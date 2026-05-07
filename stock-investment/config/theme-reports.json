@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "policy": "Core + Theme: morning brief stays compact; theme reports are run when a trigger fires or the user asks for deeper analysis.",
+  "coreMorningSections": [
+    "CRCL",
+    "BTC",
+    "GOOGL/Google",
+    "QQQ/Nasdaq",
+    "AI semiconductor/infrastructure summary"
+  ],
+  "themes": {
+    "ai-semiconductor-infrastructure": {
+      "issueKey": "ai-semiconductor-infrastructure",
+      "manualCommand": "~/ai-nodes/stock-investment/skills/current-issue-analysis/scripts/run_issue_report.sh ai-semiconductor-infrastructure",
+      "triggerCandidates": [
+        "SMH daily close change >= +4% or <= -4%",
+        "NVDA/AMD/AVGO/TSM/ASML/VRT daily close change >= +5% or <= -5%",
+        "SMH RSI14 >= 80 with volumeVsAvg20 >= 1.5",
+        "NVDA earnings week, major product launch, or large AI infrastructure partnership",
+        "TSMC/ASML capacity, CoWoS, EUV, export-control or geopolitical headline",
+        "Data-center power/cooling bottleneck headline affecting VRT or hyperscaler CapEx"
+      ],
+      "defaultCadence": "manual-or-triggered; do not run daily by default"
+    },
+    "google-ai": {
+      "issueKey": "google-io-alphabet-ai",
+      "defaultCadence": "manual-or-event-window"
+    },
+    "stablecoin-regulation": {
+      "issueKey": "us-clarity-act",
+      "defaultCadence": "manual-or-policy-event"
+    }
+  }
+}

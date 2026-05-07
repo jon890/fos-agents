@@ -92,6 +92,69 @@
           "topic": "US DOJ Google search antitrust case official context"
         }
       ]
+    },
+    "ai-semiconductor-infrastructure": {
+      "title": "AI 반도체/인프라 사이클 분석",
+      "description": "AI 수요가 GPU, ASIC, 파운드리, EUV/장비, 데이터센터 전력·냉각 인프라로 어떻게 이어지는지와 SMH/NVDA/TSM/AVGO/AMD/ASML/VRT 투자 관찰 포인트를 분석한다.",
+      "focusQuestions": [
+        "AI 수요가 실제 매출, 수주, CapEx, 가이던스로 확인되고 있는 영역은 어디인가?",
+        "GPU/AI accelerator, ASIC/네트워킹, 파운드리/첨단 패키징, EUV/장비, 전력·냉각 인프라 중 병목과 수혜가 어디에 있는가?",
+        "SMH, NVDA, TSM, AVGO, AMD, ASML, VRT의 역할과 민감도는 어떻게 다른가?",
+        "현재 주가에는 AI 인프라 기대감이 얼마나 반영됐고, 과열/차익실현 신호는 무엇인가?",
+        "단기/중기/장기 투자 관점에서 봐야 할 촉매와 리스크는 무엇인가?"
+      ],
+      "sources": [
+        {
+          "id": "nvidia-newsroom",
+          "url": "https://nvidianews.nvidia.com/news",
+          "topic": "NVIDIA AI chips, data center, networking and product announcements"
+        },
+        {
+          "id": "nvidia-ir",
+          "url": "https://investor.nvidia.com/news/",
+          "topic": "NVIDIA official IR news and earnings context"
+        },
+        {
+          "id": "tsmc-news",
+          "url": "https://pr.tsmc.com/english/news",
+          "topic": "TSMC official news, HPC, capacity, monthly revenue context"
+        },
+        {
+          "id": "tsmc-ir",
+          "url": "https://investor.tsmc.com/english/quarterly-results",
+          "topic": "TSMC quarterly results and guidance context"
+        },
+        {
+          "id": "asml-news",
+          "url": "https://www.asml.com/en/news",
+          "topic": "ASML lithography, EUV, High-NA and semiconductor capex"
+        },
+        {
+          "id": "broadcom-news",
+          "url": "https://www.broadcom.com/company/news",
+          "topic": "Broadcom AI networking, ASIC and infrastructure software"
+        },
+        {
+          "id": "amd-newsroom",
+          "url": "https://www.amd.com/en/newsroom.html",
+          "topic": "AMD AI accelerators, data center and CPUs"
+        },
+        {
+          "id": "vertiv-news",
+          "url": "https://www.vertiv.com/en-us/about/news-and-insights/news-releases/",
+          "topic": "Vertiv AI data center power and cooling infrastructure"
+        },
+        {
+          "id": "semi-industry-news",
+          "url": "https://www.semiconductors.org/news-events/latest-news/",
+          "topic": "Semiconductor industry cycle, policy and supply chain"
+        },
+        {
+          "id": "smh-holdings",
+          "url": "https://www.vaneck.com/us/en/investments/semiconductor-etf-smh/holdings/",
+          "topic": "SMH ETF holdings and sector composition"
+        }
+      ]
     }
   },
   "defaultIssue": "us-clarity-act"
