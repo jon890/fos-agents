@@ -1,0 +1,36 @@
+{
+  "policy": {
+    "tone": "관찰 후보 / 분석 후보",
+    "markets": ["US", "KR"],
+    "focus": ["AI productivity", "semiconductors", "data centers", "power infrastructure", "cloud", "automation", "AI software"]
+  },
+  "symbols": [
+    {"ticker":"NVDA", "name":"NVIDIA", "market":"US", "theme":["AI accelerator", "data center GPU", "AI platform"]},
+    {"ticker":"AVGO", "name":"Broadcom", "market":"US", "theme":["AI ASIC", "networking", "infrastructure software"]},
+    {"ticker":"AMD", "name":"Advanced Micro Devices", "market":"US", "theme":["AI GPU challenger", "server CPU"]},
+    {"ticker":"TSM", "name":"Taiwan Semiconductor Manufacturing", "market":"US", "theme":["AI foundry", "advanced packaging", "CoWoS"]},
+    {"ticker":"ASML", "name":"ASML Holding", "market":"US", "theme":["EUV", "semiconductor capex"]},
+    {"ticker":"MSFT", "name":"Microsoft", "market":"US", "theme":["AI cloud", "Copilot", "Azure"]},
+    {"ticker":"GOOGL", "name":"Alphabet", "market":"US", "theme":["Gemini", "AI search", "Google Cloud", "TPU"]},
+    {"ticker":"AMZN", "name":"Amazon", "market":"US", "theme":["AWS", "AI cloud", "automation"]},
+    {"ticker":"META", "name":"Meta Platforms", "market":"US", "theme":["AI ads", "open model", "infrastructure capex"]},
+    {"ticker":"ORCL", "name":"Oracle", "market":"US", "theme":["AI cloud infrastructure", "database"]},
+    {"ticker":"ARM", "name":"Arm Holdings", "market":"US", "theme":["AI edge", "CPU IP"]},
+    {"ticker":"ANET", "name":"Arista Networks", "market":"US", "theme":["AI networking", "data center switching"]},
+    {"ticker":"VRT", "name":"Vertiv", "market":"US", "theme":["data center power", "cooling"]},
+    {"ticker":"ETN", "name":"Eaton", "market":"US", "theme":["electrical equipment", "grid", "data center power"]},
+    {"ticker":"PWR", "name":"Quanta Services", "market":"US", "theme":["grid construction", "power infrastructure"]},
+    {"ticker":"IREN", "name":"IREN", "market":"US", "theme":["AI data center", "power portfolio", "Bitcoin mining transition"]},
+    {"ticker":"CRDO", "name":"Credo Technology", "market":"US", "theme":["AI connectivity", "data center networking"]},
+    {"ticker":"005930.KS", "name":"삼성전자", "market":"KR", "theme":["HBM", "memory", "foundry", "on-device AI"]},
+    {"ticker":"000660.KS", "name":"SK하이닉스", "market":"KR", "theme":["HBM", "AI memory", "DRAM"]},
+    {"ticker":"042700.KQ", "name":"한미반도체", "market":"KR", "theme":["HBM equipment", "advanced packaging"]},
+    {"ticker":"007660.KS", "name":"이수페타시스", "market":"KR", "theme":["AI server PCB", "network equipment"]},
+    {"ticker":"267260.KS", "name":"HD현대일렉트릭", "market":"KR", "theme":["transformer", "grid", "data center power"]},
+    {"ticker":"010120.KS", "name":"LS ELECTRIC", "market":"KR", "theme":["power equipment", "automation", "grid"]},
+    {"ticker":"298040.KS", "name":"효성중공업", "market":"KR", "theme":["transformer", "power infrastructure"]},
+    {"ticker":"034020.KS", "name":"두산에너빌리티", "market":"KR", "theme":["power generation", "SMR", "AI power demand"]},
+    {"ticker":"035420.KS", "name":"네이버", "market":"KR", "theme":["AI search", "cloud", "sovereign AI"]},
+    {"ticker":"035720.KS", "name":"카카오", "market":"KR", "theme":["AI services", "platform", "advertising"]}
+  ]
+}
