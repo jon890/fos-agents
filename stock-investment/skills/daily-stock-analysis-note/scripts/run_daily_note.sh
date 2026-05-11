@@ -20,6 +20,8 @@ UNIVERSE="$TASK_ROOT/config/daily-stock-universe.json"
 SELECTED_JSON="$OUTDIR/selected.json"
 RAW_JSON="$OUTDIR/raw-inputs.json"
 HISTORY_JSON="$TASK_ROOT/data/daily-notes/history.json"
+THESIS_DIR="$TASK_ROOT/data/thesis-tracker"
+CATALYSTS_JSON="$TASK_ROOT/config/catalysts.json"
 ANALYSIS_INPUT="$OUTDIR/analysis-input.md"
 CLAUDE_JSON="$OUTDIR/claude.result.json"
 DRAFT_MD="$OUTDIR/report.md"
@@ -48,6 +50,7 @@ PY
 SLUG="$(printf '%s' "$TICKER" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g; s/-\+/-/g; s/^-//; s/-$//')"
 BLOG_REL="finance/investing/ai-tech-stock/${REPORT_DATE}-${SLUG}.md"
 BLOG_MD="$FOS_STUDY/$BLOG_REL"
+THESIS_JSON="$THESIS_DIR/$SLUG.json"
 
 {
   cat "$PROMPT_FILE"
@@ -57,6 +60,24 @@ BLOG_MD="$FOS_STUDY/$BLOG_REL"
   printf '\n```\n\nraw-inputs.json:\n```json\n'
   cat "$RAW_JSON"
   printf '\n```\n'
+  if [[ -f "$THESIS_JSON" ]]; then
+    printf '\n\nthesis-tracker.json:\n```json\n'
+    cat "$THESIS_JSON"
+    printf '\n```\n'
+  fi
+  if [[ -f "$CATALYSTS_JSON" ]]; then
+    printf '\n\ncatalyst-calendar.json:\n```json\n'
+    python3 - <<'PY' "$CATALYSTS_JSON" "$TICKER"
+import json, sys
+from pathlib import Path
+path = Path(sys.argv[1])
+ticker = sys.argv[2]
+data = json.loads(path.read_text(encoding='utf-8'))
+events = [e for e in data.get('events', []) if e.get('ticker') in {ticker, 'QQQ', '^NDX'}]
+print(json.dumps({'policy': data.get('policy', {}), 'events': events}, ensure_ascii=False, indent=2))
+PY
+    printf '\n```\n'
+  fi
 } > "$ANALYSIS_INPUT"
 
 if timeout "${CLAUDE_TIMEOUT_SECONDS:-240}" claude --permission-mode bypassPermissions --print --output-format json "$(cat "$ANALYSIS_INPUT")" > "$CLAUDE_JSON"; then
