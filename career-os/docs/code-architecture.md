@@ -54,17 +54,15 @@ career-os/
 │     모든 에이전트용 정식 가이드. 워크스페이스 정책·진입점·외부 의존성.
 ├── TOOLS.md
 │     도구 메모. 짧음.
-├── docs/                                  ← 5 종합 문서 (fos-blog 패턴)
+├── docs/                                  ← 5 종합 문서 + 보조 영역
 │   ├── prd.md            제품 범위·MVP·기능 목록
 │   ├── data-schema.md    config/logs/runtime 스키마
 │   ├── flow.md           사용자/데이터 플로우
 │   ├── code-architecture.md  이 문서
-│   ├── adr.md            모든 아키텍처 결정 누적 기록
-│   ├── decisions/        (legacy) 개별 ADR 파일들 — adr.md로 통합 후 archive 예정
-│   ├── hand-off/         타 에이전트/사람에게 넘기는 인수인계 메모
-│   ├── prep/             회사별·이벤트별 준비 노트
-│   ├── learn/            세션·실험 회고
-│   └── audit/            (legacy) 과거 docs-audit 출력
+│   ├── adr.md            모든 아키텍처 결정 누적 기록 (단일 출처, ADR-015/018)
+│   ├── learn/            짧은 회고. 결정 굳어지면 adr.md 로 흡수 후 삭제 (ADR-018)
+│   ├── hand-off/         외부 위임·인수인계 일회성 노트
+│   └── prep/             회사·이벤트별 운영 자산. 이벤트 종료 후 archive
 │
 ├── tasks/                                 ← planning 산출물 (실행 대기 또는 실행 중)
 │   └── plan{N}-<kebab-slug>/

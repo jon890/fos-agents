@@ -12,7 +12,7 @@
 | [`docs/data-schema.md`](docs/data-schema.md) | config / logs / runtime / 산출물 JSON 스키마 | 데이터 파일 다룰 때 / 새 config 도입 |
 | [`docs/flow.md`](docs/flow.md) | 사용자·데이터 플로우 (명령별 입력→runner→산출물) | 새 흐름 추가 / 디버깅 |
 | [`docs/code-architecture.md`](docs/code-architecture.md) | 디렉터리 레이어·책임·외부 의존·Runner/Dispatcher 패턴 | 코드 구조 변경 / 새 스킬 추가 |
-| [`docs/adr.md`](docs/adr.md) | 모든 아키텍처 결정 누적 기록 (현재 ADR-001~015) | 결정의 *왜*를 알아야 할 때 |
+| [`docs/adr.md`](docs/adr.md) | 모든 아키텍처 결정 누적 기록 (현재 ADR-001~018) | 결정의 *왜*를 알아야 할 때 |
 
 `tasks/`는 docs와 별개의 영역으로, `skills/planning`이 생성하고 `skills/plan-and-build`가 실행하는 **워크스페이스 단위 실행 계획**의 영구 저장소다. `<workspace>/tasks/plan{N}-<slug>/` 형태로 각 plan이 자기 디렉터리를 갖고, 그 안에 `index.json` + `phase-NN.md`가 들어간다. 완료된 plan도 history 보존 목적으로 삭제하지 않는다.
 
@@ -76,4 +76,4 @@
 - 저장소는 로컬 동기 우선, 분석은 Claude로.
 - 워크플로는 백그라운드 재실행 가능하고 날짜 단위로 멱등.
 - 불확실성을 명시한다. 검증된 사실과 추론을 구분한다.
-- 새 아키텍처 결정은 `docs/adr.md` 맨 아래에 누적 — 개별 ADR 파일 신설 금지 (legacy `docs/decisions/` 파일들은 통합 후 보존만).
+- 새 아키텍처 결정은 `docs/adr.md` 맨 아래에 누적 — 개별 ADR 파일 신설 금지 (legacy `docs/decisions/` + `docs/audit/` 디렉터리는 ADR-018 로 폐기. 새 파일 생성 금지).
