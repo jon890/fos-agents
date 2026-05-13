@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 INCLUDE_DIRS = ["database", "architecture", "java", "interview", "kafka"]
-PRIORITY_FILES = ["interview/cj-oliveyoung-wellness-backend.md"]
+PRIORITY_FILES = ["interview/kakao-healthcare-carechat-ai-agent.md"]
 EXCLUDE_PARTS = {".claude", ".git", "node_modules"}
 
 

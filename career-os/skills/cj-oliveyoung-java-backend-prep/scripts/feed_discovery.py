@@ -171,35 +171,70 @@ def fetch_feed_cached(
     return entries
 
 
+GENERIC_BACKEND_RELEVANCE_KEYWORDS = [
+    "backend", "백엔드", "server", "서버", "spring", "java", "kotlin",
+    "mysql", "db", "database", "데이터베이스", "redis", "cache", "캐시",
+    "kafka", "flink", "rocksdb", "starrocks", "stream", "streaming", "스트림",
+    "transaction", "트랜잭션", "race condition", "경쟁 조건", "동시성",
+    "distributed", "분산", "messaging", "메시징", "queue", "event", "이벤트",
+    "architecture", "아키텍처", "scale", "scaling", "확장", "slo", "sli",
+    "storage", "스토리지", "검색", "search", "운영", "성능", "performance",
+    "batch", "배치", "eks", "kubernetes", "autoscaling", "오토스케일링",
+]
+
+LOW_SIGNAL_TITLE_KEYWORDS = [
+    "세미나", "현장 스케치", "참가 신청", "사전 안내", "공채", "코딩테스트",
+    "문제해설", "학생에서 개발자로", "직무", "디자인 직무", "프론트", "front",
+]
+
+
+def _keyword_score(title: str, keywords: Iterable[str]) -> int:
+    lower_title = title.lower()
+    return sum(1 for kw in keywords if kw and kw.lower() in lower_title)
+
+
 def select_article(
     entries: Iterable[dict],
     filter_keywords: Optional[list[str]] = None,
     exclude_urls: Optional[Iterable[str]] = None,
 ) -> Optional[dict]:
-    """Choose a non-excluded entry from a feed.
+    """Choose a non-excluded article from a feed.
 
-    When filter_keywords are configured, require at least one keyword match in the
-    title. This deliberately falls back to the reservoir card instead of attaching
-    an irrelevant latest article from a broad company feed.
+    Prefer item-specific keyword matches, but do not fall back to a vague reservoir
+    card when a real backend-relevant article exists. Broad company feeds often use
+    titles such as "Flink 운영기" or "경쟁 조건 문제" that are useful even when they
+    miss the narrow source card keywords.
     """
     excluded = set(exclude_urls or [])
-    entries_list = [e for e in entries if e.get("link")]
-
-    if filter_keywords:
-        kws = [kw.lower() for kw in filter_keywords if kw]
-        matched = [
-            e for e in entries_list
-            if any(kw in (e.get("title") or "").lower() for kw in kws)
-        ]
-        for e in matched:
-            if e["link"] not in excluded:
-                return e
+    entries_list = [
+        e for e in entries
+        if e.get("link")
+        and e.get("link") not in excluded
+        and _keyword_score(e.get("title") or "", LOW_SIGNAL_TITLE_KEYWORDS) == 0
+    ]
+    if not entries_list:
         return None
 
-    for e in entries_list:
-        if e["link"] not in excluded:
-            return e
-    return None
+    if filter_keywords:
+        exact_matches = [
+            e for e in entries_list
+            if _keyword_score(e.get("title") or "", filter_keywords) > 0
+        ]
+        if exact_matches:
+            return exact_matches[0]
+
+        relevance_matches = [
+            (_keyword_score(e.get("title") or "", GENERIC_BACKEND_RELEVANCE_KEYWORDS), e)
+            for e in entries_list
+        ]
+        relevance_matches = [(score, e) for score, e in relevance_matches if score > 0]
+        if relevance_matches:
+            # Feed order is usually newest-first; Python sort is stable, so equal scores keep recency.
+            relevance_matches.sort(key=lambda pair: pair[0], reverse=True)
+            return relevance_matches[0][1]
+        return None
+
+    return entries_list[0]
 
 
 def discover_for_item(

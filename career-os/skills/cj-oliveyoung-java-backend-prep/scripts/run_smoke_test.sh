@@ -19,7 +19,7 @@ EXTRACT="$HOME/ai-nodes/_shared/bin/extract_claude_result.py"
 mkdir -p "$OUTDIR"
 
 cat > "$TARGET_LIST" <<EOF
-interview/cj-oliveyoung-wellness-backend.md
+interview/kakao-healthcare-carechat-ai-agent.md
 database/index.md
 database/mysql/transaction-lock.md
 database/mysql/mysql-architecture.md
@@ -39,9 +39,9 @@ $(cat "$PROMPT_FILE")
 - target-files.txt 에 나열된 마크다운 파일만 읽는다.
 - target-files.txt 의 파일 경로는 소스 레포지토리 루트 기준 상대 경로다.
 - .claude/** 와 비-마크다운 파일은 무시한다.
-- CJ OliveYoung Wellness Platform Java 백엔드 면접 준비에 초점을 맞춘다.
+- 카카오헬스케어 케어챗 AI Agent 개발자 포지션 준비에 초점을 맞춘다.
 - DB를 약점 가능성이 높은 영역으로 다루고, 스터디 노트가 이를 뒷받침하는지 검증한다.
-- interview/cj-oliveyoung-wellness-backend.md 의 근거를 우선한다.
+- interview/kakao-healthcare-carechat-ai-agent.md 의 근거를 우선한다.
 - 최종 리포트는 한국어로 작성한다.
 EOF
 
@@ -50,7 +50,7 @@ if timeout 300s claude --permission-mode bypassPermissions --print --output-form
   python3 "$EXTRACT" "$CLAUDE_JSON" "$REPORT_MD" "${TRACK_TASK_CLAUDE_USAGE_FILE:-}"
 else
   cat > "$FALLBACK_MD" <<EOF
-# CJ OliveYoung Java Backend Prep Smoke Test Report
+# Kakao Healthcare CareChat Java Backend Prep Smoke Test Report
 
 - Status: Claude synthesis failed, fallback report created
 - Candidate profile: $PROFILE

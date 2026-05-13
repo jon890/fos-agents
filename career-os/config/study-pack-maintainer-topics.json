@@ -30,27 +30,6 @@
     ],
     "preferredDomain": "architecture"
   },
-  "oliveyoung-tech-blog-company-analysis-upgrade": {
-    "requestedTopic": "올리브영 기술블로그의 최근 글들 중 면접 준비와 팀 이해에 직접 도움이 되는 문서들을 선별해 핵심 내용을 정리하고, 그 인사이트가 기존 CJ 올리브영 웰니스/플랫폼 회사 분석 문서와 유기적으로 연결되도록 company analysis 문서를 update 또는 augment한다. 특히 다음 블로그 축을 반영해야 한다. 첫째, 올영매장 데이터 연동 전략 글에서 데이터 사용처/변경 특성/라이프사이클 기준으로 API 직접 호출, Redis Cache-Aside, Kafka Event Notification + Redis key cache 하이브리드를 선택한 점. 둘째, Spring 트랜잭션 동기화 기반 레거시 알림톡 현대화 글에서 TransactionSynchronizationManager afterCommit 기반 커밋 후 Kafka 발행, 레거시 제약 아래의 정합성 보장, 그리고 더 높은 안정성을 위해 Outbox Pattern을 고려해야 한다는 시사점. 셋째, 무중단 OAuth2 전환 글에서 Feature Flag 위임 패턴, Strategy 패턴, Shadow Mode, 점진 롤아웃, Jitter, Resilience4j 기반 장애 격리. 넷째, Host-level 카오스 엔지니어링 글에서 DB/캐시/큐/검색 장애 실험, 복구 후 데이터 정합성, 고객 경험 중심 영향도 평가, 5분 TTL 기반 복구 기준. 최종 문서는 단순 링크 모음이 아니라, 어떤 글을 왜 읽어야 하는지, 그 글이 팀의 실제 백엔드 문제를 어떻게 보여주는지, 후보자가 면접에서 어떤 시그널을 가져가야 하는지까지 드러내야 한다.",
-    "candidateFiles": [
-      "interview/company-analysis/cj-oliveyoung-wellness-platform-backend-analysis.md"
-    ],
-    "preferredDomain": "interview"
-  },
-  "oliveyoung-tech-blog-company-analysis-link-upgrade": {
-    "requestedTopic": "기존 CJ 올리브영 웰니스/플랫폼 company analysis 문서에서 이미 정리된 기술블로그 인사이트는 유지하되, 원문 링크 연결성을 더 강화하도록 문서를 update 또는 augment한다. 특히 0장의 A/B/C/D 각 항목과 필요한 본문 섹션에 원문 링크를 자연스럽게 포함하고, 독자가 바로 클릭해 원문을 읽을 수 있게 해야 한다. 다음 원문 링크를 정확히 활용한다. A 데이터 연동 전략: https://oliveyoung.tech/2026-03-18/oy-store-data-interconnection-strategy/ B 트랜잭션 동기화 기반 레거시 알림톡 현대화: https://oliveyoung.tech/2026-02-23/from-legacy-to-modern-architecture-journey/ C 무중단 OAuth2 전환: https://oliveyoung.tech/2025-10-28/oliveyoung-zero-downtime-oauth2-migration/ D Host-level 카오스 엔지니어링: https://oliveyoung.tech/2026-03-30/chaos-host-level/ 보너스 참고 SQS 알림톡 데드락 분석: https://oliveyoung.tech/2025-05-02/oliveryoung-alimtalk-deadlock/ 링크는 문서 흐름을 해치지 않게 자연스럽게 녹이고, 단순 URL 나열이 아니라 원문/참고 글/더 읽어볼 글 형태로 표시한다.",
-    "candidateFiles": [
-      "interview/company-analysis/cj-oliveyoung-wellness-platform-backend-analysis.md"
-    ],
-    "preferredDomain": "interview"
-  },
-  "oliveyoung-wellness-direct-post-discovery": {
-    "requestedTopic": "기존 CJ 올리브영 웰니스/플랫폼 company analysis 문서를 유지하되, 공개된 올리브영 기술블로그 글 중에서 웰니스개발팀이 직접 쓴 글 또는 웰니스 도메인에 매우 강하게 귀속되는 글이 실제로 있는지 더 엄밀하게 판별해 보강한다. 중요한 것은 억지 추정이 아니라 분류의 정확성이다. 직접 근거가 약한 글은 '인접 스쿼드/공통 엔지니어링 사례'로 남겨야 하고, 웰니스 직접 글 또는 강한 웰니스 도메인 글이 확인되는 경우에만 별도 섹션으로 추가한다. 특히 팀명/저자 소개/도메인 서술/서비스명(예: 헬스+, W CARE, 웰니스 등)/업무 범위가 직접 연결되는지를 근거로 분류해야 한다. 만약 공개 블로그에서 웰니스 직접 사례를 확정하기 어렵다면, 그 사실 자체를 문서에 정직하게 반영하고 '직접 사례는 제한적이지만 인접 조직 엔지니어링 사례는 풍부하다'는 식으로 정확하게 정리한다.",
-    "candidateFiles": [
-      "interview/company-analysis/cj-oliveyoung-wellness-platform-backend-analysis.md"
-    ],
-    "preferredDomain": "interview"
-  },
   "mysql-index-comprehensive-upgrade": {
     "requestedTopic": "기존 MySQL 인덱스 문서를 종합 문서로 업그레이드한다. 새 문서를 만들기보다 기존 인덱스 문서(특히 B-Tree 인덱스 문서)를 중심으로 update 또는 augment하는 것이 자연스러운지 판단한다. 최종 문서에는 MySQL/InnoDB 인덱스의 구조, 클러스터드/세컨더리 인덱스, 커버링 인덱스, 복합 인덱스, EXPLAIN으로 인덱스를 검증하는 방법, 그리고 특히 '인덱스를 타지 않는 경우'를 깊게 다뤄야 한다. 함수 적용, 암묵적 형변환, leading wildcard, OR 조건, 낮은 카디널리티, 좌측 접두사 규칙 위반, range 이후 컬럼, 정렬/그룹핑 미스매치, 옵티마이저가 풀스캔을 고르는 경우 등을 정리하고, 그런 쿼리를 실무에서 어떻게 진단하고 처리했는지까지 포함한다. 단순한 개념 허브가 아니라 '왜 인덱스를 안 타는가 / 어떻게 개선하는가'까지 설명하는 종합 문서가 되어야 한다.",
     "candidateFiles": [
@@ -86,5 +65,18 @@
       "database/redis/redis-advanced-patterns.md"
     ],
     "preferredDomain": "redis"
+  },
+  "kakao-healthcare-carechat-company-analysis": {
+    "requestedTopic": "카카오헬스케어 케어챗 AI Agent 개발자 포지션 분석 문서를 고도화한다. 공고의 주요 업무(OPEN LLM 기반 AI Agent, 의도 분석, Tool 호출, 멀티턴 메모리, 케어챗 챗봇 엔진/마이데이터, LLM 서빙 아키텍처, Python AI 서비스, 기존 Java Spring Boot 백엔드 연동, 클라우드 모니터링/성능/장애 대응, 프롬프트/Agent Workflow 개선)를 후보자 실제 경험과 연결한다. 특히 AI 서비스팀 RAG 파이프라인, AI 웹툰 제작 MVP의 LLM workflow/fallback/rate limit/context caching, AI 에이전트 기반 슬롯 개발, Kafka Outbox/비동기/관측성 경험을 케어챗 지원 전략으로 매핑한다. 의료 도메인 직접 경험 부족은 개인정보/KYC/마이데이터 인접 경험과 학습 계획으로 정직하게 보완한다.",
+    "candidateFiles": [
+      "interview/kakao-healthcare-carechat-ai-agent.md",
+      "resume/2603_김병태_이력서_v4.md",
+      "task/ai-service-team/README.md",
+      "task/ai-service-team/rag-vector-search-batch.md",
+      "task/ai-service-team/webtoon-maker-ai-pipeline.md",
+      "task/nsc-slot/ai-tool-adoption.md",
+      "task/sb-dev-team/kyc-system.md"
+    ],
+    "preferredDomain": "interview"
   }
 }

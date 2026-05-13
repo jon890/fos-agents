@@ -35,4 +35,4 @@
 - 기존 최근 생성 주제와 핵심 개념이 겹치면 안 된다.
 - review는 기존 문서를 압축/연결하는 경우에만 허용한다.
 - 같은 도메인만 몰아서 만들지 않는다.
-- 회사/면접 맥락(CJ OliveYoung, 커머스, Spring/Java 백엔드, 대용량 트래픽, 캐시/메시징/DB 운영)을 반영한다.
+- 회사/면접 맥락(Kakao Healthcare CareChat, AI Agent, 헬스케어/마이데이터, LLM serving, Python AI service, Java Spring 백엔드 연동, 관측성/장애 대응)을 반영한다.

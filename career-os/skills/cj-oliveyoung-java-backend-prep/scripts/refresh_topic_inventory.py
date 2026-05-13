@@ -28,10 +28,16 @@ RECENT_ARTICLE_URL_LOOKBACK = 7  # 최근 N개 history entry의 article URL은 �
 # ADR-010: backend 추천 점수 기반 + mix target (3-item version per ADR-012)
 BACKEND_TARGET_TOTAL = 3
 BACKEND_MIX_TARGET = {'new': 1, 'deepen': 1, 'live-coding': 1}
-WEAK_AREAS = {'mysql', 'redis'}
-WEAK_AREA_BONUS = 3
-RECENT_PENALTY_PER = 2
-CARRYOVER_PENALTY = 1
+WEAK_AREAS = {'ai-agent', 'llm-serving', 'rag', 'python', 'security', 'observability'}
+# Weak areas still matter, but they should not dominate the daily list.
+# The user is now targeting Kakao Healthcare CareChat; keep recommendations broad but prioritize AI Agent/service-readiness topics.
+WEAK_AREA_BONUS = 1
+RECENT_PENALTY_PER = 3
+CARRYOVER_PENALTY = 2
+# Strongly suppress topics already shown in recent recommendation history.
+# Domain diversity alone is not enough: otherwise the same top item per domain repeats for a week.
+RECENT_KEY_PENALTY_PER = 8
+BACKEND_KEY_COOLDOWN_ENTRIES = 7
 TAG_PRIORITY = {'new': 0, 'deepen': -1, 'review': -2, 'live-coding': 0}
 
 # ADR-012: 보조 카테고리 슬롯
@@ -166,6 +172,19 @@ for item in study_candidates:
     candidate_recommendations.append(item)
 
 
+def backend_domain_group(domain):
+    """Collapse adjacent domains for visible diversity in a 3-item daily set."""
+    if domain in {'database', 'mysql', 'postgresql'}:
+        return 'database'
+    if domain in {'redis', 'cache'}:
+        return 'cache'
+    if domain in {'kafka', 'rabbitmq', 'sqs', 'message-queue'}:
+        return 'message-queue'
+    if domain in {'spring', 'java', 'security'}:
+        return 'java-spring'
+    return domain or 'unknown'
+
+
 def pick_backend_recommendations(yesterday_keys):
     """ADR-010 점수 기반 + ADR-012 3-item mix target."""
     pool = [dict(item) for item in candidate_recommendations]
@@ -186,9 +205,11 @@ def pick_backend_recommendations(yesterday_keys):
         })
 
     for item in pool:
+        key = item.get('key')
         domain = item.get('domain', '')
         tag = item.get('tag', 'new')
         score = -RECENT_PENALTY_PER * recent_domain_counts.get(domain, 0)
+        score -= RECENT_KEY_PENALTY_PER * recent_backend_key_counts.get(key, 0)
         if domain in WEAK_AREAS:
             score += WEAK_AREA_BONUS
         score += TAG_PRIORITY.get(tag, -3)
@@ -201,22 +222,48 @@ def pick_backend_recommendations(yesterday_keys):
     chosen = []
     used_tags = Counter()
     chosen_keys = set()
+    used_domains = set()
 
+    # First pass: satisfy the tag mix while avoiding repeated backend domain groups
+    # and recently shown exact keys. This keeps the daily backend set from feeling
+    # like only the top DB/Spring/architecture card every morning.
     for item in pool:
+        key = item.get('key')
         tag = item.get('tag', 'new')
+        domain = backend_domain_group(item.get('domain', ''))
+        if recent_backend_key_counts.get(key, 0):
+            continue
+        if domain in used_domains:
+            continue
         if used_tags[tag] < BACKEND_MIX_TARGET.get(tag, 0):
             chosen.append(item)
             chosen_keys.add(item.get('key'))
+            used_domains.add(domain)
             used_tags[tag] += 1
             if len(chosen) >= BACKEND_TARGET_TOTAL:
                 break
 
+    # Second pass: if one mix slot is impossible, still prefer a fresh domain and non-recent key.
     if len(chosen) < BACKEND_TARGET_TOTAL:
         for item in pool:
-            if item.get('key') in chosen_keys:
+            key = item.get('key')
+            domain = backend_domain_group(item.get('domain', ''))
+            if key in chosen_keys or domain in used_domains or recent_backend_key_counts.get(key, 0):
                 continue
             chosen.append(item)
-            chosen_keys.add(item.get('key'))
+            chosen_keys.add(key)
+            used_domains.add(domain)
+            if len(chosen) >= BACKEND_TARGET_TOTAL:
+                break
+
+    # Final fallback: only repeat domains when the reservoir is genuinely narrow.
+    if len(chosen) < BACKEND_TARGET_TOTAL:
+        for item in pool:
+            key = item.get('key')
+            if key in chosen_keys:
+                continue
+            chosen.append(item)
+            chosen_keys.add(key)
             if len(chosen) >= BACKEND_TARGET_TOTAL:
                 break
 
@@ -248,6 +295,12 @@ def pick_secondary(items, recently_shown_keys, limit):
 
 
 recent_history = load_recent_history(SECONDARY_COOLDOWN_ENTRIES)
+backend_key_history = load_recent_history(BACKEND_KEY_COOLDOWN_ENTRIES)
+recent_backend_key_counts = Counter(
+    key
+    for entry in backend_key_history
+    for key in (entry.get('keys', []) or [])
+)
 yesterday_keys = load_yesterday_keys()
 recent_tech_blog_keys = collect_recent_keys(recent_history, 'techBlogKeys')
 recent_ai_keys = collect_recent_keys(recent_history, 'aiKeys')
@@ -263,7 +316,6 @@ for entry in article_url_history:
             recent_article_urls.add(url)
 
 backend_recommendations = pick_backend_recommendations(yesterday_keys)
-tech_blog_recommendations = pick_secondary(tech_blog_items, recent_tech_blog_keys, TECH_BLOG_SLOTS)
 ai_recommendations = pick_secondary(ai_topic_items, recent_ai_keys, AI_SLOTS)
 geek_recommendations = pick_secondary(geek_news_items, recent_geek_keys, GEEK_SLOTS)
 
@@ -306,9 +358,41 @@ def attach_discovered_articles(items, exclude_urls):
     return discovery_log
 
 
+def pick_tech_blog_articles(items, recently_shown_keys, limit, exclude_urls):
+    """Pick tech-blog recommendations that resolve to concrete article URLs.
+
+    Company blog cards are only useful when they point to a real post. Unlike AI/geek
+    secondary cards, do not show vague source-level fallback cards for tech blogs.
+    """
+    discovery_log = []
+    chosen = []
+    ordered = [item for item in items if item.get('key') not in recently_shown_keys]
+    ordered.extend(item for item in items if item.get('key') in recently_shown_keys)
+    seen_keys = set()
+    for raw_item in ordered:
+        key = raw_item.get('key')
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        item = dict(raw_item)
+        item_log = attach_discovered_articles([item], exclude_urls)
+        discovery_log.extend(item_log)
+        if item.get('discoveredArticle', {}).get('url'):
+            chosen.append(item)
+        if len(chosen) >= limit:
+            break
+    return chosen, discovery_log
+
+
 discovery_exclude = set(recent_article_urls)
-discovery_log = []
-for group in (tech_blog_recommendations, ai_recommendations, geek_recommendations):
+tech_blog_recommendations, tech_blog_discovery_log = pick_tech_blog_articles(
+    tech_blog_items,
+    recent_tech_blog_keys,
+    TECH_BLOG_SLOTS,
+    discovery_exclude,
+)
+discovery_log = list(tech_blog_discovery_log)
+for group in (ai_recommendations, geek_recommendations):
     discovery_log.extend(attach_discovered_articles(group, discovery_exclude))
 
 

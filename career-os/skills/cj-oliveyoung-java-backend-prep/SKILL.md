@@ -1,11 +1,11 @@
 ---
 name: cj-oliveyoung-java-backend-prep
-description: Collect markdown study notes from the jon890/fos-study repository, combine them with CJ OliveYoung target-role context and candidate profile data, then generate Java backend interview preparation reports. Use for baseline gap analysis and daily study reports before the 2026-04-21 interview.
+description: Collect markdown study notes from the jon890/fos-study repository, combine them with Kakao Healthcare CareChat AI Agent target-role context and candidate profile data, then generate AI-service/backend interview preparation reports.
 ---
 
-# CJ OliveYoung Java Backend Prep
+# Kakao Healthcare CareChat AI Agent Prep
 
-This skill supports a focused interview-prep workflow for the CJ OliveYoung Wellness Platform Java backend role.
+This skill supports a focused interview-prep workflow for the Kakao Healthcare CareChat AI Agent developer role.
 
 ## Scope
 
@@ -13,9 +13,9 @@ This skill supports a focused interview-prep workflow for the CJ OliveYoung Well
 - Branch: `main`
 - Include: markdown files only (`**/*.md`)
 - Exclude: `.claude/**`
-- Focus: Java backend
+- Focus: AI Agent service backend, RAG/LLM workflow, Java Spring integration, Python AI service readiness
 - De-emphasize/exclude: Kotlin for current MVP
-- Candidate weak area hint: DB
+- Candidate weak area hints: Python AI service depth, healthcare/mydata domain, LLM evaluation/guardrails
 
 ## Workflow
 
@@ -32,10 +32,9 @@ This skill supports a focused interview-prep workflow for the CJ OliveYoung Well
 ## Output goals
 
 Reports should emphasize:
-- backend interview readiness
-- database weaknesses and missing depth
-- Spring / transaction / JPA / performance / architecture gaps
-- likely high-value study topics before 2026-04-21
+- AI Agent / LLM service interview readiness
+- RAG, Tool calling, multi-turn memory, LLM serving, guardrails, and observability gaps
+- Java Spring backend integration, async processing, reliability, and healthcare/mydata security concerns
 - concrete daily study actions and likely interview questions
 
 ## Files

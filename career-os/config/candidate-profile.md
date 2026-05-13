@@ -8,10 +8,10 @@
 
 ## 지원 대상
 
-- **현재 타깃**: CJ 올리브영 커머스플랫폼유닛(웰니스개발팀) Java 백엔드 경력직
-- **면접일**: 2026-04-21 (1차 Live Coding / 구술)
-- **지원 가능 범위 (재사용 가능 포지셔닝)**: Spring Boot · JPA · Kafka · Redis · OpenSearch 기반 MSA 환경의 시니어 Java 백엔드. 게임/커머스/핀테크/AI 플랫폼 공통으로 매칭 가능.
-- **포지셔닝 한 줄**: "Spring Boot 기반 MSA에서 캐시 정합성·비동기 이벤트·대용량 배치 파이프라인을 설계부터 운영까지 일관되게 수행해 온 4년차 Java 백엔드 개발자."
+- **현재 타깃**: 카카오헬스케어 케어챗 AI Agent 개발자.
+- **지원 포지션 핵심**: OPEN LLM 기반 AI Agent 설계/개발, 의도 분석, Tool 호출, 멀티턴 메모리, 케어챗 챗봇 엔진/의료 마이데이터 고도화, LLM 서빙 아키텍처, Python AI 서비스, 기존 Java(Spring Boot) 백엔드와 AI Agent 연동, 클라우드 모니터링/성능/장애 대응.
+- **지원 가능 범위 (재사용 가능 포지셔닝)**: Spring Boot · Kafka · Redis · OpenSearch 기반 운영형 백엔드 + RAG/LLM workflow/Agent orchestration 경험을 결합한 AI 서비스 백엔드.
+- **포지셔닝 한 줄**: "LLM Agent를 단순 데모가 아니라 실제 서비스 백엔드와 안정적으로 연결하고, RAG/Tool calling/비동기 처리/장애 대응/비용 최적화까지 제품 수준으로 설계해 본 AI 서비스 백엔드 개발자."
 
 ---
 
@@ -24,8 +24,10 @@
 | 2024.06 ~ 2025.11 | NHN NSC 슬롯개발팀 | Spring Boot 3.x / Java 17 / MySQL / Redis. 신규 슬롯 8종 개발, **슬롯 엔진 추상화**(`SlotTemplate`, `BaseSlotService`), **RCC(RTP Cache Control)** 백그라운드 캐시 시스템, **StampedLock** 기반 정적 데이터 동시성 해결, **AliasMethod O(1)** 스핀 최적화, **Cursor Rules 20종 이상** 구축 및 AI 에이전트 단독 3종 구현. (`task/nsc-slot/`) |
 | 2025.12 ~ 현재 | NHN AI 서비스 개발팀 | Spring Boot 3 / Java 21 / Spring Batch / OpenSearch. 사내 RAG용 **Confluence 벡터 색인 배치 파이프라인(11 Step)** 설계·구현, **AsyncItemProcessor**로 I/O 병렬화, 전략 패턴 기반 메타데이터 Provider, Next.js 기반 사내 AI 웹툰 제작 MVP 풀스택. (`task/ai-service-team/`) |
 
+- 총 개발 경력은 **약 7년차**로 본다. 별도 SI 개발 경험 약 3년이 있으며, 현재 이력/프로젝트 문서에 상세히 정리된 최근 경력은 위 표 기준이다.
 - NHN 재직 자체는 4년차이지만, 경력기술서 기준 **"시니어 Java 백엔드 실무"는 2023.01부터 약 3년+** 축적.
-- 출처: `sources/fos-study/resume/2603_김병태_이력서_v4.md` 문항1, 각 팀 `README.md`.
+- 포지션 추천 시 5년+ 공고는 현실권으로 보고, 7년+ 공고도 정규직이면 도전 가능 후보로 평가한다. 단, 계약직/임시직/프리랜서는 제외한다.
+- 출처: `sources/fos-study/resume/2603_김병태_이력서_v4.md` 문항1, 각 팀 `README.md`, 사용자 직접 정정(2026-05-08: SI 개발 경험 약 3년 포함 총 7년차).
 
 ---
 
@@ -37,7 +39,7 @@
 - **Java 17 · Java 21** (실전 운영, 4년+) — `task/nsc-slot/slot-engine-abstraction.md`, `task/ai-service-team/rag-vector-search-batch.md`
 - **Kotlin** — 출처 문서에 직접 운영 기재 없음. 공고 요건상 필요 시 학습 가능 수준. (※ 현 MVP에서는 Kotlin 제외 유지)
 - **TypeScript / Node.js (NestJS)** (실전 운영, 2022~2024 일부) — `task/the-future-company/`, `task/sb-dev-team/kyc-system.md`
-- **Python** (사용 경험, 제한적) — gRPC OCR 서버 graceful shutdown 수정. `task/ai-service-team/graceful-shutdown-503-fix.md`
+- **Python** (사용 경험, 제한적) — gRPC OCR 서버 graceful shutdown 수정. 케어챗 포지션 대비 FastAPI/async/background task/LLM gateway 패턴을 단기 보강 우선순위로 둔다. `task/ai-service-team/graceful-shutdown-503-fix.md`
 
 ### 프레임워크
 - **Spring Boot 3.x** (실전 운영, 2024~) — `task/nsc-slot/README.md`, `task/ai-service-team/README.md`
@@ -163,7 +165,7 @@
 
 1. **DB 튜닝 실무 깊이** — 자가 진단 weak area. 복합 인덱스 추가 경험(`task/nsc-slot/rcc-rtp-cache-control.md`)은 있으나 **EXPLAIN plan 읽기, 커버링 인덱스 설계, InnoDB buffer pool·통계 정보 해석**을 면접 수준으로 말할 수 있는 드릴은 부족. 개선 중(career-os baseline 토픽).
 2. **JPA N+1 · 페치 조인 · 벌크 연산 실전 질의응답** — 운영에서 사용은 하고 있으나 드릴다운 질문에 즉답할 수준으로 정리가 부족. 개선 중(career-os smoke test에서 식별).
-3. **Redis 캐싱 패턴 폭** — Cache-Aside는 익숙. Write-Through / Write-Behind / Read-Through / 인증·세션 분리 / 분산 락(Redisson 등) / Hot Key 처리 실전 사례는 상대적으로 얕음. 올리브영 기술 블로그의 Cache-Aside + Kafka 하이브리드 설계 수준을 말할 수 있도록 학습 중.
+3. **Redis 캐싱 패턴 폭** — Cache-Aside는 익숙. Write-Through / Write-Behind / Read-Through / 인증·세션 분리 / 분산 락(Redisson 등) / Hot Key 처리 실전 사례는 상대적으로 얕음. 특정 회사 사례보다 범용적인 대규모 백엔드 운영/설계 관점으로 학습한다.
 4. **Kafka 운영 디테일** — Outbox 설계·운영 경험은 있으나, **파티셔닝 키 선택 / Consumer Group rebalance / Exactly-Once Semantics / Lag 모니터링** 같은 운영 이슈에서 깊이가 부족할 수 있음.
 5. **Kubernetes 실운영** — NHN Cloud Container Service의 K8s 추상화 위에서 preStop/grace 수준은 다뤘으나, 직접적인 Deployment/HPA/PDB 튜닝 기재는 출처 문서에 없음. 면접 질문 시 "운영 제약을 받는 사용자 관점"으로 답할 것.
 6. **대규모 트래픽 TPS 숫자** — 이력서·task 전반에서 **구체 TPS / 레이턴시 수치는 명시하지 않음**. 과장 답변 리스크가 있으므로 "측정 여부 / 측정 방법 / 체감 단위"로 답해야 함.
@@ -213,8 +215,8 @@
    - 상태: study-pack 1편 작성 완료, 구술 드릴 반복 필요.
 3. **Redis 캐싱 패턴 확장**
    - Write-Through / Write-Behind / Read-Through / Cache Stampede / Hot Key.
-   - 올리브영 기술 블로그 "Redis Cache-Aside + Kafka 하이브리드" 복기.
-   - 상태: 공고 분석(`interview/cj-oliveyoung-wellness-backend.md`)에서 핵심 포인트 추출 완료.
+   - Cache-Aside + Kafka 하이브리드, Hot Key, TTL/invalidation, 장애 시 fallback 복기.
+   - 상태: 범용 백엔드 면접 답변으로 재사용 가능하게 정리 중.
 4. **Kafka 운영 질문 대비**
    - Consumer Group Rebalance, Partition 키 전략, Exactly-Once, Idempotent Producer.
    - Outbox Pattern 설명 시 "왜 AFTER_COMMIT이어야 하는가 / 왜 REQUIRES_NEW인가"를 1분 내 말할 수 있도록 정리.
@@ -222,9 +224,9 @@
    - Sync vs Async 선택 기준, 분산 트랜잭션(Saga), 이벤트 유실 대비.
 6. **자기 프로젝트 1분 설명 3종 준비**
    - RAG 배치 파이프라인 / 캐시 정합성 / Outbox Pattern.
-7. **CJ 올리브영 특화 보조 포인트** (공고 1회 분량만)
-   - Feature Flag 무중단 배포, Shadow Mode, Resilience4j Circuit Breaker 3단계, Aurora Serverless 특성.
-   - 본 프로필은 중립 유지. CJ 특화 세부는 `config/interview-master-topics.json` 또는 `interview/cj-oliveyoung-wellness-backend.md`에서 주입.
+7. **카카오헬스케어 케어챗 특화 보조 포인트**
+   - Tool calling / 멀티턴 메모리 / RAG 품질 평가 / hallucination 방어 / LLM serving 비용·지연·fallback / 의료 마이데이터 개인정보·권한·감사로그를 우선 준비한다.
+   - 회사·포지션 세부는 `interview/kakao-healthcare-carechat-ai-agent.md`와 `config/interview-master-topics.json`에서 주입한다.
 
 ---
 
@@ -233,8 +235,8 @@
 - **Kotlin은 현 MVP에서 제외** — 기존 프로필의 `Kotlin excluded from the current MVP focus` 정책 유지.
 - **폴리그롯 가정 금지** — 이력서·task에 기재 없는 언어/도구(예: Scala, Rust 본격 운영)는 pipeline에서 전제하지 않는다.
 - **수치 날조 금지** — TPS, 팀 규모, 성과 %, 감축율 등이 이력서·task에 명시되지 않았으면 pipeline은 "출처 문서에 기재 없음"으로 응답해야 한다. 이력서 문항1의 "447개 테스트 파일", 본 문서 JMH 수치는 출처 확인됨.
-- **실무 근거 범위** — 본 프로필은 `resume/2603_김병태_이력서_v4.md` + `task/**/*.md` + `interview/cj-oliveyoung-wellness-backend.md`만을 1차 근거로 사용한다. 기타 이력서 버전(v1~v3, 2108/2512/2601)은 참조용.
-- **CJ 편향 최소화** — 본 프로필은 Java 백엔드 경력자 일반 관점으로 기술됐으며, 회사 특화 맥락은 별도 파일(`config/interview-master-topics.json` promptAppend 등)에서 주입.
+- **실무 근거 범위** — 본 프로필은 `resume/2603_김병태_이력서_v4.md` + `task/**/*.md` + `interview/kakao-healthcare-carechat-ai-agent.md`를 1차 근거로 사용한다. 기타 이력서 버전(v1~v3, 2108/2512/2601)은 참조용.
+- **카카오헬스케어 케어챗 타깃 유지** — 회사 특화 맥락은 `interview/kakao-healthcare-carechat-ai-agent.md`와 `config/interview-master-topics.json` promptAppend에서 주입한다.
 
 ---
 
@@ -258,7 +260,7 @@
 | `sources/fos-study/task/sb-dev-team/README.md` | 커리어 타임라인 |
 | `sources/fos-study/task/sb-dev-team/cache-architecture.md` | 주요 프로젝트(6) / 강점 1 / 기술 스택(Ehcache·MQ Fanout) |
 | `sources/fos-study/task/the-future-company/README.md` | 커리어 타임라인 / 기술 스택(Redis Streams) |
-| `sources/fos-study/interview/cj-oliveyoung-wellness-backend.md` | 지원 대상 / 면접 준비 우선순위 |
+| `sources/fos-study/interview/kakao-healthcare-carechat-ai-agent.md` | 지원 대상 / 케어챗 포지션 분석 / 면접 준비 우선순위 |
 | `career-os/CLAUDE.md` | 약점(자가 진단) / 제약(Kotlin 제외) / 면접 준비 우선순위 |
 
 > 미래 업데이트 규칙: 이력서 v5가 나오면 "커리어 타임라인 / 주요 프로젝트 / 강점" 우선 재생성. 신규 task 문서가 추가되면 "기술 스택 / 주요 프로젝트" 재생성. CJ가 아닌 회사로 타깃 전환 시 "지원 대상 / 면접 준비 우선순위 7항" 만 교체하면 중립성 유지됨.

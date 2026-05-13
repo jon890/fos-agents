@@ -1,10 +1,6 @@
-interview/cj-oliveyoung-wellness-backend.md
-database/index.md
-database/mysql/mysql-architecture.md
-database/mysql/transaction-lock.md
-database/mysql/b-tree-index.md
-database/connection-pool.md
-java/spring/jpa-transaction.md
-architecture/distributed-transaction.md
-architecture/cache-strategies.md
-database/redis/basic.md
+interview/kakao-healthcare-carechat-ai-agent.md
+resume/2603_김병태_이력서_v4.md
+task/ai-service-team/README.md
+task/ai-service-team/rag-vector-search-batch.md
+task/ai-service-team/webtoon-maker-ai-pipeline.md
+task/nsc-slot/ai-tool-adoption.md

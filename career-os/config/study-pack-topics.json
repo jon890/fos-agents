@@ -3,7 +3,7 @@
     "domain": "redis",
     "outputPath": "database/redis/cache-aside.md",
     "commitTopic": "cache-aside",
-    "appendPrompt": "Redis Cache-Aside 패턴을 백엔드 면접 대비용으로 정리한다. 단순 개념 설명을 넘어서 read-through / write-through / write-behind와 비교하고, stale data, cache stampede, eviction, TTL, invalidation, Kafka와 결합하는 방식까지 포함한다. 올리브영처럼 실시간성과 트래픽이 모두 중요한 커머스 환경을 예시로 들어 설명한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    "appendPrompt": "Redis Cache-Aside 패턴을 백엔드 면접 대비용으로 정리한다. 단순 개념 설명을 넘어서 read-through / write-through / write-behind와 비교하고, stale data, cache stampede, eviction, TTL, invalidation, Kafka와 결합하는 방식까지 포함한다. 케어챗처럼 실사용 트래픽과 안정성이 중요한 AI/헬스케어 서비스 환경을 예시로 들어 설명한다. 문서 제목은 반드시 [초안]으로 시작한다."
   },
   "distributed-architecture": {
     "domain": "architecture",
@@ -105,7 +105,7 @@
     "domain": "mysql",
     "outputPath": "database/mysql/aurora-serverless-connection-pool-transaction-budget.md",
     "commitTopic": "aurora-serverless-connection-pool-transaction-budget",
-    "appendPrompt": "Aurora Serverless 환경의 커넥션 풀·트랜잭션 예산 설계를 백엔드 면접 대비용으로 정리한다. 단순히 커넥션 풀 개념만 설명하지 말고 Aurora Serverless(v1/v2 차이 포함) 특성과 max_connections 제약, scale-up/scale-down 지연, cold start/ACU 관점, HikariCP 같은 애플리케이션 풀과 RDS Proxy 조합 이유, 읽기/쓰기 부하와 짧은 트랜잭션 유지 원칙까지 연결한다. 또한 트랜잭션 예산이라는 표현을 실제 운영 감각으로 풀어서 lock 유지 시간, 외부 IO 분리, timeout, retry, burst traffic 상황에서 어떤 예산 감각으로 설계하는지 설명한다. 올리브영처럼 커머스 트래픽과 실시간성이 중요한 환경 예시를 포함하고, 면접에서 답변할 수 있는 실무형 프레임으로 정리한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    "appendPrompt": "Aurora Serverless 환경의 커넥션 풀·트랜잭션 예산 설계를 백엔드 면접 대비용으로 정리한다. 단순히 커넥션 풀 개념만 설명하지 말고 Aurora Serverless(v1/v2 차이 포함) 특성과 max_connections 제약, scale-up/scale-down 지연, cold start/ACU 관점, HikariCP 같은 애플리케이션 풀과 RDS Proxy 조합 이유, 읽기/쓰기 부하와 짧은 트랜잭션 유지 원칙까지 연결한다. 또한 트랜잭션 예산이라는 표현을 실제 운영 감각으로 풀어서 lock 유지 시간, 외부 IO 분리, timeout, retry, burst traffic 상황에서 어떤 예산 감각으로 설계하는지 설명한다. 케어챗처럼 AI Agent API와 기존 백엔드가 함께 동작하는 서비스 환경 예시를 포함하고, 면접에서 답변할 수 있는 실무형 프레임으로 정리한다. 문서 제목은 반드시 [초안]으로 시작한다."
   },
   "kafka-operations-deepen": {
     "domain": "kafka",
@@ -159,12 +159,174 @@
     "domain": "redis",
     "outputPath": "database/redis/redis-cluster-operations.md",
     "commitTopic": "redis-cluster",
-    "appendPrompt": "Redis Cluster의 샤딩 메커니즘(16384 슬롯), 노드 추가/제거 절차, 자동 페일오버와 수동 페일오버 시나리오, 그리고 운영 시 주의사항(네트워크 파티션, 슬롯 마이그레이션 중 트래픽 처리)을 다루는 study-pack을 작성하세요. 문서 제목은 반드시 [초안]으로 시작하며, CJ OliveYoung 같은 대규모 커머스 환경에서 Redis Cluster를 운영할 때 알아야 할 핵심 내용을 담아야 합니다."
+    "appendPrompt": "Redis Cluster의 샤딩 메커니즘(16384 슬롯), 노드 추가/제거 절차, 자동 페일오버와 수동 페일오버 시나리오, 그리고 운영 시 주의사항(네트워크 파티션, 슬롯 마이그레이션 중 트래픽 처리)을 다루는 study-pack을 작성하세요. 문서 제목은 반드시 [초안]으로 시작하며, AI Agent/헬스케어 서비스처럼 실시간 응답성과 안정성이 중요한 환경에서 Redis Cluster를 운영할 때 알아야 할 핵심 내용을 담아야 합니다."
   },
   "review-mysql-index-design": {
     "domain": "mysql",
     "outputPath": "database/mysql/review-index-design.md",
     "commitTopic": "mysql-index-review",
     "appendPrompt": "기존의 b-tree-index.md, composite-index 관련 문서, 그리고 커버링 인덱스 내용을 바탕으로, MySQL 인덱스 설계의 핵심 원칙(B+Tree 구조, 복합 인덱스 컬럼 순서, 커버링 인덱스 활용)만 압축한 1페이지 복습용 study-pack을 작성하세요. 문서 제목은 반드시 [초안]으로 시작하며, 인덱스 설계 체크리스트와 흔한 실수를 불릿으로 정리해야 합니다."
+  },
+  "llm-tool-calling-agent-workflow": {
+    "domain": "ai-agent",
+    "outputPath": "ai/agent/llm-tool-calling-agent-workflow.md",
+    "commitTopic": "llm-tool-calling-agent-workflow",
+    "appendPrompt": "LLM Tool Calling과 Agent Workflow 설계를 케어챗 AI Agent 개발자 면접 대비용으로 정리한다. intent classification, tool registry, schema validation, permission check, fallback, retry, audit log, Java/Spring 백엔드 연동까지 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+  },
+  "multi-turn-memory-healthcare-agent": {
+    "domain": "ai-agent",
+    "outputPath": "ai/agent/multi-turn-memory-healthcare-agent.md",
+    "commitTopic": "multi-turn-memory-healthcare-agent",
+    "appendPrompt": "헬스케어 AI Agent의 멀티턴 메모리 설계를 면접 대비용으로 정리한다. conversation state, user profile memory, short/long-term memory, privacy minimization, consent, expiration, deletion, prompt injection 방어를 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+  },
+  "outbox-inbox-pattern-deepen": {
+    "domain": "message-queue",
+    "outputPath": "architecture/outbox-inbox-pattern.md",
+    "commitTopic": "outbox-inbox-pattern-deepen",
+    "appendPrompt": "Outbox/Inbox Pattern 심화를 백엔드 면접 대비용으로 정리한다. transaction boundary, polling/publishing, duplicate handling, ordering, replay, monitoring, Kafka/SQS 적용 차이를 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+  },
+  "hexagonal-clean-architecture-spring": {
+    "domain": "architecture",
+    "outputPath": "architecture/hexagonal-clean-architecture-spring.md",
+    "commitTopic": "hexagonal-clean-architecture-spring",
+    "appendPrompt": "CJ푸드빌 디지털 채널 Back-end 지원 대비용으로 Hexagonal Architecture와 Clean Architecture를 Spring 백엔드 관점에서 정리한다. 단순 이론이 아니라 Controller/Application Service/Domain/Port/Adapter/Repository 경계, JPA 엔티티와 도메인 모델 분리 여부, 트랜잭션 경계, DTO 매핑, 테스트 전략, 과설계 기준, 레거시/커머스 서비스에서 적용하는 방법을 포함한다. 후보자의 SlotTemplate, RccSpinResultAnalyzer, Provider 전략 패턴 경험을 포트-어댑터적 사고로 설명하는 면접 답변 예시를 넣는다. 문서 제목은 반드시 [초안]으로 시작한다."
+  },
+  "mybatis-jpa-tradeoffs": {
+    "domain": "database",
+    "outputPath": "database/mybatis-jpa-tradeoffs.md",
+    "commitTopic": "mybatis-jpa-tradeoffs",
+    "appendPrompt": "CJ푸드빌 디지털 채널 Back-end 지원 대비용으로 MyBatis 운영 패턴과 JPA/Hibernate와의 트레이드오프를 정리한다. XML Mapper, resultMap, 동적 SQL, 페이징, N+1, 복잡한 조회, 트랜잭션, 캐시, SQL 가시성, 유지보수성, 레거시 시스템에서 MyBatis를 만났을 때의 대응 전략을 포함한다. JPA 중심 경험자가 면접에서 MyBatis 경험 부족을 어떻게 정직하게 보완해 답변할지 예시를 넣는다. 문서 제목은 반드시 [초안]으로 시작한다."
+  },
+  "ecommerce-order-payment-domain-modeling": {
+    "domain": "architecture",
+    "outputPath": "architecture/ecommerce-order-payment-domain-modeling.md",
+    "commitTopic": "ecommerce-order-payment-domain-modeling",
+    "appendPrompt": "CJ푸드빌/F&B/e-Commerce 백엔드 지원 대비용으로 주문, 결제, 쿠폰, 프로모션, 회원, 매장/픽업/배달 도메인 모델링을 정리한다. 주문 상태머신, 결제 승인/취소/환불, 재고/매장 가용성, 쿠폰 중복 사용 방지, 프로모션 정책, 정합성, 멱등성, Outbox/Saga 적용, 장애 복구, 운영 모니터링까지 포함한다. 후보자의 Kafka Outbox, 캐시 정합성, 장애 대응 경험을 e-Commerce 언어로 번역하는 답변 예시를 넣는다. 문서 제목은 반드시 [초안]으로 시작한다."
+  },
+  "legacy-jsp-jquery-api-coexistence": {
+    "domain": "architecture",
+    "outputPath": "architecture/legacy-jsp-jquery-api-coexistence.md",
+    "commitTopic": "legacy-jsp-jquery-api-coexistence",
+    "appendPrompt": "CJ푸드빌 디지털 채널 Back-end 지원 대비용으로 JSP/jQuery 레거시 화면과 신규 API/모바일 앱/SPA가 공존하는 환경의 백엔드 운영 전략을 정리한다. 세션 기반 인증과 토큰/API 인증 공존, 화면 렌더링과 REST API 경계, 점진적 마이그레이션, Strangler Fig 패턴, 레거시 변경 리스크 줄이기, 테스트/모니터링, 장애 대응, 보안 체크리스트를 포함한다. JSP/jQuery 실무 경험이 적은 Java/Spring 백엔드 개발자가 면접에서 어떻게 정직하고 설득력 있게 답변할지 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+  },
+  "fnb-ecommerce-domain-overview": {
+    "domain": "architecture",
+    "outputPath": "architecture/fnb-ecommerce-domain-overview.md",
+    "commitTopic": "fnb-ecommerce-domain-overview",
+    "appendPrompt": "CJ푸드빌 디지털 채널 Back-end 지원 대비용으로 F&B/e-Commerce 도메인 전체 그림을 정리한다. 사용자 채널(앱/웹), 회원, 브랜드/매장, 메뉴, 옵션, 주문, 결제, 쿠폰/프로모션, 픽업/배달, 클레임/환불, 정산, 백오피스, 외부 연동(PG/배달/알림)을 포함한다. 단순 용어집이 아니라 4년차+ 서버 개발자가 면접에서 도메인 이해를 보여줄 수 있도록 bounded context, 핵심 엔티티, 데이터 흐름, 자주 터지는 장애/정합성 이슈까지 포함한다. 후보자의 캐시 정합성, Kafka Outbox, 장애 대응 경험을 F&B 디지털 채널 언어로 번역하는 답변 예시를 넣는다. 문서 제목은 반드시 [초안]으로 시작한다."
+  },
+  "fnb-order-store-pickup-state-machine": {
+    "domain": "architecture",
+    "outputPath": "architecture/fnb-order-store-pickup-state-machine.md",
+    "commitTopic": "fnb-order-store-pickup-state-machine",
+    "appendPrompt": "CJ푸드빌/F&B 디지털 채널 지원 대비용으로 주문, 매장, 픽업/배달 상태머신 설계를 정리한다. 주문 생성, 메뉴/옵션 선택, 매장 가용성, 영업시간, 재고/품절, 주문 접수, 제조중, 픽업대기, 완료, 취소, 노쇼, 부분 실패를 포함한다. 상태 전이 표, 불변 조건, 동시성/중복 요청/멱등성, 모바일 앱 재시도, 매장 POS 연동 지연, Outbox 이벤트 설계, 운영 모니터링까지 포함한다. 4년차+ 백엔드 면접 답변 수준으로 작성한다. 문서 제목은 반드시 [초안]으로 시작한다."
+  },
+  "fnb-coupon-promotion-membership-design": {
+    "domain": "architecture",
+    "outputPath": "architecture/fnb-coupon-promotion-membership-design.md",
+    "commitTopic": "fnb-coupon-promotion-membership-design",
+    "appendPrompt": "CJ푸드빌/F&B/e-Commerce 지원 대비용으로 쿠폰, 프로모션, 멤버십, 포인트 설계를 정리한다. 쿠폰 발급/사용/복구, 중복 사용 방지, 선착순 이벤트, 브랜드/매장/메뉴별 적용 조건, 할인 우선순위, 프로모션 정책 엔진, 포인트 적립/차감, 동시성, Redis/RDBMS 역할 분리, 정합성, 감사로그, CS 복구 운영까지 포함한다. 후보자의 캐시 정합성, StampedLock, RabbitMQ/Kafka 경험을 프로모션/멤버십 설계로 연결하는 면접 답변 예시를 넣는다. 문서 제목은 반드시 [초안]으로 시작한다."
+  },
+  "fnb-payment-refund-settlement-operations": {
+    "domain": "architecture",
+    "outputPath": "architecture/fnb-payment-refund-settlement-operations.md",
+    "commitTopic": "fnb-payment-refund-settlement-operations",
+    "appendPrompt": "CJ푸드빌/F&B/e-Commerce 지원 대비용으로 결제, 취소, 환불, 정산 운영을 정리한다. PG 승인/매입/취소/부분취소, 주문-결제 상태 분리, 결제 성공 후 주문 실패, 주문 성공 후 결제 실패, 재시도, 멱등키, Outbox/Saga, 환불 처리, 매장/브랜드/본사 정산, 대사, 장애 복구, 운영 알림, 감사로그를 포함한다. 후보자의 Kafka Outbox Pattern과 트랜잭션 경계 경험을 결제 도메인 언어로 번역하는 답변 예시를 넣는다. 문서 제목은 반드시 [초안]으로 시작한다."
+  },
+  "fnb-ecommerce-operations-monitoring-interview": {
+    "domain": "devops",
+    "outputPath": "devops/fnb-ecommerce-operations-monitoring-interview.md",
+    "commitTopic": "fnb-ecommerce-operations-monitoring-interview",
+    "appendPrompt": "CJ푸드빌 디지털 채널 Back-end 지원 대비용으로 F&B/e-Commerce 운영 장애 대응과 모니터링을 정리한다. 피크타임 트래픽, 이벤트/쿠폰 오픈, 매장 POS 연동 장애, PG 장애, 알림 장애, 재고/품절 동기화 지연, 캐시 불일치, 배치 실패, 사용자 CS 증가를 포함한다. 핵심 지표, 알림 기준, 대시보드, 로그/traceId, 장애 대응 첫 5분, postmortem, 재발 방지, 면접 예상 질문 답변을 포함한다. 후보자의 graceful shutdown 503 대응, 캐시 정합성, traceId 재전송 경험을 운영형 프로덕트 백엔드로 포지셔닝한다. 문서 제목은 반드시 [초안]으로 시작한다."
+  },
+  "cj-foodville-commerce-domain-design-interview": {
+    "domain": "architecture",
+    "outputPath": "architecture/cj-foodville-commerce-domain-design-interview.md",
+    "commitTopic": "cj-foodville-commerce-domain-design-interview",
+    "appendPrompt": "CJ푸드빌 디지털 채널 Back-end 지원 대비용으로 커머스/F&B 도메인 설계 능력을 면접에서 어필하는 방법을 정리한다. 슬롯 도메인 경험(SlotTemplate, BaseSlotService, RCC, StampedLock, 정책/전략 분리)을 주문/결제/쿠폰/매장 상태 설계 경험으로 번역하는 답변을 포함한다. 도메인 모델링, bounded context, 상태 전이, 불변 조건, 예외 복구, 운영 관측을 4년차+ 백엔드 관점으로 정리한다. 문서 제목은 반드시 [초안]으로 시작한다."
+  },
+  "commerce-order-state-consistency-fundamentals": {
+    "domain": "architecture",
+    "outputPath": "architecture/commerce-order-state-consistency-fundamentals.md",
+    "commitTopic": "commerce-order-state-consistency-fundamentals",
+    "appendPrompt": "커머스 주문 상태와 데이터 정합성 기본기를 CJ푸드빌 지원 대비용으로 정리한다. 주문 생성/접수/준비/완료/취소/환불 상태, 상태 전이 불변 조건, 중복 요청, 모바일 재시도, 동시성, 트랜잭션 경계, 이벤트 발행, 장애 복구, 면접 예상 질문을 포함한다. 기본기에서 털리지 않도록 DB 트랜잭션/락/격리수준과 연결해 설명한다. 문서 제목은 반드시 [초안]으로 시작한다."
+  },
+  "payment-idempotency-transaction-basics": {
+    "domain": "architecture",
+    "outputPath": "architecture/payment-idempotency-transaction-basics.md",
+    "commitTopic": "payment-idempotency-transaction-basics",
+    "appendPrompt": "결제 도메인의 멱등성, 트랜잭션, 재시도 기본기를 CJ푸드빌/F&B 커머스 지원 대비용으로 정리한다. idempotency key, 주문-결제 상태 분리, PG 승인/취소/부분취소, 네트워크 타임아웃, 중복 결제 방지, Outbox/Saga, DB unique constraint, 재처리, 감사로그, 면접 답변 예시를 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+  },
+  "coupon-promotion-concurrency-basics": {
+    "domain": "architecture",
+    "outputPath": "architecture/coupon-promotion-concurrency-basics.md",
+    "commitTopic": "coupon-promotion-concurrency-basics",
+    "appendPrompt": "쿠폰/프로모션 동시성과 정합성 기본기를 CJ푸드빌/F&B 커머스 지원 대비용으로 정리한다. 선착순 쿠폰, 중복 사용 방지, 발급/사용/복구, Redis vs RDBMS 역할, 분산락, unique key, optimistic/pessimistic lock, 이벤트 오픈 피크 트래픽, CS 복구, 면접 예상 질문을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+  },
+  "mysql-index-explain-commerce-api": {
+    "domain": "database",
+    "outputPath": "database/mysql/mysql-index-explain-commerce-api.md",
+    "commitTopic": "mysql-index-explain-commerce-api",
+    "appendPrompt": "커머스 API 성능 개선을 위한 MySQL 인덱스와 EXPLAIN 기본기를 CJ푸드빌 지원 대비용으로 정리한다. 주문 목록/회원 쿠폰/매장 메뉴 조회 예시, 복합 인덱스, 커버링 인덱스, leftmost prefix, filesort, range 조건, cardinality, pagination, slow query, 면접에서 EXPLAIN을 읽는 순서를 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+  },
+  "jpa-n-plus-one-commerce-read-model": {
+    "domain": "database",
+    "outputPath": "database/jpa-n-plus-one-commerce-read-model.md",
+    "commitTopic": "jpa-n-plus-one-commerce-read-model",
+    "appendPrompt": "JPA N+1과 커머스 조회 모델 기본기를 CJ푸드빌 지원 대비용으로 정리한다. 주문 상세/주문 목록/메뉴 옵션/쿠폰 조회 예시, fetch join, EntityGraph, batch size, DTO projection, pagination 한계, OSIV, read model 분리, MyBatis와의 선택 기준, 면접 답변을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+  },
+  "spring-transaction-propagation-commerce": {
+    "domain": "spring",
+    "outputPath": "java/spring/spring-transaction-propagation-commerce.md",
+    "commitTopic": "spring-transaction-propagation-commerce",
+    "appendPrompt": "Spring 트랜잭션 전파와 커머스 주문/결제 시나리오를 CJ푸드빌 지원 대비용으로 정리한다. REQUIRED, REQUIRES_NEW, NESTED, rollbackOnly, checked/unchecked exception, self-invocation, @TransactionalEventListener(AFTER_COMMIT), Outbox 실패 저장, 면접 함정 질문과 후보자의 Kafka Outbox 경험 연결 답변을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+  },
+  "java-concurrency-locks-commerce-cache": {
+    "domain": "java",
+    "outputPath": "java/java-concurrency-locks-commerce-cache.md",
+    "commitTopic": "java-concurrency-locks-commerce-cache",
+    "appendPrompt": "Java 동시성 기본기와 커머스 캐시/정책 갱신 시나리오를 CJ푸드빌 지원 대비용으로 정리한다. synchronized, ReentrantReadWriteLock, StampedLock, optimistic read, volatile, AtomicReference, thread safety, cache refresh 중 조회, 후보자의 슬롯 정적 데이터 캐시 경험을 커머스 메뉴/프로모션 정책 캐시로 번역하는 답변을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+  },
+  "redis-cache-invalidation-commerce": {
+    "domain": "redis",
+    "outputPath": "database/redis/redis-cache-invalidation-commerce.md",
+    "commitTopic": "redis-cache-invalidation-commerce",
+    "appendPrompt": "Redis/캐시 무효화 기본기와 커머스 메뉴/프로모션/회원 캐시 정합성을 CJ푸드빌 지원 대비용으로 정리한다. cache-aside, write-through, TTL, pub/sub, fanout invalidation, stale data, stampede, distributed lock, 다중 서버 캐시 정합성, RabbitMQ Fanout 경험 연결 답변을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+  },
+  "http-session-cookie-api-auth-basics": {
+    "domain": "web",
+    "outputPath": "web/http-session-cookie-api-auth-basics.md",
+    "commitTopic": "http-session-cookie-api-auth-basics",
+    "appendPrompt": "웹/앱 디지털 채널 백엔드 기본기인 HTTP, Cookie, Session, Token/API 인증을 CJ푸드빌 지원 대비용으로 정리한다. JSP/jQuery 레거시 세션과 모바일 API 토큰 공존, CSRF/CORS, SameSite, stateless vs stateful, refresh token, 인증 장애, 면접 기본 질문을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+  },
+  "rest-api-versioning-mobile-compatibility": {
+    "domain": "architecture",
+    "outputPath": "architecture/rest-api-versioning-mobile-compatibility.md",
+    "commitTopic": "rest-api-versioning-mobile-compatibility",
+    "appendPrompt": "모바일 앱/웹 디지털 채널에서 REST API 버저닝과 하위 호환성 기본기를 CJ푸드빌 지원 대비용으로 정리한다. 앱 강제 업데이트 어려움, additive change, enum 확장, nullable 필드, deprecation, consumer-driven contract, rollback, API gateway, 면접 답변을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+  },
+  "commerce-observability-first-five-minutes": {
+    "domain": "devops",
+    "outputPath": "devops/commerce-observability-first-five-minutes.md",
+    "commitTopic": "commerce-observability-first-five-minutes",
+    "appendPrompt": "커머스/F&B 디지털 채널 장애 대응 첫 5분과 관측성 기본기를 CJ푸드빌 지원 대비용으로 정리한다. 주문 실패율, 결제 실패율, PG/POS 지연, 쿠폰 오류, latency, error rate, saturation, log/metric/trace, traceId, dashboard, alert threshold, postmortem, 후보자의 graceful shutdown 503 해결 경험 연결 답변을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+  },
+  "clean-architecture-pragmatic-spring-commerce": {
+    "domain": "architecture",
+    "outputPath": "architecture/clean-architecture-pragmatic-spring-commerce.md",
+    "commitTopic": "clean-architecture-pragmatic-spring-commerce",
+    "appendPrompt": "Clean/Hexagonal Architecture를 커머스 Spring 서비스에 실용적으로 적용하는 방법을 CJ푸드빌 지원 대비용으로 정리한다. 과설계 방지, CRUD와 복잡 도메인의 구분, application service, domain service, port/adapter, repository, transaction script vs domain model, 테스트 경계, 면접 답변을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+  },
+  "mybatis-dynamic-sql-resultmap-basics": {
+    "domain": "database",
+    "outputPath": "database/mybatis-dynamic-sql-resultmap-basics.md",
+    "commitTopic": "mybatis-dynamic-sql-resultmap-basics",
+    "appendPrompt": "MyBatis 기본기와 운영 패턴을 CJ푸드빌 지원 대비용으로 정리한다. XML mapper, parameterType, resultMap, 동적 SQL(if/choose/foreach), 페이징, batch, SQL injection 방지, JPA와 혼용 시 트랜잭션, 레거시 시스템에서 MyBatis를 빠르게 읽고 수정하는 방법, 면접 답변을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+  },
+  "commerce-interview-answer-slot-experience-mapping": {
+    "domain": "interview",
+    "outputPath": "interview/commerce-interview-answer-slot-experience-mapping.md",
+    "commitTopic": "commerce-interview-answer-slot-experience-mapping",
+    "appendPrompt": "CJ푸드빌 디지털 채널 Back-end 면접 대비용으로 슬롯 개발팀 경험을 커머스/F&B 도메인 설계 능력으로 매핑하는 답변집을 작성한다. SlotTemplate/BaseSlotService/RCC/캐시 정합성/StampedLock/AliasMethod/Kafka Outbox를 주문/결제/쿠폰/메뉴/매장 정책 설계로 번역한다. 자기소개, 왜 CJ푸드빌인가, 도메인 전환 우려, 기본기 검증 질문 답변을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
   }
 }

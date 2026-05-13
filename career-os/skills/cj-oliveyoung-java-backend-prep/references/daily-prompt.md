@@ -1,14 +1,14 @@
 You are generating a daily interview preparation report.
 
 Context:
-- Target company: CJ OliveYoung
-- Target domain: Wellness Platform
-- Target role: Java backend
-- Interview date: 2026-04-21
+- Target company: Kakao Healthcare CareChat
+- Target domain: Healthcare / CareChat / medical mydata
+- Target role: AI Agent developer / AI service backend
+- Interview date: TBD
 - Analyze local markdown study notes from a synced `fos-study` repository
 - Ignore `.claude/**`
-- Focus on Java backend, Spring, DB, transaction, JPA, performance, architecture, Redis, Kafka, and operational readiness
-- Candidate self-assessed weak area: DB
+- Focus on LLM Agent workflow, Tool calling, multi-turn memory, RAG, LLM serving, Python AI service, Java Spring integration, observability, security/privacy, and operational readiness
+- Candidate priority gaps: Python AI service depth, healthcare/mydata domain, LLM evaluation/guardrails
 - Kotlin is excluded from the current MVP focus
 
 Write a concise markdown report with these sections:
@@ -21,5 +21,5 @@ Write a concise markdown report with these sections:
 Rules:
 - Be concrete and interview-focused.
 - Use the provided target file list and candidate profile.
-- Prioritize evidence from interview/cj-oliveyoung-wellness-backend.md.
+- Prioritize evidence from interview/kakao-healthcare-carechat-ai-agent.md.
 - Produce the final report in Korean.
