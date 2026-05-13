@@ -15,7 +15,7 @@ REPORT_MD="$OUTDIR/report.md"
 STDERR_LOG="$OUTDIR/claude.stderr.log"
 CLAUDE_JSON="$OUTDIR/claude.result.json"
 FALLBACK_MD="$OUTDIR/report.fallback.md"
-CORE_LIST="$TASK_ROOT/config/baseline-core-files.txt"
+CORE_LIST="$TASK_ROOT/config/baseline-core-files.json"
 EXTRACT="$HOME/ai-nodes/_shared/bin/extract_claude_result.py"
 
 mkdir -p "$OUTDIR"
@@ -27,7 +27,11 @@ else
   git -C "$SOURCE_DIR" pull --ff-only
 fi
 
-cp "$CORE_LIST" "$TARGET_LIST"
+python3 -c "
+import json, sys
+data = json.load(open('$CORE_LIST'))
+print('\n'.join(f['path'] for f in data['files']))
+" > "$TARGET_LIST"
 
 # --- Build analysis input note ---
 cat > "$INPUT_NOTE" <<EOF

@@ -1,0 +1,14 @@
+{
+  "_meta": {
+    "purpose": "baseline 분석 대상 큐레이션된 core 파일 (ADR-003, ADR-016)",
+    "schema_version": "1"
+  },
+  "files": [
+    {"path": "interview/kakao-healthcare-carechat-ai-agent.md"},
+    {"path": "resume/2603_김병태_이력서_v4.md"},
+    {"path": "task/ai-service-team/README.md"},
+    {"path": "task/ai-service-team/rag-vector-search-batch.md"},
+    {"path": "task/ai-service-team/webtoon-maker-ai-pipeline.md"},
+    {"path": "task/nsc-slot/ai-tool-adoption.md"}
+  ]
+}

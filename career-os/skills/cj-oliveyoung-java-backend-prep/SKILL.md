@@ -20,7 +20,7 @@ This skill supports a focused interview-prep workflow for the Kakao Healthcare C
 ## Workflow
 
 1. Sync the local source repository under `sources/fos-study` using git clone/pull.
-2. For the baseline report, use the curated core file set in `config/baseline-core-files.txt`.
+2. For the baseline report, use the curated core file set in `config/baseline-core-files.json`.
 3. For daily reports, use the target list builder to expand scope selectively.
 4. Read `config/candidate-profile.md`.
 5. Use Claude CLI in print mode to generate:
