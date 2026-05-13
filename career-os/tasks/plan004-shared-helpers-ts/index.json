@@ -2,9 +2,9 @@
   "name": "plan004-shared-helpers-ts",
   "description": "_shared/ 공용 헬퍼를 TS(Bun) 로 마이그레이션. notify_discord.ts + invoke_claude_skills.ts + format_cost_summary.ts 3개 + _shared/types/ 공통 타입. 8+ runner caller 일괄 갱신. claude_lib.sh + format_cost_summary.py + extract_claude_result.py + 워크스페이스별 notify_discord.sh 폐기.",
   "created_at": "2026-05-13T19:30:00+00:00",
-  "updated_at": "2026-05-13T19:30:00+00:00",
+  "updated_at": "2026-05-13T15:58:13.797520+00:00",
   "status": "pending",
-  "current_phase": 1,
+  "current_phase": 2,
   "total_phases": 5,
   "error_message": null,
   "blocked_reason": null,
@@ -21,17 +21,30 @@
       "number": 1,
       "title": "docs-first: ADR-019 (TS Bun 마이그레이션) + code-architecture _shared/ 트리 + AGENTS.md",
       "file": "phase-01.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "b968995a5e91"
     },
     {
       "number": 2,
       "title": "Bun 환경 부트스트랩: bun 존재 확인 + package.json + tsconfig.json + .gitignore + _shared/types/ 골격",
       "file": "phase-02.md",
       "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep"],
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
       "model": "sonnet",
       "timeout": 600
     },
@@ -40,7 +53,13 @@
       "title": "_shared/lib/notify_discord.ts + format_cost_summary.ts 작성 + unit smoke",
       "file": "phase-03.md",
       "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep"],
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
       "model": "sonnet",
       "timeout": 600
     },
@@ -49,7 +68,13 @@
       "title": "_shared/lib/invoke_claude_skills.ts (claude_lib.sh + extract_claude_result.py 흡수)",
       "file": "phase-04.md",
       "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep"],
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
       "model": "sonnet",
       "timeout": 1200
     },
@@ -58,7 +83,13 @@
       "title": "8+ runner caller 갱신 + 옛 .sh/.py 폐기 + run_now.sh format_cost 호출 갱신 + 통합 smoke + index.json + push",
       "file": "phase-05.md",
       "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep"],
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
       "model": "sonnet",
       "timeout": 900
     }

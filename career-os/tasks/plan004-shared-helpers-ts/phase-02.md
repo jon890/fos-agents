@@ -20,6 +20,8 @@ ai-nodes 루트에 Bun 환경을 부트스트랩한다 (package.json + tsconfig.
 
 ### 1. Bun 설치 확인
 
+**중요 — 반드시 Bash 도구로 아래 블록 전체를 직접 실행하라**. prose로 "PHASE_BLOCKED: Bun 미설치"만 출력하고 정상 종료하면 `run-phases.py`가 exit code 0을 받아 success 로 잘못 처리한다 (plan004 1차 실행에서 실제 발생). Bash 도구의 마지막 명령이 `exit 2`로 끝나야 run-phases.py가 blocked로 인식한다.
+
 ```bash
 cd /home/bifos/ai-nodes
 if ! command -v bun >/dev/null 2>&1; then
