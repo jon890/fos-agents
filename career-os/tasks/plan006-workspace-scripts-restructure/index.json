@@ -2,9 +2,9 @@
   "name": "plan006-workspace-scripts-restructure",
   "description": "ADR-019 — career-os에 한정해 Claude Code skill 폴더(`skills/<name>/`)와 실행 스크립트 디렉터리(`scripts/<name>/`)를 분리. 11개 skill의 scripts/ 전체를 workspace-level scripts/<name>/으로 이동, skills/<name>/은 SKILL.md + references/만 유지. dispatcher 14개 case + 외부 caller + cross-skill path 일괄 갱신.",
   "created_at": "2026-05-14T01:30:00+00:00",
-  "updated_at": "2026-05-14T02:00:00+00:00",
-  "status": "running",
-  "current_phase": 2,
+  "updated_at": "2026-05-14T02:15:00+00:00",
+  "status": "completed",
+  "current_phase": 5,
   "total_phases": 5,
   "error_message": null,
   "blocked_reason": null,
@@ -34,13 +34,14 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 1200
+      "timeout": 1200,
+      "commitSha": "ae5f6ddbb38f"
     },
     {
       "number": 2,
       "title": "신설 4 skill (knowledge-gap-analyzer / study-topic-recommender / topic-pool-replenisher / study-pack-batch) scripts/ 이동 + dispatcher case 갱신",
       "file": "phase-02.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
@@ -50,13 +51,14 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 1200
+      "timeout": 1200,
+      "commitSha": "07bb3b15e013"
     },
     {
       "number": 3,
       "title": "기존 6 skill scripts/ 이동 + dispatcher 나머지 case + cross-skill path 갱신",
       "file": "phase-03.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
@@ -66,13 +68,14 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 1200
+      "timeout": 1200,
+      "commitSha": "3f5e4a45ad26"
     },
     {
       "number": 4,
       "title": "SKILL.md 일괄 갱신 (11개) + 빈 skills/<name>/scripts/ 디렉터리 정리",
       "file": "phase-04.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
@@ -82,13 +85,14 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 1200
+      "timeout": 1200,
+      "commitSha": "8f2d67a57cce"
     },
     {
       "number": 5,
       "title": "통합 smoke + 잔재 grep + push + trailing cleanup",
       "file": "phase-05.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
