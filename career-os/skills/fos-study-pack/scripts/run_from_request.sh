@@ -9,11 +9,10 @@ if [[ -z "$REQUEST_TEXT" ]]; then
 fi
 
 RESOLVER="$TASK_ROOT/skills/fos-study-pack/scripts/resolve_freeform_study_pack.py"
-STUDY_CFG="$TASK_ROOT/config/study-pack-topics.json"
-MAINT_CFG="$TASK_ROOT/config/study-pack-maintainer-topics.json"
+TOPICS_CFG="$TASK_ROOT/config/topics.json"
 RUNNER="$TASK_ROOT/skills/cj-oliveyoung-java-backend-prep/scripts/run_now.sh"
 
-RESOLUTION_JSON="$(python3 "$RESOLVER" "$STUDY_CFG" "$MAINT_CFG" "$REQUEST_TEXT")"
+RESOLUTION_JSON="$(python3 "$RESOLVER" "$TOPICS_CFG" "$REQUEST_TEXT")"
 MODE="$(python3 - <<'PY' "$RESOLUTION_JSON"
 import json, sys
 print(json.loads(sys.argv[1])['mode'])

@@ -3,8 +3,8 @@ set -euo pipefail
 
 TASK_ROOT="${TASK_ROOT:-$HOME/ai-nodes/career-os}"
 SOURCE_DIR="$TASK_ROOT/sources/fos-study"
-CONFIG="$TASK_ROOT/config/cj-foodville-bootcamp-topics.json"
-TOPIC_CONFIG="$TASK_ROOT/config/study-pack-topics.json"
+CONFIG="$TASK_ROOT/config/topics.json"
+TOPIC_CONFIG="$TASK_ROOT/config/topics.json"
 RESOLVER="$TASK_ROOT/skills/study-pack-writer/scripts/resolve_study_pack_topic.py"
 RUNNER="$TASK_ROOT/skills/study-pack-writer/scripts/run_study_pack.sh"
 OUTDIR="$TASK_ROOT/data/reports/daily/${REPORT_DATE:-$(date +%F)}/cj-foodville-bootcamp"
@@ -14,8 +14,9 @@ mkdir -p "$OUTDIR" "$TASK_ROOT/data/runtime"
 mapfile -t SELECTED < <(python3 - <<'PY' "$CONFIG" "$TOPIC_CONFIG" "$SOURCE_DIR"
 import json, sys
 from pathlib import Path
-cfg=json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
-topics=json.loads(Path(sys.argv[2]).read_text(encoding='utf-8'))
+topics_data=json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
+cfg=topics_data['bootcamp']
+topics=topics_data['study-pack']
 source=Path(sys.argv[3])
 rec_n=int(cfg.get('dailyRecommendCount',10))
 # Recommend queue: first ungenerated, then generated/review topics.
@@ -36,7 +37,7 @@ RECOMMEND_KEYS=()
 GENERATE_KEYS=()
 GENERATE_N=$(python3 - <<'PY' "$CONFIG"
 import json, sys
-print(json.loads(open(sys.argv[1], encoding='utf-8').read()).get('dailyGenerateCount',5))
+print(json.loads(open(sys.argv[1], encoding='utf-8').read())['bootcamp'].get('dailyGenerateCount',5))
 PY
 )
 for row in "${SELECTED[@]}"; do
@@ -62,8 +63,8 @@ done
     if [[ -f "$TOPIC_CONFIG" ]]; then
       title=$(python3 - <<'PY' "$TOPIC_CONFIG" "$key"
 import json, sys
-cfg=json.loads(open(sys.argv[1], encoding='utf-8').read())
-e=cfg.get(sys.argv[2],{})
+topics_data=json.loads(open(sys.argv[1], encoding='utf-8').read())
+e=topics_data['study-pack'].get(sys.argv[2],{})
 print(e.get('commitTopic') or sys.argv[2])
 PY
 )
@@ -108,8 +109,8 @@ fi
     for topic in "${GENERATE_KEYS[@]}"; do
       out=$(python3 - <<'PY' "$TOPIC_CONFIG" "$topic"
 import json, sys
-cfg=json.loads(open(sys.argv[1], encoding='utf-8').read())
-print(cfg.get(sys.argv[2],{}).get('outputPath',''))
+topics_data=json.loads(open(sys.argv[1], encoding='utf-8').read())
+print(topics_data['study-pack'].get(sys.argv[2],{}).get('outputPath',''))
 PY
 )
       echo "- ${topic} → ${out}"

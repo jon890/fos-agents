@@ -45,7 +45,7 @@ The runner is responsible for extracting these fields and publishing the markdow
 
 - Prompt reference: `references/maintainer-prompt.md`
 - Runner: `scripts/run_maintainer.sh`
-- Config: `config/study-pack-maintainer-topics.json`
+- Config: `config/topics.json` (study-pack-maintainer namespace)
 
 ## Invocation
 

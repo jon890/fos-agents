@@ -102,8 +102,9 @@ def safe_load(path: Path, fallback):
         return fallback
 
 
-study_topics = read_json(CONFIG / 'study-pack-topics.json')
-study_candidates = read_json(CONFIG / 'study-topic-candidates.json').get('topics', [])
+_topics_cfg = read_json(CONFIG / 'topics.json')
+study_topics = _topics_cfg['study-pack']
+study_candidates = _topics_cfg.get('study-pack-candidates', {}).get('topics', [])
 live_seeds = read_json(CONFIG / 'live-coding-seed-pool.json').get('seeds', [])
 live_seed_candidates = read_json(CONFIG / 'live-coding-seed-candidates.json').get('seeds', [])
 artifacts = read_json(TASK_ROOT / 'data' / 'generated-artifacts.json').get('artifacts', [])

@@ -1,0 +1,1212 @@
+{
+  "_meta": {
+    "purpose": "career-os topic 메타데이터 단일 출처 (ADR-016)",
+    "schema_version": "1",
+    "namespaces": [
+      "study-pack",
+      "study-pack-candidates",
+      "study-pack-maintainer",
+      "question-bank",
+      "master",
+      "bootcamp"
+    ]
+  },
+  "study-pack": {
+    "redis-cache-aside": {
+      "domain": "redis",
+      "outputPath": "database/redis/cache-aside.md",
+      "commitTopic": "cache-aside",
+      "appendPrompt": "Redis Cache-Aside 패턴을 백엔드 면접 대비용으로 정리한다. 단순 개념 설명을 넘어서 read-through / write-through / write-behind와 비교하고, stale data, cache stampede, eviction, TTL, invalidation, Kafka와 결합하는 방식까지 포함한다. 케어챗처럼 실사용 트래픽과 안정성이 중요한 AI/헬스케어 서비스 환경을 예시로 들어 설명한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "distributed-architecture": {
+      "domain": "architecture",
+      "outputPath": "architecture/distributed-architecture-study-pack.md",
+      "commitTopic": "distributed-architecture",
+      "appendPrompt": "분산 아키텍처를 백엔드 면접 대비용으로 정리한다. 모놀리식과의 차이, 수평 확장, CAP 관점, 데이터 정합성, 장애 전파, 운영 복잡도, MSA와의 관계를 포함한다. 추상론만 말하지 말고 커머스/플랫폼 백엔드 실무 예시를 반드시 넣는다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "distributed-transaction-outbox-pattern": {
+      "domain": "architecture",
+      "outputPath": "architecture/distributed-transaction-outbox-pattern.md",
+      "commitTopic": "distributed-transaction-outbox-pattern",
+      "appendPrompt": "분산 트랜잭션과 Outbox Pattern을 백엔드 면접 대비용으로 정리한다. 2PC를 왜 잘 쓰지 않는지, Saga 패턴과의 관계, Outbox 테이블 설계, 발행 순서 보장, 멱등 소비, 장애 복구, CDC vs polling relay까지 포함한다. 커머스/이벤트 기반 시스템 예시를 넣는다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "spring-transaction-propagation-isolation-after-commit": {
+      "domain": "spring",
+      "outputPath": "java/spring/transaction-propagation-isolation-after-commit.md",
+      "commitTopic": "transaction-propagation-isolation-after-commit",
+      "appendPrompt": "Spring 트랜잭션 전파(propagation), 격리수준(isolation), afterCommit / TransactionSynchronization 개념을 백엔드 면접 대비용으로 정리한다. @Transactional이 실제로 어떻게 동작하는지, REQUIRED / REQUIRES_NEW / NESTED 차이, 외부 시스템 호출을 트랜잭션 내부에서 하면 왜 위험한지, afterCommit이 왜 필요한지까지 넣는다. 실무 예시는 알림 발송, Kafka 발행, 배치 후처리로 구성한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "spring-aop-proxies-deep-dive": {
+      "domain": "spring",
+      "outputPath": "java/spring/spring-aop-proxies-deep-dive.md",
+      "commitTopic": "spring-aop-proxies-deep-dive",
+      "appendPrompt": "Spring AOP 프록시를 면접 대비용으로 깊게 정리한다. JDK Dynamic Proxy, CGLIB/서브클래싱 프록시, self-invocation, @Transactional/@Async/@Cacheable이 왜 프록시를 타야 하는지, 디버깅 포인트를 넣는다. Spring Boot 환경에서 개발자가 헷갈리는 포인트를 위주로 설명한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "jpa-n-plus-one": {
+      "domain": "spring",
+      "outputPath": "java/spring/jpa-n-plus-one.md",
+      "commitTopic": "jpa-n-plus-one",
+      "appendPrompt": "JPA N+1 문제를 백엔드 면접 대비용으로 정리한다. 왜 생기는지, LAZY/EAGER와 관계, fetch join, entity graph, batch size, DTO projection, 페이징과의 트레이드오프, SQL 로그와 EXPLAIN으로 어떻게 검증하는지까지 설명한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "composite-index": {
+      "domain": "mysql",
+      "outputPath": "database/mysql/composite-index.md",
+      "commitTopic": "composite-index",
+      "appendPrompt": "MySQL 복합 인덱스를 백엔드 면접 대비용으로 정리한다. leftmost prefix rule, selectivity, range 조건, order by, covering index, index condition pushdown, EXPLAIN 해석까지 넣는다. 단순 정의가 아니라 어떤 쿼리에서 왜 인덱스를 타고 못 타는지 비교 예시를 넣는다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "strategy-pattern": {
+      "domain": "architecture",
+      "outputPath": "architecture/strategy-pattern.md",
+      "commitTopic": "strategy-pattern",
+      "appendPrompt": "Strategy Pattern을 백엔드 실무/면접 대비용으로 정리한다. 단순 GoF 설명이 아니라 Spring에서 전략 패턴을 어떻게 쓰는지, if-else 분기 제거, 정책 교체, 런타임 선택, Feature Flag와 결합하는 구조까지 설명한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "template-method-pattern": {
+      "domain": "architecture",
+      "outputPath": "architecture/template-method-pattern.md",
+      "commitTopic": "template-method-pattern",
+      "appendPrompt": "Template Method Pattern을 백엔드 실무/면접 대비용으로 정리한다. 상속 기반 공통 흐름 제어, Hook 메서드, Strategy와의 차이, 언제 남용이 되는지, Spring/JdbcTemplate/Abstract* 계열 예시까지 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "spring-framework-vs-spring-boot": {
+      "domain": "spring",
+      "outputPath": "java/spring/spring-framework-vs-spring-boot.md",
+      "commitTopic": "spring-framework-vs-spring-boot",
+      "appendPrompt": "Spring Framework와 Spring Boot의 결정적인 차이를 백엔드 면접 대비용으로 정리한다. 단순히 Boot는 편하다 수준이 아니라, Spring Framework가 제공하는 핵심 컨테이너/DI/AOP/트랜잭션 기반 위에 Spring Boot가 무엇을 자동화하고 opinionated하게 제공하는지 설명한다. 설정 방식, auto-configuration, starter dependency, embedded server, actuator, externalized configuration, 실행/배포 방식, 테스트 경험, 운영 관점 차이를 포함한다. 또한 'Spring Boot를 쓴다고 Spring Framework를 몰라도 되는가?' 같은 면접형 질문에도 답할 수 있게 구성한다. Boot 없이 순수 Framework를 직접 설정하는 경우와 Boot 기반 프로젝트 개발 경험의 차이도 비교한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "stamped-lock-vs-reentrant-readwrite-lock": {
+      "domain": "java",
+      "outputPath": "java/concurrency/stamped-lock-vs-reentrant-readwrite-lock.md",
+      "commitTopic": "stamped-lock-vs-reentrant-readwrite-lock",
+      "appendPrompt": "Java의 StampedLock과 ReentrantReadWriteLock의 차이를 백엔드 면접 대비용으로 정리한다. 단순 API 비교가 아니라 읽기 많은 환경에서 왜 두 락이 다른지, optimistic read가 무엇인지, 재진입 가능 여부, condition 지원 여부, 업그레이드/다운그레이드 패턴, starvation/공정성, 사용 시 주의할 점, 실제로 어떤 상황에서 어느 쪽을 선택할지까지 설명한다. 슬롯 캐시 같은 읽기 많은 서버 상황을 예시로 들면 좋다. 코드 예시와 함께 잘못 쓰면 생기는 위험도 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "rabbitmq-basics": {
+      "domain": "rabbitmq",
+      "outputPath": "rabbitmq/rabbitmq-basics.md",
+      "commitTopic": "rabbitmq-basics",
+      "appendPrompt": "RabbitMQ 기본기를 백엔드 면접 대비용으로 정리한다. 단순 소개가 아니라 producer, consumer, broker, exchange, queue, binding, routing key, ack/nack, prefetch, durability, dead letter queue, retry, ordering, fanout/direct/topic/header exchange까지 한 흐름으로 설명한다. 또한 RabbitMQ가 어떤 문제를 풀기 좋은지, 실무에서 자주 발생하는 오해와 운영 포인트도 포함한다. Java/Spring 기반 실무 예시가 있으면 좋다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "rabbitmq-vs-kafka": {
+      "domain": "rabbitmq",
+      "outputPath": "rabbitmq/rabbitmq-vs-kafka.md",
+      "commitTopic": "rabbitmq-vs-kafka",
+      "appendPrompt": "RabbitMQ와 Kafka의 차이를 백엔드 면접 대비용으로 정리한다. 단순 비교표가 아니라 메시지 브로커 vs event streaming platform 관점, push/pull 소비 모델, ordering, replay, retention, throughput, consumer scaling, DLQ/retry 처리, exactly-once 기대치, 운영 복잡도, 어떤 상황에서 RabbitMQ를 고르고 어떤 상황에서 Kafka를 고르는지까지 설명한다. 서로를 대체재로만 보지 말고, 문제 유형에 따라 선택이 달라진다는 관점으로 정리한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "filter-interceptor-aop": {
+      "domain": "spring",
+      "outputPath": "java/spring/filter-interceptor-aop.md",
+      "commitTopic": "filter-interceptor-aop",
+      "appendPrompt": "Java Servlet Filter, Spring HandlerInterceptor, Spring AOP를 하나의 흐름으로 연결해서 이해할 수 있는 문서를 백엔드 면접 대비용으로 정리한다. 단순 정의 나열이 아니라 요청 처리 흐름에서 각각이 어디서 동작하는지, 무엇을 할 수 있고 무엇을 하면 안 되는지, 인증/인가, 로깅, 트랜잭션, 공통 에러 처리, 컨트롤러 전후 처리 같은 실무 사례를 기준으로 비교한다. Filter -> Interceptor -> AOP 순서와 책임 범위를 그림처럼 머릿속에 잡히게 설명하고, 언제 무엇을 선택해야 하는지 결정 기준까지 넣는다. 기존 spring-aop 관련 문서와 지나치게 중복하지 말고, 필요하면 짧게 연결하고 링크로 넘겨라. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "opensearch-basics": {
+      "domain": "opensearch",
+      "outputPath": "search/opensearch-basics.md",
+      "commitTopic": "opensearch-basics",
+      "appendPrompt": "OpenSearch 기본기를 백엔드 면접 대비용으로 정리한다. 단순 소개가 아니라 OpenSearch가 어떤 문제를 푸는 검색 엔진/분산 문서 저장소인지, inverted index 기본 개념, index/document/mapping의 관계, node와 cluster, primary shard와 replica shard, segment 개념, 색인과 검색이 어떻게 이뤄지는지까지 한 흐름으로 설명한다. 또한 plugin이 왜 필요한지, 어떤 유형의 플러그인이 있는지, analyzer/tokenizer/filter 개념, text와 keyword 타입 차이, multi-field를 왜 쓰는지, 정렬/집계/전문 검색에서 어떤 타입 선택이 중요한지 포함한다. 운영 관점에서는 shard를 너무 많이 쪼개면 왜 안 좋은지, replica의 역할, refresh/flush 개념, 장애 시 복구와 scale-out 감각도 넣어라. 검색 품질 관점에서는 한글/형태소 분석이 왜 analyzer에 크게 의존하는지도 짚어라. 기존 문서와 겹치지 않게 OpenSearch 입문 허브 역할로 쓰되, 실무 예시와 면접 답변 프레임도 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "redis-advanced-patterns": {
+      "domain": "redis",
+      "outputPath": "database/redis/redis-advanced-patterns.md",
+      "commitTopic": "redis-advanced-patterns",
+      "appendPrompt": "Redis 심화 패턴을 백엔드 면접 대비용으로 정리한다. 단순 자료구조 소개가 아니라 Redis를 실무 시스템에서 어떻게 패턴으로 쓰는지 중심으로 설명한다. Cache-Aside 이후 단계로서 distributed lock, rate limiting, idempotency key, delayed queue/stream, pub-sub vs stream, leaderboard/sorted set, session/token 저장, hot key 대응, cache stampede 방어, write-through/write-behind를 언제 고려할지까지 포함한다. 각 패턴마다 무엇을 해결하는지, 어떤 자료구조나 명령이 핵심인지, 흔한 함정은 무엇인지, 언제 Redis를 쓰면 안 되는지도 넣는다. 기존 cache-aside 문서와 지나치게 겹치지 말고 필요하면 짧게 연결하고 링크로 넘겨라. 커머스/플랫폼 백엔드 실무 예시와 면접 답변 프레임도 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "api-versioning-backward-compatibility": {
+      "domain": "architecture",
+      "outputPath": "architecture/api-versioning-backward-compatibility.md",
+      "commitTopic": "api-versioning-backward-compatibility",
+      "appendPrompt": "API versioning, backward compatibility, consumer-driven change, deprecation, schema evolution, 모바일 앱 호환성까지 백엔드 면접 대비용으로 정리한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "aurora-serverless-connection-pool-transaction-budget": {
+      "domain": "mysql",
+      "outputPath": "database/mysql/aurora-serverless-connection-pool-transaction-budget.md",
+      "commitTopic": "aurora-serverless-connection-pool-transaction-budget",
+      "appendPrompt": "Aurora Serverless 환경의 커넥션 풀·트랜잭션 예산 설계를 백엔드 면접 대비용으로 정리한다. 단순히 커넥션 풀 개념만 설명하지 말고 Aurora Serverless(v1/v2 차이 포함) 특성과 max_connections 제약, scale-up/scale-down 지연, cold start/ACU 관점, HikariCP 같은 애플리케이션 풀과 RDS Proxy 조합 이유, 읽기/쓰기 부하와 짧은 트랜잭션 유지 원칙까지 연결한다. 또한 트랜잭션 예산이라는 표현을 실제 운영 감각으로 풀어서 lock 유지 시간, 외부 IO 분리, timeout, retry, burst traffic 상황에서 어떤 예산 감각으로 설계하는지 설명한다. 케어챗처럼 AI Agent API와 기존 백엔드가 함께 동작하는 서비스 환경 예시를 포함하고, 면접에서 답변할 수 있는 실무형 프레임으로 정리한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "kafka-operations-deepen": {
+      "domain": "kafka",
+      "outputPath": "kafka/kafka-operations-deepen.md",
+      "commitTopic": "kafka-operations-deepen",
+      "appendPrompt": "Kafka 운영 디테일을 백엔드 면접 대비용으로 정리한다. 파티션 키 선택, consumer rebalance, lag 관찰, retry, DLQ, ordering trade-off, exactly-once 기대치, 장애 복구를 중심으로 설명한다. 기존 kafka-design 문서와 과도하게 중복하지 말고 심화 문서 역할로 쓴다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "opensearch-query-design": {
+      "domain": "opensearch",
+      "outputPath": "search/opensearch-query-design.md",
+      "commitTopic": "opensearch-query-design",
+      "appendPrompt": "OpenSearch 쿼리 설계, analyzer 선택, relevance tuning, bool query, filter vs must, boosting, synonym, pagination, shard 영향까지 백엔드 면접 대비용으로 정리한다. 상품 검색 실무 예시를 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "resume-experience-one-minute-answers": {
+      "domain": "interview",
+      "outputPath": "interview/experience-based/one-minute-answer-playbook.md",
+      "commitTopic": "resume-experience-one-minute-answers",
+      "appendPrompt": "후보자의 주요 경험(캐시 정합성, Outbox, RAG 배치)을 1분 답변과 꼬리 질문 대응 형태로 정리한 면접용 문서를 작성한다. 기술 설명과 경험 설명이 함께 보이게 구성한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "interview-pressure-question-defense": {
+      "domain": "interview",
+      "outputPath": "interview/experience-based/pressure-question-defense.md",
+      "commitTopic": "interview-pressure-question-defense",
+      "appendPrompt": "면접에서 받기 쉬운 압박 질문(약점 캐묻기, 경험 검증, why-this-company, 부정적 가정 시나리오)을 1분 답변과 꼬리 질문 대응 형태로 정리한다. 후보자 실제 경험과 자기평가 약점(DB 등)을 활용해 솔직-방어 균형을 잡는 패턴을 코칭한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "redis-distributed-lock-deepen": {
+      "domain": "redis",
+      "outputPath": "database/redis/redis-distributed-lock.md",
+      "commitTopic": "redis-distributed-lock",
+      "appendPrompt": "Redis 분산 락(SETNX/Lua/Redlock)을 백엔드 면접 대비용으로 정리한다. 단순 구현 소개를 넘어 fencing token 필요성, RedLock 비판(Martin Kleppmann vs antirez), 락 만료/갱신, 클라이언트 장애 시나리오, 단일 인스턴스 vs 클러스터, Redisson과의 비교까지 다룬다. 후보자가 실전 운영 경험이 있는 Redis Streams/RediSearch와 자연스럽게 연결되는 톤으로 쓴다. 기존 redis-advanced-patterns 문서와 지나치게 중복하지 말고 분산 락 단일 주제 심화로 쓴다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "review-cache-coherency-cluster": {
+      "domain": "interview",
+      "outputPath": "interview/experience-based/review-cache-coherency-cluster.md",
+      "commitTopic": "review-cache-coherency-cluster",
+      "appendPrompt": "이미 작성된 study-pack(database/redis/cache-aside.md, database/redis/redis-advanced-patterns.md)과 후보자의 실전 경험(Ehcache JSR-107 + RabbitMQ Fanout 기반 다중 서버 캐시 정합성, NSC 슬롯팀 RCC 백그라운드 캐시)을 한 시야로 묶어 1분 답변/꼬리 질문/실패 시나리오까지 review 형태로 정리한다. 새 개념을 도입하지 말고 기존 문서를 짧게 인용·연결한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "redis-pub-sub-patterns": {
+      "domain": "redis",
+      "outputPath": "database/redis/pub-sub-patterns.md",
+      "commitTopic": "redis-pub-sub-patterns",
+      "appendPrompt": "Redis Pub/Sub의 동작 원리(채널 구독, 메시지 브로드캐스트)와 실전 패턴(캐시 무효화 알림, 실시간 이벤트 전파, 세션 클러스터링)을 중심으로 study-pack을 작성하라. Kafka/RabbitMQ 대비 Redis Pub/Sub의 장단점(영속성 없음, at-most-once 전달, 낮은 레이턴시)을 명확히 구분하고, 커머스 환경에서 어떤 경우 Pub/Sub를 선택하고 어떤 경우 메시지 큐를 선택하는지 판단 기준을 제시하라. 문서 제목은 반드시 [초안]으로 시작하며, 코드 예제는 Spring Data Redis 기준으로 작성한다."
+    },
+    "spring-security-oauth2-jwt-auth": {
+      "domain": "security",
+      "outputPath": "security/spring-security-oauth2-jwt.md",
+      "commitTopic": "spring-security-oauth2-jwt-auth",
+      "appendPrompt": "Spring Security OAuth2와 JWT를 이용한 상용 인증 시스템 설계 전략을 다루는 study-pack을 작성하라. OAuth2 Authorization Code/Client Credentials grant 흐름, JWT access token + refresh token 구조, Spring Security OAuth2 Resource Server 설정, 토큰 검증 필터 체인을 설명하고, 실전 보안 이슈(refresh token rotation, XSS/CSRF 방어, 토큰 탈취 시 대응, 로그아웃 처리)와 해결 방법을 제시하라. 커머스 멀티 클라이언트 환경(모바일 앱, 백오피스, 외부 API 연동)에서 각각 어떤 grant를 선택하는지 판단 기준을 포함하라. 문서 제목은 반드시 [초안]으로 시작하며, Spring Boot 3.x + Spring Security 6.x 기준으로 작성한다."
+    },
+    "redis-cluster-operations": {
+      "domain": "redis",
+      "outputPath": "database/redis/redis-cluster-operations.md",
+      "commitTopic": "redis-cluster",
+      "appendPrompt": "Redis Cluster의 샤딩 메커니즘(16384 슬롯), 노드 추가/제거 절차, 자동 페일오버와 수동 페일오버 시나리오, 그리고 운영 시 주의사항(네트워크 파티션, 슬롯 마이그레이션 중 트래픽 처리)을 다루는 study-pack을 작성하세요. 문서 제목은 반드시 [초안]으로 시작하며, AI Agent/헬스케어 서비스처럼 실시간 응답성과 안정성이 중요한 환경에서 Redis Cluster를 운영할 때 알아야 할 핵심 내용을 담아야 합니다."
+    },
+    "review-mysql-index-design": {
+      "domain": "mysql",
+      "outputPath": "database/mysql/review-index-design.md",
+      "commitTopic": "mysql-index-review",
+      "appendPrompt": "기존의 b-tree-index.md, composite-index 관련 문서, 그리고 커버링 인덱스 내용을 바탕으로, MySQL 인덱스 설계의 핵심 원칙(B+Tree 구조, 복합 인덱스 컬럼 순서, 커버링 인덱스 활용)만 압축한 1페이지 복습용 study-pack을 작성하세요. 문서 제목은 반드시 [초안]으로 시작하며, 인덱스 설계 체크리스트와 흔한 실수를 불릿으로 정리해야 합니다."
+    },
+    "llm-tool-calling-agent-workflow": {
+      "domain": "ai-agent",
+      "outputPath": "ai/agent/llm-tool-calling-agent-workflow.md",
+      "commitTopic": "llm-tool-calling-agent-workflow",
+      "appendPrompt": "LLM Tool Calling과 Agent Workflow 설계를 케어챗 AI Agent 개발자 면접 대비용으로 정리한다. intent classification, tool registry, schema validation, permission check, fallback, retry, audit log, Java/Spring 백엔드 연동까지 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "multi-turn-memory-healthcare-agent": {
+      "domain": "ai-agent",
+      "outputPath": "ai/agent/multi-turn-memory-healthcare-agent.md",
+      "commitTopic": "multi-turn-memory-healthcare-agent",
+      "appendPrompt": "헬스케어 AI Agent의 멀티턴 메모리 설계를 면접 대비용으로 정리한다. conversation state, user profile memory, short/long-term memory, privacy minimization, consent, expiration, deletion, prompt injection 방어를 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "outbox-inbox-pattern-deepen": {
+      "domain": "message-queue",
+      "outputPath": "architecture/outbox-inbox-pattern.md",
+      "commitTopic": "outbox-inbox-pattern-deepen",
+      "appendPrompt": "Outbox/Inbox Pattern 심화를 백엔드 면접 대비용으로 정리한다. transaction boundary, polling/publishing, duplicate handling, ordering, replay, monitoring, Kafka/SQS 적용 차이를 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "hexagonal-clean-architecture-spring": {
+      "domain": "architecture",
+      "outputPath": "architecture/hexagonal-clean-architecture-spring.md",
+      "commitTopic": "hexagonal-clean-architecture-spring",
+      "appendPrompt": "CJ푸드빌 디지털 채널 Back-end 지원 대비용으로 Hexagonal Architecture와 Clean Architecture를 Spring 백엔드 관점에서 정리한다. 단순 이론이 아니라 Controller/Application Service/Domain/Port/Adapter/Repository 경계, JPA 엔티티와 도메인 모델 분리 여부, 트랜잭션 경계, DTO 매핑, 테스트 전략, 과설계 기준, 레거시/커머스 서비스에서 적용하는 방법을 포함한다. 후보자의 SlotTemplate, RccSpinResultAnalyzer, Provider 전략 패턴 경험을 포트-어댑터적 사고로 설명하는 면접 답변 예시를 넣는다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "mybatis-jpa-tradeoffs": {
+      "domain": "database",
+      "outputPath": "database/mybatis-jpa-tradeoffs.md",
+      "commitTopic": "mybatis-jpa-tradeoffs",
+      "appendPrompt": "CJ푸드빌 디지털 채널 Back-end 지원 대비용으로 MyBatis 운영 패턴과 JPA/Hibernate와의 트레이드오프를 정리한다. XML Mapper, resultMap, 동적 SQL, 페이징, N+1, 복잡한 조회, 트랜잭션, 캐시, SQL 가시성, 유지보수성, 레거시 시스템에서 MyBatis를 만났을 때의 대응 전략을 포함한다. JPA 중심 경험자가 면접에서 MyBatis 경험 부족을 어떻게 정직하게 보완해 답변할지 예시를 넣는다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "ecommerce-order-payment-domain-modeling": {
+      "domain": "architecture",
+      "outputPath": "architecture/ecommerce-order-payment-domain-modeling.md",
+      "commitTopic": "ecommerce-order-payment-domain-modeling",
+      "appendPrompt": "CJ푸드빌/F&B/e-Commerce 백엔드 지원 대비용으로 주문, 결제, 쿠폰, 프로모션, 회원, 매장/픽업/배달 도메인 모델링을 정리한다. 주문 상태머신, 결제 승인/취소/환불, 재고/매장 가용성, 쿠폰 중복 사용 방지, 프로모션 정책, 정합성, 멱등성, Outbox/Saga 적용, 장애 복구, 운영 모니터링까지 포함한다. 후보자의 Kafka Outbox, 캐시 정합성, 장애 대응 경험을 e-Commerce 언어로 번역하는 답변 예시를 넣는다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "legacy-jsp-jquery-api-coexistence": {
+      "domain": "architecture",
+      "outputPath": "architecture/legacy-jsp-jquery-api-coexistence.md",
+      "commitTopic": "legacy-jsp-jquery-api-coexistence",
+      "appendPrompt": "CJ푸드빌 디지털 채널 Back-end 지원 대비용으로 JSP/jQuery 레거시 화면과 신규 API/모바일 앱/SPA가 공존하는 환경의 백엔드 운영 전략을 정리한다. 세션 기반 인증과 토큰/API 인증 공존, 화면 렌더링과 REST API 경계, 점진적 마이그레이션, Strangler Fig 패턴, 레거시 변경 리스크 줄이기, 테스트/모니터링, 장애 대응, 보안 체크리스트를 포함한다. JSP/jQuery 실무 경험이 적은 Java/Spring 백엔드 개발자가 면접에서 어떻게 정직하고 설득력 있게 답변할지 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "fnb-ecommerce-domain-overview": {
+      "domain": "architecture",
+      "outputPath": "architecture/fnb-ecommerce-domain-overview.md",
+      "commitTopic": "fnb-ecommerce-domain-overview",
+      "appendPrompt": "CJ푸드빌 디지털 채널 Back-end 지원 대비용으로 F&B/e-Commerce 도메인 전체 그림을 정리한다. 사용자 채널(앱/웹), 회원, 브랜드/매장, 메뉴, 옵션, 주문, 결제, 쿠폰/프로모션, 픽업/배달, 클레임/환불, 정산, 백오피스, 외부 연동(PG/배달/알림)을 포함한다. 단순 용어집이 아니라 4년차+ 서버 개발자가 면접에서 도메인 이해를 보여줄 수 있도록 bounded context, 핵심 엔티티, 데이터 흐름, 자주 터지는 장애/정합성 이슈까지 포함한다. 후보자의 캐시 정합성, Kafka Outbox, 장애 대응 경험을 F&B 디지털 채널 언어로 번역하는 답변 예시를 넣는다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "fnb-order-store-pickup-state-machine": {
+      "domain": "architecture",
+      "outputPath": "architecture/fnb-order-store-pickup-state-machine.md",
+      "commitTopic": "fnb-order-store-pickup-state-machine",
+      "appendPrompt": "CJ푸드빌/F&B 디지털 채널 지원 대비용으로 주문, 매장, 픽업/배달 상태머신 설계를 정리한다. 주문 생성, 메뉴/옵션 선택, 매장 가용성, 영업시간, 재고/품절, 주문 접수, 제조중, 픽업대기, 완료, 취소, 노쇼, 부분 실패를 포함한다. 상태 전이 표, 불변 조건, 동시성/중복 요청/멱등성, 모바일 앱 재시도, 매장 POS 연동 지연, Outbox 이벤트 설계, 운영 모니터링까지 포함한다. 4년차+ 백엔드 면접 답변 수준으로 작성한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "fnb-coupon-promotion-membership-design": {
+      "domain": "architecture",
+      "outputPath": "architecture/fnb-coupon-promotion-membership-design.md",
+      "commitTopic": "fnb-coupon-promotion-membership-design",
+      "appendPrompt": "CJ푸드빌/F&B/e-Commerce 지원 대비용으로 쿠폰, 프로모션, 멤버십, 포인트 설계를 정리한다. 쿠폰 발급/사용/복구, 중복 사용 방지, 선착순 이벤트, 브랜드/매장/메뉴별 적용 조건, 할인 우선순위, 프로모션 정책 엔진, 포인트 적립/차감, 동시성, Redis/RDBMS 역할 분리, 정합성, 감사로그, CS 복구 운영까지 포함한다. 후보자의 캐시 정합성, StampedLock, RabbitMQ/Kafka 경험을 프로모션/멤버십 설계로 연결하는 면접 답변 예시를 넣는다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "fnb-payment-refund-settlement-operations": {
+      "domain": "architecture",
+      "outputPath": "architecture/fnb-payment-refund-settlement-operations.md",
+      "commitTopic": "fnb-payment-refund-settlement-operations",
+      "appendPrompt": "CJ푸드빌/F&B/e-Commerce 지원 대비용으로 결제, 취소, 환불, 정산 운영을 정리한다. PG 승인/매입/취소/부분취소, 주문-결제 상태 분리, 결제 성공 후 주문 실패, 주문 성공 후 결제 실패, 재시도, 멱등키, Outbox/Saga, 환불 처리, 매장/브랜드/본사 정산, 대사, 장애 복구, 운영 알림, 감사로그를 포함한다. 후보자의 Kafka Outbox Pattern과 트랜잭션 경계 경험을 결제 도메인 언어로 번역하는 답변 예시를 넣는다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "fnb-ecommerce-operations-monitoring-interview": {
+      "domain": "devops",
+      "outputPath": "devops/fnb-ecommerce-operations-monitoring-interview.md",
+      "commitTopic": "fnb-ecommerce-operations-monitoring-interview",
+      "appendPrompt": "CJ푸드빌 디지털 채널 Back-end 지원 대비용으로 F&B/e-Commerce 운영 장애 대응과 모니터링을 정리한다. 피크타임 트래픽, 이벤트/쿠폰 오픈, 매장 POS 연동 장애, PG 장애, 알림 장애, 재고/품절 동기화 지연, 캐시 불일치, 배치 실패, 사용자 CS 증가를 포함한다. 핵심 지표, 알림 기준, 대시보드, 로그/traceId, 장애 대응 첫 5분, postmortem, 재발 방지, 면접 예상 질문 답변을 포함한다. 후보자의 graceful shutdown 503 대응, 캐시 정합성, traceId 재전송 경험을 운영형 프로덕트 백엔드로 포지셔닝한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "cj-foodville-commerce-domain-design-interview": {
+      "domain": "architecture",
+      "outputPath": "architecture/cj-foodville-commerce-domain-design-interview.md",
+      "commitTopic": "cj-foodville-commerce-domain-design-interview",
+      "appendPrompt": "CJ푸드빌 디지털 채널 Back-end 지원 대비용으로 커머스/F&B 도메인 설계 능력을 면접에서 어필하는 방법을 정리한다. 슬롯 도메인 경험(SlotTemplate, BaseSlotService, RCC, StampedLock, 정책/전략 분리)을 주문/결제/쿠폰/매장 상태 설계 경험으로 번역하는 답변을 포함한다. 도메인 모델링, bounded context, 상태 전이, 불변 조건, 예외 복구, 운영 관측을 4년차+ 백엔드 관점으로 정리한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "commerce-order-state-consistency-fundamentals": {
+      "domain": "architecture",
+      "outputPath": "architecture/commerce-order-state-consistency-fundamentals.md",
+      "commitTopic": "commerce-order-state-consistency-fundamentals",
+      "appendPrompt": "커머스 주문 상태와 데이터 정합성 기본기를 CJ푸드빌 지원 대비용으로 정리한다. 주문 생성/접수/준비/완료/취소/환불 상태, 상태 전이 불변 조건, 중복 요청, 모바일 재시도, 동시성, 트랜잭션 경계, 이벤트 발행, 장애 복구, 면접 예상 질문을 포함한다. 기본기에서 털리지 않도록 DB 트랜잭션/락/격리수준과 연결해 설명한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "payment-idempotency-transaction-basics": {
+      "domain": "architecture",
+      "outputPath": "architecture/payment-idempotency-transaction-basics.md",
+      "commitTopic": "payment-idempotency-transaction-basics",
+      "appendPrompt": "결제 도메인의 멱등성, 트랜잭션, 재시도 기본기를 CJ푸드빌/F&B 커머스 지원 대비용으로 정리한다. idempotency key, 주문-결제 상태 분리, PG 승인/취소/부분취소, 네트워크 타임아웃, 중복 결제 방지, Outbox/Saga, DB unique constraint, 재처리, 감사로그, 면접 답변 예시를 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "coupon-promotion-concurrency-basics": {
+      "domain": "architecture",
+      "outputPath": "architecture/coupon-promotion-concurrency-basics.md",
+      "commitTopic": "coupon-promotion-concurrency-basics",
+      "appendPrompt": "쿠폰/프로모션 동시성과 정합성 기본기를 CJ푸드빌/F&B 커머스 지원 대비용으로 정리한다. 선착순 쿠폰, 중복 사용 방지, 발급/사용/복구, Redis vs RDBMS 역할, 분산락, unique key, optimistic/pessimistic lock, 이벤트 오픈 피크 트래픽, CS 복구, 면접 예상 질문을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "mysql-index-explain-commerce-api": {
+      "domain": "database",
+      "outputPath": "database/mysql/mysql-index-explain-commerce-api.md",
+      "commitTopic": "mysql-index-explain-commerce-api",
+      "appendPrompt": "커머스 API 성능 개선을 위한 MySQL 인덱스와 EXPLAIN 기본기를 CJ푸드빌 지원 대비용으로 정리한다. 주문 목록/회원 쿠폰/매장 메뉴 조회 예시, 복합 인덱스, 커버링 인덱스, leftmost prefix, filesort, range 조건, cardinality, pagination, slow query, 면접에서 EXPLAIN을 읽는 순서를 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "jpa-n-plus-one-commerce-read-model": {
+      "domain": "database",
+      "outputPath": "database/jpa-n-plus-one-commerce-read-model.md",
+      "commitTopic": "jpa-n-plus-one-commerce-read-model",
+      "appendPrompt": "JPA N+1과 커머스 조회 모델 기본기를 CJ푸드빌 지원 대비용으로 정리한다. 주문 상세/주문 목록/메뉴 옵션/쿠폰 조회 예시, fetch join, EntityGraph, batch size, DTO projection, pagination 한계, OSIV, read model 분리, MyBatis와의 선택 기준, 면접 답변을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "spring-transaction-propagation-commerce": {
+      "domain": "spring",
+      "outputPath": "java/spring/spring-transaction-propagation-commerce.md",
+      "commitTopic": "spring-transaction-propagation-commerce",
+      "appendPrompt": "Spring 트랜잭션 전파와 커머스 주문/결제 시나리오를 CJ푸드빌 지원 대비용으로 정리한다. REQUIRED, REQUIRES_NEW, NESTED, rollbackOnly, checked/unchecked exception, self-invocation, @TransactionalEventListener(AFTER_COMMIT), Outbox 실패 저장, 면접 함정 질문과 후보자의 Kafka Outbox 경험 연결 답변을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "java-concurrency-locks-commerce-cache": {
+      "domain": "java",
+      "outputPath": "java/java-concurrency-locks-commerce-cache.md",
+      "commitTopic": "java-concurrency-locks-commerce-cache",
+      "appendPrompt": "Java 동시성 기본기와 커머스 캐시/정책 갱신 시나리오를 CJ푸드빌 지원 대비용으로 정리한다. synchronized, ReentrantReadWriteLock, StampedLock, optimistic read, volatile, AtomicReference, thread safety, cache refresh 중 조회, 후보자의 슬롯 정적 데이터 캐시 경험을 커머스 메뉴/프로모션 정책 캐시로 번역하는 답변을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "redis-cache-invalidation-commerce": {
+      "domain": "redis",
+      "outputPath": "database/redis/redis-cache-invalidation-commerce.md",
+      "commitTopic": "redis-cache-invalidation-commerce",
+      "appendPrompt": "Redis/캐시 무효화 기본기와 커머스 메뉴/프로모션/회원 캐시 정합성을 CJ푸드빌 지원 대비용으로 정리한다. cache-aside, write-through, TTL, pub/sub, fanout invalidation, stale data, stampede, distributed lock, 다중 서버 캐시 정합성, RabbitMQ Fanout 경험 연결 답변을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "http-session-cookie-api-auth-basics": {
+      "domain": "web",
+      "outputPath": "web/http-session-cookie-api-auth-basics.md",
+      "commitTopic": "http-session-cookie-api-auth-basics",
+      "appendPrompt": "웹/앱 디지털 채널 백엔드 기본기인 HTTP, Cookie, Session, Token/API 인증을 CJ푸드빌 지원 대비용으로 정리한다. JSP/jQuery 레거시 세션과 모바일 API 토큰 공존, CSRF/CORS, SameSite, stateless vs stateful, refresh token, 인증 장애, 면접 기본 질문을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "rest-api-versioning-mobile-compatibility": {
+      "domain": "architecture",
+      "outputPath": "architecture/rest-api-versioning-mobile-compatibility.md",
+      "commitTopic": "rest-api-versioning-mobile-compatibility",
+      "appendPrompt": "모바일 앱/웹 디지털 채널에서 REST API 버저닝과 하위 호환성 기본기를 CJ푸드빌 지원 대비용으로 정리한다. 앱 강제 업데이트 어려움, additive change, enum 확장, nullable 필드, deprecation, consumer-driven contract, rollback, API gateway, 면접 답변을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "commerce-observability-first-five-minutes": {
+      "domain": "devops",
+      "outputPath": "devops/commerce-observability-first-five-minutes.md",
+      "commitTopic": "commerce-observability-first-five-minutes",
+      "appendPrompt": "커머스/F&B 디지털 채널 장애 대응 첫 5분과 관측성 기본기를 CJ푸드빌 지원 대비용으로 정리한다. 주문 실패율, 결제 실패율, PG/POS 지연, 쿠폰 오류, latency, error rate, saturation, log/metric/trace, traceId, dashboard, alert threshold, postmortem, 후보자의 graceful shutdown 503 해결 경험 연결 답변을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "clean-architecture-pragmatic-spring-commerce": {
+      "domain": "architecture",
+      "outputPath": "architecture/clean-architecture-pragmatic-spring-commerce.md",
+      "commitTopic": "clean-architecture-pragmatic-spring-commerce",
+      "appendPrompt": "Clean/Hexagonal Architecture를 커머스 Spring 서비스에 실용적으로 적용하는 방법을 CJ푸드빌 지원 대비용으로 정리한다. 과설계 방지, CRUD와 복잡 도메인의 구분, application service, domain service, port/adapter, repository, transaction script vs domain model, 테스트 경계, 면접 답변을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "mybatis-dynamic-sql-resultmap-basics": {
+      "domain": "database",
+      "outputPath": "database/mybatis-dynamic-sql-resultmap-basics.md",
+      "commitTopic": "mybatis-dynamic-sql-resultmap-basics",
+      "appendPrompt": "MyBatis 기본기와 운영 패턴을 CJ푸드빌 지원 대비용으로 정리한다. XML mapper, parameterType, resultMap, 동적 SQL(if/choose/foreach), 페이징, batch, SQL injection 방지, JPA와 혼용 시 트랜잭션, 레거시 시스템에서 MyBatis를 빠르게 읽고 수정하는 방법, 면접 답변을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    },
+    "commerce-interview-answer-slot-experience-mapping": {
+      "domain": "interview",
+      "outputPath": "interview/commerce-interview-answer-slot-experience-mapping.md",
+      "commitTopic": "commerce-interview-answer-slot-experience-mapping",
+      "appendPrompt": "CJ푸드빌 디지털 채널 Back-end 면접 대비용으로 슬롯 개발팀 경험을 커머스/F&B 도메인 설계 능력으로 매핑하는 답변집을 작성한다. SlotTemplate/BaseSlotService/RCC/캐시 정합성/StampedLock/AliasMethod/Kafka Outbox를 주문/결제/쿠폰/메뉴/매장 정책 설계로 번역한다. 자기소개, 왜 CJ푸드빌인가, 도메인 전환 우려, 기본기 검증 질문 답변을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    }
+  },
+  "study-pack-candidates": {
+    "_comment": "Expanded topic reservoir for morning recommendations. These are candidate topics, not yet promoted into the main study-pack topic config.",
+    "topics": [
+      {
+        "key": "rag-evaluation-hallucination-guardrails",
+        "title": "RAG 평가와 Hallucination 방어 전략",
+        "domain": "rag",
+        "tag": "new",
+        "difficulty": "상",
+        "estMinutes": 60,
+        "whyNow": [
+          "RAG 파이프라인 경험을 케어챗의 안전한 답변 품질 관리로 확장한다",
+          "의료 서비스에서는 근거 표시, 답변 제한, 불확실성 처리, escalation이 특히 중요하다"
+        ],
+        "promotionTarget": {
+          "domain": "rag",
+          "outputPath": "ai/rag/rag-evaluation-hallucination-guardrails.md",
+          "commitTopic": "rag-evaluation-hallucination-guardrails",
+          "appendPrompt": "RAG 평가와 hallucination 방어 전략을 케어챗 AI Agent 면접 대비용으로 정리한다. retrieval metrics, answer groundedness, citation, refusal/escalation, prompt injection, red teaming, offline/online evaluation을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      },
+      {
+        "key": "llm-serving-cost-latency-routing",
+        "title": "LLM Serving 비용·지연·모델 라우팅 설계",
+        "domain": "llm-serving",
+        "tag": "new",
+        "difficulty": "상",
+        "estMinutes": 55,
+        "whyNow": [
+          "공고의 LLM 서빙 아키텍처, 트래픽 대응, 비용 최적화에 직접 대응한다",
+          "AI 웹툰 MVP의 fallback/rate limit/context caching 경험을 면접 답변으로 정리하기 좋다"
+        ],
+        "promotionTarget": {
+          "domain": "llm-serving",
+          "outputPath": "ai/serving/llm-serving-cost-latency-routing.md",
+          "commitTopic": "llm-serving-cost-latency-routing",
+          "appendPrompt": "LLM Serving 비용·지연·모델 라우팅 설계를 케어챗 AI Agent 면접 대비용으로 정리한다. timeout budget, model routing, fallback, rate limit, cache, batching, streaming, cost observability, SLA/SLO를 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      },
+      {
+        "key": "python-fastapi-ai-service-architecture",
+        "title": "Python FastAPI 기반 AI Service 아키텍처",
+        "domain": "python",
+        "tag": "new",
+        "difficulty": "중상",
+        "estMinutes": 45,
+        "whyNow": [
+          "Python 주력 경험 부족을 포지션 요구사항에 맞춰 빠르게 보완해야 한다",
+          "FastAPI/async/background task/model gateway 구조를 알면 Java 백엔드 연동 전략을 더 설득력 있게 말할 수 있다"
+        ],
+        "promotionTarget": {
+          "domain": "python",
+          "outputPath": "python/fastapi-ai-service-architecture.md",
+          "commitTopic": "python-fastapi-ai-service-architecture",
+          "appendPrompt": "Python FastAPI 기반 AI Service 아키텍처를 케어챗 지원 대비용으로 정리한다. async endpoint, background task, model gateway, streaming response, dependency injection, pydantic schema, observability, Java Spring 백엔드 연동을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      },
+      {
+        "key": "healthcare-mydata-privacy-audit",
+        "title": "헬스케어 마이데이터 개인정보·권한·감사로그 설계",
+        "domain": "security",
+        "tag": "new",
+        "difficulty": "상",
+        "estMinutes": 55,
+        "whyNow": [
+          "의료 마이데이터 서비스는 기능보다 신뢰성, 권한, 감사 가능성이 핵심이다",
+          "KYC/개인정보 처리 경험을 헬스케어 도메인 적응력으로 연결할 수 있다"
+        ],
+        "promotionTarget": {
+          "domain": "security",
+          "outputPath": "security/healthcare-mydata-privacy-audit.md",
+          "commitTopic": "healthcare-mydata-privacy-audit",
+          "appendPrompt": "헬스케어 마이데이터 개인정보·권한·감사로그 설계를 면접 대비용으로 정리한다. consent, purpose limitation, least privilege, audit log, data retention, masking, access review, incident response를 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      },
+      {
+        "key": "aurora-serverless-connection-pool-budget",
+        "title": "Aurora Serverless 환경의 커넥션 풀·트랜잭션 예산 설계",
+        "domain": "database",
+        "tag": "new",
+        "difficulty": "상",
+        "estMinutes": 45,
+        "whyNow": [
+          "MySQL 인덱스 설명에서 한 단계 나아가 DB 운영/예산 관점 답변을 만들 수 있다",
+          "커머스 트래픽에서 pool, timeout, burst 대응을 말할 수 있으면 실무감이 좋아진다"
+        ],
+        "promotionTarget": {
+          "domain": "mysql",
+          "outputPath": "database/mysql/aurora-serverless-connection-pool-budget.md",
+          "commitTopic": "aurora-serverless-connection-pool-budget",
+          "appendPrompt": "Aurora Serverless 환경에서 커넥션 풀, 트랜잭션 길이, timeout, burst 트래픽 대응, read/write 분리, pool exhaustion, 장애 시 fallback까지 백엔드 면접 대비용으로 정리한다. 단순 Aurora 소개가 아니라 Spring/HikariCP/JPA 트랜잭션과 연결해 실무적으로 설명한다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      },
+      {
+        "key": "sqs-retry-dlq-idempotency",
+        "title": "SQS 알림 시스템 재시도·DLQ·중복처리 설계",
+        "domain": "message-queue",
+        "tag": "new",
+        "difficulty": "중상",
+        "estMinutes": 50,
+        "whyNow": [
+          "대규모 백엔드/커머스·알림 시스템에서 폭넓게 쓰이는 주제다",
+          "Kafka 경험을 SQS 재시도/멱등 설계로 확장하면 메시징 답변 폭이 넓어진다"
+        ],
+        "promotionTarget": {
+          "domain": "architecture",
+          "outputPath": "architecture/sqs-retry-dlq-idempotency.md",
+          "commitTopic": "sqs-retry-dlq-idempotency",
+          "appendPrompt": "SQS 기반 알림 또는 비동기 처리 시스템에서 retry, DLQ, visibility timeout, idempotency key, 중복 소비 방지, 순서 보장 한계, 운영 모니터링까지 백엔드 면접 대비용으로 정리한다. Kafka와의 차이도 짧게 비교한다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      },
+      {
+        "key": "feature-flag-shadow-mode-circuit-breaker",
+        "title": "Feature Flag + Shadow Mode + Circuit Breaker 무중단 전환",
+        "domain": "architecture",
+        "tag": "new",
+        "difficulty": "상",
+        "estMinutes": 60,
+        "whyNow": [
+          "특정 회사에 묶이지 않고 운영 안정성 면접에서 범용성이 높은 주제다",
+          "운영 설계와 장애 대응을 함께 말할 수 있는 축이라 답변 밀도가 좋다"
+        ],
+        "promotionTarget": {
+          "domain": "architecture",
+          "outputPath": "architecture/feature-flag-shadow-mode-circuit-breaker.md",
+          "commitTopic": "feature-flag-shadow-mode-circuit-breaker",
+          "appendPrompt": "Feature Flag, Shadow Mode, 점진 롤아웃, Circuit Breaker, Retry, Timeout, Jitter를 묶어서 무중단 전환 전략을 백엔드 면접 대비용으로 정리한다. 대규모 트래픽 커머스 서비스 운영 맥락과 함께 설명한다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      },
+      {
+        "key": "commerce-domain-modeling-order-inventory-display",
+        "title": "커머스 도메인 모델링: 주문·재고·전시 API 경계",
+        "domain": "architecture",
+        "tag": "new",
+        "difficulty": "중상",
+        "estMinutes": 50,
+        "whyNow": [
+          "JPA 경험을 도메인 설계 답변으로 연결할 수 있다",
+          "커머스·콘텐츠·핀테크 등 여러 백엔드 면접에서 서비스 경계 설계 질문 대응에 직접적이다"
+        ],
+        "promotionTarget": {
+          "domain": "architecture",
+          "outputPath": "architecture/commerce-domain-modeling-order-inventory-display.md",
+          "commitTopic": "commerce-domain-modeling-order-inventory-display",
+          "appendPrompt": "커머스 도메인에서 주문, 재고, 전시 API 경계와 Aggregate 경계를 어떻게 나눌지 백엔드 면접 대비용으로 정리한다. JPA/도메인 모델링, 트랜잭션 경계, 이벤트 연동 관점까지 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      },
+      {
+        "key": "spring-batch-vs-event-driven",
+        "title": "Spring Batch vs Event-Driven 처리 선택 기준",
+        "domain": "spring",
+        "tag": "new",
+        "difficulty": "중상",
+        "estMinutes": 45,
+        "whyNow": [
+          "배치/RAG/데이터 처리 경험과 비동기 설계를 한 축으로 묶어 설명할 수 있다",
+          "정기 작업과 실시간 처리의 선택 기준을 물을 때 답하기 좋다"
+        ],
+        "promotionTarget": {
+          "domain": "spring",
+          "outputPath": "java/spring/spring-batch-vs-event-driven.md",
+          "commitTopic": "spring-batch-vs-event-driven",
+          "appendPrompt": "Spring Batch와 Event-Driven 처리를 언제 선택할지 백엔드 면접 대비용으로 정리한다. 처리 지연 허용도, 재시도, 운영 복잡도, 데이터 정합성, 스케줄링, 관찰성 관점으로 비교한다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      },
+      {
+        "key": "mysql-replication-and-failover-deepen",
+        "title": "MySQL 복제·페일오버 운영 디테일",
+        "domain": "mysql",
+        "tag": "deepen",
+        "difficulty": "중상",
+        "estMinutes": 50,
+        "whyNow": [
+          "DB는 후보자 자기평가상 약점 영역이라 운영 디테일 답변을 강화하면 ROI가 크다",
+          "Aurora/RDS 환경에서 read/write 분리, 장애 전파, replica lag 같은 꼬리 질문에 대응한다"
+        ],
+        "promotionTarget": {
+          "domain": "mysql",
+          "outputPath": "database/mysql/mysql-replication-and-failover.md",
+          "commitTopic": "mysql-replication-and-failover",
+          "appendPrompt": "MySQL 복제 토폴로지(async / semi-sync / GTID), read replica, replica lag 모니터링, failover 시 데이터 일관성, split-brain 방지, Aurora의 storage-level replication 차이까지 백엔드 면접 대비용으로 정리한다. 개념 설명을 넘어 장애 시 운영 의사결정에 필요한 신호를 함께 다룬다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      },
+      {
+        "key": "mysql-isolation-mvcc-deepen",
+        "title": "MySQL 격리수준·MVCC·gap lock 심화",
+        "domain": "mysql",
+        "tag": "deepen",
+        "difficulty": "상",
+        "estMinutes": 55,
+        "whyNow": [
+          "DB 약점 영역에서 InnoDB 락 동작을 풀어서 답할 수 있으면 면접 인상이 크게 바뀐다",
+          "Spring 트랜잭션 답변에 MySQL 레벨 detail을 더하면 풀스택 답변이 된다"
+        ],
+        "promotionTarget": {
+          "domain": "mysql",
+          "outputPath": "database/mysql/mysql-isolation-mvcc-gaplock.md",
+          "commitTopic": "mysql-isolation-mvcc-gaplock",
+          "appendPrompt": "MySQL InnoDB의 격리수준(REPEATABLE READ 디폴트), MVCC 동작, undo log 기반 스냅샷, gap lock / next-key lock, phantom read의 실제 발생 조건, RC vs RR에서 동작 차이, 인덱스가 락 범위에 미치는 영향까지 백엔드 면접 대비용으로 정리한다. Spring `@Transactional`과 함께 동작할 때 흔히 빠지는 함정도 짧게 짚는다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      },
+      {
+        "key": "review-jpa-transaction-pitfalls",
+        "title": "(Review) JPA·트랜잭션 함정 1분 답변",
+        "domain": "spring",
+        "tag": "review",
+        "difficulty": "중",
+        "estMinutes": 25,
+        "whyNow": [
+          "이미 작성된 jpa-n-plus-one / transaction-propagation-isolation-after-commit study-pack을 1분 답변으로 압축한 review 자료가 없다",
+          "Spring 트랜잭션은 1차 면접 단골 주제라 review 형태 ROI가 높다"
+        ],
+        "promotionTarget": {
+          "domain": "interview",
+          "outputPath": "interview/experience-based/review-jpa-transaction-pitfalls.md",
+          "commitTopic": "review-jpa-transaction-pitfalls",
+          "appendPrompt": "이미 작성된 study-pack(java/spring/jpa-n-plus-one.md, java/spring/transaction-propagation-isolation-after-commit.md, java/spring/transaction-synchronization.md)을 1분 답변과 꼬리 질문 대응 형태로 review 압축한다. 후보자가 운영해 본 PostCommitUpdateEventListener / @TransactionalEventListener(AFTER_COMMIT) / Propagation.REQUIRES_NEW 사용 사례와 자연스럽게 연결한다. 새 개념 도입 금지, 기존 문서를 짧게 인용·연결한다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      },
+      {
+        "key": "mysql-query-optimizer-execution-plan",
+        "title": "MySQL Query Optimizer와 실행 계획 읽기",
+        "domain": "mysql",
+        "tag": "deepen",
+        "difficulty": "상",
+        "estMinutes": 50,
+        "whyNow": [
+          "EXPLAIN 결과를 읽을 수 있다고 답했지만 실제 type(ref/range/index), Extra(Using filesort/temporary), rows 해석과 최적화 힌트까지 연결하는 depth가 부족한 상태임",
+          "면접관이 \"이 쿼리가 느린 이유를 EXPLAIN으로 설명해보라\"고 물었을 때 단순히 인덱스 유무만 보는 게 아니라 옵티마이저 선택 과정과 cost 모델까지 이해하고 있어야 신뢰를 얻을 수 있음"
+        ],
+        "promotionTarget": {
+          "domain": "mysql",
+          "outputPath": "database/mysql/query-optimizer-execution-plan.md",
+          "commitTopic": "mysql-query-optimizer-execution-plan",
+          "appendPrompt": "MySQL Query Optimizer의 동작 원리(cost 기반 선택, 통계 정보 활용)와 EXPLAIN 실행 계획 읽기 실전 기법을 다루는 study-pack을 작성하라. type 필드(ALL/index/range/ref/eq_ref/const), key/key_len, rows, filtered, Extra(Using index/filesort/temporary/where) 각각의 의미와 최적화 포인트를 설명하고, 실무에서 자주 나타나는 안티패턴(filesort on large table, 잘못된 인덱스 선택, join order 문제)과 해결 방법(인덱스 힌트, 통계 갱신, 쿼리 재작성)을 제시하라. 문서 제목은 반드시 [초안]으로 시작하며, InnoDB 기준으로 작성한다."
+        }
+      },
+      {
+        "key": "mysql-optimizer-hints",
+        "title": "MySQL Query Optimizer Hint와 실행계획 유도",
+        "domain": "mysql",
+        "tag": "deepen",
+        "difficulty": "중상",
+        "estMinutes": 35,
+        "whyNow": [
+          "기존 실행계획 읽기 문서는 있지만, Optimizer가 잘못된 계획을 선택할 때 힌트로 유도하는 실전 기법이 부족",
+          "복잡한 JOIN 쿼리에서 인덱스 선택을 제어하는 능력은 면접에서 SQL 튜닝 역량을 입증하는 핵심 포인트"
+        ],
+        "promotionTarget": {
+          "domain": "mysql",
+          "outputPath": "database/mysql/optimizer-hints.md",
+          "commitTopic": "mysql-optimizer-hint",
+          "appendPrompt": "MySQL Optimizer Hint(FORCE INDEX, USE INDEX, IGNORE INDEX, STRAIGHT_JOIN 등)의 종류와 사용 시나리오, Optimizer가 잘못된 인덱스를 선택하는 사례, 그리고 힌트를 사용한 실행계획 유도 과정을 다루는 study-pack을 작성하세요. 문서 제목은 반드시 [초안]으로 시작하며, 실무에서 복잡한 쿼리 튜닝 시 힌트를 활용하는 구체적인 예시를 포함해야 합니다."
+        }
+      },
+      {
+        "key": "spring-batch-chunk-processing",
+        "title": "Spring Batch 청크·재시도·Skip 패턴",
+        "domain": "spring",
+        "tag": "new",
+        "difficulty": "중",
+        "estMinutes": 35,
+        "whyNow": [
+          "대규모 데이터 배치 처리는 커머스 백엔드의 핵심 요구사항 중 하나 (주문 정산, 재고 동기화 등)",
+          "청크 크기 설정, 재시도 정책, Skip 전략은 안정적인 배치 운영의 핵심이며 면접에서 자주 다뤄지는 주제"
+        ],
+        "promotionTarget": {
+          "domain": "spring",
+          "outputPath": "java/spring/spring-batch-chunk-processing.md",
+          "commitTopic": "spring-batch",
+          "appendPrompt": "Spring Batch의 청크 기반 처리 모델(ItemReader, ItemProcessor, ItemWriter), 청크 크기 설정 기준, 재시도(Retry) 정책과 Skip 정책, 그리고 트랜잭션 경계와의 관계를 다루는 study-pack을 작성하세요. 문서 제목은 반드시 [초안]으로 시작하며, 커머스 환경에서 대량 데이터를 안정적으로 처리하는 실전 패턴을 포함해야 합니다."
+        }
+      },
+      {
+        "key": "event-sourcing-cqrs",
+        "title": "이벤트 소싱과 CQRS 패턴 입문",
+        "domain": "architecture",
+        "tag": "new",
+        "difficulty": "중상",
+        "estMinutes": 45,
+        "whyNow": [
+          "마이크로서비스 아키텍처에서 읽기/쓰기 분리와 이벤트 기반 상태 관리는 점점 더 중요해지는 패턴",
+          "주문·재고·정산처럼 읽기/쓰기 모델이 갈리는 대규모 도메인에서 면접 단골 설계 주제로 다뤄짐"
+        ],
+        "promotionTarget": {
+          "domain": "architecture",
+          "outputPath": "architecture/event-sourcing-cqrs.md",
+          "commitTopic": "event-sourcing",
+          "appendPrompt": "이벤트 소싱의 기본 개념(이벤트 저장소, 이벤트 리플레이), CQRS 패턴(Command/Query 분리), 두 패턴을 함께 사용하는 이유와 트레이드오프, 그리고 실무 적용 시 주의사항(이벤트 스키마 버전 관리, 스냅샷)을 다루는 study-pack을 작성하세요. 문서 제목은 반드시 [초안]으로 시작하며, 주문이나 재고 같은 커머스 도메인에 적용 가능한 구체적인 예시를 포함해야 합니다."
+        }
+      },
+      {
+        "key": "redis-persistence-rdb-aof",
+        "title": "Redis Persistence RDB·AOF 전략과 트레이드오프",
+        "domain": "redis",
+        "tag": "new",
+        "difficulty": "중",
+        "estMinutes": 30,
+        "whyNow": [
+          "캐시로만 사용할 때와 달리, 세션 저장소나 Rate Limiter로 쓸 때는 영속성 전략이 필수",
+          "RDB와 AOF의 차이, 복구 시간, 성능 영향은 Redis 운영 면접에서 자주 물어보는 주제"
+        ],
+        "promotionTarget": {
+          "domain": "redis",
+          "outputPath": "database/redis/persistence-rdb-aof.md",
+          "commitTopic": "redis-persistence",
+          "appendPrompt": "Redis의 영속성 옵션인 RDB(스냅샷)와 AOF(Append-Only File)의 동작 방식, 각각의 장단점과 성능 트레이드오프, 두 방식을 함께 사용하는 하이브리드 전략, 그리고 복구 시간과 디스크 사용량 비교를 다루는 study-pack을 작성하세요. 문서 제목은 반드시 [초안]으로 시작하며, 세션 저장소나 Rate Limiter 같은 실무 유스케이스별 적합한 전략을 제시해야 합니다."
+        }
+      },
+      {
+        "key": "mysql-slow-query-workflow",
+        "title": "MySQL Slow Query 분석과 튜닝 워크플로",
+        "domain": "mysql",
+        "tag": "deepen",
+        "difficulty": "중",
+        "estMinutes": 35,
+        "whyNow": [
+          "기존 실행계획 문서는 있지만, 실제 slow log를 수집하고 분석하는 실무 워크플로가 부족",
+          "pt-query-digest 같은 도구를 활용한 분석 능력은 MySQL 운영 경험을 입증하는 핵심 포인트"
+        ],
+        "promotionTarget": {
+          "domain": "mysql",
+          "outputPath": "database/mysql/slow-query-workflow.md",
+          "commitTopic": "mysql-slow-query",
+          "appendPrompt": "MySQL Slow Query Log 수집 설정(long_query_time), pt-query-digest를 활용한 로그 분석, 느린 쿼리 패턴 식별(풀 테이블 스캔, 임시 테이블, 파일 정렬), 그리고 인덱스 추가부터 쿼리 재작성까지의 튜닝 워크플로를 다루는 study-pack을 작성하세요. 문서 제목은 반드시 [초안]으로 시작하며, 실무에서 성능 문제 발생 시 체계적으로 접근하는 절차를 포함해야 합니다."
+        }
+      },
+      {
+        "key": "review-spring-transaction-essentials",
+        "title": "(Review) Spring 트랜잭션·AOP·@Transactional 핵심 정리",
+        "domain": "spring",
+        "tag": "review",
+        "difficulty": "중",
+        "estMinutes": 30,
+        "whyNow": [
+          "기존 트랜잭션 전파, AOP 프록시, @AfterCommit 문서가 여러 개로 흩어져 있어 핵심만 압축 정리 필요",
+          "면접 전 빠르게 복습할 수 있는 1페이지 요약본이 효과적"
+        ],
+        "promotionTarget": {
+          "domain": "spring",
+          "outputPath": "java/spring/review-transaction-essentials.md",
+          "commitTopic": "spring-transaction-review",
+          "appendPrompt": "기존의 transaction-propagation-isolation-after-commit.md, spring-aop-proxies-deep-dive.md, transaction-synchronization.md 문서를 바탕으로, Spring 트랜잭션의 핵심 개념(전파, 격리수준, 프록시 제약, @AfterCommit)만 압축한 1페이지 복습용 study-pack을 작성하세요. 문서 제목은 반드시 [초안]으로 시작하며, 각 항목은 2-3문장으로 요약하고 주의사항을 불릿으로 정리해야 합니다."
+        }
+      },
+      {
+        "key": "redis-memory-eviction-policies",
+        "title": "Redis 메모리 관리와 Eviction 정책 선택",
+        "domain": "redis",
+        "tag": "new",
+        "difficulty": "중",
+        "estMinutes": 35,
+        "whyNow": [
+          "대용량 트래픽 환경에서 Redis 메모리 부족 시나리오는 장애로 직결되며, maxmemory-policy 설정은 서비스 특성에 맞는 전략적 선택이 필요하다.",
+          "LRU/LFU/TTL 기반 eviction 알고리즘의 차이와 트레이드오프를 이해하면 캐시 히트율과 응답성을 동시에 최적화할 수 있다."
+        ],
+        "promotionTarget": {
+          "domain": "redis",
+          "outputPath": "database/redis/memory-eviction-policies.md",
+          "commitTopic": "redis-memory-eviction",
+          "appendPrompt": "Redis의 메모리 관리 구조(maxmemory, used_memory_rss, fragmentation)와 8가지 eviction 정책(noeviction, allkeys-lru, volatile-lru, allkeys-lfu, volatile-lfu, allkeys-random, volatile-random, volatile-ttl)을 비교 분석한다. 각 정책의 동작 원리, 적합한 사용 사례(세션 캐시 vs 조회 캐시 vs 메시지 큐), 그리고 실무에서 메모리 부족 장애를 예방하는 모니터링 전략(INFO memory, used_memory_peak, evicted_keys 지표)을 포함한다. 문서 제목은 반드시 [초안]으로 시작하며, 대규모 커머스/콘텐츠 서비스에서 상품 조회 캐시와 사용자 세션 캐시를 동시에 운영할 때의 정책 선택 근거를 예시로 든다."
+        }
+      },
+      {
+        "key": "spring-security-authentication-authorization",
+        "title": "Spring Security 인증·인가 아키텍처와 커스터마이징",
+        "domain": "security",
+        "tag": "new",
+        "difficulty": "중상",
+        "estMinutes": 40,
+        "whyNow": [
+          "커머스 플랫폼에서 회원·관리자·파트너사 등 다층 권한 체계를 안전하게 구현하려면 Spring Security 내부 구조 이해가 필수다",
+          "AuthenticationManager, SecurityContext, Filter Chain 동작 원리를 모르면 커스텀 인증 로직 추가 시 보안 구멍이 생기기 쉽다"
+        ],
+        "promotionTarget": {
+          "domain": "security",
+          "outputPath": "security/spring-security-authentication-authorization.md",
+          "commitTopic": "spring-security-authentication-authorization",
+          "appendPrompt": "문서 제목은 반드시 '[초안] Spring Security 인증·인가 아키텍처와 커스터마이징'으로 시작한다. AuthenticationManager, ProviderManager, AuthenticationProvider 체인, SecurityContext/SecurityContextHolder, Filter Chain (UsernamePasswordAuthenticationFilter, FilterSecurityInterceptor), 그리고 커스텀 인증 Provider와 Voter 구현 패턴을 다룬다. 일반적인 Java/Spring 백엔드 면접을 대비하여 다층 권한 체계 설계 예시와 JWT 통합 시나리오, 세션 vs 토큰 기반 인증 선택 기준을 포함한다."
+        }
+      },
+      {
+        "key": "mysql-partitioning-strategy",
+        "title": "MySQL 파티셔닝 전략과 실무 적용",
+        "domain": "mysql",
+        "tag": "new",
+        "difficulty": "중상",
+        "estMinutes": 45,
+        "whyNow": [
+          "커머스 도메인의 주문·상품 이력 등 시간 기반 대용량 데이터 처리 필수 스킬",
+          "MySQL 인덱스·쿼리 최적화만으로 해결 안 되는 테이블 분할 전략 학습 필요"
+        ],
+        "promotionTarget": {
+          "domain": "mysql",
+          "outputPath": "database/mysql/mysql-partitioning-strategy.md",
+          "commitTopic": "mysql-partitioning",
+          "appendPrompt": "MySQL 파티셔닝 전략과 실무 적용 가이드 문서를 작성한다. RANGE, LIST, HASH 파티셔닝 비교, 파티션 프루닝 원리, 파티션 추가/삭제/병합 DDL, 커머스 주문 테이블 예시, 성능 트레이드오프를 포함한다. 문서 제목은 반드시 \"[초안]\"으로 시작한다."
+        }
+      },
+      {
+        "key": "api-design-error-contracts",
+        "title": "API 오류 응답·에러 코드 계약 설계",
+        "domain": "api",
+        "tag": "new",
+        "difficulty": "중",
+        "estMinutes": 45,
+        "whyNow": [
+          "REST API에서 에러 계약은 클라이언트 호환성과 운영 디버깅에 직접 연결된다",
+          "validation, domain error, idempotency, retryable/non-retryable 구분을 함께 설명할 수 있다"
+        ],
+        "promotionTarget": {
+          "domain": "api",
+          "outputPath": "architecture/api-error-contracts.md",
+          "commitTopic": "api-design-error-contracts",
+          "appendPrompt": "API 오류 응답과 에러 코드 계약 설계를 백엔드 면접 대비용으로 정리한다. validation error, domain error, auth error, retryable/non-retryable, backward compatibility, observability 연동까지 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      },
+      {
+        "key": "observability-metrics-logs-traces",
+        "title": "Observability: Metrics·Logs·Traces 설계",
+        "domain": "observability",
+        "tag": "new",
+        "difficulty": "중상",
+        "estMinutes": 45,
+        "whyNow": [
+          "장애 대응 질문에서 로그만 말하는 답변을 넘어 관찰성 설계로 확장할 수 있다",
+          "RED/USE 지표, traceId 전파, SLO 기반 알림은 백엔드 운영 면접의 범용 주제다"
+        ],
+        "promotionTarget": {
+          "domain": "observability",
+          "outputPath": "architecture/observability-metrics-logs-traces.md",
+          "commitTopic": "observability-metrics-logs-traces",
+          "appendPrompt": "Metrics, Logs, Traces 기반 Observability 설계를 백엔드 면접 대비용으로 정리한다. RED/USE 지표, traceId 전파, structured logging, SLO/alerting, 장애 분석 흐름을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      },
+      {
+        "key": "rate-limiting-token-bucket",
+        "title": "Rate Limiting: Token Bucket·Leaky Bucket·분산 제한",
+        "domain": "architecture",
+        "tag": "new",
+        "difficulty": "중상",
+        "estMinutes": 45,
+        "whyNow": [
+          "API 보호와 트래픽 제어는 회사와 도메인에 무관하게 자주 나오는 설계 질문이다",
+          "Redis 기반 분산 rate limit과 장애 시 fail-open/fail-closed 선택을 말할 수 있다"
+        ],
+        "promotionTarget": {
+          "domain": "architecture",
+          "outputPath": "architecture/rate-limiting-token-bucket.md",
+          "commitTopic": "rate-limiting-token-bucket",
+          "appendPrompt": "Rate Limiting 설계를 백엔드 면접 대비용으로 정리한다. Token Bucket, Leaky Bucket, fixed/sliding window, Redis 기반 분산 제한, fail-open/fail-closed, 사용자/API 키별 정책을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      },
+      {
+        "key": "oauth2-oidc-jwt-refresh-token",
+        "title": "OAuth2/OIDC와 JWT·Refresh Token 운영 설계",
+        "domain": "security",
+        "tag": "new",
+        "difficulty": "중상",
+        "estMinutes": 45,
+        "whyNow": [
+          "Spring Security 주제를 인증 프로토콜과 토큰 운영까지 확장할 수 있다",
+          "토큰 만료, rotation, 탈취 대응, 세션/토큰 선택은 실무 질문으로 자주 이어진다"
+        ],
+        "promotionTarget": {
+          "domain": "security",
+          "outputPath": "security/oauth2-oidc-jwt-refresh-token.md",
+          "commitTopic": "oauth2-oidc-jwt-refresh-token",
+          "appendPrompt": "OAuth2/OIDC, JWT, Refresh Token 운영 설계를 백엔드 면접 대비용으로 정리한다. access/refresh token, rotation, revocation, 탈취 대응, cookie vs header, Spring Security 연동을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      },
+      {
+        "key": "distributed-locks-fencing-token",
+        "title": "분산 락과 Fencing Token으로 중복 실행 막기",
+        "domain": "concurrency",
+        "tag": "new",
+        "difficulty": "상",
+        "estMinutes": 45,
+        "whyNow": [
+          "쿠폰/주문/정산/배치 중복 실행 방지에서 범용적으로 쓰이는 동시성 주제다",
+          "Redis lock만 말하지 않고 fencing token과 DB constraint까지 연결하면 답변 깊이가 좋아진다"
+        ],
+        "promotionTarget": {
+          "domain": "concurrency",
+          "outputPath": "architecture/distributed-locks-fencing-token.md",
+          "commitTopic": "distributed-locks-fencing-token",
+          "appendPrompt": "분산 락과 Fencing Token을 백엔드 면접 대비용으로 정리한다. Redis/Redisson, lease timeout, clock drift, fencing token, DB unique constraint, idempotency와의 관계를 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      },
+      {
+        "key": "search-index-sync-opensearch",
+        "title": "OpenSearch 색인 동기화와 검색 일관성 설계",
+        "domain": "search",
+        "tag": "new",
+        "difficulty": "중상",
+        "estMinutes": 45,
+        "whyNow": [
+          "RAG/OpenSearch 경험을 일반 검색 백엔드 설계로 연결할 수 있다",
+          "DB와 검색 인덱스 간 eventual consistency, 재색인, 장애 복구는 좋은 꼬리 질문 주제다"
+        ],
+        "promotionTarget": {
+          "domain": "search",
+          "outputPath": "search/opensearch-index-sync-consistency.md",
+          "commitTopic": "search-index-sync-opensearch",
+          "appendPrompt": "OpenSearch 색인 동기화와 검색 일관성 설계를 백엔드 면접 대비용으로 정리한다. CDC/event 기반 색인, 재색인, alias swap, eventual consistency, 장애 복구, 검색 품질 지표를 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      },
+      {
+        "key": "testcontainers-integration-test-strategy",
+        "title": "Testcontainers 기반 통합 테스트 전략",
+        "domain": "testing",
+        "tag": "new",
+        "difficulty": "중",
+        "estMinutes": 45,
+        "whyNow": [
+          "테스트 447개 경험을 백엔드 품질 전략으로 확장하기 좋은 주제다",
+          "DB/Redis/Kafka 의존성을 가진 서비스의 테스트 경계를 말할 수 있다"
+        ],
+        "promotionTarget": {
+          "domain": "testing",
+          "outputPath": "java/testing/testcontainers-integration-test-strategy.md",
+          "commitTopic": "testcontainers-integration-test-strategy",
+          "appendPrompt": "Testcontainers 기반 통합 테스트 전략을 백엔드 면접 대비용으로 정리한다. unit/integration/e2e 경계, DB/Redis/Kafka 컨테이너, fixture, 속도 최적화, CI 안정성을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      },
+      {
+        "key": "java-concurrency-completablefuture-virtual-threads",
+        "title": "Java 동시성: CompletableFuture와 Virtual Threads 선택 기준",
+        "domain": "java",
+        "tag": "new",
+        "difficulty": "중상",
+        "estMinutes": 45,
+        "whyNow": [
+          "Java 백엔드 직무에서 동시성 모델 선택 질문에 대비할 수 있다",
+          "비동기 IO, thread pool 고갈, blocking call 격리까지 실무형으로 설명 가능하다"
+        ],
+        "promotionTarget": {
+          "domain": "java",
+          "outputPath": "java/java-concurrency-completablefuture-virtual-threads.md",
+          "commitTopic": "java-concurrency-completablefuture-virtual-threads",
+          "appendPrompt": "Java 동시성에서 CompletableFuture, ExecutorService, Virtual Threads 선택 기준을 백엔드 면접 대비용으로 정리한다. blocking IO, thread pool sizing, timeout/cancellation, structured concurrency 관점을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      },
+      {
+        "key": "kafka-consumer-rebalance-lag",
+        "title": "Kafka Consumer Rebalance와 Lag 운영",
+        "domain": "message-queue",
+        "tag": "deepen",
+        "difficulty": "상",
+        "estMinutes": 45,
+        "whyNow": [
+          "Kafka 운영 디테일 약점을 직접 보완하는 심화 주제다",
+          "partition assignment, rebalance, lag 모니터링은 면접에서 깊게 파고들기 좋다"
+        ],
+        "promotionTarget": {
+          "domain": "message-queue",
+          "outputPath": "kafka/kafka-consumer-rebalance-lag.md",
+          "commitTopic": "kafka-consumer-rebalance-lag",
+          "appendPrompt": "Kafka Consumer Rebalance와 Lag 운영을 백엔드 면접 대비용으로 정리한다. consumer group, partition assignment, cooperative rebalance, lag 지표, poison pill, 처리량 튜닝을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      },
+      {
+        "key": "blue-green-canary-deployment",
+        "title": "Blue-Green·Canary 배포와 롤백 전략",
+        "domain": "devops",
+        "tag": "new",
+        "difficulty": "중",
+        "estMinutes": 45,
+        "whyNow": [
+          "무중단 배포는 특정 회사가 아니라 모든 백엔드 운영 면접의 범용 주제다",
+          "feature flag, health check, rollback, migration 호환성까지 묶어 설명할 수 있다"
+        ],
+        "promotionTarget": {
+          "domain": "devops",
+          "outputPath": "architecture/blue-green-canary-deployment.md",
+          "commitTopic": "blue-green-canary-deployment",
+          "appendPrompt": "Blue-Green, Canary 배포와 롤백 전략을 백엔드 면접 대비용으로 정리한다. health check, traffic shifting, rollback, DB migration compatibility, feature flag를 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      },
+      {
+        "key": "schema-migration-backward-compatibility",
+        "title": "DB Schema Migration과 하위 호환 배포",
+        "domain": "database",
+        "tag": "new",
+        "difficulty": "중상",
+        "estMinutes": 45,
+        "whyNow": [
+          "배포/DB 변경이 얽힌 실무 장애 예방 주제라 면접 활용도가 높다",
+          "expand-contract 패턴과 zero-downtime migration을 설명할 수 있다"
+        ],
+        "promotionTarget": {
+          "domain": "database",
+          "outputPath": "database/schema-migration-backward-compatibility.md",
+          "commitTopic": "schema-migration-backward-compatibility",
+          "appendPrompt": "DB Schema Migration과 하위 호환 배포를 백엔드 면접 대비용으로 정리한다. expand-contract, dual write/read, backfill, rollback, migration lock, zero-downtime 배포를 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      },
+      {
+        "key": "pagination-cursor-vs-offset",
+        "title": "Pagination: Offset vs Cursor와 정렬 안정성",
+        "domain": "api",
+        "tag": "new",
+        "difficulty": "중",
+        "estMinutes": 45,
+        "whyNow": [
+          "API 설계에서 자주 나오지만 깊게 답하기 어려운 실무 주제다",
+          "대용량 목록, 중복/누락, 복합 정렬, 인덱스 설계를 함께 연결할 수 있다"
+        ],
+        "promotionTarget": {
+          "domain": "api",
+          "outputPath": "architecture/pagination-cursor-vs-offset.md",
+          "commitTopic": "pagination-cursor-vs-offset",
+          "appendPrompt": "Offset pagination과 Cursor pagination을 백엔드 면접 대비용으로 정리한다. 정렬 안정성, 중복/누락, 복합 cursor, 인덱스, UX/API contract trade-off를 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      },
+      {
+        "key": "multi-tenant-architecture",
+        "title": "Multi-tenant 백엔드 아키텍처와 데이터 격리",
+        "domain": "architecture",
+        "tag": "new",
+        "difficulty": "상",
+        "estMinutes": 45,
+        "whyNow": [
+          "SaaS/플랫폼 백엔드 직무에서 범용적으로 나오는 설계 축이다",
+          "tenant isolation, schema 전략, 권한, noisy neighbor 문제를 답변할 수 있다"
+        ],
+        "promotionTarget": {
+          "domain": "architecture",
+          "outputPath": "architecture/multi-tenant-architecture.md",
+          "commitTopic": "multi-tenant-architecture",
+          "appendPrompt": "Multi-tenant 백엔드 아키텍처를 면접 대비용으로 정리한다. shared DB/schema, database per tenant, tenant isolation, authz, noisy neighbor, migration 전략을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      },
+      {
+        "key": "cache-stampede-hot-key",
+        "title": "Cache Stampede·Hot Key 방어 전략",
+        "domain": "redis",
+        "tag": "deepen",
+        "difficulty": "중상",
+        "estMinutes": 45,
+        "whyNow": [
+          "Redis 약점을 반복 DB 주제가 아니라 캐시 장애 대응 주제로 넓힐 수 있다",
+          "mutex, early refresh, jitter, request coalescing 등 운영 답변에 바로 쓰인다"
+        ],
+        "promotionTarget": {
+          "domain": "redis",
+          "outputPath": "database/redis/cache-stampede-hot-key.md",
+          "commitTopic": "cache-stampede-hot-key",
+          "appendPrompt": "Cache Stampede와 Hot Key 방어 전략을 백엔드 면접 대비용으로 정리한다. mutex, early refresh, TTL jitter, request coalescing, local cache, circuit breaker를 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      },
+      {
+        "key": "saga-orchestration-choreography",
+        "title": "Saga Pattern: Orchestration vs Choreography",
+        "domain": "architecture",
+        "tag": "new",
+        "difficulty": "상",
+        "estMinutes": 45,
+        "whyNow": [
+          "MSA 데이터 정합성 질문에서 2PC 대안으로 자주 나오는 핵심 주제다",
+          "주문/결제/재고/정산 흐름을 회사 무관한 범용 예시로 설명할 수 있다"
+        ],
+        "promotionTarget": {
+          "domain": "architecture",
+          "outputPath": "architecture/saga-orchestration-choreography.md",
+          "commitTopic": "saga-orchestration-choreography",
+          "appendPrompt": "Saga Pattern에서 Orchestration과 Choreography 선택 기준을 백엔드 면접 대비용으로 정리한다. compensation, timeout, idempotency, observability, failure handling을 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      },
+      {
+        "key": "grpc-vs-rest-api-design",
+        "title": "gRPC vs REST API 설계 선택 기준",
+        "domain": "api",
+        "tag": "new",
+        "difficulty": "중",
+        "estMinutes": 45,
+        "whyNow": [
+          "MSA 내부 통신과 외부 API 경계 질문에 대비하기 좋다",
+          "schema evolution, streaming, timeout, observability 차이를 실무적으로 비교할 수 있다"
+        ],
+        "promotionTarget": {
+          "domain": "api",
+          "outputPath": "architecture/grpc-vs-rest-api-design.md",
+          "commitTopic": "grpc-vs-rest-api-design",
+          "appendPrompt": "gRPC와 REST API 설계 선택 기준을 백엔드 면접 대비용으로 정리한다. internal/external API, protobuf schema evolution, streaming, deadline/timeout, observability를 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      },
+      {
+        "key": "resilience-timeout-retry-jitter",
+        "title": "Timeout·Retry·Jitter·Circuit Breaker 장애 격리",
+        "domain": "architecture",
+        "tag": "deepen",
+        "difficulty": "상",
+        "estMinutes": 45,
+        "whyNow": [
+          "장애 대응 설계의 기본기이면서 어느 회사에서나 통하는 주제다",
+          "retry storm, timeout budget, fallback, bulkhead를 함께 말할 수 있다"
+        ],
+        "promotionTarget": {
+          "domain": "architecture",
+          "outputPath": "architecture/resilience-timeout-retry-jitter.md",
+          "commitTopic": "resilience-timeout-retry-jitter",
+          "appendPrompt": "Timeout, Retry, Jitter, Circuit Breaker 기반 장애 격리 전략을 백엔드 면접 대비용으로 정리한다. timeout budget, retry storm, exponential backoff, fallback, bulkhead, observability를 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
+        }
+      }
+    ]
+  },
+  "study-pack-maintainer": {
+    "gap-lock-next-key-lock": {
+      "requestedTopic": "InnoDB의 gap lock과 next-key lock을 더 깊게 공부하고 싶다. 기존 MySQL 문서들과의 중복을 피하면서, 가장 자연스러운 문서 전략(update vs new-file)을 선택해 최종 문서를 작성한다.",
+      "candidateFiles": [
+        "database/mysql/innodb-mvcc.md",
+        "database/mysql/deadlock-analysis.md"
+      ],
+      "preferredDomain": "mysql"
+    },
+    "jvm-tuning-with-slot-oom-case": {
+      "requestedTopic": "기존 JVM GC / JVM 튜닝 문서에 슬롯 시뮬레이터 OOM 실제 사례를 매핑해 보강한다. 새 문서를 무조건 만들기보다, create/update/augment/bridge 중 가장 자연스러운 전략을 선택한다. 특히 OOM 발생 시 어떻게 대처했는지, 임시 대응과 근본 해결이 어떻게 구분되는지, JVM/GC 관점에서 설명이 충분한지도 함께 반영한다.",
+      "candidateFiles": [
+        "java/jvm-tuning.md",
+        "task/nsc-slot/slot-simulator-oom.md"
+      ],
+      "preferredDomain": "java"
+    },
+    "redo-log-with-undo-log": {
+      "requestedTopic": "기존 MySQL redo log 문서에 undo log 내용과 redo/undo 상호작용을 보강한다. 새 문서를 만들기보다 기존 redo log 문서를 중심으로 update 또는 augment가 자연스러운지 판단하고, crash recovery, rollback, MVCC 관점에서 redo와 undo를 함께 이해할 수 있게 최종 문서를 작성한다.",
+      "candidateFiles": [
+        "database/mysql/redo-log.md",
+        "database/mysql/innodb-mvcc.md"
+      ],
+      "preferredDomain": "mysql"
+    },
+    "outbox-pattern-cdc-vs-scheduler": {
+      "requestedTopic": "기존 분산 트랜잭션과 Outbox 패턴 문서를 고도화한다. 특히 Outbox를 CDC 방식으로 구현하는 경우와 스케줄러/폴링 방식으로 구현하는 경우를 비교하고, 각 방식의 장단점, 운영 복잡도, 지연 시간, 장애 복구, 중복 처리, 도입 난이도, 어떤 상황에서 어떤 방식을 선택할지까지 포함해 기존 문서를 update 또는 augment한다.",
+      "candidateFiles": [
+        "architecture/distributed-transaction-outbox-pattern.md"
+      ],
+      "preferredDomain": "architecture"
+    },
+    "mysql-index-comprehensive-upgrade": {
+      "requestedTopic": "기존 MySQL 인덱스 문서를 종합 문서로 업그레이드한다. 새 문서를 만들기보다 기존 인덱스 문서(특히 B-Tree 인덱스 문서)를 중심으로 update 또는 augment하는 것이 자연스러운지 판단한다. 최종 문서에는 MySQL/InnoDB 인덱스의 구조, 클러스터드/세컨더리 인덱스, 커버링 인덱스, 복합 인덱스, EXPLAIN으로 인덱스를 검증하는 방법, 그리고 특히 '인덱스를 타지 않는 경우'를 깊게 다뤄야 한다. 함수 적용, 암묵적 형변환, leading wildcard, OR 조건, 낮은 카디널리티, 좌측 접두사 규칙 위반, range 이후 컬럼, 정렬/그룹핑 미스매치, 옵티마이저가 풀스캔을 고르는 경우 등을 정리하고, 그런 쿼리를 실무에서 어떻게 진단하고 처리했는지까지 포함한다. 단순한 개념 허브가 아니라 '왜 인덱스를 안 타는가 / 어떻게 개선하는가'까지 설명하는 종합 문서가 되어야 한다.",
+      "candidateFiles": [
+        "database/mysql/b-tree-index.md",
+        "database/mysql/composite-index.md",
+        "database/mysql/explain-plan.md"
+      ],
+      "preferredDomain": "mysql"
+    },
+    "mysql-docs-dedup-and-linking": {
+      "requestedTopic": "database/mysql 문서군의 중복을 줄이고 문서 간 링크 구조를 정리한다. 핵심 목표는 내용을 삭제하는 것보다 각 문서의 역할을 분명히 나누고, 허브 문서와 상세 문서가 링크로 자연스럽게 연결되게 만드는 것이다. 특히 innodb-storage-architecture.md, b-tree-index.md, composite-index.md, explain-plan.md 사이의 중복을 줄여야 한다. 예를 들어 architecture 문서는 InnoDB 큰 그림과 저장 구조 허브에 가깝게, index 문서는 인덱스 종합 허브에 가깝게, composite-index 문서는 복합 인덱스 심화에 가깝게, explain-plan 문서는 실행 계획 진단 실전에 가깝게 역할을 분리한다. 같은 설명을 여러 문서에서 길게 반복하지 말고, 한 문서에서 짧게 소개한 뒤 관련 상세 문서로 링크를 건다. 최종 결과는 독자가 mysql 폴더 안에서 허브 -> 상세 -> 실전 문서로 자연스럽게 내려갈 수 있는 구조여야 한다.",
+      "candidateFiles": [
+        "database/mysql/innodb-storage-architecture.md",
+        "database/mysql/b-tree-index.md",
+        "database/mysql/composite-index.md",
+        "database/mysql/explain-plan.md"
+      ],
+      "preferredDomain": "mysql"
+    },
+    "redis-docs-dedup-and-linking": {
+      "requestedTopic": "database/redis 문서군을 함께 읽고 역할을 정리한다. 핵심 목표는 Redis 기본, cache-aside, distributed-lock, rate-limiting, pub-sub, session, leaderboard, lua-script, operations 문서의 중복을 줄이고 링크 구조를 강화하는 것이다. 새로 만든 redis-advanced-patterns 문서가 단독으로 붕 뜨지 않게, 허브 또는 브리지 성격으로 자연스럽게 연결되도록 판단한다. create/update/augment/bridge 중 가장 적절한 전략을 선택하고, 기존 문서 설명을 길게 반복하기보다 각 문서의 역할을 분명히 나누고 관련 문서로 링크를 건다. 예를 들어 basic은 Redis 큰 그림과 자료구조 입문, cache-aside는 캐시 정합성과 스탬피드 중심, distributed-lock과 rate-limiting은 분산 제어 패턴 심화, pub-sub은 메시징 패턴, session은 인증/상태 저장, redis-advanced-patterns는 여러 실전 패턴을 연결하는 허브/브리지 문서가 되도록 유도한다. 최종 결과는 독자가 redis 폴더 안에서 허브 -> 상세 패턴 -> 운영/사례 문서로 자연스럽게 내려갈 수 있는 구조여야 한다.",
+      "candidateFiles": [
+        "database/redis/README.md",
+        "database/redis/basic.md",
+        "database/redis/cache-aside.md",
+        "database/redis/distributed-lock.md",
+        "database/redis/rate-limiting.md",
+        "database/redis/pub-sub.md",
+        "database/redis/session.md",
+        "database/redis/leaderboard.md",
+        "database/redis/lua-script.md",
+        "database/redis/operations.md",
+        "database/redis/redis-advanced-patterns.md"
+      ],
+      "preferredDomain": "redis"
+    },
+    "kakao-healthcare-carechat-company-analysis": {
+      "requestedTopic": "카카오헬스케어 케어챗 AI Agent 개발자 포지션 분석 문서를 고도화한다. 공고의 주요 업무(OPEN LLM 기반 AI Agent, 의도 분석, Tool 호출, 멀티턴 메모리, 케어챗 챗봇 엔진/마이데이터, LLM 서빙 아키텍처, Python AI 서비스, 기존 Java Spring Boot 백엔드 연동, 클라우드 모니터링/성능/장애 대응, 프롬프트/Agent Workflow 개선)를 후보자 실제 경험과 연결한다. 특히 AI 서비스팀 RAG 파이프라인, AI 웹툰 제작 MVP의 LLM workflow/fallback/rate limit/context caching, AI 에이전트 기반 슬롯 개발, Kafka Outbox/비동기/관측성 경험을 케어챗 지원 전략으로 매핑한다. 의료 도메인 직접 경험 부족은 개인정보/KYC/마이데이터 인접 경험과 학습 계획으로 정직하게 보완한다.",
+      "candidateFiles": [
+        "interview/kakao-healthcare-carechat-ai-agent.md",
+        "resume/2603_김병태_이력서_v4.md",
+        "task/ai-service-team/README.md",
+        "task/ai-service-team/rag-vector-search-batch.md",
+        "task/ai-service-team/webtoon-maker-ai-pipeline.md",
+        "task/nsc-slot/ai-tool-adoption.md",
+        "task/sb-dev-team/kyc-system.md"
+      ],
+      "preferredDomain": "interview"
+    }
+  },
+  "question-bank": {
+    "experience-qbank-ai-service-team": {
+      "track": "ai-service-team",
+      "domain": "interview",
+      "outputPath": "interview/experience-based/ai-service-team-question-bank.md",
+      "inputFiles": [
+        "resume/2603_김병태_이력서_v4.md",
+        "task/ai-service-team/README.md",
+        "task/ai-service-team/rag-vector-search-batch.md",
+        "task/ai-service-team/graceful-shutdown-503-fix.md",
+        "task/ai-service-team/embedding-metadata-provider.md",
+        "task/ai-service-team/webtoon-maker-ai-pipeline.md",
+        "interview/kakao-healthcare-carechat-ai-agent.md"
+      ],
+      "promptAppend": "카카오헬스케어 케어챗 AI Agent 개발자 포지션을 타깃으로 AI 서비스 개발팀 경험 전반을 바탕으로 면접 질문을 구성한다. 반드시 반영할 축: (1) Spring Batch 11 Step 기반 Confluence → OpenSearch RAG 벡터 색인 파이프라인 — AsyncItemProcessor / CompositeItemProcessor / @JobScope / 재시작성, (2) gRPC OCR 서버 배포 중 503 — K8s terminationGracePeriodSeconds 제약 하 Envoy · supervisord · SIGTERM · preStop hook 예산 설계, (3) 임베딩 메타데이터 전략 패턴 — Allowlist 전환과 OCP 준수, (4) 12일 단독 풀스택 AI 웹툰 제작 도구 MVP — LLM workflow, Gemini pro→flash→lite fallback, 전역 Rate Limit Tracking, Context Caching, Grounding 재주입, 에이전트 팀 조율. 질문은 AI Agent/LLM 서비스 운영, Tool calling, multi-turn memory, RAG 품질, Java Spring Boot 백엔드 연동, Python AI service 적응 전략, 헬스케어/마이데이터 신뢰성 관점으로 구성한다."
+    },
+    "experience-qbank-slot-team": {
+      "track": "slot-team",
+      "domain": "interview",
+      "outputPath": "interview/experience-based/slot-team-question-bank.md",
+      "inputFiles": [
+        "resume/2603_김병태_이력서_v4.md",
+        "task/nsc-slot/README.md",
+        "task/nsc-slot/slot-engine-abstraction.md",
+        "task/nsc-slot/rcc-rtp-cache-control.md",
+        "task/nsc-slot/slot-spin-performance.md",
+        "interview/kakao-healthcare-carechat-ai-agent.md"
+      ],
+      "promptAppend": "카카오헬스케어 케어챗 AI Agent 개발자 포지션 보조 트랙으로 슬롯팀 경험을 구성한다. 도메인 모델링, 엔진 추상화, 성능 최적화, 동시성, 테스트 인프라, AI-assisted development를 AI Agent workflow 설계/검증/운영 안정성 관점으로 연결한다."
+    }
+  },
+  "master": {
+    "_comment": "Interview master playbook topics. Use when mapping a topic key to output path inside fos-study, selected input files, and topic-specific prompt additions.",
+    "senior-backend-master-playbook": {
+      "outputPath": "interview/master/senior-backend-master-playbook.md",
+      "inputFiles": [
+        "resume/2603_김병태_이력서_v4.md",
+        "task/ai-service-team/README.md",
+        "task/ai-service-team/rag-vector-search-batch.md",
+        "task/ai-service-team/webtoon-maker-ai-pipeline.md",
+        "task/nsc-slot/README.md",
+        "task/nsc-slot/slot-engine-abstraction.md",
+        "interview/kakao-healthcare-carechat-ai-agent.md"
+      ],
+      "promptAppend": "AI Agent/헬스케어 서비스 백엔드 역할을 위한 마스터 플레이북을 작성한다. 현재 타깃은 카카오헬스케어 케어챗 AI Agent 개발자 포지션이다. 이력서와 task 문서의 실제 근거만 사용하고 일반론은 피한다. 다음 경험 축이 전반에 드러나야 한다: (a) Spring Batch 기반 Confluence→OpenSearch RAG 파이프라인(AI 서비스팀), (b) 12일 단독 풀스택으로 만든 AI 웹툰 제작 도구 MVP — 199 plan / 760 커밋 / Gemini + Claude Code 하네스 에이전트 팀 조율 · Rate Limit Tracking · Context Caching · Promise.allSettled 부분 성공 생성 · Grounding 재주입, (c) AI 에이전트 기반 슬롯 개발 — Cursor Rules 20종 이상과 에이전트 단독 구현 3종, (d) Kafka Transactional Outbox · StampedLock 기반 다중 서버 캐시 정합성 같은 운영형 백엔드 안정성. '왜 이 회사/역할인가' 섹션은 케어챗의 병원 여정 연결, 의료 마이데이터, AI Agent 실서비스화와 후보자 경험을 연결한다. Python 주력 경험과 의료 도메인 직접 경험 부족은 정직하게 인정하되, AI 서비스 아키텍처와 운영형 백엔드 강점으로 보완 전략을 제시한다."
+    }
+  },
+  "bootcamp": {
+    "description": "CJ푸드빌 디지털 채널 Back-end 지원 대비 morning bootcamp queue. Pick 10 recommendations and generate first 5 ungenerated study packs daily.",
+    "dailyRecommendCount": 10,
+    "dailyGenerateCount": 5,
+    "topics": [
+      "cj-foodville-commerce-domain-design-interview",
+      "commerce-interview-answer-slot-experience-mapping",
+      "commerce-order-state-consistency-fundamentals",
+      "spring-transaction-propagation-commerce",
+      "mysql-index-explain-commerce-api",
+      "jpa-n-plus-one-commerce-read-model",
+      "payment-idempotency-transaction-basics",
+      "coupon-promotion-concurrency-basics",
+      "java-concurrency-locks-commerce-cache",
+      "redis-cache-invalidation-commerce",
+      "http-session-cookie-api-auth-basics",
+      "mybatis-dynamic-sql-resultmap-basics",
+      "commerce-observability-first-five-minutes",
+      "clean-architecture-pragmatic-spring-commerce",
+      "rest-api-versioning-mobile-compatibility",
+      "fnb-ecommerce-domain-overview",
+      "fnb-order-store-pickup-state-machine",
+      "fnb-coupon-promotion-membership-design",
+      "fnb-payment-refund-settlement-operations",
+      "fnb-ecommerce-operations-monitoring-interview",
+      "hexagonal-clean-architecture-spring",
+      "mybatis-jpa-tradeoffs",
+      "legacy-jsp-jquery-api-coexistence"
+    ]
+  }
+}

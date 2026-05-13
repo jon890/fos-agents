@@ -12,7 +12,9 @@ if len(sys.argv) != 3:
 config_path = Path(sys.argv[1])
 topic = sys.argv[2]
 config = json.loads(config_path.read_text(encoding="utf-8"))
-entry = config.get(topic)
+namespace = "question-bank"
+ns_cfg = config.get(namespace, {})
+entry = ns_cfg.get(topic)
 if not entry:
     print(f"unknown question-bank topic: {topic}", file=sys.stderr)
     sys.exit(2)

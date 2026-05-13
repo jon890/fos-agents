@@ -57,7 +57,7 @@ Avoid feeding the entire task tree in one run.
 - Output renderer + validator: `scripts/render_question_bank.py` (enforces exactly 5 main questions × 5 follow-ups)
 - Generic prompt: `references/question-bank-prompt.md`
 - JSON schema enforced by Claude CLI `--json-schema`: `references/question-bank-schema.json`
-- Topic config: `career-os/config/experience-question-bank-topics.json`
+- Topic config: `career-os/config/topics.json` (question-bank namespace)
 
 ## External dependencies
 

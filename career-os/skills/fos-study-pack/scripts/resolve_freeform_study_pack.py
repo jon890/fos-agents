@@ -4,13 +4,14 @@ import re
 import sys
 from pathlib import Path
 
-if len(sys.argv) != 4:
-    print("usage: resolve_freeform_study_pack.py <study-pack-topics.json> <maintainer-topics.json> <freeform-text>", file=sys.stderr)
+if len(sys.argv) != 3:
+    print("usage: resolve_freeform_study_pack.py <topics.json> <freeform-text>", file=sys.stderr)
     sys.exit(1)
 
-study_cfg = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
-maint_cfg = json.loads(Path(sys.argv[2]).read_text(encoding='utf-8')) if Path(sys.argv[2]).exists() else {}
-text = sys.argv[3].strip()
+topics_cfg = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
+study_cfg = topics_cfg.get('study-pack', {})
+maint_cfg = topics_cfg.get('study-pack-maintainer', {})
+text = sys.argv[2].strip()
 normalized = re.sub(r'\s+', ' ', text).strip().lower()
 normalized = normalized.removeprefix('/study-pack').strip()
 

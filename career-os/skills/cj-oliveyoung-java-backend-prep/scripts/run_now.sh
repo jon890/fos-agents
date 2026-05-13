@@ -58,7 +58,7 @@ case "$MODE" in
     TOPIC="${2:-}"
     if [[ -z "$TOPIC" ]]; then
       echo "usage: run_now.sh study-pack <topic>" >&2
-      echo "  topic keys: see config/study-pack-topics.json" >&2
+      echo "  topic keys: see config/topics.json (study-pack namespace)" >&2
       exit 1
     fi
 
@@ -71,13 +71,14 @@ case "$MODE" in
 
     "$NOTIFY_SCRIPT" "[시작] ${TOPIC} 스터디팩 생성 시작"
 
-    MAINTAINER_CONFIG="$TASK_ROOT/config/study-pack-maintainer-topics.json"
-    PRIMARY_TOPIC_CONFIG="${TOPIC_CONFIG_OVERRIDE:-$TASK_ROOT/config/study-pack-topics.json}"
+    MAINTAINER_CONFIG="$TASK_ROOT/config/topics.json"
+    PRIMARY_TOPIC_CONFIG="${TOPIC_CONFIG_OVERRIDE:-$TASK_ROOT/config/topics.json}"
     if [[ -z "${TOPIC_CONFIG_OVERRIDE:-}" ]] && ! python3 - <<'PY' "$PRIMARY_TOPIC_CONFIG" "$TOPIC"
 import json, sys
 from pathlib import Path
 cfg = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
-sys.exit(0 if sys.argv[2] in cfg else 1)
+ns = cfg.get('study-pack', {})
+sys.exit(0 if sys.argv[2] in ns else 1)
 PY
     then
       CANDIDATE_PROMOTER="$TASK_ROOT/skills/cj-oliveyoung-java-backend-prep/scripts/promote_candidate_topics.py"
@@ -86,11 +87,12 @@ PY
       fi
     fi
 
-    if [[ -z "${TOPIC_CONFIG_OVERRIDE:-}" && -f "$MAINTAINER_CONFIG" ]] && python3 - <<'PY' "$MAINTAINER_CONFIG" "$TOPIC"
+    if [[ -z "${TOPIC_CONFIG_OVERRIDE:-}" ]] && python3 - <<'PY' "$TASK_ROOT/config/topics.json" "$TOPIC"
 import json, sys
 from pathlib import Path
 cfg = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
-sys.exit(0 if sys.argv[2] in cfg else 1)
+ns = cfg.get('study-pack-maintainer', {})
+sys.exit(0 if sys.argv[2] in ns else 1)
 PY
     then
       RESOLVER="$TASK_ROOT/skills/study-pack-maintainer/scripts/resolve_maintainer_topic.py"
@@ -101,7 +103,7 @@ PY
     fi
 
     RESOLVER="$TASK_ROOT/skills/study-pack-writer/scripts/resolve_study_pack_topic.py"
-    TOPIC_CONFIG="${TOPIC_CONFIG_OVERRIDE:-$TASK_ROOT/config/study-pack-topics.json}"
+    TOPIC_CONFIG="${TOPIC_CONFIG_OVERRIDE:-$TASK_ROOT/config/topics.json}"
     eval "$(python3 "$RESOLVER" "$TOPIC_CONFIG" "$TOPIC")"
 
     run_tracked "career-os:study-pack:$TOPIC" "${TOPIC} 스터디팩" \
@@ -111,12 +113,12 @@ PY
     TOPIC="${2:-}"
     if [[ -z "$TOPIC" ]]; then
       echo "usage: run_now.sh question-bank <topic>" >&2
-      echo "  topic keys: see config/experience-question-bank-topics.json" >&2
+      echo "  topic keys: see config/topics.json (question-bank namespace)" >&2
       exit 1
     fi
 
     RESOLVER="$TASK_ROOT/skills/experience-question-bank-writer/scripts/resolve_question_bank_topic.py"
-    TOPIC_CONFIG="$TASK_ROOT/config/experience-question-bank-topics.json"
+    TOPIC_CONFIG="$TASK_ROOT/config/topics.json"
     eval "$(python3 "$RESOLVER" "$TOPIC_CONFIG" "$TOPIC")"
 
     run_tracked "career-os:question-bank:$TOPIC" "${TOPIC} question-bank" \
@@ -142,12 +144,12 @@ PY
     TOPIC="${2:-}"
     if [[ -z "$TOPIC" ]]; then
       echo "usage: run_now.sh maintain-study-pack <topic>" >&2
-      echo "  topic keys: see config/study-pack-maintainer-topics.json" >&2
+      echo "  topic keys: see config/topics.json (study-pack-maintainer namespace)" >&2
       exit 1
     fi
 
     RESOLVER="$TASK_ROOT/skills/study-pack-maintainer/scripts/resolve_maintainer_topic.py"
-    TOPIC_CONFIG="$TASK_ROOT/config/study-pack-maintainer-topics.json"
+    TOPIC_CONFIG="$TASK_ROOT/config/topics.json"
     eval "$(python3 "$RESOLVER" "$TOPIC_CONFIG" "$TOPIC")"
 
     run_tracked "career-os:maintain-study-pack:$TOPIC" "${TOPIC} 스터디팩 유지보수" \
@@ -157,7 +159,7 @@ PY
     TOPIC="${2:-senior-backend-master-playbook}"
 
     RESOLVER="$TASK_ROOT/skills/interview-master-writer/scripts/resolve_master_topic.py"
-    TOPIC_CONFIG="$TASK_ROOT/config/interview-master-topics.json"
+    TOPIC_CONFIG="$TASK_ROOT/config/topics.json"
     eval "$(python3 "$RESOLVER" "$TOPIC_CONFIG" "$TOPIC")"
 
     run_tracked "career-os:master:$TOPIC" "${TOPIC} master playbook" \
@@ -170,10 +172,10 @@ PY
   *)
     echo "usage: run_now.sh [baseline | daily [topic] | study-pack <topic> | question-bank <topic> | recommend-topics | recommend-positions | foodville-coffeechat | replenish-topics | maintain-study-pack <topic> | master [topic] | smoke]" >&2
     echo "  daily topic keys: see config/topic-file-map.json" >&2
-    echo "  study-pack topic keys: see config/study-pack-topics.json" >&2
-    echo "  question-bank topic keys: see config/experience-question-bank-topics.json" >&2
-    echo "  maintain-study-pack topic keys: see config/study-pack-maintainer-topics.json" >&2
-    echo "  master topic keys: see config/interview-master-topics.json (default: senior-backend-master-playbook)" >&2
+    echo "  study-pack topic keys: see config/topics.json (study-pack namespace)" >&2
+    echo "  question-bank topic keys: see config/topics.json (question-bank namespace)" >&2
+    echo "  maintain-study-pack topic keys: see config/topics.json (study-pack-maintainer namespace)" >&2
+    echo "  master topic keys: see config/topics.json (master namespace, default: senior-backend-master-playbook)" >&2
     exit 1
     ;;
 esac

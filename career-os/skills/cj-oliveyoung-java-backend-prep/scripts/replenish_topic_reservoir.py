@@ -346,16 +346,16 @@ def refresh_inventory():
 
 
 def main():
-    primary_path = CONFIG / "study-pack-topics.json"
-    candidates_path = CONFIG / "study-topic-candidates.json"
+    topics_path = CONFIG / "topics.json"
     live_primary_path = CONFIG / "live-coding-seed-pool.json"
     live_candidate_path = CONFIG / "live-coding-seed-candidates.json"
     artifacts_path = TASK_ROOT / "data" / "generated-artifacts.json"
     report_json_path = RUNTIME / "topic-replenishment.json"
     report_md_path = RUNTIME / "topic-replenishment.md"
 
-    primary_cfg = read_json(primary_path)
-    candidates_doc = read_json(candidates_path)
+    topics_data = read_json(topics_path)
+    primary_cfg = topics_data["study-pack"]
+    candidates_doc = topics_data["study-pack-candidates"]
     live_primary_doc = read_json(live_primary_path)
     live_candidate_doc = read_json(live_candidate_path)
     artifacts = read_json(artifacts_path).get("artifacts", [])
@@ -386,8 +386,7 @@ def main():
     promoted = promote_candidates(primary_cfg, candidates_doc, artifacts)
     promoted_live_coding = promote_live_coding_candidates(live_primary_doc, live_candidate_doc, artifacts)
 
-    write_json(primary_path, primary_cfg)
-    write_json(candidates_path, candidates_doc)
+    write_json(topics_path, topics_data)
     write_json(live_primary_path, live_primary_doc)
     write_json(live_candidate_path, live_candidate_doc)
     refresh_inventory()

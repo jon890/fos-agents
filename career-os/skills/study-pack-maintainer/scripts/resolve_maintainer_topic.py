@@ -10,7 +10,9 @@ if len(sys.argv) != 3:
 
 config = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 topic = sys.argv[2]
-entry = config.get(topic)
+namespace = "study-pack-maintainer"
+ns_cfg = config.get(namespace, {})
+entry = ns_cfg.get(topic)
 if not entry:
     print(f"unknown topic: {topic}", file=sys.stderr)
     sys.exit(2)

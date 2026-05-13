@@ -63,7 +63,7 @@ Domain-specific extensions:
 - Output extractor + validator: `scripts/extract_and_validate_study_pack.py`
 - Generic prompt: `references/study-pack-prompt.md`
 - Topic profiles (reference only): `references/topic-profiles.md`
-- Topic config (actual per-topic metadata): `config/study-pack-topics.json` (at `career-os/config/`, not inside the skill dir)
+- Topic config (actual per-topic metadata): `config/topics.json (study-pack namespace)` (at `career-os/config/`, not inside the skill dir)
 
 ## External dependencies
 
@@ -80,12 +80,12 @@ This skill is normally invoked via the `cj-oliveyoung-java-backend-prep` skill r
 skills/cj-oliveyoung-java-backend-prep/scripts/run_now.sh study-pack <topic>
 ```
 
-Where `<topic>` is a key in `config/study-pack-topics.json` (e.g. `explain-plan`, `composite-index`).
+Where `<topic>` is a key in `config/topics.json (study-pack namespace)` (e.g. `explain-plan`, `composite-index`).
 
 The runner resolves domain, output path, and `promptAppend` from the config,
 then passes them as env vars to `run_study_pack.sh`.
 
-To add a new topic, add an entry to `config/study-pack-topics.json` with:
+To add a new topic, add an entry to `config/topics.json (study-pack namespace)` with:
 - `domain`: commit message prefix (e.g. `mysql`, `redis`)
 - `outputPath`: relative path inside `sources/fos-study`
 - `promptAppend`: topic-specific generation instructions

@@ -6,8 +6,8 @@ usage:
   promote_candidate_topics.py live-coding <slug> [--dry-run]
 
 ADR-009/010 후속 동작:
-- study mode: study-topic-candidates.json에서 key를 찾아 promotionTarget을
-  study-pack-topics.json에 key로 추가. 동일 key가 primary에 이미 있으면 abort.
+- study mode: config/topics.json의 study-pack-candidates namespace에서 key를 찾아 promotionTarget을
+  study-pack namespace에 key로 추가. 동일 key가 primary에 이미 있으면 abort.
 - live-coding mode: live-coding-seed-candidates.json에서 slug를 찾아 그대로
   live-coding-seed-pool.json의 seeds 배열에 append. 동일 slug가 이미 primary에
   있으면 abort.
@@ -27,11 +27,11 @@ def write_json(path: Path, data) -> None:
 
 
 def promote_study(target: str, dry_run: bool) -> None:
-    candidates_path = CONFIG / "study-topic-candidates.json"
-    main_path = CONFIG / "study-pack-topics.json"
-    candidates_doc = json.loads(candidates_path.read_text(encoding="utf-8"))
+    topics_path = CONFIG / "topics.json"
+    topics_data = json.loads(topics_path.read_text(encoding="utf-8"))
+    main_cfg = topics_data["study-pack"]
+    candidates_doc = topics_data["study-pack-candidates"]
     candidates = candidates_doc.get("topics", [])
-    main_cfg = json.loads(main_path.read_text(encoding="utf-8"))
 
     idx = next((i for i, c in enumerate(candidates) if c.get("key") == target), None)
     if idx is None:
@@ -42,7 +42,7 @@ def promote_study(target: str, dry_run: bool) -> None:
     if not promotion:
         raise SystemExit(f"candidate has no promotionTarget: {target}")
     if target in main_cfg:
-        raise SystemExit(f"primary study-pack-topics already has key: {target}")
+        raise SystemExit(f"primary study-pack already has key: {target}")
 
     if dry_run:
         print(f"[dry-run] would promote study candidate: {target}")
@@ -53,11 +53,9 @@ def promote_study(target: str, dry_run: bool) -> None:
         return
 
     main_cfg[target] = promotion
-    write_json(main_path, main_cfg)
-
     candidates.pop(idx)
     candidates_doc["topics"] = candidates
-    write_json(candidates_path, candidates_doc)
+    write_json(topics_path, topics_data)
 
     print(f"promoted study candidate: {target}")
 

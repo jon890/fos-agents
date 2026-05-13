@@ -3,11 +3,11 @@ set -euo pipefail
 TASK_ROOT="${TASK_ROOT:-$HOME/ai-nodes/career-os}"
 NOTIFY_SCRIPT="$TASK_ROOT/skills/cj-oliveyoung-java-backend-prep/scripts/notify_discord.sh"
 TOPIC="${QUESTION_BANK_TOPIC_OVERRIDE:-experience-qbank-ai-service-team}"
-OUTPUT_PATH="$(python3 - <<"PY" "$TASK_ROOT/config/experience-question-bank-topics.json" "$TOPIC"
+OUTPUT_PATH="$(python3 - <<"PY" "$TASK_ROOT/config/topics.json" "$TOPIC"
 import json, sys
 from pathlib import Path
-cfg=json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-print(cfg[sys.argv[2]]["outputPath"])
+topics_cfg=json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(topics_cfg['question-bank'][sys.argv[2]]["outputPath"])
 PY
 )"
 "$NOTIFY_SCRIPT" "[시작] ${TOPIC} 면접 질문팩 업데이트 시작"

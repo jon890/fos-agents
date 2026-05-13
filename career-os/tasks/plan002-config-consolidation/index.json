@@ -2,9 +2,9 @@
   "name": "plan002-config-consolidation",
   "description": "career-os/config/ 정리: 5 topic configs → 단일 topics.json, 3 source configs → 단일 sources.json, baseline-core-files.txt → JSON, position 4개 자산 → position-recommender/references/로 이동",
   "created_at": "2026-05-13T18:30:00+00:00",
-  "updated_at": "2026-05-13T10:08:57.053885+00:00",
+  "updated_at": "2026-05-13T10:14:50.606411+00:00",
   "status": "running",
-  "current_phase": 1,
+  "current_phase": 2,
   "total_phases": 5,
   "error_message": null,
   "blocked_reason": null,
@@ -29,13 +29,14 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "9851b37fc1eb"
     },
     {
       "number": 2,
       "title": "topics.json 통합 (5→1) + resolver 4개 + caller 8+ 갱신",
       "file": "phase-02.md",
-      "status": "pending",
+      "status": "running",
       "allowedTools": [
         "Read",
         "Write",
