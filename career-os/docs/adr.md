@@ -549,3 +549,41 @@ ai-nodes 의 자동화 스크립트는 shell + Python 혼재 상태로 자랐다
 - 신규 TS 파일은 모두 `_shared/lib/` 또는 `_shared/types/` 에.
 - 새 runner 가 Claude CLI 를 직접 호출하지 않는다 — `invoke_claude_skills.ts` 만 사용.
 - 다음 plan(extractor·renderer TS 화) 은 본 ADR 정책 따라 진행.
+
+---
+
+## ADR-021 — Discord 알림 openclaw 경유 + 워크스페이스 `.env` 격리
+
+- Status: Accepted
+- Date: 2026-05-14
+
+### 맥락
+ADR-020 채택 후 plan004 phase-03이 옛 `notify_discord.sh`의 실제 동작(openclaw CLI subprocess)을 한 번도 참조하지 않은 채 webhook `fetch` 호출로 추정 재구현했다. 결과적으로 `_shared/lib/notify_discord.ts`가 폐기된 옛 동작과 다르게 작동해 사용자의 Discord 채널에 메시지가 전혀 도달하지 않았다. 추가로 옛 `.sh`들에 채널 ID가 hardcoded되어 git history에 영구 노출됐고, 워크스페이스별 secret 위치(`<ws>/config/.env`)도 secret 격리 측면에서 더 명확한 위치로 옮길 필요가 있었다.
+
+### 결정
+- `_shared/lib/notify_discord.ts`를 `openclaw message send --channel discord --target channel:<ID> --message <text>` subprocess 호출 방식으로 재구현. `--media <path>` 옵션 추가로 옛 `notify_discord_media.sh` 동등 동작 흡수.
+- 채널 ID는 `DISCORD_CHANNEL_ID` env에서만 읽고 hardcoded fallback 제거. 누락 시 `exit 1` (caller fail-fast) — 옛 silent fallback 폐기.
+- 워크스페이스 secret 위치를 `<ws>/.env`(워크스페이스 root)로 이동. `<ws>/config/.env`는 폐기. `.env.example`도 동일 위치.
+- `.gitignore`는 layered 구조 — ai-nodes 루트에 글로벌 규칙(`.env`, `.env.*`, `!.env.example`, `**/data/`, `**/logs/`), 워크스페이스 root에 특화 규칙 추가 가능 (필요 시).
+- caller는 `bun --env-file=<ws>/.env <ts> [--media <path>] "<message>"` 패턴. `_shared/lib/notify_discord.ts`는 자체적으로 .env 위치 추정 안 함 — caller가 명시적 전달 (워크스페이스 격리).
+- `skills/plan-and-build/scripts/run-phases.py`가 `_shared/lib/notify_discord.ts`를 직접 호출하도록 `find_notify_script` 폐기.
+
+거절된 대안:
+- webhook URL 방식 → 옛 동작과 다른 인증/인프라 필요, 사용자 환경에 안 맞음.
+- 채널 ID hardcoded 유지 → 미래 변경 대응 불가.
+- 단일 통합 채널 → 워크스페이스별 라우팅 가치 큼.
+- git history rewrite → destructive (force push). 미래 변경 차단만으로 위험 충분히 감소.
+
+### 결과
+- Discord 알림이 사용자 환경(openclaw 인증 기반)에서 정상 동작.
+- 채널 ID가 코드에 직접 박히지 않아 미래 마이그레이션 비용 감소. 옛 hardcoded ID는 git history에 남지만 .env 격리로 추가 노출 차단.
+- 워크스페이스별 secret이 워크스페이스 root에 집중 → secret 관리 단순화.
+- `.env` 누락 시 알림 동작 안 함 (옛 silent fallback과 다른 거동) — 설정 누락이 즉시 드러남.
+- 본 ADR은 career-os 범위. apartment의 `notify_discord*.sh` 마이그레이션은 별도 plan (워크스페이스 격리 원칙).
+
+### 적용
+- 본체: `_shared/lib/notify_discord.ts` (재구현).
+- 타입: `_shared/types/index.ts::NotificationPayload`는 openclaw command shape으로 갱신 또는 제거.
+- secret: 각 워크스페이스 `<ws>/.env`(git ignore) + `<ws>/.env.example`(템플릿, git 추적).
+- caller 호출 패턴 — 본 결정 섹션 참조.
+- `skills/plan-and-build/scripts/run-phases.py` notify 통합.

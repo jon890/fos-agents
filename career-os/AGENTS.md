@@ -12,7 +12,7 @@
 | [`docs/data-schema.md`](docs/data-schema.md) | config / logs / runtime / 산출물 JSON 스키마 | 데이터 파일 다룰 때 / 새 config 도입 |
 | [`docs/flow.md`](docs/flow.md) | 사용자·데이터 플로우 (명령별 입력→runner→산출물) | 새 흐름 추가 / 디버깅 |
 | [`docs/code-architecture.md`](docs/code-architecture.md) | 디렉터리 레이어·책임·외부 의존·Runner/Dispatcher 패턴 | 코드 구조 변경 / 새 스킬 추가 |
-| [`docs/adr.md`](docs/adr.md) | 모든 아키텍처 결정 누적 기록 (현재 ADR-001~020) | 결정의 *왜*를 알아야 할 때 |
+| [`docs/adr.md`](docs/adr.md) | 모든 아키텍처 결정 누적 기록 (현재 ADR-001~021) | 결정의 *왜*를 알아야 할 때 |
 
 `tasks/`는 docs와 별개의 영역으로, `skills/planning`이 생성하고 `skills/plan-and-build`가 실행하는 **워크스페이스 단위 실행 계획**의 영구 저장소다. `<workspace>/tasks/plan{N}-<slug>/` 형태로 각 plan이 자기 디렉터리를 갖고, 그 안에 `index.json` + `phase-NN.md`가 들어간다. 완료된 plan도 history 보존 목적으로 삭제하지 않는다.
 
@@ -57,7 +57,7 @@
 
 - `_shared/bin/track_task.sh` — 모든 모드 트래커. 누락 시 모든 실행 실패.
 - `_shared/lib/invoke_claude_skills.ts` — Bun. Claude CLI 호출 + usage 전파 + 재시도 + 검증 통합 헬퍼. claude_lib.sh + extract_claude_result.py 의 후속.
-- `_shared/lib/notify_discord.ts` — Bun. Discord webhook 알림. 워크스페이스별 notify_discord.sh 의 후속.
+- `_shared/lib/notify_discord.ts` — Bun. `openclaw message send --channel discord` subprocess. `DISCORD_CHANNEL_ID` env 필수, `--media <path>` 옵션 지원. 옛 `notify_discord*.sh` 후속 (ADR-021).
 - `_shared/lib/format_cost_summary.ts` — Bun. logs/task-runs.jsonl 최신 항목 → 한 줄 cost 요약. format_cost_summary.py 의 후속.
 - `_shared/bin/update_artifacts.py` — `data/generated-artifacts.json` upsert (당분간 Python 유지, 별도 plan).
 
