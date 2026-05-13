@@ -1,0 +1,87 @@
+{
+  "name": "plan005-cj-oliveyoung-decomposition",
+  "description": "ADR-017 — cj-oliveyoung-java-backend-prep 거대 dispatcher skill을 도메인·기능 기준 5개 skill로 분해. command-router / knowledge-gap-analyzer / study-topic-recommender / topic-pool-replenisher / study-pack-batch + WIP 3개 entry point wire-up (회사명·시점명 제거) + dispatcher 새 case 3개 + caller 일괄 갱신.",
+  "created_at": "2026-05-13T10:30:00+00:00",
+  "updated_at": "2026-05-13T10:30:00+00:00",
+  "status": "pending",
+  "current_phase": 0,
+  "total_phases": 7,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/docs/adr.md",
+    "career-os/docs/prd.md",
+    "career-os/docs/flow.md",
+    "career-os/docs/code-architecture.md",
+    "career-os/AGENTS.md"
+  ],
+  "depends_on": [
+    "plan002-config-consolidation",
+    "plan004-shared-helpers-ts"
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "command-router skill 신설 (dispatcher 본체 이동) + 모든 외부 caller path 일괄 갱신",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 2,
+      "title": "knowledge-gap-analyzer skill 신설 (baseline/daily/smoke + 3 helper) + dispatcher case path 갱신",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 3,
+      "title": "study-topic-recommender skill 신설 (live-coding 흡수, 회사명·시점명 제거) + dispatcher recommend-topics case path 갱신 + live-coding-dispatch 새 case",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 4,
+      "title": "topic-pool-replenisher skill 신설 (replenishment + promotion) + dispatcher replenish-topics case path 갱신",
+      "file": "phase-04.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 5,
+      "title": "study-pack-batch skill 신설 (bootcamp 회사명 제거) + dispatcher bootcamp-batch 새 case",
+      "file": "phase-05.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 6,
+      "title": "experience-question-bank-writer에 auto-question-bank 흡수 + dispatcher auto-question-bank 새 case",
+      "file": "phase-06.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 7,
+      "title": "cj-oliveyoung-java-backend-prep 폴더 cleanup + 통합 smoke + trailing cleanup + push",
+      "file": "phase-07.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 1200
+    }
+  ]
+}
