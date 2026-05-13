@@ -217,6 +217,18 @@ git ls-files <pattern> | xargs wc -l
 - 검증 결과가 stdout에 raw 값으로 echo되어야 한다고 강제했나? (예: `echo "[count] $count"` 후 비교) — 실측이 보고에 명시적으로 드러나면 추정으로 메우기 어려움.
 - 또는 phase 본문 끝에 "✅ 모든 검증 명령 실행 완료 / ❌ 검증 실행 누락" 둘 중 하나를 stdout에 명시하라는 강제 표지가 있나?
 
+### 6-5. phase가 destructive edit을 additive edit으로 바꿔치기
+
+**증상**: phase 본문이 "기존 X 섹션의 본문은 제거하고 'migrated to ...' 표시만 남긴다"처럼 *제거*를 명시했는데, 실행 Claude가 옛 본문을 그대로 둔 채 안내 quote만 *추가*함. 결과는 docs duplicate (옛 schema 본문 + 새 통합 schema 동시 존재) → drift 위험. plan002-config-consolidation phase-01에서 실제 발생 — data-schema.md의 옛 8개 config 섹션 본문이 quote 추가만 된 채 그대로 남아 별도 cleanup commit으로 -55줄 잔여 정리 필요.
+**왜**: Claude는 destructive edit (delete, replace-with-shorter)보다 additive edit (append, insert)을 선호하는 경향. 특히 안전 본능이 작동해 "원본을 살려두면서 표시만 추가"하는 경로를 택함. 6-4와 별개 — 6-4는 검증 우회, 6-5는 작업 *동작 자체*가 의도와 어긋남.
+
+**Self-check**:
+- phase 본문에 "제거" / "본문 삭제" / "~만 남기고" / "본문 → quote 한 줄" 같은 destructive 표현이 있는가? 있다면 다음 중 하나를 phase에 박아 추정·회피 방지:
+  - 정확한 before / after 마크다운 예시 한 블록 ("기존: ... → 변경 후: ...")
+  - 정확한 라인 범위 anchor ("52-90행을 다음으로 대체")
+  - phase 끝에 destructive 검증 ("`grep -c '본문 키워드' file.md` = 0")
+- 검증 단계에서 wc -l이나 삭제 라인 수 같은 *반-증명* 검증을 포함했나? (단순히 "migrated quote 존재"만 확인하면 본문 잔존을 못 잡음)
+
 ---
 
 ## 변경 이력
@@ -224,3 +236,4 @@ git ls-files <pattern> | xargs wc -l
 - 2026-05-13: 초안 — fos-blog `_shared/common-pitfalls.md`의 1 패턴을 베이스로, ai-nodes 워크스페이스 규약(2~5)을 추가.
 - 2026-05-13: plan001-adr-cleanup 1 사이클 회고 누적 — 1-4 (phase 간 범위/검증 align), 6 신설 (run-phases.py 하네스 계약: exit code 규약 / trailing working tree / JSON trailing newline).
 - 2026-05-13: plan002-config-consolidation 1 사이클 회고 — 6-4 추가 (phase가 검증 명령을 우회하고 추정 success 보고). 6-1 exit code 보정만으로는 부족 — 명령 실측 강제가 필요.
+- 2026-05-13: plan002 leftover cleanup 회고 — 6-5 추가 (phase가 destructive edit을 additive edit으로 바꿔치기). phase-01이 옛 8개 config 섹션 본문을 제거해야 했으나 quote만 추가하고 본문 보존 → 별도 cleanup commit 필요.
