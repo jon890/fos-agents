@@ -26,7 +26,7 @@ POSITION_CONTEXT="AI 서비스 백엔드 위주" run_now.sh recommend-positions
 - Use `config/position-decision-criteria.md` as the evolving decision rubric for ranking, exclusions, and user feedback.
 - Use `config/company-upside-reference.md` for company/scale upside, brand leverage, and business risk.
 - Use `config/verified-company-research-targets.json` for broad verified-company discovery targets.
-- Use `config/tech-blog-sources.json` to judge whether a company has strong engineering-blog signals.
+- Use `config/sources.json` (key: `techBlog`) to judge whether a company has strong engineering-blog signals.
 - For verified-company scans, read `references/verified-company-discovery.md`.
 - Use selected local fos-study resume/task docs when helpful.
 - Do not invent experience or metrics not supported by the profile/docs.

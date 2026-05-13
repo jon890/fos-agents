@@ -1,0 +1,706 @@
+{
+  "_meta": {
+    "purpose": "career-os 보조 카테고리 reservoir 단일 출처 (ADR-016)",
+    "schema_version": "1",
+    "categories": [
+      "techBlog",
+      "ai",
+      "geek"
+    ]
+  },
+  "techBlog": {
+    "_meta": {
+      "purpose": "회사/엔지니어링 기술 블로그 추천 reservoir. 매일 morning 추천에서 3개 항목 선택용.",
+      "policy": "백엔드/커머스/면접 도메인 적합도 우선. 동일 source 연속 추천을 피하기 위해 source 필드를 분산해 둔다.",
+      "updateGuidance": "feedUrl이 있는 source는 ADR-013 discovery 레이어가 매일 최신 글 1편을 자동 부착한다. feedUrl이 없거나 fetch 실패 시 reservoir 원본 카드로 fallback.",
+      "schema": {
+        "key": "kebab-case 고유 키",
+        "title": "한글 추천 제목 (discovery 실패 시 fallback에 사용)",
+        "source": "블로그/조직 이름",
+        "url": "(optional) 블로그 홈/소스 URL",
+        "feedUrl": "(optional) RSS/Atom 피드 URL — 있으면 최신 글을 자동 선택",
+        "filterKeywords": "(optional) 글 제목에 포함되면 우선하는 키워드 배열 (case-insensitive)",
+        "tags": "분야 태그 배열",
+        "estMinutes": "예상 reading 시간(분)",
+        "whyNow": "왜 지금 읽으면 좋은지 (1~3문장)"
+      }
+    },
+    "items": [
+      {
+        "key": "woowahan-backend-recent",
+        "title": "우아한형제들 기술블로그 — 백엔드/주문 도메인 글 1편",
+        "source": "우아한형제들 tech",
+        "url": "https://techblog.woowahan.com/",
+        "tags": [
+          "commerce",
+          "domain-modeling"
+        ],
+        "estMinutes": 25,
+        "whyNow": [
+          "주문/재고/배달 도메인 분리 사례가 커머스 면접 답변에 거의 그대로 적용된다",
+          "DDD/Aggregate 경계 사례가 풍부해 도메인 답변 깊이가 늘어난다"
+        ]
+      },
+      {
+        "key": "toss-tech-payment-recent",
+        "title": "토스 기술 블로그 — 백엔드/데이터/운영 글 1편",
+        "source": "토스 tech",
+        "url": "https://toss.tech/tech",
+        "feedUrl": "https://toss.tech/rss.xml",
+        "filterKeywords": [
+          "결제",
+          "payment",
+          "트랜잭션",
+          "transaction",
+          "spring",
+          "kafka",
+          "MSA",
+          "백엔드",
+          "flink",
+          "rocksdb",
+          "starrocks",
+          "stream",
+          "데이터",
+          "운영"
+        ],
+        "tags": [
+          "backend",
+          "data-platform",
+          "ops"
+        ],
+        "estMinutes": 25,
+        "whyNow": [
+          "토스 글은 운영 장애·성능·데이터 처리 디테일이 강해서 면접 사례로 쓰기 좋다",
+          "분산 처리/트랜잭션/운영 관점을 실제 글 기반으로 보강할 수 있다"
+        ]
+      },
+      {
+        "key": "kakao-tech-mysql-redis",
+        "title": "카카오 기술블로그 — MySQL/Redis 운영 글 1편",
+        "source": "카카오 tech",
+        "url": "https://tech.kakao.com/blog/",
+        "feedUrl": "https://tech.kakao.com/feed/",
+        "filterKeywords": [
+          "mysql",
+          "redis",
+          "db",
+          "데이터베이스",
+          "캐시",
+          "인덱스",
+          "트랜잭션"
+        ],
+        "tags": [
+          "mysql",
+          "redis",
+          "ops"
+        ],
+        "estMinutes": 25,
+        "whyNow": [
+          "weak area인 DB 운영 디테일을 사례로 보강할 수 있다",
+          "면접에서 \"운영 경험\"으로 인용 가능한 시그널을 얻는다"
+        ]
+      },
+      {
+        "key": "naver-d2-search-architecture",
+        "title": "네이버 D2 — 검색·아키텍처 글 1편",
+        "source": "네이버 D2",
+        "url": "https://d2.naver.com/home",
+        "feedUrl": "https://d2.naver.com/d2.atom",
+        "filterKeywords": [
+          "검색",
+          "search",
+          "아키텍처",
+          "architecture",
+          "백엔드",
+          "kafka",
+          "redis",
+          "mysql"
+        ],
+        "tags": [
+          "architecture",
+          "search"
+        ],
+        "estMinutes": 25,
+        "whyNow": [
+          "검색/대용량 처리는 대규모 커머스/플랫폼 백엔드에서도 빈출 주제다",
+          "ES/OpenSearch 사례를 한국어 사례로 빠르게 흡수할 수 있다"
+        ]
+      },
+      {
+        "key": "line-engineering-distributed",
+        "title": "LINE Engineering — 신뢰성/분산 시스템 글 1편",
+        "source": "LINE engineering",
+        "url": "https://engineering.linecorp.com/ko",
+        "feedUrl": "https://engineering.linecorp.com/ko/feed/",
+        "filterKeywords": [
+          "kafka",
+          "분산",
+          "distributed",
+          "스토리지",
+          "storage",
+          "messaging",
+          "메시징",
+          "백엔드",
+          "slo",
+          "sli",
+          "신뢰성",
+          "reliability",
+          "운영"
+        ],
+        "tags": [
+          "architecture",
+          "reliability",
+          "distributed"
+        ],
+        "estMinutes": 25,
+        "whyNow": [
+          "대규모 서비스의 신뢰성·운영 기준을 실제 적용 사례로 볼 수 있다",
+          "SLO/SLI, 메시징, 스토리지 같은 운영형 면접 답변 폭이 넓어진다"
+        ]
+      },
+      {
+        "key": "daangn-backend-event-driven",
+        "title": "당근 tech blog — 백엔드/event-driven 글 1편",
+        "source": "당근 tech",
+        "url": "https://medium.com/daangn",
+        "feedUrl": "https://medium.com/feed/daangn",
+        "filterKeywords": [
+          "백엔드",
+          "backend",
+          "event",
+          "kafka",
+          "msa",
+          "도메인",
+          "spring"
+        ],
+        "tags": [
+          "architecture",
+          "event-driven"
+        ],
+        "estMinutes": 20,
+        "whyNow": [
+          "한국 커머스/마켓플레이스 도메인 사례가 면접 인용에 적합하다",
+          "MSA 분해 의사결정 흐름이 잘 정리되어 있다"
+        ]
+      },
+      {
+        "key": "coupang-tech-scaling",
+        "title": "쿠팡 기술블로그 — 확장성/주문 처리 글 1편",
+        "source": "쿠팡 engineering",
+        "url": "https://medium.com/coupang-engineering",
+        "feedUrl": "https://medium.com/feed/coupang-engineering",
+        "filterKeywords": [
+          "scaling",
+          "확장",
+          "order",
+          "주문",
+          "백엔드",
+          "backend",
+          "kafka",
+          "java"
+        ],
+        "tags": [
+          "commerce",
+          "scaling"
+        ],
+        "estMinutes": 25,
+        "whyNow": [
+          "동일 커머스 도메인의 대규모 운영 시그널을 직접 인용할 수 있다",
+          "백엔드 면접 답변에서 비교 사례로 쓰기 좋다"
+        ]
+      },
+      {
+        "key": "shopify-engineering-rails-monolith",
+        "title": "Shopify Engineering — modular monolith / commerce 글 1편",
+        "source": "Shopify engineering",
+        "url": "https://shopify.engineering/",
+        "tags": [
+          "commerce",
+          "monolith",
+          "modular"
+        ],
+        "estMinutes": 25,
+        "whyNow": [
+          "MSA 미신을 깨고 modular monolith 답변을 준비할 때 좋은 레퍼런스다",
+          "글로벌 커머스 운영 사례라 신뢰도 높은 인용처다"
+        ]
+      },
+      {
+        "key": "stripe-engineering-idempotency",
+        "title": "Stripe engineering — API 멱등성/재시도 글 1편",
+        "source": "Stripe engineering",
+        "url": "https://stripe.com/blog/engineering",
+        "tags": [
+          "api",
+          "idempotency",
+          "payment"
+        ],
+        "estMinutes": 20,
+        "whyNow": [
+          "멱등성·retry·DLQ는 면접에서 자주 깊게 들어가는 주제다",
+          "Stripe 패턴은 사실상 업계 표준 답안이라 인용 가치가 높다"
+        ]
+      },
+      {
+        "key": "netflix-tech-resilience",
+        "title": "Netflix Tech Blog — resilience / circuit breaker 글 1편",
+        "source": "Netflix tech",
+        "url": "https://netflixtechblog.com/",
+        "feedUrl": "https://medium.com/feed/netflix-techblog",
+        "filterKeywords": [
+          "resilience",
+          "circuit",
+          "retry",
+          "backpressure",
+          "latency",
+          "scaling",
+          "kafka",
+          "java"
+        ],
+        "tags": [
+          "architecture",
+          "resilience"
+        ],
+        "estMinutes": 25,
+        "whyNow": [
+          "Hystrix/Resilience4j 흐름과 backpressure 답변에 그대로 활용된다",
+          "장애 대응 답변의 깊이를 빠르게 끌어올린다"
+        ]
+      },
+      {
+        "key": "aws-architecture-blog-serverless",
+        "title": "AWS Architecture Blog — Serverless/Aurora 글 1편",
+        "source": "AWS architecture",
+        "url": "https://aws.amazon.com/blogs/architecture/",
+        "feedUrl": "https://aws.amazon.com/blogs/architecture/feed/",
+        "filterKeywords": [
+          "aurora",
+          "serverless",
+          "lambda",
+          "sqs",
+          "rds",
+          "dynamodb",
+          "msk",
+          "scaling"
+        ],
+        "tags": [
+          "aws",
+          "serverless",
+          "aurora"
+        ],
+        "estMinutes": 20,
+        "whyNow": [
+          "Aurora/Lambda/SQS 운영 패턴은 여러 백엔드 서비스 운영 환경에 적용하기 좋다",
+          "면접 답변에서 AWS 레퍼런스 아키텍처를 인용할 수 있다"
+        ]
+      }
+    ]
+  },
+  "ai": {
+    "_meta": {
+      "purpose": "AI 관련 추천 reservoir. 매일 morning 추천에서 3개 항목 선택용.",
+      "policy": "백엔드 엔지니어가 실제로 활용 가능한 AI 주제(LLM API, RAG, Agent, Vector DB, AI 코딩 워크플로) 중심. 단순 ML 이론은 제외.",
+      "updateGuidance": "Anthropic/OpenAI 신모델, 신기능 발표가 잦으므로 분기마다 사람이 검토. feedUrl이 있는 항목은 ADR-013 discovery 레이어가 최신 글을 자동 부착.",
+      "schema": {
+        "key": "kebab-case 고유 키",
+        "title": "한글 추천 제목 (discovery 실패 시 fallback)",
+        "category": "subdomain (api, rag, agent, vector-db, workflow, model)",
+        "url": "(optional) 참고 URL",
+        "feedUrl": "(optional) RSS/Atom 피드 URL",
+        "filterKeywords": "(optional) 글 제목 우선 키워드",
+        "tags": "분야 태그",
+        "estMinutes": "예상 학습 시간(분)",
+        "whyNow": "왜 지금 보면 좋은지"
+      }
+    },
+    "items": [
+      {
+        "key": "anthropic-prompt-caching-cost",
+        "title": "Anthropic Prompt Caching 실전 — cost / hit rate 튜닝",
+        "category": "api",
+        "url": "https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching",
+        "tags": [
+          "claude",
+          "cost-optimization"
+        ],
+        "estMinutes": 25,
+        "whyNow": [
+          "career-os 자체가 매일 Claude를 호출하므로 cache 튜닝이 직접적인 비용 절감으로 이어진다",
+          "면접에서 \"AI를 실제 운영해 봤다\" 신호로 쓰기 좋다"
+        ]
+      },
+      {
+        "key": "claude-agent-sdk-tool-use",
+        "title": "Claude Agent SDK / Tool Use 패턴 정리",
+        "category": "agent",
+        "url": "https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/overview",
+        "tags": [
+          "claude",
+          "agent",
+          "tool-use"
+        ],
+        "estMinutes": 30,
+        "whyNow": [
+          "Claude Code/career-os 워크플로 자체가 agent 구조라 직접 활용 가능하다",
+          "에이전트 디자인 패턴은 신규 기술 답변 카드로 강력하다"
+        ]
+      },
+      {
+        "key": "rag-eval-ragas-langsmith",
+        "title": "RAG 평가 — Ragas / LangSmith로 retrieval 품질 측정",
+        "category": "rag",
+        "url": "https://docs.ragas.io/",
+        "tags": [
+          "rag",
+          "eval"
+        ],
+        "estMinutes": 30,
+        "whyNow": [
+          "RAG 도입은 흔하지만 \"평가까지 했다\"가 차별 포인트가 된다",
+          "백엔드 메트릭 수집 패턴과 동일해 익히기 쉽다"
+        ]
+      },
+      {
+        "key": "vector-db-pgvector-vs-qdrant",
+        "title": "Vector DB 선택 — pgvector vs Qdrant vs Weaviate 비교",
+        "category": "vector-db",
+        "tags": [
+          "vector-db",
+          "rag"
+        ],
+        "estMinutes": 25,
+        "whyNow": [
+          "기존 PostgreSQL 운영 경험을 RAG 도입 답변으로 자연스럽게 확장할 수 있다",
+          "커머스/콘텐츠 서비스에서 상품 추천·검색 RAG 구상 시 직접적이다"
+        ]
+      },
+      {
+        "key": "openai-api-agent-product-updates",
+        "title": "OpenAI API / Agent 제품 업데이트 1편",
+        "category": "api",
+        "url": "https://openai.com/news/",
+        "feedUrl": "https://openai.com/news/rss.xml",
+        "filterKeywords": [
+          "api",
+          "agent",
+          "tool",
+          "function",
+          "codex",
+          "model",
+          "realtime"
+        ],
+        "tags": [
+          "openai",
+          "api",
+          "agent"
+        ],
+        "estMinutes": 30,
+        "whyNow": [
+          "OpenAI API와 agent 제품 변화는 백엔드 서비스 설계 선택지에 직접 영향을 준다",
+          "function/tool call, managed agent, 모델 라우팅 같은 주제는 AI 기능 운영 답변에서 차별점이 된다"
+        ]
+      },
+      {
+        "key": "llm-cost-routing-haiku-sonnet-opus",
+        "title": "LLM Cost Routing — Haiku/Sonnet/Opus 모델 분기 전략",
+        "category": "workflow",
+        "tags": [
+          "claude",
+          "cost-routing"
+        ],
+        "estMinutes": 20,
+        "whyNow": [
+          "OMC가 이미 모델 routing을 사용하므로 실제 패턴을 정리해두면 면접 사례화하기 쉽다",
+          "비용 통제는 AI 답변에서 가장 자주 묻는 후속 질문이다"
+        ]
+      },
+      {
+        "key": "structured-output-tool-schema-claude",
+        "title": "Claude Structured Output / Tool Schema 설계 베스트 프랙티스",
+        "category": "api",
+        "url": "https://docs.anthropic.com/en/docs/build-with-claude/structured-outputs",
+        "tags": [
+          "claude",
+          "structured-output"
+        ],
+        "estMinutes": 25,
+        "whyNow": [
+          "career-os question-bank가 strict schema 패턴을 쓰므로 그대로 사용 사례화 가능하다",
+          "백엔드 API 설계 감각과 직접 연결되는 주제다"
+        ]
+      },
+      {
+        "key": "mcp-server-design",
+        "title": "MCP (Model Context Protocol) 서버 직접 설계해 보기",
+        "category": "agent",
+        "url": "https://modelcontextprotocol.io/",
+        "tags": [
+          "mcp",
+          "tooling"
+        ],
+        "estMinutes": 35,
+        "whyNow": [
+          "OMC 환경이 MCP 기반이라 직접 설계 경험이 곧장 운영 시그널이 된다",
+          "Claude/Cursor/IDE 통합 답변에서 강력한 차별 카드"
+        ]
+      },
+      {
+        "key": "local-llm-vllm-ollama-serving",
+        "title": "Local LLM Serving — vLLM / Ollama 비교와 백엔드 연동",
+        "category": "model",
+        "tags": [
+          "local-llm",
+          "vllm",
+          "ollama"
+        ],
+        "estMinutes": 30,
+        "whyNow": [
+          "보안/비용 이슈로 사내 LLM 운영 수요가 늘고 있다",
+          "GPU 자원/스루풋 관점은 백엔드 capacity planning과 같은 언어로 설명 가능하다"
+        ]
+      },
+      {
+        "key": "ai-coding-agent-workflow-omc",
+        "title": "AI Coding Agent 워크플로 — Claude Code / OMC 패턴 정리",
+        "category": "workflow",
+        "tags": [
+          "claude-code",
+          "agent",
+          "workflow"
+        ],
+        "estMinutes": 25,
+        "whyNow": [
+          "본인이 매일 사용하는 워크플로를 \"왜 이렇게 운영하는가\"로 정리해두면 면접 자기소개에 바로 들어간다",
+          "AI 도입 사례 질문에 1분 답변으로 쓸 수 있다"
+        ]
+      },
+      {
+        "key": "embedding-model-comparison-openai-cohere",
+        "title": "Embedding 모델 비교 — OpenAI / Cohere / BGE / KURE",
+        "category": "model",
+        "tags": [
+          "embedding",
+          "rag",
+          "ko-nlp"
+        ],
+        "estMinutes": 25,
+        "whyNow": [
+          "한국어 임베딩 모델 선택은 한국 커머스 RAG에서 핵심 결정이다",
+          "라이선스/비용/품질 trade-off는 면접에서 깊게 묻는 주제다"
+        ]
+      },
+      {
+        "key": "guardrails-llm-output-validation",
+        "title": "LLM Guardrails — 출력 검증 / hallucination 방어 패턴",
+        "category": "workflow",
+        "tags": [
+          "guardrails",
+          "validation"
+        ],
+        "estMinutes": 25,
+        "whyNow": [
+          "production LLM에서 검증 없는 출력은 곧 장애로 이어진다",
+          "백엔드 입력 검증 감각을 그대로 LLM 출력에 적용하는 답변이 된다"
+        ]
+      }
+    ]
+  },
+  "geek": {
+    "_meta": {
+      "purpose": "Geek/news/broad industry 추천 reservoir. 매일 morning 추천에서 1개 항목 선택용.",
+      "policy": "GeekNews/Hacker News 류의 산업 동향, OSS 신소식, 인프라/언어/도구 흐름 등 backend 시야 확장 목적. 단발성 뉴스가 아니라 한 단락으로 정리할 수 있는 평가형 주제로 기록한다.",
+      "updateGuidance": "feedUrl이 있는 source는 ADR-013 discovery 레이어가 매일 최신 글 1편을 자동 부착한다. fetch 실패 시 reservoir 원본 카드로 fallback.",
+      "schema": {
+        "key": "kebab-case 고유 키",
+        "title": "한글 추천 제목 (discovery 실패 시 fallback)",
+        "source": "출처 큐 (GeekNews / HackerNews / OSS release / 등)",
+        "url": "(optional) 검색/참고 힌트",
+        "feedUrl": "(optional) RSS/Atom 피드 URL — 있으면 최신 글 자동 선택",
+        "filterKeywords": "(optional) 글 제목에 포함되면 우선하는 키워드 배열",
+        "tags": "분야 태그",
+        "estMinutes": "예상 reading 시간(분)",
+        "whyNow": "왜 지금 보면 좋은지"
+      }
+    },
+    "items": [
+      {
+        "key": "geeknews-weekly-top",
+        "title": "GeekNews 이번 주 인기 글 top 1편 정독",
+        "source": "GeekNews",
+        "url": "https://news.hada.io/",
+        "feedUrl": "https://news.hada.io/rss/news",
+        "tags": [
+          "industry",
+          "weekly"
+        ],
+        "estMinutes": 15,
+        "whyNow": [
+          "한국 개발자 커뮤니티 흐름을 빠르게 따라가기 위한 최소 신호",
+          "면접 small talk / 기술 동향 답변에 즉시 활용 가능"
+        ]
+      },
+      {
+        "key": "hackernews-frontpage-deepdive",
+        "title": "Hacker News 백엔드/인프라 관련 글 1편 깊이 읽기",
+        "source": "Hacker News",
+        "url": "https://news.ycombinator.com/",
+        "feedUrl": "https://news.ycombinator.com/rss",
+        "filterKeywords": [
+          "database",
+          "postgres",
+          "mysql",
+          "redis",
+          "java",
+          "jvm",
+          "kafka",
+          "distributed",
+          "backend",
+          "server",
+          "linux",
+          "cloud",
+          "aws",
+          "kubernetes",
+          "observability",
+          "security",
+          "llm",
+          "agent",
+          "ai"
+        ],
+        "tags": [
+          "industry",
+          "global"
+        ],
+        "estMinutes": 20,
+        "whyNow": [
+          "글로벌 엔지니어링 흐름 중 백엔드/인프라와 연결되는 글만 골라 답변 폭을 넓힌다",
+          "댓글까지 읽으면 같은 기술 선택에 대한 찬반 논리를 동시에 접할 수 있다"
+        ]
+      },
+      {
+        "key": "postgres-major-release-overview",
+        "title": "PostgreSQL 최신 메이저 릴리즈 변경점 훑기",
+        "source": "Postgres release notes",
+        "url": "https://www.postgresql.org/docs/release/",
+        "feedUrl": "https://www.postgresql.org/news.rss",
+        "filterKeywords": [
+          "release",
+          "릴리즈",
+          "version",
+          "버전",
+          "Postgres"
+        ],
+        "tags": [
+          "database",
+          "release"
+        ],
+        "estMinutes": 20,
+        "whyNow": [
+          "MySQL 외 DB 동향도 알고 있으면 DB 답변 폭이 넓어진다",
+          "Aurora/Citus/pgvector 활용 답변에서 차별화 포인트가 된다"
+        ]
+      },
+      {
+        "key": "duckdb-analytics-trend",
+        "title": "DuckDB / 단일 노드 분석 DB 트렌드",
+        "source": "DuckDB blog",
+        "url": "https://duckdb.org/news/",
+        "tags": [
+          "database",
+          "analytics"
+        ],
+        "estMinutes": 20,
+        "whyNow": [
+          "OLTP 외에 \"분석 쿼리는 어디로 보낼 것이냐\" 답변을 준비할 수 있다",
+          "데이터 엔지니어링 시야를 백엔드 답변에 더하는 데 가성비가 좋다"
+        ]
+      },
+      {
+        "key": "wasm-component-model",
+        "title": "WebAssembly Component Model 흐름 정리",
+        "source": "Bytecode Alliance",
+        "url": "https://bytecodealliance.org/",
+        "tags": [
+          "wasm",
+          "platform"
+        ],
+        "estMinutes": 20,
+        "whyNow": [
+          "플러그인/엣지 런타임 답변에 WASM 시그널을 잡아두면 차별화된다",
+          "5년 후 백엔드 런타임 흐름을 가늠하는 데 도움 된다"
+        ]
+      },
+      {
+        "key": "rust-tokio-async-ecosystem",
+        "title": "Rust / Tokio async 생태계 한 번 훑기",
+        "source": "Tokio blog",
+        "url": "https://tokio.rs/blog",
+        "tags": [
+          "rust",
+          "async"
+        ],
+        "estMinutes": 25,
+        "whyNow": [
+          "JVM 이외 언어 흐름을 알고 있으면 \"왜 Java 백엔드인가\" 답변이 더 정직해진다",
+          "비동기 모델 비교(Project Loom vs Tokio vs Node) 답변에 직접 활용된다"
+        ]
+      },
+      {
+        "key": "loom-virtual-thread-status",
+        "title": "Project Loom / Virtual Thread 운영 사례 업데이트",
+        "source": "OpenJDK Loom",
+        "url": "https://openjdk.org/projects/loom/",
+        "tags": [
+          "java",
+          "concurrency"
+        ],
+        "estMinutes": 25,
+        "whyNow": [
+          "Java 21 LTS 이후 virtual thread 운영 사례가 점점 쌓이는 중이라 면접 답변 갱신이 필요",
+          "blocking I/O 비용 이야기에 새로운 답이 추가된다"
+        ]
+      },
+      {
+        "key": "kafka-vs-redpanda-vs-pulsar",
+        "title": "Kafka 대안 — Redpanda / Pulsar 흐름 비교",
+        "source": "Industry comparisons",
+        "tags": [
+          "messaging",
+          "kafka"
+        ],
+        "estMinutes": 25,
+        "whyNow": [
+          "메시징 답변에서 Kafka 외 옵션을 알고 있는 것 자체가 차별 신호다",
+          "운영 단순성/비용 trade-off 답변 폭이 넓어진다"
+        ]
+      },
+      {
+        "key": "github-copilot-vs-cursor-claude-code",
+        "title": "AI 코딩 도구 — Copilot / Cursor / Claude Code 비교 단상",
+        "source": "Industry comparisons",
+        "tags": [
+          "dev-tools",
+          "ai"
+        ],
+        "estMinutes": 15,
+        "whyNow": [
+          "본인이 사용하는 도구의 위치를 한 줄 답변으로 정리해두면 자기소개에 바로 들어간다",
+          "AI 도구 도입 의사결정 답변에 활용 가능"
+        ]
+      },
+      {
+        "key": "linux-io-uring-overview",
+        "title": "Linux io_uring — async I/O 트렌드 한 번 정리",
+        "source": "kernel.org",
+        "tags": [
+          "linux",
+          "async-io"
+        ],
+        "estMinutes": 25,
+        "whyNow": [
+          "JVM/네트워크 라이브러리 성능 답변의 밑단을 이해하는 데 큰 도움",
+          "성능 답변의 깊이가 한 단계 올라간다"
+        ]
+      }
+    ]
+  }
+}

@@ -109,9 +109,10 @@ live_seeds = read_json(CONFIG / 'live-coding-seed-pool.json').get('seeds', [])
 live_seed_candidates = read_json(CONFIG / 'live-coding-seed-candidates.json').get('seeds', [])
 artifacts = read_json(TASK_ROOT / 'data' / 'generated-artifacts.json').get('artifacts', [])
 
-tech_blog_items = safe_load(CONFIG / 'tech-blog-sources.json', {}).get('items', [])
-ai_topic_items = safe_load(CONFIG / 'ai-topic-sources.json', {}).get('items', [])
-geek_news_items = safe_load(CONFIG / 'geek-news-sources.json', {}).get('items', [])
+_sources = safe_load(CONFIG / 'sources.json', {})
+tech_blog_items = _sources.get('techBlog', {}).get('items', [])
+ai_topic_items  = _sources.get('ai', {}).get('items', [])
+geek_news_items = _sources.get('geek', {}).get('items', [])
 
 study_paths = {a.get('outputPath') for a in artifacts if a.get('kind') == 'study-pack'}
 live_paths = {a.get('outputPath') for a in artifacts if a.get('kind') == 'live-coding'}
@@ -524,7 +525,7 @@ if tech_blog_recommendations:
         lines.extend(render_secondary_item(idx, item, 'source'))
         lines.append('')
 else:
-    lines.append('- (`config/tech-blog-sources.json` 비어 있음)')
+    lines.append('- (`config/sources.json` techBlog 비어 있음)')
     lines.append('')
 
 lines.append('## AI 관련 (3)')
@@ -534,7 +535,7 @@ if ai_recommendations:
         lines.extend(render_secondary_item(idx, item, 'category', source_label='분야'))
         lines.append('')
 else:
-    lines.append('- (`config/ai-topic-sources.json` 비어 있음)')
+    lines.append('- (`config/sources.json` ai 비어 있음)')
     lines.append('')
 
 lines.append('## Geek/뉴스/산업 흐름 (1)')
@@ -544,7 +545,7 @@ if geek_recommendations:
         lines.extend(render_secondary_item(idx, item, 'source'))
         lines.append('')
 else:
-    lines.append('- (`config/geek-news-sources.json` 비어 있음)')
+    lines.append('- (`config/sources.json` geek 비어 있음)')
     lines.append('')
 
 lines.append('## 오늘의 3선 (각 카테고리에서 1개씩)')

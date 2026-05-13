@@ -13,7 +13,7 @@ PROFILE="$TASK_ROOT/config/candidate-profile.md"
 DECISION_CRITERIA="$TASK_ROOT/config/position-decision-criteria.md"
 COMPANY_UPSIDE="$TASK_ROOT/config/company-upside-reference.md"
 VERIFIED_COMPANIES="$TASK_ROOT/config/verified-company-research-targets.json"
-TECH_BLOG_SOURCES="$TASK_ROOT/config/tech-blog-sources.json"
+SOURCES_JSON="$TASK_ROOT/config/sources.json"
 RAW_RESULT_JSON="$OUTDIR/claude.result.json"
 INPUT_NOTE="$OUTDIR/input.md"
 REPORT_MD="$OUTDIR/report.md"
@@ -40,7 +40,7 @@ $(if [[ -f "$COMPANY_UPSIDE" ]]; then cat "$COMPANY_UPSIDE"; else echo "없음";
 $(if [[ -f "$VERIFIED_COMPANIES" ]]; then cat "$VERIFIED_COMPANIES"; else echo "없음"; fi)
 
 기술블로그/엔지니어링 시그널 참고 소스:
-$(if [[ -f "$TECH_BLOG_SOURCES" ]]; then cat "$TECH_BLOG_SOURCES"; else echo "없음"; fi)
+$(if [[ -f "$SOURCES_JSON" ]]; then python3 -c "import json; d=json.load(open('$SOURCES_JSON')); print(json.dumps(d['techBlog'], ensure_ascii=False, indent=2))"; else echo "없음"; fi)
 
 추가 요청/맥락:
 ${POSITION_CONTEXT:-없음}
