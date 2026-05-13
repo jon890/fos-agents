@@ -7,8 +7,8 @@ CONFIG="$TASK_ROOT/config/topics.json"
 TOPIC_CONFIG="$TASK_ROOT/config/topics.json"
 RESOLVER="$TASK_ROOT/skills/study-pack-writer/scripts/resolve_study_pack_topic.py"
 RUNNER="$TASK_ROOT/skills/study-pack-writer/scripts/run_study_pack.sh"
-OUTDIR="$TASK_ROOT/data/reports/daily/${REPORT_DATE:-$(date +%F)}/cj-foodville-bootcamp"
-SUMMARY="$TASK_ROOT/data/runtime/cj-foodville-bootcamp-summary.md"
+OUTDIR="$TASK_ROOT/data/reports/daily/${REPORT_DATE:-$(date +%F)}/bootcamp"
+SUMMARY="$TASK_ROOT/data/runtime/bootcamp-summary.md"
 mkdir -p "$OUTDIR" "$TASK_ROOT/data/runtime"
 
 mapfile -t SELECTED < <(python3 - <<'PY' "$CONFIG" "$TOPIC_CONFIG" "$SOURCE_DIR"
@@ -51,7 +51,7 @@ for row in "${SELECTED[@]}"; do
 done
 
 {
-  echo "# 오늘의 CJ푸드빌 지원 대비 학습 추천"
+  echo "# 오늘의 부트캠프 추천 (${TASK_ROOT##*/})"
   echo
   echo "기준: 서버/백엔드 직무, F&B/e-Commerce 도메인 설계, 그리고 기본기 보완."
   echo
@@ -89,10 +89,10 @@ PY
 } > "$SUMMARY"
 
 if [[ "${DRY_RUN:-0}" == "1" ]]; then
-  echo "[cj-foodville-bootcamp] DRY_RUN=1; skipping generation" >&2
+  echo "[bootcamp-batch] DRY_RUN=1; skipping generation" >&2
 else
   for topic in "${GENERATE_KEYS[@]}"; do
-    echo "[cj-foodville-bootcamp] generating $topic" >&2
+    echo "[bootcamp-batch] generating $topic" >&2
     eval "$(python3 "$RESOLVER" "$TOPIC_CONFIG" "$topic")"
     TASK_ROOT="$TASK_ROOT" "$RUNNER"
   done
