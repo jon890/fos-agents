@@ -28,7 +28,7 @@
       "additionalProperties": false,
       "required": [
         "oneMinute",
-        "oliveYoungFit"
+        "targetRoleFit"
       ],
       "properties": {
         "oneMinute": {
@@ -36,7 +36,7 @@
           "minItems": 4,
           "items": { "type": "string", "minLength": 5 }
         },
-        "oliveYoungFit": {
+        "targetRoleFit": {
           "type": "array",
           "minItems": 4,
           "items": { "type": "string", "minLength": 5 }
@@ -46,14 +46,14 @@
     "motivationAndFit": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["whyChange", "whyOliveYoung", "whyThisRole"],
+      "required": ["whyChange", "whyTargetCompany", "whyThisRole"],
       "properties": {
         "whyChange": {
           "type": "array",
           "minItems": 3,
           "items": { "type": "string", "minLength": 5 }
         },
-        "whyOliveYoung": {
+        "whyTargetCompany": {
           "type": "array",
           "minItems": 3,
           "items": { "type": "string", "minLength": 5 }
