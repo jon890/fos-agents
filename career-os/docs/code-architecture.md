@@ -108,8 +108,7 @@ career-os/
 ├── scripts/                              ← 실행 파일 영역 (plan006 후, ADR-019). career-os 한정 컨벤션.
 │   ├── command-router/
 │   │   ├── run_now.sh                  디스패처 본체 (14개 case)
-│   │   ├── notify_discord.sh
-│   │   └── setup_env.sh
+│   │   └── setup_env.sh                (Discord 알림은 _shared/lib/notify_discord.ts 직접 호출 — plan004/ADR-020)
 │   ├── knowledge-gap-analyzer/
 │   │   ├── run_baseline.sh
 │   │   ├── run_daily.sh

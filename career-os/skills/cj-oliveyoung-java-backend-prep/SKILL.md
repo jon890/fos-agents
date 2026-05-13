@@ -53,7 +53,8 @@ Baseline / daily runners:
 Morning automations:
 - `scripts/run_morning_live_coding.sh` — pick next uncovered live-coding topic, dispatch study-pack, notify Discord
 - `scripts/run_morning_question_bank.sh` — regenerate the default experience question bank, notify Discord
-- `scripts/notify_discord.sh` — thin Discord webhook poster
+
+Discord 알림은 `_shared/lib/notify_discord.ts` (plan004/ADR-020) 직접 호출.
 
 Utilities:
 - `scripts/collect_fos_study.py` — GitHub Contents API fetcher for ad-hoc collection
