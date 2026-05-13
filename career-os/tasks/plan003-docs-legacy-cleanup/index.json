@@ -2,9 +2,9 @@
   "name": "plan003-docs-legacy-cleanup",
   "description": "career-os/docs/ legacy 파일 정리: decisions/ 15 + audit/ 3 + learn/ 7 (008 제외) 일괄 삭제. ADR-018로 docs/ 운영 정책 명문화. learn/README.md를 학습 정책 가이드로 재작성. prep/ 와 hand-off/ 와 learn/008은 범위 외 (별도 plan).",
   "created_at": "2026-05-13T19:00:00+00:00",
-  "updated_at": "2026-05-13T19:00:00+00:00",
-  "status": "pending",
-  "current_phase": 1,
+  "updated_at": "2026-05-13T15:36:36.700827+00:00",
+  "status": "completed",
+  "current_phase": 3,
   "total_phases": 3,
   "error_message": null,
   "blocked_reason": null,
@@ -20,26 +20,44 @@
       "number": 1,
       "title": "docs-first: ADR-018 + learn/README 재작성 + code-architecture 트리 + AGENTS.md 갱신",
       "file": "phase-01.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "b627981541f9"
     },
     {
       "number": 2,
       "title": "legacy cleanup: decisions/15 + audit/3 + learn/{001-007}.md 7 일괄 git rm + 잔존 참조 갱신",
       "file": "phase-02.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Edit", "Bash", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "010b37c474d4"
     },
     {
       "number": 3,
       "title": "통합 smoke + 잔존 참조 검증 + index.json status=completed + push",
       "file": "phase-03.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Edit", "Bash", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
       "model": "haiku",
       "timeout": 300
     }
