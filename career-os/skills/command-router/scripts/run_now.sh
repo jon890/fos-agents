@@ -144,6 +144,10 @@ PY
     run_tracked "career-os:bootcamp-batch" "부트캠프 일괄 study-pack" \
       "$TASK_ROOT/skills/study-pack-batch/scripts/run_bootcamp_batch.sh"
     ;;
+  auto-question-bank)
+    run_tracked "career-os:auto-question-bank" "auto question-bank refresh" \
+      "$TASK_ROOT/skills/experience-question-bank-writer/scripts/run_question_bank_auto.sh"
+    ;;
   replenish-topics)
     run_tracked "career-os:replenish-topics" "topic reservoir 보충" \
       "$TASK_ROOT/skills/topic-pool-replenisher/scripts/run_topic_replenishment.sh"
@@ -178,7 +182,7 @@ PY
       "$TASK_ROOT/skills/knowledge-gap-analyzer/scripts/run_smoke_test.sh"
     ;;
   *)
-    echo "usage: run_now.sh [baseline | daily [topic] | study-pack <topic> | question-bank <topic> | recommend-topics | live-coding-dispatch | recommend-positions | foodville-coffeechat | bootcamp-batch | replenish-topics | maintain-study-pack <topic> | master [topic] | smoke]" >&2
+    echo "usage: run_now.sh [baseline | daily [topic] | study-pack <topic> | question-bank <topic> | auto-question-bank | recommend-topics | live-coding-dispatch | recommend-positions | foodville-coffeechat | bootcamp-batch | replenish-topics | maintain-study-pack <topic> | master [topic] | smoke]" >&2
     echo "  daily topic keys: see config/topic-file-map.json" >&2
     echo "  study-pack topic keys: see config/topics.json (study-pack namespace)" >&2
     echo "  question-bank topic keys: see config/topics.json (question-bank namespace)" >&2

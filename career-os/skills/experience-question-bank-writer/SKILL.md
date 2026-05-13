@@ -52,7 +52,8 @@ Avoid feeding the entire task tree in one run.
 
 ## Files
 
-- Runner: `scripts/run_question_bank.sh`
+- Runner: `scripts/run_question_bank.sh` — dispatcher의 `question-bank <topic>` case에서 직접 호출. resolver로 topic 파라미터 받음.
+- Auto wrapper: `scripts/run_question_bank_auto.sh` — dispatcher의 `auto-question-bank` case에서 호출. 기본 topic(`experience-qbank-ai-service-team` 또는 `QUESTION_BANK_TOPIC_OVERRIDE`)을 dispatcher `question-bank` case에 위임하는 알림 wrapper.
 - Topic resolver: `scripts/resolve_question_bank_topic.py` (emits `export KEY=value` lines consumed via `eval` by `run_now.sh`)
 - Output renderer + validator: `scripts/render_question_bank.py` (enforces exactly 5 main questions × 5 follow-ups)
 - Generic prompt: `references/question-bank-prompt.md`
