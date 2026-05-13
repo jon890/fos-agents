@@ -2,7 +2,7 @@
   "name": "plan002-config-consolidation",
   "description": "career-os/config/ 정리: 5 topic configs → 단일 topics.json, 3 source configs → 단일 sources.json, baseline-core-files.txt → JSON, position 4개 자산 → position-recommender/references/로 이동",
   "created_at": "2026-05-13T18:30:00+00:00",
-  "updated_at": "2026-05-13T10:28:50.449752+00:00",
+  "updated_at": "2026-05-13T10:31:07.416652+00:00",
   "status": "completed",
   "current_phase": 5,
   "total_phases": 5,
@@ -94,7 +94,8 @@
         "Grep"
       ],
       "model": "haiku",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "b99448f1610f"
     }
   ]
 }
