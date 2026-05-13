@@ -63,7 +63,7 @@
 
 ## 운영 원칙
 
-- 광범위 풀-리포 분석 금지. baseline은 큐레이션된 core 세트 안에서 (`config/baseline-core-files.txt`).
+- 광범위 풀-리포 분석 금지. baseline은 큐레이션된 core 세트 안에서 (`config/baseline-core-files.json`).
 - daily는 baseline보다 더 작게 — 토픽 기반 3-5개 문서.
 - 비용 데이터는 `logs/task-runs.jsonl`의 `cost_usd` / `model` / `tokens_*` 필드로 자동 기록 (ADR-014 이후 측정 가능 정책).
 - `workspace-audit`의 `health.token_outlier`가 평균 ±2σ 이탈 보고. `format_cost_summary.py`가 실시간 알림에 비용 부착.
