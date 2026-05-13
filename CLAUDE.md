@@ -9,7 +9,7 @@
 현재 워크스페이스:
 
 - `apartment/` — 일일 아파트 시세 리포트 파이프라인 (타깃: 엘지원앙아파트 / LG원앙, 59A 타입). `apartment/AGENTS.md`, `apartment/TOOLS.md` 참조.
-- `career-os/` — CJ 올리브영 Wellness Platform Java 백엔드 면접 준비 (면접일 2026-04-21). 해당 서브트리 작업 시 `career-os/CLAUDE.md`가 이 파일을 오버라이드합니다.
+- `career-os/` — 면접/커리어 준비 자동화. 현재 액티브 타깃은 `career-os/config/mvp-target.json`이 단일 출처(과거 타깃 history도 같은 파일에 보존). 해당 서브트리 작업 시 `career-os/CLAUDE.md`가 이 파일을 오버라이드합니다.
 - `_shared/` — 워크스페이스 공통 셸/파이썬 스크립트. 내용: `track_task.sh`(실행 트래커), `extract_claude_result.py`(Claude CLI JSON → 마크다운 리포트), `update_artifacts.py`(`data/generated-artifacts.json` upsert).
 - `skills/` — 워크스페이스 공용 스킬. 현재 `agent-browser`만 존재하며, 로컬에 설치된 `agent-browser` CLI를 통한 브라우저 자동화입니다(Naver Land처럼 JS 렌더 의존도가 높은 페이지 수집에 사용). 스크립트성 공용 코드는 `_shared/bin/`에, 재사용 가능한 스킬 단위는 여기에 둡니다. Claude Code가 자동 로드하도록 스킬 단위 심링크를 둡니다: 저장소 전역 공용 스킬은 루트 `.claude/skills/<name>`, 워크스페이스 전용 스킬은 `<workspace>/.claude/skills/<name>`(예: `apartment/.claude/skills/apartment-daily-report`)에 위치합니다. 후자는 해당 워크스페이스에서 CC를 실행할 때만 자동 로드되어 격리 원칙을 유지합니다. `.gitignore`는 이 두 패턴만 예외 처리합니다.
 
@@ -73,6 +73,17 @@ career-os/skills/cj-oliveyoung-java-backend-prep/scripts/run_now.sh smoke
 - 리포트에서 불확실성은 명시적으로 드러냅니다(매물 수, 실거래 매칭 등). 추측으로 공백을 메우지 말고 공백 자체를 기록하세요.
 - 비밀 정보는 저장소 루트가 아닌 `<workspace>/config/.env`에 저장합니다(예: `GITHUB_TOKEN`).
 - career-os 비용 규율: 저장소 전체를 광범위하게 분석하지 않습니다. baseline은 `career-os/config/baseline-core-files.txt`의 큐레이션된 핵심 집합을 사용하고, daily 실행은 더 작게 유지합니다.
+
+## 모호함 대응 규칙
+
+요청을 받았을 때 혹은 진행 중 결정점에서 모호한 부분이 생기면 즉시 다음을 수행한다.
+
+1. 모호함을 **1-10점**으로 평가한다 (1=완전히 명확, 10=완전히 미정).
+2. 현재 모호함 점수와 사유를 한 줄로 사용자에게 보고한다.
+3. **점수와 무관하게 항상 진행 계획을 먼저 알린다**. "이러이러하게 할 계획"이라고 1-2줄로 명시한 뒤 사용자의 stop 신호가 없으면 진행한다.
+4. 점수가 **3 이상**이면 계획만 알리지 말고 진행 전에 `AskUserQuestion`으로 옵션을 제시해 사용자와 논의한다.
+
+조용히 결정하고 진행하지 않는다. 작은 결정이라도 어떤 기본값을 골랐는지 보이게 한다. 목적은 "본인 의도와 어긋난 채 작업이 누적되는 것"을 막는 것이다. 진행 속도보다 정합성을 우선한다. 새 작업이 들어와도 동일하게 적용한다.
 
 ## 커밋 메시지 컨벤션
 
