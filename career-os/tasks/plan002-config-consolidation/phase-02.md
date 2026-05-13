@@ -284,7 +284,9 @@ push는 phase-05에서.
 
 ## Blocked 조건
 
-- 원본 5 config 중 하나라도 누락 → `PHASE_BLOCKED: 원본 config 누락 (이름)`
-- 검증 1번에서 namespace 누락 → `PHASE_FAILED: namespace 누락`
-- 검증 2번 0이 아닌 게 있음 → `PHASE_FAILED: 옛 파일 코드 참조 잔존 (파일명·위치)`
-- 문법 검증 실패 → `PHASE_FAILED: syntax error (path)`
+**중요 — exit code 명시**: 아래 어느 마커든 출력만 하지 말고 반드시 `sys.exit(1)` (FAILED) 또는 `sys.exit(2)` (BLOCKED) — shell에서는 `exit 1` / `exit 2` — 비-0 exit code로 종료한다. 마커만 출력하고 정상 종료하면 `run-phases.py`가 success로 잘못 처리한다 (plan001-adr-cleanup 1차 실행 사례).
+
+- 원본 5 config 중 하나라도 누락 → `PHASE_BLOCKED: 원본 config 누락 (이름)` + `exit 2`
+- 검증 1번에서 namespace 누락 → `PHASE_FAILED: namespace 누락` + `exit 1`
+- 검증 2번 0이 아닌 게 있음 → `PHASE_FAILED: 옛 파일 코드 참조 잔존 (파일명·위치)` + `exit 1`
+- 문법 검증 실패 → `PHASE_FAILED: syntax error (path)` + `exit 1`

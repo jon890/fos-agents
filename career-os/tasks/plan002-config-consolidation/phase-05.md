@@ -258,7 +258,9 @@ echo "config/ entries: $count"
 
 ## Blocked 조건
 
-- phase-02/03/04 중 하나라도 미완 (옛 config가 코드에서 여전히 참조됨) → `PHASE_BLOCKED: 선행 phase 미완`
-- 통합 smoke 실패 → `PHASE_FAILED: <어느 검증>`
-- push 실패 → `PHASE_FAILED: push`
-- config/ entry count mismatch → `PHASE_FAILED: config 잔존 또는 추가 파일`
+**중요 — exit code 명시**: 아래 어느 마커든 출력만 하지 말고 반드시 `sys.exit(1)` (FAILED) 또는 `sys.exit(2)` (BLOCKED) — shell에서는 `exit 1` / `exit 2` — 비-0 exit code로 종료한다. 마커만 출력하고 정상 종료하면 `run-phases.py`가 success로 잘못 처리한다 (plan001-adr-cleanup 1차 실행 사례).
+
+- phase-02/03/04 중 하나라도 미완 (옛 config가 코드에서 여전히 참조됨) → `PHASE_BLOCKED: 선행 phase 미완` + `exit 2`
+- 통합 smoke 실패 → `PHASE_FAILED: <어느 검증>` + `exit 1`
+- push 실패 → `PHASE_FAILED: push` + `exit 1`
+- config/ entry count mismatch → `PHASE_FAILED: config 잔존 또는 추가 파일` + `exit 1`

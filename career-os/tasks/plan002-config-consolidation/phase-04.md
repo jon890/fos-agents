@@ -169,7 +169,9 @@ push는 phase-05에서.
 
 ## Blocked 조건
 
-- 원본 txt 누락 → `PHASE_BLOCKED: baseline-core-files.txt 누락`
-- 파일 수 mismatch (txt vs json) → `PHASE_FAILED: 마이그레이션 누락`
-- 옛 txt 코드 참조 잔존 → `PHASE_FAILED: caller 잔존`
-- 문법 실패 → `PHASE_FAILED: syntax error`
+**중요 — exit code 명시**: 아래 어느 마커든 출력만 하지 말고 반드시 `sys.exit(1)` (FAILED) 또는 `sys.exit(2)` (BLOCKED) — shell에서는 `exit 1` / `exit 2` — 비-0 exit code로 종료한다. 마커만 출력하고 정상 종료하면 `run-phases.py`가 success로 잘못 처리한다 (plan001-adr-cleanup 1차 실행 사례).
+
+- 원본 txt 누락 → `PHASE_BLOCKED: baseline-core-files.txt 누락` + `exit 2`
+- 파일 수 mismatch (txt vs json) → `PHASE_FAILED: 마이그레이션 누락` + `exit 1`
+- 옛 txt 코드 참조 잔존 → `PHASE_FAILED: caller 잔존` + `exit 1`
+- 문법 실패 → `PHASE_FAILED: syntax error` + `exit 1`
