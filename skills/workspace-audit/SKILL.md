@@ -32,7 +32,7 @@ bash skills/workspace-audit/scripts/run_audit.sh <workspace>
 bash skills/workspace-audit/scripts/run_audit.sh --all
 ```
 
-이 스크립트는 LLM 호출 없이 빠르게 3단계 결정적 분석을 돌리고 마크다운 리포트를 `<workspace>/data/audit/YYYY-MM-DD.md`에 쓴다:
+이 스크립트는 LLM 호출 없이 빠르게 3단계 결정적 분석을 돌리고 산출물을 `/tmp/workspace-audit-<workspace>/` 에 둔다 (세션 한정, 다음 실행 시 덮어씀). 워크스페이스 트리에 영구 파일을 만들지 **않는다** — 보존 가치 있는 발견은 본 세션에서 사용자가 `docs/decisions/`에 ADR로 옮긴다.
 
 - `audit_static.py` — 고아 config, dead 스크립트, 깨진 심링크, 문서가 가리키는 부재 경로
 - `audit_health.py` — `logs/task-runs.jsonl` 분석 (staleness, failure rate, token outlier, data/ 갭). 1회성으로 한 번만 돈 태스크는 staleness 대상에서 제외.
@@ -46,11 +46,11 @@ bash skills/workspace-audit/scripts/run_audit.sh --all
 
 #### 절차
 
-1. **JSON 읽기** — `run_audit.sh`가 `.last-run/`에 남긴 3개 파일을 읽는다:
+1. **JSON 읽기** — `run_audit.sh`가 세션 한정 stash에 남긴 3개 파일을 읽는다:
    ```
-   <workspace>/data/audit/.last-run/static.json
-   <workspace>/data/audit/.last-run/health.json
-   <workspace>/data/audit/.last-run/consistency.json
+   /tmp/workspace-audit-<workspace>/static.json
+   /tmp/workspace-audit-<workspace>/health.json
+   /tmp/workspace-audit-<workspace>/consistency.json
    ```
 
 2. **워크스페이스 문서 수집** — 다음 파일이 존재하면 읽어서 하나의 텍스트로 합친다:
@@ -72,9 +72,9 @@ bash skills/workspace-audit/scripts/run_audit.sh --all
    ```
    analyst는 read-only다. 파일 수정 지시는 하지 않는다.
 
-5. **리포트에 추가** — analyst가 반환한 마크다운을 기존 리포트 파일 끝에 추가한다:
+5. **리포트에 추가** — analyst가 반환한 마크다운을 stash 안의 리포트 파일 끝에 추가한다:
    ```
-   <workspace>/data/audit/YYYY-MM-DD.md
+   /tmp/workspace-audit-<workspace>/report.md
    ```
    추가 형식:
    ```markdown
@@ -91,7 +91,9 @@ bash skills/workspace-audit/scripts/run_audit.sh --all
    ```
 
 6. **사용자에게 패턴 요약** — analyst 결과 중 HIGH/MED 가설만 chat에 한 줄씩 나열한다.
-   전체 내용은 리포트 파일 경로로 안내.
+   전체 내용은 stash 안 리포트 파일 경로로 안내.
+
+7. **보존 가치 평가** — chat 상에서 사용자와 함께 어떤 발견이 일회성 정보가 아니라 *영구 기록 가치*가 있는지 판단한다. 가치 있는 항목만 `<workspace>/docs/decisions/`에 ADR로 옮긴다. stash 파일들은 워크스페이스 트리에 영구화하지 않는다 — 다음 audit 실행 시 덮어씀.
 
 ### 3. Chat에 요약 제시
 리포트 파일을 `Read`로 다시 읽어, 사용자에게 다음만 짧게 보여준다:
@@ -129,14 +131,14 @@ bash skills/workspace-audit/scripts/run_audit.sh --all
 
 ## 파일
 
-- `scripts/run_audit.sh` — 단일 진입점 (3개 결정적 분석 → 마크다운 리포트 → `.last-run/` JSON 저장)
+- `scripts/run_audit.sh` — 단일 진입점 (3개 결정적 분석 → 마크다운 리포트 → 모두 `/tmp/workspace-audit-<ws>/`에 stash)
 - `scripts/discover_workspaces.py` — 워크스페이스 마커(AGENTS.md 또는 skills/) 기반 탐색
 - `scripts/audit_static.py`
 - `scripts/audit_health.py`
 - `scripts/audit_consistency.py`
 - `scripts/render_report.py`
 - `references/analyst-prompt.md` — Phase 2 analyst 서브에이전트에 전달하는 프롬프트 템플릿
-- `<workspace>/data/audit/.last-run/` — 최신 실행의 phase JSON 포렌식 흔적 (static/health/consistency)
+- `/tmp/workspace-audit-<workspace>/` — 세션 한정 stash. `static.json`, `health.json`, `consistency.json`, `report.md` 모두 여기. 워크스페이스 트리에는 영구화하지 않음 (보존 가치 있는 항목만 사용자가 ADR로 lift).
 
 ## 의도적으로 안 하는 것
 

@@ -28,7 +28,6 @@
 - `sources/` — 로컬 동기 외부 저장소 (예: `sources/fos-study/`)
 - `config/` — 후보자 프로필, mvp-target, 토픽 설정, baseline core 파일 목록 등
 - `data/reports/` — **자동 생성**된 baseline / daily / study-pack 리포트 (스크립트가 작성)
-- `data/audit/` — workspace-audit 결과물
 - `data/study-progress.json` — 학습 진도 추적
 - `data/normalized/` — 구조화된 중간 데이터
 - `data/source/` — 필요 시 수집한 외부 노트

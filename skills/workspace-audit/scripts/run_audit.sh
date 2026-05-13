@@ -35,31 +35,27 @@ audit_one() {
   local ws_root="$1"
   local ws_name
   ws_name="$(basename "$ws_root")"
-  local tmp
-  tmp="$(mktemp -d)"
-  trap 'rm -rf "$tmp"' RETURN
+
+  # Session-local stash. No permanent disk artifacts under the workspace tree:
+  # if a finding is worth preserving, the active Claude session lifts it into
+  # docs/decisions/ as an ADR. The stash survives the function return so the
+  # Phase 2 analyst can read the JSONs; it is replaced on the next run.
+  local stash="/tmp/workspace-audit-${ws_name}"
+  rm -rf "$stash"
+  mkdir -p "$stash"
 
   echo "[workspace-audit] $ws_name — static"
-  python3 "$SCRIPT_DIR/audit_static.py" "$ws_root" > "$tmp/static.json"
+  python3 "$SCRIPT_DIR/audit_static.py" "$ws_root" > "$stash/static.json"
 
   echo "[workspace-audit] $ws_name — health"
-  python3 "$SCRIPT_DIR/audit_health.py" "$ws_root" > "$tmp/health.json"
+  python3 "$SCRIPT_DIR/audit_health.py" "$ws_root" > "$stash/health.json"
 
   echo "[workspace-audit] $ws_name — consistency"
-  python3 "$SCRIPT_DIR/audit_consistency.py" "$ws_root" > "$tmp/consistency.json"
+  python3 "$SCRIPT_DIR/audit_consistency.py" "$ws_root" > "$stash/consistency.json"
 
-  local today
-  today="$(date +%Y-%m-%d)"
-  local out="$ws_root/data/audit/$today.md"
-  python3 "$SCRIPT_DIR/render_report.py" "$ws_root" "$tmp" "$out"
+  python3 "$SCRIPT_DIR/render_report.py" "$ws_root" "$stash" "$stash/report.md"
 
-  # Persist phase JSONs so the active session can feed them to the analyst subagent.
-  local last_run="$ws_root/data/audit/.last-run"
-  mkdir -p "$last_run"
-  cp "$tmp/static.json"      "$last_run/static.json"
-  cp "$tmp/health.json"      "$last_run/health.json"
-  cp "$tmp/consistency.json" "$last_run/consistency.json"
-  echo "[workspace-audit] phase JSONs → $last_run"
+  echo "[workspace-audit] phase JSONs + report → $stash (session-only)"
 }
 
 if [[ "$1" == "--all" ]]; then
