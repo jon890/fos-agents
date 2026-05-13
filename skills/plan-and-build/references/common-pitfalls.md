@@ -181,13 +181,18 @@ git ls-files <pattern> | xargs wc -l
 
 ### 6-1. PHASE_FAILED / PHASE_BLOCKED 마커만 출력하고 정상 종료
 
-**증상**: phase prompt에 "검증 실패면 `PHASE_FAILED: <reason>` 출력 후 종료"라고만 적혀 있어, 실행 Claude가 마커 출력만 하고 exit 0으로 끝남.
-**왜**: run-phases.py는 phase의 **exit code**만으로 성공/실패를 판정한다. `sys.exit(1)` = failed, `sys.exit(2)` = blocked, 그 외 = success. stdout의 PHASE_FAILED 마커는 알림 메시지용일 뿐 하네스 로직에 영향 없음. plan001-adr-cleanup 1차 실행에서 실제 발생 — phase-02가 검증 실패를 보고했는데도 index.json이 `completed`로 잘못 마킹됨.
+**증상**: phase prompt에 "검증 실패면 `PHASE_FAILED: <reason>` 출력 후 종료"라고만 적혀 있어, 실행 Claude가 마커 출력만 하고 exit 0으로 끝남. **exit 코드를 본문에 명시해도** phase Claude가 그 shell 블록을 Bash 도구로 실행하지 않고 prose 응답으로 "PHASE_BLOCKED: ..." 메시지를 stdout에 흘리는 식으로 우회하면 같은 함정 재발.
+**왜**: run-phases.py는 phase의 **exit code**만으로 성공/실패를 판정한다. `sys.exit(1)` = failed, `sys.exit(2)` = blocked, 그 외 = success. stdout의 PHASE_FAILED 마커는 알림 메시지용일 뿐 하네스 로직에 영향 없음.
+
+**실제 발생**:
+- plan001-adr-cleanup phase-02 (1차): 마커만 출력 → success로 잘못 마킹.
+- plan004-shared-helpers-ts phase-02 (1차, exit 2 명시 보정 후에도 재발): Bun 미설치 → "PHASE_BLOCKED: Bun 미설치" prose만 응답으로 출력하고 정상 종료. shell 블록 안의 `exit 2`가 실행되지 않음 (Bash 도구 우회). phase-03이 같은 상태를 발견하고 정상 exit 2 처리.
 
 **Self-check**:
 - phase 본문에 PHASE_FAILED / PHASE_BLOCKED 트리거가 있다면 그 직후에 **`sys.exit(1)` (failed) 또는 `sys.exit(2)` (blocked)** 명령이 같이 적혀 있는가?
 - "출력 후 종료"가 아닌 "출력 + 비-0 exit code"로 명시했나? (예: `print('PHASE_FAILED: ...'); sys.exit(1)`)
 - shell phase면 `echo 'PHASE_FAILED: ...' && exit 1` 형태인가?
+- BLOCKED 트리거(외부 의존성 누락 등) 블록 위에 **"반드시 Bash 도구로 아래 블록 전체를 직접 실행하라. prose로 마커만 출력하면 success로 잘못 처리된다"** 강제 주의문이 박혀 있는가? phase Claude가 prose 응답 경로를 택하지 못하게 차단.
 
 ### 6-2. 마지막 phase 끝의 trailing working tree 변경
 
@@ -237,3 +242,4 @@ git ls-files <pattern> | xargs wc -l
 - 2026-05-13: plan001-adr-cleanup 1 사이클 회고 누적 — 1-4 (phase 간 범위/검증 align), 6 신설 (run-phases.py 하네스 계약: exit code 규약 / trailing working tree / JSON trailing newline).
 - 2026-05-13: plan002-config-consolidation 1 사이클 회고 — 6-4 추가 (phase가 검증 명령을 우회하고 추정 success 보고). 6-1 exit code 보정만으로는 부족 — 명령 실측 강제가 필요.
 - 2026-05-13: plan002 leftover cleanup 회고 — 6-5 추가 (phase가 destructive edit을 additive edit으로 바꿔치기). phase-01이 옛 8개 config 섹션 본문을 제거해야 했으나 quote만 추가하고 본문 보존 → 별도 cleanup commit 필요.
+- 2026-05-13: plan004-shared-helpers-ts 1차 실행 회고 — 6-1 강화 (exit code 명시만으론 부족, BLOCKED 트리거 블록 위에 "Bash 도구로 직접 실행" 강제 주의문 필요). phase-02가 본문에 `exit 2` 명시했음에도 prose 응답으로 "PHASE_BLOCKED: Bun 미설치"만 출력하고 정상 종료 → success 잘못 처리 재발.
