@@ -1,0 +1,30 @@
+{
+  "description": "CJ푸드빌 디지털 채널 Back-end 지원 대비 morning bootcamp queue. Pick 10 recommendations and generate first 5 ungenerated study packs daily.",
+  "dailyRecommendCount": 10,
+  "dailyGenerateCount": 5,
+  "topics": [
+    "cj-foodville-commerce-domain-design-interview",
+    "commerce-interview-answer-slot-experience-mapping",
+    "commerce-order-state-consistency-fundamentals",
+    "spring-transaction-propagation-commerce",
+    "mysql-index-explain-commerce-api",
+    "jpa-n-plus-one-commerce-read-model",
+    "payment-idempotency-transaction-basics",
+    "coupon-promotion-concurrency-basics",
+    "java-concurrency-locks-commerce-cache",
+    "redis-cache-invalidation-commerce",
+    "http-session-cookie-api-auth-basics",
+    "mybatis-dynamic-sql-resultmap-basics",
+    "commerce-observability-first-five-minutes",
+    "clean-architecture-pragmatic-spring-commerce",
+    "rest-api-versioning-mobile-compatibility",
+    "fnb-ecommerce-domain-overview",
+    "fnb-order-store-pickup-state-machine",
+    "fnb-coupon-promotion-membership-design",
+    "fnb-payment-refund-settlement-operations",
+    "fnb-ecommerce-operations-monitoring-interview",
+    "hexagonal-clean-architecture-spring",
+    "mybatis-jpa-tradeoffs",
+    "legacy-jsp-jquery-api-coexistence"
+  ]
+}
