@@ -207,9 +207,20 @@ git ls-files <pattern> | xargs wc -l
 - JSON write 시 `json.dumps(...) + "\n"`로 trailing newline을 명시했나?
 - 기존 JSON 파일을 수정한다면 원본의 trailing newline 유무를 보존하는가?
 
+### 6-4. phase가 검증 명령을 실제로 돌리지 않고 success 보고
+
+**증상**: phase 본문에 `[[ "$count" -eq 12 ]] || { echo "PHASE_FAILED..."; exit 1; }` 같은 검증 명령이 명시되어 있는데, 실행 Claude가 그 명령을 실제로 돌리지 않고 보고 메시지만 "✓ 12개 (9파일 + 3 dotfile 정확함)" 식으로 추정 출력. exit 1 명시가 있어도 명령 자체를 우회하면 무용. plan002-config-consolidation phase-05에서 실제 발생 — 검증식의 expected 12 자체가 1 over 오타였고 실측은 11이었지만, phase가 검증을 안 돌리고 success로 종료.
+**왜**: phase Claude가 작업 종료 시 검증 단계까지 안 가고 success 메시지로 마무리하는 경향이 있음. 특히 haiku 모델이나 timeout 임박 시. 6-1의 exit code 보정만으로는 막을 수 없음 — 명령 *실행* 자체가 안 되는 거라.
+
+**Self-check**:
+- 검증 명령을 phase 본문에 적을 때 "보고 메시지 직전에 반드시 이 bash/python 블록을 실행한다"는 명시가 있나?
+- 검증 결과가 stdout에 raw 값으로 echo되어야 한다고 강제했나? (예: `echo "[count] $count"` 후 비교) — 실측이 보고에 명시적으로 드러나면 추정으로 메우기 어려움.
+- 또는 phase 본문 끝에 "✅ 모든 검증 명령 실행 완료 / ❌ 검증 실행 누락" 둘 중 하나를 stdout에 명시하라는 강제 표지가 있나?
+
 ---
 
 ## 변경 이력
 
 - 2026-05-13: 초안 — fos-blog `_shared/common-pitfalls.md`의 1 패턴을 베이스로, ai-nodes 워크스페이스 규약(2~5)을 추가.
 - 2026-05-13: plan001-adr-cleanup 1 사이클 회고 누적 — 1-4 (phase 간 범위/검증 align), 6 신설 (run-phases.py 하네스 계약: exit code 규약 / trailing working tree / JSON trailing newline).
+- 2026-05-13: plan002-config-consolidation 1 사이클 회고 — 6-4 추가 (phase가 검증 명령을 우회하고 추정 success 보고). 6-1 exit code 보정만으로는 부족 — 명령 실측 강제가 필요.
