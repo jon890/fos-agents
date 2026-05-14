@@ -2,9 +2,9 @@
   "name": "plan009-adr-slim",
   "description": "기존 ADR이 planning skill의 5문서 작성 원칙(토큰 효율 + drift 회피)을 위반하는 부분 정리. 비대 4개(ADR-015/017/019/021) 본문 슬림 + 중간 위험 3개(ADR-016/018/020) 점검·슬림 + ADR-007a→ADR-007 단일화 + ADR-007b→ADR-023 리넘버링 + cross-ref 8곳 갱신. docs-only plan.",
   "created_at": "2026-05-14T03:30:00+00:00",
-  "updated_at": "2026-05-14T03:30:00+00:00",
-  "status": "pending",
-  "current_phase": 0,
+  "updated_at": "2026-05-14T03:25:59.451680+00:00",
+  "status": "completed",
+  "current_phase": 2,
   "total_phases": 2,
   "error_message": null,
   "blocked_reason": null,
@@ -20,19 +20,33 @@
       "number": 1,
       "title": "비대 ADR 4개 슬림 + 중간 위험 3개 점검·슬림",
       "file": "phase-01.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 1200
+      "timeout": 1200,
+      "commitSha": "38b9a50b51b5"
     },
     {
       "number": 2,
       "title": "ADR-007a→ADR-007 / 007b→ADR-023 리넘버링 + cross-ref 갱신 + push",
       "file": "phase-02.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 1200
+      "timeout": 1200,
+      "commitSha": "0dec68164348"
     }
   ]
 }
