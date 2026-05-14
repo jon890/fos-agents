@@ -45,7 +45,7 @@ python3 "$TARGET_BUILDER" "$SOURCE_DIR" "$TARGET_LIST" \
 
 # --- Build analysis input note ---
 # Resolve {{primary.company}}/{{role}} placeholders from mvp-target.json
-bun "$TASK_ROOT/_shared/lib/build_prompt.ts" "$PROMPT_FILE" > "$OUTDIR/resolved-prompt.md"
+bun "$HOME/ai-nodes/_shared/lib/build_prompt.ts" "$PROMPT_FILE" > "$OUTDIR/resolved-prompt.md"
 
 cat > "$INPUT_NOTE" <<EOF
 $(cat "$OUTDIR/resolved-prompt.md")
