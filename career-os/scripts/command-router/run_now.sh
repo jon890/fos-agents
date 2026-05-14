@@ -54,21 +54,6 @@ case "$MODE" in
     run_tracked "career-os:daily" "daily focus report" \
       "$TASK_ROOT/scripts/knowledge-gap-analyzer/run_daily.sh"
     ;;
-  question-bank)
-    TOPIC="${2:-}"
-    if [[ -z "$TOPIC" ]]; then
-      echo "usage: run_now.sh question-bank <topic>" >&2
-      echo "  topic keys: see config/topics.json (question-bank namespace)" >&2
-      exit 1
-    fi
-
-    RESOLVER="$TASK_ROOT/scripts/experience-question-bank-writer/resolve_question_bank_topic.ts"
-    TOPIC_CONFIG="$TASK_ROOT/config/topics.json"
-    eval "$("$RESOLVER" "$TOPIC_CONFIG" "$TOPIC")"
-
-    run_tracked "career-os:question-bank:$TOPIC" "${TOPIC} question-bank" \
-      "$TASK_ROOT/scripts/experience-question-bank-writer/run_question_bank.sh"
-    ;;
   recommend-topics)
     run_tracked "career-os:recommend-topics" "morning topic 추천" \
       "$TASK_ROOT/scripts/study-topic-recommender/run_topic_recommendation.sh"
@@ -85,10 +70,6 @@ case "$MODE" in
     run_tracked "career-os:foodville-coffeechat" "Foodville coffeechat 준비" \
       "$TASK_ROOT/scripts/cj-foodville-coffeechat-prep/run_foodville_coffeechat_prep.sh"
     ;;
-  auto-question-bank)
-    run_tracked "career-os:auto-question-bank" "auto question-bank refresh" \
-      "$TASK_ROOT/scripts/experience-question-bank-writer/run_question_bank_auto.sh"
-    ;;
   replenish-topics)
     run_tracked "career-os:replenish-topics" "topic reservoir 보충" \
       "$TASK_ROOT/scripts/topic-pool-replenisher/run_topic_replenishment.sh"
@@ -98,9 +79,9 @@ case "$MODE" in
       "$TASK_ROOT/scripts/knowledge-gap-analyzer/run_smoke_test.sh"
     ;;
   *)
-    echo "usage: run_now.sh [baseline | daily [topic] | question-bank <topic> | auto-question-bank | recommend-topics | live-coding-dispatch | recommend-positions | foodville-coffeechat | replenish-topics | smoke]" >&2
+    echo "usage: run_now.sh [baseline | daily [topic] | recommend-topics | live-coding-dispatch | recommend-positions | foodville-coffeechat | replenish-topics | smoke]" >&2
     echo "  daily topic keys: see config/topic-file-map.json" >&2
-    echo "  question-bank topic keys: see config/topics.json (question-bank namespace)" >&2
+    echo "  study-pack / interview-asset (Q&A + master playbook): native skill 진입점 (claude -p '/<skill> <topic>') 사용 — ai-nodes ADR-002" >&2
     exit 1
     ;;
 esac

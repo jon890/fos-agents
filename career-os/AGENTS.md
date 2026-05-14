@@ -45,7 +45,9 @@
 
 옛 진입점 (plan006 후, ADR-019): `scripts/command-router/run_now.sh`. plan005 분해 직후~plan006 전: `skills/command-router/scripts/run_now.sh`(ADR-017). 그 전: `skills/cj-oliveyoung-java-backend-prep/scripts/run_now.sh`. 마이그 안 된 skill은 옛 진입점 여전히 사용.
 
-11개 명령 (plan014/015에서 maintain-study-pack + bootcamp-batch + master 폐기 — study-pack-writer에 흡수): `baseline` · `daily [topic]` · `recommend-positions` · `recommend-topics` · `replenish-topics` · `study-pack <topic>` · `question-bank <topic>` · `foodville-coffeechat` · `smoke` · `live-coding-dispatch` · `auto-question-bank`.
+9개 dispatcher 명령 (plan014/015에서 study-pack/question-bank/master 진입점은 native skill로 흡수): `baseline` · `daily [topic]` · `recommend-positions` · `recommend-topics` · `replenish-topics` · `foodville-coffeechat` · `smoke` · `live-coding-dispatch` · (남은 dispatcher 7개 + native 진입점 2개).
+
+native skill 진입점 (ai-nodes ADR-002, plan013/014/015): `claude -p "/study-pack <topic>"` (주제 중심 학습 문서) · `claude -p "/interview-asset <topic>"` (후보자 이력 중심 Q&A 질문 은행 + 마스터 플레이북).
 
 각 명령의 입력/산출물/git push 여부 상세는 `docs/prd.md` 기능 표, 데이터 흐름은 `docs/flow.md` 참조.
 
