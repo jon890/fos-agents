@@ -14,7 +14,7 @@ SKILL_DIR="$TASK_ROOT/skills/$SKILL_SLUG"
 OUTDIR="$TASK_ROOT/data/reports/daily/$REPORT_DATE/$REPORT_SLUG"
 RUNTIME_OUT="$TASK_ROOT/data/runtime/$SKILL_SLUG.md"
 SOURCE_DIR="$TASK_ROOT/data/source/$SOURCE_SLUG"
-PROMPT_FILE="$SKILL_DIR/references/coffeechat-review-prompt.md"
+PROMPT_FILE="$SKILL_DIR/references/coffeechat-prompt.md"
 STRATEGY_NOTE="$TASK_ROOT/docs/prep/$REPORT_SLUG-strategy.md"
 PROFILE="$TASK_ROOT/config/candidate-profile.md"
 RAW_RESULT_JSON="$OUTDIR/claude.result.json"
@@ -30,8 +30,11 @@ if (( collect_code != 0 )); then
   echo "[$REPORT_SLUG] site collection had partial failures; continuing with available snapshots" >&2
 fi
 
+# Resolve {{primary.company}} placeholders from mvp-target.json
+bun "$TASK_ROOT/_shared/lib/build_prompt.ts" "$PROMPT_FILE" > "$OUTDIR/resolved-prompt.md"
+
 cat > "$INPUT_NOTE" <<EOF2
-$(cat "$PROMPT_FILE")
+$(cat "$OUTDIR/resolved-prompt.md")
 
 후보자 프로필:
 $(if [[ -f "$PROFILE" ]]; then cat "$PROFILE"; else echo "프로필 파일 없음: $PROFILE"; fi)
