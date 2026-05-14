@@ -1,0 +1,26 @@
+{
+  "name": "plan010-abstraction-audit",
+  "description": "scripts/skills 추상화 수준 + config 의존 구조 점검. 11 skill runner의 공통 패턴(Claude 호출 / extract / validate / commit·push / artifacts upsert)을 매트릭스로 정량화하고, 하드코딩 단어(회사명·날짜·URL·고정 경로) grep + config 의존 매트릭스 + 추상화 후보 우선순위 표를 docs/learn/<date>-abstraction-audit.md에 산출. audit 자체는 본 plan에서 끝나고, 추출·리팩토링은 후속 plan에서.",
+  "created_at": "2026-05-14T03:50:00+00:00",
+  "updated_at": "2026-05-14T03:50:00+00:00",
+  "status": "pending",
+  "current_phase": 0,
+  "total_phases": 1,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/docs/learn/"
+  ],
+  "depends_on": [],
+  "phases": [
+    {
+      "number": 1,
+      "title": "11 skill 추상화·config 의존 점검 + docs/learn 산출물 + commit + push",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Bash", "Glob", "Grep", "Write"],
+      "model": "sonnet",
+      "timeout": 1800
+    }
+  ]
+}
