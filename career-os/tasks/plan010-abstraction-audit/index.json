@@ -2,8 +2,8 @@
   "name": "plan010-abstraction-audit",
   "description": "skills 구조 추상화 강화 + 회사·직무 의존 외부 config 주입. (1) coffeechat·kakao·bifos 등 하드코딩된 회사·직무·경로 제거 (mvp-target.json + 새 config 의존으로 전환). (2) Claude 호출 프롬프트 안의 회사·역할 표기를 config에서 주입받도록 템플릿화. (3) study-pack 생성 공통 코어 추출 (_shared/lib/study_pack_publish.ts). (4) fos-study git operation 추상화 (_shared/lib/fos_study_git.ts). (5) SKILL.md 일관성 + 절대 경로 정리.",
   "created_at": "2026-05-14T03:50:00+00:00",
-  "updated_at": "2026-05-14T07:50:19.751379+00:00",
-  "status": "running",
+  "updated_at": "2026-05-14T07:57:52.206854+00:00",
+  "status": "completed",
   "current_phase": 6,
   "total_phases": 6,
   "error_message": null,
@@ -107,7 +107,7 @@
       "number": 6,
       "title": "통합 smoke + 회사명·하드코딩 잔재 grep + push + trailing cleanup",
       "file": "phase-06.md",
-      "status": "running",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
@@ -117,7 +117,8 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 1200
+      "timeout": 1200,
+      "commitSha": "1f2521f47675"
     }
   ]
 }
