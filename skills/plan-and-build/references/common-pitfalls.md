@@ -234,6 +234,23 @@ git ls-files <pattern> | xargs wc -l
   - phase 끝에 destructive 검증 ("`grep -c '본문 키워드' file.md` = 0")
 - 검증 단계에서 wc -l이나 삭제 라인 수 같은 *반-증명* 검증을 포함했나? (단순히 "migrated quote 존재"만 확인하면 본문 잔존을 못 잡음)
 
+### 6-6. phase의 Write/Edit 작업 자체를 prose 응답으로 위장 + commitSha false 기록
+
+**증상**: phase 본문이 "다음 draft를 Write 도구로 SKILL.md에 전체 덮어쓰기"라고 지시하고 그 아래에 ```` ```markdown ... ``` ```` 코드 블록으로 130줄 draft를 박아둠. 실행 Claude가 **Write 도구를 호출하지 않고** prose 응답 안에 "다음과 같이 작성했다 / 검증 통과 / phase-02 OK"를 출력한 채 종료. 응답 본문 안에 draft markdown이 그대로 노출되어 있어 본인은 "다 작성했다"는 환상 — 실제 파일은 안 바뀜. 게다가 run-phases.py가 phase 종료 시 `git log -1 --format=%H`를 commitSha로 박는데, phase가 새 commit을 만들지 않았으므로 *직전 plan의 HEAD*가 phase.commitSha로 박혀서 **false history가 history로 굳어짐** (audit이 거꾸로 어려워짐). 결과: phase status=completed + commitSha 기록 + 다음 phase의 검증 bash도 prose로 위장 통과 → 전체 plan이 거짓 success.
+
+**왜**: phase 본문에 draft를 *prose 안 markdown 코드 블록*으로 박는 형식은 모델에게 두 해석을 모두 허용한다 — (A) "Write 도구로 적용" / (B) "이건 reference 예시고 prose로 '적용했다'고 응답하면 끝". 후자 경로가 더 빠르고 token이 적게 들기 때문에 모델이 선호. 6-1/6-4는 *마커 위장* / *검증 우회*였지만 6-6은 **작업 동작 자체가 prose로 대체됨**이라 한 단계 더 근원적. commitSha 자동 기록 로직이 이 거짓을 history로 굳혀 audit을 방해.
+
+**실제 발생**:
+- plan013-study-pack-writer-native phase-02 (1차): SKILL.md ~130줄 native skill 재작성 지시. 실행 Claude가 Write 도구 호출 없이 prose 응답으로 종료. 결과 SKILL.md = 42줄 (옛 사람용 문서 그대로) + native 패턴 키워드 (Read/Bash/Self-check/Workflow) 0건. phase-02.commitSha는 직전 plan011 폐기 commit `850dcb1`이 박힘. phase-04 정적 검증 bash (wc -l ≥ 80, 7섹션 grep)는 진짜 실행됐다면 즉시 PHASE_FAILED여야 했으나 그것도 prose-only 위장 통과 (6-4 함정 동시 발생). 전체 plan013이 4 phase completed로 마킹된 채 종료.
+
+**Self-check**:
+- phase 본문이 Write/Edit으로 새 파일 생성·전면 재작성을 요구한다면 draft를 phase 본문에 *그대로 코드 블록으로 박지 말 것*. 대신 다음 중 하나:
+  - **별도 파일**로 draft 분리: `<plan>/draft/<target-basename>.md` 생성 → phase 본문은 "Read draft → Write target" 명령형 한 단락으로
+  - phase 본문에 박을 수밖에 없으면 그 직전에 **"본 phase는 반드시 Write 도구를 1회 이상 호출해 `<target path>`를 전면 갱신해야 한다. Write 호출 없이 prose 응답으로 끝내면 PHASE_FAILED"** 강제 주의문
+- phase 본문 끝에 **commit 개수 self-check**가 있는가? — 예: `git rev-list HEAD ^<base> --count`로 자기 phase가 만든 commit 수가 기대치(보통 1)와 일치하는지. commit 0건이면 PHASE_FAILED + exit 1. (6-6의 진짜 방어선)
+- 검증 bash가 같은 phase 안에 있다면 **그 phase는 prose 위장 위험이 두 배** — Write 위장 + 검증 위장이 함께 일어나면 검증 자체가 무력화. 가능하면 검증을 다음 phase로 분리.
+- commitSha 기록을 신뢰하지 말 것 — `git log --format='%H %s'`로 실제 commit 메시지를 확인해서 phase가 의도한 변경을 만들었는지 audit. 같은 commit SHA가 두 phase에 박혀 있으면 즉시 의심.
+
 ---
 
 ## 변경 이력
@@ -243,3 +260,4 @@ git ls-files <pattern> | xargs wc -l
 - 2026-05-13: plan002-config-consolidation 1 사이클 회고 — 6-4 추가 (phase가 검증 명령을 우회하고 추정 success 보고). 6-1 exit code 보정만으로는 부족 — 명령 실측 강제가 필요.
 - 2026-05-13: plan002 leftover cleanup 회고 — 6-5 추가 (phase가 destructive edit을 additive edit으로 바꿔치기). phase-01이 옛 8개 config 섹션 본문을 제거해야 했으나 quote만 추가하고 본문 보존 → 별도 cleanup commit 필요.
 - 2026-05-13: plan004-shared-helpers-ts 1차 실행 회고 — 6-1 강화 (exit code 명시만으론 부족, BLOCKED 트리거 블록 위에 "Bash 도구로 직접 실행" 강제 주의문 필요). phase-02가 본문에 `exit 2` 명시했음에도 prose 응답으로 "PHASE_BLOCKED: Bun 미설치"만 출력하고 정상 종료 → success 잘못 처리 재발.
+- 2026-05-14: plan013-study-pack-writer-native 1차 실행 회고 — 6-6 신설 (phase의 Write/Edit 작업 자체를 prose 응답으로 위장 + commitSha false 기록). phase-02가 SKILL.md ~130줄 재작성 지시를 받고 Write 도구를 호출하지 않은 채 prose-only 응답으로 종료. 결과 SKILL.md는 옛 사람용 문서 그대로 (42줄). phase-04 정적 검증도 6-4 위장으로 통과. plan 전체가 거짓 success 마킹. commitSha 자동 기록이 직전 plan011 폐기 commit을 phase-02에 박아 audit이 거꾸로 어려워짐. 방어선: draft를 별도 파일로 분리 + phase 끝에 commit 개수 self-check.
