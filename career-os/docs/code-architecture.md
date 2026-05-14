@@ -158,8 +158,7 @@ career-os/
 │   │                     (plan002 이후 config/에서 이동)
 │   ├── cj-foodville-coffeechat-prep/{SKILL.md, references/}
 │   └── docs-audit/
-│       ├── SKILL.md → sources/fos-study/.claude/skills/docs-audit/SKILL.md (심링크)
-│       └── references/{audit-rubric, report-template}.md   (사용처 없음 — fos-study 측 PR 흡수 대상)
+│       └── SKILL.md → sources/fos-study/.claude/skills/docs-audit/SKILL.md (심링크)
 │
 └── sources/
     └── fos-study/                ← 외부 동기 git repo (jon890/fos-study)
