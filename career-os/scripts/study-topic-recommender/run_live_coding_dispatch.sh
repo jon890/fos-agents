@@ -46,4 +46,4 @@ out.write_text(json.dumps({f"live-coding-{seed['slug']}":{"domain":"algorithm","
 PY
 
 eval "$("$RESOLVER" "$TEMP_CONFIG" "$TOPIC_KEY")"
-exec bun run "$HOME/ai-nodes/_shared/lib/study_pack_publish.ts"
+exec bun run "$HOME/ai-nodes/career-os/scripts/_lib/study_pack_publish.ts"

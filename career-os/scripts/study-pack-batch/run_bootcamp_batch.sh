@@ -32,7 +32,7 @@ for topic in "${GENERATE_KEYS[@]+"${GENERATE_KEYS[@]}"}"; do
   echo "[bootcamp-batch] generating $topic" >&2
   eval "$("$RESOLVER" "$TOPIC_CONFIG" "$topic")"
   TASK_ROOT="$TASK_ROOT" OUTDIR="$OUTDIR_BASE/$topic" \
-    bun run "$HOME/ai-nodes/_shared/lib/study_pack_publish.ts"
+    bun run "$HOME/ai-nodes/career-os/scripts/_lib/study_pack_publish.ts"
 done
 
 { echo "## 생성 완료"; for k in "${GENERATE_KEYS[@]+"${GENERATE_KEYS[@]}"}"; do echo "- $k"; done; } >> "$SUMMARY"

@@ -3,7 +3,7 @@ set -euo pipefail
 
 TASK_ROOT="${TASK_ROOT:-$HOME/ai-nodes/career-os}"
 SOURCE_DIR="$TASK_ROOT/sources/fos-study"
-FOG_GIT="$HOME/ai-nodes/_shared/lib/fos_study_git.ts"
+FOG_GIT="$HOME/ai-nodes/career-os/scripts/_lib/fos_study_git.ts"
 TOPIC="${QUESTION_BANK_TOPIC:?QUESTION_BANK_TOPIC is required}"
 OUTPUT_REL_PATH="${OUTPUT_REL_PATH:?OUTPUT_REL_PATH is required}"
 OUTDIR="$TASK_ROOT/data/reports/daily/${REPORT_DATE:-$(date +%F)}/question-bank-$TOPIC"

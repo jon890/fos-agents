@@ -41,4 +41,4 @@ PY
 export TASK_ROOT OUTDIR
 export STUDY_TOPIC="$TOPIC" STUDY_DOMAIN="$PREFERRED_DOMAIN" OUTPUT_REL_PATH COMMIT_TOPIC="$TOPIC"
 export PROMPT_FILE="$MAINTAINER_INPUT"
-exec bun run "$HOME/ai-nodes/_shared/lib/study_pack_publish.ts"
+exec bun run "$HOME/ai-nodes/career-os/scripts/_lib/study_pack_publish.ts"

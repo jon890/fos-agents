@@ -8,4 +8,4 @@ TASK_ROOT="${TASK_ROOT:-$HOME/ai-nodes/career-os}"
 
 OUTDIR="${OUTDIR:-$TASK_ROOT/data/reports/daily/${REPORT_DATE:-$(date +%F)}/study-pack-$STUDY_TOPIC}"
 export TASK_ROOT OUTDIR
-exec bun run "$HOME/ai-nodes/_shared/lib/study_pack_publish.ts"
+exec bun run "$HOME/ai-nodes/career-os/scripts/_lib/study_pack_publish.ts"

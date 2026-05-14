@@ -3,7 +3,7 @@ set -euo pipefail
 
 TASK_ROOT="${TASK_ROOT:-$HOME/ai-nodes/career-os}"
 SOURCE_DIR="$TASK_ROOT/sources/fos-study"
-FOG_GIT="$HOME/ai-nodes/_shared/lib/fos_study_git.ts"
+FOG_GIT="$HOME/ai-nodes/career-os/scripts/_lib/fos_study_git.ts"
 SLUG="${1:?usage: publish_job_analysis.sh <slug> <title> <analysis-md> [service-landscape-md]}"
 TITLE="${2:?usage: publish_job_analysis.sh <slug> <title> <analysis-md> [service-landscape-md]}"
 ANALYSIS_MD="${3:?usage: publish_job_analysis.sh <slug> <title> <analysis-md> [service-landscape-md]}"

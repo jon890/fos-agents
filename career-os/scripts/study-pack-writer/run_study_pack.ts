@@ -13,7 +13,7 @@ import { join } from "path";
 
 const TASK_ROOT = process.env.TASK_ROOT ?? join(import.meta.dir, "..", "..");
 const TOPICS_CFG = join(TASK_ROOT, "config", "topics.json");
-const PUBLISH_SCRIPT = join(TASK_ROOT, "..", "_shared", "lib", "study_pack_publish.ts");
+const PUBLISH_SCRIPT = join(TASK_ROOT, "scripts", "_lib", "study_pack_publish.ts");
 
 const freeformArg = process.argv.slice(2).join(" ").trim();
 
