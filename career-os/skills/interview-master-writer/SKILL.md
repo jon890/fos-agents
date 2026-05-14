@@ -5,72 +5,38 @@ description: Generate and publish a common senior-backend interview master playb
 
 # Interview Master Writer
 
-Create a reusable senior-backend interview master playbook based on the candidate's real resume and project history, and publish it directly into the local `fos-study` repository.
+시니어 백엔드 면접 마스터 플레이북을 생성하여 `fos-study`에 직접 게시한다.
 
-## Purpose
+`experience-question-bank-writer`(팀별 Q&A)나 `study-pack-writer`(단일 기술 토픽)와 달리, 어느 회사 면접에서도 재사용 가능한 크로스트랙 플레이북을 목표로 한다.
 
-This skill is for resume/task-driven documents that should help the user walk into *any* senior-backend interview with a consistent story, not a company-specific or topic-specific answer sheet.
-
-Unlike `experience-question-bank-writer` (team/track-specific Q&A) and `study-pack-writer` (single technical topic), this output is a **cross-track master playbook**.
-
-## Output policy
-
-- Always write directly into `sources/fos-study`.
-- Always mark the title with `[초안]`.
-- Always create a git commit for the changed file.
-- Always push the commit after creation/update.
-- Keep execution logs and intermediate artifacts under `data/reports/`.
-
-## Expected document shape
-
-Each generated document should usually contain:
-
-1. 1분 자기소개
-2. 90초 자기소개 (압축 버전)
-3. 핵심 커리어 요약 (타임라인 중심)
-4. 강점 / 약점
-5. 기술 의사결정 스타일 (어떻게 trade-off 하는가)
-6. 소프트웨어 엔지니어링 / 협업 / 리더십 강점
-7. 주요 경험별 프로젝트 요약 (AI 서비스 팀 / Slot 팀 등)
-8. 이직 동기 / 지원 회사 동기 / 역할 핏
-9. 시니어 백엔드 공통 질문 답변 프레이밍
-10. 역질문 리스트 (면접관에게 던질 질문)
-11. 면접 당일 최종 체크리스트
-
-## Input strategy
-
-Use selected inputs only.
-
-Default pattern:
-- latest resume: 1 file
-- selected task docs: 2-4 files
-- target company/role JD context: 1 file (optional, for framing)
-
-Avoid feeding the entire task tree in one run. Avoid overlapping with existing question-bank content — this document is a *narrative* layer on top of those.
-
-## Files
-
-- Generic prompt: `references/master-prompt.md`
-- Runner: `scripts/run_master.sh`
-- Topic resolver: `scripts/resolve_master_topic.py`
-- Topic config: `config/topics.json (master namespace)`
-- Output validator: reuses `scripts/study-pack-writer/extract_and_validate_study_pack.py`
-
-## Invocation
+## 호출 방법
 
 ```bash
-scripts/command-router/run_now.sh master <topic>
+career-os/scripts/command-router/run_now.sh master <topic>
 ```
 
-Where `<topic>` is a key in `config/topics.json (master namespace)`
-(default: `senior-backend-master-playbook`).
+`<topic>` 기본값: `senior-backend-master-playbook` (`config/topics.json` master namespace).
 
-## Publishing rules
+실행 파일: `career-os/scripts/interview-master-writer/`(ADR-019).
 
-Use commit messages like:
-- `docs(interview): add draft senior-backend master playbook`
-- `docs(interview): update draft senior-backend master playbook`
+## 입력
 
-If push fails, surface that clearly instead of silently stopping.
+- `config/topics.json` (master namespace) — 토픽 메타데이터
+- `references/master-prompt.md` — 공통 프롬프트 템플릿
+- 이력서 1개 + 태스크 문서 2-4개 + 선택적 JD 컨텍스트 1개
 
-실행 파일은 `career-os/scripts/interview-master-writer/`(ADR-019).
+전체 태스크 트리를 한 번에 투입하지 않는다.
+
+## 산출물
+
+- `sources/fos-study/...` — `[초안]` 접두어로 게시 + git commit + push
+- `data/reports/` — 실행 로그·중간 산출물
+
+문서 포함 항목: 1분 자기소개, 90초 버전, 커리어 타임라인, 강점/약점, 기술 의사결정 스타일, 프로젝트 요약, 이직 동기, 역질문 리스트, 면접 당일 체크리스트. push 실패 시 명시적으로 오류 출력.
+
+커밋 메시지 예: `docs(interview): add draft senior-backend master playbook`.
+
+## 관련 ADR
+
+ADR-005: 산출물 경로 컨벤션.
+ADR-019: scripts/<skill>/ 분리 컨벤션.

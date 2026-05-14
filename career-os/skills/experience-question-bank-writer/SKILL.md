@@ -5,80 +5,42 @@ description: Generate and publish experience-based interview question bank markd
 
 # Experience Question Bank Writer
 
-Create a complete experience-based interview question bank and publish it directly into the local `fos-study` repository.
+이력서 + 태스크 기반 면접 Q&A 뱅크 문서를 생성하여 `fos-study`에 직접 게시한다.
 
-## Purpose
+## 호출 방법
 
-This skill is for resume/task-driven interview prep documents that should help the user answer:
+```bash
+career-os/scripts/command-router/run_now.sh question-bank <topic>
+```
 
-- "What exactly did you do?"
-- "Why did you design it that way?"
-- "What trade-offs did you consider?"
-- "How would you defend this under pressure?"
+`<topic>`은 `config/topics.json`의 question-bank namespace 키 (예: `experience-qbank-ai-service-team`).
 
-Unlike a technical study pack, this output is a question-bank + answer-prep document.
+자동 실행 (기본 topic 사용):
 
-## Output policy
+```bash
+career-os/scripts/command-router/run_now.sh auto-question-bank
+```
 
-- Always write directly into `sources/fos-study`.
-- Always mark the title with `[초안]`.
-- Always create a git commit for the changed file.
-- Always push the commit after creation/update.
-- Keep execution logs and intermediate artifacts under `data/reports/`.
+실행 파일: `career-os/scripts/experience-question-bank-writer/`(ADR-019).
 
-## Expected document shape
+## 입력
 
-Each generated document should usually contain:
+- `config/topics.json` (question-bank namespace) — 토픽 메타데이터
+- `references/question-bank-prompt.md` — 공통 프롬프트 템플릿
+- `references/question-bank-schema.json` — Claude CLI `--json-schema` 강제 스키마
+- 이력서 1개 + 태스크 문서 2-4개 + 선택적 JD 컨텍스트 1개
 
-1. target experience summary
-2. five main interview questions
-3. five follow-up questions for each main question
-4. what the interviewer is testing
-5. answer points with real evidence / metrics / examples
-6. one-minute answer structure
-7. pressure-question defense points
-8. weak answers to avoid
+## 산출물
 
-## Input strategy
+- `sources/fos-study/...` — `[초안]` 접두어로 게시 + git commit + push
+- `data/reports/` — 실행 로그·중간 산출물
+- `data/generated-artifacts.json` — kind=`question-bank` upsert (push 성공 시)
 
-Use selected inputs only.
+문서 구조: 메인 질문 5개 × 팔로업 5개 (스키마 강제). push 실패 시 명시적으로 오류 출력.
 
-Default pattern:
-- latest resume: 1 file
-- selected task docs: 2-4 files
-- target company JD/interview context: 1 file
+커밋 메시지 예: `docs(interview): add draft ai-service-team question bank`.
 
-Avoid feeding the entire task tree in one run.
+## 관련 ADR
 
-## Files
-
-- Runner: `scripts/run_question_bank.sh` — dispatcher의 `question-bank <topic>` case에서 직접 호출. resolver로 topic 파라미터 받음.
-- Auto wrapper: `scripts/run_question_bank_auto.sh` — dispatcher의 `auto-question-bank` case에서 호출. 기본 topic(`experience-qbank-ai-service-team` 또는 `QUESTION_BANK_TOPIC_OVERRIDE`)을 dispatcher `question-bank` case에 위임하는 알림 wrapper.
-- Topic resolver: `scripts/resolve_question_bank_topic.py` (emits `export KEY=value` lines consumed via `eval` by `run_now.sh`)
-- Output renderer + validator: `scripts/render_question_bank.py` (enforces exactly 5 main questions × 5 follow-ups)
-- Generic prompt: `references/question-bank-prompt.md`
-- JSON schema enforced by Claude CLI `--json-schema`: `references/question-bank-schema.json`
-- Topic config: `career-os/config/topics.json` (question-bank namespace)
-
-## External dependencies
-
-- `_shared/bin/track_task.sh` — runner is wrapped through this tracker.
-- `_shared/bin/update_artifacts.py` — updates `data/generated-artifacts.json` (kind=`question-bank`) after a successful push.
-- `claude` CLI on PATH (used with `--output-format json --json-schema`).
-- Upstream git remote for `sources/fos-study` (push destination for the generated markdown).
-
-## Topic tracks
-
-Current intended tracks:
-- AI service team
-- Slot team
-
-## Publishing rules
-
-Use commit messages like:
-- `docs(interview): add draft ai-service-team question bank`
-- `docs(interview): update draft slot-team question bank`
-
-If push fails, surface it clearly.
-
-실행 파일은 `career-os/scripts/experience-question-bank-writer/`(ADR-019).
+ADR-005: 산출물 경로 컨벤션.
+ADR-019: scripts/<skill>/ 분리 컨벤션.

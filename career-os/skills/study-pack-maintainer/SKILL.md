@@ -5,54 +5,33 @@ description: Decide whether a requested backend study topic should update an exi
 
 # Study Pack Maintainer
 
-Use Claude as the primary writer and structure judge for study-pack maintenance work.
+중복 검사 + update-vs-new 판단 + 마크다운 생성을 Claude가 직접 수행하는 study-pack 유지보수 skill.
 
-## Purpose
-
-This skill is for cases where a new topic may overlap with existing `fos-study` documents.
-The goal is not just to write a new article, but to:
-
-1. inspect relevant existing documents,
-2. decide whether to update one of them or create a new file,
-3. generate the final markdown body accordingly,
-4. publish through the existing `fos-study` git flow.
-
-## Required workflow
-
-1. Read `references/maintainer-prompt.md`.
-2. Use `scripts/run_maintainer.sh` for actual generation.
-3. Feed Claude both:
-   - the requested topic description,
-   - the candidate existing documents that may overlap.
-4. Let Claude decide one of two modes inside the generated result:
-   - `update-existing`
-   - `create-new`
-5. Always make the final output markdown start with `# [초안]`.
-6. Always write only one final target file per run.
-7. Always commit and push if the content changed.
-
-## Output contract
-
-The Claude result must include:
-- chosen action (`update-existing` or `create-new`)
-- chosen output path inside `fos-study`
-- short rationale
-- full final markdown body
-
-The runner is responsible for extracting these fields and publishing the markdown.
-
-## Files
-
-- Prompt reference: `references/maintainer-prompt.md`
-- Runner: `scripts/run_maintainer.sh`
-- Config: `config/topics.json` (study-pack-maintainer namespace)
-
-## Invocation
+## 호출 방법
 
 ```bash
-scripts/command-router/run_now.sh maintain-study-pack <topic>
+career-os/scripts/command-router/run_now.sh maintain-study-pack <topic>
 ```
 
-Use this instead of plain `study-pack` when overlap / update strategy matters.
+일반 `study-pack`보다 overlap/update 전략이 중요할 때 사용한다.
 
-실행 파일은 `career-os/scripts/study-pack-maintainer/`(ADR-019).
+실행 파일: `career-os/scripts/study-pack-maintainer/`(ADR-019).
+
+## 입력
+
+- `references/maintainer-prompt.md` — 공통 프롬프트 템플릿
+- `config/topics.json` (study-pack-maintainer namespace) — 토픽 메타데이터
+- 후보 기존 문서 (Claude가 overlap 검사) — `sources/fos-study/...`
+- 요청된 토픽 설명 (자연어 또는 topic 키)
+
+## 산출물
+
+- `sources/fos-study/...` — `[초안]` 접두어로 게시 + git commit + push (단일 타깃)
+
+Claude 결과에 포함: chosen action (`update-existing` / `create-new`), 출력 경로, 짧은 근거, 전체 마크다운 본문.
+
+## 관련 ADR
+
+ADR-005: 산출물 경로 컨벤션.
+ADR-011: update-vs-new 정책.
+ADR-019: scripts/<skill>/ 분리 컨벤션.

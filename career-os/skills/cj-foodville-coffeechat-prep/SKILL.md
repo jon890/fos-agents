@@ -5,57 +5,36 @@ description: Prepare private CJ Foodville coffee-chat strategy and backend servi
 
 # CJ Foodville Coffee Chat Prep
 
-Use this skill to prepare a private CJ Foodville coffee-chat strategy report.
+CJ Foodville 커피챗 전략 보고서와 백엔드 서비스 인사이트를 생성하는 비공개 커리어 준비 skill.
 
-## Entrypoint
-
-Run:
+## 호출 방법
 
 ```bash
-/home/bifos/ai-nodes/career-os/scripts/command-router/run_now.sh foodville-coffeechat
+career-os/scripts/command-router/run_now.sh foodville-coffeechat
 ```
 
-Direct runner:
+추가 컨텍스트 주입:
 
 ```bash
-/home/bifos/ai-nodes/career-os/scripts/cj-foodville-coffeechat-prep/run_foodville_coffeechat_prep.sh
+FOODVILLE_CONTEXT="extra context" career-os/scripts/command-router/run_now.sh foodville-coffeechat
 ```
 
-실행 파일은 `career-os/scripts/cj-foodville-coffeechat-prep/`(ADR-019).
+실행 파일: `career-os/scripts/cj-foodville-coffeechat-prep/`(ADR-019).
 
-Optional context:
+## 입력
 
-```bash
-FOODVILLE_CONTEXT="extra user context" run_now.sh foodville-coffeechat
-```
+- `docs/prep/cj-foodville-coffeechat-strategy.md` — 기준 포지셔닝 문서
+- `data/source/cj-foodville-sites/` — 수집된 사이트 스냅샷
+- `FOODVILLE_CONTEXT` env — 선택적 추가 컨텍스트
 
-## Outputs
+## 산출물
 
-- Stable strategy note: `docs/prep/cj-foodville-coffeechat-strategy.md`
-- Per-run report: `data/reports/daily/YYYY-MM-DD/cj-foodville-coffeechat/report.md`
-- Latest runtime report: `data/runtime/cj-foodville-coffeechat-prep.md`
-- Collected site snapshots: `data/source/cj-foodville-sites/`
+- `docs/prep/cj-foodville-coffeechat-strategy.md` — 안정적 전략 노트 (갱신)
+- `data/reports/daily/YYYY-MM-DD/cj-foodville-coffeechat/report.md` — 날짜별 사본
+- `data/runtime/cj-foodville-coffeechat-prep.md` — 최신 런타임 리포트
 
-Do not publish to `sources/fos-study` unless the user explicitly asks. This is interview-prep/private career material.
+fos-study에는 게시하지 않는다. 사용자가 명시적으로 요청할 때만 예외.
 
-## Workflow
+## 관련 ADR
 
-1. Read `docs/prep/cj-foodville-coffeechat-strategy.md` for the baseline positioning.
-2. Collect or refresh site snapshots with `scripts/collect_foodville_sites.py`.
-3. Ask Claude to review:
-   - coffee-chat narrative and risks
-   - expected interviewer intent
-   - backend insights from VIPS, 제일제면소, and CJ Foodville brand pages
-   - natural questions to ask in the coffee chat
-4. Keep outputs practical: conversation flow, answer angles, question list, and backend/domain observations.
-
-## Ambiguity policy
-
-Discuss before changing these assumptions:
-
-- Publishing destination changes from private report to `fos-study` or blog.
-- Position target changes away from CJ Foodville digital-channel backend.
-- User wants scripted answer memorization instead of conversation-flow prep.
-- User wants browser-login or authenticated interactions with CJ services.
-
-If the requested change is only adding more public pages or refining output tone, proceed and note the assumption.
+ADR-019: scripts/<skill>/ 분리 컨벤션.

@@ -5,49 +5,33 @@ description: Create or update fos-study technical study-pack markdown documents 
 
 # fos-study-pack
 
-Handle natural-language study-pack requests for `fos-study`.
+자연어 학습 요청을 `fos-study` 생성 파이프라인으로 연결하는 skill.
 
-## Purpose
-
-Hide internal routing complexity from the user.
-The user should be able to ask for a study pack in plain language, and this skill should map that request into the correct `career-os` generation flow.
-
-Before acting, read `references/request-patterns.md`.
-
-## Core behavior
-
-When triggered:
-
-1. Interpret the requested topic from natural language, including slash-style prompts like `/study-pack ...`.
-2. Check whether it already maps cleanly to an existing maintained topic.
-3. If overlap or ambiguity exists, prefer the maintainer-backed `study-pack` flow so Claude can inspect existing related docs and decide update-vs-new.
-4. If it is a straightforward new curated topic already present in config, the normal `study-pack` flow is acceptable.
-5. Publish only to `sources/fos-study/...`.
-6. Commit and push document changes.
-
-## Invocation target
-
-Primary runtime entrypoint:
+## 호출 방법
 
 ```bash
-/home/bifos/ai-nodes/career-os/scripts/command-router/run_now.sh study-pack <topic>
+career-os/scripts/command-router/run_now.sh study-pack <topic>
 ```
 
-This entrypoint already supports maintainer-backed routing internally for registered maintainer topics.
-
-## Natural-language request handling
-
-Typical user prompts that should trigger this skill:
+자연어 요청 예:
 - `/study-pack JVM GC 튜닝 가이드`
-- `study pack으로 Redis cache-aside 정리해줘`
-- `InnoDB gap lock 공부하고 싶은데 기존 문서 보고 업데이트해줘`
-- `면접용으로 Kafka DLQ / retry / idempotency 스터디팩 만들어줘`
+- `Redis cache-aside 정리해줘`
+- `InnoDB gap lock 기존 문서 보고 업데이트해줘`
 
-## Important policy
+실행 파일: `career-os/scripts/fos-study-pack/`(ADR-019). 상세 라우팅 정책은 `references/request-patterns.md`.
 
-- Prefer a single user-facing interface.
-- Do not force the user to choose between create/update modes.
-- When overlap matters, let Claude inspect candidate docs and decide.
-- Keep operational commentary short; the main value is execution.
+## 입력
 
-실행 파일은 `career-os/scripts/fos-study-pack/`(ADR-019).
+- `config/topics.json` (study-pack namespace) — 토픽 메타데이터
+- `sources/fos-study/` — 중복 검사 대상 기존 문서
+- 자연어 topic 파라미터 (slash 형식 포함)
+
+## 산출물
+
+- `sources/fos-study/...` — `[초안]` 접두어로 게시 + git commit + push
+- 단일 타깃 파일 (update-existing 또는 create-new)
+
+## 관련 ADR
+
+ADR-005: 산출물 경로 컨벤션.
+ADR-011: candidate reservoir + update-vs-new 정책.
