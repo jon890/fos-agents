@@ -41,7 +41,9 @@
 
 ## 워크플로 진입점 (요약)
 
-단일 디스패처: `scripts/command-router/run_now.sh` (plan006 후, ADR-019). plan005 분해 직후·plan006 이전엔 `skills/command-router/scripts/run_now.sh`(ADR-017), 그 전까진 `skills/cj-oliveyoung-java-backend-prep/scripts/run_now.sh`.
+**plan013 이후 (ai-nodes ADR-002, native skill 패턴)**: `claude -p "/<skill-name> <args>"` 직접 호출이 표준 진입점. dispatcher (`run_now.sh`)는 점진 폐기. 첫 적용: study-pack-writer. 나머지 skill은 후속 plan으로 점진 마이그.
+
+옛 진입점 (plan006 후, ADR-019): `scripts/command-router/run_now.sh`. plan005 분해 직후~plan006 전: `skills/command-router/scripts/run_now.sh`(ADR-017). 그 전: `skills/cj-oliveyoung-java-backend-prep/scripts/run_now.sh`. 마이그 안 된 skill은 옛 진입점 여전히 사용.
 
 14개 명령 (plan005 wire-up 포함): `baseline` · `daily [topic]` · `recommend-positions` · `recommend-topics` · `replenish-topics` · `study-pack <topic>` · `maintain-study-pack <topic>` · `question-bank <topic>` · `master [topic]` · `foodville-coffeechat` · `smoke` · `bootcamp-batch` · `live-coding-dispatch` · `auto-question-bank`.
 
