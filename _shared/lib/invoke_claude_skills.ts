@@ -5,7 +5,7 @@
 // 두 가지 사용 모드:
 //   1. CLI: bun run invoke_claude_skills.ts <command> <args>
 //      - persist-usage <raw-json-path>          (claude_lib.sh::claude_persist_usage 대체)
-//      - extract <raw-json> <output-md> [usage] (extract_claude_result.py 대체)
+//      - extract <raw-json> <output-md> [usage]
 //   2. Import: import { persistUsage, extractResult } from "@shared/lib/invoke_claude_skills.ts"
 
 import { copyFileSync, existsSync, readFileSync, writeFileSync, statSync } from "node:fs";
@@ -40,7 +40,7 @@ export function persistUsage(rawJsonPath: string): void {
 }
 
 // ============================================================
-// extractResult — extract_claude_result.py 대체
+// extractResult — Claude JSON → markdown 추출
 // ============================================================
 
 /**
@@ -72,7 +72,7 @@ export function extractResult(rawJsonPath: string, outputMdPath: string, usageJs
   writeFileSync(outputMdPath, markdown + "\n", "utf-8");
 
   if (usageJsonPath) {
-    // 원본 파일 내용을 그대로 usage 파일에 (extract_claude_result.py 동일 동작).
+    // 원본 파일 내용을 그대로 usage 파일에.
     writeFileSync(usageJsonPath, rawContent, "utf-8");
   }
 }

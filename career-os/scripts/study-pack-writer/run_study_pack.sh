@@ -68,11 +68,11 @@ run_once() {
   fi
 }
 
-EXTRACTOR="$TASK_ROOT/scripts/study-pack-writer/extract_and_validate_study_pack.py"
+EXTRACTOR="$TASK_ROOT/scripts/study-pack-writer/extract_and_validate_study_pack.ts"
 
 extract_and_validate() {
   rm -f "$GENERATED_MD"
-  python3 "$EXTRACTOR" "$RAW_RESULT_JSON" "$GENERATED_MD"
+  "$EXTRACTOR" "$RAW_RESULT_JSON" "$GENERATED_MD"
 }
 
 attempt() {

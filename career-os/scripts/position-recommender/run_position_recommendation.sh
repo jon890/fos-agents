@@ -15,7 +15,7 @@ SOURCES_JSON="$TASK_ROOT/config/sources.json"
 RAW_RESULT_JSON="$OUTDIR/claude.result.json"
 INPUT_NOTE="$OUTDIR/input.md"
 REPORT_MD="$OUTDIR/report.md"
-EXTRACTOR="$TASK_ROOT/scripts/position-recommender/extract_position_report.py"
+EXTRACTOR="$TASK_ROOT/scripts/position-recommender/extract_position_report.ts"
 
 mkdir -p "$OUTDIR" "$TASK_ROOT/data/runtime"
 
@@ -70,7 +70,7 @@ timeout 900s claude --permission-mode bypassPermissions --print \
   "$(cat "$INPUT_NOTE")" \
   > "$RAW_RESULT_JSON"
 
-python3 "$EXTRACTOR" "$RAW_RESULT_JSON" "$REPORT_MD"
+"$EXTRACTOR" "$RAW_RESULT_JSON" "$REPORT_MD"
 bun run "$HOME/ai-nodes/_shared/lib/invoke_claude_skills.ts" persist-usage "$RAW_RESULT_JSON"
 cp "$REPORT_MD" "$RUNTIME_OUT"
 cat "$RUNTIME_OUT"
