@@ -1,0 +1,56 @@
+{
+  "name": "plan010-2-helpers-relocate",
+  "description": "ai-nodes ADR-001 적용 — plan010 phase-02/03/04가 _shared/lib에 잘못 넣은 career-os 한정 헬퍼 3개(build_prompt.ts / study_pack_publish.ts / fos_study_git.ts)를 career-os/scripts/_lib/로 git mv + caller 12개 갱신 + tsconfig include/paths 확장. _shared/lib는 워크스페이스 무관 헬퍼만 보유하는 정책으로 회귀.",
+  "created_at": "2026-05-14T11:00:00+00:00",
+  "updated_at": "2026-05-14T11:00:00+00:00",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 4,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "docs/adr.md",
+    "career-os/docs/code-architecture.md"
+  ],
+  "depends_on": [
+    "plan010-abstraction-audit"
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "tsconfig 확장 + career-os/scripts/_lib 신설 + 3개 헬퍼 git mv",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep"],
+      "model": "sonnet",
+      "timeout": 600
+    },
+    {
+      "number": 2,
+      "title": "build_prompt.ts caller 4개 갱신 (knowledge-gap-analyzer 3 + cj-foodville-coffeechat-prep 1)",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Edit", "Bash", "Grep"],
+      "model": "sonnet",
+      "timeout": 900
+    },
+    {
+      "number": 3,
+      "title": "study_pack_publish + fos_study_git caller 8개 일괄 갱신",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Edit", "Bash", "Grep"],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 4,
+      "title": "통합 smoke + 잔재 grep + push + trailing cleanup",
+      "file": "phase-04.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Edit", "Bash", "Grep"],
+      "model": "sonnet",
+      "timeout": 600
+    }
+  ]
+}
