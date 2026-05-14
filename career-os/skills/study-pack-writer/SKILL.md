@@ -1,6 +1,6 @@
 ---
 name: study-pack-writer
-description: "면접 준비·기술 블로그 겸용 재사용 가능 학습팩 마크다운을 fos-study 저장소에 생성·게시한다. 토픽이 매일 바뀌며 [초안] 라벨·실무 예제·실습 연습·면접 연결 구조가 포함된 독립 문서 한 건을 원할 때 사용. git commit/push 자동 수행. '/study-pack ...', 'study pack 만들어줘', '~에 대한 스터디팩 만들어줘', 'fos-study에 정리해줘' 같은 자연어 요청도 처리. 자연어 요청은 내부에서 topic key로 변환 후 동일 흐름. (기존 fos-study-pack skill 흡수, ADR-025)"
+description: "면접 준비·기술 블로그 겸용 재사용 가능 학습팩 마크다운을 fos-study 저장소에 생성·게시한다. 토픽이 매일 바뀌며 [초안] 라벨·실무 예제·실습 연습·면접 연결 구조가 포함된 독립 문서 한 건을 원할 때 사용. git commit/push 자동 수행. '/study-pack ...', 'study pack 만들어줘', '~에 대한 스터디팩 만들어줘', 'fos-study에 정리해줘' 같은 자연어 요청도 처리. 자연어 요청은 내부에서 topic key로 변환 후 동일 흐름."
 ---
 
 # Study Pack Writer
