@@ -8,11 +8,11 @@ if [[ -z "$REQUEST_TEXT" ]]; then
   exit 1
 fi
 
-RESOLVER="$TASK_ROOT/scripts/fos-study-pack/resolve_freeform_study_pack.py"
+RESOLVER="$TASK_ROOT/scripts/fos-study-pack/resolve_freeform_study_pack.ts"
 TOPICS_CFG="$TASK_ROOT/config/topics.json"
 RUNNER="$TASK_ROOT/scripts/command-router/run_now.sh"
 
-RESOLUTION_JSON="$(python3 "$RESOLVER" "$TOPICS_CFG" "$REQUEST_TEXT")"
+RESOLUTION_JSON="$("$RESOLVER" "$TOPICS_CFG" "$REQUEST_TEXT")"
 MODE="$(python3 - <<'PY' "$RESOLUTION_JSON"
 import json, sys
 print(json.loads(sys.argv[1])['mode'])

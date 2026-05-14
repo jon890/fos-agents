@@ -2,9 +2,9 @@
   "name": "plan008-extractor-renderer-ts",
   "description": "ADR-022 — 도메인 헬퍼 9개 TS(Bun) 마이그레이션. extractor/renderer 3 + resolver 5 + replenish_topic_reservoir 1. skill-specific은 scripts/<skill>/<name>.ts, 다중 skill 공유는 _shared/lib/. _shared/bin/extract_claude_result.py는 _shared/lib/extract_claude_result.ts로 신설 + 5 runner caller 갱신. shebang `#!/usr/bin/env bun`으로 직접 실행.",
   "created_at": "2026-05-14T03:00:00+00:00",
-  "updated_at": "2026-05-14T03:00:00+00:00",
-  "status": "pending",
-  "current_phase": 0,
+  "updated_at": "2026-05-14T02:55:42.905162+00:00",
+  "status": "running",
+  "current_phase": 4,
   "total_phases": 4,
   "error_message": null,
   "blocked_reason": null,
@@ -23,35 +23,66 @@
       "number": 1,
       "title": "Extractor/Renderer 3개 TS 신설 + _shared/lib/extract_claude_result.ts 신설 + caller 갱신",
       "file": "phase-01.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 1200
+      "timeout": 1200,
+      "commitSha": "ca08e9ea3143"
     },
     {
       "number": 2,
       "title": "Resolver 5개 TS 신설 + dispatcher case 안 eval 라인 갱신",
       "file": "phase-02.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 1200
+      "timeout": 1200,
+      "commitSha": "011b788f9567"
     },
     {
       "number": 3,
       "title": "replenish_topic_reservoir.ts 신설 (invoke_claude_skills.ts 활용) + caller 갱신",
       "file": "phase-03.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 1200
+      "timeout": 1200,
+      "commitSha": "a82e0c2f6a40"
     },
     {
       "number": 4,
       "title": "통합 smoke + Python 잔재 grep + push + trailing cleanup",
       "file": "phase-04.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "status": "running",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "sonnet",
       "timeout": 1200
     }

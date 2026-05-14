@@ -5,7 +5,7 @@ TASK_ROOT="${TASK_ROOT:-$HOME/ai-nodes/career-os}"
 SOURCE_DIR="$TASK_ROOT/sources/fos-study"
 CONFIG="$TASK_ROOT/config/topics.json"
 TOPIC_CONFIG="$TASK_ROOT/config/topics.json"
-RESOLVER="$TASK_ROOT/scripts/study-pack-writer/resolve_study_pack_topic.py"
+RESOLVER="$TASK_ROOT/scripts/study-pack-writer/resolve_study_pack_topic.ts"
 RUNNER="$TASK_ROOT/scripts/study-pack-writer/run_study_pack.sh"
 OUTDIR="$TASK_ROOT/data/reports/daily/${REPORT_DATE:-$(date +%F)}/bootcamp"
 SUMMARY="$TASK_ROOT/data/runtime/bootcamp-summary.md"
@@ -93,7 +93,7 @@ if [[ "${DRY_RUN:-0}" == "1" ]]; then
 else
   for topic in "${GENERATE_KEYS[@]}"; do
     echo "[bootcamp-batch] generating $topic" >&2
-    eval "$(python3 "$RESOLVER" "$TOPIC_CONFIG" "$topic")"
+    eval "$("$RESOLVER" "$TOPIC_CONFIG" "$topic")"
     TASK_ROOT="$TASK_ROOT" "$RUNNER"
   done
 fi
