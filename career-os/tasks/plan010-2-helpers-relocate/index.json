@@ -2,7 +2,7 @@
   "name": "plan010-2-helpers-relocate",
   "description": "ai-nodes ADR-001 적용 — plan010 phase-02/03/04가 _shared/lib에 잘못 넣은 career-os 한정 헬퍼 3개(build_prompt.ts / study_pack_publish.ts / fos_study_git.ts)를 career-os/scripts/_lib/로 git mv + caller 12개 갱신 + tsconfig include/paths 확장. _shared/lib는 워크스페이스 무관 헬퍼만 보유하는 정책으로 회귀.",
   "created_at": "2026-05-14T11:00:00+00:00",
-  "updated_at": "2026-05-14T13:15:37.268421+00:00",
+  "updated_at": "2026-05-14T13:24:43.481110+00:00",
   "status": "completed",
   "current_phase": 4,
   "total_phases": 4,
@@ -74,7 +74,8 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "b2249b820fdc"
     }
   ]
 }
