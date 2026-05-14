@@ -95,16 +95,16 @@ ns = cfg.get('study-pack-maintainer', {})
 sys.exit(0 if sys.argv[2] in ns else 1)
 PY
     then
-      RESOLVER="$TASK_ROOT/scripts/study-pack-maintainer/resolve_maintainer_topic.py"
-      eval "$(python3 "$RESOLVER" "$MAINTAINER_CONFIG" "$TOPIC")"
+      RESOLVER="$TASK_ROOT/scripts/study-pack-maintainer/resolve_maintainer_topic.ts"
+      eval "$("$RESOLVER" "$MAINTAINER_CONFIG" "$TOPIC")"
 
       run_tracked "career-os:study-pack:$TOPIC" "${TOPIC} 스터디팩 (maintainer)" \
         "$TASK_ROOT/scripts/study-pack-maintainer/run_maintainer.sh"
     fi
 
-    RESOLVER="$TASK_ROOT/scripts/study-pack-writer/resolve_study_pack_topic.py"
+    RESOLVER="$TASK_ROOT/scripts/study-pack-writer/resolve_study_pack_topic.ts"
     TOPIC_CONFIG="${TOPIC_CONFIG_OVERRIDE:-$TASK_ROOT/config/topics.json}"
-    eval "$(python3 "$RESOLVER" "$TOPIC_CONFIG" "$TOPIC")"
+    eval "$("$RESOLVER" "$TOPIC_CONFIG" "$TOPIC")"
 
     run_tracked "career-os:study-pack:$TOPIC" "${TOPIC} 스터디팩" \
       "$TASK_ROOT/scripts/study-pack-writer/run_study_pack.sh"
@@ -117,9 +117,9 @@ PY
       exit 1
     fi
 
-    RESOLVER="$TASK_ROOT/scripts/experience-question-bank-writer/resolve_question_bank_topic.py"
+    RESOLVER="$TASK_ROOT/scripts/experience-question-bank-writer/resolve_question_bank_topic.ts"
     TOPIC_CONFIG="$TASK_ROOT/config/topics.json"
-    eval "$(python3 "$RESOLVER" "$TOPIC_CONFIG" "$TOPIC")"
+    eval "$("$RESOLVER" "$TOPIC_CONFIG" "$TOPIC")"
 
     run_tracked "career-os:question-bank:$TOPIC" "${TOPIC} question-bank" \
       "$TASK_ROOT/scripts/experience-question-bank-writer/run_question_bank.sh"
@@ -160,9 +160,9 @@ PY
       exit 1
     fi
 
-    RESOLVER="$TASK_ROOT/scripts/study-pack-maintainer/resolve_maintainer_topic.py"
+    RESOLVER="$TASK_ROOT/scripts/study-pack-maintainer/resolve_maintainer_topic.ts"
     TOPIC_CONFIG="$TASK_ROOT/config/topics.json"
-    eval "$(python3 "$RESOLVER" "$TOPIC_CONFIG" "$TOPIC")"
+    eval "$("$RESOLVER" "$TOPIC_CONFIG" "$TOPIC")"
 
     run_tracked "career-os:maintain-study-pack:$TOPIC" "${TOPIC} 스터디팩 유지보수" \
       "$TASK_ROOT/scripts/study-pack-maintainer/run_maintainer.sh"
@@ -170,9 +170,9 @@ PY
   master)
     TOPIC="${2:-senior-backend-master-playbook}"
 
-    RESOLVER="$TASK_ROOT/scripts/interview-master-writer/resolve_master_topic.py"
+    RESOLVER="$TASK_ROOT/scripts/interview-master-writer/resolve_master_topic.ts"
     TOPIC_CONFIG="$TASK_ROOT/config/topics.json"
-    eval "$(python3 "$RESOLVER" "$TOPIC_CONFIG" "$TOPIC")"
+    eval "$("$RESOLVER" "$TOPIC_CONFIG" "$TOPIC")"
 
     run_tracked "career-os:master:$TOPIC" "${TOPIC} master playbook" \
       "$TASK_ROOT/scripts/interview-master-writer/run_master.sh"
