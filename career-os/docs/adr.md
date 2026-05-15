@@ -38,6 +38,7 @@ career-os의 모든 아키텍처 결정을 시간순으로 누적 기록한다. 
 | ADR-025 | Skills 정리 + 한글화 정책 | Accepted | fos-study-pack 폐기, SKILL.md 한글화 + 코드 식별자 영어 유지 |
 | ADR-026 | study-topic-recommender native + ts + replenish 흡수 | Accepted | Python 622줄 → ts, 3 dispatcher case 폐기 (plan016 진행 중) |
 | ADR-027 | knowledge-gap-analyzer → interview-prep-analyzer + topics.json 분리 | Accepted | smoke 폐기, baseline/daily 자연어 분기, topics.json 3 분리 (plan017) |
+| ADR-028 | candidate-baseline-suggester skill 도입 | Accepted | Append + 주석 마킹 + audit trail로 candidate-profile/baseline 자동 갱신 (plan020) |
 
 (ADR-024는 번호 누락. ADR-007a/b 충돌은 prd.md "분해 대기 작업"에 기록.)
 
@@ -557,7 +558,7 @@ plan004(ADR-020)가 공용 헬퍼만 TS로 옮긴 결과, 도메인 헬퍼(extra
 
 ## ADR-023 — Study-pack 생성: 파일 쓰기 → stdout 캡처
 
-- Status: 채택됨 (2026-04-14). **출력 포맷 폐기 부분은 사실상 무효화**. 핵심 결정(Write 도구 사용 금지)은 유지. 자세한 진단·복구는 ADR-014.
+- Status: Deprecated (2026-05-13, 실측 무효) — JSON 출력 폐기 결정이 토큰 회계 누락을 초래. ADR-014가 진짜 원인(extractor usage 전파 미구현)을 진단·복구. Write 도구 사용 금지 핵심 결정만 유지.
 - Date: 2026-04-14
 
 ### 맥락

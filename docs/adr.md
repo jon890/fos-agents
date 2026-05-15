@@ -8,6 +8,18 @@ ai-nodes 모노레포 레벨에서 모든 워크스페이스에 영향을 주는
 
 ---
 
+## Quick Index
+
+빠른 ADR 탐색용 단일 출처. 본문 헤더의 ADR 번호 + 제목 + Status 라인과 동기 유지.
+
+| ADR | 제목 | Status | 한 줄 요약 |
+|---|---|---|---|
+| ADR-001 | 공용 헬퍼 위치 분리: _shared/lib vs <workspace>/scripts/_lib | Accepted | 워크스페이스 무관 헬퍼만 _shared/lib, config/sources/data import 시 워크스페이스 한정 |
+| ADR-002 | Claude Code native skill 패턴 + .claude/skills/ 단일 위치 | Accepted | SKILL.md 단일 출처, 외부 subprocess+extractor+validator 폐기 (plan013부터 점진 마이그) |
+| ADR-003 | docs-check skill + adr.md Quick Index + drift Status 컨벤션 | Accepted | 28 ADR Quick Index 추가 + drift Status 일괄 갱신 (plan018) |
+
+---
+
 ## ADR-001 — 공용 헬퍼 위치 분리: `_shared/lib` vs `<workspace>/scripts/_lib`
 
 - Status: Accepted
