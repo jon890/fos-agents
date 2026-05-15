@@ -22,7 +22,7 @@
 - `_shared/bin/` — shell·Python 공용 헬퍼.
 - `_shared/lib/` — Bun TypeScript 공용 헬퍼. **워크스페이스 무관 헬퍼만** (ai-nodes ADR-001 정책: 특정 워크스페이스 config·sources·data 의존 금지). 워크스페이스 한정 헬퍼는 `<workspace>/scripts/_lib/`에.
 - `_shared/types/` — 공용 TS 타입.
-- `skills/` — 저장소 전역 Claude Code 스킬 (`agent-browser`, `planning`, `plan-and-build`, `workspace-audit`).
+- `skills/` — 저장소 전역 Claude Code 스킬 (`agent-browser`, `planning`, `plan-and-build`, `workspace-audit`, `docs-check`). `docs-check`는 ai-nodes 5문서 + ADR 건전성 감사 스킬.
 - `docs/` — ai-nodes 모노레포 레벨 ADR (워크스페이스 간 공통 정책). 워크스페이스 한정 결정은 `<workspace>/docs/adr.md`.
 
 ### 1-1. career-os 한정 컨벤션 (ADR-019)

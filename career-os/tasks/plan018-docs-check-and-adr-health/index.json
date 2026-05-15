@@ -2,9 +2,9 @@
   "name": "plan018-docs-check-and-adr-health",
   "description": "ai-nodes 전역 docs-check skill 도입 + adr.md Quick Index 추가 + drift Status 일괄 갱신 (ai-nodes ADR-003). fos-blog `docs-check` 5축 (Decay/Bloat/Clarity/Duplication/Self-Evidence) 차용 + ai-nodes 도메인 변형. 적용 ADR: career-os/docs/adr.md (26) + ai-nodes/docs/adr.md (3). Quick Index 작성 중 28 ADR 전수 검토 + drift Status 갱신 (Superseded/Partially superseded/Deprecated 컨벤션). common-pitfalls 6-6 회피: SKILL.md draft 별도 파일.",
   "created_at": "2026-05-15T00:00:00+00:00",
-  "updated_at": "2026-05-15T00:00:00+00:00",
-  "status": "pending",
-  "current_phase": 1,
+  "updated_at": "2026-05-15T04:14:09.006831+00:00",
+  "status": "completed",
+  "current_phase": 4,
   "total_phases": 4,
   "error_message": null,
   "blocked_reason": null,
@@ -22,35 +22,59 @@
       "number": 1,
       "title": "docs-check SKILL.md draft 작성 (5축 + ai-nodes 도메인 변형 + 자동화 검사 명세)",
       "file": "phase-01.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Bash", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Bash",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 1800
+      "timeout": 1800,
+      "commitSha": "caad7c2787aa"
     },
     {
       "number": 2,
       "title": "career-os/docs/adr.md + ai-nodes/docs/adr.md Quick Index 추가 + drift Status 일괄 갱신 (28 ADR 전수 audit)",
       "file": "phase-02.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Edit", "Bash", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
       "model": "opus",
-      "timeout": 2400
+      "timeout": 2400,
+      "commitSha": "8d7e89375d54"
     },
     {
       "number": 3,
       "title": "~/ai-nodes/skills/docs-check/ 디렉터리 + SKILL.md Write 적용 + (선택) scripts/",
       "file": "phase-03.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 1200
+      "timeout": 1200,
+      "commitSha": "8c3c7c958689"
     },
     {
       "number": 4,
       "title": "ai-nodes/AGENTS.md 갱신 + 정적 검증 + push + trailing + index.json completed 마킹",
       "file": "phase-04.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Edit", "Bash", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
       "model": "sonnet",
       "timeout": 900
     }
