@@ -52,7 +52,7 @@ notify "[시작] study-pack-writer: ${TOPIC_SHORT}"
 } >"$LOG_FILE"
 
 cd "$ROOT_DIR" || exit 1
-"$CLAUDE_BIN" -p "/study-pack-writer ${TOPIC}" >>"$LOG_FILE" 2>&1
+"$CLAUDE_BIN" --permission-mode acceptEdits -p "/study-pack-writer ${TOPIC}" >>"$LOG_FILE" 2>&1
 STATUS=$?
 
 if [[ $STATUS -eq 0 ]]; then

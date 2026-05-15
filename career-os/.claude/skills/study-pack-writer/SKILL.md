@@ -37,7 +37,12 @@ Claude는 다음을 `Read` 도구로 직접 로드:
 
 ### 3. Overlap 점검 (선택)
 
-`sources/fos-study/<outputPath 디렉터리>`에 유사 파일 있으면 update 의도 확인. update면 기존 본문 Read해서 통합 작성.
+`sources/fos-study/<outputPath 디렉터리>`에 유사 파일 있으면 기존 본문을 Read하고 다음 원칙으로 결정한다.
+
+- 기존 문서가 같은 핵심 주제를 이미 다루면 update 모드로 진행한다.
+- 기존 문서와 인접하지만 SLI/SLO/incident 등 별도 축이면 새 문서를 만들고 관련 문서 링크를 단다.
+- `claude -p` non-interactive 실행에서는 `AskUserQuestion`을 사용하지 않는다. 결정이 정말 불가능하면 stderr에 이유를 쓰고 exit 1 한다.
+- 확실한 안전 기본값은 “기존 문서 보존 + 새 문서 생성” 또는 “작은 보강 update”다.
 
 ### 4. 마크다운 작성 (Write)
 
@@ -78,7 +83,7 @@ git push origin main
 
 ### 7. Discord 알림
 
-권장 실행 경로는 OpenClaw wrapper가 호출하는 `scripts/study-pack-writer/run_with_discord_notify.sh "<topic>"` 이다. 이 wrapper가 다음 알림을 보장한다.
+권장 실행 경로는 OpenClaw wrapper가 호출하는 `scripts/study-pack-writer/run_with_discord_notify.sh "<topic>"` 이다. 이 wrapper는 `claude --permission-mode acceptEdits -p "/study-pack-writer <topic>"`로 실행하며 다음 알림을 보장한다.
 
 - `[시작] study-pack-writer: <topic>` — Claude 실행 직전
 - `[완료] study-pack-writer: <topic> (fos-study <sha>)` — exit 0 후
