@@ -2,9 +2,9 @@
   "name": "plan016-study-topic-recommender-native",
   "description": "study-topic-recommender native 마이그 + Python → TypeScript (ADR-026). 622줄 점수 알고리즘(refresh_topic_inventory.py) + RSS feed_discovery.py를 ts로 결정론 동등 마이그. SKILL.md를 native 명세로 재작성 (Bash로 ts 호출 + Claude 자연어 추론 hybrid). replenish + promote + live-coding seed 흡수. dispatcher 3 case (recommend-topics + live-coding-dispatch + 이미 plan015 폐기된 replenish-topics) 모두 폐기. 진입점 `claude -p \"/study-topic-recommender\"` 단일. common-pitfalls 6-6 회피: draft 별도 파일 + commit 개수 self-check.",
   "created_at": "2026-05-15T00:00:00+00:00",
-  "updated_at": "2026-05-15T00:00:00+00:00",
-  "status": "pending",
-  "current_phase": 1,
+  "updated_at": "2026-05-15T03:04:21.094684+00:00",
+  "status": "running",
+  "current_phase": 2,
   "total_phases": 4,
   "error_message": null,
   "blocked_reason": null,
@@ -24,7 +24,7 @@
       "number": 1,
       "title": "draft 작성 (refresh_topic_inventory.ts + feed_discovery.ts + SKILL.md draft 별도 파일)",
       "file": "phase-01.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
@@ -32,13 +32,14 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 2400
+      "timeout": 2400,
+      "commitSha": "1ec25858ac74"
     },
     {
       "number": 2,
       "title": "ts 마이그 적용 + 동등성 검증 (Python vs ts 출력 diff = 0) + Python 폐기",
       "file": "phase-02.md",
-      "status": "pending",
+      "status": "running",
       "allowedTools": [
         "Read",
         "Write",
