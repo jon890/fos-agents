@@ -1,0 +1,69 @@
+{
+  "name": "plan017-interview-prep-analyzer-native",
+  "description": "knowledge-gap-analyzer → interview-prep-analyzer 통합 native 마이그 + topics.json namespace 3 json 분리 (ADR-027). baseline + daily + smoke 3 dispatcher case를 단일 native skill로 (자연어 baseline/daily 분기, smoke 폐기). Python 6 + shell 3 script 완전 폐기 (알고리즘 단순 — 자연어 추론 동등). topics.json (62KB) → 3 json (study-pack-topics + study-pack-candidates + question-bank-topics). 5 read 위치 갱신. common-pitfalls 6-6 회피: draft 별도 파일 + commit 개수 self-check.",
+  "created_at": "2026-05-15T00:00:00+00:00",
+  "updated_at": "2026-05-15T00:00:00+00:00",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 5,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/docs/adr.md (ADR-027)",
+    "career-os/docs/data-schema.md",
+    "career-os/docs/flow.md",
+    "career-os/docs/code-architecture.md",
+    "skills/plan-and-build/references/common-pitfalls.md (6-6, 6-7)"
+  ],
+  "depends_on": [
+    "plan013-study-pack-writer-native",
+    "plan013-2-skill-rewrite-redo"
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "draft 작성 (interview-prep-analyzer SKILL.md draft + topics.json 분리 마이그 ts draft)",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Bash", "Grep"],
+      "model": "sonnet",
+      "timeout": 1800
+    },
+    {
+      "number": 2,
+      "title": "topics.json → 3 json 분리 적용 + 5 read 위치 path 갱신",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep"],
+      "model": "sonnet",
+      "timeout": 1800
+    },
+    {
+      "number": 3,
+      "title": "interview-prep-analyzer SKILL.md Write 적용 + knowledge-gap-analyzer 폐기 + Python/shell 6 폐기 + dispatcher 3 case 폐기",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep"],
+      "model": "sonnet",
+      "timeout": 1800
+    },
+    {
+      "number": 4,
+      "title": "5문서 + AGENTS.md + command-router SKILL.md 갱신 (flow.md에 interview-prep-analyzer ASCII flow 박기)",
+      "file": "phase-04.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Edit", "Bash", "Grep"],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 5,
+      "title": "정적 검증 + push + trailing cleanup + index.json completed 마킹",
+      "file": "phase-05.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Edit", "Bash", "Grep"],
+      "model": "sonnet",
+      "timeout": 900
+    }
+  ]
+}
