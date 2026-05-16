@@ -1,1 +1,1 @@
-../../sources/fos-study/.claude/skills/docs-audit/SKILL.md
+../../../sources/fos-study/.claude/skills/docs-audit/SKILL.md

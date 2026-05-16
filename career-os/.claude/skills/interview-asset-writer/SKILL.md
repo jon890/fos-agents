@@ -12,7 +12,7 @@ description: 후보자 이력 기반 면접 자산 마크다운을 생성하고 
 
 ## When to use
 
-- 슬래시 호출: `/interview-asset <topic>`
+- 슬래시 호출: `/interview-asset-writer <topic>`
 - 자연어 요청 (Q&A): "AI 서비스팀 면접 질문 은행 만들어줘", "slot 팀 experience qbank 정리해줘"
 - 자연어 요청 (master): "시니어 백엔드 마스터 플레이북 만들어줘", "면접 master playbook 갱신"
 - fos-study repo에 즉시 publish할 *후보자 이력 기반 면접 자산*이 필요한 모든 경우

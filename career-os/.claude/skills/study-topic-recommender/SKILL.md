@@ -73,7 +73,7 @@ morning-topic-recommendation.md 전체 내용을 사용자에게 출력.
 
 1. `data/runtime/topic-inventory.json`의 `pools.remainingLiveCodingSeeds` 확인. 비어 있으면 `pools.remainingLiveCodingCandidateSeeds` 확인.
 2. 가장 우선도 높은 seed 1개 선택 → 제목 + slug + difficulty + outputPath 출력
-3. 사용자 승인 시 `claude -p "/study-pack <seed-slug>"` 명령 안내 (study-pack-writer로 위임)
+3. 사용자 승인 시 `claude -p "/study-pack-writer <seed-slug>"` 명령 안내 (study-pack-writer로 위임)
 
 ## Self-check
 

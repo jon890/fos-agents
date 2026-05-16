@@ -785,7 +785,7 @@ async function main(): Promise<void> {
     `- live-coding candidate seed 남음: ${remainingLiveCandidates.length}개`,
     `- tech-blog reservoir: ${techBlogItems.length}개 / AI reservoir: ${aiTopicItems.length}개 / geek reservoir: ${geekNewsItems.length}개`,
     "",
-    "백엔드 항목은 `run_now.sh study-pack <key>`로 즉시 만들 수 있다.",
+    '백엔드 항목은 `claude -p "/study-pack-writer <key>"`로 즉시 만들 수 있다.',
     "나머지 카테고리는 외부 reading 추천이라 별도 생성 단계 없이 그대로 학습한다."
   );
 
