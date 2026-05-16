@@ -8,10 +8,10 @@
 
 ## 지원 대상
 
-- **현재 타깃**: 카카오헬스케어 케어챗 AI Agent 개발자.
-- **지원 포지션 핵심**: OPEN LLM 기반 AI Agent 설계/개발, 의도 분석, Tool 호출, 멀티턴 메모리, 케어챗 챗봇 엔진/의료 마이데이터 고도화, LLM 서빙 아키텍처, Python AI 서비스, 기존 Java(Spring Boot) 백엔드와 AI Agent 연동, 클라우드 모니터링/성능/장애 대응.
-- **지원 가능 범위 (재사용 가능 포지셔닝)**: Spring Boot · Kafka · Redis · OpenSearch 기반 운영형 백엔드 + RAG/LLM workflow/Agent orchestration 경험을 결합한 AI 서비스 백엔드.
-- **포지셔닝 한 줄**: "LLM Agent를 단순 데모가 아니라 실제 서비스 백엔드와 안정적으로 연결하고, RAG/Tool calling/비동기 처리/장애 대응/비용 최적화까지 제품 수준으로 설계해 본 AI 서비스 백엔드 개발자."
+- **현재 타깃**: CJ Foodville Digital Channel Backend (Java Backend). 회사·팀·면접 일자는 `career-os/config/mvp-target.json`이 단일 출처.
+- **지원 포지션 핵심**: F&B/e-Commerce 운영형 자사 백엔드 — Spring Boot 3 + JPA/Hibernate + Kafka + Redis + MySQL 기반 신규 서비스 개발·운영 안정화, 레거시(JSP/jQuery)와 신규 SPA 공존 환경, 주문/픽업/딜리버리 상태머신·쿠폰·멤버십 도메인, 클라우드 운영 안정성.
+- **지원 가능 범위 (재사용 가능 포지셔닝)**: 운영형 자사 서비스 백엔드 — Spring Boot 3 · Java 17·21 · JPA · Kafka · Redis · OpenSearch + 분산 캐시 정합성·Transactional Outbox·운영 장애 RCA 실전 경험. AI 서비스 백엔드 경험도 보조 자산.
+- **포지셔닝 한 줄**: "운영 안정성·트랜잭션/이벤트 경계·캐시 정합성을 자사 서비스 백엔드 관점으로 설계해 본 시니어 Java 백엔드 개발자."
 
 ---
 
@@ -224,9 +224,9 @@
    - Sync vs Async 선택 기준, 분산 트랜잭션(Saga), 이벤트 유실 대비.
 6. **자기 프로젝트 1분 설명 3종 준비**
    - RAG 배치 파이프라인 / 캐시 정합성 / Outbox Pattern.
-7. **카카오헬스케어 케어챗 특화 보조 포인트**
-   - Tool calling / 멀티턴 메모리 / RAG 품질 평가 / hallucination 방어 / LLM serving 비용·지연·fallback / 의료 마이데이터 개인정보·권한·감사로그를 우선 준비한다.
-   - 회사·포지션 세부는 `interview/kakao-healthcare-carechat-ai-agent.md`와 `config/interview-master-topics.json`에서 주입한다.
+7. **CJ Foodville 디지털 채널 특화 보조 포인트**
+   - F&B 주문/픽업/딜리버리 상태머신 / 쿠폰·프로모션 동시성 / 멤버십·CJ ONE 포인트 / 결제 멱등성·부분 취소·환불 / 레거시 JSP+jQuery와 신규 Spring API 공존 / MyBatis 운영 패턴을 우선 준비한다.
+   - 회사·포지션 세부는 `interview/cj-foodville-digital-channel-backend.md`(+ part2/part3/coffeechat)와 `config/mvp-target.json`에서 주입한다.
 
 ---
 
@@ -236,7 +236,7 @@
 - **폴리그롯 가정 금지** — 이력서·task에 기재 없는 언어/도구(예: Scala, Rust 본격 운영)는 pipeline에서 전제하지 않는다.
 - **수치 날조 금지** — TPS, 팀 규모, 성과 %, 감축율 등이 이력서·task에 명시되지 않았으면 pipeline은 "출처 문서에 기재 없음"으로 응답해야 한다. 이력서 문항1의 "447개 테스트 파일", 본 문서 JMH 수치는 출처 확인됨.
 - **실무 근거 범위** — 본 프로필은 `resume/2603_김병태_이력서_v4.md` + `task/**/*.md` + `interview/kakao-healthcare-carechat-ai-agent.md`를 1차 근거로 사용한다. 기타 이력서 버전(v1~v3, 2108/2512/2601)은 참조용.
-- **카카오헬스케어 케어챗 타깃 유지** — 회사 특화 맥락은 `interview/kakao-healthcare-carechat-ai-agent.md`와 `config/interview-master-topics.json` promptAppend에서 주입한다.
+- **CJ Foodville 디지털 채널 타깃 유지** — 회사 특화 맥락은 `interview/cj-foodville-digital-channel-backend.md`(+ part2 ivips SRE / part3 coffee chat prep)와 `config/mvp-target.json` primary에서 주입한다.
 
 ---
 

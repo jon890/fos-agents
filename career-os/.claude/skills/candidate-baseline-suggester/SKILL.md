@@ -65,11 +65,12 @@ audit trail 디렉터리 생성 실패 시 즉시 중단 — audit trail 없이 
 - study_count ≥ 2 이거나 최근 30일 내 학습 완료된 약점 → outdated 후보로 분류
 
 **D. 이력서 자동 탐지 + 매핑 후보 제시**
-- `find career-os/sources/fos-study/resume -maxdepth 3 -type f` 로 resume/ 전체 자산 스캔. 마크다운(`*.md`) / HTML / PDF 종류별 후보 + mtime + version pattern(`*_v[0-9]+\.md`, `*_yyyymm_*.md`).
+- `find career-os/sources/fos-study/resume -maxdepth 3 -type f` 로 resume/ 전체 자산 스캔. 마크다운(`*.md`) / HTML / PDF 종류별 후보 + mtime + 파일명 패턴(`*_v[0-9]+\.*`, `*_yyyymm_*.*`, `*-backend.*` 등).
+- **마크다운 / HTML / PDF는 동등 인정** — Claude 멀티모달 모델은 HTML/PDF를 직접 흡수하므로 마크다운 강요 X. mvp-target.json primary와 파일명 매칭(예: `cj-foodville-...`)이 우선순위.
 - candidate-profile.md `Source provenance` 표 + baseline-core-files.json `files[]`가 가리키는 resume path 중 부재(4-2.B 결과)인 항목 식별.
-- 발견된 후보 중 가장 적합한 1건(최신 mtime + 마크다운 우선)을 changes.md `## 이력서 매핑 후보`에 기록 (**자동 교체 X — 사용자 결정**).
-- 마크다운 0건 + HTML/PDF만 발견되면 `_missing_note`에 "현재 active 후보 = HTML/PDF만, 마크다운 재생성은 resume-writer skill 권장" 명시.
-- 마크다운/HTML/PDF 모두 부재면 changes.md에 "이력서 자산 전무 — resume-writer skill로 신규 생성 필요" 명시.
+- 발견된 후보 중 가장 적합한 1건(mvp-target 키워드 매칭 우선 → 최신 mtime → 형식 우선순위 md > html > pdf)을 changes.md `## 이력서 매핑 후보`에 기록.
+- **자동 교체 X — 사용자 결정**. 단 *대체 후보가 명확*하면 `_missing_note`에 후보 path 명시.
+- 모든 종류 부재면 changes.md에 "이력서 자산 전무 — resume-writer skill로 신규 생성 필요" 명시. (HTML/PDF가 있으면 resume-writer 권장 *문구 생략*.)
 
 ### 4-3. 자산 갱신 — Append + 주석 마킹
 
