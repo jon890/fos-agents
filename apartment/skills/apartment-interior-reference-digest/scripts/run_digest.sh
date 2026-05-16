@@ -14,9 +14,9 @@ REPORT_MD="$OUTDIR/report.md"
 mkdir -p "$OUTDIR"
 
 cat > "$REQUEST_MD" <<EOF
-# apartment-interior-reference-digest request
+# 오늘의 인테리어 추천 요청
 
-Run the apartment interior reference digest workflow.
+Run the apartment interior reference recommendation workflow.
 
 Inputs:
 - Config: $CONFIG_FILE
@@ -38,12 +38,12 @@ Do not contact vendors or request quotes.
 EOF
 
 cat > "$REPORT_MD" <<EOF
-# 인테리어 레퍼런스 다이제스트
+# 오늘의 인테리어 추천
 
 - 날짜: $REPORT_DATE
 - 상태: 준비됨
 
-이 파일은 runner가 만든 자리표시자입니다. 실제 다이제스트는 OpenClaw agent가 $REQUEST_MD 를 읽고 web_search/web_fetch로 후보를 조사한 뒤 덮어써야 합니다.
+이 파일은 runner가 만든 자리표시자입니다. 실제 추천 리포트는 OpenClaw agent가 $REQUEST_MD 를 읽고 web_search/web_fetch로 후보를 조사한 뒤 덮어써야 합니다.
 EOF
 
 echo "$REQUEST_MD"

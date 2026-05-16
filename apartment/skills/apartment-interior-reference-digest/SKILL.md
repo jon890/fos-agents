@@ -1,9 +1,9 @@
 ---
 name: apartment-interior-reference-digest
-description: Find and summarize interior renovation references for 구리 럭키아파트 5동 1004호, especially 오늘의집, 네이버 블로그, and portfolio pages. Use when the user asks for interior reference recommendations, similar 평수/구축 apartment examples, morning cron interior digests, or decision-support for renovation scope, materials, 샷시, 확장, 단열, 욕실, 주방, 바닥재, lighting, and budget tradeoffs.
+description: Find and summarize interior renovation references for 구리 럭키아파트 5동 1004호, especially 오늘의집, 네이버 블로그, and portfolio pages. Use when the user asks for interior reference recommendations, similar 평수/구축 apartment examples, morning cron interior recommendations, or decision-support for renovation scope, materials, 샷시, 확장, 단열, 욕실, 주방, 바닥재, lighting, and budget tradeoffs.
 ---
 
-# Apartment Interior Reference Digest
+# Apartment Interior Reference Recommendations
 
 ## Source of truth
 
@@ -27,9 +27,9 @@ description: Find and summarize interior renovation references for 구리 럭키
 6. Save a dated markdown digest under `data/interior-reference-digest/YYYY-MM-DD/report.md`.
 7. Append high-quality reference candidates to `docs/interior/interior-references.md` with stable IDs (`R-00X`).
 8. Send a short Discord-safe summary if running from cron.
-9. If a candidate changes a decision, append a proposed `D-00X` item to the decision note only when the user has confirmed it. Otherwise record it as "검토 후보" in the digest/reference notebook.
+9. If a candidate changes a decision, append a proposed `D-00X` item to the decision note only when the user has confirmed it. Otherwise record it as "검토 후보" in the recommendation/reference notebook.
 
-## Daily digest output
+## Daily recommendation output
 
 Keep the morning report short:
 
