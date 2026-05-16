@@ -1,0 +1,56 @@
+{
+  "name": "plan023-command-router-and-ts-lib-cleanup",
+  "description": "command-router 디렉터리 일괄 폐기 (dispatcher case 0 도달) + _shared/lib 2개 폐기 (invoke_claude_skills.ts + format_cost_summary.ts) + career-os/scripts/_lib 5 파일 일괄 폐기 (build_prompt + extract_and_validate_study_pack + fos_study_git + resolve_study_pack_topic + study_pack_publish — plan013/021/022 cleanup 잔재) + _shared/types/index.ts 관련 타입 정리 + 5문서 갱신 (ADR-031). track_task.sh는 apartment 사용 중이라 유지 (워크스페이스 격리). depends_on: plan021 + plan022 (caller 폐기 선행).",
+  "created_at": "2026-05-16T00:00:00+00:00",
+  "updated_at": "2026-05-16T00:00:00+00:00",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 4,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/docs/adr.md (ADR-031)",
+    "career-os/docs/code-architecture.md",
+    "career-os/docs/flow.md",
+    "career-os/AGENTS.md (외부 의존성 섹션)"
+  ],
+  "depends_on": ["plan021-interview-coffeechat-prep-native", "plan022-position-recommender-native"],
+  "phases": [
+    {
+      "number": 1,
+      "title": "command-router 디렉터리 일괄 폐기 (scripts + .claude/skills)",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Bash", "Grep"],
+      "model": "sonnet",
+      "timeout": 600
+    },
+    {
+      "number": 2,
+      "title": "ts lib 일괄 폐기 (_shared/lib 2개 + career-os/scripts/_lib 5개 + _shared/types/index.ts 정리)",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Edit", "Bash", "Grep"],
+      "model": "sonnet",
+      "timeout": 900
+    },
+    {
+      "number": 3,
+      "title": "5문서 + AGENTS.md 갱신 (dispatcher 0 + 외부 의존성 간소화)",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Edit", "Bash", "Grep"],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 4,
+      "title": "정적 검증 + push + trailing + index.json completed",
+      "file": "phase-04.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Edit", "Bash", "Grep"],
+      "model": "sonnet",
+      "timeout": 600
+    }
+  ]
+}
