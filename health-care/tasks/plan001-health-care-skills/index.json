@@ -1,0 +1,57 @@
+{
+  "name": "plan001-health-care-skills",
+  "description": "Design and implement three bounded health-care skills for knee rehab checkins, progress intake, and weekly clinic summaries.",
+  "created_at": "2026-05-17T10:14:05Z",
+  "updated_at": "2026-05-17T10:14:05Z",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 4,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "health-care/docs/prd.md",
+    "health-care/docs/data-schema.md",
+    "health-care/docs/flow.md",
+    "health-care/docs/code-architecture.md",
+    "health-care/docs/adr.md"
+  ],
+  "depends_on": [],
+  "phases": [
+    {
+      "number": 1,
+      "title": "Create daily checkin skill",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 600
+    },
+    {
+      "number": 2,
+      "title": "Create progress intake skill",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 600
+    },
+    {
+      "number": 3,
+      "title": "Create weekly clinic summary skill",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 900
+    },
+    {
+      "number": 4,
+      "title": "Validate health-care skill plan",
+      "file": "phase-04.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Edit", "Bash", "Glob", "Grep"],
+      "model": "haiku",
+      "timeout": 600
+    }
+  ]
+}
