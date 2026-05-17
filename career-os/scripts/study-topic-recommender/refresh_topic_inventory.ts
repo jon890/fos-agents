@@ -709,7 +709,7 @@ async function main(): Promise<void> {
     }
   } else {
     lines.push(
-      "- (reservoir 비어 있음 — `run_now.sh replenish-topics` 필요)",
+      "- (reservoir 비어 있음 — `claude -p \"/study-topic-recommender\"` 로 보충)",
       ""
     );
   }

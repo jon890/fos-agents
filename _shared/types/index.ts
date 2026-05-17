@@ -23,31 +23,6 @@ export interface ClaudeUsage {
 }
 
 /**
- * `logs/task-runs.jsonl` 한 줄 entry.
- * `format_cost_summary.ts` 가 이 형태로 latest 한 줄 파싱.
- * `track_task.sh` 가 채우는 필드 기준.
- */
-export interface TaskRunEntry {
-  run_id: string;
-  task_name: string;
-  start_time: string;
-  end_time: string;
-  duration_sec: number;
-  status: "success" | "failed";
-  exit_code: number;
-  command: string;
-  model: string | null;
-  tokens_in_delta: number | null;
-  tokens_out_delta: number | null;
-  cached_tokens_delta: number | null;
-  cache_read_input_tokens: number | null;
-  cost_usd: number | null;
-  service_tier: string | null;
-  // 그 외 track_task.sh 필드는 unknown 으로 흘려보냄
-  [key: string]: unknown;
-}
-
-/**
  * study-pack-topics.json / question-bank-topics.json 의 단일 토픽 entry (ADR-027 분리 후).
  * namespace 별로 같은 형태.
  */
