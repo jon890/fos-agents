@@ -45,17 +45,13 @@
 
 ## 워크플로 진입점 (요약)
 
-**plan013 이후 (ai-nodes ADR-002, native skill 패턴)**: `claude -p "/<skill-name> <args>"` 직접 호출이 표준 진입점. dispatcher (`run_now.sh`)는 점진 폐기. 첫 적용: study-pack-writer. 나머지 skill은 후속 plan으로 점진 마이그.
+**dispatcher 폐기 완료 (plan023, ADR-031)** — native skill 진입점 7개로 단일화. `claude -p "/<skill-name> <args>"` 직접 호출이 표준 진입점.
 
-옛 진입점 (plan006 후, ADR-019): `scripts/command-router/run_now.sh`. plan005 분해 직후~plan006 전: `skills/command-router/scripts/run_now.sh`(ADR-017). 그 전: `skills/cj-oliveyoung-java-backend-prep/scripts/run_now.sh`. 마이그 안 된 skill은 옛 진입점 여전히 사용.
+이력: 옛 진입점은 `skills/cj-oliveyoung-java-backend-prep/scripts/run_now.sh` → ADR-017에서 `skills/command-router/scripts/run_now.sh` → ADR-019 (plan006 후)에서 `scripts/command-router/run_now.sh` 순으로 변화. plan013~022에서 모든 dispatcher case가 native skill 또는 폐기 처리됨. plan023에서 command-router 디렉터리 자체 폐기.
 
-**dispatcher case 0개 도달** (plan013~022에서 모든 case가 native skill 또는 폐기 처리됨). plan023에서 command-router 디렉터리 자체 폐기 예정.
-
-native skill 진입점 (ai-nodes ADR-002, plan013~022): `claude -p "/study-pack-writer <topic>"` (주제 중심 학습 문서) · `claude -p "/interview-asset-writer <topic>"` (후보자 이력 중심 Q&A 질문 은행 + 마스터 플레이북) · `claude -p "/study-topic-recommender"` (아침 토픽 추천 + replenish + live-coding seed 선택 통합) · `claude -p "/interview-prep-analyzer [args]"` (면접 준비 갭 분석 — baseline 전체 진단 + daily 집중 점검 자연어 분기, ADR-027, plan017) · `claude --permission-mode acceptEdits -p "/candidate-baseline-suggester"` (fos-study 학습 이력 기반 후보자 자산 Append 갱신 — candidate-profile · baseline-core-files · weak_spots, ADR-028, plan020) · `claude -p "/interview-coffeechat-prep"` (mvp-target.json `primary.coffeechat` 기업 사이트 수집 + 전략 리포트, ADR-029, plan021) · `claude -p "/position-recommender [자연어 컨텍스트] [채용공고 file]"` (활성 공고 수집 + 후보자 프로필 매칭, 3 티어 추천, ADR-030, plan022).
+native skill 진입점 7개 (ai-nodes ADR-002, plan013~022): `claude -p "/study-pack-writer <topic>"` (주제 중심 학습 문서) · `claude -p "/interview-asset-writer <topic>"` (후보자 이력 중심 Q&A 질문 은행 + 마스터 플레이북) · `claude -p "/study-topic-recommender"` (아침 토픽 추천 + replenish + live-coding seed 선택 통합) · `claude -p "/interview-prep-analyzer [args]"` (면접 준비 갭 분석 — baseline 전체 진단 + daily 집중 점검 자연어 분기, ADR-027, plan017) · `claude --permission-mode acceptEdits -p "/candidate-baseline-suggester"` (fos-study 학습 이력 기반 후보자 자산 Append 갱신 — candidate-profile · baseline-core-files · weak_spots, ADR-028, plan020) · `claude -p "/interview-coffeechat-prep"` (mvp-target.json `primary.coffeechat` 기업 사이트 수집 + 전략 리포트, ADR-029, plan021) · `claude -p "/position-recommender [자연어 컨텍스트] [채용공고 file]"` (활성 공고 수집 + 후보자 프로필 매칭, 3 티어 추천, ADR-030, plan022).
 
 각 명령의 입력/산출물/git push 여부 상세는 `docs/prd.md` 기능 표, 데이터 흐름은 `docs/flow.md` 참조.
-
-모든 서브 명령은 `_shared/bin/track_task.sh`로 래핑되어 실행별 메트릭이 `logs/task-runs.jsonl` + `logs/token-usage.jsonl`에 append된다. `run_now.sh`는 내부 `run_tracked()` 헬퍼로 알림과 비용 요약을 자동 부착한다.
 
 런타임 상태(어떤 명령이 최근에 잘 도는지)는 이 문서에 박지 않는다 — `logs/task-runs.jsonl`이 단일 출처이고 `skills/workspace-audit`가 그때그때 보고한다.
 
@@ -63,10 +59,10 @@ native skill 진입점 (ai-nodes ADR-002, plan013~022): `claude -p "/study-pack-
 
 `~/ai-nodes/_shared/` 아래. 자세한 책임은 `docs/code-architecture.md` 외부 의존성 섹션 참조.
 
-- `_shared/bin/track_task.sh` — 모든 모드 트래커. 누락 시 모든 실행 실패.
-- `_shared/lib/invoke_claude_skills.ts` — Bun. Claude CLI 호출 + usage 전파 + 재시도 + 검증 통합 헬퍼. claude_lib.sh + extract_claude_result.py 의 후속.
+- `_shared/bin/track_task.sh` — 트래커. career-os 사용 0 (native skill 직접 실행). apartment 사용 중이라 `_shared/bin`에 유지.
 - `_shared/lib/notify_discord.ts` — Bun. `openclaw message send --channel discord` subprocess. `DISCORD_CHANNEL_ID` env 필수, `--media <path>` 옵션 지원. 옛 `notify_discord*.sh` 후속 (ADR-021).
-- `_shared/lib/format_cost_summary.ts` — Bun. logs/task-runs.jsonl 최신 항목 → 한 줄 cost 요약. format_cost_summary.py 의 후속.
+- `_shared/lib/mvp_target_schema.ts` — Bun/zod. `config/mvp-target.json` 스키마 검증 단일 출처. `parseMvpTarget()` + `CoffeechatSchema` 포함 (plan021 ADR-029 신규).
+- `_shared/bin/extract_claude_result.py` — career-os 사용 0. apartment + stock-investment caller 잔존 — 별도 워크스페이스 plan 대기.
 - `_shared/bin/update_artifacts.py` — `data/generated-artifacts.json` upsert (당분간 Python 유지, 별도 plan).
 
 ## 운영 원칙
@@ -74,7 +70,7 @@ native skill 진입점 (ai-nodes ADR-002, plan013~022): `claude -p "/study-pack-
 - 광범위 풀-리포 분석 금지. baseline은 큐레이션된 core 세트 안에서 (`config/baseline-core-files.json`).
 - daily는 baseline보다 더 작게 — 토픽 기반 3-5개 문서.
 - 비용 데이터는 `logs/task-runs.jsonl`의 `cost_usd` / `model` / `tokens_*` 필드로 자동 기록 (ADR-014 이후 측정 가능 정책).
-- `workspace-audit`의 `health.token_outlier`가 평균 ±2σ 이탈 보고. `format_cost_summary.py`가 실시간 알림에 비용 부착.
+- `workspace-audit`의 `health.token_outlier`가 평균 ±2σ 이탈 보고. 비용 집계는 `logs/task-runs.jsonl` `cost_usd` 필드로 추적.
 - 비밀 정보는 `.env` (워크스페이스 root, ADR-021): `DISCORD_CHANNEL_ID`, `GITHUB_TOKEN`, `GITHUB_REPO_*` 등. 템플릿은 `.env.example`.
 - 영구 자산은 `~/.openclaw/workspace`가 아닌 워크스페이스 내부에 저장.
 

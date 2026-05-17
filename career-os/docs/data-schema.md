@@ -305,7 +305,7 @@ caller가 `.env`를 ts에 전달하는 방법: `bun --env-file=career-os/.env _s
 
 ### logs/task-runs.jsonl
 
-`track_task.sh`가 매 실행마다 한 줄씩 append. 워크스페이스 운영 데이터의 단일 출처.
+`track_task.sh`가 매 실행마다 한 줄씩 append. career-os는 plan023 이후 native skill 직접 실행으로 전환 — `TaskRunEntry` 자동 기록은 apartment 등 `track_task.sh` 사용 워크스페이스에서만 유효. career-os 실행 이력은 Discord 알림 경유.
 
 ```json
 {
