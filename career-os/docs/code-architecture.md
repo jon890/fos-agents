@@ -63,7 +63,6 @@ career-os/
 │   ├── flow.md           사용자/데이터 플로우
 │   ├── code-architecture.md  이 문서
 │   ├── adr.md            모든 아키텍처 결정 누적 기록 (단일 출처, ADR-015/018)
-│   ├── learn/            짧은 회고. 결정 굳어지면 adr.md 로 흡수 후 삭제 (ADR-018)
 │   ├── hand-off/         외부 위임·인수인계 일회성 노트
 │   └── prep/             회사·이벤트별 운영 자산. 이벤트 종료 후 archive
 │
