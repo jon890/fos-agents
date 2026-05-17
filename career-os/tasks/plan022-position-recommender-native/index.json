@@ -2,9 +2,9 @@
   "name": "plan022-position-recommender-native",
   "description": "position-recommender native skill 마이그 + collect_live_postings.py → ts 마이그 + 활성화 + run_position_recommendation.sh + extract_position_report.ts + publish_job_analysis.sh 일괄 폐기 + dispatcher recommend-positions case (마지막 남은 case) 폐기 (ADR-030). 활성도 36회/30일 (career-os 최활성). plan021 패턴 적용 (zod 활용, mvp-target.json 회사 불가지론). POSITION_CONTEXT + POSITION_POSTINGS_FILE env → 자연어 인자 흡수. common-pitfalls 6-6 회피: SKILL.md draft + collect_live_postings.ts draft 별도 파일.",
   "created_at": "2026-05-16T00:00:00+00:00",
-  "updated_at": "2026-05-16T00:00:00+00:00",
-  "status": "pending",
-  "current_phase": 1,
+  "updated_at": "2026-05-17T09:47:30.251775+00:00",
+  "status": "completed",
+  "current_phase": 5,
   "total_phases": 5,
   "error_message": null,
   "blocked_reason": null,
@@ -15,52 +15,86 @@
     "career-os/docs/code-architecture.md",
     "skills/plan-and-build/references/common-pitfalls.md (6-6, 6-7)"
   ],
-  "depends_on": ["plan021-interview-coffeechat-prep-native"],
+  "depends_on": [
+    "plan021-interview-coffeechat-prep-native"
+  ],
   "phases": [
     {
       "number": 1,
       "title": "draft 작성 (SKILL.md draft + collect_live_postings.ts draft)",
       "file": "phase-01.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Bash", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Bash",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 2400
+      "timeout": 2400,
+      "commitSha": "b36c3bbc9a34"
     },
     {
       "number": 2,
       "title": "collect_live_postings.ts 적용 + 동등성 검증 (Python vs ts 출력) + Python 폐기",
       "file": "phase-02.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 1800
+      "timeout": 1800,
+      "commitSha": "d1d0a674dcff"
     },
     {
       "number": 3,
       "title": "SKILL.md Write 적용 + 옛 자산 일괄 폐기 (run_position_recommendation.sh + extract_position_report.ts + publish_job_analysis.sh) + dispatcher case 폐기",
       "file": "phase-03.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 1200
+      "timeout": 1200,
+      "commitSha": "d1d0a674dcff"
     },
     {
       "number": 4,
       "title": "5문서 + AGENTS.md 갱신 (flow.md ASCII flow 박기 + dispatcher case 0개 명시)",
       "file": "phase-04.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Edit", "Bash", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 1200
+      "timeout": 1200,
+      "commitSha": "93fbb9c40d17"
     },
     {
       "number": 5,
       "title": "정적 검증 + push + trailing + index.json completed",
       "file": "phase-05.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Edit", "Bash", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 900
+      "timeout": 900,
+      "commitSha": "93fbb9c40d17"
     }
   ]
 }
