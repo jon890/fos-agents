@@ -23,7 +23,7 @@
 - `_shared/lib/` — Bun TypeScript 공용 헬퍼. **워크스페이스 무관 헬퍼만** (ai-nodes ADR-001 정책: 특정 워크스페이스 config·sources·data 의존 금지). 워크스페이스 한정 헬퍼는 `<workspace>/scripts/<skill>/` 내부에 (plan023에서 `career-os/scripts/_lib/` 폐기, ADR-031).
 - `_shared/types/` — 공용 TS 타입.
 - `skills/` — 저장소 전역 Claude Code 스킬 (`agent-browser`, `planning`, `plan-and-build`, `workspace-audit`, `docs-check`). `docs-check`는 ai-nodes 5문서 + ADR 건전성 감사 스킬.
-- `docs/` — ai-nodes 모노레포 레벨 ADR (워크스페이스 간 공통 정책). 워크스페이스 한정 결정은 `<workspace>/docs/adr.md`.
+- `docs/` — ai-nodes 모노레포 레벨 ADR + 워크스페이스 표준 청사진 (`docs/workspace-structure.md` 신설, plan001 — 새 워크스페이스 추가 진입점). 워크스페이스 한정 결정은 `<workspace>/docs/adr.md`.
 
 ### 1-1. career-os 한정 컨벤션 (ADR-019)
 
@@ -76,6 +76,10 @@ claude -p "/position-recommender [자연어 컨텍스트] [채용공고 file]"
 ### 3-3. stock-investment / travel
 
 [`stock-investment/AGENTS.md`](stock-investment/AGENTS.md) · [`travel/AGENTS.md`](travel/AGENTS.md) 참조. 본 모노레포 진입점은 그곳에 정의.
+
+### 3-4. 새 워크스페이스 추가
+
+`ai-nodes/docs/workspace-structure.md` 10번 체크리스트 참조. mkdir + AGENTS.md + CLAUDE.md 심링크 + 5문서 placeholder + tasks/ + config/ + .env.example. 첫 plan은 5문서 본문 작성 + ADR-001 자리.
 
 ## 4. Claude CLI 호출 패턴
 
@@ -135,14 +139,19 @@ career-os는 `tasks/plan{N}-<slug>/` 영구 plan 영역을 운영. `skills/plann
 - `_shared/lib/notify_discord.ts` — Discord 알림(openclaw subprocess 경유, ADR-021).
 - `_shared/lib/extract_claude_result.ts` — `claude --output-format json` envelope 파싱. apartment + career-os 사용.
 - `_shared/lib/mvp_target_schema.ts` — career-os `config/mvp-target.json` zod 스키마 (ADR-029).
-- `agent-browser` CLI — 로컬 설치 필수(apartment의 Naver Land 같은 JS-heavy 페이지 수집).
-- Bun runtime — TS 헬퍼 실행. `bun` 명령 + npm install로 node_modules 보유.
+- Bun runtime — TS 헬퍼 실행. 설치 후 ai-nodes 루트에서 `bun install` 1회 (root package.json: zod, fast-xml-parser, dotenv + @types/bun).
+- Python 3 — `_shared/bin/extract_claude_result.py` + apartment Python collector 6개. 기본 stdlib만 사용 (외부 pip 의존 없음).
+- `agent-browser` CLI — JS-heavy 페이지(Naver Land 등) 수집. 로컬 설치 필수 (apartment ADR-001).
 - `claude` CLI — 모든 Claude 호출 워크플로 의존.
 
 ## 10. 참고 문서
 
+- 워크스페이스 표준 청사진: `docs/workspace-structure.md` (새 워크스페이스 추가 진입점).
+- 모노레포 ADR: `docs/adr.md` (ADR-001~004 누적).
 - 워크스페이스별 상세: `<workspace>/AGENTS.md`.
 - career-os 5문서: `career-os/docs/{prd, data-schema, flow, code-architecture, adr}.md`.
-- planning skill: `skills/planning/SKILL.md`(8단계 워크플로 + 5문서 공통 작성 원칙).
-- plan-and-build skill: `skills/plan-and-build/`(자동 phase 실행 + common-pitfalls 축적).
-- workspace-audit skill: `skills/workspace-audit/SKILL.md`(워크스페이스 건전성 감사).
+- apartment 5문서: `apartment/docs/{prd, data-schema, flow, code-architecture, adr}.md` (plan001 신설).
+- planning skill: `skills/planning/SKILL.md` (8단계 워크플로 + 5문서 공통 작성 원칙).
+- plan-and-build skill: `skills/plan-and-build/` (자동 phase 실행 + common-pitfalls 축적).
+- workspace-audit skill: `skills/workspace-audit/SKILL.md` (워크스페이스 건전성 감사).
+- docs-check skill: `skills/docs-check/SKILL.md` (5문서 + ADR 건전성 감사).

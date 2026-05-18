@@ -29,10 +29,10 @@ career-os의 모든 아키텍처 결정을 시간순으로 누적 기록한다. 
 | ADR-015 | docs/ 피드백 루프 + data/ 위치 정책 | Accepted | docs/=결정·학습 누적, 데이터는 data/ 단일 위치 |
 | ADR-016 | config 디렉터리 통합 | Partially superseded by ADR-027 (plan017, 2026-05-15) | topics.json 3 namespace 분리, sources/baseline 통합은 유지 |
 | ADR-017 | cj-oliveyoung-java-backend-prep 분해 | Accepted | 거대 skill → 도메인별 5 skill 분해, WIP 3개 wire-up |
-| ADR-018 | docs/ 운영 정책: 휘발성 vs 영속 | Partially superseded by ADR-032 (2026-05-17) | adr.md 단일 출처. learn 영역은 ADR-032에서 폐기, hand-off/prep 유지 |
+| ADR-018 | docs/ 운영 정책: 휘발성 vs 영속 | Partially superseded by ADR-032; 5문서/data 분리는 ai-nodes ADR-004로 Lifted | adr.md 단일 출처. learn 영역은 ADR-032에서 폐기, hand-off/prep 유지 |
 | ADR-019 | scripts/ 폴더 분리 | Accepted | career-os 한정 skills/<name> + scripts/<name> 분리 |
 | ADR-020 | 공용 헬퍼 TS(Bun) 마이그레이션 | Accepted | _shared/lib TS 단일 위치, shim·partial 금지 |
-| ADR-021 | Discord 알림 openclaw 경유 + 워크스페이스 .env | Accepted | openclaw subprocess + DISCORD_CHANNEL_ID env, secret <ws>/.env 격리 |
+| ADR-021 | Discord 알림 openclaw 경유 + 워크스페이스 .env | Lifted to ai-nodes ADR-004 (.env 부분); Discord openclaw 부분 career-os 유지 | openclaw subprocess + DISCORD_CHANNEL_ID env, secret <ws>/.env 격리 |
 | ADR-022 | 도메인 헬퍼 TS(Bun) 마이그레이션 | Accepted | extractor/renderer/resolver 9개 + extract_claude_result TS화 |
 | ADR-023 | Study-pack 생성 출력 포맷 | Deprecated (2026-05-13, 실측 무효) | JSON 폐기 결정이 회계 누락 초래 — ADR-014로 복구 |
 | ADR-025 | Skills 정리 + 한글화 정책 | Accepted | fos-study-pack 폐기, SKILL.md 한글화 + 코드 식별자 영어 유지 |
@@ -421,7 +421,7 @@ career-os/config/에 12+ 데이터 파일이 쌓여 (5 topic / 3 source / live-c
 
 ## ADR-018 — docs/ 운영 정책: 휘발성 vs 영속, learn → ADR 흡수 흐름
 
-- Status: Partially superseded by ADR-032 (2026-05-17, learn 영역 폐기 — hand-off/prep 유지 결정은 살아있음)
+- Status: Partially superseded by ADR-032 (2026-05-17, learn 영역 폐기 — hand-off/prep 유지 결정은 살아있음) — 5문서 + docs/data 분리 부분은 ai-nodes ADR-004 (2026-05-18)로 모노레포 격상 (Lifted)
 - Date: 2026-05-13
 
 ### 맥락
@@ -503,7 +503,7 @@ ai-nodes 자동화가 shell + Python 혼재로 자랐다. 사용자가 Python보
 
 ## ADR-021 — Discord 알림 openclaw 경유 + 워크스페이스 `.env` 격리
 
-- Status: Accepted
+- Status: Lifted to ai-nodes ADR-004 (2026-05-18) — .env 워크스페이스 root 격리 부분. Discord 알림 openclaw 부분은 career-os 한정 유지.
 - Date: 2026-05-14
 
 ### 맥락
