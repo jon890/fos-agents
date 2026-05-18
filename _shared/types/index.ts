@@ -3,7 +3,7 @@
 
 /**
  * `claude --print --output-format json` 의 envelope.
- * `invoke_claude_skills.ts` 가 이 형태로 결과 반환.
+ * `_shared/lib/extract_claude_result.ts` 등 Claude CLI 호출 헬퍼가 이 형태로 결과 파싱.
  */
 export interface ClaudeUsage {
   result?: string;
