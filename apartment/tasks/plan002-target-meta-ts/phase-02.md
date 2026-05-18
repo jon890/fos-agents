@@ -22,6 +22,17 @@ phase-01 산출물 통합 정적 검증 후 plan002 완료 처리 + origin/main 
 
 ## 작업 항목
 
+## 사전 cwd 설정 (run-phases.py hotfix)
+
+run-phases.py는 cwd=apartment로 phase 실행. 본 phase는 ai-nodes 루트 기준 `apartment/...` path 다수 인용 — 첫 bash 호출에서 cwd=ai-nodes 루트로 변경 (Claude Code Bash 도구 cwd 보존).
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+pwd  # 기대: /home/bifos/ai-nodes
+```
+
+---
+
 ### 1. 통합 정적 검증
 
 ```bash

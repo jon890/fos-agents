@@ -27,6 +27,17 @@ ADR-002 (focus-unit.json 단일 출처) + ADR-003 (apartment TypeScript 도입) 
 
 ---
 
+## 사전 cwd 설정 (run-phases.py hotfix)
+
+run-phases.py는 cwd=apartment (워크스페이스)로 phase 실행. 본 phase는 ai-nodes 루트 기준 `apartment/...` path를 다수 인용하므로 첫 bash 호출에서 cwd=ai-nodes 루트로 변경. Claude Code Bash 도구 cwd 보존 특성으로 후속 자동 유지.
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+pwd  # 기대: /home/bifos/ai-nodes
+```
+
+---
+
 ## 관련 docs
 
 - 적용 ADR: `apartment/docs/adr.md` ADR-002 (단일 출처) / ADR-003 (ts 도입 + `_lib/` 위치)
