@@ -2,7 +2,7 @@
   "name": "plan001-docs-and-workspace-standard",
   "description": "apartment 워크스페이스 5문서 신설 (prd/data-schema/flow/code-architecture/adr) + AGENTS slim + CLAUDE 심링크 + .env 워크스페이스 root 이동 + 기존 docs 정리 + ai-nodes 메타 표준화 (workspace-structure.md 신설 + AGENTS /init 보강 + ADR-004 격상 + career-os ADR-018/021 Status 격상). 향후 새 워크스페이스 청사진 정식화.",
   "created_at": "2026-05-18T00:00:00+00:00",
-  "updated_at": "2026-05-18T06:34:45+00:00",
+  "updated_at": "2026-05-18T06:35:09.038743+00:00",
   "status": "completed",
   "current_phase": 5,
   "total_phases": 5,
@@ -84,7 +84,7 @@
       "number": 5,
       "title": "통합 정적 검증 + status=completed + push",
       "file": "phase-05.md",
-      "status": "running",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Edit",
@@ -92,7 +92,8 @@
         "Grep"
       ],
       "model": "haiku",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "1f5ce4c341b9"
     }
   ]
 }
