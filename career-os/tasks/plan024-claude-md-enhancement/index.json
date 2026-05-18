@@ -2,9 +2,9 @@
   "name": "plan024-claude-md-enhancement",
   "description": "career-os/AGENTS.md (= CLAUDE.md 심링크) /init 식 보강 — 워크플로 진입점 native skill 7개 code block 정리 + workspace-structure.md 링크 (apartment plan001 phase-03 산출) + plan-and-build cycle 안내 + 외부 의존성 Bun runtime / claude CLI 명시. 기존 132줄 보존 + 부족 영역만 보강 (apartment AGENTS.md slim과 비슷한 최소 침습 깊이).",
   "created_at": "2026-05-18T00:00:00+00:00",
-  "updated_at": "2026-05-18T00:00:00+00:00",
-  "status": "pending",
-  "current_phase": 1,
+  "updated_at": "2026-05-18T22:50:59+00:00",
+  "status": "completed",
+  "current_phase": 2,
   "total_phases": 2,
   "error_message": null,
   "blocked_reason": null,
@@ -21,17 +21,28 @@
       "number": 1,
       "title": "career-os/AGENTS.md /init 식 보강 (워크플로 진입점 code block + workspace-structure 링크 + 외부 의존성 보강)",
       "file": "phase-01.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Edit", "Bash", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 900
+      "timeout": 900,
+      "commitSha": "a3eb62031593"
     },
     {
       "number": 2,
       "title": "통합 정적 검증 + status=completed + push",
       "file": "phase-02.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Edit", "Bash", "Grep"],
+      "status": "running",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
       "model": "haiku",
       "timeout": 600
     }
