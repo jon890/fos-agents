@@ -2,9 +2,9 @@
   "name": "plan025-study-topic-fos-study-source-of-truth",
   "description": "ADR-033 구현 — sources/fos-study 트리를 generated study artifact 단일 진실원으로 격상. (1) refresh_topic_inventory.ts에서 generated-artifacts.json 의존 제거 + fos-study 직접 스캔 + deterministic dedupe helper 분리 + inventory 스냅샷 스키마 축소 (2) study-topic-recommender SKILL.md에 Claude duplicate review 단계 추가 + morning markdown에 '기존 문서 보강 후보' 섹션 (3) study-pack-writer SKILL.md duplicate guard 강화 (new/update-existing/skip/needs-user-confirmation 4 decision 분기) (4) career-os 트리에서 generated-artifacts 활성 잔재 0 + data/generated-artifacts.json 자체 git rm + e2e 검증. docs는 planning 세션에서 반영됐으나 실행 전 docs/task 별도 커밋 필요. OpenClaw wrapper 동기는 사용자 직접 처리 (전역 정책: ~/.openclaw/** read-only).",
   "created_at": "2026-05-18T00:00:00+00:00",
-  "updated_at": "2026-05-18T09:15:00.000000+00:00",
+  "updated_at": "2026-05-18T07:34:11.005761+00:00",
   "status": "running",
-  "current_phase": 3,
+  "current_phase": 4,
   "total_phases": 5,
   "error_message": null,
   "blocked_reason": null,
@@ -48,13 +48,13 @@
       ],
       "model": "sonnet",
       "timeout": 1200,
-      "commitSha": "880e440"
+      "commitSha": "943d30ba086d"
     },
     {
       "number": 3,
       "title": "study-pack-writer SKILL.md duplicate guard 강화 (4 decision 분기)",
       "file": "phase-03.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Edit",
@@ -62,13 +62,14 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 900
+      "timeout": 900,
+      "commitSha": "4f0c500e56f7"
     },
     {
       "number": 4,
       "title": "cleanup — generated-artifacts.json git rm + active 잔재 0 + recommender e2e",
       "file": "phase-04.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Edit",
