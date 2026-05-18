@@ -1,0 +1,94 @@
+{
+  "name": "plan025-study-topic-fos-study-source-of-truth",
+  "description": "ADR-033 구현 — sources/fos-study 트리를 generated study artifact 단일 진실원으로 격상. (1) refresh_topic_inventory.ts에서 generated-artifacts.json 의존 제거 + fos-study 직접 스캔 + deterministic dedupe helper 분리 + inventory 스냅샷 스키마 축소 (2) study-topic-recommender SKILL.md에 Claude duplicate review 단계 추가 + morning markdown에 '기존 문서 보강 후보' 섹션 (3) study-pack-writer SKILL.md duplicate guard 강화 (new/update-existing/skip/needs-user-confirmation 4 decision 분기) (4) career-os 트리에서 generated-artifacts 활성 잔재 0 + data/generated-artifacts.json 자체 git rm + e2e 검증. docs는 planning 세션에서 반영됐으나 실행 전 docs/task 별도 커밋 필요. OpenClaw wrapper 동기는 사용자 직접 처리 (전역 정책: ~/.openclaw/** read-only).",
+  "created_at": "2026-05-18T00:00:00+00:00",
+  "updated_at": "2026-05-18T00:00:00+00:00",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 5,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/docs/adr.md (ADR-033)",
+    "career-os/docs/data-schema.md (topic-inventory.json 스냅샷 + duplicate decision schema)",
+    "career-os/docs/flow.md (study-topic-recommender + study-pack-writer 흐름)",
+    "career-os/docs/code-architecture.md (scripts/study-topic-recommender/ + 외부 의존성)",
+    "career-os/docs/prd.md (보강 후보 섹션)",
+    "career-os/AGENTS.md (외부 의존성 update_artifacts.py)",
+    "https://github.com/jon890/fos-claw/issues/2 (관련 이슈)"
+  ],
+  "depends_on": [],
+  "phases": [
+    {
+      "number": 1,
+      "title": "refresh_topic_inventory.ts fos-study 스캔 + deterministic dedupe + inventory 스냅샷 축소",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Write",
+        "Bash",
+        "Grep"
+      ],
+      "model": "sonnet",
+      "timeout": 1500
+    },
+    {
+      "number": 2,
+      "title": "study-topic-recommender SKILL.md Claude duplicate review 단계 + morning markdown 보강 후보 섹션",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 3,
+      "title": "study-pack-writer SKILL.md duplicate guard 강화 (4 decision 분기)",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
+      "model": "sonnet",
+      "timeout": 900
+    },
+    {
+      "number": 4,
+      "title": "cleanup — generated-artifacts.json git rm + active 잔재 0 + recommender e2e",
+      "file": "phase-04.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
+      "model": "sonnet",
+      "timeout": 900
+    },
+    {
+      "number": 5,
+      "title": "통합 정적 검증 + status=completed + push",
+      "file": "phase-05.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
+      "model": "haiku",
+      "timeout": 600
+    }
+  ]
+}
