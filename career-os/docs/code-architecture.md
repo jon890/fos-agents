@@ -90,7 +90,7 @@ career-os/
 │   └── source/                   외부 수집 노트
 │
 ├── logs/                                  ← gitignore. 운영 데이터 단일 출처
-│   ├── task-runs.jsonl           run_now.sh 모든 실행
+│   ├── task-runs.jsonl           모든 native skill 실행 (옛 run_now.sh는 plan023에서 폐기)
 │   ├── token-usage.jsonl         (위와 동일 스키마)
 │   └── .usage-status/            track_task 임시 상태 파일
 │
@@ -108,7 +108,6 @@ career-os/
    (cj-foodville-coffeechat-prep: run_foodville_coffeechat_prep.sh + collect_foodville_sites.py 폐기 — plan021, ADR-029. native skill + ts collector로 대체)
 │
 ├── .claude/skills/                       ← Claude 컨텍스트 자산만 (plan006 후, ADR-019, ADR-002)
-│   ├── command-router/SKILL.md
 │   ├── interview-prep-analyzer/
 │   │   └── SKILL.md  (plan017에서 native skill 명세 작성. baseline + daily 자연어 분기, smoke 폐기)
 │   ├── study-topic-recommender/

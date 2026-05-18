@@ -20,7 +20,7 @@
 공용 영역:
 
 - `_shared/bin/` — shell·Python 공용 헬퍼.
-- `_shared/lib/` — Bun TypeScript 공용 헬퍼. **워크스페이스 무관 헬퍼만** (ai-nodes ADR-001 정책: 특정 워크스페이스 config·sources·data 의존 금지). 워크스페이스 한정 헬퍼는 `<workspace>/scripts/_lib/`에.
+- `_shared/lib/` — Bun TypeScript 공용 헬퍼. **워크스페이스 무관 헬퍼만** (ai-nodes ADR-001 정책: 특정 워크스페이스 config·sources·data 의존 금지). 워크스페이스 한정 헬퍼는 `<workspace>/scripts/<skill>/` 내부에 (plan023에서 `career-os/scripts/_lib/` 폐기, ADR-031).
 - `_shared/types/` — 공용 TS 타입.
 - `skills/` — 저장소 전역 Claude Code 스킬 (`agent-browser`, `planning`, `plan-and-build`, `workspace-audit`, `docs-check`). `docs-check`는 ai-nodes 5문서 + ADR 건전성 감사 스킬.
 - `docs/` — ai-nodes 모노레포 레벨 ADR (워크스페이스 간 공통 정책). 워크스페이스 한정 결정은 `<workspace>/docs/adr.md`.
@@ -40,7 +40,7 @@ career-os만 `scripts/<skill-name>/`(실행 파일) + `skills/<skill-name>/`(SKI
 - 실행 전후 파일 메트릭 스냅샷(`report.md`, 입력 노트, target 파일 목록 등).
 - Claude CLI usage JSON을 `TRACK_TASK_CLAUDE_USAGE_FILE` env로 수집.
 
-워크스페이스 러너는 트래커 통과를 보장해야 하며 우회 금지. career-os의 `command-router/run_now.sh`는 이미 트래커로 `exec`하며, apartment의 `run_report.sh`는 `TRACK_TASK_WRAPPED`로 자가 래핑.
+워크스페이스 러너는 트래커 통과를 보장해야 하며 우회 금지. apartment의 `run_report.sh`는 `TRACK_TASK_WRAPPED`로 자가 래핑. career-os는 plan023 이후 native skill 직접 호출로 전환 — `logs/task-runs.jsonl` 미사용.
 
 **load-bearing 의존성**: `_shared/bin/track_task.sh`가 없으면 모든 워크스페이스 러너 실패.
 
@@ -56,7 +56,9 @@ apartment/skills/apartment-daily-report/scripts/run_report.sh
 
 ### 3-2. career-os
 
-현재 표준은 **Claude native skill 직접 호출**이다 (ai-nodes ADR-002, plan013~017). OpenClaw wrapper는 아래 명령으로 라우팅만 한다.
+현재 표준은 **Claude native skill 직접 호출**이다 (ai-nodes ADR-002, plan013~023). dispatcher 흐름은 plan023에서 완전 폐기 (ADR-031).
+
+native skill 진입점 7개:
 
 ```bash
 cd career-os
@@ -64,16 +66,10 @@ claude -p "/study-pack-writer <topic>"
 claude -p "/interview-asset-writer <topic>"
 claude -p "/study-topic-recommender [context]"
 claude -p "/interview-prep-analyzer [baseline|daily|topic]"
+claude --permission-mode acceptEdits -p "/candidate-baseline-suggester"
+claude -p "/interview-coffeechat-prep"
+claude -p "/position-recommender [자연어 컨텍스트] [채용공고 file]"
 ```
-
-남은 dispatcher 명령은 2개뿐이다:
-
-```bash
-career-os/scripts/command-router/run_now.sh recommend-positions
-career-os/scripts/command-router/run_now.sh foodville-coffeechat
-```
-
-`run_now.sh study-pack`, `question-bank`, `master`, `recommend-topics`, `replenish-topics`, `live-coding-dispatch`, `baseline`, `daily`, `smoke` 등 옛 dispatcher case는 native skill 또는 폐기 흐름으로 정리됐다.
 
 상세 컨벤션·결정 이력은 `career-os/docs/{prd,data-schema,flow,code-architecture,adr}.md` 5문서.
 
@@ -86,8 +82,8 @@ career-os/scripts/command-router/run_now.sh foodville-coffeechat
 워크스페이스마다 호출 방식이 다르다. 혼용 금지 — 해당 워크스페이스 패턴 보존:
 
 - **apartment**: `claude --output-format json` + 90초 타임아웃 폴백. JSON → `_shared/bin/extract_claude_result.py`.
-- **career-os**: `_shared/lib/invoke_claude_skills.ts`(plan004) 통합 헬퍼 사용. usage·재시도·검증·notify를 한 곳에서. 옛 `claude_lib.sh` + 직접 호출은 plan004/007/008로 제거됨.
-- **새 runner 추가 시**: 신규는 `_shared/lib/invoke_claude_skills.ts` 사용 권장(워크스페이스 무관 공용).
+- **career-os**: native skill 직접 호출 (`claude -p "/<skill-name>"`). 워크스페이스 한정 ts 헬퍼는 `career-os/scripts/<skill>/`에. 옛 `claude_lib.sh` + `invoke_claude_skills.ts` 통합 헬퍼는 plan013~023에서 모두 폐기 (ADR-031).
+- **새 runner 추가 시**: native skill 진입점 + 필요 ts 헬퍼는 `<workspace>/scripts/`에. `_shared/lib`는 워크스페이스 무관 공용 헬퍼만.
 
 패턴 변경 시 ADR로 결정 근거 남긴 뒤 진행.
 
@@ -137,8 +133,8 @@ career-os는 `tasks/plan{N}-<slug>/` 영구 plan 영역을 운영. `skills/plann
 
 - `_shared/bin/track_task.sh` — 모든 워크스페이스 트래커. **load-bearing**.
 - `_shared/lib/notify_discord.ts` — Discord 알림(openclaw subprocess 경유, ADR-021).
-- `_shared/lib/invoke_claude_skills.ts` — Claude CLI 호출 + usage 전파 + 재시도 통합(plan004).
-- `_shared/lib/format_cost_summary.ts` — logs/task-runs.jsonl → 한 줄 cost 요약.
+- `_shared/lib/extract_claude_result.ts` — `claude --output-format json` envelope 파싱. apartment + career-os 사용.
+- `_shared/lib/mvp_target_schema.ts` — career-os `config/mvp-target.json` zod 스키마 (ADR-029).
 - `agent-browser` CLI — 로컬 설치 필수(apartment의 Naver Land 같은 JS-heavy 페이지 수집).
 - Bun runtime — TS 헬퍼 실행. `bun` 명령 + npm install로 node_modules 보유.
 - `claude` CLI — 모든 Claude 호출 워크플로 의존.
