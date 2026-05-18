@@ -1,0 +1,128 @@
+# Code Architecture — apartment
+
+apartment 워크스페이스의 **디렉터리 구조·책임·외부 의존성** 단일 출처. 코드 구조 변경·새 skill 추가 시 이 문서가 기준.
+
+## 1. 디렉터리 트리
+
+```
+apartment/
+├── AGENTS.md                        # 워크스페이스 가이드 진입점
+├── CLAUDE.md -> AGENTS.md           # 심링크
+├── .env                             # 비밀 정보 (NAVER_COOKIE, DISCORD_WEBHOOK_URL 등)
+├── .env.example                     # 템플릿
+│
+├── config/
+│   ├── focus-unit.json              # 포커스 평형 메타데이터 (59A)
+│   ├── guri-buy-complexes.json      # Guri 광역 탐색 후보 단지 단일 출처
+│   ├── interior-reference-digest.json
+│   └── lucky-24-floorplan.json
+│
+├── docs/
+│   ├── prd.md
+│   ├── data-schema.md
+│   ├── flow.md
+│   ├── code-architecture.md         # 이 파일
+│   ├── adr.md
+│   └── interior/                    # 인테리어 결정 영역 (skill 도메인 자산)
+│       ├── interior-references.md
+│       ├── lucky-5-1004-interior-decisions.md
+│       ├── lucky-5-1004-decision-queue.md
+│       ├── lucky-5-1004-decision-summary.md
+│       ├── lucky-5-1004-field-checklist.md
+│       └── lucky-5-1004-contractor-brief.md
+│
+├── skills/
+│   ├── apartment-daily-report/
+│   │   ├── SKILL.md
+│   │   ├── references/
+│   │   └── scripts/
+│   │       ├── run_report.sh        # 메인 진입점 (self-wrap 포함)
+│   │       ├── run_smoke_test.sh    # 헬스 체크 진입점
+│   │       ├── run_guri_buy_search.sh
+│   │       ├── notify_discord.sh
+│   │       ├── collect_sources.py
+│   │       ├── collect_naver_api.py # ADR-001 (Naver API 3 endpoint)
+│   │       ├── collect_hogangnono.py
+│   │       ├── collect_kb.py
+│   │       └── normalize_results.py
+│   └── apartment-interior-reference-digest/
+│       ├── SKILL.md
+│       ├── references/
+│       └── scripts/
+│           └── run_digest.sh
+│
+├── .claude/
+│   └── skills/
+│       └── apartment-daily-report/  # native skill 등록
+│
+├── tasks/
+│   └── plan{N}-<slug>/
+│       ├── index.json
+│       └── phase-NN.md
+│
+├── data/                            # gitignored — 산출물
+│   ├── YYYY-MM-DD/
+│   ├── YYYY-MM-DD-HHMM-guri-buy-search/
+│   ├── interior-reference-digest/YYYY-MM-DD/
+│   └── audit/YYYY-MM-DD.md
+│
+└── logs/                            # gitignored — 실행 메타데이터
+    ├── task-runs.jsonl
+    ├── token-usage.jsonl
+    └── .usage-status/
+```
+
+`WORKFLOW.md`, `TOOLS.md`, `docs/decisions/` — plan001 phase-01 이후 `docs/` 5문서로 흡수됨. phase-02에서 제거 예정.
+
+## 2. skills/ 구조 표준
+
+`skills/<name>/{SKILL.md, references/, scripts/}` 통합 구조 — ai-nodes 표준.
+
+**의도된 비대칭**: career-os는 ADR-019에 의해 `scripts/<name>/`(실행 파일)과 `skills/<name>/`(SKILL.md + references) 분리 구조를 사용. apartment는 ai-nodes 표준 통합 구조 유지.
+
+## 3. native skill 등록 (.claude/skills/)
+
+| skill 이름 | 등록 상태 | 호출 방법 |
+|---|---|---|
+| apartment-daily-report | 등록 | `claude -p "/apartment-daily-report"` 또는 `scripts/run_report.sh` |
+| apartment-interior-reference-digest | 미등록 | `scripts/run_digest.sh` 직접 호출 |
+
+## 4. Runner 패턴
+
+self-wrap 패턴 — `TRACK_TASK_WRAPPED` guard.
+
+```bash
+# run_report.sh 상단 패턴
+if [ -z "$TRACK_TASK_WRAPPED" ]; then
+  exec _shared/bin/track_task.sh \
+    --task-id "apartment:daily-report" \
+    -- "$0" "$@"
+fi
+
+# 이후: TRACK_TASK_WRAPPED=1 환경에서 본체 실행
+```
+
+`logs/task-runs.jsonl` 기록 보장. task-id 형태: `apartment:<task-name>`.
+
+## 5. 외부 의존성
+
+| 의존성 | 위치 | 상태 | 역할 |
+|---|---|---|---|
+| `track_task.sh` | `_shared/bin/track_task.sh` | load-bearing | 모든 runner self-wrap. 없으면 runner 실패 |
+| `extract_claude_result.py` | `_shared/bin/extract_claude_result.py` | 사용 중 | `claude --output-format json` envelope → report.md 파싱 |
+| `claude` CLI | 시스템 설치 | 사용 중 | Claude 호출 (90s 타임아웃 + fallback) |
+| `agent-browser` CLI | 로컬 설치 필수 | 사용 중 | Naver Bearer JWT 자동 추출 (ADR-001) |
+| `notify_discord.ts` | `_shared/lib/notify_discord.ts` | 미사용 | Discord 알림 (apartment는 `notify_discord.sh` 직접 사용) |
+| `extract_claude_result.ts` | `_shared/lib/extract_claude_result.ts` | 미사용 | TS 버전 추출기 (apartment는 Python 버전 사용) |
+
+`notify_discord.ts` / `extract_claude_result.ts` — `_shared/lib/`에 존재하지만 apartment에서 미사용. apartment는 Shell + Python 표준.
+
+## 6. 언어 분포
+
+| 언어 | 파일 수 (추정) | 역할 |
+|---|---|---|
+| Shell | 5 | runner, notify_discord, smoke_test, guri_buy_search, env |
+| Python | 6 | collect_naver_api, collect_hogangnono, collect_kb, collect_sources, normalize_results, extract_claude_result |
+| TypeScript | 0 | (미사용) |
+
+career-os 표준 (ADR-020 TypeScript Bun)과 격차 존재. apartment는 현재 Python + Shell 표준 유지. TypeScript 전환은 별도 plan 결정 필요.
