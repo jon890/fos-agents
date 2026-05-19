@@ -34,7 +34,7 @@ apartment 워크스페이스의 **데이터 플로우 및 실행 흐름** 단일
 
 ## 2. apartment-daily-report 흐름
 
-`skills/apartment-daily-report/scripts/run_report.sh` 진입점.
+`scripts/apartment-daily-report/run_report.sh` 진입점.
 
 ```
 Step 1  self-wrap 체크
@@ -98,7 +98,7 @@ Step 12 logs append
 
 ## 3. apartment-interior-reference-digest 흐름
 
-`skills/apartment-interior-reference-digest/scripts/run_digest.sh` 진입점.
+`scripts/apartment-interior-reference-digest/run_digest.sh` 진입점.
 
 ```
 Step 1  경로 설정
@@ -128,7 +128,7 @@ Step 5  Discord 알림 (운영 시)
 
 ## 4. 알림 흐름
 
-`skills/apartment-daily-report/scripts/notify_discord.sh` 단일 진입점.
+`scripts/apartment-daily-report/notify_discord.sh` 단일 진입점.
 
 ```
 인자: TYPE (start|complete|failure) + 메시지 + [cost_summary]
@@ -165,14 +165,14 @@ cron 진입과 동일한 경로.
 
 ```bash
 # 일일 리포트
-bash apartment/skills/apartment-daily-report/scripts/run_report.sh
+bash apartment/scripts/apartment-daily-report/run_report.sh
 
 # 인테리어 디제스트
-bash apartment/skills/apartment-interior-reference-digest/scripts/run_digest.sh
+bash apartment/scripts/apartment-interior-reference-digest/run_digest.sh
 
 # 수집기/정규화기 헬스 체크 (Claude 호출 없음)
-bash apartment/skills/apartment-daily-report/scripts/run_smoke_test.sh
+bash apartment/scripts/apartment-daily-report/run_smoke_test.sh
 
 # Guri 광역 매수 탐색 (별도 진입점)
-bash apartment/skills/apartment-daily-report/scripts/run_guri_buy_search.sh
+bash apartment/scripts/apartment-daily-report/run_guri_buy_search.sh
 ```

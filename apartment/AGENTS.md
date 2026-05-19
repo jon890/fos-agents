@@ -30,11 +30,14 @@ planning + plan-and-build 스킬로 운영. 형태: `tasks/plan{N}-<slug>/`.
 ## 5. 워크플로 진입점
 
 ```bash
+# native skill 진입점
 claude -p "/apartment-daily-report"
-# 또는
-bash apartment/skills/apartment-daily-report/scripts/run_report.sh
-bash apartment/skills/apartment-interior-reference-digest/scripts/run_digest.sh
-bash apartment/skills/apartment-daily-report/scripts/run_smoke_test.sh
+claude -p "/apartment-interior-reference-digest"
+
+# 또는 직접 호출
+bash apartment/scripts/apartment-daily-report/run_report.sh
+bash apartment/scripts/apartment-interior-reference-digest/run_digest.sh
+bash apartment/scripts/apartment-daily-report/run_smoke_test.sh
 ```
 
 ## 6. 외부 의존성

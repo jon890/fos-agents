@@ -18,8 +18,20 @@ apartment/
 │   └── lucky-24-floorplan.json
 │
 ├── scripts/                            # 워크스페이스 레벨 공용 헬퍼 (ADR-003)
-│   └── _lib/
-│       └── load_target_meta.ts         # focus-unit.json read + env override (ADR-002, plan002)
+│   ├── _lib/
+│   │   └── load_target_meta.ts         # focus-unit.json read + env override (ADR-002, plan002)
+│   ├── apartment-daily-report/         # skill 실행 파일 (plan007, ADR-004)
+│   │   ├── run_report.sh               # 메인 진입점 (self-wrap 포함)
+│   │   ├── run_smoke_test.sh           # 헬스 체크 진입점
+│   │   ├── run_guri_buy_search.sh
+│   │   ├── notify_discord.sh
+│   │   ├── collect_sources.py
+│   │   ├── collect_naver_api.py        # ADR-001 (Naver API 3 endpoint)
+│   │   ├── collect_hogangnono.py
+│   │   ├── collect_kb.py
+│   │   └── normalize_results.py
+│   └── apartment-interior-reference-digest/  # skill 실행 파일 (plan007, ADR-004)
+│       └── run_digest.sh
 │
 ├── docs/
 │   ├── prd.md
@@ -35,29 +47,14 @@ apartment/
 │       ├── lucky-5-1004-field-checklist.md
 │       └── lucky-5-1004-contractor-brief.md
 │
-├── skills/
-│   ├── apartment-daily-report/
-│   │   ├── SKILL.md
-│   │   ├── references/
-│   │   └── scripts/
-│   │       ├── run_report.sh        # 메인 진입점 (self-wrap 포함)
-│   │       ├── run_smoke_test.sh    # 헬스 체크 진입점
-│   │       ├── run_guri_buy_search.sh
-│   │       ├── notify_discord.sh
-│   │       ├── collect_sources.py
-│   │       ├── collect_naver_api.py # ADR-001 (Naver API 3 endpoint)
-│   │       ├── collect_hogangnono.py
-│   │       ├── collect_kb.py
-│   │       └── normalize_results.py
-│   └── apartment-interior-reference-digest/
-│       ├── SKILL.md
-│       ├── references/
-│       └── scripts/
-│           └── run_digest.sh
-│
 ├── .claude/
 │   └── skills/
-│       └── apartment-daily-report/  # native skill 등록
+│       ├── apartment-daily-report/       # native skill 등록 (컨텍스트 자산)
+│       │   ├── SKILL.md
+│       │   └── references/
+│       └── apartment-interior-reference-digest/  # native skill 등록 (plan007, ADR-004)
+│           ├── SKILL.md
+│           └── references/
 │
 ├── tasks/
 │   └── plan{N}-<slug>/
@@ -76,18 +73,18 @@ apartment/
     └── .usage-status/
 ```
 
-## 2. skills/ 구조 표준
+## 2. skill 구조 표준
 
-`skills/<name>/{SKILL.md, references/, scripts/}` 통합 구조 — ai-nodes 표준.
+`scripts/<name>/`(실행 파일) + `.claude/skills/<name>/{SKILL.md, references/}`(컨텍스트 자산) 분리 구조 — ai-nodes ADR-006 표준 (plan007, ADR-004 적용).
 
-**의도된 비대칭**: career-os는 ADR-019에 의해 `scripts/<name>/`(실행 파일)과 `skills/<name>/`(SKILL.md + references) 분리 구조를 사용. apartment는 ai-nodes 표준 통합 구조 유지.
+실행 파일과 컨텍스트 자산을 분리 관리. `skills/` 통합 구조는 ADR-004에서 폐기.
 
 ## 3. native skill 등록 (.claude/skills/)
 
 | skill 이름 | 등록 상태 | 호출 방법 |
 |---|---|---|
-| apartment-daily-report | 등록 | `claude -p "/apartment-daily-report"` 또는 `scripts/run_report.sh` |
-| apartment-interior-reference-digest | 미등록 | `scripts/run_digest.sh` 직접 호출 |
+| apartment-daily-report | 등록 | `claude -p "/apartment-daily-report"` 또는 `bash apartment/scripts/apartment-daily-report/run_report.sh` |
+| apartment-interior-reference-digest | 등록 | `claude -p "/apartment-interior-reference-digest"` 또는 `bash apartment/scripts/apartment-interior-reference-digest/run_digest.sh` |
 
 ## 4. Runner 패턴
 
