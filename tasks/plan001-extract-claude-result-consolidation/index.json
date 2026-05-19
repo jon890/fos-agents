@@ -1,0 +1,54 @@
+{
+  "name": "plan001-extract-claude-result-consolidation",
+  "description": "ai-nodes 모노레포 첫 plan. _shared/bin/extract_claude_result.py를 _shared/lib/extract_claude_result.ts (이미 존재, career-os 사용 중)로 단일화. apartment 1 runner + stock-investment 3 runner의 EXTRACT path + python3 호출을 .ts + bun run으로 변경. career-os plan008 (미실행) 의도 완성. cross-workspace _shared 자산 정리.",
+  "created_at": "2026-05-19T00:00:00+00:00",
+  "updated_at": "2026-05-19T00:00:00+00:00",
+  "status": "planned",
+  "current_phase": 1,
+  "total_phases": 2,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "AGENTS.md (ai-nodes 모노레포 외부 의존성)",
+    "apartment/AGENTS.md (apartment 외부 의존성)",
+    "apartment/docs/flow.md (Step 9 추출)",
+    "apartment/docs/code-architecture.md (외부 의존성 표)",
+    "apartment/.claude/skills/apartment-daily-report/SKILL.md (External dependencies)",
+    "_shared/lib/extract_claude_result.ts (단일 출처)",
+    "_shared/bin/extract_claude_result.py (폐기 대상)",
+    "career-os/AGENTS.md L84 (apartment+stock-investment caller 잔존 명시)",
+    "career-os/tasks/plan008-extractor-renderer-ts (미실행 의도 plan — history 보존)"
+  ],
+  "depends_on": [],
+  "phases": [
+    {
+      "number": 1,
+      "title": "4 runner EXTRACT path 변경 + _shared/bin/extract_claude_result.py git rm",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 2,
+      "title": "통합 검증 + status=completed + push",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
+      "model": "haiku",
+      "timeout": 600
+    }
+  ]
+}
