@@ -2,9 +2,9 @@
   "name": "plan003-collectors-ts-migration",
   "description": "apartment Python collector 2개 (collect_sources.py + collect_naver_api.py) → TypeScript 마이그. ADR-005 적용 (Bun.fetch + zod + import 통합 + Bun.spawn agent-browser CLI). plan007 마이그 후 위치 (apartment/scripts/apartment-daily-report/) 기준. hogangnono / kb는 plan004 마이그 전까지 Bun.spawn(python3) 임시 호출.",
   "created_at": "2026-05-19T00:00:00+00:00",
-  "updated_at": "2026-05-19T00:00:00+00:00",
-  "status": "pending",
-  "current_phase": 1,
+  "updated_at": "2026-05-19T05:02:20+00:00",
+  "status": "completed",
+  "current_phase": 3,
   "total_phases": 3,
   "error_message": null,
   "blocked_reason": null,
@@ -23,26 +23,45 @@
       "number": 1,
       "title": "naver_api_schemas.ts (zod) + collect_naver_api.ts (Bun.fetch + agent-browser CLI Bun.spawn)",
       "file": "phase-01.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 1500
+      "timeout": 1500,
+      "commitSha": "f4d9d68a4c7d"
     },
     {
       "number": 2,
       "title": "collect_sources.ts (import 통합 + Bun.spawn python3 hogangnono/kb 임시) + run_report.sh 호출 갱신 + 옛 Python git rm",
       "file": "phase-02.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 1200
+      "timeout": 1200,
+      "commitSha": "507733e514e5"
     },
     {
       "number": 3,
       "title": "통합 검증 + status=completed + push",
       "file": "phase-03.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Edit", "Bash", "Grep"],
+      "status": "running",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
       "model": "haiku",
       "timeout": 600
     }
