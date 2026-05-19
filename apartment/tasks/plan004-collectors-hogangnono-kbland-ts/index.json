@@ -2,9 +2,9 @@
   "name": "plan004-collectors-hogangnono-kbland-ts",
   "description": "apartment Hogangnono + KB Land collector 2개 (collect_hogangnono.py + collect_kbland.py) → TypeScript 마이그. ADR-005 (Bun.fetch) + ADR-006 (import 통합) + ADR-007 (zod 결과 스키마) 후속 적용. plan003에서 도입된 collect_sources.ts의 runPythonSource 임시 분기 폐기 — 모든 source가 import 통합.",
   "created_at": "2026-05-19T00:00:00+00:00",
-  "updated_at": "2026-05-19T00:00:00+00:00",
-  "status": "planned",
-  "current_phase": 1,
+  "updated_at": "2026-05-19T05:52:59+00:00",
+  "status": "completed",
+  "current_phase": 3,
   "total_phases": 3,
   "error_message": null,
   "blocked_reason": null,
@@ -25,7 +25,7 @@
       "number": 1,
       "title": "collect_hogangnono.ts + collect_kbland.ts 신설 (Bun.fetch + HTML regex + zod 결과 스키마)",
       "file": "phase-01.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
@@ -34,13 +34,14 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 1500
+      "timeout": 1500,
+      "commitSha": "1af4104d6c52"
     },
     {
       "number": 2,
       "title": "collect_sources.ts import 통합 (runPythonSource 분기 폐기) + Python 2개 git rm",
       "file": "phase-02.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
@@ -49,13 +50,14 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 1200
+      "timeout": 1200,
+      "commitSha": "761e37a35f81"
     },
     {
       "number": 3,
       "title": "통합 검증 + status=completed + push",
       "file": "phase-03.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Edit",
