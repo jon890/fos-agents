@@ -19,8 +19,9 @@ if [[ -f "$ENV_FILE" ]]; then
 fi
 
 # notify_safe / NOTIFIER를 ts 헬퍼 호출 전에 정의 (실패 시 알림 가능하도록).
-SKILL_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-NOTIFIER="$SKILL_ROOT/scripts/notify_discord.sh"
+WS_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+SKILL_ROOT="$WS_ROOT/.claude/skills/apartment-daily-report"
+NOTIFIER="$(dirname "$0")/notify_discord.sh"
 
 notify_safe() {
   local msg="$1"
@@ -57,8 +58,8 @@ SUMMARY_JSON="$OUTDIR/summary.json"
 REPORT_MD="$OUTDIR/report.md"
 CLAUDE_JSON="$OUTDIR/claude.result.json"
 PROMPT_FILE="$SKILL_ROOT/references/claude-prompt.md"
-NORMALIZER="$SKILL_ROOT/scripts/normalize_results.py"
-COLLECTOR="$SKILL_ROOT/scripts/collect_sources.py"
+NORMALIZER="$(dirname "$0")/normalize_results.py"
+COLLECTOR="$(dirname "$0")/collect_sources.py"
 FALLBACK_MD="$OUTDIR/report.fallback.md"
 EXTRACT="$HOME/ai-nodes/_shared/bin/extract_claude_result.py"
 

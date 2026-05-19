@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SKILL_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUTDIR="${1:-$(mktemp -d)}"
 RAW_JSON="$OUTDIR/raw-search.json"
 SUMMARY_JSON="$OUTDIR/summary.json"
-COLLECTOR="$SKILL_ROOT/scripts/collect_sources.py"
-NORMALIZER="$SKILL_ROOT/scripts/normalize_results.py"
+COLLECTOR="$(dirname "$0")/collect_sources.py"
+NORMALIZER="$(dirname "$0")/normalize_results.py"
 
 mkdir -p "$OUTDIR"
 
