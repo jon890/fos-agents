@@ -30,7 +30,7 @@ career-os의 모든 아키텍처 결정을 시간순으로 누적 기록한다. 
 | ADR-016 | config 디렉터리 통합 | Partially superseded by ADR-027 (plan017, 2026-05-15) | topics.json 3 namespace 분리, sources/baseline 통합은 유지 |
 | ADR-017 | cj-oliveyoung-java-backend-prep 분해 | Accepted | 거대 skill → 도메인별 5 skill 분해, WIP 3개 wire-up |
 | ADR-018 | docs/ 운영 정책: 휘발성 vs 영속 | Partially superseded by ADR-032; 5문서/data 분리는 ai-nodes ADR-004로 Lifted | adr.md 단일 출처. learn 영역은 ADR-032에서 폐기, hand-off/prep 유지 |
-| ADR-019 | scripts/ 폴더 분리 | Accepted | career-os 한정 skills/<name> + scripts/<name> 분리 |
+| ADR-019 | scripts/ 폴더 분리 | Lifted to ai-nodes ADR-006 (2026-05-19) | 비대칭이 모노레포 표준으로 격상. scripts/<name> + .claude/skills/<name>/ 분리가 모든 워크스페이스 표준 |
 | ADR-020 | 공용 헬퍼 TS(Bun) 마이그레이션 | Accepted | _shared/lib TS 단일 위치, shim·partial 금지 |
 | ADR-021 | Discord 알림 openclaw 경유 + 워크스페이스 .env | Lifted to ai-nodes ADR-004 (.env 부분); Discord openclaw 부분 career-os 유지 | openclaw subprocess + DISCORD_CHANNEL_ID env, secret <ws>/.env 격리 |
 | ADR-022 | 도메인 헬퍼 TS(Bun) 마이그레이션 | Accepted | extractor/renderer/resolver 9개 + extract_claude_result TS화 |

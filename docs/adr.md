@@ -17,8 +17,9 @@ ai-nodes 모노레포 레벨에서 모든 워크스페이스에 영향을 주는
 | ADR-001 | 공용 헬퍼 위치 분리: _shared/lib vs <workspace>/scripts/_lib | Accepted | 워크스페이스 무관 헬퍼만 _shared/lib, config/sources/data import 시 워크스페이스 한정 |
 | ADR-002 | Claude Code native skill 패턴 + .claude/skills/ 단일 위치 | Accepted | SKILL.md 단일 출처, 외부 subprocess+extractor+validator 폐기 (plan013부터 점진 마이그) |
 | ADR-003 | docs-check skill + adr.md Quick Index + drift Status 컨벤션 | Accepted | 28 ADR Quick Index 추가 + drift Status 일괄 갱신 (plan018) |
-| ADR-004 | 워크스페이스 표준 구조 정식화 | Accepted | 5문서 + .env workspace root + tasks/plan + skills/<name>/ 통합 + AGENTS 심링크 표준화, career-os ADR-018/021 격상 |
+| ADR-004 | 워크스페이스 표준 구조 정식화 | Partially superseded by ADR-006 (2026-05-19) | 5문서 + .env workspace root + tasks/plan + AGENTS 심링크 정책 유효. skills/<name>/ 통합 표준 부분만 supersede |
 | ADR-005 | docs / ADR 작성 형식 6 패턴 + 한자어 회피 | Accepted | dooray-cli mirror — `docs/docs-style.md` 단일 출처. 새 작성물 우선 적용, 전수 정정은 별도 plan |
+| ADR-006 | 워크스페이스 표준 패턴 변경: 통합 → 분리 (.claude/skills 본체화) | Accepted | ADR-004 skills/<name>/ 통합 표준 부분 supersede. career-os ADR-019 비대칭이 표준으로 격상. apartment plan007 첫 적용 |
 
 ---
 
@@ -162,7 +163,7 @@ ai-nodes 모노레포의 워크스페이스 표준 구조를 `ai-nodes/docs/work
 
 표준 내용:
 
-1. 디렉터리 트리 — AGENTS.md / CLAUDE.md 심링크 / .env / .env.example / config/ / docs/ 5문서 / skills/<name>/{SKILL.md, references/, scripts/} / .claude/skills/<name>/ / tasks/plan{N}-<slug>/ / data/ / logs/.
+1. 디렉터리 트리 — AGENTS.md / CLAUDE.md 심링크 / .env / .env.example / config/ / docs/ 5문서 / skills/<name>/{SKILL.md, references/, scripts/} / .claude/skills/<name>/ / tasks/plan{N}-<slug>/ / data/ / logs/. **(2026-05-19 ADR-006: skills/<name>/ 부분 폐기, scripts/<name>/ + .claude/skills/<name>/ 분리로 변경)**
 2. AGENTS.md + CLAUDE.md 심링크 — Claude Code 자동 로드.
 3. docs/ 5문서 — prd / data-schema / flow / code-architecture / adr.md. ADR 누적 (개별 파일 신설 금지).
 4. .env 워크스페이스 root + .env.example 템플릿 — 워크스페이스별 격리.
@@ -244,3 +245,43 @@ dooray-cli mirror 정책을 ai-nodes 에 도입.
 - `ai-nodes/CLAUDE.md` 1번 또는 라우팅 섹션에 docs-style.md 링크
 - `ai-nodes/docs/workspace-structure.md` 워크스페이스 docs 표준에 docs-style.md 등록
 - `skills/planning/SKILL.md` 5문서 공통 작성 원칙에서 docs-style.md 참조 (단일 소스 cross-link)
+
+---
+
+## ADR-006 — 워크스페이스 표준 패턴 변경: 통합 → 분리 (.claude/skills 본체화)
+
+**Status**: Accepted
+**Date**: 2026-05-19
+
+### 맥락
+
+ai-nodes ADR-004는 워크스페이스 표준을 `skills/<name>/{SKILL.md, references/, scripts/}` 통합 패턴으로 정식화.
+하지만 career-os ADR-019는 분리 패턴 (의도된 비대칭).
+두 패턴 공존 + apartment plan007에서 분리 패턴 포팅 결정 (apartment ADR-004) → 모든 active 워크스페이스가 분리로 수렴.
+
+통합 표준이 *실제로는 비표준* — 비대칭 (career-os) + apartment 한정 적용 (plan007 전까지).
+새 워크스페이스 추가 시 청사진이 *실제 사용 패턴*과 어긋남.
+
+### 결정
+
+ai-nodes 워크스페이스 표준 패턴을 **분리**로 변경:
+
+- 표준: `<workspace>/scripts/<name>/` 실행 파일 + `<workspace>/.claude/skills/<name>/{SKILL.md, references/}` 컨텍스트 자산.
+- career-os ADR-019 비대칭이 표준으로 격상. workspace-structure.md 의도된 비대칭 표에서 제거.
+- ADR-004 *Partially superseded* — `skills/<name>/` 통합 표준 부분만. 5문서·.env·tasks/plan·CLAUDE 심링크 정책은 유효.
+- workspace-structure.md 청사진 + 매트릭스 갱신.
+
+거절한 대안:
+
+- ADR-004 통합 표준 유지 + 워크스페이스별 비대칭 — 청사진 모호 지속.
+- apartment 한정 단일 통합 (`.claude/skills/<name>/` + scripts 포함) — 세 번째 패턴, 정합 더 나쁨.
+
+### 결과
+
+- 모든 워크스페이스 분리 패턴 수렴 — career-os 이미 분리, apartment plan007에서 마이그.
+- ai-nodes ADR-004 Status: `Partially superseded by ADR-006 (2026-05-19) — skills/<name>/ 통합 표준 부분`.
+- career-os ADR-019 Status: `Lifted to ai-nodes ADR-006 (2026-05-19) — 비대칭이 표준으로 격상`.
+- stock-investment / travel은 audit 시 본 표준 따름.
+- native skill 단일 진입점 (`claude -p "/<name>"`) 일관.
+
+**적용**: `apartment/tasks/plan007-skills-folder-retirement` phase-04 — workspace-structure.md 갱신 + ai-nodes/AGENTS.md §1-1 비대칭 표 제거. career-os 영향 없음 (이미 분리 패턴).
