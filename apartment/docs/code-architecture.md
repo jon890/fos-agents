@@ -123,7 +123,7 @@ fi
 | 언어 | 파일 수 (추정) | 역할 |
 |---|---|---|
 | Shell | 5 | runner, notify_discord, smoke_test, guri_buy_search, env |
-| Python | 1 | build_weekly_listing_trend (plan006 대기) |
+| Python | 0 | apartment-daily-report 안 Python collector 0 (`extract_claude_result.py`는 `_shared/bin/` 공용) |
 | TypeScript | 7 | `_lib/load_target_meta.ts` (plan002) + collect_sources / collect_naver_api / naver_api_schemas (plan003) + collect_hogangnono / collect_kbland (plan004) + normalize_results (plan005) |
 
-apartment는 ADR-003으로 TypeScript 도입 시작 (plan002). plan003 (Naver / sources) + plan004 (Hogangnono / KB) + plan005 (normalize) 마이그 완료. plan006 (build_weekly_listing_trend) 후속 — fetch 인터페이스는 ADR-005/006/007 표준 적용.
+apartment는 ADR-003으로 TypeScript 도입 시작 (plan002). plan003 (Naver / sources) + plan004 (Hogangnono / KB) + plan005 (normalize) 마이그 완료. plan006 (build_weekly_listing_trend)는 ADR-008로 폐기 (dead code + PIL 의존 제거). apartment Python 완전 제거 — ai-nodes "stdlib only" 진술 정합화.

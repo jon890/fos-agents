@@ -172,7 +172,7 @@ career-os는 `tasks/plan{N}-<slug>/` 영구 plan 영역을 운영.
 - `_shared/lib/extract_claude_result.ts` — `claude --output-format json` envelope 파싱. apartment + career-os 사용.
 - `_shared/lib/mvp_target_schema.ts` — career-os `config/mvp-target.json` zod 스키마 (ADR-029).
 - Bun runtime — TS 헬퍼 실행. 설치 후 ai-nodes 루트에서 `bun install` 1회 (root package.json: zod, fast-xml-parser, dotenv + @types/bun).
-- Python 3 — `_shared/bin/extract_claude_result.py` + apartment Python collector 6개. 기본 stdlib만 사용 (외부 pip 의존 없음).
+- Python 3 — `_shared/bin/extract_claude_result.py` 잔존. apartment Python collector는 plan003~005 TS 마이그 + plan006 폐기 (ADR-008)로 0개. 기본 stdlib만 사용 (외부 pip 의존 없음).
 - `agent-browser` CLI — JS-heavy 페이지(Naver Land 등) 수집. 로컬 설치 필수 (apartment ADR-001).
 - `claude` CLI — 모든 Claude 호출 워크플로 의존.
 
