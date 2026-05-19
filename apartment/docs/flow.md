@@ -17,7 +17,7 @@ apartment 워크스페이스의 **데이터 플로우 및 실행 흐름** 단일
                     │     ├─► collect_hogangnono.ts (HTML regex)
                     │     └─► collect_kbland.ts (HTML regex)
                     │
-                    ├─► normalizer (normalize_results.py)
+                    ├─► normalizer (normalize_results.ts, plan005)
                     │     └─► summary.json
                     │
                     ├─► Claude CLI (--output-format json, 90s timeout)
@@ -63,9 +63,10 @@ Step 6  수집 (collect_sources.ts, ADR-006 import 통합)
         collect_kbland.ts — Bun.fetch HTML 수집 + regex 파싱 (plan004)
         산출물: raw-search.json
 
-Step 7  정규화 (normalize_results.py)
+Step 7  정규화 (normalize_results.ts, plan005)
         raw-search.json → summary.json (9 key)
         59A alias 매칭 — exact / unverified / non-match 3단계
+        zod 입력/출력 스키마 자기방어 (ADR-007 후속 적용)
 
 Step 8  Claude CLI 호출
         claude --output-format json (90초 타임아웃)
@@ -91,7 +92,7 @@ Step 12 logs append
 `scripts/run_smoke_test.sh` — Claude 호출 없는 수집기/정규화기 헬스 체크.
 
 ```
-.env 로드 → collect_sources.py (limited mode) → normalize_results.py
+.env 로드 → collect_sources.ts (limited mode) → normalize_results.ts
 → summary.json 생성 여부 확인 → exit 0/1
 ```
 

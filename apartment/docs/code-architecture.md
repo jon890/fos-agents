@@ -30,7 +30,7 @@ apartment/
 │   │   ├── naver_api_schemas.ts        # ADR-007 (zod 응답 스키마), plan003
 │   │   ├── collect_hogangnono.ts       # plan004 마이그 (HTML regex 파서)
 │   │   ├── collect_kbland.ts           # plan004 마이그 (HTML regex 파서)
-│   │   └── normalize_results.py        # plan005 마이그 대기
+│   │   └── normalize_results.ts        # plan005 마이그 (zod 입력/출력 스키마)
 │   └── apartment-interior-reference-digest/  # skill 실행 파일 (plan007, ADR-004)
 │       └── run_digest.sh
 │
@@ -123,7 +123,7 @@ fi
 | 언어 | 파일 수 (추정) | 역할 |
 |---|---|---|
 | Shell | 5 | runner, notify_discord, smoke_test, guri_buy_search, env |
-| Python | 2 | normalize_results (plan005 대기), build_weekly_listing_trend (plan006 대기) |
-| TypeScript | 6 | `_lib/load_target_meta.ts` (plan002) + collect_sources / collect_naver_api / naver_api_schemas (plan003) + collect_hogangnono / collect_kbland (plan004) |
+| Python | 1 | build_weekly_listing_trend (plan006 대기) |
+| TypeScript | 7 | `_lib/load_target_meta.ts` (plan002) + collect_sources / collect_naver_api / naver_api_schemas (plan003) + collect_hogangnono / collect_kbland (plan004) + normalize_results (plan005) |
 
-apartment는 ADR-003으로 TypeScript 도입 시작 (plan002). plan003 (Naver / sources) + plan004 (Hogangnono / KB) 마이그 완료. plan005 (normalize_results) + plan006 (build_weekly_listing_trend) 후속 — fetch 인터페이스는 ADR-005/006/007 표준 적용.
+apartment는 ADR-003으로 TypeScript 도입 시작 (plan002). plan003 (Naver / sources) + plan004 (Hogangnono / KB) + plan005 (normalize) 마이그 완료. plan006 (build_weekly_listing_trend) 후속 — fetch 인터페이스는 ADR-005/006/007 표준 적용.
