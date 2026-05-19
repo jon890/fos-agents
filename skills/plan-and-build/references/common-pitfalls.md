@@ -281,16 +281,22 @@ git ls-files <pattern> | xargs wc -l
 
 ### 6-9. 검증 대상 sigil 문자 phase 본문 직접 사용 → self-positive 또는 사용자 directive 위반
 
-**증상**: phase 본문 강제 주의문에 `§` 같은 *검증 대상 sigil 문자*를 *literal*로 박음. 검증 bash가 `grep -c "§"`로 *target 파일*만 검사하면 false positive 없지만, target에 phase 파일이 포함되면 phase 본문 자체가 잡혀 PHASE_FAILED. 또한 사용자 directive (CLAUDE.md "§ 미사용") 위반.
-**왜**: phase 작성자가 "§ 미사용 강제" 명령을 박을 때 자연히 `§` 문자 직접 인용 → phase 본문 자체에 sigil 박힘. 의도는 *검증 대상 강조*인데 결과는 *self-positive*.
+**증상**: phase 본문 강제 주의문에 section mark (U+00A7) 같은 *검증 대상 sigil 문자*를 *literal*로 박음.
+검증 bash 가 sigil 문자 자체로 `grep` 하면 *target 파일*만 검사하면 false positive 없지만, target 에 phase 파일이 포함되면 phase 본문 자체가 잡혀 PHASE_FAILED.
+또한 사용자 directive (CLAUDE.md section mark 미사용) 위반.
+
+**왜**: phase 작성자가 "section mark 미사용 강제" 명령을 박을 때 자연히 sigil 문자 직접 인용 → phase 본문 자체에 sigil 박힘.
+의도는 *검증 대상 강조*인데 결과는 *self-positive*.
 
 **실제 발생**:
-- plan024 / plan001 phase 본문에 `§ 특수문자 사용 금지` 강제 주의문 박음 → phase 본문 자체에 § 다수 (`grep -c "§" phase-01.md` = 5). PHASE_FAILED 직접 유발은 아니었지만 사용자 directive 위반 발견 후 수정. hotfix 패턴: `section mark (U+00A7)` 평문 표기 + 검증 bash는 `SIGIL_CHAR=$(printf '\xc2\xa7'); grep -c "$SIGIL_CHAR" target`.
+- plan024 / plan001 phase 본문에 section mark 사용 금지 강제 주의문을 박음 → phase 본문 자체에 sigil 다수 (검증 grep target=phase-01.md 가 5건).
+- PHASE_FAILED 직접 유발은 아니었지만 사용자 directive 위반 발견 후 수정.
+- hotfix 패턴: `section mark (U+00A7)` 평문 표기 + 검증 bash 는 `SIGIL_CHAR=$(printf '\xc2\xa7'); grep -c "$SIGIL_CHAR" target`.
 
 **Self-check**:
-- phase 본문에 sigil 문자 (`§`, `~`, etc.) 자체 인용이 있는가? → 평문 명시로 교체 (`section mark (U+00A7)`, `tilde (U+007E)`)
-- 검증 bash가 sigil 검사하는가? → escape 변수 사용 (`printf '\xc2\xa7'`) → phase 본문 자체에 sigil 박지 않고 검증 가능
-- 사용자 directive 위반 위험 zero (CLAUDE.md "§ 미사용" 같은 글로벌 규칙)
+- phase 본문에 sigil 문자 (section mark U+00A7, tilde U+007E, 등) 자체 인용이 있는가? → 평문 명시로 교체 (`section mark (U+00A7)`, `tilde (U+007E)`)
+- 검증 bash 가 sigil 검사하는가? → escape 변수 사용 (`printf '\xc2\xa7'`) → phase 본문 자체에 sigil 박지 않고 검증 가능
+- 사용자 directive 위반 위험 zero (CLAUDE.md section mark 미사용 같은 글로벌 규칙)
 
 ---
 
