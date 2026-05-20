@@ -2,9 +2,9 @@
   "name": "plan002-env-introduction",
   "description": "travel .env 도입 — Discord 알림용 DISCORD_CHANNEL_ID 환경 변수 보관. travel ADR-002 신설 (ADR-001의 .env 부재 결정 부분 supersede). scripts/.claude/skills/config 부재는 유지. 5 cron payload 안 평문 채널 ID (1498642302602580029)을 .env로 옮김 — 다른 워크스페이스와 일관성. ai-nodes workspace-structure 매트릭스 travel .env 컬럼 N/A→O.",
   "created_at": "2026-05-20T00:00:00+00:00",
-  "updated_at": "2026-05-20T00:00:00+00:00",
-  "status": "planned",
-  "current_phase": 1,
+  "updated_at": "2026-05-20T02:22:53.183484Z",
+  "status": "completed",
+  "current_phase": 2,
   "total_phases": 2,
   "error_message": null,
   "blocked_reason": null,
@@ -23,7 +23,7 @@
       "number": 1,
       "title": "ADR-002 신설 + .env + .env.example + AGENTS/code-architecture/workspace-structure 정합",
       "file": "phase-01.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
@@ -32,13 +32,14 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 900
+      "timeout": 900,
+      "commitSha": "c078643737efa9c7bcb5c62c7d3ccf708d3f8dce"
     },
     {
       "number": 2,
       "title": "통합 검증 + status=completed + push",
       "file": "phase-02.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Edit",
