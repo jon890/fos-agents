@@ -7,8 +7,7 @@ stock-investment 워크스페이스 아키텍처 결정 누적.
 
 모노레포 레벨 ADR: `../docs/adr.md`.
 
-History: 기존 `docs/decisions/001~007.md` 는 plan003에서 폐기 예정.
-5문서 (prd/data-schema/flow/code-architecture) 로 재분배 완료.
+History: 기존 `docs/decisions/001~007.md` 는 plan004에서 git rm 완료 — 자료는 plan001 phase-01에서 5문서 (prd/data-schema/flow/code-architecture/adr)로 재분배됨.
 
 ---
 
@@ -16,7 +15,7 @@ History: 기존 `docs/decisions/001~007.md` 는 plan003에서 폐기 예정.
 
 | ADR | 제목 | Status | 한 줄 요약 |
 |---|---|---|---|
-| ADR-001 | 워크스페이스 ai-nodes 표준 구조 적용 시작 | Accepted | 5문서 + AGENTS 한글화 + CLAUDE 심링크 + tasks/ (plan001). 분리 패턴 + decisions 폐기는 plan002/003 후속 |
+| ADR-001 | 워크스페이스 ai-nodes 표준 구조 적용 시작 | Accepted | 5문서 + AGENTS 한글화 + CLAUDE 심링크 + tasks/ (plan001). 분리 패턴 (plan002) + AGENTS 강화 (plan003) + decisions 폐기 (plan004) 시리즈 완료 |
 
 ---
 
@@ -49,11 +48,12 @@ ai-nodes 표준 구조 적용 시리즈 시작. 3 plan 분할:
    - AGENTS.md 한글화
    - CLAUDE.md 심링크
    - `tasks/` 신설
-   - `decisions/*` 7개는 5문서로 재분배 후 plan003에서 폐기.
+   - `decisions/*` 7개는 5문서로 재분배 후 plan004에서 git rm 완료.
 2. **plan002**: ADR-006 분리 패턴 마이그.
    - `skills/<name>/scripts/` → `scripts/<name>/` + `.claude/skills/<name>/{SKILL.md, references/}`
    - 3 skill 모두 적용.
-3. **plan003**: `decisions/*` 7 파일 git rm + workspace-structure.md 표 stock-investment 항목 갱신 + .env 도입.
+3. **plan003**: AGENTS.md 강화 (4-1 진실 출처 + 4-2 투자 컨텍스트 + cron 시점 표).
+4. **plan004**: `decisions/*` 7 파일 git rm + workspace-structure.md 매트릭스 stock-investment 항목 ?→O 갱신. .env는 plan001 phase-02 시점에 사용자 직접 신설 완료.
 
 거절한 대안:
 
@@ -69,4 +69,4 @@ ai-nodes 표준 구조 적용 시리즈 시작. 3 plan 분할:
 - 향후 plan 사이클 (`tasks/plan{N}-<slug>/`) 운영 가능.
 - cron 운영 중단 없음 — plan001은 docs only. plan002 분리 마이그 시 cron 호출 경로 갱신 필요 (별도 plan에서 결정).
 
-적용: plan001 (5문서 + AGENTS) → plan002 (분리 패턴) → plan003 (decisions/ 폐기 + workspace-structure 갱신).
+적용: plan001 (5문서 + AGENTS) → plan002 (분리 패턴) → plan003 (AGENTS 강화) → plan004 (decisions/ git rm + workspace-structure ✓).

@@ -156,7 +156,7 @@ career-os ADR-019의 scripts/ 분리 패턴은 ADR-006으로 표준 격상되어
 |---|---|---|
 | apartment | 없음 (ADR-006 분리 표준 적용, plan007) | — |
 | career-os | 없음 (ADR-019 → ADR-006 격상) | — |
-| stock-investment | TODO — 별도 audit 필요 | — |
+| stock-investment | 적용 완료 (plan001~004) | 본 표준 적용 시리즈 마지막 plan004로 decisions/ 폐기 + 매트릭스 갱신 |
 | travel | TODO — 별도 audit 필요 | — |
 
 새 예외 추가 시: 워크스페이스 `docs/adr.md`에 결정 기록 → 본 표 갱신.
@@ -170,15 +170,15 @@ career-os ADR-019의 scripts/ 분리 패턴은 ADR-006으로 표준 격상되어
 | 항목 | apartment | career-os | stock-investment | travel |
 |---|---|---|---|---|
 | AGENTS.md 존재 | O | O | O | O |
-| CLAUDE.md 심링크 | O | O | ? | ? |
-| docs/ 5문서 | O | O | ? | ? |
-| tasks/plan{N}/ 영역 | O | O | ? | ? |
-| skills/ 분리 표준 (ADR-006) | 적용 (plan007) | 적용 (ADR-019 → ADR-006 격상) | ? | ? |
-| .claude/skills/ native 등록 | O | O | ? | ? |
-| .env (workspace root) | O | O | ? | ? |
-| data/ vs docs/ 분리 | O | O | ? | ? |
+| CLAUDE.md 심링크 | O | O | O (plan001) | ? |
+| docs/ 5문서 | O | O | O (plan001) | ? |
+| tasks/plan{N}/ 영역 | O | O | O (plan001~004) | ? |
+| skills/ 분리 표준 (ADR-006) | 적용 (plan007) | 적용 (ADR-019 → ADR-006 격상) | 적용 (plan002) | ? |
+| .claude/skills/ native 등록 | O | O | O (plan002) | ? |
+| .env (workspace root) | O | O | O | ? |
+| data/ vs docs/ 분리 | O | O | O | ? |
 
-stock-investment / travel은 별도 workspace-audit 실행 후 갱신 예정.
+travel만 별도 workspace-audit 실행 후 갱신 예정. stock-investment는 plan001~004 시리즈로 완료.
 
 ---
 

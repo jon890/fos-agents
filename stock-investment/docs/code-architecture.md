@@ -36,7 +36,7 @@ stock-investment/
 │   ├── flow.md                       # 실행 흐름
 │   ├── code-architecture.md          # 본 문서
 │   ├── adr.md                        # ADR 누적
-│   └── decisions/                    # 기존 결정 파일 7개 (plan003에서 폐기 예정)
+│   # docs/decisions/ — plan004에서 git rm 완료 (자료는 plan001 phase-01에서 5문서로 재분배됨, history는 git log 참조)
 │
 ├── logs/                             # 실행 메타데이터 (track_task.sh 자동 기록)
 │   ├── task-runs.jsonl
