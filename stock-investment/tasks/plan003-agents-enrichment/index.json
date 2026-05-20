@@ -2,9 +2,9 @@
   "name": "plan003-agents-enrichment",
   "description": "stock-investment AGENTS.md 본문 강화. career-os AGENTS.md 패턴 차용 — '진실 출처' 섹션 신설 (config 6 json + sources/watchlist/catalysts) + '투자 컨텍스트' 섹션 신설 (테마 / 운영 원칙 / 관찰·분석 한정) + 워크플로 진입점 cron 호출 시점·빈도 명시. .env 실 도입 정합 표기 (plan001 phase-02 본문 '도입 예정' → '도입 완료').",
   "created_at": "2026-05-20T00:00:00+00:00",
-  "updated_at": "2026-05-20T00:00:00+00:00",
-  "status": "planned",
-  "current_phase": 1,
+  "updated_at": "2026-05-20T01:12:00Z",
+  "status": "completed",
+  "current_phase": 2,
   "total_phases": 2,
   "error_message": null,
   "blocked_reason": null,
@@ -25,7 +25,7 @@
       "number": 1,
       "title": "AGENTS.md 강화 (진실 출처 + 투자 컨텍스트 + cron 시점 + .env 정합)",
       "file": "phase-01.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
@@ -34,13 +34,14 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 900
+      "timeout": 900,
+      "commitSha": "486496c300a4"
     },
     {
       "number": 2,
       "title": "통합 검증 + status=completed + push",
       "file": "phase-02.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Edit",
