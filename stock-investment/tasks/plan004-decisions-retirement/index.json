@@ -2,9 +2,9 @@
   "name": "plan004-decisions-retirement",
   "description": "stock-investment 표준 적용 시리즈 마지막 plan. docs/decisions/* 7 파일 git rm (plan001 phase-01에서 5문서로 재분배 완료) + adr.md History 라인 정정 (plan003 → plan004) + code-architecture.md decisions 트리 정리 + ai-nodes/docs/workspace-structure.md 매트릭스 stock-investment 7행 ?→O + L159 / L181 stock-investment 완료 표기.",
   "created_at": "2026-05-20T00:00:00+00:00",
-  "updated_at": "2026-05-20T00:00:00+00:00",
-  "status": "planned",
-  "current_phase": 1,
+  "updated_at": "2026-05-20T00:52:06.505287+00:00",
+  "status": "completed",
+  "current_phase": 2,
   "total_phases": 2,
   "error_message": null,
   "blocked_reason": null,
@@ -25,7 +25,7 @@
       "number": 1,
       "title": "decisions/* 7 git rm + adr.md/code-architecture 정정 + workspace-structure 매트릭스 stock-investment O",
       "file": "phase-01.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Edit",
@@ -33,13 +33,14 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 900
+      "timeout": 900,
+      "commitSha": "567c631dd9c8"
     },
     {
       "number": 2,
       "title": "통합 검증 + status=completed + push",
       "file": "phase-02.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Edit",
