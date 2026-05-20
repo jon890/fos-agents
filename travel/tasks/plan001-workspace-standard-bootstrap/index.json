@@ -1,0 +1,79 @@
+{
+  "name": "plan001-workspace-standard-bootstrap",
+  "description": "travel 워크스페이스 ai-nodes 표준 적용 (마지막 미적용 워크스페이스). 5문서 신설 + AGENTS 한글화·강화 (16→70+ 라인) + CLAUDE 심링크 + tasks/. scripts/ + .claude/skills/는 의도된 비대칭 — travel은 자동화 0 + skill 0 (순수 문서 저장소). ADR-001로 비대칭 결정 기록. ai-nodes workspace-structure 매트릭스 travel 7행 갱신.",
+  "created_at": "2026-05-20T00:00:00+00:00",
+  "updated_at": "2026-05-20T00:00:00+00:00",
+  "status": "planned",
+  "current_phase": 1,
+  "total_phases": 4,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "ai-nodes/docs/workspace-structure.md (워크스페이스 표준 청사진 + 매트릭스 travel 컬럼)",
+    "ai-nodes/docs/adr.md (ADR-004/006 표준)",
+    "stock-investment/tasks/plan001-workspace-standard-bootstrap (5문서 신설 패턴 참고)",
+    "health-care/tasks/plan002-workspace-standard-completion (4 phase 패턴 참고)",
+    "travel/AGENTS.md (한글화·강화 대상, 현재 16줄)",
+    "travel/docs/index.md (trip 인덱스 — 5문서 외 동적 자료, 유지)",
+    "travel/trips/osaka-2026-05/ (활성 trip, plan001 변경 0)"
+  ],
+  "depends_on": [],
+  "phases": [
+    {
+      "number": 1,
+      "title": "5문서 신설 (prd/data-schema/flow/code-architecture/adr) + travel ADR-001 (의도된 비대칭)",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash"
+      ],
+      "model": "sonnet",
+      "timeout": 1500
+    },
+    {
+      "number": 2,
+      "title": "AGENTS.md 한글화·강화 + CLAUDE.md 심링크 + tasks/ 디렉터리",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash"
+      ],
+      "model": "sonnet",
+      "timeout": 900
+    },
+    {
+      "number": 3,
+      "title": "ai-nodes workspace-structure 매트릭스 travel 갱신 + 의도된 비대칭 표 + 모노레포 AGENTS 갱신",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
+      "model": "sonnet",
+      "timeout": 600
+    },
+    {
+      "number": 4,
+      "title": "통합 검증 + status=completed + push",
+      "file": "phase-04.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
+      "model": "haiku",
+      "timeout": 600
+    }
+  ]
+}
