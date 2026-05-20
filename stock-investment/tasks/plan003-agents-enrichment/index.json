@@ -2,7 +2,7 @@
   "name": "plan003-agents-enrichment",
   "description": "stock-investment AGENTS.md 본문 강화. career-os AGENTS.md 패턴 차용 — '진실 출처' 섹션 신설 (config 6 json + sources/watchlist/catalysts) + '투자 컨텍스트' 섹션 신설 (테마 / 운영 원칙 / 관찰·분석 한정) + 워크플로 진입점 cron 호출 시점·빈도 명시. .env 실 도입 정합 표기 (plan001 phase-02 본문 '도입 예정' → '도입 완료').",
   "created_at": "2026-05-20T00:00:00+00:00",
-  "updated_at": "2026-05-20T01:12:00Z",
+  "updated_at": "2026-05-20T00:40:06.939814+00:00",
   "status": "completed",
   "current_phase": 2,
   "total_phases": 2,
@@ -49,7 +49,8 @@
         "Grep"
       ],
       "model": "haiku",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "894da2d871d3"
     }
   ]
 }
