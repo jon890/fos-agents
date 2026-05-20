@@ -1,0 +1,52 @@
+{
+  "name": "plan002-env-introduction",
+  "description": "travel .env 도입 — Discord 알림용 DISCORD_CHANNEL_ID 환경 변수 보관. travel ADR-002 신설 (ADR-001의 .env 부재 결정 부분 supersede). scripts/.claude/skills/config 부재는 유지. 5 cron payload 안 평문 채널 ID (1498642302602580029)을 .env로 옮김 — 다른 워크스페이스와 일관성. ai-nodes workspace-structure 매트릭스 travel .env 컬럼 N/A→O.",
+  "created_at": "2026-05-20T00:00:00+00:00",
+  "updated_at": "2026-05-20T00:00:00+00:00",
+  "status": "planned",
+  "current_phase": 1,
+  "total_phases": 2,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "travel/docs/adr.md (ADR-002 신설 + Quick Index 갱신)",
+    "travel/AGENTS.md L72 (.env 부재 표기 정합화)",
+    "travel/docs/code-architecture.md (의도된 비대칭 표기 정합)",
+    "ai-nodes/docs/workspace-structure.md (매트릭스 travel .env 컬럼 N/A→O + 의도된 비대칭 표 갱신)",
+    "~/.openclaw/cron/jobs.json (5 비활성 cron 채널 ID = 1498642302602580029 출처)"
+  ],
+  "depends_on": [
+    "travel/tasks/plan001-workspace-standard-bootstrap (ADR-001 + 5문서 + AGENTS + CLAUDE 심링크 완료)"
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "ADR-002 신설 + .env + .env.example + AGENTS/code-architecture/workspace-structure 정합",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
+      "model": "sonnet",
+      "timeout": 900
+    },
+    {
+      "number": 2,
+      "title": "통합 검증 + status=completed + push",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
+      "model": "haiku",
+      "timeout": 600
+    }
+  ]
+}
