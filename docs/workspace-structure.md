@@ -12,7 +12,7 @@ ai-nodes 모노레포의 모든 워크스페이스가 따르는 표준 디렉터
 각 최상위 디렉터리는 독립 작업 영역으로 자체 skills · data · logs · config · docs를 가진다.
 워크스페이스는 서로 격리되며 다른 워크스페이스의 자산을 교차 참조하지 않는다.
 
-현재 워크스페이스 4개:
+현재 워크스페이스 5개:
 
 | 워크스페이스 | 가이드 | 특이사항 |
 |---|---|---|
@@ -20,6 +20,7 @@ ai-nodes 모노레포의 모든 워크스페이스가 따르는 표준 디렉터
 | `career-os/` | `career-os/AGENTS.md` | scripts/ + .claude/skills/ 분리 (ADR-019 → ADR-006 표준 격상) |
 | `stock-investment/` | `stock-investment/AGENTS.md` | 일일 모닝 브리핑 |
 | `travel/` | `travel/AGENTS.md` | trips/<trip-id>/ 단위 |
+| `health-care/` | `health-care/AGENTS.md` | 무릎 재활 daily 체크인 (knee-patellar-instability) |
 
 ---
 
@@ -158,6 +159,7 @@ career-os ADR-019의 scripts/ 분리 패턴은 ADR-006으로 표준 격상되어
 | career-os | 없음 (ADR-019 → ADR-006 격상) | — |
 | stock-investment | 적용 완료 (plan001~004) | 본 표준 적용 시리즈 마지막 plan004로 decisions/ 폐기 + 매트릭스 갱신 |
 | travel | TODO — 별도 audit 필요 | — |
+| health-care | 없음 (ADR-006 분리 표준 적용, plan002) | — |
 
 새 예외 추가 시: 워크스페이스 `docs/adr.md`에 결정 기록 → 본 표 갱신.
 
@@ -167,18 +169,18 @@ career-os ADR-019의 scripts/ 분리 패턴은 ADR-006으로 표준 격상되어
 
 2026-05-19 기준. O = 준수, X = 미준수, ? = 미확인.
 
-| 항목 | apartment | career-os | stock-investment | travel |
-|---|---|---|---|---|
-| AGENTS.md 존재 | O | O | O | O |
-| CLAUDE.md 심링크 | O | O | O (plan001) | ? |
-| docs/ 5문서 | O | O | O (plan001) | ? |
-| tasks/plan{N}/ 영역 | O | O | O (plan001~004) | ? |
-| skills/ 분리 표준 (ADR-006) | 적용 (plan007) | 적용 (ADR-019 → ADR-006 격상) | 적용 (plan002) | ? |
-| .claude/skills/ native 등록 | O | O | O (plan002) | ? |
-| .env (workspace root) | O | O | O | ? |
-| data/ vs docs/ 분리 | O | O | O | ? |
+| 항목 | apartment | career-os | stock-investment | travel | health-care |
+|---|---|---|---|---|---|
+| AGENTS.md 존재 | O | O | O | O | O |
+| CLAUDE.md 심링크 | O | O | O (plan001) | ? | O |
+| docs/ 5문서 | O | O | O (plan001) | ? | O (plan002) |
+| tasks/plan{N}/ 영역 | O | O | O (plan001~004) | ? | O (plan001~002) |
+| skills/ 분리 표준 (ADR-006) | 적용 (plan007) | 적용 (ADR-019 → ADR-006 격상) | 적용 (plan002) | ? | 적용 (plan002) |
+| .claude/skills/ native 등록 | O | O | O (plan002) | ? | O (plan002) |
+| .env (workspace root) | O | O | O | ? | O (plan002) |
+| data/ vs docs/ 분리 | O | O | O | ? | O |
 
-travel만 별도 workspace-audit 실행 후 갱신 예정. stock-investment는 plan001~004 시리즈로 완료.
+travel만 별도 workspace-audit 실행 후 갱신 예정. stock-investment는 plan001~004 시리즈로 완료. health-care는 plan002로 완료.
 
 ---
 
