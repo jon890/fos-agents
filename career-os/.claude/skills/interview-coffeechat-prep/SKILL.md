@@ -16,6 +16,10 @@ description: 면접 커피챗 준비 — 현 active 타깃 기업(mvp-target.jso
 - 사용자가 `/interview-coffeechat-prep` 슬래시 호출
 - 자연어 요청: "커피챗 준비해줘", "회사 리서치 해줘", "면접 회사 분석해줘", "커피챗 전략 보고서 만들어줘"
 - 호출 빈도: 커피챗 일정 전 1회 이상, 신규 타깃 전환 후 첫 번째 실행
+- "회사 분석해줘", "기업 조사해줘", "타깃 기업 준비해줘", "인터뷰 전 회사 공부"
+
+회사명 직접 입력 불필요 — `mvp-target.json primary.coffeechat` 에서 자동 추출.
+단일 active 타깃 기준 실행 — 복수 기업 동시 비교 분석 아님.
 
 ## Inputs
 
@@ -53,6 +57,7 @@ bun career-os/scripts/interview-coffeechat-prep/collect_company_sites.ts \
   --outdir career-os/data/source/<coffeechat.source_dir>/
 ```
 
+수집 완료 시 `data/source/<source_dir>/manifest.json` 자동 생성 — 수집된 사이트 목록 + 성공/실패 상태.
 수집 일부 실패 (exit 2) 시 경고만 출력하고 계속 진행. 전체 실패 (exit 1) 시 리포트 생성 중단.
 
 ### 3. 컨텍스트 조립 (Read)
@@ -103,7 +108,7 @@ bun --env-file=career-os/.env ../_shared/lib/notify_discord.ts \
 3. `data/source/<source_dir>/manifest.json`의 각 site entry가 리포트에 언급됐는지
 4. `data/runtime/<report_slug>.md` 파일 존재 확인
 
-실패 항목 있으면 해당 섹션 보완 후 재작성. 최대 2회.
+실패 항목 있으면 해당 섹션 보완 후 재작성. 최대 2회 (리포트 분량 특성상 재작성 비용이 큼).
 
 ## Error handling
 
