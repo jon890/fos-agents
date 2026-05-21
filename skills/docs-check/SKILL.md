@@ -1,6 +1,6 @@
 ---
 name: docs-check
-description: ai-nodes 모노레포의 docs 건전성을 5축으로 종합 감사한다. Decay (Code↔Docs drift, stale ADR), Bloat (ADR 30줄 초과 / 코드 블록 / 파일 path 열거), Clarity (why + alternative + rejection 명시), Duplication (5문서 단일 출처), Self-Evidence (자명한 ADR 폐기 후보). 자연어 호출 — "ADR 건전성 점검", "docs 감사", "stale ADR 찾기", "/docs-check". 본 skill은 *발견*만 — 수정은 사용자 승인 후 별도 진행.
+description: ai-nodes 모노레포의 docs 건전성을 5축으로 종합 감사한다. Decay (Code↔Docs drift, stale ADR), Bloat (ADR 30줄 초과 / 코드 블록 / 파일 path 열거), Clarity (why + alternative + rejection 명시), Duplication (5문서 단일 출처), Self-Evidence (자명한 ADR 폐기 후보). 자연어 호출 — "ADR 건전성 점검", "docs 감사", "stale ADR 찾기", "docs drift 확인", "5문서 건전성 감사", "코드-문서 불일치", "ADR 정리 전 감사", "/docs-check". 본 skill은 *발견*만 — 수정은 사용자 승인 후 별도 진행.
 ---
 
 # docs-check
@@ -14,7 +14,7 @@ ADR은 "코드만 보고는 알 수 없는 WHY"여야 한다. 자명한 결정·
 ## When to use
 
 - 슬래시 호출: `/docs-check [scope]` (scope: `career-os` / `ai-nodes` / `all`, 생략 시 `all`)
-- 자연어: "ADR 건전성 점검", "docs 감사", "stale ADR 찾아줘", "ADR Quick Index sync 확인"
+- 자연어: "ADR 건전성 점검", "docs 감사", "stale ADR 찾아줘", "ADR Quick Index sync 확인", "docs drift 확인", "코드-문서 불일치", "5문서 건전성 감사"
 - plan 완료 후 주기적 실행 권장 (plan-and-build와 연계)
 - 새 ADR 추가 후 Index sync 확인 시
 
@@ -88,7 +88,7 @@ done
 echo "config schema alignment 검사 완료"
 ```
 
-#### 자동화-4. Dispatcher case coverage (run_now.sh ↔ prd.md + flow.md)
+#### 자동화-4. Dispatcher case coverage (career-os scope 한정 — run_now.sh ↔ prd.md + flow.md)
 
 ```bash
 DISPATCHER=career-os/scripts/command-router/run_now.sh
@@ -226,6 +226,13 @@ ADR 폐기 후보 유형 (ai-nodes 변형):
 | config/ 없음 | 자동화-3 skip |
 | Quick Index 없음 (미작성) | Index sync 검사 → MISSING 전수 보고 |
 | scope 인식 불가 | "career-os / ai-nodes / all 중 하나로 재호출 요청" |
+
+## 의도적으로 안 하는 것
+
+- **docs 수정·삭제**: 발견 전용 — 수정은 사용자 승인 후 별도 세션.
+- **코드 변경**: docs 감사 전용. 코드 문제는 해당 task로 처리.
+- **ADR 자동 삭제**: Self-Evidence 후보를 직접 삭제하지 않는다 — 목록 제출 후 사용자 결정.
+- **scope 외 파일 감사**: 지정 scope 밖 파일은 건너뜀.
 
 ## Why this design
 
