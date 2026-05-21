@@ -12,6 +12,9 @@ backend 면접 준비용 학습 마크다운(study pack) 생성·검증·발행 
 - 사용자가 `/study-pack-writer <topic>` 슬래시 호출
 - 자연어 요청: "MySQL 인덱스 study pack 만들어줘", "Redis 캐시 전략 학습 자료 정리해줘"
 - fos-study repo에 즉시 publish할 study pack이 필요한 모든 경우
+- "fos-study에 <주제> 올려줘", "<주제> 공부 자료 만들어줘", "<주제> 학습 문서 작성해줘"
+
+후보자 이력·task 기반 Q&A 질문 은행·플레이북은 `/interview-asset-writer` 로 라우팅 (본 skill은 기술 토픽 학습 문서 전담).
 
 ## Inputs
 
@@ -29,7 +32,7 @@ Claude는 다음을 `Read` 도구로 직접 로드:
 
 ### 1. Topic 해석
 
-인자가 topic-key (kebab-case)면 `study-pack-topics.json` 매칭. 자연어면 description/domain으로 유사 매칭. 매칭 실패 시 **freeform 모드**: domain·outputPath 본인이 결정. stderr에 결정 근거 1줄 로그.
+인자가 topic-key (kebab-case)면 `study-pack-topics.json` 매칭. 자연어면 description/domain으로 유사 매칭. 매칭 실패 시 **freeform 모드**: domain·outputPath 본인이 결정. stderr에 결정 근거 1줄 로그 (예: `[study-pack] freeform 모드 — domain=database, outputPath=database/new-topic`).
 
 ### 2. Context 로드 (Read)
 
@@ -106,7 +109,7 @@ git commit -m "docs(<domain>): add|update <topic-key>"
 git push origin main
 ```
 
-`<domain>`은 topic에서 추출(database/redis/kafka/java/infra/architecture). add vs update는 `git status --porcelain`으로 자동 판단. push 실패 시 stderr + exit 1 (silent 실패 금지).
+`<domain>`은 topic에서 추출(database/redis/kafka/java/infra/architecture). add vs update는 `git status --porcelain`으로 자동 판단 — 신규 파일이면 add, 기존 파일 수정이면 update. push 실패 시 stderr + exit 1 (silent 실패 금지).
 
 ### 7. Discord 알림
 
