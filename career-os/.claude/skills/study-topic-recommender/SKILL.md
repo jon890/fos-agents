@@ -17,6 +17,10 @@ backend 면접 준비용 morning 토픽 추천 통합 skill. replenish + recomme
 - "토픽 풀 갱신해줘", "추천 갱신", "study topic 추천"
 - "live-coding 1개 골라줘", "live-coding seed 선택"
 - "recommend-topics 실행", "morning 추천 돌려줘"
+- "아침 학습 추천", "공부 주제 추천해줘", "토픽 추천해줘", "오늘 토픽 뭐야"
+
+fos-study publish 안 함 — 토픽 추천만. 실제 문서 작성은 `/study-pack-writer` 로 위임.
+promote 후보 안내는 사용자 확인 후 수동 적용 — 자동 config 수정 안 함.
 
 ## Inputs
 
@@ -38,7 +42,7 @@ promote 판단 기준도 이 스캔 결과 기반 — 외부 아티팩트 목록
 
 `data/runtime/topic-inventory-history.jsonl`의 최근 history entry에서 `study-pack-candidates` namespace에 있는 key 중 `sources/fos-study/<item.promotionTarget.outputPath>.md`가 실제로 존재하면 candidate → study-pack namespace 자동 승격 대상으로 판단한다.
 
-승격 후보가 있으면 사용자에게 안내 후 `config/study-pack-topics.json` / `config/study-pack-candidates.json` 수정 권유. 자동 수정은 하지 않는다 (사람 확인 필요).
+승격 후보가 있으면 사용자에게 안내 후 `config/study-pack-topics.json` / `config/study-pack-candidates.json` 수정 권유. 자동 수정은 하지 않는다 (사람 확인 필요). 안내 후 Step 2로 계속 진행 (사용자 응답 대기 X).
 
 승격 후보가 없으면 이 단계를 건너뛴다.
 
@@ -57,7 +61,7 @@ script 내부 흐름 (알고리즘 상수 참고용):
 - **cooldown**: backend key 7 history entries / secondary 3 history entries
 - **RSS feed**: feed-cache TTL 6h 활용 — 반복 호출 시 네트워크 부담 없음
 - **산출물**:
-  - `data/runtime/topic-inventory.json` — 전체 pool + 추천 결과 + 통계
+  - `data/runtime/topic-inventory.json` — 전체 pool + 추천 결과 + 통계 (`excluded.possibleDuplicates` 배열 포함 — Step 2.5 입력)
   - `data/runtime/morning-topic-recommendation.md` — 사람이 읽는 마크다운 (10픽 + 오늘의 3선)
   - `data/runtime/topic-inventory-history.jsonl` — 오늘 추천 history append
 
