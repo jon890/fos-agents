@@ -16,6 +16,7 @@ description: 후보자 이력 기반 면접 자산 마크다운을 생성하고 
 - 자연어 요청 (Q&A): "AI 서비스팀 면접 질문 은행 만들어줘", "slot 팀 experience qbank 정리해줘"
 - 자연어 요청 (master): "시니어 백엔드 마스터 플레이북 만들어줘", "면접 master playbook 갱신"
 - fos-study repo에 즉시 publish할 *후보자 이력 기반 면접 자산*이 필요한 모든 경우
+- "면접 자료 만들어줘", "경험 기반 질문 정리해줘", "자기소개 플레이북 만들어줘", "면접 준비 자산 만들어줘"
 
 일반 기술 토픽 학습 문서는 study-pack-writer로 라우팅 (본 skill 호출 X).
 
@@ -38,7 +39,7 @@ Claude는 다음을 `Read` 도구로 직접 로드:
 산출물 형식 판단:
 - **Q&A 질문 은행**: topic-key에 `qbank` / `question-bank` / `experience-` 포함, 또는 자연어에 "질문 은행" / "Q&A" / "qbank" 언급
 - **마스터 플레이북**: topic-key에 `master` / `playbook` 포함, 또는 자연어에 "마스터" / "플레이북" / "master playbook" 언급
-- 모호하면 사용자에게 확인 (기본값 Q&A 질문 은행)
+- 모호하면 사용자에게 확인 (기본값 Q&A 질문 은행). 비대화형(`claude -p`) 환경에서 모호 → 기본값 Q&A 질문 은행으로 자동 진행.
 
 stderr에 결정 근거 1줄 로그 (예: `[interview-asset] topic=experience-qbank-ai-service-team → Q&A 질문 은행 형식`).
 
@@ -48,7 +49,7 @@ Inputs 1~5 모두 Read. `inputFiles` 명시되면 task/resume 추가 Read.
 
 ### 3. Overlap 점검 (선택)
 
-`sources/fos-study/<outputPath 디렉터리>`에 유사 파일 있으면 update 의도 확인. update면 기존 본문 Read해서 통합 작성.
+`sources/fos-study/<outputPath 디렉터리>`에 유사 파일 있으면 update 의도 확인. 비대화형(`claude -p`) 환경에서 유사 파일 발견 시 → update 모드로 자동 진행. update면 기존 본문 Read해서 통합 작성.
 
 ### 4. 마크다운 작성 (Write)
 
