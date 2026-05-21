@@ -1,0 +1,99 @@
+{
+  "_meta": {
+    "purpose": "CJ Foodville 1차 면접 드릴용 고정 입력 파일. Codex/OpenClaw interview-prep-analyzer first-round-drill 모드가 후보자 업무 기록과 직무 분석을 균형 있게 읽기 위한 단일 출처.",
+    "schema_version": "1",
+    "created_at": "2026-05-21",
+    "policy": "private report only; do not publish to fos-study automatically"
+  },
+  "files": [
+    {
+      "path": "resume/cj-foodville-resume-backend.html",
+      "role": "target-resume",
+      "note": "CJ Foodville 백엔드 지원용 이력서. 후보자 포지셔닝과 지원 직무 표현의 기준."
+    },
+    {
+      "path": "architecture/cj-foodville-commerce-domain-design-interview.md",
+      "role": "target-role-analysis",
+      "note": "CJ푸드빌/F&B 커머스 도메인 설계 면접 대비 핵심 직무 분석."
+    },
+    {
+      "path": "interview/commerce-interview-answer-slot-experience-mapping.md",
+      "role": "experience-mapping",
+      "note": "슬롯팀 경험을 커머스/F&B 도메인 설계 답변으로 번역하는 핵심 자산."
+    },
+    {
+      "path": "interview/fnb-ecommerce-operations-monitoring-interview.md",
+      "role": "operations-interview",
+      "note": "F&B/e-commerce 운영 장애 대응과 모니터링 면접 질문 대비."
+    },
+    {
+      "path": "task/ai-service-team/README.md",
+      "role": "work-record-ai-service-overview",
+      "note": "AI 서비스팀 전체 업무 맥락."
+    },
+    {
+      "path": "task/ai-service-team/rag-vector-search-batch.md",
+      "role": "work-record-ai-service-depth",
+      "note": "Spring Batch/OpenSearch/RAG 배치 설계 경험."
+    },
+    {
+      "path": "task/ai-service-team/webtoon-maker-ai-pipeline.md",
+      "role": "work-record-ai-service-depth",
+      "note": "AI 웹툰 MVP·LLM workflow·agent 협업 경험."
+    },
+    {
+      "path": "task/ai-service-team/graceful-shutdown-503-fix.md",
+      "role": "work-record-operations",
+      "note": "운영 제약·graceful shutdown·장애 대응 경험."
+    },
+    {
+      "path": "task/nsc-slot/README.md",
+      "role": "work-record-slot-overview",
+      "note": "슬롯팀 전체 업무 맥락."
+    },
+    {
+      "path": "task/nsc-slot/slot-engine-abstraction.md",
+      "role": "work-record-slot-design",
+      "note": "SlotTemplate/BaseSlotService/StampedLock 기반 추상화·동시성 경험."
+    },
+    {
+      "path": "task/nsc-slot/rcc-rtp-cache-control.md",
+      "role": "work-record-slot-design",
+      "note": "RCC 캐시·복합 인덱스·비동기 캐시 생성 경험."
+    },
+    {
+      "path": "task/nsc-slot/slot-spin-performance.md",
+      "role": "work-record-performance",
+      "note": "AliasMethod/JMH/성능 개선 경험."
+    },
+    {
+      "path": "task/nsc-slot/ai-tool-adoption.md",
+      "role": "work-record-collaboration",
+      "note": "Cursor Rules·AI agent 도입·팀 생산성 경험."
+    },
+    {
+      "path": "database/mybatis-dynamic-sql-resultmap-basics.md",
+      "role": "jd-skill-gap",
+      "note": "CJ Foodville JD의 MyBatis/레거시 운영 대비."
+    },
+    {
+      "path": "database/connection-pool-saturation-thread-pool-isolation.md",
+      "role": "technical-depth-db-ops",
+      "note": "DB connection pool saturation, thread pool isolation, 운영 장애 대응."
+    },
+    {
+      "path": "devops/commerce-observability-first-five-minutes.md",
+      "role": "technical-depth-observability",
+      "note": "커머스 장애 첫 5분, 관측성, postmortem 답변 대비."
+    }
+  ],
+  "question_mix": {
+    "backend_technical_depth": 2,
+    "fnb_ecommerce_domain_design": 1,
+    "candidate_experience_deep_dive": 1,
+    "behavioral_pressure_communication": 1
+  },
+  "avoid_paths_containing": [
+    "kakao-healthcare-carechat-ai-agent"
+  ]
+}
