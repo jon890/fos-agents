@@ -1,13 +1,15 @@
 ---
 name: workspace-audit
-description: Interactive Claude-driven audit of an ~/ai-nodes workspace — surfaces orphan configs, dead scripts, broken symlinks, doc-code drift, and stale runs, then runs an analyst subagent for cross-finding pattern analysis, and walks the user through findings in chat. Triggered by `/workspace-audit`. No background claude CLI calls; the active session drives all judgment and dispatches an oh-my-claudecode:analyst subagent for Phase 2 pattern analysis.
+description: 현재 Claude 세션이 ~/ai-nodes 워크스페이스를 대화형으로 감사한다. 고아 config·dead 스크립트·깨진 심링크·doc-코드 불일치·오래된 실행을 찾아내고, analyst 서브에이전트로 교차 발견 패턴을 분석한 뒤 사용자와 대화로 결과를 정리한다. `/workspace-audit`으로 호출. 백그라운드 claude CLI 호출 없음 — 현재 세션이 모든 판단을 주도하고, oh-my-claudecode:analyst 서브에이전트는 Phase 2 패턴 분석에만 사용.
 ---
 
-# Workspace Audit
+# 워크스페이스 감사
 
-ai-nodes 아래 각 AI 에이전트 워크스페이스가 시간이 지나면서 코드가 썩고 있는지 점검한다. 결정적인 정적 분석은 파이썬 스크립트가 즉시 돌고, 휴먼 판단이 필요한 부분은 현재 Claude 세션이 사용자와 대화하면서 진행한다.
+ai-nodes 아래 각 AI 에이전트 워크스페이스가 시간이 지나면서 코드가 썩고 있는지 점검한다.
+결정적인 정적 분석은 파이썬 스크립트가 즉시 돌고, 휴먼 판단이 필요한 부분은 현재 Claude 세션이 사용자와 대화하면서 진행한다.
 
-다른 워크스페이스 스킬들(apartment-daily-report, career-os run_now.sh 등)은 openclaw cron → connected model → `claude --print` 구조이기 때문에 `track_task.sh` 래핑이 필요하지만, 이 스킬은 사용자가 현재 세션에서 직접 호출하므로 그런 wrapping은 **하지 않는다**.
+다른 워크스페이스 스킬들(apartment-daily-report, career-os run_now.sh 등)은 openclaw cron → connected model → `claude --print` 구조라 `track_task.sh` 래핑이 필요하다.
+이 스킬은 사용자가 현재 세션에서 직접 호출하므로 그런 래핑은 **하지 않는다**.
 
 ## 호출 형태
 
@@ -32,7 +34,10 @@ bash skills/workspace-audit/scripts/run_audit.sh <workspace>
 bash skills/workspace-audit/scripts/run_audit.sh --all
 ```
 
-이 스크립트는 LLM 호출 없이 빠르게 3단계 결정적 분석을 돌리고 산출물을 `/tmp/workspace-audit-<workspace>/` 에 둔다 (세션 한정, 다음 실행 시 덮어씀). 워크스페이스 트리에 영구 파일을 만들지 **않는다** — 보존 가치 있는 발견은 본 세션에서 사용자가 `docs/decisions/`에 ADR로 옮긴다.
+이 스크립트는 LLM 호출 없이 빠르게 3단계 결정적 분석을 돌린다.
+산출물은 `/tmp/workspace-audit-<workspace>/`에 보관된다 (세션 한정, 다음 실행 시 덮어씀).
+워크스페이스 트리에 영구 파일을 만들지 **않는다**.
+보존 가치 있는 발견은 본 세션에서 사용자가 `docs/decisions/`에 ADR로 옮긴다.
 
 - `audit_static.py` — 고아 config, dead 스크립트, 깨진 심링크, 문서가 가리키는 부재 경로
 - `audit_health.py` — `logs/task-runs.jsonl` 분석 (staleness, failure rate, token outlier, data/ 갭). 1회성으로 한 번만 돈 태스크는 staleness 대상에서 제외.
