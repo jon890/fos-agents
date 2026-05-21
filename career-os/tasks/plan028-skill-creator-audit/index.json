@@ -2,9 +2,9 @@
   "name": "plan028-skill-creator-audit",
   "description": "career-os 8 skill 의 /skill-creator:skill-creator 4축 검토 + 강화. 한국어 본문은 이미 완료라 리라이트 X. phase 분리 기준: 크기 (12KB+ 비대 후보 단독 phase). phase-01 docs-audit (19KB), phase-02 candidate-baseline-suggester (12KB), phase-03 나머지 6개 묶음. ai-nodes ADR-007 적용 — 결정 4 (skill-creator 검토 동시 적용) career-os 도 검토 대상.",
   "created_at": "2026-05-21T17:50:00+09:00",
-  "updated_at": "2026-05-21T17:50:00+09:00",
-  "status": "planned",
-  "current_phase": 0,
+  "updated_at": "2026-05-21T13:30:00.000000+00:00",
+  "status": "running",
+  "current_phase": 3,
   "total_phases": 3,
   "error_message": null,
   "blocked_reason": null,
@@ -26,7 +26,7 @@
       "number": 1,
       "title": "docs-audit (19KB) skill-creator 4축 강화 + 압축 결정 (references/ 분리 후보 도출)",
       "file": "phase-01.md",
-      "status": "planned",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
@@ -36,13 +36,14 @@
         "Skill"
       ],
       "model": "sonnet",
-      "timeout": 2400
+      "timeout": 2400,
+      "commitSha": "a56a43ab5f64"
     },
     {
       "number": 2,
       "title": "candidate-baseline-suggester (12KB) skill-creator 4축 강화 + 압축 결정",
       "file": "phase-02.md",
-      "status": "planned",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
