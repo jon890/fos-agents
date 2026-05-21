@@ -3,10 +3,11 @@
 Agent harness — Claude Code phase 순차 실행기 (ai-nodes 포팅, fos-blog 기반).
 
 Usage:
-  python skills/plan-and-build/run-phases.py <task-dir> [--from-phase N]
+  python skills/plan-and-build/run-phases.py <task-dir> [--from-phase N] [--to-phase M]
 
   예: python skills/plan-and-build/run-phases.py career-os/tasks/cj-oliveyoung-decomposition
       python skills/plan-and-build/run-phases.py career-os/tasks/cj-oliveyoung-decomposition --from-phase 3
+      python skills/plan-and-build/run-phases.py apartment/tasks/plan008-skill-korean-rewrite --to-phase 2
 
 규약:
   task-dir 은 `<workspace>/tasks/<task-name>/` 형태. workspace는 task-dir의 grandparent.
@@ -269,6 +270,15 @@ def main() -> None:
             print("[error] --from-phase 뒤에 정수를 지정하세요", file=sys.stderr)
             sys.exit(1)
 
+    to_phase: int | None = None
+    if "--to-phase" in args:
+        idx = args.index("--to-phase")
+        try:
+            to_phase = int(args[idx + 1])
+        except (IndexError, ValueError):
+            print("[error] --to-phase 뒤에 정수를 지정하세요", file=sys.stderr)
+            sys.exit(1)
+
     task, index_path = load_task(task_dir)
     task_name = task["name"]
     phases = task["phases"]
@@ -281,7 +291,11 @@ def main() -> None:
         phase_title = phase.get("title", f"Phase {phase_num}")
 
         if phase_num < from_phase:
-            print(f"  ⏭  Phase {phase_num}/{total}: {phase_title}  (skipped)")
+            print(f"  ⏭  Phase {phase_num}/{total}: {phase_title}  (skipped, before --from-phase)")
+            continue
+
+        if to_phase is not None and phase_num > to_phase:
+            print(f"  ⏭  Phase {phase_num}/{total}: {phase_title}  (skipped, after --to-phase={to_phase})")
             continue
 
         if phase["status"] == "completed":
