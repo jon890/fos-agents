@@ -15,7 +15,7 @@ description: Find and summarize interior renovation references for 구리 럭키
 
 ## Workflow
 
-1. Read the decision note to understand current scope, budget, references, and pending decisions.
+1. Read the decision note + 4 추가 docs (`lucky-5-1004-decision-summary.md`, `lucky-5-1004-field-checklist.md`, `lucky-5-1004-contractor-brief.md`, `lucky-5-1004-decision-queue.md`) to understand current scope, budget, references, and pending decisions. Decision queue 는 state board — 다른 docs 가 신규 미결정/완료 항목을 보이면 먼저 갱신.
 2. Read the config for search keywords, scoring rules, and output preferences.
 3. Search current web results. Prefer:
    - 오늘의집 project pages
@@ -24,7 +24,7 @@ description: Find and summarize interior renovation references for 구리 럭키
    - brand or platform references only as secondary sources
 4. Fetch promising pages when accessible. Do not rely on thumbnails alone.
 5. Score candidates using the rubric in the config.
-6. Save a dated markdown digest under `data/interior-reference-digest/YYYY-MM-DD/report.md`.
+6. Save a dated markdown digest under `data/interior-reference-digest/YYYY-MM-DD/report.md`. 한국어 제목은 "오늘의 인테리어 추천" 고정 ("다이제스트" 사용 금지).
 7. Append high-quality reference candidates to `docs/interior/interior-references.md` with stable IDs (`R-00X`).
 8. Send a short Discord-safe summary if running from cron.
 9. If a candidate changes a decision, append a proposed `D-00X` item to the decision note only when the user has confirmed it. Otherwise record it as "검토 후보" in the recommendation/reference notebook.
