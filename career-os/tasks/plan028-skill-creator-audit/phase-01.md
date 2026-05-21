@@ -46,6 +46,16 @@ skill-creator 리포트 + 본문 구조 분석 결과로 다음 결정:
 - 결정된 압축 옵션 적용 (있다면).
 - docs-style.md 8 패턴 재점검.
 
+**critical**: 본 단계는 *결정만 하고 종료* 금지. 본 plan028 phase-01 첫 실행이 decision-only로 끝나 SKILL.md 무변경 + references/ 미생성 사례 있음. 재실행 시 반드시 다음을 수행:
+
+1. compaction-decision.md 가 이미 존재하면 그 내용을 그대로 적용 (재결정 불필요).
+2. SKILL.md 실제 편집 — 분리 대상 섹션을 references/<new>.md 로 이동 + 본문에 포인터 한 줄 남김.
+3. references/ 디렉터리 + 새 파일 생성.
+4. git diff 로 SKILL.md 크기 감소 확인 (>= 5KB 감소 목표).
+5. step 5 commit 으로 마무리.
+
+위 5단계가 *완료되지 않은 채* exit 하면 phase 실패 (PHASE_FAILED).
+
 ### 5. commit
 
 - 메시지 (압축 X 경우): `docs(career-os): docs-audit SKILL.md skill-creator 강화 (plan028 phase-01)`.
