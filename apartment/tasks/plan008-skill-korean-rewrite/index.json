@@ -2,9 +2,9 @@
   "name": "plan008-skill-korean-rewrite",
   "description": "apartment 2 SKILL.md (apartment-daily-report + apartment-interior-reference-digest) frontmatter 포함 전면 한국어화 + /skill-creator:skill-creator 4축 검토 강화. 마지막 phase로 apartment:today-interior-recommendations openclaw cron payload 슬림화 (4번 진단 — SKILL.md/config 보강은 이미 완료, payload openclaw cron edit 만 남음). ai-nodes ADR-007 적용.",
   "created_at": "2026-05-21T17:30:00+09:00",
-  "updated_at": "2026-05-21T17:30:00+09:00",
-  "status": "planned",
-  "current_phase": 0,
+  "updated_at": "2026-05-21T11:00:00.000000+00:00",
+  "status": "running",
+  "current_phase": 3,
   "total_phases": 3,
   "error_message": null,
   "blocked_reason": null,
@@ -21,7 +21,7 @@
       "number": 1,
       "title": "apartment-daily-report SKILL.md + references/ 한국어화 + skill-creator 4축 강화",
       "file": "phase-01.md",
-      "status": "planned",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
@@ -31,13 +31,14 @@
         "Skill"
       ],
       "model": "sonnet",
-      "timeout": 1500
+      "timeout": 1500,
+      "commitSha": "be96b251f631"
     },
     {
       "number": 2,
       "title": "apartment-interior-reference-digest SKILL.md + references/ 한국어화 + skill-creator 4축 강화 (4번 진단 보강분 보존)",
       "file": "phase-02.md",
-      "status": "planned",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",

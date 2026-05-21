@@ -12,19 +12,21 @@
 
 - 링크: URL
 - 출처: 오늘의집 / 네이버 블로그 / 업체 포트폴리오 / 기타
-- 적합도: 높음/중간/낮음
+- 적합도: 높음 / 중간 / 낮음
 - 한 줄 요약:
 - 우리 집 적용 포인트:
-  - 
-  - 
+  -
+  -
 - 예산/하자 리스크:
-  - 
+  -
 - 확인할 디테일:
   - 샷시:
   - 확장/단열:
   - 바닥:
   - 주방:
   - 욕실:
+  - 수납:
+  - 작업공간:
 
 ## 오늘의 의사결정 3개
 
@@ -36,7 +38,7 @@
   - B.
   - C.
 - 추천:
-- 답변을 받으면 기록할 위치: `lucky-5-1004-decision-queue.md` / `lucky-5-1004-interior-decisions.md`
+- 답변 기록 위치: `lucky-5-1004-decision-queue.md` / `lucky-5-1004-interior-decisions.md`
 
 ### 2. 질문 제목
 
@@ -46,7 +48,7 @@
   - B.
   - C.
 - 추천:
-- 답변을 받으면 기록할 위치: `lucky-5-1004-decision-queue.md` / `lucky-5-1004-interior-decisions.md`
+- 답변 기록 위치: `lucky-5-1004-decision-queue.md` / `lucky-5-1004-interior-decisions.md`
 
 ### 3. 질문 제목
 
@@ -56,7 +58,7 @@
   - B.
   - C.
 - 추천:
-- 답변을 받으면 기록할 위치: `lucky-5-1004-decision-queue.md` / `lucky-5-1004-interior-decisions.md`
+- 답변 기록 위치: `lucky-5-1004-decision-queue.md` / `lucky-5-1004-interior-decisions.md`
 
 ## 의사결정 문서 반영 후보
 
