@@ -53,7 +53,8 @@
         "Skill"
       ],
       "model": "sonnet",
-      "timeout": 2400
+      "timeout": 2400,
+      "commitSha": "a71c340"
     },
     {
       "number": 3,
