@@ -1,0 +1,18 @@
+=== post-run snapshot (2026-05-21 19:42:04) ===
+--- git status (apartment) ---
+ M apartment/tasks/plan008-skill-korean-rewrite/index.json
+?? apartment/tasks/plan008-skill-korean-rewrite/audit/phase-03-applied-payload.txt
+?? apartment/tasks/plan008-skill-korean-rewrite/audit/phase-03-new-payload.txt
+?? apartment/tasks/plan008-skill-korean-rewrite/audit/phase-03-old-payload.json
+?? apartment/tasks/plan008-skill-korean-rewrite/audit/phase-03-payload-diff.md
+?? apartment/tasks/plan008-skill-korean-rewrite/audit/phase-03-regression-post.txt
+?? apartment/tasks/plan008-skill-korean-rewrite/audit/phase-03-regression-pre.txt
+--- file sizes ---
+-rw-rw-r-- 1 bifos bifos 45034  5월 21 09:04 apartment/docs/interior/interior-references.md
+-rw-rw-r-- 1 bifos bifos 10266  5월 21 09:04 apartment/docs/interior/lucky-5-1004-decision-queue.md
+--- data/interior-reference-digest/2026-05-21/ ---
+total 24
+drwxrwxr-x  2 bifos bifos 4096  5월 21 09:03 .
+drwxrwxr-x 13 bifos bifos 4096  5월 21 09:03 ..
+-rw-rw-r--  1 bifos bifos 9650  5월 21 09:05 report.md
+-rw-rw-r--  1 bifos bifos 1760  5월 21 09:03 request.md

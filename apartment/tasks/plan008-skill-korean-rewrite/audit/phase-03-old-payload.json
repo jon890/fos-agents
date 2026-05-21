@@ -1,0 +1,55 @@
+{
+  "id": "9a6ac82d-f6d6-4d25-a8aa-05cddc33dabe",
+  "agentId": "main",
+  "sessionKey": "agent:main:discord:channel:1496746450468733038",
+  "name": "apartment:today-interior-recommendations",
+  "description": "Daily 9am 오늘의 인테리어 추천 for 구리 럭키아파트 5동 1004호. Searches 오늘의집/네이버 블로그/portfolio pages, appends strong references to interior-references.md, and announces concise recommendations to Discord.",
+  "enabled": true,
+  "createdAtMs": 1778417973692,
+  "schedule": {
+    "kind": "cron",
+    "expr": "0 9 * * *",
+    "tz": "Asia/Seoul"
+  },
+  "sessionTarget": "isolated",
+  "wakeMode": "now",
+  "payload": {
+    "kind": "agentTurn",
+    "message": "Run the apartment 오늘의 인테리어 추천 + 업체 방문 전 의사결정 workflow for 구리 럭키아파트 5동 1004호.\n\nSource of truth:\n- Skill: /home/bifos/ai-nodes/apartment/.claude/skills/apartment-interior-reference-digest/SKILL.md\n- Runner scaffold: /home/bifos/ai-nodes/apartment/scripts/apartment-interior-reference-digest/run_digest.sh\n- Config: /home/bifos/ai-nodes/apartment/config/interior-reference-digest.json\n- Decision note: /home/bifos/ai-nodes/apartment/docs/interior/lucky-5-1004-interior-decisions.md\n- Decision summary: /home/bifos/ai-nodes/apartment/docs/interior/lucky-5-1004-decision-summary.md\n- Field checklist: /home/bifos/ai-nodes/apartment/docs/interior/lucky-5-1004-field-checklist.md\n- Contractor brief: /home/bifos/ai-nodes/apartment/docs/interior/lucky-5-1004-contractor-brief.md\n- Decision queue/state board: /home/bifos/ai-nodes/apartment/docs/interior/lucky-5-1004-decision-queue.md\n- Reference notebook: /home/bifos/ai-nodes/apartment/docs/interior/interior-references.md\n- Recent reports: /home/bifos/ai-nodes/apartment/data/interior-reference-digest/*/report.md\n\nTask:\n1. Read the canonical skill, config, decision note, decision summary, field checklist, contractor brief, decision queue/state board, reference notebook, and recent 7 days of report.md files if present.\n2. Before choosing questions, update the decision queue/state board if the other docs show newly completed decisions, newly introduced unresolved decisions, or items that should be checklist-only rather than morning questions. The queue is a state board, not a hardcoded source.\n3. Run the runner scaffold to create today's output paths.\n4. Search broadly but filter carefully: 오늘의집, 네이버 블로그, local/interior company portfolio pages, and brand/platform references only as secondary material.\n5. Prioritize same complex/similar 평수, 구리/수택/인창 구축 20평대, 거실 확장, 단열, 샷시, 욕실, 주방, 바닥재, 붙박이장, and 작업공간/모션데스크 layout relevance.\n6. Because this is the user's first interior project and they plan to visit interior vendors around next week, judge source/vendor credibility at a high level: photo/detail quality, scope transparency, material/process explanation, 하자/AS mention, and avoid overly ad-like low-information posts.\n7. Write a full markdown report to today's report.md under /home/bifos/ai-nodes/apartment/data/interior-reference-digest/YYYY-MM-DD/. Use the Korean title \"오늘의 인테리어 추천\", not \"다이제스트\".\n8. Append strong reference candidates to /home/bifos/ai-nodes/apartment/docs/interior/interior-references.md with stable R-00X IDs. Do NOT auto-confirm renovation decisions in lucky-5-1004-interior-decisions.md unless explicitly confirmed by the user; list decision candidates only.\n9. Morning decision rule: choose exactly 3 decision questions from the updated `다음 남은 질문` section in /home/bifos/ai-nodes/apartment/docs/interior/lucky-5-1004-decision-queue.md. Do not choose items under `클리어 완료`; do not ask again about items already marked 결정/방향 결정/현장 확인 후 최종 결정 unless today's evidence materially changes the decision. Do not repeat a topic asked in the recent 7 days of reports. Each question must be concise, A/B/C style, and include a short recommendation.\n10. Reply with a concise Discord-safe Korean summary titled \"오늘의 인테리어 추천\": 1-2 highly relevant references with clickable/source URLs, why each matters, source/vendor credibility note, then a section titled \"오늘 결정할 3개\" with the 3 non-repeated decision questions. Avoid markdown tables. Include report path at the end.",
+    "timeoutSeconds": 900,
+    "lightContext": true,
+    "toolsAllow": [
+      "read",
+      "write",
+      "edit",
+      "exec",
+      "web_search",
+      "web_fetch"
+    ]
+  },
+  "delivery": {
+    "mode": "announce",
+    "channel": "discord",
+    "to": "channel:1496746450468733038",
+    "accountId": "default"
+  },
+  "failureAlert": {
+    "after": 1,
+    "channel": "discord",
+    "to": "channel:1496746450468733038",
+    "mode": "announce",
+    "accountId": "default"
+  },
+  "state": {
+    "nextRunAtMs": 1779408000000,
+    "lastRunAtMs": 1779321785097,
+    "lastRunStatus": "ok",
+    "lastStatus": "ok",
+    "lastDurationMs": 168081,
+    "lastDeliveryStatus": "delivered",
+    "consecutiveErrors": 0,
+    "consecutiveSkipped": 0,
+    "lastDelivered": true
+  },
+  "updatedAtMs": 1779321953178
+}

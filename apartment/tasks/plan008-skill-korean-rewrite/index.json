@@ -2,8 +2,8 @@
   "name": "plan008-skill-korean-rewrite",
   "description": "apartment 2 SKILL.md (apartment-daily-report + apartment-interior-reference-digest) frontmatter 포함 전면 한국어화 + /skill-creator:skill-creator 4축 검토 강화. 마지막 phase로 apartment:today-interior-recommendations openclaw cron payload 슬림화 (4번 진단 — SKILL.md/config 보강은 이미 완료, payload openclaw cron edit 만 남음). ai-nodes ADR-007 적용.",
   "created_at": "2026-05-21T17:30:00+09:00",
-  "updated_at": "2026-05-21T11:00:00.000000+00:00",
-  "status": "running",
+  "updated_at": "2026-05-21T11:30:00+09:00",
+  "status": "completed",
   "current_phase": 3,
   "total_phases": 3,
   "error_message": null,
@@ -48,20 +48,21 @@
         "Skill"
       ],
       "model": "sonnet",
-      "timeout": 1500
+      "timeout": 1500,
+      "commitSha": "af41c71c416c"
     },
     {
       "number": 3,
       "title": "apartment:today-interior-recommendations cron payload 슬림화 (openclaw cron edit, 사용자 명시 확인 필수)",
       "file": "phase-03.md",
-      "status": "planned",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
         "Bash"
       ],
       "model": "sonnet",
-      "timeout": 600
-    }
+      "timeout": 600,
+      "notes": "본 세션 인터랙티브 실행. openclaw cron 9a6ac82d payload 491c Korean slim 적용 완료. cron run 회귀 검증은 codex harness 부재로 라이브 실행 불가 (별도 환경 이슈, payload 무관). 추가로 A/B 실측 비교 (claude -p) 진행 — 같은 날 재실행 시 new payload가 멱등 skip하는 사례 발견 → SKILL.md에 강제 재실행 룰 명시 추가 (별도 docs 커밋)."
   ]
 }

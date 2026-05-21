@@ -1,0 +1,38 @@
+=== pre-run snapshot (2026-05-21 19:41:04) ===
+--- git status (apartment) ---
+ M apartment/tasks/plan008-skill-korean-rewrite/index.json
+?? apartment/tasks/plan008-skill-korean-rewrite/audit/phase-03-applied-payload.txt
+?? apartment/tasks/plan008-skill-korean-rewrite/audit/phase-03-new-payload.txt
+?? apartment/tasks/plan008-skill-korean-rewrite/audit/phase-03-old-payload.json
+?? apartment/tasks/plan008-skill-korean-rewrite/audit/phase-03-payload-diff.md
+?? apartment/tasks/plan008-skill-korean-rewrite/audit/phase-03-regression-pre.txt
+--- file sizes ---
+-rw-rw-r-- 1 bifos bifos 45034  5월 21 09:04 apartment/docs/interior/interior-references.md
+-rw-rw-r-- 1 bifos bifos 10266  5월 21 09:04 apartment/docs/interior/lucky-5-1004-decision-queue.md
+--- data/interior-reference-digest/2026-05-21/ ---
+total 24
+drwxrwxr-x  2 bifos bifos 4096  5월 21 09:03 .
+drwxrwxr-x 13 bifos bifos 4096  5월 21 09:03 ..
+-rw-rw-r--  1 bifos bifos 9650  5월 21 09:05 report.md
+-rw-rw-r--  1 bifos bifos 1760  5월 21 09:03 request.md
+--- latest interior-references.md tail ---
+  - 워시타워 설치 전 사전답사, 선반 철거, 수전 슬림화, 계량기 이동 가능성 확인
+- 주의:
+  - 지역/단지는 다르고 자재·공정·AS 상세는 제한적.
+  - 감성/생활 후기 성격이 강해 견적 근거보다는 업체 선택 기준과 동선 참고용.
+
+### R-043. 온사랑집수리 - 냉장고장 급수·배수 배관 노출 최소화 시공 참고
+
+- 링크: https://m.blog.naver.com/onluvhome/223924953440
+- 출처: 네이버 블로그 / 설비 업체
+- 적합도: 보조자료
+- 이유:
+  - 냉장고장 급수관과 싱크대 배수 분기, 배관 노출 최소화, 고정 브라켓, 누수·흐름 테스트 등 급수/배수 동선 설계 포인트가 있음.
+  - LG 얼음정수 냉장고 급수 연결을 검토할 때 `숨김 시공`, `몰딩/노출`, `점검 접근성`, `누수 테스트` 질문으로 바꾸기 좋음.
+- 참고 포인트:
+  - 냉장고장 뒤 급수 위치와 싱크대 하부 급수 분기 가능 여부
+  - 배관 노출 최소화와 유지보수 접근성 균형
+  - 타공/하부장 통과/호스 고정/누수 테스트 포함 여부
+- 주의:
+  - 신축아파트 사례라 구리 럭키아파트 구축 조건과 다름.
+  - 업체 홍보성이 강하고 냉장고 급수보다 로봇청소기 직배수 설명 비중이 있어 보조자료로만 사용.

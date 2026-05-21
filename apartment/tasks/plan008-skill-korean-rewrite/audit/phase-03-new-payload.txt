@@ -1,0 +1,12 @@
+apartment 오늘의 인테리어 추천 workflow 실행 (대상: 구리 럭키아파트 5동 1004호).
+
+Skill: apartment-interior-reference-digest (canonical source of truth — SKILL.md + config 가 모든 정책)
+Workspace: ~/ai-nodes/apartment
+
+오늘의 추가 컨텍스트:
+- Runner: scripts/apartment-interior-reference-digest/run_digest.sh
+- 추가 docs: lucky-5-1004-{decision-summary, field-checklist, contractor-brief, decision-queue}.md
+- 최근 7일 data/interior-reference-digest/*/report.md 비반복 체크
+- Discord 출력: 추천 3-5개 + 오늘 결정할 3개
+
+Reply NO_REPLY 후 성공/실패만 짧게.
