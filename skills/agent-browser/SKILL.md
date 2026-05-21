@@ -1,46 +1,49 @@
 ---
 name: agent-browser
-description: Browser automation via the local agent-browser CLI. Use when Claude should directly control a browser to navigate pages, click, type, wait for dynamic content, extract visible text/data, take screenshots, or automate web UI workflows. Prefer this over static web fetching for hydration-heavy sites like Naver Land, and use it as the primary browser skill for apartment collection, exploratory QA, and visible-page evidence gathering.
+description: 로컬 설치 agent-browser CLI로 브라우저를 직접 제어한다. 페이지 탐색·클릭·입력·동적 콘텐츠 대기·화면 텍스트 추출·스크린샷·웹 UI 자동화에 사용. Naver Land처럼 JavaScript 렌더링(hydration)이 필요한 사이트에서는 정적 웹 페치보다 이 skill을 우선. 아파트 매물 수집·탐색 QA·화면 증거 수집의 기본 브라우저 레이어. 트리거 키워드: "브라우저 자동화", "페이지 클릭", "Naver Land 수집", "스크린샷 찍어줘", "동적 페이지 크롤", "agent-browser".
 ---
 
 # agent-browser
 
-Use the locally installed `agent-browser` CLI as the primary browser automation layer.
+로컬 설치 `agent-browser` CLI를 브라우저 자동화의 기본 레이어로 사용한다.
 
-## Install status
+## 설치 상태
 
-Installed locally via:
+로컬 전역 설치 순서:
+
 - `npm i -g agent-browser`
 - `agent-browser install`
 
-If Chrome launch fails on Linux due to missing shared libraries, run:
+Linux에서 Chrome 실행 실패(공유 라이브러리 누락)가 발생하면:
+
 - `agent-browser install --with-deps`
 
-## Start here
+## 시작 전 확인
 
-Before using commands, load the live CLI guidance so instructions match the installed version:
+명령 실행 전에 설치된 버전과 일치하는 최신 CLI 가이드를 로드한다:
 
 ```bash
 agent-browser skills get core
 agent-browser skills get core --full
 ```
 
-List specialized skills when needed:
+특화 skill 목록이 필요하면:
 
 ```bash
 agent-browser skills list
 ```
 
-Current notable specializations:
+현재 주요 특화 skill:
+
 - `electron`
 - `slack`
 - `dogfood`
 - `vercel-sandbox`
 - `agentcore`
 
-## Core workflow
+## 핵심 작업 흐름
 
-Use the snapshot/ref loop:
+snapshot/ref 루프를 기본으로 사용한다:
 
 ```bash
 agent-browser open <url>
@@ -49,31 +52,33 @@ agent-browser click @eN
 agent-browser snapshot -i
 ```
 
-Rules:
-- Re-snapshot after any page-changing action.
-- Prefer `snapshot -i` over raw HTML scraping.
-- Prefer visible-page evidence over guessed DOM assumptions.
-- Use `wait --load networkidle`, `wait --text`, or `wait --url` instead of blind sleeps.
+규칙:
 
-## For apartment / Naver Land
+- 페이지 상태가 바뀌는 동작 후에는 반드시 재스냅샷.
+- raw HTML 스크래핑보다 `snapshot -i` 우선.
+- DOM 구조 추측보다 화면에 보이는 증거 우선.
+- 막연한 sleep 대신 `wait --load networkidle`, `wait --text`, `wait --url` 사용.
 
-Use `agent-browser` as the primary dynamic collection path when Naver Land requires hydration.
+## 아파트 / Naver Land 수집
 
-Preferred extraction order:
-1. Open target URL
-2. Snapshot interactive elements
-3. Navigate to visible listing/complex views
-4. Extract only clearly visible evidence:
-   - complex name
-   - focus unit labels (59A / 전용 59㎡)
-   - listing counts
-   - visible price text
-   - short visible snippets
-5. Return structured JSON for downstream normalizers
+Naver Land가 JavaScript 렌더링을 요구할 때 `agent-browser`를 기본 동적 수집 경로로 사용한다.
 
-Do not invent values hidden behind incomplete page state.
+추출 순서:
 
-## Architecture role
+1. 대상 URL 열기
+2. 인터랙티브 요소 스냅샷
+3. 매물/단지 뷰로 이동
+4. 화면에 명확히 보이는 항목만 추출:
+   - 단지명
+   - 대상 면적 라벨 (예: 59A / 전용 59㎡)
+   - 매물 수
+   - 보이는 가격 텍스트
+   - 짧은 화면 발췌
+5. 후속 정규화기가 처리할 수 있도록 구조화 JSON으로 반환
 
-In `~/ai-nodes`, this skill is a reusable browser capability layer.
-Task-specific workflows like `apartment/` should call into it or mirror its command contract, while staying thin on orchestration.
+불완전한 페이지 상태 뒤에 숨은 값을 임의로 만들지 않는다.
+
+## 아키텍처 역할
+
+`~/ai-nodes` 안에서 이 skill은 재사용 가능한 브라우저 기능 레이어다.
+`apartment/` 같은 태스크 한정 워크플로는 이 skill을 호출하거나 동일한 명령 계약을 따르되, 자체 오케스트레이션은 최소화한다.
