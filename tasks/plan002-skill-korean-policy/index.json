@@ -1,0 +1,55 @@
+{
+  "name": "plan002-skill-korean-policy",
+  "description": "ai-nodes/skills/ 5 skill 의 한국어화 + skill-creator 4축 강화. phase-01: 영문 2개 (agent-browser, workspace-audit) 전면 한국어화. phase-02: 이미 한국어인 3개 (docs-check, plan-and-build, planning) skill-creator 강화만. ai-nodes ADR-007 적용.",
+  "created_at": "2026-05-21T17:35:00+09:00",
+  "updated_at": "2026-05-21T17:35:00+09:00",
+  "status": "planned",
+  "current_phase": 0,
+  "total_phases": 2,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "ai-nodes/docs/adr.md (ADR-007)",
+    "ai-nodes/docs/docs-style.md (8가지 형식 패턴)",
+    "ai-nodes/skills/agent-browser/SKILL.md (영문)",
+    "ai-nodes/skills/workspace-audit/SKILL.md (영문)",
+    "ai-nodes/skills/docs-check/SKILL.md (한국어, 강화 대상)",
+    "ai-nodes/skills/plan-and-build/SKILL.md (한국어, 강화 대상)",
+    "ai-nodes/skills/planning/SKILL.md (한국어, 강화 대상)"
+  ],
+  "depends_on": [],
+  "phases": [
+    {
+      "number": 1,
+      "title": "agent-browser + workspace-audit SKILL.md + references/ 한국어화 + skill-creator 4축 강화",
+      "file": "phase-01.md",
+      "status": "planned",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Skill"
+      ],
+      "model": "sonnet",
+      "timeout": 1800
+    },
+    {
+      "number": 2,
+      "title": "docs-check + plan-and-build + planning skill-creator 4축 강화 (한국어 보존)",
+      "file": "phase-02.md",
+      "status": "planned",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Skill"
+      ],
+      "model": "sonnet",
+      "timeout": 1800
+    }
+  ]
+}

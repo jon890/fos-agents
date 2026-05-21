@@ -1,0 +1,38 @@
+{
+  "name": "plan003-skill-korean-rewrite",
+  "description": "health-care 3 SKILL.md (daily-knee-rehab-checkin, knee-progress-intake, weekly-knee-clinic-summary) frontmatter 포함 전면 한국어화 + /skill-creator:skill-creator 4축 검토 강화. 3 skill 모두 ~2KB 작아서 단일 phase 묶음 + skill 별 commit 분리. 의료/건강 정보 특수성 — privacy boundary + 비진단·비처방 톤 보존 필수. ai-nodes ADR-007 적용.",
+  "created_at": "2026-05-21T17:45:00+09:00",
+  "updated_at": "2026-05-21T17:45:00+09:00",
+  "status": "planned",
+  "current_phase": 0,
+  "total_phases": 1,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "ai-nodes/docs/adr.md (ADR-007)",
+    "ai-nodes/docs/docs-style.md (8가지 형식 패턴)",
+    "health-care/config/public-health-care-policy.md (privacy 정책)",
+    "health-care/.claude/skills/daily-knee-rehab-checkin/SKILL.md (영문 2006b)",
+    "health-care/.claude/skills/knee-progress-intake/SKILL.md (영문 2102b)",
+    "health-care/.claude/skills/weekly-knee-clinic-summary/SKILL.md (영문 2141b)"
+  ],
+  "depends_on": [],
+  "phases": [
+    {
+      "number": 1,
+      "title": "health-care 3 skill (daily-knee-rehab-checkin + knee-progress-intake + weekly-knee-clinic-summary) 한국어화 + skill-creator 4축 강화 — skill 별 commit 분리, privacy boundary 보존",
+      "file": "phase-01.md",
+      "status": "planned",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Skill"
+      ],
+      "model": "sonnet",
+      "timeout": 1800
+    }
+  ]
+}

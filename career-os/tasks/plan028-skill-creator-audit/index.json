@@ -1,0 +1,74 @@
+{
+  "name": "plan028-skill-creator-audit",
+  "description": "career-os 8 skill 의 /skill-creator:skill-creator 4축 검토 + 강화. 한국어 본문은 이미 완료라 리라이트 X. phase 분리 기준: 크기 (12KB+ 비대 후보 단독 phase). phase-01 docs-audit (19KB), phase-02 candidate-baseline-suggester (12KB), phase-03 나머지 6개 묶음. ai-nodes ADR-007 적용 — 결정 4 (skill-creator 검토 동시 적용) career-os 도 검토 대상.",
+  "created_at": "2026-05-21T17:50:00+09:00",
+  "updated_at": "2026-05-21T17:50:00+09:00",
+  "status": "planned",
+  "current_phase": 0,
+  "total_phases": 3,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "ai-nodes/docs/adr.md (ADR-007)",
+    "ai-nodes/docs/docs-style.md (8가지 형식 패턴)",
+    "career-os/.claude/skills/docs-audit/SKILL.md (19603b — 압축 후보 1순위)",
+    "career-os/.claude/skills/candidate-baseline-suggester/SKILL.md (12065b — 압축 후보 2순위)",
+    "career-os/.claude/skills/study-topic-recommender/SKILL.md (9300b)",
+    "career-os/.claude/skills/study-pack-writer/SKILL.md (8113b)",
+    "career-os/.claude/skills/interview-asset-writer/SKILL.md (8041b)",
+    "career-os/.claude/skills/interview-prep-analyzer/SKILL.md (7483b)",
+    "career-os/.claude/skills/position-recommender/SKILL.md (7037b)",
+    "career-os/.claude/skills/interview-coffeechat-prep/SKILL.md (6552b)"
+  ],
+  "depends_on": [],
+  "phases": [
+    {
+      "number": 1,
+      "title": "docs-audit (19KB) skill-creator 4축 강화 + 압축 결정 (references/ 분리 후보 도출)",
+      "file": "phase-01.md",
+      "status": "planned",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Skill"
+      ],
+      "model": "sonnet",
+      "timeout": 2400
+    },
+    {
+      "number": 2,
+      "title": "candidate-baseline-suggester (12KB) skill-creator 4축 강화 + 압축 결정",
+      "file": "phase-02.md",
+      "status": "planned",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Skill"
+      ],
+      "model": "sonnet",
+      "timeout": 2400
+    },
+    {
+      "number": 3,
+      "title": "나머지 6 skill (interview-asset-writer, interview-coffeechat-prep, interview-prep-analyzer, position-recommender, study-pack-writer, study-topic-recommender) skill-creator 4축 강화 — skill 별 commit 분리",
+      "file": "phase-03.md",
+      "status": "planned",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Skill"
+      ],
+      "model": "sonnet",
+      "timeout": 3600
+    }
+  ]
+}
