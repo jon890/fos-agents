@@ -14,6 +14,10 @@ description: 후보자 프로필·이력서·태스크 문서·채용 시장 컨
 - 추가 포커스: "AI 서비스팀 백엔드 위주로 봐줘", "커머스·핀테크 중심으로", 특정 회사·팀 언급
 - 최신 채용 자동 수집 포함: "최신 Wanted 공고 같이 봐줘", "Toss 채용 자동 수집해줘"
 - 사용자가 채용공고 markdown 파일 경로 직접 지정: "data/runtime/live-position-postings.md 참고해줘"
+- "이직 추천해줘", "어떤 회사에 지원할까", "채용 공고 맞는 거 찾아줘", "job fit 분석해줘"
+
+커피챗 전략 리포트 → `/interview-coffeechat-prep` 으로 라우팅.
+학습 갭·면접 준비 진단 → `/interview-prep-analyzer` 로 라우팅.
 
 fos-study가 아닌 비공개 career-os 리포트 — 포지션 분석은 후보자 의사결정 자산.
 
@@ -34,7 +38,7 @@ Claude는 다음을 `Read` 도구로 직접 로드:
 
 ### 1. (선택적) 채용공고 자동 수집
 
-사용자 요청에 **"최신 채용"**, **"Wanted"**, **"Toss 자동 수집"** 키워드가 있을 때만 실행:
+사용자 요청에 **"최신 채용"**, **"실시간 채용"**, **"Wanted"**, **"Toss 자동 수집"**, **"공고 가져와줘"** 키워드가 있을 때만 실행:
 
 ```bash
 bun career-os/scripts/position-recommender/collect_live_postings.ts
