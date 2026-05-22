@@ -172,7 +172,9 @@ TossPlace fixture 예시:
 data/applications/tossplace/applied-ai-engineer/
 ```
 
-### ledger.jsonl record draft
+### ledger.jsonl record schema
+
+검증 단일 출처: `scripts/application-agent/ledger_schema.ts`
 
 ```json
 {
@@ -183,12 +185,54 @@ data/applications/tossplace/applied-ai-engineer/
   "url": "https://toss.im/career/job-detail?gh_jid=7746700003",
   "status": "discovered",
   "statusUpdatedAt": "2026-05-22T13:45:00+00:00",
+  "discoveredAt": "2026-05-22T13:45:00+00:00",
   "applicationDir": "data/applications/tossplace/applied-ai-engineer",
+  "postingPath": "data/applications/tossplace/applied-ai-engineer/posting.md",
+  "fitAnalysisPath": "data/applications/tossplace/applied-ai-engineer/fit-analysis.md",
+  "applicationPackagePath": "data/applications/tossplace/applied-ai-engineer/application-package.md",
+  "reviewPath": "data/applications/tossplace/applied-ai-engineer/review.md",
   "needsUserReview": true,
+  "userDecision": "pending",
+  "revisionCount": 0,
+  "maxRevisionCount": 3,
   "riskFlags": ["toss_group_cooldown"],
-  "nextActions": ["fit_analysis"]
+  "nextActions": ["fit_analysis"],
+  "notes": "MVP fixture only; not an actual submission target."
 }
 ```
+
+필수 필드:
+
+- `id`: `<company-slug>-<role-slug>-<external-id>` 형식 권장.
+- `company`, `role`: 사람이 읽는 표시명.
+- `source`: `wanted`, `toss-careers`, `company-careers`, `manual` 등 source key.
+- `url`: 원 공고 URL.
+- `status`: 아래 status enum 중 하나.
+- `statusUpdatedAt`: 마지막 상태 변경 시각.
+- `applicationDir`: 공고별 산출물 디렉터리.
+- `riskFlags`: 쿨다운, 중복 지원, 공고 만료 등 리스크 태그.
+- `nextActions`: 다음 agent/user action.
+
+선택 필드:
+
+- `discoveredAt`
+- `postingPath`
+- `fitAnalysisPath`
+- `applicationPackagePath`
+- `reviewPath`
+- `needsUserReview`
+- `userDecision`
+- `revisionCount`
+- `maxRevisionCount`
+- `notes`
+
+사용자 결정 enum:
+
+- `pending`
+- `approved`
+- `rejected`
+- `paused`
+- `needs_changes`
 
 상태 enum 초안:
 
@@ -204,6 +248,33 @@ data/applications/tossplace/applied-ai-engineer/
 - `closed`
 - `blocked`
 
+허용 전이:
+
+```text
+discovered
+  -> analyzing | blocked | closed
+analyzing
+  -> preparing_application | needs_revision | ready_for_user_review | blocked | closed
+preparing_application
+  -> needs_revision | ready_for_user_review | blocked | closed
+needs_revision
+  -> preparing_application | blocked | ready_for_user_review
+ready_for_user_review
+  -> approved | needs_revision | blocked | closed
+approved
+  -> submitted | interview_prep | blocked | closed
+submitted
+  -> interview_prep | interview_scheduled | closed
+interview_prep
+  -> interview_scheduled | closed | blocked
+interview_scheduled
+  -> interview_prep | closed
+blocked
+  -> analyzing | preparing_application | ready_for_user_review | closed
+closed
+  -> (terminal)
+```
+
 ### 공고별 파일 책임
 
 - `posting.md`: 공고 원문 요약, source URL, 수집 시각, 채용 상태.
@@ -212,6 +283,10 @@ data/applications/tossplace/applied-ai-engineer/
 - `review.md`: evidence guard, drift review, 개인정보/공개 금지 정보, 사용자 승인 필요 항목.
 
 공개 가능한 기술 학습 자료는 이 디렉터리가 아니라 `sources/fos-study/`에 기존 `study-pack-writer` 정책으로만 발행한다.
+
+### Git 추적 정책
+
+루트 `.gitignore`의 `**/data/` 규칙 때문에 `data/applications/`의 실제 지원 산출물은 기본적으로 git 추적되지 않는다. 이는 의도된 정책이다. 스키마와 skill 명세만 git 추적하고, 공고별 맞춤 이력서/지원 전략/제출 상태는 로컬 private data로 유지한다.
 
 ### config/study-pack-topics.json (plan017 신규 — study-pack namespace 단일 책임)
 
