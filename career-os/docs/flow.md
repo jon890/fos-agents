@@ -141,6 +141,55 @@ Discord 알림 [완료]
 
 상세 동작: `career-os/.claude/skills/position-recommender/SKILL.md` Workflow 섹션 참조.
 
+### Application Agent MVP (planned — plan029)
+
+plan029는 기존 position/study/interview native skill을 조립해 지원 전후 전체 루프를 만든다.
+
+초기 MVP 흐름:
+
+```text
+공고 수집/추천
+  -> 후보 공고 사용자 승인
+  -> 공고별 fit/gap 분석
+  -> 맞춤 지원 패키지 작성
+  -> evidence/drift review
+  -> 사용자 승인
+  -> 제출 기록 또는 보류
+  -> 제출 후 interview_prep / study loop
+  -> daily application digest
+```
+
+상태 흐름:
+
+```text
+discovered
+  -> analyzing
+  -> preparing_application
+  -> needs_revision
+  -> ready_for_user_review
+  -> approved
+  -> submitted
+  -> interview_prep
+  -> interview_scheduled
+  -> closed
+  -> blocked
+```
+
+역할 분담:
+
+- `/position-recommender`: 공고 수집/추천/초기 fit 분석
+- `application-package-writer` (plan029 예정): 공고별 지원 패키지 생성
+- `application-reviewer` (plan029 예정): 근거/과장/드리프트/쿨다운 검토
+- `daily-application-digest` (plan029 예정): 매일 진행 상태와 다음 액션 요약
+- `/study-topic-recommender` + `/study-pack-writer`: 해당 직무 gap 기반 공개 가능한 기술 학습 자료
+- `/interview-asset-writer` + `/interview-prep-analyzer`: 제출 후 면접 대비
+
+중요 경계:
+
+- 실제 제출 자동화는 MVP 범위 밖이다.
+- 공고별 맞춤 이력서, 지원동기, 지원 전략은 `data/applications/` 비공개 산출물로 둔다.
+- `sources/fos-study/`에는 회사명/개인 지원 전략이 빠진 순수 기술 학습 자료만 발행한다.
+
 ### `study-topic-recommender` (모닝 추천 — native skill, ADR-026 + ADR-033)
 
 native skill 패턴: `claude -p "/study-topic-recommender"` → SKILL.md 자동 로드 → Claude가 도구로 직접 처리.

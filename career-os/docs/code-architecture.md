@@ -123,6 +123,12 @@ career-os/
 │   │   └── references/   company-upside-reference.md, position-context-index.md,
 │   │                     position-decision-criteria.md, verified-company-research-targets.json
 │   │                     (plan002 이후 config/에서 이동)
+│   ├── application-package-writer/          (planned — plan029)
+│   │   └── SKILL.md  공고별 fit/gap + 맞춤 지원 패키지 작성
+│   ├── application-reviewer/                (planned — plan029)
+│   │   └── SKILL.md  evidence/drift/privacy/cooldown 검토
+│   ├── daily-application-digest/            (planned — plan029)
+│   │   └── SKILL.md  application ledger 기반 daily summary
 │   ├── interview-coffeechat-prep/{SKILL.md, references/}
    │   (plan021 ADR-029 rename: cj-foodville-coffeechat-prep → interview-coffeechat-prep. 회사명 박힘 제거)
    │   (plan026 ADR-034: 4 mode 일반화. coffeechat / first-round / final-round / offer-chat. private + public-safe 두 산출물)
@@ -201,3 +207,29 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts "[완료] <message>"
 | 새 native skill 추가 | `.claude/skills/<name>/SKILL.md` + `scripts/<name>/` (필요 시) + 본 문서 디렉터리 트리 + `flow.md` 명령별 흐름 + `prd.md` 기능 표 |
 | 새 config 추가 | `data-schema.md` config 섹션 + `prd.md` (사용자 가시 자산이면) |
 | 새 외부 의존 (`_shared/lib/`) | 본 문서의 외부 의존성 표 + ADR 추가 |
+
+## Planned: application agent MVP (plan029)
+
+plan029는 기존 career-os skill을 새 application 상태 루프로 조립한다.
+
+새 native skill 후보:
+
+- `application-package-writer`
+  - 입력: 공고 URL 또는 `data/applications/**/posting.md`, `config/candidate-profile.md`, 관련 resume/task 근거.
+  - 출력: `fit-analysis.md`, `application-package.md`.
+- `application-reviewer`
+  - 입력: 공고, fit 분석, 지원 패키지, candidate-profile.
+  - 출력: `review.md`, pass/revise/block 판단.
+- `daily-application-digest`
+  - 입력: `data/applications/ledger.jsonl`, 오늘 변경된 application files, position/study/interview runtime report.
+  - 출력: `data/reports/daily/YYYY-MM-DD/application-digest/report.md` + Discord 요약.
+
+데이터 저장소:
+
+```text
+data/applications/
+├── ledger.jsonl
+└── <company-slug>/<role-slug>/{posting,fit-analysis,application-package,review}.md
+```
+
+MVP에서는 제출 자동화를 구현하지 않는다. 브라우저 입력 보조와 최종 제출은 별도 phase 또는 ADR에서 다룬다.

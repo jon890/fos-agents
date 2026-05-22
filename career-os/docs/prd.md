@@ -30,10 +30,26 @@ career-os 워크스페이스의 **제품 범위·MVP 기능 명세**. 현재 act
 | `/interview-asset-writer <topic>` (native) | 후보자 이력 중심 Q&A 질문 은행 + 마스터 플레이북 → fos-study 푸시 (plan015) | ✓ | 토픽별 1회 또는 갱신 |
 | `/candidate-baseline-suggester` (native) | fos-study 학습 이력 기반으로 candidate-profile.md · baseline-core-files.json · study-progress.json weak_spots를 Append + 주석 마킹으로 갱신. audit trail → `data/runtime/profile-refresh-suggestions/YYYY-MM-DD/` (ADR-028, plan020) | 없음 | study-pack 5회 이상 누적 후 / 면접 시즌 시작 시. 최소 2주 1회 |
 
+### 계획 중: application agent MVP (plan029)
+
+`plan029-application-agent-mvp`는 기존 native skill들을 조립해 공고 탐색부터 지원 패키지 작성, evidence/drift 검토, daily digest, 제출 후 면접 대비까지 이어지는 지원 전후 케어 루프를 만든다.
+
+MVP 원칙:
+
+- 수집/분석/초안 작성/검토/daily digest는 자동화한다.
+- 단계 전환에는 사용자 승인 게이트를 둔다.
+- 각 단계 내부에서는 agent가 `draft -> review -> revise` 루프를 최대 3회 수행한다.
+- 실제 제출 자동화는 MVP 범위 밖이다. 최종 제출 버튼은 수동 승인 필수.
+- 공고별 지원 전략은 `data/applications/` 비공개 산출물로 저장한다.
+- 공개 가능한 순수 기술 학습 자료만 기존 `study-pack-writer` 정책으로 `sources/fos-study/`에 발행한다.
+
+첫 fixture는 TossPlace `Applied AI Engineer` 공고다. 이 공고는 Toss 계열 쿨다운을 고려해 실제 지원 목적이 아니라 MVP 검증용 샘플로 사용한다.
+
 ## 산출물 경로 정책
 
 - 외부 공유용 (블로그·인터뷰 자산): `sources/fos-study/` (git 동기 외부 저장소). study-pack / question-bank가 즉시 commit + push.
 - 내부 실행 로그·중간 산출물: `data/reports/`, `data/runtime/`.
+- 공고별 지원 전략·맞춤 이력서·검토 결과: `data/applications/` (plan029, 비공개)
 - 정규화 데이터: `data/normalized/` (fos-study 덤프 캐시 등).
 
 ADR-005 참조 — 외부 공유 문서의 제목에 `[초안]` 표시, commit 메시지는 `docs(<domain>): add|update draft <topic> study pack` 형식.
