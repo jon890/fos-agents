@@ -35,7 +35,7 @@ Required behavior:
 6. Append strong reference candidates to the reference notebook with stable R-00X IDs.
 7. Do not auto-confirm decisions in the decision note; only list decision candidates unless the user explicitly confirmed.
 8. If delivering to Discord, send only a concise summary with 3-5 recommendations and exactly three decision questions for today.
-9. The three decision questions must come from the `다음 남은 질문` section in the decision queue. Do not repeat the same topic from the recent 7 days of reports. Do not ask again about items under `클리어 완료` or marked 결정/방향 결정/현장 확인 후 최종 결정 unless today's evidence materially changes the decision. Each question must include short A/B/C options and a recommendation.
+9. The three decision questions must come from the '다음 남은 질문' section in the decision queue. Do not repeat the same topic from the recent 7 days of reports. Do not ask again about items under '클리어 완료' or marked 결정/방향 결정/현장 확인 후 최종 결정 unless today's evidence materially changes the decision. Each question must include short A/B/C options and a recommendation.
 
 Do not contact vendors or request quotes.
 EOF
