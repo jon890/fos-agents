@@ -344,3 +344,49 @@ apartment Discord 알림을 `_shared/lib/notify_discord.ts` 단일 정본으로 
 - 타임아웃 보강으로 알림 단계 견고성 상승.
 
 **적용**: `apartment/scripts/apartment-daily-report/run_report.sh` (NOTIFIER + notify_safe), `notify_discord.sh` / `notify_discord_media.sh` git rm, `apartment/docs/{flow,code-architecture,prd}.md` 동기화.
+
+---
+
+## ADR-010 — `run_digest.sh` scaffold 폐기 (native skill 정본 단일화)
+
+**Status**: Accepted
+**Date**: 2026-05-23
+
+### 맥락
+
+apartment-interior-reference-digest는 두 가지 진입점이 공존:
+
+- `run_with_claude.sh` — `claude -p "/apartment-interior-reference-digest"`로 native skill을 exec하는 운영 진입점.
+- `run_digest.sh` — `request.md` + `report.md` placeholder를 생성하는 thin shell scaffold (53줄). native skill 이전 시대 (`plan009` 이전)의 프롬프트 화석.
+
+운영 cron(`apartment:today-interior-recommendations`, 매일 09:00 KST, enabled) payload를 `~/.openclaw/cron/jobs.json`에서 확인:
+
+- cron payload는 `run_with_claude.sh`만 호출 — `run_digest.sh` 언급 0.
+- `run_with_claude.sh`는 `exec claude -p "/apartment-interior-reference-digest"` — `run_digest.sh` 호출 안 함.
+- SKILL.md / references / 시스템 crontab — `run_digest.sh` 단계 지시 없음.
+- repo 내 모든 참조는 docs(scaffold 서술) + tasks/ history뿐.
+
+즉 `run_digest.sh`는 **운영 경로가 완전히 우회하는 orphan scaffold**. 게다가 `run_digest.sh` 내부 heredoc(`request.md` 9개 행동 규칙)의 노하우는 plan009에서 native skill을 만들 때 이미 SKILL.md로 흡수·확장된 상태 — SKILL.md가 오히려 상위집합(field-checklist·contractor-brief·decision-summary 동기화, 법적/구조적 주제 전문가 확인, 같은 날 재실행 강제 생성 룰, `<https://...>` 링크 감싸기, 마크다운 테이블 금지 등 추가). dead scaffold를 두 번째 정본처럼 두면 SKILL.md와 drift 위험.
+
+### 결정
+
+`run_digest.sh` scaffold 폐기. native skill SKILL.md를 인테리어 워크플로 단일 정본으로 확정.
+
+1. `apartment/scripts/apartment-interior-reference-digest/run_digest.sh` git rm.
+2. `apartment/docs/flow.md` 3-2 (request scaffold 흐름) 섹션 + 6번 직접 호출 진입점에서 `run_digest.sh` 줄 제거. 3번 도입부 scaffold 서술 → native skill 직접 호출 서술로 정리.
+3. `apartment/docs/code-architecture.md` 트리에서 `run_digest.sh` 줄 → `run_with_claude.sh` 줄로 교체 (운영 진입점 명시).
+4. `ai-nodes/AGENTS.md` (root) 인테리어 진입점 서술에서 scaffold 언급 제거.
+
+**거절한 대안**:
+
+- run_digest.sh 유지 — 운영 경로 우회 + SKILL.md와 잠재 drift + 노하우 이미 SKILL.md superset에 흡수됨.
+- 삭제 전 SKILL.md 보강 — 노하우 대조 결과 9개 행동 규칙 전부 SKILL.md에 이미 있음. 추가 보강 불필요.
+- scaffold만 유지하고 docs 정리 — 정합성 일부만 해소. dead code 정리의 효익 절반.
+
+### 결과
+
+- apartment-interior-reference-digest workflow 정본이 SKILL.md 단일 출처로 정착 (ADR-006 분리 표준 정합화).
+- apartment Shell 3 → 2 (notify ADR-009 + run_digest ADR-010 누적 효과).
+- 옛 plan009 이전 시대 흔적 정리 완료.
+
+**적용**: `apartment/scripts/apartment-interior-reference-digest/run_digest.sh` git rm, `apartment/docs/{flow,code-architecture}.md` + `ai-nodes/AGENTS.md` 동기화.

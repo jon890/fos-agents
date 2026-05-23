@@ -1,9 +1,10 @@
 #!/usr/bin/env bun
-// 회사 사이트 자동 수집 — mvp-target.json `primary.coffeechat.sites` 배열 Read.
+// 회사 사이트 자동 수집 — mvp-target.json `primary.interview.<mode>.sites` 배열 Read.
 // HTML → text 추출. 회사 hard-coded URL 없음.
 //
-// usage: bun collect_company_sites.ts [--outdir <dir>]
-//   default outdir: career-os/data/source/<coffeechat.source_dir>/
+// usage: bun collect_company_sites.ts [--mode <coffeechat|first-round|final-round|offer-chat>] [--outdir <dir>]
+//   --mode default: coffeechat (backward compat)
+//   --outdir default: career-os/data/source/<mode.source_dir>/
 
 import { parseMvpTarget, type CoffeechatSite } from './mvp_target_schema';
 import { mkdir, writeFile } from 'fs/promises';
@@ -140,26 +141,36 @@ async function fetchSite(site: CoffeechatSite, outdir: string): Promise<FetchRes
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const outdirFlagIdx = args.indexOf('--outdir');
+  const modeFlagIdx = args.indexOf('--mode');
+
+  const mode = modeFlagIdx >= 0 && args[modeFlagIdx + 1] ? args[modeFlagIdx + 1] : 'coffeechat';
+  const validModes = ['coffeechat', 'first-round', 'final-round', 'offer-chat'];
+  if (!validModes.includes(mode)) {
+    console.error(`Unknown mode: ${mode}. Supported: ${validModes.join(', ')}`);
+    process.exit(1);
+  }
+
+  const modeKey = mode.replace(/-/g, '_') as 'coffeechat' | 'first_round' | 'final_round' | 'offer_chat';
 
   const mvpTarget = parseMvpTarget(MVP_TARGET_PATH);
-  const { coffeechat } = mvpTarget.primary;
+  const target = mvpTarget.primary.interview?.[modeKey];
 
-  if (!coffeechat) {
-    console.error('PHASE_FAILED: mvp-target.json에 primary.coffeechat 설정 없음');
+  if (!target) {
+    console.error(`primary.interview.${modeKey} 설정 없음 in mvp-target.json`);
     process.exit(1);
   }
 
   const outdir =
     outdirFlagIdx >= 0 && args[outdirFlagIdx + 1]
       ? resolve(args[outdirFlagIdx + 1])
-      : join(REPO_ROOT, `career-os/data/source/${coffeechat.source_dir}`);
+      : join(REPO_ROOT, `career-os/data/source/${target.source_dir}`);
 
   await mkdir(outdir, { recursive: true });
 
   const results: (FetchResult | { key: string; label: string; url: string; error: string })[] = [];
   let hasErrors = false;
 
-  for (const site of coffeechat.sites) {
+  for (const site of target.sites) {
     try {
       const result = await fetchSite(site, outdir);
       results.push(result);
