@@ -124,6 +124,8 @@ Step 4  stdout 요약
         Claude는 Discord에 그대로 보낼 수 있는 한국어 요약을 stdout 마지막에 출력
         NO_REPLY 금지
         추천 레퍼런스는 R 번호 + 제목 + 원문 링크(`<https://...>`) 포함
+        오늘 결정할 3개 질문은 단순 A/B/C가 아니라 대표 예시/사진 링크,
+        초보자용 비교 포인트, 추천 이유를 함께 포함
         OpenClaw cron agent는 stdout을 받아 최종 응답으로 반환
         cron delivery(announce)가 해당 최종 응답을 Discord로 전달
 ```
