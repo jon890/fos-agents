@@ -114,8 +114,8 @@ native skill 패턴: `claude -p "/position-recommender [자연어 컨텍스트] 
 ```
 호출: claude -p "/position-recommender [자연어 컨텍스트] [채용공고 file path]"
   ↓
-[선택적] Bash: bun career-os/scripts/position-recommender/collect_live_postings.ts
-  → /tmp/live-postings-<date>.md (Wanted + Toss 자동 수집)
+Bash: bun career-os/scripts/position-recommender/collect_live_postings.ts
+  → data/runtime/live-position-postings.md (Wanted active 중심)
   ↓
 Read:
   - config/candidate-profile.md
@@ -125,19 +125,23 @@ Read:
   - references/position-decision-criteria.md
   - references/company-upside-reference.md
   - references/verified-company-research-targets.json
+  - 최근 7일 data/reports/daily/*/position-recommendation/report.md
   - (선택) 사용자 자연어로 지정한 채용공고 file
   ↓
 Claude 자연어 분석:
   - 강력 추천 / 도전 추천 / 보류·주의 3 티어
   - role title + posting 링크 + 지원 근거 + gap + first action
+  - 최근 7일 반복 후보 감점 + 신규 후보/추가 수집 대상 최소 1개 포함
   ↓
-Self-check: 첫 줄 # + 30줄+ + 3 티어 모두 존재 (재작성 최대 3회)
+Self-check: 첫 줄 # + 오늘 날짜 + 30줄+ + 3 티어 + 반복 점검 존재 (재작성 최대 3회)
   ↓
 Write: data/reports/daily/YYYY-MM-DD/position-recommendation/report.md
        data/runtime/position-recommendation.md (cp 사본)
   ↓
 Discord 알림 [완료]
 ```
+
+daily cron은 `scripts/position-recommender/run_daily_with_claude.sh`를 통해 실행한다. 이 wrapper는 Claude native skill 호출 후 오늘 날짜 report/runtime이 실제로 생성됐는지 검증하고, stale runtime 재전송을 실패로 처리한 뒤 `_shared/lib/notify_discord.ts`로 Discord 알림을 보낸다. Claude native skill 내부에서는 외부 메시지 전송을 직접 수행하지 않는다.
 
 상세 동작: `career-os/.claude/skills/position-recommender/SKILL.md` Workflow 섹션 참조.
 
