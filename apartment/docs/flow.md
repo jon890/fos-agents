@@ -122,7 +122,10 @@ Step 3  Claude native skill이 전체 workflow 수행
         docs/interior/interior-references.md 갱신
 
 Step 4  stdout 요약
-        OpenClaw cron agent는 stdout을 받아 Discord 전달용 최종 응답만 처리
+        Claude는 Discord에 그대로 보낼 수 있는 한국어 요약을 stdout 마지막에 출력
+        NO_REPLY 금지
+        OpenClaw cron agent는 stdout을 받아 최종 응답으로 반환
+        cron delivery(announce)가 해당 최종 응답을 Discord로 전달
 ```
 
 ### 3-2. request scaffold 흐름
