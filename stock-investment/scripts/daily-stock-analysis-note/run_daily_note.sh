@@ -32,6 +32,18 @@ SANITIZER="$SKILL_DIR/sanitize_fos_study_markdown.py"
 EXTRACT="$HOME/ai-nodes/_shared/lib/extract_claude_result.ts"
 NOTIFIER="$TASK_ROOT/scripts/stock-investing-morning-brief/notify_discord.sh"
 
+push_fos_study() {
+  if git -C "$FOS_STUDY" push; then
+    return 0
+  fi
+
+  local branch
+  branch="$(git -C "$FOS_STUDY" symbolic-ref --quiet --short HEAD)"
+  echo "[daily-stock-note] git push failed; rebasing origin/$branch and retrying once" >&2
+  git -C "$FOS_STUDY" pull --rebase origin "$branch"
+  git -C "$FOS_STUDY" push
+}
+
 mkdir -p "$OUTDIR"
 python3 "$COLLECTOR" "$UNIVERSE" "$SELECTED_JSON" "$RAW_JSON" "${TICKER_ARG:--}" "$HISTORY_JSON" 2>/tmp/daily-stock-note-collector.err || {
   if [[ -s /tmp/daily-stock-note-collector.err ]]; then cat /tmp/daily-stock-note-collector.err >&2; fi
@@ -110,7 +122,7 @@ if [[ "${SKIP_PUSH:-0}" != "1" ]]; then
     PUSH_STATUS="no-change"
   else
     git -C "$FOS_STUDY" commit -m "docs(finance): add ${REPORT_DATE} ${SLUG} ai tech stock note" -- "$BLOG_REL"
-    git -C "$FOS_STUDY" push
+    push_fos_study
     PUSH_STATUS="pushed"
   fi
 fi
