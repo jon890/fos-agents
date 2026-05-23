@@ -2,9 +2,9 @@
   "name": "plan027-refresh-topic-inventory-decompose",
   "description": "ADR-035 분해 컨벤션 첫 적용 — career-os/scripts/study-topic-recommender/refresh_topic_inventory.ts (1049 줄) 를 transform / render / cli 3 레이어로 분해. 본 파일은 source 영역이 거의 없음 (scanFosStudyInventory + feed_discovery.ts 가 이미 별도). cli.ts 가 기존 진입점 path 유지. SKILL.md / 호출부 변경 0.",
   "created_at": "2026-05-19T00:00:00+00:00",
-  "updated_at": "2026-05-19T00:00:00+00:00",
-  "status": "pending",
-  "current_phase": 1,
+  "updated_at": "2026-05-23T11:22:32.000000+00:00",
+  "status": "completed",
+  "current_phase": 3,
   "total_phases": 3,
   "error_message": null,
   "blocked_reason": null,
@@ -17,26 +17,47 @@
       "number": 1,
       "title": "transform/ 디렉터리 추출 (scoring + 필터 + 추천 알고리즘 순수 함수)",
       "file": "phase-01.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 1500
+      "timeout": 1500,
+      "commitSha": "5b1a04b571fc"
     },
     {
       "number": 2,
       "title": "render/ 추출 + cli.ts 조립 + 기존 refresh_topic_inventory.ts → cli.ts 진입점 교체",
       "file": "phase-02.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 1500
+      "timeout": 1500,
+      "commitSha": "aae6b3e4790b"
     },
     {
       "number": 3,
       "title": "통합 정적 검증 + status=completed + push",
       "file": "phase-03.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Edit", "Bash", "Grep"],
+      "status": "running",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
       "model": "haiku",
       "timeout": 600
     }
