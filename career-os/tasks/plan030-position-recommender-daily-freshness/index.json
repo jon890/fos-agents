@@ -1,0 +1,59 @@
+{
+  "name": "plan030-position-recommender-daily-freshness",
+  "description": "position-recommender daily cron이 stale runtime을 재전송하지 않도록 오늘 날짜 report/runtime 검증을 추가하고, 최근 추천 이력 기반 반복 감점과 신규 후보 확보 규칙을 native skill에 반영한다.",
+  "created_at": "2026-05-23T01:13:00+00:00",
+  "updated_at": "2026-05-23T01:13:00+00:00",
+  "status": "completed",
+  "current_phase": 1,
+  "total_phases": 1,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/.claude/skills/position-recommender/SKILL.md",
+    "career-os/scripts/position-recommender/run_daily_with_claude.sh",
+    "career-os/scripts/position-recommender/collect_live_postings.ts",
+    "career-os/docs/flow.md",
+    "career-os/docs/adr.md",
+    "~/.openclaw/cron/jobs.json",
+    "~/.openclaw/workspace/skills/position-recommender/SKILL.md"
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "daily-entrypoint",
+      "decision": "daily cron은 Claude native skill을 직접 호출하되, shell wrapper가 오늘 날짜 report/runtime 생성 여부를 검증한다. OpenClaw는 오케스트레이션만 담당한다."
+    },
+    {
+      "id": "D2",
+      "title": "recommendation-rotation",
+      "decision": "최근 7일 포지션 추천 리포트를 native skill 입력으로 읽고, 반복 후보는 감점하거나 반복 유지 사유를 명시한다."
+    },
+    {
+      "id": "D3",
+      "title": "prompt-bias",
+      "decision": "daily cron payload에서 특정 KakaoPay AX 우선 문구를 제거하고, active JD fit + 회사/규모 업사이드 + 반복 여부 중심으로 랭킹한다."
+    },
+    {
+      "id": "D4",
+      "title": "toss-source",
+      "decision": "기본 live posting 수집에서는 Toss career article을 지원 가능한 공고로 섞지 않는다. 명시 요청 시 참고자료로만 수집한다."
+    }
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "freshness guard + rotation rule + cron payload 정리",
+      "file": "phase-01.md",
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
+      "model": "gpt-5.5",
+      "timeout": 1200
+    }
+  ]
+}
