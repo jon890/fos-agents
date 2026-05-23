@@ -26,7 +26,7 @@ apartment 워크스페이스의 **데이터 플로우 및 실행 흐름** 단일
                     ├─► extractor (_shared/lib/extract_claude_result.ts, ai-nodes plan001)
                     │     └─► report.md (또는 fallback)
                     │
-                    ├─► notify_discord.sh (완료/실패)
+                    ├─► notify_discord.ts (_shared/lib, 완료/실패)
                     │
                     ├─► openclaw status 캡처 (after)
                     └─► logs/task-runs.jsonl append
@@ -42,7 +42,7 @@ Step 1  self-wrap 체크
         미설정이면 track_task.sh로 자신을 재실행 (exec 패턴)
 
 Step 2  .env 로드
-        워크스페이스 root .env — NAVER_COOKIE, NAVER_BEARER, DISCORD_WEBHOOK_URL
+        워크스페이스 root .env — NAVER_COOKIE, NAVER_BEARER, DISCORD_CHANNEL_ID
 
 Step 3  타깃 변수 설정
         COMPLEX_NO, FOCUS_UNIT, DATE 등 config/focus-unit.json 기반
@@ -51,7 +51,7 @@ Step 4  출력 디렉터리 생성
         data/YYYY-MM-DD/ mkdir -p
 
 Step 5  Discord 시작 알림
-        notify_discord.sh "시작" 메시지
+        notify_discord.ts "시작" 메시지 (bun run)
 
 Step 6  수집 (collect_sources.ts, ADR-006 import 통합)
         collect_naver_api.ts — API 3 endpoint (overview / prices / articles)
@@ -82,7 +82,7 @@ Step 10 fallback (타임아웃 발생 시)
         (summary.json 기반 정적 마크다운)
 
 Step 11 Discord 완료 알림
-        notify_discord.sh "완료" + 소요 시간 + cost summary
+        notify_discord.ts "완료" + 소요 시간 + cost summary (bun run)
 
 Step 12 logs append
         track_task.sh 종료 훅 → task-runs.jsonl + token-usage.jsonl
@@ -161,15 +161,16 @@ Step 5  종료
 
 ## 4. 알림 흐름
 
-`scripts/apartment-daily-report/notify_discord.sh` 단일 진입점.
+`_shared/lib/notify_discord.ts` 단일 진입점 (ADR-009, ai-nodes 공용). `run_report.sh`의 `notify_safe` 래퍼가 `bun run`으로 호출.
 
 ```
-인자: TYPE (start|complete|failure) + 메시지 + [cost_summary]
-  └─► DISCORD_WEBHOOK_URL 환경변수 확인
-        └─► curl POST to Discord webhook
+인자: <message>  (실패 시에도 알림 가능하도록 notify_safe로 || true 감쌈)
+  └─► DISCORD_CHANNEL_ID 환경변수 확인 (누락 시 exit 1)
+        └─► openclaw message send --channel discord --target channel:<id> (10s 타임아웃)
 ```
 
 ai-nodes 표준 3단계 알림 (시작/완료/실패). 별도 start-notice cron 미사용.
+ADR-009 이전에는 워크스페이스 한정 `notify_discord.sh` (openclaw 래핑 셸) 사용 — `_shared/lib/notify_discord.ts`로 통합하며 폐기.
 
 ## 5. 트래커 + logs
 

@@ -117,7 +117,7 @@ Discord/블로그 출력에 내부 수집 경로, raw report 경로, raw JSON �
 
 ### 6-8. 알림 패턴
 
-`scripts/apartment-daily-report/notify_discord.sh` 직접 호출:
+`_shared/lib/notify_discord.ts` (bun run, ADR-009) 호출:
 - 시작 알림
 - 완료 알림 (소요 시간 포함)
 - 실패 알림

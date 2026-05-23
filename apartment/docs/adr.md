@@ -302,3 +302,45 @@ dead code + 의존성 충돌 + TS 마이그 비용 = 효익 부재.
 - 가시화 필요 시 별도 plan에서 재도입 — 사용자 호출 의도 확립 + 자동화 wire-up 결정 동시에 검토.
 
 **적용**: `apartment/scripts/apartment-daily-report/build_weekly_listing_trend.py` git rm (plan006). `apartment/docs/code-architecture.md` 언어 통계 갱신.
+
+---
+
+## ADR-009 — Discord 알림을 `_shared/lib/notify_discord.ts`로 통합 (셸 notifier 폐기)
+
+**Status**: Accepted
+**Date**: 2026-05-23
+
+### 맥락
+
+apartment는 `scripts/apartment-daily-report/notify_discord.sh` (message) + `notify_discord_media.sh` (media) 두 셸 스크립트로 Discord 알림. 둘 다 `openclaw message send`를 직접 래핑 — ai-nodes 공용 `_shared/lib/notify_discord.ts` (ADR-021, openclaw subprocess + `--media` + 10s 타임아웃)와 기능 중복.
+
+발견:
+
+- `notify_discord.ts`가 message + media를 모두 커버 — 셸 두 변종이 정본의 부분집합.
+- `notify_discord_media.sh`는 **호출자 0** — 어느 runner·cron도 부르지 않는 dead code.
+- `notify_discord.sh`는 `run_report.sh`의 `notify_safe` 래퍼에서만 사용.
+- 셸은 채널 ID 하드코딩 fallback(`1496746450468733038`) 보유 / ts는 `DISCORD_CHANNEL_ID` env 필수. apartment `.env`에 동일 값이 이미 존재하고 `run_report.sh`가 `set -a`로 export → 마이그레이션 안전.
+- 셸은 타임아웃 없음 / ts는 10s 타임아웃 — openclaw 매달림 방어 우위.
+- 같은 셸 패턴이 stock-investment에도 중복 존재 — 모노레포 전반 drift 신호 (단 워크스페이스 격리 원칙상 별건).
+
+### 결정
+
+apartment Discord 알림을 `_shared/lib/notify_discord.ts` 단일 정본으로 통합.
+
+1. `run_report.sh`의 `NOTIFIER`를 `$HOME/ai-nodes/_shared/lib/notify_discord.ts`로 교체, `notify_safe`가 `bun run`으로 호출 (`extract_claude_result.ts` 호출 패턴과 동일).
+2. `notify_discord.sh` + `notify_discord_media.sh` git rm.
+3. flow / code-architecture / prd 문서 동기화 — flow 4번에 webhook+curl로 잘못 기록돼 있던 알림 흐름도 실제 openclaw 방식으로 정정.
+
+**거절한 대안**:
+
+- 셸 유지 — 정본과 기능 중복 + 타임아웃 부재 + drift 지속.
+- apartment + stock-investment 동시 통합 — 워크스페이스 격리 원칙(ai-nodes ADR-001)상 별건. stock 통합은 별도 결정으로 분리.
+- media 변종만 삭제(부분 정리) — 중복의 근본 원인(정본 미사용)을 남김.
+
+### 결과
+
+- apartment Discord 알림이 ai-nodes 공용 정본 단일 출처로 정착. Shell 5 → 3.
+- `_shared/lib/notify_discord.ts` 상태 미사용 → 사용 중 (ADR-003 본문의 "apartment 미도입" 상태 supersede).
+- 타임아웃 보강으로 알림 단계 견고성 상승.
+
+**적용**: `apartment/scripts/apartment-daily-report/run_report.sh` (NOTIFIER + notify_safe), `notify_discord.sh` / `notify_discord_media.sh` git rm, `apartment/docs/{flow,code-architecture,prd}.md` 동기화.

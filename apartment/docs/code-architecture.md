@@ -24,7 +24,6 @@ apartment/
 │   │   ├── run_report.sh               # 메인 진입점 (self-wrap 포함)
 │   │   ├── run_smoke_test.sh           # 헬스 체크 진입점
 │   │   ├── run_guri_buy_search.sh
-│   │   ├── notify_discord.sh
 │   │   ├── collect_sources.ts          # ADR-006 (import 통합 오케스트레이터, plan003)
 │   │   ├── collect_naver_api.ts        # ADR-001 (Naver API 3 endpoint), plan003 마이그
 │   │   ├── naver_api_schemas.ts        # ADR-007 (zod 응답 스키마), plan003
@@ -114,15 +113,15 @@ fi
 | `claude` CLI | 시스템 설치 | 사용 중 | Claude 호출 (90s 타임아웃 + fallback) |
 | `agent-browser` CLI | 로컬 설치 필수 | 사용 중 | Naver Bearer JWT 자동 추출 (ADR-001) |
 | Bun runtime | 시스템 (ai-nodes root `bun install`) | 사용 중 (ADR-003) | apartment ts 헬퍼 실행 (예: `scripts/_lib/load_target_meta.ts`, plan002) |
-| `notify_discord.ts` | `_shared/lib/notify_discord.ts` | 미사용 | Discord 알림 (apartment는 `notify_discord.sh` 직접 사용) |
+| `notify_discord.ts` | `_shared/lib/notify_discord.ts` | 사용 중 (ADR-009) | Discord 알림 (openclaw 경유, `run_report.sh`가 `bun run`으로 호출) |
 
-`notify_discord.ts` — `_shared/lib/`에 존재하지만 apartment에서 미사용 (apartment는 `notify_discord.sh` 사용). `extract_claude_result.ts`는 ai-nodes plan001 이후 apartment + stock-investment + career-os 공용. apartment는 ADR-003 이후 Shell + TS 표준 확장.
+`notify_discord.ts` — ADR-009로 apartment 도입. 워크스페이스 한정 `notify_discord.sh` / `notify_discord_media.sh`를 폐기하고 `_shared/lib`의 ts 정본으로 통합 (openclaw subprocess + 10s 타임아웃, `DISCORD_CHANNEL_ID` 필수). `extract_claude_result.ts`는 ai-nodes plan001 이후 apartment + stock-investment + career-os 공용. apartment는 ADR-003 이후 Shell + TS 표준 확장.
 
 ## 6. 언어 분포
 
 | 언어 | 파일 수 (추정) | 역할 |
 |---|---|---|
-| Shell | 5 | runner (run_report.sh, run_with_claude.sh) + notify_discord.sh + notify_discord_media.sh + smoke_test |
+| Shell | 3 | runner (run_report.sh, run_with_claude.sh) + smoke_test (Discord 알림은 ADR-009로 `_shared/lib/notify_discord.ts` 통합) |
 | Python | 0 | apartment-daily-report 안 Python 0. ai-nodes plan001 이후 `_shared/bin/extract_claude_result.py` git rm — `_shared/lib/extract_claude_result.ts`가 단일 출처 |
 | TypeScript | 7 | `_lib/load_target_meta.ts` (plan002) + collect_sources / collect_naver_api / naver_api_schemas (plan003) + collect_hogangnono / collect_kbland (plan004) + normalize_results (plan005) |
 

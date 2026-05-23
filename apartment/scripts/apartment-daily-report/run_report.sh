@@ -21,12 +21,12 @@ fi
 # notify_safe / NOTIFIER를 ts 헬퍼 호출 전에 정의 (실패 시 알림 가능하도록).
 WS_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SKILL_ROOT="$WS_ROOT/.claude/skills/apartment-daily-report"
-NOTIFIER="$(dirname "$0")/notify_discord.sh"
+NOTIFIER="$HOME/ai-nodes/_shared/lib/notify_discord.ts"  # ADR-009: 셸 notifier → _shared/lib ts 통합
 
 notify_safe() {
   local msg="$1"
-  if [[ -x "$NOTIFIER" ]]; then
-    "$NOTIFIER" "$msg" || true
+  if [[ -f "$NOTIFIER" ]]; then
+    bun run "$NOTIFIER" "$msg" || true
   fi
 }
 
