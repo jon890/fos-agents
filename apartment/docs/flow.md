@@ -101,7 +101,7 @@ Step 12 logs append
 
 ## 3. apartment-interior-reference-digest 흐름
 
-운영 cron의 진입점은 `scripts/apartment-interior-reference-digest/run_with_claude.sh` — Claude native skill을 직접 호출한다 (ADR-010 — 옛 `run_digest.sh` scaffold 폐기).
+운영 cron의 진입점은 `scripts/apartment-interior-reference-digest/run_with_claude.sh` — Claude native skill을 직접 호출한다.
 
 ### 3-1. Claude native skill 운영 흐름
 

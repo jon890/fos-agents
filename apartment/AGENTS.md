@@ -11,7 +11,7 @@
 | `docs/data-schema.md` | config (4 json) / data / logs / .env 스키마 | 데이터 파일 변경 / 새 config 도입 |
 | `docs/flow.md` | 명령별 데이터 흐름 (daily-report 12 step + interior-digest 5 step) | 새 흐름 추가 / 디버깅 |
 | `docs/code-architecture.md` | 디렉터리 트리·skill 표준·외부 의존·Runner 패턴 | 코드 구조 변경 / 새 스킬 추가 |
-| `docs/adr.md` | apartment 한정 ADR 누적 (현재 ADR-001~010). 모노레포 레벨은 `../docs/adr.md` | 결정의 *왜* |
+| `docs/adr.md` | apartment 한정 ADR 누적 (현재 ADR-001~009). 모노레포 레벨은 `../docs/adr.md` | 결정의 *왜* |
 
 ## 2. tasks/ 영역
 

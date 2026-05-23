@@ -32,7 +32,7 @@ apartment/
 │   │   └── normalize_results.ts        # plan005 마이그 (zod 입력/출력 스키마)
 │   └── apartment-interior-reference-digest/  # skill 실행 파일 (plan007, ADR-004)
 │       ├── run_with_claude.sh       # 운영 cron 진입점: Claude native skill 호출
-│       └── run_with_claude.sh       # cron 진입점 — claude native skill 호출 (ADR-010)
+│       └── run_with_claude.sh       # cron 진입점 — claude native skill 호출
 │
 ├── docs/
 │   ├── prd.md
