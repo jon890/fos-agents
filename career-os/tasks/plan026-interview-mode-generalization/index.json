@@ -2,9 +2,9 @@
   "name": "plan026-interview-mode-generalization",
   "description": "interview-coffeechat-prep skill을 4 mode (coffeechat / first-round / final-round / offer-chat) 일반화. mvp-target.json primary.coffeechat → primary.interview.{...} 마이그 + zod 스키마 확장 + SKILL.md mode 분기 + first-round 활성 + private/public-safe 두 산출물. CJ Foodville 1차 면접 즉시 운영. ADR-034.",
   "created_at": "2026-05-19T00:00:00+00:00",
-  "updated_at": "2026-05-19T00:00:00+00:00",
-  "status": "pending",
-  "current_phase": 1,
+  "updated_at": "2026-05-23T12:35:00.000000+00:00",
+  "status": "completed",
+  "current_phase": 3,
   "total_phases": 3,
   "error_message": null,
   "blocked_reason": null,
@@ -21,26 +21,47 @@
       "number": 1,
       "title": "zod 스키마 확장 + mvp-target.json 마이그 + first_round 채움",
       "file": "phase-01.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 900
+      "timeout": 900,
+      "commitSha": "149f519581a5"
     },
     {
       "number": 2,
       "title": "SKILL.md mode 분기 + coffeechat-prompt.md first-round 가이드 + collect_company_sites.ts mode 인자",
       "file": "phase-02.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 1200
+      "timeout": 1200,
+      "commitSha": "7be37ee968cc"
     },
     {
       "number": 3,
       "title": "통합 정적 검증 + status=completed + push",
       "file": "phase-03.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Edit", "Bash", "Grep"],
+      "status": "running",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
       "model": "haiku",
       "timeout": 600
     }
