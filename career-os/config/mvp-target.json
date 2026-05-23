@@ -5,17 +5,33 @@
     "role": "Java Backend",
     "interview_date": "",
     "notes": "현재 집중 중인 타깃. interview_date는 일정 확정 시 채워넣을 것.",
-    "coffeechat": {
-      "sites": [
-        {"key": "vips", "url": "https://www.ivips.co.kr/", "label": "VIPS"},
-        {"key": "cheiljemyunso-menu", "url": "https://www.cheiljemyunso.co.kr/menu?categoryIdx=4", "label": "제일제면소 메뉴"},
-        {"key": "cjfoodville-brand", "url": "https://m.cjfoodville.co.kr:7443/brand/introduce.asp", "label": "CJ푸드빌 브랜드 소개"}
-      ],
-      "source_dir": "cj-foodville-sites",
-      "report_slug": "cj-foodville-coffeechat",
-      "prep_dir": "cj-foodville",
-      "strategy_filename": "strategy.md",
-      "checklist_filename": "checklist.md"
+    "interview": {
+      "coffeechat": {
+        "sites": [
+          {"key": "vips", "url": "https://www.ivips.co.kr/", "label": "VIPS"},
+          {"key": "cheiljemyunso-menu", "url": "https://www.cheiljemyunso.co.kr/menu?categoryIdx=4", "label": "제일제면소 메뉴"},
+          {"key": "cjfoodville-brand", "url": "https://m.cjfoodville.co.kr:7443/brand/introduce.asp", "label": "CJ푸드빌 브랜드 소개"}
+        ],
+        "source_dir": "cj-foodville-sites",
+        "report_slug": "cj-foodville-coffeechat",
+        "prep_dir": "cj-foodville",
+        "strategy_filename": "strategy.md",
+        "checklist_filename": "checklist.md"
+      },
+      "first_round": {
+        "sites": [
+          {"key": "vips", "url": "https://www.ivips.co.kr/", "label": "VIPS"},
+          {"key": "cheiljemyunso-menu", "url": "https://www.cheiljemyunso.co.kr/menu?categoryIdx=4", "label": "제일제면소 메뉴"},
+          {"key": "cjfoodville-brand", "url": "https://m.cjfoodville.co.kr:7443/brand/introduce.asp", "label": "CJ푸드빌 브랜드 소개"}
+        ],
+        "source_dir": "cj-foodville-first-round-sites",
+        "report_slug": "cj-foodville-first-round",
+        "prep_dir": "cj-foodville-first-round",
+        "strategy_filename": "strategy.md",
+        "checklist_filename": "checklist.md"
+      },
+      "final_round": null,
+      "offer_chat": null
     }
   },
   "history": [
