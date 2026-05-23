@@ -10,7 +10,7 @@
 
 ## 우선순위 판단 축
 
-회사/규모 업사이드의 세부 기준은 `config/company-upside-reference.md`를 함께 참조한다. 포지션 추천 시 JD fit만 보지 말고, NHN 대비 브랜드/보상/트래픽/도메인/엔지니어링 규모 업사이드를 반드시 평가한다.
+회사/규모 업사이드의 세부 기준은 `references/company-upside-reference.md`를 함께 참조한다. 포지션 추천 시 JD fit만 보지 말고, NHN 대비 브랜드/보상/트래픽/도메인/엔지니어링 규모 업사이드를 반드시 평가한다.
 
 ### 1. JD 핏
 

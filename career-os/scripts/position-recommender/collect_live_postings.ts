@@ -355,6 +355,7 @@ interface CliArgs {
   source: "all" | "wanted" | "toss";
   serverOnly: boolean;
   wantedLimit: number;
+  includeTossArticles: boolean;
 }
 
 function parseArgs(argv: string[]): CliArgs {
@@ -362,6 +363,7 @@ function parseArgs(argv: string[]): CliArgs {
   let source: "all" | "wanted" | "toss" = "all";
   let serverOnly = true;
   let wantedLimit = 120;
+  let includeTossArticles = false;
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -374,13 +376,15 @@ function parseArgs(argv: string[]): CliArgs {
       wantedLimit = parseInt(argv[++i], 10);
     } else if (arg === "--no-server-only") {
       serverOnly = false;
+    } else if (arg === "--include-toss-articles") {
+      includeTossArticles = true;
     }
   }
-  return { out, source, serverOnly, wantedLimit };
+  return { out, source, serverOnly, wantedLimit, includeTossArticles };
 }
 
 async function main(): Promise<number> {
-  const { out, source, serverOnly, wantedLimit } = parseArgs(process.argv.slice(2));
+  const { out, source, serverOnly, wantedLimit, includeTossArticles } = parseArgs(process.argv.slice(2));
   const posts: Posting[] = [];
   const errors: string[] = [];
 
@@ -391,7 +395,7 @@ async function main(): Promise<number> {
       errors.push(`wanted: ${e}`);
     }
   }
-  if (source === "all" || source === "toss") {
+  if (source === "toss" || (source === "all" && includeTossArticles)) {
     try {
       posts.push(...(await fetchToss()));
     } catch (e) {

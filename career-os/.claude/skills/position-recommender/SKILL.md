@@ -36,9 +36,9 @@ Claude는 다음을 `Read` 도구로 직접 로드:
 
 ## Workflow
 
-### 1. (선택적) 채용공고 자동 수집
+### 1. 채용공고 자동 수집
 
-사용자 요청에 **"최신 채용"**, **"실시간 채용"**, **"Wanted"**, **"Toss 자동 수집"**, **"공고 가져와줘"** 키워드가 있을 때만 실행:
+daily/cron 실행 또는 사용자 요청에 **"최신 채용"**, **"실시간 채용"**, **"Wanted"**, **"공고 가져와줘"** 키워드가 있으면 반드시 실행:
 
 ```bash
 bun career-os/scripts/position-recommender/collect_live_postings.ts
@@ -48,12 +48,16 @@ bun career-os/scripts/position-recommender/collect_live_postings.ts
 
 - 수집 실패 (exit non-zero) 시 stderr warn 출력 후 계속 진행 (수동 컨텍스트만으로 분석)
 - 사용자가 직접 파일 경로를 지정한 경우: 이 단계 건너뛰고 해당 파일을 Read
+- `Toss 자동 수집`을 명시한 경우에만 `--source toss` 또는 `--include-toss-articles`를 사용한다. 기본 daily 수집에서는 Toss career article을 지원 가능한 공고로 섞지 않는다.
 
-### 2. 컨텍스트 로드 (Read)
+### 2. 컨텍스트 + 최근 추천 이력 로드 (Read)
 
 - Inputs 1~7 모두 Read
-- (선택) 수집된 `career-os/data/runtime/live-position-postings.md` 또는 사용자 지정 파일 Read
+- 수집된 `career-os/data/runtime/live-position-postings.md` 또는 사용자 지정 파일 Read
+- 최근 7일 `career-os/data/reports/daily/*/position-recommendation/report.md` 중 존재하는 파일을 Read
 - 사용자의 자연어 포커스 키워드 (예: "AI 서비스팀 위주") 를 분석 컨텍스트에 반영
+- 최근 7일 강력 추천/도전 추천에 반복 등장한 회사·URL은 감점한다. 단, 여전히 최상위 후보면 유지할 수 있지만 “반복 유지 사유”를 명시한다.
+- 매일 최소 1개 이상은 최근 7일 내 강력 추천에 없던 신규 후보 또는 추가 수집 대상을 포함한다. 적합한 신규 후보가 없으면 “신규 후보 부족”을 명시한다.
 
 ### 3. 추천 분석 + 리포트 작성
 
@@ -68,6 +72,7 @@ bun career-os/scripts/position-recommender/collect_live_postings.ts
   - 각 항목: role title + 포스팅 링크 + 지원 근거 + gap 준비사항 + first action
 - **보류·주의** 티어 — 현시점 비추천 + 사유 명시
   - 각 항목: role title + 비추천 사유
+- **최근 반복 점검** — 최근 7일 반복 후보와 신규 후보 확보 여부
 - 총 30줄 이상
 
 ### 4. 리포트 저장 (Write)
@@ -77,25 +82,31 @@ Write → career-os/data/reports/daily/YYYY-MM-DD/position-recommendation/report
 Write → career-os/data/runtime/position-recommendation.md  (런타임 미러)
 ```
 
-날짜는 실행 시점 ISO 기준 (`new Date().toISOString().slice(0, 10)`).
+날짜는 Asia/Seoul 기준 (`TZ=Asia/Seoul date +%F`). UTC `new Date().toISOString()` 날짜를 사용하지 않는다.
+
+daily/cron 실행에서 오늘 날짜 파일을 새로 쓰지 못하면 성공으로 끝내지 않는다.
 
 ### 5. Discord 알림
 
-```bash
-bun --env-file=career-os/.env ../_shared/lib/notify_discord.ts \
-  "[완료] position-recommender: data/reports/daily/YYYY-MM-DD/position-recommendation/report.md"
-```
+Claude native skill 내부에서는 Discord 알림을 직접 보내지 않는다.
 
-알림 실패는 비치명적 — stderr warn만, skill은 success 종료.
+daily/cron 실행의 Discord 전송은 외부 runner
+`career-os/scripts/position-recommender/run_daily_with_claude.sh`가
+freshness check 통과 후 `_shared/lib/notify_discord.ts`로 수행한다.
+이는 OpenClaw/Codex가 오케스트레이션과 외부 전송을 맡고,
+Claude native skill은 리포트 생성·자기 검증에 집중하게 하기 위함이다.
 
 ## Self-check
 
-리포트 작성 후 자기 출력 검증 4항목 (옛 `extract_position_report.ts` 45줄 흡수):
+리포트 작성 후 자기 출력 검증 7항목 (옛 `extract_position_report.ts` 45줄 흡수 + stale-output 방지):
 
 1. 첫 줄 `# ` 시작 (단일 `#`, `## ` 시작 금지)
 2. 총 줄 수 ≥ 30
 3. **강력 추천**, **도전 추천**, **보류·주의** 3 티어 헤더 모두 존재
-4. `career-os/data/runtime/position-recommendation.md` 파일 존재 확인
+4. 첫 줄 날짜가 Asia/Seoul 오늘 날짜와 일치
+5. `career-os/data/reports/daily/YYYY-MM-DD/position-recommendation/report.md` 파일 존재 확인
+6. `career-os/data/runtime/position-recommendation.md` 파일 존재 확인, 첫 줄 날짜가 오늘 날짜와 일치
+7. **최근 반복 점검** 섹션 또는 동등한 반복/신규 후보 설명 존재
 
 실패 항목 있으면 해당 섹션 보완 후 재작성. **최대 3회 시도**.
 4회째도 실패 시 `stderr: position-recommender 검증 실패: <실패 항목>` + exit 1.
@@ -109,8 +120,9 @@ bun --env-file=career-os/.env ../_shared/lib/notify_discord.ts \
 | `sources.json` 부재 | stderr warn + techBlog 없이 계속 진행 |
 | `collect_live_postings.ts` 실패 | stderr warn + 수동 컨텍스트로 계속 진행 |
 | 사용자 지정 파일 path 부재 | stderr warn + 해당 파일 없이 계속 진행 |
+| 오늘 날짜 report/runtime 미생성 | stale output으로 간주, stderr + exit 1 |
 | self-check 3회 실패 | `position-recommender 검증 실패: <항목>` + exit 1 |
-| Discord notify 실패 | stderr warn, skill은 success |
+| Discord notify 실패 | native skill 내부에서는 호출하지 않음. 외부 runner가 stderr warn 후 계속 |
 
 ## Why this design
 

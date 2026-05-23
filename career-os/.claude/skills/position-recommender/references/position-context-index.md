@@ -10,19 +10,19 @@
 
 ## Decision rubric
 
-- `config/position-decision-criteria.md`
+- `references/position-decision-criteria.md`
   - 포지션 추천의 기본 의사결정 축.
   - JD fit, 차별화 가능성, 회사/도메인 업사이드, 역할 구성, 쿨다운, 하드필터/소프트랭킹, 고용 형태를 다룬다.
 
 ## Company / scale upside
 
-- `config/company-upside-reference.md`
+- `references/company-upside-reference.md`
   - NHN 대비 브랜드/보상/트래픽/도메인/엔지니어링 규모 업사이드 판단 기준.
   - 배민/우아한형제들처럼 회사는 좋지만 사업 리스크나 팀 선별이 필요한 케이스도 여기서 판단한다.
 
 ## Verified company discovery targets
 
-- `config/verified-company-research-targets.json`
+- `references/verified-company-research-targets.json`
   - 네이버/네이버파이낸셜/LINE, 쿠팡, 오늘의집, 우아한형제들, 당근 등 검증된 회사군 탐색 대상.
   - 공식 career URL, Wanted 검색 키워드, 기술블로그 URL, 선호 도메인, 주의 메모를 포함한다.
 
