@@ -2,7 +2,7 @@
   "name": "plan026-interview-mode-generalization",
   "description": "interview-coffeechat-prep skill을 4 mode (coffeechat / first-round / final-round / offer-chat) 일반화. mvp-target.json primary.coffeechat → primary.interview.{...} 마이그 + zod 스키마 확장 + SKILL.md mode 분기 + first-round 활성 + private/public-safe 두 산출물. CJ Foodville 1차 면접 즉시 운영. ADR-034.",
   "created_at": "2026-05-19T00:00:00+00:00",
-  "updated_at": "2026-05-23T12:35:00.000000+00:00",
+  "updated_at": "2026-05-23T11:01:45.148728+00:00",
   "status": "completed",
   "current_phase": 3,
   "total_phases": 3,
@@ -55,7 +55,7 @@
       "number": 3,
       "title": "통합 정적 검증 + status=completed + push",
       "file": "phase-03.md",
-      "status": "running",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Edit",
@@ -63,7 +63,8 @@
         "Grep"
       ],
       "model": "haiku",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "1cd994e04754"
     }
   ]
 }
