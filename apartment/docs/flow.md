@@ -113,7 +113,7 @@ Step 1  apartment workspace로 이동
         cd ~/ai-nodes/apartment
 
 Step 2  Claude native skill 호출
-        claude --permission-mode acceptEdits -p "/apartment-interior-reference-digest <요청>"
+        claude --permission-mode bypassPermissions -p "/apartment-interior-reference-digest <요청>"
 
 Step 3  Claude native skill이 전체 workflow 수행
         .claude/skills/apartment-interior-reference-digest/SKILL.md 기준

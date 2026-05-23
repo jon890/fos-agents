@@ -9,4 +9,4 @@ if [[ -z "$REQUEST_TEXT" ]]; then
 fi
 
 cd "$TASK_ROOT"
-exec claude --permission-mode acceptEdits -p "/apartment-interior-reference-digest ${REQUEST_TEXT}"
+exec claude --permission-mode bypassPermissions -p "/apartment-interior-reference-digest ${REQUEST_TEXT}"

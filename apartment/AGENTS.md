@@ -47,6 +47,7 @@ bash apartment/scripts/apartment-daily-report/run_smoke_test.sh
 - `claude` CLI — 모든 Claude 호출 의존.
 - `agent-browser` CLI — JS-heavy 페이지 수집 (ADR-001).
 - Bun runtime — TypeScript 헬퍼 실행. 데이터 처리/JSON 파싱/수집기 계층은 TS 우선, 단순 orchestration runner는 shell 허용.
+- Interior reference cron은 Claude native skill의 웹 검색/Fetch/문서 갱신이 필요하므로 운영 runner에서 `--permission-mode bypassPermissions`를 사용한다.
 
 상세는 `docs/code-architecture.md` 5번.
 
