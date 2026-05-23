@@ -36,7 +36,7 @@ claude -p "/apartment-interior-reference-digest"
 
 # 또는 직접 호출
 bash apartment/scripts/apartment-daily-report/run_report.sh
-bash apartment/scripts/apartment-interior-reference-digest/run_digest.sh
+bash apartment/scripts/apartment-interior-reference-digest/run_with_claude.sh "오늘의 인테리어 추천"
 bash apartment/scripts/apartment-daily-report/run_smoke_test.sh
 ```
 
@@ -46,6 +46,7 @@ bash apartment/scripts/apartment-daily-report/run_smoke_test.sh
 - `_shared/lib/extract_claude_result.ts` — claude JSON envelope 파싱 (ai-nodes plan001 마이그).
 - `claude` CLI — 모든 Claude 호출 의존.
 - `agent-browser` CLI — JS-heavy 페이지 수집 (ADR-001).
+- Bun runtime — TypeScript 헬퍼 실행. 데이터 처리/JSON 파싱/수집기 계층은 TS 우선, 단순 orchestration runner는 shell 허용.
 
 상세는 `docs/code-architecture.md` 5번.
 

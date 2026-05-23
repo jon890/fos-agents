@@ -6,7 +6,7 @@ apartment 워크스페이스의 **데이터 플로우 및 실행 흐름** 단일
 
 ```
 사용자/cron
-  └─► runner script (run_report.sh / run_digest.sh)
+  └─► runner script (run_report.sh / run_with_claude.sh)
         └─► self-wrap (TRACK_TASK_WRAPPED guard)
               └─► _shared/bin/track_task.sh
                     ├─► openclaw status 캡처 (before)

@@ -122,7 +122,7 @@ fi
 
 | 언어 | 파일 수 (추정) | 역할 |
 |---|---|---|
-| Shell | 4 | runner (run_report.sh) + notify_discord.sh + notify_discord_media.sh + smoke_test |
+| Shell | 5 | runner (run_report.sh, run_with_claude.sh) + notify_discord.sh + notify_discord_media.sh + smoke_test |
 | Python | 0 | apartment-daily-report 안 Python 0. ai-nodes plan001 이후 `_shared/bin/extract_claude_result.py` git rm — `_shared/lib/extract_claude_result.ts`가 단일 출처 |
 | TypeScript | 7 | `_lib/load_target_meta.ts` (plan002) + collect_sources / collect_naver_api / naver_api_schemas (plan003) + collect_hogangnono / collect_kbland (plan004) + normalize_results (plan005) |
 

@@ -72,12 +72,13 @@ claude -p "/apartment-interior-reference-digest"
 
 ```bash
 bash apartment/scripts/apartment-daily-report/run_report.sh
-bash apartment/scripts/apartment-interior-reference-digest/run_digest.sh
+bash apartment/scripts/apartment-interior-reference-digest/run_with_claude.sh "오늘의 인테리어 추천"
 ```
 
 산출물: `apartment/data/YYYY-MM-DD/{report.md, raw-search.json, summary.json, claude.result.json}`.
 종합 단계는 `claude --output-format json` (90초 타임아웃 시 대체 마크다운으로 폴백).
 JSON 처리는 `_shared/lib/extract_claude_result.ts` (ai-nodes plan001 마이그 완료, Bun 실행).
+인테리어 추천은 Claude native skill 직접 호출 경계가 중요하므로 `run_with_claude.sh`를 운영 진입점으로 사용하고, `run_digest.sh`는 request/report scaffold로만 다룬다.
 
 ### 3-2. career-os
 
