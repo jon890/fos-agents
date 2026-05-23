@@ -32,7 +32,8 @@ apartment/
 │   │   ├── collect_kbland.ts           # plan004 마이그 (HTML regex 파서)
 │   │   └── normalize_results.ts        # plan005 마이그 (zod 입력/출력 스키마)
 │   └── apartment-interior-reference-digest/  # skill 실행 파일 (plan007, ADR-004)
-│       └── run_digest.sh
+│       ├── run_with_claude.sh       # 운영 cron 진입점: Claude native skill 호출
+│       └── run_digest.sh            # request/report placeholder scaffold
 │
 ├── docs/
 │   ├── prd.md
@@ -85,7 +86,7 @@ apartment/
 | skill 이름 | 등록 상태 | 호출 방법 |
 |---|---|---|
 | apartment-daily-report | 등록 | `claude -p "/apartment-daily-report"` 또는 `bash apartment/scripts/apartment-daily-report/run_report.sh` |
-| apartment-interior-reference-digest | 등록 | `claude -p "/apartment-interior-reference-digest"` 또는 `bash apartment/scripts/apartment-interior-reference-digest/run_digest.sh` |
+| apartment-interior-reference-digest | 등록 | `claude -p "/apartment-interior-reference-digest"` 또는 `bash apartment/scripts/apartment-interior-reference-digest/run_with_claude.sh` |
 
 ## 4. Runner 패턴
 

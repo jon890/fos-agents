@@ -101,6 +101,32 @@ Step 12 logs append
 
 ## 3. apartment-interior-reference-digest 흐름
 
+운영 cron의 진입점은 `scripts/apartment-interior-reference-digest/run_with_claude.sh`.
+`run_digest.sh`는 request/report placeholder를 만드는 scaffold이며, 전체 추천 workflow를 직접 수행하지 않는다.
+
+### 3-1. Claude native skill 운영 흐름
+
+`scripts/apartment-interior-reference-digest/run_with_claude.sh` 진입점.
+
+```
+Step 1  apartment workspace로 이동
+        cd ~/ai-nodes/apartment
+
+Step 2  Claude native skill 호출
+        claude --permission-mode acceptEdits -p "/apartment-interior-reference-digest <요청>"
+
+Step 3  Claude native skill이 전체 workflow 수행
+        .claude/skills/apartment-interior-reference-digest/SKILL.md 기준
+        config/interior-reference-digest.json + docs/interior/* 읽기
+        웹 검색/fetch → 후보 평가 → report.md 작성
+        docs/interior/interior-references.md 갱신
+
+Step 4  stdout 요약
+        OpenClaw cron agent는 stdout을 받아 Discord 전달용 최종 응답만 처리
+```
+
+### 3-2. request scaffold 흐름
+
 `scripts/apartment-interior-reference-digest/run_digest.sh` 진입점.
 
 ```
@@ -123,11 +149,11 @@ Step 4  report.md placeholder
         실제 Claude 호출은 사용자 또는 외부 cron이 처리
         현재 runner: thin shell — request.md 작성까지
 
-Step 5  Discord 알림 (운영 시)
-        요약 + 3 결정 질문 Discord 출력
+Step 5  종료
+        request.md와 report.md 경로를 stdout으로 출력
 ```
 
-현재 runner는 thin 구조 — 실제 Claude 호출은 사용자 대화 또는 별도 외부 진입점.
+현재 scaffold는 thin 구조 — 운영 cron은 이 파일만 직접 호출하면 안 된다.
 
 ## 4. 알림 흐름
 
@@ -171,6 +197,9 @@ cron 진입과 동일한 경로.
 bash apartment/scripts/apartment-daily-report/run_report.sh
 
 # 인테리어 디제스트
+bash apartment/scripts/apartment-interior-reference-digest/run_with_claude.sh "오늘의 인테리어 추천"
+
+# 인테리어 request scaffold (Claude 호출 없음)
 bash apartment/scripts/apartment-interior-reference-digest/run_digest.sh
 
 # 수집기/정규화기 헬스 체크 (Claude 호출 없음)

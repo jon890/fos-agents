@@ -1,0 +1,27 @@
+{
+  "name": "plan009-restore-claude-interior-cron",
+  "description": "Restore apartment:today-interior-recommendations cron role boundary so OpenClaw/Codex orchestrates and Claude native skill performs the interior recommendation workflow.",
+  "created_at": "2026-05-23T09:40:00+09:00",
+  "updated_at": "2026-05-23T09:41:00+09:00",
+  "status": "completed",
+  "current_phase": 2,
+  "total_phases": 2,
+  "phases": [
+    {
+      "number": 1,
+      "title": "Add explicit Claude runner and document runner boundary",
+      "status": "completed"
+    },
+    {
+      "number": 2,
+      "title": "Edit OpenClaw cron payload to invoke Claude runner",
+      "status": "completed"
+    }
+  ],
+  "findings": [
+    "427835d introduced the native Claude skill and documented claude -p availability, but run_digest.sh was a scaffold from the start.",
+    "2f2117c slimmed the OpenClaw cron payload from prescriptive workflow steps to a short SKILL.md/config delegation note, exposing that the cron was still Codex agentTurn based.",
+    "The fix is to make the Codex cron turn explicitly run the Claude native skill through a thin shell runner.",
+    "OpenClaw cron 9a6ac82d now tells Codex to run scripts/apartment-interior-reference-digest/run_with_claude.sh and to never reply NO_REPLY."
+  ]
+}
