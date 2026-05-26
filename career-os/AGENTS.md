@@ -18,7 +18,14 @@
 
 워크스페이스 표준 구조는 [`../docs/workspace-structure.md`](../docs/workspace-structure.md) (ai-nodes ADR-004) 청사진을 따른다. career-os는 ADR-019 (`scripts/` 분리)의 의도된 비대칭 예외 — `scripts/<skill-name>/`(실행 파일) + `skills/<skill-name>/`(SKILL.md + references) 분리 구조. 다른 워크스페이스로 확산 의도 없음.
 
-plan 진행 cycle: `skills/planning` (8단계 + task 파일 작성·commit·push) → `skills/plan-and-build` (별도 세션에서 phase 자동 실행 + critic 검증). 세션 격리 원칙 — planning은 task 생성·commit까지, 실 phase 실행은 별도 세션.
+plan 진행 cycle: `skills/planning` 구조로 사용자와 대화하며 brief/결정/phase를 확정 → 합의된 task 파일 작성·commit·push → 구현 phase는 Claude 비대화형 실행 또는 별도 plan-and-build 세션에서 수행 + Codex 검토/검증. 세션 격리 원칙 — planning은 대화형 합의와 task 생성까지, 실 phase 실행은 별도 구현 세션.
+
+중요 운영 원칙:
+
+- `claude -p "/planning ..."` 비대화형 planning은 기본 사용하지 않는다. planning은 사용자의 반박/결정 보류/범위 조정을 반영해야 하므로 Codex와 사용자가 대화로 진행한다.
+- Claude 비대화형 실행은 합의된 task/phase 구현에만 사용한다.
+- Codex는 planning brief 작성, 열린 결정 정리, task 파일 고정, Claude 구현 결과 review, 검증, commit/push를 담당한다.
+- 구현 phase에서 Claude를 호출할 때도 phase 문서의 scope, safety gate, 검증 기준을 명확히 전달한다.
 
 워크플로 스크립트나 파일 선택 전략을 바꾸기 전에 반드시 `docs/adr.md`를 먼저 확인한다. 새 결정은 항상 `docs/adr.md` 맨 아래에 누적한다.
 
