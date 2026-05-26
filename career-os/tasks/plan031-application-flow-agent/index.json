@@ -96,7 +96,7 @@
       ],
       "model": "sonnet",
       "timeout": 1200,
-      "commitSha": "638b724d6a3b"
+      "commitSha": "15cdd6944265"
     },
     {
       "number": 2,
@@ -112,7 +112,7 @@
       ],
       "model": "sonnet",
       "timeout": 1800,
-      "commitSha": "638b724d6a3b"
+      "commitSha": "15cdd6944265"
     },
     {
       "number": 3,
@@ -128,7 +128,7 @@
       ],
       "model": "sonnet",
       "timeout": 2400,
-      "commitSha": "638b724d6a3b"
+      "commitSha": "15cdd6944265"
     },
     {
       "number": 4,
@@ -144,7 +144,7 @@
       ],
       "model": "sonnet",
       "timeout": 2400,
-      "commitSha": "638b724d6a3b"
+      "commitSha": "15cdd6944265"
     },
     {
       "number": 5,
@@ -160,7 +160,7 @@
       ],
       "model": "sonnet",
       "timeout": 2400,
-      "commitSha": "638b724d6a3b"
+      "commitSha": "15cdd6944265"
     }
   ]
 }
