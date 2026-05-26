@@ -36,7 +36,7 @@ Claude는 다음을 `Read` 도구로 직접 로드:
 
 ### daily 모드 추가
 
-3. `career-os/data/study-progress.json` — 토픽별 lastVisited 날짜 (토픽 자동 선택 시)
+3. `career-os/config/study-progress.json` — 토픽별 학습 진도 (토픽 자동 선택 시)
 4. `career-os/config/topic-file-map.json` — topic-key → fos-study 파일 경로 배열 매핑
 5. `career-os/sources/fos-study/<path>` — 선택된 topic의 3-5개 파일 (각 Read)
 
@@ -72,7 +72,7 @@ git pull 실패 시 → stderr warn + 로컬 캐시로 분석 계속 (이미 동
 Inputs 매트릭스대로 모두 Read.
 
 **daily 토픽 자동 선택** (인자 없거나 `daily`만 지정):
-1. `study-progress.json` Read → `lastVisited`가 가장 오래된 topic-key 선택
+1. `study-progress.json` Read → `weak_spots`에서 `last_studied`가 가장 오래되거나 null인 topic-key 선택
 2. `study-progress.json` 없으면 → `topic-file-map.json` 첫 번째 키 선택
 3. topic-file-map.json에 해당 topic-key 없으면 → freeform 모드 (fos-study에서 관련 파일 자연어 추론)
 
@@ -119,7 +119,11 @@ Inputs 매트릭스대로 모두 Read.
 
 ### 5. study-progress 갱신 (daily 모드만)
 
-보고서 Write 완료 후 `career-os/data/study-progress.json` 해당 topic-key의 `lastVisited`를 오늘 날짜(YYYY-MM-DD)로 갱신. entry 없으면 추가. 파일 없으면 신규 생성.
+보고서 Write 완료 후 `career-os/config/study-progress.json` 갱신:
+- `weak_spots[topic-key].last_studied`를 오늘 날짜(YYYY-MM-DD)로 갱신. entry 없으면 추가.
+- `weak_spots[topic-key].study_count`를 +1.
+- `sessions[]`에 `{ "date": "YYYY-MM-DD", "topics": ["<topic-key>"], "files": [<분석한 fos-study 파일 경로들>], "source": "daily-run" }` 추가.
+- 파일 없으면 신규 생성.
 
 ### 6. Discord 알림 (Bash)
 

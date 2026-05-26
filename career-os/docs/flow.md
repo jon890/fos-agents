@@ -55,15 +55,15 @@ native skill 패턴: `claude -p "/interview-prep-analyzer [args]"` → SKILL.md 
   │ ───────                             │       │ ───────                             │
   │ Read: config/baseline-core-files    │       │ Topic 선택:                         │
   │ Read: 10 파일 (큐레이션)            │       │  - 인자 명시 → 그대로               │
-  │ Claude 분석 → 7 섹션                │       │  - 없으면 data/study-progress.json  │
+  │ Claude 분석 → 7 섹션                │       │  - 없으면 config/study-progress.json │
   │ Write: data/reports/baseline/       │       │    → 가장 오래된 토픽 자연어 선택   │
   │  YYYY-MM-DD/report.md               │       │ Read: config/topic-file-map.json    │
   │                                     │       │ Read: 3-5 파일                      │
   │                                     │       │ Claude 분석 → 5 섹션                │
   │                                     │       │ Write: data/reports/daily/          │
   │                                     │       │  YYYY-MM-DD/report.md               │
-  │                                     │       │ Edit: data/study-progress.json      │
-  │                                     │       │  → 토픽 lastVisited = 오늘 갱신     │
+  │                                     │       │ Edit: config/study-progress.json    │
+  │                                     │       │  → 토픽 last_studied = 오늘 갱신    │
   └────────────────────────────────────┘       └────────────────────────────────────┘
 ```
 
@@ -84,7 +84,7 @@ native skill 패턴: `claude --permission-mode acceptEdits -p "/candidate-baseli
 호출: claude --permission-mode acceptEdits -p "/candidate-baseline-suggester"
   ↓
 Read: candidate-profile.md + baseline-core-files.json
-      + data/study-progress.json + (선택) data/reports/baseline/<latest>/
+      + config/study-progress.json + (선택) data/reports/baseline/<latest>/
       + fos-study git log (전체 history)
   ↓
 Backup → data/runtime/profile-refresh-suggestions/YYYY-MM-DD/before/

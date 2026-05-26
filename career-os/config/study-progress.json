@@ -1,0 +1,76 @@
+{
+  "sessions": [
+    {
+      "date": "2026-04-13",
+      "topics": [
+        "redis-cache-aside"
+      ],
+      "files": [
+        "interview/cj-oliveyoung-wellness-backend.md",
+        "database/redis/basic.md",
+        "java/spring/jpa-transaction.md",
+        "database/mysql/b-tree-index.md",
+        "database/index.md"
+      ],
+      "source": "manual"
+    },
+    {
+      "date": "2026-04-13",
+      "topics": [
+        "composite-index"
+      ],
+      "files": [
+        "interview/cj-oliveyoung-wellness-backend.md",
+        "database/mysql/b-tree-index.md",
+        "database/index.md",
+        "database/mysql/transaction-lock.md"
+      ],
+      "source": "daily-run"
+    },
+    {
+      "date": "2026-04-14",
+      "topics": [
+        "explain-plan"
+      ],
+      "files": [
+        "interview/cj-oliveyoung-wellness-backend.md",
+        "database/index.md",
+        "database/mysql/b-tree-index.md",
+        "database/mysql/mysql-architecture.md"
+      ],
+      "source": "daily-run"
+    }
+  ],
+  "weak_spots": {
+    "jpa-n+1": {
+      "last_studied": null,
+      "study_count": 0,
+      "last_evaluated": "2026-05-16",
+      "status": "stale"
+    },
+    "explain-plan": {
+      "last_studied": "2026-04-14",
+      "study_count": 1,
+      "last_evaluated": "2026-05-16",
+      "status": "improving"
+    },
+    "composite-index": {
+      "last_studied": "2026-04-13",
+      "study_count": 1,
+      "last_evaluated": "2026-05-16",
+      "status": "improving"
+    },
+    "redis-cache-aside": {
+      "last_studied": "2026-04-13",
+      "study_count": 1,
+      "last_evaluated": "2026-05-16",
+      "status": "improving"
+    },
+    "kafka-design": {
+      "last_studied": null,
+      "study_count": 0,
+      "last_evaluated": "2026-05-16",
+      "status": "stale"
+    }
+  }
+}

@@ -14,7 +14,7 @@ mkdir -p "$AUDIT_DIR/before" "$AUDIT_DIR/after" "$AUDIT_DIR/diff"
 # 현재 자산 snapshot
 cp career-os/config/candidate-profile.md "$AUDIT_DIR/before/candidate-profile.md"
 cp career-os/config/baseline-core-files.json "$AUDIT_DIR/before/baseline-core-files.json"
-cp career-os/data/study-progress.json "$AUDIT_DIR/before/study-progress.json"
+cp career-os/config/study-progress.json "$AUDIT_DIR/before/study-progress.json"
 ```
 
 `mkdir -p` 실패 시 즉시 중단 — audit trail 없이 자산 갱신 금지.
@@ -51,7 +51,7 @@ candidate-profile.md `Source provenance` 표 + baseline-core-files.json `files[]
 # after/ 스냅샷
 cp career-os/config/candidate-profile.md "$AUDIT_DIR/after/candidate-profile.md"
 cp career-os/config/baseline-core-files.json "$AUDIT_DIR/after/baseline-core-files.json"
-cp career-os/data/study-progress.json "$AUDIT_DIR/after/study-progress.json"
+cp career-os/config/study-progress.json "$AUDIT_DIR/after/study-progress.json"
 
 # diff/ 파일별
 for f in candidate-profile.md baseline-core-files.json study-progress.json; do

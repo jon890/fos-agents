@@ -67,7 +67,7 @@ career-os/
 │   └── .env                           비밀 (GITHUB_TOKEN, DISCORD_WEBHOOK_URL 등)
 │
 ├── data/
-│   ├── study-progress.json       후보자 학습 진도 (ADR-002)
+│   (study-progress.json은 config/로 이동 — ADR-002)
 │   (generated-artifacts.json은 ADR-033 / plan025로 active 제거 — sources/fos-study/ 직접 스캔)
 │   ├── reports/
 │   │   ├── baseline/YYYY-MM-DD/  baseline 실행 결과

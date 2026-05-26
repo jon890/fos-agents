@@ -13,7 +13,7 @@ career-os의 모든 아키텍처 결정을 시간순으로 누적 기록한다. 
 | ADR | 제목 | Status | 한 줄 요약 |
 |---|---|---|---|
 | ADR-001 | Daily 파일 선택 전략 | Accepted | topic-file-map.json 기반 토픽→파일 매핑으로 daily 범위 3-5개 축소 |
-| ADR-002 | 학습 진도 추적 | Accepted | data/study-progress.json 하이브리드 포맷으로 중복 학습 방지 |
+| ADR-002 | 학습 진도 추적 | Accepted | config/study-progress.json 하이브리드 포맷으로 중복 학습 방지 |
 | ADR-003 | Baseline 청킹 제거 | Accepted | 10 파일 단일 호출로 통합, 비용 약 60% 절감 |
 | ADR-004 | reports/ 디렉터리 컨벤션 | Superseded by no-action (2026-04-18) | 최상위 reports/ 미사용 — data/reports/만 유지 |
 | ADR-005 | Study pack 출력 및 발행 정책 | Accepted | sources/fos-study 즉시 commit+push, 제목 [초안] 표시 |
@@ -64,7 +64,7 @@ career-os의 모든 아키텍처 결정을 시간순으로 누적 기록한다. 
 ### 결정
 - `config/topic-file-map.json`에 토픽 → 파일 목록 매핑 관리.
 - `run_daily.sh`는 `DAILY_TOPIC` env 또는 `run_now.sh` 두 번째 인자로 토픽을 받는다.
-- 토픽 미지정 시 `data/study-progress.json`에서 `last_studied`가 가장 오래된 약점 토픽 자동 선택.
+- 토픽 미지정 시 `config/study-progress.json`에서 `last_studied`가 가장 오래된 약점 토픽 자동 선택.
 - 토픽 매핑이 없으면 기존 INCLUDE_DIRS로 후퇴.
 
 ### 결과
@@ -83,7 +83,7 @@ career-os의 모든 아키텍처 결정을 시간순으로 누적 기록한다. 
 daily 리포트가 어제 무엇을 공부했는지 모르고 동일 약점을 반복 제안. 면접 일정이 촉박한 상황에서 중복 학습 위험.
 
 ### 결정
-`data/study-progress.json`에 세션 + 약점 토픽별 진도를 하이브리드 포맷(sessions 배열 + weak_spots 맵)으로 기록. `run_daily.sh`가 성공 후 자동 업데이트. 스키마 상세는 `docs/data-schema.md` 참조.
+`config/study-progress.json`에 세션 + 약점 토픽별 진도를 하이브리드 포맷(sessions 배열 + weak_spots 맵)으로 기록. `run_daily.sh`가 성공 후 자동 업데이트. 스키마 상세는 `docs/data-schema.md` 참조.
 
 ### 결과
 - 진도 자동 기록 → 중복 학습 방지.
@@ -693,7 +693,7 @@ knowledge-gap-analyzer는 baseline / daily / smoke 3 모드를 dispatcher 분기
 career-os/config/ 사용자 hand-crafted 자산이 *최신화 안 됨*:
 - `candidate-profile.md` "입증된 강점" / "약점·학습 중인 영역" 섹션 — fos-study에서 학습한 새 토픽 반영 안 됨
 - `baseline-core-files.json` (현재 6 파일) — fos-study에 새 핵심 파일 추가돼도 큐레이션 set 갱신 안 됨
-- `data/study-progress.json` weak_spots — 진도 평가 자동 갱신 안 됨
+- `config/study-progress.json` weak_spots — 진도 평가 자동 갱신 안 됨
 
 (과거 design은 `prd.md "약점·강점"` 섹션도 갱신 대상이었으나 책임 영역 위반 — prd.md는 제품 문서, 후보자 데이터 X. 본 ADR 적용 후 별도 사이클에서 제거됨.)
 
@@ -706,13 +706,13 @@ career-os/config/ 사용자 hand-crafted 자산이 *최신화 안 됨*:
 **Append + 주석 마킹 하이브리드 패턴**:
 - candidate-profile.md / baseline-core-files.json: *기존 본문 보존 + 새 항목 append*. fos-study path 근거 명시.
 - candidate-profile.md "약점·학습 중인 영역" outdated 항목: `<!-- suggester: outdated since YYYY-MM-DD, 근거 fos-study/<path> -->` 주석 마킹. 사용자가 직접 삭제.
-- data/study-progress.json weak_spots: 평가 갱신.
+- config/study-progress.json weak_spots: 평가 갱신.
 
 **audit trail 필수**: `data/runtime/profile-refresh-suggestions/YYYY-MM-DD/`에 before/ + after/ + diff.md + changes.md (변경 사유 + fos-study path 출처). 사용자가 수동 roll back 가능.
 
 **입력**:
 - fos-study 전체 commit history (git log)
-- data/study-progress.json
+- config/study-progress.json
 - (선택) data/reports/baseline/<latest>/report.md (plan017 결과 — 있으면 Read)
 - candidate-profile.md / baseline-core-files.json 현재 본문
 
