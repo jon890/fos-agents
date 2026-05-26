@@ -161,13 +161,23 @@ Conventional Commits + 한글 subject:
 
 기존 영어 커밋 히스토리는 소급 리라이트하지 않는다.
 
-## 8. plan 사이클 (career-os 패턴)
+## 8. planning / implementation 위임 원칙
+
+모든 워크스페이스의 기본 원칙:
+
+- planning은 Codex와 사용자가 대화로 진행한다. planning skill은 목표 재정의, phase 구성, 열린 결정, 추천 기본값, 다음 액션을 잡는 **대화 구조**로 사용한다.
+- `claude -p "/planning ..."` 비대화형 planning은 기본 사용하지 않는다. 계획은 반박, 보류, 범위 조정, 승인 게이트 논의가 필요하므로 비대화형 생성에 맡기지 않는다.
+- Claude 비대화형 실행은 합의된 task/phase의 **구현**에만 사용한다.
+- Codex는 planning brief 작성, 결정사항 기록, task 파일 고정, Claude 구현 결과 review, 검증, 의도한 변경만 commit/push하는 책임을 가진다.
+- Claude 구현 phase를 실행할 때는 phase 문서의 scope, safety gate, 검증 기준을 명확히 전달한다.
+
+## 9. plan 사이클 (career-os 패턴)
 
 career-os는 `tasks/plan{N}-<slug>/` 영구 plan 영역을 운영.
-`skills/planning`이 plan 작성, `skills/plan-and-build`가 자동 실행 (`run-phases.py`).
+`skills/planning` 구조로 Codex와 사용자가 plan을 대화형으로 작성하고, 합의 후 task 파일로 고정한다. 구현은 Claude 비대화형 실행 또는 `skills/plan-and-build` 자동 실행(`run-phases.py`)으로 진행한다.
 본 패턴이 다른 워크스페이스에도 유용하다 판단되면 도입 가능 — 단 워크스페이스 격리 원칙상 별도 결정.
 
-## 9. 외부 의존성
+## 10. 외부 의존성
 
 - `_shared/bin/track_task.sh` — 모든 워크스페이스 트래커. **load-bearing**.
 - `_shared/lib/notify_discord.ts` — Discord 알림(openclaw subprocess 경유, ADR-021).
@@ -178,7 +188,7 @@ career-os는 `tasks/plan{N}-<slug>/` 영구 plan 영역을 운영.
 - `agent-browser` CLI — JS-heavy 페이지(Naver Land 등) 수집. 로컬 설치 필수 (apartment ADR-001).
 - `claude` CLI — 모든 Claude 호출 워크플로 의존.
 
-## 10. 참고 문서
+## 11. 참고 문서
 
 - 워크스페이스 표준 청사진: `docs/workspace-structure.md` (새 워크스페이스 추가 진입점).
 - 모노레포 ADR: `docs/adr.md` (ADR-001~005 누적).

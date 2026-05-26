@@ -104,7 +104,16 @@ ln -s AGENTS.md CLAUDE.md
 - 완료된 plan도 history 보존 목적으로 삭제하지 않는다.
 - draft/ 서브디렉터리 옵션: Write 도구로 draft 파일 먼저 작성 → Read draft → Write target 패턴 (common-pitfalls 6-6 방어).
 
-`skills/planning`이 plan 작성, `skills/plan-and-build`가 `run-phases.py`로 자동 실행.
+`skills/planning`은 비대화형 생성기가 아니라 Codex와 사용자가 계획을 합의하기 위한 구조로 사용한다.
+
+공통 운영 원칙:
+
+- planning은 대화형으로 진행한다. 목표, 범위, 열린 결정, 추천 기본값, phase를 사용자가 확인한 뒤 task 파일로 고정한다.
+- `claude -p "/planning ..."` 비대화형 planning은 기본 사용하지 않는다.
+- Claude 비대화형 실행은 합의된 task/phase 구현에 사용한다.
+- Codex는 Claude 구현 결과를 review하고, 검증 후 의도한 변경만 commit/push한다.
+
+구현 자동화가 필요하면 `skills/plan-and-build`가 `run-phases.py`로 phase를 실행할 수 있다.
 
 ---
 
