@@ -288,6 +288,45 @@ closed
 
 루트 `.gitignore`의 `**/data/` 규칙 때문에 `data/applications/`의 실제 지원 산출물은 기본적으로 git 추적되지 않는다. 이는 의도된 정책이다. 스키마와 skill 명세만 git 추적하고, 공고별 맞춤 이력서/지원 전략/제출 상태는 로컬 private data로 유지한다.
 
+### application-flow-agent runtime fields (planned — plan031)
+
+plan031은 기존 ledger record와 호환되도록 optional runtime field를 추가한다. 기존 `status`는 큰 흐름을 유지하고, 세부 자율 실행 상태는 `agentPhase` 또는 `agentState`로 분리한다.
+
+추가 후보:
+
+```json
+{
+  "agentPhase": "scouting",
+  "nextRunAt": "2026-06-02T09:00:00+09:00",
+  "lastDecisionAt": "2026-05-26T19:45:00+09:00",
+  "decisionReason": "No actionable candidate after sufficient search; retry next week.",
+  "confidence": "medium",
+  "autonomyLevel": "agent_only",
+  "requiredUserAction": "none",
+  "actionableCandidate": false,
+  "fitScore": 68,
+  "priority": "normal",
+  "sourceFreshness": "fresh",
+  "lastAgentAction": "schedule_retry",
+  "decisionLogPath": "data/applications/_logs/2026-05-26/application-flow-agent.md"
+}
+```
+
+권장 enum:
+
+- `autonomyLevel`: `agent_only`, `user_approval_required`, `external_action_blocked`
+- `requiredUserAction`: `none`, `review_application`, `approve_submission`, `provide_evidence`, `decide_cooldown`, `approve_public_publish`, `approve_profile_update`
+- `priority`: `low`, `normal`, `high`, `urgent`
+- `sourceFreshness`: `fresh`, `stale`, `unknown`
+
+검증 원칙:
+
+- `submitted`는 agent가 자동으로 설정할 수 없다.
+- `approved`는 사용자 승인 근거 없이 설정할 수 없다.
+- `sourceFreshness=stale`이면 actionable candidate로 취급하지 않는다.
+- `revisionCount > maxRevisionCount`이면 revise action을 금지한다.
+- `ready_for_user_review` 이후 외부 제출 action은 항상 사용자 승인 필요 상태로 남긴다.
+
 ### config/study-pack-topics.json (plan017 신규 — study-pack namespace 단일 책임)
 
 `config/topics.json`의 `study-pack` namespace 분리본 (ADR-027). study-pack-writer + study-topic-recommender가 Read. 55 키.

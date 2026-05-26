@@ -46,6 +46,8 @@ career-os의 모든 아키텍처 결정을 시간순으로 누적 기록한다. 
 | ADR-033 | fos-study source tree를 study artifact 단일 진실원으로 사용 | Accepted | generated-artifacts.json career-os 활성 제거, sources/fos-study 직접 스캔, duplicate decision schema 공유 (plan025) |
 | ADR-034 | interview-coffeechat-prep 4 mode 일반화 | Accepted | mvp-target.json primary.interview.{coffeechat, first_round, final_round, offer_chat} 구조 + first-round 활성 + private/public-safe 두 산출물 (plan026) |
 | ADR-035 | ts 헬퍼 모듈 분해 컨벤션 — source / transform / render / cli 4 레이어 | Accepted | god-script (단일 파일에 fetch + 정규화 + 렌더 + IO 응집) 분해 표준. plan027~plan031 시리즈 적용 (refresh_topic_inventory 859→1049 외 5 파일 2106줄) |
+| ADR-036 | position-recommender daily freshness guard + recommendation rotation | Accepted | stale runtime 재전송 차단, 최근 7일 반복 후보 감점, daily cron freshness 검증 |
+| ADR-037 | application-flow-agent runtime은 policy decision engine 중심 | Planned | plan029 skill chain 위에 state -> policy decision -> action -> validation -> state update 루프 추가 (plan031) |
 
 (ADR-024는 번호 누락. ADR-007a/b 충돌은 prd.md "분해 대기 작업"에 기록.)
 
@@ -1133,3 +1135,40 @@ career-os/scripts/<skill>/
 - Claude 내부 interactive approval 때문에 Discord notify가 멈추는 문제를 피한다.
 - 같은 공고 반복 추천을 줄이면서, 정말 좋은 후보는 이유를 붙여 유지할 수 있다.
 - OpenClaw/runner는 오케스트레이션과 외부 전송을 담당하고, 실제 추천 작업은 Claude native skill이 수행한다.
+
+---
+
+## ADR-037 — application-flow-agent runtime은 policy decision engine 중심
+
+- Status: Planned
+- Date: 2026-05-26
+
+### 맥락
+
+`plan029-application-agent-mvp`는 공고별 지원 패키지 작성, evidence/drift review, daily digest까지 구현했지만, 다음 행동을 스스로 결정하는 runtime은 없다. 현재 구조만으로는 "적절한 공고 없음 -> 더 찾기 또는 다음 주 재시도", "쿨다운/중복/마감 -> block/close", "review revise -> agent 수정 또는 evidence 수집", "제출 후 study loop 우선순위 상승" 같은 상태 기반 분기가 skill 호출 순서에 흩어진다.
+
+`plan030-position-recommender-daily-freshness`는 stale 후보를 줄이는 선행 품질 개선이다. application-flow-agent 구현 계획이 아니라, 후보 ingest 전 freshness prerequisite로 참조한다.
+
+ADR-035에는 TypeScript helper 분해 시리즈의 예시로 `plan031 — run_with_discord_notify.ts`가 적혀 있지만, 실제 `tasks/plan031-*` 디렉터리는 존재하지 않았다. 이 ADR에서는 실제 task 번호 `plan031`을 application-flow-agent에 배정하고, ADR-035의 해당 항목은 미실행 예시/후속 후보로만 취급한다.
+
+### 결정
+
+- `plan031-application-flow-agent`를 새 계획으로 연다.
+- application-flow-agent는 단순 skill chain이 아니라 `state -> policy decision -> action -> validation -> state update` 루프다.
+- Claude native skills는 tool로 재사용한다.
+  - `/position-recommender`: 후보 source
+  - `application-package-writer`: 지원 패키지 생성
+  - `application-reviewer`: evidence/drift review
+  - `daily-application-digest`: report
+  - study/interview skills: private study/interview loop
+- LLM은 분석, 작성, 추천 근거 생성을 맡고, 상태 전이 허용 여부는 TypeScript policy/validator가 결정한다.
+- 기존 `status` enum은 큰 흐름으로 유지하고, 세부 agent 상태는 `agentPhase` 또는 `agentState` optional field로 확장한다.
+- 실제 제출, 외부 사이트 입력/전송, 계정 로그인, 공개 fos-study 발행, 원본 candidate-profile 수정은 사용자 승인 없이 수행하지 않는다.
+- plan031 MVP의 submission assistant 범위는 Level 0이다. 제출 링크와 체크리스트까지만 생성한다.
+
+### 결과
+
+- no actionable candidate, needs_more_search, scheduled_retry, blocked, ready_for_user_review, study_loop 분기를 코드 policy로 검증할 수 있다.
+- plan029 산출물은 유지하고, 그 위에 runtime 계층을 추가한다.
+- plan030은 폐기하지 않고 후보 freshness prerequisite로 남긴다.
+- public/private boundary와 제출 승인 게이트가 runner allowlist에서 통제된다.

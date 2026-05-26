@@ -1,0 +1,161 @@
+{
+  "name": "plan031-application-flow-agent",
+  "description": "plan029 application package MVP와 plan030 position freshness guard를 기반으로, 단순 skill chain이 아니라 ledger 상태를 읽고 다음 행동을 결정하는 policy decision engine 중심의 자율 application-flow-agent runtime을 설계하고 구현한다.",
+  "created_at": "2026-05-26T19:45:00+09:00",
+  "updated_at": "2026-05-26T19:45:00+09:00",
+  "status": "planned",
+  "current_phase": 1,
+  "total_phases": 5,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/docs/prd.md",
+    "career-os/docs/flow.md",
+    "career-os/docs/data-schema.md",
+    "career-os/docs/code-architecture.md",
+    "career-os/docs/adr.md",
+    "career-os/scripts/application-agent/ledger_schema.ts",
+    "career-os/.claude/skills/position-recommender/SKILL.md",
+    "career-os/.claude/skills/application-package-writer/SKILL.md",
+    "career-os/.claude/skills/application-reviewer/SKILL.md",
+    "career-os/.claude/skills/daily-application-digest/SKILL.md"
+  ],
+  "depends_on": [
+    "plan029-application-agent-mvp",
+    "plan030-position-recommender-daily-freshness"
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "agent-runtime-not-skill-chain",
+      "decision": "application-flow-agent는 skill을 순서대로 호출하는 체인이 아니라 state -> policy decision -> action -> validation -> state update 루프다. 기존 native skills는 tool로만 재사용한다."
+    },
+    {
+      "id": "D2",
+      "title": "state-transition-ownership",
+      "decision": "LLM은 분석, 작성, 추천 근거 생성을 담당한다. ledger 상태 전이 허용 여부와 next action 선택은 TypeScript policy engine과 validator가 결정한다."
+    },
+    {
+      "id": "D3",
+      "title": "autonomy-default",
+      "decision": "공고 발견, 분석, 패키지 작성, 리뷰, agent 수정, private study/interview action 생성은 agent-only로 진행한다. 실제 제출, 외부 사이트 입력/전송, 계정 로그인, 공개 fos-study 발행, 원본 candidate-profile 수정은 사용자 승인 게이트에서 멈춘다."
+    },
+    {
+      "id": "D4",
+      "title": "status-compatibility",
+      "decision": "기존 ledger status enum은 큰 흐름으로 유지하고, 세부 자율 실행 상태는 agentPhase 또는 agentState 필드로 확장한다."
+    },
+    {
+      "id": "D5",
+      "title": "submission-scope",
+      "decision": "plan031 MVP의 submission assistant 범위는 Level 0으로 제한한다. 제출 링크와 체크리스트까지만 생성하고, 브라우저 입력 자동화는 후속 plan/ADR로 분리한다."
+    },
+    {
+      "id": "D6",
+      "title": "public-private-study-boundary",
+      "decision": "daily 공부자료 자동 생성은 private report를 기본으로 한다. sources/fos-study 공개 발행은 public-safe topic, 중복 guard, 민감정보 제거, 별도 승인 조건을 통과할 때만 수행한다."
+    },
+    {
+      "id": "D7",
+      "title": "candidate-memory-refinement",
+      "decision": "agent는 profile-suggestions.md를 만들 수 있지만 config/candidate-profile.md를 직접 수정하지 않는다. 실제 프로필 반영은 candidate-baseline-suggester 또는 사용자 검토 이후 별도 승인으로 처리한다."
+    }
+  ],
+  "open_decisions": [
+    {
+      "id": "O1",
+      "title": "fit-threshold",
+      "question": "actionable candidate로 간주할 role-fit threshold를 몇 점으로 둘 것인가?",
+      "recommended_default": "70점 이상을 기본값으로 두고, 85점 이상은 strong action, 70-84점은 normal action, 70점 미만은 study/hold로 분기한다."
+    },
+    {
+      "id": "O2",
+      "title": "search-expansion-sources",
+      "question": "no actionable candidate일 때 어느 채용 소스까지 확장할 것인가?",
+      "recommended_default": "MVP는 Wanted + 회사 공식 career + verified allowlist로 제한하고, 로그인 의존 플랫폼은 후속 확장으로 둔다."
+    },
+    {
+      "id": "O3",
+      "title": "cron-frequency",
+      "question": "application-flow-agent 자동 실행 빈도를 어떻게 둘 것인가?",
+      "recommended_default": "초기에는 daily 1회 + 수동 run-once로 시작하고, 안정화 후 weekday morning cron으로 고정한다."
+    }
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "상태 모델 + policy matrix 확정",
+      "file": "phase-01.md",
+      "status": "planned",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 2,
+      "title": "ledger/runtime schema + validator 확장",
+      "file": "phase-02.md",
+      "status": "planned",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
+      "model": "sonnet",
+      "timeout": 1800
+    },
+    {
+      "number": 3,
+      "title": "policy decision engine + command interface 구현",
+      "file": "phase-03.md",
+      "status": "planned",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
+      "model": "sonnet",
+      "timeout": 2400
+    },
+    {
+      "number": 4,
+      "title": "기존 skill tool 연결 + reporting/safety gates",
+      "file": "phase-04.md",
+      "status": "planned",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
+      "model": "sonnet",
+      "timeout": 2400
+    },
+    {
+      "number": 5,
+      "title": "fixture 기반 end-to-end 검증 + 운영 등록 판단",
+      "file": "phase-05.md",
+      "status": "planned",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep"
+      ],
+      "model": "sonnet",
+      "timeout": 2400
+    }
+  ]
+}

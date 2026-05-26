@@ -233,3 +233,31 @@ data/applications/
 ```
 
 MVP에서는 제출 자동화를 구현하지 않는다. 브라우저 입력 보조와 최종 제출은 별도 phase 또는 ADR에서 다룬다.
+
+## Planned: application-flow-agent runtime (plan031)
+
+plan031은 plan029 native skills 위에 TypeScript runtime 계층을 추가한다.
+
+예정 구조:
+
+```text
+scripts/application-agent/
+├── run.ts                         # command interface
+├── ledger_schema.ts               # existing schema + runtime field validation
+├── agent_decision_schema.ts        # decision object schema
+├── ledger_io.ts                    # ledger read/write helpers
+├── policy.ts                       # deterministic policy decision engine
+├── actions.ts                      # allowlisted local actions
+├── ingest_position_report.ts       # position report -> candidate ledger
+├── render_decision_log.ts          # private decision log renderer
+└── fixtures/                       # non-sensitive validation fixtures
+```
+
+책임 분리:
+
+- Claude native skills: 분석, 작성, 리뷰, 추천 보고서 생성.
+- TypeScript policy engine: 다음 action 선택, 상태 전이 허용 여부, user gate 적용.
+- validator: ledger schema, transition, private/public boundary, stale source 여부 검증.
+- runner: `run-once`, `run-daily`, `dry-run`, `validate`, `resume`, `ingest-position-report` 명령 제공.
+
+금지 action은 runner allowlist에 넣지 않는다. 실제 제출, 외부 사이트 입력/전송, 공개 발행, 원본 candidate-profile 수정은 사용자 승인 전 자동 실행 대상이 아니다.

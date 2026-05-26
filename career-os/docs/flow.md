@@ -145,7 +145,7 @@ daily cron은 `scripts/position-recommender/run_daily_with_claude.sh`를 통해 
 
 상세 동작: `career-os/.claude/skills/position-recommender/SKILL.md` Workflow 섹션 참조.
 
-### Application Agent MVP (planned — plan029)
+### Application Agent MVP (completed base — plan029)
 
 plan029는 기존 position/study/interview native skill을 조립해 지원 전후 전체 루프를 만든다.
 
@@ -193,6 +193,50 @@ discovered
 - 실제 제출 자동화는 MVP 범위 밖이다.
 - 공고별 맞춤 이력서, 지원동기, 지원 전략은 `data/applications/` 비공개 산출물로 둔다.
 - `sources/fos-study/`에는 회사명/개인 지원 전략이 빠진 순수 기술 학습 자료만 발행한다.
+
+### Application Flow Agent Runtime (planned — plan031)
+
+plan031은 plan029의 skill 산출물을 기반으로, 상태 기반 자율 실행 runtime을 추가한다.
+
+핵심 루프:
+
+```text
+ledger/runtime 읽기
+  -> actionable candidate 판정
+  -> policy decision 생성
+  -> 허용된 action 실행 또는 제안
+  -> validator로 상태 전이 검증
+  -> ledger/decision log 갱신
+  -> digest/approval 필요 항목 보고
+```
+
+명령 인터페이스:
+
+```bash
+bun scripts/application-agent/run.ts run-once
+bun scripts/application-agent/run.ts run-daily
+bun scripts/application-agent/run.ts dry-run
+bun scripts/application-agent/run.ts validate
+bun scripts/application-agent/run.ts resume <application-id>
+bun scripts/application-agent/run.ts ingest-position-report <report-path>
+```
+
+주요 분기:
+
+- actionable candidate 없음 + 검색량 부족 -> `needs_more_search`
+- actionable candidate 없음 + 검색량 충분 -> `scheduled_retry`
+- active + fit threshold 통과 -> `generating_package`
+- cooldown/duplicate/expired -> `blocked` 또는 `closed`
+- review `revise` + revisionCount 여유 -> `revising_package`
+- 근거 부족 -> `collecting_evidence` 또는 사용자 입력 요청
+- `ready_for_user_review` -> 사용자 승인 요청에서 정지
+- `submitted` 또는 `interview_scheduled` -> private `study_loop`
+
+안전 경계:
+
+- 제출 자동화는 Level 0만 허용한다. 즉 제출 링크와 체크리스트 생성까지만 한다.
+- 브라우저 입력 자동화, 실제 제출, 외부 전송, 공개 fos-study 발행, 원본 candidate-profile 수정은 후속 승인/ADR 없이는 금지한다.
+- plan030의 position freshness guard를 후보 ingest prerequisite로 사용해 stale 추천을 차단한다.
 
 ### `study-topic-recommender` (모닝 추천 — native skill, ADR-026 + ADR-033)
 
