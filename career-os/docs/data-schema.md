@@ -288,11 +288,9 @@ closed
 
 루트 `.gitignore`의 `**/data/` 규칙 때문에 `data/applications/`의 실제 지원 산출물은 기본적으로 git 추적되지 않는다. 이는 의도된 정책이다. 스키마와 skill 명세만 git 추적하고, 공고별 맞춤 이력서/지원 전략/제출 상태는 로컬 private data로 유지한다.
 
-### application-flow-agent runtime fields (planned — plan031)
+### application-flow-agent runtime fields (plan031 — phase-01 확정)
 
-plan031은 기존 ledger record와 호환되도록 optional runtime field를 추가한다. 기존 `status`는 큰 흐름을 유지하고, 세부 자율 실행 상태는 `agentPhase` 또는 `agentState`로 분리한다.
-
-추가 후보:
+plan031은 기존 ledger record와 호환되도록 optional runtime field를 추가한다. 기존 `status`는 큰 흐름을 유지하고, 세부 자율 실행 상태는 `agentPhase` optional 필드로 분리한다. 검증 단일 출처: `scripts/application-agent/ledger_schema.ts` (phase-02에서 확장).
 
 ```json
 {
@@ -300,7 +298,6 @@ plan031은 기존 ledger record와 호환되도록 optional runtime field를 추
   "nextRunAt": "2026-06-02T09:00:00+09:00",
   "lastDecisionAt": "2026-05-26T19:45:00+09:00",
   "decisionReason": "No actionable candidate after sufficient search; retry next week.",
-  "confidence": "medium",
   "autonomyLevel": "agent_only",
   "requiredUserAction": "none",
   "actionableCandidate": false,
@@ -312,20 +309,38 @@ plan031은 기존 ledger record와 호환되도록 optional runtime field를 추
 }
 ```
 
-권장 enum:
+`agentPhase` enum (확정 — plan031 phase-01):
+
+| 값 | 의미 |
+|---|---|
+| `scouting` | 후보 탐색 중 |
+| `needs_more_search` | actionable candidate 없음 + 검색량 부족 |
+| `no_good_match` | 충분히 검색했지만 actionable candidate 없음 |
+| `scheduled_retry` | 다음 실행 예약됨 (`nextRunAt` 설정) |
+| `actionable_candidate` | active + fit threshold 통과 후보 판정됨 |
+| `generating_package` | application-package-writer 실행 대상 |
+| `reviewing_package` | application-reviewer 실행 대상 |
+| `collecting_evidence` | 근거 부족 보강 대상 |
+| `revising_package` | agent 수정 루프 대상 |
+| `waiting_user_approval` | 사용자 승인 전 정지 |
+| `study_loop` | private study/interview action 생성 대상 |
+| `submission_checklist` | 제출 링크/체크리스트 생성 대상 (Level 0) |
+
+나머지 enum:
 
 - `autonomyLevel`: `agent_only`, `user_approval_required`, `external_action_blocked`
 - `requiredUserAction`: `none`, `review_application`, `approve_submission`, `provide_evidence`, `decide_cooldown`, `approve_public_publish`, `approve_profile_update`
 - `priority`: `low`, `normal`, `high`, `urgent`
 - `sourceFreshness`: `fresh`, `stale`, `unknown`
 
-검증 원칙:
+검증 규칙 (TypeScript validator 책임):
 
 - `submitted`는 agent가 자동으로 설정할 수 없다.
 - `approved`는 사용자 승인 근거 없이 설정할 수 없다.
 - `sourceFreshness=stale`이면 actionable candidate로 취급하지 않는다.
 - `revisionCount > maxRevisionCount`이면 revise action을 금지한다.
 - `ready_for_user_review` 이후 외부 제출 action은 항상 사용자 승인 필요 상태로 남긴다.
+- fit score 70점 미만이면 `actionable_candidate`로 전이할 수 없다.
 
 ### config/study-pack-topics.json (plan017 신규 — study-pack namespace 단일 책임)
 

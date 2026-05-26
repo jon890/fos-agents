@@ -194,17 +194,17 @@ discovered
 - 공고별 맞춤 이력서, 지원동기, 지원 전략은 `data/applications/` 비공개 산출물로 둔다.
 - `sources/fos-study/`에는 회사명/개인 지원 전략이 빠진 순수 기술 학습 자료만 발행한다.
 
-### Application Flow Agent Runtime (planned — plan031)
+### Application Flow Agent Runtime (plan031 — phase-01 상태 모델 확정)
 
-plan031은 plan029의 skill 산출물을 기반으로, 상태 기반 자율 실행 runtime을 추가한다.
+plan031은 plan029의 skill 산출물을 기반으로, 상태 기반 자율 실행 runtime을 추가한다. 상태 전이 허용 여부와 next action 선택은 TypeScript policy engine이 결정한다. LLM은 분석, 작성, 추천 근거 생성만 담당한다.
 
 핵심 루프:
 
 ```text
 ledger/runtime 읽기
-  -> actionable candidate 판정
-  -> policy decision 생성
-  -> 허용된 action 실행 또는 제안
+  -> actionable candidate 판정 (fit threshold + freshness + cooldown)
+  -> policy decision 생성 (TypeScript policy engine — LLM 아님)
+  -> 허용된 action 실행 또는 사용자 gate에서 정지
   -> validator로 상태 전이 검증
   -> ledger/decision log 갱신
   -> digest/approval 필요 항목 보고
@@ -221,22 +221,72 @@ bun scripts/application-agent/run.ts resume <application-id>
 bun scripts/application-agent/run.ts ingest-position-report <report-path>
 ```
 
-주요 분기:
+#### agentPhase 상태 모델
 
-- actionable candidate 없음 + 검색량 부족 -> `needs_more_search`
-- actionable candidate 없음 + 검색량 충분 -> `scheduled_retry`
-- active + fit threshold 통과 -> `generating_package`
-- cooldown/duplicate/expired -> `blocked` 또는 `closed`
-- review `revise` + revisionCount 여유 -> `revising_package`
-- 근거 부족 -> `collecting_evidence` 또는 사용자 입력 요청
-- `ready_for_user_review` -> 사용자 승인 요청에서 정지
-- `submitted` 또는 `interview_scheduled` -> private `study_loop`
+기존 `status` enum(큰 흐름)은 유지하고, 세부 agent 실행 상태를 `agentPhase` optional 필드로 분리한다.
+
+| agentPhase | 의미 |
+|---|---|
+| `scouting` | 후보 탐색 중 |
+| `needs_more_search` | actionable candidate 없음 + 검색량 부족 → 범위 확장 필요 |
+| `no_good_match` | 충분히 검색했지만 actionable candidate 없음 |
+| `scheduled_retry` | 지금은 할 일 없고 다음 실행 예약됨 (`nextRunAt` 설정) |
+| `actionable_candidate` | active + fit threshold 통과 후보 판정됨 |
+| `generating_package` | application-package-writer 실행 대상 |
+| `reviewing_package` | application-reviewer 실행 대상 |
+| `collecting_evidence` | 근거 부족 보강 대상 |
+| `revising_package` | agent 수정 루프 대상 (revisionCount < maxRevisionCount) |
+| `waiting_user_approval` | 사용자 승인 전 정지 |
+| `study_loop` | submitted/interview_scheduled → private study/interview action 생성 대상 |
+| `submission_checklist` | 제출 링크/체크리스트 생성 대상 (Level 0) |
+
+#### actionable candidate 기준
+
+- 공고가 active 상태다.
+- 공고 URL 또는 source id가 중복이 아니다.
+- 회사/그룹 쿨다운 플래그가 없다.
+- 공고 만료/마감 신호가 없다.
+- role-fit score가 threshold 이상이다 (기본값 70점 이상).
+- 최근 7일 반복 후보라면 반복 유지 사유가 있다.
+- position-recommender freshness guard를 통과한 입력에서 왔다 (plan030 prerequisite).
+
+fit score 분기:
+
+- 85점 이상: high priority actionable candidate
+- 70-84점: normal actionable candidate
+- 70점 미만: study_loop 후보 또는 hold
+
+#### policy matrix
+
+| 현재 status | 조건 | next action | next agentPhase |
+|---|---|---|---|
+| `scouting` | actionable candidate 0 + 검색량 부족 | `expand_search` | `needs_more_search` |
+| `scouting` | actionable candidate 0 + 검색량 충분 | `schedule_retry` | `scheduled_retry` |
+| `discovered` | active + fit threshold 통과 | `run_application_package_writer` | `generating_package` |
+| `discovered` | closed/expired | `close_candidate` | status → `closed` |
+| `discovered` | cooldown/duplicate | `block_candidate` | status → `blocked` |
+| `preparing_application` | package exists | `run_application_reviewer` | `reviewing_package` |
+| `needs_revision` | revisionCount < max + agent-fixable | `revise_application_package` | `revising_package` |
+| `needs_revision` | evidence 부족 | `collect_evidence_or_request_user_input` | `collecting_evidence` 또는 `waiting_user_approval` |
+| `needs_revision` | revisionCount >= maxRevisionCount | `block_or_request_user_input` | status → `blocked` |
+| `ready_for_user_review` | — | `notify_user_approval_needed` | `waiting_user_approval` |
+| `approved` | — | `create_submission_checklist` | `submission_checklist` |
+| `submitted` | — | `create_study_interview_actions` | `study_loop` |
+| `interview_scheduled` | — | `prioritize_interview_prep` | `study_loop` |
+
+#### 우선순위 큐 기본값
+
+- 하루 신규 deep analysis 최대 2개.
+- `ready_for_user_review`는 최대 3개까지만 쌓는다.
+- 진행 중인 revise/review가 신규 탐색보다 우선한다.
+- `interview_scheduled`가 있으면 study_loop 우선순위를 올린다.
+- `blocked`는 자동 재시도하지 않고 `requiredUserAction` 또는 `nextRunAt`이 있는 경우만 재평가한다.
 
 안전 경계:
 
 - 제출 자동화는 Level 0만 허용한다. 즉 제출 링크와 체크리스트 생성까지만 한다.
-- 브라우저 입력 자동화, 실제 제출, 외부 전송, 공개 fos-study 발행, 원본 candidate-profile 수정은 후속 승인/ADR 없이는 금지한다.
-- plan030의 position freshness guard를 후보 ingest prerequisite로 사용해 stale 추천을 차단한다.
+- 브라우저 입력 자동화, 실제 제출, 외부 전송, 공개 fos-study 발행, 원본 candidate-profile 수정은 사용자 승인 없이 금지한다.
+- plan030의 position freshness guard를 후보 ingest prerequisite로 사용해 stale 추천을 차단한다. plan030은 구현 대상이 아니라 prerequisite로만 참조한다.
 
 ### `study-topic-recommender` (모닝 추천 — native skill, ADR-026 + ADR-033)
 
