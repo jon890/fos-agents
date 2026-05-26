@@ -31,7 +31,7 @@
 - `docs/` — ai-nodes 모노레포 레벨.
   - `docs/adr.md` — 모노레포 ADR.
   - `docs/workspace-structure.md` — 워크스페이스 표준 청사진 (plan001 신설, 새 워크스페이스 추가 진입점).
-  - `docs/docs-style.md` — docs / ADR 형식 정책 (ADR-005). 6 패턴 + 한자어 회피 + 거울 구조. 워크스페이스 docs · CLAUDE.md · SKILL.md 모두 본 문서를 따른다.
+  - `docs/docs-style.md` — docs / ADR 형식 정책 (ADR-005). 8 패턴 + 한자어 회피 + 거울 구조. 워크스페이스 docs · CLAUDE.md · SKILL.md 모두 본 문서를 따른다.
   - 워크스페이스 한정 결정은 `<workspace>/docs/adr.md`.
 
 ### 1-1. 분리 표준 (ADR-006)
@@ -161,7 +161,34 @@ Conventional Commits + 한글 subject:
 
 기존 영어 커밋 히스토리는 소급 리라이트하지 않는다.
 
-## 8. planning / implementation 위임 원칙
+## 8. docs 가독성 규칙
+
+단일 출처: `docs/docs-style.md` (ADR-005).
+docs · CLAUDE.md · AGENTS.md · SKILL.md · task phase 파일 모두 적용.
+**새 작성은 필수, 기존 편집 중인 파일은 함께 정리.**
+
+8 패턴 요약:
+
+1. **semantic line break** — 한 문장 당 1줄.
+   - 문장 끝나면 줄바꿈.
+   - 길면 의미 단위로 분할.
+2. **enumerated inline 금지** — `A·B·C` 콤마 나열보다 bullet list가 스캔 쉬움 (항목 3개 이상이면).
+3. **괄호 중첩 2겹 이상 금지** — `((설명) 안의 설명)` 형태 금지.
+   - 별도 문장으로.
+4. **= / → 동치·인과 압축은 한 단락 1회만** — `A → B → C`가 여러 번 나오면 표로.
+5. **한 문장 80자 초과 시 분할** — 백틱 인용 3개 이상 또는 괄호 다수도 분할 대상.
+6. **한 bullet에 다중 속성 압축 금지** — 한 bullet에 4개+ 속성을 콤마로 묶지 말고 sub-bullet으로.
+7. **표 셀 안 정보 4개 이상이면 `<br>` 분리** — GitHub markdown `<br>` 줄바꿈으로 분리.
+8. **헤더 + 본문 구조** — `## 제목` → 1줄 요약 → 본문(리스트·표) 순.
+   - 헤더 바로 다음 줄에 긴 줄글 박지 않는다.
+
+추가 정책:
+- 거울 구조 — 같은 정의를 두 docs에 "본문"으로 쓰지 않는다.
+  - 단일 출처 한 곳에 본문, 다른 docs는 역참조.
+- 한자어 회피 — 한국인이 자연스럽게 읽히는 표현 우선 (상세 대체 표는 `docs/docs-style.md`).
+- `§` 기호 사용 금지 (글로벌 directive).
+
+## 9. planning / implementation 위임 원칙
 
 모든 워크스페이스의 기본 원칙:
 
@@ -171,13 +198,13 @@ Conventional Commits + 한글 subject:
 - Codex는 planning brief 작성, 결정사항 기록, task 파일 고정, Claude 구현 결과 review, 검증, 의도한 변경만 commit/push하는 책임을 가진다.
 - Claude 구현 phase를 실행할 때는 phase 문서의 scope, safety gate, 검증 기준을 명확히 전달한다.
 
-## 9. plan 사이클 (career-os 패턴)
+## 10. plan 사이클 (career-os 패턴)
 
 career-os는 `tasks/plan{N}-<slug>/` 영구 plan 영역을 운영.
 `skills/planning` 구조로 Codex와 사용자가 plan을 대화형으로 작성하고, 합의 후 task 파일로 고정한다. 구현은 Claude 비대화형 실행 또는 `skills/plan-and-build` 자동 실행(`run-phases.py`)으로 진행한다.
 본 패턴이 다른 워크스페이스에도 유용하다 판단되면 도입 가능 — 단 워크스페이스 격리 원칙상 별도 결정.
 
-## 10. 외부 의존성
+## 11. 외부 의존성
 
 - `_shared/bin/track_task.sh` — 모든 워크스페이스 트래커. **load-bearing**.
 - `_shared/lib/notify_discord.ts` — Discord 알림(openclaw subprocess 경유, ADR-021).
@@ -188,11 +215,11 @@ career-os는 `tasks/plan{N}-<slug>/` 영구 plan 영역을 운영.
 - `agent-browser` CLI — JS-heavy 페이지(Naver Land 등) 수집. 로컬 설치 필수 (apartment ADR-001).
 - `claude` CLI — 모든 Claude 호출 워크플로 의존.
 
-## 11. 참고 문서
+## 12. 참고 문서
 
 - 워크스페이스 표준 청사진: `docs/workspace-structure.md` (새 워크스페이스 추가 진입점).
 - 모노레포 ADR: `docs/adr.md` (ADR-001~005 누적).
-- docs / ADR 형식 정책: `docs/docs-style.md` (ADR-005 — 6 패턴 + 한자어 회피 + 거울 구조).
+- docs / ADR 형식 정책: `docs/docs-style.md` (ADR-005 — 8 패턴 + 한자어 회피 + 거울 구조). 인라인 요약은 8번 섹션.
 - 워크스페이스별 상세: `<workspace>/AGENTS.md`.
 - career-os 5문서: `career-os/docs/{prd, data-schema, flow, code-architecture, adr}.md`.
 - apartment 5문서: `apartment/docs/{prd, data-schema, flow, code-architecture, adr}.md` (plan001 신설).
