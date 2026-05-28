@@ -78,6 +78,27 @@ echo "[index status] $STAT"
 echo "OK"
 ```
 
+## 커밋 (검증 통과 후)
+
+**중요**: working tree에 본 plan과 무관한 미커밋 작업이 존재한다.
+`git add -A` / `git add .` 금지 — index.json만 명시 add한다.
+push는 하지 않는다(오케스트레이터가 전체 완료 후 처리).
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+git add tasks/plan003-fos-brain-integration/index.json
+STAGED=$(git diff --cached --name-only | wc -l)
+echo "[staged 파일 수] $STAGED"
+[ "$STAGED" -eq 1 ] || { echo "PHASE_FAILED: index.json 외 staged 혼입"; git reset; exit 1; }
+git commit -m "$(cat <<'EOF'
+task(ai-nodes): plan003 통합 검증 완료 + status=completed
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+EOF
+)"
+git log --oneline -1
+```
+
 ## 의도 메모 (왜)
 
 - 마지막 phase 검증 전용 분리(task-create.md 표준) — phase-01 산출물 + docs-first 산출물 정합성을 한 곳에서 확인.

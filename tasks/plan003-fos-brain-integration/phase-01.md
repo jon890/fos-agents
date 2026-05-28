@@ -114,6 +114,31 @@ echo "OK"
 
 PHASE_FAILED 트리거 시 반드시 위 bash 블록을 Bash 도구로 실행해 `exit 1`로 종료한다. prose만 출력하면 success로 잘못 처리된다.
 
+## 커밋 (검증 통과 후)
+
+**중요**: working tree에 본 plan과 무관한 미커밋 작업이 존재한다(apartment·career-os 등).
+`git add -A` / `git add .` 절대 금지 — 아래처럼 **편집한 5개 AGENTS.md만** 명시 add한다.
+push는 하지 않는다(마지막 phase 이후 오케스트레이터가 처리).
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+git add apartment/AGENTS.md career-os/AGENTS.md stock-investment/AGENTS.md travel/AGENTS.md health-care/AGENTS.md
+# 방어: 정확히 5개만 staged (무관 파일 혼입 차단)
+STAGED=$(git diff --cached --name-only | wc -l)
+echo "[staged 파일 수] $STAGED"
+[ "$STAGED" -eq 5 ] || { echo "PHASE_FAILED: staged가 5개 아님 — 무관 파일 혼입 위험"; git reset; exit 1; }
+git commit -m "$(cat <<'EOF'
+docs(ai-nodes): plan003 phase-01 5 워크스페이스 brain 연동 역참조
+
+- apartment·career-os·stock-investment·travel·health-care AGENTS.md에 fos-brain 연동 섹션 추가
+- 단일 정책(루트 AGENTS.md 13번 + ADR-009/010) 역참조 + 산출물 종류별 네임스페이스 라우팅
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+EOF
+)"
+git log --oneline -1
+```
+
 ## 의도 메모 (왜)
 
 - 거울 구조(ADR-005) — 정책 본문은 루트 `AGENTS.md` 13번 단일 소스, 워크스페이스는 역참조 + 자기 라우팅만. 같은 정의를 5곳에 복제하지 않는다.
