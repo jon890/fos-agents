@@ -16,6 +16,12 @@
 - 공통 중단 기준
 - 단계별 운동/주의사항
 
+### `config/knee-rehab-exercise-sets.md`
+
+- 아침 체크인에서 참조하는 공개 가능한 단계별 재활 운동 세트
+- 세트 A~D의 운동 구성, 피해야 할 행동, 진행 기준
+- 개인 의료정보 없이 일반화된 안전 기준만 포함
+
 ## Private data
 
 `data/conditions/<track>/`는 민감정보 저장 영역이며 gitignore 대상이다.

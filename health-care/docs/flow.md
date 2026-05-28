@@ -21,6 +21,8 @@
 
 - 급성기에는 강화보다 보호·염증 완화·관절 강직 방지를 우선한다.
 - 운동마다 중단 기준을 함께 둔다.
+- 아침 체크인은 `config/knee-rehab-exercise-sets.md`에서 현재 단계에 맞는 운동 세트를 골라 짧게 안내한다.
+- 운동 세트는 최대치가 아니라 안전하게 시작할 기본치로 제안한다.
 
 
 ## Public config policy
@@ -31,6 +33,6 @@
 
 ## 5. Skill flow plan
 
-- `daily-knee-rehab-checkin`: `current-context.md` + `config/knee-running-recovery-plan.md` → 짧은 아침 체크인. 중단 기준과 재진 기준을 항상 포함한다.
+- `daily-knee-rehab-checkin`: `current-context.md` + `config/knee-running-recovery-plan.md` + `config/knee-rehab-exercise-sets.md` → 짧은 아침 체크인과 오늘의 보수적 운동 세트. 중단 기준과 재진 기준을 항상 포함한다.
 - `knee-progress-intake`: 사용자 보고 → `progress-log.jsonl` append + 필요 시 `current-context.md` 업데이트 제안. 추론은 `확인 필요`로 분리한다.
 - `weekly-knee-clinic-summary`: 최근 경과 + OCR 요약 + 현재 컨텍스트 → 병원 제출용 요약과 질문 리스트 초안. Claude 사용 가능하나 진단/처방은 금지한다.
