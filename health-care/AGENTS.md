@@ -48,3 +48,13 @@
 6. 애매한 부분은 임의로 넘기지 말고 질문하거나 `확인 필요`로 남긴다.
 7. 아침 재활 체크인 변경은 `.claude/skills/daily-knee-rehab-checkin/SKILL.md`, `config/knee-running-recovery-plan.md`, `config/knee-rehab-exercise-sets.md`, `docs/flow.md`, `docs/code-architecture.md`를 함께 확인한다.
 8. 이후 참고 자료로 남길 만한 사용자 경과는 private `data/conditions/.../current-context.md`에, 일반화 가능한 운영 결정은 `docs/adr.md` 또는 `config/`에 남긴다.
+
+## fos-brain 연동
+
+이 워크스페이스 agents의 brain 읽기/쓰기 규약.
+단일 정책은 ai-nodes 루트 `AGENTS.md` 13번 + ADR-009(구조) / ADR-010(쓰기 안전·프라이버시).
+
+- 접근: thin caller — brain-search(읽기) / brain-add(쓰기). brain 로직 재구현 금지.
+- cron 무인 실행: brain-search 읽기만. brain-add 적재는 discord 대화 세션에서 사람 검토 후.
+- 산출물 네임스페이스 라우팅:
+  - 무릎 재활·건강 데이터 → private.

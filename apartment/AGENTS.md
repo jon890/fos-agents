@@ -67,3 +67,13 @@ bash apartment/scripts/apartment-daily-report/run_smoke_test.sh
 - 불확실성 명시 — source 실패 시 추측으로 공백 메우지 않고 기록.
 - 새 결정은 `docs/adr.md` 누적 (개별 ADR 파일 신설 금지, ai-nodes ADR-004).
 - 런타임 상태는 `logs/task-runs.jsonl` 단일 출처 — 이 파일에 박지 않는다.
+
+## 9. fos-brain 연동
+
+이 워크스페이스 agents의 brain 읽기/쓰기 규약.
+단일 정책은 ai-nodes 루트 `AGENTS.md` 13번 + ADR-009(구조) / ADR-010(쓰기 안전·프라이버시).
+
+- 접근: thin caller — brain-search(읽기) / brain-add(쓰기). brain 로직 재구현 금지.
+- cron 무인 실행: brain-search 읽기만. brain-add 적재는 discord 대화 세션에서 사람 검토 후.
+- 산출물 네임스페이스 라우팅:
+  - 매물·인테리어 결정·계약 정보 → private.

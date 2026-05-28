@@ -109,3 +109,14 @@ claude -p "/position-recommender [컨텍스트] [채용공고 file]"            
 - 워크플로는 백그라운드 재실행 가능하고 날짜 단위로 멱등.
 - 불확실성을 명시한다. 검증된 사실과 추론을 구분한다.
 - 새 아키텍처 결정은 `docs/adr.md` 맨 아래에 누적 — 개별 ADR 파일 신설 금지.
+
+## fos-brain 연동
+
+이 워크스페이스 agents의 brain 읽기/쓰기 규약.
+단일 정책은 ai-nodes 루트 `AGENTS.md` 13번 + ADR-009(구조) / ADR-010(쓰기 안전·프라이버시).
+
+- 접근: thin caller — brain-search(읽기) / brain-add(쓰기). brain 로직 재구현 금지.
+- cron 무인 실행: brain-search 읽기만. brain-add 적재는 discord 대화 세션에서 사람 검토 후.
+- 산출물 네임스페이스 라우팅:
+  - fos-study 파생 study/면접 지식 → public-OK.
+  - 개인 baseline·면접 자산·커리어 데이터 → private.

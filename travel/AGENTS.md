@@ -78,3 +78,13 @@ mkdir -p travel/trips/<도시-slug>-<YYYY-MM>/{docs,data,memory,output}
 - 새 결정은 `docs/adr.md` 누적 (개별 ADR 파일 신설 금지, ai-nodes ADR-018).
 - 새 trip 추가 시 — `trips/<trip-id>/` 구조 따라 mkdir + `docs/index.md` 인덱스 갱신.
 - 의도된 비대칭 (scripts/.claude/skills/ 부재) — ADR-001 참조. 자동화 도입 시 별도 plan + ADR.
+
+## 9. fos-brain 연동
+
+이 워크스페이스 agents의 brain 읽기/쓰기 규약.
+단일 정책은 ai-nodes 루트 `AGENTS.md` 13번 + ADR-009(구조) / ADR-010(쓰기 안전·프라이버시).
+
+- 접근: thin caller — brain-search(읽기) / brain-add(쓰기). brain 로직 재구현 금지.
+- cron 무인 실행: brain-search 읽기만. brain-add 적재는 discord 대화 세션에서 사람 검토 후.
+- 산출물 네임스페이스 라우팅:
+  - 여행 노트·일정·예약 정보 → private (게시 적정성 확인된 여행기는 public opt-in).
