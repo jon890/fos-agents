@@ -1,0 +1,32 @@
+{
+  "id": "plan004-morning-rehab-exercise-sets",
+  "title": "아침 무릎 재활 체크인에 운동 세트 포함",
+  "status": "completed",
+  "created": "2026-05-26",
+  "completed": "2026-05-26",
+  "scope": "daily-knee-rehab-checkin skill, public-safe exercise set config, context documentation, CLAUDE/AGENTS maintenance",
+  "decisions": [
+    "기존 아침 cron 진입점은 daily-knee-rehab-checkin으로 유지한다.",
+    "운동 세트의 일반 기준은 config/knee-rehab-exercise-sets.md에 둔다.",
+    "개인 경과와 요청 내용은 private data/current-context.md에만 기록한다.",
+    "빠른 계단 하강은 현재 단계에서 제외하고, 일반 계단 하강 안정 단계의 보수적 세트 C를 기본 후보로 둔다."
+  ],
+  "changed_files": [
+    ".claude/skills/daily-knee-rehab-checkin/SKILL.md",
+    "config/knee-rehab-exercise-sets.md",
+    "docs/data-schema.md",
+    "docs/flow.md",
+    "docs/code-architecture.md",
+    "docs/prd.md",
+    "docs/adr.md",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "data/conditions/knee-patellar-instability/current-context.md",
+    "OpenClaw local cron job payload for the morning health-care check-in"
+  ],
+  "privacy_notes": [
+    "No platform IDs added to public docs/config/skills.",
+    "Private medical context update remains under data/.",
+    "Cron delivery identifiers remain only in local OpenClaw runtime config, not in public docs."
+  ]
+}
