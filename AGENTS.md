@@ -214,11 +214,13 @@ career-os는 `tasks/plan{N}-<slug>/` 영구 plan 영역을 운영.
 - Python 3 — apartment Python collector는 plan003~005 TS 마이그 + plan006 폐기 (ADR-008)로 0개. `_shared/bin/extract_claude_result.py`는 ai-nodes plan001에서 git rm — `_shared/lib/extract_claude_result.ts`로 통합. 현재 `_shared/bin/`에는 `track_task.sh` + `update_artifacts.py`만 잔존.
 - `agent-browser` CLI — JS-heavy 페이지(Naver Land 등) 수집. 로컬 설치 필수 (apartment ADR-001).
 - `claude` CLI — 모든 Claude 호출 워크플로 의존.
+- `~/personal/fos-brain` — 외부 개인 지식 기반(brain). thin caller로 연동, brain skill은 `~/.claude/skills/`에 symlink. 정책은 13번 + ADR-009/010. 사용자 환경 설치(클론·symlink·brain repo 경로 통일) 전제.
 
 ## 12. 참고 문서
 
 - 워크스페이스 표준 청사진: `docs/workspace-structure.md` (새 워크스페이스 추가 진입점).
-- 모노레포 ADR: `docs/adr.md` (ADR-001~005 누적).
+- 모노레포 ADR: `docs/adr.md` (ADR-001~010 누적).
+- fos-brain 연동: 13번 섹션 + ADR-009(구조) + ADR-010(쓰기 안전·프라이버시).
 - docs / ADR 형식 정책: `docs/docs-style.md` (ADR-005 — 8 패턴 + 한자어 회피 + 거울 구조). 인라인 요약은 8번 섹션.
 - 워크스페이스별 상세: `<workspace>/AGENTS.md`.
 - career-os 5문서: `career-os/docs/{prd, data-schema, flow, code-architecture, adr}.md`.
@@ -227,3 +229,39 @@ career-os는 `tasks/plan{N}-<slug>/` 영구 plan 영역을 운영.
 - plan-and-build skill: `skills/plan-and-build/` (자동 phase 실행 + common-pitfalls 축적).
 - workspace-audit skill: `skills/workspace-audit/SKILL.md` (워크스페이스 건전성 감사).
 - docs-check skill: `skills/docs-check/SKILL.md` (5문서 + ADR 건전성 감사).
+
+## 13. fos-brain 외부 지식 기반 연동
+
+5개 워크스페이스 agents가 외부 개인 지식 기반 fos-brain과 양방향 연동하는 단일 정책.
+결정 근거는 ADR-009(구조) + ADR-010(쓰기 안전·프라이버시).
+워크스페이스 AGENTS.md는 본 섹션을 역참조하고 자기 산출물 라우팅만 명시한다(거울 구조).
+
+### 13-1. 위치와 접근
+
+- brain은 ai-nodes **밖** `~/personal/fos-brain`에 둔다 (repo `github.com/jon890/fos-brain`).
+- 접근은 **thin caller** — brain 자체 skill(brain-search / brain-add)을 호출만 하고 brain 로직은 재구현하지 않는다.
+- 설치: brain repo의 `skills/brain-*`를 `~/.claude/skills/`에 symlink. openclaw `claude -p` 세션이 전역 skill로 발견.
+
+### 13-2. 네임스페이스 라우팅 (쓰기)
+
+산출물 *종류*로 네임스페이스를 정한다 (워크스페이스 단위 아님):
+
+| 산출물 종류 | 네임스페이스 |
+|---|---|
+| fos-study 파생 지식 | public-OK (brain-add 기본 규칙) |
+| 개인 데이터 (career baseline·건강·재무·매물·여행) | private |
+| 게시 적정성 확인된 일반 지식 | public (명시 opt-in) |
+
+brain-add 호출 시 네임스페이스를 명시 전달해 brain-add 0단계 프롬프트를 건너뛴다.
+
+### 13-3. cron 읽기전용 정책
+
+- openclaw cron 무인 세션: **brain-search 읽기만**.
+- brain 적재(brain-add): **discord 대화 세션에서 사람 검토 후**. 검증 게이트를 무인화하지 않는다.
+
+### 13-4. 전제조건 (사용자 수동 1회, ai-nodes 범위 밖)
+
+- brain repo skill 본문 대상 경로 `/Users/nhn/...` → `~/personal/fos-brain` 통일 (Linux 무인 실행 필수).
+- brain 클론 → `~/personal/fos-brain`.
+- skill symlink → `~/.claude/skills/brain-{add,search,lint}`.
+- openclaw wrapper 동기화 (사용자 직접 — `~/.openclaw/`는 ai-nodes가 건드리지 않는다).
