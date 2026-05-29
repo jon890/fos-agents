@@ -44,18 +44,16 @@ career-os ADR-019 비대칭이 ADR-006으로 표준 격상 (2026-05-19). apartme
 
 ## 2. 실행 모델
 
-모든 워크스페이스 실행은 `_shared/bin/track_task.sh`로 래핑된다:
+모든 워크스페이스가 Claude native skill 직접 호출로 실행된다 (ADR-011).
 
-- 실행별 로그 → `<workspace>/logs/task-runs.jsonl` + `token-usage.jsonl`.
-- 실행 전후 `openclaw status` 캡처 — 모델·토큰·캐시 변화량.
-- 실행 전후 파일 메트릭 스냅샷(`report.md`, 입력 노트, target 파일 목록 등).
-- Claude CLI usage JSON을 `TRACK_TASK_CLAUDE_USAGE_FILE` env로 수집.
+- 진입점: `claude -p "/<skill>"` 또는 thin wrapper `run_with_claude.sh`.
+- thin wrapper는 `.env` 로드 + Discord 시작/실패 알림 + stdout 폴백만 담당.
+- native skill이 SKILL.md 기준으로 수집·합성·산출물 Write·완료 알림을 직접 수행.
+- 데이터 수집 헬퍼(TS·Python)는 native skill이 `bun`·`python3` Bash로 호출.
 
-워크스페이스 러너는 트래커 통과를 보장해야 하며 우회 금지.
-apartment의 `run_report.sh`는 `TRACK_TASK_WRAPPED`로 자가 래핑.
-career-os는 plan023 이후 native skill 직접 호출로 전환 — `logs/task-runs.jsonl` 미사용.
-
-**load-bearing 의존성**: `_shared/bin/track_task.sh`가 없으면 모든 워크스페이스 러너 실패.
+옛 `track_task.sh` self-wrap + `extract_claude_result.ts` 외부 subprocess 패턴은 ADR-011로 폐기.
+career-os(plan023) → apartment(ADR-010) → stock-investment(ADR-003) 순으로 전환 완료.
+`logs/task-runs.jsonl` 계측은 읽는 소비자가 없어 함께 폐기.
 
 ## 3. 워크스페이스 진입점
 
@@ -68,17 +66,16 @@ claude -p "/apartment-daily-report"
 claude -p "/apartment-interior-reference-digest"
 ```
 
-직접 호출:
+직접 호출 (thin wrapper):
 
 ```bash
-bash apartment/scripts/apartment-daily-report/run_report.sh
+bash apartment/scripts/apartment-daily-report/run_with_claude.sh
 bash apartment/scripts/apartment-interior-reference-digest/run_with_claude.sh "오늘의 인테리어 추천"
 ```
 
-산출물: `apartment/data/YYYY-MM-DD/{report.md, raw-search.json, summary.json, claude.result.json}`.
-종합 단계는 `claude --output-format json` (90초 타임아웃 시 대체 마크다운으로 폴백).
-JSON 처리는 `_shared/lib/extract_claude_result.ts` (ai-nodes plan001 마이그 완료, Bun 실행).
-인테리어 추천은 Claude native skill 직접 호출 경계가 중요하므로 `run_with_claude.sh`를 운영 진입점으로 사용하며, native skill(`/apartment-interior-reference-digest`)이 전체 workflow를 수행한다.
+산출물: `apartment/data/YYYY-MM-DD/{report.md, raw-search.json, summary.json}`.
+두 skill 모두 native 직접 호출 (ADR-010).
+수집·정규화 TS 헬퍼는 native skill이 `bun` Bash로 호출하고, Claude가 summary.json을 Read해 report.md를 직접 Write한다.
 
 ### 3-2. career-os
 
@@ -113,11 +110,11 @@ mkdir + AGENTS.md + CLAUDE.md 심링크 + 5문서 placeholder + tasks/ + config/
 
 워크스페이스마다 호출 방식이 다르다. 혼용 금지 — 해당 워크스페이스 패턴 보존:
 
-- **apartment**: `claude --output-format json` + 90초 타임아웃 폴백. JSON → `_shared/lib/extract_claude_result.ts` (Bun).
-- **career-os**: native skill 직접 호출 (`claude -p "/<skill-name>"`).
-  - 워크스페이스 한정 ts 헬퍼는 `career-os/scripts/<skill>/`에.
-  - 옛 `claude_lib.sh` + `invoke_claude_skills.ts` 통합 헬퍼는 plan013~023에서 모두 폐기 (ADR-031).
-- **새 runner 추가 시**: native skill 진입점 + 필요 ts 헬퍼는 `<workspace>/scripts/`에. `_shared/lib`는 워크스페이스 무관 공용 헬퍼만.
+- **모든 워크스페이스**: native skill 직접 호출 (`claude -p "/<skill>"`) — ADR-011 단일 패턴.
+  - apartment(ADR-010) / stock-investment(ADR-003) / career-os(ADR-031) 전환 완료.
+  - 옛 `claude --output-format json` + `extract_claude_result.ts` 패턴은 폐기.
+- **워크스페이스 한정 ts·py 헬퍼**는 `<workspace>/scripts/<skill>/`에. native skill이 `bun`·`python3` Bash로 호출.
+- **`_shared/lib`**는 워크스페이스 무관 공용 헬퍼만 (`notify_discord.ts` 등).
 
 패턴 변경 시 ADR로 결정 근거 남긴 뒤 진행.
 
@@ -206,12 +203,10 @@ career-os는 `tasks/plan{N}-<slug>/` 영구 plan 영역을 운영.
 
 ## 11. 외부 의존성
 
-- `_shared/bin/track_task.sh` — 모든 워크스페이스 트래커. **load-bearing**.
-- `_shared/lib/notify_discord.ts` — Discord 알림(openclaw subprocess 경유, ADR-021).
-- `_shared/lib/extract_claude_result.ts` — `claude --output-format json` envelope 파싱. apartment + stock-investment + career-os 공용 (ai-nodes plan001 통합).
+- `_shared/lib/notify_discord.ts` — Discord 알림(openclaw subprocess 경유, ADR-021). 모든 워크스페이스 공용 정본.
 - `career-os/scripts/interview-coffeechat-prep/mvp_target_schema.ts` — career-os `config/mvp-target.json` zod 스키마 (ADR-029). audit 후 _shared/lib → skill 내부로 이동 (ADR-001 엄격 준수, 호출자 1개 한정).
 - Bun runtime — TS 헬퍼 실행. 설치 후 ai-nodes 루트에서 `bun install` 1회 (root package.json: zod, fast-xml-parser, dotenv + @types/bun).
-- Python 3 — apartment Python collector는 plan003~005 TS 마이그 + plan006 폐기 (ADR-008)로 0개. `_shared/bin/extract_claude_result.py`는 ai-nodes plan001에서 git rm — `_shared/lib/extract_claude_result.ts`로 통합. 현재 `_shared/bin/`에는 `track_task.sh` + `update_artifacts.py`만 잔존.
+- Python 3 — 워크스페이스 수집기(stock-investment `collect_*.py` 등) 실행. native skill이 `python3` Bash로 호출.
 - `agent-browser` CLI — JS-heavy 페이지(Naver Land 등) 수집. 로컬 설치 필수 (apartment ADR-001).
 - `claude` CLI — 모든 Claude 호출 워크플로 의존.
 - `~/personal/fos-brain` — 외부 개인 지식 기반(brain). thin caller로 연동, brain skill은 `~/.claude/skills/`에 symlink. 정책은 13번 + ADR-009/010. 사용자 환경 설치(클론·symlink·brain repo 경로 통일) 전제.
