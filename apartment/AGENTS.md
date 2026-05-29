@@ -9,9 +9,9 @@
 |---|---|---|
 | `docs/prd.md` | 제품 범위·MVP 타깃·기능 표·Guri buy-search 운영 정책·성공 기준 | 새 기능 추가 / 우선순위 결정 |
 | `docs/data-schema.md` | config (4 json) / data / logs / .env 스키마 | 데이터 파일 변경 / 새 config 도입 |
-| `docs/flow.md` | 명령별 데이터 흐름 (daily-report 12 step + interior-digest 5 step) | 새 흐름 추가 / 디버깅 |
+| `docs/flow.md` | 명령별 데이터 흐름 (daily-report·interior 모두 native 직접 호출) | 새 흐름 추가 / 디버깅 |
 | `docs/code-architecture.md` | 디렉터리 트리·skill 표준·외부 의존·Runner 패턴 | 코드 구조 변경 / 새 스킬 추가 |
-| `docs/adr.md` | apartment 한정 ADR 누적 (현재 ADR-001~009). 모노레포 레벨은 `../docs/adr.md` | 결정의 *왜* |
+| `docs/adr.md` | apartment 한정 ADR 누적 (현재 ADR-001~010). 모노레포 레벨은 `../docs/adr.md` | 결정의 *왜* |
 
 ## 2. tasks/ 영역
 
@@ -34,17 +34,15 @@ planning + plan-and-build 스킬로 운영. 형태: `tasks/plan{N}-<slug>/`.
 claude -p "/apartment-daily-report"
 claude -p "/apartment-interior-reference-digest"
 
-# 또는 직접 호출
-bash apartment/scripts/apartment-daily-report/run_report.sh
+# 또는 thin wrapper 직접 호출
+bash apartment/scripts/apartment-daily-report/run_with_claude.sh
 bash apartment/scripts/apartment-interior-reference-digest/run_with_claude.sh "오늘의 인테리어 추천"
 bash apartment/scripts/apartment-daily-report/run_smoke_test.sh
 ```
 
 ## 6. 외부 의존성
 
-- `_shared/bin/track_task.sh` — 모든 러너 래핑. **load-bearing**.
-- `_shared/lib/extract_claude_result.ts` — claude JSON envelope 파싱 (ai-nodes plan001 마이그).
-- `claude` CLI — 모든 Claude 호출 의존.
+- `claude` CLI — native skill 직접 호출 (`claude -p "/<skill>"`).
 - `agent-browser` CLI — JS-heavy 페이지 수집 (ADR-001).
 - Bun runtime — TypeScript 헬퍼 실행. 데이터 처리/JSON 파싱/수집기 계층은 TS 우선, 단순 orchestration runner는 shell 허용.
 - Interior reference cron은 Claude native skill의 웹 검색/Fetch/문서 갱신이 필요하므로 운영 runner에서 `--permission-mode bypassPermissions`를 사용한다.

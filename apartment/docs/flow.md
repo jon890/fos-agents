@@ -4,89 +4,48 @@ apartment 워크스페이스의 **데이터 플로우 및 실행 흐름** 단일
 
 ## 1. 전체 흐름 개요
 
+두 skill 모두 Claude native skill 직접 호출 패턴 (daily-report는 ADR-010, interior는 plan007).
+
 ```
 사용자/cron
-  └─► runner script (run_report.sh / run_with_claude.sh)
-        └─► self-wrap (TRACK_TASK_WRAPPED guard)
-              └─► _shared/bin/track_task.sh
-                    ├─► openclaw status 캡처 (before)
-                    ├─► 파일 메트릭 스냅샷 (before)
-                    │
-                    ├─► collector (collect_sources.ts, ADR-006 import 통합)
-                    │     ├─► collect_naver_api.ts (API 3 endpoint + zod)
-                    │     ├─► collect_hogangnono.ts (HTML regex)
-                    │     └─► collect_kbland.ts (HTML regex)
-                    │
-                    ├─► normalizer (normalize_results.ts, plan005)
-                    │     └─► summary.json
-                    │
-                    ├─► Claude CLI (--output-format json, 90s timeout)
-                    │     └─► claude.result.json
-                    │
-                    ├─► extractor (_shared/lib/extract_claude_result.ts, ai-nodes plan001)
-                    │     └─► report.md (또는 fallback)
-                    │
-                    ├─► notify_discord.ts (_shared/lib, 완료/실패)
-                    │
-                    ├─► openclaw status 캡처 (after)
-                    └─► logs/task-runs.jsonl append
+  └─► thin wrapper (run_with_claude.sh)
+        ├─► Discord 시작 알림 (notify_discord.ts)
+        └─► claude -p "/<skill>" (native 직접 호출)
+              └─► native skill (SKILL.md) 가 워크플로 수행
+                    ├─► (daily-report) 수집·정규화 TS 헬퍼를 bun Bash로 호출
+                    │     ├─► collect_sources.ts → raw-search.json
+                    │     └─► normalize_results.ts → summary.json
+                    ├─► summary.json Read → report.md 직접 Write (Claude 합성)
+                    └─► notify_discord.ts (완료/요약)
 ```
 
-## 2. apartment-daily-report 흐름
+track_task.sh self-wrap는 ADR-010으로 제거됨.
 
-`scripts/apartment-daily-report/run_report.sh` 진입점.
+## 2. apartment-daily-report 흐름 (native, ADR-010)
+
+운영 진입점은 `scripts/apartment-daily-report/run_with_claude.sh` — Claude native skill을 직접 호출한다 (interior와 동일 패턴).
 
 ```
-Step 1  self-wrap 체크
-        TRACK_TASK_WRAPPED 환경변수 확인
-        미설정이면 track_task.sh로 자신을 재실행 (exec 패턴)
+Step 1  thin wrapper 진입
+        cd ~/ai-nodes/apartment
+        Discord 시작 알림 (notify_discord.ts, bun run)
+        claude --permission-mode bypassPermissions -p "/apartment-daily-report"
 
-Step 2  .env 로드
-        워크스페이스 root .env — NAVER_COOKIE, NAVER_BEARER, DISCORD_CHANNEL_ID
+Step 2  native skill이 워크플로 수행 (SKILL.md 기준)
+        - load_target_meta.ts (bun) → 타깃 메타 (focus-unit.json, ADR-002)
+        - collect_sources.ts (bun) → raw-search.json (ADR-006 import 통합)
+            네이버 API 3 endpoint (쿠키+Bearer, ADR-001, zod ADR-007)
+            + 호갱노노 / KB랜드 HTML 파서 (plan004)
+        - normalize_results.ts (bun) → summary.json (plan005, 59A alias 매칭)
+        - summary.json Read → report.md 직접 Write (Claude 합성)
 
-Step 3  타깃 변수 설정
-        COMPLEX_NO, FOCUS_UNIT, DATE 등 config/focus-unit.json 기반
-
-Step 4  출력 디렉터리 생성
-        data/YYYY-MM-DD/ mkdir -p
-
-Step 5  Discord 시작 알림
-        notify_discord.ts "시작" 메시지 (bun run)
-
-Step 6  수집 (collect_sources.ts, ADR-006 import 통합)
-        collect_naver_api.ts — API 3 endpoint (overview / prices / articles)
-          — 쿠키 + Bearer JWT 인증 (ADR-001)
-          — 요청 간 2초 sleep, 429 시 지수 백오프 (2→4→8s, 3회)
-          — 실패 시 마지막 성공 스냅샷 fallback + Discord 알림
-          — zod 응답 스키마 검증 (ADR-007)
-        collect_hogangnono.ts — Bun.fetch HTML 수집 + regex 파싱 (plan004)
-        collect_kbland.ts — Bun.fetch HTML 수집 + regex 파싱 (plan004)
-        산출물: raw-search.json
-
-Step 7  정규화 (normalize_results.ts, plan005)
-        raw-search.json → summary.json (9 key)
-        59A alias 매칭 — exact / unverified / non-match 3단계
-        zod 입력/출력 스키마 자기방어 (ADR-007 후속 적용)
-
-Step 8  Claude CLI 호출
-        claude --output-format json (90초 타임아웃)
-        입력: summary.json + 프롬프트
-        출력: claude.result.json
-
-Step 9  추출 (extract_claude_result.ts, ai-nodes plan001)
-        claude.result.json 파싱 → report.md
-        bun run "$EXTRACT" 호출 (Python wrapper에서 TS로 전환)
-
-Step 10 fallback (타임아웃 발생 시)
-        90초 초과 → report.fallback.md 생성
-        (summary.json 기반 정적 마크다운)
-
-Step 11 Discord 완료 알림
-        notify_discord.ts "완료" + 소요 시간 + cost summary (bun run)
-
-Step 12 logs append
-        track_task.sh 종료 훅 → task-runs.jsonl + token-usage.jsonl
+Step 3  알림 + 폴백
+        완료/요약: native skill이 notify_discord.ts 호출 (SKILL.md 지시)
+        실패: thin wrapper가 Discord 실패 알림
+        stdout 비면 wrapper가 report.md 경로 안내 (interior 폴백 패턴)
 ```
+
+산출물·TS 헬퍼 유지 범위의 결정 근거는 ADR-010 참조.
 
 ### 2-1. smoke 흐름
 
@@ -145,32 +104,19 @@ ADR-009 이전에는 워크스페이스 한정 `notify_discord.sh` (openclaw 래
 
 ## 5. 트래커 + logs
 
-`_shared/bin/track_task.sh` self-wrap 패턴.
-
-```
-run_report.sh 최초 실행
-  TRACK_TASK_WRAPPED 미설정
-    └─► exec track_task.sh run_report.sh (TRACK_TASK_WRAPPED=1 환경 설정)
-
-track_task.sh 실행
-  ├─► openclaw status 캡처 (before)
-  ├─► 파일 메트릭 스냅샷
-  ├─► run_report.sh 본체 실행 (TRACK_TASK_WRAPPED=1)
-  ├─► exit code 기록
-  ├─► openclaw status 캡처 (after)
-  ├─► logs/task-runs.jsonl append
-  └─► logs/token-usage.jsonl append (TRACK_TASK_CLAUDE_USAGE_FILE 수집)
-```
-
-task-id 형태: `apartment:daily-report`. 중복 래핑 방지: `TRACK_TASK_WRAPPED` guard.
+apartment 두 skill 모두 native 직접 호출이라 `track_task.sh`를 경유하지 않는다.
+`task-runs.jsonl` / `token-usage.jsonl`은 더 생성되지 않는다.
+폐기 경위·잔존 사용처는 ADR-010 참조.
 
 ## 6. 직접 호출 진입점
 
 cron 진입과 동일한 경로.
 
 ```bash
-# 일일 리포트
-bash apartment/scripts/apartment-daily-report/run_report.sh
+# 일일 리포트 (native, ADR-010)
+bash apartment/scripts/apartment-daily-report/run_with_claude.sh
+# 또는
+claude -p "/apartment-daily-report"
 
 # 인테리어 디제스트
 bash apartment/scripts/apartment-interior-reference-digest/run_with_claude.sh "오늘의 인테리어 추천"

@@ -21,7 +21,7 @@ apartment/
 │   ├── _lib/
 │   │   └── load_target_meta.ts         # focus-unit.json read + env override (ADR-002, plan002)
 │   ├── apartment-daily-report/         # skill 실행 파일 (plan007, ADR-004)
-│   │   ├── run_report.sh               # 메인 진입점 (self-wrap 포함)
+│   │   ├── run_with_claude.sh          # 운영 진입점: native skill 직접 호출 (ADR-010, plan010)
 │   │   ├── run_smoke_test.sh           # 헬스 체크 진입점
 │   │   ├── run_guri_buy_search.sh
 │   │   ├── collect_sources.ts          # ADR-006 (import 통합 오케스트레이터, plan003)
@@ -31,8 +31,7 @@ apartment/
 │   │   ├── collect_kbland.ts           # plan004 마이그 (HTML regex 파서)
 │   │   └── normalize_results.ts        # plan005 마이그 (zod 입력/출력 스키마)
 │   └── apartment-interior-reference-digest/  # skill 실행 파일 (plan007, ADR-004)
-│       ├── run_with_claude.sh       # 운영 cron 진입점: Claude native skill 호출
-│       └── run_with_claude.sh       # cron 진입점 — claude native skill 호출
+│       └── run_with_claude.sh          # 운영 cron 진입점: Claude native skill 호출
 │
 ├── docs/
 │   ├── prd.md
@@ -84,44 +83,42 @@ apartment/
 
 | skill 이름 | 등록 상태 | 호출 방법 |
 |---|---|---|
-| apartment-daily-report | 등록 | `claude -p "/apartment-daily-report"` 또는 `bash apartment/scripts/apartment-daily-report/run_report.sh` |
+| apartment-daily-report | 등록 (native, ADR-010) | `claude -p "/apartment-daily-report"` 또는 `bash apartment/scripts/apartment-daily-report/run_with_claude.sh` |
 | apartment-interior-reference-digest | 등록 | `claude -p "/apartment-interior-reference-digest"` 또는 `bash apartment/scripts/apartment-interior-reference-digest/run_with_claude.sh` |
 
 ## 4. Runner 패턴
 
-self-wrap 패턴 — `TRACK_TASK_WRAPPED` guard.
+두 skill 모두 native thin wrapper 패턴 (daily-report는 ADR-010, interior는 plan007).
 
 ```bash
-# run_report.sh 상단 패턴
-if [ -z "$TRACK_TASK_WRAPPED" ]; then
-  exec _shared/bin/track_task.sh \
-    --task-id "apartment:daily-report" \
-    -- "$0" "$@"
-fi
-
-# 이후: TRACK_TASK_WRAPPED=1 환경에서 본체 실행
+# run_with_claude.sh 상단 패턴
+cd "$TASK_ROOT"
+notify_safe "[시작] ..."          # Discord 시작 알림 (bun run notify_discord.ts)
+claude --permission-mode bypassPermissions -p "/<skill> ${REQUEST}"
+# stdout 비면 report.md 경로 폴백, exit!=0이면 Discord 실패 알림
 ```
 
-`logs/task-runs.jsonl` 기록 보장. task-id 형태: `apartment:<task-name>`.
+native skill이 SKILL.md 기준으로 수집·정규화 TS(bun Bash)·합성·완료 알림을 직접 수행.
+`track_task.sh` self-wrap는 ADR-010으로 폐기 — `task-runs.jsonl` 미생성.
 
 ## 5. 외부 의존성
 
 | 의존성 | 위치 | 상태 | 역할 |
 |---|---|---|---|
-| `track_task.sh` | `_shared/bin/track_task.sh` | load-bearing | 모든 runner self-wrap. 없으면 runner 실패 |
-| `extract_claude_result.ts` | `_shared/lib/extract_claude_result.ts` | 사용 중 (ai-nodes plan001) | `claude --output-format json` envelope → report.md 파싱 |
-| `claude` CLI | 시스템 설치 | 사용 중 | Claude 호출 (90s 타임아웃 + fallback) |
+| `track_task.sh` | `_shared/bin/track_task.sh` | apartment 미사용 (ADR-010) | self-wrap 제거.<br>stock-investment만 잔존 |
+| `extract_claude_result.ts` | `_shared/lib/extract_claude_result.ts` | apartment 미사용 (ADR-010) | json envelope 추출 폐기 — Claude가 report.md 직접 Write |
+| `claude` CLI | 시스템 설치 | 사용 중 | native skill 직접 호출 (`claude -p "/<skill>"`) |
 | `agent-browser` CLI | 로컬 설치 필수 | 사용 중 | Naver Bearer JWT 자동 추출 (ADR-001) |
-| Bun runtime | 시스템 (ai-nodes root `bun install`) | 사용 중 (ADR-003) | apartment ts 헬퍼 실행 (예: `scripts/_lib/load_target_meta.ts`, plan002) |
-| `notify_discord.ts` | `_shared/lib/notify_discord.ts` | 사용 중 (ADR-009) | Discord 알림 (openclaw 경유, `run_report.sh`가 `bun run`으로 호출) |
+| Bun runtime | 시스템 (ai-nodes root `bun install`) | 사용 중 (ADR-003) | 수집·정규화 TS 헬퍼 실행 (collect_sources / normalize_results / load_target_meta) |
+| `notify_discord.ts` | `_shared/lib/notify_discord.ts` | 사용 중 (ADR-009) | Discord 알림 (openclaw 경유, thin wrapper + native skill이 `bun run`으로 호출) |
 
-`notify_discord.ts` — ADR-009로 apartment 도입. 워크스페이스 한정 `notify_discord.sh` / `notify_discord_media.sh`를 폐기하고 `_shared/lib`의 ts 정본으로 통합 (openclaw subprocess + 10s 타임아웃, `DISCORD_CHANNEL_ID` 필수). `extract_claude_result.ts`는 ai-nodes plan001 이후 apartment + stock-investment + career-os 공용. apartment는 ADR-003 이후 Shell + TS 표준 확장.
+`notify_discord.ts` — ADR-009로 apartment 도입. 워크스페이스 한정 `notify_discord.sh` / `notify_discord_media.sh`를 폐기하고 `_shared/lib`의 ts 정본으로 통합 (openclaw subprocess + 10s 타임아웃, `DISCORD_CHANNEL_ID` 필수). `extract_claude_result.ts`는 ADR-010으로 apartment에서 미사용 — stock-investment만 잔존(후속 모노레포 plan에서 폐기 예정). apartment는 ADR-003 이후 Shell + TS 표준 확장.
 
 ## 6. 언어 분포
 
 | 언어 | 파일 수 (추정) | 역할 |
 |---|---|---|
-| Shell | 3 | runner (run_report.sh, run_with_claude.sh) + smoke_test (Discord 알림은 ADR-009로 `_shared/lib/notify_discord.ts` 통합) |
+| Shell | 3 | thin wrapper `run_with_claude.sh` × 2 (daily-report ADR-010 + interior)<br>+ `run_smoke_test.sh`<br>`run_report.sh`는 ADR-010 폐기 |
 | Python | 0 | apartment-daily-report 안 Python 0. ai-nodes plan001 이후 `_shared/bin/extract_claude_result.py` git rm — `_shared/lib/extract_claude_result.ts`가 단일 출처 |
 | TypeScript | 7 | `_lib/load_target_meta.ts` (plan002) + collect_sources / collect_naver_api / naver_api_schemas (plan003) + collect_hogangnono / collect_kbland (plan004) + normalize_results (plan005) |
 

@@ -2,7 +2,8 @@
 
 apartment 워크스페이스의 **제품 범위·MVP 기능 명세**. 현재 active 워크플로의 단일 출처. 새 기능을 추가하거나 우선순위를 정할 때 이 문서가 기준.
 
-런타임 상태(어느 명령이 최근에 잘 도는지, 무엇이 멈췄는지)는 여기에 박지 않는다 — `logs/task-runs.jsonl`이 단일 출처이고 `skills/workspace-audit`가 그때그때 보고한다.
+런타임 상태는 여기에 박지 않는다.
+어느 명령이 최근에 잘 도는지, 무엇이 멈췄는지는 `skills/workspace-audit`가 그때그때 보고한다.
 
 ## 1. 목적
 
@@ -33,11 +34,11 @@ apartment 워크스페이스의 **제품 범위·MVP 기능 명세**. 현재 act
 
 | 번호 | 명령 | 산출물 | 빈도 |
 |---|---|---|---|
-| 1 | `apartment-daily-report` (native skill, `scripts/apartment-daily-report/run_report.sh`) | `data/YYYY-MM-DD/{report.md, raw-search.json, summary.json, claude.result.json}` + Discord 완료 알림 | 매일 08:00 cron |
+| 1 | `apartment-daily-report` (native skill, `scripts/apartment-daily-report/run_with_claude.sh`) | `data/YYYY-MM-DD/{report.md, raw-search.json, summary.json}` + Discord 완료 알림 | 매일 08:00 cron |
 | 2 | `apartment-interior-reference-digest` (native skill, `scripts/apartment-interior-reference-digest/run_with_claude.sh`) | `data/interior-reference-digest/YYYY-MM-DD/report.md` + stdout Discord 요약 (3 결정 질문) | 매일 09:00 cron |
 
 **native skill 등록 상태**:
-- `apartment-daily-report`: 등록 (`claude -p "/apartment-daily-report"` 또는 `bash apartment/scripts/apartment-daily-report/run_report.sh`)
+- `apartment-daily-report`: 등록 (`claude -p "/apartment-daily-report"` 또는 `bash apartment/scripts/apartment-daily-report/run_with_claude.sh`)
 - `apartment-interior-reference-digest`: 등록 (`claude -p "/apartment-interior-reference-digest"` 또는 `bash apartment/scripts/apartment-interior-reference-digest/run_with_claude.sh`)
 
 광역 매수 탐색(Guri buy-search)은 섹션 6 운영 정책 참조.
