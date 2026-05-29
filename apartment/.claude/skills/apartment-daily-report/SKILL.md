@@ -26,34 +26,75 @@ description: 아파트 매물 일일 시세 리포트를 자동 생성하는 apa
 
 ## 워크플로
 
-### 1단계: 수집
+Claude가 직접 수행하는 5단계 파이프라인.
+산출물 경로: `data/YYYY-MM-DD/{raw-search.json, summary.json, report.md}` (cwd: `~/ai-nodes/apartment`).
+
+### 1단계: 타깃 메타 로드
 
 ```bash
-bash scripts/apartment-daily-report/run_report.sh
+bun scripts/_lib/load_target_meta.ts config/focus-unit.json
 ```
 
-- `TRACK_TASK_WRAPPED` 가드로 `_shared/bin/track_task.sh` 자동 래핑
-- 네이버부동산 정적 수집 → `raw-search.json`
-- 정적 수집 결과가 `status: not_found` 또는 `error`이면 `references/naver-browser-prompt.md` 프롬프트로 browser fallback 실행
+단지 메타(단지 ID, 포커스 유닛, 복합 위치)를 확보한다.
+부재 시 FAIL — 타깃 메타 없이는 수집을 시작하지 않는다 (ADR-002).
 
-### 2단계: 정규화
+### 2단계: 수집
 
 ```bash
-bun scripts/apartment-daily-report/normalize_results.ts
+bun scripts/apartment-daily-report/collect_sources.ts <raw-search.json 경로>
 ```
 
-- 소스별 원시 데이터 → `summary.json` (정규화 구조체)
+네이버부동산 API 3 endpoint (쿠키+Bearer, ADR-001) + 호갱노노 + KB랜드를 수집해 `raw-search.json`을 생성한다.
 
-### 3단계: Claude 합성
+네이버 정적 수집 결과가 `status: not_found` 또는 `error`이면 `references/naver-browser-prompt.md` 지침으로 agent-browser fallback을 실행한다.
+
+### 3단계: 정규화
 
 ```bash
-claude --permission-mode bypassPermissions --print
+bun scripts/apartment-daily-report/normalize_results.ts <raw-search.json 경로> <summary.json 경로>
 ```
 
-- `references/claude-prompt.md` 프롬프트 + `raw-search.json` + `summary.json` 입력
-- 산출물: `report.md`
+소스별 원시 데이터를 정규화 구조체 `summary.json`으로 변환한다.
 
-리포트 구조는 `references/claude-prompt.md` 참조.
+### 4단계: 합성 — report.md 직접 Write
+
+`summary.json`을 Read한 뒤 Claude가 `data/YYYY-MM-DD/report.md`를 **직접 Write**한다.
+`claude --print --output-format json` 자기 호출과 `extract_claude_result.ts`는 사용하지 않는다.
+
+리포트는 다음 7개 섹션을 포함한 간결한 마크다운으로 작성한다:
+
+1. **단지 개요**
+2. **면적별 최근 실거래 요약**
+3. **현재 매물 호가 요약**
+4. **입지·상승 잠재력 메모**
+5. **서울역 출퇴근 관점 메모**
+6. **소스 비교 요약** (네이버부동산 / 호갱노노 / KB랜드)
+7. **참고 및 불확실성**
+
+작성 규칙:
+
+- 없는 값은 발명하지 않는다.
+- 정보가 불완전하면 그 사실을 명시한다.
+- 톤은 실용적이고 간결하게.
+- 채팅 호환성을 위해 마크다운 표 대신 불릿 리스트를 사용한다.
+- 도움이 되는 경우 소스 URL을 언급한다.
+- "입지·상승 잠재력 메모"에서는 입력에 있는 검증된 사실(역 접근성, 주변 상업지구, 최근 가격 동향, 매물 압박 등)만 근거로 삼은 신중한 정성 판단을 제시한다.
+  근거가 약하면 판단이 제한적임을 명시한다.
+- "서울역 출퇴근 관점 메모"에서는 실질적인 통근 불편함을 우선 기술한다.
+  예상 철도 축·환승 부담·서울역 통근 유불리를 설명한다.
+  정확한 이동 시간이 검증되지 않았으면 숫자를 쓰지 않고 방향성만 서술한다.
+- 검증된 사실과 해석을 분리한다. 추론이면 추론임을 명시한다.
+
+`claude.result.json` / `report.fallback.md`는 생성하지 않는다 (ADR-010 폐기).
+
+### 5단계: 알림
+
+```bash
+bun ../_shared/lib/notify_discord.ts "<완료 요약 메시지>"
+```
+
+리포트 생성 완료 및 요약을 Discord로 전송한다.
+시작·실패 알림은 thin wrapper(`run_with_claude.sh`) 담당 — 이 SKILL.md 범위 외.
 
 ## 경계
 
@@ -74,13 +115,12 @@ claude --permission-mode bypassPermissions --print
 
 | 항목 | 경로 | 용도 |
 |---|---|---|
-| 메인 러너 | `scripts/apartment-daily-report/run_report.sh` | 전체 파이프라인 실행 |
+| 메인 러너 | `scripts/apartment-daily-report/run_with_claude.sh` | thin wrapper — 시작/실패 알림 + native skill 호출 |
 | 스모크 테스트 | `scripts/apartment-daily-report/run_smoke_test.sh` | 빠른 동작 확인 |
+| 타깃 메타 로더 | `scripts/_lib/load_target_meta.ts` | focus-unit.json → 단지 메타 (ADR-002) |
+| 수집기 | `scripts/apartment-daily-report/collect_sources.ts` | 소스별 원시 데이터 → raw-search.json |
 | 정규화기 | `scripts/apartment-daily-report/normalize_results.ts` | 원시 데이터 → summary.json |
-| 합성 프롬프트 | `references/claude-prompt.md` | Claude 최종 합성 지침 + 리포트 구조 |
 | Naver browser 프롬프트 | `references/naver-browser-prompt.md` | browser fallback 수집 지침 |
-| 트래커 | `_shared/bin/track_task.sh` | 실행 로그·토큰 추적 |
-| 결과 파서 | `_shared/lib/extract_claude_result.ts` | Claude JSON envelope → report.md (Bun) |
 
 ## 아키텍처
 
