@@ -2,7 +2,7 @@
   "name": "plan004-shared-helper-retirement",
   "description": "track_task.sh·update_artifacts.py·extract_claude_result.ts 죽은 공용 헬퍼 폐기 (ADR-011, native 전환 완료 후)",
   "created_at": "2026-05-29T00:00:00+00:00",
-  "updated_at": "2026-05-29T09:50:00+00:00",
+  "updated_at": "2026-05-29T09:47:42.746049+00:00",
   "status": "completed",
   "current_phase": 2,
   "total_phases": 2,
@@ -43,7 +43,7 @@
       ],
       "model": "haiku",
       "timeout": 600,
-      "commitSha": "36ef681ce6c8"
+      "commitSha": "8ce38c8b1a24"
     }
   ]
 }
