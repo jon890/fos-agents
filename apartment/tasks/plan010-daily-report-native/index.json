@@ -2,9 +2,9 @@
   "name": "plan010-daily-report-native",
   "description": "apartment-daily-report를 외부 subprocess 패턴에서 native skill 직접 호출로 전환 (ADR-010) — (B) 마이그 파일럿",
   "created_at": "2026-05-29T00:00:00+00:00",
-  "updated_at": "2026-05-29T00:00:00+00:00",
-  "status": "pending",
-  "current_phase": 1,
+  "updated_at": "2026-05-29T05:14:09.103574+00:00",
+  "status": "completed",
+  "current_phase": 3,
   "total_phases": 3,
   "error_message": null,
   "blocked_reason": null,
@@ -18,26 +18,47 @@
       "number": 1,
       "title": "SKILL.md native 동작 명세 재작성 + claude-prompt.md 흡수",
       "file": "phase-01.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "14927fa1e78e"
     },
     {
       "number": 2,
       "title": "thin wrapper run_with_claude.sh 신규 + 옛 run_report.sh 폐기",
       "file": "phase-02.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "9709ea2b845f"
     },
     {
       "number": 3,
       "title": "통합 검증 + index.json status=completed 마킹",
       "file": "phase-03.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Bash", "Grep", "Edit"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Bash",
+        "Grep",
+        "Edit"
+      ],
       "model": "haiku",
       "timeout": 600
     }
