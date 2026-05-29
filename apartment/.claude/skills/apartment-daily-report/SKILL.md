@@ -59,7 +59,7 @@ bun scripts/apartment-daily-report/normalize_results.ts <raw-search.json 경로>
 ### 4단계: 합성 — report.md 직접 Write
 
 `summary.json`을 Read한 뒤 Claude가 `data/YYYY-MM-DD/report.md`를 **직접 Write**한다.
-`claude --print --output-format json` 자기 호출과 `extract_claude_result.ts`는 사용하지 않는다.
+외부 subprocess로 자신을 재호출하지 않는다 (ADR-010 폐기 패턴).
 
 리포트는 다음 7개 섹션을 포함한 간결한 마크다운으로 작성한다:
 
