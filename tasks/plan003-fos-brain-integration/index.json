@@ -2,7 +2,7 @@
   "name": "plan003-fos-brain-integration",
   "description": "ai-nodes 5개 워크스페이스를 외부 fos-brain과 thin caller로 양방향 연동 — 워크스페이스 AGENTS.md에 brain 연동 역참조 + 산출물 라우팅 명시",
   "created_at": "2026-05-28T00:00:00+00:00",
-  "updated_at": "2026-05-28T12:06:44.120732+00:00",
+  "updated_at": "2026-05-28T12:07:23.744374+00:00",
   "status": "completed",
   "current_phase": 2,
   "total_phases": 2,
@@ -42,7 +42,8 @@
         "Edit"
       ],
       "model": "haiku",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "870c05af6f35"
     }
   ]
 }
