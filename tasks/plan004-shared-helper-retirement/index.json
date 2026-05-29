@@ -1,0 +1,35 @@
+{
+  "name": "plan004-shared-helper-retirement",
+  "description": "track_task.sh·update_artifacts.py·extract_claude_result.ts 죽은 공용 헬퍼 폐기 (ADR-011, native 전환 완료 후)",
+  "created_at": "2026-05-29T00:00:00+00:00",
+  "updated_at": "2026-05-29T00:00:00+00:00",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 2,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "docs/adr.md",
+    "AGENTS.md"
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "3 공용 헬퍼 git rm + ClaudeUsage 타입 제거",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 600
+    },
+    {
+      "number": 2,
+      "title": "잔재 grep 검증 + bun 타입체크 + index.json completed",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Bash", "Grep", "Edit"],
+      "model": "haiku",
+      "timeout": 600
+    }
+  ]
+}
