@@ -2,7 +2,7 @@
   "name": "plan010-daily-report-native",
   "description": "apartment-daily-report를 외부 subprocess 패턴에서 native skill 직접 호출로 전환 (ADR-010) — (B) 마이그 파일럿",
   "created_at": "2026-05-29T00:00:00+00:00",
-  "updated_at": "2026-05-29T05:14:09.103574+00:00",
+  "updated_at": "2026-05-29T05:14:56.693792+00:00",
   "status": "completed",
   "current_phase": 3,
   "total_phases": 3,
@@ -60,7 +60,8 @@
         "Edit"
       ],
       "model": "haiku",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "a4d0a9c03f62"
     }
   ]
 }
