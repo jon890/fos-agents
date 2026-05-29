@@ -1,0 +1,54 @@
+{
+  "name": "plan006-skills-native-migration",
+  "description": "stock-investment 3 skill을 외부 subprocess에서 native 직접 호출로 전환 + Discord 알림 _shared ts 통합 (ADR-002/003)",
+  "created_at": "2026-05-29T00:00:00+00:00",
+  "updated_at": "2026-05-29T00:00:00+00:00",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 4,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "stock-investment/docs/adr.md",
+    "stock-investment/docs/flow.md",
+    "stock-investment/docs/code-architecture.md"
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "stock-investing-morning-brief native 전환 + notify ts",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 600
+    },
+    {
+      "number": 2,
+      "title": "current-issue-analysis native 전환 + notify ts (issue-key 인자)",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 600
+    },
+    {
+      "number": 3,
+      "title": "daily-stock-analysis-note native 전환 (fos-study 발행 유지)",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 600
+    },
+    {
+      "number": 4,
+      "title": "통합 검증 + index.json status=completed 마킹",
+      "file": "phase-04.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Bash", "Grep", "Edit"],
+      "model": "haiku",
+      "timeout": 600
+    }
+  ]
+}
