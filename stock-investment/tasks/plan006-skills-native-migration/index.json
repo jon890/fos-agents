@@ -2,7 +2,7 @@
   "name": "plan006-skills-native-migration",
   "description": "stock-investment 3 skill을 외부 subprocess에서 native 직접 호출로 전환 + Discord 알림 _shared ts 통합 (ADR-002/003)",
   "created_at": "2026-05-29T00:00:00+00:00",
-  "updated_at": "2026-05-29T07:20:41.854148+00:00",
+  "updated_at": "2026-05-29T07:21:33.478767+00:00",
   "status": "completed",
   "current_phase": 4,
   "total_phases": 4,
@@ -77,7 +77,8 @@
         "Edit"
       ],
       "model": "haiku",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "6a8efe8c66b4"
     }
   ]
 }
