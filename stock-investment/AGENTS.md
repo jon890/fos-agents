@@ -12,7 +12,7 @@
 | `docs/data-schema.md` | config (6 json) / data / logs / .env 스키마 | 데이터 파일 변경 / 새 config 도입 |
 | `docs/flow.md` | 3 skill 데이터 흐름 (수집→Claude→Discord/git) | 흐름 추가 / 디버깅 |
 | `docs/code-architecture.md` | 디렉터리 트리·skill 표준·외부 의존 | 코드 구조 변경 / 새 스킬 추가 |
-| `docs/adr.md` | stock-investment 한정 ADR 누적 (현재 ADR-001). 모노레포 레벨: `../docs/adr.md` | 결정의 *왜* |
+| `docs/adr.md` | stock-investment 한정 ADR 누적 (현재 ADR-001~003). 모노레포 레벨: `../docs/adr.md` | 결정의 *왜* |
 
 ## 2. tasks/ 영역
 
@@ -69,19 +69,22 @@ claude -p "/stock-investing-morning-brief"
 claude -p "/current-issue-analysis <issue-key>"
 claude -p "/daily-stock-analysis-note"
 
-# 또는 직접 호출 (cron payload가 사용하는 absolute path)
-bash $HOME/ai-nodes/stock-investment/scripts/stock-investing-morning-brief/run_report.sh
-bash $HOME/ai-nodes/stock-investment/scripts/current-issue-analysis/run_issue_report.sh
-bash $HOME/ai-nodes/stock-investment/scripts/daily-stock-analysis-note/run_daily_note.sh
+# 또는 thin wrapper 직접 호출 (cron payload 동일 경로)
+bash $HOME/ai-nodes/stock-investment/scripts/stock-investing-morning-brief/run_with_claude.sh
+bash $HOME/ai-nodes/stock-investment/scripts/current-issue-analysis/run_with_claude.sh <issue-key>
+bash $HOME/ai-nodes/stock-investment/scripts/daily-stock-analysis-note/run_with_claude.sh
 ```
 
-cron payload 갱신 이력: plan002 phase-01 (분리 마이그) 완료 후 `openclaw cron edit` 으로 `skills/<name>/scripts/` → `scripts/<name>/` 갱신 완료 (2026-05-20).
+cron payload 갱신 이력:
+- plan002 phase-01: `skills/<name>/scripts/` → `scripts/<name>/` 갱신 완료 (2026-05-20).
+- ADR-003 native 전환: `run_*.sh` → `run_with_claude.sh` 갱신 예정 (plan006).
 
 ## 6. 외부 의존성
 
-- `_shared/bin/track_task.sh` — 모든 runner self-wrap. **load-bearing**.
-- `_shared/lib/extract_claude_result.ts` — claude JSON envelope 파싱 (ai-nodes plan001 통합).
-- `claude` CLI — 모든 Claude 호출 의존.
+- `claude` CLI — native skill 직접 호출 (`claude -p "/<skill>"`).
+- `_shared/lib/notify_discord.ts` — Discord 알림 정본 (ADR-002, bun run 호출).
+- `python3` — 수집기 스크립트 (collect_*.py). yfinance, requests 등.
+- `bun` — notify_discord.ts 실행. root `package.json` + `bun install` 1회.
 - `career-os/sources/fos-study` — daily-stock-analysis-note만 발행 대상 (cross-workspace 예외, 발행 git repo).
 
 상세는 `docs/code-architecture.md` 외부 의존성 섹션.
