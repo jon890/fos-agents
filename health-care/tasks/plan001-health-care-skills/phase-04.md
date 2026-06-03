@@ -25,7 +25,7 @@
 
 1. 세 skill `SKILL.md` frontmatter와 description이 사용 시점을 명확히 구분하는지 확인한다.
 2. 민감 식별자 잔재 grep을 실행한다.
-3. `data/` 파일이 git에 올라오지 않는지 확인한다.
+3. `private/` 파일이 git에 올라오지 않는지 확인한다.
 4. `index.json`의 phase 상태를 completed로 정리한다.
 
 ## 검증
@@ -36,7 +36,7 @@ cd /home/bifos/ai-nodes
 [ -f health-care/skills/knee-progress-intake/SKILL.md ]
 [ -f health-care/skills/weekly-knee-clinic-summary/SKILL.md ]
 ! grep -RE "[0-9]{17,20}" health-care/skills health-care/docs health-care/config health-care/tasks
-git check-ignore -q health-care/data/conditions/knee-patellar-instability/current-context.md
+git check-ignore -q health-care/private/conditions/knee-patellar-instability/current-context.md
 python3 -m json.tool health-care/tasks/plan001-health-care-skills/index.json >/dev/null
 ```
 

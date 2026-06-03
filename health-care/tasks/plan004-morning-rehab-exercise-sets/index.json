@@ -8,7 +8,7 @@
   "decisions": [
     "기존 아침 cron 진입점은 daily-knee-rehab-checkin으로 유지한다.",
     "운동 세트의 일반 기준은 config/knee-rehab-exercise-sets.md에 둔다.",
-    "개인 경과와 요청 내용은 private data/current-context.md에만 기록한다.",
+    "개인 경과와 요청 내용은 private/conditions/knee-patellar-instability/current-context.md에만 기록한다.",
     "빠른 계단 하강은 현재 단계에서 제외하고, 일반 계단 하강 안정 단계의 보수적 세트 C를 기본 후보로 둔다."
   ],
   "changed_files": [
@@ -21,12 +21,12 @@
     "docs/adr.md",
     "AGENTS.md",
     "CLAUDE.md",
-    "data/conditions/knee-patellar-instability/current-context.md",
+    "private/conditions/knee-patellar-instability/current-context.md",
     "OpenClaw local cron job payload for the morning health-care check-in"
   ],
   "privacy_notes": [
     "No platform IDs added to public docs/config/skills.",
-    "Private medical context update remains under data/.",
+    "Private medical context update remains under private/conditions/.",
     "Cron delivery identifiers remain only in local OpenClaw runtime config, not in public docs."
   ]
 }

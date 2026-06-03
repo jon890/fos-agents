@@ -24,7 +24,7 @@
 
 ## Private data
 
-`data/conditions/<track>/`는 민감정보 저장 영역이며 gitignore 대상이다.
+`private/conditions/<track>/`는 민감정보 저장 영역이며 gitignore 대상이다.
 
 권장 파일:
 
@@ -50,4 +50,4 @@
 - `source`: `user_report` 등 출처
 - `created_at`: ISO-8601
 
-민감정보이므로 `data/` 밖으로 복사하지 않는다.
+민감정보이므로 `private/` 밖으로 복사하지 않는다.

@@ -24,7 +24,7 @@
 
 1. `health-care/skills/knee-progress-intake/SKILL.md` 생성.
    - 사용 시점: 사용자가 오늘 증상, 붓기, 계단, 굽힘 각도, 운동 후 반응을 보고할 때.
-   - 출력 책임: `data/conditions/knee-patellar-instability/progress-log.jsonl` append 제안/수행 절차.
+   - 출력 책임: `private/conditions/knee-patellar-instability/progress-log.jsonl` append 제안/수행 절차.
 2. progress entry 필드가 `docs/data-schema.md`의 `progress-log.jsonl` 권장 스키마와 일치하도록 명시.
 3. `current-context.md` 업데이트는 확정 사실/사용자 보고/확인 필요를 분리하도록 지시.
 4. skill 내부에 플랫폼 ID, 병원 등록번호, 실명 같은 식별자를 쓰지 말라고 명시.

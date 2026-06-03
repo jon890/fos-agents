@@ -12,6 +12,8 @@
 **/data/
 **/logs/
 **/tmp/
+**/private/
+openclaw-orchestrator/memory/
 
 # Nested repos / published outputs managed separately
 career-os/sources/fos-study/

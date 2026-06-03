@@ -10,15 +10,15 @@ description: 사용자가 무릎 증상·붓기·불안정감·가동범위(ROM,
 ## 입력
 
 - 현재 대화에서 사용자 보고
-- `health-care/data/conditions/knee-patellar-instability/current-context.md` — 가능하면 읽기
+- `health-care/private/conditions/knee-patellar-instability/current-context.md` — 가능하면 읽기
 - `health-care/docs/data-schema.md` — `progress-log.jsonl` 항목 스키마 참조
 
 ## 데이터 대상
 
 private 데이터만 기록한다:
 
-- `health-care/data/conditions/knee-patellar-instability/progress-log.jsonl`에 추가(append)
-- 새 보고가 현재 상태를 변경할 때만 `health-care/data/conditions/knee-patellar-instability/current-context.md` 갱신
+- `health-care/private/conditions/knee-patellar-instability/progress-log.jsonl`에 추가(append)
+- 새 보고가 현재 상태를 변경할 때만 `health-care/private/conditions/knee-patellar-instability/current-context.md` 갱신
 
 이 내용을 `docs/`, `config/`, 또는 공개 skill 파일로 이동하지 않는다.
 
@@ -58,4 +58,4 @@ private 데이터만 기록한다:
 사용자 보고 범위를 넘어 의학적 결론을 추론하지 않는다.
 
 플랫폼 ID(Discord/서버 ID 등), 병원 등록번호, 불필요한 개인 식별자를 저장하지 않는다.
-공개/비공개 경계가 모호하면 임의로 `data/` 외부에 쓰지 말고 사용자에게 확인한다.
+공개/비공개 경계가 모호하면 임의로 `private/` 외부에 쓰지 말고 사용자에게 확인한다.

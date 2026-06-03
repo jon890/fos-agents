@@ -27,10 +27,10 @@
    - 사용 시점: 주간 경과 리뷰, 병원 방문 전 1페이지 요약, 질문 리스트 업데이트.
    - Claude 사용은 허용하되 진단/처방 금지와 OCR 불확실성 표시를 강제.
 2. 입력 파일을 명시한다.
-   - `data/conditions/knee-patellar-instability/current-context.md`
-   - `data/conditions/knee-patellar-instability/progress-log.jsonl`가 있을 때만
+   - `private/conditions/knee-patellar-instability/current-context.md`
+   - `private/conditions/knee-patellar-instability/progress-log.jsonl`가 있을 때만
    - OCR 요약 파일이 있을 때만
-3. 출력 위치를 `data/conditions/knee-patellar-instability/weekly-summaries/YYYY-MM-DD.md`로 명시한다.
+3. 출력 위치를 `private/conditions/knee-patellar-instability/weekly-summaries/YYYY-MM-DD.md`로 명시한다.
 4. 공개/외부 전송은 사용자 확인 후에만 하도록 명시한다.
 
 ## Critical Files

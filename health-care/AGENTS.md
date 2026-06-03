@@ -28,14 +28,23 @@
 
 ## 현재 관리 트랙
 
-- `data/conditions/knee-patellar-instability/` — 슬개골 재발성 탈구 수술 이력 및 최근 무릎 불안정 증상
+- `private/conditions/knee-patellar-instability/` — 슬개골 재발성 탈구 수술 이력 및 최근 무릎 불안정 증상
 
 ## 디렉터리
 
 - `config/` — 외부 공개 가능 정책, 일반화된 회복 플랜, 비식별 운영 기준
-- `data/conditions/` — 질환/증상별 원본 문맥, 경과 기록, 진료 노트. 민감정보이므로 git 커밋하지 않는다.
+- `private/conditions/` — 질환/증상별 원본 문맥, 경과 기록, 진료 노트. 민감정보이므로 git 커밋하지 않는다.
 - `docs/` — 워크플로/ADR/운영 문서
 - `.claude/skills/` — Claude native skill 컨텍스트 자산 (SKILL.md + references/). ADR-006 분리 표준.
+
+## Private Storage Rule
+
+- 민감 건강 기록은 `private/`에 둔다. 폴더명만 봐도 비공개 영역임을 알 수 있게 하기 위함이다.
+- `data/`를 private 대용으로 쓰지 않는다. 기존 `data/conditions/` 경로는 `private/conditions/`로 이전했다.
+- 현재 무릎 트랙의 기준 경로는 `private/conditions/knee-patellar-instability/`다.
+- 경과 로그는 `progress-log.jsonl`, 최신 요약은 `current-context.md`, 맞춤 재활 계획은 `rehab-plan-YYYY-MM-DD.md`에 둔다.
+- `private/`는 ai-nodes `.gitignore` 대상이어야 하며, 커밋·공개·외부 전송 전에 사용자 확인을 우선한다.
+- 공개 가능한 일반 정책과 비식별 재활 기준만 `config/`나 `docs/`에 둔다.
 
 ## 작업 방식
 
@@ -47,7 +56,7 @@
 5. 재활 계획은 “안전한 범위 유지” 중심으로 제안하고, 강화 단계는 의료진/물리치료사 확인 후 진행한다.
 6. 애매한 부분은 임의로 넘기지 말고 질문하거나 `확인 필요`로 남긴다.
 7. 아침 재활 체크인 변경은 `.claude/skills/daily-knee-rehab-checkin/SKILL.md`, `config/knee-running-recovery-plan.md`, `config/knee-rehab-exercise-sets.md`, `docs/flow.md`, `docs/code-architecture.md`를 함께 확인한다.
-8. 이후 참고 자료로 남길 만한 사용자 경과는 private `data/conditions/.../current-context.md`에, 일반화 가능한 운영 결정은 `docs/adr.md` 또는 `config/`에 남긴다.
+8. 이후 참고 자료로 남길 만한 사용자 경과는 `private/conditions/.../current-context.md`에, 일반화 가능한 운영 결정은 `docs/adr.md` 또는 `config/`에 남긴다.
 
 ## fos-brain 연동
 

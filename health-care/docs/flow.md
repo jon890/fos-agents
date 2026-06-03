@@ -3,7 +3,7 @@
 ## 1. Intake
 
 - 사용자가 증상/검사/진료 내용을 제공한다.
-- 원본은 `data/conditions/<track>/source-*.md`에 보존한다.
+- 원본은 `private/conditions/<track>/source-*.md`에 보존한다.
 - 요약은 `current-context.md`에 업데이트한다.
 
 ## 2. Clinic prep
@@ -28,7 +28,7 @@
 ## Public config policy
 
 - `config/`에는 공개되어도 괜찮은 일반화된 정책과 플랜만 둔다.
-- 원본 진료기록과 상세 증상 컨텍스트는 `data/`에만 보관한다.
+- 원본 진료기록과 상세 증상 컨텍스트는 `private/`에만 보관한다.
 - 경계가 애매하면 커밋/푸시 전에 사용자와 논의한다.
 
 ## 5. Skill flow plan

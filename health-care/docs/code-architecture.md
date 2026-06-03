@@ -3,7 +3,7 @@
 ## 레이어
 
 - `config/`: 공개 가능한 정책과 일반화된 재활 플랜.
-- `data/`: 민감한 개인 의료 컨텍스트와 경과 기록. gitignore 대상.
+- `private/`: 민감한 개인 의료 컨텍스트와 경과 기록. gitignore 대상.
 - `docs/`: 제품 범위, 데이터 책임, 흐름, 아키텍처, ADR.
 - `.claude/skills/`: Claude native skill 컨텍스트 자산 (SKILL.md + references/). ADR-006 분리 표준 적용 (plan002 phase-02).
 - `tasks/`: planning/plan-and-build 실행 계획.
@@ -12,9 +12,9 @@
 
 ### `.claude/skills/daily-knee-rehab-checkin/`
 
-- 입력: `data/conditions/knee-patellar-instability/current-context.md`, `config/knee-running-recovery-plan.md`
+- 입력: `private/conditions/knee-patellar-instability/current-context.md`, `config/knee-running-recovery-plan.md`
 - 추가 입력: `config/knee-rehab-exercise-sets.md`
-- 출력: Discord용 짧은 체크인 메시지와 오늘의 재활 운동 세트 또는 `data/.../daily-checkins/` 저장본
+- 출력: Discord용 짧은 체크인 메시지와 오늘의 재활 운동 세트 또는 `private/.../daily-checkins/` 저장본
 - 원칙: Claude 없이도 동작 가능한 보수적 안내. 판단 최소화. 불확실하면 낮은 단계 운동 세트를 선택.
 
 ### `.claude/skills/knee-progress-intake/`

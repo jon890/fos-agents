@@ -36,7 +36,7 @@
 
 ### 결정
 
-`daily-knee-rehab-checkin`은 기존 상태 체크와 주의사항에 더해 오늘의 재활 운동 세트를 포함한다. 운동 세트의 일반 기준은 `config/knee-rehab-exercise-sets.md`에 둔다. 개인 경과와 수술 이력은 계속 `data/conditions/knee-patellar-instability/current-context.md`에만 보관한다.
+`daily-knee-rehab-checkin`은 기존 상태 체크와 주의사항에 더해 오늘의 재활 운동 세트를 포함한다. 운동 세트의 일반 기준은 `config/knee-rehab-exercise-sets.md`에 둔다. 개인 경과와 수술 이력은 계속 `private/conditions/knee-patellar-instability/current-context.md`에만 보관한다.
 
 ### 결과
 
