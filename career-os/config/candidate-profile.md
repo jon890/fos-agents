@@ -163,13 +163,12 @@
 
 > 거짓 약점 금지. 출처 문서·자가 진단(`CLAUDE.md`) · smoke test 결과에 근거.
 
-1. **DB 튜닝 실무 깊이** — 자가 진단 weak area. 복합 인덱스 추가 경험(`task/nsc-slot/rcc-rtp-cache-control.md`)은 있으나 **EXPLAIN plan 읽기, 커버링 인덱스 설계, InnoDB buffer pool·통계 정보 해석**을 면접 수준으로 말할 수 있는 드릴은 부족. 개선 중(career-os baseline 토픽).
-2. **JPA N+1 · 페치 조인 · 벌크 연산 실전 질의응답** — 운영에서 사용은 하고 있으나 드릴다운 질문에 즉답할 수준으로 정리가 부족. 개선 중(career-os smoke test에서 식별).
-3. **Redis 캐싱 패턴 폭** — Cache-Aside는 익숙. Write-Through / Write-Behind / Read-Through / 인증·세션 분리 / 분산 락(Redisson 등) / Hot Key 처리 실전 사례는 상대적으로 얕음. 특정 회사 사례보다 범용적인 대규모 백엔드 운영/설계 관점으로 학습한다.
-4. **Kafka 운영 디테일** — Outbox 설계·운영 경험은 있으나, **파티셔닝 키 선택 / Consumer Group rebalance / Exactly-Once Semantics / Lag 모니터링** 같은 운영 이슈에서 깊이가 부족할 수 있음.
-5. **Kubernetes 실운영** — NHN Cloud Container Service의 K8s 추상화 위에서 preStop/grace 수준은 다뤘으나, 직접적인 Deployment/HPA/PDB 튜닝 기재는 출처 문서에 없음. 면접 질문 시 "운영 제약을 받는 사용자 관점"으로 답할 것.
-6. **대규모 트래픽 TPS 숫자** — 이력서·task 전반에서 **구체 TPS / 레이턴시 수치는 명시하지 않음**. 과장 답변 리스크가 있으므로 "측정 여부 / 측정 방법 / 체감 단위"로 답해야 함.
-7. **Kotlin** — 직접 운영 기재 없음. 현 MVP에서는 제외하나, 타깃 회사에 따라 단기 학습 필요 가능.
+1. **JPA N+1 · 페치 조인 · 벌크 연산 실전 질의응답** — 운영에서 사용은 하고 있으나 드릴다운 질문에 즉답할 수준으로 정리가 부족. 개선 중(career-os smoke test에서 식별).
+2. **Redis 캐싱 패턴 폭** — Cache-Aside는 익숙. Write-Through / Write-Behind / Read-Through / 인증·세션 분리 / 분산 락(Redisson 등) / Hot Key 처리 실전 사례는 상대적으로 얕음. 특정 회사 사례보다 범용적인 대규모 백엔드 운영/설계 관점으로 학습한다.
+3. **Kafka 운영 디테일** — Outbox 설계·운영 경험은 있으나, **파티셔닝 키 선택 / Consumer Group rebalance / Exactly-Once Semantics / Lag 모니터링** 같은 운영 이슈에서 깊이가 부족할 수 있음.
+4. **Kubernetes 실운영** — NHN Cloud Container Service의 K8s 추상화 위에서 preStop/grace 수준은 다뤘으나, 직접적인 Deployment/HPA/PDB 튜닝 기재는 출처 문서에 없음. 면접 질문 시 "운영 제약을 받는 사용자 관점"으로 답할 것.
+5. **대규모 트래픽 TPS 숫자** — 이력서·task 전반에서 **구체 TPS / 레이턴시 수치는 명시하지 않음**. 과장 답변 리스크가 있으므로 "측정 여부 / 측정 방법 / 체감 단위"로 답해야 함.
+6. **Kotlin** — 직접 운영 기재 없음. 현 MVP에서는 제외하나, 타깃 회사에 따라 단기 학습 필요 가능.
 
 ---
 
@@ -206,25 +205,21 @@
 
 > 약점 섹션과 1:1 매핑. 구체 액션과 상태.
 
-1. **DB 튜닝 드릴**
-   - EXPLAIN plan 해석(type / key / rows / Extra), 복합 인덱스 vs 커버링 인덱스, leftmost prefix.
-   - InnoDB MVCC · 언두·리두 · 격리 수준별 락 양상.
-   - 상태: career-os baseline 토픽. study-pack 반복 필요.
-2. **JPA N+1 & 페치 전략 질의응답**
+1. **JPA N+1 & 페치 전략 질의응답**
    - `@EntityGraph` / fetch join / `default_batch_fetch_size` / `open-in-view=false`.
    - 상태: study-pack 1편 작성 완료, 구술 드릴 반복 필요.
-3. **Redis 캐싱 패턴 확장**
+2. **Redis 캐싱 패턴 확장**
    - Write-Through / Write-Behind / Read-Through / Cache Stampede / Hot Key.
    - Cache-Aside + Kafka 하이브리드, Hot Key, TTL/invalidation, 장애 시 fallback 복기.
    - 상태: 범용 백엔드 면접 답변으로 재사용 가능하게 정리 중.
-4. **Kafka 운영 질문 대비**
+3. **Kafka 운영 질문 대비**
    - Consumer Group Rebalance, Partition 키 전략, Exactly-Once, Idempotent Producer.
    - Outbox Pattern 설명 시 "왜 AFTER_COMMIT이어야 하는가 / 왜 REQUIRES_NEW인가"를 1분 내 말할 수 있도록 정리.
-5. **MSA 간 데이터 연동 질문**
+4. **MSA 간 데이터 연동 질문**
    - Sync vs Async 선택 기준, 분산 트랜잭션(Saga), 이벤트 유실 대비.
-6. **자기 프로젝트 1분 설명 3종 준비**
+5. **자기 프로젝트 1분 설명 3종 준비**
    - RAG 배치 파이프라인 / 캐시 정합성 / Outbox Pattern.
-7. **CJ Foodville 디지털 채널 특화 보조 포인트**
+6. **CJ Foodville 디지털 채널 특화 보조 포인트**
    - F&B 주문/픽업/딜리버리 상태머신 / 쿠폰·프로모션 동시성 / 멤버십·CJ ONE 포인트 / 결제 멱등성·부분 취소·환불 / 레거시 JSP+jQuery와 신규 Spring API 공존 / MyBatis 운영 패턴을 우선 준비한다.
    - 회사·포지션 세부는 `interview/cj-foodville-digital-channel-backend.md`(+ part2/part3/coffeechat)와 `config/mvp-target.json`에서 주입한다.
 
@@ -248,7 +243,7 @@
 | `sources/fos-study/task/nsc-slot/README.md` | 커리어 타임라인 / 기술 스택 |
 | `sources/fos-study/task/nsc-slot/slot-engine-abstraction.md` | 주요 프로젝트(2) / 의사결정 패턴 1·4 / 기술 스택(StampedLock) |
 | `sources/fos-study/task/nsc-slot/slot-spin-performance.md` | 주요 프로젝트(5) / 의사결정 패턴 2 / 기술 스택(AliasMethod·ThreadLocalRandom) |
-| `sources/fos-study/task/nsc-slot/rcc-rtp-cache-control.md` | 주요 프로젝트(4) / 의사결정 패턴 4 / 약점(DB 튜닝) |
+| `sources/fos-study/task/nsc-slot/rcc-rtp-cache-control.md` | 주요 프로젝트(4) / 의사결정 패턴 4 / 기술 스택(MySQL·비동기 캐시·DB 유니크 키) |
 | `sources/fos-study/task/nsc-slot/ai-tool-adoption.md` | 주요 프로젝트(7) / 협업·리더십 |
 | `sources/fos-study/task/nsc-slot/slot-simulator-oom.md` | 강점 5 |
 | `sources/fos-study/task/nsc-slot/slot-simulator-jackpot-pool.md` | 기술 스택(AtomicReference) |
@@ -261,6 +256,6 @@
 | `sources/fos-study/task/sb-dev-team/cache-architecture.md` | 주요 프로젝트(6) / 강점 1 / 기술 스택(Ehcache·MQ Fanout) |
 | `sources/fos-study/task/the-future-company/README.md` | 커리어 타임라인 / 기술 스택(Redis Streams) |
 | `sources/fos-study/interview/kakao-healthcare-carechat-ai-agent.md` | 지원 대상 / 케어챗 포지션 분석 / 면접 준비 우선순위 |
-| `career-os/CLAUDE.md` | 약점(자가 진단) / 제약(Kotlin 제외) / 면접 준비 우선순위 |
+| `career-os/CLAUDE.md` | 제약(Kotlin 제외) / 면접 준비 우선순위 |
 
 > 미래 업데이트 규칙: 이력서 v5가 나오면 "커리어 타임라인 / 주요 프로젝트 / 강점" 우선 재생성. 신규 task 문서가 추가되면 "기술 스택 / 주요 프로젝트" 재생성. CJ가 아닌 회사로 타깃 전환 시 "지원 대상 / 면접 준비 우선순위 7항" 만 교체하면 중립성 유지됨.

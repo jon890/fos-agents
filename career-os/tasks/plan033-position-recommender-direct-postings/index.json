@@ -1,0 +1,48 @@
+{
+  "name": "plan033-position-recommender-direct-postings",
+  "description": "position-recommender를 회사/탐색 링크 추천기가 아니라 현재 열린 개별 공고 기반 추천기로 고정한다.",
+  "created_at": "2026-06-04T11:20:00+09:00",
+  "updated_at": "2026-06-04T11:20:00+09:00",
+  "status": "completed",
+  "current_phase": 1,
+  "total_phases": 1,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/.claude/skills/position-recommender/SKILL.md",
+    "career-os/.claude/skills/position-recommender/references/position-recommendation-prompt.md",
+    "career-os/.claude/skills/position-recommender/references/position-decision-criteria.md",
+    "career-os/scripts/position-recommender/collect_live_postings.ts",
+    "career-os/scripts/position-recommender/run_daily_with_claude.sh",
+    "career-os/docs/adr.md"
+  ],
+  "depends_on": [
+    "plan022-position-recommender-native",
+    "plan030-position-recommender-daily-freshness"
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "recommend-direct-postings-only",
+      "decision": "강력 추천/도전 추천은 현재 열린 개별 공고 URL과 active/open 근거가 있는 항목만 허용한다."
+    },
+    {
+      "id": "D2",
+      "title": "company-leads-are-collection-targets",
+      "decision": "회사 채용홈, 기술블로그, 뉴스, 회사명 기반 lead는 추천 티어가 아니라 추가 수집 대상으로만 둔다."
+    },
+    {
+      "id": "D3",
+      "title": "runner-validates-report-shape",
+      "decision": "daily runner는 추천 티어에 직접 공고 링크와 개별 active/open 근거가 없으면 실패 처리한다."
+    }
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "개별 공고 기반 추천 정책과 runner validation 적용",
+      "file": "phase-01.md",
+      "status": "completed"
+    }
+  ]
+}

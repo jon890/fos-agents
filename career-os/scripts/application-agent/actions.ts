@@ -1,4 +1,4 @@
-import { appendFileSync, existsSync, mkdirSync, writeFileSync } from 'fs';
+import { appendFileSync, existsSync, mkdirSync, statSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import type { AgentDecision } from './agent_decision_schema';
 import { updateLedgerRecord } from './ledger_io';
@@ -22,6 +22,9 @@ export type ActionResult = {
   ledgerUpdated: boolean;
   decisionLogPath?: string;
   commandSuggestions: string[];
+  executionBlocked?: boolean;
+  executionBlockReason?: string;
+  missingArtifacts?: string[];
   studyActionsPath?: string;
   submissionChecklistPath?: string;
   profileSuggestionsPath?: string;
@@ -41,22 +44,34 @@ export async function executeDecision(
     commandSuggestions: buildCommandSuggestions(record, decision),
   };
 
-  if (opts.dryRun) return result;
-
   // Safety gate — hard block before any writes
   const safetyResult = validateSafetyGate(decision);
   if (!safetyResult.safe) {
     result.safetyBlocked = true;
     result.safetyViolations = safetyResult.violations;
-    // Still write the decision log so violations are auditable
-    result.decisionLogPath = appendDecisionLog(record, decision);
+    // Still write the decision log so violations are auditable.
+    if (!opts.dryRun) {
+      result.decisionLogPath = appendDecisionLog(record, decision);
+    }
     return result;
   }
 
   // Write decision log (append to per-application jsonl log)
-  result.decisionLogPath = appendDecisionLog(record, decision);
+  if (!opts.dryRun) {
+    result.decisionLogPath = appendDecisionLog(record, decision);
+  }
 
   if (!decision.allowed) return result;
+
+  const artifactGate = validateArtifactGate(record, decision);
+  if (!artifactGate.allowed) {
+    result.executionBlocked = true;
+    result.executionBlockReason = artifactGate.reason;
+    result.missingArtifacts = artifactGate.missingArtifacts;
+    return result;
+  }
+
+  if (opts.dryRun) return result;
 
   // Update ledger with new state
   updateLedgerRecord(opts.ledgerPath, record.id, {
@@ -67,6 +82,7 @@ export async function executeDecision(
     nextActions: decision.nextActions,
     requiredUserAction: decision.requiredUserAction,
     confidence: decision.confidence,
+    ...artifactGate.pathUpdates,
   });
   result.ledgerUpdated = true;
 
@@ -89,6 +105,132 @@ export async function executeDecision(
   return result;
 }
 
+function validateArtifactGate(
+  record: ApplicationLedgerRecord,
+  decision: AgentDecision,
+): {
+  allowed: boolean;
+  reason?: string;
+  missingArtifacts?: string[];
+  pathUpdates?: Partial<ApplicationLedgerRecord>;
+} {
+  const expected = expectedArtifacts(record, decision);
+  if (expected.length === 0) return { allowed: true, pathUpdates: {} };
+
+  const missing = expected.filter((artifact) => !existsSync(artifact.path));
+  if (missing.length > 0) {
+    return {
+      allowed: false,
+      reason:
+        'required skill artifacts are missing; run the suggested command(s), then resume this application',
+      missingArtifacts: missing.map((artifact) => `${artifact.label}: ${artifact.path}`),
+      pathUpdates: {},
+    };
+  }
+
+  const stale = staleArtifacts(record, decision);
+  if (stale.length > 0) {
+    return {
+      allowed: false,
+      reason:
+        'required skill artifacts are stale; rerun the suggested command(s), then resume this application',
+      missingArtifacts: stale,
+      pathUpdates: {},
+    };
+  }
+
+  const pathUpdates: Partial<ApplicationLedgerRecord> = {};
+  for (const artifact of expected) {
+    pathUpdates[artifact.field] = artifact.path;
+  }
+  return { allowed: true, pathUpdates };
+}
+
+function staleArtifacts(
+  record: ApplicationLedgerRecord,
+  decision: AgentDecision,
+): string[] {
+  const applicationPackagePath =
+    record.applicationPackagePath ?? join(record.applicationDir, 'application-package.md');
+  const reviewPath = record.reviewPath ?? join(record.applicationDir, 'review.md');
+
+  if (
+    decision.decision === 'revise_application_package' &&
+    existsSync(applicationPackagePath) &&
+    existsSync(reviewPath) &&
+    statSync(applicationPackagePath).mtimeMs <= statSync(reviewPath).mtimeMs
+  ) {
+    return [
+      `application package is not newer than review: ${applicationPackagePath} (review: ${reviewPath})`,
+    ];
+  }
+
+  if (
+    decision.decision === 'call_application_package_writer' &&
+    existsSync(applicationPackagePath) &&
+    existsSync(reviewPath) &&
+    statSync(reviewPath).mtimeMs < statSync(applicationPackagePath).mtimeMs
+  ) {
+    return [
+      `application review is older than package: ${reviewPath} (package: ${applicationPackagePath})`,
+    ];
+  }
+
+  return [];
+}
+
+export function expectedArtifacts(
+  record: ApplicationLedgerRecord,
+  decision: AgentDecision,
+): Array<{
+  field: 'fitAnalysisPath' | 'applicationPackagePath' | 'reviewPath';
+  label: string;
+  path: string;
+}> {
+  const fitAnalysisPath = record.fitAnalysisPath ?? join(record.applicationDir, 'fit-analysis.md');
+  const applicationPackagePath =
+    record.applicationPackagePath ?? join(record.applicationDir, 'application-package.md');
+  const reviewPath = record.reviewPath ?? join(record.applicationDir, 'review.md');
+
+  switch (decision.decision) {
+    case 'run_fit_analysis':
+      return [
+        {
+          field: 'fitAnalysisPath',
+          label: 'fit analysis',
+          path: fitAnalysisPath,
+        },
+      ];
+
+    case 'draft_application_package':
+    case 'revise_application_package':
+      return [
+        {
+          field: 'applicationPackagePath',
+          label: 'application package',
+          path: applicationPackagePath,
+        },
+      ];
+
+    case 'call_application_package_writer':
+      return [
+        {
+          field: 'applicationPackagePath',
+          label: 'application package',
+          path: applicationPackagePath,
+        },
+        {
+          field: 'reviewPath',
+          label: 'application review',
+          path: reviewPath,
+        },
+      ];
+
+    default:
+      return [];
+  }
+}
+
 function buildCommandSuggestions(
   record: ApplicationLedgerRecord,
   decision: AgentDecision,
@@ -98,14 +240,17 @@ function buildCommandSuggestions(
     case 'call_application_package_writer':
     case 'revise_application_package':
       return [
-        buildSkillCommand('application-package-writer', { applicationDir: record.applicationDir }),
+        buildSkillCommand('application-package-writer', {
+          postingPath: record.postingPath ?? join(record.applicationDir, 'posting.md'),
+        }),
         buildSkillCommand('application-reviewer', { applicationDir: record.applicationDir }),
       ];
 
     case 'run_fit_analysis':
       return [
-        buildSkillCommand('position-recommender'),
-        `# After run: ingest-position-report to update ledger`,
+        buildSkillCommand('application-package-writer', {
+          postingPath: record.postingPath ?? join(record.applicationDir, 'posting.md'),
+        }),
       ];
 
     case 'generate_study_actions':

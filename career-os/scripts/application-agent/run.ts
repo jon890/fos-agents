@@ -15,6 +15,17 @@ import {
   renderDailyDigestReport,
   extractDiscordSummary,
 } from './render_decision_log';
+import {
+  executeRequiredSkills,
+  type SkillExecutionResult,
+} from './skill_executor';
+import {
+  createProgressNotifier,
+  renderApplicationLabel,
+  renderDecisionStartMessage,
+  renderExecutionBlockedMessage,
+  renderLedgerUpdatedMessage,
+} from './progress_notifier';
 
 type RunOptions = {
   ledgerPath: string;
@@ -22,6 +33,13 @@ type RunOptions = {
   format: 'markdown' | 'jsonl';
   dryRun: boolean;
   maxActions: number;
+  executeSkills: boolean;
+  skillTimeoutMs: number;
+  notifyDiscord: boolean;
+};
+
+type AgentRunResult = ActionResult & {
+  skillExecution?: SkillExecutionResult;
 };
 
 function parseOpts(args: string[]): Partial<RunOptions> {
@@ -33,6 +51,10 @@ function parseOpts(args: string[]): Partial<RunOptions> {
       opts.format = args[++i] as 'markdown' | 'jsonl';
     else if (args[i] === '--max-actions' && args[i + 1])
       opts.maxActions = parseInt(args[++i]);
+    else if (args[i] === '--execute-skills') opts.executeSkills = true;
+    else if (args[i] === '--notify-discord') opts.notifyDiscord = true;
+    else if (args[i] === '--skill-timeout-ms' && args[i + 1])
+      opts.skillTimeoutMs = parseInt(args[++i]);
   }
   return opts;
 }
@@ -44,6 +66,9 @@ function resolveOpts(partial: Partial<RunOptions>, isDryRun = false): RunOptions
     format: partial.format ?? 'markdown',
     dryRun: isDryRun,
     maxActions: partial.maxActions ?? 5,
+    executeSkills: partial.executeSkills ?? false,
+    skillTimeoutMs: partial.skillTimeoutMs ?? 20 * 60 * 1000,
+    notifyDiscord: partial.notifyDiscord ?? false,
   };
 }
 
@@ -129,11 +154,11 @@ async function cmdDryRun(args: string[]): Promise<void> {
   }
 
   const ranked = rankCandidates(records);
-  const results: ActionResult[] = [];
+  const results: AgentRunResult[] = [];
 
   for (const record of ranked) {
     const decision = decideForRecord(record);
-    results.push(await executeDecision(record, decision, opts));
+    results.push(await executeDecisionWithOptionalSkills(record, decision, opts));
   }
 
   const output =
@@ -153,7 +178,7 @@ async function cmdRunOnce(args: string[]): Promise<void> {
     const decision = decideForRecord(record);
     if (!decision.allowed) continue;
 
-    const result = await executeDecision(record, decision, opts);
+    const result = await executeDecisionWithOptionalSkills(record, decision, opts);
 
     if (result.safetyBlocked) {
       console.warn(`[safety gate blocked] ${record.id}:`);
@@ -164,6 +189,7 @@ async function cmdRunOnce(args: string[]): Promise<void> {
     }
 
     printResult(result, opts);
+    if (result.executionBlocked) return;
     return;
   }
 
@@ -174,13 +200,13 @@ async function cmdRunDaily(args: string[]): Promise<void> {
   const opts = resolveOpts(parseOpts(args), false);
   const records = readLedger(opts.ledgerPath);
   const ranked = rankCandidates(records);
-  const results: ActionResult[] = [];
+  const results: AgentRunResult[] = [];
   let actionCount = 0;
 
   for (const record of ranked) {
     if (actionCount >= opts.maxActions) break;
     const decision = decideForRecord(record);
-    const result = await executeDecision(record, decision, opts);
+    const result = await executeDecisionWithOptionalSkills(record, decision, opts);
     results.push(result);
 
     if (result.safetyBlocked) {
@@ -191,7 +217,7 @@ async function cmdRunDaily(args: string[]): Promise<void> {
       continue;
     }
 
-    if (decision.allowed) actionCount++;
+    if (decision.allowed && !result.executionBlocked) actionCount++;
     printResult(result, opts);
   }
 
@@ -210,7 +236,7 @@ async function cmdResume(applicationId: string, args: string[]): Promise<void> {
   }
 
   const decision = decideForRecord(record);
-  const result = await executeDecision(record, decision, opts);
+  const result = await executeDecisionWithOptionalSkills(record, decision, opts);
 
   if (result.safetyBlocked) {
     console.warn(`[safety gate blocked] ${record.id}:`);
@@ -260,11 +286,11 @@ async function cmdReportDaily(args: string[]): Promise<void> {
   }
 
   const ranked = rankCandidates(records);
-  const results: ActionResult[] = [];
+  const results: AgentRunResult[] = [];
 
   for (const record of ranked) {
     const decision = decideForRecord(record);
-    results.push(await executeDecision(record, decision, opts));
+    results.push(await executeDecisionWithOptionalSkills(record, decision, opts));
   }
 
   const date = new Date().toISOString().slice(0, 10);
@@ -290,7 +316,48 @@ async function cmdReportDaily(args: string[]): Promise<void> {
 
 // --- Helpers ---
 
-function printResult(result: ActionResult, opts: RunOptions): void {
+async function executeDecisionWithOptionalSkills(
+  record: ApplicationLedgerRecord,
+  decision: ReturnType<typeof decideForRecord>,
+  opts: RunOptions,
+): Promise<AgentRunResult> {
+  const notifier = createProgressNotifier({
+    enabled: opts.notifyDiscord,
+    dryRun: opts.dryRun,
+  });
+
+  if (opts.executeSkills && decision.allowed) {
+    await notifier.notify(renderDecisionStartMessage(record, decision));
+  }
+
+  const skillExecution =
+    opts.executeSkills && decision.allowed
+      ? await executeRequiredSkills(record, decision, {
+          enabled: opts.executeSkills,
+          dryRun: opts.dryRun,
+          timeoutMs: opts.skillTimeoutMs,
+          notify: (message) => notifier.notify(message),
+          applicationLabel: renderApplicationLabel(record),
+        })
+      : undefined;
+
+  const result = (await executeDecision(record, decision, opts)) as AgentRunResult;
+  if (skillExecution) result.skillExecution = skillExecution;
+
+  if (opts.executeSkills && decision.allowed) {
+    if (result.ledgerUpdated) {
+      await notifier.notify(renderLedgerUpdatedMessage(record, decision));
+    } else if (result.executionBlocked) {
+      await notifier.notify(
+        renderExecutionBlockedMessage(record, result.executionBlockReason),
+      );
+    }
+  }
+
+  return result;
+}
+
+function printResult(result: AgentRunResult, opts: RunOptions): void {
   const d = result.decision;
   const statusLine =
     d.nextStatus === d.fromStatus
@@ -309,6 +376,20 @@ function printResult(result: ActionResult, opts: RunOptions): void {
     console.log('  Commands:');
     for (const cmd of result.commandSuggestions) console.log(`    ${cmd}`);
   }
+  if (result.skillExecution) {
+    console.log(
+      `  Skill execution: ${result.skillExecution.attempted ? 'attempted' : 'not needed'}`,
+    );
+    for (const skill of result.skillExecution.ran) {
+      console.log(`    ran: ${skill}`);
+    }
+    for (const skipped of result.skillExecution.skipped) {
+      console.log(`    skipped: ${skipped}`);
+    }
+    if (result.skillExecution.failed) {
+      console.log(`    failed: ${result.skillExecution.failed}`);
+    }
+  }
   if (result.ledgerUpdated) {
     console.log('  Ledger:   updated');
   } else if (!opts.dryRun && !d.allowed) {
@@ -319,6 +400,16 @@ function printResult(result: ActionResult, opts: RunOptions): void {
   if (result.submissionChecklistPath) {
     console.log(`  Checklist: ${result.submissionChecklistPath}`);
   }
+  if (result.executionBlocked) {
+    console.log('  Execution: blocked until required artifacts exist');
+    if (result.executionBlockReason) {
+      console.log(`  Reason:    ${result.executionBlockReason}`);
+    }
+    if (result.missingArtifacts && result.missingArtifacts.length > 0) {
+      console.log('  Missing artifacts:');
+      for (const artifact of result.missingArtifacts) console.log(`    ${artifact}`);
+    }
+  }
   if (result.studyActionsPath) {
     console.log(`  Study actions: ${result.studyActionsPath}`);
   }
@@ -327,7 +418,7 @@ function printResult(result: ActionResult, opts: RunOptions): void {
   }
 }
 
-function printSummary(results: ActionResult[], opts: RunOptions): void {
+function printSummary(results: AgentRunResult[], opts: RunOptions): void {
   const allowed = results.filter((r) => r.decision.allowed).length;
   const awaitingUser = results.filter(
     (r) => !r.decision.allowed && r.decision.requiredUserAction !== 'none',
@@ -335,6 +426,9 @@ function printSummary(results: ActionResult[], opts: RunOptions): void {
   const terminal = results.filter((r) => r.decision.decision === 'terminal_skip').length;
   const updated = results.filter((r) => r.ledgerUpdated).length;
   const safetyBlocked = results.filter((r) => r.safetyBlocked).length;
+  const executionBlocked = results.filter((r) => r.executionBlocked).length;
+  const skillsRan = results.reduce((sum, r) => sum + (r.skillExecution?.ran.length ?? 0), 0);
+  const skillFailures = results.filter((r) => r.skillExecution?.failed).length;
 
   console.log('---');
   console.log(`Summary: ${results.length} records processed`);
@@ -344,8 +438,17 @@ function printSummary(results: ActionResult[], opts: RunOptions): void {
   if (safetyBlocked > 0) {
     console.log(`  Safety gate blocked:  ${safetyBlocked}`);
   }
+  if (executionBlocked > 0) {
+    console.log(`  Execution blocked:    ${executionBlocked}`);
+  }
+  if (opts.executeSkills) {
+    console.log(`  Skills executed:      ${skillsRan}`);
+    console.log(`  Skill failures:       ${skillFailures}`);
+  }
   if (!opts.dryRun) console.log(`  Ledger updates:       ${updated}`);
   console.log(`  Dry run:              ${opts.dryRun ? 'YES (no writes)' : 'NO'}`);
+  console.log(`  Execute skills:       ${opts.executeSkills ? 'YES' : 'NO'}`);
+  console.log(`  Notify Discord:       ${opts.notifyDiscord ? 'YES' : 'NO'}`);
 }
 
 function ensureDir(dir: string): void {
@@ -372,6 +475,9 @@ Options:
   --output-dir <path>   Output directory (default: data/runtime/application-agent)
   --format markdown|jsonl  Decision log format (default: markdown)
   --max-actions <n>     Max agent actions per run-daily (default: 5)
+  --execute-skills      Execute allowed private native skills before artifact gate
+  --notify-discord      Send concise progress notifications during real execution
+  --skill-timeout-ms <n>  Timeout for each skill execution (default: 1200000)
 
 Safety gates (always enforced):
   - Actual job submission is never automated (checklist only)

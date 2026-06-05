@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from 'fs';
+import { join } from 'path';
 import {
   AgentForbiddenTargetStatuses,
   type ApplicationLedgerRecord,
@@ -85,6 +87,7 @@ function makeDecision(
 export function decideForRecord(record: ApplicationLedgerRecord): AgentDecision {
   const now = new Date().toISOString();
   const fitScore = record.fitScore ?? 0;
+  const reviewVerdict = readReviewVerdict(record);
 
   // Terminal statuses — no agent action
   if (record.status === 'closed') {
@@ -259,6 +262,19 @@ export function decideForRecord(record: ApplicationLedgerRecord): AgentDecision 
     }
 
     case 'preparing_application': {
+      if (reviewVerdict === 'pass') {
+        return makeDecision(record, now, {
+          decision: 'review_pass_ready_for_user',
+          decisionReason: 'review.md 판정 pass — 사용자 최종 검토 단계로 전환',
+          confidence: 0.95,
+          nextStatus: 'ready_for_user_review',
+          nextAgentPhase: 'user_review_pending',
+          nextActions: ['user_review_application_package', 'await_user_approval'],
+          requiredUserAction: 'review_application',
+          allowed: true,
+        });
+      }
+
       return makeDecision(record, now, {
         decision: 'call_application_package_writer',
         decisionReason: 'application-package-writer 호출 — 지원 패키지 초안 작성',
@@ -272,6 +288,19 @@ export function decideForRecord(record: ApplicationLedgerRecord): AgentDecision 
     }
 
     case 'needs_revision': {
+      if (reviewVerdict === 'pass') {
+        return makeDecision(record, now, {
+          decision: 'review_pass_ready_for_user',
+          decisionReason: 'review.md 판정 pass — 사용자 최종 검토 단계로 전환',
+          confidence: 0.95,
+          nextStatus: 'ready_for_user_review',
+          nextAgentPhase: 'user_review_pending',
+          nextActions: ['user_review_application_package', 'await_user_approval'],
+          requiredUserAction: 'review_application',
+          allowed: true,
+        });
+      }
+
       if (record.revisionCount < record.maxRevisionCount) {
         return makeDecision(record, now, {
           decision: 'revise_application_package',
@@ -322,4 +351,17 @@ export function decideForRecord(record: ApplicationLedgerRecord): AgentDecision 
       });
     }
   }
+}
+
+function readReviewVerdict(
+  record: ApplicationLedgerRecord,
+): 'pass' | 'revise' | 'block' | undefined {
+  const reviewPath = record.reviewPath ?? join(record.applicationDir, 'review.md');
+  if (!existsSync(reviewPath)) return undefined;
+
+  const text = readFileSync(reviewPath, 'utf-8');
+  if (/^\s*-\s*result:\s*pass\s*$/im.test(text)) return 'pass';
+  if (/^\s*-\s*result:\s*revise\s*$/im.test(text)) return 'revise';
+  if (/^\s*-\s*result:\s*block\s*$/im.test(text)) return 'block';
+  return undefined;
 }

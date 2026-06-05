@@ -114,8 +114,8 @@ python3 skills/plan-and-build/scripts/run-phases.py career-os/tasks/<task-name> 
 ```
 
 run-phases.py가 자동으로 워크스페이스(`<task-dir>/../..`)를 감지하고:
-- `<workspace>/config/.env`를 env로 로드 (Discord webhook URL 등)
-- `<workspace>/skills/*/scripts/notify_discord.sh`를 찾아 진행/완료/실패 알림 발송
+- `<workspace>/.env`를 env로 로드 (`DISCORD_CHANNEL_ID` 등)
+- ai-nodes 공용 `_shared/lib/notify_discord.ts`를 통해 진행/완료/실패 알림 발송
 - phase별 commit SHA를 `index.json`에 기록
 
 ### 6. 검증
@@ -177,7 +177,8 @@ run-phases.py가 자동 발송:
 - `[보류] <ws> task <name> phase N: <blocked-reason>`
 - `[완료] <ws> task <name> 전체 완료 (M phases)`
 
-webhook URL은 `<workspace>/config/.env`의 `DISCORD_WEBHOOK_URL` 또는 notify_discord.sh가 내부적으로 처리하는 변수에 의존.
+알림은 `<workspace>/.env`의 `DISCORD_CHANNEL_ID`와 `_shared/lib/notify_discord.ts`에 의존한다.
+`.env`가 없으면 `run-phases.py`가 알림을 조용히 건너뛴다. `.env`는 있지만 `DISCORD_CHANNEL_ID`가 비어 있거나 OpenClaw CLI 전송이 실패하면 warning만 남기고 phase 실행 자체를 깨뜨리지 않는다.
 
 ## 파일
 

@@ -10,7 +10,7 @@
     {"path": "task/ai-service-team/rag-vector-search-batch.md"},
     {"path": "task/ai-service-team/webtoon-maker-ai-pipeline.md"},
     {"path": "task/nsc-slot/ai-tool-adoption.md"},
-    {"path": "database/connection-pool-saturation-thread-pool-isolation.md", "note": "suggester: added 2026-05-16 (path 정정 from connection-pool-saturation.md), 근거 1858a53 — DB 약점 보강 (saturation + thread pool isolation)"},
+    {"path": "database/connection-pool-saturation-thread-pool-isolation.md", "note": "suggester: added 2026-05-16 (path 정정 from connection-pool-saturation.md), 근거 1858a53 — connection pool saturation + thread pool isolation 운영 보강"},
     {"path": "database/mybatis-dynamic-sql-resultmap-basics.md", "note": "suggester: added 2026-05-16 (path 정정 from database/mysql/...), 근거 94e5171 — CJ Foodville JD MyBatis 매칭"},
     {"path": "architecture/clean-architecture-pragmatic-spring-commerce.md", "note": "suggester: added 2026-05-16, 근거 1652e23 clean architecture pragmatic Spring commerce"},
     {"path": "devops/commerce-observability-first-five-minutes.md", "note": "suggester: added 2026-05-16, 근거 30486d6 commerce observability first 5min"}

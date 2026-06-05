@@ -1,0 +1,36 @@
+{
+  "updated_at": "2026-06-05",
+  "purpose": "Daily study recommendation should be LLM-curated from context, not merely a fixed topic-pool rotation.",
+  "current_target": {
+    "company": "CJ Foodville",
+    "team": "Digital Channel Backend",
+    "interview_date": "2026-06-15"
+  },
+  "selection_principles": [
+    "Reflect already studied topics from config/study-progress.json and sources/fos-study scan.",
+    "If a candidate topic is already covered by an existing fos-study document, classify it as review/update-existing rather than a new study topic.",
+    "After the user creates or updates a study pack, cool down the same or near-duplicate topic in morning recommendations unless the user asks for interview drill practice on it.",
+    "Prefer topics that connect candidate experience to first-round interview answers.",
+    "Use pools as candidates and guardrails, not as the final decision-maker.",
+    "Avoid treating generic DB tuning as the candidate's active weak area.",
+    "Keep enough variety across backend depth, F&B/e-Commerce domain, operations, architecture, AI/backend tooling, and live-coding practice.",
+    "Explain why each recommendation is useful now."
+  ],
+  "interest_axes": [
+    "CJ Foodville F&B/e-Commerce digital-channel domain",
+    "Java/Spring backend architecture",
+    "JPA/MyBatis query and legacy coexistence as interview context, not as a generic weakness",
+    "Kafka/Outbox/message idempotency",
+    "Redis/cache consistency and operational failure modes",
+    "observability, incident response, and non-technical communication",
+    "Spring Batch/RAG/OpenSearch experience translation",
+    "AI agent workflow and backend productivity",
+    "live-coding explanation practice"
+  ],
+  "avoid": [
+    "Repeating the same DB/Spring/cache pool simply because it remains in config.",
+    "Generating a study-pack automatically before the user selects a topic.",
+    "Presenting old CJ OliveYoung-derived material as a fresh study topic when the real value is a short refresh or target-company translation.",
+    "Over-indexing on old CJ OliveYoung or Kakao Healthcare target context unless explicitly comparing."
+  ]
+}

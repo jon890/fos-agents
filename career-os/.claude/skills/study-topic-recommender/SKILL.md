@@ -31,10 +31,23 @@ Claude는 다음을 `Read` 도구로 직접 로드:
 3. `career-os/config/sources.json` — `techBlog / ai / geek` reservoir items (feedUrl, filterKeywords 포함)
 4. `career-os/config/live-coding-seed-pool.json` — primary live-coding seed pool
 5. `career-os/config/live-coding-seed-candidates.json` — candidate live-coding seeds
-6. `career-os/data/runtime/topic-inventory-history.jsonl` — 최근 추천 history (cooldown 계산, 없으면 skip)
+6. `career-os/config/study-progress.json` — 이미 공부한 주제와 현재 보강 영역
+7. `career-os/config/study-preferences.json` — 사용자의 관심 축과 추천 철학
+8. `career-os/data/runtime/topic-inventory-history.jsonl` — 최근 추천 history (cooldown 계산, 없으면 skip)
 
 fos-study 산출물 진실원 (ADR-033): `career-os/sources/fos-study/` 트리의 `**/*.md` 직접 스캔.
 promote 판단 기준도 이 스캔 결과 기반 — 외부 아티팩트 목록 파일 불필요.
+
+## Recommendation philosophy
+
+The TypeScript inventory script is a candidate generator and diversity guardrail, not the final brain.
+After inventory generation, use LLM reasoning to choose and explain what matters today:
+
+- reflect already studied topics and generated fos-study artifacts
+- reflect the current target, interview date, and first-round readiness
+- reflect the user's interest axes in `study-preferences.json`
+- avoid stale weak-area assumptions, especially generic DB tuning, unless the specific topic is useful for today's interview context
+- do not merely rotate a fixed pool when another topic better fits the current learning arc
 
 ## Workflow
 
@@ -109,15 +122,24 @@ bun --env-file=career-os/.env \
 
 `--render-only` 모드는 기존 `topic-inventory.json`을 읽고 markdown만 다시 쓴다. `claudeDuplicateReview` 결과가 반영된 "기존 문서 보강 후보 (최대 5)" 섹션과 (status=failed이면) 상단 warning 라인이 출력된다.
 
-### 3. 결과 출력
+### 3. LLM 큐레이션
 
-```bash
-cat career-os/data/runtime/morning-topic-recommendation.md
-```
+Read `data/runtime/topic-inventory.json`, `data/runtime/morning-topic-recommendation.md`,
+`config/study-progress.json`, and `config/study-preferences.json`.
 
-morning-topic-recommendation.md 전체 내용을 사용자에게 출력.
+Use them to produce a concise recommendation with:
 
-### 4. Live-coding seed 선택 (옵션)
+- today's recommended 3 backend study topics
+- 1-3 external reading picks if useful
+- why these fit the current interview arc
+- one explicit note on what was avoided because it was already studied or recently repeated
+- pool health only as a diagnostic, not as the main answer
+
+### 4. 결과 출력
+
+Do not paste the full markdown by default. Summarize the LLM-curated picks and include the path to `morning-topic-recommendation.md`.
+
+### 5. Live-coding seed 선택 (옵션)
 
 자연어에 "live-coding" 키워드가 있으면 추가 처리:
 

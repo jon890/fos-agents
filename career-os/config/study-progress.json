@@ -39,6 +39,19 @@
         "database/mysql/mysql-architecture.md"
       ],
       "source": "daily-run"
+    },
+    {
+      "date": "2026-06-05",
+      "topics": [
+        "feature-flag-shadow-mode-circuit-breaker",
+        "zero-downtime-migration"
+      ],
+      "files": [
+        "architecture/zero-downtime-migration.md",
+        "architecture/resilience-patterns.md"
+      ],
+      "source": "manual-reconciliation",
+      "note": "Already covered; future recommendation should be refresh/update-existing, not a fresh study-pack."
     }
   ],
   "weak_spots": {
@@ -47,18 +60,6 @@
       "study_count": 0,
       "last_evaluated": "2026-05-16",
       "status": "stale"
-    },
-    "explain-plan": {
-      "last_studied": "2026-04-14",
-      "study_count": 1,
-      "last_evaluated": "2026-05-16",
-      "status": "improving"
-    },
-    "composite-index": {
-      "last_studied": "2026-04-13",
-      "study_count": 1,
-      "last_evaluated": "2026-05-16",
-      "status": "improving"
     },
     "redis-cache-aside": {
       "last_studied": "2026-04-13",
@@ -71,6 +72,18 @@
       "study_count": 0,
       "last_evaluated": "2026-05-16",
       "status": "stale"
+    },
+    "feature-flag-shadow-mode-circuit-breaker": {
+      "last_studied": "2026-06-05",
+      "study_count": 1,
+      "last_evaluated": "2026-06-05",
+      "status": "covered-update-existing"
+    },
+    "zero-downtime-migration": {
+      "last_studied": "2026-06-05",
+      "study_count": 1,
+      "last_evaluated": "2026-06-05",
+      "status": "covered-update-existing"
     }
   }
 }

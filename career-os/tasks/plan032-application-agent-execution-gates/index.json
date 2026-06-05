@@ -1,0 +1,43 @@
+{
+  "name": "plan032-application-agent-execution-gates",
+  "description": "plan031 operation test에서 발견한 false-positive ledger transition 문제를 막기 위해 application-flow-agent에 skill artifact execution gate를 추가한다.",
+  "created_at": "2026-06-04T11:13:00+09:00",
+  "updated_at": "2026-06-04T11:13:00+09:00",
+  "status": "completed",
+  "current_phase": 1,
+  "total_phases": 1,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/tasks/plan031-application-flow-agent/audit/operation-test-2026-05-27.md",
+    "career-os/scripts/application-agent/actions.ts",
+    "career-os/scripts/application-agent/run.ts",
+    "career-os/scripts/application-agent/render_decision_log.ts",
+    "career-os/docs/code-architecture.md",
+    "career-os/docs/flow.md",
+    "career-os/docs/adr.md"
+  ],
+  "depends_on": [
+    "plan031-application-flow-agent"
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "artifact-before-transition",
+      "decision": "skill 기반 상태 전이는 필수 산출물이 존재할 때만 ledger에 반영한다."
+    },
+    {
+      "id": "D2",
+      "title": "command-suggestion-preserved",
+      "decision": "산출물이 없을 때는 decision log와 command suggestion은 남기되 status/agentPhase는 유지한다."
+    }
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "execution gate 구현과 fixture/live-copy 검증",
+      "file": "phase-01.md",
+      "status": "completed"
+    }
+  ]
+}

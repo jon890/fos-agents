@@ -765,6 +765,22 @@ data/prep/
 
 study-pack 등 중복 실행 방지용 flock 파일. 토픽별 `<task>-<topic>.lock`.
 
+### data/runtime/live-position-postings.md
+
+`position-recommender` daily runner가 Claude 호출 전에 갱신하는 active-only 공고 snapshot.
+source adapter가 수집한 후보를 공통 validator가 걸러낸 뒤 markdown으로 렌더링한다.
+
+필수 의미 필드:
+
+- `source` — 수집 adapter 이름. 예: `wanted`, `toss-careers`.
+- `link_type` — 추천 입력은 `direct_posting`만 허용.
+- `posting_status` — 추천 입력은 `active` 또는 `open`만 허용.
+- `active_evidence` — API status, job detail page, apply form 등 active/open 근거.
+- `closes_at`, `days_until_close`, `close_urgency` — 마감 판단 정보. 마감이 없으면 `no_deadline`.
+- `opened_at` — 값이 있을 때만 출력. 수집되지 않은 경우 `unknown` 문자열을 쓰지 않고 생략한다.
+
+`career_article`, `search_page`, `posting_status: unknown` 항목은 snapshot에서 제외하거나 diagnostics에만 남긴다.
+
 ## sources/fos-study/
 
 외부 git 저장소 (jon890/fos-study). career-os가 마크다운만 읽고, study-pack 종류 명령이 commit + push한다.

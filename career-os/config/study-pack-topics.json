@@ -137,7 +137,7 @@
     "domain": "interview",
     "outputPath": "interview/experience-based/pressure-question-defense.md",
     "commitTopic": "interview-pressure-question-defense",
-    "appendPrompt": "면접에서 받기 쉬운 압박 질문(약점 캐묻기, 경험 검증, why-this-company, 부정적 가정 시나리오)을 1분 답변과 꼬리 질문 대응 형태로 정리한다. 후보자 실제 경험과 자기평가 약점(DB 등)을 활용해 솔직-방어 균형을 잡는 패턴을 코칭한다. 문서 제목은 반드시 [초안]으로 시작한다."
+    "appendPrompt": "면접에서 받기 쉬운 압박 질문(약점 캐묻기, 경험 검증, why-this-company, 부정적 가정 시나리오)을 1분 답변과 꼬리 질문 대응 형태로 정리한다. 후보자 실제 경험과 현재 보강 중인 영역을 활용해 솔직-방어 균형을 잡는 패턴을 코칭한다. 문서 제목은 반드시 [초안]으로 시작한다."
   },
   "redis-distributed-lock-deepen": {
     "domain": "redis",

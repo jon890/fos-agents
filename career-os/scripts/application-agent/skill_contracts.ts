@@ -44,7 +44,8 @@ export const SKILL_CONTRACTS: Readonly<Record<string, SkillContract>> = {
 
   'application-package-writer': {
     skillName: 'application-package-writer',
-    cliPattern: 'cd career-os && claude -p "/application-package-writer {applicationDir}"',
+    cliPattern:
+      'cd career-os && claude --permission-mode acceptEdits -p "/application-package-writer {postingPath}"',
     description:
       '공고별 fit-analysis.md + application-package.md 생성. 근거 없는 주장은 needs_evidence로 마킹.',
     autonomy: 'agent_only',
@@ -60,7 +61,8 @@ export const SKILL_CONTRACTS: Readonly<Record<string, SkillContract>> = {
 
   'application-reviewer': {
     skillName: 'application-reviewer',
-    cliPattern: 'cd career-os && claude -p "/application-reviewer {applicationDir}"',
+    cliPattern:
+      'cd career-os && claude --permission-mode acceptEdits -p "/application-reviewer {applicationDir}"',
     description:
       '지원 패키지 심사 — evidence/drift/exaggeration/privacy/cooldown 6축 심사 후 pass/revise/blocked 판정.',
     autonomy: 'agent_only',

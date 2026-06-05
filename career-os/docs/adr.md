@@ -48,6 +48,13 @@ career-os의 모든 아키텍처 결정을 시간순으로 누적 기록한다. 
 | ADR-035 | ts 헬퍼 모듈 분해 컨벤션 — source / transform / render / cli 4 레이어 | Accepted | god-script (단일 파일에 fetch + 정규화 + 렌더 + IO 응집) 분해 표준. plan027~plan031 시리즈 적용 (refresh_topic_inventory 859→1049 외 5 파일 2106줄) |
 | ADR-036 | position-recommender daily freshness guard + recommendation rotation | Accepted | stale runtime 재전송 차단, 최근 7일 반복 후보 감점, daily cron freshness 검증 |
 | ADR-037 | application-flow-agent runtime은 policy decision engine 중심 | Planned | plan029 skill chain 위에 state -> policy decision -> action -> validation -> state update 루프 추가 (plan031) |
+| ADR-038 | application-flow-agent 상태 전이는 skill artifact 검증 뒤에만 수행 | Accepted | 필수 산출물 존재 확인 전 ledger 상태 전이 금지 |
+| ADR-039 | position-recommender 추천 단위는 개별 active/open 공고 | Accepted | 회사 lead가 아니라 active/open 근거가 있는 개별 공고만 추천 티어 허용 |
+| ADR-040 | application-flow-agent native skill 실행은 명시 옵션에서만 수행 | Accepted | `--execute-skills`에서만 package/review native skill 실행 |
+| ADR-041 | application-flow-agent 실행 진행 상황은 명시 옵션으로 Discord에 알린다 | Accepted | `--notify-discord`에서 private-safe progress만 알림 |
+| ADR-042 | reviewer pass 판정은 사용자 검토 대기 상태로 전환한다 | Accepted | reviewer pass 후 revision loop 대신 user review gate로 이동 |
+| ADR-043 | position-recommender 공고 수집은 source adapter + active validator로 분리 | Accepted | 정적 수집기가 active direct posting만 만들고 LLM은 fit 판단만 수행 |
+| ADR-044 | 큰 변경은 planning → delegated implementation → main-session verification으로 운영 | Accepted | 의사결정은 planning/task/ADR에 남기고, Claude 구현 결과는 메인 세션이 diff/test/실행 검증 후 채택 |
 
 (ADR-024는 번호 누락. ADR-007a/b 충돌은 prd.md "분해 대기 작업"에 기록.)
 
@@ -1214,3 +1221,220 @@ fit score 70점 이상 + active + 비중복 + 비쿨다운 + 비만료 + sourceF
 - `docs/code-architecture.md` — 책임 매트릭스 + policy.ts 결정 흐름 추가 (phase-01).
 - `scripts/application-agent/policy.ts` + `ledger_schema.ts` 확장 (phase-02 이후).
 - `tasks/plan031-application-flow-agent/`.
+
+---
+
+## ADR-038 — application-flow-agent 상태 전이는 skill artifact 검증 뒤에만 수행
+
+- Status: Accepted
+- Date: 2026-06-04
+
+### 맥락
+
+2026-05-27 operation test에서 `run-once`가 `preparing_application -> needs_revision`으로 진행 가능한 결정을 만들었지만, 실제 `application-package-writer`와 `application-reviewer` 산출물은 아직 없었다. 이 구조는 의도한 `policy decision -> execute tool/skill -> validate artifacts -> state update` 루프가 아니라 `policy decision -> command suggestion -> ledger transition`에 가까워, 지원 패키지가 없는 상태에서도 ledger가 앞서갈 수 있었다.
+
+### 결정
+
+- `scripts/application-agent/actions.ts`에 execution gate를 둔다.
+- 상태 전이를 동반하는 skill 기반 decision은 필수 산출물이 존재할 때만 ledger를 갱신한다.
+  - `run_fit_analysis`: `fit-analysis.md`
+  - `draft_application_package` / `revise_application_package`: `application-package.md`
+  - `call_application_package_writer`: `application-package.md` + `review.md`
+- 산출물이 없으면 decision log와 command suggestion은 남기되, ledger status/agentPhase는 변경하지 않는다.
+- safety gate는 금지 action을 막고, execution gate는 아직 수행되지 않은 skill 결과를 근거로 한 false-positive 전이를 막는다.
+
+### 결과
+
+- `run-once`가 준비되지 않은 지원 건을 다음 상태로 넘기지 않는다.
+- 실제 skill 실행 또는 산출물 생성 뒤 `resume <application-id>`로 같은 decision을 다시 검증할 수 있다.
+- cron 등록 전 수동 운용 단계에서 false-positive 상태 전이를 줄인다.
+
+---
+
+## ADR-039 — position-recommender 추천 단위는 개별 active/open 공고
+
+- Status: Accepted
+- Date: 2026-06-04
+
+### 맥락
+
+사용자는 position-recommender가 단순히 "어떤 회사를 지원해보라"는 수준에 머물지 않고, 실제로 현재 올라온 구체적인 공고만 분석해 알려주기를 원한다. application-flow-agent와 `data/applications/ledger.jsonl`의 입력은 실제 지원 가능한 공고여야 하므로, 회사명·채용홈·기술블로그·뉴스 기반 lead가 추천 티어에 섞이면 후속 지원 패키지 자동화 품질이 떨어진다.
+
+### 결정
+
+- 강력 추천/도전 추천의 단위는 회사가 아니라 현재 열린 개별 채용공고다.
+- 추천 티어에는 다음 조건을 만족하는 항목만 올린다.
+  - 개별 공고 URL 존재
+  - active/open 근거 존재
+  - 서버/백엔드 정규직 JD fit 확인
+- 회사 채용홈, 검색 페이지, 기술블로그, 뉴스, verified-company 목록은 추천 티어가 아니라 `추가 수집 대상`으로만 둔다.
+- `collect_live_postings.ts` snapshot에 `link_type`, `posting_status`, `active_evidence`를 추가한다.
+- daily runner는 Claude 호출 전에 `collect_live_postings.ts --source wanted`를 직접 실행해 최신 개별 공고 snapshot을 만든다.
+- `run_daily_with_claude.sh`는 강력/도전 추천 항목에 직접 공고 링크와 개별 active/open 근거가 없으면 실패 처리한다.
+
+### 결과
+
+- position-recommender report가 application-flow-agent ingest에 더 적합한 입력이 된다.
+- 좋은 회사 lead는 보존하되, 실제 지원 후보와 섞이지 않는다.
+- Wanted URL은 API active 근거가 있을 때만 추천 티어에 들어간다.
+- Claude Bash 승인 게이트 때문에 collector가 실행되지 않아 stale snapshot + 회사 lead 추천으로 흐르는 실패 모드를 줄인다.
+
+---
+
+## ADR-040 — application-flow-agent native skill 실행은 명시 옵션에서만 수행
+
+- Status: Accepted
+- Date: 2026-06-04
+
+### 맥락
+
+ADR-038로 `application-flow-agent`는 필수 산출물이 없으면 ledger 상태 전이를 막게 됐다. 다음 단계는 runner가 실제 `application-package-writer`와 `application-reviewer`를 실행해 산출물을 만든 뒤 같은 gate를 통과시키는 것이다. 다만 Claude native skill 실행은 비용과 시간, private 지원 문서 생성이라는 부작용이 있으므로 기본 동작으로 켜면 운용자가 dry-run/suggestion-only 흐름을 잃는다.
+
+### 결정
+
+- native skill 실행은 `--execute-skills` 명시 옵션에서만 수행한다.
+- 실행 대상은 MVP에서 private agent-only skill로 제한한다.
+  - `application-package-writer`
+  - `application-reviewer`
+- 쓰기형 native skill은 `claude --permission-mode acceptEdits -p ...`로 실행한다.
+- `run_fit_analysis`, `draft_application_package`, `revise_application_package`는 `application-package-writer`를 실행한다.
+- `call_application_package_writer`는 `application-package-writer` 후 `application-reviewer`를 순차 실행한다.
+- skill 실행 후에도 ADR-038 execution gate가 필수 산출물을 다시 검증한다.
+- revision 상태에서는 기존 package 존재만으로 전이하지 않고, `application-package.md`가 `review.md`보다 최신인지 확인한다.
+- `study-pack-writer`, `interview-asset-writer`, `candidate-baseline-suggester`처럼 공개 발행/프로필 반영/사용자 승인 경계가 있는 skill은 자동 실행 대상에서 제외한다.
+
+### 결과
+
+- 기본 `run-once`/`run-daily`는 계속 command suggestion only로 안전하게 동작한다.
+- 사용자가 명시적으로 `--execute-skills`를 붙이면 runner가 package/review 산출물을 만들고, 검증 통과 시 ledger를 이어서 갱신한다.
+- reviewer가 `revise`를 낸 뒤에는 수정된 package가 review보다 최신이어야 다음 revision 전이가 가능하다.
+- 실제 제출, 로그인, 브라우저 입력, fos-study 발행은 여전히 자동화하지 않는다.
+
+---
+
+## ADR-041 — application-flow-agent 실행 진행 상황은 명시 옵션으로 Discord에 알린다
+
+- Status: Accepted
+- Date: 2026-06-04
+
+### 맥락
+
+`--execute-skills`는 실제 Claude native skill을 실행하므로 몇 분 동안 외부에서 진행 상황이 보이지 않는다. 사용자는 내부 블랙박스 영역에서 어떤 단계가 돌고 있는지 인지할 필요가 있다. 동시에 지원 패키지와 리뷰 본문은 private 전략 자산이므로 Discord 알림에 그대로 노출하면 안 된다.
+
+### 결정
+
+- `--notify-discord` 명시 옵션을 추가한다.
+- 알림은 `--execute-skills` 실제 실행에서만 의미 있게 보낸다. dry-run에서는 보내지 않는다.
+- 알림 범위는 private-safe progress 정보로 제한한다.
+  - decision 시작
+  - skill 시작/완료/실패
+  - 산출물 누락
+  - ledger 갱신 완료
+  - execution gate 대기
+- 알림에는 지원 패키지 본문, 이력서 bullet 상세, private strategy note, review 상세 지적을 포함하지 않는다.
+- Discord 알림 실패는 runner 본 작업 실패로 전파하지 않고 warning으로만 남긴다.
+
+### 결과
+
+- 사용자는 장기 실행 중 현재 단계와 실패 지점을 빠르게 알 수 있다.
+- application-agent는 기존처럼 CLI stdout에도 상세 결과를 남긴다.
+- Discord 채널에는 민감한 지원 전략 대신 진행 상태만 노출된다.
+
+---
+
+## ADR-042 — reviewer pass 판정은 사용자 검토 대기 상태로 전환한다
+
+- Status: Accepted
+- Date: 2026-06-04
+
+### 맥락
+
+실제 당근페이 Backend application 실행에서 `application-reviewer`가 `result: pass`를 냈지만, 기존 policy는 `needs_revision` 상태만 보고 다시 `revise_application_package`를 제안했다. 또한 revision 단계에서 기존 `application-package.md`가 존재한다는 이유로 package-writer가 skip되어 stale review/package 루프가 풀리지 않는 문제가 있었다.
+
+### 결정
+
+- `needs_revision`에서 `application-package.md`가 `review.md`보다 오래되었거나 같은 시간이면 기존 package가 있어도 `application-package-writer`를 다시 실행한다.
+- `preparing_application`에서 `review.md`가 package보다 오래되면 `application-reviewer`를 다시 실행한다.
+- policy는 `review.md`의 `- result: pass`를 읽고, pass면 `review_pass_ready_for_user` decision으로 `ready_for_user_review`에 전환한다.
+- `ready_for_user_review` 이후에는 기존 user approval gate가 적용되어 실제 제출은 자동화하지 않는다.
+
+### 결과
+
+- reviewer pass 이후 revision 루프가 반복되지 않는다.
+- 사용자는 최종 패키지와 review를 보고 제출 여부를 결정할 수 있다.
+- stale artifact gate와 pass verdict gate가 함께 작동해 package/review 순서를 유지한다.
+
+---
+
+## ADR-043 — position-recommender 공고 수집은 source adapter + active validator로 분리
+
+- Status: Accepted
+- Date: 2026-06-05
+
+### 맥락
+
+ADR-039로 추천 단위는 개별 active/open 공고로 고정됐다. 그러나 현재 수집기는 Wanted detail 검증과 렌더링이 단일 파일에 응집돼 있고, Toss는 커리어 아티클 feed가 먼저 노출되어 개별 공고와 혼동될 수 있다. 사용자는 정적 도구가 공고 활성 여부를 먼저 검증하고, LLM은 후보자 fit 판단만 맡는 구조를 원한다.
+
+### 결정
+
+- `collect_live_postings.ts`는 source adapter 계층과 공통 active validator 계층으로 분리한다.
+- adapter는 구조화된 public endpoint나 SSR data에서 개별 공고 URL, active/open 근거, JD, 지원 가능 근거, 마감 정보를 수집한다.
+- validator는 `link_type=direct_posting`, `posting_status=active/open`, active evidence, backend/server 필터, 계약직/인턴 제외, 마감 임박도를 공통으로 적용한다.
+- Toss는 career article 자체를 공고로 쓰지 않는다. article CTA에서 `job-detail` URL을 따라가고, job detail page의 JD와 지원 폼이 확인된 항목만 open 공고로 채택한다.
+- `opened_at`처럼 값이 없는 필드는 snapshot에서 생략한다. 마감 판단에 필요한 `closes_at`, `days_until_close`, `close_urgency`는 유지한다.
+- LLM은 active/open 여부를 추정하지 않는다. LLM 입력은 validator를 통과한 snapshot으로 제한하고, LLM은 fit, upside, gap, 준비 액션만 판단한다.
+
+### 결과
+
+- Toss를 포함한 공식 career 수집을 확장해도 커리어 아티클, 회사 홈, 검색 페이지가 추천 티어에 섞이지 않는다.
+- source별 수집 실패와 active 검증 실패를 diagnostics로 남길 수 있다.
+- application-flow-agent ingest로 넘길 후보의 품질이 높아진다.
+- public endpoint 또는 SSR schema가 바뀌면 해당 adapter만 수정하면 된다.
+
+### 적용
+
+- `scripts/position-recommender/collect_live_postings.ts`의 source/validate/render 분리.
+- `data/runtime/live-position-postings.md` snapshot schema.
+- `scripts/position-recommender/run_daily_with_claude.sh` active-only gate.
+- `tasks/plan037-position-recommender-source-adapters/`.
+
+---
+
+## ADR-044 — 큰 변경은 planning → delegated implementation → main-session verification으로 운영
+
+- Status: Accepted
+- Date: 2026-06-05
+
+### 맥락
+
+career-os는 position-recommender, study-topic-recommender, interview-prep, application-flow-agent처럼 여러 자동화 흐름이 연결돼 있다. 사용자는 애매한 결정이 구현 중에 묻히지 않고, 계획과 의사결정이 문서로 남으며, 구현은 Claude/subagent에게 맡기더라도 메인 세션이 최종 품질을 검증하는 운영 방식을 원한다.
+
+plan037에서 실제로 `Toss active job-detail adapter + source adapter 구조화 + validation gate 강화`를 진행하며 이 패턴을 검증했다. Claude가 phase 구현을 일부 수행했지만 timeout과 품질 이슈가 있었고, 메인 세션이 diff 확인, 직접 패치, build/smoke, active-only leak check, runner validation, 실제 수집 품질 검토를 수행한 뒤 완료 처리했다.
+
+### 결정
+
+- 30분 이상 걸리거나 여러 파일/흐름/정책을 건드리는 큰 변경은 먼저 `skills/planning` 흐름으로 목표, 범위, 결정사항, 열린 질문, phase를 정리한다.
+- 합의된 plan은 `tasks/plan{N}-<slug>/index.json`과 phase 파일로 남긴다.
+- 정책 또는 구조 결정은 `docs/adr.md`에 누적한다. 5문서 영향이 있으면 `docs/flow.md`, `docs/code-architecture.md`, `docs/data-schema.md` 등에도 반영한다.
+- 구현은 가능한 경우 `skills/plan-and-build` 또는 Claude 비대화형 phase 실행에 위임한다.
+- Claude/subagent 구현 결과는 바로 신뢰하지 않는다. 메인 세션이 다음 gate를 직접 수행해야 한다.
+  - 관련 `git diff` 확인
+  - build/test/smoke 실행
+  - 정책 grep 또는 validator 실행
+  - runner syntax/freshness/validation gate 실행
+  - 외부 API나 수집기 변경은 실제 실행 결과와 diagnostics 검토
+- 새 collector/source adapter/cron 기본값은 구현 직후 daily 기본값으로 켜지 않는다. 먼저 shadow 실행 또는 명시 옵션으로 2-3일 관찰하고, 수집량·품질·실패 모드가 안정적이면 별도 결정으로 기본값 전환한다.
+- dirty worktree에서는 commit/push를 보류한다. unrelated 변경을 포함해 커밋하지 않고, 관련 diff와 검증 결과만 보고한다.
+
+### 결과
+
+- 사용자의 비즈니스/커리어 기준 결정과 코드 구현이 분리된다.
+- Claude가 만든 변경이 정책을 깨거나 품질이 낮아도 메인 세션 gate에서 걸러진다.
+- 채용 공고 수집처럼 외부 상태에 민감한 기능은 build 통과만으로 완료 처리하지 않고 실제 수집 품질까지 확인한다.
+- 이후 큰 작업도 동일한 방식으로 재현 가능하며, 다음 에이전트는 `AGENTS.md`, `tasks/`, `docs/adr.md`만 읽어도 운영 방식을 복원할 수 있다.
+
+### 적용
+
+- `AGENTS.md` — planning/plan-and-build/Claude 위임/메인 세션 검증/shadow 운영 규칙.
+- `tasks/plan037-position-recommender-source-adapters/` — 이 패턴을 적용한 첫 position-recommender source adapter 고도화 plan.
+- `scripts/position-recommender/collect_live_postings.ts`와 `run_daily_with_claude.sh` — 메인 세션 검증 대상이 된 collector/runner gate.

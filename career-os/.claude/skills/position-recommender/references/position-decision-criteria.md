@@ -7,6 +7,7 @@
 - NHN보다 커리어/보상/브랜드/엔지니어링 규모 면에서 나은 회사로 이동한다.
 - 기존 게임/사내 플랫폼 도메인에 갇히지 않고, 결제·핀테크·커머스·검색·포털·모빌리티·콘텐츠·물류·클라우드·플랫폼·AI product 등으로 적극 전환한다.
 - 기본 지원 축은 Java/Spring 서버/백엔드다. AI/AX/MLOps는 후보자의 실제 AI workflow, RAG, Agent orchestration 경험이 서버 개발 역할과 결합될 때만 우선순위를 높인다.
+- 추천의 기본 단위는 회사가 아니라 **현재 열린 개별 채용공고**다. 개별 공고 URL과 active/open 근거가 없으면 강력/도전 추천에 올리지 않는다.
 
 ## 우선순위 판단 축
 
@@ -14,6 +15,7 @@
 
 ### 1. JD 핏
 
+- 개별 공고 원문 또는 Wanted active detail에서 역할, 스택, 요구사항을 확인한 공고만 추천한다.
 - Java/Spring, Kafka, Redis, MySQL/RDBMS, OpenSearch, Batch, MSA, 운영 트러블슈팅과 직접 연결되는 포지션을 우선한다.
 - Kotlin/Node/Python/Kubernetes/MLOps 중심 포지션은 강점 전이가 분명할 때만 stretch로 둔다.
 - Data Engineer, ML Engineer, AI Research, Frontend, PM, QA, Designer는 사용자가 명시하지 않는 한 제외한다.
@@ -55,6 +57,8 @@
 - 정규직/상시 정규직만 강력 추천/도전 추천에 올린다.
 - 계약직, 임시직, 프리랜서, 위촉직, 인턴은 추천·보류 후보에서 제외한다.
 - 마감/폐쇄 공고를 추천하지 않는다. Wanted는 가능하면 API status=active를 확인한다.
+- 회사 채용 홈, 검색 결과, 기술블로그, verified-company 목록은 신호일 뿐이다. 개별 공고 URL을 확보하기 전에는 `추가 수집 대상`으로만 둔다.
+- 강력 추천/도전 추천 항목에 `탐색 링크`가 필요하다면 그 항목은 아직 추천 준비가 안 된 것이다.
 
 ## 현재 적용 중인 세부 판단
 

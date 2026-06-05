@@ -48,6 +48,7 @@ export function getCandidateRecommendations(
   fosStudyPaths: Set<string>
 ): TopicItem[] {
   return studyCandidates.filter((item) => {
+    if (item.outputPath && fosStudyPaths.has(item.outputPath)) return false;
     const promotedPath = item.promotionTarget?.outputPath;
     return !(promotedPath && fosStudyPaths.has(promotedPath));
   });

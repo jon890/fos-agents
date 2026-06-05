@@ -246,6 +246,17 @@ async function runPipeline(): Promise<void> {
       .map((item) => ({ key: item.key ?? "", candidatePath: item.outputPath! })),
   ];
   const dedupeResult = deterministicDedupe(dedupeInputs, fosInventory.markdownPathsRelative);
+  const deterministicUpdateExisting: PossibleDuplicate[] = [
+    ...dedupeResult.exactPathMatches.map((p) => ({
+      ...p,
+      reason: "exact path already exists in fos-study",
+    })),
+    ...dedupeResult.normalizedPathMatches.map((p) => ({
+      ...p,
+      reason: "normalized path already exists in fos-study",
+    })),
+    ...dedupeResult.possibleDuplicates,
+  ];
 
   // history
   const recentHistory = loadRecentHistory(SECONDARY_COOLDOWN_ENTRIES);
@@ -332,7 +343,7 @@ async function runPipeline(): Promise<void> {
     todayPick,
     updateExistingRecommendations: buildUpdateExisting(
       { status: "skipped", items: [] },
-      dedupeResult.possibleDuplicates
+      deterministicUpdateExisting
     ),
     discovery: {
       cacheDir: FEED_CACHE_DIR,
@@ -350,7 +361,7 @@ async function runPipeline(): Promise<void> {
   // write morning-topic-recommendation.md
   const updateExisting = buildUpdateExisting(
     { status: "skipped", items: [] },
-    dedupeResult.possibleDuplicates
+    deterministicUpdateExisting
   );
 
   const mdContent = buildMorningMarkdown(

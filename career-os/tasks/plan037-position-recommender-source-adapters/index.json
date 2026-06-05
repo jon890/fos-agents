@@ -1,0 +1,70 @@
+{
+  "name": "plan037-position-recommender-source-adapters",
+  "description": "position-recommender live posting collector를 source adapter + active validator 구조로 분리하고 Toss job-detail active 공고 수집을 추가한다.",
+  "created_at": "2026-06-05T06:48:57Z",
+  "updated_at": "2026-06-05T07:13:04Z",
+  "status": "completed",
+  "current_phase": 3,
+  "total_phases": 3,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/docs/adr.md",
+    "career-os/docs/flow.md",
+    "career-os/docs/code-architecture.md",
+    "career-os/docs/data-schema.md",
+    "career-os/scripts/position-recommender/collect_live_postings.ts",
+    "career-os/scripts/position-recommender/run_daily_with_claude.sh"
+  ],
+  "depends_on": [
+    "plan022-position-recommender-native",
+    "plan030-position-recommender-daily-freshness",
+    "plan033-position-recommender-direct-postings"
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "static-collector-owns-active-status",
+      "decision": "공고 active/open 여부는 source adapter + validator가 판정하고 LLM은 추정하지 않는다."
+    },
+    {
+      "id": "D2",
+      "title": "toss-articles-are-not-postings",
+      "decision": "Toss career article은 CTA에서 job-detail URL을 추출하는 발견 수단일 뿐이며, job-detail JD와 지원 폼 확인 전에는 공고로 채택하지 않는다."
+    },
+    {
+      "id": "D3",
+      "title": "omit-empty-opened-at",
+      "decision": "opened_at 값이 없으면 unknown 문자열을 렌더링하지 않고 생략한다."
+    }
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "collector source adapter 구조 분리",
+      "file": "phase-01.md",
+      "status": "completed",
+      "allowedTools": ["Read", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 900
+    },
+    {
+      "number": 2,
+      "title": "Toss job-detail adapter 추가",
+      "file": "phase-02.md",
+      "status": "completed",
+      "allowedTools": ["Read", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 3,
+      "title": "daily runner 검증과 통합 smoke",
+      "file": "phase-03.md",
+      "status": "completed",
+      "allowedTools": ["Read", "Edit", "Bash", "Glob", "Grep"],
+      "model": "haiku",
+      "timeout": 900
+    }
+  ]
+}

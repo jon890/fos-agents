@@ -5,6 +5,7 @@ ROOT="${CAREER_OS_ROOT:-/home/bifos/ai-nodes/career-os}"
 REPORT_DATE="${REPORT_DATE:-$(TZ=Asia/Seoul date +%F)}"
 REPORT="$ROOT/data/reports/daily/$REPORT_DATE/position-recommendation/report.md"
 RUNTIME="$ROOT/data/runtime/position-recommendation.md"
+LIVE_POSTINGS="$ROOT/data/runtime/live-position-postings.md"
 NOTIFY_SCRIPT="$ROOT/../_shared/lib/notify_discord.ts"
 
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
@@ -27,7 +28,7 @@ if [[ "${1:-}" == "--validate-existing" ]]; then
   shift
 fi
 
-DEFAULT_CONTEXT="매일 서버/backend 정규직 포지션 추천. 최신 Wanted/공식 career active/open 공고 포함. Java/Spring 서버/backend 정규직 중심. 최근 7일 position-recommendation 리포트를 읽고 반복 후보는 감점하되, 여전히 최상위인 경우 반복 유지 사유를 명시. 최소 1개 이상은 최근 7일 강력 추천에 없던 신규 후보 또는 추가 수집 대상을 포함. NHN보다 좋은 회사, 강한 성장 모멘텀, 도메인 전환 기회를 우선. 토스 계열은 최근 6개월 불합격 쿨다운으로 강력 추천/즉시 지원 액션에서 제외하고 보류/쿨다운 후보로만 짧게 언급. 특정 회사나 공고를 고정 우선하지 말고 active JD fit, 회사/규모 업사이드, 최근 반복 여부로 랭킹."
+DEFAULT_CONTEXT="매일 서버/backend 정규직 포지션 추천. 최신 Wanted/공식 career active/open 개별 공고만 강력 추천/도전 추천에 포함. 회사명, 채용 홈, 기술블로그, 뉴스, 탐색 링크만 있는 lead는 추천 티어에 올리지 말고 추가 수집 대상에만 분리. Java/Spring 서버/backend 정규직 중심. 최근 7일 position-recommendation 리포트를 읽고 반복 후보는 감점하되, 동일 개별 active 공고가 여전히 최상위인 경우 반복 유지 사유를 명시. 최소 1개 이상은 최근 7일 강력 추천에 없던 신규 개별 active 공고를 포함하고, 없으면 신규 active 공고 부족이라고 명시. NHN보다 좋은 회사, 강한 성장 모멘텀, 도메인 전환 기회를 우선하되 개별 공고 JD fit이 없으면 추천하지 않음. 토스 계열은 최근 6개월 불합격 쿨다운으로 강력 추천/즉시 지원 액션에서 제외하고 보류/쿨다운 후보로만 짧게 언급. 특정 회사나 공고를 고정 우선하지 말고 active JD fit, 회사/규모 업사이드, 최근 반복 여부로 랭킹."
 CONTEXT="${*:-$DEFAULT_CONTEXT}"
 
 if [[ "$CONTEXT" == /position-recommender* ]]; then
@@ -38,6 +39,26 @@ fi
 
 cd "$ROOT"
 if [[ "$VALIDATE_ONLY" != "1" ]]; then
+  COLLECT_ARGS=(
+    "$ROOT/scripts/position-recommender/collect_live_postings.ts"
+    --source "${POSITION_RECOMMENDER_SOURCE:-wanted}"
+    --max-wanted "${POSITION_RECOMMENDER_WANTED_LIMIT:-120}"
+    --output "$LIVE_POSTINGS"
+  )
+  if [[ "${POSITION_RECOMMENDER_INCLUDE_TOSS_ARTICLES:-0}" == "1" ]]; then
+    COLLECT_ARGS+=(--include-toss-articles)
+  fi
+  bun "${COLLECT_ARGS[@]}"
+  if ! grep -q "link_type: direct_posting" "$LIVE_POSTINGS"; then
+    echo "position-recommender live-postings: no direct postings collected: $LIVE_POSTINGS" >&2
+  fi
+  if ! grep -Eq "posting_status: (active|open)" "$LIVE_POSTINGS"; then
+    echo "position-recommender live-postings: no active/open postings collected: $LIVE_POSTINGS" >&2
+  fi
+  if grep -Eq "link_type: (career_article|search_page)|posting_status: unknown|opened_at: unknown" "$LIVE_POSTINGS"; then
+    echo "position-recommender live-postings: non-active or non-direct lead leaked into active-only snapshot: $LIVE_POSTINGS" >&2
+    exit 1
+  fi
   claude --permission-mode acceptEdits -p "$PROMPT"
 fi
 
@@ -67,6 +88,82 @@ if [[ "$runtime_first_line" != "# $REPORT_DATE "* ]]; then
   exit 1
 fi
 
+validate_direct_posting_recommendations() {
+  awk '
+    function flush_candidate() {
+      if (section == "" || title == "") {
+        reset_candidate()
+        return
+      }
+      if (posting_link !~ /^https?:\/\//) {
+        print "position-recommender invalid recommendation: " section " item lacks direct posting link: " title > "/dev/stderr"
+        bad = 1
+      }
+      if (explore_link != "" && explore_link != "-") {
+        print "position-recommender invalid recommendation: " section " item has explore link in recommendation tier: " title > "/dev/stderr"
+        bad = 1
+      }
+      if (evidence !~ /개별 공고 (active|open) 확인/) {
+        print "position-recommender invalid recommendation: " section " item lacks direct active/open evidence: " title > "/dev/stderr"
+        bad = 1
+      }
+      reset_candidate()
+    }
+    function reset_candidate() {
+      title = ""
+      posting_link = ""
+      explore_link = ""
+      evidence = ""
+    }
+    /^## 강력 추천/ {
+      flush_candidate()
+      section = "strong"
+      next
+    }
+    /^## 도전 추천/ {
+      flush_candidate()
+      section = "stretch"
+      next
+    }
+    /^## / {
+      flush_candidate()
+      section = ""
+      next
+    }
+    section != "" && /^(### )?[0-9]+\. / {
+      flush_candidate()
+      line = $0
+      sub(/^(### )?[0-9]+\. /, "", line)
+      title = line
+      next
+    }
+    section != "" && title != "" && /^[[:space:]]*- 공고 링크:/ {
+      line = $0
+      sub(/^[[:space:]]*- 공고 링크:[[:space:]]*/, "", line)
+      posting_link = line
+      next
+    }
+    section != "" && title != "" && /^[[:space:]]*- 탐색 링크:/ {
+      line = $0
+      sub(/^[[:space:]]*- 탐색 링크:[[:space:]]*/, "", line)
+      explore_link = line
+      next
+    }
+    section != "" && title != "" && /^[[:space:]]*- 링크 근거 수준:/ {
+      line = $0
+      sub(/^[[:space:]]*- 링크 근거 수준:[[:space:]]*/, "", line)
+      evidence = line
+      next
+    }
+    END {
+      flush_candidate()
+      exit bad
+    }
+  ' "$RUNTIME"
+}
+
+validate_direct_posting_recommendations
+
 notify_position_recommendation() {
   if [[ "${POSITION_RECOMMENDER_NOTIFY:-1}" == "0" ]]; then
     return 0
@@ -79,15 +176,85 @@ notify_position_recommendation() {
 
   local candidates
   candidates="$(awk '
-    /^## 강력 추천/ { section = "strong"; print "강력 추천:"; next }
-    /^## 도전 추천/ { section = "stretch"; print ""; print "도전 추천:"; next }
-    /^## 보류/ { section = ""; next }
-    section != "" && /^[0-9]+\. / {
-      line = $0
-      sub(/^[0-9]+\. /, "- ", line)
-      print line
+    function flush_candidate() {
+      if (section == "" || title == "") return
+      if (section == "strong" && strong_count >= 3) {
+        reset_candidate()
+        return
+      }
+      if (section == "stretch" && stretch_count >= 2) {
+        reset_candidate()
+        return
+      }
+      if (section == "strong") strong_count++
+      if (section == "stretch") stretch_count++
+      print "- " title
+      print "  스택: " (stack != "" ? stack : "-")
+      print "  기간: " (period != "" ? period : "-")
+      print "  한줄: " (summary != "" ? summary : "-")
+      print "  링크: " (link != "" ? link : "-")
+      reset_candidate()
     }
-  ' "$RUNTIME" | head -n 10)"
+    function reset_candidate() {
+      title = ""
+      stack = ""
+      period = ""
+      summary = ""
+      link = ""
+    }
+    /^## 강력 추천/ {
+      flush_candidate()
+      section = "strong"
+      print "강력 추천:"
+      next
+    }
+    /^## 도전 추천/ {
+      flush_candidate()
+      section = "stretch"
+      print ""
+      print "도전 추천:"
+      next
+    }
+    /^## / {
+      flush_candidate()
+      section = ""
+      next
+    }
+    section != "" && /^(### )?[0-9]+\. / {
+      flush_candidate()
+      line = $0
+      sub(/^(### )?[0-9]+\. /, "", line)
+      title = line
+      next
+    }
+    section != "" && title != "" && /^[[:space:]]*- (공고|탐색) 링크:/ {
+      line = $0
+      sub(/^[[:space:]]*- (공고|탐색) 링크:[[:space:]]*/, "", line)
+      link = line
+      next
+    }
+    section != "" && title != "" && /^[[:space:]]*- 검색 키워드:/ {
+      line = $0
+      sub(/^[[:space:]]*- 검색 키워드:[[:space:]]*/, "", line)
+      stack = line
+      next
+    }
+    section != "" && title != "" && /^[[:space:]]*- 공고 기간:/ {
+      line = $0
+      sub(/^[[:space:]]*- 공고 기간:[[:space:]]*/, "", line)
+      period = line
+      next
+    }
+    section != "" && title != "" && /^[[:space:]]*- 왜 맞는가:/ {
+      line = $0
+      sub(/^[[:space:]]*- 왜 맞는가:[[:space:]]*/, "", line)
+      sentence_end = index(line, ". ")
+      if (sentence_end > 0) line = substr(line, 1, sentence_end)
+      summary = line
+      next
+    }
+    END { flush_candidate() }
+  ' "$RUNTIME")"
 
   local message
   message="$(cat <<EOF

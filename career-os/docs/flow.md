@@ -115,7 +115,9 @@ native skill 패턴: `claude -p "/position-recommender [자연어 컨텍스트] 
 호출: claude -p "/position-recommender [자연어 컨텍스트] [채용공고 file path]"
   ↓
 Bash: bun career-os/scripts/position-recommender/collect_live_postings.ts
-  → data/runtime/live-position-postings.md (Wanted active 중심)
+  → source adapters (Wanted, Toss job-detail 등)
+  → active validator (direct posting + active/open + backend fit + deadline)
+  → data/runtime/live-position-postings.md
   ↓
 Read:
   - config/candidate-profile.md
@@ -131,6 +133,7 @@ Read:
 Claude 자연어 분석:
   - 강력 추천 / 도전 추천 / 보류·주의 3 티어
   - role title + posting 링크 + 지원 근거 + gap + first action
+  - active/open 여부는 추정하지 않고 snapshot evidence만 사용
   - 최근 7일 반복 후보 감점 + 신규 후보/추가 수집 대상 최소 1개 포함
   ↓
 Self-check: 첫 줄 # + 오늘 날짜 + 30줄+ + 3 티어 + 반복 점검 존재 (재작성 최대 3회)
@@ -205,6 +208,9 @@ ledger/runtime 읽기
   -> actionable candidate 판정 (fit threshold + freshness + cooldown)
   -> policy decision 생성 (TypeScript policy engine — LLM 아님)
   -> 허용된 action 실행 또는 사용자 gate에서 정지
+  -> --notify-discord 명시 시 단계별 진행 알림
+  -> --execute-skills 명시 시 agent-only private native skill 실행
+  -> 필수 skill artifact 검증 (없으면 command suggestion만 남기고 상태 전이 금지)
   -> validator로 상태 전이 검증
   -> ledger/decision log 갱신
   -> digest/approval 필요 항목 보고
@@ -220,6 +226,10 @@ bun scripts/application-agent/run.ts validate
 bun scripts/application-agent/run.ts resume <application-id>
 bun scripts/application-agent/run.ts ingest-position-report <report-path>
 ```
+
+`--execute-skills`를 붙이면 runner가 execution gate에 필요한 private agent-only skill을 먼저 실행한다. 현재 자동 실행 대상은 `application-package-writer`와 `application-reviewer`뿐이다. 공개 발행, 프로필 반영, 실제 제출, 로그인/브라우저 입력 계열은 여전히 사용자 승인 또는 차단 대상이다.
+
+`--notify-discord`를 함께 붙이면 시작, skill 시작/완료/실패, ledger 갱신, execution gate 대기 상태를 Discord에 짧게 알린다. 알림은 회사/역할/단계/skill 이름만 담고 지원 패키지 본문이나 private strategy note는 보내지 않는다.
 
 #### agentPhase 상태 모델
 

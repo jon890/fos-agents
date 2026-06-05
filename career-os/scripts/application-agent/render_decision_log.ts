@@ -29,6 +29,15 @@ export function renderDecisionLogMarkdown(results: ActionResult[]): string {
         lines.push(`  - [${v.severity}] ${v.rule}: ${v.detail}`);
       }
     }
+    if (r.executionBlocked) {
+      lines.push('- **Execution Gate: BLOCKED**');
+      if (r.executionBlockReason) {
+        lines.push(`  - Reason: ${r.executionBlockReason}`);
+      }
+      for (const artifact of r.missingArtifacts ?? []) {
+        lines.push(`  - Missing: ${artifact}`);
+      }
+    }
 
     if (d.requiredUserAction !== 'none') {
       lines.push(`- Required User Action: **${d.requiredUserAction}**`);
@@ -58,7 +67,9 @@ export function renderDecisionLogMarkdown(results: ActionResult[]): string {
   }
 
   // Summary
-  const allowed = results.filter((r) => r.decision.allowed).length;
+  const allowed = results.filter(
+    (r) => r.decision.allowed && !r.safetyBlocked && !r.executionBlocked,
+  ).length;
   const awaitingUser = results.filter(
     (r) => !r.decision.allowed && r.decision.requiredUserAction !== 'none',
   ).length;
@@ -66,6 +77,7 @@ export function renderDecisionLogMarkdown(results: ActionResult[]): string {
   const noSearch = results.filter((r) => r.decision.decision === 'needs_more_search').length;
   const cooldown = results.filter((r) => r.decision.decision === 'wait_cooldown').length;
   const safetyBlocked = results.filter((r) => r.safetyBlocked).length;
+  const executionBlocked = results.filter((r) => r.executionBlocked).length;
 
   lines.push('---');
   lines.push('## Summary');
@@ -77,6 +89,9 @@ export function renderDecisionLogMarkdown(results: ActionResult[]): string {
   lines.push(`- Terminal (skip): ${terminal}`);
   if (safetyBlocked > 0) {
     lines.push(`- Safety gate blocked: ${safetyBlocked}`);
+  }
+  if (executionBlocked > 0) {
+    lines.push(`- Execution gate blocked: ${executionBlocked}`);
   }
 
   return lines.join('\n');
@@ -112,7 +127,9 @@ export function renderDailyDigestReport(
   const date = opts.date ?? new Date().toISOString().slice(0, 10);
   const now = new Date().toISOString();
 
-  const agentActions = results.filter((r) => r.decision.allowed && !r.safetyBlocked);
+  const agentActions = results.filter(
+    (r) => r.decision.allowed && !r.safetyBlocked && !r.executionBlocked,
+  );
   const needsApproval = results.filter(
     (r) => !r.decision.allowed && r.decision.requiredUserAction !== 'none',
   );
@@ -131,6 +148,7 @@ export function renderDailyDigestReport(
         r.decision.requiredUserAction === 'none'),
   );
   const safetyBlockedItems = results.filter((r) => r.safetyBlocked);
+  const executionBlockedItems = results.filter((r) => r.executionBlocked);
   const terminalItems = results.filter((r) => r.decision.decision === 'terminal_skip');
 
   // Collect all study-related nextActions across results
@@ -169,6 +187,9 @@ export function renderDailyDigestReport(
   lines.push(`- Terminal (closed/submitted): ${terminalItems.length}`);
   if (safetyBlockedItems.length > 0) {
     lines.push(`- Safety gate blocked: ${safetyBlockedItems.length}`);
+  }
+  if (executionBlockedItems.length > 0) {
+    lines.push(`- Execution gate blocked: ${executionBlockedItems.length}`);
   }
   lines.push('');
   lines.push('**Status breakdown:**');
@@ -255,7 +276,11 @@ export function renderDailyDigestReport(
   // 5. Blocked / Cooldown
   lines.push('## Blocked / Cooldown');
   lines.push('');
-  if (blockedItems.length === 0 && safetyBlockedItems.length === 0) {
+  if (
+    blockedItems.length === 0 &&
+    safetyBlockedItems.length === 0 &&
+    executionBlockedItems.length === 0
+  ) {
     lines.push('- (no blocked items)');
   } else {
     for (const r of blockedItems) {
@@ -266,6 +291,15 @@ export function renderDailyDigestReport(
       lines.push(`- **${r.applicationId}** [safety gate]: ${
         r.safetyViolations?.map((v) => v.detail).join('; ') ?? 'unknown violation'
       }`);
+    }
+    for (const r of executionBlockedItems) {
+      const missing =
+        r.missingArtifacts && r.missingArtifacts.length > 0
+          ? ` Missing: ${r.missingArtifacts.join('; ')}`
+          : '';
+      lines.push(
+        `- **${r.applicationId}** [execution gate]: ${r.executionBlockReason ?? 'required artifacts missing'}.${missing}`,
+      );
     }
   }
   lines.push('');

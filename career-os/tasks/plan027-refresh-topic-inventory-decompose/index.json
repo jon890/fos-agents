@@ -2,7 +2,7 @@
   "name": "plan027-refresh-topic-inventory-decompose",
   "description": "ADR-035 분해 컨벤션 첫 적용 — career-os/scripts/study-topic-recommender/refresh_topic_inventory.ts (1049 줄) 를 transform / render / cli 3 레이어로 분해. 본 파일은 source 영역이 거의 없음 (scanFosStudyInventory + feed_discovery.ts 가 이미 별도). cli.ts 가 기존 진입점 path 유지. SKILL.md / 호출부 변경 0.",
   "created_at": "2026-05-19T00:00:00+00:00",
-  "updated_at": "2026-05-23T11:22:32.000000+00:00",
+  "updated_at": "2026-05-23T11:23:00.486218+00:00",
   "status": "completed",
   "current_phase": 3,
   "total_phases": 3,
@@ -51,7 +51,7 @@
       "number": 3,
       "title": "통합 정적 검증 + status=completed + push",
       "file": "phase-03.md",
-      "status": "running",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Edit",
@@ -59,7 +59,8 @@
         "Grep"
       ],
       "model": "haiku",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "fbfbde913312"
     }
   ]
 }

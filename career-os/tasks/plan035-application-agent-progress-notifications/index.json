@@ -1,0 +1,47 @@
+{
+  "name": "plan035-application-agent-progress-notifications",
+  "description": "application-flow-agent의 Claude native skill 실행이 블랙박스처럼 보이지 않도록 단계별 Discord 진행 알림을 추가한다.",
+  "created_at": "2026-06-04T11:52:00+09:00",
+  "updated_at": "2026-06-04T11:52:00+09:00",
+  "status": "completed",
+  "current_phase": 1,
+  "total_phases": 1,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/scripts/application-agent/run.ts",
+    "career-os/scripts/application-agent/skill_executor.ts",
+    "career-os/scripts/application-agent/progress_notifier.ts",
+    "career-os/docs/code-architecture.md",
+    "career-os/docs/flow.md",
+    "career-os/docs/adr.md"
+  ],
+  "depends_on": [
+    "plan034-application-agent-skill-execution"
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "explicit-notify-flag",
+      "decision": "Discord 진행 알림은 --notify-discord 명시 옵션에서만 보낸다."
+    },
+    {
+      "id": "D2",
+      "title": "private-safe-progress-only",
+      "decision": "알림에는 지원 패키지 본문이나 이력서 세부 내용 없이 대상/단계/skill/결과만 포함한다."
+    },
+    {
+      "id": "D3",
+      "title": "notification-non-blocking",
+      "decision": "Discord 알림 실패는 application-agent 본 작업 실패로 전파하지 않는다."
+    }
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "progress notification option",
+      "file": "phase-01.md",
+      "status": "completed"
+    }
+  ]
+}

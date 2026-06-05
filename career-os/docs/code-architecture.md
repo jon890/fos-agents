@@ -105,7 +105,7 @@ career-os/
 │   (study-topic-recommender: run_*.sh + Python scripts 폐기 완료 — plan016. dispatcher 2 case 폐기. native skill로 진입점 통합)
 │   (study-pack-writer + interview-asset-writer scripts 폐기 — plan013/015 native skill로 흡수, .claude/skills/ 트리 참조)
 │   ├── position-recommender/
-│   │   └── collect_live_postings.ts    Wanted + Toss 활성 공고 수집기 (ADR-030, plan022; Python 폐기)
+│   │   └── collect_live_postings.ts    source adapter + active validator 기반 live posting 수집기 (ADR-030, ADR-043)
 │   └── interview-coffeechat-prep/{collect_company_sites.ts}
    (cj-foodville-coffeechat-prep: run_foodville_coffeechat_prep.sh + collect_foodville_sites.py 폐기 — plan021, ADR-029. native skill + ts collector로 대체)
 │
@@ -247,6 +247,8 @@ scripts/application-agent/
 ├── policy.ts                      # deterministic policy decision engine + priority ranker
 ├── actions.ts                     # allowlisted local artifact generation (checklist / study-actions / profile-suggestions)
 ├── ingest_position_report.ts      # position report -> candidate ledger
+├── skill_executor.ts              # --execute-skills 명시 시 agent-only private native skills 실행
+├── progress_notifier.ts           # --notify-discord 명시 시 private-safe progress 알림
 ├── skill_contracts.ts             # native skill call contracts + CLI command builder (phase-04)
 ├── safety_gate.ts                 # hard safety gate validator + study action classifier (phase-04)
 ├── render_decision_log.ts         # decision log renderer + daily digest with public/private separation
@@ -260,6 +262,9 @@ scripts/application-agent/
 | 분석, 작성, 리뷰, 추천 근거 생성 | Claude native skills (LLM) |
 | 다음 action 선택 | TypeScript `policy.ts` |
 | 상태 전이 허용 여부 판정 | TypeScript `policy.ts` + `ledger_schema.ts` validator |
+| skill 산출물 존재 검증 후 상태 갱신 | TypeScript `actions.ts` execution gate |
+| 명시 옵션에서 native skill 실행 | TypeScript `skill_executor.ts` (`--execute-skills`) |
+| 단계별 진행 알림 | TypeScript `progress_notifier.ts` (`--notify-discord`) |
 | safety gate 적용 (금지 action 차단) | TypeScript `safety_gate.ts` |
 | user gate 적용 (승인 전 정지) | TypeScript `actions.ts` + `skill_contracts.ts` |
 | ledger schema 검증 | TypeScript `ledger_schema.ts` (zod) |
@@ -277,6 +282,9 @@ scripts/application-agent/
   -> policy matrix 조회 (status + agentPhase 조합)
   -> 허용된 next action 반환 또는 user gate 발생
   -> safety_gate.ts 검증 (forbidden action / public publish / profile modification 차단)
+  -> --notify-discord 명시 시 private-safe progress 알림
+  -> --execute-skills 명시 시 agent-only private skill 실행
+  -> skill artifact gate 검증 (필수 산출물 없으면 ledger 전이 금지)
   -> validator로 전이 허용 여부 최종 확인
   -> agentPhase + status 갱신 + decision log append
 ```
