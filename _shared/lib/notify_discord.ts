@@ -10,6 +10,12 @@
 //   DISCORD_CHANNEL_ID (필수) — 누락 시 exit 1.
 
 const OPENCLAW_TIMEOUT_MS = 10_000;
+const FNM_NODE_BIN = "/home/bifos/.local/share/fnm/node-versions/v24.14.0/installation/bin";
+const OPENCLAW_CANDIDATES = [
+  process.env.OPENCLAW_BIN,
+  "openclaw",
+  `${FNM_NODE_BIN}/openclaw`,
+].filter(Boolean) as string[];
 
 export interface NotifyOptions {
   media?: string;
@@ -33,10 +39,28 @@ export async function notifyDiscord(message: string, opts?: NotifyOptions): Prom
     args.splice(args.indexOf("--message"), 0, "--media", opts.media);
   }
 
-  const proc = Bun.spawn(["openclaw", ...args], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
+  let lastError: unknown;
+  let proc: Bun.Subprocess<"pipe", "pipe", "inherit"> | null = null;
+  for (const candidate of OPENCLAW_CANDIDATES) {
+    try {
+      proc = Bun.spawn([candidate, ...args], {
+        env: {
+          ...process.env,
+          PATH: `${FNM_NODE_BIN}:${process.env.PATH ?? ""}`,
+        },
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      break;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (!proc) {
+    console.error(`[notify_discord] openclaw executable not found: ${String(lastError)}`);
+    process.exit(1);
+  }
 
   const timeoutId = setTimeout(() => {
     proc.kill();
