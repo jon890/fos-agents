@@ -768,6 +768,70 @@ data/runtime/profile-refresh-suggestions/
 `before/` 생성 실패 시 skill이 즉시 중단 — audit trail 없이 자산 갱신 금지 (ADR-028).
 git 추적 여부: `data/runtime/` 아래이므로 대부분 gitignore. 보존이 필요한 경우 사용자가 git add 수동 처리.
 
+### data/runtime/application-agent/eval-cases/
+
+커리어 에이전트가 만든 이력서 문장, 지원 패키지 문장, 리뷰 문장의 안전성을 점검하기 위한 평가 샘플. 현재는 runtime 실험 자산이라 git 추적하지 않는다.
+
+기본 파일:
+
+```text
+data/runtime/application-agent/eval-cases/resume-package-eval-cases.md
+```
+
+케이스 형식:
+
+```markdown
+## Case 01 — Evidence-backed backend resume line
+
+Type: resume_line
+
+Candidate output:
+> ...
+
+Expected verdict: pass
+```
+
+`Expected verdict` 값:
+
+- `pass`: 그대로 사용 가능
+- `revise`: 수정 필요
+- `blocked`: 제출, 공개, 이력서 반영 전 차단
+
+현재 검증 단일 출처는 `scripts/application-agent/evaluate_cases.ts`다. 이 스크립트는 샘플을 읽어 실제 판정과 기대 판정이 일치하는지 확인하고, 결과를 `eval-reports/`에 쓴다.
+
+### data/runtime/application-agent/eval-reports/
+
+`scripts/application-agent/evaluate_cases.ts` 실행 결과. 기본 산출물:
+
+```text
+data/runtime/application-agent/eval-reports/latest-report.md
+data/runtime/application-agent/eval-reports/latest-report.json
+```
+
+`latest-report.json` 주요 필드:
+
+```json
+{
+  "generatedAt": "2026-06-05T16:31:01.830Z",
+  "overall": "pass",
+  "matched": 10,
+  "total": 10,
+  "results": [
+    {
+      "id": "case-01",
+      "title": "Evidence-backed backend resume line",
+      "type": "resume_line",
+      "expectedVerdict": "pass",
+      "actualVerdict": "pass",
+      "matched": true,
+      "reasons": ["검증 가능한 기술 경험 문장"]
+    }
+  ]
+}
+```
+
+이 리포트는 커리어 에이전트의 평가 기준이 바뀌었을 때 회귀 확인용으로 쓴다. 장기 보존이 필요한 리포트는 별도 report 경로로 승격하기 전까지 git에 넣지 않는다.
+
 ### data/prep/<company-slug>/ (plan021, ADR-029)
 
 커피챗 면접 준비 회사별 hand-crafted 자산. `docs/prep/`에서 이동됨 (ADR-015 정렬 — `docs/`는 의사결정·학습 누적용, 회사 특화 운영 자산은 `data/prep/`).

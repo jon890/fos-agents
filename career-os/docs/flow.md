@@ -298,6 +298,34 @@ fit score 분기:
 - 브라우저 입력 자동화, 실제 제출, 외부 전송, 공개 fos-study 발행, 원본 candidate-profile 수정은 사용자 승인 없이 금지한다.
 - plan030의 position freshness guard를 후보 ingest prerequisite로 사용해 stale 추천을 차단한다. plan030은 구현 대상이 아니라 prerequisite로만 참조한다.
 
+### Application Agent Evaluation Loop (runtime guardrail)
+
+지원 패키지와 이력서 문장의 안전성을 고도화하기 위한 작은 평가 루프다. 목적은 실제 제출 자동화가 아니라, 에이전트가 생성한 문장이 과장·근거 없음·개인정보 노출·잘못된 JD 해석을 포함하는지 회귀 테스트하는 것이다.
+
+현재 단계는 LLM 평가 모델을 붙이기 전의 결정적 평가기다. 사람이 정한 샘플과 기대 판정을 기준으로 규칙 기반 판정이 일치하는지 확인한다.
+
+```text
+Read: data/runtime/application-agent/eval-cases/resume-package-eval-cases.md
+  -> Parse: Case ID / Type / Candidate output / Expected verdict
+  -> Evaluate: scripts/application-agent/evaluate_cases.ts
+  -> Write: data/runtime/application-agent/eval-reports/latest-report.md
+            data/runtime/application-agent/eval-reports/latest-report.json
+```
+
+실행:
+
+```bash
+bun scripts/application-agent/evaluate_cases.ts
+```
+
+판정 값:
+
+- `pass`: 그대로 사용 가능
+- `revise`: 사람 또는 에이전트가 문장 보강 필요
+- `blocked`: 제출/공개/이력서 반영 전에 반드시 차단
+
+현재 평가 샘플은 `data/runtime/` 아래에 있으므로 git 추적 대상이 아니다. 장기적으로 공유해야 할 안정 샘플이 생기면 별도 논의 후 `tests/` 또는 `fixtures/` 성격의 추적 파일로 승격한다.
+
 ### `study-topic-recommender` (모닝 추천 — native skill, ADR-026 + ADR-033)
 
 native skill 패턴: `claude -p "/study-topic-recommender"` → SKILL.md 자동 로드 → Claude가 도구로 직접 처리.
