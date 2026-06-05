@@ -326,6 +326,27 @@ bun scripts/application-agent/evaluate_cases.ts
 
 현재 평가 샘플은 `data/runtime/` 아래에 있으므로 git 추적 대상이 아니다. 장기적으로 공유해야 할 안정 샘플이 생기면 별도 논의 후 `tests/` 또는 `fixtures/` 성격의 추적 파일로 승격한다.
 
+### Application Package Evaluation Loop (runtime guardrail)
+
+실제 지원 패키지와 리뷰 문서를 입력으로 받아 제출 전 위험 신호를 자동 점검한다. 사람 리뷰를 대체하지 않고, 명확한 과장·자동 제출·내부정보·근거 부족 신호를 먼저 리포트로 남기는 1차 안전망이다.
+
+```text
+Read: data/applications/<company>/<role>/application-package.md
+Read: data/applications/<company>/<role>/review.md
+  -> Evaluate: scripts/application-agent/evaluate_package.ts
+  -> Write: data/runtime/application-agent/package-eval/<company-role>/latest-report.md
+            data/runtime/application-agent/package-eval/<company-role>/latest-report.json
+```
+
+기본 호출:
+
+```bash
+bun scripts/application-agent/evaluate_package.ts \
+  --application-dir data/applications/tossplace/applied-ai-engineer
+```
+
+판정 값은 `pass / revise / blocked` 세 단계다. `blocked`는 자동 제출, 검증 전 프레임워크 경험 과장, 근거 없는 강한 정량 성과처럼 제출 전 반드시 멈춰야 하는 항목이다. `revise`는 사내 식별자 일반화, `needs_evidence` 경계 보강처럼 사용자 검토와 문장 수정이 필요한 항목이다.
+
 ### `study-topic-recommender` (모닝 추천 — native skill, ADR-026 + ADR-033)
 
 native skill 패턴: `claude -p "/study-topic-recommender"` → SKILL.md 자동 로드 → Claude가 도구로 직접 처리.

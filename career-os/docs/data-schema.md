@@ -832,6 +832,46 @@ data/runtime/application-agent/eval-reports/latest-report.json
 
 이 리포트는 커리어 에이전트의 평가 기준이 바뀌었을 때 회귀 확인용으로 쓴다. 장기 보존이 필요한 리포트는 별도 report 경로로 승격하기 전까지 git에 넣지 않는다.
 
+### data/runtime/application-agent/package-eval/
+
+실제 지원 패키지 평가 결과. `scripts/application-agent/evaluate_package.ts`가 `application-package.md`와 `review.md`를 읽고, 제출 전 안전 점검 리포트를 쓴다.
+
+기본 산출물:
+
+```text
+data/runtime/application-agent/package-eval/<company-role>/latest-report.md
+data/runtime/application-agent/package-eval/<company-role>/latest-report.json
+```
+
+`latest-report.json` 주요 필드:
+
+```json
+{
+  "generatedAt": "2026-06-05T16:49:00.000Z",
+  "applicationDir": "data/applications/tossplace/applied-ai-engineer",
+  "overall": "revise",
+  "inputs": {
+    "packagePath": "data/applications/tossplace/applied-ai-engineer/application-package.md",
+    "reviewPath": "data/applications/tossplace/applied-ai-engineer/review.md"
+  },
+  "findings": [
+    {
+      "id": "internal-identifier-generalization",
+      "severity": "revise",
+      "reason": "사내 식별자는 실제 제출본에서 일반화 권장"
+    }
+  ]
+}
+```
+
+`overall` 산정:
+
+- `blocked` finding이 하나라도 있으면 `blocked`
+- `blocked`는 없고 `revise` finding이 있으면 `revise`
+- finding이 없거나 `pass`만 있으면 `pass`
+
+이 리포트는 runtime 점검 결과라 git에 넣지 않는다. 사용자 검토 후 보존 가치가 생긴 결론만 `review.md`나 별도 비공개 report로 승격한다.
+
 ### data/prep/<company-slug>/ (plan021, ADR-029)
 
 커피챗 면접 준비 회사별 hand-crafted 자산. `docs/prep/`에서 이동됨 (ADR-015 정렬 — `docs/`는 의사결정·학습 누적용, 회사 특화 운영 자산은 `data/prep/`).

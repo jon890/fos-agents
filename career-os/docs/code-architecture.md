@@ -80,7 +80,8 @@ career-os/
 │   │   ├── position-recommendation.md
 │   │   ├── application-agent/
 │   │   │   ├── eval-cases/           지원 패키지/이력서 문장 평가 샘플 (runtime, gitignore)
-│   │   │   └── eval-reports/         평가 실행 결과 (runtime, gitignore)
+│   │   │   ├── eval-reports/         평가 샘플 실행 결과 (runtime, gitignore)
+│   │   │   └── package-eval/         실제 지원 패키지 평가 결과 (runtime, gitignore)
 │   │   ├── feed-cache/<sha1>.json    6h TTL (ADR-013)
 │   │   ├── locks/                    flock 잠금 파일들
 │   │   ├── freeform-study-pack-topic.json   (deferred runner용)
@@ -110,7 +111,8 @@ career-os/
 │   ├── position-recommender/
 │   │   └── collect_live_postings.ts    source adapter + active validator 기반 live posting 수집기 (ADR-030, ADR-043)
 │   ├── application-agent/
-│   │   └── evaluate_cases.ts           runtime eval-case markdown을 pass/revise/blocked로 검증하는 결정적 평가기
+│   │   ├── evaluate_cases.ts           runtime eval-case markdown을 pass/revise/blocked로 검증하는 결정적 평가기
+│   │   └── evaluate_package.ts         application-package/review 문서를 제출 전 안전 기준으로 점검
 │   └── interview-coffeechat-prep/{collect_company_sites.ts}
    (cj-foodville-coffeechat-prep: run_foodville_coffeechat_prep.sh + collect_foodville_sites.py 폐기 — plan021, ADR-029. native skill + ts collector로 대체)
 │
