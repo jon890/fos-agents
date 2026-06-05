@@ -103,11 +103,18 @@ ai-nodes의 docs는 단순 참조 문서가 아니라 **의사결정·기술 학
 
 **병렬 실행 규칙**: 두 task를 동시에 실행하려면 반드시 **git worktree 분리** 또는 **claude teams**(subagent)를 사용. 같은 working directory에서 `run-phases.py`를 2개 동시 실행 금지.
 
-**반드시 `run-phases.py`를 Bash `run_in_background: true`로 실행한다.**
+**반드시 `run-phases.py`를 백그라운드 실행한다.**
+
+OpenClaw/Codex 메인 세션에서 사용자가 "기다리지 말고 notify로 받아보자"는 의도를 밝히면 단순 `nohup ... &`보다 `systemd-run --user` transient unit을 우선한다. 도구 실행 부모 프로세스가 정리되면서 `nohup` 자식이 끊길 수 있기 때문이다. `systemd-run --user`는 main session과 분리되고, 완료/실패는 `run-phases.py`의 Discord notify와 unit log로 추적한다.
 
 ```bash
 # 전체 실행 (백그라운드)
 python3 skills/plan-and-build/scripts/run-phases.py career-os/tasks/<task-name>
+
+# OpenClaw/Codex 메인 세션에서 완전 분리 실행
+systemd-run --user --unit=career-os-plan-<task-name> \
+  --working-directory=/home/bifos/ai-nodes \
+  python3 skills/plan-and-build/scripts/run-phases.py career-os/tasks/<task-name>
 
 # 특정 phase부터 재개
 python3 skills/plan-and-build/scripts/run-phases.py career-os/tasks/<task-name> --from-phase 3
