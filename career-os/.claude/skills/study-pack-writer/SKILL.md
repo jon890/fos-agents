@@ -1,11 +1,11 @@
 ---
 name: study-pack-writer
-description: backend 면접 준비용 study pack 마크다운을 생성하고 sources/fos-study 저장소에 자동 발행. /study-pack-writer <topic-key-or-자연어> 슬래시 명령 또는 "<주제> study pack 만들어줘" / "<주제> 학습 정리해줘" / "<주제>에 대한 스터디팩" 같은 자연어 요청 시 무조건 사용. backend·db·infrastructure·언어·아키텍처 주제로 fos-study에 즉시 commit/push해야 하는 작업이면 이 skill을 호출.
+description: backend/AI/infra 기술 학습용 study pack 마크다운을 생성하고 sources/fos-study 저장소에 자동 발행. /study-pack-writer <topic-key-or-자연어> 슬래시 명령 또는 "<주제> study pack 만들어줘" / "<주제> 학습 정리해줘" / "<주제>에 대한 스터디팩" 같은 자연어 요청 시 무조건 사용. backend·db·infrastructure·언어·아키텍처 주제로 fos-study에 즉시 commit/push해야 하는 작업이면 이 skill을 호출.
 ---
 
 # Study Pack Writer
 
-backend 면접 준비용 학습 마크다운(study pack) 생성·검증·발행 workflow.
+backend/AI/infra 기술 학습용 마크다운(study pack) 생성·검증·발행 workflow.
 
 ## When to use
 
@@ -80,7 +80,9 @@ deterministic dedupe도 Claude 의미 판정도 결정이 불가능하면 **`nee
 - 첫 줄: `# <topic-title>` (단일 `#`, `## ` 시작 금지, `# 초안:` / `# Draft:` 금지)
 - ≥80줄
 - 모든 ` ``` ` 코드 펜스에 언어 명시 (`bash`, `ts`, `sql`, `java` 등)
-- 백엔드 면접 관점: 개념 → 작동 원리 → 흔한 오해 → 면접 질문 시뮬레이션
+- 공개 공부팩은 특정 회사/포지션/지원 여부를 전제로 쓰지 않는다. "TossPlace 관점", "Applied AI Engineer 포지션 관점", "면접에서 평가받는 지점"처럼 지원 의도가 강하게 드러나는 표현은 사용자가 명시 요청한 경우에만 쓴다.
+- 기본 구조는 기술 주제 중심: 개념 → 작동 원리 → 흔한 오해 → 설계/운영 체크포인트 → 실습 또는 점검 질문.
+- 면접·지원서 연결이 필요하면 공개 공부팩 본문이 아니라 `career-os/data/` 아래 비공개 지원 패키지/면접 메모에 따로 둔다.
 - `references/study-pack-writing-rules.md` 모든 규칙 준수
 
 `Write` 도구로 `career-os/sources/fos-study/<outputPath>.md`에 직접 저장.
