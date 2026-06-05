@@ -72,6 +72,29 @@ zod 검증 단일 출처: `career-os/scripts/interview-coffeechat-prep/mvp_targe
 
 후보자 이력. 11개 섹션의 prose 마크다운. **JSON이 아닌 의도적 선택** — AI 에이전트가 context로 직접 읽는 자산이라 구조화보다 narrative 가치가 큼. 모든 주장은 `task/**` 또는 `resume/**` 경로 태깅됨 (소스 추적용).
 
+### config/study-preferences.json
+
+아침 학습 추천의 사용자 선호와 타깃 맥락. `current_target`은 `config/mvp-target.json`의 현재 1순위 면접 대비 흐름을 사람이 읽기 쉽게 반복한 값이고, `secondary_targets`는 1순위 대비를 방해하지 않는 보조 학습 트랙을 정의한다.
+
+`secondary_targets[]` 예시 필드:
+
+```json
+{
+  "company": "TossPlace",
+  "role": "Applied AI Engineer",
+  "priority": 2,
+  "posting_path": "data/applications/tossplace/applied-ai-engineer/posting.md",
+  "fit_analysis_path": "data/applications/tossplace/applied-ai-engineer/fit-analysis.md",
+  "application_package_path": "data/applications/tossplace/applied-ai-engineer/application-package.md",
+  "review_path": "data/applications/tossplace/applied-ai-engineer/review.md",
+  "study_goal": "string",
+  "focus_axes": ["string"],
+  "constraints": ["string"]
+}
+```
+
+보조 트랙은 study-pack 자동 생성이나 fos-study 발행을 의미하지 않는다. cron이나 agent prompt가 이 값을 읽어 별도 report/runtime 경로에 추천만 생성한다.
+
 ### config/baseline-core-files.txt
 
 > **plan002 이후**: `config/baseline-core-files.json`으로 전환. 단일 출처는 "통합 config 스키마 (plan002 이후)" 섹션 참조.

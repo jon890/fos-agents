@@ -6,6 +6,33 @@
     "team": "Digital Channel Backend",
     "interview_date": "2026-06-15"
   },
+  "secondary_targets": [
+    {
+      "company": "TossPlace",
+      "role": "Applied AI Engineer",
+      "priority": 2,
+      "posting_path": "data/applications/tossplace/applied-ai-engineer/posting.md",
+      "fit_analysis_path": "data/applications/tossplace/applied-ai-engineer/fit-analysis.md",
+      "application_package_path": "data/applications/tossplace/applied-ai-engineer/application-package.md",
+      "review_path": "data/applications/tossplace/applied-ai-engineer/review.md",
+      "study_goal": "Prepare a lightweight morning Applied AI Engineer study track without disrupting CJ Foodville first-priority interview prep.",
+      "focus_axes": [
+        "Agentic workflow design: reasoning, tool use, state management, human-in-the-loop, fallback",
+        "LLM/RAG productization: context design, retrieval quality, hallucination control, operational feedback loops",
+        "AI agent evaluation: golden set, regression test, LLM-as-a-judge, human evaluation, production feedback",
+        "Product/backend reliability for AI: latency, cost, observability, permission, tool failure handling",
+        "TossPlace domain translation: merchant operations, CS, reviews, orders, payments, incident response",
+        "Candidate experience translation: RAG batch pipeline, AI webtoon MVP, agent-assisted development, outbox/cache/system reliability"
+      ],
+      "constraints": [
+        "Keep CJ Foodville as the primary target until the 2026-06-15 first-round interview is done.",
+        "Recommend TossPlace study materials only; do not generate study packs automatically.",
+        "Do not claim production agent-operation experience beyond evidence in candidate-profile and application files.",
+        "Treat LangGraph/AutoGen/CrewAI and evaluation framework as gap-closing study topics unless direct evidence is added.",
+        "Keep public fos-study topics company-neutral unless the user explicitly asks for a private application asset."
+      ]
+    }
+  ],
   "selection_principles": [
     "Reflect already studied topics from config/study-progress.json and sources/fos-study scan.",
     "If a candidate topic is already covered by an existing fos-study document, classify it as review/update-existing rather than a new study topic.",
