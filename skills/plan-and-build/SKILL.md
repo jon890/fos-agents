@@ -107,6 +107,8 @@ ai-nodes의 docs는 단순 참조 문서가 아니라 **의사결정·기술 학
 
 OpenClaw/Codex 메인 세션에서 사용자가 "기다리지 말고 notify로 받아보자"는 의도를 밝히면 단순 `nohup ... &`보다 `systemd-run --user` transient unit을 우선한다. 도구 실행 부모 프로세스가 정리되면서 `nohup` 자식이 끊길 수 있기 때문이다. `systemd-run --user`는 main session과 분리되고, 완료/실패는 `run-phases.py`의 Discord notify와 unit log로 추적한다.
 
+Discord notify는 사람에게 보이는 채널 알림이고, Codex 메인 세션 wake를 보장하지 않는다. 완료 후 메인 세션이 반드시 후속 검토를 해야 하는 task는 systemd command 끝에 `openclaw system event --session-key <current-session-key> --mode now --text "<completion summary>"`를 붙이거나 OpenClaw cron `systemEvent` wake를 별도로 예약한다.
+
 ```bash
 # 전체 실행 (백그라운드)
 python3 skills/plan-and-build/scripts/run-phases.py career-os/tasks/<task-name>
@@ -114,7 +116,7 @@ python3 skills/plan-and-build/scripts/run-phases.py career-os/tasks/<task-name>
 # OpenClaw/Codex 메인 세션에서 완전 분리 실행
 systemd-run --user --unit=career-os-plan-<task-name> \
   --working-directory=/home/bifos/ai-nodes \
-  python3 skills/plan-and-build/scripts/run-phases.py career-os/tasks/<task-name>
+  bash -lc 'python3 skills/plan-and-build/scripts/run-phases.py career-os/tasks/<task-name>; status=$?; openclaw system event --session-key "<current-session-key>" --mode now --text "plan-and-build finished: <task-name> status=$status"; exit $status'
 
 # 특정 phase부터 재개
 python3 skills/plan-and-build/scripts/run-phases.py career-os/tasks/<task-name> --from-phase 3
