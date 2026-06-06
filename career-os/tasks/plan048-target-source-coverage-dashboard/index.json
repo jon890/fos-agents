@@ -1,0 +1,68 @@
+{
+  "name": "plan048-target-source-coverage-dashboard",
+  "description": "Expand target source coverage so position collection and dashboard views surface postings the user actually cares about.",
+  "created_at": "2026-06-06T15:34:28Z",
+  "updated_at": "2026-06-06T15:34:28Z",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 5,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/docs/adr.md",
+    "career-os/docs/code-architecture.md",
+    "career-os/docs/flow.md",
+    "career-os/docs/data-schema.md"
+  ],
+  "depends_on": [
+    "plan040-position-recommender-collector-modularization",
+    "plan046-fos-career-position-collection-dashboard-verification"
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "Read-only source architecture and target URL discovery validation",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Bash", "Glob", "Grep", "WebFetch", "WebSearch"],
+      "model": "sonnet",
+      "timeout": 900
+    },
+    {
+      "number": 2,
+      "title": "Adapter contract and configured source registry",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Edit", "Write", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 900
+    },
+    {
+      "number": 3,
+      "title": "Target source adapters and detail evidence",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Edit", "Write", "Bash", "Glob", "Grep", "WebFetch", "WebSearch"],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 4,
+      "title": "Import and dashboard source controls",
+      "file": "phase-04.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Edit", "Write", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 5,
+      "title": "End-to-end verification and final failure summary",
+      "file": "phase-05.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Edit", "Bash", "Glob", "Grep"],
+      "model": "haiku",
+      "timeout": 900
+    }
+  ]
+}
