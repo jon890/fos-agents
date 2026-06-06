@@ -4,6 +4,12 @@
 
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  hasUsageRemaining,
+  mergeKnownUsage,
+  safeUsageSnapshot,
+  type SafeUsageSnapshot,
+} from "./session_status_hud.ts";
 
 const DEFAULT_STATE_ROOT_RELATIVE = "openclaw-orchestrator/state/task-hud";
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -15,7 +21,7 @@ const INACTIVE_STATUS_SET = new Set(["completed", "done", "failed", "cancelled",
 
 type Command = "status" | "update" | "warn";
 type WarningKind = "usage" | "context" | "compaction";
-type GuardState = "ok" | "usage warning" | "context warning" | "compaction likely";
+type GuardState = "ok" | "usage warning" | "usage parse warning" | "context warning" | "compaction likely";
 
 interface ActiveSubagent {
   id?: string;
@@ -23,12 +29,7 @@ interface ActiveSubagent {
   status?: string;
 }
 
-interface UsageSnapshot {
-  fiveHourRemaining?: string;
-  weeklyRemaining?: string;
-  contextPercent?: number;
-  compactionCount?: number;
-}
+type UsageSnapshot = SafeUsageSnapshot;
 
 interface HudState {
   sessionId: string;
@@ -198,8 +199,9 @@ function mergeJsonInput(opts: CliOptions): CliOptions {
     return opts;
   }
   const input = parseJsonObject(opts.jsonInput, "--json");
-  const usage = readObject(input.usage);
   const sessionStatus = readObject(input.sessionStatus);
+  const usageSnapshotFromJson = safeUsageSnapshot(input);
+  const statusSnapshotFromJson = sessionStatus ? safeUsageSnapshot(sessionStatus) : undefined;
   const subagentsFromJson = Array.isArray(input.subagents) ? JSON.stringify(input.subagents) : undefined;
   return {
     ...opts,
@@ -213,20 +215,20 @@ function mergeJsonInput(opts: CliOptions): CliOptions {
     subagentsJson: opts.subagentsJson ?? subagentsFromJson,
     fiveHourRemaining:
       opts.fiveHourRemaining ??
-      readString(usage?.fiveHourRemaining) ??
-      readString(sessionStatus?.fiveHourRemaining),
+      usageSnapshotFromJson.fiveHourRemaining ??
+      statusSnapshotFromJson?.fiveHourRemaining,
     weeklyRemaining:
       opts.weeklyRemaining ??
-      readString(usage?.weeklyRemaining) ??
-      readString(sessionStatus?.weeklyRemaining),
+      usageSnapshotFromJson.weeklyRemaining ??
+      statusSnapshotFromJson?.weeklyRemaining,
     contextPercent:
       opts.contextPercent ??
-      readNumber(usage?.contextPercent) ??
-      readNumber(sessionStatus?.contextPercent),
+      usageSnapshotFromJson.contextPercent ??
+      statusSnapshotFromJson?.contextPercent,
     compactionCount:
       opts.compactionCount ??
-      readNumber(usage?.compactionCount) ??
-      readNumber(sessionStatus?.compactionCount),
+      usageSnapshotFromJson.compactionCount ??
+      statusSnapshotFromJson?.compactionCount,
   };
 }
 
@@ -247,10 +249,6 @@ function readObject(value: unknown): Record<string, unknown> | undefined {
 
 function readString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
-}
-
-function readNumber(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
 function readWarningKind(value: unknown): WarningKind | undefined {
@@ -348,35 +346,6 @@ function usageSnapshot(opts: CliOptions): UsageSnapshot | undefined {
   return Object.values(snapshot).some((value) => value !== undefined) ? snapshot : undefined;
 }
 
-function safeUsageSnapshot(raw: Record<string, unknown>): UsageSnapshot {
-  const usage = readObject(raw.usage);
-  const limits = readObject(raw.limits) ?? readObject(raw.usageLimits) ?? readObject(raw.quota);
-  const context = readObject(raw.context) ?? readObject(raw.contextWindow);
-  const compaction = readObject(raw.compaction);
-
-  return {
-    fiveHourRemaining:
-      readString(raw.fiveHourRemaining) ??
-      readString(usage?.fiveHourRemaining) ??
-      readString(limits?.fiveHourRemaining) ??
-      readString(limits?.fiveHour),
-    weeklyRemaining:
-      readString(raw.weeklyRemaining) ??
-      readString(usage?.weeklyRemaining) ??
-      readString(limits?.weeklyRemaining) ??
-      readString(limits?.weekly),
-    contextPercent:
-      readNumber(raw.contextPercent) ??
-      readNumber(usage?.contextPercent) ??
-      readNumber(context?.percent) ??
-      readNumber(context?.usedPercent),
-    compactionCount:
-      readNumber(raw.compactionCount) ??
-      readNumber(usage?.compactionCount) ??
-      readNumber(compaction?.count),
-  };
-}
-
 function readSessionStatusAgents(raw: Record<string, unknown>): unknown[] | undefined {
   const nested = readObject(raw.native) ?? readObject(raw.activeAgents) ?? readObject(raw.agentsState);
   const candidates = [
@@ -472,6 +441,9 @@ function sanitizeVisible(value: string): string {
 }
 
 function nextGuard(state: HudState, snapshot: UsageSnapshot | undefined, explicitKind?: WarningKind): GuardState {
+  if (state.guard === "usage parse warning" && !hasUsageRemaining(snapshot)) {
+    return "usage parse warning";
+  }
   if (explicitKind === "usage") {
     return "usage warning";
   }
@@ -518,6 +490,9 @@ function warningMessage(kind: WarningKind, state: HudState): string {
   }
   if (kind === "context") {
     return "Context warning: compaction appears possible soon. I will continue and keep the HUD state current.";
+  }
+  if (state.guard === "usage parse warning") {
+    return "Usage parse warning: could not parse remaining usage from session_status. I will keep previous known values when available.";
   }
   return "Usage warning: remaining usage appears low. This is warn-only; work will continue unless the user stops it.";
 }
@@ -669,6 +644,8 @@ async function run(): Promise<void> {
 
   const state = await loadState(opts);
   const snapshot = usageSnapshot(opts);
+  const usageParseWarning = Boolean(opts.sessionStatusJson) && !hasUsageRemaining(snapshot) && !hasUsageRemaining(state.lastUsageSnapshot);
+  const mergedSnapshot = mergeKnownUsage(state.lastUsageSnapshot, snapshot);
   const parsedSubagents = parseSubagents(opts);
   const now = new Date().toISOString();
 
@@ -676,16 +653,16 @@ async function run(): Promise<void> {
     state.taskLabel = opts.taskLabel ?? state.taskLabel;
     state.taskStatus = opts.status ?? state.taskStatus;
   }
-  if (snapshot) {
-    state.lastUsageSnapshot = snapshot;
-    state.lastContextSnapshot = snapshot.contextPercent !== undefined ? snapshot : state.lastContextSnapshot;
+  if (mergedSnapshot) {
+    state.lastUsageSnapshot = mergedSnapshot;
+    state.lastContextSnapshot = mergedSnapshot.contextPercent !== undefined ? mergedSnapshot : state.lastContextSnapshot;
   }
   if (parsedSubagents !== undefined) {
     state.activeSubagents = parsedSubagents;
   }
-  state.guard = nextGuard(state, snapshot, opts.command === "warn" ? opts.kind : undefined);
-  if (snapshot?.compactionCount !== undefined) {
-    state.lastCompactionCount = snapshot.compactionCount;
+  state.guard = usageParseWarning ? "usage parse warning" : nextGuard(state, mergedSnapshot, opts.command === "warn" ? opts.kind : undefined);
+  if (mergedSnapshot?.compactionCount !== undefined) {
+    state.lastCompactionCount = mergedSnapshot.compactionCount;
   }
   state.updatedAt = now;
 
@@ -700,6 +677,7 @@ async function run(): Promise<void> {
   } else if (opts.command === "update" && state.guard !== "ok") {
     const guardKindMap: Record<string, WarningKind | undefined> = {
       "usage warning": "usage",
+      "usage parse warning": "usage",
       "context warning": "context",
       "compaction likely": "compaction",
     };
