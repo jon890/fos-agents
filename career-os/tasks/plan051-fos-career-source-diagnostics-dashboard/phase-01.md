@@ -1,6 +1,6 @@
 # Phase 01 — Read-only source diagnostics dashboard
 
-**Status**: planned
+**Status**: completed
 
 ---
 
@@ -14,6 +14,20 @@ The page should show:
 - collected / imported / skipped / failed counts,
 - current imported DB row count per source,
 - latest import run id.
+
+## Result
+
+Implemented in `fos-career` PR #3.
+
+Validation:
+
+- `npm run build` passed with the existing Next/Turbopack trace warning.
+- `git diff --check` passed.
+- Docker build and app-only restart passed.
+- Authenticated smoke checks passed:
+  - `/dashboard/priority` returned 8 rows.
+  - `/dashboard/positions` returned 15 rows.
+  - `/dashboard/sources` returned 200 and showed Wanted/KakaoPay diagnostics.
 
 ## Scope
 
