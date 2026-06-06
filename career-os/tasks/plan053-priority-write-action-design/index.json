@@ -1,0 +1,59 @@
+{
+  "name": "plan053-priority-write-action-design",
+  "description": "Design and stage a safe priority write-action bridge from fos-career to career-os without direct dashboard mutation.",
+  "created_at": "2026-06-06T18:25:01Z",
+  "updated_at": "2026-06-06T18:25:01Z",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 3,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/docs/adr.md",
+    "career-os/docs/prd.md",
+    "career-os/docs/data-schema.md",
+    "career-os/docs/flow.md",
+    "career-os/docs/code-architecture.md"
+  ],
+  "depends_on": [
+    "plan050-position-priority-fit-workflow",
+    "plan052-fos-career-priority-detail-dashboard"
+  ],
+  "recommended_defaults": [
+    "Keep the fos-career career-os mount read-only.",
+    "Store user-confirmed write actions as fos-career MySQL pending requests first.",
+    "Apply career-os mutation only through the existing application-agent confirm-priority command.",
+    "Treat stale snapshots as blocked rather than overwriting newer career-os state.",
+    "Use append-only history for audit and new confirmation events for recovery."
+  ],
+  "open_decisions": [],
+  "phases": [
+    {
+      "number": 1,
+      "title": "fos-career pending priority request queue",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Edit", "Write", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 2,
+      "title": "Controlled career-os priority request applier",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Edit", "Write", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 3,
+      "title": "Integration validation and task completion",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Edit", "Write", "Bash", "Glob", "Grep"],
+      "model": "haiku",
+      "timeout": 900
+    }
+  ]
+}

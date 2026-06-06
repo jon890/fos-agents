@@ -265,7 +265,8 @@ career-os와의 인터페이스:
 | 방향 | 방법 | 범위 |
 |---|---|---|
 | fos-career → career-os | 읽기 전용 파일 마운트 (`CAREER_OS_ROOT`) | frontdoor-queue, ledger, position-recommendation, candidate-profile |
-| career-os → fos-career | 없음 | career-os는 fos-career를 참조하지 않는다 |
+| fos-career → career-os write | pending request queue + controlled runner | plan053 priority confirmation only |
+| career-os → fos-career | 없음 | career-os는 fos-career를 직접 참조하지 않는다 |
 
 LLM provider 경계:
 
@@ -281,6 +282,15 @@ MVP에서 fos-career가 읽는 career-os 파일:
 - `data/applications/_priority-history.jsonl`
 - `data/runtime/position-recommendation.md`
 - `config/candidate-profile.md`
+
+Priority write-action bridge:
+
+- fos-career는 MySQL `priority_action_requests`에 사용자 확인 요청을 저장한다.
+- web container의 `/data/career-os` mount는 read-only로 유지한다.
+- career-os 파일 변경은 writable checkout에서 실행되는 controlled runner만 수행한다.
+- runner는 기존 `scripts/application-agent/run.ts confirm-priority` 경로를 재사용한다.
+- direct JSONL write, dashboard container writable mount, LLM chat 기반 mutation은 금지한다.
+- 적용 결과는 career-os `_priority-history.jsonl`과 fos-career request status 양쪽에서 확인한다.
 
 ## 변경 시 영향 범위
 
@@ -435,3 +445,25 @@ data/applications/
 - `recommendationSnapshot`은 source report, evidence URL, generatedAt을 포함해야 한다.
 - `excluded`는 사용자 확정 또는 명확한 정책 사유 없이 자동 확정하지 않는다.
 - priority history는 append-only로 운영한다.
+
+## Priority write-action bridge (planned — plan053)
+
+plan053은 priority confirmation write를 dashboard 직접 쓰기가 아니라 queue-based bridge로 둔다.
+
+구성 요소:
+
+- fos-career API: authenticated admin request를 받아 `priority_action_requests` row를 만든다.
+- fos-career UI: detail 화면에서 stage/rank/reason을 확인하고 pending status를 보여준다.
+- career-os applier: pending request를 명시적으로 받아 기존 `confirm-priority` command로 적용한다.
+- audit: fos-career `audit_logs`, fos-career `priority_action_requests`, career-os `_priority-history.jsonl`을 함께 본다.
+
+거절한 대안:
+
+- career-os를 HTTP API service로 띄우기.
+  인증, 네트워크 노출, long-running service 운영 비용이 MVP보다 크다.
+- dashboard container에 writable career-os mount를 주기.
+  기존 read-only 안전 경계를 깨고 UI bug가 곧 data corruption으로 이어질 수 있다.
+- fos-career가 `frontdoor-queue.jsonl`과 `ledger.jsonl`을 직접 수정하기.
+  career-os schema validation과 priority history helper를 우회한다.
+- LLM chat이 tool call로 priority를 변경하기.
+  사용자 확인, idempotency, rollback 검증이 불명확하다.
