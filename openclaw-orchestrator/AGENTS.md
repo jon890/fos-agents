@@ -33,3 +33,25 @@ It is the ai-nodes home for daily session notes, heartbeat state, and cross-doma
   Use repo-relative paths, `~/...`, `<home>`, or deployment placeholders instead.
 - Do not reveal private home-server absolute paths in Discord-visible replies.
 - Do not delete the legacy OpenClaw workspace memory until the migration has been stable and the user asks for cleanup.
+
+## OpenClaw HUD Runtime Policy
+
+Pinned OpenClaw HUD updates are session state, not chat narration.
+Runtime state lives under `openclaw-orchestrator/state/task-hud/`.
+Shared helper code may live under `_shared/lib/` only when it stays workspace-agnostic.
+
+HUD update code edits an existing message id first.
+Creating a new HUD message is allowed only after edit failure.
+When fallback creates a new message, the helper sends a separate visible warning with an emoji telling the user that a new HUD was created and needs pinning.
+
+Visible HUD timestamps use absolute KST time.
+Relative-only text such as "just now" is not enough for a pinned surface.
+
+`session_status` is the preferred source for usage, context, and native active-agent state.
+HUD rendering uses an allowlist of safe fields.
+Raw tool output, account identity, secrets, detailed costs, and private absolute paths do not appear in visible HUD text.
+
+Validation starts with dry-run and state path checks.
+Real message edit testing is allowed only from the main session against an existing pinned HUD message.
+Validation must confirm that no second state root is created.
+It must also confirm that no new HUD message appears unless the edit-failure fallback is being tested on purpose.
