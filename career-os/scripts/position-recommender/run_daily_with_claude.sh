@@ -18,6 +18,7 @@ Asia/Seoul report and runtime mirror were freshly written.
 
 Environment:
   POSITION_RECOMMENDER_NOTIFY=0  Skip Discord notification.
+  POSITION_RECOMMENDER_NOTIFY_DRY_RUN=1  Print the Discord message instead of sending it.
 EOF
   exit 0
 fi
@@ -186,21 +187,48 @@ notify_position_recommendation() {
         reset_candidate()
         return
       }
-      if (section == "strong") strong_count++
-      if (section == "stretch") stretch_count++
-      print "- " title
-      print "  스택: " (stack != "" ? stack : "-")
-      print "  기간: " (period != "" ? period : "-")
-      print "  한줄: " (summary != "" ? summary : "-")
-      print "  링크: " (link != "" ? link : "-")
+      if (section == "strong") {
+        strong_count++
+        item_no = strong_count
+      }
+      if (section == "stretch") {
+        stretch_count++
+        item_no = stretch_count
+      }
+      print item_no ". " title
+      print "   지원: " format_link(link)
+      print "   이유: " (summary != "" ? summary : "-")
+      print "   확인: " (check != "" ? check : "-")
+      print "   다음: " (action != "" ? action : "-")
       reset_candidate()
+    }
+    function format_link(value) {
+      if (value ~ /^https?:\/\//) return "<" value ">"
+      return "-"
+    }
+    function trim(value) {
+      sub(/^[[:space:]]+/, "", value)
+      sub(/[[:space:],，]+$/, "", value)
+      return value
+    }
+    function first_sentence(value) {
+      value = trim(value)
+      sentence_end = index(value, ". ")
+      if (sentence_end > 0) value = substr(value, 1, sentence_end)
+      return value
+    }
+    function first_list_item(value) {
+      value = trim(value)
+      sub(/^\([0-9]+\)[[:space:]]*/, "", value)
+      split(value, parts, /\([0-9]+\)/)
+      return trim(parts[1])
     }
     function reset_candidate() {
       title = ""
-      stack = ""
-      period = ""
       summary = ""
       link = ""
+      check = ""
+      action = ""
     }
     /^## 강력 추천/ {
       flush_candidate()
@@ -230,27 +258,25 @@ notify_position_recommendation() {
     section != "" && title != "" && /^[[:space:]]*- (공고|탐색) 링크:/ {
       line = $0
       sub(/^[[:space:]]*- (공고|탐색) 링크:[[:space:]]*/, "", line)
-      link = line
-      next
-    }
-    section != "" && title != "" && /^[[:space:]]*- 검색 키워드:/ {
-      line = $0
-      sub(/^[[:space:]]*- 검색 키워드:[[:space:]]*/, "", line)
-      stack = line
-      next
-    }
-    section != "" && title != "" && /^[[:space:]]*- 공고 기간:/ {
-      line = $0
-      sub(/^[[:space:]]*- 공고 기간:[[:space:]]*/, "", line)
-      period = line
+      if (link == "" || link == "-") link = line
       next
     }
     section != "" && title != "" && /^[[:space:]]*- 왜 맞는가:/ {
       line = $0
       sub(/^[[:space:]]*- 왜 맞는가:[[:space:]]*/, "", line)
-      sentence_end = index(line, ". ")
-      if (sentence_end > 0) line = substr(line, 1, sentence_end)
-      summary = line
+      summary = first_sentence(line)
+      next
+    }
+    section != "" && title != "" && /^[[:space:]]*- 확인해야 할 모호점:/ {
+      line = $0
+      sub(/^[[:space:]]*- 확인해야 할 모호점:[[:space:]]*/, "", line)
+      check = first_list_item(line)
+      next
+    }
+    section != "" && title != "" && /^[[:space:]]*- 준비 액션:/ {
+      line = $0
+      sub(/^[[:space:]]*- 준비 액션:[[:space:]]*/, "", line)
+      action = first_sentence(line)
       next
     }
     END { flush_candidate() }
@@ -258,21 +284,25 @@ notify_position_recommendation() {
 
   local message
   message="$(cat <<EOF
-[완료] position-recommender $REPORT_DATE
-report: $REPORT
-runtime: $RUNTIME
+오늘 포지션 추천 ($REPORT_DATE)
 
 $candidates
 
-stale guard: 통과
+전체 리포트: \`$REPORT\`
+검증: 오늘 날짜 리포트 + 개별 active 공고 링크 확인 완료
 EOF
 )"
+
+  if [[ "${POSITION_RECOMMENDER_NOTIFY_DRY_RUN:-0}" == "1" ]]; then
+    printf '%s\n' "$message"
+    return 0
+  fi
 
   bun --env-file="$ROOT/.env" "$NOTIFY_SCRIPT" "$message" || \
     echo "position-recommender warn: discord notify failed" >&2
 }
 
-if [[ "$VALIDATE_ONLY" != "1" ]]; then
+if [[ "$VALIDATE_ONLY" != "1" || "${POSITION_RECOMMENDER_NOTIFY_DRY_RUN:-0}" == "1" ]]; then
   notify_position_recommendation
 fi
 

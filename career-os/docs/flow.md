@@ -144,7 +144,7 @@ Write: data/reports/daily/YYYY-MM-DD/position-recommendation/report.md
 Discord 알림 [완료]
 ```
 
-daily cron은 `scripts/position-recommender/run_daily_with_claude.sh`를 통해 실행한다. 이 wrapper는 Claude native skill 호출 후 오늘 날짜 report/runtime이 실제로 생성됐는지 검증하고, stale runtime 재전송을 실패로 처리한 뒤 `_shared/lib/notify_discord.ts`로 Discord 알림을 보낸다. Claude native skill 내부에서는 외부 메시지 전송을 직접 수행하지 않는다.
+daily cron은 `scripts/position-recommender/run_daily_with_claude.sh`를 통해 실행한다. 이 wrapper는 Claude native skill 호출 후 오늘 날짜 report/runtime이 실제로 생성됐는지 검증하고, stale runtime 재전송을 실패로 처리한 뒤 `_shared/lib/notify_discord.ts`로 Discord 알림을 보낸다. 아침 Discord 알림은 전체 리포트를 붙이지 않고 상위 강력 추천 3개 + 도전 추천 2개를 `지원 링크 / 이유 / 확인할 점 / 다음 액션` 중심으로 압축한다. Claude native skill 내부에서는 외부 메시지 전송을 직접 수행하지 않는다.
 
 상세 동작: `career-os/.claude/skills/position-recommender/SKILL.md` Workflow 섹션 참조.
 
