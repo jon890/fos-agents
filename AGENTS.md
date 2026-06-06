@@ -23,8 +23,7 @@
 
 공용 영역:
 
-- `_shared/bin/` — shell·Python 공용 헬퍼.
-- `_shared/lib/` — Bun TypeScript 공용 헬퍼.
+- `_shared/lib/` — Bun TypeScript 공용 헬퍼 (현재 `notify_discord.ts` 정본 1개).
   - **워크스페이스 무관 헬퍼만** (ai-nodes ADR-001 정책: 특정 워크스페이스 config·sources·data 의존 금지).
   - 워크스페이스 한정 헬퍼는 `<workspace>/scripts/<skill>/` 내부에 (plan023에서 `career-os/scripts/_lib/` 폐기, ADR-031).
 - `_shared/types/` — 공용 TS 타입.
