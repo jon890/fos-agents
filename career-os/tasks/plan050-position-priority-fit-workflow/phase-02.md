@@ -116,4 +116,3 @@ git push origin main
 
 - active/open posting input을 찾을 수 없고 fixture도 만들 수 없으면 `PHASE_BLOCKED: no posting input available for priority snapshot smoke`를 출력하고 exit 2.
 - dry-run이 candidate count와 stage distribution을 출력하지 못하면 `PHASE_FAILED: priority recommendation dry-run failed`를 출력하고 exit 1.
-

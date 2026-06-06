@@ -119,4 +119,3 @@ git push origin main
 
 - record id를 frontdoor queue와 ledger 양쪽에서 찾는 공통 패턴이 없으면 `PHASE_BLOCKED: priority confirmation record lookup needs design decision`을 출력하고 exit 2.
 - confirmation command가 recommendation snapshot을 덮어쓰면 `PHASE_FAILED: user confirmation overwrote recommendation snapshot`을 출력하고 exit 1.
-

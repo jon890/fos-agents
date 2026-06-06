@@ -118,4 +118,3 @@ git push origin main
 
 - 기존 zod schema 패턴을 찾을 수 없으면 `PHASE_BLOCKED: application-agent schema pattern unavailable`를 출력하고 exit 2.
 - 기존 frontdoor/ledger fixtures가 optional priority fields 때문에 깨지면 `PHASE_FAILED: priority schema is not backward compatible`를 출력하고 exit 1.
-
