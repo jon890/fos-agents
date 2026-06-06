@@ -7,6 +7,7 @@ import {
   type RequiredUserAction,
 } from './ledger_schema';
 import type { AgentDecision } from './agent_decision_schema';
+import { type ActionStage, priorityDisplayValue } from './priority_schema';
 
 export const STRONG_FIT_THRESHOLD = 85;
 export const NORMAL_FIT_THRESHOLD = 70;
@@ -21,6 +22,21 @@ export function computePriorityScore(record: ApplicationLedgerRecord): number {
     low: 0,
   };
   score += priorityBoost[record.priority ?? 'low'] ?? 0;
+
+  const effectiveStage = getEffectiveActionStage(record);
+  if (effectiveStage) {
+    const stageBoost: Record<ActionStage, number> = {
+      'prepare-now': 35,
+      investigate: 20,
+      monitor: 8,
+      'low-priority': -5,
+      hold: -20,
+      excluded: -100,
+    };
+    score += stageBoost[effectiveStage] ?? 0;
+    score -= priorityDisplayValue(effectiveStage);
+    score -= record.userConfirmedPriority?.priorityRank ?? record.priorityRank ?? 0;
+  }
 
   if (record.sourceFreshness === 'fresh') score += 10;
 
@@ -40,6 +56,10 @@ export function computePriorityScore(record: ApplicationLedgerRecord): number {
   score += statusScore[record.status] ?? 0;
 
   return score;
+}
+
+export function getEffectiveActionStage(record: ApplicationLedgerRecord): ActionStage | undefined {
+  return record.userConfirmedPriority?.actionStage ?? record.actionStage;
 }
 
 export function rankCandidates(
@@ -88,6 +108,43 @@ export function decideForRecord(record: ApplicationLedgerRecord): AgentDecision 
   const now = new Date().toISOString();
   const fitScore = record.fitScore ?? 0;
   const reviewVerdict = readReviewVerdict(record);
+  const effectiveStage = getEffectiveActionStage(record);
+
+  if (effectiveStage === 'excluded') {
+    return makeDecision(record, now, {
+      decision: 'user_confirmed_excluded_skip',
+      decisionReason: '사용자가 제외로 확정한 공고 — 추천/준비 후보에서 제외',
+      confidence: 1.0,
+      nextStatus: record.status,
+      nextActions: [],
+      requiredUserAction: 'none',
+      allowed: false,
+    });
+  }
+
+  if (effectiveStage === 'hold') {
+    return makeDecision(record, now, {
+      decision: 'user_confirmed_hold_skip',
+      decisionReason: '사용자가 보류로 확정한 공고 — 조건 변경 전까지 준비하지 않음',
+      confidence: 1.0,
+      nextStatus: record.status,
+      nextActions: [],
+      requiredUserAction: 'none',
+      allowed: false,
+    });
+  }
+
+  if (effectiveStage === 'low-priority' && record.status === 'discovered') {
+    return makeDecision(record, now, {
+      decision: 'user_confirmed_low_priority_skip',
+      decisionReason: '사용자가 낮은 우선 행동 단계로 확정 — 자동 패키지 준비 제외',
+      confidence: 0.95,
+      nextStatus: record.status,
+      nextActions: ['monitor_only'],
+      requiredUserAction: 'none',
+      allowed: false,
+    });
+  }
 
   // Terminal statuses — no agent action
   if (record.status === 'closed') {

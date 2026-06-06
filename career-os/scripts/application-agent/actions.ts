@@ -9,6 +9,7 @@ import {
   validateSafetyGate,
 } from './safety_gate';
 import { buildSkillCommand, requiresUserApproval } from './skill_contracts';
+import type { ActionStage } from './priority_schema';
 
 export type ActionOptions = {
   dryRun: boolean;
@@ -32,6 +33,41 @@ export type ActionResult = {
   safetyViolations?: SafetyViolation[];
 };
 
+export function buildPreparationActionSuggestions(
+  actionStage: ActionStage,
+  record: Pick<ApplicationLedgerRecord, 'applicationDir' | 'postingPath' | 'url'>,
+): string[] {
+  switch (actionStage) {
+    case 'prepare-now':
+      return [
+        buildSkillCommand('application-package-writer', {
+          postingPath: record.postingPath ?? `${record.applicationDir}/posting.md`,
+        }),
+        buildSkillCommand('application-reviewer', {
+          applicationDir: record.applicationDir,
+        }),
+        buildSkillCommand('interview-prep-analyzer'),
+      ];
+    case 'investigate':
+      return [
+        `# Recheck active/open posting URL: ${record.url}`,
+        buildSkillCommand('study-topic-recommender'),
+        `# [requires user approval] ${buildSkillCommand('study-pack-writer', { topic: '<public-safe-topic>' })}`,
+      ];
+    case 'monitor':
+      return [
+        buildSkillCommand('position-recommender'),
+        '# Keep in daily refresh until source freshness or fit changes',
+      ];
+    case 'low-priority':
+      return ['# Keep visible below current action list; skip package draft automation'];
+    case 'hold':
+      return ['# Wait for user decision or an explicit condition change'];
+    case 'excluded':
+      return ['# Remove from recommendation and preparation candidates'];
+  }
+}
+
 export async function executeDecision(
   record: ApplicationLedgerRecord,
   decision: AgentDecision,
@@ -44,7 +80,7 @@ export async function executeDecision(
     commandSuggestions: buildCommandSuggestions(record, decision),
   };
 
-  // Safety gate — hard block before any writes
+  // Safety check: hard block before any writes.
   const safetyResult = validateSafetyGate(decision);
   if (!safetyResult.safe) {
     result.safetyBlocked = true;
@@ -331,7 +367,7 @@ function writeSubmissionChecklist(
     '## Risk Flags',
     flags,
     '',
-    '## Safety Gate',
+    '## Safety Check',
     '- Actual submission is NOT automated — this checklist is the final agent artifact',
     '- Browser input, site login, and account access require manual user action',
   ].join('\n');

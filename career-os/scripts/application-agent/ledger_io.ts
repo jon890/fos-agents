@@ -6,7 +6,10 @@ import {
   parseLedgerFile,
 } from './ledger_schema';
 
-export function readLedger(path: string): ApplicationLedgerRecord[] {
+const WORKSPACE_PREFIX = process.cwd().endsWith('/career-os') ? '' : 'career-os/';
+export const DEFAULT_LEDGER_PATH = `${WORKSPACE_PREFIX}data/applications/ledger.jsonl`;
+
+export function readLedger(path: string = DEFAULT_LEDGER_PATH): ApplicationLedgerRecord[] {
   if (!existsSync(path)) return [];
   return parseLedgerFile(path);
 }
