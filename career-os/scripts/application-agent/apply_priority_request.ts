@@ -198,7 +198,13 @@ function printResult(value: PriorityRequestResult): void {
 }
 
 async function main(): Promise<void> {
-  const opts = parseArgs(process.argv.slice(2));
+  const args = process.argv.slice(2);
+  if (args.length === 0) {
+    showHelp();
+    return;
+  }
+
+  const opts = parseArgs(args);
   let requestId = 'unknown-request';
 
   try {
