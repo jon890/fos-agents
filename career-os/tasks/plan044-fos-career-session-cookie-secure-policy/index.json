@@ -1,0 +1,55 @@
+{
+  "name": "plan044-fos-career-session-cookie-secure-policy",
+  "description": "fos-career HTTP 테스트에서 로그인 세션이 유지되도록 세션 쿠키 Secure 정책을 env-only override로 고정한다.",
+  "created_at": "2026-06-06T13:49:00Z",
+  "updated_at": "2026-06-06T14:00:00Z",
+  "status": "completed",
+  "current_phase": 1,
+  "total_phases": 1,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/tasks/plan039-fos-career-dashboard",
+    "fos-career/lib/db/session.ts",
+    "fos-career/.env.example"
+  ],
+  "depends_on": [
+    "plan039-fos-career-dashboard",
+    "plan043-fos-career-auth-shell-login"
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "production-secure-default",
+      "decision": "운영 기본값은 NODE_ENV=production에서 session cookie Secure=true를 유지한다."
+    },
+    {
+      "id": "D2",
+      "title": "explicit-temporary-http-override",
+      "decision": "HTTPS 안정화 전 HTTP 테스트는 SESSION_COOKIE_SECURE=false가 명시된 경우에만 Secure=false를 허용한다."
+    },
+    {
+      "id": "D3",
+      "title": "rollback-after-ssl",
+      "decision": "HTTPS 검증이 끝나면 배포 .env에서 SESSION_COOKIE_SECURE override를 제거하거나 true로 되돌린다."
+    }
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "세션 쿠키 Secure 정책 override 구현과 배포 검증",
+      "file": "phase-01.md",
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "codex",
+      "timeout": 900,
+      "commitSha": "1d58677"
+    }
+  ]
+}
