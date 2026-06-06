@@ -1,0 +1,146 @@
+{
+  "name": "plan049-openclaw-hud-runtime-stability",
+  "description": "Pinned OpenClaw HUD update reliability: stable state root, KST timestamps, session_status-derived state, edit-first pinned updates, and loud fallback warning.",
+  "created_at": "2026-06-06T16:44:32Z",
+  "updated_at": "2026-06-06T16:44:32Z",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 5,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "openclaw-orchestrator/AGENTS.md",
+    "_shared/lib/task_hud.ts",
+    "openclaw-orchestrator/state/task-hud/"
+  ],
+  "depends_on": [
+    "plan045-openclaw-session-task-hud",
+    "plan047-openclaw-session-hud-enhancement"
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "edit-existing-pinned-hud-first",
+      "decision": "HUD update는 저장된 기존 message id edit을 먼저 시도한다. edit 실패 뒤에만 새 HUD message 생성이 허용된다."
+    },
+    {
+      "id": "D2",
+      "title": "fallback-warning-visible",
+      "decision": "edit 실패로 새 HUD message가 만들어지면 별도 visible warning을 emoji 포함으로 보내며, 새 HUD를 pin해야 한다고 사용자에게 알린다."
+    },
+    {
+      "id": "D3",
+      "title": "stable-orchestrator-state-root",
+      "decision": "HUD runtime state root는 `openclaw-orchestrator/state/task-hud/`로 고정한다. 다른 cwd나 env 때문에 두 번째 state root가 생기지 않게 검증한다."
+    },
+    {
+      "id": "D4",
+      "title": "kst-absolute-updated",
+      "decision": "Pinned HUD의 Updated line은 relative-only 표현 대신 absolute KST timestamp를 보여준다."
+    },
+    {
+      "id": "D5",
+      "title": "session-status-derived-state",
+      "decision": "usage, context, native active agent state는 sanitized `session_status` source에서 추출해 HUD wrapper에 전달한다."
+    },
+    {
+      "id": "D6",
+      "title": "phase-commit-push-boundary",
+      "decision": "각 phase는 의도한 파일만 stage하고 자체 commit/push 경계로 끝난다."
+    }
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "state root 안정화",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 2,
+      "title": "Updated timestamp KST 절대시간 렌더링",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
+      "model": "sonnet",
+      "timeout": 900
+    },
+    {
+      "number": 3,
+      "title": "session_status to HUD wrapper 연결",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 4,
+      "title": "pinned message edit fallback warning 정책 구현",
+      "file": "phase-04.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 5,
+      "title": "검증과 문서 및 커밋 경계 정리",
+      "file": "phase-05.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
+      "model": "haiku",
+      "timeout": 900
+    }
+  ],
+  "open_decisions": [
+    {
+      "id": "O1",
+      "title": "main-session-real-edit-invocation",
+      "question": "실제 pinned message edit 검증은 main session에서만 실행한다. 별도 session은 dry-run과 state path 검증까지만 수행한다."
+    },
+    {
+      "id": "O2",
+      "title": "fallback-test-target",
+      "question": "edit failure path를 실제로 테스트할 때는 새 message 생성이 의도된 검증임을 먼저 명시하고, 생성된 HUD가 pin 필요 warning을 동반했는지 확인한다."
+    }
+  ]
+}
