@@ -109,7 +109,14 @@ career-os/
 │   (study-topic-recommender: run_*.sh + Python scripts 폐기 완료 — plan016. dispatcher 2 case 폐기. native skill로 진입점 통합)
 │   (study-pack-writer + interview-asset-writer scripts 폐기 — plan013/015 native skill로 흡수, .claude/skills/ 트리 참조)
 │   ├── position-recommender/
-│   │   └── collect_live_postings.ts    source adapter + active validator 기반 live posting 수집기 (ADR-030, ADR-043)
+│   │   ├── collect_live_postings.ts    CLI 호환 entrypoint (ADR-030, ADR-043, ADR-047)
+│   │   └── live-postings/
+│   │       ├── types.ts                Posting / SourceAdapter / CollectResult 계약
+│   │       ├── policy.ts               수집 가능성 필터. 추천 순위 판단은 하지 않음
+│   │       ├── active-validator.ts     direct active/open posting snapshot gate
+│   │       ├── render.ts               markdown snapshot renderer
+│   │       ├── cli.ts                  arg parsing + adapter 실행 + 파일 쓰기
+│   │       └── adapters/{index,wanted,toss}.ts
 │   ├── application-agent/
 │   │   ├── evaluate_cases.ts           runtime eval-case markdown을 pass/revise/blocked로 검증하는 결정적 평가기
 │   │   └── evaluate_package.ts         application-package/review 문서를 제출 전 안전 기준으로 점검

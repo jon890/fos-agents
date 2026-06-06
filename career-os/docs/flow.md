@@ -115,8 +115,10 @@ native skill 패턴: `claude -p "/position-recommender [자연어 컨텍스트] 
 호출: claude -p "/position-recommender [자연어 컨텍스트] [채용공고 file path]"
   ↓
 Bash: bun career-os/scripts/position-recommender/collect_live_postings.ts
-  → source adapters (Wanted, Toss job-detail 등)
-  → active validator (direct posting + active/open + backend fit + deadline)
+  → live-postings source registry (Wanted, Toss job-detail 등)
+  → source adapters (source별 fetch + source-specific active evidence)
+  → active validator (direct posting + active/open + leakage guard)
+  → renderer
   → data/runtime/live-position-postings.md
   ↓
 Read:
@@ -133,6 +135,8 @@ Read:
 Claude 자연어 분석:
   - 강력 추천 / 도전 추천 / 보류·주의 3 티어
   - role title + posting 링크 + 지원 근거 + gap + first action
+  - 추천 순위, fit/gap, 커리어 서사 판단은 LLM이 담당
+  - collector는 active/open 개별 공고 후보 정제까지만 담당
   - active/open 여부는 추정하지 않고 snapshot evidence만 사용
   - 최근 7일 반복 후보 감점 + 신규 후보/추가 수집 대상 최소 1개 포함
   ↓
