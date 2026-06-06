@@ -34,6 +34,7 @@
 
 - `config/` — 외부 공개 가능 정책, 일반화된 회복 플랜, 비식별 운영 기준
 - `private/conditions/` — 질환/증상별 원본 문맥, 경과 기록, 진료 노트. 민감정보이므로 git 커밋하지 않는다.
+- `private/reports/` — 병원 후보 조사, 진료 준비 요약, 개인 증상·수술 이력·복약 맥락이 들어간 리포트. 민감정보이므로 git 커밋하지 않는다.
 - `docs/` — 워크플로/ADR/운영 문서
 - `.claude/skills/` — Claude native skill 컨텍스트 자산 (SKILL.md + references/). ADR-006 분리 표준.
 
@@ -43,6 +44,8 @@
 - `data/`를 private 대용으로 쓰지 않는다. 기존 `data/conditions/` 경로는 `private/conditions/`로 이전했다.
 - 현재 무릎 트랙의 기준 경로는 `private/conditions/knee-patellar-instability/`다.
 - 경과 로그는 `progress-log.jsonl`, 최신 요약은 `current-context.md`, 맞춤 재활 계획은 `rehab-plan-YYYY-MM-DD.md`에 둔다.
+- 병원 후보 조사, 진료 준비 리포트, 의료진에게 전달할 요약처럼 개인 건강 맥락이 들어간 산출물은 `private/reports/`에 둔다.
+- 루트 `reports/`는 기본적으로 사용하지 않는다. 완전 비식별 공개 산출물일 때만 예외적으로 쓰고, 그 전에는 공개/비공개 경계를 확인한다.
 - `private/`는 ai-nodes `.gitignore` 대상이어야 하며, 커밋·공개·외부 전송 전에 사용자 확인을 우선한다.
 - 공개 가능한 일반 정책과 비식별 재활 기준만 `config/`나 `docs/`에 둔다.
 
