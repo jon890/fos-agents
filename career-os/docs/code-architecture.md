@@ -407,6 +407,7 @@ plan050은 새 독립 추천기를 먼저 만들지 않고 기존 collector/reco
 - `config/candidate-profile.md`와 기존 resume/profile material은 fit analysis 입력으로 재사용한다.
 - study/interview 관련 native skill은 gap 기반 preparation action 후보를 만들 때만 호출한다.
 - fos-career는 priority fields와 history를 읽기 전용으로 표시한다.
+  list route는 action stage filter와 scan에 집중하고, detail route는 record type과 id로 frontdoor queue 또는 ledger record를 찾아 recommendation snapshot, fit/gap details, evidence, preparation actions, history를 보여준다.
 
 planned files:
 

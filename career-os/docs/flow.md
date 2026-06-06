@@ -279,6 +279,7 @@ plan048 collected postings
      - LLM refresh와 분리
   -> dashboard read-only display
      - priority badges/filters
+     - priority detail page by record type and id
      - fit summary
      - gap summary
      - next action
@@ -299,7 +300,9 @@ plan048 collected postings
 - 새 generator를 만들기 전에 `position-recommender`, application-agent, study/interview asset workflow를 먼저 연결한다.
 - manual active-open URL과 prior recommendation report는 evidence input으로 읽는다.
 - `recommendation_snapshot` refresh는 `user_confirmed_priority`를 덮어쓰지 않는다.
-- dashboard는 처음에는 career-os 파일을 읽기만 한다. priority write UI는 별도 결정에서 다룬다.
+- dashboard는 career-os 파일을 읽기만 한다.
+  list page는 action stage별 scan을 담당하고, detail page는 record별 posting/fit/gap snapshot, evidence URL, preparation action, priority history를 표시한다.
+  priority write UI는 별도 결정에서 다룬다.
 
 ### Application Flow Agent Runtime (plan031 — phase-01 상태 모델 확정)
 

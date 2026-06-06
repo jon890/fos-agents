@@ -150,6 +150,7 @@ MVP 범위:
 - LLM 채팅 UI (career-os 파일을 컨텍스트로 주입)
 - MySQL 소유 데이터: admin 계정/세션, LLM 채팅 이력, audit log, action history
 - Docker 이미지, 홈서버 역방향 프록시(기존 npm/Node 웹서버) 뒤에 배포
+- priority detail view: frontdoor queue와 ledger record를 같은 read-only 화면에서 열고, 추천 snapshot, fit/gap, next action, evidence, preparation action, priority history를 한 곳에서 확인한다.
 
 MVP 범위 밖:
 
