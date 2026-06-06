@@ -2,9 +2,9 @@
   "name": "plan046-fos-career-position-collection-dashboard-verification",
   "description": "기존 position 수집 source를 모두 실행하고, 성공한 수집 결과가 fos-career DB를 거쳐 dashboard 화면에 실제로 보이는지 확인한다.",
   "created_at": "2026-06-06T23:23:00+09:00",
-  "updated_at": "2026-06-06T14:43:08.515033+00:00",
+  "updated_at": "2026-06-06T14:51:46.192446+00:00",
   "status": "running",
-  "current_phase": 3,
+  "current_phase": 4,
   "total_phases": 5,
   "error_message": null,
   "blocked_reason": null,
@@ -121,13 +121,13 @@
       ],
       "model": "sonnet",
       "timeout": 1500,
-      "commitSha": "e6f39a6"
+      "commitSha": "6361b723c1d1"
     },
     {
       "number": 4,
       "title": "dashboard 전체 필드 표시와 화면 검증",
       "file": "phase-04.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
@@ -137,7 +137,8 @@
         "Glob"
       ],
       "model": "sonnet",
-      "timeout": 1500
+      "timeout": 1500,
+      "commitSha": "9169429"
     },
     {
       "number": 5,
