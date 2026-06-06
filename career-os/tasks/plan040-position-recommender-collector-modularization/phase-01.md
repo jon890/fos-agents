@@ -112,7 +112,7 @@ cd "$(git rev-parse --show-toplevel)"
 bun --check career-os/scripts/position-recommender/collect_live_postings.ts
 
 # entrypoint와 옵션 유지
-bun career-os/scripts/position-recommender/collect_live_postings.ts --source wanted --max-wanted 5 --output /tmp/plan040-phase01-wanted.md
+bun career-os/scripts/position-recommender/collect_live_postings.ts --source wanted --max-wanted 30 --output /tmp/plan040-phase01-wanted.md
 test -s /tmp/plan040-phase01-wanted.md
 grep -q "link_type: direct_posting" /tmp/plan040-phase01-wanted.md
 ! grep -Eq "link_type: (career_article|search_page|home_page)|posting_status: unknown" /tmp/plan040-phase01-wanted.md

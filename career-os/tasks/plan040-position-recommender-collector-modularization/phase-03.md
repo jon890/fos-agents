@@ -103,7 +103,7 @@ bun career-os/scripts/position-recommender/collect_live_postings.ts --source tos
 test -s /tmp/plan040-phase03-toss.md
 ! grep -Eq "link_type: (career_article|search_page|home_page)|posting_status: unknown" /tmp/plan040-phase03-toss.md
 
-bun career-os/scripts/position-recommender/collect_live_postings.ts --source all --max-wanted 5 --output /tmp/plan040-phase03-all.md
+bun career-os/scripts/position-recommender/collect_live_postings.ts --source all --max-wanted 30 --output /tmp/plan040-phase03-all.md
 test -s /tmp/plan040-phase03-all.md
 ! grep -Eq "link_type: (career_article|search_page|home_page)|posting_status: unknown" /tmp/plan040-phase03-all.md
 

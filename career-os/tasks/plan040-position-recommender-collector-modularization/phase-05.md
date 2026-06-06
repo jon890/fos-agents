@@ -89,9 +89,9 @@ cd "$(git rev-parse --show-toplevel)"
 python3 -m json.tool career-os/tasks/plan040-position-recommender-collector-modularization/index.json >/tmp/plan040-index.json
 bun --check career-os/scripts/position-recommender/collect_live_postings.ts
 
-bun career-os/scripts/position-recommender/collect_live_postings.ts --source wanted --max-wanted 5 --output /tmp/plan040-final-wanted.md
+bun career-os/scripts/position-recommender/collect_live_postings.ts --source wanted --max-wanted 30 --output /tmp/plan040-final-wanted.md
 bun career-os/scripts/position-recommender/collect_live_postings.ts --source toss --output /tmp/plan040-final-toss.md
-bun career-os/scripts/position-recommender/collect_live_postings.ts --source all --max-wanted 5 --output /tmp/plan040-final-all.md
+bun career-os/scripts/position-recommender/collect_live_postings.ts --source all --max-wanted 30 --output /tmp/plan040-final-all.md
 
 test -s /tmp/plan040-final-wanted.md
 test -s /tmp/plan040-final-toss.md

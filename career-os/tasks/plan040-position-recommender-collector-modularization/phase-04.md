@@ -110,9 +110,9 @@ test -f career-os/scripts/position-recommender/live-postings/registry.ts
 test -f career-os/scripts/position-recommender/live-postings/README.md
 bun --check career-os/scripts/position-recommender/collect_live_postings.ts
 
-bun career-os/scripts/position-recommender/collect_live_postings.ts --source wanted --max-wanted 5 --output /tmp/plan040-phase04-wanted.md
+bun career-os/scripts/position-recommender/collect_live_postings.ts --source wanted --max-wanted 30 --output /tmp/plan040-phase04-wanted.md
 bun career-os/scripts/position-recommender/collect_live_postings.ts --source toss --output /tmp/plan040-phase04-toss.md
-bun career-os/scripts/position-recommender/collect_live_postings.ts --source all --max-wanted 5 --output /tmp/plan040-phase04-all.md
+bun career-os/scripts/position-recommender/collect_live_postings.ts --source all --max-wanted 30 --output /tmp/plan040-phase04-all.md
 
 test -s /tmp/plan040-phase04-wanted.md
 test -s /tmp/plan040-phase04-toss.md
