@@ -2,8 +2,8 @@
   "name": "plan043-fos-career-auth-shell-login",
   "description": "fos-career 로그인 화면을 독립 랜딩이 아니라 관리자 shell의 content 영역으로 렌더링하도록 정리한다.",
   "created_at": "2026-06-06T13:39:00Z",
-  "updated_at": "2026-06-06T13:39:00Z",
-  "status": "pending",
+  "updated_at": "2026-06-06T13:42:17.306426+00:00",
+  "status": "completed",
   "current_phase": 1,
   "total_phases": 1,
   "error_message": null,
@@ -40,7 +40,7 @@
       "number": 1,
       "title": "로그인 화면을 관리자 shell content 영역으로 재구성",
       "file": "phase-01.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
@@ -50,7 +50,8 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 900
+      "timeout": 900,
+      "commitSha": "aeef6886c6c1"
     }
   ]
 }
