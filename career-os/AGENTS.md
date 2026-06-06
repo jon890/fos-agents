@@ -131,9 +131,8 @@ claude -p "/interview-asset-writer <topic>"                                     
 
 # 추천·분석 (비공개 career-os 리포트)
 claude -p "/study-topic-recommender [context]"                                  # 아침 토픽 추천 + replenish + live-coding seed (ADR-026)
-claude -p "/interview-prep-analyzer [baseline|daily|topic]"                     # baseline 전체 / daily 집중 자연어 분기 (ADR-027)
+claude -p "/interview-prep-analyzer [baseline|daily|topic|first-round]"          # baseline/daily/stage 면접 준비 자연어 분기 (ADR-027, ADR-048)
 claude --permission-mode acceptEdits -p "/candidate-baseline-suggester"         # 후보자 자산 Append 갱신 (ADR-028)
-claude -p "/interview-coffeechat-prep"                                          # 커피챗 기업 사이트 수집 + 전략 리포트 (ADR-029)
 claude -p "/position-recommender [컨텍스트] [채용공고 file]"                    # 활성 공고 수집 + 3 티어 추천 (ADR-030)
 ```
 
@@ -146,7 +145,7 @@ claude -p "/position-recommender [컨텍스트] [채용공고 file]"            
 `~/ai-nodes/_shared/` 아래. 자세한 책임은 `docs/code-architecture.md` 외부 의존성 섹션 참조.
 
 - `_shared/lib/notify_discord.ts` — Bun. `openclaw message send --channel discord` subprocess. `DISCORD_CHANNEL_ID` env 필수, `--media <path>` 옵션 지원.
-- `career-os/scripts/interview-coffeechat-prep/mvp_target_schema.ts` — Bun/zod. `config/mvp-target.json` 스키마 검증 단일 출처. `parseMvpTarget()` + `CoffeechatSchema` 포함.
+- `career-os/scripts/interview-prep-analyzer/mvp_target_schema.ts` — Bun/zod. `config/mvp-target.json` 면접 단계 설정 검증. `parseMvpTarget()` 포함.
 - `_shared/lib/extract_claude_result.ts` — Bun. Claude JSON envelope 파싱. career-os + apartment + stock-investment 공용.
 - Bun runtime — TS 헬퍼 실행. 설치 후 ai-nodes 루트에서 `bun install` 1회 (zod, fast-xml-parser, dotenv).
 - `claude` CLI — native skill 호출 (`claude -p "/<skill>"`). 인증 + 로그인 필요. ai-nodes 모노레포 공통.

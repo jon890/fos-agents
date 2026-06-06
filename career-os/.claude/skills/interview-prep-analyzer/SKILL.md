@@ -1,19 +1,21 @@
 ---
 name: interview-prep-analyzer
-description: 후보자의 학습 갭을 진단·점검하는 면접 준비 분석 skill. 두 모드 자동 분기 — (1) baseline 전체 진단 (큐레이션 10 파일 + 7 섹션 면접 고위험 영역 도출, 면접 시즌 시작 시), (2) daily 집중 점검 (토픽 1개 3-5 파일 + 5 섹션 + study-progress.json 갱신, 매일). 자연어 호출 — "면접 준비 진단", "오늘 갭 점검", "<topic> 약점 분석" 또는 `/interview-prep-analyzer` 슬래시. 후보자 코드/문서 갭 분석이면 무조건 이 skill을 호출.
+description: 후보자의 면접 준비를 진단·점검하는 skill. baseline 전체 진단, daily 집중 점검, stage interview prep(first-round/final-round/offer-chat) 자동 분기. 자연어 호출 — "면접 준비 진단", "오늘 갭 점검", "1차 면접 준비", "최종 면접 준비", "오퍼 단계 준비" 또는 `/interview-prep-analyzer`. 후보자 코드/문서 갭 분석이나 단계별 면접 준비면 이 skill을 호출.
 ---
 
 # Interview Prep Analyzer
 
-후보자의 fos-study 학습 노트를 읽고 면접 준비 갭을 분석하는 workflow. baseline(전체 진단)과 daily(집중 점검) 두 모드 자동 분기.
+후보자의 fos-study 학습 노트와 회사/직무 컨텍스트를 읽고 면접 준비 갭을 분석하는 workflow. baseline(전체 진단), daily(집중 점검), stage interview prep(면접 단계별 준비) 세 갈래로 자동 분기한다.
 
 ## When to use
 
-- 슬래시 호출: `/interview-prep-analyzer [baseline|daily|<topic-key>]`
+- 슬래시 호출: `/interview-prep-analyzer [baseline|daily|<topic-key>|first-round|final-round|offer-chat]`
 - 자연어 요청 (baseline): "면접 준비 전체 진단", "baseline 갭 분석", "전반적인 학습 상태 점검", "진단해줘"
 - 자연어 요청 (daily): "오늘 갭 점검", "daily 분석", "MySQL 인덱스 약점 분석", "오늘 공부할 내용 갭 확인"
+- 자연어 요청 (stage): "1차 면접 준비", "first-round 준비", "최종 면접 준비", "오퍼 단계 준비", "면접 예상 질문 뽑아줘", "면접 답변 연습"
 - 학습 노트 기반 면접 갭 분석이 필요한 모든 경우
-- "학습 갭 분석해줘", "갭 점검해줘", "준비 현황 분석해줘", "오늘 학습 분석"
+- 회사/직무 맥락과 후보자 이력을 엮어 예상 질문, 답변 리스크, 역질문을 정리해야 하는 경우
+- "학습 갭 분석해줘", "갭 점검해줘", "준비 현황 분석해줘", "오늘 학습 분석", "면접 연습"
 
 fos-study publish 안 함 — 비공개 career-os 리포트만 생성.
 학습 문서 작성 아님 — 갭 진단·분석 전담. 실제 문서 생성은 `/study-pack-writer` 로 위임.
@@ -24,7 +26,7 @@ fos-study publish 안 함 — 비공개 career-os 리포트만 생성.
 
 Claude는 다음을 `Read` 도구로 직접 로드:
 
-### 공통 (두 모드 모두)
+### 공통
 
 1. `career-os/config/mvp-target.json` — `primary.company`, `primary.team`, `primary.role`
 2. `career-os/config/candidate-profile.md` — 11섹션 prose, 후보자 이력·약점 (필수)
@@ -40,11 +42,23 @@ Claude는 다음을 `Read` 도구로 직접 로드:
 4. `career-os/config/topic-file-map.json` — topic-key → fos-study 파일 경로 배열 매핑
 5. `career-os/sources/fos-study/<path>` — 선택된 topic의 3-5개 파일 (각 Read)
 
+### stage 모드 추가
+
+3. `career-os/config/mvp-target.json` — `primary.interview.first_round|final_round|offer_chat`
+4. `career-os/data/prep/<prep_dir>/<strategy_filename>` — 회사/단계별 준비 노트 (있으면 Read)
+5. `career-os/data/prep/<prep_dir>/<checklist_filename>` — 준비 체크리스트 (있으면 Read)
+6. `career-os/data/source/<source_dir>/manifest.json`와 사이트 `.txt` 파일 — 수집된 회사/서비스 맥락 (있으면 Read)
+7. `career-os/sources/fos-study/`의 관련 학습 문서 — 역할/약점과 직접 연결되는 범위만 선별 Read
+
 ## Workflow
 
 ### 1. 모드 판단
 
-다음 신호로 baseline / daily 분기:
+다음 신호로 baseline / daily / stage 분기:
+
+**stage** 모드 → 다음 중 하나:
+- 인자 또는 자연어에 `first-round`, `1차`, `실무 면접`, `final-round`, `최종`, `offer-chat`, `오퍼` 포함
+- 자연어에 "회사 면접 준비", "예상 질문", "역질문", "답변 연습"이 있고 특정 회사/직무 타깃이 필요한 경우
 
 **baseline** 모드 → 다음 중 하나:
 - 인자에 `baseline` 또는 인자 없음
@@ -56,7 +70,7 @@ Claude는 다음을 `Read` 도구로 직접 로드:
 
 모호하면 사용자에게 확인 요청 (기본값 daily).
 
-stderr에 결정 근거 1줄 로그 (예: `[interview-prep] mode=daily topic=jpa-n+1`).
+stderr에 결정 근거 1줄 로그 (예: `[interview-prep] mode=daily topic=jpa-n+1`, `[interview-prep] mode=stage stage=first-round`).
 
 ### 2. fos-study git sync (Bash)
 
@@ -75,6 +89,18 @@ Inputs 매트릭스대로 모두 Read.
 1. `study-progress.json` Read → `weak_spots`에서 `last_studied`가 가장 오래되거나 null인 topic-key 선택
 2. `study-progress.json` 없으면 → `topic-file-map.json` 첫 번째 키 선택
 3. topic-file-map.json에 해당 topic-key 없으면 → freeform 모드 (fos-study에서 관련 파일 자연어 추론)
+
+**stage 준비**:
+1. stage를 `first_round`, `final_round`, `offer_chat` 중 하나로 정규화한다.
+2. `primary.interview.<stage>`가 null이면 사용자에게 해당 단계 설정이 없다고 알리고, 회사/역할/면접 단계만으로 가능한 범위의 freeform 준비 메모를 작성할지 확인한다.
+3. 설정이 있으면 필요 시 다음 수집기를 실행한다.
+
+```bash
+bun career-os/scripts/interview-prep-analyzer/collect_interview_sites.ts --mode <first-round|final-round|offer-chat>
+```
+
+4. 수집 실패가 일부면 manifest와 기존 파일로 계속한다. 전체 실패면 사이트 수집 실패를 보고서에 명시하고 candidate-profile + prep note + fos-study 근거로 진행한다.
+5. 커피챗 요청은 자동화하지 않는다. 회사, 상대/맥락, 목적이 확인되지 않았으면 추정하지 말고 확인 필요 항목으로 남긴다.
 
 ### 4. 분석 + 보고서 작성 (Write)
 
@@ -108,6 +134,21 @@ Inputs 매트릭스대로 모두 Read.
 4. 답변 시 주의할 포인트
 5. 오늘 fos-study에 추가하면 좋은 문서 주제
 
+#### 4-C. stage 보고서
+
+저장 경로: `career-os/data/reports/daily/YYYY-MM-DD/interview-prep-<stage>/report.md`
+
+첫 줄: `# <company> <stage-title> 면접 준비 — YYYY-MM-DD`
+
+7개 섹션 (모두 필수):
+1. 목표와 현재 맥락
+2. 회사·서비스에서 확인한 신호
+3. 후보자 포지셔닝
+4. 예상 질문
+5. 답변 리스크와 보완 방향
+6. 역질문
+7. 남은 확인 필요 항목
+
 #### 공통 출력 규칙
 
 - 한국어 작성
@@ -115,6 +156,7 @@ Inputs 매트릭스대로 모두 Read.
 - 후보자 실제 이력 인용 필수 (candidate-profile.md 근거, generic advice 금지)
 - DB는 약점 가능성이 높은 영역으로 다루고 학습 노트 뒷받침 여부 검증
 - Kotlin 현재 MVP 제외 — 분석 범위 언급 불필요
+- coffeechat의 형식, 대화 상대의 역할, referral 이후 절차, 평가 방식은 사용자가 명시하지 않으면 가정하지 않는다
 - 메타 보고 문구 금지 ("파일이 생성되었습니다" 등) — 보고서 본문만 작성
 
 ### 5. study-progress 갱신 (daily 모드만)
@@ -141,9 +183,11 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 1. 첫 줄 `# ` 시작 (`## ` 아닌)
 2. baseline: 7개 섹션 헤더 모두 존재 ("목표", "강점", "부족", "고위험", "우선순위", "면접질문", "정리주제" 포함)
 3. daily: 5개 섹션 헤더 모두 존재 ("부족", "학습목표", "면접질문", "주의", "추가하면" 포함)
-4. mvp-target.json 회사·롤 명시 여부 확인
-5. 후보자 이력 인용 1건 이상 (candidate-profile 구체 근거)
-6. 한국어 작성 확인
+4. stage: 7개 섹션 헤더 모두 존재 ("목표", "회사", "포지셔닝", "예상 질문", "리스크", "역질문", "확인 필요" 포함)
+5. mvp-target.json 회사·롤 명시 여부 확인
+6. 후보자 이력 인용 1건 이상 (candidate-profile 구체 근거)
+7. 한국어 작성 확인
+8. coffeechat 전제나 확인되지 않은 참석자/평가 방식 추정이 없는지 확인
 
 실패 항목이 있으면 수정 후 재작성. **최대 3회 시도**. 4회째도 실패 시 stderr에 `interview-prep 검증 실패: <항목>` + exit 1.
 
@@ -154,6 +198,7 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 | 모드 판단 불가 (자연어·인자 모두 모호) | stderr + 사용자에게 baseline/daily 확인 요청 (기본값 daily) |
 | fos-study git pull 실패 | stderr warn + 로컬 캐시로 분석 계속 |
 | topic 자동 선택 실패 (study-progress 없음 + topic-file-map 비어 있음) | freeform 모드 — Claude가 fos-study에서 적절한 파일 추론 |
+| stage 설정 없음 | 사용자에게 설정 없음 명시. 확인 없이 coffeechat 상황으로 대체하지 않음 |
 | baseline-core-files.json 없음 | stderr + exit 1 |
 | candidate-profile.md 없음 | stderr + exit 1 |
 | self-check 3회 실패 | stderr + exit 1, 실패 항목 명시 |
@@ -161,7 +206,7 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 
 ## Why this design
 
-- **두 모드 단일 skill (ADR-027)**: baseline + daily는 입력 셋·섹션 수가 다르지만 mvp-target + candidate-profile + fos-study Read → Claude 분석 → report Write 흐름 80% 공통. 분리 시 SKILL.md drift 위험 — 통합이 native 패턴에 맞다.
+- **단일 면접 준비 skill (ADR-027, ADR-048)**: baseline + daily + stage는 입력 셋·섹션 수가 다르지만 mvp-target + candidate-profile + 필요한 학습/회사 context Read → Claude 분석 → report Write 흐름이 공통이다. 분리 시 SKILL.md drift 위험 — 통합이 native 패턴에 맞다.
 - **smoke 폐기 (ADR-027)**: native 패턴에서 Claude 호출 sanity는 다른 skill 사용 중에 자연 확인됨. 별도 smoke는 overhead 대비 가치 약함.
 - **Python 6개 폐기 (ADR-027)**: build_target_file_list / select_topic / update_study_progress 알고리즘은 단순 (점수 없음, cooldown 단순) — Claude 자연어 추론으로 동등 대체. 외부 Python 의존 제거로 실행 경로 단순화.
 - **Self-check 본 skill 안에 박는 이유**: 옛 외부 validator를 Claude 자체 검증으로 대체. SKILL.md 단일 진실 출처.

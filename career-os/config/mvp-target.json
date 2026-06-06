@@ -6,18 +6,7 @@
     "interview_date": "2026-06-15",
     "notes": "현재 집중 중인 타깃. 1차 면접일은 2026-06-15로 확정.",
     "interview": {
-      "coffeechat": {
-        "sites": [
-          {"key": "vips", "url": "https://www.ivips.co.kr/", "label": "VIPS"},
-          {"key": "cheiljemyunso-menu", "url": "https://www.cheiljemyunso.co.kr/menu?categoryIdx=4", "label": "제일제면소 메뉴"},
-          {"key": "cjfoodville-brand", "url": "https://m.cjfoodville.co.kr:7443/brand/introduce.asp", "label": "CJ푸드빌 브랜드 소개"}
-        ],
-        "source_dir": "cj-foodville-sites",
-        "report_slug": "cj-foodville-coffeechat",
-        "prep_dir": "cj-foodville",
-        "strategy_filename": "strategy.md",
-        "checklist_filename": "checklist.md"
-      },
+      "coffeechat": null,
       "first_round": {
         "sites": [
           {"key": "vips", "url": "https://www.ivips.co.kr/", "label": "VIPS"},

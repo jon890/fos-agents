@@ -1,149 +1,22 @@
 ---
 name: interview-coffeechat-prep
-description: 면접 준비 — 4 mode (coffeechat / first-round / final-round / offer-chat) 일반화. 현 active 타깃 기업의 회사 사이트 자동 수집 + 후보자 프로필 결합 + Claude 분석으로 private + public-safe 리포트 두 파일 생성. mode 결정: slash arg 우선, 자연어 키워드 (`커피챗`, `1차 면접`, `최종 면접`, `오퍼챗`) fallback. fos-study가 아닌 비공개 career-os 리포트. mvp-target.json `primary.interview.<mode>` 단일 출처. ADR-029 + ADR-034.
+description: Deprecated tombstone. Do not use for new work. Coffeechat-specific automation was retired by ADR-048; use interview-prep-analyzer for first-round, final-round, and offer-stage interview preparation.
 ---
 
-# Interview Coffeechat Prep
+# Deprecated: Interview Coffeechat Prep
 
-현 active 타깃 기업의 면접 전략 보고서를 자동 생성하는 비공개 career-os skill. 4 mode (coffeechat / first-round / final-round / offer-chat) 지원.
+This skill is intentionally retired.
 
-**회사 불가지론**: 회사명·사이트 URL·슬러그는 `config/mvp-target.json`의 `primary.interview.<mode>` 객체에서만 읽는다. 이 SKILL.md 어디에도 특정 회사명을 박지 않는다.
+Do not generate company-specific coffeechat strategy reports from this entrypoint. Coffeechat formats vary by company, attendee, purpose, and formality level, so the old automation created too much risk of assuming context the user did not confirm.
 
-스키마 검증: `career-os/scripts/interview-coffeechat-prep/mvp_target_schema.ts`의 `parseMvpTarget()` + zod로 진입 시점에 설정 오류를 조기 차단한다.
+## Replacement
 
-## When to use
+Use `/interview-prep-analyzer` for reusable interview preparation:
 
-- 사용자가 `/interview-coffeechat-prep [mode]` 슬래시 호출 (mode 생략 시 coffeechat default)
-- 자연어 분기:
-  - `1차 면접` / `first-round` → first_round
-  - `최종 면접` / `final-round` → final_round
-  - `오퍼챗` / `offer-chat` → offer_chat
-  - 그 외 (`커피챗 준비`, `회사 리서치`, `면접 회사 분석`, `커피챗 전략 보고서`) → coffeechat
-- 호출 빈도: 각 면접 단계 전 1회 이상, 신규 타깃 전환 후 첫 번째 실행
+- `first-round`: company and role context, candidate positioning, likely questions, answer risks, reverse questions.
+- `final-round`: decision-maker concerns, leadership/ownership evidence, high-risk follow-ups.
+- `offer-chat`: constraints, negotiation prep, expectations, and questions to clarify.
 
-회사명 직접 입력 불필요 — `mvp-target.json primary.interview.<mode>` 에서 자동 추출.
-단일 active 타깃 기준 실행 — 복수 기업 동시 비교 분석 아님.
+If the user explicitly asks about a coffeechat, do not run automation. Ask for the company, attendee/context if known, and purpose of the conversation, then treat it as an unstructured interview-prep note through `/interview-prep-analyzer` only after those facts are available.
 
-## Inputs
-
-Claude는 다음을 `Read` 도구로 직접 로드:
-
-1. `career-os/config/mvp-target.json` → zod parse (`career-os/scripts/interview-coffeechat-prep/mvp_target_schema.ts` `parseMvpTarget()`) → `primary.interview` 객체 추출 + mode 결정 → 해당 `primary.interview.<mode>` 객체 사용
-   - `<mode>.sites` — fetch 대상 사이트 배열 (key, url, label)
-   - `<mode>.source_dir` — 수집 결과 저장 경로 (`data/source/<source_dir>/`)
-   - `<mode>.report_slug` — 리포트 경로 슬러그
-   - `<mode>.prep_dir` — 전략 노트 경로 (`data/prep/<prep_dir>/`)
-   - `<mode>.strategy_filename` — 기본값 `strategy.md`
-   - `<mode>.checklist_filename` — 기본값 `checklist.md`
-2. `career-os/config/candidate-profile.md` — 후보자 프로필 (11섹션)
-3. `career-os/data/prep/<mode.prep_dir>/<strategy_filename>` — 전략 노트 (선택)
-4. `career-os/data/prep/<mode.prep_dir>/<checklist_filename>` — 준비 체크리스트 (선택)
-5. `career-os/data/source/<mode.source_dir>/` — 사이트 수집 결과 `.txt` 파일들
-6. `references/coffeechat-prompt.md` — 분석 프롬프트 가이드
-
-## Workflow
-
-### 1. mvp-target.json 파싱 + mode 결정
-
-```
-Read career-os/config/mvp-target.json
-→ zod parse → primary.interview 객체 추출
-→ mode 결정 (slash arg 우선 → 자연어 키워드 fallback → default coffeechat)
-→ primary.interview.<mode> 객체가 null 이면 "<mode> 설정 없음 — config/mvp-target.json primary.interview.<mode> 채움 필요" + exit 1
-→ primary.company, primary.team, primary.role 도 추출 (리포트 헤더용)
-```
-
-mvp-target.json이 구버전 flat 필드(`coffeechat_skill_dir` 등)를 가지면 `primary.interview` 블록이 없어 즉시 실패. 사용자에게 `primary.interview.<mode>` 객체 마이그 안내.
-
-### 2. 사이트 수집 (Bash)
-
-```bash
-bun career-os/scripts/interview-coffeechat-prep/collect_company_sites.ts \
-  --mode <mode> \
-  --outdir career-os/data/source/<mode.source_dir>/
-```
-
-수집 완료 시 `data/source/<source_dir>/manifest.json` 자동 생성 — 수집된 사이트 목록 + 성공/실패 상태.
-수집 일부 실패 (exit 2) 시 경고만 출력하고 계속 진행. 전체 실패 (exit 1) 시 리포트 생성 중단.
-
-### 3. 컨텍스트 조립 (Read)
-
-- candidate-profile.md
-- `data/prep/<prep_dir>/<strategy_filename>` (없으면 "전략 노트 없음" 표시)
-- `data/prep/<prep_dir>/<checklist_filename>` (없으면 "체크리스트 없음" 표시)
-- `data/source/<source_dir>/manifest.json` — 수집 결과 요약
-- `data/source/<source_dir>/<key>.txt` (sites 배열의 각 key)
-- `references/coffeechat-prompt.md`
-
-### 4. Claude 분석 + 리포트 작성
-
-`references/coffeechat-prompt.md` 가이드에 따라 mode 별 분석 영역으로 통합 리포트 작성:
-
-- **coffeechat**: 팀 적합성·주도성·커뮤니케이션·서비스 관심도 중심
-- **first-round**: 회사·비즈니스 분석 / 역할·팀 전략 / 후보자 포지셔닝 / 예상 질문 / 역질문 (5 영역 — 상세는 `references/coffeechat-prompt.md` First-Round 모드 가이드 참조)
-- **final-round** / **offer-chat**: 설정 시 해당 context로 분석 (현재 활성화 기준 — mvp-target.json 설정 필요)
-
-두 파일 동시 생성:
-- `report.md` — private (전체 분석, 내부 리서치 포함)
-- `report-public.md` — public-safe (개인명·추수 액수·내부 리서치 마스킹, `references/coffeechat-prompt.md` Public-safe sanitize 규칙 따름)
-
-### 5. 리포트 저장 (Write)
-
-```
-Write → career-os/data/reports/daily/YYYY-MM-DD/<mode.report_slug>/report.md
-Write → career-os/data/reports/daily/YYYY-MM-DD/<mode.report_slug>/report-public.md
-Write → career-os/data/runtime/<mode.report_slug>.md  (런타임 미러, private 사본)
-```
-
-날짜는 `new Date().toISOString().slice(0, 10)` 기준.
-
-### 6. Discord 알림
-
-```bash
-bun --env-file=career-os/.env ../_shared/lib/notify_discord.ts \
-  "[완료] interview-coffeechat-prep (<mode>): data/reports/daily/YYYY-MM-DD/<report_slug>/report.md"
-```
-
-알림 실패는 비치명적 — stderr warn만, skill은 success 종료.
-
-## Self-check
-
-리포트 작성 후 다음 항목 검증:
-
-1. `report.md` 총 줄 수 ≥ 50 (내용 충분성)
-2. 회사명이 `primary.company` 값과 일치하는지 확인 (hard-coded 단어 아닌지)
-3. `data/source/<source_dir>/manifest.json`의 각 site entry가 리포트에 언급됐는지
-4. `data/runtime/<report_slug>.md` 파일 존재 확인
-5. `report-public.md` 파일 존재 확인
-6. `report-public.md` 본문에 개인명 / 추수 액수 / 내부 리서치 마스킹 정합 (`references/coffeechat-prompt.md` Public-safe sanitize 규칙 따름)
-
-실패 항목 있으면 해당 섹션 보완 후 재작성. 최대 2회 (리포트 분량 특성상 재작성 비용이 큼).
-
-## Error handling
-
-| 상황 | 처리 |
-|---|---|
-| `primary.interview.<mode>` null | "<mode> 설정 없음 — primary.interview.<mode> 채움 필요" + exit 1 |
-| `--mode <unknown>` | "지원되지 않는 mode" + exit 1 (지원: coffeechat / first-round / final-round / offer-chat) |
-| zod parse 실패 | 스키마 불일치 필드 명시 + exit 1 |
-| 사이트 수집 전체 실패 | "사이트 수집 실패" + exit 1 |
-| 사이트 수집 일부 실패 | stderr warn + 수집된 파일로 계속 진행 |
-| strategy.md 없음 | "전략 노트 없음" 표시 + 리포트 생성 계속 |
-| report.md 줄 수 < 50 | 내용 보완 후 재작성 (최대 2회) |
-| Discord notify 실패 | stderr warn, skill은 success |
-
-## Why this design
-
-- **ADR-029**: Python 수집기 → TypeScript 마이그, 회사명 hard-coded 제거. mvp-target.json `primary.interview.<mode>` 객체가 단일 진실 출처. 회사 전환·면접 단계 전환 시 JSON 한 곳만 수정.
-- **ADR-034**: 4 mode 일반화 — coffeechat/first-round/final-round/offer-chat. mode 별 분석 영역 + public-safe 산출물 추가.
-- **zod 파싱 first**: `mvp_target_schema.ts` `parseMvpTarget()`로 runner 진입 시점 스키마 검증 → 회사 설정 오류를 수집/분석 전에 조기 실패.
-- **사이트 수집 분리**: `collect_company_sites.ts` 독립 실행 가능. skill 밖에서도 재실행·디버깅 용이.
-- **두 산출물 동시 생성**: report.md (private)와 report-public.md (sanitized)를 같은 Claude 호출에서 동시 생성 — 일관성은 Claude 책임, 후처리 스크립트 없음.
-
-## References
-
-- `references/coffeechat-prompt.md` — 분석 프롬프트 가이드 (coffeechat + first-round 모드 가이드 + public-safe sanitize 규칙)
-- `career-os/config/mvp-target.json` — 타깃 기업 + interview 설정 단일 출처
-- `career-os/scripts/interview-coffeechat-prep/mvp_target_schema.ts` — zod 스키마 + parseMvpTarget() 함수
-- `career-os/docs/adr.md` ADR-029 — Python→TS 마이그 설계 결정
-- `career-os/docs/adr.md` ADR-034 — 4 mode 일반화 설계 결정
+Historical details are kept in `docs/adr.md` ADR-029, ADR-034, and ADR-048.

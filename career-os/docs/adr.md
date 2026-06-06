@@ -1033,7 +1033,7 @@ interview-coffeechat-prep skill 을 4 mode 일반화. backward compat 유지.
 - `career-os/config/mvp-target.json` — `primary.coffeechat` → `primary.interview.{coffeechat, first_round, ...}` 마이그 + first_round 본문 채움.
 - `career-os/.claude/skills/interview-coffeechat-prep/SKILL.md` — mode 분기 본문.
 - `career-os/.claude/skills/interview-coffeechat-prep/references/coffeechat-prompt.md` — first-round 가이드 + public-safe sanitize 규칙.
-- `career-os/scripts/interview-coffeechat-prep/collect_company_sites.ts` — mode 인자 받음 (default coffeechat).
+- `career-os/scripts/interview-coffeechat-prep/collect_company_sites.ts` — mode 인자 받음. 당시에는 coffeechat을 기본값으로 두었다.
 - `career-os/tasks/plan026-interview-mode-generalization/` — 3 phase.
 
 ---

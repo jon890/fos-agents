@@ -30,8 +30,7 @@ career-os 워크스페이스의 **제품 범위·MVP 기능 명세**.
 | 명령 | 산출물 | push | 빈도 |
 |---|---|---|---|
 | `/position-recommender` | 활성 공고 자동 수집 + 후보자 프로필 매칭 추천<br>3 티어: 강력 / 도전 / 보류·주의<br>`data/runtime/position-recommendation.md`<br>`data/reports/daily/YYYY-MM-DD/position-recommendation/report.md`<br>ADR-030, plan022 | 없음 | 매일 |
-| `/interview-coffeechat-prep [mode]` | 기업 사이트 자동 수집 + 후보자 프로필 결합 + Claude 분석<br>비공개 + public-safe 리포트 두 파일 생성<br>`data/reports/daily/YYYY-MM-DD/<slug>/{report.md, report-public.md}`<br>mode: coffeechat / first-round / final-round / offer-chat (default coffeechat)<br>ADR-029, ADR-034, plan026 | 없음 | 면접 단계별 |
-| `/interview-prep-analyzer` | 면접 준비 갭 분석 (자연어 분기)<br>baseline: 큐레이션 10파일 + 7섹션 고위험 영역 도출<br>daily: 토픽 1개 3-5파일 + 5섹션 + `config/study-progress.json` 갱신<br>`data/reports/{baseline,daily}/YYYY-MM-DD/report.md`<br>ADR-027, plan017 | 없음 | baseline: 시즌 시작 시<br>daily: 매일 |
+| `/interview-prep-analyzer` | 면접 준비 갭 분석과 단계별 면접 준비 (자연어 분기)<br>baseline: 큐레이션 10파일 + 7섹션 고위험 영역 도출<br>daily: 토픽 1개 3-5파일 + 5섹션 + `config/study-progress.json` 갱신<br>stage: first-round / final-round / offer-chat 회사·직무 맥락 + 후보자 이력 기반 예상 질문·답변 리스크·역질문<br>`data/reports/{baseline,daily}/YYYY-MM-DD/report.md` 또는 `data/reports/daily/YYYY-MM-DD/interview-prep-<stage>/report.md`<br>ADR-027, ADR-048, plan017, plan041 | 없음 | baseline: 시즌 시작 시<br>daily: 매일<br>stage: 면접 전 |
 | `/study-topic-recommender` | 아침 토픽 추천 10픽 + 오늘의 3선<br>기존 문서 보강 후보 (최대 5개, ADR-033)<br>replenish + live-coding seed 선택<br>`data/runtime/morning-topic-recommendation.md`<br>ADR-026, plan016 | 없음 | 매일 |
 | `/study-pack-writer <topic>` | 토픽 1개 풀 마크다운 스터디팩 → fos-study 푸시<br>duplicate guard (ADR-033): high/medium 중복 시 update-existing 전환<br>self-check 내장 (plan014에서 maintain-study-pack 흡수) | ✓ | 토픽별 |
 | `/interview-asset-writer <topic>` | 후보자 이력 중심 Q&A 질문 은행 + 마스터 플레이북<br>→ fos-study 푸시<br>plan015 | ✓ | 토픽별 |
