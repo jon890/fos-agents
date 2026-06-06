@@ -278,6 +278,7 @@ MVP에서 fos-career가 읽는 career-os 파일:
 
 - `data/runtime/application-agent/frontdoor-queue.jsonl`
 - `data/applications/ledger.jsonl`
+- `data/applications/_priority-history.jsonl`
 - `data/runtime/position-recommendation.md`
 - `config/candidate-profile.md`
 
@@ -393,3 +394,43 @@ safety gate 금지 action 목록 (`safety_gate.ts`):
 | `{outputDir}/reports/daily/{date}/application-agent/digest.md` | `report-daily` 커맨드 |
 
 plan030 freshness guard는 구현 대상이 아니라 후보 ingest 시 prerequisite로만 참조한다 (`sourceFreshness` 필드 검증).
+
+## Position priority layer (planned — plan050)
+
+plan050은 새 독립 추천기를 먼저 만들지 않고 기존 collector/recommender/application-agent 자산을 연결하는 얇은 priority layer로 둔다.
+
+책임 경계:
+
+- `scripts/position-recommender/live-postings/`는 active/open 개별 공고와 evidence snapshot을 만든다.
+- `position-recommender` native skill은 LLM recommendation snapshot 초안을 만든다.
+- `scripts/application-agent/`는 frontdoor queue, ledger, 공고별 application files, priority history를 검증하고 갱신한다.
+- `config/candidate-profile.md`와 기존 resume/profile material은 fit analysis 입력으로 재사용한다.
+- study/interview 관련 native skill은 gap 기반 preparation action 후보를 만들 때만 호출한다.
+- fos-career는 priority fields와 history를 읽기 전용으로 표시한다.
+
+planned files:
+
+```text
+scripts/application-agent/
+├── priority_schema.ts             # action stage, recommendation snapshot, user confirmed priority schema
+├── priority_history.ts            # priority change history append/read helpers
+├── priority_recommendation.ts     # position/frontdoor/ledger inputs를 recommendation snapshot으로 정리
+└── priority_dashboard_view.ts     # dashboard가 읽기 쉬운 summary projection
+
+data/applications/
+└── _priority-history.jsonl        # user/agent priority change audit log
+```
+
+기존 파일 확장 후보:
+
+- `frontdoor_queue_schema.ts` — action stage와 recommendation snapshot optional fields.
+- `ledger_schema.ts` — promoted application의 confirmed priority optional fields.
+- `policy.ts` — `prepare-now`와 기존 actionable candidate 판단 연결.
+- `render_decision_log.ts` — priority change summary 추가.
+
+구현 원칙:
+
+- `userConfirmedPriority`는 LLM refresh path에서 쓰지 않는다.
+- `recommendationSnapshot`은 source report, evidence URL, generatedAt을 포함해야 한다.
+- `excluded`는 사용자 확정 또는 명확한 정책 사유 없이 자동 확정하지 않는다.
+- priority history는 append-only로 운영한다.

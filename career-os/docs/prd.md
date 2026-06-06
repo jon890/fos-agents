@@ -104,6 +104,34 @@ MVP 범위:
 
 - Next.js 대시보드와 관리자 로그인은 `plan039`로 분리한다.
 
+### 계획 중: position priority + posting/fit analysis workflow (plan050)
+
+`plan050-position-priority-fit-workflow`는 plan048에서 모은 active/open 공고를 지원 행동 우선순위로 연결한다.
+목표는 회사를 절대 순위로 줄 세우는 것이 아니라, 각 공고를 지금 어떤 행동으로 다룰지 정하는 것이다.
+
+MVP 범위:
+
+- collected posting을 posting analysis, fit analysis, gap analysis로 정리한다.
+- LLM 추천 초안은 `recommendation_snapshot`으로 저장한다.
+- 사용자가 확정한 우선순위는 `user_confirmed_priority`에 따로 저장하고 LLM refresh가 덮어쓰지 않는다.
+- action stage 기본값은 `prepare-now`, `investigate`, `monitor`, `low-priority`, `hold`, `excluded`다.
+- 사용자 표시가 필요하면 `prepare-now=1`, `investigate=2`, `monitor=3`, 나머지 낮은 행동 단계는 `4`로 매핑한다.
+- dashboard는 priority badge/filter, fit summary, gap summary, next action, priority 변경 이력을 읽기 전용으로 보여준다.
+
+재사용 우선 자산:
+
+- plan048 collected postings와 active/open evidence.
+- `config/candidate-profile.md`와 기존 resume/profile material.
+- application-agent frontdoor queue, ledger, 공고별 posting/fit/package/review 파일.
+- prior recommendation reports와 manual active-open URL notes.
+- study pack / interview asset workflow.
+
+범위 밖:
+
+- 외부 채용 사이트 제출 자동화.
+- user-confirmed priority를 dashboard에서 직접 쓰는 기능.
+- 기존 application package generator를 새 generator로 대체하는 일.
+
 ### 계획 중: fos-career 웹 대시보드 (plan039)
 
 `plan039-fos-career-dashboard`는 career-os 데이터를 브라우저에서 읽고 LLM과 채팅으로 해석할 수 있는 Next.js 관리자 대시보드를 별도 저장소(`~/services/fos-career`)에 구축한다.

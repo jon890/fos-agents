@@ -248,6 +248,59 @@ frontdoor queue 상태:
 - Next.js 대시보드와 관리자 로그인은 plan039에서 다룬다.
 - 최종 지원 패키지 작성, 제출 승인, 외부 사이트 입력/전송은 기존 사용자 검토 gate를 유지한다.
 
+### Position Priority + Posting/Fit Analysis Workflow (planned — plan050)
+
+plan050은 plan048 collected postings를 action stage 중심 priority로 연결한다.
+LLM은 추천 초안을 만들고, 사용자가 확정한 priority는 별도 필드에 보존한다.
+
+```text
+plan048 collected postings
+  -> posting analysis
+     - active/open evidence
+     - 역할/연차/스택/지원 경로
+     - 마감 또는 always-open 상태
+  -> fit analysis
+     - candidate-profile
+     - 기존 resume/profile material
+     - application-agent posting/fit/package/review 파일 재사용
+  -> gap analysis
+     - 부족 근거
+     - 준비할 기술/면접 포인트
+     - study pack / interview asset 연결 후보
+  -> LLM recommendation snapshot
+     - priority_rank
+     - action_stage
+     - priority_reason
+     - next_action
+     - risk_flags
+     - evidence_urls
+  -> user_confirmed_priority
+     - 사용자가 명시 확정한 action stage/rank/reason
+     - LLM refresh와 분리
+  -> dashboard read-only display
+     - priority badges/filters
+     - fit summary
+     - gap summary
+     - next action
+     - priority change history
+```
+
+기본 action stage:
+
+- `prepare-now`: 바로 공고 분석, fit/gap 분석, 지원 패키지 초안을 준비한다.
+- `investigate`: active/open은 맞지만 요구사항, 회사 맥락, 지원 경로를 더 확인한다.
+- `monitor`: 지금 준비하지 않고 daily refresh에서 상태를 본다.
+- `low-priority`: 후보로 남기되 현재 행동 목록 아래로 둔다.
+- `hold`: 사용자 판단, 마감, 쿨다운, 정보 부족 등으로 보류한다.
+- `excluded`: 추천/준비 후보에서 제외한다.
+
+재사용 우선순위:
+
+- 새 generator를 만들기 전에 `position-recommender`, application-agent, study/interview asset workflow를 먼저 연결한다.
+- manual active-open URL과 prior recommendation report는 evidence input으로 읽는다.
+- `recommendation_snapshot` refresh는 `user_confirmed_priority`를 덮어쓰지 않는다.
+- dashboard는 처음에는 career-os 파일을 읽기만 한다. priority write UI는 별도 결정에서 다룬다.
+
 ### Application Flow Agent Runtime (plan031 — phase-01 상태 모델 확정)
 
 plan031은 plan029의 skill 산출물을 기반으로, 상태 기반 자율 실행 runtime을 추가한다. 상태 전이 허용 여부와 next action 선택은 TypeScript policy engine이 결정한다. LLM은 분석, 작성, 추천 근거 생성만 담당한다.

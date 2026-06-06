@@ -236,11 +236,107 @@ namespace 안의 topic key는 namespace별로 독립적이라 같은 key가 두 
 - `promoted_to_ledger`는 `promotedApplicationId`가 있어야 한다.
 - 이미 같은 URL이나 external id가 ledger에 있으면 새 ledger record를 만들지 않고 existing application을 연결한다.
 
+### position priority fields (planned — plan050)
+
+plan050은 frontdoor queue와 ledger에 action stage 중심 priority layer를 추가한다.
+이 필드는 회사의 절대 선호 순위가 아니라 "지금 어떤 행동을 할지"를 나타낸다.
+
+기본 action stage:
+
+- `prepare-now`: 바로 지원 준비를 시작한다.
+- `investigate`: 공고/회사/요구 역량을 더 확인한다.
+- `monitor`: active/open 상태를 유지하며 주기적으로 본다.
+- `low-priority`: 가능성은 있으나 지금 준비하지 않는다.
+- `hold`: 판단 보류 또는 조건 대기.
+- `excluded`: 추천/대시보드 준비 후보에서 제외한다.
+
+사용자 표시용 숫자 매핑:
+
+- `prepare-now` → `1`
+- `investigate` → `2`
+- `monitor` → `3`
+- `low-priority`, `hold`, `excluded` → `4`
+
+예시 optional fields:
+
+```json
+{
+  "priorityRank": 1,
+  "actionStage": "prepare-now",
+  "priorityReason": "AI Agent 실무 전환성이 높고 active/open evidence가 명확하다.",
+  "nextAction": "공고 분석과 fit/gap 분석을 갱신한 뒤 지원 패키지 초안을 만든다.",
+  "riskFlags": ["platform_scope_heavy"],
+  "evidenceUrls": ["https://example.com/jobs/123"],
+  "recommendationSnapshot": {
+    "generatedAt": "2026-06-07T09:30:00+09:00",
+    "sourceReportPath": "data/runtime/position-recommendation.md",
+    "postingAnalysisPath": "data/applications/example/backend/posting.md",
+    "fitSummary": "서버/API 경험과 AI agent workflow 관심사가 맞는다.",
+    "gapSummary": "Kubernetes 운영 경험은 확인이 필요하다.",
+    "preparationActions": ["package_draft", "interview_practice", "study_pack_candidate"]
+  },
+  "userConfirmedPriority": {
+    "confirmedAt": "2026-06-07T10:00:00+09:00",
+    "actionStage": "investigate",
+    "priorityRank": 2,
+    "reason": "공고는 좋지만 플랫폼 요구사항을 먼저 확인한다.",
+    "confirmedBy": "user"
+  }
+}
+```
+
+필드 책임:
+
+- `priorityRank`: 같은 action stage 안에서 보여줄 상대 순서. 전체 회사 선호 순위가 아니다.
+- `actionStage`: LLM 추천 초안의 현재 행동 단계.
+- `priorityReason`: 행동 단계 추천 이유.
+- `nextAction`: 사람이 바로 실행할 다음 행동.
+- `riskFlags`: 쿨다운, 공고 불명확성, 과한 요구 역량, 지원 경로 문제 등.
+- `evidenceUrls`: 공고 URL, official careers URL, manual active-open URL 등 판단 근거.
+- `recommendationSnapshot`: LLM이 만든 추천 초안과 분석 요약. refresh 때 갱신 가능하다.
+- `userConfirmedPriority`: 사용자가 확정한 priority. LLM refresh가 덮어쓰면 안 된다.
+
+검증 규칙:
+
+- `actionStage`는 기본 enum 중 하나여야 한다.
+- `excluded`는 사용자 확정 또는 명확한 정책 사유 없이 자동으로 확정값이 될 수 없다.
+- `userConfirmedPriority`가 있으면 dashboard와 application flow는 이 값을 LLM snapshot보다 우선 표시한다.
+- `recommendationSnapshot.generatedAt`과 source report path가 없으면 refresh 결과로 취급하지 않는다.
+- `prepare-now`에는 `nextAction`과 하나 이상의 `evidenceUrls`가 필요하다.
+
+### data/applications/_priority-history.jsonl (planned — plan050)
+
+priority 변경 이력을 저장하는 runtime/private audit log다.
+한 줄은 하나의 priority 변경 이벤트다.
+
+예시 record:
+
+```json
+{
+  "eventId": "priority-20260607-kakaopay-001",
+  "recordId": "frontdoor-kakaopay-ax-202310",
+  "recordType": "frontdoor_queue",
+  "changedAt": "2026-06-07T10:00:00+09:00",
+  "changedBy": "user",
+  "previous": {
+    "actionStage": "prepare-now",
+    "priorityRank": 1
+  },
+  "next": {
+    "actionStage": "investigate",
+    "priorityRank": 2
+  },
+  "reason": "플랫폼 요구사항 확인 후 준비 여부를 정한다.",
+  "source": "manual-confirmation"
+}
+```
+
 ### 디렉터리 구조
 
 ```text
 data/applications/
 ├── ledger.jsonl
+├── _priority-history.jsonl
 └── <company-slug>/
     └── <role-slug>/
         ├── posting.md
