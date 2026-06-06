@@ -53,6 +53,15 @@ CRCL (Circle) + BTC + GOOGL/GOOG + QQQ + AI 반도체/인프라.
 - **불확실성 명시**: 추측·예측은 *추측이라 명시*. 사실로 위장 금지.
 - **세션 격리**: 각 cron job은 `sessionTarget: isolated` — 다른 워크스페이스 컨텍스트 누수 회피.
 
+## 4-3. fos-study 블로그 발행 의미
+
+사용자가 `블로그 글 발행`, `블로그 글로 만들어줘`, `fos-study에 게시해줘`처럼 말하면, stock-investment 맥락에서는 `~/ai-nodes/career-os/sources/fos-study/finance/investing/` 아래에 `[초안]` 마크다운 글을 만들고, 필요한 README 인덱스를 갱신한 뒤, fos-study 저장소만 커밋/푸시하는 뜻으로 이해한다.
+
+- 이미 다룬 종목의 최신 이슈는 새 일일 종목 노트로 중복 생성하지 않는다.
+- 이런 경우 `YYYY-MM-DD-<ticker>.md`가 아니라 `YYYY-MM-DD-<topic>.md` 형태의 후속 이슈 분석 글로 발행한다.
+- 예: Broadcom 기존 AVGO 노트가 있을 때 실적 쇼크/금리/AI 내러티브 점검은 `2026-06-06-broadcom-ai-rate-shock.md` 같은 후속 분석 글로 처리.
+- 모든 글은 투자 권유가 아니라 개인 공부용 관찰/분석 노트로 쓴다.
+
 ## 5. 워크플로 진입점
 
 3 skill — ADR-006 분리 패턴 (`scripts/<name>/` + `.claude/skills/<name>/`, plan002 적용).
