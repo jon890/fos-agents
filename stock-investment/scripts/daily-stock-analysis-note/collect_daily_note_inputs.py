@@ -141,6 +141,15 @@ def score(symbol, chart, rotation_index, item, history):
     return round(s, 3), {"base": round(base, 3), "historyPenalty": history_penalty, "marketBalanceBoost": market_boost}
 
 
+def published_tickers(history):
+    tickers = set()
+    for entry in history.get("entries", []):
+        ticker = entry.get("ticker")
+        if ticker and entry.get("pushStatus") in {"pushed", "no-change"}:
+            tickers.add(ticker.upper())
+    return tickers
+
+
 def main():
     if len(sys.argv) != 6:
         print("usage: collect_daily_note_inputs.py <universe.json> <selected.json> <raw.json> <optional_ticker_or_-> <history.json>", file=sys.stderr); return 2
@@ -156,6 +165,9 @@ def main():
     charts = {}
     ranked = []
     requested_norm = None if requested == "-" else requested.upper()
+    already_published = published_tickers(history)
+    if requested_norm and requested_norm in already_published:
+        raise SystemExit(f"ticker already has a published note: {requested_norm}")
     for i, item in enumerate(symbols):
         t = item["ticker"]
         c = yahoo_chart(t)
@@ -168,14 +180,17 @@ def main():
         if not selected:
             raise SystemExit(f"unknown ticker: {requested_norm}")
     else:
-        selected = next((x for x in ranked if x["chartOk"]), ranked[0])
+        eligible = [x for x in ranked if x["chartOk"] and x["ticker"].upper() not in already_published]
+        if not eligible:
+            raise SystemExit("no eligible ticker: every chart-ok universe ticker already has a published note")
+        selected = eligible[0]
     q = f'{selected["name"]} {selected["ticker"]} earnings guidance AI data center semiconductor stock'
     if selected["market"] == "KR":
         q = f'{selected["name"]} {selected["ticker"]} 실적 전망 AI 반도체 데이터센터 주가'
     news = google_news(q, selected["market"])
     generated = datetime.now(timezone.utc).isoformat()
-    selected_payload = {"generatedAt": generated, "selected": selected, "chart": charts.get(selected["ticker"]), "selectionPolicy": cfg.get("policy"), "selectionHistory": history.get("entries", [])[-14:], "topCandidates": ranked[:10]}
-    raw_payload = {"generatedAt": generated, "universeCount": len(symbols), "charts": charts, "newsQuery": q, "news": news, "ranked": ranked, "selectionHistory": history.get("entries", [])[-30:]}
+    selected_payload = {"generatedAt": generated, "selected": selected, "chart": charts.get(selected["ticker"]), "selectionPolicy": cfg.get("policy"), "selectionHistory": history.get("entries", [])[-14:], "excludedPublishedTickers": sorted(already_published), "topCandidates": ranked[:10]}
+    raw_payload = {"generatedAt": generated, "universeCount": len(symbols), "charts": charts, "newsQuery": q, "news": news, "ranked": ranked, "excludedPublishedTickers": sorted(already_published), "selectionHistory": history.get("entries", [])[-30:]}
     selected_out.write_text(json.dumps(selected_payload, ensure_ascii=False, indent=2), encoding="utf-8")
     raw_out.write_text(json.dumps(raw_payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return 0

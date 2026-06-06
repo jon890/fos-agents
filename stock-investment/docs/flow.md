@@ -90,8 +90,8 @@ Step 1  thin wrapper 진입
 Step 2  native skill 이 워크플로 수행 (SKILL.md 기준)
         - python3 collect_daily_note_inputs.py 호출
             입력: config/daily-stock-universe.json (후보 풀: US 17 + KR 13)
-                  data/daily-notes/history.json (rotation 패널티)
-                  TICKER 환경변수 (수동 지정 시 우선)
+                  data/daily-notes/history.json (기존 발행 종목 제외 + rotation 보정)
+                  TICKER 환경변수 (수동 지정 시 우선, 단 기존 발행 종목이면 실패)
                   config/catalysts.json (catalyst 참조)
                   data/thesis-tracker/<slug>.json (기존 가설, 파일 존재 시)
             산출물: data/daily-notes/YYYY-MM-DD/selected.json (선택 종목 + 근거)

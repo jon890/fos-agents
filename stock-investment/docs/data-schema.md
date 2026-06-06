@@ -90,7 +90,8 @@ daily-stock-analysis-note와 morning-brief에서 참조.
 ```
 
 현재 수록: US 17종목 + KR 13종목 = 30종목.
-최근 선택된 종목은 `data/daily-notes/history.json` 에서 rotation 패널티 적용.
+이미 발행된 종목은 `data/daily-notes/history.json` 기준으로 자동 후보에서 제외한다.
+같은 종목을 다시 다룰 때는 신규 일일 노트가 아니라 기존 노트 업데이트나 별도 후속 분석으로 처리한다.
 
 ### 1-4. sources.json
 
@@ -208,8 +209,9 @@ fos-study 발행본: `career-os/sources/fos-study/finance/investing/ai-tech-stoc
 
 ### 2-4. data/daily-notes/history.json
 
-daily-stock-analysis-note가 종목 선택 이력을 기록해 rotation 패널티를 적용하는 파일.
-같은 종목이 연속 선택되지 않도록 최근 선택 기록 보존.
+daily-stock-analysis-note가 종목 선택 이력을 기록하고, 이미 발행된 종목의 중복 신규 노트를 막는 파일.
+자동 선택은 `pushStatus`가 `pushed` 또는 `no-change`인 티커를 제외한다.
+`TICKER` 환경변수로 수동 지정해도 이미 발행된 티커면 수집 단계에서 실패해야 한다.
 US 종목만 연속 선택될 경우 한국 종목에 rotation 가점 부여.
 
 ### 2-5. data/thesis-tracker/\<ticker-slug\>.json

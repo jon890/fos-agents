@@ -26,7 +26,7 @@ stock-investment/
 │   ├── issues/YYYY-MM-DD/<issue>/    # current-issue-analysis 산출물
 │   ├── daily-notes/
 │   │   ├── YYYY-MM-DD/               # daily-stock-analysis-note 런타임 산출물
-│   │   └── history.json              # 종목 선택 이력 (rotation 패널티)
+│   │   └── history.json              # 종목 선택 이력 (기존 발행 제외 + rotation 보정)
 │   ├── thesis-tracker/               # 종목별 투자 가설 누적 로그 (JSON)
 │   └── audit/                        # workspace-audit 결과
 │
@@ -117,7 +117,7 @@ claude -p "/daily-stock-analysis-note"
 
 - 광범위 풀-리포 분석 금지 — 비용 급증 방지.
 - 수집 실패 시 raw 파일 보존 — 재수집 없이 수집 결과 보존.
-- daily-stock-analysis-note: `data/daily-notes/history.json` rotation으로 동일 종목 반복 분석 방지.
+- daily-stock-analysis-note: `data/daily-notes/history.json`으로 이미 발행된 종목의 신규 노트 중복 생성을 막고, 남은 후보 안에서 rotation 보정을 적용.
 
 ## 6. 결정 문서 경로
 
