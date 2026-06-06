@@ -2,12 +2,26 @@
   "name": "plan046-fos-career-position-collection-dashboard-verification",
   "description": "기존 position 수집 source를 모두 실행하고, 성공한 수집 결과가 fos-career DB를 거쳐 dashboard 화면에 실제로 보이는지 확인한다.",
   "created_at": "2026-06-06T23:23:00+09:00",
-  "updated_at": "2026-06-06T14:51:46.192446+00:00",
-  "status": "running",
-  "current_phase": 4,
+  "updated_at": "2026-06-07T00:05:00+09:00",
+  "status": "completed",
+  "current_phase": 5,
   "total_phases": 5,
   "error_message": null,
   "blocked_reason": null,
+  "summary": {
+    "collection": "wanted source에서 8개 active/open 공고 수집",
+    "source_failures": "없음",
+    "dashboard_visibility": "yes - collectedPositions DB 연동, 모든 필드 표시 확인",
+    "fields_displayed": [
+      "basic: source, link_type, location, title, company, url",
+      "status: posting_status(badge), close_urgency(badge), closes_at",
+      "metadata: tags, skills, collected_at, import_run_id, url_hash",
+      "raw: main_tasks/requirements/preferred (expandable)"
+    ],
+    "open_decisions": [
+      "필드 숨김 정책 (후속 논의 필요)"
+    ]
+  },
   "related_docs": [
     "career-os/AGENTS.md",
     "career-os/docs/adr.md",
@@ -138,13 +152,13 @@
       ],
       "model": "sonnet",
       "timeout": 1500,
-      "commitSha": "9169429"
+      "commitSha": "6c7df8e774d3"
     },
     {
       "number": 5,
       "title": "최종 검증과 source 실패 요약 보고",
       "file": "phase-05.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Bash",
@@ -152,7 +166,8 @@
         "Glob"
       ],
       "model": "haiku",
-      "timeout": 900
+      "timeout": 900,
+      "completedAt": "2026-06-07T00:05:00+09:00"
     }
   ]
 }
