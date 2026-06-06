@@ -29,7 +29,7 @@ if [[ "${1:-}" == "--validate-existing" ]]; then
   shift
 fi
 
-DEFAULT_CONTEXT="매일 서버/backend 정규직 포지션 추천. 최신 Wanted/공식 career active/open 개별 공고만 강력 추천/도전 추천에 포함. 회사명, 채용 홈, 기술블로그, 뉴스, 탐색 링크만 있는 lead는 추천 티어에 올리지 말고 추가 수집 대상에만 분리. Java/Spring 서버/backend 정규직 중심. 최근 7일 position-recommendation 리포트를 읽고 반복 후보는 감점하되, 동일 개별 active 공고가 여전히 최상위인 경우 반복 유지 사유를 명시. 최소 1개 이상은 최근 7일 강력 추천에 없던 신규 개별 active 공고를 포함하고, 없으면 신규 active 공고 부족이라고 명시. NHN보다 좋은 회사, 강한 성장 모멘텀, 도메인 전환 기회를 우선하되 개별 공고 JD fit이 없으면 추천하지 않음. 토스 계열은 최근 6개월 불합격 쿨다운으로 강력 추천/즉시 지원 액션에서 제외하고 보류/쿨다운 후보로만 짧게 언급. 특정 회사나 공고를 고정 우선하지 말고 active JD fit, 회사/규모 업사이드, 최근 반복 여부로 랭킹."
+DEFAULT_CONTEXT="매일 서버/backend 정규직 포지션 추천. 최신 Wanted/공식 career active/open 개별 공고만 강력 추천/도전 추천에 포함. 회사명, 채용 홈, 기술블로그, 뉴스, 탐색 링크만 있는 lead는 추천 티어에 올리지 말고 추가 수집 대상에만 분리. Java/Spring 서버/backend 정규직 중심. 최근 7일 position-recommendation 리포트를 읽고 반복 후보는 감점하되, 동일 개별 active 공고가 여전히 최상위인 경우 반복 유지 사유를 명시. 최소 1개 이상은 최근 7일 강력 추천에 없던 신규 개별 active 공고를 포함하고, 없으면 신규 active 공고 부족이라고 명시. NHN보다 좋은 회사, 강한 성장 모멘텀, 도메인 전환 기회를 우선하되 개별 공고 JD fit이 없으면 추천하지 않음. 레브잇/올웨이즈는 사용자가 크게 가고 싶은 회사가 아니므로 강력 추천/도전 추천/즉시 지원 액션에서 제외. 토스 계열은 최근 6개월 불합격 쿨다운으로 강력 추천/즉시 지원 액션에서 제외하고 보류/쿨다운 후보로만 짧게 언급. 특정 회사나 공고를 고정 우선하지 말고 active JD fit, 회사/규모 업사이드, 최근 반복 여부로 랭킹."
 CONTEXT="${*:-$DEFAULT_CONTEXT}"
 
 if [[ "$CONTEXT" == /position-recommender* ]]; then

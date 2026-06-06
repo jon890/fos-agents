@@ -51,6 +51,7 @@ const HARD_DOMAIN_KEYWORDS = [
   "search", "검색", "platform", "플랫폼", "kafka", "streaming", "backend", "백엔드", "server", "서버",
 ];
 const AI_KEYWORDS = ["ai", "agent", "llm", "rag", "openai", "gemini", "머신러닝", "인공지능"];
+const EXCLUDED_COMPANY_KEYWORDS = ["레브잇", "올웨이즈", "rev-it", "revit", "always", "alway"];
 
 // ---- Posting model ------------------------------------------------------
 
@@ -99,6 +100,10 @@ function isServerRole(text: string): boolean {
 
 function isContractRole(text: string): boolean {
   return hasKeyword(text, CONTRACT_KEYWORDS);
+}
+
+function isExcludedCompany(text: string): boolean {
+  return hasKeyword(text, EXCLUDED_COMPANY_KEYWORDS);
 }
 
 function cleanDetail(text: unknown, limit = 420): string {
@@ -248,6 +253,7 @@ async function fetchWanted(limit = 120, serverOnly = true, includeDetail = true)
     const text = `${company} ${title} ${categoryText}`;
     const low = text.toLowerCase();
 
+    if (isExcludedCompany(text)) continue;
     if (serverOnly && isNonServerTitle(`${title} ${categoryText}`)) continue;
     if (serverOnly && !isServerRole(text)) continue;
     if (![...HARD_DOMAIN_KEYWORDS, ...AI_KEYWORDS, ...SERVER_KEYWORDS].some((k) => low.includes(k))) continue;
@@ -280,6 +286,7 @@ async function fetchWanted(limit = 120, serverOnly = true, includeDetail = true)
       .join(" ");
     const fullText = `${text} ${employeeType} ${detailText}`;
 
+    if (isExcludedCompany(fullText)) continue;
     if (isContractRole(fullText)) continue;
     if (serverOnly && !isServerRole(fullText)) continue;
 
