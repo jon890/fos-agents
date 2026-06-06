@@ -30,6 +30,8 @@ phase 작성 직후 self-check 패턴 누적. critic 반복 지적 회피용.
 | 5-1 | git 운영 | force push / hooks skip | `--no-verify` / `--force` / `--no-edit` 0건 |
 | 5-2 | git 운영 | 한 phase 여러 무관 commit | commit별 단일 관심사 |
 | 5-3 | git 운영 | sources/fos-study 직접 commit | study-pack-class runner 경유 또는 정당화 |
+| 5-4 | git 운영 | 병렬 task main worktree 혼선 | active task 2개 이상이면 worktree + branch |
+| 5-5 | git 운영 | unrelated dirty files stage | `git diff --cached --name-only`가 intended files만 |
 | 6-1 | 하네스 계약 | PHASE_FAILED 마커만 출력 | `exit 1/2` 명시 + "Bash 도구로 직접 실행" 강제 주의문 |
 | 6-2 | 하네스 계약 | trailing working tree | 마지막 phase 후 trailing cleanup commit 사후 단계 |
 | 6-3 | 하네스 계약 | JSON trailing newline 누락 | `json.dumps(...) + "\n"` |
@@ -156,6 +158,18 @@ phase 작성 직후 self-check 패턴 누적. critic 반복 지적 회피용.
 **왜**: fos-study는 외부 동기 저장소. study-pack-class runner 검증된 출력만 push.
 **Self-check**: `sources/fos-study/` 작업이 study-pack-class runner를 경유. 아니면 명시 정당화.
 
+### 5-4. 병렬 task를 main worktree에서 구현
+
+**증상**: 다른 task가 active거나 dirty state가 있는데 background 구현자가 main worktree에서 직접 Edit/Write.
+**왜**: 단순한 "구현해줘" 요청은 main worktree가 안전하다는 허가가 아니다. 병렬 작업은 git add/commit/push 범위가 섞인다.
+**Self-check**: phase 시작 전에 `git status --porcelain`, `git branch --show-current`, active task 여부를 확인. active task가 2개 이상이면 별도 worktree + branch를 사용. main worktree 직접 편집은 단일 active task, 작은 docs/process-only 변경, 또는 사용자 명시 허용에 한정.
+
+### 5-5. unrelated dirty files를 stage
+
+**증상**: phase commit에 이전 작업의 dirty file, format-on-save, 다른 워크스페이스 변경이 같이 들어감.
+**왜**: phase 경계는 commit/push 경계다. unrelated file이 섞이면 review와 rollback이 어려워진다.
+**Self-check**: commit 직전 `git diff --cached --name-only`와 `git status --short`를 확인. intended files만 stage하고, unrelated dirty files는 수정하지 않는다. background worker 최종 보고에 사용한 worktree/branch와 stage 범위를 적는다.
+
 ---
 
 ## 6. run-phases.py 하네스 계약
@@ -229,3 +243,4 @@ phase 작성 직후 self-check 패턴 누적. critic 반복 지적 회피용.
 - 2026-05-19: plan024 / plan002 1차 실행 전 hotfix — 6-8 (cwd=workspace path 불일치), 6-9 (sigil self-positive) 신설.
 - 2026-05-19: apartment plan003 ADR-005 1차 작성 — 1-5 신설 (ADR 단일 책임 위반). 4 결정 통합 → 사용자 점검 후 ADR-005/006/007 분할.
 - 2026-05-19: 전면 재구성 — 표 인덱스 + 본문 슬림화 (327→195줄). AI agent 참고 효율 + 사람 가독성 양립. 실제 발생 사례는 본 섹션 단일 출처.
+- 2026-06-07: background 구현 worktree 정책 강화 — 5-4, 5-5 신설. 병렬 active task는 별도 worktree/branch를 기본값으로 하고, phase commit/push 경계와 intended files staging을 명시.

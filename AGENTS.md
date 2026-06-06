@@ -196,10 +196,28 @@ docs · CLAUDE.md · AGENTS.md · SKILL.md · task phase 파일 모두 적용.
 모든 워크스페이스의 기본 원칙:
 
 - planning은 Codex와 사용자가 대화로 진행한다. planning skill은 목표 재정의, phase 구성, 열린 결정, 추천 기본값, 다음 액션을 잡는 **대화 구조**로 사용한다.
-- `claude -p "/planning ..."` 비대화형 planning은 기본 사용하지 않는다. 계획은 반박, 보류, 범위 조정, 승인 게이트 논의가 필요하므로 비대화형 생성에 맡기지 않는다.
+- `claude -p "/planning ..."` 비대화형 planning은 기본 사용하지 않는다. 계획은 반박, 보류, 범위 조정, 승인 절차 논의가 필요하므로 비대화형 생성에 맡기지 않는다.
 - Claude 비대화형 실행은 합의된 task/phase의 **구현**에만 사용한다.
 - Codex는 planning brief 작성, 결정사항 기록, task 파일 고정, Claude 구현 결과 review, 검증, 의도한 변경만 commit/push하는 책임을 가진다.
-- Claude 구현 phase를 실행할 때는 phase 문서의 scope, safety gate, 검증 기준을 명확히 전달한다.
+- Claude 구현 phase를 실행할 때는 phase 문서의 범위, 안전 조건, 검증 기준을 명확히 전달한다.
+
+### 9-1. background 구현 worktree 원칙
+
+메인 worktree는 사용자와 Codex가 현재 맥락을 확인하는 기준점이다.
+background 구현 작업은 다른 활성 작업과 섞이지 않게 격리한다.
+
+- 여러 task가 동시에 active 상태면 background 구현은 별도 git worktree와 branch를 기본값으로 사용한다.
+- 단순한 "구현해줘" 요청만으로 main worktree 직접 편집이 안전하다고 가정하지 않는다.
+  먼저 active 작업과 dirty state를 확인한다.
+- main worktree 직접 편집은 아래 경우에만 허용한다:
+  - active task가 하나뿐이다.
+  - 작고 안전한 docs/process-only 변경이다.
+  - 사용자가 main worktree 직접 편집을 명시적으로 허용했다.
+- background worker 최종 보고에는 사용한 worktree/branch 여부를 반드시 적는다.
+- phase 경계는 commit/push 경계다.
+  긴 dirty state를 남기지 않고, 검증된 변경은 작은 단위로 push한다.
+- stage는 intended files만 한다.
+  unrelated dirty files를 수정, stage, commit하지 않는다.
 
 ## 10. plan 사이클 (career-os 패턴)
 
