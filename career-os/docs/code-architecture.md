@@ -112,10 +112,11 @@ career-os/
 │   │   └── live-postings/
 │   │       ├── types.ts                Posting / SourceAdapter / CollectResult 계약
 │   │       ├── policy.ts               수집 가능성 필터. 추천 순위 판단은 하지 않음
-│   │       ├── active-validator.ts     direct active/open posting snapshot gate
+│   │       ├── validator.ts            direct active/open posting snapshot boundary
 │   │       ├── render.ts               markdown snapshot renderer
 │   │       ├── cli.ts                  arg parsing + adapter 실행 + 파일 쓰기
-│   │       └── adapters/{index,wanted,toss}.ts
+│   │       └── adapters/{index,wanted,toss,...}.ts
+│   │           source별 listing/detail fetch, entrypoint, known target URL 소유
 │   ├── application-agent/
 │   │   ├── evaluate_cases.ts           runtime eval-case markdown을 pass/revise/blocked로 검증하는 결정적 평가기
 │   │   └── evaluate_package.ts         application-package/review 문서를 제출 전 안전 기준으로 점검

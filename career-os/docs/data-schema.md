@@ -960,6 +960,7 @@ source adapter가 수집한 후보를 공통 validator가 걸러낸 뒤 markdown
 필수 의미 필드:
 
 - `source` — 수집 adapter 이름. 예: `wanted`, `toss-careers`.
+- `discovery_mode` — 같은 source 안의 발견 경로. 예: `broad`, `target-url`, `official-listing`.
 - `link_type` — 추천 입력은 `direct_posting`만 허용.
 - `posting_status` — 추천 입력은 `active` 또는 `open`만 허용.
 - `active_evidence` — API status, job detail page, apply form 등 active/open 근거.
@@ -967,6 +968,16 @@ source adapter가 수집한 후보를 공통 validator가 걸러낸 뒤 markdown
 - `opened_at` — 값이 있을 때만 출력. 수집되지 않은 경우 `unknown` 문자열을 쓰지 않고 생략한다.
 
 `career_article`, `search_page`, `posting_status: unknown` 항목은 snapshot에서 제외하거나 diagnostics에만 남긴다.
+
+source diagnostics:
+
+- `configured_sources` — 요청된 source set. `all`은 등록된 모든 source를 뜻한다.
+- `source_counts` — source별 import 후보 수.
+- `source_diagnostics` — dashboard에 보여줄 source별 짧은 상태와 실패 수.
+- `source_errors` — runtime output에 남기는 상세 실패. 한 source 실패는 다른 source 결과를 제거하지 않는다.
+
+source adapter는 official listing이나 known target URL 후보를 import하기 전에 detail page를 fetch하고 active/open evidence를 기록한다.
+중복 처리는 URL 우선, URL이 불안정한 source는 hash 보조를 사용한다.
 
 ## sources/fos-study/
 
