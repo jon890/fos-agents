@@ -2,12 +2,35 @@
   "name": "plan048-target-source-coverage-dashboard",
   "description": "Expand target source coverage so position collection and dashboard views surface postings the user actually cares about.",
   "created_at": "2026-06-06T15:34:28Z",
-  "updated_at": "2026-06-06T15:34:28Z",
-  "status": "pending",
-  "current_phase": 1,
+  "updated_at": "2026-06-07T01:44:30+09:00",
+  "status": "completed",
+  "current_phase": 5,
   "total_phases": 5,
   "error_message": null,
   "blocked_reason": null,
+  "summary": {
+    "collection": "final all-source snapshot produced 15 active/open direct postings",
+    "configured_sources": [
+      "wanted",
+      "toss-careers",
+      "kakaopay",
+      "kakaopay-securities"
+    ],
+    "source_counts": {
+      "wanted": 9,
+      "toss-careers": 1,
+      "kakaopay": 3,
+      "kakaopay-securities": 2
+    },
+    "source_failures": [
+      "kakaopay known target /o/144295 returned HTTP 404 and was kept as source diagnostics only"
+    ],
+    "dashboard": "fos-career build passed with required env placeholders; existing container is healthy on local port 16000 but not rebuilt from this plan's dashboard commit",
+    "verification": [
+      "all import candidates include source, discovery_mode, active_evidence, direct posting URL, and active/open status",
+      "career article/search page/unknown-status leak check passed"
+    ]
+  },
   "related_docs": [
     "career-os/docs/adr.md",
     "career-os/docs/code-architecture.md",
@@ -23,7 +46,7 @@
       "number": 1,
       "title": "Read-only source architecture and target URL discovery validation",
       "file": "phase-01.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": ["Read", "Bash", "Glob", "Grep", "WebFetch", "WebSearch"],
       "model": "sonnet",
       "timeout": 900
@@ -32,7 +55,7 @@
       "number": 2,
       "title": "Adapter contract and configured source registry",
       "file": "phase-02.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": ["Read", "Edit", "Write", "Bash", "Glob", "Grep"],
       "model": "sonnet",
       "timeout": 900
@@ -41,7 +64,7 @@
       "number": 3,
       "title": "Target source adapters and detail evidence",
       "file": "phase-03.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": ["Read", "Edit", "Write", "Bash", "Glob", "Grep", "WebFetch", "WebSearch"],
       "model": "sonnet",
       "timeout": 1200
@@ -50,7 +73,7 @@
       "number": 4,
       "title": "Import and dashboard source controls",
       "file": "phase-04.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": ["Read", "Edit", "Write", "Bash", "Glob", "Grep"],
       "model": "sonnet",
       "timeout": 1200
@@ -59,7 +82,7 @@
       "number": 5,
       "title": "End-to-end verification and final failure summary",
       "file": "phase-05.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": ["Read", "Edit", "Bash", "Glob", "Grep"],
       "model": "haiku",
       "timeout": 900
