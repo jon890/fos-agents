@@ -2,9 +2,9 @@
   "name": "plan047-openclaw-session-hud-enhancement",
   "description": "OpenClaw session HUD를 더 눈에 띄는 HUD 형태로 개선하고 context 사용량, active subagents, 안전한 자동 갱신 흐름을 추가한다.",
   "created_at": "2026-06-06T14:41:35Z",
-  "updated_at": "2026-06-06T14:41:35Z",
-  "status": "pending",
-  "current_phase": 1,
+  "updated_at": "2026-06-07T00:00:00.000000+00:00",
+  "status": "running",
+  "current_phase": 4,
   "total_phases": 4,
   "error_message": null,
   "blocked_reason": null,
@@ -75,7 +75,7 @@
       "number": 1,
       "title": "현재 HUD helper와 OpenClaw 노출값 읽기 전용 확인",
       "file": "phase-01.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Bash",
@@ -83,13 +83,14 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 900
+      "timeout": 900,
+      "commitSha": "e9965517304d"
     },
     {
       "number": 2,
       "title": "HUD 표시 형식과 context 및 active subagent 필드 개선",
       "file": "phase-02.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
@@ -99,13 +100,14 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 1200
+      "timeout": 1200,
+      "commitSha": "ecc9da974e1f"
     },
     {
       "number": 3,
       "title": "현재 OpenClaw 세션 자동 갱신 연결과 warning threshold 적용",
       "file": "phase-03.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",

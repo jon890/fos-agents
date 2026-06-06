@@ -619,6 +619,17 @@ async function run(): Promise<void> {
     } else {
       console.log(`Warning cooldown active for ${kind}.`);
     }
+  } else if (opts.command === "update" && state.guard !== "ok") {
+    const guardKindMap: Record<string, WarningKind | undefined> = {
+      "usage warning": "usage",
+      "context warning": "context",
+      "compaction likely": "compaction",
+    };
+    const autoKind = guardKindMap[state.guard];
+    if (autoKind && shouldWarn(state, autoKind)) {
+      state.lastWarningAt = { ...(state.lastWarningAt ?? {}), [autoKind]: now };
+      await publishWarning(opts, state, warningMessage(autoKind, state));
+    }
   }
 
   await saveState(opts, state);
