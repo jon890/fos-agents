@@ -4,10 +4,20 @@
 
 const DEFAULT_STATE_ROOT = "openclaw-orchestrator/state/task-hud";
 const WARNING_COOLDOWN_MS = 15 * 60 * 1000;
+const MAX_ACTIVE_SUBAGENT_LABELS = 3;
+
+const ACTIVE_STATUS_SET = new Set(["active", "running", "in_progress"]);
+const INACTIVE_STATUS_SET = new Set(["completed", "done", "failed", "cancelled", "stopped", "error"]);
 
 type Command = "status" | "update" | "warn";
 type WarningKind = "usage" | "context" | "compaction";
 type GuardState = "ok" | "usage warning" | "context warning" | "compaction likely";
+
+interface ActiveSubagent {
+  id?: string;
+  label?: string;
+  status?: string;
+}
 
 interface UsageSnapshot {
   fiveHourRemaining?: string;
@@ -30,6 +40,7 @@ interface HudState {
   lastContextSnapshot?: UsageSnapshot;
   lastCompactionCount?: number;
   lastWarningAt?: Partial<Record<WarningKind, string>>;
+  activeSubagents?: ActiveSubagent[];
   createdAt: string;
   updatedAt: string;
 }
@@ -47,6 +58,7 @@ interface CliOptions {
   message?: string;
   jsonInput?: string;
   sessionStatusJson?: string;
+  subagentsJson?: string;
   fiveHourRemaining?: string;
   weeklyRemaining?: string;
   contextPercent?: number;
@@ -69,15 +81,16 @@ Options:
   --target <channel:id>              Discord target for real send/edit.
   --thread-id <id>                   Optional thread id for real send/edit.
   --state-root <path>                State root, default openclaw-orchestrator/state/task-hud.
-  --json '<object>'                  Input object with session, taskLabel, status, usage, or sessionStatus.
+  --json '<object>'                  Input object with session, taskLabel, status, usage, subagents, or sessionStatus.
   --session-status-json '<object>'   Sanitized session_status-like input.
+  --subagents-json '<array>'         JSON array of subagent objects {id?, label?, status}.
   --five-hour-remaining <text>       Visible 5h remaining value.
   --weekly-remaining <text>          Visible weekly remaining value.
   --context-percent <number>         Warning-only context percentage.
   --compaction-count <number>        Compaction count for likely post-detection.
 
 Visible HUD output:
-  Task, Status, Usage, Guard.
+  Task, State, Usage, Context, Agents (active only), Warn, Updated.
 `);
 }
 
@@ -139,6 +152,9 @@ function parseArgs(argv: string[]): CliOptions {
       case "--session-status-json":
         opts.sessionStatusJson = next;
         break;
+      case "--subagents-json":
+        opts.subagentsJson = next;
+        break;
       case "--five-hour-remaining":
         opts.fiveHourRemaining = next;
         break;
@@ -166,6 +182,7 @@ function mergeJsonInput(opts: CliOptions): CliOptions {
   const input = parseJsonObject(opts.jsonInput, "--json");
   const usage = readObject(input.usage);
   const sessionStatus = readObject(input.sessionStatus);
+  const subagentsFromJson = Array.isArray(input.subagents) ? JSON.stringify(input.subagents) : undefined;
   return {
     ...opts,
     session: opts.session ?? readString(input.session) ?? readString(input.sessionId),
@@ -175,6 +192,7 @@ function mergeJsonInput(opts: CliOptions): CliOptions {
     status: opts.status ?? readString(input.status) ?? readString(input.taskStatus),
     kind: opts.kind ?? readWarningKind(input.kind),
     message: opts.message ?? readString(input.message),
+    subagentsJson: opts.subagentsJson ?? subagentsFromJson,
     fiveHourRemaining:
       opts.fiveHourRemaining ??
       readString(usage?.fiveHourRemaining) ??
@@ -219,6 +237,37 @@ function readNumber(value: unknown): number | undefined {
 
 function readWarningKind(value: unknown): WarningKind | undefined {
   return value === "usage" || value === "context" || value === "compaction" ? value : undefined;
+}
+
+function normalizeActiveSubagents(raw: unknown[]): ActiveSubagent[] {
+  return raw
+    .filter((item): item is Record<string, unknown> =>
+      item !== null && typeof item === "object" && !Array.isArray(item),
+    )
+    .filter((item) => {
+      const status = readString(item.status);
+      if (!status) return false;
+      const normalized = status.toLowerCase().replace(/[\s-]/g, "_");
+      // only include explicitly active statuses; unknown statuses are excluded
+      return ACTIVE_STATUS_SET.has(normalized) && !INACTIVE_STATUS_SET.has(normalized);
+    })
+    .map((item) => ({
+      id: readString(item.id),
+      label: readString(item.label) ?? readString(item.task) ?? readString(item.name),
+      status: readString(item.status),
+    }));
+}
+
+function parseSubagents(opts: CliOptions): ActiveSubagent[] | undefined {
+  if (!opts.subagentsJson) return undefined;
+  let raw: unknown;
+  try {
+    raw = JSON.parse(opts.subagentsJson);
+  } catch {
+    return undefined;
+  }
+  if (!Array.isArray(raw)) return undefined;
+  return normalizeActiveSubagents(raw);
 }
 
 function statePath(stateRoot: string, sessionId: string): string {
@@ -284,15 +333,60 @@ function usageSnapshot(opts: CliOptions): UsageSnapshot | undefined {
   return Object.values(snapshot).some((value) => value !== undefined) ? snapshot : undefined;
 }
 
+// Visible field allowlist: only these fields are included in the rendered HUD body.
+// Raw session_status objects must never be stringified and written directly.
+function renderContextLine(usage: UsageSnapshot | undefined): string {
+  if (!usage || usage.contextPercent === undefined) return "unavailable";
+  return `${usage.contextPercent}%`;
+}
+
+function renderAgentsLine(agents: ActiveSubagent[] | undefined): string {
+  if (agents === undefined) return "unavailable";
+  if (agents.length === 0) return "none active";
+
+  const labels = agents
+    .slice(0, MAX_ACTIVE_SUBAGENT_LABELS)
+    .map((a) => sanitizeVisible(a.label ?? a.id ?? "unknown"));
+
+  const remainder = agents.length - MAX_ACTIVE_SUBAGENT_LABELS;
+  const summary = labels.join(", ");
+
+  if (remainder > 0) {
+    return `${agents.length} active — ${summary}, +${remainder} more`;
+  }
+  return `${agents.length} active — ${summary}`;
+}
+
+function formatUpdatedAt(isoString: string): string {
+  try {
+    const diffMs = Date.now() - Date.parse(isoString);
+    if (diffMs < 60_000) return "just now";
+    if (diffMs < 3_600_000) return `${Math.floor(diffMs / 60_000)}m ago`;
+    if (diffMs < 86_400_000) return `${Math.floor(diffMs / 3_600_000)}h ago`;
+    return isoString.slice(0, 16).replace("T", " ") + " UTC";
+  } catch {
+    return isoString;
+  }
+}
+
 function renderHud(state: HudState): string {
   const usage = state.lastUsageSnapshot;
   const fiveHour = usage?.fiveHourRemaining ?? "unknown";
   const weekly = usage?.weeklyRemaining ?? "unknown";
+  const contextLine = renderContextLine(usage);
+  const agentsLine = renderAgentsLine(state.activeSubagents);
+  const warnLine = state.guard === "ok" ? "ok" : sanitizeVisible(state.guard);
+  const updatedAt = formatUpdatedAt(state.updatedAt);
+
   return [
+    "[OpenClaw HUD]",
     `Task: ${sanitizeVisible(state.taskLabel)}`,
-    `Status: ${sanitizeVisible(state.taskStatus)}`,
-    `Usage: 5h ${sanitizeVisible(fiveHour)}, weekly ${sanitizeVisible(weekly)}`,
-    `Guard: ${state.guard}`,
+    `State: ${sanitizeVisible(state.taskStatus)}`,
+    `Usage: 5h ${sanitizeVisible(fiveHour)} · weekly ${sanitizeVisible(weekly)}`,
+    `Context: ${contextLine}`,
+    `Agents: ${agentsLine}`,
+    `Warn: ${warnLine}`,
+    `Updated: ${updatedAt}`,
   ].join("\n");
 }
 
@@ -497,6 +591,7 @@ async function run(): Promise<void> {
 
   const state = await loadState(opts);
   const snapshot = usageSnapshot(opts);
+  const parsedSubagents = parseSubagents(opts);
   const now = new Date().toISOString();
 
   if (opts.command === "update") {
@@ -506,6 +601,9 @@ async function run(): Promise<void> {
   if (snapshot) {
     state.lastUsageSnapshot = snapshot;
     state.lastContextSnapshot = snapshot.contextPercent !== undefined ? snapshot : state.lastContextSnapshot;
+  }
+  if (parsedSubagents !== undefined) {
+    state.activeSubagents = parsedSubagents;
   }
   state.guard = nextGuard(state, snapshot, opts.command === "warn" ? opts.kind : undefined);
   if (snapshot?.compactionCount !== undefined) {
@@ -520,6 +618,17 @@ async function run(): Promise<void> {
       await publishWarning(opts, state, warningMessage(kind, state));
     } else {
       console.log(`Warning cooldown active for ${kind}.`);
+    }
+  } else if (opts.command === "update" && state.guard !== "ok") {
+    const guardKindMap: Record<string, WarningKind | undefined> = {
+      "usage warning": "usage",
+      "context warning": "context",
+      "compaction likely": "compaction",
+    };
+    const autoKind = guardKindMap[state.guard];
+    if (autoKind && shouldWarn(state, autoKind)) {
+      state.lastWarningAt = { ...(state.lastWarningAt ?? {}), [autoKind]: now };
+      await publishWarning(opts, state, warningMessage(autoKind, state));
     }
   }
 
