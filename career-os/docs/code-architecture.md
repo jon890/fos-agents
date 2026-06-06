@@ -446,7 +446,7 @@ data/applications/
 - `excluded`는 사용자 확정 또는 명확한 정책 사유 없이 자동 확정하지 않는다.
 - priority history는 append-only로 운영한다.
 
-## Priority write-action bridge (planned — plan053)
+## Priority write-action bridge (plan053)
 
 plan053은 priority confirmation write를 dashboard 직접 쓰기가 아니라 queue-based bridge로 둔다.
 
@@ -454,8 +454,17 @@ plan053은 priority confirmation write를 dashboard 직접 쓰기가 아니라 q
 
 - fos-career API: authenticated admin request를 받아 `priority_action_requests` row를 만든다.
 - fos-career UI: detail 화면에서 stage/rank/reason을 확인하고 pending status를 보여준다.
-- career-os applier: pending request를 명시적으로 받아 기존 `confirm-priority` command로 적용한다.
+- fos-career host-side processor: pending request를 JSON으로 넘기고 결과 status를 fos-career DB에 반영한다.
+- career-os applier: request snapshot을 검증한 뒤 기존 `confirm-priority` helper로 적용한다.
 - audit: fos-career `audit_logs`, fos-career `priority_action_requests`, career-os `_priority-history.jsonl`을 함께 본다.
+
+관련 파일:
+
+```text
+career-os/scripts/application-agent/apply_priority_request.ts
+career-os/scripts/application-agent/priority_request_schema.ts
+career-os/scripts/application-agent/run.ts
+```
 
 거절한 대안:
 

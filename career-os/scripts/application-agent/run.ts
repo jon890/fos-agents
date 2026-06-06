@@ -167,6 +167,7 @@ function cmdValidate(args: string[]): void {
 
 function parseConfirmPriorityArgs(args: string[]): {
   recordId?: string;
+  recordType?: 'frontdoor_queue' | 'ledger';
   actionStage?: ActionStage;
   priorityRank?: number;
   reason?: string;
@@ -182,6 +183,7 @@ function parseConfirmPriorityArgs(args: string[]): {
     historyPath: DEFAULT_PRIORITY_HISTORY_PATH,
   } as {
     recordId?: string;
+    recordType?: 'frontdoor_queue' | 'ledger';
     actionStage?: ActionStage;
     priorityRank?: number;
     reason?: string;
@@ -193,7 +195,13 @@ function parseConfirmPriorityArgs(args: string[]): {
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--record-id' && args[i + 1]) parsed.recordId = args[++i];
-    else if (args[i] === '--stage' && args[i + 1]) {
+    else if (args[i] === '--record-type' && args[i + 1]) {
+      const recordType = args[++i];
+      if (recordType !== 'frontdoor_queue' && recordType !== 'ledger') {
+        throw new Error('--record-type must be frontdoor_queue or ledger');
+      }
+      parsed.recordType = recordType;
+    } else if (args[i] === '--stage' && args[i + 1]) {
       parsed.actionStage = ActionStageSchema.parse(args[++i]);
     } else if (args[i] === '--rank' && args[i + 1]) {
       parsed.priorityRank = Number.parseInt(args[++i], 10);
@@ -213,6 +221,121 @@ function parseConfirmPriorityArgs(args: string[]): {
   return parsed;
 }
 
+export type ConfirmPriorityInput = {
+  recordId: string;
+  recordType?: 'frontdoor_queue' | 'ledger';
+  actionStage: ActionStage;
+  priorityRank: number;
+  reason: string;
+  changedBy: string;
+  queuePath?: string;
+  ledgerPath?: string;
+  historyPath?: string;
+};
+
+export type ConfirmPriorityResult = {
+  recordId: string;
+  recordType: 'frontdoor_queue' | 'ledger';
+  eventId: string;
+  confirmedAt: string;
+  messages: string[];
+};
+
+export function confirmPriority(input: ConfirmPriorityInput): ConfirmPriorityResult {
+  const opts = {
+    queuePath: DEFAULT_QUEUE_PATH,
+    ledgerPath: DEFAULT_LEDGER_PATH,
+    historyPath: DEFAULT_PRIORITY_HISTORY_PATH,
+    ...input,
+  };
+
+  if (!Number.isInteger(opts.priorityRank) || opts.priorityRank <= 0) {
+    throw new Error('--rank must be a positive integer');
+  }
+
+  const messages: string[] = [];
+  const confirmedAt = new Date().toISOString();
+  const next = UserConfirmedPrioritySchema.parse({
+    confirmedAt,
+    actionStage: opts.actionStage,
+    priorityRank: opts.priorityRank,
+    reason: opts.reason,
+    confirmedBy: opts.changedBy,
+  });
+
+  if (!opts.recordType || opts.recordType === 'frontdoor_queue') {
+    const queueRecords = readFrontdoorQueue(opts.queuePath);
+    const queueIndex = queueRecords.findIndex((record) => record.queueId === opts.recordId);
+    if (queueIndex !== -1) {
+      const previous = queueRecords[queueIndex].userConfirmedPriority ?? null;
+      queueRecords[queueIndex] = FrontdoorQueueRecordSchema.parse({
+        ...queueRecords[queueIndex],
+        userConfirmedPriority: next,
+      });
+      writeFrontdoorQueue(queueRecords, opts.queuePath);
+      const event = createPriorityHistoryEvent({
+        recordId: opts.recordId,
+        recordType: 'frontdoor_queue',
+        changedBy: opts.changedBy,
+        previous,
+        next,
+        reason: opts.reason,
+        source: 'confirm-priority-command',
+        changedAt: confirmedAt,
+      });
+      appendPriorityHistoryEvent(event, opts.historyPath);
+      messages.push(`confirmed priority for frontdoor queue record: ${opts.recordId}`);
+      messages.push(`suggested next actions: ${queueRecords[queueIndex].nextAction ?? '(none)'}`);
+      return {
+        recordId: opts.recordId,
+        recordType: 'frontdoor_queue',
+        eventId: event.eventId,
+        confirmedAt,
+        messages,
+      };
+    }
+  }
+
+  if (!opts.recordType || opts.recordType === 'ledger') {
+    const ledgerRecords = readLedger(opts.ledgerPath);
+    const ledgerIndex = ledgerRecords.findIndex((record) => record.id === opts.recordId);
+    if (ledgerIndex !== -1) {
+      const previous = ledgerRecords[ledgerIndex].userConfirmedPriority ?? null;
+      ledgerRecords[ledgerIndex] = {
+        ...ledgerRecords[ledgerIndex],
+        userConfirmedPriority: next,
+      };
+      writeLedger(opts.ledgerPath, ledgerRecords);
+      const event = createPriorityHistoryEvent({
+        recordId: opts.recordId,
+        recordType: 'ledger',
+        changedBy: opts.changedBy,
+        previous,
+        next,
+        reason: opts.reason,
+        source: 'confirm-priority-command',
+        changedAt: confirmedAt,
+      });
+      appendPriorityHistoryEvent(event, opts.historyPath);
+      messages.push(`confirmed priority for ledger record: ${opts.recordId}`);
+      const suggestions = buildPreparationActionSuggestions(
+        next.actionStage,
+        ledgerRecords[ledgerIndex],
+      );
+      for (const suggestion of suggestions) messages.push(suggestion);
+      return {
+        recordId: opts.recordId,
+        recordType: 'ledger',
+        eventId: event.eventId,
+        confirmedAt,
+        messages,
+      };
+    }
+  }
+
+  throw new Error(`record not found in requested priority source: ${opts.recordId}`);
+}
+
 function cmdConfirmPriority(args: string[]): void {
   const opts = parseConfirmPriorityArgs(args);
   if (!opts.recordId || !opts.actionStage || !opts.priorityRank || !opts.reason) {
@@ -226,75 +349,24 @@ function cmdConfirmPriority(args: string[]): void {
     process.exit(1);
   }
 
-  const confirmedAt = new Date().toISOString();
-  const next = UserConfirmedPrioritySchema.parse({
-    confirmedAt,
-    actionStage: opts.actionStage,
-    priorityRank: opts.priorityRank,
-    reason: opts.reason,
-    confirmedBy: opts.changedBy,
-  });
-
-  const queueRecords = readFrontdoorQueue(opts.queuePath);
-  const queueIndex = queueRecords.findIndex((record) => record.queueId === opts.recordId);
-  if (queueIndex !== -1) {
-    const previous = queueRecords[queueIndex].userConfirmedPriority ?? null;
-    queueRecords[queueIndex] = FrontdoorQueueRecordSchema.parse({
-      ...queueRecords[queueIndex],
-      userConfirmedPriority: next,
+  try {
+    const result = confirmPriority({
+      recordId: opts.recordId,
+      recordType: opts.recordType,
+      actionStage: opts.actionStage,
+      priorityRank: opts.priorityRank,
+      reason: opts.reason,
+      changedBy: opts.changedBy,
+      queuePath: opts.queuePath,
+      ledgerPath: opts.ledgerPath,
+      historyPath: opts.historyPath,
     });
-    writeFrontdoorQueue(queueRecords, opts.queuePath);
-    appendPriorityHistoryEvent(
-      createPriorityHistoryEvent({
-        recordId: opts.recordId,
-        recordType: 'frontdoor_queue',
-        changedBy: opts.changedBy,
-        previous,
-        next,
-        reason: opts.reason,
-        source: 'confirm-priority-command',
-        changedAt: confirmedAt,
-      }),
-      opts.historyPath,
-    );
-    console.log(`confirmed priority for frontdoor queue record: ${opts.recordId}`);
-    console.log(`suggested next actions: ${queueRecords[queueIndex].nextAction ?? '(none)'}`);
-    return;
+    for (const message of result.messages) console.log(message);
+    console.log(`priority history event: ${result.eventId}`);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
   }
-
-  const ledgerRecords = readLedger(opts.ledgerPath);
-  const ledgerIndex = ledgerRecords.findIndex((record) => record.id === opts.recordId);
-  if (ledgerIndex !== -1) {
-    const previous = ledgerRecords[ledgerIndex].userConfirmedPriority ?? null;
-    ledgerRecords[ledgerIndex] = {
-      ...ledgerRecords[ledgerIndex],
-      userConfirmedPriority: next,
-    };
-    writeLedger(opts.ledgerPath, ledgerRecords);
-    appendPriorityHistoryEvent(
-      createPriorityHistoryEvent({
-        recordId: opts.recordId,
-        recordType: 'ledger',
-        changedBy: opts.changedBy,
-        previous,
-        next,
-        reason: opts.reason,
-        source: 'confirm-priority-command',
-        changedAt: confirmedAt,
-      }),
-      opts.historyPath,
-    );
-    console.log(`confirmed priority for ledger record: ${opts.recordId}`);
-    const suggestions = buildPreparationActionSuggestions(
-      next.actionStage,
-      ledgerRecords[ledgerIndex],
-    );
-    for (const suggestion of suggestions) console.log(`  ${suggestion}`);
-    return;
-  }
-
-  console.error(`record not found in frontdoor queue or ledger: ${opts.recordId}`);
-  process.exit(1);
 }
 
 async function cmdDryRun(args: string[]): Promise<void> {
@@ -642,7 +714,7 @@ Options:
   --skill-timeout-ms <n>  Timeout for each skill execution (default: 1200000)
 
 Priority confirmation:
-  confirm-priority --record-id <id> --stage prepare-now|investigate|monitor|low-priority|hold|excluded --rank <n> --reason <text>
+  confirm-priority --record-id <id> [--record-type frontdoor_queue|ledger] --stage prepare-now|investigate|monitor|low-priority|hold|excluded --rank <n> --reason <text>
 
 Safety rules (always enforced):
   - Actual job submission is never automated (checklist only)
@@ -693,7 +765,9 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+if (import.meta.main) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}
