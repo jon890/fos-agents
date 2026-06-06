@@ -164,6 +164,9 @@ Conventional Commits + 한글 subject:
 docs · CLAUDE.md · AGENTS.md · SKILL.md · task phase 파일 모두 적용.
 **새 작성은 필수, 기존 편집 중인 파일은 함께 정리.**
 
+**작성 언어는 한글 원칙** — docs · ADR · SKILL.md · 커밋 메시지(subject·본문) 모두 한글로 작성한다.
+도구·릴리즈 호환이 필요한 부분만 영문 유지: 커밋 `type` 프리픽스(`feat`·`fix` 등), 코드 식별자·경로, `Co-Authored-By:` 트레일러.
+
 8 패턴 요약:
 
 1. **semantic line break** — 한 문장 당 1줄.
