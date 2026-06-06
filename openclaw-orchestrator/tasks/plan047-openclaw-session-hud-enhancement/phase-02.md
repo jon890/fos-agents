@@ -169,7 +169,7 @@ commit message:
 feat(openclaw): session HUD 표시 정보 개선
 ```
 
-commit 후 `git push origin main`을 실행한다.
+commit 후 `git push origin HEAD`을 실행한다.
 unrelated dirty state가 있으면 commit하지 말고 어떤 파일 때문에 보류했는지 보고한다.
 
 ---
