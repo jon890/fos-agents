@@ -25,16 +25,16 @@ HTTP 브라우저와 `curl` cookie jar는 이 쿠키를 저장하지 않는다.
 
 ## 롤백
 
-HTTPS가 성공하면 `/home/bifos/apps/fos-career/.env`에서 `SESSION_COOKIE_SECURE=false`를 제거한다.
+HTTPS가 성공하면 `<home-server-app-env>`에서 `SESSION_COOKIE_SECURE=false`를 제거한다.
 또는 `SESSION_COOKIE_SECURE=true`로 바꾼 뒤 컨테이너를 재배포한다.
 
 ## 범위
 
 수정 대상:
 
-- `/home/bifos/services/fos-career/lib/db/session.ts`
-- `/home/bifos/services/fos-career/.env.example` config template
-- `/home/bifos/apps/fos-career/.env`에 임시 override 추가
+- `fos-career/lib/db/session.ts`
+- `fos-career/.env.example` config template
+- `<home-server-app-env>`에 임시 override 추가
 
 범위 외:
 
@@ -60,7 +60,7 @@ HTTPS가 성공하면 `/home/bifos/apps/fos-career/.env`에서 `SESSION_COOKIE_S
 
 ```bash
 set -a
-. /home/bifos/apps/fos-career/.env
+. <home-server-app-env>
 set +a
 npm run build
 ```
@@ -68,13 +68,13 @@ npm run build
 정책 grep:
 
 ```bash
-rg -n "SESSION_COOKIE_SECURE|secure:" /home/bifos/services/fos-career/lib/db/session.ts /home/bifos/services/fos-career/.env.example
+rg -n "SESSION_COOKIE_SECURE|secure:" fos-career/lib/db/session.ts fos-career/.env.example
 ```
 
 배포:
 
 ```bash
-cd /home/bifos/apps/fos-career
+cd <home-server-app-dir>
 docker compose up -d --build
 docker ps --filter name=fos-career --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
 ```
@@ -122,4 +122,4 @@ prose만 출력하면 phase harness가 success로 잘못 처리할 수 있다.
 - `SESSION_COOKIE_SECURE=false`가 명시된 경우만 HTTP cookie 저장을 허용하는지 확인한다.
 - 모호한 env 값이 조용히 `false`로 처리되지 않는지 확인한다.
 - `git status --short`에서 의도한 fos-career 파일만 commit 대상인지 확인한다.
-- `/home/bifos/apps/fos-career/.env` 내용은 출력하지 않는다.
+- `<home-server-app-env>` 내용은 출력하지 않는다.

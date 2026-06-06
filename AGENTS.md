@@ -128,6 +128,9 @@ mkdir + AGENTS.md + CLAUDE.md 심링크 + 5문서 placeholder + tasks/ + config/
 - 워크플로는 재실행 가능 + 날짜별 멱등. 실시간 수집보다 로컬 git-sync + 파일 읽기 우선.
 - 리포트의 불확실성 명시 — 추측으로 공백 메우지 말고 공백을 기록.
 - 비밀: `<workspace>/config/.env`(career-os 기준) 또는 워크스페이스 root `.env`(ADR-021 이후, 워크스페이스별 격리). `GITHUB_TOKEN`, `DISCORD_CHANNEL_ID` 등.
+- 공개 repo에 커밋되는 docs/task에는 홈 서버 절대 경로를 쓰지 않는다.
+  repo 내부 파일은 repo-relative path로, 사용자 로컬 경로는 필요한 경우 `~/...` 또는 `<home>` placeholder로 쓴다.
+- Discord 등 공개 또는 준공개 채널 답변에서도 private home-server path를 그대로 드러내지 않는다.
 - career-os 비용 규율: 광범위 풀-리포 분석 금지. baseline은 `config/baseline-core-files.json` 큐레이션 집합 안에서, daily는 더 작게(3-5 파일).
 
 ## 6. 모호함 대응 규칙

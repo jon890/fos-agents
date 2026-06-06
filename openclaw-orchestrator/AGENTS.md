@@ -29,4 +29,7 @@ It is the ai-nodes home for daily session notes, heartbeat state, and cross-doma
 - Treat this workspace as private by default.
 - In group chats, use these files for context only.
 - Reply with the minimum appropriate detail for the channel.
+- Do not commit private home-server absolute paths into public docs or tasks.
+  Use repo-relative paths, `~/...`, `<home>`, or deployment placeholders instead.
+- Do not reveal private home-server absolute paths in Discord-visible replies.
 - Do not delete the legacy OpenClaw workspace memory until the migration has been stable and the user asks for cleanup.
