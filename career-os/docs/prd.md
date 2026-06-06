@@ -129,8 +129,29 @@ MVP 범위:
 범위 밖:
 
 - 외부 채용 사이트 제출 자동화.
-- user-confirmed priority를 dashboard에서 직접 쓰는 기능.
 - 기존 application package generator를 새 generator로 대체하는 일.
+
+### 계획 중: priority write-action bridge (plan053)
+
+`plan053-priority-write-action-design`은 fos-career에서 사용자가 확정한 priority action을 career-os 상태로 반영하는 안전한 쓰기 경로를 설계한다.
+목표는 dashboard 버튼이 career-os 파일을 직접 수정하지 않게 하면서도, 사용자 확인과 감사 이력을 남기는 것이다.
+
+MVP 범위:
+
+- fos-career는 priority 변경 요청을 자기 MySQL pending queue에 저장한다.
+- pending request는 record id, record type, stage, rank, reason, 요청자, 생성 시각, 요청 당시 snapshot을 가진다.
+- fos-career는 career-os read-only mount를 계속 유지한다.
+- career-os mutation은 기존 `application-agent confirm-priority` 계열 명령이 맡는다.
+- 실제 적용 runner는 pending request를 명시적으로 집어 실행하고, career-os `_priority-history.jsonl`에 append-only 이력을 남긴다.
+- 적용 전 현재 record와 요청 당시 snapshot을 비교해 stale request를 막는다.
+
+범위 밖:
+
+- dashboard container에 writable career-os mount를 주는 일.
+- 외부 채용 사이트 제출 자동화.
+- candidate-profile.md 수정.
+- LLM recommendation refresh와 priority confirmation을 한 버튼에 묶는 일.
+- career-os ledger/frontdoor queue를 fos-career MySQL로 옮기는 일.
 
 ### 계획 중: fos-career 웹 대시보드 (plan039)
 
@@ -154,7 +175,7 @@ MVP 범위:
 
 MVP 범위 밖:
 
-- prepare-start/hold/reject 버튼 등 쓰기 액션 — 별도 승인된 쓰기 phase에서 다룬다.
+- prepare-start/hold/reject 버튼 등 쓰기 액션 — plan053의 pending request bridge 뒤에서만 다룬다.
 - career-os ledger/materials MySQL 마이그레이션 — 프로그레시브 마이그레이션은 별도 결정에서 다룬다.
 - 외부 채용 사이트 자동 제출
 - 공개 fos-study 발행

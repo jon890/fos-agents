@@ -302,7 +302,43 @@ plan048 collected postings
 - `recommendation_snapshot` refresh는 `user_confirmed_priority`를 덮어쓰지 않는다.
 - dashboard는 career-os 파일을 읽기만 한다.
   list page는 action stage별 scan을 담당하고, detail page는 record별 posting/fit/gap snapshot, evidence URL, preparation action, priority history를 표시한다.
-  priority write UI는 별도 결정에서 다룬다.
+  priority write UI는 plan053 pending request bridge 뒤에서만 활성화한다.
+
+### Priority write-action bridge (plan053 — planned)
+
+fos-career는 dashboard에서 사용자가 확정한 priority action을 바로 career-os 파일에 쓰지 않는다.
+요청은 먼저 fos-career MySQL pending queue에 저장하고, career-os 적용은 별도 runner가 기존 application-agent 명령으로 처리한다.
+
+요청 생성 흐름:
+
+```text
+사용자가 priority detail에서 stage/rank/reason 확인
+  -> POST /api/priority/actions
+  -> 관리자 세션 검증
+  -> record type/id로 career-os read-only snapshot 재조회
+  -> fos-career priority_action_requests row 생성
+  -> audit_logs에 priority.request_created 기록
+  -> 화면은 pending 상태를 표시
+```
+
+적용 흐름:
+
+```text
+운영자 또는 승인된 runner가 pending request 하나를 선택
+  -> 요청 당시 snapshot과 현재 career-os record 비교
+  -> stale이면 priority_action_requests.status=stale
+  -> 유효하면 career-os writable checkout에서 application-agent confirm-priority 실행
+  -> career-os frontdoor queue 또는 ledger에 userConfirmedPriority 반영
+  -> data/applications/_priority-history.jsonl에 append-only event 기록
+  -> fos-career request status를 applied 또는 failed로 갱신
+```
+
+회복 흐름:
+
+- `priority_action_requests`는 요청과 결과를 보존한다.
+- career-os `_priority-history.jsonl`은 실제 적용 이력을 보존한다.
+- 되돌림은 자동 삭제가 아니라 새 user confirmation event로 처리한다.
+- stale 또는 failed row는 같은 record에 대한 새 request를 만들기 전에 사람이 확인한다.
 
 ### Application Flow Agent Runtime (plan031 — phase-01 상태 모델 확정)
 
@@ -635,8 +671,10 @@ LLM 채팅 흐름:
 경계:
 
 - fos-career는 career-os 파일에 쓰거나 수정하지 않는다.
+- priority write action도 먼저 fos-career MySQL pending queue에 저장한다.
+  career-os 파일 반영은 plan053의 별도 적용 runner만 수행한다.
 - LLM 채팅이 외부 사이트 접근, fos-study 발행, candidate-profile 수정을 수행하지 않는다.
-- 쓰기 액션(prepare-start/hold/reject 버튼)은 별도 승인된 쓰기 phase에서 다룬다.
+- 쓰기 액션(prepare-start/hold/reject 버튼)은 pending queue와 사용자 확인 절차 없이 실행하지 않는다.
 
 ## 통과 시점에 항상 일어나는 일
 
