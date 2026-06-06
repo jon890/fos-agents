@@ -5,6 +5,9 @@
     "title": "엘스인테리어 구리 럭키아파트 24평형 인테리어",
     "url": "https://m.blog.naver.com/PostView.naver?blogId=ahreum8100&logNo=224277761576",
     "localImage": "/home/bifos/ai-nodes/apartment/data/interior/floorplans/lucky-24/blog_img_00.jpg",
+    "localReadme": "/home/bifos/ai-nodes/apartment/data/interior/floorplans/lucky-24/README.md",
+    "sha256": "c600d11e6bdaf32f49f5139cac38f1625f432f5b961cca123481c8e4e7e1cf9c",
+    "archivedAt": "2026-06-03",
     "confidence": "reference-not-official",
     "note": "블로그 본문에 '평면도는 아래를 참고'로 게시된 이미지. 공식 도면은 아니므로 현장 실측으로 검증 필요."
   },

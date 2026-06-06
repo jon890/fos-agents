@@ -12,10 +12,11 @@ apartment/
 ├── .env.example                     # 템플릿
 │
 ├── config/
+│   ├── README.md                    # config 파일 역할과 평면도 보관 규칙
 │   ├── focus-unit.json              # 포커스 평형 메타데이터 단일 출처 (59A, ADR-002)
 │   ├── guri-buy-complexes.json      # Guri 광역 탐색 후보 단지 단일 출처
 │   ├── interior-reference-digest.json
-│   └── lucky-24-floorplan.json
+│   └── lucky-24-floorplan.json      # 럭키 24평 참고 평면도 메타데이터, 원본 이미지 경로/해시 포함
 │
 ├── scripts/                            # 워크스페이스 레벨 공용 헬퍼 (ADR-003)
 │   ├── _lib/
@@ -65,6 +66,7 @@ apartment/
 │   ├── YYYY-MM-DD/
 │   ├── YYYY-MM-DD-HHMM-guri-buy-search/
 │   ├── interior-reference-digest/YYYY-MM-DD/
+│   ├── interior/floorplans/lucky-24/ # 럭키 24평 참고 평면도 원본 이미지/README
 │   └── audit/YYYY-MM-DD.md
 │
 └── logs/                            # gitignored — 실행 메타데이터

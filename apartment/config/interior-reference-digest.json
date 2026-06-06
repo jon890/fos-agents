@@ -8,12 +8,32 @@
   },
   "stylePreferences": [
     "화이트/베이지 기반",
-    "우드 포인트",
+    "밝은 우드 포인트",
+    "화이트 70~80% + 우드 20~30% 정도의 균형",
+    "과한 내추럴/카페풍보다 깔끔한 구축 올수리 톤",
     "밝고 따뜻한 분위기",
     "구축 올수리 느낌",
-    "거실 베란다 확장",
-    "단열 강화"
+    "거실 베란다 비확장 유지",
+    "발코니 마감 개선"
   ],
+  "toneReferenceFocus": {
+    "primaryTone": "화이트/아이보리/웜화이트 기반",
+    "woodTone": "밝은 오크, 애쉬, 내추럴 우드 계열 우선",
+    "woodRatioGuide": "전체 시야에서 우드는 20~30% 정도의 포인트로 본다",
+    "preferredExamples": [
+      "화이트 벽/천장 + 밝은 우드 바닥 또는 가구",
+      "화이트 주방 + 우드 선반/식탁/수납 포인트",
+      "아이보리 욕실/현관 + 우드톤 도어·가구 일부",
+      "모루유리 3연동 중문 + 밝은 프레임/우드 포인트 조합"
+    ],
+    "avoidExamples": [
+      "짙은 월넛/티크 비중이 커서 어두워 보이는 톤",
+      "우드 루버/템바보드가 과하게 많은 카페풍",
+      "베이지·우드만 많아 전체가 누렇게 보이는 톤",
+      "블랙 프레임과 짙은 우드가 강한 인더스트리얼 톤"
+    ],
+    "dailyReportRequirement": "매일 추천 레퍼런스마다 화이트와 우드의 비율, 우드 색감, 우리 집 적용 가능 포인트를 짧게 평가한다"
+  },
   "currentDecisionNote": "/home/bifos/ai-nodes/apartment/docs/interior/lucky-5-1004-interior-decisions.md",
   "outputRoot": "/home/bifos/ai-nodes/apartment/data/interior-reference-digest",
   "sourcePriority": [
@@ -57,21 +77,25 @@
       "구리 럭키아파트 인테리어",
       "구리 럭키아파트 24평 인테리어",
       "구리 럭키아파트 리모델링",
-      "구리 럭키아파트 베란다 확장",
+      "구리 럭키아파트 비확장 인테리어",
       "구리 럭키아파트 샷시 교체"
     ],
     "nearbyAndSimilar": [
       "구리 구축 아파트 20평대 인테리어 베이지 우드",
-      "수택동 구축 아파트 인테리어 거실 확장",
+      "구리 구축 아파트 20평대 화이트 우드 인테리어",
+      "수택동 구축 아파트 인테리어 비확장",
       "인창동 구축 아파트 인테리어 24평",
       "구리 20평대 아파트 리모델링 욕실 주방",
-      "구리 아파트 베란다 확장 단열 샷시"
+      "구리 아파트 발코니 비확장 인테리어"
     ],
     "topicFocused": [
-      "20평대 아파트 거실 확장 단열 샷시 비용",
-      "구축 아파트 거실 확장 샷시 단열 인테리어",
+      "20평대 아파트 베란다 비확장 인테리어",
+      "구축 아파트 발코니 유지 폴딩도어 터닝도어 인테리어",
       "600각 타일 거실 주방 구축 아파트 인테리어",
       "화이트 베이지 우드 20평대 아파트 인테리어",
+      "화이트 우드 24평 구축 아파트 인테리어",
+      "화이트 오크 20평대 아파트 인테리어",
+      "웜화이트 우드 아파트 리모델링",
       "구축 아파트 붙박이장 수납 인테리어",
       "재택근무 작업공간 모션데스크 홈오피스 인테리어"
     ]
@@ -79,14 +103,17 @@
   "scoringRubric": {
     "sameComplexOrUnit": 30,
     "nearbyGuriSimilarAgeAndSize": 20,
-    "livingRoomExpansionOrInsulation": 15,
+    "nonExpandedBalconyOrBoundaryDesign": 15,
     "windowSashDetails": 12,
     "matchesStyle": 10,
+    "matchesWhiteWoodTone": 15,
+    "balancedWoodAccentNotTooHeavy": 8,
     "budgetOrScopeTransparency": 8,
     "usefulPhotosOrFloorplan": 8,
     "vendorAndMaterialInfo": 5,
     "penaltyLowInfoAdOnly": -15,
     "penaltyTooLuxuryOrUnrealistic": -10,
+    "penaltyTooDarkWoodOrHeavyCafeStyle": -8,
     "penaltyNotApartmentOrWrongScale": -20
   },
   "dailyReport": {
@@ -105,6 +132,8 @@
     "동일 단지/유사 평형 사례 우선",
     "견적 투명성, 공사 범위 설명, 하자/AS 언급, 실제 사진 품질 확인",
     "과도하게 광고성인 글은 감점",
-    "거실 확장/단열/샷시/욕실/주방/수납/작업공간 배치 힌트 우선"
+    "비확장 발코니/경계부 문/샷시 보수/욕실/주방/수납/작업공간 배치 힌트 우선",
+    "화이트/아이보리 기반에 밝은 오크·애쉬 우드가 과하지 않게 섞인 레퍼런스 우선",
+    "레퍼런스마다 화이트:우드 비율, 우드 색감, 우리 집 톤과의 적합성을 짧게 평가"
   ]
 }

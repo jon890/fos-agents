@@ -13,6 +13,29 @@
 | `docs/code-architecture.md` | 디렉터리 트리·skill 표준·외부 의존·Runner 패턴 | 코드 구조 변경 / 새 스킬 추가 |
 | `docs/adr.md` | apartment 한정 ADR 누적 (현재 ADR-001~010). 모노레포 레벨은 `../docs/adr.md` | 결정의 *왜* |
 
+## 1-1. 핵심 파일 빠른 지도
+
+### 구리 럭키아파트 5동 1004호 인테리어
+
+| 파일 | 역할 |
+|---|---|
+| `docs/interior/lucky-5-1004-interior-decisions.md` | 인테리어 결정/보류/확인사항 원본 노트 |
+| `docs/interior/lucky-5-1004-decision-queue.md` | 다음에 결정할 질문 큐, 완료된 질문 재등장 방지 |
+| `docs/interior/lucky-5-1004-decision-summary.md` | 업체 상담/검토용 요약 |
+| `docs/interior/lucky-5-1004-field-checklist.md` | 현장 실측/업체 확인 체크리스트 |
+| `docs/interior/lucky-5-1004-contractor-brief.md` | 시공사/견적 상담 전달용 브리프 |
+| `docs/interior/interior-references.md` | 오늘의집/블로그/업체 사례 누적 레퍼런스 |
+
+### 평면도/구조 데이터
+
+| 파일 | 역할 |
+|---|---|
+| `config/lucky-24-floorplan.json` | 럭키 24평 참고 평면도 메타데이터, 보이는 치수, 해석, 이미지 경로 |
+| `data/interior/floorplans/lucky-24/blog_img_00.jpg` | 보관된 참고 평면도 이미지 원본 |
+| `data/interior/floorplans/lucky-24/README.md` | 평면도 출처, 해시, 공식 도면 아님 주의사항 |
+
+원본 평면도 이미지는 `data/`에 보관하고, `config/lucky-24-floorplan.json`에서 경로·출처·해시를 가리킨다. config에는 바이너리 원본을 직접 넣지 않는다.
+
 ## 2. tasks/ 영역
 
 planning + plan-and-build 스킬로 운영. 형태: `tasks/plan{N}-<slug>/`.
