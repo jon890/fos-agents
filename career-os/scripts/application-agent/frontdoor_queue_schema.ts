@@ -1,6 +1,13 @@
 import { existsSync, readFileSync } from 'fs';
 import { z } from 'zod';
 import { SourceFreshnessSchema } from './ledger_schema';
+import {
+  ActionStageSchema,
+  EvidenceUrlSchema,
+  PriorityRankSchema,
+  RecommendationSnapshotSchema,
+  UserConfirmedPrioritySchema,
+} from './priority_schema';
 
 export const FrontdoorQueueStatusSchema = z.enum([
   'collected',
@@ -37,6 +44,14 @@ export const FrontdoorQueueRecordSchema = z
     promotedApplicationId: z.string().nullable(),
     decisionReason: z.string().min(1),
     nextActions: z.array(z.string().min(1)).default([]),
+    actionStage: ActionStageSchema.optional(),
+    priorityRank: PriorityRankSchema.optional(),
+    priorityReason: z.string().min(1).optional(),
+    nextAction: z.string().min(1).optional(),
+    riskFlags: z.array(z.string().min(1)).default([]),
+    evidenceUrls: z.array(EvidenceUrlSchema).default([]),
+    recommendationSnapshot: RecommendationSnapshotSchema.optional(),
+    userConfirmedPriority: UserConfirmedPrioritySchema.optional(),
   })
   .superRefine((record, ctx) => {
     if (
@@ -64,6 +79,23 @@ export const FrontdoorQueueRecordSchema = z
         message: 'promoted_to_ledger requires promotedApplicationId to be set',
         path: ['promotedApplicationId'],
       });
+    }
+
+    if (record.actionStage === 'prepare-now') {
+      if (!record.nextAction) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'prepare-now requires nextAction',
+          path: ['nextAction'],
+        });
+      }
+      if (record.evidenceUrls.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'prepare-now requires at least one evidenceUrls entry',
+          path: ['evidenceUrls'],
+        });
+      }
     }
   });
 

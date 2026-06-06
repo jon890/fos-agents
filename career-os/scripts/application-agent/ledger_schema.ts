@@ -1,5 +1,12 @@
 import { existsSync, readFileSync } from 'fs';
 import { z } from 'zod';
+import {
+  ActionStageSchema,
+  EvidenceUrlSchema,
+  PriorityRankSchema,
+  RecommendationSnapshotSchema,
+  UserConfirmedPrioritySchema,
+} from './priority_schema';
 
 export const ApplicationStatusSchema = z.enum([
   'discovered',
@@ -43,48 +50,74 @@ export const PrioritySchema = z.enum(['low', 'normal', 'high', 'urgent']);
 
 export const SourceFreshnessSchema = z.enum(['fresh', 'stale', 'unknown']);
 
-export const ApplicationLedgerRecordSchema = z.object({
-  id: z.string().min(1),
-  company: z.string().min(1),
-  role: z.string().min(1),
-  source: z.string().min(1),
-  url: z.string().url(),
-  discoveryMode: z.string().min(1).optional(),
-  activeEvidence: z.string().min(1).optional(),
-  identityHash: z.string().min(1).optional(),
-  careerUpsideHypothesis: z.string().min(1).optional(),
-  careerUpsideEvidence: z.array(z.string().min(1)).optional(),
-  careerUpsideRiskFlags: z.array(z.string().min(1)).optional(),
-  status: ApplicationStatusSchema,
-  statusUpdatedAt: z.string().min(1),
-  discoveredAt: z.string().min(1).optional(),
-  applicationDir: z.string().min(1),
-  postingPath: z.string().min(1).optional(),
-  fitAnalysisPath: z.string().min(1).optional(),
-  applicationPackagePath: z.string().min(1).optional(),
-  reviewPath: z.string().min(1).optional(),
-  needsUserReview: z.boolean().default(false),
-  userDecision: UserDecisionSchema.default('pending'),
-  revisionCount: z.number().int().min(0).default(0),
-  maxRevisionCount: z.number().int().min(1).default(3),
-  riskFlags: z.array(z.string().min(1)).default([]),
-  nextActions: z.array(z.string().min(1)).default([]),
-  notes: z.string().optional(),
-  // Runtime fields (optional — backward compatible with plan029 records)
-  agentPhase: z.string().optional(),
-  nextRunAt: z.string().optional(),
-  lastDecisionAt: z.string().optional(),
-  decisionReason: z.string().optional(),
-  confidence: z.number().min(0).max(1).optional(),
-  autonomyLevel: AutonomyLevelSchema.optional(),
-  requiredUserAction: RequiredUserActionSchema.optional(),
-  actionableCandidate: z.boolean().optional(),
-  fitScore: z.number().min(0).max(100).optional(),
-  priority: PrioritySchema.optional(),
-  sourceFreshness: SourceFreshnessSchema.optional(),
-  lastAgentAction: z.string().optional(),
-  decisionLogPath: z.string().optional(),
-});
+export const ApplicationLedgerRecordSchema = z
+  .object({
+    id: z.string().min(1),
+    company: z.string().min(1),
+    role: z.string().min(1),
+    source: z.string().min(1),
+    url: z.string().url(),
+    discoveryMode: z.string().min(1).optional(),
+    activeEvidence: z.string().min(1).optional(),
+    identityHash: z.string().min(1).optional(),
+    careerUpsideHypothesis: z.string().min(1).optional(),
+    careerUpsideEvidence: z.array(z.string().min(1)).optional(),
+    careerUpsideRiskFlags: z.array(z.string().min(1)).optional(),
+    status: ApplicationStatusSchema,
+    statusUpdatedAt: z.string().min(1),
+    discoveredAt: z.string().min(1).optional(),
+    applicationDir: z.string().min(1),
+    postingPath: z.string().min(1).optional(),
+    fitAnalysisPath: z.string().min(1).optional(),
+    applicationPackagePath: z.string().min(1).optional(),
+    reviewPath: z.string().min(1).optional(),
+    needsUserReview: z.boolean().default(false),
+    userDecision: UserDecisionSchema.default('pending'),
+    revisionCount: z.number().int().min(0).default(0),
+    maxRevisionCount: z.number().int().min(1).default(3),
+    riskFlags: z.array(z.string().min(1)).default([]),
+    nextActions: z.array(z.string().min(1)).default([]),
+    notes: z.string().optional(),
+    // Runtime fields (optional — backward compatible with plan029 records)
+    agentPhase: z.string().optional(),
+    nextRunAt: z.string().optional(),
+    lastDecisionAt: z.string().optional(),
+    decisionReason: z.string().optional(),
+    confidence: z.number().min(0).max(1).optional(),
+    autonomyLevel: AutonomyLevelSchema.optional(),
+    requiredUserAction: RequiredUserActionSchema.optional(),
+    actionableCandidate: z.boolean().optional(),
+    fitScore: z.number().min(0).max(100).optional(),
+    priority: PrioritySchema.optional(),
+    sourceFreshness: SourceFreshnessSchema.optional(),
+    lastAgentAction: z.string().optional(),
+    decisionLogPath: z.string().optional(),
+    actionStage: ActionStageSchema.optional(),
+    priorityRank: PriorityRankSchema.optional(),
+    priorityReason: z.string().min(1).optional(),
+    nextAction: z.string().min(1).optional(),
+    evidenceUrls: z.array(EvidenceUrlSchema).default([]),
+    recommendationSnapshot: RecommendationSnapshotSchema.optional(),
+    userConfirmedPriority: UserConfirmedPrioritySchema.optional(),
+  })
+  .superRefine((record, ctx) => {
+    if (record.actionStage === 'prepare-now') {
+      if (!record.nextAction) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'prepare-now requires nextAction',
+          path: ['nextAction'],
+        });
+      }
+      if (record.evidenceUrls.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'prepare-now requires at least one evidenceUrls entry',
+          path: ['evidenceUrls'],
+        });
+      }
+    }
+  });
 
 export type ApplicationStatus = z.infer<typeof ApplicationStatusSchema>;
 export type UserDecision = z.infer<typeof UserDecisionSchema>;
@@ -257,7 +290,8 @@ function checkSafetyInvariants(record: ApplicationLedgerRecord): string[] {
 }
 
 function main(): void {
-  const path = process.argv[2] ?? 'data/applications/ledger.jsonl';
+  const workspacePrefix = process.cwd().endsWith('/career-os') ? '' : 'career-os/';
+  const path = process.argv[2] ?? `${workspacePrefix}data/applications/ledger.jsonl`;
   if (!existsSync(path)) {
     console.error(`ledger not found: ${path}`);
     process.exit(2);
