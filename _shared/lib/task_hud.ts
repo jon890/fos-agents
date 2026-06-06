@@ -2,7 +2,11 @@
 // _shared/lib/task_hud.ts
 // OpenClaw session task HUD helper.
 
-const DEFAULT_STATE_ROOT = "openclaw-orchestrator/state/task-hud";
+import { dirname, isAbsolute, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const DEFAULT_STATE_ROOT_RELATIVE = "openclaw-orchestrator/state/task-hud";
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const WARNING_COOLDOWN_MS = 15 * 60 * 1000;
 const MAX_ACTIVE_SUBAGENT_LABELS = 3;
 
@@ -50,6 +54,7 @@ interface CliOptions {
   dryRun: boolean;
   session?: string;
   stateRoot: string;
+  stateRootOverridden?: boolean;
   target?: string;
   threadId?: string;
   taskLabel?: string;
@@ -80,7 +85,7 @@ function printHelp(): void {
 Options:
   --target <channel:id>              Discord target for real send/edit.
   --thread-id <id>                   Optional thread id for real send/edit.
-  --state-root <path>                State root, default openclaw-orchestrator/state/task-hud.
+  --state-root <path>                Explicit state root override.
   --json '<object>'                  Input object with session, taskLabel, status, usage, subagents, or sessionStatus.
   --session-status-json '<object>'   Sanitized session_status-like input.
   --subagents-json '<array>'         JSON array of subagent objects {id?, label?, status}.
@@ -97,7 +102,7 @@ Visible HUD output:
 function parseArgs(argv: string[]): CliOptions {
   const opts: CliOptions = {
     dryRun: false,
-    stateRoot: process.env.TASK_HUD_STATE_ROOT ?? DEFAULT_STATE_ROOT,
+    stateRoot: defaultStateRoot(),
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -123,7 +128,8 @@ function parseArgs(argv: string[]): CliOptions {
         opts.session = next;
         break;
       case "--state-root":
-        opts.stateRoot = next;
+        opts.stateRoot = resolveStateRoot(next);
+        opts.stateRootOverridden = true;
         break;
       case "--target":
         opts.target = next;
@@ -175,7 +181,19 @@ function parseArgs(argv: string[]): CliOptions {
   return mergeJsonInput(opts);
 }
 
+function defaultStateRoot(): string {
+  return resolve(REPO_ROOT, DEFAULT_STATE_ROOT_RELATIVE);
+}
+
+function resolveStateRoot(raw: string): string {
+  return isAbsolute(raw) ? raw : resolve(process.cwd(), raw);
+}
+
 function mergeJsonInput(opts: CliOptions): CliOptions {
+  const envStateRoot = process.env.TASK_HUD_STATE_ROOT;
+  if (envStateRoot && !opts.stateRootOverridden) {
+    opts.stateRoot = resolveStateRoot(envStateRoot);
+  }
   if (!opts.jsonInput) {
     return opts;
   }
@@ -259,10 +277,12 @@ function normalizeActiveSubagents(raw: unknown[]): ActiveSubagent[] {
 }
 
 function parseSubagents(opts: CliOptions): ActiveSubagent[] | undefined {
-  if (!opts.subagentsJson) return undefined;
+  if (!opts.subagentsJson && !opts.sessionStatusJson) return undefined;
   let raw: unknown;
   try {
-    raw = JSON.parse(opts.subagentsJson);
+    raw = opts.subagentsJson
+      ? JSON.parse(opts.subagentsJson)
+      : readSessionStatusAgents(parseJsonObject(opts.sessionStatusJson ?? "{}", "--session-status-json"));
   } catch {
     return undefined;
   }
@@ -272,7 +292,7 @@ function parseSubagents(opts: CliOptions): ActiveSubagent[] | undefined {
 
 function statePath(stateRoot: string, sessionId: string): string {
   const safeSessionId = sessionId.replace(/[^a-zA-Z0-9._-]/g, "_");
-  return `${stateRoot}/${safeSessionId}.json`;
+  return join(stateRoot, `${safeSessionId}.json`);
 }
 
 async function loadState(opts: CliOptions): Promise<HudState> {
@@ -316,12 +336,7 @@ function usageSnapshot(opts: CliOptions): UsageSnapshot | undefined {
   let fromSessionStatus: UsageSnapshot = {};
   if (opts.sessionStatusJson) {
     const raw = parseJsonObject(opts.sessionStatusJson, "--session-status-json");
-    fromSessionStatus = {
-      fiveHourRemaining: readString(raw.fiveHourRemaining),
-      weeklyRemaining: readString(raw.weeklyRemaining),
-      contextPercent: readNumber(raw.contextPercent),
-      compactionCount: readNumber(raw.compactionCount),
-    };
+    fromSessionStatus = safeUsageSnapshot(raw);
   }
   const snapshot: UsageSnapshot = {
     ...fromSessionStatus,
@@ -331,6 +346,47 @@ function usageSnapshot(opts: CliOptions): UsageSnapshot | undefined {
     compactionCount: opts.compactionCount ?? fromSessionStatus.compactionCount,
   };
   return Object.values(snapshot).some((value) => value !== undefined) ? snapshot : undefined;
+}
+
+function safeUsageSnapshot(raw: Record<string, unknown>): UsageSnapshot {
+  const usage = readObject(raw.usage);
+  const limits = readObject(raw.limits) ?? readObject(raw.usageLimits) ?? readObject(raw.quota);
+  const context = readObject(raw.context) ?? readObject(raw.contextWindow);
+  const compaction = readObject(raw.compaction);
+
+  return {
+    fiveHourRemaining:
+      readString(raw.fiveHourRemaining) ??
+      readString(usage?.fiveHourRemaining) ??
+      readString(limits?.fiveHourRemaining) ??
+      readString(limits?.fiveHour),
+    weeklyRemaining:
+      readString(raw.weeklyRemaining) ??
+      readString(usage?.weeklyRemaining) ??
+      readString(limits?.weeklyRemaining) ??
+      readString(limits?.weekly),
+    contextPercent:
+      readNumber(raw.contextPercent) ??
+      readNumber(usage?.contextPercent) ??
+      readNumber(context?.percent) ??
+      readNumber(context?.usedPercent),
+    compactionCount:
+      readNumber(raw.compactionCount) ??
+      readNumber(usage?.compactionCount) ??
+      readNumber(compaction?.count),
+  };
+}
+
+function readSessionStatusAgents(raw: Record<string, unknown>): unknown[] | undefined {
+  const nested = readObject(raw.native) ?? readObject(raw.activeAgents) ?? readObject(raw.agentsState);
+  const candidates = [
+    raw.subagents,
+    raw.agents,
+    raw.activeSubagents,
+    nested?.subagents,
+    nested?.agents,
+  ];
+  return candidates.find((candidate): candidate is unknown[] => Array.isArray(candidate));
 }
 
 // Visible field allowlist: only these fields are included in the rendered HUD body.
@@ -359,13 +415,28 @@ function renderAgentsLine(agents: ActiveSubagent[] | undefined): string {
 
 function formatUpdatedAt(isoString: string): string {
   try {
-    const diffMs = Date.now() - Date.parse(isoString);
-    if (diffMs < 60_000) return "just now";
-    if (diffMs < 3_600_000) return `${Math.floor(diffMs / 60_000)}m ago`;
-    if (diffMs < 86_400_000) return `${Math.floor(diffMs / 3_600_000)}h ago`;
-    return isoString.slice(0, 16).replace("T", " ") + " UTC";
+    const date = new Date(isoString);
+    if (Number.isNaN(date.getTime())) {
+      return sanitizeVisible(isoString);
+    }
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Seoul",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    })
+      .formatToParts(date)
+      .reduce<Record<string, string>>((acc, part) => {
+        acc[part.type] = part.value;
+        return acc;
+      }, {});
+    return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second} KST`;
   } catch {
-    return isoString;
+    return sanitizeVisible(isoString);
   }
 }
 
@@ -391,10 +462,12 @@ function renderHud(state: HudState): string {
 }
 
 function sanitizeVisible(value: string): string {
+  const homePathPattern = new RegExp(`/${"home"}/[^/\\s]+(?:/[^\\s]*)?`, "g");
+  const usersPathPattern = new RegExp(`/${"Users"}/[^/\\s]+(?:/[^\\s]*)?`, "g");
   return value
     .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[redacted]")
-    .replace(/\/home\/[^/\s]+(?:\/[^\s]*)?/g, "~/...")
-    .replace(/\/Users\/[^/\s]+(?:\/[^\s]*)?/g, "~/...")
+    .replace(homePathPattern, "~/...")
+    .replace(usersPathPattern, "~/...")
     .replace(/\b(?:sk|xoxb|ghp)_[A-Za-z0-9_-]{12,}\b/g, "[redacted]");
 }
 
@@ -466,7 +539,7 @@ async function publishHud(opts: CliOptions, state: HudState): Promise<void> {
 
   const target = opts.target ?? targetFromEnv();
   if (!target) {
-    throw new Error("PHASE_BLOCKED: cannot persist per-session HUD identity");
+    throw new Error("Cannot persist per-session HUD identity without a target.");
   }
 
   if (state.hudMessageId) {
@@ -482,11 +555,12 @@ async function publishHud(opts: CliOptions, state: HudState): Promise<void> {
       throw new Error(`OpenClaw HUD edit and fallback send failed: ${edited.stderr ?? sent.stderr ?? "unknown error"}`);
     }
     if (!sent.messageId) {
-      throw new Error("PHASE_BLOCKED: cannot persist per-session HUD identity");
+      throw new Error("Cannot persist per-session HUD identity without a returned message id.");
     }
     state.supersededHudMessageIds = [...(state.supersededHudMessageIds ?? []), previous];
     state.hudMessageId = sent.messageId;
     await saveState(opts, state);
+    await publishWarning(opts, state, fallbackWarningMessage());
     return;
   }
 
@@ -495,7 +569,7 @@ async function publishHud(opts: CliOptions, state: HudState): Promise<void> {
     throw new Error(`OpenClaw HUD send failed: ${sent.stderr ?? "unknown error"}`);
   }
   if (!sent.messageId) {
-    throw new Error("PHASE_BLOCKED: cannot persist per-session HUD identity");
+    throw new Error("Cannot persist per-session HUD identity without a returned message id.");
   }
   state.hudMessageId = sent.messageId;
   await saveState(opts, state);
@@ -508,12 +582,16 @@ async function publishWarning(opts: CliOptions, state: HudState, message: string
   }
   const target = opts.target ?? targetFromEnv();
   if (!target) {
-    throw new Error("PHASE_BLOCKED: cannot persist per-session HUD identity");
+    throw new Error("Cannot persist per-session HUD identity without a target.");
   }
   const result = await openclawMessage("send", target, message, opts.threadId ?? state.hudThreadId);
   if (!result.ok) {
     throw new Error(`OpenClaw HUD warning send failed: ${result.stderr ?? "unknown error"}`);
   }
+}
+
+function fallbackWarningMessage(): string {
+  return "⚠ New OpenClaw HUD message was created after the pinned edit failed. Please pin the new HUD message.";
 }
 
 function targetFromEnv(): string | undefined {
@@ -632,7 +710,9 @@ async function run(): Promise<void> {
     }
   }
 
-  await saveState(opts, state);
+  if (!opts.dryRun) {
+    await saveState(opts, state);
+  }
   await publishHud(opts, state);
 }
 
