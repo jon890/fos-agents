@@ -56,6 +56,7 @@ export function render(posts: Posting[], outPath: string, diagnostics: Collectio
     lines.push(`- [${p.company}] ${p.title}`);
     lines.push(`  - source: ${p.source}`);
     if (p.discoveryMode) lines.push(`  - discovery_mode: ${p.discoveryMode}`);
+    if (p.identityHash) lines.push(`  - identity_hash: ${p.identityHash}`);
     lines.push(`  - link_type: ${p.linkType}`);
     lines.push(`  - posting_status: ${p.postingStatus}`);
     lines.push(`  - active_evidence: ${p.activeEvidence}`);
@@ -66,6 +67,13 @@ export function render(posts: Posting[], outPath: string, diagnostics: Collectio
     lines.push(`  - tags: ${p.tags.join(", ")}`);
     if (p.summary) lines.push(`  - summary: ${p.summary}`);
     if (p.skills.length > 0) lines.push(`  - skills: ${p.skills.join(", ")}`);
+    if (p.careerUpsideHypothesis) lines.push(`  - career_upside_hypothesis: ${p.careerUpsideHypothesis}`);
+    if (p.careerUpsideEvidence && p.careerUpsideEvidence.length > 0) {
+      lines.push(`  - career_upside_evidence: ${p.careerUpsideEvidence.join(" | ")}`);
+    }
+    if (p.careerUpsideRiskFlags && p.careerUpsideRiskFlags.length > 0) {
+      lines.push(`  - career_upside_risk_flags: ${p.careerUpsideRiskFlags.join(", ")}`);
+    }
     if (p.dueTime) lines.push(`  - due: ${p.dueTime}`);
     if (p.mainTasks) lines.push(`  - main_tasks: ${p.mainTasks}`);
     if (p.requirements) lines.push(`  - requirements: ${p.requirements}`);

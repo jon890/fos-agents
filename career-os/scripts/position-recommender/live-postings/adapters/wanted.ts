@@ -1,4 +1,4 @@
-import type { Posting, SourceAdapter } from "../types.ts";
+import type { AdapterCollectionResult, DiscoveryMode, Posting, SourceAdapter } from "../types.ts";
 import {
   AI_KEYWORDS,
   AI_PLATFORM_ROLE_KEYWORDS,
@@ -15,6 +15,10 @@ import {
 } from "../policy.ts";
 
 const UA = "Mozilla/5.0 (OpenClaw career-os position recommender)";
+const WANTED_TARGET_URLS = [
+  "https://www.wanted.co.kr/wd/344103",
+  "https://www.wanted.co.kr/wd/360452",
+];
 
 function isWantedActive(job: Record<string, unknown>): boolean {
   const status = norm(job.status ?? "").toLowerCase();
@@ -29,6 +33,92 @@ async function wantedDetail(pid: number): Promise<Record<string, unknown>> {
   if (!r.ok) throw new Error(`wanted detail ${pid}: HTTP ${r.status}`);
   const data = (await r.json()) as Record<string, unknown>;
   return (data.job as Record<string, unknown>) ?? {};
+}
+
+function wantedPidFromUrl(url: string): number | null {
+  const m = url.match(/\/wd\/(\d+)/);
+  return m ? Number(m[1]) : null;
+}
+
+function postingFromWantedDetail(
+  pid: number,
+  detail: Record<string, unknown>,
+  discoveryMode: DiscoveryMode,
+  serverOnly: boolean,
+  fallback?: {
+    company?: string;
+    title?: string;
+    category?: string;
+    summary?: string;
+  }
+): Posting | null {
+  if (!isWantedActive(detail)) return null;
+
+  const d = (
+    typeof detail.detail === "object" && detail.detail !== null ? detail.detail : {}
+  ) as Record<string, unknown>;
+  const companyDetail = (
+    typeof detail.company === "object" && detail.company !== null ? detail.company : {}
+  ) as Record<string, unknown>;
+  const company = norm(companyDetail.name ?? fallback?.company);
+  const title = norm(detail.position ?? fallback?.title);
+  const detailText = (["intro", "main_tasks", "requirements", "preferred_points"] as const)
+    .map((k) => norm(d[k]))
+    .join(" ");
+  const employeeTypeTags = (detail.employee_type_tags as unknown[]) ?? [];
+  const employeeType = employeeTypeTags
+    .filter((t): t is Record<string, unknown> => typeof t === "object" && t !== null)
+    .map((t) => norm(t.title ?? t.name ?? t.commonName))
+    .join(" ");
+  const fullText = `${company} ${title} ${fallback?.category ?? ""} ${employeeType} ${detailText}`;
+
+  if (!company || !title) return null;
+  if (isExcludedCompany(fullText)) return null;
+  if (isContractRole(fullText)) return null;
+  if (serverOnly && isNonServerTitle(title)) return null;
+  if (serverOnly && !isServerRole(fullText)) return null;
+
+  const skillTags = (detail.skill_tags as unknown[]) ?? [];
+  const skills = skillTags
+    .map((tag) => {
+      if (typeof tag === "object" && tag !== null) {
+        const t = tag as Record<string, unknown>;
+        return norm(t.title ?? t.name);
+      }
+      return norm(tag);
+    })
+    .filter(Boolean)
+    .slice(0, 12);
+
+  const categoryTags = (detail.category_tags as unknown[]) ?? [];
+  const category =
+    categoryTags
+      .filter((t): t is Record<string, unknown> => typeof t === "object" && t !== null)
+      .map((t) => norm(t.title))
+      .filter(Boolean)
+      .join(", ") || fallback?.category || "";
+
+  return {
+    source: "wanted",
+    discoveryMode,
+    company,
+    title,
+    url: `https://www.wanted.co.kr/wd/${pid}`,
+    identityHash: `wanted:${pid}`,
+    linkType: "direct_posting",
+    postingStatus: "active",
+    activeEvidence: `Wanted API detail status=active (${discoveryMode})`,
+    openedAt: "",
+    ...closeWindow(detail.due_time),
+    category,
+    summary: fallback?.summary ?? "",
+    tags: classify(fullText),
+    skills,
+    dueTime: norm(detail.due_time),
+    mainTasks: cleanDetail(d.main_tasks),
+    requirements: cleanDetail(d.requirements),
+    preferred: cleanDetail(d.preferred_points),
+  };
 }
 
 async function fetchWanted(limit = 120, serverOnly = true, includeDetail = true): Promise<Posting[]> {
@@ -74,78 +164,69 @@ async function fetchWanted(limit = 120, serverOnly = true, includeDetail = true)
     }
     if (includeDetail && (Object.keys(detail).length === 0 || !isWantedActive(detail))) continue;
 
-    const d = (
-      typeof detail.detail === "object" && detail.detail !== null ? detail.detail : {}
-    ) as Record<string, unknown>;
-    const companyDetail = (
-      typeof detail.company === "object" && detail.company !== null ? detail.company : {}
-    ) as Record<string, unknown>;
-    const detailText = (["intro", "main_tasks", "requirements", "preferred_points"] as const)
-      .map((k) => norm(d[k]))
-      .join(" ");
-    const employeeTypeTags = (detail.employee_type_tags as unknown[]) ?? [];
-    const employeeType = employeeTypeTags
-      .filter((t): t is Record<string, unknown> => typeof t === "object" && t !== null)
-      .map((t) => norm(t.title ?? t.name ?? t.commonName))
-      .join(" ");
-    const fullText = `${text} ${employeeType} ${detailText}`;
-
-    if (isExcludedCompany(fullText)) continue;
-    if (isContractRole(fullText)) continue;
-    if (serverOnly && !isServerRole(fullText)) continue;
-
-    const tags = classify(fullText);
-
-    const skillTags = (detail.skill_tags as unknown[]) ?? [];
-    const skills = skillTags
-      .map((tag) => {
-        if (typeof tag === "object" && tag !== null) {
-          const t = tag as Record<string, unknown>;
-          return norm(t.title ?? t.name);
-        }
-        return norm(tag);
-      })
-      .filter(Boolean)
-      .slice(0, 12);
-
-    const categoryTags = (detail.category_tags as unknown[]) ?? [];
-    const category =
-      categoryTags
-        .filter((t): t is Record<string, unknown> => typeof t === "object" && t !== null)
-        .map((t) => norm(t.title))
-        .filter(Boolean)
-        .join(", ") || categoryText;
-
     const addressObj = (item.address ?? {}) as Record<string, unknown>;
-    const close = closeWindow(detail.due_time);
-
-    out.push({
-      source: "wanted",
-      company: norm(companyDetail.name ?? company),
-      title: norm(detail.position ?? title),
-      url: `https://www.wanted.co.kr/wd/${pid}`,
-      linkType: "direct_posting",
-      postingStatus: "active",
-      activeEvidence: "Wanted API detail status=active",
-      openedAt: "",
-      ...close,
-      category,
+    const posting = postingFromWantedDetail(pid, detail, "broad", serverOnly, {
+      company,
+      title,
+      category: categoryText,
       summary: norm(addressObj.location),
-      tags,
-      skills,
-      dueTime: norm(detail.due_time),
-      mainTasks: cleanDetail(d.main_tasks),
-      requirements: cleanDetail(d.requirements),
-      preferred: cleanDetail(d.preferred_points),
     });
+    if (posting) out.push(posting);
   }
   return out;
+}
+
+async function fetchWantedTargets(serverOnly = true): Promise<{
+  postings: Posting[];
+  skippedCount: number;
+  failedCount: number;
+  errors: string[];
+}> {
+  const postings: Posting[] = [];
+  let skippedCount = 0;
+  let failedCount = 0;
+  const errors: string[] = [];
+  for (const url of WANTED_TARGET_URLS) {
+    const pid = wantedPidFromUrl(url);
+    if (!pid) {
+      skippedCount++;
+      errors.push(`wanted target-url invalid: ${url}`);
+      continue;
+    }
+    try {
+      const detail = await wantedDetail(pid);
+      const posting = postingFromWantedDetail(pid, detail, "target-url", serverOnly);
+      if (posting) postings.push(posting);
+      else skippedCount++;
+    } catch (error) {
+      failedCount++;
+      errors.push(`wanted target-url ${pid}: ${error}`);
+    }
+  }
+  return { postings, skippedCount, failedCount, errors };
 }
 
 export const wantedAdapter: SourceAdapter = {
   id: "wanted",
   name: "wanted",
-  async collect({ serverOnly, wantedLimit }) {
-    return fetchWanted(wantedLimit, serverOnly, true);
+  async collect({ serverOnly, wantedLimit }): Promise<AdapterCollectionResult> {
+    const broad = await fetchWanted(wantedLimit, serverOnly, true);
+    const targets = await fetchWantedTargets(serverOnly);
+    const postings = [...broad, ...targets.postings];
+    return {
+      postings,
+      diagnostics: {
+        source: "wanted",
+        status: targets.failedCount > 0 ? "partial" : "ok",
+        collectedCount: postings.length,
+        skippedCount: targets.skippedCount,
+        failedCount: targets.failedCount,
+        discoveryModes: ["broad", "target-url"],
+        message:
+          `wanted diagnostics: broad=${broad.length}, target_url=${targets.postings.length}, ` +
+          `target_skipped=${targets.skippedCount}, target_failed=${targets.failedCount}`,
+      },
+      errors: targets.errors,
+    };
   },
 };

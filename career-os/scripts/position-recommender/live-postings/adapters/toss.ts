@@ -1,4 +1,4 @@
-import type { Posting, SourceAdapter } from "../types.ts";
+import type { AdapterCollectionResult, Posting, SourceAdapter } from "../types.ts";
 import {
   CONTRACT_KEYWORDS,
   cleanDetail,
@@ -303,9 +303,11 @@ function parseTossJobDetail(
   return {
     posting: {
       source: "toss-careers",
+      discoveryMode: "official-detail",
       company: deepFindStringAny(roots, ["companyName", "company"]) || "Toss",
       title,
       url,
+      identityHash: `toss-careers:${url.match(/job_id=([^&]+)/)?.[1] ?? url}`,
       linkType: "direct_posting",
       postingStatus: "open",
       activeEvidence: "job-detail page + apply evidence",
@@ -326,7 +328,7 @@ function parseTossJobDetail(
 export const tossAdapter: SourceAdapter = {
   id: "toss-careers",
   name: "toss-careers",
-  async collect({ serverOnly }) {
+  async collect({ serverOnly }): Promise<AdapterCollectionResult> {
     const rejected: Record<string, number> = {};
     const reject = (r: string) => {
       rejected[r] = (rejected[r] ?? 0) + 1;
@@ -391,9 +393,23 @@ export const tossAdapter: SourceAdapter = {
       Object.entries(rejected)
         .map(([k, v]) => `${k}=${v}`)
         .join(", ") || "-";
-    tossAdapter.note =
+    const skippedCount = Object.values(rejected).reduce((sum, count) => sum + count, 0);
+    const message =
       `toss-careers diagnostics: article_candidates=${articleUrls.size}, ` +
       `job_detail_urls=${jobIds.size}, accepted=${out.length}, rejected={${rejectSummary}}`;
-    return out;
+    tossAdapter.note = message;
+    return {
+      postings: out,
+      diagnostics: {
+        source: "toss-careers",
+        status: rejected.http || rejected.post_api_http || rejected.feed_http ? "partial" : "ok",
+        collectedCount: out.length,
+        skippedCount,
+        failedCount: (rejected.http ?? 0) + (rejected.post_api_http ?? 0) + (rejected.feed_http ?? 0),
+        discoveryModes: ["official-listing", "official-detail"],
+        message,
+      },
+      errors: [],
+    };
   },
 };

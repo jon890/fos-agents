@@ -1,4 +1,4 @@
-// Active-snapshot gate: only direct individual postings with verified active/open status
+// Active-snapshot boundary: only direct individual postings with verified active/open status
 // are kept. This is the single barrier that prevents career_article / search_page links
 // and unknown-status postings from leaking into the snapshot regardless of source.
 
@@ -9,9 +9,11 @@ const ACTIVE_POSTING_STATUSES: ReadonlySet<Posting["postingStatus"]> = new Set([
 export function dedupe(posts: Posting[]): Posting[] {
   const seen = new Set<string>();
   return posts.filter((p) => {
-    const key = `${p.source}|${p.url}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
+    const urlKey = `${p.source}|url|${p.url}`;
+    const hashKey = p.identityHash ? `${p.source}|hash|${p.identityHash}` : "";
+    if (seen.has(urlKey) || (hashKey && seen.has(hashKey))) return false;
+    seen.add(urlKey);
+    if (hashKey) seen.add(hashKey);
     return true;
   });
 }

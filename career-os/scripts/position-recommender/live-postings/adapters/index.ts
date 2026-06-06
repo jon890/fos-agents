@@ -1,10 +1,14 @@
 import type { SourceAdapter, SourceId, SourceSelection } from "../types.ts";
+import { kakaopayAdapter } from "./kakaopay.ts";
+import { kakaopaySecuritiesAdapter } from "./kakaopay-securities.ts";
 import { tossAdapter } from "./toss.ts";
 import { wantedAdapter } from "./wanted.ts";
 
 const ADAPTERS: Record<SourceId, SourceAdapter> = {
   wanted: wantedAdapter,
   "toss-careers": tossAdapter,
+  kakaopay: kakaopayAdapter,
+  "kakaopay-securities": kakaopaySecuritiesAdapter,
 };
 
 const SOURCE_ALIASES: Record<string, SourceId> = {

@@ -1,6 +1,6 @@
 // Posting model and shared contracts for live-postings collection.
 
-export type SourceId = "wanted" | "toss-careers";
+export type SourceId = "wanted" | "toss-careers" | "kakaopay" | "kakaopay-securities";
 export type SourceAlias = "toss";
 export type SourceSelection = SourceId | SourceAlias | "all";
 
@@ -14,6 +14,7 @@ export interface Posting {
   company: string;
   title: string;
   url: string;
+  identityHash?: string;
   linkType: "direct_posting" | "career_article" | "search_page";
   postingStatus: "active" | "open" | "unknown";
   activeEvidence: string;
@@ -25,6 +26,9 @@ export interface Posting {
   summary: string;
   tags: string[];
   skills: string[];
+  careerUpsideHypothesis?: string;
+  careerUpsideEvidence?: string[];
+  careerUpsideRiskFlags?: string[];
   dueTime: string;
   mainTasks: string;
   requirements: string;

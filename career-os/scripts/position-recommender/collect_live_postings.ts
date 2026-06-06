@@ -50,7 +50,14 @@ function parseArgs(argv: string[]): CliArgs {
       out = argv[++i];
     } else if (arg === "--source" && argv[i + 1]) {
       const s = argv[++i];
-      if (s === "wanted" || s === "toss" || s === "toss-careers" || s === "all") source = s;
+      if (
+        s === "wanted" ||
+        s === "toss" ||
+        s === "toss-careers" ||
+        s === "kakaopay" ||
+        s === "kakaopay-securities" ||
+        s === "all"
+      ) source = s;
     } else if (arg === "--max-wanted" && argv[i + 1]) {
       wantedLimit = parseInt(argv[++i], 10);
     } else if (arg === "--no-server-only") {
