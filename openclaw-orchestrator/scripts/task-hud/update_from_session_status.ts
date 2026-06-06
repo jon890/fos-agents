@@ -3,6 +3,7 @@
 
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { safeUsageSnapshot, type SafeUsageSnapshot } from "../../../_shared/lib/session_status_hud.ts";
 
 interface Options {
   dryRun: boolean;
@@ -17,12 +18,7 @@ interface Options {
   subagentsJson?: string;
 }
 
-interface SafeStatus {
-  fiveHourRemaining?: string;
-  weeklyRemaining?: string;
-  contextPercent?: number;
-  compactionCount?: number;
-}
+type SafeStatus = SafeUsageSnapshot;
 
 interface SafeAgent {
   id?: string;
@@ -134,36 +130,8 @@ function readString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
 }
 
-function readNumber(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-
 function safeStatus(raw: Record<string, unknown>): SafeStatus {
-  const usage = readObject(raw.usage);
-  const limits = readObject(raw.limits) ?? readObject(raw.usageLimits) ?? readObject(raw.quota);
-  const context = readObject(raw.context) ?? readObject(raw.contextWindow);
-  const compaction = readObject(raw.compaction);
-  return compact({
-    fiveHourRemaining:
-      readString(raw.fiveHourRemaining) ??
-      readString(usage?.fiveHourRemaining) ??
-      readString(limits?.fiveHourRemaining) ??
-      readString(limits?.fiveHour),
-    weeklyRemaining:
-      readString(raw.weeklyRemaining) ??
-      readString(usage?.weeklyRemaining) ??
-      readString(limits?.weeklyRemaining) ??
-      readString(limits?.weekly),
-    contextPercent:
-      readNumber(raw.contextPercent) ??
-      readNumber(usage?.contextPercent) ??
-      readNumber(context?.percent) ??
-      readNumber(context?.usedPercent),
-    compactionCount:
-      readNumber(raw.compactionCount) ??
-      readNumber(usage?.compactionCount) ??
-      readNumber(compaction?.count),
-  });
+  return safeUsageSnapshot(raw);
 }
 
 function safeAgents(raw: Record<string, unknown>, explicitJson: string | undefined): SafeAgent[] {
