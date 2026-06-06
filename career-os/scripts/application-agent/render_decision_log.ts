@@ -24,13 +24,13 @@ export function renderDecisionLogMarkdown(results: ActionResult[]): string {
     lines.push(`- Allowed: ${d.allowed ? 'YES' : 'NO'}`);
 
     if (r.safetyBlocked) {
-      lines.push('- **Safety Gate: BLOCKED**');
+      lines.push('- **Safety Check: BLOCKED**');
       for (const v of r.safetyViolations ?? []) {
         lines.push(`  - [${v.severity}] ${v.rule}: ${v.detail}`);
       }
     }
     if (r.executionBlocked) {
-      lines.push('- **Execution Gate: BLOCKED**');
+      lines.push('- **Execution Check: BLOCKED**');
       if (r.executionBlockReason) {
         lines.push(`  - Reason: ${r.executionBlockReason}`);
       }
@@ -44,6 +44,9 @@ export function renderDecisionLogMarkdown(results: ActionResult[]): string {
     }
     if (d.nextActions.length > 0) {
       lines.push(`- Next Actions: ${d.nextActions.join(', ')}`);
+    }
+    if (d.decision.startsWith('user_confirmed_')) {
+      lines.push('- Priority: user-confirmed action stage overrides recommendation snapshot');
     }
     if (r.commandSuggestions.length > 0) {
       lines.push('- Commands:');
@@ -88,10 +91,10 @@ export function renderDecisionLogMarkdown(results: ActionResult[]): string {
   lines.push(`- Cooldown / blocked: ${cooldown}`);
   lines.push(`- Terminal (skip): ${terminal}`);
   if (safetyBlocked > 0) {
-    lines.push(`- Safety gate blocked: ${safetyBlocked}`);
+    lines.push(`- Safety check blocked: ${safetyBlocked}`);
   }
   if (executionBlocked > 0) {
-    lines.push(`- Execution gate blocked: ${executionBlocked}`);
+    lines.push(`- Execution check blocked: ${executionBlocked}`);
   }
 
   return lines.join('\n');
@@ -113,7 +116,7 @@ export type DigestRenderOptions = {
  *
  * Separates:
  * - Agent actions today (allowed decisions)
- * - Agent-only next work (internal, no user gate)
+ * - Agent-only next work (internal, no user approval needed)
  * - Needs user approval (requiredUserAction !== 'none')
  * - Blocked / cooldown items
  * - Public-safe study candidates (no company context)
@@ -186,10 +189,10 @@ export function renderDailyDigestReport(
   lines.push(`- Blocked / cooldown: ${blockedItems.length}`);
   lines.push(`- Terminal (closed/submitted): ${terminalItems.length}`);
   if (safetyBlockedItems.length > 0) {
-    lines.push(`- Safety gate blocked: ${safetyBlockedItems.length}`);
+    lines.push(`- Safety check blocked: ${safetyBlockedItems.length}`);
   }
   if (executionBlockedItems.length > 0) {
-    lines.push(`- Execution gate blocked: ${executionBlockedItems.length}`);
+    lines.push(`- Execution check blocked: ${executionBlockedItems.length}`);
   }
   lines.push('');
   lines.push('**Status breakdown:**');
@@ -288,7 +291,7 @@ export function renderDailyDigestReport(
       lines.push(`- **${r.applicationId}**: ${d.decisionReason}`);
     }
     for (const r of safetyBlockedItems) {
-      lines.push(`- **${r.applicationId}** [safety gate]: ${
+      lines.push(`- **${r.applicationId}** [safety check]: ${
         r.safetyViolations?.map((v) => v.detail).join('; ') ?? 'unknown violation'
       }`);
     }
@@ -298,7 +301,7 @@ export function renderDailyDigestReport(
           ? ` Missing: ${r.missingArtifacts.join('; ')}`
           : '';
       lines.push(
-        `- **${r.applicationId}** [execution gate]: ${r.executionBlockReason ?? 'required artifacts missing'}.${missing}`,
+        `- **${r.applicationId}** [execution check]: ${r.executionBlockReason ?? 'required artifacts missing'}.${missing}`,
       );
     }
   }

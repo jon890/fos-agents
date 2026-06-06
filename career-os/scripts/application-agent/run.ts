@@ -1,13 +1,34 @@
 import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
-import { executeDecision, type ActionOptions, type ActionResult } from './actions';
+import {
+  buildPreparationActionSuggestions,
+  executeDecision,
+  type ActionOptions,
+  type ActionResult,
+} from './actions';
 import { ingestPositionReport } from './ingest_position_report';
-import { readLedger } from './ledger_io';
+import { DEFAULT_LEDGER_PATH, readLedger, writeLedger } from './ledger_io';
 import {
   parseLedgerFile,
   isActionableCandidate,
   type ApplicationLedgerRecord,
 } from './ledger_schema';
+import {
+  DEFAULT_QUEUE_PATH,
+  readFrontdoorQueue,
+  writeFrontdoorQueue,
+} from './frontdoor_queue_io';
+import { FrontdoorQueueRecordSchema } from './frontdoor_queue_schema';
+import {
+  ActionStageSchema,
+  UserConfirmedPrioritySchema,
+  type ActionStage,
+} from './priority_schema';
+import {
+  appendPriorityHistoryEvent,
+  createPriorityHistoryEvent,
+  DEFAULT_PRIORITY_HISTORY_PATH,
+} from './priority_history';
 import { decideForRecord, rankCandidates } from './policy';
 import {
   renderDecisionLogMarkdown,
@@ -61,7 +82,7 @@ function parseOpts(args: string[]): Partial<RunOptions> {
 
 function resolveOpts(partial: Partial<RunOptions>, isDryRun = false): RunOptions {
   return {
-    ledgerPath: partial.ledgerPath ?? 'data/applications/ledger.jsonl',
+    ledgerPath: partial.ledgerPath ?? DEFAULT_LEDGER_PATH,
     outputDir: partial.outputDir ?? 'data/runtime/application-agent',
     format: partial.format ?? 'markdown',
     dryRun: isDryRun,
@@ -76,7 +97,7 @@ function resolveOpts(partial: Partial<RunOptions>, isDryRun = false): RunOptions
 
 function cmdValidate(args: string[]): void {
   const opts = parseOpts(args);
-  const ledgerPath = opts.ledgerPath ?? 'data/applications/ledger.jsonl';
+  const ledgerPath = opts.ledgerPath ?? DEFAULT_LEDGER_PATH;
 
   if (!existsSync(ledgerPath)) {
     console.error(`ledger not found: ${ledgerPath}`);
@@ -124,7 +145,7 @@ function cmdValidate(args: string[]): void {
       ['applicationPackagePath', record.applicationPackagePath],
       ['reviewPath', record.reviewPath],
     ] as const) {
-      if (p && !existsSync(p)) {
+      if (p && !workspacePathExists(p)) {
         warnings.push(`[${record.id}] ${field} not found on disk: ${p}`);
       }
     }
@@ -142,6 +163,138 @@ function cmdValidate(args: string[]): void {
 
   const warnSuffix = warnings.length > 0 ? ` (${warnings.length} warnings)` : '';
   console.log(`ledger ok: ${records.length} records${warnSuffix}`);
+}
+
+function parseConfirmPriorityArgs(args: string[]): {
+  recordId?: string;
+  actionStage?: ActionStage;
+  priorityRank?: number;
+  reason?: string;
+  changedBy: string;
+  queuePath: string;
+  ledgerPath: string;
+  historyPath: string;
+} {
+  const parsed = {
+    changedBy: 'user',
+    queuePath: DEFAULT_QUEUE_PATH,
+    ledgerPath: DEFAULT_LEDGER_PATH,
+    historyPath: DEFAULT_PRIORITY_HISTORY_PATH,
+  } as {
+    recordId?: string;
+    actionStage?: ActionStage;
+    priorityRank?: number;
+    reason?: string;
+    changedBy: string;
+    queuePath: string;
+    ledgerPath: string;
+    historyPath: string;
+  };
+
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--record-id' && args[i + 1]) parsed.recordId = args[++i];
+    else if (args[i] === '--stage' && args[i + 1]) {
+      parsed.actionStage = ActionStageSchema.parse(args[++i]);
+    } else if (args[i] === '--rank' && args[i + 1]) {
+      parsed.priorityRank = Number.parseInt(args[++i], 10);
+    } else if (args[i] === '--reason' && args[i + 1]) {
+      parsed.reason = args[++i];
+    } else if (args[i] === '--changed-by' && args[i + 1]) {
+      parsed.changedBy = args[++i];
+    } else if (args[i] === '--queue' && args[i + 1]) {
+      parsed.queuePath = args[++i];
+    } else if (args[i] === '--ledger' && args[i + 1]) {
+      parsed.ledgerPath = args[++i];
+    } else if (args[i] === '--history' && args[i + 1]) {
+      parsed.historyPath = args[++i];
+    }
+  }
+
+  return parsed;
+}
+
+function cmdConfirmPriority(args: string[]): void {
+  const opts = parseConfirmPriorityArgs(args);
+  if (!opts.recordId || !opts.actionStage || !opts.priorityRank || !opts.reason) {
+    console.error(
+      'Usage: confirm-priority --record-id <id> --stage <stage> --rank <n> --reason <text>',
+    );
+    process.exit(1);
+  }
+  if (!Number.isInteger(opts.priorityRank) || opts.priorityRank <= 0) {
+    console.error('--rank must be a positive integer');
+    process.exit(1);
+  }
+
+  const confirmedAt = new Date().toISOString();
+  const next = UserConfirmedPrioritySchema.parse({
+    confirmedAt,
+    actionStage: opts.actionStage,
+    priorityRank: opts.priorityRank,
+    reason: opts.reason,
+    confirmedBy: opts.changedBy,
+  });
+
+  const queueRecords = readFrontdoorQueue(opts.queuePath);
+  const queueIndex = queueRecords.findIndex((record) => record.queueId === opts.recordId);
+  if (queueIndex !== -1) {
+    const previous = queueRecords[queueIndex].userConfirmedPriority ?? null;
+    queueRecords[queueIndex] = FrontdoorQueueRecordSchema.parse({
+      ...queueRecords[queueIndex],
+      userConfirmedPriority: next,
+    });
+    writeFrontdoorQueue(queueRecords, opts.queuePath);
+    appendPriorityHistoryEvent(
+      createPriorityHistoryEvent({
+        recordId: opts.recordId,
+        recordType: 'frontdoor_queue',
+        changedBy: opts.changedBy,
+        previous,
+        next,
+        reason: opts.reason,
+        source: 'confirm-priority-command',
+        changedAt: confirmedAt,
+      }),
+      opts.historyPath,
+    );
+    console.log(`confirmed priority for frontdoor queue record: ${opts.recordId}`);
+    console.log(`suggested next actions: ${queueRecords[queueIndex].nextAction ?? '(none)'}`);
+    return;
+  }
+
+  const ledgerRecords = readLedger(opts.ledgerPath);
+  const ledgerIndex = ledgerRecords.findIndex((record) => record.id === opts.recordId);
+  if (ledgerIndex !== -1) {
+    const previous = ledgerRecords[ledgerIndex].userConfirmedPriority ?? null;
+    ledgerRecords[ledgerIndex] = {
+      ...ledgerRecords[ledgerIndex],
+      userConfirmedPriority: next,
+    };
+    writeLedger(opts.ledgerPath, ledgerRecords);
+    appendPriorityHistoryEvent(
+      createPriorityHistoryEvent({
+        recordId: opts.recordId,
+        recordType: 'ledger',
+        changedBy: opts.changedBy,
+        previous,
+        next,
+        reason: opts.reason,
+        source: 'confirm-priority-command',
+        changedAt: confirmedAt,
+      }),
+      opts.historyPath,
+    );
+    console.log(`confirmed priority for ledger record: ${opts.recordId}`);
+    const suggestions = buildPreparationActionSuggestions(
+      next.actionStage,
+      ledgerRecords[ledgerIndex],
+    );
+    for (const suggestion of suggestions) console.log(`  ${suggestion}`);
+    return;
+  }
+
+  console.error(`record not found in frontdoor queue or ledger: ${opts.recordId}`);
+  process.exit(1);
 }
 
 async function cmdDryRun(args: string[]): Promise<void> {
@@ -181,7 +334,7 @@ async function cmdRunOnce(args: string[]): Promise<void> {
     const result = await executeDecisionWithOptionalSkills(record, decision, opts);
 
     if (result.safetyBlocked) {
-      console.warn(`[safety gate blocked] ${record.id}:`);
+      console.warn(`[safety check blocked] ${record.id}:`);
       for (const v of result.safetyViolations ?? []) {
         console.warn(`  [${v.severity}] ${v.rule}: ${v.detail}`);
       }
@@ -210,7 +363,7 @@ async function cmdRunDaily(args: string[]): Promise<void> {
     results.push(result);
 
     if (result.safetyBlocked) {
-      console.warn(`[safety gate blocked] ${record.id}:`);
+      console.warn(`[safety check blocked] ${record.id}:`);
       for (const v of result.safetyViolations ?? []) {
         console.warn(`  [${v.severity}] ${v.rule}: ${v.detail}`);
       }
@@ -239,7 +392,7 @@ async function cmdResume(applicationId: string, args: string[]): Promise<void> {
   const result = await executeDecisionWithOptionalSkills(record, decision, opts);
 
   if (result.safetyBlocked) {
-    console.warn(`[safety gate blocked] ${record.id}:`);
+    console.warn(`[safety check blocked] ${record.id}:`);
     for (const v of result.safetyViolations ?? []) {
       console.warn(`  [${v.severity}] ${v.rule}: ${v.detail}`);
     }
@@ -436,7 +589,7 @@ function printSummary(results: AgentRunResult[], opts: RunOptions): void {
   console.log(`  Awaiting user action: ${awaitingUser}`);
   console.log(`  Terminal (skip):      ${terminal}`);
   if (safetyBlocked > 0) {
-    console.log(`  Safety gate blocked:  ${safetyBlocked}`);
+    console.log(`  Safety check blocked: ${safetyBlocked}`);
   }
   if (executionBlocked > 0) {
     console.log(`  Execution blocked:    ${executionBlocked}`);
@@ -455,6 +608,14 @@ function ensureDir(dir: string): void {
   if (dir && !existsSync(dir)) mkdirSync(dir, { recursive: true });
 }
 
+function workspacePathExists(path: string): boolean {
+  if (existsSync(path)) return true;
+  if (!process.cwd().endsWith('/career-os') && existsSync(join('career-os', path))) {
+    return true;
+  }
+  return false;
+}
+
 function showHelp(): void {
   console.log(`Application Flow Agent
 
@@ -469,17 +630,21 @@ Commands:
   resume <application-id>              Process a specific application
   ingest-position-report <path>        Import positions from position-recommender report
   report-daily                         Generate daily digest with public/private separation
+  confirm-priority                     Store user-confirmed action stage and priority rank
 
 Options:
   --ledger <path>       Ledger file (default: data/applications/ledger.jsonl)
   --output-dir <path>   Output directory (default: data/runtime/application-agent)
   --format markdown|jsonl  Decision log format (default: markdown)
   --max-actions <n>     Max agent actions per run-daily (default: 5)
-  --execute-skills      Execute allowed private native skills before artifact gate
+  --execute-skills      Execute allowed private native skills before artifact checks
   --notify-discord      Send concise progress notifications during real execution
   --skill-timeout-ms <n>  Timeout for each skill execution (default: 1200000)
 
-Safety gates (always enforced):
+Priority confirmation:
+  confirm-priority --record-id <id> --stage prepare-now|investigate|monitor|low-priority|hold|excluded --rank <n> --reason <text>
+
+Safety rules (always enforced):
   - Actual job submission is never automated (checklist only)
   - Site login and browser automation are blocked
   - fos-study publish requires user approval
@@ -518,6 +683,9 @@ async function main(): Promise<void> {
     }
     case 'report-daily':
       await cmdReportDaily(restArgs);
+      break;
+    case 'confirm-priority':
+      cmdConfirmPriority(restArgs);
       break;
     default:
       showHelp();
