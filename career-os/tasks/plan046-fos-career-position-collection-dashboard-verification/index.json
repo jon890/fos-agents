@@ -167,7 +167,8 @@
       ],
       "model": "haiku",
       "timeout": 900,
-      "completedAt": "2026-06-07T00:05:00+09:00"
+      "completedAt": "2026-06-07T00:05:00+09:00",
+      "commitSha": "517a96878673"
     }
   ]
 }
