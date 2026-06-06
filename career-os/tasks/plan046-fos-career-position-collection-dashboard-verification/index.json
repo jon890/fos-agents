@@ -1,0 +1,154 @@
+{
+  "name": "plan046-fos-career-position-collection-dashboard-verification",
+  "description": "기존 position 수집 source를 모두 실행하고, 성공한 수집 결과가 fos-career DB를 거쳐 dashboard 화면에 실제로 보이는지 확인한다.",
+  "created_at": "2026-06-06T23:23:00+09:00",
+  "updated_at": "2026-06-06T23:23:00+09:00",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 5,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/AGENTS.md",
+    "career-os/docs/adr.md",
+    "career-os/docs/data-schema.md",
+    "career-os/docs/flow.md",
+    "career-os/docs/code-architecture.md",
+    "career-os/tasks/plan039-fos-career-dashboard/index.json",
+    "career-os/tasks/plan040-position-recommender-collector-modularization/index.json",
+    "career-os/tasks/plan046-fos-career-position-collection-dashboard-verification/phase-01.md",
+    "career-os/tasks/plan046-fos-career-position-collection-dashboard-verification/phase-02.md",
+    "career-os/tasks/plan046-fos-career-position-collection-dashboard-verification/phase-03.md",
+    "career-os/tasks/plan046-fos-career-position-collection-dashboard-verification/phase-04.md",
+    "career-os/tasks/plan046-fos-career-position-collection-dashboard-verification/phase-05.md"
+  ],
+  "depends_on": [
+    "plan039-fos-career-dashboard",
+    "plan040-position-recommender-collector-modularization"
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "dashboard-visible-success",
+      "decision": "성공 기준은 파일이나 DB 저장만이 아니라 fos-career dashboard 화면에서 수집 공고가 실제로 보이는 것이다."
+    },
+    {
+      "id": "D2",
+      "title": "show-all-fields-first",
+      "decision": "초기 화면에는 수집 공고의 사용 가능한 모든 필드를 노출하고, 숨길 필드는 이후 사용자와 논의한다."
+    },
+    {
+      "id": "D3",
+      "title": "manual-import-first",
+      "decision": "collector output을 fos-career DB로 옮기는 가져오기 도구가 필요하면 첫 실행은 dashboard 버튼이 아니라 CLI 수동 실행으로 한다."
+    },
+    {
+      "id": "D4",
+      "title": "existing-sources-only",
+      "decision": "이번 plan은 기존 source를 모두 실행하되 새 source를 추가하지 않는다."
+    },
+    {
+      "id": "D5",
+      "title": "source-failure-does-not-stop-successes",
+      "decision": "실패한 source는 기록하고, 성공한 source의 결과는 dashboard 확인까지 계속 진행한다."
+    },
+    {
+      "id": "D6",
+      "title": "source-link-upsert",
+      "decision": "중복 처리는 가능하면 source와 external id 또는 link 기준의 갱신 삽입으로 처리한다."
+    }
+  ],
+  "execution_rules": [
+    "phase 경계는 commit/push 경계로 다룬다.",
+    "읽기 전용 phase는 변경을 남기지 않고 clean/no-change로 보고한다.",
+    "쓰기 phase는 phase 끝에서 의도한 변경만 stage하고 commit/push한 뒤 runner가 commit hash를 기록한다.",
+    "관련 없는 dirty state를 다음 phase로 넘기지 않는다.",
+    "stage는 명시 파일만 대상으로 하고 git add . 또는 넓은 path add를 쓰지 않는다.",
+    "plan-and-build runner는 workspace env가 설정되어 있으면 notify_discord로 phase 진행 알림을 보낸다. phase 파일은 특별한 사용자 요약이 필요한 경우가 아니면 수동 알림을 중복하지 않는다."
+  ],
+  "out_of_scope": [
+    "새 채용 source 추가",
+    "dashboard에서 수집 실행 버튼 추가",
+    "지원 준비 ledger 승격",
+    "수집 공고 추천 순위 재계산",
+    "화면 필드 숨김 정책 확정",
+    "plan045 또는 HUD 파일 수정",
+    "secrets 커밋"
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "기존 수집 산출물과 dashboard DB/API 연결 읽기 전용 진단",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 900
+    },
+    {
+      "number": 2,
+      "title": "기존 source 전체 수집 실행과 성공/실패 기록",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 3,
+      "title": "필요 시 collector output을 dashboard DB로 옮기는 최소 가져오기 도구 구현",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 1500
+    },
+    {
+      "number": 4,
+      "title": "dashboard 전체 필드 표시와 화면 검증",
+      "file": "phase-04.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 1500
+    },
+    {
+      "number": 5,
+      "title": "최종 검증과 source 실패 요약 보고",
+      "file": "phase-05.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "haiku",
+      "timeout": 900
+    }
+  ]
+}
