@@ -324,6 +324,7 @@ function parseTossJobDetail(
 }
 
 export const tossAdapter: SourceAdapter = {
+  id: "toss-careers",
   name: "toss-careers",
   async collect({ serverOnly }) {
     const rejected: Record<string, number> = {};

@@ -31,6 +31,7 @@ export function render(posts: Posting[], outPath: string, diagnostics: Collectio
     "## Collection Diagnostics",
     "",
     `- requested_source: ${diagnostics.requestedSource}`,
+    `- configured_sources: ${diagnostics.configuredSources.join(", ") || "-"}`,
     `- server_only: ${diagnostics.serverOnly}`,
     `- wanted_limit: ${diagnostics.wantedLimit}`,
     `- include_toss_articles: ${diagnostics.includeTossArticles}`,
@@ -39,12 +40,22 @@ export function render(posts: Posting[], outPath: string, diagnostics: Collectio
     `- non_direct_leads: ${nonDirectCount}`,
     `- close_urgency_counts: urgent=${urgentCount}, soon=${soonCount}, no_deadline=${noDeadlineCount}`,
     `- source_counts: ${Array.from(sourceCounts.entries()).map(([k, v]) => `${k}=${v}`).join(", ") || "-"}`,
+    `- source_diagnostics: ${
+      diagnostics.sourceDiagnostics.length > 0
+        ? diagnostics.sourceDiagnostics
+            .map((d) =>
+              `${d.source}:${d.status} collected=${d.collectedCount} imported=${d.importedCount} skipped=${d.skippedCount} failed=${d.failedCount}`
+            )
+            .join(" | ")
+        : "-"
+    }`,
     `- source_errors: ${diagnostics.errors.length > 0 ? diagnostics.errors.join(" | ") : "-"}`,
     "",
   ];
   for (const p of posts) {
     lines.push(`- [${p.company}] ${p.title}`);
     lines.push(`  - source: ${p.source}`);
+    if (p.discoveryMode) lines.push(`  - discovery_mode: ${p.discoveryMode}`);
     lines.push(`  - link_type: ${p.linkType}`);
     lines.push(`  - posting_status: ${p.postingStatus}`);
     lines.push(`  - active_evidence: ${p.activeEvidence}`);

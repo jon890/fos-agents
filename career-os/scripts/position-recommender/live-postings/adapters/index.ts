@@ -1,21 +1,30 @@
-import type { SourceAdapter } from "../types.ts";
+import type { SourceAdapter, SourceId, SourceSelection } from "../types.ts";
 import { tossAdapter } from "./toss.ts";
 import { wantedAdapter } from "./wanted.ts";
 
-const ADAPTERS: Record<"wanted" | "toss", SourceAdapter> = {
+const ADAPTERS: Record<SourceId, SourceAdapter> = {
   wanted: wantedAdapter,
-  toss: tossAdapter,
+  "toss-careers": tossAdapter,
 };
 
-export type SourceId = keyof typeof ADAPTERS;
-export type SourceSelection = SourceId | "all";
+const SOURCE_ALIASES: Record<string, SourceId> = {
+  toss: "toss-careers",
+};
+
+function normalizeSource(source: SourceSelection): SourceSelection {
+  if (source === "all") return source;
+  return SOURCE_ALIASES[source] ?? source;
+}
+
+export function configuredSourceIds(source: SourceSelection): SourceId[] {
+  const normalized = normalizeSource(source);
+  if (normalized === "all") return Object.keys(ADAPTERS) as SourceId[];
+  return [normalized as SourceId];
+}
 
 export function selectAdapters(
   source: SourceSelection,
-  includeTossArticles: boolean
+  _includeTossArticles: boolean
 ): SourceAdapter[] {
-  const adapters: SourceAdapter[] = [];
-  if (source === "all" || source === "wanted") adapters.push(ADAPTERS.wanted);
-  if (source === "toss" || (source === "all" && includeTossArticles)) adapters.push(ADAPTERS.toss);
-  return adapters;
+  return configuredSourceIds(source).map((id) => ADAPTERS[id]);
 }

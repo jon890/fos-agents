@@ -21,10 +21,17 @@
  */
 
 import { resolve } from "path";
-import type { Posting, CollectionDiagnostics, CliArgs } from "./live-postings/types.ts";
+import type {
+  AdapterCollectionResult,
+  CollectionDiagnostics,
+  Posting,
+  CliArgs,
+  SourceDiagnostic,
+  SourceSelection,
+} from "./live-postings/types.ts";
 import { dedupe, keepActiveDirectPostings } from "./live-postings/validator.ts";
 import { render } from "./live-postings/render.ts";
-import { selectAdapters } from "./live-postings/adapters/index.ts";
+import { configuredSourceIds, selectAdapters } from "./live-postings/adapters/index.ts";
 
 const REPO_ROOT = resolve(import.meta.dir, "../../..");
 
@@ -32,7 +39,7 @@ const REPO_ROOT = resolve(import.meta.dir, "../../..");
 
 function parseArgs(argv: string[]): CliArgs {
   let out = resolve(REPO_ROOT, "career-os/data/runtime/live-position-postings.md");
-  let source: "all" | "wanted" | "toss" = "all";
+  let source: SourceSelection = "all";
   let serverOnly = true;
   let wantedLimit = 120;
   let includeTossArticles = false;
@@ -43,7 +50,7 @@ function parseArgs(argv: string[]): CliArgs {
       out = argv[++i];
     } else if (arg === "--source" && argv[i + 1]) {
       const s = argv[++i];
-      if (s === "wanted" || s === "toss" || s === "all") source = s;
+      if (s === "wanted" || s === "toss" || s === "toss-careers" || s === "all") source = s;
     } else if (arg === "--max-wanted" && argv[i + 1]) {
       wantedLimit = parseInt(argv[++i], 10);
     } else if (arg === "--no-server-only") {
@@ -55,26 +62,72 @@ function parseArgs(argv: string[]): CliArgs {
   return { out, source, serverOnly, wantedLimit, includeTossArticles };
 }
 
+function isAdapterCollectionResult(value: Posting[] | AdapterCollectionResult): value is AdapterCollectionResult {
+  return !Array.isArray(value);
+}
+
+function importedCountsBySource(posts: Posting[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const post of posts) counts.set(post.source, (counts.get(post.source) ?? 0) + 1);
+  return counts;
+}
+
 async function main(): Promise<number> {
   const { out, source, serverOnly, wantedLimit, includeTossArticles } = parseArgs(process.argv.slice(2));
   const collected: Posting[] = [];
   const errors: string[] = [];
+  const sourceDiagnostics: SourceDiagnostic[] = [];
 
   for (const adapter of selectAdapters(source, includeTossArticles)) {
     try {
-      collected.push(...(await adapter.collect({ serverOnly, wantedLimit })));
+      const result = await adapter.collect({ serverOnly, wantedLimit });
+      if (isAdapterCollectionResult(result)) {
+        collected.push(...result.postings);
+        sourceDiagnostics.push({ ...result.diagnostics, importedCount: 0 });
+        errors.push(...(result.errors ?? []));
+      } else {
+        collected.push(...result);
+        sourceDiagnostics.push({
+          source: adapter.id,
+          status: "ok",
+          collectedCount: result.length,
+          importedCount: 0,
+          skippedCount: 0,
+          failedCount: 0,
+          discoveryModes: [],
+          message: adapter.note ?? `${adapter.name}: collected=${result.length}`,
+        });
+      }
       if (adapter.note) errors.push(adapter.note);
     } catch (e) {
-      errors.push(`${adapter.name}: ${e}`);
+      const message = `${adapter.name}: ${e}`;
+      errors.push(message);
+      sourceDiagnostics.push({
+        source: adapter.id,
+        status: "failed",
+        collectedCount: 0,
+        importedCount: 0,
+        skippedCount: 0,
+        failedCount: 1,
+        discoveryModes: [],
+        message,
+      });
     }
   }
 
   const activePosts = keepActiveDirectPostings(dedupe(collected));
+  const importedCounts = importedCountsBySource(activePosts);
+  const normalizedDiagnostics = sourceDiagnostics.map((diagnostic) => ({
+    ...diagnostic,
+    importedCount: importedCounts.get(diagnostic.source) ?? 0,
+  }));
   render(activePosts, out, {
     requestedSource: source,
+    configuredSources: configuredSourceIds(source),
     serverOnly,
     wantedLimit,
     includeTossArticles,
+    sourceDiagnostics: normalizedDiagnostics,
     errors,
   } satisfies CollectionDiagnostics);
   if (errors.length > 0) {

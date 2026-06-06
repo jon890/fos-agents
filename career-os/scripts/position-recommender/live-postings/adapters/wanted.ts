@@ -143,6 +143,7 @@ async function fetchWanted(limit = 120, serverOnly = true, includeDetail = true)
 }
 
 export const wantedAdapter: SourceAdapter = {
+  id: "wanted",
   name: "wanted",
   async collect({ serverOnly, wantedLimit }) {
     return fetchWanted(wantedLimit, serverOnly, true);
