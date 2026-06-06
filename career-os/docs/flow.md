@@ -566,7 +566,6 @@ LLM 채팅 흐름:
   -> career-os 파일에서 관련 컨텍스트 읽기 (읽기 전용)
      candidate-profile 최대 4000자 + frontdoor-queue 상태 요약 + ledger 최근 5개
   -> LLM provider 선택 (LLM_PROVIDER)
-     - anthropic: Anthropic Messages API
      - openai: OpenAI Responses API
   -> 응답 스트리밍
   -> MySQL llm_chat_messages에 메시지 영속화
