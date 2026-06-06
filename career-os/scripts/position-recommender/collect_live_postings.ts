@@ -30,14 +30,19 @@ const UA = "Mozilla/5.0 (OpenClaw career-os position recommender)";
 const SERVER_KEYWORDS = [
   "backend", "백엔드", "server", "서버", "spring", "java", "kotlin", "api", "platform", "플랫폼", "gateway",
 ];
+const AI_PLATFORM_ROLE_KEYWORDS = [
+  "ai transformation", "ax", "ai-native", "ai native", "ai agent", "agent", "llm", "rag", "llmops", "mlops",
+  "ai 플랫폼", "ai플랫폼", "ai 서비스", "ai 엔지니어", "프로덕트 엔지니어", "전사 주요 프로젝트",
+  "업무 자동화", "개발 생산성", "workflow", "tool calling", "memory",
+];
 const EXCLUDE_NON_SERVER_KEYWORDS = [
-  "data engineer", "데이터 엔지니어", "data scientist", "ml engineer", "ai research", "research engineer",
-  "frontend", "front-end", "프론트", "android", "ios", "qa", "product designer", "ux", "pm", "manager", "마케터",
+  "data engineer", "데이터 엔지니어", "data scientist", "데이터 사이언티스트", "ai research", "research engineer",
+  "frontend", "front-end", "프론트", "android", "ios", "qa", "product designer", "ux", "마케터",
 ];
 const NON_SERVER_TITLE_KEYWORDS = [
   "기획", "서비스 기획", "product manager", "프로덕트 매니저", "po", "pm", "planner",
   "designer", "디자이너", "qa", "frontend", "프론트", "android", "ios", "data engineer",
-  "데이터 엔지니어", "ml engineer", "ai research", "마케터", "marketing",
+  "데이터 엔지니어", "data scientist", "데이터 사이언티스트", "ai research", "마케터", "marketing",
 ];
 const CONTRACT_KEYWORDS = [
   "계약직", "contract", "contractor", "temporary", "temp", "freelance", "프리랜서",
@@ -95,7 +100,10 @@ function isNonServerTitle(text: string): boolean {
 function isServerRole(text: string): boolean {
   const low = text.toLowerCase();
   if (EXCLUDE_NON_SERVER_KEYWORDS.some((k) => low.includes(k))) return false;
-  return SERVER_KEYWORDS.some((k) => low.includes(k));
+  const hasServerKeyword = SERVER_KEYWORDS.some((k) => low.includes(k));
+  const hasAiPlatformKeyword = AI_PLATFORM_ROLE_KEYWORDS.some((k) => low.includes(k));
+  if (low.includes("ml engineer") && !hasAiPlatformKeyword) return false;
+  return hasServerKeyword || hasAiPlatformKeyword;
 }
 
 function isContractRole(text: string): boolean {
@@ -256,7 +264,7 @@ async function fetchWanted(limit = 120, serverOnly = true, includeDetail = true)
     if (isExcludedCompany(text)) continue;
     if (serverOnly && isNonServerTitle(`${title} ${categoryText}`)) continue;
     if (serverOnly && !isServerRole(text)) continue;
-    if (![...HARD_DOMAIN_KEYWORDS, ...AI_KEYWORDS, ...SERVER_KEYWORDS].some((k) => low.includes(k))) continue;
+    if (![...HARD_DOMAIN_KEYWORDS, ...AI_KEYWORDS, ...SERVER_KEYWORDS, ...AI_PLATFORM_ROLE_KEYWORDS].some((k) => low.includes(k))) continue;
 
     const pid = item.id as number;
     let detail: Record<string, unknown> = {};

@@ -7,6 +7,16 @@
   "priorityCompanies": [
     {
       "tier": "A",
+      "company": "KakaoPay / KakaoPay Securities",
+      "koreanName": "카카오페이/카카오페이증권",
+      "careerUrls": ["https://kakaopay.career.greetinghr.com/ko/main", "https://career.kakaopaysec.com/"],
+      "wantedKeywords": ["카카오페이 서버 개발자", "카카오페이 백엔드", "카카오페이 AX", "카카오페이 AI Agent", "카카오페이 AI 플랫폼", "카카오페이증권 AI 엔지니어"],
+      "techBlogs": ["https://tech.kakaopay.com/"],
+      "preferredDomains": ["payment", "settlement", "fintech", "ai-transformation", "ai-agent", "ai-platform", "backend-platform"],
+      "notes": "결제/정산 서버는 백엔드 코어 레버리지, AX/AI Agent/AI 플랫폼은 후보자의 AI workflow·RAG·Agent 경험 레버리지가 큼. 공식 active 개별 공고 확인 시 우선 평가."
+    },
+    {
+      "tier": "A",
       "company": "NAVER / NAVER Financial / NAVER Pay",
       "koreanName": "네이버/네이버파이낸셜/네이버페이",
       "careerUrls": ["https://recruit.navercorp.com/", "https://recruit.naverfincorp.com/"],

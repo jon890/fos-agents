@@ -219,7 +219,12 @@ export function decideForRecord(record: ApplicationLedgerRecord): AgentDecision 
           confidence: fitScore >= STRONG_FIT_THRESHOLD ? 0.9 : 0.75,
           nextStatus: 'analyzing',
           nextAgentPhase: 'fit_analysis_started',
-          nextActions: ['run_fit_analysis'],
+          nextActions: [
+            'run_posting_analysis',
+            'run_fit_gap_analysis',
+            'generate_study_priorities',
+            'generate_interview_questions',
+          ],
           requiredUserAction: 'none',
           allowed: true,
         });

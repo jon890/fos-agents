@@ -1,5 +1,5 @@
 {
-  "description": "Core fos-study files for CJ Foodville first-round daily interview drill generation.",
+  "description": "Core fos-study files for CJ Foodville first-round daily interview practice generation.",
   "updated_at": "2026-06-05",
   "target": {
     "company": "CJ Foodville",
@@ -18,7 +18,7 @@
     },
     {
       "path": "architecture/fnb-order-store-pickup-state-machine.md",
-      "note": "Order, store acceptance, pickup, delivery, cancellation, and recovery state-machine drill source."
+      "note": "Order, store acceptance, pickup, delivery, cancellation, and recovery state-machine practice source."
     },
     {
       "path": "architecture/fnb-coupon-promotion-membership-design.md",

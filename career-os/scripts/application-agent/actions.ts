@@ -251,6 +251,8 @@ function buildCommandSuggestions(
         buildSkillCommand('application-package-writer', {
           postingPath: record.postingPath ?? join(record.applicationDir, 'posting.md'),
         }),
+        buildSkillCommand('study-topic-recommender'),
+        buildSkillCommand('interview-prep-analyzer'),
       ];
 
     case 'generate_study_actions':

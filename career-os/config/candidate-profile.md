@@ -163,7 +163,7 @@
 
 > 거짓 약점 금지. 출처 문서·자가 진단(`CLAUDE.md`) · smoke test 결과에 근거.
 
-1. **JPA N+1 · 페치 조인 · 벌크 연산 실전 질의응답** — 운영에서 사용은 하고 있으나 드릴다운 질문에 즉답할 수준으로 정리가 부족. 개선 중(career-os smoke test에서 식별).
+1. **JPA N+1 · 페치 조인 · 벌크 연산 실전 질의응답** — 운영에서 사용은 하고 있으나 깊이 있는 추가 질문에 즉답할 수준으로 정리가 부족. 개선 중(career-os smoke test에서 식별).
 2. **Redis 캐싱 패턴 폭** — Cache-Aside는 익숙. Write-Through / Write-Behind / Read-Through / 인증·세션 분리 / 분산 락(Redisson 등) / Hot Key 처리 실전 사례는 상대적으로 얕음. 특정 회사 사례보다 범용적인 대규모 백엔드 운영/설계 관점으로 학습한다.
 3. **Kafka 운영 디테일** — Outbox 설계·운영 경험은 있으나, **파티셔닝 키 선택 / Consumer Group rebalance / Exactly-Once Semantics / Lag 모니터링** 같은 운영 이슈에서 깊이가 부족할 수 있음.
 4. **Kubernetes 실운영** — NHN Cloud Container Service의 K8s 추상화 위에서 preStop/grace 수준은 다뤘으나, 직접적인 Deployment/HPA/PDB 튜닝 기재는 출처 문서에 없음. 면접 질문 시 "운영 제약을 받는 사용자 관점"으로 답할 것.
@@ -207,7 +207,7 @@
 
 1. **JPA N+1 & 페치 전략 질의응답**
    - `@EntityGraph` / fetch join / `default_batch_fetch_size` / `open-in-view=false`.
-   - 상태: study-pack 1편 작성 완료, 구술 드릴 반복 필요.
+   - 상태: study-pack 1편 작성 완료, 구술 면접 연습 반복 필요.
 2. **Redis 캐싱 패턴 확장**
    - Write-Through / Write-Behind / Read-Through / Cache Stampede / Hot Key.
    - Cache-Aside + Kafka 하이브리드, Hot Key, TTL/invalidation, 장애 시 fallback 복기.

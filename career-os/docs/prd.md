@@ -83,6 +83,57 @@ MVP 원칙:
   - 원본 candidate-profile 수정
 - plan030 position-recommender freshness guard는 후보 입력 품질 prerequisite로 참조한다.
 
+### 계획 중: application frontdoor queue (plan038)
+
+`plan038-application-frontdoor-review`는 application-flow-agent 앞단을 "추천 후보 순위 확인 → 사용자가 N번 준비 시작 선택 → 선택된 후보만 상세 분석/학습/지원 준비로 승격" 흐름으로 정리한다.
+
+MVP 범위:
+
+- `/position-recommender` 결과에서 사용자에게 보여줄 지원 후보 순위를 만든다.
+- 추천 후보는 `data/runtime/application-agent/frontdoor-queue.jsonl`에 저장한다.
+- 사용자가 "N번 준비 시작"을 명시한 후보만 `data/applications/ledger.jsonl`로 승격한다.
+- 승격 후 자동 생성 범위는 상세 공고 분석, fit/gap, 공부 우선순위, 예상 면접 질문까지로 제한한다.
+- 최종 지원 패키지 생성과 제출 관련 action은 기존 사용자 검토 gate를 유지한다.
+
+초기 검증 대상:
+
+- `카카오페이 서버 개발자 (144295)` — KakaoPay AI track 임시 후보. 별도 AI 전용 URL이 확인되면 교체한다.
+- `카카오페이증권 워크플랫폼 백엔드 개발자 (시니어)` — AI/workplatform track 후보.
+- `TossPlace Applied AI Engineer` — 이미 ledger에 있으므로 중복 승격 방지 검증 후보.
+
+범위 밖:
+
+- Next.js 대시보드와 관리자 로그인은 `plan039`로 분리한다.
+
+### 계획 중: fos-career 웹 대시보드 (plan039)
+
+`plan039-fos-career-dashboard`는 career-os 데이터를 브라우저에서 읽고 LLM과 채팅으로 해석할 수 있는 Next.js 관리자 대시보드를 별도 저장소(`~/services/fos-career`)에 구축한다.
+
+핵심 분리 원칙:
+
+- career-os는 에이전트/데이터/자동화 진실 출처를 유지한다.
+- fos-career는 human-facing 웹 제품이다.
+- fos-career는 career-os 파일을 읽기 전용 마운트(`CAREER_OS_ROOT=/data/career-os`)로만 읽는다.
+- fos-career가 career-os 파일을 수정하는 것을 금지한다.
+
+MVP 범위:
+
+- 관리자 ID/password 로그인
+- frontdoor queue, ledger, position recommendation 읽기 전용 대시보드
+- LLM 채팅 UI (career-os 파일을 컨텍스트로 주입)
+- MySQL 소유 데이터: admin 계정/세션, LLM 채팅 이력, audit log, action history
+- Docker 이미지, 홈서버 역방향 프록시(기존 npm/Node 웹서버) 뒤에 배포
+
+MVP 범위 밖:
+
+- prepare-start/hold/reject 버튼 등 쓰기 액션 — 별도 승인된 쓰기 phase에서 다룬다.
+- career-os ledger/materials MySQL 마이그레이션 — 프로그레시브 마이그레이션은 별도 결정에서 다룬다.
+- 외부 채용 사이트 자동 제출
+- 공개 fos-study 발행
+- candidate-profile.md 수정
+
+(ADR-046 참조)
+
 ## 산출물 경로 정책
 
 - 외부 공유용 (블로그·인터뷰 자산): `sources/fos-study/`

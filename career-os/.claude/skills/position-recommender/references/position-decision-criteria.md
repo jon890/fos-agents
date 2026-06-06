@@ -7,7 +7,7 @@
 - NHN보다 커리어/보상/브랜드/엔지니어링 규모 면에서 나은 회사로 이동한다.
 - 사용자는 레브잇/올웨이즈를 크게 가고 싶은 회사로 보지 않는다. 레브잇/올웨이즈 개별 공고는 강력 추천/도전 추천/이번 주 즉시 지원 액션에서 제외하고, 필요하면 보류·제외 사유로만 짧게 언급한다.
 - 기존 게임/사내 플랫폼 도메인에 갇히지 않고, 결제·핀테크·커머스·검색·포털·모빌리티·콘텐츠·물류·클라우드·플랫폼·AI product 등으로 적극 전환한다.
-- 기본 지원 축은 Java/Spring 서버/백엔드다. AI/AX/MLOps는 후보자의 실제 AI workflow, RAG, Agent orchestration 경험이 서버 개발 역할과 결합될 때만 우선순위를 높인다.
+- 기본 지원 축은 Java/Spring 서버/백엔드다. 동시에 사용자는 AI 서비스/AI Transformation(AX)/AI Agent/AI 플랫폼에도 관심이 많으므로, 후보자의 실제 AI workflow, RAG, Agent orchestration, 개발 생산성 자동화 경험이 서버/플랫폼 개발 역할과 결합되는 공고는 적극 탐색한다.
 - 추천의 기본 단위는 회사가 아니라 **현재 열린 개별 채용공고**다. 개별 공고 URL과 active/open 근거가 없으면 강력/도전 추천에 올리지 않는다.
 
 ## 우선순위 판단 축
@@ -19,7 +19,12 @@
 - 개별 공고 원문 또는 Wanted active detail에서 역할, 스택, 요구사항을 확인한 공고만 추천한다.
 - Java/Spring, Kafka, Redis, MySQL/RDBMS, OpenSearch, Batch, MSA, 운영 트러블슈팅과 직접 연결되는 포지션을 우선한다.
 - Kotlin/Node/Python/Kubernetes/MLOps 중심 포지션은 강점 전이가 분명할 때만 stretch로 둔다.
-- Data Engineer, ML Engineer, AI Research, Frontend, PM, QA, Designer는 사용자가 명시하지 않는 한 제외한다.
+- AI/AX/Agent/AI 플랫폼 포지션은 다음 조건 중 2개 이상이면 추천 후보로 본다.
+  - Java/Kotlin/Python/TypeScript 중 하나 이상의 API·백엔드·플랫폼 개발 비중이 명시되어 있다.
+  - LLM, RAG, Agent, Tool calling, Memory, workflow/orchestration, evaluation, LLMOps/MLOps 중 후보자 경험과 연결되는 키워드가 있다.
+  - 내부 플랫폼, 개발 생산성, 업무 자동화, SDLC AI 활용, AI-Native 개발 문화처럼 후보자의 에이전트/자동화 경험을 차별화할 수 있다.
+  - NHN 대비 브랜드/보상/도메인/엔지니어링 규모 업사이드가 분명하다.
+- Data Engineer, AI Research, Frontend, PM, QA, Designer는 사용자가 명시하지 않는 한 제외한다. ML Engineer/MLOps는 모델 연구보다 플랫폼·서빙·파이프라인 개발 비중이 높을 때만 도전 추천 또는 보류로 다룬다.
 
 ### 2. 차별화 가능성
 
@@ -38,6 +43,7 @@
 - “서버 개발자” 이름이 붙어 있어도 실제 역할이 제품 서버/플랫폼 서버 개발인지, 내부 도구 운영/기획/조율 중심인지 확인한다.
 - AX 포지션은 서버 개발 비중이 충분하고 전사 주요 프로젝트/AI 전환 파이프라인 설계 역할이면 우선순위를 높인다.
 - AX가 단순 업무툴 도입, 프롬프트 운영, 내부 지원 업무 중심이면 결제서비스 같은 정통 백엔드 포지션을 더 안전하게 본다.
+- AI 전환 레인은 백엔드 코어 레인과 경쟁시키되, “커리어 서사”를 별도 평가한다. 예: 결제 서버는 백엔드 시니어 핵심 역량을 강화하고, AX/AI Agent 포지션은 후보자의 AI 도구·에이전트·자동화 경험을 더 크게 드러낼 수 있다.
 
 ### 5. 지원 이력/쿨다운
 

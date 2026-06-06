@@ -176,6 +176,61 @@ namespace 안의 topic key는 namespace별로 독립적이라 같은 key가 두 
 
 공고별 지원 에이전트 MVP의 비공개 상태 저장소. 실제 지원 전략, 맞춤 이력서 문구, 제출 상태, 회사별 쿨다운 판단이 들어가므로 git 추적하지 않는다.
 
+## data/runtime/application-agent/frontdoor-queue.jsonl (planned — plan038)
+
+사용자 선택 전 추천 후보 순위와 상태를 저장하는 JSONL 파일. 한 줄은 하나의 추천 후보이며, 사용자가 "N번 준비 시작"을 선택하기 전까지 `data/applications/ledger.jsonl`에 넣지 않는다. 이 파일은 runtime 데이터이며 git 추적 대상이 아니다.
+
+상태 enum:
+
+- `collected`: 수집됨. 아직 추천 후보로 선별되지 않았다.
+- `shortlisted`: 추천 후보로 선별됐다.
+- `needs_user_start_approval`: 사용자에게 "준비 시작" 선택을 기다린다.
+- `start_approved`: 사용자가 준비 시작을 승인했다.
+- `promoted_to_ledger`: ledger 승격이 끝났다.
+- `rejected`: 사용자가 제외했다.
+- `expired`: 공고가 만료됐거나 active 검증에 실패했다.
+
+예시 record:
+
+```json
+{
+  "queueId": "frontdoor-kakaopay-server-144295",
+  "rank": 1,
+  "company": "카카오페이",
+  "role": "서버 개발자",
+  "trackLabel": "KakaoPay AI track candidate",
+  "source": "position-recommender",
+  "url": "https://www.wanted.co.kr/wd/144295",
+  "status": "needs_user_start_approval",
+  "fitScore": 78,
+  "recommendationTier": "challenge",
+  "sourceFreshness": "fresh",
+  "selectedAt": null,
+  "promotedApplicationId": null,
+  "decisionReason": "AI 도구 활용 우대가 있는 서버 공고로, 별도 KakaoPay AI 전용 공고 URL 확인 전 임시 후보로 사용한다.",
+  "nextActions": ["await_user_start_approval"]
+}
+```
+
+필수/중요 필드:
+
+- `queueId`: frontdoor queue 안의 고유 ID.
+- `rank`: 사용자에게 보여줄 추천 순위.
+- `company`, `role`, `trackLabel`: 표시용 정보.
+- `source`, `url`: 수집 출처와 개별 공고 URL.
+- `status`: 위 상태 enum 중 하나.
+- `fitScore`, `recommendationTier`, `sourceFreshness`: 추천/검증 판단에 쓰는 보조 필드.
+- `selectedAt`: 사용자가 준비 시작을 승인한 시각. 승인 전에는 `null`.
+- `promotedApplicationId`: ledger 승격 후 연결된 application id. 승격 전에는 `null`.
+- `decisionReason`, `nextActions`: 사용자에게 보여줄 이유와 다음 액션.
+
+검증 규칙:
+
+- `sourceFreshness=stale`이면 `needs_user_start_approval`이나 `start_approved`가 될 수 없다.
+- `start_approved`는 사용자 선택 근거 없이 설정할 수 없다.
+- `promoted_to_ledger`는 `promotedApplicationId`가 있어야 한다.
+- 이미 같은 URL이나 external id가 ledger에 있으면 새 ledger record를 만들지 않고 existing application을 연결한다.
+
 ### 디렉터리 구조
 
 ```text
@@ -915,3 +970,89 @@ source adapter가 수집한 후보를 공통 validator가 걸러낸 뒤 markdown
 career-os가 손대지 말아야 할 영역: `.claude/**` (별도 스킬 정의), `.git/**`.
 
 `sources/fos-study/.claude/skills/docs-audit/SKILL.md`는 docs-audit 스킬의 진실 출처이며 `career-os/.claude/skills/docs-audit/`이 실체 디렉터리로 위치함 (내부 SKILL.md만 심링크 유지).
+
+## fos-career MySQL 스키마 (plan039 — planned)
+
+fos-career 대시보드가 소유하는 데이터.
+career-os 파일(ledger, frontdoor-queue, materials)은 MySQL로 마이그레이션하지 않는다.
+fos-career가 직접 소유하는 데이터만 여기에 정의한다.
+
+### admin_users
+
+단일 관리자 계정 테이블.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `id` | INT AUTO_INCREMENT PK | |
+| `username` | VARCHAR(64) UNIQUE NOT NULL | 관리자 아이디 |
+| `passwordHash` | VARCHAR(255) NOT NULL | bcrypt 해시 |
+| `createdAt` | DATETIME NOT NULL | |
+| `lastLoginAt` | DATETIME NULL | |
+
+### sessions
+
+관리자 세션.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `id` | VARCHAR(128) PK | 세션 ID (UUID) |
+| `adminUserId` | INT FK NOT NULL | admin_users.id |
+| `expiresAt` | DATETIME NOT NULL | |
+| `createdAt` | DATETIME NOT NULL | |
+| `ipAddress` | VARCHAR(45) NULL | |
+
+### audit_logs
+
+관리자 행동 기록.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `id` | BIGINT AUTO_INCREMENT PK | |
+| `adminUserId` | INT FK NULL | admin_users.id |
+| `action` | VARCHAR(128) NOT NULL | 예: `auth.login_success`, `chat.message_sent` |
+| `resource` | VARCHAR(128) NULL | 예: `application`, `chat_session` |
+| `resourceId` | VARCHAR(255) NULL | |
+| `detailsJson` | JSON NULL | |
+| `createdAt` | DATETIME NOT NULL | |
+
+### action_history
+
+대시보드에서 시작한 액션 이력.
+MVP에서는 읽기 전용 대시보드이므로 주로 chat 관련 액션이 기록된다.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `id` | BIGINT AUTO_INCREMENT PK | |
+| `adminUserId` | INT FK NOT NULL | admin_users.id |
+| `actionType` | VARCHAR(64) NOT NULL | 예: `chat.message_sent`, `dashboard.view` |
+| `payloadJson` | JSON NULL | |
+| `status` | ENUM('pending','done','failed') NOT NULL | |
+| `createdAt` | DATETIME NOT NULL | |
+
+### llm_chat_sessions
+
+LLM 채팅 세션.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `id` | VARCHAR(128) PK | UUID |
+| `adminUserId` | INT FK NOT NULL | admin_users.id |
+| `title` | VARCHAR(255) NOT NULL | 자동 생성 또는 사용자 지정 |
+| `createdAt` | DATETIME NOT NULL | |
+| `updatedAt` | DATETIME NOT NULL | |
+
+### llm_chat_messages
+
+LLM 채팅 메시지.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `id` | BIGINT AUTO_INCREMENT PK | |
+| `sessionId` | VARCHAR(128) FK NOT NULL | llm_chat_sessions.id |
+| `role` | ENUM('user','assistant') NOT NULL | |
+| `content` | TEXT NOT NULL | |
+| `contextSnapshotJson` | JSON NULL | 채팅 시점 career-os 컨텍스트 메타데이터 (파일 경로 목록 + 레코드 count만, 전체 내용 아님) |
+| `createdAt` | DATETIME NOT NULL | |
+
+Git 추적: fos-career 저장소(`~/services/fos-career`)에서 Drizzle ORM으로 관리.
+ai-nodes career-os와 무관.
