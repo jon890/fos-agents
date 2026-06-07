@@ -1,7 +1,7 @@
 # Phase 02 — docs/ADR 경계 결정
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ---
 
