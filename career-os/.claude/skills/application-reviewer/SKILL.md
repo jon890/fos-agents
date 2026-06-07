@@ -17,6 +17,28 @@ application-package-writer가 생성한 공고별 지원 패키지가 실제 경
 실제 지원서 제출·로그인·채용 사이트 접속 자동화 안 함 — 사용자 승인 필요 항목으로만 안내.
 `sources/fos-study/`에 아무것도 쓰지 않음.
 
+## 생성 산출물 품질 계약
+
+review.md는 내부 검토 문서다.
+사용자가 바로 수정하거나 승인 보류를 판단할 수 있게 결론과 행동을 앞에 둔다.
+
+- 한국어 우선 섹션 제목과 자연스러운 한국어 문장을 사용한다.
+  `pass`, `revise`, `blocked`, `Ledger Update Suggestion` 같은 판정·상태 식별자는 유지한다.
+- 첫 10줄 안에 결론을 둔다.
+  `pass/revise/blocked` 판정과 가장 중요한 권장 행동이 바로 보여야 한다.
+- 내부 분석에는 근거 경로를 유지한다.
+  posting, fit-analysis, application-package, ledger, riskFlag, 근거 파일 경로를 reviewer 판단 근거로 남긴다.
+- 제출용 문장에 대한 지적은 제출용 문장 자체와 내부 근거를 분리해서 쓴다.
+  제출용으로 옮길 수 있는 수정 문구에는 내부 파일 경로, plan 번호, commit hash, runner 상태를 넣지 않는다.
+- 이력서 MVP 산출물 체인은 `Markdown 이력서 초안 -> design.md를 적용한 HTML 이력서 -> HTML을 PDF로 변환한 완성 PDF 이력서`로 검토한다.
+  HTML 이력서는 model이 `design.md`를 적용했다는 전제를 확인하고, PDF는 사용자가 첨부할 수 있는 최종 산출물로 본다.
+  PDF 생성은 제출 자동화가 아니며, 업로드·전송·제출 버튼 클릭은 별도의 `사용자 승인 필요` 항목이다.
+- `needs_evidence`는 사용자에게 raw label로 남기지 않는다.
+  발견 항목은 모두 `보강 필요 / 선택지 / 권장 행동` 구조로 바꾼다.
+  이 구조는 사용자가 증거를 찾을지, 표현을 낮출지, 진행을 멈출지 바로 고를 수 있어야 한다.
+- 실제 제출, 로그인, 채용 사이트 입력, 공개 발행, candidate-profile 수정은 하지 않는다.
+  모두 `사용자 승인 필요` 항목으로만 안내한다.
+
 ## Inputs
 
 Claude는 다음을 `Read` 도구로 직접 로드:
@@ -59,7 +81,7 @@ Claude는 다음을 `Read` 도구로 직접 로드:
 #### 3-1. Evidence Guard (근거 없는 주장 여부)
 
 application-package.md의 이력서 bullet, 지원동기, 직무별 강조 포인트를 검토:
-- `needs_evidence` 마킹이 있는 항목 목록화
+- 내부적으로 `needs_evidence`에 해당하는 항목을 찾되, review.md에는 raw label이 아니라 `보강 필요 / 선택지 / 권장 행동`으로 작성
 - 근거 파일 없이 수치·성과·기술 경험을 주장한 문장 식별
 - 근거 파일이 실제 존재하는지 확인 (Read 결과 기반)
 
@@ -93,7 +115,7 @@ ledger.jsonl의 riskFlags와 posting.md의 위험 플래그를 교차:
 
 다음 항목은 agent가 자동으로 수행할 수 없음 — 사용자 승인 필요:
 - 실제 지원서 제출 / 채용 사이트 접속 / 계정 로그인
-- needs_evidence 항목 실제 보강 여부 결정 (후보자 본인만 판단 가능)
+- 근거 보강 필요 항목의 실제 보강 여부 결정 (후보자 본인만 판단 가능)
 - 쿨다운 리스크 수용 여부 (개인 전략 결정)
 - 포지셔닝 전환 의사결정 (Java 백엔드 → Applied AI Engineer 등)
 
@@ -102,13 +124,13 @@ ledger.jsonl의 riskFlags와 posting.md의 위험 플래그를 교차:
 6개 축 결과를 종합해 다음 중 하나로 판정:
 
 - **`pass`**: 근거 있는 주장만 포함, drift·과장·공개 금지 없음, 리스크 플래그 없거나 사용자 확인 후 진행 가능
-- **`revise`**: agent가 수정 가능한 구체 항목이 있음 (needs_evidence 강화, 과장 표현 수정 등). 수정 후 재심사 필요
+- **`revise`**: agent가 수정 가능한 구체 항목이 있음 (근거 보강 루프, 과장 표현 수정 등). 수정 후 재심사 필요
 - **`blocked`**: 공고 만료 / 쿨다운 리스크 / fixture-only / 심각한 근거 부족으로 진행 불가. source 근거 명시 필수
 
 판정 기준:
 - riskFlags에 `mvp_fixture_only`가 있으면 `blocked` — 실제 제출 판정 불가
 - riskFlags에 `toss_group_cooldown` 등 쿨다운이 있으면 사용자 확인 전 `blocked`
-- needs_evidence 항목이 필수 요건 1개 이상을 직접 충족해야 하는 경우 `revise` 이상
+- 근거 보강 필요 항목이 필수 요건 1개 이상을 직접 충족해야 하는 경우 `revise` 이상
 - 과장·허위 가능성 있는 항목이 1개 이상이면 최소 `revise`
 
 ### 5. review.md 작성 (Write)
@@ -119,6 +141,8 @@ ledger.jsonl의 riskFlags와 posting.md의 위험 플래그를 교차:
 
 ```markdown
 # <Company> <Role> — Application Review
+
+## 결론
 
 ## Verdict
 
@@ -144,10 +168,16 @@ ledger.jsonl의 riskFlags와 posting.md의 위험 플래그를 교차:
 ```
 
 작성 규칙:
+- 첫 10줄 안에 판정과 가장 중요한 권장 행동을 쓴다.
 - 각 축 섹션에 심사 결과 요약 + 구체 근거 문장 명시
 - `revise`일 경우 `## Revision Requests`에 agent가 수정 가능한 구체 항목 3개 이상
+  근거 부족 항목은 `보강 필요 / 선택지 / 권장 행동` 구조로 쓴다.
 - `blocked`일 경우 `## Revision Requests`에 차단 근거 + source 경로(ledger/posting/riskFlag) 명시
 - `pass`일 경우에도 `## User Approval Gate`에 사용자 승인 필요 항목 목록화
+- 제출용 수정 문구에는 내부 파일 경로, plan 번호, commit hash, runner 상태를 넣지 않는다.
+- 내부 reviewer 근거에는 source 경로를 유지한다.
+- resume package 산출물이 함께 검토되면 Markdown 초안, design.md 적용 HTML, 첨부 가능한 PDF의 경계를 확인한다.
+  PDF가 있어도 외부 제출·업로드·전송은 완료로 보지 않는다.
 - 총 30줄 이상
 
 **Ledger Update Suggestion 섹션 (필수)**:
@@ -174,6 +204,12 @@ review.md 작성 후 아래 항목 검증. 실패 시 해당 섹션 재작성:
 5. `blocked`일 경우 `## Revision Requests`에 source 경로 포함 차단 근거 존재
 6. `sources/fos-study/` 아래 어떤 파일도 쓰지 않았는지 확인
 7. 제출·로그인·외부 계정 작업 실행 지시가 없음 확인
+8. 첫 10줄 안에 판정과 권장 행동이 있음
+9. raw `needs_evidence`가 사용자-facing 항목에 남아 있지 않고, 모두 `보강 필요 / 선택지 / 권장 행동`으로 바뀌어 있음
+10. 제출용 수정 문구에는 내부 파일 경로, plan 번호, commit hash, runner 상태가 없음
+11. 내부 reviewer 판단에는 posting/ledger/riskFlag/근거 파일 경로가 유지됨
+12. candidate-profile 수정, 공개 발행, 외부 제출은 `사용자 승인 필요`로만 표현됨
+13. resume package를 검토하면 Markdown 초안 -> design.md 적용 HTML -> 첨부 가능한 PDF 체인을 구분하고, PDF를 제출 자동화 완료로 판정하지 않음
 
 실패 항목 있으면 수정 후 재작성. **최대 3회**. 4회째도 실패 시 `stderr: application-reviewer 검증 실패: <항목>` + exit 1.
 

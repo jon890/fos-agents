@@ -2,9 +2,9 @@
   "name": "plan058-generated-artifact-quality-rollout",
   "description": "생성 문서 품질 계약을 native skill과 지원, 공부, 면접 산출물 전반에 적용한다.",
   "created_at": "2026-06-07T00:00:00Z",
-  "updated_at": "2026-06-07T08:04:40Z",
+  "updated_at": "2026-06-07T09:25:00Z",
   "status": "in_progress",
-  "current_phase": 2,
+  "current_phase": 3,
   "total_phases": 5,
   "error_message": null,
   "blocked_reason": null,
@@ -46,6 +46,11 @@
       "id": "D5",
       "title": "approval-before-public",
       "decision": "public fos-study publish는 사용자 승인 없이는 실행하지 않는다."
+    },
+    {
+      "id": "D6",
+      "title": "resume-artifact-chain",
+      "decision": "이력서 MVP 산출물 체인은 Markdown 이력서 초안 -> design.md를 적용한 HTML 이력서 -> HTML을 PDF로 변환한 완성 PDF 이력서다. PDF는 첨부 가능한 최종 산출물이지 외부 제출 자동화가 아니며, 업로드·전송·제출은 사용자 승인 게이트 뒤에 둔다."
     }
   ],
   "open_decisions": [
@@ -89,7 +94,7 @@
       "number": 2,
       "title": "지원 산출물 skill contract",
       "file": "phase-02.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
       "model": "sonnet",
       "timeout": 1200
