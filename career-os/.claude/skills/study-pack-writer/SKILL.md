@@ -7,6 +7,24 @@ description: backend/AI/infra 기술 학습용 study pack 마크다운을 생성
 
 backend/AI/infra 기술 학습용 마크다운(study pack) 생성·검증·발행 workflow.
 
+## 생성 산출물 품질 계약
+
+study pack은 공개 fos-study 산출물이므로 기술 학습 문서로만 읽혀야 한다.
+지원 전략, 후보자 private 맥락, 내부 reviewer 판단은 공개 본문에 섞지 않는다.
+
+- 한국어 우선 섹션 제목과 자연스러운 한국어 문장을 사용한다.
+  영어 label은 코드 식별자, 공식 기술명, 경로, 상태값처럼 필요한 경우에만 유지한다.
+- 첫 10줄 안에 학습 목표, 결론, 또는 권장 행동 중 하나를 둔다.
+  공개 글의 자연스러운 흐름을 해치지 않는 범위에서 독자가 바로 방향을 알 수 있게 한다.
+- 내부 분석과 공개용 문구를 분리한다.
+  후보자 이력, 회사별 지원 의도, 면접 전략은 공개 study pack 본문에 복사하지 않는다.
+- 근거가 부족한 항목은 `needs_evidence` raw label로 남기지 않는다.
+  발견한 순간 `보강 필요 / 선택지 / 권장 행동` 구조로 바꾼다.
+  공개 본문에 넣기 어렵다면 비공개 career-os note로 분리하거나 작성하지 않는다.
+- 공개 fos-study 발행은 사용자 승인 전에는 실행하지 않는다.
+  사용자의 명시적 `/study-pack-writer` 호출이나 "fos-study에 올려줘" 요청은 해당 주제의 발행 승인으로 본다.
+  cron, recommender, background worker가 추천만 만든 경우에는 publish하지 않고 `사용자 승인 필요`로 멈춘다.
+
 ## When to use
 
 - 사용자가 `/study-pack-writer <topic>` 슬래시 호출
@@ -25,7 +43,7 @@ Claude는 다음을 `Read` 도구로 직접 로드:
 3. `career-os/config/mvp-target.json` — `primary.company`, `primary.role` (현재 면접 타깃)
 4. `career-os/config/topic-profiles.json` — 토픽 family별 (mysql/redis/kafka/spring-jpa) emphasis + output path 패턴. topic-key가 어느 family에 속하는지 `topicHints` 매칭으로 파악
 5. `references/study-pack-prompt.md` — prompt 구조 가이드
-6. `references/study-pack-writing-rules.md` — 작성 규칙 상세
+6. `references/fos-study-writing-rules.md` — 작성 규칙 상세
 7. **필수**: `sources/fos-study/**/*.md` 트리 스캔 결과 — `career-os/scripts/study-topic-recommender/duplicate_detection.ts` helper로 결정. exclude `.git/**`, `.claude/**`. `git pull` 호출 금지.
 
 ## Workflow
@@ -83,7 +101,8 @@ deterministic dedupe도 Claude 의미 판정도 결정이 불가능하면 **`nee
 - 공개 공부팩은 특정 회사/포지션/지원 여부를 전제로 쓰지 않는다. "TossPlace 관점", "Applied AI Engineer 포지션 관점", "면접에서 평가받는 지점"처럼 지원 의도가 강하게 드러나는 표현은 사용자가 명시 요청한 경우에만 쓴다.
 - 기본 구조는 기술 주제 중심: 개념 → 작동 원리 → 흔한 오해 → 설계/운영 체크포인트 → 실습 또는 점검 질문.
 - 면접·지원서 연결이 필요하면 공개 공부팩 본문이 아니라 `career-os/data/` 아래 비공개 지원 패키지/면접 메모에 따로 둔다.
-- `references/study-pack-writing-rules.md` 모든 규칙 준수
+- `needs_evidence` 같은 raw marker는 공개 본문에 남기지 않고 `보강 필요 / 선택지 / 권장 행동`으로 바꾼다.
+- `references/fos-study-writing-rules.md` 모든 규칙 준수
 
 `Write` 도구로 `career-os/sources/fos-study/<outputPath>.md`에 직접 저장.
 
@@ -95,7 +114,12 @@ deterministic dedupe도 Claude 의미 판정도 결정이 불가능하면 **`nee
 2. 총 줄 수 ≥80
 3. 모든 펜스 언어 지정
 4. 금지 prefix 부재
-5. `references/study-pack-writing-rules.md` 명시 규칙 준수
+5. `references/fos-study-writing-rules.md` 명시 규칙 준수
+6. 첫 10줄 안에 학습 목표, 결론, 또는 권장 행동이 있음
+7. 섹션 제목은 한국어 우선이며 자연스러운 한국어 문장으로 작성됨
+8. raw `needs_evidence`가 남아 있지 않고 필요한 경우 `보강 필요 / 선택지 / 권장 행동`으로 바뀌어 있음
+9. 후보자 private 맥락, 회사별 지원 전략, 내부 reviewer 판단이 공개 본문에 섞이지 않음
+10. 사용자 승인 없이 공개 publish가 실행되지 않음
 
 실패 항목이 있으면 그 항목 수정 후 재작성·재검증. **최대 3회 시도**. 4회째도 실패 시 stderr에 `study-pack 검증 실패: <실패 항목>` + 종료 (exit 1).
 
@@ -152,4 +176,4 @@ bun --env-file=career-os/.env ../_shared/lib/notify_discord.ts \
 ## References
 
 - `references/study-pack-prompt.md` — 옛 prompt 구조 (Claude가 참고)
-- `references/study-pack-writing-rules.md` — 작성 규칙 상세
+- `references/fos-study-writing-rules.md` — 작성 규칙 상세

@@ -7,6 +7,21 @@ description: 후보자의 면접 준비를 진단·점검하는 skill. baseline 
 
 후보자의 fos-study 학습 노트와 회사/직무 컨텍스트를 읽고 면접 준비 갭을 분석하는 workflow. baseline(전체 진단), daily(집중 점검), stage interview prep(면접 단계별 준비) 세 갈래로 자동 분기한다.
 
+## 생성 산출물 품질 계약
+
+interview prep 보고서는 비공개 내부 분석이지만 사용자가 바로 다음 행동을 정할 수 있어야 한다.
+공개용 글이나 제출용 문구와 섞이지 않게 비공개 리포트 경계를 유지한다.
+
+- 한국어 우선 섹션 제목과 자연스러운 한국어 문장을 사용한다.
+  영어 label은 단계명, 코드 식별자, 공식 역할명처럼 필요한 경우에만 유지한다.
+- 첫 10줄 안에 결론, 준비 우선순위, 또는 권장 행동 중 하나를 둔다.
+- 내부 분석에는 후보자 근거, 회사/면접 맥락, 리스크 판단을 유지한다.
+  공개용 study pack이나 제출용 문구가 필요하면 별도 승인 흐름으로 분리한다.
+- 근거가 부족한 항목은 `needs_evidence` raw label로 남기지 않는다.
+  발견한 순간 `보강 필요 / 선택지 / 권장 행동` 구조로 바꾼다.
+- 공개 fos-study 발행, 외부 제출, coffeechat 요청, candidate-profile 수정은 사용자 승인 전에는 실행하지 않는다.
+  필요한 경우 `사용자 승인 필요` 항목으로만 안내한다.
+
 ## When to use
 
 - 슬래시 호출: `/interview-prep-analyzer [baseline|daily|<topic-key>|first-round|final-round|offer-chat]`
@@ -157,6 +172,7 @@ bun career-os/scripts/interview-prep-analyzer/collect_interview_sites.ts --mode 
 - DB는 약점 가능성이 높은 영역으로 다루고 학습 노트 뒷받침 여부 검증
 - Kotlin 현재 MVP 제외 — 분석 범위 언급 불필요
 - coffeechat의 형식, 대화 상대의 역할, referral 이후 절차, 평가 방식은 사용자가 명시하지 않으면 가정하지 않는다
+- 근거가 부족한 항목은 raw `needs_evidence` 대신 `보강 필요 / 선택지 / 권장 행동`으로 쓴다
 - 메타 보고 문구 금지 ("파일이 생성되었습니다" 등) — 보고서 본문만 작성
 
 ### 5. study-progress 갱신 (daily 모드만)
@@ -188,6 +204,10 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 6. 후보자 이력 인용 1건 이상 (candidate-profile 구체 근거)
 7. 한국어 작성 확인
 8. coffeechat 전제나 확인되지 않은 참석자/평가 방식 추정이 없는지 확인
+9. 첫 10줄 안에 결론, 준비 우선순위, 또는 권장 행동이 있음
+10. 섹션 제목은 한국어 우선이며 자연스러운 한국어 문장으로 작성됨
+11. raw `needs_evidence`가 남아 있지 않고 필요한 경우 `보강 필요 / 선택지 / 권장 행동`으로 바뀌어 있음
+12. 공개 발행, 외부 제출, coffeechat 요청, candidate-profile 수정은 `사용자 승인 필요`로만 표현됨
 
 실패 항목이 있으면 수정 후 재작성. **최대 3회 시도**. 4회째도 실패 시 stderr에 `interview-prep 검증 실패: <항목>` + exit 1.
 

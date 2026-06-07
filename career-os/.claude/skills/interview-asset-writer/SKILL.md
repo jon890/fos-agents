@@ -10,6 +10,24 @@ description: 후보자 이력 기반 면접 자산 마크다운을 생성하고 
 - **Q&A 질문 은행** (옛 experience-question-bank-writer): 5 main Q + 5 follow-up + answer points + 1분 답변 + 압박 방어
 - **마스터 플레이북** (옛 interview-master-writer): 자기소개 / 커리어 narrative / 기술 의사결정 스타일 / 역질문 / 최종 체크리스트
 
+## 생성 산출물 품질 계약
+
+interview asset은 후보자 이력 기반 자료지만 fos-study 공개 발행 경로를 가진다.
+그래서 내부 분석과 공개 가능한 면접 준비 문구를 반드시 분리한다.
+
+- 한국어 우선 섹션 제목과 자연스러운 한국어 문장을 사용한다.
+  영어 label은 `Q&A`, `follow-up`, 코드 식별자처럼 필요한 경우에만 유지한다.
+- 첫 10줄 안에 문서 목적, 결론, 또는 권장 행동 중 하나를 둔다.
+- 내부 분석과 공개용 문구를 분리한다.
+  후보자 private 평가, 특정 회사 지원 전략, reviewer 판단은 공개 본문에 복사하지 않는다.
+- 후보자 이력 근거는 공개 가능하도록 일반화한다.
+  내부 URL, 비공개 시스템명, 회사별 지원 맥락은 제거하거나 비공개 career-os note로 분리한다.
+- 근거가 부족한 항목은 `needs_evidence` raw label로 남기지 않는다.
+  발견한 순간 `보강 필요 / 선택지 / 권장 행동` 구조로 바꾼다.
+- 공개 fos-study 발행은 사용자 승인 전에는 실행하지 않는다.
+  사용자의 명시적 `/interview-asset-writer` 호출이나 "fos-study에 면접 자료로 올려줘" 요청은 해당 주제의 발행 승인으로 본다.
+  background worker가 audit이나 초안만 만드는 경우에는 publish하지 않고 `사용자 승인 필요`로 멈춘다.
+
 ## When to use
 
 - 슬래시 호출: `/interview-asset-writer <topic>`
@@ -86,6 +104,7 @@ Inputs 1~5 모두 Read. `inputFiles` 명시되면 task/resume 추가 Read.
 - `Write` 도구로 *markdown 직접 작성* (JSON 출력 금지, JSON schema 따르지 않음 — native skill 패턴)
 - 메타 보고 문구 금지 ("파일이 생성되었습니다", "문서 구성 요약", "아래와 같이" 등) — 본문 자체를 작성
 - 첫 줄 `# [초안] <topic-title>` 형식. 작성 후에는 본문만 출력하지 *작성했다는 보고*는 하지 않음.
+- 공개 본문에 `needs_evidence`를 남기지 않고, 필요한 경우 `보강 필요 / 선택지 / 권장 행동`으로 바꾼다.
 
 ### 5. Self-check (재작성 ≤3회)
 
@@ -95,17 +114,22 @@ Inputs 1~5 모두 Read. `inputFiles` 명시되면 task/resume 추가 Read.
 2. 총 줄 수 ≥80
 3. 모든 펜스 언어 지정
 4. 금지 prefix 부재
+5. 첫 10줄 안에 문서 목적, 결론, 또는 권장 행동이 있음
+6. 섹션 제목은 한국어 우선이며 자연스러운 한국어 문장으로 작성됨
+7. raw `needs_evidence`가 남아 있지 않고 필요한 경우 `보강 필요 / 선택지 / 권장 행동`으로 바뀌어 있음
+8. 내부 분석, 특정 회사 지원 전략, reviewer 판단이 공개용 문구와 섞이지 않음
+9. 사용자 승인 없이 공개 publish가 실행되지 않음
 
 #### 5-B. Q&A 질문 은행 추가 항목
 
-5. 메인 질문 ≥5개 (헤더에 "Q" 또는 "질문" 키워드로 카운트)
-6. 각 메인 질문에 follow-up 1개 이상 + answer points 섹션 존재
-7. 1분 답변 + 압박 질문 방어 섹션 존재
+10. 메인 질문 ≥5개 (헤더에 "Q" 또는 "질문" 키워드로 카운트)
+11. 각 메인 질문에 follow-up 1개 이상 + answer points 섹션 존재
+12. 1분 답변 + 압박 질문 방어 섹션 존재
 
 #### 5-C. 마스터 플레이북 추가 항목
 
-5. 5 섹션 헤더 모두 존재
-6. 회사명·면접일 직접 명시 없음 (cross-track 톤)
+10. 5 섹션 헤더 모두 존재
+11. 회사명·면접일 직접 명시 없음 (cross-track 톤)
 
 실패 항목이 있으면 그 항목 수정 후 재작성·재검증. **최대 3회 시도**. 4회째도 실패 시 stderr에 `interview-asset 검증 실패: <항목>` + 종료 (exit 1).
 
@@ -148,4 +172,3 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 - **Self-check가 JSON schema 대체**: 옛 `--json-schema` + renderer 패턴은 외부 subprocess의 부산물. native에서는 Claude 자체 검증으로 동등 효과.
 - **재작성 ≤3회 cap**: 무한 루프 차단. 그래도 실패하면 본질 문제 (topic 모호, 입력 부족) — 사용자 개입 필요.
 - **Publish + notify Bash 통합**: 옛 외부 publish/notify shell을 Bash 도구로 직접. 의존 줄임.
-
