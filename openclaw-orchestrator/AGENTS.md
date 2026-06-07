@@ -36,28 +36,10 @@ It is the ai-nodes home for daily session notes, heartbeat state, and cross-doma
 
 ## OpenClaw HUD Runtime Policy
 
-In user-facing conversation, "HUD" means the pinned OpenClaw status message for the current Discord/OpenClaw session.
-Pinned OpenClaw HUD updates are session state, not chat narration.
-Runtime state lives under `openclaw-orchestrator/state/task-hud/`.
-Shared helper code may live under `_shared/lib/` only when it stays workspace-agnostic.
+This workspace is no longer the source of truth for OpenClaw HUD policy.
+HUD policy and runtime state belong to `.openclaw/workspace/`.
 
-HUD update code edits an existing message id first.
-Creating a new HUD message is allowed only after edit failure.
-When fallback creates a new message, the helper sends a separate visible warning with an emoji telling the user that a new HUD was created and needs pinning.
+`openclaw-orchestrator/state/task-hud/` is legacy state.
+Do not write new HUD state here unless a migration task explicitly needs it.
 
-Visible HUD timestamps use absolute KST time.
-Relative-only text such as "just now" is not enough for a pinned surface.
-
-`session_status` is the preferred source for usage, context, and native active-agent state.
-HUD rendering uses an allowlist of safe fields.
-Raw tool output, account identity, secrets, detailed costs, and private absolute paths do not appear in visible HUD text.
-
-Long-running work updates HUD on events:
-start, phase start, phase complete, blocked, failed, and final complete.
-Event-based updates are preferred over high-frequency polling.
-If the last HUD update is older than 30 minutes during active work, treat the HUD as stale and refresh it before continuing.
-
-Validation starts with dry-run and state path checks.
-Real message edit testing is allowed only from the main session against an existing pinned HUD message.
-Validation must confirm that no second state root is created.
-It must also confirm that no new HUD message appears unless the edit-failure fallback is being tested on purpose.
+Workspace-agnostic helper code may still live under `_shared/lib/`.
