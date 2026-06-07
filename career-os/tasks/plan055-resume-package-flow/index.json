@@ -1,0 +1,144 @@
+{
+  "name": "plan055-resume-package-flow",
+  "description": "지원 준비 흐름을 맞춤 이력서 패키지까지 확장한다. Markdown 산출물 계약을 먼저 고정하고, request status, processor post-validation, review loop, workbench UX, export gate를 phase로 분리한다.",
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T07:51:46Z",
+  "status": "in_progress",
+  "current_phase": 3,
+  "total_phases": 5,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/docs/prd.md",
+    "career-os/docs/data-schema.md",
+    "career-os/docs/flow.md",
+    "career-os/docs/code-architecture.md",
+    "career-os/docs/adr.md",
+    "career-os/tasks/plan031-application-flow-agent/index.json",
+    "career-os/tasks/plan038-application-frontdoor-review/index.json",
+    "career-os/tasks/plan054-fos-career-application-workbench/index.json"
+  ],
+  "depends_on": [
+    "plan031-application-flow-agent",
+    "plan038-application-frontdoor-review",
+    "plan050-position-priority-fit-workflow",
+    "plan053-priority-write-action-design",
+    "plan054-fos-career-application-workbench"
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "goal-flow",
+      "decision": "목표 흐름은 공고 발견 -> 우선순위 확정 -> 지원 준비 시작 -> 맞춤 이력서/지원서 생성 -> 리뷰 -> 사용자 승인이다."
+    },
+    {
+      "id": "D2",
+      "title": "markdown-freeze-first",
+      "decision": "PDF/DOCX export보다 Markdown 산출물 계약을 먼저 고정한다."
+    },
+    {
+      "id": "D3",
+      "title": "application-package-boundary",
+      "decision": "application-package.md는 내부 지원 전략과 초안 방향 문서로 유지하고, 제출용 이력서와 지원동기는 resume-draft.md와 cover-letter.md로 분리한다."
+    },
+    {
+      "id": "D4",
+      "title": "resume-package-contract",
+      "decision": "필수 산출물은 posting.md, fit-analysis.md, application-package.md, resume-draft.md, cover-letter.md, submission-checklist.md, review.md다. resume-metadata.json은 readiness/status 계산에 실익이 있을 때만 도입한다."
+    },
+    {
+      "id": "D5",
+      "title": "generated-document-quality",
+      "decision": "생성 문서는 첫 10줄 안에 결론을 두고, 한국어 우선 제목과 자연스러운 한국어 문장을 사용하며, 내부 분석과 제출용 문구를 분리한다."
+    },
+    {
+      "id": "D6",
+      "title": "needs-evidence-loop",
+      "decision": "needs_evidence는 그대로 남기지 않고 보강 필요 / 선택지 / 권장 행동 루프로 전환한다."
+    },
+    {
+      "id": "D7",
+      "title": "request-status-projection",
+      "decision": "application request 상태는 pending, running, done, failed, stale를 기본값으로 하며 ledgerId, error, resultSnapshot을 포함한다."
+    },
+    {
+      "id": "D8",
+      "title": "approval-gates",
+      "decision": "실제 제출, 로그인, 외부 전송, 공개 발행, candidate-profile mutation은 사용자 승인 없이는 실행하지 않는다."
+    }
+  ],
+  "open_decisions": [
+    {
+      "id": "O1",
+      "title": "resume-metadata-json",
+      "question": "resume-metadata.json을 이번 plan에서 도입할 것인가?",
+      "recommended_default": "도입하지 않는다. Markdown 파일 존재와 review.md verdict로 readiness를 계산하다가 상태 투영이 복잡해질 때 후속 phase에서 추가한다."
+    },
+    {
+      "id": "O2",
+      "title": "request-storage-owner",
+      "question": "application resume request 상태를 fos-career MySQL에 별도 table로 둘 것인가, 기존 request bridge를 확장할 것인가?",
+      "recommended_default": "기존 plan053 pending request bridge 패턴을 확장한다. 새 table은 상태와 audit 요구가 기존 priority_action_requests로 표현되지 않을 때만 만든다."
+    },
+    {
+      "id": "O3",
+      "title": "review-verdict-threshold",
+      "question": "review.md가 pass/revise/blocked 중 어떤 verdict일 때 ready_for_user_review로 보낼 것인가?",
+      "recommended_default": "pass만 ready_for_user_review로 보낸다. revise는 needs_evidence 루프 또는 needs_revision으로 남기고, blocked는 사용자 개입 전 자동 진행하지 않는다."
+    }
+  ],
+  "recommended_defaults": [
+    "Markdown 산출물과 review loop를 먼저 고정하고 export는 후속 plan으로 둔다.",
+    "resume-metadata.json은 이번 plan의 필수 산출물로 만들지 않는다.",
+    "request status는 pending/running/done/failed/stale enum을 사용한다.",
+    "processor는 run.ts resume 이후 실제 파일 존재와 freshness를 검증한다.",
+    "fos-career는 career-os 파일을 직접 쓰지 않고 request/status만 보여준다."
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "문서 정합성 + 이력서 패키지 계약",
+      "file": "phase-01.md",
+      "status": "completed",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "model": "sonnet",
+      "timeout": 900
+    },
+    {
+      "number": 2,
+      "title": "지원 준비 요청 상태 모델",
+      "file": "phase-02.md",
+      "status": "completed",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 3,
+      "title": "이력서 패키지 처리 후검증",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "model": "sonnet",
+      "timeout": 1500
+    },
+    {
+      "number": 4,
+      "title": "생성 및 리뷰 루프",
+      "file": "phase-04.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "model": "sonnet",
+      "timeout": 1800
+    },
+    {
+      "number": 5,
+      "title": "워크벤치 UX와 export 게이트",
+      "file": "phase-05.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "model": "sonnet",
+      "timeout": 1500
+    }
+  ]
+}

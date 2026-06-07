@@ -1,0 +1,127 @@
+{
+  "name": "plan056-data-boundary-and-legacy-cleanup",
+  "description": "career-os data 사용을 private, runtime, source, report 경계로 다시 나누고 오래된 tracked runtime artifact와 coffeechat tombstone 정리 결정을 고정한다.",
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 5,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "docs/adr.md",
+    "docs/data-schema.md",
+    "docs/flow.md",
+    "docs/code-architecture.md",
+    "AGENTS.md",
+    "tasks/plan041-interview-coffeechat-deprecation/index.json",
+    "tasks/plan041-interview-coffeechat-deprecation/phase-01.md",
+    "tasks/plan041-interview-coffeechat-deprecation/phase-04.md",
+    "tasks/plan055-resume-package-flow/index.json"
+  ],
+  "depends_on": [
+    "plan041-interview-coffeechat-deprecation",
+    "plan055-resume-package-flow"
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "data-boundary-first",
+      "decision": "정리 작업은 삭제보다 경계 정의와 inventory를 먼저 수행한다."
+    },
+    {
+      "id": "D2",
+      "title": "private-by-default",
+      "decision": "지원, 면접, 개인 분석과 연결된 data/applications, data/reports, data/source 내용은 private by default로 본다."
+    },
+    {
+      "id": "D3",
+      "title": "runtime-is-projection",
+      "decision": "data/runtime은 최신 projection과 cache를 위한 위치이며 오래된 plan smoke/final artifact를 영구 산출물처럼 보존하지 않는다."
+    },
+    {
+      "id": "D4",
+      "title": "private-archive-home",
+      "decision": "기존 data/private는 의도된 private/archive home으로 격상해 이름과 책임을 문서에 맞춘다."
+    },
+    {
+      "id": "D5",
+      "title": "plan048-runtime-exceptions",
+      "decision": "data/runtime/live-position-postings.plan048-final.md와 data/runtime/live-position-postings.plan048-smoke.md는 tracked exception으로 별도 결정을 남기고 처리한다."
+    }
+  ],
+  "open_decisions": [
+    {
+      "id": "O1",
+      "title": "coffeechat-tombstones",
+      "question": ".claude/skills/interview-coffeechat-prep와 scripts/interview-coffeechat-prep tombstone을 계속 둘 것인가, ADR만 남기고 제거할 것인가?",
+      "recommended_default": "한 번 더 release cycle 동안 tombstone을 유지하고, active caller가 없다는 grep이 반복 확인되면 ADR만 남기고 제거한다."
+    },
+    {
+      "id": "O2",
+      "title": "runtime-exception-retention",
+      "question": "plan048 smoke/final runtime artifact를 archive로 옮길 것인가, tracked exception으로 계속 둘 것인가?",
+      "recommended_default": "plan048 검증 증거로 필요한지 확인한 뒤 data/private/archive 또는 task-local evidence로 이동한다."
+    },
+    {
+      "id": "O3",
+      "title": "report-retention",
+      "question": "data/reports daily/baseline report의 보관 기간과 archive 기준을 어떻게 둘 것인가?",
+      "recommended_default": "최근 운영 판단에 필요한 기간만 active로 두고, 오래된 보고서는 data/private/archive 아래 날짜별로 보관한다."
+    }
+  ],
+  "recommended_defaults": [
+    "삭제 phase 전에 inventory와 문서 결정을 먼저 끝낸다.",
+    "data/private를 private/archive의 의도된 home으로 둔다.",
+    "data/source는 외부에서 수집한 원문이라도 지원/면접과 연결되면 private로 분류한다.",
+    "plan041 index와 phase body의 status mismatch는 구현 전 metadata/body 정합성 감사로 확인한다.",
+    "plan055 구현 산출물 계약과 겹치는 application package 구현은 이 plan에서 반복하지 않는다."
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "data 경계 inventory",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 900
+    },
+    {
+      "number": 2,
+      "title": "docs/ADR 경계 결정",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 3,
+      "title": "runtime 산출물 정리 계획",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 900
+    },
+    {
+      "number": 4,
+      "title": "coffeechat tombstone 결정",
+      "file": "phase-04.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 900
+    },
+    {
+      "number": 5,
+      "title": "metadata 정합성 검증",
+      "file": "phase-05.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Edit", "Bash", "Glob", "Grep"],
+      "model": "haiku",
+      "timeout": 600
+    }
+  ]
+}

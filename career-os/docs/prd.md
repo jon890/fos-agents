@@ -54,7 +54,7 @@ MVP 원칙:
 첫 fixture는 TossPlace `Applied AI Engineer` 공고다.
 이 공고는 Toss 계열 쿨다운을 고려해 실제 지원 목적이 아니라 MVP 검증용 샘플로 사용한다.
 
-### 계획 중: application-flow-agent runtime (plan031)
+### 완료 기반: application-flow-agent runtime (plan031)
 
 `plan031-application-flow-agent`는 plan029 산출물 위에 상태 기반 자율 실행 계층을 추가한다.
 핵심은 native skill을 순서대로 이어 붙이는 것이 아니라, ledger/runtime을 읽고 상태 기반 루프를 수행하는 TypeScript policy decision engine이다.
@@ -82,7 +82,7 @@ MVP 원칙:
   - 원본 candidate-profile 수정
 - plan030 position-recommender freshness guard는 후보 입력 품질 prerequisite로 참조한다.
 
-### 계획 중: application frontdoor queue (plan038)
+### 완료 기반: application frontdoor queue (plan038)
 
 `plan038-application-frontdoor-review`는 application-flow-agent 앞단을 "추천 후보 순위 확인 → 사용자가 N번 준비 시작 선택 → 선택된 후보만 상세 분석/학습/지원 준비로 승격" 흐름으로 정리한다.
 
@@ -104,7 +104,7 @@ MVP 범위:
 
 - Next.js 대시보드와 관리자 로그인은 `plan039`로 분리한다.
 
-### 계획 중: position priority + posting/fit analysis workflow (plan050)
+### 완료 기반: position priority + posting/fit analysis workflow (plan050)
 
 `plan050-position-priority-fit-workflow`는 plan048에서 모은 active/open 공고를 지원 행동 우선순위로 연결한다.
 목표는 회사를 절대 순위로 줄 세우는 것이 아니라, 각 공고를 지금 어떤 행동으로 다룰지 정하는 것이다.
@@ -131,7 +131,7 @@ MVP 범위:
 - 외부 채용 사이트 제출 자동화.
 - 기존 application package generator를 새 generator로 대체하는 일.
 
-### 계획 중: priority write-action bridge (plan053)
+### 완료 기반: priority write-action bridge (plan053)
 
 `plan053-priority-write-action-design`은 fos-career에서 사용자가 확정한 priority action을 career-os 상태로 반영하는 안전한 쓰기 경로를 설계한다.
 목표는 dashboard 버튼이 career-os 파일을 직접 수정하지 않게 하면서도, 사용자 확인과 감사 이력을 남기는 것이다.
@@ -153,7 +153,7 @@ MVP 범위:
 - LLM recommendation refresh와 priority confirmation을 한 버튼에 묶는 일.
 - career-os ledger/frontdoor queue를 fos-career MySQL로 옮기는 일.
 
-### 계획 중: fos-career application workbench (plan054)
+### 완료 기반: fos-career application workbench (plan054)
 
 `plan054-fos-career-application-workbench`는 fos-career를 "수집 공고 확인 화면"에서 "지원 준비 작업대"로 확장한다.
 목표는 사용자가 지금 준비해야 할 후보, 준비 산출물 상태, 다음 행동, 차단 사유를 한 화면에서 판단하게 만드는 것이다.
@@ -172,6 +172,32 @@ MVP 범위:
 - candidate-profile.md 수정.
 - career-os ledger/frontdoor queue를 fos-career MySQL로 이관.
 - 사용자의 명시 승인 없는 지원 패키지 최종 제출 또는 공개 발행.
+
+### 계획 중: resume package flow (plan055)
+
+`plan055-resume-package-flow`는 지원 준비 흐름을 맞춤 이력서 초안까지 확장한다.
+목표 흐름은 `공고 발견 -> 우선순위 확정 -> 지원 준비 시작 -> 맞춤 이력서/지원서 생성 -> 리뷰 -> 사용자 승인`이다.
+
+MVP 범위:
+
+- `application-package.md`는 지원 전략과 초안 문서로 유지한다.
+- 제출용 초안은 별도 Markdown 산출물로 분리한다.
+  - `resume-draft.md`
+  - `cover-letter.md`
+  - `submission-checklist.md`
+- `run.ts resume` 이후 processor는 실제 파일 존재와 freshness를 검증한다.
+- `needs_evidence`는 그대로 방치하지 않고 `보강 필요 / 선택지 / 권장 행동` 루프로 전환한다.
+- fos-career workbench는 application request 처리 상태를 표시한다.
+  상태는 `pending`, `running`, `done`, `failed`, `stale`를 기본값으로 둔다.
+- 생성 문서는 한국어 우선 제목과 자연스러운 문장으로 쓴다.
+  첫 10줄 안에 결론을 두고, 내부 분석과 제출용 문구를 분리한다.
+
+범위 밖:
+
+- PDF/DOCX export.
+- 외부 채용 사이트 제출 자동화.
+- 로그인, 브라우저 입력, 공개 발행, candidate-profile mutation.
+- 사용자 승인 없는 최종 제출.
 
 ### 계획 중: fos-career 웹 대시보드 (plan039)
 

@@ -47,7 +47,7 @@ career-os의 모든 아키텍처 결정을 시간순으로 누적 기록한다. 
 | ADR-034 | interview-coffeechat-prep 4 mode 일반화 | Accepted | mvp-target.json primary.interview.{coffeechat, first_round, final_round, offer_chat} 구조 + first-round 활성 + private/public-safe 두 산출물 (plan026) |
 | ADR-035 | ts 헬퍼 모듈 분해 컨벤션 — source / transform / render / cli 4 레이어 | Accepted | god-script (단일 파일에 fetch + 정규화 + 렌더 + IO 응집) 분해 표준. plan027~plan031 시리즈 적용 (refresh_topic_inventory 859→1049 외 5 파일 2106줄) |
 | ADR-036 | position-recommender daily freshness guard + recommendation rotation | Accepted | stale runtime 재전송 차단, 최근 7일 반복 후보 감점, daily cron freshness 검증 |
-| ADR-037 | application-flow-agent runtime은 policy decision engine 중심 | Planned | plan029 skill chain 위에 state -> policy decision -> action -> validation -> state update 루프 추가 (plan031) |
+| ADR-037 | application-flow-agent runtime은 policy decision engine 중심 | Accepted | plan029 skill chain 위에 state -> policy decision -> action -> validation -> state update 루프 추가 (plan031) |
 | ADR-038 | application-flow-agent 상태 전이는 skill artifact 검증 뒤에만 수행 | Accepted | 필수 산출물 존재 확인 전 ledger 상태 전이 금지 |
 | ADR-039 | position-recommender 추천 단위는 개별 active/open 공고 | Accepted | 회사 lead가 아니라 active/open 근거가 있는 개별 공고만 추천 티어 허용 |
 | ADR-040 | application-flow-agent native skill 실행은 명시 옵션에서만 수행 | Accepted | `--execute-skills`에서만 package/review native skill 실행 |
@@ -62,6 +62,9 @@ career-os의 모든 아키텍처 결정을 시간순으로 누적 기록한다. 
 | ADR-051 | target source coverage는 adapter-owned entrypoint로 확장한다 | Accepted | Wanted broad scan은 유지하되 official source와 target URL 검증은 source adapter가 책임진다 |
 | ADR-052 | 지원 우선순위는 회사 순위가 아니라 action stage로 관리한다 | Accepted | LLM recommendation snapshot과 user-confirmed priority를 분리한다 |
 | ADR-053 | priority write action은 pending request bridge로 처리한다 | Accepted | fos-career는 요청만 저장하고 career-os command가 실제 mutation을 수행한다 |
+| ADR-054 | fos-career의 다음 제품 축은 application workbench다 | Accepted | frontdoor queue와 ledger를 read-only projection으로 합쳐 지원 준비 상태를 보여준다 |
+| ADR-055 | background worktree는 완료 시 명시적으로 정리한다 | Accepted | 별도 worktree를 만든 background worker는 완료 전 clean 여부 확인과 디렉터리 제거를 보고한다 |
+| ADR-056 | resume package는 Markdown 산출물 계약을 먼저 고정한다 | Accepted | application-package와 제출용 resume/cover/checklist를 분리하고 request status를 표준화한다 |
 
 (ADR-024는 번호 누락. ADR-007a/b 충돌은 prd.md "분해 대기 작업"에 기록.)
 
@@ -1898,3 +1901,54 @@ plan039부터 plan053까지 fos-career는 수집 공고, source diagnostics, pri
 - main workspace 주변에 오래된 `ai-nodes-worktrees/*` 디렉터리가 누적되지 않는다.
 - 완료 보고에는 worktree/branch 사용 여부와 cleanup 결과가 포함된다.
 - branch 보존과 디렉터리 정리를 분리해 복구 가능성을 유지한다.
+
+---
+
+## ADR-056 — resume package는 Markdown 산출물 계약을 먼저 고정한다
+
+- Status: Accepted
+- Date: 2026-06-07
+
+### 맥락
+
+plan031 application-flow-agent, plan038 frontdoor queue, plan054 application workbench가 완료되면서 지원 준비 흐름은 화면과 원장을 갖췄다.
+하지만 다음 단계인 맞춤 이력서 생성에서는 경계가 흐리다.
+
+현재 `application-package.md`는 지원 전략, 이력서 문장, 지원동기, 검토 요청이 섞일 수 있다.
+이 상태에서 바로 dashboard action이나 export를 붙이면 내부 분석과 제출용 문구가 섞이고, `needs_evidence`가 해결되지 않은 채 제출 초안에 남을 수 있다.
+
+### 결정
+
+- plan055를 `resume package flow`로 연다.
+- Markdown 산출물 계약을 먼저 고정한다.
+  PDF/DOCX export는 후속 plan으로 둔다.
+- `application-package.md`는 내부 지원 전략과 초안 방향 문서로 유지한다.
+- 제출용 초안은 별도 파일로 분리한다.
+  - `resume-draft.md`
+  - `cover-letter.md`
+  - `submission-checklist.md`
+- 필요할 때만 `resume-metadata.json`을 도입한다.
+  readiness/status 계산을 단순화하지 못하면 Markdown 파일 존재와 `review.md`를 우선한다.
+- 생성 문서 품질 계약을 둔다.
+  첫 10줄 안에 결론을 두고, 한국어 우선 제목과 자연스러운 한국어 문장을 사용한다.
+  내부 분석과 제출용 문구를 분리한다.
+- `needs_evidence`는 `보강 필요 / 선택지 / 권장 행동` resolution loop로 바꾼다.
+- application request 상태는 `pending`, `running`, `done`, `failed`, `stale`를 기본값으로 둔다.
+  상태에는 `ledgerId`, `error`, `resultSnapshot`을 포함한다.
+- processor는 `run.ts resume` 이후 실제 산출물을 파일 시스템에서 검증한다.
+  검증 대상은 `posting.md`, `fit-analysis.md`, `application-package.md`, `resume-draft.md`, `cover-letter.md`, `submission-checklist.md`, `review.md`다.
+
+### 결과
+
+- 지원 전략 문서와 제출용 문서의 책임이 분리된다.
+- 사용자 검토 전 자동 제출이나 외부 전송으로 흐르지 않는다.
+- workbench는 "요청이 처리 중인가", "어떤 파일이 준비됐는가", "무엇이 막혔는가"를 같은 언어로 표시할 수 있다.
+- export 기능은 Markdown 품질과 review loop가 안정된 뒤 별도 결정으로 다룰 수 있다.
+
+### 적용
+
+- `tasks/plan055-resume-package-flow/` — 구현 계획.
+- `docs/prd.md` — resume package flow planned scope.
+- `docs/data-schema.md` — Resume Package Contract와 generated document quality contract.
+- `docs/flow.md` — `run.ts resume` 처리 흐름과 request status projection.
+- `docs/code-architecture.md` — runner, processor, fos-career adapter 책임 경계.

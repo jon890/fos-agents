@@ -198,9 +198,9 @@ discovered
 역할 분담:
 
 - `/position-recommender`: 공고 수집/추천/초기 fit 분석
-- `application-package-writer` (plan029 예정): 공고별 지원 패키지 생성
-- `application-reviewer` (plan029 예정): 근거/과장/드리프트/쿨다운 검토
-- `daily-application-digest` (plan029 예정): 매일 진행 상태와 다음 액션 요약
+- `application-package-writer`: 공고별 지원 패키지 생성
+- `application-reviewer`: 근거/과장/드리프트/쿨다운 검토
+- `daily-application-digest`: 매일 진행 상태와 다음 액션 요약
 - `/study-topic-recommender` + `/study-pack-writer`: 해당 직무 gap 기반 공개 가능한 기술 학습 자료
 - `/interview-asset-writer` + `/interview-prep-analyzer`: 제출 후 면접 대비
 
@@ -210,7 +210,7 @@ discovered
 - 공고별 맞춤 이력서, 지원동기, 지원 전략은 `data/applications/` 비공개 산출물로 둔다.
 - `sources/fos-study/`에는 회사명/개인 지원 전략이 빠진 순수 기술 학습 자료만 발행한다.
 
-### Application Frontdoor Queue (planned — plan038)
+### Application Frontdoor Queue (implemented — plan038)
 
 plan038은 `/position-recommender` 결과와 `application-flow-agent` ledger 사이에 사용자 선택 전용 queue를 둔다.
 
@@ -248,7 +248,7 @@ frontdoor queue 상태:
 - Next.js 대시보드와 관리자 로그인은 plan039에서 다룬다.
 - 최종 지원 패키지 작성, 제출 승인, 외부 사이트 입력/전송은 기존 사용자 검토 gate를 유지한다.
 
-### Position Priority + Posting/Fit Analysis Workflow (planned — plan050)
+### Position Priority + Posting/Fit Analysis Workflow (implemented — plan050)
 
 plan050은 plan048 collected postings를 action stage 중심 priority로 연결한다.
 LLM은 추천 초안을 만들고, 사용자가 확정한 priority는 별도 필드에 보존한다.
@@ -655,7 +655,7 @@ Deprecated: `/interview-coffeechat-prep`는 tombstone으로만 남는다. 과거
 
 이전 dispatcher 흐름 (dispatcher → run_live_coding_dispatch.sh → TOPIC_CONFIG_OVERRIDE → study-pack)은 plan016 phase-03에서 폐기됨.
 
-### fos-career 웹 대시보드 읽기 흐름 (plan039 — planned)
+### fos-career 웹 대시보드 읽기 흐름 (plan039 — implemented base)
 
 fos-career(`~/services/fos-career`)는 career-os 파일을 읽기 전용으로만 읽는다.
 career-os 파일을 수정하는 경로가 없다.
@@ -698,6 +698,51 @@ LLM 채팅 흐름:
   career-os 파일 반영은 plan053의 별도 적용 runner만 수행한다.
 - LLM 채팅이 외부 사이트 접근, fos-study 발행, candidate-profile 수정을 수행하지 않는다.
 - 쓰기 액션(prepare-start/hold/reject 버튼)은 pending queue와 사용자 확인 절차 없이 실행하지 않는다.
+
+### Resume Package Flow (plan055 — planned)
+
+지원 준비 흐름은 맞춤 이력서 초안을 별도 Markdown 산출물로 고정한 뒤 사용자 승인으로 멈춘다.
+
+```text
+공고 발견
+  -> 우선순위 확정
+  -> 지원 준비 시작
+  -> run.ts resume <application-id> --execute-skills
+  -> posting.md / fit-analysis.md / application-package.md 확인
+  -> resume-draft.md / cover-letter.md / submission-checklist.md 생성
+  -> review.md 생성 또는 갱신
+  -> processor post-validation
+  -> fos-career application request status 갱신
+  -> 사용자 승인 대기
+```
+
+post-validation은 다음 파일을 실제 파일 시스템에서 확인한다.
+
+- `posting.md`
+- `fit-analysis.md`
+- `application-package.md`
+- `resume-draft.md`
+- `cover-letter.md`
+- `submission-checklist.md`
+- `review.md`
+
+`needs_evidence`가 발견되면 runner는 제출용 문서를 바로 통과시키지 않는다.
+대신 다음 루프를 생성한다.
+
+- `보강 필요`: 어떤 주장이나 문장이 부족한지.
+- `선택지`: 삭제, 약화 표현, 사용자 근거 요청, private source 재확인.
+- `권장 행동`: 다음 실행 또는 사용자에게 요청할 한 가지 행동.
+
+application request status projection:
+
+- `pending`: 요청이 생성됐지만 processor가 아직 처리하지 않았다.
+- `running`: processor가 해당 요청을 처리 중이다.
+- `done`: 산출물 검증과 상태 반영이 끝났다.
+- `failed`: 실행 또는 검증 실패가 있다.
+- `stale`: 요청 당시 snapshot과 현재 ledger/frontdoor 상태가 달라 중단했다.
+
+상태 표시에는 `ledgerId`, `error`, `resultSnapshot`을 포함한다.
+fos-career는 이 상태를 보여주되 career-os 원장을 직접 수정하지 않는다.
 
 ## 통과 시점에 항상 일어나는 일
 

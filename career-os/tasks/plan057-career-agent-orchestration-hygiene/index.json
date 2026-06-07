@@ -1,0 +1,109 @@
+{
+  "name": "plan057-career-agent-orchestration-hygiene",
+  "description": "career OpenClaw agent migration 이후 wrapper skill, HUD snapshot, legacy state, subagent/session registry 운영을 정리해 혼선을 줄인다.",
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T00:00:00Z",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 4,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "AGENTS.md",
+    "../AGENTS.md",
+    "docs/adr.md",
+    "docs/code-architecture.md",
+    "docs/flow.md",
+    "tasks/plan055-resume-package-flow/index.json"
+  ],
+  "depends_on": [
+    "plan055-resume-package-flow"
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "career-agent-owns-career-wrappers",
+      "decision": "career workspace가 career wrapper skills를 소유하고 main workspace는 career-specific skills를 계속 보관하지 않는다."
+    },
+    {
+      "id": "D2",
+      "title": "hud-session-status-first",
+      "decision": "HUD usage snapshot을 쓰기 전에는 session_status를 먼저 호출한다. update_event.ts 단독 실행은 stale snapshot을 재사용할 수 있다."
+    },
+    {
+      "id": "D3",
+      "title": "legacy-hud-state-is-decision",
+      "decision": "옛 .openclaw/workspace/openclaw-orchestrator/state/task-hud 상태는 조용히 삭제하지 않고 archive 또는 migration 결정을 남긴다."
+    },
+    {
+      "id": "D4",
+      "title": "main-session-decides",
+      "decision": "메인 세션은 decision-making, task files, background implementation review를 맡고 긴 구현은 background flow로 분리한다."
+    }
+  ],
+  "open_decisions": [
+    {
+      "id": "O1",
+      "title": "agent-workspace-backup",
+      "question": "career agent workspace files를 private repo 또는 allowlist backup으로 보관할 것인가?",
+      "recommended_default": "private repo나 allowlist backup을 검토하되 session logs, cache, tokens, private secrets는 제외한다."
+    },
+    {
+      "id": "O2",
+      "title": "legacy-hud-state",
+      "question": "legacy HUD state를 archive할 것인가, migration record만 남기고 제거할 것인가?",
+      "recommended_default": "archive/migration decision을 먼저 남긴 뒤 보존 가치가 없는 runtime state만 제거한다."
+    },
+    {
+      "id": "O3",
+      "title": "registry-visibility",
+      "question": "agent switch 이후 subagent/session registry visibility를 어디에 문서화할 것인가?",
+      "recommended_default": "career agent 운영 문서와 OpenClaw workspace note에 짧게 남기고 private implementation detail은 공개 docs에 넣지 않는다."
+    }
+  ],
+  "recommended_defaults": [
+    "main workspace의 career-specific skill은 제거 후보로 두고 career workspace 소유로 수렴한다.",
+    "HUD usage snapshot 갱신은 session_status -> snapshot write 순서를 표준으로 한다.",
+    "legacy HUD state는 삭제 전에 archive/migration decision을 남긴다.",
+    "subagent/session registry visibility는 agent switch 후 smoke 확인 절차를 둔다.",
+    "백업은 allowlist 기반으로 만들고 session logs/cache/tokens/private secrets를 제외한다."
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "agent workspace 소유권 inventory",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 900
+    },
+    {
+      "number": 2,
+      "title": "HUD snapshot 갱신 절차",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 900
+    },
+    {
+      "number": 3,
+      "title": "registry와 background flow 정리",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 900
+    },
+    {
+      "number": 4,
+      "title": "backup allowlist와 검증",
+      "file": "phase-04.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "haiku",
+      "timeout": 600
+    }
+  ]
+}
