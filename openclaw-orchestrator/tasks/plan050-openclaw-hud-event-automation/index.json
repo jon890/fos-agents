@@ -1,0 +1,118 @@
+{
+  "name": "plan050-openclaw-hud-event-automation",
+  "description": "OpenClaw HUD를 작업 이벤트 기반으로 자동 갱신하고 stale 상태를 드러내는 운영 흐름을 구현한다.",
+  "created_at": "2026-06-07T05:12:21Z",
+  "updated_at": "2026-06-07T05:12:21Z",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 4,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "docs/adr.md",
+    "openclaw-orchestrator/AGENTS.md",
+    "_shared/lib/task_hud.ts",
+    "openclaw-orchestrator/scripts/task-hud/",
+    "skills/plan-and-build/scripts/run-phases.py"
+  ],
+  "depends_on": [
+    "plan045-openclaw-session-task-hud",
+    "plan047-openclaw-session-hud-enhancement",
+    "plan049-openclaw-hud-runtime-stability"
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "hud-name-contract",
+      "decision": "사용자 대화에서 HUD는 현재 Discord/OpenClaw session의 pinned OpenClaw status message를 뜻한다."
+    },
+    {
+      "id": "D2",
+      "title": "event-based-refresh",
+      "decision": "HUD 갱신은 작업 이벤트 기반으로 한다. high-frequency polling은 도입하지 않는다."
+    },
+    {
+      "id": "D3",
+      "title": "canonical-state-root-only",
+      "decision": "runtime state는 `openclaw-orchestrator/state/task-hud/`를 canonical root로 사용한다."
+    },
+    {
+      "id": "D4",
+      "title": "thirty-minute-stale-threshold",
+      "decision": "active work 중 마지막 HUD update가 30분을 넘으면 stale로 본다."
+    }
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "HUD event wrapper와 stale 판정",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 2,
+      "title": "run-phases.py 이벤트 갱신 연결",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 3,
+      "title": "current session dogfooding과 legacy root guard",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 4,
+      "title": "검증과 task 상태 정리",
+      "file": "phase-04.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
+      "model": "haiku",
+      "timeout": 900
+    }
+  ],
+  "open_decisions": [
+    {
+      "id": "O1",
+      "title": "additional-scheduler",
+      "question": "event update만으로 부족하면 별도 heartbeat 또는 timer stale check를 후속 plan으로 둔다."
+    }
+  ]
+}
