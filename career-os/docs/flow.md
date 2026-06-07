@@ -747,7 +747,7 @@ LLM 채팅 흐름:
 - LLM 채팅이 외부 사이트 접근, fos-study 발행, candidate-profile 수정을 수행하지 않는다.
 - 쓰기 액션(prepare-start/hold/reject 버튼)은 pending queue와 사용자 확인 절차 없이 실행하지 않는다.
 
-### Resume Package Flow (plan055 — planned)
+### Resume Package Flow (plan055 — completed)
 
 지원 준비 흐름은 맞춤 이력서 초안을 별도 Markdown 산출물로 고정한 뒤 사용자 승인으로 멈춘다.
 

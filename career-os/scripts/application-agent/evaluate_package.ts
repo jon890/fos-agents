@@ -216,13 +216,13 @@ function overallVerdict(findings: Finding[]): Severity {
 function renderMarkdown(opts: Options, findings: Finding[], generatedAt: string): string {
   const overall = overallVerdict(findings);
   const lines: string[] = [
-    '# Application Package Eval Report',
+    '# 지원 패키지 평가 리포트',
     '',
-    `Generated: ${generatedAt}`,
-    `Application dir: ${opts.applicationDir}`,
-    `Overall: ${overall}`,
+    `생성 시각: ${generatedAt}`,
+    `지원 디렉터리: ${opts.applicationDir}`,
+    `종합 판정: ${overall}`,
     '',
-    '## Inputs',
+    '## 입력 파일',
     '',
     `- package: ${opts.packagePath}`,
     `- resume draft: ${opts.resumePath}`,
@@ -230,7 +230,7 @@ function renderMarkdown(opts: Options, findings: Finding[], generatedAt: string)
     `- checklist: ${opts.checklistPath}`,
     `- review: ${opts.reviewPath}`,
     '',
-    '## Findings',
+    '## 발견 항목',
     '',
   ];
 
@@ -244,7 +244,7 @@ function renderMarkdown(opts: Options, findings: Finding[], generatedAt: string)
     lines.push('');
   }
 
-  lines.push('## Next Actions', '');
+  lines.push('## 다음 행동', '');
   if (overall === 'blocked') {
     lines.push('- blocked finding을 먼저 제거하기 전에는 사용자 검토 단계로 넘기지 않는다.');
   } else if (overall === 'revise') {
@@ -301,8 +301,8 @@ function main(): void {
   );
 
   console.log(`application package verdict: ${overall}`);
-  console.log(`findings: ${findings.length}`);
-  console.log(`report: ${opts.outputPath}`);
+  console.log(`발견 항목 수: ${findings.length}`);
+  console.log(`리포트: ${opts.outputPath}`);
   console.log(`json: ${opts.jsonPath}`);
 
   if (overall === 'blocked') process.exit(1);

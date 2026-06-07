@@ -161,29 +161,23 @@ li { margin: 3px 0; }
 `;
 }
 
-function renderHtml(resumeMarkdown: string, designMarkdown: string, opts: Options): string {
+function renderHtml(resumeMarkdown: string, designMarkdown: string): string {
   const css = extractCss(designMarkdown);
   const body = renderMarkdown(resumeMarkdown);
-  const generatedAt = new Date().toISOString();
 
   return `<!doctype html>
 <html lang="ko">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Resume</title>
+  <title>이력서</title>
   <style>
 ${css}
   </style>
 </head>
 <body>
   <main>
-    <div class="resume-meta">Generated: ${escapeHtml(generatedAt)} · Source: ${escapeHtml(opts.resumePath)} · Design: ${escapeHtml(opts.designPath)}</div>
 ${body}
-    <section class="design-note" aria-hidden="true">
-      <h2>Design Contract</h2>
-      <pre>${escapeHtml(designMarkdown)}</pre>
-    </section>
   </main>
 </body>
 </html>
@@ -220,28 +214,28 @@ function main(): void {
   const opts = parseArgs(process.argv.slice(2));
   const resumeMarkdown = readRequired(opts.resumePath);
   const designMarkdown = readRequired(opts.designPath);
-  const html = renderHtml(resumeMarkdown, designMarkdown, opts);
+  const html = renderHtml(resumeMarkdown, designMarkdown);
 
   writeHtml(opts.htmlPath, html);
   renderPdf(opts);
 
-  console.log(`html: ${opts.htmlPath}`);
-  console.log(`pdf: ${opts.pdfPath}`);
-  console.log('external submission automation: not performed');
+  console.log(`HTML 이력서: ${opts.htmlPath}`);
+  console.log(`PDF 이력서: ${opts.pdfPath}`);
+  console.log('외부 제출 자동화: 실행하지 않음');
 }
 
 function showHelp(): void {
-  console.log(`Resume export helper
+  console.log(`이력서 export helper
 
 Usage:
   bun scripts/application-agent/export_resume.ts --application-dir data/applications/<company>/<role>
 
 Options:
-  --resume <path>       Markdown source. Default: <application-dir>/resume-draft.md
-  --design <path>       design.md source. Default: <application-dir>/design.md, fallback config/resume-design.md
-  --html <path>         HTML output. Default: <application-dir>/resume.html
-  --pdf <path>          PDF output. Default: <application-dir>/resume.pdf
-  --chrome-bin <path>   Chrome/Chromium binary. Default: CHROME_BIN or common system paths
+  --resume <path>       Markdown 원본. 기본값: <application-dir>/resume-draft.md
+  --design <path>       design.md 원본. 기본값: <application-dir>/design.md, fallback config/resume-design.md
+  --html <path>         HTML 출력. 기본값: <application-dir>/resume.html
+  --pdf <path>          PDF 출력. 기본값: <application-dir>/resume.pdf
+  --chrome-bin <path>   Chrome/Chromium binary. 기본값: CHROME_BIN 또는 common system paths
 `);
 }
 

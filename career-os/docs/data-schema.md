@@ -566,7 +566,7 @@ closed
 - `submission-checklist.md`: 사용자가 수동 제출 전에 확인할 체크리스트.
 - `review.md`: evidence guard, drift review, 개인정보/공개 금지 정보, 사용자 승인 필요 항목.
 
-### Resume Package Contract (planned — plan055)
+### Resume Package Contract (completed — plan055)
 
 plan055는 지원 패키지의 전략 문서와 제출용 문서를 분리한다.
 Markdown 산출물을 먼저 고정하고, 리뷰된 이력서 초안을 HTML/PDF로 내보낸다.
