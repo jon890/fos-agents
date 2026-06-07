@@ -2,12 +2,18 @@
   "name": "plan056-data-boundary-and-legacy-cleanup",
   "description": "career-os data 사용을 private, runtime, source, report 경계로 다시 나누고 오래된 tracked runtime artifact와 coffeechat tombstone 정리 결정을 고정한다.",
   "created_at": "2026-06-07T00:00:00Z",
-  "updated_at": "2026-06-07T09:14:04Z",
-  "status": "in_progress",
-  "current_phase": 3,
+  "updated_at": "2026-06-07T10:25:00Z",
+  "status": "completed",
+  "current_phase": 5,
   "total_phases": 5,
   "error_message": null,
   "blocked_reason": null,
+  "summary": {
+    "boundary": "data/applications, data/private, data/source, data/reports, data/runtime 경계를 private-first와 retention/archive 중심으로 고정했다.",
+    "runtime": "두 plan048 tracked runtime exception은 active runtime이 아니라 plan048 verification evidence로 분류했고, 후속 git mv 대상은 task-local evidence를 우선 권고했다.",
+    "coffeechat": "interview-coffeechat-prep skill/script는 active caller가 없는 tombstone으로 확인했고, 한 release cycle 더 유지한 뒤 repeated zero-caller 확인 후 ADR-only 전환을 권고했다.",
+    "metadata": "plan041 index는 completed지만 phase body status는 pending인 mismatch를 기록했고, plan056 필수 산출물 검증을 완료했다."
+  },
   "related_docs": [
     "docs/adr.md",
     "docs/data-schema.md",
@@ -100,7 +106,7 @@
       "number": 3,
       "title": "runtime 산출물 정리 계획",
       "file": "phase-03.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
       "model": "sonnet",
       "timeout": 900
@@ -109,7 +115,7 @@
       "number": 4,
       "title": "coffeechat tombstone 결정",
       "file": "phase-04.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
       "model": "sonnet",
       "timeout": 900
@@ -118,7 +124,7 @@
       "number": 5,
       "title": "metadata 정합성 검증",
       "file": "phase-05.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": ["Read", "Edit", "Bash", "Glob", "Grep"],
       "model": "haiku",
       "timeout": 600
