@@ -161,6 +161,24 @@ Conventional Commits + 한글 subject:
 
 기존 영어 커밋 히스토리는 소급 리라이트하지 않는다.
 
+## 7-1. PR과 작업 산출물 언어 규칙
+
+새 PR 제목과 본문은 한글로 작성한다.
+GitHub UI나 자동화가 요구하는 고정 키워드, 명령어, 코드 식별자, 경로, commit SHA, bot trailer는 원문을 유지한다.
+
+- PR 제목: `<type>[(scope)]: <한글 요약>` 형식을 따른다.
+- PR 본문: 목적, 주요 변경, 검증, 남은 결정점을 한글로 요약한다.
+- phase 실행 보고서와 subagent 최종 보고도 한글을 기본으로 한다.
+- task 파일, phase 파일, 내부 운영 문서, SKILL.md의 설명 문구도 한글을 기본으로 한다.
+- 외부 라이브러리 API, CLI 명령, 에러 원문, 파일 경로, JSON key는 번역하지 않는다.
+
+예외:
+
+- Conventional Commit `type`과 `scope`.
+- `Co-Authored-By:`, `Signed-off-by:` 같은 Git trailer.
+- 자동 생성된 도구 출력과 원문 로그.
+- 영어 원문을 그대로 보존해야 하는 문서 인용.
+
 ## 8. docs 가독성 규칙
 
 단일 출처: `docs/docs-style.md` (ADR-005).
