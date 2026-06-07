@@ -69,9 +69,10 @@ career-os/
 ├── data/
 │   (study-progress.json은 config/로 이동 — ADR-002)
 │   (generated-artifacts.json은 ADR-033 / plan025로 active 제거 — sources/fos-study/ 직접 스캔)
+│   (data 경계와 archive/retention 기본값은 data-schema.md의 "data/ 경계와 보존 원칙"이 단일 출처)
 │   ├── reports/
 │   │   ├── baseline/YYYY-MM-DD/  baseline 실행 결과
-│   │   └── daily/YYYY-MM-DD/     daily / position / foodville 실행 결과
+│   │   └── daily/YYYY-MM-DD/     daily / position / foodville 실행 결과. 오래된 generated report는 retention/archive 후보
 │   ├── runtime/                  ← 가변 상태 (gitignore 대부분)
 │   │   ├── topic-inventory.json
 │   │   ├── topic-inventory-history.jsonl
@@ -86,12 +87,14 @@ career-os/
 │   │   ├── locks/                    flock 잠금 파일들
 │   │   ├── freeform-study-pack-topic.json   (deferred runner용)
 │   │   └── live-coding-generated-topic.json (deferred runner용)
+│   ├── applications/             data/applications/ — 공고별 지원 원장과 private 지원 패키지. gitignore
+│   ├── private/                  data/private/ — private-only archive/tombstone home. gitignore
 │   ├── normalized/               fos-study 정규화 캐시 (현재 비어 있음)
 │   ├── prep/                     회사별 hand-crafted 준비 자산 (plan021 ADR-029: docs/prep/ → data/prep/ 이동)
 │   │   └── <company-slug>/
 │   │       ├── strategy.md       커피챗 전략 노트 (회사 특화)
 │   │       └── checklist.md      면접 체크리스트 (회사 특화)
-│   └── source/                   외부 수집 노트
+│   └── source/                   data/source/ — 외부 수집 노트. 지원/면접과 연결되면 private by default
 │
 ├── logs/                                  ← gitignore. 운영 데이터 단일 출처
 │   ├── task-runs.jsonl           모든 native skill 실행 (옛 run_now.sh는 plan023에서 폐기)
