@@ -747,7 +747,7 @@ LLM 채팅 흐름:
 - LLM 채팅이 외부 사이트 접근, fos-study 발행, candidate-profile 수정을 수행하지 않는다.
 - 쓰기 액션(prepare-start/hold/reject 버튼)은 pending queue와 사용자 확인 절차 없이 실행하지 않는다.
 
-### Resume Package Flow (plan055 — planned)
+### Resume Package Flow (plan055 — completed)
 
 지원 준비 흐름은 맞춤 이력서 초안을 별도 Markdown 산출물로 고정한 뒤 사용자 승인으로 멈춘다.
 
@@ -792,8 +792,9 @@ application request status projection:
 상태 표시에는 `ledgerId`, `error`, `resultSnapshot`을 포함한다.
 fos-career는 이 상태를 보여주되 career-os 원장을 직접 수정하지 않는다.
 
-첨부 가능한 PDF resume export는 Markdown 이력서 리뷰 루프가 안정화된 뒤 후속 plan에서 추가한다.
-후속 산출물 체인은 `Markdown 이력서 초안 -> design.md 적용 HTML 이력서 -> HTML을 PDF로 변환한 완성 PDF 이력서`다.
+첨부 가능한 PDF resume export는 review를 통과한 Markdown 이력서 초안에서 시작한다.
+산출물 체인은 `Markdown 이력서 초안 -> design.md 적용 HTML 이력서 -> HTML을 PDF로 변환한 완성 PDF 이력서`다.
+career-os의 `resume-exporter`는 로컬 파일만 생성한다.
 외부 제출 자동화, 로그인, 브라우저 입력은 이 흐름에 넣지 않는다.
 
 ## 통과 시점에 항상 일어나는 일

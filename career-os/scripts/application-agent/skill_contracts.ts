@@ -47,11 +47,14 @@ export const SKILL_CONTRACTS: Readonly<Record<string, SkillContract>> = {
     cliPattern:
       'cd career-os && claude --permission-mode acceptEdits -p "/application-package-writer {postingPath}"',
     description:
-      '공고별 fit-analysis.md + application-package.md 생성. 근거 없는 주장은 needs_evidence로 마킹.',
+      '공고별 fit-analysis.md + application-package.md + 제출용 Markdown 초안 생성. 근거 없는 주장은 보강 필요 / 선택지 / 권장 행동으로 분리.',
     autonomy: 'agent_only',
     expectedOutputs: [
       '{applicationDir}/fit-analysis.md',
       '{applicationDir}/application-package.md',
+      '{applicationDir}/resume-draft.md',
+      '{applicationDir}/cover-letter.md',
+      '{applicationDir}/submission-checklist.md',
     ],
     touchesFosStudy: false,
     modifiesCandidateProfile: false,
@@ -64,13 +67,30 @@ export const SKILL_CONTRACTS: Readonly<Record<string, SkillContract>> = {
     cliPattern:
       'cd career-os && claude --permission-mode acceptEdits -p "/application-reviewer {applicationDir}"',
     description:
-      '지원 패키지 심사 — evidence/drift/exaggeration/privacy/cooldown 6축 심사 후 pass/revise/blocked 판정.',
+      '지원 패키지와 제출용 Markdown 초안 심사 — evidence/drift/exaggeration/privacy/resume readiness/cooldown 축 검토 후 pass/revise/blocked 판정.',
     autonomy: 'agent_only',
     expectedOutputs: ['{applicationDir}/review.md'],
     touchesFosStudy: false,
     modifiesCandidateProfile: false,
     requiresExternalAccess: false,
     prerequisiteGuards: ['application_package_exists'],
+  },
+
+  'resume-exporter': {
+    skillName: 'resume-exporter',
+    cliPattern:
+      'cd career-os && bun scripts/application-agent/export_resume.ts --application-dir {applicationDir}',
+    description:
+      '검토된 resume-draft.md와 design.md 계약으로 resume.html과 첨부 가능한 resume.pdf를 생성. 외부 제출이나 업로드는 하지 않음.',
+    autonomy: 'agent_only',
+    expectedOutputs: [
+      '{applicationDir}/resume.html',
+      '{applicationDir}/resume.pdf',
+    ],
+    touchesFosStudy: false,
+    modifiesCandidateProfile: false,
+    requiresExternalAccess: false,
+    prerequisiteGuards: ['resume_draft_exists', 'review_pass_or_user_requested_export'],
   },
 
   'daily-application-digest': {

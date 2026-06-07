@@ -207,27 +207,37 @@ function staleArtifacts(
 ): string[] {
   const applicationPackagePath =
     record.applicationPackagePath ?? join(record.applicationDir, 'application-package.md');
+  const resumeDraftPath = record.resumeDraftPath ?? join(record.applicationDir, 'resume-draft.md');
+  const coverLetterPath = record.coverLetterPath ?? join(record.applicationDir, 'cover-letter.md');
+  const submissionChecklistPath =
+    record.submissionChecklistPath ?? join(record.applicationDir, 'submission-checklist.md');
   const reviewPath = record.reviewPath ?? join(record.applicationDir, 'review.md');
 
   if (
     decision.decision === 'revise_application_package' &&
     existsSync(applicationPackagePath) &&
     existsSync(reviewPath) &&
-    statSync(applicationPackagePath).mtimeMs <= statSync(reviewPath).mtimeMs
+    [applicationPackagePath, resumeDraftPath, coverLetterPath, submissionChecklistPath].some(
+      (path) => existsSync(path) && statSync(path).mtimeMs <= statSync(reviewPath).mtimeMs,
+    )
   ) {
     return [
-      `application package is not newer than review: ${applicationPackagePath} (review: ${reviewPath})`,
+      `generated resume package is not newer than review; rerun writer outputs before review: ${reviewPath}`,
     ];
   }
 
   if (
     decision.decision === 'call_application_package_writer' &&
-    existsSync(applicationPackagePath) &&
+    [applicationPackagePath, resumeDraftPath, coverLetterPath, submissionChecklistPath].every(
+      (path) => existsSync(path),
+    ) &&
     existsSync(reviewPath) &&
-    statSync(reviewPath).mtimeMs < statSync(applicationPackagePath).mtimeMs
+    [applicationPackagePath, resumeDraftPath, coverLetterPath, submissionChecklistPath].some(
+      (path) => statSync(reviewPath).mtimeMs < statSync(path).mtimeMs,
+    )
   ) {
     return [
-      `application review is older than package: ${reviewPath} (package: ${applicationPackagePath})`,
+      `application review is older than generated resume package: ${reviewPath}`,
     ];
   }
 
@@ -287,6 +297,24 @@ export function expectedArtifacts(
           path: applicationPackagePath,
           freshnessRole: 'generated',
         },
+        {
+          field: 'resumeDraftPath',
+          label: 'resume draft',
+          path: resumeDraftPath,
+          freshnessRole: 'generated',
+        },
+        {
+          field: 'coverLetterPath',
+          label: 'cover letter',
+          path: coverLetterPath,
+          freshnessRole: 'generated',
+        },
+        {
+          field: 'submissionChecklistPath',
+          label: 'submission checklist',
+          path: submissionChecklistPath,
+          freshnessRole: 'generated',
+        },
       ];
 
     case 'call_application_package_writer':
@@ -295,6 +323,24 @@ export function expectedArtifacts(
           field: 'applicationPackagePath',
           label: 'application package',
           path: applicationPackagePath,
+          freshnessRole: 'generated',
+        },
+        {
+          field: 'resumeDraftPath',
+          label: 'resume draft',
+          path: resumeDraftPath,
+          freshnessRole: 'generated',
+        },
+        {
+          field: 'coverLetterPath',
+          label: 'cover letter',
+          path: coverLetterPath,
+          freshnessRole: 'generated',
+        },
+        {
+          field: 'submissionChecklistPath',
+          label: 'submission checklist',
+          path: submissionChecklistPath,
           freshnessRole: 'generated',
         },
         {
@@ -398,6 +444,7 @@ function buildCommandSuggestions(
     case 'max_revision_exceeded_escalate':
       return [
         `# Review required: ${record.applicationPackagePath ?? record.applicationDir}`,
+        buildSkillCommand('resume-exporter', { applicationDir: record.applicationDir }),
         `# To approve: update ledger record id=${record.id} userDecision=approved`,
         `# [requires user approval] ${buildSkillCommand('candidate-baseline-suggester')}`,
       ];

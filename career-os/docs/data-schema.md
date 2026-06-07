@@ -558,16 +558,19 @@ closed
 - `fit-analysis.md`: candidate-profile 기반 fit/gap, 우선순위, 지원 리스크.
 - `application-package.md`: 지원 전략, 포지셔닝, 맞춤 초안 방향, 근거 보강 요청을 담는 내부 준비 문서.
 - `resume-draft.md`: 사용자가 제출 전에 검토할 맞춤 이력서 Markdown 초안.
+- `design.md`: 공고별 HTML/PDF 이력서 디자인 계약.
+  없으면 `config/resume-design.md` 기본값을 사용한다.
+- `resume.html`: `resume-draft.md`에 `design.md` 계약을 적용한 HTML 이력서.
+- `resume.pdf`: HTML 이력서를 headless Chrome으로 변환한 첨부 가능한 PDF 이력서.
 - `cover-letter.md`: 지원동기와 자기소개서 성격의 제출용 Markdown 초안.
 - `submission-checklist.md`: 사용자가 수동 제출 전에 확인할 체크리스트.
 - `review.md`: evidence guard, drift review, 개인정보/공개 금지 정보, 사용자 승인 필요 항목.
 
-### Resume Package Contract (planned — plan055)
+### Resume Package Contract (completed — plan055)
 
 plan055는 지원 패키지의 전략 문서와 제출용 문서를 분리한다.
-Markdown 산출물을 먼저 고정한다.
-첨부 가능한 PDF resume export는 Markdown 리뷰 루프가 안정화된 뒤 후속 plan에서 다룬다.
-후속 산출물 체인은 `Markdown 이력서 초안 -> design.md 적용 HTML 이력서 -> HTML을 PDF로 변환한 완성 PDF 이력서`다.
+Markdown 산출물을 먼저 고정하고, 리뷰된 이력서 초안을 HTML/PDF로 내보낸다.
+산출물 체인은 `Markdown 이력서 초안 -> design.md 적용 HTML 이력서 -> HTML을 PDF로 변환한 완성 PDF 이력서`다.
 외부 제출 자동화는 여전히 범위 밖이다.
 
 필수 파일:
@@ -576,6 +579,10 @@ Markdown 산출물을 먼저 고정한다.
   공개 또는 제출용 최종 문구와 내부 분석을 섞지 않는다.
 - `resume-draft.md`: 제출용 이력서 초안.
   검증된 경험과 근거 태그에서만 문장을 만든다.
+- `design.md`: 공고별 이력서 디자인 계약.
+  파일이 없으면 `config/resume-design.md`를 사용한다.
+- `resume.html`: `resume-draft.md`와 디자인 계약에서 만든 HTML 제출물.
+- `resume.pdf`: HTML을 headless Chrome으로 출력한 첨부 가능한 PDF.
 - `cover-letter.md`: 지원동기/자기소개서 초안.
   회사와 공고 맥락을 반영하되 검증되지 않은 성과를 단정하지 않는다.
 - `submission-checklist.md`: 수동 제출 전 확인 항목.

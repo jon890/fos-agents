@@ -2,9 +2,9 @@
   "name": "plan055-resume-package-flow",
   "description": "지원 준비 흐름을 맞춤 이력서 패키지까지 확장한다. Markdown 산출물 계약을 먼저 고정하고, request status, processor post-validation, review loop, workbench UX, export gate를 phase로 분리한다.",
   "created_at": "2026-06-07T00:00:00Z",
-  "updated_at": "2026-06-07T09:10:00Z",
-  "status": "in_progress",
-  "current_phase": 4,
+  "updated_at": "2026-06-07T11:05:00Z",
+  "status": "completed",
+  "current_phase": 5,
   "total_phases": 5,
   "error_message": null,
   "blocked_reason": null,
@@ -69,7 +69,7 @@
     {
       "id": "D9",
       "title": "pdf-resume-export-followup",
-      "decision": "최종 목표에는 Markdown 이력서 초안 -> design.md를 적용한 HTML 이력서 -> HTML을 PDF로 변환한 완성 PDF 이력서 체인을 포함한다. 단 Markdown 이력서 리뷰 루프 안정화 뒤 후속 phase 또는 후속 plan에서 다루며, 외부 제출 자동화는 여전히 범위 밖이다."
+      "decision": "최종 목표에는 Markdown 이력서 초안 -> design.md를 적용한 HTML 이력서 -> HTML을 PDF로 변환한 완성 PDF 이력서 체인을 포함한다. plan055 MVP에서 로컬 HTML/PDF export까지 다루며, 외부 제출 자동화는 여전히 범위 밖이다."
     }
   ],
   "open_decisions": [
@@ -93,8 +93,8 @@
     }
   ],
   "recommended_defaults": [
-    "Markdown 산출물과 review loop를 먼저 고정하고 export는 후속 plan으로 둔다.",
-    "첨부 가능한 PDF resume export는 Markdown 리뷰 루프 안정화 뒤 design.md 적용 HTML 이력서 변환을 거쳐 추가한다.",
+    "Markdown 산출물과 review loop를 먼저 고정한 뒤 같은 plan에서 로컬 HTML/PDF export로 연결한다.",
+    "첨부 가능한 PDF resume export는 design.md 적용 HTML 이력서 변환을 거쳐 생성하되 외부 제출 자동화와 분리한다.",
     "resume-metadata.json은 이번 plan의 필수 산출물로 만들지 않는다.",
     "request status는 pending/running/done/failed/stale enum을 사용한다.",
     "processor는 run.ts resume 이후 실제 파일 존재와 freshness를 검증한다.",
@@ -132,7 +132,7 @@
       "number": 4,
       "title": "생성 및 리뷰 루프",
       "file": "phase-04.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
       "model": "sonnet",
       "timeout": 1800
@@ -141,7 +141,7 @@
       "number": 5,
       "title": "워크벤치 UX와 export 게이트",
       "file": "phase-05.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
       "model": "sonnet",
       "timeout": 1500

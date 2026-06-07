@@ -1,17 +1,16 @@
 # Phase 05 — 워크벤치 UX와 export 게이트
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ---
 
 ## 목표
 
 fos-career application workbench가 resume package readiness와 request status를 보여주게 한다.
-PDF/DOCX export는 의도적으로 막고,
-Markdown 리뷰 루프 안정화 이후 `Markdown 이력서 초안 -> design.md 적용 HTML 이력서 -> PDF 이력서` 후속 plan으로 넘긴다.
+Markdown 리뷰 루프가 만든 `resume-draft.md`를 `design.md` 적용 HTML 이력서와 첨부 가능한 PDF 이력서로 변환한다.
 
-**범위 외**: PDF/DOCX 생성, 외부 제출, 로그인/브라우저 입력 자동화, candidate-profile mutation.
+**범위 외**: DOCX 생성, 외부 제출, 로그인/브라우저 입력 자동화, candidate-profile mutation.
 
 ---
 
@@ -23,7 +22,7 @@ Markdown 리뷰 루프 안정화 이후 `Markdown 이력서 초안 -> design.md 
 - `docs/data-schema.md` — workbench projection, request status
 - `docs/flow.md` — Resume Package Flow
 - `docs/code-architecture.md` — fos-career adapter/UI responsibility
-- `docs/adr.md` — ADR-054, ADR-056
+- `docs/adr.md` — ADR-054, ADR-056, ADR-059
 - `tasks/plan054-fos-career-application-workbench/index.json`
 
 ---
@@ -75,11 +74,16 @@ detail 화면에서 다음 파일의 존재 여부와 열람 경로를 보여준
 
 내부 분석과 제출용 문서 구분이 화면에서 보이게 한다.
 
-### 4. export gate 표시
+### 4. HTML/PDF export gate 구현
 
-PDF/DOCX 버튼을 구현하지 않는다.
-필요하면 비활성 상태나 "Markdown 리뷰 후 HTML/PDF export 후속" 성격의 내부 UI state로만 표시한다.
-사용자 승인 없는 제출/다운로드 자동화로 이어지면 안 된다.
+career-os에 로컬 export helper를 추가한다.
+
+- 입력: `resume-draft.md`, `design.md`
+- 출력: `resume.html`, `resume.pdf`
+- fallback design: `config/resume-design.md`
+- PDF 생성: headless Chrome print-to-pdf
+
+사용자 승인 없는 제출/업로드 자동화로 이어지면 안 된다.
 
 ### 5. typecheck와 screenshot smoke
 
@@ -93,8 +97,8 @@ fos-career typecheck를 실행한다.
 - workbench list/detail에서 resume package readiness가 보인다.
 - request status와 error summary가 보인다.
 - 내부 전략 문서와 제출용 문서가 구분된다.
-- PDF/DOCX export는 구현되지 않았고 후속 gate로 남는다.
-  후속 목표는 design.md를 적용한 HTML 이력서와 첨부 가능한 PDF 이력서이며, 외부 제출 자동화는 아니다.
+- HTML/PDF export는 career-os 로컬 파일 생성으로 구현된다.
+  외부 제출 자동화는 아니다.
 - fos-career는 career-os 파일을 직접 쓰지 않는다.
 
 ---
@@ -109,6 +113,15 @@ npx tsc --noEmit
 rg "resumeDraft|coverLetter|submissionChecklist|resume-draft.md|cover-letter.md|submission-checklist.md" app lib
 rg "pending|running|done|failed|stale" app lib
 git status --short
+```
+
+career-os export smoke도 실행한다.
+
+```bash
+cd career-os
+bun scripts/application-agent/export_resume.ts --application-dir <fixture-dir>
+test -f <fixture-dir>/resume.html
+test -f <fixture-dir>/resume.pdf
 ```
 
 가능하면 UI smoke를 실행한다.
@@ -141,6 +154,7 @@ npm run test -- --runInBand
 
 ## Self-check
 
-- export/PDF/DOCX를 구현하지 않는다.
+- PDF는 첨부 파일 생성까지만 구현한다.
+- DOCX를 구현하지 않는다.
 - 외부 제출, 로그인, 브라우저 입력을 추가하지 않는다.
 - career-os data 파일을 fos-career에서 직접 수정하지 않는다.
