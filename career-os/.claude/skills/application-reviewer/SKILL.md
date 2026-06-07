@@ -32,7 +32,7 @@ review.md는 내부 검토 문서다.
   제출용으로 옮길 수 있는 수정 문구에는 내부 파일 경로, plan 번호, commit hash, runner 상태를 넣지 않는다.
 - 이력서 MVP 산출물 체인은 `Markdown 이력서 초안 -> design.md를 적용한 HTML 이력서 -> HTML을 PDF로 변환한 완성 PDF 이력서`로 검토한다.
   HTML 이력서는 model이 `design.md`를 적용했다는 전제를 확인하고, PDF는 사용자가 첨부할 수 있는 최종 산출물로 본다.
-  PDF 생성은 제출 자동화가 아니며, 업로드·전송·제출 버튼 클릭은 별도의 `사용자 승인 필요` 항목이다.
+  PDF 생성은 제출 자동화가 아니며, 업로드·전송·제출 버튼 클릭 자동화는 이번 MVP 범위 밖이다.
 - `needs_evidence`는 사용자에게 raw label로 남기지 않는다.
   발견 항목은 모두 `보강 필요 / 선택지 / 권장 행동` 구조로 바꾼다.
   이 구조는 사용자가 증거를 찾을지, 표현을 낮출지, 진행을 멈출지 바로 고를 수 있어야 한다.
@@ -177,7 +177,7 @@ ledger.jsonl의 riskFlags와 posting.md의 위험 플래그를 교차:
 - 제출용 수정 문구에는 내부 파일 경로, plan 번호, commit hash, runner 상태를 넣지 않는다.
 - 내부 reviewer 근거에는 source 경로를 유지한다.
 - resume package 산출물이 함께 검토되면 Markdown 초안, design.md 적용 HTML, 첨부 가능한 PDF의 경계를 확인한다.
-  PDF가 있어도 외부 제출·업로드·전송은 완료로 보지 않는다.
+  PDF가 있어도 외부 제출·업로드·전송은 완료로 보지 않고, 자동화 대상으로도 다루지 않는다.
 - 총 30줄 이상
 
 **Ledger Update Suggestion 섹션 (필수)**:
