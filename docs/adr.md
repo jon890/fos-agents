@@ -583,11 +583,11 @@ OpenClaw 자체의 행동 규칙과 runtime state에 가깝다.
 OpenClaw HUD의 의미를 pinned 상태 메시지로 고정한다.
 HUD는 chat narration이 아니라 session 작업 상태의 visible projection이다.
 
-HUD 정책은 `.openclaw/workspace/AGENTS.md`에 둔다.
+HUD 정책은 각 OpenClaw agent workspace의 `AGENTS.md`에 둔다.
 여기에는 HUD 용어, 갱신 이벤트, stale 기준, visible privacy rule을 기록한다.
 
-HUD runtime state는 `.openclaw/workspace/state/task-hud/`에 둔다.
-기존 `openclaw-orchestrator/state/task-hud/`는 legacy로만 취급한다.
+career HUD runtime state는 `.openclaw/workspace-career/state/task-hud/`에 둔다.
+기존 `openclaw-orchestrator/state/task-hud/`와 `.openclaw/workspace/state/task-hud/`는 더 이상 사용하지 않고 제거한다.
 
 workspace-agnostic helper code는 `ai-nodes/_shared/lib/`에 둘 수 있다.
 단, 특정 OpenClaw workspace state를 직접 소유하지 않는다.
@@ -610,13 +610,14 @@ stale 기준은 30분이다.
 사용자는 pinned HUD 하나만 보면 현재 장기 작업 상태를 확인할 수 있다.
 작업 루프가 HUD update를 놓치면 stale 기준으로 드러난다.
 state root 혼선은 새 구현에서 제거된다.
+`openclaw-orchestrator/`는 운영 workspace에서 제외하고 ai-nodes에서 삭제한다.
 
 단점은 각 long-running 진입점이 HUD update helper를 호출해야 한다는 점이다.
-이 호출 누락을 줄이기 위해 `.openclaw/workspace/tasks/plan001-hud-event-automation`에서 wrapper와 phase 검증을 추가한다.
+이 호출 누락을 줄이기 위해 `.openclaw/workspace-career/AGENTS.md`와 관련 skill에 HUD 갱신 지점을 기록한다.
 
 ### 적용
 
-- HUD 정책: `.openclaw/workspace/AGENTS.md`.
-- HUD runtime state: `.openclaw/workspace/state/task-hud/`.
+- HUD 정책: `.openclaw/workspace-career/AGENTS.md`.
+- HUD runtime state: `.openclaw/workspace-career/state/task-hud/`.
 - helper: `_shared/lib/task_hud.ts`.
-- 구현 task: `.openclaw/workspace/tasks/plan001-hud-event-automation/`.
+- career updater wrapper: `.openclaw/workspace-career/scripts/task-hud/`.

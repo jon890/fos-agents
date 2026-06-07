@@ -11,7 +11,7 @@ import {
   type SafeUsageSnapshot,
 } from "./session_status_hud.ts";
 
-const DEFAULT_STATE_ROOT_RELATIVE = "openclaw-orchestrator/state/task-hud";
+const DEFAULT_STATE_ROOT_RELATIVE = ".openclaw/task-hud";
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const WARNING_COOLDOWN_MS = 15 * 60 * 1000;
 const MAX_ACTIVE_SUBAGENT_LABELS = 3;

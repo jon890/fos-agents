@@ -33,7 +33,7 @@
     {
       "id": "D3",
       "title": "legacy-hud-state-is-decision",
-      "decision": "옛 .openclaw/workspace/openclaw-orchestrator/state/task-hud 상태는 조용히 삭제하지 않고 archive 또는 migration 결정을 남긴다."
+      "decision": "옛 HUD state root는 canonical state root로 현재 HUD message id를 옮긴 뒤 제거한다."
     },
     {
       "id": "D4",
@@ -52,7 +52,7 @@
       "id": "O2",
       "title": "legacy-hud-state",
       "question": "legacy HUD state를 archive할 것인가, migration record만 남기고 제거할 것인가?",
-      "recommended_default": "archive/migration decision을 먼저 남긴 뒤 보존 가치가 없는 runtime state만 제거한다."
+      "recommended_default": "현재 HUD message id는 .openclaw/workspace-career/state/task-hud에 유지하고, 나머지 runtime state root는 제거한다."
     },
     {
       "id": "O3",
@@ -64,7 +64,7 @@
   "recommended_defaults": [
     "main workspace의 career-specific skill은 제거 후보로 두고 career workspace 소유로 수렴한다.",
     "HUD 상태 요약 갱신은 session_status -> snapshot write 순서를 표준으로 한다.",
-    "legacy HUD state는 삭제 전에 archive/migration decision을 남긴다.",
+    "legacy HUD state는 현재 HUD message id를 canonical state root로 옮긴 뒤 제거한다.",
     "subagent/session registry visibility는 agent switch 후 smoke 확인 절차를 둔다.",
     "백업은 allowlist 기반으로 만들고 session logs/cache/tokens/private secrets를 제외한다."
   ],

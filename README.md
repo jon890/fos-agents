@@ -8,7 +8,7 @@
 
 ## 워크스페이스
 
-워크스페이스 6개. 모두 Claude native skill 직접 호출로 실행된다 (ADR-011).
+워크스페이스 5개. 모두 Claude native skill 직접 호출로 실행된다 (ADR-011).
 
 | 워크스페이스 | 목적 | 진입점 |
 |---|---|---|
@@ -17,7 +17,6 @@
 | [`stock-investment/`](stock-investment/) | 일일 주식·이슈 모니터링 + 모닝 브리핑 | `claude -p "/stock-investing-morning-brief"` 외 |
 | [`travel/`](travel/) | 여행별 일정·결정 로그 관리 | `trips/<trip-id>/` 폴더 단위 운영 |
 | [`health-care/`](health-care/) | 무릎 재활 daily 체크인 (cron 08:30 KST) | `claude -p "/daily-knee-rehab-checkin"` 외 |
-| [`openclaw-orchestrator/`](openclaw-orchestrator/) | OpenClaw daily memory + cross-domain orchestration notes | 폴더 단위 운영 |
 
 각 워크스페이스는 자체 `AGENTS.md` + `docs/`를 가진다.
 워크스페이스 작업은 그 안의 `AGENTS.md`를 먼저 확인.

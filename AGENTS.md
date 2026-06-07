@@ -10,7 +10,7 @@
 최상위 디렉터리 각각은 자체 skills · data · logs · config를 가진 **독립 작업 워크스페이스**다.
 워크스페이스는 서로 격리되며 다른 워크스페이스의 자산을 교차 참조하지 않는다.
 
-현재 워크스페이스 6개:
+현재 워크스페이스 5개:
 
 | 워크스페이스 | 자체 가이드 | 특이사항 |
 |---|---|---|
@@ -19,7 +19,6 @@
 | `stock-investment/` | [`stock-investment/AGENTS.md`](stock-investment/AGENTS.md) | 일일 모닝 브리핑 |
 | `travel/` | [`travel/AGENTS.md`](travel/AGENTS.md) | `trips/<trip-id>/` 단위, ADR-001 의도된 비대칭 (scripts/.claude/skills/.env/config 부재) |
 | `health-care/` | [`health-care/AGENTS.md`](health-care/AGENTS.md) | 무릎 재활 daily 체크인 (knee-patellar-instability, cron 08:30 KST) |
-| `openclaw-orchestrator/` | [`openclaw-orchestrator/AGENTS.md`](openclaw-orchestrator/AGENTS.md), `openclaw-orchestrator/TOOLS.md` | OpenClaw daily memory와 cross-domain orchestration notes |
 
 공용 영역:
 

@@ -9,17 +9,17 @@
 
 - career workspace wrapper: `skills/refresh-hud/SKILL.md`
   - `session_status`를 먼저 호출한 뒤 task-hud updater로 반영하라고 안내한다.
-- session_status 기반 updater: `openclaw-orchestrator/scripts/task-hud/update_from_session_status.ts`
+- session_status 기반 updater: `.openclaw/workspace-career/scripts/task-hud/update_from_session_status.ts`
   - `--session-status-json`을 받아 안전한 usage summary만 `_shared/lib/task_hud.ts`에 넘긴다.
-- legacy event updater: `scripts/task-hud/update_event.ts`
+- event updater: `.openclaw/workspace-career/scripts/task-hud/update_event.ts`
   - event와 status만 넘기는 얇은 wrapper다.
   - `session_status` 입력을 받지 않으므로 단독 실행 시 usage 실측을 새로 만들지 못한다.
 - task-hud helper: `_shared/lib/task_hud.ts`
   - 상태판 파일을 읽고 update/status/warn을 처리한다.
   - 새 usage가 비어 있으면 기존 `lastUsageSnapshot`과 합칠 수 있다.
-- legacy HUD state: `.openclaw/workspace/openclaw-orchestrator/state/task-hud`
-  - 이번 phase에서는 존재 여부만 확인했다.
-  - 파일 내용은 열지 않았고 삭제, archive, migration은 실행하지 않았다.
+- canonical HUD state: `.openclaw/workspace-career/state/task-hud`
+  - career HUD가 유지해야 하는 현재 상태 파일만 이 경로에 둔다.
+  - 과거 `openclaw-orchestrator`와 `.openclaw/workspace`의 task-hud 상태는 운영 경로에서 제거한다.
 
 ## 표준 순서
 
@@ -36,7 +36,7 @@ HUD 상태 요약을 갱신할 때는 아래 순서를 따른다.
 예시:
 
 ```bash
-bun openclaw-orchestrator/scripts/task-hud/update_from_session_status.ts \
+bun /home/bifos/.openclaw/workspace-career/scripts/task-hud/update_from_session_status.ts \
   --session discord-career-main \
   --task-label "<현재 작업 요약>" \
   --status "<짧은 상태>" \
@@ -80,10 +80,10 @@ HUD에 넣지 않는 값:
 - 사용자의 로컬 절대 경로
 - 판단에 필요 없는 Discord 대화 원문
 
-## legacy task-hud 처리 기준
+## 옛 task-hud 처리 기준
 
-legacy `task-hud` 상태는 조용히 삭제하지 않는다.
-archive 또는 migration 판단을 먼저 남긴다.
+옛 `task-hud` 상태는 현재 HUD message id를 canonical state root로 옮긴 뒤 제거한다.
+career 세션의 canonical state root는 `.openclaw/workspace-career/state/task-hud`다.
 
 archive 후보:
 
@@ -105,9 +105,9 @@ migration 후보:
 
 금지:
 
-- state 파일 내용을 검토하지 않고 삭제하지 않는다.
-- archive/migration decision 없이 runtime state를 옮기지 않는다.
-- phase-02에서 OpenClaw runtime state를 수정하지 않는다.
+- canonical state root의 현재 HUD message id를 잃어버리지 않는다.
+- 옛 state root를 되살려 새 작업 경로로 사용하지 않는다.
+- `openclaw-orchestrator`를 HUD 운영 workspace로 다시 사용하지 않는다.
 
 ## 작업자 체크리스트
 
@@ -117,6 +117,6 @@ HUD 상태를 갱신하기 전에 아래를 확인한다.
 - stale snapshot 또는 오래된 snapshot을 재사용하지 않는가?
 - `update_event.ts` 단독 실행이 아니라 task-hud updater에 실측 JSON을 넘겼는가?
 - dry-run 결과에 private 내용이나 로컬 절대 경로가 없는가?
-- legacy `task-hud` archive/migration 판단이 필요한 작업을 이번 phase에서 실행하지 않았는가?
+- 옛 `task-hud` state root를 다시 사용하지 않는가?
 
 이 체크를 통과하지 못하면 HUD 갱신을 멈추고 실패 이유를 짧게 보고한다.
