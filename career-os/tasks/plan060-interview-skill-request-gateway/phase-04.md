@@ -71,3 +71,19 @@ fos-career 쪽 검증 명령은 repo의 기존 package script를 사용한다.
 ## PHASE_FAILED
 
 검증 명령을 실행하지 않고 success로 보고하거나, forbidden action 경로가 남아 있으면 실패로 본다.
+
+## 완료 기록
+
+- status: completed
+- completed_at: 2026-06-07T13:21:17Z
+- fos-career 검증:
+  - `npx tsc --noEmit`
+  - `npm run apply:interview-requests -- --self-test-gates`
+  - `DATABASE_URL=mysql://user:pass@127.0.0.1:3306/fos_career SESSION_SECRET=0123456789abcdef0123456789abcdef SESSION_COOKIE_SECURE=false npm run build`
+  - `git diff --check HEAD~2..HEAD`
+  - dashboard/API direct skill execution grep: match 없음.
+  - private body/stdout 경계 grep: answer body와 feedback body는 private answer table/UI 표시 경로에만 있고 request/audit에는 길이, id, summary만 저장.
+- career-os task 검증:
+  - `python3 -m json.tool career-os/tasks/plan060-interview-skill-request-gateway/index.json >/dev/null`
+  - phase 계약 키워드 `rg` 검증.
+  - `git diff --check`

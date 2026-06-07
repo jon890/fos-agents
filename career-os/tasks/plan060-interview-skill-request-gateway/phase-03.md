@@ -92,3 +92,16 @@ fos-career dashboard에 CJ푸드빌 2026-06-15 면접 준비 hub를 추가하고
 ## PHASE_FAILED
 
 UI가 career-os writable path를 요구하거나 `claude -p`를 직접 호출하면 실패로 본다.
+
+## 완료 기록
+
+- status: completed
+- completed_at: 2026-06-07T13:21:17Z
+- fos-career commit: `8608dce feat(interview): dashboard 면접 hub 추가`
+- 변경 요약:
+  - career-os read-only adapter에 CJ푸드빌 2026-06-15 hub projection 추가.
+  - `/dashboard/interview` hub 페이지와 dashboard nav 링크 추가.
+  - request queue, 기본 5턴 세션, 자유형 연장, 답변 저장, 상세 피드백/4축 점수, 보완 주제 study-pack 요청 UI 추가.
+- 검증:
+  - `npx tsc --noEmit`
+  - `git diff --check`

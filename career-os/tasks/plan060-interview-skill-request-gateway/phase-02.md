@@ -78,3 +78,17 @@ fos-career의 기존 DB 또는 processor 구조에서 request queue를 안전하
 ## PHASE_FAILED
 
 dashboard container가 career-os skill을 직접 실행하는 구현이 필요해지면 실패로 본다.
+
+## 완료 기록
+
+- status: completed
+- completed_at: 2026-06-07T13:21:17Z
+- fos-career commit: `737c992 feat(interview): skill request gateway 구현`
+- 변경 요약:
+  - `interview_skill_requests`, `interview_practice_sessions`, `interview_answer_records` schema/migration 추가.
+  - `/api/interview/requests`, `/api/interview/sessions`, `/api/interview/answers` 추가.
+  - `scripts/process-interview-requests.ts` processor와 public-safe/allowlist/self-test gate 추가.
+- 검증:
+  - `npx tsc --noEmit`
+  - `npm run apply:interview-requests -- --self-test-gates`
+  - `git diff --check`
