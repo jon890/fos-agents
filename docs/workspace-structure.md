@@ -12,13 +12,14 @@ ai-nodes 모노레포의 모든 워크스페이스가 따르는 표준 디렉터
 각 최상위 디렉터리는 독립 작업 영역으로 자체 skills · data · logs · config · docs를 가진다.
 워크스페이스는 서로 격리되며 다른 워크스페이스의 자산을 교차 참조하지 않는다.
 
-현재 워크스페이스 5개:
+현재 워크스페이스 6개:
 
 | 워크스페이스 | 가이드 | 특이사항 |
 |---|---|---|
 | `apartment/` | `apartment/AGENTS.md` | 네이버 부동산 API + agent-browser |
 | `career-os/` | `career-os/AGENTS.md` | scripts/ + .claude/skills/ 분리 (ADR-019 → ADR-006 표준 격상) |
 | `stock-investment/` | `stock-investment/AGENTS.md` | 일일 모닝 브리핑 |
+| `cooking/` | `cooking/AGENTS.md` | 요리 재료 조사, 재료 비교, 영상 수집, 장보기 리스트 |
 | `travel/` | `travel/AGENTS.md` | trips/<trip-id>/ 단위, 의도된 비대칭 (ADR-001) — scripts/.claude/skills/config 부재 (.env는 ADR-002로 도입) |
 | `health-care/` | `health-care/AGENTS.md` | 무릎 재활 daily 체크인 (knee-patellar-instability) |
 
@@ -178,16 +179,16 @@ career-os ADR-019의 scripts/ 분리 패턴은 ADR-006으로 표준 격상되어
 
 2026-05-19 기준. O = 준수, X = 미준수, ? = 미확인.
 
-| 항목 | apartment | career-os | stock-investment | travel | health-care |
-|---|---|---|---|---|---|
-| AGENTS.md 존재 | O | O | O | O | O |
-| CLAUDE.md 심링크 | O | O | O (plan001) | O (plan001) | O |
-| docs/ 5문서 | O | O | O (plan001) | O (plan001) | O (plan002) |
-| tasks/plan{N}/ 영역 | O | O | O (plan001~004) | O (plan001) | O (plan001~002) |
-| skills/ 분리 표준 (ADR-006) | 적용 (plan007) | 적용 (ADR-019 → ADR-006 격상) | 적용 (plan002) | N/A (ADR-001 비대칭) | 적용 (plan002) |
-| .claude/skills/ native 등록 | O | O | O (plan002) | N/A (ADR-001 비대칭) | O (plan002) |
-| .env (workspace root) | O | O | O | O (plan002 ADR-002) | O (plan002) |
-| data/ vs docs/ 분리 | O | O | O | O (trips/<trip-id>/data + docs) | O |
+| 항목 | apartment | career-os | stock-investment | cooking | travel | health-care |
+|---|---|---|---|---|---|---|
+| AGENTS.md 존재 | O | O | O | O | O | O |
+| CLAUDE.md 심링크 | O | O | O (plan001) | O | O (plan001) | O |
+| docs/ 5문서 | O | O | O (plan001) | O | O (plan001) | O (plan002) |
+| tasks/plan{N}/ 영역 | O | O | O (plan001~004) | O | O (plan001) | O (plan001~002) |
+| skills/ 분리 표준 (ADR-006) | 적용 (plan007) | 적용 (ADR-019 → ADR-006 격상) | 적용 (plan002) | 적용 | N/A (ADR-001 비대칭) | 적용 (plan002) |
+| .claude/skills/ native 등록 | O | O | O (plan002) | O | N/A (ADR-001 비대칭) | O |
+| .env (workspace root) | O | O | O | 필요 시 생성 (.env.example 있음) | O (plan002 ADR-002) | O (plan002) |
+| data/ vs docs/ 분리 | O | O | O | O | O (trips/<trip-id>/data + docs) | O |
 
 stock-investment plan001~004 + health-care plan002 + travel plan001~002 시리즈로 5 워크스페이스 모두 표준 적용 완료. travel은 ADR-001 의도된 비대칭 — scripts/.claude/skills/config 부재 (자동화 0 + workspace-level skill 0). .env는 plan002 ADR-002로 도입.
 

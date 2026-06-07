@@ -10,13 +10,14 @@
 최상위 디렉터리 각각은 자체 skills · data · logs · config를 가진 **독립 작업 워크스페이스**다.
 워크스페이스는 서로 격리되며 다른 워크스페이스의 자산을 교차 참조하지 않는다.
 
-현재 워크스페이스 6개:
+현재 워크스페이스 7개:
 
 | 워크스페이스 | 자체 가이드 | 특이사항 |
 |---|---|---|
 | `apartment/` | [`apartment/AGENTS.md`](apartment/AGENTS.md), `apartment/TOOLS.md` | 네이버 부동산 API + agent-browser 결합 |
 | `career-os/` | [`career-os/AGENTS.md`](career-os/AGENTS.md) (= CLAUDE.md 심링크), `docs/` 5문서 | 분리 표준 최초 도입 (ADR-019 → ADR-006 격상) |
 | `stock-investment/` | [`stock-investment/AGENTS.md`](stock-investment/AGENTS.md) | 일일 모닝 브리핑 |
+| `cooking/` | [`cooking/AGENTS.md`](cooking/AGENTS.md) | 요리 재료 조사, 재료 비교, 영상 수집, 장보기 리스트 |
 | `travel/` | [`travel/AGENTS.md`](travel/AGENTS.md) | `trips/<trip-id>/` 단위, ADR-001 의도된 비대칭 (scripts/.claude/skills/.env/config 부재) |
 | `health-care/` | [`health-care/AGENTS.md`](health-care/AGENTS.md) | 무릎 재활 daily 체크인 (knee-patellar-instability, cron 08:30 KST) |
 | `openclaw-orchestrator/` | [`openclaw-orchestrator/AGENTS.md`](openclaw-orchestrator/AGENTS.md), `openclaw-orchestrator/TOOLS.md` | OpenClaw daily memory와 cross-domain orchestration notes |
@@ -99,6 +100,15 @@ claude -p "/position-recommender [자연어 컨텍스트] [채용공고 file]"
 ### 3-3. stock-investment / travel
 
 [`stock-investment/AGENTS.md`](stock-investment/AGENTS.md) · [`travel/AGENTS.md`](travel/AGENTS.md) 참조. 본 모노레포 진입점은 그곳에 정의.
+
+### 3-3-1. cooking
+
+요리 재료 조사, 재료 비교, 영상 수집, 첫 시도 레시피, 장보기 리스트는 `cooking/` 워크스페이스가 담당한다.
+
+```bash
+cd cooking
+claude -p "/cooking-research <메뉴명>"
+```
 
 ### 3-4. 새 워크스페이스 추가
 

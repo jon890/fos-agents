@@ -1,0 +1,14 @@
+{
+  "servings": 2,
+  "criteria": ["taste", "accessibility", "price", "failureRisk"],
+  "videoLanguages": ["ko", "fr", "en"],
+  "privacyDefault": "private",
+  "outputFiles": [
+    "ingredients.md",
+    "comparison.md",
+    "recipe.md",
+    "videos.md",
+    "shopping-list.md"
+  ]
+}
+
