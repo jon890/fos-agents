@@ -444,6 +444,7 @@ function buildCommandSuggestions(
     case 'max_revision_exceeded_escalate':
       return [
         `# Review required: ${record.applicationPackagePath ?? record.applicationDir}`,
+        buildSkillCommand('resume-exporter', { applicationDir: record.applicationDir }),
         `# To approve: update ledger record id=${record.id} userDecision=approved`,
         `# [requires user approval] ${buildSkillCommand('candidate-baseline-suggester')}`,
       ];

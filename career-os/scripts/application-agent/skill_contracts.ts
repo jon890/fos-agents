@@ -76,6 +76,23 @@ export const SKILL_CONTRACTS: Readonly<Record<string, SkillContract>> = {
     prerequisiteGuards: ['application_package_exists'],
   },
 
+  'resume-exporter': {
+    skillName: 'resume-exporter',
+    cliPattern:
+      'cd career-os && bun scripts/application-agent/export_resume.ts --application-dir {applicationDir}',
+    description:
+      '검토된 resume-draft.md와 design.md 계약으로 resume.html과 첨부 가능한 resume.pdf를 생성. 외부 제출이나 업로드는 하지 않음.',
+    autonomy: 'agent_only',
+    expectedOutputs: [
+      '{applicationDir}/resume.html',
+      '{applicationDir}/resume.pdf',
+    ],
+    touchesFosStudy: false,
+    modifiesCandidateProfile: false,
+    requiresExternalAccess: false,
+    prerequisiteGuards: ['resume_draft_exists', 'review_pass_or_user_requested_export'],
+  },
+
   'daily-application-digest': {
     skillName: 'daily-application-digest',
     cliPattern: 'cd career-os && claude -p "/daily-application-digest"',
