@@ -65,6 +65,7 @@ career-os의 모든 아키텍처 결정을 시간순으로 누적 기록한다. 
 | ADR-054 | fos-career의 다음 제품 축은 application workbench다 | Accepted | frontdoor queue와 ledger를 read-only projection으로 합쳐 지원 준비 상태를 보여준다 |
 | ADR-055 | background worktree는 완료 시 명시적으로 정리한다 | Accepted | 별도 worktree를 만든 background worker는 완료 전 clean 여부 확인과 디렉터리 제거를 보고한다 |
 | ADR-056 | resume package는 Markdown 산출물 계약을 먼저 고정한다 | Accepted | application-package와 제출용 resume/cover/checklist를 분리하고 request status를 표준화한다 |
+| ADR-057 | 생성 산출물 품질 계약은 전역 기준이다 | Accepted | 한국어 우선, 첫 10줄 결론, 내부 분석과 제출용/공개용 분리, needs_evidence resolution loop를 모든 생성 Markdown에 적용 |
 
 (ADR-024는 번호 누락. ADR-007a/b 충돌은 prd.md "분해 대기 작업"에 기록.)
 
@@ -1952,3 +1953,39 @@ plan031 application-flow-agent, plan038 frontdoor queue, plan054 application wor
 - `docs/data-schema.md` — Resume Package Contract와 generated document quality contract.
 - `docs/flow.md` — `run.ts resume` 처리 흐름과 request status projection.
 - `docs/code-architecture.md` — runner, processor, fos-career adapter 책임 경계.
+
+---
+
+## ADR-057 — 생성 산출물 품질 계약은 전역 기준이다
+
+- Status: Accepted
+- Date: 2026-06-07
+
+### 맥락
+
+plan055에서 resume package Markdown 산출물 계약을 고정하면서 생성 문서 품질 기준도 함께 정했다.
+하지만 이 기준을 resume package에만 묶어 두면 study artifact, interview asset, application reviewer output, workbench-facing summary가 서로 다른 문체와 구조로 흩어질 수 있다.
+
+특히 내부 분석과 제출용 또는 공개용 문구가 섞이면 private 지원 맥락이 외부-facing 산출물로 새어 나갈 수 있다.
+또 `needs_evidence`가 최종 문서에 그대로 남으면 runner와 사용자는 어떤 근거를 보강해야 하는지, 문장을 삭제해야 하는지, 사용자 확인이 필요한지 알기 어렵다.
+
+### 결정
+
+- plan055의 generated document quality 결정을 career-os 전역 생성 산출물 품질 계약으로 승격한다.
+- 모든 생성 Markdown 산출물은 한국어 우선 section title을 사용한다.
+  코드 식별자, 파일명, enum, 외부 product name처럼 필요한 경우에만 영어를 유지한다.
+- 본문은 자연스러운 한국어 문장으로 쓴다.
+  영어-heavy label 나열과 긴 미정리 문단을 피한다.
+- 첫 10줄 안에 decision, conclusion, recommended action 중 적어도 하나가 있어야 한다.
+- 내부 분석과 제출용 또는 공개용 문구를 분리한다.
+  private 지원 전략, 후보자 맥락, reviewer 판단은 제출용 초안이나 공개용 fos-study artifact에 복사하지 않는다.
+- `needs_evidence`는 최종 상태로 남기지 않는다.
+  발견 시 `보강 필요 / 선택지 / 권장 행동`으로 바꿔 근거 보강 루프를 명시한다.
+- 이 계약은 docs 기준이며, skill prompt 수정과 기존 generated output rewrite는 후속 phase에서 다룬다.
+
+### 결과
+
+- resume package 품질 기준이 application-package 흐름 밖에서도 같은 언어로 적용된다.
+- 공개용, 제출용, 내부 분석 산출물의 경계가 문서 구조 차원에서 유지된다.
+- `needs_evidence`가 막연한 marker가 아니라 다음 행동을 만드는 resolution loop로 취급된다.
+- 후속 native skill 수정은 이 ADR과 `docs/prd.md`, `docs/flow.md`, `docs/code-architecture.md`의 계약을 기준으로 진행한다.

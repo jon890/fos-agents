@@ -43,6 +43,7 @@ career-os/
 │   ├── flow.md           사용자/데이터 플로우
 │   ├── code-architecture.md  이 문서
 │   ├── adr.md            모든 아키텍처 결정 누적 기록 (단일 출처, ADR-015/018)
+│   ├── korean-expression-guide.md  career-os 산출물 한국어 표현 가이드
 │   ├── hand-off/         외부 위임·인수인계 일회성 노트
 │   └── prep/             회사·이벤트별 운영 자산. 이벤트 종료 후 archive
 │
@@ -208,6 +209,23 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts "[완료] <message>"
 각 native skill의 SKILL.md가 알림·자기 검증(self-check) 책임을 직접 담는다.
 
 (옛 bash runner → `track_task.sh` → `claude --print --output-format json` → Python extractor → `claude_persist_usage` → fos-study push 패턴은 plan006~022 기간 레거시. plan023 ADR-031로 career-os에서 완전 제거. apartment는 여전히 `track_task.sh` 사용 중.)
+
+## 생성 산출물 품질 경계
+
+LLM이 작성하는 Markdown 산출물은 skill prompt, runner post-validation, reviewer 중 해당 흐름에 존재하는 가장 가까운 계층에서 품질 계약을 확인한다.
+계약은 전역 기준이고, resume package만의 특수 규칙이 아니다.
+
+책임:
+
+| 계층 | 책임 |
+|---|---|
+| native skill prompt | 한국어 우선 섹션 제목, 자연스러운 한국어 문장, 첫 10줄 안 decision/conclusion/recommended action 요구 |
+| runner / processor | 필수 파일 존재, freshness, `needs_evidence` 잔존 여부, 제출용/공개용 파일 경계 검증 |
+| reviewer skill | 내부 분석과 제출용 또는 공개용 문구 혼입 여부, evidence/drift/privacy risk 검토 |
+| fos-career adapter | private 산출물과 공개용/제출용 산출물을 같은 화면에 섞어 action으로 처리하지 않음 |
+
+`needs_evidence`는 저장된 최종 산출물의 상태값으로 방치하지 않는다.
+검증 계층은 이를 `보강 필요 / 선택지 / 권장 행동`으로 변환해야 하며, 변환 전에는 제출용 또는 공개용 산출물을 ready 상태로 보지 않는다.
 
 ## 인근 워크스페이스와의 관계
 

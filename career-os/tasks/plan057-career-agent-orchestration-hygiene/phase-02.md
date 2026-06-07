@@ -1,4 +1,4 @@
-# Phase 02 — HUD snapshot 갱신 절차
+# Phase 02 — HUD 상태 요약 갱신 절차
 
 **Model**: sonnet
 **Status**: pending
@@ -7,7 +7,7 @@
 
 ## 목표
 
-HUD usage snapshot 갱신 절차를 `session_status` 우선 호출 규칙으로 고정하고 stale snapshot 재사용 위험을 줄인다.
+HUD 상태 요약 갱신 절차를 `session_status` 우선 호출 규칙으로 고정하고 오래된 snapshot 재사용 위험을 줄인다.
 
 **범위 외**:
 
@@ -34,7 +34,7 @@ HUD usage snapshot 갱신 절차를 `session_status` 우선 호출 규칙으로 
 ## 작업 항목 (5)
 
 1. HUD usage snapshot을 쓰는 흐름을 찾고 `update_event.ts` 단독 호출 지점을 inventory한다.
-2. `session_status` 호출 없이 snapshot을 쓰면 stale snapshot이 생기는 실패 모드를 정리한다.
+2. `session_status` 호출 없이 snapshot을 쓰면 오래된 snapshot이 생기는 실패 모드를 정리한다.
 3. legacy HUD state인 `~/.openclaw/workspace/openclaw-orchestrator/state/task-hud` 처리 선택지를 적는다.
 4. archive/migration decision이 필요한 항목과 즉시 정리 가능한 runtime artifact를 분리한다.
 5. `tasks/plan057-career-agent-orchestration-hygiene/hud-protocol.md`를 작성한다.
@@ -51,14 +51,14 @@ HUD usage snapshot 갱신 절차를 `session_status` 우선 호출 규칙으로 
 
 ```bash
 test -f tasks/plan057-career-agent-orchestration-hygiene/hud-protocol.md
-rg -n "session_status|stale snapshot|update_event.ts|task-hud|archive|migration" tasks/plan057-career-agent-orchestration-hygiene/hud-protocol.md
+rg -n "session_status|stale snapshot|오래된 snapshot|update_event.ts|task-hud|archive|migration" tasks/plan057-career-agent-orchestration-hygiene/hud-protocol.md
 git status --short tasks/plan057-career-agent-orchestration-hygiene
 ```
 
 성공 기준:
 
 - `session_status` 선행 호출 규칙이 적힌다.
-- `stale snapshot` 위험이 명시된다.
+- 오래된 snapshot 위험이 명시된다.
 - legacy HUD state를 silent deletion하지 않는 결정 경로가 적힌다.
 
 ---

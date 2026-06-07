@@ -23,6 +23,18 @@ career-os 워크스페이스의 **제품 범위·MVP 기능 명세**.
 후보자 본인 1인.
 매일 아침 모닝 추천을 받고, 그 안에서 골라 study-pack / question-bank 같은 학습·면접 자산을 만든다.
 
+## 생성 문서 품질 계약
+
+career-os의 모든 생성 Markdown 산출물은 용도와 공개 범위가 달라도 같은 읽기 품질 기준을 따른다.
+
+- 한국어 우선 섹션 제목을 쓰고, 코드 식별자나 상태값처럼 필요한 경우에만 영어 label을 유지한다.
+- 자연스러운 한국어 문장으로 결론, 근거, 다음 행동을 설명한다.
+- 첫 10줄 안에 decision, conclusion, recommended action 중 적어도 하나를 둔다.
+- 내부 분석 문서와 제출용 또는 공개용 문구를 분리한다.
+  private 지원 전략, 후보자 맥락, reviewer 판단은 제출용 초안이나 공개용 study artifact에 섞지 않는다.
+- `needs_evidence`는 그대로 남기지 않는다.
+  발견 즉시 `보강 필요 / 선택지 / 권장 행동` 루프로 바꿔 사용자나 runner가 다음 행동을 판단할 수 있게 한다.
+
 ## 기능 목록
 
 **dispatcher 폐기 완료 (plan023, ADR-031)** — 모든 진입점이 native skill `claude -p "/<skill>"` 직접 호출로 단일화됨.
