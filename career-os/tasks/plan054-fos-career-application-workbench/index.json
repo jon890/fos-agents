@@ -1,0 +1,60 @@
+{
+  "name": "plan054-fos-career-application-workbench",
+  "description": "Extend fos-career from collected-posting dashboards into an application preparation workbench with readiness and next-action views.",
+  "created_at": "2026-06-07T03:00:03Z",
+  "updated_at": "2026-06-07T03:00:03Z",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 3,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/docs/adr.md",
+    "career-os/docs/prd.md",
+    "career-os/docs/data-schema.md",
+    "career-os/docs/flow.md",
+    "career-os/docs/code-architecture.md"
+  ],
+  "depends_on": [
+    "plan039-fos-career-dashboard",
+    "plan050-position-priority-fit-workflow",
+    "plan052-fos-career-priority-detail-dashboard",
+    "plan053-priority-write-action-design"
+  ],
+  "recommended_defaults": [
+    "Keep the workbench read-only for MVP.",
+    "Do not introduce a new fos-career DB table.",
+    "Use a runtime projection over frontdoor queue, ledger, priority history, and application files.",
+    "Put external submission, public publishing, and profile mutation outside this plan."
+  ],
+  "open_decisions": [],
+  "phases": [
+    {
+      "number": 1,
+      "title": "Workbench projection and readiness model",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 900
+    },
+    {
+      "number": 2,
+      "title": "Applications list and detail workbench UI",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 3,
+      "title": "Validation, deploy smoke, and completion",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "haiku",
+      "timeout": 900
+    }
+  ]
+}
