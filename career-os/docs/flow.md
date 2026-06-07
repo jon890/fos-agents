@@ -343,6 +343,26 @@ fos-career는 dashboard에서 사용자가 확정한 priority action을 바로 c
 - dry-run은 stale guard와 예정 command만 검증하고 어느 쪽 파일/DB도 갱신하지 않는다.
 - stale 또는 failed row는 같은 record에 대한 새 request를 만들기 전에 사람이 확인한다.
 
+### fos-career application workbench (plan054)
+
+application workbench는 읽기 중심 UI 흐름이다.
+수집 공고 목록만 보여주는 것이 아니라, frontdoor queue와 ledger를 합쳐 "지원 준비를 어디까지 진행했는가"를 보여준다.
+
+기본 흐름:
+
+```text
+career-os frontdoor queue + ledger + priority history + application files
+  -> fos-career adapter projection
+  -> application workbench list/detail
+  -> user reviews readiness / next action / blocker
+  -> write action needed?
+     -> no: read-only inspection
+     -> yes: existing safe bridge such as priority pending request
+```
+
+MVP에서 workbench는 career-os 파일을 직접 수정하지 않는다.
+산출물 생성, 지원 패키지 수정, 외부 제출은 기존 agent/task 흐름이나 별도 승인 게이트 뒤에서만 수행한다.
+
 ### Application Flow Agent Runtime (plan031 — phase-01 상태 모델 확정)
 
 plan031은 plan029의 skill 산출물을 기반으로, 상태 기반 자율 실행 runtime을 추가한다. 상태 전이 허용 여부와 next action 선택은 TypeScript policy engine이 결정한다. LLM은 분석, 작성, 추천 근거 생성만 담당한다.

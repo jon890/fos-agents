@@ -153,6 +153,26 @@ MVP 범위:
 - LLM recommendation refresh와 priority confirmation을 한 버튼에 묶는 일.
 - career-os ledger/frontdoor queue를 fos-career MySQL로 옮기는 일.
 
+### 계획 중: fos-career application workbench (plan054)
+
+`plan054-fos-career-application-workbench`는 fos-career를 "수집 공고 확인 화면"에서 "지원 준비 작업대"로 확장한다.
+목표는 사용자가 지금 준비해야 할 후보, 준비 산출물 상태, 다음 행동, 차단 사유를 한 화면에서 판단하게 만드는 것이다.
+
+MVP 범위:
+
+- frontdoor queue와 ledger를 하나의 application workbench projection으로 합쳐 보여준다.
+- 각 후보에 stage, status, fit score, material readiness, next action, blocker/risk flag를 표시한다.
+- 공고/fit 분석/지원 패키지/review 파일 존재 여부를 readiness checklist로 보여준다.
+- application detail 화면은 원문 필드 덤프보다 지원 준비 진행 상태와 다음 행동을 우선 노출한다.
+- career-os 파일은 계속 read-only로 읽고, 쓰기 행동은 plan053 pending request bridge 같은 안전 경로만 사용한다.
+
+범위 밖:
+
+- 외부 채용 사이트 제출 자동화.
+- candidate-profile.md 수정.
+- career-os ledger/frontdoor queue를 fos-career MySQL로 이관.
+- 사용자의 명시 승인 없는 지원 패키지 최종 제출 또는 공개 발행.
+
 ### 계획 중: fos-career 웹 대시보드 (plan039)
 
 `plan039-fos-career-dashboard`는 career-os 데이터를 브라우저에서 읽고 LLM과 채팅으로 해석할 수 있는 Next.js 관리자 대시보드를 별도 저장소(`~/services/fos-career`)에 구축한다.

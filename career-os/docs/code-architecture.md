@@ -476,3 +476,31 @@ career-os/scripts/application-agent/run.ts
   career-os schema validation과 priority history helper를 우회한다.
 - LLM chat이 tool call로 priority를 변경하기.
   사용자 확인, idempotency, rollback 검증이 불명확하다.
+
+## fos-career application workbench (plan054)
+
+plan054는 fos-career의 다음 제품 축을 application workbench로 둔다.
+기존 priority/list/detail projection을 재사용하되, 화면의 중심을 "공고가 수집됐는가"에서 "지원 준비가 어디까지 됐고 다음 행동이 무엇인가"로 옮긴다.
+
+구성 요소:
+
+- fos-career adapter: frontdoor queue, ledger, priority history, application files를 읽어 workbench projection을 만든다.
+- applications list UI: stage/status/readiness/next action/blocker를 스캔 가능한 행 단위로 표시한다.
+- application detail UI: posting, fit analysis, application package, review 파일 존재 여부와 준비 상태를 우선 보여준다.
+- career-os automation: 실제 산출물 생성과 원장 mutation은 기존 agent/task 흐름 또는 plan053 safe bridge가 맡는다.
+
+관련 fos-career 파일:
+
+```text
+/home/bifos/services/fos-career/app/dashboard/applications/page.tsx
+/home/bifos/services/fos-career/app/dashboard/applications/[id]/page.tsx
+/home/bifos/services/fos-career/lib/career-os/adapter.ts
+/home/bifos/services/fos-career/lib/career-os/types.ts
+```
+
+구현 원칙:
+
+- fos-career MySQL에 새 상태 원장을 만들지 않고, MVP는 read-only projection으로 시작한다.
+- readiness는 파일 존재 여부와 ledger/frontdoor fields에서 계산한다.
+- 외부 제출, 공개 발행, candidate-profile mutation은 workbench 밖의 별도 승인 흐름으로 유지한다.
+- action button이 필요하면 plan053처럼 pending request bridge를 먼저 설계한다.

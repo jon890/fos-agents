@@ -331,6 +331,60 @@ priority 변경 이력을 저장하는 runtime/private audit log다.
 }
 ```
 
+### application workbench projection (planned — plan054)
+
+plan054는 fos-career 내부 read-only projection을 추가한다.
+이 projection은 career-os 파일에 저장되는 새 원장이 아니라, frontdoor queue, ledger, priority history, application files를 읽어 화면 표시용으로 계산한 view model이다.
+
+예시 shape:
+
+```json
+{
+  "id": "ledger:tossplace-applied-ai-engineer-7746700003",
+  "recordType": "ledger",
+  "recordId": "tossplace-applied-ai-engineer-7746700003",
+  "company": "TossPlace",
+  "role": "Applied AI Engineer",
+  "status": "ready_for_user_review",
+  "actionStage": "prepare-now",
+  "priorityRank": 1,
+  "fitScore": 86,
+  "readiness": {
+    "posting": "present",
+    "fitAnalysis": "present",
+    "applicationPackage": "missing",
+    "review": "missing",
+    "completeCount": 2,
+    "totalCount": 4
+  },
+  "nextAction": "지원 패키지 초안을 만들고 사용자 검토 대기로 전환한다.",
+  "blockers": ["review_missing"],
+  "riskFlags": ["toss_group_cooldown"],
+  "materialPaths": {
+    "postingPath": "data/applications/tossplace/applied-ai-engineer/posting.md",
+    "fitAnalysisPath": "data/applications/tossplace/applied-ai-engineer/fit-analysis.md",
+    "applicationPackagePath": null,
+    "reviewPath": null
+  }
+}
+```
+
+필드 책임:
+
+- `id`: UI row key. `recordType:recordId` 형식.
+- `recordType`: `frontdoor_queue` 또는 `ledger`.
+- `recordId`: 원본 career-os record id.
+- `readiness`: 지원 준비 산출물 존재 여부. 실제 파일 시스템 read 결과에서 계산한다.
+- `nextAction`: priority snapshot, user confirmation, ledger nextActions 중 사람이 바로 볼 값을 선택한다.
+- `blockers`: 준비 진행을 막는 표시용 이유. 원장 status가 아니라 projection 계산값이다.
+
+검증 규칙:
+
+- projection은 fos-career MySQL에 저장하지 않는다.
+- projection 계산은 career-os 파일을 수정하지 않는다.
+- ledger file path가 있으면 파일 존재 여부를 직접 확인하고, 없으면 `missing`으로 표시한다.
+- frontdoor queue record는 application material path가 없을 수 있으므로 readiness를 `not_started` 성격으로 계산한다.
+
 ### 디렉터리 구조
 
 ```text
