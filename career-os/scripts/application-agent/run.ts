@@ -143,6 +143,9 @@ function cmdValidate(args: string[]): void {
     for (const [field, p] of [
       ['fitAnalysisPath', record.fitAnalysisPath],
       ['applicationPackagePath', record.applicationPackagePath],
+      ['resumeDraftPath', record.resumeDraftPath],
+      ['coverLetterPath', record.coverLetterPath],
+      ['submissionChecklistPath', record.submissionChecklistPath],
       ['reviewPath', record.reviewPath],
     ] as const) {
       if (p && !workspacePathExists(p)) {

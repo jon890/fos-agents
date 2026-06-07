@@ -11,6 +11,22 @@ import {
 import { buildSkillCommand, requiresUserApproval } from './skill_contracts';
 import type { ActionStage } from './priority_schema';
 
+type ArtifactField =
+  | 'postingPath'
+  | 'fitAnalysisPath'
+  | 'applicationPackagePath'
+  | 'resumeDraftPath'
+  | 'coverLetterPath'
+  | 'submissionChecklistPath'
+  | 'reviewPath';
+
+type ExpectedArtifact = {
+  field: ArtifactField;
+  label: string;
+  path: string;
+  freshnessRole?: 'source' | 'generated' | 'review';
+};
+
 export type ActionOptions = {
   dryRun: boolean;
   ledgerPath: string;
@@ -104,6 +120,9 @@ export async function executeDecision(
     result.executionBlocked = true;
     result.executionBlockReason = artifactGate.reason;
     result.missingArtifacts = artifactGate.missingArtifacts;
+    if (!opts.dryRun) {
+      result.decisionLogPath = appendArtifactGateLog(record, decision, artifactGate);
+    }
     return result;
   }
 
@@ -212,20 +231,40 @@ function staleArtifacts(
     ];
   }
 
+  if (decision.decision === 'review_pass_ready_for_user') {
+    const expected = expectedArtifacts(record, decision);
+    const review = expected.find((artifact) => artifact.freshnessRole === 'review');
+    if (!review || !existsSync(review.path)) return [];
+
+    const reviewMtime = statSync(review.path).mtimeMs;
+    return expected
+      .filter(
+        (artifact) =>
+          artifact.freshnessRole === 'generated' &&
+          existsSync(artifact.path) &&
+          statSync(artifact.path).mtimeMs > reviewMtime,
+      )
+      .map(
+        (artifact) =>
+          `review is older than ${artifact.label}: ${review.path} (${artifact.label}: ${artifact.path})`,
+      );
+  }
+
   return [];
 }
 
 export function expectedArtifacts(
   record: ApplicationLedgerRecord,
   decision: AgentDecision,
-): Array<{
-  field: 'fitAnalysisPath' | 'applicationPackagePath' | 'reviewPath';
-  label: string;
-  path: string;
-}> {
+): ExpectedArtifact[] {
+  const postingPath = record.postingPath ?? join(record.applicationDir, 'posting.md');
   const fitAnalysisPath = record.fitAnalysisPath ?? join(record.applicationDir, 'fit-analysis.md');
   const applicationPackagePath =
     record.applicationPackagePath ?? join(record.applicationDir, 'application-package.md');
+  const resumeDraftPath = record.resumeDraftPath ?? join(record.applicationDir, 'resume-draft.md');
+  const coverLetterPath = record.coverLetterPath ?? join(record.applicationDir, 'cover-letter.md');
+  const submissionChecklistPath =
+    record.submissionChecklistPath ?? join(record.applicationDir, 'submission-checklist.md');
   const reviewPath = record.reviewPath ?? join(record.applicationDir, 'review.md');
 
   switch (decision.decision) {
@@ -235,6 +274,7 @@ export function expectedArtifacts(
           field: 'fitAnalysisPath',
           label: 'fit analysis',
           path: fitAnalysisPath,
+          freshnessRole: 'generated',
         },
       ];
 
@@ -245,6 +285,7 @@ export function expectedArtifacts(
           field: 'applicationPackagePath',
           label: 'application package',
           path: applicationPackagePath,
+          freshnessRole: 'generated',
         },
       ];
 
@@ -254,11 +295,59 @@ export function expectedArtifacts(
           field: 'applicationPackagePath',
           label: 'application package',
           path: applicationPackagePath,
+          freshnessRole: 'generated',
         },
         {
           field: 'reviewPath',
           label: 'application review',
           path: reviewPath,
+          freshnessRole: 'review',
+        },
+      ];
+
+    case 'review_pass_ready_for_user':
+      return [
+        {
+          field: 'postingPath',
+          label: 'posting',
+          path: postingPath,
+          freshnessRole: 'source',
+        },
+        {
+          field: 'fitAnalysisPath',
+          label: 'fit analysis',
+          path: fitAnalysisPath,
+          freshnessRole: 'generated',
+        },
+        {
+          field: 'applicationPackagePath',
+          label: 'application package',
+          path: applicationPackagePath,
+          freshnessRole: 'generated',
+        },
+        {
+          field: 'resumeDraftPath',
+          label: 'resume draft',
+          path: resumeDraftPath,
+          freshnessRole: 'generated',
+        },
+        {
+          field: 'coverLetterPath',
+          label: 'cover letter',
+          path: coverLetterPath,
+          freshnessRole: 'generated',
+        },
+        {
+          field: 'submissionChecklistPath',
+          label: 'submission checklist',
+          path: submissionChecklistPath,
+          freshnessRole: 'generated',
+        },
+        {
+          field: 'reviewPath',
+          label: 'application review',
+          path: reviewPath,
+          freshnessRole: 'review',
         },
       ];
 
@@ -338,6 +427,35 @@ function appendDecisionLog(
   ensureDir(dir);
   const logPath = join(dir, 'decisions.jsonl');
   appendFileSync(logPath, JSON.stringify(decision) + '\n', 'utf-8');
+  return logPath;
+}
+
+function appendArtifactGateLog(
+  record: ApplicationLedgerRecord,
+  decision: AgentDecision,
+  artifactGate: {
+    allowed: boolean;
+    reason?: string;
+    missingArtifacts?: string[];
+    pathUpdates?: Partial<ApplicationLedgerRecord>;
+  },
+): string {
+  const dir = join(record.applicationDir, 'decisions');
+  ensureDir(dir);
+  const logPath = join(dir, 'decisions.jsonl');
+  appendFileSync(
+    logPath,
+    JSON.stringify({
+      applicationId: record.id,
+      event: 'artifact_gate_blocked',
+      decision: decision.decision,
+      nextStatus: decision.nextStatus,
+      reason: artifactGate.reason,
+      missingOrStaleArtifacts: artifactGate.missingArtifacts ?? [],
+      createdAt: decision.createdAt,
+    }) + '\n',
+    'utf-8',
+  );
   return logPath;
 }
 

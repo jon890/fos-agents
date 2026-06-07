@@ -9,7 +9,7 @@
 
 fos-career application workbench가 resume package readiness와 request status를 보여주게 한다.
 PDF/DOCX export는 의도적으로 막고,
-Markdown contract freeze 이후 별도 plan으로 넘긴다.
+Markdown 리뷰 루프 안정화 이후 `Markdown 이력서 초안 -> design.md 적용 HTML 이력서 -> PDF 이력서` 후속 plan으로 넘긴다.
 
 **범위 외**: PDF/DOCX 생성, 외부 제출, 로그인/브라우저 입력 자동화, candidate-profile mutation.
 
@@ -78,7 +78,7 @@ detail 화면에서 다음 파일의 존재 여부와 열람 경로를 보여준
 ### 4. export gate 표시
 
 PDF/DOCX 버튼을 구현하지 않는다.
-필요하면 비활성 상태나 "Markdown 검토 후 후속" 성격의 내부 UI state로만 표시한다.
+필요하면 비활성 상태나 "Markdown 리뷰 후 HTML/PDF export 후속" 성격의 내부 UI state로만 표시한다.
 사용자 승인 없는 제출/다운로드 자동화로 이어지면 안 된다.
 
 ### 5. typecheck와 screenshot smoke
@@ -94,6 +94,7 @@ fos-career typecheck를 실행한다.
 - request status와 error summary가 보인다.
 - 내부 전략 문서와 제출용 문서가 구분된다.
 - PDF/DOCX export는 구현되지 않았고 후속 gate로 남는다.
+  후속 목표는 design.md를 적용한 HTML 이력서와 첨부 가능한 PDF 이력서이며, 외부 제출 자동화는 아니다.
 - fos-career는 career-os 파일을 직접 쓰지 않는다.
 
 ---

@@ -766,6 +766,10 @@ application request status projection:
 상태 표시에는 `ledgerId`, `error`, `resultSnapshot`을 포함한다.
 fos-career는 이 상태를 보여주되 career-os 원장을 직접 수정하지 않는다.
 
+첨부 가능한 PDF resume export는 Markdown 이력서 리뷰 루프가 안정화된 뒤 후속 plan에서 추가한다.
+후속 산출물 체인은 `Markdown 이력서 초안 -> design.md 적용 HTML 이력서 -> HTML을 PDF로 변환한 완성 PDF 이력서`다.
+외부 제출 자동화, 로그인, 브라우저 입력은 이 흐름에 넣지 않는다.
+
 ## 통과 시점에 항상 일어나는 일
 
 모든 native skill 공통 흐름:
