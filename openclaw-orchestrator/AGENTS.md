@@ -36,6 +36,7 @@ It is the ai-nodes home for daily session notes, heartbeat state, and cross-doma
 
 ## OpenClaw HUD Runtime Policy
 
+In user-facing conversation, "HUD" means the pinned OpenClaw status message for the current Discord/OpenClaw session.
 Pinned OpenClaw HUD updates are session state, not chat narration.
 Runtime state lives under `openclaw-orchestrator/state/task-hud/`.
 Shared helper code may live under `_shared/lib/` only when it stays workspace-agnostic.
@@ -50,6 +51,11 @@ Relative-only text such as "just now" is not enough for a pinned surface.
 `session_status` is the preferred source for usage, context, and native active-agent state.
 HUD rendering uses an allowlist of safe fields.
 Raw tool output, account identity, secrets, detailed costs, and private absolute paths do not appear in visible HUD text.
+
+Long-running work updates HUD on events:
+start, phase start, phase complete, blocked, failed, and final complete.
+Event-based updates are preferred over high-frequency polling.
+If the last HUD update is older than 30 minutes during active work, treat the HUD as stale and refresh it before continuing.
 
 Validation starts with dry-run and state path checks.
 Real message edit testing is allowed only from the main session against an existing pinned HUD message.
