@@ -15,6 +15,9 @@ type Finding = {
 type Options = {
   applicationDir: string;
   packagePath: string;
+  resumePath: string;
+  coverLetterPath: string;
+  checklistPath: string;
   reviewPath: string;
   outputPath: string;
   jsonPath: string;
@@ -25,6 +28,9 @@ const DEFAULT_APPLICATION_DIR = 'data/applications/tossplace/applied-ai-engineer
 function parseArgs(args: string[]): Options {
   let applicationDir = DEFAULT_APPLICATION_DIR;
   let packagePath = '';
+  let resumePath = '';
+  let coverLetterPath = '';
+  let checklistPath = '';
   let reviewPath = '';
   let outputPath = '';
   let jsonPath = '';
@@ -33,12 +39,18 @@ function parseArgs(args: string[]): Options {
     const arg = args[i];
     if (arg === '--application-dir' && args[i + 1]) applicationDir = args[++i];
     else if (arg === '--package' && args[i + 1]) packagePath = args[++i];
+    else if (arg === '--resume' && args[i + 1]) resumePath = args[++i];
+    else if (arg === '--cover-letter' && args[i + 1]) coverLetterPath = args[++i];
+    else if (arg === '--checklist' && args[i + 1]) checklistPath = args[++i];
     else if (arg === '--review' && args[i + 1]) reviewPath = args[++i];
     else if (arg === '--output' && args[i + 1]) outputPath = args[++i];
     else if (arg === '--json' && args[i + 1]) jsonPath = args[++i];
   }
 
   packagePath = packagePath || join(applicationDir, 'application-package.md');
+  resumePath = resumePath || join(applicationDir, 'resume-draft.md');
+  coverLetterPath = coverLetterPath || join(applicationDir, 'cover-letter.md');
+  checklistPath = checklistPath || join(applicationDir, 'submission-checklist.md');
   reviewPath = reviewPath || join(applicationDir, 'review.md');
 
   const slug = `${basename(dirname(applicationDir))}-${basename(applicationDir)}`;
@@ -49,7 +61,16 @@ function parseArgs(args: string[]): Options {
     jsonPath ||
     join('data/runtime/application-agent/package-eval', slug, 'latest-report.json');
 
-  return { applicationDir, packagePath, reviewPath, outputPath, jsonPath };
+  return {
+    applicationDir,
+    packagePath,
+    resumePath,
+    coverLetterPath,
+    checklistPath,
+    reviewPath,
+    outputPath,
+    jsonPath,
+  };
 }
 
 function requireFile(path: string): string {
@@ -69,15 +90,27 @@ function hasApprovalBoundary(text: string): boolean {
   return /사용자 승인|사용자 최종 승인|사용자 직접|자동 수행 불가|자동 진행 불가/.test(text);
 }
 
-function evaluatePackage(packageText: string, reviewText: string): Finding[] {
-  const combined = `${packageText}\n\n${reviewText}`;
+function evaluatePackage(
+  packageText: string,
+  resumeText: string,
+  coverLetterText: string,
+  checklistText: string,
+  reviewText: string,
+): Finding[] {
+  const combined = [
+    packageText,
+    resumeText,
+    coverLetterText,
+    checklistText,
+    reviewText,
+  ].join('\n\n');
   const findings: Finding[] = [];
 
   const unsupportedMetric = firstMatch(
     combined,
     /(?:전환율|TPS|비용 절감율|합격률|매출|트래픽).{0,30}(?:\d+%|\d+배|\d+건)/,
   );
-  if (unsupportedMetric && !/needs_evidence|출처 문서에 없|날조 금지/.test(combined)) {
+  if (unsupportedMetric && !/보강 필요|출처 문서에 없|날조 금지/.test(combined)) {
     findings.push({
       id: 'unsupported-quantified-impact',
       severity: 'blocked',
@@ -97,7 +130,7 @@ function evaluatePackage(packageText: string, reviewText: string): Finding[] {
   }
 
   const frameworkOverclaim = firstMatch(combined, /(?:LangGraph|AutoGen|CrewAI)\s*(?:기반|운영|구축|프로덕션)/);
-  if (frameworkOverclaim && !/직접 경험 없음|미경험|needs_evidence/.test(combined)) {
+  if (frameworkOverclaim && !/직접 경험 없음|미경험|보강 필요/.test(combined)) {
     findings.push({
       id: 'framework-experience-overclaim',
       severity: 'blocked',
@@ -110,7 +143,7 @@ function evaluatePackage(packageText: string, reviewText: string): Finding[] {
     combined,
     /(?:대고객|프로덕션).{0,20}(?:AI Agent|AI 에이전트|tool-use|도구 사용).{0,20}(?:운영|설계)/,
   );
-  if (productionAgentOverclaim && !/needs_evidence|정직 전환|아직 보강 영역|숨기지/.test(combined)) {
+  if (productionAgentOverclaim && !/보강 필요|정직 전환|아직 보강 영역|숨기지/.test(combined)) {
     findings.push({
       id: 'production-agent-overclaim',
       severity: 'blocked',
@@ -136,8 +169,24 @@ function evaluatePackage(packageText: string, reviewText: string): Finding[] {
     findings.push({
       id: 'needs-evidence-remains',
       severity: 'revise',
-      reason: '`needs_evidence` 항목은 사용자 사실 확인 또는 문장 보강 필요',
+      reason: '`needs_evidence` raw label은 보강 필요 / 선택지 / 권장 행동 구조로 바꿔야 함',
       evidence: 'needs_evidence',
+    });
+  }
+
+  if (/보강 필요/.test(combined) && !/선택지/.test(combined)) {
+    findings.push({
+      id: 'evidence-loop-missing-options',
+      severity: 'revise',
+      reason: '`보강 필요` 항목에는 사용자가 고를 수 있는 `선택지`가 함께 필요',
+    });
+  }
+
+  if (/보강 필요/.test(combined) && !/권장 행동/.test(combined)) {
+    findings.push({
+      id: 'evidence-loop-missing-action',
+      severity: 'revise',
+      reason: '`보강 필요` 항목에는 다음 행동을 정하는 `권장 행동`이 함께 필요',
     });
   }
 
@@ -176,6 +225,9 @@ function renderMarkdown(opts: Options, findings: Finding[], generatedAt: string)
     '## Inputs',
     '',
     `- package: ${opts.packagePath}`,
+    `- resume draft: ${opts.resumePath}`,
+    `- cover letter: ${opts.coverLetterPath}`,
+    `- checklist: ${opts.checklistPath}`,
     `- review: ${opts.reviewPath}`,
     '',
     '## Findings',
@@ -197,7 +249,7 @@ function renderMarkdown(opts: Options, findings: Finding[], generatedAt: string)
     lines.push('- blocked finding을 먼저 제거하기 전에는 사용자 검토 단계로 넘기지 않는다.');
   } else if (overall === 'revise') {
     lines.push('- revise finding을 지원 패키지 문장 보강 목록으로 넘긴다.');
-    lines.push('- 사용자 사실 확인이 필요한 항목은 `needs_evidence`로 유지한다.');
+    lines.push('- 사용자 사실 확인이 필요한 항목은 `보강 필요 / 선택지 / 권장 행동`으로 정리한다.');
   } else {
     lines.push('- 자동 차단/수정 필요 finding 없음. 그래도 실제 제출은 사용자 승인 뒤에만 진행한다.');
   }
@@ -209,8 +261,17 @@ function renderMarkdown(opts: Options, findings: Finding[], generatedAt: string)
 function main(): void {
   const opts = parseArgs(process.argv.slice(2));
   const packageText = requireFile(opts.packagePath);
+  const resumeText = requireFile(opts.resumePath);
+  const coverLetterText = requireFile(opts.coverLetterPath);
+  const checklistText = requireFile(opts.checklistPath);
   const reviewText = requireFile(opts.reviewPath);
-  const findings = evaluatePackage(packageText, reviewText);
+  const findings = evaluatePackage(
+    packageText,
+    resumeText,
+    coverLetterText,
+    checklistText,
+    reviewText,
+  );
   const generatedAt = new Date().toISOString();
   const overall = overallVerdict(findings);
 
@@ -226,6 +287,9 @@ function main(): void {
         overall,
         inputs: {
           packagePath: opts.packagePath,
+          resumePath: opts.resumePath,
+          coverLetterPath: opts.coverLetterPath,
+          checklistPath: opts.checklistPath,
           reviewPath: opts.reviewPath,
         },
         findings,

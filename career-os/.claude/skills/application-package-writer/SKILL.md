@@ -1,11 +1,12 @@
 ---
 name: application-package-writer
-description: 공고 1개와 후보자 프로필을 입력으로 받아 공고별 지원 패키지(fit-analysis.md + application-package.md)를 생성하는 비공개 career-os skill. 근거 있는 주장만 작성하고, 근거 부족은 보강 필요 / 선택지 / 권장 행동으로 정리. '지원 패키지 만들어줘', '지원서 초안 작성', 'fit 분석해줘', '/application-package-writer' 슬래시 호출.
+description: 공고 1개와 후보자 프로필을 입력으로 받아 공고별 지원 패키지(fit-analysis.md + application-package.md + resume-draft.md + cover-letter.md + submission-checklist.md)를 생성하는 비공개 career-os skill. 근거 있는 주장만 작성하고, 근거 부족은 보강 필요 / 선택지 / 권장 행동으로 정리. '지원 패키지 만들어줘', '지원서 초안 작성', 'fit 분석해줘', '/application-package-writer' 슬래시 호출.
 ---
 
 # Application Package Writer
 
 공고 요구사항과 후보자 근거를 교차 분석해 공고별 맞춤 지원 패키지를 생성하는 비공개 career-os skill.
+내부 전략 문서와 제출용 Markdown 초안을 분리해서 작성한다.
 
 ## When to use
 
@@ -25,6 +26,7 @@ fos-study publish 안 함 — 비공개 career-os 산출물만 생성.
   `Role-Fit`, `Ledger Update Suggestion`, 상태값처럼 기존 contract 식별자는 필요한 경우 유지한다.
 - 각 문서 첫 10줄 안에 결론을 둔다.
   `fit-analysis.md`는 지원 적합도 결론, `application-package.md`는 제출 전 권장 행동이나 핵심 포지셔닝 결론을 먼저 쓴다.
+  `resume-draft.md`, `cover-letter.md`, `submission-checklist.md`도 사용자가 바로 검토할 핵심 결론이나 제출 전 행동을 앞에 둔다.
 - 내부 분석과 제출용 문구를 분리한다.
   fit/gap 판단, reviewer용 리스크, 근거 파일 경로는 내부 분석 섹션에 둔다.
   이력서 bullet·지원동기처럼 제출용으로 옮길 수 있는 문장에는 내부 파일 경로, plan 번호, commit hash, runner 상태 같은 내부 맥락을 넣지 않는다.
@@ -170,22 +172,112 @@ candidate-profile.md + 근거 파일과 교차 분석:
   - run_application_reviewer
 ```
 
-### 6. Self-check (최대 3회)
+### 6. resume-draft.md 작성 (Write)
 
-두 출력 파일 작성 후 아래 항목 검증. 실패 시 해당 파일 재작성:
+저장 경로: `career-os/data/applications/<company>/<role>/resume-draft.md`
+
+**필수 섹션 6개:**
+
+```markdown
+# <Company> <Role> — Resume Draft
+
+## 결론
+
+## 제출용 요약
+
+## 맞춤 경력 Bullet
+
+## 프로젝트별 강조 문장
+
+## 보강 필요
+
+## 사용자 승인 필요
+```
+
+작성 규칙:
+- 첫 10줄 안에 이 이력서 초안의 핵심 포지셔닝과 제출 전 남은 행동을 둔다.
+- 제출용 요약과 맞춤 경력 Bullet은 채용 사이트나 PDF 이력서에 옮길 수 있는 문장으로 쓴다.
+- 제출용 문장에는 내부 파일 경로, plan 번호, commit hash, runner 상태를 쓰지 않는다.
+- 근거가 약한 항목은 제출용 문장에서 강하게 주장하지 않는다.
+  `보강 필요 / 선택지 / 권장 행동` 구조로 분리한다.
+- Markdown 초안은 후속 HTML/PDF 변환의 원본이다.
+  `design.md` 적용 HTML과 첨부 가능한 PDF는 별도 산출물로 구분한다.
+- 총 20줄 이상
+
+### 7. cover-letter.md 작성 (Write)
+
+저장 경로: `career-os/data/applications/<company>/<role>/cover-letter.md`
+
+**필수 섹션 5개:**
+
+```markdown
+# <Company> <Role> — Cover Letter Draft
+
+## 결론
+
+## 지원동기 초안
+
+## 직무 적합성 초안
+
+## 보강 필요
+
+## 사용자 승인 필요
+```
+
+작성 규칙:
+- 첫 10줄 안에 지원동기의 핵심 방향과 제출 전 확인할 내용을 둔다.
+- 공고의 팀/역할 특성과 후보자 근거가 만나는 지점만 쓴다.
+- 확인되지 않은 회사 내부 사정, 과장된 공감 문구, 근거 없는 수치 성과를 쓰지 않는다.
+- 근거 부족은 `보강 필요 / 선택지 / 권장 행동` 구조로 둔다.
+- 총 20줄 이상
+
+### 8. submission-checklist.md 작성 (Write)
+
+저장 경로: `career-os/data/applications/<company>/<role>/submission-checklist.md`
+
+**필수 섹션 5개:**
+
+```markdown
+# <Company> <Role> — Submission Checklist
+
+## 결론
+
+## 제출 전 확인
+
+## 첨부 파일 준비
+
+## 보강 필요
+
+## 사용자 승인 필요
+```
+
+작성 규칙:
+- 첫 10줄 안에 제출 가능 여부와 남은 승인/보강 행동을 둔다.
+- 첨부 파일 준비에는 `resume-draft.md`, `cover-letter.md`, HTML 이력서, PDF 이력서의 상태를 분리해 적는다.
+- PDF 이력서는 사용자가 첨부할 수 있는 파일일 뿐, 업로드·전송·제출 자동화 완료로 쓰지 않는다.
+- 채용 사이트 로그인, 외부 제출, 공개 발행은 `사용자 승인 필요`로만 적는다.
+- 총 15줄 이상
+
+### 9. Self-check (최대 3회)
+
+다섯 출력 파일 작성 후 아래 항목 검증. 실패 시 해당 파일 재작성:
 
 1. `fit-analysis.md` 줄 수 ≥ 30
 2. `application-package.md` 줄 수 ≥ 30
-3. `fit-analysis.md`에 필수 7개 섹션 헤더 모두 존재
-4. `application-package.md`에 필수 7개 섹션 헤더 모두 존재 (Ledger Update Suggestion 포함)
-5. 두 파일 모두 첫 10줄 안에 결론 또는 권장 행동이 있음
-6. `sources/fos-study/` 아래 어떤 파일도 쓰지 않았는지 확인
-7. 제출·로그인·외부 계정 작업 실행 지시가 없음 확인
-8. 근거 부족 항목이 있으면 raw `needs_evidence` 대신 `보강 필요 / 선택지 / 권장 행동` 구조로 쓰였음
-9. 제출용 문구 후보에 내부 파일 경로, plan 번호, commit hash, runner 상태가 없음
-10. 내부 분석 섹션에는 확인된 근거 파일 경로가 유지됨
-11. candidate-profile 수정, 공개 발행, 외부 제출은 `사용자 승인 필요`로만 표현됨
-12. resume package를 언급하면 Markdown 초안 -> design.md 적용 HTML -> 첨부 가능한 PDF 체인을 구분하고, PDF를 외부 제출 자동화로 표현하지 않음
+3. `resume-draft.md` 줄 수 ≥ 20
+4. `cover-letter.md` 줄 수 ≥ 20
+5. `submission-checklist.md` 줄 수 ≥ 15
+6. `fit-analysis.md`에 필수 7개 섹션 헤더 모두 존재
+7. `application-package.md`에 필수 7개 섹션 헤더 모두 존재 (Ledger Update Suggestion 포함)
+8. `resume-draft.md`, `cover-letter.md`, `submission-checklist.md`에 각 필수 섹션 헤더 모두 존재
+9. 모든 파일 첫 10줄 안에 결론 또는 권장 행동이 있음
+10. `sources/fos-study/` 아래 어떤 파일도 쓰지 않았는지 확인
+11. 제출·로그인·외부 계정 작업 실행 지시가 없음 확인
+12. 근거 부족 항목이 있으면 raw `needs_evidence` 대신 `보강 필요 / 선택지 / 권장 행동` 구조로 쓰였음
+13. 제출용 문구 후보에 내부 파일 경로, plan 번호, commit hash, runner 상태가 없음
+14. 내부 분석 섹션에는 확인된 근거 파일 경로가 유지됨
+15. candidate-profile 수정, 공개 발행, 외부 제출은 `사용자 승인 필요`로만 표현됨
+16. resume package를 언급하면 Markdown 초안 -> design.md 적용 HTML -> 첨부 가능한 PDF 체인을 구분하고, PDF를 외부 제출 자동화로 표현하지 않음
 
 실패 항목 있으면 수정 후 재작성. **최대 3회**. 4회째도 실패 시 `stderr: application-package-writer 검증 실패: <항목>` + exit 1.
 
@@ -205,7 +297,7 @@ candidate-profile.md + 근거 파일과 교차 분석:
 - **근거 분리 원칙**: posting 요구사항 × 후보자 근거 파일 교차 매핑으로 추측성 주장을 구조적으로 차단. 근거 부족 항목은 `보강 필요 / 선택지 / 권장 행동`으로 바꿔 후보자 스스로 보강할 포인트를 명시.
 - **ledger 연계**: ledger에서 다음 행동 후보를 자동 식별. 직접 ledger 변경은 하지 않고 `Ledger Update Suggestion`으로 사용자 의사결정 유도 (ADR-032 직접 갱신 금지 원칙).
 - **fos-study 격리**: 지원 전략은 후보자 의사결정 자산 — 공개 저장소에 흘리지 않음.
-- **Phase 05 연계**: 본 skill이 생성한 application-package.md를 `application-reviewer` skill이 pass/fail 판정. 본 skill은 생성만 담당.
+- **Phase 05 연계**: 본 skill이 생성한 Markdown 제출 초안을 `application-reviewer` skill이 pass/fail 판정. 본 skill은 생성만 담당.
 
 ## References
 

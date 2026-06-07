@@ -47,11 +47,14 @@ export const SKILL_CONTRACTS: Readonly<Record<string, SkillContract>> = {
     cliPattern:
       'cd career-os && claude --permission-mode acceptEdits -p "/application-package-writer {postingPath}"',
     description:
-      '공고별 fit-analysis.md + application-package.md 생성. 근거 없는 주장은 needs_evidence로 마킹.',
+      '공고별 fit-analysis.md + application-package.md + 제출용 Markdown 초안 생성. 근거 없는 주장은 보강 필요 / 선택지 / 권장 행동으로 분리.',
     autonomy: 'agent_only',
     expectedOutputs: [
       '{applicationDir}/fit-analysis.md',
       '{applicationDir}/application-package.md',
+      '{applicationDir}/resume-draft.md',
+      '{applicationDir}/cover-letter.md',
+      '{applicationDir}/submission-checklist.md',
     ],
     touchesFosStudy: false,
     modifiesCandidateProfile: false,
@@ -64,7 +67,7 @@ export const SKILL_CONTRACTS: Readonly<Record<string, SkillContract>> = {
     cliPattern:
       'cd career-os && claude --permission-mode acceptEdits -p "/application-reviewer {applicationDir}"',
     description:
-      '지원 패키지 심사 — evidence/drift/exaggeration/privacy/cooldown 6축 심사 후 pass/revise/blocked 판정.',
+      '지원 패키지와 제출용 Markdown 초안 심사 — evidence/drift/exaggeration/privacy/resume readiness/cooldown 축 검토 후 pass/revise/blocked 판정.',
     autonomy: 'agent_only',
     expectedOutputs: ['{applicationDir}/review.md'],
     touchesFosStudy: false,
