@@ -1,7 +1,7 @@
 # Phase 05 — metadata 정합성 검증
 
 **Model**: haiku
-**Status**: pending
+**Status**: completed
 
 ---
 
