@@ -388,6 +388,47 @@ fos-career는 dashboard에서 사용자가 확정한 priority action을 바로 c
 - `priority_action_requests`는 요청과 결과를 보존한다.
 - career-os `_priority-history.jsonl`은 실제 적용 이력을 보존한다.
 - 되돌림은 자동 삭제가 아니라 새 user confirmation event로 처리한다.
+
+### 공고 상태 사용자 액션 (plan059 — planned)
+
+fos-career workbench는 사용자가 공고별로 `보류`, `제외`, `지원 준비`를 선택할 수 있게 한다.
+이 액션은 career-os 파일을 직접 쓰지 않고 pending request bridge를 통해 처리한다.
+
+요청 생성 흐름:
+
+```text
+사용자가 공고/detail에서 보류 | 제외 | 지원 준비 선택
+  -> 선택 사유 입력 optional
+  -> POST /api/applications/state-actions
+  -> 관리자 세션 검증
+  -> record type/id로 career-os read-only snapshot 재조회
+  -> fos-career user_position_action_requests row 생성
+  -> audit_logs에 position_state_action.request_created 기록
+  -> 화면은 pending/running/done/failed/stale 상태 표시
+```
+
+적용 흐름:
+
+```text
+processor가 pending request 선택
+  -> 요청 당시 snapshot과 현재 frontdoor/ledger record 비교
+  -> stale이면 career-os 파일을 쓰지 않고 status=stale
+  -> 보류: action stage hold 반영
+  -> 제외: action stage excluded 반영
+  -> 지원 준비:
+       frontdoor 후보면 ledger 승격
+       action stage prepare-now 반영
+       지원 준비 산출물 생성 요청 시작
+       resume-draft.md -> resume.html -> resume.pdf 흐름까지 연결
+  -> 결과 snapshot과 material readiness를 fos-career DB에 저장
+  -> audit_logs에 처리 결과 기록
+```
+
+안전 경계:
+
+- 사유 입력은 선택이지만 요청 row에는 최종 reason을 항상 저장한다.
+- `지원 준비`는 내부 산출물 생성까지만 수행한다.
+- 외부 제출, 로그인, 업로드, 공개 발행은 수행하지 않는다.
 - dry-run은 stale guard와 예정 command만 검증하고 어느 쪽 파일/DB도 갱신하지 않는다.
 - stale 또는 failed row는 같은 record에 대한 새 request를 만들기 전에 사람이 확인한다.
 

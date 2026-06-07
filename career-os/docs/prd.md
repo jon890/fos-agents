@@ -185,6 +185,29 @@ MVP 범위:
 - career-os ledger/frontdoor queue를 fos-career MySQL로 이관.
 - 사용자의 명시 승인 없는 지원 패키지 최종 제출 또는 공개 발행.
 
+### 계획 중: 공고 상태 사용자 액션 (plan059)
+
+`plan059-position-state-actions`는 fos-career workbench에서 사용자가 공고 상태를 직접 바꿀 수 있게 한다.
+목표는 추천 결과를 보기만 하는 화면에서 `보류`, `제외`, `지원 준비` 결정을 바로 남기고, 안전한 runner가 career-os 상태와 필요한 산출물을 반영하게 만드는 것이다.
+
+MVP 범위:
+
+- 공고/detail 화면에 `보류`, `제외`, `지원 준비` 액션을 제공한다.
+- 사유 입력은 선택으로 둔다.
+  비어 있으면 시스템 기본 사유를 저장하되, 사용자가 입력한 사유가 있으면 우선한다.
+- `보류`는 action stage를 `hold`로 바꾼다.
+- `제외`는 action stage를 `excluded`로 바꾸고 준비 후보에서 제외한다.
+- `지원 준비`는 상태 변경에서 멈추지 않고 필요한 지원 준비 자원 생성을 시작한다.
+  frontdoor 후보는 ledger 승격을 거친 뒤 `posting.md`, `fit-analysis.md`, `application-package.md`, `resume-draft.md`, `cover-letter.md`, `submission-checklist.md`, `review.md`, HTML/PDF 이력서 생성 흐름으로 이어진다.
+- dashboard는 career-os 파일을 직접 쓰지 않고 pending request bridge에 요청을 저장한다.
+- processor는 요청 당시 snapshot과 현재 career-os record를 비교해 stale 요청을 막고, 결과를 fos-career request status와 audit log에 남긴다.
+
+범위 밖:
+
+- 외부 채용 사이트 제출, 로그인, 업로드, 브라우저 입력 자동화.
+- candidate-profile 자동 수정.
+- 버튼 클릭만으로 사용자 검토 없이 외부 메시지나 공개 문서를 발행하는 일.
+
 ### 계획 중: resume package flow (plan055)
 
 `plan055-resume-package-flow`는 지원 준비 흐름을 맞춤 이력서 초안까지 확장한다.

@@ -562,3 +562,29 @@ plan054는 fos-career의 다음 제품 축을 application workbench로 둔다.
 - readiness는 파일 존재 여부와 ledger/frontdoor fields에서 계산한다.
 - 외부 제출, 공개 발행, candidate-profile mutation은 workbench 밖의 별도 승인 흐름으로 유지한다.
 - action button이 필요하면 plan053처럼 pending request bridge를 먼저 설계한다.
+
+## 공고 상태 사용자 액션 (plan059 예정)
+
+plan059는 application workbench에 `보류`, `제외`, `지원 준비` 버튼을 추가한다.
+이 버튼은 UI convenience가 아니라 사용자의 명시 의사결정을 request로 보존하는 write boundary다.
+
+구성 요소:
+
+- fos-career UI: application/detail 화면에서 공고별 상태 액션 버튼과 optional reason 입력을 제공한다.
+- fos-career API: authenticated admin request를 받아 `user_position_action_requests` row를 만든다.
+- fos-career processor: pending request를 읽고 stale guard를 수행한 뒤 career-os runner를 호출한다.
+- career-os runner: frontdoor/ledger record에 action stage를 반영하고, `지원 준비`는 ledger 승격과 이력서 패키지 생성으로 이어간다.
+- audit: fos-career `audit_logs`, `user_position_action_requests`, career-os priority/application history를 함께 본다.
+
+액션 매핑:
+
+- `보류` -> `hold`
+- `제외` -> `excluded`
+- `지원 준비` -> `prepare_application`
+
+구현 원칙:
+
+- reason은 optional이지만 request에는 `effectiveReason`을 항상 저장한다.
+- dashboard container는 career-os 파일을 직접 쓰지 않는다.
+- `지원 준비`는 내부 산출물 생성까지 진행한다.
+  외부 제출, 업로드, 로그인, 공개 발행은 하지 않는다.

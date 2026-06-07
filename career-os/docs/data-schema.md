@@ -1377,6 +1377,41 @@ stale guard 비교 대상:
 - `rejected`: request JSON이 schema 또는 identity contract를 만족하지 않는다.
 - `failed`: helper 실행 중 예외가 발생했다.
 
+### user_position_action_requests (planned — plan059)
+
+fos-career가 소유하는 공고 상태 사용자 액션 pending queue다.
+사용자가 dashboard에서 `보류`, `제외`, `지원 준비`를 선택하면 career-os 파일을 직접 쓰지 않고 이 요청으로 저장한다.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `id` | VARCHAR(64) PK | UUID |
+| `adminUserId` | INT FK NOT NULL | admin_users.id |
+| `recordType` | ENUM('frontdoor_queue','ledger') NOT NULL | career-os record 종류 |
+| `recordId` | VARCHAR(255) NOT NULL | queueId 또는 ledger id |
+| `requestedAction` | ENUM('hold','exclude','prepare_application') NOT NULL | 사용자 선택 액션 |
+| `reason` | TEXT NULL | 사용자가 입력한 선택 사유. optional |
+| `effectiveReason` | TEXT NOT NULL | 사용자 사유 또는 시스템 기본 사유 |
+| `status` | ENUM('pending','running','done','failed','stale') NOT NULL | 처리 상태 |
+| `requestSnapshotJson` | JSON NOT NULL | 요청 당시 record 요약과 현재 stage/status |
+| `resultSnapshotJson` | JSON NULL | 적용 뒤 stage, ledgerId, readiness, material paths 요약 |
+| `errorMessage` | TEXT NULL | 실패 또는 stale 사유 |
+| `createdAt` | DATETIME NOT NULL | |
+| `updatedAt` | DATETIME NOT NULL | |
+
+액션 의미:
+
+- `hold`: action stage를 `hold`로 바꾸고 사용자의 판단 보류 상태로 둔다.
+- `exclude`: action stage를 `excluded`로 바꾸고 추천/준비 후보에서 제외한다.
+- `prepare_application`: 상태 변경과 함께 지원 준비 산출물 생성을 시작한다.
+  frontdoor 후보는 ledger 승격을 거친 뒤 이력서 패키지 생성 request로 이어진다.
+
+검증 규칙:
+
+- `reason`은 optional이지만 `effectiveReason`은 비어 있으면 안 된다.
+- 같은 `recordType` + `recordId`에 `pending` 또는 `running` row가 있으면 새 요청보다 기존 요청 검토를 우선한다.
+- `prepare_application`은 외부 제출, 로그인, 업로드를 수행하지 않는다.
+- processor는 요청 당시 snapshot과 현재 career-os record를 비교하고 stale이면 career-os 파일을 쓰지 않는다.
+
 ### llm_chat_sessions
 
 LLM 채팅 세션.
