@@ -145,11 +145,12 @@ phase-02.md
 2. **task 파일 생성 완료 확인** — `<workspace>/tasks/plan{N}-<slug>/` 디렉터리 + index.json + phase 파일들.
 3. **`common-pitfalls.md` 섹션 1~5 사전 해소** — task 제출 전 self-check.
 4. **branch 확인** — `git branch --show-current`가 `main`이어야 함.
-5. **git commit** — docs 변경과 task 파일을 **별도 커밋** 두 개로 분리 (docs-first 원칙, ADR-015):
+5. **HUD 갱신** — OpenClaw career 세션에서 task 파일을 생성했다면 `task files completed` 상태로 HUD를 갱신한다. 긴 task materialization 시작 전에는 `task materializing` 상태로 먼저 갱신한다.
+6. **git commit** — docs 변경과 task 파일을 **별도 커밋** 두 개로 분리 (docs-first 원칙, ADR-015):
    - 첫 커밋: `docs(<workspace>): <기능명> 관련 ADR + 명세 갱신`
    - 두 번째 커밋: `task(<workspace>): plan{N} <기능명> task 생성`
-6. **git push origin main** — 둘 다 푸시.
-7. 사용자 보고 + 실행 안내:
+7. **git push origin main** — 둘 다 푸시.
+8. 사용자 보고 + 실행 안내:
 
    > plan{N} task 파일 생성 + commit + push 완료. 별도 세션에서 다음을 실행하세요:
    > ```
