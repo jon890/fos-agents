@@ -1,0 +1,176 @@
+{
+  "name": "plan060-interview-skill-request-gateway",
+  "description": "CJ푸드빌 2026-06-15 면접 준비 hub를 fos-career dashboard에 만들고, dashboard가 직접 skill을 실행하지 않도록 interview skill request queue와 processor를 둔다. 기존 career-os 자산은 읽기 전용 projection으로 표시하고, interview-prep-analyzer, interview-asset-writer, study-pack-writer 요청을 안전하게 처리한다. study-pack-writer는 [초안] fos-study 문서 생성과 commit/push까지 이어진다. dashboard 면접 대화 세션은 기본 5턴으로 시작하고 자유형 연장이 가능하며, 질문 생성/선택, 답변 입력, 점수화된 피드백, 꼬리질문, 최종 요약/보완 주제/study-pack 후보 흐름을 제공한다. 답변 전문과 상세 피드백은 DB에 저장해 dashboard에서 바로 보여준다.",
+  "created_at": "2026-06-07T00:00:00Z",
+  "updated_at": "2026-06-07T12:30:00Z",
+  "status": "planned",
+  "current_phase": 2,
+  "total_phases": 4,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/docs/prd.md",
+    "career-os/docs/data-schema.md",
+    "career-os/docs/flow.md",
+    "career-os/docs/code-architecture.md",
+    "career-os/docs/adr.md",
+    "career-os/tasks/plan053-priority-write-action-design/index.json",
+    "career-os/tasks/plan054-fos-career-application-workbench/index.json",
+    "career-os/tasks/plan059-position-state-actions/index.json"
+  ],
+  "depends_on": [
+    "plan039-fos-career-dashboard",
+    "plan054-fos-career-application-workbench"
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "interview-hub-target",
+      "decision": "Dashboard hub는 CJ푸드빌 2026-06-15 면접 준비 상태를 보여준다."
+    },
+    {
+      "id": "D2",
+      "title": "read-only-projection",
+      "decision": "기존 career-os 자산은 dashboard에서 읽기 전용 projection으로 표시한다."
+    },
+    {
+      "id": "D3",
+      "title": "skill-allowlist",
+      "decision": "Gateway가 호출할 수 있는 skill은 interview-prep-analyzer, interview-asset-writer, study-pack-writer로 제한한다."
+    },
+    {
+      "id": "D4",
+      "title": "request-queue-boundary",
+      "decision": "Dashboard는 skill을 직접 실행하지 않고 request queue만 만든다."
+    },
+    {
+      "id": "D5",
+      "title": "minimal-result-storage",
+      "decision": "Skill request result는 파일 경로, 상태, 짧은 요약만 저장하고 private 문서 본문과 command stdout 전체를 저장하지 않는다. 면접 답변 전문과 상세 피드백은 별도 private answer/session DB에 저장한다."
+    },
+    {
+      "id": "D6",
+      "title": "forbidden-actions",
+      "decision": "외부 제출, 공개 발행, 로그인, 업로드, candidate-profile 자동 수정은 금지한다."
+    },
+    {
+      "id": "D7",
+      "title": "docs-first-split",
+      "decision": "docs-first phase와 implementation phase를 분리하고, implementation phase에서는 docs/ADR/정책 문서를 수정하지 않는다."
+    },
+    {
+      "id": "D8",
+      "title": "draft-study-pack-publish",
+      "decision": "study-pack-writer 요청은 이전 방식처럼 fos-study에 [초안] 제목으로 즉시 생성하고 commit/push까지 수행한다."
+    },
+    {
+      "id": "D9",
+      "title": "answer-record-feedback",
+      "decision": "Dashboard는 면접 답변 텍스트 입력을 받아 답변 전문과 상세 피드백을 DB에 저장하고 dashboard에서 바로 보여준다."
+    },
+    {
+      "id": "D10",
+      "title": "conversation-session-ux",
+      "decision": "면접 대화 세션 UX는 질문 생성/선택 -> 답변 입력 -> 피드백 -> 꼬리질문 -> 답변 -> 최종 요약/보완 주제/study-pack 후보 흐름으로 구성한다."
+    },
+    {
+      "id": "D11",
+      "title": "post-interview-archive",
+      "decision": "2026-06-15 CJ푸드빌 면접 종료 후 해당 면접모드는 read-only/archive 상태로 전환한다."
+    },
+    {
+      "id": "D12",
+      "title": "default-five-turn-session",
+      "decision": "면접 대화 세션은 기본 5턴으로 시작하고 자유형 연장을 허용한다."
+    },
+    {
+      "id": "D13",
+      "title": "scored-feedback-rubric",
+      "decision": "피드백은 기술 정확성, 경험 연결, 답변 구조, CJ푸드빌 맥락 반영 기준으로 점수화한다."
+    },
+    {
+      "id": "D14",
+      "title": "flexible-study-pack-request",
+      "decision": "study-pack 생성 요청은 고정 추천뿐 아니라 사용자의 자연어 요청과 인터뷰 중 모르는 주제에서 직접 생성할 수 있게 한다."
+    }
+  ],
+  "open_decisions": [
+    {
+      "id": "O1",
+      "title": "hub-source-summary",
+      "question": "hub가 표시할 짧은 요약을 파일 첫머리에서 추출할지, 별도 projection builder가 경로와 상태만 계산할지 결정한다.",
+      "recommended_default": "초기 MVP는 파일 경로와 상태 중심으로 표시하고, 요약은 private 본문 노출 위험이 낮은 1-2문장만 processor가 작성한다."
+    },
+    {
+      "id": "O2",
+      "title": "study-topic-approval",
+      "question": "study pack 요청의 공개 가능 주제 검증을 UI에서 선차단할지 processor에서 최종 차단할지 결정한다.",
+      "recommended_default": "UI는 안내와 1차 검증을 하고, processor가 최종 allowlist와 private-boundary 검증을 수행한다."
+    },
+    {
+      "id": "O3",
+      "title": "processor-trigger",
+      "question": "processor를 수동 CLI로 실행할지, host-side scheduled job으로 pending request를 처리할지 결정한다.",
+      "recommended_default": "면접 전 단기 MVP는 수동 CLI로 시작하고, 반복 안정화 후 scheduled job을 검토한다."
+    },
+    {
+      "id": "O4",
+      "title": "feedback-engine",
+      "question": "answer feedback을 fos-career LLM provider로 처리할지, processor가 기존 interview-prep-analyzer 맥락을 읽어 별도 private feedback job으로 처리할지 구현 시 결정한다.",
+      "recommended_default": "career-os skill 수정 없이 fos-career processor의 private feedback job으로 시작한다. 필요한 맥락은 career-os path만 참조하고 본문은 request/audit에 저장하지 않는다."
+    }
+  ],
+  "recommended_defaults": [
+    "request table 이름은 interview_skill_requests를 사용한다.",
+    "requestType은 interview_prep_report, interview_asset, study_pack으로 시작한다.",
+    "targetKey는 cj-foodville-2026-06-15를 사용한다.",
+    "dashboard는 career-os read-only mount만 사용한다.",
+    "processor는 writable checkout에서만 claude native skill을 실행한다.",
+    "study-pack-writer 요청은 공개 가능한 순수 기술 주제만 허용하고 [초안] fos-study 문서 생성과 commit/push까지 수행한다.",
+    "자연어 study-pack 요청은 public-safe topic으로 정규화한 뒤 request를 만든다.",
+    "답변 전문과 상세 피드백은 private DB 영역에 저장해 dashboard에서 바로 볼 수 있게 한다.",
+    "면접 세션 기본 turn budget은 5로 두고 사용자가 자유형으로 연장할 수 있게 한다.",
+    "점수 기준은 기술 정확성, 경험 연결, 답변 구조, CJ푸드빌 맥락 반영으로 시작한다.",
+    "request result, audit log, Discord, fos-study로 답변 전문과 상세 피드백을 복사하지 않는다.",
+    "면접 종료 후 archive 상태에서는 새 질문/답변/feedback request를 만들지 않는다.",
+    "PR은 모든 phase 완료 뒤 plan 단위로 만든다."
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "문서 계약 고정",
+      "file": "phase-01.md",
+      "status": "completed",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "model": "sonnet",
+      "timeout": 900
+    },
+    {
+      "number": 2,
+      "title": "request queue와 processor 계약 구현",
+      "file": "phase-02.md",
+      "status": "planned",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "model": "sonnet",
+      "timeout": 1800
+    },
+    {
+      "number": 3,
+      "title": "dashboard 면접 hub와 요청 UI",
+      "file": "phase-03.md",
+      "status": "planned",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "model": "sonnet",
+      "timeout": 1800
+    },
+    {
+      "number": 4,
+      "title": "통합 검증과 안전 경계 점검",
+      "file": "phase-04.md",
+      "status": "planned",
+      "allowedTools": ["Read", "Edit", "Bash", "Grep", "Glob"],
+      "model": "haiku",
+      "timeout": 900
+    }
+  ]
+}

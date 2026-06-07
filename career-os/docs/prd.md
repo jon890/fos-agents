@@ -208,6 +208,44 @@ MVP 범위:
 - candidate-profile 자동 수정.
 - 버튼 클릭만으로 사용자 검토 없이 외부 메시지나 공개 문서를 발행하는 일.
 
+### 계획 중: CJ푸드빌 면접 skill request gateway (plan060)
+
+`plan060-interview-skill-request-gateway`는 fos-career dashboard에 CJ푸드빌 2026-06-15 면접 준비 hub를 만든다.
+목표는 사용자가 기존 career-os 면접 준비 자산을 한 화면에서 확인하고, 부족한 준비 자산 생성을 안전한 request queue로 요청하게 하는 것이다.
+
+MVP 범위:
+
+- dashboard는 `config/mvp-target.json`의 현재 면접 target과 career-os read-only projection을 읽어 CJ푸드빌 2026-06-15 준비 hub를 표시한다.
+- hub는 기존 `data/prep/`, `data/reports/`, `sources/fos-study/` 경로의 존재 여부와 짧은 표시용 요약만 보여준다.
+- 기존 native skill을 새 generator로 대체하지 않고 바로 연결한다.
+  - `interview-prep-analyzer`
+  - `interview-asset-writer`
+  - `study-pack-writer`
+- 면접 대비 중 공부해야 할 주제가 생기면 dashboard에서 study pack 생성 요청까지 만들 수 있다.
+- `study-pack-writer` 요청은 이전 방식처럼 `sources/fos-study/`에 `[초안]` 제목의 공부팩을 즉시 생성하고 commit/push까지 이어진다.
+  단, 공개 가능한 순수 기술 주제일 때만 허용한다.
+- dashboard는 면접 예상 질문별 답변 텍스트 입력을 받고, 답변 전문과 상세 피드백을 DB에 저장해 화면에서 바로 볼 수 있게 한다.
+- 면접 대화 세션 UX는 `질문 생성/선택 -> 답변 입력 -> 피드백 -> 꼬리질문 -> 답변 -> 최종 요약/보완 주제/study-pack 후보` 흐름을 기본값으로 둔다.
+- 면접 대화 세션은 기본 5턴으로 시작하고, 사용자가 원하면 자유형으로 연장할 수 있다.
+- 피드백은 점수화한다.
+  기본 평가 기준은 기술 정확성, 경험 연결, 답변 구조, CJ푸드빌 맥락 반영이다.
+- study pack 생성 요청은 고정 추천뿐 아니라 사용자의 자연어 요청도 받는다.
+  예: "어떤 스터디팩 만들어줘" 같은 요청을 public-safe topic으로 정규화한다.
+- 사용자가 인터뷰 중 특정 주제를 정말 모르겠다고 느끼면 해당 대화 turn에서 직접 study-pack 생성 요청을 만들 수 있다.
+- CJ푸드빌 2026-06-15 면접 종료 후 해당 면접모드는 read-only/archive 상태로 전환한다.
+- dashboard는 skill을 직접 실행하지 않고 fos-career MySQL request queue에 요청만 저장한다.
+- processor가 request를 읽고 career-os writable checkout에서 허용된 native skill만 호출한다.
+- 처리 결과는 상태, 생성 또는 갱신된 파일 경로, 짧은 요약, 오류 요약만 저장한다.
+
+범위 밖:
+
+- dashboard container에서 `claude -p`를 직접 실행하는 일.
+- request result, audit log, Discord 알림에 private 문서 본문, 면접 답변 전문, 상세 피드백, command stdout 전체를 저장하는 일.
+- 사용자가 입력한 답변 기록을 공개 산출물이나 fos-study로 옮기는 일.
+- 외부 제출, 공개 발행, 로그인, 업로드.
+- candidate-profile 자동 수정.
+- 구현 phase에서 docs/ADR/정책 문서를 수정하는 일.
+
 ### 계획 중: resume package flow (plan055)
 
 `plan055-resume-package-flow`는 지원 준비 흐름을 맞춤 이력서 초안까지 확장한다.

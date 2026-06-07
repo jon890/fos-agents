@@ -423,6 +423,209 @@ plan054는 fos-career 내부 read-only projection을 추가한다.
 - plan055 이후 readiness는 `resume-draft.md`, `cover-letter.md`, `submission-checklist.md`를 포함한다.
   구현 전까지 누락 파일은 `missing`으로 표시한다.
 
+### interview skill request queue (planned — plan060)
+
+plan060은 fos-career 내부 request queue를 추가한다.
+이 queue는 career-os 파일이 아니라 dashboard가 만든 skill 실행 요청과 처리 결과의 최소 메타데이터를 저장한다.
+dashboard는 career-os를 read-only projection으로만 읽고, skill 실행은 processor가 맡는다.
+면접 대화 답변 전문과 상세 피드백은 request result가 아니라 별도 private answer/session table에 저장한다.
+
+허용 skill:
+
+- `interview-prep-analyzer`
+- `interview-asset-writer`
+- `study-pack-writer`
+
+권장 request record shape:
+
+```json
+{
+  "id": "interview-skill-request-20260607-001",
+  "targetKey": "cj-foodville-2026-06-15",
+  "company": "CJ푸드빌",
+  "interviewDate": "2026-06-15",
+  "requestType": "interview_prep_report",
+  "skillName": "interview-prep-analyzer",
+  "skillArgs": {
+    "mode": "first-round",
+    "topic": null
+  },
+  "status": "pending",
+  "requestedBy": "admin",
+  "requestedAt": "2026-06-07T12:00:00+09:00",
+  "startedAt": null,
+  "finishedAt": null,
+  "sourceSnapshot": {
+    "mvpTargetPath": "config/mvp-target.json",
+    "prepDir": "data/prep/cj-foodville",
+    "reportPath": null
+  },
+  "resultSnapshot": {
+    "status": null,
+    "paths": [],
+    "summary": null,
+    "errorSummary": null
+  }
+}
+```
+
+필드 책임:
+
+- `targetKey`: 회사와 면접일 기준의 dashboard hub key.
+  CJ푸드빌 2026-06-15는 `cj-foodville-2026-06-15`를 권장한다.
+- `requestType`: `interview_prep_report`, `interview_asset`, `study_pack`, `answer_feedback` 중 하나.
+- `skillName`: allowlist에 있는 native skill 이름.
+  `answer_feedback`처럼 dashboard private feedback 요청이면 `null` 또는 별도 feedback processor 값을 둘 수 있다.
+- `skillArgs`: processor가 command를 만들기 위한 최소 인자.
+  private answer body나 generated markdown body를 넣지 않는다.
+- `sourceSnapshot`: 요청 당시 dashboard가 본 경로와 revision hint.
+  원문 본문은 저장하지 않는다.
+- `resultSnapshot.paths`: 생성 또는 갱신된 파일 경로 목록.
+- `resultSnapshot.summary`: 사람이 상태를 이해할 수 있는 짧은 요약.
+  답변 전문은 answer/session table에 따로 저장한다.
+  result snapshot에는 private 문서 본문이나 command stdout 전체를 저장하지 않는다.
+
+상태 enum:
+
+- `pending`
+- `running`
+- `done`
+- `failed`
+- `stale`
+- `blocked`
+
+검증 규칙:
+
+- native skill 요청의 `skillName`은 allowlist 밖 값을 받을 수 없다.
+- `study-pack-writer` 요청은 공개 가능한 순수 기술 주제일 때만 허용한다.
+  회사별 지원 전략이나 private 후보자 맥락을 fos-study 공개 글로 만들지 않는다.
+- `study-pack-writer` 결과는 기존 정책대로 `sources/fos-study/`에 `[초안]` 제목으로 생성하고 commit/push까지 이어진다.
+  push 실패는 `failed`로 남기고 silent 처리하지 않는다.
+- `interview-asset-writer` 결과는 공개 가능 경로와 private 경로의 경계를 processor가 확인해야 한다.
+- `interview-prep-analyzer` 결과는 private report 경로와 짧은 요약만 저장한다.
+- `answer_feedback`은 사용자 입력 답변을 private answer record로 저장하고, feedback result를 같은 private 경계 안에 둔다.
+  답변 전문과 상세 피드백은 dashboard에서 바로 확인할 수 있게 DB에 저장한다.
+  request result snapshot, audit log, Discord 알림, fos-study로는 복사하지 않는다.
+- 외부 제출, 공개 발행, 로그인, 업로드, candidate-profile 자동 수정 요청은 생성 시 차단한다.
+- processor stdout은 debug log로도 전문 저장하지 않고 필요한 오류 요약만 남긴다.
+
+### interview session mode (planned — plan060)
+
+CJ푸드빌 2026-06-15 면접 hub는 면접 전까지 active session mode로 동작한다.
+면접이 끝나면 read-only/archive 상태로 전환한다.
+
+권장 session record shape:
+
+```json
+{
+  "id": "interview-session-cj-foodville-2026-06-15",
+  "targetKey": "cj-foodville-2026-06-15",
+  "company": "CJ푸드빌",
+  "interviewDate": "2026-06-15",
+  "modeStatus": "active",
+  "archivedAt": null,
+  "createdAt": "2026-06-07T12:00:00+09:00",
+  "updatedAt": "2026-06-07T12:20:00+09:00",
+  "defaultTurnBudget": 5,
+  "allowFreeformExtension": true,
+  "finalSummary": null,
+  "improvementTopics": [],
+  "studyPackCandidates": []
+}
+```
+
+`modeStatus` enum:
+
+- `active`: 면접 전 준비 중.
+- `read_only`: 면접이 끝나 새 답변/요청 생성을 막고 기록 조회만 허용.
+- `archived`: 장기 보존 상태.
+  dashboard에서는 archive badge와 기록 조회만 제공한다.
+
+전환 규칙:
+
+- 2026-06-15 CJ푸드빌 면접 종료 후 해당 session은 `read_only` 또는 `archived`로 전환한다.
+- archive 상태에서는 새 질문 생성, 새 답변 입력, 새 feedback 요청을 만들지 않는다.
+- 기존 답변 전문, 상세 피드백, 최종 요약, 보완 주제, study-pack 후보는 dashboard에서 조회 가능해야 한다.
+- archive 전환은 외부 제출이나 공개 발행을 의미하지 않는다.
+- 면접 대화 세션은 기본 5턴으로 시작한다.
+  사용자가 원하면 자유형으로 꼬리질문과 추가 답변을 연장할 수 있다.
+
+### interview answer records (planned — plan060)
+
+plan060은 dashboard에서 사용자가 면접 질문에 대한 답변을 직접 입력하고 피드백을 받을 수 있게 한다.
+이 기록은 private dashboard data다.
+공개 study artifact나 career-os docs가 아니다.
+
+권장 record shape:
+
+```json
+{
+  "id": "answer-record-20260607-001",
+  "sessionId": "interview-session-cj-foodville-2026-06-15",
+  "targetKey": "cj-foodville-2026-06-15",
+  "company": "CJ푸드빌",
+  "interviewDate": "2026-06-15",
+  "turnIndex": 1,
+  "questionType": "main",
+  "questionText": "본인의 백엔드 경험을 CJ푸드빌 서비스와 어떻게 연결할 수 있나요?",
+  "answerText": "사용자가 dashboard에 입력한 답변 전문",
+  "createdBy": "admin",
+  "createdAt": "2026-06-07T12:10:00+09:00",
+  "feedbackStatus": "pending",
+  "feedbackRequestId": "interview-skill-request-20260607-002",
+  "feedback": {
+    "summary": "핵심 경험 연결은 좋지만 CJ푸드빌 도메인 연결 근거가 약하다.",
+    "detail": "상세 피드백 전문",
+    "scores": {
+      "technicalAccuracy": 3,
+      "experienceConnection": 4,
+      "answerStructure": 3,
+      "cjFoodvilleContext": 2
+    },
+    "strengths": ["백엔드 장애 대응 경험을 먼저 제시했다."],
+    "risks": ["식음료/매장 운영 도메인과의 연결이 추상적이다."],
+    "recommendedRevision": "CJ푸드빌 주문/매장 운영 맥락으로 경험을 다시 연결한다.",
+    "followUpQuestions": ["해당 경험에서 지표를 어떻게 개선했나요?"],
+    "improvementTopics": ["대용량 주문 처리", "장애 대응 커뮤니케이션"],
+    "studyPackCandidates": ["pos-order-traffic-handling"],
+    "generatedAt": "2026-06-07T12:11:00+09:00"
+  },
+  "sourceContext": {
+    "prepPaths": [],
+    "reportPaths": []
+  }
+}
+```
+
+필드 책임:
+
+- `questionText`: dashboard에서 선택하거나 사용자가 입력한 질문.
+- `answerText`: 사용자가 입력한 답변 전문.
+  private DB record에 저장해 dashboard에서 바로 조회할 수 있게 한다.
+  공개 산출물로 옮기지 않는다.
+- `questionType`: `main`, `follow_up`, `revision`, `summary` 중 하나.
+- `feedbackRequestId`: `interview_skill_requests`의 `answer_feedback` 요청과 연결한다.
+- `feedback`: dashboard에 보여줄 피드백.
+  상세 피드백까지 DB에 저장해 dashboard에서 바로 조회할 수 있게 한다.
+  private feedback이며 외부 제출 문구나 공개 글이 아니다.
+- `feedback.scores`: 기본 4개 평가 기준의 점수.
+  기술 정확성, 경험 연결, 답변 구조, CJ푸드빌 맥락 반영을 기본값으로 둔다.
+- `sourceContext`: feedback이 참고한 career-os 경로.
+  파일 본문은 저장하지 않는다.
+
+검증 규칙:
+
+- answer record는 Discord나 외부 알림에 본문을 보내지 않는다.
+- feedback은 답변의 강점, 리스크, 권장 수정 방향, 꼬리질문, 보완 주제, study-pack 후보를 제공한다.
+  합격 보장, 허위 성과 추가, 검증되지 않은 정량 성과 제안은 금지한다.
+- 평가 점수는 dashboard 비교와 개선 추적을 돕기 위한 내부 기준이다.
+  합격 가능성 점수로 해석하지 않는다.
+- answer record는 `study-pack-writer` 입력으로 자동 변환하지 않는다.
+- 공개 가능한 기술 주제만 별도 `study_pack` request로 승격할 수 있다.
+  승격은 고정 추천뿐 아니라 사용자의 자연어 요청으로도 만들 수 있다.
+- 사용자가 인터뷰 중 특정 주제를 정말 모르겠다고 느끼면 해당 turn에서 직접 `study_pack` request를 만들 수 있다.
+- archived session에서는 answer record 생성과 feedback request 생성을 막는다.
+
 ### 디렉터리 구조
 
 ```text

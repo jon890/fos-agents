@@ -432,6 +432,126 @@ processor가 pending request 선택
 - dry-run은 stale guard와 예정 command만 검증하고 어느 쪽 파일/DB도 갱신하지 않는다.
 - stale 또는 failed row는 같은 record에 대한 새 request를 만들기 전에 사람이 확인한다.
 
+### CJ푸드빌 면접 skill request gateway (plan060 — planned)
+
+fos-career dashboard는 CJ푸드빌 2026-06-15 면접 준비 hub를 제공한다.
+hub는 기존 career-os 자산을 읽기 전용으로 보여주고, 부족한 준비 자산은 request queue로 요청한다.
+
+hub projection 흐름:
+
+```text
+dashboard request
+  -> 관리자 세션 검증
+  -> career-os read-only adapter
+     - config/mvp-target.json에서 현재 면접 target 확인
+     - data/prep/<prep_dir>/ strategy/checklist 존재 확인
+     - data/reports/daily/<date>/interview-prep-<stage>/report.md 존재 확인
+     - sources/fos-study/의 관련 study/interview asset 경로 존재 확인
+  -> CJ푸드빌 2026-06-15 hub view model 생성
+     - 상태
+     - 파일 경로
+     - 짧은 표시용 요약
+     - 다음 요청 후보
+```
+
+요청 생성 흐름:
+
+```text
+사용자가 hub에서 면접 분석 | 면접 asset | study pack 생성 요청 선택
+  -> POST /api/interview/skill-requests
+  -> 관리자 세션 검증
+  -> requestType과 skillName allowlist 검증
+  -> 공개 가능 study topic 여부와 private 경계 확인
+  -> fos-career interview_skill_requests row 생성
+  -> audit_logs에 interview_skill_request.created 기록
+  -> 화면은 pending 상태 표시
+```
+
+processor 흐름:
+
+```text
+processor가 pending request 선택
+  -> 요청 당시 target snapshot과 현재 config/mvp-target.json 비교
+  -> stale이면 skill을 실행하지 않고 status=stale
+  -> allowlist command 생성
+     - interview-prep-analyzer first-round
+     - interview-asset-writer <topic>
+     - study-pack-writer <public-safe-topic>
+  -> career-os writable checkout에서 native skill 실행
+  -> study-pack-writer 요청이면 sources/fos-study에 [초안] 제목으로 작성
+     git pull --rebase --autostash -> commit -> push까지 완료
+  -> 생성 또는 갱신된 파일 경로 확인
+  -> resultSnapshot에 status, paths, 짧은 summary, errorSummary만 저장
+  -> audit_logs에 처리 결과 기록
+```
+
+답변 기록과 피드백 흐름:
+
+```text
+질문 생성/선택
+  -> 기본 5턴 세션 시작
+  -> 사용자가 hub에서 예상 질문 선택 또는 직접 입력
+  -> dashboard textarea에 답변 입력
+  -> POST /api/interview/answers
+  -> 답변 전문을 private answer record DB에 저장
+  -> answer_feedback request 생성
+  -> processor가 answer record와 관련 prep/report 경로를 읽음
+  -> 상세 private feedback 생성 후 DB에 저장
+     - 강점
+     - 리스크
+     - 권장 수정 방향
+     - 기술 정확성 / 경험 연결 / 답변 구조 / CJ푸드빌 맥락 반영 점수
+     - 꼬리질문
+     - 보완 주제
+     - study-pack 후보
+  -> answer record feedback 필드 갱신
+  -> dashboard가 답변 전문과 상세 피드백 표시
+  -> 사용자가 꼬리질문 선택
+  -> 답변 입력
+  -> 필요 시 같은 loop 반복
+  -> 5턴 이후 사용자가 원하면 자유형으로 연장
+  -> 최종 요약 / 보완 주제 / study-pack 후보 생성
+```
+
+study-pack 자연어 요청 흐름:
+
+```text
+사용자가 고정 study-pack 후보 선택
+  -> study_pack request 생성
+
+또는
+
+사용자가 "이 주제 모르겠어" / "이걸로 스터디팩 만들어줘"처럼 자연어 입력
+  -> processor가 공개 가능한 순수 기술 주제로 정규화
+  -> private 지원 전략이나 회사별 답변 전문이 섞였는지 확인
+  -> public-safe면 study_pack request 생성
+  -> study-pack-writer가 [초안] fos-study 문서 생성
+  -> commit/push
+```
+
+면접 종료 후 archive 흐름:
+
+```text
+2026-06-15 CJ푸드빌 면접 종료 확인
+  -> interview session modeStatus를 read_only 또는 archived로 전환
+  -> 새 질문 생성 / 새 답변 입력 / 새 feedback request 차단
+  -> 기존 답변 전문 / 상세 피드백 / 최종 요약 / 보완 주제 / study-pack 후보 조회만 허용
+```
+
+안전 경계:
+
+- dashboard는 `claude -p`를 직접 실행하지 않는다.
+- request result와 audit log에는 private 문서 본문, 면접 답변 전문, 상세 피드백, command stdout 전체를 저장하지 않는다.
+- 사용자가 입력한 답변 전문과 상세 피드백은 private DB record에 저장해 dashboard에서 바로 볼 수 있게 한다.
+  fos-study, Discord, 외부 알림으로 복사하지 않는다.
+- study pack 요청은 공개 가능한 기술 주제로만 제한한다.
+- study pack 요청은 고정 추천과 자연어 요청을 모두 지원한다.
+  인터뷰 중 모르는 주제가 생기면 해당 turn에서 직접 요청할 수 있다.
+- study pack 요청은 기존 `study-pack-writer` 정책대로 `[초안]` 제목의 fos-study 문서를 만들고 commit/push까지 수행한다.
+- 외부 제출, 공개 발행, 로그인, 업로드, candidate-profile 자동 수정은 차단한다.
+- 구현 phase는 이 docs/ADR 계약을 고치지 않는다.
+  문서 수정이 필요할 만큼 계약이 모호하면 `PHASE_BLOCKED`로 보고한다.
+
 ### fos-career application workbench (plan054)
 
 application workbench는 읽기 중심 UI 흐름이다.
