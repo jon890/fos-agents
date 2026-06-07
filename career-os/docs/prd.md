@@ -204,9 +204,15 @@ MVP 범위:
 - 생성 문서는 한국어 우선 제목과 자연스러운 문장으로 쓴다.
   첫 10줄 안에 결론을 두고, 내부 분석과 제출용 문구를 분리한다.
 
+후속 목표:
+
+- Markdown 이력서 리뷰 루프가 안정화되면 첨부 가능한 PDF resume export를 추가한다.
+  산출물 체인은 `Markdown 이력서 초안 -> design.md를 적용한 HTML 이력서 -> HTML을 PDF로 변환한 완성 PDF 이력서`다.
+  외부 제출 자동화와 로그인/브라우저 입력은 여전히 범위 밖이다.
+
 범위 밖:
 
-- PDF/DOCX export.
+- plan055 phase-03 안의 PDF/DOCX 생성.
 - 외부 채용 사이트 제출 자동화.
 - 로그인, 브라우저 입력, 공개 발행, candidate-profile mutation.
 - 사용자 승인 없는 최종 제출.

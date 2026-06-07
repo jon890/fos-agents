@@ -565,7 +565,10 @@ closed
 ### Resume Package Contract (planned — plan055)
 
 plan055는 지원 패키지의 전략 문서와 제출용 문서를 분리한다.
-Markdown 산출물을 먼저 고정하고, PDF/DOCX export는 후속 plan으로 둔다.
+Markdown 산출물을 먼저 고정한다.
+첨부 가능한 PDF resume export는 Markdown 리뷰 루프가 안정화된 뒤 후속 plan에서 다룬다.
+후속 산출물 체인은 `Markdown 이력서 초안 -> design.md 적용 HTML 이력서 -> HTML을 PDF로 변환한 완성 PDF 이력서`다.
+외부 제출 자동화는 여전히 범위 밖이다.
 
 필수 파일:
 
