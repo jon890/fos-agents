@@ -1377,7 +1377,7 @@ stale guard 비교 대상:
 - `rejected`: request JSON이 schema 또는 identity contract를 만족하지 않는다.
 - `failed`: helper 실행 중 예외가 발생했다.
 
-### user_position_action_requests (planned — plan059)
+### user_position_action_requests (implemented — plan059)
 
 fos-career가 소유하는 공고 상태 사용자 액션 pending queue다.
 사용자가 dashboard에서 `보류`, `제외`, `지원 준비`를 선택하면 career-os 파일을 직접 쓰지 않고 이 요청으로 저장한다.
@@ -1411,6 +1411,8 @@ fos-career가 소유하는 공고 상태 사용자 액션 pending queue다.
 - 같은 `recordType` + `recordId`에 `pending` 또는 `running` row가 있으면 새 요청보다 기존 요청 검토를 우선한다.
 - `prepare_application`은 외부 제출, 로그인, 업로드를 수행하지 않는다.
 - processor는 요청 당시 snapshot과 현재 career-os record를 비교하고 stale이면 career-os 파일을 쓰지 않는다.
+- result payload에는 ledger id, 적용 stage, readiness 숫자, material path 요약만 저장한다.
+  private 문서 본문, resume body, command stdout 전체는 저장하지 않는다.
 
 ### llm_chat_sessions
 

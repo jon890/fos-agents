@@ -42,3 +42,23 @@ pending request를 읽어 career-os 상태에 안전하게 반영하는 processo
 ## PHASE_FAILED
 
 - request snapshot 비교 없이 career-os mutation이 발생하면 실패로 본다.
+
+## 실행 결과
+
+- career-os controlled applier를 추가했다.
+  - `scripts/application-agent/apply_position_action_request.ts`
+  - `scripts/application-agent/position_action_request_schema.ts`
+- fos-career host-side processor를 추가했다.
+  - `scripts/process-position-actions.ts`
+  - `npm run apply:position-actions`
+- stale guard는 요청 snapshot과 현재 frontdoor/ledger projection을 비교한다.
+- `hold`는 `hold`, `exclude`는 `excluded`, `prepare_application`은 `prepare-now`로 반영한다.
+- `prepare_application`은 frontdoor 후보를 ledger로 승격한 뒤 `action_history`에 `application.start_preparation` request를 생성한다.
+- long-running resume package 실행은 후속 `apply:application-requests` processor가 맡도록 분리했다.
+
+## 검증 결과
+
+- `/tmp` fixture로 `hold`, `exclude`, `prepare_application` 실제 apply 성공을 확인했다.
+- stale fixture는 exit 2와 `status=stale` 결과를 반환했고 career-os mutation을 진행하지 않았다.
+- `bun --check scripts/application-agent/apply_position_action_request.ts` 통과.
+- `bun --check scripts/application-agent/position_action_request_schema.ts` 통과.
