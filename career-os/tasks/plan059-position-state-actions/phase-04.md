@@ -47,3 +47,24 @@ npm run build
 ## PHASE_FAILED
 
 - 검증 없이 plan status만 completed로 바꾸면 실패로 본다.
+
+## 실행 결과
+
+- phase-01 산출물을 검토했다.
+- phase-02~03 구현을 완료했다.
+- `index.json`의 모든 phase status와 plan status를 `completed`로 정리했다.
+- 남은 open decision은 없다.
+
+## 검증 결과
+
+- `python3 -m json.tool tasks/plan059-position-state-actions/index.json >/dev/null` 통과.
+- `rg -n "보류|제외|지원 준비|user_position_action_requests|prepare_application|effectiveReason" docs tasks/plan059-position-state-actions scripts/application-agent/apply_position_action_request.ts scripts/application-agent/position_action_request_schema.ts` 실행.
+- `bun --check scripts/application-agent/apply_position_action_request.ts` 통과.
+- `bun --check scripts/application-agent/position_action_request_schema.ts` 통과.
+- fos-career `npx tsc --noEmit` 통과.
+- fos-career `DATABASE_URL=... SESSION_SECRET=... npm run build` 통과.
+- `/tmp` fixture smoke:
+  - `hold=done:hold`
+  - `exclude=done:excluded`
+  - `prepare=done:prepare-now:<ledgerId>`
+  - stale snapshot은 exit 2와 `status=stale`을 반환했다.

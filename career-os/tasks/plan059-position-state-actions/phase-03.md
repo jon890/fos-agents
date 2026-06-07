@@ -40,3 +40,17 @@ fos-career application workbench에서 공고별 `보류`, `제외`, `지원 준
 ## PHASE_FAILED
 
 - UI에서 외부 제출로 오해되는 copy나 제출 자동화 button이 추가되면 실패로 본다.
+
+## 실행 결과
+
+- application detail 화면에 `보류`, `제외`, `지원 준비` 요청 form을 추가했다.
+- `제외`는 접힌 확인 affordance 안에서만 확정 버튼을 누르게 했다.
+- list/detail 화면에 최신 `user_position_action_requests` 상태를 표시한다.
+- detail 화면은 최신 요청의 `effectiveReason`, failure/stale error, 연결된 application request id를 표시한다.
+- 요청 API는 인증된 사용자만 호출할 수 있고, career-os 파일을 직접 쓰지 않는다.
+
+## 검증 결과
+
+- `npx tsc --noEmit` 통과.
+- `npm run build` 통과.
+- build 결과에서 `/dashboard/applications`와 `/dashboard/applications/[id]`가 dynamic route로 잡힌 것을 확인했다.
