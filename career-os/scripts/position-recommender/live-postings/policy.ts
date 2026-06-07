@@ -35,7 +35,20 @@ export const HARD_DOMAIN_KEYWORDS = [
   "search", "검색", "platform", "플랫폼", "kafka", "streaming", "backend", "백엔드", "server", "서버",
 ];
 export const AI_KEYWORDS = ["ai", "agent", "llm", "rag", "openai", "gemini", "머신러닝", "인공지능"];
-export const EXCLUDED_COMPANY_KEYWORDS = ["레브잇", "올웨이즈", "rev-it", "revit", "always", "alway"];
+export const EXCLUDED_COMPANY_KEYWORDS = [
+  "레브잇",
+  "올웨이즈",
+  "rev-it",
+  "revit",
+  "always",
+  "alway",
+  "다니엘프로젝트",
+  "리아드코퍼레이션",
+  "피닉스랩",
+  "phoenixlab",
+  "와그",
+  "waug",
+];
 
 // ---- Text helpers --------------------------------------------------------
 
