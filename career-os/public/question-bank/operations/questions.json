@@ -1,0 +1,86 @@
+[
+  {
+    "id": "operations-001",
+    "category": "operations",
+    "difficulty": "basic",
+    "question": "장애가 발생했을 때 log, metric, trace를 어떤 순서와 기준으로 확인하겠습니까?",
+    "intent": "관측성 도구의 역할과 incident triage 흐름을 확인한다.",
+    "answerSignals": [
+      "사용자 영향과 error budget 관점",
+      "metric으로 범위 파악, log로 원인 단서 확인, trace로 요청 경로 추적",
+      "rollback, feature flag, traffic 우회 판단"
+    ],
+    "source": "public-general-operations-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "운영 경험과 장애 대응 습관을 확인할 때 선별한다.",
+    "normalizedFrom": "observability 3 pillars를 incident triage 질문으로 정규화",
+    "tags": ["observability", "incident", "triage"],
+    "followUps": [
+      "metric alert가 너무 자주 울리면 어떻게 개선하나요?",
+      "trace sampling을 낮게 잡으면 어떤 정보가 사라질 수 있나요?"
+    ]
+  },
+  {
+    "id": "operations-002",
+    "category": "operations",
+    "difficulty": "intermediate",
+    "question": "무중단 배포를 설계할 때 health check, readiness, database migration을 어떻게 다루겠습니까?",
+    "intent": "배포 안정성과 backward compatibility 감각을 확인한다.",
+    "answerSignals": [
+      "readiness와 liveness 구분",
+      "expand-and-contract migration",
+      "rollback 가능한 application version 관리"
+    ],
+    "source": "public-general-operations-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "배포 자동화와 migration 사고 예방 질문으로 선별한다.",
+    "normalizedFrom": "zero-downtime deployment 일반 주제를 DB 변경 포함 질문으로 정규화",
+    "tags": ["deployment", "migration", "health-check"],
+    "followUps": [
+      "column rename은 무중단으로 어떻게 처리하나요?",
+      "readiness가 실패한 instance를 load balancer가 계속 호출하면 어떻게 되나요?"
+    ]
+  },
+  {
+    "id": "operations-003",
+    "category": "operations",
+    "difficulty": "intermediate",
+    "question": "API latency가 갑자기 p95에서만 나빠졌다면 평균 latency와 다르게 어떤 원인을 의심하겠습니까?",
+    "intent": "tail latency와 bottleneck 분석 능력을 확인한다.",
+    "answerSignals": [
+      "downstream dependency 지연",
+      "connection pool, thread pool, queue 대기",
+      "GC pause와 특정 query skew 확인"
+    ],
+    "source": "public-general-operations-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "성능 장애와 SLO 기반 분석 질문으로 선별한다.",
+    "normalizedFrom": "latency percentile 개념을 backend 장애 진단 질문으로 정규화",
+    "tags": ["latency", "slo", "performance"],
+    "followUps": [
+      "p99가 나쁜데 평균이 괜찮으면 사용자 영향은 어떻게 설명하나요?",
+      "pool metric 중 어떤 값을 먼저 보나요?"
+    ]
+  },
+  {
+    "id": "operations-004",
+    "category": "operations",
+    "difficulty": "advanced",
+    "question": "message queue consumer가 재처리 중복을 만들 수 있는 상황에서 안전하게 처리하려면 어떤 운영 지표와 코드 설계를 함께 보겠습니까?",
+    "intent": "at-least-once 처리, idempotency, 운영 metric 연결 능력을 확인한다.",
+    "answerSignals": [
+      "consumer lag, retry count, dead-letter queue",
+      "idempotent handler와 deduplication key",
+      "poison message 격리와 backoff 정책"
+    ],
+    "source": "public-general-operations-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "비동기 처리와 장애 복구 경험을 확인할 때 선별한다.",
+    "normalizedFrom": "queue 운영 주제를 재처리 안전성 질문으로 정규화",
+    "tags": ["queue", "idempotency", "dlq"],
+    "followUps": [
+      "consumer lag이 늘 때 scale-out만 하면 충분한가요?",
+      "dead-letter queue를 언제 다시 처리하나요?"
+    ]
+  }
+]

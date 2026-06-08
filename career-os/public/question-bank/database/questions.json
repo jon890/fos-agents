@@ -1,0 +1,86 @@
+[
+  {
+    "id": "database-001",
+    "category": "database",
+    "difficulty": "basic",
+    "question": "B-tree index가 equality 조건과 range 조건에서 어떻게 쓰이는지 설명하고, 복합 index 순서를 어떻게 정할지 말해 주세요.",
+    "intent": "index access pattern과 query predicate 설계 이해를 확인한다.",
+    "answerSignals": [
+      "leftmost prefix와 selectivity 고려",
+      "equality 조건 뒤 range 조건의 영향",
+      "covering index와 write cost trade-off"
+    ],
+    "source": "public-general-database-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "조회 성능 개선 경험을 확인할 때 선별한다.",
+    "normalizedFrom": "index 기초를 query tuning 설계 질문으로 정규화",
+    "tags": ["index", "query-tuning", "rdb"],
+    "followUps": [
+      "index가 있는데도 full scan이 선택되는 이유는 무엇인가요?",
+      "정렬 조건까지 포함하면 index 순서를 어떻게 조정하나요?"
+    ]
+  },
+  {
+    "id": "database-002",
+    "category": "database",
+    "difficulty": "intermediate",
+    "question": "transaction isolation level이 낮을 때 생길 수 있는 이상 현상을 예로 들고, 성능과 정합성 사이에서 어떻게 선택하겠습니까?",
+    "intent": "isolation anomaly와 업무 요구사항 기반 선택 능력을 확인한다.",
+    "answerSignals": [
+      "dirty read, non-repeatable read, phantom read 구분",
+      "lock과 MVCC 관점 설명",
+      "업무 invariant 기준으로 isolation과 보상 로직 선택"
+    ],
+    "source": "public-general-database-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "동시성 제어와 정합성이 중요한 도메인 질문으로 선별한다.",
+    "normalizedFrom": "transaction isolation 일반 이론을 업무 invariant 질문으로 정규화",
+    "tags": ["transaction", "isolation", "concurrency"],
+    "followUps": [
+      "lost update는 어떤 방식으로 막을 수 있나요?",
+      "optimistic lock과 pessimistic lock을 언제 고르나요?"
+    ]
+  },
+  {
+    "id": "database-003",
+    "category": "database",
+    "difficulty": "intermediate",
+    "question": "JPA N+1 문제를 탐지하고 줄이는 방법을 설명하고, fetch join을 항상 쓰면 안 되는 이유를 말해 주세요.",
+    "intent": "ORM 조회 전략과 성능 문제의 균형 감각을 확인한다.",
+    "answerSignals": [
+      "SQL log, metric, query count 기반 탐지",
+      "fetch join, entity graph, batch size 선택",
+      "pagination, cartesian product, memory 사용량 주의"
+    ],
+    "source": "public-general-backend-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "JPA 기반 서비스 성능 개선 질문으로 선별한다.",
+    "normalizedFrom": "JPA N+1 일반 주제를 관찰과 해결 trade-off 질문으로 정규화",
+    "tags": ["jpa", "orm", "performance"],
+    "followUps": [
+      "collection fetch join과 pagination을 함께 쓰면 어떤 문제가 있나요?",
+      "DTO projection을 선택하는 기준은 무엇인가요?"
+    ]
+  },
+  {
+    "id": "database-004",
+    "category": "database",
+    "difficulty": "advanced",
+    "question": "Redis cache를 적용했는데 stale data가 문제가 된다면 cache-aside 기준으로 어떤 보완책을 검토하겠습니까?",
+    "intent": "cache invalidation, TTL, consistency trade-off를 확인한다.",
+    "answerSignals": [
+      "TTL, explicit invalidation, versioned key",
+      "write-through와 cache-aside 차이",
+      "stampede 방지와 fallback 전략"
+    ],
+    "source": "public-general-cache-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "cache 일관성과 운영 안정성을 확인할 때 선별한다.",
+    "normalizedFrom": "Redis cache pattern을 stale data 대응 질문으로 정규화",
+    "tags": ["redis", "cache", "consistency"],
+    "followUps": [
+      "cache stampede는 어떻게 줄이나요?",
+      "Redis 장애 시 DB 보호는 어떻게 하나요?"
+    ]
+  }
+]

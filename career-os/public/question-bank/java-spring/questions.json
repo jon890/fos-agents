@@ -1,0 +1,86 @@
+[
+  {
+    "id": "java-spring-001",
+    "category": "java-spring",
+    "difficulty": "basic",
+    "question": "Spring MVC에서 요청이 controller method까지 도달하는 흐름을 설명하고, filter와 interceptor를 어디에 쓰는지 비교해 주세요.",
+    "intent": "웹 요청 처리 흐름과 cross-cutting concern 분리 기준을 확인한다.",
+    "answerSignals": [
+      "DispatcherServlet 중심 흐름",
+      "filter는 servlet container 경계, interceptor는 Spring MVC 경계",
+      "인증, 로깅, tracing 적용 위치의 trade-off"
+    ],
+    "source": "public-general-backend-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "Spring MVC 기반 API 서버 경험을 확인할 때 선별한다.",
+    "normalizedFrom": "Spring request lifecycle 일반 주제를 실무형 비교 질문으로 정규화",
+    "tags": ["spring-mvc", "http", "middleware"],
+    "followUps": [
+      "exception handler는 이 흐름에서 어디에 개입하나요?",
+      "filter에서 request body를 읽을 때 주의할 점은 무엇인가요?"
+    ]
+  },
+  {
+    "id": "java-spring-002",
+    "category": "java-spring",
+    "difficulty": "intermediate",
+    "question": "Spring transaction proxy가 동작하지 않는 대표적인 상황과 이를 피하는 설계 방법을 설명해 주세요.",
+    "intent": "AOP proxy, transaction boundary, self-invocation 이해를 확인한다.",
+    "answerSignals": [
+      "proxy를 통하지 않는 self-invocation 문제",
+      "public method boundary와 propagation 이해",
+      "service 책임 분리 또는 TransactionTemplate 같은 대안"
+    ],
+    "source": "public-general-backend-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "transaction bug 경험이나 service layer 설계 질문으로 선별한다.",
+    "normalizedFrom": "Spring transaction 동작 원리를 장애 예방 질문으로 정규화",
+    "tags": ["spring", "transaction", "aop"],
+    "followUps": [
+      "readOnly transaction은 어떤 효과와 한계가 있나요?",
+      "checked exception과 rollback 규칙은 어떻게 다루나요?"
+    ]
+  },
+  {
+    "id": "java-spring-003",
+    "category": "java-spring",
+    "difficulty": "advanced",
+    "question": "JVM heap 사용량이 배포 후 점진적으로 증가한다면 어떤 순서로 원인을 좁히겠습니까?",
+    "intent": "JVM memory 관찰, heap dump, GC log 기반 진단 순서를 확인한다.",
+    "answerSignals": [
+      "metric으로 leak 여부와 traffic 상관관계 확인",
+      "heap dump와 dominator tree 분석",
+      "cache, static reference, thread-local, queue 적체 점검"
+    ],
+    "source": "public-general-backend-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "JVM 운영과 장애 대응 역량을 확인할 때 선별한다.",
+    "normalizedFrom": "JVM memory leak 일반 주제를 운영 진단 질문으로 정규화",
+    "tags": ["jvm", "gc", "observability"],
+    "followUps": [
+      "GC log에서 어떤 지표를 먼저 보나요?",
+      "leak이 아니라 정상 cache 증가라면 어떻게 구분하나요?"
+    ]
+  },
+  {
+    "id": "java-spring-004",
+    "category": "java-spring",
+    "difficulty": "intermediate",
+    "question": "REST API에서 idempotency가 중요한 상황을 예로 들고, Spring 기반 서버에서 어떻게 구현할지 설명해 주세요.",
+    "intent": "HTTP semantics와 서버 측 중복 처리 설계를 확인한다.",
+    "answerSignals": [
+      "POST retry와 중복 side effect 위험",
+      "idempotency key 저장과 TTL",
+      "unique constraint, transaction, response replay 고려"
+    ],
+    "source": "public-general-backend-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "결제, 주문, 예약처럼 중복 요청 위험이 있는 API 질문으로 선별한다.",
+    "normalizedFrom": "HTTP idempotency 개념을 backend 구현 질문으로 정규화",
+    "tags": ["rest-api", "idempotency", "transaction"],
+    "followUps": [
+      "idempotency key 저장소 장애 시 어떻게 처리하나요?",
+      "PUT과 POST의 idempotency 차이는 무엇인가요?"
+    ]
+  }
+]

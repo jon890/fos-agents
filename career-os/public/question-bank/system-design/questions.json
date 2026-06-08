@@ -1,0 +1,86 @@
+[
+  {
+    "id": "system-design-001",
+    "category": "system-design",
+    "difficulty": "intermediate",
+    "question": "읽기 traffic이 쓰기보다 훨씬 많은 상품 조회 API를 설계한다면 cache, database, invalidation을 어떻게 구성하겠습니까?",
+    "intent": "read-heavy backend architecture와 consistency trade-off를 확인한다.",
+    "answerSignals": [
+      "cache-aside, TTL, explicit invalidation 선택",
+      "read replica와 replication lag 고려",
+      "hot key, cache stampede, fallback 설계"
+    ],
+    "source": "public-general-system-design-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "commerce, catalog, content 조회 시스템 질문으로 선별한다.",
+    "normalizedFrom": "read-heavy API 설계를 cache consistency 질문으로 정규화",
+    "tags": ["cache", "read-heavy", "architecture"],
+    "followUps": [
+      "재고처럼 강한 정합성이 필요한 필드는 어떻게 분리하나요?",
+      "cache hit rate가 낮을 때 어떤 가설을 세우나요?"
+    ]
+  },
+  {
+    "id": "system-design-002",
+    "category": "system-design",
+    "difficulty": "advanced",
+    "question": "주문 생성 API에서 결제, 재고, 알림 같은 후속 처리를 모두 동기 호출하지 않으려면 어떤 경계와 실패 처리 전략을 잡겠습니까?",
+    "intent": "transaction boundary, eventual consistency, outbox pattern 이해를 확인한다.",
+    "answerSignals": [
+      "core order transaction과 side effect 분리",
+      "outbox 또는 event queue로 reliable publish",
+      "보상 처리, retry, idempotent consumer"
+    ],
+    "source": "public-general-system-design-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "주문, 예약, 신청 같은 workflow 설계 질문으로 선별한다.",
+    "normalizedFrom": "event-driven backend 설계를 transaction boundary 질문으로 정규화",
+    "tags": ["event-driven", "outbox", "transaction"],
+    "followUps": [
+      "event publish는 DB commit 전후 어디에 두나요?",
+      "consumer가 같은 event를 두 번 처리하면 어떻게 막나요?"
+    ]
+  },
+  {
+    "id": "system-design-003",
+    "category": "system-design",
+    "difficulty": "intermediate",
+    "question": "대용량 파일 업로드 기능을 API 서버가 직접 처리하지 않게 설계하려면 어떤 흐름을 제안하겠습니까?",
+    "intent": "backend resource isolation과 object storage 기반 설계 능력을 확인한다.",
+    "answerSignals": [
+      "pre-signed URL 또는 direct upload",
+      "metadata transaction과 upload completion 검증",
+      "virus scan, size/type validation, lifecycle policy"
+    ],
+    "source": "public-general-system-design-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "media, document, attachment 처리 시스템 질문으로 선별한다.",
+    "normalizedFrom": "file upload 일반 설계를 API 서버 보호 질문으로 정규화",
+    "tags": ["object-storage", "api-design", "resource-isolation"],
+    "followUps": [
+      "업로드 성공 후 metadata 저장이 실패하면 어떻게 정리하나요?",
+      "다운로드 권한 검사는 어디에서 하나요?"
+    ]
+  },
+  {
+    "id": "system-design-004",
+    "category": "system-design",
+    "difficulty": "advanced",
+    "question": "단일 database가 병목이 되는 서비스를 분리하거나 shard해야 한다면 어떤 신호를 보고 어떤 순서로 접근하겠습니까?",
+    "intent": "scale-out 이전의 병목 확인과 data partitioning trade-off를 확인한다.",
+    "answerSignals": [
+      "query tuning, index, read replica, cache 등 선행 조치",
+      "bounded context와 ownership 분리",
+      "shard key, cross-shard query, migration 비용 고려"
+    ],
+    "source": "public-general-system-design-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "성장하는 backend 시스템의 확장 전략 질문으로 선별한다.",
+    "normalizedFrom": "database scaling 일반 주제를 단계적 architecture decision 질문으로 정규화",
+    "tags": ["scaling", "sharding", "database"],
+    "followUps": [
+      "read replica로 해결되지 않는 병목은 무엇인가요?",
+      "shard key를 잘못 고르면 어떤 문제가 생기나요?"
+    ]
+  }
+]

@@ -1,7 +1,7 @@
 # Phase 01 — public/question-bank schema/seed/README와 private boundary
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ## 목표
 
@@ -150,3 +150,11 @@ prose만 출력하면 success로 잘못 처리될 수 있다.
 - fos-study에 자동 발행하거나 sources/fos-study를 수정한다.
 - docs/ADR/정책 문서를 임의 수정한다.
 - apartment repo 변경을 수정, stage, revert한다.
+
+## 실행 결과
+
+- 완료 시각: 2026-06-08T18:18:45+09:00
+- `public/question-bank/README.md`와 5개 카테고리 seed JSON을 생성했다.
+- public/private 경계, 금지 자료, private prep.md 선별 반영 책임을 README에 명시했다.
+- `find public/question-bank -type f` 결과 파일 수는 6개다.
+- sensitive grep 결과는 README의 금지 문구만 포함하며 실제 private 내용은 없다.

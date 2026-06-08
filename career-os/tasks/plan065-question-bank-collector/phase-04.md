@@ -1,7 +1,7 @@
 # Phase 04 — prep.md 선별 반영 또는 request button 연동 여부 확인
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ## 목표
 
@@ -150,3 +150,12 @@ prose만 출력하면 success로 잘못 처리될 수 있다.
 - docs/ADR/정책 문서를 임의 수정한다.
 - fos-study에 자동 발행하거나 sources/fos-study를 수정한다.
 - apartment repo 변경을 수정, stage, revert한다.
+
+## 실행 결과
+
+- 완료 시각: 2026-06-08T18:18:45+09:00
+- `private/*/*/interview/prep.md`는 1개 존재한다.
+- public bank의 `category`, `difficulty`, `tags`, `positionFitHint`로 private prep.md에 수동 선별 반영할 수 있음을 확인했다.
+- fos-career `InterviewRequestType`과 `REQUEST_TYPE_SKILL` allowlist에는 `question-bank-collector` 계약이 없다.
+- dashboard/request button 연동은 이번 plan에서 구현하지 않고 후속 plan 후보로 남겼다.
+- fos-career 변경은 없다.

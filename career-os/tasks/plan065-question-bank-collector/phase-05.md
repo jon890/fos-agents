@@ -1,7 +1,7 @@
 # Phase 05 — 검증/build/static privacy grep/HUD 완료
 
 **Model**: haiku
-**Status**: pending
+**Status**: completed
 
 ## 목표
 
@@ -186,3 +186,14 @@ prose만 출력하면 success로 잘못 처리될 수 있다.
 - sources/fos-study가 수정됐다.
 - docs/ADR/정책 문서를 임의 수정했다.
 - apartment repo 변경을 수정, stage, revert했다.
+
+## 실행 결과
+
+- 완료 시각: 2026-06-08T18:18:45+09:00
+- public/question-bank 파일 수 6개를 확인했다.
+- 필수 trigger grep 결과는 25 refs다.
+- `bun scripts/question-bank-collector/validate.ts`가 통과했다.
+- sensitive grep 결과 19 refs는 README, skill, validator의 금지 문구로 분류했다.
+- `git status --short sources/fos-study`는 출력이 없다.
+- `git diff --check`가 통과했다.
+- HUD complete event가 성공했다.

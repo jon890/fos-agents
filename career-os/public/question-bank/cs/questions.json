@@ -1,0 +1,86 @@
+[
+  {
+    "id": "cs-001",
+    "category": "cs",
+    "difficulty": "basic",
+    "question": "TCP 3-way handshake와 connection 종료 과정에서 backend 서버가 알아야 할 운영상 포인트를 설명해 주세요.",
+    "intent": "transport layer 기초를 서버 운영 문제와 연결하는지 확인한다.",
+    "answerSignals": [
+      "SYN, SYN-ACK, ACK 흐름",
+      "TIME_WAIT와 connection reuse 영향",
+      "timeout, keep-alive, backlog 관찰"
+    ],
+    "source": "public-general-cs-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "HTTP 서버 connection 이슈나 timeout 질문으로 선별한다.",
+    "normalizedFrom": "TCP 연결 기초를 backend 운영 관점 질문으로 정규화",
+    "tags": ["network", "tcp", "http"],
+    "followUps": [
+      "keep-alive timeout을 너무 길게 잡으면 어떤 문제가 있나요?",
+      "connection pool 고갈은 어떻게 탐지하나요?"
+    ]
+  },
+  {
+    "id": "cs-002",
+    "category": "cs",
+    "difficulty": "intermediate",
+    "question": "process와 thread의 차이를 설명하고, Java web server에서 thread pool 설정이 성능에 미치는 영향을 말해 주세요.",
+    "intent": "OS 실행 단위와 backend runtime tuning 연결 능력을 확인한다.",
+    "answerSignals": [
+      "주소 공간과 context switch 차이",
+      "blocking IO와 thread pool 크기 관계",
+      "CPU, memory, downstream latency 기반 조정"
+    ],
+    "source": "public-general-cs-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "서버 처리량과 latency 병목 질문으로 선별한다.",
+    "normalizedFrom": "process/thread 이론을 Java web server capacity 질문으로 정규화",
+    "tags": ["os", "thread", "performance"],
+    "followUps": [
+      "thread pool을 크게 늘리면 항상 처리량이 좋아지나요?",
+      "blocking call이 많을 때 어떤 지표를 보나요?"
+    ]
+  },
+  {
+    "id": "cs-003",
+    "category": "cs",
+    "difficulty": "basic",
+    "question": "hash map의 평균 시간 복잡도와 worst case를 설명하고, backend 개발에서 key 설계가 왜 중요한지 예를 들어 주세요.",
+    "intent": "자료구조 기본기와 실무적 key modeling 감각을 확인한다.",
+    "answerSignals": [
+      "average O(1)과 collision 영향",
+      "hashCode와 equals 계약",
+      "mutable key, skewed key, memory overhead 주의"
+    ],
+    "source": "public-general-cs-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "Java collection 기본기와 캐시 key 설계 질문으로 선별한다.",
+    "normalizedFrom": "hash map 이론을 backend key modeling 질문으로 정규화",
+    "tags": ["data-structure", "hash-map", "java"],
+    "followUps": [
+      "HashMap과 ConcurrentHashMap의 사용 기준은 무엇인가요?",
+      "equals만 override하고 hashCode를 빼면 어떤 일이 생기나요?"
+    ]
+  },
+  {
+    "id": "cs-004",
+    "category": "cs",
+    "difficulty": "intermediate",
+    "question": "rate limit을 구현할 때 token bucket과 fixed window counter의 차이를 설명하고 어떤 상황에 어느 방식을 고르겠습니까?",
+    "intent": "알고리즘 기초를 API 보호 설계에 적용하는지 확인한다.",
+    "answerSignals": [
+      "fixed window boundary burst 문제",
+      "token bucket의 burst 허용과 refill rate",
+      "분산 환경에서 atomic counter나 Redis script 고려"
+    ],
+    "source": "public-general-backend-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "API abuse 방지와 traffic shaping 질문으로 선별한다.",
+    "normalizedFrom": "rate limiting 알고리즘을 API gateway 질문으로 정규화",
+    "tags": ["algorithm", "rate-limit", "redis"],
+    "followUps": [
+      "분산 서버에서 counter 정합성은 어떻게 맞추나요?",
+      "사용자별 limit과 IP별 limit을 함께 쓰면 어떤 장단점이 있나요?"
+    ]
+  }
+]

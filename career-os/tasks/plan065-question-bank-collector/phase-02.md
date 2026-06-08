@@ -1,7 +1,7 @@
 # Phase 02 — question-bank-collector skill 생성 및 자연어 trigger 강화
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ## 목표
 
@@ -149,3 +149,11 @@ prose만 출력하면 success로 잘못 처리될 수 있다.
 - fos-study 자동 발행을 허용한다.
 - docs/ADR/정책 문서를 임의 수정한다.
 - apartment repo 변경을 수정, stage, revert한다.
+
+## 실행 결과
+
+- 완료 시각: 2026-06-08T18:18:45+09:00
+- `.claude/skills/question-bank-collector/SKILL.md`를 생성했다.
+- 기존 OpenClaw workspace `skills/*/SKILL.md` 패턴을 확인하고 `/home/bifos/.openclaw/workspace-career/skills/question-bank-collector/SKILL.md`도 생성했다.
+- 필수 trigger 6개는 native skill과 OpenClaw wrapper에 모두 그대로 들어갔다.
+- trigger grep 결과는 25 refs다.

@@ -1,7 +1,7 @@
 # Phase 03 — normalizer/validator 구현과 seed 질문 생성
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ## 목표
 
@@ -153,3 +153,12 @@ prose만 출력하면 success로 잘못 처리될 수 있다.
 - seed 질문을 `data/`에 만든다.
 - docs/ADR/정책 문서를 임의 수정한다.
 - apartment repo 변경을 수정, stage, revert한다.
+
+## 실행 결과
+
+- 완료 시각: 2026-06-08T18:18:45+09:00
+- `scripts/question-bank-collector/validate.ts`를 구현했다.
+- 5개 카테고리에 각 4개씩 총 20개 seed 질문을 만들었다.
+- validator는 필수 필드, 중복 id, 중복 질문, category 구조, private 금지어, 원문 복사 위험 문구를 검사한다.
+- `bun scripts/question-bank-collector/validate.ts`가 통과했다.
+- question/tag/difficulty grep 결과는 90 refs다.
