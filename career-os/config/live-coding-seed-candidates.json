@@ -1,29 +1,4 @@
 {
-  "_comment": "Candidate reservoir for live-coding topics. These are intentionally separate from the main seed pool so they can be reviewed/promoted or consumed as fallback when the main pool is exhausted.",
-  "seeds": [
-    {
-      "slug": "union-find",
-      "title": "Union-Find",
-      "outputPath": "algorithm/live-coding/union-find.md",
-      "difficulty": "중",
-      "focus": [
-        "parent 배열과 path compression",
-        "union by rank 또는 size",
-        "connected components 사고방식",
-        "그래프 문제에서 언제 쓰는지 판단"
-      ]
-    },
-    {
-      "slug": "topological-sort",
-      "title": "Topological Sort",
-      "outputPath": "algorithm/live-coding/topological-sort.md",
-      "difficulty": "중상",
-      "focus": [
-        "진입차수 기반 큐 풀이",
-        "DAG 조건 이해",
-        "사이클이 있으면 왜 실패하는지",
-        "선후관계 문제로 변환하는 감각"
-      ]
-    }
-  ]
+  "_comment": "Candidate live-coding seed fallback. Empty because previous candidates are already present in sources/fos-study.",
+  "seeds": []
 }

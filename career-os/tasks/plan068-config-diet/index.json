@@ -2,9 +2,9 @@
   "name": "plan068-config-diet",
   "description": "ADR-069 결정에 따라 career-os config를 정책, 현재 타깃, 후보자 baseline, 사람이 고른 예외 override 중심으로 줄인다. 학습 문서 inventory는 sources/fos-study/에서 파생하고, 공개 질문 inventory는 public/question-bank/에서 파생한다. plan068은 바로 파괴적 삭제하지 않고 reader inventory, fallback, 검증 명령을 먼저 고정한 뒤 phase 단위로 대량 topic/reservoir JSON을 축소, 이관, 삭제한다.",
   "created_at": "2026-06-08T00:00:00+09:00",
-  "updated_at": "2026-06-08T21:02:25+09:00",
+  "updated_at": "2026-06-08T21:12:26+09:00",
   "status": "in_progress",
-  "current_phase": 4,
+  "current_phase": 5,
   "total_phases": 5,
   "error_message": null,
   "blocked_reason": null,
@@ -172,7 +172,7 @@
       "number": 4,
       "title": "dead config 제거 또는 축소",
       "file": "phase-04.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
@@ -201,63 +201,69 @@
     }
   ],
   "implementation_result": {
-    "phase": 3,
+    "phase": 4,
     "status": "completed",
-    "completed_at": "2026-06-08T21:02:25+09:00",
-    "summary": "study-topic-recommender reader를 fos-study derived inventory 우선으로 전환하고, 대량 config JSON은 override/seed/fallback 후보로만 읽도록 조정했다. fallback 후보 key는 slug 단독이 아니라 경로 기반으로 생성해 중복을 제거했다. 관련 native skill 입력 설명도 public/question-bank와 sources/fos-study inventory가 정본이라는 계약에 맞췄다. dead config 삭제/축소, docs/ADR/정책 문서, public/question-bank 질문 내용, sources/fos-study 문서, candidate-profile, private prep은 수정하지 않았다.",
+    "completed_at": "2026-06-08T21:12:26+09:00",
+    "summary": "Phase 01 reader inventory와 Phase 03 migration 결과를 근거로 dead config를 삭제하거나 override/seed/fallback 중심으로 축소했다. first-round drill core 파일은 마지막 rg에서 active reader가 없어 제거했다. active reader가 남은 config는 기존 top-level 구조를 유지하면서 전체 목록 정본 역할을 제거했다. docs/ADR/AGENTS/TOOLS/정책 문서, public/question-bank 질문 내용, sources/fos-study 문서, private 자료, unrelated apartment 변경은 수정하지 않았다.",
     "artifacts": [
-      "scripts/study-topic-recommender/cli.ts",
-      ".claude/skills/study-topic-recommender/SKILL.md",
-      ".claude/skills/study-pack-writer/SKILL.md",
-      ".claude/skills/interview-asset-writer/SKILL.md",
-      ".claude/skills/interview-prep-analyzer/SKILL.md",
-      ".claude/skills/question-bank-collector/SKILL.md",
+      "config/first-round-drill-core-files.json",
+      "config/study-preferences.json",
+      "config/study-pack-topics.json",
+      "config/study-pack-candidates.json",
+      "config/topic-file-map.json",
+      "config/topic-profiles.json",
+      "config/question-bank-topics.json",
+      "config/live-coding-seed-pool.json",
+      "config/live-coding-seed-candidates.json",
       "tasks/plan068-config-diet/index.json",
-      "tasks/plan068-config-diet/phase-03.md"
+      "tasks/plan068-config-diet/phase-04.md"
     ],
-    "migration_contract": {
-      "study_topic_recommender": {
-        "source_of_truth": "sources/fos-study derived inventory",
-        "config_role": {
-          "study-pack-topics.json": "override/fallback 후보",
-          "study-pack-candidates.json": "seed/fallback 후보",
-          "live-coding-seed-pool.json": "사람이 고른 seed 후보",
-          "live-coding-seed-candidates.json": "candidate seed 후보",
-          "sources.json": "외부 reading reservoir"
-        },
-        "fallback": "config 일부가 없거나 parse 실패해도 fos-study inventory에서 deterministic fallback 후보를 만든다. fallback key는 경로 기반이며 README.md는 후보에서 제외한다.",
-        "runtime_snapshot": "data/runtime/topic-inventory.json에 sourceOfTruth, configRole, pools를 기록한다."
+    "cleanup_result": {
+      "removed": [
+        "config/first-round-drill-core-files.json"
+      ],
+      "reduced": {
+        "config/study-preferences.json": "current target 반복과 secondary target 운영 상태를 제거하고 추천 철학, 관심 축, 제약, 회피 조건만 유지했다.",
+        "config/study-pack-topics.json": "55개 topic 목록을 4개 public-safe override/fallback 후보로 축소했다.",
+        "config/study-pack-candidates.json": "39개 reservoir를 8개 seed/fallback 후보로 축소했다.",
+        "config/topic-file-map.json": "active reader가 남아 있어 삭제하지 않고 5개 daily fallback topic만 유지했다.",
+        "config/topic-profiles.json": "writer family guide 구조를 유지하되 정본 inventory가 아니라 optional guide임을 명시했다.",
+        "config/question-bank-topics.json": "public bank 정본 역할을 제거하고 interview-asset override 2개만 유지했다. 긴 private-context prompt는 일반화했다.",
+        "config/live-coding-seed-pool.json": "active reader가 남아 있어 seed 구조를 유지하고 5개 pinned example만 남겼다.",
+        "config/live-coding-seed-candidates.json": "기존 candidate seed가 모두 fos-study에 있어 빈 seeds 배열로 축소했다."
       },
-      "skills": {
-        "study-pack-writer": "sources/fos-study inventory를 먼저 보고 study-pack-topics/topic-profiles는 override 또는 guide로만 설명한다.",
-        "interview-asset-writer": "public/question-bank inventory를 먼저 보고 question-bank-topics는 interview asset override 후보로만 설명한다.",
-        "interview-prep-analyzer": "topic-file-map은 실제 fos-study 파일 존재 여부보다 우선하지 않는 fallback으로 설명한다.",
-        "question-bank-collector": "scanQuestionBankInventory 결과를 public/question-bank 정본 inventory로 설명한다."
-      }
+      "kept_for_active_readers": [
+        "config/study-pack-topics.json",
+        "config/study-pack-candidates.json",
+        "config/topic-file-map.json",
+        "config/topic-profiles.json",
+        "config/question-bank-topics.json",
+        "config/live-coding-seed-pool.json",
+        "config/live-coding-seed-candidates.json"
+      ]
     },
     "validation": {
       "status": "passed",
       "notes": [
-        "career-os cwd 기준으로 phase-03.md 검증 명령을 실행했다.",
-        "refresh_topic_inventory.ts 실행 확인 결과 topic-inventory.json과 morning-topic-recommendation.md가 생성 또는 갱신됐다.",
-        "topic-inventory.json은 sourceOfTruth.kind=fos-study, root=sources/fos-study, scannedMarkdownCount=364, pools, excluded, claudeDuplicateReview를 포함한다.",
-        "fos-study fallback key 중복 확인 결과 duplicateCount=0이다.",
-        "금지 표현 grep 결과 없음.",
+        "career-os cwd 기준으로 phase-04.md 검증 명령을 실행했다.",
+        "post-cleanup reader grep 결과는 /tmp/plan068-phase04-post-cleanup-readers.txt에 기록했다. 삭제된 first-round config는 docs/task history에만 남고 active script/skill reader는 없다.",
+        "bun --check scripts/study-topic-recommender/refresh_topic_inventory.ts는 통과했으며 Bun 동작상 refresh entrypoint가 실행됐다.",
+        "bun scripts/study-topic-recommender/refresh_topic_inventory.ts 실행 확인 결과 backend 3, techBlog 3, ai 3, geek 1 추천이 생성됐다.",
+        "bun scripts/question-bank-collector/validate.ts 실행 확인 결과 categories=5, questions=35다.",
+        "금지 표현 broad grep은 기존 범위 밖 파일인 config/candidate-profile.md와 scripts/application-agent/priority_recommendation.ts의 오래된 문구를 잡았다. Phase 04 변경 파일 기준 grep은 no matches다.",
+        "git diff --check 통과.",
         "unrelated dirty 변경은 ../apartment 쪽 파일뿐이며 수정, stage, revert하지 않았다."
       ],
       "commands": [
         "git status --short",
+        "remaining/removed config size loop",
+        "rg reader references | tee /tmp/plan068-phase04-post-cleanup-readers.txt",
         "python3 -m json.tool tasks/plan068-config-diet/index.json",
         "bun --check scripts/study-topic-recommender/refresh_topic_inventory.ts",
-        "bun --check scripts/study-topic-recommender/fos_study_inventory.ts",
-        "rg config reader references",
-        "rg derived inventory references",
         "bun scripts/study-topic-recommender/refresh_topic_inventory.ts",
-        "test -f data/runtime/topic-inventory.json",
-        "rg sourceOfTruth/fos-study/excluded/pools/claudeDuplicateReview data/runtime/topic-inventory.json",
-        "rg forbidden wording",
-        "git diff --check",
-        "python3 -m json.tool tasks/plan068-config-diet/index.json"
+        "bun scripts/question-bank-collector/validate.ts",
+        "rg -n \"smo\"\"ke\" tasks/plan068-config-diet config scripts .claude/skills && exit 1 || true",
+        "git diff --check"
       ]
     },
     "phase_blocked": false,

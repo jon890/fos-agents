@@ -1,50 +1,16 @@
 {
-  "updated_at": "2026-06-05",
-  "purpose": "Daily study recommendation should be LLM-curated from context, not merely a fixed topic-pool rotation.",
-  "current_target": {
-    "company": "CJ Foodville",
-    "team": "Digital Channel Backend",
-    "interview_date": "2026-06-15"
-  },
-  "secondary_targets": [
-    {
-      "company": "TossPlace",
-      "role": "Applied AI Engineer",
-      "priority": 2,
-      "posting_path": "data/applications/tossplace/applied-ai-engineer/posting.md",
-      "fit_analysis_path": "data/applications/tossplace/applied-ai-engineer/fit-analysis.md",
-      "application_package_path": "data/applications/tossplace/applied-ai-engineer/application-package.md",
-      "review_path": "data/applications/tossplace/applied-ai-engineer/review.md",
-      "study_goal": "Prepare a lightweight morning Applied AI Engineer study track without disrupting CJ Foodville first-priority interview prep.",
-      "focus_axes": [
-        "Agentic workflow design: reasoning, tool use, state management, human-in-the-loop, fallback",
-        "LLM/RAG productization: context design, retrieval quality, hallucination control, operational feedback loops",
-        "AI agent evaluation: golden set, regression test, LLM-as-a-judge, human evaluation, production feedback",
-        "Product/backend reliability for AI: latency, cost, observability, permission, tool failure handling",
-        "TossPlace domain translation: merchant operations, CS, reviews, orders, payments, incident response",
-        "Candidate experience translation: RAG batch pipeline, AI webtoon MVP, agent-assisted development, outbox/cache/system reliability"
-      ],
-      "constraints": [
-        "Keep CJ Foodville as the primary target until the 2026-06-15 first-round interview is done.",
-        "Recommend TossPlace study materials only; do not generate study packs automatically.",
-        "Do not claim production agent-operation experience beyond evidence in candidate-profile and application files.",
-        "Treat LangGraph/AutoGen/CrewAI and evaluation framework as gap-closing study topics unless direct evidence is added.",
-        "Keep public fos-study topics company-neutral unless the user explicitly asks for a private application asset."
-      ]
-    }
-  ],
+  "updated_at": "2026-06-08",
+  "purpose": "Daily study recommendation should be LLM-curated from derived inventory, progress, and user intent, not merely a fixed topic-pool rotation.",
   "selection_principles": [
     "Reflect already studied topics from config/study-progress.json and sources/fos-study scan.",
     "If a candidate topic is already covered by an existing fos-study document, classify it as review/update-existing rather than a new study topic.",
-    "After the user creates or updates a study pack, cool down the same or near-duplicate topic in morning recommendations unless the user asks for interview drill practice on it.",
-    "Prefer topics that connect candidate experience to first-round interview answers.",
-    "Use pools as candidates and guardrails, not as the final decision-maker.",
-    "Avoid treating generic DB tuning as the candidate's active weak area.",
-    "Keep enough variety across backend depth, F&B/e-Commerce domain, operations, architecture, AI/backend tooling, and live-coding practice.",
-    "Explain why each recommendation is useful now."
+    "Use config pools only as candidates, pins, exclusions, and guardrails; do not treat them as the canonical study inventory.",
+    "Prefer topics that connect backend experience to near-term interview answers without copying private application material into public study topics.",
+    "Avoid treating generic DB tuning as the active weak area unless the specific topic is useful for the current interview arc.",
+    "Keep enough variety across backend depth, commerce domain, operations, architecture, AI/backend tooling, and live-coding practice.",
+    "Explain why each recommendation is useful now and what was intentionally skipped."
   ],
   "interest_axes": [
-    "CJ Foodville F&B/e-Commerce digital-channel domain",
     "Java/Spring backend architecture",
     "JPA/MyBatis query and legacy coexistence as interview context, not as a generic weakness",
     "Kafka/Outbox/message idempotency",
@@ -54,10 +20,15 @@
     "AI agent workflow and backend productivity",
     "live-coding explanation practice"
   ],
+  "constraints": [
+    "Do not generate study packs automatically before the user selects a topic.",
+    "Keep public fos-study topics company-neutral unless the user explicitly asks for a private application asset.",
+    "Do not claim production agent-operation experience beyond evidence in candidate-profile and approved application files.",
+    "Treat LLM agent frameworks and evaluation frameworks as gap-closing study topics unless direct evidence is added."
+  ],
   "avoid": [
     "Repeating the same DB/Spring/cache pool simply because it remains in config.",
-    "Generating a study-pack automatically before the user selects a topic.",
-    "Presenting old CJ OliveYoung-derived material as a fresh study topic when the real value is a short refresh or target-company translation.",
-    "Over-indexing on old CJ OliveYoung or Kakao Healthcare target context unless explicitly comparing."
+    "Presenting old target-specific material as a fresh study topic when the real value is a short refresh or target-company translation.",
+    "Over-indexing on old company context unless explicitly comparing."
   ]
 }

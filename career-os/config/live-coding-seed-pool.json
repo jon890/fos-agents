@@ -1,5 +1,5 @@
 {
-  "_comment": "Semi-automatic seed pool for morning live-coding generation. The runner chooses the first uncovered seed and synthesizes a temporary study-pack topic from this metadata.",
+  "_comment": "Pinned live-coding seed examples for recommender fallback. Existing generated markdown is derived from sources/fos-study; this file is not the full algorithm inventory.",
   "seeds": [
     {
       "slug": "prefix-sum",
@@ -46,89 +46,6 @@
       ]
     },
     {
-      "slug": "intervals",
-      "title": "Intervals",
-      "outputPath": "algorithm/live-coding/intervals.md",
-      "focus": [
-        "정렬 후 병합 패턴",
-        "겹침 판별",
-        "meeting room 류 사고방식",
-        "sweep line 기초"
-      ]
-    },
-    {
-      "slug": "monotonic-stack",
-      "title": "Monotonic Stack",
-      "outputPath": "algorithm/live-coding/monotonic-stack.md",
-      "difficulty": "중상",
-      "focus": [
-        "다음 큰 수/작은 수 패턴",
-        "인덱스 저장 vs 값 저장",
-        "while-pop 조건 실수",
-        "배열 한 번 순회로 푸는 이유"
-      ]
-    },
-    {
-      "slug": "deque-sliding-window",
-      "title": "Deque 기반 Sliding Window",
-      "outputPath": "algorithm/live-coding/deque-sliding-window.md",
-      "difficulty": "상",
-      "focus": [
-        "window max/min 유지",
-        "인덱스 만료 처리",
-        "deque 단조성 유지",
-        "O(n)으로 떨어지는 이유"
-      ]
-    },
-    {
-      "slug": "binary-tree",
-      "title": "Binary Tree",
-      "outputPath": "algorithm/live-coding/binary-tree.md",
-      "difficulty": "중",
-      "focus": [
-        "전위/중위/후위 순회",
-        "재귀 종료 조건",
-        "BFS vs DFS 선택 기준",
-        "트리 높이/균형 질문 대응"
-      ]
-    },
-    {
-      "slug": "linked-list",
-      "title": "Linked List",
-      "outputPath": "algorithm/live-coding/linked-list.md",
-      "difficulty": "중",
-      "focus": [
-        "dummy node 사용 이유",
-        "slow-fast pointer 패턴",
-        "reverse / merge 기본기",
-        "pointer null 처리 실수"
-      ]
-    },
-    {
-      "slug": "backtracking",
-      "title": "Backtracking",
-      "outputPath": "algorithm/live-coding/backtracking.md",
-      "difficulty": "중상",
-      "focus": [
-        "선택-재귀-복구 패턴",
-        "부분집합/순열/조합 변형",
-        "pruning 기준",
-        "상태 복원 누락 실수"
-      ]
-    },
-    {
-      "slug": "shortest-path",
-      "title": "Shortest Path",
-      "outputPath": "algorithm/live-coding/shortest-path.md",
-      "difficulty": "상",
-      "focus": [
-        "BFS shortest path vs Dijkstra 구분",
-        "priority queue 갱신 패턴",
-        "visited와 distance 배열 역할",
-        "가중치 조건에 따른 알고리즘 선택"
-      ]
-    },
-    {
       "slug": "dynamic-programming-basic",
       "title": "Dynamic Programming Basic",
       "outputPath": "algorithm/live-coding/dynamic-programming-basic.md",
@@ -138,18 +55,6 @@
         "top-down vs bottom-up",
         "상태 정의와 초기값",
         "메모이제이션 누락 실수"
-      ]
-    },
-    {
-      "slug": "trie",
-      "title": "Trie",
-      "outputPath": "algorithm/live-coding/trie.md",
-      "difficulty": "상",
-      "focus": [
-        "prefix 검색 구조",
-        "노드 메모리 trade-off",
-        "insert/search 구현 패턴",
-        "문자 집합 가정과 최적화"
       ]
     }
   ]

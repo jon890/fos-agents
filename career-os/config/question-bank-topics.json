@@ -1,11 +1,10 @@
 {
   "_meta": {
-    "purpose": "career-os question-bank 토픽 메타데이터 단일 출처 (ADR-027 분리)",
-    "schema_version": "2",
-    "namespace": "question-bank",
-    "source": "/home/bifos/ai-nodes/career-os/config/topics.json",
-    "migrated_from": "topics.json",
-    "migrated_at": "2026-05-15"
+    "purpose": "interview-asset-writer topic overrides only; public/question-bank is the public question inventory source of truth.",
+    "schema_version": "3",
+    "namespace": "interview-asset-overrides",
+    "reduced_from_schema_version": "2",
+    "reduced_at": "2026-06-08"
   },
   "experience-qbank-ai-service-team": {
     "track": "ai-service-team",
@@ -20,7 +19,7 @@
       "task/ai-service-team/webtoon-maker-ai-pipeline.md",
       "interview/kakao-healthcare-carechat-ai-agent.md"
     ],
-    "promptAppend": "카카오헬스케어 케어챗 AI Agent 개발자 포지션을 타깃으로 AI 서비스 개발팀 경험 전반을 바탕으로 면접 질문을 구성한다. 반드시 반영할 축: (1) Spring Batch 11 Step 기반 Confluence → OpenSearch RAG 벡터 색인 파이프라인 — AsyncItemProcessor / CompositeItemProcessor / @JobScope / 재시작성, (2) gRPC OCR 서버 배포 중 503 — K8s terminationGracePeriodSeconds 제약 하 Envoy · supervisord · SIGTERM · preStop hook 예산 설계, (3) 임베딩 메타데이터 전략 패턴 — Allowlist 전환과 OCP 준수, (4) 12일 단독 풀스택 AI 웹툰 제작 도구 MVP — LLM workflow, Gemini pro→flash→lite fallback, 전역 Rate Limit Tracking, Context Caching, Grounding 재주입, 에이전트 팀 조율. 질문은 AI Agent/LLM 서비스 운영, Tool calling, multi-turn memory, RAG 품질, Java Spring Boot 백엔드 연동, Python AI service 적응 전략, 헬스케어/마이데이터 신뢰성 관점으로 구성한다."
+    "promptAppend": "AI service experience interview asset override. Use candidate-profile and listed input files for evidence; keep public output generalized and do not copy private reviewer judgment or company-specific application strategy."
   },
   "experience-qbank-slot-team": {
     "track": "slot-team",
@@ -34,6 +33,6 @@
       "task/nsc-slot/slot-spin-performance.md",
       "interview/kakao-healthcare-carechat-ai-agent.md"
     ],
-    "promptAppend": "카카오헬스케어 케어챗 AI Agent 개발자 포지션 보조 트랙으로 슬롯팀 경험을 구성한다. 도메인 모델링, 엔진 추상화, 성능 최적화, 동시성, 테스트 인프라, AI-assisted development를 AI Agent workflow 설계/검증/운영 안정성 관점으로 연결한다."
+    "promptAppend": "Slot/team experience interview asset override. Use candidate-profile and listed input files for evidence; keep public output generalized and do not copy private reviewer judgment or company-specific application strategy."
   }
 }

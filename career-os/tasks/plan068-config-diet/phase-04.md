@@ -168,3 +168,107 @@ prose만 출력하면 success로 잘못 처리될 수 있다.
 - sources/fos-study 또는 public/question-bank 질문 본문을 임의 수정한다.
 - 새 산출물에 금지 표현을 남긴다.
 - unrelated dirty 변경을 revert, stage, commit, push한다.
+
+## 실행 결과
+
+완료 시각: 2026-06-08T21:12:26+09:00
+
+상태: completed
+
+### 변경 요약
+
+- `config/first-round-drill-core-files.json`은 마지막 `rg` 확인에서 active script/skill reader가 없어 제거했다.
+- `config/study-preferences.json`은 current target 반복과 secondary target 운영 상태를 제거하고 추천 철학, 관심 축, 제약, 회피 조건만 남겼다.
+- `config/study-pack-topics.json`은 전체 study-pack 목록 역할을 중단하고 4개 public-safe override/fallback 후보만 남겼다.
+- `config/study-pack-candidates.json`은 전체 reservoir 역할을 중단하고 8개 seed/fallback 후보만 남겼다.
+- `config/topic-file-map.json`은 `interview-prep-analyzer` active fallback reader가 남아 있어 삭제하지 않고 5개 fallback topic만 남겼다.
+- `config/topic-profiles.json`은 active writer guide reader가 남아 있어 구조를 유지하고, 정본 inventory가 아니라 optional guide임을 명시했다.
+- `config/question-bank-topics.json`은 public/question-bank 정본 역할을 제거하고 interview-asset override 2개만 남겼다.
+  긴 company-specific prompt는 private 판단을 복사하지 않는 일반 안내로 축소했다.
+- `config/live-coding-seed-pool.json`은 active reader가 남아 있어 seed 구조를 유지하고 5개 pinned example만 남겼다.
+- `config/live-coding-seed-candidates.json`은 기존 candidate seed가 모두 `sources/fos-study`에 있어 빈 `seeds` 배열로 축소했다.
+
+### 범위 확인
+
+- docs/ADR/AGENTS/TOOLS/정책 문서 수정 없음.
+- public/question-bank 질문 내용 수정 없음.
+- sources/fos-study 문서 수정 또는 발행 없음.
+- private 자료를 config override로 복사하지 않음.
+- unrelated apartment dirty 변경 수정, stage, revert, commit, push 없음.
+- 같은 plan의 Phase 05는 실행하지 않음.
+
+### 실행 확인 결과
+
+다음 명령을 career-os repo root에서 실행했다.
+
+```bash
+git status --short
+
+for file in \
+  config/first-round-drill-core-files.json \
+  config/study-preferences.json \
+  config/study-pack-topics.json \
+  config/study-pack-candidates.json \
+  config/topic-file-map.json \
+  config/topic-profiles.json \
+  config/question-bank-topics.json \
+  config/live-coding-seed-pool.json \
+  config/live-coding-seed-candidates.json; do
+  if test -f "$file"; then
+    printf "[remaining] %s " "$file"
+    wc -c <"$file"
+  else
+    printf "[removed] %s\n" "$file"
+  fi
+done
+
+rg -n "study-pack-topics|study-pack-candidates|topic-file-map|topic-profiles|question-bank-topics|study-preferences|first-round-drill-core-files|live-coding-seed" \
+  scripts .claude/skills config docs tasks \
+  | tee /tmp/plan068-phase04-post-cleanup-readers.txt
+
+python3 -m json.tool tasks/plan068-config-diet/index.json
+bun --check scripts/study-topic-recommender/refresh_topic_inventory.ts
+bun scripts/study-topic-recommender/refresh_topic_inventory.ts
+bun scripts/question-bank-collector/validate.ts
+rg -n "smo""ke" tasks/plan068-config-diet config scripts .claude/skills && exit 1 || true
+git diff --check
+```
+
+결과:
+
+- remaining/removed 확인:
+  - removed: `config/first-round-drill-core-files.json`
+  - remaining bytes:
+    - `config/study-preferences.json`: 2380
+    - `config/study-pack-topics.json`: 3600
+    - `config/study-pack-candidates.json`: 9203
+    - `config/topic-file-map.json`: 1125
+    - `config/topic-profiles.json`: 2060
+    - `config/question-bank-topics.json`: 1853
+    - `config/live-coding-seed-pool.json`: 1893
+    - `config/live-coding-seed-candidates.json`: 148
+- post-cleanup reader grep 결과는 `/tmp/plan068-phase04-post-cleanup-readers.txt`에 기록했다.
+  삭제된 first-round config는 docs/task history에만 남고 active script/skill reader는 없다.
+- `python3 -m json.tool tasks/plan068-config-diet/index.json`: passed.
+- `bun --check scripts/study-topic-recommender/refresh_topic_inventory.ts`: passed.
+  Bun 동작상 entrypoint가 실행되어 runtime inventory도 갱신됐다.
+- `bun scripts/study-topic-recommender/refresh_topic_inventory.ts`: passed.
+  stdout 기준 backend 3, techBlog 3, ai 3, geek 1 추천을 생성했다.
+- `bun scripts/question-bank-collector/validate.ts`: passed.
+  stdout 기준 categories=5, questions=35.
+- 금지 표현 broad grep:
+  기존 범위 밖 파일인 `config/candidate-profile.md`와 `scripts/application-agent/priority_recommendation.ts`의 오래된 문구가 잡혔다.
+  Phase 04 변경 파일 기준 grep은 no matches.
+- `git diff --check`: passed.
+- 메인 세션 review에서 `config/topic-file-map.json`에 실제 `sources/fos-study`에 없는 오래된 fallback 경로가 남아 있음을 확인했고, 해당 경로를 제거한 뒤 다시 검증했다.
+  - `topic-file-map.json`의 남은 fallback path 존재 확인: passed.
+  - `python3 -m json.tool tasks/plan068-config-diet/index.json`: passed.
+  - `bun --check scripts/study-topic-recommender/refresh_topic_inventory.ts`: passed.
+  - `bun scripts/study-topic-recommender/refresh_topic_inventory.ts`: passed.
+  - `bun scripts/question-bank-collector/validate.ts`: passed, categories=5, questions=35.
+  - `rg -n "first-round-drill-core-files" scripts .claude/skills config`: no active refs.
+  - `git diff --check`: passed.
+
+PHASE_BLOCKED: false
+
+PHASE_FAILED: false

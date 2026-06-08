@@ -1,147 +1,28 @@
 {
-  "_comment": "토픽 → fos-study 내 파일 경로 매핑. 현재 회사/역할 타깃은 interview/kakao-healthcare-carechat-ai-agent.md를 우선 포함한다.",
+  "_comment": "Optional daily-mode fallback only. interview-prep-analyzer must prefer sources/fos-study inventory and use these paths only when they still exist.",
   "jpa-n+1": [
-    "interview/kakao-healthcare-carechat-ai-agent.md",
     "java/spring/jpa-transaction.md",
     "database/mysql/b-tree-index.md",
     "database/connection-pool.md"
   ],
-  "explain-plan": [
-    "interview/kakao-healthcare-carechat-ai-agent.md",
-    "database/index.md",
-    "database/mysql/b-tree-index.md",
-    "database/mysql/mysql-architecture.md"
-  ],
   "composite-index": [
-    "interview/kakao-healthcare-carechat-ai-agent.md",
     "database/mysql/b-tree-index.md",
     "database/index.md",
     "database/mysql/transaction-lock.md"
   ],
   "redis-cache-aside": [
-    "interview/kakao-healthcare-carechat-ai-agent.md",
     "database/redis/basic.md",
     "architecture/cache-strategies.md",
     "database/redis/distributed-lock.md"
   ],
   "kafka-design": [
-    "interview/kakao-healthcare-carechat-ai-agent.md",
     "kafka/basic.md",
     "kafka/data-consistency.md",
     "kafka/message-delivery-semantics.md"
   ],
   "spring-transaction": [
-    "interview/kakao-healthcare-carechat-ai-agent.md",
     "java/spring/jpa-transaction.md",
     "database/mysql/transaction-lock.md",
     "architecture/distributed-transaction.md"
-  ],
-  "innodb-mvcc": [
-    "interview/kakao-healthcare-carechat-ai-agent.md",
-    "database/mysql/transaction-lock.md",
-    "database/mysql/innodb-storage-architecture.md",
-    "database/mysql/redo-log.md"
-  ],
-  "distributed-transaction": [
-    "interview/kakao-healthcare-carechat-ai-agent.md",
-    "architecture/distributed-transaction.md",
-    "architecture/cache-strategies.md",
-    "kafka/data-consistency.md"
-  ],
-  "redis-advanced": [
-    "interview/kakao-healthcare-carechat-ai-agent.md",
-    "database/redis/distributed-lock.md",
-    "database/redis/pub-sub.md",
-    "database/redis/rate-limiting.md"
-  ],
-  "system-design-basics": [
-    "interview/kakao-healthcare-carechat-ai-agent.md",
-    "architecture/distributed-architecture-study-pack.md",
-    "architecture/distributed-transaction.md",
-    "database/connection-pool.md"
-  ],
-  "testing-strategies": [
-    "interview/kakao-healthcare-carechat-ai-agent.md",
-    "task/nsc-slot/slot-test-template.md",
-    "task/nsc-slot/README.md",
-    "task/ai-service-team/README.md"
-  ],
-  "api-design": [
-    "interview/kakao-healthcare-carechat-ai-agent.md",
-    "architecture/distributed-architecture-study-pack.md",
-    "http/connection-pool.md",
-    "database/connection-pool.md"
-  ],
-  "observability-basics": [
-    "interview/kakao-healthcare-carechat-ai-agent.md",
-    "java/logging.md",
-    "java/MDC.md",
-    "java/opentelemetry/traceId.md"
-  ],
-  "security-auth": [
-    "interview/kakao-healthcare-carechat-ai-agent.md",
-    "database/redis/rate-limiting.md",
-    "database/redis/distributed-lock.md",
-    "http/connection-pool.md"
-  ],
-  "resilience-patterns": [
-    "interview/kakao-healthcare-carechat-ai-agent.md",
-    "architecture/distributed-transaction-outbox-pattern.md",
-    "http/connection-pool.md",
-    "database/connection-pool.md"
-  ],
-  "jvm-tuning": [
-    "interview/kakao-healthcare-carechat-ai-agent.md",
-    "java/virtual-thread.md",
-    "java/stamped-lock.md",
-    "java/더_자바_코드를_조작하는_다양한_방법/JVM_구조.md"
-  ],
-  "mysql-replication-sharding": [
-    "interview/kakao-healthcare-carechat-ai-agent.md",
-    "database/mysql/mysql-architecture.md",
-    "database/mysql/innodb-storage-architecture.md",
-    "database/connection-pool.md"
-  ],
-  "msa-service-communication": [
-    "interview/kakao-healthcare-carechat-ai-agent.md",
-    "architecture/distributed-architecture-study-pack.md",
-    "architecture/cache-strategies.md",
-    "kafka/data-consistency.md"
-  ],
-  "zero-downtime-migration": [
-    "interview/kakao-healthcare-carechat-ai-agent.md",
-    "architecture/strategy-pattern.md",
-    "architecture/resilience-patterns.md",
-    "architecture/api-design.md"
-  ],
-  "mysql-deadlock-analysis": [
-    "interview/kakao-healthcare-carechat-ai-agent.md",
-    "database/mysql/transaction-lock.md",
-    "database/mysql/innodb-mvcc.md",
-    "database/connection-pool.md"
-  ],
-  "spring-transaction-synchronization": [
-    "interview/kakao-healthcare-carechat-ai-agent.md",
-    "java/spring/jpa-transaction.md",
-    "architecture/distributed-transaction-outbox-pattern.md",
-    "architecture/distributed-transaction.md"
-  ],
-  "high-traffic-commerce-patterns": [
-    "interview/kakao-healthcare-carechat-ai-agent.md",
-    "architecture/cache-strategies.md",
-    "architecture/resilience-patterns.md",
-    "database/redis/rate-limiting.md"
-  ],
-  "datadog-apm-observability": [
-    "interview/kakao-healthcare-carechat-ai-agent.md",
-    "architecture/observability-basics.md",
-    "java/MDC.md",
-    "java/opentelemetry/traceId.md"
-  ],
-  "ddd-domain-modeling": [
-    "interview/kakao-healthcare-carechat-ai-agent.md",
-    "java/spring/jpa-transaction.md",
-    "architecture/strategy-pattern.md",
-    "architecture/distributed-architecture-study-pack.md"
   ]
 }

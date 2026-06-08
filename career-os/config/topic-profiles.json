@@ -1,5 +1,5 @@
 {
-  "_description": "study-pack-writer가 토픽 family별로 작성 emphasis와 출력 경로 패턴을 참고하는 메타데이터. SKILL.md Inputs에서 Read.",
+  "_description": "Optional study-pack-writer family guide. This is not a topic inventory and does not override actual sources/fos-study file existence.",
   "mysql": {
     "topicHints": [
       "explain-plan",
