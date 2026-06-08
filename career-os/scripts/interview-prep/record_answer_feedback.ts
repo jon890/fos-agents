@@ -10,6 +10,7 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
+import { parseMvpTarget } from "../interview-prep-analyzer/mvp_target_schema";
 
 const ROOT = process.env.CAREER_OS_ROOT ?? join(homedir(), "ai-nodes", "career-os");
 const TZ = "Asia/Seoul";
@@ -34,8 +35,8 @@ function usage(): never {
   console.error(`usage: bun scripts/interview-prep/record_answer_feedback.ts --question-id Q1 (--answer "..." | --answer-file path) [--note "..."] [--date YYYY-MM-DD]
 
 Records to:
-  data/interview/answers/YYYY-MM-DD.jsonl
-  data/runtime/interview-answer-feedback.md`);
+  <mvp-target data_root>/interview/answers/YYYY-MM-DD.jsonl
+  <mvp-target data_root>/interview/feedback/YYYY-MM-DD.md`);
   process.exit(2);
 }
 
@@ -67,15 +68,28 @@ function readOptional(path: string): string {
   return existsSync(path) ? readFileSync(path, "utf-8") : "";
 }
 
+function resolveDataRoot(): string {
+  const targetPath = join(ROOT, "config", "mvp-target.json");
+  const target = parseMvpTarget(targetPath);
+  const dataRoot = target.primary.data_root.trim();
+  if (!dataRoot || dataRoot.includes("..") || dataRoot.startsWith("/")) {
+    throw new Error("config/mvp-target.json primary.data_root must be a safe relative path");
+  }
+  return join(ROOT, dataRoot);
+}
+
 function main(): void {
   const args = parseArgs(process.argv.slice(2));
-  const drillPath = join(ROOT, "data", "runtime", "interview-drill.md");
-  const answerDir = join(ROOT, "data", "interview", "answers");
+  const dataRoot = resolveDataRoot();
+  const prepPath = join(dataRoot, "interview", "prep.md");
+  const answerDir = join(dataRoot, "interview", "answers");
   const answerLog = join(answerDir, `${args.date}.jsonl`);
-  const feedbackPath = join(ROOT, "data", "runtime", "interview-answer-feedback.md");
-  const drill = readOptional(drillPath);
+  const feedbackDir = join(dataRoot, "interview", "feedback");
+  const feedbackPath = join(feedbackDir, `${args.date}.md`);
+  const prep = readOptional(prepPath);
 
   mkdirSync(answerDir, { recursive: true });
+  mkdirSync(feedbackDir, { recursive: true });
 
   const entry = {
     recordedAt: new Date().toISOString(),
@@ -83,7 +97,7 @@ function main(): void {
     questionId: args.questionId,
     answer: args.answer,
     note: args.note,
-    sourceDrill: drillPath,
+    sourcePrep: prepPath,
   };
   appendFileSync(answerLog, JSON.stringify(entry) + "\n", "utf-8");
 
@@ -92,7 +106,7 @@ function main(): void {
     "",
     `- 질문 ID: ${args.questionId}`,
     `- 답변 로그: ${answerLog}`,
-    `- 원본 드릴: ${drillPath}`,
+    `- 면접 준비 정본: ${prepPath}`,
     "",
     "## 사용자 답변",
     "",
@@ -114,9 +128,9 @@ function main(): void {
     "- 예상 꼬리질문:",
     "- 누적 약점 태그:",
     "",
-    "## 오늘의 원본 드릴",
+    "## 면접 준비 정본",
     "",
-    drill || "(data/runtime/interview-drill.md 없음)",
+    prep || "(position home interview/prep.md 없음)",
     "",
   ].join("\n");
 

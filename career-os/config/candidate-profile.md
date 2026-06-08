@@ -221,7 +221,7 @@
    - RAG 배치 파이프라인 / 캐시 정합성 / Outbox Pattern.
 6. **CJ Foodville 디지털 채널 특화 보조 포인트**
    - F&B 주문/픽업/딜리버리 상태머신 / 쿠폰·프로모션 동시성 / 멤버십·CJ ONE 포인트 / 결제 멱등성·부분 취소·환불 / 레거시 JSP+jQuery와 신규 Spring API 공존 / MyBatis 운영 패턴을 우선 준비한다.
-   - 회사·포지션 세부는 `interview/cj-foodville-digital-channel-backend.md`(+ part2/part3/coffeechat)와 `config/mvp-target.json`에서 주입한다.
+   - 회사·포지션 세부는 `private/cj-foodville/digital-channel-backend/interview/prep.md`와 `config/mvp-target.json`에서 주입한다.
 
 ---
 
@@ -231,7 +231,7 @@
 - **폴리그롯 가정 금지** — 이력서·task에 기재 없는 언어/도구(예: Scala, Rust 본격 운영)는 pipeline에서 전제하지 않는다.
 - **수치 날조 금지** — TPS, 팀 규모, 성과 %, 감축율 등이 이력서·task에 명시되지 않았으면 pipeline은 "출처 문서에 기재 없음"으로 응답해야 한다. 이력서 문항1의 "447개 테스트 파일", 본 문서 JMH 수치는 출처 확인됨.
 - **실무 근거 범위** — 본 프로필은 `resume/2603_김병태_이력서_v4.md` + `task/**/*.md` + `interview/kakao-healthcare-carechat-ai-agent.md`를 1차 근거로 사용한다. 기타 이력서 버전(v1~v3, 2108/2512/2601)은 참조용.
-- **CJ Foodville 디지털 채널 타깃 유지** — 회사 특화 맥락은 `interview/cj-foodville-digital-channel-backend.md`(+ part2 ivips SRE / part3 coffee chat prep)와 `config/mvp-target.json` primary에서 주입한다.
+- **CJ Foodville 디지털 채널 타깃 유지** — 회사 특화 맥락은 `private/cj-foodville/digital-channel-backend/interview/prep.md`와 `config/mvp-target.json` primary에서 주입한다.
 
 ---
 

@@ -1,0 +1,132 @@
+{
+  "name": "plan062-interview-prep-single-file",
+  "description": "ADR-063에 따라 CJ푸드빌 면접 준비의 사람용 정본을 private/cj-foodville/digital-channel-backend/interview/prep.md 단일 파일로 정제하고, career-os와 fos-career가 split primary asset을 읽거나 노출하지 않게 한다.",
+  "created_at": "2026-06-08T05:26:28Z",
+  "updated_at": "2026-06-08T05:39:02Z",
+  "status": "completed",
+  "current_phase": 4,
+  "total_phases": 4,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/docs/adr.md",
+    "career-os/docs/data-schema.md",
+    "career-os/docs/flow.md",
+    "career-os/docs/code-architecture.md",
+    "career-os/docs/prd.md",
+    "career-os/tasks/plan061-private-position-home-unification/index.json"
+  ],
+  "depends_on": [
+    "plan060-interview-skill-request-gateway"
+  ],
+  "supersedes": [
+    "plan061-private-position-home-unification"
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "human-canonical-prep-md",
+      "decision": "사람이 읽는 면접 준비 정본은 config/mvp-target.json primary.data_root 아래 interview/prep.md 한 파일이다."
+    },
+    {
+      "id": "D2",
+      "title": "structured-prep-sections",
+      "decision": "prep.md는 요약, 예상 질문 드릴, 추천 시작 질문, 1차 면접 전략, 체크리스트, 단기 Java 준비, 이미 정리된 주제와 낮은 우선순위 주제, 다음 액션을 섹션으로 담는다."
+    },
+    {
+      "id": "D3",
+      "title": "answers-feedback-separate",
+      "decision": "답변 기록과 피드백 로그는 interview/answers/*.jsonl, interview/feedback/*.md로 계속 분리한다."
+    },
+    {
+      "id": "D4",
+      "title": "no-default-snapshot",
+      "decision": "날짜별 snapshot은 기본 생성하지 않고 필요할 때만 interview/history/YYYY-MM-DD.md로 만든다."
+    },
+    {
+      "id": "D5",
+      "title": "dashboard-primary-prep",
+      "decision": "fos-career dashboard는 여러 asset card 대신 prep.md를 primary markdown으로 보여주고, 예상 질문 선택지는 prep.md 질문 섹션에서 파싱한다."
+    },
+    {
+      "id": "D6",
+      "title": "implementation-doc-freeze",
+      "decision": "구현 phase는 docs/ADR/정책 문서를 수정하지 않는다. 계약이 부족하면 PHASE_BLOCKED로 보고한다."
+    }
+  ],
+  "open_decisions": [],
+  "recommended_defaults": [
+    "phase 실행 전 career-os와 /home/bifos/services/fos-career의 dirty state를 각각 확인하고, unrelated 변경을 되돌리거나 stage하지 않는다.",
+    "prep.md 작성은 단순 concatenate가 아니라 중복 제거와 현재 면접 우선순위 기준 정제다.",
+    "data/prep/<prep_dir>/strategy.md와 checklist.md는 존재할 때만 읽고, 없으면 PHASE_BLOCKED가 아니라 source absence로 기록한다.",
+    "legacy split 파일은 prep.md 대체 확인 후 마지막 phase에서만 정리한다.",
+    "private 내용을 sources/fos-study로 그대로 복사하지 않는다.",
+    "request result visibility 개선은 이 plan 범위 밖이다.",
+    "PR은 모든 phase 완료 뒤 plan 단위로 만든다."
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "prep.md 초안과 정제 생성",
+      "file": "phase-01.md",
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 1800
+    },
+    {
+      "number": 2,
+      "title": "career-os prep.md 경로 전환",
+      "file": "phase-02.md",
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 1800
+    },
+    {
+      "number": 3,
+      "title": "fos-career prep.md 표시와 질문 파싱",
+      "file": "phase-03.md",
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 1800
+    },
+    {
+      "number": 4,
+      "title": "legacy split 파일 정리와 통합 검증",
+      "file": "phase-04.md",
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "haiku",
+      "timeout": 1200
+    }
+  ]
+}

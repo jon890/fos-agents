@@ -1,6 +1,5 @@
 #!/usr/bin/env bun
 // Interview preparation site collector.
-// Supported modes intentionally exclude coffeechat; see ADR-048.
 //
 // usage: bun collect_interview_sites.ts [--mode <first-round|final-round|offer-chat>] [--outdir <dir>]
 //   --mode default: first-round

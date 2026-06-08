@@ -1,0 +1,218 @@
+{
+  "name": "plan064-interview-llm-evaluator",
+  "description": "ADR-065 결정에 따라 fos-career 면접 답변 제출 직후 LLM evaluator가 답변을 평가하고, 필요하면 꼬리질문을 생성한다. 별도 AI 피드백 버튼은 두지 않는다. 너무 짧거나 의미 없는 답변은 LLM 호출 전에 deterministic guard로 1/5 insufficient feedback을 저장한다. 정상 답변만 career context bundle로 OpenAI/Codex LLM evaluator를 호출한다. 답변 전문과 상세 피드백은 private DB에 저장하되, audit/request result/Discord/HUD에는 본문 전문을 저장하지 않는다.",
+  "created_at": "2026-06-08T00:00:00Z",
+  "updated_at": "2026-06-08T16:54:54+09:00",
+  "status": "completed",
+  "current_phase": 4,
+  "total_phases": 4,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/docs/adr.md",
+    "career-os/docs/prd.md",
+    "career-os/docs/flow.md",
+    "career-os/docs/code-architecture.md",
+    "career-os/docs/data-schema.md",
+    "career-os/tasks/plan060-interview-skill-request-gateway/index.json",
+    "career-os/tasks/plan062-interview-prep-single-file/index.json",
+    "career-os/tasks/plan063-generic-chat-removal/index.json"
+  ],
+  "target_repositories": [
+    {
+      "name": "fos-career",
+      "path": "~/services/fos-career",
+      "role": "implementation target"
+    },
+    {
+      "name": "career-os",
+      "path": ".",
+      "role": "task contract and private source of truth"
+    }
+  ],
+  "depends_on": [
+    "ADR-065 interview llm evaluator",
+    "ADR-064 generic chat removal",
+    "plan060-interview-skill-request-gateway",
+    "plan062-interview-prep-single-file",
+    "plan063-generic-chat-removal"
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "submit-triggers-evaluation",
+      "decision": "면접 답변 제출 후 즉시 평가한다. 별도 AI 피드백 버튼은 두지 않는다."
+    },
+    {
+      "id": "D2",
+      "title": "evaluator-owned-follow-up",
+      "decision": "꼬리질문 생성 여부와 내용은 LLM evaluator가 답변 상태를 보고 자체 판단한다."
+    },
+    {
+      "id": "D3",
+      "title": "private-feedback-storage",
+      "decision": "답변 전문과 상세 피드백은 private DB에 저장하되 audit/request result/Discord/HUD에는 본문 전문을 저장하지 않는다."
+    },
+    {
+      "id": "D4",
+      "title": "deterministic-insufficient-guard",
+      "decision": "너무 짧거나 의미 없는 답변은 LLM 호출 전에 deterministic guard로 1/5 insufficient feedback 처리한다."
+    },
+    {
+      "id": "D5",
+      "title": "context-bundle-evaluator",
+      "decision": "정상 답변만 career context bundle로 OpenAI/Codex LLM evaluator를 호출한다."
+    },
+    {
+      "id": "D6",
+      "title": "llm-provider-reuse",
+      "decision": "ADR-064와 plan063 이후 남긴 lib/llm/* provider는 evaluator에서 재사용한다."
+    },
+    {
+      "id": "D7",
+      "title": "schema-minimalism",
+      "decision": "DB schema 변경은 꼭 필요한 경우에만 non-destructive column을 추가한다. 가능하면 기존 feedbackBody, score fields, followUpQuestion, improvementTopicsJson, studyPackCandidatesJson을 활용한다."
+    },
+    {
+      "id": "D8",
+      "title": "implementation-doc-freeze",
+      "decision": "docs-first 반영은 완료됐으므로 implementation phase에서는 docs/ADR/정책 문서를 임의 수정하지 않는다. 부족하면 PHASE_BLOCKED로 보고한다."
+    },
+    {
+      "id": "D9",
+      "title": "processor-timer-awareness",
+      "decision": "현재 interview request processor는 systemd user timer로 2분마다 scripts/run-interview-request-processor.sh를 실행하고, 한 번에 pending 1건을 처리한다."
+    }
+  ],
+  "open_decisions": [],
+  "recommended_defaults": [
+    "task files completed 시 HUD를 task files completed로 갱신한다.",
+    "implementation 시작 시 HUD를 implementation running 또는 running으로 갱신한다.",
+    "implementation 전체 완료 시 HUD를 implementation completed 또는 completed로 갱신한다.",
+    "implementation 실패 시 HUD를 implementation failed 또는 failed로 갱신한다.",
+    "implementation 보류 시 HUD를 implementation blocked 또는 blocked로 갱신한다.",
+    "phase 실행 전 career-os와 ~/services/fos-career의 dirty state를 각각 확인하고, unrelated 변경은 되돌리거나 stage하지 않는다.",
+    "apartment repo 변경은 무시한다.",
+    "implementation phase에서는 career-os docs/ADR/정책 문서를 수정하지 않는다.",
+    "provider disabled, JSON parse failure, evaluator call failure는 private body 없는 짧은 fallback summary로 request result를 남긴다.",
+    "정상 evaluator mock path, 짧은 답변 guard, JSON parse failure fallback, provider disabled fallback smoke test를 우선한다.",
+    "PR은 모든 phase 완료 뒤 plan 단위로 만든다.",
+    "이 task 파일 생성 작업에서는 commit/push하지 않는다."
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "evaluator 계약과 provider 확장",
+      "file": "phase-01.md",
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 1800
+    },
+    {
+      "number": 2,
+      "title": "processor answer_feedback 연동과 fallback",
+      "file": "phase-02.md",
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 1800
+    },
+    {
+      "number": 3,
+      "title": "dashboard feedback/follow-up 표시와 queue 상태 확인",
+      "file": "phase-03.md",
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 1500
+    },
+    {
+      "number": 4,
+      "title": "build/docker/systemd timer/static verification과 task 완료",
+      "file": "phase-04.md",
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "haiku",
+      "timeout": 1200
+    }
+  ],
+  "implementation_result": {
+    "status": "completed",
+    "completed_at": "2026-06-08T16:54:54+09:00",
+    "summary": "fos-career answer_feedback가 deterministic insufficient guard, LLM evaluator JSON 호출, provider/parse/context fallback, private DB feedback 저장, public-safe request result를 사용하도록 구현했다.",
+    "changed_files": [
+      "~/services/fos-career/lib/interview/gateway.ts",
+      "~/services/fos-career/lib/llm/types.ts",
+      "~/services/fos-career/lib/llm/openai-provider.ts",
+      "~/services/fos-career/scripts/process-interview-requests.ts",
+      "~/services/fos-career/app/dashboard/interview/page.tsx",
+      "~/services/fos-career/package.json",
+      "career-os/tasks/plan064-interview-llm-evaluator/index.json"
+    ],
+    "verification": [
+      {
+        "command": "npx tsc --noEmit",
+        "status": "passed"
+      },
+      {
+        "command": "npm run build",
+        "status": "passed"
+      },
+      {
+        "command": "npm run smoke:interview-evaluator",
+        "status": "passed",
+        "notes": "short guard, provider disabled fallback, JSON parse failure fallback, normal evaluator mock path passed"
+      },
+      {
+        "command": "docker compose up -d --build fos-career && docker compose ps && docker compose exec -T fos-career wget --quiet --tries=1 --spider http://localhost:3000",
+        "status": "passed",
+        "notes": "fos-career-app Up healthy, HTTP health returned healthy"
+      },
+      {
+        "command": "systemctl --user list-timers '*interview*' --all && systemctl --user status fos-career-interview-processor.timer --no-pager && systemctl --user status fos-career-interview-processor.service --no-pager",
+        "status": "passed",
+        "notes": "timer active every 2 minutes; service last run exited status 0 with --limit 1 and no pending requests"
+      },
+      {
+        "command": "static privacy/chat grep",
+        "status": "passed",
+        "notes": "request result/audit stores summary, reason, scores, counts only; chat refs are legacy docs/schema compatibility references"
+      },
+      {
+        "command": "git diff --check",
+        "status": "passed"
+      }
+    ],
+    "privacy_boundary": "답변 전문과 상세 feedback은 interview_answer_records와 evaluator input 경계에만 두고 request result/audit/HUD에는 저장하지 않는다.",
+    "legacy_reference": "chat regression grep count 2는 README의 제거 설명과 schema legacy table 주석이다.",
+    "commit_push": "not performed by request"
+  }
+}

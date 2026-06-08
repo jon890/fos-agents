@@ -66,9 +66,16 @@ career-os의 모든 아키텍처 결정을 시간순으로 누적 기록한다. 
 | ADR-055 | background worktree는 완료 시 명시적으로 정리한다 | Accepted | 별도 worktree를 만든 background worker는 완료 전 clean 여부 확인과 디렉터리 제거를 보고한다 |
 | ADR-056 | resume package는 Markdown 산출물 계약을 먼저 고정한다 | Accepted; PDF scope superseded by ADR-059 | application-package와 제출용 resume/cover/checklist를 분리하고 request status를 표준화한다 |
 | ADR-057 | 생성 산출물 품질 계약은 전역 기준이다 | Accepted | 한국어 우선, 첫 10줄 결론, 내부 분석과 제출용/공개용 분리, needs_evidence resolution loop를 모든 생성 Markdown에 적용 |
-| ADR-058 | data cleanup은 private boundary와 retention을 먼저 고정한다 | Accepted | data 파일은 private by default로 보고 archive/retention 경계를 먼저 정한다 |
+| ADR-058 | data cleanup은 private boundary와 retention을 먼저 고정한다 | Partially superseded by ADR-062 | data 파일은 private by default로 보고 archive/retention 경계를 먼저 정한다 |
 | ADR-059 | plan055 MVP에 HTML/PDF 이력서 export를 포함한다 | Accepted | resume-draft.md -> design.md 적용 resume.html -> 첨부 가능한 resume.pdf를 같은 plan에 포함한다 |
 | ADR-060 | 공고 상태 액션은 사용자 버튼과 pending request로 처리한다 | Accepted | 보류/제외/지원 준비 버튼을 제공하고, 지원 준비는 내부 산출물 생성까지 이어지되 외부 제출은 하지 않는다 |
+| ADR-061 | 면접 준비 dashboard는 skill request gateway로 실행을 분리한다 | Accepted | dashboard는 요청만 만들고 processor가 허용된 native skill을 실행한다 |
+| ADR-062 | 포지션별 준비 홈은 루트 private 아래에 둔다 | Accepted | private/<company>/<position>을 정본으로 두고 공개 공부팩은 별도 재작성한다 |
+| ADR-063 | 면접 준비 사람용 정본은 단일 prep.md로 관리한다 | Accepted | 리포트·드릴·전략·체크리스트·단기 Java 준비를 `interview/prep.md` 한 파일로 정제한다 |
+| ADR-064 | fos-career 범용 채팅은 제거하고 목적별 요청 UI로 통일한다 | Accepted | `/dashboard/chat`과 `/api/chat`을 제거하고 버튼 기반 request/evaluator 흐름만 유지한다 |
+| ADR-065 | 면접 답변 피드백은 career context LLM evaluator로 처리한다 | Accepted | 답변 제출 즉시 평가하고, guard 통과 답변만 `prep.md` 기반 LLM evaluator가 점수·피드백·꼬리질문을 생성한다 |
+| ADR-066 | 공개 가능 일반 면접 질문 bank는 public/question-bank에 둔다 | Accepted | Backend/CS/운영/System design 질문을 공개 가능 자산으로 추적하고 자연어 trigger가 강한 collector skill로 관리한다 |
+| ADR-067 | coffeechat 자동화 tombstone도 제거하고 ADR-only history로 둔다 | Accepted | coffeechat script/skill/schema/config/docs active reference를 제거하고 과거 task 기록만 history로 보존한다 |
 
 (ADR-024는 번호 누락. ADR-007a/b 충돌은 prd.md "분해 대기 작업"에 기록.)
 
@@ -236,7 +243,7 @@ Discord에 시작 / 실패 / 완료 3단계 짧은 상태 알림. 형식:
 
 ## ADR-009 — Morning topic reservoir + recommendation pipeline
 
-- Status: Accepted
+- Status: Partially superseded by ADR-062
 - Date: 2026-04-25
 
 ### 맥락
@@ -2004,7 +2011,8 @@ plan055에서 resume package Markdown 산출물 계약을 고정하면서 생성
 ### 맥락
 
 plan056 phase-01 inventory에서 현재 checkout의 실제 `data/` 파일은 `data/runtime/live-position-postings.plan048-final.md`와 `data/runtime/live-position-postings.plan048-smoke.md` 두 tracked runtime exception뿐이었다.
-하지만 docs에는 이미 `data/applications/`, `data/reports/`, `data/runtime/`, `data/source/`가 여러 흐름의 책임 위치로 쓰이고 있고, phase 계획은 `data/private/`까지 boundary로 다룬다.
+하지만 docs에는 이미 `data/applications/`, `data/reports/`, `data/runtime/`, `data/source/`가 여러 흐름의 책임 위치로 쓰이고 있고, 당시 phase 계획은 `data/private/`까지 boundary로 다뤘다.
+ADR-062 이후 회사·포지션별 작업 홈은 루트 `private/` 아래로 이동했다.
 
 지원 준비, 면접 준비, 후보자 맥락, 회사별 전략이 섞이는 data 파일은 공개 가능성을 추정하기 어렵다.
 오래된 파일을 바로 삭제하면 검증 evidence, task history, coffeechat deprecation 이력, plan048 snapshot 같은 맥락이 사라질 수 있다.
@@ -2016,14 +2024,14 @@ plan056 phase-01 inventory에서 현재 checkout의 실제 `data/` 파일은 `da
   공개 가능성은 별도 review와 사용자 승인으로만 승격한다.
 - `data/applications/`는 공고별 지원 원장, 맞춤 지원 패키지, resume draft, cover letter, review의 private home이다.
 - `data/private/`는 private-only 보관과 archive home으로 둔다.
-  공개·제출·runtime 경계가 애매하거나 오래된 민감 자료는 삭제 전에 이 위치의 archive/tombstone 후보로 분류한다.
+  이 항목은 ADR-062 이후 루트 `private/` 정책으로 대체됐다.
 - `data/source/`는 외부 source text와 notes의 입력 위치다.
   외부 공개 페이지에서 왔더라도 특정 지원, 면접, 회사 전략과 연결되면 private by default로 다룬다.
 - `data/reports/`는 generated report 위치다.
   최근 운영 판단, task/ADR 근거, application/interview prep 참조가 있는 report는 보존한다.
   참조가 없고 새 report나 docs 결정으로 대체된 report는 retention 검토 후 archive 후보로 둔다.
 - `data/runtime/`은 최신 projection, cache, lock, eval result 같은 가변 상태 위치다.
-  장기 근거가 필요한 runtime 파일은 report, task evidence, `data/private/archive/` 중 하나로 승격 여부를 별도 결정한다.
+  장기 근거가 필요한 runtime 파일은 report, task evidence, private archive 중 하나로 승격 여부를 별도 결정한다.
 - plan048의 두 tracked runtime file은 named exception으로만 다룬다.
   일반 runtime 추적 규칙으로 확장하지 않는다.
 - coffeechat 자동화 tombstone은 이번 결정에서 삭제하지 않는다.
@@ -2043,7 +2051,7 @@ plan056 phase-01 inventory에서 현재 checkout의 실제 `data/` 파일은 `da
 ### 결과
 
 - cleanup phase는 삭제 중심이 아니라 archive, tombstone, retention 중심으로 진행된다.
-- `data/applications`, `data/private`, `data/source`, `data/reports`, `data/runtime`의 책임이 분리된다.
+- `data/applications`, private archive, `data/source`, `data/reports`, `data/runtime`의 책임이 분리된다.
 - future worker는 private 원문을 task/docs에 복사하지 않고 path와 classification만 다룬다.
 - phase-03 이후 runtime exception이나 coffeechat tombstone을 정리할 때 이 ADR을 기준으로 named decision을 남긴다.
 
@@ -2092,6 +2100,51 @@ ADR-056은 Markdown 산출물 계약을 먼저 고정하고 PDF export를 후속
 - `scripts/application-agent/export_resume.ts`
 - `config/resume-design.md`
 - `scripts/application-agent/skill_contracts.ts`
+- `docs/prd.md`
+- `docs/data-schema.md`
+- `docs/flow.md`
+- `docs/code-architecture.md`
+
+---
+
+## ADR-062 — 포지션별 준비 홈은 루트 private 아래에 둔다
+
+- Status: Accepted
+- Date: 2026-06-08
+
+### 맥락
+
+CJ푸드빌 면접 준비가 dashboard, markdown 보기, 질문 선택, 답변 피드백으로 이어지면서 회사·포지션별 자료가 기능별 경로에 흩어졌다.
+초기 정리는 `data/<company>/<position>` 형태였지만, 이 경로는 runtime, report, cache, queue 같은 시스템 데이터와 포지션별 작업 자료의 의미를 섞는다.
+
+사용자는 포지션 준비 자료가 외부 공개 전 작업물이라는 점이 경로에서 바로 드러나길 원했다.
+동시에 `private`를 절대 공개 금지 금고로 과도하게 해석하면, 여기서 출발한 순수 기술 공부팩을 `sources/fos-study/`에 발행하는 정상 흐름까지 막을 수 있다.
+
+### 결정
+
+- 회사·포지션별 active 준비 홈은 `private/<company-slug>/<position-slug>/`에 둔다.
+- 현재 CJ푸드빌 타깃의 정본 경로는 `private/cj-foodville/digital-channel-backend/`다.
+- `config/mvp-target.json`의 `primary.data_root`는 이 정본 경로를 가리킨다.
+- 웹 dashboard와 새 자동화는 `primary.data_root`를 정본으로 읽는다.
+- 면접 질문 정본을 `data/runtime/interview-drill.md`나 `data/reports/daily/*/interview-drill/report.md`에 중복 유지하지 않는다.
+- 구조 전환에서 새 정본으로 대체된 legacy runtime/report는 archive 없이 삭제할 수 있다.
+- 새 코드와 processor는 legacy fallback을 추가하지 않는다.
+  필요한 호환은 일회성 migration으로 끝내고, 장기 운영 경로는 `primary.data_root` 하나로 통일한다.
+- `private/`는 공개 전 작업 홈이다.
+  개인 답변, 지원 전략, 회사별 민감 맥락을 그대로 공개 경로에 복사하지 않는다.
+- 공개 가능한 기술 공부팩은 `private/`의 내용을 재가공해 `sources/fos-study/`에 따로 작성할 수 있다.
+
+### 결과
+
+- 포지션별 준비 자료와 시스템 runtime/report의 경계가 명확해진다.
+- dashboard는 `data_root` 하나를 따라가면 현재 포지션의 면접 연습, report, study 자료를 찾을 수 있다.
+- legacy fallback을 제거해 경로 drift와 중복 산출물이 줄어든다.
+- 공개 공부팩 발행 흐름은 유지하되, 개인 답변과 지원 전략이 그대로 공개되는 일은 막는다.
+
+### 적용
+
+- `config/mvp-target.json`
+- `private/cj-foodville/digital-channel-backend/`
 - `docs/prd.md`
 - `docs/data-schema.md`
 - `docs/flow.md`
@@ -2218,3 +2271,278 @@ CJ푸드빌 2026-06-15 면접 준비는 기존 career-os 자산을 빠르게 확
 - `docs/data-schema.md`
 - `docs/flow.md`
 - `docs/code-architecture.md`
+
+---
+
+## ADR-063 — 면접 준비 사람용 정본은 단일 prep.md로 관리한다
+
+- Status: Accepted
+- Date: 2026-06-08
+
+### 맥락
+
+ADR-062로 포지션별 준비 홈은 `private/<company>/<position>/` 아래로 정리됐지만, 면접 준비 내용은 여전히 여러 파일로 흩어질 수 있었다.
+예상 질문 드릴, 면접 준비 리포트, 1차 면접 전략, 1차 면접 체크리스트, 10일 Java 준비 재료를 각각 별도 파일로 노출하면 dashboard와 사람이 읽는 흐름 모두 복잡해진다.
+
+사용자는 면접 준비 화면에서 여러 마크다운을 찾아다니기보다, 지금 당장 읽고 답변 연습할 하나의 정제된 문서를 원한다.
+답변 기록이나 피드백 로그처럼 기계가 누적해야 하는 데이터는 분리할 수 있지만, 사람이 보는 준비 자산은 한 파일로 합치는 편이 낫다.
+
+### 결정
+
+- 포지션별 면접 준비의 사람용 정본은 `private/<company-slug>/<position-slug>/interview/prep.md` 하나로 둔다.
+- `prep.md`는 다음 내용을 섹션으로 포함한다.
+  - 오늘의 면접 준비 요약
+  - 예상 질문 드릴
+  - 추천 시작 질문
+  - 1차 면접 전략
+  - 1차 면접 체크리스트
+  - 단기 Java 준비 중 현재 면접에 필요한 항목
+  - 이미 정리된 주제와 낮은 우선순위 주제
+  - 다음 액션
+- `interview/current-practice.md`, `interview/reports/YYYY-MM-DD.md`, `study/interview-prep-10-day-java-materials.md`, `data/prep/<prep_dir>/strategy.md`, `data/prep/<prep_dir>/checklist.md`는 dashboard의 사람이 보는 primary asset이 아니다.
+  기존 내용은 `prep.md`로 정제·흡수하고, 대체 확인 후 legacy mirror 또는 reference로 정리한다.
+- 답변 기록과 피드백 로그는 사람이 보는 정본이 아니라 누적 데이터이므로 계속 분리한다.
+  기본 위치는 `interview/answers/*.jsonl`, `interview/feedback/*.md`다.
+- 날짜별 snapshot은 기본 생성하지 않는다.
+  추적이 필요할 때만 `interview/history/YYYY-MM-DD.md`를 선택적으로 만든다.
+- dashboard는 면접 hub 상단에서 `prep.md`를 우선 보여주고, 예상 질문 드롭다운도 `prep.md`의 질문 섹션에서 파싱한다.
+- 공개 가능한 공부팩은 계속 `sources/fos-study/`에 만들 수 있지만, `prep.md`의 개인 답변·지원 전략·회사별 민감 맥락을 그대로 복사하지 않고 public-safe로 재작성한다.
+
+### 결과
+
+- 면접 준비 자료가 사람이 읽는 한 문서로 정리된다.
+- dashboard 카드와 markdown 링크가 줄어들어 현재 준비 흐름이 명확해진다.
+- generator와 processor는 여러 산출물을 흩뿌리는 대신 `prep.md` 갱신을 중심으로 동작한다.
+- 답변/피드백 로그는 유지되어 연습 이력과 사람용 준비 문서의 책임이 분리된다.
+
+### 적용
+
+- `private/cj-foodville/digital-channel-backend/interview/prep.md`
+- `docs/data-schema.md`
+- `docs/flow.md`
+- `docs/code-architecture.md`
+- `docs/prd.md`
+- `tasks/plan061-private-position-home-unification/` — 후속 정리에서 supersede 또는 재작성
+
+---
+
+## ADR-064 — fos-career 범용 채팅은 제거하고 목적별 요청 UI로 통일한다
+
+- Status: Accepted
+- Date: 2026-06-08
+
+### 맥락
+
+fos-career의 초기 MVP에는 career-os 파일을 컨텍스트로 읽는 범용 LLM 채팅이 포함되어 있었다.
+하지만 dashboard가 발전하면서 주요 행동은 이미 버튼과 pending request queue로 분리됐다.
+지원 우선순위 변경, 지원 준비 시작, 면접 준비 생성, 공부팩 생성, 답변 피드백은 모두 목적이 정해진 UI와 processor가 처리하는 편이 더 안전하고 추적 가능하다.
+
+범용 채팅은 사용자가 무엇이 실행되는지 예측하기 어렵고, career agent 맥락을 충분히 주입하지 않으면 단순 Q&A처럼 동작한다.
+반대로 career agent 맥락을 과하게 주입하면 private 문서와 지원 전략이 채팅 기록, audit log, screenshot에 새어 나갈 위험이 커진다.
+따라서 fos-career의 사람용 표면은 자유 채팅이 아니라 명시적 버튼, 정본 markdown, 답변 입력, 피드백, 꼬리질문 흐름으로 제한한다.
+
+### 결정
+
+- fos-career에서 범용 채팅 제품면을 제거한다.
+  - `/dashboard/chat`
+  - floating chat button/panel
+  - `/api/chat/*`
+- dashboard navigation과 login shell에서 채팅 메뉴를 노출하지 않는다.
+- dashboard에서 skill 실행은 계속 버튼 기반 request queue로 만든다.
+  fos-career는 요청을 저장하고, processor가 allowlist와 stale guard를 확인한 뒤 career-os writable checkout에서 실행한다.
+- 면접 답변 피드백은 범용 채팅이 아니라 interview evaluator 흐름으로 다룬다.
+  evaluator는 `private/<company>/<position>/interview/prep.md`, 현재 질문, 사용자 답변, 최근 답변/피드백 요약, 이미 정리된 주제, 포지션 맥락을 명시적으로 묶어 평가한다.
+- 질문 선택 UI는 긴 질문을 잘라 보이는 select가 아니라 버튼 목록과 readonly textarea로 표시한다.
+- `lib/llm/*` 같은 provider 경계는 범용 채팅이 아니라 목적별 evaluator/request processor에서 재사용할 수 있다.
+  이름과 책임은 후속 plan에서 필요하면 generic provider로 정리한다.
+- 기존 MySQL `llm_chat_sessions`, `llm_chat_messages` 테이블은 즉시 destructive migration으로 drop하지 않는다.
+  코드 경로에서 참조를 제거하고 문서상 legacy/deprecated로 표시한 뒤, 데이터 보관 여부를 별도 cleanup plan에서 결정한다.
+- audit/action log 예시는 `chat.message_sent` 대신 `dashboard.view`, `interview.answer_submitted`, `interview.feedback_generated`, `skill_request.created` 같은 목적별 action으로 갱신한다.
+- LLM은 여전히 분석, 작성, 추천 근거, 면접 답변 평가에 사용할 수 있다.
+  금지되는 것은 목적 없는 자유 채팅 UI와 chat 기반 mutation이다.
+
+### 결과
+
+- dashboard의 행동 표면이 버튼과 명시적 request로 정리된다.
+- private career-os 맥락이 범용 채팅 기록에 섞일 위험이 줄어든다.
+- 면접 피드백은 career agent 맥락을 갖춘 전용 evaluator로 발전시킬 수 있다.
+- ADR-046의 “LLM 채팅 UI” 범위는 이 ADR로 supersede된다.
+
+### 적용
+
+- `~/services/fos-career/app/dashboard/chat/`
+- `~/services/fos-career/app/dashboard/floating-chat.tsx`
+- `~/services/fos-career/app/api/chat/`
+- `~/services/fos-career/lib/llm/`
+- `~/services/fos-career/db/schema.ts`
+- `docs/prd.md`
+- `docs/flow.md`
+- `docs/code-architecture.md`
+- `docs/data-schema.md`
+
+---
+
+## ADR-065 — 면접 답변 피드백은 career context LLM evaluator로 처리한다
+
+- Status: Accepted
+- Date: 2026-06-08
+
+### 맥락
+
+ADR-064로 범용 채팅 UI/API를 제거했기 때문에 fos-career의 LLM 사용은 목적별 evaluator/request processor에 붙어야 한다.
+현재 면접 답변 제출 흐름은 답변 저장 후 `answer_feedback` request를 pending queue에 넣고, host-side processor가 2분 간격으로 처리한다.
+다만 feedback 생성은 아직 deterministic fallback 중심이라 짧은 테스트 답변도 표현상 과하게 긍정적으로 보일 수 있었다.
+
+사용자는 답변 제출 뒤 즉시 평가되는 경험을 원하고, 꼬리질문 생성 여부도 LLM이 답변 상태를 보고 판단하길 원한다.
+따라서 `answer_feedback`은 범용 채팅이 아니라 career agent 맥락을 가진 전용 LLM evaluator로 승격한다.
+
+### 결정
+
+- 답변 제출 시 `interview_answer_records` row와 `answer_feedback` request를 즉시 생성한다.
+- feedback 처리는 별도 버튼 없이 제출 직후 pending queue에 들어가고, 기존 host-side interview processor가 처리한다.
+- 너무 짧거나 의미 없는 답변은 LLM을 호출하지 않고 deterministic guard에서 즉시 insufficient feedback으로 처리한다.
+  예: 매우 짧은 문자열, 기술/경험/구조/도메인 신호가 없는 답변.
+- guard를 통과한 답변만 LLM evaluator를 호출한다.
+- evaluator context bundle은 다음 입력으로 제한한다.
+  - `private/<company>/<position>/interview/prep.md`
+  - 현재 질문
+  - 사용자 답변
+  - 최근 3-5개 답변/피드백 요약
+  - 이미 정리된 주제와 낮은 우선순위 주제
+  - 포지션/회사 맥락
+  - 평가 기준: 기술 정확성, 경험 연결, 답변 구조, CJ푸드빌 맥락 반영, 위험 표현
+- LLM 응답은 strict JSON으로 받는다.
+  기본 필드는 `feedbackBody`, `scores`, `followUpQuestion`, `shouldAskFollowUp`, `improvementTopics`, `studyPackCandidates`, `riskFlags`다.
+- 꼬리질문은 LLM이 `shouldAskFollowUp`과 `followUpQuestion`으로 판단한다.
+  후속 턴 전환은 dashboard가 해당 값을 보여주고 사용자가 이어 답하는 흐름으로 둔다.
+- LLM 실패, timeout, JSON parse 실패는 deterministic fallback으로 처리하고 request를 실패로 방치하지 않는다.
+- DB에는 답변 전문과 상세 피드백을 private 영역으로 저장한다.
+  audit log, request result, Discord, HUD에는 길이, 점수, 짧은 summary, 상태만 저장한다.
+- evaluator는 외부 사이트 접근, fos-study 발행, candidate-profile 수정, 지원서 제출을 수행하지 않는다.
+- 기존 `lib/llm/*` provider는 이 evaluator에서 재사용한다.
+  필요하면 streaming 중심 계약을 structured JSON 평가 계약으로 확장한다.
+
+### 결과
+
+- 면접 피드백의 품질과 맥락성이 올라간다.
+- 답변이 충분하지 않은 경우에는 비용을 쓰지 않고 빠르게 낮은 점수와 재답변 가이드를 제공한다.
+- 꼬리질문은 고정 생성이 아니라 답변 상태에 맞춰 생성된다.
+- 범용 채팅 없이도 career agent 맥락이 면접 연습 흐름 안에 살아난다.
+
+### 적용
+
+- `~/services/fos-career/lib/interview/gateway.ts`
+- `~/services/fos-career/lib/llm/`
+- `~/services/fos-career/scripts/process-interview-requests.ts`
+- `~/services/fos-career/app/api/interview/answers/route.ts`
+- `~/services/fos-career/db/schema.ts`
+- `docs/prd.md`
+- `docs/flow.md`
+- `docs/code-architecture.md`
+- `docs/data-schema.md`
+
+---
+
+## ADR-066 — 공개 가능 일반 면접 질문 bank는 public/question-bank에 둔다
+
+- Status: Accepted
+- Date: 2026-06-08
+
+### 맥락
+
+면접 준비는 포지션별 private 질문만으로는 범위가 좁다.
+일반적인 Java/Spring, DB, CS, 운영, System design 질문도 꾸준히 모아야 하지만, `data/`는 gitignore 대상이라 공개 가능하고 재사용 가능한 질문 bank를 보관하기에 적합하지 않다.
+
+또한 OpenClaw에서 사용자가 “일반 백엔드 질문”, “CS 질문 수집”, “질문 bank 보강”처럼 자연어로 말했을 때 안정적으로 해당 작업이 호출되려면 skill description과 routing trigger가 명확해야 한다.
+
+### 결정
+
+- 공개 가능 일반 질문 bank는 career-os 루트의 `public/question-bank/` 아래에 둔다.
+- `public/question-bank/`는 git 추적 대상이며 private 지원/면접 맥락을 포함하지 않는다.
+- 기본 하위 범위는 다음과 같다.
+  - `java-spring/`
+  - `database/`
+  - `cs/`
+  - `operations/`
+  - `system-design/`
+- 질문 bank 항목은 단순 암기 질문을 그대로 저장하지 않고 backend 실무형 질문으로 정규화한다.
+- 질문 항목은 최소한 category, difficulty, question, intent, answerSignals, source, publicSafe, positionFitHint, normalizedFrom을 가진다.
+- private 포지션 맞춤 질문은 `private/<company>/<position>/interview/prep.md`에 선별 반영한다.
+  `public/question-bank`의 일반 질문이 private 답변/회사 맥락을 포함해서는 안 된다.
+- 공개 글 형태로 발행할 때만 `sources/fos-study/`로 복사 또는 재작성한다.
+  `public/question-bank`는 공개 가능 원천이지만 자동 발행 대상은 아니다.
+- `question-bank-collector` skill을 추가한다.
+  OpenClaw와 Claude native workflow 모두에서 자연어 trigger가 잘 잡히도록 description에 다음 표현을 포함한다.
+  - “일반 backend 질문”
+  - “CS 질문 수집”
+  - “면접 질문 bank”
+  - “질문 뱅크 보강”
+  - “약점 기반 질문 재선별”
+  - “Java/Spring/DB/운영 질문 모아줘”
+- 수집기는 raw 후보를 만든 뒤 normalizer가 중복 제거와 실무형 변환을 수행한다.
+- 최근 7일 질문, 이미 답변이 정리된 주제, 포지션별 낮은 우선순위 주제는 선별 시 감점한다.
+
+### 결과
+
+- 일반 backend/CS 질문이 git 추적 가능한 공개 가능 자산으로 쌓인다.
+- private 지원 맥락과 public-safe 질문 bank의 경계가 선명해진다.
+- fos-study 발행은 검수된 질문/해설만 별도 초안으로 진행할 수 있다.
+- OpenClaw 자연어 요청에서도 question-bank 작업을 안정적으로 라우팅할 수 있다.
+
+### 적용
+
+- `public/question-bank/`
+- `.openclaw/workspace-career/skills/question-bank-collector/SKILL.md`
+- `career-os/.claude/skills/question-bank-collector/SKILL.md`
+- `docs/prd.md`
+- `docs/flow.md`
+- `docs/code-architecture.md`
+- `docs/data-schema.md`
+
+---
+
+## ADR-067 — coffeechat 자동화 tombstone도 제거하고 ADR-only history로 둔다
+
+- Status: Accepted
+- Date: 2026-06-08
+
+### 맥락
+
+ADR-048로 coffeechat 자동화는 이미 active workflow에서 폐기됐고, first-round/final-round/offer 준비는 `interview-prep-analyzer`로 이관됐다.
+그 뒤에도 `.claude/skills/interview-coffeechat-prep/`와 `scripts/interview-coffeechat-prep/`는 tombstone으로 남아 있었고, `config/mvp-target.json`과 schema에는 `coffeechat: null` compatibility field가 남아 있었다.
+
+사용자는 coffeechat이 지원 흐름과 통합할 만큼 일관된 workflow가 아니라고 판단했고, scripts와 문서의 coffeechat 관련 active 흔적을 제거하길 원했다.
+따라서 이제 tombstone 파일도 제거하고, coffeechat 폐기 결정은 ADR/task history에만 남긴다.
+
+### 결정
+
+- `.claude/skills/interview-coffeechat-prep/`를 제거한다.
+- `scripts/interview-coffeechat-prep/`를 제거한다.
+- `config/mvp-target.json`의 `primary.interview.coffeechat` field를 제거한다.
+- `scripts/interview-prep-analyzer/mvp_target_schema.ts`에서 coffeechat mode/schema compatibility를 제거한다.
+- active docs, AGENTS, TOOLS, candidate-profile에서 coffeechat을 현행 흐름처럼 언급하지 않는다.
+- `interview-prep-analyzer`는 `first_round`, `final_round`, `offer_chat`만 지원한다.
+- 과거 task 기록(`tasks/plan021-*`, `tasks/plan041-*`, `tasks/plan056-*`)은 구현 이력으로 보존한다.
+  단, active guide처럼 오해될 수 있는 최신 docs나 skill index에서는 제거한다.
+- `data/private/...prep-archive`와 오래된 `data/reports/...coffeechat` 같은 과거 산출물은 active source가 아니므로 이번 cleanup에서 삭제 대상으로 보지 않는다.
+  별도 data retention cleanup이 필요하면 후속 plan에서 다룬다.
+
+### 결과
+
+- coffeechat 자동화가 active code path와 docs에서 완전히 사라진다.
+- 면접 준비 workflow는 first-round/final-round/offer 중심으로 단순화된다.
+- history는 ADR/task에 남아 과거 의사결정을 추적할 수 있다.
+- 향후 coffeechat 요청은 별도 표준 자동화가 아니라 상황별 수동 리서치/일회성 준비로만 다룬다.
+
+### 적용
+
+- `.claude/skills/interview-coffeechat-prep/`
+- `scripts/interview-coffeechat-prep/`
+- `config/mvp-target.json`
+- `scripts/interview-prep-analyzer/mvp_target_schema.ts`
+- `docs/prd.md`
+- `docs/flow.md`
+- `docs/code-architecture.md`
+- `docs/data-schema.md`
+- `AGENTS.md`
+- `config/candidate-profile.md`

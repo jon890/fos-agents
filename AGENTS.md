@@ -80,7 +80,7 @@ bash apartment/scripts/apartment-interior-reference-digest/run_with_claude.sh "�
 
 현재 표준은 **Claude native skill 직접 호출**이다 (ai-nodes ADR-002, plan013~023). dispatcher 흐름은 plan023에서 완전 폐기 (ADR-031).
 
-native skill 진입점 7개:
+native skill 진입점 6개:
 
 ```bash
 cd career-os
@@ -89,7 +89,6 @@ claude -p "/interview-asset-writer <topic>"
 claude -p "/study-topic-recommender [context]"
 claude -p "/interview-prep-analyzer [baseline|daily|topic]"
 claude --permission-mode acceptEdits -p "/candidate-baseline-suggester"
-claude -p "/interview-coffeechat-prep"
 claude -p "/position-recommender [자연어 컨텍스트] [채용공고 file]"
 ```
 
@@ -248,7 +247,7 @@ career-os는 `tasks/plan{N}-<slug>/` 영구 plan 영역을 운영.
 ## 11. 외부 의존성
 
 - `_shared/lib/notify_discord.ts` — Discord 알림(openclaw subprocess 경유, ADR-021). 모든 워크스페이스 공용 정본.
-- `career-os/scripts/interview-coffeechat-prep/mvp_target_schema.ts` — career-os `config/mvp-target.json` zod 스키마 (ADR-029). audit 후 _shared/lib → skill 내부로 이동 (ADR-001 엄격 준수, 호출자 1개 한정).
+- `career-os/scripts/interview-prep-analyzer/mvp_target_schema.ts` — career-os `config/mvp-target.json` 면접 단계 zod 스키마. audit 후 _shared/lib → skill 내부로 이동 (ADR-001 엄격 준수, 호출자 1개 한정).
 - Bun runtime — TS 헬퍼 실행. 설치 후 ai-nodes 루트에서 `bun install` 1회 (root package.json: zod, fast-xml-parser, dotenv + @types/bun).
 - Python 3 — 워크스페이스 수집기(stock-investment `collect_*.py` 등) 실행. native skill이 `python3` Bash로 호출.
 - `agent-browser` CLI — JS-heavy 페이지(Naver Land 등) 수집. 로컬 설치 필수 (apartment ADR-001).

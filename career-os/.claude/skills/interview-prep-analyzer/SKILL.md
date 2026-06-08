@@ -19,7 +19,7 @@ interview prep 보고서는 비공개 내부 분석이지만 사용자가 바로
   공개용 study pack이나 제출용 문구가 필요하면 별도 승인 흐름으로 분리한다.
 - 근거가 부족한 항목은 `needs_evidence` raw label로 남기지 않는다.
   발견한 순간 `보강 필요 / 선택지 / 권장 행동` 구조로 바꾼다.
-- 공개 fos-study 발행, 외부 제출, coffeechat 요청, candidate-profile 수정은 사용자 승인 전에는 실행하지 않는다.
+- 공개 fos-study 발행, 외부 제출, 비정형 면담 요청, candidate-profile 수정은 사용자 승인 전에는 실행하지 않는다.
   필요한 경우 `사용자 승인 필요` 항목으로만 안내한다.
 
 ## When to use
@@ -43,7 +43,7 @@ Claude는 다음을 `Read` 도구로 직접 로드:
 
 ### 공통
 
-1. `career-os/config/mvp-target.json` — `primary.company`, `primary.team`, `primary.role`
+1. `career-os/config/mvp-target.json` — `primary.company`, `primary.team`, `primary.role`, `primary.data_root`
 2. `career-os/config/candidate-profile.md` — 11섹션 prose, 후보자 이력·약점 (필수)
 
 ### baseline 모드 추가
@@ -59,11 +59,10 @@ Claude는 다음을 `Read` 도구로 직접 로드:
 
 ### stage 모드 추가
 
-3. `career-os/config/mvp-target.json` — `primary.interview.first_round|final_round|offer_chat`
-4. `career-os/data/prep/<prep_dir>/<strategy_filename>` — 회사/단계별 준비 노트 (있으면 Read)
-5. `career-os/data/prep/<prep_dir>/<checklist_filename>` — 준비 체크리스트 (있으면 Read)
-6. `career-os/data/source/<source_dir>/manifest.json`와 사이트 `.txt` 파일 — 수집된 회사/서비스 맥락 (있으면 Read)
-7. `career-os/sources/fos-study/`의 관련 학습 문서 — 역할/약점과 직접 연결되는 범위만 선별 Read
+3. `career-os/config/mvp-target.json` — `primary.data_root`, `primary.interview.first_round|final_round|offer_chat`
+4. `career-os/<primary.data_root>/interview/prep.md` — 사람이 보는 면접 준비 단일 정본 (있으면 Read)
+5. `career-os/data/source/<source_dir>/manifest.json`와 사이트 `.txt` 파일 — 수집된 회사/서비스 맥락 (있으면 Read)
+6. `career-os/sources/fos-study/`의 관련 학습 문서 — 역할/약점과 직접 연결되는 범위만 선별 Read
 
 ## Workflow
 
@@ -115,7 +114,7 @@ bun career-os/scripts/interview-prep-analyzer/collect_interview_sites.ts --mode 
 ```
 
 4. 수집 실패가 일부면 manifest와 기존 파일로 계속한다. 전체 실패면 사이트 수집 실패를 보고서에 명시하고 candidate-profile + prep note + fos-study 근거로 진행한다.
-5. 커피챗 요청은 자동화하지 않는다. 회사, 상대/맥락, 목적이 확인되지 않았으면 추정하지 말고 확인 필요 항목으로 남긴다.
+5. 비정형 면담 요청은 표준 면접 단계로 추정하지 않는다. 회사, 상대/맥락, 목적이 확인되지 않았으면 확인 필요 항목으로 남긴다.
 
 ### 4. 분석 + 보고서 작성 (Write)
 
@@ -149,29 +148,33 @@ bun career-os/scripts/interview-prep-analyzer/collect_interview_sites.ts --mode 
 4. 답변 시 주의할 포인트
 5. 오늘 fos-study에 추가하면 좋은 문서 주제
 
-#### 4-C. stage 보고서
+#### 4-C. stage 준비 정본
 
-저장 경로: `career-os/data/reports/daily/YYYY-MM-DD/interview-prep-<stage>/report.md`
+저장 경로: `career-os/<primary.data_root>/interview/prep.md`
 
-첫 줄: `# <company> <stage-title> 면접 준비 — YYYY-MM-DD`
+첫 줄: `# <company> <stage-title> 면접 준비`
 
-7개 섹션 (모두 필수):
-1. 목표와 현재 맥락
-2. 회사·서비스에서 확인한 신호
-3. 후보자 포지셔닝
-4. 예상 질문
-5. 답변 리스크와 보완 방향
-6. 역질문
-7. 남은 확인 필요 항목
+8개 섹션 (모두 필수):
+1. 오늘의 면접 준비 요약
+2. 예상 질문 드릴
+3. 추천 시작 질문
+4. 1차 면접 전략
+5. 1차 면접 체크리스트
+6. 단기 Java 준비
+7. 이미 정리된 주제와 낮은 우선순위 주제
+8. 다음 액션
 
 #### 공통 출력 규칙
 
 - 한국어 작성
 - mvp-target.json의 `primary.company` · `primary.team` · `primary.role` 명시
+- stage 준비 정본은 `primary.data_root` 아래 `interview/prep.md`에 쓰고 여러 report, drill, strategy, checklist 파일로 중복 저장하지 않음
+- 답변 기록과 상세 피드백은 `interview/answers/`, `interview/feedback/`에 별도 보존하고 `prep.md`에 누적하지 않음
+- 공개 study pack이나 interview asset을 만들 때는 `prep.md`의 개인 답변, 지원 전략, 회사별 민감 맥락을 그대로 복사하지 않고 public-safe 주제로 재작성함
 - 후보자 실제 이력 인용 필수 (candidate-profile.md 근거, generic advice 금지)
 - DB는 약점 가능성이 높은 영역으로 다루고 학습 노트 뒷받침 여부 검증
 - Kotlin 현재 MVP 제외 — 분석 범위 언급 불필요
-- coffeechat의 형식, 대화 상대의 역할, referral 이후 절차, 평가 방식은 사용자가 명시하지 않으면 가정하지 않는다
+- 비정형 면담의 형식, 대화 상대의 역할, referral 이후 절차, 평가 방식은 사용자가 명시하지 않으면 가정하지 않는다
 - 근거가 부족한 항목은 raw `needs_evidence` 대신 `보강 필요 / 선택지 / 권장 행동`으로 쓴다
 - 메타 보고 문구 금지 ("파일이 생성되었습니다" 등) — 보고서 본문만 작성
 
@@ -187,7 +190,7 @@ bun career-os/scripts/interview-prep-analyzer/collect_interview_sites.ts --mode 
 
 ```bash
 bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
-  "[완료] interview-prep-analyzer <mode> <topic-key>: data/reports/<mode>/YYYY-MM-DD/report.md"
+  "[완료] interview-prep-analyzer <mode> <topic-key>: primary.data_root 기반 report 생성"
 ```
 
 알림 실패는 비치명적 — stderr warn만, skill 자체는 success 종료.
@@ -199,15 +202,15 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 1. 첫 줄 `# ` 시작 (`## ` 아닌)
 2. baseline: 7개 섹션 헤더 모두 존재 ("목표", "강점", "부족", "고위험", "우선순위", "면접질문", "정리주제" 포함)
 3. daily: 5개 섹션 헤더 모두 존재 ("부족", "학습목표", "면접질문", "주의", "추가하면" 포함)
-4. stage: 7개 섹션 헤더 모두 존재 ("목표", "회사", "포지셔닝", "예상 질문", "리스크", "역질문", "확인 필요" 포함)
+4. stage: 8개 섹션 헤더 모두 존재 ("오늘의 면접 준비 요약", "예상 질문 드릴", "추천 시작 질문", "1차 면접 전략", "1차 면접 체크리스트", "단기 Java 준비", "이미 정리된 주제와 낮은 우선순위 주제", "다음 액션" 포함)
 5. mvp-target.json 회사·롤 명시 여부 확인
 6. 후보자 이력 인용 1건 이상 (candidate-profile 구체 근거)
 7. 한국어 작성 확인
-8. coffeechat 전제나 확인되지 않은 참석자/평가 방식 추정이 없는지 확인
+8. 확인되지 않은 비정형 면담 전제나 참석자/평가 방식 추정이 없는지 확인
 9. 첫 10줄 안에 결론, 준비 우선순위, 또는 권장 행동이 있음
 10. 섹션 제목은 한국어 우선이며 자연스러운 한국어 문장으로 작성됨
 11. raw `needs_evidence`가 남아 있지 않고 필요한 경우 `보강 필요 / 선택지 / 권장 행동`으로 바뀌어 있음
-12. 공개 발행, 외부 제출, coffeechat 요청, candidate-profile 수정은 `사용자 승인 필요`로만 표현됨
+12. 공개 발행, 외부 제출, 비정형 면담 요청, candidate-profile 수정은 `사용자 승인 필요`로만 표현됨
 
 실패 항목이 있으면 수정 후 재작성. **최대 3회 시도**. 4회째도 실패 시 stderr에 `interview-prep 검증 실패: <항목>` + exit 1.
 
@@ -218,7 +221,7 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 | 모드 판단 불가 (자연어·인자 모두 모호) | stderr + 사용자에게 baseline/daily 확인 요청 (기본값 daily) |
 | fos-study git pull 실패 | stderr warn + 로컬 캐시로 분석 계속 |
 | topic 자동 선택 실패 (study-progress 없음 + topic-file-map 비어 있음) | freeform 모드 — Claude가 fos-study에서 적절한 파일 추론 |
-| stage 설정 없음 | 사용자에게 설정 없음 명시. 확인 없이 coffeechat 상황으로 대체하지 않음 |
+| stage 설정 없음 | 사용자에게 설정 없음 명시. 확인 없이 다른 면담 상황으로 대체하지 않음 |
 | baseline-core-files.json 없음 | stderr + exit 1 |
 | candidate-profile.md 없음 | stderr + exit 1 |
 | self-check 3회 실패 | stderr + exit 1, 실패 항목 명시 |

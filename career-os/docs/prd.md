@@ -112,7 +112,7 @@ MVP 범위:
 - `카카오페이증권 워크플랫폼 백엔드 개발자 (시니어)` — AI/workplatform track 후보.
 - `TossPlace Applied AI Engineer` — 이미 ledger에 있으므로 중복 승격 방지 검증 후보.
 
-범위 밖:
+Question bank 범위 밖:
 
 - Next.js 대시보드와 관리자 로그인은 `plan039`로 분리한다.
 
@@ -138,7 +138,7 @@ MVP 범위:
 - prior recommendation reports와 manual active-open URL notes.
 - study pack / interview asset workflow.
 
-범위 밖:
+plan060 범위 밖:
 
 - 외부 채용 사이트 제출 자동화.
 - 기존 application package generator를 새 generator로 대체하는 일.
@@ -216,7 +216,8 @@ MVP 범위:
 MVP 범위:
 
 - dashboard는 `config/mvp-target.json`의 현재 면접 target과 career-os read-only projection을 읽어 CJ푸드빌 2026-06-15 준비 hub를 표시한다.
-- hub는 기존 `data/prep/`, `data/reports/`, `sources/fos-study/` 경로의 존재 여부와 짧은 표시용 요약만 보여준다.
+- hub는 `config/mvp-target.json`의 `primary.data_root`가 가리키는 `private/<company>/<position>/interview/prep.md`를 면접 준비 단일 정본으로 보여준다.
+  여러 markdown 카드를 나열하지 않고, 예상 질문·전략·체크리스트·단기 Java 준비를 `prep.md` 섹션에서 파싱하거나 앵커로 연결한다.
 - 기존 native skill을 새 generator로 대체하지 않고 바로 연결한다.
   - `interview-prep-analyzer`
   - `interview-asset-writer`
@@ -224,11 +225,17 @@ MVP 범위:
 - 면접 대비 중 공부해야 할 주제가 생기면 dashboard에서 study pack 생성 요청까지 만들 수 있다.
 - `study-pack-writer` 요청은 이전 방식처럼 `sources/fos-study/`에 `[초안]` 제목의 공부팩을 즉시 생성하고 commit/push까지 이어진다.
   단, 공개 가능한 순수 기술 주제일 때만 허용한다.
-- dashboard는 면접 예상 질문별 답변 텍스트 입력을 받고, 답변 전문과 상세 피드백을 DB에 저장해 화면에서 바로 볼 수 있게 한다.
+- dashboard는 면접 예상 질문별 답변 텍스트 입력을 받고, 답변 제출 직후 `answer_feedback` request를 생성한다.
+  답변 전문과 상세 피드백은 DB에 저장해 화면에서 바로 볼 수 있게 한다.
 - 면접 대화 세션 UX는 `질문 생성/선택 -> 답변 입력 -> 피드백 -> 꼬리질문 -> 답변 -> 최종 요약/보완 주제/study-pack 후보` 흐름을 기본값으로 둔다.
+- 긴 면접 질문은 `<select>`로 잘려 보이지 않게 한다.
+  질문 후보는 줄바꿈되는 버튼 목록으로 선택하고, 선택된 질문 전문은 readonly textarea에 표시한다.
 - 면접 대화 세션은 기본 5턴으로 시작하고, 사용자가 원하면 자유형으로 연장할 수 있다.
 - 피드백은 점수화한다.
   기본 평가 기준은 기술 정확성, 경험 연결, 답변 구조, CJ푸드빌 맥락 반영이다.
+  너무 짧거나 의미 있는 기술·경험 신호가 없는 답변은 강점 문구를 붙이지 않고 1/5 수준의 insufficient feedback으로 처리한다.
+  정상 답변은 `prep.md` 기반 career context LLM evaluator가 구조화 JSON으로 평가하고, 꼬리질문 생성 여부와 내용을 함께 판단한다.
+  LLM timeout, 설정 오류, JSON parse 실패는 deterministic fallback으로 처리한다.
 - study pack 생성 요청은 고정 추천뿐 아니라 사용자의 자연어 요청도 받는다.
   예: "어떤 스터디팩 만들어줘" 같은 요청을 public-safe topic으로 정규화한다.
 - 사용자가 인터뷰 중 특정 주제를 정말 모르겠다고 느끼면 해당 대화 turn에서 직접 study-pack 생성 요청을 만들 수 있다.
@@ -237,14 +244,35 @@ MVP 범위:
 - processor가 request를 읽고 career-os writable checkout에서 허용된 native skill만 호출한다.
 - 처리 결과는 상태, 생성 또는 갱신된 파일 경로, 짧은 요약, 오류 요약만 저장한다.
 
+### 계획 중: 공개 가능 일반 질문 bank collector
+
+일반 backend/CS 면접 질문은 `data/`가 아니라 git 추적 가능한 `public/question-bank/`에 저장한다.
+이 영역은 공개 가능 자산이지만 자동 발행 대상은 아니며, 검수된 문서만 `sources/fos-study/`로 재작성한다.
+
+MVP 범위:
+
+- Java/Spring, DB, CS, 운영/장애, System design 질문 후보를 만든다.
+- 질문은 단순 암기형 원문을 그대로 보관하지 않고 backend 실무형 질문으로 정규화한다.
+- 각 항목은 category, difficulty, question, intent, answerSignals, source, publicSafe, positionFitHint, normalizedFrom을 가진다.
+- `question-bank-collector` skill은 “일반 backend 질문”, “CS 질문 수집”, “면접 질문 bank”, “질문 뱅크 보강”, “약점 기반 질문 재선별” 같은 자연어 요청에 반응해야 한다.
+- 포지션별 최종 질문은 `private/<company>/<position>/interview/prep.md`에 선별 반영한다.
+
+범위 밖:
+
+- 유료 강의/문제집/면접 후기 원문 복사.
+- 회사별 비공개 후기성 질문 저장.
+- private 답변/지원 맥락을 `public/question-bank/`에 복사.
+- 검수 없는 fos-study 자동 발행.
+
 범위 밖:
 
 - dashboard container에서 `claude -p`를 직접 실행하는 일.
-- request result, audit log, Discord 알림에 private 문서 본문, 면접 답변 전문, 상세 피드백, command stdout 전체를 저장하는 일.
-- 사용자가 입력한 답변 기록을 공개 산출물이나 fos-study로 옮기는 일.
+- request result, audit log, Discord 알림에 private 작업 홈의 본문, 면접 답변 전문, 상세 피드백, command stdout 전체를 저장하는 일.
+- 사용자가 입력한 답변 기록을 그대로 공개 산출물이나 fos-study로 옮기는 일.
 - 외부 제출, 공개 발행, 로그인, 업로드.
 - candidate-profile 자동 수정.
 - 구현 phase에서 docs/ADR/정책 문서를 수정하는 일.
+- 면접 준비 리포트, 예상 질문 드릴, 전략, 체크리스트, 단기 Java 준비를 dashboard primary asset으로 각각 분리 노출하는 일.
 
 ### 계획 중: resume package flow (plan055)
 
@@ -281,7 +309,8 @@ MVP 목표:
 
 ### 계획 중: fos-career 웹 대시보드 (plan039)
 
-`plan039-fos-career-dashboard`는 career-os 데이터를 브라우저에서 읽고 LLM과 채팅으로 해석할 수 있는 Next.js 관리자 대시보드를 별도 저장소(`~/services/fos-career`)에 구축한다.
+`plan039-fos-career-dashboard`는 career-os 데이터를 브라우저에서 읽고 목적별 버튼과 request queue로 실행할 수 있는 Next.js 관리자 대시보드를 별도 저장소(`~/services/fos-career`)에 구축한다.
+초기 MVP에 있던 범용 LLM 채팅 UI는 ADR-064로 제거한다.
 
 핵심 분리 원칙:
 
@@ -294,8 +323,9 @@ MVP 범위:
 
 - 관리자 ID/password 로그인
 - frontdoor queue, ledger, position recommendation 읽기 전용 대시보드
-- LLM 채팅 UI (career-os 파일을 컨텍스트로 주입)
-- MySQL 소유 데이터: admin 계정/세션, LLM 채팅 이력, audit log, action history
+- 버튼 기반 pending request UI
+- 면접 hub, `interview/prep.md` markdown 보기, 질문 선택, 답변 입력, 피드백 확인
+- MySQL 소유 데이터: admin 계정/세션, pending request, 면접 답변/피드백, audit log, action history
 - Docker 이미지, 홈서버 역방향 프록시(기존 npm/Node 웹서버) 뒤에 배포
 - priority detail view: frontdoor queue와 ledger record를 같은 read-only 화면에서 열고, 추천 snapshot, fit/gap, next action, evidence, preparation action, priority history를 한 곳에서 확인한다.
 
@@ -306,8 +336,9 @@ MVP 범위 밖:
 - 외부 채용 사이트 자동 제출
 - 공개 fos-study 발행
 - candidate-profile.md 수정
+- 범용 채팅 UI와 chat 기반 mutation
 
-(ADR-046 참조)
+(ADR-046, ADR-064 참조)
 
 ## 산출물 경로 정책
 

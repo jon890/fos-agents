@@ -1,0 +1,184 @@
+{
+  "name": "plan063-generic-chat-removal",
+  "description": "ADR-064 결정에 따라 fos-career의 범용 채팅 UI/API를 제거한다. 내부 skill 호출은 버튼과 pending request로 충분하므로 chat route, floating chat, chat API, layout/nav/login mention을 정리한다. LLM provider는 후속 interview evaluator에서 재사용 가능성이 있으므로 즉시 삭제하지 않고 책임 정리 대상으로 남긴다. llm_chat_sessions/messages DB table은 즉시 destructive migration으로 drop하지 않고 legacy/deprecated로 문서화한 뒤 코드 참조 제거를 우선한다.",
+  "created_at": "2026-06-08T00:00:00Z",
+  "updated_at": "2026-06-08T07:15:49Z",
+  "status": "completed",
+  "current_phase": 3,
+  "total_phases": 3,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/AGENTS.md",
+    "career-os/docs/prd.md",
+    "career-os/docs/data-schema.md",
+    "career-os/docs/flow.md",
+    "career-os/docs/code-architecture.md",
+    "career-os/docs/adr.md",
+    "career-os/tasks/plan060-interview-skill-request-gateway/index.json",
+    "career-os/tasks/plan062-interview-prep-single-file/index.json"
+  ],
+  "target_repositories": [
+    {
+      "name": "fos-career",
+      "path": "~/services/fos-career",
+      "role": "implementation target"
+    },
+    {
+      "name": "career-os",
+      "path": ".",
+      "role": "task contract and private source of truth"
+    }
+  ],
+  "private_targets": [
+    {
+      "key": "cj-foodville-digital-channel-backend",
+      "path": "private/cj-foodville/digital-channel-backend",
+      "canonical_prep": "private/cj-foodville/digital-channel-backend/interview/prep.md"
+    }
+  ],
+  "depends_on": [
+    "ADR-064 generic chat removal",
+    "plan060-interview-skill-request-gateway",
+    "plan062-interview-prep-single-file"
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "remove-generic-chat",
+      "decision": "fos-career의 범용 채팅 기능은 제거한다."
+    },
+    {
+      "id": "D2",
+      "title": "button-request-skill-flow",
+      "decision": "내부 skill 호출은 버튼과 pending request queue 흐름으로 충분하며 chat command surface를 유지하지 않는다."
+    },
+    {
+      "id": "D3",
+      "title": "private-target",
+      "decision": "CJ푸드빌 디지털채널 Backend 면접 준비의 canonical private target은 private/cj-foodville/digital-channel-backend이고, 면접 준비 정본은 private/cj-foodville/digital-channel-backend/interview/prep.md다."
+    },
+    {
+      "id": "D4",
+      "title": "llm-provider-retention",
+      "decision": "lib/llm/* provider 코드는 후속 interview evaluator에서 재사용 가능성이 있으므로 chat 제거와 동시에 삭제하지 않는다."
+    },
+    {
+      "id": "D5",
+      "title": "legacy-chat-tables",
+      "decision": "llm_chat_sessions와 llm_chat_messages는 즉시 drop migration을 만들지 않고 legacy/deprecated로 문서화하며, 코드 참조 제거를 먼저 완료한다."
+    },
+    {
+      "id": "D6",
+      "title": "docs-frozen-for-implementation",
+      "decision": "docs-first 반영은 완료됐으므로 implementation phase는 docs/ADR/정책 문서를 임의 수정하지 않는다. 부족하면 PHASE_BLOCKED로 보고한다."
+    },
+    {
+      "id": "D7",
+      "title": "privacy-boundary",
+      "decision": "Discord, HUD, audit log, request result에는 private 본문, 면접 답변 전문, 상세 피드백 전문을 노출하지 않는다."
+    }
+  ],
+  "open_decisions": [],
+  "recommended_defaults": [
+    "제거 대상은 ~/services/fos-career/app/dashboard/chat/, app/dashboard/floating-chat.tsx, app/api/chat/, layout import/render, login/nav mention으로 시작한다.",
+    "LLM provider를 유지하되 chat UI/API만 참조하던 타입이나 helper가 있으면 고아 코드 여부를 확인하고 책임명을 정리한다.",
+    "DB table drop은 만들지 않고 README, schema 주석, 코드 검색 결과에서 legacy/deprecated 상태를 명확히 한다.",
+    "implementation running 시작 시 HUD를 running으로 갱신한다.",
+    "task 파일 검토 완료 시 HUD를 task files completed로 갱신한다.",
+    "implementation 완료 시 HUD를 completed로 갱신한다.",
+    "implementation 실패 시 HUD를 failed로 갱신한다.",
+    "implementation 보류 시 HUD를 blocked로 갱신한다.",
+    "기존 dirty/unrelated 변경은 되돌리지 않는다. 특히 apartment repo 변경은 무시한다.",
+    "PR은 모든 phase 완료 뒤 plan 단위로 만든다."
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "fos-career chat UI/API 제거 및 라우팅 정리",
+      "file": "phase-01.md",
+      "status": "completed",
+      "completed_at": "2026-06-08T07:15:49Z",
+      "result": "app/dashboard/chat, app/dashboard/floating-chat.tsx, app/api/chat route를 삭제하고 dashboard layout, login nav, proxy matcher의 chat 진입점을 제거했다.",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "model": "sonnet",
+      "timeout": 1800
+    },
+    {
+      "number": 2,
+      "title": "README/deployment/docs와 schema/code 참조 정리",
+      "file": "phase-02.md",
+      "status": "completed",
+      "completed_at": "2026-06-08T07:15:49Z",
+      "result": "README와 deployment의 generic chat 현행 기능 설명을 제거하고 LLM provider를 evaluator/request processor용 provider 계층으로 정리했다. db/schema.ts의 chat table export는 legacy compatibility 주석만 남겼고 runtime import는 제거됐다.",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "model": "sonnet",
+      "timeout": 1500
+    },
+    {
+      "number": 3,
+      "title": "build/docker health/static grep 검증 및 task 완료 정리",
+      "file": "phase-03.md",
+      "status": "completed",
+      "completed_at": "2026-06-08T07:15:49Z",
+      "result": "git diff --check, npx tsc --noEmit, npm run build, docker compose up -d --build fos-career, docker compose ps, container wget health, static grep 검증을 통과했다. HUD complete event도 성공했다.",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "model": "sonnet",
+      "timeout": 1200
+    }
+  ],
+  "verification": {
+    "completed_at": "2026-06-08T07:15:49Z",
+    "commands": [
+      {
+        "command": "git diff --check",
+        "status": "passed"
+      },
+      {
+        "command": "npx tsc --noEmit",
+        "status": "passed"
+      },
+      {
+        "command": "npm run build",
+        "status": "passed"
+      },
+      {
+        "command": "docker compose up -d --build fos-career",
+        "status": "passed"
+      },
+      {
+        "command": "docker compose ps",
+        "status": "passed",
+        "summary": "fos-career-app Up and healthy on 127.0.0.1:16000->3000"
+      },
+      {
+        "command": "docker compose exec -T fos-career wget --quiet --tries=1 --spider http://localhost:3000 && echo healthy",
+        "status": "passed"
+      },
+      {
+        "command": "rg -n \"FloatingChat|/dashboard/chat|app/api/chat|/api/chat|generic chat|범용 채팅\" app lib db/schema.ts README.md docs scripts package.json proxy.ts --glob '!db/data/**'",
+        "status": "passed",
+        "summary": "runtime route/API/floating 참조 없음. README 제거 설명과 db/schema.ts legacy 주석만 남음."
+      },
+      {
+        "command": "rg -n \"llmChatSessions|llmChatMessages|llm_chat_sessions|llm_chat_messages\" app lib db/schema.ts README.md docs scripts package.json proxy.ts --glob '!db/data/**'",
+        "status": "passed",
+        "summary": "db/schema.ts legacy export와 내부 FK 참조만 남음."
+      }
+    ],
+    "hud": {
+      "command": "bun scripts/task-hud/update_event.ts --session discord-career-main --task-label plan063-generic-chat-removal --event complete --status completed --target channel:1492521172099666021",
+      "status": "passed"
+    },
+    "legacy_references": [
+      {
+        "path": "db/schema.ts",
+        "reason": "llm_chat_sessions와 llm_chat_messages table 정의는 destructive migration 금지 및 migration compatibility 때문에 유지한다."
+      },
+      {
+        "path": "README.md",
+        "reason": "generic chat이 현행 기능에서 제거됐고 LLM provider는 유지된다는 제거 상태 설명만 남겼다."
+      }
+    ]
+  }
+}

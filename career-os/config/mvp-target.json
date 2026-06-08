@@ -3,10 +3,12 @@
     "company": "CJ Foodville",
     "team": "Digital Channel Backend",
     "role": "Java Backend",
+    "company_slug": "cj-foodville",
+    "position_slug": "digital-channel-backend",
+    "data_root": "private/cj-foodville/digital-channel-backend",
     "interview_date": "2026-06-15",
     "notes": "현재 집중 중인 타깃. 1차 면접일은 2026-06-15로 확정.",
     "interview": {
-      "coffeechat": null,
       "first_round": {
         "sites": [
           {"key": "vips", "url": "https://www.ivips.co.kr/", "label": "VIPS"},
@@ -15,9 +17,7 @@
         ],
         "source_dir": "cj-foodville-first-round-sites",
         "report_slug": "cj-foodville-first-round",
-        "prep_dir": "cj-foodville-first-round",
-        "strategy_filename": "strategy.md",
-        "checklist_filename": "checklist.md"
+        "prep_dir": "cj-foodville-first-round"
       },
       "final_round": null,
       "offer_chat": null

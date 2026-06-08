@@ -1,0 +1,95 @@
+{
+  "name": "plan061-private-position-home-unification",
+  "description": "ADR-062에 따라 CJ푸드빌 포지션 준비 홈을 config/mvp-target.json primary.data_root 하나로 통일한다. career-os runtime caller와 skill prompt, fos-career dashboard/processor가 legacy interview-drill/runtime/report/data 경로를 정본으로 읽지 않게 하고, 대체 완료된 legacy mirror를 정리한다.",
+  "created_at": "2026-06-08T00:00:00Z",
+  "updated_at": "2026-06-08T05:24:00Z",
+  "status": "blocked",
+  "current_phase": 3,
+  "total_phases": 3,
+  "error_message": null,
+  "blocked_reason": "ADR-063에서 면접 준비 사람용 정본을 interview/prep.md 단일 파일로 바꾸기로 결정했다. plan061의 경로 단일화 구현 일부는 재사용 가능하지만, current-practice/reports/study 분리 구조를 전제로 한 phase 계약은 plan062에서 재작성해야 한다.",
+  "related_docs": [
+    "career-os/docs/adr.md",
+    "career-os/docs/data-schema.md",
+    "career-os/docs/flow.md",
+    "career-os/docs/code-architecture.md",
+    "career-os/docs/prd.md",
+    "career-os/tasks/plan056-data-boundary-and-legacy-cleanup/index.json",
+    "career-os/tasks/plan060-interview-skill-request-gateway/index.json"
+  ],
+  "depends_on": [
+    "plan060-interview-skill-request-gateway"
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "canonical-position-home",
+      "decision": "회사·포지션별 active 준비 홈은 career-os 루트의 private/<company-slug>/<position-slug>/이고, 현재 정본은 private/cj-foodville/digital-channel-backend/다."
+    },
+    {
+      "id": "D2",
+      "title": "data-root-single-source",
+      "decision": "config/mvp-target.json primary.data_root가 dashboard, processor, 새 자동화의 단일 출처다."
+    },
+    {
+      "id": "D3",
+      "title": "no-legacy-fallback",
+      "decision": "새 dashboard, processor, automation은 legacy fallback을 추가하지 않고 primary.data_root만 따른다."
+    },
+    {
+      "id": "D4",
+      "title": "legacy-runtime-cleanup",
+      "decision": "새 정본으로 대체 확인된 legacy runtime/report/mirror 파일은 archive 없이 제거할 수 있다."
+    },
+    {
+      "id": "D5",
+      "title": "public-safe-study",
+      "decision": "공개 fos-study 공부팩은 계속 만들 수 있지만 private 답변, 지원전략, 회사별 민감 맥락을 그대로 복사하지 않고 public-safe로 재작성한다."
+    },
+    {
+      "id": "D6",
+      "title": "implementation-doc-freeze",
+      "decision": "구현 phase는 docs/ADR/정책 문서를 수정하지 않는다. 구현 중 문서 변경이 필요하면 PHASE_BLOCKED로 보고한다."
+    }
+  ],
+  "open_decisions": [],
+  "recommended_defaults": [
+    "career-os 구현은 config/mvp-target.json을 parseMvpTarget() 또는 동등한 검증 경로로 읽고 primary.data_root를 absolute path로 resolve한다.",
+    "legacy 문자열은 테스트 fixture나 과거 task/history 문맥에 남을 수 있으나 runtime source로 사용되면 제거한다.",
+    "fos-career는 /home/bifos/services/fos-career 별도 repo이며 이 plan의 구현 대상에 포함한다.",
+    "fos-career dashboard container의 career-os mount는 read-only를 유지한다.",
+    "processor만 writable career-os checkout에서 허용된 작업을 수행한다.",
+    "private 문서 본문, 면접 답변 전문, 상세 피드백, command stdout 전체는 request result/audit log/Discord에 복사하지 않는다.",
+    "request result visibility 개선은 다음 plan에서 별도로 다룬다. plan061 구현 phase는 결과 가시성 UI/DB schema를 확장하지 않는다.",
+    "PR은 모든 phase 완료 뒤 plan 단위로 만든다."
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "career-os legacy runtime source 제거",
+      "file": "phase-01.md",
+      "status": "completed",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "model": "sonnet",
+      "timeout": 1800
+    },
+    {
+      "number": 2,
+      "title": "fos-career data_root 통일",
+      "file": "phase-02.md",
+      "status": "completed",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "model": "sonnet",
+      "timeout": 1800
+    },
+    {
+      "number": 3,
+      "title": "통합 검증과 cleanup",
+      "file": "phase-03.md",
+      "status": "blocked",
+      "allowedTools": ["Read", "Edit", "Bash", "Grep", "Glob"],
+      "model": "haiku",
+      "timeout": 1200
+    }
+  ]
+}

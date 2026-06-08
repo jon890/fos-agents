@@ -1,0 +1,247 @@
+{
+  "name": "plan066-coffeechat-active-removal",
+  "description": "ADR-067 결정에 따라 coffeechat 자동화 tombstone과 active reference를 제거한다. 과거 ADR/task history와 오래된 data archive/report output은 보존하고, 현재 사용 진입점, active docs, config/schema, skill/script 자산에서 coffeechat을 제거한다.",
+  "created_at": "2026-06-08T00:00:00Z",
+  "updated_at": "2026-06-08T00:00:00Z",
+  "status": "completed",
+  "current_phase": 4,
+  "total_phases": 4,
+  "execution_mode": "sequential",
+  "parallel_execution": false,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "docs/adr.md",
+    "docs/code-architecture.md",
+    "docs/data-schema.md",
+    "docs/flow.md",
+    "config/candidate-profile.md",
+    "AGENTS.md",
+    "TOOLS.md",
+    "../AGENTS.md"
+  ],
+  "target_repositories": [
+    {
+      "name": "career-os",
+      "path": ".",
+      "role": "implementation target and task contract"
+    },
+    {
+      "name": "fos-career",
+      "path": "~/services/fos-career",
+      "role": "validation-only target"
+    }
+  ],
+  "depends_on": [
+    "ADR-067 coffeechat tombstone removal",
+    "plan041-interview-coffeechat-deprecation",
+    "plan062-interview-prep-single-file"
+  ],
+  "history_preservation": [
+    "tasks/plan021-*",
+    "tasks/plan041-*",
+    "tasks/plan056-*",
+    "docs/adr.md의 과거 ADR 본문",
+    "오래된 data archive/report output"
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "remove-active-coffeechat",
+      "decision": "coffeechat 자동화는 active skill, script, config, schema, docs, guide에서 제거한다."
+    },
+    {
+      "id": "D2",
+      "title": "adr-only-history",
+      "decision": "coffeechat 폐기 이력은 ADR-067과 과거 task/ADR history에만 남긴다."
+    },
+    {
+      "id": "D3",
+      "title": "preserve-history-and-archives",
+      "decision": "과거 task 기록, 과거 ADR 본문, 오래된 data archive/report output은 이번 plan에서 삭제하지 않는다."
+    },
+    {
+      "id": "D4",
+      "title": "interview-modes",
+      "decision": "interview-prep-analyzer는 first_round, final_round, offer_chat만 지원한다."
+    },
+    {
+      "id": "D5",
+      "title": "fos-career-validation-only",
+      "decision": "fos-career는 coffeechat reference가 없는지 검증만 수행하고, 이번 plan의 구현 변경 대상으로 보지 않는다."
+    },
+    {
+      "id": "D6",
+      "title": "sequential-phases",
+      "decision": "같은 plan 안의 phase는 current_phase 순서대로 실행하며 병렬 실행하지 않는다."
+    },
+    {
+      "id": "D7",
+      "title": "dirty-state-boundary",
+      "decision": "기존 dirty/unrelated 변경은 되돌리거나 stage하지 않는다. apartment 쪽 변경은 무시한다."
+    }
+  ],
+  "open_decisions": [],
+  "recommended_defaults": [
+    "task files completed 시 HUD를 task files completed로 갱신한다.",
+    "implementation running 시작 시 HUD를 running으로 갱신한다.",
+    "implementation completed 시 HUD를 completed로 갱신한다.",
+    "implementation failed 시 HUD를 failed로 갱신한다.",
+    "implementation blocked 시 HUD를 blocked로 갱신한다.",
+    "phase 실행 전 career-os와 fos-career의 dirty state를 확인하고 unrelated 변경은 건드리지 않는다.",
+    "history-only reference는 삭제하지 않고 검증 결과에서 근거를 적는다.",
+    "active docs cleanup은 현재 사용 진입점과 구조 설명에서 coffeechat을 제거하는 데 한정한다.",
+    "data retention은 별도 plan으로 남기고 이번 plan에서 오래된 archive/report output을 삭제하지 않는다.",
+    "PR은 모든 phase 완료 뒤 plan 단위로 만든다."
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "active coffeechat inventory와 보존 경계 확정",
+      "file": "phase-01.md",
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "haiku",
+      "timeout": 900
+    },
+    {
+      "number": 2,
+      "title": "active docs와 guide coffeechat cleanup",
+      "file": "phase-02.md",
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 1500
+    },
+    {
+      "number": 3,
+      "title": "active code와 config coffeechat cleanup",
+      "file": "phase-03.md",
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 1500
+    },
+    {
+      "number": 4,
+      "title": "policy grep, schema smoke, fos-career 부재 검증",
+      "file": "phase-04.md",
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "haiku",
+      "timeout": 1200
+    }
+  ],
+  "verification": {
+    "status": "completed",
+    "required_commands": [
+      "git status --short",
+      "rg -n \"coffeechat|coffee chat|interview-coffeechat-prep|primary\\.interview\\.coffeechat\" AGENTS.md TOOLS.md docs config scripts .claude/skills --glob '!docs/adr.md'",
+      "rg -n \"coffeechat|coffee chat|interview-coffeechat-prep|primary\\.interview\\.coffeechat\" tasks/plan021-* tasks/plan041-* tasks/plan056-* docs/adr.md",
+      "python3 -m json.tool config/mvp-target.json >/tmp/plan066-mvp-target.json",
+      "bun scripts/interview-prep-analyzer/mvp_target_schema.ts config/mvp-target.json",
+      "rg -n \"coffeechat|coffee chat|interview-coffeechat-prep\" ~/services/fos-career --glob '!node_modules/**' --glob '!.next/**' --glob '!db/data/**'"
+    ],
+    "hud": {
+      "task_files_completed": "bun ~/.openclaw/workspace-career/scripts/task-hud/update_event.ts --session discord-career-main --task-label plan066-coffeechat-active-removal --event task_files_completed --status completed --target channel:1492521172099666021",
+      "implementation_running": "bun ~/.openclaw/workspace-career/scripts/task-hud/update_event.ts --session discord-career-main --task-label plan066-coffeechat-active-removal --event running --status running --target channel:1492521172099666021",
+      "implementation_completed": "bun ~/.openclaw/workspace-career/scripts/task-hud/update_event.ts --session discord-career-main --task-label plan066-coffeechat-active-removal --event complete --status completed --target channel:1492521172099666021",
+      "implementation_failed": "bun ~/.openclaw/workspace-career/scripts/task-hud/update_event.ts --session discord-career-main --task-label plan066-coffeechat-active-removal --event failed --status failed --target channel:1492521172099666021",
+      "implementation_blocked": "bun ~/.openclaw/workspace-career/scripts/task-hud/update_event.ts --session discord-career-main --task-label plan066-coffeechat-active-removal --event blocked --status blocked --target channel:1492521172099666021"
+    },
+    "results": [
+      {
+        "command": "bun ~/.openclaw/workspace-career/scripts/task-hud/update_event.ts --session discord-career-main --task-label plan066-coffeechat-active-removal --event running --status running --target channel:1492521172099666021",
+        "status": "failed",
+        "summary": "HUD wrapper가 running 이벤트를 지원하지 않아 unsupported event: running을 반환했다."
+      },
+      {
+        "command": "bun ~/.openclaw/workspace-career/scripts/task-hud/update_event.ts --session discord-career-main --task-label plan066-coffeechat-active-removal --event start --status running --target channel:1492521172099666021",
+        "status": "passed",
+        "summary": "지원 이벤트 start로 implementation running 상태를 반영했다."
+      },
+      {
+        "command": "test ! -e .claude/skills/interview-coffeechat-prep && test ! -e scripts/interview-coffeechat-prep",
+        "status": "passed",
+        "summary": "coffeechat tombstone skill/script 디렉터리가 제거됐다."
+      },
+      {
+        "command": "python3 -m json.tool config/mvp-target.json >/tmp/plan066-mvp-target.json",
+        "status": "passed",
+        "summary": "config/mvp-target.json JSON 검증 통과."
+      },
+      {
+        "command": "python3 interview key check",
+        "status": "passed",
+        "summary": "primary.interview key는 final_round, first_round, offer_chat뿐이고 coffeechat은 없다."
+      },
+      {
+        "command": "rg -n \"coffeechat|coffee chat|interview-coffeechat-prep|primary\\.interview\\.coffeechat\" AGENTS.md TOOLS.md ../AGENTS.md docs config scripts .claude/skills --glob '!docs/adr.md' --glob '!tasks/**' --glob '!data/**' --glob '!private/**'",
+        "status": "passed",
+        "summary": "active 영역 coffeechat reference 없음. rg exit 1은 결과 없음으로 기대값."
+      },
+      {
+        "command": "rg -n \"coffeechat|coffee chat|interview-coffeechat-prep|primary\\.interview\\.coffeechat\" docs/adr.md tasks/plan021-* tasks/plan041-* tasks/plan056-*",
+        "status": "passed",
+        "summary": "docs/adr.md와 과거 task history에 coffeechat 이력이 남아 있음을 확인했다."
+      },
+      {
+        "command": "bun scripts/interview-prep-analyzer/mvp_target_schema.ts config/mvp-target.json",
+        "status": "passed",
+        "summary": "schema smoke 통과."
+      },
+      {
+        "command": "rg -n \"coffeechat|coffee chat|interview-coffeechat-prep|primary\\.interview\\.coffeechat\" ~/services/fos-career --glob '!node_modules/**' --glob '!.next/**' --glob '!db/data/**'",
+        "status": "passed",
+        "summary": "fos-career coffeechat reference 없음. rg exit 1은 결과 없음으로 기대값."
+      },
+      {
+        "command": "git diff --check",
+        "status": "passed",
+        "summary": "whitespace error 없음."
+      },
+      {
+        "command": "bun ~/.openclaw/workspace-career/scripts/task-hud/update_event.ts --session discord-career-main --task-label plan066-coffeechat-active-removal --event complete --status completed --target channel:1492521172099666021",
+        "status": "passed",
+        "summary": "HUD completed 반영 완료."
+      }
+    ],
+    "reference_classification": {
+      "active": "none",
+      "history_only": [
+        "docs/adr.md",
+        "tasks/plan021-*",
+        "tasks/plan041-*",
+        "tasks/plan056-*"
+      ],
+      "preserved": [
+        "오래된 data archive/report output",
+        "private archive",
+        "과거 ADR 본문"
+      ]
+    }
+  }
+}

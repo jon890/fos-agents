@@ -12,12 +12,9 @@ export const InterviewModeSchema = z.object({
   source_dir: z.string(),
   report_slug: z.string(),
   prep_dir: z.string(),
-  strategy_filename: z.string().default('strategy.md'),
-  checklist_filename: z.string().default('checklist.md'),
 });
 
 export const InterviewSchema = z.object({
-  coffeechat: InterviewModeSchema.nullable().optional(),
   first_round: InterviewModeSchema.nullable(),
   final_round: InterviewModeSchema.nullable(),
   offer_chat: InterviewModeSchema.nullable(),
@@ -27,6 +24,9 @@ export const MvpTargetPrimarySchema = z.object({
   company: z.string(),
   team: z.string(),
   role: z.string(),
+  company_slug: z.string(),
+  position_slug: z.string(),
+  data_root: z.string(),
   interview_date: z.string(),
   notes: z.string().optional(),
   interview: InterviewSchema.optional(),
