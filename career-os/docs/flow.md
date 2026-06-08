@@ -88,6 +88,28 @@ source 수집 또는 agent 실행
 - `private/`는 포지션별 작업 홈이다.
   그대로 공개 경로로 복사하지 않고, 공개 가능한 기술 자료로 재작성한 결과만 `sources/fos-study/`에 둔다.
 
+### config diet 흐름 (ADR-069)
+
+config는 실행 정책과 사람이 고른 예외를 담고, 실제 자산 목록은 파일 트리에서 파생한다.
+
+```text
+skill 또는 추천기 실행
+  -> Read: config/mvp-target.json, candidate-profile.md, baseline/study-progress/sources 등 필요한 정책 파일
+  -> Derive: sources/fos-study/ 파일 트리에서 학습 문서 inventory 생성
+  -> Derive: public/question-bank/ validator 결과에서 공개 질문 inventory 생성
+  -> Apply: config override / pin / exclusion / seed가 있으면 가중치만 조정
+  -> Write: report/runtime/private/public 중 책임 위치에 산출물 저장
+```
+
+금지하는 흐름:
+
+- fos-study에 있는 모든 문서 목록을 config JSON에 다시 복제한다.
+- public question bank의 전체 질문 목록을 별도 config topic으로 다시 관리한다.
+- 현재 타깃을 `mvp-target.json`과 다른 config에 반복해서 저장한다.
+- 오래된 topic-file map을 실제 파일 존재 여부보다 우선한다.
+
+plan068은 이 원칙을 기준으로 reader inventory를 만든 뒤, 죽은 config reader 제거와 fallback migration을 순서대로 수행한다.
+
 ### `/interview-prep-analyzer` (native skill — plan017, baseline + daily 두 모드 자연어 분기)
 
 native skill 패턴: `claude -p "/interview-prep-analyzer [args]"` → SKILL.md 자동 로드 → Claude가 도구로 직접 처리.
@@ -126,7 +148,7 @@ native skill 패턴: `claude -p "/interview-prep-analyzer [args]"` → SKILL.md 
 - `fos-study git pull --rebase --autostash` (사전)
 - Discord 알림 [완료] + cost
 
-옛 외부 subprocess 흐름 (dispatcher → run_baseline/daily/smoke.sh → 6 Python script → claude --print → extract → 갱신)은 plan017에서 폐기됨. smoke 모드 자체도 폐기 — Claude 호출 sanity는 다른 skill 사용 중에 자연 확인.
+옛 외부 subprocess 흐름 (dispatcher → run_baseline/daily/smoke.sh → 6 Python script → claude --print → extract → 갱신)은 plan017에서 폐기됨. smoke 모드 자체도 폐기 — Claude 호출 기본 동작 확인은 다른 skill 사용 중에 자연 확인.
 
 상세 동작: `career-os/.claude/skills/interview-prep-analyzer/SKILL.md` Workflow 섹션 참조.
 

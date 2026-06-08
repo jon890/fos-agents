@@ -53,15 +53,15 @@ career-os/
 │       └── phase-NN.md                   각 phase의 자기완결 프롬프트
 │   ↑ skills/planning이 생성, skills/plan-and-build가 실행. 완료된 plan도 history 보존 위해 삭제 X.
 │
-├── config/                                ← 사람이 큐레이션한 입력 (ADR-016 통합 후)
+├── config/                                ← 사람이 큐레이션한 정책·타깃·baseline·예외 override (ADR-069)
 │   ├── mvp-target.json                현재 active 타깃 단일 출처
 │   ├── candidate-profile.md           이력 (prose, 의도적으로 JSON 아님)
-│   ├── study-pack-topics.json         study-pack namespace (plan017 분리 — study-pack-writer + study-topic-recommender Read)
-│   ├── study-pack-candidates.json     study-pack 후보 reservoir (plan017 분리 — study-topic-recommender Read)
-│   ├── question-bank-topics.json      question-bank + master namespace (plan017 분리 — interview-asset-writer Read)
+│   ├── study-pack-topics.json         legacy 대량 topic DB. plan068에서 override/seed로 축소 예정
+│   ├── study-pack-candidates.json     legacy 후보 reservoir. plan068에서 축소 예정
+│   ├── question-bank-topics.json      interview-asset topic override 후보. public/question-bank 정본 아님
 │   ├── sources.json                   3 source configs 통합 (plan002)
 │   ├── baseline-core-files.json       baseline 분석 대상 파일 목록 (txt → JSON, plan002)
-│   ├── topic-file-map.json            daily용 토픽 → 파일
+│   ├── topic-file-map.json            legacy daily용 토픽 → 파일. fos-study inventory 기반으로 대체 예정
 │   ├── live-coding-seed-pool.json
 │   ├── live-coding-seed-candidates.json
 │   └── .env                           비밀 (GITHUB_TOKEN, DISCORD_WEBHOOK_URL 등)
@@ -158,6 +158,14 @@ career-os/
         ├── interview/, database/, java/, kafka/, architecture/, ...
         └── (study-pack / interview-asset 산출물이 여기로 push됨)
 ```
+
+config 설계 원칙:
+
+- config는 전체 자산 목록을 담는 DB가 아니다.
+- 학습 문서 목록은 `sources/fos-study/`에서 파생한다.
+- 공개 질문 목록은 `public/question-bank/`에서 파생한다.
+- config에 남길 것은 현재 타깃, 후보자 baseline, 외부 source registry, 학습 진행 상태, 사람이 고른 pin/override/제외 조건이다.
+- `study-pack-topics.json`, `study-pack-candidates.json`, `topic-file-map.json`처럼 자산 목록을 복제하는 파일은 plan068에서 reader inventory와 fallback을 확인한 뒤 축소한다.
 
 ## 외부 의존성 (`_shared/`)
 

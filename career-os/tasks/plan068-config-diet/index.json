@@ -1,0 +1,204 @@
+{
+  "name": "plan068-config-diet",
+  "description": "ADR-069 결정에 따라 career-os config를 정책, 현재 타깃, 후보자 baseline, 사람이 고른 예외 override 중심으로 줄인다. 학습 문서 inventory는 sources/fos-study/에서 파생하고, 공개 질문 inventory는 public/question-bank/에서 파생한다. plan068은 바로 파괴적 삭제하지 않고 reader inventory, fallback, 검증 명령을 먼저 고정한 뒤 phase 단위로 대량 topic/reservoir JSON을 축소, 이관, 삭제한다.",
+  "created_at": "2026-06-08T00:00:00+09:00",
+  "updated_at": "2026-06-08T00:00:00+09:00",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 5,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "docs/adr.md",
+    "docs/data-schema.md",
+    "docs/flow.md",
+    "docs/code-architecture.md",
+    "AGENTS.md"
+  ],
+  "target_repositories": [
+    {
+      "name": "career-os",
+      "path": ".",
+      "role": "config reader inventory, derived inventory helper, skill reader migration, config 축소, 검증"
+    }
+  ],
+  "depends_on": [
+    "ADR-069 config는 정책·타깃·예외만 남기고 자산 목록은 파생한다",
+    "docs/data-schema.md config 책임 원칙",
+    "docs/flow.md config diet 흐름",
+    "docs/code-architecture.md config 설계 원칙",
+    "docs-first updates already reflected in docs/adr.md, docs/data-schema.md, docs/flow.md, docs/code-architecture.md"
+  ],
+  "execution_policy": {
+    "phase_order": "current_phase 순서대로 Phase 01부터 Phase 05까지 실행한다.",
+    "parallelism": "같은 plan 안의 phase는 병렬 실행하지 않는다.",
+    "implementation_docs_freeze": "implementation phase에서는 career-os docs/ADR/정책 문서를 수정하지 않는다. 계약이 부족하면 PHASE_BLOCKED로 멈춘다. Phase 05의 docs 검토도 task 실행 결과와 후속 후보 정리에 한정한다.",
+    "task_scope": "task materialization 단계에서는 tasks/plan068-config-diet/** 파일만 생성 또는 갱신한다.",
+    "pr_unit": "PR은 모든 phase 완료 뒤 plan 단위로 만든다. task 파일 생성 작업에서는 commit/push하지 않는다."
+  },
+  "hud_events": [
+    {
+      "when": "task files materializing",
+      "status": "task files running",
+      "command": "session_status와 subagents를 먼저 확인한 뒤 bun /home/bifos/.openclaw/workspace-career/scripts/task-hud/update_from_session_status.ts --session discord-career-main --task-label plan068-config-diet --status 'task files running' --target channel:1492521172099666021 --state-root /home/bifos/.openclaw/workspace-career/state/task-hud --session-status-json '<fresh session_status json>' --subagents-json '<fresh subagents json>'"
+    },
+    {
+      "when": "task files completed",
+      "status": "task files completed",
+      "command": "session_status와 subagents를 먼저 확인한 뒤 bun /home/bifos/.openclaw/workspace-career/scripts/task-hud/update_from_session_status.ts --session discord-career-main --task-label plan068-config-diet --status 'task files completed' --target channel:1492521172099666021 --state-root /home/bifos/.openclaw/workspace-career/state/task-hud --session-status-json '<fresh session_status json>' --subagents-json '<fresh subagents json>'"
+    },
+    {
+      "when": "implementation starts",
+      "status": "implementation running",
+      "command": "session_status와 subagents를 먼저 확인한 뒤 bun /home/bifos/.openclaw/workspace-career/scripts/task-hud/update_from_session_status.ts --session discord-career-main --task-label plan068-config-diet --status 'implementation running' --target channel:1492521172099666021 --state-root /home/bifos/.openclaw/workspace-career/state/task-hud --session-status-json '<fresh session_status json>' --subagents-json '<fresh subagents json>'"
+    },
+    {
+      "when": "implementation completes",
+      "status": "implementation completed",
+      "command": "session_status와 subagents를 먼저 확인한 뒤 bun /home/bifos/.openclaw/workspace-career/scripts/task-hud/update_from_session_status.ts --session discord-career-main --task-label plan068-config-diet --status 'implementation completed' --target channel:1492521172099666021 --state-root /home/bifos/.openclaw/workspace-career/state/task-hud --session-status-json '<fresh session_status json>' --subagents-json '<fresh subagents json>'"
+    },
+    {
+      "when": "implementation fails",
+      "status": "implementation failed",
+      "command": "session_status와 subagents를 먼저 확인한 뒤 bun /home/bifos/.openclaw/workspace-career/scripts/task-hud/update_from_session_status.ts --session discord-career-main --task-label plan068-config-diet --status 'implementation failed' --target channel:1492521172099666021 --state-root /home/bifos/.openclaw/workspace-career/state/task-hud --session-status-json '<fresh session_status json>' --subagents-json '<fresh subagents json>'"
+    },
+    {
+      "when": "implementation blocks",
+      "status": "implementation blocked",
+      "command": "session_status와 subagents를 먼저 확인한 뒤 bun /home/bifos/.openclaw/workspace-career/scripts/task-hud/update_from_session_status.ts --session discord-career-main --task-label plan068-config-diet --status 'implementation blocked' --target channel:1492521172099666021 --state-root /home/bifos/.openclaw/workspace-career/state/task-hud --session-status-json '<fresh session_status json>' --subagents-json '<fresh subagents json>'"
+    }
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "config-policy-boundary",
+      "decision": "config는 정책, 현재 타깃, 후보자 baseline, 학습 진행 상태, 외부 source registry, 사람이 명시적으로 고른 pin/override/exclusion/seed만 보관한다."
+    },
+    {
+      "id": "D2",
+      "title": "fos-study-derived-inventory",
+      "decision": "학습 문서 inventory는 sources/fos-study/ 파일 트리에서 파생한다."
+    },
+    {
+      "id": "D3",
+      "title": "question-bank-derived-inventory",
+      "decision": "공개 질문 inventory는 public/question-bank/ validator 또는 동등 helper 결과에서 파생한다."
+    },
+    {
+      "id": "D4",
+      "title": "bulk-topic-json-not-canonical",
+      "decision": "대량 topic/reservoir JSON은 정본이 아니라 축소, 이관, 삭제 대상이다."
+    },
+    {
+      "id": "D5",
+      "title": "no-destructive-cleanup-first",
+      "decision": "reader inventory, fallback path, 검증 명령을 고정하기 전에는 config 파일을 파괴적으로 삭제하지 않는다."
+    },
+    {
+      "id": "D6",
+      "title": "reader-migration-order",
+      "decision": "reader inventory 분류 후 derived inventory helper와 fallback migration을 먼저 끝내고, 마지막에 dead config 제거 또는 축소를 수행한다."
+    },
+    {
+      "id": "D7",
+      "title": "wording-policy",
+      "decision": "새 산출물에서는 금지 표현을 쓰지 않고 상황에 따라 동작 확인, 운영 확인, 실행 확인을 사용한다."
+    }
+  ],
+  "open_decisions": [],
+  "recommended_defaults": [
+    "phase 실행 전 career-os dirty state를 확인하고 unrelated 변경은 되돌리거나 stage하지 않는다.",
+    "implementation phase에서는 docs/ADR/정책 문서를 임의 수정하지 않는다.",
+    "reader inventory는 rg 기반으로 코드, skill, scripts, docs, task history를 구분하되 active reader와 history-only reference를 분리한다.",
+    "derived inventory helper는 기존 scripts/study-topic-recommender/fos_study_inventory.ts와 public/question-bank validator를 우선 재사용하거나 확장한다.",
+    "fallback은 기존 config가 없어도 sources/fos-study/와 public/question-bank/에서 최소 추천 또는 안내가 가능해야 한다.",
+    "dead config 제거는 reader 제거와 검증이 끝난 뒤 수행한다.",
+    "private 지원 패키지, candidate-profile 본문, 회사별 prep 자료를 public inventory에 섞지 않는다.",
+    "sources/fos-study/는 inventory scan 대상으로만 다루며 study-pack 발행 요청 없이 수정하지 않는다.",
+    "public/question-bank에는 private 답변, 지원 전략, 회사별 비공개 맥락을 넣지 않는다.",
+    "task 파일 생성 작업에서는 구현 코드 수정, commit, push를 하지 않는다.",
+    "PR은 모든 phase 완료 뒤 plan 단위로 만든다."
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "config reader inventory와 사용 분류",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 1800
+    },
+    {
+      "number": 2,
+      "title": "derived inventory helper 계약 구현",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 2400
+    },
+    {
+      "number": 3,
+      "title": "study-topic-recommender와 skill reader migration",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 2400
+    },
+    {
+      "number": 4,
+      "title": "dead config 제거 또는 축소",
+      "file": "phase-04.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 2400
+    },
+    {
+      "number": 5,
+      "title": "문서 일치 검토와 운영 확인",
+      "file": "phase-05.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "haiku",
+      "timeout": 1500
+    }
+  ],
+  "implementation_result": null
+}
