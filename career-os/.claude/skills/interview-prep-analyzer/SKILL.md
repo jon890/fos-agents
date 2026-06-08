@@ -54,8 +54,9 @@ Claude는 다음을 `Read` 도구로 직접 로드:
 ### daily 모드 추가
 
 3. `career-os/config/study-progress.json` — 토픽별 학습 진도 (토픽 자동 선택 시)
-4. `career-os/config/topic-file-map.json` — topic-key → fos-study 파일 경로 배열 매핑
-5. `career-os/sources/fos-study/<path>` — 선택된 topic의 3-5개 파일 (각 Read)
+4. `career-os/sources/fos-study/` inventory — 실제 파일 존재 여부와 유사 topic/path 선택의 우선 기준
+5. `career-os/config/topic-file-map.json` — 선택 사항. topic-key → fos-study 파일 경로 fallback 매핑. 실제 파일 존재 여부보다 우선하지 않음.
+6. `career-os/sources/fos-study/<path>` — 선택된 topic의 3-5개 파일 (각 Read)
 
 ### stage 모드 추가
 
@@ -101,8 +102,9 @@ Inputs 매트릭스대로 모두 Read.
 
 **daily 토픽 자동 선택** (인자 없거나 `daily`만 지정):
 1. `study-progress.json` Read → `weak_spots`에서 `last_studied`가 가장 오래되거나 null인 topic-key 선택
-2. `study-progress.json` 없으면 → `topic-file-map.json` 첫 번째 키 선택
-3. topic-file-map.json에 해당 topic-key 없으면 → freeform 모드 (fos-study에서 관련 파일 자연어 추론)
+2. `study-progress.json` 없으면 → `sources/fos-study` inventory에서 최근 학습 흐름과 맞는 파일을 먼저 추론
+3. 추론이 어렵고 `topic-file-map.json`이 있으면 실제 존재하는 파일만 fallback으로 선택
+4. topic-file-map.json에 해당 topic-key가 없거나 파일이 사라졌으면 → freeform 모드 (fos-study에서 관련 파일 자연어 추론)
 
 **stage 준비**:
 1. stage를 `first_round`, `final_round`, `offer_chat` 중 하나로 정규화한다.
@@ -230,7 +232,7 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 |---|---|
 | 모드 판단 불가 (자연어·인자 모두 모호) | stderr + 사용자에게 baseline/daily 확인 요청 (기본값 daily) |
 | fos-study git pull 실패 | stderr warn + 로컬 캐시로 분석 계속 |
-| topic 자동 선택 실패 (study-progress 없음 + topic-file-map 비어 있음) | freeform 모드 — Claude가 fos-study에서 적절한 파일 추론 |
+| topic 자동 선택 실패 (study-progress 없음 + 실제 fos-study 파일 추론 실패) | freeform 모드 — Claude가 fos-study에서 적절한 파일 추론 |
 | stage 설정 없음 | 사용자에게 설정 없음 명시. 확인 없이 다른 면담 상황으로 대체하지 않음 |
 | baseline-core-files.json 없음 | stderr + exit 1 |
 | candidate-profile.md 없음 | stderr + exit 1 |
@@ -240,6 +242,6 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 ## Why this design
 
 - **단일 면접 준비 skill (ADR-027, ADR-048)**: baseline + daily + stage는 입력 셋·섹션 수가 다르지만 mvp-target + candidate-profile + 필요한 학습/회사 context Read → Claude 분석 → report Write 흐름이 공통이다. 분리 시 SKILL.md drift 위험 — 통합이 native 패턴에 맞다.
-- **smoke 폐기 (ADR-027)**: native 패턴에서 Claude 호출 sanity는 다른 skill 사용 중에 자연 확인됨. 별도 smoke는 overhead 대비 가치 약함.
+- **실행 확인 폐기 (ADR-027)**: native 패턴에서 Claude 호출 sanity는 다른 skill 사용 중에 자연 확인됨. 별도 실행 확인은 overhead 대비 가치 약함.
 - **Python 6개 폐기 (ADR-027)**: build_target_file_list / select_topic / update_study_progress 알고리즘은 단순 (점수 없음, cooldown 단순) — Claude 자연어 추론으로 동등 대체. 외부 Python 의존 제거로 실행 경로 단순화.
 - **Self-check 본 skill 안에 박는 이유**: 옛 외부 validator를 Claude 자체 검증으로 대체. SKILL.md 단일 진실 출처.

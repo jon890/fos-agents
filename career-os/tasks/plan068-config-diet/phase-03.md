@@ -1,7 +1,7 @@
 # Phase 03 — study-topic-recommender와 skill reader migration
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ## 목표
 
@@ -154,3 +154,74 @@ prose만 출력하면 success로 잘못 처리될 수 있다.
 - docs/ADR/정책 문서를 임의 수정한다.
 - 새 산출물에 금지 표현을 남긴다.
 - unrelated dirty 변경을 revert, stage, commit, push한다.
+
+## 실행 결과
+
+완료 시각: 2026-06-08T21:02:25+09:00
+
+상태: completed
+
+### 변경 요약
+
+- `scripts/study-topic-recommender/cli.ts`가 `sources/fos-study/` derived inventory를 먼저 스캔한다.
+- `study-pack-topics.json`은 override/fallback 후보로, `study-pack-candidates.json`은 seed/fallback 후보로만 읽는다.
+- config 일부가 없거나 JSON parse에 실패해도 빈 seed와 fos-study derived fallback 후보로 deterministic 추천을 계속한다.
+- fos-study fallback 후보 key는 파일 slug 단독이 아니라 경로 기반으로 생성한다.
+  `README.md`는 fallback 추천 후보에서 제외했고, fallback key 중복이 0개임을 확인했다.
+- `data/runtime/topic-inventory.json`에 `sourceOfTruth`, `configRole`, `pools`를 기록한다.
+- `topic-file-map.json`은 실제 fos-study 파일 존재 여부보다 우선하지 않는 fallback으로 skill 설명을 조정했다.
+- `question-bank-topics.json`은 public/question-bank 정본이 아니라 interview asset override 후보로만 설명했다.
+
+### 변경 파일
+
+- `scripts/study-topic-recommender/cli.ts`
+- `.claude/skills/study-topic-recommender/SKILL.md`
+- `.claude/skills/study-pack-writer/SKILL.md`
+- `.claude/skills/interview-asset-writer/SKILL.md`
+- `.claude/skills/interview-prep-analyzer/SKILL.md`
+- `.claude/skills/question-bank-collector/SKILL.md`
+- `tasks/plan068-config-diet/index.json`
+- `tasks/plan068-config-diet/phase-03.md`
+
+### 검증 결과
+
+다음 명령을 career-os repo root에서 실행했다.
+
+```bash
+git status --short
+python3 -m json.tool tasks/plan068-config-diet/index.json
+bun --check scripts/study-topic-recommender/refresh_topic_inventory.ts
+bun --check scripts/study-topic-recommender/fos_study_inventory.ts
+rg -n "study-pack-topics|study-pack-candidates|topic-file-map|topic-profiles|question-bank-topics|study-preferences|live-coding-seed" scripts/study-topic-recommender .claude/skills
+rg -n "sources/fos-study|fosStudy|fos-study|public/question-bank|override|pin|exclusion|seed|fallback" scripts/study-topic-recommender .claude/skills
+bun scripts/study-topic-recommender/refresh_topic_inventory.ts
+test -f data/runtime/topic-inventory.json
+rg -n "sourceOfTruth|fos-study|excluded|pools|claudeDuplicateReview" data/runtime/topic-inventory.json
+rg -n "smo""ke" tasks/plan068-config-diet scripts/study-topic-recommender .claude/skills && exit 1 || true
+git diff --check
+```
+
+결과:
+
+- `python3 -m json.tool tasks/plan068-config-diet/index.json`: passed.
+- `bun --check scripts/study-topic-recommender/refresh_topic_inventory.ts`: passed. Bun 동작상 entrypoint가 실행되어 runtime inventory도 갱신됐다.
+- `bun --check scripts/study-topic-recommender/fos_study_inventory.ts`: passed.
+- `bun scripts/study-topic-recommender/refresh_topic_inventory.ts`: passed.
+- `data/runtime/topic-inventory.json` 확인: `sourceOfTruth`, `fos-study`, `excluded`, `pools`, `claudeDuplicateReview` 모두 존재.
+- fos-study fallback key 중복 확인: duplicateCount 0.
+- 금지 표현 grep: no matches.
+- `git diff --check`: passed.
+
+### 범위 확인
+
+- dead config 삭제/축소 없음.
+- docs/ADR/AGENTS/TOOLS/정책 문서 수정 없음.
+- public/question-bank 질문 내용 수정 없음.
+- sources/fos-study 문서 수정/발행 없음.
+- candidate-profile 자동 수정 없음.
+- private prep 자동 반영 없음.
+- unrelated dirty 변경 수정, stage, revert, commit, push 없음.
+
+PHASE_BLOCKED: false
+
+PHASE_FAILED: false

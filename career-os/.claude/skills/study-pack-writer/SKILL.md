@@ -38,23 +38,29 @@ study pack은 공개 fos-study 산출물이므로 기술 학습 문서로만 읽
 
 Claude는 다음을 `Read` 도구로 직접 로드:
 
-1. `career-os/config/study-pack-topics.json` — `<topic-key>` 검색 → `outputPath` / `domain` / `title` / `promptAppend`
-2. `career-os/config/candidate-profile.md` — 11섹션 prose, 후보자 이력
-3. `career-os/config/mvp-target.json` — `primary.company`, `primary.role` (현재 면접 타깃)
-4. `career-os/config/topic-profiles.json` — 토픽 family별 (mysql/redis/kafka/spring-jpa) emphasis + output path 패턴. topic-key가 어느 family에 속하는지 `topicHints` 매칭으로 파악
-5. `references/study-pack-prompt.md` — prompt 구조 가이드
-6. `references/fos-study-writing-rules.md` — 작성 규칙 상세
-7. **필수**: `sources/fos-study/**/*.md` 트리 스캔 결과 — `career-os/scripts/study-topic-recommender/duplicate_detection.ts` helper로 결정. exclude `.git/**`, `.claude/**`. `git pull` 호출 금지.
+1. `career-os/sources/fos-study/**/*.md` 트리 스캔 결과 — 학습 문서 inventory 정본. exclude `.git/**`, `.claude/**`, `private/**`.
+2. `career-os/config/study-pack-topics.json` — 선택 사항. `<topic-key>` override/seed/fallback 후보 검색 → `outputPath` / `domain` / `title` / `promptAppend`
+3. `career-os/config/candidate-profile.md` — 11섹션 prose, 후보자 이력
+4. `career-os/config/mvp-target.json` — `primary.company`, `primary.role` (현재 면접 타깃)
+5. `career-os/config/topic-profiles.json` — 선택 사항. 토픽 family별 작성 guide 또는 family override. 실제 파일 존재 여부보다 우선하지 않음.
+6. `references/study-pack-prompt.md` — prompt 구조 가이드
+7. `references/fos-study-writing-rules.md` — 작성 규칙 상세
+8. `career-os/scripts/study-topic-recommender/duplicate_detection.ts` — duplicate guard helper. `git pull` 호출 금지.
 
 ## Workflow
 
 ### 1. Topic 해석
 
-인자가 topic-key (kebab-case)면 `study-pack-topics.json` 매칭. 자연어면 description/domain으로 유사 매칭. 매칭 실패 시 **freeform 모드**: domain·outputPath 본인이 결정. stderr에 결정 근거 1줄 로그 (예: `[study-pack] freeform 모드 — domain=database, outputPath=database/new-topic`).
+인자가 topic-key (kebab-case)면 먼저 `sources/fos-study` inventory에서 실제 파일 존재 여부와 유사 slug를 확인한다.
+그다음 `study-pack-topics.json`을 override/seed/fallback 후보로 매칭한다.
+자연어면 fos-study 파일명, heading, config fallback의 description/domain 순서로 유사 매칭한다.
+매칭 실패 시 **freeform 모드**: domain·outputPath 본인이 결정. stderr에 결정 근거 1줄 로그 (예: `[study-pack] freeform 모드 — domain=database, outputPath=database/new-topic`).
 
 ### 2. Context 로드 (Read)
 
-위 Inputs 1~6 모두 Read. topic-profiles.json에서 `<topic-key>`가 어느 family의 `topicHints`에 속하는지 매칭 → 해당 family의 `emphasis` 적용.
+위 Inputs를 Read한다.
+`topic-profiles.json`이 있으면 `<topic-key>`가 어느 family의 `topicHints`에 속하는지 매칭해 해당 family의 `emphasis`를 작성 guide로만 적용한다.
+파일이 없거나 매칭되지 않으면 일반 topic guide와 fos-study inventory 기반 freeform 판단으로 계속한다.
 
 ### 3. Duplicate guard (ADR-033)
 

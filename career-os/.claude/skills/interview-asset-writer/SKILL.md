@@ -42,17 +42,21 @@ interview asset은 후보자 이력 기반 자료지만 fos-study 공개 발행 
 
 Claude는 다음을 `Read` 도구로 직접 로드:
 
-1. `career-os/config/question-bank-topics.json` — `<topic-key>` 검색 → `outputPath` / `domain` / `title` / `inputFiles` / `promptAppend`
-2. `career-os/config/candidate-profile.md` — 11섹션 prose, 후보자 이력 (필수)
-3. `career-os/config/mvp-target.json` — `primary.company`, `primary.role` (현재 면접 타깃)
-4. `career-os/task/*` 또는 `career-os/resume/*` — `inputFiles` 명시되면 그 파일들, 아니면 candidate-profile에서 참조하는 경로
-5. (선택) `sources/fos-study/<유사 outputPath>.md` — overlap 회피
+1. `career-os/public/question-bank/` inventory — 공개 질문 bank 정본. 질문 본문은 public-safe JSON에서만 읽는다.
+2. `career-os/config/question-bank-topics.json` — 선택 사항. public bank 정본이 아니라 interview asset 전용 `<topic-key>` override 후보 → `outputPath` / `domain` / `title` / `inputFiles` / `promptAppend`
+3. `career-os/config/candidate-profile.md` — 11섹션 prose, 후보자 이력 (필수)
+4. `career-os/config/mvp-target.json` — `primary.company`, `primary.role` (현재 면접 타깃)
+5. `career-os/task/*` 또는 `career-os/resume/*` — `inputFiles` 명시되면 그 파일들, 아니면 candidate-profile에서 참조하는 경로
+6. (선택) `sources/fos-study/<유사 outputPath>.md` — overlap 회피
 
 ## Workflow
 
 ### 1. Topic 해석 + 형식 판단
 
-인자가 topic-key (kebab-case)면 `question-bank-topics.json` 매칭. 자연어면 description/domain으로 유사 매칭. 매칭 실패 시 **freeform 모드**: outputPath 본인이 결정.
+인자가 topic-key (kebab-case)면 먼저 `public/question-bank` category와 id inventory를 확인한다.
+그다음 `question-bank-topics.json`을 interview asset 전용 override 후보로만 매칭한다.
+자연어면 public bank category/tag와 override description/domain 순서로 유사 매칭한다.
+매칭 실패 시 **freeform 모드**: outputPath 본인이 결정.
 
 산출물 형식 판단:
 - **Q&A 질문 은행**: topic-key에 `qbank` / `question-bank` / `experience-` 포함, 또는 자연어에 "질문 은행" / "Q&A" / "qbank" 언급

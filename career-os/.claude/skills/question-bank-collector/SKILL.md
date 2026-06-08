@@ -26,13 +26,15 @@ private 포지션 준비 정본은 `private/<company>/<position>/interview/prep.
 
 - `public/question-bank/README.md`
 - `public/question-bank/{java-spring,database,cs,operations,system-design}/questions.json`
+- `scripts/question-bank-collector/validate.ts`의 `scanQuestionBankInventory()` 결과.
+  public/question-bank inventory 정본이며, `config/question-bank-topics.json`을 정본으로 사용하지 않는다.
 - 필요한 경우 공개 가능한 기존 study topic 이름.
 - 포지션 맞춤 선별을 명시한 경우에만 `private/<company>/<position>/interview/prep.md`.
 
 ## 작업 흐름
 
 1. 요청 범위를 category와 약점 tag로 나눈다.
-2. 기존 bank를 읽고 중복 id와 중복 질문을 피한다.
+2. `scanQuestionBankInventory()` 또는 동등한 public bank scan으로 기존 bank를 읽고 중복 id와 중복 질문을 피한다.
 3. 질문을 단순 암기형 원문이 아니라 backend 실무형 질문으로 정규화한다.
 4. 각 항목에 category, difficulty, question, intent, answerSignals, source, publicSafe, positionFitHint, normalizedFrom, tags, followUps를 채운다.
 5. public bank만 보강하는 요청이면 `public/question-bank/`만 수정한다.

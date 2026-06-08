@@ -14,7 +14,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFil
 import { homedir } from "os";
 import { join } from "path";
 import { discoverForItem, type ReservoirItem } from "./feed_discovery.js";
-import { scanFosStudyInventory } from "./fos_study_inventory.js";
+import { scanFosStudyInventory, type FosStudyInventoryItem } from "./fos_study_inventory.js";
 import { deterministicDedupe, type DuplicateCandidateInput, type PossibleDuplicate } from "./duplicate_detection.js";
 import {
   SECONDARY_COOLDOWN_ENTRIES,
@@ -71,6 +71,45 @@ function safeLoad<T>(path: string, fallback: T): T {
   } catch {
     return fallback;
   }
+}
+
+function stripMetaTopics(raw: Record<string, StudyTopicEntry>): Record<string, StudyTopicEntry> {
+  return Object.fromEntries(
+    Object.entries(raw).filter(([key]) => key !== "_meta" && !key.startsWith("_"))
+  ) as Record<string, StudyTopicEntry>;
+}
+
+function titleFromSlug(slug: string): string {
+  return slug
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function fallbackKeyFromPath(path: string): string {
+  return `fos-study-${path.replace(/\.md$/i, "").replace(/[^a-z0-9가-힣]+/gi, "-").replace(/^-+|-+$/g, "")}`;
+}
+
+function buildFosStudyFallbackCandidates(items: FosStudyInventoryItem[]): TopicItem[] {
+  return items
+    .filter((item) => item.path.endsWith(".md"))
+    .filter((item) => !item.path.startsWith("interview/"))
+    .filter((item) => item.slug.toLowerCase() !== "readme")
+    .map((item) => ({
+      key: fallbackKeyFromPath(item.path),
+      title: item.titleCandidate ?? titleFromSlug(item.slug),
+      domain: item.domainCandidate ?? "fos-study",
+      outputPath: item.path,
+      source: "fos-study-derived",
+      tag: "deepen",
+      difficulty: "중",
+      estMinutes: 35,
+      whyNow: [
+        "sources/fos-study에 이미 있는 학습 문서라서 보강이나 복습 출발점으로 쓸 수 있다",
+        "config 후보가 부족해도 실제 파일 inventory 기반으로 deterministic fallback을 유지한다",
+      ],
+    }));
 }
 
 // ── history helpers ───────────────────────────────────────────────────────────
@@ -196,34 +235,41 @@ async function pickTechBlogArticles(
 async function runPipeline(): Promise<void> {
   mkdirSync(RUNTIME, { recursive: true });
 
-  // load config
-  const studyTopicsRaw = readJson<Record<string, StudyTopicEntry>>(join(CONFIG, "study-pack-topics.json"));
-  const studyTopics: Record<string, StudyTopicEntry> = Object.fromEntries(
-    Object.entries(studyTopicsRaw).filter(([k]) => k !== "_meta")
-  ) as Record<string, StudyTopicEntry>;
-  const studyCandidates = readJson<{ topics?: TopicItem[] }>(
-    join(CONFIG, "study-pack-candidates.json")
+  // fos-study scan (ADR-033 / ADR-069): actual files are the source of truth.
+  const fosInventory = scanFosStudyInventory({ root: FOS_STUDY_ROOT });
+  const fosStudyPaths = new Set(fosInventory.markdownPathsRelative);
+
+  // load config as optional override/seed/fallback, never as the canonical inventory
+  const studyTopicsRaw = safeLoad<Record<string, StudyTopicEntry>>(
+    join(CONFIG, "study-pack-topics.json"),
+    {}
+  );
+  const studyTopics = stripMetaTopics(studyTopicsRaw);
+  const studyCandidates = safeLoad<{ topics?: TopicItem[] }>(
+    join(CONFIG, "study-pack-candidates.json"),
+    { topics: [] }
   ).topics ?? [];
-  const liveSeeds: LiveSeed[] = readJson<{ seeds: LiveSeed[] }>(
-    join(CONFIG, "live-coding-seed-pool.json")
+  const liveSeeds: LiveSeed[] = safeLoad<{ seeds?: LiveSeed[] }>(
+    join(CONFIG, "live-coding-seed-pool.json"),
+    { seeds: [] }
   ).seeds ?? [];
-  const liveSeedCandidates: LiveSeed[] = readJson<{ seeds: LiveSeed[] }>(
-    join(CONFIG, "live-coding-seed-candidates.json")
+  const liveSeedCandidates: LiveSeed[] = safeLoad<{ seeds?: LiveSeed[] }>(
+    join(CONFIG, "live-coding-seed-candidates.json"),
+    { seeds: [] }
   ).seeds ?? [];
   const sources = safeLoad<SourcesConfig>(join(CONFIG, "sources.json"), {});
   const techBlogItems: ReservoirItem[] = sources.techBlog?.items ?? [];
   const aiTopicItems: ReservoirItem[] = sources.ai?.items ?? [];
   const geekNewsItems: ReservoirItem[] = sources.geek?.items ?? [];
 
-  // fos-study scan (ADR-033)
-  const fosInventory = scanFosStudyInventory({ root: FOS_STUDY_ROOT });
-  const fosStudyPaths = new Set(fosInventory.markdownPathsRelative);
-
   // derived sets
   const uncoveredCurated = getUncoveredCurated(studyTopics, fosStudyPaths);
   const remainingLive = getRemainingLive(liveSeeds, fosStudyPaths);
   const remainingLiveCandidates = getRemainingLiveCandidates(liveSeedCandidates, fosStudyPaths);
   const candidateRecommendations = getCandidateRecommendations(studyCandidates, fosStudyPaths);
+  const fosStudyFallbackCandidates = buildFosStudyFallbackCandidates(fosInventory.items);
+  const backendCandidatePool =
+    candidateRecommendations.length > 0 ? candidateRecommendations : fosStudyFallbackCandidates;
 
   // recentDomainCounts — fos-study mtime fallback (ADR-033)
   const withMtime = fosInventory.markdownPathsRelative.map((p) => {
@@ -274,7 +320,7 @@ async function runPipeline(): Promise<void> {
   // recommendations
   const backendRecommendations = pickBackendRecommendations(
     yesterdayKeys,
-    candidateRecommendations,
+    backendCandidatePool,
     remainingLive,
     remainingLiveCandidates,
     recentDomainCounts,
@@ -312,9 +358,16 @@ async function runPipeline(): Promise<void> {
       scannedMarkdownCount: fosInventory.scannedMarkdownCount,
       excludedDirs: fosInventory.excludedDirs,
     },
+    configRole: {
+      studyPackTopics: "override/fallback 후보",
+      studyPackCandidates: "seed/fallback 후보",
+      liveCodingSeeds: "사람이 고른 seed 후보",
+      sources: "외부 reading reservoir",
+    },
     counts: {
-      configCuratedStudyTopics: Object.keys(studyTopics).length,
-      configStudyTopicCandidates: studyCandidates.length,
+      configStudyTopicOverrides: Object.keys(studyTopics).length,
+      configStudyTopicFallbackCandidates: studyCandidates.length,
+      derivedFosStudyFallbackCandidates: fosStudyFallbackCandidates.length,
       existingFosStudyMarkdownFiles: fosInventory.scannedMarkdownCount,
       remainingCuratedStudyTopics: uncoveredCurated.length,
       remainingCandidateStudyTopics: candidateRecommendations.length,
@@ -329,6 +382,12 @@ async function runPipeline(): Promise<void> {
       curatedStudyTopicKeys: uncoveredCurated.map((t) => t.key),
       candidateStudyTopicKeys: candidateRecommendations.map((t) => t.key),
       liveCodingSlugs: remainingLive.map((s) => s.slug),
+    },
+    pools: {
+      remainingLiveCodingSeeds: remainingLive,
+      remainingLiveCodingCandidateSeeds: remainingLiveCandidates,
+      configStudyTopicFallbackCandidates: candidateRecommendations,
+      derivedFosStudyFallbackCandidates: fosStudyFallbackCandidates.slice(0, 20),
     },
     excluded: dedupeResult,
     claudeDuplicateReview: {
