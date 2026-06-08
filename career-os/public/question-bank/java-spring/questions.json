@@ -250,5 +250,89 @@
       "공용 thread pool을 쓰면 어떤 위험이 있나요?",
       "일부 호출만 실패했을 때 응답 정책을 어떻게 잡나요?"
     ]
+  },
+  {
+    "id": "java-spring-013",
+    "category": "java-spring",
+    "difficulty": "intermediate",
+    "question": "@Transactional의 propagation 옵션 중 REQUIRED와 REQUIRES_NEW의 차이를 설명하고, 바깥 transaction이 rollback돼도 남겨야 하는 작업이 있을 때 어떻게 설계할지 말해 주세요.",
+    "intent": "transaction propagation과 중첩 transaction 경계 이해를 확인한다.",
+    "answerSignals": [
+      "REQUIRED는 기존 transaction에 합류, REQUIRES_NEW는 별도 물리 transaction으로 분리",
+      "감사 로그, 실패 기록처럼 바깥 rollback과 독립적으로 commit해야 하는 사례",
+      "REQUIRES_NEW가 별도 connection을 잡아 connection pool 고갈 위험이 있다는 trade-off"
+    ],
+    "source": "public-general-backend-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "transaction 경계 설계나 감사/이력 기록 경험을 확인할 때 선별한다.",
+    "normalizedFrom": "Spring transaction propagation 개념을 rollback 독립성 설계 질문으로 정규화",
+    "tags": ["spring", "transaction", "propagation"],
+    "followUps": [
+      "NESTED propagation은 REQUIRES_NEW와 어떻게 다른가요?",
+      "REQUIRES_NEW 호출이 self-invocation이면 어떤 문제가 생기나요?"
+    ]
+  },
+  {
+    "id": "java-spring-014",
+    "category": "java-spring",
+    "difficulty": "intermediate",
+    "question": "@Transactional의 기본 rollback 규칙을 설명하고, checked exception이 발생했는데 rollback이 안 돼서 데이터가 어긋났던 상황을 어떻게 예방할지 말해 주세요.",
+    "intent": "rollback 규칙과 예외 설계가 정합성에 미치는 영향을 확인한다.",
+    "answerSignals": [
+      "기본은 unchecked(RuntimeException)와 Error에서만 rollback, checked exception은 commit",
+      "rollbackFor 지정 또는 도메인 예외를 RuntimeException 계열로 설계",
+      "예외를 catch해 삼키면 rollback이 트리거되지 않는다는 점"
+    ],
+    "source": "public-general-backend-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "transaction 정합성 버그 경험이나 예외 설계 역량을 확인할 때 선별한다.",
+    "normalizedFrom": "Spring rollback 규칙을 정합성 사고 예방 질문으로 정규화",
+    "tags": ["spring", "transaction", "exception"],
+    "followUps": [
+      "예외를 잡아서 로깅만 하고 흘려보낼 때 transaction은 어떻게 되나요?",
+      "여러 도메인 예외의 rollback 정책을 일관되게 잡으려면 어떻게 하나요?"
+    ]
+  },
+  {
+    "id": "java-spring-015",
+    "category": "java-spring",
+    "difficulty": "advanced",
+    "question": "@Transactional 메서드 안에서 외부 API 호출이나 오래 걸리는 작업을 함께 수행하면 어떤 문제가 생기는지 설명하고, transaction 경계를 어떻게 다시 설계하겠습니까?",
+    "intent": "transaction 보유 시간과 connection 점유, 경계 분리 설계를 확인한다.",
+    "answerSignals": [
+      "transaction이 길어지면 DB connection을 오래 잡아 pool 고갈과 lock 보유 시간 증가",
+      "외부 호출을 transaction 밖으로 빼고 DB 작업만 짧게 감싸는 재설계",
+      "외부 호출 실패와 DB 정합성을 분리하기 위한 보상/재시도, eventual consistency 고려"
+    ],
+    "source": "public-general-backend-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "장애 대응이나 transaction 경계 리팩토링 경험을 확인할 때 선별한다.",
+    "normalizedFrom": "long transaction anti-pattern을 경계 재설계 질문으로 정규화",
+    "tags": ["spring", "transaction", "performance"],
+    "followUps": [
+      "외부 호출 결과를 DB 상태와 맞춰야 한다면 어떤 패턴을 쓰나요?",
+      "connection pool 고갈 징후는 어떤 지표로 확인하나요?"
+    ]
+  },
+  {
+    "id": "java-spring-016",
+    "category": "java-spring",
+    "difficulty": "advanced",
+    "question": "@Async로 다른 thread에서 실행되는 메서드에 바깥 transaction이 전파되지 않는 이유를 설명하고, 비동기 작업의 정합성을 어떻게 보장하겠습니까?",
+    "intent": "transaction의 thread 바인딩과 비동기 경계에서의 정합성 설계를 확인한다.",
+    "answerSignals": [
+      "transaction context가 ThreadLocal로 thread에 묶여 있어 새 thread로 전파되지 않음",
+      "비동기 메서드는 자체 @Transactional 경계를 갖거나 별도 commit 단위로 설계",
+      "바깥 commit 이후 이벤트 발행, 실패 시 재처리/보상으로 정합성 확보"
+    ],
+    "source": "public-general-backend-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "비동기 처리와 transaction 정합성을 함께 다룬 경험을 확인할 때 선별한다.",
+    "normalizedFrom": "@Async와 transaction thread 경계 주제를 정합성 설계 질문으로 정규화",
+    "tags": ["spring", "transaction", "async"],
+    "followUps": [
+      "transaction commit 이후에만 비동기 작업을 트리거하려면 어떻게 하나요?",
+      "ThreadLocal 기반 context를 새 thread로 넘겨야 한다면 어떤 주의가 필요한가요?"
+    ]
   }
 ]

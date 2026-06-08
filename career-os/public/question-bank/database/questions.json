@@ -82,5 +82,68 @@
       "cache stampede는 어떻게 줄이나요?",
       "Redis 장애 시 DB 보호는 어떻게 하나요?"
     ]
+  },
+  {
+    "id": "database-005",
+    "category": "database",
+    "difficulty": "intermediate",
+    "question": "동시 수정이 충돌할 수 있는 데이터에서 optimistic lock과 pessimistic lock을 어떤 기준으로 선택하는지, JPA의 @Version을 예로 들어 설명해 주세요.",
+    "intent": "동시성 제어 방식의 trade-off와 충돌 처리 설계를 확인한다.",
+    "answerSignals": [
+      "충돌 빈도가 낮으면 optimistic, 높으면 pessimistic이 유리하다는 기준",
+      "@Version으로 update 시 버전 비교, 불일치 시 OptimisticLockException 후 재시도",
+      "pessimistic lock은 lock 보유로 정합성은 강하지만 대기/deadlock 위험 증가"
+    ],
+    "source": "public-general-database-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "동시 수정 충돌 처리나 재고/잔액 같은 정합성 민감 도메인 경험을 확인할 때 선별한다.",
+    "normalizedFrom": "optimistic/pessimistic locking 비교 주제를 선택 기준 질문으로 정규화",
+    "tags": ["transaction", "locking", "concurrency"],
+    "followUps": [
+      "optimistic lock 충돌이 잦아지면 어떻게 대응하나요?",
+      "재시도 횟수와 backoff는 어떤 기준으로 정하나요?"
+    ]
+  },
+  {
+    "id": "database-006",
+    "category": "database",
+    "difficulty": "advanced",
+    "question": "여러 요청이 동시에 같은 행의 재고를 차감할 때 발생하는 lost update를 설명하고, DB 수준에서 이를 막는 방법을 비교해 주세요.",
+    "intent": "동시 갱신 race condition과 DB 차원의 정합성 보장 수단을 확인한다.",
+    "answerSignals": [
+      "read 후 write 사이 다른 transaction이 끼어들어 갱신이 덮어써지는 lost update 설명",
+      "조건부 원자적 update(예: stock = stock - 1 WHERE stock >= 1)로 read-modify-write 제거",
+      "select for update(pessimistic) 또는 version 기반 optimistic lock과의 trade-off 비교"
+    ],
+    "source": "public-general-database-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "재고 차감, 잔액 변경처럼 동시 갱신 정합성이 중요한 도메인 경험을 확인할 때 선별한다.",
+    "normalizedFrom": "lost update와 동시 차감 주제를 DB 정합성 비교 질문으로 정규화",
+    "tags": ["transaction", "concurrency", "consistency"],
+    "followUps": [
+      "조건부 update로 막을 때 실패한 요청에는 어떤 응답을 주나요?",
+      "분산 환경에서 단일 행 lock이 병목이 되면 어떤 대안이 있나요?"
+    ]
+  },
+  {
+    "id": "database-007",
+    "category": "database",
+    "difficulty": "advanced",
+    "question": "운영 중 transaction deadlock이 발생했다면 원인을 어떻게 파악하고, 재발을 줄이기 위해 어떤 설계 변경을 검토하겠습니까?",
+    "intent": "deadlock의 발생 조건과 진단, 예방 설계 이해를 확인한다.",
+    "answerSignals": [
+      "서로 다른 순서로 lock을 잡아 순환 대기가 생기는 구조 설명",
+      "DB deadlock 로그/모니터링으로 충돌 쿼리와 lock 순서 파악",
+      "lock 획득 순서 통일, transaction 범위 축소, 인덱스로 lock 범위 최소화 같은 예방책"
+    ],
+    "source": "public-general-database-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "운영 장애 대응이나 동시성 튜닝 경험을 확인할 때 선별한다.",
+    "normalizedFrom": "DB deadlock 주제를 진단과 예방 설계 질문으로 정규화",
+    "tags": ["transaction", "locking", "operations"],
+    "followUps": [
+      "deadlock과 단순 lock 대기(timeout)는 어떻게 구분하나요?",
+      "재시도로 deadlock을 흡수할 때 주의할 점은 무엇인가요?"
+    ]
   }
 ]
