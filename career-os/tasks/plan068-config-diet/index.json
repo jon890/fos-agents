@@ -2,9 +2,9 @@
   "name": "plan068-config-diet",
   "description": "ADR-069 결정에 따라 career-os config를 정책, 현재 타깃, 후보자 baseline, 사람이 고른 예외 override 중심으로 줄인다. 학습 문서 inventory는 sources/fos-study/에서 파생하고, 공개 질문 inventory는 public/question-bank/에서 파생한다. plan068은 바로 파괴적 삭제하지 않고 reader inventory, fallback, 검증 명령을 먼저 고정한 뒤 phase 단위로 대량 topic/reservoir JSON을 축소, 이관, 삭제한다.",
   "created_at": "2026-06-08T00:00:00+09:00",
-  "updated_at": "2026-06-08T00:00:00+09:00",
+  "updated_at": "2026-06-08T20:47:01+09:00",
   "status": "in_progress",
-  "current_phase": 2,
+  "current_phase": 3,
   "total_phases": 5,
   "error_message": null,
   "blocked_reason": null,
@@ -140,7 +140,7 @@
       "number": 2,
       "title": "derived inventory helper 계약 구현",
       "file": "phase-02.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
@@ -201,46 +201,72 @@
     }
   ],
   "implementation_result": {
-    "phase": 1,
+    "phase": 2,
     "status": "completed",
-    "completed_at": "2026-06-08T00:00:00+09:00",
-    "summary": "대상 config 9개의 존재 여부, 크기, top-level key, active reader, docs reference, task history를 조사해 reader-inventory.md로 고정했다. Phase 01만 실행했으며 config, scripts, skill, public/question-bank, sources/fos-study는 수정하지 않았다.",
+    "completed_at": "2026-06-08T20:47:01+09:00",
+    "summary": "기존 fos-study inventory helper와 public question-bank validator를 확장해 실제 파일 트리 기반 inventory 계약을 구현했다. config 파일, docs/ADR/정책 문서, skill reader, sources/fos-study 문서, public/question-bank 질문 내용은 수정하지 않았다.",
     "artifacts": [
-      "tasks/plan068-config-diet/reader-inventory.md",
+      "scripts/study-topic-recommender/fos_study_inventory.ts",
+      "scripts/question-bank-collector/validate.ts",
       "tasks/plan068-config-diet/index.json",
-      "tasks/plan068-config-diet/phase-01.md"
+      "tasks/plan068-config-diet/phase-02.md"
     ],
-    "reader_classification": {
-      "maintain": [
-        "config/live-coding-seed-pool.json"
-      ],
-      "shrink": [
-        "config/study-preferences.json",
-        "config/study-pack-topics.json",
-        "config/study-pack-candidates.json",
-        "config/live-coding-seed-candidates.json"
-      ],
-      "migrate": [
-        "config/topic-file-map.json",
-        "config/topic-profiles.json",
-        "config/question-bank-topics.json"
-      ],
-      "delete_candidates": [
-        "config/first-round-drill-core-files.json"
-      ],
-      "hold": []
+    "helper_contract": {
+      "fos_study_inventory": {
+        "function": "scanFosStudyInventory",
+        "source_root": "sources/fos-study",
+        "excluded_dirs": [
+          ".git",
+          ".claude",
+          "private"
+        ],
+        "item_fields": [
+          "path",
+          "slug",
+          "titleCandidate",
+          "domainCandidate",
+          "categoryCandidate",
+          "tagsCandidate",
+          "mtimeMs",
+          "updatedAt"
+        ],
+        "compatibility": "기존 markdownPathsRelative 반환값을 유지했다."
+      },
+      "question_bank_inventory": {
+        "function": "scanQuestionBankInventory",
+        "source_root": "public/question-bank",
+        "derived_from": "scripts/question-bank-collector/validate.ts validator scan",
+        "item_fields": [
+          "path",
+          "key",
+          "category",
+          "difficulty",
+          "tagsCandidate",
+          "source",
+          "publicSafe",
+          "signalCount",
+          "followUpCount",
+          "mtimeMs",
+          "updatedAt"
+        ],
+        "content_boundary": "질문 본문과 답변 신호 본문은 inventory item에 복사하지 않는다."
+      }
     },
     "validation": {
       "status": "passed",
       "notes": [
-        "career-os cwd 기준으로 phase-01.md 검증 명령을 실행했다.",
-        "phase 검증 블록의 rg 범위에 포함된 skills/ 디렉터리는 현재 존재하지 않아 rg 경고가 출력됐지만, 파이프라인 전체는 0으로 종료됐다.",
+        "career-os cwd 기준으로 phase-02.md 검증 명령을 실행했다.",
+        "fos-study markdown count는 364개, public/question-bank file count는 6개다.",
+        "scanQuestionBankInventory 실행 확인 결과 5개 JSON에서 35개 질문 메타데이터를 파생했다.",
+        "private-review grep 결과는 validator의 boundary 문구와 phase 문서 참조이며, helper가 private 본문을 inventory item에 포함하지 않는다.",
         "python3 -m json.tool, git diff --check, 금지 표현 grep 모두 통과했다."
       ],
       "commands": [
-        "phase-01.md validation command block",
+        "phase-02.md validation command block",
+        "bun -e import scanFosStudyInventory execution check",
+        "bun -e import scanQuestionBankInventory execution check",
         "python3 -m json.tool tasks/plan068-config-diet/index.json",
-        "git diff --check -- tasks/plan068-config-diet",
+        "git diff --check",
         "forbidden wording grep"
       ]
     },

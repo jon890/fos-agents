@@ -1,7 +1,7 @@
 # Phase 02 — derived inventory helper 계약 구현
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ## 목표
 
@@ -158,3 +158,49 @@ prose만 출력하면 success로 잘못 처리될 수 있다.
 - docs/ADR/정책 문서를 임의 수정한다.
 - 새 산출물에 금지 표현을 남긴다.
 - unrelated dirty 변경을 revert, stage, commit, push한다.
+
+## 실행 결과
+
+완료 시각: 2026-06-08T20:47:01+09:00
+
+### 변경 요약
+
+- `scripts/study-topic-recommender/fos_study_inventory.ts`의 기존 helper를 확장했다.
+  기존 `markdownPathsRelative` 계약은 유지하고, `items`에 `path`, `slug`, `titleCandidate`, `domainCandidate`, `categoryCandidate`, `tagsCandidate`, `mtimeMs`, `updatedAt`을 추가했다.
+- `fos-study` scan 기본 제외 디렉터리는 `.git`, `.claude`, `private`로 두었다.
+- `scripts/question-bank-collector/validate.ts`를 CLI validator와 import 가능한 helper 겸용으로 확장했다.
+  `scanQuestionBankInventory()`는 validator와 같은 schema 검증 경로에서 `public/question-bank` 파일, category, 질문 메타데이터 inventory를 파생한다.
+- public question bank inventory item에는 질문 본문이나 답변 신호 본문을 복사하지 않고, `key`, `category`, `difficulty`, `tagsCandidate`, `source`, `publicSafe`, 개수 진단값, mtime 진단값만 담았다.
+- config 파일, docs/ADR/정책 문서, skill reader, `sources/fos-study`, `public/question-bank` 질문 파일은 수정하지 않았다.
+
+### helper 실행 확인
+
+- `scanFosStudyInventory({ root: "./sources/fos-study" })`
+  - markdown count: 364
+  - excluded dirs: `.git`, `.claude`, `private`
+  - sample item에서 path, slug, title 후보, domain/category 후보, mtime 진단값 확인.
+- `scanQuestionBankInventory()`
+  - files: 5
+  - questions: 35
+  - categories: `java-spring`, `database`, `cs`, `operations`, `system-design`
+
+### 검증 결과
+
+- `git status --short`: career-os 변경 파일만 4개 표시.
+  apartment 쪽 기존 dirty 변경은 수정, stage, revert하지 않았다.
+- `test -f tasks/plan068-config-diet/reader-inventory.md`: 통과.
+- `bun --check scripts/study-topic-recommender/fos_study_inventory.ts`: 통과.
+- `bun --check scripts/question-bank-collector/validate.ts`: 통과.
+- `find sources/fos-study ... | wc -l`: `[fos-study markdown count] 364`.
+- `find public/question-bank -type f | sort | wc -l`: `[question-bank file count] 6`.
+- inventory reference grep 결과는 `/tmp/plan068-phase02-inventory-refs.txt`에 기록했다.
+- private boundary grep 결과는 `/tmp/plan068-phase02-private-review.txt`에 기록했다.
+  결과는 validator의 boundary 문구와 phase 문서의 금지 범위 확인용 참조이며, helper가 private 본문을 inventory에 포함하지 않는다.
+- 금지 표현 grep: 통과.
+- `python3 -m json.tool tasks/plan068-config-diet/index.json`: 통과.
+- `git diff --check`: 통과.
+
+### Phase 판정
+
+- PHASE_BLOCKED: false
+- PHASE_FAILED: false
