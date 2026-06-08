@@ -153,3 +153,75 @@ prose만 출력하면 success로 잘못 처리될 수 있다.
 - 구현 코드나 config를 이 검증 phase에서 추가 수정한다.
 - 새 산출물에 금지 표현을 남긴다.
 - unrelated dirty 변경을 revert, stage, commit, push한다.
+
+## 실행 결과
+
+완료 시각: 2026-06-08T21:23:38+09:00
+
+상태: completed
+
+### 검토 요약
+
+- ADR-069, data-schema, flow, code-architecture의 config 책임 원칙과 구현 결과가 충돌하지 않음을 확인했다.
+- `config/`는 전체 학습 문서 DB나 공개 질문 DB가 아니라 override, seed, fallback, guide 중심으로 축소된 상태다.
+- 학습 문서 inventory는 `sources/fos-study/`에서 파생되고, `data/runtime/topic-inventory.json`에 `sourceOfTruth.root`가 `sources/fos-study`로 기록된다.
+- 공개 질문 inventory는 `public/question-bank/` validator에서 파생되며, validator 실행 결과 categories 5개, questions 35개가 통과했다.
+- `first-round-drill-core-files`는 active script, skill, config 참조가 없고 docs/task history에만 남는다.
+- private 경계 확인 결과 runtime inventory에는 private 경로 매치가 없고, validator의 차단 패턴 문구만 확인됐다.
+
+### 범위 확인
+
+- docs/ADR/AGENTS/TOOLS/정책 문서 수정 없음.
+- 구현 코드와 config 수정 없음.
+- public/question-bank 질문 내용 수정 없음.
+- sources/fos-study 문서 수정 또는 발행 없음.
+- private 자료 수정 또는 복사 없음.
+- unrelated apartment dirty 변경 수정, stage, revert, commit, push 없음.
+- Phase 05에서 수정한 파일은 이 phase 파일과 `index.json`뿐이다.
+
+### 실행한 명령과 결과
+
+다음 명령을 career-os repo root에서 실행했다.
+
+```bash
+git status --short
+python3 -m json.tool tasks/plan068-config-diet/index.json
+bun --check scripts/study-topic-recommender/refresh_topic_inventory.ts
+bun --check scripts/study-topic-recommender/fos_study_inventory.ts
+bun scripts/study-topic-recommender/refresh_topic_inventory.ts
+bun scripts/question-bank-collector/validate.ts
+rg -n "study-pack-topics|study-pack-candidates|topic-file-map|topic-profiles|question-bank-topics|study-preferences|first-round-drill-core-files|live-coding-seed" scripts .claude/skills config docs tasks | tee /tmp/plan068-phase05-reader-review.txt
+rg -n "sources/fos-study|public/question-bank|override|pin|exclusion|seed|fallback|sourceOfTruth" scripts .claude/skills data/runtime/topic-inventory.json public/question-bank | tee /tmp/plan068-phase05-derived-review.txt
+rg -n "candidate-profile|data/private|data/applications|private/" scripts/study-topic-recommender scripts/question-bank-collector data/runtime/topic-inventory.json | tee /tmp/plan068-phase05-private-review.txt || true
+git diff --check
+```
+
+결과:
+
+- `git status --short`: Phase 05 정리 전 career-os 내부 dirty 없음.
+  최종 dirty는 이 phase 파일과 `index.json`뿐이며, 기존 unrelated dirty는 `../apartment` 쪽 파일뿐이다.
+- `python3 -m json.tool tasks/plan068-config-diet/index.json`: 통과.
+- `bun --check scripts/study-topic-recommender/refresh_topic_inventory.ts`: 통과.
+- `bun --check scripts/study-topic-recommender/fos_study_inventory.ts`: 통과.
+- `bun scripts/study-topic-recommender/refresh_topic_inventory.ts`: 통과.
+  stdout 기준 backend 3, techBlog 3, ai 3, geek 1 추천이 생성됐다.
+- `bun scripts/question-bank-collector/validate.ts`: 통과.
+  stdout 기준 status ok, categories 5, questions 35.
+- reader review는 `/tmp/plan068-phase05-reader-review.txt`에 기록했다.
+  active reader는 축소된 config를 optional override, seed, fallback, guide로만 참조한다.
+- derived review는 `/tmp/plan068-phase05-derived-review.txt`에 기록했다.
+  `sources/fos-study`, `public/question-bank`, `sourceOfTruth`, override/seed/fallback 참조를 확인했다.
+- private review는 `/tmp/plan068-phase05-private-review.txt`에 기록했다.
+  validator의 private/copyright 차단 패턴 문구만 확인됐다.
+- 금지 표현 broad grep은 오래된 task history와 기존 범위 밖 파일의 문구를 잡았다.
+  `tasks/plan068-config-diet` 기준 확인은 no matches다.
+- `git diff --check`: 통과.
+
+### 후속 후보
+
+- 필수 후속 구현 후보는 없다.
+- 별도 정리 후보로는 오래된 task history와 plan068 범위 밖 파일에 남은 금지 표현을 future cleanup에서 다루는 정도가 있다.
+
+PHASE_BLOCKED: false
+
+PHASE_FAILED: false

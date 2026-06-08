@@ -2,8 +2,8 @@
   "name": "plan068-config-diet",
   "description": "ADR-069 결정에 따라 career-os config를 정책, 현재 타깃, 후보자 baseline, 사람이 고른 예외 override 중심으로 줄인다. 학습 문서 inventory는 sources/fos-study/에서 파생하고, 공개 질문 inventory는 public/question-bank/에서 파생한다. plan068은 바로 파괴적 삭제하지 않고 reader inventory, fallback, 검증 명령을 먼저 고정한 뒤 phase 단위로 대량 topic/reservoir JSON을 축소, 이관, 삭제한다.",
   "created_at": "2026-06-08T00:00:00+09:00",
-  "updated_at": "2026-06-08T21:12:26+09:00",
-  "status": "in_progress",
+  "updated_at": "2026-06-08T21:23:38+09:00",
+  "status": "completed",
   "current_phase": 5,
   "total_phases": 5,
   "error_message": null,
@@ -188,7 +188,7 @@
       "number": 5,
       "title": "문서 일치 검토와 운영 확인",
       "file": "phase-05.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Edit",
@@ -201,22 +201,16 @@
     }
   ],
   "implementation_result": {
-    "phase": 4,
+    "phase": 5,
     "status": "completed",
-    "completed_at": "2026-06-08T21:12:26+09:00",
-    "summary": "Phase 01 reader inventory와 Phase 03 migration 결과를 근거로 dead config를 삭제하거나 override/seed/fallback 중심으로 축소했다. first-round drill core 파일은 마지막 rg에서 active reader가 없어 제거했다. active reader가 남은 config는 기존 top-level 구조를 유지하면서 전체 목록 정본 역할을 제거했다. docs/ADR/AGENTS/TOOLS/정책 문서, public/question-bank 질문 내용, sources/fos-study 문서, private 자료, unrelated apartment 변경은 수정하지 않았다.",
+    "completed_at": "2026-06-08T21:23:38+09:00",
+    "summary": "Phase 05 최종 통합 검증에서 plan068 결과가 ADR-069, data-schema, flow, code-architecture의 config 책임 원칙과 충돌하지 않음을 확인했다. config는 전체 학습 문서 DB나 공개 질문 DB가 아니라 override, seed, fallback, guide 중심으로 축소됐고, 학습 문서 inventory는 sources/fos-study/에서, 공개 질문 inventory는 public/question-bank/ validator에서 파생되는 상태다. first-round drill core 파일은 active script/skill/config 참조가 없고 task/docs history에만 남는다. docs/ADR/AGENTS/TOOLS/정책 문서, 구현 코드, config, public/question-bank, sources/fos-study, private 자료, unrelated apartment 변경은 Phase 05에서 수정하지 않았다.",
     "artifacts": [
-      "config/first-round-drill-core-files.json",
-      "config/study-preferences.json",
-      "config/study-pack-topics.json",
-      "config/study-pack-candidates.json",
-      "config/topic-file-map.json",
-      "config/topic-profiles.json",
-      "config/question-bank-topics.json",
-      "config/live-coding-seed-pool.json",
-      "config/live-coding-seed-candidates.json",
       "tasks/plan068-config-diet/index.json",
-      "tasks/plan068-config-diet/phase-04.md"
+      "tasks/plan068-config-diet/phase-05.md",
+      "/tmp/plan068-phase05-reader-review.txt",
+      "/tmp/plan068-phase05-derived-review.txt",
+      "/tmp/plan068-phase05-private-review.txt"
     ],
     "cleanup_result": {
       "removed": [
@@ -226,7 +220,7 @@
         "config/study-preferences.json": "current target 반복과 secondary target 운영 상태를 제거하고 추천 철학, 관심 축, 제약, 회피 조건만 유지했다.",
         "config/study-pack-topics.json": "55개 topic 목록을 4개 public-safe override/fallback 후보로 축소했다.",
         "config/study-pack-candidates.json": "39개 reservoir를 8개 seed/fallback 후보로 축소했다.",
-        "config/topic-file-map.json": "active reader가 남아 있어 삭제하지 않고 5개 daily fallback topic만 유지했다.",
+        "config/topic-file-map.json": "active reader가 남아 있어 삭제하지 않고 실제 존재하는 fallback topic만 유지했다.",
         "config/topic-profiles.json": "writer family guide 구조를 유지하되 정본 inventory가 아니라 optional guide임을 명시했다.",
         "config/question-bank-topics.json": "public bank 정본 역할을 제거하고 interview-asset override 2개만 유지했다. 긴 private-context prompt는 일반화했다.",
         "config/live-coding-seed-pool.json": "active reader가 남아 있어 seed 구조를 유지하고 5개 pinned example만 남겼다.",
@@ -245,24 +239,31 @@
     "validation": {
       "status": "passed",
       "notes": [
-        "career-os cwd 기준으로 phase-04.md 검증 명령을 실행했다.",
-        "post-cleanup reader grep 결과는 /tmp/plan068-phase04-post-cleanup-readers.txt에 기록했다. 삭제된 first-round config는 docs/task history에만 남고 active script/skill reader는 없다.",
-        "bun --check scripts/study-topic-recommender/refresh_topic_inventory.ts는 통과했으며 Bun 동작상 refresh entrypoint가 실행됐다.",
+        "docs/adr.md ADR-069, docs/data-schema.md config 책임 원칙, docs/flow.md config diet 흐름, docs/code-architecture.md config 설계 원칙을 grep으로 대조했다.",
+        "reader review 결과는 /tmp/plan068-phase05-reader-review.txt에 기록했다. first-round drill core 파일은 active script/skill/config 참조가 없다.",
+        "derived review 결과는 /tmp/plan068-phase05-derived-review.txt에 기록했다. study-topic-recommender와 관련 skill은 sources/fos-study, public/question-bank, override, seed, fallback, sourceOfTruth 계약을 참조한다.",
+        "private review 결과는 /tmp/plan068-phase05-private-review.txt에 기록했다. runtime inventory에는 private 경로 매치가 없고 validator의 차단 패턴 문구만 확인됐다.",
+        "bun --check scripts/study-topic-recommender/refresh_topic_inventory.ts 통과.",
+        "bun --check scripts/study-topic-recommender/fos_study_inventory.ts 통과.",
         "bun scripts/study-topic-recommender/refresh_topic_inventory.ts 실행 확인 결과 backend 3, techBlog 3, ai 3, geek 1 추천이 생성됐다.",
-        "bun scripts/question-bank-collector/validate.ts 실행 확인 결과 categories=5, questions=35다.",
-        "금지 표현 broad grep은 기존 범위 밖 파일인 config/candidate-profile.md와 scripts/application-agent/priority_recommendation.ts의 오래된 문구를 잡았다. Phase 04 변경 파일 기준 grep은 no matches다.",
+        "bun scripts/question-bank-collector/validate.ts 실행 확인 결과 status ok, categories 5, questions 35다.",
+        "금지 표현 broad grep은 기존 history/task와 기존 범위 밖 파일의 오래된 문구를 잡았다. tasks/plan068-config-diet 기준 grep은 no matches다.",
         "git diff --check 통과.",
-        "unrelated dirty 변경은 ../apartment 쪽 파일뿐이며 수정, stage, revert하지 않았다."
+        "unrelated dirty 변경은 ../apartment 쪽 파일뿐이며 수정, stage, revert, commit, push하지 않았다."
       ],
       "commands": [
         "git status --short",
-        "remaining/removed config size loop",
-        "rg reader references | tee /tmp/plan068-phase04-post-cleanup-readers.txt",
+        "rg docs contract references",
+        "rg first-round-drill-core-files scripts .claude/skills config docs tasks",
         "python3 -m json.tool tasks/plan068-config-diet/index.json",
         "bun --check scripts/study-topic-recommender/refresh_topic_inventory.ts",
+        "bun --check scripts/study-topic-recommender/fos_study_inventory.ts",
         "bun scripts/study-topic-recommender/refresh_topic_inventory.ts",
         "bun scripts/question-bank-collector/validate.ts",
-        "rg -n \"smo\"\"ke\" tasks/plan068-config-diet config scripts .claude/skills && exit 1 || true",
+        "rg reader references | tee /tmp/plan068-phase05-reader-review.txt",
+        "rg derived/source references | tee /tmp/plan068-phase05-derived-review.txt",
+        "rg private-boundary references | tee /tmp/plan068-phase05-private-review.txt",
+        "rg prohibited term tasks/plan068-config-diet",
         "git diff --check"
       ]
     },
