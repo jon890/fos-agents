@@ -1,0 +1,260 @@
+{
+  "name": "plan067-question-bank-request-gateway",
+  "description": "ADR-068 결정에 따라 fos-career 면접 hub의 request gateway에 question bank 보강 요청을 연결한다. dashboard는 `question_bank_refresh` request만 만들고, host-side processor가 `question-bank-collector`를 실행한다. resultJson에는 public-safe summary, public/question-bank path, validator count만 저장하고 private 본문, 답변 전문, command stdout 전체, 민감 내용은 저장하지 않는다.",
+  "created_at": "2026-06-08T00:00:00Z",
+  "updated_at": "2026-06-08T19:08:22+09:00",
+  "status": "completed",
+  "current_phase": 4,
+  "total_phases": 4,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "docs/adr.md",
+    "docs/prd.md",
+    "docs/data-schema.md",
+    "docs/flow.md",
+    "docs/code-architecture.md",
+    "tasks/plan060-interview-skill-request-gateway/index.json",
+    "tasks/plan065-question-bank-collector/index.json"
+  ],
+  "target_repositories": [
+    {
+      "name": "fos-career",
+      "path": "~/services/fos-career",
+      "role": "DB schema, migration, API validation, dashboard button, request processor"
+    },
+    {
+      "name": "career-os",
+      "path": ".",
+      "role": "task contract, question-bank validator, public/question-bank safety boundary"
+    }
+  ],
+  "depends_on": [
+    "ADR-068 question bank request gateway",
+    "plan060-interview-skill-request-gateway",
+    "plan065-question-bank-collector",
+    "docs-first updates already reflected in docs/prd.md, docs/flow.md, docs/code-architecture.md, docs/data-schema.md"
+  ],
+  "execution_policy": {
+    "phase_order": "current_phase 순서대로 Phase 01부터 Phase 04까지 실행한다.",
+    "parallelism": "같은 plan 안의 phase는 병렬 실행하지 않는다.",
+    "implementation_docs_freeze": "implementation phase에서는 career-os docs/ADR/정책 문서를 수정하지 않는다. 계약이 부족하면 PHASE_BLOCKED로 멈춘다.",
+    "pr_unit": "PR은 모든 phase 완료 뒤 plan 단위로 만든다. task 파일 생성 작업에서는 commit/push하지 않는다."
+  },
+  "hud_events": [
+    {
+      "when": "task files materializing",
+      "status": "task files running",
+      "command": "bun /home/bifos/.openclaw/workspace-career/scripts/task-hud/update_event.ts --session discord-career-main --task-label plan067-question-bank-request-gateway --event start --status 'task files running' --target channel:1492521172099666021"
+    },
+    {
+      "when": "task files completed",
+      "status": "task files completed",
+      "command": "bun /home/bifos/.openclaw/workspace-career/scripts/task-hud/update_event.ts --session discord-career-main --task-label plan067-question-bank-request-gateway --event complete --status 'task files completed' --target channel:1492521172099666021"
+    },
+    {
+      "when": "implementation starts",
+      "status": "implementation running",
+      "command": "bun /home/bifos/.openclaw/workspace-career/scripts/task-hud/update_event.ts --session discord-career-main --task-label plan067-question-bank-request-gateway --event start --status 'implementation running' --target channel:1492521172099666021"
+    },
+    {
+      "when": "implementation completes",
+      "status": "implementation completed",
+      "command": "bun /home/bifos/.openclaw/workspace-career/scripts/task-hud/update_event.ts --session discord-career-main --task-label plan067-question-bank-request-gateway --event complete --status 'implementation completed' --target channel:1492521172099666021"
+    },
+    {
+      "when": "implementation fails",
+      "status": "implementation failed",
+      "command": "bun /home/bifos/.openclaw/workspace-career/scripts/task-hud/update_event.ts --session discord-career-main --task-label plan067-question-bank-request-gateway --event fail --status 'implementation failed' --target channel:1492521172099666021"
+    },
+    {
+      "when": "implementation blocks",
+      "status": "implementation blocked",
+      "command": "bun /home/bifos/.openclaw/workspace-career/scripts/task-hud/update_event.ts --session discord-career-main --task-label plan067-question-bank-request-gateway --event block --status 'implementation blocked' --target channel:1492521172099666021"
+    }
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "question-bank-refresh-request-type",
+      "decision": "fos-career `interview_skill_requests.request_type`에 `question_bank_refresh`를 추가한다."
+    },
+    {
+      "id": "D2",
+      "title": "question-bank-collector-skill",
+      "decision": "`question_bank_refresh`의 `requested_skill`은 `question-bank-collector`만 허용한다."
+    },
+    {
+      "id": "D3",
+      "title": "dashboard-request-only",
+      "decision": "면접 hub의 “질문 bank 보강” 버튼은 request row만 만들고 dashboard container가 `claude`를 직접 실행하지 않는다."
+    },
+    {
+      "id": "D4",
+      "title": "public-safe-topic-only",
+      "decision": "기본 topic 후보와 사용자 입력은 공개 가능 일반 backend/CS 질문 범위로 정규화하고 private prep 자동 반영은 하지 않는다."
+    },
+    {
+      "id": "D5",
+      "title": "processor-command",
+      "decision": "processor는 `question_bank_refresh`를 `claude --permission-mode <mode> -p \"/question-bank-collector <topic>\"`로 실행한다."
+    },
+    {
+      "id": "D6",
+      "title": "processor-permission-mode",
+      "decision": "processor는 기존 `CLAUDE_PERMISSION_MODE` 또는 기존 processor 권한 모드 결정을 재사용한다."
+    },
+    {
+      "id": "D7",
+      "title": "validator-after-run",
+      "decision": "실행 후 `bun scripts/question-bank-collector/validate.ts`를 실행하거나 동등하게 결과를 확인한다."
+    },
+    {
+      "id": "D8",
+      "title": "minimal-result-json",
+      "decision": "resultJson에는 public-safe summary, `public/question-bank` path, validator count만 저장한다. command stdout 전체와 민감 본문은 저장하지 않는다."
+    },
+    {
+      "id": "D9",
+      "title": "fos-study-no-change",
+      "decision": "question bank 보강 요청은 `sources/fos-study/`를 수정하거나 발행하지 않는다."
+    },
+    {
+      "id": "D10",
+      "title": "docker-deploy-if-needed",
+      "decision": "docker rebuild/restart는 구현 phase에서 필요할 때만 수행하고, 별도 DB 컨테이너를 만들지 않는다."
+    }
+  ],
+  "open_decisions": [],
+  "recommended_defaults": [
+    "fos-career migration은 기존 migration 패턴을 재사용한다.",
+    "API validation과 processor allowlist 둘 다에서 `question_bank_refresh`와 `question-bank-collector`를 검증한다.",
+    "기본 topic 후보는 Java/Spring, DB/JPA/MyBatis/Redis/cache, CS, 운영/장애/관측성, System design/backend architecture 같은 일반 범위만 사용한다.",
+    "resultJson summary는 processor가 짧게 생성한 공개 가능 요약만 둔다.",
+    "stdout은 디버그 로그에도 장기 저장하지 않고 필요하면 짧은 errorSummary로만 축약한다.",
+    "private `prep.md` 자동 반영, fos-study 발행, 범용 chat 복구는 후속 plan으로 남긴다.",
+    "phase 실행 전 career-os와 fos-career dirty state를 확인하고 unrelated 변경은 되돌리거나 stage하지 않는다.",
+    "apartment repo 변경은 무시한다.",
+    "PR은 모든 phase 완료 뒤 plan 단위로 만든다. 이 task 파일 생성 작업에서는 commit/push하지 않는다."
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "fos-career DB/schema/API 계약 확장",
+      "file": "phase-01.md",
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 1800,
+      "completed_at": "2026-06-08T19:08:22+09:00",
+      "result": "fos-career DB enum/schema/migration/API/gateway allowlist에 question_bank_refresh와 question-bank-collector를 추가했다. API와 gateway 양쪽에서 question_bank_refresh는 question-bank-collector만 허용하고 public-safe topic gate를 적용한다."
+    },
+    {
+      "number": 2,
+      "title": "면접 hub 질문 bank 보강 버튼",
+      "file": "phase-02.md",
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 1800,
+      "completed_at": "2026-06-08T19:08:22+09:00",
+      "result": "면접 hub request queue 후보에 질문 bank 보강 버튼을 추가했다. 기본 topic은 Java/Spring, DB/JPA/MyBatis/Redis/cache, CS, 운영/장애/관측성, System design/backend architecture의 공개 가능 일반 범위만 사용한다."
+    },
+    {
+      "number": 3,
+      "title": "processor question-bank-collector 연결",
+      "file": "phase-03.md",
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 1800,
+      "completed_at": "2026-06-08T19:08:22+09:00",
+      "result": "host-side interview request processor가 question_bank_refresh를 /question-bank-collector <topic>으로 실행하고, 실행 후 bun scripts/question-bank-collector/validate.ts 결과의 categories/questions count와 public/question-bank path만 resultJson에 저장하도록 연결했다."
+    },
+    {
+      "number": 4,
+      "title": "통합 검증과 privacy 경계 확인",
+      "file": "phase-04.md",
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "haiku",
+      "timeout": 1500,
+      "completed_at": "2026-06-08T19:08:22+09:00",
+      "result": "npx tsc --noEmit, npm run build, git diff --check, question-bank validator, fos-study 무변경, privacy grep, DB enum 적용 확인, rollback pending request smoke, docker rebuild/restart와 healthy 확인을 완료했다."
+    }
+  ],
+  "implementation_result": {
+    "status": "completed",
+    "completed_at": "2026-06-08T19:08:22+09:00",
+    "summary": "fos-career 면접 hub에서 question_bank_refresh request를 만들고 host-side processor가 question-bank-collector와 validator를 실행하도록 연결했다.",
+    "changed_files": [
+      "/home/bifos/services/fos-career/app/api/interview/requests/route.ts",
+      "/home/bifos/services/fos-career/app/dashboard/interview/page.tsx",
+      "/home/bifos/services/fos-career/db/migrations/0006_question_bank_refresh_requests.sql",
+      "/home/bifos/services/fos-career/db/migrations/meta/_journal.json",
+      "/home/bifos/services/fos-career/db/schema.ts",
+      "/home/bifos/services/fos-career/lib/career-os/adapter.ts",
+      "/home/bifos/services/fos-career/lib/career-os/types.ts",
+      "/home/bifos/services/fos-career/lib/interview/gateway.ts",
+      "/home/bifos/services/fos-career/scripts/process-interview-requests.ts",
+      "tasks/plan067-question-bank-request-gateway/index.json",
+      "tasks/plan067-question-bank-request-gateway/phase-01.md",
+      "tasks/plan067-question-bank-request-gateway/phase-02.md",
+      "tasks/plan067-question-bank-request-gateway/phase-03.md",
+      "tasks/plan067-question-bank-request-gateway/phase-04.md"
+    ],
+    "verification": {
+      "fos_career": [
+        "npx tsc --noEmit: passed",
+        "npm run build: passed",
+        "git diff --check: passed",
+        "npm run apply:interview-requests -- --self-test-gates: passed",
+        "DB enum migration 0006: applied directly against existing bifos-db via 127.0.0.1:13306 after drizzle-kit migrate could not apply from empty __drizzle_migrations history",
+        "pending request smoke: transaction rollback insert for question_bank_refresh/question-bank-collector passed",
+        "docker compose up -d --build fos-career: passed",
+        "docker health: fos-career-app healthy",
+        "curl /dashboard/interview: 307 to /login"
+      ],
+      "career_os": [
+        "bun scripts/question-bank-collector/validate.ts: passed with categories=5 questions=20",
+        "git status --short sources/fos-study: clean",
+        "git diff --check -- tasks/plan067-question-bank-request-gateway: passed"
+      ]
+    },
+    "privacy_boundary": [
+      "dashboard/API는 claude를 직접 실행하지 않고 request row만 생성한다.",
+      "question_bank_refresh는 question-bank-collector만 허용한다.",
+      "question bank resultJson은 public-safe summary, public/question-bank path, validator categories/questions count 중심으로 저장한다.",
+      "command stdout 전체, private 본문, 답변 전문, 민감 내용은 question bank result/audit 저장 경로에 넣지 않았다.",
+      "sources/fos-study/는 수정하지 않았다."
+    ],
+    "commit_push_pr": "하지 않음"
+  }
+}

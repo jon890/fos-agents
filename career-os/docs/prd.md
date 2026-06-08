@@ -255,6 +255,8 @@ MVP 범위:
 - 질문은 단순 암기형 원문을 그대로 보관하지 않고 backend 실무형 질문으로 정규화한다.
 - 각 항목은 category, difficulty, question, intent, answerSignals, source, publicSafe, positionFitHint, normalizedFrom을 가진다.
 - `question-bank-collector` skill은 “일반 backend 질문”, “CS 질문 수집”, “면접 질문 bank”, “질문 뱅크 보강”, “약점 기반 질문 재선별” 같은 자연어 요청에 반응해야 한다.
+- fos-career 면접 hub에서 `question_bank_refresh` request를 만들 수 있어야 한다.
+  processor는 `question-bank-collector`를 실행하고 `public/question-bank` 갱신 결과만 저장한다.
 - 포지션별 최종 질문은 `private/<company>/<position>/interview/prep.md`에 선별 반영한다.
 
 범위 밖:
@@ -263,6 +265,7 @@ MVP 범위:
 - 회사별 비공개 후기성 질문 저장.
 - private 답변/지원 맥락을 `public/question-bank/`에 복사.
 - 검수 없는 fos-study 자동 발행.
+- question bank를 포지션별 `prep.md`에 자동 반영하는 dashboard 버튼.
 
 범위 밖:
 

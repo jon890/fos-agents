@@ -82,5 +82,173 @@
       "idempotency key 저장소 장애 시 어떻게 처리하나요?",
       "PUT과 POST의 idempotency 차이는 무엇인가요?"
     ]
+  },
+  {
+    "id": "java-spring-005",
+    "category": "java-spring",
+    "difficulty": "intermediate",
+    "question": "Spring bean이 기본적으로 singleton인데, singleton bean에 가변 상태를 두면 어떤 문제가 생기고 어떻게 설계해야 하는지 설명해 주세요.",
+    "intent": "bean scope와 singleton bean의 thread-safety 이해를 확인한다.",
+    "answerSignals": [
+      "여러 요청이 같은 instance를 공유하므로 가변 필드는 race condition 위험",
+      "상태를 method local, 요청 scope, parameter로 옮기는 설계",
+      "필요 시 prototype, request scope 또는 불변 객체 사용"
+    ],
+    "source": "public-general-backend-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "동시성이 중요한 API 서버나 bean 설계 경험을 확인할 때 선별한다.",
+    "normalizedFrom": "Spring bean scope 개념을 동시성 안전 설계 질문으로 정규화",
+    "tags": ["spring", "bean-scope", "concurrency"],
+    "followUps": [
+      "request scope bean을 singleton bean에 주입할 때 어떻게 해결하나요?",
+      "ThreadLocal을 쓴다면 어떤 정리 책임이 생기나요?"
+    ]
+  },
+  {
+    "id": "java-spring-006",
+    "category": "java-spring",
+    "difficulty": "basic",
+    "question": "equals와 hashCode를 함께 재정의해야 하는 이유를 HashMap, HashSet 동작과 연결해서 설명해 주세요.",
+    "intent": "equals/hashCode 계약과 컬렉션 동작 이해를 확인한다.",
+    "answerSignals": [
+      "hashCode로 bucket을 찾고 equals로 최종 비교하는 흐름",
+      "equals만 재정의하면 같은 객체를 다른 bucket에서 못 찾는 문제",
+      "불변 필드 기반 hashCode와 일관성 유지"
+    ],
+    "source": "public-general-backend-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "Java 기본기와 컬렉션 이해를 확인할 때 선별한다.",
+    "normalizedFrom": "equals/hashCode 계약 개념을 컬렉션 동작 연결 질문으로 정규화",
+    "tags": ["java", "collections", "fundamentals"],
+    "followUps": [
+      "엔티티 객체의 equals/hashCode는 어떤 기준으로 잡는 게 안전한가요?",
+      "record 타입은 이 부분을 어떻게 처리하나요?"
+    ]
+  },
+  {
+    "id": "java-spring-007",
+    "category": "java-spring",
+    "difficulty": "advanced",
+    "question": "공유 카운터나 캐시를 여러 thread가 갱신할 때 synchronized, ReentrantLock, java.util.concurrent의 atomic/동시성 컬렉션 중 무엇을 어떤 기준으로 고르겠습니까?",
+    "intent": "Java 동시성 도구 선택 기준과 trade-off 이해를 확인한다.",
+    "answerSignals": [
+      "lock 경합 비용과 임계 영역 크기 고려",
+      "단순 증가는 atomic, 복합 조건은 lock 또는 동시성 컬렉션",
+      "ConcurrentHashMap의 atomic 연산과 compute류 메서드 활용"
+    ],
+    "source": "public-general-backend-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "고동시성 처리나 캐시/카운터 설계 경험을 확인할 때 선별한다.",
+    "normalizedFrom": "Java concurrency 도구 비교 주제를 선택 기준 질문으로 정규화",
+    "tags": ["java", "concurrency", "performance"],
+    "followUps": [
+      "read가 압도적으로 많은 경우 어떤 선택이 유리한가요?",
+      "lock-free 방식의 한계는 무엇인가요?"
+    ]
+  },
+  {
+    "id": "java-spring-008",
+    "category": "java-spring",
+    "difficulty": "intermediate",
+    "question": "Spring Boot auto-configuration이 동작하는 원리를 설명하고, 특정 자동 설정을 덮어쓰거나 끄려면 어떻게 하는지 말해 주세요.",
+    "intent": "auto-configuration과 conditional bean 메커니즘 이해를 확인한다.",
+    "answerSignals": [
+      "classpath와 조건부 bean 등록(@Conditional 계열) 동작",
+      "사용자 정의 bean이 있으면 기본 설정을 backoff하는 흐름",
+      "exclude 속성이나 property로 자동 설정 비활성화"
+    ],
+    "source": "public-general-backend-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "Spring Boot 기반 서비스 구성 경험을 확인할 때 선별한다.",
+    "normalizedFrom": "Spring Boot auto-configuration 개념을 설정 제어 질문으로 정규화",
+    "tags": ["spring-boot", "configuration", "dependency-injection"],
+    "followUps": [
+      "디버그 시 어떤 자동 설정이 적용됐는지 어떻게 확인하나요?",
+      "starter를 직접 만든다면 어떤 구조가 필요한가요?"
+    ]
+  },
+  {
+    "id": "java-spring-009",
+    "category": "java-spring",
+    "difficulty": "advanced",
+    "question": "응답 지연 그래프에서 주기적으로 튀는 구간이 GC 때문인지 의심된다면, GC 동작을 어떻게 관찰하고 어떤 튜닝 방향을 검토하겠습니까?",
+    "intent": "GC 관찰과 pause 원인 분석, collector 선택 이해를 확인한다.",
+    "answerSignals": [
+      "GC log와 pause 시간, 빈도 지표 수집",
+      "allocation rate와 promotion 패턴으로 young/old 분리",
+      "G1, ZGC 등 collector 특성과 heap 크기 조정 trade-off"
+    ],
+    "source": "public-general-backend-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "지연 민감 서비스의 JVM 튜닝 경험을 확인할 때 선별한다.",
+    "normalizedFrom": "GC pause 분석과 collector 비교 주제를 운영 진단 질문으로 정규화",
+    "tags": ["jvm", "gc", "performance"],
+    "followUps": [
+      "heap을 키우면 pause는 어떻게 변하나요?",
+      "stop-the-world를 줄이는 collector의 대가는 무엇인가요?"
+    ]
+  },
+  {
+    "id": "java-spring-010",
+    "category": "java-spring",
+    "difficulty": "intermediate",
+    "question": "Spring API 서버에서 예외 처리 전략을 어떻게 설계하고, client에게 일관된 에러 응답을 주기 위해 무엇을 고려하는지 설명해 주세요.",
+    "intent": "전역 예외 처리와 에러 응답 일관성 설계를 확인한다.",
+    "answerSignals": [
+      "@ControllerAdvice, @ExceptionHandler 기반 중앙 처리",
+      "도메인 예외와 HTTP status 매핑 규칙",
+      "에러 코드, 메시지, 로깅 레벨, 민감 정보 노출 방지"
+    ],
+    "source": "public-general-backend-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "API 에러 규약이나 장애 가시성 설계 경험을 확인할 때 선별한다.",
+    "normalizedFrom": "Spring 예외 처리 개념을 에러 응답 설계 질문으로 정규화",
+    "tags": ["spring", "error-handling", "rest-api"],
+    "followUps": [
+      "검증 실패와 비즈니스 예외의 응답을 어떻게 구분하나요?",
+      "예외 로깅 레벨은 어떤 기준으로 정하나요?"
+    ]
+  },
+  {
+    "id": "java-spring-011",
+    "category": "java-spring",
+    "difficulty": "basic",
+    "question": "Spring에서 요청 입력 검증을 어디서 어떻게 처리하는 게 좋은지, Bean Validation을 예로 들어 설명해 주세요.",
+    "intent": "입력 검증 책임 위치와 Bean Validation 활용 이해를 확인한다.",
+    "answerSignals": [
+      "@Valid와 제약 애너테이션으로 controller 경계에서 검증",
+      "검증 실패를 일관된 에러 응답으로 변환",
+      "도메인 불변식은 별도 계층에서 추가 검증"
+    ],
+    "source": "public-general-backend-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "API 입력 안전성과 계층 책임 분리 경험을 확인할 때 선별한다.",
+    "normalizedFrom": "Bean Validation 개념을 검증 책임 위치 질문으로 정규화",
+    "tags": ["spring", "validation", "rest-api"],
+    "followUps": [
+      "서로 의존적인 필드의 교차 검증은 어떻게 처리하나요?",
+      "controller 검증과 도메인 검증의 경계는 어떻게 나누나요?"
+    ]
+  },
+  {
+    "id": "java-spring-012",
+    "category": "java-spring",
+    "difficulty": "advanced",
+    "question": "여러 외부 API를 호출해 결과를 합쳐 응답해야 할 때 Spring 환경에서 비동기/병렬 처리를 어떻게 설계하고, 어떤 장애 처리를 함께 고려하겠습니까?",
+    "intent": "비동기 병렬 호출 설계와 timeout, 격리 처리 이해를 확인한다.",
+    "answerSignals": [
+      "독립 호출을 CompletableFuture 등으로 병렬화하고 결과 결합",
+      "thread pool 격리와 고갈 방지",
+      "호출별 timeout, fallback, 부분 실패 처리"
+    ],
+    "source": "public-general-backend-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "외부 연동이 많은 aggregation API나 지연 최적화 경험을 확인할 때 선별한다.",
+    "normalizedFrom": "비동기 병렬 호출 주제를 장애 처리 포함 설계 질문으로 정규화",
+    "tags": ["spring", "async", "resilience"],
+    "followUps": [
+      "공용 thread pool을 쓰면 어떤 위험이 있나요?",
+      "일부 호출만 실패했을 때 응답 정책을 어떻게 잡나요?"
+    ]
   }
 ]

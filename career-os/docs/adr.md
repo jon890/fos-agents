@@ -76,6 +76,7 @@ career-os의 모든 아키텍처 결정을 시간순으로 누적 기록한다. 
 | ADR-065 | 면접 답변 피드백은 career context LLM evaluator로 처리한다 | Accepted | 답변 제출 즉시 평가하고, guard 통과 답변만 `prep.md` 기반 LLM evaluator가 점수·피드백·꼬리질문을 생성한다 |
 | ADR-066 | 공개 가능 일반 면접 질문 bank는 public/question-bank에 둔다 | Accepted | Backend/CS/운영/System design 질문을 공개 가능 자산으로 추적하고 자연어 trigger가 강한 collector skill로 관리한다 |
 | ADR-067 | coffeechat 자동화 tombstone도 제거하고 ADR-only history로 둔다 | Accepted | coffeechat script/skill/schema/config/docs active reference를 제거하고 과거 task 기록만 history로 보존한다 |
+| ADR-068 | 질문 bank 보강은 dashboard request gateway로 연결한다 | Accepted | fos-career 면접 hub가 `question_bank_refresh` 요청을 만들고 processor가 `question-bank-collector`를 실행한다 |
 
 (ADR-024는 번호 누락. ADR-007a/b 충돌은 prd.md "분해 대기 작업"에 기록.)
 
@@ -2546,3 +2547,48 @@ ADR-048로 coffeechat 자동화는 이미 active workflow에서 폐기됐고, fi
 - `docs/data-schema.md`
 - `AGENTS.md`
 - `config/candidate-profile.md`
+
+---
+
+## ADR-068 — 질문 bank 보강은 dashboard request gateway로 연결한다
+
+- Status: Accepted
+- Date: 2026-06-08
+
+### 맥락
+
+ADR-066으로 공개 가능 일반 질문 bank와 `question-bank-collector` skill이 생겼다.
+하지만 fos-career dashboard의 면접 hub에는 아직 이 skill을 호출하는 버튼과 request processor 경로가 없다.
+
+사용자는 내부 skill 호출을 버튼 기반으로 쓰고 싶어 하며, 범용 chat은 ADR-064로 제거했다.
+따라서 question bank 보강도 chat이 아니라 목적별 request queue로 연결해야 한다.
+
+### 결정
+
+- fos-career `interview_skill_requests`에 `question_bank_refresh` request type을 추가한다.
+- `question_bank_refresh`의 유일한 skill은 `question-bank-collector`다.
+- dashboard 면접 hub에는 “질문 bank 보강” 요청 버튼을 추가한다.
+  topic은 공개 가능 일반 질문 범위만 받는다.
+- processor는 `question_bank_refresh`를 받으면 `claude --permission-mode <mode> -p "/question-bank-collector <topic>"`로 실행한다.
+- processor는 실행 후 `public/question-bank` path와 validator 결과만 request result에 저장한다.
+  private 본문, 답변 전문, command stdout 전체는 저장하지 않는다.
+- 이번 연결은 public question bank 보강까지만 다룬다.
+  `private/<company>/<position>/interview/prep.md`로 선별 반영하는 버튼은 후속 plan에서 다룬다.
+- `sources/fos-study/` 자동 발행은 하지 않는다.
+
+### 결과
+
+- dashboard에서 일반 backend/CS 질문 bank 보강을 버튼으로 요청할 수 있다.
+- queue/processor/HUD 흐름은 기존 interview skill request gateway와 일관된다.
+- public/private 경계가 유지된다.
+- question bank를 실제 면접 질문 추천으로 섞는 단계는 후속 결정으로 분리된다.
+
+### 적용
+
+- `fos-career/db/schema.ts`
+- `fos-career/db/migrations/`
+- `fos-career/lib/interview/gateway.ts`
+- `fos-career/app/dashboard/interview/page.tsx`
+- `fos-career/app/api/interview/requests/route.ts`
+- `fos-career/scripts/process-interview-requests.ts`
+- `career-os/tasks/plan067-question-bank-request-gateway/`
