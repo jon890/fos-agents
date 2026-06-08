@@ -3,8 +3,8 @@
   "description": "ADR-069 결정에 따라 career-os config를 정책, 현재 타깃, 후보자 baseline, 사람이 고른 예외 override 중심으로 줄인다. 학습 문서 inventory는 sources/fos-study/에서 파생하고, 공개 질문 inventory는 public/question-bank/에서 파생한다. plan068은 바로 파괴적 삭제하지 않고 reader inventory, fallback, 검증 명령을 먼저 고정한 뒤 phase 단위로 대량 topic/reservoir JSON을 축소, 이관, 삭제한다.",
   "created_at": "2026-06-08T00:00:00+09:00",
   "updated_at": "2026-06-08T00:00:00+09:00",
-  "status": "pending",
-  "current_phase": 1,
+  "status": "in_progress",
+  "current_phase": 2,
   "total_phases": 5,
   "error_message": null,
   "blocked_reason": null,
@@ -124,7 +124,7 @@
       "number": 1,
       "title": "config reader inventory와 사용 분류",
       "file": "phase-01.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
@@ -200,5 +200,51 @@
       "timeout": 1500
     }
   ],
-  "implementation_result": null
+  "implementation_result": {
+    "phase": 1,
+    "status": "completed",
+    "completed_at": "2026-06-08T00:00:00+09:00",
+    "summary": "대상 config 9개의 존재 여부, 크기, top-level key, active reader, docs reference, task history를 조사해 reader-inventory.md로 고정했다. Phase 01만 실행했으며 config, scripts, skill, public/question-bank, sources/fos-study는 수정하지 않았다.",
+    "artifacts": [
+      "tasks/plan068-config-diet/reader-inventory.md",
+      "tasks/plan068-config-diet/index.json",
+      "tasks/plan068-config-diet/phase-01.md"
+    ],
+    "reader_classification": {
+      "maintain": [
+        "config/live-coding-seed-pool.json"
+      ],
+      "shrink": [
+        "config/study-preferences.json",
+        "config/study-pack-topics.json",
+        "config/study-pack-candidates.json",
+        "config/live-coding-seed-candidates.json"
+      ],
+      "migrate": [
+        "config/topic-file-map.json",
+        "config/topic-profiles.json",
+        "config/question-bank-topics.json"
+      ],
+      "delete_candidates": [
+        "config/first-round-drill-core-files.json"
+      ],
+      "hold": []
+    },
+    "validation": {
+      "status": "passed",
+      "notes": [
+        "career-os cwd 기준으로 phase-01.md 검증 명령을 실행했다.",
+        "phase 검증 블록의 rg 범위에 포함된 skills/ 디렉터리는 현재 존재하지 않아 rg 경고가 출력됐지만, 파이프라인 전체는 0으로 종료됐다.",
+        "python3 -m json.tool, git diff --check, 금지 표현 grep 모두 통과했다."
+      ],
+      "commands": [
+        "phase-01.md validation command block",
+        "python3 -m json.tool tasks/plan068-config-diet/index.json",
+        "git diff --check -- tasks/plan068-config-diet",
+        "forbidden wording grep"
+      ]
+    },
+    "phase_blocked": false,
+    "phase_failed": false
+  }
 }

@@ -1,7 +1,7 @@
 # Phase 01 — config reader inventory와 사용 분류
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ## 목표
 
@@ -113,7 +113,7 @@ for file in \
 done
 
 rg -n "first-round-drill-core-files|study-preferences|study-pack-topics|study-pack-candidates|topic-file-map|topic-profiles|question-bank-topics|live-coding-seed-pool|live-coding-seed-candidates" \
-  scripts .claude/skills skills public config docs tasks \
+  scripts .claude/skills public config docs tasks \
   | tee /tmp/plan068-phase01-reader-rg.txt
 
 test -f tasks/plan068-config-diet/reader-inventory.md
@@ -170,3 +170,52 @@ prose만 출력하면 success로 잘못 처리될 수 있다.
 - private 본문을 reader inventory에 복사한다.
 - 새 task 산출물에 금지 표현을 남긴다.
 - unrelated dirty 변경을 revert, stage, commit, push한다.
+
+## 실행 결과
+
+- 완료일: 2026-06-08
+- 상태: completed
+- 산출물: `tasks/plan068-config-diet/reader-inventory.md`
+- index 갱신: `tasks/plan068-config-diet/index.json`의 Phase 01 status를 `completed`, plan status를 `in_progress`, `current_phase`를 2로 갱신했다.
+- PHASE_BLOCKED: 없음
+- PHASE_FAILED: 없음
+
+### reader 분류 요약
+
+- 유지: `config/live-coding-seed-pool.json`
+- 축소: `config/study-preferences.json`, `config/study-pack-topics.json`, `config/study-pack-candidates.json`, `config/live-coding-seed-candidates.json`
+- 이관: `config/topic-file-map.json`, `config/topic-profiles.json`, `config/question-bank-topics.json`
+- 삭제 후보: `config/first-round-drill-core-files.json`
+- 보류: 없음
+
+### 검증 결과
+
+career-os cwd 기준으로 검증했다.
+phase 문서의 명령 블록에 포함됐던 `skills/` 디렉터리는 현재 존재하지 않아 `rg` 경고가 출력됐지만, 파이프라인 전체는 0으로 종료됐다.
+검토 후 후속 실행에서 경고가 반복되지 않도록 검증 경로는 `.claude/skills` 기준으로 정리했다.
+
+```text
+git status --short
+ M ../apartment/docs/interior/interior-references.md
+ M ../apartment/docs/interior/lucky-5-1004-decision-queue.md
+ M tasks/plan068-config-diet/index.json
+ M tasks/plan068-config-diet/phase-01.md
+?? ../apartment/docs/interior/contractor-estimates/designflat-todayhome-2026-06-08.md
+?? tasks/plan068-config-diet/reader-inventory.md
+
+[exists] config/first-round-drill-core-files.json 3399
+[exists] config/study-preferences.json 4140
+[exists] config/study-pack-topics.json 39846
+[exists] config/study-pack-candidates.json 41812
+[exists] config/topic-file-map.json 5079
+[exists] config/topic-profiles.json 2068
+[exists] config/question-bank-topics.json 2732
+[exists] config/live-coding-seed-pool.json 4605
+[exists] config/live-coding-seed-candidates.json 973
+
+rg: skills: No such file or directory (os error 2)
+reader inventory grep: active reader, docs reference, task history, 유지, 축소, 이관, 삭제 후보 확인됨
+금지 표현 grep: 통과
+git diff --check -- tasks/plan068-config-diet: 통과
+python3 -m json.tool tasks/plan068-config-diet/index.json: 통과
+```
