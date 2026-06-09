@@ -282,13 +282,16 @@ notify_position_recommendation() {
     END { flush_candidate() }
   ' "$RUNTIME")"
 
+  local report_display
+  report_display="${REPORT#$ROOT/}"
+
   local message
   message="$(cat <<EOF
 오늘 포지션 추천 ($REPORT_DATE)
 
 $candidates
 
-전체 리포트: \`$REPORT\`
+전체 리포트: \`$report_display\`
 검증: 오늘 날짜 리포트 + 개별 active 공고 링크 확인 완료
 EOF
 )"
