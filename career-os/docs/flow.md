@@ -765,9 +765,13 @@ bun scripts/application-agent/evaluate_package.ts \
 
 native skill 패턴: `claude --permission-mode bypassPermissions -p "/study-topic-recommender"` → SKILL.md 자동 로드 → Claude가 도구로 직접 처리.
 
-자동 실행에서는 후보 제안 JSON, runtime report, inventory markdown을 쓰고 `Bash`로 Bun 스크립트를 실행한다.
+on-demand 실행에서는 후보 제안 JSON, runtime report, inventory markdown을 쓰고 `Bash`로 Bun 스크립트를 실행한다.
 기본 `claude -p` 또는 `acceptEdits`만 쓰면 비대화형 실행 중 권한 승인 요청에서 멈출 수 있으므로,
 이 agent-only 내부 추천 흐름은 `bypassPermissions`를 사용한다.
+
+daily cron은 비용과 채널 가독성을 위해 native Claude skill을 호출하지 않는다.
+cron은 `refresh_topic_inventory.ts`만 직접 실행하고 `recommendations[0:3]`의 제목과 짧은 이유만 보낸다.
+후보 refresh나 긴 중복 검토가 필요하면 on-demand native skill을 별도로 실행한다.
 
 내부 흐름 (ADR-070 이후):
 
