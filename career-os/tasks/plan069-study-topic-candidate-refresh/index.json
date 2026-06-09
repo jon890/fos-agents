@@ -2,9 +2,9 @@
   "name": "plan069-study-topic-candidate-refresh",
   "description": "ADR-070 결정에 따라 study-topic-recommender에 LLM 기반 candidate refresh turn을 추가한다. refresh_topic_inventory.ts는 기존 inventory refresh와 추천 스냅샷 생성을 유지하고, 새 후보 발굴은 별도 refresh entrypoint가 맡는다. deterministic 검증을 통과한 new 후보만 config/study-pack-candidates.json active 캐시에 자동 반영하며 update-existing, skip, needs-confirmation은 runtime report에만 남긴다.",
   "created_at": "2026-06-09T12:48:00+09:00",
-  "updated_at": "2026-06-09T12:48:00+09:00",
-  "status": "pending",
-  "current_phase": 1,
+  "updated_at": "2026-06-09T04:20:53.710688+00:00",
+  "status": "completed",
+  "current_phase": 4,
   "total_phases": 4,
   "error_message": null,
   "blocked_reason": null,
@@ -141,7 +141,7 @@
       "number": 1,
       "title": "스키마와 검증 helper 추가",
       "file": "phase-01.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
@@ -151,13 +151,14 @@
         "Glob"
       ],
       "model": "sonnet",
-      "timeout": 2400
+      "timeout": 2400,
+      "commitSha": "0302a3b00160"
     },
     {
       "number": 2,
       "title": "LLM 후보 refresh entrypoint 추가",
       "file": "phase-02.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
@@ -167,13 +168,14 @@
         "Glob"
       ],
       "model": "sonnet",
-      "timeout": 3000
+      "timeout": 3000,
+      "commitSha": "0302a3b00160"
     },
     {
       "number": 3,
       "title": "study-topic-recommender skill과 CLI 연결",
       "file": "phase-03.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
@@ -183,13 +185,14 @@
         "Glob"
       ],
       "model": "sonnet",
-      "timeout": 3000
+      "timeout": 3000,
+      "commitSha": "0302a3b00160"
     },
     {
       "number": 4,
       "title": "cron과 실행 검증",
       "file": "phase-04.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
@@ -199,8 +202,19 @@
         "Glob"
       ],
       "model": "sonnet",
-      "timeout": 3000
+      "timeout": 3000,
+      "commitSha": "0302a3b00160"
     }
   ],
-  "implementation_result": null
+  "implementation_result": {
+    "summary": "ADR-070 후보 refresh 실행 경로 구현 완료. schema/apply helper, refresh_candidate_pool entrypoint, study-topic-recommender native skill 연결, cron 하루 1회 제한과 smoke 검증을 반영했다.",
+    "implementationCommit": "0302a3b00160",
+    "verified": [
+      "bun --check scripts/study-topic-recommender/*.ts",
+      "refresh_candidate_pool.ts --dry-run keeps config unchanged",
+      "refresh_candidate_pool.ts --render-only",
+      "refresh_topic_inventory.ts --render-only",
+      "runtime markdown sensitive-info grep"
+    ]
+  }
 }
