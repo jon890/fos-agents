@@ -1,0 +1,206 @@
+{
+  "name": "plan069-study-topic-candidate-refresh",
+  "description": "ADR-070 결정에 따라 study-topic-recommender에 LLM 기반 candidate refresh turn을 추가한다. refresh_topic_inventory.ts는 기존 inventory refresh와 추천 스냅샷 생성을 유지하고, 새 후보 발굴은 별도 refresh entrypoint가 맡는다. deterministic 검증을 통과한 new 후보만 config/study-pack-candidates.json active 캐시에 자동 반영하며 update-existing, skip, needs-confirmation은 runtime report에만 남긴다.",
+  "created_at": "2026-06-09T12:48:00+09:00",
+  "updated_at": "2026-06-09T12:48:00+09:00",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 4,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "AGENTS.md",
+    "docs/adr.md",
+    "docs/data-schema.md",
+    "docs/flow.md",
+    "docs/code-architecture.md",
+    "../skills/plan-and-build/references/common-pitfalls.md"
+  ],
+  "target_repositories": [
+    {
+      "name": "career-os",
+      "path": ".",
+      "role": "study-topic-recommender 후보 refresh 스키마, helper, entrypoint, native skill 연결, cron/실행 검증"
+    }
+  ],
+  "depends_on": [
+    "ADR-070 study topic 후보 풀은 LLM refresh turn이 발굴하고 config에는 active 캐시만 반영한다",
+    "ADR-069 config는 정책·타깃·예외만 남기고 자산 목록은 파생한다",
+    "ADR-033 study-topic-recommender는 sources/fos-study/를 직접 스캔한다",
+    "docs-first updates already reflected in docs/adr.md, docs/data-schema.md, docs/flow.md, docs/code-architecture.md"
+  ],
+  "execution_policy": {
+    "phase_order": "current_phase 순서대로 Phase 01부터 Phase 04까지 실행한다.",
+    "parallelism": "같은 plan 안의 phase는 병렬 실행하지 않는다.",
+    "implementation_docs_freeze": "implementation phase에서는 career-os docs/ADR/AGENTS/TOOLS/정책 문서를 수정하지 않는다. 계약이 부족하면 PHASE_BLOCKED로 멈춘다.",
+    "task_scope": "task materialization 단계에서는 tasks/plan069-study-topic-candidate-refresh/** 파일만 생성 또는 갱신한다.",
+    "runtime_outputs": "후보 refresh 실행 기록은 data/runtime/study-topic-candidate-refresh.json과 data/runtime/study-topic-candidate-refresh.md에만 남긴다.",
+    "config_apply_boundary": "config/study-pack-candidates.json에는 deterministic 검증을 통과한 new 후보만 자동 append/update한다.",
+    "discord_routing": "추천 결과와 정기 실행 요약은 #병태-이직준비방(channel:1513678786552660158) 기준으로 보내고, 개발·운영 상태와 오류 분석은 #병태-개발공부방(channel:1492521172099666021)에 둔다.",
+    "pr_unit": "PR은 모든 phase 완료 뒤 plan 단위로 만든다. task 파일 생성 작업에서는 commit/push하지 않는다."
+  },
+  "hud_events": [
+    {
+      "when": "task files materializing",
+      "status": "task files running",
+      "command": "session_status와 subagents를 먼저 확인한 뒤 bun ~/.openclaw/workspace-career/scripts/task-hud/update_from_session_status.ts --session discord-career-main --task-label plan069-study-topic-candidate-refresh --status 'task files running' --target channel:1492521172099666021 --state-root ~/.openclaw/workspace-career/state/task-hud --session-status-json '<fresh session_status json>' --subagents-json '<fresh subagents json>'"
+    },
+    {
+      "when": "task files completed",
+      "status": "task files completed",
+      "command": "session_status와 subagents를 먼저 확인한 뒤 bun ~/.openclaw/workspace-career/scripts/task-hud/update_from_session_status.ts --session discord-career-main --task-label plan069-study-topic-candidate-refresh --status 'task files completed' --target channel:1492521172099666021 --state-root ~/.openclaw/workspace-career/state/task-hud --session-status-json '<fresh session_status json>' --subagents-json '<fresh subagents json>'"
+    },
+    {
+      "when": "implementation starts",
+      "status": "implementation running",
+      "command": "session_status와 subagents를 먼저 확인한 뒤 bun ~/.openclaw/workspace-career/scripts/task-hud/update_from_session_status.ts --session discord-career-main --task-label plan069-study-topic-candidate-refresh --status 'implementation running' --target channel:1492521172099666021 --state-root ~/.openclaw/workspace-career/state/task-hud --session-status-json '<fresh session_status json>' --subagents-json '<fresh subagents json>'"
+    },
+    {
+      "when": "implementation completes",
+      "status": "implementation completed",
+      "command": "session_status와 subagents를 먼저 확인한 뒤 bun ~/.openclaw/workspace-career/scripts/task-hud/update_from_session_status.ts --session discord-career-main --task-label plan069-study-topic-candidate-refresh --status 'implementation completed' --target channel:1492521172099666021 --state-root ~/.openclaw/workspace-career/state/task-hud --session-status-json '<fresh session_status json>' --subagents-json '<fresh subagents json>'"
+    },
+    {
+      "when": "implementation fails",
+      "status": "implementation failed",
+      "command": "session_status와 subagents를 먼저 확인한 뒤 bun ~/.openclaw/workspace-career/scripts/task-hud/update_from_session_status.ts --session discord-career-main --task-label plan069-study-topic-candidate-refresh --status 'implementation failed' --target channel:1492521172099666021 --state-root ~/.openclaw/workspace-career/state/task-hud --session-status-json '<fresh session_status json>' --subagents-json '<fresh subagents json>'"
+    },
+    {
+      "when": "implementation blocks",
+      "status": "implementation blocked",
+      "command": "session_status와 subagents를 먼저 확인한 뒤 bun ~/.openclaw/workspace-career/scripts/task-hud/update_from_session_status.ts --session discord-career-main --task-label plan069-study-topic-candidate-refresh --status 'implementation blocked' --target channel:1492521172099666021 --state-root ~/.openclaw/workspace-career/state/task-hud --session-status-json '<fresh session_status json>' --subagents-json '<fresh subagents json>'"
+    }
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "inventory-refresh-stays",
+      "decision": "refresh_topic_inventory.ts는 inventory refresh, deterministic dedupe, history cooldown, RSS discovery, markdown rendering을 계속 담당한다."
+    },
+    {
+      "id": "D2",
+      "title": "candidate-refresh-turn",
+      "decision": "새 후보 발굴은 별도 candidate refresh turn과 entrypoint로 분리한다."
+    },
+    {
+      "id": "D3",
+      "title": "refresh-inputs",
+      "decision": "candidate refresh turn은 fos-study inventory, study-preferences, study-progress, topic-inventory-history, 현재 추천 실행 맥락 또는 사용자 관심사를 입력으로 읽는다."
+    },
+    {
+      "id": "D4",
+      "title": "decision-classes",
+      "decision": "LLM 후보 10-20개는 deterministic 검증으로 new, update-existing, skip, needs-confirmation으로 분류한다."
+    },
+    {
+      "id": "D5",
+      "title": "new-only-auto-apply",
+      "decision": "new 후보만 config/study-pack-candidates.json에 자동 append/update하고 나머지 분류는 runtime report에만 남긴다."
+    },
+    {
+      "id": "D6",
+      "title": "active-cache-not-canonical",
+      "decision": "config/study-pack-candidates.json은 전체 후보 정본이 아니라 active 후보 캐시와 사람이 고른 seed/pin 목록이다."
+    },
+    {
+      "id": "D7",
+      "title": "auto-candidate-fields",
+      "decision": "자동 후보는 source=llm-candidate-refresh, generatedAt, status, sourceSignals, promotionTarget.outputPath를 가진다."
+    },
+    {
+      "id": "D8",
+      "title": "active-limit-and-stale",
+      "decision": "active 자동 후보는 기본 30개 이하로 유지하고, 30일 이상 선택되지 않은 자동 후보는 stale 처리 대상이다."
+    },
+    {
+      "id": "D9",
+      "title": "refresh-triggers",
+      "decision": "새 후보 5개 이하, 최근 7회 domain/tag 반복 과다, 사용자 새 관심사, 새 지원·면접 맥락, 기존 문서가 새 추천 후보에 많이 섞이는 경우 refresh turn을 연다."
+    },
+    {
+      "id": "D10",
+      "title": "cron-limit-routing",
+      "decision": "cron 자동 후보 refresh는 하루 1회로 제한하고, 추천 결과는 이직준비방, 개발·운영 오류 분석은 개발공부방으로 보낸다."
+    }
+  ],
+  "open_decisions": [],
+  "recommended_defaults": [
+    "phase 실행 전 career-os dirty state를 확인하고 unrelated 변경은 되돌리거나 stage하지 않는다.",
+    "implementation phase에서는 docs/ADR/AGENTS/TOOLS/정책 문서를 수정하지 않는다.",
+    "새 helper는 scripts/study-topic-recommender/ 아래 TypeScript로 두고 기존 helper와 import 방식을 맞춘다.",
+    "schema/검증 로직은 string parsing보다 typed guard와 JSON parse 기반으로 구현한다.",
+    "LLM 후보 출력은 runtime draft로 남기되 config 반영은 deterministic decision 결과만 사용한다.",
+    "needs-confirmation은 자동 적용하지 않고 사람이 읽는 markdown 요약에만 남긴다.",
+    "sources/fos-study/는 inventory scan 대상으로만 다루며 study-pack 발행 요청 없이 수정하지 않는다.",
+    "private 지원 패키지, candidate-profile 본문, 회사별 prep 자료를 Discord나 runtime markdown에 복사하지 않는다.",
+    "task 파일 생성 작업에서는 구현 코드 수정, commit, push를 하지 않는다.",
+    "마지막 phase는 실제 추천 실행 확인과 민감 정보 출력 금지 확인을 포함한다."
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "스키마와 검증 helper 추가",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 2400
+    },
+    {
+      "number": 2,
+      "title": "LLM 후보 refresh entrypoint 추가",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 3000
+    },
+    {
+      "number": 3,
+      "title": "study-topic-recommender skill과 CLI 연결",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 3000
+    },
+    {
+      "number": 4,
+      "title": "cron과 실행 검증",
+      "file": "phase-04.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 3000
+    }
+  ],
+  "implementation_result": null
+}
