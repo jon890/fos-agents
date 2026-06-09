@@ -23,6 +23,7 @@ study pack은 공개 fos-study 산출물이므로 기술 학습 문서로만 읽
   공개 본문에 넣기 어렵다면 비공개 career-os note로 분리하거나 작성하지 않는다.
 - 공개 fos-study 발행은 사용자 승인 전에는 실행하지 않는다.
   사용자의 명시적 `/study-pack-writer` 호출이나 "fos-study에 올려줘" 요청은 해당 주제의 발행 승인으로 본다.
+  Discord 추천 버튼의 `career.study-pack.create:*`는 **초안 생성 요청**일 뿐이며 publish 승인이나 `[초안]` 제거 승인이 아니다.
   cron, recommender, background worker가 추천만 만든 경우에는 publish하지 않고 `사용자 승인 필요`로 멈춘다.
 
 ## When to use
@@ -101,7 +102,8 @@ deterministic dedupe도 Claude 의미 판정도 결정이 불가능하면 **`nee
 ### 4. 마크다운 작성 (Write)
 
 생성 구조:
-- 첫 줄: `# <topic-title>` (단일 `#`, `## ` 시작 금지, `# 초안:` / `# Draft:` 금지)
+- 첫 줄: `# [초안] <topic-title>` (단일 `#`, `## ` 시작 금지)
+  사용자가 직접 검토 후 최종화를 승인하기 전까지 `[초안]`을 제거하지 않는다.
 - ≥80줄
 - 모든 ` ``` ` 코드 펜스에 언어 명시 (`bash`, `ts`, `sql`, `java` 등)
 - 공개 공부팩은 특정 회사/포지션/지원 여부를 전제로 쓰지 않는다. "TossPlace 관점", "Applied AI Engineer 포지션 관점", "면접에서 평가받는 지점"처럼 지원 의도가 강하게 드러나는 표현은 사용자가 명시 요청한 경우에만 쓴다.

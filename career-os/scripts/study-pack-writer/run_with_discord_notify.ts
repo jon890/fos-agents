@@ -81,6 +81,16 @@ async function gitHeadShort(): Promise<string> {
   return code === 0 ? out.trim() : "";
 }
 
+async function fosStudyStatus(): Promise<string> {
+  const proc = Bun.spawn(["git", "-C", resolve(rootDir, "sources/fos-study"), "status", "--porcelain"], {
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const out = await new Response(proc.stdout).text();
+  const code = await proc.exited;
+  return code === 0 ? out.trim() : "status-check-failed";
+}
+
 async function main(): Promise<number> {
   loadEnvFileIfPresent(envFile);
   mkdirSync(logDir, { recursive: true });
@@ -126,6 +136,11 @@ async function main(): Promise<number> {
   const status = await proc.exited;
 
   if (status === 0) {
+    const dirtyStatus = await fosStudyStatus();
+    if (dirtyStatus) {
+      await notify(`[보류] study-pack-writer: ${topicShort}\nfos-study 미발행 변경이 남아 있어 publish 완료로 처리하지 않음\n${dirtyStatus}`, logFile);
+      return 1;
+    }
     const sha = await gitHeadShort();
     await notify(`[완료] study-pack-writer: ${topicShort}${sha ? ` (fos-study ${sha})` : ""}`, logFile);
   } else {
