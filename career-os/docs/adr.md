@@ -2788,7 +2788,7 @@ ADR-071로 native `study-topic-recommender`의 비대화형 권한 대기 문제
 
 - daily study cron은 native Claude skill을 호출하지 않는다.
 - daily study cron은 `refresh_topic_inventory.ts`를 직접 실행한다.
-- Discord에는 `recommendations[0:3]`의 제목과 짧은 이유만 보낸다.
+- Discord에는 `recommendations[0:3]`의 제목, 짧은 이유, 추천한 이유 묶음, 일부러 피한 축만 보낸다.
 - 실행 로그, self-check 전문, 비용·토큰 세부사항은 Discord 요약에 남기지 않는다.
 - full report 경로는 짧게 남긴다.
 - 후보 refresh가 필요하면 on-demand `claude --permission-mode bypassPermissions -p "/study-topic-recommender ..."`로 별도 실행한다.
