@@ -262,11 +262,38 @@ async function runPipeline(): Promise<void> {
   const aiTopicItems: ReservoirItem[] = sources.ai?.items ?? [];
   const geekNewsItems: ReservoirItem[] = sources.geek?.items ?? [];
 
+  // deterministic dedupe (ADR-033)
+  const dedupeInputs: DuplicateCandidateInput[] = [
+    ...Object.entries(studyTopics)
+      .filter(([, entry]) => entry.outputPath)
+      .map(([key, entry]) => ({ key, candidatePath: entry.outputPath! })),
+    ...studyCandidates
+      .filter((item) => item.outputPath)
+      .map((item) => ({ key: item.key ?? "", candidatePath: item.outputPath! })),
+    ...studyCandidates
+      .filter((item) => item.promotionTarget?.outputPath)
+      .map((item) => ({ key: item.key ?? "", candidatePath: item.promotionTarget!.outputPath! })),
+  ];
+  const dedupeResult = deterministicDedupe(dedupeInputs, fosInventory.markdownPathsRelative);
+  const deterministicUpdateExisting: PossibleDuplicate[] = [
+    ...dedupeResult.exactPathMatches.map((p) => ({
+      ...p,
+      reason: "exact path already exists in fos-study",
+    })),
+    ...dedupeResult.normalizedPathMatches.map((p) => ({
+      ...p,
+      reason: "normalized path already exists in fos-study",
+    })),
+    ...dedupeResult.possibleDuplicates,
+  ];
+  const deterministicDuplicateKeys = new Set(deterministicUpdateExisting.map((item) => item.key));
+
   // derived sets
   const uncoveredCurated = getUncoveredCurated(studyTopics, fosStudyPaths);
   const remainingLive = getRemainingLive(liveSeeds, fosStudyPaths);
   const remainingLiveCandidates = getRemainingLiveCandidates(liveSeedCandidates, fosStudyPaths);
-  const candidateRecommendations = getCandidateRecommendations(studyCandidates, fosStudyPaths);
+  const candidateRecommendations = getCandidateRecommendations(studyCandidates, fosStudyPaths)
+    .filter((item) => !deterministicDuplicateKeys.has(item.key ?? ""));
   const fosStudyFallbackCandidates = buildFosStudyFallbackCandidates(fosInventory.items);
   const backendCandidatePool =
     candidateRecommendations.length > 0 ? candidateRecommendations : fosStudyFallbackCandidates;
@@ -281,28 +308,6 @@ async function runPipeline(): Promise<void> {
   const recentDomainCounts = countMap(
     withMtime.slice(0, 10).map(({ path }) => artifactDomainLabel(path))
   );
-
-  // deterministic dedupe (ADR-033)
-  const dedupeInputs: DuplicateCandidateInput[] = [
-    ...Object.entries(studyTopics)
-      .filter(([, entry]) => entry.outputPath)
-      .map(([key, entry]) => ({ key, candidatePath: entry.outputPath! })),
-    ...studyCandidates
-      .filter((item) => item.outputPath)
-      .map((item) => ({ key: item.key ?? "", candidatePath: item.outputPath! })),
-  ];
-  const dedupeResult = deterministicDedupe(dedupeInputs, fosInventory.markdownPathsRelative);
-  const deterministicUpdateExisting: PossibleDuplicate[] = [
-    ...dedupeResult.exactPathMatches.map((p) => ({
-      ...p,
-      reason: "exact path already exists in fos-study",
-    })),
-    ...dedupeResult.normalizedPathMatches.map((p) => ({
-      ...p,
-      reason: "normalized path already exists in fos-study",
-    })),
-    ...dedupeResult.possibleDuplicates,
-  ];
 
   // history
   const recentHistory = loadRecentHistory(SECONDARY_COOLDOWN_ENTRIES);
