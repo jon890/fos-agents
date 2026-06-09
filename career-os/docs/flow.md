@@ -765,14 +765,20 @@ bun scripts/application-agent/evaluate_package.ts \
 
 native skill 패턴: `claude -p "/study-topic-recommender"` → SKILL.md 자동 로드 → Claude가 도구로 직접 처리.
 
-내부 흐름 (ADR-033 이후):
+내부 흐름 (ADR-070 이후):
 
 ```
 호출: claude -p "/study-topic-recommender"
   ↓
 1. Promote detect — history 기반 study-pack-candidates → study-pack 승격 후보 안내 (자동 수정 X)
   ↓
-2. Bash: bun career-os/scripts/study-topic-recommender/refresh_topic_inventory.ts
+2. Candidate refresh decision
+   ├─ 조건: 새 후보 5개 이하 / 최근 7회 domain 반복 / 사용자 새 관심사 / 새 지원·면접 맥락
+   ├─ 필요 시 LLM 후보 refresh turn 실행
+   ├─ Write: data/runtime/study-topic-candidate-refresh.{json,md}
+   └─ Apply: 검증 통과 new 후보만 config/study-pack-candidates.json에 자동 반영
+  ↓
+3. Bash: bun career-os/scripts/study-topic-recommender/refresh_topic_inventory.ts
    ├─ Read: config (study-pack-topics / study-pack-candidates / sources / live-coding-*)
    ├─ Scan: sources/fos-study/**/*.md (exclude .git/.claude) — git pull 없음, 로컬 clone 기준
    ├─ Deterministic dedupe (provider-free):
@@ -782,20 +788,20 @@ native skill 패턴: `claude -p "/study-topic-recommender"` → SKILL.md 자동 
    ├─ 추천 점수 계산 + mix target + feed discovery (ADR-010/012/013)
    └─ Write: data/runtime/topic-inventory.json (excluded.* + claudeDuplicateReview.status=skipped 초기값)
   ↓
-3. Claude duplicate review (native skill 내부)
+4. Claude duplicate review (native skill 내부)
    ├─ Read: inventory.excluded.possibleDuplicates
    ├─ 각 후보를 의미 판정 → decision (new | update-existing | skip | needs-user-confirmation)
    ├─ 성공 시: inventory.claudeDuplicateReview.{status=ok, reviewedAt, items[]} 갱신
    └─ 실패 시: status=failed + warning, 추천 자체는 계속 (deterministic 결과만 반영)
   ↓
-4. Write: data/runtime/morning-topic-recommendation.md
+5. Write: data/runtime/morning-topic-recommendation.md
    ├─ 백엔드/기술블로그/AI/Geek 4축 + 오늘의 3선 (기존 ADR-012 구조)
    ├─ "기존 문서 보강 후보" 섹션 (최대 5개) — update-existing + needs-user-confirmation
    └─ Claude review 실패 시 상단 warning 라인 추가
   ↓
-5. Append: data/runtime/topic-inventory-history.jsonl
+6. Append: data/runtime/topic-inventory-history.jsonl
   ↓
-6. (선택) live-coding seed 선택 — 자연어에 "live-coding" 포함 시
+7. (선택) live-coding seed 선택 — 자연어에 "live-coding" 포함 시
   ↓
 Discord 알림 [완료]
 ```
@@ -803,6 +809,8 @@ Discord 알림 [완료]
 산출물:
 
 - `data/runtime/topic-inventory.json` — ADR-033 스냅샷 스키마 (data-schema.md 참조)
+- `data/runtime/study-topic-candidate-refresh.json` — ADR-070 후보 refresh 실행 기록
+- `data/runtime/study-topic-candidate-refresh.md` — 후보 refresh 사람이 읽는 요약
 - `data/runtime/morning-topic-recommendation.md` — 사람이 읽는 마크다운
 - `data/runtime/topic-inventory-history.jsonl` — 매일 한 줄 append
 

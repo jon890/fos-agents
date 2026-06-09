@@ -1321,7 +1321,96 @@ decision 라벨 의미:
 - `skip` — visible recommendation에서 제외. writer에서 호출되면 작성 중단.
 - `needs-user-confirmation` — 애매. 사용자 확인 없이는 새 파일 생성 금지.
 
-writer는 deterministic scan + (가능하면) Claude review 결과를 새 markdown Write 직전에 한 번 더 확인 — 사용자가 직접 topic-key를 지정해 호출하는 경로에도 최종 게이트로 동작.
+writer는 deterministic scan + (가능하면) Claude review 결과를 새 markdown Write 직전에 한 번 더 확인 — 사용자가 직접 topic-key를 지정해 호출하는 경로에도 최종 검증 조건으로 동작.
+
+### data/runtime/study-topic-candidate-refresh.json (ADR-070)
+
+LLM 기반 후보 refresh turn의 실행 기록.
+추천기가 고정 seed만 순회하지 않도록, 현재 학습 선호·진행 상태·최근 추천 반복·fos-study inventory를 보고 새 후보를 발굴한 결과를 남긴다.
+
+이 파일은 실행 기록이다.
+실제 추천 후보로 쓰는 active 캐시는 `config/study-pack-candidates.json`에 반영한다.
+
+```json
+{
+  "generatedAt": "ISO-8601",
+  "trigger": {
+    "kind": "on-demand | cron-health-check | recommendation-needs-refresh",
+    "reason": "string",
+    "sourceMessage": "string | null"
+  },
+  "inputs": {
+    "fosStudyMarkdownCount": "int",
+    "recentHistoryEntries": "int",
+    "remainingNewCandidates": "int",
+    "dominantRecentDomains": ["string"]
+  },
+  "proposals": [
+    {
+      "key": "string",
+      "title": "string",
+      "domain": "string",
+      "tag": "new | deepen | interview | live-coding",
+      "difficulty": "string",
+      "estMinutes": "int",
+      "whyNow": ["string"],
+      "promotionTarget": { "outputPath": "string" },
+      "sourceSignals": ["string"]
+    }
+  ],
+  "decisions": [
+    {
+      "key": "string",
+      "decision": "new | update-existing | skip | needs-confirmation",
+      "candidatePath": "string",
+      "matchedPath": "string | null",
+      "reason": "string"
+    }
+  ],
+  "applied": {
+    "configPath": "config/study-pack-candidates.json",
+    "added": ["string"],
+    "updated": ["string"],
+    "staled": ["string"]
+  }
+}
+```
+
+동반 markdown인 `data/runtime/study-topic-candidate-refresh.md`는 사람이 읽는 요약이다.
+Discord에는 민감하지 않은 후보 수, 새 후보 예시, 보류 사유만 요약한다.
+
+### config/study-pack-candidates.json (ADR-070 이후 active 후보 캐시)
+
+`study-topic-recommender`가 읽는 후보 입력이다.
+전체 학습 자산 목록이나 정본 reservoir가 아니다.
+LLM 후보 refresh가 검증을 통과한 `new` 후보만 자동 append/update한다.
+
+자동 반영 항목은 다음 필드를 가진다.
+
+```json
+{
+  "key": "string",
+  "title": "string",
+  "domain": "string",
+  "tag": "new | deepen | interview | live-coding",
+  "difficulty": "string",
+  "estMinutes": "int",
+  "whyNow": ["string"],
+  "source": "llm-candidate-refresh",
+  "generatedAt": "ISO-8601",
+  "status": "active | stale | promoted",
+  "sourceSignals": ["string"],
+  "promotionTarget": { "outputPath": "string" }
+}
+```
+
+운영 규칙:
+
+- `new`만 config에 반영한다.
+- `update-existing`, `skip`, `needs-confirmation`은 runtime report에만 남긴다.
+- active 자동 후보는 기본 30개를 넘기지 않는다.
+- 30일 이상 선택되지 않은 자동 후보는 `stale` 처리 대상이다.
+- fos-study 문서가 실제로 생긴 후보는 다음 refresh에서 `promoted` 또는 제거 후보가 된다.
 
 ### data/runtime/topic-inventory-history.jsonl (ADR-010/012)
 

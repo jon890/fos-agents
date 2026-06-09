@@ -57,7 +57,7 @@ career-os/
 │   ├── mvp-target.json                현재 active 타깃 단일 출처
 │   ├── candidate-profile.md           이력 (prose, 의도적으로 JSON 아님)
 │   ├── study-pack-topics.json         legacy 대량 topic DB. plan068에서 override/seed로 축소 예정
-│   ├── study-pack-candidates.json     legacy 후보 reservoir. plan068에서 축소 예정
+│   ├── study-pack-candidates.json     자동 발굴 active 후보 캐시 + 사람이 고른 seed/pin. 정본 목록 아님
 │   ├── question-bank-topics.json      interview-asset topic override 후보. public/question-bank 정본 아님
 │   ├── sources.json                   3 source configs 통합 (plan002)
 │   ├── baseline-core-files.json       baseline 분석 대상 파일 목록 (txt → JSON, plan002)
@@ -76,6 +76,8 @@ career-os/
 │   ├── runtime/                  ← 가변 상태 (gitignore 대부분)
 │   │   ├── topic-inventory.json
 │   │   ├── topic-inventory-history.jsonl
+│   │   ├── study-topic-candidate-refresh.json
+│   │   ├── study-topic-candidate-refresh.md
 │   │   ├── topic-replenishment.json
 │   │   ├── morning-topic-recommendation.md
 │   │   ├── position-recommendation.md
@@ -103,6 +105,7 @@ career-os/
 │   (knowledge-gap-analyzer/ 폐기 완료 — plan017. baseline/daily/smoke 3 script + Python 6개 제거. interview-prep-analyzer native skill로 대체)
 │   ├── study-topic-recommender/
 │   │   ├── refresh_topic_inventory.ts    ADR-009/010/012/013 종합 엔진 (ADR-026 Python → TypeScript). ADR-033 이후 fos-study 직접 스캔
+│   │   ├── refresh_candidate_pool.ts      ADR-070 LLM 후보 발굴 + 검증 + config 자동 반영 entrypoint
 │   │   ├── feed_discovery.ts             ADR-013 RSS/Atom 파서 (ADR-026 Python → TypeScript)
 │   │   ├── fos_study_inventory.ts        fos-study 트리 스캔 helper (ADR-033, plan025 신규 — 필요 시 분리)
 │   │   └── duplicate_detection.ts        deterministic dedupe helper (ADR-033, plan025 신규 — writer도 참조)
