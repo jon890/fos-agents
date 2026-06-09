@@ -350,6 +350,98 @@
         "commitTopic": "idempotent-consumer-deduplication",
         "appendPrompt": "Idempotent Consumer와 중복 메시지 제거를 백엔드 면접 대비용으로 정리한다. at-least-once delivery, duplicate message, processed-message table, business key idempotency, outbox/inbox와의 관계, retry/DLQ, exactly-once 기대치의 한계를 포함한다. 문서 제목은 반드시 [초안]으로 시작한다."
       }
+    },
+    {
+      "key": "opentelemetry-trace-sampling-backend",
+      "title": "OpenTelemetry trace sampling과 백엔드 관찰성 비용 제어",
+      "domain": "observability",
+      "tag": "new",
+      "difficulty": "중상",
+      "estMinutes": 50,
+      "whyNow": [
+        "운영형 백엔드에서 장애 분석과 비용 제어를 함께 설명할 수 있다",
+        "로그/메트릭/트레이스의 역할 분리와 sampling trade-off를 면접 답변으로 연결하기 좋다"
+      ],
+      "source": "llm-candidate-refresh",
+      "generatedAt": "2026-06-09T05:01:34.336Z",
+      "status": "active",
+      "sourceSignals": [
+        "plan069-rollout",
+        "observability-gap",
+        "recent-domain-diversity"
+      ],
+      "promotionTarget": {
+        "outputPath": "observability/opentelemetry-trace-sampling-backend.md"
+      }
+    },
+    {
+      "key": "api-backpressure-rate-limit-retry-budget",
+      "title": "API backpressure, rate limit, retry budget 설계",
+      "domain": "architecture",
+      "tag": "new",
+      "difficulty": "중상",
+      "estMinutes": 55,
+      "whyNow": [
+        "외부 API 연동과 장애 전파 방지를 함께 설명할 수 있다",
+        "retry storm, timeout, circuit breaker 질문과 자연스럽게 연결된다"
+      ],
+      "source": "llm-candidate-refresh",
+      "generatedAt": "2026-06-09T05:01:34.336Z",
+      "status": "active",
+      "sourceSignals": [
+        "plan069-rollout",
+        "resilience",
+        "interview-arc"
+      ],
+      "promotionTarget": {
+        "outputPath": "architecture/api-backpressure-rate-limit-retry-budget.md"
+      }
+    },
+    {
+      "key": "kafka-idempotent-producer-exactly-once",
+      "title": "Kafka idempotent producer와 exactly-once 처리 한계",
+      "domain": "kafka",
+      "tag": "deepen",
+      "difficulty": "상",
+      "estMinutes": 60,
+      "whyNow": [
+        "비동기 이벤트 처리에서 중복 처리와 정합성 답변을 깊게 만들 수 있다",
+        "idempotent consumer, outbox, transaction boundary와 비교하기 좋다"
+      ],
+      "source": "llm-candidate-refresh",
+      "generatedAt": "2026-06-09T05:01:34.336Z",
+      "status": "active",
+      "sourceSignals": [
+        "plan069-rollout",
+        "message-queue",
+        "consistency"
+      ],
+      "promotionTarget": {
+        "outputPath": "kafka/kafka-idempotent-producer-exactly-once.md"
+      }
+    },
+    {
+      "key": "spring-cloud-contract-api-evolution",
+      "title": "Spring Cloud Contract와 API evolution 테스트 전략",
+      "domain": "testing",
+      "tag": "new",
+      "difficulty": "중",
+      "estMinutes": 45,
+      "whyNow": [
+        "서비스 간 API 변경에서 consumer 영향과 회귀 테스트를 설명할 수 있다",
+        "contract testing, backward compatibility, CI 전략을 한 흐름으로 묶을 수 있다"
+      ],
+      "source": "llm-candidate-refresh",
+      "generatedAt": "2026-06-09T05:01:34.336Z",
+      "status": "active",
+      "sourceSignals": [
+        "plan069-rollout",
+        "api-contract",
+        "testing-gap"
+      ],
+      "promotionTarget": {
+        "outputPath": "testing/spring-cloud-contract-api-evolution.md"
+      }
     }
   ]
 }
