@@ -19,6 +19,7 @@ const OPENCLAW_CANDIDATES = [
 
 export interface NotifyOptions {
   media?: string;
+  presentation?: unknown;
 }
 
 export async function notifyDiscord(message: string, opts?: NotifyOptions): Promise<void> {
@@ -37,6 +38,9 @@ export async function notifyDiscord(message: string, opts?: NotifyOptions): Prom
   ];
   if (opts?.media) {
     args.splice(args.indexOf("--message"), 0, "--media", opts.media);
+  }
+  if (opts?.presentation) {
+    args.splice(args.indexOf("--json"), 0, "--presentation", JSON.stringify(opts.presentation));
   }
 
   let lastError: unknown;
@@ -81,11 +85,19 @@ export async function notifyDiscord(message: string, opts?: NotifyOptions): Prom
 if (import.meta.main) {
   const argv = process.argv.slice(2);
   let media: string | undefined;
+  let presentation: unknown;
   const positional: string[] = [];
 
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--media") {
       media = argv[++i];
+    } else if (argv[i] === "--presentation") {
+      try {
+        presentation = JSON.parse(argv[++i] ?? "");
+      } catch (err) {
+        console.error(`invalid --presentation JSON: ${err instanceof Error ? err.message : String(err)}`);
+        process.exit(2);
+      }
     } else {
       positional.push(argv[i]);
     }
@@ -97,5 +109,8 @@ if (import.meta.main) {
     process.exit(1);
   }
 
-  await notifyDiscord(message, media ? { media } : undefined);
+  await notifyDiscord(message, {
+    ...(media ? { media } : {}),
+    ...(presentation ? { presentation } : {}),
+  });
 }

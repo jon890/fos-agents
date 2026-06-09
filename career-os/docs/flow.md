@@ -770,8 +770,10 @@ on-demand 실행에서는 후보 제안 JSON, runtime report, inventory markdown
 이 agent-only 내부 추천 흐름은 `bypassPermissions`를 사용한다.
 
 daily cron은 비용과 채널 가독성을 위해 native Claude skill을 호출하지 않는다.
-cron은 `refresh_topic_inventory.ts`만 직접 실행한다.
+cron은 `send_daily_recommendation.ts`만 실행한다.
+이 script는 내부에서 `refresh_topic_inventory.ts`를 실행한 뒤 `topic-inventory.json`을 읽고,
 Discord에는 `recommendations[0:3]`의 제목, 짧은 이유, 추천한 이유 묶음, 일부러 피한 축만 보낸다.
+또한 같은 메시지에 `1번 초안 생성`, `2번 초안 생성`, `3번 초안 생성`, `오늘은 넘김` 버튼 payload를 붙인다.
 후보 refresh나 긴 중복 검토가 필요하면 on-demand native skill을 별도로 실행한다.
 
 내부 흐름 (ADR-070 이후):
@@ -815,12 +817,33 @@ Discord에는 `recommendations[0:3]`의 제목, 짧은 이유, 추천한 이유 
 Discord 알림 [완료]
 ```
 
+daily lean cron 흐름 (ADR-072 + ADR-073):
+
+```
+OpenClaw cron career-os:daily-study-topic-recommendation
+  ↓
+bun --env-file=.env scripts/study-topic-recommender/send_daily_recommendation.ts
+  ↓
+1. refresh_topic_inventory.ts 실행
+2. data/runtime/topic-inventory.json 읽기
+3. data/runtime/study-topic-actions/YYYY-MM-DD.json + latest.json 쓰기
+4. _shared/lib/notify_discord.ts --presentation 으로 Discord 버튼 포함 발송
+```
+
+버튼 callback 의미:
+
+- `career.study-pack.create:<YYYY-MM-DD>:<index>:<topic-key>` — 해당 topic-key로 study-pack **초안 생성 요청**. 최종화나 `[초안]` 제거가 아니다.
+- `career.study-pack.skip:<YYYY-MM-DD>` — 그날 추천을 넘긴 기록. topic 영구 제외가 아니다.
+- OpenClaw Discord component TTL은 24시간으로 설정한다.
+
 산출물:
 
 - `data/runtime/topic-inventory.json` — ADR-033 스냅샷 스키마 (data-schema.md 참조)
 - `data/runtime/study-topic-candidate-refresh.json` — ADR-070 후보 refresh 실행 기록
 - `data/runtime/study-topic-candidate-refresh.md` — 후보 refresh 사람이 읽는 요약
 - `data/runtime/morning-topic-recommendation.md` — 사람이 읽는 마크다운
+- `data/runtime/study-topic-actions/YYYY-MM-DD.json` — daily 추천 버튼 callback 매핑
+- `data/runtime/study-topic-actions/latest.json` — 가장 최근 daily 추천 버튼 callback 매핑
 - `data/runtime/topic-inventory-history.jsonl` — 매일 한 줄 append
 
 상세 동작: `career-os/.claude/skills/study-topic-recommender/SKILL.md` Workflow 섹션 참조.

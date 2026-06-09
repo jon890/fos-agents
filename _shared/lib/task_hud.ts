@@ -22,6 +22,7 @@ const INACTIVE_STATUS_SET = new Set(["completed", "done", "failed", "cancelled",
 type Command = "status" | "update" | "warn";
 type WarningKind = "usage" | "context" | "compaction";
 type GuardState = "ok" | "usage warning" | "usage parse warning" | "context warning" | "compaction likely";
+type RefreshSource = "local" | "session-status" | "both";
 
 interface ActiveSubagent {
   id?: string;
@@ -45,6 +46,8 @@ interface HudState {
   lastContextSnapshot?: UsageSnapshot;
   lastCompactionCount?: number;
   lastWarningAt?: Partial<Record<WarningKind, string>>;
+  lastLocalRefreshAt?: string;
+  lastSessionStatusRefreshAt?: string;
   activeSubagents?: ActiveSubagent[];
   createdAt: string;
   updatedAt: string;
@@ -69,6 +72,7 @@ interface CliOptions {
   weeklyRemaining?: string;
   contextPercent?: number;
   compactionCount?: number;
+  refreshSource?: RefreshSource;
 }
 
 interface OpenClawResult {
@@ -94,9 +98,10 @@ Options:
   --weekly-remaining <text>          Visible weekly remaining value.
   --context-percent <number>         Warning-only context percentage.
   --compaction-count <number>        Compaction count for likely post-detection.
+  --refresh-source <source>          local|session-status|both. Records refresh timing separately.
 
 Visible HUD output:
-  Task, State, Usage, Context, Agents (active only), Warn, Updated.
+  Task, State, Usage, Context, Agents (active only), Warn, Refresh, Updated.
 `);
 }
 
@@ -174,6 +179,12 @@ function parseArgs(argv: string[]): CliOptions {
       case "--compaction-count":
         opts.compactionCount = Number(next);
         break;
+      case "--refresh-source":
+        if (!["local", "session-status", "both"].includes(next)) {
+          throw new Error(`invalid refresh source: ${next}`);
+        }
+        opts.refreshSource = next as RefreshSource;
+        break;
       default:
         throw new Error(`unknown option: ${arg}`);
     }
@@ -229,6 +240,7 @@ function mergeJsonInput(opts: CliOptions): CliOptions {
       opts.compactionCount ??
       usageSnapshotFromJson.compactionCount ??
       statusSnapshotFromJson?.compactionCount,
+    refreshSource: opts.refreshSource ?? readRefreshSource(input.refreshSource),
   };
 }
 
@@ -245,6 +257,10 @@ function readObject(value: unknown): Record<string, unknown> | undefined {
     return undefined;
   }
   return value as Record<string, unknown>;
+}
+
+function readRefreshSource(value: unknown): RefreshSource | undefined {
+  return value === "local" || value === "session-status" || value === "both" ? value : undefined;
 }
 
 function readString(value: unknown): string | undefined {
@@ -411,23 +427,39 @@ function formatUpdatedAt(isoString: string): string {
 
 function renderHud(state: HudState): string {
   const usage = state.lastUsageSnapshot;
-  const fiveHour = usage?.fiveHourRemaining ?? "unknown";
-  const weekly = usage?.weeklyRemaining ?? "unknown";
+  const fiveHour = renderRemainingWithReset(usage?.fiveHourRemaining, usage?.fiveHourResetIn);
+  const weekly = renderRemainingWithReset(usage?.weeklyRemaining, usage?.weeklyResetIn);
   const contextLine = renderContextLine(usage);
   const agentsLine = renderAgentsLine(state.activeSubagents);
   const warnLine = state.guard === "ok" ? "ok" : sanitizeVisible(state.guard);
+  const refreshLine = renderRefreshLine(state);
   const updatedAt = formatUpdatedAt(state.updatedAt);
 
   return [
     "[OpenClaw HUD]",
     `Task: ${sanitizeVisible(state.taskLabel)}`,
     `State: ${sanitizeVisible(state.taskStatus)}`,
-    `Usage: 5h ${sanitizeVisible(fiveHour)} · weekly ${sanitizeVisible(weekly)}`,
+    `Usage: 5h ${fiveHour} · weekly ${weekly}`,
     `Context: ${contextLine}`,
     `Agents: ${agentsLine}`,
     `Warn: ${warnLine}`,
+    `Refresh: ${refreshLine}`,
     `Updated: ${updatedAt}`,
   ].join("\n");
+}
+
+function renderRemainingWithReset(remaining: string | undefined, resetIn: string | undefined): string {
+  const safeRemaining = sanitizeVisible(remaining ?? "unknown");
+  if (!resetIn) {
+    return safeRemaining;
+  }
+  return `${safeRemaining} (reset in ${sanitizeVisible(resetIn)})`;
+}
+
+function renderRefreshLine(state: HudState): string {
+  const local = state.lastLocalRefreshAt ? formatUpdatedAt(state.lastLocalRefreshAt) : "unknown";
+  const exact = state.lastSessionStatusRefreshAt ? formatUpdatedAt(state.lastSessionStatusRefreshAt) : "unknown";
+  return `local ${local} · exact ${exact}`;
 }
 
 function sanitizeVisible(value: string): string {
@@ -663,6 +695,12 @@ async function run(): Promise<void> {
   state.guard = usageParseWarning ? "usage parse warning" : nextGuard(state, mergedSnapshot, opts.command === "warn" ? opts.kind : undefined);
   if (mergedSnapshot?.compactionCount !== undefined) {
     state.lastCompactionCount = mergedSnapshot.compactionCount;
+  }
+  if (opts.refreshSource === "local" || opts.refreshSource === "both") {
+    state.lastLocalRefreshAt = now;
+  }
+  if (opts.refreshSource === "session-status" || opts.refreshSource === "both") {
+    state.lastSessionStatusRefreshAt = now;
   }
   state.updatedAt = now;
 
