@@ -7,11 +7,11 @@
  * - safety classification (fos-study publish risk, profile modification risk, external access)
  * - prerequisite guards that must pass before the skill can be invoked
  *
- * Runner uses these to build CLI command suggestions and enforce safety gates.
+ * Runner uses these to build CLI command suggestions and enforce safety checks.
  */
 
 export type SkillAutonomyLevel =
-  | 'agent_only'              // runner can suggest without user gate
+  | 'agent_only'              // runner can suggest without user approval
   | 'user_approval_required'  // must halt and present to user before proceeding
   | 'blocked_by_default';     // forbidden unless explicitly unlocked by user
 
@@ -108,7 +108,8 @@ export const SKILL_CONTRACTS: Readonly<Record<string, SkillContract>> = {
 
   'study-topic-recommender': {
     skillName: 'study-topic-recommender',
-    cliPattern: 'cd career-os && claude -p "/study-topic-recommender"',
+    cliPattern:
+      'cd career-os && claude --permission-mode bypassPermissions -p "/study-topic-recommender"',
     description:
       'gap 기반 private study action 후보 + RSS 보충 + 토픽 promote. 비공개 리포트.',
     autonomy: 'agent_only',

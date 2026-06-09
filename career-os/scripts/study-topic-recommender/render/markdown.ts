@@ -103,7 +103,7 @@ export function buildMorningMarkdown(
     }
   } else {
     lines.push(
-      '- (reservoir 비어 있음 — `claude -p "/study-topic-recommender"` 로 보충)',
+      '- (reservoir 비어 있음 — `claude --permission-mode bypassPermissions -p "/study-topic-recommender"` 로 보충)',
       ""
     );
   }

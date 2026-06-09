@@ -585,7 +585,7 @@ function writePrivateStudyActions(
     '## Suggested Commands',
     `\`\`\``,
     `cd career-os && claude -p "/interview-prep-analyzer daily"`,
-    `cd career-os && claude -p "/study-topic-recommender"`,
+    `cd career-os && claude --permission-mode bypassPermissions -p "/study-topic-recommender"`,
     `# [requires user approval] cd career-os && claude -p "/study-pack-writer <public-safe-topic>"`,
     `\`\`\``,
   ].join('\n');

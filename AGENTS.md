@@ -86,7 +86,7 @@ native skill 진입점 6개:
 cd career-os
 claude -p "/study-pack-writer <topic>"
 claude -p "/interview-asset-writer <topic>"
-claude -p "/study-topic-recommender [context]"
+claude --permission-mode bypassPermissions -p "/study-topic-recommender [context]"
 claude -p "/interview-prep-analyzer [baseline|daily|topic]"
 claude --permission-mode acceptEdits -p "/candidate-baseline-suggester"
 claude -p "/position-recommender [자연어 컨텍스트] [채용공고 file]"

@@ -102,8 +102,8 @@ Trigger 조건이 없으면 이 단계를 건너뛰고 Step 3으로 진행한다
 
 3. `refresh_candidate_pool.ts`를 Bash로 호출한다:
    ```bash
-   bun --env-file=career-os/.env \
-     career-os/scripts/study-topic-recommender/refresh_candidate_pool.ts \
+   bun --env-file=.env \
+     scripts/study-topic-recommender/refresh_candidate_pool.ts \
      --proposals /tmp/study-topic-candidate-proposals.json \
      --trigger-kind recommendation-needs-refresh \
      --trigger-reason "<trigger 조건 요약>" \
@@ -125,8 +125,8 @@ Trigger 조건이 없으면 이 단계를 건너뛰고 Step 3으로 진행한다
 ts script를 `Bash` 도구로 직접 호출:
 
 ```bash
-bun --env-file=career-os/.env \
-  career-os/scripts/study-topic-recommender/refresh_topic_inventory.ts
+bun --env-file=.env \
+  scripts/study-topic-recommender/refresh_topic_inventory.ts
 ```
 
 script 내부 흐름 (알고리즘 상수 참고용):
@@ -177,8 +177,8 @@ review 실행 자체가 실패하면 (Claude 호출 자체가 안 되거나 sche
 render-only 모드로 재생성:
 
 ```bash
-bun --env-file=career-os/.env \
-  career-os/scripts/study-topic-recommender/refresh_topic_inventory.ts --render-only
+bun --env-file=.env \
+  scripts/study-topic-recommender/refresh_topic_inventory.ts --render-only
 ```
 
 `--render-only` 모드는 기존 `topic-inventory.json`을 읽고 markdown만 다시 쓴다. `claudeDuplicateReview` 결과가 반영된 "기존 문서 보강 후보 (최대 5)" 섹션과 (status=failed이면) 상단 warning 라인이 출력된다.
@@ -256,16 +256,16 @@ ADR-026 결정 요약 (3줄):
 
 1. **Python → TypeScript**: 모노레포 ts 표준 (_shared/lib, plan004 ADR-020) 일관성. 외부 RSS XML 파싱은 `fast-xml-parser`로 대체.
 2. **알고리즘 결정론 보존**: 점수(RECENT_PENALTY/WEAK_AREA_BONUS/CARRYOVER) + mix target + cooldown 로직을 ts에 동등 이식. Python·ts 출력 diff=0 검증은 phase-02에서 별도 진행.
-3. **replenish + promote + live-coding 흡수**: 이전 topic-pool-replenisher + dispatcher 3 case(recommend-topics / live-coding-dispatch / replenish-topics)를 단일 native 진입점으로 통합 — `claude -p "/study-topic-recommender"` 한 줄로 전체 아침 추천 흐름 완결.
+3. **replenish + promote + live-coding 흡수**: 이전 topic-pool-replenisher + dispatcher 3 case(recommend-topics / live-coding-dispatch / replenish-topics)를 단일 native 진입점으로 통합 — `claude --permission-mode bypassPermissions -p "/study-topic-recommender"` 한 줄로 전체 아침 추천 흐름 완결.
 
 ## 호출 예시
 
 ```bash
 # 일반 morning 추천
-claude -p "/study-topic-recommender"
+claude --permission-mode bypassPermissions -p "/study-topic-recommender"
 
 # live-coding seed 선택 포함
-claude -p "/study-topic-recommender live-coding 1개 골라줘"
+claude --permission-mode bypassPermissions -p "/study-topic-recommender live-coding 1개 골라줘"
 
 # openclaw 스케줄러 경유 (트리거 시점 정책은 외부)
 openclaw schedule run study-topic-recommender

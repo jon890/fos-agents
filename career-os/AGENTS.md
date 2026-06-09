@@ -169,7 +169,7 @@ claude -p "/interview-asset-writer <topic>"                                     
 claude -p "/question-bank-collector <topic>"                                    # 공개 가능 일반 backend/CS 질문 bank 보강
 
 # 추천·분석 (비공개 career-os 리포트)
-claude -p "/study-topic-recommender [context]"                                  # 아침 토픽 추천 + replenish + live-coding seed (ADR-026)
+claude --permission-mode bypassPermissions -p "/study-topic-recommender [context]" # 아침 토픽 추천 + 후보 refresh + live-coding seed (ADR-026, ADR-070)
 claude -p "/interview-prep-analyzer [baseline|daily|topic|first-round]"          # baseline/daily/stage 면접 준비 자연어 분기 (ADR-027, ADR-048)
 claude --permission-mode acceptEdits -p "/candidate-baseline-suggester"         # 후보자 자산 Append 갱신 (ADR-028)
 claude -p "/position-recommender [컨텍스트] [채용공고 file]"                    # 활성 공고 수집 + 3 티어 추천 (ADR-030)
