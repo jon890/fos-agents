@@ -61,7 +61,66 @@ After inventory generation, use LLM reasoning to choose and explain what matters
 
 승격 후보가 없으면 이 단계를 건너뛴다.
 
-### 2. Replenish + Recommend
+### 2. Candidate refresh decision (ADR-070)
+
+`config/study-pack-candidates.json`과 최근 history를 읽어 후보 refresh 필요 여부를 판단한다.
+
+**Cron 경로 하루 1회 제한 (ADR-070 D10):**
+스킬 호출 args에 새 관심사·면접 맥락이 없는 cron 자동 실행의 경우,
+`data/runtime/study-topic-candidate-refresh.json`의 `generatedAt`이 오늘 날짜(YYYY-MM-DD)이면 이 단계를 건너뛰고 Step 3으로 진행한다.
+on-demand (스킬 args에 관심사 포함) 경우 이 제한을 적용하지 않는다.
+`refresh_candidate_pool.ts`를 `--trigger-kind cron-health-check`로 직접 호출하는 경우에도 동일하게 오늘 이미 실행됐으면 자동으로 skip한다 (exit 0).
+
+**Trigger 조건 — 다음 중 하나라도 해당하면 refresh 실행:**
+
+- `config/study-pack-candidates.json`의 active 자동 후보(`source: "llm-candidate-refresh"`, `status: "active"`)가 5개 이하
+- `data/runtime/topic-inventory-history.jsonl` 최근 7회 entries에서 같은 domain/tag 반복이 과도함
+- 스킬 호출 args에 새 관심사 또는 새 지원·면접 맥락이 포함됨
+- 기존 fos-study 문서가 현재 active 후보와 많이 겹침
+
+Trigger 조건이 없으면 이 단계를 건너뛰고 Step 3으로 진행한다.
+
+**Refresh 실행 (trigger 조건 해당 시):**
+
+1. `config/study-preferences.json`, `config/study-progress.json`, `data/runtime/topic-inventory-history.jsonl`을 Read한다.
+2. Claude가 위 입력과 호출 context를 바탕으로 10-20개 신규 후보를 제안하고 `/tmp/study-topic-candidate-proposals.json`에 Write한다.
+
+   각 후보 필드:
+   ```json
+   {
+     "key": "kebab-case-unique-key",
+     "title": "후보 제목",
+     "domain": "backend|infra|...",
+     "tag": "new|deepen|interview|live-coding",
+     "difficulty": "beginner|intermediate|advanced",
+     "estMinutes": 60,
+     "whyNow": ["이유 1"],
+     "promotionTarget": { "outputPath": "domain/topic-slug" },
+     "sourceSignals": ["study-preferences", "history-gap"]
+   }
+   ```
+
+3. `refresh_candidate_pool.ts`를 Bash로 호출한다:
+   ```bash
+   bun --env-file=career-os/.env \
+     career-os/scripts/study-topic-recommender/refresh_candidate_pool.ts \
+     --proposals /tmp/study-topic-candidate-proposals.json \
+     --trigger-kind recommendation-needs-refresh \
+     --trigger-reason "<trigger 조건 요약>" \
+     [--context "<on-demand 관심사 요약 — 민감 본문 제외>"]
+   ```
+
+4. 성공 시: stdout의 `decisions.new` 수를 확인하고 진행 상황을 간략히 출력한다.
+5. 실패 시: 오류를 기록하고 Step 3으로 계속 진행한다. **refresh 실패로 전체 추천을 중단하지 않는다.**
+
+**Context와 config 반영 구분:**
+
+- 호출 args에 on-demand 관심사·맥락이 있으면 trigger 판단에 반영하고, `--context`에는 공개 가능한 요약만 전달한다.
+  민감 본문(지원 회사명·비공개 답변 등)은 포함하지 않는다.
+- `--context`는 runtime JSON(`study-topic-candidate-refresh.json`)에만 저장되며 SKILL.md 예시나 Discord 메시지에 그대로 남기지 않는다.
+- Step 3.6의 `refresh_topic_inventory.ts --render-only`는 이 단계와 별개로 morning markdown만 재생성하며 config를 변경하지 않는다.
+
+### 3. Replenish + Recommend
 
 ts script를 `Bash` 도구로 직접 호출:
 
@@ -76,11 +135,11 @@ script 내부 흐름 (알고리즘 상수 참고용):
 - **cooldown**: backend key 7 history entries / secondary 3 history entries
 - **RSS feed**: feed-cache TTL 6h 활용 — 반복 호출 시 네트워크 부담 없음
 - **산출물**:
-  - `data/runtime/topic-inventory.json` — fos-study sourceOfTruth + override/seed/fallback pool + 추천 결과 + 통계 (`excluded.possibleDuplicates` 배열 포함 — Step 2.5 입력)
+  - `data/runtime/topic-inventory.json` — fos-study sourceOfTruth + override/seed/fallback pool + 추천 결과 + 통계 (`excluded.possibleDuplicates` 배열 포함 — Step 3.5 입력)
   - `data/runtime/morning-topic-recommendation.md` — 사람이 읽는 마크다운 (10픽 + 오늘의 3선)
   - `data/runtime/topic-inventory-history.jsonl` — 오늘 추천 history append
 
-### 2.5 Claude duplicate review (ADR-033)
+### 3.5 Claude duplicate review (ADR-033)
 
 `data/runtime/topic-inventory.json`을 Read하고 `excluded.possibleDuplicates` 배열을 의미 판정한다.
 
@@ -107,11 +166,11 @@ script 내부 흐름 (알고리즘 상수 참고용):
 review 실행 자체가 실패하면 (Claude 호출 자체가 안 되거나 schema 위반):
 - `claudeDuplicateReview.status = "failed"` + `reviewedAt = now` + `items = []`로 Write
 - 추천 전체는 실패시키지 않음 — 다음 단계로 진행
-- morning markdown에 warning 표시 책임은 rendering 단계 (Step 2.6)
+- morning markdown에 warning 표시 책임은 rendering 단계 (Step 3.6)
 
 `possibleDuplicates`가 0개이면 review skip. inventory의 `claudeDuplicateReview.status = "skipped"` 그대로 유지하고 다음 단계로 진행.
 
-### 2.6 morning markdown 재생성
+### 3.6 morning markdown 재생성
 
 `claudeDuplicateReview`를 inventory에 반영한 뒤 markdown을 재생성한다. **주의: 일반 `refresh_topic_inventory.ts` 재호출은 inventory를 다시 계산하면서 Claude review 결과를 덮어쓸 수 있으므로 금지한다.**
 
@@ -124,7 +183,7 @@ bun --env-file=career-os/.env \
 
 `--render-only` 모드는 기존 `topic-inventory.json`을 읽고 markdown만 다시 쓴다. `claudeDuplicateReview` 결과가 반영된 "기존 문서 보강 후보 (최대 5)" 섹션과 (status=failed이면) 상단 warning 라인이 출력된다.
 
-### 3. LLM 큐레이션
+### 4. LLM 큐레이션
 
 Read `data/runtime/topic-inventory.json`, `data/runtime/morning-topic-recommendation.md`,
 `config/study-progress.json`, and `config/study-preferences.json`.
@@ -137,11 +196,11 @@ Use them to produce a concise recommendation with:
 - one explicit note on what was avoided because it was already studied or recently repeated
 - pool health only as a diagnostic, not as the main answer
 
-### 4. 결과 출력
+### 5. 결과 출력
 
 Do not paste the full markdown by default. Summarize the LLM-curated picks and include the path to `morning-topic-recommendation.md`.
 
-### 5. Live-coding seed 선택 (옵션)
+### 6. Live-coding seed 선택 (옵션)
 
 자연어에 "live-coding" 키워드가 있으면 추가 처리:
 
