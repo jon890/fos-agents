@@ -11,7 +11,6 @@ export const InterviewModeSchema = z.object({
   sites: z.array(InterviewSiteSchema),
   source_dir: z.string(),
   report_slug: z.string(),
-  prep_dir: z.string(),
 });
 
 export const InterviewSchema = z.object({

@@ -16,8 +16,7 @@
           {"key": "cjfoodville-brand", "url": "https://m.cjfoodville.co.kr:7443/brand/introduce.asp", "label": "CJ푸드빌 브랜드 소개"}
         ],
         "source_dir": "cj-foodville-first-round-sites",
-        "report_slug": "cj-foodville-first-round",
-        "prep_dir": "cj-foodville-first-round"
+        "report_slug": "cj-foodville-first-round"
       },
       "final_round": null,
       "offer_chat": null
