@@ -236,6 +236,7 @@ source coverage 확장 원칙은 ADR-051을 따른다.
 Wanted broad scan은 유지하고, Wanted target URL 검증은 `target-url`, 선호 회사 키워드 탐색은 `target-keyword` discovery mode로 처리한다.
 KakaoPay, KakaoPay Securities, KakaoMobility, NAVER Careers는 official source로 수집한다.
 Coupang처럼 공식 사이트가 fetch에서 차단되는 회사는 1차로 Wanted target keyword discovery를 사용한다.
+Coupang 공식 `coupang.jobs` 수집은 후속 browser 기반 수집 후보로 둔다.
 한 source 실패는 다른 source의 수집·import·dashboard 표시를 막지 않는다.
 
 추천 범위는 Java/Spring 서버·백엔드 정규직을 기본으로 하되, 사용자의 현재 선호에 따라 AI 서비스/AI Transformation(AX)/AI Agent/AI 플랫폼 공고도 별도 레인으로 평가한다. 단, 이 레인의 공고도 추천 티어에 오르려면 active/open 개별 공고 URL이 있어야 하며, 서버·플랫폼 개발 전이성(API, Agent/RAG/LLM workflow, LLMOps/MLOps, 개발 생산성 자동화, SDLC AI 활용 등)이 명확해야 한다. 순수 AI Research, PM, 프론트엔드, 데이터 엔지니어 중심 공고는 사용자가 별도로 요청하지 않는 한 추천 티어에서 제외한다.

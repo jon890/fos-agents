@@ -2862,6 +2862,7 @@ daily study cron 메시지는 이제 실행 로그가 아니라 오늘 공부할
 - official source adapter를 추가할 수 있는 회사는 source별 adapter로 수집한다.
 - KakaoMobility와 NAVER Careers는 1차 official adapter로 추가한다.
 - Coupang처럼 공식 사이트가 fetch에서 차단되는 회사는 Wanted target keyword discovery를 1차 fallback으로 사용한다.
+  Coupang 공식 `coupang.jobs` 수집은 후속 browser 기반 수집 후보로 분리한다.
 - Wanted adapter는 broad scan 외에 선호 회사 키워드 검색을 수행하고, detail API `status=active`로 검증된 개별 공고만 snapshot에 넣는다.
 - 새 source는 `--source all` shadow 검증을 먼저 거친다.
 - 2026-06-11 shadow 검증에서 active/direct guard가 통과했으므로 daily runner 기본값을 `POSITION_RECOMMENDER_SOURCE=all`로 전환한다.
