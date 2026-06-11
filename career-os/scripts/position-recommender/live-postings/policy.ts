@@ -48,11 +48,6 @@ export const EXCLUDED_COMPANY_KEYWORDS = [
   "phoenixlab",
   "와그",
   "waug",
-  "그린카",
-  "greencar",
-  "green car",
-  "페이민트",
-  "paymint",
 ];
 
 // ---- Text helpers --------------------------------------------------------
