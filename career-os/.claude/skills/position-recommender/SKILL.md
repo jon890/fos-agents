@@ -74,6 +74,8 @@ bun career-os/scripts/position-recommender/collect_live_postings.ts
 - 강력 추천/도전 추천의 입력 후보는 수집 snapshot 안의 `posting_status: active/open` + `link_type: direct_posting` + 개별 URL이 있는 항목으로 제한한다.
 - snapshot에 `posting_status: unknown`, career article, search page, 채용홈 lead만 있는 항목이 있으면 추천 후보로 사용하지 않는다.
 - snapshot의 `closes_at`, `days_until_close`, `close_urgency`를 우선 읽고, `opened_at`은 값이 있을 때만 공고 기간에 포함한다. 마감이 없으면 `상시/마감 미정`으로 쓴다. `close_urgency`가 `urgent`/`soon`이면 준비 액션에 마감 임박을 반영한다.
+- snapshot의 `main_tasks`, `requirements`, `preferred`는 실행 시간을 줄이기 위해 요약 길이로 잘린 입력이다.
+  추천 판단에는 충분하지만, 문장 일부가 `...`로 끝나면 원문을 보았다고 쓰지 않는다.
 
 ### 2. 컨텍스트 + 최근 추천 이력 로드 (Read)
 
@@ -92,15 +94,18 @@ bun career-os/scripts/position-recommender/collect_live_postings.ts
 보고서 필수 구조:
 - 첫 줄: `# <YYYY-MM-DD> 포지션 추천 리포트`
 - 첫 10줄 안: 오늘의 결론 또는 권장 행동 1~3줄
-- **추천 배경 요약** — 후보자 현재 강점·약점 포지션 1단락
+- **추천 배경 요약** — 후보자 현재 강점·약점 포지션 2~3문장
 - **강력 추천** 티어 — role-fit 높고 gap 준비 가능한 포지션
-  - 각 항목: role title + 개별 active 포스팅 링크 + 공고 기간 + 지원 근거 + gap 준비사항 + first action
+  - 최대 3개
+  - 각 항목: role title + 개별 active 포스팅 링크 + 공고 기간 + 지원 근거 1~2문장 + gap 준비사항 + first action
 - **도전 추천** 티어 — stretch goal, 준비 기간 필요
-  - 각 항목: role title + 개별 active 포스팅 링크 + 공고 기간 + 지원 근거 + gap 준비사항 + first action
+  - 최대 2개
+  - 각 항목: role title + 개별 active 포스팅 링크 + 공고 기간 + 지원 근거 1~2문장 + gap 준비사항 + first action
 - **보류·주의** 티어 — 현시점 비추천 + 사유 명시
+  - 최대 3개
   - 각 항목: role title + 비추천 사유
 - **최근 반복 점검** — 최근 7일 반복 후보와 신규 후보 확보 여부
-- 총 30줄 이상
+- 총 30~70줄 권장. 판단에 필요한 근거만 남기고 장문 회사 설명은 쓰지 않는다.
 
 ### 4. 리포트 저장 (Write)
 

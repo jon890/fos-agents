@@ -43,7 +43,7 @@ if [[ "$VALIDATE_ONLY" != "1" ]]; then
   COLLECT_ARGS=(
     "$ROOT/scripts/position-recommender/collect_live_postings.ts"
     --source "${POSITION_RECOMMENDER_SOURCE:-wanted}"
-    --max-wanted "${POSITION_RECOMMENDER_WANTED_LIMIT:-120}"
+    --max-wanted "${POSITION_RECOMMENDER_WANTED_LIMIT:-80}"
     --output "$LIVE_POSTINGS"
   )
   if [[ "${POSITION_RECOMMENDER_INCLUDE_TOSS_ARTICLES:-0}" == "1" ]]; then

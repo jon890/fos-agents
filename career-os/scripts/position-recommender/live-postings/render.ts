@@ -5,6 +5,24 @@ import { dirname } from "path";
 import type { Posting, CollectionDiagnostics } from "./types.ts";
 import { postSortKey } from "./policy.ts";
 
+const DEFAULT_TEXT_LIMIT = 360;
+const SUMMARY_TEXT_LIMIT = 120;
+const LIST_LIMIT = 8;
+
+function compactText(value: string | undefined, limit = DEFAULT_TEXT_LIMIT): string {
+  const normalized = (value ?? "").replace(/\s+/g, " ").trim();
+  if (!normalized) return "";
+  if (normalized.length <= limit) return normalized;
+  return `${normalized.slice(0, Math.max(0, limit - 3)).trimEnd()}...`;
+}
+
+function compactList(values: string[], limit = LIST_LIMIT): string[] {
+  return values
+    .map((value) => compactText(value, 60))
+    .filter(Boolean)
+    .slice(0, limit);
+}
+
 export function render(posts: Posting[], outPath: string, diagnostics: CollectionDiagnostics): void {
   posts.sort((a, b) => {
     const [aj, at] = postSortKey(a);
@@ -64,20 +82,22 @@ export function render(posts: Posting[], outPath: string, diagnostics: Collectio
     lines.push(`  - closes_at: ${p.closesAt}`);
     lines.push(`  - days_until_close: ${p.daysUntilClose}`);
     lines.push(`  - close_urgency: ${p.closeUrgency}`);
-    lines.push(`  - tags: ${p.tags.join(", ")}`);
-    if (p.summary) lines.push(`  - summary: ${p.summary}`);
-    if (p.skills.length > 0) lines.push(`  - skills: ${p.skills.join(", ")}`);
-    if (p.careerUpsideHypothesis) lines.push(`  - career_upside_hypothesis: ${p.careerUpsideHypothesis}`);
+    lines.push(`  - tags: ${compactList(p.tags).join(", ")}`);
+    if (p.summary) lines.push(`  - summary: ${compactText(p.summary, SUMMARY_TEXT_LIMIT)}`);
+    if (p.skills.length > 0) lines.push(`  - skills: ${compactList(p.skills).join(", ")}`);
+    if (p.careerUpsideHypothesis) {
+      lines.push(`  - career_upside_hypothesis: ${compactText(p.careerUpsideHypothesis, 180)}`);
+    }
     if (p.careerUpsideEvidence && p.careerUpsideEvidence.length > 0) {
-      lines.push(`  - career_upside_evidence: ${p.careerUpsideEvidence.join(" | ")}`);
+      lines.push(`  - career_upside_evidence: ${compactList(p.careerUpsideEvidence, 4).join(" | ")}`);
     }
     if (p.careerUpsideRiskFlags && p.careerUpsideRiskFlags.length > 0) {
-      lines.push(`  - career_upside_risk_flags: ${p.careerUpsideRiskFlags.join(", ")}`);
+      lines.push(`  - career_upside_risk_flags: ${compactList(p.careerUpsideRiskFlags, 4).join(", ")}`);
     }
-    if (p.dueTime) lines.push(`  - due: ${p.dueTime}`);
-    if (p.mainTasks) lines.push(`  - main_tasks: ${p.mainTasks}`);
-    if (p.requirements) lines.push(`  - requirements: ${p.requirements}`);
-    if (p.preferred) lines.push(`  - preferred: ${p.preferred}`);
+    if (p.dueTime) lines.push(`  - due: ${compactText(p.dueTime, 80)}`);
+    if (p.mainTasks) lines.push(`  - main_tasks: ${compactText(p.mainTasks)}`);
+    if (p.requirements) lines.push(`  - requirements: ${compactText(p.requirements)}`);
+    if (p.preferred) lines.push(`  - preferred: ${compactText(p.preferred)}`);
     lines.push(`  - url: ${p.url}`);
   }
 

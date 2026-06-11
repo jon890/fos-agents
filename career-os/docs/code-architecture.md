@@ -488,7 +488,8 @@ plan050은 새 독립 추천기를 먼저 만들지 않고 기존 collector/reco
 
 책임 경계:
 
-- `scripts/position-recommender/live-postings/`는 active/open 개별 공고와 evidence snapshot을 만든다.
+- `scripts/position-recommender/live-postings/`는 active/open 개별 공고와 compact evidence snapshot을 만든다.
+  긴 JD 원문 필드는 추천 판단에 필요한 길이로 축약해 LLM 입력과 실행 시간을 줄인다.
 - `position-recommender` native skill은 LLM recommendation snapshot 초안을 만든다.
 - `scripts/application-agent/`는 frontdoor queue, ledger, 공고별 application files, priority history를 검증하고 갱신한다.
 - `config/candidate-profile.md`와 기존 resume/profile material은 fit analysis 입력으로 재사용한다.

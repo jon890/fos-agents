@@ -195,7 +195,7 @@ Bash: bun career-os/scripts/position-recommender/collect_live_postings.ts
   → source adapters (Wanted broad/target URL, Toss, KakaoPay, KakaoPay Securities 등)
   → detail page active/open evidence 확인
   → active validator (direct posting + active/open + leakage boundary)
-  → renderer
+  → compact renderer (긴 JD 필드는 판단 가능한 길이로 축약)
   → data/runtime/live-position-postings.md
   ↓
 Read:
@@ -216,6 +216,7 @@ Claude 자연어 분석:
   - collector는 active/open 개별 공고 후보 정제까지만 담당
   - active/open 여부는 추정하지 않고 snapshot evidence만 사용
   - 최근 7일 반복 후보 감점 + 신규 후보/추가 수집 대상 최소 1개 포함
+  - 리포트는 강력 추천 3개, 도전 추천 2개, 보류/주의 3개 안에서 압축 작성
   ↓
 Self-check: 첫 줄 # + 오늘 날짜 + 30줄+ + 3 티어 + 반복 점검 존재 (재작성 최대 3회)
   ↓
