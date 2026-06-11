@@ -3,14 +3,21 @@
 export type SourceId =
   | "wanted"
   | "toss-careers"
+  | "coupang-careers"
   | "kakaopay"
   | "kakaopay-securities"
   | "kakaomobility"
   | "naver-careers";
-export type SourceAlias = "toss";
+export type SourceAlias = "toss" | "coupang";
 export type SourceSelection = SourceId | SourceAlias | "all";
 
-export type DiscoveryMode = "broad" | "target-url" | "target-keyword" | "official-listing" | "official-detail";
+export type DiscoveryMode =
+  | "broad"
+  | "target-url"
+  | "target-keyword"
+  | "official-listing"
+  | "official-sitemap"
+  | "official-detail";
 
 export type SourceDiagnosticStatus = "ok" | "partial" | "failed";
 

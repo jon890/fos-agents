@@ -1,4 +1,5 @@
 import type { SourceAdapter, SourceId, SourceSelection } from "../types.ts";
+import { coupangCareersAdapter } from "./coupang-careers.ts";
 import { kakaomobilityAdapter } from "./kakaomobility.ts";
 import { kakaopayAdapter } from "./kakaopay.ts";
 import { kakaopaySecuritiesAdapter } from "./kakaopay-securities.ts";
@@ -9,6 +10,7 @@ import { wantedAdapter } from "./wanted.ts";
 const ADAPTERS: Record<SourceId, SourceAdapter> = {
   wanted: wantedAdapter,
   "toss-careers": tossAdapter,
+  "coupang-careers": coupangCareersAdapter,
   kakaopay: kakaopayAdapter,
   "kakaopay-securities": kakaopaySecuritiesAdapter,
   kakaomobility: kakaomobilityAdapter,
@@ -17,6 +19,7 @@ const ADAPTERS: Record<SourceId, SourceAdapter> = {
 
 const SOURCE_ALIASES: Record<string, SourceId> = {
   toss: "toss-careers",
+  coupang: "coupang-careers",
 };
 
 function normalizeSource(source: SourceSelection): SourceSelection {

@@ -36,7 +36,7 @@ Runs claude -p "/position-recommender ..." and verifies that today's
 Asia/Seoul report and runtime mirror were freshly written.
 
 Environment:
-  POSITION_RECOMMENDER_SOURCE=all|wanted|toss|kakaopay|kakaopay-securities|kakaomobility|naver-careers
+  POSITION_RECOMMENDER_SOURCE=all|wanted|toss|coupang|coupang-careers|kakaopay|kakaopay-securities|kakaomobility|naver-careers
     Source selection for live posting collection. Default: all.
   POSITION_RECOMMENDER_NOTIFY=0  Skip Discord notification.
   POSITION_RECOMMENDER_NOTIFY_DRY_RUN=1  Print the Discord message instead of sending it.`);

@@ -17,7 +17,7 @@
  * Output: markdown summary for Claude position recommender.
  *
  * Usage:
- *   bun collect_live_postings.ts --output <output-md> [--max-wanted N] [--source all|wanted|toss]
+ *   bun collect_live_postings.ts --output <output-md> [--max-wanted N] [--source all|wanted|toss|coupang]
  */
 
 import { resolve } from "path";
@@ -54,6 +54,8 @@ function parseArgs(argv: string[]): CliArgs {
         s === "wanted" ||
         s === "toss" ||
         s === "toss-careers" ||
+        s === "coupang" ||
+        s === "coupang-careers" ||
         s === "kakaopay" ||
         s === "kakaopay-securities" ||
         s === "kakaomobility" ||

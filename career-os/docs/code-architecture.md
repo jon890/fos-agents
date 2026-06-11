@@ -124,7 +124,7 @@ career-os/
 │   │       ├── validator.ts            direct active/open posting snapshot boundary
 │   │       ├── render.ts               markdown snapshot renderer
 │   │       ├── cli.ts                  arg parsing + adapter 실행 + 파일 쓰기
-│   │       └── adapters/{index,wanted,toss,kakaomobility,naver-careers,...}.ts
+│   │       └── adapters/{index,wanted,toss,coupang-careers,kakaomobility,naver-careers,...}.ts
 │   │           source별 listing/detail fetch, entrypoint, known target URL 소유
 │   ├── application-agent/
 │   │   ├── evaluate_cases.ts           runtime eval-case markdown을 pass/revise/blocked로 검증하는 결정적 평가기
