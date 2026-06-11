@@ -17,6 +17,8 @@ Runs claude -p "/position-recommender ..." and verifies that today's
 Asia/Seoul report and runtime mirror were freshly written.
 
 Environment:
+  POSITION_RECOMMENDER_SOURCE=all|wanted|toss|kakaopay|kakaopay-securities|kakaomobility|naver-careers
+    Source selection for live posting collection. Default: all.
   POSITION_RECOMMENDER_NOTIFY=0  Skip Discord notification.
   POSITION_RECOMMENDER_NOTIFY_DRY_RUN=1  Print the Discord message instead of sending it.
 EOF
@@ -42,7 +44,7 @@ cd "$ROOT"
 if [[ "$VALIDATE_ONLY" != "1" ]]; then
   COLLECT_ARGS=(
     "$ROOT/scripts/position-recommender/collect_live_postings.ts"
-    --source "${POSITION_RECOMMENDER_SOURCE:-wanted}"
+    --source "${POSITION_RECOMMENDER_SOURCE:-all}"
     --max-wanted "${POSITION_RECOMMENDER_WANTED_LIMIT:-80}"
     --output "$LIVE_POSTINGS"
   )
