@@ -122,7 +122,7 @@ career-os/
 │   │       ├── validator.ts            direct active/open posting snapshot boundary
 │   │       ├── render.ts               markdown snapshot renderer
 │   │       ├── cli.ts                  arg parsing + adapter 실행 + 파일 쓰기
-│   │       └── adapters/{index,wanted,toss,...}.ts
+│   │       └── adapters/{index,wanted,toss,kakaomobility,naver-careers,...}.ts
 │   │           source별 listing/detail fetch, entrypoint, known target URL 소유
 │   ├── application-agent/
 │   │   ├── evaluate_cases.ts           runtime eval-case markdown을 pass/revise/blocked로 검증하는 결정적 평가기
@@ -490,6 +490,8 @@ plan050은 새 독립 추천기를 먼저 만들지 않고 기존 collector/reco
 
 - `scripts/position-recommender/live-postings/`는 active/open 개별 공고와 compact evidence snapshot을 만든다.
   긴 JD 원문 필드는 추천 판단에 필요한 길이로 축약해 LLM 입력과 실행 시간을 줄인다.
+  Wanted는 broad scan 외에 선호 회사 target keyword discovery를 함께 수행하고,
+  KakaoMobility와 NAVER Careers는 official source adapter로 수집한다.
 - `position-recommender` native skill은 LLM recommendation snapshot 초안을 만든다.
 - `scripts/application-agent/`는 frontdoor queue, ledger, 공고별 application files, priority history를 검증하고 갱신한다.
 - `config/candidate-profile.md`와 기존 resume/profile material은 fit analysis 입력으로 재사용한다.

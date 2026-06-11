@@ -19,6 +19,20 @@ const WANTED_TARGET_URLS = [
   "https://www.wanted.co.kr/wd/344103",
   "https://www.wanted.co.kr/wd/360452",
 ];
+const WANTED_TARGET_KEYWORDS = [
+  "쿠팡 백엔드",
+  "쿠팡 서버 개발자",
+  "쿠팡페이 백엔드",
+  "네이버 백엔드",
+  "네이버파이낸셜 서버 개발자",
+  "라인 백엔드",
+  "LINE backend engineer",
+  "카카오뱅크 백엔드",
+  "카카오모빌리티 백엔드",
+  "우아한형제들 백엔드",
+  "당근 백엔드",
+  "오늘의집 백엔드",
+];
 
 function isWantedActive(job: Record<string, unknown>): boolean {
   const status = norm(job.status ?? "").toLowerCase();
@@ -33,6 +47,26 @@ async function wantedDetail(pid: number): Promise<Record<string, unknown>> {
   if (!r.ok) throw new Error(`wanted detail ${pid}: HTTP ${r.status}`);
   const data = (await r.json()) as Record<string, unknown>;
   return (data.job as Record<string, unknown>) ?? {};
+}
+
+async function wantedKeywordSearch(query: string, limit = 12): Promise<number[]> {
+  const params = new URLSearchParams({
+    query,
+    country: "kr",
+    job_sort: "job.latest_order",
+    years: "3",
+    locations: "all",
+    limit: String(limit),
+  });
+  const r = await fetch(`https://www.wanted.co.kr/api/chaos/search/v1/position?${params}`, {
+    headers: { "User-Agent": UA },
+    signal: AbortSignal.timeout(20_000),
+  });
+  if (!r.ok) throw new Error(`wanted keyword-search ${query}: HTTP ${r.status}`);
+  const data = (await r.json()) as { data?: unknown[] };
+  return (data.data ?? [])
+    .map((rawItem) => (rawItem as Record<string, unknown>).id)
+    .filter((id): id is number => typeof id === "number");
 }
 
 function wantedPidFromUrl(url: string): number | null {
@@ -206,27 +240,69 @@ async function fetchWantedTargets(serverOnly = true): Promise<{
   return { postings, skippedCount, failedCount, errors };
 }
 
+async function fetchWantedKeywordTargets(serverOnly = true): Promise<{
+  postings: Posting[];
+  searchedCount: number;
+  skippedCount: number;
+  failedCount: number;
+  errors: string[];
+}> {
+  const postings: Posting[] = [];
+  const seenPids = new Set<number>();
+  let skippedCount = 0;
+  let failedCount = 0;
+  let searchedCount = 0;
+  const errors: string[] = [];
+
+  for (const keyword of WANTED_TARGET_KEYWORDS) {
+    try {
+      const pids = await wantedKeywordSearch(keyword);
+      searchedCount += pids.length;
+      for (const pid of pids) {
+        if (seenPids.has(pid)) continue;
+        seenPids.add(pid);
+        try {
+          const detail = await wantedDetail(pid);
+          const posting = postingFromWantedDetail(pid, detail, "target-keyword", serverOnly);
+          if (posting) postings.push(posting);
+          else skippedCount++;
+        } catch (error) {
+          failedCount++;
+          errors.push(`wanted target-keyword detail ${pid}: ${error}`);
+        }
+      }
+    } catch (error) {
+      failedCount++;
+      errors.push(`${error}`);
+    }
+  }
+  return { postings, searchedCount, skippedCount, failedCount, errors };
+}
+
 export const wantedAdapter: SourceAdapter = {
   id: "wanted",
   name: "wanted",
   async collect({ serverOnly, wantedLimit }): Promise<AdapterCollectionResult> {
     const broad = await fetchWanted(wantedLimit, serverOnly, true);
     const targets = await fetchWantedTargets(serverOnly);
-    const postings = [...broad, ...targets.postings];
+    const keywordTargets = await fetchWantedKeywordTargets(serverOnly);
+    const postings = [...broad, ...targets.postings, ...keywordTargets.postings];
     return {
       postings,
       diagnostics: {
         source: "wanted",
-        status: targets.failedCount > 0 ? "partial" : "ok",
+        status: targets.failedCount > 0 || keywordTargets.failedCount > 0 ? "partial" : "ok",
         collectedCount: postings.length,
-        skippedCount: targets.skippedCount,
-        failedCount: targets.failedCount,
-        discoveryModes: ["broad", "target-url"],
+        skippedCount: targets.skippedCount + keywordTargets.skippedCount,
+        failedCount: targets.failedCount + keywordTargets.failedCount,
+        discoveryModes: ["broad", "target-url", "target-keyword"],
         message:
           `wanted diagnostics: broad=${broad.length}, target_url=${targets.postings.length}, ` +
-          `target_skipped=${targets.skippedCount}, target_failed=${targets.failedCount}`,
+          `target_keyword=${keywordTargets.postings.length}/${keywordTargets.searchedCount}, ` +
+          `target_skipped=${targets.skippedCount + keywordTargets.skippedCount}, ` +
+          `target_failed=${targets.failedCount + keywordTargets.failedCount}`,
       },
-      errors: targets.errors,
+      errors: [...targets.errors, ...keywordTargets.errors],
     };
   },
 };

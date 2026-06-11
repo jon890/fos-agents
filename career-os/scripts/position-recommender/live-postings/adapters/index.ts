@@ -1,6 +1,8 @@
 import type { SourceAdapter, SourceId, SourceSelection } from "../types.ts";
+import { kakaomobilityAdapter } from "./kakaomobility.ts";
 import { kakaopayAdapter } from "./kakaopay.ts";
 import { kakaopaySecuritiesAdapter } from "./kakaopay-securities.ts";
+import { naverCareersAdapter } from "./naver-careers.ts";
 import { tossAdapter } from "./toss.ts";
 import { wantedAdapter } from "./wanted.ts";
 
@@ -9,6 +11,8 @@ const ADAPTERS: Record<SourceId, SourceAdapter> = {
   "toss-careers": tossAdapter,
   kakaopay: kakaopayAdapter,
   "kakaopay-securities": kakaopaySecuritiesAdapter,
+  kakaomobility: kakaomobilityAdapter,
+  "naver-careers": naverCareersAdapter,
 };
 
 const SOURCE_ALIASES: Record<string, SourceId> = {

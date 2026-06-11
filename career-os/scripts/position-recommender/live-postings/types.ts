@@ -1,10 +1,16 @@
 // Posting model and shared contracts for live-postings collection.
 
-export type SourceId = "wanted" | "toss-careers" | "kakaopay" | "kakaopay-securities";
+export type SourceId =
+  | "wanted"
+  | "toss-careers"
+  | "kakaopay"
+  | "kakaopay-securities"
+  | "kakaomobility"
+  | "naver-careers";
 export type SourceAlias = "toss";
 export type SourceSelection = SourceId | SourceAlias | "all";
 
-export type DiscoveryMode = "broad" | "target-url" | "official-listing" | "official-detail";
+export type DiscoveryMode = "broad" | "target-url" | "target-keyword" | "official-listing" | "official-detail";
 
 export type SourceDiagnosticStatus = "ok" | "partial" | "failed";
 

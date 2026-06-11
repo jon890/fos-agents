@@ -56,6 +56,8 @@ function parseArgs(argv: string[]): CliArgs {
         s === "toss-careers" ||
         s === "kakaopay" ||
         s === "kakaopay-securities" ||
+        s === "kakaomobility" ||
+        s === "naver-careers" ||
         s === "all"
       ) source = s;
     } else if (arg === "--max-wanted" && argv[i + 1]) {

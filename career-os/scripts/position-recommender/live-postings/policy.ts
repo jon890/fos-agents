@@ -21,7 +21,8 @@ export const EXCLUDE_NON_SERVER_KEYWORDS = [
 export const NON_SERVER_TITLE_KEYWORDS = [
   "기획", "서비스 기획", "product manager", "프로덕트 매니저", "po", "pm", "planner",
   "designer", "디자이너", "qa", "frontend", "프론트", "android", "ios", "data engineer",
-  "데이터 엔지니어", "data scientist", "데이터 사이언티스트", "ai research", "마케터", "marketing",
+  "데이터 엔지니어", "data scientist", "데이터 사이언티스트", "ai research", "research scientist",
+  "마케터", "marketing", "assistant", "어시스턴트", "정책", "e/e", "데이터 라벨링",
 ];
 export const CONTRACT_KEYWORDS = [
   "계약직", "contract", "contractor", "temporary", "temp", "freelance", "프리랜서",

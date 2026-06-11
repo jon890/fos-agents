@@ -192,7 +192,7 @@ native skill 패턴: `claude -p "/position-recommender [자연어 컨텍스트] 
   ↓
 Bash: bun career-os/scripts/position-recommender/collect_live_postings.ts
   → live-postings source registry (`all`은 등록된 모든 source)
-  → source adapters (Wanted broad/target URL, Toss, KakaoPay, KakaoPay Securities 등)
+  → source adapters (Wanted broad/target URL/target keyword, Toss, KakaoPay, KakaoPay Securities, KakaoMobility, NAVER Careers 등)
   → detail page active/open evidence 확인
   → active validator (direct posting + active/open + leakage boundary)
   → compact renderer (긴 JD 필드는 판단 가능한 길이로 축약)
@@ -228,7 +228,11 @@ Discord 알림 [완료]
 
 daily cron은 `scripts/position-recommender/run_daily_with_claude.sh`를 통해 실행한다. 이 wrapper는 Claude native skill 호출 후 오늘 날짜 report/runtime이 실제로 생성됐는지 검증하고, stale runtime 재전송을 실패로 처리한 뒤 `_shared/lib/notify_discord.ts`로 Discord 알림을 보낸다. 아침 Discord 알림은 전체 리포트를 붙이지 않고 상위 강력 추천 3개 + 도전 추천 2개를 `지원 링크 / 이유 / 확인할 점 / 다음 액션` 중심으로 압축한다. Claude native skill 내부에서는 외부 메시지 전송을 직접 수행하지 않는다.
 
-source coverage 확장 원칙은 ADR-051을 따른다. Wanted broad scan은 유지하고, Wanted target URL 검증은 `wanted` source의 `target-url` discovery mode로 처리한다. KakaoPay official careers/GreetingHR와 KakaoPay Securities official careers는 primary source로 수집한다. 한 source 실패는 다른 source의 수집·import·dashboard 표시를 막지 않는다.
+source coverage 확장 원칙은 ADR-051을 따른다.
+Wanted broad scan은 유지하고, Wanted target URL 검증은 `target-url`, 선호 회사 키워드 탐색은 `target-keyword` discovery mode로 처리한다.
+KakaoPay, KakaoPay Securities, KakaoMobility, NAVER Careers는 official source로 수집한다.
+Coupang처럼 공식 사이트가 fetch에서 차단되는 회사는 1차로 Wanted target keyword discovery를 사용한다.
+한 source 실패는 다른 source의 수집·import·dashboard 표시를 막지 않는다.
 
 추천 범위는 Java/Spring 서버·백엔드 정규직을 기본으로 하되, 사용자의 현재 선호에 따라 AI 서비스/AI Transformation(AX)/AI Agent/AI 플랫폼 공고도 별도 레인으로 평가한다. 단, 이 레인의 공고도 추천 티어에 오르려면 active/open 개별 공고 URL이 있어야 하며, 서버·플랫폼 개발 전이성(API, Agent/RAG/LLM workflow, LLMOps/MLOps, 개발 생산성 자동화, SDLC AI 활용 등)이 명확해야 한다. 순수 AI Research, PM, 프론트엔드, 데이터 엔지니어 중심 공고는 사용자가 별도로 요청하지 않는 한 추천 티어에서 제외한다.
 
