@@ -115,6 +115,8 @@ career-os/
 │   (study-topic-recommender: run_*.sh + Python scripts 폐기 완료 — plan016. dispatcher 2 case 폐기. native skill로 진입점 통합)
 │   (study-pack-writer + interview-asset-writer scripts 폐기 — plan013/015 native skill로 흡수, .claude/skills/ 트리 참조)
 │   ├── position-recommender/
+│   │   ├── run_daily_with_claude.ts    daily runner 정본. collect → Claude → freshness/active 검증 → Discord 알림
+│   │   ├── run_daily_with_claude.sh    기존 cron/수동 호출 호환용 TS runner shim
 │   │   ├── collect_live_postings.ts    CLI 호환 entrypoint (ADR-030, ADR-043, ADR-047)
 │   │   └── live-postings/
 │   │       ├── types.ts                Posting / SourceAdapter / CollectResult 계약

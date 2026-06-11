@@ -1,0 +1,300 @@
+#!/usr/bin/env bun
+import { existsSync, copyFileSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { spawnSync } from "node:child_process";
+
+const DEFAULT_CONTEXT =
+  "매일 서버/backend 정규직 포지션 추천. 최신 Wanted/공식 career active/open 개별 공고만 강력 추천/도전 추천에 포함. 회사명, 채용 홈, 기술블로그, 뉴스, 탐색 링크만 있는 lead는 추천 티어에 올리지 말고 추가 수집 대상에만 분리. Java/Spring 서버/backend 정규직 중심이되, 사용자는 AI 서비스/AI Transformation(AX)/AI Agent/AI 플랫폼에도 관심이 많으므로 서버·플랫폼 개발 전이가 분명한 AI 포지션은 별도 추천 레인으로 적극 탐색. 최근 7일 position-recommendation 리포트를 읽고 반복 후보는 감점하되, 동일 개별 active 공고가 여전히 최상위인 경우 반복 유지 사유를 명시. 최소 1개 이상은 최근 7일 강력 추천에 없던 신규 개별 active 공고를 포함하고, 없으면 신규 active 공고 부족이라고 명시. 추천 랭킹은 JD fit보다 회사 업사이드 검증을 먼저 통과해야 한다. 강력 추천은 복지/보상 기대, 동료 밀도, 엔지니어링 문화, 대규모 트래픽·플랫폼 학습 환경, 브랜드 레버리지가 NHN보다 분명한 회사만 허용한다. 최우선 탐색군은 LINE/LINE Plus, NAVER 본체·네이버페이·네이버파이낸셜, 당근/당근페이, 카카오페이·카카오뱅크·카카오모빌리티, Coupang/Coupang Pay, 우아한형제들, 오늘의집, 무신사, 컬리, 야놀자다. 작은 스타트업·낮은 인지도 회사·불명확한 계열사·저연차 공고는 JD fit이 좋아도 강력 추천에서 제외하고, 회사/보상/팀 규모/학습 환경이 검증되기 전에는 도전 추천이 아니라 관찰/보류 후보로 둔다. NHN보다 좋은 회사, 강한 성장 모멘텀, 도메인 전환 기회를 우선하되 개별 공고 JD fit이 없으면 추천하지 않음. 레브잇/올웨이즈/다니엘프로젝트/리아드코퍼레이션/피닉스랩/와그(WAUG)는 사용자가 크게 지원해보고 싶은 회사가 아니라고 판단했으므로 강력 추천/도전 추천/즉시 지원 액션에서 제외. 토스 계열은 최근 6개월 불합격 쿨다운으로 강력 추천/즉시 지원 액션에서 제외하고 보류/쿨다운 후보로만 짧게 언급. 특정 회사나 공고를 고정 우선하지 말고 active JD fit, 회사/규모 업사이드, AI 전환/백엔드 코어 커리어 서사, 최근 반복 여부로 랭킹.";
+
+interface Candidate {
+  section: "strong" | "stretch";
+  title: string;
+  postingLink: string;
+  exploreLink: string;
+  evidence: string;
+  summary: string;
+  check: string;
+  action: string;
+}
+
+function kstDate(): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function usage(): void {
+  console.log(`usage: run_daily_with_claude.ts [context]
+       run_daily_with_claude.ts --validate-existing
+
+Runs claude -p "/position-recommender ..." and verifies that today's
+Asia/Seoul report and runtime mirror were freshly written.
+
+Environment:
+  POSITION_RECOMMENDER_SOURCE=all|wanted|toss|kakaopay|kakaopay-securities|kakaomobility|naver-careers
+    Source selection for live posting collection. Default: all.
+  POSITION_RECOMMENDER_NOTIFY=0  Skip Discord notification.
+  POSITION_RECOMMENDER_NOTIFY_DRY_RUN=1  Print the Discord message instead of sending it.`);
+}
+
+function run(cmd: string, args: string[], cwd: string): void {
+  const result = spawnSync(cmd, args, {
+    cwd,
+    stdio: "inherit",
+    env: process.env,
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) process.exit(result.status ?? 1);
+}
+
+function die(message: string): never {
+  console.error(message);
+  process.exit(1);
+}
+
+function firstLine(path: string): string {
+  return readFileSync(path, "utf-8").split(/\r?\n/, 1)[0] ?? "";
+}
+
+function assertLivePostingSnapshot(path: string): void {
+  const content = readFileSync(path, "utf-8");
+  if (!content.includes("link_type: direct_posting")) {
+    die(`position-recommender live-postings: no direct postings collected: ${path}`);
+  }
+  if (!/posting_status: (active|open)/.test(content)) {
+    die(`position-recommender live-postings: no active/open postings collected: ${path}`);
+  }
+  if (/link_type: (career_article|search_page)|posting_status: unknown|opened_at: unknown/.test(content)) {
+    die(`position-recommender live-postings: non-active or non-direct lead leaked into active-only snapshot: ${path}`);
+  }
+}
+
+function trimValue(value: string): string {
+  return value.trim().replace(/[\s,，]+$/, "");
+}
+
+function firstSentence(value: string): string {
+  const trimmed = trimValue(value);
+  const sentenceEnd = trimmed.indexOf(". ");
+  return sentenceEnd > 0 ? trimmed.slice(0, sentenceEnd + 1) : trimmed;
+}
+
+function firstListItem(value: string): string {
+  const trimmed = trimValue(value).replace(/^\([0-9]+\)\s*/, "");
+  return trimValue(trimmed.split(/\([0-9]+\)/)[0] ?? "");
+}
+
+function parseRecommendationCandidates(content: string): Candidate[] {
+  const candidates: Candidate[] = [];
+  let section: Candidate["section"] | "" = "";
+  let current: Candidate | null = null;
+
+  const flush = () => {
+    if (current) candidates.push(current);
+    current = null;
+  };
+
+  for (const line of content.split(/\r?\n/)) {
+    if (/^## 강력 추천/.test(line)) {
+      flush();
+      section = "strong";
+      continue;
+    }
+    if (/^## 도전 추천/.test(line)) {
+      flush();
+      section = "stretch";
+      continue;
+    }
+    if (/^## /.test(line)) {
+      flush();
+      section = "";
+      continue;
+    }
+    if (section && /^(### )?[0-9]+\. /.test(line)) {
+      flush();
+      current = {
+        section,
+        title: line.replace(/^(### )?[0-9]+\. /, ""),
+        postingLink: "",
+        exploreLink: "",
+        evidence: "",
+        summary: "",
+        check: "",
+        action: "",
+      };
+      continue;
+    }
+    if (!section || !current) continue;
+    const label = line.match(/^\s*- ([^:]+):\s*(.*)$/);
+    if (!label) continue;
+    const [, key, rawValue] = label;
+    const value = rawValue ?? "";
+    if (key === "공고 링크") current.postingLink = value;
+    if (key === "탐색 링크") current.exploreLink = value;
+    if (key === "링크 근거 수준") current.evidence = value;
+    if (key === "왜 맞는가") current.summary = firstSentence(value);
+    if (key === "확인해야 할 모호점") current.check = firstListItem(value);
+    if (key === "준비 액션") current.action = firstSentence(value);
+  }
+  flush();
+  return candidates;
+}
+
+function validateDirectPostingRecommendations(runtimePath: string): Candidate[] {
+  const content = readFileSync(runtimePath, "utf-8");
+  const candidates = parseRecommendationCandidates(content);
+  let bad = false;
+  for (const candidate of candidates) {
+    if (!/^https?:\/\//.test(candidate.postingLink)) {
+      console.error(
+        `position-recommender invalid recommendation: ${candidate.section} item lacks direct posting link: ${candidate.title}`
+      );
+      bad = true;
+    }
+    if (candidate.exploreLink && candidate.exploreLink !== "-") {
+      console.error(
+        `position-recommender invalid recommendation: ${candidate.section} item has explore link in recommendation tier: ${candidate.title}`
+      );
+      bad = true;
+    }
+    if (!/개별 공고 (active|open) 확인/.test(candidate.evidence)) {
+      console.error(
+        `position-recommender invalid recommendation: ${candidate.section} item lacks direct active/open evidence: ${candidate.title}`
+      );
+      bad = true;
+    }
+  }
+  if (bad) process.exit(1);
+  return candidates;
+}
+
+function formatDiscordCandidates(candidates: Candidate[]): string {
+  const lines: string[] = [];
+  const counts = { strong: 0, stretch: 0 };
+  let currentSection: Candidate["section"] | "" = "";
+  for (const candidate of candidates) {
+    if (candidate.section === "strong" && counts.strong >= 3) continue;
+    if (candidate.section === "stretch" && counts.stretch >= 2) continue;
+    if (candidate.section !== currentSection) {
+      if (lines.length > 0) lines.push("");
+      lines.push(candidate.section === "strong" ? "강력 추천:" : "도전 추천:");
+      currentSection = candidate.section;
+    }
+    counts[candidate.section]++;
+    const itemNo = counts[candidate.section];
+    const link = /^https?:\/\//.test(candidate.postingLink) ? `<${candidate.postingLink}>` : "-";
+    lines.push(`${itemNo}. ${candidate.title}`);
+    lines.push(`   지원: ${link}`);
+    lines.push(`   이유: ${candidate.summary || "-"}`);
+    lines.push(`   확인: ${candidate.check || "-"}`);
+    lines.push(`   다음: ${candidate.action || "-"}`);
+  }
+  if (lines.length === 0) return "강력 추천:\n\n도전 추천:";
+  if (!lines.includes("강력 추천:")) lines.unshift("강력 추천:", "");
+  if (!lines.includes("도전 추천:")) lines.push("", "도전 추천:");
+  return lines.join("\n");
+}
+
+function notifyPositionRecommendation(args: {
+  root: string;
+  notifyScript: string;
+  reportDate: string;
+  report: string;
+  candidates: Candidate[];
+}): void {
+  if (process.env.POSITION_RECOMMENDER_NOTIFY === "0") return;
+  if (!existsSync(args.notifyScript)) {
+    console.error(`position-recommender warn: notify script not found: ${args.notifyScript}`);
+    return;
+  }
+  const reportDisplay = args.report.startsWith(`${args.root}/`) ? args.report.slice(args.root.length + 1) : args.report;
+  const message = `오늘 포지션 추천 (${args.reportDate})
+
+${formatDiscordCandidates(args.candidates)}
+
+전체 리포트: \`${reportDisplay}\`
+검증: 오늘 날짜 리포트 + 개별 active 공고 링크 확인 완료`;
+
+  if (process.env.POSITION_RECOMMENDER_NOTIFY_DRY_RUN === "1") {
+    console.log(message);
+    return;
+  }
+  const result = spawnSync("bun", [`--env-file=${args.root}/.env`, args.notifyScript, message], {
+    cwd: args.root,
+    stdio: "inherit",
+    env: process.env,
+  });
+  if (result.status !== 0) {
+    console.error("position-recommender warn: discord notify failed");
+  }
+}
+
+function main(): void {
+  const argv = process.argv.slice(2);
+  if (argv[0] === "--help" || argv[0] === "-h") {
+    usage();
+    return;
+  }
+
+  let validateOnly = false;
+  if (argv[0] === "--validate-existing") {
+    validateOnly = true;
+    argv.shift();
+  }
+
+  const root = resolve(process.env.CAREER_OS_ROOT ?? "/home/bifos/ai-nodes/career-os");
+  const reportDate = process.env.REPORT_DATE ?? kstDate();
+  const report = `${root}/data/reports/daily/${reportDate}/position-recommendation/report.md`;
+  const runtime = `${root}/data/runtime/position-recommendation.md`;
+  const livePostings = `${root}/data/runtime/live-position-postings.md`;
+  const notifyScript = `${root}/../_shared/lib/notify_discord.ts`;
+  const context = argv.length > 0 ? argv.join(" ") : DEFAULT_CONTEXT;
+  const prompt = context.startsWith("/position-recommender") ? context : `/position-recommender ${context}`;
+
+  if (!validateOnly) {
+    const collectArgs = [
+      `${root}/scripts/position-recommender/collect_live_postings.ts`,
+      "--source",
+      process.env.POSITION_RECOMMENDER_SOURCE ?? "all",
+      "--max-wanted",
+      process.env.POSITION_RECOMMENDER_WANTED_LIMIT ?? "80",
+      "--output",
+      livePostings,
+    ];
+    if (process.env.POSITION_RECOMMENDER_INCLUDE_TOSS_ARTICLES === "1") collectArgs.push("--include-toss-articles");
+    run("bun", collectArgs, root);
+    assertLivePostingSnapshot(livePostings);
+    run("claude", ["--permission-mode", "acceptEdits", "-p", prompt], root);
+  }
+
+  if (!existsSync(report)) {
+    die(`position-recommender stale-output: expected today's report not found: ${report}`);
+  }
+  const reportFirstLine = firstLine(report);
+  if (!reportFirstLine.startsWith(`# ${reportDate} `)) {
+    die(`position-recommender stale-output: report first line is not today's date (${reportDate}): ${reportFirstLine}`);
+  }
+
+  if (!existsSync(runtime)) copyFileSync(report, runtime);
+  let runtimeFirstLine = firstLine(runtime);
+  if (!runtimeFirstLine.startsWith(`# ${reportDate} `)) {
+    copyFileSync(report, runtime);
+    runtimeFirstLine = firstLine(runtime);
+  }
+  if (!runtimeFirstLine.startsWith(`# ${reportDate} `)) {
+    die(`position-recommender stale-output: runtime first line is not today's date (${reportDate}): ${runtimeFirstLine}`);
+  }
+
+  const candidates = validateDirectPostingRecommendations(runtime);
+  if (!validateOnly || process.env.POSITION_RECOMMENDER_NOTIFY_DRY_RUN === "1") {
+    notifyPositionRecommendation({ root, notifyScript, reportDate, report, candidates });
+  }
+  console.log(`OK position-recommender fresh report: ${report}`);
+}
+
+main();
