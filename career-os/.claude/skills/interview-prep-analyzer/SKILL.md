@@ -65,6 +65,11 @@ Claude는 다음을 `Read` 도구로 직접 로드:
 5. `career-os/data/source/<source_dir>/manifest.json`와 사이트 `.txt` 파일 — 수집된 회사/서비스 맥락 (있으면 Read)
 6. `career-os/sources/fos-study/`의 관련 학습 문서 — 역할/약점과 직접 연결되는 범위만 선별 Read
 
+Stage 모드에서 `config/first-round-drill-core-files.json`은 필수 입력으로 보지 않는다.
+plan068 이후 active reader가 없는 legacy 설정으로 정리된 파일이므로,
+파일이 없어도 블로커로 기록하지 않는다.
+필요한 학습 근거는 실제 `sources/fos-study/` inventory와 `config/baseline-core-files.json`에서 선별한다.
+
 ## Workflow
 
 ### 1. 모드 판단
