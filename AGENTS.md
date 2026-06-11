@@ -217,27 +217,27 @@ docs · CLAUDE.md · AGENTS.md · SKILL.md · task phase 파일 모두 적용.
 - Codex는 planning brief 작성, 결정사항 기록, task 파일 고정, Claude 구현 결과 review, 검증, 의도한 변경만 commit/push하는 책임을 가진다.
 - Claude 구현 phase를 실행할 때는 phase 문서의 범위, 안전 조건, 검증 기준을 명확히 전달한다.
 
-### 9-1. background 구현 worktree 원칙
+### 9-1. background 구현 워크트리 원칙
 
-메인 worktree는 사용자와 Codex가 현재 맥락을 확인하는 기준점이다.
+메인 워크트리는 사용자와 Codex가 현재 맥락을 확인하는 기준점이다.
 background 구현 작업은 다른 활성 작업과 섞이지 않게 격리한다.
 
 - 여러 task가 동시에 active 상태면 background 구현은 별도 git worktree와 branch를 기본값으로 사용한다.
-- 단순한 "구현해줘" 요청만으로 main worktree 직접 편집이 안전하다고 가정하지 않는다.
+- 단순한 "구현해줘" 요청만으로 main 워크트리 직접 편집이 안전하다고 가정하지 않는다.
   먼저 active 작업과 dirty state를 확인한다.
-- main worktree 직접 편집은 아래 경우에만 허용한다:
+- main 워크트리 직접 편집은 아래 경우에만 허용한다:
   - active task가 하나뿐이다.
   - 작고 안전한 docs/process-only 변경이다.
-  - 사용자가 main worktree 직접 편집을 명시적으로 허용했다.
-- background worker 최종 보고에는 사용한 worktree/branch 여부를 반드시 적는다.
-- background worker가 별도 worktree를 만들었다면 작업 완료/중단 보고 전에 `git worktree remove <path>`로 worktree 디렉터리를 명시적으로 제거한다.
+  - 사용자가 main 워크트리 직접 편집을 명시적으로 허용했다.
+- background worker 최종 보고에는 사용한 워크트리/branch 여부를 반드시 적는다.
+- background worker가 별도 워크트리를 만들었다면 작업 완료/중단 보고 전에 `git worktree remove <path>`로 워크트리 디렉터리를 명시적으로 제거한다.
   제거 전 `git -C <path> status --short`가 비어 있는지 확인하고, 비어 있지 않으면 제거하지 말고 남은 변경과 경로를 보고한다.
-  branch 보존이 필요하면 worktree만 제거하고 branch는 삭제하지 않는다.
+  branch 보존이 필요하면 워크트리만 제거하고 branch는 삭제하지 않는다.
 - phase 경계는 commit/push 경계다.
   긴 dirty state를 남기지 않고, 검증된 변경은 작은 단위로 push한다.
 - stage는 intended files만 한다.
   unrelated dirty files를 수정, stage, commit하지 않는다.
-- 작업 완료 보고 전에는 관련 worktree에서 `git status --short`를 다시 확인한다.
+- 작업 완료 보고 전에는 관련 워크트리에서 `git status --short`를 다시 확인한다.
   완료 보고에는 `clean`, `unrelated dirty만 남음`, `의도적으로 남긴 파일 있음`, `정리 보류`처럼 남은 상태를 분류해 적는다.
 - 검증된 intended 변경은 관심사별 commit/push를 기본값으로 한다.
   보류가 필요하면 남긴 이유, 파일 목록, 다음 조치를 보고한다.
