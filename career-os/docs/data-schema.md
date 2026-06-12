@@ -91,8 +91,6 @@ fos-career request gateway:
   단, 구조 전환에서 정본이 `private/<company>/<position>/`으로 이동했고 새 정본으로 대체 확인이 끝난 legacy mirror/runtime/report는 archive 없이 제거해도 된다.
 - 오래된 generated report는 최근 7일 반복 추천, active interview/application 판단, task/ADR 근거와 연결돼 있으면 보존한다.
   연결이 없고 새 report나 docs 결정으로 대체됐으면 `private/archive/` 후보로 분류한다.
-- `data/runtime/live-position-postings.plan048-final.md`와 `data/runtime/live-position-postings.plan048-smoke.md`는 tracked runtime exception이다.
-  후속 phase에서 명명된 예외로만 다루고 일반 runtime 추적 규칙으로 확장하지 않는다.
 ## config/
 
 ### config 책임 원칙 (ADR-069)
