@@ -1,10 +1,24 @@
 #!/usr/bin/env bun
 import { existsSync, copyFileSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 
 const DEFAULT_CONTEXT =
-  "매일 서버/backend 정규직 포지션 추천. 최신 Wanted/공식 career active/open 개별 공고만 강력 추천/도전 추천에 포함. 회사명, 채용 홈, 기술블로그, 뉴스, 탐색 링크만 있는 lead는 추천 티어에 올리지 말고 추가 수집 대상에만 분리. Java/Spring 서버/backend 정규직 중심이되, 사용자는 AI 서비스/AI Transformation(AX)/AI Agent/AI 플랫폼에도 관심이 많으므로 서버·플랫폼 개발 전이가 분명한 AI 포지션은 별도 추천 레인으로 적극 탐색. 최근 7일 position-recommendation 리포트를 읽고 반복 후보는 감점하되, 동일 개별 active 공고가 여전히 최상위인 경우 반복 유지 사유를 명시. 최소 1개 이상은 최근 7일 강력 추천에 없던 신규 개별 active 공고를 포함하고, 없으면 신규 active 공고 부족이라고 명시. 추천 랭킹은 JD fit보다 회사 업사이드 검증을 먼저 통과해야 한다. 강력 추천은 복지/보상 기대, 동료 밀도, 엔지니어링 문화, 대규모 트래픽·플랫폼 학습 환경, 브랜드 레버리지가 NHN보다 분명한 회사만 허용한다. 최우선 탐색군은 LINE/LINE Plus, NAVER 본체·네이버페이·네이버파이낸셜, 당근/당근페이, 카카오페이·카카오뱅크·카카오모빌리티, Coupang/Coupang Pay, 우아한형제들, 오늘의집, 무신사, 컬리, 야놀자다. 작은 스타트업·낮은 인지도 회사·불명확한 계열사·저연차 공고는 JD fit이 좋아도 강력 추천에서 제외하고, 회사/보상/팀 규모/학습 환경이 검증되기 전에는 도전 추천이 아니라 관찰/보류 후보로 둔다. NHN보다 좋은 회사, 강한 성장 모멘텀, 도메인 전환 기회를 우선하되 개별 공고 JD fit이 없으면 추천하지 않음. 레브잇/올웨이즈/다니엘프로젝트/리아드코퍼레이션/피닉스랩/와그(WAUG)는 사용자가 크게 지원해보고 싶은 회사가 아니라고 판단했으므로 강력 추천/도전 추천/즉시 지원 액션에서 제외. 토스 계열은 최근 6개월 불합격 쿨다운으로 강력 추천/즉시 지원 액션에서 제외하고 보류/쿨다운 후보로만 짧게 언급. 특정 회사나 공고를 고정 우선하지 말고 active JD fit, 회사/규모 업사이드, AI 전환/백엔드 코어 커리어 서사, 최근 반복 여부로 랭킹.";
+  [
+    "매일 서버/backend 정규직 포지션 추천.",
+    "data/runtime/live-position-postings.md의 direct active/open 개별 공고만 강력 추천/도전 추천에 포함.",
+    "회사 홈, 탐색 링크, 상태 unknown, 닫힌 공고는 추천 티어에서 제외.",
+    "Java/Spring backend를 기본으로 보고, 서버/플랫폼 전이가 분명한 AI/AX/Agent/Payments/Wallet 공고도 평가.",
+    "우선 회사군: LINE, NAVER/네이버페이/네이버파이낸셜, 당근/당근페이, 카카오페이/카카오뱅크/카카오모빌리티, Coupang/Coupang Pay, 우아한형제들, 오늘의집, 무신사, 컬리, 야놀자.",
+    "최근 7일 추천 반복은 감점하고, 신규 active 공고가 있으면 최소 1개 포함.",
+    "강력 추천은 NHN 대비 회사 upside와 role-fit이 모두 분명한 경우만 허용.",
+    "토스 계열은 최근 6개월 불합격 쿨다운으로 즉시 지원 액션에서 제외.",
+    "레브잇/올웨이즈/다니엘프로젝트/리아드코퍼레이션/피닉스랩/와그는 추천 액션에서 제외.",
+    "30~70줄로 압축해 오늘의 결론, 강력 추천, 도전 추천, 보류·주의, 최근 반복 점검을 작성.",
+  ].join(" ");
+
+const DEFAULT_CLAUDE_TIMEOUT_MS = 9 * 60 * 1000;
+const DEFAULT_CLAUDE_NO_OUTPUT_MS = 4 * 60 * 1000;
 
 interface Candidate {
   section: "strong" | "stretch";
@@ -39,7 +53,10 @@ Environment:
   POSITION_RECOMMENDER_SOURCE=all|wanted|toss|coupang|coupang-careers|kakaopay|kakaopay-securities|kakaomobility|naver-careers
     Source selection for live posting collection. Default: all.
   POSITION_RECOMMENDER_NOTIFY=0  Skip Discord notification.
-  POSITION_RECOMMENDER_NOTIFY_DRY_RUN=1  Print the Discord message instead of sending it.`);
+  POSITION_RECOMMENDER_NOTIFY_DRY_RUN=1  Print the Discord message instead of sending it.
+  POSITION_RECOMMENDER_CLAUDE_TIMEOUT_MS=<n>  Kill Claude after this total runtime. Default: ${DEFAULT_CLAUDE_TIMEOUT_MS}.
+  POSITION_RECOMMENDER_CLAUDE_NO_OUTPUT_MS=<n>  Kill Claude if stdout/stderr is silent this long. Default: ${DEFAULT_CLAUDE_NO_OUTPUT_MS}.
+  POSITION_RECOMMENDER_CLAUDE_LOG_STREAM=1  Forward raw Claude stream-json stdout to logs.`);
 }
 
 function run(cmd: string, args: string[], cwd: string): void {
@@ -55,6 +72,113 @@ function run(cmd: string, args: string[], cwd: string): void {
 function die(message: string): never {
   console.error(message);
   process.exit(1);
+}
+
+function envMs(name: string, defaultValue: number): number {
+  const raw = process.env[name];
+  if (!raw) return defaultValue;
+  const value = Number.parseInt(raw, 10);
+  if (!Number.isFinite(value) || value <= 0) {
+    die(`${name} must be a positive integer milliseconds value: ${raw}`);
+  }
+  return value;
+}
+
+async function runClaudeWithGuards(args: string[], cwd: string): Promise<void> {
+  const timeoutMs = envMs("POSITION_RECOMMENDER_CLAUDE_TIMEOUT_MS", DEFAULT_CLAUDE_TIMEOUT_MS);
+  const noOutputMs = envMs("POSITION_RECOMMENDER_CLAUDE_NO_OUTPUT_MS", DEFAULT_CLAUDE_NO_OUTPUT_MS);
+  const child = spawn("claude", args, {
+    cwd,
+    env: process.env,
+    stdio: ["ignore", "pipe", "pipe"],
+    detached: true,
+  });
+
+  let finished = false;
+  let killReason = "";
+  let lastProgressLog = 0;
+  let totalTimer: ReturnType<typeof setTimeout>;
+  let noOutputTimer: ReturnType<typeof setTimeout>;
+
+  const killChild = (reason: string) => {
+    if (finished) return;
+    if (killReason) return;
+    killReason = reason;
+    console.error(`position-recommender claude guard: ${reason}`);
+    if (child.pid) {
+      try {
+        process.kill(-child.pid, "SIGTERM");
+      } catch {
+        child.kill("SIGTERM");
+      }
+    } else {
+      child.kill("SIGTERM");
+    }
+    setTimeout(() => {
+      if (finished || !child.pid) return;
+      try {
+        process.kill(-child.pid, "SIGKILL");
+      } catch {
+        child.kill("SIGKILL");
+      }
+    }, 5_000).unref();
+  };
+
+  const resetNoOutputTimer = () => {
+    clearTimeout(noOutputTimer);
+    noOutputTimer = setTimeout(
+      () => killChild(`no stdout/stderr for ${noOutputMs}ms`),
+      noOutputMs
+    );
+    noOutputTimer.unref();
+  };
+
+  totalTimer = setTimeout(() => killChild(`exceeded total timeout ${timeoutMs}ms`), timeoutMs);
+  totalTimer.unref();
+  noOutputTimer = setTimeout(() => killChild(`no stdout/stderr for ${noOutputMs}ms`), noOutputMs);
+  noOutputTimer.unref();
+
+  const onStdout = (chunk: Buffer) => {
+    resetNoOutputTimer();
+    if (process.env.POSITION_RECOMMENDER_CLAUDE_LOG_STREAM === "1") {
+      process.stdout.write(chunk);
+      return;
+    }
+    const now = Date.now();
+    if (now - lastProgressLog > 30_000) {
+      lastProgressLog = now;
+      console.error("position-recommender claude progress: stream output received");
+    }
+  };
+  const onStderr = (chunk: Buffer) => {
+    resetNoOutputTimer();
+    process.stderr.write(chunk);
+  };
+  child.stdout.on("data", onStdout);
+  child.stderr.on("data", onStderr);
+
+  return new Promise((resolvePromise, reject) => {
+    child.on("error", (error) => {
+      finished = true;
+      clearTimeout(totalTimer);
+      clearTimeout(noOutputTimer);
+      reject(error);
+    });
+    child.on("close", (code, signal) => {
+      finished = true;
+      clearTimeout(totalTimer);
+      clearTimeout(noOutputTimer);
+      if (killReason) {
+        reject(new Error(`claude terminated: ${killReason}`));
+        return;
+      }
+      if (code === 0) {
+        resolvePromise();
+        return;
+      }
+      reject(new Error(`claude exited with code ${code ?? "null"} signal ${signal ?? "null"}`));
+    });
+  });
 }
 
 function firstLine(path: string): string {
@@ -234,7 +358,7 @@ ${formatDiscordCandidates(args.candidates)}
   }
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const argv = process.argv.slice(2);
   if (argv[0] === "--help" || argv[0] === "-h") {
     usage();
@@ -269,7 +393,23 @@ function main(): void {
     if (process.env.POSITION_RECOMMENDER_INCLUDE_TOSS_ARTICLES === "1") collectArgs.push("--include-toss-articles");
     run("bun", collectArgs, root);
     assertLivePostingSnapshot(livePostings);
-    run("claude", ["--permission-mode", "acceptEdits", "-p", prompt], root);
+    try {
+      await runClaudeWithGuards(
+        [
+          "--permission-mode",
+          "acceptEdits",
+          "--output-format",
+          "stream-json",
+          "--include-partial-messages",
+          "--verbose",
+          "-p",
+          prompt,
+        ],
+        root
+      );
+    } catch (error) {
+      die(`position-recommender claude failed: ${error}`);
+    }
   }
 
   if (!existsSync(report)) {
@@ -297,4 +437,4 @@ function main(): void {
   console.log(`OK position-recommender fresh report: ${report}`);
 }
 
-main();
+main().catch((error) => die(`position-recommender runner failed: ${error}`));

@@ -229,7 +229,11 @@ Discord 알림 [완료]
 daily runner 정본은 `scripts/position-recommender/run_daily_with_claude.ts`다.
 기존 `scripts/position-recommender/run_daily_with_claude.sh`는 cron과 수동 호출 호환을 위해 TS runner를 호출하는 shim으로 유지한다.
 이 runner는 기본 `POSITION_RECOMMENDER_SOURCE=all`로 Wanted, Toss, Coupang Careers sitemap, KakaoPay, KakaoPay Securities, KakaoMobility, NAVER Careers source를 함께 수집한다.
-Claude native skill 호출 후 오늘 날짜 report/runtime이 실제로 생성됐는지 검증하고, stale runtime 재전송을 실패로 처리한 뒤 `_shared/lib/notify_discord.ts`로 Discord 알림을 보낸다.
+Claude native skill 호출은 `--output-format stream-json --include-partial-messages --verbose`로 진행 이벤트를 만들며, 총 실행 시간과 무출력 시간을 감시한다.
+기본 로그는 30초 간격의 진행 표시만 남기고, raw stream-json은 `POSITION_RECOMMENDER_CLAUDE_LOG_STREAM=1`일 때만 출력한다.
+기본값은 `POSITION_RECOMMENDER_CLAUDE_TIMEOUT_MS=540000`, `POSITION_RECOMMENDER_CLAUDE_NO_OUTPUT_MS=240000`이다.
+Claude가 멈추거나 오늘 날짜 report/runtime을 쓰지 못하면 실패 처리하고, stale runtime 재전송을 막는다.
+검증 통과 후 `_shared/lib/notify_discord.ts`로 Discord 알림을 보낸다.
 아침 Discord 알림은 전체 리포트를 붙이지 않고 상위 강력 추천 3개 + 도전 추천 2개를 `지원 링크 / 이유 / 확인할 점 / 다음 액션` 중심으로 압축한다.
 Claude native skill 내부에서는 외부 메시지 전송을 직접 수행하지 않는다.
 
