@@ -223,6 +223,9 @@ Self-check: 첫 줄 # + 오늘 날짜 + 30줄+ + 3 티어 + 반복 점검 존재
 Write: data/reports/daily/YYYY-MM-DD/position-recommendation/report.md
        data/runtime/position-recommendation.md (cp 사본)
   ↓
+Refresh: data/runtime/application-agent/frontdoor-queue.jsonl
+         data/applications/ledger.jsonl priority snapshot
+  ↓
 Discord 알림 [완료]
 ```
 
@@ -233,6 +236,8 @@ Claude native skill 호출은 `--output-format stream-json --include-partial-mes
 기본 로그는 30초 간격의 진행 표시만 남기고, raw stream-json은 `POSITION_RECOMMENDER_CLAUDE_LOG_STREAM=1`일 때만 출력한다.
 기본값은 `POSITION_RECOMMENDER_CLAUDE_TIMEOUT_MS=540000`, `POSITION_RECOMMENDER_CLAUDE_NO_OUTPUT_MS=240000`이다.
 Claude가 멈추거나 오늘 날짜 report/runtime을 쓰지 못하면 실패 처리하고, stale runtime 재전송을 막는다.
+검증 통과 후 `frontdoor_queue_builder.ts`로 frontdoor queue를 갱신하고, `priority_recommendation.ts`로 frontdoor/ledger priority snapshot을 갱신한다.
+이 단계까지 성공해야 dashboard application workbench가 최신 추천 cycle을 본다.
 검증 통과 후 `_shared/lib/notify_discord.ts`로 Discord 알림을 보낸다.
 아침 Discord 알림은 전체 리포트를 붙이지 않고 상위 강력 추천 3개 + 도전 추천 2개를 `지원 링크 / 이유 / 확인할 점 / 다음 액션` 중심으로 압축한다.
 Claude native skill 내부에서는 외부 메시지 전송을 직접 수행하지 않는다.
@@ -475,6 +480,9 @@ processor가 pending request 선택
 - 외부 제출, 로그인, 업로드, 공개 발행은 수행하지 않는다.
 - dry-run은 stale guard와 예정 command만 검증하고 어느 쪽 파일/DB도 갱신하지 않는다.
 - stale 또는 failed row는 같은 record에 대한 새 request를 만들기 전에 사람이 확인한다.
+- processor는 host-side wrapper로 실행한다.
+  web container는 career-os를 read-only로 읽고, 원장 갱신은 host-side writable checkout에서만 수행한다.
+  host-side wrapper는 Docker network용 `bifos-db` host를 host-published MySQL port로 보정한다.
 
 ### CJ푸드빌 면접 skill request gateway (plan060 — planned)
 
