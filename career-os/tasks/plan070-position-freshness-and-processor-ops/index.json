@@ -1,0 +1,104 @@
+{
+  "name": "plan070-position-freshness-and-processor-ops",
+  "description": "position daily runner 성공 뒤 frontdoor/priority snapshot을 자동 갱신하고, fos-career position/application action processor를 host-side wrapper로 안정화한다.",
+  "created_at": "2026-06-12T10:14:50Z",
+  "updated_at": "2026-06-12T10:14:50Z",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 3,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/docs/adr.md",
+    "career-os/docs/flow.md",
+    "career-os/docs/code-architecture.md",
+    "career-os/docs/data-schema.md",
+    "career-os/tasks/plan038-application-frontdoor-review/index.json",
+    "career-os/tasks/plan050-position-priority-fit-workflow/index.json",
+    "career-os/tasks/plan059-position-state-actions/index.json"
+  ],
+  "depends_on": [
+    "plan038-application-frontdoor-review",
+    "plan050-position-priority-fit-workflow",
+    "plan059-position-state-actions"
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "daily-freshness-includes-workbench-snapshots",
+      "decision": "position daily runner 성공 기준은 position recommendation report 생성에서 끝나지 않고 frontdoor queue와 priority snapshot 갱신까지 포함한다."
+    },
+    {
+      "id": "D2",
+      "title": "user-decisions-preserved",
+      "decision": "frontdoor queue refresh는 protected status와 user-confirmed priority를 덮어쓰지 않는다."
+    },
+    {
+      "id": "D3",
+      "title": "host-side-write-processors",
+      "decision": "fos-career web container는 career-os read-only mount를 유지하고, position/application write processor는 host-side wrapper에서 writable checkout과 host-published MySQL port를 사용한다."
+    },
+    {
+      "id": "D4",
+      "title": "implementation-doc-freeze",
+      "decision": "구현 phase는 docs/ADR/정책 문서를 수정하지 않는다. 구현 중 문서 변경이 필요하면 PHASE_BLOCKED로 보고한다."
+    }
+  ],
+  "open_decisions": [],
+  "recommended_defaults": [
+    "frontdoor queue builder는 기존 mergeQueues 보호 규칙을 유지한다.",
+    "priority_recommendation.ts는 userConfirmedPriority 보존 규칙을 유지한다.",
+    "daily runner에서는 report freshness 검증 뒤 frontdoor refresh, priority refresh 순서로 실행한다.",
+    "host-side wrapper는 run-interview-request-processor.sh 패턴을 복제하되 lock file과 npm script만 분리한다.",
+    "wrapper는 DATABASE_URL의 @bifos-db:3306을 @127.0.0.1:13306으로 치환한다.",
+    "PR은 모든 phase 완료 뒤 plan 단위로 만든다."
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "position daily runner workbench refresh 연결",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 1800
+    },
+    {
+      "number": 2,
+      "title": "fos-career host-side processor wrapper 추가",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 1800
+    },
+    {
+      "number": 3,
+      "title": "통합 검증과 plan 완료",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "haiku",
+      "timeout": 1200
+    }
+  ]
+}
