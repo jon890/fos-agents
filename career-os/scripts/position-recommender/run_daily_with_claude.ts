@@ -431,6 +431,28 @@ async function main(): Promise<void> {
   }
 
   const candidates = validateDirectPostingRecommendations(runtime);
+
+  const queueOut = `${root}/data/runtime/application-agent/frontdoor-queue.jsonl`;
+  console.error("position-recommender workbench: refreshing frontdoor queue...");
+  run(
+    "bun",
+    [
+      `${root}/scripts/application-agent/frontdoor_queue_builder.ts`,
+      "--report",
+      runtime,
+      "--out",
+      queueOut,
+    ],
+    root
+  );
+
+  console.error("position-recommender workbench: refreshing priority snapshot...");
+  run(
+    "bun",
+    [`${root}/scripts/application-agent/priority_recommendation.ts`, "--write"],
+    root
+  );
+
   if (!validateOnly || process.env.POSITION_RECOMMENDER_NOTIFY_DRY_RUN === "1") {
     notifyPositionRecommendation({ root, notifyScript, reportDate, report, candidates });
   }
