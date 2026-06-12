@@ -68,6 +68,12 @@ dry-run에서 실제 data 파일을 쓰면 안 된다는 기존 계약이 있으
 현재 `data/runtime/position-recommendation.md` 기준으로 queue builder를 temp 파일에 실행했을 때 06-12 추천 카드가 파싱되는지 확인한다.
 실제 파일 갱신 검증은 runner smoke에서 수행한다.
 
+### 6. phase commit
+
+검증이 끝나면 career-os repo에서 의도한 변경만 stage한다.
+commit 메시지는 `fix(career-os): position runner workbench snapshot 갱신 연결`을 사용한다.
+unrelated apartment 변경은 stage하지 않는다.
+
 ---
 
 ## Critical Files
@@ -113,6 +119,7 @@ git -C career-os status --short
 - daily runner 성공 경로에 frontdoor queue refresh와 priority refresh가 포함된다.
 - refresh 실패가 runner 실패로 전파된다.
 - temp queue 검증에서 최신 추천 카드가 파싱된다.
+- career-os 의도 변경이 한 커밋으로 저장된다.
 - docs/ADR/정책 문서는 수정하지 않는다.
 
 ---
@@ -132,4 +139,5 @@ git -C career-os status --short
 - refresh 실패가 runner 성공으로 숨는다.
 - temp queue 검증에서 최신 추천 카드가 파싱되지 않는다.
 - `bun --check` 또는 `git diff --check`가 실패한다.
+- 의도한 career-os 변경을 커밋하지 않았다.
 - docs/ADR/정책 문서를 수정했다.

@@ -67,6 +67,13 @@ fos-career typecheck 또는 build를 실행한다.
 검증이 끝나면 `index.json`의 `status`, `current_phase`, phase statuses, `updated_at`을 완료 상태로 갱신한다.
 phase 실행 harness가 commitSha를 후기록할 수 있으므로 마지막에 working tree 상태를 보고한다.
 
+### 6. final commit과 push
+
+career-os repo에서 plan070 task 상태 변경만 stage해 `task(career-os): plan070 실행 완료 기록`으로 commit한다.
+fos-career repo에 unpushed phase 2 commit이 있으면 함께 push한다.
+career-os repo도 push한다.
+unrelated apartment 변경은 stage하지 않는다.
+
 ---
 
 ## 검증
@@ -117,6 +124,8 @@ git -C /home/bifos/services/fos-career status --short
 - fos-career wrapper와 processor dry-run 검증이 통과한다.
 - web container read-only mount가 유지된다.
 - `index.json`이 completed로 정리된다.
+- career-os task 완료 기록이 commit/push된다.
+- fos-career wrapper commit이 push된다.
 - docs/ADR/정책 문서는 수정하지 않는다.
 
 ---
@@ -136,5 +145,6 @@ git -C /home/bifos/services/fos-career status --short
 - 검증 명령을 실행하지 않고 성공 처리했다.
 - web container가 writable career-os mount를 사용한다.
 - `index.json`이 invalid JSON이거나 completed 상태로 정리되지 않았다.
+- 완료 기록 또는 wrapper commit이 push되지 않았다.
 - docs/ADR/정책 문서를 수정했다.
 - `git diff --check`가 실패한다.
