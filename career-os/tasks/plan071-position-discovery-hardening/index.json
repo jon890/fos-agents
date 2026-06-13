@@ -2,7 +2,7 @@
   "name": "plan071-position-discovery-hardening",
   "description": "Toss/Wanted/카카오계열/NAVER계열/Coupang 포지션 discovery를 넓히고 하드코딩된 개별 공고 URL seed를 제거한다.",
   "created_at": "2026-06-13T15:55:41Z",
-  "updated_at": "2026-06-14T00:00:00Z",
+  "updated_at": "2026-06-13T16:36:51Z",
   "status": "completed",
   "current_phase": 4,
   "total_phases": 4,
@@ -101,7 +101,7 @@
       ],
       "model": "sonnet",
       "timeout": 2400,
-      "commitSha": "0de1d470b0ec"
+      "commitSha": "99788ec1fd4d"
     },
     {
       "number": 4,
@@ -117,7 +117,7 @@
       ],
       "model": "haiku",
       "timeout": 1800,
-      "completedAt": "2026-06-14T00:00:00Z"
+      "commitSha": "bde7b83dfdcf"
     }
   ]
 }
