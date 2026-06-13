@@ -1691,6 +1691,9 @@ Toss adapter는 공식 `job-groups` API의 그룹 공고와 하위 포지션을 
 - 정본 내용은 `data/runtime/position-recommendation.md`와 당일 report.md다.
 - HTML은 사람이 아침 Discord 알림에서 바로 읽기 위한 표시 산출물이다.
 - 같은 날짜 보존본은 `data/reports/daily/YYYY-MM-DD/position-recommendation/report.html`에 쓴다.
+- 표시 template 정본은 `scripts/position-recommender/templates/report.html`이다.
+- template은 실행 자산이므로 `data/` 아래에 두지 않는다.
+- 한국어 리포트 본문은 Markdown 입력에서 들어오고, template 파일 자체는 ASCII 중심으로 유지한다.
 
 ## sources/fos-study/
 
