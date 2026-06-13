@@ -33,6 +33,8 @@ const TOSS_EXCLUDE_EMPLOYMENT = [
 ];
 const TOSS_SERVER_TITLE_KEYWORDS = [
   "backend", "백엔드", "server", "서버", "node.js", "nodejs", "java", "spring", "kotlin",
+  // AI/Platform/Infra titles — downstream isServerRole() still filters out pure research/DS roles
+  "ai", "agent", "llm", "platform", "플랫폼", "infra", "sre", "devops",
 ];
 
 const TOSS_APPLY_EVIDENCE_KEYS = [

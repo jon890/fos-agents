@@ -12,7 +12,12 @@ import {
 
 const UA = "Mozilla/5.0 (OpenClaw career-os position recommender)";
 const HOST = "https://recruit.navercorp.com";
-const LISTING_URL = `${HOST}/rcrt/list.do`;
+// Developer category first for relevance; unfiltered fallback broadens coverage when category yields nothing.
+const LISTING_URLS = [
+  `${HOST}/rcrt/list.do?annoCategoryCode=developer`,
+  `${HOST}/rcrt/list.do`,
+];
+const MAX_DETAIL_FETCH = 40;
 
 async function fetchHtml(url: string): Promise<{ ok: boolean; status: number; text: string }> {
   const r = await fetch(url, {
@@ -42,11 +47,25 @@ function decodeHtml(text: string): string {
 }
 
 function extractListItems(html: string): Array<{ id: string; title: string }> {
+  // Two-pass extraction: IDs and titles paired by document order.
+  // More robust than a single combined regex when HTML span between show() and h4 varies.
+  const idRe = /show\(['"]?(\d+)['"]?\)/g;
+  const titleRe = /<h4[^>]+class=["'][^"']*card_title[^"']*["'][^>]*>([\s\S]*?)<\/h4>/g;
+
+  const ids: string[] = [];
+  const titles: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = idRe.exec(html)) !== null) ids.push(m[1]);
+  while ((m = titleRe.exec(html)) !== null) titles.push(cleanDetail(decodeHtml(m[1]), 180));
+
+  const count = Math.min(ids.length, titles.length);
+  const seen = new Set<string>();
   const items: Array<{ id: string; title: string }> = [];
-  const re = /show\(['"]?(\d+)['"]?\)[\s\S]*?<h4 class="card_title">([\s\S]*?)<\/h4>/g;
-  let match: RegExpExecArray | null;
-  while ((match = re.exec(html)) !== null) {
-    items.push({ id: match[1], title: cleanDetail(decodeHtml(match[2]), 180) });
+  for (let i = 0; i < count; i++) {
+    if (ids[i] && titles[i] && !seen.has(ids[i])) {
+      seen.add(ids[i]);
+      items.push({ id: ids[i], title: titles[i] });
+    }
   }
   return items;
 }
@@ -111,13 +130,35 @@ export const naverCareersAdapter: SourceAdapter = {
   name: "naver-careers",
   async collect(): Promise<AdapterCollectionResult> {
     const errors: string[] = [];
-    const listing = await fetchHtml(LISTING_URL);
-    const items = listing.ok ? extractListItems(listing.text) : [];
-    if (!listing.ok) errors.push(`naver-careers listing: HTTP ${listing.status}`);
+    // Deduplicate across multiple listing URLs by annoId.
+    const allItems = new Map<string, string>(); // id → title
+    let listingFailed = 0;
+
+    for (const listingUrl of LISTING_URLS) {
+      try {
+        const listing = await fetchHtml(listingUrl);
+        if (!listing.ok) {
+          listingFailed++;
+          errors.push(`naver-careers listing (${listingUrl.includes("annoCategoryCode") ? "developer" : "all"}): HTTP ${listing.status}`);
+          continue;
+        }
+        for (const { id, title } of extractListItems(listing.text)) {
+          if (!allItems.has(id)) allItems.set(id, title);
+        }
+      } catch (error) {
+        listingFailed++;
+        errors.push(`naver-careers listing fetch failed: ${error}`);
+      }
+    }
+
+    const items = [...allItems.entries()]
+      .map(([id, title]) => ({ id, title }))
+      .slice(0, MAX_DETAIL_FETCH);
 
     const postings: Posting[] = [];
     let skippedCount = 0;
-    let failedCount = listing.ok ? 0 : 1;
+    let failedCount = listingFailed;
+
     for (const item of items) {
       const url = `${HOST}/rcrt/view.do?annoId=${item.id}&lang=ko`;
       try {
@@ -136,6 +177,8 @@ export const naverCareersAdapter: SourceAdapter = {
       }
     }
 
+    const message = `naver-careers diagnostics: listing_candidates=${allItems.size}, detail_candidates=${items.length}, accepted=${postings.length}, skipped=${skippedCount}, failed=${failedCount}`;
+    naverCareersAdapter.note = message;
     return {
       postings,
       diagnostics: {
@@ -145,7 +188,7 @@ export const naverCareersAdapter: SourceAdapter = {
         skippedCount,
         failedCount,
         discoveryModes: ["official-listing", "official-detail"],
-        message: `naver-careers diagnostics: detail_candidates=${items.length}, accepted=${postings.length}, skipped=${skippedCount}, failed=${failedCount}`,
+        message,
       },
       errors,
     };

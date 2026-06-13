@@ -38,6 +38,13 @@ const WANTED_TARGET_KEYWORDS = [
   "ML Backend Engineer",
   "LLMOps MLOps 플랫폼",
   "Workflow Automation AI",
+  // Company subsidiaries not fully covered by direct adapters
+  "카카오페이 백엔드",
+  "토스뱅크 백엔드",
+  "네이버클라우드 백엔드",
+  // AI/Agentic backend roles
+  "GenAI 서버 개발",
+  "AI 에이전트 백엔드",
 ];
 
 function isWantedActive(job: Record<string, unknown>): boolean {
