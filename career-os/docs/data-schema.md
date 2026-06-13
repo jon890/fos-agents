@@ -1678,9 +1678,10 @@ source diagnostics:
 - `source_diagnostics` — dashboard에 보여줄 source별 짧은 상태와 실패 수.
 - `source_errors` — runtime output에 남기는 상세 실패. 한 source 실패는 다른 source 결과를 제거하지 않는다.
 
-source adapter는 official listing이나 known target URL 후보를 import하기 전에 detail page를 fetch하고 active/open evidence를 기록한다.
+source adapter는 official listing, official API, sitemap, keyword search에서 발견한 후보를 import하기 전에 detail page를 fetch하고 active/open evidence를 기록한다.
+개별 공고 URL은 daily snapshot에서 파생되어야 하며, adapter 코드의 필수 seed로 두지 않는다.
 중복 처리는 URL 우선, URL이 불안정한 source는 hash 보조를 사용한다.
-Wanted adapter는 백엔드 target URL/keyword 외에 AI Agent/RAG/MCP/LLMOps/ML Backend 계열 target URL/keyword를 함께 수집할 수 있다.
+Wanted adapter는 백엔드 keyword 외에 AI Agent/RAG/MCP/LLMOps/ML Backend 계열 keyword를 함께 수집할 수 있다.
 Toss adapter는 공식 `job-groups` API의 그룹 공고와 하위 포지션을 펼쳐 snapshot에 넣는다.
 
 ### data/runtime/position-recommendation.html
