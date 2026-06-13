@@ -17,8 +17,9 @@ const PROTECTED_STATUSES: FrontdoorQueueStatus[] = [
   'rejected',
 ];
 
-// Required seed URLs (TossPlace excluded — it is hardcoded from ledger)
-const REQUIRED_SEED_URLS = [
+// Historical bootstrap seed URLs. Absence is no longer blocking because daily
+// recommendations rotate with the active live-postings snapshot.
+const HISTORICAL_SEED_URLS = [
   'https://kakaopay.career.greetinghr.com/en/o/144295',
   'https://career.kakaopaysec.com/job_posting/iWWBkQ7Z',
 ];
@@ -231,13 +232,18 @@ function main(): void {
   const content = readFileSync(reportPath, 'utf-8');
   const candidates = parseRecommendationMarkdown(content);
 
-  // Block if neither required seed URL is found in the report
-  const parsedUrlSet = new Set(candidates.map((c) => c.url));
-  const missingSeeds = REQUIRED_SEED_URLS.filter((u) => !parsedUrlSet.has(u));
-  if (missingSeeds.length === REQUIRED_SEED_URLS.length) {
-    console.error('PHASE_BLOCKED: required frontdoor seed postings unavailable');
-    console.error('Missing URLs:', missingSeeds.join(', '));
+  if (candidates.length === 0) {
+    console.error('PHASE_BLOCKED: no frontdoor candidates parsed from position report');
     process.exit(2);
+  }
+
+  // Historical seed URLs are useful diagnostics, but stale seeds must not block
+  // fresh daily recommendations from reaching the frontdoor queue.
+  const parsedUrlSet = new Set(candidates.map((c) => c.url));
+  const missingSeeds = HISTORICAL_SEED_URLS.filter((u) => !parsedUrlSet.has(u));
+  if (missingSeeds.length > 0) {
+    console.warn('Warning: historical frontdoor seed postings absent from current report');
+    console.warn('Missing historical URLs:', missingSeeds.join(', '));
   }
 
   // Build records from report
