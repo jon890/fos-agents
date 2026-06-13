@@ -63,14 +63,22 @@ def load_dotenv(workspace: Path) -> None:
 def notify(message: str, workspace: Path) -> None:
     """ADR-021. _shared/lib/notify_discord.ts를 bun --env-file=<ws>/.env로 호출.
 
+    TASK_NOTIFY_CHANNEL_ID가 있으면 phase 진행 알림만 해당 채널로 보낸다.
+    daily 결과 알림용 DISCORD_CHANNEL_ID와 agent 운영 알림 채널을 분리하기 위한 override다.
+
     .env 부재 시 silent skip — caller 깨뜨리지 않음.
     """
     env_file = workspace / ".env"
     if not env_file.exists():
         return
+    env = os.environ.copy()
+    task_notify_channel_id = os.environ.get("TASK_NOTIFY_CHANNEL_ID")
+    if task_notify_channel_id:
+        env["DISCORD_CHANNEL_ID"] = task_notify_channel_id
     try:
         subprocess.run(
             ["bun", f"--env-file={env_file}", "run", str(NOTIFY_TS), message],
+            env=env,
             timeout=15,
             check=False,
             capture_output=True,

@@ -143,6 +143,7 @@ python3 skills/plan-and-build/scripts/run-phases.py career-os/tasks/<task-name> 
 run-phases.py가 자동으로 워크스페이스(`<task-dir>/../..`)를 감지하고:
 - `<workspace>/.env`를 env로 로드 (`DISCORD_CHANNEL_ID` 등)
 - ai-nodes 공용 `_shared/lib/notify_discord.ts`를 통해 진행/완료/실패 알림 발송
+  - `TASK_NOTIFY_CHANNEL_ID`가 있으면 phase 진행 알림은 해당 채널로 보내고, daily 결과 알림용 `DISCORD_CHANNEL_ID`는 그대로 둔다.
 - phase별 commit SHA를 `index.json`에 기록
 
 ### 6. 검증
@@ -227,6 +228,8 @@ run-phases.py가 자동 발송:
 - `[완료] <ws> task <name> 전체 완료 (M phases)`
 
 알림은 `<workspace>/.env`의 `DISCORD_CHANNEL_ID`와 `_shared/lib/notify_discord.ts`에 의존한다.
+`TASK_NOTIFY_CHANNEL_ID`가 있으면 `run-phases.py`가 phase 진행/완료/실패/보류 알림에만 해당 값을 `DISCORD_CHANNEL_ID` override로 전달한다.
+이 값은 daily 추천/스터디 결과 알림 채널과 agent 개발/운영 알림 채널을 분리할 때 사용한다.
 `.env`가 없으면 `run-phases.py`가 알림을 조용히 건너뛴다. `.env`는 있지만 `DISCORD_CHANNEL_ID`가 비어 있거나 OpenClaw CLI 전송이 실패하면 warning만 남기고 phase 실행 자체를 깨뜨리지 않는다.
 
 HUD 갱신은 `<workspace>/.env`의 `TASK_HUD_SESSION_ID`, `TASK_HUD_TARGET`, `OPENCLAW_WORKSPACE_ROOT`에 의존한다.
