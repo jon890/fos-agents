@@ -1,0 +1,99 @@
+{
+  "name": "plan072-position-report-html-template",
+  "description": "아침 position recommendation 리포트를 Discord 짧은 알림과 읽기 좋은 HTML 첨부로 분리하기 위해 template 기반 renderer 계약을 도입한다.",
+  "created_at": "2026-06-13T16:08:35Z",
+  "updated_at": "2026-06-13T16:08:35Z",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 3,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/docs/adr.md",
+    "career-os/docs/flow.md",
+    "career-os/docs/code-architecture.md",
+    "career-os/docs/data-schema.md"
+  ],
+  "depends_on": [
+    "plan070-position-freshness-and-processor-ops"
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "html-is-display-mirror",
+      "decision": "position daily HTML은 Markdown 추천 리포트의 표시 미러이며 내용 정본은 report.md와 runtime markdown이다."
+    },
+    {
+      "id": "D2",
+      "title": "template-lives-with-position-recommender",
+      "decision": "HTML 표시 template은 position-recommender 실행 자산으로 두고 scripts/position-recommender/templates/report.html 경로를 기본값으로 쓴다."
+    },
+    {
+      "id": "D3",
+      "title": "discord-is-brief",
+      "decision": "Discord 본문은 짧은 triage 요약만 보내고, 자세한 읽기는 HTML 첨부와 Markdown 정본에 맡긴다."
+    },
+    {
+      "id": "D4",
+      "title": "implementation-doc-freeze",
+      "decision": "구현 phase는 docs/ADR/정책 문서를 수정하지 않는다. 구현 중 문서 변경이 필요하면 PHASE_BLOCKED로 보고한다."
+    }
+  ],
+  "open_decisions": [],
+  "recommended_defaults": [
+    "template 경로는 scripts/position-recommender/templates/report.html을 쓴다.",
+    "template placeholder는 title, generatedAt, reportHtml, diagnosticsHtml처럼 renderer가 명시적으로 채우는 값으로 제한한다.",
+    "HTML 스타일은 SaaS/dashboard형으로 조용하게 두고 landing page hero나 과한 장식을 넣지 않는다.",
+    "모바일에서는 link와 긴 직무명이 카드 너비를 깨지 않도록 word-break, min-width, grid fallback을 검증한다.",
+    "검증은 bun --check, renderer smoke, HTML 파일 존재 및 placeholder 잔재 grep, git diff --check를 포함한다."
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "현 HTML renderer와 daily 연결 감사",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 2,
+      "title": "template 파일 도입과 renderer 분리",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 1800
+    },
+    {
+      "number": 3,
+      "title": "시각 스타일과 HTML 검증",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 1800
+    }
+  ]
+}
