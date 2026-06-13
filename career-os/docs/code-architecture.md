@@ -118,7 +118,8 @@ career-os/
 │   │   ├── run_daily_with_claude.ts    daily runner 정본. collect → Claude guard → freshness/active 검증 → frontdoor/priority refresh → Discord 알림
 │   │   ├── run_daily_with_claude.sh    기존 cron/수동 호출 호환용 TS runner shim
 │   │   ├── collect_live_postings.ts    CLI 호환 entrypoint (ADR-030, ADR-043, ADR-047)
-│   │   ├── render_report_html.ts       Markdown 추천 리포트의 HTML 미러 생성
+│   │   ├── render_report_html.ts       Markdown 추천 리포트를 template에 주입해 HTML 미러 생성
+│   │   ├── templates/report.html       position daily HTML 표시 template
 │   │   └── live-postings/
 │   │       ├── types.ts                Posting / SourceAdapter / CollectResult 계약
 │   │       ├── policy.ts               수집 가능성 필터. 추천 순위 판단은 하지 않음
@@ -499,6 +500,7 @@ plan050은 새 독립 추천기를 먼저 만들지 않고 기존 collector/reco
   adapter는 listing/API/sitemap root URL은 가질 수 있지만, 개별 공고 URL을 코드에 하드코딩하지 않는다.
 - `position-recommender` native skill은 LLM recommendation snapshot 초안을 만든다.
 - `scripts/position-recommender/render_report_html.ts`는 daily runner의 post-process로 Markdown 리포트를 HTML 미러로 변환한다.
+  표시 구조와 CSS는 `scripts/position-recommender/templates/report.html`에 둔다.
 - `scripts/application-agent/`는 frontdoor queue, ledger, 공고별 application files, priority history를 검증하고 갱신한다.
 - `config/candidate-profile.md`와 기존 resume/profile material은 fit analysis 입력으로 재사용한다.
 - study/interview 관련 native skill은 gap 기반 preparation action 후보를 만들 때만 호출한다.
