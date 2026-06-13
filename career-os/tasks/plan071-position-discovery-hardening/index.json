@@ -1,0 +1,119 @@
+{
+  "name": "plan071-position-discovery-hardening",
+  "description": "Toss/Wanted/카카오계열/NAVER계열/Coupang 포지션 discovery를 넓히고 하드코딩된 개별 공고 URL seed를 제거한다.",
+  "created_at": "2026-06-13T15:55:41Z",
+  "updated_at": "2026-06-13T15:55:41Z",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 4,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/docs/adr.md",
+    "career-os/docs/flow.md",
+    "career-os/docs/code-architecture.md",
+    "career-os/docs/data-schema.md",
+    "career-os/scripts/position-recommender/live-postings/adapters/README.md"
+  ],
+  "depends_on": [
+    "plan070-position-freshness-and-processor-ops"
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "dynamic-discovery-first",
+      "decision": "포지션 수집은 official listing/API/sitemap/keyword discovery를 우선하고, 개별 공고 URL을 seed로 하드코딩하지 않는다."
+    },
+    {
+      "id": "D2",
+      "title": "root-entrypoint-allowed",
+      "decision": "adapter 안의 URL 상수는 회사 채용 root, listing endpoint, API endpoint, sitemap처럼 discovery entrypoint에 필요한 값만 허용한다."
+    },
+    {
+      "id": "D3",
+      "title": "coverage-targets",
+      "decision": "확대 대상은 Toss, Wanted, 카카오계열 모든 계열사, NAVER계열, Coupang이다."
+    },
+    {
+      "id": "D4",
+      "title": "shadow-before-daily-default",
+      "decision": "새 source는 official listing/API/sitemap이 확인된 범위에서 추가하고, daily 기본값 활성은 shadow 또는 명시 옵션 검증 뒤로 제한한다."
+    },
+    {
+      "id": "D5",
+      "title": "implementation-doc-freeze",
+      "decision": "구현 phase는 docs/ADR/정책 문서를 수정하지 않는다. 문서 변경이 필요하면 PHASE_BLOCKED로 보고한다."
+    }
+  ],
+  "open_decisions": [],
+  "recommended_defaults": [
+    "새 외부 의존성은 도입하지 않고 기존 Bun/TypeScript/fetch 기반을 유지한다.",
+    "개인 정보와 지원서 원문은 Discord 또는 외부 서비스로 보내지 않는다.",
+    "source별 수집량과 drop/stale 사유는 artifact 또는 검증 출력으로 남긴다.",
+    "공식 listing/API/sitemap이 확인되지 않은 새 source는 daily 기본값에 포함하지 않는다.",
+    "adapter별 hardcoded posting URL 검출은 grep 기반 반증 검증을 포함한다."
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "수집기 감사와 기준선 기록",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 1800
+    },
+    {
+      "number": 2,
+      "title": "개별 공고 URL seed 제거",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 1800
+    },
+    {
+      "number": 3,
+      "title": "대상 source discovery 확대",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "sonnet",
+      "timeout": 2400
+    },
+    {
+      "number": 4,
+      "title": "통합 검증과 plan 완료",
+      "file": "phase-04.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "model": "haiku",
+      "timeout": 1800
+    }
+  ]
+}
