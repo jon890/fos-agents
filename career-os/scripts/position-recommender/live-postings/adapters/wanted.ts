@@ -15,12 +15,6 @@ import {
 } from "../policy.ts";
 
 const UA = "Mozilla/5.0 (OpenClaw career-os position recommender)";
-const WANTED_TARGET_URLS = [
-  "https://www.wanted.co.kr/wd/344103",
-  "https://www.wanted.co.kr/wd/360452",
-  "https://www.wanted.co.kr/wd/356931",
-  "https://www.wanted.co.kr/wd/364006",
-];
 const WANTED_TARGET_KEYWORDS = [
   "쿠팡 백엔드",
   "쿠팡 서버 개발자",
@@ -222,36 +216,6 @@ async function fetchWanted(limit = 120, serverOnly = true, includeDetail = true)
   return out;
 }
 
-async function fetchWantedTargets(serverOnly = true): Promise<{
-  postings: Posting[];
-  skippedCount: number;
-  failedCount: number;
-  errors: string[];
-}> {
-  const postings: Posting[] = [];
-  let skippedCount = 0;
-  let failedCount = 0;
-  const errors: string[] = [];
-  for (const url of WANTED_TARGET_URLS) {
-    const pid = wantedPidFromUrl(url);
-    if (!pid) {
-      skippedCount++;
-      errors.push(`wanted target-url invalid: ${url}`);
-      continue;
-    }
-    try {
-      const detail = await wantedDetail(pid);
-      const posting = postingFromWantedDetail(pid, detail, "target-url", serverOnly);
-      if (posting) postings.push(posting);
-      else skippedCount++;
-    } catch (error) {
-      failedCount++;
-      errors.push(`wanted target-url ${pid}: ${error}`);
-    }
-  }
-  return { postings, skippedCount, failedCount, errors };
-}
-
 async function fetchWantedKeywordTargets(serverOnly = true): Promise<{
   postings: Posting[];
   searchedCount: number;
@@ -296,25 +260,24 @@ export const wantedAdapter: SourceAdapter = {
   name: "wanted",
   async collect({ serverOnly, wantedLimit }): Promise<AdapterCollectionResult> {
     const broad = await fetchWanted(wantedLimit, serverOnly, true);
-    const targets = await fetchWantedTargets(serverOnly);
     const keywordTargets = await fetchWantedKeywordTargets(serverOnly);
-    const postings = [...broad, ...targets.postings, ...keywordTargets.postings];
+    const postings = [...broad, ...keywordTargets.postings];
     return {
       postings,
       diagnostics: {
         source: "wanted",
-        status: targets.failedCount > 0 || keywordTargets.failedCount > 0 ? "partial" : "ok",
+        status: keywordTargets.failedCount > 0 ? "partial" : "ok",
         collectedCount: postings.length,
-        skippedCount: targets.skippedCount + keywordTargets.skippedCount,
-        failedCount: targets.failedCount + keywordTargets.failedCount,
-        discoveryModes: ["broad", "target-url", "target-keyword"],
+        skippedCount: keywordTargets.skippedCount,
+        failedCount: keywordTargets.failedCount,
+        discoveryModes: ["broad", "target-keyword"],
         message:
-          `wanted diagnostics: broad=${broad.length}, target_url=${targets.postings.length}, ` +
+          `wanted diagnostics: broad=${broad.length}, ` +
           `target_keyword=${keywordTargets.postings.length}/${keywordTargets.searchedCount}, ` +
-          `target_skipped=${targets.skippedCount + keywordTargets.skippedCount}, ` +
-          `target_failed=${targets.failedCount + keywordTargets.failedCount}`,
+          `target_skipped=${keywordTargets.skippedCount}, ` +
+          `target_failed=${keywordTargets.failedCount}`,
       },
-      errors: [...targets.errors, ...keywordTargets.errors],
+      errors: [...keywordTargets.errors],
     };
   },
 };

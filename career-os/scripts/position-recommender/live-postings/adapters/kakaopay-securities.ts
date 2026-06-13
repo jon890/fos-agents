@@ -13,10 +13,6 @@ import {
 const UA = "Mozilla/5.0 (OpenClaw career-os position recommender)";
 const HOST = "https://career.kakaopaysec.com";
 const LISTING_URLS = [`${HOST}/`, `${HOST}/job_posting`];
-const KNOWN_TARGET_URLS = [
-  `${HOST}/job_posting/Rtv75CLr`,
-  `${HOST}/job_posting/iWWBkQ7Z`,
-];
 
 async function fetchHtml(url: string): Promise<{ ok: boolean; status: number; text: string }> {
   const r = await fetch(url, {
@@ -35,7 +31,6 @@ function extractDetailUrls(html: string): string[] {
   const re = /(?:https:\/\/career\.kakaopaysec\.com)?\/job_posting\/[A-Za-z0-9]+/g;
   let match: RegExpExecArray | null;
   while ((match = re.exec(html)) !== null) urls.add(absoluteUrl(match[0]));
-  for (const url of KNOWN_TARGET_URLS) urls.add(url);
   return [...urls];
 }
 
@@ -148,7 +143,7 @@ export const kakaopaySecuritiesAdapter: SourceAdapter = {
   name: "kakaopay-securities",
   async collect(): Promise<AdapterCollectionResult> {
     const errors: string[] = [];
-    const urls = new Set<string>(KNOWN_TARGET_URLS);
+    const urls = new Set<string>();
     let failedCount = 0;
     for (const listingUrl of LISTING_URLS) {
       try {

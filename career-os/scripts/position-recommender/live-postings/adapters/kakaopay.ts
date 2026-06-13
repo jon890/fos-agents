@@ -13,11 +13,6 @@ import {
 const UA = "Mozilla/5.0 (OpenClaw career-os position recommender)";
 const HOST = "https://kakaopay.career.greetinghr.com";
 const LISTING_URL = `${HOST}/ko/main`;
-const KNOWN_TARGET_URLS = [
-  `${HOST}/ko/o/192129`,
-  `${HOST}/ko/o/202310`,
-  `${HOST}/ko/o/144295`,
-];
 
 async function fetchHtml(url: string): Promise<{ ok: boolean; status: number; text: string }> {
   const r = await fetch(url, {
@@ -36,7 +31,6 @@ function extractDetailUrls(html: string): string[] {
   const re = /(?:https:\/\/kakaopay\.career\.greetinghr\.com)?\/ko\/o\/[0-9]+/g;
   let match: RegExpExecArray | null;
   while ((match = re.exec(html)) !== null) urls.add(absoluteUrl(match[0]));
-  for (const url of KNOWN_TARGET_URLS) urls.add(url);
   return [...urls];
 }
 
@@ -118,7 +112,7 @@ export const kakaopayAdapter: SourceAdapter = {
   async collect(): Promise<AdapterCollectionResult> {
     const errors: string[] = [];
     const listing = await fetchHtml(LISTING_URL);
-    const urls = listing.ok ? extractDetailUrls(listing.text) : [...KNOWN_TARGET_URLS];
+    const urls = listing.ok ? extractDetailUrls(listing.text) : [];
     if (!listing.ok) errors.push(`kakaopay listing: HTTP ${listing.status}`);
 
     const postings: Posting[] = [];
