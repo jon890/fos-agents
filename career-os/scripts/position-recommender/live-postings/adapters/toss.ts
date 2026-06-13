@@ -17,6 +17,7 @@ const UA = "Mozilla/5.0 (OpenClaw career-os position recommender)";
 const TOSS_HOST = "https://toss.im";
 const TOSS_POSTS_API =
   "https://api-public.toss.im/api-public/v3/ipd-thor/api/v1/workspaces/13/posts";
+const TOSS_JOB_GROUPS_API = "https://api-public.toss.im/api/v3/ipd-eggnog/career/job-groups";
 const TOSS_FEED_URLS = [
   "https://toss.im/career/jobs",
   "https://toss.im/career",
@@ -55,6 +56,31 @@ const TOSS_DEADLINE_KEYS = [
 ];
 const TOSS_DEPARTMENT_KEYS = ["department", "team", "organization", "group", "jobCategory"];
 
+type TossMetadata = {
+  id?: number;
+  name?: string;
+  value?: unknown;
+};
+
+type TossJob = {
+  id?: number;
+  title?: string;
+  content?: string;
+  company_name?: string;
+  first_published?: string;
+  updated_at?: string;
+  application_deadline?: string | null;
+  location?: { name?: string };
+  metadata?: TossMetadata[];
+};
+
+type TossJobGroup = {
+  id?: number;
+  title?: string;
+  primary_job?: TossJob;
+  jobs?: TossJob[];
+};
+
 interface TossFetchResult {
   ok: boolean;
   status: number;
@@ -73,6 +99,12 @@ async function tossFetch(url: string): Promise<TossFetchResult> {
   });
   const text = r.ok ? await r.text() : "";
   return { ok: r.ok, status: r.status, text };
+}
+
+async function tossJson(url: string): Promise<unknown> {
+  const res = await tossFetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return JSON.parse(res.text) as unknown;
 }
 
 function extractNextData(html: string): unknown {
@@ -253,6 +285,120 @@ function htmlTitle(html: string): string {
   return m ? cleanDetail(m[1]).replace(/\s*[|\-–]\s*토스.*$/, "").trim() : "";
 }
 
+function tossMetadata(job: TossJob, needles: string[]): string {
+  for (const item of job.metadata ?? []) {
+    const name = norm(item.name);
+    if (!name) continue;
+    if (!needles.some((needle) => name.includes(needle))) continue;
+    const value = item.value;
+    if (Array.isArray(value)) return value.map(norm).filter(Boolean).join(", ");
+    return cleanDetail(value, 4000);
+  }
+  return "";
+}
+
+function tossJobDescription(job: TossJob): string {
+  return tossMetadata(job, ["Job Description"]) || cleanDetail(job.content, 4000);
+}
+
+function tossCategory(job: TossJob): string {
+  return tossMetadata(job, ["Job Category"]);
+}
+
+function tossCompany(job: TossJob): string {
+  return (
+    tossMetadata(job, ["소속 자회사"]) ||
+    tossMetadata(job, ["공통 채용"]) ||
+    norm(job.company_name) ||
+    "Toss"
+  );
+}
+
+function tossEmployment(job: TossJob): string {
+  return tossMetadata(job, ["Employment_Type", "고용_형태"]);
+}
+
+function tossSearchText(job: TossJob): string {
+  return [
+    tossMetadata(job, ["외부 노출용 키워드", "Keywords"]),
+    tossMetadata(job, ["검색에 쓰일 키워드", "SearchKeywords"]),
+  ].filter(Boolean).join(" ");
+}
+
+function tossHiddenForList(job: TossJob): boolean {
+  return /true|yes/i.test(tossMetadata(job, ["미노출", "ShouldHiddenForList"]));
+}
+
+function postingFromTossApiJob(group: TossJobGroup, job: TossJob, serverOnly: boolean): TossParse {
+  const id = job.id ?? group.id;
+  const title = norm(job.title ?? group.title);
+  const content = tossJobDescription(job);
+  if (!id || !title || !content) return { reject: "api_no_content" };
+  if (tossHiddenForList(job)) return { reject: "api_hidden" };
+
+  const employment = tossEmployment(job);
+  const company = tossCompany(job);
+  const category = tossCategory(job);
+  const keywords = tossSearchText(job);
+  const fullText = `${company} ${title} ${category} ${keywords} ${employment} ${content}`;
+
+  if (hasKeyword(fullText, TOSS_EXCLUDE_EMPLOYMENT)) return { reject: "contract_intern_freelance" };
+  if (serverOnly && isNonServerTitle(title)) return { reject: "not_server_title" };
+  if (serverOnly && !isServerRole(fullText)) return { reject: "not_server" };
+
+  const due = job.application_deadline || tossMetadata(job, ["클로징 일자", "ExpiryDate"]);
+  return {
+    posting: {
+      source: "toss-careers",
+      discoveryMode: "official-listing",
+      company,
+      title,
+      url: `${TOSS_HOST}/career/job-detail?job_id=${id}`,
+      identityHash: `toss-careers:${id}`,
+      linkType: "direct_posting",
+      postingStatus: "open",
+      activeEvidence: "개별 공고 open 확인 (Toss official job-groups API + individual job id)",
+      openedAt: norm(job.first_published ?? job.updated_at),
+      ...closeWindow(due),
+      category,
+      summary: norm(job.location?.name),
+      tags: classify(fullText),
+      skills: [],
+      dueTime: norm(due),
+      mainTasks: cleanDetail(content, 900),
+      requirements: "",
+      preferred: "",
+    },
+  };
+}
+
+async function collectTossJobGroups(serverOnly: boolean): Promise<{
+  postings: Posting[];
+  totalJobs: number;
+  rejected: Record<string, number>;
+}> {
+  const rejected: Record<string, number> = {};
+  const reject = (reason: string) => {
+    rejected[reason] = (rejected[reason] ?? 0) + 1;
+  };
+  const data = await tossJson(TOSS_JOB_GROUPS_API) as { success?: TossJobGroup[] };
+  const groups = data.success ?? [];
+  const postings: Posting[] = [];
+  let totalJobs = 0;
+
+  for (const group of groups) {
+    const jobs = group.jobs && group.jobs.length > 0 ? group.jobs : group.primary_job ? [group.primary_job] : [];
+    for (const job of jobs) {
+      totalJobs++;
+      const parsed = postingFromTossApiJob(group, job, serverOnly);
+      if (parsed.posting) postings.push(parsed.posting);
+      else if (parsed.reject) reject(parsed.reject);
+    }
+  }
+
+  return { postings, totalJobs, rejected };
+}
+
 interface TossParse {
   posting?: Posting;
   reject?: string;
@@ -335,6 +481,23 @@ export const tossAdapter: SourceAdapter = {
     };
     const articleUrls = new Set<string>();
     const jobIds = new Set<string>();
+    const out: Posting[] = [];
+    let apiAccepted = 0;
+    let apiTotalJobs = 0;
+
+    // 0. Official listing API. This is the main Toss careers source; it exposes
+    // grouped positions and sub-positions such as AI Engineer (Platform/Model/etc).
+    try {
+      const api = await collectTossJobGroups(serverOnly);
+      apiAccepted = api.postings.length;
+      apiTotalJobs = api.totalJobs;
+      out.push(...api.postings);
+      for (const [reason, count] of Object.entries(api.rejected)) {
+        rejected[reason] = (rejected[reason] ?? 0) + count;
+      }
+    } catch {
+      reject("job_groups_api_http");
+    }
 
     // 1. Discovery: the public article API exposes CTA job-detail URLs. The API
     // results themselves are still treated only as discovery articles.
@@ -374,7 +537,6 @@ export const tossAdapter: SourceAdapter = {
     }
 
     // 4. Fetch + validate each discovered job-detail page.
-    const out: Posting[] = [];
     for (const id of [...jobIds].slice(0, TOSS_MAX_JOB_DETAILS)) {
       const url = `${TOSS_HOST}/career/job-detail?job_id=${id}`;
       let res: TossFetchResult;
@@ -395,17 +557,22 @@ export const tossAdapter: SourceAdapter = {
         .join(", ") || "-";
     const skippedCount = Object.values(rejected).reduce((sum, count) => sum + count, 0);
     const message =
-      `toss-careers diagnostics: article_candidates=${articleUrls.size}, ` +
+      `toss-careers diagnostics: job_groups_total=${apiTotalJobs}, job_groups_accepted=${apiAccepted}, ` +
+      `article_candidates=${articleUrls.size}, ` +
       `job_detail_urls=${jobIds.size}, accepted=${out.length}, rejected={${rejectSummary}}`;
     tossAdapter.note = message;
     return {
       postings: out,
       diagnostics: {
         source: "toss-careers",
-        status: rejected.http || rejected.post_api_http || rejected.feed_http ? "partial" : "ok",
+        status: rejected.http || rejected.post_api_http || rejected.feed_http || rejected.job_groups_api_http ? "partial" : "ok",
         collectedCount: out.length,
         skippedCount,
-        failedCount: (rejected.http ?? 0) + (rejected.post_api_http ?? 0) + (rejected.feed_http ?? 0),
+        failedCount:
+          (rejected.http ?? 0) +
+          (rejected.post_api_http ?? 0) +
+          (rejected.feed_http ?? 0) +
+          (rejected.job_groups_api_http ?? 0),
         discoveryModes: ["official-listing", "official-detail"],
         message,
       },

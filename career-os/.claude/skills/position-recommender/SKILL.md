@@ -84,6 +84,8 @@ bun career-os/scripts/position-recommender/collect_live_postings.ts
 - 최근 7일 `career-os/data/reports/daily/*/position-recommendation/report.md` 중 존재하는 파일을 Read
 - 사용자의 자연어 포커스 키워드 (예: "AI 서비스팀 위주") 를 분석 컨텍스트에 반영
 - 사용자의 현재 선호상 AI 서비스/AI Transformation(AX)/AI Agent/AI 플랫폼 포지션도 탐색한다. 단, 강력/도전 추천에는 서버·플랫폼 개발 전이가 분명하고 active/open 개별 공고 URL이 확인된 항목만 올린다.
+- 백엔드 + AI 전환 후보는 별도 관점으로 검토한다. 예: AI Agent/RAG/MCP/LLMOps/ML Backend/AI Platform처럼 API·서버·플랫폼·운영 자동화와 AI 응용 경험이 함께 필요한 공고.
+- Toss는 공식 `job-groups` API의 그룹/하위 포지션까지 수집 대상으로 본다. `AI Engineer` 그룹의 Platform/Brain/Commerce/Model/Ads 하위 포지션처럼 목록 화면의 그룹 구조에 묶인 공고를 누락하지 않는다.
 - 최근 7일 강력 추천/도전 추천에 반복 등장한 회사·URL은 감점한다. 단, 동일 개별 active 공고가 여전히 최상위 후보면 유지할 수 있지만 “반복 유지 사유”를 명시한다.
 - 매일 최소 1개 이상은 최근 7일 내 강력 추천에 없던 신규 **개별 active 공고**를 포함한다. 적합한 신규 공고가 없으면 추천 티어를 억지로 채우지 말고 “신규 active 공고 부족”을 명시한다.
 
@@ -112,6 +114,8 @@ bun career-os/scripts/position-recommender/collect_live_postings.ts
 ```
 Write → career-os/data/reports/daily/YYYY-MM-DD/position-recommendation/report.md
 Write → career-os/data/runtime/position-recommendation.md  (런타임 미러)
+Runner post-process → career-os/data/reports/daily/YYYY-MM-DD/position-recommendation/report.html
+Runner post-process → career-os/data/runtime/position-recommendation.html  (런타임 HTML 미러)
 ```
 
 날짜는 Asia/Seoul 기준 (`TZ=Asia/Seoul date +%F`). UTC `new Date().toISOString()` 날짜를 사용하지 않는다.
@@ -125,6 +129,8 @@ Claude native skill 내부에서는 Discord 알림을 직접 보내지 않는다
 daily/cron 실행의 Discord 전송은 외부 runner
 `career-os/scripts/position-recommender/run_daily_with_claude.sh`가
 freshness check 통과 후 `_shared/lib/notify_discord.ts`로 수행한다.
+runner는 Markdown 리포트 검증 후 HTML 미러를 생성하고,
+아침 Discord 알림에 HTML 파일을 첨부한다.
 이는 OpenClaw/Codex가 오케스트레이션과 외부 전송을 맡고,
 Claude native skill은 리포트 생성·자기 검증에 집중하게 하기 위함이다.
 

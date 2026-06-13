@@ -18,6 +18,8 @@ const UA = "Mozilla/5.0 (OpenClaw career-os position recommender)";
 const WANTED_TARGET_URLS = [
   "https://www.wanted.co.kr/wd/344103",
   "https://www.wanted.co.kr/wd/360452",
+  "https://www.wanted.co.kr/wd/356931",
+  "https://www.wanted.co.kr/wd/364006",
 ];
 const WANTED_TARGET_KEYWORDS = [
   "쿠팡 백엔드",
@@ -32,6 +34,16 @@ const WANTED_TARGET_KEYWORDS = [
   "우아한형제들 백엔드",
   "당근 백엔드",
   "오늘의집 백엔드",
+  "AI Agent 백엔드",
+  "Applied AI Engineer",
+  "AI Engineer LLM RAG Agent",
+  "MCP 서버 AI",
+  "LLM 백엔드",
+  "RAG 백엔드",
+  "AI Platform Engineer",
+  "ML Backend Engineer",
+  "LLMOps MLOps 플랫폼",
+  "Workflow Automation AI",
 ];
 
 function isWantedActive(job: Record<string, unknown>): boolean {

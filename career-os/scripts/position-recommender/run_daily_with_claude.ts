@@ -9,6 +9,7 @@ const DEFAULT_CONTEXT =
     "data/runtime/live-position-postings.md의 direct active/open 개별 공고만 강력 추천/도전 추천에 포함.",
     "회사 홈, 탐색 링크, 상태 unknown, 닫힌 공고는 추천 티어에서 제외.",
     "Java/Spring backend를 기본으로 보고, 서버/플랫폼 전이가 분명한 AI/AX/Agent/Payments/Wallet 공고도 평가.",
+    "AI Agent/RAG/MCP/LLMOps/ML Backend처럼 백엔드 강점과 AI 응용 경험을 함께 쓰는 공고는 AI 전환 후보로 별도 검토.",
     "우선 회사군: LINE, NAVER/네이버페이/네이버파이낸셜, 당근/당근페이, 카카오페이/카카오뱅크/카카오모빌리티, Coupang/Coupang Pay, 우아한형제들, 오늘의집, 무신사, 컬리, 야놀자.",
     "최근 7일 추천 반복은 감점하고, 신규 active 공고가 있으면 최소 1개 포함.",
     "강력 추천은 NHN 대비 회사 upside와 role-fit이 모두 분명한 경우만 허용.",
@@ -329,6 +330,7 @@ function notifyPositionRecommendation(args: {
   notifyScript: string;
   reportDate: string;
   report: string;
+  htmlReport: string;
   candidates: Candidate[];
 }): void {
   if (process.env.POSITION_RECOMMENDER_NOTIFY === "0") return;
@@ -337,18 +339,20 @@ function notifyPositionRecommendation(args: {
     return;
   }
   const reportDisplay = args.report.startsWith(`${args.root}/`) ? args.report.slice(args.root.length + 1) : args.report;
+  const htmlDisplay = args.htmlReport.startsWith(`${args.root}/`) ? args.htmlReport.slice(args.root.length + 1) : args.htmlReport;
   const message = `오늘 포지션 추천 (${args.reportDate})
 
 ${formatDiscordCandidates(args.candidates)}
 
 전체 리포트: \`${reportDisplay}\`
+HTML 리포트: \`${htmlDisplay}\`
 검증: 오늘 날짜 리포트 + 개별 active 공고 링크 확인 완료`;
 
   if (process.env.POSITION_RECOMMENDER_NOTIFY_DRY_RUN === "1") {
     console.log(message);
     return;
   }
-  const result = spawnSync("bun", [`--env-file=${args.root}/.env`, args.notifyScript, message], {
+  const result = spawnSync("bun", [`--env-file=${args.root}/.env`, args.notifyScript, "--media", args.htmlReport, message], {
     cwd: args.root,
     stdio: "inherit",
     env: process.env,
@@ -374,7 +378,9 @@ async function main(): Promise<void> {
   const root = resolve(process.env.CAREER_OS_ROOT ?? "/home/bifos/ai-nodes/career-os");
   const reportDate = process.env.REPORT_DATE ?? kstDate();
   const report = `${root}/data/reports/daily/${reportDate}/position-recommendation/report.md`;
+  const reportHtml = `${root}/data/reports/daily/${reportDate}/position-recommendation/report.html`;
   const runtime = `${root}/data/runtime/position-recommendation.md`;
+  const runtimeHtml = `${root}/data/runtime/position-recommendation.html`;
   const livePostings = `${root}/data/runtime/live-position-postings.md`;
   const notifyScript = `${root}/../_shared/lib/notify_discord.ts`;
   const context = argv.length > 0 ? argv.join(" ") : DEFAULT_CONTEXT;
@@ -432,6 +438,29 @@ async function main(): Promise<void> {
 
   const candidates = validateDirectPostingRecommendations(runtime);
 
+  run(
+    "bun",
+    [
+      `${root}/scripts/position-recommender/render_report_html.ts`,
+      "--input",
+      report,
+      "--output",
+      reportHtml,
+    ],
+    root
+  );
+  run(
+    "bun",
+    [
+      `${root}/scripts/position-recommender/render_report_html.ts`,
+      "--input",
+      runtime,
+      "--output",
+      runtimeHtml,
+    ],
+    root
+  );
+
   const queueOut = `${root}/data/runtime/application-agent/frontdoor-queue.jsonl`;
   console.error("position-recommender workbench: refreshing frontdoor queue...");
   run(
@@ -454,9 +483,11 @@ async function main(): Promise<void> {
   );
 
   if (!validateOnly || process.env.POSITION_RECOMMENDER_NOTIFY_DRY_RUN === "1") {
-    notifyPositionRecommendation({ root, notifyScript, reportDate, report, candidates });
+    notifyPositionRecommendation({ root, notifyScript, reportDate, report, htmlReport: reportHtml, candidates });
   }
   console.log(`OK position-recommender fresh report: ${report}`);
 }
 
-main().catch((error) => die(`position-recommender runner failed: ${error}`));
+if (import.meta.main) {
+  main().catch((error) => die(`position-recommender runner failed: ${error}`));
+}

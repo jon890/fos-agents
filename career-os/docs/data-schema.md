@@ -1680,6 +1680,16 @@ source diagnostics:
 
 source adapter는 official listing이나 known target URL 후보를 import하기 전에 detail page를 fetch하고 active/open evidence를 기록한다.
 중복 처리는 URL 우선, URL이 불안정한 source는 hash 보조를 사용한다.
+Wanted adapter는 백엔드 target URL/keyword 외에 AI Agent/RAG/MCP/LLMOps/ML Backend 계열 target URL/keyword를 함께 수집할 수 있다.
+Toss adapter는 공식 `job-groups` API의 그룹 공고와 하위 포지션을 펼쳐 snapshot에 넣는다.
+
+### data/runtime/position-recommendation.html
+
+`position-recommender` daily runner가 Markdown 추천 리포트 검증 뒤 생성하는 HTML 미러.
+
+- 정본 내용은 `data/runtime/position-recommendation.md`와 당일 report.md다.
+- HTML은 사람이 아침 Discord 알림에서 바로 읽기 위한 표시 산출물이다.
+- 같은 날짜 보존본은 `data/reports/daily/YYYY-MM-DD/position-recommendation/report.html`에 쓴다.
 
 ## sources/fos-study/
 

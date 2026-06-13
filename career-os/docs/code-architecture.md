@@ -118,6 +118,7 @@ career-os/
 │   │   ├── run_daily_with_claude.ts    daily runner 정본. collect → Claude guard → freshness/active 검증 → frontdoor/priority refresh → Discord 알림
 │   │   ├── run_daily_with_claude.sh    기존 cron/수동 호출 호환용 TS runner shim
 │   │   ├── collect_live_postings.ts    CLI 호환 entrypoint (ADR-030, ADR-043, ADR-047)
+│   │   ├── render_report_html.ts       Markdown 추천 리포트의 HTML 미러 생성
 │   │   └── live-postings/
 │   │       ├── types.ts                Posting / SourceAdapter / CollectResult 계약
 │   │       ├── policy.ts               수집 가능성 필터. 추천 순위 판단은 하지 않음
@@ -492,9 +493,11 @@ plan050은 새 독립 추천기를 먼저 만들지 않고 기존 collector/reco
 
 - `scripts/position-recommender/live-postings/`는 active/open 개별 공고와 compact evidence snapshot을 만든다.
   긴 JD 원문 필드는 추천 판단에 필요한 길이로 축약해 LLM 입력과 실행 시간을 줄인다.
-  Wanted는 broad scan 외에 선호 회사 target keyword discovery를 함께 수행하고,
+  Wanted는 broad scan 외에 선호 회사 target keyword discovery와 AI 전환 target URL/keyword search를 함께 수행하고,
+  Toss는 공식 `job-groups` API에서 그룹 공고와 하위 포지션을 펼쳐 수집하며,
   KakaoMobility와 NAVER Careers는 official source adapter로 수집한다.
 - `position-recommender` native skill은 LLM recommendation snapshot 초안을 만든다.
+- `scripts/position-recommender/render_report_html.ts`는 daily runner의 post-process로 Markdown 리포트를 HTML 미러로 변환한다.
 - `scripts/application-agent/`는 frontdoor queue, ledger, 공고별 application files, priority history를 검증하고 갱신한다.
 - `config/candidate-profile.md`와 기존 resume/profile material은 fit analysis 입력으로 재사용한다.
 - study/interview 관련 native skill은 gap 기반 preparation action 후보를 만들 때만 호출한다.
