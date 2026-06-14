@@ -232,9 +232,9 @@ run-phases.py가 자동 발송:
 이 값은 daily 추천/스터디 결과 알림 채널과 agent 개발/운영 알림 채널을 분리할 때 사용한다.
 `.env`가 없으면 `run-phases.py`가 알림을 조용히 건너뛴다. `.env`는 있지만 `DISCORD_CHANNEL_ID`가 비어 있거나 OpenClaw CLI 전송이 실패하면 warning만 남기고 phase 실행 자체를 깨뜨리지 않는다.
 
-HUD 갱신은 `<workspace>/.env`의 `TASK_HUD_SESSION_ID`, `TASK_HUD_TARGET`, `OPENCLAW_WORKSPACE_ROOT`에 의존한다.
-값이 있으면 `run-phases.py`가 phase 시작/완료/실패/보류 이벤트를 task HUD에 반영한다.
-HUD 갱신 실패도 warning-only이며 phase 성공/실패 판정에는 영향을 주지 않는다.
+HUD 갱신은 `run-phases.py`가 직접 수행하지 않는다.
+부분 event update는 usage/context/agents를 stale하게 만들 수 있으므로 외부 인터페이스로 남기지 않는다.
+메인 세션이 `session_status`와 subagent 상태를 확인한 뒤 `scripts/task-hud/update_from_session_status.ts`로 full snapshot을 반영한다.
 
 ## 파일
 

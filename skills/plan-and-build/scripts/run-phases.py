@@ -31,7 +31,6 @@ from pathlib import Path
 
 AI_NODES_ROOT = Path(__file__).resolve().parent.parent.parent.parent  # skills/plan-and-build/scripts/ → ai-nodes
 NOTIFY_TS = AI_NODES_ROOT / "_shared" / "lib" / "notify_discord.ts"
-DEFAULT_OPENCLAW_WORKSPACE_ROOT = Path.home() / ".openclaw" / "workspace"
 
 
 # ── 워크스페이스 컨텍스트 ─────────────────────────────────────────────────────
@@ -85,60 +84,6 @@ def notify(message: str, workspace: Path) -> None:
         )
     except Exception as e:
         print(f"[warn] 알림 실패: {e}", file=sys.stderr)
-
-
-def hud_event(event: str, status: str, task_label: str) -> None:
-    """Update the pinned OpenClaw HUD when configured.
-
-    HUD failures are intentionally warn-only so phase outcomes stay governed by
-    the actual task execution result.
-    """
-    if os.environ.get("TASK_HUD_DISABLE") == "1":
-        return
-
-    session_id = os.environ.get("TASK_HUD_SESSION_ID")
-    if not session_id:
-        return
-
-    workspace_root = Path(
-        os.environ.get("OPENCLAW_WORKSPACE_ROOT", str(DEFAULT_OPENCLAW_WORKSPACE_ROOT))
-    ).expanduser()
-    script_path = workspace_root / "scripts" / "task-hud" / "update_event.ts"
-    if not script_path.exists():
-        print(f"[warn] HUD update skipped ({event}): helper script not found", file=sys.stderr)
-        return
-
-    cmd = [
-        "bun",
-        str(script_path),
-        "--session",
-        session_id,
-        "--task-label",
-        task_label,
-        "--event",
-        event,
-        "--status",
-        status,
-    ]
-    target = os.environ.get("TASK_HUD_TARGET")
-    if target:
-        cmd.extend(["--target", target])
-
-    try:
-        result = subprocess.run(
-            cmd,
-            cwd=workspace_root,
-            timeout=15,
-            check=False,
-            capture_output=True,
-            text=True,
-        )
-    except Exception as e:
-        print(f"[warn] HUD update failed ({event}): {e}", file=sys.stderr)
-        return
-
-    if result.returncode != 0:
-        print(f"[warn] HUD update failed ({event}): exit {result.returncode}", file=sys.stderr)
 
 
 # ── Task 파일 헬퍼 ────────────────────────────────────────────────────────────
@@ -348,7 +293,6 @@ def main() -> None:
     total = len(phases)
 
     print(f"\n🚀  Task: {task_name}  ({total} phases, workspace={workspace.name})\n")
-    hud_event("start", "running", task_name)
 
     for phase in phases:
         phase_num = phase["number"]
@@ -373,7 +317,6 @@ def main() -> None:
             task["status"] = "failed"
             task["error_message"] = msg
             save_task(task, index_path)
-            hud_event("failed", f"phase {phase_num} failed", task_name)
             notify(f"[실패] {workspace.name} task {task_name} phase {phase_num}: {msg}", workspace)
             print(f"  ✗  {msg}", file=sys.stderr)
             sys.exit(1)
@@ -391,7 +334,6 @@ def main() -> None:
         task["status"] = "running"
         task["current_phase"] = phase_num
         save_task(task, index_path)
-        hud_event("phase-start", f"phase {phase_num}/{total} running", task_name)
         notify(f"[진행] {workspace.name} task {task_name} phase {phase_num}/{total}: {phase_title}{model_label}", workspace)
 
         start_time = time.monotonic()
@@ -408,7 +350,6 @@ def main() -> None:
             save_task(task, index_path)
             msg = f"[보류] {workspace.name} task {task_name} phase {phase_num}: {blocked}"
             print(f"\n  ⚠  {msg}", file=sys.stderr)
-            hud_event("blocked", f"phase {phase_num} blocked", task_name)
             notify(msg, workspace)
             sys.exit(2)
 
@@ -425,7 +366,6 @@ def main() -> None:
             save_task(task, index_path)
             msg = f"[실패] {workspace.name} task {task_name} phase {phase_num}: {error}"
             print(f"\n  ✗  {msg}", file=sys.stderr)
-            hud_event("failed", f"phase {phase_num} failed", task_name)
             notify(msg, workspace)
             sys.exit(1)
 
@@ -442,13 +382,11 @@ def main() -> None:
         except Exception:
             pass
         save_task(task, index_path)
-        hud_event("phase-complete", f"phase {phase_num}/{total} completed", task_name)
         notify(f"[완료] {workspace.name} task {task_name} phase {phase_num}/{total}: {phase_title} [{fmt_elapsed(elapsed)}]", workspace)
         print(f"  ✓  Phase {phase_num}/{total}: {phase_title}  완료  [{fmt_elapsed(elapsed)}]\n")
 
     task["status"] = "completed"
     save_task(task, index_path)
-    hud_event("complete", "done", task_name)
 
     msg = f"[완료] {workspace.name} task {task_name} 전체 완료 ({total} phases)"
     print(f"\n{msg}\n")
