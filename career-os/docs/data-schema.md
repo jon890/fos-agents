@@ -324,9 +324,11 @@ namespace 안의 topic key는 namespace별로 독립적이라 같은 key가 두 
 
 공고별 지원 에이전트 MVP의 비공개 상태 저장소. 실제 지원 전략, 맞춤 이력서 문구, 제출 상태, 회사별 쿨다운 판단이 들어가므로 git 추적하지 않는다.
 
-## data/runtime/application-agent/frontdoor-queue.jsonl (implemented — plan038)
+## data/runtime/application-agent/frontdoor-queue.jsonl (legacy — plan038)
 
 사용자 선택 전 추천 후보 순위와 상태를 저장하는 JSONL 파일. 한 줄은 하나의 추천 후보이며, 사용자가 "N번 준비 시작"을 선택하기 전까지 `data/applications/ledger.jsonl`에 넣지 않는다. 이 파일은 runtime 데이터이며 git 추적 대상이 아니다.
+ADR-081 이후 이 파일은 DB import 검증 후 삭제 대상이다.
+새 대시보드 기능은 이 파일을 현재 상태 정본으로 삼지 않는다.
 
 상태 enum:
 
@@ -1703,11 +1705,19 @@ career-os가 손대지 말아야 할 영역: `.claude/**` (별도 스킬 정의)
 
 `sources/fos-study/.claude/skills/docs-audit/SKILL.md`는 docs-audit 스킬의 진실 출처이며 `career-os/.claude/skills/docs-audit/`이 실체 디렉터리로 위치함 (내부 SKILL.md만 심링크 유지).
 
-## fos-career MySQL 스키마 (plan039 — planned)
+## fos-career MySQL 스키마
 
 fos-career 대시보드가 소유하는 데이터.
-career-os 파일(ledger, frontdoor-queue, materials)은 MySQL로 마이그레이션하지 않는다.
-fos-career가 직접 소유하는 데이터만 여기에 정의한다.
+ADR-081 이후 추천 후보 상태와 background outbox는 fos-career DB를 정본으로 둔다.
+career-os 파일은 migration 전 legacy 입력 또는 private 산출물 위치로만 다룬다.
+
+정본 원칙:
+
+- 추천 후보의 현재 상태와 stage는 fos-career DB가 정본이다.
+- 같은 공고 중복 방지는 candidate key unique constraint로 처리한다.
+- HTML report는 읽기용 snapshot이며 action source가 아니다.
+- `frontdoor-queue.jsonl`은 DB import 검증 후 삭제한다.
+- 오래 걸리는 skill 실행은 DB outbox job으로 관리한다.
 
 ### admin_users
 
@@ -1761,10 +1771,167 @@ fos-career가 직접 소유하는 데이터만 여기에 정의한다.
 | `status` | ENUM('pending','done','failed') NOT NULL | |
 | `createdAt` | DATETIME NOT NULL | |
 
-### priority_action_requests
+### application_state_master
+
+지원 후보의 큰 상태를 정의하는 master table.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `key` | VARCHAR(64) PK | 예: `recommended`, `held`, `excluded`, `started`, `closed` |
+| `label` | VARCHAR(128) NOT NULL | 화면 표시명 |
+| `sortOrder` | INT NOT NULL | 화면 표시 순서 |
+| `isTerminal` | TINYINT NOT NULL | 종료 상태 여부 |
+| `createdAt` | DATETIME NOT NULL | |
+| `updatedAt` | DATETIME NOT NULL | |
+
+기본 상태:
+
+- `recommended`: 추천 후보로 표시할 수 있다.
+- `held`: 사용자가 보류했다.
+- `excluded`: 사용자가 제외했다. 기본 추천 화면에서 숨긴다.
+- `started`: 내부 지원 시작 workflow가 시작됐다.
+- `closed`: 더 이상 진행하지 않는다.
+
+### application_stage_master
+
+지원 workflow 안의 현재 단계를 정의하는 master table.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `key` | VARCHAR(64) PK | 예: `company_analysis`, `fit_analysis`, `study_pack`, `resume_draft` |
+| `label` | VARCHAR(128) NOT NULL | 화면 표시명 |
+| `sortOrder` | INT NOT NULL | workflow 순서 |
+| `createdAt` | DATETIME NOT NULL | |
+| `updatedAt` | DATETIME NOT NULL | |
+
+기본 stage:
+
+- `company_analysis`: 회사와 사업 맥락 분석.
+- `posting_analysis`: 공고 요구사항 분석.
+- `fit_analysis`: 후보자 이력과 공고 fit/gap 분석.
+- `study_pack`: fit/gap 기반 공부팩 생성.
+- `resume_draft`: 이력서와 지원 패키지 초안 생성.
+- `submitted`: 사용자가 실제 제출했다고 표시한 상태.
+- `resume_passed`: 서류 통과를 표시한 상태.
+- `interview_prep`: 면접 대비 workflow.
+
+### application_stage_transitions
+
+허용되는 state/stage 전이를 정의한다.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `id` | BIGINT AUTO_INCREMENT PK | |
+| `fromState` | VARCHAR(64) NOT NULL | nullable이 필요하면 별도 sentinel 사용 |
+| `fromStage` | VARCHAR(64) NOT NULL | nullable이 필요하면 별도 sentinel 사용 |
+| `toState` | VARCHAR(64) NOT NULL | |
+| `toStage` | VARCHAR(64) NOT NULL | |
+| `trigger` | VARCHAR(128) NOT NULL | 예: `user.start_application`, `worker.fit_analysis_done` |
+| `createdAt` | DATETIME NOT NULL | |
+
+### position_recommendation_runs
+
+아침 포지션 추천 실행 단위.
+Markdown/HTML 리포트와 DB ingest 결과를 연결한다.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `id` | VARCHAR(64) PK | run id |
+| `reportDate` | DATE NOT NULL | 리포트 기준 날짜 |
+| `sourceSnapshotPath` | TEXT NULL | 수집 snapshot path |
+| `markdownReportPath` | TEXT NOT NULL | career-os report.md 또는 runtime markdown path |
+| `htmlReportPath` | TEXT NULL | career-os report.html path |
+| `status` | ENUM('pending','ingested','failed') NOT NULL | ingest 상태 |
+| `itemCount` | INT NOT NULL | structured item 수 |
+| `createdAt` | DATETIME NOT NULL | |
+| `updatedAt` | DATETIME NOT NULL | |
+
+### application_candidates
+
+추천 공고 후보의 identity table.
+같은 공고가 여러 날 추천되어도 한 row로 유지한다.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `id` | VARCHAR(64) PK | candidate id |
+| `candidateKey` | VARCHAR(128) UNIQUE NOT NULL | normalized URL hash 또는 fallback hash |
+| `keyStrategy` | ENUM('normalized_url','company_title_source_close_date') NOT NULL | key 생성 방식 |
+| `source` | VARCHAR(64) NOT NULL | Wanted, Toss, NAVER Careers 등 |
+| `company` | VARCHAR(256) NOT NULL | 회사명 |
+| `title` | TEXT NOT NULL | 공고명 |
+| `postingUrl` | TEXT NULL | 원본 공고 URL |
+| `normalizedPostingUrl` | TEXT NULL | query/tracking 정리 URL |
+| `closeDate` | VARCHAR(32) NULL | 마감일 문자열 |
+| `latestRunId` | VARCHAR(64) NULL | 마지막 추천 run |
+| `latestSnapshotJson` | JSON NOT NULL | 추천 카드 요약, fit/gap, evidence |
+| `createdAt` | DATETIME NOT NULL | |
+| `updatedAt` | DATETIME NOT NULL | |
+
+### application_candidate_states
+
+지원 후보의 현재 상태와 stage.
+대시보드가 현재 화면을 계산할 때 보는 정본이다.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `candidateId` | VARCHAR(64) PK | application_candidates.id |
+| `currentState` | VARCHAR(64) NOT NULL | application_state_master.key |
+| `currentStage` | VARCHAR(64) NULL | application_stage_master.key |
+| `ledgerId` | VARCHAR(255) NULL | legacy ledger 또는 새 application workflow id |
+| `lastUserAction` | VARCHAR(128) NULL | 예: `start_application`, `hold`, `exclude` |
+| `lastUserActionAt` | DATETIME NULL | |
+| `lastRecommendationRunId` | VARCHAR(64) NULL | 마지막으로 추천에 등장한 run |
+| `hiddenFromRecommendation` | TINYINT NOT NULL | excluded/closed 기본 숨김 |
+| `stateReason` | TEXT NULL | 사용자 또는 system reason |
+| `createdAt` | DATETIME NOT NULL | |
+| `updatedAt` | DATETIME NOT NULL | |
+
+표시 규칙:
+
+- `recommended`: 카드 표시, 클릭 가능.
+- `held`: 보류 섹션으로 분리.
+- `excluded`: 기본 추천 화면에서 숨김.
+- `started`: 지원 준비 중으로 표시, 다시 클릭 불가.
+- `closed`: 기본 숨김.
+
+### career_outbox_jobs
+
+fos-career가 소유하는 background job outbox다.
+사용자 클릭과 worker 실행을 분리하고, retry와 감사 가능성을 보장한다.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `id` | VARCHAR(64) PK | job id |
+| `jobType` | VARCHAR(128) NOT NULL | 예: `application.start`, `application.fit_analysis`, `study_pack.create` |
+| `aggregateType` | VARCHAR(64) NOT NULL | 예: `application_candidate` |
+| `aggregateId` | VARCHAR(64) NOT NULL | candidate id 또는 application id |
+| `payloadJson` | JSON NOT NULL | worker 입력. private 본문은 저장하지 않음 |
+| `status` | ENUM('pending','running','succeeded','failed','dead','cancelled') NOT NULL | |
+| `attempts` | INT NOT NULL | |
+| `maxAttempts` | INT NOT NULL | |
+| `nextRunAt` | DATETIME NOT NULL | |
+| `lockedBy` | VARCHAR(128) NULL | worker id |
+| `lockedAt` | DATETIME NULL | |
+| `idempotencyKey` | VARCHAR(255) UNIQUE NOT NULL | 중복 실행 방지 key |
+| `resultJson` | JSON NULL | 생성 경로, 다음 stage, 요약 |
+| `lastError` | TEXT NULL | 실패 요약 |
+| `createdAt` | DATETIME NOT NULL | |
+| `updatedAt` | DATETIME NOT NULL | |
+
+worker 규칙:
+
+- pending job을 `nextRunAt <= now()` 조건으로 가져온다.
+- lock 획득은 DB transaction으로 처리한다.
+- 실패하면 attempts를 늘리고 backoff 뒤 재시도한다.
+- `dead`는 maxAttempts 초과 또는 재시도 불가능한 검증 실패다.
+- 외부 제출, 업로드, 로그인, 공개 발행은 jobType으로 허용하지 않는다.
+
+### priority_action_requests (legacy bridge)
 
 fos-career가 소유하는 priority write-action pending queue다.
 career-os 파일을 직접 쓰지 않고, 사용자가 확인한 요청을 감사 가능한 DB row로 보존한다.
+ADR-081 이후 새 long-running 작업은 `career_outbox_jobs`로 통합한다.
+priority bridge는 migration compatibility로 유지한다.
 
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
@@ -1846,10 +2013,12 @@ stale guard 비교 대상:
 - `rejected`: request JSON이 schema 또는 identity contract를 만족하지 않는다.
 - `failed`: helper 실행 중 예외가 발생했다.
 
-### user_position_action_requests (implemented — plan059)
+### user_position_action_requests (legacy bridge — plan059)
 
 fos-career가 소유하는 공고 상태 사용자 액션 pending queue다.
 사용자가 dashboard에서 `보류`, `제외`, `지원 준비`를 선택하면 career-os 파일을 직접 쓰지 않고 이 요청으로 저장한다.
+ADR-081 이후 상태 변경은 `application_candidate_states` transaction으로 처리하고, 오래 걸리는 실행은 `career_outbox_jobs`로 넘긴다.
+이 table은 legacy frontdoor/ledger bridge migration 중에만 사용한다.
 
 | 컬럼 | 타입 | 설명 |
 |---|---|---|

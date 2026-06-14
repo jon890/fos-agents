@@ -134,21 +134,27 @@ config는 전체 자산 목록을 담는 DB가 아니다.
 
 ## 지원 준비 데이터 경계
 
-지원 준비 흐름은 사용자가 보기 전 후보와 실제 준비 원장을 분리한다. 자세한 필드, 상태값, 승격 규칙은 `docs/data-schema.md`와 관련 task 문서를 따른다.
+지원 준비 흐름은 추천 리포트, 지원 후보 상태, 실제 지원 워크플로우를 분리한다.
+자세한 필드, 상태값, 승격 규칙은 `docs/data-schema.md`와 관련 task 문서를 따른다.
 
-- `frontdoor-queue.jsonl` 계열 파일은 사용자 선택 전 추천·검토 후보를 담는 pre-ledger queue다.
-- `ledger.jsonl`은 사용자가 준비 시작을 승인했거나 실제 지원 준비로 승격된 공고 원장이다.
+- `frontdoor-queue.jsonl` 계열 파일은 legacy pre-ledger queue이며 DB import 후 삭제 대상이다.
+- fos-career MySQL은 지원 후보 상태와 background outbox의 정본으로 전환한다.
+- 사용자가 카드 전체를 클릭하면 내부적으로 지원 시작 workflow를 요청한다.
+- 지원 시작은 회사 분석, 공고 분석, fit 분석, 공부팩, 이력서 초안, 제출 후 면접 대비까지 이어지는 내부 workflow다.
+- 실제 외부 제출, 업로드, 로그인, 공개 발행은 사용자 별도 승인 전까지 하지 않는다.
 - 개별 공고 URL, 모집 활성 여부, 역할/연차/스택, 지원 경로가 불명확한 항목은 ledger로 승격하지 않는다.
 - 후보 추천, 승격, 제외, 만료 같은 상세 상태명은 AGENTS가 아니라 schema/docs/task에서 관리한다.
 - 최종 이력서, 지원 패키지, 외부 제출, 공개 발행은 사용자 검토 절차를 통과한 뒤에만 진행한다.
 
 ## 웹 대시보드 경계
 
-`fos-career`는 career-os와 분리된 사람용 웹 제품 레포로 다룬다. career-os는 데이터·자동화의 원천이고, 웹 대시보드는 career-os 파일을 읽어 보여주는 별도 제품이다.
+`fos-career`는 career-os와 분리된 사람용 웹 제품 레포로 다룬다.
+웹 대시보드는 추천 후보 상태와 실행 요청의 정본을 점진적으로 소유한다.
+career-os는 수집, 리포트 생성, skill 실행, private 산출물 생성을 맡는다.
 
 - 기본 위치는 `~/services/fos-career`를 사용한다.
-- career-os 원장과 산출물은 초기에는 read-only mount 또는 명시 env 경로로 읽는다.
-- 대시보드 자체의 인증, 세션, 감사 로그, 목적별 request queue는 `fos-career` 쪽 책임으로 둔다.
+- legacy career-os 원장과 산출물은 migration 전까지 read-only mount 또는 명시 env 경로로 읽는다.
+- 대시보드 자체의 인증, 세션, 감사 로그, 지원 후보 상태, 목적별 background outbox는 `fos-career` 쪽 책임으로 둔다.
 - 범용 채팅 UI/API는 ADR-064로 제거됐으므로 새 작업에서 되살리지 않는다.
 - 배포, Docker, MySQL, reverse proxy 세부 구현은 `fos-career` repo 또는 관련 plan/docs에 둔다.
 

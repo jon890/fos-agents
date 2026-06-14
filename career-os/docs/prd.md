@@ -94,9 +94,11 @@ MVP 원칙:
   - 원본 candidate-profile 수정
 - plan030 position-recommender freshness guard는 후보 입력 품질 prerequisite로 참조한다.
 
-### 완료 기반: application frontdoor queue (plan038)
+### Legacy: application frontdoor queue (plan038)
 
 `plan038-application-frontdoor-review`는 application-flow-agent 앞단을 "추천 후보 순위 확인 → 사용자가 N번 준비 시작 선택 → 선택된 후보만 상세 분석/학습/지원 준비로 승격" 흐름으로 정리한다.
+이 구조는 ADR-081 이후 대시보드 DB 중심 구조로 대체한다.
+`frontdoor-queue.jsonl`은 migration 입력으로만 유지하고, DB import 검증 후 삭제한다.
 
 MVP 범위:
 
@@ -115,6 +117,35 @@ MVP 범위:
 Question bank 범위 밖:
 
 - Next.js 대시보드와 관리자 로그인은 `plan039`로 분리한다.
+
+### 계획 중: dashboard canonical application workflow (plan073)
+
+`plan073-dashboard-application-candidate-state`는 포지션 추천 리포트와 지원 준비 workflow를 fos-career DB 중심으로 다시 연결한다.
+목표는 `frontdoor queue`라는 중간 workflow 용어를 제거하고, 웹 대시보드에서 지원 후보의 현재 상태와 다음 작업을 직접 관리하게 만드는 것이다.
+
+MVP 범위:
+
+- 아침 포지션 추천 run은 Markdown/HTML 리포트와 함께 structured recommendation item을 만든다.
+- fos-career는 추천 item을 DB로 ingest하고 `application_candidates`와 현재 `state`/`stage`를 관리한다.
+- 같은 공고가 다시 추천되면 `normalizedPostingUrl` 기반 unique key로 기존 후보를 갱신한다.
+- URL이 없거나 불안정하면 `company + title + source + closeDate` 보조 hash를 사용한다.
+- `excluded` 후보는 다음 추천 화면에서 기본 숨김 처리한다.
+- `held` 후보는 보류 섹션으로 분리한다.
+- `started` 후보는 지원 준비 중으로 표시하고 다시 클릭할 수 없게 한다.
+- 카드 전체 클릭은 내부 `지원 시작` workflow를 요청한다.
+- 지원 시작 workflow는 회사 분석, 공고 분석, fit 분석, 공부팩 생성, 이력서 초안, 제출 후 면접 대비로 이어진다.
+- 실행은 dependency 순서대로 진행한다.
+  첫 단계는 회사 분석, 공고 분석, fit 분석이다.
+- 오래 걸리는 작업은 fos-career DB outbox job으로 저장하고 worker가 주기적으로 처리한다.
+- HTML 리포트는 그날의 읽기용 스냅샷으로 유지하고, 현재 상태는 DB를 정본으로 본다.
+- `frontdoor-queue.jsonl`은 DB import와 diff 검증 후 삭제한다.
+
+범위 밖:
+
+- 외부 채용 사이트 제출, 로그인, 업로드, 브라우저 입력 자동화.
+- 사용자 승인 없는 이메일, 외부 메시지, 공개 발행.
+- 한 번의 카드 클릭으로 모든 private 산출물을 무조건 병렬 생성하는 일.
+- dashboard container가 career-os checkout을 직접 쓰는 일.
 
 ### 완료 기반: position priority + posting/fit analysis workflow (plan050)
 
@@ -164,6 +195,7 @@ MVP 범위:
 - candidate-profile.md 수정.
 - LLM recommendation refresh와 priority confirmation을 한 버튼에 묶는 일.
 - career-os ledger/frontdoor queue를 fos-career MySQL로 옮기는 일.
+  이 범위 밖 결정은 plan053 당시 기준이며, ADR-081 이후 별도 migration plan에서 다시 다룬다.
 
 ### 완료 기반: fos-career application workbench (plan054)
 
@@ -183,6 +215,7 @@ MVP 범위:
 - 외부 채용 사이트 제출 자동화.
 - candidate-profile.md 수정.
 - career-os ledger/frontdoor queue를 fos-career MySQL로 이관.
+  이 범위 밖 결정은 plan054 당시 기준이며, ADR-081 이후 plan073에서 대체한다.
 - 사용자의 명시 승인 없는 지원 패키지 최종 제출 또는 공개 발행.
 
 ### 계획 중: 공고 상태 사용자 액션 (plan059)
@@ -310,16 +343,17 @@ MVP 목표:
 - 로그인, 브라우저 입력, 공개 발행, candidate-profile mutation.
 - 사용자 승인 없는 최종 제출.
 
-### 계획 중: fos-career 웹 대시보드 (plan039)
+### Legacy base: fos-career 웹 대시보드 (plan039)
 
 `plan039-fos-career-dashboard`는 career-os 데이터를 브라우저에서 읽고 목적별 버튼과 request queue로 실행할 수 있는 Next.js 관리자 대시보드를 별도 저장소(`~/services/fos-career`)에 구축한다.
+ADR-081 이후 dashboard는 read-only projection을 넘어 추천 후보 상태와 outbox job의 정본을 소유한다.
 초기 MVP에 있던 범용 LLM 채팅 UI는 ADR-064로 제거한다.
 
 핵심 분리 원칙:
 
 - career-os는 에이전트/데이터/자동화 진실 출처를 유지한다.
 - fos-career는 human-facing 웹 제품이다.
-- fos-career는 career-os 파일을 읽기 전용 마운트(`CAREER_OS_ROOT=/data/career-os`)로만 읽는다.
+- fos-career는 migration 전 career-os 파일을 읽기 전용 마운트(`CAREER_OS_ROOT=/data/career-os`)로 읽는다.
 - fos-career가 career-os 파일을 수정하는 것을 금지한다.
 
 MVP 범위:
@@ -335,7 +369,8 @@ MVP 범위:
 MVP 범위 밖:
 
 - prepare-start/hold/reject 버튼 등 쓰기 액션 — plan053의 pending request bridge 뒤에서만 다룬다.
-- career-os ledger/materials MySQL 마이그레이션 — 프로그레시브 마이그레이션은 별도 결정에서 다룬다.
+- legacy career-os ledger/materials 전체 MySQL 마이그레이션.
+  ADR-081의 1차 범위는 추천 후보 상태와 outbox 정본화이며, private 산출물 본문은 계속 career-os 파일에 둔다.
 - 외부 채용 사이트 자동 제출
 - 공개 fos-study 발행
 - candidate-profile.md 수정
