@@ -1,7 +1,7 @@
 # Phase 07 — legacy frontdoor cleanup과 compatibility 정리
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ---
 
@@ -129,8 +129,30 @@ git status --short
 
 ## common-pitfalls self-check
 
-- [ ] 성공 기준은 `bun build --target bun`, `pnpm`, `rg`로 판정 가능하다.
-- [ ] 삭제는 import diff 통과 뒤에만 한다.
-- [ ] docs/ADR 수정은 범위 밖이다.
-- [ ] legacy compatibility와 새 workflow를 분리한다.
-- [ ] 첫 bash 블록에서 ai-nodes 루트로 이동한다.
+- [x] 성공 기준은 `bun build --target bun`, `pnpm`, `rg`로 판정 가능하다.
+- [x] 삭제는 import diff 통과 뒤에만 한다.
+- [x] docs/ADR 수정은 범위 밖이다.
+- [x] legacy compatibility와 새 workflow를 분리한다.
+- [x] 첫 bash 블록에서 ai-nodes 루트로 이동한다.
+
+---
+
+## 완료 기록
+
+- 완료 시각: 2026-06-14T16:31:17Z
+- career-os commit: `3850968 fix(career-os): 포지션 추천 DB ingest로 전환`
+- fos-career commit: `82a552e fix(fos-career): legacy 후보 표시와 호환 경계 정리`
+- 변경 요약:
+  - daily position recommendation runner에서 legacy `frontdoor-queue.jsonl` refresh와 priority snapshot refresh를 제거했다.
+  - structured `items.json` 생성 뒤 fos-career `ingest:position-recommendations`를 호출해 DB ingest를 수행하도록 전환했다.
+  - fos-career legacy workbench/priority 화면의 사용자 표시를 `frontdoor`/raw `frontdoor_queue`에서 `추천 후보`로 바꿨다.
+  - 남아 있는 `recordType: frontdoor_queue`는 legacy compatibility 전용이며, legacy route와 pending bridge request 정리 뒤 제거한다는 주석을 남겼다.
+- 검증:
+  - `bun build --target bun --outfile /tmp/plan073-run-daily-check.js career-os/scripts/position-recommender/run_daily_with_claude.ts`
+  - `rg -n "frontdoor-queue.jsonl|frontdoor_queue|Frontdoor Queue|frontdoor queue" career-os/scripts career-os/.claude /home/bifos/services-worktrees/fos-career-plan073-phase07/app /home/bifos/services-worktrees/fos-career-plan073-phase07/lib /home/bifos/services-worktrees/fos-career-plan073-phase07/scripts || true`
+  - `pnpm exec tsc --noEmit`
+  - `DATABASE_URL='mysql://user:pass@127.0.0.1:3306/fos_career' SESSION_SECRET='0123456789abcdef0123456789abcdef' pnpm build`
+  - 양쪽 `git diff --check`
+- 비고:
+  - Phase 03의 실제 DB diff 완료 산출물을 찾지 못해 legacy `frontdoor-queue.jsonl` 실제 삭제는 하지 않았다.
+  - `frontdoor_queue` 잔재는 legacy import/diff command, legacy processor, adapter fallback, type/API compatibility에만 남았다.
