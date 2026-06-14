@@ -1,7 +1,14 @@
 # Phase 01 — fos-career pnpm 전환과 lockfile 정리
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
+
+완료 기록:
+
+- fos-career commit: `9817856 build(fos-career): pnpm lockfile로 전환`
+- 검증: `pnpm install --frozen-lockfile`, `pnpm exec tsc --noEmit`, `pnpm build`
+- 결과: `packageManager`를 `pnpm@10.24.0`으로 고정하고 `pnpm-lock.yaml`을 생성했다.
+- `package-lock.json`은 제거했다.
 
 ---
 
