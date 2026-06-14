@@ -166,7 +166,9 @@ config는 전체 자산 목록을 담는 DB가 아니다.
 
 ## 워크플로 진입점 (요약)
 
-**현재 표준 진입점은 native skill 직접 호출이다.** `claude -p "/<skill-name> <args>"` 형태를 기본으로 사용하고, 쓰기 권한이 필요한 일부 skill만 명시 permission mode를 붙인다.
+**현재 표준 진입점은 native skill 직접 호출이다.** `claude --permission-mode bypassPermissions -p "/<skill-name> <args>"` 형태를 기본으로 사용한다.
+편집 승인 대기에서 장시간 멈추지 않도록 백그라운드 실행도 이 권한 모드를 우선한다.
+단, 지원서 제출, 이메일, 공개 게시물, 외부 메시지 전송은 별도 사용자 승인 전까지 실행하지 않는다.
 
 폐기된 dispatcher / command-router 이력은 `docs/adr.md` ADR-031을 단일 출처로 본다. 새 작업에서 옛 `run_now.sh` 계열 경로를 되살리지 않는다.
 
@@ -176,21 +178,32 @@ config는 전체 자산 목록을 담는 DB가 아니다.
 cd career-os
 
 # 학습·면접 자산 생성 (fos-study commit + push)
-claude -p "/study-pack-writer <topic>"                                          # 주제 중심 학습 문서
-claude -p "/interview-asset-writer <topic>"                                     # 후보자 이력 Q&A 은행 + 마스터 플레이북
-claude -p "/question-bank-collector <topic>"                                    # 공개 가능 일반 backend/CS 질문 bank 보강
+# 주제 중심 학습 문서
+claude --permission-mode bypassPermissions -p "/study-pack-writer <topic>"
+# 후보자 이력 Q&A 은행 + 마스터 플레이북
+claude --permission-mode bypassPermissions -p "/interview-asset-writer <topic>"
+# 공개 가능 일반 backend/CS 질문 bank 보강
+claude --permission-mode bypassPermissions -p "/question-bank-collector <topic>"
 
 # 추천·분석 (비공개 career-os 리포트)
-claude --permission-mode bypassPermissions -p "/study-topic-recommender [context]" # 아침 토픽 추천 + 후보 refresh + live-coding seed (ADR-026, ADR-070)
-claude -p "/interview-prep-analyzer [baseline|daily|topic|first-round]"          # baseline/daily/stage 면접 준비 자연어 분기 (ADR-027, ADR-048)
-claude --permission-mode acceptEdits -p "/candidate-baseline-suggester"         # 후보자 자산 Append 갱신 (ADR-028)
-claude -p "/position-recommender [컨텍스트] [채용공고 file]"                    # 활성 공고 수집 + 3 티어 추천 (ADR-030)
+# 아침 토픽 추천 + 후보 refresh + live-coding seed (ADR-026, ADR-070)
+claude --permission-mode bypassPermissions -p "/study-topic-recommender [context]"
+# baseline/daily/stage 면접 준비 자연어 분기 (ADR-027, ADR-048)
+claude --permission-mode bypassPermissions -p "/interview-prep-analyzer [baseline|daily|topic|first-round]"
+# 후보자 자산 Append 갱신 (ADR-028)
+claude --permission-mode bypassPermissions -p "/candidate-baseline-suggester"
+# 활성 공고 수집 + 3 티어 추천 (ADR-030)
+claude --permission-mode bypassPermissions -p "/position-recommender [컨텍스트] [채용공고 file]"
 
 # 지원 준비 루프 (비공개 career-os 산출물)
-claude -p "/application-package-writer <posting-path-or-context>"                # 공고별 지원 패키지 생성
-claude -p "/application-reviewer <application-dir>"                              # 지원 패키지 근거/과장/드리프트 검토
-claude -p "/daily-application-digest [YYYY-MM-DD]"                               # 일일 지원 현황 digest
-claude -p "/docs-audit <scope-or-request>"                                       # 공개/공개 예정 fos-study 문서 감사
+# 공고별 지원 패키지 생성
+claude --permission-mode bypassPermissions -p "/application-package-writer <posting-path-or-context>"
+# 지원 패키지 근거/과장/드리프트 검토
+claude --permission-mode bypassPermissions -p "/application-reviewer <application-dir>"
+# 일일 지원 현황 digest
+claude --permission-mode bypassPermissions -p "/daily-application-digest [YYYY-MM-DD]"
+# 공개/공개 예정 fos-study 문서 감사
+claude --permission-mode bypassPermissions -p "/docs-audit <scope-or-request>"
 ```
 
 각 명령의 입력/산출물/git push 여부 상세는 `docs/prd.md` 기능 표, 데이터 흐름은 `docs/flow.md` 참조.
@@ -205,7 +218,7 @@ claude -p "/docs-audit <scope-or-request>"                                      
 - `career-os/scripts/interview-prep-analyzer/mvp_target_schema.ts` — Bun/zod. `config/mvp-target.json` 면접 단계 설정 검증. `parseMvpTarget()` 포함.
 - `_shared/lib/extract_claude_result.ts` — Bun. Claude JSON envelope 파싱. career-os + apartment + stock-investment 공용.
 - Bun runtime — TS 헬퍼 실행. 설치 후 ai-nodes 루트에서 `bun install` 1회 (zod, fast-xml-parser, dotenv).
-- `claude` CLI — native skill 호출 (`claude -p "/<skill>"`). 인증 + 로그인 필요. ai-nodes 모노레포 공통.
+- `claude` CLI — native skill 호출 (`claude --permission-mode bypassPermissions -p "/<skill>"`). 인증 + 로그인 필요. ai-nodes 모노레포 공통.
 
 ## 운영 원칙
 

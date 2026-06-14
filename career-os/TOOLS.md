@@ -10,3 +10,9 @@ Current MVP target:
 - Company target: see `config/mvp-target.json` (single source of truth)
 - Self-assessed weak area: DB
 - Use `config/.env` for task-local secrets such as `GITHUB_TOKEN`
+
+Claude skill invocation:
+- Run native skills from this workspace root.
+- Prefer background execution for long skill calls.
+- Use `claude --permission-mode bypassPermissions -p "/<skill> ..."` by default so edit approval prompts do not stall unattended runs.
+- Do not use this permission mode to bypass user approval for applications, emails, public posts, or external messages.
