@@ -1,7 +1,7 @@
 # Phase 06 — outbox worker와 첫 분석 묶음 adapter
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ---
 
@@ -126,8 +126,31 @@ git status --short
 
 ## common-pitfalls self-check
 
-- [ ] 성공 기준은 `pnpm`, dry-run, `rg`로 판정 가능하다.
-- [ ] 오래 걸리는 실행은 DB outbox job으로 관리한다.
-- [ ] 외부 제출, 로그인, 업로드, 공개 발행을 수행하지 않는다.
-- [ ] docs/ADR 수정은 범위 밖이다.
-- [ ] 첫 bash 블록에서 ai-nodes 루트로 이동한다.
+- [x] 성공 기준은 `pnpm`, dry-run, `rg`로 판정 가능하다.
+- [x] 오래 걸리는 실행은 DB outbox job으로 관리한다.
+- [x] 외부 제출, 로그인, 업로드, 공개 발행을 수행하지 않는다.
+- [x] docs/ADR 수정은 범위 밖이다.
+- [x] 첫 bash 블록에서 ai-nodes 루트로 이동한다.
+
+---
+
+## 완료 기록
+
+- 완료 시각: 2026-06-14T16:20:19Z
+- fos-career commit: `60c4a4b feat(fos-career): career outbox worker 추가`
+- 변경 요약:
+  - `process:career-outbox` worker를 추가했다.
+  - pending `career_outbox_jobs`를 transaction으로 lock해 `running` 처리하고 success/failure/retry/backoff/dead 상태를 갱신한다.
+  - `application.start` handler가 `company_analysis`, `posting_analysis`, `fit_analysis` 첫 분석 묶음만 처리하고 다음 stage를 `study_pack`으로 남긴다.
+  - 실제 skill 실행 없이 payload, lock, handler, stage 계산을 확인하는 dry-run을 추가했다.
+  - non-dry-run 실행은 기존 applier process 패턴과 같이 별도 `CAREER_OS_APPLIER_ROOT`/`CAREER_OS_ROOT`에서 수행한다.
+- 검증:
+  - `pnpm exec tsc --noEmit`
+  - `DATABASE_URL='mysql://user:pass@127.0.0.1:3306/fos_career' SESSION_SECRET='0123456789abcdef0123456789abcdef' pnpm build`
+  - `pnpm run process:career-outbox -- --dry-run`
+  - `rg -n "career_outbox_jobs|lockedBy|nextRunAt|application.start|dry-run|company_analysis|posting_analysis|fit_analysis" scripts lib app`
+  - `rg -n "submit|upload|login|publish" scripts lib && true`
+  - `git diff --check`
+- 비고:
+  - 금지어 grep은 기존 login route, 기존 application preparation 코드, dry-run smoke의 금지어 검사에서만 잡혔다.
+  - 신규 worker/handler에는 외부 제출, 업로드, 로그인, 공개 발행 실행 호출이 없다.
