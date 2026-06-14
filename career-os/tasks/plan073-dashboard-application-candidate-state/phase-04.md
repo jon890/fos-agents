@@ -1,7 +1,7 @@
 # Phase 04 — reports route와 DB 상태 카드
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ---
 
@@ -128,8 +128,29 @@ git status --short
 
 ## common-pitfalls self-check
 
-- [ ] 성공 기준은 `pnpm`, `rg`, `git diff --check`로 판정 가능하다.
-- [ ] dashboard 화면은 SaaS 운영 화면처럼 조용하고 밀도 있게 구성한다.
-- [ ] 카드 전체 클릭 action은 다음 phase 책임이다.
-- [ ] docs/ADR 수정은 범위 밖이다.
-- [ ] 첫 bash 블록에서 ai-nodes 루트로 이동한다.
+- [x] 성공 기준은 `pnpm`, `rg`, `git diff --check`로 판정 가능하다.
+- [x] dashboard 화면은 SaaS 운영 화면처럼 조용하고 밀도 있게 구성한다.
+- [x] 카드 전체 클릭 action은 다음 phase 책임이다.
+- [x] docs/ADR 수정은 범위 밖이다.
+- [x] 첫 bash 블록에서 ai-nodes 루트로 이동한다.
+
+---
+
+## 완료 기록
+
+- 완료 시각: 2026-06-14T15:57:57Z
+- fos-career commit: `4d03f15 feat(fos-career): 지원 후보 리포트 route 추가`
+- 변경 요약:
+  - `/dashboard/reports`, `/dashboard/reports/position/latest`, `/dashboard/reports/position/[date]` route를 추가했다.
+  - 날짜별 화면에서 sandboxed HTML read-only preview와 DB `application_candidate_states` 기반 지원 후보 카드를 함께 표시한다.
+  - 홈 dashboard의 추천 후보 count도 legacy queue가 아니라 최신 DB report의 `recommended` count 기준으로 보정했다.
+  - 사용자 화면에서 `frontdoor queue` 표현과 구현 단계 노출 문구를 제거했다.
+- 검증:
+  - `pnpm exec tsc --noEmit`
+  - `DATABASE_URL='mysql://user:pass@127.0.0.1:3306/fos_career' SESSION_SECRET='0123456789abcdef0123456789abcdef' pnpm build`
+  - `rg -n "지원 후보|지원 시작" app lib`
+  - `rg -n "frontdoor queue|Frontdoor Queue" app lib && exit 1 || true`
+  - `git diff --check`
+- 비고:
+  - env 없이 `pnpm build`는 기존 app 요구사항인 `DATABASE_URL` 누락으로 실패하므로 dummy env를 주입해 build를 확인했다.
+  - 카드 mutation/action은 phase 05 책임이라 구현하지 않았다.
