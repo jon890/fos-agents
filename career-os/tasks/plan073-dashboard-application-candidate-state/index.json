@@ -1,0 +1,141 @@
+{
+  "name": "plan073-dashboard-application-candidate-state",
+  "description": "ADR-081에 따라 지원 후보 상태와 background outbox를 fos-career DB 정본으로 전환하고 legacy frontdoor queue를 import 검증 뒤 제거한다.",
+  "created_at": "2026-06-14T15:01:44Z",
+  "updated_at": "2026-06-14T15:01:44Z",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 8,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/AGENTS.md",
+    "career-os/docs/prd.md",
+    "career-os/docs/data-schema.md",
+    "career-os/docs/flow.md",
+    "career-os/docs/code-architecture.md",
+    "career-os/docs/adr.md",
+    "/home/bifos/services/fos-career/AGENTS.md"
+  ],
+  "depends_on": [
+    "plan072-position-report-html-template"
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "db-is-canonical",
+      "decision": "추천 후보의 현재 state, stage, background outbox는 fos-career MySQL을 정본으로 둔다."
+    },
+    {
+      "id": "D2",
+      "title": "report-is-readonly-snapshot",
+      "decision": "Markdown/HTML 리포트는 읽기용 snapshot이며 action source가 아니다."
+    },
+    {
+      "id": "D3",
+      "title": "candidate-language",
+      "decision": "화면 용어는 지원 후보, 내부 모델명은 application candidate state를 사용하고 새 workflow 용어로 frontdoor queue를 쓰지 않는다."
+    },
+    {
+      "id": "D4",
+      "title": "start-application-workflow",
+      "decision": "카드 전체 클릭은 외부 제출이 아니라 내부 지원 시작 workflow이며, 첫 실행 묶음은 회사 분석, 공고 분석, fit 분석이다."
+    },
+    {
+      "id": "D5",
+      "title": "implementation-doc-freeze",
+      "decision": "구현 phase는 docs/ADR/정책 문서를 수정하지 않는다. 구현 중 문서 변경이 필요하면 PHASE_BLOCKED로 처리한다."
+    }
+  ],
+  "open_decisions": [],
+  "validation_summary": [
+    "pnpm 전환은 package-lock 제거, pnpm-lock 생성, pnpm build/lint/typecheck 또는 대체 검증으로 확인한다.",
+    "DB 전환은 drizzle schema, migration, seed/master data, migration smoke로 확인한다.",
+    "report ingest는 structured recommendation item 생성, DB upsert, legacy frontdoor-queue import, diff 검증으로 확인한다.",
+    "dashboard는 /dashboard/reports 계열 route, HTML-only preview, DB 상태 카드, card click smoke로 확인한다.",
+    "outbox worker는 pending lock, retry/backoff, idempotency, 첫 실행 묶음 dry-run으로 확인한다.",
+    "cleanup은 frontdoor-queue 새 workflow 용어와 legacy write path 잔재 grep으로 확인한다."
+  ],
+  "safety_boundaries": [
+    "구현 phase는 career-os docs/ADR/AGENTS를 수정하지 않는다.",
+    "외부 채용 사이트 제출, 로그인, 업로드, 이메일, 공개 발행은 수행하지 않는다.",
+    "dashboard container가 career-os checkout을 쓰기 mount로 다루지 않는다.",
+    "frontdoor-queue.jsonl은 DB import와 diff 검증 전 삭제하지 않는다.",
+    "HTML 리포트 클릭이나 preview를 action source로 만들지 않는다.",
+    "unrelated dirty 변경은 stage, commit, revert하지 않는다."
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "fos-career pnpm 전환과 lockfile 정리",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "model": "sonnet",
+      "timeout": 1800
+    },
+    {
+      "number": 2,
+      "title": "application candidate DB schema와 migration",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "model": "sonnet",
+      "timeout": 2400
+    },
+    {
+      "number": 3,
+      "title": "report ingest와 legacy import diff",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "model": "sonnet",
+      "timeout": 2400
+    },
+    {
+      "number": 4,
+      "title": "reports route와 DB 상태 카드",
+      "file": "phase-04.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "model": "sonnet",
+      "timeout": 2400
+    },
+    {
+      "number": 5,
+      "title": "카드 클릭 지원 시작 transaction",
+      "file": "phase-05.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "model": "sonnet",
+      "timeout": 2400
+    },
+    {
+      "number": 6,
+      "title": "outbox worker와 첫 분석 묶음 adapter",
+      "file": "phase-06.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "model": "sonnet",
+      "timeout": 3000
+    },
+    {
+      "number": 7,
+      "title": "legacy frontdoor cleanup과 compatibility 정리",
+      "file": "phase-07.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "model": "sonnet",
+      "timeout": 2400
+    },
+    {
+      "number": 8,
+      "title": "통합 검증과 task 완료 마킹",
+      "file": "phase-08.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Edit", "Bash", "Grep", "Glob"],
+      "model": "haiku",
+      "timeout": 2400
+    }
+  ]
+}
