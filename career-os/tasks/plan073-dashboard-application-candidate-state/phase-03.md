@@ -1,7 +1,7 @@
 # Phase 03 — report ingest와 legacy import diff
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ---
 
@@ -132,8 +132,29 @@ pnpm run ingest:position-recommendations -- --dry-run
 
 ## common-pitfalls self-check
 
-- [ ] 성공 기준은 `bun build --target bun`, `pnpm`, `rg`로 판정 가능하다.
-- [ ] 새 workflow 용어로 frontdoor queue를 쓰지 않는다.
-- [ ] docs/ADR 수정은 범위 밖이다.
-- [ ] legacy 삭제는 검증 뒤 후속 phase 책임이다.
-- [ ] 첫 bash 블록에서 ai-nodes 루트로 이동한다.
+- [x] 성공 기준은 `bun build --target bun`, `pnpm`, `rg`로 판정 가능하다.
+- [x] 새 workflow 용어로 frontdoor queue를 쓰지 않는다.
+- [x] docs/ADR 수정은 범위 밖이다.
+- [x] legacy 삭제는 검증 뒤 후속 phase 책임이다.
+- [x] 첫 bash 블록에서 ai-nodes 루트로 이동한다.
+
+---
+
+## 완료 기록
+
+- 완료 시각: 2026-06-14T15:44:37Z
+- career-os commit: `188e01f feat(career-os): 포지션 추천 structured item 산출 추가`
+- fos-career commit: `a09823a feat(fos-career): 지원 후보 ingest 명령 추가`
+- 변경 요약:
+  - position recommendation run이 날짜별 `items.json`과 runtime mirror를 생성하도록 structured item 산출을 연결했다.
+  - fos-career에 `ingest:position-recommendations`, `import:legacy-frontdoor`, `diff:application-candidates` pnpm command를 추가했다.
+  - ingest upsert가 기존 `held`, `excluded`, `started`, `closed` 상태를 daily recommendation으로 덮어쓰지 않도록 보존 로직을 보강했다.
+- 검증:
+  - `bun build --target bun --outfile /tmp/plan073-run-daily-check.js career-os/scripts/position-recommender/run_daily_with_claude.ts`
+  - `pnpm exec tsc --noEmit`
+  - `DATABASE_URL='mysql://user:pass@127.0.0.1:3306/fos_career' SESSION_SECRET='0123456789abcdef0123456789abcdef' pnpm build`
+  - `git diff --check`
+  - fixture 기반 `ingest:position-recommendations --dry-run`, `import:legacy-frontdoor --dry-run`, `diff:application-candidates --dry-run`
+- 비고:
+  - env 없이 `pnpm build`는 기존 app 요구사항인 `DATABASE_URL` 누락으로 실패하므로 dummy env를 주입해 build를 확인했다.
+  - legacy `frontdoor-queue.jsonl`은 이 phase에서 삭제하지 않았다.
