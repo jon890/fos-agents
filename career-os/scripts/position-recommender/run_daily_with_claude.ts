@@ -61,7 +61,9 @@ Environment:
   POSITION_RECOMMENDER_NOTIFY_DRY_RUN=1  Print the Discord message instead of sending it.
   POSITION_RECOMMENDER_CLAUDE_TIMEOUT_MS=<n>  Kill Claude after this total runtime. Default: ${DEFAULT_CLAUDE_TIMEOUT_MS}.
   POSITION_RECOMMENDER_CLAUDE_NO_OUTPUT_MS=<n>  Kill Claude if stdout/stderr is silent this long. Default: ${DEFAULT_CLAUDE_NO_OUTPUT_MS}.
-  POSITION_RECOMMENDER_CLAUDE_LOG_STREAM=1  Forward raw Claude stream-json stdout to logs.`);
+  POSITION_RECOMMENDER_CLAUDE_LOG_STREAM=1  Forward raw Claude stream-json stdout to logs.
+  FOS_CAREER_ROOT=<path>  fos-career repo for DB ingest. Default: ~/services/fos-career.
+  DATABASE_URL=<mysql-url>  Required by fos-career ingest.`);
 }
 
 function run(cmd: string, args: string[], cwd: string): void {
@@ -366,6 +368,20 @@ HTML 리포트: \`${htmlDisplay}\`
   }
 }
 
+function runFosCareerCandidateIngest(args: { input: string }): void {
+  const fosCareerRoot = resolve(process.env.FOS_CAREER_ROOT ?? `${process.env.HOME}/services/fos-career`);
+  if (!existsSync(`${fosCareerRoot}/package.json`)) {
+    die(`position-recommender DB ingest: fos-career root not found: ${fosCareerRoot}`);
+  }
+
+  console.error("position-recommender DB ingest: syncing application candidate states...");
+  run(
+    "pnpm",
+    ["ingest:position-recommendations", "--input", args.input],
+    fosCareerRoot
+  );
+}
+
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
   if (argv[0] === "--help" || argv[0] === "-h") {
@@ -480,26 +496,7 @@ async function main(): Promise<void> {
     runtimeItems
   );
 
-  const queueOut = `${root}/data/runtime/application-agent/frontdoor-queue.jsonl`;
-  console.error("position-recommender workbench: refreshing frontdoor queue...");
-  run(
-    "bun",
-    [
-      `${root}/scripts/application-agent/frontdoor_queue_builder.ts`,
-      "--report",
-      runtime,
-      "--out",
-      queueOut,
-    ],
-    root
-  );
-
-  console.error("position-recommender workbench: refreshing priority snapshot...");
-  run(
-    "bun",
-    [`${root}/scripts/application-agent/priority_recommendation.ts`, "--write"],
-    root
-  );
+  runFosCareerCandidateIngest({ input: reportItems });
 
   if (!validateOnly || process.env.POSITION_RECOMMENDER_NOTIFY_DRY_RUN === "1") {
     notifyPositionRecommendation({ root, notifyScript, reportDate, report, htmlReport: reportHtml, candidates });
