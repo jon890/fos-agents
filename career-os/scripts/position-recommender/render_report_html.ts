@@ -2,6 +2,8 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
+const DEFAULT_TEMPLATE = resolve(import.meta.dir, "templates/report.html");
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -14,7 +16,7 @@ function escapeHtml(value: string): string {
 function inlineMarkdown(value: string): string {
   const links: string[] = [];
   let out = value.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, (_match, label, href) => {
-    const token = `\u0000LINK${links.length}\u0000`;
+    const token = ` LINK${links.length} `;
     links.push(`<a href="${escapeHtml(href)}">${escapeHtml(label)}</a>`);
     return token;
   });
@@ -23,7 +25,7 @@ function inlineMarkdown(value: string): string {
   out = out.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   out = out.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1">$1</a>');
   for (let i = 0; i < links.length; i++) {
-    out = out.replace(`\u0000LINK${i}\u0000`, links[i]);
+    out = out.replace(` LINK${i} `, links[i]);
   }
   return out;
 }
@@ -100,84 +102,73 @@ function renderMarkdown(markdown: string): string {
   return html.join("\n");
 }
 
-function renderHtml(markdown: string): string {
+function splitDiagnostics(markdown: string): { main: string; diagnostics: string } {
+  const diagPattern = /\n## [Ss]ource diagnostics\b/g;
+  let lastIdx = -1;
+  let m;
+  while ((m = diagPattern.exec(markdown)) !== null) {
+    lastIdx = m.index;
+  }
+  if (lastIdx === -1) return { main: markdown, diagnostics: "" };
+  return {
+    main: markdown.slice(0, lastIdx).trimEnd(),
+    diagnostics: markdown.slice(lastIdx + 1).trim(),
+  };
+}
+
+function buildDiagnosticsHtml(diagnosticsMd: string): string {
+  if (!diagnosticsMd) return "";
+  const body = diagnosticsMd.replace(/^## [Ss]ource diagnostics\b.*\n?/, "").trim();
+  const bodyHtml = renderMarkdown(body);
+  return `<details class="diagnostics">
+  <summary>수집 진단</summary>
+  <div class="diagnostics-body">${bodyHtml}</div>
+</details>`;
+}
+
+function addTierClasses(html: string): string {
+  return html
+    .replace(/<h2>강력 추천<\/h2>/g, '<h2 class="tier-strong">강력 추천</h2>')
+    .replace(/<h2>도전 추천<\/h2>/g, '<h2 class="tier-stretch">도전 추천</h2>')
+    .replace(/<h2>(보류[^<]*?)<\/h2>/g, '<h2 class="tier-hold">$1</h2>');
+}
+
+function kstNow(): string {
+  return new Date().toLocaleString("ko-KR", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+function renderHtml(markdown: string, templatePath: string): string {
   const title = markdown.match(/^#\s+(.+)$/m)?.[1] ?? "Position Recommendation";
-  return `<!doctype html>
-<html lang="ko">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${escapeHtml(title)}</title>
-  <style>
-    :root {
-      color-scheme: light;
-      --bg: #f7f8fa;
-      --panel: #ffffff;
-      --text: #1b1f24;
-      --muted: #58606a;
-      --line: #d8dee4;
-      --accent: #0a66c2;
-    }
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      line-height: 1.62;
-    }
-    main {
-      max-width: 920px;
-      margin: 0 auto;
-      padding: 32px 18px 56px;
-    }
-    article {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 28px;
-    }
-    h1, h2, h3 { line-height: 1.28; letter-spacing: 0; }
-    h1 { margin: 0 0 20px; font-size: 28px; }
-    h2 { margin: 32px 0 12px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 21px; }
-    h3 { margin: 24px 0 10px; font-size: 17px; }
-    p, ul, ol { margin: 10px 0; }
-    li { margin: 6px 0; }
-    a { color: var(--accent); word-break: break-all; }
-    code {
-      padding: 2px 5px;
-      border-radius: 5px;
-      background: #eef2f6;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 0.92em;
-    }
-    pre {
-      overflow-x: auto;
-      padding: 14px;
-      border-radius: 8px;
-      background: #111827;
-      color: #f9fafb;
-    }
-    @media (max-width: 640px) {
-      main { padding: 16px 10px 36px; }
-      article { padding: 18px; }
-      h1 { font-size: 23px; }
-      h2 { font-size: 19px; }
-    }
-  </style>
-</head>
-<body>
-  <main>
-    <article>
-${renderMarkdown(markdown)}
-    </article>
-  </main>
-</body>
-</html>
-`;
+  const generatedAt = kstNow();
+
+  const { main: mainMd, diagnostics: diagMd } = splitDiagnostics(markdown);
+  const reportHtml = addTierClasses(renderMarkdown(mainMd));
+  const sourceDiagnosticsHtml = buildDiagnosticsHtml(diagMd);
+
+  const template = readFileSync(templatePath, "utf-8");
+  const replacements: Record<string, string> = {
+    title: escapeHtml(title),
+    generatedAt: escapeHtml(generatedAt),
+    reportHtml,
+    sourceDiagnosticsHtml,
+  };
+
+  return template.replace(/\{\{(\w+)\}\}/g, (_match: string, key: string) => {
+    if (key in replacements) return replacements[key];
+    throw new Error(`Unknown template placeholder: {{${key}}}`);
+  });
 }
 
 function usage(): never {
-  console.error("usage: render_report_html.ts --input <report.md> --output <report.html>");
+  console.error("usage: render_report_html.ts --input <report.md> --output <report.html> [--template <template.html>]");
   process.exit(2);
 }
 
@@ -185,14 +176,16 @@ if (import.meta.main) {
   const args = process.argv.slice(2);
   let input = "";
   let output = "";
+  let template = DEFAULT_TEMPLATE;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--input") input = args[++i] ?? "";
     else if (args[i] === "--output") output = args[++i] ?? "";
+    else if (args[i] === "--template") template = args[++i] ?? "";
   }
   if (!input || !output) usage();
 
   const markdown = readFileSync(resolve(input), "utf-8");
-  const html = renderHtml(markdown);
+  const html = renderHtml(markdown, resolve(template));
   mkdirSync(dirname(resolve(output)), { recursive: true });
   writeFileSync(resolve(output), html, "utf-8");
   console.log(`HTML position report: ${resolve(output)}`);
