@@ -1,7 +1,7 @@
 # Phase 05 — 카드 클릭 지원 시작 transaction
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ---
 
@@ -134,8 +134,31 @@ pnpm run smoke:start-application -- --dry-run
 
 ## common-pitfalls self-check
 
-- [ ] 성공 기준은 `pnpm`, `rg`, smoke command로 판정 가능하다.
-- [ ] HTML report나 legacy queue를 action source로 쓰지 않는다.
-- [ ] docs/ADR 수정은 범위 밖이다.
-- [ ] idempotency guard를 검증한다.
-- [ ] 첫 bash 블록에서 ai-nodes 루트로 이동한다.
+- [x] 성공 기준은 `pnpm`, `rg`, smoke command로 판정 가능하다.
+- [x] HTML report나 legacy queue를 action source로 쓰지 않는다.
+- [x] docs/ADR 수정은 범위 밖이다.
+- [x] idempotency guard를 검증한다.
+- [x] 첫 bash 블록에서 ai-nodes 루트로 이동한다.
+
+---
+
+## 완료 기록
+
+- 완료 시각: 2026-06-14T16:09:33Z
+- fos-career commit: `78baeb8 feat(fos-career): 지원 시작 transaction 추가`
+- 변경 요약:
+  - `/api/applications/start`와 `startApplicationForCandidate` transaction helper를 추가했다.
+  - `recommended` 후보만 내부 `지원 시작` 요청이 가능하며, `started`, `held`, `excluded`, `closed`는 다시 시작할 수 없다.
+  - 하나의 DB transaction 안에서 state를 `started`, stage를 `company_analysis`로 갱신하고 `career_outbox_jobs`에 `application.start` job을 생성한다.
+  - idempotency key `application.start:${candidateId}`로 중복 job 생성을 방지한다.
+  - `actionHistory`, `auditLogs`에 `user.start_application` 결과를 남기되 private 본문은 저장하지 않는다.
+  - recommended 카드 전체가 submit target이 되도록 보정했다.
+- 검증:
+  - `pnpm exec tsc --noEmit`
+  - `DATABASE_URL='mysql://user:pass@127.0.0.1:3306/fos_career' SESSION_SECRET='0123456789abcdef0123456789abcdef' pnpm build`
+  - `pnpm run smoke:start-application -- --dry-run`
+  - `rg -n "application.start|user.start_application|idempotencyKey|지원 시작|external|upload|login" app lib scripts`
+  - `git diff --check`
+- 비고:
+  - env 없이 `pnpm build`는 기존 app 요구사항인 `DATABASE_URL` 누락으로 실패하므로 dummy env를 주입해 build를 확인했다.
+  - `rg` 결과에 기존 auth login route와 legacy application preparation 코드가 함께 잡혔지만, 신규 start workflow payload에는 외부 제출, 업로드, 로그인 작업이 없다.
