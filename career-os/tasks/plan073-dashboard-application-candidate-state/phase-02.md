@@ -1,7 +1,15 @@
 # Phase 02 — application candidate DB schema와 migration
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
+
+완료 기록:
+
+- fos-career commit: `41707cf feat(fos-career): 지원 후보 상태 DB 스키마 추가`
+- migration: `db/migrations/0007_application_candidate_state.sql`
+- 검증: `pnpm exec tsc --noEmit`, `pnpm build`, `git diff --check`
+- DB smoke: 안전한 local `DATABASE_URL`이 없어 실제 적용 smoke는 실행하지 않았다.
+  대신 Drizzle migration 생성, SQL inspection, typecheck, build로 대체 검증했다.
 
 ---
 
