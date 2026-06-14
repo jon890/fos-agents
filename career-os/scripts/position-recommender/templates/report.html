@@ -7,19 +7,25 @@
   <style>
     :root {
       color-scheme: light;
-      --bg: #f7f8fa;
+      --bg: #f4f6f8;
       --panel: #ffffff;
       --text: #1b1f24;
-      --muted: #58606a;
-      --line: #d8dee4;
+      --muted: #5a6270;
+      --line: #dde2e8;
       --accent: #0a66c2;
+      --tier-strong-ink: #1a7f4b;
+      --tier-strong-rule: #b2dfc4;
+      --tier-stretch-ink: #8a4a00;
+      --tier-stretch-rule: #f0d0a0;
     }
+    *, *::before, *::after { box-sizing: border-box; }
     body {
       margin: 0;
       background: var(--bg);
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      line-height: 1.62;
+      font-size: 15px;
+      line-height: 1.65;
     }
     main {
       max-width: 920px;
@@ -27,51 +33,113 @@
       padding: 32px 18px 56px;
     }
     header {
-      margin-bottom: 8px;
+      margin-bottom: 18px;
     }
     header h1 {
       margin: 0 0 4px;
-      font-size: 28px;
-      line-height: 1.28;
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1.3;
+      overflow-wrap: anywhere;
     }
     .meta {
       color: var(--muted);
-      font-size: 0.88em;
-      margin: 0 0 20px;
+      font-size: 0.86em;
+      margin: 0;
     }
     article {
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 8px;
-      padding: 28px;
+      padding: 28px 32px;
     }
-    h1, h2, h3 { line-height: 1.28; letter-spacing: 0; }
-    h1 { margin: 0 0 20px; font-size: 28px; }
-    h2 { margin: 32px 0 12px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 21px; }
-    h3 { margin: 24px 0 10px; font-size: 17px; }
+    h2 {
+      margin: 32px 0 12px;
+      padding-top: 20px;
+      border-top: 1px solid var(--line);
+      font-size: 19px;
+      font-weight: 600;
+      line-height: 1.3;
+      overflow-wrap: anywhere;
+    }
+    h2.tier-strong {
+      color: var(--tier-strong-ink);
+      border-top-color: var(--tier-strong-rule);
+    }
+    h2.tier-stretch {
+      color: var(--tier-stretch-ink);
+      border-top-color: var(--tier-stretch-rule);
+    }
+    h2.tier-hold {
+      color: var(--muted);
+    }
+    h3 {
+      margin: 20px 0 8px;
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 1.3;
+      overflow-wrap: anywhere;
+    }
     p, ul, ol { margin: 10px 0; }
-    li { margin: 6px 0; }
-    a { color: var(--accent); word-break: break-all; }
+    li {
+      margin: 5px 0;
+      overflow-wrap: anywhere;
+    }
+    a {
+      color: var(--accent);
+      word-break: break-all;
+      overflow-wrap: anywhere;
+    }
     code {
       padding: 2px 5px;
-      border-radius: 5px;
+      border-radius: 4px;
       background: #eef2f6;
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 0.92em;
+      font-size: 0.91em;
     }
     pre {
       overflow-x: auto;
-      padding: 14px;
-      border-radius: 8px;
+      padding: 14px 16px;
+      border-radius: 6px;
       background: #111827;
       color: #f9fafb;
+      font-size: 0.9em;
     }
+    pre code { background: none; padding: 0; font-size: inherit; }
+    details.diagnostics {
+      margin-top: 16px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+    }
+    details.diagnostics summary {
+      padding: 10px 16px;
+      cursor: pointer;
+      font-size: 0.86em;
+      font-weight: 500;
+      color: var(--muted);
+      user-select: none;
+      list-style: none;
+    }
+    details.diagnostics summary::-webkit-details-marker { display: none; }
+    details.diagnostics summary::before { content: "\25B6\00A0"; font-size: 0.7em; }
+    details.diagnostics[open] summary::before { content: "\25BC\00A0"; }
+    .diagnostics-body {
+      padding: 4px 16px 14px;
+      font-size: 0.86em;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+    }
+    .diagnostics-body p,
+    .diagnostics-body ul,
+    .diagnostics-body ol { margin: 6px 0; }
+    .diagnostics-body li { margin: 2px 0; }
     @media (max-width: 640px) {
       main { padding: 16px 10px 36px; }
-      article { padding: 18px; }
-      header h1 { font-size: 23px; }
-      h1 { font-size: 23px; }
-      h2 { font-size: 19px; }
+      article { padding: 18px 16px; }
+      header h1 { font-size: 20px; }
+      h2 { font-size: 17px; }
+      h3 { font-size: 15px; }
     }
   </style>
 </head>
