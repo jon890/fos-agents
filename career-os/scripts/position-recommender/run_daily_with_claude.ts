@@ -2,6 +2,10 @@
 import { existsSync, copyFileSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { spawn, spawnSync } from "node:child_process";
+import {
+  buildStructuredRecommendationRun,
+  writeStructuredRecommendationRun,
+} from "./structured_recommendation_items";
 
 const DEFAULT_CONTEXT =
   [
@@ -379,8 +383,10 @@ async function main(): Promise<void> {
   const reportDate = process.env.REPORT_DATE ?? kstDate();
   const report = `${root}/data/reports/daily/${reportDate}/position-recommendation/report.md`;
   const reportHtml = `${root}/data/reports/daily/${reportDate}/position-recommendation/report.html`;
+  const reportItems = `${root}/data/reports/daily/${reportDate}/position-recommendation/items.json`;
   const runtime = `${root}/data/runtime/position-recommendation.md`;
   const runtimeHtml = `${root}/data/runtime/position-recommendation.html`;
+  const runtimeItems = `${root}/data/runtime/position-recommendation-items.json`;
   const livePostings = `${root}/data/runtime/live-position-postings.md`;
   const notifyScript = `${root}/../_shared/lib/notify_discord.ts`;
   const context = argv.length > 0 ? argv.join(" ") : DEFAULT_CONTEXT;
@@ -459,6 +465,19 @@ async function main(): Promise<void> {
       runtimeHtml,
     ],
     root
+  );
+
+  const structuredRun = buildStructuredRecommendationRun({
+    reportDate,
+    sourceSnapshotPath: livePostings,
+    markdownReportPath: report,
+    htmlReportPath: reportHtml,
+    candidates,
+  });
+  writeStructuredRecommendationRun(structuredRun, reportItems);
+  writeStructuredRecommendationRun(
+    { ...structuredRun, markdownReportPath: runtime, htmlReportPath: runtimeHtml },
+    runtimeItems
   );
 
   const queueOut = `${root}/data/runtime/application-agent/frontdoor-queue.jsonl`;
