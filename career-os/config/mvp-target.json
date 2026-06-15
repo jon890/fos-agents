@@ -7,17 +7,9 @@
     "position_slug": "digital-channel-backend",
     "data_root": "private/cj-foodville/digital-channel-backend",
     "interview_date": "2026-06-15",
-    "notes": "현재 집중 중인 타깃. 1차 면접일은 2026-06-15로 확정.",
+    "notes": "CJ푸드빌 1차 면접은 2026-06-15에 종료. 1차 면접 준비 모드는 종료했고, 후속 단계 여부 대기 중.",
     "interview": {
-      "first_round": {
-        "sites": [
-          {"key": "vips", "url": "https://www.ivips.co.kr/", "label": "VIPS"},
-          {"key": "cheiljemyunso-menu", "url": "https://www.cheiljemyunso.co.kr/menu?categoryIdx=4", "label": "제일제면소 메뉴"},
-          {"key": "cjfoodville-brand", "url": "https://m.cjfoodville.co.kr:7443/brand/introduce.asp", "label": "CJ푸드빌 브랜드 소개"}
-        ],
-        "source_dir": "cj-foodville-first-round-sites",
-        "report_slug": "cj-foodville-first-round"
-      },
+      "first_round": null,
       "final_round": null,
       "offer_chat": null
     }
