@@ -1,6 +1,6 @@
 ---
 name: apartment-daily-report
-description: 아파트 매물 일일 시세 리포트를 자동 생성하는 apartment 워크스페이스 skill. 타깃 단지(현재 엘지원앙아파트)의 네이버부동산·호갱노노·KB랜드 수집 → 정규화 → Claude 합성까지 파이프라인 전체를 실행. "일일 리포트 실행해줘", "오늘 아파트 시세 확인해줘", "매물 현황 수집해줘", "아파트 보고서 돌려줘" 같은 자연어 요청 또는 `/apartment-daily-report` 슬래시.
+description: 아파트 매물 일일 시세 리포트를 생성하는 apartment 워크스페이스 skill. "일일 리포트 실행해줘", "오늘 아파트 시세 확인해줘", "매물 현황 수집해줘", "아파트 보고서 돌려줘", `/apartment-daily-report`, cron 08:00 Asia/Seoul처럼 타깃 단지의 네이버부동산·호갱노노·KB랜드 수집, 정규화, report.md 합성이 필요할 때 사용. 가격·수량을 발명하지 않고 검증된 사실과 추론을 구분한다.
 ---
 
 # Apartment Daily Report
@@ -8,11 +8,11 @@ description: 아파트 매물 일일 시세 리포트를 자동 생성하는 apa
 수집 → 정규화 → 합성 3단계 자동화 파이프라인.
 소스별 데이터 품질이 부분적이므로 결과는 신중한 참고 자료로 취급한다 — 완벽한 시장 정보 피드가 아니다.
 
-## 언제 사용하는가
+## 호출 후 입력 해석
 
-- 사용자가 `/apartment-daily-report` 슬래시 호출
-- 자연어: "일일 리포트 실행해줘", "오늘 아파트 시세 확인해줘", "매물 현황 수집해줘", "아파트 보고서 돌려줘"
-- cron 스케줄(매일 08:00 Asia/Seoul) 진입 시
+- 날짜 인자가 없으면 오늘 날짜(`YYYY-MM-DD`)를 사용한다.
+- 타깃 단지는 `apartment/config/` 또는 `.env`에서 읽는다.
+- cron 진입이면 마지막 출력이 Discord에 전달될 수 있음을 고려해 짧은 완료 요약을 남긴다.
 
 ## 범위
 
@@ -26,7 +26,7 @@ description: 아파트 매물 일일 시세 리포트를 자동 생성하는 apa
 
 ## 워크플로
 
-Claude가 직접 수행하는 5단계 파이프라인.
+현재 에이전트가 직접 수행하는 5단계 파이프라인.
 산출물 경로: `data/YYYY-MM-DD/{raw-search.json, summary.json, report.md}` (cwd: `~/ai-nodes/apartment`).
 
 ### 1단계: 타깃 메타 로드
@@ -58,7 +58,7 @@ bun scripts/apartment-daily-report/normalize_results.ts <raw-search.json 경로>
 
 ### 4단계: 합성 — report.md 직접 Write
 
-`summary.json`을 Read한 뒤 Claude가 `data/YYYY-MM-DD/report.md`를 **직접 Write**한다.
+`summary.json`을 읽은 뒤 현재 에이전트가 `data/YYYY-MM-DD/report.md`를 **직접 작성**한다.
 외부 subprocess로 자신을 재호출하지 않는다 (ADR-010 폐기 패턴).
 
 리포트는 다음 7개 섹션을 포함한 간결한 마크다운으로 작성한다:

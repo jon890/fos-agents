@@ -1,12 +1,12 @@
 ---
 name: workspace-audit
-description: 현재 Claude 세션이 ~/ai-nodes 워크스페이스를 대화형으로 감사한다. 고아 config·dead 스크립트·깨진 심링크·doc-코드 불일치·오래된 실행을 찾아내고, analyst 서브에이전트로 교차 발견 패턴을 분석한 뒤 사용자와 대화로 결과를 정리한다. `/workspace-audit`으로 호출. 백그라운드 claude CLI 호출 없음 — 현재 세션이 모든 판단을 주도하고, oh-my-claudecode:analyst 서브에이전트는 Phase 2 패턴 분석에만 사용.
+description: ai-nodes 워크스페이스를 대화형으로 감사하는 skill. `/workspace-audit`, `/workspace-audit <workspace>`, `/workspace-audit --all`, "워크스페이스 감사", "고아 config 찾아줘", "dead script 점검", "깨진 심링크 확인", "doc-code 불일치", "오래된 실행 확인"처럼 고아 config, dead 스크립트, 깨진 심링크, 문서-코드 불일치, 오래된 실행을 찾고 사용자와 결과를 정리해야 할 때 사용. 백그라운드 claude CLI를 호출하지 않고 현재 세션이 판단한다.
 ---
 
 # 워크스페이스 감사
 
 ai-nodes 아래 각 AI 에이전트 워크스페이스가 시간이 지나면서 코드가 썩고 있는지 점검한다.
-결정적인 정적 분석은 파이썬 스크립트가 즉시 돌고, 휴먼 판단이 필요한 부분은 현재 Claude 세션이 사용자와 대화하면서 진행한다.
+결정적인 정적 분석은 파이썬 스크립트가 즉시 돌고, 사람 판단이 필요한 부분은 현재 세션이 사용자와 대화하면서 진행한다.
 
 다른 워크스페이스 스킬들(apartment-daily-report, career-os run_now.sh 등)은 openclaw cron → connected model → `claude --print` 구조라 `track_task.sh` 래핑이 필요하다.
 이 스킬은 사용자가 현재 세션에서 직접 호출하므로 그런 래핑은 **하지 않는다**.
@@ -17,7 +17,7 @@ ai-nodes 아래 각 AI 에이전트 워크스페이스가 시간이 지나면서
 - `/workspace-audit <workspace>` — 지정 워크스페이스 즉시 분석.
 - `/workspace-audit --all` — 감지된 모든 워크스페이스 순차 분석 후 통합 요약.
 
-## 워크플로 (Claude가 따라야 할 순서)
+## 워크플로 (현재 에이전트가 따라야 할 순서)
 
 ### 1. 대상 결정
 - 인자가 있으면 그대로 사용.

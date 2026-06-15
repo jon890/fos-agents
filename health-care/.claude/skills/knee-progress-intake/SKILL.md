@@ -1,6 +1,6 @@
 ---
 name: knee-progress-intake
-description: 사용자가 무릎 증상·붓기·불안정감·가동범위(ROM, range of motion)·보행/계단·수행한 운동·다음날 반응을 보고하고 health-care private 컨텍스트 갱신을 원할 때 사용. "무릎 오늘 상태 기록", "증상 보고", "오늘 운동 기록해줘", "무릎 경과 입력" 또는 /knee-progress-intake 슬래시 호출. 진단·처방 금지, 사용자 보고 범위만 기록.
+description: 사용자의 무릎 경과 보고를 health-care private 데이터로 구조화하는 skill. "무릎 오늘 상태 기록", "증상 보고", "오늘 운동 기록해줘", "무릎 경과 입력", `/knee-progress-intake`처럼 증상, 붓기, 불안정감, 가동범위(ROM), 보행/계단, 수행 운동, 다음날 반응을 progress-log.jsonl과 current-context.md에 반영해야 할 때 사용. 진단·처방을 하지 않고 사용자 보고 범위만 기록한다.
 ---
 
 # knee-progress-intake
