@@ -62,6 +62,7 @@ export type StructuredRecommendationRun = {
   reportDate: string;
   generatedAt: string;
   sourceSnapshotPath: string;
+  collectionRunId: string | null;
   markdownReportPath: string;
   htmlReportPath: string;
   itemCount: number;
@@ -156,6 +157,7 @@ function riskFlagsFromCheck(value: string): string[] {
 export function buildStructuredRecommendationRun(args: {
   reportDate: string;
   sourceSnapshotPath: string;
+  collectionRunId?: string | null;
   markdownReportPath: string;
   htmlReportPath: string;
   candidates: ParsedRecommendationCandidate[];
@@ -210,6 +212,7 @@ export function buildStructuredRecommendationRun(args: {
     reportDate: args.reportDate,
     generatedAt,
     sourceSnapshotPath: args.sourceSnapshotPath,
+    collectionRunId: args.collectionRunId ?? null,
     markdownReportPath: args.markdownReportPath,
     htmlReportPath: args.htmlReportPath,
     itemCount: items.length,
