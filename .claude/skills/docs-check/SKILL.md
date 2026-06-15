@@ -37,7 +37,7 @@ ADR은 "코드만 보고는 알 수 없는 WHY"여야 한다. 자명한 결정·
 # scope: career-os | ai-nodes | all (default: all)
 ls career-os/docs/*.md ai-nodes/docs/*.md \
    career-os/.claude/skills/*/SKILL.md \
-   skills/*/SKILL.md 2>/dev/null
+   .claude/skills/*/SKILL.md 2>/dev/null
 ```
 
 ### 1. 자동화 검사 5개 (bash 선행 실행)
@@ -108,7 +108,7 @@ done
 ```bash
 # 금지 용어: § 기호 / 옛 subprocess 지시문 / 매트릭스
 for f in career-os/docs/*.md ai-nodes/docs/*.md \
-         career-os/.claude/skills/*/SKILL.md skills/*/SKILL.md; do
+         career-os/.claude/skills/*/SKILL.md .claude/skills/*/SKILL.md; do
   [ -f "$f" ] || continue
   grep -n "§" "$f" && echo "PROHIBITED: § in $f"
   # 옛 subprocess 지시문 (common-pitfalls 6-7): 문자열 변수 분리로 grep 자기 오탐 방지
