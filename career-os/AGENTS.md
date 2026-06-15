@@ -167,6 +167,9 @@ career-os는 수집, 리포트 생성, skill 실행, private 산출물 생성을
 - 대시보드 자체의 인증, 세션, 감사 로그, 지원 후보 상태, 목적별 background outbox는 `fos-career` 쪽 책임으로 둔다.
 - 범용 채팅 UI/API는 ADR-064로 제거됐으므로 새 작업에서 되살리지 않는다.
 - 배포, Docker, MySQL, reverse proxy 세부 구현은 `fos-career` repo 또는 관련 plan/docs에 둔다.
+- fos-career DB schema나 migration을 바꾸는 career-os task는 migration 파일 생성만으로 완료 처리하지 않는다.
+  실제 대상 DB 또는 명시된 smoke DB에 적용하고, 신규 table/index/seed, `__drizzle_migrations` 최신 hash, `drizzle-kit migrate` 재실행 성공, 실제 DB ingest/helper/worker dry-run 중 하나 이상을 확인해야 한다.
+  DB 연결을 할 수 없으면 fixture/dry-run으로 대체 완료하지 말고 `PHASE_BLOCKED` 또는 운영 DB 적용 보류로 기록한다.
 
 ## 진실 출처
 
