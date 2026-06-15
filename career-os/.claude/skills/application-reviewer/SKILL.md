@@ -18,27 +18,18 @@ application-package-writer가 생성한 공고별 지원 패키지가 실제 경
 실제 지원서 제출·로그인·채용 사이트 접속 자동화 안 함 — 사용자 승인 필요 항목으로만 안내.
 `sources/fos-study/`에 아무것도 쓰지 않음.
 
-## 생성 산출물 품질 계약
+## 출력 정책
 
+먼저 `references/output-policy.md`를 읽고 비공개 산출물 정책을 따른다.
 review.md는 내부 검토 문서다.
-사용자가 바로 수정하거나 승인 보류를 판단할 수 있게 결론과 행동을 앞에 둔다.
+첫 10줄 안에 `pass/revise/blocked` 판정과 가장 중요한 권장 행동을 둔다.
 
-- 한국어 우선 섹션 제목과 자연스러운 한국어 문장을 사용한다.
-  `pass`, `revise`, `blocked`, `Ledger Update Suggestion` 같은 판정·상태 식별자는 유지한다.
-- 첫 10줄 안에 결론을 둔다.
-  `pass/revise/blocked` 판정과 가장 중요한 권장 행동이 바로 보여야 한다.
-- 내부 분석에는 근거 경로를 유지한다.
-  posting, fit-analysis, application-package, ledger, riskFlag, 근거 파일 경로를 reviewer 판단 근거로 남긴다.
-- 제출용 문장에 대한 지적은 제출용 문장 자체와 내부 근거를 분리해서 쓴다.
-  제출용으로 옮길 수 있는 수정 문구에는 내부 파일 경로, plan 번호, commit hash, runner 상태를 넣지 않는다.
-- 이력서 MVP 산출물 체인은 `Markdown 이력서 초안 -> design.md를 적용한 HTML 이력서 -> HTML을 PDF로 변환한 완성 PDF 이력서`로 검토한다.
-  HTML 이력서는 model이 `design.md`를 적용했다는 전제를 확인하고, PDF는 사용자가 첨부할 수 있는 최종 산출물로 본다.
-  PDF 생성은 제출 자동화가 아니며, 업로드·전송·제출 버튼 클릭 자동화는 이번 MVP 범위 밖이다.
-- `needs_evidence`는 사용자에게 raw label로 남기지 않는다.
-  발견 항목은 모두 `보강 필요 / 선택지 / 권장 행동` 구조로 바꾼다.
-  이 구조는 사용자가 증거를 찾을지, 표현을 낮출지, 진행을 멈출지 바로 고를 수 있어야 한다.
-- 실제 제출, 로그인, 채용 사이트 입력, 공개 발행, candidate-profile 수정은 하지 않는다.
-  모두 `사용자 승인 필요` 항목으로만 안내한다.
+posting, fit-analysis, application-package, ledger, riskFlag, 근거 파일 경로는 reviewer 판단 근거로 남긴다.
+제출용 문장에 대한 지적은 제출용 문장 자체와 내부 근거를 분리해서 쓴다.
+제출용으로 옮길 수 있는 수정 문구에는 내부 파일 경로, plan 번호, commit hash, runner 상태를 넣지 않는다.
+
+이력서 MVP 산출물 체인은 `Markdown 이력서 초안 -> design.md를 적용한 HTML 이력서 -> HTML을 PDF로 변환한 완성 PDF 이력서`로 검토한다.
+PDF 생성은 제출 자동화가 아니며, 업로드·전송·제출 버튼 클릭 자동화는 이번 MVP 범위 밖이다.
 
 ## Inputs
 

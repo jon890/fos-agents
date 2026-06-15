@@ -1,6 +1,6 @@
 ---
 name: interview-asset-writer
-description: 후보자 이력 기반 면접 자산 마크다운을 생성하고 sources/fos-study에 자동 발행. 두 형식 흡수 — (1) Q&A 질문 은행 (5 main Q + follow-up + answer points + 1분 답변 + 압박 방어), (2) 시니어 백엔드 마스터 플레이북 (자기소개 + 커리어 narrative + 기술 의사결정 + 역질문 + 최종 체크리스트). "질문 은행" / "qbank" / "experience-..." / "마스터 플레이북" / "master" / "playbook" 키워드 또는 자연어 요청 시 사용. 후보자 이력서·task 노트 기반 면접 자산이 필요하면 무조건 이 skill을 호출. 일반 기술 토픽 학습 문서는 study-pack-writer가 담당 — 본 skill은 *후보자 이력 중심*.
+description: 후보자 이력 기반 면접 자산 마크다운 초안을 생성하고, 사용자가 명시적으로 공개 발행을 승인한 경우에만 sources/fos-study commit/push까지 진행하는 career-os skill. Q&A 질문 은행, experience qbank, 마스터 플레이북, 자기소개 플레이북, 후보자 이력서·task 노트 기반 면접 자료 요청에 사용. 일반 기술 토픽 학습 문서는 study-pack-writer가 담당.
 ---
 
 # Interview Asset Writer
@@ -10,30 +10,20 @@ description: 후보자 이력 기반 면접 자산 마크다운을 생성하고 
 - **Q&A 질문 은행** (옛 experience-question-bank-writer): 5 main Q + 5 follow-up + answer points + 1분 답변 + 압박 방어
 - **마스터 플레이북** (옛 interview-master-writer): 자기소개 / 커리어 narrative / 기술 의사결정 스타일 / 역질문 / 최종 체크리스트
 
-## 생성 산출물 품질 계약
+## 출력 정책
 
-interview asset은 후보자 이력 기반 자료지만 fos-study 공개 발행 경로를 가진다.
-그래서 내부 분석과 공개 가능한 면접 준비 문구를 반드시 분리한다.
-
-- 한국어 우선 섹션 제목과 자연스러운 한국어 문장을 사용한다.
-  영어 label은 `Q&A`, `follow-up`, 코드 식별자처럼 필요한 경우에만 유지한다.
-- 첫 10줄 안에 문서 목적, 결론, 또는 권장 행동 중 하나를 둔다.
-- 내부 분석과 공개용 문구를 분리한다.
-  후보자 private 평가, 특정 회사 지원 전략, reviewer 판단은 공개 본문에 복사하지 않는다.
-- 후보자 이력 근거는 공개 가능하도록 일반화한다.
-  내부 URL, 비공개 시스템명, 회사별 지원 맥락은 제거하거나 비공개 career-os note로 분리한다.
-- 근거가 부족한 항목은 `needs_evidence` raw label로 남기지 않는다.
-  발견한 순간 `보강 필요 / 선택지 / 권장 행동` 구조로 바꾼다.
-- 공개 fos-study 발행은 사용자 승인 전에는 실행하지 않는다.
-  사용자의 명시적 `/interview-asset-writer` 호출이나 "fos-study에 면접 자료로 올려줘" 요청은 해당 주제의 발행 승인으로 본다.
-  background worker가 audit이나 초안만 만드는 경우에는 publish하지 않고 `사용자 승인 필요`로 멈춘다.
+먼저 `references/output-policy.md`를 읽고 공개 산출물 정책을 따른다.
+interview asset은 후보자 이력 기반 자료지만 `fos-study` 공개 발행 경로를 가진다.
+후보자 private 평가, 특정 회사 지원 전략, reviewer 판단은 공개 본문에 복사하지 않는다.
+후보자 이력 근거는 공개 가능하도록 일반화하고, 내부 URL과 비공개 시스템명은 제거하거나 비공개 career-os note로 분리한다.
+공개 발행은 사용자 명시 승인 후에만 수행한다.
 
 ## When to use
 
 - 슬래시 호출: `/interview-asset-writer <topic>`
 - 자연어 요청 (Q&A): "AI 서비스팀 면접 질문 은행 만들어줘", "slot 팀 experience qbank 정리해줘"
 - 자연어 요청 (master): "시니어 백엔드 마스터 플레이북 만들어줘", "면접 master playbook 갱신"
-- fos-study repo에 즉시 publish할 *후보자 이력 기반 면접 자산*이 필요한 모든 경우
+- 사용자가 명시적으로 발행까지 승인한 후보자 이력 기반 면접 자산 작업
 - "면접 자료 만들어줘", "경험 기반 질문 정리해줘", "자기소개 플레이북 만들어줘", "면접 준비 자산 만들어줘"
 
 일반 기술 토픽 학습 문서는 study-pack-writer로 라우팅 (본 skill 호출 X).
@@ -76,7 +66,7 @@ Inputs 1~5 모두 읽는다. `inputFiles` 명시되면 task/resume 추가로 읽
 ### 4. 마크다운 작성
 
 공통 구조:
-- 첫 줄: `# <topic-title>` (단일 `#`, `## ` 시작 금지, `# 초안:` / `# Draft:` 금지)
+- 첫 줄: `# [초안] <topic-title>` (단일 `#`, `## ` 시작 금지, `# 초안:` / `# Draft:` 금지)
 - ≥80줄
 - 모든 ` ``` ` 코드 펜스에 언어 명시
 
@@ -139,7 +129,13 @@ Inputs 1~5 모두 읽는다. `inputFiles` 명시되면 task/resume 추가로 읽
 
 본 self-check가 옛 JSON schema 검증을 대체. 객관적 기준(첫 줄·줄 수·펜스·섹션 헤더) self-check가 신뢰 가능. 3회 cap은 무한 루프 차단.
 
-### 6. Publish (셸 명령)
+### 6. Publish (사용자 승인 후에만)
+
+사용자가 공개 발행과 commit/push를 명시 승인하지 않았으면 여기서 멈춘다.
+최종 응답에는 생성·수정한 초안 경로, self-check 결과, 발행 보류 사유를 적는다.
+`[초안]` 제목은 유지한다.
+
+사용자가 명시 승인한 경우에만 다음 셸 명령을 실행한다.
 
 ```bash
 cd career-os/sources/fos-study
@@ -167,7 +163,7 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 | topic 형식 판단 불가 + 자연어 키워드 없음 | stderr + 사용자 확인 요청 |
 | candidate-profile / task / resume 필수 입력 부재 | stderr + exit 1 |
 | self-check 3회 실패 | stderr + exit 1, 실패 항목 명시 |
-| git push 실패 (권한/충돌) | stderr + exit 1 |
+| 승인된 publish의 git push 실패 (권한/충돌) | stderr + exit 1 |
 | Discord notify 실패 | stderr warn, skill success |
 
 ## Why this design

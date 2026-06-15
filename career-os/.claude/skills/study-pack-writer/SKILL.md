@@ -1,37 +1,26 @@
 ---
 name: study-pack-writer
-description: backend/AI/infra 기술 학습용 study pack 마크다운을 생성하고 sources/fos-study 저장소에 자동 발행. /study-pack-writer <topic-key-or-자연어> 슬래시 명령 또는 "<주제> study pack 만들어줘" / "<주제> 학습 정리해줘" / "<주제>에 대한 스터디팩" 같은 자연어 요청 시 무조건 사용. backend·db·infrastructure·언어·아키텍처 주제로 fos-study에 즉시 commit/push해야 하는 작업이면 이 skill을 호출.
+description: backend/AI/infra 기술 학습용 study pack 마크다운 초안을 생성하고, 사용자가 명시적으로 공개 발행을 승인한 경우에만 sources/fos-study commit/push까지 진행하는 career-os skill. /study-pack-writer <topic-key-or-자연어>, "<주제> study pack 만들어줘", "<주제> 학습 정리해줘", "fos-study에 <주제> 초안 작성" 같은 요청에 사용. 후보자 이력 기반 면접 자산은 interview-asset-writer로 라우팅.
 ---
 
 # Study Pack Writer
 
 backend/AI/infra 기술 학습용 마크다운(study pack) 생성·검증·발행 workflow.
 
-## 생성 산출물 품질 계약
+## 출력 정책
 
-study pack은 공개 fos-study 산출물이므로 기술 학습 문서로만 읽혀야 한다.
+먼저 `references/output-policy.md`를 읽고 공개 산출물 정책을 따른다.
+study pack은 공개 `fos-study` 산출물이므로 기술 학습 문서로만 읽혀야 한다.
 지원 전략, 후보자 private 맥락, 내부 reviewer 판단은 공개 본문에 섞지 않는다.
-
-- 한국어 우선 섹션 제목과 자연스러운 한국어 문장을 사용한다.
-  영어 label은 코드 식별자, 공식 기술명, 경로, 상태값처럼 필요한 경우에만 유지한다.
-- 첫 10줄 안에 학습 목표, 결론, 또는 권장 행동 중 하나를 둔다.
-  공개 글의 자연스러운 흐름을 해치지 않는 범위에서 독자가 바로 방향을 알 수 있게 한다.
-- 내부 분석과 공개용 문구를 분리한다.
-  후보자 이력, 회사별 지원 의도, 면접 전략은 공개 study pack 본문에 복사하지 않는다.
-- 근거가 부족한 항목은 `needs_evidence` raw label로 남기지 않는다.
-  발견한 순간 `보강 필요 / 선택지 / 권장 행동` 구조로 바꾼다.
-  공개 본문에 넣기 어렵다면 비공개 career-os note로 분리하거나 작성하지 않는다.
-- 공개 fos-study 발행은 사용자 승인 전에는 실행하지 않는다.
-  사용자의 명시적 `/study-pack-writer` 호출이나 "fos-study에 올려줘" 요청은 해당 주제의 발행 승인으로 본다.
-  Discord 추천 버튼의 `career.study-pack.create:*`는 **초안 생성 요청**일 뿐이며 publish 승인이나 `[초안]` 제거 승인이 아니다.
-  cron, recommender, background worker가 추천만 만든 경우에는 publish하지 않고 `사용자 승인 필요`로 멈춘다.
+공개 발행과 `[초안]` 제거는 사용자 명시 승인 후에만 수행한다.
+Discord 추천 버튼의 `career.study-pack.create:*`는 초안 생성 요청일 뿐 publish 승인이 아니다.
 
 ## When to use
 
 - 사용자가 `/study-pack-writer <topic>` 슬래시 호출
 - 자연어 요청: "MySQL 인덱스 study pack 만들어줘", "Redis 캐시 전략 학습 자료 정리해줘"
-- fos-study repo에 즉시 publish할 study pack이 필요한 모든 경우
-- "fos-study에 <주제> 올려줘", "<주제> 공부 자료 만들어줘", "<주제> 학습 문서 작성해줘"
+- 사용자가 명시적으로 발행까지 승인한 공개 study pack 작업
+- "fos-study에 <주제> 초안 작성해줘", "<주제> 공부 자료 만들어줘", "<주제> 학습 문서 작성해줘"
 
 후보자 이력·task 기반 Q&A 질문 은행·플레이북은 `/interview-asset-writer` 로 라우팅 (본 skill은 기술 토픽 학습 문서 전담).
 
@@ -137,7 +126,13 @@ deterministic dedupe도 현재 에이전트 의미 판정도 결정이 불가능
 
 검증 명세를 본 skill 안에 박는 이유: 객관적(첫 줄·줄 수·펜스 언어) 기준은 self-check가 신뢰 가능. 3회 cap은 무한 루프 차단.
 
-### 6. Publish (셸 명령)
+### 6. Publish (사용자 승인 후에만)
+
+사용자가 공개 발행과 commit/push를 명시 승인하지 않았으면 여기서 멈춘다.
+최종 응답에는 생성·수정한 초안 경로, self-check 결과, 발행 보류 사유를 적는다.
+`[초안]` 제목은 유지한다.
+
+사용자가 명시 승인한 경우에만 다음 셸 명령을 실행한다.
 
 ```bash
 cd career-os/sources/fos-study
@@ -173,7 +168,7 @@ bun --env-file=career-os/.env ../_shared/lib/notify_discord.ts \
 | topic-key 매칭 실패 + 자연어 해석 불가 | stderr + exit 1, 사용자에게 명시적 topic 요청 |
 | sources/fos-study 없음 or git pull 실패 | stderr + exit 1, 환경 설정 안내 |
 | self-check 3회 실패 | stderr + exit 1, 실패 항목 명시 |
-| git push 실패 (권한/충돌) | stderr + exit 1, git stderr 그대로 |
+| 승인된 publish의 git push 실패 (권한/충돌) | stderr + exit 1, git stderr 그대로 |
 | Discord notify 실패 | stderr warn, skill은 success |
 | duplicate guard skip / needs-user-confirmation | stderr + exit 1, matched 문서 경로 + 사유 명시 |
 | duplicate guard update-existing 진입 | 새 파일 생성 금지, 기존 matched 문서 patch 모드로 전환 |
@@ -182,7 +177,7 @@ bun --env-file=career-os/.env ../_shared/lib/notify_discord.ts \
 
 - **Self-check 본 skill 안에 박는 이유**: 옛 외부 validator를 현재 에이전트 자체 검증으로. SKILL.md 단일 진실 출처.
 - **재작성 ≤3회**: 무한 루프 차단. 3회로도 통과 못 하면 본질 문제 (topic 모호, 입력 부족) — 사용자 개입 필요.
-- **Publish + notify 통합**: 기본은 `scripts/study-pack-writer/run_with_discord_notify.ts` wrapper가 시작/완료/에러 알림을 담당한다. agent skill의 완료 알림은 보조 경로로 유지한다.
+- **Publish + notify 분리**: 기본은 초안 생성 후 사용자 승인 전에는 publish하지 않는다. 승인된 publish에서는 `scripts/study-pack-writer/run_with_discord_notify.ts` wrapper가 시작/완료/에러 알림을 담당한다. agent skill의 완료 알림은 보조 경로로 유지한다.
 - **Duplicate guard (ADR-033)**: recommender·writer가 같은 4 decision schema를 공유. 사용자가 직접 호출한 주제에도 동일 게이트 — fos-study 진실원과 drift 없음.
 
 ## References

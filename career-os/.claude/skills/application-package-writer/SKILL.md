@@ -18,29 +18,15 @@ description: 공고 1개와 후보자 프로필을 입력으로 받아 공고별
 fos-study publish 안 함 — 비공개 career-os 산출물만 생성.
 실제 지원서 제출·로그인·채용 사이트 입력 자동화 안 함 — 사용자 승인 필요 단계로만 안내.
 
-## 생성 산출물 품질 계약
+## 출력 정책
 
+먼저 `references/output-policy.md`를 읽고 비공개 산출물 정책을 따른다.
 지원 패키지는 내부 분석 문서와 제출용 문구 후보가 섞이기 쉬우므로 경계를 먼저 고정한다.
+fit/gap 판단, reviewer용 리스크, 근거 파일 경로는 내부 분석 섹션에 둔다.
+이력서 bullet·지원동기처럼 제출용으로 옮길 수 있는 문장에는 내부 경로, plan 번호, commit hash, runner 상태를 넣지 않는다.
 
-- 한국어 우선 섹션 제목과 자연스러운 한국어 문장을 사용한다.
-  `Role-Fit`, `Ledger Update Suggestion`, 상태값처럼 기존 contract 식별자는 필요한 경우 유지한다.
-- 각 문서 첫 10줄 안에 결론을 둔다.
-  `fit-analysis.md`는 지원 적합도 결론, `application-package.md`는 제출 전 권장 행동이나 핵심 포지셔닝 결론을 먼저 쓴다.
-  `resume-draft.md`, `cover-letter.md`, `submission-checklist.md`도 사용자가 바로 검토할 핵심 결론이나 제출 전 행동을 앞에 둔다.
-- 내부 분석과 제출용 문구를 분리한다.
-  fit/gap 판단, reviewer용 리스크, 근거 파일 경로는 내부 분석 섹션에 둔다.
-  이력서 bullet·지원동기처럼 제출용으로 옮길 수 있는 문장에는 내부 파일 경로, plan 번호, commit hash, runner 상태 같은 내부 맥락을 넣지 않는다.
-- 내부 분석에는 근거 경로를 유지한다.
-  `task/...`, `resume/...`, `data/applications/...` 같은 경로는 `강점 근거`, `Gap 분석`, `근거 파일 참조`, `Ledger Update Suggestion` 등 내부 섹션에만 둔다.
-- 이력서 MVP 산출물 체인은 `Markdown 이력서 초안 -> design.md를 적용한 HTML 이력서 -> HTML을 PDF로 변환한 완성 PDF 이력서`로 다룬다.
-  HTML 이력서 생성 단계에서는 model이 `design.md`의 레이아웃·타이포그래피·섹션 규칙을 적용해야 한다.
-  PDF는 외부 제출 자동화가 아니라 사용자가 첨부할 수 있는 최종 산출물이다.
-  채용 사이트 업로드, 전송, 제출 버튼 클릭 자동화는 이번 MVP 범위 밖이며 별도 plan과 명시적 승인이 필요하다.
-- 근거 부족은 `needs_evidence` raw label로 남기지 않는다.
-  발견한 순간 사용자 행동으로 이어지는 `보강 필요 / 선택지 / 권장 행동` 구조로 바꾼다.
-  예: `보강 필요: 정량 성과 근거가 없음 / 선택지: 수치 없는 표현으로 낮추기 또는 근거 문서 추가 확인 / 권장 행동: 제출용 bullet에서는 수치 삭제`.
-- 외부 제출, 로그인, 채용 사이트 입력, 공개 발행, candidate-profile 수정은 실행하지 않는다.
-  필요한 경우 `사용자 승인 필요` 항목으로만 안내한다.
+이력서 MVP 산출물 체인은 `Markdown 이력서 초안 -> design.md를 적용한 HTML 이력서 -> HTML을 PDF로 변환한 완성 PDF 이력서`로 다룬다.
+채용 사이트 업로드, 전송, 제출 버튼 클릭 자동화는 이번 MVP 범위 밖이며 별도 plan과 명시적 승인이 필요하다.
 
 ## Inputs
 
