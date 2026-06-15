@@ -64,7 +64,7 @@ MVP 원칙:
 - 공개 가능한 순수 기술 학습 자료만 기존 `study-pack-writer` 정책으로 `sources/fos-study/`에 발행한다.
 
 첫 fixture는 TossPlace `Applied AI Engineer` 공고다.
-이 공고는 Toss 계열 쿨다운을 고려해 실제 지원 목적이 아니라 MVP 검증용 샘플로 사용한다.
+이 공고는 이미 ledger에 있는 후보이므로 중복 승격 방지 검증 샘플로 사용한다.
 
 ### 완료 기반: application-flow-agent runtime (plan031)
 

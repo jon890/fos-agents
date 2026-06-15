@@ -507,7 +507,7 @@ plan054는 fos-career 내부 read-only projection을 추가한다.
   },
   "nextAction": "지원 패키지 초안을 만들고 사용자 검토 대기로 전환한다.",
   "blockers": ["review_missing"],
-  "riskFlags": ["toss_group_cooldown"],
+  "riskFlags": ["existing_ledger_record"],
   "materialPaths": {
     "postingPath": "data/applications/tossplace/applied-ai-engineer/posting.md",
     "fitAnalysisPath": "data/applications/tossplace/applied-ai-engineer/fit-analysis.md",
@@ -793,7 +793,7 @@ data/applications/tossplace/applied-ai-engineer/
   "userDecision": "pending",
   "revisionCount": 0,
   "maxRevisionCount": 3,
-  "riskFlags": ["toss_group_cooldown"],
+  "riskFlags": ["existing_ledger_record"],
   "nextActions": ["fit_analysis"],
   "notes": "MVP fixture only; not an actual submission target."
 }
