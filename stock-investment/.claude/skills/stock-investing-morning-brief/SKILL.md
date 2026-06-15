@@ -1,6 +1,6 @@
 ---
 name: stock-investing-morning-brief
-description: stock-investment 워크스페이스에서 Circle Internet Group (CRCL), Bitcoin, Google/Alphabet (GOOGL/GOOG), Nasdaq/QQQ, AI 반도체/인프라를 대상으로 한국어 모닝 브리핑을 생성한다. "모닝 브리핑 실행해줘", "오늘 주식 체크해줘", "아침 시장 브리프", "주식 모닝 브리프 돌려줘", "/stock-investing-morning-brief" 슬래시 또는 cron 08:00 Asia/Seoul 트리거.
+description: stock-investment 워크스페이스에서 Circle Internet Group(CRCL), Bitcoin, Google/Alphabet(GOOGL/GOOG), Nasdaq/QQQ, AI 반도체/인프라 한국어 모닝 브리핑을 생성하는 skill. "모닝 브리핑 실행해줘", "오늘 주식 체크해줘", "아침 시장 브리프", "주식 모닝 브리프 돌려줘", `/stock-investing-morning-brief`, cron 08:00 Asia/Seoul처럼 일일 시장 데이터와 뉴스 수집, report.md 작성, Discord 요약이 필요할 때 사용. 투자 조언이 아니라 관찰 포인트와 리스크 중심으로 쓴다.
 ---
 
 # 주식 모닝 브리핑
@@ -24,8 +24,8 @@ description: stock-investment 워크스페이스에서 Circle Internet Group (CR
 
 ## 워크플로
 
-운영 진입점: `bash ~/ai-nodes/stock-investment/scripts/stock-investing-morning-brief/run_with_claude.sh`
-또는 native 직접: `claude -p "/stock-investing-morning-brief"`
+운영 진입점은 `bash ~/ai-nodes/stock-investment/scripts/stock-investing-morning-brief/run_with_claude.sh`다.
+대화형 실행에서는 현재 에이전트가 아래 단계를 직접 수행한다.
 
 ### Step 1 — 수집
 
@@ -149,7 +149,7 @@ fi
 | 파일 | 역할 |
 |---|---|
 | `scripts/stock-investing-morning-brief/collect_sources.py` | 수집기 (Python, yfinance/requests) |
-| `scripts/stock-investing-morning-brief/run_with_claude.sh` | thin wrapper (claude -p 호출, Discord 시작/실패 알림) |
+| `scripts/stock-investing-morning-brief/run_with_claude.sh` | thin wrapper (agent skill 호출, Discord 시작/실패 알림) |
 | `scripts/stock-investing-morning-brief/run_smoke_test.sh` | 수집 헬스체크 (Claude 없음) |
 | `_shared/lib/notify_discord.ts` | Discord 알림 정본 (ADR-002) |
 | `config/watchlist.json` | 수집 종목 목록 |

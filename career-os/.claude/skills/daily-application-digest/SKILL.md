@@ -1,6 +1,6 @@
 ---
 name: daily-application-digest
-description: 지원 현황 일일 요약 skill. ledger.jsonl과 오늘 변경된 application 산출물을 읽어 상태 변화·사용자 승인 필요 항목·agent-only 작업·부족 역량·오늘의 공부/면접 대비 액션을 정리하고 report.md를 생성한다. Discord 전송은 하지 않음 — cron/runner에서 별도 전송. '오늘 지원 현황 요약', '지원 digest', 'application 일일 리포트', '/daily-application-digest' 슬래시 호출.
+description: 지원 현황 일일 요약 report.md를 생성하는 비공개 career-os skill. "오늘 지원 현황 요약", "지원 digest", "application 일일 리포트", "지원 상태 어때", `/daily-application-digest [YYYY-MM-DD]`처럼 ledger.jsonl과 application 산출물의 상태 변화, 사용자 승인 필요 항목, agent-only 작업, 부족 역량, 오늘의 공부/면접 대비 액션을 요약해야 할 때 사용. Discord 전송, 실제 제출, 로그인, 채용 사이트 접속, fos-study write는 하지 않는다.
 ---
 
 # Daily Application Digest
@@ -8,33 +8,23 @@ description: 지원 현황 일일 요약 skill. ledger.jsonl과 오늘 변경된
 application ledger 전체를 읽어 오늘의 지원 현황을 요약하는 비공개 career-os skill.
 사용자 승인 필요 항목과 agent-only 작업을 분리하고, 직무별 부족 역량과 오늘의 액션을 제안한다.
 
-## 생성 산출물 품질 계약
+## 출력 정책
 
+먼저 `references/output-policy.md`를 읽고 비공개 산출물 정책을 따른다.
 application digest는 여러 지원 산출물을 한 화면으로 요약하므로 사용자가 바로 판단할 수 있어야 한다.
+첫 10줄 안에 오늘의 결론, 승인 필요 항목, 또는 권장 행동 중 하나를 둔다.
 내부 분석, 제출용 문구, Discord 요약 후보를 분리한다.
+Discord 요약에는 private 지원 전략이나 이력서 문구를 넣지 않는다.
 
-- 한국어 우선 섹션 제목과 자연스러운 한국어 문장을 사용한다.
-  영어 label은 파일명, 상태값, 명령어처럼 필요한 경우에만 유지한다.
-- 첫 10줄 안에 오늘의 결론, 승인 필요 항목, 또는 권장 행동 중 하나를 둔다.
-- 내부 분석에는 근거 경로와 risk flag를 유지하되, Discord 요약에는 private 지원 전략이나 이력서 문구를 넣지 않는다.
-- 근거가 부족한 항목은 raw marker로 노출하지 않는다.
-  발견한 순간 `보강 필요 / 선택지 / 권장 행동` 구조로 바꾼다.
-- 외부 제출, 로그인, 채용 계정 작업, 공개 발행, candidate-profile 수정은 사용자 승인 전에는 실행하지 않는다.
-  필요한 경우 `사용자 승인 필요` 항목으로만 안내한다.
+## 호출 후 입력 해석
 
-## When to use
-
-- 슬래시 호출: `/daily-application-digest [YYYY-MM-DD]`
-- 자연어 요청: "오늘 지원 현황 요약해줘", "지원 digest 만들어줘", "application 일일 리포트", "지원 상태 어때"
-- 매일 아침 또는 저녁 review 시점에 호출
-
-실제 지원서 제출·로그인·채용 사이트 접속 자동화 안 함 — 사용자 승인 필요 항목으로만 안내.
-Discord 전송 안 함 — cron/runner에서 `_shared/lib/notify_discord.ts`로 별도 전송.
-`sources/fos-study/`에 아무것도 쓰지 않음.
+- 날짜 인자가 있으면 해당 날짜를 사용한다.
+- 날짜가 없으면 오늘 날짜(`YYYY-MM-DD`)를 사용한다.
+- Discord 전송은 cron/runner가 담당하므로 여기서는 report.md만 생성한다.
 
 ## Inputs
 
-Claude는 다음을 `Read` 도구로 직접 로드:
+현재 에이전트는 다음 파일과 명령 출력을 직접 로드:
 
 1. `career-os/data/applications/ledger.jsonl` — 전체 지원 이력 원장 (필수)
 2. 각 applicationDir의 파일 (존재하는 것만):
@@ -58,7 +48,7 @@ Claude는 다음을 `Read` 도구로 직접 로드:
 
 ### 2. ledger 로드 및 applicationDir 목록 수집
 
-`career-os/data/applications/ledger.jsonl`을 Read한다.
+`career-os/data/applications/ledger.jsonl`을 읽는다.
 
 각 줄을 JSON 파싱해 다음 필드를 수집:
 
@@ -77,7 +67,7 @@ Claude는 다음을 `Read` 도구로 직접 로드:
 
 ### 3. 각 applicationDir 파일 확인
 
-각 entry의 `applicationDir` 기준으로 다음 파일을 Read한다:
+각 entry의 `applicationDir` 기준으로 다음 파일을 읽는다:
 
 ```
 career-os/<applicationDir>/posting.md

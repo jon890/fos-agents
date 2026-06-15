@@ -104,7 +104,7 @@ ln -s AGENTS.md CLAUDE.md
 - 완료된 plan도 history 보존 목적으로 삭제하지 않는다.
 - draft/ 서브디렉터리 옵션: Write 도구로 draft 파일 먼저 작성 → Read draft → Write target 패턴 (common-pitfalls 6-6 방어).
 
-`skills/planning`은 비대화형 생성기가 아니라 Codex와 사용자가 계획을 합의하기 위한 구조로 사용한다.
+`.claude/skills/planning`은 비대화형 생성기가 아니라 Codex와 사용자가 계획을 합의하기 위한 구조로 사용한다.
 
 공통 운영 원칙:
 
@@ -113,7 +113,7 @@ ln -s AGENTS.md CLAUDE.md
 - Claude 비대화형 실행은 합의된 task/phase 구현에 사용한다.
 - Codex는 Claude 구현 결과를 review하고, 검증 후 의도한 변경만 commit/push한다.
 
-구현 자동화가 필요하면 `skills/plan-and-build`가 `run-phases.py`로 phase를 실행할 수 있다.
+구현 자동화가 필요하면 `.claude/skills/plan-and-build`가 `run-phases.py`로 phase를 실행할 수 있다.
 
 ---
 
@@ -217,7 +217,7 @@ mkdir -p ~/ai-nodes/$WS/.claude/skills
 ## 11. 참조
 
 - `ai-nodes/docs/adr.md` ADR-004 — 본 표준의 결정 근거
-- `skills/planning/SKILL.md` — 8단계 워크플로 + 5문서 공통 작성 원칙
-- `skills/plan-and-build/` — 자동 phase 실행 + common-pitfalls 축적
-- `skills/workspace-audit/SKILL.md` — 워크스페이스 건전성 감사 (준수도 매트릭스 업데이트 진입점)
-- `skills/docs-check/SKILL.md` — 5문서 + ADR 건전성 감사
+- `.claude/skills/planning/SKILL.md` — 8단계 워크플로 + 5문서 공통 작성 원칙
+- `.claude/skills/plan-and-build/` — 자동 phase 실행 + common-pitfalls 축적
+- `.claude/skills/workspace-audit/SKILL.md` — 워크스페이스 건전성 감사 (준수도 매트릭스 업데이트 진입점)
+- `.claude/skills/docs-check/SKILL.md` — 5문서 + ADR 건전성 감사

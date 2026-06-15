@@ -64,7 +64,7 @@ CRCL (Circle) + BTC + GOOGL/GOOG + QQQ + AI 반도체/인프라.
 
 ## 5. 워크플로 진입점
 
-3 skill — ADR-006 분리 패턴 (`scripts/<name>/` + `.claude/skills/<name>/`, plan002 적용).
+3 skill — ADR-006/013 분리 패턴 (`scripts/<name>/` + `.claude/skills/<name>/` 정본 + `.codex/skills/<name>/` 노출, plan002 적용).
 
 | skill | 호출 시점 | 트리거 | 산출물 발행 |
 |---|---|---|---|
@@ -73,7 +73,7 @@ CRCL (Circle) + BTC + GOOGL/GOOG + QQQ + AI 반도체/인프라.
 | `current-issue-analysis` | 사용자 수동 호출 | 자연어 또는 슬래시 | Discord 알림 (선택) |
 
 ```bash
-# native skill 진입점 (.claude/skills/ 자동 로드)
+# 운영 호환 skill 진입점 (.claude/skills/ 자동 로드)
 claude -p "/stock-investing-morning-brief"
 claude -p "/current-issue-analysis <issue-key>"
 claude -p "/daily-stock-analysis-note"
@@ -90,7 +90,9 @@ cron payload 갱신 이력:
 
 ## 6. 외부 의존성
 
-- `claude` CLI — native skill 직접 호출 (`claude -p "/<skill>"`).
+- `.claude/skills/` — agent skill 정본.
+- `.codex/skills/` — Codex 노출용 심볼릭 링크.
+- `claude` CLI — 운영 호환 skill 직접 호출 (`claude -p "/<skill>"`).
 - `_shared/lib/notify_discord.ts` — Discord 알림 정본 (ADR-002, bun run 호출).
 - `python3` — 수집기 스크립트 (collect_*.py). yfinance, requests 등.
 - `bun` — notify_discord.ts 실행. root `package.json` + `bun install` 1회.

@@ -1,6 +1,6 @@
 ---
 name: application-package-writer
-description: 공고 1개와 후보자 프로필을 입력으로 받아 공고별 지원 패키지(fit-analysis.md + application-package.md + resume-draft.md + cover-letter.md + submission-checklist.md)를 생성하는 비공개 career-os skill. 근거 있는 주장만 작성하고, 근거 부족은 보강 필요 / 선택지 / 권장 행동으로 정리. '지원 패키지 만들어줘', '지원서 초안 작성', 'fit 분석해줘', '/application-package-writer' 슬래시 호출.
+description: 공고 1개와 후보자 프로필을 입력으로 받아 공고별 지원 패키지(fit-analysis.md + application-package.md + resume-draft.md + cover-letter.md + submission-checklist.md)를 생성하는 비공개 career-os skill. "지원 패키지 만들어줘", "지원서 초안 작성", "fit 분석해줘", "이 공고 지원 준비", "다음 지원 준비", `/application-package-writer [posting-path]`처럼 공고별 지원 문서와 role-fit 분석이 필요할 때 사용. 근거 있는 주장만 작성하고, 근거 부족은 보강 필요 / 선택지 / 권장 행동으로 정리. fos-study publish, 실제 제출, 로그인, 채용 사이트 입력은 하지 않는다.
 ---
 
 # Application Package Writer
@@ -8,47 +8,29 @@ description: 공고 1개와 후보자 프로필을 입력으로 받아 공고별
 공고 요구사항과 후보자 근거를 교차 분석해 공고별 맞춤 지원 패키지를 생성하는 비공개 career-os skill.
 내부 전략 문서와 제출용 Markdown 초안을 분리해서 작성한다.
 
-## When to use
+## 호출 후 입력 해석
 
-- 슬래시 호출: `/application-package-writer [posting-path]`
-- 자연어 요청: "지원 패키지 만들어줘", "지원서 초안 작성해줘", "fit 분석해줘", "이 공고 지원 준비해줘"
-- 특정 공고 파일 지정: `data/applications/tossplace/applied-ai-engineer/posting.md`
-- ledger에서 후보 자동 선택: "다음 지원 준비해줘"
+- posting path가 있으면 해당 파일을 사용한다.
+- posting path가 없고 "다음 지원" 흐름이면 ledger에서 후보를 고른 뒤 사용자 확인을 받는다.
+- 결과는 비공개 career-os 산출물만 생성한다.
 
-fos-study publish 안 함 — 비공개 career-os 산출물만 생성.
-실제 지원서 제출·로그인·채용 사이트 입력 자동화 안 함 — 사용자 승인 필요 단계로만 안내.
+## 출력 정책
 
-## 생성 산출물 품질 계약
-
+먼저 `references/output-policy.md`를 읽고 비공개 산출물 정책을 따른다.
 지원 패키지는 내부 분석 문서와 제출용 문구 후보가 섞이기 쉬우므로 경계를 먼저 고정한다.
+fit/gap 판단, reviewer용 리스크, 근거 파일 경로는 내부 분석 섹션에 둔다.
+이력서 bullet·지원동기처럼 제출용으로 옮길 수 있는 문장에는 내부 경로, plan 번호, commit hash, runner 상태를 넣지 않는다.
 
-- 한국어 우선 섹션 제목과 자연스러운 한국어 문장을 사용한다.
-  `Role-Fit`, `Ledger Update Suggestion`, 상태값처럼 기존 contract 식별자는 필요한 경우 유지한다.
-- 각 문서 첫 10줄 안에 결론을 둔다.
-  `fit-analysis.md`는 지원 적합도 결론, `application-package.md`는 제출 전 권장 행동이나 핵심 포지셔닝 결론을 먼저 쓴다.
-  `resume-draft.md`, `cover-letter.md`, `submission-checklist.md`도 사용자가 바로 검토할 핵심 결론이나 제출 전 행동을 앞에 둔다.
-- 내부 분석과 제출용 문구를 분리한다.
-  fit/gap 판단, reviewer용 리스크, 근거 파일 경로는 내부 분석 섹션에 둔다.
-  이력서 bullet·지원동기처럼 제출용으로 옮길 수 있는 문장에는 내부 파일 경로, plan 번호, commit hash, runner 상태 같은 내부 맥락을 넣지 않는다.
-- 내부 분석에는 근거 경로를 유지한다.
-  `task/...`, `resume/...`, `data/applications/...` 같은 경로는 `강점 근거`, `Gap 분석`, `근거 파일 참조`, `Ledger Update Suggestion` 등 내부 섹션에만 둔다.
-- 이력서 MVP 산출물 체인은 `Markdown 이력서 초안 -> design.md를 적용한 HTML 이력서 -> HTML을 PDF로 변환한 완성 PDF 이력서`로 다룬다.
-  HTML 이력서 생성 단계에서는 model이 `design.md`의 레이아웃·타이포그래피·섹션 규칙을 적용해야 한다.
-  PDF는 외부 제출 자동화가 아니라 사용자가 첨부할 수 있는 최종 산출물이다.
-  채용 사이트 업로드, 전송, 제출 버튼 클릭 자동화는 이번 MVP 범위 밖이며 별도 plan과 명시적 승인이 필요하다.
-- 근거 부족은 `needs_evidence` raw label로 남기지 않는다.
-  발견한 순간 사용자 행동으로 이어지는 `보강 필요 / 선택지 / 권장 행동` 구조로 바꾼다.
-  예: `보강 필요: 정량 성과 근거가 없음 / 선택지: 수치 없는 표현으로 낮추기 또는 근거 문서 추가 확인 / 권장 행동: 제출용 bullet에서는 수치 삭제`.
-- 외부 제출, 로그인, 채용 사이트 입력, 공개 발행, candidate-profile 수정은 실행하지 않는다.
-  필요한 경우 `사용자 승인 필요` 항목으로만 안내한다.
+이력서 MVP 산출물 체인은 `Markdown 이력서 초안 -> design.md를 적용한 HTML 이력서 -> HTML을 PDF로 변환한 완성 PDF 이력서`로 다룬다.
+채용 사이트 업로드, 전송, 제출 버튼 클릭 자동화는 이번 MVP 범위 밖이며 별도 plan과 명시적 승인이 필요하다.
 
 ## Inputs
 
-Claude는 다음을 `Read` 도구로 직접 로드:
+현재 에이전트는 다음 파일과 명령 출력을 직접 로드:
 
 1. `career-os/data/applications/<company>/<role>/posting.md` — 공고 본문 (필수)
 2. `career-os/config/candidate-profile.md` — 후보자 프로필 11섹션 (필수)
-3. 후보자 프로필이 참조하는 근거 파일 (`task/**/*.md`, `resume/*.md`) — 필요 시 선택적 Read
+3. 후보자 프로필이 참조하는 근거 파일 (`task/**/*.md`, `resume/*.md`) — 필요 시 선택적으로 읽는다
 4. `career-os/data/applications/ledger.jsonl` — posting path 자동 추출 시 참조 (선택)
 
 ## Workflow
@@ -59,19 +41,19 @@ Claude는 다음을 `Read` 도구로 직접 로드:
 
 - 예: `/application-package-writer data/applications/tossplace/applied-ai-engineer/posting.md`
   → path = `career-os/data/applications/tossplace/applied-ai-engineer/posting.md`
-- path가 없으면 `career-os/data/applications/ledger.jsonl`을 Read해 다음 조건의 첫 항목을 후보로 선택:
+- path가 없으면 `career-os/data/applications/ledger.jsonl`을 읽어 다음 조건의 첫 항목을 후보로 선택:
   - `needsUserReview=true` 또는 `status`가 `discovered|analyzing|preparing_application` 중 하나
   - 후보 선택 시 사용자에게 확인 ("TossPlace Applied AI Engineer 공고로 진행할까요?") 후 계속
 
 posting path 특정 불가 시 stderr + exit 1.
 
-### 2. 컨텍스트 로드 (Read)
+### 2. 컨텍스트 로드
 
-순서대로 Read:
+순서대로 읽는다:
 
 1. posting.md
 2. `career-os/config/candidate-profile.md`
-3. candidate-profile.md의 "Source provenance" 섹션에서 관련성 높은 근거 파일 2~5개 선택적 Read
+3. candidate-profile.md의 "Source provenance" 섹션에서 관련성 높은 근거 파일 2~5개 선택적으로 읽는다
    - 공고 요구사항과 겹치는 프로젝트·기술 스택의 근거 파일 우선 선택
    - 전체 `task/**` 탐색 금지 — 관련성 판단은 프로필 인용 경로 기반
 
@@ -90,7 +72,7 @@ candidate-profile.md + 근거 파일과 교차 분석:
 - 근거가 없거나 약한 항목은 내부 판단에서 `needs_evidence`로 취급하되, 최종 문서에는 raw label로 남기지 않는다.
   - 추측성 주장 / 이력서·task에 기재 없는 수치·성과 / 검증 불가 기술 경험 등은 `보강 필요 / 선택지 / 권장 행동`으로 작성한다.
 
-### 4. fit-analysis.md 작성 (Write)
+### 4. fit-analysis.md 작성
 
 저장 경로: `career-os/data/applications/<company>/<role>/fit-analysis.md`
 
@@ -122,7 +104,7 @@ candidate-profile.md + 근거 파일과 교차 분석:
 - 총 30줄 이상
 - `sources/fos-study/`에 쓰지 않음
 
-### 5. application-package.md 작성 (Write)
+### 5. application-package.md 작성
 
 저장 경로: `career-os/data/applications/<company>/<role>/application-package.md`
 
@@ -172,7 +154,7 @@ candidate-profile.md + 근거 파일과 교차 분석:
   - run_application_reviewer
 ```
 
-### 6. resume-draft.md 작성 (Write)
+### 6. resume-draft.md 작성
 
 저장 경로: `career-os/data/applications/<company>/<role>/resume-draft.md`
 
@@ -204,7 +186,7 @@ candidate-profile.md + 근거 파일과 교차 분석:
   `design.md` 적용 HTML과 첨부 가능한 PDF는 별도 산출물로 구분한다.
 - 총 20줄 이상
 
-### 7. cover-letter.md 작성 (Write)
+### 7. cover-letter.md 작성
 
 저장 경로: `career-os/data/applications/<company>/<role>/cover-letter.md`
 
@@ -231,7 +213,7 @@ candidate-profile.md + 근거 파일과 교차 분석:
 - 근거 부족은 `보강 필요 / 선택지 / 권장 행동` 구조로 둔다.
 - 총 20줄 이상
 
-### 8. submission-checklist.md 작성 (Write)
+### 8. submission-checklist.md 작성
 
 저장 경로: `career-os/data/applications/<company>/<role>/submission-checklist.md`
 
@@ -289,7 +271,7 @@ candidate-profile.md + 근거 파일과 교차 분석:
 | posting.md 부재 | stderr + exit 1 |
 | candidate-profile.md 부재 | stderr + exit 1 |
 | ledger.jsonl 부재 (자동 선택 시) | stderr warn + posting path를 사용자에게 직접 입력 요청 |
-| 근거 파일 Read 실패 | stderr warn + 해당 파일 없이 계속 진행 (`보강 필요 / 선택지 / 권장 행동` 강화) |
+| 근거 파일 읽기 실패 | stderr warn + 해당 파일 없이 계속 진행 (`보강 필요 / 선택지 / 권장 행동` 강화) |
 | self-check 3회 실패 | stderr + exit 1, 실패 항목 명시 |
 
 ## Why this design

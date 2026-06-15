@@ -26,6 +26,8 @@ ai-nodes 모노레포 레벨에서 모든 워크스페이스에 영향을 주는
 | ADR-010 | brain 쓰기 안전·프라이버시: 산출물 종류별 라우팅 + cron 읽기전용 | Accepted | 개인 데이터 private 기본·fos-study public-OK, cron은 읽기만·쓰기는 대화형 한정 |
 | ADR-011 | track_task·extract_claude_result·update_artifacts 폐기 (native 전환 완료) | Accepted | 5 워크스페이스 native 전환으로 호출처 0 → 죽은 공용 헬퍼 git rm. logs/task-runs.jsonl 계측 종료 |
 | ADR-012 | OpenClaw HUD 정책은 .openclaw, 공통 helper는 _shared | Accepted | HUD 정책·runtime state는 .openclaw workspace, 재사용 helper만 _shared에 둠 |
+| ADR-013 | agent skill 정본과 Codex 노출 경로를 분리한다 | Partially superseded by ADR-014 (2026-06-16) | `.claude/skills`를 정본으로 두고 `.codex/skills`는 심볼릭 링크, trigger는 description에 둔다. repo 전역 정본 경로 부분만 ADR-014가 supersede |
+| ADR-014 | repo 전역 skill 정본을 .claude/skills로 통일 | Accepted | 루트 `skills/` 폐기, repo 전역 정본도 `.claude/skills/`로 이전해 워크스페이스 표준과 통일. `.codex/skills`는 심링크 재지정 |
 
 ---
 
@@ -621,3 +623,80 @@ state root 혼선은 새 구현에서 제거된다.
 - HUD runtime state: `.openclaw/workspace-career/state/task-hud/`.
 - helper: `_shared/lib/task_hud.ts`.
 - career updater wrapper: `.openclaw/workspace-career/scripts/task-hud/`.
+
+---
+
+## ADR-013 — agent skill 정본과 Codex 노출 경로를 분리한다
+
+- Status: Partially superseded by ADR-014 (2026-06-16) — repo 전역 정본 경로 부분만
+- Date: 2026-06-16
+
+### 맥락
+
+Claude CLI 호출 비용 문제 때문에 기존 `.claude/skills` workflow를 Codex에서도 직접 실행할 필요가 생겼다.
+단순 wrapper로 `claude -p`를 호출하면 비용 문제가 해결되지 않는다.
+반대로 `.claude/skills`와 `.codex/skills`에 본문을 복사하면 skill 내용이 갈라질 위험이 크다.
+
+Codex skill 선택은 `SKILL.md` 본문을 읽기 전에 frontmatter의 `name`과 `description`만 보고 이뤄진다.
+따라서 본문 `When to use`에 자연어 trigger를 많이 두는 구조는 Codex 호출 정확도에 도움이 작다.
+
+### 결정
+
+- 모든 워크스페이스의 skill 정본은 `<workspace>/.claude/skills/<skill>/SKILL.md`로 유지한다.
+- Codex 노출은 `<workspace>/.codex/skills/<skill>` 심볼릭 링크로 둔다.
+- repo 전역 skill 정본은 `skills/<skill>/SKILL.md`로 유지한다.
+- repo 전역 Codex 노출은 `.codex/skills/<skill>` 심볼릭 링크로 둔다.
+- `SKILL.md` frontmatter에는 `name`과 `description`만 둔다.
+- skill 사용 여부를 결정하는 자연어 trigger, 슬래시 호출 형태, 주요 라우팅 경계는 `description`에 둔다.
+- 본문에는 이미 호출된 뒤 필요한 입력 해석, 범위 해석, 실행 절차만 둔다.
+- 운영 runner의 `run_with_claude.sh`와 `claude -p` 경로는 호환 계층으로 유지할 수 있다.
+  새 대화형 작업에서는 현재 에이전트가 같은 SKILL.md를 직접 읽고 실행한다.
+
+### 결과
+
+- Codex가 apartment, stock-investment, health-care, career-os, repo 전역 skill을 같은 본문으로 읽을 수 있다.
+- skill 본문 복사로 인한 Claude/Codex drift를 피한다.
+- 새 skill을 추가할 때는 `.claude/skills` 또는 `skills/` 정본을 만들고 대응 `.codex/skills` 링크를 추가하면 된다.
+- description 품질이 skill 호출 정확도의 1차 기준이 된다.
+
+### 적용
+
+- `.codex/skills/`
+- `apartment/.codex/skills/`
+- `stock-investment/.codex/skills/`
+- `health-care/.codex/skills/`
+- `<workspace>/.claude/skills/*/SKILL.md`
+- `skills/*/SKILL.md`
+
+---
+
+## ADR-014 — repo 전역 skill 정본을 .claude/skills로 통일
+
+- Status: Accepted
+- Date: 2026-06-16
+
+### 맥락
+
+ADR-013은 워크스페이스 skill 정본을 `<workspace>/.claude/skills/`로, repo 전역 skill 정본을 루트 `skills/`로 분리해 규정했다.
+그 결과 루트만 본체 위치가 워크스페이스 표준과 달라 비대칭이 남았다.
+`.gitignore`는 이미 `.claude/*`를 무시하되 `.claude/skills/`를 추적 예외로 둬 `.claude/skills/` 본체 커밋을 허용한다.
+또 루트 `.claude/skills/`에 `docs-check` 심링크가 누락돼 Claude Code 세션에 docs-check이 노출되지 않는 문제도 있었다.
+
+### 결정
+
+- repo 전역 skill 정본도 `.claude/skills/<skill>/`로 둔다. 워크스페이스 표준(ADR-013)과 통일한다.
+- 루트 `skills/` 디렉터리는 폐기한다.
+- repo 전역 Codex 노출은 `.codex/skills/<skill>` → `../../.claude/skills/<skill>` 심링크로 재지정한다.
+- ADR-013의 "repo 전역 정본 = `skills/`" 결정만 supersede한다. 워크스페이스 정본·Codex 분리 원칙은 유효하다.
+
+### 결과
+
+- 루트·워크스페이스 모든 skill이 `.claude/skills/` 단일 본체 패턴으로 통일된다.
+- docs-check 심링크 누락이 해소돼 Claude Code 세션에 노출된다.
+- `run-phases.py`의 루트 계산 깊이를 한 단계 늘리고, docs-check glob을 `.claude/skills/*`로 통합한다.
+
+### 적용
+
+- `.claude/skills/*` (루트 전역 5개 본체)
+- `.codex/skills/*` (심링크 재지정)
+- `README.md`, `AGENTS.md`, `docs/docs-style.md`, `docs/workspace-structure.md`

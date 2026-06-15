@@ -3,11 +3,11 @@
 Agent harness — Claude Code phase 순차 실행기 (ai-nodes 포팅, fos-blog 기반).
 
 Usage:
-  python skills/plan-and-build/run-phases.py <task-dir> [--from-phase N] [--to-phase M]
+  python .claude/skills/plan-and-build/scripts/run-phases.py <task-dir> [--from-phase N] [--to-phase M]
 
-  예: python skills/plan-and-build/run-phases.py career-os/tasks/cj-oliveyoung-decomposition
-      python skills/plan-and-build/run-phases.py career-os/tasks/cj-oliveyoung-decomposition --from-phase 3
-      python skills/plan-and-build/run-phases.py apartment/tasks/plan008-skill-korean-rewrite --to-phase 2
+  예: python .claude/skills/plan-and-build/scripts/run-phases.py career-os/tasks/cj-oliveyoung-decomposition
+      python .claude/skills/plan-and-build/scripts/run-phases.py career-os/tasks/cj-oliveyoung-decomposition --from-phase 3
+      python .claude/skills/plan-and-build/scripts/run-phases.py apartment/tasks/plan008-skill-korean-rewrite --to-phase 2
 
 규약:
   task-dir 은 `<workspace>/tasks/<task-name>/` 형태. workspace는 task-dir의 grandparent.
@@ -29,7 +29,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-AI_NODES_ROOT = Path(__file__).resolve().parent.parent.parent.parent  # skills/plan-and-build/scripts/ → ai-nodes
+AI_NODES_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent  # .claude/skills/plan-and-build/scripts/ → ai-nodes
 NOTIFY_TS = AI_NODES_ROOT / "_shared" / "lib" / "notify_discord.ts"
 
 
@@ -138,7 +138,7 @@ def validate_task(task: dict, task_dir: Path) -> None:
         for e in errors:
             print(f"  - {e}", file=sys.stderr)
         print(
-            "\n  → skills/planning/task-create.md 참고\n",
+            "\n  → .claude/skills/planning/task-create.md 참고\n",
             file=sys.stderr,
         )
         sys.exit(1)

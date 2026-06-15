@@ -53,7 +53,7 @@ planning + plan-and-build 스킬로 운영. 형태: `tasks/plan{N}-<slug>/`.
 ## 5. 워크플로 진입점
 
 ```bash
-# native skill 진입점
+# 운영 호환 skill 진입점
 claude -p "/apartment-daily-report"
 claude -p "/apartment-interior-reference-digest"
 
@@ -65,7 +65,9 @@ bash apartment/scripts/apartment-daily-report/run_smoke_test.sh
 
 ## 6. 외부 의존성
 
-- `claude` CLI — native skill 직접 호출 (`claude -p "/<skill>"`).
+- `.claude/skills/` — agent skill 정본.
+- `.codex/skills/` — Codex 노출용 심볼릭 링크.
+- `claude` CLI — 운영 호환 skill 직접 호출 (`claude -p "/<skill>"`).
 - `agent-browser` CLI — JS-heavy 페이지 수집 (ADR-001).
 - Bun runtime — TypeScript 헬퍼 실행. 데이터 처리/JSON 파싱/수집기 계층은 TS 우선, 단순 orchestration runner는 shell 허용.
 - Interior reference cron은 Claude native skill의 웹 검색/Fetch/문서 갱신이 필요하므로 운영 runner에서 `--permission-mode bypassPermissions`를 사용한다.

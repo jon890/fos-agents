@@ -1,6 +1,6 @@
 ---
 name: current-issue-analysis
-description: 미국 CLARITY Act, 암호화폐 규제, 스테이블코인 정책, Circle/USDC, Bitcoin, Nasdaq, Google 촉매, AI 반도체/인프라 테마 등 stock-investment 현안을 한국어 심층 분석 리포트로 생성한다. "CLARITY Act 분석해줘", "BTC 규제 리포트 써줘", "Circle 정책 현안 분석", "AI 반도체 이슈 브리핑해줘", "/current-issue-analysis <issue-key>" 슬래시 또는 일회성 현안 분석 요청 시 사용.
+description: stock-investment 현안을 한국어 심층 분석 리포트로 생성하는 skill. "CLARITY Act 분석해줘", "BTC 규제 리포트 써줘", "Circle 정책 현안 분석", "AI 반도체 이슈 브리핑해줘", "Google 촉매 분석", `/current-issue-analysis <issue-key>`처럼 미국 CLARITY Act, 암호화폐 규제, 스테이블코인 정책, Circle/USDC, Bitcoin, Nasdaq, Google, AI 반도체/인프라 일회성 현안 분석이 필요할 때 사용. 매수·매도 지시를 하지 않고 공식 자료와 언론 해석을 구분한다.
 ---
 
 # 현안 분석
@@ -15,8 +15,8 @@ description: 미국 CLARITY Act, 암호화폐 규제, 스테이블코인 정책,
 
 ## 워크플로
 
-운영 진입점: `bash ~/ai-nodes/stock-investment/scripts/current-issue-analysis/run_with_claude.sh <issue-key>`
-또는 native 직접: `claude -p "/current-issue-analysis <issue-key>"`
+운영 진입점은 `bash ~/ai-nodes/stock-investment/scripts/current-issue-analysis/run_with_claude.sh <issue-key>`다.
+대화형 실행에서는 현재 에이전트가 아래 단계를 직접 수행한다.
 
 ### Step 1 — issue-key 결정
 
@@ -123,7 +123,7 @@ fi
 | 파일 | 역할 |
 |---|---|
 | `scripts/current-issue-analysis/collect_issue_sources.py` | 수집기 (Python, requests) |
-| `scripts/current-issue-analysis/run_with_claude.sh` | thin wrapper (issue-key 인자 전달, claude -p 호출, Discord 시작/실패 알림) |
+| `scripts/current-issue-analysis/run_with_claude.sh` | thin wrapper (issue-key 인자 전달, agent skill 호출, Discord 시작/실패 알림) |
 | `_shared/lib/notify_discord.ts` | Discord 알림 정본 (ADR-002) |
 | `config/current-issues.json` | 현안 토픽 큐 (issue-key 목록, defaultIssue) |
 

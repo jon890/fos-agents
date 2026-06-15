@@ -1,6 +1,6 @@
 ---
 name: docs-check
-description: ai-nodes 모노레포의 docs 건전성을 5축으로 종합 감사한다. Decay (Code↔Docs drift, stale ADR), Bloat (ADR 30줄 초과 / 코드 블록 / 파일 path 열거), Clarity (why + alternative + rejection 명시), Duplication (5문서 단일 출처), Self-Evidence (자명한 ADR 폐기 후보). 자연어 호출 — "ADR 건전성 점검", "docs 감사", "stale ADR 찾기", "docs drift 확인", "5문서 건전성 감사", "코드-문서 불일치", "ADR 정리 전 감사", "/docs-check". 본 skill은 *발견*만 — 수정은 사용자 승인 후 별도 진행.
+description: ai-nodes 모노레포의 docs 건전성을 5축으로 종합 감사하는 발견 전용 skill. "ADR 건전성 점검", "docs 감사", "stale ADR 찾기", "docs drift 확인", "5문서 건전성 감사", "코드-문서 불일치", "ADR Quick Index sync 확인", "ADR 정리 전 감사", `/docs-check [scope]`처럼 Decay, Bloat, Clarity, Duplication, Self-Evidence 점검이 필요할 때 사용. 수정은 사용자 승인 후 별도 진행한다.
 ---
 
 # docs-check
@@ -11,16 +11,15 @@ ai-nodes 모노레포 docs를 **AI 에이전트가 최소 컨텍스트로 의사
 
 ADR은 "코드만 보고는 알 수 없는 WHY"여야 한다. 자명한 결정·마이그레이션 기록이 누적되면 시그널 대비 노이즈 비율이 떨어져 에이전트가 잘못된 코드를 생성한다. docs-check는 발견만 한다 — 수정은 사용자 승인 후 별도 세션.
 
-## When to use
+## 호출 후 scope 해석
 
-- 슬래시 호출: `/docs-check [scope]` (scope: `career-os` / `ai-nodes` / `all`, 생략 시 `all`)
-- 자연어: "ADR 건전성 점검", "docs 감사", "stale ADR 찾아줘", "ADR Quick Index sync 확인", "docs drift 확인", "코드-문서 불일치", "5문서 건전성 감사"
-- plan 완료 후 주기적 실행 권장 (plan-and-build와 연계)
-- 새 ADR 추가 후 Index sync 확인 시
+- scope는 `career-os`, `ai-nodes`, `all` 중 하나다.
+- scope가 없으면 `all`로 본다.
+- plan 완료 후 또는 새 ADR 추가 후에는 Quick Index sync를 함께 확인한다.
 
 ## Inputs
 
-Claude는 다음을 `Read` 도구로 직접 로드:
+현재 에이전트는 다음을 직접 로드:
 
 1. `career-os/docs/adr.md` — 26 ADR + Quick Index (scope에 career-os / all 포함 시)
 2. `ai-nodes/docs/adr.md` — 모노레포 레벨 ADR (scope에 ai-nodes / all 포함 시)
@@ -38,7 +37,7 @@ Claude는 다음을 `Read` 도구로 직접 로드:
 # scope: career-os | ai-nodes | all (default: all)
 ls career-os/docs/*.md ai-nodes/docs/*.md \
    career-os/.claude/skills/*/SKILL.md \
-   skills/*/SKILL.md 2>/dev/null
+   .claude/skills/*/SKILL.md 2>/dev/null
 ```
 
 ### 1. 자동화 검사 5개 (bash 선행 실행)
@@ -109,7 +108,7 @@ done
 ```bash
 # 금지 용어: § 기호 / 옛 subprocess 지시문 / 매트릭스
 for f in career-os/docs/*.md ai-nodes/docs/*.md \
-         career-os/.claude/skills/*/SKILL.md skills/*/SKILL.md; do
+         career-os/.claude/skills/*/SKILL.md .claude/skills/*/SKILL.md; do
   [ -f "$f" ] || continue
   grep -n "§" "$f" && echo "PROHIBITED: § in $f"
   # 옛 subprocess 지시문 (common-pitfalls 6-7): 문자열 변수 분리로 grep 자기 오탐 방지
