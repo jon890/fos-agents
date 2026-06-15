@@ -1,0 +1,104 @@
+{
+  "name": "plan074-fos-career-mobile-position-explorer",
+  "description": "ADR-082에 따라 fos-career 모바일 shell을 하단 네비게이션 중심으로 정리하고, 전체 수집 공고 탐색과 추천 후보 카드를 분리하며 structured recommendation ingest 품질을 검증한다.",
+  "created_at": "2026-06-15T00:00:00Z",
+  "updated_at": "2026-06-15T00:00:00Z",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 4,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/AGENTS.md",
+    "career-os/docs/prd.md",
+    "career-os/docs/data-schema.md",
+    "career-os/docs/flow.md",
+    "career-os/docs/code-architecture.md",
+    "career-os/docs/adr.md",
+    "~/services/fos-career/AGENTS.md"
+  ],
+  "depends_on": [
+    "plan073-dashboard-application-candidate-state"
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "mobile-shell-bottom-navigation",
+      "decision": "모바일 shell은 하단 네비게이션과 햄버거 또는 더보기 메뉴를 함께 사용하고, 1급 메뉴는 홈, 공고, 후보, 지원, 더보기로 둔다."
+    },
+    {
+      "id": "D2",
+      "title": "positions-vs-candidates",
+      "decision": "공고 화면은 collected_positions 전체 풀을 탐색하고, 후보 화면은 position recommender가 선별한 application candidate를 다룬다."
+    },
+    {
+      "id": "D3",
+      "title": "structured-card-fields",
+      "decision": "추천 후보 카드는 latestSnapshotJson.priorityReason, nextAction, riskFlags, evidenceUrls를 우선 표시한다."
+    },
+    {
+      "id": "D4",
+      "title": "ingest-missing-field-quality-gate",
+      "decision": "Markdown 리포트에 근거가 있는데 structured recommendation item 필드가 null이면 dry-run summary나 검증 로그에서 누락으로 드러낸다."
+    },
+    {
+      "id": "D5",
+      "title": "implementation-doc-freeze",
+      "decision": "구현 phase는 docs/ADR/정책 문서를 수정하지 않는다. 구현 중 문서 변경이 필요하면 PHASE_BLOCKED로 처리한다."
+    }
+  ],
+  "open_decisions": [],
+  "validation_summary": [
+    "모바일 shell은 desktop/mobile viewport에서 navigation overflow와 텍스트 겹침 없이 확인한다.",
+    "/dashboard/positions는 검색, 필터, 정렬, source diagnostics 접힘, 모바일 카드 표시를 smoke로 확인한다.",
+    "추천 후보 카드와 ingest는 priorityReason, nextAction, riskFlags, evidenceUrls 누락 검증과 fallback 표시를 확인한다.",
+    "정적 검증은 fos-career pnpm exec tsc --noEmit, pnpm build를 기본으로 한다.",
+    "완료 phase는 career-os position recommender dry-run 또는 당일 재실행, fos-career DB ingest, dashboard 확인까지 수행한다."
+  ],
+  "safety_boundaries": [
+    "구현 phase는 career-os docs/ADR/AGENTS와 fos-career 정책 문서를 수정하지 않는다.",
+    "외부 채용 사이트 제출, 로그인, 업로드, 이메일, 공개 발행은 수행하지 않는다.",
+    "기본값은 DB schema 변경 없이 existing JSON snapshot과 ingest helper를 보강하는 것이다.",
+    "DB migration이 필요하다고 판정되면 실제 migration 적용과 검증 기준을 포함하되, 문서 결정이 더 필요하면 PHASE_BLOCKED로 멈춘다.",
+    "fos-career는 별도 저장소이며 career-os 파일은 읽기 전용 입력으로 취급한다.",
+    "unrelated dirty 변경은 stage, commit, revert하지 않는다."
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "모바일 dashboard shell과 네비게이션 정리",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "model": "sonnet",
+      "timeout": 2400
+    },
+    {
+      "number": 2,
+      "title": "전체 공고 탐색 화면 개선",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "model": "sonnet",
+      "timeout": 3000
+    },
+    {
+      "number": 3,
+      "title": "추천 후보 구조화 추출과 ingest 보강",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "model": "sonnet",
+      "timeout": 3000
+    },
+    {
+      "number": 4,
+      "title": "통합 검증과 당일 추천 재실행",
+      "file": "phase-04.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Edit", "Bash", "Grep", "Glob"],
+      "model": "sonnet",
+      "timeout": 3600
+    }
+  ]
+}

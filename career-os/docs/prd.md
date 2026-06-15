@@ -118,7 +118,7 @@ Question bank 범위 밖:
 
 - Next.js 대시보드와 관리자 로그인은 `plan039`로 분리한다.
 
-### 계획 중: dashboard canonical application workflow (plan073)
+### 완료 기반: dashboard canonical application workflow (plan073)
 
 `plan073-dashboard-application-candidate-state`는 포지션 추천 리포트와 지원 준비 workflow를 fos-career DB 중심으로 다시 연결한다.
 목표는 `frontdoor queue`라는 중간 workflow 용어를 제거하고, 웹 대시보드에서 지원 후보의 현재 상태와 다음 작업을 직접 관리하게 만드는 것이다.
@@ -145,6 +145,30 @@ MVP 범위:
 - 외부 채용 사이트 제출, 로그인, 업로드, 브라우저 입력 자동화.
 - 사용자 승인 없는 이메일, 외부 메시지, 공개 발행.
 - 한 번의 카드 클릭으로 모든 private 산출물을 무조건 병렬 생성하는 일.
+- dashboard container가 career-os checkout을 직접 쓰는 일.
+
+### 계획 중: fos-career mobile navigation and position exploration (plan074)
+
+`plan074-fos-career-mobile-position-explorer`는 plan073 이후 대시보드를 모바일에서 실제 운영 화면으로 쓰기 위한 UX 후속 작업이다.
+목표는 늘어난 상단 메뉴를 모바일에서 정리하고, 수집 공고 전체와 추천 후보 5개를 분명히 구분해 탐색할 수 있게 하는 것이다.
+
+MVP 범위:
+
+- 모바일 shell은 하단 네비게이션과 햄버거 또는 더보기 메뉴를 함께 사용한다.
+- 모바일 1급 메뉴는 `홈`, `공고`, `후보`, `지원`, `더보기`를 기본값으로 둔다.
+- `공고`는 `collected_positions` 전체 풀을 보는 화면이다.
+- `후보`는 포지션 추천 run에서 선별된 application candidate 화면이다.
+- `/dashboard/positions`는 검색, source/status/urgency 필터, 최신 수집 시각, source 진단 접힘 영역을 제공한다.
+- 추천 후보로 승격된 공고는 전체 공고 목록에서도 표시하거나 후보 리포트로 연결한다.
+- 추천 후보 카드에는 `priorityReason`, `nextAction`, `evidenceUrls` 같은 구조화 필드를 우선 표시한다.
+- structured recommendation item 생성 또는 ingest 단계에서 Markdown 리포트의 추천 근거와 다음 행동이 `latestSnapshotJson`에 빠지지 않게 보강한다.
+- 작업 완료 후 당일 포지션 추천을 재실행하고, Toss 계열 쿨다운 해제와 구조화 추출 결과가 DB에 반영됐는지 확인한다.
+
+범위 밖:
+
+- 외부 채용 사이트 제출, 로그인, 업로드, 브라우저 입력 자동화.
+- 추천 개수를 5개에서 바꾸는 정책 변경.
+- 새 DB 컨테이너 생성.
 - dashboard container가 career-os checkout을 직접 쓰는 일.
 
 ### 완료 기반: position priority + posting/fit analysis workflow (plan050)

@@ -1867,6 +1867,19 @@ Markdown/HTML 리포트와 DB ingest 결과를 연결한다.
 | `createdAt` | DATETIME NOT NULL | |
 | `updatedAt` | DATETIME NOT NULL | |
 
+`latestSnapshotJson` 표시용 권장 필드:
+
+- `rank`: 추천 run 내 순서.
+- `tier`: `강력 추천`, `도전 추천` 같은 표시 티어.
+- `priorityReason`: 추천 근거.
+- `nextAction`: 사람이 바로 실행할 다음 행동.
+- `riskFlags`: 확인할 점 또는 주의할 조건.
+- `evidenceUrls`: 공고 URL, official careers URL, active/open 확인 URL.
+- `ingestSource`: `position_recommendation_items` 또는 legacy import source.
+
+plan074 이후 추천 후보 카드와 ingest 검증은 `priorityReason`, `nextAction`, `evidenceUrls` 누락을 품질 신호로 다룬다.
+Markdown 리포트에 근거가 있는데 structured item이 null이면 추출 보강 대상이다.
+
 ### application_candidate_states
 
 지원 후보의 현재 상태와 stage.

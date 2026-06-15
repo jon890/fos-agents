@@ -339,6 +339,15 @@ ADR-081 이후 목표 구조:
 - 카드 전체 클릭은 DB transaction으로 `started` 상태와 outbox job을 만든다.
 - outbox worker가 pending job을 처리하고 결과를 DB와 career-os private 산출물에 반영한다.
 
+plan074 이후 UX 구조:
+
+- 모바일 shell은 하단 네비게이션과 햄버거 또는 더보기 메뉴를 함께 사용한다.
+- 1급 모바일 경로는 `홈`, `공고`, `후보`, `지원`, `더보기`로 둔다.
+- `/dashboard/positions`는 `collected_positions` 전체 풀 탐색 화면이다.
+- `/dashboard/reports/position/*`와 application candidate 계열 화면은 추천 후보 5개를 다룬다.
+- 추천 후보 카드의 이유와 다음 행동은 `application_candidates.latestSnapshotJson`의 구조화 필드를 우선 사용한다.
+- source diagnostics와 긴 원문 필드는 모바일에서 기본 접힘으로 둔다.
+
 Priority write-action bridge:
 
 - fos-career는 MySQL `priority_action_requests`에 사용자 확인 요청을 저장한다.
