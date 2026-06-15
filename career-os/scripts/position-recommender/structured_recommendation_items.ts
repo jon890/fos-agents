@@ -40,6 +40,10 @@ export type StructuredRecommendationItem = {
     generatedAt: string;
     recommendationTier: RecommendationTier;
     recommendationTitle: string;
+    priorityReason: string;
+    nextAction: string;
+    riskFlags: string[];
+    evidenceUrls: string[];
     evidence: string;
     fitSummary: string;
     ambiguityCheck: string;
@@ -144,6 +148,11 @@ function closeDateFromLivePosting(live?: LivePostingRecord): string | null {
   return live.closesAt;
 }
 
+function riskFlagsFromCheck(value: string): string[] {
+  const trimmed = value.trim();
+  return trimmed ? [trimmed] : [];
+}
+
 export function buildStructuredRecommendationRun(args: {
   reportDate: string;
   sourceSnapshotPath: string;
@@ -176,6 +185,10 @@ export function buildStructuredRecommendationRun(args: {
         generatedAt,
         recommendationTier: candidate.section,
         recommendationTitle: candidate.title,
+        priorityReason: candidate.summary,
+        nextAction: candidate.action,
+        riskFlags: riskFlagsFromCheck(candidate.check),
+        evidenceUrls: [candidate.postingLink],
         evidence: candidate.evidence,
         fitSummary: candidate.summary,
         ambiguityCheck: candidate.check,
@@ -193,7 +206,7 @@ export function buildStructuredRecommendationRun(args: {
 
   return {
     schemaVersion: 1,
-    runId: `posrec-${args.reportDate}-${sha1(args.markdownReportPath).slice(0, 10)}`,
+    runId: `posrec-${args.reportDate}-${sha1(`${args.markdownReportPath}|${generatedAt}`).slice(0, 10)}`,
     reportDate: args.reportDate,
     generatedAt,
     sourceSnapshotPath: args.sourceSnapshotPath,
@@ -201,6 +214,34 @@ export function buildStructuredRecommendationRun(args: {
     htmlReportPath: args.htmlReportPath,
     itemCount: items.length,
     items,
+  };
+}
+
+export function summarizeStructuredRecommendationQuality(run: StructuredRecommendationRun): {
+  missingRequiredCardFields: Array<{
+    itemId: string;
+    rank: number;
+    company: string;
+    title: string;
+    missing: string[];
+  }>;
+} {
+  return {
+    missingRequiredCardFields: run.items
+      .map((item) => {
+        const missing: string[] = [];
+        if (!item.snapshot.priorityReason.trim()) missing.push("priorityReason");
+        if (!item.snapshot.nextAction.trim()) missing.push("nextAction");
+        if (item.snapshot.evidenceUrls.length === 0) missing.push("evidenceUrls");
+        return {
+          itemId: item.itemId,
+          rank: item.rank,
+          company: item.company,
+          title: item.title,
+          missing,
+        };
+      })
+      .filter((item) => item.missing.length > 0),
   };
 }
 

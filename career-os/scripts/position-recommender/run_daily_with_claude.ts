@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 import {
   buildStructuredRecommendationRun,
+  summarizeStructuredRecommendationQuality,
   writeStructuredRecommendationRun,
 } from "./structured_recommendation_items";
 
@@ -63,14 +64,15 @@ Environment:
   POSITION_RECOMMENDER_CLAUDE_NO_OUTPUT_MS=<n>  Kill Claude if stdout/stderr is silent this long. Default: ${DEFAULT_CLAUDE_NO_OUTPUT_MS}.
   POSITION_RECOMMENDER_CLAUDE_LOG_STREAM=1  Forward raw Claude stream-json stdout to logs.
   FOS_CAREER_ROOT=<path>  fos-career repo for DB ingest. Default: ~/services/fos-career.
-  DATABASE_URL=<mysql-url>  Required by fos-career ingest.`);
+  DATABASE_URL=<mysql-url>  Required by fos-career ingest.
+  FOS_CAREER_DATABASE_URL=<mysql-url>  Host-side override for fos-career ingest.`);
 }
 
-function run(cmd: string, args: string[], cwd: string): void {
+function run(cmd: string, args: string[], cwd: string, env: NodeJS.ProcessEnv = process.env): void {
   const result = spawnSync(cmd, args, {
     cwd,
     stdio: "inherit",
-    env: process.env,
+    env,
   });
   if (result.error) throw result.error;
   if (result.status !== 0) process.exit(result.status ?? 1);
@@ -368,6 +370,40 @@ HTML 리포트: \`${htmlDisplay}\`
   }
 }
 
+function parseDotEnv(filePath: string): NodeJS.ProcessEnv {
+  if (!existsSync(filePath)) return {};
+  const parsed: NodeJS.ProcessEnv = {};
+  for (const line of readFileSync(filePath, "utf-8").split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const match = trimmed.match(/^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+    if (!match) continue;
+    const rawValue = match[2].trim();
+    parsed[match[1]] = rawValue.replace(/^['"]|['"]$/g, "");
+  }
+  return parsed;
+}
+
+function buildFosCareerIngestEnv(fosCareerRoot: string): NodeJS.ProcessEnv {
+  const env = { ...parseDotEnv(`${fosCareerRoot}/.env`), ...process.env };
+  if (env.FOS_CAREER_DATABASE_URL) {
+    env.DATABASE_URL = env.FOS_CAREER_DATABASE_URL;
+  }
+  if (env.DATABASE_URL && env.POSITION_RECOMMENDER_DB_HOST_OVERRIDE !== "0") {
+    try {
+      const url = new URL(env.DATABASE_URL);
+      if (url.hostname === "bifos-db") {
+        url.hostname = env.POSITION_RECOMMENDER_DB_HOST ?? "127.0.0.1";
+        url.port = env.POSITION_RECOMMENDER_DB_PORT ?? "13306";
+        env.DATABASE_URL = url.toString();
+      }
+    } catch {
+      // Let the fos-career ingest command report malformed DATABASE_URL.
+    }
+  }
+  return env;
+}
+
 function runFosCareerCandidateIngest(args: { input: string }): void {
   const fosCareerRoot = resolve(process.env.FOS_CAREER_ROOT ?? `${process.env.HOME}/services/fos-career`);
   if (!existsSync(`${fosCareerRoot}/package.json`)) {
@@ -378,7 +414,8 @@ function runFosCareerCandidateIngest(args: { input: string }): void {
   run(
     "pnpm",
     ["ingest:position-recommendations", "--input", args.input],
-    fosCareerRoot
+    fosCareerRoot,
+    buildFosCareerIngestEnv(fosCareerRoot)
   );
 }
 
@@ -490,6 +527,12 @@ async function main(): Promise<void> {
     htmlReportPath: reportHtml,
     candidates,
   });
+  const structuredQuality = summarizeStructuredRecommendationQuality(structuredRun);
+  if (structuredQuality.missingRequiredCardFields.length > 0) {
+    console.warn(
+      `WARN structured recommendation missing card fields: ${JSON.stringify(structuredQuality.missingRequiredCardFields)}`
+    );
+  }
   writeStructuredRecommendationRun(structuredRun, reportItems);
   writeStructuredRecommendationRun(
     { ...structuredRun, markdownReportPath: runtime, htmlReportPath: runtimeHtml },
