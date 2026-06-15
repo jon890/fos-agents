@@ -78,6 +78,19 @@ function run(cmd: string, args: string[], cwd: string, env: NodeJS.ProcessEnv = 
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
+function runOutput(cmd: string, args: string[], cwd: string, env: NodeJS.ProcessEnv = process.env): string {
+  const result = spawnSync(cmd, args, {
+    cwd,
+    encoding: "utf-8",
+    env,
+  });
+  if (result.stdout) process.stdout.write(result.stdout);
+  if (result.stderr) process.stderr.write(result.stderr);
+  if (result.error) throw result.error;
+  if (result.status !== 0) process.exit(result.status ?? 1);
+  return result.stdout ?? "";
+}
+
 function die(message: string): never {
   console.error(message);
   process.exit(1);
@@ -419,6 +432,30 @@ function runFosCareerCandidateIngest(args: { input: string }): void {
   );
 }
 
+function runFosCareerCollectionImport(args: { snapshot: string; requestedSource: string }): string {
+  const fosCareerRoot = resolve(process.env.FOS_CAREER_ROOT ?? `${process.env.HOME}/services/fos-career`);
+  if (!existsSync(`${fosCareerRoot}/package.json`)) {
+    die(`position-recommender collection import: fos-career root not found: ${fosCareerRoot}`);
+  }
+
+  console.error("position-recommender DB ingest: importing collection snapshot...");
+  const stdout = runOutput(
+    "pnpm",
+    ["tsx", "db/import-positions.ts", "--snapshot", args.snapshot, "--requested-source", args.requestedSource],
+    fosCareerRoot,
+    buildFosCareerIngestEnv(fosCareerRoot)
+  );
+  try {
+    const parsed = JSON.parse(stdout);
+    if (typeof parsed.collectionRunId === "string" && parsed.collectionRunId.trim()) {
+      return parsed.collectionRunId;
+    }
+  } catch {
+    // Fall through to a hard failure below.
+  }
+  die("position-recommender collection import: collectionRunId missing from import output");
+}
+
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
   if (argv[0] === "--help" || argv[0] === "-h") {
@@ -444,6 +481,7 @@ async function main(): Promise<void> {
   const notifyScript = `${root}/../_shared/lib/notify_discord.ts`;
   const context = argv.length > 0 ? argv.join(" ") : DEFAULT_CONTEXT;
   const prompt = context.startsWith("/position-recommender") ? context : `/position-recommender ${context}`;
+  let collectionRunId: string | null = null;
 
   if (!validateOnly) {
     const collectArgs = [
@@ -458,6 +496,10 @@ async function main(): Promise<void> {
     if (process.env.POSITION_RECOMMENDER_INCLUDE_TOSS_ARTICLES === "1") collectArgs.push("--include-toss-articles");
     run("bun", collectArgs, root);
     assertLivePostingSnapshot(livePostings);
+    collectionRunId = runFosCareerCollectionImport({
+      snapshot: livePostings,
+      requestedSource: process.env.POSITION_RECOMMENDER_SOURCE ?? "all",
+    });
     try {
       await runClaudeWithGuards(
         [
@@ -475,6 +517,11 @@ async function main(): Promise<void> {
     } catch (error) {
       die(`position-recommender claude failed: ${error}`);
     }
+  } else if (existsSync(livePostings)) {
+    collectionRunId = runFosCareerCollectionImport({
+      snapshot: livePostings,
+      requestedSource: process.env.POSITION_RECOMMENDER_SOURCE ?? "all",
+    });
   }
 
   if (!existsSync(report)) {
@@ -523,6 +570,7 @@ async function main(): Promise<void> {
   const structuredRun = buildStructuredRecommendationRun({
     reportDate,
     sourceSnapshotPath: livePostings,
+    collectionRunId,
     markdownReportPath: report,
     htmlReportPath: reportHtml,
     candidates,

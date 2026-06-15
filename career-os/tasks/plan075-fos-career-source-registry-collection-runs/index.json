@@ -2,9 +2,9 @@
   "name": "plan075-fos-career-source-registry-collection-runs",
   "description": "ADR-083에 따라 fos-career DB에 source registry와 collection run을 도입하고, collection snapshot import, source diagnostics UI, runner 연결, 실제 수집 검증까지 고정한다.",
   "created_at": "2026-06-15T12:15:09Z",
-  "updated_at": "2026-06-15T12:15:09Z",
-  "status": "pending",
-  "current_phase": 1,
+  "updated_at": "2026-06-15T13:37:46.493Z",
+  "status": "completed",
+  "current_phase": 5,
   "total_phases": 5,
   "error_message": null,
   "blocked_reason": null,
@@ -44,6 +44,11 @@
       "id": "D5",
       "title": "implementation-doc-freeze",
       "decision": "구현 phase는 docs/ADR/정책 문서를 수정하지 않는다. 구현 중 문서 변경이 필요하면 PHASE_BLOCKED로 처리한다."
+    },
+    {
+      "id": "D6",
+      "title": "cumulative-position-pool",
+      "decision": "collected_positions는 latest run 전용 snapshot이 아니라 누적 공고 pool이다. postingUrl은 source에서 받은 원본 공고 URL로 저장한다. 중복 판정에는 앞뒤 공백, fragment, 명백한 tracking query만 제거한 dedupe URL을 우선 사용한다. DB 내부 unique index 길이 제약 때문에 positionKey/urlHash를 derived key로 둔다. URL이 없으면 source metadata key, 그다음 company/title/source/location처럼 비교적 안정적인 필드를 사용한다. closeDate는 identity core에서 제외하고 field update와 run history로만 남긴다."
     }
   ],
   "open_decisions": [],
@@ -51,6 +56,11 @@
     "DB 변경 phase는 migration 파일 생성만으로 완료하지 않고 기존 fos-career MySQL 또는 명시 smoke DB에 실제 적용 검증을 수행한다.",
     "collection snapshot import는 live-position-postings.md의 configured sources, source counts, diagnostics, errors를 파싱해 source registry, collection run, source diagnostics, collected positions를 갱신한다.",
     "/dashboard/sources는 registry와 latest run diagnostics를 읽고, enabled source가 0건이어도 zeroReason 또는 failureReason과 함께 표시한다.",
+    "/dashboard/positions는 전체 누적 공고를 기본으로 보여주고 latest run, 신규, 과거, source, 추천 여부 필터를 제공한다.",
+    "collected_position_run_items가 run별 등장 이력을 보존해 latest run 밖 과거 공고가 화면에서 사라지지 않게 한다.",
+    "원본 공고 URL과 함께 중복 판정용으로 최소 정리한 URL을 저장한다. 최소 정리는 tracking query 제거, fragment 제거, trailing slash 통일에 한정하고 의미 있는 query parameter는 보존한다.",
+    "urlHash는 긴 URL의 unique index 제약을 피하기 위한 DB 내부 derived key로만 사용한다.",
+    "closeDate만 바뀐 fallback 공고는 새 row를 만들지 않고 기존 collected_positions row를 갱신한다.",
     "/dashboard/positions와 recommendation run은 최신 collectionRunId 연결을 보여준다.",
     "최종 phase는 실제 collect/import/recommendation ingest smoke, Docker app rebuild/health, DB query 검증을 수행한다."
   ],
@@ -67,8 +77,15 @@
       "number": 1,
       "title": "fos-career DB schema와 seed 도입",
       "file": "phase-01.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
       "model": "sonnet",
       "timeout": 3000
     },
@@ -76,8 +93,15 @@
       "number": 2,
       "title": "collection snapshot import pipeline",
       "file": "phase-02.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
       "model": "sonnet",
       "timeout": 3600
     },
@@ -85,8 +109,15 @@
       "number": 3,
       "title": "source diagnostics와 positions UI 연결",
       "file": "phase-03.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
       "model": "sonnet",
       "timeout": 3600
     },
@@ -94,8 +125,15 @@
       "number": 4,
       "title": "runner integration과 실제 smoke 검증",
       "file": "phase-04.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
       "model": "sonnet",
       "timeout": 4200
     },
@@ -103,8 +141,15 @@
       "number": 5,
       "title": "0건 source 원인 진단 보강",
       "file": "phase-05.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
       "model": "sonnet",
       "timeout": 3000
     }

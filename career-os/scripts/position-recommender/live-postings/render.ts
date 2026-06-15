@@ -62,7 +62,8 @@ export function render(posts: Posting[], outPath: string, diagnostics: Collectio
       diagnostics.sourceDiagnostics.length > 0
         ? diagnostics.sourceDiagnostics
             .map((d) =>
-              `${d.source}:${d.status} collected=${d.collectedCount} imported=${d.importedCount} skipped=${d.skippedCount} failed=${d.failedCount}`
+              `${d.source}:${d.status} collected=${d.collectedCount} imported=${d.importedCount} skipped=${d.skippedCount} failed=${d.failedCount}` +
+              (d.message ? ` reason=${compactText(d.message, 180)}` : "")
             )
             .join(" | ")
         : "-"
