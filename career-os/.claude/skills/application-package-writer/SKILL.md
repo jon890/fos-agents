@@ -44,11 +44,11 @@ fos-study publish 안 함 — 비공개 career-os 산출물만 생성.
 
 ## Inputs
 
-Claude는 다음을 `Read` 도구로 직접 로드:
+현재 에이전트는 다음 파일과 명령 출력을 직접 로드:
 
 1. `career-os/data/applications/<company>/<role>/posting.md` — 공고 본문 (필수)
 2. `career-os/config/candidate-profile.md` — 후보자 프로필 11섹션 (필수)
-3. 후보자 프로필이 참조하는 근거 파일 (`task/**/*.md`, `resume/*.md`) — 필요 시 선택적 Read
+3. 후보자 프로필이 참조하는 근거 파일 (`task/**/*.md`, `resume/*.md`) — 필요 시 선택적으로 읽는다
 4. `career-os/data/applications/ledger.jsonl` — posting path 자동 추출 시 참조 (선택)
 
 ## Workflow
@@ -59,19 +59,19 @@ Claude는 다음을 `Read` 도구로 직접 로드:
 
 - 예: `/application-package-writer data/applications/tossplace/applied-ai-engineer/posting.md`
   → path = `career-os/data/applications/tossplace/applied-ai-engineer/posting.md`
-- path가 없으면 `career-os/data/applications/ledger.jsonl`을 Read해 다음 조건의 첫 항목을 후보로 선택:
+- path가 없으면 `career-os/data/applications/ledger.jsonl`을 읽어 다음 조건의 첫 항목을 후보로 선택:
   - `needsUserReview=true` 또는 `status`가 `discovered|analyzing|preparing_application` 중 하나
   - 후보 선택 시 사용자에게 확인 ("TossPlace Applied AI Engineer 공고로 진행할까요?") 후 계속
 
 posting path 특정 불가 시 stderr + exit 1.
 
-### 2. 컨텍스트 로드 (Read)
+### 2. 컨텍스트 로드
 
-순서대로 Read:
+순서대로 읽는다:
 
 1. posting.md
 2. `career-os/config/candidate-profile.md`
-3. candidate-profile.md의 "Source provenance" 섹션에서 관련성 높은 근거 파일 2~5개 선택적 Read
+3. candidate-profile.md의 "Source provenance" 섹션에서 관련성 높은 근거 파일 2~5개 선택적으로 읽는다
    - 공고 요구사항과 겹치는 프로젝트·기술 스택의 근거 파일 우선 선택
    - 전체 `task/**` 탐색 금지 — 관련성 판단은 프로필 인용 경로 기반
 
@@ -90,7 +90,7 @@ candidate-profile.md + 근거 파일과 교차 분석:
 - 근거가 없거나 약한 항목은 내부 판단에서 `needs_evidence`로 취급하되, 최종 문서에는 raw label로 남기지 않는다.
   - 추측성 주장 / 이력서·task에 기재 없는 수치·성과 / 검증 불가 기술 경험 등은 `보강 필요 / 선택지 / 권장 행동`으로 작성한다.
 
-### 4. fit-analysis.md 작성 (Write)
+### 4. fit-analysis.md 작성
 
 저장 경로: `career-os/data/applications/<company>/<role>/fit-analysis.md`
 
@@ -122,7 +122,7 @@ candidate-profile.md + 근거 파일과 교차 분석:
 - 총 30줄 이상
 - `sources/fos-study/`에 쓰지 않음
 
-### 5. application-package.md 작성 (Write)
+### 5. application-package.md 작성
 
 저장 경로: `career-os/data/applications/<company>/<role>/application-package.md`
 
@@ -172,7 +172,7 @@ candidate-profile.md + 근거 파일과 교차 분석:
   - run_application_reviewer
 ```
 
-### 6. resume-draft.md 작성 (Write)
+### 6. resume-draft.md 작성
 
 저장 경로: `career-os/data/applications/<company>/<role>/resume-draft.md`
 
@@ -204,7 +204,7 @@ candidate-profile.md + 근거 파일과 교차 분석:
   `design.md` 적용 HTML과 첨부 가능한 PDF는 별도 산출물로 구분한다.
 - 총 20줄 이상
 
-### 7. cover-letter.md 작성 (Write)
+### 7. cover-letter.md 작성
 
 저장 경로: `career-os/data/applications/<company>/<role>/cover-letter.md`
 
@@ -231,7 +231,7 @@ candidate-profile.md + 근거 파일과 교차 분석:
 - 근거 부족은 `보강 필요 / 선택지 / 권장 행동` 구조로 둔다.
 - 총 20줄 이상
 
-### 8. submission-checklist.md 작성 (Write)
+### 8. submission-checklist.md 작성
 
 저장 경로: `career-os/data/applications/<company>/<role>/submission-checklist.md`
 
@@ -289,7 +289,7 @@ candidate-profile.md + 근거 파일과 교차 분석:
 | posting.md 부재 | stderr + exit 1 |
 | candidate-profile.md 부재 | stderr + exit 1 |
 | ledger.jsonl 부재 (자동 선택 시) | stderr warn + posting path를 사용자에게 직접 입력 요청 |
-| 근거 파일 Read 실패 | stderr warn + 해당 파일 없이 계속 진행 (`보강 필요 / 선택지 / 권장 행동` 강화) |
+| 근거 파일 읽기 실패 | stderr warn + 해당 파일 없이 계속 진행 (`보강 필요 / 선택지 / 권장 행동` 강화) |
 | self-check 3회 실패 | stderr + exit 1, 실패 항목 명시 |
 
 ## Why this design

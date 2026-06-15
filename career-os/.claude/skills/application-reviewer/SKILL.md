@@ -42,7 +42,7 @@ review.md는 내부 검토 문서다.
 
 ## Inputs
 
-Claude는 다음을 `Read` 도구로 직접 로드:
+현재 에이전트는 다음 파일과 명령 출력을 직접 로드:
 
 1. `career-os/data/applications/<company>/<role>/posting.md` — 공고 본문 (필수)
 2. `career-os/data/applications/<company>/<role>/fit-analysis.md` — fit 분석 (필수)
@@ -51,7 +51,7 @@ Claude는 다음을 `Read` 도구로 직접 로드:
 5. `career-os/data/applications/<company>/<role>/cover-letter.md` — 제출용 지원동기 Markdown 초안 (필수)
 6. `career-os/data/applications/<company>/<role>/submission-checklist.md` — 제출 전 확인 목록 (필수)
 7. `career-os/config/candidate-profile.md` — 후보자 프로필 11섹션 (필수)
-8. fit-analysis.md 및 application-package.md의 `## 근거 파일 참조` 에 명시된 근거 파일 — 선택적 Read
+8. fit-analysis.md 및 application-package.md의 `## 근거 파일 참조` 에 명시된 근거 파일 — 선택적으로 읽는다
 9. `career-os/data/applications/ledger.jsonl` — riskFlags / status / revisionCount 확인 (선택)
 
 ## Workflow
@@ -62,14 +62,14 @@ Claude는 다음을 `Read` 도구로 직접 로드:
 
 - 예: `/application-reviewer data/applications/tossplace/applied-ai-engineer`
   → dir = `career-os/data/applications/tossplace/applied-ai-engineer`
-- path가 없으면 `career-os/data/applications/ledger.jsonl`을 Read해 다음 조건의 첫 항목을 후보로 선택:
+- path가 없으면 `career-os/data/applications/ledger.jsonl`을 읽어 다음 조건의 첫 항목을 후보로 선택:
   - `needsUserReview=true` 또는 `status`가 `ready_for_user_review|preparing_application|needs_revision` 중 하나
   - 후보 선택 시 사용자에게 확인 후 계속
 - dir 특정 불가 시 stderr + exit 1.
 
-### 2. 컨텍스트 로드 (Read)
+### 2. 컨텍스트 로드
 
-순서대로 Read:
+순서대로 읽는다:
 
 1. posting.md
 2. fit-analysis.md
@@ -78,7 +78,7 @@ Claude는 다음을 `Read` 도구로 직접 로드:
 5. cover-letter.md
 6. submission-checklist.md
 7. `career-os/config/candidate-profile.md`
-8. application-package.md의 `## 근거 파일 참조` 에서 관련성 높은 근거 파일 2~5개 선택적 Read
+8. application-package.md의 `## 근거 파일 참조` 에서 관련성 높은 근거 파일 2~5개 선택적으로 읽는다
 9. ledger.jsonl — riskFlags / revisionCount 확인
 
 ### 3. 6개 축 심사
@@ -90,7 +90,7 @@ Claude는 다음을 `Read` 도구로 직접 로드:
 application-package.md, resume-draft.md, cover-letter.md의 이력서 bullet, 지원동기, 직무별 강조 포인트를 검토:
 - 내부적으로 `needs_evidence`에 해당하는 항목을 찾되, review.md에는 raw label이 아니라 `보강 필요 / 선택지 / 권장 행동`으로 작성
 - 근거 파일 없이 수치·성과·기술 경험을 주장한 문장 식별
-- 근거 파일이 실제 존재하는지 확인 (Read 결과 기반)
+- 근거 파일이 실제 존재하는지 확인 (읽은 파일 기준)
 
 #### 3-2. Drift Review (공고 맞춤 중 경력 왜곡 여부)
 
@@ -140,7 +140,7 @@ ledger.jsonl의 riskFlags와 posting.md의 위험 플래그를 교차:
 - 근거 보강 필요 항목이 필수 요건 1개 이상을 직접 충족해야 하는 경우 `revise` 이상
 - 과장·허위 가능성 있는 항목이 1개 이상이면 최소 `revise`
 
-### 5. review.md 작성 (Write)
+### 5. review.md 작성
 
 저장 경로: `career-os/data/applications/<company>/<role>/review.md`
 
@@ -232,7 +232,7 @@ review.md 작성 후 아래 항목 검증. 실패 시 해당 섹션 재작성:
 | posting.md / fit-analysis.md / application-package.md / resume-draft.md / cover-letter.md / submission-checklist.md 부재 | stderr + exit 1 |
 | candidate-profile.md 부재 | stderr + exit 1 |
 | ledger.jsonl 부재 (자동 선택 시) | stderr warn + dir를 사용자에게 직접 입력 요청 |
-| 근거 파일 Read 실패 | stderr warn + 해당 파일 없이 계속 진행 (evidence guard 강화) |
+| 근거 파일 읽기 실패 | stderr warn + 해당 파일 없이 계속 진행 (evidence guard 강화) |
 | self-check 3회 실패 | stderr + exit 1, 실패 항목 명시 |
 
 ## Why this design

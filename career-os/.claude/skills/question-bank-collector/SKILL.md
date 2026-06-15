@@ -5,7 +5,7 @@ description: 일반 backend 질문, CS 질문 수집, 면접 질문 bank, 질문
 
 # Question Bank Collector
 
-공개 가능한 일반 backend/CS 면접 질문을 `public/question-bank/`에 모으고 보강하는 native skill이다.
+공개 가능한 일반 backend/CS 면접 질문을 `public/question-bank/`에 모으고 보강하는 agent skill이다.
 private 포지션 준비 정본은 `private/<company>/<position>/interview/prep.md`이며, 이 skill은 public bank와 private prep 경계를 분리한다.
 
 ## When To Use

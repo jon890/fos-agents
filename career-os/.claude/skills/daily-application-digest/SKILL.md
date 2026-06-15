@@ -34,7 +34,7 @@ Discord 전송 안 함 — cron/runner에서 `_shared/lib/notify_discord.ts`로 
 
 ## Inputs
 
-Claude는 다음을 `Read` 도구로 직접 로드:
+현재 에이전트는 다음 파일과 명령 출력을 직접 로드:
 
 1. `career-os/data/applications/ledger.jsonl` — 전체 지원 이력 원장 (필수)
 2. 각 applicationDir의 파일 (존재하는 것만):
@@ -58,7 +58,7 @@ Claude는 다음을 `Read` 도구로 직접 로드:
 
 ### 2. ledger 로드 및 applicationDir 목록 수집
 
-`career-os/data/applications/ledger.jsonl`을 Read한다.
+`career-os/data/applications/ledger.jsonl`을 읽는다.
 
 각 줄을 JSON 파싱해 다음 필드를 수집:
 
@@ -77,7 +77,7 @@ Claude는 다음을 `Read` 도구로 직접 로드:
 
 ### 3. 각 applicationDir 파일 확인
 
-각 entry의 `applicationDir` 기준으로 다음 파일을 Read한다:
+각 entry의 `applicationDir` 기준으로 다음 파일을 읽는다:
 
 ```
 career-os/<applicationDir>/posting.md

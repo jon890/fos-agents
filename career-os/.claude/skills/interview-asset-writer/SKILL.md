@@ -40,7 +40,7 @@ interview asset은 후보자 이력 기반 자료지만 fos-study 공개 발행 
 
 ## Inputs
 
-Claude는 다음을 `Read` 도구로 직접 로드:
+현재 에이전트는 다음 파일과 명령 출력을 직접 로드:
 
 1. `career-os/public/question-bank/` inventory — 공개 질문 bank 정본. 질문 본문은 public-safe JSON에서만 읽는다.
 2. `career-os/config/question-bank-topics.json` — 선택 사항. public bank 정본이 아니라 interview asset 전용 `<topic-key>` override 후보 → `outputPath` / `domain` / `title` / `inputFiles` / `promptAppend`
@@ -61,19 +61,19 @@ Claude는 다음을 `Read` 도구로 직접 로드:
 산출물 형식 판단:
 - **Q&A 질문 은행**: topic-key에 `qbank` / `question-bank` / `experience-` 포함, 또는 자연어에 "질문 은행" / "Q&A" / "qbank" 언급
 - **마스터 플레이북**: topic-key에 `master` / `playbook` 포함, 또는 자연어에 "마스터" / "플레이북" / "master playbook" 언급
-- 모호하면 사용자에게 확인 (기본값 Q&A 질문 은행). 비대화형(`claude -p`) 환경에서 모호 → 기본값 Q&A 질문 은행으로 자동 진행.
+- 모호하면 사용자에게 확인 (기본값 Q&A 질문 은행). 비대화형 환경에서 모호 → 기본값 Q&A 질문 은행으로 자동 진행.
 
 stderr에 결정 근거 1줄 로그 (예: `[interview-asset] topic=experience-qbank-ai-service-team → Q&A 질문 은행 형식`).
 
-### 2. Context 로드 (Read)
+### 2. Context 로드
 
-Inputs 1~5 모두 Read. `inputFiles` 명시되면 task/resume 추가 Read.
+Inputs 1~5 모두 읽는다. `inputFiles` 명시되면 task/resume 추가로 읽는다.
 
 ### 3. Overlap 점검 (선택)
 
-`sources/fos-study/<outputPath 디렉터리>`에 유사 파일 있으면 update 의도 확인. 비대화형(`claude -p`) 환경에서 유사 파일 발견 시 → update 모드로 자동 진행. update면 기존 본문 Read해서 통합 작성.
+`sources/fos-study/<outputPath 디렉터리>`에 유사 파일 있으면 update 의도 확인. 비대화형 환경에서 유사 파일 발견 시 → update 모드로 자동 진행. update면 기존 본문 읽어서 통합 작성.
 
-### 4. 마크다운 작성 (Write)
+### 4. 마크다운 작성
 
 공통 구조:
 - 첫 줄: `# <topic-title>` (단일 `#`, `## ` 시작 금지, `# 초안:` / `# Draft:` 금지)
@@ -105,7 +105,7 @@ Inputs 1~5 모두 Read. `inputFiles` 명시되면 task/resume 추가 Read.
 
 #### 공통 출력 규칙
 
-- `Write` 도구로 *markdown 직접 작성* (JSON 출력 금지, JSON schema 따르지 않음 — native skill 패턴)
+- 파일 쓰기로 *markdown 직접 작성* (JSON 출력 금지, JSON schema 따르지 않음 — agent skill 패턴)
 - 메타 보고 문구 금지 ("파일이 생성되었습니다", "문서 구성 요약", "아래와 같이" 등) — 본문 자체를 작성
 - 첫 줄 `# [초안] <topic-title>` 형식. 작성 후에는 본문만 출력하지 *작성했다는 보고*는 하지 않음.
 - 공개 본문에 `needs_evidence`를 남기지 않고, 필요한 경우 `보강 필요 / 선택지 / 권장 행동`으로 바꾼다.
@@ -139,7 +139,7 @@ Inputs 1~5 모두 Read. `inputFiles` 명시되면 task/resume 추가 Read.
 
 본 self-check가 옛 JSON schema 검증을 대체. 객관적 기준(첫 줄·줄 수·펜스·섹션 헤더) self-check가 신뢰 가능. 3회 cap은 무한 루프 차단.
 
-### 6. Publish (Bash)
+### 6. Publish (셸 명령)
 
 ```bash
 cd career-os/sources/fos-study
@@ -151,7 +151,7 @@ git push origin main
 
 add vs update는 `git status --porcelain` 자동 판단. push 실패 시 stderr + exit 1 (silent 실패 금지).
 
-### 7. Discord 알림 (Bash)
+### 7. Discord 알림 (셸 명령)
 
 ```bash
 bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
@@ -173,6 +173,6 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 ## Why this design
 
 - **두 형식 흡수 (plan015 사용자 통찰)**: master playbook과 Q&A 질문 은행은 모두 *후보자 이력 기반 면접 자산*. 학습 문서(study-pack-writer)와 책임 분리 — 본 skill은 *이력 중심*, study-pack-writer는 *주제 중심*. 두 형식을 한 skill로 묶고 분기 처리.
-- **Self-check가 JSON schema 대체**: 옛 `--json-schema` + renderer 패턴은 외부 subprocess의 부산물. native에서는 Claude 자체 검증으로 동등 효과.
+- **Self-check가 JSON schema 대체**: 옛 `--json-schema` + renderer 패턴은 외부 subprocess의 부산물. native에서는 현재 에이전트 자체 검증으로 동등 효과.
 - **재작성 ≤3회 cap**: 무한 루프 차단. 그래도 실패하면 본질 문제 (topic 모호, 입력 부족) — 사용자 개입 필요.
-- **Publish + notify Bash 통합**: 옛 외부 publish/notify shell을 Bash 도구로 직접. 의존 줄임.
+- **Publish + notify 셸 명령 통합**: 옛 외부 publish/notify shell을 셸 명령 도구로 직접. 의존 줄임.
