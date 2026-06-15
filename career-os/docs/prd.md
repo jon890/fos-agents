@@ -196,6 +196,32 @@ MVP 범위:
 - 새 DB 컨테이너 생성.
 - 추천 후보 개수 정책 변경.
 
+### 계획 중: fos-career position lifecycle validation (plan076)
+
+`plan076-fos-career-position-lifecycle-validation`은 전체 수집 공고 pool을 운영 가능한 lifecycle 상태로 관리한다.
+목표는 사람이 닫은 공고, validator가 닫은 공고, 다시 수집되어 열린 공고를 모두 fos-career DB에서 추적하는 것이다.
+
+MVP 범위:
+
+- `collected_positions.postingStatus`를 현재 상태 정본으로 직접 갱신한다.
+- 모든 상태 변경은 `position_status_events`에 남긴다.
+- `/dashboard/positions`에서 modal로 수동 닫기를 제공한다.
+- 수동 닫기는 사유 입력을 필수로 한다.
+- validator script는 기본 dry-run이고, `--apply`에서만 실제 상태를 바꾼다.
+- validator는 한 번에 처리할 수 있는 상태 변경 상한을 둔다. 기본값은 20개다.
+- 3회 이상 최신 수집 실행에서 미등장하고 source 상태가 정상 계열인 공고는 자동 닫기 후보가 된다.
+- source가 blocked, parser_changed, failed, skipped, unknown 계열이면 자동 닫지 않고 검증 보류 이벤트를 남긴다.
+- 닫힌 공고가 다시 수집되면 snapshot의 `posting_status`로 자동 복구한다.
+- 최신/신규/과거 판단은 `collected_position_run_items`를 기준으로 한다.
+- 사용자에게 보이는 버튼, 필터, badge, 상태 설명은 한국어 표현을 우선한다.
+
+범위 밖:
+
+- Naver Careers와 KakaoPay Securities adapter 자체 개선.
+- 공고 상세 페이지 신설.
+- 외부 채용 사이트 접속, 로그인, 제출 자동화.
+- validator를 승인 없이 cron으로 자동 적용하는 일.
+
 ### 완료 기반: position priority + posting/fit analysis workflow (plan050)
 
 `plan050-position-priority-fit-workflow`는 plan048에서 모은 active/open 공고를 지원 행동 우선순위로 연결한다.

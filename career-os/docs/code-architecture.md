@@ -359,6 +359,18 @@ plan075 이후 source/collection 구조:
 - `position_recommendation_runs`는 사용한 `collectionRunId`를 참조한다.
 - source별 0건은 `zeroReason` 또는 `failureReason`으로 구분해 정상 0건과 parser/차단/필터 문제를 분리한다.
 
+plan076 이후 collected position lifecycle 구조:
+
+- 수집 공고의 현재 상태는 `collected_positions.postingStatus`가 정본이다.
+- 상태 변경 이력은 `position_status_events`에 누적한다.
+- 수동 닫기는 `/dashboard/positions` modal에서 사유 입력 후 수행한다.
+- validator는 기본 dry-run이며, `--apply`에서만 자동 닫기/재오픈 상태 변경을 수행한다.
+- 자동 닫기는 3회 이상 최신 수집 실행에서 미등장하고 source 상태가 정상 계열일 때만 수행한다.
+- 닫힌 공고가 다시 수집되면 snapshot의 `posting_status`로 자동 복구한다.
+- latest/new/past 판단은 `collected_position_run_items`를 정본으로 사용한다.
+- 사용자에게 보이는 버튼, 필터, badge, 상태 설명은 한국어 label을 우선한다.
+- Naver/KakaoPay Securities adapter 자체 조사는 lifecycle validator와 분리된 후속 source adapter plan에서 다룬다.
+
 Priority write-action bridge:
 
 - fos-career는 MySQL `priority_action_requests`에 사용자 확인 요청을 저장한다.

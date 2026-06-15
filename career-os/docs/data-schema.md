@@ -1979,6 +1979,58 @@ collection run 안의 source별 결과.
 `sourceDiagnostics`처럼 공고 row마다 반복 저장된 진단 텍스트는 migration compatibility로만 남긴다.
 새 source diagnostics 화면은 `position_sources`, `position_collection_runs`, `position_source_run_diagnostics`를 읽는다.
 
+### position_status_events (planned — plan076)
+
+수집 공고 상태 변경 이력.
+현재 상태는 `collected_positions.postingStatus`에 직접 반영하고, 변경 이유와 근거는 이 테이블에 누적한다.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `id` | BIGINT PK | 자동 증가 ID |
+| `collectedPositionId` | BIGINT NOT NULL | `collected_positions.id` |
+| `eventType` | VARCHAR(64) NOT NULL | `manual_closed`, `validator_closed`, `validator_reopened`, `validation_checked`, `validation_skipped` |
+| `previousStatus` | VARCHAR(32) NULL | 변경 전 상태 |
+| `nextStatus` | VARCHAR(32) NULL | 변경 후 상태 |
+| `reason` | TEXT NOT NULL | 사람이 읽는 한국어 이유 |
+| `collectionRunId` | VARCHAR(64) NULL | 판단에 사용한 수집 실행 |
+| `sourceId` | VARCHAR(64) NULL | 관련 수집처 |
+| `validationRunId` | VARCHAR(64) NULL | validator 실행 ID |
+| `actorAdminUserId` | INT NULL | 수동 처리한 관리자 |
+| `evidenceJson` | JSON NULL | 미등장 횟수, source 상태, URL 등 근거 |
+| `createdAt` | DATETIME NOT NULL | 생성 시각 |
+
+표시 규칙:
+
+- 화면 label은 한국어를 우선한다.
+- `manual_closed`는 "수동 닫기"로 표시한다.
+- `validator_closed`는 "검증 자동 닫기"로 표시한다.
+- `validator_reopened`는 "재수집 자동 열기"로 표시한다.
+- `validation_skipped`는 "검증 보류"로 표시한다.
+
+### position_validation_runs (planned — plan076)
+
+validator 실행 단위.
+기본 실행은 dry-run이며, `--apply`가 있는 경우에만 상태 변경을 적용한다.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `id` | VARCHAR(64) PK | validator 실행 ID |
+| `mode` | VARCHAR(16) NOT NULL | `dry_run` 또는 `apply` |
+| `maxChanges` | INT NOT NULL | 한 번에 적용 가능한 최대 변경 수 |
+| `checkedCount` | INT NOT NULL | 검사한 공고 수 |
+| `closedCount` | INT NOT NULL | 닫은 공고 수 |
+| `reopenedCount` | INT NOT NULL | 다시 연 공고 수 |
+| `skippedCount` | INT NOT NULL | 보류한 공고 수 |
+| `startedAt` | DATETIME NOT NULL | 시작 시각 |
+| `finishedAt` | DATETIME NULL | 종료 시각 |
+| `summaryJson` | JSON NULL | 실행 요약 |
+
+기본 정책:
+
+- 3회 이상 최신 수집 실행에서 미등장하고 source 상태가 정상 계열이면 자동 닫기 후보가 된다.
+- source 상태가 blocked, parser_changed, failed, skipped, unknown 계열이면 자동 닫지 않는다.
+- 닫힌 공고가 다시 수집되면 snapshot의 `posting_status`로 자동 복구한다.
+
 ### application_candidate_states
 
 지원 후보의 현재 상태와 stage.

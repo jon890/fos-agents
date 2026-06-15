@@ -457,6 +457,40 @@ career-os live-postings adapter registry
 - 추천 run은 사용한 `collectionRunId`를 참조한다.
 - `application_candidates`는 추천 후보 상태를 소유하되, 전체 수집 공고 pool을 대체하지 않는다.
 
+### fos-career position lifecycle validation (planned — plan076)
+
+수집 공고의 현재 상태는 `collected_positions.postingStatus`에 직접 반영한다.
+상태 변경 이유와 이전 상태는 `position_status_events`에 누적한다.
+
+```text
+collection run import
+  -> collected_position_run_items에 등장 이력 저장
+  -> validator dry-run
+  -> --apply일 때 상태 변경 후보를 최대 N개 적용
+  -> collected_positions.postingStatus 갱신
+  -> position_status_events 기록
+  -> dashboard /dashboard/positions 표시
+```
+
+수동 닫기:
+
+- 사용자는 `/dashboard/positions`에서 modal을 열어 사유를 입력한다.
+- fos-career API는 `postingStatus=closed`로 갱신한다.
+- `position_status_events`에 `manual_closed` 이벤트를 남긴다.
+
+validator:
+
+- 기본 실행은 dry-run이다.
+- `--apply`가 있을 때만 `validator_closed` 또는 `validator_reopened`를 적용한다.
+- 최신 수집 실행에서 3회 이상 미등장하고 source 상태가 정상 계열인 공고만 자동 닫기 대상이다.
+- source 장애, parser 변경, 차단, 알 수 없음은 `validation_skipped`로 남긴다.
+- 닫힌 공고가 다시 수집되면 snapshot의 `posting_status`로 자동 복구한다.
+
+표시:
+
+- 사용자가 보는 label은 한국어를 우선한다.
+- 내부 enum이나 raw source 값은 상세 영역에 보조 정보로 둔다.
+
 ### Application Frontdoor Queue (legacy — plan038)
 
 plan038은 `/position-recommender` 결과와 `application-flow-agent` ledger 사이에 사용자 선택 전용 queue를 둔다.
