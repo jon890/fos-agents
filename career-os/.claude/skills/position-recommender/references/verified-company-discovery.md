@@ -39,7 +39,7 @@
 - 후보자의 Outbox, 캐시 정합성, Batch, OpenSearch/RAG, AI workflow 중 2개 이상과 연결
 - 회사 공식 career 또는 Wanted active 근거 존재
 
-## 보류/주의 조건
+## 보류·주의 조건
 
 - 마감/폐쇄 공고
 - 계약직/프리랜서/임시직/인턴
