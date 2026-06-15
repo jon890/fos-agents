@@ -4,9 +4,9 @@
   "description": "ADR-084에 따라 fos-career 수집 공고 pool의 현재 상태, 수동 닫힘 처리, validator 자동 닫힘, 재수집 자동 재오픈을 DB 이벤트와 검증 실행으로 관리한다.",
   "goal": "collected_positions.postingStatus를 현재 상태 정본으로 유지하면서 모든 수동/자동 상태 변경을 position_status_events와 position_validation_runs에 추적하고, /dashboard/positions에서 한국어 중심으로 운영 가능한 검증 UI를 제공한다.",
   "created_at": "2026-06-15T00:00:00Z",
-  "updated_at": "2026-06-15T00:00:00Z",
-  "status": "pending",
-  "current_phase": 1,
+  "updated_at": "2026-06-15T02:50:00Z",
+  "status": "completed",
+  "current_phase": 6,
   "total_phases": 6,
   "execution_mode": {
     "sequential": true,
@@ -97,7 +97,7 @@
       "number": 1,
       "title": "DB schema와 migration",
       "file": "phase-01.md",
-      "status": "pending",
+      "status": "completed",
       "objective": "position_status_events와 position_validation_runs, 필요한 indexes와 Drizzle schema를 추가하고 현재 상태 정본이 collected_positions.postingStatus임을 코드 구조에 반영한다.",
       "owned_files_or_modules": [
         "fos-career db schema",
@@ -119,7 +119,7 @@
       "number": 2,
       "title": "수동 닫힘 처리",
       "file": "phase-02.md",
-      "status": "pending",
+      "status": "completed",
       "objective": "/dashboard/positions에서 사유 필수 수동 닫힘 처리를 제공하고 collected_positions.postingStatus 갱신과 manual_closed 이벤트 기록을 transaction으로 묶는다.",
       "owned_files_or_modules": [
         "fos-career /dashboard/positions route/components",
@@ -141,7 +141,7 @@
       "number": 3,
       "title": "validator script",
       "file": "phase-03.md",
-      "status": "pending",
+      "status": "completed",
       "objective": "기본 dry-run validator를 만들고 --apply에서만 자동 닫힘을 적용하며 --max-changes 기본값 20, run item 기반 미등장 판정, source diagnostics 기반 skip을 구현한다.",
       "owned_files_or_modules": [
         "fos-career scripts/position lifecycle validator",
@@ -164,7 +164,7 @@
       "number": 4,
       "title": "재수집 자동 재오픈",
       "file": "phase-04.md",
-      "status": "pending",
+      "status": "completed",
       "objective": "닫힌 공고가 새 collection run에 다시 등장하면 snapshot posting_status로 복원하고 validator_reopened 이벤트를 남긴다.",
       "owned_files_or_modules": [
         "fos-career collection snapshot import path",
@@ -186,7 +186,7 @@
       "number": 5,
       "title": "positions UI와 진단 polish",
       "file": "phase-05.md",
-      "status": "pending",
+      "status": "completed",
       "objective": "/dashboard/positions를 전체 누적 pool 중심으로 다듬고 latest/new/past/source/recommendation/status 필터, 검증 요약, 한국어 label을 제공한다.",
       "owned_files_or_modules": [
         "fos-career /dashboard/positions page",
@@ -208,7 +208,7 @@
       "number": 6,
       "title": "검증과 배포 smoke",
       "file": "phase-06.md",
-      "status": "pending",
+      "status": "completed",
       "objective": "plan076 전체 변경을 typecheck/build/migration/fixture/docker/external route smoke로 검증하고 완료 가능한 상태로 정리한다.",
       "owned_files_or_modules": [
         "fos-career validation commands",

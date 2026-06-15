@@ -1,7 +1,7 @@
 # Phase 02 - 수동 닫힘 처리
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ---
 
@@ -141,8 +141,23 @@ git status --short
 
 ## common-pitfalls self-check
 
-- [ ] 첫 bash 블록이 `cd "$(git rev-parse --show-toplevel)"`로 시작한다.
-- [ ] 사유 필수 검증을 서버 쪽에서 수행한다.
-- [ ] row update와 event write가 같은 transaction이다.
-- [ ] 사용자-facing 표현은 한국어 우선이다.
-- [ ] 공고 상세 페이지를 만들지 않는다.
+- [x] 첫 bash 블록이 `cd "$(git rev-parse --show-toplevel)"`로 시작한다.
+- [x] 사유 필수 검증을 서버 쪽에서 수행한다.
+- [x] row update와 event write가 같은 transaction이다.
+- [x] 사용자-facing 표현은 한국어 우선이다.
+- [x] 공고 상세 페이지를 만들지 않는다.
+
+## 완료 기록
+
+- 완료 시각: 2026-06-15 KST
+- fos-career branch: `plan076-position-lifecycle-validation`
+- 변경 요약:
+  - `/dashboard/positions` 목록 row에 사유 필수 `닫힘 처리` form을 추가했다.
+  - `/api/positions/manual-close`에서 인증, 사유 검증, 수동 닫힘 처리를 수행한다.
+  - `collected_positions.postingStatus` 갱신, `manual_closed` 이벤트, audit log를 같은 transaction으로 기록한다.
+  - 이미 `closed`인 공고는 중복 이벤트 없이 거절한다.
+- 검증:
+  - `pnpm exec tsc --noEmit`: 성공
+  - `pnpm build`: 성공
+  - `rg`로 `manual_closed`, `actorAdminUserId`, 한국어 label, 외부 제출/업로드 경계를 확인했다.
+  - `git diff --check`: 성공

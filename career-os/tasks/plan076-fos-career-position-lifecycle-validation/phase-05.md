@@ -1,7 +1,7 @@
 # Phase 05 - positions UI와 진단 polish
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ---
 
@@ -147,8 +147,24 @@ git status --short
 
 ## common-pitfalls self-check
 
-- [ ] 첫 bash 블록이 `cd "$(git rev-parse --show-toplevel)"`로 시작한다.
-- [ ] 전체 누적 pool을 유지한다.
-- [ ] latest/new/past는 run item 기반이다.
-- [ ] 사용자-facing label은 한국어 우선이다.
-- [ ] 공고 상세 페이지를 만들지 않는다.
+- [x] 첫 bash 블록이 `cd "$(git rev-parse --show-toplevel)"`로 시작한다.
+- [x] 전체 누적 pool을 유지한다.
+- [x] latest/new/past는 run item 기반이다.
+- [x] 사용자-facing label은 한국어 우선이다.
+- [x] 공고 상세 페이지를 만들지 않는다.
+
+## 완료 기록
+
+- 완료 시각: 2026-06-15 KST
+- fos-career branch: `plan076-position-lifecycle-validation`
+- 변경 요약:
+  - `/dashboard/positions`에 최근 validator 실행 기반 `검증 요약`을 추가했다.
+  - 최근 상태 이벤트를 한국어 label로 요약한다.
+  - 필터, badge, 수집처 진단, field label을 한국어 중심으로 정리했다.
+  - 전체 누적 pool과 run item 기반 latest/new/past 계산은 유지했다.
+- 검증:
+  - `pnpm exec tsc --noEmit`: 성공
+  - `pnpm build`: 성공
+  - 한국어 label grep: 성공
+  - `/dashboard/positions/` 상세 경로 생성 흔적 없음
+  - `git diff --check`: 성공
