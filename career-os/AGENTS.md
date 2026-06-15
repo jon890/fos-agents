@@ -242,9 +242,7 @@ cd career-os
 /daily-application-digest [YYYY-MM-DD]
 ```
 
-`docs-audit`는 `sources/fos-study` 외부 repo의 skill로 향하는 심볼릭 링크다.
-현재 career-os Codex 노출 목록에는 포함하지 않는다.
-fos-study checkout이 있는 실행 환경에서 별도 검토 후 연결한다.
+`docs-audit`는 career-os에서 제거됐다(ADR-088). fos-study 문서 감사가 필요하면 fos-study repo checkout 환경에서 그 repo의 스킬을 직접 실행한다.
 
 각 명령의 입력/산출물/git push 여부 상세는 `docs/prd.md` 기능 표, 데이터 흐름은 `docs/flow.md` 참조.
 

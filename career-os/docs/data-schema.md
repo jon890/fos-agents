@@ -1703,8 +1703,6 @@ Toss adapter는 공식 `job-groups` API의 그룹 공고와 하위 포지션을 
 
 career-os가 손대지 말아야 할 영역: `.claude/**` (별도 스킬 정의), `.git/**`.
 
-`sources/fos-study/.claude/skills/docs-audit/SKILL.md`는 docs-audit 스킬의 진실 출처이며 `career-os/.claude/skills/docs-audit/`이 실체 디렉터리로 위치함 (내부 SKILL.md만 심링크 유지).
-
 ## fos-career MySQL 스키마
 
 fos-career 대시보드가 소유하는 데이터.
