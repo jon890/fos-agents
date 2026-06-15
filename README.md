@@ -1,7 +1,7 @@
 # ai-nodes 모노레포
 
 재사용 가능한 작업 워크스페이스들의 단일 출처(source-of-truth) 모노레포.
-각 워크스페이스는 자체 skills · config · data · logs를 가진 **독립 영역**이며, 공용 자산만 루트 `_shared/`와 `skills/`에 둔다.
+각 워크스페이스는 자체 skills · config · data · logs를 가진 **독립 영역**이며, 공용 자산만 루트 `_shared/`와 `.claude/skills/`에 둔다.
 
 정식 가이드는 [`AGENTS.md`](AGENTS.md) (CLAUDE.md는 본 파일의 심볼릭 링크).
 본 README는 개요만 담고, 진입점·정책 상세는 AGENTS.md와 각 `<workspace>/AGENTS.md`를 역참조한다.
@@ -28,7 +28,7 @@
 |---|---|
 | [`_shared/lib/`](_shared/lib/) | Bun TypeScript 공용 헬퍼 (현재 `notify_discord.ts` 정본 1개) |
 | [`_shared/types/`](_shared/types/) | 공용 TS 타입 (`index.ts`) |
-| [`skills/`](skills/) | 저장소 전역 Claude Code 스킬 (`agent-browser`, `planning`, `plan-and-build`, `workspace-audit`, `docs-check`) |
+| [`.claude/skills/`](.claude/skills/) | 저장소 전역 Claude Code 스킬 (`agent-browser`, `planning`, `plan-and-build`, `workspace-audit`, `docs-check`). `.codex/skills/`는 같은 본체를 가리키는 심링크 |
 | [`docs/`](docs/) | 모노레포 레벨 — `adr.md`, `workspace-structure.md`, `docs-style.md` |
 
 공용은 **워크스페이스 무관 헬퍼만** 둔다 (ADR-001).
@@ -40,7 +40,7 @@
   - thin wrapper는 `.env` 로드 + Discord 알림 + stdout 폴백만 담당.
   - 옛 `track_task.sh` self-wrap + `extract_claude_result.ts` 외부 subprocess 패턴은 폐기.
 - 분리 표준 (ADR-006): `<workspace>/scripts/<name>/` 실행 파일 + `<workspace>/.claude/skills/<name>/` 컨텍스트 자산.
-- 워크스페이스 간 자산 교차 참조 금지. 공용은 `_shared/`와 루트 `skills/`만.
+- 워크스페이스 간 자산 교차 참조 금지. 공용은 `_shared/`와 루트 `.claude/skills/`만.
 - 신규 결정은 모노레포 `docs/adr.md` 또는 워크스페이스 `<workspace>/docs/adr.md`에 누적.
 
 ## Git 정책
