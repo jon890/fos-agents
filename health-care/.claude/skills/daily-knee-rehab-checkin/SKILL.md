@@ -1,6 +1,6 @@
 ---
 name: daily-knee-rehab-checkin
-description: 매일 아침 무릎 재활 체크인·보수적 슬개골 불안정(patellar instability) 회복 리마인더·오늘의 재활 운동 세트·러닝 복귀 기준 안내에 사용. "무릎 아침 체크인", "오늘 재활 뭐 해야 해", "무릎 상태 확인해줘", "재활 운동 세트", "재활 리마인더" 또는 /daily-knee-rehab-checkin 슬래시 호출. cron 08:30 KST 자동 실행도 같은 skill 진입.
+description: 매일 아침 무릎 재활 체크인, 보수적 슬개골 불안정(patellar instability) 회복 리마인더, 오늘의 재활 운동 세트, 러닝 복귀 기준 안내를 생성하는 health-care skill. "무릎 아침 체크인", "오늘 재활 뭐 해야 해", "무릎 상태 확인해줘", "재활 운동 세트", "재활 리마인더", `/daily-knee-rehab-checkin`, cron 08:30 KST처럼 private 현재 상태와 공개 회복 플랜 기반 아침 안내가 필요할 때 사용. 진단·처방을 하지 않고 보수적 축소 조언을 우선한다.
 ---
 
 # daily-knee-rehab-checkin

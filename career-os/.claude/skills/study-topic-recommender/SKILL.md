@@ -1,30 +1,22 @@
 ---
 name: study-topic-recommender
-description: backend 면접 준비용 morning 학습 토픽 추천 + RSS feed 기반 풀 보충 + 학습 완료 토픽 자동 promote + live-coding seed 선택까지 통합 처리하는 native skill. "오늘 뭐 공부할까" / "morning recommend" / "토픽 풀 갱신" / "live-coding 1개 골라줘" 같은 자연어 요청 또는 `/study-topic-recommender` 슬래시 호출. 호출 시마다 replenish + recommend + promote 자동 진행. 트리거 시점 정책은 외부 (openclaw 스케줄러).
+description: backend 면접 준비용 morning 학습 토픽 추천, RSS feed 기반 후보 풀 보충, 학습 완료 토픽 promote 후보 산출, live-coding seed 선택을 통합 처리하는 career-os skill. "오늘 뭐 공부할까", "morning recommend", "오늘 학습 추천", "토픽 풀 갱신", "추천 갱신", "study topic 추천", "live-coding 1개 골라줘", "아침 학습 추천", `/study-topic-recommender`처럼 학습 주제 추천이나 후보 풀 갱신이 필요할 때 사용. 호출 시마다 replenish + recommend + promote 판단을 수행하지만 fos-study publish와 자동 config 수정은 하지 않는다.
 ---
 
 # Study Topic Recommender
 
 backend 면접 준비용 morning 토픽 추천 통합 skill. replenish + recommend + promote 흐름을 단일 호출로 자동 처리.
 
-## When to use
+## 호출 후 범위 해석
 
-슬래시 호출:
-- `/study-topic-recommender`
-
-자연어 패턴:
-- "오늘 뭐 공부할까", "morning recommend", "오늘 학습 추천"
-- "토픽 풀 갱신해줘", "추천 갱신", "study topic 추천"
-- "live-coding 1개 골라줘", "live-coding seed 선택"
-- "recommend-topics 실행", "morning 추천 돌려줘"
-- "아침 학습 추천", "공부 주제 추천해줘", "토픽 추천해줘", "오늘 토픽 뭐야"
-
-fos-study publish 안 함 — 토픽 추천만. 실제 문서 작성은 `/study-pack-writer` 로 위임.
-promote 후보 안내는 사용자 확인 후 수동 적용 — 자동 config 수정 안 함.
+- 추천 요청이면 morning topic 추천을 생성한다.
+- 토픽 풀 갱신 신호가 있으면 RSS/feed 기반 후보 보충을 포함한다.
+- live-coding 신호가 있으면 seed 선택을 포함한다.
+- 실제 문서 작성은 `study-pack-writer`로 위임하고, promote 후보는 사용자 확인 후 수동 적용한다.
 
 ## Inputs
 
-Claude는 다음을 `Read` 도구로 직접 로드:
+현재 에이전트는 다음 파일과 명령 출력을 직접 로드:
 
 1. `career-os/sources/fos-study/**/*.md` — 학습 문서 inventory 정본. exclude `.git/**`, `.claude/**`, `private/**`.
 2. `career-os/config/study-pack-topics.json` — 선택 사항. 전체 목록 정본이 아니라 사람이 고른 override/fallback 후보.
@@ -82,8 +74,8 @@ Trigger 조건이 없으면 이 단계를 건너뛰고 Step 3으로 진행한다
 
 **Refresh 실행 (trigger 조건 해당 시):**
 
-1. `config/study-preferences.json`, `config/study-progress.json`, `data/runtime/topic-inventory-history.jsonl`을 Read한다.
-2. Claude가 위 입력과 호출 context를 바탕으로 10-20개 신규 후보를 제안하고 `/tmp/study-topic-candidate-proposals.json`에 Write한다.
+1. `config/study-preferences.json`, `config/study-progress.json`, `data/runtime/topic-inventory-history.jsonl`을 읽는다.
+2. 현재 에이전트가 위 입력과 호출 context를 바탕으로 10-20개 신규 후보를 제안하고 `/tmp/study-topic-candidate-proposals.json`에 쓴다.
 
    각 후보 필드:
    ```json
@@ -100,7 +92,7 @@ Trigger 조건이 없으면 이 단계를 건너뛰고 Step 3으로 진행한다
    }
    ```
 
-3. `refresh_candidate_pool.ts`를 Bash로 호출한다:
+3. `refresh_candidate_pool.ts`를 셸 명령으로 호출한다:
    ```bash
    bun --env-file=.env \
      scripts/study-topic-recommender/refresh_candidate_pool.ts \
@@ -122,7 +114,7 @@ Trigger 조건이 없으면 이 단계를 건너뛰고 Step 3으로 진행한다
 
 ### 3. Replenish + Recommend
 
-ts script를 `Bash` 도구로 직접 호출:
+ts script를 셸 명령으로 직접 호출:
 
 ```bash
 bun --env-file=.env \
@@ -139,9 +131,9 @@ script 내부 흐름 (알고리즘 상수 참고용):
   - `data/runtime/morning-topic-recommendation.md` — 사람이 읽는 마크다운 (10픽 + 오늘의 3선)
   - `data/runtime/topic-inventory-history.jsonl` — 오늘 추천 history append
 
-### 3.5 Claude duplicate review (ADR-033)
+### 3.5 에이전트 duplicate review (ADR-033)
 
-`data/runtime/topic-inventory.json`을 Read하고 `excluded.possibleDuplicates` 배열을 의미 판정한다.
+`data/runtime/topic-inventory.json`을 읽고 `excluded.possibleDuplicates` 배열을 의미 판정한다.
 
 각 후보를 다음 4 decision label 중 하나로 분류:
 - `new` — 의미적으로 다른 주제. 새 study-pack 추천 가능.
@@ -149,7 +141,8 @@ script 내부 흐름 (알고리즘 상수 참고용):
 - `skip` — visible recommendation에서 제외.
 - `needs-user-confirmation` — 애매. 사용자 확인 필요.
 
-판정 결과를 inventory의 `claudeDuplicateReview` 객체에 Write:
+판정 결과를 inventory의 `claudeDuplicateReview` 객체에 쓴다.
+필드명은 기존 renderer와 호환하기 위해 유지한다.
 
 ```json
 {
@@ -163,16 +156,18 @@ script 내부 흐름 (알고리즘 상수 참고용):
 
 판정 입력 최소화: candidate.candidatePath / matched.matchedPath / 옵션으로 matched 파일의 첫 30줄만. 본문 전체는 비용 큼.
 
-review 실행 자체가 실패하면 (Claude 호출 자체가 안 되거나 schema 위반):
-- `claudeDuplicateReview.status = "failed"` + `reviewedAt = now` + `items = []`로 Write
+review 실행 자체가 실패하면 (에이전트 호출 자체가 안 되거나 schema 위반):
+- `claudeDuplicateReview.status = "failed"` + `reviewedAt = now` + `items = []`로 쓴다
 - 추천 전체는 실패시키지 않음 — 다음 단계로 진행
 - morning markdown에 warning 표시 책임은 rendering 단계 (Step 3.6)
 
-`possibleDuplicates`가 0개이면 review skip. inventory의 `claudeDuplicateReview.status = "skipped"` 그대로 유지하고 다음 단계로 진행.
+`possibleDuplicates`가 0개이면 review skip.
+inventory의 `claudeDuplicateReview.status = "skipped"` 그대로 유지하고 다음 단계로 진행.
 
 ### 3.6 morning markdown 재생성
 
-`claudeDuplicateReview`를 inventory에 반영한 뒤 markdown을 재생성한다. **주의: 일반 `refresh_topic_inventory.ts` 재호출은 inventory를 다시 계산하면서 Claude review 결과를 덮어쓸 수 있으므로 금지한다.**
+`claudeDuplicateReview`를 inventory에 반영한 뒤 markdown을 재생성한다.
+**주의: 일반 `refresh_topic_inventory.ts` 재호출은 inventory를 다시 계산하면서 review 결과를 덮어쓸 수 있으므로 금지한다.**
 
 render-only 모드로 재생성:
 
@@ -181,11 +176,12 @@ bun --env-file=.env \
   scripts/study-topic-recommender/refresh_topic_inventory.ts --render-only
 ```
 
-`--render-only` 모드는 기존 `topic-inventory.json`을 읽고 markdown만 다시 쓴다. `claudeDuplicateReview` 결과가 반영된 "기존 문서 보강 후보 (최대 5)" 섹션과 (status=failed이면) 상단 warning 라인이 출력된다.
+`--render-only` 모드는 기존 `topic-inventory.json`을 읽고 markdown만 다시 쓴다.
+`claudeDuplicateReview` 결과가 반영된 "기존 문서 보강 후보 (최대 5)" 섹션과 (status=failed이면) 상단 warning 라인이 출력된다.
 
 ### 4. LLM 큐레이션
 
-Read `data/runtime/topic-inventory.json`, `data/runtime/morning-topic-recommendation.md`,
+`data/runtime/topic-inventory.json` 읽기, `data/runtime/morning-topic-recommendation.md`,
 `config/study-progress.json`, and `config/study-preferences.json`.
 
 Use them to produce a concise recommendation with:
@@ -206,11 +202,12 @@ Do not paste the full markdown by default. Summarize the LLM-curated picks and i
 
 1. `data/runtime/topic-inventory.json`의 `pools.remainingLiveCodingSeeds` 확인. 비어 있으면 `pools.remainingLiveCodingCandidateSeeds` 확인.
 2. 가장 우선도 높은 seed 1개 선택 → 제목 + slug + difficulty + outputPath 출력
-3. 사용자 승인 시 `claude -p "/study-pack-writer <seed-slug>"` 명령 안내 (study-pack-writer로 위임)
+3. 사용자 승인 시 `/study-pack-writer <seed-slug>` 호출 안내 (study-pack-writer로 위임)
 
 ## Self-check
 
-`Bash` 호출 종료 후 Claude가 직접 검증한다. 검증 명령을 반드시 실행할 것 — prose로 추정 보고하면 PHASE_FAILED:
+셸 명령 호출 종료 후 현재 에이전트가 직접 검증한다.
+검증 명령을 반드시 실행할 것 — prose로 추정 보고하면 PHASE_FAILED:
 
 ```bash
 # A. topic-inventory.json 존재 및 필수 키
@@ -246,7 +243,7 @@ echo "[self-check] OK"
 | candidate 없음 (pool 고갈) | 경고 메시지 + inventory는 정상 기록 + 사용자에게 `replenish` 필요 안내 |
 | live-coding seed pool 비어있음 | 단계 4 skip + "seed pool 비어 있음 — live-coding seed 후보 갱신 필요" 안내 |
 | history.jsonl 부재 | 빈 history로 처리 (첫 실행 시 정상 상태) |
-| Claude duplicate review 호출 실패 | `claudeDuplicateReview.status = "failed"`, items = []. 추천 전체는 계속. `--render-only`로 markdown warning 표시 |
+| duplicate review 실패 | `claudeDuplicateReview.status = "failed"`, items = []. 추천 전체는 계속. `--render-only`로 markdown warning 표시 |
 | possibleDuplicates 0개 | review skip. `status = "skipped"` 그대로. 보강 후보 섹션 "없음" 표시 |
 | review 결과 schema 위반 | "failed" 처리 + stderr 로그. 추천 계속 |
 
@@ -256,16 +253,12 @@ ADR-026 결정 요약 (3줄):
 
 1. **Python → TypeScript**: 모노레포 ts 표준 (_shared/lib, plan004 ADR-020) 일관성. 외부 RSS XML 파싱은 `fast-xml-parser`로 대체.
 2. **알고리즘 결정론 보존**: 점수(RECENT_PENALTY/WEAK_AREA_BONUS/CARRYOVER) + mix target + cooldown 로직을 ts에 동등 이식. Python·ts 출력 diff=0 검증은 phase-02에서 별도 진행.
-3. **replenish + promote + live-coding 흡수**: 이전 topic-pool-replenisher + dispatcher 3 case(recommend-topics / live-coding-dispatch / replenish-topics)를 단일 native 진입점으로 통합 — `claude --permission-mode bypassPermissions -p "/study-topic-recommender"` 한 줄로 전체 아침 추천 흐름 완결.
-
+3. **replenish + promote + live-coding 흡수**: 이전 topic-pool-replenisher + dispatcher 3 case(recommend-topics / live-coding-dispatch / replenish-topics)를 단일 agent skill 진입점으로 통합.
 ## 호출 예시
 
 ```bash
-# 일반 morning 추천
-claude --permission-mode bypassPermissions -p "/study-topic-recommender"
-
-# live-coding seed 선택 포함
-claude --permission-mode bypassPermissions -p "/study-topic-recommender live-coding 1개 골라줘"
+/study-topic-recommender
+/study-topic-recommender live-coding 1개 골라줘
 
 # openclaw 스케줄러 경유 (트리거 시점 정책은 외부)
 openclaw schedule run study-topic-recommender

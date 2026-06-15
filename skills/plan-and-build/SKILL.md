@@ -1,18 +1,17 @@
 ---
 name: plan-and-build
-description: ai-nodes 워크스페이스 단위의 대규모 구현 자동화. 논의 → docs 반영·커밋 → task 파일 생성·커밋 → run-phases.py 백그라운드 실행 → 검증 → plan 완료 후 단일 PR 생성. 새 기능 추가, 리팩토링, 폴더 분해 등 multi-phase 작업에 사용. phase별 commit/push는 허용하지만 PR/merge는 plan 전체 완료 후 진행한다. 본 세션 = 계획 수립, 별도 세션 = 자동 실행. 자연어 호출 — "/plan-and-build", "task 실행", "phase 실행", "run-phases 실행", "구현 자동화", "백그라운드로 실행".
+description: ai-nodes 워크스페이스 단위의 대규모 구현을 phase로 나눠 자동 실행하는 skill. `/plan-and-build`, "task 실행", "phase 실행", "run-phases 실행", "구현 자동화", "백그라운드로 실행", "multi-phase 작업", "계획된 task 실행"처럼 planning 이후 task 파일을 생성·커밋하고 run-phases.py로 백그라운드 실행, 검증, plan 완료 후 단일 PR 생성까지 필요할 때 사용. phase별 commit/push는 허용하지만 PR/merge는 plan 전체 완료 후 진행한다.
 ---
 
 # plan-and-build
 
 ai-nodes 워크스페이스의 새 기능이나 대규모 변경을 phase 단위로 분리하고, `run-phases.py` 하네스를 통해 Claude Code가 자동으로 순차 실행하는 시스템.
 
-## When to use
+## 호출 후 범위 해석
 
-- 슬래시 호출: `/plan-and-build`
-- 자연어: "task 실행", "phase 실행", "run-phases 실행", "구현 자동화", "백그라운드로 실행"
-- `/planning`으로 task 파일 생성 완료 후 별도 세션에서 실행할 때
-- 특정 phase부터 재개 (`--from-phase N`)가 필요할 때
+- planning으로 task 파일 생성이 완료된 작업을 실행한다.
+- 특정 phase부터 재개해야 하면 `--from-phase N`을 사용한다.
+- plan 전체 완료 전에는 plan 단위 PR을 만들지 않는다.
 
 ## 핵심 원칙 — 사용자에게 묻지 말고 자동으로 따를 것
 

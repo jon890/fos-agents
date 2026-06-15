@@ -1,6 +1,6 @@
 ---
 name: planning
-description: ai-nodes 워크스페이스에 새 기능/변경사항을 구현하기 전 8단계 설계 워크플로. 구현 가능성 → 기술 스택 → 호출 시나리오 → 데이터/스키마 → 흐름 → 코드 구조 → docs 영향 분석 → task 파일 생성. 각 단계에서 모호함을 제거하고 의사결정을 즉시 docs에 기록. /planning 호출 또는 "계획 세워보자" / "설계해보자" / "plan 세워줘" / "기획해줘" / "task 파일 만들어줘" / "구현 전 검토" 요청 시 사용.
+description: ai-nodes 워크스페이스에 새 기능·변경사항을 구현하기 전 8단계 설계 워크플로를 수행하는 skill. `/planning <기능 설명>`, "계획 세워보자", "설계해보자", "plan 세워줘", "기획해줘", "task 파일 만들어줘", "구현 전 검토", "새 기능 설계", "리팩토링 계획"처럼 구현 전 모호함 제거, docs 영향 분석, task 파일 생성이 필요할 때 사용. 구현 가능성 → 기술 스택 → 호출 시나리오 → 데이터/스키마 → 흐름 → 코드 구조 → docs 영향 분석 → task 생성 순서로 의사결정을 기록한다.
 ---
 
 # planning
@@ -9,13 +9,11 @@ ai-nodes 워크스페이스에 새 기능이나 변경사항을 구현하기 전
 
 fos-blog repo의 동명 스킬을 ai-nodes 멀티 워크스페이스 맥락으로 포팅한 것. 화면/UI 단계는 CLI 시나리오로 변형하고, fos-blog 특화 자산(pages/, fos-blog-docs-verifier)은 빼고, ai-nodes 5문서 컨벤션(`prd / data-schema / flow / code-architecture / adr`)에 정렬했다.
 
-## When to use
+## 호출 후 범위 해석
 
-- 슬래시 호출: `/planning <기능 설명>`
-- 자연어: "계획 세워보자", "설계해보자", "plan 세워줘", "기획해줘", "task 파일 만들어줘", "구현 전 검토"
-- 새 기능·리팩토링·폴더 분해 등 구현 시작 전 모호함을 해소해야 할 때
-- docs 영향이 불명확한 변경 전
-- planning 완료 후 `/plan-and-build`로 task 실행으로 이어짐
+- 새 기능, 리팩토링, 폴더 분해처럼 구현 시작 전 모호함을 닫아야 하는 요청에 적용한다.
+- docs 영향이 불명확하면 planning 범위에 포함한다.
+- planning 완료 후 실행이 필요하면 `plan-and-build`로 넘긴다.
 
 ## 핵심 원칙
 

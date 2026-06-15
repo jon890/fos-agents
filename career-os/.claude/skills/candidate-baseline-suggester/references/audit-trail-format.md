@@ -1,10 +1,10 @@
 # audit trail 명령 + 형식 상세
 
-candidate-baseline-suggester SKILL.md의 bash 명령·형식 상세 참조.
+candidate-baseline-suggester SKILL.md의 셸 명령·형식 상세 참조.
 
 ---
 
-## Bash — 4-1 Backup
+## 셸 명령 — 4-1 Backup
 
 ```bash
 DATE=$(date +%F)
@@ -34,7 +34,7 @@ find career-os/sources/fos-study/resume -maxdepth 3 -type f
 2. 최신 mtime
 3. 형식 우선순위 (md > html > pdf)
 
-**마크다운 / HTML / PDF 동등 인정** — Claude 멀티모달 모델은 HTML/PDF 직접 흡수. 마크다운 강요 X.
+**마크다운 / HTML / PDF 동등 인정** — 멀티모달 모델은 HTML/PDF를 직접 읽을 수 있다. 마크다운 강요 X.
 
 candidate-profile.md `Source provenance` 표 + baseline-core-files.json `files[]`가 가리키는 resume path 중 4-2.B 에서 부재로 확인된 항목 식별.
 
@@ -43,7 +43,7 @@ candidate-profile.md `Source provenance` 표 + baseline-core-files.json `files[]
 
 ---
 
-## Bash — 4-4 After/Diff
+## 셸 명령 — 4-4 After/Diff
 
 `$AUDIT_DIR`는 SKILL.md 4-1 에서 정의된 변수 (`career-os/data/runtime/profile-refresh-suggestions/$DATE`).
 

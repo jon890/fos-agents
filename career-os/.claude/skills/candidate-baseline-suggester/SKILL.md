@@ -1,28 +1,26 @@
 ---
 name: candidate-baseline-suggester
-description: career-os/config/ hand-crafted 자산 (candidate-profile.md, baseline-core-files.json, config/study-progress.json weak_spots)을 fos-study 전체 commit history + study-progress + interview-prep-analyzer baseline 산출물 기반으로 자동 갱신. Append + 주석 마킹 패턴 — 기존 본문 보존 + 새 항목 추가 + outdated 항목 주석 마킹. audit trail (data/runtime/profile-refresh-suggestions/YYYY-MM-DD/ 안 before/after/diff/changes) 필수. 자연어 호출 — "후보자 프로필 갱신", "baseline 약점·강점 평가 업데이트", "프로필 업데이트", "baseline 갱신", "학습 내용 반영", "weak_spots 갱신", "/candidate-baseline-suggester" 슬래시.
+description: career-os/config/ hand-crafted 자산(candidate-profile.md, baseline-core-files.json, config/study-progress.json weak_spots)을 fos-study 전체 commit history, study-progress, interview-prep-analyzer baseline 산출물 기반으로 갱신 제안하는 비공개 career-os skill. "후보자 프로필 갱신", "baseline 약점·강점 평가 업데이트", "프로필 업데이트", "baseline 갱신", "학습 내용 반영", "weak_spots 갱신", `/candidate-baseline-suggester`처럼 후보자 기준선과 학습 약점 자산을 업데이트해야 할 때 사용. Append + 주석 마킹 패턴으로 기존 본문을 보존하고 audit trail(data/runtime/profile-refresh-suggestions/YYYY-MM-DD/ before/after/diff/changes)을 반드시 남긴다.
 ---
 
 # Candidate Baseline Suggester
 
 fos-study 학습 이력을 기반으로 career-os 자산(프로필·baseline·진도)을 Append + 주석 마킹으로 자동 갱신하는 skill.
 
-## When to use
+## 호출 후 입력 해석
 
-- 슬래시 호출: `/candidate-baseline-suggester`
-- 자연어 요청: "후보자 프로필 갱신해줘", "baseline 약점·강점 업데이트", "fos-study 학습 결과 프로필에 반영해줘", "프로필 업데이트해줘", "weak_spots 갱신해줘"
-- **권장 호출 시점**: study-pack 5회 이상 누적 후 / 면접 시즌 시작 시 / 타깃 회사 변경 후. 최소 2주 1회 이상.
-
-`claude --permission-mode acceptEdits -p "/candidate-baseline-suggester"` 비대화형 실행 지원.
+- study-pack 5회 이상 누적, 면접 시즌 시작, 타깃 회사 변경 뒤 실행하면 효과가 크다.
+- 기존 본문은 직접 덮어쓰지 않고 Append + 주석 마킹으로 변경한다.
+- audit trail 없이 자산을 갱신하지 않는다.
 
 ## Inputs
 
-Claude는 다음을 `Read` 도구로 직접 로드:
+현재 에이전트는 다음 파일과 명령 출력을 직접 로드:
 
 1. `career-os/config/candidate-profile.md` — 현재 본문 전체
 2. `career-os/config/baseline-core-files.json` — 현재 `files` 배열 전체
 3. `career-os/config/study-progress.json` — `sessions` 배열 + `weak_spots` 맵 전체
-4. (선택) `career-os/data/reports/baseline/<latest>/report.md` — 존재 시 Read, 없으면 skip
+4. (선택) `career-os/data/reports/baseline/<latest>/report.md` — 존재 시 읽고, 없으면 skip
 5. fos-study 전체 commit history — `git -C career-os/sources/fos-study log --all --pretty=format:'%h %ad %s' --date=short` + 최근 30개 commit path
 
 ## Workflow
@@ -34,11 +32,11 @@ DATE=$(date +%F)
 AUDIT_DIR=career-os/data/runtime/profile-refresh-suggestions/$DATE
 ```
 
-디렉터리 생성 + before/ 스냅샷 bash 명령은 `references/audit-trail-format.md` `## Bash — 4-1 Backup` 참조.
+디렉터리 생성 + before/ 스냅샷 셸 명령은 `references/audit-trail-format.md` `## 셸 명령 — 4-1 Backup` 참조.
 
 audit trail 디렉터리 생성 실패 시 즉시 중단 — **audit trail 없이 자산 갱신 금지**.
 
-### 4-2. fos-study 분석 (Claude 자연어 추론)
+### 4-2. fos-study 분석 (현재 에이전트의 자연어 추론)
 
 다음을 수행해 갱신 근거를 수집:
 
@@ -122,7 +120,7 @@ JSON 파싱 실패 시 이 자산만 skip + stderr warn.
 
 ### 4-4. audit trail — after/ + diff/ + changes.md
 
-after/ 스냅샷, diff/ 생성 bash 명령 및 changes.md 작성 구조는 `references/audit-trail-format.md` `## Bash — 4-4 After/Diff` 및 `## changes.md 구조` 참조.
+after/ 스냅샷, diff/ 생성 셸 명령 및 changes.md 작성 구조는 `references/audit-trail-format.md` `## 셸 명령 — 4-4 After/Diff` 및 `## changes.md 구조` 참조.
 
 ## Self-check
 
@@ -145,7 +143,7 @@ after/ 스냅샷, diff/ 생성 bash 명령 및 changes.md 작성 구조는 `refe
 | baseline-core-files.json JSON 파싱 실패 | 해당 자산 skip + stderr warn. 나머지 자산 정상 진행 |
 | study-progress.json 파싱 실패 | 해당 자산 skip + stderr warn |
 | self-check 라인 수 감소 감지 | 갱신 파일 before/ 복원 + stderr "candidate-profile 라인 감소 — 롤백" + exit 1 |
-| audit trail Write 실패 (disk full 등) | exit 1. 자산은 이미 갱신된 경우 경고만 — after/ 없으면 수동 복원 안내 |
+| audit trail 쓰기 실패 (disk full 등) | exit 1. 자산은 이미 갱신된 경우 경고만 — after/ 없으면 수동 복원 안내 |
 
 ## Why this design
 
@@ -154,19 +152,6 @@ ADR-028 핵심 3줄:
 - **Append + 주석 마킹**: hand-crafted 자산은 사용자 판단이 최종 권위 — skill은 제안만 추가하고 삭제는 사용자 몫.
 - **audit trail 필수**: git revert로 잡히지 않는 의미 단위 변경을 before/after/diff/changes.md로 추적해 언제든 수동 rollback 가능.
 - **self-check 라인 감소 트랩**: Append 모드를 보장하는 최소 불변식 — 실수로 본문 삭제 시 즉시 감지·롤백.
-
-## 호출 패턴
-
-```bash
-# 슬래시 직접 호출
-claude --permission-mode acceptEdits -p "/candidate-baseline-suggester"
-
-# 자연어
-claude --permission-mode acceptEdits -p "후보자 프로필 fos-study 학습 결과 반영해서 갱신해줘"
-
-# wrapper (Discord 알림 포함, 향후 scripts/ 추가 예정)
-# bun career-os/scripts/candidate-baseline-suggester/run_with_notify.ts
-```
 
 결과물: `career-os/data/runtime/profile-refresh-suggestions/YYYY-MM-DD/changes.md` (갱신 요약).
 갱신된 자산을 git에 commit할지 여부는 사용자가 결정 — skill은 자동 commit 하지 않음.

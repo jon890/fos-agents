@@ -36,7 +36,8 @@
 - `private/conditions/` — 질환/증상별 원본 문맥, 경과 기록, 진료 노트. 민감정보이므로 git 커밋하지 않는다.
 - `private/reports/` — 병원 후보 조사, 진료 준비 요약, 개인 증상·수술 이력·복약 맥락이 들어간 리포트. 민감정보이므로 git 커밋하지 않는다.
 - `docs/` — 워크플로/ADR/운영 문서
-- `.claude/skills/` — Claude native skill 컨텍스트 자산 (SKILL.md + references/). ADR-006 분리 표준.
+- `.claude/skills/` — agent skill 정본 (SKILL.md + references/). ADR-006 분리 표준.
+- `.codex/skills/` — Codex 노출용 심볼릭 링크.
 
 ## Private Storage Rule
 

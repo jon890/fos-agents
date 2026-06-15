@@ -1,6 +1,6 @@
 ---
 name: interview-asset-writer
-description: 후보자 이력 기반 면접 자산 마크다운을 생성하고 sources/fos-study에 자동 발행. 두 형식 흡수 — (1) Q&A 질문 은행 (5 main Q + follow-up + answer points + 1분 답변 + 압박 방어), (2) 시니어 백엔드 마스터 플레이북 (자기소개 + 커리어 narrative + 기술 의사결정 + 역질문 + 최종 체크리스트). "질문 은행" / "qbank" / "experience-..." / "마스터 플레이북" / "master" / "playbook" 키워드 또는 자연어 요청 시 사용. 후보자 이력서·task 노트 기반 면접 자산이 필요하면 무조건 이 skill을 호출. 일반 기술 토픽 학습 문서는 study-pack-writer가 담당 — 본 skill은 *후보자 이력 중심*.
+description: 후보자 이력 기반 면접 자산 마크다운 초안을 생성하는 career-os skill. "면접 자료 만들어줘", "경험 기반 질문 정리", "AI 서비스팀 면접 질문 은행", "experience qbank", "자기소개 플레이북", "마스터 플레이북", `/interview-asset-writer <topic>`처럼 후보자 이력서·task 노트 기반 Q&A 질문 은행이나 마스터 플레이북이 필요할 때 사용. 일반 기술 토픽 학습 문서는 study-pack-writer로 라우팅. 사용자가 명시적으로 공개 발행을 승인한 경우에만 sources/fos-study commit/push를 수행한다.
 ---
 
 # Interview Asset Writer
@@ -10,37 +10,23 @@ description: 후보자 이력 기반 면접 자산 마크다운을 생성하고 
 - **Q&A 질문 은행** (옛 experience-question-bank-writer): 5 main Q + 5 follow-up + answer points + 1분 답변 + 압박 방어
 - **마스터 플레이북** (옛 interview-master-writer): 자기소개 / 커리어 narrative / 기술 의사결정 스타일 / 역질문 / 최종 체크리스트
 
-## 생성 산출물 품질 계약
+## 출력 정책
 
-interview asset은 후보자 이력 기반 자료지만 fos-study 공개 발행 경로를 가진다.
-그래서 내부 분석과 공개 가능한 면접 준비 문구를 반드시 분리한다.
+먼저 `references/output-policy.md`를 읽고 공개 산출물 정책을 따른다.
+interview asset은 후보자 이력 기반 자료지만 `fos-study` 공개 발행 경로를 가진다.
+후보자 private 평가, 특정 회사 지원 전략, reviewer 판단은 공개 본문에 복사하지 않는다.
+후보자 이력 근거는 공개 가능하도록 일반화하고, 내부 URL과 비공개 시스템명은 제거하거나 비공개 career-os note로 분리한다.
+공개 발행은 사용자 명시 승인 후에만 수행한다.
 
-- 한국어 우선 섹션 제목과 자연스러운 한국어 문장을 사용한다.
-  영어 label은 `Q&A`, `follow-up`, 코드 식별자처럼 필요한 경우에만 유지한다.
-- 첫 10줄 안에 문서 목적, 결론, 또는 권장 행동 중 하나를 둔다.
-- 내부 분석과 공개용 문구를 분리한다.
-  후보자 private 평가, 특정 회사 지원 전략, reviewer 판단은 공개 본문에 복사하지 않는다.
-- 후보자 이력 근거는 공개 가능하도록 일반화한다.
-  내부 URL, 비공개 시스템명, 회사별 지원 맥락은 제거하거나 비공개 career-os note로 분리한다.
-- 근거가 부족한 항목은 `needs_evidence` raw label로 남기지 않는다.
-  발견한 순간 `보강 필요 / 선택지 / 권장 행동` 구조로 바꾼다.
-- 공개 fos-study 발행은 사용자 승인 전에는 실행하지 않는다.
-  사용자의 명시적 `/interview-asset-writer` 호출이나 "fos-study에 면접 자료로 올려줘" 요청은 해당 주제의 발행 승인으로 본다.
-  background worker가 audit이나 초안만 만드는 경우에는 publish하지 않고 `사용자 승인 필요`로 멈춘다.
+## 호출 후 입력 해석
 
-## When to use
-
-- 슬래시 호출: `/interview-asset-writer <topic>`
-- 자연어 요청 (Q&A): "AI 서비스팀 면접 질문 은행 만들어줘", "slot 팀 experience qbank 정리해줘"
-- 자연어 요청 (master): "시니어 백엔드 마스터 플레이북 만들어줘", "면접 master playbook 갱신"
-- fos-study repo에 즉시 publish할 *후보자 이력 기반 면접 자산*이 필요한 모든 경우
-- "면접 자료 만들어줘", "경험 기반 질문 정리해줘", "자기소개 플레이북 만들어줘", "면접 준비 자산 만들어줘"
-
-일반 기술 토픽 학습 문서는 study-pack-writer로 라우팅 (본 skill 호출 X).
+- `qbank`, `question-bank`, "질문 은행", "Q&A" 신호가 있으면 Q&A 질문 은행 형식으로 작성한다.
+- `master`, `playbook`, "마스터", "플레이북" 신호가 있으면 마스터 플레이북 형식으로 작성한다.
+- 일반 기술 토픽 학습 문서로 보이면 `study-pack-writer`로 라우팅한다.
 
 ## Inputs
 
-Claude는 다음을 `Read` 도구로 직접 로드:
+현재 에이전트는 다음 파일과 명령 출력을 직접 로드:
 
 1. `career-os/public/question-bank/` inventory — 공개 질문 bank 정본. 질문 본문은 public-safe JSON에서만 읽는다.
 2. `career-os/config/question-bank-topics.json` — 선택 사항. public bank 정본이 아니라 interview asset 전용 `<topic-key>` override 후보 → `outputPath` / `domain` / `title` / `inputFiles` / `promptAppend`
@@ -61,22 +47,22 @@ Claude는 다음을 `Read` 도구로 직접 로드:
 산출물 형식 판단:
 - **Q&A 질문 은행**: topic-key에 `qbank` / `question-bank` / `experience-` 포함, 또는 자연어에 "질문 은행" / "Q&A" / "qbank" 언급
 - **마스터 플레이북**: topic-key에 `master` / `playbook` 포함, 또는 자연어에 "마스터" / "플레이북" / "master playbook" 언급
-- 모호하면 사용자에게 확인 (기본값 Q&A 질문 은행). 비대화형(`claude -p`) 환경에서 모호 → 기본값 Q&A 질문 은행으로 자동 진행.
+- 모호하면 사용자에게 확인 (기본값 Q&A 질문 은행). 비대화형 환경에서 모호 → 기본값 Q&A 질문 은행으로 자동 진행.
 
 stderr에 결정 근거 1줄 로그 (예: `[interview-asset] topic=experience-qbank-ai-service-team → Q&A 질문 은행 형식`).
 
-### 2. Context 로드 (Read)
+### 2. Context 로드
 
-Inputs 1~5 모두 Read. `inputFiles` 명시되면 task/resume 추가 Read.
+Inputs 1~5 모두 읽는다. `inputFiles` 명시되면 task/resume 추가로 읽는다.
 
 ### 3. Overlap 점검 (선택)
 
-`sources/fos-study/<outputPath 디렉터리>`에 유사 파일 있으면 update 의도 확인. 비대화형(`claude -p`) 환경에서 유사 파일 발견 시 → update 모드로 자동 진행. update면 기존 본문 Read해서 통합 작성.
+`sources/fos-study/<outputPath 디렉터리>`에 유사 파일 있으면 update 의도 확인. 비대화형 환경에서 유사 파일 발견 시 → update 모드로 자동 진행. update면 기존 본문 읽어서 통합 작성.
 
-### 4. 마크다운 작성 (Write)
+### 4. 마크다운 작성
 
 공통 구조:
-- 첫 줄: `# <topic-title>` (단일 `#`, `## ` 시작 금지, `# 초안:` / `# Draft:` 금지)
+- 첫 줄: `# [초안] <topic-title>` (단일 `#`, `## ` 시작 금지, `# 초안:` / `# Draft:` 금지)
 - ≥80줄
 - 모든 ` ``` ` 코드 펜스에 언어 명시
 
@@ -105,7 +91,7 @@ Inputs 1~5 모두 Read. `inputFiles` 명시되면 task/resume 추가 Read.
 
 #### 공통 출력 규칙
 
-- `Write` 도구로 *markdown 직접 작성* (JSON 출력 금지, JSON schema 따르지 않음 — native skill 패턴)
+- 파일 쓰기로 *markdown 직접 작성* (JSON 출력 금지, JSON schema 따르지 않음 — agent skill 패턴)
 - 메타 보고 문구 금지 ("파일이 생성되었습니다", "문서 구성 요약", "아래와 같이" 등) — 본문 자체를 작성
 - 첫 줄 `# [초안] <topic-title>` 형식. 작성 후에는 본문만 출력하지 *작성했다는 보고*는 하지 않음.
 - 공개 본문에 `needs_evidence`를 남기지 않고, 필요한 경우 `보강 필요 / 선택지 / 권장 행동`으로 바꾼다.
@@ -139,7 +125,13 @@ Inputs 1~5 모두 Read. `inputFiles` 명시되면 task/resume 추가 Read.
 
 본 self-check가 옛 JSON schema 검증을 대체. 객관적 기준(첫 줄·줄 수·펜스·섹션 헤더) self-check가 신뢰 가능. 3회 cap은 무한 루프 차단.
 
-### 6. Publish (Bash)
+### 6. Publish (사용자 승인 후에만)
+
+사용자가 공개 발행과 commit/push를 명시 승인하지 않았으면 여기서 멈춘다.
+최종 응답에는 생성·수정한 초안 경로, self-check 결과, 발행 보류 사유를 적는다.
+`[초안]` 제목은 유지한다.
+
+사용자가 명시 승인한 경우에만 다음 셸 명령을 실행한다.
 
 ```bash
 cd career-os/sources/fos-study
@@ -151,7 +143,7 @@ git push origin main
 
 add vs update는 `git status --porcelain` 자동 판단. push 실패 시 stderr + exit 1 (silent 실패 금지).
 
-### 7. Discord 알림 (Bash)
+### 7. Discord 알림 (셸 명령)
 
 ```bash
 bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
@@ -167,12 +159,12 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 | topic 형식 판단 불가 + 자연어 키워드 없음 | stderr + 사용자 확인 요청 |
 | candidate-profile / task / resume 필수 입력 부재 | stderr + exit 1 |
 | self-check 3회 실패 | stderr + exit 1, 실패 항목 명시 |
-| git push 실패 (권한/충돌) | stderr + exit 1 |
+| 승인된 publish의 git push 실패 (권한/충돌) | stderr + exit 1 |
 | Discord notify 실패 | stderr warn, skill success |
 
 ## Why this design
 
 - **두 형식 흡수 (plan015 사용자 통찰)**: master playbook과 Q&A 질문 은행은 모두 *후보자 이력 기반 면접 자산*. 학습 문서(study-pack-writer)와 책임 분리 — 본 skill은 *이력 중심*, study-pack-writer는 *주제 중심*. 두 형식을 한 skill로 묶고 분기 처리.
-- **Self-check가 JSON schema 대체**: 옛 `--json-schema` + renderer 패턴은 외부 subprocess의 부산물. native에서는 Claude 자체 검증으로 동등 효과.
+- **Self-check가 JSON schema 대체**: 옛 `--json-schema` + renderer 패턴은 외부 subprocess의 부산물. native에서는 현재 에이전트 자체 검증으로 동등 효과.
 - **재작성 ≤3회 cap**: 무한 루프 차단. 그래도 실패하면 본질 문제 (topic 모호, 입력 부족) — 사용자 개입 필요.
-- **Publish + notify Bash 통합**: 옛 외부 publish/notify shell을 Bash 도구로 직접. 의존 줄임.
+- **Publish + notify 셸 명령 통합**: 옛 외부 publish/notify shell을 셸 명령 도구로 직접. 의존 줄임.
