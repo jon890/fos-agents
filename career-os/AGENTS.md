@@ -146,6 +146,16 @@ config는 전체 자산 목록을 담는 DB가 아니다.
 - 후보 추천, 승격, 제외, 만료 같은 상세 상태명은 AGENTS가 아니라 schema/docs/task에서 관리한다.
 - 최종 이력서, 지원 패키지, 외부 제출, 공개 발행은 사용자 검토 절차를 통과한 뒤에만 진행한다.
 
+## Discord HTML 첨부 경계
+
+복습자료나 면접 준비 HTML을 Discord에 직접 첨부할 때는 OpenClaw 전역 HTML 읽기 정책을 완화하지 않는다.
+직접 첨부 대상 HTML은 `data/runtime/downloads/` 아래에 둔 파일만 허용한다.
+
+- 일반 `private/` 경로의 HTML을 바로 첨부하지 않는다.
+- `scripts/interview-prep/stage_review_html_for_discord.ts <data/runtime/downloads/*.html>`로 파일을 검증하고 `/tmp/openclaw/career-review-downloads/` 아래로 스테이징한 뒤, 출력된 `file://` 경로를 Discord 첨부에 사용한다.
+- 이 헬퍼는 `data/runtime/downloads/` 밖의 HTML을 거절해야 한다. 더 넓은 허용이 필요하면 전역 정책을 풀지 말고 먼저 사용자와 범위, 민감 정보 경계, 대안 형식을 논의한다.
+- ZIP 첨부는 fallback으로만 사용하고, 사용자가 직접 HTML 다운로드를 요청하면 위 스테이징 경로를 우선한다.
+
 ## 웹 대시보드 경계
 
 `fos-career`는 career-os와 분리된 사람용 웹 제품 레포로 다룬다.
