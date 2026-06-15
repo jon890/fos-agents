@@ -4,9 +4,9 @@
   "description": "ADR-084에 따라 fos-career 수집 공고 pool의 현재 상태, 수동 닫힘 처리, validator 자동 닫힘, 재수집 자동 재오픈을 DB 이벤트와 검증 실행으로 관리한다.",
   "goal": "collected_positions.postingStatus를 현재 상태 정본으로 유지하면서 모든 수동/자동 상태 변경을 position_status_events와 position_validation_runs에 추적하고, /dashboard/positions에서 한국어 중심으로 운영 가능한 검증 UI를 제공한다.",
   "created_at": "2026-06-15T00:00:00Z",
-  "updated_at": "2026-06-15T02:05:00Z",
+  "updated_at": "2026-06-15T02:25:00Z",
   "status": "running",
-  "current_phase": 5,
+  "current_phase": 6,
   "total_phases": 6,
   "execution_mode": {
     "sequential": true,
@@ -186,7 +186,7 @@
       "number": 5,
       "title": "positions UI와 진단 polish",
       "file": "phase-05.md",
-      "status": "pending",
+      "status": "completed",
       "objective": "/dashboard/positions를 전체 누적 pool 중심으로 다듬고 latest/new/past/source/recommendation/status 필터, 검증 요약, 한국어 label을 제공한다.",
       "owned_files_or_modules": [
         "fos-career /dashboard/positions page",
