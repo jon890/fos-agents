@@ -171,6 +171,31 @@ MVP 범위:
 - 새 DB 컨테이너 생성.
 - dashboard container가 career-os checkout을 직접 쓰는 일.
 
+### 계획 중: fos-career source registry and collection runs (plan075)
+
+`plan075-fos-career-source-registry-collection-runs`는 소스 진단 화면과 수집 공고 DB import를 정식 데이터 모델로 승격한다.
+목표는 대시보드가 오래된 `collected_positions` 행에서 source diagnostics를 역산하지 않고, 최신 수집 실행과 source별 원인을 직접 보여주는 것이다.
+
+MVP 범위:
+
+- source 목록은 fos-career DB registry로 관리한다.
+- 실제 수집 adapter와 official entrypoint는 career-os `live-postings` 코드가 계속 소유한다.
+- 매 수집 실행은 `position_collection_runs`로 저장한다.
+- source별 결과는 `position_source_run_diagnostics`로 저장한다.
+- `collected_positions`는 개별 공고 pool만 담당한다.
+- 추천 run은 사용한 `collectionRunId`를 참조한다.
+- 수집 snapshot DB import는 Claude 추천 생성보다 먼저 수행한다.
+- `/dashboard/sources`는 registry와 최신 collection run diagnostics를 보여준다.
+- 0건 source는 정상 0건, 필터 과도, 파서 변경, 차단, 비활성, 알 수 없음으로 구분한다.
+- Naver Careers와 KakaoPay Securities의 0건 원인을 후속 진단 대상으로 남긴다.
+
+범위 밖:
+
+- 수집 source를 무제한으로 추가하는 일.
+- 외부 채용 사이트 제출, 로그인, 업로드, 브라우저 입력 자동화.
+- 새 DB 컨테이너 생성.
+- 추천 후보 개수 정책 변경.
+
 ### 완료 기반: position priority + posting/fit analysis workflow (plan050)
 
 `plan050-position-priority-fit-workflow`는 plan048에서 모은 active/open 공고를 지원 행동 우선순위로 연결한다.

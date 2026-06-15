@@ -311,9 +311,9 @@ career-os와의 인터페이스:
 | 방향 | 방법 | 범위 |
 |---|---|---|
 | fos-career → career-os | migration 전 읽기 전용 파일 마운트 (`CAREER_OS_ROOT`) | legacy frontdoor-queue, ledger, position-recommendation, candidate-profile |
-| fos-career DB | canonical state | 추천 후보, 현재 state/stage, outbox job, audit |
+| fos-career DB | canonical state | source registry, collection run, 추천 후보, 현재 state/stage, outbox job, audit |
 | fos-career worker → career-os | controlled local runner / skill call | 회사 분석, fit 분석, 공부팩, 이력서 초안 같은 private 산출물 생성 |
-| career-os → fos-career | report ingest 또는 host-side import | 추천 run 결과를 DB recommendation item으로 반영 |
+| career-os → fos-career | report ingest 또는 host-side import | 수집 snapshot과 추천 run 결과를 DB로 반영 |
 
 LLM provider 경계:
 
@@ -347,6 +347,17 @@ plan074 이후 UX 구조:
 - `/dashboard/reports/position/*`와 application candidate 계열 화면은 추천 후보 5개를 다룬다.
 - 추천 후보 카드의 이유와 다음 행동은 `application_candidates.latestSnapshotJson`의 구조화 필드를 우선 사용한다.
 - source diagnostics와 긴 원문 필드는 모바일에서 기본 접힘으로 둔다.
+
+plan075 이후 source/collection 구조:
+
+- source registry와 collection run은 fos-career DB가 정본이다.
+- career-os `scripts/position-recommender/live-postings/` adapter registry는 실제 수집 방법을 소유한다.
+- `db/import-positions.ts` 계열 host-side import는 `live-position-postings.md`의 configured sources, source counts, diagnostics, errors를 DB 테이블로 정규화한다.
+- `/dashboard/sources`는 `collected_positions` row에서 source diagnostics를 역산하지 않는다.
+- `/dashboard/sources`는 `position_sources`, latest `position_collection_runs`, `position_source_run_diagnostics`를 읽는다.
+- `collected_positions`는 개별 공고 pool이고, source registry나 run diagnostics의 정본이 아니다.
+- `position_recommendation_runs`는 사용한 `collectionRunId`를 참조한다.
+- source별 0건은 `zeroReason` 또는 `failureReason`으로 구분해 정상 0건과 parser/차단/필터 문제를 분리한다.
 
 Priority write-action bridge:
 

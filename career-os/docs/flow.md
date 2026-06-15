@@ -271,6 +271,34 @@ adapter 안의 URL 상수는 listing/API/sitemap entrypoint처럼 source discove
 개별 공고 URL은 테스트 fixture나 문서 예시 외에는 하드코딩하지 않는다.
 한 source 실패는 다른 source의 수집·import·dashboard 표시를 막지 않는다.
 
+plan075 이후 목표 흐름:
+
+```text
+collect_live_postings.ts
+  -> data/runtime/live-position-postings.md 생성
+  -> fos-career DB source snapshot import
+     - position_sources upsert
+     - position_collection_runs 생성
+     - position_source_run_diagnostics 생성
+     - collected_positions upsert
+  -> Claude position recommendation 생성
+  -> structured recommendation items 추출
+  -> position_recommendation_runs가 collectionRunId 참조
+  -> application_candidates / application_candidate_states ingest
+```
+
+이 순서는 의도적이다.
+수집 snapshot import는 Claude 추천 생성보다 먼저 수행한다.
+그래야 추천 생성이나 recommendation ingest가 실패해도 대시보드가 그날 source별 수집 상태를 보여줄 수 있다.
+
+source diagnostics 표시 기준:
+
+- source 목록은 DB registry를 기준으로 한다.
+- 최신 collection run의 source별 diagnostics를 함께 보여준다.
+- imported count가 0이어도 registry에 있으면 표시한다.
+- 0건은 `정상 0건`, `필터 과도`, `파서 변경`, `차단`, `비활성`, `알 수 없음`으로 구분한다.
+- `Naver Careers`, `KakaoPay Securities`처럼 0건 source는 후속 진단 대상이다.
+
 추천 범위는 Java/Spring 서버·백엔드 정규직을 기본으로 하되, 사용자의 현재 선호에 따라 AI 서비스/AI Transformation(AX)/AI Agent/AI 플랫폼 공고도 별도 레인으로 평가한다. 단, 이 레인의 공고도 추천 티어에 오르려면 active/open 개별 공고 URL이 있어야 하며, 서버·플랫폼 개발 전이성(API, Agent/RAG/LLM workflow, LLMOps/MLOps, 개발 생산성 자동화, SDLC AI 활용 등)이 명확해야 한다. 순수 AI Research, PM, 프론트엔드, 데이터 엔지니어 중심 공고는 사용자가 별도로 요청하지 않는 한 추천 티어에서 제외한다.
 
 상세 동작: `career-os/.claude/skills/position-recommender/SKILL.md` Workflow 섹션 참조.
@@ -401,6 +429,33 @@ plan074는 대시보드가 모바일에서 길어진 상단 메뉴에 밀리지 
 - 추천 후보 5개는 전체 수집 풀의 부분집합임을 명확히 보여준다.
 - 추천 근거와 다음 행동은 `latestSnapshotJson`의 구조화 필드를 우선 사용한다.
 - 구조화 필드가 비어 있으면 UI에서 빈 카드로 보이지 않게 fallback을 제공하되, runner 검증에서는 누락을 잡는다.
+
+### fos-career source registry and collection runs (planned — plan075)
+
+source diagnostics는 더 이상 `collected_positions` row에 저장된 텍스트를 역산하지 않는다.
+source registry와 collection run을 DB에 저장하고, dashboard는 최신 run을 기준으로 상태를 보여준다.
+
+```text
+career-os live-postings adapter registry
+  -> source registry seed/upsert
+  -> collection snapshot import
+  -> source run diagnostics 저장
+  -> dashboard /dashboard/sources
+  -> 최신 run의 source별 상태 + 0건 원인 표시
+```
+
+역할 분담:
+
+- career-os adapter/config: 실제 수집 방법, official entrypoint, active/open validator.
+- fos-career DB: 표시용 source registry, 수집 run 이력, source별 결과, collected positions.
+- dashboard: 최신 run 진단을 우선 표시하고 과거 run history로 확장 가능한 구조.
+
+추천 run 연결:
+
+- `position_collection_runs`는 수집 실행이다.
+- `position_recommendation_runs`는 추천 실행이다.
+- 추천 run은 사용한 `collectionRunId`를 참조한다.
+- `application_candidates`는 추천 후보 상태를 소유하되, 전체 수집 공고 pool을 대체하지 않는다.
 
 ### Application Frontdoor Queue (legacy — plan038)
 
