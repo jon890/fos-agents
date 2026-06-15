@@ -2,7 +2,7 @@
   "name": "plan075-fos-career-source-registry-collection-runs",
   "description": "ADR-083에 따라 fos-career DB에 source registry와 collection run을 도입하고, collection snapshot import, source diagnostics UI, runner 연결, 실제 수집 검증까지 고정한다.",
   "created_at": "2026-06-15T12:15:09Z",
-  "updated_at": "2026-06-15T13:05:01.684Z",
+  "updated_at": "2026-06-15T13:25:44.976Z",
   "status": "completed",
   "current_phase": 5,
   "total_phases": 5,
@@ -44,6 +44,11 @@
       "id": "D5",
       "title": "implementation-doc-freeze",
       "decision": "구현 phase는 docs/ADR/정책 문서를 수정하지 않는다. 구현 중 문서 변경이 필요하면 PHASE_BLOCKED로 처리한다."
+    },
+    {
+      "id": "D6",
+      "title": "cumulative-position-pool",
+      "decision": "collected_positions는 latest run 전용 snapshot이 아니라 누적 공고 pool이다. 공고 identity는 normalized posting URL hash를 우선하고, 같은 공고가 여러 collection run에 반복 등장하면 기존 row를 갱신하며 run별 등장 이력은 별도 history table로 보존한다."
     }
   ],
   "open_decisions": [],
@@ -51,6 +56,8 @@
     "DB 변경 phase는 migration 파일 생성만으로 완료하지 않고 기존 fos-career MySQL 또는 명시 smoke DB에 실제 적용 검증을 수행한다.",
     "collection snapshot import는 live-position-postings.md의 configured sources, source counts, diagnostics, errors를 파싱해 source registry, collection run, source diagnostics, collected positions를 갱신한다.",
     "/dashboard/sources는 registry와 latest run diagnostics를 읽고, enabled source가 0건이어도 zeroReason 또는 failureReason과 함께 표시한다.",
+    "/dashboard/positions는 전체 누적 공고를 기본으로 보여주고 latest run, 신규, 과거, source, 추천 여부 필터를 제공한다.",
+    "collected_position_run_items가 run별 등장 이력을 보존해 latest run 밖 과거 공고가 화면에서 사라지지 않게 한다.",
     "/dashboard/positions와 recommendation run은 최신 collectionRunId 연결을 보여준다.",
     "최종 phase는 실제 collect/import/recommendation ingest smoke, Docker app rebuild/health, DB query 검증을 수행한다."
   ],
