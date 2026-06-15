@@ -2,9 +2,9 @@
   "name": "plan074-fos-career-mobile-position-explorer",
   "description": "ADR-082에 따라 fos-career 모바일 shell을 하단 네비게이션 중심으로 정리하고, 전체 수집 공고 탐색과 추천 후보 카드를 분리하며 structured recommendation ingest 품질을 검증한다.",
   "created_at": "2026-06-15T00:00:00Z",
-  "updated_at": "2026-06-15T00:00:00Z",
-  "status": "pending",
-  "current_phase": 1,
+  "updated_at": "2026-06-15T11:40:00Z",
+  "status": "completed",
+  "current_phase": 4,
   "total_phases": 4,
   "error_message": null,
   "blocked_reason": null,
@@ -68,37 +68,41 @@
       "number": 1,
       "title": "모바일 dashboard shell과 네비게이션 정리",
       "file": "phase-01.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
       "model": "sonnet",
-      "timeout": 2400
+      "timeout": 2400,
+      "commitSha": "20b6e0e"
     },
     {
       "number": 2,
       "title": "전체 공고 탐색 화면 개선",
       "file": "phase-02.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
       "model": "sonnet",
-      "timeout": 3000
+      "timeout": 3000,
+      "commitSha": "5778fd9"
     },
     {
       "number": 3,
       "title": "추천 후보 구조화 추출과 ingest 보강",
       "file": "phase-03.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
       "model": "sonnet",
-      "timeout": 3000
+      "timeout": 3000,
+      "commitSha": "career-os:1811d4d,fos-career:a1f6e9d"
     },
     {
       "number": 4,
       "title": "통합 검증과 당일 추천 재실행",
       "file": "phase-04.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": ["Read", "Edit", "Bash", "Grep", "Glob"],
       "model": "sonnet",
-      "timeout": 3600
+      "timeout": 3600,
+      "commitSha": "validation-only"
     }
   ]
 }
