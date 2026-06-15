@@ -1,7 +1,7 @@
 # Phase 03 - validator script
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ---
 
@@ -151,8 +151,25 @@ git status --short
 
 ## common-pitfalls self-check
 
-- [ ] 첫 bash 블록이 `cd "$(git rev-parse --show-toplevel)"`로 시작한다.
-- [ ] validator 기본값은 dry-run이다.
-- [ ] `--apply`와 `--max-changes` 경계가 테스트된다.
-- [ ] run item 기반으로 latest/absence를 판정한다.
-- [ ] source adapter 개선을 하지 않는다.
+- [x] 첫 bash 블록이 `cd "$(git rev-parse --show-toplevel)"`로 시작한다.
+- [x] validator 기본값은 dry-run이다.
+- [x] `--apply`와 `--max-changes` 경계가 테스트된다.
+- [x] run item 기반으로 latest/absence를 판정한다.
+- [x] source adapter 개선을 하지 않는다.
+
+## 완료 기록
+
+- 완료 시각: 2026-06-15 KST
+- fos-career branch: `plan076-position-lifecycle-validation`
+- 변경 요약:
+  - `pnpm run validate:positions` CLI를 추가했다.
+  - 기본 실행은 dry-run이며 `--apply`가 있을 때만 상태 변경과 이벤트를 적용한다.
+  - `--max-changes` 기본값은 20이고 옵션으로 낮출 수 있다.
+  - 최근 3회 미등장 판정은 `collected_position_run_items` 기준으로 구현했다.
+  - `failed`, `skipped`, `blocked`, `parser_changed`, `unknown` 진단은 `validation_skipped` 대상으로 분리했다.
+- 검증:
+  - `pnpm exec tsc --noEmit`: 성공
+  - `pnpm build`: 성공
+  - `pnpm run validate:positions -- --dry-run`: 성공, `validationRunId=1`, `checkedCount=137`, 상태 변경 0건
+  - `pnpm run validate:positions -- --dry-run --max-changes 1`: 성공, `validationRunId=2`, 상태 변경 0건
+  - `git diff --check`: 성공

@@ -4,9 +4,9 @@
   "description": "ADR-084에 따라 fos-career 수집 공고 pool의 현재 상태, 수동 닫힘 처리, validator 자동 닫힘, 재수집 자동 재오픈을 DB 이벤트와 검증 실행으로 관리한다.",
   "goal": "collected_positions.postingStatus를 현재 상태 정본으로 유지하면서 모든 수동/자동 상태 변경을 position_status_events와 position_validation_runs에 추적하고, /dashboard/positions에서 한국어 중심으로 운영 가능한 검증 UI를 제공한다.",
   "created_at": "2026-06-15T00:00:00Z",
-  "updated_at": "2026-06-15T01:20:00Z",
+  "updated_at": "2026-06-15T01:45:00Z",
   "status": "running",
-  "current_phase": 3,
+  "current_phase": 4,
   "total_phases": 6,
   "execution_mode": {
     "sequential": true,
@@ -141,7 +141,7 @@
       "number": 3,
       "title": "validator script",
       "file": "phase-03.md",
-      "status": "pending",
+      "status": "completed",
       "objective": "기본 dry-run validator를 만들고 --apply에서만 자동 닫힘을 적용하며 --max-changes 기본값 20, run item 기반 미등장 판정, source diagnostics 기반 skip을 구현한다.",
       "owned_files_or_modules": [
         "fos-career scripts/position lifecycle validator",
