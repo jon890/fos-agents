@@ -4,9 +4,9 @@
   "description": "ADR-084에 따라 fos-career 수집 공고 pool의 현재 상태, 수동 닫힘 처리, validator 자동 닫힘, 재수집 자동 재오픈을 DB 이벤트와 검증 실행으로 관리한다.",
   "goal": "collected_positions.postingStatus를 현재 상태 정본으로 유지하면서 모든 수동/자동 상태 변경을 position_status_events와 position_validation_runs에 추적하고, /dashboard/positions에서 한국어 중심으로 운영 가능한 검증 UI를 제공한다.",
   "created_at": "2026-06-15T00:00:00Z",
-  "updated_at": "2026-06-15T01:45:00Z",
+  "updated_at": "2026-06-15T02:05:00Z",
   "status": "running",
-  "current_phase": 4,
+  "current_phase": 5,
   "total_phases": 6,
   "execution_mode": {
     "sequential": true,
@@ -164,7 +164,7 @@
       "number": 4,
       "title": "재수집 자동 재오픈",
       "file": "phase-04.md",
-      "status": "pending",
+      "status": "completed",
       "objective": "닫힌 공고가 새 collection run에 다시 등장하면 snapshot posting_status로 복원하고 validator_reopened 이벤트를 남긴다.",
       "owned_files_or_modules": [
         "fos-career collection snapshot import path",

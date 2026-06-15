@@ -1,7 +1,7 @@
 # Phase 04 - 재수집 자동 재오픈
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ---
 
@@ -135,8 +135,24 @@ git status --short
 
 ## common-pitfalls self-check
 
-- [ ] 첫 bash 블록이 `cd "$(git rev-parse --show-toplevel)"`로 시작한다.
-- [ ] 복원 status는 snapshot `posting_status`를 사용한다.
-- [ ] `validator_reopened` 이벤트를 남긴다.
-- [ ] 중복 reopen 이벤트를 방지한다.
-- [ ] source adapter 구현을 하지 않는다.
+- [x] 첫 bash 블록이 `cd "$(git rev-parse --show-toplevel)"`로 시작한다.
+- [x] 복원 status는 snapshot `posting_status`를 사용한다.
+- [x] `validator_reopened` 이벤트를 남긴다.
+- [x] 중복 reopen 이벤트를 방지한다.
+- [x] source adapter 구현을 하지 않는다.
+
+## 완료 기록
+
+- 완료 시각: 2026-06-15 KST
+- fos-career branch: `plan076-position-lifecycle-validation`
+- 변경 요약:
+  - `db/import-positions.ts`에서 기존 공고의 이전 `posting_status`를 읽는다.
+  - 기존 상태가 `closed`이고 새 snapshot `posting_status`가 `closed`가 아니면 `validator_reopened` 이벤트를 기록한다.
+  - row의 상태 복원은 기존 import upsert의 `posting_status = VALUES(posting_status)` 경로를 사용한다.
+  - reopen fixture snapshot과 `test/.gitkeep`을 추가했다.
+- 검증:
+  - `pnpm exec tsc --noEmit`: 성공
+  - `pnpm build`: 성공
+  - `pnpm run import:positions -- --snapshot fixtures/position-lifecycle/reopen-snapshot.md --collection-run-id fixture-reopen-dry-run --dry-run`: 성공
+  - `rg`로 `validator_reopened`, `posting_status`, `collected_position_run_items` 경계를 확인했다.
+  - `git diff --check`: 성공
