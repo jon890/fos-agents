@@ -1,7 +1,7 @@
 # Phase 06 - 검증과 배포 smoke
 
 **Model**: haiku
-**Status**: pending
+**Status**: completed
 
 ---
 
@@ -152,8 +152,33 @@ git status --short
 
 ## common-pitfalls self-check
 
-- [ ] 첫 bash 블록이 `cd "$(git rev-parse --show-toplevel)"`로 시작한다.
-- [ ] migration은 2회 실행한다.
-- [ ] dry-run/apply/source failure/reopen fixture를 모두 확인한다.
-- [ ] 외부 `/dashboard/positions`는 로그인 리다이렉트 또는 정상 응답만 확인한다.
-- [ ] 새 기능 범위를 추가하지 않는다.
+- [x] 첫 bash 블록이 `cd "$(git rev-parse --show-toplevel)"`로 시작한다.
+- [x] migration은 2회 실행한다.
+- [x] dry-run/apply/source failure/reopen fixture를 모두 확인한다.
+- [x] 외부 `/dashboard/positions`는 로그인 리다이렉트 또는 정상 응답만 확인한다.
+- [x] 새 기능 범위를 추가하지 않는다.
+
+## 완료 기록
+
+- 완료 시각: 2026-06-15 KST
+- fos-career branch: `plan076-position-lifecycle-validation`
+- 변경 요약:
+  - `smoke:position-lifecycle` script를 추가해 apply, source failure skip, reopen fixture를 실제 DB에서 검증하고 fixture row를 정리했다.
+- 검증:
+  - `pnpm exec tsc --noEmit`: 성공
+  - `pnpm build`: 성공
+  - `pnpm exec drizzle-kit migrate`: 성공
+  - `pnpm exec drizzle-kit migrate` 재실행: 성공
+  - `pnpm run validate:positions -- --dry-run`: 성공, `validationRunId=4`, `checkedCount=137`, 상태 변경 0건
+  - `pnpm run validate:positions -- --dry-run --max-changes 1`: 성공, `validationRunId=3`, 상태 변경 0건
+  - `pnpm run smoke:position-lifecycle`: 성공
+    - `validatorApply`: passed
+    - `sourceFailure`: passed
+    - `reopen`: passed
+    - fixture cleanup 확인: source/run/position 잔여 0건
+  - `docker compose -p fos-career ... up -d --build fos-career`: 성공
+  - `docker compose ps`: `fos-career-app` healthy
+  - `http://127.0.0.1:16000/dashboard/positions`: `307 /login`
+  - `https://career.fosworld.co.kr/dashboard/positions`: `307 /login`
+  - `rg`로 lifecycle event/schema 경계를 확인했다.
+  - `git diff --check`: 성공
