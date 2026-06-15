@@ -1,0 +1,232 @@
+{
+  "id": "plan076",
+  "name": "plan076-fos-career-position-lifecycle-validation",
+  "description": "ADR-084에 따라 fos-career 수집 공고 pool의 현재 상태, 수동 닫힘 처리, validator 자동 닫힘, 재수집 자동 재오픈을 DB 이벤트와 검증 실행으로 관리한다.",
+  "goal": "collected_positions.postingStatus를 현재 상태 정본으로 유지하면서 모든 수동/자동 상태 변경을 position_status_events와 position_validation_runs에 추적하고, /dashboard/positions에서 한국어 중심으로 운영 가능한 검증 UI를 제공한다.",
+  "created_at": "2026-06-15T00:00:00Z",
+  "updated_at": "2026-06-15T00:00:00Z",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 6,
+  "execution_mode": {
+    "sequential": true,
+    "parallel_execution_allowed": false,
+    "worker_requirement": "구현 worker는 main 워크트리를 직접 수정하지 말고 별도 git worktree와 plan076 전용 branch에서 순차 phase를 실행한다.",
+    "phase_boundary": "각 phase는 검증 후 관심사별 commit/push 경계로 다룬다. unrelated dirty 변경은 stage, commit, revert하지 않는다."
+  },
+  "notifications": {
+    "start": "phase 실행 전 HUD를 task files completed 또는 plan076 phase running 상태로 full snapshot 갱신하고, phase 시작 알림을 보낸다.",
+    "phase_complete": "각 phase 완료 뒤 검증 결과, commit SHA, 남은 dirty 상태를 보고하고 HUD를 full snapshot으로 갱신한다.",
+    "complete": "phase-06 검증 완료 뒤 task completed 상태와 최종 dirty 상태를 보고한다.",
+    "blocked_or_failed": "PHASE_BLOCKED 또는 PHASE_FAILED 발생 시 즉시 알림을 보내고 다음 phase로 진행하지 않는다."
+  },
+  "related_docs": [
+    "career-os/AGENTS.md",
+    "career-os/TOOLS.md",
+    "career-os/docs/prd.md",
+    "career-os/docs/data-schema.md",
+    "career-os/docs/flow.md",
+    "career-os/docs/code-architecture.md",
+    "career-os/docs/adr.md"
+  ],
+  "depends_on": [
+    "plan075-fos-career-source-registry-collection-runs"
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "title": "posting-status-is-current-source",
+      "decision": "수집 공고의 현재 상태 정본은 별도 override table이 아니라 collected_positions.postingStatus다."
+    },
+    {
+      "id": "D2",
+      "title": "status-events-are-audit-log",
+      "decision": "manual_closed, validator_closed, validator_reopened, validation_checked, validation_skipped 이벤트를 position_status_events에 누적한다."
+    },
+    {
+      "id": "D3",
+      "title": "validator-is-dry-run-first",
+      "decision": "validator script는 기본 dry-run이고 --apply가 있을 때만 상태 변경을 수행한다. --max-changes 기본값은 20이다."
+    },
+    {
+      "id": "D4",
+      "title": "run-items-drive-latest-and-absence",
+      "decision": "latest/new/past 판단과 3회 이상 미등장 판정은 collected_positions.collectionRunId가 아니라 collected_position_run_items를 기준으로 한다."
+    },
+    {
+      "id": "D5",
+      "title": "unstable-source-skip",
+      "decision": "source 상태가 blocked, parser_changed, failed, skipped, unknown 계열이면 자동 닫지 않고 validation_skipped 이벤트를 남긴다."
+    },
+    {
+      "id": "D6",
+      "title": "reopen-from-new-snapshot",
+      "decision": "닫힌 공고가 새 collection run에 다시 등장하면 snapshot의 posting_status 값으로 복원하고 validator_reopened 이벤트를 남긴다."
+    },
+    {
+      "id": "D7",
+      "title": "korean-user-facing-labels",
+      "decision": "사용자-facing 버튼, 필터, badge, 상태 설명은 한국어를 우선하고 내부 enum과 raw log는 보조 정보로 둔다."
+    },
+    {
+      "id": "D8",
+      "title": "implementation-doc-freeze",
+      "decision": "구현 phase는 career-os docs/ADR/AGENTS와 기존 plan075 산출물을 수정하지 않는다. 문서 결정 변경이 필요하면 PHASE_BLOCKED로 처리한다."
+    }
+  ],
+  "open_decisions": [],
+  "validation_summary": [
+    "DB schema phase는 migration 생성만으로 완료하지 않고 기존 fos-career MySQL 또는 명시 smoke DB에 drizzle-kit migrate를 2회 적용해 신규 table/index를 확인한다.",
+    "수동 닫힘 처리는 /dashboard/positions에서 사유 필수 modal 또는 동등한 행 액션으로 제공하고 row update와 position_status_events 기록을 같은 transaction으로 처리한다.",
+    "validator는 기본 dry-run, --apply 명시 적용, --max-changes 기본 20, source diagnostics 기반 skip, collected_position_run_items 기반 3회 미등장 판정을 검증한다.",
+    "재수집 자동 재오픈은 collection import path에서 닫힌 공고가 다시 등장할 때 snapshot posting_status로 복원하고 이벤트를 남기는 fixture로 확인한다.",
+    "/dashboard/positions는 전체 누적 pool을 기본으로 유지하며 latest/new/past/source/recommendation/status 필터와 한국어 label, 검증 요약을 제공한다.",
+    "최종 smoke는 tsc, build, migrate 2회, dry-run/apply fixture, source failure fixture, reopen fixture, docker compose health, 외부 /dashboard/positions 응답을 확인한다."
+  ],
+  "safety_boundaries": [
+    "plan075 산출물과 기존 완료 plan은 수정하지 않는다.",
+    "career-os docs/ADR/AGENTS/TOOLS는 구현 phase에서 수정하지 않는다.",
+    "Naver Careers와 KakaoPay Securities adapter 구현 또는 0건 원인 보강은 범위 밖이다.",
+    "공고 상세 페이지 구현은 범위 밖이며 후속 plan077 후보로 남긴다.",
+    "validator를 승인 없이 cron 자동 apply로 연결하지 않는다.",
+    "외부 지원, 이메일, 공개 게시물 작성, 채용 사이트 로그인/제출/업로드 자동화는 수행하지 않는다.",
+    "unrelated dirty 변경은 stage, commit, revert하지 않는다."
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "DB schema와 migration",
+      "file": "phase-01.md",
+      "status": "pending",
+      "objective": "position_status_events와 position_validation_runs, 필요한 indexes와 Drizzle schema를 추가하고 현재 상태 정본이 collected_positions.postingStatus임을 코드 구조에 반영한다.",
+      "owned_files_or_modules": [
+        "fos-career db schema",
+        "fos-career Drizzle migrations",
+        "fos-career DB relation/index definitions"
+      ],
+      "commands": [
+        "cd \"$(git rev-parse --show-toplevel)\" && cd ~/services/fos-career && pnpm exec tsc --noEmit",
+        "cd \"$(git rev-parse --show-toplevel)\" && cd ~/services/fos-career && pnpm build",
+        "cd \"$(git rev-parse --show-toplevel)\" && cd ~/services/fos-career && pnpm drizzle-kit migrate && pnpm drizzle-kit migrate"
+      ],
+      "verification": [
+        "신규 table, index, migration hash를 실제 DB 또는 명시 smoke DB에서 확인한다.",
+        "migration 재실행이 idempotent하게 성공한다."
+      ],
+      "handoff_notes": "phase-02는 이 phase의 schema와 event helper를 사용한다. DB 연결 검증이 불가능하면 fixture로 대체하지 말고 PHASE_BLOCKED 처리한다."
+    },
+    {
+      "number": 2,
+      "title": "수동 닫힘 처리",
+      "file": "phase-02.md",
+      "status": "pending",
+      "objective": "/dashboard/positions에서 사유 필수 수동 닫힘 처리를 제공하고 collected_positions.postingStatus 갱신과 manual_closed 이벤트 기록을 transaction으로 묶는다.",
+      "owned_files_or_modules": [
+        "fos-career /dashboard/positions route/components",
+        "fos-career positions action/API",
+        "fos-career auth/audit boundary"
+      ],
+      "commands": [
+        "cd \"$(git rev-parse --show-toplevel)\" && cd ~/services/fos-career && pnpm exec tsc --noEmit",
+        "cd \"$(git rev-parse --show-toplevel)\" && cd ~/services/fos-career && pnpm build"
+      ],
+      "verification": [
+        "사유 없이 닫힘 처리가 거절된다.",
+        "성공 시 row status와 position_status_events가 함께 갱신된다.",
+        "권한 없는 요청은 거절되고 외부 제출/업로드/로그인 동작은 없다."
+      ],
+      "handoff_notes": "phase-03 validator가 같은 event write path를 재사용할 수 있게 helper 경계를 과하게 UI에 묶지 않는다."
+    },
+    {
+      "number": 3,
+      "title": "validator script",
+      "file": "phase-03.md",
+      "status": "pending",
+      "objective": "기본 dry-run validator를 만들고 --apply에서만 자동 닫힘을 적용하며 --max-changes 기본값 20, run item 기반 미등장 판정, source diagnostics 기반 skip을 구현한다.",
+      "owned_files_or_modules": [
+        "fos-career scripts/position lifecycle validator",
+        "fos-career source diagnostics readers",
+        "fos-career validator fixtures"
+      ],
+      "commands": [
+        "cd \"$(git rev-parse --show-toplevel)\" && cd ~/services/fos-career && pnpm exec tsc --noEmit",
+        "cd \"$(git rev-parse --show-toplevel)\" && cd ~/services/fos-career && pnpm build",
+        "cd \"$(git rev-parse --show-toplevel)\" && cd ~/services/fos-career && pnpm run validate:positions -- --dry-run"
+      ],
+      "verification": [
+        "dry-run은 DB 상태를 바꾸지 않고 position_validation_runs 요약 또는 dry-run summary를 남긴다.",
+        "--apply와 --max-changes가 있을 때만 최대 변경 수 안에서 validator_closed를 적용한다.",
+        "blocked/parser_changed/failed/skipped/unknown 계열 source는 validation_skipped로만 남는다."
+      ],
+      "handoff_notes": "phase-04는 collection import 또는 run item 갱신 시 재등장 공고를 자동 재오픈하는 경로를 이어받는다."
+    },
+    {
+      "number": 4,
+      "title": "재수집 자동 재오픈",
+      "file": "phase-04.md",
+      "status": "pending",
+      "objective": "닫힌 공고가 새 collection run에 다시 등장하면 snapshot posting_status로 복원하고 validator_reopened 이벤트를 남긴다.",
+      "owned_files_or_modules": [
+        "fos-career collection snapshot import path",
+        "fos-career collected_position_run_items integration",
+        "fos-career reopen fixtures"
+      ],
+      "commands": [
+        "cd \"$(git rev-parse --show-toplevel)\" && cd ~/services/fos-career && pnpm exec tsc --noEmit",
+        "cd \"$(git rev-parse --show-toplevel)\" && cd ~/services/fos-career && pnpm build"
+      ],
+      "verification": [
+        "closed 공고가 새 run item에 다시 등장하면 snapshot posting_status로 복원된다.",
+        "validator_reopened 이벤트가 previousStatus, nextStatus, collectionRunId, sourceId, evidenceJson을 포함한다.",
+        "이미 열린 공고는 불필요한 reopen 이벤트를 중복 생성하지 않는다."
+      ],
+      "handoff_notes": "phase-05 UI는 reopen/event 결과와 latest/new/past 상태를 읽어 표시한다."
+    },
+    {
+      "number": 5,
+      "title": "positions UI와 진단 polish",
+      "file": "phase-05.md",
+      "status": "pending",
+      "objective": "/dashboard/positions를 전체 누적 pool 중심으로 다듬고 latest/new/past/source/recommendation/status 필터, 검증 요약, 한국어 label을 제공한다.",
+      "owned_files_or_modules": [
+        "fos-career /dashboard/positions page",
+        "fos-career positions filters/query params",
+        "fos-career status/event labels"
+      ],
+      "commands": [
+        "cd \"$(git rev-parse --show-toplevel)\" && cd ~/services/fos-career && pnpm exec tsc --noEmit",
+        "cd \"$(git rev-parse --show-toplevel)\" && cd ~/services/fos-career && pnpm build"
+      ],
+      "verification": [
+        "전체 누적 공고 pool이 기본 표시되고 latest run 밖 과거 공고가 사라지지 않는다.",
+        "latest/new/past/source/recommendation/status 필터가 query와 UI에서 동작한다.",
+        "버튼, badge, 필터, 빈 상태, 검증 요약은 한국어 우선 표현을 사용한다."
+      ],
+      "handoff_notes": "상세 페이지는 만들지 않는다. 상세 drill-down이 필요하면 plan077 후보로 보고한다."
+    },
+    {
+      "number": 6,
+      "title": "검증과 배포 smoke",
+      "file": "phase-06.md",
+      "status": "pending",
+      "objective": "plan076 전체 변경을 typecheck/build/migration/fixture/docker/external route smoke로 검증하고 완료 가능한 상태로 정리한다.",
+      "owned_files_or_modules": [
+        "fos-career validation commands",
+        "fos-career docker compose smoke",
+        "plan076 completion report"
+      ],
+      "commands": [
+        "cd \"$(git rev-parse --show-toplevel)\" && cd ~/services/fos-career && pnpm exec tsc --noEmit",
+        "cd \"$(git rev-parse --show-toplevel)\" && cd ~/services/fos-career && pnpm build",
+        "cd \"$(git rev-parse --show-toplevel)\" && cd ~/services/fos-career && pnpm drizzle-kit migrate && pnpm drizzle-kit migrate",
+        "cd \"$(git rev-parse --show-toplevel)\" && cd ~/services/fos-career && docker compose ps"
+      ],
+      "verification": [
+        "dry-run/apply fixture, source failure fixture, reopen fixture를 실행하고 결과를 보고한다.",
+        "docker compose health가 정상이다.",
+        "외부 /dashboard/positions는 로그인 리다이렉트 또는 정상 응답을 반환한다."
+      ],
+      "handoff_notes": "검증이 끝나면 main session이 diff, task 상태, commit/push 여부를 review한다. 이 phase에서 새 기능 범위를 추가하지 않는다."
+    }
+  ]
+}
