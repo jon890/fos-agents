@@ -1,6 +1,6 @@
 ---
 name: interview-prep-analyzer
-description: 후보자의 면접 준비를 진단·점검하는 skill. baseline 전체 진단, daily 집중 점검, stage interview prep(first-round/final-round/offer-chat) 자동 분기. 자연어 호출 — "면접 준비 진단", "오늘 갭 점검", "1차 면접 준비", "최종 면접 준비", "오퍼 단계 준비" 또는 `/interview-prep-analyzer`. 후보자 코드/문서 갭 분석이나 단계별 면접 준비면 이 skill을 호출.
+description: 후보자의 면접 준비를 진단·점검하는 비공개 career-os skill. "면접 준비 진단", "baseline 갭 분석", "오늘 갭 점검", "MySQL 인덱스 약점 분석", "1차 면접 준비", "최종 면접 준비", "오퍼 단계 준비", "면접 예상 질문", "면접 답변 연습", `/interview-prep-analyzer [baseline|daily|topic|first-round|final-round|offer-chat]`처럼 후보자 코드/문서 갭 분석이나 단계별 면접 준비가 필요할 때 사용. baseline 전체 진단, daily 집중 점검, stage interview prep을 자동 분기하며 공개 fos-study 발행은 하지 않는다.
 ---
 
 # Interview Prep Analyzer
@@ -15,20 +15,12 @@ interview prep 보고서는 비공개 내부 분석이지만 사용자가 바로
 후보자 근거, 회사/면접 맥락, 리스크 판단은 내부 분석에 유지한다.
 공개용 study pack이나 제출용 문구가 필요하면 별도 승인 흐름으로 분리한다.
 
-## When to use
+## 호출 후 모드 해석
 
-- 슬래시 호출: `/interview-prep-analyzer [baseline|daily|<topic-key>|first-round|final-round|offer-chat]`
-- 자연어 요청 (baseline): "면접 준비 전체 진단", "baseline 갭 분석", "전반적인 학습 상태 점검", "진단해줘"
-- 자연어 요청 (daily): "오늘 갭 점검", "daily 분석", "MySQL 인덱스 약점 분석", "오늘 공부할 내용 갭 확인"
-- 자연어 요청 (stage): "1차 면접 준비", "first-round 준비", "최종 면접 준비", "오퍼 단계 준비", "면접 예상 질문 뽑아줘", "면접 답변 연습"
-- 학습 노트 기반 면접 갭 분석이 필요한 모든 경우
-- 회사/직무 맥락과 후보자 이력을 엮어 예상 질문, 답변 리스크, 역질문을 정리해야 하는 경우
-- "학습 갭 분석해줘", "갭 점검해줘", "준비 현황 분석해줘", "오늘 학습 분석", "면접 연습"
-
-fos-study publish 안 함 — 비공개 career-os 리포트만 생성.
-학습 문서 작성 아님 — 갭 진단·분석 전담. 실제 문서 생성은 `/study-pack-writer` 로 위임.
-
-일반 학습 문서 생성은 study-pack-writer, 이력서 기반 면접 자산은 interview-asset-writer 사용.
+- `first-round`, `final-round`, `offer-chat` 또는 대응 한국어가 있으면 stage 모드로 실행한다.
+- `baseline`, "전체", "진단", "전반적" 신호가 있으면 baseline 모드로 실행한다.
+- `daily`, "오늘", 특정 topic-key 신호가 있으면 daily 모드로 실행한다.
+- 일반 학습 문서 생성은 `study-pack-writer`, 이력서 기반 면접 자산 작성은 `interview-asset-writer`로 라우팅한다.
 
 ## Inputs
 

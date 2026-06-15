@@ -1,6 +1,6 @@
 ---
 name: application-package-writer
-description: 공고 1개와 후보자 프로필을 입력으로 받아 공고별 지원 패키지(fit-analysis.md + application-package.md + resume-draft.md + cover-letter.md + submission-checklist.md)를 생성하는 비공개 career-os skill. 근거 있는 주장만 작성하고, 근거 부족은 보강 필요 / 선택지 / 권장 행동으로 정리. '지원 패키지 만들어줘', '지원서 초안 작성', 'fit 분석해줘', '/application-package-writer' 슬래시 호출.
+description: 공고 1개와 후보자 프로필을 입력으로 받아 공고별 지원 패키지(fit-analysis.md + application-package.md + resume-draft.md + cover-letter.md + submission-checklist.md)를 생성하는 비공개 career-os skill. "지원 패키지 만들어줘", "지원서 초안 작성", "fit 분석해줘", "이 공고 지원 준비", "다음 지원 준비", `/application-package-writer [posting-path]`처럼 공고별 지원 문서와 role-fit 분석이 필요할 때 사용. 근거 있는 주장만 작성하고, 근거 부족은 보강 필요 / 선택지 / 권장 행동으로 정리. fos-study publish, 실제 제출, 로그인, 채용 사이트 입력은 하지 않는다.
 ---
 
 # Application Package Writer
@@ -8,15 +8,11 @@ description: 공고 1개와 후보자 프로필을 입력으로 받아 공고별
 공고 요구사항과 후보자 근거를 교차 분석해 공고별 맞춤 지원 패키지를 생성하는 비공개 career-os skill.
 내부 전략 문서와 제출용 Markdown 초안을 분리해서 작성한다.
 
-## When to use
+## 호출 후 입력 해석
 
-- 슬래시 호출: `/application-package-writer [posting-path]`
-- 자연어 요청: "지원 패키지 만들어줘", "지원서 초안 작성해줘", "fit 분석해줘", "이 공고 지원 준비해줘"
-- 특정 공고 파일 지정: `data/applications/tossplace/applied-ai-engineer/posting.md`
-- ledger에서 후보 자동 선택: "다음 지원 준비해줘"
-
-fos-study publish 안 함 — 비공개 career-os 산출물만 생성.
-실제 지원서 제출·로그인·채용 사이트 입력 자동화 안 함 — 사용자 승인 필요 단계로만 안내.
+- posting path가 있으면 해당 파일을 사용한다.
+- posting path가 없고 "다음 지원" 흐름이면 ledger에서 후보를 고른 뒤 사용자 확인을 받는다.
+- 결과는 비공개 career-os 산출물만 생성한다.
 
 ## 출력 정책
 

@@ -1,26 +1,18 @@
 ---
 name: study-topic-recommender
-description: backend 면접 준비용 morning 학습 토픽 추천 + RSS feed 기반 풀 보충 + 학습 완료 토픽 자동 promote + live-coding seed 선택까지 통합 처리하는 agent skill. "오늘 뭐 공부할까" / "morning recommend" / "토픽 풀 갱신" / "live-coding 1개 골라줘" 같은 자연어 요청 또는 `/study-topic-recommender` 슬래시 호출. 호출 시마다 replenish + recommend + promote 자동 진행. 트리거 시점 정책은 외부 (openclaw 스케줄러).
+description: backend 면접 준비용 morning 학습 토픽 추천, RSS feed 기반 후보 풀 보충, 학습 완료 토픽 promote 후보 산출, live-coding seed 선택을 통합 처리하는 career-os skill. "오늘 뭐 공부할까", "morning recommend", "오늘 학습 추천", "토픽 풀 갱신", "추천 갱신", "study topic 추천", "live-coding 1개 골라줘", "아침 학습 추천", `/study-topic-recommender`처럼 학습 주제 추천이나 후보 풀 갱신이 필요할 때 사용. 호출 시마다 replenish + recommend + promote 판단을 수행하지만 fos-study publish와 자동 config 수정은 하지 않는다.
 ---
 
 # Study Topic Recommender
 
 backend 면접 준비용 morning 토픽 추천 통합 skill. replenish + recommend + promote 흐름을 단일 호출로 자동 처리.
 
-## When to use
+## 호출 후 범위 해석
 
-슬래시 호출:
-- `/study-topic-recommender`
-
-자연어 패턴:
-- "오늘 뭐 공부할까", "morning recommend", "오늘 학습 추천"
-- "토픽 풀 갱신해줘", "추천 갱신", "study topic 추천"
-- "live-coding 1개 골라줘", "live-coding seed 선택"
-- "recommend-topics 실행", "morning 추천 돌려줘"
-- "아침 학습 추천", "공부 주제 추천해줘", "토픽 추천해줘", "오늘 토픽 뭐야"
-
-fos-study publish 안 함 — 토픽 추천만. 실제 문서 작성은 `/study-pack-writer` 로 위임.
-promote 후보 안내는 사용자 확인 후 수동 적용 — 자동 config 수정 안 함.
+- 추천 요청이면 morning topic 추천을 생성한다.
+- 토픽 풀 갱신 신호가 있으면 RSS/feed 기반 후보 보충을 포함한다.
+- live-coding 신호가 있으면 seed 선택을 포함한다.
+- 실제 문서 작성은 `study-pack-writer`로 위임하고, promote 후보는 사용자 확인 후 수동 적용한다.
 
 ## Inputs
 

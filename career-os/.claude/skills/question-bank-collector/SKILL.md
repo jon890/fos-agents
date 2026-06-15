@@ -1,6 +1,6 @@
 ---
 name: question-bank-collector
-description: 일반 backend 질문, CS 질문 수집, 면접 질문 bank, 질문 뱅크 보강, 약점 기반 질문 재선별, Java/Spring/DB/운영 질문 모아줘 같은 요청을 처리하는 public-safe question bank collector. career-os public/question-bank에 Java/Spring, database, CS, operations, system-design 질문을 정규화하고 private 답변, 지원 전략, 회사별 비공개 맥락, 유료 강의/문제집/면접 후기 원문, fos-study 자동 발행을 금지한다.
+description: 공개 가능한 일반 backend/CS 면접 질문을 career-os public/question-bank에 모으고 보강하는 public-safe question bank collector. "일반 backend 질문", "CS 질문 수집", "면접 질문 bank", "질문 뱅크 보강", "약점 기반 질문 재선별", "Java/Spring/DB/운영 질문 모아줘", "system design 질문 bank", "Spring/DB 면접 질문"처럼 공개 질문 bank를 정규화하거나 private prep에 질문을 선별 반영해야 할 때 사용. private 답변, 지원 전략, 회사별 비공개 맥락, 유료 강의/문제집/면접 후기 원문, fos-study 자동 발행은 금지한다.
 ---
 
 # Question Bank Collector
@@ -8,19 +8,11 @@ description: 일반 backend 질문, CS 질문 수집, 면접 질문 bank, 질문
 공개 가능한 일반 backend/CS 면접 질문을 `public/question-bank/`에 모으고 보강하는 agent skill이다.
 private 포지션 준비 정본은 `private/<company>/<position>/interview/prep.md`이며, 이 skill은 public bank와 private prep 경계를 분리한다.
 
-## When To Use
+## 호출 후 범위 해석
 
-다음 trigger 문구가 있으면 이 skill을 사용한다.
-
-- 일반 backend 질문
-- CS 질문 수집
-- 면접 질문 bank
-- 질문 뱅크 보강
-- 약점 기반 질문 재선별
-- Java/Spring/DB/운영 질문 모아줘
-
-비슷한 표현도 이 skill로 라우팅한다.
-예: "Spring/DB 면접 질문 모아줘", "운영 질문 seed 보강", "system design 질문 bank 정리".
+- public bank 보강 요청이면 `public/question-bank/`만 수정한다.
+- 포지션 맞춤 선별을 명시한 경우에만 public bank에서 골라 private prep에 반영한다.
+- private 답변, 회사별 지원 전략, 유료 자료 원문은 추가하지 않는다.
 
 ## 입력
 

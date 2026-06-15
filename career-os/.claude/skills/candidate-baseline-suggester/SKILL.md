@@ -1,17 +1,17 @@
 ---
 name: candidate-baseline-suggester
-description: career-os/config/ hand-crafted 자산 (candidate-profile.md, baseline-core-files.json, config/study-progress.json weak_spots)을 fos-study 전체 commit history + study-progress + interview-prep-analyzer baseline 산출물 기반으로 자동 갱신. Append + 주석 마킹 패턴 — 기존 본문 보존 + 새 항목 추가 + outdated 항목 주석 마킹. audit trail (data/runtime/profile-refresh-suggestions/YYYY-MM-DD/ 안 before/after/diff/changes) 필수. 자연어 호출 — "후보자 프로필 갱신", "baseline 약점·강점 평가 업데이트", "프로필 업데이트", "baseline 갱신", "학습 내용 반영", "weak_spots 갱신", "/candidate-baseline-suggester" 슬래시.
+description: career-os/config/ hand-crafted 자산(candidate-profile.md, baseline-core-files.json, config/study-progress.json weak_spots)을 fos-study 전체 commit history, study-progress, interview-prep-analyzer baseline 산출물 기반으로 갱신 제안하는 비공개 career-os skill. "후보자 프로필 갱신", "baseline 약점·강점 평가 업데이트", "프로필 업데이트", "baseline 갱신", "학습 내용 반영", "weak_spots 갱신", `/candidate-baseline-suggester`처럼 후보자 기준선과 학습 약점 자산을 업데이트해야 할 때 사용. Append + 주석 마킹 패턴으로 기존 본문을 보존하고 audit trail(data/runtime/profile-refresh-suggestions/YYYY-MM-DD/ before/after/diff/changes)을 반드시 남긴다.
 ---
 
 # Candidate Baseline Suggester
 
 fos-study 학습 이력을 기반으로 career-os 자산(프로필·baseline·진도)을 Append + 주석 마킹으로 자동 갱신하는 skill.
 
-## When to use
+## 호출 후 입력 해석
 
-- 슬래시 호출: `/candidate-baseline-suggester`
-- 자연어 요청: "후보자 프로필 갱신해줘", "baseline 약점·강점 업데이트", "fos-study 학습 결과 프로필에 반영해줘", "프로필 업데이트해줘", "weak_spots 갱신해줘"
-- **권장 호출 시점**: study-pack 5회 이상 누적 후 / 면접 시즌 시작 시 / 타깃 회사 변경 후. 최소 2주 1회 이상.
+- study-pack 5회 이상 누적, 면접 시즌 시작, 타깃 회사 변경 뒤 실행하면 효과가 크다.
+- 기존 본문은 직접 덮어쓰지 않고 Append + 주석 마킹으로 변경한다.
+- audit trail 없이 자산을 갱신하지 않는다.
 
 ## Inputs
 
