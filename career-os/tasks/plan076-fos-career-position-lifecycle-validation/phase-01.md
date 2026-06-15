@@ -1,7 +1,7 @@
 # Phase 01 - DB schema와 migration
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ---
 
@@ -176,8 +176,23 @@ git status --short
 
 ## common-pitfalls self-check
 
-- [ ] 첫 bash 블록이 `cd "$(git rev-parse --show-toplevel)"`로 시작한다.
-- [ ] DB migration은 실제 적용과 재실행 검증을 포함한다.
-- [ ] `collected_positions.postingStatus`를 현재 상태 정본으로 유지한다.
-- [ ] phase 안에서 docs/ADR과 plan075를 수정하지 않는다.
-- [ ] unrelated dirty 변경을 stage하지 않는다.
+- [x] 첫 bash 블록이 `cd "$(git rev-parse --show-toplevel)"`로 시작한다.
+- [x] DB migration은 실제 적용과 재실행 검증을 포함한다.
+- [x] `collected_positions.postingStatus`를 현재 상태 정본으로 유지한다.
+- [x] phase 안에서 docs/ADR과 plan075를 수정하지 않는다.
+- [x] unrelated dirty 변경을 stage하지 않는다.
+
+## 완료 기록
+
+- 완료 시각: 2026-06-15 KST
+- fos-career branch: `plan076-position-lifecycle-validation`
+- 변경 요약:
+  - `position_validation_runs` Drizzle schema와 migration을 추가했다.
+  - `position_status_events` Drizzle schema, FK, 조회 index를 추가했다.
+  - 현재 상태 정본은 `collected_positions.postingStatus`로 유지했다.
+- 검증:
+  - `pnpm exec tsc --noEmit`: 성공
+  - `pnpm build`: 성공
+  - `pnpm exec drizzle-kit migrate`: 성공
+  - `pnpm exec drizzle-kit migrate` 재실행: 성공
+  - 실제 DB에서 `position_status_events`, `position_validation_runs` table과 index 존재를 확인했다.
