@@ -4,7 +4,7 @@
     "schema_version": "1"
   },
   "files": [
-    {"path": "architecture/cj-foodville-commerce-domain-design-interview.md", "note": "updated 2026-05-21, 근거 — existing CJ Foodville/F&B commerce role-analysis document; replaced missing interview/cj-foodville-digital-channel-backend.md reference"},
+    {"path": "architecture/fnb-ecommerce-domain-overview.md", "note": "updated 2026-06-16, 근거 — cj-foodville-commerce-domain-design-interview.md가 fa368c1에서 private 면접 답변 자료로 공개 블로그에서 삭제됨. 같은 F&B·commerce 도메인 주제의 공개 후속 문서로 교체"},
     {"path": "resume/cj-foodville-resume-backend.html", "note": "suggester: added 2026-05-16, 근거 — commit 119fe4e의 CJ푸드빌 백엔드 v1 active 이력서. Claude 멀티모달 HTML 지원으로 마크다운 강요 X (옛 resume/2603 v4 마크다운 부재 대체)"},
     {"path": "task/ai-service-team/README.md"},
     {"path": "task/ai-service-team/rag-vector-search-batch.md"},
