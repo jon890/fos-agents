@@ -1,0 +1,54 @@
+{
+  "name": "plan077-skill-config-consistency",
+  "description": "스킬 구성 점검 후속 — ADR-088 결정에 따라 career-os에서 깨진 docs-audit 스킬 심링크 디렉터리를 제거하고(A), position-recommender SKILL.md에 daily/cron runner 자산 경계를 code-architecture.md 역참조로 보강한다(B). docs/ADR 반영은 이미 선행 commit으로 끝났고, 본 plan은 그 결정을 구현으로 옮긴다. SKILL.md 공통 섹션 표준화(D)는 별도 후속 plan으로 분리한다.",
+  "created_at": "2026-06-16T08:58:24+09:00",
+  "updated_at": "2026-06-16T08:58:24+09:00",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 2,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/docs/adr.md",
+    "career-os/docs/code-architecture.md",
+    "career-os/AGENTS.md"
+  ],
+  "target_repositories": [
+    {
+      "name": "career-os",
+      "path": ".",
+      "role": "docs-audit 스킬 디렉터리 제거, position-recommender SKILL.md runner 자산 역참조 보강"
+    }
+  ],
+  "depends_on": [
+    "ADR-088 career-os에서 docs-audit 스킬 심링크를 제거한다",
+    "docs-first 반영 완료 commit 3a0844f (ADR-088 + 참조 정리)"
+  ],
+  "execution_policy": {
+    "phase_order": "current_phase 순서대로 Phase 01부터 Phase 02까지 실행한다.",
+    "parallelism": "같은 plan 안의 phase는 병렬 실행하지 않는다.",
+    "implementation_docs_freeze": "implementation phase에서는 career-os docs/ADR/정책 문서를 수정하지 않는다. SKILL.md는 스킬 본문이라 수정 대상이지만, docs/*.md와 AGENTS.md는 손대지 않는다. 계약이 부족하면 PHASE_BLOCKED로 멈춘다.",
+    "task_scope": "구현 대상은 .claude/skills/docs-audit/ 제거와 .claude/skills/position-recommender/SKILL.md 보강뿐이다.",
+    "pr_unit": "phase마다 commit하고 push는 마지막 phase에서만 한다."
+  },
+  "phases": [
+    {
+      "number": 1,
+      "title": "docs-audit 스킬 디렉터리 제거",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Bash", "Glob", "Grep"],
+      "model": "haiku",
+      "timeout": 600
+    },
+    {
+      "number": 2,
+      "title": "position-recommender SKILL.md runner 자산 경계 역참조 보강",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 600
+    }
+  ]
+}
