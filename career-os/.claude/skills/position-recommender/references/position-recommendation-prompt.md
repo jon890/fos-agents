@@ -13,7 +13,7 @@
 - 사용자는 레브잇/올웨이즈/다니엘프로젝트/리아드코퍼레이션/피닉스랩/와그(WAUG)를 크게 가고 싶은 회사로 보지 않는다. 해당 공고는 JD fit이 높아도 강력 추천/도전 추천/이번 주 즉시 지원 액션에서 제외한다.
 - 네이버, LINE, 쿠팡, 핀테크·결제·플랫폼·커머스 등 NHN 대비 커리어 성장/보상/브랜드/엔지니어링 규모가 나은 회사는 JD 핏이 실제로 있을 때 우선순위를 높인다. 단, 회사 이름만 보고 JD 핏이 낮은 포지션을 억지 추천하지 않는다.
 - 강력 추천은 JD fit보다 회사 업사이드 검증을 먼저 통과해야 한다. 복지/보상 기대, 동료 밀도, 학습 가능한 엔지니어링 표준, 대규모 운영 경험, 브랜드 레버리지가 약하거나 불확실하면 강력 추천으로 올리지 않는다.
-- 최우선 탐색군은 LINE/LINE Plus, NAVER 본체·네이버페이·네이버파이낸셜, 당근/당근페이, 카카오페이·카카오뱅크·카카오모빌리티, Coupang/Coupang Pay, 우아한형제들, 오늘의집, 무신사, 컬리, 야놀자다. 이 회사군의 Core Platform, Payment/Settlement, Search/Ads, Commerce Platform, Identity, Reliability/Observability, Developer Platform, AI Platform 공고를 먼저 파라.
+- 최우선 탐색군은 `config/verified-company-research-targets.json`의 `priorityCompanies`를 단일 출처로 본다. 이 회사군의 Core Platform, Payment/Settlement, Search/Ads, Commerce Platform, Identity, Reliability/Observability, Developer Platform, AI Platform 공고를 먼저 파라.
 - 작은 스타트업, 낮은 인지도 회사, 불명확한 계열사, 경력 1~3년 중심 공고는 JD fit이 좋아도 강력 추천하지 않는다. 회사/보상/팀 규모/학습 환경이 검증되기 전에는 도전 추천도 신중히 하고, 기본은 관찰/보류 후보로 둔다.
 - 추천할 때 회사/규모 업사이드를 반드시 별도 평가한다. 브랜드/레주메 레버리지, 트래픽/도메인 밀도, 보상 기대치, 엔지니어링 문화/조직 규모, 사업 리스크를 나눠 본다.
 - 기술블로그/엔지니어링 블로그가 잘 갖춰진 회사는 가점한다. 단, 블로그 존재만으로 추천하지 말고 실제 JD fit과 active 공고 근거를 우선한다.
@@ -29,7 +29,7 @@
 - Python/Kubernetes/ML 모델링처럼 제한적 경험인 영역은 과장하지 말고 "보완 필요"로 둔다.
 - 포지션 추천은 단순 직무명 나열이 아니라, 실제 지원 전략으로 쓸 수 있어야 한다.
 - 후보자가 블로그/스터디팩으로 학습 문서를 쌓고 있으므로, 각 포지션마다 다음 준비 액션을 연결한다.
-- 검증된 회사군 탐색에서는 `skills/position-recommender/references/verified-company-research-targets.json`의 회사군과 `config/sources.json` (`techBlog` 카테고리)의 기술블로그 신호를 적극 활용한다.
+- 검증된 회사군 탐색에서는 `config/verified-company-research-targets.json`의 회사군과 `config/sources.json` (`techBlog` 카테고리)의 기술블로그 신호를 적극 활용한다.
 
 출력 형식:
 # <YYYY-MM-DD> 포지션 추천 리포트

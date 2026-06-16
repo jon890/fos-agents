@@ -22,7 +22,7 @@
 
 ## Verified company discovery targets
 
-- `references/verified-company-research-targets.json`
+- `config/verified-company-research-targets.json`
   - 네이버/네이버파이낸셜/LINE, 쿠팡, 오늘의집, 우아한형제들, 당근 등 검증된 회사군 탐색 대상.
   - 공식 career URL, Wanted 검색 키워드, 기술블로그 URL, 선호 도메인, 주의 메모를 포함한다.
 
