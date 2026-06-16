@@ -52,7 +52,7 @@ export const HARD_DOMAIN_KEYWORDS = [
   "bank", "뱅크", "은행", "loan", "대출", "credit", "여신", "수신", "증권", "금융",
   "search", "검색", "platform", "플랫폼", "kafka", "streaming", "backend", "백엔드", "server", "서버",
 ];
-export const AI_KEYWORDS = ["ai", "agent", "llm", "rag", "openai", "gemini", "머신러닝", "인공지능"];
+export const AI_KEYWORDS = ["llm", "rag", "openai", "gemini", "머신러닝", "인공지능"];
 export const EXCLUDED_COMPANY_KEYWORDS = [
   "레브잇",
   "올웨이즈",
@@ -120,20 +120,20 @@ export function classify(text: string): string[] {
   const low = text.toLowerCase();
   const tags: string[] = [];
   if (
-    ["bank", "뱅크", "은행", "loan", "대출", "credit", "여신", "수신", "증권", "금융"].some((k) => low.includes(k))
+    ["bank", "뱅크", "은행", "loan", "대출", "여신", "수신", "증권"].some((k) => low.includes(k))
   )
     tags.push("internet-bank/fintech");
   if (
-    ["commerce", "커머스", "order", "주문", "payment", "payments", "결제", "정산", "페이"].some((k) =>
+    ["commerce", "커머스", "order", "주문", "payment", "payments", "결제", "정산"].some((k) =>
       low.includes(k)
     )
   )
     tags.push("commerce/payment");
-  if (["search", "검색", "rag", "opensearch", "elastic", "vector"].some((k) => low.includes(k)))
+  if (["검색", "rag", "opensearch", "elastic", "vector"].some((k) => low.includes(k)))
     tags.push("search/rag");
   if (AI_KEYWORDS.some((k) => low.includes(k))) tags.push("ai-service");
   if (
-    ["backend", "백엔드", "server", "서버", "spring", "java", "kafka", "platform", "플랫폼"].some((k) =>
+    ["backend", "백엔드", "server", "서버", "spring", "java", "kafka"].some((k) =>
       low.includes(k)
     )
   )
