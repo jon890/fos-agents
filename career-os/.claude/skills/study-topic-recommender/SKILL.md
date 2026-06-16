@@ -254,6 +254,18 @@ ADR-026 결정 요약 (3줄):
 1. **Python → TypeScript**: 모노레포 ts 표준 (_shared/lib, plan004 ADR-020) 일관성. 외부 RSS XML 파싱은 `fast-xml-parser`로 대체.
 2. **알고리즘 결정론 보존**: 점수(RECENT_PENALTY/WEAK_AREA_BONUS/CARRYOVER) + mix target + cooldown 로직을 ts에 동등 이식. Python·ts 출력 diff=0 검증은 phase-02에서 별도 진행.
 3. **replenish + promote + live-coding 흡수**: 이전 topic-pool-replenisher + dispatcher 3 case(recommend-topics / live-coding-dispatch / replenish-topics)를 단일 agent skill 진입점으로 통합.
+
+## References
+
+- `career-os/docs/adr.md` — ADR-026 Python→TypeScript 전환 + replenish/promote/live-coding 통합 설계 근거, ADR-070 cron 실행 하루 1회 제한 설계 근거
+- `career-os/scripts/study-topic-recommender/refresh_topic_inventory.ts` — 추천 점수 계산 + mix target + morning markdown 생성 (알고리즘 상수 포함)
+- `career-os/scripts/study-topic-recommender/refresh_candidate_pool.ts` — 후보 풀 갱신 (proposals JSON 검증 + study-pack-candidates.json append)
+- `career-os/config/study-preferences.json` — 관심 축과 추천 철학 (LLM 큐레이션 Step 4 입력)
+- `career-os/config/study-progress.json` — 학습 진도 + 약점 맵 (cooldown·promote 판단 입력)
+- `career-os/data/runtime/topic-inventory-history.jsonl` — 최근 추천 history (cooldown 계산 + cron 중복 실행 방지)
+- 관련 스킬: `study-pack-writer` — 추천 토픽의 실제 학습 문서 작성 위임
+- 관련 스킬: `interview-prep-analyzer` — daily 모드에서 본 skill 추천 토픽을 입력으로 활용
+
 ## 호출 예시
 
 ```bash

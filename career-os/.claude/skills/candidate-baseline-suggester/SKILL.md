@@ -155,3 +155,12 @@ ADR-028 핵심 3줄:
 
 결과물: `career-os/data/runtime/profile-refresh-suggestions/YYYY-MM-DD/changes.md` (갱신 요약).
 갱신된 자산을 git에 commit할지 여부는 사용자가 결정 — skill은 자동 commit 하지 않음.
+
+## References
+
+- `career-os/docs/adr.md` — ADR-028 Append + 주석 마킹 설계 근거 (hand-crafted 자산 보존 원칙)
+- `career-os/.claude/skills/candidate-baseline-suggester/references/audit-trail-format.md` — audit trail 셸 명령 (4-1 Backup / 4-4 After·Diff) + changes.md 구조 + 이력서 탐지 알고리즘
+- `career-os/config/candidate-profile.md` — 갱신 대상 후보자 프로필 (강점 evidence + 약점 섹션)
+- `career-os/config/baseline-core-files.json` — 갱신 대상 큐레이션 파일 목록 (신규 추가 + 부재 마킹 대상)
+- `career-os/config/study-progress.json` — 갱신 대상 학습 진도 + 약점 맵 (`weak_spots` status 판단 입력)
+- 관련 스킬: `interview-prep-analyzer` — baseline 산출물(`data/reports/baseline/`)을 갱신 근거로 읽음

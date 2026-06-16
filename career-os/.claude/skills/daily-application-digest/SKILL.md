@@ -180,7 +180,7 @@ fit-analysis.md의 Gap 분석에서 **해당 공고 기준 부족 역량 상위 
 - 총 20줄 이상.
 - `sources/fos-study/`에 쓰지 않음.
 
-### 9. Self-check (최대 3회)
+## Self-check (최대 3회)
 
 report.md 작성 후 아래 항목 검증. 실패 시 해당 섹션 재작성:
 

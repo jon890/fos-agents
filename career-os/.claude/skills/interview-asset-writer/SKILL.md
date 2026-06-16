@@ -168,3 +168,14 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 - **Self-check가 JSON schema 대체**: 옛 `--json-schema` + renderer 패턴은 외부 subprocess의 부산물. native에서는 현재 에이전트 자체 검증으로 동등 효과.
 - **재작성 ≤3회 cap**: 무한 루프 차단. 그래도 실패하면 본질 문제 (topic 모호, 입력 부족) — 사용자 개입 필요.
 - **Publish + notify 셸 명령 통합**: 옛 외부 publish/notify shell을 셸 명령 도구로 직접. 의존 줄임.
+
+## References
+
+- `career-os/config/candidate-profile.md` — 후보자 이력 단일 출처 (Q&A 질문 은행 + 마스터 플레이북 양쪽 공통 입력)
+- `career-os/config/mvp-target.json` — 현재 면접 타깃 (마스터 플레이북 cross-track 톤 기준)
+- `career-os/public/question-bank/` — 공개 질문 bank 정본 (topic-key 매칭 1순위)
+- `career-os/config/question-bank-topics.json` — interview asset 전용 override 후보 (outputPath / domain / inputFiles)
+- `career-os/.claude/skills/interview-asset-writer/references/output-policy.md` — 공개 산출물 경계 정책 (내부 전략과 공개 문구 분리 기준)
+- 관련 스킬: `study-pack-writer` — 일반 기술 토픽 학습 문서 (이력 기반 자산과 책임 분리)
+- 관련 스킬: `question-bank-collector` — 공개 일반 backend/CS 질문 bank 보강
+- 관련 스킬: `interview-prep-analyzer` — 면접 준비 갭 분석 (본 skill 산출물을 입력으로 사용)
