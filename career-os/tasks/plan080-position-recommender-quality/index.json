@@ -1,0 +1,109 @@
+{
+  "name": "plan080-position-recommender-quality",
+  "description": "position-recommender 실제 호출 평가에서 드러난 품질 4문제를 고친다. ① 공유 서버 필터 구멍(Legal Counsel·Strategic Finance·Security·KYC/AML·SAP·Technical Writer·Recruiting 등 비개발 직무가 toss snapshot 통과) → policy.ts NON_SERVER_TITLE_KEYWORDS/isServerRole 강화로 모든 adapter가 혜택. ② JD 상세 미수집(토스·카카오모빌리티 requirements 빈칸, 쿠팡 'sitemap title 기반 추정') → adapter detail fetch 경로 보강. ③ 태그 변별력 부족(거의 모든 공고가 fintech·payment·ai-service·backend-platform 동시 태그) → classify 키워드 정교화. ④ 문서 형식 불일치(SKILL.md Workflow 3은 8 라벨, prompt.md는 14 라벨) → 14 라벨로 정합 + 줄 수 상한 완화. career-os는 shadow 관찰 기간을 두지 않으므로(AGENTS.md) 변경 즉시 1회 수집으로 검증한다.",
+  "created_at": "2026-06-16T12:00:53+09:00",
+  "updated_at": "2026-06-16T12:00:53+09:00",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 5,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/.claude/skills/position-recommender/SKILL.md",
+    "career-os/.claude/skills/position-recommender/references/position-recommendation-prompt.md",
+    "career-os/scripts/position-recommender/live-postings/policy.ts",
+    "career-os/scripts/position-recommender/collect_live_postings.ts"
+  ],
+  "target_repositories": [
+    {
+      "name": "career-os",
+      "path": ".",
+      "role": "position-recommender SKILL/references 문서 정합 + live-postings policy/adapters 품질 개선"
+    }
+  ],
+  "depends_on": [],
+  "execution_policy": {
+    "goal": "position-recommender 실제 호출 평가에서 나온 ①서버 필터 구멍 ②JD 상세 미수집 ③태그 변별력 ④문서 형식 불일치 4문제를 고친다. phase-01은 스킬 본문(SKILL.md/references) 수정이 허용된 작업이고, phase-02~04는 live-postings policy/adapter 코드 수정, phase-05는 검증이다.",
+    "phase_order": "current_phase 순서대로 Phase 01부터 Phase 05까지 순차 실행한다. 같은 plan 안의 phase는 병렬 실행하지 않는다.",
+    "parallelism": "같은 plan 안의 phase는 병렬 실행하지 않는다.",
+    "scope_boundary": "phase-01은 SKILL.md/prompt.md 문서 정합만(docs/*.md·AGENTS.md는 건드리지 않는다), phase-02는 서버 필터, phase-03은 태그, phase-04는 JD detail fetch 보강, phase-05는 통합 검증이다. career-os는 shadow 관찰 기간을 두지 않으므로 코드 변경은 즉시 1회 수집으로 검증한다.",
+    "pr_unit": "별도 worktree+branch에서 실행한다. phase는 commit만 하고 push/PR은 하지 않는다. 마지막 phase도 push하지 않는다. push와 plan 단위 PR은 모든 phase 완료 후 메인 세션이 review한 뒤 처리한다."
+  },
+  "phases": [
+    {
+      "number": 1,
+      "title": "④ SKILL.md Workflow 3 ↔ prompt.md 14 라벨 정합 + 줄 수 상한 완화",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
+      "model": "sonnet",
+      "timeout": 600
+    },
+    {
+      "number": 2,
+      "title": "① 공유 서버 필터 강화 (policy.ts NON_SERVER_TITLE_KEYWORDS / isServerRole)",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
+      "model": "sonnet",
+      "timeout": 600
+    },
+    {
+      "number": 3,
+      "title": "③ 태그 변별력 정교화 (policy.ts classify)",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
+      "model": "sonnet",
+      "timeout": 600
+    },
+    {
+      "number": 4,
+      "title": "② JD detail fetch 보강 (toss / coupang-careers / kakaomobility) + 즉시 1회 수집 검증",
+      "file": "phase-04.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
+      "model": "sonnet",
+      "timeout": 1200
+    },
+    {
+      "number": 5,
+      "title": "통합 검증 (1회 수집 + 문서 정합) + index.json status=completed 마킹",
+      "file": "phase-05.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
+      "model": "haiku",
+      "timeout": 900
+    }
+  ]
+}
