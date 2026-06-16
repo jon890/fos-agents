@@ -2,7 +2,7 @@
   "name": "plan077-skill-config-consistency",
   "description": "스킬 구성 점검 후속 — ADR-088 결정에 따라 career-os에서 깨진 docs-audit 스킬 심링크 디렉터리를 제거하고(A), position-recommender SKILL.md에 daily/cron runner 자산 경계를 code-architecture.md 역참조로 보강한다(B). docs/ADR 반영은 이미 선행 commit으로 끝났고, 본 plan은 그 결정을 구현으로 옮긴다. SKILL.md 공통 섹션 표준화(D)는 별도 후속 plan으로 분리한다.",
   "created_at": "2026-06-16T08:58:24+09:00",
-  "updated_at": "2026-06-16T09:09:39+09:00",
+  "updated_at": "2026-06-16T00:10:01.068636+00:00",
   "status": "completed",
   "current_phase": 2,
   "total_phases": 2,
@@ -60,7 +60,8 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "dd20b257abb8"
     }
   ]
 }
