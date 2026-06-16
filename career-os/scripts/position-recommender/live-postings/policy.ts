@@ -8,6 +8,7 @@ import type { Posting } from "./types.ts";
 
 export const SERVER_KEYWORDS = [
   "backend", "백엔드", "server", "서버", "spring", "java", "kotlin", "api", "platform", "플랫폼", "gateway",
+  "devops", "sre", "infrastructure", "인프라",
 ];
 export const AI_PLATFORM_ROLE_KEYWORDS = [
   "ai transformation", "ax", "ai-native", "ai native", "ai agent", "agent", "llm", "rag", "llmops", "mlops",
@@ -23,6 +24,22 @@ export const NON_SERVER_TITLE_KEYWORDS = [
   "designer", "디자이너", "qa", "frontend", "프론트", "android", "ios", "data engineer",
   "데이터 엔지니어", "data scientist", "데이터 사이언티스트", "ai research", "research scientist",
   "마케터", "marketing", "assistant", "어시스턴트", "정책", "e/e", "데이터 라벨링",
+  // 법무·컴플라이언스
+  "legal", "counsel", "법무", "변호사", "compliance manager", "준법", "kyc", "aml", "privacy manager",
+  // 재무·회계·감사
+  "finance manager", "financial manager", "strategic finance", "재무", "accounting", "회계", "audit manager",
+  // 채용·인사
+  "recruiting", "recruiter", "채용", "talent acquisition", "hr manager", "인사", "people partner",
+  // ERP
+  "sap",
+  // 기술 문서
+  "technical writer", "테크니컬 라이터",
+  // 전략·기획
+  "strategy manager", "비즈니스 애널리스트", "business analyst",
+  // 운영 관리 (server operations/SRE와 구분하기 위해 복합 표현 사용)
+  "operations manager", "운영 매니저",
+  // 보안 직무 (security engineer 단독은 정보보안 직무)
+  "security engineer",
 ];
 export const CONTRACT_KEYWORDS = [
   "계약직", "contract", "contractor", "temporary", "temp", "freelance", "프리랜서",
