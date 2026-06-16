@@ -10,6 +10,7 @@ const rootDir = resolve(scriptDir, "../..");
 const envFile = resolve(rootDir, ".env");
 const logDir = resolve(rootDir, "logs/study-pack-writer");
 const claudeBin = process.env.STUDY_PACK_WRITER_CLAUDE_BIN || "claude";
+const permissionMode = process.env.STUDY_PACK_WRITER_PERMISSION_MODE || "bypassPermissions";
 
 function loadEnvFileIfPresent(path: string): void {
   if (!existsSync(path)) return;
@@ -113,6 +114,7 @@ async function main(): Promise<number> {
     `[topic] ${topic}`,
     `[cwd] ${rootDir}`,
     `[claude_bin] ${claudeBin}`,
+    `[permission_mode] ${permissionMode}`,
     "--- claude output ---",
     "",
   ].join("\n"));
@@ -120,7 +122,7 @@ async function main(): Promise<number> {
   const proc = Bun.spawn([
     claudeBin,
     "--permission-mode",
-    "acceptEdits",
+    permissionMode,
     "-p",
     `/study-pack-writer ${topic}`,
   ], {
