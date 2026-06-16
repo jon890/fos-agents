@@ -469,7 +469,11 @@ async function main(): Promise<void> {
     argv.shift();
   }
 
-  const root = resolve(process.env.CAREER_OS_ROOT ?? "/home/bifos/ai-nodes/career-os");
+  // career-os root = 이 스크립트(career-os/scripts/<skill>/)에서 2단계 위.
+  // CAREER_OS_ROOT env가 있으면 우선 — 어떤 체크아웃 위치에서도 동작 (Linux 하드코딩 제거).
+  const root = process.env.CAREER_OS_ROOT
+    ? resolve(process.env.CAREER_OS_ROOT)
+    : resolve(import.meta.dir, "..", "..");
   const reportDate = process.env.REPORT_DATE ?? kstDate();
   const report = `${root}/data/reports/daily/${reportDate}/position-recommendation/report.md`;
   const reportHtml = `${root}/data/reports/daily/${reportDate}/position-recommendation/report.html`;

@@ -18,8 +18,7 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import { homedir } from "os";
-import { join } from "path";
+import { join, resolve } from "path";
 import { scanFosStudyInventory, type FosStudyInventory } from "./fos_study_inventory.js";
 import {
   deterministicDedupe,
@@ -38,7 +37,11 @@ import { applyNewCandidates } from "./candidate_refresh_apply.js";
 
 // ── paths ─────────────────────────────────────────────────────────────────────
 
-const TASK_ROOT = join(homedir(), "ai-nodes", "career-os");
+// career-os root = 이 스크립트(career-os/scripts/<skill>/)에서 2단계 위.
+// CAREER_OS_ROOT env가 있으면 우선 — 어떤 체크아웃 위치에서도 동작 (하드코딩 제거).
+const TASK_ROOT = process.env.CAREER_OS_ROOT
+  ? resolve(process.env.CAREER_OS_ROOT)
+  : resolve(import.meta.dir, "..", "..");
 const CONFIG = join(TASK_ROOT, "config");
 const RUNTIME = join(TASK_ROOT, "data", "runtime");
 const FOS_STUDY_ROOT = join(TASK_ROOT, "sources", "fos-study");

@@ -89,3 +89,4 @@
 | ADR-088 | career-os에서 docs-audit 스킬 심링크를 제거한다 | Accepted | [ADR-088-career-os에서-docs-audit-스킬-심링크를-제거한다.md](ADR-088-career-os에서-docs-audit-스킬-심링크를-제거한다.md) |
 | ADR-089 | career-os ADR을 개별 파일로 관리한다 | Accepted | [ADR-089-career-os-adr을-개별-파일로-관리한다.md](ADR-089-career-os-adr을-개별-파일로-관리한다.md) |
 | ADR-090 | 검증 회사군을 config JSON 단일 출처로 둔다 | Accepted | [ADR-090-검증-회사군을-json-단일-출처로-둔다.md](ADR-090-검증-회사군을-json-단일-출처로-둔다.md) |
+| ADR-091 | career-os 스크립트 root는 위치 기준으로 해석한다 | Accepted | [ADR-091-script-career-os-root-위치-기준-해석.md](ADR-091-script-career-os-root-위치-기준-해석.md) |
