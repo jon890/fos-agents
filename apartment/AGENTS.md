@@ -82,6 +82,7 @@ bash apartment/scripts/apartment-daily-report/run_smoke_test.sh
 - 매물 가격 발명 금지 — source 실패 시 raw 보존.
 - `.env`는 워크스페이스 root (`apartment/.env`). ai-nodes ADR-004 표준.
 - 영구 자산은 `~/.openclaw/workspace` 아닌 워크스페이스 내부.
+- 인테리어 의사결정/남은 결정 항목을 사용자에게 보여줄 때는 Markdown 원본만 두지 말고, 가독성 좋은 HTML 뷰를 함께 만든다. HTML은 `data/interior-reference-digest/YYYY-MM-DD/` 같은 날짜별 산출물 폴더에 두고, 결정 원본은 계속 `docs/interior/*.md`를 단일 출처로 유지한다. 사용자가 "보여줘"처럼 열람을 요청하면 경로만 말하지 말고 HTML 파일을 Discord에 첨부해 다운로드해서 볼 수 있게 보낸다.
 
 ## 8. 규칙
 

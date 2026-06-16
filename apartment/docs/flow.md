@@ -77,6 +77,7 @@ Step 3  Claude native skill이 전체 workflow 수행
         .claude/skills/apartment-interior-reference-digest/SKILL.md 기준
         config/interior-reference-digest.json + docs/interior/* 읽기
         웹 검색/fetch → 후보 평가 → report.md 작성
+        의사결정/남은 결정 표시가 필요한 경우 decision-view.html도 함께 작성
         docs/interior/interior-references.md 갱신
 
 Step 4  stdout 요약
@@ -85,6 +86,7 @@ Step 4  stdout 요약
         추천 레퍼런스는 R 번호 + 제목 + 원문 링크(`<https://...>`) 포함
         오늘 결정할 3개 질문은 단순 A/B/C가 아니라 대표 예시/사진 링크,
         초보자용 비교 포인트, 추천 이유를 함께 포함
+        HTML 의사결정 뷰를 만든 경우 decision-view.html 경로 포함
         OpenClaw cron agent는 stdout을 받아 최종 응답으로 반환
         cron delivery(announce)가 해당 최종 응답을 Discord로 전달
 ```
