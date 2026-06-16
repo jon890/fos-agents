@@ -13,12 +13,9 @@
 
 ### 결정
 
-- skill을 `interview-coffeechat-prep`으로 rename한다.
-  회사명을 제거하고 `mvp-target.json`의 `primary.coffeechat` 객체를 context 단일 출처로 쓴다.
-- Python collector를 TypeScript로 마이그레이션한다.
-  회사 hard-coded URL을 제거하고 sites 배열을 config에서 읽는다.
-- shell runner를 폐기한다.
-  native skill이 Bash로 ts collector를 직접 호출한다.
+- skill을 `interview-coffeechat-prep`으로 rename하고 `mvp-target.json`의 `primary.coffeechat`을 context 단일 출처로 쓴다.
+- Python collector를 TypeScript로 마이그레이션하고 회사 hard-coded URL을 제거한다. sites 배열은 config에서 읽는다.
+- shell runner를 폐기하고 native skill이 ts collector를 직접 호출한다.
 - 회사 준비 자산을 `docs/prep/`에서 `data/prep/<company-slug>/`로 이동한다.
 - dispatcher `foodville-coffeechat` case를 폐기한다.
 

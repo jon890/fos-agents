@@ -28,4 +28,3 @@ interview request processor에는 host-side wrapper가 있었지만 position/app
 - 사용자가 `지원 준비`, `보류`, `제외`를 누른 뒤 processor를 실행할 운영 진입점이 명확해진다.
 - web app의 read-only mount 안전 경계는 유지된다.
 - 단점은 daily runner가 추천 리포트 생성 외에도 queue/priority refresh 실패를 함께 다뤄야 한다는 점이다.
-

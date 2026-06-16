@@ -28,4 +28,3 @@
 - 공식 adapter가 가능한 source와 fallback discovery가 필요한 source를 분리해 운영할 수 있다.
 - Coupang은 공식 direct job URL을 수집하고 detail fetch가 성공하면 JD까지 제공하되, 차단/레벨 mismatch 가능성은 추천에서 보수적으로 확인하게 한다.
 - active/open direct posting guard는 기존과 동일하게 유지된다.
-
