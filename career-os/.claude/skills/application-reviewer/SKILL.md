@@ -227,12 +227,12 @@ review.md 작성 후 아래 항목 검증. 실패 시 해당 섹션 재작성:
 - **Phase 05 연계**: application-package-writer(Phase 04)가 생성한 패키지를 독립 심사자로 교차 검증. 생성과 심사를 분리해 자기 편향을 줄임.
 - **6축 분리**: 각 리스크 유형을 독립 섹션으로 분리해 revisit 용이. revision 요청을 축 단위로 추적 가능.
 - **판정 3단계**: pass/revise/blocked로 명확히 분기 — revise는 agent 수정 루프로, blocked는 사용자 개입으로 라우팅 (Phase 07 e2e 리허설 연계).
-- **ADR-032 직접 갱신 금지**: ledger를 직접 수정하지 않고 `Ledger Update Suggestion`으로 사용자 의사결정 유도.
+- **ledger 직접 갱신 금지 (ADR-038)**: ledger를 직접 수정하지 않고 `Ledger Update Suggestion`으로 사용자 의사결정 유도. 상태 전이는 artifact 검증 뒤에만.
 - **fixture 안전 장치**: `mvp_fixture_only` riskFlag가 있으면 판정이 `blocked` 이상을 강제 — 실제 제출 경로를 차단.
 
 ## References
 
-- `career-os/docs/adr.md` — ADR-032 application ledger 스키마 설계 근거
+- `career-os/docs/adr/INDEX.md` — ADR-045 (지원 후보 ledger 분리), ADR-038 (artifact 검증 후 상태 전이) 설계 근거
 - `career-os/docs/data-schema.md` — ledger.jsonl 스키마
 - `career-os/data/applications/ledger.jsonl` — 지원 이력 원장
 - `career-os/config/candidate-profile.md` — 후보자 프로필 단일 출처

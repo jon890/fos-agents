@@ -233,11 +233,11 @@ bun --env-file=career-os/.env \
 - **승인 게이트 명시**: 외부 제출·로그인처럼 agent가 자동 처리할 수 없는 항목을 `Needs User Approval` 섹션으로 격리 — 사용자가 한 섹션만 보면 오늘 결정해야 할 것을 파악.
 - **공개/비공개 분리 강제**: `Public-Safe Study Candidates`와 `Private Strategy Notes`를 별도 섹션으로 강제 — 회사 맞춤 전략이 fos-study 같은 공개 채널로 흘러들어가는 것을 구조적으로 차단.
 - **Discord 전송 분리**: skill이 외부 전송까지 책임지면 dry-run / 테스트 시 실수로 전송되는 리스크 발생. cron/runner가 전송 책임 — skill은 report만 생성.
-- **ledger 직접 갱신 금지**: 상태 업데이트 제안은 `Ledger Update Suggestion` 패턴으로 (ADR-032). report.md 안에서 제안만 — 직접 수정은 사용자 확인 후.
+- **ledger 직접 갱신 금지**: 상태 업데이트 제안은 `Ledger Update Suggestion` 패턴으로 (ADR-038 — 상태 전이는 artifact 검증 뒤에만). report.md 안에서 제안만 — 직접 수정은 사용자 확인 후.
 
 ## References
 
-- `career-os/docs/adr.md` — ADR-032 (ledger 직접 갱신 금지), ADR-021 (Discord notify_discord.ts)
+- `career-os/docs/adr/INDEX.md` — ADR-038 (ledger 직접 갱신 금지, artifact 검증 후 상태 전이), ADR-021 (Discord notify_discord.ts)
 - `career-os/docs/data-schema.md` — ledger.jsonl 스키마
 - `career-os/data/applications/ledger.jsonl` — 지원 이력 원장
 - `career-os/.claude/skills/application-package-writer/SKILL.md` — 생성 단계 (Phase 04)

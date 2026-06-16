@@ -257,7 +257,7 @@ ADR-026 결정 요약 (3줄):
 
 ## References
 
-- `career-os/docs/adr.md` — ADR-026 Python→TypeScript 전환 + replenish/promote/live-coding 통합 설계 근거, ADR-070 cron 실행 하루 1회 제한 설계 근거
+- `career-os/docs/adr/INDEX.md` — ADR-026 Python→TypeScript 전환 + replenish/promote/live-coding 통합 설계 근거, ADR-070 cron 실행 하루 1회 제한 설계 근거
 - `career-os/scripts/study-topic-recommender/refresh_topic_inventory.ts` — 추천 점수 계산 + mix target + morning markdown 생성 (알고리즘 상수 포함)
 - `career-os/scripts/study-topic-recommender/refresh_candidate_pool.ts` — 후보 풀 갱신 (proposals JSON 검증 + study-pack-candidates.json append)
 - `career-os/config/study-preferences.json` — 관심 축과 추천 철학 (LLM 큐레이션 Step 4 입력)
