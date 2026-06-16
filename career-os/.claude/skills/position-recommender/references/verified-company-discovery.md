@@ -4,7 +4,7 @@
 
 ## 우선 탐색 대상
 
-`skills/position-recommender/references/verified-company-research-targets.json`을 우선 참조한다.
+`config/verified-company-research-targets.json`을 우선 참조한다.
 
 기본 회사군:
 

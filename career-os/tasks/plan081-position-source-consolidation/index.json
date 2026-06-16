@@ -2,9 +2,9 @@
   "name": "plan081-position-source-consolidation",
   "description": "position-recommender 수집기 정합·복구. ① 비서버 필터 보강(policy.ts NON_SERVER_TITLE_KEYWORDS에 product owner·compensation 추가 — 현재 po·pm이 'Product Owner'를 substring 매칭 못 함). ② naver-careers 0건 복구(listing 후보는 잡히는데 detail 단계에서 전부 skip되어 accepted=0인 원인 조사·수정, 복구 불가면 PHASE_BLOCKED). ④ 검증 회사군 config 정합(ADR-090 — JSON을 references/에서 config/verified-company-research-targets.json으로 이동, 텍스트 '최우선 탐색군' 목록 제거 후 역참조, hasAdapter·adapterId 필드 추가로 코드+LLM 양방향 스키마 확정, 회사 수 7→12+). 신규 adapter(#3)는 plan082로 분리. 코드가 JSON을 읽어 adapter를 라우팅하는 wire-up도 plan082 — 이번엔 스키마+이동+정합만. career-os는 shadow 관찰 기간을 두지 않으므로(AGENTS.md) 변경 즉시 1회 수집으로 검증한다.",
   "created_at": "2026-06-16T15:12:09+09:00",
-  "updated_at": "2026-06-16T15:12:09+09:00",
-  "status": "pending",
-  "current_phase": 1,
+  "updated_at": "2026-06-16T07:00:36.588544+00:00",
+  "status": "completed",
+  "current_phase": 4,
   "total_phases": 4,
   "error_message": null,
   "blocked_reason": null,
@@ -36,7 +36,7 @@
       "number": 1,
       "title": "④ 검증 회사군 config 정합 (JSON config/ 이동 + 텍스트 흡수·역참조 + hasAdapter 스키마)",
       "file": "phase-01.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
@@ -46,13 +46,14 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 900
+      "timeout": 900,
+      "commitSha": "89a4d9e2fba9"
     },
     {
       "number": 2,
       "title": "① 비서버 필터 보강 (policy.ts NON_SERVER_TITLE_KEYWORDS에 product owner·compensation 추가)",
       "file": "phase-02.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Edit",
@@ -61,13 +62,14 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "2d0ef2cba36c"
     },
     {
       "number": 3,
       "title": "② naver-careers 0건 복구 (detail skip 원인 조사·수정 또는 PHASE_BLOCKED)",
       "file": "phase-03.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Edit",
@@ -76,13 +78,14 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 1200
+      "timeout": 1200,
+      "commitSha": "e65d6593f304"
     },
     {
       "number": 4,
       "title": "통합 검증 (1회 수집 + 3개 통합 확인) + index.json status=completed 마킹",
       "file": "phase-04.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Bash",
@@ -90,7 +93,8 @@
         "Grep"
       ],
       "model": "haiku",
-      "timeout": 900
+      "timeout": 900,
+      "commitSha": "54adc7b9492f"
     }
   ]
 }

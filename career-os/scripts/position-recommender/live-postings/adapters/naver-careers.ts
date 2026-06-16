@@ -12,11 +12,9 @@ import {
 
 const UA = "Mozilla/5.0 (OpenClaw career-os position recommender)";
 const HOST = "https://recruit.navercorp.com";
-// Developer category first for relevance; unfiltered fallback broadens coverage when category yields nothing.
-const LISTING_URLS = [
-  `${HOST}/rcrt/list.do?annoCategoryCode=developer`,
-  `${HOST}/rcrt/list.do`,
-];
+// JSON API used for listing (HTML page renders cards via AJAX, not SSR).
+const LIST_API = `${HOST}/rcrt/loadJobList.do`;
+const LISTING_PAGE = `${HOST}/rcrt/list.do`;
 const MAX_DETAIL_FETCH = 40;
 
 async function fetchHtml(url: string): Promise<{ ok: boolean; status: number; text: string }> {
@@ -27,9 +25,41 @@ async function fetchHtml(url: string): Promise<{ ok: boolean; status: number; te
   return { ok: r.ok, status: r.status, text: await r.text() };
 }
 
+async function fetchJobListJson(): Promise<Array<{ id: string; title: string; empType: string }>> {
+  // NAVER Careers listing page renders cards via JavaScript AJAX (/rcrt/loadJobList.do JSON API).
+  // HTML regex over the listing page only finds JS template placeholders, not real card data.
+  const r = await fetch(`${LIST_API}?firstIndex=0`, {
+    headers: {
+      "User-Agent": UA,
+      "Accept": "application/json, text/javascript, */*; q=0.01",
+      "X-Requested-With": "XMLHttpRequest",
+      "Referer": LISTING_PAGE,
+    },
+    signal: AbortSignal.timeout(20_000),
+  });
+  if (!r.ok) throw new Error(`loadJobList.do HTTP ${r.status}`);
+  const data = await r.json() as { result: string; list: Array<{ annoId: number; annoSubject: string; empTypeCdNm: string }> };
+  if (data.result !== "Y" || !Array.isArray(data.list)) throw new Error(`loadJobList.do unexpected response: result=${data.result}`);
+  return data.list.map(item => ({
+    id: String(item.annoId),
+    title: decodeHtml(item.annoSubject ?? ""),
+    empType: item.empTypeCdNm ?? "",
+  }));
+}
+
 function htmlText(html: string): string {
+  // The detail page navigation menu includes ALL job category names ("Frontend Android iOS Backend ..."),
+  // which triggers EXCLUDE_NON_SERVER_KEYWORDS and makes isServerRole() return false for every posting.
+  // Extract only the job-description section (detail_wrap div → site_wrap/body) to avoid nav contamination.
+  const detailWrapIdx = html.indexOf('class="detail_wrap"');
+  const siteWrapIdx = html.indexOf('class="site_wrap"');
+  const bodyEndIdx = html.indexOf("</body>");
+  const contentEnd = siteWrapIdx !== -1 ? siteWrapIdx : bodyEndIdx !== -1 ? bodyEndIdx : html.length;
+  const content = detailWrapIdx !== -1 && contentEnd > detailWrapIdx
+    ? html.slice(detailWrapIdx, contentEnd)
+    : html;
   return cleanDetail(
-    html
+    content
       .replace(/<script[\s\S]*?<\/script>/gi, " ")
       .replace(/<style[\s\S]*?<\/style>/gi, " ")
       .replace(/<[^>]+>/g, " "),
@@ -46,29 +76,6 @@ function decodeHtml(text: string): string {
     .replace(/&#39;/g, "'");
 }
 
-function extractListItems(html: string): Array<{ id: string; title: string }> {
-  // Two-pass extraction: IDs and titles paired by document order.
-  // More robust than a single combined regex when HTML span between show() and h4 varies.
-  const idRe = /show\(['"]?(\d+)['"]?\)/g;
-  const titleRe = /<h4[^>]+class=["'][^"']*card_title[^"']*["'][^>]*>([\s\S]*?)<\/h4>/g;
-
-  const ids: string[] = [];
-  const titles: string[] = [];
-  let m: RegExpExecArray | null;
-  while ((m = idRe.exec(html)) !== null) ids.push(m[1]);
-  while ((m = titleRe.exec(html)) !== null) titles.push(cleanDetail(decodeHtml(m[1]), 180));
-
-  const count = Math.min(ids.length, titles.length);
-  const seen = new Set<string>();
-  const items: Array<{ id: string; title: string }> = [];
-  for (let i = 0; i < count; i++) {
-    if (ids[i] && titles[i] && !seen.has(ids[i])) {
-      seen.add(ids[i]);
-      items.push({ id: ids[i], title: titles[i] });
-    }
-  }
-  return items;
-}
 
 function skillsFromText(text: string): string[] {
   const skills = ["Java", "Kotlin", "Spring", "Spring Boot", "JPA", "MySQL", "Kafka", "Redis", "Kubernetes", "Python", "LLM", "AI", "Search", "Platform"];
@@ -130,30 +137,24 @@ export const naverCareersAdapter: SourceAdapter = {
   name: "naver-careers",
   async collect(): Promise<AdapterCollectionResult> {
     const errors: string[] = [];
-    // Deduplicate across multiple listing URLs by annoId.
-    const allItems = new Map<string, string>(); // id → title
     let listingFailed = 0;
+    let rawItems: Array<{ id: string; title: string; empType: string }> = [];
 
-    for (const listingUrl of LISTING_URLS) {
-      try {
-        const listing = await fetchHtml(listingUrl);
-        if (!listing.ok) {
-          listingFailed++;
-          errors.push(`naver-careers listing (${listingUrl.includes("annoCategoryCode") ? "developer" : "all"}): HTTP ${listing.status}`);
-          continue;
-        }
-        for (const { id, title } of extractListItems(listing.text)) {
-          if (!allItems.has(id)) allItems.set(id, title);
-        }
-      } catch (error) {
-        listingFailed++;
-        errors.push(`naver-careers listing fetch failed: ${error}`);
-      }
+    try {
+      rawItems = await fetchJobListJson();
+    } catch (error) {
+      listingFailed++;
+      errors.push(`naver-careers listing (JSON API) failed: ${error}`);
     }
 
-    const items = [...allItems.entries()]
-      .map(([id, title]) => ({ id, title }))
-      .slice(0, MAX_DETAIL_FETCH);
+    // Pre-filter obvious non-candidates from API metadata before fetching detail pages.
+    const filtered = rawItems.filter(item => {
+      if (/인턴|intern/i.test(item.empType)) return false;
+      if (/계약|contract/i.test(item.empType)) return false;
+      return true;
+    });
+
+    const items = filtered.slice(0, MAX_DETAIL_FETCH);
 
     const postings: Posting[] = [];
     let skippedCount = 0;
@@ -177,7 +178,7 @@ export const naverCareersAdapter: SourceAdapter = {
       }
     }
 
-    const message = `naver-careers diagnostics: listing_candidates=${allItems.size}, detail_candidates=${items.length}, accepted=${postings.length}, skipped=${skippedCount}, failed=${failedCount}`;
+    const message = `naver-careers diagnostics: listing_candidates=${rawItems.length}, detail_candidates=${items.length}, accepted=${postings.length}, skipped=${skippedCount}, failed=${failedCount}`;
     naverCareersAdapter.note = message;
     return {
       postings,

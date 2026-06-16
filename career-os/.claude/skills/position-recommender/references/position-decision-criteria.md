@@ -37,7 +37,7 @@
 ### 3. 회사/도메인 업사이드
 
 - NHN 대비 브랜드, 보상, 트래픽 규모, 엔지니어링 문화, 성장성, 도메인 확장성을 함께 본다.
-- 최우선 탐색군은 LINE/LINE Plus, NAVER 본체·네이버페이·네이버파이낸셜, 당근/당근페이, 카카오페이·카카오뱅크·카카오모빌리티, Coupang/Coupang Pay, 우아한형제들, 오늘의집, 무신사, 컬리, 야놀자다.
+- 최우선 탐색군은 `config/verified-company-research-targets.json`의 `priorityCompanies`를 단일 출처로 본다.
 - 검증된 회사군의 Core Platform, Payment/Settlement, Search/Ads, Commerce Platform, Identity, Reliability/Observability, Developer Platform, AI Platform 공고를 먼저 deep dive한다.
 - 대기업/유명 회사라도 JD 핏이 약하면 억지 추천하지 않는다.
 - 작은 스타트업·낮은 인지도 회사·불명확한 계열사·저연차 공고는 JD fit이 좋아도 강력 추천하지 않는다. 회사/보상/팀 규모/학습 환경이 검증되기 전에는 도전 추천도 신중히 하고, 기본은 관찰/보류 후보로 둔다.
