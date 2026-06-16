@@ -22,9 +22,8 @@
 
 "오늘의 3선" = 백엔드 1 + 기술 블로그 1 + AI 1 (각 카테고리 1순위).
 
-백엔드 mix를 5-item → 3-item로 축소한다(new 1 / deepen 1 / live-coding 1). review는 점수 fallback으로만 노출한다.
-
-보조 카테고리는 점수 없이 reservoir 순서 + cooldown(최근 3일)을 적용한다.
+백엔드 mix를 5-item에서 3-item으로 축소하고, review는 점수 fallback으로만 노출한다.
+보조 카테고리는 점수 없이 reservoir 순서와 cooldown을 적용한다.
 
 ### 결과
 

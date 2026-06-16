@@ -12,15 +12,13 @@
 
 ### 결정
 
-- `collected_positions.postingStatus`를 공고의 현재 상태 정본으로 직접 갱신한다.
-  별도 override table로 덮어쓰지 않는다. 현재 상태의 단일 출처를 유지해 조회를 단순하게 한다.
-- 상태 변경 이력은 전용 이벤트 테이블에 남긴다.
-  각 이벤트는 수동/자동 구분, before/after status, reason, source 정보를 포함한다.
+- `collected_positions.postingStatus`를 공고 현재 상태 정본으로 직접 갱신한다. 별도 override table로 덮어쓰지 않는다.
+- 상태 변경 이력은 전용 이벤트 테이블에 남기며, 수동/자동 구분과 before/after status, reason, source 정보를 포함한다.
 - validator는 기본 dry-run으로 실행하고, 실제 상태 변경은 명시적 옵션을 붙였을 때만 수행한다.
-- 자동 닫기 조건: 최신 수집 실행 3회 이상 미등장 + 해당 source diagnostics가 정상 계열.
-  source가 장애 또는 parser 변경 계열이면 자동 닫지 않고 skipped 이벤트만 남긴다.
-- 한 번에 자동으로 닫을 수 있는 공고는 20개로 제한한다.
-- 이미 닫힌 공고가 다시 수집되면 새 snapshot의 상태로 자동 복구하고 이벤트로 남긴다.
+- 자동 닫기는 여러 수집 실행에서 미등장 + source diagnostics가 정상 계열일 때만 수행한다.
+  source 장애나 parser 변경 계열이면 자동 닫지 않고 skipped 이벤트만 남긴다.
+- 한 번에 자동으로 닫는 공고 수에 상한을 두어 대량 오판을 방지한다.
+- 이미 닫힌 공고가 다시 수집되면 새 snapshot 상태로 자동 복구하고 이벤트로 남긴다.
 
 거절한 대안:
 

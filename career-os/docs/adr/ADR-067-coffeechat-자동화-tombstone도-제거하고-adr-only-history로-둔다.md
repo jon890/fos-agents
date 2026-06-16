@@ -13,16 +13,12 @@ ADR-048로 coffeechat 자동화는 이미 active workflow에서 폐기됐고, fi
 
 ### 결정
 
-- `.claude/skills/interview-coffeechat-prep/`를 제거한다.
-- `scripts/interview-coffeechat-prep/`를 제거한다.
-- `config/mvp-target.json`의 `primary.interview.coffeechat` field를 제거한다.
-- `scripts/interview-prep-analyzer/mvp_target_schema.ts`에서 coffeechat mode/schema compatibility를 제거한다.
-- active docs, AGENTS, TOOLS, candidate-profile에서 coffeechat을 현행 흐름처럼 언급하지 않는다.
+- skill 디렉터리와 script 디렉터리에서 `interview-coffeechat-prep` 관련 자산을 제거한다.
+- `mvp-target.json`과 schema에서 coffeechat 호환 필드를 제거한다.
+- active docs, AGENTS, candidate-profile에서 coffeechat을 현행 흐름처럼 언급하지 않는다.
 - `interview-prep-analyzer`는 `first_round`, `final_round`, `offer_chat`만 지원한다.
-- 과거 task 기록(`tasks/plan021-*`, `tasks/plan041-*`, `tasks/plan056-*`)은 구현 이력으로 보존한다.
-  단, active guide처럼 오해될 수 있는 최신 docs나 skill index에서는 제거한다.
-- `data/private/...prep-archive`와 오래된 `data/reports/...coffeechat` 같은 과거 산출물은 active source가 아니므로 이번 cleanup에서 삭제 대상으로 보지 않는다.
-  별도 data retention cleanup이 필요하면 후속 plan에서 다룬다.
+- 과거 task 기록은 구현 이력으로 보존하되, active guide처럼 오해될 수 있는 최신 docs·skill index에서는 제거한다.
+- 과거 data 산출물은 이번 cleanup 대상으로 보지 않고, data retention cleanup이 필요하면 후속 plan에서 다룬다.
 
 ### 결과
 

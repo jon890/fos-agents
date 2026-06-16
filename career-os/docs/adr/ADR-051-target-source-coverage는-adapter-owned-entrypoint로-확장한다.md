@@ -13,19 +13,12 @@ ADR-047로 collector는 source adapter 단위로 분리됐다.
 
 ### 결정
 
-- Wanted broad scan은 유지한다.
-- configured source set의 `all`은 등록된 모든 source를 뜻한다.
-- Toss는 configured source set이 `all`이면 포함한다.
-- KakaoPay official careers/GreetingHR와 KakaoPay Securities official careers를 primary source로 추가한다.
+- Wanted broad scan은 유지하고, KakaoPay, KakaoPay Securities, Toss를 primary source로 추가한다.
 - Wanted URL/detail verification은 secondary path로 지원한다.
-  source key는 `wanted`를 유지하고, discovery mode로 `broad`와 `target-url`을 구분한다.
-- 별도 seed 파일은 만들지 않는다.
-  각 source adapter가 entrypoint, known target URL, source-local seed를 소유한다.
-- 모든 official listing과 seed 후보는 import 전에 detail page를 fetch하고 active/open evidence를 기록해야 한다.
+- 별도 seed 파일은 만들지 않는다. 각 source adapter가 entrypoint와 source-local seed를 소유한다.
+- 모든 official listing은 import 전에 active/open evidence를 기록해야 한다.
 - 한 source가 실패해도 성공한 source의 결과는 계속 import와 dashboard 표시로 이어진다.
-- dedupe/upsert는 URL을 우선하고, URL이 불안정할 때 hash를 보조로 쓴다.
-- 대시보드는 source filter와 brief diagnostics를 보여준다.
-  상세 실패는 runtime output에 남긴다.
+- 대시보드는 source filter와 brief diagnostics를 보여주고, 상세 실패는 runtime output에 남긴다.
 
 ### 결과
 

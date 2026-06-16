@@ -13,16 +13,10 @@
 ### 결정
 
 - `collect_live_postings.ts`는 기존 CLI 호환을 유지하는 얇은 entrypoint로 축소한다.
-- collector 구현은 `scripts/position-recommender/live-postings/` 아래로 분리한다.
-  - `types.ts` — `Posting`, `SourceAdapter`, `CollectContext`, `CollectResult`.
-  - `policy.ts` — 수집 가능성 필터. 서버/AI 실무 개발 역할, 계약직/인턴/비서버 직군 제외, 제외 회사 필터만 담당한다.
-  - `active-validator.ts` — `link_type=direct_posting`, `posting_status=active/open`, active evidence 같은 snapshot gate.
-  - `render.ts` — markdown snapshot 출력만 담당한다.
-  - `cli.ts` — arg parsing, adapter 실행, 파일 쓰기.
-  - `adapters/wanted.ts`, `adapters/toss.ts`, `adapters/index.ts` — source별 수집과 registry.
-- 이번 plan에서는 새 source를 추가하지 않는다. Wanted/Toss 동작 보존과 구조 분리에 집중한다.
+- collector 구현은 `live-postings/` 서브디렉터리 아래 types, policy, active-validator, render, cli, adapters 단위로 분리한다.
+  상세 파일 구조는 [[ADR-035]] 4레이어 컨벤션을 따른다.
+- 이번 전환에서는 새 source를 추가하지 않는다. Wanted/Toss 동작 보존과 구조 분리에 집중한다.
 - 새 source 추가는 후속 plan에서 adapter만 추가하는 방식으로 진행한다.
-- 구현 phase는 `career-os/docs/adr.md`, `docs/code-architecture.md`, `docs/flow.md`를 수정하지 않는다. 구현 중 docs drift가 발견되면 phase는 `PHASE_BLOCKED`로 멈추고 메인 세션에서 planning/docs를 다시 조정한다.
 
 ### 결과
 

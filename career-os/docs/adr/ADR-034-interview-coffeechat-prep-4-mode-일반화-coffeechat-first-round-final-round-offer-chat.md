@@ -13,11 +13,10 @@ interview-coffeechat-prep skill은 `mvp-target.json` `primary.coffeechat` 단일
 
 - interview-coffeechat-prep skill을 4 mode로 일반화한다.
   mode: `coffeechat`, `first-round`, `final-round`, `offer-chat`.
-- `mvp-target.json` 스키마를 `primary.coffeechat` → `primary.interview.{coffeechat, first_round, final_round, offer_chat}`으로 마이그레이션한다.
-  `final-round`와 `offer-chat`은 스키마만 정의하고, 이번 plan에서는 `first-round`만 활성화한다.
+- `mvp-target.json` 스키마를 `primary.coffeechat` 단일 객체에서 interview 하위 4 mode 구조로 마이그레이션한다.
+  `final-round`와 `offer-chat`은 스키마만 정의하고 초기에는 `first-round`만 활성화한다.
 - mode 트리거는 slash arg 우선, 자연어 키워드를 fallback으로 사용한다.
-- 산출물은 private `report.md`와 개인 정보를 마스킹한 `report-public.md` 두 파일로 생성한다.
-- skill rename은 이번 plan 범위 밖으로 별도 결정한다.
+- 산출물은 private 리포트와 개인 정보를 마스킹한 public 리포트 두 파일로 생성한다.
 
 거절한 대안:
 

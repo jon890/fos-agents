@@ -16,13 +16,10 @@
 - dashboard는 skill을 직접 실행하지 않고 request queue만 만든다.
   processor가 pending request를 읽고 allowlist와 stale guard를 확인한 뒤 career-os writable checkout에서 native skill을 호출한다.
   이유: read-only 경계를 유지하면서 기존 native skill 자산을 재사용해 새 자동화 표면을 줄일 수 있다.
-- allowlist는 기존 skill 3개로 제한한다: `interview-prep-analyzer`, `interview-asset-writer`, `study-pack-writer`.
-- `study-pack-writer` 요청은 공개 가능한 순수 기술 주제일 때만 허용하고, commit/push는 사용자 명시 승인 뒤에만 수행한다.
-- 면접 대화 답변 전문과 상세 피드백은 DB에 저장해 dashboard에서 바로 볼 수 있게 한다.
-  private 문서 본문, command stdout 전체는 request result, audit log, Discord 알림, fos-study로 복사하지 않는다.
+- allowlist는 기존 native skill 3개(`interview-prep-analyzer`, `interview-asset-writer`, `study-pack-writer`)로 제한한다.
+- `study-pack-writer` 요청은 공개 가능한 순수 기술 주제일 때만 허용하고, fos-study commit/push는 사용자 명시 승인 뒤에만 수행한다.
+- 면접 대화 답변 전문과 상세 피드백은 DB에 저장하되, private 문서 본문과 command stdout 전체는 audit log·Discord·fos-study로 복사하지 않는다.
 - 외부 제출, 공개 발행, 로그인, 업로드, candidate-profile 자동 수정은 금지한다.
-- 구현 phase에서는 docs/ADR/정책 문서를 수정하지 않는다.
-  계약이 부족하면 구현을 멈추고 `PHASE_BLOCKED`로 보고한다.
 
 거절한 대안:
 

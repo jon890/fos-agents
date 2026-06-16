@@ -16,8 +16,8 @@ inventory 갱신과 upsert가 분리되어 동기화가 보장되지 않았고, 
 - `data/generated-artifacts.json`은 활성 동작에서 제거한다.
 - study-topic-recommender는 fos-study 트리를 직접 스캔하며, 추천 실행 중 `git pull`은 하지 않는다.
 - `topic-inventory.json`은 config pool 복사본이 아닌 실행/진단 스냅샷으로 축소한다.
-- duplicate detection은 TS deterministic scan(path/slug/token)을 먼저 실행하고, Claude semantic review를 수행하는 2단계로 분리한다. TS는 provider-free로 동작한다.
-- recommender와 writer가 같은 4라벨 duplicate decision schema(`new`, `update-existing`, `skip`, `needs-user-confirmation`)를 사용한다.
+- duplicate detection은 TS deterministic 스캔을 먼저 실행하고 Claude semantic review를 후속으로 수행하는 2단계로 분리한다.
+- recommender와 writer가 같은 4라벨 duplicate decision schema를 사용한다.
 
 ### 거절한 대안
 

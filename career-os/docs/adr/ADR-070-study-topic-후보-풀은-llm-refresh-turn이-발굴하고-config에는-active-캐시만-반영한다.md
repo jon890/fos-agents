@@ -12,15 +12,12 @@
 ### 결정
 
 - 새 후보 발굴은 별도 `candidate refresh turn`으로 분리한다.
-  `refresh_topic_inventory.ts`는 inventory refresh와 추천 스냅샷 생성을 계속 담당한다.
-- 후보 refresh turn은 LLM이 10-20개 후보를 제안한 뒤 deterministic 검증으로 `new`, `update-existing`, `skip`, `needs-confirmation`으로 분류한다.
-  `new` 후보만 `config/study-pack-candidates.json`에 자동 append/update하고, 나머지는 config에 반영하지 않고 runtime report에만 남긴다.
+  LLM이 후보를 제안한 뒤 deterministic 검증으로 4라벨(`new`, `update-existing`, `skip`, `needs-confirmation`)로 분류하고, `new` 후보만 config에 자동 append/update한다.
+  나머지는 config에 반영하지 않고 runtime report에만 남긴다.
   이유: config를 전체 후보 정본이 아니라 active 후보 캐시로만 유지해 파일 크기가 추천 품질을 저하시키는 문제를 방지한다.
-- active 자동 후보는 기본 30개를 넘기지 않는다.
-  30일 이상 선택되지 않은 자동 후보는 `stale` 처리 대상이다.
+- active 자동 후보 수를 상한으로 제한하고, 오랫동안 선택되지 않은 자동 후보는 stale 처리 대상으로 본다.
 - cron은 매일 무조건 후보를 보충하지 않는다.
-  다음 조건 중 하나일 때만 refresh turn을 연다: 새 후보가 5개 이하, 최근 7회 추천에서 같은 domain/tag 반복이 과도함, 사용자가 새 관심사를 말함, 새 지원·면접 맥락이 생김, 이미 만든 문서가 새 추천 후보에 많이 섞임.
-- cron 자동 후보 refresh는 하루 1회로 제한한다.
+  후보가 부족하거나, 추천 다양성이 떨어지거나, 사용자가 새 관심사나 지원·면접 맥락을 제공한 경우에만 refresh turn을 연다.
 
 거절한 대안:
 
