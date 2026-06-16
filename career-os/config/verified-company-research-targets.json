@@ -2,23 +2,27 @@
   "_meta": {
     "purpose": "포지션 추천 전 검증된 회사군을 폭넓게 탐색하기 위한 회사/채널 레퍼런스. Wanted, 공식 career, 기술블로그를 함께 확인한다.",
     "policy": "서버/백엔드 정규직 공고만 추천 후보로 올린다. 회사명만 보고 추천하지 말고 active 공고, JD fit, 회사/규모 업사이드, 기술블로그/엔지니어링 시그널을 함께 본다.",
-    "usage": "position-recommender runner가 이 파일을 프롬프트 컨텍스트로 포함한다. 사람이 수동 web_search/web_fetch를 할 때도 이 목록을 우선 탐색 대상으로 사용한다."
+    "usage": "position-recommender runner가 이 파일을 프롬프트 컨텍스트로 포함한다. 사람이 수동 web_search/web_fetch를 할 때도 이 목록을 우선 탐색 대상으로 사용한다. hasAdapter/adapterId는 코드 수집 라우팅에 사용한다(plan082)."
   },
   "priorityCompanies": [
     {
       "tier": "A",
       "company": "KakaoPay / KakaoPay Securities",
       "koreanName": "카카오페이/카카오페이증권",
+      "hasAdapter": true,
+      "adapterId": "kakaopay",
       "careerUrls": ["https://kakaopay.career.greetinghr.com/ko/main", "https://career.kakaopaysec.com/"],
       "wantedKeywords": ["카카오페이 서버 개발자", "카카오페이 백엔드", "카카오페이 AX", "카카오페이 AI Agent", "카카오페이 AI 플랫폼", "카카오페이증권 AI 엔지니어"],
       "techBlogs": ["https://tech.kakaopay.com/"],
       "preferredDomains": ["payment", "settlement", "fintech", "ai-transformation", "ai-agent", "ai-platform", "backend-platform"],
-      "notes": "결제/정산 서버는 백엔드 코어 레버리지, AX/AI Agent/AI 플랫폼은 후보자의 AI workflow·RAG·Agent 경험 레버리지가 큼. 공식 active 개별 공고 확인 시 우선 평가."
+      "notes": "결제/정산 서버는 백엔드 코어 레버리지, AX/AI Agent/AI 플랫폼은 후보자의 AI workflow·RAG·Agent 경험 레버리지가 큼. 공식 active 개별 공고 확인 시 우선 평가. kakaopay-securities adapter도 별도 존재."
     },
     {
       "tier": "A",
       "company": "NAVER / NAVER Financial / NAVER Pay",
       "koreanName": "네이버/네이버파이낸셜/네이버페이",
+      "hasAdapter": true,
+      "adapterId": "naver-careers",
       "careerUrls": ["https://recruit.navercorp.com/", "https://recruit.naverfincorp.com/"],
       "wantedKeywords": ["네이버 백엔드", "네이버 서버 개발자", "네이버페이 백엔드", "네이버파이낸셜 서버 개발자"],
       "techBlogs": ["https://d2.naver.com/home"],
@@ -29,16 +33,20 @@
       "tier": "A",
       "company": "LINE / LINE Plus",
       "koreanName": "라인/라인플러스",
+      "hasAdapter": false,
+      "adapterId": null,
       "careerUrls": ["https://careers.linecorp.com/"],
       "wantedKeywords": ["LINE 백엔드", "라인플러스 서버 개발자", "LINE backend engineer"],
       "techBlogs": ["https://engineering.linecorp.com/ko"],
       "preferredDomains": ["messaging", "platform", "fintech", "reliability", "distributed-system"],
-      "notes": "분산시스템/신뢰성/글로벌 서비스 시그널이 강하면 우선 후보."
+      "notes": "분산시스템/신뢰성/글로벌 서비스 시그널이 강하면 우선 후보. adapter 추가 backlog."
     },
     {
       "tier": "A",
       "company": "Coupang / Coupang Pay",
       "koreanName": "쿠팡/쿠팡페이",
+      "hasAdapter": true,
+      "adapterId": "coupang-careers",
       "careerUrls": ["https://www.coupang.jobs/", "https://www.wanted.co.kr/company/53"],
       "wantedKeywords": ["쿠팡 백엔드", "쿠팡 서버 개발자", "쿠팡페이 백엔드", "coupang backend"],
       "techBlogs": ["https://medium.com/coupang-engineering"],
@@ -49,31 +57,97 @@
       "tier": "A-",
       "company": "Bucketplace",
       "koreanName": "오늘의집/버킷플레이스",
+      "hasAdapter": false,
+      "adapterId": null,
       "careerUrls": ["https://www.bucketplace.com/careers/?team=dev", "https://www.wanted.co.kr/company/179"],
       "wantedKeywords": ["오늘의집 백엔드", "버킷플레이스 backend", "오늘의집 Core Platform"],
       "techBlogs": ["https://www.bucketplace.com/careers/?team=dev"],
       "preferredDomains": ["commerce", "content", "community", "core-platform", "home-service"],
-      "notes": "커머스+콘텐츠+시공/홈서비스 플랫폼. Rails/Kotlin 비중과 팀 안정성 확인 필요."
+      "notes": "커머스+콘텐츠+시공/홈서비스 플랫폼. Rails/Kotlin 비중과 팀 안정성 확인 필요. adapter 추가 backlog."
     },
     {
       "tier": "A-",
       "company": "Woowa Bros",
       "koreanName": "우아한형제들/배민",
+      "hasAdapter": false,
+      "adapterId": null,
       "careerUrls": ["https://career.woowahan.com/", "https://www.wanted.co.kr/company/102"],
       "wantedKeywords": ["우아한형제들 백엔드", "배민 서버 개발자", "배민공통서비스 백엔드"],
       "techBlogs": ["https://techblog.woowahan.com/"],
       "preferredDomains": ["order", "payment", "settlement", "experiment", "display", "store", "ads", "platform"],
-      "notes": "기술조직/도메인은 여전히 좋지만 DH 매각설·쿠팡이츠 경쟁·수익성 압박 때문에 팀 선별 필요."
+      "notes": "기술조직/도메인은 여전히 좋지만 DH 매각설·쿠팡이츠 경쟁·수익성 압박 때문에 팀 선별 필요. adapter 추가 backlog."
     },
     {
       "tier": "A-",
       "company": "Karrot",
       "koreanName": "당근",
+      "hasAdapter": false,
+      "adapterId": null,
       "careerUrls": ["https://about.daangn.com/jobs/"],
       "wantedKeywords": ["당근 백엔드", "당근 server engineer", "karrot backend"],
       "techBlogs": ["https://medium.com/daangn"],
       "preferredDomains": ["local-commerce", "marketplace", "ads", "platform", "backend"],
-      "notes": "마켓플레이스/지역 서비스/광고 플랫폼 쪽이면 검토. Kotlin/Ruby 등 스택 확인 필요."
+      "notes": "마켓플레이스/지역 서비스/광고 플랫폼 쪽이면 검토. Kotlin/Ruby 등 스택 확인 필요. adapter 추가 backlog."
+    },
+    {
+      "tier": "A",
+      "company": "KakaoMobility",
+      "koreanName": "카카오모빌리티",
+      "hasAdapter": true,
+      "adapterId": "kakaomobility",
+      "careerUrls": ["https://kakaomobility.com/recruit/"],
+      "wantedKeywords": ["카카오모빌리티 서버 개발자", "카카오모빌리티 백엔드", "카카오모빌리티 플랫폼"],
+      "techBlogs": ["https://tech.kakaoenterprise.com/"],
+      "preferredDomains": ["mobility", "platform", "map", "logistics", "large-scale-backend"],
+      "notes": "카카오 계열 모빌리티/지도 플랫폼. 대규모 실시간 서비스 경험 레버리지. 공식 채용 URL 재확인 필요."
+    },
+    {
+      "tier": "A",
+      "company": "KakaoBank",
+      "koreanName": "카카오뱅크",
+      "hasAdapter": false,
+      "adapterId": null,
+      "careerUrls": ["https://kakaobank.recruiter.co.kr/appsite/company/index"],
+      "wantedKeywords": ["카카오뱅크 서버 개발자", "카카오뱅크 백엔드", "카카오뱅크 플랫폼"],
+      "techBlogs": ["https://tech.kakaobank.com/"],
+      "preferredDomains": ["banking", "fintech", "payment", "platform", "large-scale-backend"],
+      "notes": "인터넷 전문 은행. 금융 규제 환경에서의 대규모 서버 개발 경험 레버리지. adapter 추가 backlog."
+    },
+    {
+      "tier": "A-",
+      "company": "MUSINSA",
+      "koreanName": "무신사",
+      "hasAdapter": false,
+      "adapterId": null,
+      "careerUrls": ["https://career.musinsa.com/"],
+      "wantedKeywords": ["무신사 서버 개발자", "무신사 백엔드", "무신사 플랫폼"],
+      "techBlogs": ["https://medium.com/musinsa-tech"],
+      "preferredDomains": ["commerce", "fashion", "platform", "content", "ads"],
+      "notes": "패션 커머스 플랫폼. 커머스/플랫폼 도메인 전환 시 검토. adapter 추가 backlog."
+    },
+    {
+      "tier": "A-",
+      "company": "Kurly",
+      "koreanName": "컬리",
+      "hasAdapter": false,
+      "adapterId": null,
+      "careerUrls": ["https://career.kurly.com/"],
+      "wantedKeywords": ["컬리 서버 개발자", "컬리 백엔드", "마켓컬리 백엔드"],
+      "techBlogs": ["https://helloworld.kurly.com/"],
+      "preferredDomains": ["commerce", "fulfillment", "logistics", "platform"],
+      "notes": "신선식품 커머스/풀필먼트 플랫폼. 물류/커머스 도메인 경험 레버리지. 사업 수익성 확인 필요. adapter 추가 backlog."
+    },
+    {
+      "tier": "A-",
+      "company": "Yanolja",
+      "koreanName": "야놀자",
+      "hasAdapter": false,
+      "adapterId": null,
+      "careerUrls": ["https://careers.yanolja.co/"],
+      "wantedKeywords": ["야놀자 서버 개발자", "야놀자 백엔드", "야놀자 플랫폼"],
+      "techBlogs": ["https://medium.com/yanolja"],
+      "preferredDomains": ["travel", "hospitality", "platform", "commerce", "global"],
+      "notes": "여행/숙박 글로벌 플랫폼. 글로벌 확장 단계. 팀/사업 안정성 확인 필요. adapter 추가 backlog."
     }
   ],
   "discoveryChecklist": [
