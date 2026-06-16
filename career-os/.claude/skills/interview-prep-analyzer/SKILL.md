@@ -238,7 +238,7 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 
 ## References
 
-- `career-os/docs/adr.md` — ADR-027 단일 skill 통합 + Python 폐기 설계 근거, ADR-048 stage 모드 확장 근거
+- `career-os/docs/adr/INDEX.md` — ADR-027 단일 skill 통합 + Python 폐기 설계 근거, ADR-048 stage 모드 확장 근거
 - `career-os/config/mvp-target.json` — 현재 면접 타깃 (company / team / role / stage 분기 입력)
 - `career-os/config/baseline-core-files.json` — baseline 모드 큐레이션 파일 목록 (최대 10개 읽기)
 - `career-os/config/study-progress.json` — daily 모드 토픽 자동 선택 입력 (`weak_spots.last_studied`)

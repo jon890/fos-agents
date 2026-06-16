@@ -277,13 +277,13 @@ candidate-profile.md + 근거 파일과 교차 분석:
 ## Why this design
 
 - **근거 분리 원칙**: posting 요구사항 × 후보자 근거 파일 교차 매핑으로 추측성 주장을 구조적으로 차단. 근거 부족 항목은 `보강 필요 / 선택지 / 권장 행동`으로 바꿔 후보자 스스로 보강할 포인트를 명시.
-- **ledger 연계**: ledger에서 다음 행동 후보를 자동 식별. 직접 ledger 변경은 하지 않고 `Ledger Update Suggestion`으로 사용자 의사결정 유도 (ADR-032 직접 갱신 금지 원칙).
+- **ledger 연계**: ledger에서 다음 행동 후보를 자동 식별. 직접 ledger 변경은 하지 않고 `Ledger Update Suggestion`으로 사용자 의사결정 유도 (ADR-038 — 상태 전이는 artifact 검증 뒤에만).
 - **fos-study 격리**: 지원 전략은 후보자 의사결정 자산 — 공개 저장소에 흘리지 않음.
 - **Phase 05 연계**: 본 skill이 생성한 Markdown 제출 초안을 `application-reviewer` skill이 pass/fail 판정. 본 skill은 생성만 담당.
 
 ## References
 
-- `career-os/docs/adr.md` — ADR-032 application ledger 스키마 설계 근거
+- `career-os/docs/adr/INDEX.md` — ADR-045 (지원 후보 ledger 분리), ADR-038 (artifact 검증 후 상태 전이) 설계 근거
 - `career-os/docs/data-schema.md` — ledger.jsonl 스키마
 - `career-os/data/applications/ledger.jsonl` — 지원 이력 원장
 - `career-os/config/candidate-profile.md` — 후보자 프로필 단일 출처

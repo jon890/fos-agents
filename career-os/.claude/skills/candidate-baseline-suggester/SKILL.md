@@ -158,7 +158,7 @@ ADR-028 핵심 3줄:
 
 ## References
 
-- `career-os/docs/adr.md` — ADR-028 Append + 주석 마킹 설계 근거 (hand-crafted 자산 보존 원칙)
+- `career-os/docs/adr/INDEX.md` — ADR-028 Append + 주석 마킹 설계 근거 (hand-crafted 자산 보존 원칙)
 - `career-os/.claude/skills/candidate-baseline-suggester/references/audit-trail-format.md` — audit trail 셸 명령 (4-1 Backup / 4-4 After·Diff) + changes.md 구조 + 이력서 탐지 알고리즘
 - `career-os/config/candidate-profile.md` — 갱신 대상 후보자 프로필 (강점 evidence + 약점 섹션)
 - `career-os/config/baseline-core-files.json` — 갱신 대상 큐레이션 파일 목록 (신규 추가 + 부재 마킹 대상)
