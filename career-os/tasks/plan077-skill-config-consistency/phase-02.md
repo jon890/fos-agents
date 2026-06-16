@@ -117,7 +117,9 @@ print("index.json status=completed 마킹 완료")
 PY
 ```
 
-## commit + push (마지막 phase)
+## commit (마지막 phase)
+
+본 plan은 별도 git worktree + branch에서 실행된다. 따라서 commit만 하고 **push와 plan 단위 PR은 하지 않는다**. push와 PR은 모든 phase 완료 후 메인 세션이 worktree branch를 review한 뒤 처리한다(plan-and-build 원칙: PR은 plan 단위, merge는 review 후).
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
@@ -135,11 +137,9 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
 EOF
 )"
 
-# 본 plan이 만든 commit 개수 self-check (phase-01 + phase-02 = 2개여야 함, base=3a0844f)
-git rev-list HEAD ^3a0844f --count
-git log --oneline -3
-
-git push origin main
+# phase-01·phase-02 commit 2개가 이 branch에 들어갔는지 self-check (Write 위장 방어)
+# prose만 출력하고 Edit/commit을 실제로 안 했으면 아래 두 메시지가 안 보인다
+git log --oneline -2
 ```
 
 ## 의도 메모 (왜)
