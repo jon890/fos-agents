@@ -240,6 +240,24 @@ bun --env-file=.env scripts/study-topic-recommender/send_daily_recommendation.ts
 
 각 agent skill의 SKILL.md가 알림·자기 검증(self-check) 책임을 직접 담는다.
 
+### SKILL.md 권장 섹션 구성
+
+career-os agent skill의 SKILL.md는 아래 섹션 구성을 권장한다.
+강제 템플릿이 아니라 일관성 기준이며, 스킬 성격에 따라 가감한다.
+
+- 호출 후 해석 — 입력·모드·범위 중 스킬에 맞는 이름을 쓴다.
+  - 단일 입력은 `호출 후 입력 해석`.
+  - 여러 모드로 분기하면 `호출 후 모드 해석`, 범위가 갈리면 `호출 후 범위 해석`.
+- Inputs — 읽는 파일과 명령 출력.
+- Workflow — 수집·분석·산출·검증 단계.
+- Self-check — 산출물 자기 검증. 독립 섹션이면 `## Self-check` 레벨로 둔다.
+- Error handling — 입력 부재·실패 시 동작. 표 형태를 권장한다.
+- Why this design — 결정 근거. 관련 ADR 번호를 인용한다.
+- References — 관련 스킬 cross-ref와 핵심 docs 포인터. ADR 재나열이 아니라 포인터 역할.
+
+질문·검증·금지선처럼 스킬 고유 섹션은 위 구성에 더한다.
+public-safe 수집기처럼 단순한 스킬은 일부 섹션을 생략할 수 있다(예: question-bank-collector).
+
 (옛 bash runner → `track_task.sh` → `claude --print --output-format json` → Python extractor → `claude_persist_usage` → fos-study push 패턴은 plan006~022 기간 레거시. plan023 ADR-031로 career-os에서 완전 제거. apartment는 여전히 `track_task.sh` 사용 중.)
 
 ## 생성 산출물 품질 경계
