@@ -342,8 +342,8 @@ function parseTossJDSections(content: string): {
   preferred: string;
 } {
   const TASK_RE = /(?:담당\s*업무|주요\s*업무|하게\s*될\s*일|합류하면\s*함께\s*할|합류하게\s*되면|Responsibilities?)/i;
-  const REQ_RE = /(?:자격\s*요건|필요\s*역량|이런\s*분이\s*필요해요|이런\s*분을\s*찾습니다|이런\s*경험이\s*있다면|Qualifications?)/i;
-  const PREF_RE = /(?:우대\s*사항|이런\s*경험이\s*있으면\s*더|있으면\s*더\s*좋은|Preferred)/i;
+  const REQ_RE = /(?:지원\s*자격|지원자격|필수\s*요건|자격\s*요건|필요\s*역량|이런\s*분이\s*필요해요|이런\s*분을\s*찾습니다|이런\s*경험이\s*있다면|Requirements?|What\s+we\s+look\s+for|Qualifications?)/i;
+  const PREF_RE = /(?:우대\s*사항|우대사항|선호\s*역량|이런\s*경험이\s*있으면\s*더|있으면\s*더\s*좋은|Preferred)/i;
 
   const taskM = TASK_RE.exec(content);
   const reqM = REQ_RE.exec(content);
@@ -365,7 +365,7 @@ function parseTossJDSections(content: string): {
     mainTasks: taskContentStart >= 0
       ? slice(taskContentStart, Math.min(reqHeadStart, prefHeadStart), 900)
       : cleanDetail(content, 900),
-    requirements: reqContentStart >= 0 ? slice(reqContentStart, prefHeadStart, 900) : "",
+    requirements: reqContentStart >= 0 ? slice(reqContentStart, prefHeadStart, 900) : cleanDetail(content, 900),
     preferred: prefContentStart >= 0 ? slice(prefContentStart, content.length, 500) : "",
   };
 }
