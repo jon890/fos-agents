@@ -331,6 +331,45 @@ function tossHiddenForList(job: TossJob): boolean {
   return /true|yes/i.test(tossMetadata(job, ["미노출", "ShouldHiddenForList"]));
 }
 
+/**
+ * Parse Korean/English section headings from a Toss JD content blob.
+ * Toss API returns the full JD as one "Job Description" text blob; this splits it into
+ * mainTasks / requirements / preferred sections.
+ */
+function parseTossJDSections(content: string): {
+  mainTasks: string;
+  requirements: string;
+  preferred: string;
+} {
+  const TASK_RE = /(?:담당\s*업무|주요\s*업무|하게\s*될\s*일|합류하면\s*함께\s*할|합류하게\s*되면|Responsibilities?)/i;
+  const REQ_RE = /(?:지원\s*자격|지원자격|필수\s*요건|자격\s*요건|필요\s*역량|이런\s*분이\s*필요해요|이런\s*분을\s*찾습니다|이런\s*경험이\s*있다면|Requirements?|What\s+we\s+look\s+for|Qualifications?)/i;
+  const PREF_RE = /(?:우대\s*사항|우대사항|선호\s*역량|이런\s*경험이\s*있으면\s*더|있으면\s*더\s*좋은|Preferred)/i;
+
+  const taskM = TASK_RE.exec(content);
+  const reqM = REQ_RE.exec(content);
+  const prefM = PREF_RE.exec(content);
+
+  // heading start indexes (where the next section begins)
+  const reqHeadStart = reqM ? reqM.index : content.length;
+  const prefHeadStart = prefM ? prefM.index : content.length;
+
+  // content start indexes (right after the heading)
+  const taskContentStart = taskM ? taskM.index + taskM[0].length : -1;
+  const reqContentStart = reqM ? reqM.index + reqM[0].length : -1;
+  const prefContentStart = prefM ? prefM.index + prefM[0].length : -1;
+
+  const slice = (from: number, to: number, limit: number): string =>
+    from < 0 || to <= from ? "" : cleanDetail(content.slice(from, to), limit);
+
+  return {
+    mainTasks: taskContentStart >= 0
+      ? slice(taskContentStart, Math.min(reqHeadStart, prefHeadStart), 900)
+      : cleanDetail(content, 900),
+    requirements: reqContentStart >= 0 ? slice(reqContentStart, prefHeadStart, 900) : cleanDetail(content, 900),
+    preferred: prefContentStart >= 0 ? slice(prefContentStart, content.length, 500) : "",
+  };
+}
+
 function postingFromTossApiJob(group: TossJobGroup, job: TossJob, serverOnly: boolean): TossParse {
   const id = job.id ?? group.id;
   const title = norm(job.title ?? group.title);
@@ -367,9 +406,7 @@ function postingFromTossApiJob(group: TossJobGroup, job: TossJob, serverOnly: bo
       tags: classify(fullText),
       skills: [],
       dueTime: norm(due),
-      mainTasks: cleanDetail(content, 900),
-      requirements: "",
-      preferred: "",
+      ...parseTossJDSections(content),
     },
   };
 }
@@ -466,9 +503,9 @@ function parseTossJobDetail(
       tags: classify(fullText),
       skills: [],
       dueTime: due,
-      mainTasks: deepFindStringAny(roots, ["responsibilities", "mainTasks", "main_tasks", "role"]),
-      requirements: deepFindStringAny(roots, ["requirements", "qualifications"]),
-      preferred: deepFindStringAny(roots, ["preferred", "preferredPoints", "preferred_points"]),
+      mainTasks: deepFindStringAny(roots, ["responsibilities", "mainTasks", "main_tasks", "role"]) || parseTossJDSections(content).mainTasks,
+      requirements: deepFindStringAny(roots, ["requirements", "qualifications"]) || parseTossJDSections(content).requirements,
+      preferred: deepFindStringAny(roots, ["preferred", "preferredPoints", "preferred_points"]) || parseTossJDSections(content).preferred,
     },
   };
 }

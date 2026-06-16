@@ -8,6 +8,7 @@ import type { Posting } from "./types.ts";
 
 export const SERVER_KEYWORDS = [
   "backend", "백엔드", "server", "서버", "spring", "java", "kotlin", "api", "platform", "플랫폼", "gateway",
+  "devops", "sre", "infrastructure", "인프라",
 ];
 export const AI_PLATFORM_ROLE_KEYWORDS = [
   "ai transformation", "ax", "ai-native", "ai native", "ai agent", "agent", "llm", "rag", "llmops", "mlops",
@@ -23,6 +24,22 @@ export const NON_SERVER_TITLE_KEYWORDS = [
   "designer", "디자이너", "qa", "frontend", "프론트", "android", "ios", "data engineer",
   "데이터 엔지니어", "data scientist", "데이터 사이언티스트", "ai research", "research scientist",
   "마케터", "marketing", "assistant", "어시스턴트", "정책", "e/e", "데이터 라벨링",
+  // 법무·컴플라이언스
+  "legal", "counsel", "법무", "변호사", "compliance manager", "준법", "kyc", "aml", "privacy manager",
+  // 재무·회계·감사
+  "finance manager", "financial manager", "strategic finance", "재무", "accounting", "회계", "audit manager",
+  // 채용·인사
+  "recruiting", "recruiter", "채용", "talent acquisition", "hr manager", "인사", "people partner",
+  // ERP
+  "sap",
+  // 기술 문서
+  "technical writer", "테크니컬 라이터",
+  // 전략·기획
+  "strategy manager", "비즈니스 애널리스트", "business analyst",
+  // 운영 관리 (server operations/SRE와 구분하기 위해 복합 표현 사용)
+  "operations manager", "운영 매니저",
+  // 보안 직무 (security engineer 단독은 정보보안 직무)
+  "security engineer",
 ];
 export const CONTRACT_KEYWORDS = [
   "계약직", "contract", "contractor", "temporary", "temp", "freelance", "프리랜서",
@@ -35,7 +52,7 @@ export const HARD_DOMAIN_KEYWORDS = [
   "bank", "뱅크", "은행", "loan", "대출", "credit", "여신", "수신", "증권", "금융",
   "search", "검색", "platform", "플랫폼", "kafka", "streaming", "backend", "백엔드", "server", "서버",
 ];
-export const AI_KEYWORDS = ["ai", "agent", "llm", "rag", "openai", "gemini", "머신러닝", "인공지능"];
+export const AI_KEYWORDS = ["llm", "rag", "openai", "gemini", "머신러닝", "인공지능"];
 export const EXCLUDED_COMPANY_KEYWORDS = [
   "레브잇",
   "올웨이즈",
@@ -103,20 +120,20 @@ export function classify(text: string): string[] {
   const low = text.toLowerCase();
   const tags: string[] = [];
   if (
-    ["bank", "뱅크", "은행", "loan", "대출", "credit", "여신", "수신", "증권", "금융"].some((k) => low.includes(k))
+    ["bank", "뱅크", "은행", "loan", "대출", "여신", "수신", "증권"].some((k) => low.includes(k))
   )
     tags.push("internet-bank/fintech");
   if (
-    ["commerce", "커머스", "order", "주문", "payment", "payments", "결제", "정산", "페이"].some((k) =>
+    ["commerce", "커머스", "order", "주문", "payment", "payments", "결제", "정산"].some((k) =>
       low.includes(k)
     )
   )
     tags.push("commerce/payment");
-  if (["search", "검색", "rag", "opensearch", "elastic", "vector"].some((k) => low.includes(k)))
+  if (["검색", "rag", "opensearch", "elastic", "vector"].some((k) => low.includes(k)))
     tags.push("search/rag");
   if (AI_KEYWORDS.some((k) => low.includes(k))) tags.push("ai-service");
   if (
-    ["backend", "백엔드", "server", "서버", "spring", "java", "kafka", "platform", "플랫폼"].some((k) =>
+    ["backend", "백엔드", "server", "서버", "spring", "java", "kafka"].some((k) =>
       low.includes(k)
     )
   )

@@ -195,11 +195,30 @@ function enrichWithDetail(posting: Posting, html: string): Posting {
   const fullText = `${title} ${text}`;
   const location = firstMatch(text, [/Location\s+(.+?)\s+Updated/i, /Location\s+(.+?)\s+Apply now/i]);
   const updated = firstMatch(text, [/Updated\s+([0-9/.-]+)/i]);
-  const description = section(text, "Description", ["Basic Qualifications", "Preferred Qualifications", "Recruitment Process", "Location"]);
-  const responsibilities = section(text, "Key Responsibilities", ["Basic Qualifications", "Preferred Qualifications", "Recruitment Process", "Location"]);
-  const requirements = section(text, "Basic Qualifications", ["Preferred Qualifications", "Recruitment Process", "Why Coupang", "Location"]);
-  const preferred = section(text, "Preferred Qualifications", ["Recruitment Process", "Why Coupang", "Location"]);
+  const description = section(text, "Description", ["Basic Qualifications", "Preferred Qualifications", "Qualifications", "Recruitment Process", "Location"]);
+  const responsibilities = section(text, "Key Responsibilities", ["Basic Qualifications", "Preferred Qualifications", "Qualifications", "Recruitment Process", "Location"]);
+
+  // Try multiple heading variants: Coupang postings use English headings but may vary
+  const requirements =
+    section(text, "Basic Qualifications", ["Preferred Qualifications", "Preferred Experiences", "Recruitment Process", "Why Coupang", "Location"]) ||
+    section(text, "Qualifications", ["Preferred Qualifications", "Preferred Experiences", "Recruitment Process", "Why Coupang", "Location"]) ||
+    section(text, "Requirements", ["Preferred Qualifications", "Preferred Experiences", "Recruitment Process", "Why Coupang", "Location"]) ||
+    section(text, "자격 요건", ["우대 사항", "우대사항", "전형 절차", "Preferred", "Recruitment Process"]) ||
+    section(text, "자격요건", ["우대 사항", "우대사항", "전형 절차", "Preferred", "Recruitment Process"]);
+
+  const preferred =
+    section(text, "Preferred Qualifications", ["Recruitment Process", "Why Coupang", "Location"]) ||
+    section(text, "Preferred Experiences", ["Recruitment Process", "Why Coupang", "Location"]) ||
+    section(text, "우대 사항", ["전형 절차", "Recruitment Process", "Location"]) ||
+    section(text, "우대사항", ["전형 절차", "Recruitment Process", "Location"]);
+
   const skills = [...new Set([...posting.skills, ...skillsFromTitle(fullText)])].slice(0, 12);
+
+  // enrichWithDetail is only called on HTTP 200 detail fetches.
+  // When detail is available, clear the sitemap-only placeholder from postingFromSitemapUrl.
+  const SITEMAP_PLACEHOLDER = /상세 페이지 확인 필요|sitemap title 기반/;
+  const finalRequirements = requirements || (SITEMAP_PLACEHOLDER.test(posting.requirements ?? "") ? "" : (posting.requirements ?? ""));
+  const finalPreferred = preferred || (SITEMAP_PLACEHOLDER.test(posting.preferred ?? "") ? "" : (posting.preferred ?? ""));
 
   return {
     ...posting,
@@ -215,8 +234,8 @@ function enrichWithDetail(posting: Posting, html: string): Posting {
     ],
     dueTime: updated || posting.dueTime,
     mainTasks: responsibilities || description || posting.mainTasks,
-    requirements: requirements || posting.requirements,
-    preferred: preferred || posting.preferred,
+    requirements: finalRequirements,
+    preferred: finalPreferred,
   };
 }
 

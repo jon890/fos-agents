@@ -2,10 +2,10 @@
   "name": "plan080-position-recommender-quality",
   "description": "position-recommender 실제 호출 평가에서 드러난 품질 4문제를 고친다. ① 공유 서버 필터 구멍(Legal Counsel·Strategic Finance·Security·KYC/AML·SAP·Technical Writer·Recruiting 등 비개발 직무가 toss snapshot 통과) → policy.ts NON_SERVER_TITLE_KEYWORDS/isServerRole 강화로 모든 adapter가 혜택. ② JD 상세 미수집(토스·카카오모빌리티 requirements 빈칸, 쿠팡 'sitemap title 기반 추정') → adapter detail fetch 경로 보강. ③ 태그 변별력 부족(거의 모든 공고가 fintech·payment·ai-service·backend-platform 동시 태그) → classify 키워드 정교화. ④ 문서 형식 불일치(SKILL.md Workflow 3은 8 라벨, prompt.md는 14 라벨) → 14 라벨로 정합 + 줄 수 상한 완화. career-os는 shadow 관찰 기간을 두지 않으므로(AGENTS.md) 변경 즉시 1회 수집으로 검증한다.",
   "created_at": "2026-06-16T12:00:53+09:00",
-  "updated_at": "2026-06-16T12:00:53+09:00",
-  "status": "pending",
-  "current_phase": 1,
-  "total_phases": 5,
+  "updated_at": "2026-06-16T05:18:03.662133+00:00",
+  "status": "completed",
+  "current_phase": 6,
+  "total_phases": 6,
   "error_message": null,
   "blocked_reason": null,
   "related_docs": [
@@ -34,7 +34,7 @@
       "number": 1,
       "title": "④ SKILL.md Workflow 3 ↔ prompt.md 14 라벨 정합 + 줄 수 상한 완화",
       "file": "phase-01.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
@@ -44,13 +44,14 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "f5ac80266b4d"
     },
     {
       "number": 2,
       "title": "① 공유 서버 필터 강화 (policy.ts NON_SERVER_TITLE_KEYWORDS / isServerRole)",
       "file": "phase-02.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Edit",
@@ -59,13 +60,14 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "9f2e8e182f86"
     },
     {
       "number": 3,
       "title": "③ 태그 변별력 정교화 (policy.ts classify)",
       "file": "phase-03.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Edit",
@@ -74,13 +76,14 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "ecf277ccc5fc"
     },
     {
       "number": 4,
       "title": "② JD detail fetch 보강 (toss / coupang-careers / kakaomobility) + 즉시 1회 수집 검증",
       "file": "phase-04.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Edit",
@@ -89,13 +92,14 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 1200
+      "timeout": 1200,
+      "commitSha": "90ed809fdacf"
     },
     {
       "number": 5,
       "title": "통합 검증 (1회 수집 + 문서 정합) + index.json status=completed 마킹",
       "file": "phase-05.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Bash",
@@ -103,7 +107,24 @@
         "Grep"
       ],
       "model": "haiku",
-      "timeout": 900
+      "timeout": 900,
+      "commitSha": "e82e8cadea9f"
+    },
+    {
+      "number": 6,
+      "title": "toss/kakaomobility JD detail requirements 채움 보강",
+      "file": "phase-06.md",
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
+      "model": "sonnet",
+      "timeout": 1200,
+      "commitSha": "65799820409e"
     }
   ]
 }
