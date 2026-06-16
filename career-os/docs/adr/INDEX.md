@@ -92,3 +92,4 @@
 | ADR-087 | skill 트리거는 frontmatter description에 둔다 | Accepted | [ADR-087-skill-트리거는-frontmatter-description에-둔다.md](ADR-087-skill-트리거는-frontmatter-description에-둔다.md) |
 | ADR-088 | career-os에서 docs-audit 스킬 심링크를 제거한다 | Accepted | [ADR-088-career-os에서-docs-audit-스킬-심링크를-제거한다.md](ADR-088-career-os에서-docs-audit-스킬-심링크를-제거한다.md) |
 | ADR-089 | career-os ADR을 개별 파일로 관리한다 | Accepted | [ADR-089-career-os-adr을-개별-파일로-관리한다.md](ADR-089-career-os-adr을-개별-파일로-관리한다.md) |
+| ADR-090 | 검증 회사군을 config JSON 단일 출처로 둔다 | Accepted | [ADR-090-검증-회사군을-json-단일-출처로-둔다.md](ADR-090-검증-회사군을-json-단일-출처로-둔다.md) |

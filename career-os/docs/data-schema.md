@@ -104,6 +104,7 @@ fos-career request gateway:
 - baseline 분석용 core file pin: `config/baseline-core-files.json`
 - 학습 진행 상태와 약점 상태: `config/study-progress.json`
 - 외부 source registry: `config/sources.json`
+- 검증 회사군 단일 출처: `config/verified-company-research-targets.json` (ADR-090, references에서 이동)
 - 지원서 export 기본 디자인 계약: `config/resume-design.md`
 - 사람이 명시적으로 고른 추천 guardrail, pin, 제외, seed override
 
@@ -127,6 +128,20 @@ fos-career request gateway:
 
 config diet는 plan068에서 reader inventory와 fallback을 확인한 뒤 phase 단위로 진행한다.
 삭제는 reader 제거와 검증이 끝난 뒤 수행한다.
+
+### config/verified-company-research-targets.json (검증 회사군 단일 출처, ADR-090)
+
+검증 회사군의 단일 출처. 코드(adapter discovery)와 LLM 프롬프트 주입 양방향으로 소비한다.
+`references/`에서 `config/`로 이동했다(ADR-090). 텍스트로 흩어졌던 "최우선 탐색군"(decision-criteria.md·prompt.md)을 흡수하고, 두 텍스트는 본 파일을 역참조한다.
+
+| 필드 | 소비자 | 설명 |
+|---|---|---|
+| `company`, `koreanName`, `tier` | 공통/LLM | 회사명·검증 티어 |
+| `hasAdapter`, `adapterId` | 코드 | 수집 adapter 커버리지·라우팅. `false`는 adapter 추가 backlog |
+| `careerUrls`, `wantedKeywords` | 코드+LLM | discovery entrypoint + 탐색 키워드 |
+| `preferredDomains`, `techBlogs`, `notes` | LLM | 회사 업사이드 판단 근거 |
+
+코드가 JSON을 읽어 adapter를 라우팅하는 wire-up은 후속 plan에서 한다. 본 스키마는 양방향 소비를 전제로 설계한다.
 
 ### config/mvp-target.json (현재 타깃 단일 출처)
 
