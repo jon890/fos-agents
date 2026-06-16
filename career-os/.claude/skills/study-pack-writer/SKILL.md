@@ -1,6 +1,6 @@
 ---
 name: study-pack-writer
-description: backend/AI/infra 기술 학습용 study pack 마크다운 초안을 생성하는 career-os skill. `/study-pack-writer <topic-key-or-자연어>`, "<주제> study pack 만들어줘", "<주제> 학습 정리해줘", "<주제> 공부 자료 만들어줘", "fos-study에 <주제> 초안 작성"처럼 공개 가능한 기술 토픽 학습 문서가 필요할 때 사용. 후보자 이력 기반 면접 자산은 interview-asset-writer로 라우팅. 사용자가 명시적으로 공개 발행을 승인한 경우에만 sources/fos-study commit/push를 수행한다.
+description: backend/AI/infra 기술 학습용 study pack 마크다운 초안을 생성하는 career-os skill. `/study-pack-writer <topic-key-or-자연어>`, "<주제> study pack 만들어줘", "<주제> 학습 정리해줘", "<주제> 공부 자료 만들어줘", "fos-study에 <주제> 초안 작성"처럼 공개 가능한 기술 토픽 학습 문서가 필요할 때 사용. career-os 이직·면접 준비 맥락의 학습 자료이며 회사명을 본문에 쓰지 않고 일반 기술 문서로 작성한다. 개인 업무 회고·블로그 포스팅(회사/팀명 표기 가능, ~/personal/fos-study)은 blog-post-writer로, 후보자 이력 기반 면접 자산은 interview-asset-writer로 라우팅한다. 사용자가 명시적으로 공개 발행을 승인한 경우에만 sources/fos-study commit/push를 수행한다.
 ---
 
 # Study Pack Writer
