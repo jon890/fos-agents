@@ -2,9 +2,9 @@
   "name": "plan079-adr-individual-files",
   "description": "career-os ADR을 단일 adr.md(88 ADR·3560줄)에서 개별 파일 + INDEX 구조로 전환하는 파일럿(career-os ADR-089, ai-nodes ADR-015). ① 기계적·무손실 분해(docs/adr/ADR-NNN-slug.md + INDEX.md, cross-ref [[ADR-NNN]], adr.md 제거, 라우팅 docs 갱신) → ② Bloat ADR 슬림화(30줄 초과 약 60건을 결정/맥락/대안 기각으로 압축, 의도는 보존) → ③ 전역 스킬(planning·plan-and-build·docs-check)이 career-os adr/ 구조 인지 + ADR 본문 구현명세 금지 self-check 강화 → ④ 통합 검증. 본 plan은 ADR 구조 전환 자체가 목표라 implementation phase가 docs/adr/·라우팅 docs·스킬을 수정하는 점에서 일반 docs-freeze 규칙의 예외다.",
   "created_at": "2026-06-16T09:53:03+09:00",
-  "updated_at": "2026-06-16T09:53:03+09:00",
-  "status": "pending",
-  "current_phase": 1,
+  "updated_at": "2026-06-16T01:25:36.956925+00:00",
+  "status": "running",
+  "current_phase": 3,
   "total_phases": 4,
   "error_message": null,
   "blocked_reason": null,
@@ -38,26 +38,47 @@
       "number": 1,
       "title": "adr.md 기계적 분해 + INDEX 생성 + 라우팅 docs 갱신",
       "file": "phase-01.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 900
+      "timeout": 900,
+      "commitSha": "962915874b0e"
     },
     {
       "number": 2,
       "title": "Bloat ADR 슬림화 + prohibited 토큰 정리",
       "file": "phase-02.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 900
+      "timeout": 1800
     },
     {
       "number": 3,
       "title": "전역 스킬 career-os adr/ 분기 + 구현명세 금지 self-check 강화",
       "file": "phase-03.md",
       "status": "pending",
-      "allowedTools": ["Read", "Edit", "Bash", "Glob", "Grep"],
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "sonnet",
       "timeout": 600
     },
@@ -66,7 +87,12 @@
       "title": "통합 검증 + index.json status=completed 마킹",
       "file": "phase-04.md",
       "status": "pending",
-      "allowedTools": ["Read", "Bash", "Glob", "Grep"],
+      "allowedTools": [
+        "Read",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "haiku",
       "timeout": 600
     }
