@@ -2,7 +2,7 @@
   "name": "plan083-adr-self-evidence-cleanup",
   "description": "ADR Self-Evidence 정리 — '완료된 폐기/네이티브 마이그레이션 기록'으로 자명한 안전 후보 13개(003·004·006·007·011·016·017·029·030·036·072·075·076)를 docs/adr/에서 제거한다. 사용자가 피참조 0(다른 ADR이 [[ADR-NNN]]로 참조하지 않음)을 근거로 이 13개만 제거를 승인했다. 자산이 git rm으로 사라진 완료 폐기 또는 native 마이그레이션 기록이고 git history로 보존되므로 ADR 파일 제거는 안전하다. phase-01은 제거 직전 각 13개의 피참조를 grep으로 재확인하고(하나라도 피참조 발견 시 그 번호 제외 또는 PHASE_BLOCKED — 억지 제거 금지), 피참조 0 확인분만 git rm + INDEX.md 행 삭제 후 깨진 링크 0건을 검증한다. 제거 자체는 완료된 폐기 정리라 새 ADR을 만들지 않고 commit message로 보존한다. docs/adr/ 외 파일은 건드리지 않는다.",
   "created_at": "2026-06-16T15:54:17+09:00",
-  "updated_at": "2026-06-16T16:15:42+09:00",
+  "updated_at": "2026-06-16T07:15:55.768369+00:00",
   "status": "completed",
   "current_phase": 1,
   "total_phases": 1,
@@ -34,7 +34,7 @@
       "number": 1,
       "title": "안전 재검증(피참조 grep) + 13개 ADR 제거 + INDEX.md 행 삭제 + 깨진 링크 0건 검증",
       "file": "phase-01.md",
-      "status": "running",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Edit",
@@ -43,7 +43,8 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 900
+      "timeout": 900,
+      "commitSha": "789affa94f9d"
     }
   ]
 }
