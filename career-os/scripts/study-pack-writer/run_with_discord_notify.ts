@@ -9,8 +9,6 @@ const scriptDir = dirname(fileURLToPath(import.meta.url));
 const rootDir = resolve(scriptDir, "../..");
 const envFile = resolve(rootDir, ".env");
 const logDir = resolve(rootDir, "logs/study-pack-writer");
-const claudeBin = process.env.STUDY_PACK_WRITER_CLAUDE_BIN || "claude";
-const permissionMode = process.env.STUDY_PACK_WRITER_PERMISSION_MODE || "bypassPermissions";
 
 function loadEnvFileIfPresent(path: string): void {
   if (!existsSync(path)) return;
@@ -95,6 +93,8 @@ async function fosStudyStatus(): Promise<string> {
 async function main(): Promise<number> {
   loadEnvFileIfPresent(envFile);
   mkdirSync(logDir, { recursive: true });
+  const claudeBin = process.env.STUDY_PACK_WRITER_CLAUDE_BIN || "claude";
+  const permissionMode = process.env.STUDY_PACK_WRITER_PERMISSION_MODE || "bypassPermissions";
 
   const topic = process.argv.slice(2).join(" ").trim();
   if (!topic) {
