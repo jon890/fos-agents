@@ -190,7 +190,7 @@ ledger.jsonl의 riskFlags와 posting.md의 위험 플래그를 교차:
   - <판정에 따른 next action>
 ```
 
-### 6. Self-check (최대 3회)
+## Self-check (최대 3회)
 
 review.md 작성 후 아래 항목 검증. 실패 시 해당 섹션 재작성:
 
