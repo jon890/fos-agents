@@ -40,7 +40,9 @@ career-os/
 │   ├── data-schema.md    config/logs/runtime 스키마
 │   ├── flow.md           사용자/데이터 플로우
 │   ├── code-architecture.md  이 문서
-│   ├── adr.md            모든 아키텍처 결정 누적 기록 (단일 출처, ADR-015/018)
+│   ├── adr/              아키텍처 결정 개별 파일 + INDEX (ADR-089 파일럿 전환, ai-nodes ADR-015)
+│   │   ├── INDEX.md      번호·제목·Status·파일 조망 표
+│   │   └── ADR-NNN-slug.md  개별 ADR 파일 (88개)
 │   ├── korean-expression-guide.md  career-os 산출물 한국어 표현 가이드
 │   ├── hand-off/         외부 위임·인수인계 일회성 노트
 │   └── prep/             회사·이벤트별 운영 자산. 이벤트 종료 후 archive
