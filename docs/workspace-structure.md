@@ -92,6 +92,8 @@ ln -s AGENTS.md CLAUDE.md
 
 모노레포 공통 결정 (모든 워크스페이스에 영향)은 `ai-nodes/docs/adr.md`에 격상. 워크스페이스 한정 결정만 `<workspace>/docs/adr.md`에.
 
+**career-os 예외 (ai-nodes ADR-015 파일럿)**: career-os는 단일 `adr.md` 대신 `docs/adr/` 디렉터리 구조를 사용한다. 개별 ADR 파일(`ADR-NNN-slug.md`) + `INDEX.md` 조망 표. 다른 워크스페이스는 단일 `adr.md` 유지 — career-os만 파일럿 전환.
+
 **형식 정책**: 5문서 본문 작성 시 `ai-nodes/docs/docs-style.md` 형식 정책 준수 (ADR-005). 6 패턴 + 한자어 회피 표 + 거울 구조 원칙.
 
 ---
@@ -165,12 +167,12 @@ career-os ADR-019의 scripts/ 분리 패턴은 ADR-006으로 표준 격상되어
 | 워크스페이스 | 비대칭 내용 | 근거 |
 |---|---|---|
 | apartment | 없음 (ADR-006 분리 표준 적용, plan007) | — |
-| career-os | 없음 (ADR-019 → ADR-006 격상) | — |
+| career-os | `docs/adr/` 개별 파일 구조 (ADR-089 파일럿 전환, ai-nodes ADR-015) | career-os ADR-089 + ai-nodes ADR-015 |
 | stock-investment | 적용 완료 (plan001~004) | 본 표준 적용 시리즈 마지막 plan004로 decisions/ 폐기 + 매트릭스 갱신 |
 | travel | scripts/.claude/skills/config 부재 (의도된 비대칭, plan001 ADR-001) — .env는 plan002 ADR-002로 도입 | travel/docs/adr.md ADR-001 + ADR-002 |
 | health-care | 없음 (ADR-006 분리 표준 적용, plan002) | — |
 
-새 예외 추가 시: 워크스페이스 `docs/adr.md`에 결정 기록 → 본 표 갱신.
+새 예외 추가 시: 워크스페이스 ADR에 결정 기록 → 본 표 갱신 (career-os는 `docs/adr/ADR-NNN.md`, 다른 워크스페이스는 `docs/adr.md`).
 
 ---
 

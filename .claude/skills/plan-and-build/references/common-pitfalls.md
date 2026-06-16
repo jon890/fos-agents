@@ -22,7 +22,7 @@ phase 작성 직후 self-check 패턴 누적. critic 반복 지적 회피용.
 | 2-1 | 워크스페이스 격리 | 다른 워크스페이스 자산 참조 | path가 `<workspace>/` / `_shared/` / `skills/`로 시작 |
 | 2-2 | 워크스페이스 격리 | config 새로 만들기 | `data-schema.md` 스키마 섹션 동반 |
 | 3-1 | docs/data 라우팅 | 데이터 파일 docs/에 둠 | `*.json/jsonl/csv` → `<workspace>/data/` |
-| 3-2 | docs/data 라우팅 | 개별 ADR 파일 신설 | `<workspace>/docs/adr.md`에 append |
+| 3-2 | docs/data 라우팅 | ADR 저장 방식 혼용 | career-os: `docs/adr/` 개별 파일 + `INDEX.md` / 그 외: `docs/adr.md` append |
 | 3-3 | docs/data 라우팅 | phase에서 docs 수정 | task 생성 전 별도 commit |
 | 4-1 | runner 경계 | dispatcher 우회 직접 호출 | `run_now.sh <command>` 경유 |
 | 4-2 | runner 경계 | claude_persist_usage 누락 | 새 runner는 `attempt()` 안에 호출 |
@@ -102,11 +102,13 @@ phase 작성 직후 self-check 패턴 누적. critic 반복 지적 회피용.
 **왜**: ai-nodes 정책 — `docs/` 의사결정·학습 누적, 데이터는 `data/` (ADR-015).
 **Self-check**: 산출물이 `*.json/jsonl/csv` 등 데이터면 `<workspace>/data/`. 의사결정·회고·이력 마크다운이면 `<workspace>/docs/{adr,learn,hand-off}`.
 
-### 3-2. 개별 ADR 파일 신설
+### 3-2. ADR 저장 방식 혼용
 
-**증상**: phase가 `<workspace>/docs/decisions/NNN-<topic>.md` 새 파일 생성.
-**왜**: `docs/adr.md` 단일 파일 누적 컨벤션 (5문서 표준).
-**Self-check**: 새 결정 기록 시 `<workspace>/docs/adr.md` 맨 아래 append.
+**증상**: 워크스페이스 방식을 착각해 career-os에서 `docs/adr.md`에 append하거나, 다른 워크스페이스에서 개별 ADR 파일을 신설.
+**왜**: career-os는 ai-nodes ADR-015 파일럿으로 `docs/adr/` 개별 파일 + `INDEX.md` 구조를 사용한다. 다른 워크스페이스는 `docs/adr.md` 단일 파일 누적 컨벤션 (5문서 표준).
+**Self-check**:
+- career-os: 새 ADR은 `career-os/docs/adr/ADR-NNN-slug.md` 새 파일 생성 + `career-os/docs/adr/INDEX.md` 행 추가.
+- 그 외 워크스페이스: `<workspace>/docs/adr.md` 맨 아래 append (개별 파일 신설 X).
 
 ### 3-3. phase 안에서 docs 갱신
 

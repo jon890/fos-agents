@@ -38,7 +38,7 @@ ls -d <workspace>/tasks/plan*/ 2>/dev/null | head -5
   "error_message": null,                    // 실패 시 채워짐
   "blocked_reason": null,                   // PHASE_BLOCKED 시 채워짐
   "related_docs": [                         // (선택) 관련 docs 경로
-    "career-os/docs/adr.md",
+    "career-os/docs/adr/INDEX.md",
     "career-os/docs/code-architecture.md"
   ],
   "depends_on": [                           // (선택) 선행 plan 번호
@@ -260,5 +260,5 @@ bash <workspace>/skills/.../scripts/run_now.sh <command> [args]
 
 - `../plan-and-build/references/common-pitfalls.md` — task 작성 self-check 패턴 누적
 - `<workspace>/docs/code-architecture.md` — runner / dispatcher / extractor 표준 패턴
-- `<workspace>/docs/adr.md` — 결정 이력
+- `<workspace>/docs/adr.md` — 결정 이력 (career-os는 `docs/adr/INDEX.md` + 개별 파일)
 - `_shared/bin/claude_lib.sh` — 토큰 회계 헬퍼 (모든 새 runner 사용 필수)
