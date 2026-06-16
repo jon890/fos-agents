@@ -1,0 +1,74 @@
+{
+  "name": "plan079-adr-individual-files",
+  "description": "career-os ADR을 단일 adr.md(88 ADR·3560줄)에서 개별 파일 + INDEX 구조로 전환하는 파일럿(career-os ADR-089, ai-nodes ADR-015). ① 기계적·무손실 분해(docs/adr/ADR-NNN-slug.md + INDEX.md, cross-ref [[ADR-NNN]], adr.md 제거, 라우팅 docs 갱신) → ② Bloat ADR 슬림화(30줄 초과 약 60건을 결정/맥락/대안 기각으로 압축, 의도는 보존) → ③ 전역 스킬(planning·plan-and-build·docs-check)이 career-os adr/ 구조 인지 + ADR 본문 구현명세 금지 self-check 강화 → ④ 통합 검증. 본 plan은 ADR 구조 전환 자체가 목표라 implementation phase가 docs/adr/·라우팅 docs·스킬을 수정하는 점에서 일반 docs-freeze 규칙의 예외다.",
+  "created_at": "2026-06-16T09:53:03+09:00",
+  "updated_at": "2026-06-16T09:53:03+09:00",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 4,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/docs/adr.md",
+    "career-os/docs/code-architecture.md",
+    "career-os/AGENTS.md",
+    "docs/workspace-structure.md"
+  ],
+  "target_repositories": [
+    {
+      "name": "career-os",
+      "path": ".",
+      "role": "adr.md → docs/adr/ 개별 파일 + INDEX 전환, 라우팅 docs 갱신, 전역 스킬 분기"
+    }
+  ],
+  "depends_on": [
+    "career-os ADR-089 (career-os ADR을 개별 파일로 관리한다)",
+    "ai-nodes ADR-015 (career-os 파일럿 예외)",
+    "docs-first 반영 완료 commit 8ccdcb7 (ADR-089 + ADR-015 본문)"
+  ],
+  "execution_policy": {
+    "goal": "본 plan은 career-os ADR 구조 전환이 목표이므로, 일반 규칙(구현 phase는 docs 수정 금지)의 예외다. phase가 docs/adr/·라우팅 docs(AGENTS.md·code-architecture.md·workspace-structure.md)·전역 스킬(.claude/skills/)을 의도적으로 수정한다.",
+    "phase_order": "current_phase 순서대로 Phase 01부터 Phase 04까지 순차 실행한다. phase-02는 phase-01의 docs/adr/ 산출물에, phase-03·04는 그 이후 상태에 의존하므로 병렬 실행하지 않는다.",
+    "parallelism": "같은 plan 안의 phase는 병렬 실행하지 않는다.",
+    "scope_boundary": "phase-01은 분해+라우팅, phase-02는 슬림화, phase-03은 스킬 분기, phase-04는 검증으로 책임이 분리된다. career-os 외 워크스페이스의 adr.md 방식은 변경하지 않는다(파일럿 격리).",
+    "pr_unit": "별도 worktree+branch에서 실행한다. phase는 commit만 하고 push/PR은 하지 않는다. 마지막 phase도 push하지 않는다. push와 plan 단위 PR은 모든 phase 완료 후 메인 세션이 review한 뒤 처리한다."
+  },
+  "phases": [
+    {
+      "number": 1,
+      "title": "adr.md 기계적 분해 + INDEX 생성 + 라우팅 docs 갱신",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 900
+    },
+    {
+      "number": 2,
+      "title": "Bloat ADR 슬림화 + prohibited 토큰 정리",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 900
+    },
+    {
+      "number": 3,
+      "title": "전역 스킬 career-os adr/ 분기 + 구현명세 금지 self-check 강화",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 600
+    },
+    {
+      "number": 4,
+      "title": "통합 검증 + index.json status=completed 마킹",
+      "file": "phase-04.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Bash", "Glob", "Grep"],
+      "model": "haiku",
+      "timeout": 600
+    }
+  ]
+}
