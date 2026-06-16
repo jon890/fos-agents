@@ -235,3 +235,14 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 - **실행 확인 폐기 (ADR-027)**: agent skill 패턴에서 에이전트 호출 sanity는 다른 skill 사용 중에 자연 확인됨. 별도 실행 확인은 overhead 대비 가치 약함.
 - **Python 6개 폐기 (ADR-027)**: build_target_file_list / select_topic / update_study_progress 알고리즘은 단순 (점수 없음, cooldown 단순) — 현재 에이전트의 자연어 추론으로 동등 대체. 외부 Python 의존 제거로 실행 경로 단순화.
 - **Self-check 본 skill 안에 박는 이유**: 옛 외부 validator를 현재 에이전트 자체 검증으로 대체. SKILL.md 단일 진실 출처.
+
+## References
+
+- `career-os/docs/adr.md` — ADR-027 단일 skill 통합 + Python 폐기 설계 근거, ADR-048 stage 모드 확장 근거
+- `career-os/config/mvp-target.json` — 현재 면접 타깃 (company / team / role / stage 분기 입력)
+- `career-os/config/baseline-core-files.json` — baseline 모드 큐레이션 파일 목록 (최대 10개 읽기)
+- `career-os/config/study-progress.json` — daily 모드 토픽 자동 선택 입력 (`weak_spots.last_studied`)
+- `career-os/.claude/skills/interview-prep-analyzer/references/output-policy.md` — 비공개 산출물 정책 (내부 분석과 공개 발행 경계)
+- 관련 스킬: `study-pack-writer` — 일반 학습 문서 생성 라우팅 (기술 토픽 중심)
+- 관련 스킬: `interview-asset-writer` — 후보자 이력 기반 면접 자산 라우팅 (Q&A 질문 은행·마스터 플레이북)
+- 관련 스킬: `candidate-baseline-suggester` — baseline 산출물을 읽어 후보자 프로필 갱신 제안
