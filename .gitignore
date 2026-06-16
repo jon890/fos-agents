@@ -16,7 +16,8 @@
 openclaw-orchestrator/memory/
 
 # Nested repos / published outputs managed separately
-career-os/sources/fos-study/
+# (디렉터리 clone 또는 ~/personal/fos-study symlink 둘 다 무시 — 끝 슬래시 없이)
+career-os/sources/fos-study
 
 # Local env / transient artifacts
 .env
