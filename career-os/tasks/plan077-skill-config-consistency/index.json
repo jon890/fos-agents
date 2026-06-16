@@ -2,9 +2,9 @@
   "name": "plan077-skill-config-consistency",
   "description": "스킬 구성 점검 후속 — ADR-088 결정에 따라 career-os에서 깨진 docs-audit 스킬 심링크 디렉터리를 제거하고(A), position-recommender SKILL.md에 daily/cron runner 자산 경계를 code-architecture.md 역참조로 보강한다(B). docs/ADR 반영은 이미 선행 commit으로 끝났고, 본 plan은 그 결정을 구현으로 옮긴다. SKILL.md 공통 섹션 표준화(D)는 별도 후속 plan으로 분리한다.",
   "created_at": "2026-06-16T08:58:24+09:00",
-  "updated_at": "2026-06-16T08:58:24+09:00",
-  "status": "pending",
-  "current_phase": 1,
+  "updated_at": "2026-06-16T09:09:39+09:00",
+  "status": "completed",
+  "current_phase": 2,
   "total_phases": 2,
   "error_message": null,
   "blocked_reason": null,
@@ -36,17 +36,29 @@
       "number": 1,
       "title": "docs-audit 스킬 디렉터리 제거",
       "file": "phase-01.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Bash", "Glob", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "haiku",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "771ca7376f72"
     },
     {
       "number": 2,
       "title": "position-recommender SKILL.md runner 자산 경계 역참조 보강",
       "file": "phase-02.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Edit", "Bash", "Glob", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "sonnet",
       "timeout": 600
     }
