@@ -20,7 +20,7 @@ export const EXCLUDE_NON_SERVER_KEYWORDS = [
   "frontend", "front-end", "프론트", "android", "ios", "qa", "product designer", "ux", "마케터",
 ];
 export const NON_SERVER_TITLE_KEYWORDS = [
-  "기획", "서비스 기획", "product manager", "프로덕트 매니저", "po", "pm", "planner",
+  "기획", "서비스 기획", "product manager", "product owner", "프로덕트 매니저", "po", "pm", "planner",
   "designer", "디자이너", "qa", "frontend", "프론트", "android", "ios", "data engineer",
   "데이터 엔지니어", "data scientist", "데이터 사이언티스트", "ai research", "research scientist",
   "마케터", "marketing", "assistant", "어시스턴트", "정책", "e/e", "데이터 라벨링",
@@ -29,7 +29,7 @@ export const NON_SERVER_TITLE_KEYWORDS = [
   // 재무·회계·감사
   "finance manager", "financial manager", "strategic finance", "재무", "accounting", "회계", "audit manager",
   // 채용·인사
-  "recruiting", "recruiter", "채용", "talent acquisition", "hr manager", "인사", "people partner",
+  "recruiting", "recruiter", "채용", "talent acquisition", "hr manager", "인사", "people partner", "compensation",
   // ERP
   "sap",
   // 기술 문서
