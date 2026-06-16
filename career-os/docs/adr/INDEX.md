@@ -14,6 +14,7 @@
 | ADR-013 | RSS·Atom discovery 레이어 부착 | Accepted | [ADR-013-rss-atom-discovery-레이어-부착.md](ADR-013-rss-atom-discovery-레이어-부착.md) |
 | ADR-014 | Claude usage 전파 패턴 통일 (토큰·비용 회계 복구) | Accepted (2026-05-13 실측 검증 완료). 관련: [[ADR-023]] 출력 포맷 결정은 사실상 무효화. | [ADR-014-claude-usage-전파-패턴-통일-토큰-비용-회계-복구.md](ADR-014-claude-usage-전파-패턴-통일-토큰-비용-회계-복구.md) |
 | ADR-015 | docs/ 피드백 루프 + data/ 위치 정책 | Accepted | [ADR-015-docs-피드백-루프-data-위치-정책.md](ADR-015-docs-피드백-루프-data-위치-정책.md) |
+| ADR-016 | config 디렉터리 통합: 관심사별 단일 파일 + JSON 통일 | Partially superseded by [[ADR-027]] (plan017, 2026-05-15) — topics.json이 3 namespace로 재분리 (study-pack-topics / study-pack-candidates / question-bank-topics). sources.json + baseline-core-files.json 통합 결정은 유지. | [ADR-016-config-디렉터리-통합-관심사별-단일-파일-json-통일.md](ADR-016-config-디렉터리-통합-관심사별-단일-파일-json-통일.md) |
 | ADR-018 | docs/ 운영 정책: 휘발성 vs 영속, learn → ADR 흡수 흐름 | Partially superseded by [[ADR-032]] (2026-05-17, learn 영역 폐기 — hand-off/prep 유지 결정은 살아있음) — 5문서 + docs/data 분리 부분은 ai-nodes ADR-004 (2026-05-18)로 모노레포 격상 (Lifted) | [ADR-018-docs-운영-정책-휘발성-vs-영속-learn-adr-흡수-흐름.md](ADR-018-docs-운영-정책-휘발성-vs-영속-learn-adr-흡수-흐름.md) |
 | ADR-019 | career-os: Claude Code skill 폴더와 실행 스크립트 디렉터리 분리 | Accepted | [ADR-019-career-os-claude-code-skill-폴더와-실행-스크립트-디렉터리-분리.md](ADR-019-career-os-claude-code-skill-폴더와-실행-스크립트-디렉터리-분리.md) |
 | ADR-020 | 공용 헬퍼 TS(Bun) 마이그레이션: 점진 + _shared/lib·types 단일 위치 | Accepted | [ADR-020-공용-헬퍼-ts-bun-마이그레이션-점진-_shared-lib-types-단일-위치.md](ADR-020-공용-헬퍼-ts-bun-마이그레이션-점진-_shared-lib-types-단일-위치.md) |
