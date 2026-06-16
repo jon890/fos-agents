@@ -29,7 +29,9 @@ ai-nodes 워크스페이스의 새 기능이나 대규모 변경을 phase 단위
 ### docs 피드백 루프 원칙
 ai-nodes의 docs는 단순 참조 문서가 아니라 **의사결정·기술 학습이 누적되는 피드백 루프**다. 매 사이클마다:
 
-- 새 결정은 `<workspace>/docs/adr.md` 맨 아래에 누적 (개별 ADR 파일 신설 금지).
+- 새 결정 기록 방식은 워크스페이스에 따라 다르다:
+  - **career-os**: `docs/adr/ADR-NNN-slug.md` 새 파일 생성 + `docs/adr/INDEX.md` 행 추가 (ai-nodes ADR-015 파일럿).
+  - **그 외 워크스페이스**: `<workspace>/docs/adr.md` 맨 아래 *append* (개별 ADR 파일 신설 금지).
 - 명세 변경은 `prd.md` / `data-schema.md` / `flow.md` / `code-architecture.md` 중 영향 받는 문서에 즉시 반영.
 - 학습·회고는 `<workspace>/docs/learn/YYYY-MM-DD-<topic>.md`로.
 - 인수인계 메모는 `<workspace>/docs/hand-off/`.
@@ -49,7 +51,7 @@ ai-nodes의 docs는 단순 참조 문서가 아니라 **의사결정·기술 학
 - `<workspace>/docs/data-schema.md` — 데이터 스키마 (config / logs / runtime / data)
 - `<workspace>/docs/flow.md` — 사용자·데이터 플로우
 - `<workspace>/docs/code-architecture.md` — 디렉터리 구조, 계층, 외부 의존성
-- `<workspace>/docs/adr.md` — 모든 아키텍처 결정 누적 기록
+- `<workspace>/docs/adr.md` — 모든 아키텍처 결정 누적 기록 (career-os는 `docs/adr/` 개별 파일 + `INDEX.md`)
 - `<workspace>/AGENTS.md` — 워크스페이스 진입점·정책 요약
 - 전역 `CLAUDE.md` — ai-nodes 차원 규칙
 
@@ -63,7 +65,7 @@ ai-nodes의 docs는 단순 참조 문서가 아니라 **의사결정·기술 학
 구현 phase 중 docs/ADR/정책 문서를 고쳐야 할 정도로 애매한 부분이 나오면 구현을 계속하지 말고 `PHASE_BLOCKED`로 보고한다.
 예외는 task `index.json`, phase 파일의 상태, 검증 결과, 완료 기록처럼 실행 이력을 정리하는 변경뿐이다.
 
-- `<workspace>/docs/adr.md` — 새 의사결정 한 항목 누적 (개별 파일 신설 X)
+- `<workspace>/docs/adr.md` — 새 의사결정 한 항목 누적 (career-os 제외: `docs/adr/ADR-NNN.md` 신규 파일 + `INDEX.md` 갱신)
 - `<workspace>/docs/data-schema.md` — 스키마 변경 반영
 - `<workspace>/docs/flow.md` — 플로우 변경 반영
 - `<workspace>/docs/code-architecture.md` — 디렉터리·계층 변경 반영
@@ -244,7 +246,7 @@ HUD 갱신은 `run-phases.py`가 직접 수행하지 않는다.
 
 ```bash
 # 1) 본 세션: docs 반영 + task 생성 + 별도 커밋
-git add career-os/docs/adr.md career-os/docs/code-architecture.md
+git add career-os/docs/adr/ career-os/docs/code-architecture.md  # career-os: adr/ 디렉터리 전체
 git commit -m "docs(career-os): cj-oliveyoung 폴더 분해 ADR 추가"
 git push
 

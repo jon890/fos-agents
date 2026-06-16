@@ -105,13 +105,15 @@ task 파일을 **사용자에게 제출하기 전**에 반드시 [`../plan-and-b
 | 데이터 / 스키마 / 산출물 형식 | `data-schema.md` |
 | 호출 시나리오 / 데이터 흐름 | `flow.md` |
 | 디렉터리 / 계층 / 외부 의존 | `code-architecture.md` |
-| 기술 결정 (왜) | `adr.md` 맨 아래 누적 |
+| 기술 결정 (왜) | `adr.md` 맨 아래 누적 (career-os는 `docs/adr/ADR-NNN-slug.md` 신규 파일 + `INDEX.md` 갱신) |
 | 회고·학습 | `docs/learn/YYYY-MM-DD-<topic>.md` |
 | 인수인계 메모 | `docs/hand-off/` |
 
 **문서 책임 표 (단일 소스 원칙)**:
 - 같은 정보를 두 문서에 적지 않는다. 다른 문서가 참조해야 하면 ADR 번호로 링크.
-- 새 결정은 항상 `adr.md` 맨 아래에 *append*. 개별 ADR 파일 신설 금지.
+- 새 결정 기록 방식은 워크스페이스에 따라 다르다:
+  - **career-os**: 새 ADR은 `docs/adr/ADR-NNN-slug.md` 새 파일 생성 + `docs/adr/INDEX.md` 행 추가 (ai-nodes ADR-015 파일럿).
+  - **그 외 워크스페이스**: `docs/adr.md` 맨 아래 *append* (개별 ADR 파일 신설 금지).
 - 자명한 결정(예: "버그 수정 위치를 한 줄 옮긴다")은 ADR로 기록하지 않는다.
 
 **ADR 작성 원칙**: 자세한 규칙은 [`references/adr-writing.md`](references/adr-writing.md)를 **반드시** Read 도구로 로드 후 적용.
@@ -186,7 +188,8 @@ task phase를 작성할 때 docs-first materialization phase와 구현 phase를 
 ```bash
 # cwd: ai-nodes root
 ls <workspace>/tasks/ | grep "plan{후보번호}"
-grep "^## ADR-{후보번호}" <workspace>/docs/adr.md
+grep "^## ADR-{후보번호}" <workspace>/docs/adr.md        # career-os 제외
+ls career-os/docs/adr/ | grep "^ADR-{후보번호}"          # career-os 전용
 ```
 
 다음 가용 번호를 사용. plan / ADR 번호는 워크스페이스별로 독립적.
@@ -212,7 +215,7 @@ plan003-2-cj-oliveyoung-renamer-rollout     # 동일 성격 후속
 ## 의도적으로 안 하는 것
 
 - **본 세션에서 phase 실행**: planning은 task 파일 생성까지만. 실행은 `/plan-and-build`가 별도 세션에서.
-- **개별 ADR 파일 신설**: 모든 새 결정은 `<workspace>/docs/adr.md` 맨 아래 누적 (ADR-015).
+- **ADR 저장 위치 혼용**: career-os는 `docs/adr/` 개별 파일 + `INDEX.md` 구조 (ai-nodes ADR-015 파일럿). 그 외 워크스페이스는 `docs/adr.md` 단일 파일 *append*. 워크스페이스 방식을 섞지 않는다.
 - **데이터 파일을 docs/ 아래 둠**: 데이터는 항상 `<workspace>/data/` (ADR-015).
 - **외부 의존성 무비판 도입**: 신규 라이브러리는 1단계·2단계에서 정당화 + 사용자 동의 필수.
 - **워크스페이스 간 자산 참조**: 다른 워크스페이스 코드를 import / read / write 금지.

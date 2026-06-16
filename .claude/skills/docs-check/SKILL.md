@@ -21,7 +21,7 @@ ADR은 "코드만 보고는 알 수 없는 WHY"여야 한다. 자명한 결정·
 
 현재 에이전트는 다음을 직접 로드:
 
-1. `career-os/docs/adr.md` — 26 ADR + Quick Index (scope에 career-os / all 포함 시)
+1. `career-os/docs/adr/INDEX.md` + `career-os/docs/adr/ADR-*.md` 개별 파일 — career-os ADR (scope에 career-os / all 포함 시)
 2. `ai-nodes/docs/adr.md` — 모노레포 레벨 ADR (scope에 ai-nodes / all 포함 시)
 3. `career-os/docs/{prd,data-schema,flow,code-architecture}.md` — 5문서 나머지 4개
 4. `career-os/scripts/command-router/run_now.sh` — dispatcher case 목록
@@ -47,7 +47,25 @@ ls career-os/docs/*.md ai-nodes/docs/*.md \
 #### 자동화-1. ADR Quick Index ↔ 본문 sync
 
 ```bash
-for ADR_FILE in career-os/docs/adr.md ai-nodes/docs/adr.md; do
+# career-os: adr/ 개별 파일 + INDEX.md 구조 (ai-nodes ADR-015 파일럿)
+echo "=== career-os/docs/adr/ ==="
+INDEX_FILE="career-os/docs/adr/INDEX.md"
+if [ -f "$INDEX_FILE" ]; then
+  # 개별 파일 헤더 기준 ADR 번호
+  BODY=$(grep -rhoE '^## ADR-[0-9]+' career-os/docs/adr/ | grep -oE 'ADR-[0-9]+' | sort -u)
+  # INDEX.md 에 링크된 ADR 번호
+  INDEX=$(grep -oE 'ADR-[0-9]+' "$INDEX_FILE" | sort -u | head -200)
+  for n in $BODY; do
+    echo "$INDEX" | grep -q "^$n$" || echo "INDEX_MISSING: $n not in INDEX.md"
+  done
+  [ -z "$(for n in $BODY; do echo "$INDEX" | grep -q "^$n$" || echo "x"; done)" ] \
+    && echo "Quick Index sync OK" || true
+else
+  echo "INDEX_MISSING: career-os/docs/adr/INDEX.md 없음"
+fi
+
+# 그 외 워크스페이스 (단일 adr.md 구조)
+for ADR_FILE in ai-nodes/docs/adr.md; do
   [ -f "$ADR_FILE" ] || continue
   echo "=== $ADR_FILE ==="
   # 본문 ADR 번호 (헤더 기준)
@@ -65,7 +83,17 @@ done
 #### 자동화-2. ADR 본문 30줄 threshold (Bloat 후보)
 
 ```bash
-for ADR_FILE in career-os/docs/adr.md ai-nodes/docs/adr.md; do
+# career-os: 개별 파일 각각을 30줄 기준으로 점검
+echo "=== career-os/docs/adr/ ==="
+for f in career-os/docs/adr/ADR-*.md; do
+  [ -f "$f" ] || continue
+  size=$(wc -l < "$f" | tr -d ' ')
+  name=$(basename "$f" .md)
+  [ "$size" -gt 30 ] && echo "BLOAT: $name ($size lines > 30) — 슬림화 검토"
+done
+
+# 그 외 워크스페이스 (단일 adr.md 구조)
+for ADR_FILE in ai-nodes/docs/adr.md; do
   [ -f "$ADR_FILE" ] || continue
   echo "=== $ADR_FILE ==="
   for n in $(grep -oE '^## ADR-[0-9]+' "$ADR_FILE" | grep -oE '[0-9]+'); do
@@ -220,7 +248,8 @@ ADR 폐기 후보 유형 (ai-nodes 변형):
 
 | 상황 | 처리 |
 |---|---|
-| adr.md 파일 없음 | stderr warn + 해당 scope 건너뜀 |
+| adr.md 파일 없음 (그 외 워크스페이스) | stderr warn + 해당 scope 건너뜀 |
+| career-os/docs/adr/INDEX.md 없음 | INDEX_MISSING 출력 + 개별 파일 Bloat 검사만 진행 |
 | dispatcher 파일 없음 | 자동화-4 skip, 수동 감사만 진행 |
 | config/ 없음 | 자동화-3 skip |
 | Quick Index 없음 (미작성) | Index sync 검사 → MISSING 전수 보고 |
