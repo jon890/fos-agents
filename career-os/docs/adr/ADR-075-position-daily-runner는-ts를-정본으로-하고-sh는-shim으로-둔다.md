@@ -23,9 +23,3 @@ career-os runner는 대부분 Bun TypeScript로 모이는 추세이며, position
 - runner 로직을 TypeScript에서 테스트·확장하기 쉬워진다.
 - 기존 sh 호출자는 깨지지 않는다.
 - cron 전환 전후를 분리해 운영 위험을 줄인다.
-
-### 적용
-
-- `scripts/position-recommender/run_daily_with_claude.ts`
-- `scripts/position-recommender/run_daily_with_claude.sh`
-- `docs/flow.md`

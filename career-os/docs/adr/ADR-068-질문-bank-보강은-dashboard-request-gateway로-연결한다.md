@@ -15,7 +15,7 @@ ADR-066으로 공개 가능 일반 질문 bank와 `question-bank-collector` skil
 
 - fos-career `interview_skill_requests`에 `question_bank_refresh` request type을 추가한다.
 - `question_bank_refresh`의 유일한 skill은 `question-bank-collector`다.
-- dashboard 면접 hub에는 “질문 bank 보강” 요청 버튼을 추가한다.
+- dashboard 면접 hub에는 "질문 bank 보강" 요청 버튼을 추가한다.
   topic은 공개 가능 일반 질문 범위만 받는다.
 - processor는 `question_bank_refresh`를 받으면 `claude --permission-mode <mode> -p "/question-bank-collector <topic>"`로 실행한다.
 - processor는 실행 후 `public/question-bank` path와 validator 결과만 request result에 저장한다.
@@ -30,13 +30,3 @@ ADR-066으로 공개 가능 일반 질문 bank와 `question-bank-collector` skil
 - queue/processor/HUD 흐름은 기존 interview skill request gateway와 일관된다.
 - public/private 경계가 유지된다.
 - question bank를 실제 면접 질문 추천으로 섞는 단계는 후속 결정으로 분리된다.
-
-### 적용
-
-- `fos-career/db/schema.ts`
-- `fos-career/db/migrations/`
-- `fos-career/lib/interview/gateway.ts`
-- `fos-career/app/dashboard/interview/page.tsx`
-- `fos-career/app/api/interview/requests/route.ts`
-- `fos-career/scripts/process-interview-requests.ts`
-- `career-os/tasks/plan067-question-bank-request-gateway/`

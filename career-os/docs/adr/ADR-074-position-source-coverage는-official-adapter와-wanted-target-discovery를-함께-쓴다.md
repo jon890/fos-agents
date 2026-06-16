@@ -29,10 +29,3 @@
 - Coupang은 공식 direct job URL을 수집하고 detail fetch가 성공하면 JD까지 제공하되, 차단/레벨 mismatch 가능성은 추천에서 보수적으로 확인하게 한다.
 - active/open direct posting guard는 기존과 동일하게 유지된다.
 
-### 적용
-
-- `scripts/position-recommender/live-postings/adapters/`
-- `scripts/position-recommender/live-postings/types.ts`
-- `scripts/position-recommender/collect_live_postings.ts`
-- `docs/flow.md`
-- `docs/code-architecture.md`

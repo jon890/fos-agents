@@ -25,8 +25,3 @@ ADR-071로 native `study-topic-recommender`의 비대화형 권한 대기 문제
 - 매일 알림의 토큰 비용과 채널 소음을 줄인다.
 - 사용자는 `#병태-이직준비방`에서 바로 공부할 주제만 본다.
 - 동적 후보 발굴 경로는 유지하되 매일 cron의 기본 비용으로 만들지 않는다.
-
-### 적용
-
-- `docs/flow.md`
-- OpenClaw cron `career-os:daily-study-topic-recommendation`

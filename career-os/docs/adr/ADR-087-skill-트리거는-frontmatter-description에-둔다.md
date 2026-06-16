@@ -25,7 +25,3 @@ career-os skill들은 Claude native skill 시절의 관성으로 본문 `When to
 - Codex가 본문을 열기 전에 더 정확하게 career-os skill을 선택할 수 있다.
 - 본문은 이미 호출된 뒤의 실행 절차와 입력 해석에 집중한다.
 - Claude와 Codex가 같은 skill 본문을 공유하면서도 Codex의 progressive disclosure 원칙을 더 잘 따른다.
-
-### 적용
-
-- `career-os/.claude/skills/*/SKILL.md`

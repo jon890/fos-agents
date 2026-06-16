@@ -31,8 +31,3 @@
 - collector가 추천 판단까지 과하게 떠안지 않고, LLM 추천 흐름과 책임 경계가 분명해진다.
 - daily runner는 기존 `collect_live_postings.ts` 경로를 계속 호출하므로 cron 진입점 변경이 작다.
 
-### 적용
-
-- `tasks/plan040-position-recommender-collector-modularization/` — 구현 계획 5 phase.
-- `docs/code-architecture.md` — collector 모듈 구조.
-- `docs/flow.md` — position-recommender 수집 흐름.

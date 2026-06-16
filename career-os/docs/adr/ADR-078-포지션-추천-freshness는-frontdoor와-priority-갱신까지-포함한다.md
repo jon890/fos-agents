@@ -29,11 +29,3 @@ interview request processor에는 host-side wrapper가 있었지만 position/app
 - web app의 read-only mount 안전 경계는 유지된다.
 - 단점은 daily runner가 추천 리포트 생성 외에도 queue/priority refresh 실패를 함께 다뤄야 한다는 점이다.
 
-### 적용
-
-- `scripts/position-recommender/run_daily_with_claude.ts`
-- `scripts/application-agent/frontdoor_queue_builder.ts`
-- `scripts/application-agent/priority_recommendation.ts`
-- `/home/bifos/services/fos-career/scripts/run-*-processor.sh`
-- `docs/flow.md`
-- `docs/code-architecture.md`

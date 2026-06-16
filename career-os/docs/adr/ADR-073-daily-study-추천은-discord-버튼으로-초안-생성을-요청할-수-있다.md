@@ -12,12 +12,13 @@ daily study cron 메시지는 이제 실행 로그가 아니라 오늘 공부할
 ### 결정
 
 - `_shared/lib/notify_discord.ts`는 OpenClaw shared `presentation` payload를 전달할 수 있도록 `--presentation <json>`을 지원한다.
-- daily study cron은 `scripts/study-topic-recommender/send_daily_recommendation.ts`를 실행한다.
-- 이 script는 `refresh_topic_inventory.ts`를 실행한 뒤 추천 3개를 짧게 렌더링하고, Discord 버튼을 함께 보낸다.
+- daily study cron은 추천 3개를 짧게 렌더링하고 Discord 버튼을 함께 보낸다.
 - 버튼은 `1번 초안 생성`, `2번 초안 생성`, `3번 초안 생성`, `오늘은 넘김`으로 둔다.
 - 버튼 callback 매핑은 `data/runtime/study-topic-actions/YYYY-MM-DD.json`과 `latest.json`에 저장한다.
-- `career.study-pack.create:*`는 study-pack 초안 생성 요청이다. 공개 최종화나 `[초안]` 제거가 아니다.
-- `career.study-pack.skip:*`는 그날 추천을 넘긴 기록이다. 해당 topic을 영구 제외하지 않는다.
+- `career.study-pack.create:*`는 study-pack 초안 생성 요청이다.
+  공개 최종화나 `[초안]` 제거가 아니다.
+- `career.study-pack.skip:*`는 그날 추천을 넘긴 기록이다.
+  해당 topic을 영구 제외하지 않는다.
 - Discord component 유효시간은 24시간으로 설정한다.
 
 ### 결과
@@ -25,12 +26,3 @@ daily study cron 메시지는 이제 실행 로그가 아니라 오늘 공부할
 - daily 추천 메시지는 짧게 유지하면서도 바로 다음 action으로 연결된다.
 - 공개 발행 경계는 유지된다.
 - callback은 runtime snapshot을 통해 날짜와 topic-key를 검증할 수 있다.
-
-### 적용
-
-- `_shared/lib/notify_discord.ts`
-- `scripts/study-topic-recommender/send_daily_recommendation.ts`
-- `docs/flow.md`
-- `docs/code-architecture.md`
-- `docs/data-schema.md`
-- OpenClaw cron `career-os:daily-study-topic-recommendation`

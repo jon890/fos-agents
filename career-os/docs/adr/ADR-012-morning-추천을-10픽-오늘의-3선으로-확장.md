@@ -4,10 +4,13 @@
 - Date: 2026-05-02
 
 ### 맥락
-[[ADR-009]]/010/011 이후에도 모닝 추천이 백엔드 study-pack / live-coding 한 축에 집중. 회사 사례·AI·산업 흐름이 빠짐.
+
+[[ADR-009]]/010/011 이후에도 모닝 추천이 백엔드 study-pack / live-coding 한 축에 집중되어 있었다.
+회사 사례·AI·산업 흐름이 빠진 상태였다.
 
 ### 결정
-10픽 구조 + "오늘의 3선" 큐레이션.
+
+10픽 구조 + "오늘의 3선" 큐레이션으로 확장한다.
 
 | 카테고리 | 슬롯 |
 |---|---|
@@ -19,13 +22,12 @@
 
 "오늘의 3선" = 백엔드 1 + 기술 블로그 1 + AI 1 (각 카테고리 1순위).
 
-백엔드 mix를 5-item → 3-item로 축소: new 1 / deepen 1 / live-coding 1. review는 점수 fallback으로만.
+백엔드 mix를 5-item → 3-item로 축소한다(new 1 / deepen 1 / live-coding 1). review는 점수 fallback으로만 노출한다.
 
-신규 reservoir 파일: `config/tech-blog-sources.json`, `config/ai-topic-sources.json`, `config/geek-news-sources.json`.
-
-보조 카테고리는 점수 없이 reservoir 순서 + cooldown(최근 3일).
+보조 카테고리는 점수 없이 reservoir 순서 + cooldown(최근 3일)을 적용한다.
 
 ### 결과
-- 매일 학습 input 폭 4축으로 확대.
-- "오늘의 3선"이 사용자 결정 비용 ↓.
-- 단점: review 슬롯이 mix에서 빠져 review 노출 감소. 면접 D-N 시점에 따라 mix 재조정 필요.
+
+- 매일 학습 input 폭이 4축으로 확대된다.
+- "오늘의 3선"이 사용자 결정 비용을 낮춘다.
+- 단점: review 슬롯이 mix에서 빠져 review 노출이 감소한다. 면접 D-N 시점에 따라 mix 재조정이 필요하다.
