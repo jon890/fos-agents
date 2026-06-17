@@ -22,11 +22,10 @@ ADR은 "코드만 보고는 알 수 없는 WHY"여야 한다. 자명한 결정·
 현재 에이전트는 다음을 직접 로드:
 
 1. `career-os/docs/adr/INDEX.md` + `career-os/docs/adr/ADR-*.md` 개별 파일 — career-os ADR (scope에 career-os / all 포함 시)
-2. `ai-nodes/docs/adr.md` — 모노레포 레벨 ADR (scope에 ai-nodes / all 포함 시)
+2. `docs/adr/INDEX.md` + `docs/adr/ADR-*.md` — 모노레포 레벨 ADR (scope에 ai-nodes / all 포함 시)
 3. `career-os/docs/{prd,data-schema,flow,code-architecture}.md` — 5문서 나머지 4개
-4. `career-os/scripts/command-router/run_now.sh` — dispatcher case 목록
-5. `career-os/config/*.json` — config 파일 키 목록 (data-schema.md 정합 확인용)
-6. `.claude/skills/*/SKILL.md` (career-os + ai-nodes 전역) — SKILL.md trigger 패턴 감사
+4. `career-os/config/*.json` — config 파일 키 목록 (data-schema.md 정합 확인용)
+5. `.claude/skills/*/SKILL.md` (career-os + ai-nodes 전역) — SKILL.md trigger 패턴 감사
 
 ## Workflow
 
@@ -35,7 +34,8 @@ ADR은 "코드만 보고는 알 수 없는 WHY"여야 한다. 자명한 결정·
 ```bash
 # cwd: /home/bifos/ai-nodes
 # scope: career-os | ai-nodes | all (default: all)
-ls career-os/docs/*.md ai-nodes/docs/*.md \
+ls career-os/docs/*.md docs/*.md \
+   docs/adr/*.md \
    career-os/.claude/skills/*/SKILL.md \
    .claude/skills/*/SKILL.md 2>/dev/null
 ```
@@ -64,20 +64,20 @@ else
   echo "INDEX_MISSING: career-os/docs/adr/INDEX.md 없음"
 fi
 
-# 그 외 워크스페이스 (단일 adr.md 구조)
-for ADR_FILE in ai-nodes/docs/adr.md; do
-  [ -f "$ADR_FILE" ] || continue
-  echo "=== $ADR_FILE ==="
-  # 본문 ADR 번호 (헤더 기준)
-  BODY=$(grep -oE '^## ADR-[0-9]+' "$ADR_FILE" | grep -oE 'ADR-[0-9]+' | sort -u)
-  # Quick Index 링크 ADR 번호
-  INDEX=$(grep -oE 'ADR-[0-9]+' "$ADR_FILE" | sort -u | head -100)
+# ai-nodes root: adr/ 개별 파일 + INDEX.md 구조
+echo "=== docs/adr/ ==="
+ROOT_INDEX_FILE="docs/adr/INDEX.md"
+if [ -f "$ROOT_INDEX_FILE" ]; then
+  BODY=$(grep -rhoE '^## ADR-[0-9]+' docs/adr/ADR-*.md | grep -oE 'ADR-[0-9]+' | sort -u)
+  INDEX=$(grep -oE 'ADR-[0-9]+' "$ROOT_INDEX_FILE" | sort -u | head -100)
   for n in $BODY; do
-    echo "$INDEX" | grep -q "^$n$" || echo "INDEX_MISSING: $n in $ADR_FILE"
+    echo "$INDEX" | grep -q "^$n$" || echo "INDEX_MISSING: $n not in docs/adr/INDEX.md"
   done
   [ -z "$(for n in $BODY; do echo "$INDEX" | grep -q "^$n$" || echo "x"; done)" ] \
     && echo "Quick Index sync OK" || true
-done
+else
+  echo "INDEX_MISSING: docs/adr/INDEX.md 없음"
+fi
 ```
 
 #### 자동화-2. ADR 본문 30줄 threshold (Bloat 후보)
@@ -92,14 +92,13 @@ for f in career-os/docs/adr/ADR-*.md; do
   [ "$size" -gt 30 ] && echo "BLOAT: $name ($size lines > 30) — 슬림화 검토"
 done
 
-# 그 외 워크스페이스 (단일 adr.md 구조)
-for ADR_FILE in ai-nodes/docs/adr.md; do
-  [ -f "$ADR_FILE" ] || continue
-  echo "=== $ADR_FILE ==="
-  for n in $(grep -oE '^## ADR-[0-9]+' "$ADR_FILE" | grep -oE '[0-9]+'); do
-    size=$(awk "/^## ADR-$n/,/^## ADR-[0-9]/" "$ADR_FILE" | wc -l | tr -d ' ')
-    [ "$size" -gt 30 ] && echo "BLOAT: ADR-$n ($size lines > 30) — 슬림화 검토"
-  done
+# ai-nodes root: 개별 파일 각각을 30줄 기준으로 점검
+echo "=== docs/adr/ ==="
+for f in docs/adr/ADR-*.md; do
+  [ -f "$f" ] || continue
+  size=$(wc -l < "$f" | tr -d ' ')
+  name=$(basename "$f" .md)
+  [ "$size" -gt 30 ] && echo "BLOAT: $name ($size lines > 30) — 슬림화 검토"
 done
 ```
 
@@ -115,37 +114,36 @@ done
 echo "config schema alignment 검사 완료"
 ```
 
-#### 자동화-4. Dispatcher case coverage (career-os scope 한정 — run_now.sh ↔ prd.md + flow.md)
+#### 자동화-4. Skill docs coverage
 
 ```bash
-DISPATCHER=career-os/scripts/command-router/run_now.sh
-[ -f "$DISPATCHER" ] || { echo "DISPATCHER_NOT_FOUND: $DISPATCHER"; exit 0; }
-# dispatcher case 목록 추출
-CASES=$(grep -oE '^\s+[a-z][a-z-]+\)' "$DISPATCHER" | tr -d ' )' | sort -u)
-echo "Dispatcher cases: $CASES"
-for c in $CASES; do
-  grep -q "$c" career-os/docs/prd.md \
-    || echo "PRD_MISSING: dispatcher case '$c' not in prd.md"
-  grep -q "$c" career-os/docs/flow.md \
-    || echo "FLOW_MISSING: dispatcher case '$c' not in flow.md"
+for skill in career-os/.claude/skills/*/SKILL.md; do
+  [ -f "$skill" ] || continue
+  name=$(basename "$(dirname "$skill")")
+  grep -q "$name" career-os/docs/prd.md career-os/docs/flow.md career-os/docs/code-architecture.md \
+    || echo "SKILL_DOC_MISSING: $name not referenced in career-os docs"
 done
 ```
 
 #### 자동화-5. Prohibited terms
 
 ```bash
-# 금지 용어: § 기호 / 옛 subprocess 지시문 / 매트릭스
-for f in career-os/docs/*.md ai-nodes/docs/*.md \
+# 금지 용어 검사.
+# ADR 본문은 과거 결정 기록이라 표현만으로 수정하지 않는다.
+# docs/docs-style.md는 정책 원문이라 금지 표현 예시를 담을 수 있다.
+for f in career-os/docs/*.md docs/*.md docs/adr/INDEX.md \
          career-os/.claude/skills/*/SKILL.md .claude/skills/*/SKILL.md; do
   [ -f "$f" ] || continue
-  grep -n "§" "$f" && echo "PROHIBITED: § in $f"
-  # 옛 subprocess 지시문: common-pitfalls/harness/6-7-references-audit.md
-  # 문자열 변수 분리로 grep 자기 오탐 방지
+  [ "$f" = "docs/docs-style.md" ] && continue
+  P_SIGIL=$(printf '\302\247')
+  grep -n "$P_SIGIL" "$f" && echo "PROHIBITED: 섹션 기호 in $f"
+  # 폐기된 실행 지시문: 문자열 변수 분리로 grep 자기 오탐 방지
   P1="Output only valid JS""ON"; P2="Do not output mark""down"; P3="claude --json-sche""ma"
   grep -n "$P1\|$P2\|$P3" "$f" \
-    && echo "PROHIBITED: 옛 subprocess 지시문 in $f"
-  grep -n "매트릭스\|matrix" "$f" \
-    && echo "PROHIBITED: 매트릭스 용어 in $f"
+    && echo "PROHIBITED: 폐기된 실행 지시문 in $f"
+  P4="매""트릭스"; P5="mat""rix"
+  grep -n "$P4\|$P5" "$f" \
+    && echo "PROHIBITED: 금지 외래어 in $f"
 done
 echo "prohibited terms 검사 완료"
 ```
@@ -158,7 +156,7 @@ echo "prohibited terms 검사 완료"
 
 ai-nodes 도메인 특화 검사:
 - ADR 본문의 skill 이름 ↔ 실제 `.claude/skills/*/SKILL.md` 존재 여부
-- ADR 본문의 dispatcher case 이름 ↔ `run_now.sh` 실제 case 존재 여부
+- ADR 본문의 skill 이름 ↔ 실제 `.claude/skills/*/SKILL.md` 존재 여부
 - ADR 본문의 config 파일 경로 ↔ `career-os/config/` 실제 파일 존재 여부
 - Status=Accepted인 ADR의 결정이 코드에 미반영된 경우 → drift 의심
 - Quick Index Status ↔ ADR 본문 Status 라인 불일치
@@ -194,8 +192,8 @@ ADR 폐기 후보 유형 (ai-nodes 변형):
 |---|---|---|
 | 패키지 선택 기록만 | "Bun 사용" | package.json으로 자명 |
 | 디렉터리 구조 변경 | "scripts/ 분리" | 실제 트리로 자명 |
-| 단순 마이그 기록 | "run_now.sh 이름 변경" | git log로 자명 |
-| Dispatcher case 추가 | "smoke 명령 추가" | run_now.sh로 자명 |
+| 단순 마이그 기록 | "파일 이름 변경" | git log로 자명 |
+| skill 진입점 추가 | "smoke skill 추가" | SKILL.md와 docs/flow.md로 자명 |
 
 유지 기준 (하나 이상 해당 시 보존):
 1. 라이브러리 고유 함정 / 직관에 반하는 API 특성
@@ -224,7 +222,7 @@ ADR 폐기 후보 유형 (ai-nodes 변형):
 
 ### Summary
 - 검사 파일: N개 / ADR: N개
-- 자동화 검사: Index sync X건 / Bloat Y건 / Schema Z건 / Dispatcher W건 / Prohibited V건
+- 자동화 검사: Index sync X건 / Bloat Y건 / Schema Z건 / Skill docs W건 / Prohibited V건
 - 5축 발견: Decay A / Bloat B / Clarity C / Duplication D / Self-Evidence E
 
 ### Critical (즉시 수정 권장)
@@ -251,7 +249,7 @@ ADR 폐기 후보 유형 (ai-nodes 변형):
 |---|---|
 | adr.md 파일 없음 (그 외 워크스페이스) | stderr warn + 해당 scope 건너뜀 |
 | career-os/docs/adr/INDEX.md 없음 | INDEX_MISSING 출력 + 개별 파일 Bloat 검사만 진행 |
-| dispatcher 파일 없음 | 자동화-4 skip, 수동 감사만 진행 |
+| skill 파일 없음 | 자동화-4 skip, 수동 감사만 진행 |
 | config/ 없음 | 자동화-3 skip |
 | Quick Index 없음 (미작성) | Index sync 검사 → MISSING 전수 보고 |
 | scope 인식 불가 | "career-os / ai-nodes / all 중 하나로 재호출 요청" |
@@ -265,4 +263,6 @@ ADR 폐기 후보 유형 (ai-nodes 변형):
 
 ## Why this design
 
-ADR-003 (ai-nodes/docs/adr.md): 현재 28 ADR 중 drift 5+개 — AI 에이전트가 어떤 결정이 살아있는지 추론 불가. fos-blog 5축 구조를 차용하되 ai-nodes 도메인 (Drizzle→config json / page.tsx→dispatcher case / SKILL.md trigger pattern)으로 변형. 발견 전용 + 사용자 승인 후 수정 분리로 의도하지 않은 docs 파괴 방지.
+ADR-003 (docs/adr/): ADR drift가 누적되면 AI 에이전트가 어떤 결정이 살아있는지 추론하기 어렵다.
+fos-blog 5축 구조를 차용하되 ai-nodes 도메인으로 변형했다.
+발견 전용 + 사용자 승인 후 수정 분리로 의도하지 않은 docs 파괴를 방지한다.

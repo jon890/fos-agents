@@ -1,5 +1,5 @@
 ---
-id: 6-9
+id: 6-8
 category: harness
 triggers:
   - sigil
@@ -13,7 +13,7 @@ source:
 related: []
 ---
 
-# 6-9. sigil 자체 인용 self-positive
+# 6-8. sigil 자체 인용 self-positive
 
 ## 증상
 

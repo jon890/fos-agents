@@ -30,11 +30,10 @@ plan-and-build task와 phase 작성 중 반복된 실패 패턴의 라우터다.
 | 2-1 | workspace | 다른 워크스페이스, cross-workspace | [2-1-cross-workspace-assets.md](workspace/2-1-cross-workspace-assets.md) | path가 현재 workspace, `_shared`, `.claude/skills` 범위 |
 | 2-2 | workspace | 새 config, 스키마 누락 | [2-2-config-schema.md](workspace/2-2-config-schema.md) | 새 config와 data-schema 갱신 동반 |
 | 3-1 | docs-data | docs 아래 데이터, json, csv | [3-1-data-under-docs.md](docs-data/3-1-data-under-docs.md) | 데이터는 `<workspace>/data/` |
-| 3-2 | docs-data | ADR 저장 위치, 개별 ADR, append | [3-2-adr-storage-mix.md](docs-data/3-2-adr-storage-mix.md) | workspace별 ADR 방식 준수 |
+| 3-2 | docs-data | ADR 저장 위치, 개별 ADR, append | [3-2-adr-storage-mix.md](docs-data/3-2-adr-storage-mix.md) | root와 career-os는 `docs/adr/`, 그 외는 `docs/adr.md` |
 | 3-3 | docs-data | phase에서 docs 수정, docs-first | [3-3-docs-in-phase.md](docs-data/3-3-docs-in-phase.md) | docs 변경은 task 실행 전 별도 commit |
-| 4-1 | runner | runner 직접 호출, dispatcher 우회 | [4-1-dispatcher-bypass.md](runner/4-1-dispatcher-bypass.md) | `run_now.sh <command>` 경유 |
-| 4-2 | runner | usage, cost, claude output | [4-2-usage-persistence.md](runner/4-2-usage-persistence.md) | `claude_persist_usage` 호출 보장 |
-| 4-3 | runner | Discord, webhook, curl | [4-3-direct-webhook.md](runner/4-3-direct-webhook.md) | 알림 helper 경유 |
+| 4-1 | execution | agent CLI, skill 위임, 하드코딩 | [4-1-agent-cli-hardcoding.md](execution/4-1-agent-cli-hardcoding.md) | skill 위임은 `/<skill> [args]` 의도 표현 |
+| 4-2 | execution | Discord, webhook, curl, 알림 | [4-2-direct-webhook.md](execution/4-2-direct-webhook.md) | 공용 알림 helper 경유 |
 | 5-1 | git | force push, no-verify, hooks | [5-1-force-push-hooks-skip.md](git/5-1-force-push-hooks-skip.md) | 위험 플래그 0건 |
 | 5-2 | git | 여러 commit, 무관 변경 | [5-2-unrelated-commits.md](git/5-2-unrelated-commits.md) | commit별 단일 관심사 |
 | 5-3 | git | fos-study, 외부 저장소 | [5-3-fos-study-direct-commit.md](git/5-3-fos-study-direct-commit.md) | 검증된 runner 경유 |
@@ -46,6 +45,5 @@ plan-and-build task와 phase 작성 중 반복된 실패 패턴의 라우터다.
 | 6-4 | harness | 검증 미실행, success 추정 | [6-4-unrun-verification.md](harness/6-4-unrun-verification.md) | raw value stdout 출력 후 비교 |
 | 6-5 | harness | 제거, 삭제, additive | [6-5-destructive-to-additive.md](harness/6-5-destructive-to-additive.md) | 반증 grep으로 잔재 0건 확인 |
 | 6-6 | harness | Write 위장, prose-only | [6-6-write-disguised-as-prose.md](harness/6-6-write-disguised-as-prose.md) | draft 파일과 commit 개수 self-check |
-| 6-7 | harness | SKILL.md 재작성, references audit | [6-7-references-audit.md](harness/6-7-references-audit.md) | references 옛 subprocess 키워드 grep |
-| 6-8 | harness | cwd, workspace path | [6-8-cwd-workspace-mismatch.md](harness/6-8-cwd-workspace-mismatch.md) | 첫 bash에서 repo root로 이동 |
-| 6-9 | harness | sigil, section mark, tilde | [6-9-sigil-self-positive.md](harness/6-9-sigil-self-positive.md) | literal 대신 Unicode 이름과 escape 변수 사용 |
+| 6-7 | harness | cwd, workspace path | [6-7-cwd-workspace-mismatch.md](harness/6-7-cwd-workspace-mismatch.md) | 첫 bash에서 repo root로 이동 |
+| 6-8 | harness | sigil, section mark, tilde | [6-8-sigil-self-positive.md](harness/6-8-sigil-self-positive.md) | literal 대신 Unicode 이름과 escape 변수 사용 |

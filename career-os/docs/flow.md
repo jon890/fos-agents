@@ -216,10 +216,12 @@ discovered
 면접 준비 흐름은 역할 단위 진단, 단계별 준비, 매일 답변 드릴로 나뉜다.
 
 ```text
-Use skill: /job-fit-analyzer [context]
-  -> 타깃 역할과 후보자 프로필 읽기
-  -> 강점, 부족분, 준비 우선순위 진단
-  -> data/reports/job-fit-YYYY-MM-DD.md 작성
+Use skill: /job-fit-analyzer [역할]
+  -> 타깃 해석(인자 또는 mvp-target fallback) + 후보자 프로필·baseline 읽기
+  -> 같은 역할 지난 진단 있으면 changeSince 반영
+  -> JobFitRun JSON 정본 생성(verdict·careerPath·interviewStrategy 1급, reinforcement 부차)
+  -> data/reports/job-fit-YYYY-MM-DD-<slug>.json 작성 → render_job_fit.ts로 md 파생
+  -> nextActions 라우팅(최우선 갭 → study-pack)  [ADR-096]
 ```
 
 ```text
@@ -243,7 +245,7 @@ Use skill: /behavioral-interview-drill
 
 주요 산출물:
 
-- `data/reports/job-fit-YYYY-MM-DD.md`
+- `data/reports/job-fit-YYYY-MM-DD-<slug>.{json,md}` (JSON 정본 + md 파생, ADR-096)
 - `data/reports/stage-prep-YYYY-MM-DD.md`
 - `data/runtime/drill-log-YYYY-MM-DD.jsonl`
 - `config/study-progress.json`

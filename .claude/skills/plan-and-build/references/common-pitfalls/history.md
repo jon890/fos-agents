@@ -8,8 +8,7 @@
 - 2026-05-13: plan002-config-consolidation. 6-4와 6-5를 신설했다.
 - 2026-05-13: plan004-shared-helpers-ts. 6-1을 강화했다.
 - 2026-05-14: plan013-study-pack-writer-native. 6-6을 신설했다.
-- 2026-05-15: plan015. 6-7을 신설했다.
-- 2026-05-19: plan024와 plan002 1차 실행 전 hotfix. 6-8과 6-9를 신설했다.
+- 2026-05-19: plan024와 plan002 1차 실행 전 hotfix. 6-7과 6-8을 신설했다.
 - 2026-05-19: apartment plan003 ADR-005 1차 작성. 1-5를 신설했다.
 - 2026-05-19: 전면 재구성. 표 인덱스와 본문 slim 구조로 정리했다.
 - 2026-06-07: background 구현 worktree 정책 강화. 5-4와 5-5를 신설했다.

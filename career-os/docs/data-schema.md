@@ -1276,7 +1276,8 @@ plan086 이후 `tech-interview-drill` / `behavioral-interview-drill`이 `weak_sp
 |---|---|---|
 | `data/reports/baseline/YYYY-MM-DD/report.md` | legacy `interview-prep-analyzer` baseline | 큐레이션 10파일 + 7섹션 고위험 영역 종합 진단 |
 | `data/reports/daily/YYYY-MM-DD/report.md` | legacy `interview-prep-analyzer` daily | 토픽 1개 3-5파일 + 5섹션 집중 점검 |
-| `data/reports/job-fit-YYYY-MM-DD.md` | `job-fit-analyzer` | 타깃 직무 역할 단위 핏 분석 + 부족분 갭 진단 |
+| `data/reports/job-fit-YYYY-MM-DD-<slug>.json` | `job-fit-analyzer` | **정본** JobFitRun(schemaVersion 1, `scripts/job-fit-analyzer/jobfit_schema.ts`). `verdict`(go/no-go)·`careerPath`·`interviewStrategy` 1급, `reinforcement` 부차. `targetRole`(자연어 인자 또는 mvp-target fallback + slug), `nextActions`, `changeSince`(ADR-096) |
+| `data/reports/job-fit-YYYY-MM-DD-<slug>.md` | `job-fit-analyzer` | 위 정본에서 `render_job_fit.ts --format md` 파생 |
 | `data/reports/stage-prep-YYYY-MM-DD.md` | `interview-stage-prep` | 1차/최종/오퍼 단계별 실전 준비 자료 |
 
 baseline 모드는 `config/baseline-core-files.json` 큐레이션 집합 사용.

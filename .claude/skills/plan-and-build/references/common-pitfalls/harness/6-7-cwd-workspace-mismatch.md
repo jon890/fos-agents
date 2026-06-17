@@ -1,5 +1,5 @@
 ---
-id: 6-8
+id: 6-7
 category: harness
 triggers:
   - cwd
@@ -12,7 +12,7 @@ source:
 related: []
 ---
 
-# 6-8. run-phases.py cwd와 workspace path 불일치
+# 6-7. run-phases.py cwd와 workspace path 불일치
 
 ## 증상
 
