@@ -10,6 +10,9 @@
 
 # Generated task outputs
 **/data/
+# 공개 질문 풀은 추적 (public-safe static assets)
+!**/data/question-bank/
+!**/data/question-bank/**
 **/logs/
 **/tmp/
 **/private/

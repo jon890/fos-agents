@@ -233,6 +233,10 @@ cd career-os
 # 활성 공고 수집 + 3 티어 추천 (ADR-030)
 /position-recommender [컨텍스트] [채용공고 file]
 
+# 면접 드릴 (비공개 career-os 산출물)
+# 매일 기술 면접 질문 1문장 답변·채점·약점 환류
+/tech-interview-drill
+
 # 지원 준비 루프 (비공개 career-os 산출물)
 # 공고별 지원 패키지 생성
 /application-package-writer <posting-path-or-context>
