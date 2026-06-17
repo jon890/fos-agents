@@ -226,8 +226,8 @@ cd career-os
 # 추천·분석 (비공개 career-os 리포트)
 # 아침 토픽 추천 + 후보 refresh + live-coding seed (ADR-026, ADR-070)
 /study-topic-recommender [context]
-# baseline/daily/stage 면접 준비 자연어 분기 (ADR-027, ADR-048)
-/interview-prep-analyzer [baseline|daily|topic|first-round]
+# 타깃 직무 역할 단위 핏·갭 진단 (ADR-092)
+/job-fit-analyzer
 # 후보자 자산 Append 갱신 (ADR-028)
 /candidate-baseline-suggester
 # 활성 공고 수집 + 3 티어 추천 (ADR-030)
