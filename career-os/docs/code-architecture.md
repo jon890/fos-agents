@@ -137,6 +137,7 @@ career-os/
 │   │   └── mvp_target_schema.ts        legacy 면접 단계 설정 zod 검증 보조
 │   ├── interview-drill/                (plan086 신규 — 공용 드릴 엔진, ADR-019 scripts 분리 원칙 준수)
 │   │   └── drill-engine.ts             질문 선정(간격 반복) + 채점 + 기록 + 약점 환류 + study-pack 위임
+│                                       질문 정본은 public/question-bank(일반) + private/question-bank(개인), ADR-097
 │                                       (tech-interview-drill, behavioral-interview-drill 공유 — ADR-031 준수, scripts/_lib 미사용)
 │
 ├── .claude/skills/                       ← agent skill 정본 (plan006 후, ADR-019, ADR-002, ADR-085)
