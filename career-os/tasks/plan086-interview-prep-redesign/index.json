@@ -2,7 +2,7 @@
   "name": "plan086-interview-prep-redesign",
   "description": "면접/지원 준비 flow를 역할별 단일 책임 스킬로 재편한다. 매일 답변 연습 → 실약점 진단 → 보강 공부팩의 닫힌 루프를 만든다. interview-prep-analyzer를 job-fit-analyzer로 리네임(daily 제거, 핏·갭 진단 리포커스), tech-interview-drill·behavioral-interview-drill(신규, 공용 드릴 엔진 공유), 면접 단계 준비 스킬(신규, stage 분리), candidate-baseline-suggester 제거(ADR-028 폐기). 약점 진단 근거를 정적 학습 노트에서 실제 답변 성능으로 전환한다(ADR-092).",
   "created_at": "2026-06-17T00:00:00+09:00",
-  "updated_at": "2026-06-17T14:09:46+09:00",
+  "updated_at": "2026-06-17T05:10:14.044725+00:00",
   "status": "completed",
   "current_phase": 6,
   "total_phases": 6,
@@ -135,7 +135,8 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 900
+      "timeout": 900,
+      "commitSha": "1eb67c1fce49"
     }
   ]
 }
