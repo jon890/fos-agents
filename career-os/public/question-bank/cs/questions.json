@@ -102,5 +102,31 @@
       "분산 서버에서 counter 정합성은 어떻게 맞추나요?",
       "사용자별 limit과 IP별 limit을 함께 쓰면 어떤 장단점이 있나요?"
     ]
+  },
+  {
+    "id": "cs-005",
+    "category": "cs",
+    "difficulty": "intermediate",
+    "question": "HTTP Cache-Control 헤더의 주요 지시어(max-age, no-cache, no-store, must-revalidate)를 설명하고, CDN 환경에서 어떻게 활용하겠습니까?",
+    "intent": "HTTP 캐싱 메커니즘과 실제 적용 감각을 확인한다.",
+    "answerSignals": [
+      "max-age로 freshness 결정, no-cache는 재검증 필수, no-store는 저장 자체 금지 구분",
+      "ETag와 Last-Modified를 이용한 조건부 요청과 304 응답 흐름",
+      "CDN에서 public/private 지시어로 엣지 캐시 vs 브라우저 캐시를 분리하는 설계"
+    ],
+    "source": "public-general-cs-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "정적 자산 배포, CDN 설계, API 응답 캐싱 최적화 질문으로 선별한다.",
+    "normalizedFrom": "HTTP Cache-Control 헤더 개념을 CDN 활용 설계 질문으로 정규화",
+    "topic": "http-caching",
+    "tags": [
+      "http",
+      "cache",
+      "cdn"
+    ],
+    "followUps": [
+      "CDN에서 max-age와 s-maxage를 다르게 설정하는 이유는 무엇인가요?",
+      "stale-while-revalidate는 어떤 상황에 유용한가요?"
+    ]
   }
 ]

@@ -180,5 +180,31 @@
       "deadlock과 단순 lock 대기(timeout)는 어떻게 구분하나요?",
       "재시도로 deadlock을 흡수할 때 주의할 점은 무엇인가요?"
     ]
+  },
+  {
+    "id": "database-008",
+    "category": "database",
+    "difficulty": "intermediate",
+    "question": "Connection Pool 크기를 어떻게 결정하고, 너무 작거나 클 때 각각 어떤 문제가 발생하는지 설명해 주세요.",
+    "intent": "리소스 설계와 성능 병목 이해를 확인한다.",
+    "answerSignals": [
+      "CPU 코어 수와 IO 대기 시간을 기준으로 크기를 산정하는 방법(예: HikariCP 권장식)",
+      "풀이 너무 작으면 커넥션 대기로 지연 증가, 너무 크면 DB 서버 과부하와 context switch 비용",
+      "wait timeout, active/idle connection metric으로 현재 설정의 적절성을 관찰하는 방법"
+    ],
+    "source": "public-general-database-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "HikariCP, DB 성능 튜닝, connection 관련 장애 경험을 확인할 때 선별한다.",
+    "normalizedFrom": "Connection Pool 설정 주제를 크기 결정 근거와 장애 패턴 질문으로 정규화",
+    "topic": "connection-pool",
+    "tags": [
+      "database",
+      "connection-pool",
+      "performance"
+    ],
+    "followUps": [
+      "HikariCP의 권장 공식(CPU 코어 * 2 + 1)의 근거는 무엇인가요?",
+      "connection pool 고갈을 실시간으로 탐지하려면 어떤 지표를 봐야 하나요?"
+    ]
   }
 ]

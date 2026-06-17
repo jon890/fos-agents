@@ -102,5 +102,31 @@
       "consumer lag이 늘 때 scale-out만 하면 충분한가요?",
       "dead-letter queue를 언제 다시 처리하나요?"
     ]
+  },
+  {
+    "id": "operations-005",
+    "category": "operations",
+    "difficulty": "advanced",
+    "question": "외부 서비스 호출 실패율이 높아질 때 Circuit Breaker를 어떻게 설계하고, Closed·Open·Half-Open 상태 전이를 어떻게 결정하겠습니까?",
+    "intent": "장애 격리와 복원력 설계 이해를 확인한다.",
+    "answerSignals": [
+      "슬라이딩 윈도우로 실패율을 계산해 임계값 초과 시 Open 전환",
+      "Open 상태에서 빠른 실패(fail-fast)로 downstream 부하를 차단",
+      "Half-Open에서 제한적 호출로 복구 여부를 확인 후 상태 결정"
+    ],
+    "source": "public-general-operations-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "MSA나 외부 의존성이 많은 서비스의 장애 격리 설계 질문으로 선별한다.",
+    "normalizedFrom": "Circuit Breaker 패턴을 운영 시나리오 설계 질문으로 정규화",
+    "topic": "circuit-breaker",
+    "tags": [
+      "resilience",
+      "circuit-breaker",
+      "fault-tolerance"
+    ],
+    "followUps": [
+      "Bulkhead 패턴을 Circuit Breaker와 함께 쓰는 이유는 무엇인가요?",
+      "Fallback은 어떤 방식으로 구현하나요?"
+    ]
   }
 ]

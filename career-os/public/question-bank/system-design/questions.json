@@ -102,5 +102,31 @@
       "read replica로 해결되지 않는 병목은 무엇인가요?",
       "shard key를 잘못 고르면 어떤 문제가 생기나요?"
     ]
+  },
+  {
+    "id": "system-design-005",
+    "category": "system-design",
+    "difficulty": "advanced",
+    "question": "Kafka 파티션, Consumer Group, Offset의 관계를 설명하고, 파티션 수와 컨슈머 수를 어떻게 맞춰 병렬 처리를 설계하겠습니까?",
+    "intent": "Kafka 분산 소비 모델과 병렬성 설계 이해를 확인한다.",
+    "answerSignals": [
+      "파티션이 병렬성의 단위이고 컨슈머 수가 파티션 수를 넘으면 idle이 생기는 구조 설명",
+      "Consumer Group이 Offset을 파티션별로 독립 관리해 여러 그룹이 같은 토픽을 독립 소비",
+      "리밸런싱 시 처리 중단 최소화와 consumer lag 모니터링 방법"
+    ],
+    "source": "public-general-system-design-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "비동기 처리, 이벤트 파이프라인, 대용량 메시지 설계 질문으로 선별한다.",
+    "normalizedFrom": "Kafka 핵심 개념을 병렬 처리 설계 질문으로 정규화",
+    "topic": "kafka-design",
+    "tags": [
+      "kafka",
+      "event-streaming",
+      "distributed"
+    ],
+    "followUps": [
+      "파티션 수보다 컨슈머가 많으면 어떻게 되나요?",
+      "Exactly-Once Semantics를 Kafka에서 어떻게 구현하나요?"
+    ]
   }
 ]
