@@ -2,9 +2,9 @@
   "name": "plan089-question-bank-unify",
   "description": "질문 정본을 public/question-bank/ 하나로 1원화한다(ADR-097). public 질문 스키마에 topic 필드 추가(weak_spots 키), behavioral 카테고리 신설, data/question-bank/ 드릴 풀 폐기, drill-engine을 public(일반)+private(개인) merge로 재작성, interview-asset-writer 개인 질문 생성 확장 + 드릴 즉석 생성 경로, question-bank-collector behavioral 확장. 개인 맞춤 질문은 private/question-bank/{behavioral,tech}-personal.jsonl 정본으로 분리.",
   "created_at": "2026-06-17T00:00:00+09:00",
-  "updated_at": "2026-06-17T00:00:00+09:00",
-  "status": "pending",
-  "current_phase": 1,
+  "updated_at": "2026-06-18T00:00:00+09:00",
+  "status": "completed",
+  "current_phase": 5,
   "total_phases": 5,
   "error_message": null,
   "blocked_reason": null,
@@ -48,44 +48,83 @@
       "number": 1,
       "title": "public 질문 topic 필드 추가 + behavioral 카테고리 신설 + validate.ts 동반 수정",
       "file": "phase-01.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 900
+      "timeout": 900,
+      "commitSha": "938d4223ae04"
     },
     {
       "number": 2,
       "title": "data tech 질문 12개 public 기술 카테고리로 이관 + 중복 제거",
       "file": "phase-02.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 900
+      "timeout": 900,
+      "commitSha": "666e4145556c"
     },
     {
       "number": 3,
       "title": "drill-engine loadQuestionBank 재작성 (public+private merge) + 드릴 SKILL.md 의존 자산 갱신",
       "file": "phase-03.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 900
+      "timeout": 900,
+      "commitSha": "79f2a4acee10"
     },
     {
       "number": 4,
       "title": "interview-asset-writer 개인 질문 생성 확장 + 드릴 즉석 생성 경로",
       "file": "phase-04.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "564a8ddb1e13"
     },
     {
       "number": 5,
       "title": "question-bank-collector behavioral 확장 + data/question-bank 폐기 + 잔존 참조 정리 + 통합 검증",
       "file": "phase-05.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "sonnet",
       "timeout": 900
     }
