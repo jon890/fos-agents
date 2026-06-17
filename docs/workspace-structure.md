@@ -104,7 +104,8 @@ ln -s AGENTS.md CLAUDE.md
 - slug는 kebab-case, 간략한 영문 또는 한글 음절 (예: `plan001-docs-and-workspace-standard`).
 - 각 plan 디렉터리 안: `index.json` (계획 메타 + status) + `phase-NN.md` (각 phase 명세).
 - 완료된 plan도 history 보존 목적으로 삭제하지 않는다.
-- draft/ 서브디렉터리 옵션: Write 도구로 draft 파일 먼저 작성 → Read draft → Write target 패턴 (common-pitfalls 6-6 방어).
+- draft/ 서브디렉터리 옵션: Write 도구로 draft 파일 먼저 작성 → Read draft → Write target 패턴.
+  세부 self-check는 `common-pitfalls/harness/6-6-write-disguised-as-prose.md`를 참조한다.
 
 `.claude/skills/planning`은 비대화형 생성기가 아니라 Codex와 사용자가 계획을 합의하기 위한 구조로 사용한다.
 

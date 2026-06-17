@@ -139,7 +139,8 @@ for f in career-os/docs/*.md ai-nodes/docs/*.md \
          career-os/.claude/skills/*/SKILL.md .claude/skills/*/SKILL.md; do
   [ -f "$f" ] || continue
   grep -n "§" "$f" && echo "PROHIBITED: § in $f"
-  # 옛 subprocess 지시문 (common-pitfalls 6-7): 문자열 변수 분리로 grep 자기 오탐 방지
+  # 옛 subprocess 지시문: common-pitfalls/harness/6-7-references-audit.md
+  # 문자열 변수 분리로 grep 자기 오탐 방지
   P1="Output only valid JS""ON"; P2="Do not output mark""down"; P3="claude --json-sche""ma"
   grep -n "$P1\|$P2\|$P3" "$f" \
     && echo "PROHIBITED: 옛 subprocess 지시문 in $f"
