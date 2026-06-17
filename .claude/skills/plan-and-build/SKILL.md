@@ -30,10 +30,12 @@ ai-nodes 워크스페이스의 새 기능이나 대규모 변경을 phase 단위
 ai-nodes의 docs는 단순 참조 문서가 아니라 **의사결정·기술 학습이 누적되는 피드백 루프**다. 매 사이클마다:
 
 - 새 결정 기록 방식은 워크스페이스에 따라 다르다:
+  - **ai-nodes 루트**: `docs/adr/ADR-NNN-slug.md` 새 파일 생성 + `docs/adr/INDEX.md` 행 추가.
   - **career-os**: `docs/adr/ADR-NNN-slug.md` 새 파일 생성 + `docs/adr/INDEX.md` 행 추가 (ai-nodes ADR-015 파일럿).
   - **그 외 워크스페이스**: `<workspace>/docs/adr.md` 맨 아래 *append* (개별 ADR 파일 신설 금지).
 - 명세 변경은 `prd.md` / `data-schema.md` / `flow.md` / `code-architecture.md` 중 영향 받는 문서에 즉시 반영.
-- 학습·회고는 `<workspace>/docs/learn/YYYY-MM-DD-<topic>.md`로.
+- 학습·회고가 행동 규칙으로 굳어지면 ADR, skill, AGENTS 중 책임 문서에 직접 흡수한다.
+  일회성 실행 회고는 task phase 산출물에만 남긴다.
 - 인수인계 메모는 `<workspace>/docs/hand-off/`.
 
 ### 데이터 위치 원칙
@@ -51,7 +53,7 @@ ai-nodes의 docs는 단순 참조 문서가 아니라 **의사결정·기술 학
 - `<workspace>/docs/data-schema.md` — 데이터 스키마 (config / logs / runtime / data)
 - `<workspace>/docs/flow.md` — 사용자·데이터 플로우
 - `<workspace>/docs/code-architecture.md` — 디렉터리 구조, 계층, 외부 의존성
-- `<workspace>/docs/adr.md` — 모든 아키텍처 결정 누적 기록 (career-os는 `docs/adr/` 개별 파일 + `INDEX.md`)
+- `<workspace>/docs/adr.md` 또는 `<workspace>/docs/adr/` — 아키텍처 결정 기록
 - `<workspace>/AGENTS.md` — 워크스페이스 진입점·정책 요약
 - 전역 `CLAUDE.md` — ai-nodes 차원 규칙
 
@@ -65,7 +67,7 @@ ai-nodes의 docs는 단순 참조 문서가 아니라 **의사결정·기술 학
 구현 phase 중 docs/ADR/정책 문서를 고쳐야 할 정도로 애매한 부분이 나오면 구현을 계속하지 말고 `PHASE_BLOCKED`로 보고한다.
 예외는 task `index.json`, phase 파일의 상태, 검증 결과, 완료 기록처럼 실행 이력을 정리하는 변경뿐이다.
 
-- `<workspace>/docs/adr.md` — 새 의사결정 한 항목 누적 (career-os 제외: `docs/adr/ADR-NNN.md` 신규 파일 + `INDEX.md` 갱신)
+- `<workspace>/docs/adr.md` 또는 `<workspace>/docs/adr/` — 새 의사결정 기록
 - `<workspace>/docs/data-schema.md` — 스키마 변경 반영
 - `<workspace>/docs/flow.md` — 플로우 변경 반영
 - `<workspace>/docs/code-architecture.md` — 디렉터리·계층 변경 반영

@@ -187,7 +187,7 @@ bash <workspace>/skills/.../scripts/run_now.sh <command> [args]
 
 ## 의도 메모 (왜)
 
-- 결정 X의 근거 — 다른 옵션을 기각한 이유 (`docs/adr.md` ADR-N 참조)
+- 결정 X의 근거 — 다른 옵션을 기각한 이유 (해당 워크스페이스 ADR 참조)
 - 향후 이 phase가 다음 plan의 어떤 부분을 막아주는가
 
 ## Blocked 조건 (선택)
@@ -260,5 +260,5 @@ bash <workspace>/skills/.../scripts/run_now.sh <command> [args]
 
 - `../plan-and-build/references/common-pitfalls.md` — task 작성 self-check 패턴 누적
 - `<workspace>/docs/code-architecture.md` — runner / dispatcher / extractor 표준 패턴
-- `<workspace>/docs/adr.md` — 결정 이력 (career-os는 `docs/adr/INDEX.md` + 개별 파일)
+- `<workspace>/docs/adr.md` 또는 `<workspace>/docs/adr/` — 결정 이력
 - `_shared/bin/claude_lib.sh` — 토큰 회계 헬퍼 (모든 새 runner 사용 필수)

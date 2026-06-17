@@ -44,7 +44,7 @@ export async function notifyDiscord(message: string, opts?: NotifyOptions): Prom
   }
 
   let lastError: unknown;
-  let proc: Bun.Subprocess<"pipe", "pipe", "inherit"> | null = null;
+  let proc: Bun.Subprocess<"pipe", "pipe", "pipe"> | null = null;
   for (const candidate of OPENCLAW_CANDIDATES) {
     try {
       proc = Bun.spawn([candidate, ...args], {

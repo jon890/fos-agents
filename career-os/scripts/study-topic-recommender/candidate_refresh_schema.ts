@@ -76,7 +76,7 @@ export interface CandidateRefreshReport {
 
 // ── config에 자동 반영되는 후보 항목 (ADR-070) ────────────────────────────────
 
-export interface AutoCandidateEntry {
+export interface AutoCandidateEntry extends Record<string, unknown> {
   key: string;
   title: string;
   domain: string;
@@ -236,8 +236,10 @@ export function parseDecisions(raw: unknown): ParseResult<CandidateRefreshDecisi
 
 // ── AutoCandidateEntry 판별 ───────────────────────────────────────────────────
 
-export function isAutoCandidate(
-  entry: Record<string, unknown>
-): entry is AutoCandidateEntry {
-  return entry.source === "llm-candidate-refresh";
+export function isAutoCandidate(entry: unknown): entry is AutoCandidateEntry {
+  return (
+    !!entry &&
+    typeof entry === "object" &&
+    (entry as Record<string, unknown>).source === "llm-candidate-refresh"
+  );
 }

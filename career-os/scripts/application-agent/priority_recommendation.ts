@@ -184,6 +184,8 @@ function buildUpdate(
   const snapshot = RecommendationSnapshotSchema.parse({
     generatedAt: new Date().toISOString(),
     sourceReportPath: context.sourceReportPath,
+    actionStage: stage,
+    priorityRank,
     postingAnalysis: {
       activeEvidence: deriveActiveEvidence(candidate, sourceText),
       role: candidate.role,
@@ -432,7 +434,9 @@ function applyUpdates<T extends FrontdoorQueueRecord | ApplicationLedgerRecord>(
   schema: { parse: (input: unknown) => T },
 ): T[] {
   return records.map((record) => {
-    const id = String(record[idField]);
+    const id = idField === 'queueId'
+      ? (record as FrontdoorQueueRecord).queueId
+      : (record as ApplicationLedgerRecord).id;
     const update = updates.get(id);
     if (!update) return record;
     return schema.parse({
