@@ -110,6 +110,114 @@ skill 또는 추천기 실행
 
 plan068은 이 원칙을 기준으로 reader inventory를 만든 뒤, 죽은 config reader 제거와 fallback migration을 순서대로 수행한다.
 
+### `/job-fit-analyzer` (native skill — plan086, interview-prep-analyzer 리네임 + 리포커스)
+
+native skill 패턴: `claude -p "/job-fit-analyzer [args]"` → SKILL.md 자동 로드 → Claude가 도구로 직접 처리.
+
+```
+호출: claude -p "/job-fit-analyzer [자연어 컨텍스트]"
+  ↓
+Read: config/mvp-target.json + config/candidate-profile.md
+  ↓
+Claude 분석:
+  - 타깃 직무 역할 단위 핏 분석
+  - 후보자 강점·경험 vs 직무 요구사항 매핑
+  - 부족분 갭 진단 (스킬·경험·키워드 단위)
+  ↓
+Write: data/reports/job-fit-YYYY-MM-DD.md
+  ↓
+Discord 알림 [완료]
+```
+
+git push 없음 (비공개 리포트).
+기존 `interview-prep-analyzer` baseline·daily 모드는 plan086 이후 `job-fit-analyzer`로 기능이 재편된다.
+
+상세 동작: `career-os/.claude/skills/job-fit-analyzer/SKILL.md` Workflow 섹션 참조.
+
+### `/tech-interview-drill` (native skill — plan086 신규)
+
+native skill 패턴: `claude -p "/tech-interview-drill"` → SKILL.md 자동 로드 → Claude가 도구로 직접 처리.
+
+```
+호출: claude -p "/tech-interview-drill"
+  ↓
+Read: data/question-bank/tech-questions.jsonl
+Read: config/study-progress.json (weak_spots — next_review_date + status 기준 질문 선정)
+  ↓
+[질문 선정 — 간격 반복]
+  - status=active이고 next_review_date ≤ 오늘인 질문 우선 선정
+  - 신규 질문(pass_count=0)은 next_review_date 무시하고 포함
+  ↓
+[대화 답변 루프]
+  사용자가 답변 → Claude 3단계 채점 (pass / shallow / fail / unknown)
+  ↓
+[기록]
+  Append: data/runtime/drill-log-YYYY-MM-DD.jsonl
+  Edit: config/study-progress.json (weak_spots 갱신 — 누적 횟수 + next_review_date 계산)
+  ↓
+[약점 환류]
+  fail / shallow 점수 → study-pack-writer 비동기 위임 (study_pack_dispatched=true 기록)
+```
+
+git push 없음.
+`tech-interview-drill`과 `behavioral-interview-drill`은 `scripts/interview-drill/drill-engine.ts` 공용 드릴 엔진을 공유한다.
+
+상세 동작: `career-os/.claude/skills/tech-interview-drill/SKILL.md` Workflow 섹션 참조.
+
+### `/behavioral-interview-drill` (native skill — plan086 신규)
+
+native skill 패턴: `claude -p "/behavioral-interview-drill"` → SKILL.md 자동 로드 → Claude가 도구로 직접 처리.
+
+```
+호출: claude -p "/behavioral-interview-drill"
+  ↓
+Read: data/question-bank/behavioral-questions.jsonl
+Read: config/study-progress.json (weak_spots — next_review_date + status 기준 질문 선정)
+  ↓
+[질문 선정 — 간격 반복]
+  tech-interview-drill과 동일 엔진, behavioral 질문 풀 적용
+  ↓
+[대화 답변 루프]
+  사용자가 답변 → Claude STAR·가치관 관점 채점 rubric 적용 (pass / shallow / fail / unknown)
+  ↓
+[기록]
+  Append: data/runtime/drill-log-YYYY-MM-DD.jsonl
+  Edit: config/study-progress.json (weak_spots 갱신)
+  ↓
+[약점 환류]
+  fail / shallow 점수 → study-pack-writer 비동기 위임
+```
+
+git push 없음.
+기술 면접 드릴과 달리 STAR 구조(상황·과제·행동·결과)와 가치관 일관성을 채점 기준으로 추가 적용한다.
+
+상세 동작: `career-os/.claude/skills/behavioral-interview-drill/SKILL.md` Workflow 섹션 참조.
+
+### `/interview-stage-prep` (native skill — plan086 신규)
+
+native skill 패턴: `claude -p "/interview-stage-prep [stage]"` → SKILL.md 자동 로드 → Claude가 도구로 직접 처리.
+
+```
+호출: claude -p "/interview-stage-prep [first-round|final-round|offer]"
+  ↓
+Read: config/mvp-target.json (면접 단계 정보 — 회사·직무·일정)
+Read: config/candidate-profile.md
+  ↓
+Claude 분석:
+  - 단계별 예상 질문·답변 리스크·역질문 구성
+  - first-round: 기술 역량 중심 실전 준비
+  - final-round: 문화 핏·리더십·조직 관점 준비
+  - offer: 협상 포인트·역질문·입사 준비 체크리스트
+  ↓
+Write: data/reports/stage-prep-YYYY-MM-DD.md
+  ↓
+Discord 알림 [완료]
+```
+
+git push 없음 (비공개 리포트).
+
+상세 동작: `career-os/.claude/skills/interview-stage-prep/SKILL.md` Workflow 섹션 참조.
+
 ### `/interview-prep-analyzer` (native skill — plan017, baseline + daily 두 모드 자연어 분기)
 
 native skill 패턴: `claude -p "/interview-prep-analyzer [args]"` → SKILL.md 자동 로드 → Claude가 도구로 직접 처리.
@@ -1303,6 +1411,43 @@ fos-career는 이 상태를 보여주되 career-os 원장을 직접 수정하지
 산출물 체인은 `Markdown 이력서 초안 -> design.md 적용 HTML 이력서 -> HTML을 PDF로 변환한 완성 PDF 이력서`다.
 career-os의 `resume-exporter`는 로컬 파일만 생성한다.
 외부 제출 자동화, 로그인, 브라우저 입력은 이 흐름에 넣지 않는다.
+
+## 스킬 입출력 요약 (plan086 재편 기준)
+
+각 스킬의 역할·입력 파일·출력 파일·드릴 위임 흐름을 한눈에 정리한다.
+
+### 핵심 스킬 입출력 표
+
+| 스킬 | 입력 | 출력 | git push |
+|---|---|---|---|
+| `job-fit-analyzer` | `config/mvp-target.json`<br>`config/candidate-profile.md` | `data/reports/job-fit-YYYY-MM-DD.md` | 없음 |
+| `tech-interview-drill` | `data/question-bank/tech-questions.jsonl`<br>`config/study-progress.json` weak_spots | `data/runtime/drill-log-YYYY-MM-DD.jsonl`<br>`config/study-progress.json` (갱신) | 없음 |
+| `behavioral-interview-drill` | `data/question-bank/behavioral-questions.jsonl`<br>`config/study-progress.json` weak_spots | `data/runtime/drill-log-YYYY-MM-DD.jsonl`<br>`config/study-progress.json` (갱신) | 없음 |
+| `interview-stage-prep` | `config/mvp-target.json`<br>`config/candidate-profile.md` | `data/reports/stage-prep-YYYY-MM-DD.md` | 없음 |
+| `question-bank-collector` | fos-study 문서<br>공개 가능 backend/CS 토픽 | `data/question-bank/tech-questions.jsonl`<br>`data/question-bank/behavioral-questions.jsonl` | 없음 |
+| `study-pack-writer` | `sources/fos-study/` | `sources/fos-study/<category>/<topic>.md` | ✓ |
+
+### 드릴 → study-pack-writer 위임 흐름
+
+```text
+tech-interview-drill / behavioral-interview-drill
+  └→ 채점: fail / shallow
+        └→ study-pack-writer 비동기 위임
+              └→ sources/fos-study/<category>/<topic>.md 생성
+                    └→ fos-study commit + push
+              └→ drill-log study_pack_dispatched=true 기록
+```
+
+### question-bank-collector → 질문 풀 보충 흐름
+
+```text
+question-bank-collector
+  └→ data/question-bank/tech-questions.jsonl 보강
+  └→ data/question-bank/behavioral-questions.jsonl 보강
+
+tech-interview-drill / behavioral-interview-drill
+  └→ data/question-bank/*.jsonl 읽기 (간격 반복 질문 선정)
+```
 
 ## 통과 시점에 항상 일어나는 일
 
