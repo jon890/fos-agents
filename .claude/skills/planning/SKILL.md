@@ -40,20 +40,19 @@ task 파일을 **사용자에게 제출하기 전**에 반드시 [`../plan-and-b
 **역할**: CTO
 
 - 기술적으로 구현 가능한지 검증.
-- 기존 코드베이스(워크스페이스 안 + `_shared/bin/`)에서 재사용 가능한 부분 식별.
+- 기존 코드베이스(워크스페이스 안 + `_shared/lib/`)에서 재사용 가능한 부분 식별.
 - 리스크·제약사항 도출.
 - 모호한 부분이 있으면 즉시 사용자와 논의.
 
 **확인할 것**:
 - 기존 config 스키마로 충분한가, 변경이 필요한가? (`docs/data-schema.md` 점검)
-- 기존 dispatcher (`run_now.sh`) 분기로 충분한가, 새 분기 추가가 필요한가?
-- 기존 runner / extractor를 재사용 가능한가?
-- 기존 `_shared/bin/` 헬퍼로 커버되는가, 새 헬퍼가 필요한가?
-- 외부 의존성(`claude` CLI 외) 추가가 필요한가?
+- 기존 skill 또는 script helper로 충분한가, 새 진입점이 필요한가?
+- 기존 `_shared/lib/` helper로 커버되는가, 새 helper가 필요한가?
+- 외부 의존성 추가가 필요한가?
 
 ### 2단계: 기술 스택 검증
 
-- ai-nodes 기존 스택(Python 3 stdlib, bash, claude CLI)으로 충분한지 확인.
+- ai-nodes 기존 스택(Bun TypeScript, Python 3, Bash, agent skill 직접 호출)으로 충분한지 확인.
 - 새 라이브러리 도입이 필요하면 대안 비교 + 사용자와 논의. **신규 외부 의존성은 비용이 크다** — 정당화 없이 도입 금지.
 - MVP 범위에 불필요한 복잡도(예: 별도 서비스, queue, DB)를 추가하지 않는지 검증.
 
@@ -61,8 +60,8 @@ task 파일을 **사용자에게 제출하기 전**에 반드시 [`../plan-and-b
 
 **역할**: 시니어 워크플로 디자이너
 
-- 새 기능이 dispatcher(`run_now.sh`)의 어떤 분기로 들어오는지 명확화.
-- 명령 인자·플래그 조합, env 변수, cron 트리거 등 입력 경로 구체화.
+- 새 기능이 어떤 skill, script, env 변수, cron 트리거로 호출되는지 명확화.
+- 명령 인자와 플래그 조합을 구체화.
 - 정상 흐름 + 에러 흐름 + 빈 상태 + 권한·잠금 충돌 같은 엣지 케이스 점검.
 - 모호한 부분은 전부 사용자에게 질문.
 
@@ -81,18 +80,17 @@ task 파일을 **사용자에게 제출하기 전**에 반드시 [`../plan-and-b
 
 ### 5단계: 흐름 설계
 
-- 새 기능이 dispatcher → runner → claude → extractor → 산출물 흐름의 어디에 들어가는지 한 줄 시퀀스로.
+- 새 기능이 사용자 요청 → agent skill → script/helper → 산출물 흐름의 어디에 들어가는지 한 줄 시퀀스로.
 - 알림 발송 시점 (시작/완료/실패).
 - 잠금이 필요한 경우 `data/runtime/locks/` 사용 명시.
-- 토큰 회계가 자동으로 흘러가는지 (`claude_persist_usage` 호출 위치) 점검.
 
 `docs/flow.md` 갱신 필수.
 
 ### 6단계: 코드 구조 영향 분석
 
 - 새 스킬 디렉터리가 필요한가, 기존 스킬을 확장하는가?
-- 새 runner 추가 시 `_shared/bin/track_task.sh` 래핑 패턴 준수 (ai-nodes CLAUDE.md 2번 참조).
-- dispatcher case 추가 시 해당 워크스페이스 실행 패턴 준수 (AGENTS.md 참조).
+- 새 script helper가 필요한가, 기존 helper를 확장하는가?
+- skill에서 다른 skill을 위임할 때 CLI 하드코딩 없이 `/<skill> [args]` 의도 표현을 쓰는가?
 - 워크스페이스 격리: 다른 워크스페이스 자산을 참조하는가? 참조해야 한다면 정당화.
 
 `docs/code-architecture.md` 갱신 필수.
@@ -105,13 +103,14 @@ task 파일을 **사용자에게 제출하기 전**에 반드시 [`../plan-and-b
 | 데이터 / 스키마 / 산출물 형식 | `data-schema.md` |
 | 호출 시나리오 / 데이터 흐름 | `flow.md` |
 | 디렉터리 / 계층 / 외부 의존 | `code-architecture.md` |
-| 기술 결정 (왜) | `adr.md` 맨 아래 누적 (career-os는 `docs/adr/ADR-NNN-slug.md` 신규 파일 + `INDEX.md` 갱신) |
-| 회고·학습 | `docs/learn/YYYY-MM-DD-<topic>.md` |
+| 기술 결정 (왜) | 워크스페이스 ADR 구조에 맞춰 기록 |
+| 회고·학습 | 행동 규칙으로 굳어지면 ADR, skill, AGENTS 중 책임 문서에 직접 흡수 |
 | 인수인계 메모 | `docs/hand-off/` |
 
 **문서 책임 표 (단일 소스 원칙)**:
 - 같은 정보를 두 문서에 적지 않는다. 다른 문서가 참조해야 하면 ADR 번호로 링크.
 - 새 결정 기록 방식은 워크스페이스에 따라 다르다:
+  - **ai-nodes 루트**: 새 ADR은 `docs/adr/ADR-NNN-slug.md` 새 파일 생성 + `docs/adr/INDEX.md` 행 추가.
   - **career-os**: 새 ADR은 `docs/adr/ADR-NNN-slug.md` 새 파일 생성 + `docs/adr/INDEX.md` 행 추가 (ai-nodes ADR-015 파일럿).
   - **그 외 워크스페이스**: `docs/adr.md` 맨 아래 *append* (개별 ADR 파일 신설 금지).
 - 자명한 결정(예: "버그 수정 위치를 한 줄 옮긴다")은 ADR로 기록하지 않는다.
@@ -175,7 +174,7 @@ task phase를 작성할 때 docs-first materialization phase와 구현 phase를 
 |---|---|
 | 소 (버그 수정, 한 줄 정책 변경) | 1 → 7 → 8 (3·4·5·6 생략) |
 | 중 (기존 기능 확장, 새 토픽 추가) | 1 → 3 → 4 → 6 → 7 → 8 |
-| 대 (신규 dispatcher 분기, 새 runner) | 전체 8단계 |
+| 대 (신규 skill, 새 script helper, 새 데이터 흐름) | 전체 8단계 |
 
 소·중 규모에서도 7단계 docs 영향 분석은 **항상** 수행 — 5문서 drift 방지.
 
@@ -189,6 +188,7 @@ task phase를 작성할 때 docs-first materialization phase와 구현 phase를 
 # cwd: ai-nodes root
 ls <workspace>/tasks/ | grep "plan{후보번호}"
 grep "^## ADR-{후보번호}" <workspace>/docs/adr.md        # career-os 제외
+ls docs/adr/ | grep "^ADR-{후보번호}"                    # ai-nodes root
 ls career-os/docs/adr/ | grep "^ADR-{후보번호}"          # career-os 전용
 ```
 
@@ -215,7 +215,9 @@ plan003-2-cj-oliveyoung-renamer-rollout     # 동일 성격 후속
 ## 의도적으로 안 하는 것
 
 - **본 세션에서 phase 실행**: planning은 task 파일 생성까지만. 실행은 `/plan-and-build`가 별도 세션에서.
-- **ADR 저장 위치 혼용**: career-os는 `docs/adr/` 개별 파일 + `INDEX.md` 구조 (ai-nodes ADR-015 파일럿). 그 외 워크스페이스는 `docs/adr.md` 단일 파일 *append*. 워크스페이스 방식을 섞지 않는다.
+- **ADR 저장 위치 혼용**: ai-nodes root와 career-os는 `docs/adr/` 개별 파일 + `INDEX.md` 구조를 사용한다.
+  그 외 워크스페이스는 `docs/adr.md` 단일 파일 *append*다.
+  워크스페이스 방식을 섞지 않는다.
 - **데이터 파일을 docs/ 아래 둠**: 데이터는 항상 `<workspace>/data/` (ADR-015).
 - **외부 의존성 무비판 도입**: 신규 라이브러리는 1단계·2단계에서 정당화 + 사용자 동의 필수.
 - **워크스페이스 간 자산 참조**: 다른 워크스페이스 코드를 import / read / write 금지.

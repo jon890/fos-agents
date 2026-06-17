@@ -1,295 +1,142 @@
 # AGENTS.md — ai-nodes 모노레포
 
-모든 에이전트(Claude / Codex / Gemini 등)를 위한 정식 가이드 진입점. `CLAUDE.md`는 이 파일의 심볼릭 링크.
+모든 에이전트(Claude / Codex / Gemini 등)를 위한 공통 진입점이다.
+`CLAUDE.md`는 이 파일의 심볼릭 링크다.
 
-상세 워크스페이스 정책은 `<workspace>/AGENTS.md`를 따른다.
-이 파일은 워크스페이스 간 공통 규약과 진입점 목록만 담는다.
+이 파일은 행동 규칙과 문서 라우팅만 담는다.
+구조 설명은 [`docs/code-architecture.md`](docs/code-architecture.md)를 따른다.
+결정의 이유는 [`docs/adr/INDEX.md`](docs/adr/INDEX.md)를 따른다.
 
-## 1. 저장소 구조
+## 읽기 순서
 
-`~/ai-nodes`는 단일 프로젝트가 아닌 **멀티 워크스페이스 컨테이너**다.
-최상위 디렉터리 각각은 자체 skills · data · logs · config를 가진 **독립 작업 워크스페이스**다.
-워크스페이스는 서로 격리되며 다른 워크스페이스의 자산을 교차 참조하지 않는다.
+작업 범위에 맞는 단일 출처를 먼저 연다.
+같은 정의를 여러 문서에 복제하지 않는다.
 
-현재 워크스페이스 5개:
-
-| 워크스페이스 | 자체 가이드 | 특이사항 |
+| 문서 | 책임 | 언제 보는지 |
 |---|---|---|
-| `apartment/` | [`apartment/AGENTS.md`](apartment/AGENTS.md), `apartment/TOOLS.md` | 네이버 부동산 API + agent-browser 결합 |
-| `career-os/` | [`career-os/AGENTS.md`](career-os/AGENTS.md) (= CLAUDE.md 심링크), `docs/` 5문서 | 분리 표준 최초 도입 (ADR-019 → ADR-006 격상) |
-| `stock-investment/` | [`stock-investment/AGENTS.md`](stock-investment/AGENTS.md) | 일일 모닝 브리핑 |
-| `travel/` | [`travel/AGENTS.md`](travel/AGENTS.md) | `trips/<trip-id>/` 단위, ADR-001 의도된 비대칭 (scripts/.claude/skills/.env/config 부재) |
-| `health-care/` | [`health-care/AGENTS.md`](health-care/AGENTS.md) | 무릎 재활 daily 체크인 (knee-patellar-instability, cron 08:30 KST) |
+| [`docs/code-architecture.md`](docs/code-architecture.md) | 루트와 워크스페이스 구조 | 디렉터리, skill, 공용 helper 변경 |
+| [`docs/adr/INDEX.md`](docs/adr/INDEX.md) | 모노레포 결정 이유 | 공통 정책, 구조 변경, 되돌리기 어려운 결정 |
+| [`docs/docs-style.md`](docs/docs-style.md) | 문서 작성 형식 | docs, ADR, AGENTS, SKILL 작성 |
+| `<workspace>/AGENTS.md` | 워크스페이스별 정책 | 특정 워크스페이스 작업 시작 |
 
-공용 영역:
+## 워크스페이스
 
-- `_shared/lib/` — Bun TypeScript 공용 헬퍼 (현재 `notify_discord.ts` 정본 1개).
-  - **워크스페이스 무관 헬퍼만** (ai-nodes ADR-001 정책: 특정 워크스페이스 config·sources·data 의존 금지).
-  - 워크스페이스 한정 헬퍼는 `<workspace>/scripts/<skill>/` 내부에 둔다.
-- `_shared/types/` — 공용 TS 타입.
-- `.claude/skills/` — 저장소 전역 agent skill 본체 (`agent-browser`, `planning`, `plan-and-build`, `workspace-audit`, `docs-check`).
-  `docs-check`는 ai-nodes 5문서와 ADR 건전성 감사 skill이다.
-  `.codex/skills/`는 같은 본체를 가리키는 심링크다.
-- `docs/` — ai-nodes 모노레포 레벨.
-  - `docs/adr.md` — 모노레포 ADR.
-  - `docs/workspace-structure.md` — 워크스페이스 표준 청사진 (plan001 신설, 새 워크스페이스 추가 진입점).
-  - `docs/docs-style.md` — docs / ADR 형식 정책 (ADR-005). 8 패턴 + 한자어 회피 + 거울 구조. 워크스페이스 docs · CLAUDE.md · SKILL.md 모두 본 문서를 따른다.
-  - 워크스페이스 한정 결정은 해당 워크스페이스의 ADR 문서를 따른다.
-    career-os는 `career-os/docs/adr/INDEX.md`와 개별 `ADR-*.md` 파일을 사용한다.
+각 워크스페이스는 독립 작업 영역이다.
+작업을 시작하면 해당 워크스페이스의 `AGENTS.md`를 먼저 읽는다.
 
-### 1-1. 분리 표준 (ADR-006)
+| 워크스페이스 | 가이드 | 책임 |
+|---|---|---|
+| `apartment/` | [`apartment/AGENTS.md`](apartment/AGENTS.md) | 아파트 시세와 인테리어 리포트 |
+| `career-os/` | [`career-os/AGENTS.md`](career-os/AGENTS.md) | 커리어, 면접, 지원 준비 자동화 |
+| `stock-investment/` | [`stock-investment/AGENTS.md`](stock-investment/AGENTS.md) | 일일 주식과 이슈 모니터링 |
+| `travel/` | [`travel/AGENTS.md`](travel/AGENTS.md) | 여행별 일정과 결정 로그 |
+| `health-care/` | [`health-care/AGENTS.md`](health-care/AGENTS.md) | 무릎 재활 체크인 |
 
-`<workspace>/scripts/<name>/` 실행 파일 + `<workspace>/.claude/skills/<name>/{SKILL.md, references/}` 컨텍스트 자산 본체.
+## 작업 경계
 
-career-os ADR-019 비대칭이 ADR-006으로 표준 격상 (2026-05-19). apartment plan007 첫 적용. stock-investment / travel은 audit 시 본 표준 따름.
+- 워크스페이스 간 자산을 교차 참조하지 않는다.
+- 공용 helper는 워크스페이스 무관 코드만 `_shared/`에 둔다.
+- 워크스페이스 한정 helper는 `<workspace>/scripts/<skill>/`에 둔다.
+- 비밀 값은 각 워크스페이스의 `.env`에 둔다.
+- 공개 repo에 커밋되는 문서와 task에는 private home-server 절대 경로를 쓰지 않는다.
+- Discord 등 공개 또는 준공개 채널 답변에서도 private path를 그대로 드러내지 않는다.
+- `career-os/sources/fos-study`는 별도 동기 저장소다.
+  study-pack 계열 작업이 아니면 프로젝트 코드처럼 편집하지 않는다.
 
-상세 청사진: `docs/workspace-structure.md` 2번·6번.
+## Agent Skill
 
-## 2. 실행 모델
+모든 워크스페이스는 agent skill 직접 호출을 표준으로 사용한다.
+문서에서 skill을 위임할 때는 `/<skill> [args]` 형태의 의도 표현으로 적는다.
 
-모든 워크스페이스가 agent skill 직접 호출로 실행된다 (ADR-011, ADR-013).
+- 정본: `<workspace>/.claude/skills/<skill>/SKILL.md`
+- Codex 노출: `<workspace>/.codex/skills/<skill>` 심볼릭 링크
+- 실행 환경: CLI, 서브에이전트, wrapper 중 어떤 방식을 쓸지는 환경이 결정한다.
+- skill 본문과 설명 문구는 한국어를 기본으로 작성한다.
 
-- 정본: `<workspace>/.claude/skills/<skill>/SKILL.md`.
-- Codex 노출: `<workspace>/.codex/skills/<skill>` 심볼릭 링크.
-- 문서상 호출 표현: `/<skill> [args]`.
-- CLI와 thin wrapper는 실행 환경의 호환 경로일 뿐이다.
-- thin wrapper는 `.env` 로드, 시작/실패 알림, stdout 폴백만 담당한다.
-- 현재 에이전트가 SKILL.md 기준으로 수집·합성·산출물 작성·완료 알림을 직접 수행.
-- 데이터 수집 헬퍼(TS·Python)는 skill이 `bun`·`python3` Bash로 호출.
+## 모호함 대응
 
-전환 이력과 과거 경로는 관련 ADR을 따른다.
+요청이나 결정점이 모호하면 즉시 드러낸다.
 
-## 3. 워크스페이스 진입점
+1. 모호함을 1-10점으로 평가한다.
+2. 점수와 사유를 한 줄로 보고한다.
+3. 진행 계획을 먼저 알린다.
+4. 점수 3 이상이면 선택지를 제시하고 사용자 결정을 받는다.
 
-### 3-1. apartment
+조용히 가정하고 진행하지 않는다.
+작은 결정이라도 기본값을 선택했다면 보이게 남긴다.
 
-상세 진입점은 [`apartment/AGENTS.md`](apartment/AGENTS.md)와 `apartment/TOOLS.md`를 따른다.
-apartment는 agent skill 직접 호출을 사용한다.
-수집·정규화 TS 헬퍼는 skill이 `bun` Bash로 호출한다.
+## Planning
 
-### 3-2. career-os
+planning은 Codex와 사용자가 대화로 진행한다.
+planning skill의 비대화형 CLI 호출은 기본 사용하지 않는다.
 
-상세 진입점은 [`career-os/AGENTS.md`](career-os/AGENTS.md)를 따른다.
-career-os는 agent skill 직접 호출을 표준으로 사용한다.
-결정 이력은 `career-os/docs/adr/INDEX.md`에서 확인한다.
+- 새 결정은 구현 전에 docs 또는 ADR에 먼저 반영한다.
+- task 파일은 확정된 결정을 실행 가능한 phase로 옮기는 산출물이다.
+- 비대화형 agent 실행은 합의된 task/phase 구현에만 사용한다.
+- 구현 중 문서 결정이 필요하면 phase를 보류하고 planning으로 되돌린다.
 
-### 3-3. stock-investment / travel
+career-os의 `tasks/plan{N}-<slug>/` 흐름은 필요할 때 다른 워크스페이스에도 별도 결정으로 도입한다.
 
-[`stock-investment/AGENTS.md`](stock-investment/AGENTS.md) · [`travel/AGENTS.md`](travel/AGENTS.md) 참조. 본 모노레포 진입점은 그곳에 정의.
+## Worktree
 
-### 3-4. 새 워크스페이스 추가
+메인 워크트리는 사용자와 Codex가 현재 상태를 확인하는 기준점이다.
+다른 활성 작업과 섞일 수 있으면 별도 git worktree와 branch를 만든다.
 
-`ai-nodes/docs/workspace-structure.md` 10번 체크리스트 참조.
-mkdir + AGENTS.md + CLAUDE.md 심링크 + 5문서 placeholder + tasks/ + config/ + .env.example.
-첫 plan은 5문서 본문 작성 + ADR-001 자리.
+- main 워크트리 직접 편집은 단일 active task이거나 작은 docs/process-only 변경일 때만 허용한다.
+- stage는 intended files만 한다.
+- phase 경계는 commit/push 경계다.
+- 완료 전에는 관련 worktree에서 `git status --short`를 확인한다.
+- 별도 worktree를 만들었다면 clean 상태 확인 후 `git worktree remove <path>`로 정리한다.
 
-## 4. agent skill 호출 패턴
+## Commit And PR
 
-워크스페이스마다 운영 호환 경로가 다를 수 있다.
-문서와 skill 위임은 에이전트 비종속 호출 표현을 우선한다.
+커밋은 관심사 단위로 나눈다.
+한 커밋은 하나의 논리적 변경만 담는다.
 
-- **모든 워크스페이스**: agent skill 직접 호출 — ADR-011/013 단일 패턴.
-  - apartment(ADR-010) / stock-investment(ADR-003) / career-os(ADR-031) 전환 완료.
-  - 운영 runner는 선택된 agent CLI 호환 경로를 계속 쓸 수 있다.
-  - Codex는 `.codex/skills/<skill>` 심볼릭 링크를 통해 같은 본문을 읽는다.
-- **워크스페이스 한정 ts·py 헬퍼**는 `<workspace>/scripts/<skill>/`에. skill이 `bun`·`python3` Bash로 호출.
-- **`_shared/lib`**는 워크스페이스 무관 공용 헬퍼만 (`notify_discord.ts` 등).
+커밋 메시지는 Conventional Commits와 한글 subject를 쓴다.
 
-패턴 변경 시 ADR로 결정 근거 남긴 뒤 진행.
+```text
+<type>[(scope)]: <한글 subject>
+```
 
-## 5. 작업 규칙
-
-- `career-os/sources/fos-study`는 외부 동기 저장소 (`github.com/jon890/fos-study`, `main`).
-  - study-pack 계열 실행 중이 아니면 프로젝트 코드처럼 편집하지 말 것.
-  - `.claude/**` 무시.
-- 자동 생성 리포트는 `<workspace>/data/reports/`로. 별도 큐레이션 싱크 없음.
-- career-os 아키텍처 결정은 `career-os/docs/adr/INDEX.md`와 개별 `ADR-*.md` 파일에 기록한다.
-- 워크플로는 재실행 가능 + 날짜별 멱등. 실시간 수집보다 로컬 git-sync + 파일 읽기 우선.
-- 리포트의 불확실성 명시 — 추측으로 공백 메우지 말고 공백을 기록.
-- 비밀: `<workspace>/config/.env`(career-os 기준) 또는 워크스페이스 root `.env`(ADR-021 이후, 워크스페이스별 격리). `GITHUB_TOKEN`, `DISCORD_CHANNEL_ID` 등.
-- 공개 repo에 커밋되는 docs/task에는 홈 서버 절대 경로를 쓰지 않는다.
-  repo 내부 파일은 repo-relative path로, 사용자 로컬 경로는 필요한 경우 `~/...` 또는 `<home>` placeholder로 쓴다.
-- Discord 등 공개 또는 준공개 채널 답변에서도 private home-server path를 그대로 드러내지 않는다.
-- career-os 비용 규율: 광범위 풀-리포 분석 금지. baseline은 `config/baseline-core-files.json` 큐레이션 집합 안에서, daily는 더 작게(3-5 파일).
-
-## 6. 모호함 대응 규칙
-
-요청 받거나 결정점에서 모호한 부분이 생기면 즉시:
-
-1. 모호함을 **1-10점**으로 평가 (1=완전 명확, 10=완전 미정).
-2. 점수와 사유를 한 줄로 보고.
-3. **점수와 무관하게 진행 계획 먼저 알림** — "이러이러하게 할 계획" 1-2줄 + stop 신호 없으면 진행.
-4. 점수 **3 이상**이면 `AskUserQuestion`으로 옵션 제시 후 논의.
-
-조용히 결정하고 진행하지 않는다. 작은 결정이라도 어떤 기본값을 골랐는지 보이게. 진행 속도보다 정합성 우선.
-
-## 7. 커밋 메시지 컨벤션
-
-Conventional Commits + 한글 subject:
-
-- 헤더: `<type>[(scope)]: <한글 subject>`
-- `type`(영문 소문자, 릴리즈 자동화 호환): `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `style`, `perf`, `build`, `ci`.
-- `scope`: 워크스페이스 또는 모듈명(예: `apartment`, `career-os`, `_shared`).
-- subject: 50자 내외, 마침표 생략.
-- 본문: 한 줄 띄우고 한글 서술. 변경 항목은 `-` 불릿.
-- `Co-Authored-By:` 트레일러는 영어 그대로.
-
-예:
-- `docs(agents): 공용 skills 디렉터리와 agent skill 호출 패턴 문서화`
-- `fix(apartment): Naver 브라우저 수집 실패 시 fallback 경로 보정`
-
-기존 영어 커밋 히스토리는 소급 리라이트하지 않는다.
-
-## 7-1. PR과 작업 산출물 언어 규칙
+- `type`: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `style`, `perf`, `build`, `ci`
+- `scope`: 워크스페이스 또는 모듈명
+- subject: 50자 내외, 마침표 생략
+- trailer: `Co-Authored-By:`, `Signed-off-by:` 등은 영어 원문 유지
 
 새 PR 제목과 본문은 한글로 작성한다.
-GitHub UI나 자동화가 요구하는 고정 키워드, 명령어, 코드 식별자, 경로, commit SHA, bot trailer는 원문을 유지한다.
+GitHub UI, bot, 코드 식별자가 요구하는 고정 키워드는 원문을 유지한다.
 
-- PR 제목: `<type>[(scope)]: <한글 요약>` 형식을 따른다.
-- PR 본문: 목적, 주요 변경, 검증, 남은 결정점을 한글로 요약한다.
-- phase 실행 보고서와 subagent 최종 보고도 한글을 기본으로 한다.
-- task 파일, phase 파일, 내부 운영 문서, SKILL.md의 설명 문구도 한글을 기본으로 한다.
-- 외부 라이브러리 API, CLI 명령, 에러 원문, 파일 경로, JSON key는 번역하지 않는다.
+## Docs Style
 
-예외:
+문서 작성은 [`docs/docs-style.md`](docs/docs-style.md)를 따른다.
+새로 작성하거나 편집한 docs, ADR, AGENTS, SKILL, task phase 파일에 적용한다.
 
-- Conventional Commit `type`과 `scope`.
-- `Co-Authored-By:`, `Signed-off-by:` 같은 Git trailer.
-- 자동 생성된 도구 출력과 원문 로그.
-- 영어 원문을 그대로 보존해야 하는 문서 인용.
+핵심 원칙:
 
-## 8. docs 가독성 규칙
+- 한 문장 한 줄.
+- 항목 3개 이상은 목록으로 분리.
+- 한 문서에는 자기 책임만 적는다.
+- 구현 상세와 변경 이력은 docs 본문에 누적하지 않는다.
+- 한국어 문장을 기본으로 쓰고, 코드 식별자와 경로는 원문 유지.
+- 섹션 기호는 쓰지 않는다.
 
-단일 출처: `docs/docs-style.md` (ADR-005).
-docs · CLAUDE.md · AGENTS.md · SKILL.md · task phase 파일 모두 적용.
-**새 작성은 필수, 기존 편집 중인 파일은 함께 정리.**
+## fos-brain
 
-**작성 언어는 한글 원칙** — docs · ADR · SKILL.md · 커밋 메시지(subject·본문) 모두 한글로 작성한다.
-도구·릴리즈 호환이 필요한 부분만 영문 유지: 커밋 `type` 프리픽스(`feat`·`fix` 등), 코드 식별자·경로, `Co-Authored-By:` 트레일러.
+사용자는 `~/personal/fos-brain`에 개인 지식 기반을 운영한다.
+사용자의 과거 결정, 취향, 업무 방식, 학습 내용이 답에 영향을 주면 brain을 먼저 조회한다.
 
-8 패턴 요약:
+- brain 읽기는 필요할 때 수행한다.
+- brain 쓰기는 사용자 승인 후에만 수행한다.
+- public/private/work 네임스페이스를 구분한다.
+- repo 문서에 충분히 남은 구현 세부나 하루짜리 실행 로그는 brain에 넣지 않는다.
 
-1. **semantic line break** — 한 문장 당 1줄.
-   - 문장 끝나면 줄바꿈.
-   - 길면 의미 단위로 분할.
-2. **enumerated inline 금지** — `A·B·C` 콤마 나열보다 bullet list가 스캔 쉬움 (항목 3개 이상이면).
-3. **괄호 중첩 2겹 이상 금지** — `((설명) 안의 설명)` 형태 금지.
-   - 별도 문장으로.
-4. **= / → 동치·인과 압축은 한 단락 1회만** — `A → B → C`가 여러 번 나오면 표로.
-5. **한 문장 80자 초과 시 분할** — 백틱 인용 3개 이상 또는 괄호 다수도 분할 대상.
-6. **한 bullet에 다중 속성 압축 금지** — 한 bullet에 4개+ 속성을 콤마로 묶지 말고 sub-bullet으로.
-7. **표 셀 안 정보 4개 이상이면 `<br>` 분리** — GitHub markdown `<br>` 줄바꿈으로 분리.
-8. **헤더 + 본문 구조** — `## 제목` → 1줄 요약 → 본문(리스트·표) 순.
-   - 헤더 바로 다음 줄에 긴 줄글 박지 않는다.
+## 참고
 
-추가 정책:
-- 거울 구조 — 같은 정의를 두 docs에 "본문"으로 쓰지 않는다.
-  - 단일 출처 한 곳에 본문, 다른 docs는 역참조.
-- 한자어 회피 — 한국인이 자연스럽게 읽히는 표현 우선 (상세 대체 표는 `docs/docs-style.md`).
-- 섹션 기호 사용 금지 (공통 지시).
-
-## 9. planning / implementation 위임 원칙
-
-모든 워크스페이스의 기본 원칙:
-
-- planning은 Codex와 사용자가 대화로 진행한다. planning skill은 목표 재정의, phase 구성, 열린 결정, 추천 기본값, 다음 액션을 잡는 **대화 구조**로 사용한다.
-- planning skill의 비대화형 CLI 호출은 기본 사용하지 않는다.
-  계획은 반박, 보류, 범위 조정, 승인 절차 논의가 필요하므로 비대화형 생성에 맡기지 않는다.
-- 비대화형 agent 실행은 합의된 task/phase의 **구현**에만 사용한다.
-- Codex는 planning brief 작성, 결정사항 기록, task 파일 고정, 구현 결과 review, 검증, 의도한 변경만 commit/push하는 책임을 가진다.
-- 구현 phase를 agent에게 위임할 때는 phase 문서의 범위, 안전 조건, 검증 기준을 명확히 전달한다.
-
-### 9-1. background 구현 워크트리 원칙
-
-메인 워크트리는 사용자와 Codex가 현재 맥락을 확인하는 기준점이다.
-background 구현 작업은 다른 활성 작업과 섞이지 않게 격리한다.
-
-- 여러 task가 동시에 active 상태면 background 구현은 별도 git worktree와 branch를 기본값으로 사용한다.
-- 단순한 "구현해줘" 요청만으로 main 워크트리 직접 편집이 안전하다고 가정하지 않는다.
-  먼저 active 작업과 dirty state를 확인한다.
-- main 워크트리 직접 편집은 아래 경우에만 허용한다:
-  - active task가 하나뿐이다.
-  - 작고 안전한 docs/process-only 변경이다.
-  - 사용자가 main 워크트리 직접 편집을 명시적으로 허용했다.
-- background worker 최종 보고에는 사용한 워크트리/branch 여부를 반드시 적는다.
-- background worker가 별도 워크트리를 만들었다면 작업 완료/중단 보고 전에 `git worktree remove <path>`로 워크트리 디렉터리를 명시적으로 제거한다.
-  제거 전 `git -C <path> status --short`가 비어 있는지 확인하고, 비어 있지 않으면 제거하지 말고 남은 변경과 경로를 보고한다.
-  branch 보존이 필요하면 워크트리만 제거하고 branch는 삭제하지 않는다.
-- phase 경계는 commit/push 경계다.
-  긴 dirty state를 남기지 않고, 검증된 변경은 작은 단위로 push한다.
-- stage는 intended files만 한다.
-  unrelated dirty files를 수정, stage, commit하지 않는다.
-- 작업 완료 보고 전에는 관련 워크트리에서 `git status --short`를 다시 확인한다.
-  완료 보고에는 `clean`, `unrelated dirty만 남음`, `의도적으로 남긴 파일 있음`, `정리 보류`처럼 남은 상태를 분류해 적는다.
-- 검증된 intended 변경은 관심사별 commit/push를 기본값으로 한다.
-  보류가 필요하면 남긴 이유, 파일 목록, 다음 조치를 보고한다.
-- 임시 로그, scratch 파일, 중간 산출물은 보존할 이유가 없으면 정리한다.
-  삭제가 애매하면 제거하지 말고 경로와 판단 이유를 보고한다.
-
-## 10. plan 사이클 (career-os 패턴)
-
-career-os는 `tasks/plan{N}-<slug>/` 영구 plan 영역을 운영한다.
-`.claude/skills/planning` 구조로 Codex와 사용자가 plan을 대화형으로 작성하고, 합의 후 task 파일로 고정한다.
-구현은 합의된 phase 문서를 기준으로 agent worker 또는 `.claude/skills/plan-and-build` 실행 흐름에 위임한다.
-본 패턴이 다른 워크스페이스에도 유용하다고 판단되면 별도 결정으로 도입한다.
-
-## 11. 외부 의존성
-
-- `_shared/lib/notify_discord.ts` — Discord 알림(openclaw subprocess 경유, ADR-021). 모든 워크스페이스 공용 정본.
-- Bun runtime — TS 헬퍼 실행. 설치 후 ai-nodes 루트에서 `bun install` 1회 (root package.json: zod, fast-xml-parser, dotenv + @types/bun).
-- Python 3 — 워크스페이스 수집기(stock-investment `collect_*.py` 등) 실행. agent skill이 `python3` Bash로 호출.
-- `agent-browser` CLI — JS-heavy 페이지(Naver Land 등) 수집. 로컬 설치 필수 (apartment ADR-001).
-- agent CLI — 운영 runner 호환 경로에서 선택적으로 사용한다.
-  문서의 표준 계약은 `/<skill> [args]` 호출 의도다.
-- `~/personal/fos-brain` — 외부 개인 지식 기반(brain). thin caller로 연동, brain skill은 `~/.claude/skills/`에 symlink. 정책은 13번 + ADR-009/010. 사용자 환경 설치(클론·symlink·brain repo 경로 통일) 전제.
-
-## 12. 참고 문서
-
-- 워크스페이스 표준 청사진: `docs/workspace-structure.md` (새 워크스페이스 추가 진입점).
-- 모노레포 ADR: `docs/adr.md` (ADR-001~010 누적).
-- fos-brain 연동: 13번 섹션 + ADR-009(구조) + ADR-010(쓰기 안전·프라이버시).
-- docs / ADR 형식 정책: `docs/docs-style.md` (ADR-005 — 8 패턴 + 한자어 회피 + 거울 구조). 인라인 요약은 8번 섹션.
-- 워크스페이스별 상세: `<workspace>/AGENTS.md`.
-- career-os 5문서: `career-os/docs/{prd, data-schema, flow, code-architecture}.md`와 `career-os/docs/adr/INDEX.md`.
-- apartment 5문서: `apartment/docs/{prd, data-schema, flow, code-architecture, adr}.md` (plan001 신설).
-- planning skill: `.claude/skills/planning/SKILL.md` (8단계 워크플로 + 5문서 공통 작성 원칙).
-- plan-and-build skill: `.claude/skills/plan-and-build/` (자동 phase 실행 + common-pitfalls 축적).
-- workspace-audit skill: `.claude/skills/workspace-audit/SKILL.md` (워크스페이스 건전성 감사).
-- docs-check skill: `.claude/skills/docs-check/SKILL.md` (5문서 + ADR 건전성 감사).
-
-## 13. fos-brain 외부 지식 기반 연동
-
-5개 워크스페이스 agents가 외부 개인 지식 기반 fos-brain과 양방향 연동하는 단일 정책.
-결정 근거는 ADR-009(구조) + ADR-010(쓰기 안전·프라이버시).
-워크스페이스 AGENTS.md는 본 섹션을 역참조하고 자기 산출물 라우팅만 명시한다(거울 구조).
-
-### 13-1. 위치와 접근
-
-- brain은 ai-nodes **밖** `~/personal/fos-brain`에 둔다 (repo `github.com/jon890/fos-brain`).
-- 접근은 **thin caller** — brain 자체 skill(brain-search / brain-add)을 호출만 하고 brain 로직은 재구현하지 않는다.
-- 설치: brain repo의 `skills/brain-*`를 agent skill 경로에 symlink한다.
-  OpenClaw/CLI 세션은 전역 skill로 발견한다.
-
-### 13-2. 네임스페이스 라우팅 (쓰기)
-
-산출물 *종류*로 네임스페이스를 정한다 (워크스페이스 단위 아님):
-
-| 산출물 종류 | 네임스페이스 |
-|---|---|
-| fos-study 파생 지식 | public-OK (brain-add 기본 규칙) |
-| 개인 데이터 (career baseline·건강·재무·매물·여행) | private |
-| 게시 적정성 확인된 일반 지식 | public (명시 opt-in) |
-
-brain-add 호출 시 네임스페이스를 명시 전달해 brain-add 0단계 프롬프트를 건너뛴다.
-
-### 13-3. cron 읽기전용 정책
-
-- openclaw cron 무인 세션: **brain-search 읽기만**.
-- brain 적재(brain-add): **discord 대화 세션에서 사람 검토 후**. 검증 게이트를 무인화하지 않는다.
-
-### 13-4. 전제조건 (사용자 수동 1회, ai-nodes 범위 밖)
-
-- brain repo skill 본문 대상 경로 `/Users/nhn/...` → `~/personal/fos-brain` 통일 (Linux 무인 실행 필수).
-- brain 클론 → `~/personal/fos-brain`.
-- skill symlink → `~/.claude/skills/brain-{add,search,lint}`.
-- openclaw wrapper 동기화 (사용자 직접 — `~/.openclaw/`는 ai-nodes가 건드리지 않는다).
+- 구조와 새 워크스페이스 추가: [`docs/code-architecture.md`](docs/code-architecture.md)
+- 모노레포 ADR: [`docs/adr/INDEX.md`](docs/adr/INDEX.md)
+- 문서 형식: [`docs/docs-style.md`](docs/docs-style.md)
+- planning skill: [`.claude/skills/planning/SKILL.md`](.claude/skills/planning/SKILL.md)
+- plan-and-build skill: [`.claude/skills/plan-and-build/SKILL.md`](.claude/skills/plan-and-build/SKILL.md)
+- workspace-audit skill: [`.claude/skills/workspace-audit/SKILL.md`](.claude/skills/workspace-audit/SKILL.md)
+- docs-check skill: [`.claude/skills/docs-check/SKILL.md`](.claude/skills/docs-check/SKILL.md)
