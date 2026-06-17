@@ -136,7 +136,7 @@ fit-analysis.md의 Gap 분석에서 **해당 공고 기준 부족 역량 상위 
 
 - Gap Focus에서 도출한 보강 가능한 항목
 - 당장 학습 가능한 기술 토픽 (study-pack-writer로 연계 가능한 것)
-- interview-prep-analyzer로 심화 분석 가능한 항목
+- job-fit-analyzer로 심화 분석 가능한 항목
 
 ### 8. report.md 작성
 

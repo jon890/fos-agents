@@ -134,9 +134,20 @@ career-os/
 │   ├── interview-prep-analyzer/
 │   │   ├── collect_interview_sites.ts  first-round/final-round/offer-chat 회사 사이트 수집 (ADR-048)
 │   │   └── mvp_target_schema.ts        면접 단계 설정 zod 검증
+│   ├── interview-drill/                (plan086 신규 — 공용 드릴 엔진, ADR-019 scripts 분리 원칙 준수)
+│   │   └── drill-engine.ts             질문 선정(간격 반복) + 채점 + 기록 + 약점 환류 + study-pack 위임
+│                                       (tech-interview-drill, behavioral-interview-drill 공유 — ADR-031 준수, scripts/_lib 미사용)
 │
 ├── .claude/skills/                       ← agent skill 정본 (plan006 후, ADR-019, ADR-002, ADR-085)
-│   ├── interview-prep-analyzer/
+│   ├── job-fit-analyzer/               (plan086 — interview-prep-analyzer 리네임 + 리포커스)
+│   │   └── SKILL.md  타깃 직무 역할 단위 핏 분석 + 부족분 갭 진단
+│   ├── tech-interview-drill/           (plan086 신규)
+│   │   └── SKILL.md  매일 기술 면접 답변 연습 + 3단계 채점 + 약점 환류
+│   ├── behavioral-interview-drill/     (plan086 신규)
+│   │   └── SKILL.md  매일 인성 면접 답변 연습 + STAR·가치관 채점 + 약점 환류
+│   ├── interview-stage-prep/           (plan086 신규)
+│   │   └── SKILL.md  1차/최종/오퍼 단계별 실전 준비 자료 생성
+│   ├── interview-prep-analyzer/        (plan086 이후 제거 예정 — job-fit-analyzer로 대체)
 │   │   └── SKILL.md  (plan017에서 native skill 명세 작성. plan041에서 first-round/final-round/offer-chat 준비 이관)
 │   ├── study-topic-recommender/
 │   │   └── SKILL.md   (plan016에서 native skill 명세로 재작성. references/ 없음)
@@ -155,22 +166,23 @@ career-os/
 │   │   └── SKILL.md  공고별 fit/gap + 맞춤 지원 패키지 작성
 │   ├── application-reviewer/
 │   │   └── SKILL.md  evidence/drift/privacy/cooldown 검토
-│   ├── daily-application-digest/
-│   │   └── SKILL.md  application ledger 기반 daily summary
-│   └── candidate-baseline-suggester/
-│       └── SKILL.md   (plan020에서 native skill 명세 작성. Append + 주석 마킹 + audit trail. ADR-028)
+│   └── daily-application-digest/
+│       └── SKILL.md  application ledger 기반 daily summary
 │
 ├── .codex/skills/                        ← Codex 노출용 심볼릭 링크 (ADR-085)
 │   ├── application-package-writer -> ../../.claude/skills/application-package-writer
 │   ├── application-reviewer -> ../../.claude/skills/application-reviewer
-│   ├── candidate-baseline-suggester -> ../../.claude/skills/candidate-baseline-suggester
+│   ├── behavioral-interview-drill -> ../../.claude/skills/behavioral-interview-drill  (plan086 신규)
 │   ├── daily-application-digest -> ../../.claude/skills/daily-application-digest
 │   ├── interview-asset-writer -> ../../.claude/skills/interview-asset-writer
-│   ├── interview-prep-analyzer -> ../../.claude/skills/interview-prep-analyzer
+│   ├── interview-prep-analyzer -> ../../.claude/skills/interview-prep-analyzer  (제거 예정)
+│   ├── interview-stage-prep -> ../../.claude/skills/interview-stage-prep  (plan086 신규)
+│   ├── job-fit-analyzer -> ../../.claude/skills/job-fit-analyzer  (plan086 신규)
 │   ├── position-recommender -> ../../.claude/skills/position-recommender
 │   ├── question-bank-collector -> ../../.claude/skills/question-bank-collector
 │   ├── study-pack-writer -> ../../.claude/skills/study-pack-writer
-│   └── study-topic-recommender -> ../../.claude/skills/study-topic-recommender
+│   ├── study-topic-recommender -> ../../.claude/skills/study-topic-recommender
+│   └── tech-interview-drill -> ../../.claude/skills/tech-interview-drill  (plan086 신규)
 │
 └── sources/
     └── fos-study/                ← 외부 동기 git repo (jon890/fos-study)
@@ -228,9 +240,6 @@ Claude와 Codex는 같은 SKILL.md를 공유하고, Codex 발견 경로는 `.cod
 
 # legacy cron/runner 중 Claude CLI가 남아 있는 경로
 claude --permission-mode bypassPermissions -p "/study-topic-recommender"
-
-# legacy 쓰기-heavy runner
-claude --permission-mode acceptEdits -p "/candidate-baseline-suggester"
 
 # Discord 알림 (notify_discord.ts 직접 호출)
 bun --env-file=career-os/.env _shared/lib/notify_discord.ts "[완료] <message>"

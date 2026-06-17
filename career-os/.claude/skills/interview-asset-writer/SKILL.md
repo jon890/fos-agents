@@ -178,4 +178,4 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 - `career-os/.claude/skills/interview-asset-writer/references/output-policy.md` — 공개 산출물 경계 정책 (내부 전략과 공개 문구 분리 기준)
 - 관련 스킬: `study-pack-writer` — 일반 기술 토픽 학습 문서 (이력 기반 자산과 책임 분리)
 - 관련 스킬: `question-bank-collector` — 공개 일반 backend/CS 질문 bank 보강
-- 관련 스킬: `interview-prep-analyzer` — 면접 준비 갭 분석 (본 skill 산출물을 입력으로 사용)
+- 관련 스킬: `job-fit-analyzer` — 직무 핏·갭 진단 (본 skill 산출물을 입력으로 사용)

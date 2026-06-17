@@ -264,7 +264,7 @@ ADR-026 결정 요약 (3줄):
 - `career-os/config/study-progress.json` — 학습 진도 + 약점 맵 (cooldown·promote 판단 입력)
 - `career-os/data/runtime/topic-inventory-history.jsonl` — 최근 추천 history (cooldown 계산 + cron 중복 실행 방지)
 - 관련 스킬: `study-pack-writer` — 추천 토픽의 실제 학습 문서 작성 위임
-- 관련 스킬: `interview-prep-analyzer` — daily 모드에서 본 skill 추천 토픽을 입력으로 활용
+- 관련 스킬: `tech-interview-drill` / `behavioral-interview-drill` — 매일 답변 연습에서 본 skill 추천 토픽·약점을 활용
 
 ## 호출 예시
 

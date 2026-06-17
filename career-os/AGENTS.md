@@ -226,12 +226,18 @@ cd career-os
 # 추천·분석 (비공개 career-os 리포트)
 # 아침 토픽 추천 + 후보 refresh + live-coding seed (ADR-026, ADR-070)
 /study-topic-recommender [context]
-# baseline/daily/stage 면접 준비 자연어 분기 (ADR-027, ADR-048)
-/interview-prep-analyzer [baseline|daily|topic|first-round]
-# 후보자 자산 Append 갱신 (ADR-028)
-/candidate-baseline-suggester
+# 타깃 직무 역할 단위 핏·갭 진단 (ADR-092)
+/job-fit-analyzer
 # 활성 공고 수집 + 3 티어 추천 (ADR-030)
 /position-recommender [컨텍스트] [채용공고 file]
+
+# 면접 드릴 (비공개 career-os 산출물)
+# 매일 기술 면접 질문 1문장 답변·채점·약점 환류
+/tech-interview-drill
+# 매일 인성 면접 질문(STAR·가치관) 1문장 답변·채점·약점 환류
+/behavioral-interview-drill
+# 면접 단계별 실전 준비 가이드 생성 (1차·최종·협상 단계)
+/interview-stage-prep
 
 # 지원 준비 루프 (비공개 career-os 산출물)
 # 공고별 지원 패키지 생성

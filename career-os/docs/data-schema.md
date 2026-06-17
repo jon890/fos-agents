@@ -1238,24 +1238,102 @@ caller가 `.env`를 ts에 전달하는 방법: `bun --env-file=career-os/.env _s
   "weak_spots": {
     "<topic-key>": {
       "last_studied": "YYYY-MM-DD | null",
-      "study_count": "int"
+      "study_count": "int",
+      "question_id": "string | null",
+      "pass_count": "int",
+      "shallow_count": "int",
+      "fail_count": "int",
+      "unknown_count": "int",
+      "next_review_date": "YYYY-MM-DD | null",
+      "last_passed": "YYYY-MM-DD | null",
+      "status": "active | retired"
     }
   }
 }
 ```
 
+- `question_id`: 연결된 질문 풀 ID (드릴 일별 로그와 연결).
+- `pass_count` / `shallow_count` / `fail_count` / `unknown_count`: 답변 성과 누적 횟수.
+- `next_review_date`: 다음 복습 예정일 (간격 반복 스케줄, ISO 8601).
+- `last_passed`: 마지막 통과 날짜 (ISO 8601, null이면 미통과).
+- `status`: `active`이면 드릴에 포함되고, `retired`이면 충분히 통과해 드릴에서 제외됨.
+
 `interview-prep-analyzer` daily 모드 성공 후 자동 업데이트 (plan017, ADR-027). 옛 `run_daily.sh` 후속.
+plan086 이후 `tech-interview-drill` / `behavioral-interview-drill`도 `weak_spots` 필드를 갱신한다.
 
-### data/reports/ (interview-prep-analyzer 산출물 — plan017)
+### data/reports/ (분석·준비 리포트 — plan017, plan086)
 
-`interview-prep-analyzer` 실행 산출물. 외부 publish 없음 — 내부 학습용.
+분석·준비 스킬 실행 산출물. 외부 publish 없음 — 내부 학습용.
 
-| 경로 | 모드 | 내용 |
+| 경로 | 스킬 | 내용 |
 |---|---|---|
-| `data/reports/baseline/YYYY-MM-DD/report.md` | baseline | 큐레이션 10파일 + 7섹션 고위험 영역 종합 진단 |
-| `data/reports/daily/YYYY-MM-DD/report.md` | daily | 토픽 1개 3-5파일 + 5섹션 집중 점검 |
+| `data/reports/baseline/YYYY-MM-DD/report.md` | `interview-prep-analyzer` baseline | 큐레이션 10파일 + 7섹션 고위험 영역 종합 진단 |
+| `data/reports/daily/YYYY-MM-DD/report.md` | `interview-prep-analyzer` daily | 토픽 1개 3-5파일 + 5섹션 집중 점검 |
+| `data/reports/job-fit-YYYY-MM-DD.md` | `job-fit-analyzer` | 타깃 직무 역할 단위 핏 분석 + 부족분 갭 진단 |
+| `data/reports/stage-prep-YYYY-MM-DD.md` | `interview-stage-prep` | 1차/최종/오퍼 단계별 실전 준비 자료 |
 
-baseline 모드는 `config/baseline-core-files.json` 큐레이션 집합 사용. daily 모드는 토픽 기반 fos-study 파일 선택 + `config/study-progress.json` 갱신.
+baseline 모드는 `config/baseline-core-files.json` 큐레이션 집합 사용.
+daily 모드는 토픽 기반 fos-study 파일 선택 + `config/study-progress.json` 갱신.
+
+### data/runtime/drill-log-YYYY-MM-DD.jsonl (plan086 신규)
+
+`tech-interview-drill` / `behavioral-interview-drill` 실행 시 질문별 답변 성과를 누적하는 일별 로그.
+같은 날 여러 번 드릴을 돌려도 같은 파일에 append된다.
+
+```json
+{
+  "date": "YYYY-MM-DD",
+  "drill_type": "tech | behavioral",
+  "question_id": "string",
+  "question_text": "string",
+  "answer_summary": "string",
+  "score": "pass | shallow | fail | unknown",
+  "topics": ["string", "..."],
+  "study_pack_dispatched": "boolean"
+}
+```
+
+- `drill_type`: `tech`(기술 면접)이면 기술 채점 rubric, `behavioral`이면 STAR·가치관 관점 채점 rubric 적용.
+- `answer_summary`: 사용자 답변 요약 (1문장).
+- `score`: 3단계 채점 결과. `unknown`은 답변 불가 또는 채점 보류.
+- `study_pack_dispatched`: `fail`/`shallow` 점수 시 `study-pack-writer`에 비동기 위임 여부.
+
+### data/question-bank/ (plan086 신규)
+
+공개 가능한 기술·인성 면접 질문을 JSON Lines 형식으로 관리하는 질문 풀.
+`question-bank-collector` 자동 수집 또는 수동 추가.
+
+**data/question-bank/tech-questions.jsonl**
+
+```json
+{
+  "id": "tech-001",
+  "type": "tech",
+  "question": "string",
+  "topics": ["string", "..."],
+  "difficulty": "easy | medium | hard",
+  "created_at": "YYYY-MM-DD",
+  "source": "question-bank-collector | manual"
+}
+```
+
+**data/question-bank/behavioral-questions.jsonl**
+
+```json
+{
+  "id": "beh-001",
+  "type": "behavioral",
+  "question": "string",
+  "topics": ["string", "..."],
+  "difficulty": "easy | medium | hard",
+  "created_at": "YYYY-MM-DD",
+  "source": "question-bank-collector | manual"
+}
+```
+
+- `id`: 고유 식별자. `tech-NNN` 또는 `beh-NNN` 형식.
+- `type`: `tech`(기술 면접 질문) 또는 `behavioral`(인성 면접 질문).
+- `source`: `question-bank-collector` 자동 수집 또는 `manual` 직접 추가.
 
 ### data/generated-artifacts.json (ADR-033, plan025 이후 active 제거)
 
@@ -1508,9 +1586,11 @@ RSS/Atom feed 디스크 캐시. 6시간 TTL.
 
 `run_from_request.sh` / `run_morning_live_coding.sh`가 쓰는 임시 토픽 컨테이너. 두 runner 모두 dispatcher 미연결 — deferred.
 
-### data/runtime/profile-refresh-suggestions/YYYY-MM-DD/ (plan020, ADR-028)
+### data/runtime/profile-refresh-suggestions/YYYY-MM-DD/ (plan020, ADR-028 — 폐기)
 
-`candidate-baseline-suggester` 실행마다 생성되는 audit trail. 날짜별 디렉터리로 멱등.
+프로필 갱신 제안 스킬(ADR-028)이 생성하던 audit trail 디렉터리.
+해당 스킬은 plan086 phase-06에서 제거됨 (ADR-092 — weak_spots는 드릴이 전담).
+신규 생성 없음 — 기존 데이터는 참조용으로 보존 가능하나 더 이상 갱신되지 않는다.
 
 ```
 data/runtime/profile-refresh-suggestions/
