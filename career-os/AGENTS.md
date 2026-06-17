@@ -209,9 +209,10 @@ career-os는 수집, 리포트 생성, skill 실행, private 산출물 생성을
 skill 본문은 `career-os/.claude/skills/<skill>/SKILL.md`를 정본으로 두고,
 Codex 노출은 `career-os/.codex/skills/<skill>` 심볼릭 링크로 연결한다.
 워크플로 문서와 스킬 간 위임은 `/<skill> [args]` 형태의 의도 표현을 표준으로 쓴다.
-Claude CLI 호환 실행 명령은 한 실행 경로일 뿐이고, SKILL.md의 워크플로 계약이 아니다.
-Claude CLI 비용을 피해야 하는 대화형 작업에서는 별도 wrapper를 만들지 말고 Codex가 같은 SKILL.md 흐름을 직접 수행한다.
+특정 에이전트 CLI 호환 실행 명령은 한 실행 경로일 뿐이고, SKILL.md의 워크플로 계약이 아니다.
+특정 에이전트 CLI 비용을 피해야 하는 대화형 작업에서는 wrapper를 만들지 말고 현재 에이전트가 같은 SKILL.md 흐름을 직접 수행한다.
 기존 cron/runner 중 `run_daily_with_claude.*`처럼 이름이 남은 경로는 호환 계층으로만 다룬다.
+application-agent와 리포트가 사용자에게 다음 행동을 안내할 때는 `Use skill: /<skill> [args]`처럼 에이전트 비종속 표현을 쓴다.
 단, 지원서 제출, 이메일, 공개 게시물, 외부 메시지 전송은 별도 사용자 승인 전까지 실행하지 않는다.
 
 폐기된 dispatcher / command-router 이력은 `docs/adr/ADR-031-command-router-일괄-폐기-ts-lib-정리.md`를 단일 출처로 본다. 새 작업에서 옛 `run_now.sh` 계열 경로를 되살리지 않는다.

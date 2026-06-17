@@ -565,7 +565,9 @@ dashboard는 career-os를 read-only projection으로만 읽고, skill 실행은 
 
 허용 skill:
 
-- `interview-prep-analyzer`
+- `interview-stage-prep`
+- `tech-interview-drill`
+- `behavioral-interview-drill`
 - `interview-asset-writer`
 - `study-pack-writer`
 
@@ -577,10 +579,10 @@ dashboard는 career-os를 read-only projection으로만 읽고, skill 실행은 
   "targetKey": "cj-foodville-2026-06-15",
   "company": "CJ푸드빌",
   "interviewDate": "2026-06-15",
-  "requestType": "interview_prep_report",
-  "skillName": "interview-prep-analyzer",
+  "requestType": "interview_stage_prep",
+  "skillName": "interview-stage-prep",
   "skillArgs": {
-    "mode": "first-round",
+    "stage": "first-round",
     "topic": null
   },
   "status": "pending",
@@ -635,7 +637,7 @@ dashboard는 career-os를 read-only projection으로만 읽고, skill 실행은 
 - `study-pack-writer` 결과는 기존 정책대로 `sources/fos-study/`에 `[초안]` 제목으로 생성하고 commit/push까지 이어진다.
   push 실패는 `failed`로 남기고 silent 처리하지 않는다.
 - `interview-asset-writer` 결과는 공개 가능 경로와 private 경로의 경계를 processor가 확인해야 한다.
-- `interview-prep-analyzer` 결과는 private report 경로와 짧은 요약만 저장한다.
+- `interview-stage-prep` 결과는 private report 경로와 짧은 요약만 저장한다.
 - `answer_feedback`은 사용자 입력 답변을 private answer record로 저장하고, feedback result를 같은 private 경계 안에 둔다.
   답변 전문과 상세 피드백은 dashboard에서 바로 확인할 수 있게 DB에 저장한다.
   request result snapshot, audit log, Discord 알림, fos-study로는 복사하지 않는다.
@@ -1261,8 +1263,7 @@ caller가 `.env`를 ts에 전달하는 방법: `bun --env-file=career-os/.env _s
 - `last_passed`: 마지막 통과 날짜 (ISO 8601, null이면 미통과).
 - `status`: `active`이면 드릴에 포함되고, `retired`이면 충분히 통과해 드릴에서 제외됨.
 
-`interview-prep-analyzer` daily 모드 성공 후 자동 업데이트 (plan017, ADR-027). 옛 `run_daily.sh` 후속.
-plan086 이후 `tech-interview-drill` / `behavioral-interview-drill`도 `weak_spots` 필드를 갱신한다.
+plan086 이후 `tech-interview-drill` / `behavioral-interview-drill`이 `weak_spots` 필드를 갱신한다.
 
 ### data/reports/ (분석·준비 리포트 — plan017, plan086)
 
@@ -1270,8 +1271,8 @@ plan086 이후 `tech-interview-drill` / `behavioral-interview-drill`도 `weak_sp
 
 | 경로 | 스킬 | 내용 |
 |---|---|---|
-| `data/reports/baseline/YYYY-MM-DD/report.md` | `interview-prep-analyzer` baseline | 큐레이션 10파일 + 7섹션 고위험 영역 종합 진단 |
-| `data/reports/daily/YYYY-MM-DD/report.md` | `interview-prep-analyzer` daily | 토픽 1개 3-5파일 + 5섹션 집중 점검 |
+| `data/reports/baseline/YYYY-MM-DD/report.md` | legacy `interview-prep-analyzer` baseline | 큐레이션 10파일 + 7섹션 고위험 영역 종합 진단 |
+| `data/reports/daily/YYYY-MM-DD/report.md` | legacy `interview-prep-analyzer` daily | 토픽 1개 3-5파일 + 5섹션 집중 점검 |
 | `data/reports/job-fit-YYYY-MM-DD.md` | `job-fit-analyzer` | 타깃 직무 역할 단위 핏 분석 + 부족분 갭 진단 |
 | `data/reports/stage-prep-YYYY-MM-DD.md` | `interview-stage-prep` | 1차/최종/오퍼 단계별 실전 준비 자료 |
 
@@ -1746,7 +1747,7 @@ data/prep/
 ```
 
 - active `config/mvp-target.json`은 `prep_dir`를 들지 않는다.
-- `interview-prep-analyzer` native skill은 `primary.data_root` 아래 `interview/prep.md`를 정본으로 읽는다.
+- `interview-stage-prep` skill은 `primary.data_root` 아래 `interview/prep.md`를 정본으로 읽는다.
 - stage 산출물: `private/<company>/<position>/interview/prep.md`.
 - git 추적 ✓ — 남기는 경우 과거 히스토리 보존 가치가 있는 파일만 둔다.
 

@@ -111,7 +111,7 @@ ln -s AGENTS.md CLAUDE.md
 공통 운영 원칙:
 
 - planning은 대화형으로 진행한다. 목표, 범위, 열린 결정, 추천 기본값, phase를 사용자가 확인한 뒤 task 파일로 고정한다.
-- `claude -p "/planning ..."` 비대화형 planning은 기본 사용하지 않는다.
+- 비대화형 planning CLI 호출은 기본 사용하지 않는다.
 - Claude 비대화형 실행은 합의된 task/phase 구현에 사용한다.
 - Codex는 Claude 구현 결과를 review하고, 검증 후 의도한 변경만 commit/push한다.
 
@@ -137,7 +137,7 @@ scripts/<skill-name>/             # 실행 파일 — runner / 헬퍼
 2. `.claude/skills/<name>/SKILL.md` 작성 (본체)
 3. `.claude/skills/<name>/references/` 참조 문서 배치 (있는 경우)
 
-native skill 진입점: `claude -p "/<skill-name> <args>"`
+agent skill 진입점: `/<skill-name> <args>`
 
 ---
 
