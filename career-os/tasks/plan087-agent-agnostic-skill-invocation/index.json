@@ -1,0 +1,80 @@
+{
+  "name": "plan087-agent-agnostic-skill-invocation",
+  "description": "career-os skill 호출 문서를 agent 비종속 의도 표현으로 정제하고, scripts 계층의 Claude 실행기 변경은 후속 plan으로 분리한다.",
+  "created_at": "2026-06-17T06:19:00Z",
+  "updated_at": "2026-06-17T06:19:00Z",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 3,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/docs/adr/ADR-093-skill-호출은-agent-비종속-의도-표현으로-쓴다.md",
+    "career-os/docs/adr/INDEX.md",
+    "career-os/AGENTS.md",
+    "career-os/TOOLS.md",
+    "career-os/docs/prd.md",
+    "career-os/docs/flow.md",
+    "career-os/docs/code-architecture.md"
+  ],
+  "depends_on": [
+    "plan086-interview-prep-redesign"
+  ],
+  "execution_policy": {
+    "goal": "문서와 skill 위임 표현을 특정 CLI 명령이 아니라 agent skill 호출 의도로 통일한다.",
+    "phase_order": "current_phase 순서대로 phase-01부터 phase-03까지 순차 실행한다.",
+    "parallelism": "같은 plan 안의 phase는 병렬 실행하지 않는다.",
+    "scope_boundary": "ADR 역사 기록과 완료된 tasks 기록은 수정하지 않는다. scripts 계층의 실제 실행기 변경도 이번 plan에서 구현하지 않고, phase-03에서 후속 plan 계약만 고정한다.",
+    "pr_unit": "별도 worktree+branch에서 실행한다. phase별 commit은 허용하되 push와 PR은 메인 세션 검토 후 수행한다."
+  },
+  "phases": [
+    {
+      "number": 1,
+      "title": "docs-first materialization — ADR-093과 5문서 호출 표현 정제",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
+      "model": "sonnet",
+      "timeout": 600
+    },
+    {
+      "number": 2,
+      "title": "skill surface audit — SKILL.md와 사용자 표시 문구의 CLI hardcoding 제거",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
+      "model": "sonnet",
+      "timeout": 600
+    },
+    {
+      "number": 3,
+      "title": "scripts follow-up contract — 실행기 변경 보류 근거와 후속 plan 기준 고정",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
+      "model": "sonnet",
+      "timeout": 600
+    }
+  ]
+}

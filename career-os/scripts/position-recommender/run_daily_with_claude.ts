@@ -499,7 +499,7 @@ async function main(): Promise<void> {
     : resolve(import.meta.dir, "..", "..");
   const reportDate = process.env.REPORT_DATE ?? kstDate();
   const reportDir = `${root}/data/reports/daily/${reportDate}/position-recommendation`;
-  // ADR-093: recommendation.json이 정본. report.md/report.html은 여기서 파생한다.
+  // ADR-094: recommendation.json이 정본. report.md/report.html은 여기서 파생한다.
   const recommendation = `${reportDir}/recommendation.json`;
   const report = `${reportDir}/report.md`;
   const reportHtml = `${reportDir}/report.html`;
@@ -555,7 +555,7 @@ async function main(): Promise<void> {
     });
   }
 
-  // ADR-093: 정본은 recommendation.json. freshness는 파일 존재 + reportDate 필드가 오늘인지로 본다.
+  // ADR-094: 정본은 recommendation.json. freshness는 파일 존재 + reportDate 필드가 오늘인지로 본다.
   if (!existsSync(recommendation)) {
     die(`position-recommender stale-output: expected today's recommendation.json not found: ${recommendation}`);
   }

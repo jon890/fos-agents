@@ -1781,7 +1781,7 @@ source adapter는 official listing, official API, sitemap, keyword search에서 
 Wanted adapter는 백엔드 keyword 외에 AI Agent/RAG/MCP/LLMOps/ML Backend 계열 keyword를 함께 수집할 수 있다.
 Toss adapter는 공식 `job-groups` API의 그룹 공고와 하위 포지션을 펼쳐 snapshot에 넣는다.
 
-### data/reports/daily/YYYY-MM-DD/position-recommendation/recommendation.json (정본, ADR-093)
+### data/reports/daily/YYYY-MM-DD/position-recommendation/recommendation.json (정본, ADR-094)
 
 `position-recommender` 산출물의 단일 정본. schemaVersion 2, `scripts/position-recommender/recommendation_schema.ts` zod 스키마를 따른다.
 

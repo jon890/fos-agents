@@ -1,4 +1,4 @@
-// position-recommender 산출물 정본 스키마 (ADR-093).
+// position-recommender 산출물 정본 스키마 (ADR-094).
 // 에이전트가 이 스키마에 맞는 recommendation.json을 생성하면,
 // 렌더러가 여기서 HTML / Markdown / Discord 카드 / DB items를 파생한다.
 // SKILL self-check는 이 스키마 검증으로 대체한다.
