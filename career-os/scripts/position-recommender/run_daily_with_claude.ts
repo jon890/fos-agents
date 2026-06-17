@@ -6,7 +6,9 @@ import {
   buildStructuredRecommendationRun,
   summarizeStructuredRecommendationQuality,
   writeStructuredRecommendationRun,
+  type ParsedRecommendationCandidate,
 } from "./structured_recommendation_items";
+import { RecommendationRun, type RecommendationRunType, type PositionItemType } from "./recommendation_schema.ts";
 
 const DEFAULT_CONTEXT =
   [
@@ -26,15 +28,27 @@ const DEFAULT_CONTEXT =
 const DEFAULT_CLAUDE_TIMEOUT_MS = 9 * 60 * 1000;
 const DEFAULT_CLAUDE_NO_OUTPUT_MS = 4 * 60 * 1000;
 
+// Discord 카드용 추천 후보. recommendation.json의 strong/stretch에서 직접 만든다.
 interface Candidate {
   section: "strong" | "stretch";
+  company: string;
   title: string;
-  postingLink: string;
-  exploreLink: string;
-  evidence: string;
-  summary: string;
-  check: string;
-  action: string;
+  searchKeywords: string[];
+  whyFit: string;
+  postingUrl: string;
+}
+
+function recommendationToCandidates(run: RecommendationRunType): Candidate[] {
+  const fromTier = (items: PositionItemType[], section: Candidate["section"]): Candidate[] =>
+    items.map((item) => ({
+      section,
+      company: item.company,
+      title: item.title,
+      searchKeywords: item.searchKeywords,
+      whyFit: item.whyFit,
+      postingUrl: item.postingUrl,
+    }));
+  return [...fromTier(run.tiers.strong, "strong"), ...fromTier(run.tiers.stretch, "stretch")];
 }
 
 function kstDate(): string {
@@ -203,10 +217,6 @@ async function runClaudeWithGuards(args: string[], cwd: string): Promise<void> {
   });
 }
 
-function firstLine(path: string): string {
-  return readFileSync(path, "utf-8").split(/\r?\n/, 1)[0] ?? "";
-}
-
 function assertLivePostingSnapshot(path: string): void {
   const content = readFileSync(path, "utf-8");
   if (!content.includes("link_type: direct_posting")) {
@@ -219,6 +229,20 @@ function assertLivePostingSnapshot(path: string): void {
     die(`position-recommender live-postings: non-active or non-direct lead leaked into active-only snapshot: ${path}`);
   }
 }
+
+function loadRecommendationRun(path: string): RecommendationRunType {
+  const raw = JSON.parse(readFileSync(path, "utf-8"));
+  const parsed = RecommendationRun.safeParse(raw);
+  if (!parsed.success) {
+    const issues = parsed.error.issues
+      .map((issue) => `  - ${issue.path.join(".")}: ${issue.message}`)
+      .join("\n");
+    die(`position-recommender recommendation.json schema 검증 실패: ${path}\n${issues}`);
+  }
+  return parsed.data;
+}
+
+// ===== items용: 파생 report.md를 파싱해 ParsedRecommendationCandidate 생성 =====
 
 function trimValue(value: string): string {
   return value.trim().replace(/[\s,，]+$/, "");
@@ -235,10 +259,10 @@ function firstListItem(value: string): string {
   return trimValue(trimmed.split(/\([0-9]+\)/)[0] ?? "");
 }
 
-function parseRecommendationCandidates(content: string): Candidate[] {
-  const candidates: Candidate[] = [];
-  let section: Candidate["section"] | "" = "";
-  let current: Candidate | null = null;
+function parseRecommendationCandidates(content: string): ParsedRecommendationCandidate[] {
+  const candidates: ParsedRecommendationCandidate[] = [];
+  let section: ParsedRecommendationCandidate["section"] | "" = "";
+  let current: ParsedRecommendationCandidate | null = null;
 
   const flush = () => {
     if (current) candidates.push(current);
@@ -267,7 +291,6 @@ function parseRecommendationCandidates(content: string): Candidate[] {
         section,
         title: line.replace(/^(### )?[0-9]+\. /, ""),
         postingLink: "",
-        exploreLink: "",
         evidence: "",
         summary: "",
         check: "",
@@ -281,7 +304,6 @@ function parseRecommendationCandidates(content: string): Candidate[] {
     const [, key, rawValue] = label;
     const value = rawValue ?? "";
     if (key === "공고 링크") current.postingLink = value;
-    if (key === "탐색 링크") current.exploreLink = value;
     if (key === "링크 근거 수준") current.evidence = value;
     if (key === "왜 맞는가") current.summary = firstSentence(value);
     if (key === "확인해야 할 모호점") current.check = firstListItem(value);
@@ -291,7 +313,7 @@ function parseRecommendationCandidates(content: string): Candidate[] {
   return candidates;
 }
 
-function validateDirectPostingRecommendations(runtimePath: string): Candidate[] {
+function validateDirectPostingRecommendations(runtimePath: string): ParsedRecommendationCandidate[] {
   const content = readFileSync(runtimePath, "utf-8");
   const candidates = parseRecommendationCandidates(content);
   let bad = false;
@@ -299,12 +321,6 @@ function validateDirectPostingRecommendations(runtimePath: string): Candidate[] 
     if (!/^https?:\/\//.test(candidate.postingLink)) {
       console.error(
         `position-recommender invalid recommendation: ${candidate.section} item lacks direct posting link: ${candidate.title}`
-      );
-      bad = true;
-    }
-    if (candidate.exploreLink && candidate.exploreLink !== "-") {
-      console.error(
-        `position-recommender invalid recommendation: ${candidate.section} item has explore link in recommendation tier: ${candidate.title}`
       );
       bad = true;
     }
@@ -333,12 +349,12 @@ function formatDiscordCandidates(candidates: Candidate[]): string {
     }
     counts[candidate.section]++;
     const itemNo = counts[candidate.section];
-    const link = /^https?:\/\//.test(candidate.postingLink) ? `<${candidate.postingLink}>` : "-";
-    lines.push(`${itemNo}. ${candidate.title}`);
-    lines.push(`   지원: ${link}`);
-    lines.push(`   이유: ${candidate.summary || "-"}`);
-    lines.push(`   확인: ${candidate.check || "-"}`);
-    lines.push(`   다음: ${candidate.action || "-"}`);
+    const link = /^https?:\/\//.test(candidate.postingUrl) ? `<${candidate.postingUrl}>` : "-";
+    const stack = candidate.searchKeywords.length > 0 ? candidate.searchKeywords.join(", ") : "-";
+    lines.push(`${itemNo}. ${candidate.company} — ${candidate.title}`);
+    lines.push(`   스택: ${stack}`);
+    lines.push(`   한줄: ${candidate.whyFit || "-"}`);
+    lines.push(`   링크: ${link}`);
   }
   if (lines.length === 0) return "강력 추천:\n\n도전 추천:";
   if (!lines.includes("강력 추천:")) lines.unshift("강력 추천:", "");
@@ -419,6 +435,13 @@ function buildFosCareerIngestEnv(fosCareerRoot: string): NodeJS.ProcessEnv {
 
 function runFosCareerCandidateIngest(args: { input: string }): void {
   const fosCareerRoot = resolve(process.env.FOS_CAREER_ROOT ?? `${process.env.HOME}/services/fos-career`);
+  const ingestEnv = existsSync(`${fosCareerRoot}/package.json`) ? buildFosCareerIngestEnv(fosCareerRoot) : process.env;
+  // DB 미설정(DATABASE_URL/FOS_CAREER_DATABASE_URL 모두 없음)이면 ingest를 건너뛴다.
+  // dry-run·DB 없는 환경에서 items.json 파생까지만 검증할 수 있게 한다.
+  if (!ingestEnv.DATABASE_URL && !ingestEnv.FOS_CAREER_DATABASE_URL) {
+    console.error("position-recommender DB ingest: DATABASE_URL not set, skipping candidate ingest");
+    return;
+  }
   if (!existsSync(`${fosCareerRoot}/package.json`)) {
     die(`position-recommender DB ingest: fos-career root not found: ${fosCareerRoot}`);
   }
@@ -428,7 +451,7 @@ function runFosCareerCandidateIngest(args: { input: string }): void {
     "pnpm",
     ["ingest:position-recommendations", "--input", args.input],
     fosCareerRoot,
-    buildFosCareerIngestEnv(fosCareerRoot)
+    ingestEnv
   );
 }
 
@@ -475,11 +498,15 @@ async function main(): Promise<void> {
     ? resolve(process.env.CAREER_OS_ROOT)
     : resolve(import.meta.dir, "..", "..");
   const reportDate = process.env.REPORT_DATE ?? kstDate();
-  const report = `${root}/data/reports/daily/${reportDate}/position-recommendation/report.md`;
-  const reportHtml = `${root}/data/reports/daily/${reportDate}/position-recommendation/report.html`;
-  const reportItems = `${root}/data/reports/daily/${reportDate}/position-recommendation/items.json`;
+  const reportDir = `${root}/data/reports/daily/${reportDate}/position-recommendation`;
+  // ADR-093: recommendation.json이 정본. report.md/report.html은 여기서 파생한다.
+  const recommendation = `${reportDir}/recommendation.json`;
+  const report = `${reportDir}/report.md`;
+  const reportHtml = `${reportDir}/report.html`;
+  const reportItems = `${reportDir}/items.json`;
   const runtime = `${root}/data/runtime/position-recommendation.md`;
   const runtimeHtml = `${root}/data/runtime/position-recommendation.html`;
+  const runtimeRecommendation = `${root}/data/runtime/position-recommendation.json`;
   const runtimeItems = `${root}/data/runtime/position-recommendation-items.json`;
   const livePostings = `${root}/data/runtime/live-position-postings.md`;
   const notifyScript = `${root}/../_shared/lib/notify_discord.ts`;
@@ -528,56 +555,52 @@ async function main(): Promise<void> {
     });
   }
 
-  if (!existsSync(report)) {
-    die(`position-recommender stale-output: expected today's report not found: ${report}`);
+  // ADR-093: 정본은 recommendation.json. freshness는 파일 존재 + reportDate 필드가 오늘인지로 본다.
+  if (!existsSync(recommendation)) {
+    die(`position-recommender stale-output: expected today's recommendation.json not found: ${recommendation}`);
   }
-  const reportFirstLine = firstLine(report);
-  if (!reportFirstLine.startsWith(`# ${reportDate} `)) {
-    die(`position-recommender stale-output: report first line is not today's date (${reportDate}): ${reportFirstLine}`);
-  }
-
-  if (!existsSync(runtime)) copyFileSync(report, runtime);
-  let runtimeFirstLine = firstLine(runtime);
-  if (!runtimeFirstLine.startsWith(`# ${reportDate} `)) {
-    copyFileSync(report, runtime);
-    runtimeFirstLine = firstLine(runtime);
-  }
-  if (!runtimeFirstLine.startsWith(`# ${reportDate} `)) {
-    die(`position-recommender stale-output: runtime first line is not today's date (${reportDate}): ${runtimeFirstLine}`);
+  const recommendationRun = loadRecommendationRun(recommendation);
+  if (recommendationRun.reportDate !== reportDate) {
+    die(
+      `position-recommender stale-output: recommendation.json reportDate (${recommendationRun.reportDate}) != today (${reportDate}): ${recommendation}`
+    );
   }
 
-  const candidates = validateDirectPostingRecommendations(runtime);
+  // 정본 JSON에서 report.md/report.html과 runtime 미러(md/html)를 파생한다.
+  const renderRecommendation = (input: string, format: "md" | "html", output: string): void => {
+    run(
+      "bun",
+      [
+        `${root}/scripts/position-recommender/render_recommendation.ts`,
+        "--input",
+        input,
+        "--format",
+        format,
+        "--output",
+        output,
+      ],
+      root
+    );
+  };
+  renderRecommendation(recommendation, "md", report);
+  renderRecommendation(recommendation, "html", reportHtml);
+  // runtime 미러: 정본 JSON 복사 + 같은 렌더러로 md/html 파생.
+  copyFileSync(recommendation, runtimeRecommendation);
+  renderRecommendation(recommendation, "md", runtime);
+  renderRecommendation(recommendation, "html", runtimeHtml);
 
-  run(
-    "bun",
-    [
-      `${root}/scripts/position-recommender/render_report_html.ts`,
-      "--input",
-      report,
-      "--output",
-      reportHtml,
-    ],
-    root
-  );
-  run(
-    "bun",
-    [
-      `${root}/scripts/position-recommender/render_report_html.ts`,
-      "--input",
-      runtime,
-      "--output",
-      runtimeHtml,
-    ],
-    root
-  );
+  // Discord 카드용 후보를 정본(recommendation.json)에서 직접 만든다.
+  const candidates = recommendationToCandidates(recommendationRun);
 
+  // items.json: 파생된 runtime md를 파싱해 buildStructuredRecommendationRun으로 생성한다(옛 흐름 유지).
+  const parsedCandidates = validateDirectPostingRecommendations(runtime);
   const structuredRun = buildStructuredRecommendationRun({
     reportDate,
     sourceSnapshotPath: livePostings,
     collectionRunId,
     markdownReportPath: report,
     htmlReportPath: reportHtml,
-    candidates,
+    candidates: parsedCandidates,
   });
   const structuredQuality = summarizeStructuredRecommendationQuality(structuredRun);
   if (structuredQuality.missingRequiredCardFields.length > 0) {
