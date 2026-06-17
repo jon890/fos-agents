@@ -2,9 +2,9 @@
   "name": "plan086-interview-prep-redesign",
   "description": "면접/지원 준비 flow를 역할별 단일 책임 스킬로 재편한다. 매일 답변 연습 → 실약점 진단 → 보강 공부팩의 닫힌 루프를 만든다. interview-prep-analyzer를 job-fit-analyzer로 리네임(daily 제거, 핏·갭 진단 리포커스), tech-interview-drill·behavioral-interview-drill(신규, 공용 드릴 엔진 공유), 면접 단계 준비 스킬(신규, stage 분리), candidate-baseline-suggester 제거(ADR-028 폐기). 약점 진단 근거를 정적 학습 노트에서 실제 답변 성능으로 전환한다(ADR-092).",
   "created_at": "2026-06-17T00:00:00+09:00",
-  "updated_at": "2026-06-17T00:00:00+09:00",
-  "status": "pending",
-  "current_phase": 1,
+  "updated_at": "2026-06-17T14:09:46+09:00",
+  "status": "completed",
+  "current_phase": 6,
   "total_phases": 6,
   "error_message": null,
   "blocked_reason": null,
@@ -40,7 +40,7 @@
       "number": 1,
       "title": "docs-first materialization — data-schema·flow·code-architecture·prd·README 플로우차트 (코드 변경 없음)",
       "file": "phase-01.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
@@ -50,13 +50,14 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 900
+      "timeout": 900,
+      "commitSha": "57e067f427f6"
     },
     {
       "number": 2,
       "title": "job-fit-analyzer 리네임 — interview-prep-analyzer daily 제거 + 핏·갭 리포커스 + 심링크·참조 갱신",
       "file": "phase-02.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
@@ -66,13 +67,14 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "c86e6a18229c"
     },
     {
       "number": 3,
       "title": "공용 드릴 엔진 + tech-interview-drill 신규 스킬 작성",
       "file": "phase-03.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
@@ -82,13 +84,14 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 900
+      "timeout": 900,
+      "commitSha": "834aa0f2d23d"
     },
     {
       "number": 4,
       "title": "behavioral-interview-drill 신규 스킬 작성 (공용 드릴 엔진 재사용)",
       "file": "phase-04.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
@@ -98,13 +101,14 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "25d10be45f14"
     },
     {
       "number": 5,
       "title": "interview-stage-prep 신규 스킬 작성 (interview-prep-analyzer stage 모드 분리)",
       "file": "phase-05.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",
@@ -114,13 +118,14 @@
         "Grep"
       ],
       "model": "sonnet",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "181d1cb4238b"
     },
     {
       "number": 6,
       "title": "candidate-baseline-suggester 제거 + 잔존 참조 정리 + 통합 검증 + index.json status=completed 마킹",
       "file": "phase-06.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": [
         "Read",
         "Write",

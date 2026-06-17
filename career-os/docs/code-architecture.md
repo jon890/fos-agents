@@ -166,16 +166,13 @@ career-os/
 │   │   └── SKILL.md  공고별 fit/gap + 맞춤 지원 패키지 작성
 │   ├── application-reviewer/
 │   │   └── SKILL.md  evidence/drift/privacy/cooldown 검토
-│   ├── daily-application-digest/
-│   │   └── SKILL.md  application ledger 기반 daily summary
-│   └── candidate-baseline-suggester/   (plan086 phase-06에서 제거 예정)
-│       └── SKILL.md   (plan020에서 native skill 명세 작성. Append + 주석 마킹 + audit trail. ADR-028)
+│   └── daily-application-digest/
+│       └── SKILL.md  application ledger 기반 daily summary
 │
 ├── .codex/skills/                        ← Codex 노출용 심볼릭 링크 (ADR-085)
 │   ├── application-package-writer -> ../../.claude/skills/application-package-writer
 │   ├── application-reviewer -> ../../.claude/skills/application-reviewer
 │   ├── behavioral-interview-drill -> ../../.claude/skills/behavioral-interview-drill  (plan086 신규)
-│   ├── candidate-baseline-suggester -> ../../.claude/skills/candidate-baseline-suggester  (제거 예정)
 │   ├── daily-application-digest -> ../../.claude/skills/daily-application-digest
 │   ├── interview-asset-writer -> ../../.claude/skills/interview-asset-writer
 │   ├── interview-prep-analyzer -> ../../.claude/skills/interview-prep-analyzer  (제거 예정)
@@ -243,9 +240,6 @@ Claude와 Codex는 같은 SKILL.md를 공유하고, Codex 발견 경로는 `.cod
 
 # legacy cron/runner 중 Claude CLI가 남아 있는 경로
 claude --permission-mode bypassPermissions -p "/study-topic-recommender"
-
-# legacy 쓰기-heavy runner
-claude --permission-mode acceptEdits -p "/candidate-baseline-suggester"
 
 # Discord 알림 (notify_discord.ts 직접 호출)
 bun --env-file=career-os/.env _shared/lib/notify_discord.ts "[완료] <message>"

@@ -111,7 +111,7 @@ description: >
   - `drill_type: "behavioral"` 필드로 tech 드릴 기록과 구분한다.
 - weak_spots: `career-os/config/study-progress.json`의 `weak_spots` 필드 직접 갱신.
   - 갱신 필드: `pass_count`, `fail_count`, `next_review_date`, `last_passed`, `last_evaluated`, `status`.
-  - `candidate-profile.md`는 수정하지 않는다 (candidate-baseline-suggester 담당).
+  - `candidate-profile.md`는 수정하지 않는다 (사람이 직접 편집).
 
 ## 간격 반복 규칙
 
@@ -143,4 +143,4 @@ description: >
 - tech-interview-drill 진행 금지 (별도 스킬 담당).
 - 면접 단계별 준비 금지 (interview-stage-prep 담당).
 - fos-study 발행 금지 (study-pack-writer 담당).
-- candidate-profile.md 직접 수정 금지 (candidate-baseline-suggester 담당).
+- candidate-profile.md 직접 수정 금지 (사람이 직접 편집).

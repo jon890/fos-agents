@@ -228,8 +228,6 @@ cd career-os
 /study-topic-recommender [context]
 # 타깃 직무 역할 단위 핏·갭 진단 (ADR-092)
 /job-fit-analyzer
-# 후보자 자산 Append 갱신 (ADR-028)
-/candidate-baseline-suggester
 # 활성 공고 수집 + 3 티어 추천 (ADR-030)
 /position-recommender [컨텍스트] [채용공고 file]
 

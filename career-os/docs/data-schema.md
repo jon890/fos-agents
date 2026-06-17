@@ -1586,9 +1586,11 @@ RSS/Atom feed 디스크 캐시. 6시간 TTL.
 
 `run_from_request.sh` / `run_morning_live_coding.sh`가 쓰는 임시 토픽 컨테이너. 두 runner 모두 dispatcher 미연결 — deferred.
 
-### data/runtime/profile-refresh-suggestions/YYYY-MM-DD/ (plan020, ADR-028)
+### data/runtime/profile-refresh-suggestions/YYYY-MM-DD/ (plan020, ADR-028 — 폐기)
 
-`candidate-baseline-suggester` 실행마다 생성되는 audit trail. 날짜별 디렉터리로 멱등.
+프로필 갱신 제안 스킬(ADR-028)이 생성하던 audit trail 디렉터리.
+해당 스킬은 plan086 phase-06에서 제거됨 (ADR-092 — weak_spots는 드릴이 전담).
+신규 생성 없음 — 기존 데이터는 참조용으로 보존 가능하나 더 이상 갱신되지 않는다.
 
 ```
 data/runtime/profile-refresh-suggestions/

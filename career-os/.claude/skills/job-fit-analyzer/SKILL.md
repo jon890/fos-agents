@@ -134,4 +134,4 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 - 관련 스킬: `application-package-writer` — 개별 공고 단위 fit 분석 (라우팅 대상)
 - 관련 스킬: `study-pack-writer` — 일반 학습 문서 생성
 - 관련 스킬: `interview-asset-writer` — 후보자 이력 기반 면접 자산
-- 관련 스킬: `candidate-baseline-suggester` — 진단 산출물 기반 후보자 프로필 갱신 제안
+

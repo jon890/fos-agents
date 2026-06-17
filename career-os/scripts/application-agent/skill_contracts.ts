@@ -166,26 +166,6 @@ export const SKILL_CONTRACTS: Readonly<Record<string, SkillContract>> = {
     prerequisiteGuards: [],
   },
 
-  'candidate-baseline-suggester': {
-    skillName: 'candidate-baseline-suggester',
-    cliPattern:
-      'cd career-os && claude --permission-mode acceptEdits -p "/candidate-baseline-suggester"',
-    description:
-      'profile-suggestions.md 생성 및 baseline 개선 후보 검토. config/candidate-profile.md 직접 수정 금지.',
-    autonomy: 'user_approval_required',
-    expectedOutputs: [
-      'data/runtime/profile-refresh-suggestions/{date}/before.md',
-      'data/runtime/profile-refresh-suggestions/{date}/after.md',
-      'data/runtime/profile-refresh-suggestions/{date}/diff.md',
-      'data/runtime/profile-refresh-suggestions/{date}/changes.md',
-    ],
-    touchesFosStudy: false,
-    modifiesCandidateProfile: false, // generates suggestions only, never direct modification
-    requiresExternalAccess: false,
-    prerequisiteGuards: ['profile_suggestions_not_direct_modification'],
-    approvalGateReason:
-      'profile 반영 전 사용자 검토 필요 — agent는 profile-suggestions.md까지만 생성',
-  },
 };
 
 export function buildSkillCommand(

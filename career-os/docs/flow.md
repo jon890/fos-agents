@@ -260,37 +260,6 @@ native skill 패턴: `claude -p "/interview-prep-analyzer [args]"` → SKILL.md 
 
 상세 동작: `career-os/.claude/skills/interview-prep-analyzer/SKILL.md` Workflow 섹션 참조.
 
-### `/candidate-baseline-suggester` (native skill — plan020, ADR-028)
-
-native skill 패턴: `claude --permission-mode acceptEdits -p "/candidate-baseline-suggester"` → SKILL.md 자동 로드 → Claude가 도구로 직접 처리.
-
-```
-호출: claude --permission-mode acceptEdits -p "/candidate-baseline-suggester"
-  ↓
-Read: candidate-profile.md + baseline-core-files.json
-      + config/study-progress.json + (선택) data/reports/baseline/<latest>/
-      + fos-study git log (전체 history)
-  ↓
-Backup → data/runtime/profile-refresh-suggestions/YYYY-MM-DD/before/
-  ↓
-Claude 자연어 분석:
-  - 강점 추가 후보 (fos-study 학습 증거)
-  - 약점 outdated 후보 (학습 완료 → 주석 마킹)
-  - baseline-core-files 추가 후보 (fos-study 새 핵심 파일)
-  - weak_spots 평가 갱신
-  ↓
-Edit 적용 (Append + 주석 마킹):
-  candidate-profile.md / baseline-core-files.json / prd.md / study-progress.json
-  ↓
-audit trail Write → after/ + diff/ + changes.md
-  ↓
-Discord 알림 [완료]
-```
-
-자동 commit 없음 — 갱신된 자산을 git에 추가할지 사용자가 결정.
-
-상세 동작: `career-os/.claude/skills/candidate-baseline-suggester/SKILL.md` Workflow 섹션 참조.
-
 ### `/position-recommender` (native skill — plan022, ADR-030)
 
 native skill 패턴: `claude -p "/position-recommender [자연어 컨텍스트] [채용공고 file path]"` → SKILL.md 자동 로드 → Claude가 도구로 직접 처리.
