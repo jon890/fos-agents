@@ -7,7 +7,7 @@
 
 ## 목표
 
-질문 정본을 `public/question-bank/`로 모으기 위한 첫 단계다(ADR-096).
+질문 정본을 `public/question-bank/`로 모으기 위한 첫 단계다(ADR-097).
 
 - 기존 public 질문 전체에 `topic` 필드를 추가한다(= `study-progress.json` weak_spots 키).
 - `public/question-bank/behavioral/` 카테고리를 신설하고, `data/question-bank/behavioral-questions.jsonl` 5개를 public 스키마로 보강해 이관한다.
@@ -16,7 +16,7 @@
 **범위 외**:
 - data tech 질문 이관 금지(phase-02)
 - drill-engine.ts 수정 금지(phase-03)
-- docs/ADR 수정 금지(이미 plan088 docs 커밋에서 반영됨)
+- docs/ADR 수정 금지(이미 plan089 docs 커밋에서 반영됨)
 - `data/question-bank/` 삭제 금지(phase-05) — behavioral 원본은 phase-05까지 남겨 둔다
 - push·PR 금지
 
@@ -141,7 +141,7 @@ cd "$(git rev-parse --show-toplevel)"
 git add career-os/public/question-bank/ career-os/scripts/question-bank-collector/validate.ts
 git diff --cached --name-only
 git commit -q -m "$(cat <<'EOF'
-feat(career-os): public 질문 topic 필드 추가 + behavioral 카테고리 신설 (ADR-096)
+feat(career-os): public 질문 topic 필드 추가 + behavioral 카테고리 신설 (ADR-097)
 
 - public 전 카테고리 질문에 topic 필드(weak_spots 키) 추가
 - public/question-bank/behavioral/ 신설, data behavioral 5개 이관·보강

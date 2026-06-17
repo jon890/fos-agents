@@ -7,7 +7,7 @@
 
 ## 목표
 
-드릴 엔진이 `data/question-bank/`가 아니라 정본(public + private)을 읽게 한다(ADR-096).
+드릴 엔진이 `data/question-bank/`가 아니라 정본(public + private)을 읽게 한다(ADR-097).
 
 - `scripts/interview-drill/drill-engine.ts`의 `loadQuestionBank`와 경로 헬퍼를 재작성한다.
 - tech 드릴 = public 기술 카테고리 5개 통합 풀, behavioral 드릴 = `public/question-bank/behavioral/`.
@@ -142,7 +142,7 @@ git add career-os/scripts/interview-drill/drill-engine.ts \
   career-os/.claude/skills/behavioral-interview-drill/SKILL.md
 git diff --cached --name-only
 git commit -q -m "$(cat <<'EOF'
-refactor(career-os): drill-engine을 public+private 정본 merge로 재작성 (ADR-096)
+refactor(career-os): drill-engine을 public+private 정본 merge로 재작성 (ADR-097)
 
 - loadQuestionBank: public 기술 카테고리 순회 + private personal.jsonl merge
 - public은 JSON 배열, private은 JSONL — 파서 분기

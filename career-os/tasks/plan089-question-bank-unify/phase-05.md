@@ -7,7 +7,7 @@
 
 ## 목표
 
-정본 1원화를 마무리한다(ADR-096).
+정본 1원화를 마무리한다(ADR-097).
 
 - `question-bank-collector`가 behavioral 카테고리도 보강 대상에 포함하게 한다.
 - `data/question-bank/`를 폐기(삭제)한다.
@@ -48,7 +48,7 @@ cd "$(git rev-parse --show-toplevel)"
 grep -rn "data/question-bank" career-os/scripts career-os/.claude/skills career-os/CLAUDE.md 2>/dev/null
 ```
 - 남은 참조를 정본 경로로 바꾸거나 제거한다(docs는 이미 갱신됨, 건드리지 않는다).
-- **실측 알려진 잔존**: `career-os/scripts/application-agent/skill_contracts.ts`에 `data/question-bank/{topic}.jsonl` 출력 계약 문자열이 있다(question-bank-collector 옛 출력). ADR-096 이후 collector 출력은 `public/question-bank/<category>/questions.json`이므로 이 문자열을 정정한다. 이 파일을 정정하지 않으면 아래 성공 기준 grep이 무조건 FAIL이다.
+- **실측 알려진 잔존**: `career-os/scripts/application-agent/skill_contracts.ts`에 `data/question-bank/{topic}.jsonl` 출력 계약 문자열이 있다(question-bank-collector 옛 출력). ADR-097 이후 collector 출력은 `public/question-bank/<category>/questions.json`이므로 이 문자열을 정정한다. 이 파일을 정정하지 않으면 아래 성공 기준 grep이 무조건 FAIL이다.
 
 ### 3. data/question-bank 폐기 (삭제)
 
@@ -75,7 +75,7 @@ console.log('tech', loadQuestionBank('tech').length, 'behavioral', loadQuestionB
 
 ### 5. index.json status=completed 마킹
 
-`tasks/plan088-question-bank-unify/index.json`의 `status`를 `completed`, `current_phase`를 5로, 각 phase status를 completed로 갱신한다(commitSha는 메인 세션 review 후 채워질 수 있음).
+`tasks/plan089-question-bank-unify/index.json`의 `status`를 `completed`, `current_phase`를 5로, 각 phase status를 completed로 갱신한다(commitSha는 메인 세션 review 후 채워질 수 있음).
 
 ---
 
@@ -116,11 +116,11 @@ console.log('OK tech',t.length,'behavioral',b.length);
 " || FAIL=1
 
 # index.json completed
-grep -q '"status": "completed"' career-os/tasks/plan088-question-bank-unify/index.json \
+grep -q '"status": "completed"' career-os/tasks/plan089-question-bank-unify/index.json \
   || { echo "[FAIL] index.json status 미갱신"; FAIL=1; }
 
 if [ "$FAIL" = "0" ]; then
-  echo "SUCCESS: phase-05 통과 — plan088 완료"
+  echo "SUCCESS: phase-05 통과 — plan089 완료"
 else
   echo "PHASE_FAILED: 위 항목 수정 후 재실행"; exit 1
 fi
@@ -134,17 +134,17 @@ fi
 cd "$(git rev-parse --show-toplevel)"
 git add career-os/.claude/skills/question-bank-collector/ \
   career-os/scripts/ career-os/CLAUDE.md \
-  career-os/tasks/plan088-question-bank-unify/index.json
+  career-os/tasks/plan089-question-bank-unify/index.json
 # data/question-bank 삭제분 stage
 git add -A career-os/data/question-bank 2>/dev/null || true
 git diff --cached --name-only
 git commit -q -m "$(cat <<'EOF'
-feat(career-os): question-bank-collector behavioral 확장 + data/question-bank 폐기 (ADR-096)
+feat(career-os): question-bank-collector behavioral 확장 + data/question-bank 폐기 (ADR-097)
 
 - question-bank-collector behavioral 카테고리 보강 대상 포함
 - data/question-bank/ 삭제(정본은 public/question-bank)
 - 코드·스킬 잔존 참조 정리, 드릴 로드 통합 검증
-- plan088 index.json status=completed
+- plan089 index.json status=completed
 
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
 EOF

@@ -7,7 +7,7 @@
 
 ## 목표
 
-`data/question-bank/tech-questions.jsonl` 12개를 public 기술 카테고리로 이관한다(ADR-096).
+`data/question-bank/tech-questions.jsonl` 12개를 public 기술 카테고리로 이관한다(ADR-097).
 public에 이미 있는 중복 질문은 버리고, 없는 것만 public 스키마로 보강해 넣는다.
 
 **범위 외**:
@@ -126,7 +126,7 @@ cd "$(git rev-parse --show-toplevel)"
 git add career-os/public/question-bank/
 git diff --cached --name-only
 git commit -q -m "$(cat <<'EOF'
-feat(career-os): data tech 질문 12개 public 기술 카테고리로 이관 (ADR-096)
+feat(career-os): data tech 질문 12개 public 기술 카테고리로 이관 (ADR-097)
 
 - category 매핑(database/java-spring/cs/operations/system-design)대로 이관
 - id 재발급 + public 스키마 보강(source/publicSafe/positionFitHint)

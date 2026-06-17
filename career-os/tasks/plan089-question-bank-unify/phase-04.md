@@ -7,7 +7,7 @@
 
 ## 목표
 
-개인 맞춤 질문(후보자 이력 기반)을 생성·관리하는 경로를 만든다(ADR-096).
+개인 맞춤 질문(후보자 이력 기반)을 생성·관리하는 경로를 만든다(ADR-097).
 
 - `interview-asset-writer`가 `config/candidate-profile.md` 기반으로 개인 질문을 `private/question-bank/{behavioral,tech}-personal.jsonl`로 생성하는 흐름을 추가한다.
 - 두 드릴 SKILL.md에 "개인 질문 즉석 생성" 경로를 추가한다(드릴 중 사용자가 "이 경험으로 질문 만들어줘" 요청).
@@ -118,7 +118,7 @@ git add career-os/.claude/skills/interview-asset-writer/SKILL.md \
   career-os/.claude/skills/behavioral-interview-drill/SKILL.md
 git diff --cached --name-only
 git commit -q -m "$(cat <<'EOF'
-feat(career-os): 개인 질문 생성 경로 추가 — interview-asset-writer + 드릴 즉석 생성 (ADR-096)
+feat(career-os): 개인 질문 생성 경로 추가 — interview-asset-writer + 드릴 즉석 생성 (ADR-097)
 
 - interview-asset-writer: candidate-profile 기반 private/question-bank/{behavioral,tech}-personal.jsonl 생성
 - 두 드릴 SKILL.md: 개인 질문 즉석 생성 위임 경로(에이전트 비종속 표현)

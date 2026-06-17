@@ -1,6 +1,6 @@
 {
-  "name": "plan088-question-bank-unify",
-  "description": "질문 정본을 public/question-bank/ 하나로 1원화한다(ADR-096). public 질문 스키마에 topic 필드 추가(weak_spots 키), behavioral 카테고리 신설, data/question-bank/ 드릴 풀 폐기, drill-engine을 public(일반)+private(개인) merge로 재작성, interview-asset-writer 개인 질문 생성 확장 + 드릴 즉석 생성 경로, question-bank-collector behavioral 확장. 개인 맞춤 질문은 private/question-bank/{behavioral,tech}-personal.jsonl 정본으로 분리.",
+  "name": "plan089-question-bank-unify",
+  "description": "질문 정본을 public/question-bank/ 하나로 1원화한다(ADR-097). public 질문 스키마에 topic 필드 추가(weak_spots 키), behavioral 카테고리 신설, data/question-bank/ 드릴 풀 폐기, drill-engine을 public(일반)+private(개인) merge로 재작성, interview-asset-writer 개인 질문 생성 확장 + 드릴 즉석 생성 경로, question-bank-collector behavioral 확장. 개인 맞춤 질문은 private/question-bank/{behavioral,tech}-personal.jsonl 정본으로 분리.",
   "created_at": "2026-06-17T00:00:00+09:00",
   "updated_at": "2026-06-17T00:00:00+09:00",
   "status": "pending",
@@ -9,8 +9,8 @@
   "error_message": null,
   "blocked_reason": null,
   "related_docs": [
-    "career-os/docs/adr/ADR-096-question-bank-정본-public으로-1원화하고-개인-질문은-private에-둔다.md",
-    "career-os/docs/adr/ADR-097-data-schema는-현재-스키마만-담고-폐기-항목은-adr로-위임한다.md",
+    "career-os/docs/adr/ADR-097-question-bank-정본-public으로-1원화하고-개인-질문은-private에-둔다.md",
+    "career-os/docs/adr/ADR-098-data-schema는-현재-스키마만-담고-폐기-항목은-adr로-위임한다.md",
     "career-os/docs/adr/INDEX.md",
     "career-os/docs/data-schema.md",
     "career-os/docs/flow.md",
@@ -31,11 +31,11 @@
   ],
   "depends_on": [],
   "execution_policy": {
-    "goal": "질문 정본을 public/question-bank/ 하나로 모으고, 드릴·자산생성·수집 스킬이 같은 정본을 읽게 한다. 개인 맞춤 질문은 private 정본으로 분리한다. docs(ADR-096/097, data-schema, flow, code-architecture)는 이미 docs-first로 반영됐으므로 구현 phase는 docs를 건드리지 않는다.",
+    "goal": "질문 정본을 public/question-bank/ 하나로 모으고, 드릴·자산생성·수집 스킬이 같은 정본을 읽게 한다. 개인 맞춤 질문은 private 정본으로 분리한다. docs(ADR-097/097, data-schema, flow, code-architecture)는 이미 docs-first로 반영됐으므로 구현 phase는 docs를 건드리지 않는다.",
     "phase_order": "current_phase 순서대로 phase-01부터 phase-05까지 순차 실행한다. 같은 plan 안의 phase는 병렬 실행하지 않는다.",
     "parallelism": "같은 plan 안의 phase는 병렬 실행하지 않는다. phase-02는 phase-01(topic 필드+behavioral 카테고리+validate.ts)에 의존, phase-03은 phase-01/02 산출물(public 정본)에 의존한다.",
-    "scope_boundary": "구현 phase는 docs/ADR을 수정하지 않는다(이미 plan088 docs 커밋에서 반영됨). phase-01은 public 질문 JSON·behavioral 신설·validate.ts, phase-02는 public 기술 카테고리 JSON, phase-03은 drill-engine.ts와 두 드릴 SKILL.md, phase-04는 interview-asset-writer SKILL.md와 두 드릴 SKILL.md, phase-05는 question-bank-collector·validate.ts·data/question-bank 삭제·잔존 참조 정리만 다룬다. phase-05가 마지막이며 통합 검증과 index.json status=completed 마킹을 포함한다.",
-    "pr_unit": "refactor/plan088-question-bank-unify 워크트리에서 실행한다. 각 phase는 commit만 하고 push/PR은 하지 않는다. push와 plan 단위 PR은 모든 phase 완료 후 메인 세션이 review한 뒤 처리한다."
+    "scope_boundary": "구현 phase는 docs/ADR을 수정하지 않는다(이미 plan089 docs 커밋에서 반영됨). phase-01은 public 질문 JSON·behavioral 신설·validate.ts, phase-02는 public 기술 카테고리 JSON, phase-03은 drill-engine.ts와 두 드릴 SKILL.md, phase-04는 interview-asset-writer SKILL.md와 두 드릴 SKILL.md, phase-05는 question-bank-collector·validate.ts·data/question-bank 삭제·잔존 참조 정리만 다룬다. phase-05가 마지막이며 통합 검증과 index.json status=completed 마킹을 포함한다.",
+    "pr_unit": "refactor/plan089-question-bank-unify 워크트리에서 실행한다. 각 phase는 commit만 하고 push/PR은 하지 않는다. push와 plan 단위 PR은 모든 phase 완료 후 메인 세션이 review한 뒤 처리한다."
   },
   "notes": [
     "공통 함정(실측): scripts/question-bank-collector/validate.ts가 CATEGORIES(behavioral 없음)와 REQUIRED_FIELDS(topic 없음)를 강제한다. phase-01이 public에 topic·behavioral을 추가하면서 validate.ts도 같이 고치지 않으면 검증이 깨진다.",
