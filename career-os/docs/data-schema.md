@@ -1781,16 +1781,25 @@ source adapter는 official listing, official API, sitemap, keyword search에서 
 Wanted adapter는 백엔드 keyword 외에 AI Agent/RAG/MCP/LLMOps/ML Backend 계열 keyword를 함께 수집할 수 있다.
 Toss adapter는 공식 `job-groups` API의 그룹 공고와 하위 포지션을 펼쳐 snapshot에 넣는다.
 
-### data/runtime/position-recommendation.html
+### data/reports/daily/YYYY-MM-DD/position-recommendation/recommendation.json (정본, ADR-093)
 
-`position-recommender` daily runner가 Markdown 추천 리포트 검증 뒤 생성하는 HTML 미러.
+`position-recommender` 산출물의 단일 정본. schemaVersion 2, `scripts/position-recommender/recommendation_schema.ts` zod 스키마를 따른다.
 
-- 정본 내용은 `data/runtime/position-recommendation.md`와 당일 report.md다.
-- HTML은 사람이 아침 Discord 알림에서 바로 읽기 위한 표시 산출물이다.
-- 같은 날짜 보존본은 `data/reports/daily/YYYY-MM-DD/position-recommendation/report.html`에 쓴다.
-- 표시 template 정본은 `scripts/position-recommender/templates/report.html`이다.
-- template은 실행 자산이므로 `data/` 아래에 두지 않는다.
-- 한국어 리포트 본문은 Markdown 입력에서 들어오고, template 파일 자체는 ASCII 중심으로 유지한다.
+- 에이전트가 이 JSON을 생성하고, `render_recommendation.ts`가 Markdown·HTML을 파생한다. 자체 markdown 파서를 거치지 않는다.
+- 14개 라벨이 `PositionItem` 필드로 고정되어 items·DB ingest로 손실 없이 전달된다.
+- tier 상한(강력 3 / 도전 2 / 보류 3), `linkEvidenceLevel` enum(active/open만), 추천 티어 개별 공고 URL 강제, 강력 추천 `stretchGap` 금지를 스키마가 보장한다.
+- DB ingest는 이 JSON을 직접 사용한다.
+- 런타임 미러는 `data/runtime/position-recommendation-items.json`.
+
+### data/runtime/position-recommendation.{md,html}
+
+recommendation.json 정본에서 파생하는 사람 읽기용 산출물.
+
+- `position-recommendation.md` — `render_recommendation.ts --format md` 파생. freshness 가드·기록 호환용.
+- `position-recommendation.html` — `--format html` 파생. 아침 Discord 알림 표시용.
+- 같은 날짜 보존본은 `data/reports/daily/YYYY-MM-DD/position-recommendation/{report.md,report.html}`.
+- 표시 template 정본은 `scripts/position-recommender/templates/report.html` (스타일만 정의, JSON 데이터 바인딩).
+- template은 실행 자산이므로 `data/` 아래에 두지 않고 ASCII 중심으로 유지한다.
 
 ## sources/fos-study/
 
