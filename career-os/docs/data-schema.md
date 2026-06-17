@@ -136,12 +136,15 @@ config diet는 plan068에서 reader inventory와 fallback을 확인한 뒤 phase
 
 | 필드 | 소비자 | 설명 |
 |---|---|---|
-| `company`, `koreanName`, `tier` | 공통/LLM | 회사명·검증 티어 |
-| `hasAdapter`, `adapterId` | 코드 | 수집 adapter 커버리지·라우팅. `false`는 adapter 추가 backlog |
-| `careerUrls`, `wantedKeywords` | 코드+LLM | discovery entrypoint + 탐색 키워드 |
-| `preferredDomains`, `techBlogs`, `notes` | LLM | 회사 업사이드 판단 근거 |
+| `priorityCompanies[].company`, `koreanName`, `tier` | 공통/LLM | 회사명·검증 티어 |
+| `priorityCompanies[].hasAdapter`, `adapterId` | 코드 | 수집 adapter 커버리지·라우팅. `false`는 adapter 추가 backlog |
+| `priorityCompanies[].careerUrls`, `wantedKeywords` | 코드+LLM | discovery entrypoint + 탐색 키워드 |
+| `priorityCompanies[].preferredDomains`, `techBlogs`, `notes` | LLM | 회사 업사이드 판단 근거 |
+| `cooldown.active[]`, `cooldown.notes` | LLM | 우선순위 감점 쿨다운 회사 + 해제 메모. 하드필터 아님(ADR-094) |
+| `preferenceExcluded.companies[]` | LLM | JD fit이 높아도 추천 티어에서 제외하는 선호 제외 회사(ADR-094) |
 
 코드가 JSON을 읽어 adapter를 라우팅하는 wire-up은 후속 plan에서 한다. 본 스키마는 양방향 소비를 전제로 설계한다.
+회사별 운영 데이터(쿨다운·선호제외)도 references 산문에서 본 파일로 흡수했다(ADR-094). references md는 방법론만 남기고 회사 데이터는 본 파일을 역참조한다.
 
 ### config/mvp-target.json (현재 타깃 단일 출처)
 
