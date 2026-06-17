@@ -238,6 +238,8 @@ cd career-os
 /tech-interview-drill
 # 매일 인성 면접 질문(STAR·가치관) 1문장 답변·채점·약점 환류
 /behavioral-interview-drill
+# 면접 단계별 실전 준비 가이드 생성 (1차·최종·협상 단계)
+/interview-stage-prep
 
 # 지원 준비 루프 (비공개 career-os 산출물)
 # 공고별 지원 패키지 생성
