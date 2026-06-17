@@ -128,10 +128,14 @@ git pull 실패 시 → stderr warn + 로컬 캐시로 분석 계속.
 
 ### 6. nextActions — 다음 스킬 연결
 
-`nextActions[]`로 다음 행동을 구조화한다. study-pack은 부차 라우팅으로 둔다.
+`nextActions[]`로 다음 행동을 구조화한다.
+**첫 액션은 `verdict.recommendation`에 따라 분기한다** — 진단이 "공부 목록"이 아니라 의사결정 산출물임을 끝까지 일관되게 유지하기 위함이다. study-pack은 부차 라우팅으로 둔다.
 
-- **첫 액션**: 최우선 갭(`priority: "고"`)에 대해 `study-pack-writer` 생성을 제안한다.
+- **`verdict`가 "지원 권장" 또는 "조건부 지원"이면**: 첫 액션은 최우선 갭(`priority: "고"`) 보강이다.
   `skill: "study-pack-writer"`, `input: "<갭 주제>"`, `why: "최우선 갭 보강"`.
+- **`verdict`가 "보류"이면**: 첫 액션은 학습 갭 보강이 아니라 **재탐색**이다.
+  더 맞는 직무를 다시 찾거나(`position-recommender`) 다른 역할을 진단(`job-fit-analyzer`)하는 쪽으로 라우팅한다.
+  `why: "현재 역할 핏이 낮아 보강보다 재탐색이 우선"`. 핏이 낮은데 갭만 메우는 공부로 모는 것을 피한다.
 - 면접 답변 연습이 필요하면 `tech-interview-drill` / `behavioral-interview-drill` 라우팅.
 - 개별 공고 지원 준비로 넘어가면 `application-package-writer` 라우팅.
 - 면접 단계가 잡혀 있으면 `interview-stage-prep` 라우팅.
@@ -192,7 +196,7 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 - **ADR-096 (의사결정·전략 재정의)**: 산출물 정본을 구조화 JSON `JobFitRun`으로 올리고, `verdict`·`careerPath`·`interviewStrategy`를 1급 필드로 둔다. `reinforcement`(학습 갭)는 부차로 내려, "공부 목록 생성기"에서 "지원 판단 + 면접 전략 + 커리어 정합" 진단으로 가치를 옮긴다.
 - **자연어 타깃 override (ADR-096)**: `/job-fit-analyzer [역할]` 인자로 타깃을 받고, 없으면 mvp-target primary fallback. mvp-target 고정을 풀어 다른 직무 탐색 진단을 우회 표기 없이 수행한다.
 - **JSON 정본 + 렌더러 파생 (ADR-096, ADR-094 패턴 재사용)**: `render_job_fit.ts`가 정본에서 md를 파생하고, self-check를 zod 검증으로 대체. 자체 markdown 파서를 폐기해 출력이 항상 일관되고, 진단 갭을 다음 스킬 입력으로 재사용하기 쉽다.
-- **nextActions 구조화 (ADR-096)**: 다음 스킬 라우팅을 `nextActions{skill,input,why}`로 구조화. 최우선 갭은 study-pack 생성을 첫 액션으로 제안하되, study-pack은 부차 라우팅으로 남긴다.
+- **nextActions 구조화 (ADR-096)**: 다음 스킬 라우팅을 `nextActions{skill,input,why}`로 구조화. 첫 액션은 `verdict`에 따라 분기한다 — "지원 권장/조건부"면 study-pack 보강, "보류"면 재탐색(position-recommender / 다른 역할 job-fit). 핏이 낮은데도 갭 보강 공부로만 모는 것을 막아, 진단이 의사결정 산출물임을 일관되게 유지한다.
 - **changeSince (ADR-096)**: 역할 슬러그 파일명으로 같은 역할 지난 진단 대비 변화를 보여줘 반복 진단 가치를 만든다.
 - **경계 유지 (ADR-096)**: 회사 최근 동향은 범위 밖으로 두고 position-recommender(회사 평가)와 경계를 유지한다.
 - **단일 모드 (ADR-092)**: baseline/daily/stage 3분기 대신 역할 단위 진단 단일 모드. stage 준비는 `interview-stage-prep`, 개별 공고 fit은 `application-package-writer` 책임.
