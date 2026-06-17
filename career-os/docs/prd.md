@@ -509,16 +509,6 @@ commit 메시지는 `docs(<domain>): add|update draft <topic> study pack` 형식
 워크플로 그래프에 진입점이 없는 자산 (deferred features).
 다음 사이클에서 wire-up 또는 폐기 결정.
 
-폐기 완료 항목:
-
-- `live-coding-dispatch`: plan016에서 study-topic-recommender agent skill로 흡수
-- `bootcamp-batch`: plan014에서 폐기
-- `auto-question-bank`: plan015에서 폐기
-  - 사용자가 직접 `/study-pack-writer` 또는 `/interview-asset-writer` 반복 호출로 대체
-- `collect_live_postings.py` + `publish_job_analysis.sh` + `run_position_recommendation.sh` + `extract_position_report.ts`:
-  - plan022에서 폐기
-  - `/position-recommender` agent skill로 흡수
-
 ## 분해 대기 작업
 
 현재 분해 대기 항목 없음.

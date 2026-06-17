@@ -172,7 +172,7 @@ export function buildMorningMarkdown(
     ""
   );
   if (reviewStatus === "failed") {
-    lines.push("> ⚠️ Claude duplicate review 실패 — deterministic 중복 필터 결과만 반영했습니다.", "");
+    lines.push("> ⚠️ LLM duplicate review 실패 — deterministic 중복 필터 결과만 반영했습니다.", "");
   }
   if (updateExisting.length === 0) {
     lines.push("- (보강 후보 없음 — 모든 추천은 새 study-pack 가능)", "");

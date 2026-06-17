@@ -773,5 +773,5 @@ fos-career 연동:
 
 - 면접 hub는 `question_bank_refresh` request를 만든다.
 - processor는 host-side career-os checkout에서 `question-bank-collector`를 실행한다.
-- dashboard container는 `claude`를 직접 실행하지 않는다.
+- dashboard container는 특정 에이전트 CLI를 직접 실행하지 않는다.
 - private prep 반영은 별도 후속 흐름으로 분리한다.
