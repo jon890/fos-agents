@@ -93,7 +93,7 @@ export function buildMorningMarkdown(
   ];
 
   if (reviewStatus === "failed") {
-    lines.push("> ⚠️ Claude duplicate review 실패 — 추천은 deterministic dedupe 기준입니다.", "");
+    lines.push("> ⚠️ LLM duplicate review 실패 — 추천은 deterministic dedupe 기준입니다.", "");
   }
 
   lines.push("## 백엔드 스터디 주제 (3)", "");
@@ -103,7 +103,7 @@ export function buildMorningMarkdown(
     }
   } else {
     lines.push(
-      '- (reservoir 비어 있음 — `claude --permission-mode bypassPermissions -p "/study-topic-recommender"` 로 보충)',
+      '- (reservoir 비어 있음 — `/study-topic-recommender` 로 보충)',
       ""
     );
   }
@@ -198,7 +198,7 @@ export function buildMorningMarkdown(
     `- fos-study 스캔: ${stats.scannedMarkdownCount}개 .md 파일`,
     `- deterministic 중복 후보: ${stats.possibleDuplicates}개`,
     "",
-    '백엔드 항목은 `claude -p "/study-pack-writer <key>"`로 즉시 만들 수 있다.',
+    '백엔드 항목은 `/study-pack-writer <key>`로 즉시 만들 수 있다.',
     "나머지 카테고리는 외부 reading 추천이라 별도 생성 단계 없이 그대로 학습한다."
   );
 
