@@ -93,3 +93,4 @@
 | ADR-092 | 면접 준비 flow 재편: 핏 진단과 매일 답변 드릴 분리 | Accepted | [ADR-092-면접-준비-flow-재편-진단-드릴-분리.md](ADR-092-면접-준비-flow-재편-진단-드릴-분리.md) |
 | ADR-093 | Skill 호출은 agent 비종속 의도 표현으로 쓴다 | Accepted | [ADR-093-skill-호출은-agent-비종속-의도-표현으로-쓴다.md](ADR-093-skill-호출은-agent-비종속-의도-표현으로-쓴다.md) |
 | ADR-094 | 포지션 추천 산출물을 JSON 정본으로 전환한다 | Accepted | [ADR-094-포지션-추천-산출물-json-정본-전환.md](ADR-094-포지션-추천-산출물-json-정본-전환.md) |
+| ADR-095 | 회사 업사이드 운영 데이터를 config JSON 단일 출처로 흡수한다 | Accepted | [ADR-095-회사-업사이드-운영데이터-config-흡수.md](ADR-095-회사-업사이드-운영데이터-config-흡수.md) |

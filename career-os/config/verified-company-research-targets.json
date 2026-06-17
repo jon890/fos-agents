@@ -2,7 +2,16 @@
   "_meta": {
     "purpose": "포지션 추천 전 검증된 회사군을 폭넓게 탐색하기 위한 회사/채널 레퍼런스. Wanted, 공식 career, 기술블로그를 함께 확인한다.",
     "policy": "서버/백엔드 정규직 공고만 추천 후보로 올린다. 회사명만 보고 추천하지 말고 active 공고, JD fit, 회사/규모 업사이드, 기술블로그/엔지니어링 시그널을 함께 본다.",
-    "usage": "position-recommender runner가 이 파일을 프롬프트 컨텍스트로 포함한다. 사람이 수동 web_search/web_fetch를 할 때도 이 목록을 우선 탐색 대상으로 사용한다. hasAdapter/adapterId는 코드 수집 라우팅에 사용한다(plan082)."
+    "usage": "position-recommender runner가 이 파일을 프롬프트 컨텍스트로 포함한다. 사람이 수동 web_search/web_fetch를 할 때도 이 목록을 우선 탐색 대상으로 사용한다. hasAdapter/adapterId는 코드 수집 라우팅에 사용한다(plan082). 쿨다운·선호제외 운영 데이터의 단일 출처는 이 파일이다(ADR-095)."
+  },
+  "cooldown": {
+    "_comment": "최근 6개월 내 지원 후 불합격 등으로 우선순위를 낮추는 회사(하드필터 아님, 감점). 추천 시 이 목록을 단일 출처로 본다.",
+    "active": [],
+    "notes": "토스 계열(토스/비바리퍼블리카/토스뱅크/토스페이먼츠/토스플레이스)은 2026-06-15부터 쿨다운 해제 상태."
+  },
+  "preferenceExcluded": {
+    "_comment": "JD fit이 높아도 사용자 선호가 낮아 강력/도전 추천·즉시 지원 액션에 올리지 않는 회사. 필요 시 보류·제외 사유로만 짧게 언급.",
+    "companies": ["레브잇", "올웨이즈", "다니엘프로젝트", "리아드코퍼레이션", "피닉스랩", "와그(WAUG)"]
   },
   "priorityCompanies": [
     {
