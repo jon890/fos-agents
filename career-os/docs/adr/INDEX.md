@@ -91,3 +91,4 @@
 | ADR-090 | 검증 회사군을 config JSON 단일 출처로 둔다 | Accepted | [ADR-090-검증-회사군을-json-단일-출처로-둔다.md](ADR-090-검증-회사군을-json-단일-출처로-둔다.md) |
 | ADR-091 | career-os 스크립트 root는 위치 기준으로 해석한다 | Accepted | [ADR-091-script-career-os-root-위치-기준-해석.md](ADR-091-script-career-os-root-위치-기준-해석.md) |
 | ADR-092 | 면접 준비 flow 재편: 핏 진단과 매일 답변 드릴 분리 | Accepted | [ADR-092-면접-준비-flow-재편-진단-드릴-분리.md](ADR-092-면접-준비-flow-재편-진단-드릴-분리.md) |
+| ADR-093 | Skill 호출은 agent 비종속 의도 표현으로 쓴다 | Accepted | [ADR-093-skill-호출은-agent-비종속-의도-표현으로-쓴다.md](ADR-093-skill-호출은-agent-비종속-의도-표현으로-쓴다.md) |
