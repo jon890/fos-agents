@@ -10,7 +10,7 @@
 - AI/AX 공고를 볼 때는 두 레인을 구분한다. (1) 백엔드 코어 레인: 결제/정산/플랫폼 서버처럼 트랜잭션·정합성·운영 안정성이 핵심인 공고. (2) AI 전환 레인: AX, AI Agent, AI 플랫폼, LLMOps/MLOps, 개발 생산성 자동화처럼 후보자의 AI workflow/Agent/RAG 경험이 차별화되는 공고.
 - 후보자의 강점은 Spring Boot/Java/Kafka/Redis/OpenSearch/RAG/LLM workflow/Agent orchestration/운영 트러블슈팅이다.
 - 사용자는 NHN보다 나은 회사로의 이동과 다른 도메인으로의 적극적인 전환을 원한다. 기존 게임/사내 플랫폼 도메인에 과하게 묶지 말고, 커머스/결제·핀테크/검색·포털/메신저·소셜/모빌리티/콘텐츠/물류/클라우드·플랫폼/대규모 B2C 서비스 등 Java/Spring 백엔드 경험이 잘 전이되는 도메인을 우선 검토한다.
-- `preferenceExcluded`(config `verified-company-research-targets.json`) 회사는 사용자가 크게 가고 싶은 회사로 보지 않는다(ADR-094). 해당 공고는 JD fit이 높아도 강력 추천/도전 추천/이번 주 즉시 지원 액션에서 제외한다.
+- `preferenceExcluded`(config `verified-company-research-targets.json`) 회사는 사용자가 크게 가고 싶은 회사로 보지 않는다(ADR-095). 해당 공고는 JD fit이 높아도 강력 추천/도전 추천/이번 주 즉시 지원 액션에서 제외한다.
 - 네이버, LINE, 쿠팡, 핀테크·결제·플랫폼·커머스 등 NHN 대비 커리어 성장/보상/브랜드/엔지니어링 규모가 나은 회사는 JD 핏이 실제로 있을 때 우선순위를 높인다. 단, 회사 이름만 보고 JD 핏이 낮은 포지션을 억지 추천하지 않는다.
 - 강력 추천은 JD fit보다 회사 업사이드 검증을 먼저 통과해야 한다. 복지/보상 기대, 동료 밀도, 학습 가능한 엔지니어링 표준, 대규모 운영 경험, 브랜드 레버리지가 약하거나 불확실하면 강력 추천으로 올리지 않는다.
 - 최우선 탐색군은 `config/verified-company-research-targets.json`의 `priorityCompanies`를 단일 출처로 본다. 이 회사군의 Core Platform, Payment/Settlement, Search/Ads, Commerce Platform, Identity, Reliability/Observability, Developer Platform, AI Platform 공고를 먼저 파라.
@@ -23,7 +23,7 @@
 - 추천 티어의 링크 근거 수준은 `개별 공고 active 확인` 또는 `개별 공고 open 확인`만 허용한다. `공식 career 내 탐색 필요`, `외부 검색 시그널만 있음`은 추천 티어가 아니라 추가 수집 대상이다.
 - 공고 기간을 반드시 확인한다. 수집 snapshot의 `closes_at`, `days_until_close`, `close_urgency`를 우선 읽고, 마감이 7일 이하로 남은 공고는 준비 액션에 “마감 임박”을 명시한다. `opened_at`은 값이 있을 때만 사용하고, `closes_at: no_deadline`이면 상시/마감 미정으로 쓴다.
 - `공식 career 내 탐색 필요` 후보는 최대 3개만 “추가 수집 대상” 섹션에 짧게 묶고, 사용자가 직접 보라는 의미가 아니라 다음 스캔에서 에이전트가 개별 active 서버 공고 URL을 더 확보해야 한다는 의미로 설명한다.
-- 쿨다운 대상은 `config/verified-company-research-targets.json`의 `cooldown`을 단일 출처로 본다(ADR-094). 쿨다운에서 풀린 회사는 active/open 개별 공고, JD fit, 회사 업사이드, 중복 지원 여부를 다른 상위 회사군과 같은 기준으로 평가한다.
+- 쿨다운 대상은 `config/verified-company-research-targets.json`의 `cooldown`을 단일 출처로 본다(ADR-095). 쿨다운에서 풀린 회사는 active/open 개별 공고, JD fit, 회사 업사이드, 중복 지원 여부를 다른 상위 회사군과 같은 기준으로 평가한다.
 - 하드필터는 최소화한다. 마감/폐쇄 공고, 계약직/임시직/프리랜서/위촉직/인턴, 서버/백엔드와 무관한 직무, 명백한 필수조건 미충족만 제외한다. 그 외 약점은 감점·우선순위·보류 사유로 표현한다.
 - 기본 추천 범위는 서버 개발자/백엔드 엔지니어와 서버 개발 전이가 분명한 AI 서비스/AX/AI Agent/AI 플랫폼 엔지니어다. Data Engineer, AI Research, Frontend, PM, QA, Designer는 사용자가 명시적으로 요청하지 않는 한 추천하지 않는다. ML Engineer/MLOps/LLMOps는 API/플랫폼/서빙/파이프라인 개발 비중이 높고 후보자 경험과 연결될 때만 도전 추천 또는 보류로 다룬다.
 - Python/Kubernetes/ML 모델링처럼 제한적 경험인 영역은 과장하지 말고 "보완 필요"로 둔다.

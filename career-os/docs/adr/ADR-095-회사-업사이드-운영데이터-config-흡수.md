@@ -1,4 +1,4 @@
-## ADR-094 — 회사 업사이드 운영 데이터를 verified-company-research-targets.json 단일 출처로 흡수한다
+## ADR-095 — 회사 업사이드 운영 데이터를 verified-company-research-targets.json 단일 출처로 흡수한다
 
 - Status: Accepted
 - Date: 2026-06-17
