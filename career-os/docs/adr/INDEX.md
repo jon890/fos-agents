@@ -92,3 +92,4 @@
 | ADR-091 | career-os 스크립트 root는 위치 기준으로 해석한다 | Accepted | [ADR-091-script-career-os-root-위치-기준-해석.md](ADR-091-script-career-os-root-위치-기준-해석.md) |
 | ADR-092 | 면접 준비 flow 재편: 핏 진단과 매일 답변 드릴 분리 | Accepted | [ADR-092-면접-준비-flow-재편-진단-드릴-분리.md](ADR-092-면접-준비-flow-재편-진단-드릴-분리.md) |
 | ADR-093 | 포지션 추천 산출물을 JSON 정본으로 전환한다 | Accepted | [ADR-093-포지션-추천-산출물-json-정본-전환.md](ADR-093-포지션-추천-산출물-json-정본-전환.md) |
+| ADR-094 | 회사 업사이드 운영 데이터를 config JSON 단일 출처로 흡수한다 | Accepted | [ADR-094-회사-업사이드-운영데이터-config-흡수.md](ADR-094-회사-업사이드-운영데이터-config-흡수.md) |
