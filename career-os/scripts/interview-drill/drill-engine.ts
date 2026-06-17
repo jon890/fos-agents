@@ -7,7 +7,9 @@
  * study-pack-writer 위임 판단을 담당한다.
  *
  * 의존 파일:
- *   - career-os/data/question-bank/{tech|behavioral}-questions.jsonl
+ *   - career-os/public/question-bank/{기술 카테고리}/questions.json  (tech)
+ *   - career-os/public/question-bank/behavioral/questions.json  (behavioral)
+ *   - career-os/private/question-bank/{tech|behavioral}-personal.jsonl  (있으면 merge)
  *   - career-os/config/study-progress.json
  *   - career-os/data/runtime/drill-log-YYYY-MM-DD.jsonl  (자동 생성)
  */
@@ -75,14 +77,13 @@ function careerOsRoot(): string {
   return join(repoRoot(), "career-os");
 }
 
-function questionBankPath(drillType: DrillType): string {
-  return join(
-    careerOsRoot(),
-    "data",
-    "question-bank",
-    `${drillType}-questions.jsonl`
-  );
-}
+const TECH_CATEGORIES = [
+  "java-spring",
+  "database",
+  "cs",
+  "operations",
+  "system-design",
+] as const;
 
 function studyProgressPath(): string {
   return join(careerOsRoot(), "config", "study-progress.json");
@@ -97,19 +98,81 @@ function drillLogPath(date?: string): string {
 
 // ─── 질문 풀 로드 ─────────────────────────────────────────────────────────────
 
-export function loadQuestionBank(drillType: DrillType): DrillQuestion[] {
-  const path = questionBankPath(drillType);
-  if (!existsSync(path)) {
-    console.error(
-      `[drill-engine] 질문 풀 없음: ${path}\n` +
-        `  → /question-bank-collector ${drillType} 로 보강하세요.`
-    );
-    return [];
+function loadPublicTechQuestions(): DrillQuestion[] {
+  const questions: DrillQuestion[] = [];
+  for (const cat of TECH_CATEGORIES) {
+    const path = join(careerOsRoot(), "public", "question-bank", cat, "questions.json");
+    if (!existsSync(path)) continue;
+    const parsed = JSON.parse(readFileSync(path, "utf-8")) as DrillQuestion[];
+    questions.push(...parsed);
   }
-  const lines = readFileSync(path, "utf-8")
+  return questions;
+}
+
+function loadPublicBehavioralQuestions(): DrillQuestion[] {
+  const path = join(careerOsRoot(), "public", "question-bank", "behavioral", "questions.json");
+  if (!existsSync(path)) return [];
+  return JSON.parse(readFileSync(path, "utf-8")) as DrillQuestion[];
+}
+
+function mergePrivateQuestions(
+  base: DrillQuestion[],
+  drillType: DrillType
+): DrillQuestion[] {
+  const privatePath = join(
+    careerOsRoot(),
+    "private",
+    "question-bank",
+    `${drillType}-personal.jsonl`
+  );
+  if (!existsSync(privatePath)) return base;
+
+  const requiredFields: (keyof DrillQuestion)[] = [
+    "id",
+    "topic",
+    "category",
+    "difficulty",
+    "question",
+    "intent",
+    "answerSignals",
+  ];
+  const lines = readFileSync(privatePath, "utf-8")
     .split("\n")
     .filter((l) => l.trim());
-  return lines.map((l) => JSON.parse(l) as DrillQuestion);
+  const privateQuestions: DrillQuestion[] = [];
+  for (const line of lines) {
+    try {
+      const q = JSON.parse(line) as Partial<DrillQuestion>;
+      const missing = requiredFields.filter((f) => !q[f]);
+      if (missing.length > 0) {
+        console.warn(
+          `[drill-engine] private 항목 건너뜀 (누락 필드: ${missing.join(", ")}): ${line.slice(0, 80)}`
+        );
+        continue;
+      }
+      privateQuestions.push(q as DrillQuestion);
+    } catch {
+      console.warn(`[drill-engine] private JSONL 파싱 실패, 건너뜀: ${line.slice(0, 80)}`);
+    }
+  }
+  return [...base, ...privateQuestions];
+}
+
+export function loadQuestionBank(drillType: DrillType): DrillQuestion[] {
+  const publicQuestions =
+    drillType === "tech"
+      ? loadPublicTechQuestions()
+      : loadPublicBehavioralQuestions();
+
+  const merged = mergePrivateQuestions(publicQuestions, drillType);
+
+  if (merged.length === 0) {
+    console.error(
+      `[drill-engine] 질문 풀 없음 (${drillType})\n` +
+        `  → /question-bank-collector ${drillType} 로 보강하세요.`
+    );
+  }
+  return merged;
 }
 
 // ─── 간격 반복 날짜 계산 ──────────────────────────────────────────────────────

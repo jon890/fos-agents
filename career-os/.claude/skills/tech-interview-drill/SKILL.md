@@ -17,7 +17,8 @@ description: >
 ## 의존 자산
 
 - `career-os/scripts/interview-drill/drill-engine.ts` — 질문 선정·채점·기록·weak_spots 갱신
-- `career-os/data/question-bank/tech-questions.jsonl` — 기술 면접 질문 풀
+- `career-os/public/question-bank/{java-spring,database,cs,operations,system-design}/questions.json` — 기술 면접 공개 질문 풀 (JSON 배열)
+- `career-os/private/question-bank/tech-personal.jsonl` — 개인 기술 질문 추가 풀 (있으면 merge, JSONL)
 - `career-os/config/study-progress.json` — weak_spots 정본 (pass_count·fail_count·next_review_date)
 - `career-os/data/runtime/drill-log-YYYY-MM-DD.jsonl` — 드릴 일별 기록 (자동 생성)
 

@@ -18,7 +18,8 @@ description: >
 ## 의존 자산
 
 - `career-os/scripts/interview-drill/drill-engine.ts` — 질문 선정·채점·기록·weak_spots 갱신
-- `career-os/data/question-bank/behavioral-questions.jsonl` — 인성 면접 질문 풀
+- `career-os/public/question-bank/behavioral/questions.json` — 인성 면접 공개 질문 풀 (JSON 배열)
+- `career-os/private/question-bank/behavioral-personal.jsonl` — 개인 인성 질문 추가 풀 (있으면 merge, JSONL)
 - `career-os/config/study-progress.json` — weak_spots 정본 (pass_count·fail_count·next_review_date)
 - `career-os/data/runtime/drill-log-YYYY-MM-DD.jsonl` — 드릴 일별 기록 (tech 드릴과 공유, `drill_type: "behavioral"` 구분)
 - `references/scoring-rubric.md` — STAR·가치관 채점 기준 상세
