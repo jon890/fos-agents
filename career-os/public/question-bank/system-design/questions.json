@@ -14,7 +14,12 @@
     "publicSafe": true,
     "positionFitHint": "commerce, catalog, content 조회 시스템 질문으로 선별한다.",
     "normalizedFrom": "read-heavy API 설계를 cache consistency 질문으로 정규화",
-    "tags": ["cache", "read-heavy", "architecture"],
+    "topic": "read-heavy-caching",
+    "tags": [
+      "cache",
+      "read-heavy",
+      "architecture"
+    ],
     "followUps": [
       "재고처럼 강한 정합성이 필요한 필드는 어떻게 분리하나요?",
       "cache hit rate가 낮을 때 어떤 가설을 세우나요?"
@@ -35,7 +40,12 @@
     "publicSafe": true,
     "positionFitHint": "주문, 예약, 신청 같은 workflow 설계 질문으로 선별한다.",
     "normalizedFrom": "event-driven backend 설계를 transaction boundary 질문으로 정규화",
-    "tags": ["event-driven", "outbox", "transaction"],
+    "topic": "event-driven",
+    "tags": [
+      "event-driven",
+      "outbox",
+      "transaction"
+    ],
     "followUps": [
       "event publish는 DB commit 전후 어디에 두나요?",
       "consumer가 같은 event를 두 번 처리하면 어떻게 막나요?"
@@ -56,7 +66,12 @@
     "publicSafe": true,
     "positionFitHint": "media, document, attachment 처리 시스템 질문으로 선별한다.",
     "normalizedFrom": "file upload 일반 설계를 API 서버 보호 질문으로 정규화",
-    "tags": ["object-storage", "api-design", "resource-isolation"],
+    "topic": "large-file-upload",
+    "tags": [
+      "object-storage",
+      "api-design",
+      "resource-isolation"
+    ],
     "followUps": [
       "업로드 성공 후 metadata 저장이 실패하면 어떻게 정리하나요?",
       "다운로드 권한 검사는 어디에서 하나요?"
@@ -77,7 +92,12 @@
     "publicSafe": true,
     "positionFitHint": "성장하는 backend 시스템의 확장 전략 질문으로 선별한다.",
     "normalizedFrom": "database scaling 일반 주제를 단계적 architecture decision 질문으로 정규화",
-    "tags": ["scaling", "sharding", "database"],
+    "topic": "database-scaling",
+    "tags": [
+      "scaling",
+      "sharding",
+      "database"
+    ],
     "followUps": [
       "read replica로 해결되지 않는 병목은 무엇인가요?",
       "shard key를 잘못 고르면 어떤 문제가 생기나요?"

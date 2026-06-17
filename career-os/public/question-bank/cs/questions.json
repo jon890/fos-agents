@@ -14,7 +14,12 @@
     "publicSafe": true,
     "positionFitHint": "HTTP 서버 connection 이슈나 timeout 질문으로 선별한다.",
     "normalizedFrom": "TCP 연결 기초를 backend 운영 관점 질문으로 정규화",
-    "tags": ["network", "tcp", "http"],
+    "topic": "tcp-connection",
+    "tags": [
+      "network",
+      "tcp",
+      "http"
+    ],
     "followUps": [
       "keep-alive timeout을 너무 길게 잡으면 어떤 문제가 있나요?",
       "connection pool 고갈은 어떻게 탐지하나요?"
@@ -35,7 +40,12 @@
     "publicSafe": true,
     "positionFitHint": "서버 처리량과 latency 병목 질문으로 선별한다.",
     "normalizedFrom": "process/thread 이론을 Java web server capacity 질문으로 정규화",
-    "tags": ["os", "thread", "performance"],
+    "topic": "process-thread",
+    "tags": [
+      "os",
+      "thread",
+      "performance"
+    ],
     "followUps": [
       "thread pool을 크게 늘리면 항상 처리량이 좋아지나요?",
       "blocking call이 많을 때 어떤 지표를 보나요?"
@@ -56,7 +66,12 @@
     "publicSafe": true,
     "positionFitHint": "Java collection 기본기와 캐시 key 설계 질문으로 선별한다.",
     "normalizedFrom": "hash map 이론을 backend key modeling 질문으로 정규화",
-    "tags": ["data-structure", "hash-map", "java"],
+    "topic": "hashmap-complexity",
+    "tags": [
+      "data-structure",
+      "hash-map",
+      "java"
+    ],
     "followUps": [
       "HashMap과 ConcurrentHashMap의 사용 기준은 무엇인가요?",
       "equals만 override하고 hashCode를 빼면 어떤 일이 생기나요?"
@@ -77,7 +92,12 @@
     "publicSafe": true,
     "positionFitHint": "API abuse 방지와 traffic shaping 질문으로 선별한다.",
     "normalizedFrom": "rate limiting 알고리즘을 API gateway 질문으로 정규화",
-    "tags": ["algorithm", "rate-limit", "redis"],
+    "topic": "rate-limiting",
+    "tags": [
+      "algorithm",
+      "rate-limit",
+      "redis"
+    ],
     "followUps": [
       "분산 서버에서 counter 정합성은 어떻게 맞추나요?",
       "사용자별 limit과 IP별 limit을 함께 쓰면 어떤 장단점이 있나요?"
