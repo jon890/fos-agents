@@ -103,7 +103,7 @@ task 파일을 **사용자에게 제출하기 전**에 반드시 [`../plan-and-b
 
 | 변경 유형 | 갱신할 docs |
 |---|---|
-| 제품 범위 / 기능 추가 | `prd.md` 기능 표 |
+| 제품 가치 / 범위 / 기능 추가 | `prd.md` 제품 가치·skill 자산·성공 기준 |
 | 데이터 / 스키마 / 산출물 형식 | `data-schema.md` |
 | 호출 시나리오 / 데이터 흐름 | `flow.md` |
 | 디렉터리 / 계층 / 외부 의존 | `code-architecture.md` |
@@ -121,7 +121,9 @@ task 파일을 **사용자에게 제출하기 전**에 반드시 [`../plan-and-b
 
 **ADR 작성 원칙**: 자세한 규칙은 [`references/adr-writing.md`](references/adr-writing.md)를 **반드시** Read 도구로 로드 후 적용.
 
-**5문서 공통 작성 원칙**: 자세한 규칙은 [`references/5docs-policy.md`](references/5docs-policy.md)를 **반드시** Read 도구로 로드 후 적용.
+**문서 작성 원칙**:
+- 대상 워크스페이스에 `<workspace>/docs/README.md`가 있으면 먼저 로드해 문서별 책임을 확인한다.
+- 공통 보조 규칙은 [`references/5docs-policy.md`](references/5docs-policy.md)를 **반드시** Read 도구로 로드 후 적용한다.
 
 ### 8단계: task 파일 생성 + 커밋
 

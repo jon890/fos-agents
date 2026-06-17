@@ -1,6 +1,7 @@
 # ADR INDEX — career-os
 
 개별 ADR 파일 조망 표. 새 ADR은 새 파일(`docs/adr/ADR-NNN-slug.md`) + 이 INDEX 행 추가.
+작성 규칙은 [`../README.md`](../README.md)의 ADR 작성 규칙을 따른다.
 
 | ADR | 제목 | Status | 파일 |
 |---|---|---|---|

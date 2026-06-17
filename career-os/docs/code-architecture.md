@@ -1,6 +1,7 @@
 # Code Architecture — career-os
 
 career-os의 디렉터리 구조·계층 책임·외부 의존성. 새 스킬·러너를 추가하거나 파이프라인을 바꿀 때 이 문서를 기준으로 한다.
+작성 규칙은 [`README.md`](README.md)의 Code Architecture 작성 규칙을 따른다.
 
 ## 계층
 

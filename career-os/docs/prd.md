@@ -5,6 +5,7 @@ career-os는 커리어 전환 과정을 매일 재실행 가능한 로컬 워크
 각 skill은 반복 업무의 의도, 입력, 산출물, 안전 경계를 담는 제품 단위다.
 
 이 문서는 제품 가치와 우선순위의 단일 출처다.
+작성 규칙은 [`README.md`](README.md)의 PRD 작성 규칙을 따른다.
 입력부터 산출물까지의 흐름은 [`flow.md`](flow.md)를 따른다.
 디렉터리와 구현 구조는 [`code-architecture.md`](code-architecture.md)를 따른다.
 결정의 이유와 대안 기각은 [`adr/INDEX.md`](adr/INDEX.md)를 따른다.
