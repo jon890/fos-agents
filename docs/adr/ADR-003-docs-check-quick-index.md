@@ -36,6 +36,6 @@ fos-blog repo의 `.claude/skills/docs-check` skill이 5축 검사 (Decay / Bloat
 - 본 plan018 task 본문 phase-01 ~ phase-04 참조.
 - skill 위치: `~/ai-nodes/skills/docs-check/SKILL.md` (모노레포 전역).
 - 적용 대상 ADR 파일: `career-os/docs/adr.md` (26) + `~/ai-nodes/docs/adr.md` (3, 본 ADR 포함).
-- common-pitfalls 6-6 회피: skill SKILL.md draft 별도 파일 + Read draft → Write target.
+- `common-pitfalls/harness/6-6-write-disguised-as-prose.md` 회피: skill SKILL.md draft 별도 파일 + Read draft → Write target.
 
 ---

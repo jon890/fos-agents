@@ -97,7 +97,9 @@ ai-nodes의 docs는 단순 참조 문서가 아니라 **의사결정·기술 학
   ...
 ```
 
-각 phase 프롬프트는 **자기완결적**이어야 한다 — 이전 대화 없이 독립 실행 가능. `references/common-pitfalls.md`의 self-check 항목을 모두 거친 뒤 사용자에게 제출.
+각 phase 프롬프트는 **자기완결적**이어야 한다 — 이전 대화 없이 독립 실행 가능.
+`references/common-pitfalls/INDEX.md`에서 현재 phase와 맞는 pattern file을 고르고 self-check한 뒤 사용자에게 제출.
+어떤 항목이 필요한지 모호하면 해당 category 디렉터리 전체를 확인한다.
 
 ### 5. 실행
 
@@ -242,7 +244,8 @@ HUD 갱신은 `run-phases.py`가 직접 수행하지 않는다.
 ## 파일
 
 - `scripts/run-phases.py` — phase 순차 실행 하네스
-- `references/common-pitfalls.md` — task 작성 시 self-check 누적 (시간이 갈수록 두꺼워짐)
+- `references/common-pitfalls/INDEX.md` — task 작성 시 self-check pattern router.
+- `references/common-pitfalls/<category>/<id>-*.md` — 필요한 pattern만 선택해 읽는 세부 self-check.
 
 ## 사용 예시
 

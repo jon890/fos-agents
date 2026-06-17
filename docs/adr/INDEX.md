@@ -26,3 +26,4 @@ ADR은 결정의 이유와 대안 기각만 담고, 현행 구조 설명은 `doc
 | ADR-014 | repo 전역 skill 정본을 .claude/skills로 통일 | Accepted | [ADR-014-repo-global-skills-claude.md](ADR-014-repo-global-skills-claude.md) |
 | ADR-015 | career-os ADR을 개별 파일로 관리하는 파일럿 예외 | Accepted | [ADR-015-career-os-adr-files-pilot.md](ADR-015-career-os-adr-files-pilot.md) |
 | ADR-016 | root docs 구조를 ADR 디렉터리와 code-architecture로 재편 | Accepted | [ADR-016-root-docs-structure.md](ADR-016-root-docs-structure.md) |
+| ADR-017 | common-pitfalls file-per-pattern 구조 | Accepted | [ADR-017-common-pitfalls-file-per-pattern.md](ADR-017-common-pitfalls-file-per-pattern.md) |
