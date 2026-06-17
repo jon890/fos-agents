@@ -142,6 +142,31 @@
 - **기술적 핵심**: **에이전트 파이프라인 설계자** 레벨의 AI 협업 (툴 사용자 수준을 넘어섬) / 풀스택 단일 타입 안전성(Zod 단일 소스) / 재시도·폴백 전략 설계 / 운영 관측성(`GET /api/model-status`) / 비용 의사결정 ("싸 보이는 모델이 재생성 반복으로 더 비싸지는" trade-off 역전) / docs-first 원칙 / Server Action ≠ AI 계층 ≠ DB 계층 레이어 분리.
 - 출처: `task/ai-service-team/webtoon-maker-ai-pipeline.md`
 
+### 9. Playground 문서 파싱 파이프라인 (AI 서비스 개발팀, 2026.05~현재)
+- **개요**: 사내 LLM workflow 제품 Playground의 문서 입력 정규화 서비스. PDF/DOC(X)/PPTX/XLSX/HWP/이미지 등 다양한 포맷을 markdown으로 변환하며, 한국어는 NHN Cloud OCR·일본어는 PaddleOCR을 내부 호출. Python 3.11 · FastAPI · docling(+TableFormer) · ProcessPoolExecutor 워커 풀 · Docker(CUDA)/GPU.
+- **주요 기여**:
+  - OCR 처리를 단일 경로에서 워커 풀(KR/JA/Priority) 병렬 구조로 전환 — 동시 처리량 향상 (수치 보강 필요)
+  - 모놀리식 파서 모듈을 router / loader / converter / markdown-generator 레이어로 분해해 변경 비용 축소
+  - 관측 정보 단일 소스화 — 메트릭·로그·status API 3중 기록을 메트릭(Grafana)으로 통일하고 중복 조회 API 제거
+  - 워커 풀 큐 backpressure 관측 정립 — ProcessPoolExecutor pending vs call_queue 구분으로 워커 증설 판단 근거 마련
+  - markdown 출력 회귀 검증 체계 운영 — OCR 옵션 변경 시 byte-diff 의무화, 합격선 NED ≥ 0.95
+  - PaddleOCR 오류를 worker 종료 + death monitor 재spawn으로 복구 (CUDA 상태 오염 회피)
+  - 배포 health check vs cold start 충돌 해결, GitHub Enterprise self-hosted runner CI + 코드 리뷰 파이프라인 구축
+- **기술적 핵심**: 멀티프로세스 GPU 워커 풀 운영 / 런타임 내부 구조(ProcessPoolExecutor 큐) 이해 기반 운영 지표 해석 / 상태 오염 자원의 격리·재시작 설계 / 관측 단일 소스화.
+- 출처: `task/ai-service-team/playground-document-parser.md`
+
+---
+
+## 개인 프로젝트
+
+> 회사 기여 외 개인 프로젝트. 면접 보조 자산.
+
+### dooray-cli — 업무 자동화 CLI (2026.04~2026.06, npm 공개 배포)
+- Dooray REST API와 IMAP/SMTP를 단일 CLI로 통합해 터미널·AI 에이전트에서 업무/위키/메일을 자동화. TypeScript · Node.js · Commander.js · vitest.
+- 다형 입력 해석기 — URL 3형식 / 프로젝트코드+번호 / ID / 멤버(이름·이메일·ID) 자동 분기.
+- AI 에이전트 친화 설계 — `--json` / `--dry-run` / `--quiet` / `--no-confirm` 플래그, 중복 파일 보호.
+- 약 400커밋·2개월간 기능개발 → 디렉터리 리팩토링 → PII 정책·문서화까지 전체 수명주기 관리, npm 공개 배포.
+
 ---
 
 ## 입증된 강점 (with evidence)
