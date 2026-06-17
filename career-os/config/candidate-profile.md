@@ -145,14 +145,16 @@
 ### 9. Playground 문서 파싱 파이프라인 (AI 서비스 개발팀, 2026.05~현재)
 - **개요**: 사내 LLM workflow 제품 Playground의 문서 입력 정규화 서비스. PDF/DOC(X)/PPTX/XLSX/HWP/이미지 등 다양한 포맷을 markdown으로 변환하며, 한국어는 NHN Cloud OCR·일본어는 PaddleOCR을 내부 호출. Python 3.11 · FastAPI · docling(+TableFormer) · ProcessPoolExecutor 워커 풀 · Docker(CUDA)/GPU.
 - **주요 기여**:
-  - OCR 처리를 단일 경로에서 워커 풀(KR/JA/Priority) 병렬 구조로 전환 — 동시 처리량 향상 (수치 보강 필요)
-  - 모놀리식 파서 모듈을 router / loader / converter / markdown-generator 레이어로 분해해 변경 비용 축소
-  - 관측 정보 단일 소스화 — 메트릭·로그·status API 3중 기록을 메트릭(Grafana)으로 통일하고 중복 조회 API 제거
-  - 워커 풀 큐 backpressure 관측 정립 — ProcessPoolExecutor pending vs call_queue 구분으로 워커 증설 판단 근거 마련
-  - markdown 출력 회귀 검증 체계 운영 — OCR 옵션 변경 시 byte-diff 의무화, 합격선 NED ≥ 0.95
-  - PaddleOCR 오류를 worker 종료 + death monitor 재spawn으로 복구 (CUDA 상태 오염 회피)
-  - 배포 health check vs cold start 충돌 해결, GitHub Enterprise self-hosted runner CI + 코드 리뷰 파이프라인 구축
-- **기술적 핵심**: 멀티프로세스 GPU 워커 풀 운영 / 런타임 내부 구조(ProcessPoolExecutor 큐) 이해 기반 운영 지표 해석 / 상태 오염 자원의 격리·재시작 설계 / 관측 단일 소스화.
+  - OCR 처리를 한 건씩 처리에서 멀티프로세스 워커 풀(한국어/일본어/우선순위) 병렬 구조로 전환 — 동시 처리량 향상 (수치 보강 필요)
+  - 비대해진 단일 파서 모듈을 입력/적재/변환/markdown 생성 단계로 분해해 변경 비용 축소
+  - 관측 정보 단일화 — 지표·로그·조회 API 3중 기록을 지표(Grafana)로 통일하고 중복 조회 API 제거
+  - 워커 작업 대기 현황 대시보드 정립 — 실제 적체(pending)와 작게 고정된 전달 버퍼(call_queue)를 구분해 워커 증설 판단 근거 마련
+  - **출력 품질 다층 검증 체계 구축** — 1차 회귀 검증(이전 출력 대비 글자 일치도 NED ≥ 0.95)에 더해, 정답에 얼마나 가까운지 재는 정답지(golden) 채점(LLM 초안 → 사람 확정) + 텍스트 NED·표 셀 F1 두 지표를 별도로 둬, 회귀 차단과 안전한 품질 개선을 동시에 가능케 함
+  - **안전한 일회성 테스트 환경 구축** — 운영 인스턴스를 트래픽에서 빼내(drain) 검증하던 방식을, 직접 만든 NHN Cloud CLI로 테스트 인스턴스를 발급·종료하는 방식으로 전환해 비용 절감·운영 무영향
+  - **워커 메모리 누수 진단·해결** — 워커 강제 종료 방어(예열 비용)에서, gc로 안 풀리는 원인(메모리 단편화)을 진단해 OS 반환을 유도(malloc_trim)하는 방식으로 개선
+  - 일본어 OCR(PaddleOCR) 오류를 워커 종료 + 감시 장치 재시작으로 복구 (상태 오염 회피)
+  - 배포 첫 기동 지연(워커 예열·모델 첫 로딩이 상태 점검 시간 초과) 문제 해결, 사내 GitHub Enterprise 자체 실행기에 자동 테스트 + 코드 리뷰 파이프라인 구축
+- **기술적 핵심**: 출력 품질 검증 인프라(회귀 검증 + 정답지 채점) 설계로 안전한 반복 개선 환경 구축 / 멀티프로세스 GPU 워커 풀 운영·메모리 단편화 진단 / 런타임 내부 구조 이해 기반 운영 지표 해석 / 일회성 테스트 환경 자동화(자체 CLI) / 상태 오염 자원의 격리·재시작 설계.
 - 출처: `task/ai-service-team/playground-document-parser.md`
 
 ---
