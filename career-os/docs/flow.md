@@ -295,15 +295,13 @@ Claude 자연어 분석:
   - 최근 7일 반복 후보 감점 + 신규 후보/추가 수집 대상 최소 1개 포함
   - 리포트는 강력 추천 3개, 도전 추천 2개, 보류/주의 3개 안에서 압축 작성
   ↓
-Self-check: 첫 줄 # + 오늘 날짜 + 30줄+ + 3 티어 + 반복 점검 존재 (재작성 최대 3회)
+Self-check: render_recommendation.ts 실행이 곧 zod 검증 (recommendation_schema.ts) — 14 라벨·tier 상한·링크 근거·reportDate 보장 (ADR-093)
   ↓
-Write: data/reports/daily/YYYY-MM-DD/position-recommendation/report.md
-       data/runtime/position-recommendation.md (cp 사본)
-Post-process:
-  - scripts/position-recommender/render_report_html.ts
-  - scripts/position-recommender/templates/report.html
-  → data/reports/daily/YYYY-MM-DD/position-recommendation/report.html
-  → data/runtime/position-recommendation.html
+Write: data/reports/daily/YYYY-MM-DD/position-recommendation/recommendation.json (정본, ADR-093)
+Post-process (render_recommendation.ts가 정본에서 파생):
+  - --format md   → report.md + data/runtime/position-recommendation.md
+  - --format html → report.html + data/runtime/position-recommendation.html
+  - templates/report.html (스타일만)
   ↓
 Refresh:
   - legacy: data/runtime/application-agent/frontdoor-queue.jsonl
