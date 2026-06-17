@@ -113,27 +113,33 @@ skill 또는 추천기 실행
 
 plan068은 이 원칙을 기준으로 reader inventory를 만든 뒤, 죽은 config reader 제거와 fallback migration을 순서대로 수행한다.
 
-### `/job-fit-analyzer` (agent skill — plan086, interview-prep-analyzer 리네임 + 리포커스)
+### `/job-fit-analyzer` (agent skill — ADR-096 의사결정·전략 재정의)
 
-agent skill 패턴: `/job-fit-analyzer [args]` → SKILL.md 로드 → 현재 에이전트가 도구로 직접 처리.
+agent skill 패턴: `/job-fit-analyzer [역할]` → SKILL.md 로드 → 현재 에이전트가 직접 처리.
 
 ```
-호출: /job-fit-analyzer [자연어 컨텍스트]
+호출: /job-fit-analyzer [자연어 역할]
   ↓
-Read: config/mvp-target.json + config/candidate-profile.md
+타깃 해석: 인자 있으면 targetRole(source=argument), 없으면 mvp-target.json primary fallback
   ↓
-에이전트 분석:
-  - 타깃 직무 역할 단위 핏 분석
-  - 후보자 강점·경험 vs 직무 요구사항 매핑
-  - 부족분 갭 진단 (스킬·경험·키워드 단위)
+Read: config/mvp-target.json + config/candidate-profile.md + baseline-core-files
   ↓
-Write: data/reports/job-fit-YYYY-MM-DD.md
+같은 slug 지난 진단 JSON 있으면 로드 → changeSince
   ↓
-Discord 알림 [완료]
+에이전트: JobFitRun JSON 정본 생성
+  - verdict(go/no-go) · careerPath(정합/이탈) · interviewStrategy(어필·방어)  ← 1급
+  - strengths · gaps · reinforcement(부차) · interviewQuestions · nextActions
+  ↓
+Write: data/reports/job-fit-YYYY-MM-DD-<slug>.json  (정본)
+파생: render_job_fit.ts --format md → job-fit-YYYY-MM-DD-<slug>.md
+  ↓
+self-check: zod (JobFitRun) 검증 (render_job_fit 실행이 곧 검증)
+  ↓
+nextActions 라우팅 (최우선 갭 → study-pack 생성 제안)
 ```
 
-git push 없음 (비공개 리포트).
-기존 `interview-prep-analyzer` baseline·daily 모드는 plan086 이후 `job-fit-analyzer`로 기능이 재편된다.
+git push 없음 (비공개 리포트). 산출물 정본은 JSON, md는 파생(ADR-096).
+회사 최근 동향은 범위 밖(position-recommender 담당).
 
 상세 동작: `career-os/.claude/skills/job-fit-analyzer/SKILL.md` Workflow 섹션 참조.
 
