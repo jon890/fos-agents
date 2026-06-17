@@ -236,6 +236,8 @@ cd career-os
 # 면접 드릴 (비공개 career-os 산출물)
 # 매일 기술 면접 질문 1문장 답변·채점·약점 환류
 /tech-interview-drill
+# 매일 인성 면접 질문(STAR·가치관) 1문장 답변·채점·약점 환류
+/behavioral-interview-drill
 
 # 지원 준비 루프 (비공개 career-os 산출물)
 # 공고별 지원 패키지 생성
