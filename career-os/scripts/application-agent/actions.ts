@@ -62,7 +62,7 @@ export function buildPreparationActionSuggestions(
         buildSkillCommand('application-reviewer', {
           applicationDir: record.applicationDir,
         }),
-        buildSkillCommand('interview-prep-analyzer'),
+        buildSkillCommand('job-fit-analyzer'),
       ];
     case 'investigate':
       return [
@@ -423,13 +423,13 @@ function buildCommandSuggestions(
           postingPath: record.postingPath ?? join(record.applicationDir, 'posting.md'),
         }),
         buildSkillCommand('study-topic-recommender'),
-        buildSkillCommand('interview-prep-analyzer'),
+        buildSkillCommand('job-fit-analyzer'),
       ];
 
     case 'generate_study_actions':
     case 'scheduled_retry': {
       const studyCmds = [
-        buildSkillCommand('interview-prep-analyzer'),
+        buildSkillCommand('job-fit-analyzer'),
         buildSkillCommand('study-topic-recommender'),
       ];
       if (requiresUserApproval('study-pack-writer')) {
@@ -457,7 +457,7 @@ function buildCommandSuggestions(
 
     case 'generate_study_action_queue':
       return [
-        buildSkillCommand('interview-prep-analyzer'),
+        buildSkillCommand('tech-interview-drill'),
         `# [requires user approval] ${buildSkillCommand('interview-asset-writer', { topic: '<topic>' })}`,
       ];
 
@@ -584,9 +584,9 @@ function writePrivateStudyActions(
     '',
     '## Suggested Commands',
     `\`\`\``,
-    `cd career-os && claude -p "/interview-prep-analyzer daily"`,
-    `cd career-os && claude --permission-mode bypassPermissions -p "/study-topic-recommender"`,
-    `# [requires user approval] cd career-os && claude -p "/study-pack-writer <public-safe-topic>"`,
+    buildSkillCommand('job-fit-analyzer'),
+    buildSkillCommand('study-topic-recommender'),
+    `# [requires user approval] ${buildSkillCommand('study-pack-writer', { topic: '<public-safe-topic>' })}`,
     `\`\`\``,
   ].join('\n');
 

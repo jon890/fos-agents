@@ -66,7 +66,7 @@ function usage(): void {
   console.log(`usage: run_daily_with_claude.ts [context]
        run_daily_with_claude.ts --validate-existing
 
-Runs claude -p "/position-recommender ..." and verifies that today's
+Runs the Claude CLI compatibility backend for /position-recommender and verifies that today's
 Asia/Seoul report and runtime mirror were freshly written.
 
 Environment:

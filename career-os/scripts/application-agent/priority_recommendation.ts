@@ -351,7 +351,7 @@ function derivePreparationActions(stage: ActionStage, candidate: CandidateInput)
       {
         kind: 'interview-practice' as const,
         label: '실전 답변 연습 후보',
-        command: buildSkillCommand('interview-prep-analyzer'),
+        command: buildSkillCommand('tech-interview-drill'),
       },
     ];
   }

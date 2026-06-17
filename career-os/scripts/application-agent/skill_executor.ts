@@ -2,6 +2,7 @@ import { existsSync, statSync } from 'fs';
 import { join } from 'path';
 import type { AgentDecision } from './agent_decision_schema';
 import type { ApplicationLedgerRecord } from './ledger_schema';
+import { buildClaudeCliArgs } from './skill_contracts';
 
 export type SkillExecutionOptions = {
   enabled: boolean;
@@ -20,7 +21,7 @@ export type SkillExecutionResult = {
 
 type SkillInvocation = {
   skillName: 'application-package-writer' | 'application-reviewer';
-  prompt: string;
+  substitutions: Record<string, string>;
   requiredBefore?: string;
   expectedOutputs: string[];
   shouldRun?: () => boolean;
@@ -69,7 +70,7 @@ export async function executeRequiredSkills(
       ].join('\n'),
     );
 
-    const run = await runClaudeSkill(invocation, opts.timeoutMs);
+    const run = await runClaudeCliBackend(invocation, opts.timeoutMs);
     if (!run.ok) {
       result.failed = `${invocation.skillName}: ${run.error}`;
       await opts.notify?.(
@@ -122,19 +123,30 @@ function skillInvocationsForDecision(
 
   const packageWriter: SkillInvocation = {
     skillName: 'application-package-writer',
-    prompt: `/application-package-writer ${postingPath}`,
-    expectedOutputs: [fitAnalysisPath, applicationPackagePath],
+    substitutions: { postingPath },
+    expectedOutputs: [
+      fitAnalysisPath,
+      applicationPackagePath,
+      join(record.applicationDir, 'resume-draft.md'),
+      join(record.applicationDir, 'cover-letter.md'),
+      join(record.applicationDir, 'submission-checklist.md'),
+    ],
   };
   const reviewer: SkillInvocation = {
     skillName: 'application-reviewer',
-    prompt: `/application-reviewer ${record.applicationDir}`,
+    substitutions: { applicationDir: record.applicationDir },
     requiredBefore: applicationPackagePath,
     expectedOutputs: [reviewPath],
   };
 
   switch (decision.decision) {
     case 'run_fit_analysis':
-      return [packageWriter];
+      return [
+        {
+          ...packageWriter,
+          expectedOutputs: [fitAnalysisPath],
+        },
+      ];
     case 'draft_application_package':
       return [packageWriter];
     case 'revise_application_package':
@@ -169,11 +181,11 @@ function isOlder(targetPath: string, referencePath: string): boolean {
   return statSync(targetPath).mtimeMs < statSync(referencePath).mtimeMs;
 }
 
-async function runClaudeSkill(
+async function runClaudeCliBackend(
   invocation: SkillInvocation,
   timeoutMs: number,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const proc = Bun.spawn(['claude', '--permission-mode', 'acceptEdits', '-p', invocation.prompt], {
+  const proc = Bun.spawn(buildClaudeCliArgs(invocation.skillName, invocation.substitutions), {
     cwd: process.cwd(),
     stdout: 'pipe',
     stderr: 'pipe',
