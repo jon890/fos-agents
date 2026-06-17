@@ -1,6 +1,7 @@
 # Data Schema — career-os
 
 career-os가 다루는 모든 영속 데이터의 스키마와 위치. 새 필드를 추가하거나 새 파일을 도입할 때 이 문서에 같이 갱신한다.
+작성 규칙은 [`README.md`](README.md)의 Data Schema 작성 규칙을 따른다.
 
 ## 디렉터리 한눈에
 

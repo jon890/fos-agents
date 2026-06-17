@@ -3,6 +3,7 @@
 career-os의 반복 업무가 어떤 입력에서 시작해 어떤 처리 주체를 거치는지 정리한다.
 또한 어떤 산출물과 다음 상태로 이어지는지 함께 정리한다.
 이 문서는 빠른 경로 파악을 위한 지도이며, 구현 세부사항을 담지 않는다.
+작성 규칙은 [`README.md`](README.md)의 Flow 작성 규칙을 따른다.
 
 ## 빠른 이동
 
@@ -33,16 +34,7 @@ career-os의 반복 업무가 어떤 입력에서 시작해 어떤 처리 주체
 - 다음 상태나 다음 사용자 행동은 무엇인가.
 - 어떤 안전 경계에서 멈추는가.
 
-다음 내용은 다른 문서가 정본이다.
-
-| 내용 | 정본 |
-|---|---|
-| JSON 필드와 파일 스키마 | [`data-schema.md`](data-schema.md) |
-| 디렉터리 책임, runner, script 구조 | [`code-architecture.md`](code-architecture.md) |
-| 제품 범위와 우선순위 | [`prd.md`](prd.md) |
-| 결정 이유와 대안 기각 | [`adr/INDEX.md`](adr/INDEX.md) |
-| skill 내부 절차와 self-check | `career-os/.claude/skills/<skill>/SKILL.md` |
-| 완료된 plan의 상세 실행 기록 | `tasks/plan*/` |
+다른 문서와의 책임 경계는 [`README.md`](README.md)의 문서별 책임 표를 따른다.
 
 ## 공통 실행 계약
 

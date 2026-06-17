@@ -15,7 +15,8 @@
 | 문서 | 책임 | 언제 보는지 |
 |---|---|---|
 | [`../AGENTS.md`](../AGENTS.md) | 모노레포 공통 규칙 | 모든 작업 시작 시 |
-| [`docs/prd.md`](docs/prd.md) | 제품 범위, 기능 목록, 성공 기준 | 새 기능 추가, 우선순위 결정 |
+| [`docs/README.md`](docs/README.md) | career-os 문서별 책임과 작성 규칙 | docs 작성·수정 전 |
+| [`docs/prd.md`](docs/prd.md) | 제품 가치, skill 자산, 성공 기준 | 새 기능 추가, 우선순위 결정 |
 | [`docs/data-schema.md`](docs/data-schema.md) | config, runtime, 산출물, ledger 스키마 | 데이터 파일 변경, 새 상태값 추가 |
 | [`docs/flow.md`](docs/flow.md) | 사용자 입력부터 산출물까지의 흐름 | 새 실행 흐름 추가, 디버깅 |
 | [`docs/code-architecture.md`](docs/code-architecture.md) | 디렉터리 책임, 외부 의존, 실행 구조 | 코드 구조 변경, 새 스크립트 추가 |
@@ -45,6 +46,7 @@
 career-os에서는 다음 차이만 추가로 지킨다.
 
 - 구현 전에는 관련 `docs/` 또는 `docs/adr/` 결정을 먼저 고정한다.
+- docs 작성·수정 전에는 [`docs/README.md`](docs/README.md)의 문서별 책임을 확인한다.
 - 실행 계획은 `tasks/plan{N}-<slug>/` 아래에 보존한다.
 - 각 plan은 `index.json`과 `phase-NN.md`를 가진다.
 - phase 문서는 실행 가능한 성공 기준, 보류 조건, 실패 조건을 포함한다.
