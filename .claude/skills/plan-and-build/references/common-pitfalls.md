@@ -22,11 +22,10 @@ phase 작성 직후 self-check 패턴 누적. critic 반복 지적 회피용.
 | 2-1 | 워크스페이스 격리 | 다른 워크스페이스 자산 참조 | path가 `<workspace>/` / `_shared/` / `skills/`로 시작 |
 | 2-2 | 워크스페이스 격리 | config 새로 만들기 | `data-schema.md` 스키마 섹션 동반 |
 | 3-1 | docs/data 라우팅 | 데이터 파일 docs/에 둠 | `*.json/jsonl/csv` → `<workspace>/data/` |
-| 3-2 | docs/data 라우팅 | ADR 저장 방식 혼용 | career-os: `docs/adr/` 개별 파일 + `INDEX.md` / 그 외: `docs/adr.md` append |
+| 3-2 | docs/data 라우팅 | ADR 저장 방식 혼용 | ai-nodes root와 career-os: `docs/adr/` 개별 파일 + `INDEX.md` / 그 외: `docs/adr.md` append |
 | 3-3 | docs/data 라우팅 | phase에서 docs 수정 | task 생성 전 별도 commit |
-| 4-1 | runner 경계 | dispatcher 우회 직접 호출 | `run_now.sh <command>` 경유 |
-| 4-2 | runner 경계 | claude_persist_usage 누락 | 새 runner는 `attempt()` 안에 호출 |
-| 4-3 | runner 경계 | webhook 직접 호출 | `notify_discord.sh` 경유 |
+| 4-1 | 실행 경계 | agent CLI 하드코딩 | skill 위임은 `/<skill> [args]` 의도 표현 |
+| 4-2 | 알림 경계 | webhook 직접 호출 | 공용 알림 helper 경유 |
 | 5-1 | git 운영 | force push / hooks skip | `--no-verify` / `--force` / `--no-edit` 0건 |
 | 5-2 | git 운영 | 한 phase 여러 무관 commit | commit별 단일 관심사 |
 | 5-3 | git 운영 | sources/fos-study 직접 commit | study-pack-class runner 경유 또는 정당화 |
@@ -99,16 +98,17 @@ phase 작성 직후 self-check 패턴 누적. critic 반복 지적 회피용.
 ### 3-1. 데이터 파일 docs/에 둠
 
 **증상**: phase가 `<workspace>/docs/<some>.json` / `.jsonl` 생성.
-**왜**: ai-nodes 정책 — `docs/` 의사결정·학습 누적, 데이터는 `data/` (ADR-015).
-**Self-check**: 산출물이 `*.json/jsonl/csv` 등 데이터면 `<workspace>/data/`. 의사결정·회고·이력 마크다운이면 `<workspace>/docs/{adr,learn,hand-off}`.
+**왜**: ai-nodes 정책 — `docs/`는 의사결정과 운영 문서, 데이터는 `data/` 책임이다.
+**Self-check**: 산출물이 `*.json/jsonl/csv` 등 데이터면 `<workspace>/data/`. 의사결정·인수인계 마크다운이면 `<workspace>/docs/{adr,hand-off}` 또는 task phase 산출물.
 
 ### 3-2. ADR 저장 방식 혼용
 
-**증상**: 워크스페이스 방식을 착각해 career-os에서 `docs/adr.md`에 append하거나, 다른 워크스페이스에서 개별 ADR 파일을 신설.
-**왜**: career-os는 ai-nodes ADR-015 파일럿으로 `docs/adr/` 개별 파일 + `INDEX.md` 구조를 사용한다. 다른 워크스페이스는 `docs/adr.md` 단일 파일 누적 컨벤션 (5문서 표준).
+**증상**: 워크스페이스 방식을 착각해 ai-nodes root나 career-os에서 `docs/adr.md`에 append하거나, 다른 워크스페이스에서 개별 ADR 파일을 신설.
+**왜**: ai-nodes root와 career-os는 `docs/adr/` 개별 파일 + `INDEX.md` 구조를 사용한다. 다른 워크스페이스는 `docs/adr.md` 단일 파일 누적 컨벤션을 사용한다.
 **Self-check**:
+- ai-nodes root: 새 ADR은 `docs/adr/ADR-NNN-slug.md` 새 파일 생성 + `docs/adr/INDEX.md` 행 추가.
 - career-os: 새 ADR은 `career-os/docs/adr/ADR-NNN-slug.md` 새 파일 생성 + `career-os/docs/adr/INDEX.md` 행 추가.
-- 그 외 워크스페이스: `<workspace>/docs/adr.md` 맨 아래 append (개별 파일 신설 X).
+- 그 외 워크스페이스: `<workspace>/docs/adr.md` 맨 아래 append.
 
 ### 3-3. phase 안에서 docs 갱신
 
@@ -118,25 +118,19 @@ phase 작성 직후 self-check 패턴 누적. critic 반복 지적 회피용.
 
 ---
 
-## 4. dispatcher / runner 경계 위반
+## 4. 실행 / 알림 경계 위반
 
-### 4-1. dispatcher 우회 직접 호출
+### 4-1. agent CLI 하드코딩
 
-**증상**: phase가 `bash <workspace>/skills/*/scripts/run_*.sh` 직접 호출.
-**왜**: `run_now.sh` 우회 시 `track_task.sh` 래핑 빠져 logs / Discord / 잠금 회피.
-**Self-check**: 실행 명령이 `bash <workspace>/skills/.../run_now.sh <command>` 형태. 직접 호출 시 정당화 한 줄 명시.
+**증상**: SKILL.md나 phase가 다른 skill을 위임하면서 특정 agent CLI 호출을 박는다.
+**왜**: 같은 SKILL.md를 Codex, Claude, Gemini가 함께 읽을 때 workflow가 한 agent에 종속된다.
+**Self-check**: skill 위임은 `/<skill> [args]` 의도 표현으로 적고, 실제 실행기는 환경에 맡긴다.
 
-### 4-2. claude_persist_usage 호출 누락
-
-**증상**: 새 runner가 `claude --print --output-format json` 호출하지만 `claude_persist_usage` 누락.
-**왜**: ADR-014. usage 전파 누락 시 logs/task-runs.jsonl `cost_usd` / `model` null.
-**Self-check**: `attempt()` 함수에 `claude_persist_usage "$RAW_RESULT_JSON"`이 `run_once` 직후 (extractor 호출 전). runner 상단 `source "$HOME/ai-nodes/_shared/bin/claude_lib.sh"`.
-
-### 4-3. webhook 직접 호출
+### 4-2. webhook 직접 호출
 
 **증상**: phase가 `curl`로 Discord webhook 직접 호출.
-**왜**: 알림은 `notify_discord.sh` 단일 진입점 (ADR-008).
-**Self-check**: 알림은 `<workspace>/skills/.../notify_discord.sh` 또는 `run_now.sh`의 `run_tracked` 헬퍼 경유.
+**왜**: 알림 format, 실패 처리, 비밀 값 로딩이 호출자마다 갈라진다.
+**Self-check**: 알림은 `_shared/lib/notify_discord.ts` 또는 워크스페이스에서 승인된 helper를 경유한다.
 
 ---
 
@@ -212,19 +206,13 @@ phase 작성 직후 self-check 패턴 누적. critic 반복 지적 회피용.
 **왜**: prose 안 draft 코드 블록은 모델에게 두 해석 (Write 실제 / prose만) 허용 → token 적은 prose 경로 선호.
 **Self-check**: Write/Edit 전면 재작성 요구 시 (1) draft 별도 파일 분리 (`<plan>/draft/<basename>.md`) 또는 (2) "본 phase는 반드시 Write 1회 이상 호출. prose만 끝내면 PHASE_FAILED" 강제 주의문. phase 끝에 `git rev-list HEAD ^<base> --count` commit 개수 self-check (0이면 exit 1).
 
-### 6-7. SKILL.md 재작성 시 references/ 파일 audit 누락
-
-**증상**: SKILL.md를 native 패턴으로 재작성하며 references/ path만 인용. references 본문이 옛 외부 subprocess 시대 지시문 (`Output only valid JSON`, `Do not output markdown`) 그대로.
-**왜**: SKILL.md가 references를 Read하면 native 패턴과 충돌. 사용자 발견 전까지 critical bug push.
-**Self-check**: SKILL.md 재작성 시 references/ 안 모든 파일 본문 동시 audit. 옛 subprocess 키워드 grep (`Output only valid JSON`, `Do not output markdown`, `--output-format json`, `valid JSON that matches the schema`). 잔재 시 references 폐기 또는 SKILL.md에 흡수.
-
-### 6-8. run-phases.py cwd=workspace path 불일치
+### 6-7. run-phases.py cwd=workspace path 불일치
 
 **증상**: phase 본문 bash 명령이 `<workspace>/...` ai-nodes 루트 기준 path 사용. run-phases.py는 cwd=workspace로 실행 → `<workspace>/<workspace>/path` 부재.
 **왜**: run-phases.py line 355 `cwd=workspace`. phase 본문 path 컨벤션이 ai-nodes 루트 기준이라 충돌. task-create.md에 cwd 정책 명시 부재 시 작성자가 매번 헤맴.
 **Self-check**: phase 본문 bash 명령에 `<workspace>/...` path 등장하면 첫 bash 블록에 `cd "$(git rev-parse --show-toplevel)"` 명시. Claude Code Bash 도구 cwd 보존 — 첫 호출에만 박으면 후속 자동. Edit 도구는 absolute path라 cwd 무관.
 
-### 6-9. sigil 자체 인용 self-positive / directive 위반
+### 6-8. sigil 자체 인용 self-positive / directive 위반
 
 **증상**: phase 본문 강제 주의문에 sigil 문자 (section mark U+00A7, tilde) literal 인용. 검증 bash가 target에 phase 파일 포함하면 self-positive PHASE_FAILED. 또한 사용자 directive (CLAUDE.md sigil 미사용) 위반.
 **왜**: "sigil 미사용 강제" 박을 때 자연히 문자 직접 인용 → phase 본문 자체에 sigil. 의도는 검증 강조인데 결과는 self-positive + directive 위반.
@@ -241,7 +229,6 @@ phase 작성 직후 self-check 패턴 누적. critic 반복 지적 회피용.
 - 2026-05-13: plan002-config-consolidation — 6-4 (검증 우회 추정 success), 6-5 (destructive→additive) 신설.
 - 2026-05-13: plan004-shared-helpers-ts — 6-1 강화 (exit code 명시만으론 부족, "Bash 도구로 직접 실행" 강제 주의문).
 - 2026-05-14: plan013-study-pack-writer-native — 6-6 신설 (Write 위장 + commitSha false 기록). phase-02가 SKILL.md ~130줄 재작성을 prose 응답으로 종료.
-- 2026-05-15: plan015 — 6-7 신설 (references/ 파일 audit 누락). interview-asset-writer SKILL.md 재작성 시 references 옛 subprocess 지시문 잔재.
 - 2026-05-19: plan024 / plan002 1차 실행 전 hotfix — 6-8 (cwd=workspace path 불일치), 6-9 (sigil self-positive) 신설.
 - 2026-05-19: apartment plan003 ADR-005 1차 작성 — 1-5 신설 (ADR 단일 책임 위반). 4 결정 통합 → 사용자 점검 후 ADR-005/006/007 분할.
 - 2026-05-19: 전면 재구성 — 표 인덱스 + 본문 슬림화 (327→195줄). AI agent 참고 효율 + 사람 가독성 양립. 실제 발생 사례는 본 섹션 단일 출처.

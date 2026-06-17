@@ -22,7 +22,7 @@ planning 7단계에서 docs를 갱신할 때 적용한다. `planning/SKILL.md` 7
 
 - 파일 전수 목록 (디렉터리 한 줄 또는 패턴으로 충분).
 - 변경 이력 / 마이그레이션 step (git history + task phase 산출물).
-- 검증 결과 구체 수치 (`docs/learn/`).
+- 검증 결과 구체 수치 (task phase 산출물 책임).
 - 미래 enhancement / TODO (별도 plan으로).
 - 같은 정보 두 문서에 중복 (단일 소스 원칙 — 다른 문서가 참조해야 하면 ADR 번호로 링크).
 
