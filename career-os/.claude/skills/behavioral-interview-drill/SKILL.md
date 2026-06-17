@@ -126,17 +126,14 @@ description: >
 | 4회 → 5회 | 30일 후 |
 | 5회 이상 | 60일 후 |
 
-## study-pack-writer 백그라운드 위임 방법
+## 공부팩 위임 (백그라운드)
 
-```
-백그라운드 서브에이전트 호출:
-  claude --permission-mode bypassPermissions \
-    -p "/study-pack-writer <topic>" \
-    --max-turns 5
-```
+부족 토픽의 공부팩이 필요하면 `study-pack-writer` 스킬에 위임한다.
 
-위임 후 현재 드릴 세션은 계속 진행한다.
-완료 알림은 Discord 채널로 전송된다 (`_shared/lib/notify_discord.ts` 경유).
+- 위임은 백그라운드(non-blocking)로 한다 — 드릴 세션은 기다리지 않고 다음 질문으로 계속한다.
+- 넘기는 것은 **대상 토픽**뿐이다. 그 토픽의 공부팩 생성은 study-pack-writer가 담당한다.
+- 어떻게 실행할지(서브에이전트·백그라운드 호출 방식)는 실행 환경에 맡긴다. 이 스킬은 "어떤 토픽으로 study-pack-writer를 호출할지"만 정하고 CLI 명령을 직접 박지 않는다.
+- 완료 알림·결과 회수는 실행 환경의 알림 경로를 따른다.
 
 ## 범위 외
 
