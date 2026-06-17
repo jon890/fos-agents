@@ -2,9 +2,9 @@
   "name": "job-fit-redesign",
   "description": "job-fit-analyzer를 의사결정·전략·커리어패스 중심으로 재정의 + JSON 정본화 (ADR-096)",
   "created_at": "2026-06-17T07:56:26Z",
-  "updated_at": "2026-06-17T07:56:26Z",
-  "status": "planned",
-  "current_phase": 1,
+  "updated_at": "2026-06-17T10:30:00Z",
+  "status": "completed",
+  "current_phase": 4,
   "total_phases": 4,
   "error_message": null,
   "blocked_reason": null,
@@ -13,38 +13,66 @@
       "number": 1,
       "title": "jobfit_schema.ts zod 정본 스키마",
       "file": "phase-01.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "sonnet",
       "timeout": 600,
-      "commitSha": null
+      "commitSha": "a7f8ae974363"
     },
     {
       "number": 2,
       "title": "render_job_fit.ts JSON->md 렌더러",
       "file": "phase-02.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "sonnet",
       "timeout": 600,
-      "commitSha": null
+      "commitSha": "a95e58d9dfa3"
     },
     {
       "number": 3,
       "title": "SKILL.md 의사결정·전략 재정의 재작성",
       "file": "phase-03.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "opus",
       "timeout": 600,
-      "commitSha": null
+      "commitSha": "185b658c7503"
     },
     {
       "number": 4,
       "title": "end-to-end 통합 검증 + plan 완료 마킹",
       "file": "phase-04.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "sonnet",
       "timeout": 600,
       "commitSha": null
