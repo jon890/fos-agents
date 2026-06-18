@@ -10,6 +10,7 @@
 - `cs/` — Network, OS, 자료구조, 알고리즘 기초 질문.
 - `operations/` — 장애 대응, 배포, 로그, metric, tracing, 운영 자동화 질문.
 - `system-design/` — backend architecture, 확장성, consistency, queue, storage 설계 질문.
+- `behavioral/` — 협업, 성장, 커뮤니케이션, 오너십 등 인성·역량 면접 질문.
 
 ## 항목 형식
 
@@ -26,6 +27,7 @@
 - `publicSafe`: 공개 가능 여부.
 - `positionFitHint`: private prep.md로 선별할 때 참고할 적합도 힌트.
 - `normalizedFrom`: 원문 복사가 아니라 어떤 축으로 정규화했는지 적는 메모.
+- `topic`: 질문이 다루는 개념 단위(kebab-case). `study-progress.json`의 `weak_spots` 키와 동일한 값을 쓴다.
 - `tags`: 약점 기반 질문 재선별에 쓸 일반 태그.
 - `followUps`: 꼬리 질문 후보.
 

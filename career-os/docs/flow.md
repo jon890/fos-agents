@@ -265,9 +265,8 @@ request queue에 넣고 host-side processor가 allowlist를 확인한 뒤 career
 
 주요 산출물:
 
-- `public/question-bank/`
-- `data/question-bank/tech-questions.jsonl`
-- `data/question-bank/behavioral-questions.jsonl`
+- `public/question-bank/<category>/questions.json` (질문 정본, behavioral 포함 — ADR-097)
+- `private/question-bank/{behavioral,tech}-personal.jsonl` (개인 맞춤 질문 정본)
 
 ## 이력서 패키지
 

@@ -8,6 +8,17 @@ description: 공개 가능한 일반 backend/CS 면접 질문을 career-os publi
 공개 가능한 일반 backend/CS 면접 질문을 `public/question-bank/`에 모으고 보강하는 agent skill이다.
 private 포지션 준비 정본은 `private/<company>/<position>/interview/prep.md`이며, 이 skill은 public bank와 private prep 경계를 분리한다.
 
+## 보강 대상 카테고리
+
+- `java-spring` — Java/Spring 기술 면접 질문
+- `database` — DB/쿼리/트랜잭션 기술 면접 질문
+- `cs` — 운영체제/네트워크/자료구조 등 CS 기초 질문
+- `operations` — 배포/모니터링/인프라 운영 질문
+- `system-design` — 시스템 설계 질문
+- `behavioral` — STAR 형식 경험 공유, 협업, 성장, 가치관 등 일반 인성 질문.
+  개인 답변, 지원 전략, 회사별 비공개 맥락은 넣지 않는다.
+  개인 맞춤 인성 질문은 `private/question-bank/behavioral-personal.jsonl` 정본(interview-asset-writer 담당).
+
 ## 호출 후 범위 해석
 
 - public bank 보강 요청이면 `public/question-bank/`만 수정한다.
@@ -17,7 +28,7 @@ private 포지션 준비 정본은 `private/<company>/<position>/interview/prep.
 ## 입력
 
 - `public/question-bank/README.md`
-- `public/question-bank/{java-spring,database,cs,operations,system-design}/questions.json`
+- `public/question-bank/{java-spring,database,cs,operations,system-design,behavioral}/questions.json`
 - `scripts/question-bank-collector/validate.ts`의 `scanQuestionBankInventory()` 결과.
   public/question-bank inventory 정본이며, `config/question-bank-topics.json`을 정본으로 사용하지 않는다.
 - 필요한 경우 공개 가능한 기존 study topic 이름.

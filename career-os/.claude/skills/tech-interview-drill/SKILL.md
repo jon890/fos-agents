@@ -17,7 +17,8 @@ description: >
 ## 의존 자산
 
 - `career-os/scripts/interview-drill/drill-engine.ts` — 질문 선정·채점·기록·weak_spots 갱신
-- `career-os/data/question-bank/tech-questions.jsonl` — 기술 면접 질문 풀
+- `career-os/public/question-bank/{java-spring,database,cs,operations,system-design}/questions.json` — 기술 면접 공개 질문 풀 (JSON 배열)
+- `career-os/private/question-bank/tech-personal.jsonl` — 개인 기술 질문 추가 풀 (있으면 merge, JSONL)
 - `career-os/config/study-progress.json` — weak_spots 정본 (pass_count·fail_count·next_review_date)
 - `career-os/data/runtime/drill-log-YYYY-MM-DD.jsonl` — 드릴 일별 기록 (자동 생성)
 
@@ -129,6 +130,20 @@ description: >
 - 넘기는 것은 **대상 토픽**뿐이다. 그 토픽의 공부팩 생성은 study-pack-writer가 담당한다.
 - 어떻게 실행할지(서브에이전트·백그라운드 호출 방식)는 실행 환경에 맡긴다. 이 스킬은 "어떤 토픽으로 study-pack-writer를 호출할지"만 정하고 CLI 명령을 직접 박지 않는다.
 - 완료 알림·결과 회수는 실행 환경의 알림 경로를 따른다.
+
+## 개인 질문 즉석 생성
+
+드릴 중 사용자가 "이 경험으로 질문 만들어줘", "내 경험 기반 질문 추가", "개인 질문 생성" 같은 요청을 하면
+`interview-asset-writer` 스킬에 개인 기술 질문 생성을 위임한다.
+
+- 위임 입력: 사용자가 언급한 경험 키워드 + 현재 드릴 토픽.
+  `interview-asset-writer`에 "tech-personal 질문 생성 — 경험: <키워드>, 토픽: <topic>"처럼
+  개인 질문 풀 생성 의도를 전달한다.
+- 어떻게 실행할지(서브에이전트·호출 방식)는 실행 환경에 맡긴다.
+  이 스킬은 "어떤 입력으로 interview-asset-writer를 호출할지"만 정하고 CLI 명령을 직접 박지 않는다.
+- 위임은 백그라운드(non-blocking)로 처리하고 드릴 세션은 계속 진행한다.
+- 생성된 질문은 `private/question-bank/tech-personal.jsonl`에 추가되고,
+  이후 드릴 세션부터 자동으로 병합된다.
 
 ## 범위 외
 
