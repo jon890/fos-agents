@@ -28,9 +28,10 @@
 
 ## Engineering blog signals
 
-- `config/sources.json` (`techBlog` 카테고리)
+- `config/external-reading-sources.json` (`techBlog` 카테고리)
   - 기술블로그/엔지니어링 블로그 소스.
   - 회사의 엔지니어링 문화, 대규모 운영, 결제/정산/커머스/플랫폼/SRE 시그널을 판단할 때 사용한다.
+  - 공고 수집 source registry는 `live-postings` adapter와 fos-career DB가 맡는다.
 
 ## Runtime posting snapshots
 
