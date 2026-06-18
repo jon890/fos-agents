@@ -150,6 +150,9 @@ fos-career request gateway:
 - 학습 진행 상태와 약점 상태: `config/study-progress.json`
 - 외부 reading reservoir: `config/external-reading-sources.json`
 - 검증 회사군 단일 출처: `config/verified-company-research-targets.json` (ADR-090, references에서 이동)
+- position 수집 설정: `config/position-collection.json` (ADR-099) — `{ wanted: { jobGroupId, targetKeywords[] } }`. wanted.ts 하드코딩 제거
+- 후보자 구조화 사실: `config/candidate-config.json` (ADR-099) — `{ experienceYears, ... }`. 코드가 읽는 사실 정본, profile.md는 prose 서술(거울 구조)
+- position 지표 시계열: `logs/position-metrics.jsonl` (ADR-099) — 날짜별 1줄 append. `{ date, collection:{activeDirectPostings,sourceCounts,rejectCounts,adapterCoverage}, recommendation:{strongActive,newRatio,tierDist,labelCompleteness} }`
 - 지원서 export 기본 디자인 계약: `config/resume-design.md`
 - 사람이 명시적으로 고른 추천 guardrail, pin, 제외, seed override
 

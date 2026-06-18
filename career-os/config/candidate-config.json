@@ -1,0 +1,6 @@
+{
+  "_meta": {
+    "purpose": "후보자 구조화 사실. 코드가 읽는 사실 정본. profile.md는 prose 서술 (ADR-099, 거울 구조)."
+  },
+  "experienceYears": 7
+}
