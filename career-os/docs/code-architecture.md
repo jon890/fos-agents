@@ -60,6 +60,8 @@ career-os/
 │   ├── study-pack-candidates.json     자동 발굴 active 후보 캐시 + 사람이 고른 seed/pin. 정본 목록 아님
 │   ├── question-bank-topics.json      interview-asset topic override 후보. public/question-bank 정본 아님
 │   ├── sources.json                   3 source configs 통합 (plan002)
+│   ├── position-collection.json       position 수집 설정 (wanted jobGroupId·targetKeywords, ADR-099)
+│   ├── candidate-config.json          후보자 구조화 사실 (experienceYears 등, ADR-099. profile.md는 prose)
 │   ├── baseline-core-files.json       baseline 분석 대상 파일 목록 (txt → JSON, plan002)
 │   ├── topic-file-map.json            legacy daily용 토픽 → 파일. fos-study inventory 기반으로 대체 예정
 │   ├── live-coding-seed-pool.json
