@@ -27,6 +27,7 @@ export const MvpTargetPrimarySchema = z.object({
   position_slug: z.string(),
   data_root: z.string(),
   interview_date: z.string(),
+  position_focus: z.string().optional(),
   notes: z.string().optional(),
   interview: InterviewSchema.optional(),
 });

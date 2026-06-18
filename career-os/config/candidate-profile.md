@@ -8,10 +8,25 @@
 
 ## 지원 대상
 
-- **현재 타깃**: CJ Foodville Digital Channel Backend (Java Backend). 회사·팀·면접 일자는 `career-os/config/mvp-target.json`이 단일 출처.
-- **지원 포지션 핵심**: F&B/e-Commerce 운영형 자사 백엔드 — Spring Boot 3 + JPA/Hibernate + Kafka + Redis + MySQL 기반 신규 서비스 개발·운영 안정화, 레거시(JSP/jQuery)와 신규 SPA 공존 환경, 주문/픽업/딜리버리 상태머신·쿠폰·멤버십 도메인, 클라우드 운영 안정성.
-- **지원 가능 범위 (재사용 가능 포지셔닝)**: 운영형 자사 서비스 백엔드 — Spring Boot 3 · Java 17·21 · JPA · Kafka · Redis · OpenSearch + 분산 캐시 정합성·Transactional Outbox·운영 장애 RCA 실전 경험. AI 서비스 백엔드 경험도 보조 자산.
-- **포지셔닝 한 줄**: "운영 안정성·트랜잭션/이벤트 경계·캐시 정합성을 자사 서비스 백엔드 관점으로 설계해 본 시니어 Java 백엔드 개발자."
+- **현재 타깃**: CJ Foodville Digital Channel Backend (Java Backend). 회사·팀·면접 일자·포지션 핵심은 `career-os/config/mvp-target.json`이 단일 출처.
+- **지원 가능 범위 (재사용 가능 포지셔닝)**: 운영형 자사 서비스 백엔드 — Spring Boot 3 · Java 17·21 · JPA · Redis · OpenSearch + 슬롯 도메인 점진 아키텍처 개선, 테스트/검증 기반 리팩터링, AI 활용 개발 생산성 경험.
+  AI 서비스·AI 플랫폼 전환 포지션에서는 RAG 색인, 문서 파싱 운영, 품질 검증 인프라, 에이전트 기반 개발 생산성 경험을 차별화 자산으로 쓴다.
+- **포지셔닝 한 줄**: "복잡한 도메인을 직접 구현하며 반복을 관찰한 뒤 구조를 고치고, AI를 개발 생산성과 서비스 검증 파이프라인에 연결해 온 백엔드 개발자."
+
+## 핵심 무기
+
+정통 백엔드 레인과 AI 전환 레인을 함께 평가할 때 아래 순서로 본다.
+
+1. **슬롯 도메인에서 검증된 점진 아키텍처 개선력** — 슬롯을 여러 개 직접 만들며 반복 패턴을 확인한 뒤 `SlotTemplate`, `BaseSlotService`, `ExtraConfig` 분리처럼 잘못된 선추상화를 피하고 실제 중복이 자란 지점에서 구조를 고쳤다.
+   출처: `sources/fos-study/task/nsc-slot/slot-engine-abstraction.md`
+2. **AI를 개발 생산성으로 끌어오는 능력** — Cursor Rules 20종 이상, 에이전트 단독 슬롯 구현 3종, `by agent` 커밋 추적처럼 AI를 단순 보조 도구가 아니라 팀 개발 프로세스와 도메인 지식 재사용 체계에 붙였다.
+   출처: `sources/fos-study/task/nsc-slot/ai-tool-adoption.md`, `sources/fos-study/resume/2603_김병태_이력서_v4.md`
+3. **복잡한 구현을 테스트·검증 가능한 구조로 바꾸는 습관** — Spring Batch 11 Step RAG 색인, 문서 파싱 단계 분해, 출력 회귀 검증·golden 채점처럼 실패 격리와 품질 회귀 차단을 함께 설계했다.
+   출처: `sources/fos-study/task/ai-service-team/rag-vector-search-batch.md`, `sources/fos-study/task/ai-service-team/playground-document-parser.md`
+4. **운영 문제를 끝까지 파는 문제 해결력** — graceful shutdown 503, 문서 파싱 워커 RSS 증가, OCR 워커 상태 오염처럼 런타임·프로세스·인프라 경계에서 발생한 문제를 진단하고 검증했다.
+   출처: `sources/fos-study/task/ai-service-team/graceful-shutdown-503-fix.md`, `sources/fos-study/task/ai-service-team/playground-document-parser.md`, `sources/fos-study/task/ai-service-team/glibc-malloc-trim-python-leak.md`
+5. **상태 갱신과 동시성에 대한 실전 감각** — MQ Fanout 기반 캐시 갱신 전파, StampedLock 읽기 보호, AliasMethod 성능 개선처럼 서비스 안에서 반복되는 상태·성능 문제를 구현 수준에서 해결했다.
+   출처: `sources/fos-study/task/sb-dev-team/cache-architecture.md`, `sources/fos-study/task/nsc-slot/slot-engine-abstraction.md`, `sources/fos-study/task/nsc-slot/slot-spin-performance.md`
 
 ---
 
@@ -22,7 +37,7 @@
 | 2022.02 ~ 2022.11 | 더퓨쳐컴퍼니 | Node.js 백엔드. 게임 아이템 거래소 **체결 엔진·호가창**을 Redis Streams/RediSearch 기반으로 구현, 블록체인 입출금 데몬 설계. (`task/the-future-company/`) |
 | 2023.01 ~ 2024.03 | SB 개발팀 (스포츠 베팅 플랫폼) | Java 11 / Spring Boot 2.6 백엔드. **Ehcache + 인메모리 Map** 이중 캐시와 **MQ Fanout 기반 다중 서버 캐시 정합성**(RabbitMQ / Azure Service Bus 이중화), KYC·Azure Blob 저장·추천 프로그램·wemix 지갑 연동. (`task/sb-dev-team/`) |
 | 2024.06 ~ 2025.11 | NHN NSC 슬롯개발팀 | Spring Boot 3.x / Java 17 / MySQL / Redis. 신규 슬롯 8종 개발, **슬롯 엔진 추상화**(`SlotTemplate`, `BaseSlotService`), **RCC(RTP Cache Control)** 백그라운드 캐시 시스템, **StampedLock** 기반 정적 데이터 동시성 해결, **AliasMethod O(1)** 스핀 최적화, **Cursor Rules 20종 이상** 구축 및 AI 에이전트 단독 3종 구현. (`task/nsc-slot/`) |
-| 2025.12 ~ 현재 | NHN AI 서비스 개발팀 | Spring Boot 3 / Java 21 / Spring Batch / OpenSearch. 사내 RAG용 **Confluence 벡터 색인 배치 파이프라인(11 Step)** 설계·구현, **AsyncItemProcessor**로 I/O 병렬화, 전략 패턴 기반 메타데이터 Provider, Next.js 기반 사내 AI 웹툰 제작 MVP 풀스택. (`task/ai-service-team/`) |
+| 2025.12 ~ 현재 | NHN AI 서비스 개발팀 | Spring Boot 3 / Java 21 / Spring Batch / OpenSearch + Python/FastAPI 문서 파싱 운영. 사내 RAG용 **Confluence 벡터 색인 배치 파이프라인(11 Step)** 설계·구현, **AsyncItemProcessor**로 I/O 병렬화, 전략 패턴 기반 메타데이터 Provider, Next.js 기반 사내 AI 웹툰 제작 MVP 풀스택, Playground 문서 파싱 파이프라인 품질 검증·워커 운영 개선. (`task/ai-service-team/`) |
 
 - 총 개발 경력은 **약 7년차**로 본다. 별도 SI 개발 경험 약 3년이 있으며, 현재 이력/프로젝트 문서에 상세히 정리된 최근 경력은 위 표 기준이다.
 - NHN 재직 자체는 4년차이지만, 경력기술서 기준 **"시니어 Java 백엔드 실무"는 2023.01부터 약 3년+** 축적.
@@ -39,20 +54,22 @@
 - **Java 17 · Java 21** (실전 운영, 4년+) — `task/nsc-slot/slot-engine-abstraction.md`, `task/ai-service-team/rag-vector-search-batch.md`
 - **Kotlin** — 출처 문서에 직접 운영 기재 없음. 공고 요건상 필요 시 학습 가능 수준. (※ 현 MVP에서는 Kotlin 제외 유지)
 - **TypeScript / Node.js (NestJS)** (실전 운영, 2022~2024 일부) — `task/the-future-company/`, `task/sb-dev-team/kyc-system.md`
-- **Python** (사용 경험, 제한적) — gRPC OCR 서버 graceful shutdown 수정. 케어챗 포지션 대비 FastAPI/async/background task/LLM gateway 패턴을 단기 보강 우선순위로 둔다. `task/ai-service-team/graceful-shutdown-503-fix.md`
+- **Python** (운영 개선 경험, 제한적 제품 백엔드) — FastAPI 기반 문서 파싱 서비스의 멀티프로세스 워커 풀, OCR 호출, RSS 증가 진단, `malloc_trim` 적용, graceful shutdown 문제를 다뤘다.
+  단, Python을 주력 제품 서버 언어로 장기간 운영한 근거는 제한적이다.
+  `task/ai-service-team/playground-document-parser.md`, `task/ai-service-team/glibc-malloc-trim-python-leak.md`, `task/ai-service-team/graceful-shutdown-503-fix.md`
 
 ### 프레임워크
 - **Spring Boot 3.x** (실전 운영, 2024~) — `task/nsc-slot/README.md`, `task/ai-service-team/README.md`
 - **Spring Boot 2.6** (실전 운영, 2023~2024) — `task/sb-dev-team/README.md`
 - **Spring Batch** (설계 경험, 2026.01~) — 11 Step 파이프라인, `AsyncItemProcessor`, `@JobScope`, `CompositeItemProcessor`. `task/ai-service-team/rag-vector-search-batch.md`
-- **JPA / Hibernate** (실전 운영) — `PostCommitUpdateEventListener` 활용, `@TransactionalEventListener(AFTER_COMMIT)`, `Propagation.REQUIRES_NEW`. `resume/2603_김병태_이력서_v4.md` 문항1
+- **JPA / Hibernate** (실전 운영) — 엔티티 매핑, QueryDSL, 커밋 이후 갱신 이벤트 처리 경험. `resume/2603_김병태_이력서_v4.md` 문항1
 - **QueryDSL** (실전 운영) — `task/nsc-slot/`, `task/sb-dev-team/`
 - **Project Reactor** (사용 경험) — `task/nsc-slot/simulator-template.md` (ReactiveSimulator)
 
 ### 메시징 / 이벤트
-- **Apache Kafka** (실전 운영 + 설계) — **Transactional Outbox Pattern** 설계·운영. `@TransactionalEventListener(AFTER_COMMIT)` + `REQUIRES_NEW` 실패 메시지 저장 + 스케줄러 재전송 + traceId 추적. 출처: `resume/2603_김병태_이력서_v4.md` 문항1 "Kafka 비동기 처리" 단락.
-- **RabbitMQ Fanout Exchange** (실전 운영) — 다중 서버 인메모리 캐시 정합성. `task/sb-dev-team/cache-architecture.md`, NSC 슬롯팀 정적 데이터 갱신.
-- **Azure Service Bus** (실전 운영) — RabbitMQ 이중화. `task/sb-dev-team/cache-architecture.md`
+- **Apache Kafka** (사용·패턴 이해) — 비동기 처리와 이벤트 발행 패턴을 접했으나, Kafka 운영·파티셔닝·Consumer Group 튜닝을 핵심 강점으로 내세우지는 않는다.
+- **RabbitMQ Fanout Exchange** (기능 구현 경험) — 다중 서버 인메모리 캐시 갱신 전파에 사용. 브로커 운영 전문성보다 애플리케이션 캐시 갱신 구조 경험으로 표현한다. `task/sb-dev-team/cache-architecture.md`, NSC 슬롯팀 정적 데이터 갱신.
+- **Azure Service Bus** (사용 경험) — RabbitMQ와 동일 인터페이스로 환경별 구현체를 분리한 경험. `task/sb-dev-team/cache-architecture.md`
 
 ### 데이터 / 스토리지
 - **MySQL 8.x** (실전 운영) — 복합 인덱스 추가로 캐시 충족 판정 쿼리 개선. `task/nsc-slot/rcc-rtp-cache-control.md`
@@ -73,9 +90,11 @@
 - **NHN Cloud / Azure** (실전 운영) — `task/sb-dev-team/README.md`
 - **NHN Cloud Container Service** (실전 운영, 제약 경험) — `terminationGracePeriodSeconds` 30s 고정 제약 하 예산 설계. `task/ai-service-team/graceful-shutdown-503-fix.md`
 - **Envoy / gRPC / supervisord** (트러블슈팅) — preStop + SIGTERM 핸들러 + stopwaitsecs 조합 설계. `task/ai-service-team/graceful-shutdown-503-fix.md`
+- **FastAPI / ProcessPoolExecutor / GPU 워커 풀** (운영 개선 경험) — 문서 파싱 API의 OCR 워커 병렬화, 대기열 관측, 워커 오류 복구 구조 개선. `task/ai-service-team/playground-document-parser.md`
 - **Docker** (사용 경험) — 실제 운영 배포 파이프라인에서 사용. Kubernetes 직접 운영 기재는 출처 문서에 명시 없음.
 - **Jenkins** (사용 경험) — `Jenkinsfile_deploy_real` 수정. `task/ai-service-team/graceful-shutdown-503-fix.md`
 - **Testcontainers / JUnit 5 / MockRestServiceServer / spring-batch-test** (실전 운영) — `task/ai-service-team/rag-vector-search-batch.md`
+- **출력 품질 검증 / golden set / NED / 표 셀 F1** (설계 경험) — 문서 파싱 결과 회귀 검증과 정답지 채점 체계를 구축했다. `task/ai-service-team/playground-document-parser.md`
 
 ### 테스트
 - 제네릭 기반 추상 테스트 클래스 설계, **447개 테스트 파일** 운영(이력서 기재). `resume/2603_김병태_이력서_v4.md` 문항1. AOP / Kafka 이벤트 발행 / Redis 통합 테스트 커버.
@@ -93,18 +112,18 @@
 - **기술적 핵심**: Step 단위 실패 격리 / `ItemStream` 구현으로 커서 기반 재시작 / Confluence ADF → Markdown 변환 / 전략 패턴(`ConfluenceDocumentMetadataProvider`)으로 스페이스별 메타데이터 분기 제거.
 - 출처: `task/ai-service-team/rag-vector-search-batch.md`
 
-### 2. 다중 서버 인메모리 캐시 정합성 설계 (NSC 슬롯팀)
+### 2. 다중 서버 인메모리 캐시 갱신 구조 (NSC 슬롯팀)
 - **문제**: 정적 설정 데이터를 DB 부하 절감용으로 메모리 캐싱했지만, 어드민에서 변경 시 다중 서버 인스턴스 간 정합성이 깨지고 갱신 중 조회 요청에서 일시적 NPE 발생.
-- **접근**: Hibernate `PostCommitUpdateEventListener` → RabbitMQ Fanout Exchange 발행 → 각 서버가 자기 큐에서 수신 후 해당 데이터만 선택 갱신. 갱신 구간은 `StampedLock` writeLock으로 보호, 조회는 `tryReadLock(2.5s)` 타임아웃.
+- **접근**: 어드민 변경 후 RabbitMQ Fanout 메시지를 발행하고, 각 서버가 자기 큐에서 수신 후 해당 데이터만 선택 갱신. 갱신 구간은 `StampedLock` writeLock으로 보호, 조회는 `tryReadLock(2.5s)` 타임아웃.
 - **결과 (출처 명시 범위)**: 일시적 정합성 오류(NPE) 해소. `StaticDataManager` 인터페이스로 init/refresh/clear 책임 분리해 신규 캐시 타입 추가 시 기존 코드 미수정.
 - **기술적 핵심**: JPA 커밋 이벤트 리스너 / Fanout Exchange / Java 동시성 기본기(StampedLock) / OCP 준수.
 - 출처: `resume/2603_김병태_이력서_v4.md` 문항1, `task/nsc-slot/slot-engine-abstraction.md`, `task/sb-dev-team/cache-architecture.md`
 
-### 3. Kafka Transactional Outbox Pattern 설계 (NSC 슬롯팀)
+### 3. 트랜잭션 이후 비동기 처리 패턴 경험 (NSC 슬롯팀)
 - **문제**: 핵심 API에서 금액·레벨 처리(동기) + 미션·통계·알림(비동기)를 분리하면서도 메시지 유실과 DB-브로커 원자성 깨짐을 방지해야 함.
-- **접근**: `@TransactionalEventListener(AFTER_COMMIT)`으로 커밋 이후 발행 보장. 전송 실패 시 `Propagation.REQUIRES_NEW` 별도 트랜잭션으로 실패 메시지 DB 저장 + 스케줄러 재전송. traceId 함께 저장해 실패 원인 추적.
+- **접근**: 커밋 이후 이벤트 발행과 실패 기록 분리 패턴을 적용했다. 다만 이 경험은 Kafka 운영 전문성이나 분산 트랜잭션 설계 강점으로 과장하지 않는다.
 - **결과 (출처 명시 범위)**: 메시지 유실 없는 비동기 후처리 구조 운영. 정량 지표는 출처 문서에 기재 없음.
-- **기술적 핵심**: Outbox Pattern / Spring 트랜잭션 전파 정확한 사용 / 관측 가능성(traceId) 내재화.
+- **기술적 핵심**: 트랜잭션 이후 후처리 경계 이해 / 실패 기록 분리 / 관측 가능성(traceId) 내재화.
 - 출처: `resume/2603_김병태_이력서_v4.md` 문항1
 
 ### 4. RCC (RTP Cache Control) — 백그라운드 사전 캐시 시스템 (NSC 슬롯팀, 2025.07~2025.10)
@@ -175,14 +194,15 @@
 
 > 추상어 금지. 실제 에피소드 기반. 각 항목 뒤에 증거 파일 경로.
 
-1. **분산 캐시 정합성 설계 실제 경험** — JPA 이벤트 리스너 → MQ Fanout → StampedLock 까지 단일 스택으로 직접 설계/해결. `task/sb-dev-team/cache-architecture.md`, `task/nsc-slot/slot-engine-abstraction.md`
-2. **트랜잭션 경계와 이벤트 발행의 상호작용 이해** — `@TransactionalEventListener(AFTER_COMMIT)` + `REQUIRES_NEW` + Outbox 재전송 설계 운영. `resume/2603_김병태_이력서_v4.md` 문항1
-3. **대용량 배치 파이프라인을 처음부터 설계** — Step 분리·재시작·I/O 병렬화 의사결정을 문서 수준으로 정리. `task/ai-service-team/rag-vector-search-batch.md`
-4. **"추상화는 반복을 본 뒤에"를 실제로 실천** — SlotTemplate / BaseSlotService / EmbeddingMetadataProvider 모두 if-else가 자라는 걸 먼저 관찰하고 나서 추상화. `task/nsc-slot/slot-engine-abstraction.md`, `task/ai-service-team/embedding-metadata-provider.md`
-5. **알고리즘 기반 성능 개선 실제 적용 + 측정** — AliasMethod O(n)→O(1), Welford's Online Algorithm으로 OOM 제거, JMH 근거. `task/nsc-slot/slot-spin-performance.md`, `task/nsc-slot/slot-simulator-oom.md`
+1. **슬롯 도메인 점진 아키텍처 개선** — 슬롯 5종 이상을 직접 만들며 반복 패턴을 확인한 뒤 `SlotTemplate`, `BaseSlotService`, `ExtraConfig` 분리로 구조를 개선했다. `task/nsc-slot/slot-engine-abstraction.md`
+2. **AI 활용 개발 생산성 인프라 구축** — Cursor Rules 20종 이상, 에이전트 단독 슬롯 구현 3종, `by agent` 커밋 태깅으로 AI 작업 범위를 분리 추적했다. `resume/2603_김병태_이력서_v4.md` 문항2·4, `task/nsc-slot/ai-tool-adoption.md`
+3. **검증 가능한 파이프라인 설계** — Spring Batch 11 Step RAG 색인과 문서 파싱 품질 검증(NED·golden·표 셀 F1)으로 실패 격리와 회귀 차단을 함께 설계했다. `task/ai-service-team/rag-vector-search-batch.md`, `task/ai-service-team/playground-document-parser.md`
+4. **알고리즘 기반 성능 개선 실제 적용 + 측정** — AliasMethod O(n)→O(1), Welford's Online Algorithm으로 OOM 제거, JMH 근거. `task/nsc-slot/slot-spin-performance.md`, `task/nsc-slot/slot-simulator-oom.md`
+5. **캐시 갱신 전파와 갱신 중 읽기 보호 경험** — MQ Fanout으로 여러 서버에 갱신 신호를 보내고, StampedLock으로 refresh 중 NPE를 막았다. 브로커 운영 전문성이 아니라 애플리케이션 상태 갱신 구조 경험으로 표현한다. `task/sb-dev-team/cache-architecture.md`, `task/nsc-slot/slot-engine-abstraction.md`
 6. **제약 조건 하에서 운영 문제 해결** — NHN Cloud Container Service의 `terminationGracePeriodSeconds` 30s 고정 하에 preStop 15s + gRPC grace 12s + 여유 3s 예산 설계로 503 제거. `task/ai-service-team/graceful-shutdown-503-fix.md`
-7. **팀 개발 생산성 인프라 구축** — 447개 테스트 파일, Cursor Rules 20종, 에이전트 단독 구현 3종. `resume/2603_김병태_이력서_v4.md` 문항2·4, `task/nsc-slot/ai-tool-adoption.md`
-8. **의사결정 문서화 습관** — task 문서 각 파일이 "배경 → 접근 → 트러블 → 배운 것" 구조로 일관 작성. 블로그/저장소 형태로 지속. `task/**`
+7. **Python 워커 런타임 문제 진단** — `gc.collect()`로 RSS가 줄지 않는 이유를 glibc allocator·단편화 관점에서 진단하고 `malloc_trim` helper와 카나리 검증으로 운영 리스크를 줄였다. `task/ai-service-team/glibc-malloc-trim-python-leak.md`
+8. **트랜잭션 이후 후처리 경계 이해** — 커밋 이후 이벤트 발행과 실패 기록 분리 패턴을 접했지만, 분산 트랜잭션/Kafka 운영을 핵심 강점으로 내세우지는 않는다. `resume/2603_김병태_이력서_v4.md` 문항1
+9. **의사결정 문서화 습관** — task 문서 각 파일이 "배경 → 접근 → 트러블 → 배운 것" 구조로 일관 작성. 블로그/저장소 형태로 지속. `task/**`
 
 ---
 
@@ -207,7 +227,7 @@
 2. **보안 vs 성능** — `SecureRandom`의 암호학적 강도가 슬롯 서버 내부에서 불필요하다고 판단해 `ThreadLocalRandom`으로 전환. JMH 벤치마크로 58배 차이 근거. `task/nsc-slot/slot-spin-performance.md`
 3. **복잡도 관리** — 14개 `remove` 호출 + DocumentType 분기가 누적되는 구조를 OCP 위반으로 진단 → **Blocklist → Allowlist** 전환으로 `EmbeddingService` 순수 위임 구조화. `task/ai-service-team/embedding-metadata-provider.md`
 4. **동시성 선택** — 갱신 빈도 낮고 읽기 압도적 → `StampedLock` + `tryReadLock` 타임아웃 / 캐시 생성 충돌 빈도 낮음 → 낙관적 락 대신 DB 유니크 키 + 예외 처리 선택. `task/nsc-slot/slot-engine-abstraction.md`, `task/nsc-slot/rcc-rtp-cache-control.md`
-5. **트랜잭션·메시지 경계** — 이벤트 발행은 커밋 이후에만(AFTER_COMMIT), 실패 기록은 별도 트랜잭션(REQUIRES_NEW)으로 원자성 분리. `resume/2603_김병태_이력서_v4.md` 문항1
+5. **후처리 경계** — 커밋 이후 처리와 실패 기록 분리 패턴을 이해하되, 분산 트랜잭션 전문성으로 과장하지 않는다. `resume/2603_김병태_이력서_v4.md` 문항1
 6. **운영 제약을 예산으로 환산** — `terminationGracePeriodSeconds` 30s 고정 제약에서 preStop sleep 15s + gRPC grace 12s + 여유 3s로 계산. `task/ai-service-team/graceful-shutdown-503-fix.md`
 7. **Step 분리 = 실패 격리** — 단일 거대 Step 대신 11개 Step 분리를 "댓글 Step이 죽어도 페이지 Step 결과는 살아있다"는 운영적 관점으로 설명. `task/ai-service-team/rag-vector-search-batch.md`
 
@@ -266,19 +286,22 @@
 
 | 파일 | 기여 섹션 |
 |------|-----------|
-| `sources/fos-study/resume/2603_김병태_이력서_v4.md` | 지원 대상 / 커리어 타임라인 / 주요 프로젝트(2·3) / 강점 1·2·7 / 협업 |
+| `sources/fos-study/resume/2603_김병태_이력서_v4.md` | 지원 대상 / 커리어 타임라인 / 핵심 무기 1 / 주요 프로젝트(2·3) / 강점 1·2·9 / 협업 |
 | `sources/fos-study/task/nsc-slot/README.md` | 커리어 타임라인 / 기술 스택 |
-| `sources/fos-study/task/nsc-slot/slot-engine-abstraction.md` | 주요 프로젝트(2) / 의사결정 패턴 1·4 / 기술 스택(StampedLock) |
+| `sources/fos-study/task/nsc-slot/slot-engine-abstraction.md` | 핵심 무기 1·5 / 주요 프로젝트(2) / 의사결정 패턴 1·4 / 기술 스택(StampedLock) |
 | `sources/fos-study/task/nsc-slot/slot-spin-performance.md` | 주요 프로젝트(5) / 의사결정 패턴 2 / 기술 스택(AliasMethod·ThreadLocalRandom) |
 | `sources/fos-study/task/nsc-slot/rcc-rtp-cache-control.md` | 주요 프로젝트(4) / 의사결정 패턴 4 / 기술 스택(MySQL·비동기 캐시·DB 유니크 키) |
-| `sources/fos-study/task/nsc-slot/ai-tool-adoption.md` | 주요 프로젝트(7) / 협업·리더십 |
+| `sources/fos-study/task/nsc-slot/ai-tool-adoption.md` | 핵심 무기 4 / 주요 프로젝트(7) / 협업·리더십 |
 | `sources/fos-study/task/nsc-slot/slot-simulator-oom.md` | 강점 5 |
 | `sources/fos-study/task/nsc-slot/slot-simulator-jackpot-pool.md` | 기술 스택(AtomicReference) |
 | `sources/fos-study/task/nsc-slot/slot-test-template.md` | 협업·리더십(테스트 인프라) |
 | `sources/fos-study/task/ai-service-team/README.md` | 커리어 타임라인 / 기술 스택 |
-| `sources/fos-study/task/ai-service-team/rag-vector-search-batch.md` | 주요 프로젝트(1) / 의사결정 패턴 7 / 기술 스택(Spring Batch) |
-| `sources/fos-study/task/ai-service-team/embedding-metadata-provider.md` | 의사결정 패턴 3 / 강점 4 |
-| `sources/fos-study/task/ai-service-team/graceful-shutdown-503-fix.md` | 강점 6 / 의사결정 패턴 6 / 약점(K8s) |
+| `sources/fos-study/task/ai-service-team/rag-vector-search-batch.md` | 핵심 무기 3 / 주요 프로젝트(1) / 의사결정 패턴 7 / 기술 스택(Spring Batch) |
+| `sources/fos-study/task/ai-service-team/embedding-metadata-provider.md` | 핵심 무기 5 / 의사결정 패턴 3 / 강점 4 |
+| `sources/fos-study/task/ai-service-team/graceful-shutdown-503-fix.md` | 핵심 무기 2 / 강점 6 / 의사결정 패턴 6 / 약점(K8s) |
+| `sources/fos-study/task/ai-service-team/playground-document-parser.md` | 핵심 무기 2·3·5 / 커리어 타임라인 / 주요 프로젝트(9) / 강점 7 / 기술 스택(FastAPI·ProcessPoolExecutor·품질 검증) |
+| `sources/fos-study/task/ai-service-team/glibc-malloc-trim-python-leak.md` | 핵심 무기 2 / 강점 8 / 기술 스택(Python 워커 메모리 진단) |
+| `sources/fos-study/task/ai-service-team/webtoon-maker-ai-pipeline.md` | 핵심 무기 4 / 주요 프로젝트(8) |
 | `sources/fos-study/task/sb-dev-team/README.md` | 커리어 타임라인 |
 | `sources/fos-study/task/sb-dev-team/cache-architecture.md` | 주요 프로젝트(6) / 강점 1 / 기술 스택(Ehcache·MQ Fanout) |
 | `sources/fos-study/task/the-future-company/README.md` | 커리어 타임라인 / 기술 스택(Redis Streams) |
