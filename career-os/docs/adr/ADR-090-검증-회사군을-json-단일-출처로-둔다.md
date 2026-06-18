@@ -16,7 +16,7 @@
 ### 결정
 
 - 검증 회사군 JSON을 `references/`에서 `config/verified-company-research-targets.json`으로 옮겨 단일 출처로 둔다. 텍스트 목록의 회사를 JSON으로 흡수한다.
-  - 이유 — career-os config는 사람이 큐레이션한 정책·외부 source registry이고 코드가 읽는 설정이다(`config/sources.json`과 같은 부류). 양방향(코드 discovery + LLM 주입) 소비에 맞고, `data-schema.md`가 스키마를 관리한다.
+  - 이유 — career-os config는 사람이 큐레이션한 정책과 외부 reading reservoir를 담고 코드가 읽는 설정이다(`config/external-reading-sources.json`과 같은 부류). 양방향(코드 discovery + LLM 주입) 소비에 맞고, `data-schema.md`가 스키마를 관리한다.
 - 스키마를 코드와 LLM 양방향 소비를 고려해 설계한다.
   - 코드용 — `hasAdapter`·`adapterId`·`careerUrls`·`wantedKeywords`로 수집 커버리지와 discovery.
   - LLM용 — `tier`·`koreanName`·`preferredDomains`·`techBlogs`·`notes`로 업사이드 판단.

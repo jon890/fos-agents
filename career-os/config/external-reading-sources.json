@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "purpose": "career-os 보조 카테고리 reservoir 단일 출처 (ADR-016)",
+    "purpose": "career-os 외부 reading reservoir 단일 출처. 공고 수집 source registry가 아니다 (ADR-016, ADR-083)",
     "schema_version": "1",
     "categories": [
       "techBlog",

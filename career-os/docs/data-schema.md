@@ -148,7 +148,7 @@ fos-career request gateway:
 - 후보자 baseline과 장기 이력: `config/candidate-profile.md`
 - baseline 분석용 core file pin: `config/baseline-core-files.json`
 - 학습 진행 상태와 약점 상태: `config/study-progress.json`
-- 외부 source registry: `config/sources.json`
+- 외부 reading reservoir: `config/external-reading-sources.json`
 - 검증 회사군 단일 출처: `config/verified-company-research-targets.json` (ADR-090, references에서 이동)
 - position 수집 설정: `config/position-collection.json` (ADR-099) — `{ wanted: { jobGroupId, targetKeywords[] } }`. wanted.ts 하드코딩 제거
 - 후보자 구조화 사실: `config/candidate-config.json` (ADR-099) — `{ experienceYears, ... }`. 코드가 읽는 사실 정본, profile.md는 prose 서술(거울 구조)
@@ -337,7 +337,7 @@ daily report용 토픽 → fos-study 파일 목록 매핑 (ADR-001).
 
 ### config/tech-blog-sources.json / ai-topic-sources.json / geek-news-sources.json
 
-> **plan002 이후**: `config/sources.json`의 `techBlog` / `ai` / `geek` category로 통합. 단일 출처는 "통합 config 스키마 (plan002 이후)" 섹션 참조.
+> **plan002 이후**: `config/external-reading-sources.json`의 `techBlog` / `ai` / `geek` category로 통합. 단일 출처는 "통합 config 스키마 (plan002 이후)" 섹션 참조.
 
 ## data/applications/ (implemented base — plan029, plan031, plan038)
 
@@ -1100,14 +1100,17 @@ ADR-066 이후 공개 가능 일반 질문 bank의 정본은 `public/question-ba
 }
 ```
 
-### config/sources.json
+### config/external-reading-sources.json
 
-3개 source config 파일 통합본 (`tech-blog-sources`, `ai-topic-sources`, `geek-news-sources`).
+3개 외부 reading source config 파일 통합본 (`tech-blog-sources`, `ai-topic-sources`, `geek-news-sources`).
+`study-topic-recommender`의 보조 읽을거리 추천과 `position-recommender`의 `techBlogSignal` 판단에만 사용한다.
+공고 수집 source registry가 아니다.
+공고 수집 source registry와 collection run은 ADR-083에 따라 fos-career DB가 정본이고, career-os `live-postings` adapter registry는 실제 수집 방법을 소유한다.
 
 ```json
 {
   "_meta": {
-    "purpose": "tech-blog / ai / geek-news reservoir 단일 출처",
+    "purpose": "tech-blog / ai / geek-news external reading reservoir 단일 출처",
     "schema_version": "1",
     "categories": ["techBlog", "ai", "geek"]
   },

@@ -260,7 +260,7 @@ async function runPipeline(): Promise<void> {
     join(CONFIG, "live-coding-seed-candidates.json"),
     { seeds: [] }
   ).seeds ?? [];
-  const sources = safeLoad<SourcesConfig>(join(CONFIG, "sources.json"), {});
+  const sources = safeLoad<SourcesConfig>(join(CONFIG, "external-reading-sources.json"), {});
   const techBlogItems: ReservoirItem[] = sources.techBlog?.items ?? [];
   const aiTopicItems: ReservoirItem[] = sources.ai?.items ?? [];
   const geekNewsItems: ReservoirItem[] = sources.geek?.items ?? [];
