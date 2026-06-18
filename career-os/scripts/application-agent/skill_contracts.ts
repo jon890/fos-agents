@@ -270,7 +270,7 @@ export const SKILL_CONTRACTS: Readonly<Record<string, SkillContract>> = {
     description:
       '공개 가능한 일반 backend/CS 면접 질문 bank를 정규화하고 보강.',
     autonomy: 'user_approval_required',
-    expectedOutputs: ['data/question-bank/{topic}.jsonl'],
+    expectedOutputs: ['public/question-bank/<category>/questions.json'],
     touchesFosStudy: false,
     modifiesCandidateProfile: false,
     requiresExternalAccess: false,
