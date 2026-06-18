@@ -152,6 +152,50 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 
 알림 실패는 비치명적 — stderr warn만, skill 자체는 success 종료.
 
+## 개인 질문 풀 생성
+
+`candidate-profile.md`의 프로젝트·경험 기반으로 드릴에서 쓸 수 있는 개인 맞춤 질문을 생성한다.
+일반 워크플로(fos-study 마크다운 발행)와 별개의 독립 모드다.
+
+### 트리거
+
+`personal`, "개인 질문 만들어줘", "이력 기반 질문", "내 경험으로 질문 생성" 신호가 있을 때 이 모드로 진입한다.
+
+### 입력
+
+`career-os/config/candidate-profile.md` — 프로젝트·경험 섹션에서 근거를 추출한다.
+
+### 출력
+
+- `career-os/private/question-bank/behavioral-personal.jsonl` — 이력 기반 STAR 인성 질문
+- `career-os/private/question-bank/tech-personal.jsonl` — 경험 기반 기술 심화 질문
+
+출력 디렉터리 `private/`는 git에서 무시되며 공개 저장소에 올라가지 않는다.
+
+### 스키마 (드릴 정본과 동일 필드)
+
+```json
+{
+  "id": "beh-personal-NNN 또는 tech-personal-NNN",
+  "topic": "kebab-case — public 질문과 같은 topic 체계로 맞춘다",
+  "category": "behavioral 또는 tech 하위 카테고리",
+  "difficulty": "easy | medium | hard",
+  "question": "질문 본문",
+  "intent": "면접관이 이 질문으로 확인하려는 것",
+  "answerSignals": ["핵심 답변 신호 1", "핵심 답변 신호 2"],
+  "followUps": ["선택 사항 — 후속 질문"],
+  "source": "candidate-profile"
+}
+```
+
+### 경계
+
+- 개인 질문은 `private/question-bank/`에만 둔다.
+  `public/question-bank/`로 역유출하지 않는다.
+- 회사별 비공개 맥락·지원 전략은 질문 본문에 넣지 않는다.
+  그런 내용은 지원 패키지 또는 면접 메모에서 따로 관리한다.
+- 개인 질문 풀은 publish 절차 없이 로컬 JSONL 파일로만 저장한다.
+
 ## Error handling
 
 | 상황 | 처리 |

@@ -14,7 +14,12 @@
     "publicSafe": true,
     "positionFitHint": "조회 성능 개선 경험을 확인할 때 선별한다.",
     "normalizedFrom": "index 기초를 query tuning 설계 질문으로 정규화",
-    "tags": ["index", "query-tuning", "rdb"],
+    "topic": "index-design",
+    "tags": [
+      "index",
+      "query-tuning",
+      "rdb"
+    ],
     "followUps": [
       "index가 있는데도 full scan이 선택되는 이유는 무엇인가요?",
       "정렬 조건까지 포함하면 index 순서를 어떻게 조정하나요?"
@@ -35,7 +40,12 @@
     "publicSafe": true,
     "positionFitHint": "동시성 제어와 정합성이 중요한 도메인 질문으로 선별한다.",
     "normalizedFrom": "transaction isolation 일반 이론을 업무 invariant 질문으로 정규화",
-    "tags": ["transaction", "isolation", "concurrency"],
+    "topic": "transaction-isolation",
+    "tags": [
+      "transaction",
+      "isolation",
+      "concurrency"
+    ],
     "followUps": [
       "lost update는 어떤 방식으로 막을 수 있나요?",
       "optimistic lock과 pessimistic lock을 언제 고르나요?"
@@ -56,7 +66,12 @@
     "publicSafe": true,
     "positionFitHint": "JPA 기반 서비스 성능 개선 질문으로 선별한다.",
     "normalizedFrom": "JPA N+1 일반 주제를 관찰과 해결 trade-off 질문으로 정규화",
-    "tags": ["jpa", "orm", "performance"],
+    "topic": "jpa-n+1",
+    "tags": [
+      "jpa",
+      "orm",
+      "performance"
+    ],
     "followUps": [
       "collection fetch join과 pagination을 함께 쓰면 어떤 문제가 있나요?",
       "DTO projection을 선택하는 기준은 무엇인가요?"
@@ -77,7 +92,12 @@
     "publicSafe": true,
     "positionFitHint": "cache 일관성과 운영 안정성을 확인할 때 선별한다.",
     "normalizedFrom": "Redis cache pattern을 stale data 대응 질문으로 정규화",
-    "tags": ["redis", "cache", "consistency"],
+    "topic": "redis-cache-aside",
+    "tags": [
+      "redis",
+      "cache",
+      "consistency"
+    ],
     "followUps": [
       "cache stampede는 어떻게 줄이나요?",
       "Redis 장애 시 DB 보호는 어떻게 하나요?"
@@ -98,7 +118,12 @@
     "publicSafe": true,
     "positionFitHint": "동시 수정 충돌 처리나 재고/잔액 같은 정합성 민감 도메인 경험을 확인할 때 선별한다.",
     "normalizedFrom": "optimistic/pessimistic locking 비교 주제를 선택 기준 질문으로 정규화",
-    "tags": ["transaction", "locking", "concurrency"],
+    "topic": "optimistic-lock",
+    "tags": [
+      "transaction",
+      "locking",
+      "concurrency"
+    ],
     "followUps": [
       "optimistic lock 충돌이 잦아지면 어떻게 대응하나요?",
       "재시도 횟수와 backoff는 어떤 기준으로 정하나요?"
@@ -119,7 +144,12 @@
     "publicSafe": true,
     "positionFitHint": "재고 차감, 잔액 변경처럼 동시 갱신 정합성이 중요한 도메인 경험을 확인할 때 선별한다.",
     "normalizedFrom": "lost update와 동시 차감 주제를 DB 정합성 비교 질문으로 정규화",
-    "tags": ["transaction", "concurrency", "consistency"],
+    "topic": "lost-update",
+    "tags": [
+      "transaction",
+      "concurrency",
+      "consistency"
+    ],
     "followUps": [
       "조건부 update로 막을 때 실패한 요청에는 어떤 응답을 주나요?",
       "분산 환경에서 단일 행 lock이 병목이 되면 어떤 대안이 있나요?"
@@ -140,10 +170,41 @@
     "publicSafe": true,
     "positionFitHint": "운영 장애 대응이나 동시성 튜닝 경험을 확인할 때 선별한다.",
     "normalizedFrom": "DB deadlock 주제를 진단과 예방 설계 질문으로 정규화",
-    "tags": ["transaction", "locking", "operations"],
+    "topic": "deadlock",
+    "tags": [
+      "transaction",
+      "locking",
+      "operations"
+    ],
     "followUps": [
       "deadlock과 단순 lock 대기(timeout)는 어떻게 구분하나요?",
       "재시도로 deadlock을 흡수할 때 주의할 점은 무엇인가요?"
+    ]
+  },
+  {
+    "id": "database-008",
+    "category": "database",
+    "difficulty": "intermediate",
+    "question": "Connection Pool 크기를 어떻게 결정하고, 너무 작거나 클 때 각각 어떤 문제가 발생하는지 설명해 주세요.",
+    "intent": "리소스 설계와 성능 병목 이해를 확인한다.",
+    "answerSignals": [
+      "CPU 코어 수와 IO 대기 시간을 기준으로 크기를 산정하는 방법(예: HikariCP 권장식)",
+      "풀이 너무 작으면 커넥션 대기로 지연 증가, 너무 크면 DB 서버 과부하와 context switch 비용",
+      "wait timeout, active/idle connection metric으로 현재 설정의 적절성을 관찰하는 방법"
+    ],
+    "source": "public-general-database-knowledge",
+    "publicSafe": true,
+    "positionFitHint": "HikariCP, DB 성능 튜닝, connection 관련 장애 경험을 확인할 때 선별한다.",
+    "normalizedFrom": "Connection Pool 설정 주제를 크기 결정 근거와 장애 패턴 질문으로 정규화",
+    "topic": "connection-pool",
+    "tags": [
+      "database",
+      "connection-pool",
+      "performance"
+    ],
+    "followUps": [
+      "HikariCP의 권장 공식(CPU 코어 * 2 + 1)의 근거는 무엇인가요?",
+      "connection pool 고갈을 실시간으로 탐지하려면 어떤 지표를 봐야 하나요?"
     ]
   }
 ]

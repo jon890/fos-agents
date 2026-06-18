@@ -1,6 +1,6 @@
 ## ADR-036 — position-recommender daily freshness guard + recommendation rotation
 
-- Status: Partially superseded by ADR-097
+- Status: Partially superseded by ADR-100
 - Date: 2026-05-23
 
 ### 맥락
@@ -17,7 +17,7 @@
 - `position-recommender` native skill은 최근 7일 `position-recommendation/report.md`를 읽고 반복 후보의 active/open 상태와 지원 액션 필요 여부를 확인한다.
   - 반복 자체는 감점하지 않는다.
   - 반복 후보가 여전히 최상위면 유지하고 “반복 유지 사유”와 “아직 지원 액션이 필요한 이유”를 명시한다.
-  - 신규 후보 강제 포함 규칙은 ADR-097에서 폐기했다.
+  - 신규 후보 강제 포함 규칙은 ADR-100에서 폐기했다.
 - daily cron prompt에서 특정 KakaoPay AX 우선 문구를 제거한다.
   - 랭킹 기준은 active JD fit, 회사/규모 업사이드, 반복 여부, 도메인 전환 가치로 둔다.
 - 기본 live posting 수집에서 Toss career article을 지원 가능한 공고로 섞지 않는다.

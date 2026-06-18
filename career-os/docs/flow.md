@@ -111,11 +111,13 @@ scheduled daily recommendation
 
 ```text
 Use skill: /position-recommender [context]
-  -> 등록된 source에서 active/open 공고 후보 수집
+  -> 수집 설정(config/position-collection.json) + 후보자 경력(config/candidate-config.json) 읽기  [ADR-099]
+  -> 등록된 source에서 active/open 공고 후보 수집 (wanted years는 경력 기반)
   -> 후보자 프로필과 최근 추천 이력 읽기
   -> 강력 추천, 도전 추천, 보류/주의 후보 분류
   -> structured recommendation JSON 작성
   -> Markdown과 HTML report 파생
+  -> 수집·추천 건강 지표를 logs/position-metrics.jsonl에 append (기준선 대비 개선 추적)  [ADR-099]
   -> application candidate 상태 또는 legacy frontdoor queue 갱신
   -> 다음 행동 후보를 application flow로 넘김
 ```
@@ -263,9 +265,8 @@ request queue에 넣고 host-side processor가 allowlist를 확인한 뒤 career
 
 주요 산출물:
 
-- `public/question-bank/`
-- `data/question-bank/tech-questions.jsonl`
-- `data/question-bank/behavioral-questions.jsonl`
+- `public/question-bank/<category>/questions.json` (질문 정본, behavioral 포함 — ADR-097)
+- `private/question-bank/{behavioral,tech}-personal.jsonl` (개인 맞춤 질문 정본)
 
 ## 이력서 패키지
 

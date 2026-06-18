@@ -117,7 +117,7 @@ export function buildMorningMarkdown(
       );
     }
   } else {
-    lines.push("- (`config/sources.json` techBlog 비어 있음)", "");
+    lines.push("- (`config/external-reading-sources.json` techBlog 비어 있음)", "");
   }
 
   lines.push("## AI 관련 (3)", "");
@@ -129,7 +129,7 @@ export function buildMorningMarkdown(
       );
     }
   } else {
-    lines.push("- (`config/sources.json` ai 비어 있음)", "");
+    lines.push("- (`config/external-reading-sources.json` ai 비어 있음)", "");
   }
 
   lines.push("## Geek/뉴스/산업 흐름 (1)", "");
@@ -141,7 +141,7 @@ export function buildMorningMarkdown(
       );
     }
   } else {
-    lines.push("- (`config/sources.json` geek 비어 있음)", "");
+    lines.push("- (`config/external-reading-sources.json` geek 비어 있음)", "");
   }
 
   lines.push("## 오늘의 3선 (각 카테고리에서 1개씩)", "");

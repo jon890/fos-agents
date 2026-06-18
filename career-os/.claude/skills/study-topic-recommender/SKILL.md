@@ -21,7 +21,7 @@ backend 면접 준비용 morning 토픽 추천 통합 skill. replenish + recomme
 1. `career-os/sources/fos-study/**/*.md` — 학습 문서 inventory 정본. exclude `.git/**`, `.claude/**`, `private/**`.
 2. `career-os/config/study-pack-topics.json` — 선택 사항. 전체 목록 정본이 아니라 사람이 고른 override/fallback 후보.
 3. `career-os/config/study-pack-candidates.json` — 선택 사항. 전체 reservoir 정본이 아니라 seed/fallback 후보.
-4. `career-os/config/sources.json` — `techBlog / ai / geek` reservoir items (feedUrl, filterKeywords 포함)
+4. `career-os/config/external-reading-sources.json` — `techBlog / ai / geek` 외부 reading reservoir items (feedUrl, filterKeywords 포함)
 5. `career-os/config/live-coding-seed-pool.json` — primary live-coding seed pool
 6. `career-os/config/live-coding-seed-candidates.json` — candidate live-coding seeds
 7. `career-os/config/study-progress.json` — 이미 공부한 주제와 현재 보강 영역

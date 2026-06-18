@@ -1,4 +1,4 @@
-# ADR-097 — position-recommender 신규 후보 강제 회전 폐기
+# ADR-100 — position-recommender 신규 후보 강제 회전 폐기
 
 - Status: Accepted
 - Date: 2026-06-18

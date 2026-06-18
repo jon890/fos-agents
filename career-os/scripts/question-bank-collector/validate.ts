@@ -16,6 +16,7 @@ export interface QuestionItem {
   publicSafe: boolean;
   positionFitHint: string;
   normalizedFrom: string;
+  topic: string;
   tags?: string[];
   followUps?: string[];
 }
@@ -56,7 +57,7 @@ export interface QuestionBankInventory {
 
 const ROOT = process.cwd();
 const BANK_ROOT = join(ROOT, "public", "question-bank");
-const CATEGORIES = ["java-spring", "database", "cs", "operations", "system-design"];
+const CATEGORIES = ["java-spring", "database", "cs", "operations", "system-design", "behavioral"];
 const DIFFICULTIES = new Set(["basic", "intermediate", "advanced"]);
 const REQUIRED_FIELDS: Array<keyof QuestionItem> = [
   "id",
@@ -69,6 +70,7 @@ const REQUIRED_FIELDS: Array<keyof QuestionItem> = [
   "publicSafe",
   "positionFitHint",
   "normalizedFrom",
+  "topic",
 ];
 
 const PRIVATE_PATTERNS = [
@@ -130,6 +132,7 @@ export function validateItem(path: string, item: QuestionItem, expectedCategory:
   assert(item.publicSafe === true, `${path}: ${item.id} publicSafe must be true`);
   assert(typeof item.positionFitHint === "string" && item.positionFitHint.trim().length >= 10, `${path}: ${item.id} positionFitHint too short`);
   assert(typeof item.normalizedFrom === "string" && item.normalizedFrom.trim().length >= 10, `${path}: ${item.id} normalizedFrom too short`);
+  assert(typeof item.topic === "string" && /^[a-z0-9][a-z0-9+]*(-[a-z0-9+]+)*$/.test(item.topic), `${path}: ${item.id} topic must be kebab-case, got ${item.topic}`);
   if (item.tags !== undefined) {
     assert(Array.isArray(item.tags) && item.tags.every((value) => typeof value === "string" && value.trim()), `${path}: ${item.id} invalid tags`);
   }

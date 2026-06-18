@@ -59,7 +59,9 @@ career-os/
 │   ├── study-pack-topics.json         legacy 대량 topic DB. plan068에서 override/seed로 축소 예정
 │   ├── study-pack-candidates.json     자동 발굴 active 후보 캐시 + 사람이 고른 seed/pin. 정본 목록 아님
 │   ├── question-bank-topics.json      interview-asset topic override 후보. public/question-bank 정본 아님
-│   ├── sources.json                   3 source configs 통합 (plan002)
+│   ├── external-reading-sources.json  techBlog/ai/geek 외부 reading reservoir (plan002, ADR-083 이후 공고 source registry와 분리)
+│   ├── position-collection.json       position 수집 설정 (wanted jobGroupId·targetKeywords, ADR-099)
+│   ├── candidate-config.json          후보자 구조화 사실 (experienceYears 등, ADR-099. profile.md는 prose)
 │   ├── baseline-core-files.json       baseline 분석 대상 파일 목록 (txt → JSON, plan002)
 │   ├── topic-file-map.json            legacy daily용 토픽 → 파일. fos-study inventory 기반으로 대체 예정
 │   ├── live-coding-seed-pool.json
@@ -138,6 +140,7 @@ career-os/
 │   │   └── mvp_target_schema.ts        legacy 면접 단계 설정 zod 검증 보조
 │   ├── interview-drill/                (plan086 신규 — 공용 드릴 엔진, ADR-019 scripts 분리 원칙 준수)
 │   │   └── drill-engine.ts             질문 선정(간격 반복) + 채점 + 기록 + 약점 환류 + study-pack 위임
+│                                       질문 정본은 public/question-bank(일반) + private/question-bank(개인), ADR-097
 │                                       (tech-interview-drill, behavioral-interview-drill 공유 — ADR-031 준수, scripts/_lib 미사용)
 │
 ├── .claude/skills/                       ← agent skill 정본 (plan006 후, ADR-019, ADR-002, ADR-085)
@@ -195,7 +198,8 @@ config 설계 원칙:
 - config는 전체 자산 목록을 담는 DB가 아니다.
 - 학습 문서 목록은 `sources/fos-study/`에서 파생한다.
 - 공개 질문 목록은 `public/question-bank/`에서 파생한다.
-- config에 남길 것은 현재 타깃, 후보자 baseline, 외부 source registry, 학습 진행 상태, 사람이 고른 pin/override/제외 조건이다.
+- config에 남길 것은 현재 타깃, 후보자 baseline, 학습 진행 상태, 외부 reading reservoir, 사람이 고른 pin/override/제외 조건이다.
+- 공고 수집 source registry와 collection run은 fos-career DB가 정본이고, career-os `live-postings` adapter registry는 실제 수집 방법을 소유한다.
 - `study-pack-topics.json`, `study-pack-candidates.json`, `topic-file-map.json`처럼 자산 목록을 복제하는 파일은 plan068에서 reader inventory와 fallback을 확인한 뒤 축소한다.
 
 ## 외부 의존성 (`_shared/`)
