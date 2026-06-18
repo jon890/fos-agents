@@ -1,0 +1,53 @@
+{
+  "name": "position-collection-metrics",
+  "description": "position 수집 설정 외부화 + 후보자 config + 지표 시계열 (ADR-099)",
+  "created_at": "2026-06-18T00:00:53Z",
+  "updated_at": "2026-06-18T00:00:53Z",
+  "status": "planned",
+  "current_phase": 1,
+  "total_phases": 4,
+  "error_message": null,
+  "blocked_reason": null,
+  "phases": [
+    {
+      "number": 1,
+      "title": "config 파일 생성 (position-collection·candidate-config)",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 600,
+      "commitSha": null
+    },
+    {
+      "number": 2,
+      "title": "wanted.ts config 로드 + years 경력 매핑",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "opus",
+      "timeout": 900,
+      "commitSha": null
+    },
+    {
+      "number": 3,
+      "title": "지표 기록 helper + position-metrics.jsonl",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 600,
+      "commitSha": null
+    },
+    {
+      "number": 4,
+      "title": "end-to-end 통합 검증 + plan 완료 마킹",
+      "file": "phase-04.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 900,
+      "commitSha": null
+    }
+  ]
+}
