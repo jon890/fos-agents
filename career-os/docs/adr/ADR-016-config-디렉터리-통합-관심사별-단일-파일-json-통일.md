@@ -1,6 +1,6 @@
 ## ADR-016 — config 디렉터리 통합: 관심사별 단일 파일 + JSON 통일
 
-- Status: Partially superseded by [[ADR-027]] (plan017, 2026-05-15) — topics.json이 3 namespace로 재분리 (study-pack-topics / study-pack-candidates / question-bank-topics). sources.json + baseline-core-files.json 통합 결정은 유지.
+- Status: Partially superseded by [[ADR-027]] (plan017, 2026-05-15) — topics.json이 3 namespace로 재분리 (study-pack-topics / study-pack-candidates / question-bank-topics). 외부 reading source 통합본은 `config/external-reading-sources.json`으로 rename했고, baseline-core-files.json 통합 결정은 유지.
 - Date: 2026-05-13
 
 ### 맥락
@@ -8,7 +8,7 @@ career-os/config/에 12+ 데이터 파일이 쌓여 (5 topic / 3 source / live-c
 
 ### 결정
 - 5개 topic configs(study-pack/maintainer/question-bank/master/bootcamp + candidates)를 단일 `config/topics.json`으로 통합. 각 type을 namespace 키로.
-- 3개 source configs(tech-blog/ai-topic/geek-news)를 단일 `config/sources.json`으로 통합. 카테고리 키.
+- 3개 source configs(tech-blog/ai-topic/geek-news)를 단일 `config/external-reading-sources.json`으로 통합. 카테고리 키.
 - `config/baseline-core-files.txt` → `config/baseline-core-files.json`. 다른 데이터 파일과 형식 통일.
 - position-recommender 단일 사용 자산 4개(`company-upside-reference.md`, `position-context-index.md`, `position-decision-criteria.md`, `verified-company-research-targets.json`)를 `skills/position-recommender/references/`로 이동. config/는 워크스페이스 공용 입력만.
 - `live-coding-seed-pool.json`과 `-candidates.json`은 분리 유지 — ADR-009의 primary vs reservoir 의도된 분리 (현 plan에서 합치지 않음).
