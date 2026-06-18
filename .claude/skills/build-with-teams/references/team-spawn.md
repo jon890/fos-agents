@@ -66,7 +66,7 @@ team-lead 외 멤버가 0명이면 직전 Agent 호출에서 `name` 누락 — `
 
 **팀원 self-shutdown 패턴 대응 (관측)**:
 
-`oh-my-claudecode:code-reviewer` / `docu-parser-docs-verifier` 같은 검증 에이전트는 `run_in_background: true` + idle prompt 로 스폰해도 **idle 알림 직후 자체 shutdown 하는 경향** 이 있다.
+`oh-my-claudecode:code-reviewer` / `<workspace>-docs-verifier` 같은 검증 에이전트는 `run_in_background: true` + idle prompt 로 스폰해도 **idle 알림 직후 자체 shutdown 하는 경향** 이 있다.
 critic 은 응답 후 idle 유지에 성공하지만 검증 에이전트는 일관되지 않음.
 
 **우회**:
