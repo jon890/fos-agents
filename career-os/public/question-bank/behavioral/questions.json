@@ -103,5 +103,329 @@
       "배운 내용을 팀에 어떻게 공유했나요?",
       "학습 우선순위는 어떻게 결정하나요?"
     ]
+  },
+  {
+    "id": "behavioral-006",
+    "category": "behavioral",
+    "difficulty": "intermediate",
+    "question": "여러 업무가 동시에 몰렸을 때 우선순위를 정하고 납기나 품질을 지킨 경험을 STAR 형식으로 설명해 주세요.",
+    "intent": "압박 상황에서 우선순위를 정하고 실행 계획을 조정하는 방식을 확인한다.",
+    "answerSignals": [
+      "업무 간 긴급도와 영향도 판단 기준 제시",
+      "이해관계자와 일정·범위·품질 기준을 조율한 행동",
+      "납기, 품질, 리스크 감소 등 측정 가능한 결과"
+    ],
+    "source": "public-online-behavioral-question-patterns",
+    "publicSafe": true,
+    "positionFitHint": "운영형 백엔드에서 장애 대응, 배포, 기능 개발이 겹치는 상황의 우선순위 판단을 확인할 때 선별한다.",
+    "normalizedFrom": "공개 행동면접의 시간관리·우선순위 질문을 backend 실무 상황 중심으로 정규화",
+    "topic": "prioritization-under-pressure",
+    "tags": [
+      "time-management",
+      "prioritization",
+      "delivery",
+      "operations"
+    ],
+    "followUps": [
+      "우선순위 판단에서 양보하지 않은 기준은 무엇이었나요?",
+      "일정이 더 줄었다면 무엇을 먼저 줄였을까요?"
+    ]
+  },
+  {
+    "id": "behavioral-007",
+    "category": "behavioral",
+    "difficulty": "intermediate",
+    "question": "팀이나 조직의 방향이 바뀌었을 때 자신의 일하는 방식을 조정해 성과를 낸 경험을 말씀해 주세요.",
+    "intent": "변화 적응력과 변화 속에서도 성과를 유지하는 방식을 확인한다.",
+    "answerSignals": [
+      "변화의 배경과 본인 역할 변화 설명",
+      "학습·조율·실행 방식을 바꾼 구체적 행동",
+      "적응 후 산출물, 속도, 협업 품질 변화"
+    ],
+    "source": "public-online-behavioral-question-patterns",
+    "publicSafe": true,
+    "positionFitHint": "레거시와 신규 시스템이 공존하거나 프로세스가 바뀌는 환경에서 적응력을 확인할 때 선별한다.",
+    "normalizedFrom": "공개 행동면접의 변화 적응 질문을 기술 조직 변화 대응 경험으로 정규화",
+    "topic": "change-adaptation",
+    "tags": [
+      "adaptability",
+      "change",
+      "learning",
+      "legacy-modernization"
+    ],
+    "followUps": [
+      "변화에 동의하지 않는 구성원이 있었다면 어떻게 설득했나요?",
+      "변화 초기에 놓쳤던 신호가 있었나요?"
+    ]
+  },
+  {
+    "id": "behavioral-008",
+    "category": "behavioral",
+    "difficulty": "advanced",
+    "question": "요구사항이 모호한 상태에서 문제를 정의하고 실행 가능한 작업으로 바꾼 경험을 설명해 주세요.",
+    "intent": "모호함을 구조화하고 실행 가능한 범위로 전환하는 문제 정의 능력을 확인한다.",
+    "answerSignals": [
+      "모호했던 요구사항과 불확실성의 종류 제시",
+      "질문, 가설, 검증 기준, 범위 확정 과정을 설명",
+      "재작업 감소, 의사결정 속도, 품질 개선 결과"
+    ],
+    "source": "public-online-behavioral-question-patterns",
+    "publicSafe": true,
+    "positionFitHint": "도메인 정책, 주문 상태, 외부 연동처럼 요구사항 해석이 중요한 backend 업무에 선별한다.",
+    "normalizedFrom": "공개 행동면접의 문제해결·모호함 대응 질문을 요구사항 구체화 경험으로 정규화",
+    "topic": "ambiguity-clarification",
+    "tags": [
+      "ambiguity",
+      "problem-definition",
+      "requirements",
+      "stakeholder"
+    ],
+    "followUps": [
+      "처음 세운 가설이 틀렸을 때 어떻게 수정했나요?",
+      "모호함을 줄이기 위해 어떤 문서나 지표를 만들었나요?"
+    ]
+  },
+  {
+    "id": "behavioral-009",
+    "category": "behavioral",
+    "difficulty": "intermediate",
+    "question": "비즈니스 이해관계자와 기술팀 사이의 기대치가 달랐던 상황을 어떻게 조율했는지 말씀해 주세요.",
+    "intent": "이해관계자 조율과 기술적 제약을 비즈니스 언어로 설명하는 능력을 확인한다.",
+    "answerSignals": [
+      "서로 다른 기대치와 제약 조건을 구체적으로 제시",
+      "대안, 비용, 리스크를 비교해 합의한 과정",
+      "합의 후 일정, 품질, 운영 리스크 측면 결과"
+    ],
+    "source": "public-online-behavioral-question-patterns",
+    "publicSafe": true,
+    "positionFitHint": "서비스 기획, 운영, 개발 간 조율이 잦은 자사 서비스 backend 역할에 선별한다.",
+    "normalizedFrom": "공개 행동면접의 설득·커뮤니케이션 질문을 기술-비즈니스 조율 경험으로 정규화",
+    "topic": "stakeholder-alignment",
+    "tags": [
+      "communication",
+      "stakeholder",
+      "tradeoff",
+      "business-impact"
+    ],
+    "followUps": [
+      "기술적으로 더 좋은 선택과 비즈니스 요구가 충돌했을 때 어떤 기준을 썼나요?",
+      "합의 내용을 어떻게 추적 가능하게 만들었나요?"
+    ]
+  },
+  {
+    "id": "behavioral-010",
+    "category": "behavioral",
+    "difficulty": "advanced",
+    "question": "사용자나 고객 영향이 큰 문제를 발견했을 때 빠르게 대응하고 신뢰를 회복한 경험을 설명해 주세요.",
+    "intent": "고객 영향 인식, 긴급 대응, 신뢰 회복 행동을 확인한다.",
+    "answerSignals": [
+      "사용자 영향 범위와 심각도 판단 근거",
+      "우선 조치, 커뮤니케이션, 재발 방지 행동",
+      "영향 축소, 복구 시간, 후속 개선 결과"
+    ],
+    "source": "public-online-behavioral-question-patterns",
+    "publicSafe": true,
+    "positionFitHint": "주문, 결제, 예약, 배송 등 고객 영향이 큰 도메인의 운영 감각을 확인할 때 선별한다.",
+    "normalizedFrom": "공개 행동면접의 고객 대응·위기 대응 질문을 backend 운영 안정성 경험으로 정규화",
+    "topic": "customer-impact-recovery",
+    "tags": [
+      "customer-impact",
+      "incident",
+      "operations",
+      "trust"
+    ],
+    "followUps": [
+      "당시 가장 먼저 확인한 지표나 로그는 무엇이었나요?",
+      "사용자 영향과 내부 처리 속도 사이에서 어떤 기준으로 판단했나요?"
+    ]
+  },
+  {
+    "id": "behavioral-011",
+    "category": "behavioral",
+    "difficulty": "advanced",
+    "question": "장애나 긴급 이슈 상황에서 팀과 이해관계자에게 상황을 공유하고 혼선을 줄인 경험을 말씀해 주세요.",
+    "intent": "긴급 상황 커뮤니케이션과 역할 분리, 정보 갱신 방식을 확인한다.",
+    "answerSignals": [
+      "긴급 상황에서 정보가 부족했던 맥락 설명",
+      "상태 공유, 역할 분담, 의사결정 채널 정리 행동",
+      "혼선 감소, 복구 속도, 사후 회고 개선 결과"
+    ],
+    "source": "public-online-behavioral-question-patterns",
+    "publicSafe": true,
+    "positionFitHint": "운영 안정성과 장애 대응 커뮤니케이션 역량을 확인할 때 선별한다.",
+    "normalizedFrom": "공개 행동면접의 압박 상황·커뮤니케이션 질문을 장애 상황 공유 경험으로 정규화",
+    "topic": "incident-communication",
+    "tags": [
+      "incident",
+      "communication",
+      "ownership",
+      "operations"
+    ],
+    "followUps": [
+      "공유 주기와 공유 범위는 어떻게 정했나요?",
+      "사후 회고에서 커뮤니케이션 방식은 어떻게 바뀌었나요?"
+    ]
+  },
+  {
+    "id": "behavioral-012",
+    "category": "behavioral",
+    "difficulty": "advanced",
+    "question": "장애나 실패 이후 개인 책임으로 끝내지 않고 팀의 재발 방지 체계로 연결한 경험을 설명해 주세요.",
+    "intent": "비난보다 학습과 시스템 개선으로 연결하는 오너십을 확인한다.",
+    "answerSignals": [
+      "문제 원인과 재발 가능성을 구조적으로 분석",
+      "체크리스트, 모니터링, 테스트, 배포 절차 등 체계 개선 행동",
+      "재발 감소나 탐지 시간 단축 같은 결과"
+    ],
+    "source": "public-online-behavioral-question-patterns",
+    "publicSafe": true,
+    "positionFitHint": "운영 품질과 지속 개선 문화를 확인할 때 선별한다.",
+    "normalizedFrom": "공개 행동면접의 실패 학습 질문을 사후 분석과 재발 방지 체계 경험으로 정규화",
+    "topic": "postmortem-ownership",
+    "tags": [
+      "failure-learning",
+      "postmortem",
+      "quality",
+      "process-improvement"
+    ],
+    "followUps": [
+      "재발 방지책이 과한 비용이 되지 않도록 어떻게 조절했나요?",
+      "사후 개선이 실제로 유지되는지 어떻게 확인했나요?"
+    ]
+  },
+  {
+    "id": "behavioral-013",
+    "category": "behavioral",
+    "difficulty": "advanced",
+    "question": "속도, 품질, 운영 안정성 사이에서 어려운 선택을 했던 경험과 판단 기준을 설명해 주세요.",
+    "intent": "트레이드오프 판단과 책임 있는 의사결정 기준을 확인한다.",
+    "answerSignals": [
+      "선택지가 가진 비용과 리스크를 균형 있게 설명",
+      "판단 기준과 이해관계자 합의 과정을 제시",
+      "선택 이후 결과와 후속 보완 행동"
+    ],
+    "source": "public-online-behavioral-question-patterns",
+    "publicSafe": true,
+    "positionFitHint": "기능 출시와 안정성 사이의 의사결정 경험을 확인할 때 선별한다.",
+    "normalizedFrom": "공개 행동면접의 어려운 의사결정 질문을 backend 품질·속도 트레이드오프로 정규화",
+    "topic": "tradeoff-decision",
+    "tags": [
+      "decision-making",
+      "tradeoff",
+      "quality",
+      "delivery"
+    ],
+    "followUps": [
+      "지금 다시 결정한다면 바꿀 기준이 있나요?",
+      "반대 의견을 어떻게 검토했나요?"
+    ]
+  },
+  {
+    "id": "behavioral-014",
+    "category": "behavioral",
+    "difficulty": "intermediate",
+    "question": "기술부채나 구조 개선 필요성을 팀에 설득하고 실제 개선으로 연결한 경험을 말씀해 주세요.",
+    "intent": "장기 품질 개선을 설득하고 실행하는 방식을 확인한다.",
+    "answerSignals": [
+      "기술부채가 만든 비용이나 위험을 구체화",
+      "작게 나누어 실행하거나 비즈니스 가치로 번역한 행동",
+      "장애 감소, 개발 속도 개선, 유지보수 비용 절감 결과"
+    ],
+    "source": "public-online-behavioral-question-patterns",
+    "publicSafe": true,
+    "positionFitHint": "레거시 개선, 점진적 리팩터링, 안정성 개선 경험을 확인할 때 선별한다.",
+    "normalizedFrom": "공개 행동면접의 설득·주도성 질문을 기술부채 개선 경험으로 정규화",
+    "topic": "technical-debt-negotiation",
+    "tags": [
+      "technical-debt",
+      "persuasion",
+      "refactoring",
+      "incremental-architecture"
+    ],
+    "followUps": [
+      "개선 작업이 기능 개발보다 뒤로 밀릴 때 어떻게 대응했나요?",
+      "기술부채의 비용을 어떤 지표나 사례로 보여줬나요?"
+    ]
+  },
+  {
+    "id": "behavioral-015",
+    "category": "behavioral",
+    "difficulty": "intermediate",
+    "question": "다른 팀의 협조가 늦어져 본인 업무가 지연될 수 있었던 상황을 어떻게 풀었는지 설명해 주세요.",
+    "intent": "부서 간 의존성 관리와 수동 대기 대신 문제를 진전시키는 방식을 확인한다.",
+    "answerSignals": [
+      "의존성, 지연 위험, 영향 범위를 명확히 제시",
+      "대안 마련, 일정 재조정, 커뮤니케이션 채널 정리 행동",
+      "지연 최소화나 후속 협업 방식 개선 결과"
+    ],
+    "source": "public-online-behavioral-question-patterns",
+    "publicSafe": true,
+    "positionFitHint": "외부 시스템 연동, 플랫폼 의존성, 운영팀 협업이 필요한 backend 역할에 선별한다.",
+    "normalizedFrom": "공개 행동면접의 비협조적 상대·정보 확보 질문을 cross-team dependency 관리 경험으로 정규화",
+    "topic": "cross-team-dependency",
+    "tags": [
+      "collaboration",
+      "dependency-management",
+      "communication",
+      "delivery"
+    ],
+    "followUps": [
+      "상대 팀을 압박하지 않으면서 속도를 낸 방법은 무엇이었나요?",
+      "다음 프로젝트에서 같은 의존성을 줄이기 위해 무엇을 바꿨나요?"
+    ]
+  },
+  {
+    "id": "behavioral-016",
+    "category": "behavioral",
+    "difficulty": "basic",
+    "question": "동료나 리더에게 받은 피드백을 받아들여 일하는 방식을 개선한 경험을 말씀해 주세요.",
+    "intent": "피드백 수용성과 성장 방식의 구체성을 확인한다.",
+    "answerSignals": [
+      "받은 피드백과 당시 맥락을 방어적으로 설명하지 않음",
+      "행동을 어떻게 바꿨는지 구체적으로 제시",
+      "개선 후 협업, 품질, 속도 측면 변화"
+    ],
+    "source": "public-online-behavioral-question-patterns",
+    "publicSafe": true,
+    "positionFitHint": "성장 가능성과 협업 성숙도를 확인할 때 선별한다.",
+    "normalizedFrom": "공개 행동면접의 피드백·성장 질문을 개발자 협업 개선 경험으로 정규화",
+    "topic": "feedback-growth",
+    "tags": [
+      "feedback",
+      "growth",
+      "collaboration",
+      "self-awareness"
+    ],
+    "followUps": [
+      "처음에는 동의하기 어려웠던 피드백이 있었나요?",
+      "개선이 실제로 되었는지 어떻게 확인했나요?"
+    ]
+  },
+  {
+    "id": "behavioral-017",
+    "category": "behavioral",
+    "difficulty": "intermediate",
+    "question": "동료의 성장을 돕거나 팀의 지식 공유 수준을 높인 경험을 설명해 주세요.",
+    "intent": "개인 성과를 넘어 팀 역량을 높이는 행동을 확인한다.",
+    "answerSignals": [
+      "팀 또는 동료가 겪던 구체적 어려움 제시",
+      "문서화, 페어링, 리뷰, 세션 등 지원 행동",
+      "온보딩 시간 단축, 리뷰 품질 개선, 재질문 감소 등 결과"
+    ],
+    "source": "public-online-behavioral-question-patterns",
+    "publicSafe": true,
+    "positionFitHint": "주니어 이상 backend 개발자의 협업 기여와 지식 전파 역량을 확인할 때 선별한다.",
+    "normalizedFrom": "공개 행동면접의 리더십·팀 기여 질문을 지식 공유와 멘토링 경험으로 정규화",
+    "topic": "mentoring-knowledge-sharing",
+    "tags": [
+      "mentoring",
+      "knowledge-sharing",
+      "leadership",
+      "team-growth"
+    ],
+    "followUps": [
+      "지식 공유가 일회성으로 끝나지 않게 한 방법은 무엇인가요?",
+      "상대의 수준이 다를 때 설명 방식을 어떻게 바꿨나요?"
+    ]
   }
 ]
