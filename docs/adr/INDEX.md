@@ -27,3 +27,4 @@ ADR은 결정의 이유와 대안 기각만 담고, 현행 구조 설명은 `doc
 | ADR-015 | career-os ADR을 개별 파일로 관리하는 파일럿 예외 | Accepted | [ADR-015-career-os-adr-files-pilot.md](ADR-015-career-os-adr-files-pilot.md) |
 | ADR-016 | root docs 구조를 ADR 디렉터리와 code-architecture로 재편 | Accepted | [ADR-016-root-docs-structure.md](ADR-016-root-docs-structure.md) |
 | ADR-017 | common-pitfalls file-per-pattern 구조 | Accepted | [ADR-017-common-pitfalls-file-per-pattern.md](ADR-017-common-pitfalls-file-per-pattern.md) |
+| ADR-018 | build-with-teams 하네스 도입 (Agent Teams 가시 협업, plan-and-build 병존) | Accepted | [ADR-018-build-with-teams-harness.md](ADR-018-build-with-teams-harness.md) |
