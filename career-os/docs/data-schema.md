@@ -161,6 +161,7 @@ zod 검증 단일 출처: `career-os/scripts/interview-prep-analyzer/mvp_target_
     "position_slug": "string (예: digital-channel-backend)",
     "data_root": "string (예: private/cj-foodville/digital-channel-backend)",
     "interview_date": "YYYY-MM-DD | empty",
+    "position_focus": "string (선택, 현재 타깃 포지션의 핵심 업무·스택·도메인)",
     "notes": "string (선택)",
     "interview": {
       "first_round": {

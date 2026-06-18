@@ -90,8 +90,10 @@ bun scripts/position-recommender/collect_live_postings.ts
 - 사용자의 현재 선호상 AI 서비스/AI Transformation(AX)/AI Agent/AI 플랫폼 포지션도 탐색한다. 단, 강력/도전 추천에는 서버·플랫폼 개발 전이가 분명하고 active/open 개별 공고 URL이 확인된 항목만 올린다.
 - 백엔드와 AI 전환 후보는 별도 관점으로 검토한다. 예: AI Agent/RAG/MCP/LLMOps/ML Backend/AI Platform처럼 API·서버·플랫폼·운영 자동화와 AI 응용 경험이 함께 필요한 공고.
 - Toss는 공식 `job-groups` API의 그룹/하위 포지션까지 수집 대상으로 본다. `AI Engineer` 그룹의 Platform/Brain/Commerce/Model/Ads 하위 포지션처럼 목록 화면의 그룹 구조에 묶인 공고를 누락하지 않는다.
-- 최근 7일 강력 추천/도전 추천에 반복 등장한 회사·URL은 감점한다. 단, 동일 개별 active 공고가 여전히 최상위 후보면 유지할 수 있지만 “반복 유지 사유”를 명시한다.
-- 매일 최소 1개 이상은 최근 7일 내 강력 추천에 없던 신규 **개별 active 공고**를 포함한다. 적합한 신규 공고가 없으면 추천 티어를 억지로 채우지 말고 “신규 active 공고 부족”을 명시한다.
+- 최근 7일 강력 추천/도전 추천에 반복 등장한 회사·URL은 확인한다.
+- 반복 자체는 감점하지 않는다.
+- 동일 개별 active 공고가 여전히 최상위 후보면 유지하고 “반복 유지 사유”와 “아직 지원 액션이 필요한 이유”를 명시한다.
+- 신규 공고 포함은 목표가 아니라 보조 신호다. 낮은 fit의 신규 공고를 넣기 위해 더 좋은 반복 후보를 내리지 않는다.
 
 ### 3. 추천 분석 + 리포트 작성
 
@@ -109,7 +111,7 @@ bun scripts/position-recommender/collect_live_postings.ts
 - `tiers.stretch[]` — stretch goal, 준비 기간 필요 (최대 2, `stretchGap` 포함)
 - `tiers.hold[]` — 현시점 비추천 + 사유 (최대 3, `company`·`title`·`link`·`reason`)
 - `additionalTargets[]` — 개별 active URL 미확보 회사 lead (최대 3, 다음 수집 범위 결정용)
-- `recentCheck[]` — 최근 7일 반복/신규 후보 확보 여부
+- `recentCheck[]` — 최근 7일 반복 후보의 active/open 상태, 유지 사유, 아직 지원 액션이 필요한 이유
 - `weeklyActions` — `apply` / `resume` / `study` 각 1개
 
 각 포지션 항목(`PositionItem`)은 스키마가 14개 필드를 강제한다. 옛 markdown 라벨이 곧 이 필드다.

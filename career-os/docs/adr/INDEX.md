@@ -36,7 +36,7 @@
 | ADR-033 | fos-study source tree를 study artifact 단일 진실원으로 사용 | Accepted | [ADR-033-fos-study-source-tree를-study-artifact-단일-진실원으로-사용.md](ADR-033-fos-study-source-tree를-study-artifact-단일-진실원으로-사용.md) |
 | ADR-034 | interview-coffeechat-prep 4 mode 일반화 (coffeechat / first-round / final-round / offer-chat) | Accepted | [ADR-034-interview-coffeechat-prep-4-mode-일반화-coffeechat-first-round-final-round-offer-chat.md](ADR-034-interview-coffeechat-prep-4-mode-일반화-coffeechat-first-round-final-round-offer-chat.md) |
 | ADR-035 | ts 헬퍼 모듈 분해 컨벤션 (source / transform / render / cli 4 레이어) | Accepted | [ADR-035-ts-헬퍼-모듈-분해-컨벤션-source-transform-render-cli-4-레이어.md](ADR-035-ts-헬퍼-모듈-분해-컨벤션-source-transform-render-cli-4-레이어.md) |
-| ADR-036 | position-recommender daily freshness guard + recommendation rotation | Accepted | [ADR-036-position-recommender-daily-freshness-guard-recommendation-rotation.md](ADR-036-position-recommender-daily-freshness-guard-recommendation-rotation.md) |
+| ADR-036 | position-recommender daily freshness guard + recommendation rotation | Accepted; 신규 후보 강제 회전은 [[ADR-097]]로 superseded | [ADR-036-position-recommender-daily-freshness-guard-recommendation-rotation.md](ADR-036-position-recommender-daily-freshness-guard-recommendation-rotation.md) |
 | ADR-037 | application-flow-agent runtime은 policy decision engine 중심 | Accepted | [ADR-037-application-flow-agent-runtime은-policy-decision-engine-중심.md](ADR-037-application-flow-agent-runtime은-policy-decision-engine-중심.md) |
 | ADR-038 | application-flow-agent 상태 전이는 skill artifact 검증 뒤에만 수행 | Accepted | [ADR-038-application-flow-agent-상태-전이는-skill-artifact-검증-뒤에만-수행.md](ADR-038-application-flow-agent-상태-전이는-skill-artifact-검증-뒤에만-수행.md) |
 | ADR-039 | position-recommender 추천 단위는 개별 active/open 공고 | Accepted | [ADR-039-position-recommender-추천-단위는-개별-active-open-공고.md](ADR-039-position-recommender-추천-단위는-개별-active-open-공고.md) |
@@ -96,3 +96,4 @@
 | ADR-094 | 포지션 추천 산출물을 JSON 정본으로 전환한다 | Accepted | [ADR-094-포지션-추천-산출물-json-정본-전환.md](ADR-094-포지션-추천-산출물-json-정본-전환.md) |
 | ADR-095 | 회사 업사이드 운영 데이터를 config JSON 단일 출처로 흡수한다 | Accepted | [ADR-095-회사-업사이드-운영데이터-config-흡수.md](ADR-095-회사-업사이드-운영데이터-config-흡수.md) |
 | ADR-096 | job-fit-analyzer를 의사결정·전략 중심으로 재정의한다 | Accepted | [ADR-096-job-fit-analyzer-의사결정-전략-재정의.md](ADR-096-job-fit-analyzer-의사결정-전략-재정의.md) |
+| ADR-097 | position-recommender 신규 후보 강제 회전 폐기 | Accepted | [ADR-097-position-recommender-신규-후보-강제-회전-폐기.md](ADR-097-position-recommender-신규-후보-강제-회전-폐기.md) |
