@@ -2,9 +2,9 @@
   "name": "plan005-build-with-teams-port",
   "description": "build-with-teams 하네스를 docu-parser 정본에서 모노레포 공용으로 포팅한다(ADR-018). SKILL.md·references 공용화(docu-parser/dooray/python 전용 → <workspace> placeholder + variant), career-os 전용 agent 2개(executor, docs-verifier) 신규 작성, variants/career-os.md, AGENTS·code-architecture 반영. plan-and-build 병존. ADR-018과 skill 복사·브랜치 공용화는 선행 커밋(4fba587, 6fe5d7b)으로 완료.",
   "created_at": "2026-06-18T00:00:00+09:00",
-  "updated_at": "2026-06-18T00:00:00+09:00",
-  "status": "pending",
-  "current_phase": 1,
+  "updated_at": "2026-06-18T12:00:00+09:00",
+  "status": "completed",
+  "current_phase": 4,
   "total_phases": 4,
   "error_message": null,
   "blocked_reason": null,
@@ -50,7 +50,7 @@
       "number": 1,
       "title": "SKILL.md 나머지 공용화 + references 4개 공용화 (docu-parser/dooray/python 전용 → <workspace>+variant)",
       "file": "phase-01.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
       "model": "sonnet",
       "timeout": 900
@@ -59,7 +59,7 @@
       "number": 2,
       "title": "career-os 전용 agent 2개 신규 작성 (career-os-executor, career-os-docs-verifier)",
       "file": "phase-02.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
       "model": "sonnet",
       "timeout": 900
@@ -68,7 +68,7 @@
       "number": 3,
       "title": "variants/career-os.md + verify_team_members.sh 적응",
       "file": "phase-03.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
       "model": "sonnet",
       "timeout": 600
@@ -77,7 +77,7 @@
       "number": 4,
       "title": "AGENTS.md / code-architecture.md 반영 + 검증 (build-with-teams로 작은 작업 1회)",
       "file": "phase-04.md",
-      "status": "pending",
+      "status": "completed",
       "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
       "model": "sonnet",
       "timeout": 900

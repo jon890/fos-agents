@@ -27,7 +27,8 @@
 | `CLAUDE.md` | `AGENTS.md` 심볼릭 링크 |
 | `_shared/lib/` | 워크스페이스 무관 Bun TypeScript helper |
 | `_shared/types/` | 공용 TypeScript type |
-| `.claude/skills/` | 저장소 전역 agent skill 정본 |
+| `.claude/skills/` | 저장소 전역 agent skill 정본 (`build-with-teams` 등 공용 skill 포함) |
+| `.claude/agents/` | `build-with-teams` 전용 agent (`<workspace>-executor`·`<workspace>-docs-verifier`) |
 | `.codex/skills/` | Codex 노출용 skill 심볼릭 링크 |
 | `docs/adr/` | 모노레포 레벨 ADR |
 | `docs/code-architecture.md` | 현재 구조와 책임 경계 |
