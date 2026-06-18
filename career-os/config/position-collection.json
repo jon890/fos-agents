@@ -1,0 +1,37 @@
+{
+  "_meta": {
+    "purpose": "position-recommender 수집 설정. wanted.ts 하드코딩을 외부화 (ADR-099)."
+  },
+  "wanted": {
+    "jobGroupId": 518,
+    "targetKeywords": [
+      "쿠팡 백엔드",
+      "쿠팡 서버 개발자",
+      "쿠팡페이 백엔드",
+      "네이버 백엔드",
+      "네이버파이낸셜 서버 개발자",
+      "라인 백엔드",
+      "LINE backend engineer",
+      "카카오뱅크 백엔드",
+      "카카오모빌리티 백엔드",
+      "우아한형제들 백엔드",
+      "당근 백엔드",
+      "오늘의집 백엔드",
+      "AI Agent 백엔드",
+      "Applied AI Engineer",
+      "AI Engineer LLM RAG Agent",
+      "MCP 서버 AI",
+      "LLM 백엔드",
+      "RAG 백엔드",
+      "AI Platform Engineer",
+      "ML Backend Engineer",
+      "LLMOps MLOps 플랫폼",
+      "Workflow Automation AI",
+      "카카오페이 백엔드",
+      "토스뱅크 백엔드",
+      "네이버클라우드 백엔드",
+      "GenAI 서버 개발",
+      "AI 에이전트 백엔드"
+    ]
+  }
+}
