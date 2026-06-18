@@ -1,6 +1,7 @@
 # Code Architecture — career-os
 
 career-os의 디렉터리 구조·계층 책임·외부 의존성. 새 스킬·러너를 추가하거나 파이프라인을 바꿀 때 이 문서를 기준으로 한다.
+작성 규칙은 [`README.md`](README.md)의 Code Architecture 작성 규칙을 따른다.
 
 ## 계층
 
@@ -141,8 +142,9 @@ career-os/
 │                                       (tech-interview-drill, behavioral-interview-drill 공유 — ADR-031 준수, scripts/_lib 미사용)
 │
 ├── .claude/skills/                       ← agent skill 정본 (plan006 후, ADR-019, ADR-002, ADR-085)
-│   ├── job-fit-analyzer/               (plan086 — interview-prep-analyzer 리네임 + 리포커스)
-│   │   └── SKILL.md  타깃 직무 역할 단위 핏 분석 + 부족분 갭 진단
+│   ├── job-fit-analyzer/               (ADR-096 의사결정·전략 재정의)
+│   │   └── SKILL.md  지원 의사결정 + 면접 전략 + 커리어 패스 정합. 정본 JSON → md 파생
+│   │       (실행 자산: scripts/job-fit-analyzer/{jobfit_schema.ts, render_job_fit.ts}, ADR-019 분리)
 │   ├── tech-interview-drill/           (plan086 신규)
 │   │   └── SKILL.md  매일 기술 면접 답변 연습 + 3단계 채점 + 약점 환류
 │   ├── behavioral-interview-drill/     (plan086 신규)

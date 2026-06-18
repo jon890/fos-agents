@@ -54,6 +54,8 @@ export const PreparationActionSchema = z.object({
 export const RecommendationSnapshotSchema = z.object({
   generatedAt: z.string().min(1),
   sourceReportPath: z.string().min(1),
+  actionStage: ActionStageSchema.optional(),
+  priorityRank: PriorityRankSchema.optional(),
   postingAnalysis: PostingAnalysisSummarySchema.optional(),
   fitSummary: FitSummarySchema.optional(),
   gapSummary: GapSummarySchema.optional(),

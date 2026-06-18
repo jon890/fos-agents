@@ -77,7 +77,7 @@ ADR을 쓰기 전에 *이 결정이 정말 ADR감인가* 자문한다. 자명한
 - 코드 블록 (before/after 비교, 함수 구현, 셸 명령 시퀀스).
 - 적용 대상 파일의 전수 목록 (디렉터리 한 줄 또는 패턴으로 충분).
 - 변경 이력 (git history가 단일 출처).
-- 검증 결과의 구체 수치 (`docs/learn/` 또는 task phase 산출물로).
+- 검증 결과의 구체 수치 (task phase 산출물로).
 - 미래 enhancement / TODO (별도 plan이나 task로).
 
 **구현명세 금지 Self-check (ADR 작성 직후 반드시 확인)**:
@@ -89,12 +89,13 @@ ADR을 쓰기 전에 *이 결정이 정말 ADR감인가* 자문한다. 자명한
 
 구현명세가 ADR에 섞이면 Bloat의 주원인이 된다. 코드·`code-architecture.md`·git history가 HOW의 단일 출처다.
 
-코드를 알아야 결정 자체를 이해할 수 없는 경우만 짧은 인용 1-2줄 허용 (예: "기존 `--output-format json` 폐기가 부작용을 일으켰음" 정도).
+코드를 알아야 결정 자체를 이해할 수 없는 경우만 짧은 인용 1-2줄 허용한다.
+예전 실행기 폐기가 부작용을 일으킨 결정처럼, WHY를 설명하는 데 필요한 최소 맥락만 남긴다.
 
 ## 왜 이 원칙인가
 
-- AI 에이전트가 `docs/adr.md`를 읽을 때 소비하는 토큰을 줄인다. 의사결정 맥락에만 집중.
+- AI 에이전트가 ADR을 읽을 때 소비하는 토큰을 줄인다. 의사결정 맥락에만 집중.
 - ADR과 코드 사이 drift 위험 감소 — ADR은 *왜*만, 코드가 *어떻게*의 단일 출처.
-- 구현 상세는 `docs/code-architecture.md`(현행 구조) / `docs/learn/`(회고) / git history / task phase 산출물로 자연스럽게 분산.
+- 구현 상세는 `docs/code-architecture.md`(현행 구조), git history, task phase 산출물로 자연스럽게 분산.
 
 기존 ADR이 본 원칙에 어긋나면 (예: 코드 블록이 들어가 있음) 그 자리에서 슬림화하지 말고, 별도 `plan{N}-adr-cleanup` 후속 task로 처리한다 — 한 번에 너무 많은 변경을 한 ADR 사이클에 섞지 않는다.

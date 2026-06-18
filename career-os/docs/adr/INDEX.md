@@ -1,6 +1,7 @@
 # ADR INDEX — career-os
 
 개별 ADR 파일 조망 표. 새 ADR은 새 파일(`docs/adr/ADR-NNN-slug.md`) + 이 INDEX 행 추가.
+작성 규칙은 [`../README.md`](../README.md)의 ADR 작성 규칙을 따른다.
 
 | ADR | 제목 | Status | 파일 |
 |---|---|---|---|
@@ -94,5 +95,6 @@
 | ADR-093 | skill 호출 계약은 에이전트 비종속으로 둔다 | Accepted | [ADR-093-skill-호출-계약은-에이전트-비종속으로-둔다.md](ADR-093-skill-호출-계약은-에이전트-비종속으로-둔다.md) |
 | ADR-094 | 포지션 추천 산출물을 JSON 정본으로 전환한다 | Accepted | [ADR-094-포지션-추천-산출물-json-정본-전환.md](ADR-094-포지션-추천-산출물-json-정본-전환.md) |
 | ADR-095 | 회사 업사이드 운영 데이터를 config JSON 단일 출처로 흡수한다 | Accepted | [ADR-095-회사-업사이드-운영데이터-config-흡수.md](ADR-095-회사-업사이드-운영데이터-config-흡수.md) |
+| ADR-096 | job-fit-analyzer를 의사결정·전략 중심으로 재정의한다 | Accepted | [ADR-096-job-fit-analyzer-의사결정-전략-재정의.md](ADR-096-job-fit-analyzer-의사결정-전략-재정의.md) |
 | ADR-097 | question-bank 정본을 public으로 1원화하고 개인 질문은 private에 둔다 | Accepted | [ADR-097-question-bank-정본-public으로-1원화하고-개인-질문은-private에-둔다.md](ADR-097-question-bank-정본-public으로-1원화하고-개인-질문은-private에-둔다.md) |
 | ADR-098 | data-schema는 현재 스키마만 담고 폐기 항목은 ADR로 위임한다 | Accepted | [ADR-098-data-schema는-현재-스키마만-담고-폐기-항목은-adr로-위임한다.md](ADR-098-data-schema는-현재-스키마만-담고-폐기-항목은-adr로-위임한다.md) |

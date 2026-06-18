@@ -245,4 +245,4 @@ ai-nodes 한정 정책은 본 문서가 단일 출처.
 - dooray-cli mirror — 본 정책의 출처
 - 글로벌 directive — `~/.claude/CLAUDE.md` `documentation_style`
 - planning SKILL.md — 5문서 공통 작성 원칙 (의미·내용 정책, 본 문서와 영역 분리)
-- common-pitfalls.md §6-9 — sigil 검증 대상 escape 패턴
+- `common-pitfalls/harness/6-8-sigil-self-positive.md` — sigil 검증 대상 escape 패턴

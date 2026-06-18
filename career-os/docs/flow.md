@@ -1,377 +1,177 @@
-# Flow — career-os 사용자/데이터 플로우
+# Flow - career-os 사용자와 데이터 흐름
 
-career-os의 일상적 사용 패턴과 각 명령의 데이터 흐름. 새 워크플로를 추가하거나 기존 흐름을 변경할 때 여기를 같이 갱신한다.
+career-os의 반복 업무가 어떤 입력에서 시작해 어떤 처리 주체를 거치는지 정리한다.
+또한 어떤 산출물과 다음 상태로 이어지는지 함께 정리한다.
+이 문서는 빠른 경로 파악을 위한 지도이며, 구현 세부사항을 담지 않는다.
+작성 규칙은 [`README.md`](README.md)의 Flow 작성 규칙을 따른다.
 
-## 일상 사이클 (가장 자주 도는 흐름)
+## 빠른 이동
 
-```
-[매일 아침]
-  ↓
-  Use skill: /study-topic-recommender  → data/runtime/morning-topic-recommendation.md
-  ↓ (10픽 + 오늘의 3선)
-  사용자가 1개 토픽 선택
-  ↓
-  Use skill: /study-pack-writer <topic>      → sources/fos-study/<domain>/<topic>.md
-  ↓ (또는)
-  Use skill: /interview-asset-writer <topic> → sources/fos-study/interview/<형식별 경로>/<topic>.md
-  ↓
-  fos-study git commit + push (자동)
-  ↓
-  Discord 알림: [완료] <topic> · $0.27 · sonnet-4-6 · 24k→6k 토큰 · 105s
-```
+| 영역 | 언제 보는지 | 핵심 산출물 |
+|---|---|---|
+| [문서 책임](#문서-책임) | flow.md에 둘 내용인지 판단할 때 | 문서 경계 |
+| [공통 실행 계약](#공통-실행-계약) | 모든 skill 공통 규칙 확인 | 실행, 알림, 안전 경계 |
+| [일상 학습](#일상-학습) | 오늘 공부 추천과 study pack 생성 | 추천 리포트, fos-study 초안 |
+| [포지션 추천](#포지션-추천) | 공고 수집과 지원 후보 생성 | 추천 JSON, report, 후보 상태 |
+| [지원 준비](#지원-준비) | 지원 패키지, 리뷰, 이력서 초안 | 공고별 application 산출물 |
+| [면접 준비](#면접-준비) | 역할 핏 진단, 단계별 준비, 드릴 | 면접 준비 자료, 드릴 로그 |
+| [질문 은행](#질문-은행) | 공개 가능한 질문 풀 수집과 보강 흐름 | `public/question-bank/` |
+| [이력서 패키지](#이력서-패키지) | 검토된 이력서 초안 변환 | `resume.html`, `resume.pdf` |
+| [fos-career 연결](#fos-career-연결) | 웹 대시보드와 career-os 연결 | DB request, outbox |
+| [실행 가드](#실행-가드) | 평가, stale guard, 사용자 승인 경계 | 검증 결과, 차단 상태 |
+| [폐기 흐름과 tombstone](#폐기-흐름과-tombstone) | 폐기된 흐름 확인 | tombstone 요약 |
+| [실패 동작](#실패-동작) | 실패 시 어디서 멈추는지 확인 | 실패 알림과 재시도 기준 |
 
-```
-[정기 백그라운드 — cron]
-  ↓
-  (replenish는 plan015에서 별도 명령 폐기 — plan016에서 study-topic-recommender agent skill로 흡수 완료)
-  ↓
-  position-recommender compatibility backend → data/runtime/position-recommendation.md
-  ↓
-  study-topic-recommender (native)가 갱신된 inventory를 읽음
-```
+## 문서 책임
 
-## 명령별 데이터 흐름
+`flow.md`에는 흐름을 판단하는 데 필요한 최소 정보를 둔다.
+각 섹션은 다음 질문에 답해야 한다.
 
-dispatcher 폐기 완료 (plan023, ADR-031) — 모든 명령은 agent skill 직접 진입: `/<skill> [args]`.
-현재 에이전트는 대응되는 SKILL.md를 읽고 workflow를 직접 수행한다.
-무인 runner가 필요할 때만 특정 CLI compatibility backend를 사용한다.
-완료/실패 시 Discord 알림 발송 (`bun --env-file=career-os/.env _shared/lib/notify_discord.ts` 경유, ADR-021).
+- 무엇이 이 흐름을 시작하는가.
+- 어떤 입력을 읽는가.
+- 누가 처리하는가.
+- 어떤 산출물을 쓰는가.
+- 다음 상태나 다음 사용자 행동은 무엇인가.
+- 어떤 안전 경계에서 멈추는가.
 
-### 생성 문서 품질 계약 (전역)
+다른 문서와의 책임 경계는 [`README.md`](README.md)의 문서별 책임 표를 따른다.
 
-모든 생성 흐름은 파일 쓰기 전 또는 post-validation에서 다음 기준을 확인한다.
+## 공통 실행 계약
 
-```text
-생성 입력 수집
-  -> 내부 분석과 제출용/공개용 산출물 경계 확인
-  -> Markdown 생성
-  -> 첫 10줄 안에 decision / conclusion / recommended action 확인
-  -> 한국어 우선 섹션 제목과 자연스러운 한국어 문장 확인
-  -> needs_evidence 잔존 여부 확인
-  -> 보강 필요 / 선택지 / 권장 행동 루프로 변환
-  -> 용도별 파일에만 저장
-```
+career-os의 표준 진입점은 agent skill 직접 호출이다.
+문서와 산출물은 `Use skill: /<skill> [args]` 형태로 다음 행동을 안내한다.
+특정 에이전트 CLI나 runner는 무인 실행을 위한 호환 계층이며, workflow 계약이 아니다.
 
-원칙:
-
-- 내부 분석은 private 산출물에 둔다.
-- 제출용 문구와 공개용 문구는 private 판단 근거를 그대로 복사하지 않는다.
-- 공개용 산출물은 회사별 지원 전략, 후보자 private 이력, 내부 reviewer 판단을 포함하지 않는다.
-- `needs_evidence`가 남아 있으면 통과시키지 않고 `보강 필요 / 선택지 / 권장 행동`으로 바꾼다.
-
-### data 경계와 보존 흐름
-
-`data/` 아래 흐름은 ADR-058의 private by default 원칙과 ADR-062의 position home 원칙을 따른다.
-정리 작업은 삭제보다 archive, tombstone, retention 검토를 먼저 수행한다.
-다만 구조 전환에서 `private/<company>/<position>/` 정본으로 대체가 끝난 legacy mirror/runtime/report는 archive 없이 제거할 수 있다.
+공통 처리 흐름:
 
 ```text
-source 수집 또는 agent 실행
-  -> private, data/source, data/runtime, data/reports, data/applications 중 책임 위치 선택
-  -> 지원/면접/후보자 맥락과 연결됐는지 확인
-  -> 연결됐으면 private by default
-  -> 오래됐거나 active 판단에서 빠졌으면 retention 검토
-  -> 구조 전환에서 새 정본으로 대체된 legacy runtime/report는 archive 없이 삭제 가능
+사용자 요청 또는 예약 실행
+  -> 대응 SKILL.md 확인
+  -> 입력 파일과 공개/비공개 경계 확인
+  -> agent 또는 runner가 필요한 도구 실행
+  -> 산출물 작성
+  -> 검증과 안전 경계 확인
+  -> 다음 행동 또는 사용자 승인 대기 상태 기록
+  -> 필요한 경우 Discord 알림
 ```
 
-위치별 기본값:
+공통 안전 경계:
 
-- `private/<company-slug>/<position-slug>/`는 active 회사·직무별 사람이 보는 준비 홈이다.
-  면접 연습, 지원 준비, 포지션별 스터디 재료를 한 폴더에서 찾기 위한 작업 홈이다.
-  새 웹 화면과 자동화는 `config/mvp-target.json`의 `primary.data_root`를 정본으로 읽는다.
-  면접 준비의 사람용 정본은 `interview/prep.md` 하나이며, 리포트·예상 질문·전략·체크리스트·단기 Java 준비는 이 파일의 섹션으로 정제한다.
-  공개 가능한 기술 공부팩은 개인 답변·지원 전략·회사별 민감 맥락을 제거해 `sources/fos-study/`에 따로 작성할 수 있다.
-- `data/source/`는 수집 원문과 노트의 입력 위치다.
-  외부 공개 페이지에서 왔더라도 지원/면접과 연결되면 비공개 입력으로만 읽는다.
-- `data/runtime/`은 최신 projection, cache, lock, eval 결과를 둔다.
-  장기 근거가 되면 runtime에 남기지 말고 `data/reports/`, task evidence, `private/archive/` 중 하나로 승격 결정을 남긴다.
-- `data/reports/`는 generated report를 둔다.
-  최근 운영 판단, task/ADR 근거, application/interview prep 참조가 있으면 보존하고, 없으면 archive 후보로 둔다.
-- `data/applications/`는 실제 지원 준비와 제출 전 검토 산출물의 private home이다.
-- `private/`는 포지션별 작업 홈이다.
-  그대로 공개 경로로 복사하지 않고, 공개 가능한 기술 자료로 재작성한 결과만 `sources/fos-study/`에 둔다.
+- 실제 제출, 로그인, 업로드, 외부 메시지 전송은 사용자 승인 없이 수행하지 않는다.
+- `sources/fos-study/`에는 회사별 지원 전략을 쓰지 않는다.
+  후보자 private 이력과 면접 답변 원문도 쓰지 않는다.
+- `data/`, `private/`, `public/`, `sources/fos-study/` 경계는 [`data-schema.md`](data-schema.md)를 따른다.
+- agent가 만든 제출용 문서에 근거 부족이 남으면 바로 통과시키지 않는다.
+  `보강 필요`, `선택지`, `권장 행동`으로 바꿔 사용자 또는 다음 실행으로 넘긴다.
 
-### config diet 흐름 (ADR-069)
+## 일상 학습
 
-config는 실행 정책과 사람이 고른 예외를 담고, 실제 자산 목록은 파일 트리에서 파생한다.
+매일 학습 흐름은 주제 추천에서 시작해 공개 가능한 기술 문서 초안으로 이어진다.
 
 ```text
-skill 또는 추천기 실행
-  -> Read: config/mvp-target.json, candidate-profile.md, baseline/study-progress/sources 등 필요한 정책 파일
-  -> Derive: sources/fos-study/ 파일 트리에서 학습 문서 inventory 생성
-  -> Derive: public/question-bank/ validator 결과에서 공개 질문 inventory 생성
-  -> Apply: config override / pin / exclusion / seed가 있으면 가중치만 조정
-  -> Write: report/runtime/private/public 중 책임 위치에 산출물 저장
+Use skill: /study-topic-recommender
+  -> 현재 학습 상태, 후보 풀, fos-study inventory 읽기
+  -> 오늘의 학습 후보와 보강 후보 생성
+  -> data/runtime/morning-topic-recommendation.md 작성
+  -> 사용자가 주제 선택
+  -> Use skill: /study-pack-writer <topic>
+  -> 공개 가능한 기술 주제로 정규화
+  -> 중복 문서와 public-safe 경계 확인
+  -> sources/fos-study/<category>/<topic>.md 작성
+  -> fos-study commit 및 push
 ```
 
-금지하는 흐름:
-
-- fos-study에 있는 모든 문서 목록을 config JSON에 다시 복제한다.
-- public question bank의 전체 질문 목록을 별도 config topic으로 다시 관리한다.
-- 현재 타깃을 `mvp-target.json`과 다른 config에 반복해서 저장한다.
-- 오래된 topic-file map을 실제 파일 존재 여부보다 우선한다.
-
-plan068은 이 원칙을 기준으로 reader inventory를 만든 뒤, 죽은 config reader 제거와 fallback migration을 순서대로 수행한다.
-
-### `/job-fit-analyzer` (agent skill — plan086, interview-prep-analyzer 리네임 + 리포커스)
-
-agent skill 패턴: `/job-fit-analyzer [args]` → SKILL.md 로드 → 현재 에이전트가 도구로 직접 처리.
-
-```
-호출: /job-fit-analyzer [자연어 컨텍스트]
-  ↓
-Read: config/mvp-target.json + config/candidate-profile.md
-  ↓
-에이전트 분석:
-  - 타깃 직무 역할 단위 핏 분석
-  - 후보자 강점·경험 vs 직무 요구사항 매핑
-  - 부족분 갭 진단 (스킬·경험·키워드 단위)
-  ↓
-Write: data/reports/job-fit-YYYY-MM-DD.md
-  ↓
-Discord 알림 [완료]
-```
-
-git push 없음 (비공개 리포트).
-기존 `interview-prep-analyzer` baseline·daily 모드는 plan086 이후 `job-fit-analyzer`로 기능이 재편된다.
-
-상세 동작: `career-os/.claude/skills/job-fit-analyzer/SKILL.md` Workflow 섹션 참조.
-
-### `/tech-interview-drill` (agent skill — plan086 신규)
-
-agent skill 패턴: `/tech-interview-drill` → SKILL.md 로드 → 현재 에이전트가 도구로 직접 처리.
-
-```
-호출: /tech-interview-drill
-  ↓
-Read: public/question-bank/{기술 카테고리}/questions.json (일반 질문 정본, ADR-097)
-Read: private/question-bank/tech-personal.jsonl (개인 기술 질문, 있으면)
-Read: config/study-progress.json (weak_spots — next_review_date + status 기준 질문 선정)
-  ↓
-[질문 선정 — 간격 반복]
-  - public(일반) + private(개인) 질문을 topic 키로 합쳐 풀 구성
-  - status=active이고 next_review_date ≤ 오늘인 질문 우선 선정
-  - 신규 질문(pass_count=0)은 next_review_date 무시하고 포함
-  ↓
-[대화 답변 루프]
-  사용자가 답변 → 에이전트 3단계 채점 (pass / shallow / fail / unknown)
-  ↓
-[기록]
-  Append: data/runtime/drill-log-YYYY-MM-DD.jsonl
-  Edit: config/study-progress.json (weak_spots 갱신 — 누적 횟수 + next_review_date 계산)
-  ↓
-[약점 환류]
-  fail / shallow 점수 → study-pack-writer 비동기 위임 (study_pack_dispatched=true 기록)
-```
-
-git push 없음.
-`tech-interview-drill`과 `behavioral-interview-drill`은 `scripts/interview-drill/drill-engine.ts` 공용 드릴 엔진을 공유한다.
-
-상세 동작: `career-os/.claude/skills/tech-interview-drill/SKILL.md` Workflow 섹션 참조.
-
-### `/behavioral-interview-drill` (agent skill — plan086 신규)
-
-agent skill 패턴: `/behavioral-interview-drill` → SKILL.md 로드 → 현재 에이전트가 도구로 직접 처리.
-
-```
-호출: /behavioral-interview-drill
-  ↓
-Read: public/question-bank/behavioral/questions.json (일반 인성 질문 정본, ADR-097)
-Read: private/question-bank/behavioral-personal.jsonl (개인 인성 질문, 있으면)
-Read: config/study-progress.json (weak_spots — next_review_date + status 기준 질문 선정)
-  ↓
-[질문 선정 — 간격 반복]
-  tech-interview-drill과 동일 엔진, behavioral 질문 풀(public + private) 적용
-  ↓
-[대화 답변 루프]
-  사용자가 답변 → 에이전트가 STAR·가치관 관점 채점 rubric 적용 (pass / shallow / fail / unknown)
-  ↓
-[기록]
-  Append: data/runtime/drill-log-YYYY-MM-DD.jsonl
-  Edit: config/study-progress.json (weak_spots 갱신)
-  ↓
-[약점 환류]
-  fail / shallow 점수 → study-pack-writer 비동기 위임
-```
-
-git push 없음.
-기술 면접 드릴과 달리 STAR 구조(상황·과제·행동·결과)와 가치관 일관성을 채점 기준으로 추가 적용한다.
-
-상세 동작: `career-os/.claude/skills/behavioral-interview-drill/SKILL.md` Workflow 섹션 참조.
-
-### `/interview-stage-prep` (agent skill — plan086 신규)
-
-agent skill 패턴: `/interview-stage-prep [stage]` → SKILL.md 로드 → 현재 에이전트가 도구로 직접 처리.
-
-```
-호출: /interview-stage-prep [first-round|final-round|offer]
-  ↓
-Read: config/mvp-target.json (면접 단계 정보 — 회사·직무·일정)
-Read: config/candidate-profile.md
-  ↓
-에이전트 분석:
-  - 단계별 예상 질문·답변 리스크·역질문 구성
-  - first-round: 기술 역량 중심 실전 준비
-  - final-round: 문화 핏·리더십·조직 관점 준비
-  - offer: 협상 포인트·역질문·입사 준비 체크리스트
-  ↓
-Write: data/reports/stage-prep-YYYY-MM-DD.md
-  ↓
-Discord 알림 [완료]
-```
-
-git push 없음 (비공개 리포트).
-
-상세 동작: `career-os/.claude/skills/interview-stage-prep/SKILL.md` Workflow 섹션 참조.
-
-### `/interview-prep-analyzer` tombstone
-
-`interview-prep-analyzer` skill은 plan086 phase-02와 phase-06에서 제거됐다.
-역할 단위 핏·갭 진단은 `/job-fit-analyzer`가 맡고,
-면접 단계별 실전 준비는 `/interview-stage-prep`가 맡는다.
-매일 답변 연습과 약점 환류는 `/tech-interview-drill`과 `/behavioral-interview-drill`이 맡는다.
-
-### `/position-recommender` (agent skill — plan022, ADR-030)
-
-agent skill 패턴: `/position-recommender [자연어 컨텍스트] [채용공고 file path]` → SKILL.md 로드 → 현재 에이전트가 도구로 직접 처리.
-
-```
-호출: /position-recommender [자연어 컨텍스트] [채용공고 file path]
-  ↓
-Bash: bun career-os/scripts/position-recommender/collect_live_postings.ts
-  → live-postings source registry (`all`은 등록된 모든 source)
-  → source adapters (Wanted broad/keyword, Toss job-groups, Coupang Careers sitemap, KakaoPay 계열, NAVER 계열 등)
-  → detail page active/open evidence 확인
-  → active validator (direct posting + active/open + leakage boundary)
-  → compact renderer (긴 JD 필드는 판단 가능한 길이로 축약)
-  → data/runtime/live-position-postings.md
-  ↓
-Read:
-  - config/candidate-profile.md
-  - config/sources.json (techBlog 필드)
-  - references/position-recommendation-prompt.md
-  - references/position-context-index.md
-  - references/position-decision-criteria.md
-  - references/company-upside-reference.md
-  - references/verified-company-research-targets.json
-  - 최근 7일 data/reports/daily/*/position-recommendation/report.md
-  - (선택) 사용자 자연어로 지정한 채용공고 file
-  ↓
-에이전트 자연어 분석:
-  - 강력 추천 / 도전 추천 / 보류·주의 3 티어
-  - role title + posting 링크 + 지원 근거 + gap + first action
-  - 추천 순위, fit/gap, 커리어 서사 판단은 LLM이 담당
-  - collector는 active/open 개별 공고 후보 정제까지만 담당
-  - active/open 여부는 추정하지 않고 snapshot evidence만 사용
-  - 최근 7일 반복 후보 감점 + 신규 후보/추가 수집 대상 최소 1개 포함
-  - 리포트는 강력 추천 3개, 도전 추천 2개, 보류/주의 3개 안에서 압축 작성
-  ↓
-Self-check: render_recommendation.ts 실행이 곧 zod 검증 (recommendation_schema.ts) — 14 라벨·tier 상한·링크 근거·reportDate 보장 (ADR-094)
-  ↓
-Write: data/reports/daily/YYYY-MM-DD/position-recommendation/recommendation.json (정본, ADR-094)
-Post-process (render_recommendation.ts가 정본에서 파생):
-  - --format md   → report.md + data/runtime/position-recommendation.md
-  - --format html → report.html + data/runtime/position-recommendation.html
-  - templates/report.html (스타일만)
-  ↓
-Refresh:
-  - legacy: data/runtime/application-agent/frontdoor-queue.jsonl
-  - target: fos-career DB recommendation items + application candidate state
-  - target: fos-career DB outbox jobs for long-running workflow execution
-  ↓
-Discord 알림 [완료]
-```
-
-daily runner 정본은 `scripts/position-recommender/run_daily_with_claude.ts`다.
-기존 `scripts/position-recommender/run_daily_with_claude.sh`는 cron과 수동 호출 호환을 위해 TS runner를 호출하는 shim으로 유지한다.
-이 runner는 기본 `POSITION_RECOMMENDER_SOURCE=all`로 Wanted, Toss, Coupang Careers sitemap, KakaoPay, KakaoPay Securities, KakaoMobility, NAVER Careers source를 함께 수집한다.
-Claude CLI 호환 실행 경로는 진행 이벤트, 총 실행 시간, 무출력 시간을 감시한다.
-기본 로그는 30초 간격의 진행 표시만 남기고, raw stream-json은 `POSITION_RECOMMENDER_CLAUDE_LOG_STREAM=1`일 때만 출력한다.
-기본값은 `POSITION_RECOMMENDER_CLAUDE_TIMEOUT_MS=540000`, `POSITION_RECOMMENDER_CLAUDE_NO_OUTPUT_MS=240000`이다.
-에이전트 실행이 멈추거나 오늘 날짜 report/runtime을 쓰지 못하면 실패 처리하고, stale runtime 재전송을 막는다.
-검증 통과 후 현재 legacy 경로는 `frontdoor_queue_builder.ts`로 frontdoor queue를 갱신하고, `priority_recommendation.ts`로 frontdoor/ledger priority snapshot을 갱신한다.
-ADR-081 이후 목표 경로는 structured recommendation item을 fos-career DB로 ingest하고, DB의 지원 후보 상태를 정본으로 갱신하는 것이다.
-이 단계까지 성공해야 dashboard application workbench가 최신 추천 cycle을 본다.
-plan074 이후 structured recommendation item은 카드 표시용 최소 필드를 비워 두지 않는다.
-Markdown 리포트에 있는 추천 이유, 확인할 점, 다음 행동, evidence URL은 `priorityReason`, `nextAction`, `riskFlags`, `evidenceUrls` 또는 동등한 snapshot field로 추출되어야 한다.
-추출할 수 없으면 null로 조용히 통과시키지 않고 검증 로그나 dry-run summary에서 누락을 드러낸다.
-검증 통과 후 `_shared/lib/notify_discord.ts`로 Discord 알림을 보낸다.
-아침 Discord 알림은 전체 리포트를 붙이지 않고 상위 강력 추천 3개 + 도전 추천 2개를 `지원 링크 / 이유 / 확인할 점 / 다음 액션` 중심으로 압축한다.
-같은 알림에 HTML 리포트 파일을 첨부해 모바일/브라우저에서 읽기 쉽게 한다.
-자세한 본문은 Markdown 정본과 HTML 첨부에서 읽고, Discord 본문은 알림과 빠른 triage 역할만 맡는다.
-agent skill 내부에서는 외부 메시지 전송을 직접 수행하지 않는다.
-
-source coverage 확장 원칙은 ADR-051과 ADR-079를 따른다.
-Wanted broad scan은 유지하고, 선호 회사와 AI 전환 직무 탐색은 `target-keyword` discovery mode로 처리한다.
-Wanted adapter는 공고 ID나 URL을 코드에 박지 않고 공식 search/detail API 결과에서 active 공고만 가져온다.
-AI Agent/RAG/MCP/LLMOps/ML Backend 같은 백엔드 + AI 전환 후보는 AI keyword search로 별도 수집한다.
-Toss는 공식 `job-groups` API를 사용해 그룹 공고와 하위 포지션을 펼쳐서 수집한다.
-예: `AI Engineer` 그룹의 Platform/Brain/Commerce/Model/Ads 하위 포지션.
-Kakao 계열은 GreetingHR/공식 careers listing에서 detail URL을 발견하고, 계열사별 adapter를 점진적으로 늘린다.
-현재 active adapter는 KakaoPay, KakaoPay Securities, KakaoMobility다.
-NAVER 계열은 NAVER Careers official listing을 기본으로 수집하고, 계열사 확장은 공식 listing/API가 확인된 source만 추가한다.
-Coupang처럼 공식 detail/listing HTML이 fetch에서 차단될 수 있는 회사는 1차로 Wanted target keyword discovery를 유지한다.
-Coupang 공식 `coupang.jobs`는 접근 가능한 `sitemap.xml` 기반 direct job URL을 수집하고, 가능한 경우 detail fetch로 JD를 보강한다.
-detail Cloudflare 차단은 diagnostics/risk flag에 남기고 JD 상세와 근무지는 후속 browser/manual 확인 대상으로 둔다.
-adapter 안의 URL 상수는 listing/API/sitemap entrypoint처럼 source discovery에 필요한 root만 허용한다.
-개별 공고 URL은 테스트 fixture나 문서 예시 외에는 하드코딩하지 않는다.
-한 source 실패는 다른 source의 수집·import·dashboard 표시를 막지 않는다.
-
-plan075 이후 목표 흐름:
+정기 아침 알림은 가벼운 경로를 사용한다.
 
 ```text
-collect_live_postings.ts
-  -> data/runtime/live-position-postings.md 생성
-  -> fos-career DB source snapshot import
-     - position_sources upsert
-     - position_collection_runs 생성
-     - position_source_run_diagnostics 생성
-     - collected_positions upsert
-  -> LLM position recommendation 생성
-  -> structured recommendation items 추출
-  -> position_recommendation_runs가 collectionRunId 참조
-  -> application_candidates / application_candidate_states ingest
+scheduled daily recommendation
+  -> topic inventory refresh
+  -> 상위 추천 3개와 버튼 payload 생성
+  -> Discord 알림
+  -> 사용자가 버튼 또는 자연어로 초안 생성을 요청
+  -> study-pack-writer 실행 요청으로 연결
 ```
 
-이 순서는 의도적이다.
-수집 snapshot import는 LLM 추천 생성보다 먼저 수행한다.
-그래야 추천 생성이나 recommendation ingest가 실패해도 대시보드가 그날 source별 수집 상태를 보여줄 수 있다.
+`study-topic-recommender`는 후보 추천과 promote 판단을 수행한다.
+`study-pack-writer`는 실제 공개 문서 초안을 만든다.
+중복 판정, 후보 refresh, live-coding seed 세부 규칙은 각 SKILL.md와 관련 ADR을 정본으로 본다.
 
-source diagnostics 표시 기준:
+주요 산출물:
 
-- source 목록은 DB registry를 기준으로 한다.
-- 최신 collection run의 source별 diagnostics를 함께 보여준다.
-- imported count가 0이어도 registry에 있으면 표시한다.
-- 0건은 `정상 0건`, `필터 과도`, `파서 변경`, `차단`, `비활성`, `알 수 없음`으로 구분한다.
-- `Naver Careers`, `KakaoPay Securities`처럼 0건 source는 후속 진단 대상이다.
+- `data/runtime/topic-inventory.json`
+- `data/runtime/morning-topic-recommendation.md`
+- `data/runtime/study-topic-candidate-refresh.{json,md}`
+- `data/runtime/study-topic-actions/YYYY-MM-DD.json`
+- `sources/fos-study/<category>/<topic>.md`
 
-추천 범위는 Java/Spring 서버·백엔드 정규직을 기본으로 하되, 사용자의 현재 선호에 따라 AI 서비스/AI Transformation(AX)/AI Agent/AI 플랫폼 공고도 별도 레인으로 평가한다. 단, 이 레인의 공고도 추천 티어에 오르려면 active/open 개별 공고 URL이 있어야 하며, 서버·플랫폼 개발 전이성(API, Agent/RAG/LLM workflow, LLMOps/MLOps, 개발 생산성 자동화, SDLC AI 활용 등)이 명확해야 한다. 순수 AI Research, PM, 프론트엔드, 데이터 엔지니어 중심 공고는 사용자가 별도로 요청하지 않는 한 추천 티어에서 제외한다.
+## 포지션 추천
 
-상세 동작: `career-os/.claude/skills/position-recommender/SKILL.md` Workflow 섹션 참조.
-
-### Application Agent MVP (completed base — plan029)
-
-plan029는 기존 position/study/interview agent skill을 조립해 지원 전후 전체 루프를 만든다.
-
-초기 MVP 흐름:
+포지션 추천 흐름은 active/open 공고 후보를 모은다.
+그 뒤 지원 가능성을 평가해 다음 행동 후보로 만든다.
 
 ```text
-공고 수집/추천
-  -> 지원 후보 순위 생성
-  -> frontdoor queue에 사용자 선택 대기 상태로 저장
-  -> 사용자가 "N번 준비 시작" 선택
-  -> 선택된 후보만 ledger로 승격
-  -> 공고별 fit/gap 분석
-  -> 공부 우선순위 / 예상 면접 질문 생성
-  -> 맞춤 지원 패키지 작성
-  -> evidence/drift review
-  -> 사용자 승인
-  -> 제출 기록 또는 보류
-  -> 제출 후 interview_prep / study loop
-  -> daily application digest
+Use skill: /position-recommender [context]
+  -> 등록된 source에서 active/open 공고 후보 수집
+  -> 후보자 프로필과 최근 추천 이력 읽기
+  -> 강력 추천, 도전 추천, 보류/주의 후보 분류
+  -> structured recommendation JSON 작성
+  -> Markdown과 HTML report 파생
+  -> application candidate 상태 또는 legacy frontdoor queue 갱신
+  -> 다음 행동 후보를 application flow로 넘김
 ```
 
-상태 흐름:
+추천 판단의 큰 기준:
+
+- 추천 티어에 오르려면 active/open 개별 공고 URL이 있어야 한다.
+- Java/Spring 서버와 백엔드 정규직을 기본 레인으로 본다.
+- AI 서비스, AI Agent, AI 플랫폼 공고는 별도 레인으로 평가한다.
+  단, 서버와 플랫폼 개발 전이성이 명확해야 한다.
+- 순수 연구, PM, 프론트엔드, 데이터 엔지니어 중심 공고는 추천 티어에서 제외한다.
+  사용자가 별도로 요청하면 예외로 다룬다.
+
+현재 전환 상태:
+
+- legacy 경로는 `frontdoor-queue.jsonl`을 거쳐 application ledger로 이어진다.
+- 목표 경로는 fos-career DB의 recommendation item, application candidate state, outbox job을 정본으로 둔다.
+- 수집 source, adapter, 진단 상세는 `code-architecture.md`와 position-recommender SKILL.md를 따른다.
+
+주요 산출물:
+
+- `data/runtime/live-position-postings.md`
+- `data/reports/daily/YYYY-MM-DD/position-recommendation/recommendation.json`
+- `data/reports/daily/YYYY-MM-DD/position-recommendation/report.md`
+- `data/reports/daily/YYYY-MM-DD/position-recommendation/report.html`
+- `data/runtime/position-recommendation.md`
+- `data/runtime/position-recommendation.html`
+- `data/runtime/application-agent/frontdoor-queue.jsonl` (legacy)
+
+## 지원 준비
+
+지원 준비 흐름은 추천 후보를 실제 지원 패키지 후보로 승격하는 과정이다.
+자동화는 내부 산출물 작성과 검토까지만 수행한다.
+제출은 사용자 승인 뒤 별도 행동으로 남긴다.
+
+```text
+추천 후보 선택
+  -> 지원 준비 시작 요청
+  -> ledger 또는 application candidate state 갱신
+  -> posting.md 확보
+  -> Use skill: /application-package-writer <posting-path>
+  -> fit-analysis.md 작성
+  -> application-package.md 작성
+  -> resume-draft.md 작성
+  -> cover-letter.md 작성
+  -> submission-checklist.md 작성
+  -> Use skill: /application-reviewer <application-dir>
+  -> review.md 작성
+  -> pass, revise, blocked 중 하나로 판정
+  -> 사용자 검토 대기
+```
+
+application-agent runtime은 상태 전이를 검증하고 다음 action을 제안한다.
+필수 산출물이 없으면 상태를 앞당기지 않고 command suggestion만 남긴다.
+
+대표 상태 흐름:
 
 ```text
 discovered
@@ -382,1016 +182,215 @@ discovered
   -> approved
   -> submitted
   -> interview_prep
-  -> interview_scheduled
-  -> closed
-  -> blocked
-```
-
-역할 분담:
-
-- `/position-recommender`: 공고 수집/추천/초기 fit 분석
-- `application-package-writer`: 공고별 지원 패키지 생성
-- `application-reviewer`: 근거/과장/드리프트/쿨다운 검토
-- `daily-application-digest`: 매일 진행 상태와 다음 액션 요약
-- `/study-topic-recommender` + `/study-pack-writer`: 해당 직무 gap 기반 공개 가능한 기술 학습 자료
-- `/interview-stage-prep` + `/tech-interview-drill` + `/behavioral-interview-drill`: 제출 후 면접 대비
-
-중요 경계:
-
-- 실제 제출 자동화는 MVP 범위 밖이다.
-- 공고별 맞춤 이력서, 지원동기, 지원 전략은 `data/applications/` 비공개 산출물로 둔다.
-- `sources/fos-study/`에는 회사명/개인 지원 전략이 빠진 순수 기술 학습 자료만 발행한다.
-
-### Application Candidate State (target — ADR-081 / plan073)
-
-포지션 추천 리포트의 추천 카드는 대시보드에서 지원 후보 상태와 결합해 보여준다.
-`frontdoor queue`는 workflow 단계가 아니라 legacy staging file로만 취급한다.
-
-```text
-/position-recommender report + structured recommendation items
-  -> fos-career DB ingest
-  -> application_candidates upsert by candidate key
-  -> application_candidate_states current state/stage 갱신
-  -> dashboard reports route에서 HTML snapshot + DB 상태 표시
-  -> 사용자 카드 전체 클릭: 지원 시작
-  -> career_outbox_jobs row 생성
-  -> worker가 pending job을 lock 후 실행
-  -> 회사 분석 / 공고 분석 / fit 분석
-  -> 공부팩 생성
-  -> 이력서/지원 패키지 초안
-  -> 사용자 제출 표시
-  -> 서류 통과 표시 시 면접 대비 stage
-```
-
-후보 key:
-
-- 1차: normalized posting URL hash.
-- 2차: URL이 없거나 불안정하면 `company + title + source + closeDate` hash.
-- 같은 key가 다시 들어오면 새 후보를 만들지 않고 최근 추천 run과 스냅샷을 갱신한다.
-
-상태 책임:
-
-- `state`: 후보의 큰 상태.
-  예: `recommended`, `held`, `excluded`, `started`, `closed`.
-- `stage`: 지원 workflow 안의 현재 단계.
-  예: `company_analysis`, `fit_analysis`, `study_pack`, `resume_draft`, `submitted`, `resume_passed`, `interview_prep`.
-- 마스터 테이블이 state/stage 의미와 표시 순서, 허용 전이를 관리한다.
-- `excluded`는 기본 추천 화면에서 숨긴다.
-- `held`는 보류 섹션으로 분리한다.
-- `started` 이상은 다시 클릭할 수 없고 지원 준비 중으로 표시한다.
-
-outbox worker:
-
-- 대시보드는 오래 걸리는 skill 실행을 직접 수행하지 않는다.
-- 사용자 클릭은 DB transaction으로 상태 변경과 outbox job 생성을 함께 기록한다.
-- worker는 `pending` job을 주기적으로 가져와 lock을 잡고 실행한다.
-- 실패 시 attempts와 backoff를 기록하고, 반복 실패는 `dead`로 보낸다.
-- 외부 제출, 업로드, 로그인, 공개 발행은 worker가 수행하지 않는다.
-
-### fos-career mobile dashboard and position exploration (planned — plan074)
-
-plan074는 대시보드가 모바일에서 길어진 상단 메뉴에 밀리지 않도록 shell을 재구성한다.
-동시에 추천 후보와 수집 공고 전체를 다른 화면으로 명확히 분리한다.
-
-```text
-모바일 dashboard shell
-  -> 하단 네비게이션: 홈 / 공고 / 후보 / 지원 / 더보기
-  -> 햄버거 또는 더보기 메뉴: 리포트, 소스 진단, 우선 행동, 면접 hub
-  -> 공고 화면: collected_positions 전체 탐색
-  -> 후보 화면: position recommendation run에서 선별된 application_candidates
-  -> 후보 카드: priorityReason / nextAction / evidenceUrls 우선 표시
-```
-
-공고 화면 책임:
-
-- 전체 수집 풀의 검색과 필터를 제공한다.
-- source, posting status, close urgency, skill/tag를 빠르게 좁힌다.
-- source diagnostics는 기본 접힘으로 두고, 오류 원인은 필요할 때만 펼친다.
-- 추천 후보로 승격된 공고는 badge 또는 report link로 표시한다.
-- 모바일에서는 제목, 회사, source, 마감, 상태, 핵심 skill을 먼저 보여주고 긴 원문 필드는 접는다.
-
-후보 화면 책임:
-
-- 추천 후보 5개는 전체 수집 풀의 부분집합임을 명확히 보여준다.
-- 추천 근거와 다음 행동은 `latestSnapshotJson`의 구조화 필드를 우선 사용한다.
-- 구조화 필드가 비어 있으면 UI에서 빈 카드로 보이지 않게 fallback을 제공하되, runner 검증에서는 누락을 잡는다.
-
-### fos-career source registry and collection runs (planned — plan075)
-
-source diagnostics는 더 이상 `collected_positions` row에 저장된 텍스트를 역산하지 않는다.
-source registry와 collection run을 DB에 저장하고, dashboard는 최신 run을 기준으로 상태를 보여준다.
-
-```text
-career-os live-postings adapter registry
-  -> source registry seed/upsert
-  -> collection snapshot import
-  -> source run diagnostics 저장
-  -> dashboard /dashboard/sources
-  -> 최신 run의 source별 상태 + 0건 원인 표시
-```
-
-역할 분담:
-
-- career-os adapter/config: 실제 수집 방법, official entrypoint, active/open validator.
-- fos-career DB: 표시용 source registry, 수집 run 이력, source별 결과, collected positions.
-- dashboard: 최신 run 진단을 우선 표시하고 과거 run history로 확장 가능한 구조.
-
-추천 run 연결:
-
-- `position_collection_runs`는 수집 실행이다.
-- `position_recommendation_runs`는 추천 실행이다.
-- 추천 run은 사용한 `collectionRunId`를 참조한다.
-- `application_candidates`는 추천 후보 상태를 소유하되, 전체 수집 공고 pool을 대체하지 않는다.
-
-### fos-career position lifecycle validation (planned — plan076)
-
-수집 공고의 현재 상태는 `collected_positions.postingStatus`에 직접 반영한다.
-상태 변경 이유와 이전 상태는 `position_status_events`에 누적한다.
-
-```text
-collection run import
-  -> collected_position_run_items에 등장 이력 저장
-  -> validator dry-run
-  -> --apply일 때 상태 변경 후보를 최대 N개 적용
-  -> collected_positions.postingStatus 갱신
-  -> position_status_events 기록
-  -> dashboard /dashboard/positions 표시
-```
-
-수동 닫기:
-
-- 사용자는 `/dashboard/positions`에서 modal을 열어 사유를 입력한다.
-- fos-career API는 `postingStatus=closed`로 갱신한다.
-- `position_status_events`에 `manual_closed` 이벤트를 남긴다.
-
-validator:
-
-- 기본 실행은 dry-run이다.
-- `--apply`가 있을 때만 `validator_closed` 또는 `validator_reopened`를 적용한다.
-- 최신 수집 실행에서 3회 이상 미등장하고 source 상태가 정상 계열인 공고만 자동 닫기 대상이다.
-- source 장애, parser 변경, 차단, 알 수 없음은 `validation_skipped`로 남긴다.
-- 닫힌 공고가 다시 수집되면 snapshot의 `posting_status`로 자동 복구한다.
-
-표시:
-
-- 사용자가 보는 label은 한국어를 우선한다.
-- 내부 enum이나 raw source 값은 상세 영역에 보조 정보로 둔다.
-
-### Application Frontdoor Queue (legacy — plan038)
-
-plan038은 `/position-recommender` 결과와 `application-flow-agent` ledger 사이에 사용자 선택 전용 queue를 둔다.
-ADR-081 이후 이 queue는 DB import 후 삭제 대상이다.
-새 dashboard 기능은 이 파일을 action source로 삼지 않는다.
-
-```text
-/position-recommender report
-  -> frontdoor queue 생성/갱신
-  -> 후보 순위 + 추천 이유 + 확인할 점 표시
-  -> 사용자 입력: "N번 준비 시작"
-  -> 해당 queue record를 start_approved로 전환
-  -> ledger 중복 확인
-  -> 신규 후보면 ledger record + applicationDir 생성
-  -> 이미 ledger에 있으면 promotedApplicationId만 연결
-  -> 상세 공고 분석 / fit-gap / 공부 우선순위 / 예상 면접 질문으로 진입
-```
-
-frontdoor queue 상태:
-
-- `collected`
-- `shortlisted`
-- `needs_user_start_approval`
-- `start_approved`
-- `promoted_to_ledger`
-- `rejected`
-- `expired`
-
-초기 검증 후보:
-
-- KakaoPay AI track candidate: `카카오페이 서버 개발자 (144295)` — 로컬 리포트에는 별도 AI 전용 공고가 없어 임시 후보로 사용한다.
-- KakaoPay Securities AI/workplatform candidate: `카카오페이증권 워크플랫폼 백엔드 개발자 (시니어)`.
-- TossPlace AI candidate: `TossPlace Applied AI Engineer` — 이미 ledger에 있으므로 중복 생성 없이 연결해야 한다.
-
-범위 경계:
-
-- plan038은 frontdoor queue, 사용자 선택, ledger 승격, 상세 분석/학습 진입까지만 다룬다.
-- Next.js 대시보드와 관리자 로그인은 plan039에서 다룬다.
-- 최종 지원 패키지 작성, 제출 승인, 외부 사이트 입력/전송은 기존 사용자 검토 gate를 유지한다.
-
-### Position Priority + Posting/Fit Analysis Workflow (implemented — plan050)
-
-plan050은 plan048 collected postings를 action stage 중심 priority로 연결한다.
-LLM은 추천 초안을 만들고, 사용자가 확정한 priority는 별도 필드에 보존한다.
-
-```text
-plan048 collected postings
-  -> posting analysis
-     - active/open evidence
-     - 역할/연차/스택/지원 경로
-     - 마감 또는 always-open 상태
-  -> fit analysis
-     - candidate-profile
-     - 기존 resume/profile material
-     - application-agent posting/fit/package/review 파일 재사용
-  -> gap analysis
-     - 부족 근거
-     - 준비할 기술/면접 포인트
-     - study pack / interview asset 연결 후보
-  -> LLM recommendation snapshot
-     - priority_rank
-     - action_stage
-     - priority_reason
-     - next_action
-     - risk_flags
-     - evidence_urls
-  -> user_confirmed_priority
-     - 사용자가 명시 확정한 action stage/rank/reason
-     - LLM refresh와 분리
-  -> dashboard read-only display
-     - priority badges/filters
-     - priority detail page by record type and id
-     - fit summary
-     - gap summary
-     - next action
-     - priority change history
-```
-
-기본 action stage:
-
-- `prepare-now`: 바로 공고 분석, fit/gap 분석, 지원 패키지 초안을 준비한다.
-- `investigate`: active/open은 맞지만 요구사항, 회사 맥락, 지원 경로를 더 확인한다.
-- `monitor`: 지금 준비하지 않고 daily refresh에서 상태를 본다.
-- `low-priority`: 후보로 남기되 현재 행동 목록 아래로 둔다.
-- `hold`: 사용자 판단, 마감, 쿨다운, 정보 부족 등으로 보류한다.
-- `excluded`: 추천/준비 후보에서 제외한다.
-
-재사용 우선순위:
-
-- 새 generator를 만들기 전에 `position-recommender`, application-agent, study/interview asset workflow를 먼저 연결한다.
-- manual active-open URL과 prior recommendation report는 evidence input으로 읽는다.
-- `recommendation_snapshot` refresh는 `user_confirmed_priority`를 덮어쓰지 않는다.
-- dashboard는 career-os 파일을 읽기만 한다.
-  list page는 action stage별 scan을 담당하고, detail page는 record별 posting/fit/gap snapshot, evidence URL, preparation action, priority history를 표시한다.
-  priority write UI는 plan053 pending request bridge 뒤에서만 활성화한다.
-
-### Priority write-action bridge (plan053)
-
-fos-career는 dashboard에서 사용자가 확정한 priority action을 바로 career-os 파일에 쓰지 않는다.
-요청은 먼저 fos-career MySQL pending queue에 저장하고, career-os 적용은 별도 runner가 기존 application-agent 명령으로 처리한다.
-
-요청 생성 흐름:
-
-```text
-사용자가 priority detail에서 stage/rank/reason 확인
-  -> POST /api/priority/actions
-  -> 관리자 세션 검증
-  -> record type/id로 career-os read-only snapshot 재조회
-  -> fos-career priority_action_requests row 생성
-  -> audit_logs에 priority.request_created 기록
-  -> 화면은 pending 상태를 표시
-```
-
-적용 흐름:
-
-```text
-운영자 또는 승인된 runner가 pending request 하나를 선택
-  -> fos-career host-side processor가 request JSON 생성
-  -> career-os apply_priority_request.ts가 요청 당시 snapshot과 현재 career-os record 비교
-  -> stale이면 career-os 파일을 쓰지 않고 status=stale 결과 JSON 출력
-  -> 유효하면 career-os writable checkout에서 confirm-priority helper 호출
-  -> career-os frontdoor queue 또는 ledger에 userConfirmedPriority 반영
-  -> data/applications/_priority-history.jsonl에 append-only event 기록
-  -> fos-career processor가 request status를 applied/stale/rejected/failed로 갱신
-  -> audit_logs에 처리 결과 기록
-```
-
-회복 흐름:
-
-- `priority_action_requests`는 요청과 결과를 보존한다.
-- career-os `_priority-history.jsonl`은 실제 적용 이력을 보존한다.
-- 되돌림은 자동 삭제가 아니라 새 user confirmation event로 처리한다.
-
-### 공고 상태 사용자 액션 (plan059 — planned)
-
-fos-career workbench는 사용자가 공고별로 `보류`, `제외`, `지원 준비`를 선택할 수 있게 한다.
-이 액션은 career-os 파일을 직접 쓰지 않고 pending request bridge를 통해 처리한다.
-
-요청 생성 흐름:
-
-```text
-사용자가 공고/detail에서 보류 | 제외 | 지원 준비 선택
-  -> 선택 사유 입력 optional
-  -> POST /api/applications/state-actions
-  -> 관리자 세션 검증
-  -> record type/id로 career-os read-only snapshot 재조회
-  -> fos-career user_position_action_requests row 생성
-  -> audit_logs에 position_state_action.request_created 기록
-  -> 화면은 pending/running/done/failed/stale 상태 표시
-```
-
-적용 흐름:
-
-```text
-processor가 pending request 선택
-  -> 요청 당시 snapshot과 현재 frontdoor/ledger record 비교
-  -> stale이면 career-os 파일을 쓰지 않고 status=stale
-  -> 보류: action stage hold 반영
-  -> 제외: action stage excluded 반영
-  -> 지원 준비:
-       frontdoor 후보면 ledger 승격
-       action stage prepare-now 반영
-       지원 준비 산출물 생성 요청 시작
-       resume-draft.md -> resume.html -> resume.pdf 흐름까지 연결
-  -> 결과 snapshot과 material readiness를 fos-career DB에 저장
-  -> audit_logs에 처리 결과 기록
+  -> closed 또는 blocked
 ```
 
 안전 경계:
 
-- 사유 입력은 선택이지만 요청 row에는 최종 reason을 항상 저장한다.
-- `지원 준비`는 내부 산출물 생성까지만 수행한다.
-- 외부 제출, 로그인, 업로드, 공개 발행은 수행하지 않는다.
-- dry-run은 stale guard와 예정 command만 검증하고 어느 쪽 파일/DB도 갱신하지 않는다.
-- stale 또는 failed row는 같은 record에 대한 새 request를 만들기 전에 사람이 확인한다.
-- processor는 host-side wrapper로 실행한다.
-  web container는 career-os를 read-only로 읽고, 원장 갱신은 host-side writable checkout에서만 수행한다.
-  host-side wrapper는 Docker network용 `bifos-db` host를 host-published MySQL port로 보정한다.
+- `ready_for_user_review` 이후에는 사람이 제출 여부를 결정한다.
+- 실제 채용 사이트 입력과 제출은 자동화하지 않는다.
+- 근거 없는 정량 성과, private 정보 노출, 직무 요구사항 오독은 review에서 멈춘다.
+  판정은 revise 또는 blocked로 남긴다.
 
-### CJ푸드빌 면접 skill request gateway (plan060 — planned)
+주요 산출물:
 
-fos-career dashboard는 CJ푸드빌 2026-06-15 면접 준비 hub를 제공한다.
-hub는 기존 career-os 자산을 읽기 전용으로 보여주고, 부족한 준비 자산은 request queue로 요청한다.
+- `data/applications/ledger.jsonl`
+- `data/applications/<application-id>/posting.md`
+- `data/applications/<application-id>/fit-analysis.md`
+- `data/applications/<application-id>/application-package.md`
+- `data/applications/<application-id>/resume-draft.md`
+- `data/applications/<application-id>/cover-letter.md`
+- `data/applications/<application-id>/submission-checklist.md`
+- `data/applications/<application-id>/review.md`
 
-hub projection 흐름:
+## 면접 준비
 
-```text
-dashboard request
-  -> 관리자 세션 검증
-  -> career-os read-only adapter
-     - config/mvp-target.json에서 현재 면접 target 확인
-     - private/<company>/<position>/interview/prep.md 존재 확인
-     - data/reports/daily/<date>/interview-prep-<stage>/report.md 존재 확인
-     - sources/fos-study/의 관련 study/interview asset 경로 존재 확인
-  -> CJ푸드빌 2026-06-15 hub view model 생성
-     - 상태
-     - 파일 경로
-     - 짧은 표시용 요약
-     - 다음 요청 후보
-```
-
-요청 생성 흐름:
+면접 준비 흐름은 역할 단위 진단, 단계별 준비, 매일 답변 드릴로 나뉜다.
 
 ```text
-사용자가 hub에서 면접 분석 | 면접 asset | study pack 생성 요청 선택
-  -> POST /api/interview/skill-requests
-  -> 관리자 세션 검증
-  -> requestType과 skillName allowlist 검증
-  -> 공개 가능 study topic 여부와 private 경계 확인
-  -> fos-career interview_skill_requests row 생성
-  -> audit_logs에 interview_skill_request.created 기록
-  -> 화면은 pending 상태 표시
+Use skill: /job-fit-analyzer [역할]
+  -> 타깃 해석(인자 또는 mvp-target fallback) + 후보자 프로필·baseline 읽기
+  -> 같은 역할 지난 진단 있으면 changeSince 반영
+  -> JobFitRun JSON 정본 생성(verdict·careerPath·interviewStrategy 1급, reinforcement 부차)
+  -> data/reports/job-fit-YYYY-MM-DD-<slug>.json 작성 → render_job_fit.ts로 md 파생
+  -> nextActions 라우팅(최우선 갭 → study-pack)  [ADR-096]
 ```
-
-processor 흐름:
 
 ```text
-processor가 pending request 선택
-  -> 요청 당시 target snapshot과 현재 config/mvp-target.json 비교
-  -> stale이면 skill을 실행하지 않고 status=stale
-  -> allowlist skill 요청 생성
-     - interview-stage-prep <stage>
-     - tech-interview-drill
-     - behavioral-interview-drill
-     - interview-asset-writer <topic>
-     - study-pack-writer <public-safe-topic>
-  -> career-os writable checkout에서 agent skill 실행
-  -> study-pack-writer 요청이면 sources/fos-study에 [초안] 제목으로 작성
-     git pull --rebase --autostash -> commit -> push까지 완료
-  -> 생성 또는 갱신된 파일 경로 확인
-  -> resultSnapshot에 status, paths, 짧은 summary, errorSummary만 저장
-  -> audit_logs에 처리 결과 기록
+Use skill: /interview-stage-prep [first-round|final-round|offer]
+  -> 현재 면접 단계와 후보자 프로필 읽기
+  -> 단계별 예상 질문, 리스크, 역질문, 준비 체크리스트 작성
+  -> data/reports/stage-prep-YYYY-MM-DD.md 작성
 ```
-
-답변 기록과 피드백 흐름:
 
 ```text
-질문 생성/선택
-  -> 기본 5턴 세션 시작
-  -> dashboard가 prep.md의 예상 질문을 줄바꿈 가능한 버튼 목록으로 표시
-  -> 사용자가 질문을 선택하면 선택된 질문 전문을 readonly textarea에 표시
-  -> hidden questionText 값으로 선택 질문을 제출
-  -> dashboard textarea에 답변 입력
-  -> POST /api/interview/answers
-  -> 답변 전문을 private answer record DB에 저장
-  -> answer_feedback request 생성
-  -> processor가 answer record와 career context bundle을 읽음
-     - private/<company>/<position>/interview/prep.md
-     - 현재 질문과 사용자 답변
-     - 최근 3-5개 답변/피드백 요약
-     - 이미 정리된 주제와 낮은 우선순위 주제
-     - 포지션/회사 맥락
-  -> 답변이 너무 짧거나 의미 있는 기술·경험 신호가 없으면 insufficient feedback으로 분기
-  -> guard 통과 답변은 LLM evaluator 호출
-     - strict JSON output
-     - timeout/config/parse 실패 시 deterministic fallback
-  -> 상세 private feedback 생성 후 DB에 저장
-     - 강점
-     - 리스크
-     - 권장 수정 방향
-     - 기술 정확성 / 경험 연결 / 답변 구조 / CJ푸드빌 맥락 반영 점수
-     - 꼬리질문 생성 여부와 꼬리질문
-     - 보완 주제
-     - study-pack 후보
-  -> answer record feedback 필드 갱신
-  -> dashboard가 답변 전문과 상세 피드백 표시
-  -> 사용자가 꼬리질문 선택
-  -> 답변 입력
-  -> 필요 시 같은 loop 반복
-  -> 5턴 이후 사용자가 원하면 자유형으로 연장
-  -> 최종 요약 / 보완 주제 / study-pack 후보 생성
+Use skill: /tech-interview-drill
+Use skill: /behavioral-interview-drill
+  -> 질문 풀과 약점 기록 읽기
+  -> 사용자 답변 1개를 채점
+  -> 드릴 로그와 약점 상태 갱신
+  -> 필요한 경우 study-pack-writer 위임 후보 생성
 ```
 
-study-pack 자연어 요청 흐름:
+면접 준비의 사람용 정본은 포지션별 private home에 둔다.
+공개 가능한 기술 보강 주제만 `study-pack-writer`로 넘어간다.
+
+주요 산출물:
+
+- `data/reports/job-fit-YYYY-MM-DD-<slug>.{json,md}` (JSON 정본 + md 파생, ADR-096)
+- `data/reports/stage-prep-YYYY-MM-DD.md`
+- `data/runtime/drill-log-YYYY-MM-DD.jsonl`
+- `config/study-progress.json`
+- `private/<company>/<position>/interview/prep.md`
+
+## 질문 은행
+
+질문 bank 흐름은 공개 가능한 일반 backend와 CS 질문을 수집하고 정규화한다.
+회사별 답변, 지원 전략, 비공개 면접 맥락은 넣지 않는다.
 
 ```text
-사용자가 고정 study-pack 후보 선택
-  -> study_pack request 생성
-
-또는
-
-사용자가 "이 주제 모르겠어" / "이걸로 스터디팩 만들어줘"처럼 자연어 입력
-  -> processor가 공개 가능한 순수 기술 주제로 정규화
-  -> private 지원 전략이나 회사별 답변 전문이 섞였는지 확인
-  -> public-safe면 study_pack request 생성
-  -> study-pack-writer가 [초안] fos-study 문서 생성
-  -> commit/push
+Use skill: /question-bank-collector <topic>
+  -> 공개 가능한 source와 기존 질문 풀 읽기
+  -> 질문 후보 생성
+  -> public-safe 여부와 중복 여부 확인
+  -> category, difficulty, intent, answer signals 정규화
+  -> public/question-bank/ 갱신
+  -> 필요한 경우 private 면접 prep에 선별 반영 후보 제공
 ```
 
-면접 종료 후 archive 흐름:
+fos-career 면접 hub에서 질문 bank 보강을 요청할 때도 직접 실행하지 않는다.
+request queue에 넣고 host-side processor가 allowlist를 확인한 뒤 career-os skill을 실행한다.
+
+주요 산출물:
+
+- `public/question-bank/`
+- `data/question-bank/tech-questions.jsonl`
+- `data/question-bank/behavioral-questions.jsonl`
+
+## 이력서 패키지
+
+resume package 흐름은 검토된 이력서 초안을 첨부 가능한 파일로 변환한다.
+외부 제출이나 업로드는 포함하지 않는다.
 
 ```text
-2026-06-15 CJ푸드빌 면접 종료 확인
-  -> interview session modeStatus를 read_only 또는 archived로 전환
-  -> 새 질문 생성 / 새 답변 입력 / 새 feedback request 차단
-  -> 기존 답변 전문 / 상세 피드백 / 최종 요약 / 보완 주제 / study-pack 후보 조회만 허용
+application review 통과
+  -> resume-draft.md 확인
+  -> design.md 또는 기본 이력서 디자인 계약 적용
+  -> resume.html 생성
+  -> resume.pdf 생성
+  -> 사용자 검토 대기
 ```
 
-안전 경계:
+주요 산출물:
 
-- dashboard는 특정 에이전트 CLI를 직접 실행하지 않는다.
-- request result와 audit log에는 private 문서 본문, 면접 답변 전문, 상세 피드백, command stdout 전체를 저장하지 않는다.
-- 사용자가 입력한 답변 전문과 상세 피드백은 private DB record에 저장해 dashboard에서 바로 볼 수 있게 한다.
-  fos-study, Discord, 외부 알림으로 복사하지 않는다.
-- study pack 요청은 공개 가능한 기술 주제로만 제한한다.
-- study pack 요청은 고정 추천과 자연어 요청을 모두 지원한다.
-  인터뷰 중 모르는 주제가 생기면 해당 turn에서 직접 요청할 수 있다.
-- study pack 요청은 기존 `study-pack-writer` 정책대로 `[초안]` 제목의 fos-study 문서를 만들고 commit/push까지 수행한다.
-- 외부 제출, 공개 발행, 로그인, 업로드, candidate-profile 자동 수정은 차단한다.
-- 구현 phase는 이 docs/ADR 계약을 고치지 않는다.
-  문서 수정이 필요할 만큼 계약이 모호하면 `PHASE_BLOCKED`로 보고한다.
+- `data/applications/<application-id>/resume-draft.md`
+- `data/applications/<application-id>/resume.html`
+- `data/applications/<application-id>/resume.pdf`
 
-### fos-career application workbench (plan054)
+## fos-career 연결
 
-application workbench는 읽기 중심 UI 흐름이다.
-수집 공고 목록만 보여주는 것이 아니라, frontdoor queue와 ledger를 합쳐 "지원 준비를 어디까지 진행했는가"를 보여준다.
-이 문단은 plan054 당시 read-only projection 기준이다.
-ADR-081 이후 새 dashboard 구현은 DB의 `application_candidate_states`를 현재 상태 정본으로 사용한다.
+fos-career는 career-os 파일과 상태를 웹에서 보기 위한 별도 서비스다.
+대시보드는 기본적으로 career-os를 읽기 전용으로 다룬다.
+쓰기 작업은 request queue와 host-side processor를 통해 수행한다.
 
-기본 흐름:
-
-```text
-career-os frontdoor queue + ledger + priority history + application files
-  -> fos-career adapter projection
-  -> application workbench list/detail
-  -> user reviews readiness / next action / blocker
-  -> write action needed?
-     -> no: read-only inspection
-     -> yes: existing safe bridge such as priority pending request
-```
-
-MVP에서 workbench는 career-os 파일을 직접 수정하지 않는다.
-산출물 생성, 지원 패키지 수정, 외부 제출은 기존 agent/task 흐름이나 별도 승인 게이트 뒤에서만 수행한다.
-
-### Application Flow Agent Runtime (plan031 — phase-01 상태 모델 확정)
-
-plan031은 plan029의 skill 산출물을 기반으로, 상태 기반 자율 실행 runtime을 추가한다. 상태 전이 허용 여부와 next action 선택은 TypeScript policy engine이 결정한다. LLM은 분석, 작성, 추천 근거 생성만 담당한다.
-
-핵심 루프:
-
-```text
-ledger/runtime 읽기
-  -> actionable candidate 판정 (fit threshold + freshness + cooldown)
-  -> policy decision 생성 (TypeScript policy engine — LLM 아님)
-  -> 허용된 action 실행 또는 사용자 gate에서 정지
-  -> --notify-discord 명시 시 단계별 진행 알림
-  -> --execute-skills 명시 시 agent-only private agent skill 실행
-  -> 필수 skill artifact 검증 (없으면 command suggestion만 남기고 상태 전이 금지)
-  -> validator로 상태 전이 검증
-  -> ledger/decision log 갱신
-  -> digest/approval 필요 항목 보고
-```
-
-명령 인터페이스:
-
-```bash
-bun scripts/application-agent/run.ts run-once
-bun scripts/application-agent/run.ts run-daily
-bun scripts/application-agent/run.ts dry-run
-bun scripts/application-agent/run.ts validate
-bun scripts/application-agent/run.ts resume <application-id>
-bun scripts/application-agent/run.ts ingest-position-report <report-path>
-```
-
-`--execute-skills`를 붙이면 runner가 execution gate에 필요한 private agent-only skill을 먼저 실행한다. 현재 자동 실행 대상은 `application-package-writer`와 `application-reviewer`뿐이다. 공개 발행, 프로필 반영, 실제 제출, 로그인/브라우저 입력 계열은 여전히 사용자 승인 또는 차단 대상이다.
-
-`--notify-discord`를 함께 붙이면 시작, skill 시작/완료/실패, ledger 갱신, execution gate 대기 상태를 Discord에 짧게 알린다. 알림은 회사/역할/단계/skill 이름만 담고 지원 패키지 본문이나 private strategy note는 보내지 않는다.
-
-#### agentPhase 상태 모델
-
-기존 `status` enum(큰 흐름)은 유지하고, 세부 agent 실행 상태를 `agentPhase` optional 필드로 분리한다.
-
-| agentPhase | 의미 |
-|---|---|
-| `scouting` | 후보 탐색 중 |
-| `needs_more_search` | actionable candidate 없음 + 검색량 부족 → 범위 확장 필요 |
-| `no_good_match` | 충분히 검색했지만 actionable candidate 없음 |
-| `scheduled_retry` | 지금은 할 일 없고 다음 실행 예약됨 (`nextRunAt` 설정) |
-| `actionable_candidate` | active + fit threshold 통과 후보 판정됨 |
-| `generating_package` | application-package-writer 실행 대상 |
-| `reviewing_package` | application-reviewer 실행 대상 |
-| `collecting_evidence` | 근거 부족 보강 대상 |
-| `revising_package` | agent 수정 루프 대상 (revisionCount < maxRevisionCount) |
-| `waiting_user_approval` | 사용자 승인 전 정지 |
-| `study_loop` | submitted/interview_scheduled → private study/interview action 생성 대상 |
-| `submission_checklist` | 제출 링크/체크리스트 생성 대상 (Level 0) |
-
-#### actionable candidate 기준
-
-- 공고가 active 상태다.
-- 공고 URL 또는 source id가 중복이 아니다.
-- 회사/그룹 쿨다운 플래그가 없다.
-- 공고 만료/마감 신호가 없다.
-- role-fit score가 threshold 이상이다 (기본값 70점 이상).
-- 최근 7일 반복 후보라면 반복 유지 사유가 있다.
-- position-recommender freshness guard를 통과한 입력에서 왔다 (plan030 prerequisite).
-
-fit score 분기:
-
-- 85점 이상: high priority actionable candidate
-- 70-84점: normal actionable candidate
-- 70점 미만: study_loop 후보 또는 hold
-
-#### policy matrix
-
-| 현재 status | 조건 | next action | next agentPhase |
-|---|---|---|---|
-| `scouting` | actionable candidate 0 + 검색량 부족 | `expand_search` | `needs_more_search` |
-| `scouting` | actionable candidate 0 + 검색량 충분 | `schedule_retry` | `scheduled_retry` |
-| `discovered` | active + fit threshold 통과 | `run_application_package_writer` | `generating_package` |
-| `discovered` | closed/expired | `close_candidate` | status → `closed` |
-| `discovered` | cooldown/duplicate | `block_candidate` | status → `blocked` |
-| `preparing_application` | package exists | `run_application_reviewer` | `reviewing_package` |
-| `needs_revision` | revisionCount < max + agent-fixable | `revise_application_package` | `revising_package` |
-| `needs_revision` | evidence 부족 | `collect_evidence_or_request_user_input` | `collecting_evidence` 또는 `waiting_user_approval` |
-| `needs_revision` | revisionCount >= maxRevisionCount | `block_or_request_user_input` | status → `blocked` |
-| `ready_for_user_review` | — | `notify_user_approval_needed` | `waiting_user_approval` |
-| `approved` | — | `create_submission_checklist` | `submission_checklist` |
-| `submitted` | — | `create_study_interview_actions` | `study_loop` |
-| `interview_scheduled` | — | `prioritize_interview_prep` | `study_loop` |
-
-#### 우선순위 큐 기본값
-
-- 하루 신규 deep analysis 최대 2개.
-- `ready_for_user_review`는 최대 3개까지만 쌓는다.
-- 진행 중인 revise/review가 신규 탐색보다 우선한다.
-- `interview_scheduled`가 있으면 study_loop 우선순위를 올린다.
-- `blocked`는 자동 재시도하지 않고 `requiredUserAction` 또는 `nextRunAt`이 있는 경우만 재평가한다.
-
-안전 경계:
-
-- 제출 자동화는 Level 0만 허용한다. 즉 제출 링크와 체크리스트 생성까지만 한다.
-- 브라우저 입력 자동화, 실제 제출, 외부 전송, 공개 fos-study 발행, 원본 candidate-profile 수정은 사용자 승인 없이 금지한다.
-- plan030의 position freshness guard를 후보 ingest prerequisite로 사용해 stale 추천을 차단한다. plan030은 구현 대상이 아니라 prerequisite로만 참조한다.
-
-### Application Agent Evaluation Loop (runtime guardrail)
-
-지원 패키지와 이력서 문장의 안전성을 고도화하기 위한 작은 평가 루프다. 목적은 실제 제출 자동화가 아니라, 에이전트가 생성한 문장이 과장·근거 없음·개인정보 노출·잘못된 JD 해석을 포함하는지 회귀 테스트하는 것이다.
-
-현재 단계는 LLM 평가 모델을 붙이기 전의 결정적 평가기다. 사람이 정한 샘플과 기대 판정을 기준으로 규칙 기반 판정이 일치하는지 확인한다.
-
-```text
-Read: data/runtime/application-agent/eval-cases/resume-package-eval-cases.md
-  -> Parse: Case ID / Type / Candidate output / Expected verdict
-  -> Evaluate: scripts/application-agent/evaluate_cases.ts
-  -> Write: data/runtime/application-agent/eval-reports/latest-report.md
-            data/runtime/application-agent/eval-reports/latest-report.json
-```
-
-실행:
-
-```bash
-bun scripts/application-agent/evaluate_cases.ts
-```
-
-판정 값:
-
-- `pass`: 그대로 사용 가능
-- `revise`: 사람 또는 에이전트가 문장 보강 필요
-- `blocked`: 제출/공개/이력서 반영 전에 반드시 차단
-
-현재 평가 샘플은 `data/runtime/` 아래에 있으므로 git 추적 대상이 아니다. 장기적으로 공유해야 할 안정 샘플이 생기면 별도 논의 후 `tests/` 또는 `fixtures/` 성격의 추적 파일로 승격한다.
-
-### Application Package Evaluation Loop (runtime guardrail)
-
-실제 지원 패키지와 리뷰 문서를 입력으로 받아 제출 전 위험 신호를 자동 점검한다. 사람 리뷰를 대체하지 않고, 명확한 과장·자동 제출·내부정보·근거 부족 신호를 먼저 리포트로 남기는 1차 안전망이다.
-
-```text
-Read: data/applications/<company>/<role>/application-package.md
-Read: data/applications/<company>/<role>/review.md
-  -> Evaluate: scripts/application-agent/evaluate_package.ts
-  -> Write: data/runtime/application-agent/package-eval/<company-role>/latest-report.md
-            data/runtime/application-agent/package-eval/<company-role>/latest-report.json
-```
-
-기본 호출:
-
-```bash
-bun scripts/application-agent/evaluate_package.ts \
-  --application-dir data/applications/tossplace/applied-ai-engineer
-```
-
-판정 값은 `pass / revise / blocked` 세 단계다. `blocked`는 자동 제출, 검증 전 프레임워크 경험 과장, 근거 없는 강한 정량 성과처럼 제출 전 반드시 멈춰야 하는 항목이다. `revise`는 사내 식별자 일반화, `needs_evidence` 경계 보강처럼 사용자 검토와 문장 수정이 필요한 항목이다.
-
-### `study-topic-recommender` (모닝 추천 — agent skill, ADR-026 + ADR-033 + ADR-070)
-
-agent skill 패턴: `/study-topic-recommender [context]` → SKILL.md 로드 → 현재 에이전트가 도구로 직접 처리.
-
-on-demand 실행에서는 후보 제안 JSON, runtime report, inventory markdown을 쓰고 `Bash`로 Bun 스크립트를 실행한다.
-무인 runner가 필요하면 compatibility backend가 권한 mode를 선택한다.
-이 권한 mode는 backend 구현 세부사항이며 workflow 계약이 아니다.
-
-daily cron은 비용과 채널 가독성을 위해 agent skill을 호출하지 않는다.
-cron은 `send_daily_recommendation.ts`만 실행한다.
-이 script는 내부에서 `refresh_topic_inventory.ts`를 실행한 뒤 `topic-inventory.json`을 읽고,
-Discord에는 `recommendations[0:3]`의 제목, 짧은 이유, 추천한 이유 묶음, 일부러 피한 축만 보낸다.
-또한 같은 메시지에 `1번 초안 생성`, `2번 초안 생성`, `3번 초안 생성`, `오늘은 넘김` 버튼 payload를 붙인다.
-후보 refresh나 긴 중복 검토가 필요하면 on-demand agent skill을 별도로 실행한다.
-
-내부 흐름 (ADR-070 이후):
-
-```
-호출: /study-topic-recommender
-  ↓
-1. Promote detect — history 기반 study-pack-candidates → study-pack 승격 후보 안내 (자동 수정 X)
-  ↓
-2. Candidate refresh decision
-   ├─ 조건: 새 후보 5개 이하 / 최근 7회 domain 반복 / 사용자 새 관심사 / 새 지원·면접 맥락
-   ├─ 필요 시 LLM 후보 refresh turn 실행
-   ├─ Write: data/runtime/study-topic-candidate-refresh.{json,md}
-   └─ Apply: 검증 통과 new 후보만 config/study-pack-candidates.json에 자동 반영
-  ↓
-3. Bash: bun career-os/scripts/study-topic-recommender/refresh_topic_inventory.ts
-   ├─ Read: config (study-pack-topics / study-pack-candidates / sources / live-coding-*)
-   ├─ Scan: sources/fos-study/**/*.md (exclude .git/.claude) — git pull 없음, 로컬 clone 기준
-   ├─ Deterministic dedupe (provider-free):
-   │    a. exact path match → excluded.exactPathMatches
-   │    b. normalized path match (lower-case + slash normalize) → excluded.normalizedPathMatches
-   │    c. slug/token overlap → excluded.possibleDuplicates (LLM review 후보)
-   ├─ 추천 점수 계산 + mix target + feed discovery (ADR-010/012/013)
-   └─ Write: data/runtime/topic-inventory.json (excluded.* + claudeDuplicateReview.status=skipped 초기값)
-  ↓
-4. LLM duplicate review (agent skill 내부)
-   ├─ Read: inventory.excluded.possibleDuplicates
-   ├─ 각 후보를 의미 판정 → decision (new | update-existing | skip | needs-user-confirmation)
-   ├─ 성공 시: inventory.claudeDuplicateReview.{status=ok, reviewedAt, items[]} 갱신
-   └─ 실패 시: status=failed + warning, 추천 자체는 계속 (deterministic 결과만 반영)
-  ↓
-5. Write: data/runtime/morning-topic-recommendation.md
-   ├─ 백엔드/기술블로그/AI/Geek 4축 + 오늘의 3선 (기존 ADR-012 구조)
-   ├─ "기존 문서 보강 후보" 섹션 (최대 5개) — update-existing + needs-user-confirmation
-   └─ LLM review 실패 시 상단 warning 라인 추가
-  ↓
-6. Append: data/runtime/topic-inventory-history.jsonl
-  ↓
-7. (선택) live-coding seed 선택 — 자연어에 "live-coding" 포함 시
-  ↓
-Discord 알림 [완료]
-```
-
-daily lean cron 흐름 (ADR-072 + ADR-073):
-
-```
-OpenClaw cron career-os:daily-study-topic-recommendation
-  ↓
-bun --env-file=.env scripts/study-topic-recommender/send_daily_recommendation.ts
-  ↓
-1. refresh_topic_inventory.ts 실행
-2. data/runtime/topic-inventory.json 읽기
-3. data/runtime/study-topic-actions/YYYY-MM-DD.json + latest.json 쓰기
-4. _shared/lib/notify_discord.ts --presentation 으로 Discord 버튼 포함 발송
-```
-
-버튼 callback 의미:
-
-- `career.study-pack.create:<YYYY-MM-DD>:<index>:<topic-key>` — 해당 topic-key로 study-pack **초안 생성 요청**. 최종화나 `[초안]` 제거가 아니다.
-- `career.study-pack.skip:<YYYY-MM-DD>` — 그날 추천을 넘긴 기록. topic 영구 제외가 아니다.
-- OpenClaw Discord component TTL은 24시간으로 설정한다.
-
-산출물:
-
-- `data/runtime/topic-inventory.json` — ADR-033 스냅샷 스키마 (data-schema.md 참조)
-- `data/runtime/study-topic-candidate-refresh.json` — ADR-070 후보 refresh 실행 기록
-- `data/runtime/study-topic-candidate-refresh.md` — 후보 refresh 사람이 읽는 요약
-- `data/runtime/morning-topic-recommendation.md` — 사람이 읽는 마크다운
-- `data/runtime/study-topic-actions/YYYY-MM-DD.json` — daily 추천 버튼 callback 매핑
-- `data/runtime/study-topic-actions/latest.json` — 가장 최근 daily 추천 버튼 callback 매핑
-- `data/runtime/topic-inventory-history.jsonl` — 매일 한 줄 append
-
-상세 동작: `career-os/.claude/skills/study-topic-recommender/SKILL.md` Workflow 섹션 참조.
-
-- 외부 subprocess (dispatcher → run_topic_recommendation.sh → refresh_topic_inventory.py)는 plan016 phase-03에서 폐기됨.
-- `data/generated-artifacts.json` 의존은 ADR-033 / plan025에서 제거 — fos-study 직접 스캔으로 단일화.
-
-### `/study-pack-writer <topic>` (native skill — ai-nodes ADR-002, plan013 + ADR-033)
-
-agent skill 패턴: `/study-pack-writer <topic>` → SKILL.md 로드 → 현재 에이전트가 도구로 직접 처리.
-
-내부 흐름 (ADR-033 이후 duplicate guard 추가):
-
-```
-호출: /study-pack-writer <topic-key-or-자연어>
-  ↓
-1. Topic 해석 → topic-key / outputPath 확정
-  ↓
-2. Context 로드 (Read): study-pack-topics.json + candidate-profile.md + mvp-target.json + topic-profiles.json + references
-  ↓
-3. Duplicate guard (ADR-033 — recommender와 같은 decision schema)
-   ├─ Scan: sources/fos-study/**/*.md → exact path / normalized path / slug overlap
-   ├─ (선택) LLM 의미 판정 → decision (new | update-existing | skip | needs-user-confirmation)
-   └─ 분기:
-        - new                       → 새 markdown 작성 진행
-        - update-existing           → 새 파일 생성 금지 + 기존 matchedPath update 모드
-        - skip                      → 작성 중단 + 기존 문서 경로/사유 stderr 보고 + exit 1
-        - needs-user-confirmation   → 사용자 확인 없이 진행 금지 (non-interactive면 stderr + exit 1)
-  ↓
-4. 마크다운 작성 (Write) — sources/fos-study/<outputPath>.md
-  ↓
-5. Self-check (재작성 ≤3회) — 첫 줄 / 줄 수 / 펜스 언어 / 금지 prefix / writing-rules
-  ↓
-6. Publish (Bash) — git pull --rebase --autostash → add → commit → push
-  ↓
-7. Discord 알림
-```
-
-writer는 recommender에서 선택한 보강 후보뿐 아니라 *사용자가 직접 호출한 주제*에도 같은 게이트를 적용한다 — recommender와 writer가 공유하는 단일 진실원.
-
-상세 동작: `career-os/.claude/skills/study-pack-writer/SKILL.md` Workflow 섹션 참조.
-
-- 외부 subprocess (dispatcher → run_study_pack.sh → claude --print → extractor → publish)는 plan013 phase-03에서 폐기됨.
-- 옛 SKILL.md §3 overlap 점검은 자기 판단 의존이라 high/medium 중복을 지키지 못한 경우 발생 — ADR-033으로 duplicate decision schema 게이트로 격상.
-
-### `/interview-asset-writer <topic>` (native skill — plan015, Q&A + master playbook 두 형식)
-
-agent skill 패턴: `/interview-asset-writer <topic>` → SKILL.md 로드 → 현재 에이전트가 도구로 직접 처리.
-
-두 산출물 형식 자동 분기 (topic-key 또는 자연어 키워드로 판단):
-- Q&A 질문 은행 (옛 question-bank)
-- 마스터 플레이북 (옛 master)
-
-상세 동작: `career-os/.claude/skills/interview-asset-writer/SKILL.md` Workflow 섹션 참조.
-
-### 면접 단계 준비 흐름
-
-면접 단계별 준비는 `/interview-stage-prep [first-round|final-round|offer]`가 맡는다.
-`interview-prep-analyzer first-round|final-round|offer-chat` 흐름은 plan086 이후 활성 진입점이 아니다.
-
-### live-coding seed 선택 (study-topic-recommender 흡수 — plan016)
-
-`/study-topic-recommender live-coding 1개 골라줘` — study-topic-recommender가 live-coding seed 선택을 내부적으로 처리.
-
-1. `data/runtime/topic-inventory.json`의 `pools.remainingLiveCodingSeeds` 확인
-2. 가장 우선도 높은 seed 1개 선택 → 제목 + slug + difficulty 출력
-3. 사용자 승인 시 `/study-pack-writer <seed-slug>` 위임
-
-`config/live-coding-seed-pool.json` + `live-coding-seed-candidates.json`은 유지 (SKILL.md가 Read).
-
-### fos-career 웹 대시보드 읽기 흐름 (plan039 — implemented base)
-
-fos-career(`~/services/fos-career`)는 career-os 파일을 읽기 전용으로만 읽는다.
-career-os 파일을 수정하는 경로가 없다.
-이 문단은 plan039 base의 legacy 읽기 흐름이다.
-ADR-081 이후 추천 후보 상태와 outbox job은 fos-career DB가 정본이다.
-
-브라우저 요청 흐름:
+읽기 흐름:
 
 ```text
 브라우저 요청
-  -> Next.js App Router (~/services/fos-career)
-  -> 관리자 세션 검증 (MySQL sessions 테이블)
-  -> career-os 파일 어댑터 (CAREER_OS_ROOT=/data/career-os 읽기 전용 마운트)
-     - data/runtime/application-agent/frontdoor-queue.jsonl 읽기
-     - data/applications/ledger.jsonl 읽기
-     - data/runtime/position-recommendation.md 읽기
-     - config/candidate-profile.md 읽기
-  -> 서버 컴포넌트에서 렌더링
-  -> 읽기 전용 뷰 반환
+  -> fos-career route
+  -> 관리자 세션 검증
+  -> career-os read-only projection 또는 fos-career DB 조회
+  -> 화면 표시용 view model 생성
+  -> dashboard 렌더링
 ```
 
-범용 LLM 채팅 흐름은 ADR-064로 제거한다.
-fos-career에서 LLM이 필요한 기능은 목적별 request/evaluator 흐름으로만 노출한다.
+쓰기 요청 흐름:
 
 ```text
-사용자가 목적별 버튼 또는 면접 답변 제출
-  -> POST /api/<purpose-specific route>
-  -> 세션 검증
-  -> MySQL pending request 또는 interview answer record 생성
-  -> processor가 allowlist/stale guard 확인
-  -> career-os 정본 파일과 최소 context bundle 읽기
-     - interview/prep.md
-     - 현재 질문과 사용자 답변
-     - 최근 답변/피드백 요약
-     - 이미 정리된 주제와 낮은 우선순위 주제
-  -> 목적별 evaluator 또는 agent skill 실행
-  -> 결과 요약과 상태를 MySQL에 저장
-  -> dashboard에서 결과 확인
+사용자 버튼 또는 form 제출
+  -> fos-career API
+  -> 관리자 세션 검증
+  -> 현재 snapshot 저장
+  -> pending request 또는 outbox job 생성
+  -> host-side processor가 lock 획득
+  -> stale guard 확인
+  -> 허용된 career-os runner 또는 skill 실행
+  -> 결과 snapshot 저장
+  -> dashboard에서 pending, running, done, failed, stale 표시
 ```
+
+적용 대상:
+
+- priority 변경 요청
+- 공고 상태 변경 요청
+- 지원 준비 시작 요청
+- 면접 skill request
+- 질문 bank 보강 요청
 
 경계:
 
-- fos-career는 migration 전 legacy career-os 파일에 직접 쓰거나 수정하지 않는다.
-- priority write action도 먼저 fos-career MySQL pending queue에 저장한다.
-  career-os 파일 반영은 plan053의 별도 적용 runner만 수행한다.
-- ADR-081 이후 새 long-running 작업은 `career_outbox_jobs` outbox로 관리한다.
-- 범용 채팅 UI는 없다.
-- LLM evaluator가 외부 사이트 접근, fos-study 발행, candidate-profile 수정을 수행하지 않는다.
-- 쓰기 액션(prepare-start/hold/reject 버튼)은 pending queue와 사용자 확인 절차 없이 실행하지 않는다.
+- web container는 career-os 파일을 직접 수정하지 않는다.
+- private 본문, 면접 답변 전문, command stdout 전체는 request result에 저장하지 않는다.
+- long-running 작업은 outbox job으로 분리한다.
+- 외부 제출, 공개 발행, candidate-profile 자동 수정은 allowlist 밖이다.
 
-### Question Bank Collector Flow
+## 실행 가드
 
-공개 가능 일반 backend/CS·인성 질문 bank는 `public/question-bank/`를 정본으로 둔다(ADR-097).
-behavioral 카테고리도 보강 대상에 포함한다.
+runtime guard는 자동화가 잘못된 상태 전이를 만들지 않게 막는다.
 
-```text
-사용자 자연어 요청
-  예: "일반 backend 질문 모아줘", "CS 질문 수집", "질문 뱅크 보강"
-  -> question-bank-collector skill 선택
-  -> source seed 수집
-     - fos-study 기존 문서
-     - 공개 가능한 backend/CS topic seed
-     - candidate/project 경험에서 public-safe로 추상화 가능한 질문 축
-  -> raw 후보 생성
-  -> normalizer
-     - 단순 암기형 질문을 backend 실무형 질문으로 변환
-     - 중복 제거
-     - publicSafe/private leak 점검
-     - topic/category/difficulty/intent/answerSignals/source 기록 (topic = weak_spots 키, ADR-097)
-  -> public/question-bank/<category>/... 저장 (기술 카테고리 또는 behavioral)
-  -> 포지션 맞춤 선별 시 private/<company>/<position>/interview/prep.md에 일부 반영
-  -> fos-study 발행은 별도 검수 후 sources/fos-study로 재작성
-```
+주요 guard:
 
-경계:
+- freshness guard: 오래된 포지션 추천이나 stale snapshot으로 지원 준비를 시작하지 않는다.
+- artifact guard: 필수 산출물이 없으면 다음 상태로 넘기지 않는다.
+- user gate: 제출, 공개, 외부 전송, 민감 정보 수정은 사용자 승인 전 멈춘다.
+- cooldown guard: 회사나 그룹 단위 쿨다운을 무시하지 않는다.
+- privacy guard: private 지원 전략과 공개 산출물 경계를 확인한다.
 
-- `public/question-bank/`에는 private 답변, 지원 전략, 회사별 비공개 맥락을 넣지 않는다.
-- 유료 강의/문제집/면접 후기 원문은 복사하지 않는다.
-- 수집된 질문은 바로 면접 준비 정본이 아니며, normalizer와 선별 단계를 거친다.
-
-### Question Bank Dashboard Request Flow
-
-fos-career 면접 hub는 질문 bank 보강을 직접 실행하지 않고 request queue에 넣는다.
+평가 흐름:
 
 ```text
-사용자
-  -> 면접 hub "질문 bank 보강" 버튼
-  -> interview_skill_requests
-     request_type = question_bank_refresh
-     requested_skill = question-bank-collector
-  -> host-side processor
-     Use skill: /question-bank-collector <topic>
-  -> public/question-bank 갱신
-  -> validator 실행
-  -> request result에는 path, summary, validator count만 저장
+fixture 또는 실제 application package 선택
+  -> evaluator 실행
+  -> pass, revise, blocked 판정
+  -> report 작성
+  -> regression 신호 확인
 ```
 
-이번 흐름은 `public/question-bank` 보강까지만 책임진다.
-포지션별 `prep.md`에 질문을 선별 반영하는 흐름은 후속 plan에서 다룬다.
+평가 결과는 실제 제출 자동화가 아니라 생성 품질 회귀를 막기 위한 guardrail이다.
 
-### Resume Package Flow (plan055 — completed)
+## 폐기 흐름과 tombstone
 
-지원 준비 흐름은 맞춤 이력서 초안을 별도 Markdown 산출물로 고정한 뒤 사용자 승인으로 멈춘다.
+현재 활성 흐름을 이해하는 데 필요한 폐기 이력만 남긴다.
+상세 마이그레이션 기록은 ADR과 task 기록을 따른다.
+
+| 항목 | 현재 상태 | 현재 대체 흐름 |
+|---|---|---|
+| dispatcher와 `run_now.sh` | career-os 활성 진입점에서 제거됨 | agent skill 직접 호출 |
+| `interview-prep-analyzer` | 제거됨 | `job-fit-analyzer`, `interview-stage-prep`, drill 계열 |
+| `frontdoor-queue.jsonl` | legacy staging file | fos-career DB application candidate state |
+| 범용 LLM 채팅 UI | 제거됨 | 목적별 request와 evaluator |
+| 오래된 subprocess writer 경로 | 제거됨 | 현재 에이전트가 SKILL.md workflow 수행 |
+
+## 실패 동작
+
+실패는 조용히 통과시키지 않는다.
+흐름별 실패는 report, request status, stderr, Discord 알림 중 적절한 위치에 남긴다.
+
+공통 실패 흐름:
 
 ```text
-공고 발견
-  -> 우선순위 확정
-  -> 지원 준비 시작
-  -> run.ts resume <application-id> --execute-skills
-  -> posting.md / fit-analysis.md / application-package.md 확인
-  -> resume-draft.md / cover-letter.md / submission-checklist.md 생성
-  -> review.md 생성 또는 갱신
-  -> processor post-validation
-  -> fos-career application request status 갱신
-  -> 사용자 승인 대기
+실행 또는 검증 실패
+  -> 현재 상태 유지
+  -> 실패 사유 기록
+  -> 자동 재시도 가능 여부 판단
+  -> 사용자 승인이나 입력이 필요하면 대기 상태로 전환
+  -> 필요한 경우 Discord 실패 알림
 ```
 
-post-validation은 다음 파일을 실제 파일 시스템에서 확인한다.
+실패 기준:
 
-- `posting.md`
-- `fit-analysis.md`
-- `application-package.md`
-- `resume-draft.md`
-- `cover-letter.md`
-- `submission-checklist.md`
-- `review.md`
-
-`needs_evidence`가 발견되면 runner는 제출용 문서를 바로 통과시키지 않는다.
-대신 다음 루프를 생성한다.
-
-- `보강 필요`: 어떤 주장이나 문장이 부족한지.
-- `선택지`: 삭제, 약화 표현, 사용자 근거 요청, private source 재확인.
-- `권장 행동`: 다음 실행 또는 사용자에게 요청할 한 가지 행동.
-
-application request status projection:
-
-- `pending`: 요청이 생성됐지만 processor가 아직 처리하지 않았다.
-- `running`: processor가 해당 요청을 처리 중이다.
-- `done`: 산출물 검증과 상태 반영이 끝났다.
-- `failed`: 실행 또는 검증 실패가 있다.
-- `stale`: 요청 당시 snapshot과 현재 ledger/frontdoor 상태가 달라 중단했다.
-
-상태 표시에는 `ledgerId`, `error`, `resultSnapshot`을 포함한다.
-fos-career는 이 상태를 보여주되 career-os 원장을 직접 수정하지 않는다.
-
-첨부 가능한 PDF resume export는 review를 통과한 Markdown 이력서 초안에서 시작한다.
-산출물 체인은 `Markdown 이력서 초안 -> design.md 적용 HTML 이력서 -> HTML을 PDF로 변환한 완성 PDF 이력서`다.
-career-os의 `resume-exporter`는 로컬 파일만 생성한다.
-외부 제출 자동화, 로그인, 브라우저 입력은 이 흐름에 넣지 않는다.
-
-## 스킬 입출력 요약 (plan086 재편 기준)
-
-각 스킬의 역할·입력 파일·출력 파일·드릴 위임 흐름을 한눈에 정리한다.
-
-### 핵심 스킬 입출력 표
-
-| 스킬 | 입력 | 출력 | git push |
-|---|---|---|---|
-| `job-fit-analyzer` | `config/mvp-target.json`<br>`config/candidate-profile.md` | `data/reports/job-fit-YYYY-MM-DD.md` | 없음 |
-| `tech-interview-drill` | `public/question-bank/{기술 카테고리}/questions.json`<br>`private/question-bank/tech-personal.jsonl`<br>`config/study-progress.json` weak_spots | `data/runtime/drill-log-YYYY-MM-DD.jsonl`<br>`config/study-progress.json` (갱신) | 없음 |
-| `behavioral-interview-drill` | `public/question-bank/behavioral/questions.json`<br>`private/question-bank/behavioral-personal.jsonl`<br>`config/study-progress.json` weak_spots | `data/runtime/drill-log-YYYY-MM-DD.jsonl`<br>`config/study-progress.json` (갱신) | 없음 |
-| `interview-stage-prep` | `config/mvp-target.json`<br>`config/candidate-profile.md` | `data/reports/stage-prep-YYYY-MM-DD.md` | 없음 |
-| `question-bank-collector` | fos-study 문서<br>공개 가능 backend/CS·인성 토픽 | `public/question-bank/<category>/questions.json` (behavioral 포함) | 없음 |
-| `interview-asset-writer` (개인 질문 생성) | `config/candidate-profile.md` | `private/question-bank/{behavioral,tech}-personal.jsonl` | 없음 |
-| `study-pack-writer` | `sources/fos-study/` | `sources/fos-study/<category>/<topic>.md` | ✓ |
-
-### 드릴 → study-pack-writer 위임 흐름
-
-```text
-tech-interview-drill / behavioral-interview-drill
-  └→ 채점: fail / shallow
-        └→ study-pack-writer 비동기 위임
-              └→ sources/fos-study/<category>/<topic>.md 생성
-                    └→ fos-study commit + push
-              └→ drill-log study_pack_dispatched=true 기록
-```
-
-### question-bank-collector → 질문 풀 보충 흐름
-
-```text
-question-bank-collector
-  └→ public/question-bank/<기술 카테고리>/questions.json 보강
-  └→ public/question-bank/behavioral/questions.json 보강
-
-interview-asset-writer (개인 질문)
-  └→ private/question-bank/{behavioral,tech}-personal.jsonl 생성
-
-tech-interview-drill / behavioral-interview-drill
-  └→ public/question-bank(일반) + private/question-bank(개인) 읽기 (topic 키로 합쳐 간격 반복 선정)
-```
-
-## 통과 시점에 항상 일어나는 일
-
-모든 agent skill 공통 흐름:
-
-1. 현재 에이전트가 SKILL.md를 읽고 도구를 직접 실행한다.
-2. 완료/실패 시 `bun --env-file=career-os/.env _shared/lib/notify_discord.ts` 호출 → Discord 알림 ([완료]/[실패] + cost line).
-3. study-pack / interview-asset는 fos-study commit + push 포함.
-
-(옛 `run_tracked()` → `track_task.sh` → `format_cost_summary.py` 파이프라인은 plan023에서 career-os 흐름에서 제거됨. `track_task.sh`는 apartment 등 다른 워크스페이스에서 여전히 사용 중.)
-
-## 의도적 비대칭
-
-- job-fit-analyzer와 interview-stage-prep: 외부 publish 안 함. 내부 준비용. (plan086, ADR-092)
-- study-pack / question-bank: fos-study에 commit + push 강제.
-- position-recommender / job-fit-analyzer / interview-stage-prep: data/runtime 또는 data/reports에만, 외부 publish X.
-- study-topic-recommender (native): 산출물이 사람이 읽고 다음 단계로 가는 입력. replenish + recommend + live-coding seed 흡수 완료 (plan015/016, ADR-026).
-
-## 실패 시 동작
-
-- compatibility backend 타임아웃: runner가 비-zero exit, Discord [실패] 알림.
-- fos-study git push 실패: study-pack-class runner는 exit non-zero. push 실패는 silent 처리 금지.
-- validator 실패: runner가 stricter prompt로 재시도 1회. 그래도 실패하면 [실패] 알림.
-
-## 워크플로 우회
-
-dispatcher 폐기 후 `run_now.sh`는 존재하지 않음.
-agent skill(`/<skill> [args]`)이 유일한 workflow 계약이다.
-
-디버깅·단발 테스트 시에도 같은 SKILL.md 흐름을 사용한다.
+- compatibility backend timeout은 실패로 기록한다.
+- fos-study push 실패는 silent 처리하지 않는다.
+- validator 실패는 재시도 가능 범위에서만 반복한다.
+- stale request는 원장을 쓰지 않고 stale 상태로 멈춘다.
+- blocked 판정은 사용자가 명시적으로 해제하기 전까지 자동 진행하지 않는다.
