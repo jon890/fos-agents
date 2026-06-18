@@ -36,7 +36,7 @@
     "parallelism": "순차.",
     "scope_boundary": "phase-01 skill 공용화(SKILL.md+references), phase-02 전용 agent 2개, phase-03 variant+verify 스크립트, phase-04 AGENTS/code-architecture 반영+검증. docs/ADR(ADR-018)은 이미 반영됨 — 구현 phase는 ADR 수정 안 함.",
     "pr_unit": "feat/harness-build-with-teams 워크트리에서. 모든 phase 완료 후 단일 PR. 메인 세션 review 후 머지.",
-    "execution_mode": "메인 세션 직접 실행(가시 협업이 도입 목적). 새 집중 세션에서 phase 문서를 순차 수행."
+    "execution_mode": "build-with-teams를 기성 agent로 부분 가동해 실행한다. executor=oh-my-claudecode:executor, critic=oh-my-claudecode:critic, code-reviewer=oh-my-claudecode:code-reviewer. phase-02에서 career-os 전용 agent(career-os-executor, career-os-docs-verifier)가 생기면 phase-03부터 전용 agent로 전환한다. 도메인 지식은 전용 agent 생성 전까지 phase 문서가 보완한다. 가시 협업이 목적이므로 plan-and-build(블랙박스)는 쓰지 않는다. 다중 agent + 4 phase이므로 새 집중 세션 권장."
   },
   "notes": [
     "선행 완료: ADR-018(4fba587), skill 복사+브랜치 공용화(6fe5d7b).",
