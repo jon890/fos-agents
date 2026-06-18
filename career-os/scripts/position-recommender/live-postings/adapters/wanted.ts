@@ -13,39 +13,9 @@ import {
   isServerRole,
   norm,
 } from "../policy.ts";
+import { loadCandidateConfig, loadWantedCollectionConfig } from "../config.ts";
 
 const UA = "Mozilla/5.0 (OpenClaw career-os position recommender)";
-const WANTED_TARGET_KEYWORDS = [
-  "쿠팡 백엔드",
-  "쿠팡 서버 개발자",
-  "쿠팡페이 백엔드",
-  "네이버 백엔드",
-  "네이버파이낸셜 서버 개발자",
-  "라인 백엔드",
-  "LINE backend engineer",
-  "카카오뱅크 백엔드",
-  "카카오모빌리티 백엔드",
-  "우아한형제들 백엔드",
-  "당근 백엔드",
-  "오늘의집 백엔드",
-  "AI Agent 백엔드",
-  "Applied AI Engineer",
-  "AI Engineer LLM RAG Agent",
-  "MCP 서버 AI",
-  "LLM 백엔드",
-  "RAG 백엔드",
-  "AI Platform Engineer",
-  "ML Backend Engineer",
-  "LLMOps MLOps 플랫폼",
-  "Workflow Automation AI",
-  // Company subsidiaries not fully covered by direct adapters
-  "카카오페이 백엔드",
-  "토스뱅크 백엔드",
-  "네이버클라우드 백엔드",
-  // AI/Agentic backend roles
-  "GenAI 서버 개발",
-  "AI 에이전트 백엔드",
-];
 
 function isWantedActive(job: Record<string, unknown>): boolean {
   const status = norm(job.status ?? "").toLowerCase();
@@ -62,12 +32,12 @@ async function wantedDetail(pid: number): Promise<Record<string, unknown>> {
   return (data.job as Record<string, unknown>) ?? {};
 }
 
-async function wantedKeywordSearch(query: string, limit = 12): Promise<number[]> {
+async function wantedKeywordSearch(query: string, years: string, limit = 12): Promise<number[]> {
   const params = new URLSearchParams({
     query,
     country: "kr",
     job_sort: "job.latest_order",
-    years: "3",
+    years,
     locations: "all",
     limit: String(limit),
   });
@@ -168,12 +138,18 @@ function postingFromWantedDetail(
   };
 }
 
-async function fetchWanted(limit = 120, serverOnly = true, includeDetail = true): Promise<Posting[]> {
+async function fetchWanted(
+  jobGroupId: number,
+  years: string,
+  limit = 120,
+  serverOnly = true,
+  includeDetail = true
+): Promise<Posting[]> {
   const params = new URLSearchParams({
-    job_group_id: "518",
+    job_group_id: String(jobGroupId),
     country: "kr",
     job_sort: "job.latest_order",
-    years: "3",
+    years,
     locations: "all",
     limit: String(limit),
   });
@@ -223,7 +199,11 @@ async function fetchWanted(limit = 120, serverOnly = true, includeDetail = true)
   return out;
 }
 
-async function fetchWantedKeywordTargets(serverOnly = true): Promise<{
+async function fetchWantedKeywordTargets(
+  targetKeywords: string[],
+  years: string,
+  serverOnly = true
+): Promise<{
   postings: Posting[];
   searchedCount: number;
   skippedCount: number;
@@ -237,9 +217,9 @@ async function fetchWantedKeywordTargets(serverOnly = true): Promise<{
   let searchedCount = 0;
   const errors: string[] = [];
 
-  for (const keyword of WANTED_TARGET_KEYWORDS) {
+  for (const keyword of targetKeywords) {
     try {
-      const pids = await wantedKeywordSearch(keyword);
+      const pids = await wantedKeywordSearch(keyword, years);
       searchedCount += pids.length;
       for (const pid of pids) {
         if (seenPids.has(pid)) continue;
@@ -266,8 +246,10 @@ export const wantedAdapter: SourceAdapter = {
   id: "wanted",
   name: "wanted",
   async collect({ serverOnly, wantedLimit }): Promise<AdapterCollectionResult> {
-    const broad = await fetchWanted(wantedLimit, serverOnly, true);
-    const keywordTargets = await fetchWantedKeywordTargets(serverOnly);
+    const { jobGroupId, targetKeywords } = loadWantedCollectionConfig();
+    const years = String(loadCandidateConfig().experienceYears);
+    const broad = await fetchWanted(jobGroupId, years, wantedLimit, serverOnly, true);
+    const keywordTargets = await fetchWantedKeywordTargets(targetKeywords, years, serverOnly);
     const postings = [...broad, ...keywordTargets.postings];
     return {
       postings,
