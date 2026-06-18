@@ -1,0 +1,86 @@
+{
+  "name": "plan005-build-with-teams-port",
+  "description": "build-with-teams 하네스를 docu-parser 정본에서 모노레포 공용으로 포팅한다(ADR-018). SKILL.md·references 공용화(docu-parser/dooray/python 전용 → <workspace> placeholder + variant), career-os 전용 agent 2개(executor, docs-verifier) 신규 작성, variants/career-os.md, AGENTS·code-architecture 반영. plan-and-build 병존. ADR-018과 skill 복사·브랜치 공용화는 선행 커밋(4fba587, 6fe5d7b)으로 완료.",
+  "created_at": "2026-06-18T00:00:00+09:00",
+  "updated_at": "2026-06-18T12:00:00+09:00",
+  "status": "completed",
+  "current_phase": 4,
+  "total_phases": 4,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "docs/adr/ADR-018-build-with-teams-harness.md",
+    "docs/adr/ADR-017-common-pitfalls-file-per-pattern.md",
+    "docs/adr/INDEX.md",
+    "docs/code-architecture.md",
+    "AGENTS.md",
+    ".claude/skills/build-with-teams/SKILL.md",
+    ".claude/skills/plan-and-build/references/common-pitfalls/INDEX.md"
+  ],
+  "reference_sources": [
+    "/Users/nhn/projects/ai-playground-docu-parser/.claude/skills/build-with-teams/ (정본 — SKILL.md + references 4개 + scripts)",
+    "/Users/nhn/projects/ai-playground-docu-parser/.claude/agents/docu-parser-executor.md (전용 executor 정본, 239줄)",
+    "/Users/nhn/projects/ai-playground-docu-parser/.claude/agents/docu-parser-docs-verifier.md (전용 docs-verifier 정본, 232줄)"
+  ],
+  "target_repositories": [
+    {
+      "name": "ai-nodes",
+      "path": ".",
+      "role": "공용 skill 공용화 + career-os 전용 agent + variant + AGENTS/code-architecture 반영"
+    }
+  ],
+  "depends_on": [],
+  "execution_policy": {
+    "goal": "docu-parser 전용 build-with-teams를 모노레포 공용으로 일반화하고 career-os 전용 agent를 신설한다. 실행은 메인 세션 직접(가시) — build-with-teams 도입 작업 자체이므로 plan-and-build run-phases.py(블랙박스)를 쓰지 않는다.",
+    "phase_order": "phase-01부터 순차. 같은 plan phase 병렬 금지.",
+    "parallelism": "순차.",
+    "scope_boundary": "phase-01 skill 공용화(SKILL.md+references), phase-02 전용 agent 2개, phase-03 variant+verify 스크립트, phase-04 AGENTS/code-architecture 반영+검증. docs/ADR(ADR-018)은 이미 반영됨 — 구현 phase는 ADR 수정 안 함.",
+    "pr_unit": "feat/harness-build-with-teams 워크트리에서. 모든 phase 완료 후 단일 PR. 메인 세션 review 후 머지.",
+    "execution_mode": "build-with-teams를 기성 agent로 부분 가동해 실행한다. executor=oh-my-claudecode:executor, critic=oh-my-claudecode:critic, code-reviewer=oh-my-claudecode:code-reviewer. phase-02에서 career-os 전용 agent(career-os-executor, career-os-docs-verifier)가 생기면 phase-03부터 전용 agent로 전환한다. 도메인 지식은 전용 agent 생성 전까지 phase 문서가 보완한다. 가시 협업이 목적이므로 plan-and-build(블랙박스)는 쓰지 않는다. 다중 agent + 4 phase이므로 새 집중 세션 권장."
+  },
+  "notes": [
+    "선행 완료: ADR-018(4fba587), skill 복사+브랜치 공용화(6fe5d7b).",
+    "공용화 핵심: 공용 skill인데 executor/docs-verifier agent명이 워크스페이스별이다. SKILL.md는 `<workspace>-executor`/`<workspace>-docs-verifier`로 두고 '실행 워크스페이스명을 prefix로 한다'는 규칙을 명시. docu-parser 하드코딩을 placeholder로.",
+    "career-os 도메인(전용 agent에 내장): ADR 개별파일(docs/adr/ADR-NNN-slug.md + INDEX 행), docs 5문서(prd/data-schema/flow/code-architecture/adr), fos-study 공개 경계, bun+zod, 워크스페이스 격리(_shared는 워크스페이스 무관 헬퍼만), 커밋 한글 subject.",
+    "pitfalls는 ADR-017 구조(.claude/skills/plan-and-build/references/common-pitfalls/ 파일-per-패턴+INDEX) 재사용. build-with-teams critic·code-reviewer·docs-verifier가 라우터로 참조.",
+    "career-os 검증명령(variant): bun 헬퍼 실행 + bun --check. python3 수집기. CI_CMD는 워크스페이스별."
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "SKILL.md 나머지 공용화 + references 4개 공용화 (docu-parser/dooray/python 전용 → <workspace>+variant)",
+      "file": "phase-01.md",
+      "status": "completed",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 900
+    },
+    {
+      "number": 2,
+      "title": "career-os 전용 agent 2개 신규 작성 (career-os-executor, career-os-docs-verifier)",
+      "file": "phase-02.md",
+      "status": "completed",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 900
+    },
+    {
+      "number": 3,
+      "title": "variants/career-os.md + verify_team_members.sh 적응",
+      "file": "phase-03.md",
+      "status": "completed",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 600
+    },
+    {
+      "number": 4,
+      "title": "AGENTS.md / code-architecture.md 반영 + 검증 (build-with-teams로 작은 작업 1회)",
+      "file": "phase-04.md",
+      "status": "completed",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 900
+    }
+  ]
+}
