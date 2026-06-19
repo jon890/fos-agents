@@ -117,11 +117,9 @@ career-os/
 │   (study-topic-recommender: run_*.sh + Python scripts 폐기 완료 — plan016. dispatcher 2 case 폐기. agent skill로 진입점 통합)
 │   (study-pack-writer + interview-asset-writer scripts 폐기 — plan013/015 agent skill로 흡수, .claude/skills/ 트리 참조)
 │   ├── position-recommender/
-│   │   ├── run_daily_with_claude.ts    daily runner 정본. collect → LLM guard → freshness/active 검증 → frontdoor/priority refresh → Discord 알림
-│   │   ├── run_daily_with_claude.sh    기존 cron/수동 호출 호환용 TS runner shim
 │   │   ├── collect_live_postings.ts    CLI 호환 entrypoint (ADR-030, ADR-043, ADR-047)
-│   │   ├── recommendation_schema.ts    산출물 정본 zod 스키마 (ADR-094, RecommendationRun)
-│   │   ├── render_recommendation.ts    정본 recommendation.json에서 Markdown·HTML 파생 (ADR-094)
+│   │   ├── recommendation_schema.ts    표준 출력 JSON zod 스키마 (ADR-094/ADR-101, RecommendationRun, source·closeDate 포함)
+│   │   ├── render_recommendation.ts    표준 출력 JSON에서 Markdown·HTML 파생 (ADR-094)
 │   │   ├── templates/report.html       position daily HTML 표시 template (스타일만, JSON 바인딩)
 │   │   └── live-postings/
 │   │       ├── types.ts                Posting / SourceAdapter / CollectResult 계약
@@ -587,8 +585,8 @@ plan050은 새 독립 추천기를 먼저 만들지 않고 기존 collector/reco
   Toss는 공식 `job-groups` API에서 그룹 공고와 하위 포지션을 펼쳐 수집하며,
   Kakao 계열, NAVER 계열, Coupang은 official source entrypoint가 확인된 범위에서 adapter로 수집한다.
   adapter는 listing/API/sitemap root URL은 가질 수 있지만, 개별 공고 URL을 코드에 하드코딩하지 않는다.
-- `position-recommender` agent skill은 산출물 정본 `recommendation.json`(ADR-094, schemaVersion 2)을 만든다.
-- `scripts/position-recommender/render_recommendation.ts`는 정본 JSON에서 Markdown·HTML을 파생한다(입력 시 zod 검증 내장). 자체 markdown 파서 `render_report_html.ts`는 ADR-094로 폐기됐다.
+- `position-recommender` agent skill은 표준 출력 JSON `recommendation.json`(ADR-094/ADR-101, schemaVersion 2)을 만든다. 적재용 `source`·`closeDate`를 포함하며, Discord 요약·DB 적재 같은 가공은 호출자(cron·backend)가 맡는다(ADR-101).
+- `scripts/position-recommender/render_recommendation.ts`는 표준 출력 JSON에서 Markdown·HTML을 파생한다(입력 시 zod 검증 내장). 자체 markdown 파서 `render_report_html.ts`는 ADR-094로 폐기됐다.
   표시 구조와 CSS는 `scripts/position-recommender/templates/report.html`에 둔다.
 - `scripts/application-agent/`는 frontdoor queue, ledger, 공고별 application files, priority history를 검증하고 갱신한다.
 - `config/candidate-profile.md`와 기존 resume/profile material은 fit analysis 입력으로 재사용한다.

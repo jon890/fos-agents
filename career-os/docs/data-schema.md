@@ -1684,7 +1684,7 @@ study-pack 등 중복 실행 방지용 flock 파일. 토픽별 `<task>-<topic>.l
 
 ### data/runtime/live-position-postings.md
 
-`position-recommender` daily runner가 Claude 호출 전에 갱신하는 active-only 공고 snapshot.
+`position-recommender` 수집 단계(`collect_live_postings.ts`)가 추천 분석 전에 갱신하는 active-only 공고 snapshot.
 source adapter가 수집한 후보를 공통 validator가 걸러낸 뒤 markdown으로 렌더링한다.
 
 필수 의미 필드:
@@ -1712,15 +1712,16 @@ source adapter는 official listing, official API, sitemap, keyword search에서 
 Wanted adapter는 백엔드 keyword 외에 AI Agent/RAG/MCP/LLMOps/ML Backend 계열 keyword를 함께 수집할 수 있다.
 Toss adapter는 공식 `job-groups` API의 그룹 공고와 하위 포지션을 펼쳐 snapshot에 넣는다.
 
-### data/reports/daily/YYYY-MM-DD/position-recommendation/recommendation.json (정본, ADR-094)
+### data/reports/daily/YYYY-MM-DD/position-recommendation/recommendation.json (표준 출력 JSON, ADR-094/ADR-101)
 
-`position-recommender` 산출물의 단일 정본. schemaVersion 2, `scripts/position-recommender/recommendation_schema.ts` zod 스키마를 따른다.
+`position-recommender` 산출물의 단일 표준 출력. schemaVersion 2, `scripts/position-recommender/recommendation_schema.ts` zod 스키마를 따른다.
 
 - 에이전트가 이 JSON을 생성하고, `render_recommendation.ts`가 Markdown·HTML을 파생한다. 자체 markdown 파서를 거치지 않는다.
-- 14개 라벨이 `PositionItem` 필드로 고정되어 items·DB ingest로 손실 없이 전달된다.
+- 사람용 14개 라벨 외에 적재용 `source`(수집 adapter 식별자)와 `closeDate`(마감일 문자열 또는 null)를 `PositionItem`(강력·도전 티어)에 둔다(ADR-101).
+- `source`·`closeDate`는 수집 snapshot에서 채운다. fos-career candidate identity(`company_title_source_close_date`) 적재에 쓰인다.
 - tier 상한(강력 3 / 도전 2 / 보류 3), `linkEvidenceLevel` enum(active/open만), 추천 티어 개별 공고 URL 강제, 강력 추천 `stretchGap` 금지를 스키마가 보장한다.
-- DB ingest는 이 JSON을 직접 사용한다.
-- 런타임 미러는 `data/runtime/position-recommendation-items.json`.
+- 표준 출력 JSON을 호출자가 가공한다(ADR-101). cron은 Discord 요약, backend는 DB 적재로 소비하며, 전달 매체는 운영의 공유 파일과 로컬·분산의 hermes API 응답이다.
+- 옛 파생 `items.json`과 daily runner는 ADR-101로 폐기됐다.
 
 ### data/runtime/position-recommendation.{md,html}
 

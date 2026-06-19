@@ -36,7 +36,7 @@
 | ADR-033 | fos-study source tree를 study artifact 단일 진실원으로 사용 | Accepted | [ADR-033-fos-study-source-tree를-study-artifact-단일-진실원으로-사용.md](ADR-033-fos-study-source-tree를-study-artifact-단일-진실원으로-사용.md) |
 | ADR-034 | interview-coffeechat-prep 4 mode 일반화 (coffeechat / first-round / final-round / offer-chat) | Accepted | [ADR-034-interview-coffeechat-prep-4-mode-일반화-coffeechat-first-round-final-round-offer-chat.md](ADR-034-interview-coffeechat-prep-4-mode-일반화-coffeechat-first-round-final-round-offer-chat.md) |
 | ADR-035 | ts 헬퍼 모듈 분해 컨벤션 (source / transform / render / cli 4 레이어) | Accepted | [ADR-035-ts-헬퍼-모듈-분해-컨벤션-source-transform-render-cli-4-레이어.md](ADR-035-ts-헬퍼-모듈-분해-컨벤션-source-transform-render-cli-4-레이어.md) |
-| ADR-036 | position-recommender daily freshness guard + recommendation rotation | Accepted; 신규 후보 강제 회전은 [[ADR-100]]로 superseded | [ADR-036-position-recommender-daily-freshness-guard-recommendation-rotation.md](ADR-036-position-recommender-daily-freshness-guard-recommendation-rotation.md) |
+| ADR-036 | position-recommender daily freshness guard + recommendation rotation | Accepted; 신규 후보 강제 회전은 [[ADR-100]]로 superseded; reportDate freshness 검증 책임은 [[ADR-101]]로 스킬 self-check·소비측 이전 | [ADR-036-position-recommender-daily-freshness-guard-recommendation-rotation.md](ADR-036-position-recommender-daily-freshness-guard-recommendation-rotation.md) |
 | ADR-037 | application-flow-agent runtime은 policy decision engine 중심 | Accepted | [ADR-037-application-flow-agent-runtime은-policy-decision-engine-중심.md](ADR-037-application-flow-agent-runtime은-policy-decision-engine-중심.md) |
 | ADR-038 | application-flow-agent 상태 전이는 skill artifact 검증 뒤에만 수행 | Accepted | [ADR-038-application-flow-agent-상태-전이는-skill-artifact-검증-뒤에만-수행.md](ADR-038-application-flow-agent-상태-전이는-skill-artifact-검증-뒤에만-수행.md) |
 | ADR-039 | position-recommender 추천 단위는 개별 active/open 공고 | Accepted | [ADR-039-position-recommender-추천-단위는-개별-active-open-공고.md](ADR-039-position-recommender-추천-단위는-개별-active-open-공고.md) |
@@ -75,7 +75,7 @@
 | ADR-072 | daily study cron은 주제 3개만 보내는 lean path로 둔다 | Accepted | [ADR-072-daily-study-cron은-주제-3개만-보내는-lean-path로-둔다.md](ADR-072-daily-study-cron은-주제-3개만-보내는-lean-path로-둔다.md) |
 | ADR-073 | daily study 추천은 Discord 버튼으로 초안 생성을 요청할 수 있다 | Accepted | [ADR-073-daily-study-추천은-discord-버튼으로-초안-생성을-요청할-수-있다.md](ADR-073-daily-study-추천은-discord-버튼으로-초안-생성을-요청할-수-있다.md) |
 | ADR-074 | position source coverage는 official adapter와 Wanted target discovery를 함께 쓴다 | Accepted | [ADR-074-position-source-coverage는-official-adapter와-wanted-target-discovery를-함께-쓴다.md](ADR-074-position-source-coverage는-official-adapter와-wanted-target-discovery를-함께-쓴다.md) |
-| ADR-075 | position daily runner는 TS를 정본으로 하고 sh는 shim으로 둔다 | Accepted | [ADR-075-position-daily-runner는-ts를-정본으로-하고-sh는-shim으로-둔다.md](ADR-075-position-daily-runner는-ts를-정본으로-하고-sh는-shim으로-둔다.md) |
+| ADR-075 | position daily runner는 TS를 정본으로 하고 sh는 shim으로 둔다 | Superseded by [[ADR-101]] — daily runner 폐기, cron·backend가 SKILL 직접 호출 | [ADR-075-position-daily-runner는-ts를-정본으로-하고-sh는-shim으로-둔다.md](ADR-075-position-daily-runner는-ts를-정본으로-하고-sh는-shim으로-둔다.md) |
 | ADR-077 | position daily runner는 Claude 무출력 hang을 실패로 처리한다 | Accepted | [ADR-077-position-daily-runner는-claude-무출력-hang을-실패로-처리한다.md](ADR-077-position-daily-runner는-claude-무출력-hang을-실패로-처리한다.md) |
 | ADR-078 | 포지션 추천 freshness는 frontdoor와 priority 갱신까지 포함한다 | Accepted | [ADR-078-포지션-추천-freshness는-frontdoor와-priority-갱신까지-포함한다.md](ADR-078-포지션-추천-freshness는-frontdoor와-priority-갱신까지-포함한다.md) |
 | ADR-079 | 포지션 수집은 동적 discovery를 우선하고 개별 공고 URL seed를 제거한다 | Accepted | [ADR-079-포지션-수집은-동적-discovery를-우선하고-개별-공고-url-seed를-제거한다.md](ADR-079-포지션-수집은-동적-discovery를-우선하고-개별-공고-url-seed를-제거한다.md) |
@@ -100,3 +100,4 @@
 | ADR-098 | data-schema는 현재 스키마만 담고 폐기 항목은 ADR로 위임한다 | Accepted | [ADR-098-data-schema는-현재-스키마만-담고-폐기-항목은-adr로-위임한다.md](ADR-098-data-schema는-현재-스키마만-담고-폐기-항목은-adr로-위임한다.md) |
 | ADR-099 | position-recommender 수집 설정 외부화 + 후보자 config + 지표 시계열 | Accepted | [ADR-099-position-수집설정-외부화-후보자config-지표시계열.md](ADR-099-position-수집설정-외부화-후보자config-지표시계열.md) |
 | ADR-100 | position-recommender 신규 후보 강제 회전 폐기 | Accepted | [ADR-100-position-recommender-신규-후보-강제-회전-폐기.md](ADR-100-position-recommender-신규-후보-강제-회전-폐기.md) |
+| ADR-101 | position-recommender 산출물을 표준 출력 JSON으로 단일화하고 소비측이 가공한다 | Accepted | [ADR-101-position-recommender-표준출력-json-단일화-소비측-가공.md](ADR-101-position-recommender-표준출력-json-단일화-소비측-가공.md) |
