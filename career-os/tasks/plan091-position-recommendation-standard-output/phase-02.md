@@ -106,6 +106,16 @@ grep -q "마감일" /tmp/p91_out.md && echo "closeDate OK"
 
 성공 기준: 두 파생 명령이 exit 0으로 산출물을 만들고, `수집 source`·`naver-careers`·`마감일`이 출력에 포함.
 
+## 커밋
+
+검증 통과 후 이 phase 변경만 stage해 커밋한다. push하지 않는다. 무관한 dirty 파일을 stage하지 않도록 경로를 명시한다.
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+git add career-os/scripts/position-recommender/render_recommendation.ts
+git commit -m "feat(career-os): position 리포트 렌더러에 source·마감일 표시 (plan091)"
+```
+
 ## 의도 메모 (왜)
 
 - 렌더 파생이 곧 zod self-check다(ADR-094). 새 필드를 추가해도 파생이 성공해야 스키마와 렌더가 정합임을 보장한다.

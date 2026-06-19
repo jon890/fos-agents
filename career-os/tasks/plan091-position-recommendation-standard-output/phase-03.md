@@ -102,6 +102,16 @@ grep -q "ADR-101" "$SKILL" && echo "ADR 참조 OK"
 
 성공 기준: 새 계약 grep이 모두 매치, 폐기 자산 참조 grep이 모두 0건.
 
+## 커밋
+
+검증 통과 후 이 phase 변경만 stage해 커밋한다. push하지 않는다. 무관한 dirty 파일을 stage하지 않도록 경로를 명시한다.
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+git add career-os/.claude/skills/position-recommender/SKILL.md
+git commit -m "docs(career-os): position-recommender SKILL 표준 출력 JSON 계약 개편 (plan091)"
+```
+
 ## 의도 메모 (왜)
 
 - 생성 경로가 "에이전트가 직접 JSON 작성"이므로 source·closeDate를 채우는 책임은 코드 후처리가 아니라 SKILL 지시에 있다(cron 환경 bun 부재로 후처리 스크립트가 안 돈다).

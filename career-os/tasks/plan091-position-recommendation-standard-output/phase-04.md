@@ -91,6 +91,16 @@ echo "잔재 참조: $RESID (기대 0)"
 
 성공 기준: 세 파일 모두 부재, `scripts`·`.claude`·`docs`에서 잔재 참조 0건.
 
+## 커밋
+
+`git rm`이 이미 삭제를 stage했으므로 그대로 커밋한다. push하지 않는다. 무관한 dirty 파일이 staged에 없는지 `git status --short`로 먼저 확인한다.
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+git status --short
+git commit -m "refactor(career-os): position items.json·daily runner 죽은 코드 제거 (plan091)"
+```
+
 ## 의도 메모 (왜)
 
 - 완료된 폐기가 아니라 ADR-101이 정책 함의(표준 출력 단일화 + freshness 책임 이전 + ADR-075 supersede)를 동반하므로 ADR로 근거를 남기고 자산은 git rm으로 제거한다.

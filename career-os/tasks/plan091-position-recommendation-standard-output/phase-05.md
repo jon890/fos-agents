@@ -82,6 +82,17 @@ git status --short
 
 성공 기준: 잔재 참조 0건, 삭제 파일 부재, index.json status="completed".
 
+## 커밋 + push
+
+완료 마킹을 커밋하고, 이 plan의 모든 phase 커밋을 한 번에 push한다(plan091 마지막 phase). 무관한 dirty 파일을 stage하지 않도록 경로를 명시한다. PR은 만들지 않는다(메인 세션이 plan 단위로 생성).
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+git add career-os/tasks/plan091-position-recommendation-standard-output/index.json
+git commit -m "chore(career-os): plan091 완료 마킹"
+git push origin main
+```
+
 ## 의도 메모 (왜)
 
 - 마지막 phase를 검증 전용으로 분리해 구현 phase와 검증 단위를 나눈다(task-create 표준).

@@ -93,6 +93,16 @@ cd career-os && bun /tmp/p91_schema_check.ts
 
 성공 기준: 위 bun 검증이 exit 0 (source·closeDate 있으면 통과, source 누락 시 거부).
 
+## 커밋
+
+검증 통과 후 이 phase 변경만 stage해 커밋한다. push하지 않는다(마지막 phase에서 일괄 push). 무관한 dirty 파일을 stage하지 않도록 경로를 명시한다.
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+git add career-os/scripts/position-recommender/recommendation_schema.ts
+git commit -m "feat(career-os): recommendation 스키마에 source·closeDate 추가 (plan091)"
+```
+
 ## 의도 메모 (왜)
 
 - `source`를 enum이 아닌 string으로 둔 이유: adapter 목록의 단일 출처는 registry이고, 스키마 enum은 adapter 추가마다 drift를 만든다(ADR-101 거절 대안).
