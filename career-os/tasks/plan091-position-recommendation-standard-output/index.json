@@ -1,0 +1,64 @@
+{
+  "name": "plan091-position-recommendation-standard-output",
+  "description": "position-recommender 표준 출력 JSON에 source·closeDate 추가, items.json·daily runner 폐기, SKILL을 표준 출력 JSON 계약으로 정렬 (ADR-101)",
+  "created_at": "2026-06-19T00:00:00+00:00",
+  "updated_at": "2026-06-19T00:00:00+00:00",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 5,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "career-os/docs/adr/ADR-101-position-recommender-표준출력-json-단일화-소비측-가공.md",
+    "career-os/docs/data-schema.md",
+    "career-os/docs/code-architecture.md",
+    "career-os/.claude/skills/position-recommender/SKILL.md"
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "스키마에 source·closeDate 추가",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 600
+    },
+    {
+      "number": 2,
+      "title": "렌더러에 source·closeDate 표시 추가",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 600
+    },
+    {
+      "number": 3,
+      "title": "SKILL을 표준 출력 JSON 계약으로 개편",
+      "file": "phase-03.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 600
+    },
+    {
+      "number": 4,
+      "title": "items.json·daily runner 죽은 코드 제거",
+      "file": "phase-04.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "haiku",
+      "timeout": 600
+    },
+    {
+      "number": 5,
+      "title": "통합 검증 + 잔재 grep + 완료 마킹",
+      "file": "phase-05.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "haiku",
+      "timeout": 600
+    }
+  ]
+}
