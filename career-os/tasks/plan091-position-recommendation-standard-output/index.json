@@ -2,9 +2,9 @@
   "name": "plan091-position-recommendation-standard-output",
   "description": "position-recommender 표준 출력 JSON에 source·closeDate 추가, items.json·daily runner 폐기, SKILL을 표준 출력 JSON 계약으로 정렬 (ADR-101)",
   "created_at": "2026-06-19T00:00:00+00:00",
-  "updated_at": "2026-06-19T00:00:00+00:00",
-  "status": "pending",
-  "current_phase": 1,
+  "updated_at": "2026-06-19T08:03:09.112280+00:00",
+  "status": "completed",
+  "current_phase": 5,
   "total_phases": 5,
   "error_message": null,
   "blocked_reason": null,
@@ -19,46 +19,86 @@
       "number": 1,
       "title": "스키마에 source·closeDate 추가",
       "file": "phase-01.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "d39e7fb83e0f"
     },
     {
       "number": 2,
       "title": "렌더러에 source·closeDate 표시 추가",
       "file": "phase-02.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "b5c91dd0c333"
     },
     {
       "number": 3,
       "title": "SKILL을 표준 출력 JSON 계약으로 개편",
       "file": "phase-03.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "sonnet",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "c3c9d967ee09"
     },
     {
       "number": 4,
       "title": "items.json·daily runner 죽은 코드 제거",
       "file": "phase-04.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "haiku",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "b891c1c01a3a"
     },
     {
       "number": 5,
       "title": "통합 검증 + 잔재 grep + 완료 마킹",
       "file": "phase-05.md",
-      "status": "pending",
-      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "status": "completed",
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
       "model": "haiku",
-      "timeout": 600
+      "timeout": 600,
+      "commitSha": "pending"
     }
   ]
 }
