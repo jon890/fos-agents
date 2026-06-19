@@ -27,6 +27,8 @@ export const PositionItem = z.object({
   exploreLink: z.string().default("-"), // 추천 티어에서는 항상 "-"
   linkEvidenceLevel: LinkEvidenceLevel,
   postingPeriod: z.string().min(1), // closes_at / days_until_close / urgency
+  source: z.string().min(1), // 수집 adapter 식별자 (예: naver-careers, kakaopay). enum 미사용 — adapter 목록 단일 출처는 registry(ADR-101)
+  closeDate: z.string().nullable(), // 기계 적재용 마감일 문자열 또는 null (사람용 자유문자열 postingPeriod와 별도)
   searchKeywords: z.array(z.string().min(1)).min(1),
   whyFit: z.string().min(1),
   candidateEvidence: z.array(z.string().min(1)).min(1),
