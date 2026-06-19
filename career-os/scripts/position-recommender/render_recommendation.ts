@@ -33,6 +33,8 @@ function positionToMarkdown(item: PositionItemType, isStretch: boolean): string 
   lines.push(`   - 탐색 링크: ${item.exploreLink}`);
   lines.push(`   - 링크 근거 수준: ${item.linkEvidenceLevel}`);
   lines.push(`   - 공고 기간: ${item.postingPeriod}`);
+  lines.push(`   - 수집 source: ${item.source}`);
+  lines.push(`   - 마감일: ${item.closeDate ?? "상시/미정"}`);
   lines.push(`   - 검색 키워드: ${kw(item.searchKeywords)}`);
   lines.push(`   - 왜 맞는가: ${item.whyFit}`);
   lines.push(`   - 후보자 경험 근거:`);
@@ -127,6 +129,8 @@ function positionCardHtml(item: PositionItemType, isStretch: boolean): string {
   f.push(field("공고 링크", linkOrText(item.postingUrl)));
   f.push(field("링크 근거 수준", escapeHtml(item.linkEvidenceLevel)));
   f.push(field("공고 기간", escapeHtml(item.postingPeriod)));
+  f.push(field("수집 source", escapeHtml(item.source)));
+  f.push(field("마감일", escapeHtml(item.closeDate ?? "상시/미정")));
   f.push(field("검색 키워드", codeList(item.searchKeywords)));
   f.push(field("왜 맞는가", escapeHtml(item.whyFit)));
   f.push(
