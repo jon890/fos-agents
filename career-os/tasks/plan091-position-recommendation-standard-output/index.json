@@ -2,7 +2,7 @@
   "name": "plan091-position-recommendation-standard-output",
   "description": "position-recommender 표준 출력 JSON에 source·closeDate 추가, items.json·daily runner 폐기, SKILL을 표준 출력 JSON 계약으로 정렬 (ADR-101)",
   "created_at": "2026-06-19T00:00:00+00:00",
-  "updated_at": "2026-06-19T08:03:09.112280+00:00",
+  "updated_at": "2026-06-19T08:04:04.459730+00:00",
   "status": "completed",
   "current_phase": 5,
   "total_phases": 5,
@@ -98,7 +98,7 @@
       ],
       "model": "haiku",
       "timeout": 600,
-      "commitSha": "pending"
+      "commitSha": "f56b179aa6ba"
     }
   ]
 }
