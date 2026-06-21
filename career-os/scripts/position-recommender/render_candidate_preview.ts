@@ -121,7 +121,14 @@ function summarizeText(value: string, maxLength = 260): string {
 function isExcludedPreviewPosting(posting: { company: string; title: string; fields: Record<string, string>; raw: string[] }): boolean {
   const text = [posting.company, posting.title, ...Object.values(posting.fields), ...posting.raw].join(" ").toLowerCase();
   if (/cto|chief technology officer|기술\s*총괄|기술총괄/.test(text)) return true;
+  if (/tech\s*lead|server\s*lead|technical\s*lead|테크\s*리드|기술\s*리드/.test(text)) return true;
   if (/ai engineer\s*\(model\)|ai\s*model\s*research|model\s*research|research\s*scientist|applied\s*scientist|ai\s*research|모델\s*연구/.test(text)) return true;
+
+  const company = posting.company.toLowerCase();
+  const title = posting.title.toLowerCase();
+  const isTossRootCompany = company === "토스" || company === "toss";
+  const isGenericTossServer = /^server developer(?:\s*\([^)]+\)|\s*\[[^\]]+\].*)?$/i.test(posting.title.trim());
+  if (isTossRootCompany && isGenericTossServer) return true;
   return false;
 }
 

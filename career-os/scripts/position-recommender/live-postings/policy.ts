@@ -23,6 +23,8 @@ export const NON_SERVER_TITLE_KEYWORDS = [
   "기획", "서비스 기획", "product manager", "product owner", "프로덕트 매니저", "po", "pm", "planner",
   "designer", "디자이너", "qa", "frontend", "프론트", "android", "ios", "data engineer",
   "데이터 엔지니어", "data scientist", "데이터 사이언티스트", "ai research", "research scientist",
+  "applied scientist", "ai engineer (model)", "model researcher", "모델 연구",
+  "cto", "chief technology officer", "tech lead", "server lead", "technical lead", "테크 리드", "기술 리드", "기술총괄", "기술 총괄",
   "마케터", "marketing", "assistant", "어시스턴트", "정책", "e/e", "데이터 라벨링",
   // 법무·컴플라이언스
   "legal", "counsel", "법무", "변호사", "compliance manager", "준법", "kyc", "aml", "privacy manager",

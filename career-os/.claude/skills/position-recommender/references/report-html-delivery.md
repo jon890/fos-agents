@@ -6,6 +6,8 @@
 - 항상 다운로드해서 바로 볼 수 있는 HTML을 함께 첨부한다.
 - HTML 안의 공고명은 개별 공고 URL로 이동하는 링크여야 한다.
 - Discord 미리보기에도 상위 후보, 핵심 사유, 공고 링크를 포함한다.
+- 사용자가 “전체 후보”를 요청하면 임의로 50개 등으로 제한하지 말고 `--limit all` preview를 생성한다.
+- AI 모델 연구 중심 포지션과 CTO/기술총괄 포지션은 사용자가 명시적으로 요청하지 않는 한 preview에서 제외한다.
 
 ## 권장 산출물
 
@@ -32,7 +34,8 @@ node scripts/position-recommender/render_candidate_preview.ts \
   --limit 10 \
   --output data/runtime/downloads/position-recommendation-preview-$(TZ=Asia/Seoul date +%F).html
 
-# 전체 active/open 후보 미리보기. AI 모델 연구 중심 포지션과 CTO/기술총괄 포지션은 제외된다.
+# 전체 active/open 후보 미리보기.
+# AI 모델 연구 중심, CTO/기술총괄, Tech Lead/Server Lead, Toss 루트 회사의 범용 Server Developer 공고는 제외된다.
 node scripts/position-recommender/render_candidate_preview.ts \
   --input data/runtime/position-recommendation.json \
   --postings data/runtime/live-position-postings.md \
@@ -54,3 +57,5 @@ node scripts/position-recommender/render_candidate_preview.ts \
 - 회사 채용홈이나 검색 페이지 링크를 추천 티어 공고 링크로 쓰면 안 된다.
 - `data/runtime/downloads/` 밖의 HTML을 Discord에 직접 첨부하지 않는다.
 - 마감 임박/사용자 하향 판단이 있는 후보를 snapshot의 `no_deadline`만 보고 최상위로 다시 올리지 않는다.
+- Toss 루트 회사의 범용 `Server Developer (...)` 공고는 구체적 공고가 아니므로 제외한다.
+- Tech Lead/Server Lead/CTO/기술총괄 계열은 현재 seniority 대비 과도하므로 제외한다.

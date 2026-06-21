@@ -107,6 +107,18 @@ test("candidate preview can render all live posting rows while excluding CTO and
   - link_type: direct_posting
   - main_tasks: AI model research and model training
   - url: https://toss.im/career/job-detail?job_id=7758217003
+- [토스] Server Developer (Product)
+  - source: toss-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - main_tasks: 토스의 유저가 매일 사용하는 여러 서비스를 개발해요. Product Chapter는 유저가 직접 사용하는 토스의 서비스를 개발해요.
+  - url: https://toss.im/career/job-detail?job_id=4071141003
+- [토스] Tech Lead (Server)
+  - source: toss-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - main_tasks: 여러 시스템을 아우르는 기술적 비전과 아키텍처를 설계하고 조직 전체에 영향을 미치는 기술 방향을 제시해요.
+  - url: https://toss.im/career/job-detail?job_id=7519850003
 - [카카오페이] 서버 개발자 - 결제 서비스
   - source: kakaopay
   - posting_status: open
@@ -124,5 +136,7 @@ test("candidate preview can render all live posting rows while excluding CTO and
   assert.match(html, /https:\/\/kakaopay\.career\.greetinghr\.com\/ko\/o\/192129/);
   assert.doesNotMatch(html, /CTO/);
   assert.doesNotMatch(html, /AI Engineer \(Model\)/);
+  assert.doesNotMatch(html, /Server Developer \(Product\)/);
+  assert.doesNotMatch(html, /Tech Lead \(Server\)/);
   assert.doesNotMatch(html, /토스뱅크/);
 });

@@ -331,6 +331,25 @@ function tossHiddenForList(job: TossJob): boolean {
   return /true|yes/i.test(tossMetadata(job, ["미노출", "ShouldHiddenForList"]));
 }
 
+function tossRoleSpecificityReject(company: string, title: string, content: string): string | null {
+  const normalizedCompany = norm(company).toLowerCase();
+  const normalizedTitle = norm(title);
+  const text = `${normalizedCompany} ${normalizedTitle} ${content}`.toLowerCase();
+
+  if (/tech\s*lead|server\s*lead|technical\s*lead|테크\s*리드|기술\s*리드/.test(text)) {
+    return "seniority_lead_gap";
+  }
+
+  const isTossRootCompany = normalizedCompany === "토스" || normalizedCompany === "toss";
+  const isGenericServerDeveloper = /^server developer(?:\s*\([^)]+\)|\s*\[[^\]]+\].*)?$/i.test(normalizedTitle);
+  if (isTossRootCompany && isGenericServerDeveloper) {
+    return "generic_toss_server_chapter";
+  }
+
+  return null;
+}
+
+
 /**
  * Parse Korean/English section headings from a Toss JD content blob.
  * Toss API returns the full JD as one "Job Description" text blob; this splits it into
@@ -384,6 +403,8 @@ function postingFromTossApiJob(group: TossJobGroup, job: TossJob, serverOnly: bo
   const fullText = `${company} ${title} ${category} ${keywords} ${employment} ${content}`;
 
   if (hasKeyword(fullText, TOSS_EXCLUDE_EMPLOYMENT)) return { reject: "contract_intern_freelance" };
+  const specificityReject = tossRoleSpecificityReject(company, title, content);
+  if (specificityReject) return { reject: specificityReject };
   if (serverOnly && isNonServerTitle(title)) return { reject: "not_server_title" };
   if (serverOnly && !isServerRole(fullText)) return { reject: "not_server" };
 
@@ -473,8 +494,11 @@ function parseTossJobDetail(
   if (!applyEvidence) return { reject: "no_apply_evidence" };
 
   const employment = deepFindStringAny(roots, TOSS_EMPLOYMENT_KEYS);
+  const company = deepFindStringAny(roots, ["companyName", "company"]) || "Toss";
   const fullText = `${title} ${content} ${employment}`;
   if (hasKeyword(fullText, TOSS_EXCLUDE_EMPLOYMENT)) return { reject: "contract_intern_freelance" };
+  const specificityReject = tossRoleSpecificityReject(company, title, content);
+  if (specificityReject) return { reject: specificityReject };
 
   if (serverOnly && isNonServerTitle(title)) return { reject: "not_server" };
   if (serverOnly && !hasKeyword(title, TOSS_SERVER_TITLE_KEYWORDS)) return { reject: "not_server_title" };
@@ -489,7 +513,7 @@ function parseTossJobDetail(
     posting: {
       source: "toss-careers",
       discoveryMode: "official-detail",
-      company: deepFindStringAny(roots, ["companyName", "company"]) || "Toss",
+      company,
       title,
       url,
       identityHash: `toss-careers:${url.match(/job_id=([^&]+)/)?.[1] ?? url}`,
