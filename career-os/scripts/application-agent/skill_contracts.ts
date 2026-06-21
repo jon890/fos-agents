@@ -68,7 +68,7 @@ export const SKILL_CONTRACTS: Readonly<Record<string, SkillContract>> = {
       kind: 'agent_skill',
       slashCommand: 'application-package-writer',
       argsTemplate: '{postingPath}',
-      claudeCli: { permissionMode: 'acceptEdits' },
+      claudeCli: { permissionMode: 'bypassPermissions' },
     },
     description:
       '공고별 fit-analysis.md + application-package.md + 제출용 Markdown 초안 생성. 근거 없는 주장은 보강 필요 / 선택지 / 권장 행동으로 분리.',
@@ -92,7 +92,7 @@ export const SKILL_CONTRACTS: Readonly<Record<string, SkillContract>> = {
       kind: 'agent_skill',
       slashCommand: 'application-reviewer',
       argsTemplate: '{applicationDir}',
-      claudeCli: { permissionMode: 'acceptEdits' },
+      claudeCli: { permissionMode: 'bypassPermissions' },
     },
     description:
       '지원 패키지와 제출용 Markdown 초안 심사 — evidence/drift/exaggeration/privacy/resume readiness/cooldown 축 검토 후 pass/revise/blocked 판정.',
@@ -109,7 +109,7 @@ export const SKILL_CONTRACTS: Readonly<Record<string, SkillContract>> = {
     invocation: {
       kind: 'local_script',
       localCommandTemplate:
-        'bun scripts/application-agent/export_resume.ts --application-dir {applicationDir}',
+        'node scripts/application-agent/export_resume.ts --application-dir {applicationDir}',
     },
     description:
       '검토된 resume-draft.md와 design.md 계약으로 resume.html과 첨부 가능한 resume.pdf를 생성. 외부 제출이나 업로드는 하지 않음.',

@@ -8,10 +8,14 @@
     "data_root": "private/cj-foodville/digital-channel-backend",
     "interview_date": "2026-06-15",
     "position_focus": "F&B/e-Commerce 운영형 자사 백엔드 — Spring Boot 3 + JPA/Hibernate + Kafka + Redis + MySQL 기반 신규 서비스 개발·운영 안정화, 레거시(JSP/jQuery)와 신규 SPA 공존 환경, 주문/픽업/딜리버리 상태머신·쿠폰·멤버십 도메인, 클라우드 운영 안정성.",
-    "notes": "CJ푸드빌 1차 면접은 2026-06-15에 종료. 1차 면접 준비 모드는 종료했고, 후속 단계 여부 대기 중.",
+    "notes": "CJ푸드빌 1차 면접은 종료. 결과가 나올 때까지 1차 기술면접 연습은 중단하고, 2차/인성면접 대비 모드로 운영한다.",
     "interview": {
       "first_round": null,
-      "final_round": null,
+      "final_round": {
+        "sites": [],
+        "source_dir": "cj-foodville-digital-channel-backend",
+        "report_slug": "cj-foodville-round2-personality"
+      },
       "offer_chat": null
     }
   },

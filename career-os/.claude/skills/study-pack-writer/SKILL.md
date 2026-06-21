@@ -62,9 +62,16 @@ recommender만이 아닌 모든 writer 호출 경로의 최종 점검이다.
 import 및 호출 (셸 명령):
 
 ```bash
+# bun이 있으면 기존 경로 사용
 bun career-os/scripts/study-topic-recommender/duplicate_detection.ts ...
-# 또는 agent skill 내부에서 직접 읽고 동등 로직 적용
+
+# bun이 없고 Node 22+가 있으면 Node의 TypeScript 실행 경로 사용
+node career-os/scripts/study-topic-recommender/duplicate_detection.ts ...
+
+# 둘 다 불가능하면 현재 에이전트가 파일을 직접 읽고 동등한 중복 판단을 수행
 ```
+
+런타임 도구가 없다는 이유만으로 skill을 중단하지 않는다. `bun`이 없으면 현재 LLM 에이전트가 `read_file`/`search_files`/`write_file`/`patch` 도구로 같은 절차를 수행한다.
 
 deterministic dedupe 결과는 ADR-033 duplicate decision schema 형태 (key / candidatePath / matchedPath / decision / reason / confidence).
 
@@ -142,6 +149,7 @@ WebSearch: "<기술명> limitations tradeoffs when to use"
 - `references/fos-study-writing-rules.md` 모든 규칙 준수
 
 파일 쓰기로 `career-os/sources/fos-study/<outputPath>.md`에 직접 저장.
+Hermes/현재 에이전트에서 실행 중이면 외부 Claude CLI에게 다시 위임하지 말고, 현재 세션의 `write_file` 또는 `patch` 도구로 저장한다. 파일 수정 권한 오류가 나면 `pwd`, `whoami`, 대상 경로 `stat`, 쓰기 테스트를 확인하고, `/opt/data/workspaces/career` wrapper가 아니라 `/home/bifos/ai-nodes/career-os` 정본 경로를 우선 사용한다.
 
 ### 6. Self-check (재작성 ≤3회)
 

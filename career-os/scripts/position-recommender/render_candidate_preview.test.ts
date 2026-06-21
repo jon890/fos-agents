@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { renderCandidatePreviewHtml } from "./render_candidate_preview.ts";
+import type { RecommendationRunType } from "./recommendation_schema.ts";
 
-const sampleRun = {
+const sampleRun: RecommendationRunType = {
   schemaVersion: 2,
   reportDate: "2026-06-21",
   generatedAt: "2026-06-21T15:00:00+09:00",
@@ -69,7 +70,7 @@ const sampleRun = {
   recentCheck: ["반복 점검"],
   weeklyActions: { apply: "지원", resume: "이력서", study: "학습" },
   sourceSnapshot: { collectionRunId: null, snapshotPath: "career-os/data/runtime/live-position-postings.md" }
-} as const;
+};
 
 test("candidate preview renders clickable posting links and tier labels", () => {
   const html = renderCandidatePreviewHtml(sampleRun, { limit: 10 });
