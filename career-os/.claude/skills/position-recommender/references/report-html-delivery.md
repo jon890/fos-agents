@@ -31,6 +31,13 @@ node scripts/position-recommender/render_candidate_preview.ts \
   --input data/runtime/position-recommendation.json \
   --limit 10 \
   --output data/runtime/downloads/position-recommendation-preview-$(TZ=Asia/Seoul date +%F).html
+
+# 전체 active/open 후보 미리보기. AI 모델 연구 중심 포지션과 CTO/기술총괄 포지션은 제외된다.
+node scripts/position-recommender/render_candidate_preview.ts \
+  --input data/runtime/position-recommendation.json \
+  --postings data/runtime/live-position-postings.md \
+  --limit all \
+  --output data/runtime/downloads/position-recommendation-preview-all-$(TZ=Asia/Seoul date +%F).html
 ```
 
 ## 검증 기준

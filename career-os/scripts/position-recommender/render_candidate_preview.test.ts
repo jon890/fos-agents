@@ -89,3 +89,40 @@ test("candidate preview applies limit to tiered position rows", () => {
   assert.doesNotMatch(html, /토스뱅크/);
   assert.doesNotMatch(html, /NAVER/);
 });
+
+
+test("candidate preview can render all live posting rows while excluding CTO and AI model research", () => {
+  const snapshot = `# Live Posting Snapshot
+
+- [케이존] CTO / Agentic AI 기술 총괄 리드
+  - source: wanted
+  - posting_status: active
+  - link_type: direct_posting
+  - skills: React, TypeScript
+  - main_tasks: Agentic AI 기술 총괄
+  - url: https://www.wanted.co.kr/wd/369442
+- [토스] AI Engineer (Model)
+  - source: toss-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - main_tasks: AI model research and model training
+  - url: https://toss.im/career/job-detail?job_id=7758217003
+- [카카오페이] 서버 개발자 - 결제 서비스
+  - source: kakaopay
+  - posting_status: open
+  - link_type: direct_posting
+  - skills: Java, Spring Boot
+  - main_tasks: 결제 승인, 취소, 매입 서버를 개발합니다.
+  - url: https://kakaopay.career.greetinghr.com/ko/o/192129
+`;
+
+  const html = renderCandidatePreviewHtml(sampleRun, { postingsMarkdown: snapshot, limit: null });
+
+  assert.match(html, /표시 후보 1개/);
+  assert.match(html, /카카오페이/);
+  assert.match(html, /결제 승인, 취소, 매입 서버를 개발합니다/);
+  assert.match(html, /https:\/\/kakaopay\.career\.greetinghr\.com\/ko\/o\/192129/);
+  assert.doesNotMatch(html, /CTO/);
+  assert.doesNotMatch(html, /AI Engineer \(Model\)/);
+  assert.doesNotMatch(html, /토스뱅크/);
+});

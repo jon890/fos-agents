@@ -5,7 +5,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { RecommendationRun, type RecommendationRunType, type PositionItemType } from "./recommendation_schema.ts";
 
-type PreviewTier = "강력 추천" | "도전 추천" | "보류·주의";
+type PreviewTier = "강력 추천" | "도전 추천" | "보류·주의" | "전체 후보";
 
 interface PreviewRow {
   tier: PreviewTier;
@@ -17,8 +17,9 @@ interface PreviewRow {
 }
 
 export interface CandidatePreviewOptions {
-  limit?: number;
+  limit?: number | null;
   title?: string;
+  postingsMarkdown?: string;
 }
 
 function escapeHtml(value: string): string {
@@ -41,8 +42,8 @@ function positionRow(tier: PreviewTier, item: PositionItemType): PreviewRow {
   };
 }
 
-function rowsFromRun(run: RecommendationRunType, limit: number): PreviewRow[] {
-  const rows: PreviewRow[] = [
+function rowsFromRun(run: RecommendationRunType): PreviewRow[] {
+  return [
     ...run.tiers.strong.map((item) => positionRow("강력 추천", item)),
     ...run.tiers.stretch.map((item) => positionRow("도전 추천", item)),
     ...run.tiers.hold
@@ -56,13 +57,84 @@ function rowsFromRun(run: RecommendationRunType, limit: number): PreviewRow[] {
         keywords: ["보류", "확인 필요"],
       })),
   ];
-  return rows.slice(0, limit);
+}
+
+function parseLivePostingRows(markdown: string): PreviewRow[] {
+  const rows: PreviewRow[] = [];
+  let current: { company: string; title: string; fields: Record<string, string>; raw: string[] } | null = null;
+
+  function flush(): void {
+    if (!current) return;
+    const status = (current.fields.posting_status ?? "").toLowerCase();
+    const linkType = (current.fields.link_type ?? "").toLowerCase();
+    const url = current.fields.url ?? "";
+    if ((status === "active" || status === "open") && linkType === "direct_posting" && url && !isExcludedPreviewPosting(current)) {
+      const skills = splitCsv(current.fields.skills ?? "").slice(0, 8);
+      const why = summarizeText(firstNonEmpty([
+        current.fields.main_tasks,
+        current.fields.requirements,
+        current.fields.preferred,
+        "개별 active/open 공고로 수집된 전체 후보입니다.",
+      ]));
+      rows.push({
+        tier: "전체 후보",
+        company: current.company,
+        title: current.title,
+        url,
+        why,
+        keywords: skills.length > 0 ? skills : [current.fields.source ?? "수집 공고"],
+      });
+    }
+    current = null;
+  }
+
+  for (const line of markdown.split(/\r?\n/)) {
+    const header = line.match(/^- \[([^\]]+)\] (.+)$/);
+    if (header) {
+      flush();
+      current = { company: header[1].trim(), title: header[2].trim(), fields: {}, raw: [line] };
+      continue;
+    }
+    if (!current) continue;
+    current.raw.push(line);
+    const field = line.trim().match(/^- ([a-zA-Z0-9_]+):\s*(.*)$/);
+    if (field) current.fields[field[1]] = field[2].trim();
+  }
+  flush();
+  return rows;
+}
+
+function splitCsv(value: string): string[] {
+  return value.split(",").map((item) => item.trim()).filter(Boolean);
+}
+
+function firstNonEmpty(values: Array<string | undefined>): string {
+  return values.find((value) => value && value.trim())?.trim() ?? "개별 active/open 공고로 수집된 전체 후보입니다.";
+}
+
+function summarizeText(value: string, maxLength = 260): string {
+  const sanitized = value.replace(/CTO/g, "기술 조직").replace(/\s+/g, " ").trim();
+  if (sanitized.length <= maxLength) return sanitized;
+  return `${sanitized.slice(0, maxLength - 1)}…`;
+}
+
+function isExcludedPreviewPosting(posting: { company: string; title: string; fields: Record<string, string>; raw: string[] }): boolean {
+  const text = [posting.company, posting.title, ...Object.values(posting.fields), ...posting.raw].join(" ").toLowerCase();
+  if (/cto|chief technology officer|기술\s*총괄|기술총괄/.test(text)) return true;
+  if (/ai engineer\s*\(model\)|ai\s*model\s*research|model\s*research|research\s*scientist|applied\s*scientist|ai\s*research|모델\s*연구/.test(text)) return true;
+  return false;
+}
+
+function applyLimit(rows: PreviewRow[], limit: number | null | undefined): PreviewRow[] {
+  if (limit == null) return rows;
+  return rows.slice(0, Math.max(1, limit));
 }
 
 function badgeClass(tier: PreviewTier): string {
   if (tier === "강력 추천") return "strong";
   if (tier === "도전 추천") return "stretch";
-  return "hold";
+  if (tier === "보류·주의") return "hold";
+  return "all";
 }
 
 function codeList(values: string[]): string {
@@ -70,8 +142,8 @@ function codeList(values: string[]): string {
 }
 
 export function renderCandidatePreviewHtml(run: RecommendationRunType, options: CandidatePreviewOptions = {}): string {
-  const limit = Math.max(1, options.limit ?? 10);
-  const rows = rowsFromRun(run, limit);
+  const effectiveLimit = options.limit === undefined ? 10 : options.limit;
+  const rows = applyLimit(options.postingsMarkdown ? parseLivePostingRows(options.postingsMarkdown) : rowsFromRun(run), effectiveLimit);
   const title = options.title ?? `${run.reportDate} 포지션 추천 미리보기`;
   const rowHtml = rows
     .map(
@@ -116,6 +188,7 @@ export function renderCandidatePreviewHtml(run: RecommendationRunType, options: 
     .badge.strong { background: #ecfdf3; color: #027a48; }
     .badge.stretch { background: #eff8ff; color: #175cd3; }
     .badge.hold { background: #fff7ed; color: #b54708; }
+    .badge.all { background: #f2f4f7; color: #344054; }
   </style>
 </head>
 <body>
@@ -136,7 +209,7 @@ ${rowHtml}
 }
 
 function usage(): never {
-  console.error("usage: render_candidate_preview.ts --input <recommendation.json> --output <preview.html> [--limit N] [--title <title>]");
+  console.error("usage: render_candidate_preview.ts --input <recommendation.json> --output <preview.html> [--limit N|all] [--title <title>] [--postings <live-position-postings.md>]");
   process.exit(2);
 }
 
@@ -144,13 +217,18 @@ if (import.meta.main) {
   const args = process.argv.slice(2);
   let input = "";
   let output = "";
-  let limit = 10;
+  let limit: number | null = 10;
   let title = "";
+  let postings = "";
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--input") input = args[++i] ?? "";
     else if (args[i] === "--output") output = args[++i] ?? "";
-    else if (args[i] === "--limit") limit = Number(args[++i] ?? "10") || 10;
+    else if (args[i] === "--limit") {
+      const value = args[++i] ?? "10";
+      limit = value === "all" ? null : Number(value) || 10;
+    }
     else if (args[i] === "--title") title = args[++i] ?? "";
+    else if (args[i] === "--postings") postings = args[++i] ?? "";
   }
   if (!input || !output) usage();
 
@@ -162,7 +240,8 @@ if (import.meta.main) {
     process.exit(1);
   }
 
-  const html = renderCandidatePreviewHtml(parsed.data, { limit, title: title || undefined });
+  const postingsMarkdown = postings ? readFileSync(resolve(postings), "utf-8") : undefined;
+  const html = renderCandidatePreviewHtml(parsed.data, { limit, title: title || undefined, postingsMarkdown });
   mkdirSync(dirname(resolve(output)), { recursive: true });
   writeFileSync(resolve(output), html, "utf-8");
   console.log(`candidate preview html: ${resolve(output)}`);
