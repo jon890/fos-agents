@@ -26,6 +26,8 @@
   - LLM, RAG, Agent, Tool calling, Memory, workflow/orchestration, evaluation, LLMOps/MLOps 중 후보자 경험과 연결되는 키워드가 있다.
   - 내부 플랫폼, 개발 생산성, 업무 자동화, SDLC AI 활용, AI-Native 개발 문화처럼 후보자의 에이전트/자동화 경험을 차별화할 수 있다.
   - NHN 대비 브랜드/보상/도메인/엔지니어링 규모 업사이드가 분명하다.
+- 실무형 AI Agent 설계 자체가 핵심인 공고는 별도 감점한다. 후보자의 현재 강점은 서비스 백엔드, RAG/workflow, agent 자동화, 품질 검증이지, 대규모 실서비스 AI Agent 설계를 주도한 이력은 아직 부족하다.
+- NAVER Webtoon `AI Applied Engineer`는 사용자가 2026-06-21에 “실무적 AI agents 설계 쪽이 아직 미흡하고 마감일도 오늘까지라 지원은 어렵다”고 판단했으므로, 같은 공고가 다음 수집 루프에 남아 있어도 강력 추천 1순위로 올리지 말고 보류/후순위로 낮춘다.
 - Data Engineer, AI Research, Frontend, PM, QA, Designer는 사용자가 명시하지 않는 한 제외한다. ML Engineer/MLOps는 모델 연구보다 플랫폼·서빙·파이프라인 개발 비중이 높을 때만 도전 추천 또는 보류로 다룬다.
 
 ### 2. 차별화 가능성
