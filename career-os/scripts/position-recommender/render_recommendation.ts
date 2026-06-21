@@ -3,13 +3,14 @@
 // 정본이 구조이므로 출력이 깨지지 않고, HTML은 JSON에서 직접 시맨틱 구조로 생성한다.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   RecommendationRun,
   type PositionItemType,
   type RecommendationRunType,
 } from "./recommendation_schema.ts";
 
-const DEFAULT_TEMPLATE = resolve(import.meta.dir, "templates/report.html");
+const DEFAULT_TEMPLATE = resolve(dirname(fileURLToPath(import.meta.url)), "templates/report.html");
 
 function escapeHtml(value: string): string {
   return value

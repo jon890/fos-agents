@@ -3,9 +3,10 @@
 // (import.meta.dir) so it is found regardless of cwd (ADR-091 principle).
 
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const CONFIG_DIR = resolve(import.meta.dir, "../../../config");
+const CONFIG_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../../../config");
 
 export interface WantedCollectionConfig {
   jobGroupId: number;

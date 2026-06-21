@@ -10,10 +10,11 @@
  * 한 줄 JSON을 --output 파일에 append한다.
  */
 
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from "fs";
-import { dirname, resolve } from "path";
+import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const REPO_ROOT = resolve(import.meta.dir, "../../..");
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const DEFAULT_OUTPUT = resolve(REPO_ROOT, "career-os/logs/position-metrics.jsonl");
 const TARGETS_CONFIG = resolve(REPO_ROOT, "career-os/config/verified-company-research-targets.json");
 

@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { XMLParser } from "fast-xml-parser";
 import type { AdapterCollectionResult, Posting, SourceAdapter } from "../types.ts";
 import {
@@ -31,7 +32,45 @@ async function fetchText(url: string): Promise<{ ok: boolean; status: number; te
     headers: { "User-Agent": UA, "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7" },
     signal: AbortSignal.timeout(20_000),
   });
-  return { ok: r.ok, status: r.status, text: await r.text() };
+  const text = await r.text();
+  if (r.ok || r.status !== 403) {
+    return { ok: r.ok, status: r.status, text };
+  }
+
+  // Cloudflare currently blocks Node/undici TLS fingerprints for Coupang job detail pages
+  // while accepting curl from the same host with the same headers. Use curl as a narrow
+  // fallback so the adapter can still enrich official direct-posting URLs.
+  return fetchTextWithCurl(url);
+}
+
+function fetchTextWithCurl(url: string): { ok: boolean; status: number; text: string } {
+  try {
+    const raw = execFileSync(
+      "curl",
+      [
+        "-L",
+        "-sS",
+        "--max-time",
+        "20",
+        "-A",
+        UA,
+        "-H",
+        "Accept-Language: ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+        "-w",
+        "\n__HTTP_STATUS__:%{http_code}",
+        url,
+      ],
+      { encoding: "utf-8", maxBuffer: 5 * 1024 * 1024 },
+    );
+    const marker = "\n__HTTP_STATUS__:";
+    const index = raw.lastIndexOf(marker);
+    if (index < 0) return { ok: false, status: 0, text: raw };
+    const text = raw.slice(0, index);
+    const status = Number(raw.slice(index + marker.length).trim()) || 0;
+    return { ok: status >= 200 && status < 300, status, text };
+  } catch (error) {
+    return { ok: false, status: 0, text: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 function parseSitemap(xml: string): SitemapUrl[] {

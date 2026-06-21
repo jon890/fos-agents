@@ -20,7 +20,8 @@
  *   bun collect_live_postings.ts --output <output-md> [--max-wanted N] [--source all|wanted|toss|coupang]
  */
 
-import { resolve } from "path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import type {
   AdapterCollectionResult,
   CollectionDiagnostics,
@@ -33,7 +34,7 @@ import { dedupe, keepActiveDirectPostings } from "./live-postings/validator.ts";
 import { render } from "./live-postings/render.ts";
 import { configuredSourceIds, selectAdapters } from "./live-postings/adapters/index.ts";
 
-const REPO_ROOT = resolve(import.meta.dir, "../../..");
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 
 // ---- CLI ----------------------------------------------------------------
 
