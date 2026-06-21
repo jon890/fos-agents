@@ -31,6 +31,7 @@
 | `stock-investment/` | [`stock-investment/AGENTS.md`](stock-investment/AGENTS.md) | 일일 주식과 이슈 모니터링 |
 | `travel/` | [`travel/AGENTS.md`](travel/AGENTS.md) | 여행별 일정과 결정 로그 |
 | `health-care/` | [`health-care/AGENTS.md`](health-care/AGENTS.md) | 무릎 재활 체크인 |
+| `ji-yoon-blog/` | [`ji-yoon-blog/AGENTS.md`](ji-yoon-blog/AGENTS.md) | 지융로그 네이버 블로그 운영, 글쓰기, 트렌드 분석 |
 
 ## 작업 경계
 
@@ -40,6 +41,9 @@
 - 비밀 값은 각 워크스페이스의 `.env`에 둔다.
 - 공개 repo에 커밋되는 문서와 task에는 private home-server 절대 경로를 쓰지 않는다.
 - Discord 등 공개 또는 준공개 채널 답변에서도 private path를 그대로 드러내지 않는다.
+- 보안상 민감한 설정·인증 파일은 공개 채널에 내용을 노출하지 않는다.
+- 파일 도구가 보안상 민감한 파일 수정을 거부하면 `terminal`, Python, 쉘 스크립트로 우회하지 않는다.
+- 직접 수정이 꼭 필요하면 파일, 변경값, 이유를 사용자에게 설명하고 명시 승인을 받은 뒤 진행한다.
 - `career-os/sources/fos-study`는 별도 동기 저장소다.
   study-pack 계열 작업이 아니면 프로젝트 코드처럼 편집하지 않는다.
 
