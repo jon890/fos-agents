@@ -1,7 +1,9 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 // _shared/lib/task_hud.ts
 // OpenClaw session task HUD helper.
 
+import { spawn } from "node:child_process";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -83,9 +85,9 @@ interface OpenClawResult {
 
 function printHelp(): void {
   console.log(`Usage:
-  bun _shared/lib/task_hud.ts status --session <session-id> [--dry-run]
-  bun _shared/lib/task_hud.ts update --session <session-id> --task-label <label> --status <status> [--dry-run]
-  bun _shared/lib/task_hud.ts warn --session <session-id> --kind <usage|context|compaction> [--dry-run]
+  node _shared/lib/task_hud.ts status --session <session-id> [--dry-run]
+  node _shared/lib/task_hud.ts update --session <session-id> --task-label <label> --status <status> [--dry-run]
+  node _shared/lib/task_hud.ts warn --session <session-id> --kind <usage|context|compaction> [--dry-run]
 
 Options:
   --target <channel:id>              Discord target for real send/edit.
@@ -318,7 +320,7 @@ async function loadState(opts: CliOptions): Promise<HudState> {
   const path = statePath(opts.stateRoot, sessionId);
   const now = new Date().toISOString();
   try {
-    const existing = JSON.parse(await Bun.file(path).text()) as HudState;
+    const existing = JSON.parse(await readFile(path, "utf-8")) as HudState;
     return {
       ...existing,
       sessionId,
@@ -342,8 +344,8 @@ async function loadState(opts: CliOptions): Promise<HudState> {
 }
 
 async function saveState(opts: CliOptions, state: HudState): Promise<void> {
-  await Bun.$`mkdir -p ${opts.stateRoot}`.quiet();
-  await Bun.write(statePath(opts.stateRoot, state.sessionId), `${JSON.stringify(state, null, 2)}\n`);
+  await mkdir(opts.stateRoot, { recursive: true });
+  await writeFile(statePath(opts.stateRoot, state.sessionId), `${JSON.stringify(state, null, 2)}\n`);
 }
 
 function usageSnapshot(opts: CliOptions): UsageSnapshot | undefined {
@@ -621,19 +623,36 @@ async function openclawMessage(
   if (messageId) {
     args.push("--message-id", messageId);
   }
-  const proc = Bun.spawn([bin, ...args], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const [exitCode, stdout, stderr] = await Promise.all([
-    proc.exited,
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-  ]);
+  const { exitCode, stdout, stderr } = await spawnCapture(bin, args);
   if (exitCode !== 0) {
     return { ok: false, stderr: stderr.trim() };
   }
   return { ok: true, messageId: extractMessageId(stdout) };
+}
+
+function spawnCapture(command: string, args: string[]): Promise<{ exitCode: number | null; stdout: string; stderr: string }> {
+  return new Promise((resolveResult) => {
+    const proc = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"] });
+    const stdoutChunks: Buffer[] = [];
+    const stderrChunks: Buffer[] = [];
+    proc.stdout.on("data", (chunk: Buffer) => stdoutChunks.push(chunk));
+    proc.stderr.on("data", (chunk: Buffer) => stderrChunks.push(chunk));
+    proc.on("error", (error) => {
+      stderrChunks.push(Buffer.from(error instanceof Error ? error.message : String(error)));
+      resolveResult({
+        exitCode: 1,
+        stdout: Buffer.concat(stdoutChunks).toString("utf-8"),
+        stderr: Buffer.concat(stderrChunks).toString("utf-8"),
+      });
+    });
+    proc.on("exit", (exitCode) => {
+      resolveResult({
+        exitCode,
+        stdout: Buffer.concat(stdoutChunks).toString("utf-8"),
+        stderr: Buffer.concat(stderrChunks).toString("utf-8"),
+      });
+    });
+  });
 }
 
 function extractMessageId(stdout: string): string | undefined {
@@ -732,11 +751,9 @@ async function run(): Promise<void> {
   await publishHud(opts, state);
 }
 
-if (import.meta.main) {
-  try {
-    await run();
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exit(1);
-  }
+try {
+  await run();
+} catch (error) {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
 }
