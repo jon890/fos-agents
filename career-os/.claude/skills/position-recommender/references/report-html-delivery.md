@@ -6,13 +6,13 @@
 - 항상 다운로드해서 바로 볼 수 있는 HTML을 함께 첨부한다.
 - HTML 안의 공고명은 개별 공고 URL로 이동하는 링크여야 한다.
 - Discord 미리보기에도 상위 후보, 핵심 사유, 공고 링크를 포함한다.
-- 사용자가 “전체 후보”를 요청하면 임의로 50개 등으로 제한하지 말고 `--limit all` preview를 생성한다.
-- AI 모델 연구 중심 포지션과 CTO/기술총괄 포지션은 사용자가 명시적으로 요청하지 않는 한 preview에서 제외한다.
+- 사용자가 “전체 후보”를 요청하면 임의로 20개·50개 등으로 자르지 말고 전체 active/open 후보를 보여준다.
 
 ## 권장 산출물
 
 - 전체 리포트: `data/runtime/downloads/position-recommendation-full-YYYY-MM-DD.html`
-- 후보 미리보기: `data/runtime/downloads/position-recommendation-preview-YYYY-MM-DD.html`
+- 기본 후보 미리보기: `data/runtime/downloads/position-recommendation-preview-YYYY-MM-DD.html`
+- 전체 후보 미리보기: `data/runtime/downloads/position-recommendation-preview-all-YYYY-MM-DD.html`
 - runtime mirror: `data/runtime/position-recommendation.{json,md,html}`
 
 ## 권장 실행 흐름
@@ -28,7 +28,7 @@ node scripts/position-recommender/render_recommendation.ts \
 cp data/runtime/position-recommendation.html \
   data/runtime/downloads/position-recommendation-full-$(TZ=Asia/Seoul date +%F).html
 
-# 후보 미리보기 HTML
+# 기본 후보 미리보기 HTML
 node scripts/position-recommender/render_candidate_preview.ts \
   --input data/runtime/position-recommendation.json \
   --limit 10 \
@@ -48,6 +48,7 @@ node scripts/position-recommender/render_candidate_preview.ts \
 - HTML 파일이 실제로 존재한다.
 - 미리보기 HTML에 `<a class="title" href="https://..." target="_blank"` 형태의 개별 공고 링크가 있다.
 - 텍스트 답변은 요약 수준이고, 본문은 HTML 첨부로 전달한다.
+- 전체 후보 미리보기에서 제외 대상 문자열이 사용자에게 보이지 않는지 확인한다: `CTO`, `AI Engineer (Model)`, `Applied Scientist`, `Tech Lead`, `Server Developer (Product)`.
 - 핵심 문서(AGENTS.md, SKILL.md, ADR, flow)를 수정했다면 완료 보고에 수정 사실과 파일 목록을 명시한다.
 - 변경은 가능하면 관심사별로 commit/push한다. 인증 문제나 unrelated dirty 파일 때문에 push가 막히면 이유를 보고한다.
 
