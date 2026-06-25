@@ -7,8 +7,11 @@ export type SourceId =
   | "kakaopay"
   | "kakaopay-securities"
   | "kakaomobility"
-  | "naver-careers";
-export type SourceAlias = "toss" | "coupang";
+  | "naver-careers"
+  | "samsung-careers"
+  | "sk-careers"
+  | "cj-careers";
+export type SourceAlias = "toss" | "coupang" | "samsung" | "sk" | "cj";
 export type SourceSelection = SourceId | SourceAlias | "all";
 
 export type DiscoveryMode =
