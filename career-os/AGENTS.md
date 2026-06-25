@@ -51,6 +51,12 @@ career-os에서는 다음 차이만 추가로 지킨다.
 - 각 plan은 `index.json`과 `phase-NN.md`를 가진다.
 - phase 문서는 실행 가능한 성공 기준, 보류 조건, 실패 조건을 포함한다.
 - 여러 phase를 건드리는 구현은 별도 worktree와 branch를 기본값으로 둔다.
+- career-os 전용 별도 worktree는 `career-os/.codex/worktrees/<branch-slug>/` 아래에 만든다.
+  `career-os` 루트에서 실행한다면 `.codex/worktrees/<branch-slug>/` 경로를 사용한다.
+- worktree 디렉터리 이름은 branch 이름의 `/`를 `-`로 바꾼 kebab-case slug를 기본값으로 둔다.
+- worktree branch 이름은 `codex/<topic>` 또는 `fix/<topic>`처럼 작업 성격이 드러나게 둔다.
+- worktree 생성 전에는 같은 경로와 branch가 이미 있는지 `git worktree list`와 `git branch --list`로 확인한다.
+- worktree 완료 전에는 해당 worktree에서 `git status --short`를 확인하고, clean 상태면 `git worktree remove <path>`로 정리한다.
 - 같은 plan 안의 phase는 명시적 예외가 없으면 순서대로 실행한다.
 - task나 phase를 실행하기 전에는 `docs/adr/INDEX.md`에서 관련 결정을 확인한다.
 
