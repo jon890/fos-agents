@@ -70,6 +70,8 @@
 - **Apache Kafka** (사용·패턴 이해) — 비동기 처리와 이벤트 발행 패턴을 접했으나, Kafka 운영·파티셔닝·Consumer Group 튜닝을 핵심 강점으로 내세우지는 않는다.
 - **RabbitMQ Fanout Exchange** (기능 구현 경험) — 다중 서버 인메모리 캐시 갱신 전파에 사용. 브로커 운영 전문성보다 애플리케이션 캐시 갱신 구조 경험으로 표현한다. `task/sb-dev-team/cache-architecture.md`, NSC 슬롯팀 정적 데이터 갱신.
 - **Azure Service Bus** (사용 경험) — RabbitMQ와 동일 인터페이스로 환경별 구현체를 분리한 경험. `task/sb-dev-team/cache-architecture.md`
+- **TCP/UDP·Socket 서버·저수준 네트워크 프로토콜** — HTTP API, gRPC 경계 트러블슈팅, MQ, Redis Streams 사용 경험은 있으나, TCP/UDP socket server, custom protocol, Netty 기반 네트워크 서버 아키텍처를 직접 설계·운영한 근거는 제한적이다.
+  해당 경험을 필수로 요구하는 공고에서는 강점으로 과장하지 않고, 지원 우선순위를 낮춘다.
 
 ### 데이터 / 스토리지
 - **MySQL 8.x** (실전 운영) — 복합 인덱스 추가로 캐시 충족 판정 쿼리 개선. `task/nsc-slot/rcc-rtp-cache-control.md`

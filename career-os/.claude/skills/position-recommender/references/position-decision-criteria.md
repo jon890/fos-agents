@@ -28,6 +28,9 @@
   - NHN 대비 브랜드/보상/도메인/엔지니어링 규모 업사이드가 분명하다.
 - 실무형 AI Agent 설계 자체가 핵심인 공고는 별도 감점한다. 후보자의 현재 강점은 서비스 백엔드, RAG/workflow, agent 자동화, 품질 검증이지, 대규모 실서비스 AI Agent 설계를 주도한 이력은 아직 부족하다.
 - NAVER Webtoon `AI Applied Engineer`는 사용자가 2026-06-21에 “실무적 AI agents 설계 쪽이 아직 미흡하고 마감일도 오늘까지라 지원은 어렵다”고 판단했으므로, 같은 공고가 다음 수집 루프에 남아 있어도 강력 추천 1순위로 올리지 말고 보류/후순위로 낮춘다.
+- TCP/UDP 기반 네트워크 통신, socket server, realtime network protocol, custom protocol, Netty 기반 저수준 네트워크 서버 아키텍처의 깊은 이해와 실무 경험이 필수인 공고는 현재 후보자 기준 강력 추천/도전 추천에서 제외한다.
+  후보자에게 HTTP API, gRPC 경계 트러블슈팅, MQ, Redis Streams 경험은 있으나 TCP/UDP socket server를 직접 설계·운영한 근거는 제한적이다.
+  해당 문구가 우대사항이거나 공고의 핵심이 일반 Java/Spring API 서버라면 하드 제외하지 않고 `businessRisk` 또는 `stretchGap`에 저수준 네트워크 경험 부족을 명시한다.
 - Data Engineer, AI Research, Frontend, PM, QA, Designer는 사용자가 명시하지 않는 한 제외한다. ML Engineer/MLOps는 모델 연구보다 플랫폼·서빙·파이프라인 개발 비중이 높을 때만 도전 추천 또는 보류로 다룬다.
 
 ### 2. 차별화 가능성
@@ -65,6 +68,7 @@
 
 - 하드필터는 최소화한다. 기본적으로는 공고를 삭제하기보다 감점 사유와 우선순위로 표현한다.
 - 하드필터 대상: 마감/폐쇄 공고, 계약직/임시직/프리랜서/위촉직/인턴, 서버/백엔드와 무관한 직무, 명백히 필수조건 미충족인 포지션.
+  TCP/UDP socket server, custom network protocol, realtime networking 실무 경험을 필수로 둔 공고는 현재 후보자에게 명백한 필수조건 미충족으로 본다.
 - 소프트 랭킹 대상: 최근 탈락 회사, Kotlin/Python/K8s 등 일부 기술 갭, 도메인 전환 난이도, 회사 업사이드 불확실성, 내부도구/조율 비중 우려, 복지/보상/팀 규모 불명확.
 - 회사 업사이드가 불확실한 공고는 기본적으로 “보류·주의”로 둔다. 도전 추천은 회사 업사이드가 중간 이상이고 후보자 차별화 fit이 강한 경우에만 사용한다.
 
