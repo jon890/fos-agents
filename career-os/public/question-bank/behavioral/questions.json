@@ -3,7 +3,7 @@
     "id": "behavioral-001",
     "category": "behavioral",
     "difficulty": "basic",
-    "question": "팀 내 기술적 의견 충돌을 해결한 경험을 STAR 형식으로 말씀해 주세요.",
+    "question": "팀 내 기술적 의견 충돌을 해결한 경험을 말씀해 주세요.",
     "intent": "갈등 처리 능력과 협업 방식을 확인한다.",
     "answerSignals": [
       "상황(Situation)과 과제(Task) 명확히 제시",
@@ -45,7 +45,7 @@
     "id": "behavioral-003",
     "category": "behavioral",
     "difficulty": "intermediate",
-    "question": "자신이 주도적으로 문제를 발견하고 해결한 경험을 STAR 형식으로 설명하세요.",
+    "question": "자신이 주도적으로 문제를 발견하고 해결한 경험을 설명해 주세요.",
     "intent": "자기 주도성과 오너십을 확인한다.",
     "answerSignals": [
       "자발적 문제 발견과 제안(Situation/Task)",
@@ -108,7 +108,7 @@
     "id": "behavioral-006",
     "category": "behavioral",
     "difficulty": "intermediate",
-    "question": "여러 업무가 동시에 몰렸을 때 우선순위를 정하고 납기나 품질을 지킨 경험을 STAR 형식으로 설명해 주세요.",
+    "question": "여러 업무가 동시에 몰렸을 때 우선순위를 정하고 납기나 품질을 지킨 경험을 설명해 주세요.",
     "intent": "압박 상황에서 우선순위를 정하고 실행 계획을 조정하는 방식을 확인한다.",
     "answerSignals": [
       "업무 간 긴급도와 영향도 판단 기준 제시",
@@ -426,6 +426,222 @@
     "followUps": [
       "지식 공유가 일회성으로 끝나지 않게 한 방법은 무엇인가요?",
       "상대의 수준이 다를 때 설명 방식을 어떻게 바꿨나요?"
+    ]
+  },
+  {
+    "id": "behavioral-018",
+    "category": "behavioral",
+    "difficulty": "basic",
+    "question": "지원한 회사와 직무를 선택한 이유를 본인의 경험과 연결해 설명해 주세요.",
+    "intent": "지원 동기가 단순 선호가 아니라 경험, 강점, 직무 이해와 연결되는지 확인한다.",
+    "answerSignals": [
+      "회사나 직무를 선택한 기준을 구체적으로 제시",
+      "본인의 과거 경험과 강점이 직무 요구와 어떻게 맞는지 설명",
+      "입사 후 기여 방향을 현실적인 업무 맥락으로 연결"
+    ],
+    "source": "public-web-behavioral-source-scan",
+    "publicSafe": true,
+    "positionFitHint": "회사 이해도와 직무 적합성을 첫 질문으로 확인할 때 선별한다.",
+    "normalizedFrom": "공개 채용 플랫폼과 개발자 회고에서 반복 확인된 지원동기 질문을 범용 직무 적합성 질문으로 정규화",
+    "topic": "motivation-role-fit",
+    "tags": [
+      "motivation",
+      "role-fit",
+      "company-understanding",
+      "opening"
+    ],
+    "followUps": [
+      "그 경험이 이 직무에서 어떤 방식으로 재현될 수 있나요?",
+      "다른 회사가 아니라 이 회사를 고른 기준은 무엇인가요?"
+    ]
+  },
+  {
+    "id": "behavioral-019",
+    "category": "behavioral",
+    "difficulty": "intermediate",
+    "question": "지원한 산업이나 서비스에서 최근 중요해졌다고 보는 변화와 그 이유를 말씀해 주세요.",
+    "intent": "산업 이해도, 시장 감도, 직무 관점의 해석 능력을 확인한다.",
+    "answerSignals": [
+      "관찰한 변화가 무엇인지 구체적으로 설명",
+      "고객, 운영, 기술, 비즈니스 영향 중 하나 이상과 연결",
+      "지원 직무에서 그 변화에 어떻게 대응할지 제시"
+    ],
+    "source": "public-web-behavioral-source-scan",
+    "publicSafe": true,
+    "positionFitHint": "F&B, 커머스, 콘텐츠, 플랫폼 등 산업 이해가 중요한 역할에 선별한다.",
+    "normalizedFrom": "외식 트렌드, 커머스 트렌드, 서비스 관심도 질문을 산업 감도 확인 질문으로 정규화",
+    "topic": "industry-trend-awareness",
+    "tags": [
+      "industry",
+      "trend",
+      "business-impact",
+      "service-understanding"
+    ],
+    "followUps": [
+      "그 변화를 확인할 때 어떤 자료나 지표를 주로 보나요?",
+      "그 변화가 본인 직무의 우선순위에 어떤 영향을 준다고 보나요?"
+    ]
+  },
+  {
+    "id": "behavioral-020",
+    "category": "behavioral",
+    "difficulty": "intermediate",
+    "question": "고객이나 사용자 접점에서 얻은 관찰을 업무 개선으로 연결한 경험을 설명해 주세요.",
+    "intent": "고객 관찰을 실행 가능한 개선으로 바꾸는 역량을 확인한다.",
+    "answerSignals": [
+      "고객 또는 사용자 관찰의 출처와 문제 정의가 명확함",
+      "관찰을 개선 과제로 바꾸기 위해 한 행동 제시",
+      "개선 후 고객 경험, 운영 효율, 품질 측면 결과 설명"
+    ],
+    "source": "public-web-behavioral-source-scan",
+    "publicSafe": true,
+    "positionFitHint": "고객 접점, 서비스 운영, 제품 개선 감각을 확인할 때 선별한다.",
+    "normalizedFrom": "외식업 현장 경험, 사용자 경험, 서비스 개선 질문을 고객 관찰 기반 개선 경험으로 정규화",
+    "topic": "customer-observation-improvement",
+    "tags": [
+      "customer",
+      "service",
+      "improvement",
+      "operations"
+    ],
+    "followUps": [
+      "그 관찰이 개인적 인상에 그치지 않도록 어떻게 검증했나요?",
+      "개선안이 받아들여지지 않았다면 어떻게 설득했을까요?"
+    ]
+  },
+  {
+    "id": "behavioral-021",
+    "category": "behavioral",
+    "difficulty": "intermediate",
+    "question": "회사나 서비스의 아쉬운 점을 발견했을 때 어떻게 건설적으로 제안했는지 말씀해 주세요.",
+    "intent": "비판적 사고와 존중 있는 개선 제안 방식을 확인한다.",
+    "answerSignals": [
+      "아쉬운 점을 감정이 아니라 근거와 영향으로 설명",
+      "대안과 비용, 기대 효과를 함께 제시",
+      "상대가 받아들이기 쉬운 방식으로 제안하거나 검증한 행동"
+    ],
+    "source": "public-web-behavioral-source-scan",
+    "publicSafe": true,
+    "positionFitHint": "회사 이해도와 개선 제안 태도를 동시에 확인할 때 선별한다.",
+    "normalizedFrom": "회사에 대한 아쉬운 점, 브랜드 차별점, 개선 제안 질문을 건설적 피드백 질문으로 정규화",
+    "topic": "constructive-service-critique",
+    "tags": [
+      "constructive-feedback",
+      "company-understanding",
+      "improvement",
+      "communication"
+    ],
+    "followUps": [
+      "제안이 비판처럼 들리지 않게 하기 위해 무엇을 신경 썼나요?",
+      "대안의 우선순위는 어떤 기준으로 정했나요?"
+    ]
+  },
+  {
+    "id": "behavioral-022",
+    "category": "behavioral",
+    "difficulty": "advanced",
+    "question": "중요한 선택의 순간에 어떤 기준으로 판단했고, 그 기준이 결과에 어떤 영향을 줬는지 설명해 주세요.",
+    "intent": "의사결정 기준, 책임감, 결과 회고 능력을 확인한다.",
+    "answerSignals": [
+      "선택지가 가진 장단점과 제약을 균형 있게 설명",
+      "판단 기준이 개인 취향이 아니라 목표와 리스크에 연결됨",
+      "선택 이후 결과와 다음 판단에 반영한 학습 제시"
+    ],
+    "source": "public-web-behavioral-source-scan",
+    "publicSafe": true,
+    "positionFitHint": "최종 면접에서 업무 태도와 판단 기준을 깊게 확인할 때 선별한다.",
+    "normalizedFrom": "문화 적합성 면접의 판단 기준, 왜 그렇게 결정했는지 묻는 질문을 의사결정 회고 질문으로 정규화",
+    "topic": "decision-criteria-reflection",
+    "tags": [
+      "decision-making",
+      "judgment",
+      "culture-fit",
+      "reflection"
+    ],
+    "followUps": [
+      "당시 반대 의견이 있었다면 어떻게 검토했나요?",
+      "지금 같은 상황을 다시 만나면 어떤 기준을 바꾸겠나요?"
+    ]
+  },
+  {
+    "id": "behavioral-023",
+    "category": "behavioral",
+    "difficulty": "intermediate",
+    "question": "모르는 내용이나 답하기 어려운 질문을 마주했을 때 어떻게 대응하고 이후 보완했는지 말씀해 주세요.",
+    "intent": "모르는 것을 다루는 태도, 학습 회복력, 사후 보완 습관을 확인한다.",
+    "answerSignals": [
+      "모르는 부분을 인정하면서 현재 아는 범위를 명확히 설명",
+      "추론 과정이나 확인 계획을 말로 공유한 행동",
+      "이후 학습, 검증, 재발 방지로 이어진 사례"
+    ],
+    "source": "public-web-behavioral-source-scan",
+    "publicSafe": true,
+    "positionFitHint": "압박 질문, 기술-인성 혼합 면접, 성장 가능성을 확인할 때 선별한다.",
+    "normalizedFrom": "개발자 면접 회고에서 반복된 질문 의도 파악, 모르는 내용 복습, 답변을 찾아가는 태도를 범용 질문으로 정규화",
+    "topic": "unknown-question-recovery",
+    "tags": [
+      "learning",
+      "self-awareness",
+      "pressure",
+      "growth"
+    ],
+    "followUps": [
+      "모르는 내용을 인정하는 것과 무책임해 보이는 것의 차이는 무엇이라고 생각하나요?",
+      "그 이후 같은 약점을 어떻게 추적했나요?"
+    ]
+  },
+  {
+    "id": "behavioral-024",
+    "category": "behavioral",
+    "difficulty": "intermediate",
+    "question": "업무 강도나 역할 범위가 예상과 달랐던 상황에서 어떻게 적응했는지 설명해 주세요.",
+    "intent": "업무 압박, 역할 변화, 스트레스 상황에서의 적응 방식을 확인한다.",
+    "answerSignals": [
+      "예상과 달랐던 조건과 영향 범위를 구체적으로 설명",
+      "우선순위 조정, 커뮤니케이션, 회복 루틴 등 대응 행동 제시",
+      "성과 유지나 번아웃 방지, 협업 안정화 결과"
+    ],
+    "source": "public-web-behavioral-source-scan",
+    "publicSafe": true,
+    "positionFitHint": "업무 속도와 책임 범위가 큰 조직에서 적응 가능성을 확인할 때 선별한다.",
+    "normalizedFrom": "업무량, 스트레스 관리, 역할 범위 수용 질문을 업무 압박 적응 경험으로 정규화",
+    "topic": "workload-role-adaptation",
+    "tags": [
+      "workload",
+      "stress-management",
+      "adaptability",
+      "role-change"
+    ],
+    "followUps": [
+      "적응 과정에서 주변에 어떤 도움을 요청했나요?",
+      "업무 강도를 버티는 것과 지속 가능하게 일하는 것의 차이는 무엇인가요?"
+    ]
+  },
+  {
+    "id": "behavioral-025",
+    "category": "behavioral",
+    "difficulty": "intermediate",
+    "question": "프로젝트에서 가장 중요하게 여긴 기준과 그 기준을 지키기 위해 한 행동을 말씀해 주세요.",
+    "intent": "본인이 일에서 중요하게 보는 가치와 실제 행동의 일관성을 확인한다.",
+    "answerSignals": [
+      "프로젝트 목표와 본인이 중요하게 본 기준을 연결",
+      "그 기준을 지키기 위해 포기하거나 조율한 선택 설명",
+      "결과와 함께 기준이 적절했는지 회고"
+    ],
+    "source": "public-web-behavioral-source-scan",
+    "publicSafe": true,
+    "positionFitHint": "프로젝트 경험을 통해 가치관, 품질 기준, 협업 태도를 확인할 때 선별한다.",
+    "normalizedFrom": "프로젝트에서 중요하게 여긴 부분, 기술적 도전, 역할 수행 질문을 가치 기준 검증 질문으로 정규화",
+    "topic": "project-value-standard",
+    "tags": [
+      "project",
+      "values",
+      "quality",
+      "ownership"
+    ],
+    "followUps": [
+      "그 기준 때문에 속도나 범위를 포기한 적이 있나요?",
+      "팀 기준과 본인 기준이 달랐을 때 어떻게 맞췄나요?"
     ]
   }
 ]

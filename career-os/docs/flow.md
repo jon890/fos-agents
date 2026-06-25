@@ -14,7 +14,7 @@ career-os의 반복 업무가 어떤 입력에서 시작해 어떤 처리 주체
 | [일상 학습](#일상-학습) | 오늘 공부 추천과 study pack 생성 | 추천 리포트, fos-study 초안 |
 | [포지션 추천](#포지션-추천) | 공고 수집과 지원 후보 생성 | 추천 JSON, report, 후보 상태 |
 | [지원 준비](#지원-준비) | 지원 패키지, 리뷰, 이력서 초안 | 공고별 application 산출물 |
-| [면접 준비](#면접-준비) | 역할 핏 진단, 단계별 준비, 드릴 | 면접 준비 자료, 드릴 로그 |
+| [면접 준비](#면접-준비) | 역할 핏 진단, 단계별 준비, 답변 연습 | 면접 준비 자료, 답변 연습 로그 |
 | [질문 은행](#질문-은행) | 공개 가능한 질문 풀 수집과 보강 흐름 | `public/question-bank/` |
 | [이력서 패키지](#이력서-패키지) | 검토된 이력서 초안 변환 | `resume.html`, `resume.pdf` |
 | [fos-career 연결](#fos-career-연결) | 웹 대시보드와 career-os 연결 | DB request, outbox |
@@ -207,7 +207,7 @@ discovered
 
 ## 면접 준비
 
-면접 준비 흐름은 역할 단위 진단, 단계별 준비, 매일 답변 드릴로 나뉜다.
+면접 준비 흐름은 역할 단위 진단, 단계별 준비, 매일 면접 답변 연습으로 나뉜다.
 
 ```text
 Use skill: /job-fit-analyzer [역할]
@@ -230,7 +230,7 @@ Use skill: /tech-interview-drill
 Use skill: /behavioral-interview-drill
   -> 질문 풀과 약점 기록 읽기
   -> 사용자 답변 1개를 채점
-  -> 드릴 로그와 약점 상태 갱신
+  -> 답변 연습 로그와 약점 상태 갱신
   -> 필요한 경우 study-pack-writer 위임 후보 생성
 ```
 
@@ -259,6 +259,9 @@ Use skill: /question-bank-collector <topic>
   -> public/question-bank/ 갱신
   -> 필요한 경우 private 면접 prep에 선별 반영 후보 제공
 ```
+
+인성 면접 웹 수집 자료는 먼저 `data/runtime/behavioral-interview-web-source-scan-YYYY-MM-DD.md`에 출처와 신뢰도를 남긴다.
+그중 회사명, 개인 이력, 지원 전략을 제거해 재사용 가능한 일반 질문으로 정규화할 수 있는 항목은 `public/question-bank/behavioral/questions.json`에 누적한다.
 
 fos-career 면접 hub에서 질문 bank 보강을 요청할 때도 직접 실행하지 않는다.
 request queue에 넣고 host-side processor가 allowlist를 확인한 뒤 career-os skill을 실행한다.
