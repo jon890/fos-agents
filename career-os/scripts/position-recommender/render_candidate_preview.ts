@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// 포지션 추천 JSON에서 Discord 첨부용 HTML 미리보기를 생성한다.
-// 전체 report.html은 render_recommendation.ts가 담당하고, 이 파일은 후보 링크 중심 preview 전용이다.
+// 포지션 추천 JSON과 live posting snapshot에서 Discord 첨부용 전체 공고 HTML을 생성한다.
+// 전체 report.html은 render_recommendation.ts가 담당하고, 이 파일은 공고 링크 중심 HTML 전용이다.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { RecommendationRun, type RecommendationRunType, type PositionItemType } from "./recommendation_schema.ts";
@@ -151,7 +151,7 @@ function codeList(values: string[]): string {
 export function renderCandidatePreviewHtml(run: RecommendationRunType, options: CandidatePreviewOptions = {}): string {
   const effectiveLimit = options.limit === undefined ? 10 : options.limit;
   const rows = applyLimit(options.postingsMarkdown ? parseLivePostingRows(options.postingsMarkdown) : rowsFromRun(run), effectiveLimit);
-  const title = options.title ?? `${run.reportDate} 포지션 추천 미리보기`;
+  const title = options.title ?? (options.postingsMarkdown ? `${run.reportDate} 전체 수집 공고` : `${run.reportDate} 포지션 추천 후보`);
   const rowHtml = rows
     .map(
       (row, index) => `<tr>
@@ -201,7 +201,7 @@ export function renderCandidatePreviewHtml(run: RecommendationRunType, options: 
 <body>
 <main>
   <h1>${escapeHtml(title)}</h1>
-  <div class="meta">생성일: ${escapeHtml(run.reportDate)} · 공고명을 클릭하면 개별 공고 페이지로 이동합니다. · 표시 후보 ${rows.length}개</div>
+  <div class="meta">생성일: ${escapeHtml(run.reportDate)} · 공고명을 클릭하면 개별 공고 페이지로 이동합니다. · 표시 공고 ${rows.length}개</div>
   <section class="conclusion"><ul>${conclusion}</ul></section>
   <table>
     <thead><tr><th class="rank">순위</th><th>구분</th><th>공고 링크</th><th>키워드</th><th>핵심 판단</th></tr></thead>
@@ -216,7 +216,7 @@ ${rowHtml}
 }
 
 function usage(): never {
-  console.error("usage: render_candidate_preview.ts --input <recommendation.json> --output <preview.html> [--limit N|all] [--title <title>] [--postings <live-position-postings.md>]");
+  console.error("usage: render_candidate_preview.ts --input <recommendation.json> --postings <live-position-postings.md> --limit all --output <all-postings.html> [--title <title>]");
   process.exit(2);
 }
 

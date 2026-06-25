@@ -130,7 +130,7 @@ test("candidate preview can render all live posting rows while excluding CTO and
 
   const html = renderCandidatePreviewHtml(sampleRun, { postingsMarkdown: snapshot, limit: null });
 
-  assert.match(html, /표시 후보 1개/);
+  assert.match(html, /표시 공고 1개/);
   assert.match(html, /카카오페이/);
   assert.match(html, /결제 승인, 취소, 매입 서버를 개발합니다/);
   assert.match(html, /https:\/\/kakaopay\.career\.greetinghr\.com\/ko\/o\/192129/);
