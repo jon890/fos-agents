@@ -1,9 +1,9 @@
 #!/usr/bin/env bun
 
 /**
- * 공용 드릴 엔진 — tech-interview-drill · behavioral-interview-drill 공통 로직
+ * 공용 답변 연습 엔진 — tech-interview-drill · behavioral-interview-drill 공통 로직
  *
- * 간격 반복 기반 질문 선정, 답변 채점, 드릴 로그 기록, weak_spots 갱신,
+ * 간격 반복 기반 질문 선정, 답변 채점, 답변 연습 로그 기록, weak_spots 갱신,
  * study-pack-writer 위임 판단을 담당한다.
  *
  * 의존 파일:
@@ -37,6 +37,9 @@ export interface DrillQuestion {
   intent: string;
   answerSignals: string[];
   followUps?: string[];
+  positionFitHint?: string;
+  tags?: string[];
+  sequenceHint?: "opening" | "early" | "middle" | "late" | "closing";
 }
 
 export interface WeakSpotEntry {
@@ -44,7 +47,7 @@ export interface WeakSpotEntry {
   study_count: number;
   last_evaluated: string | null;
   status: string;
-  // 드릴 엔진이 관리하는 필드
+  // 답변 연습 엔진이 관리하는 필드
   pass_count?: number;
   fail_count?: number;
   next_review_date?: string | null;
@@ -64,6 +67,15 @@ export interface DrillLogEntry {
   question: string;
   score: ScoreResult;
   studyPackDispatched?: boolean;
+  targetCompany?: string;
+  targetRole?: string;
+  targetValueAxis?: string;
+}
+
+interface PrimaryTarget {
+  company?: string;
+  company_slug?: string;
+  role?: string;
 }
 
 // ─── 경로 헬퍼 ───────────────────────────────────────────────────────────────
@@ -87,6 +99,10 @@ const TECH_CATEGORIES = [
 
 function studyProgressPath(): string {
   return join(careerOsRoot(), "config", "study-progress.json");
+}
+
+function mvpTargetPath(): string {
+  return join(careerOsRoot(), "config", "mvp-target.json");
 }
 
 function drillLogPath(date?: string): string {
@@ -194,6 +210,56 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+function loadPrimaryTarget(): PrimaryTarget | null {
+  const path = mvpTargetPath();
+  if (!existsSync(path)) return null;
+
+  try {
+    const parsed = JSON.parse(readFileSync(path, "utf-8")) as {
+      primary?: PrimaryTarget;
+    };
+    return parsed.primary ?? null;
+  } catch {
+    console.warn(`[drill-engine] mvp-target.json 파싱 실패, 타깃 boost 생략: ${path}`);
+    return null;
+  }
+}
+
+function targetPriorityBoost(
+  drillType: DrillType,
+  question: DrillQuestion,
+  target: PrimaryTarget | null
+): number {
+  if (drillType !== "behavioral" || target == null) return 0;
+
+  const companySlug = target.company_slug?.toLowerCase() ?? "";
+  if (!companySlug) return 0;
+
+  return question.id.toLowerCase().startsWith(`${companySlug}-`) ? 10 : 0;
+}
+
+function difficultyOrder(difficulty: DrillQuestion["difficulty"]): number {
+  if (difficulty === "basic") return 0;
+  if (difficulty === "intermediate") return 1;
+  return 2;
+}
+
+function sequenceOrder(question: DrillQuestion): number {
+  if (question.sequenceHint === "opening") return 0;
+  if (question.sequenceHint === "early") return 1;
+  if (question.sequenceHint === "middle") return 2;
+  if (question.sequenceHint === "late") return 3;
+  if (question.sequenceHint === "closing") return 4;
+
+  if (question.difficulty === "basic") return 1;
+  if (question.tags?.some((tag) => ["incident", "customer-impact"].includes(tag))) {
+    return 3;
+  }
+  if (question.topic.includes("failure") || question.topic.includes("retry")) return 3;
+  if (question.topic.includes("result")) return 4;
+  return 2;
+}
+
 // ─── 질문 선정 (간격 반복) ────────────────────────────────────────────────────
 
 /**
@@ -209,6 +275,7 @@ export function selectQuestions(
   if (bank.length === 0) return [];
 
   const todayStr = today();
+  const primaryTarget = loadPrimaryTarget();
 
   // 각 질문의 우선순위 점수 계산
   const scored = bank.map((q) => {
@@ -229,13 +296,28 @@ export function selectQuestions(
     else if (isDue && passCount === 0) priority = 2; // 미시도
     else if (isDue) priority = 1; // 일반 복습
 
+    if (priority >= 0) {
+      priority += targetPriorityBoost(drillType, q, primaryTarget);
+    }
+
     return { q, priority };
   });
 
-  return scored
+  const selected = scored
     .filter((s) => s.priority >= 0)
     .sort((a, b) => b.priority - a.priority)
-    .slice(0, maxCount)
+    .slice(0, maxCount);
+
+  return selected
+    .sort((a, b) => {
+      const sequenceDiff = sequenceOrder(a.q) - sequenceOrder(b.q);
+      if (sequenceDiff !== 0) return sequenceDiff;
+
+      const difficultyDiff = difficultyOrder(a.q.difficulty) - difficultyOrder(b.q.difficulty);
+      if (difficultyDiff !== 0) return difficultyDiff;
+
+      return a.q.id.localeCompare(b.q.id);
+    })
     .map((s) => s.q);
 }
 
@@ -262,7 +344,7 @@ export function scoreAnswer(
   return "fail";
 }
 
-// ─── 드릴 로그 기록 ──────────────────────────────────────────────────────────
+// ─── 답변 연습 로그 기록 ──────────────────────────────────────────────────────
 
 export function recordDrillLog(entry: DrillLogEntry): void {
   const path = drillLogPath();
@@ -351,10 +433,10 @@ if (import.meta.main) {
   const questions = selectQuestions(drillType, progress.weak_spots);
   if (questions.length === 0) {
     console.log(
-      "오늘 드릴할 질문이 없습니다. /question-bank-collector 로 질문 풀을 보강하세요."
+      "오늘 연습할 질문이 없습니다. /question-bank-collector 로 질문 풀을 보강하세요."
     );
   } else {
-    console.log(`[${drillType}] 오늘 드릴 질문 ${questions.length}개:`);
+    console.log(`[${drillType}] 오늘 연습 질문 ${questions.length}개:`);
     questions.forEach((q, i) => {
       console.log(`  ${i + 1}. [${q.topic}] ${q.question}`);
     });
