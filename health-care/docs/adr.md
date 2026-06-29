@@ -19,7 +19,7 @@
 
 ### 결정
 
-초기 health-care skill 설계는 `daily-knee-rehab-checkin`, `knee-progress-intake`, `weekly-knee-clinic-summary` 세 경계로 나눈다. 매일 체크인은 보수적 규칙 기반으로 시작하고, Claude는 주간/진료 전 요약처럼 분석 가치가 큰 작업에 제한적으로 사용한다.
+초기 health-care skill 설계는 `daily-knee-rehab-checkin`, `knee-progress-intake`, `weekly-knee-clinic-summary` 세 경계로 나누었고, 2026-06-29 이후 아침 체크인은 `daily-health-coaching`으로 확장한다. 매일 체크인은 보수적 규칙 기반으로 시작하고, Claude는 주간/진료 전 요약처럼 분석 가치가 큰 작업에 제한적으로 사용한다.
 
 ### 결과
 
@@ -36,7 +36,7 @@
 
 ### 결정
 
-`daily-knee-rehab-checkin`은 기존 상태 체크와 주의사항에 더해 오늘의 재활 운동 세트를 포함한다. 운동 세트의 일반 기준은 `config/knee-rehab-exercise-sets.md`에 둔다. 개인 경과와 수술 이력은 계속 `private/conditions/knee-patellar-instability/current-context.md`에만 보관한다.
+`daily-health-coaching`은 기존 무릎 상태 체크와 재활 운동 세트에 더해 건강검진 기반 식단·체중·저충격 운동 코칭을 포함한다. 운동 세트의 일반 기준은 `config/knee-rehab-exercise-sets.md`에 둔다. 개인 경과와 수술 이력은 계속 `private/conditions/knee-patellar-instability/current-context.md`에만 보관한다.
 
 ### 결과
 

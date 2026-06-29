@@ -59,7 +59,7 @@
 4. 병원 제출용 문서는 짧고 정확하게 만든다.
 5. 재활 계획은 “안전한 범위 유지” 중심으로 제안하고, 강화 단계는 의료진/물리치료사 확인 후 진행한다.
 6. 애매한 부분은 임의로 넘기지 말고 질문하거나 `확인 필요`로 남긴다.
-7. 아침 재활 체크인 변경은 `.claude/skills/daily-knee-rehab-checkin/SKILL.md`, `config/knee-running-recovery-plan.md`, `config/knee-rehab-exercise-sets.md`, `docs/flow.md`, `docs/code-architecture.md`를 함께 확인한다.
+7. 아침 종합 건강 코칭 변경은 `.claude/skills/daily-health-coaching/SKILL.md`, `private/conditions/health-screening-2026-06-10/current-context.md`, `private/conditions/health-screening-2026-06-10/health-coaching-plan-2026-06-29.md`, `config/knee-running-recovery-plan.md`, `config/knee-rehab-exercise-sets.md`, `docs/flow.md`, `docs/code-architecture.md`를 함께 확인한다.
 8. 이후 참고 자료로 남길 만한 사용자 경과는 `private/conditions/.../current-context.md`에, 일반화 가능한 운영 결정은 `docs/adr.md` 또는 `config/`에 남긴다.
 
 ## fos-brain 연동

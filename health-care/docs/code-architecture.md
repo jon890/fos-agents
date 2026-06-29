@@ -10,7 +10,7 @@
 
 ## 예정 skill 경계
 
-### `.claude/skills/daily-knee-rehab-checkin/`
+### `.claude/skills/daily-health-coaching/`
 
 - 입력: `private/conditions/knee-patellar-instability/current-context.md`, `config/knee-running-recovery-plan.md`
 - 추가 입력: `config/knee-rehab-exercise-sets.md`
@@ -32,6 +32,6 @@
 ## 알림/cron
 
 - 매일 아침 체크인은 OpenClaw cron이 담당한다.
-- cron payload는 `/daily-knee-rehab-checkin` 또는 동등한 스킬 호출로 유지하고, 운동 세트 변경은 skill/config 문서에서 관리한다.
+- cron payload는 `/daily-health-coaching` 또는 동등한 스킬 호출로 유지하고, 무릎 재활·식단·건강검진 기반 코칭 변경은 skill/private context/config 문서에서 관리한다.
 - 플랫폼 내부 식별자는 repo 문서에 기록하지 않는다.
 - 배송 대상은 OpenClaw 로컬 cron/config에서만 관리한다.

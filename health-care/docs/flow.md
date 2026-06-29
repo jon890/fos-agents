@@ -33,6 +33,6 @@
 
 ## 5. Skill flow plan
 
-- `daily-knee-rehab-checkin`: `current-context.md` + `config/knee-running-recovery-plan.md` + `config/knee-rehab-exercise-sets.md` → 짧은 아침 체크인과 오늘의 보수적 운동 세트. 중단 기준과 재진 기준을 항상 포함한다.
+- `daily-health-coaching`: 무릎 `current-context.md` + 건강검진 `current-context.md` + `health-coaching-plan-2026-06-29.md` + 공개 재활 config → 짧은 아침 종합 건강 코칭. 무릎 중단 기준, 식단 조절점, 저충격 운동, 진료/추적검사 리마인더를 포함한다.
 - `knee-progress-intake`: 사용자 보고 → `progress-log.jsonl` append + 필요 시 `current-context.md` 업데이트 제안. 추론은 `확인 필요`로 분리한다.
 - `weekly-knee-clinic-summary`: 최근 경과 + OCR 요약 + 현재 컨텍스트 → 병원 제출용 요약과 질문 리스트 초안. Claude 사용 가능하나 진단/처방은 금지한다.
