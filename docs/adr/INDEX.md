@@ -21,7 +21,7 @@ ADR은 결정의 이유와 대안 기각만 담고, 현행 구조 설명은 `doc
 | ADR-009 | fos-brain 외부 연동: thin caller + 외부 배치 + 워크스페이스 공유 의존성 | Accepted | [ADR-009-fos-brain-thin-caller.md](ADR-009-fos-brain-thin-caller.md) |
 | ADR-010 | brain 쓰기 안전·프라이버시: 산출물 종류별 네임스페이스 라우팅 + cron 읽기전용 | Accepted | [ADR-010-brain-write-safety.md](ADR-010-brain-write-safety.md) |
 | ADR-011 | track_task·extract_claude_result·update_artifacts 폐기 (native 전환 완료) | Accepted | [ADR-011-native-transition-cleanup.md](ADR-011-native-transition-cleanup.md) |
-| ADR-012 | OpenClaw HUD 정책은 .openclaw, 공통 helper는 _shared | Accepted | [ADR-012-openclaw-hud-boundary.md](ADR-012-openclaw-hud-boundary.md) |
+| ADR-012 | OpenClaw HUD 정책은 .openclaw, 공통 helper는 _shared | Archived (2026-06-29, OpenClaw 전환 문서 정리) | 삭제됨 |
 | ADR-013 | agent skill 정본과 Codex 노출 경로를 분리한다 | Partially superseded by ADR-014 (2026-06-16) — repo 전역 정본 경로 부분만 | [ADR-013-agent-skill-codex-exposure.md](ADR-013-agent-skill-codex-exposure.md) |
 | ADR-014 | repo 전역 skill 정본을 .claude/skills로 통일 | Accepted | [ADR-014-repo-global-skills-claude.md](ADR-014-repo-global-skills-claude.md) |
 | ADR-015 | career-os ADR을 개별 파일로 관리하는 파일럿 예외 | Accepted | [ADR-015-career-os-adr-files-pilot.md](ADR-015-career-os-adr-files-pilot.md) |
