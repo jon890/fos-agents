@@ -23,6 +23,78 @@ description: 1차·최종·오퍼 단계별 면접 실전 준비를 생성하는
 1. `career-os/config/mvp-target.json` — `primary.interview` (단계별 날짜/상태), `primary.company`, `primary.role`
 2. `career-os/config/candidate-profile.md` — 후보자 이력·약점·강점 (필수)
 
+최종/2차 인성면접 산출물을 생성할 때는 추가로 확인한다:
+
+3. `public/question-bank/behavioral/questions.json` — 공개 인성 질문 풀 (있으면 참고)
+4. `private/<target>/interview/**` 또는 `primary.data_root/interview/**` — 기존 회사별 준비 자료와 current-practice (있으면 참고)
+
+## 2차/최종·인성면접 daily artifact 모드
+
+트리거: `second-round`, `final`, `personality-draft`, `2차`, `최종`, `인성면접`, 또는 `mvp-target.json`에 1차 종료/2차 대비 문구가 있을 때.
+
+이 모드에서는 1차 기술면접 드릴을 만들지 않는다.
+`mvp-target.json`에 오래된 1차 표현이 남아 있어도 1차가 종료됐다는 최신 지시와 `primary.notes`를 우선해 2차/최종·인성면접으로 작성한다.
+
+### 산출물 경로
+
+1. `primary.data_root`를 기준으로 아래 두 파일을 쓴다.
+   - `<primary.data_root>/interview/personality-question-bank-YYYY-MM-DD.md`
+   - `<primary.data_root>/interview/current-practice.md`
+2. `primary.data_root`가 상대 경로이면 현재 실행 중인 career-os 워크스페이스 루트 기준으로 해석한다.
+   사용자가 `/home/.../career-os` 같은 절대 경로를 줬더라도, 파일 도구가 보호 정책으로 쓰기를 거부하면 곧바로 fallback하지 말고 동일 repo의 활성 워크스페이스 경로(`/opt/data/...` 등 현재 cwd 기준)로 한 번 재시도한다.
+   이때 최종 응답의 저장 파일 경로는 private 절대 경로가 아니라 `primary.data_root` 기준 상대 경로로 보고한다.
+3. 경로 해석이 불가능하거나 활성 워크스페이스 기준 재시도도 실패할 때만 `data/reports/daily/YYYY-MM-DD/interview-second-round/report.md`로 fallback하고, 완료 보고에 fallback 이유를 밝힌다.
+4. 저장 후 파일 존재와 비어 있지 않음, 질문 수 50개, current-practice Top 10개를 검증한다.
+
+### 내용 구성
+
+- `personality-question-bank-YYYY-MM-DD.md`에는 후보자 맞춤 50문항을 만든다.
+- 각 문항에는 15초짜리 한 줄 답변 방향만 붙인다.
+  모든 답변을 길게 확장하지 않는다.
+- `current-practice.md`에는 오늘 우선 연습할 Top 10과 1번 질문의 답변 시작점만 담는다.
+- 기존 `current-practice.md`에 더 나은 active set이 있으면 무조건 덮어쓰기보다 유지·갱신한다.
+
+### 2차/최종·인성면접 테마
+
+반드시 아래 축을 우선한다:
+
+- 이직 동기와 CJ Foodville 지원동기
+- 오너십, 협업, 갈등, 실패, 압박, 모호함 대응
+- F&B/e-commerce/digital channel backend의 고객·매장 운영 관점
+- 제품·운영·이해관계자와의 커뮤니케이션
+- 직책 없는 리더십과 팀 생산성 기여
+- AI/backend 경험의 안전한 연결: 과장하지 말고 문서화·검증·자동화·팀 생산성 근거로만 사용
+
+금지:
+
+- “1차 면접 연습”, “기술면접 직전”처럼 stale first-round wording 사용
+- 1차용 기술 deep dive 5문항 생성
+- 출처 없는 수치, 팀 규모, 성과율 생성
+
+### Discord-facing 완료 응답
+
+최종 응답에는 50문항 전체를 붙이지 않는다.
+아래만 짧게 보낸다:
+
+- 오늘의 초점 2-3개 bullet
+- Top 10 우선 질문 짧은 줄
+- 지금 답할 1번 질문
+- 저장 파일 경로
+- 검증 결과 한 줄
+
+스케줄러가 `Skill(s) not found and skipped: ...` 같은 누락 skill 공지를 요구한 경우에는 최종 응답 첫 줄에 그 공지를 그대로 먼저 둔다.
+누락된 skill이 있어도 현재 요청이 `second-round` / `personality-draft` 산출물 생성이면 이 skill의 2차/최종·인성면접 daily artifact 모드로 계속 처리한다.
+
+마지막 줄은 필요 시 다음 문구로 닫는다:
+
+`오늘은 1번부터 답해보면 내가 면접관처럼 꼬리질문할게.`
+
+### 검증 주의점
+
+질문 수를 검증할 때 `오늘 우선 연습 10개` 섹션의 번호까지 같이 세지 않는다.
+`personality-question-bank-YYYY-MM-DD.md`에서는 본문 50문항만 세고, Top 10은 별도로 검증한다.
+예: `오늘 우선 연습 10개` 헤더가 나오기 전까지만 `^[0-9]+\. ` 패턴을 카운트한다.
+
 ## 단계 감지
 
 `mvp-target.json`의 `primary.interview` 필드를 읽어 현재 단계를 판단한다:
