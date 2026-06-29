@@ -245,12 +245,8 @@ cron 환경에서 표준 JSON 작성이나 대형 파일 작성이 안전 가드
 - 이 fallback은 새 live collection이 성공했거나, 호출자가 기존 snapshot 사용을 명시 허용했고 snapshot에 `direct_active_or_open_postings > 0`일 때만 사용한다.
 - 사용자-facing 요약에는 “새 수집 성공/기존 snapshot 사용” 중 실제 상태만 짧게 밝히고, 내부 tool guard나 approval 세부를 길게 노출하지 않는다.
 - terminal heredoc으로 report를 직접 쓸 때 본문에 raw `&` 문자가 있으면 shell/background 가드가 오탐할 수 있으므로, 한국어 제목은 `and`/`및`으로 바꾸거나 escape해서 재시도한다.
-<<<<<<< HEAD
-- Markdown fallback으로 썼더라도 HTML 전달 정책은 유지한다. 가능한 경우 active/open snapshot에서 전체 공고 HTML을 생성하고 `data/runtime/downloads/position-recommendation-all-YYYY-MM-DD.html`에 둔다.
-=======
 - cron/Codex 환경에서 대형 JSON·Markdown을 shell heredoc으로 한 번에 쓰다가 URL path의 비ASCII 문자 등으로 보안 가드가 멈추면, shell 우회 대신 `write_file`로 산출물 원문을 쓰고 필요한 단일 URL/문구만 `patch`로 보정한 뒤 renderer와 `cp` 검증 명령을 별도 terminal 호출로 실행한다.
-- Markdown fallback으로 썼더라도 HTML 전달 정책은 유지한다. 최소한 같은 Markdown에서 안전한 HTML copy를 생성하고 `data/runtime/downloads/position-recommendation-full-YYYY-MM-DD.html`에 둔다.
->>>>>>> 2f30692 (docs(career-os): Hermes cron 운영 지침 보강)
+- Markdown fallback으로 썼더라도 HTML 전달 정책은 유지한다. 가능한 경우 active/open snapshot에서 전체 공고 HTML을 생성하고 `data/runtime/downloads/position-recommendation-all-YYYY-MM-DD.html`에 둔다. 최소한 같은 Markdown에서 안전한 HTML copy를 생성하고 `data/runtime/downloads/position-recommendation-full-YYYY-MM-DD.html`에 둔다.
 - 완료 전 `test -s`, `cmp`, HTML 링크 개수 확인 등으로 날짜별 report/runtime mirror/download HTML의 존재와 동일성을 실제로 검증한다.
 
 ## Self-check
