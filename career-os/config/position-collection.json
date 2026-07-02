@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "purpose": "position-recommender 수집 설정. wanted.ts 하드코딩을 외부화 (ADR-099)."
+    "purpose": "position-recommender 수집 설정. 후보자 관심사/탐색 키워드/보고서 선호를 config에서 관리한다 (ADR-099)."
   },
   "wanted": {
     "jobGroupId": 518,
@@ -54,7 +54,84 @@
       "CJ올리브네트웍스 백엔드",
       "CJ올리브영 백엔드",
       "KT Cloud 백엔드",
-      "KT AI 플랫폼"
+      "KT AI 플랫폼",
+      "토스 AI Platform",
+      "토스 AI Agent",
+      "토스 LLMOps",
+      "토스 RAG",
+      "토스 Vector Database",
+      "토스 ML Backend",
+      "토스 Applied AI Engineer",
+      "토스뱅크 AI Platform",
+      "토스뱅크 ML Backend",
+      "토스뱅크 LLMOps",
+      "토스증권 ML Platform",
+      "토스플레이스 Applied AI Engineer",
+      "토스인슈어런스 AI Agent",
+      "카카오 AI 플랫폼",
+      "카카오 AI Platform",
+      "카카오 AI Agent",
+      "카카오 LLMOps",
+      "카카오 MLOps",
+      "카카오 RAG",
+      "카카오 Vector Search",
+      "카카오모빌리티 AI Agent",
+      "카카오모빌리티 에이전트 백엔드",
+      "카카오모빌리티 AI 플랫폼",
+      "카카오모빌리티 Physical AI",
+      "네이버 AI 플랫폼",
+      "NAVER AI Platform",
+      "네이버 AI Agent",
+      "네이버 RAG",
+      "네이버 Vector Search",
+      "네이버클라우드 AI 플랫폼",
+      "NAVER Cloud AI Platform",
+      "네이버페이 AI 플랫폼",
+      "네이버파이낸셜 AI 플랫폼"
     ]
+  },
+  "interestProfile": {
+    "purpose": "포지션 수집·필터링 시 후보자 관심사를 표현하는 config. skill에는 절차만 두고, 회사/키워드 관심사는 여기에 둔다.",
+    "primaryRoleThemes": [
+      "AI 서비스 백엔드",
+      "AI 플랫폼",
+      "AX 전환",
+      "AI Agent 설계·구현",
+      "RAG",
+      "Vector Search",
+      "LLMOps/MLOps 플랫폼",
+      "ML Backend",
+      "Workflow Automation"
+    ],
+    "fitFraming": "모델 연구가 아니라 서비스 백엔드, 워크플로우/RAG, 에이전트 자동화, 품질 검증, 플랫폼 운영 경험으로 평가한다.",
+    "preferredPatterns": [
+      "Java/Kotlin/Spring 기반 서버 개발과 AI 제품 접점",
+      "LLM/API Gateway·Model Router·Workflow·Tool use·State management",
+      "RAG 색인/검색/OpenSearch/vector database 운영",
+      "AI 제품 백엔드·서빙 안정화·품질 검증",
+      "사내 개발 생산성/업무 자동화 플랫폼"
+    ],
+    "downrankPatterns": [
+      "순수 모델 연구",
+      "논문/오픈소스 연구 중심",
+      "GPU 커널/학습 최적화만 중심",
+      "CTO/기술총괄/Tech Lead 과중 역할",
+      "기획/PM/컴플라이언스 단독 역할"
+    ],
+    "focusCompanies": [
+      "Toss 계열",
+      "Kakao 계열",
+      "NAVER 계열",
+      "Coupang 계열",
+      "AI/플랫폼 전환을 명시한 대형 서비스 회사"
+    ],
+    "reportPreference": {
+      "adHocCompanyKeywordScan": true,
+      "htmlRequired": true,
+      "includeAllCheckedPostings": true,
+      "includeAgentOpinion": true,
+      "includeHoldAndExcludeReasons": true,
+      "outputDir": "data/runtime/downloads/"
+    }
   }
 }
