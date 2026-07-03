@@ -46,29 +46,29 @@
 | ADR-043 | position-recommender 공고 수집은 source adapter + active validator로 분리 | Accepted | [ADR-043-position-recommender-공고-수집은-source-adapter-active-validator로-분리.md](ADR-043-position-recommender-공고-수집은-source-adapter-active-validator로-분리.md) |
 | ADR-044 | 큰 변경은 planning → delegated implementation → main-session verification으로 운영 | Accepted | [ADR-044-큰-변경은-planning-delegated-implementation-main-session-verification으로-운영.md](ADR-044-큰-변경은-planning-delegated-implementation-main-session-verification으로-운영.md) |
 | ADR-045 | 지원 후보 frontdoor queue를 ledger와 분리한다 | Accepted | [ADR-045-지원-후보-frontdoor-queue를-ledger와-분리한다.md](ADR-045-지원-후보-frontdoor-queue를-ledger와-분리한다.md) |
-| ADR-046 | fos-career 웹 대시보드를 별도 저장소로 분리한다 | Accepted | [ADR-046-fos-career-웹-대시보드를-별도-저장소로-분리한다.md](ADR-046-fos-career-웹-대시보드를-별도-저장소로-분리한다.md) |
+| ADR-046 | fos-career 웹 대시보드를 별도 저장소로 분리한다 | Superseded by [[ADR-102]] | [ADR-046-fos-career-웹-대시보드를-별도-저장소로-분리한다.md](ADR-046-fos-career-웹-대시보드를-별도-저장소로-분리한다.md) |
 | ADR-047 | position-recommender collector adapter를 모듈 경계로 승격한다 | Accepted | [ADR-047-position-recommender-collector-adapter를-모듈-경계로-승격한다.md](ADR-047-position-recommender-collector-adapter를-모듈-경계로-승격한다.md) |
 | ADR-048 | coffeechat 자동화는 폐기하고 면접 준비 기능만 이관한다 | Accepted | [ADR-048-coffeechat-자동화는-폐기하고-면접-준비-기능만-이관한다.md](ADR-048-coffeechat-자동화는-폐기하고-면접-준비-기능만-이관한다.md) |
-| ADR-049 | fos-career LLM 채팅은 provider interface 뒤에서 SDK를 교체한다 | Accepted | [ADR-049-fos-career-llm-채팅은-provider-interface-뒤에서-sdk를-교체한다.md](ADR-049-fos-career-llm-채팅은-provider-interface-뒤에서-sdk를-교체한다.md) |
-| ADR-050 | fos-career 로그인은 관리자 shell 안의 content 영역으로 렌더링한다 | Accepted | [ADR-050-fos-career-로그인은-관리자-shell-안의-content-영역으로-렌더링한다.md](ADR-050-fos-career-로그인은-관리자-shell-안의-content-영역으로-렌더링한다.md) |
+| ADR-049 | fos-career LLM 채팅은 provider interface 뒤에서 SDK를 교체한다 | Superseded by [[ADR-102]] | [ADR-049-fos-career-llm-채팅은-provider-interface-뒤에서-sdk를-교체한다.md](ADR-049-fos-career-llm-채팅은-provider-interface-뒤에서-sdk를-교체한다.md) |
+| ADR-050 | fos-career 로그인은 관리자 shell 안의 content 영역으로 렌더링한다 | Superseded by [[ADR-102]] | [ADR-050-fos-career-로그인은-관리자-shell-안의-content-영역으로-렌더링한다.md](ADR-050-fos-career-로그인은-관리자-shell-안의-content-영역으로-렌더링한다.md) |
 | ADR-051 | target source coverage는 adapter-owned entrypoint로 확장한다 | Accepted | [ADR-051-target-source-coverage는-adapter-owned-entrypoint로-확장한다.md](ADR-051-target-source-coverage는-adapter-owned-entrypoint로-확장한다.md) |
 | ADR-052 | 지원 우선순위는 회사 순위가 아니라 action stage로 관리한다 | Accepted | [ADR-052-지원-우선순위는-회사-순위가-아니라-action-stage로-관리한다.md](ADR-052-지원-우선순위는-회사-순위가-아니라-action-stage로-관리한다.md) |
 | ADR-053 | priority write action은 pending request bridge로 처리한다 | Accepted | [ADR-053-priority-write-action은-pending-request-bridge로-처리한다.md](ADR-053-priority-write-action은-pending-request-bridge로-처리한다.md) |
-| ADR-054 | fos-career의 다음 제품 축은 application workbench다 | Accepted | [ADR-054-fos-career의-다음-제품-축은-application-workbench다.md](ADR-054-fos-career의-다음-제품-축은-application-workbench다.md) |
+| ADR-054 | fos-career의 다음 제품 축은 application workbench다 | Superseded by [[ADR-102]] | [ADR-054-fos-career의-다음-제품-축은-application-workbench다.md](ADR-054-fos-career의-다음-제품-축은-application-workbench다.md) |
 | ADR-055 | background worktree는 완료 시 명시적으로 정리한다 | Accepted | [ADR-055-background-worktree는-완료-시-명시적으로-정리한다.md](ADR-055-background-worktree는-완료-시-명시적으로-정리한다.md) |
 | ADR-056 | resume package는 Markdown 산출물 계약을 먼저 고정한다 | Accepted | [ADR-056-resume-package는-markdown-산출물-계약을-먼저-고정한다.md](ADR-056-resume-package는-markdown-산출물-계약을-먼저-고정한다.md) |
 | ADR-057 | 생성 산출물 품질 계약은 전역 기준이다 | Accepted | [ADR-057-생성-산출물-품질-계약은-전역-기준이다.md](ADR-057-생성-산출물-품질-계약은-전역-기준이다.md) |
 | ADR-058 | data cleanup은 private boundary와 retention을 먼저 고정한다 | Accepted | [ADR-058-data-cleanup은-private-boundary와-retention을-먼저-고정한다.md](ADR-058-data-cleanup은-private-boundary와-retention을-먼저-고정한다.md) |
 | ADR-059 | plan055 MVP에 HTML/PDF 이력서 export를 포함한다 | Accepted | [ADR-059-plan055-mvp에-html-pdf-이력서-export를-포함한다.md](ADR-059-plan055-mvp에-html-pdf-이력서-export를-포함한다.md) |
 | ADR-060 | 공고 상태 액션은 사용자 버튼과 pending request로 처리한다 | Accepted | [ADR-060-공고-상태-액션은-사용자-버튼과-pending-request로-처리한다.md](ADR-060-공고-상태-액션은-사용자-버튼과-pending-request로-처리한다.md) |
-| ADR-061 | 면접 준비 dashboard는 skill request gateway로 실행을 분리한다 | Accepted | [ADR-061-면접-준비-dashboard는-skill-request-gateway로-실행을-분리한다.md](ADR-061-면접-준비-dashboard는-skill-request-gateway로-실행을-분리한다.md) |
+| ADR-061 | 면접 준비 dashboard는 skill request gateway로 실행을 분리한다 | Superseded by [[ADR-102]] | [ADR-061-면접-준비-dashboard는-skill-request-gateway로-실행을-분리한다.md](ADR-061-면접-준비-dashboard는-skill-request-gateway로-실행을-분리한다.md) |
 | ADR-062 | 포지션별 준비 홈은 루트 private 아래에 둔다 | Accepted | [ADR-062-포지션별-준비-홈은-루트-private-아래에-둔다.md](ADR-062-포지션별-준비-홈은-루트-private-아래에-둔다.md) |
 | ADR-063 | 면접 준비 사람용 정본은 단일 prep.md로 관리한다 | Accepted | [ADR-063-면접-준비-사람용-정본은-단일-prep-md로-관리한다.md](ADR-063-면접-준비-사람용-정본은-단일-prep-md로-관리한다.md) |
-| ADR-064 | fos-career 범용 채팅은 제거하고 목적별 요청 UI로 통일한다 | Accepted | [ADR-064-fos-career-범용-채팅은-제거하고-목적별-요청-ui로-통일한다.md](ADR-064-fos-career-범용-채팅은-제거하고-목적별-요청-ui로-통일한다.md) |
+| ADR-064 | fos-career 범용 채팅은 제거하고 목적별 요청 UI로 통일한다 | Superseded by [[ADR-102]] | [ADR-064-fos-career-범용-채팅은-제거하고-목적별-요청-ui로-통일한다.md](ADR-064-fos-career-범용-채팅은-제거하고-목적별-요청-ui로-통일한다.md) |
 | ADR-065 | 면접 답변 피드백은 career context LLM evaluator로 처리한다 | Accepted | [ADR-065-면접-답변-피드백은-career-context-llm-evaluator로-처리한다.md](ADR-065-면접-답변-피드백은-career-context-llm-evaluator로-처리한다.md) |
 | ADR-066 | 공개 가능 일반 면접 질문 bank는 public/question-bank에 둔다 | Accepted | [ADR-066-공개-가능-일반-면접-질문-bank는-public-question-bank에-둔다.md](ADR-066-공개-가능-일반-면접-질문-bank는-public-question-bank에-둔다.md) |
 | ADR-067 | coffeechat 자동화 tombstone도 제거하고 ADR-only history로 둔다 | Accepted | [ADR-067-coffeechat-자동화-tombstone도-제거하고-adr-only-history로-둔다.md](ADR-067-coffeechat-자동화-tombstone도-제거하고-adr-only-history로-둔다.md) |
-| ADR-068 | 질문 bank 보강은 dashboard request gateway로 연결한다 | Accepted | [ADR-068-질문-bank-보강은-dashboard-request-gateway로-연결한다.md](ADR-068-질문-bank-보강은-dashboard-request-gateway로-연결한다.md) |
+| ADR-068 | 질문 bank 보강은 dashboard request gateway로 연결한다 | Superseded by [[ADR-102]] | [ADR-068-질문-bank-보강은-dashboard-request-gateway로-연결한다.md](ADR-068-질문-bank-보강은-dashboard-request-gateway로-연결한다.md) |
 | ADR-069 | config는 정책·타깃·예외만 남기고 자산 목록은 파생한다 | Accepted | [ADR-069-config는-정책-타깃-예외만-남기고-자산-목록은-파생한다.md](ADR-069-config는-정책-타깃-예외만-남기고-자산-목록은-파생한다.md) |
 | ADR-070 | study topic 후보 풀은 LLM refresh turn이 발굴하고 config에는 active 캐시만 반영한다 | Accepted | [ADR-070-study-topic-후보-풀은-llm-refresh-turn이-발굴하고-config에는-active-캐시만-반영한다.md](ADR-070-study-topic-후보-풀은-llm-refresh-turn이-발굴하고-config에는-active-캐시만-반영한다.md) |
 | ADR-071 | study-topic-recommender 자동 실행은 bypassPermissions로 호출한다 | Accepted | [ADR-071-study-topic-recommender-자동-실행은-bypasspermissions로-호출한다.md](ADR-071-study-topic-recommender-자동-실행은-bypasspermissions로-호출한다.md) |
@@ -80,10 +80,10 @@
 | ADR-078 | 포지션 추천 freshness는 frontdoor와 priority 갱신까지 포함한다 | Accepted | [ADR-078-포지션-추천-freshness는-frontdoor와-priority-갱신까지-포함한다.md](ADR-078-포지션-추천-freshness는-frontdoor와-priority-갱신까지-포함한다.md) |
 | ADR-079 | 포지션 수집은 동적 discovery를 우선하고 개별 공고 URL seed를 제거한다 | Accepted | [ADR-079-포지션-수집은-동적-discovery를-우선하고-개별-공고-url-seed를-제거한다.md](ADR-079-포지션-수집은-동적-discovery를-우선하고-개별-공고-url-seed를-제거한다.md) |
 | ADR-080 | position daily HTML 리포트는 template 기반 표시 미러로 둔다 | Accepted | [ADR-080-position-daily-html-리포트는-template-기반-표시-미러로-둔다.md](ADR-080-position-daily-html-리포트는-template-기반-표시-미러로-둔다.md) |
-| ADR-081 | 지원 후보 상태와 background outbox는 fos-career DB를 정본으로 둔다 | Accepted | [ADR-081-지원-후보-상태와-background-outbox는-fos-career-db를-정본으로-둔다.md](ADR-081-지원-후보-상태와-background-outbox는-fos-career-db를-정본으로-둔다.md) |
-| ADR-082 | fos-career 모바일 UX는 하단 네비게이션과 전체 공고 탐색을 분리한다 | Accepted | [ADR-082-fos-career-모바일-ux는-하단-네비게이션과-전체-공고-탐색을-분리한다.md](ADR-082-fos-career-모바일-ux는-하단-네비게이션과-전체-공고-탐색을-분리한다.md) |
-| ADR-083 | source registry와 collection run은 fos-career DB가 정본이다 | Accepted | [ADR-083-source-registry와-collection-run은-fos-career-db가-정본이다.md](ADR-083-source-registry와-collection-run은-fos-career-db가-정본이다.md) |
-| ADR-084 | 수집 공고 lifecycle 검증과 자동 상태 전이는 fos-career DB 이벤트로 남긴다 | Accepted | [ADR-084-수집-공고-lifecycle-검증과-자동-상태-전이는-fos-career-db-이벤트로-남긴다.md](ADR-084-수집-공고-lifecycle-검증과-자동-상태-전이는-fos-career-db-이벤트로-남긴다.md) |
+| ADR-081 | 지원 후보 상태와 background outbox는 fos-career DB를 정본으로 둔다 | Superseded by [[ADR-102]] | [ADR-081-지원-후보-상태와-background-outbox는-fos-career-db를-정본으로-둔다.md](ADR-081-지원-후보-상태와-background-outbox는-fos-career-db를-정본으로-둔다.md) |
+| ADR-082 | fos-career 모바일 UX는 하단 네비게이션과 전체 공고 탐색을 분리한다 | Superseded by [[ADR-102]] | [ADR-082-fos-career-모바일-ux는-하단-네비게이션과-전체-공고-탐색을-분리한다.md](ADR-082-fos-career-모바일-ux는-하단-네비게이션과-전체-공고-탐색을-분리한다.md) |
+| ADR-083 | source registry와 collection run은 fos-career DB가 정본이다 | Superseded by [[ADR-102]] | [ADR-083-source-registry와-collection-run은-fos-career-db가-정본이다.md](ADR-083-source-registry와-collection-run은-fos-career-db가-정본이다.md) |
+| ADR-084 | 수집 공고 lifecycle 검증과 자동 상태 전이는 fos-career DB 이벤트로 남긴다 | Superseded by [[ADR-102]] | [ADR-084-수집-공고-lifecycle-검증과-자동-상태-전이는-fos-career-db-이벤트로-남긴다.md](ADR-084-수집-공고-lifecycle-검증과-자동-상태-전이는-fos-career-db-이벤트로-남긴다.md) |
 | ADR-085 | career-os skill을 Codex에 심볼릭 링크로 노출한다 | Accepted | [ADR-085-career-os-skill을-codex에-심볼릭-링크로-노출한다.md](ADR-085-career-os-skill을-codex에-심볼릭-링크로-노출한다.md) |
 | ADR-086 | skill 출력 정책은 공통 reference로 둔다 | Accepted | [ADR-086-skill-출력-정책은-공통-reference로-둔다.md](ADR-086-skill-출력-정책은-공통-reference로-둔다.md) |
 | ADR-087 | skill 트리거는 frontmatter description에 둔다 | Accepted | [ADR-087-skill-트리거는-frontmatter-description에-둔다.md](ADR-087-skill-트리거는-frontmatter-description에-둔다.md) |
@@ -100,4 +100,5 @@
 | ADR-098 | data-schema는 현재 스키마만 담고 폐기 항목은 ADR로 위임한다 | Accepted | [ADR-098-data-schema는-현재-스키마만-담고-폐기-항목은-adr로-위임한다.md](ADR-098-data-schema는-현재-스키마만-담고-폐기-항목은-adr로-위임한다.md) |
 | ADR-099 | position-recommender 수집 설정 외부화 + 후보자 config + 지표 시계열 | Accepted | [ADR-099-position-수집설정-외부화-후보자config-지표시계열.md](ADR-099-position-수집설정-외부화-후보자config-지표시계열.md) |
 | ADR-100 | position-recommender 신규 후보 강제 회전 폐기 | Accepted | [ADR-100-position-recommender-신규-후보-강제-회전-폐기.md](ADR-100-position-recommender-신규-후보-강제-회전-폐기.md) |
-| ADR-101 | position-recommender 산출물을 표준 출력 JSON으로 단일화하고 소비측이 가공한다 | Accepted | [ADR-101-position-recommender-표준출력-json-단일화-소비측-가공.md](ADR-101-position-recommender-표준출력-json-단일화-소비측-가공.md) |
+| ADR-101 | position-recommender 산출물을 표준 출력 JSON으로 단일화하고 소비측이 가공한다 | Accepted; consumer backend parts superseded by [[ADR-102]] | [ADR-101-position-recommender-표준출력-json-단일화-소비측-가공.md](ADR-101-position-recommender-표준출력-json-단일화-소비측-가공.md) |
+| ADR-102 | fos-career 웹 대시보드를 폐기하고 파일 기반 피드백 루프로 회귀한다 | Accepted | [ADR-102-fos-career-웹-대시보드를-폐기하고-파일-기반-피드백-루프로-회귀한다.md](ADR-102-fos-career-웹-대시보드를-폐기하고-파일-기반-피드백-루프로-회귀한다.md) |

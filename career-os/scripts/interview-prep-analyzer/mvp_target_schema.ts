@@ -38,11 +38,12 @@ export const MvpTargetHistoryItemSchema = z.object({
   role: z.string(),
   interview_date: z.string(),
   deprecated_at: z.string(),
+  outcome: z.enum(['rejected', 'withdrawn', 'closed', 'completed']).optional(),
   notes: z.string().optional(),
 });
 
 export const MvpTargetSchema = z.object({
-  primary: MvpTargetPrimarySchema,
+  primary: MvpTargetPrimarySchema.nullable(),
   history: z.array(MvpTargetHistoryItemSchema).default([]),
 });
 

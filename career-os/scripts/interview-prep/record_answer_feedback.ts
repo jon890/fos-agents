@@ -74,6 +74,9 @@ function readOptional(path: string): string {
 function resolveDataRoot(): string {
   const targetPath = join(ROOT, "config", "mvp-target.json");
   const target = parseMvpTarget(targetPath);
+  if (!target.primary) {
+    throw new Error("config/mvp-target.json primary is null; set an active interview target before recording position-specific feedback");
+  }
   const dataRoot = target.primary.data_root.trim();
   if (!dataRoot || dataRoot.includes("..") || dataRoot.startsWith("/")) {
     throw new Error("config/mvp-target.json primary.data_root must be a safe relative path");
@@ -121,7 +124,7 @@ function main(): void {
     "- 실제 경험 근거가 포함됐는가",
     "- 기술 선택의 trade-off를 말했는가",
     "- 장애/운영/관찰성 관점까지 확장했는가",
-    "- CJ Foodville 디지털 채널 백엔드 맥락으로 연결했는가",
+    "- 현재 active 포지션 맥락으로 연결했는가",
     "",
     "## 다음 피드백 패스에서 채울 내용",
     "",

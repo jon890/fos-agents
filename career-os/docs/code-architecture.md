@@ -96,7 +96,7 @@ career-os/
 │   ├── applications/             data/applications/ — 공고별 지원 원장과 private 지원 패키지. gitignore
 │   ├── private/                  private/ — 포지션별 작업 홈과 archive. gitignore
 │   ├── normalized/               fos-study 정규화 캐시 (현재 비어 있음)
-│   ├── prep/                     legacy 회사별 hand-crafted 준비 자산. 새 dashboard primary asset은 private/<company>/<position>/interview/prep.md
+│   ├── prep/                     legacy 회사별 hand-crafted 준비 자산. 새 active 준비 정본은 private/<company>/<position>/interview/prep.md
 │   └── source/                   data/source/ — 외부 수집 노트. 지원/면접과 연결되면 private by default
 │
 ├── logs/                                  ← gitignore. 운영 데이터 단일 출처
@@ -197,7 +197,7 @@ config 설계 원칙:
 - 학습 문서 목록은 `sources/fos-study/`에서 파생한다.
 - 공개 질문 목록은 `public/question-bank/`에서 파생한다.
 - config에 남길 것은 현재 타깃, 후보자 baseline, 학습 진행 상태, 외부 reading reservoir, 사람이 고른 pin/override/제외 조건이다.
-- 공고 수집 source registry와 collection run은 fos-career DB가 정본이고, career-os `live-postings` adapter registry는 실제 수집 방법을 소유한다.
+- 공고 수집 설정은 `config/position-collection.json`과 `scripts/position-recommender/live-postings/` adapter가 소유한다.
 - `study-pack-topics.json`, `study-pack-candidates.json`, `topic-file-map.json`처럼 자산 목록을 복제하는 파일은 plan068에서 reader inventory와 fallback을 확인한 뒤 축소한다.
 
 ## 외부 의존성 (`_shared/`)
@@ -286,7 +286,7 @@ LLM이 작성하는 Markdown 산출물은 skill prompt, runner post-validation, 
 | agent skill prompt | 한국어 우선 섹션 제목, 자연스러운 한국어 문장, 첫 10줄 안 decision/conclusion/recommended action 요구 |
 | runner / processor | 필수 파일 존재, freshness, `needs_evidence` 잔존 여부, 제출용/공개용 파일 경계 검증 |
 | reviewer skill | 내부 분석과 제출용 또는 공개용 문구 혼입 여부, evidence/drift/privacy risk 검토 |
-| fos-career adapter | private 산출물과 공개용/제출용 산출물을 같은 화면에 섞어 action으로 처리하지 않음 |
+| application/reviewer 계층 | private 산출물과 공개용/제출용 산출물을 같은 ready 상태로 섞어 처리하지 않음 |
 
 `needs_evidence`는 저장된 최종 산출물의 상태값으로 방치하지 않는다.
 검증 계층은 이를 `보강 필요 / 선택지 / 권장 행동`으로 변환해야 하며, 변환 전에는 제출용 또는 공개용 산출물을 ready 상태로 보지 않는다.
@@ -298,128 +298,28 @@ LLM이 작성하는 Markdown 산출물은 skill prompt, runner post-validation, 
 - ai-nodes 루트의 `skills/`는 전역 공용 스킬 (`workspace-audit`, `agent-browser`).
 - career-os 워크스페이스 audit은 `bash skills/workspace-audit/scripts/run_audit.sh career-os`로 실행. 산출물은 `/tmp/workspace-audit-career-os/`에 stash (영구화 X — 보존 가치는 ADR로 lift).
 
-## fos-career 웹 대시보드
+## 사용자 표면
 
-fos-career는 career-os와 **분리된 저장소**(`~/services/fos-career`)의 독립 프로젝트다.
-ai-nodes 모노레포 밖에 위치하며, 사람용 대시보드와 DB 상태 관리를 맡는다.
+사람이 보는 표면은 Markdown/HTML 리포트, private position home, application ledger, question bank, Discord 요약이다.
 
-```text
-~/services/fos-career/          ← 별도 git 저장소 (ai-nodes 밖)
-├── app/                        Next.js 15 App Router
-│   ├── (auth)/login/           관리자 로그인
-│   ├── dashboard/
-│   │   ├── reports/            날짜별 position report + 지원 후보 카드
-│   │   ├── positions/          collected positions + source diagnostics
-│   │   ├── applications/       지원 후보 상태 + workflow 상세
-│   │   └── interview/          면접 prep.md, 질문, 답변, 피드백 UI
-│   └── api/
-│       ├── auth/               세션 관리 (login/logout)
-│       ├── priority/           legacy priority request / migration 대상
-│       ├── positions/          collected position 조회
-│       ├── applications/       지원 후보 상태 변경 + 지원 시작 요청
-│       ├── jobs/               DB outbox job 조회/재시도
-│       └── interview/          면접 답변/피드백 request
-├── lib/
-│   ├── career-os/
-│   │   ├── adapter.ts          migration 전 legacy 파일 읽기 어댑터
-│   │   └── types.ts            legacy FrontdoorQueueRecord, LedgerRecord 타입
-│   ├── llm/
-│   │   ├── types.ts            LLM provider 공통 계약
-│   │   ├── provider.ts         LLM_PROVIDER 기반 provider 선택
-│   │   └── openai-provider.ts
-│   └── db/
-│       ├── client.ts           MySQL 클라이언트 싱글턴 (Drizzle ORM)
-│       └── session.ts          iron-session 세션 헬퍼
-├── db/
-│   ├── schema.ts               MySQL 스키마 (admin/session/audit, candidate state, outbox, interview)
-│   ├── migrations/             drizzle-kit 생성 마이그레이션 파일
-│   └── seed-admin.ts           관리자 계정 초기 생성 스크립트
-├── middleware.ts                /dashboard와 보호 API 세션 검증
-├── Dockerfile
-├── docker-compose.yml
-└── .env.example
-```
+현재 인터페이스:
 
-Auth shell 경계:
+| 흐름 | 정본 |
+|---|---|
+| 공고 수집 | `config/position-collection.json`, `scripts/position-recommender/live-postings/`, `data/runtime/live-position-postings.md` |
+| 공고 추천 | `recommendation.json` 정본 + Markdown/HTML 파생 |
+| 선택 전 후보 | `data/runtime/application-agent/frontdoor-queue.jsonl` |
+| 지원 준비 | `data/applications/ledger.jsonl`, `data/applications/<application-id>/` |
+| 면접 준비 | `config/mvp-target.json`, `private/<company>/<position>/interview/prep.md`, drill log |
+| 피드백 루프 | closed/rejected 기록, `config/study-progress.json`, `private/question-bank/`, 다음 job-fit report |
 
-- 로그인 화면은 독립 랜딩이 아니라 fos-career 관리자 shell의 content 영역으로 보이게 한다.
-- 인증 전 shell은 제품명/head/nav 구조를 유지하되, 데이터 메뉴는 disabled 또는 제한 상태로 표시한다.
-- 인증 후 `/dashboard/*`는 기존 dashboard layout과 동일한 운영 화면으로 진입한다.
-- 로그인 shell 변경은 auth/session 정책 변경이 아니라 UI 구조 변경이다.
+원칙:
 
-career-os와의 인터페이스:
-
-| 방향 | 방법 | 범위 |
-|---|---|---|
-| fos-career → career-os | migration 전 읽기 전용 파일 마운트 (`CAREER_OS_ROOT`) | legacy frontdoor-queue, ledger, position-recommendation, candidate-profile |
-| fos-career DB | canonical state | source registry, collection run, 추천 후보, 현재 state/stage, outbox job, audit |
-| fos-career worker → career-os | controlled local runner / skill call | 회사 분석, fit 분석, 공부팩, 이력서 초안 같은 private 산출물 생성 |
-| career-os → fos-career | report ingest 또는 host-side import | 수집 snapshot과 추천 run 결과를 DB로 반영 |
-
-LLM provider 경계:
-
-- 범용 `/dashboard/chat`과 `/api/chat`은 ADR-064로 제거한다.
-- `lib/llm/*`는 자유 채팅이 아니라 목적별 evaluator/request processor에서 재사용할 provider 경계다.
-- 면접 답변 평가는 `interview/prep.md`, 현재 질문, 사용자 답변, 최근 답변/피드백 요약을 묶은 context bundle로 실행한다.
-- `LLM_PROVIDER=openai`는 OpenAI Responses API provider를 사용할 수 있다.
-- 새 SDK는 evaluator가 요구하는 구조화 출력 계약을 만족할 때만 추가한다.
-
-migration 전 fos-career가 읽는 career-os 파일:
-
-- `data/runtime/application-agent/frontdoor-queue.jsonl`
-- `data/applications/ledger.jsonl`
-- `data/applications/_priority-history.jsonl`
-- `data/runtime/position-recommendation.md`
-- `config/candidate-profile.md`
-
-ADR-081 이후 목표 구조:
-
-- `frontdoor-queue.jsonl`은 DB import 검증 후 삭제한다.
-- 지원 후보의 현재 상태는 fos-career DB가 정본이다.
-- HTML report는 그날 읽기용 snapshot이며 action source가 아니다.
-- 카드 전체 클릭은 DB transaction으로 `started` 상태와 outbox job을 만든다.
-- outbox worker가 pending job을 처리하고 결과를 DB와 career-os private 산출물에 반영한다.
-
-plan074 이후 UX 구조:
-
-- 모바일 shell은 하단 네비게이션과 햄버거 또는 더보기 메뉴를 함께 사용한다.
-- 1급 모바일 경로는 `홈`, `공고`, `후보`, `지원`, `더보기`로 둔다.
-- `/dashboard/positions`는 `collected_positions` 전체 풀 탐색 화면이다.
-- `/dashboard/reports/position/*`와 application candidate 계열 화면은 추천 후보 5개를 다룬다.
-- 추천 후보 카드의 이유와 다음 행동은 `application_candidates.latestSnapshotJson`의 구조화 필드를 우선 사용한다.
-- source diagnostics와 긴 원문 필드는 모바일에서 기본 접힘으로 둔다.
-
-plan075 이후 source/collection 구조:
-
-- source registry와 collection run은 fos-career DB가 정본이다.
-- career-os `scripts/position-recommender/live-postings/` adapter registry는 실제 수집 방법을 소유한다.
-- `db/import-positions.ts` 계열 host-side import는 `live-position-postings.md`의 configured sources, source counts, diagnostics, errors를 DB 테이블로 정규화한다.
-- `/dashboard/sources`는 `collected_positions` row에서 source diagnostics를 역산하지 않는다.
-- `/dashboard/sources`는 `position_sources`, latest `position_collection_runs`, `position_source_run_diagnostics`를 읽는다.
-- `collected_positions`는 개별 공고 pool이고, source registry나 run diagnostics의 정본이 아니다.
-- `position_recommendation_runs`는 사용한 `collectionRunId`를 참조한다.
-- source별 0건은 `zeroReason` 또는 `failureReason`으로 구분해 정상 0건과 parser/차단/필터 문제를 분리한다.
-
-plan076 이후 collected position lifecycle 구조:
-
-- 수집 공고의 현재 상태는 `collected_positions.postingStatus`가 정본이다.
-- 상태 변경 이력은 `position_status_events`에 누적한다.
-- 수동 닫기는 `/dashboard/positions` modal에서 사유 입력 후 수행한다.
-- validator는 기본 dry-run이며, `--apply`에서만 자동 닫기/재오픈 상태 변경을 수행한다.
-- 자동 닫기는 3회 이상 최신 수집 실행에서 미등장하고 source 상태가 정상 계열일 때만 수행한다.
-- 닫힌 공고가 다시 수집되면 snapshot의 `posting_status`로 자동 복구한다.
-- latest/new/past 판단은 `collected_position_run_items`를 정본으로 사용한다.
-- 사용자에게 보이는 버튼, 필터, badge, 상태 설명은 한국어 label을 우선한다.
-- Naver/KakaoPay Securities adapter 자체 조사는 lifecycle validator와 분리된 후속 source adapter plan에서 다룬다.
-
-Priority write-action bridge:
-
-- fos-career는 MySQL `priority_action_requests`에 사용자 확인 요청을 저장한다.
-- web container의 `/data/career-os` mount는 read-only로 유지한다.
-- career-os 파일 변경은 writable checkout에서 실행되는 controlled runner만 수행한다.
-- runner는 기존 `scripts/application-agent/run.ts confirm-priority` 경로를 재사용한다.
-- direct JSONL write, dashboard container writable mount, chat 기반 mutation은 금지한다.
-- 적용 결과는 career-os `_priority-history.jsonl`과 fos-career request status 양쪽에서 확인한다.
+- 추천 후보 상태와 background outbox를 외부 MySQL에 두지 않는다.
+- `frontdoor-queue.jsonl`은 선택 전 staging file이고, 지원 준비 시작 시 ledger로 승격한다.
+- HTML report는 읽기용 snapshot이고 action source가 아니다.
+- 오래 걸리는 작업은 사용자가 skill을 명시 호출하거나 agent가 현재 세션에서 이어서 실행한다.
+- 외부 제출, 로그인, 업로드, 공개 발행은 사용자 승인 없이 실행하지 않는다.
 
 ## 변경 시 영향 범위
 
@@ -543,7 +443,7 @@ plan055는 application-agent의 다음 축을 맞춤 이력서 패키지로 둔�
 - skill contract: 생성 문서 품질 계약을 `application-package-writer`와 `application-reviewer` 입력/출력 조건에 반영한다.
 - processor post-validation: 실제 파일 존재, freshness, review verdict, `needs_evidence` resolution을 확인한다.
 - resume exporter: `export_resume.ts`가 `resume-draft.md`와 `design.md` 계약으로 `resume.html`, `resume.pdf`를 만든다.
-- fos-career adapter/UI: application request status와 readiness를 사람이 볼 수 있게 표시한다.
+- priority/application view helper: readiness를 파일 존재 여부와 ledger/frontdoor fields에서 계산한다.
 
 필수 산출물:
 
@@ -563,7 +463,6 @@ data/applications/<company-slug>/<role-slug>/
 
 상태 경계:
 
-- fos-career는 request row와 status projection을 보여준다.
 - career-os runner는 ledger mutation과 post-validation을 맡는다.
 - 외부 제출, 로그인, public publish, candidate-profile mutation은 사용자 승인 없이는 실행하지 않는다.
 - PDF export는 로컬 첨부 파일 생성까지만 다룬다.
@@ -574,8 +473,8 @@ plan030 freshness guard는 구현 대상이 아니라 후보 ingest 시 prerequi
 ## Position priority layer (implemented — plan050)
 
 plan050은 새 독립 추천기를 먼저 만들지 않고 기존 collector/recommender/application-agent 자산을 연결하는 얇은 priority layer로 둔다.
-이 문단은 ADR-081 이전 priority layer 구조를 설명한다.
-새 dashboard 흐름은 DB candidate state를 우선하고, legacy frontdoor/ledger projection은 migration compatibility로 둔다.
+이 문단은 파일 기반 priority layer 구조를 설명한다.
+별도 DB 없이 frontdoor/ledger projection을 사용한다.
 
 책임 경계:
 
@@ -585,14 +484,13 @@ plan050은 새 독립 추천기를 먼저 만들지 않고 기존 collector/reco
   Toss는 공식 `job-groups` API에서 그룹 공고와 하위 포지션을 펼쳐 수집하며,
   Kakao 계열, NAVER 계열, Coupang은 official source entrypoint가 확인된 범위에서 adapter로 수집한다.
   adapter는 listing/API/sitemap root URL은 가질 수 있지만, 개별 공고 URL을 코드에 하드코딩하지 않는다.
-- `position-recommender` agent skill은 표준 출력 JSON `recommendation.json`(ADR-094/ADR-101, schemaVersion 2)을 만든다. 적재용 `source`·`closeDate`를 포함하며, Discord 요약·DB 적재 같은 가공은 호출자(cron·backend)가 맡는다(ADR-101).
+- `position-recommender` agent skill은 표준 출력 JSON `recommendation.json`(ADR-094/ADR-101, schemaVersion 2)을 만든다. 적재용 `source`·`closeDate`를 포함하며, Discord 요약 같은 가공은 호출자가 맡는다(ADR-101).
 - `scripts/position-recommender/render_recommendation.ts`는 표준 출력 JSON에서 Markdown·HTML을 파생한다(입력 시 zod 검증 내장). 자체 markdown 파서 `render_report_html.ts`는 ADR-094로 폐기됐다.
   표시 구조와 CSS는 `scripts/position-recommender/templates/report.html`에 둔다.
 - `scripts/application-agent/`는 frontdoor queue, ledger, 공고별 application files, priority history를 검증하고 갱신한다.
 - `config/candidate-profile.md`와 기존 resume/profile material은 fit analysis 입력으로 재사용한다.
 - study/interview 관련 agent skill은 gap 기반 preparation action 후보를 만들 때만 호출한다.
-- fos-career는 priority fields와 history를 읽기 전용으로 표시한다.
-  list route는 action stage filter와 scan에 집중하고, detail route는 record type과 id로 frontdoor queue 또는 ledger record를 찾아 recommendation snapshot, fit/gap details, evidence, preparation actions, history를 보여준다.
+- `priority_view.ts`는 record type과 id로 frontdoor queue 또는 ledger record를 찾아 recommendation snapshot, fit/gap details, evidence, preparation actions, history를 요약한다.
 
 관련 파일:
 
@@ -601,7 +499,7 @@ scripts/application-agent/
 ├── priority_schema.ts             # action stage, recommendation snapshot, user confirmed priority schema
 ├── priority_history.ts            # priority change history append/read helpers
 ├── priority_recommendation.ts     # position/frontdoor/ledger inputs를 recommendation snapshot으로 정리
-└── priority_dashboard_view.ts     # dashboard가 읽기 쉬운 summary projection
+└── priority_view.ts               # 사람이 읽기 쉬운 priority summary projection
 
 data/applications/
 └── _priority-history.jsonl        # user/agent priority change audit log
@@ -621,150 +519,19 @@ data/applications/
 - `excluded`는 사용자 확정 또는 명확한 정책 사유 없이 자동 확정하지 않는다.
 - priority history는 append-only로 운영한다.
 
-## Priority write-action bridge (plan053)
+## Application agent helper
 
-plan053은 priority confirmation write를 dashboard 직접 쓰기가 아니라 queue-based bridge로 둔다.
+현재는 career-os 파일과 skill 직접 호출이 정본이다.
 
-구성 요소:
+로컬 helper:
 
-- fos-career API: authenticated admin request를 받아 `priority_action_requests` row를 만든다.
-- fos-career UI: detail 화면에서 stage/rank/reason을 확인하고 pending status를 보여준다.
-- fos-career host-side processor: pending request를 JSON으로 넘기고 결과 status를 fos-career DB에 반영한다.
-- career-os applier: request snapshot을 검증한 뒤 기존 `confirm-priority` helper로 적용한다.
-- audit: fos-career `audit_logs`, fos-career `priority_action_requests`, career-os `_priority-history.jsonl`을 함께 본다.
+- `apply_priority_request.ts`
+- `apply_position_action_request.ts`
+- `priority_request_schema.ts`
+- `position_action_request_schema.ts`
 
-관련 파일:
-
-```text
-career-os/scripts/application-agent/apply_priority_request.ts
-career-os/scripts/application-agent/priority_request_schema.ts
-career-os/scripts/application-agent/run.ts
-```
-
-거절한 대안:
-
-- career-os를 HTTP API service로 띄우기.
-  인증, 네트워크 노출, long-running service 운영 비용이 MVP보다 크다.
-- dashboard container에 writable career-os mount를 주기.
-  기존 read-only 안전 경계를 깨고 UI bug가 곧 data corruption으로 이어질 수 있다.
-- fos-career가 `frontdoor-queue.jsonl`과 `ledger.jsonl`을 직접 수정하기.
-  career-os schema validation과 priority history helper를 우회한다.
-- LLM chat이 tool call로 priority를 변경하기.
-  사용자 확인, idempotency, rollback 검증이 불명확하다.
-
-## fos-career application workbench (plan054)
-
-plan054는 fos-career의 다음 제품 축을 application workbench로 둔다.
-기존 priority/list/detail projection을 재사용하되, 화면의 중심을 "공고가 수집됐는가"에서 "지원 준비가 어디까지 됐고 다음 행동이 무엇인가"로 옮긴다.
-이 문단은 plan054 당시 read-only projection 기준이다.
-ADR-081 이후 새 dashboard 구현은 fos-career DB의 `application_candidate_states`와 `career_outbox_jobs`를 정본으로 사용한다.
-
-구성 요소:
-
-- fos-career adapter: frontdoor queue, ledger, priority history, application files를 읽어 workbench projection을 만든다.
-- applications list UI: stage/status/readiness/next action/blocker를 스캔 가능한 행 단위로 표시한다.
-- application detail UI: posting, fit analysis, application package, review 파일 존재 여부와 준비 상태를 우선 보여준다.
-- career-os automation: 실제 산출물 생성과 원장 mutation은 기존 agent/task 흐름 또는 plan053 safe bridge가 맡는다.
-
-관련 fos-career 파일:
-
-```text
-/home/bifos/services/fos-career/app/dashboard/applications/page.tsx
-/home/bifos/services/fos-career/app/dashboard/applications/[id]/page.tsx
-/home/bifos/services/fos-career/lib/career-os/adapter.ts
-/home/bifos/services/fos-career/lib/career-os/types.ts
-```
-
-구현 원칙:
-
-- fos-career MySQL에 새 상태 원장을 만들지 않고, MVP는 read-only projection으로 시작한다.
-- readiness는 파일 존재 여부와 ledger/frontdoor fields에서 계산한다.
-- 외부 제출, 공개 발행, candidate-profile mutation은 workbench 밖의 별도 승인 흐름으로 유지한다.
-- action button이 필요하면 plan053처럼 pending request bridge를 먼저 설계한다.
-
-## 공고 상태 사용자 액션 (plan059 예정)
-
-plan059는 application workbench에 `보류`, `제외`, `지원 준비` 버튼을 추가한다.
-이 버튼은 UI convenience가 아니라 사용자의 명시 의사결정을 request로 보존하는 write boundary다.
-
-구성 요소:
-
-- fos-career UI: application/detail 화면에서 공고별 상태 액션 버튼과 optional reason 입력을 제공한다.
-- fos-career API: authenticated admin request를 받아 `user_position_action_requests` row를 만든다.
-- fos-career processor: pending request를 읽고 stale guard를 수행한 뒤 career-os runner를 호출한다.
-- career-os runner: frontdoor/ledger record에 action stage를 반영하고, `지원 준비`는 ledger 승격과 이력서 패키지 생성으로 이어간다.
-- audit: fos-career `audit_logs`, `user_position_action_requests`, career-os priority/application history를 함께 본다.
-- processor 운영 진입점은 host-side wrapper다.
-  web container는 career-os를 read-only mount로 유지하고, host-side wrapper가 writable checkout과 host-published MySQL port를 사용한다.
-
-액션 매핑:
-
-- `보류` -> `hold`
-- `제외` -> `excluded`
-- `지원 준비` -> `prepare_application`
-
-구현 원칙:
-
-- reason은 optional이지만 request에는 `effectiveReason`을 항상 저장한다.
-- dashboard container는 career-os 파일을 직접 쓰지 않는다.
-- `지원 준비`는 내부 산출물 생성까지 진행한다.
-  외부 제출, 업로드, 로그인, 공개 발행은 하지 않는다.
-
-## CJ푸드빌 면접 skill request gateway (plan060 예정)
-
-plan060은 fos-career dashboard의 면접 준비 hub와 career-os agent skill 실행 사이에 request gateway를 둔다.
-dashboard는 CJ푸드빌 2026-06-15 면접 준비 상태를 보여주지만, career-os skill을 직접 실행하지 않는다.
-
-구성 요소:
-
-- fos-career hub adapter: career-os read-only mount에서 target, prep, report, fos-study 관련 경로를 읽어 projection을 만든다.
-- fos-career API: authenticated admin request를 받아 `interview_skill_requests` row를 만든다.
-- fos-career interview session store: CJ푸드빌 2026-06-15 면접모드의 active/read-only/archive 상태를 관리한다.
-- fos-career answer practice UI: 기본 5턴 세션, 자유형 연장, 질문 생성/선택, 답변 textarea, 피드백, 꼬리질문, 최종 요약/보완 주제/study-pack 후보를 제공한다.
-  긴 질문 가독성을 위해 질문 후보는 `<select>`가 아니라 버튼 목록과 readonly textarea 조합으로 표시하고, 제출값은 hidden `questionText`로 유지한다.
-- fos-career answer store: 답변 전문과 상세 피드백을 private DB record로 저장해 dashboard에서 바로 보여준다.
-- fos-career scoring model: 기술 정확성, 경험 연결, 답변 구조, CJ푸드빌 맥락 반영 점수를 저장하고 표시한다.
-  너무 짧거나 의미 있는 기술·경험 신호가 없는 답변은 강점 없이 insufficient feedback과 1/5 점수로 저장한다.
-- fos-career LLM evaluator: guard를 통과한 `answer_feedback` request에 대해 `prep.md`, 현재 질문, 사용자 답변, 최근 답변/피드백 요약, 정리된 주제, 포지션 맥락을 context bundle로 묶고 OpenAI provider를 통해 strict JSON feedback을 생성한다.
-  꼬리질문 생성 여부와 꼬리질문 내용은 evaluator가 판단한다.
-- fos-career processor: pending request를 읽고 allowlist와 stale guard를 확인한 뒤 career-os agent skill을 호출한다.
-- career-os agent skills: 현재 활성 skill을 재사용한다.
-  - `interview-stage-prep`
-  - `tech-interview-drill`
-  - `behavioral-interview-drill`
-  - `interview-asset-writer`
-  - `study-pack-writer`
-- audit: fos-career `audit_logs`와 request row에는 상태, 경로, 짧은 요약만 남긴다.
-
-허용 skill family:
-
-```text
-/interview-stage-prep <stage>
-/tech-interview-drill
-/behavioral-interview-drill
-/interview-asset-writer <topic>
-/study-pack-writer <public-safe-topic>
-```
-
-구현 원칙:
-
-- 새 career-os skill이나 script를 만들지 않고 기존 agent skill을 먼저 연결한다.
-- dashboard container의 `/data/career-os` mount는 read-only로 유지한다.
-- processor는 writable checkout에서만 skill을 실행한다.
-- `study-pack-writer` 요청은 기존 방식처럼 `sources/fos-study/`에 `[초안]` 제목의 공부팩을 만들고 commit/push까지 수행한다.
-- request/result payload와 audit log에는 private 문서 본문, 면접 답변 전문, 상세 피드백, command stdout 전체를 저장하지 않는다.
-- 사용자가 textarea에 입력한 답변 전문과 processor가 만든 상세 피드백은 private answer/session DB에 저장한다.
-  dashboard에서 바로 조회 가능해야 하며, audit log, Discord, fos-study로 복사하지 않는다.
-- answer feedback은 private dashboard 기능이며 답변의 강점, 리스크, 권장 수정 방향, 점수, 꼬리질문, 보완 주제, study-pack 후보를 제공한다.
-- LLM evaluator는 외부 사이트 접근, fos-study 발행, candidate-profile mutation, 지원서 제출을 수행하지 않는다.
-  timeout, 설정 오류, JSON parse 실패는 deterministic fallback으로 처리한다.
-- study-pack request는 고정 추천 후보와 사용자 자연어 요청을 모두 받는다.
-  사용자가 인터뷰 중 특정 주제를 정말 모르겠다고 느끼면 해당 turn에서 직접 요청할 수 있다.
-- 2026-06-15 CJ푸드빌 면접 종료 후 해당 면접모드는 read-only/archive 상태로 전환한다.
-  archive 상태에서는 새 질문/답변/feedback request를 만들지 않는다.
-- study pack은 공개 가능한 순수 기술 주제만 허용한다.
-- 외부 제출, 공개 발행, 로그인, 업로드, candidate-profile 자동 수정은 forbidden action이다.
-- implementation phase에서 docs/ADR/정책 문서 수정이 필요해지면 구현하지 말고 `PHASE_BLOCKED`로 보고한다.
+이 helper들은 외부 웹 DB 계약이 아니라 JSON request를 검증하고 career-os 파일 원장에 반영하는 compatibility entrypoint다.
+사용자가 명시적으로 필요 없다고 판단하면 별도 cleanup pass에서 제거한다.
 
 ### Question Bank Collector
 
@@ -779,9 +546,9 @@ OpenClaw 자연어 라우팅을 위해 skill description에는 “일반 backend
 - private 포지션 맥락이 필요한 질문은 `private/<company>/<position>/interview/prep.md` 선별 단계에서만 다룬다.
 - 검수된 질문/해설만 `sources/fos-study/`로 재작성해 발행할 수 있다.
 
-fos-career 연동:
+파일 기반 연동:
 
-- 면접 hub는 `question_bank_refresh` request를 만든다.
-- processor는 host-side career-os checkout에서 `question-bank-collector`를 실행한다.
-- dashboard container는 특정 에이전트 CLI를 직접 실행하지 않는다.
+- 사용자는 `/question-bank-collector <topic>`을 직접 호출한다.
+- public-safe 질문은 `public/question-bank/`에 저장한다.
+- 개인 맞춤 질문은 `private/question-bank/` 또는 `private/<company>/<position>/interview/prep.md`에만 둔다.
 - private prep 반영은 별도 후속 흐름으로 분리한다.

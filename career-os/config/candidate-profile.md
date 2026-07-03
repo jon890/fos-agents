@@ -8,7 +8,8 @@
 
 ## 지원 대상
 
-- **현재 타깃**: CJ Foodville Digital Channel Backend (Java Backend). 회사·팀·면접 일자·포지션 핵심은 `career-os/config/mvp-target.json`이 단일 출처.
+- **현재 타깃**: active target이 없을 수 있다.
+  회사·팀·면접 일자·포지션 핵심은 `career-os/config/mvp-target.json`이 단일 출처이며, `primary: null`이면 새 공고 탐색부터 시작한다.
 - **지원 가능 범위 (재사용 가능 포지셔닝)**: 운영형 자사 서비스 백엔드 — Spring Boot 3 · Java 17·21 · JPA · Redis · OpenSearch + 슬롯 도메인 점진 아키텍처 개선, 테스트/검증 기반 리팩터링, AI 활용 개발 생산성 경험.
   AI 서비스·AI 플랫폼 전환 포지션에서는 RAG 색인, 문서 파싱 운영, 품질 검증 인프라, 에이전트 기반 개발 생산성 경험을 차별화 자산으로 쓴다.
 - **포지셔닝 한 줄**: "복잡한 도메인을 직접 구현하며 반복을 관찰한 뒤 구조를 고치고, AI를 개발 생산성과 서비스 검증 파이프라인에 연결해 온 백엔드 개발자."
@@ -268,9 +269,9 @@
    - Sync vs Async 선택 기준, 분산 트랜잭션(Saga), 이벤트 유실 대비.
 5. **자기 프로젝트 1분 설명 3종 준비**
    - RAG 배치 파이프라인 / 캐시 정합성 / Outbox Pattern.
-6. **CJ Foodville 디지털 채널 특화 보조 포인트**
-   - F&B 주문/픽업/딜리버리 상태머신 / 쿠폰·프로모션 동시성 / 멤버십·CJ ONE 포인트 / 결제 멱등성·부분 취소·환불 / 레거시 JSP+jQuery와 신규 Spring API 공존 / MyBatis 운영 패턴을 우선 준비한다.
-   - 회사·포지션 세부는 `private/cj-foodville/digital-channel-backend/interview/prep.md`와 `config/mvp-target.json`에서 주입한다.
+6. **지원동기·회사 선택 이유 보강**
+   - 2차 면접 이후 받은 피드백은 기술적 자질은 충분하나 지원동기가 명확히 받아들여지지 않았다는 평가였다.
+   - 다음 지원 루프에서는 회사 선택 이유, 도메인 관심, 커리어 전환 논리, 입사 후 기여 시나리오를 기술 역량과 같은 1급 점검 축으로 둔다.
 
 ---
 
@@ -280,7 +281,7 @@
 - **폴리그롯 가정 금지** — 이력서·task에 기재 없는 언어/도구(예: Scala, Rust 본격 운영)는 pipeline에서 전제하지 않는다.
 - **수치 날조 금지** — TPS, 팀 규모, 성과 %, 감축율 등이 이력서·task에 명시되지 않았으면 pipeline은 "출처 문서에 기재 없음"으로 응답해야 한다. 이력서 문항1의 "447개 테스트 파일", 본 문서 JMH 수치는 출처 확인됨.
 - **실무 근거 범위** — 본 프로필은 `resume/2603_김병태_이력서_v4.md` + `task/**/*.md` + `interview/kakao-healthcare-carechat-ai-agent.md`를 1차 근거로 사용한다. 기타 이력서 버전(v1~v3, 2108/2512/2601)은 참조용.
-- **CJ Foodville 디지털 채널 타깃 유지** — 회사 특화 맥락은 `private/cj-foodville/digital-channel-backend/interview/prep.md`와 `config/mvp-target.json` primary에서 주입한다.
+- **회사 특화 타깃은 active primary에서만 주입** — `config/mvp-target.json`의 `primary`가 `null`이면 회사 특화 맥락을 기본값으로 쓰지 않는다.
 
 ---
 

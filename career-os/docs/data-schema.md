@@ -90,12 +90,11 @@ career-os가 다루는 모든 영속 데이터의 스키마와 위치. 새 필�
 - 유료 강의/문제집/면접 후기 원문을 복사하지 않는다.
 - `sources/fos-study/`로 발행하려면 별도 public-safe 문서로 재작성한다.
 
-fos-career request gateway:
+파일 기반 question bank 보강:
 
-- request type: `question_bank_refresh`
-- requested skill: `question-bank-collector`
-- result에는 `public/question-bank` 경로, 요약, validator count만 둔다.
-- private 답변, 지원 전략, 회사별 비공개 맥락, command stdout 전체는 저장하지 않는다.
+- 사용자는 `/question-bank-collector <topic>`을 직접 호출한다.
+- 결과에는 `public/question-bank` 경로, 요약, validator count만 둔다.
+- private 답변, 지원 전략, 회사별 비공개 맥락은 저장하지 않는다.
 
 보존 정책:
 
@@ -237,13 +236,17 @@ zod 검증 단일 출처: `career-os/scripts/interview-prep-analyzer/mvp_target_
 }
 ```
 
+- `primary` — 활성 타깃이 없으면 `null`일 수 있다.
+  탈락, 지원 취소, 종료 후 다음 active target이 정해지지 않았을 때 사용한다.
+- `history[].outcome` — 선택 필드.
+  `rejected`, `withdrawn`, `closed`, `completed` 중 하나다.
 - `primary.interview` — 면접 단계별 컨테이너.
   - `primary.interview.first_round` — 1차 면접 mode. 활성. 필드: sites, source_dir, report_slug.
   - `primary.interview.final_round` — 최종 면접 mode. nullable, 필요 시 활성화.
   - `primary.interview.offer_chat` — 오퍼 단계 mode. nullable, 필요 시 활성화.
 - `primary.company_slug`, `primary.position_slug`, `primary.data_root` — 회사·직무별 관리 홈.
   active 타깃의 사람이 보는 자산은 `data_root` 아래에 둔다.
-  웹과 새 자동화는 `data_root`를 정본으로 읽고, 면접 질문 정본을 `data/runtime`이나 `data/reports/daily`에 중복 유지하지 않는다.
+  자동화는 `data_root`를 정본으로 읽고, 면접 질문 정본을 `data/runtime`이나 `data/reports/daily`에 중복 유지하지 않는다.
 
 타깃 전환 시 `primary`를 `history` 앞에 push하고 새 `primary`를 채운다.
 
@@ -254,7 +257,7 @@ zod 검증 단일 출처: `career-os/scripts/interview-prep-analyzer/mvp_target_
 
 이 위치는 공개용 자료가 아니라 포지션별 작업 홈이다.
 회사·포지션 맥락, 면접 질문, 답변 메모, 피드백, 지원 준비가 섞일 수 있다.
-자동화와 웹은 이 경로를 정본으로 읽는다.
+자동화는 이 경로를 정본으로 읽는다.
 공개 가능한 기술 공부팩은 이 작업 홈의 내용을 그대로 복사하지 않고, 개인 답변·지원 전략·회사별 민감 맥락을 제거해 `sources/fos-study/`에 따로 작성한다.
 
 권장 구조:
@@ -280,7 +283,7 @@ private/<company-slug>/<position-slug>/
 - `interview/history/` — 필요한 경우에만 생성하는 날짜별 snapshot.
 - `manifest.json` — 사람이 읽는 index와 연결 자산 목록을 둔다.
 
-분리 파일로 생성됐던 면접 준비 리포트, 예상 질문 드릴, 1차 면접 전략, 1차 면접 체크리스트, 10일 Java 준비 재료는 dashboard primary asset으로 유지하지 않는다.
+분리 파일로 생성됐던 면접 준비 리포트, 예상 질문 드릴, 1차 면접 전략, 1차 면접 체크리스트, 10일 Java 준비 재료는 active primary asset으로 유지하지 않는다.
 필요한 내용만 `interview/prep.md`에 정제해 흡수한다.
 
 ### config/candidate-profile.md
@@ -470,7 +473,7 @@ plan050은 frontdoor queue와 ledger에 action stage 중심 priority layer를 �
 
 - `actionStage`는 기본 enum 중 하나여야 한다.
 - `excluded`는 사용자 확정 또는 명확한 정책 사유 없이 자동으로 확정값이 될 수 없다.
-- `userConfirmedPriority`가 있으면 dashboard와 application flow는 이 값을 LLM snapshot보다 우선 표시한다.
+- `userConfirmedPriority`가 있으면 application flow는 이 값을 LLM snapshot보다 우선 표시한다.
 - `recommendationSnapshot.generatedAt`과 source report path가 없으면 refresh 결과로 취급하지 않는다.
 - `prepare-now`에는 `nextAction`과 하나 이상의 `evidenceUrls`가 필요하다.
 
@@ -501,278 +504,33 @@ priority 변경 이력을 저장하는 runtime/private audit log다.
 }
 ```
 
-### application workbench projection (implemented — plan054)
+### priority view projection
 
-plan054는 fos-career 내부 read-only projection을 추가한다.
-이 projection은 career-os 파일에 저장되는 새 원장이 아니라, frontdoor queue, ledger, priority history, application files를 읽어 화면 표시용으로 계산한 view model이다.
-
-예시 shape:
-
-```json
-{
-  "id": "ledger:tossplace-applied-ai-engineer-7746700003",
-  "recordType": "ledger",
-  "recordId": "tossplace-applied-ai-engineer-7746700003",
-  "company": "TossPlace",
-  "role": "Applied AI Engineer",
-  "status": "ready_for_user_review",
-  "actionStage": "prepare-now",
-  "priorityRank": 1,
-  "fitScore": 86,
-  "readiness": {
-    "posting": "present",
-    "fitAnalysis": "present",
-    "applicationPackage": "missing",
-    "resumeDraft": "missing",
-    "coverLetter": "missing",
-    "submissionChecklist": "missing",
-    "review": "missing",
-    "completeCount": 2,
-    "totalCount": 7
-  },
-  "nextAction": "지원 패키지 초안을 만들고 사용자 검토 대기로 전환한다.",
-  "blockers": ["review_missing"],
-  "riskFlags": ["existing_ledger_record"],
-  "materialPaths": {
-    "postingPath": "data/applications/tossplace/applied-ai-engineer/posting.md",
-    "fitAnalysisPath": "data/applications/tossplace/applied-ai-engineer/fit-analysis.md",
-    "applicationPackagePath": null,
-    "resumeDraftPath": null,
-    "coverLetterPath": null,
-    "submissionChecklistPath": null,
-    "reviewPath": null
-  }
-}
-```
-
-필드 책임:
-
-- `id`: UI row key. `recordType:recordId` 형식.
-- `recordType`: `frontdoor_queue` 또는 `ledger`.
-- `recordId`: 원본 career-os record id.
-- `readiness`: 지원 준비 산출물 존재 여부. 실제 파일 시스템 read 결과에서 계산한다.
-- `nextAction`: priority snapshot, user confirmation, ledger nextActions 중 사람이 바로 볼 값을 선택한다.
-- `blockers`: 준비 진행을 막는 표시용 이유. 원장 status가 아니라 projection 계산값이다.
+`priority_view.ts`는 frontdoor queue, ledger, priority history, application files를 읽어 사람이 볼 요약 row를 계산한다.
+이 projection은 파일에 저장되는 새 원장이 아니며, 외부 DB에도 저장하지 않는다.
 
 검증 규칙:
 
-- projection은 fos-career MySQL에 저장하지 않는다.
 - projection 계산은 career-os 파일을 수정하지 않는다.
 - ledger file path가 있으면 파일 존재 여부를 직접 확인하고, 없으면 `missing`으로 표시한다.
-- frontdoor queue record는 application material path가 없을 수 있으므로 readiness를 `not_started` 성격으로 계산한다.
-- plan055 이후 readiness는 `resume-draft.md`, `cover-letter.md`, `submission-checklist.md`를 포함한다.
-  구현 전까지 누락 파일은 `missing`으로 표시한다.
+- frontdoor queue record는 application material path가 없을 수 있으므로 `not_started` 성격으로 계산한다.
 
-### interview skill request queue (planned — plan060)
+### interview answer feedback files
 
-plan060은 fos-career 내부 request queue를 추가한다.
-이 queue는 career-os 파일이 아니라 dashboard가 만든 skill 실행 요청과 처리 결과의 최소 메타데이터를 저장한다.
-dashboard는 career-os를 read-only projection으로만 읽고, skill 실행은 processor가 맡는다.
-면접 대화 답변 전문과 상세 피드백은 request result가 아니라 별도 private answer/session table에 저장한다.
+면접 답변과 피드백은 별도 웹 DB가 아니라 active `mvp-target`의 `primary.data_root` 아래에 저장한다.
 
-허용 skill:
-
-- `interview-stage-prep`
-- `tech-interview-drill`
-- `behavioral-interview-drill`
-- `interview-asset-writer`
-- `study-pack-writer`
-
-권장 request record shape:
-
-```json
-{
-  "id": "interview-skill-request-20260607-001",
-  "targetKey": "cj-foodville-2026-06-15",
-  "company": "CJ푸드빌",
-  "interviewDate": "2026-06-15",
-  "requestType": "interview_stage_prep",
-  "skillName": "interview-stage-prep",
-  "skillArgs": {
-    "stage": "first-round",
-    "topic": null
-  },
-  "status": "pending",
-  "requestedBy": "admin",
-  "requestedAt": "2026-06-07T12:00:00+09:00",
-  "startedAt": null,
-  "finishedAt": null,
-  "sourceSnapshot": {
-    "mvpTargetPath": "config/mvp-target.json",
-    "prepDir": "data/prep/cj-foodville",
-    "reportPath": null
-  },
-  "resultSnapshot": {
-    "status": null,
-    "paths": [],
-    "summary": null,
-    "errorSummary": null
-  }
-}
+```text
+private/<company-slug>/<position-slug>/interview/
+├── answers/YYYY-MM-DD.jsonl
+└── feedback/YYYY-MM-DD.md
 ```
 
-필드 책임:
+규칙:
 
-- `targetKey`: 회사와 면접일 기준의 dashboard hub key.
-  CJ푸드빌 2026-06-15는 `cj-foodville-2026-06-15`를 권장한다.
-- `requestType`: `interview_prep_report`, `interview_asset`, `study_pack`, `answer_feedback` 중 하나.
-- `skillName`: allowlist에 있는 native skill 이름.
-  `answer_feedback`처럼 dashboard private feedback 요청이면 `null` 또는 별도 feedback processor 값을 둘 수 있다.
-- `skillArgs`: processor가 command를 만들기 위한 최소 인자.
-  private answer body나 generated markdown body를 넣지 않는다.
-- `sourceSnapshot`: 요청 당시 dashboard가 본 경로와 revision hint.
-  원문 본문은 저장하지 않는다.
-- `resultSnapshot.paths`: 생성 또는 갱신된 파일 경로 목록.
-- `resultSnapshot.summary`: 사람이 상태를 이해할 수 있는 짧은 요약.
-  답변 전문은 answer/session table에 따로 저장한다.
-  result snapshot에는 private 문서 본문이나 command stdout 전체를 저장하지 않는다.
-
-상태 enum:
-
-- `pending`
-- `running`
-- `done`
-- `failed`
-- `stale`
-- `blocked`
-
-검증 규칙:
-
-- native skill 요청의 `skillName`은 allowlist 밖 값을 받을 수 없다.
-- `study-pack-writer` 요청은 공개 가능한 순수 기술 주제일 때만 허용한다.
-  회사별 지원 전략이나 private 후보자 맥락을 fos-study 공개 글로 만들지 않는다.
-- `study-pack-writer` 결과는 기존 정책대로 `sources/fos-study/`에 `[초안]` 제목으로 생성하고 commit/push까지 이어진다.
-  push 실패는 `failed`로 남기고 silent 처리하지 않는다.
-- `interview-asset-writer` 결과는 공개 가능 경로와 private 경로의 경계를 processor가 확인해야 한다.
-- `interview-stage-prep` 결과는 private report 경로와 짧은 요약만 저장한다.
-- `answer_feedback`은 사용자 입력 답변을 private answer record로 저장하고, feedback result를 같은 private 경계 안에 둔다.
-  답변 전문과 상세 피드백은 dashboard에서 바로 확인할 수 있게 DB에 저장한다.
-  request result snapshot, audit log, Discord 알림, fos-study로는 복사하지 않는다.
-- 외부 제출, 공개 발행, 로그인, 업로드, candidate-profile 자동 수정 요청은 생성 시 차단한다.
-- processor stdout은 debug log로도 전문 저장하지 않고 필요한 오류 요약만 남긴다.
-
-### interview session mode (planned — plan060)
-
-CJ푸드빌 2026-06-15 면접 hub는 면접 전까지 active session mode로 동작한다.
-면접이 끝나면 read-only/archive 상태로 전환한다.
-
-권장 session record shape:
-
-```json
-{
-  "id": "interview-session-cj-foodville-2026-06-15",
-  "targetKey": "cj-foodville-2026-06-15",
-  "company": "CJ푸드빌",
-  "interviewDate": "2026-06-15",
-  "modeStatus": "active",
-  "archivedAt": null,
-  "createdAt": "2026-06-07T12:00:00+09:00",
-  "updatedAt": "2026-06-07T12:20:00+09:00",
-  "defaultTurnBudget": 5,
-  "allowFreeformExtension": true,
-  "finalSummary": null,
-  "improvementTopics": [],
-  "studyPackCandidates": []
-}
-```
-
-`modeStatus` enum:
-
-- `active`: 면접 전 준비 중.
-- `read_only`: 면접이 끝나 새 답변/요청 생성을 막고 기록 조회만 허용.
-- `archived`: 장기 보존 상태.
-  dashboard에서는 archive badge와 기록 조회만 제공한다.
-
-전환 규칙:
-
-- 2026-06-15 CJ푸드빌 면접 종료 후 해당 session은 `read_only` 또는 `archived`로 전환한다.
-- archive 상태에서는 새 질문 생성, 새 답변 입력, 새 feedback 요청을 만들지 않는다.
-- 기존 답변 전문, 상세 피드백, 최종 요약, 보완 주제, study-pack 후보는 dashboard에서 조회 가능해야 한다.
-- archive 전환은 외부 제출이나 공개 발행을 의미하지 않는다.
-- 면접 대화 세션은 기본 5턴으로 시작한다.
-  사용자가 원하면 자유형으로 꼬리질문과 추가 답변을 연장할 수 있다.
-
-### interview answer records (planned — plan060)
-
-plan060은 dashboard에서 사용자가 면접 질문에 대한 답변을 직접 입력하고 피드백을 받을 수 있게 한다.
-이 기록은 private dashboard data다.
-공개 study artifact나 career-os docs가 아니다.
-
-권장 record shape:
-
-```json
-{
-  "id": "answer-record-20260607-001",
-  "sessionId": "interview-session-cj-foodville-2026-06-15",
-  "targetKey": "cj-foodville-2026-06-15",
-  "company": "CJ푸드빌",
-  "interviewDate": "2026-06-15",
-  "turnIndex": 1,
-  "questionType": "main",
-  "questionText": "본인의 백엔드 경험을 CJ푸드빌 서비스와 어떻게 연결할 수 있나요?",
-  "answerText": "사용자가 dashboard에 입력한 답변 전문",
-  "createdBy": "admin",
-  "createdAt": "2026-06-07T12:10:00+09:00",
-  "feedbackStatus": "pending",
-  "feedbackRequestId": "interview-skill-request-20260607-002",
-  "feedback": {
-    "summary": "핵심 경험 연결은 좋지만 CJ푸드빌 도메인 연결 근거가 약하다.",
-    "detail": "상세 피드백 전문",
-    "scores": {
-      "technicalAccuracy": 3,
-      "experienceConnection": 4,
-      "answerStructure": 3,
-      "cjFoodvilleContext": 2
-    },
-    "strengths": ["백엔드 장애 대응 경험을 먼저 제시했다."],
-    "risks": ["식음료/매장 운영 도메인과의 연결이 추상적이다."],
-    "recommendedRevision": "CJ푸드빌 주문/매장 운영 맥락으로 경험을 다시 연결한다.",
-    "followUpQuestions": ["해당 경험에서 지표를 어떻게 개선했나요?"],
-    "improvementTopics": ["대용량 주문 처리", "장애 대응 커뮤니케이션"],
-    "studyPackCandidates": ["pos-order-traffic-handling"],
-    "generatedAt": "2026-06-07T12:11:00+09:00"
-  },
-  "sourceContext": {
-    "prepPaths": [],
-    "reportPaths": []
-  }
-}
-```
-
-필드 책임:
-
-- `questionText`: dashboard에서 선택하거나 사용자가 입력한 질문.
-- `answerText`: 사용자가 입력한 답변 전문.
-  private DB record에 저장해 dashboard에서 바로 조회할 수 있게 한다.
-  공개 산출물로 옮기지 않는다.
-- `questionType`: `main`, `follow_up`, `revision`, `summary` 중 하나.
-- `feedbackRequestId`: `interview_skill_requests`의 `answer_feedback` 요청과 연결한다.
-- `feedback`: dashboard에 보여줄 피드백.
-  상세 피드백까지 DB에 저장해 dashboard에서 바로 조회할 수 있게 한다.
-  private feedback이며 외부 제출 문구나 공개 글이 아니다.
-- `feedback.scores`: 기본 4개 평가 기준의 점수.
-  기술 정확성, 경험 연결, 답변 구조, CJ푸드빌 맥락 반영을 기본값으로 둔다.
-- `feedback.followUpQuestion`: LLM evaluator 또는 deterministic fallback이 만든 꼬리질문.
-  LLM evaluator는 답변 상태를 보고 꼬리질문 생성 여부까지 판단한다.
-- `feedback.improvementTopics`와 `feedback.studyPackCandidates`: 다음 연습 또는 public-safe 공부팩 후보.
-- `sourceContext`: feedback이 참고한 career-os 경로.
-  파일 본문은 저장하지 않는다.
-
-검증 규칙:
-
-- answer record는 Discord나 외부 알림에 본문을 보내지 않는다.
-- feedback은 답변의 강점, 리스크, 권장 수정 방향, 꼬리질문 생성 여부/내용, 보완 주제, study-pack 후보를 제공한다.
-  합격 보장, 허위 성과 추가, 검증되지 않은 정량 성과 제안은 금지한다.
-- 평가 점수는 dashboard 비교와 개선 추적을 돕기 위한 내부 기준이다.
-- 너무 짧거나 의미 없는 답변은 LLM 호출 없이 1/5 insufficient feedback으로 저장한다.
-- guard 통과 답변은 `prep.md`, 현재 질문, 답변, 최근 답변/피드백 요약, 정리된 주제, 포지션 맥락으로 구성한 context bundle을 LLM evaluator에 전달한다.
-- LLM raw response 전체는 audit log나 request result에 저장하지 않는다.
-  합격 가능성 점수로 해석하지 않는다.
-- answer record는 `study-pack-writer` 입력으로 자동 변환하지 않는다.
-- 공개 가능한 기술 주제만 별도 `study_pack` request로 승격할 수 있다.
-  승격은 고정 추천뿐 아니라 사용자의 자연어 요청으로도 만들 수 있다.
-- 사용자가 인터뷰 중 특정 주제를 정말 모르겠다고 느끼면 해당 turn에서 직접 `study_pack` request를 만들 수 있다.
-- archived session에서는 answer record 생성과 feedback request 생성을 막는다.
+- `config/mvp-target.json`의 `primary`가 `null`이면 포지션별 답변 피드백 기록은 중단한다.
+- 답변 전문과 상세 피드백은 private 경계 안에만 둔다.
+- Discord, `sources/fos-study/`, 공개 질문 bank로 답변 원문을 복사하지 않는다.
+- 공개 가능한 기술 주제만 별도 `study-pack-writer` 입력 후보가 될 수 있다.
 
 ### 디렉터리 구조
 
@@ -942,7 +700,7 @@ Markdown 산출물을 먼저 고정하고, 리뷰된 이력서 초안을 HTML/PD
 선택 파일:
 
 - `resume-metadata.json`: readiness/status 계산을 단순화해야 할 때만 도입한다.
-  도입 시 `ledger_schema.ts`와 fos-career projection 책임을 함께 문서화한다.
+  도입 시 `ledger_schema.ts`와 파일 기반 projection 책임을 함께 문서화한다.
 
 생성 문서 품질 계약:
 
@@ -1108,7 +866,7 @@ ADR-066 이후 공개 가능 일반 질문 bank의 정본은 `public/question-ba
 3개 외부 reading source config 파일 통합본 (`tech-blog-sources`, `ai-topic-sources`, `geek-news-sources`).
 `study-topic-recommender`의 보조 읽을거리 추천과 `position-recommender`의 `techBlogSignal` 판단에만 사용한다.
 공고 수집 source registry가 아니다.
-공고 수집 source registry와 collection run은 ADR-083에 따라 fos-career DB가 정본이고, career-os `live-postings` adapter registry는 실제 수집 방법을 소유한다.
+공고 수집 source 설정은 `config/position-collection.json`과 career-os `live-postings` adapter registry가 소유한다.
 
 ```json
 {
@@ -1705,7 +1463,7 @@ source diagnostics:
 
 - `configured_sources` — 요청된 source set. `all`은 등록된 모든 source를 뜻한다.
 - `source_counts` — source별 import 후보 수.
-- `source_diagnostics` — dashboard에 보여줄 source별 짧은 상태와 실패 수.
+- `source_diagnostics` — 리포트에 보여줄 source별 짧은 상태와 실패 수.
 - `source_errors` — runtime output에 남기는 상세 실패. 한 source 실패는 다른 source 결과를 제거하지 않는다.
 
 source adapter는 official listing, official API, sitemap, keyword search에서 발견한 후보를 import하기 전에 detail page를 fetch하고 active/open evidence를 기록한다.
@@ -1720,9 +1478,9 @@ Toss adapter는 공식 `job-groups` API의 그룹 공고와 하위 포지션을 
 
 - 에이전트가 이 JSON을 생성하고, `render_recommendation.ts`가 Markdown·HTML을 파생한다. 자체 markdown 파서를 거치지 않는다.
 - 사람용 14개 라벨 외에 적재용 `source`(수집 adapter 식별자)와 `closeDate`(마감일 문자열 또는 null)를 `PositionItem`(강력·도전 티어)에 둔다(ADR-101).
-- `source`·`closeDate`는 수집 snapshot에서 채운다. fos-career candidate identity(`company_title_source_close_date`) 적재에 쓰인다.
+- `source`·`closeDate`는 수집 snapshot에서 채운다.
 - tier 상한(강력 3 / 도전 2 / 보류 3), `linkEvidenceLevel` enum(active/open만), 추천 티어 개별 공고 URL 강제, 강력 추천 `stretchGap` 금지를 스키마가 보장한다.
-- 표준 출력 JSON을 호출자가 가공한다(ADR-101). cron은 Discord 요약, backend는 DB 적재로 소비하며, 전달 매체는 운영의 공유 파일과 로컬·분산의 hermes API 응답이다.
+- 표준 출력 JSON을 호출자가 가공한다(ADR-101). cron은 Discord 요약으로 소비하며, 전달 매체는 운영의 공유 파일과 로컬·분산의 hermes API 응답이다.
 - 옛 파생 `items.json`과 daily runner는 ADR-101로 폐기됐다.
 
 ### data/runtime/position-recommendation.{md,html}
@@ -1740,517 +1498,3 @@ recommendation.json 정본에서 파생하는 사람 읽기용 산출물.
 외부 git 저장소 (jon890/fos-study). career-os가 마크다운만 읽고, study-pack 종류 명령이 commit + push한다.
 
 career-os가 손대지 말아야 할 영역: `.claude/**` (별도 스킬 정의), `.git/**`.
-
-## fos-career MySQL 스키마
-
-fos-career 대시보드가 소유하는 데이터.
-ADR-081 이후 추천 후보 상태와 background outbox는 fos-career DB를 정본으로 둔다.
-career-os 파일은 migration 전 legacy 입력 또는 private 산출물 위치로만 다룬다.
-
-정본 원칙:
-
-- 추천 후보의 현재 상태와 stage는 fos-career DB가 정본이다.
-- 수집 source registry와 collection run 상태는 fos-career DB가 정본이다.
-- career-os adapter/config는 실제 수집 로직과 entrypoint를 소유한다.
-- 같은 공고 중복 방지는 candidate key unique constraint로 처리한다.
-- HTML report는 읽기용 snapshot이며 action source가 아니다.
-- `frontdoor-queue.jsonl`은 DB import 검증 후 삭제한다.
-- 오래 걸리는 skill 실행은 DB outbox job으로 관리한다.
-
-### admin_users
-
-단일 관리자 계정 테이블.
-
-| 컬럼 | 타입 | 설명 |
-|---|---|---|
-| `id` | INT AUTO_INCREMENT PK | |
-| `username` | VARCHAR(64) UNIQUE NOT NULL | 관리자 아이디 |
-| `passwordHash` | VARCHAR(255) NOT NULL | bcrypt 해시 |
-| `createdAt` | DATETIME NOT NULL | |
-| `lastLoginAt` | DATETIME NULL | |
-
-### sessions
-
-관리자 세션.
-
-| 컬럼 | 타입 | 설명 |
-|---|---|---|
-| `id` | VARCHAR(128) PK | 세션 ID (UUID) |
-| `adminUserId` | INT FK NOT NULL | admin_users.id |
-| `expiresAt` | DATETIME NOT NULL | |
-| `createdAt` | DATETIME NOT NULL | |
-| `ipAddress` | VARCHAR(45) NULL | |
-
-### audit_logs
-
-관리자 행동 기록.
-
-| 컬럼 | 타입 | 설명 |
-|---|---|---|
-| `id` | BIGINT AUTO_INCREMENT PK | |
-| `adminUserId` | INT FK NULL | admin_users.id |
-| `action` | VARCHAR(128) NOT NULL | 예: `auth.login_success`, `dashboard.view`, `interview.feedback_generated` |
-| `resource` | VARCHAR(128) NULL | 예: `application`, `interview_answer`, `skill_request` |
-| `resourceId` | VARCHAR(255) NULL | |
-| `detailsJson` | JSON NULL | |
-| `createdAt` | DATETIME NOT NULL | |
-
-### action_history
-
-대시보드에서 시작한 액션 이력.
-범용 chat action은 ADR-064로 제거됐고, 목적별 request와 면접 답변/피드백 액션만 기록한다.
-
-| 컬럼 | 타입 | 설명 |
-|---|---|---|
-| `id` | BIGINT AUTO_INCREMENT PK | |
-| `adminUserId` | INT FK NOT NULL | admin_users.id |
-| `actionType` | VARCHAR(64) NOT NULL | 예: `dashboard.view`, `skill_request.created`, `interview.answer_submitted` |
-| `payloadJson` | JSON NULL | |
-| `status` | ENUM('pending','done','failed') NOT NULL | |
-| `createdAt` | DATETIME NOT NULL | |
-
-### application_state_master
-
-지원 후보의 큰 상태를 정의하는 master table.
-
-| 컬럼 | 타입 | 설명 |
-|---|---|---|
-| `key` | VARCHAR(64) PK | 예: `recommended`, `held`, `excluded`, `started`, `closed` |
-| `label` | VARCHAR(128) NOT NULL | 화면 표시명 |
-| `sortOrder` | INT NOT NULL | 화면 표시 순서 |
-| `isTerminal` | TINYINT NOT NULL | 종료 상태 여부 |
-| `createdAt` | DATETIME NOT NULL | |
-| `updatedAt` | DATETIME NOT NULL | |
-
-기본 상태:
-
-- `recommended`: 추천 후보로 표시할 수 있다.
-- `held`: 사용자가 보류했다.
-- `excluded`: 사용자가 제외했다. 기본 추천 화면에서 숨긴다.
-- `started`: 내부 지원 시작 workflow가 시작됐다.
-- `closed`: 더 이상 진행하지 않는다.
-
-### application_stage_master
-
-지원 workflow 안의 현재 단계를 정의하는 master table.
-
-| 컬럼 | 타입 | 설명 |
-|---|---|---|
-| `key` | VARCHAR(64) PK | 예: `company_analysis`, `fit_analysis`, `study_pack`, `resume_draft` |
-| `label` | VARCHAR(128) NOT NULL | 화면 표시명 |
-| `sortOrder` | INT NOT NULL | workflow 순서 |
-| `createdAt` | DATETIME NOT NULL | |
-| `updatedAt` | DATETIME NOT NULL | |
-
-기본 stage:
-
-- `company_analysis`: 회사와 사업 맥락 분석.
-- `posting_analysis`: 공고 요구사항 분석.
-- `fit_analysis`: 후보자 이력과 공고 fit/gap 분석.
-- `study_pack`: fit/gap 기반 공부팩 생성.
-- `resume_draft`: 이력서와 지원 패키지 초안 생성.
-- `submitted`: 사용자가 실제 제출했다고 표시한 상태.
-- `resume_passed`: 서류 통과를 표시한 상태.
-- `interview_prep`: 면접 대비 workflow.
-
-### application_stage_transitions
-
-허용되는 state/stage 전이를 정의한다.
-
-| 컬럼 | 타입 | 설명 |
-|---|---|---|
-| `id` | BIGINT AUTO_INCREMENT PK | |
-| `fromState` | VARCHAR(64) NOT NULL | nullable이 필요하면 별도 sentinel 사용 |
-| `fromStage` | VARCHAR(64) NOT NULL | nullable이 필요하면 별도 sentinel 사용 |
-| `toState` | VARCHAR(64) NOT NULL | |
-| `toStage` | VARCHAR(64) NOT NULL | |
-| `trigger` | VARCHAR(128) NOT NULL | 예: `user.start_application`, `worker.fit_analysis_done` |
-| `createdAt` | DATETIME NOT NULL | |
-
-### position_recommendation_runs
-
-아침 포지션 추천 실행 단위.
-Markdown/HTML 리포트와 DB ingest 결과를 연결한다.
-
-| 컬럼 | 타입 | 설명 |
-|---|---|---|
-| `id` | VARCHAR(64) PK | run id |
-| `reportDate` | DATE NOT NULL | 리포트 기준 날짜 |
-| `sourceSnapshotPath` | TEXT NULL | 수집 snapshot path |
-| `collectionRunId` | VARCHAR(64) NULL | 추천 입력으로 사용한 collection run |
-| `markdownReportPath` | TEXT NOT NULL | career-os report.md 또는 runtime markdown path |
-| `htmlReportPath` | TEXT NULL | career-os report.html path |
-| `status` | ENUM('pending','ingested','failed') NOT NULL | ingest 상태 |
-| `itemCount` | INT NOT NULL | structured item 수 |
-| `createdAt` | DATETIME NOT NULL | |
-| `updatedAt` | DATETIME NOT NULL | |
-
-### application_candidates
-
-추천 공고 후보의 identity table.
-같은 공고가 여러 날 추천되어도 한 row로 유지한다.
-
-| 컬럼 | 타입 | 설명 |
-|---|---|---|
-| `id` | VARCHAR(64) PK | candidate id |
-| `candidateKey` | VARCHAR(128) UNIQUE NOT NULL | normalized URL hash 또는 fallback hash |
-| `keyStrategy` | ENUM('normalized_url','company_title_source_close_date') NOT NULL | key 생성 방식 |
-| `source` | VARCHAR(64) NOT NULL | Wanted, Toss, NAVER Careers 등 |
-| `company` | VARCHAR(256) NOT NULL | 회사명 |
-| `title` | TEXT NOT NULL | 공고명 |
-| `postingUrl` | TEXT NULL | 원본 공고 URL |
-| `normalizedPostingUrl` | TEXT NULL | query/tracking 정리 URL |
-| `closeDate` | VARCHAR(32) NULL | 마감일 문자열 |
-| `latestRunId` | VARCHAR(64) NULL | 마지막 추천 run |
-| `latestSnapshotJson` | JSON NOT NULL | 추천 카드 요약, fit/gap, evidence |
-| `createdAt` | DATETIME NOT NULL | |
-| `updatedAt` | DATETIME NOT NULL | |
-
-`latestSnapshotJson` 표시용 권장 필드:
-
-- `rank`: 추천 run 내 순서.
-- `tier`: `강력 추천`, `도전 추천` 같은 표시 티어.
-- `priorityReason`: 추천 근거.
-- `nextAction`: 사람이 바로 실행할 다음 행동.
-- `riskFlags`: 확인할 점 또는 주의할 조건.
-- `evidenceUrls`: 공고 URL, official careers URL, active/open 확인 URL.
-- `ingestSource`: `position_recommendation_items` 또는 legacy import source.
-
-plan074 이후 추천 후보 카드와 ingest 검증은 `priorityReason`, `nextAction`, `evidenceUrls` 누락을 품질 신호로 다룬다.
-Markdown 리포트에 근거가 있는데 structured item이 null이면 추출 보강 대상이다.
-
-### position_sources (planned — plan075)
-
-수집 source registry.
-dashboard 표시와 source diagnostics의 기준이다.
-실제 수집 구현은 career-os `live-postings` adapter가 계속 소유한다.
-
-| 컬럼 | 타입 | 설명 |
-|---|---|---|
-| `id` | VARCHAR(64) PK | source key. 예: `wanted`, `toss-careers` |
-| `label` | VARCHAR(128) NOT NULL | 화면 표시명 |
-| `category` | VARCHAR(64) NULL | `job-board`, `company-careers`, `group-careers` 등 |
-| `adapterKey` | VARCHAR(64) NOT NULL | career-os adapter key |
-| `isEnabled` | TINYINT NOT NULL | 기본 수집 대상 여부 |
-| `displayOrder` | INT NOT NULL | 화면 표시 순서 |
-| `entrypointUrl` | TEXT NULL | official listing/API/sitemap root |
-| `notes` | TEXT NULL | 운영 메모. 민감 정보 금지 |
-| `createdAt` | DATETIME NOT NULL | |
-| `updatedAt` | DATETIME NOT NULL | |
-
-초기 registry에는 최신 `live-position-postings.md` 기준 source를 seed한다.
-
-- `wanted`
-- `toss-careers`
-- `coupang-careers`
-- `kakaopay`
-- `kakaopay-securities`
-- `kakaomobility`
-- `naver-careers`
-
-### position_collection_runs (planned — plan075)
-
-포지션 source 수집 실행 단위.
-추천 생성 전 `data/runtime/live-position-postings.md` snapshot을 DB로 import하면서 생성한다.
-
-| 컬럼 | 타입 | 설명 |
-|---|---|---|
-| `id` | VARCHAR(64) PK | collection run id |
-| `runDate` | DATE NOT NULL | 수집 기준 날짜 |
-| `requestedSource` | VARCHAR(64) NOT NULL | `all` 또는 단일 source key |
-| `configuredSourcesJson` | JSON NOT NULL | 실행 당시 registry/config source 목록 |
-| `sourceSnapshotPath` | TEXT NOT NULL | `data/runtime/live-position-postings.md` 또는 보존본 |
-| `status` | ENUM('pending','imported','failed') NOT NULL | import 상태 |
-| `totalCollected` | INT NOT NULL | import 후보 총수 |
-| `directActiveCount` | INT NOT NULL | active/open direct posting 수 |
-| `nonDirectLeadCount` | INT NOT NULL | direct posting이 아닌 lead 수 |
-| `startedAt` | DATETIME NULL | 수집 시작 시각 |
-| `finishedAt` | DATETIME NULL | 수집 종료 시각 |
-| `errorSummary` | TEXT NULL | 전체 실행 실패 요약 |
-| `createdAt` | DATETIME NOT NULL | |
-| `updatedAt` | DATETIME NOT NULL | |
-
-수집 snapshot import는 Claude 추천 생성보다 먼저 수행한다.
-추천 생성 또는 recommendation ingest가 실패해도 그날 source별 수집 결과는 dashboard에 남아야 한다.
-
-### position_source_run_diagnostics (planned — plan075)
-
-collection run 안의 source별 결과.
-`0건`을 정상/주의/실패로 구분하기 위한 테이블이다.
-
-| 컬럼 | 타입 | 설명 |
-|---|---|---|
-| `id` | BIGINT AUTO_INCREMENT PK | |
-| `collectionRunId` | VARCHAR(64) NOT NULL | position_collection_runs.id |
-| `sourceId` | VARCHAR(64) NOT NULL | position_sources.id |
-| `status` | ENUM('ok','zero','warning','failed','skipped') NOT NULL | source별 결과 |
-| `collectedCount` | INT NOT NULL | source adapter가 만든 후보 수 |
-| `importedCount` | INT NOT NULL | DB에 import된 공고 수 |
-| `skippedCount` | INT NOT NULL | 중복/비활성/정책 필터로 제외된 수 |
-| `failedCount` | INT NOT NULL | 실패한 detail fetch 또는 parser 수 |
-| `zeroReason` | VARCHAR(128) NULL | `no_matching_postings`, `too_narrow_filter`, `parser_changed`, `blocked`, `disabled`, `unknown` 등 |
-| `failureReason` | TEXT NULL | 실패 요약. raw HTML이나 민감 정보 금지 |
-| `diagnosticsJson` | JSON NULL | source diagnostics 원본 요약 |
-| `createdAt` | DATETIME NOT NULL | |
-
-표시 규칙:
-
-- registry에 있는 enabled source는 imported count가 0이어도 source diagnostics에 표시한다.
-- `zeroReason=no_matching_postings`는 정상 0건이다.
-- `parser_changed`, `blocked`, `unknown`은 주의 또는 실패로 표시한다.
-- `disabled`는 수집 제외로 표시한다.
-
-### collected_positions (planned extension — plan075)
-
-전체 수집 공고 pool.
-개별 공고 저장만 담당하고 source registry나 run diagnostics를 대신하지 않는다.
-
-추가 예정 필드:
-
-| 컬럼 | 타입 | 설명 |
-|---|---|---|
-| `collectionRunId` | VARCHAR(64) NULL | 마지막으로 import한 collection run |
-| `sourceId` | VARCHAR(64) NULL | position_sources.id |
-
-`sourceDiagnostics`처럼 공고 row마다 반복 저장된 진단 텍스트는 migration compatibility로만 남긴다.
-새 source diagnostics 화면은 `position_sources`, `position_collection_runs`, `position_source_run_diagnostics`를 읽는다.
-
-### position_status_events (planned — plan076)
-
-수집 공고 상태 변경 이력.
-현재 상태는 `collected_positions.postingStatus`에 직접 반영하고, 변경 이유와 근거는 이 테이블에 누적한다.
-
-| 컬럼 | 타입 | 설명 |
-|---|---|---|
-| `id` | BIGINT PK | 자동 증가 ID |
-| `collectedPositionId` | BIGINT NOT NULL | `collected_positions.id` |
-| `eventType` | VARCHAR(64) NOT NULL | `manual_closed`, `validator_closed`, `validator_reopened`, `validation_checked`, `validation_skipped` |
-| `previousStatus` | VARCHAR(32) NULL | 변경 전 상태 |
-| `nextStatus` | VARCHAR(32) NULL | 변경 후 상태 |
-| `reason` | TEXT NOT NULL | 사람이 읽는 한국어 이유 |
-| `collectionRunId` | VARCHAR(64) NULL | 판단에 사용한 수집 실행 |
-| `sourceId` | VARCHAR(64) NULL | 관련 수집처 |
-| `validationRunId` | VARCHAR(64) NULL | validator 실행 ID |
-| `actorAdminUserId` | INT NULL | 수동 처리한 관리자 |
-| `evidenceJson` | JSON NULL | 미등장 횟수, source 상태, URL 등 근거 |
-| `createdAt` | DATETIME NOT NULL | 생성 시각 |
-
-표시 규칙:
-
-- 화면 label은 한국어를 우선한다.
-- `manual_closed`는 "수동 닫기"로 표시한다.
-- `validator_closed`는 "검증 자동 닫기"로 표시한다.
-- `validator_reopened`는 "재수집 자동 열기"로 표시한다.
-- `validation_skipped`는 "검증 보류"로 표시한다.
-
-### position_validation_runs (planned — plan076)
-
-validator 실행 단위.
-기본 실행은 dry-run이며, `--apply`가 있는 경우에만 상태 변경을 적용한다.
-
-| 컬럼 | 타입 | 설명 |
-|---|---|---|
-| `id` | VARCHAR(64) PK | validator 실행 ID |
-| `mode` | VARCHAR(16) NOT NULL | `dry_run` 또는 `apply` |
-| `maxChanges` | INT NOT NULL | 한 번에 적용 가능한 최대 변경 수 |
-| `checkedCount` | INT NOT NULL | 검사한 공고 수 |
-| `closedCount` | INT NOT NULL | 닫은 공고 수 |
-| `reopenedCount` | INT NOT NULL | 다시 연 공고 수 |
-| `skippedCount` | INT NOT NULL | 보류한 공고 수 |
-| `startedAt` | DATETIME NOT NULL | 시작 시각 |
-| `finishedAt` | DATETIME NULL | 종료 시각 |
-| `summaryJson` | JSON NULL | 실행 요약 |
-
-기본 정책:
-
-- 3회 이상 최신 수집 실행에서 미등장하고 source 상태가 정상 계열이면 자동 닫기 후보가 된다.
-- source 상태가 blocked, parser_changed, failed, skipped, unknown 계열이면 자동 닫지 않는다.
-- 닫힌 공고가 다시 수집되면 snapshot의 `posting_status`로 자동 복구한다.
-
-### application_candidate_states
-
-지원 후보의 현재 상태와 stage.
-대시보드가 현재 화면을 계산할 때 보는 정본이다.
-
-| 컬럼 | 타입 | 설명 |
-|---|---|---|
-| `candidateId` | VARCHAR(64) PK | application_candidates.id |
-| `currentState` | VARCHAR(64) NOT NULL | application_state_master.key |
-| `currentStage` | VARCHAR(64) NULL | application_stage_master.key |
-| `ledgerId` | VARCHAR(255) NULL | legacy ledger 또는 새 application workflow id |
-| `lastUserAction` | VARCHAR(128) NULL | 예: `start_application`, `hold`, `exclude` |
-| `lastUserActionAt` | DATETIME NULL | |
-| `lastRecommendationRunId` | VARCHAR(64) NULL | 마지막으로 추천에 등장한 run |
-| `hiddenFromRecommendation` | TINYINT NOT NULL | excluded/closed 기본 숨김 |
-| `stateReason` | TEXT NULL | 사용자 또는 system reason |
-| `createdAt` | DATETIME NOT NULL | |
-| `updatedAt` | DATETIME NOT NULL | |
-
-표시 규칙:
-
-- `recommended`: 카드 표시, 클릭 가능.
-- `held`: 보류 섹션으로 분리.
-- `excluded`: 기본 추천 화면에서 숨김.
-- `started`: 지원 준비 중으로 표시, 다시 클릭 불가.
-- `closed`: 기본 숨김.
-
-### career_outbox_jobs
-
-fos-career가 소유하는 background job outbox다.
-사용자 클릭과 worker 실행을 분리하고, retry와 감사 가능성을 보장한다.
-
-| 컬럼 | 타입 | 설명 |
-|---|---|---|
-| `id` | VARCHAR(64) PK | job id |
-| `jobType` | VARCHAR(128) NOT NULL | 예: `application.start`, `application.fit_analysis`, `study_pack.create` |
-| `aggregateType` | VARCHAR(64) NOT NULL | 예: `application_candidate` |
-| `aggregateId` | VARCHAR(64) NOT NULL | candidate id 또는 application id |
-| `payloadJson` | JSON NOT NULL | worker 입력. private 본문은 저장하지 않음 |
-| `status` | ENUM('pending','running','succeeded','failed','dead','cancelled') NOT NULL | |
-| `attempts` | INT NOT NULL | |
-| `maxAttempts` | INT NOT NULL | |
-| `nextRunAt` | DATETIME NOT NULL | |
-| `lockedBy` | VARCHAR(128) NULL | worker id |
-| `lockedAt` | DATETIME NULL | |
-| `idempotencyKey` | VARCHAR(255) UNIQUE NOT NULL | 중복 실행 방지 key |
-| `resultJson` | JSON NULL | 생성 경로, 다음 stage, 요약 |
-| `lastError` | TEXT NULL | 실패 요약 |
-| `createdAt` | DATETIME NOT NULL | |
-| `updatedAt` | DATETIME NOT NULL | |
-
-worker 규칙:
-
-- pending job을 `nextRunAt <= now()` 조건으로 가져온다.
-- lock 획득은 DB transaction으로 처리한다.
-- 실패하면 attempts를 늘리고 backoff 뒤 재시도한다.
-- `dead`는 maxAttempts 초과 또는 재시도 불가능한 검증 실패다.
-- 외부 제출, 업로드, 로그인, 공개 발행은 jobType으로 허용하지 않는다.
-
-### priority_action_requests (legacy bridge)
-
-fos-career가 소유하는 priority write-action pending queue다.
-career-os 파일을 직접 쓰지 않고, 사용자가 확인한 요청을 감사 가능한 DB row로 보존한다.
-ADR-081 이후 새 long-running 작업은 `career_outbox_jobs`로 통합한다.
-priority bridge는 migration compatibility로 유지한다.
-
-| 컬럼 | 타입 | 설명 |
-|---|---|---|
-| `id` | VARCHAR(64) PK | UUID |
-| `adminUserId` | INT FK NOT NULL | admin_users.id |
-| `recordType` | ENUM('frontdoor_queue','ledger') NOT NULL | career-os record 종류 |
-| `recordId` | VARCHAR(255) NOT NULL | queueId 또는 ledger id |
-| `requestedStage` | VARCHAR(32) NOT NULL | action stage |
-| `requestedRank` | INT NOT NULL | 같은 stage 안 상대 순서 |
-| `reason` | TEXT NOT NULL | 사용자가 확인한 이유 |
-| `status` | ENUM('pending','applied','rejected','failed','stale') NOT NULL | 처리 상태 |
-| `requestSnapshotJson` | JSON NOT NULL | 요청 당시 record 요약과 기존 priority |
-| `appliedEventId` | VARCHAR(255) NULL | career-os `_priority-history.jsonl` eventId |
-| `errorMessage` | TEXT NULL | 실패 또는 stale 사유 |
-| `createdAt` | DATETIME NOT NULL | |
-| `updatedAt` | DATETIME NOT NULL | |
-
-상태 책임:
-
-- `pending`: fos-career가 요청만 저장했다.
-- `applied`: career-os runner가 기존 `confirm-priority` 계열 명령으로 적용했고 eventId를 연결했다.
-- `rejected`: 사용자가 적용 전 취소했다.
-- `failed`: runner가 검증 또는 실행에 실패했다.
-- `stale`: 요청 당시 snapshot과 현재 career-os record가 달라 자동 적용하지 않았다.
-
-검증 규칙:
-
-- `requestedStage`는 career-os `ActionStage` enum 중 하나여야 한다.
-- `requestedRank`는 양의 정수여야 한다.
-- `reason`은 빈 문자열이면 안 된다.
-- 같은 `recordType` + `recordId`에 `pending` row가 있으면 새 요청보다 기존 요청 검토를 우선한다.
-- fos-career 웹 앱은 이 row 생성만 수행하고 `frontdoor-queue.jsonl`, `ledger.jsonl`, `_priority-history.jsonl`을 쓰지 않는다.
-- fos-career host-side processor는 pending row를 읽고 career-os applier를 호출한 뒤 이 table과 `audit_logs`만 갱신한다.
-
-### priority action request applier input
-
-career-os `scripts/application-agent/apply_priority_request.ts`가 받는 JSON contract다.
-stdin 또는 `--request <path>`로 전달한다.
-
-```json
-{
-  "requestId": "uuid",
-  "recordType": "frontdoor_queue",
-  "recordId": "queue-id",
-  "requestedStage": "prepare-now",
-  "requestedRank": 1,
-  "reason": "사용자가 확인한 이유",
-  "changedBy": "fos-career-admin:1",
-  "requestSnapshot": {
-    "recordType": "frontdoor_queue",
-    "recordId": "queue-id",
-    "company": "Company",
-    "role": "Backend Engineer",
-    "url": "https://example.com/posting",
-    "effectiveActionStage": "investigate",
-    "priorityRank": 2,
-    "prioritySource": "recommendation",
-    "latestRecommendationSnapshotAt": "2026-06-07T00:00:00.000Z",
-    "latestUserConfirmationAt": null,
-    "userConfirmedPriority": null
-  }
-}
-```
-
-stale guard 비교 대상:
-
-- record type/id
-- company/role/url
-- effective action stage와 rank
-- priority source
-- latest recommendation snapshot timestamp
-- latest user confirmation timestamp
-- current `userConfirmedPriority`
-
-결과 JSON status:
-
-- `applied`: stale guard 통과 후 기존 `application-agent confirm-priority` helper로 반영했다.
-- `stale`: 현재 career-os projection이 request snapshot과 달라 쓰지 않았다.
-- `rejected`: request JSON이 schema 또는 identity contract를 만족하지 않는다.
-- `failed`: helper 실행 중 예외가 발생했다.
-
-### user_position_action_requests (legacy bridge — plan059)
-
-fos-career가 소유하는 공고 상태 사용자 액션 pending queue다.
-사용자가 dashboard에서 `보류`, `제외`, `지원 준비`를 선택하면 career-os 파일을 직접 쓰지 않고 이 요청으로 저장한다.
-ADR-081 이후 상태 변경은 `application_candidate_states` transaction으로 처리하고, 오래 걸리는 실행은 `career_outbox_jobs`로 넘긴다.
-이 table은 legacy frontdoor/ledger bridge migration 중에만 사용한다.
-
-| 컬럼 | 타입 | 설명 |
-|---|---|---|
-| `id` | VARCHAR(64) PK | UUID |
-| `adminUserId` | INT FK NOT NULL | admin_users.id |
-| `recordType` | ENUM('frontdoor_queue','ledger') NOT NULL | career-os record 종류 |
-| `recordId` | VARCHAR(255) NOT NULL | queueId 또는 ledger id |
-| `requestedAction` | ENUM('hold','exclude','prepare_application') NOT NULL | 사용자 선택 액션 |
-| `reason` | TEXT NULL | 사용자가 입력한 선택 사유. optional |
-| `effectiveReason` | TEXT NOT NULL | 사용자 사유 또는 시스템 기본 사유 |
-| `status` | ENUM('pending','running','done','failed','stale') NOT NULL | 처리 상태 |
-| `requestSnapshotJson` | JSON NOT NULL | 요청 당시 record 요약과 현재 stage/status |
-| `resultSnapshotJson` | JSON NULL | 적용 뒤 stage, ledgerId, readiness, material paths 요약 |
-| `errorMessage` | TEXT NULL | 실패 또는 stale 사유 |
-| `createdAt` | DATETIME NOT NULL | |
-| `updatedAt` | DATETIME NOT NULL | |
-
-액션 의미:
-
-- `hold`: action stage를 `hold`로 바꾸고 사용자의 판단 보류 상태로 둔다.
-- `exclude`: action stage를 `excluded`로 바꾸고 추천/준비 후보에서 제외한다.
-- `prepare_application`: 상태 변경과 함께 지원 준비 산출물 생성을 시작한다.
-  frontdoor 후보는 ledger 승격을 거친 뒤 이력서 패키지 생성 request로 이어진다.
-
-검증 규칙:
-
-- `reason`은 optional이지만 `effectiveReason`은 비어 있으면 안 된다.
-- 같은 `recordType` + `recordId`에 `pending` 또는 `running` row가 있으면 새 요청보다 기존 요청 검토를 우선한다.
-- `prepare_application`은 외부 제출, 로그인, 업로드를 수행하지 않는다.
-- processor는 요청 당시 snapshot과 현재 career-os record를 비교하고 stale이면 career-os 파일을 쓰지 않는다.
-- result payload에는 ledger id, 적용 stage, readiness 숫자, material path 요약만 저장한다.
-  private 문서 본문, resume body, command stdout 전체는 저장하지 않는다.
-
-Git 추적: fos-career 저장소(`~/services/fos-career`)에서 Drizzle ORM으로 관리.
-ai-nodes career-os와 무관.

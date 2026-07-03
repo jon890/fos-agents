@@ -4,14 +4,13 @@
     "schema_version": "1"
   },
   "files": [
-    {"path": "architecture/fnb-ecommerce-domain-overview.md", "note": "updated 2026-06-16, 근거 — cj-foodville-commerce-domain-design-interview.md가 fa368c1에서 private 면접 답변 자료로 공개 블로그에서 삭제됨. 같은 F&B·commerce 도메인 주제의 공개 후속 문서로 교체"},
-    {"path": "resume/cj-foodville-resume-backend.html", "note": "suggester: added 2026-05-16, 근거 — commit 119fe4e의 CJ푸드빌 백엔드 v1 active 이력서. Claude 멀티모달 HTML 지원으로 마크다운 강요 X (옛 resume/2603 v4 마크다운 부재 대체)"},
+    {"path": "architecture/fnb-ecommerce-domain-overview.md", "note": "updated 2026-06-16, 근거 — F&B·commerce 도메인 주제의 공개 학습 문서. 특정 지원 타깃이 아니라 커머스 백엔드 재사용 자료로 유지"},
     {"path": "task/ai-service-team/README.md"},
     {"path": "task/ai-service-team/rag-vector-search-batch.md"},
     {"path": "task/ai-service-team/webtoon-maker-ai-pipeline.md"},
     {"path": "task/nsc-slot/ai-tool-adoption.md"},
     {"path": "database/connection-pool-saturation-thread-pool-isolation.md", "note": "suggester: added 2026-05-16 (path 정정 from connection-pool-saturation.md), 근거 1858a53 — connection pool saturation + thread pool isolation 운영 보강"},
-    {"path": "database/mybatis-dynamic-sql-resultmap-basics.md", "note": "suggester: added 2026-05-16 (path 정정 from database/mysql/...), 근거 94e5171 — CJ Foodville JD MyBatis 매칭"},
+    {"path": "database/mybatis-dynamic-sql-resultmap-basics.md", "note": "suggester: added 2026-05-16 (path 정정 from database/mysql/...), 근거 — 레거시 DB 연동과 MyBatis 운영 질문 대비"},
     {"path": "architecture/clean-architecture-pragmatic-spring-commerce.md", "note": "suggester: added 2026-05-16, 근거 1652e23 clean architecture pragmatic Spring commerce"},
     {"path": "devops/commerce-observability-first-five-minutes.md", "note": "suggester: added 2026-05-16, 근거 30486d6 commerce observability first 5min"}
   ]

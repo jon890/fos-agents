@@ -100,7 +100,7 @@ function buildMessage(inventory: TopicInventory, today = kstParts()): string {
 
   const lines: string[] = [
     `오늘의 백엔드 학습 추천 (${today.short})`,
-    "CJ Foodville 1차 면접(6/15) 대비 — 커머스 백엔드의 운영·정합성 축에 맞춰 골랐어요.",
+    "다음 지원 루프 대비 — 백엔드 운영·정합성·지원동기 보강에 연결하기 좋은 주제를 골랐어요.",
     "",
     "오늘의 백엔드 3선",
   ];

@@ -5,7 +5,8 @@ description: 1차·최종·오퍼 단계별 면접 실전 준비를 생성하는
 
 # Interview Stage Prep
 
-현재 면접 단계(`config/mvp-target.json`의 `interview` 필드)를 읽고 단계에 맞는 실전 준비 가이드를 생성하는 workflow.
+현재 면접 단계(`config/mvp-target.json`의 `primary.interview` 필드)를 읽고 단계에 맞는 실전 준비 가이드를 생성하는 workflow.
+`primary`가 `null`이면 활성 면접 타깃이 없는 상태이므로 생성하지 않는다.
 
 ## 스킬 경계 (boundary)
 
@@ -20,7 +21,8 @@ description: 1차·최종·오퍼 단계별 면접 실전 준비를 생성하는
 
 현재 에이전트는 다음 파일을 직접 로드한다:
 
-1. `career-os/config/mvp-target.json` — `primary.interview` (단계별 날짜/상태), `primary.company`, `primary.role`
+1. `career-os/config/mvp-target.json` — `primary.interview` (단계별 날짜/상태), `primary.company`, `primary.role`.
+   `primary`가 `null`이면 활성 면접 타깃 없음으로 처리한다.
 2. `career-os/config/candidate-profile.md` — 후보자 이력·약점·강점 (필수)
 
 최종/2차 인성면접 산출물을 생성할 때는 추가로 확인한다:
@@ -110,7 +112,8 @@ description: 1차·최종·오퍼 단계별 면접 실전 준비를 생성하는
 
 ## 단계 감지
 
-`mvp-target.json`의 `primary.interview` 필드를 읽어 현재 단계를 판단한다:
+`mvp-target.json`의 `primary.interview` 필드를 읽어 현재 단계를 판단한다.
+`primary`가 `null`이면 stderr에 활성 면접 타깃이 없다고 쓰고 exit 1로 종료한다:
 
 | 필드 | 단계 | 준비 모드 |
 |---|---|---|
@@ -210,6 +213,7 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 | 상황 | 처리 |
 |---|---|
 | mvp-target.json 없음 | stderr + exit 1 |
+| mvp-target.json primary null | stderr + exit 1 |
 | candidate-profile.md 없음 | stderr + exit 1 |
 | interview 필드 모두 null | 범용 체크리스트 출력 (exit 0) |
 | self-check 3회 실패 | stderr + exit 1, 실패 항목 명시 |

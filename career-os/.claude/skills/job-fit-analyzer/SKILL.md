@@ -31,9 +31,11 @@ description: 타깃 직무(역할 단위) 대비 지원 의사결정·면접 전
   자연어 역할 텍스트를 그대로 `targetRole.role`에 쓰고, 역할 텍스트에서 슬러그를 만든다.
   슬러그는 소문자·숫자·하이픈만 허용한다 (예: "AI 에이전트 백엔드" → `ai-agent-backend`).
   회사·팀이 자연어에 드러나면 `company`·`team`에 채우고, 없으면 비워 둔다.
-- **인자가 없으면**: `config/mvp-target.json`의 `primary`를 fallback으로 쓴다.
+- **인자가 없고 `primary`가 있으면**: `config/mvp-target.json`의 `primary`를 fallback으로 쓴다.
   `targetRole.source = "mvp-target"`, `company`·`team`·`role`을 `primary`에서 읽고,
   슬러그는 `primary.position_slug`(없으면 role에서 파생)로 쓴다.
+- **인자가 없고 `primary`가 null이면**: 역할 진단을 만들지 않는다.
+  먼저 `/position-recommender`로 새 후보를 찾거나 `/job-fit-analyzer [자연어 역할]`로 명시 타깃을 받는다.
 
 자연어 역할로 진단하면 position-recommender가 추천한 직무를 mvp-target 고정 없이 바로 진단할 수 있다.
 
@@ -48,7 +50,7 @@ description: 타깃 직무(역할 단위) 대비 지원 의사결정·면접 전
 
 현재 에이전트는 다음 파일을 직접 로드한다:
 
-1. `career-os/config/mvp-target.json` — 인자 없을 때 타깃 fallback (`primary.company`, `primary.team`, `primary.role`, `primary.position_slug`)
+1. `career-os/config/mvp-target.json` — 인자 없을 때 타깃 fallback (`primary`가 null이면 fallback 없음)
 2. `career-os/config/candidate-profile.md` — 후보자 이력·약점 (필수)
 3. `career-os/config/baseline-core-files.json` — 큐레이션된 파일 경로 목록 (`files[].path`)
 4. `career-os/sources/fos-study/<path>` — baseline-core-files에 나열된 파일 (각 파일 읽기)
@@ -185,6 +187,7 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 | 상황 | 처리 |
 |---|---|
 | fos-study git pull 실패 | stderr warn + 로컬 캐시로 분석 계속 |
+| 인자 없음 + mvp-target primary null | stderr + exit 1, `/position-recommender` 또는 명시 역할 입력 안내 |
 | baseline-core-files.json 없음 | stderr + exit 1 |
 | candidate-profile.md 없음 | stderr + exit 1 |
 | 지난 진단 JSON 없음 | changeSince 생략하고 계속 진행 |

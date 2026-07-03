@@ -18,7 +18,7 @@ import {
 
 type RecordType = 'frontdoor_queue' | 'ledger';
 
-export type PriorityDashboardRow = {
+export type PriorityViewRow = {
   recordId: string;
   recordType: RecordType;
   company: string;
@@ -67,11 +67,11 @@ function parseOpts(args: string[]): CliOptions {
   return opts;
 }
 
-export function buildPriorityDashboardRows(options?: {
+export function buildPriorityViewRows(options?: {
   queuePath?: string;
   ledgerPath?: string;
   historyPath?: string;
-}): PriorityDashboardRow[] {
+}): PriorityViewRow[] {
   const queue = readFrontdoorQueue(options?.queuePath ?? DEFAULT_QUEUE_PATH);
   const ledger = readLedger(options?.ledgerPath ?? DEFAULT_LEDGER_PATH);
   const history = existsSync(options?.historyPath ?? DEFAULT_PRIORITY_HISTORY_PATH)
@@ -83,7 +83,7 @@ export function buildPriorityDashboardRows(options?: {
     historyCounts.set(event.recordId, (historyCounts.get(event.recordId) ?? 0) + 1);
   }
 
-  const queueRows = queue.map((record): PriorityDashboardRow => {
+  const queueRows = queue.map((record): PriorityViewRow => {
     const userConfirmed = record.userConfirmedPriority;
     const effectiveActionStage = userConfirmed?.actionStage ?? record.actionStage;
     const priorityRank = userConfirmed?.priorityRank ?? record.priorityRank;
@@ -117,7 +117,7 @@ export function buildPriorityDashboardRows(options?: {
     };
   });
 
-  const ledgerRows = ledger.map((record): PriorityDashboardRow => {
+  const ledgerRows = ledger.map((record): PriorityViewRow => {
     const userConfirmed = record.userConfirmedPriority;
     const effectiveActionStage = userConfirmed?.actionStage ?? record.actionStage;
     const priorityRank = userConfirmed?.priorityRank ?? record.priorityRank;
@@ -154,7 +154,7 @@ export function buildPriorityDashboardRows(options?: {
   return [...queueRows, ...ledgerRows].sort(compareRows);
 }
 
-function compareRows(a: PriorityDashboardRow, b: PriorityDashboardRow): number {
+function compareRows(a: PriorityViewRow, b: PriorityViewRow): number {
   const aValue = a.priorityDisplayValue ?? 99;
   const bValue = b.priorityDisplayValue ?? 99;
   if (aValue !== bValue) return aValue - bValue;
@@ -170,7 +170,7 @@ function renderBadgeLabel(stage: ActionStage | undefined, rank: number | undefin
   return `${stage}${rankSuffix}`;
 }
 
-function renderDistribution(rows: PriorityDashboardRow[]): string {
+function renderDistribution(rows: PriorityViewRow[]): string {
   const counts: Record<ActionStage, number> = {
     'prepare-now': 0,
     investigate: 0,
@@ -189,7 +189,7 @@ function renderDistribution(rows: PriorityDashboardRow[]): string {
 
 function main(): void {
   const opts = parseOpts(process.argv.slice(2));
-  const rows = buildPriorityDashboardRows({
+  const rows = buildPriorityViewRows({
     queuePath: opts.queuePath,
     ledgerPath: opts.ledgerPath,
     historyPath: opts.historyPath,
@@ -200,7 +200,7 @@ function main(): void {
     return;
   }
 
-  console.log(`dashboard rows: ${rows.length}`);
+  console.log(`priority view rows: ${rows.length}`);
   console.log(`stage distribution: ${renderDistribution(rows)}`);
   console.log(
     'recognized filters: prepare-now, investigate, monitor, low-priority, hold, excluded',

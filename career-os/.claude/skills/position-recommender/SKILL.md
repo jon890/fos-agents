@@ -178,7 +178,7 @@ md/html의 한국어 라벨 변환은 `render_recommendation.ts`가 담당하므
 다운로드 HTML → <ts-runtime> scripts/position-recommender/render_candidate_preview.ts --input <json> --postings data/runtime/live-position-postings.md --limit all --output data/runtime/downloads/position-recommendation-all-YYYY-MM-DD.html
 미러 → career-os/data/runtime/position-recommendation.{json,md,html}
 다운로드 → data/runtime/downloads/position-recommendation-all-YYYY-MM-DD.html 하나만 둔다.
-소비측 가공 → cron: 최종 응답 Discord 요약 산문 + HTML 첨부 / backend: JSON을 hermes API 응답으로 받아 DB 적재
+소비측 가공 → cron 또는 호출자: 최종 응답 Discord 요약 산문 + HTML 첨부 / 파일 기반 후속 루프
 ```
 
 `<ts-runtime>`은 `bun`이 있으면 `bun`, 없으면 Node 22+의 `node`를 사용한다. 렌더러나 수집기가 `import.meta.dir`에 의존해 Node에서 실패하면 `dirname(fileURLToPath(import.meta.url))`로 바꾸고 `node --check` 후 실제 렌더링까지 확인한다.
@@ -186,7 +186,7 @@ md/html의 한국어 라벨 변환은 `render_recommendation.ts`가 담당하므
 날짜는 Asia/Seoul 기준 (`TZ=Asia/Seoul date +%F`). UTC `new Date().toISOString()` 날짜를 사용하지 않는다.
 
 daily/cron 실행에서 오늘 날짜 표준 출력 JSON을 새로 쓰지 못하면 성공으로 끝내지 않는다.
-DB 적재는 backend 소비측 책임이다(ADR-101). skill은 표준 출력 JSON과 파생물을 정확히 만드는 데 집중한다.
+후속 가공은 호출자 책임이다(ADR-101). skill은 표준 출력 JSON과 파생물을 정확히 만드는 데 집중한다.
 
 ### 5. Discord 알림
 

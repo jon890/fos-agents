@@ -1,10 +1,10 @@
 // position-recommender 산출물 정본 스키마 (ADR-094).
 // 에이전트가 이 스키마에 맞는 recommendation.json을 생성하면,
-// 렌더러가 여기서 HTML / Markdown / Discord 카드 / DB items를 파생한다.
+// 렌더러가 여기서 HTML / Markdown / Discord 카드용 데이터를 파생한다.
 // SKILL self-check는 이 스키마 검증으로 대체한다.
 import { z } from "zod";
 
-/** 회사/규모 업사이드 신호. HTML 배지·DB 필드로 직접 매핑된다. */
+/** 회사/규모 업사이드 신호. HTML 배지와 요약 필드로 직접 매핑된다. */
 export const UpsideLevel = z.enum(["강함", "중간", "약함"]);
 
 /** 링크 근거 수준. 추천 티어에는 active/open 확인만 허용한다(SKILL self-check 9). */

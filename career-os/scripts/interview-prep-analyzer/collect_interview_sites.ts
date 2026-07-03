@@ -142,6 +142,10 @@ async function main(): Promise<void> {
 
   const mode = normalizeMode(modeFlagIdx >= 0 && args[modeFlagIdx + 1] ? args[modeFlagIdx + 1] : 'first-round');
   const mvpTarget = parseMvpTarget(MVP_TARGET_PATH);
+  if (!mvpTarget.primary) {
+    console.error('config/mvp-target.json primary 없음: 활성 면접 타깃을 먼저 설정하세요.');
+    process.exit(1);
+  }
   const target = mvpTarget.primary.interview?.[mode];
 
   if (!target) {

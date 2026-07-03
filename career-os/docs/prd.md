@@ -39,7 +39,7 @@ career-os는 아래 문제를 줄이는 데 집중한다.
 - 공고별 지원 전략, 이력서 초안, 검토 결과가 매번 새로 만들어져 누적되지 않는다.
 - 면접 준비가 실제 약점, 공고 요구사항, 최근 지원 흐름과 연결되지 않는다.
 - 공개 가능한 학습 자료와 비공개 지원 전략이 섞일 위험이 있다.
-- 웹 대시보드나 자동화 worker가 어떤 작업을 해도 되는지 안전 경계가 흐려지기 쉽다.
+- 여러 산출물이 이어질 때 어떤 피드백이 다음 탐색, 지원동기, 면접 답변으로 환류돼야 하는지 흐려지기 쉽다.
 
 ## Skill 자산 원칙
 
@@ -52,7 +52,7 @@ career-os는 아래 문제를 줄이는 데 집중한다.
 - 공개 가능 자산과 비공개 자산을 분리한다.
 - 근거가 부족하면 추측으로 채우지 않고 `보강 필요 / 선택지 / 권장 행동`으로 남긴다.
 - 사용자 승인 없이 제출, 로그인, 업로드, 외부 메시지 전송, 공개 발행을 하지 않는다.
-- 결과가 다음 추천, 지원 준비, 면접 드릴, dashboard 상태 판단에 재사용된다.
+- 결과가 다음 추천, 지원 준비, 면접 드릴, 피드백 루프 판단에 재사용된다.
 
 ## 현재 제품 축
 
@@ -85,12 +85,12 @@ career-os는 아래 문제를 줄이는 데 집중한다.
 - 주요 산출물: morning 추천, study pack, public question bank.
 - 다음 가치: 공개 가능 질문과 study pack이 private 준비를 돕되, 비공개 맥락을 노출하지 않게 한다.
 
-### 운영 화면
+### 피드백 루프
 
-- 사용자 가치: 사람이 상태와 다음 행동을 한 화면에서 판단한다.
-- 현재 자산: fos-career dashboard, request queue, outbox worker.
-- 주요 산출물: application candidate state, request status, audit log.
-- 다음 가치: dashboard를 실행 버튼 모음이 아니라 안전한 의사결정 표면으로 만든다.
+- 사용자 가치: 탈락, 보류, reviewer 지적, 면접 피드백을 다음 탐색과 지원동기에 반영한다.
+- 현재 자산: `config/mvp-target.json`, application ledger, job-fit report, drill log, private question bank.
+- 주요 산출물: closed/rejected 기록, nextActions, 약점 기록, 지원동기 보강 후보.
+- 다음 가치: 기술 갭뿐 아니라 회사 선택 이유와 커리어 정합을 반복 평가한다.
 
 ## 기능 계약
 
@@ -156,19 +156,18 @@ career-os는 아래 문제를 줄이는 데 집중한다.
 - `/study-pack-writer`는 공개 가능한 기술 토픽을 study pack으로 작성한다.
 - `/question-bank-collector`는 일반 backend/CS 질문을 공개 가능한 질문 은행으로 정리한다.
 
-### 운영 화면
+### 피드백 루프
 
-fos-career는 career-os의 human-facing 운영 화면이다.
-career-os skill과 private 파일을 직접 대체하지 않는다.
-dashboard는 사람이 상태, 후보, 요청, 결과를 보고 판단하는 표면이다.
+피드백 루프는 공고 분석, 핏 분석, 공부자료 생성, 이력서 작성, 1차·2차 면접 대비를 하나의 반복으로 묶는다.
+결과가 좋지 않았을 때 기술 부족으로만 단순화하지 않고, 회사 선택 이유, 지원동기, 커리어 경로 설명까지 원인 후보로 기록한다.
 
-운영 화면의 기본 원칙:
+기본 원칙:
 
-- career-os 파일은 읽기 전용 projection으로 다룬다.
-- 쓰기 작업은 승인된 request queue와 worker를 통해 수행한다.
-- dashboard container가 특정 agent CLI를 직접 실행하지 않는다.
-- request와 audit log에는 상태, 경로, 짧은 요약만 남긴다.
-  private 본문과 면접 답변 전문은 공개 채널이나 audit log에 복사하지 않는다.
+- 탈락이나 지원 취소는 `closed/rejected`로 남기고 active target에서 제거한다.
+- 면접 피드백은 기술, 지원동기, 커뮤니케이션, 커리어 정합 축으로 분리한다.
+- 공개 가능한 기술 보강만 study pack으로 보낸다.
+- 지원동기와 회사별 전략은 private 산출물에만 둔다.
+- 다음 포지션 추천은 직전 실패 원인을 반영해 역할과 회사 선택 기준을 조정한다.
 
 ## 공개 범위 계약
 
@@ -179,7 +178,7 @@ dashboard는 사람이 상태, 후보, 요청, 결과를 보고 판단하는 표
 | Public-safe | `public/question-bank/`, `sources/fos-study/` | 일반 기술 지식, 공개 가능한 질문, 회사명 없는 study pack |
 | Private | `data/applications/`, `private/`, `data/runtime/` | 지원 전략, 후보자 맥락, 면접 답변, reviewer 판단 |
 | Config | `config/` | 후보자 프로필, 현재 타깃, 학습 진행 상태 |
-| Dashboard state | fos-career DB | request 상태, application candidate state, audit summary |
+| Feedback state | `config/mvp-target.json`, `data/applications/`, `private/` | active target, closed outcome, private feedback |
 
 공개 가능 여부가 애매하면 private으로 둔다.
 공개 발행은 사용자의 명시 승인 후에만 수행한다.
@@ -191,7 +190,7 @@ dashboard는 사람이 상태, 후보, 요청, 결과를 보고 판단하는 표
 - **프라이버시**: private 지원 전략과 면접 답변 전문을 public-safe 산출물에 섞지 않는다.
 - **사용자 승인**: 제출, 로그인, 업로드, 외부 메시지, 공개 발행은 사용자 승인 없이 하지 않는다.
 - **에이전트 비종속성**: 문서와 skill 위임은 `/<skill> [args]` 의도 표현을 쓰고 특정 agent CLI에 묶지 않는다.
-- **관찰 가능성**: 실패, 보류, 사용자 승인 필요 상태를 산출물이나 dashboard request 상태로 남긴다.
+- **관찰 가능성**: 실패, 보류, 사용자 승인 필요 상태를 산출물과 private feedback 기록으로 남긴다.
 
 ## 의도적으로 안 하는 것
 
@@ -199,7 +198,7 @@ dashboard는 사람이 상태, 후보, 요청, 결과를 보고 판단하는 표
 - 사용자 승인 없는 로그인, 업로드, 메시지 전송.
 - 회사별 지원 전략을 `sources/fos-study/`에 쓰는 일.
 - 후보자 프로필을 자동으로 수정하는 일.
-- dashboard container가 career-os 파일을 직접 쓰는 일.
+- 별도 웹 대시보드를 정본으로 두는 일.
 - skill 내부 판단을 근거 없이 “합격 가능성” 같은 확정 표현으로 바꾸는 일.
 
 ## 성공 기준
@@ -211,7 +210,7 @@ career-os가 잘 작동하면 사용자는 매일 아래 질문에 답할 수 �
 - 제출 전에 근거 부족, 과장, 공개 금지 정보가 검토됐는가.
 - 다음 면접에서 가장 먼저 보강할 약점은 무엇인가.
 - 오늘 공부할 public-safe 주제는 무엇인가.
-- dashboard에서 요청한 작업이 어디까지 처리됐고, 어디서 사용자 승인이 필요한가.
+- 직전 탈락이나 보류에서 다음 루프로 가져갈 피드백은 무엇인가.
 
 제품 수준 성공 기준:
 
@@ -219,7 +218,7 @@ career-os가 잘 작동하면 사용자는 매일 아래 질문에 답할 수 �
 - 공고별 지원 패키지가 reviewer 검토를 통과하거나, 수정 요청이 명확히 남는다.
 - 기술/인성 드릴 결과가 약점 관리와 다음 학습 추천에 반영된다.
 - public-safe 자산과 private 산출물이 섞이지 않는다.
-- fos-career는 안전한 request 표면으로 동작하고, career-os skill 자산을 직접 훼손하지 않는다.
+- 탈락 피드백이 기술 갭, 지원동기, 회사 선택 이유, 커리어 정합 중 어느 축인지 구분된다.
 
 ## 다음 가치 방향
 
@@ -228,7 +227,7 @@ career-os가 잘 작동하면 사용자는 매일 아래 질문에 답할 수 �
 우선순위:
 
 1. 추천 후보, 지원 패키지, reviewer 지적, 드릴 결과를 하나의 상태 루프로 연결한다.
-2. dashboard를 실행 버튼 모음이 아니라 다음 행동을 판단하는 운영 화면으로 만든다.
+2. 지원동기와 회사 선택 이유를 reviewer와 면접 준비의 1급 점검 축으로 올린다.
 3. 질문 은행과 study pack을 약점 기반으로 재선별해 면접 준비에 되먹인다.
 4. 지원 패키지의 evidence gap을 이력서 초안, 면접 질문, 공부 주제로 자동 분해한다.
 5. 공개 가능한 지식 자산은 fos-study와 question bank로 축적하고, private 판단은 career-os 내부에만 남긴다.

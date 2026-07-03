@@ -17,7 +17,7 @@ career-os의 반복 업무가 어떤 입력에서 시작해 어떤 처리 주체
 | [면접 준비](#면접-준비) | 역할 핏 진단, 단계별 준비, 답변 연습 | 면접 준비 자료, 답변 연습 로그 |
 | [질문 은행](#질문-은행) | 공개 가능한 질문 풀 수집과 보강 흐름 | `public/question-bank/` |
 | [이력서 패키지](#이력서-패키지) | 검토된 이력서 초안 변환 | `resume.html`, `resume.pdf` |
-| [fos-career 연결](#fos-career-연결) | 웹 대시보드와 career-os 연결 | DB request, outbox |
+| [피드백 루프](#피드백-루프) | 탈락·면접·리뷰 결과를 다음 탐색과 학습으로 환류 | closed 기록, 약점, next action |
 | [실행 가드](#실행-가드) | 평가, stale guard, 사용자 승인 경계 | 검증 결과, 차단 상태 |
 | [폐기 흐름과 tombstone](#폐기-흐름과-tombstone) | 폐기된 흐름 확인 | tombstone 요약 |
 | [실패 동작](#실패-동작) | 실패 시 어디서 멈추는지 확인 | 실패 알림과 재시도 기준 |
@@ -118,8 +118,8 @@ Use skill: /position-recommender [context]
   -> 표준 출력 JSON(recommendation.json) 작성 — 적재용 source·closeDate 포함  [ADR-101]
   -> Markdown과 HTML report 파생
   -> 수집·추천 건강 지표를 logs/position-metrics.jsonl에 append (기준선 대비 개선 추적)  [ADR-099]
-  -> application candidate 상태 또는 legacy frontdoor queue 갱신
-  -> 다음 행동 후보를 application flow로 넘김
+  -> frontdoor queue 또는 application ledger 후보 갱신
+  -> 다음 행동 후보를 지원 준비 또는 역할 fit 진단으로 넘김
 ```
 
 추천 판단의 큰 기준:
@@ -131,10 +131,11 @@ Use skill: /position-recommender [context]
 - 순수 연구, PM, 프론트엔드, 데이터 엔지니어 중심 공고는 추천 티어에서 제외한다.
   사용자가 별도로 요청하면 예외로 다룬다.
 
-현재 전환 상태:
+현재 상태:
 
-- legacy 경로는 `frontdoor-queue.jsonl`을 거쳐 application ledger로 이어진다.
-- 목표 경로는 fos-career DB의 recommendation item, application candidate state, outbox job을 정본으로 둔다.
+- 표준 출력 JSON과 report가 추천 정본이다.
+- 선택 전 후보는 `frontdoor-queue.jsonl`에 둘 수 있고, 실제 지원 준비는 `data/applications/ledger.jsonl`로 승격한다.
+- 별도 웹 DB나 outbox를 정본으로 두지 않는다.
 - 수집 source, adapter, 진단 상세는 `code-architecture.md`와 position-recommender SKILL.md를 따른다.
 
 주요 산출물:
@@ -156,7 +157,7 @@ Use skill: /position-recommender [context]
 ```text
 추천 후보 선택
   -> 지원 준비 시작 요청
-  -> ledger 또는 application candidate state 갱신
+  -> ledger 갱신
   -> posting.md 확보
   -> Use skill: /application-package-writer <posting-path>
   -> fit-analysis.md 작성
@@ -193,6 +194,8 @@ discovered
 - 실제 채용 사이트 입력과 제출은 자동화하지 않는다.
 - 근거 없는 정량 성과, private 정보 노출, 직무 요구사항 오독은 review에서 멈춘다.
   판정은 revise 또는 blocked로 남긴다.
+- 불합격, 지원 취소, 마감 종료는 `closed`와 `userDecision=rejected` 또는 그에 준하는 notes로 남긴다.
+  이후 같은 회사·역할은 새 지원으로 자동 재개하지 않고 피드백 루프로 돌린다.
 
 주요 산출물:
 
@@ -237,6 +240,9 @@ Use skill: /behavioral-interview-drill
 면접 준비의 사람용 정본은 포지션별 private home에 둔다.
 공개 가능한 기술 보강 주제만 `study-pack-writer`로 넘어간다.
 
+활성 면접 타깃이 없으면 `config/mvp-target.json`의 `primary`는 `null`일 수 있다.
+이때 단계별 면접 준비는 새 active 타깃이 설정될 때까지 멈추고, 드릴과 일반 질문 bank 보강은 회사별 boost 없이 계속 진행한다.
+
 주요 산출물:
 
 - `data/reports/job-fit-YYYY-MM-DD-<slug>.{json,md}` (JSON 정본 + md 파생, ADR-096)
@@ -263,8 +269,7 @@ Use skill: /question-bank-collector <topic>
 인성 면접 웹 수집 자료는 먼저 `data/runtime/behavioral-interview-web-source-scan-YYYY-MM-DD.md`에 출처와 신뢰도를 남긴다.
 그중 회사명, 개인 이력, 지원 전략을 제거해 재사용 가능한 일반 질문으로 정규화할 수 있는 항목은 `public/question-bank/behavioral/questions.json`에 누적한다.
 
-fos-career 면접 hub에서 질문 bank 보강을 요청할 때도 직접 실행하지 않는다.
-request queue에 넣고 host-side processor가 allowlist를 확인한 뒤 career-os skill을 실행한다.
+특정 포지션에서 드러난 약점 질문은 `private/question-bank/{behavioral,tech}-personal.jsonl`에 남기고, 공개 가능한 일반 질문만 `public/question-bank/`로 승격한다.
 
 주요 산출물:
 
@@ -291,52 +296,37 @@ application review 통과
 - `data/applications/<application-id>/resume.html`
 - `data/applications/<application-id>/resume.pdf`
 
-## fos-career 연결
+## 피드백 루프
 
-fos-career는 career-os 파일과 상태를 웹에서 보기 위한 별도 서비스다.
-대시보드는 기본적으로 career-os를 읽기 전용으로 다룬다.
-쓰기 작업은 request queue와 host-side processor를 통해 수행한다.
+지원 루프는 탈락이나 보류에서 끝나지 않고 다음 탐색과 보강으로 돌아간다.
+웹 대시보드 없이 파일과 skill 산출물이 루프 상태를 드러낸다.
 
-읽기 흐름:
-
-```text
-브라우저 요청
-  -> fos-career route
-  -> 관리자 세션 검증
-  -> career-os read-only projection 또는 fos-career DB 조회
-  -> 화면 표시용 view model 생성
-  -> dashboard 렌더링
-```
-
-쓰기 요청 흐름:
+표준 루프:
 
 ```text
-사용자 버튼 또는 form 제출
-  -> fos-career API
-  -> 관리자 세션 검증
-  -> 현재 snapshot 저장
-  -> pending request 또는 outbox job 생성
-  -> host-side processor가 lock 획득
-  -> stale guard 확인
-  -> 허용된 career-os runner 또는 skill 실행
-  -> 결과 snapshot 저장
-  -> dashboard에서 pending, running, done, failed, stale 표시
+Use skill: /position-recommender
+  -> 추천 JSON/report 생성
+  -> 후보 선택
+  -> Use skill: /job-fit-analyzer [역할 또는 공고 요약]
+  -> fit/gap과 nextActions 생성
+  -> Use skill: /study-pack-writer <public-safe-gap-topic>
+  -> Use skill: /application-package-writer <posting-path>
+  -> Use skill: /application-reviewer <application-dir>
+  -> 사용자 수동 제출
+  -> 1차 면접이면 /interview-stage-prep first-round + drill
+  -> 2차/최종이면 /interview-stage-prep final-round + behavioral drill
+  -> 결과 기록
+  -> closed/rejected면 약점·공고 선택 기준·다음 탐색 조건으로 환류
 ```
 
-적용 대상:
+탈락 피드백 처리:
 
-- priority 변경 요청
-- 공고 상태 변경 요청
-- 지원 준비 시작 요청
-- 면접 skill request
-- 질문 bank 보강 요청
-
-경계:
-
-- web container는 career-os 파일을 직접 수정하지 않는다.
-- private 본문, 면접 답변 전문, command stdout 전체는 request result에 저장하지 않는다.
-- long-running 작업은 outbox job으로 분리한다.
-- 외부 제출, 공개 발행, candidate-profile 자동 수정은 allowlist 밖이다.
+- 해당 지원은 `closed`로 둔다.
+- `userDecision`은 `rejected` 또는 notes의 outcome으로 남긴다.
+- active 면접 타깃이면 `config/mvp-target.json`의 `primary`를 `history`로 옮기고 `primary: null`로 둔다.
+- 회사별 private 질문은 보존하되, 다음 추천과 드릴에서 회사별 boost로 쓰지 않는다.
+- 반복 약점은 `config/study-progress.json`, `private/question-bank/`, 다음 `job-fit` report의 `changeSince`로 이어간다.
+- 새 공고 탐색은 같은 회사 재지원보다 역할·도메인·갭 변화가 명확한 후보를 우선한다.
 
 ## 실행 가드
 
@@ -371,14 +361,14 @@ fixture 또는 실제 application package 선택
 |---|---|---|
 | dispatcher와 `run_now.sh` | career-os 활성 진입점에서 제거됨 | agent skill 직접 호출 |
 | `interview-prep-analyzer` | 제거됨 | `job-fit-analyzer`, `interview-stage-prep`, drill 계열 |
-| `frontdoor-queue.jsonl` | legacy staging file | fos-career DB application candidate state |
+| `frontdoor-queue.jsonl` | 선택 전 staging file | application ledger 승격 |
 | 범용 LLM 채팅 UI | 제거됨 | 목적별 request와 evaluator |
 | 오래된 subprocess writer 경로 | 제거됨 | 현재 에이전트가 SKILL.md workflow 수행 |
 
 ## 실패 동작
 
 실패는 조용히 통과시키지 않는다.
-흐름별 실패는 report, request status, stderr, Discord 알림 중 적절한 위치에 남긴다.
+흐름별 실패는 report, stderr, Discord 알림 중 적절한 위치에 남긴다.
 
 공통 실패 흐름:
 

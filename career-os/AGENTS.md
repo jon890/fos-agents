@@ -96,9 +96,9 @@ Codex 노출은 `career-os/.codex/skills/<skill>` 심볼릭 링크로 연결한�
 study-pack 계열 작업이 아니면 프로젝트 코드처럼 편집하지 않는다.
 게시 목적 글은 작성 후 필요한 README나 index를 갱신하고, 검증 후 commit/push한다.
 
-`fos-career`는 사람용 웹 제품 repo로 분리해서 다룬다.
-career-os는 수집, 리포트 생성, skill 실행, private 산출물 생성을 맡는다.
-웹 대시보드의 인증, 세션, 감사 로그, 지원 후보 상태, background outbox는 `fos-career` 책임이다.
+`fos-career` 웹 대시보드 축은 ADR-102로 폐기했다.
+career-os는 별도 웹 제품 없이 수집, 리포트 생성, skill 실행, private 산출물, 피드백 루프 기록을 파일과 skill 계약으로 직접 관리한다.
+지원 후보 상태와 준비 단계는 `data/runtime/application-agent/`, `data/applications/`, `private/` 산출물에서 관리하고, 외부 DB나 outbox를 정본으로 두지 않는다.
 
 Discord에 HTML을 첨부할 때는 전역 HTML 읽기 정책을 완화하지 않는다.
 직접 첨부 대상 HTML은 `data/runtime/downloads/` 아래 파일만 허용한다.
