@@ -38,9 +38,10 @@ CRCL (Circle) + BTC + GOOGL/GOOG + QQQ + AI 반도체/인프라.
 - **daily-note 후보 풀**: `config/daily-stock-universe.json` — daily-stock-analysis-note skill이 매일 1 종목 선택.
 - **종목 선택 이력**: `data/daily-notes/history.json` — rotation 패널티 적용 (같은 종목 연속 선택 방지).
 - **투자 가설 누적**: `data/thesis-tracker/<ticker>.json` — 종목별 시계열 thesis 추적.
-- **외부 발행 대상**: `career-os/sources/fos-study/` — daily-stock-analysis-note만 git push (cross-workspace 단방향 쓰기, ADR-001 격리 원칙 의도된 예외).
-- **비밀 정보**: `.env` (워크스페이스 root, gitignore) — `DISCORD_CHANNEL_ID` 등.
-- **운영 상태 (cron)**: `~/.openclaw/cron/jobs.json` (openclaw 측 자산, 읽기 전용 참조).
+- **발행 준비 산출물**: `stock-investment/data/publish/` — 블로그 글 초안, 발행 요청 메타데이터, 싱크 확인 대기 상태를 이 워크스페이스 안에만 보관한다.
+- **외부 발행 대상**: 다른 워크스페이스나 외부 git 저장소를 이 프로필에서 직접 수정하지 않는다. `fos-study` 반영은 별도 승인된 발행 프로필·Jenkins·수동 작업으로 넘긴다.
+- **비밀 정보**: `.env` (워크스페이스 root, gitignore) 또는 Hermes secrets — `DISCORD_CHANNEL_ID`, GitHub token 등. 비밀값은 채팅·문서·로그에 쓰지 않는다.
+- **운영 상태 (cron)**: Hermes/cron 상태는 읽기 전용 참조만 허용한다.
 
 회사명·티커·테마를 어떤 markdown에도 박지 않는다 — config json 한 곳만 수정해서 전환.
 
@@ -55,12 +56,14 @@ CRCL (Circle) + BTC + GOOGL/GOOG + QQQ + AI 반도체/인프라.
 
 ## 4-3. fos-study 블로그 발행 의미
 
-사용자가 `블로그 글 발행`, `블로그 글로 만들어줘`, `fos-study에 게시해줘`처럼 말하면, stock-investment 맥락에서는 `~/ai-nodes/career-os/sources/fos-study/finance/investing/` 아래에 `[초안]` 마크다운 글을 만들고, 필요한 README 인덱스를 갱신한 뒤, fos-study 저장소만 커밋/푸시하는 뜻으로 이해한다.
+사용자가 `블로그 글 발행`, `블로그 글로 만들어줘`, `fos-study에 게시해줘`처럼 말하면, stock-investment 맥락에서는 이 프로필이 `stock-investment/data/publish/` 아래에 `[초안]` 마크다운과 발행 요청 메타데이터를 만든다는 뜻으로 이해한다.
+`career-os/sources/fos-study` 같은 다른 워크스페이스나 외부 git 저장소는 이 프로필에서 직접 수정하지 않는다.
 
 - 이미 다룬 종목의 최신 이슈는 새 일일 종목 노트로 중복 생성하지 않는다.
-- 이런 경우 `YYYY-MM-DD-<ticker>.md`가 아니라 `YYYY-MM-DD-<topic>.md` 형태의 후속 이슈 분석 글로 발행한다.
-- 예: Broadcom 기존 AVGO 노트가 있을 때 실적 쇼크/금리/AI 내러티브 점검은 `2026-06-06-broadcom-ai-rate-shock.md` 같은 후속 분석 글로 처리.
+- 이런 경우 `YYYY-MM-DD-<ticker>.md`가 아니라 `YYYY-MM-DD-<topic>.md` 형태의 후속 이슈 분석 초안으로 처리한다.
 - 모든 글은 투자 권유가 아니라 개인 공부용 관찰/분석 노트로 쓴다.
+- 실제 `fos-study` 반영, commit/push, Jenkins 싱크, 공개 블로그 URL 확인은 별도 승인된 발행 프로필·Jenkins·수동 작업에서 수행한다.
+- 이 프로필은 외부 반영 결과를 사용자가 제공하거나 읽기 권한이 명확할 때만 확인한다.
 
 ## 5. 워크플로 진입점
 
@@ -69,7 +72,7 @@ CRCL (Circle) + BTC + GOOGL/GOOG + QQQ + AI 반도체/인프라.
 | skill | 호출 시점 | 트리거 | 산출물 발행 |
 |---|---|---|---|
 | `stock-investing-morning-brief` | 매일 08:00 Asia/Seoul | cron `0 8 * * *` (openclaw, isolated session) | Discord 채널 announce (failureAlert) |
-| `daily-stock-analysis-note` | 매일 09:00 Asia/Seoul | cron `0 9 * * *` (openclaw, isolated session) | Discord delivery + `career-os/sources/fos-study/` git push |
+| `daily-stock-analysis-note` | 매일 09:00 Asia/Seoul | cron `0 9 * * *` (openclaw, isolated session) | Discord delivery + 워크스페이스 내부 분석 노트 생성 |
 | `current-issue-analysis` | 사용자 수동 호출 | 자연어 또는 슬래시 | Discord 알림 (선택) |
 
 ```bash
@@ -96,7 +99,7 @@ cron payload 갱신 이력:
 - `_shared/lib/notify_discord.ts` — Discord 알림 정본 (ADR-002, bun run 호출).
 - `python3` — 수집기 스크립트 (collect_*.py). yfinance, requests 등.
 - `bun` — notify_discord.ts 실행. root `package.json` + `bun install` 1회.
-- `career-os/sources/fos-study` — daily-stock-analysis-note만 발행 대상 (cross-workspace 예외, 발행 git repo).
+- `stock-investment/data/publish` — 블로그 발행 준비 초안과 메타데이터를 워크스페이스 내부에 보관한다. 외부 `fos-study` 반영은 이 프로필에서 직접 수행하지 않는다.
 
 상세는 `docs/code-architecture.md` 외부 의존성 섹션.
 
@@ -109,15 +112,27 @@ cron payload 갱신 이력:
 - 모닝 Discord 메시지는 간결 — 상세 자산은 `data/YYYY-MM-DD/`.
 - 영구 자산은 워크스페이스 내부 (`~/.openclaw/workspace` 사용 안 함).
 
-## 8. 규칙
+## 8. 보안 경계
 
-- 다른 워크스페이스 (apartment, career-os, travel) 격리 — 교차 참조 금지 (단 career-os/sources/fos-study 발행 예외).
+이 프로필의 기본 쓰기 범위는 `stock-investment/` 워크스페이스 내부로 제한한다.
+
+- 허용: `stock-investment/AGENTS.md`, `docs/`, `config/`, `scripts/`, `.claude/skills/`, `.codex/skills/`, `data/`, `logs/`, `tasks/`.
+- 금지: `../career-os`, `../apartment`, `../travel`, `../health-care`, `../ji-yoon-blog`, `../_shared`, `career-os/sources/fos-study`, 다른 git 저장소, Hermes 다른 프로필 디렉터리 직접 수정.
+- 예외: 사용자가 해당 턴에서 파일 경로와 목적을 명시하고 승인한 경우에만 단발성으로 수행한다.
+  예외 작업 전에는 대상 파일, 변경 이유, 공개/비밀 영향, 되돌릴 방법을 먼저 보고한다.
+- 비밀값은 Hermes secrets 또는 워크스페이스 `.env`에만 둔다.
+  토큰·쿠키·세션·비밀번호 값은 채팅, 문서, 로그, git diff에 쓰지 않는다.
+- 파일 도구가 보호 파일 수정을 거부하면 terminal/Python/shell로 우회하지 않는다.
+- 다른 워크스페이스의 현재 상태 확인이 꼭 필요하면 읽기 범위와 이유를 먼저 밝히고, 쓰기는 하지 않는다.
+
+## 9. 규칙
+
 - 재실행 가능 + 날짜 단위 멱등.
 - 불확실성 명시 — 검증된 사실과 해석 분리.
 - 새 결정은 `docs/adr.md` 누적 (개별 ADR 파일 신설 금지, ai-nodes ADR-018).
-- 비밀 정보 (`DISCORD_CHANNEL_ID`)는 `.env` (워크스페이스 root, gitignore). 출처: `~/.openclaw/cron/jobs.json` 추출. `.env.example` template 참고.
+- 비밀 정보 (`DISCORD_CHANNEL_ID`, GitHub token 등)는 Hermes secrets 또는 `.env`에 둔다. `.env.example` template 참고.
 
-## 9. fos-brain 연동
+## 10. fos-brain 연동
 
 이 워크스페이스 agents의 brain 읽기/쓰기 규약.
 단일 정책은 ai-nodes 루트 `AGENTS.md` 13번 + ADR-009(구조) / ADR-010(쓰기 안전·프라이버시).

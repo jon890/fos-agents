@@ -18,6 +18,7 @@ History: 기존 `docs/decisions/001~007.md` 는 plan004에서 git rm 완료 — 
 | ADR-001 | 워크스페이스 ai-nodes 표준 구조 적용 시작 | Accepted | 5문서 + AGENTS 한글화 + CLAUDE 심링크 + tasks/ (plan001). 분리 패턴 (plan002) + AGENTS 강화 (plan003) + decisions 폐기 (plan004) 시리즈 완료 |
 | ADR-002 | Discord 알림을 _shared/lib/notify_discord.ts로 통합 | Accepted | 워크스페이스 셸 notify_discord.sh 폐기, ts 정본 통합 (apartment ADR-009 미러) |
 | ADR-003 | 3 skill native 전환 (외부 subprocess 폐기) | Accepted | claude json+extractor+track_task 래핑 폐기, native 직접 호출. Python 수집기 유지. apartment ADR-010 미러 |
+| ADR-004 | 프로필 쓰기 범위를 stock-investment 내부로 제한 | Accepted | 다른 워크스페이스와 외부 git 저장소 직접 수정을 금지하고 발행은 내부 초안+메타데이터로 분리 |
 
 ---
 
@@ -157,3 +158,41 @@ stock 3 skill은 apartment daily-report와 동일 구조라 같은 패턴을 복
 - 단점: native skill이 데이터 파이프라인 오케스트레이션까지 책임 — 수집 실패 처리를 SKILL.md가 명시해야 함.
 
 **적용**: `stock-investment/.claude/skills/<name>/SKILL.md`(native 재작성) + `scripts/<name>/run_with_claude.sh`(신규) + 옛 `run_*.sh` 폐기. `stock-investment/tasks/plan006-skills-native-migration` phase 참조.
+
+---
+
+## ADR-004 — 프로필 쓰기 범위를 stock-investment 내부로 제한
+
+**Status**: Accepted
+**Date**: 2026-07-03
+
+### 맥락
+
+이 프로필은 Discord `#주식토크`에서 주식·경제 분석, 가격 확인, 뉴스 해석, 학습 자산 생성을 담당한다.
+이전 운영 문서에는 `career-os/sources/fos-study`에 직접 쓰고 git push하는 예외가 남아 있었다.
+하지만 사용자는 이 프로필이 다른 워크스페이스를 건드리지 않고, 주식/금융 워크스페이스 내부에서만 작업되기를 원한다.
+GitHub token 같은 비밀값도 채팅·문서·로그가 아니라 Hermes secrets 또는 워크스페이스 `.env`에서 관리해야 한다.
+
+### 결정
+
+이 프로필의 기본 쓰기 범위를 `stock-investment/` 내부로 제한한다.
+
+- 허용 범위는 `AGENTS.md`, `docs/`, `config/`, `scripts/`, `.claude/skills/`, `.codex/skills/`, `data/`, `logs/`, `tasks/`다.
+- `career-os`, `apartment`, `travel`, `health-care`, `ji-yoon-blog`, `_shared`, `career-os/sources/fos-study`, 다른 git 저장소, Hermes 다른 프로필 디렉터리는 직접 수정하지 않는다.
+- 사용자가 해당 턴에서 파일 경로와 목적을 명시하고 승인한 경우에만 단발성 예외를 허용한다.
+- 블로그 글은 `stock-investment/data/publish/` 아래 초안과 발행 요청 메타데이터로 준비한다.
+- 실제 `fos-study` 반영, commit/push, Jenkins 싱크, 공개 블로그 URL 확인은 별도 승인된 발행 프로필·Jenkins·수동 작업으로 넘긴다.
+- 비밀값은 Hermes secrets 또는 워크스페이스 `.env`에만 둔다.
+
+거절한 대안:
+
+- `career-os/sources/fos-study` 직접 쓰기 유지: 프로필 경계를 흐리고 사용자의 보안 요구와 충돌한다.
+- `_shared` helper 직접 수정 허용: 공용 영향이 있으므로 이 프로필의 기본 권한 밖에 둔다.
+- 비밀값을 문서나 skill에 기록: 공개·로그 노출 위험이 있어 금지한다.
+
+### 결과
+
+- stock-investment 프로필은 분석과 초안 생성까지 책임진다.
+- 외부 발행은 명시 승인된 별도 단계로 분리된다.
+- 이전 cross-workspace 발행 예외는 폐기된다.
+- GitHub token 같은 비밀값은 Hermes secrets 또는 `.env`를 통해서만 주입한다.

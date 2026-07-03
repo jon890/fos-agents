@@ -110,7 +110,7 @@ claude -p "/daily-stock-analysis-note"
 | `claude` CLI | native skill 직접 호출 | `claude -p "/<skill>"` |
 | `python3` | 수집기 스크립트 (collect_*.py) | yfinance, requests 등 |
 | `bun` | notify_discord.ts 실행 | root `package.json` + `bun install` 1회 |
-| `career-os/sources/fos-study` | daily-stock-analysis-note 발행 대상 | cross-workspace 단방향 쓰기 (발행 목적 예외) |
+| `stock-investment/data/publish` | 발행 준비 초안과 메타데이터 | 외부 `fos-study` 반영은 이 프로필에서 직접 수행하지 않음 |
 | Discord | `#주식토크` 채널 알림 | `DISCORD_CHANNEL_ID` 필요 |
 
 ## 5. 비용·실행 규율

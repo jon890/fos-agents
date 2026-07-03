@@ -99,22 +99,22 @@ Step 2  native skill 이 워크플로 수행 (SKILL.md 기준)
             부작용: data/daily-notes/history.json 업데이트
         - 수집 산출물 Read → data/daily-notes/YYYY-MM-DD/report.md 직접 Write
 
-Step 3  fos-study 발행
-        sanitize_fos_study_markdown.py 로 fos-study 마크다운 규칙 적용
-        BLOG_MD 경로:
-          career-os/sources/fos-study/finance/investing/ai-tech-stock/YYYY-MM-DD-<slug>.md
-        git add + git commit + git push (SKIP_PUSH=1 로 억제 가능)
+Step 3  워크스페이스 내부 발행 준비
+        sanitize_fos_study_markdown.py 로 마크다운 규칙 적용
+        준비 경로:
+          stock-investment/data/publish/YYYY-MM-DD-<slug>.md
+        실제 fos-study 반영, commit/push, Jenkins 싱크는 이 프로필에서 직접 수행하지 않음
 
 Step 4  알림 + 폴백
         완료/요약: native skill 이 notify_discord.ts 호출 (SKILL.md 지시)
         실패: thin wrapper 가 Discord 실패 알림
 ```
 
-cross-workspace 쓰기 예외:
+cross-workspace 쓰기 금지:
 
-- `career-os/sources/fos-study` 는 발행 목적 git 저장소.
-- 투자 공부 블로그 노트를 fos-study로 발행하는 단방향 쓰기.
-- 워크스페이스 격리 원칙 예외 (ADR-001 미위반).
+- 이 프로필은 `stock-investment` 워크스페이스 안에서만 초안과 메타데이터를 만든다.
+- `career-os/sources/fos-study` 같은 다른 워크스페이스나 외부 git 저장소는 직접 수정하지 않는다.
+- 실제 블로그 반영은 별도 승인된 발행 프로필·Jenkins·수동 작업으로 넘긴다.
 
 ## 5. 공통 흐름
 
