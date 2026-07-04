@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "timezone": "Asia/Seoul",
+  "default_lookback_hours": 72,
+  "max_videos_per_run": 4,
+  "channels": [
+    {
+      "name": "자산제곱",
+      "channel_id": "UCpTC-SMFjA3EDRhZIKOcKuQ",
+      "feed_url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCpTC-SMFjA3EDRhZIKOcKuQ",
+      "enabled": true
+    },
+    {
+      "name": "월가아재의 과학적 투자",
+      "channel_id": "UCpqD9_OJNtF6suPpi6mOQCQ",
+      "feed_url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCpqD9_OJNtF6suPpi6mOQCQ",
+      "enabled": true
+    }
+  ],
+  "learning_value_policy": {
+    "include": [
+      "투자 원칙과 행동경제학",
+      "위험관리와 포트폴리오 관리",
+      "자산배분과 장기 투자 관점",
+      "금리, 환율, 물가, 유동성 등 거시경제 구조",
+      "시장 사이클과 밸류에이션 해석",
+      "투자 의사결정 과정과 검증 프레임워크"
+    ],
+    "downrank_or_exclude": [
+      "특정 종목 단기 매수·매도 유도",
+      "선정적 공포·탐욕 자극 중심",
+      "단순 뉴스 낭독",
+      "근거 없는 가격 예측",
+      "정치 이슈만 있고 투자 일반론으로 연결되지 않는 내용",
+      "자막이 없어서 내용을 확인할 수 없는 영상"
+    ],
+    "output_rule": "신규 영상이 없거나 학습 가치가 낮으면 아무 메시지도 출력하지 않는다."
+  }
+}

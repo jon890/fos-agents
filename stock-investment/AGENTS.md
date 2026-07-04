@@ -67,11 +67,12 @@ CRCL (Circle) + BTC + GOOGL/GOOG + QQQ + AI 반도체/인프라.
 
 ## 5. 워크플로 진입점
 
-3 skill — ADR-006/013 분리 패턴 (`scripts/<name>/` + `.claude/skills/<name>/` 정본 + `.codex/skills/<name>/` 노출, plan002 적용).
+4 skill — ADR-006/013 분리 패턴 (`scripts/<name>/` + `.claude/skills/<name>/` 정본 + `.codex/skills/<name>/` 노출, plan002 적용).
 
 | skill | 호출 시점 | 트리거 | 산출물 발행 |
 |---|---|---|---|
 | `stock-investing-morning-brief` | 매일 08:00 Asia/Seoul | cron `0 8 * * *` (openclaw, isolated session) | Discord 채널 announce (failureAlert) |
+| `stock-youtube-learning-digest` | 매일 08:20 Asia/Seoul | Hermes cron `20 8 * * *` + 후보 감지 script + 후보 있을 때 LLM 요약 | 신규/유효 영상이 있을 때만 #주식토크 delivery |
 | `daily-stock-analysis-note` | 매일 09:00 Asia/Seoul | cron `0 9 * * *` (openclaw, isolated session) | Discord delivery + 워크스페이스 내부 분석 노트 생성 |
 | `current-issue-analysis` | 사용자 수동 호출 | 자연어 또는 슬래시 | Discord 알림 (선택) |
 
@@ -98,6 +99,7 @@ cron payload 갱신 이력:
 - `claude` CLI — 운영 호환 skill 직접 호출 (`claude -p "/<skill>"`).
 - `_shared/lib/notify_discord.ts` — Discord 알림 정본 (ADR-002, bun run 호출).
 - `python3` — 수집기 스크립트 (collect_*.py). yfinance, requests 등.
+- `uv` — YouTube 자막 추출 의존성 `youtube-transcript-api`를 `uv run --with`로 임시 실행.
 - `bun` — notify_discord.ts 실행. root `package.json` + `bun install` 1회.
 - `stock-investment/data/publish` — 블로그 발행 준비 초안과 메타데이터를 워크스페이스 내부에 보관한다. 외부 `fos-study` 반영은 이 프로필에서 직접 수행하지 않는다.
 
