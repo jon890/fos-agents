@@ -51,8 +51,6 @@
       "SK플래닛 백엔드",
       "현대오토에버 백엔드",
       "현대오토에버 플랫폼",
-      "CJ올리브네트웍스 백엔드",
-      "CJ올리브영 백엔드",
       "KT Cloud 백엔드",
       "KT AI 플랫폼",
       "토스 AI Platform",
@@ -103,7 +101,22 @@
       "ML Backend",
       "Workflow Automation"
     ],
-    "fitFraming": "모델 연구가 아니라 서비스 백엔드, 워크플로우/RAG, 에이전트 자동화, 품질 검증, 플랫폼 운영 경험으로 평가한다.",
+    "fitFraming": "현재 사용자는 AI/RAG/Vector Search/AX 전환 주도 포지션 관심이 높다. 모델 연구가 아니라 서비스 백엔드, 워크플로우/RAG, 에이전트 자동화, 품질 검증, 플랫폼 운영 경험으로 평가하고, 이 조건을 만족하는 active/open 공고를 상위에 둔다.",
+    "rankingBias": {
+      "priority": "AI 전환 레인을 상위 배치한다. RAG, Vector Search, AX 전환 주도, AI Agent/AI 플랫폼, LLMOps/MLOps처럼 사용자의 최근 관심사가 직접 드러나는 active/open 개별 공고는 순수 결제·커머스 백엔드보다 먼저 검토한다.",
+      "topSignals": [
+        "RAG 색인/검색/OpenSearch/vector database 운영",
+        "AX 전환 주도 또는 전사 AI Transformation",
+        "AI Agent/LLM workflow/tool calling/platform backend",
+        "LLM API Gateway/Model Router/LLMOps/MLOps 플랫폼",
+        "AI 제품 백엔드·품질 검증·서빙 안정화"
+      ],
+      "guardrails": [
+        "순수 모델 연구, 논문 중심, GPU 커널/학습 최적화 중심은 계속 낮게 본다.",
+        "AI 키워드가 있어도 서버/API/플랫폼 개발 비중이 약하면 보류로 둔다.",
+        "Tech Lead/CTO/기술총괄처럼 seniority가 과한 역할은 상위 배치하지 않는다."
+      ]
+    },
     "preferredPatterns": [
       "Java/Kotlin/Spring 기반 서버 개발과 AI 제품 접점",
       "LLM/API Gateway·Model Router·Workflow·Tool use·State management",

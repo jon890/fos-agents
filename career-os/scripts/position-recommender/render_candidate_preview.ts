@@ -16,6 +16,13 @@ interface PreviewRow {
   keywords: string[];
 }
 
+interface LivePostingCandidate {
+  company: string;
+  title: string;
+  fields: Record<string, string>;
+  raw: string[];
+}
+
 export interface CandidatePreviewOptions {
   limit?: number | null;
   title?: string;
@@ -59,9 +66,19 @@ function rowsFromRun(run: RecommendationRunType): PreviewRow[] {
   ];
 }
 
-function parseLivePostingRows(markdown: string): PreviewRow[] {
+function recommendationOpinionByUrl(run: RecommendationRunType): Map<string, string> {
+  const entries = [
+    ...run.tiers.strong.map((item) => [item.postingUrl, item.whyFit] as const),
+    ...run.tiers.stretch.map((item) => [item.postingUrl, `${item.whyFit} ${item.stretchGap}`] as const),
+    ...run.tiers.hold.filter((item) => item.link && item.link !== "-").map((item) => [item.link, item.reason] as const),
+  ];
+  return new Map(entries.map(([url, opinion]) => [url, summarizeOpinion(opinion)]));
+}
+
+function parseLivePostingRows(markdown: string, run: RecommendationRunType): PreviewRow[] {
   const rows: PreviewRow[] = [];
-  let current: { company: string; title: string; fields: Record<string, string>; raw: string[] } | null = null;
+  let current: LivePostingCandidate | null = null;
+  const opinionByUrl = recommendationOpinionByUrl(run);
 
   function flush(): void {
     if (!current) return;
@@ -70,12 +87,7 @@ function parseLivePostingRows(markdown: string): PreviewRow[] {
     const url = current.fields.url ?? "";
     if ((status === "active" || status === "open") && linkType === "direct_posting" && url && !isExcludedPreviewPosting(current)) {
       const skills = splitCsv(current.fields.skills ?? "").slice(0, 8);
-      const why = summarizeText(firstNonEmpty([
-        current.fields.main_tasks,
-        current.fields.requirements,
-        current.fields.preferred,
-        "개별 active/open 공고로 수집된 전체 후보입니다.",
-      ]));
+      const why = opinionByUrl.get(url) ?? buildFallbackOpinion(current);
       rows.push({
         tier: "전체 후보",
         company: current.company,
@@ -101,7 +113,25 @@ function parseLivePostingRows(markdown: string): PreviewRow[] {
     if (field) current.fields[field[1]] = field[2].trim();
   }
   flush();
-  return rows;
+  return sortLivePreviewRows(rows);
+}
+
+function aiInterestScore(row: PreviewRow): number {
+  const text = [row.company, row.title, row.why, ...row.keywords].join(" ").toLowerCase();
+  const highSignals = ["rag", "vector", "벡터", "opensearch", "llm", "agent", "에이전트", "ax", "ai transformation", "ai 플랫폼", "ai platform", "llmops", "mlops", "model router", "gateway", "workflow", "tool calling"];
+  const serverSignals = ["backend", "백엔드", "server", "서버", "spring", "java", "kotlin", "api", "platform", "플랫폼"];
+  const researchOnlySignals = ["research scientist", "applied scientist", "model research", "모델 연구", "논문"];
+  const high = highSignals.reduce((sum, signal) => sum + (text.includes(signal) ? 3 : 0), 0);
+  const server = serverSignals.reduce((sum, signal) => sum + (text.includes(signal) ? 1 : 0), 0);
+  const researchPenalty = researchOnlySignals.some((signal) => text.includes(signal)) ? 20 : 0;
+  return high + Math.min(server, 4) - researchPenalty;
+}
+
+function sortLivePreviewRows(rows: PreviewRow[]): PreviewRow[] {
+  return rows
+    .map((row, index) => ({ row, index, score: aiInterestScore(row) }))
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .map((item) => item.row);
 }
 
 function splitCsv(value: string): string[] {
@@ -112,17 +142,37 @@ function firstNonEmpty(values: Array<string | undefined>): string {
   return values.find((value) => value && value.trim())?.trim() ?? "개별 active/open 공고로 수집된 전체 후보입니다.";
 }
 
-function summarizeText(value: string, maxLength = 260): string {
+function summarizeText(value: string, maxLength = 220): string {
   const sanitized = value.replace(/CTO/g, "기술 조직").replace(/\s+/g, " ").trim();
   if (sanitized.length <= maxLength) return sanitized;
   return `${sanitized.slice(0, maxLength - 1)}…`;
 }
 
-function isExcludedPreviewPosting(posting: { company: string; title: string; fields: Record<string, string>; raw: string[] }): boolean {
+function sentenceLimit(value: string, maxSentences = 3): string {
+  const sanitized = summarizeText(value, 360);
+  const sentences = sanitized
+    .split(/(?<=[.!?。！？])\s+|(?<=다\.)\s+|(?<=요\.)\s+|(?<=임\.)\s+|(?<=음\.)\s+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return summarizeText((sentences.length ? sentences : [sanitized]).slice(0, maxSentences).join(" "), 260);
+}
+
+function summarizeOpinion(value: string): string {
+  return sentenceLimit(value, 3);
+}
+
+function buildFallbackOpinion(posting: LivePostingCandidate): string {
+  const roleSummary = sentenceLimit(firstNonEmpty([posting.fields.main_tasks, posting.fields.requirements, posting.fields.summary]), 2);
+  const risk = sentenceLimit(firstNonEmpty([posting.fields.career_upside_risk_flags, posting.fields.preferred, "세부 JD와 seniority 기대치를 확인해야 합니다."]), 1);
+  return summarizeText(`추천 티어에는 올리지 않았지만 active/open 후보로 유지할 만한 공고입니다. ${roleSummary} 확인 포인트는 ${risk}`, 280);
+}
+
+function isExcludedPreviewPosting(posting: LivePostingCandidate): boolean {
   const text = [posting.company, posting.title, ...Object.values(posting.fields), ...posting.raw].join(" ").toLowerCase();
-  if (/cto|chief technology officer|기술\s*총괄|기술총괄/.test(text)) return true;
+  if (/\bcto\b|chief technology officer|기술\s*총괄|기술총괄/.test(text)) return true;
   if (/tech\s*lead|server\s*lead|technical\s*lead|테크\s*리드|기술\s*리드/.test(text)) return true;
   if (/ai engineer\s*\(model\)|ai\s*model\s*research|model\s*research|research\s*scientist|applied\s*scientist|ai\s*research|모델\s*연구/.test(text)) return true;
+  if (/cj\s*foodville|cj\s*푸드빌|cj푸드빌|씨제이푸드빌|cj\s*olive\s*young|cj올리브영|씨제이올리브영/.test(text)) return true;
 
   const company = posting.company.toLowerCase();
   const title = posting.title.toLowerCase();
@@ -150,13 +200,13 @@ function codeList(values: string[]): string {
 
 export function renderCandidatePreviewHtml(run: RecommendationRunType, options: CandidatePreviewOptions = {}): string {
   const effectiveLimit = options.limit === undefined ? 10 : options.limit;
-  const rows = applyLimit(options.postingsMarkdown ? parseLivePostingRows(options.postingsMarkdown) : rowsFromRun(run), effectiveLimit);
+  const rows = applyLimit(options.postingsMarkdown ? parseLivePostingRows(options.postingsMarkdown, run) : rowsFromRun(run), effectiveLimit);
   const title = options.title ?? (options.postingsMarkdown ? `${run.reportDate} 전체 수집 공고` : `${run.reportDate} 포지션 추천 후보`);
   const rowHtml = rows
     .map(
       (row, index) => `<tr>
   <td class="rank">${index + 1}</td>
-  <td><span class="badge ${badgeClass(row.tier)}">${escapeHtml(row.tier)}</span></td>
+  <td class="tier"><span class="badge ${badgeClass(row.tier)}">${escapeHtml(row.tier)}</span></td>
   <td>
     <a class="title" href="${escapeHtml(row.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(row.company)} — ${escapeHtml(row.title)}</a>
     <div class="url">${escapeHtml(row.url)}</div>
@@ -177,12 +227,14 @@ export function renderCandidatePreviewHtml(run: RecommendationRunType, options: 
   <style>
     :root { color-scheme: light; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; color: #172033; background: #f7f8fb; }
-    main { max-width: 1180px; margin: 32px auto; background: white; padding: 32px; border-radius: 18px; box-shadow: 0 10px 30px rgba(20,30,60,.08); }
+    main { max-width: 1180px; margin: 32px auto; background: white; padding: 32px; border-radius: 18px; box-shadow: 0 10px 30px rgba(20,30,60,.08); overflow: hidden; }
     h1 { margin: 0 0 8px; font-size: 28px; }
     .meta { color: #667085; margin-bottom: 20px; line-height: 1.55; }
     .conclusion { background: #f6f8fb; border: 1px solid #e6e8ef; border-radius: 12px; padding: 14px 18px; margin-bottom: 24px; }
     .conclusion ul { margin: 0; padding-left: 20px; }
-    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .table-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; border: 1px solid #e6e8ef; border-radius: 12px; }
+    .table-scroll:focus { outline: 2px solid #84caff; outline-offset: 2px; }
+    table { width: 100%; min-width: 920px; border-collapse: collapse; font-size: 14px; }
     th, td { padding: 12px 10px; border-bottom: 1px solid #e6e8ef; vertical-align: top; }
     th { text-align: left; background: #f1f4f9; color: #344054; position: sticky; top: 0; }
     .rank { width: 44px; text-align: right; color: #667085; font-variant-numeric: tabular-nums; }
@@ -196,6 +248,19 @@ export function renderCandidatePreviewHtml(run: RecommendationRunType, options: 
     .badge.stretch { background: #eff8ff; color: #175cd3; }
     .badge.hold { background: #fff7ed; color: #b54708; }
     .badge.all { background: #f2f4f7; color: #344054; }
+    @media (max-width: 720px) {
+      body { background: white; }
+      main { margin: 0; padding: 22px 16px; border-radius: 0; box-shadow: none; overflow: visible; }
+      h1 { font-size: 24px; line-height: 1.25; word-break: keep-all; }
+      .meta { font-size: 14px; }
+      .conclusion { padding: 12px 14px; }
+      .table-scroll { margin: 0 -16px; width: calc(100% + 32px); border-left: 0; border-right: 0; border-radius: 0; }
+      table { min-width: 760px; font-size: 13px; }
+      th, td { padding: 10px 8px; }
+      th:nth-child(2), td.tier { display: none; }
+      .note { min-width: 280px; max-width: 340px; }
+      .url { font-size: 11px; }
+    }
   </style>
 </head>
 <body>
@@ -203,12 +268,14 @@ export function renderCandidatePreviewHtml(run: RecommendationRunType, options: 
   <h1>${escapeHtml(title)}</h1>
   <div class="meta">생성일: ${escapeHtml(run.reportDate)} · 공고명을 클릭하면 개별 공고 페이지로 이동합니다. · 표시 공고 ${rows.length}개</div>
   <section class="conclusion"><ul>${conclusion}</ul></section>
-  <table>
-    <thead><tr><th class="rank">순위</th><th>구분</th><th>공고 링크</th><th>키워드</th><th>핵심 판단</th></tr></thead>
-    <tbody>
+  <div class="table-scroll" tabindex="0" aria-label="공고 목록 가로 스크롤 영역">
+    <table>
+      <thead><tr><th class="rank">순위</th><th>구분</th><th>공고 링크</th><th>키워드</th><th>핵심 판단</th></tr></thead>
+      <tbody>
 ${rowHtml}
-    </tbody>
-  </table>
+      </tbody>
+    </table>
+  </div>
 </main>
 </body>
 </html>

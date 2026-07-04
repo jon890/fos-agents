@@ -126,17 +126,28 @@ test("candidate preview can render all live posting rows while excluding CTO and
   - skills: Java, Spring Boot
   - main_tasks: 결제 승인, 취소, 매입 서버를 개발합니다.
   - url: https://kakaopay.career.greetinghr.com/ko/o/192129
+- [씨제이올리브영(CJ올리브영)] Backend Engineer (광고/DSP)
+  - source: wanted
+  - posting_status: active
+  - link_type: direct_posting
+  - skills: Java, Spring Boot
+  - main_tasks: 리테일미디어 플랫폼 백엔드 개발
+  - url: https://www.wanted.co.kr/wd/365596
 `;
 
   const html = renderCandidatePreviewHtml(sampleRun, { postingsMarkdown: snapshot, limit: null });
 
   assert.match(html, /표시 공고 1개/);
   assert.match(html, /카카오페이/);
-  assert.match(html, /결제 승인, 취소, 매입 서버를 개발합니다/);
+  assert.match(html, /결제 정합성 경험과 잘 맞는다/);
   assert.match(html, /https:\/\/kakaopay\.career\.greetinghr\.com\/ko\/o\/192129/);
+  assert.match(html, /table-scroll/);
+  assert.match(html, /overflow-x: auto/);
+  assert.match(html, /th:nth-child\(2\), td\.tier \{ display: none; \}/);
   assert.doesNotMatch(html, /CTO/);
   assert.doesNotMatch(html, /AI Engineer \(Model\)/);
   assert.doesNotMatch(html, /Server Developer \(Product\)/);
   assert.doesNotMatch(html, /Tech Lead \(Server\)/);
+  assert.doesNotMatch(html, /CJ올리브영/);
   assert.doesNotMatch(html, /토스뱅크/);
 });
