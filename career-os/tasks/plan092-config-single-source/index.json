@@ -13,8 +13,8 @@
     "docs/data-schema.md",
     "docs/code-architecture.md",
     "docs/adr/INDEX.md",
-    "docs/adr/ADR-095-쿨다운-선호제외-단일출처.md",
-    "docs/adr/ADR-099-config-사실-정본-분리.md",
+    "docs/adr/ADR-095-회사-업사이드-운영데이터-config-흡수.md",
+    "docs/adr/ADR-099-position-수집설정-외부화-후보자config-지표시계열.md",
     "AGENTS.md"
   ],
   "target_repositories": [

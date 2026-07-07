@@ -21,19 +21,21 @@ weak_spots는 recommender와 두 드릴 skill이 함께 쓰므로, 분리 시 �
 
 ## 작업
 
-- ADR 결정대로 드릴 간격 반복 상태를 `config/drill-progress.json`으로 분리하거나, `study-progress.json` 안에서 스키마를 통일.
-- `weak_spots` 필드 셋(`pass_count`·`fail_count`·`next_review_date` 등)을 SKILL 문서·`WeakSpotEntry` 타입·실데이터에서 동일하게 맞춘다.
-- 세 writer(recommender·tech drill·behavioral drill)의 읽기/쓰기 경로 갱신.
+- ADR-105 결정대로 드릴 간격 반복 상태를 `config/drill-progress.json`으로 분리한다.
+- `WeakSpotEntry`를 관심사별 2타입으로 분리: topic 학습 상태(`last_studied·study_count·last_evaluated·status`, study-progress 잔류) ↔ drill 상태(`pass_count·fail_count·next_review_date·last_passed`, drill-progress).
+- **마이그레이션**: 실데이터 weak_spots에 drill 필드가 0건이므로 `drill-progress.json`은 빈 상태로 신설, study-progress의 기존 키는 topic 학습 필드로 잔류(데이터 손실 없음, ADR-105 방침).
+- `weak_spots`(→ 분리된 각 타입) 필드 셋을 SKILL 문서·`WeakSpotEntry` 타입·실데이터에서 동일하게 맞춘다.
+- 세 writer(study-topic-recommender·tech drill·behavioral drill)의 읽기/쓰기 경로 갱신.
 
 ## 성공 기준
 
-- 학습 이력과 드릴 상태가 관심사별로 분리(ADR 결정 형태).
-- weak_spots 스키마가 문서·타입·실데이터에서 일치(필드 셋 diff 0).
-- tech/behavioral 드릴 1회 실행이 정상 동작하고 상태가 올바른 파일에 기록된다.
+- 학습 이력(study-progress)과 드릴 상태(drill-progress.json)가 관심사별로 파일 분리(ADR-105 형태).
+- 분리된 스키마가 문서·타입·실데이터에서 일치(필드 셋 diff 0).
+- tech/behavioral 드릴 1회 실행이 정상 동작하고 상태가 `drill-progress.json`에 기록된다.
 
 ## 보류 조건
 
-- 기존 weak_spots 데이터 마이그레이션 방식이 불명확하면 Phase 01로.
+- 마이그레이션이 ADR-105 방침(drill 필드 0건 → 빈 파일 신설)과 다른 상황(실데이터에 drill 필드 발견 등)이면 Phase 01로.
 
 ## 실패 조건
 
