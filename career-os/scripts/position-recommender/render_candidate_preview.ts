@@ -202,12 +202,14 @@ export function renderCandidatePreviewHtml(run: RecommendationRunType, options: 
   const effectiveLimit = options.limit === undefined ? 10 : options.limit;
   const rows = applyLimit(options.postingsMarkdown ? parseLivePostingRows(options.postingsMarkdown, run) : rowsFromRun(run), effectiveLimit);
   const title = options.title ?? (options.postingsMarkdown ? `${run.reportDate} 전체 수집 공고` : `${run.reportDate} 포지션 추천 후보`);
+  // 전체 공고 목록(--postings)은 모든 행이 "전체 후보" 단일 티어라 구분 뱃지가 정보를 담지 못한다.
+  // 이 모드에서는 뱃지 컬럼을 숨기고, 추천 티어에서 직접 렌더할 때만 표시한다.
+  const showTierColumn = !options.postingsMarkdown;
   const rowHtml = rows
     .map(
       (row, index) => `<tr>
   <td class="rank">${index + 1}</td>
-  <td class="tier"><span class="badge ${badgeClass(row.tier)}">${escapeHtml(row.tier)}</span></td>
-  <td>
+${showTierColumn ? `  <td class="tier"><span class="badge ${badgeClass(row.tier)}">${escapeHtml(row.tier)}</span></td>\n` : ""}  <td>
     <a class="title" href="${escapeHtml(row.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(row.company)} — ${escapeHtml(row.title)}</a>
     <div class="url">${escapeHtml(row.url)}</div>
   </td>
@@ -270,7 +272,7 @@ export function renderCandidatePreviewHtml(run: RecommendationRunType, options: 
   <section class="conclusion"><ul>${conclusion}</ul></section>
   <div class="table-scroll" tabindex="0" aria-label="공고 목록 가로 스크롤 영역">
     <table>
-      <thead><tr><th class="rank">순위</th><th>구분</th><th>공고 링크</th><th>키워드</th><th>핵심 판단</th></tr></thead>
+      <thead><tr><th class="rank">순위</th>${showTierColumn ? "<th>구분</th>" : ""}<th>공고 링크</th><th>키워드</th><th>핵심 판단</th></tr></thead>
       <tbody>
 ${rowHtml}
       </tbody>
