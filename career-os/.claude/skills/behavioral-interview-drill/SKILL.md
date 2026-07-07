@@ -35,7 +35,8 @@ description: >
 - `career-os/public/question-bank/behavioral/questions.json` — 인성 면접 공개 질문 풀 (JSON 배열)
 - `career-os/private/question-bank/behavioral-personal.jsonl` — 개인 인성 질문 추가 풀 (있으면 merge, JSONL)
 - `career-os/config/mvp-target.json` — 현재 면접 대상 회사·직무·면접 단계 정본
-- `career-os/config/study-progress.json` — weak_spots 정본 (pass_count·fail_count·next_review_date)
+- `career-os/config/study-progress.json` — topic 학습 상태 (`last_studied`·`study_count`·`last_evaluated`·`status`)
+- `career-os/config/drill-progress.json` — 드릴 간격 반복 상태 정본 (`pass_count`·`fail_count`·`next_review_date`, ADR-105)
 - `career-os/data/runtime/drill-log-YYYY-MM-DD.jsonl` — 답변 연습 일별 기록 (내부 파일명은 기존 `drill-log` 유지, `drill_type: "behavioral"` 구분)
 - `career-os/data/runtime/behavioral-interview-target-context.md` — 현재 호출에서 생성·갱신한 면접 대상 회사 컨텍스트 (있으면 적용)
 - `references/scoring-rubric.md` — STAR·가치관 채점 기준 상세
@@ -88,7 +89,7 @@ description: >
 준비되면 "시작" 또는 "연습 시작"이라고 말씀하세요.
 ```
 
-질문 목록은 `drill-engine.ts`의 `selectQuestions("behavioral", weakSpots)` 결과를 사용한다.
+질문 목록은 `drill-engine.ts`의 `selectQuestions("behavioral", drillProgress)` 결과를 사용한다.
 현재 회사 오버레이가 적용된 경우 `private/question-bank/behavioral-personal.jsonl`에서 `company_slug` prefix가 붙은 질문이 병합되어 우선 후보가 된다.
 선택된 질문은 실제 면접처럼 가벼운 협업·조율 질문에서 시작해 문제해결, 고객·운영 영향, 실패 회복, 성과 증명 순서로 재정렬한다.
 질문 항목에 `sequenceHint`가 있으면 `opening → early → middle → late → closing` 순서를 따른다.
@@ -139,7 +140,7 @@ STAR는 답변을 구성하고 채점할 때 쓰는 내부 기준이다.
 2. **백그라운드 서브에이전트**로 `study-pack-writer <topic>` 실행 — non-blocking.
    - 현재 답변 연습은 중단하지 않고 즉시 다음 질문으로 이동.
    - 완료 메시지: "📦 <topic> 공부팩을 백그라운드에서 생성 중입니다. 답변 연습을 계속 진행합니다."
-3. `shouldDispatchStudyPack(weakSpots, topic, dispatchedToday)` — 중복 방지.
+3. `shouldDispatchStudyPack(drillProgress, topic, dispatchedToday)` — 중복 방지.
    같은 토픽을 당일 이미 위임했으면 "이미 생성 요청됨" 메시지 후 다음 질문으로.
 
 ### 단계 5 — 약점 환류 (자동)
@@ -173,8 +174,9 @@ STAR는 답변을 구성하고 채점할 때 쓰는 내부 기준이다.
 
 - 답변 연습 로그: `career-os/data/runtime/drill-log-YYYY-MM-DD.jsonl` — 질문·점수·위임 여부 기록.
   - `drill_type: "behavioral"` 필드로 기술 면접 답변 연습 기록과 구분한다.
-- weak_spots: `career-os/config/study-progress.json`의 `weak_spots` 필드 직접 갱신.
-  - 갱신 필드: `pass_count`, `fail_count`, `next_review_date`, `last_passed`, `last_evaluated`, `status`.
+- `updateWeakSpots(question, score)` 호출 1번으로 두 파일이 함께 갱신된다 (ADR-105).
+  - `career-os/config/study-progress.json`의 `weak_spots` — topic 학습 상태: `last_evaluated`, `study_count`, `last_studied`, `status`.
+  - `career-os/config/drill-progress.json` — 드릴 간격 반복 상태: `pass_count`, `fail_count`, `next_review_date`, `last_passed`.
   - `candidate-profile.md`는 수정하지 않는다 (사람이 직접 편집).
 
 ## 간격 반복 규칙
