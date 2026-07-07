@@ -37,9 +37,10 @@ PDF 생성은 제출 자동화가 아니며, 업로드·전송·제출 버튼 �
 4. `career-os/data/applications/<company>/<role>/resume-draft.md` — 제출용 이력서 Markdown 초안 (필수)
 5. `career-os/data/applications/<company>/<role>/cover-letter.md` — 제출용 지원동기 Markdown 초안 (필수)
 6. `career-os/data/applications/<company>/<role>/submission-checklist.md` — 제출 전 확인 목록 (필수)
-7. `career-os/config/candidate-profile.md` — 후보자 프로필 11섹션 (필수)
-8. fit-analysis.md 및 application-package.md의 `## 근거 파일 참조` 에 명시된 근거 파일 — 선택적으로 읽는다
-9. `career-os/data/applications/ledger.jsonl` — riskFlags / status / revisionCount 확인 (선택)
+7. `career-os/config/candidate-profile.md` — 후보자 프로필 core: 사실·라벨 (필수)
+8. `career-os/config/candidate-profile-detail.md` — 프로젝트 서사·의사결정 패턴·협업 스타일 (필수)
+9. fit-analysis.md 및 application-package.md의 `## 근거 파일 참조` 에 명시된 근거 파일 — 선택적으로 읽는다
+10. `career-os/data/applications/ledger.jsonl` — riskFlags / status / revisionCount 확인 (선택)
 
 ## Workflow
 
@@ -64,7 +65,7 @@ PDF 생성은 제출 자동화가 아니며, 업로드·전송·제출 버튼 �
 4. resume-draft.md
 5. cover-letter.md
 6. submission-checklist.md
-7. `career-os/config/candidate-profile.md`
+7. `career-os/config/candidate-profile.md` (core) + `career-os/config/candidate-profile-detail.md` (detail — 프로젝트 서사·의사결정 패턴·협업 스타일)
 8. application-package.md의 `## 근거 파일 참조` 에서 관련성 높은 근거 파일 2~5개 선택적으로 읽는다
 9. ledger.jsonl — riskFlags / revisionCount 확인
 
@@ -235,5 +236,6 @@ review.md 작성 후 아래 항목 검증. 실패 시 해당 섹션 재작성:
 - `career-os/docs/adr/INDEX.md` — ADR-045 (지원 후보 ledger 분리), ADR-038 (artifact 검증 후 상태 전이) 설계 근거
 - `career-os/docs/data-schema.md` — ledger.jsonl 스키마
 - `career-os/data/applications/ledger.jsonl` — 지원 이력 원장
-- `career-os/config/candidate-profile.md` — 후보자 프로필 단일 출처
+- `career-os/config/candidate-profile.md` — 후보자 프로필 core (사실·라벨)
+- `career-os/config/candidate-profile-detail.md` — 후보자 프로필 detail (프로젝트 서사·의사결정 패턴·협업 스타일)
 - `career-os/.claude/skills/application-package-writer/SKILL.md` — 생성 단계 skill (Phase 04)

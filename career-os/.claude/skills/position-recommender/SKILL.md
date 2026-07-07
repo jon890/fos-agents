@@ -45,7 +45,7 @@ Discord 요약은 내부 파일 경로, plan 번호, commit hash 같은 내부 �
 
 현재 에이전트는 다음 파일과 명령 출력을 직접 로드:
 
-1. `career-os/config/candidate-profile.md` — 후보자 프로필 (11섹션 prose, 경력·기술·자기진단 포함)
+1. `career-os/config/candidate-profile.md` — 후보자 프로필 core: 경력·기술 스택 라벨·강점·약점·제약 (추천·fit 판단용). 면접 서사 detail은 읽지 않는다.
 2. `career-os/config/external-reading-sources.json` (`techBlog` 필드) — 엔지니어링 블로그 신호 판단. 공고 수집 source registry가 아님
 3. `references/output-policy.md` — 비공개 산출물과 Discord 요약 정책
 4. `references/position-recommendation-prompt.md` — 추천 분석과 출력 형식 가이드

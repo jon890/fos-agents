@@ -27,7 +27,7 @@ Discord 추천 버튼의 `career.study-pack.create:*`는 초안 생성 요청일
 
 1. `career-os/sources/fos-study/**/*.md` 트리 스캔 결과 — 학습 문서 inventory 정본. exclude `.git/**`, `.claude/**`, `private/**`.
 2. `career-os/config/study-pack-topics.json` — 선택 사항. `<topic-key>` override/seed/fallback 후보 검색 → `outputPath` / `domain` / `title` / `promptAppend`
-3. `career-os/config/candidate-profile.md` — 11섹션 prose, 후보자 이력
+3. `career-os/config/candidate-profile.md` — 후보자 프로필 core: 경력·기술 스택 라벨·약점 (학습 문서 작성용). 면접 서사 detail은 읽지 않는다.
 4. `career-os/config/mvp-target.json` — `primary.company`, `primary.role` (현재 면접 타깃)
 5. `career-os/config/topic-profiles.json` — 선택 사항. 토픽 family별 작성 guide 또는 family override. 실제 파일 존재 여부보다 우선하지 않음.
 6. `references/study-pack-prompt.md` — prompt 구조 가이드
