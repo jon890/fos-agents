@@ -1,7 +1,7 @@
 # Phase 04 — study-progress 분리 + weak_spots 스키마 통일
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ## 목표
 

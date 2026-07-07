@@ -67,7 +67,6 @@ career-os/
 │   ├── verified-company-research-targets.json  검증 회사군 + 회사 키워드 단일 출처 (ADR-090·ADR-103. secondaryCompanies 포함)
 │   ├── candidate-config.json          후보자 구조화 사실 (experienceYears 등, ADR-099. profile.md는 prose)
 │   ├── baseline-core-files.json       baseline 분석 대상 파일 목록 (txt → JSON, plan002)
-│   ├── topic-file-map.json            고아 config. ADR-106 폐기 결정 (Phase 05 삭제, fos-study inventory로 대체)
 │   ├── live-coding-seed-pool.json
 │   ├── live-coding-seed-candidates.json
 │   └── .env                           비밀 (GITHUB_TOKEN, DISCORD_WEBHOOK_URL 등)
@@ -204,7 +203,6 @@ config 설계 원칙:
 - 공고 수집 설정은 `config/position-collection.json`과 `scripts/position-recommender/live-postings/` adapter가 소유한다.
 - 회사별 탐색 키워드는 `config/verified-company-research-targets.json`이 단일 출처이고, `position-collection.json`은 회사 비종속 role 키워드만 담는다(ADR-103).
 - `study-pack-topics.json`, `study-pack-candidates.json`처럼 자산 목록을 복제하는 파일은 plan068에서 reader inventory와 fallback을 확인한 뒤 축소한다.
-- `topic-file-map.json`은 고아 config로 ADR-106에서 폐기를 결정했다(plan092 Phase 05 삭제).
 
 ## 외부 의존성 (`_shared/`)
 

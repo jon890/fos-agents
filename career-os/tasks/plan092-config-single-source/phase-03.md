@@ -1,7 +1,7 @@
 # Phase 03 — candidate-profile core/detail 분리
 
 **Model**: opus
-**Status**: pending
+**Status**: completed
 
 ## 목표
 

@@ -1,7 +1,7 @@
 # Phase 05 — 고아 config 삭제 + 잔여 중복 정리
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ## 목표
 

@@ -1,6 +1,6 @@
 ## ADR-016 — config 디렉터리 통합: 관심사별 단일 파일 + JSON 통일
 
-- Status: Partially superseded by [[ADR-027]] (plan017, 2026-05-15) — topics.json이 3 namespace로 재분리 (study-pack-topics / study-pack-candidates / question-bank-topics). 외부 reading source 통합본은 `config/external-reading-sources.json`으로 rename했고, baseline-core-files.json 통합 결정은 유지.
+- Status: Partially superseded by [[ADR-027]] (plan017, 2026-05-15) — topics.json이 3 namespace로 재분리 (study-pack-topics / study-pack-candidates / question-bank-topics). 외부 reading source 통합본은 `config/external-reading-sources.json`으로 rename했고, baseline-core-files.json 통합 결정은 유지. topic-file-map.json은 [[ADR-106]]에서 폐기했다(plan092 Phase 05 삭제).
 - Date: 2026-05-13
 
 ### 맥락

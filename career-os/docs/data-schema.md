@@ -172,7 +172,6 @@ career-os가 다루는 모든 영속 데이터의 스키마와 위치. 새 필�
 - `first-round-drill-core-files.json` — `interview/prep.md` 단일 정본 이후 active reader가 없으면 제거한다.
 - `study-preferences.json` — `mvp-target`과 반복되는 current target은 제거하고 추천 철학/제약만 남긴다.
 - `study-pack-topics.json`, `study-pack-candidates.json` — 전체 topic DB 역할을 중단하고 override/seed만 남긴다.
-- `topic-file-map.json` — 수동 topic→file map 대신 fos-study inventory 검색/태그/path 기반 선별로 전환한다.
 - `topic-profiles.json` — 전역 config가 아니라 `study-pack-writer` reference나 작은 override로 이관한다.
 - `question-bank-topics.json` — `public/question-bank`와 역할을 분리하고, 필요하면 interview-asset topic override로 rename한다.
 - `live-coding-seed-pool.json`, `live-coding-seed-candidates.json` — active 추천 흐름에서 실제 사용 여부를 확인한 뒤 유지 또는 흡수한다.
@@ -190,7 +189,8 @@ config diet는 plan068에서 reader inventory와 fallback을 확인한 뒤 phase
 | `priorityCompanies[].company`, `koreanName`, `tier` | 공통/LLM | 회사명·검증 티어 |
 | `priorityCompanies[].hasAdapter`, `adapterId` | 코드 | 수집 adapter 커버리지·라우팅. `false`는 adapter 추가 backlog |
 | `priorityCompanies[].careerUrls`, `wantedKeywords` | 코드+LLM | discovery entrypoint + 탐색 키워드 |
-| `priorityCompanies[].preferredDomains`, `techBlogs`, `notes` | LLM | 회사 업사이드 판단 근거 |
+| `priorityCompanies[].preferredDomains`, `notes` | LLM | 회사 업사이드 판단 근거 |
+| `priorityCompanies[].techBlogs` | LLM | 기술 블로그 URL 목록. `ref:<key>` 값은 `config/external-reading-sources.json`의 `techBlog.items[].key`를 가리키고, URL 정본은 그 파일이다. 매칭 항목이 없으면 URL을 그대로 둔다 |
 | `secondaryCompanies[]` | 코드+LLM | 저-tier 회사 키워드 목록(ADR-103). priorityCompanies에 없던 회사 키워드를 담아 수집 커버리지 유지. `company`·`wantedKeywords` 중심 |
 | `cooldown.active[]`, `cooldown.notes` | LLM | 우선순위 감점 쿨다운 회사 + 해제 메모. 하드필터 아님(ADR-095) |
 | `preferenceExcluded.companies[]` | LLM | JD fit이 높아도 추천 티어에서 제외하는 선호 제외 회사(ADR-095) |
@@ -345,16 +345,6 @@ ADR-069 이후 `current_target`처럼 `config/mvp-target.json`의 현재 타깃�
 ### config/experience-question-bank-topics.json
 
 > **plan002 이후**: `config/topics.json`의 `question-bank` namespace로 통합. 단일 출처는 "통합 config 스키마 (plan002 이후)" 섹션 참조.
-
-### config/topic-file-map.json
-
-daily report용 토픽 → fos-study 파일 목록 매핑 (ADR-001).
-
-```json
-{
-  "<topic-key>": ["sources/fos-study/path/to/file.md", ...]
-}
-```
 
 ### config/tech-blog-sources.json / ai-topic-sources.json / geek-news-sources.json
 
