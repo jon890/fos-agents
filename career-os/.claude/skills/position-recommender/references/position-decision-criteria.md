@@ -20,14 +20,15 @@
 - JD 핏은 추천의 필요조건이지 충분조건이 아니다. 회사 업사이드가 약하거나 불확실하면 강력 추천에서 제외한다.
 - 개별 공고 원문 또는 Wanted active detail에서 역할, 스택, 요구사항을 확인한 공고만 추천한다.
 - Java/Spring, Kafka, Redis, MySQL/RDBMS, OpenSearch, Batch, MSA, 운영 트러블슈팅과 직접 연결되는 포지션을 우선한다.
-- Kotlin/Node/Python/Kubernetes/MLOps 중심 포지션은 강점 전이가 분명할 때만 stretch로 둔다.
+- Node/Python/Kubernetes/MLOps 중심 포지션은 강점 전이가 분명할 때만 stretch로 둔다.
+- Kotlin은 갭·감점 요소로 보지 않는다. Java 실전 운영 경험자는 Kotlin 적응이 쉬우므로, Kotlin 요건이 있어도 Java/Spring 백엔드 공고와 동일 기준으로 평가한다.
 - AI/AX/Agent/AI 플랫폼 포지션은 다음 조건 중 2개 이상이면 추천 후보로 본다.
   - Java/Kotlin/Python/TypeScript 중 하나 이상의 API·백엔드·플랫폼 개발 비중이 명시되어 있다.
   - LLM, RAG, Agent, Tool calling, Memory, workflow/orchestration, evaluation, LLMOps/MLOps 중 후보자 경험과 연결되는 키워드가 있다.
   - 내부 플랫폼, 개발 생산성, 업무 자동화, SDLC AI 활용, AI-Native 개발 문화처럼 후보자의 에이전트/자동화 경험을 차별화할 수 있다.
   - NHN 대비 브랜드/보상/도메인/엔지니어링 규모 업사이드가 분명하다.
 - 실무형 AI Agent 설계 자체가 핵심인 공고는 별도 감점한다. 후보자의 현재 강점은 서비스 백엔드, RAG/workflow, agent 자동화, 품질 검증이지, 대규모 실서비스 AI Agent 설계를 주도한 이력은 아직 부족하다.
-- NAVER Webtoon `AI Applied Engineer`는 사용자가 2026-06-21에 “실무적 AI agents 설계 쪽이 아직 미흡하고 마감일도 오늘까지라 지원은 어렵다”고 판단했으므로, 같은 공고가 다음 수집 루프에 남아 있어도 강력 추천 1순위로 올리지 말고 보류/후순위로 낮춘다.
+- 실무형 AI Agent 설계가 공고의 핵심이고 후보자의 대규모 실서비스 agent 설계 이력이 부족한 경우, 특히 마감이 임박했으면 강력 추천 1순위로 올리지 말고 보류/후순위로 낮춘다.
 - TCP/UDP 기반 네트워크 통신, socket server, realtime network protocol, custom protocol, Netty 기반 저수준 네트워크 서버 아키텍처의 깊은 이해와 실무 경험이 필수인 공고는 현재 후보자 기준 강력 추천/도전 추천에서 제외한다.
   후보자에게 HTTP API, gRPC 경계 트러블슈팅, MQ, Redis Streams 경험은 있으나 TCP/UDP socket server를 직접 설계·운영한 근거는 제한적이다.
   해당 문구가 우대사항이거나 공고의 핵심이 일반 Java/Spring API 서버라면 하드 제외하지 않고 `businessRisk` 또는 `stretchGap`에 저수준 네트워크 경험 부족을 명시한다.
@@ -42,6 +43,7 @@
 ### 3. 회사/도메인 업사이드
 
 - NHN 대비 브랜드, 보상, 트래픽 규모, 엔지니어링 문화, 성장성, 도메인 확장성을 함께 본다.
+- NHN 대비 업사이드 판단은 키워드/리스트로 필터링하지 않고 LLM이 이 문서와 `company-upside-reference.md` 기준으로 티어 배정 시 수행한다. `priorityCompanies`와 `position-collection.json`의 targetKeywords는 "무엇을 수집할지" 도달 범위(reach) seed일 뿐, "업사이드 통과 필터"가 아니다. 리스트에 없는 회사도 수집 snapshot에 들어오면 동일 기준으로 평가한다.
 - 최우선 탐색군은 `config/verified-company-research-targets.json`의 `priorityCompanies`를 단일 출처로 본다.
 - 검증된 회사군의 Core Platform, Payment/Settlement, Search/Ads, Commerce Platform, Identity, Reliability/Observability, Developer Platform, AI Platform 공고를 먼저 deep dive한다.
 - 대기업/유명 회사라도 JD 핏이 약하면 억지 추천하지 않는다.
