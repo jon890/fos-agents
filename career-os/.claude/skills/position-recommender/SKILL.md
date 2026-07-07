@@ -45,7 +45,7 @@ Discord 요약은 내부 파일 경로, plan 번호, commit hash 같은 내부 �
 
 현재 에이전트는 다음 파일과 명령 출력을 직접 로드:
 
-1. `career-os/config/candidate-profile.md` — 후보자 프로필 (11섹션 prose, 경력·기술·자기진단 포함)
+1. `career-os/config/candidate-profile.md` — 후보자 프로필 core: 경력·기술 스택 라벨·강점·약점·제약 (추천·fit 판단용). 면접 서사 detail은 읽지 않는다.
 2. `career-os/config/external-reading-sources.json` (`techBlog` 필드) — 엔지니어링 블로그 신호 판단. 공고 수집 source registry가 아님
 3. `references/output-policy.md` — 비공개 산출물과 Discord 요약 정책
 4. `references/position-recommendation-prompt.md` — 추천 분석과 출력 형식 가이드
@@ -116,8 +116,7 @@ Node 실행에서 `import.meta.dir` 관련 오류가 나면 Bun 전용 경로 �
 - 사용자의 현재 선호상 AI 서비스/AI Transformation(AX)/AI Agent/AI 플랫폼 포지션도 탐색한다. 단, 강력/도전 추천에는 서버·플랫폼 개발 전이가 분명하고 active/open 개별 공고 URL이 확인된 항목만 올린다.
 - 백엔드와 AI 전환 후보는 별도 관점으로 검토한다. 예: AI Agent/RAG/MCP/LLMOps/ML Backend/AI Platform처럼 API·서버·플랫폼·운영 자동화와 AI 응용 경험이 함께 필요한 공고.
 - Toss는 공식 `job-groups` API의 그룹/하위 포지션까지 수집 대상으로 본다. `AI Engineer` 그룹의 Platform/Brain/Commerce/Model/Ads 하위 포지션처럼 목록 화면의 그룹 구조에 묶인 공고를 누락하지 않는다.
-- 단, Toss 루트 회사의 `Server Developer (Product)` 같은 챕터/직군 단위 범용 공고는 구체적인 팀·도메인·상품이 특정된 공고가 아니므로 수집 후보에서 제외한다.
-- `Tech Lead`, `Server Lead`, CTO/기술총괄 계열은 현재 사용자의 seniority 대비 과도하므로 기본 수집/프리뷰 후보에서 제외한다.
+- Toss 루트 회사의 범용 챕터/직군 공고, `Tech Lead`/`Server Lead`/CTO·기술총괄, 모델 연구 중심 공고 제외 규칙은 `references/position-decision-criteria.md`의 "4. 역할 구성"을 단일 출처로 따른다(수집 후보 단계에도 동일 적용).
 - 최근 7일 강력 추천/도전 추천에 반복 등장한 회사·URL은 확인한다.
 - 반복 자체는 감점하지 않는다.
 - 동일 개별 active 공고가 여전히 최상위 후보면 유지하고 “반복 유지 사유”와 “아직 지원 액션이 필요한 이유”를 명시한다.
@@ -205,7 +204,7 @@ Discord 알림은 리포트 전체 요약이 아니라 “클릭 가능한 카�
 - Discord 요약에는 강력 추천 최대 3개, 도전 추천 최대 2개를 짧게 쓴다.
 - 첨부 HTML은 항상 `--postings data/runtime/live-position-postings.md --limit all`로 전체 active/open 후보를 보여준다.
 - 사용자가 넓은 preview, 20개 이상 후보, 또는 전체 후보를 요청하면 임의로 50개처럼 다시 자르지 않는다.
-- 전체 후보 preview와 전체 공고 HTML에서도 AI 모델 연구 중심 포지션과 CTO/기술총괄 포지션은 제외한다.
+- 전체 후보 preview와 전체 공고 HTML에서도 `references/position-decision-criteria.md`의 "4. 역할 구성" 제외 규칙을 동일하게 적용한다.
 - **중요: `position-recommendation-full-YYYY-MM-DD.html`은 추천 리포트 전체본이지, 수집된 모든 active/open 공고 목록이 아니다.** 사용자가 "모든 공고", "전체 공고", "다 들어있는 HTML"을 요청하거나 포함 여부를 확인하면 `data/runtime/live-position-postings.md`의 `direct_active_or_open_postings`와 HTML의 공고 링크/행 수를 비교한다. 불일치하면 full report를 재전송하지 말고, snapshot의 `link_type: direct_posting` + `posting_status: active/open` + `url` 항목 전체를 표로 렌더링한 별도 HTML을 `data/runtime/downloads/position-recommendation-all-postings-YYYY-MM-DD.html`로 만들고, 링크 수가 snapshot count와 일치하는지 검증한 뒤 첨부한다.
 - 전체 공고 HTML에는 최소 컬럼 `순번`, `출처`, `공고 링크`, `상태`, `마감`, `태그/스킬`, `요약`을 둔다. 공고명은 개별 공고 URL로 이동하는 `<a href>` 링크여야 하며, 최종 전송 전 `<a ` 개수와 표시 행 수가 `direct_active_or_open_postings`와 일치해야 한다.
 - 각 후보 preview 또는 전체 공고 HTML 행은 다음 4줄 또는 표 컬럼을 유지한다:
@@ -214,7 +213,7 @@ Discord 알림은 리포트 전체 요약이 아니라 “클릭 가능한 카�
   - 한줄: 보고서의 `왜 맞는가` 첫 문장 수준 요약
   - 링크: 개별 공고 URL
 - 보류·주의와 추가 수집 대상은 기본 Discord 요약에서 제외한다.
-- AI 모델 연구 중심 포지션, CTO/기술총괄, Tech Lead/Server Lead, Toss 루트 회사의 범용 `Server Developer (...)` 공고는 전체 공고 HTML에서 제외한다.
+- 전체 공고 HTML에서도 `references/position-decision-criteria.md`의 "4. 역할 구성" 제외 규칙(모델 연구 중심 포지션, CTO/기술총괄, Tech Lead/Server Lead, Toss 루트 회사의 범용 공고)을 적용한다.
 - 링크만 있는 과압축 알림을 피하고, Discord에서 바로 다음 행동을 판단할 수 있는 최소 맥락을 제공한다.
 
 #### Cron 최종 응답 override

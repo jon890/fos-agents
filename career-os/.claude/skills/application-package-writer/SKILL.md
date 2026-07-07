@@ -29,9 +29,10 @@ fit/gap 판단, reviewer용 리스크, 근거 파일 경로는 내부 분석 섹
 현재 에이전트는 다음 파일과 명령 출력을 직접 로드:
 
 1. `career-os/data/applications/<company>/<role>/posting.md` — 공고 본문 (필수)
-2. `career-os/config/candidate-profile.md` — 후보자 프로필 11섹션 (필수)
-3. 후보자 프로필이 참조하는 근거 파일 (`task/**/*.md`, `resume/*.md`) — 필요 시 선택적으로 읽는다
-4. `career-os/data/applications/ledger.jsonl` — posting path 자동 추출 시 참조 (선택)
+2. `career-os/config/candidate-profile.md` — 후보자 프로필 core: 사실·라벨 (필수)
+3. `career-os/config/candidate-profile-detail.md` — 프로젝트 서사·의사결정 패턴·협업 스타일·면접 준비 우선순위·기술 스택 증거 상세 (필수)
+4. 후보자 프로필이 참조하는 근거 파일 (`task/**/*.md`, `resume/*.md`) — 필요 시 선택적으로 읽는다
+5. `career-os/data/applications/ledger.jsonl` — posting path 자동 추출 시 참조 (선택)
 
 ## Workflow
 
@@ -52,8 +53,8 @@ posting path 특정 불가 시 stderr + exit 1.
 순서대로 읽는다:
 
 1. posting.md
-2. `career-os/config/candidate-profile.md`
-3. candidate-profile.md의 "Source provenance" 섹션에서 관련성 높은 근거 파일 2~5개 선택적으로 읽는다
+2. `career-os/config/candidate-profile.md` (core) + `career-os/config/candidate-profile-detail.md` (detail — 프로젝트 서사·의사결정 패턴·협업 스타일·면접 준비 우선순위)
+3. `career-os/config/candidate-profile-provenance.md`의 근거 파일 매핑에서 관련성 높은 근거 파일 2~5개 선택적으로 읽는다
    - 공고 요구사항과 겹치는 프로젝트·기술 스택의 근거 파일 우선 선택
    - 전체 `task/**` 탐색 금지 — 관련성 판단은 프로필 인용 경로 기반
 
@@ -286,4 +287,5 @@ candidate-profile.md + 근거 파일과 교차 분석:
 - `career-os/docs/adr/INDEX.md` — ADR-045 (지원 후보 ledger 분리), ADR-038 (artifact 검증 후 상태 전이) 설계 근거
 - `career-os/docs/data-schema.md` — ledger.jsonl 스키마
 - `career-os/data/applications/ledger.jsonl` — 지원 이력 원장
-- `career-os/config/candidate-profile.md` — 후보자 프로필 단일 출처
+- `career-os/config/candidate-profile.md` — 후보자 프로필 core (사실·라벨)
+- `career-os/config/candidate-profile-detail.md` — 후보자 프로필 detail (프로젝트 서사·의사결정 패턴·기술 스택 증거 상세)

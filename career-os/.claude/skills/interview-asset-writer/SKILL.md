@@ -30,10 +30,11 @@ interview asset은 후보자 이력 기반 자료지만 `fos-study` 공개 발�
 
 1. `career-os/public/question-bank/` inventory — 공개 질문 bank 정본. 질문 본문은 public-safe JSON에서만 읽는다.
 2. `career-os/config/question-bank-topics.json` — 선택 사항. public bank 정본이 아니라 interview asset 전용 `<topic-key>` override 후보 → `outputPath` / `domain` / `title` / `inputFiles` / `promptAppend`
-3. `career-os/config/candidate-profile.md` — 11섹션 prose, 후보자 이력 (필수)
-4. `career-os/config/mvp-target.json` — `primary.company`, `primary.role` (현재 면접 타깃)
-5. `career-os/task/*` 또는 `career-os/resume/*` — `inputFiles` 명시되면 그 파일들, 아니면 candidate-profile에서 참조하는 경로
-6. (선택) `sources/fos-study/<유사 outputPath>.md` — overlap 회피
+3. `career-os/config/candidate-profile.md` — 후보자 이력 core: 사실·라벨 (필수)
+4. `career-os/config/candidate-profile-detail.md` — 주요 프로젝트·개인 프로젝트·의사결정 패턴·협업 등 경험 서사 (필수)
+5. `career-os/config/mvp-target.json` — `primary.company`, `primary.role` (현재 면접 타깃)
+6. `career-os/task/*` 또는 `career-os/resume/*` — `inputFiles` 명시되면 그 파일들, 아니면 candidate-profile core/detail에서 참조하는 경로
+7. (선택) `sources/fos-study/<유사 outputPath>.md` — overlap 회피
 
 ## Workflow
 
@@ -154,7 +155,7 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 
 ## 개인 질문 풀 생성
 
-`candidate-profile.md`의 프로젝트·경험 기반으로 드릴에서 쓸 수 있는 개인 맞춤 질문을 생성한다.
+`candidate-profile-detail.md`의 프로젝트·경험 서사(+ core `candidate-profile.md`의 강점·기술 스택 라벨) 기반으로 드릴에서 쓸 수 있는 개인 맞춤 질문을 생성한다.
 일반 워크플로(fos-study 마크다운 발행)와 별개의 독립 모드다.
 
 ### 트리거
@@ -163,7 +164,7 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 
 ### 입력
 
-`career-os/config/candidate-profile.md` — 프로젝트·경험 섹션에서 근거를 추출한다.
+`career-os/config/candidate-profile-detail.md` — 주요 프로젝트·개인 프로젝트·의사결정 패턴 섹션에서 근거를 추출한다. 기술 스택 라벨·강점은 core `career-os/config/candidate-profile.md`를 함께 참조한다.
 
 ### 출력
 
@@ -215,7 +216,8 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 
 ## References
 
-- `career-os/config/candidate-profile.md` — 후보자 이력 단일 출처 (Q&A 질문 은행 + 마스터 플레이북 양쪽 공통 입력)
+- `career-os/config/candidate-profile.md` — 후보자 이력 core (사실·라벨, Q&A 질문 은행 + 마스터 플레이북 양쪽 공통 입력)
+- `career-os/config/candidate-profile-detail.md` — 후보자 이력 detail (주요 프로젝트·개인 프로젝트·의사결정 패턴·협업)
 - `career-os/config/mvp-target.json` — 현재 면접 타깃 (마스터 플레이북 cross-track 톤 기준)
 - `career-os/public/question-bank/` — 공개 질문 bank 정본 (topic-key 매칭 1순위)
 - `career-os/config/question-bank-topics.json` — interview asset 전용 override 후보 (outputPath / domain / inputFiles)

@@ -8,7 +8,7 @@
       "interview_date": "2026-06-15",
       "deprecated_at": "2026-07-03",
       "outcome": "rejected",
-      "notes": "2차 면접 진행 후 불합격 연락을 받아 active 타깃에서 제거했다. 피드백은 기술적 자질은 충분하나 지원동기가 명확히 받아들여지지 않았다는 평가였다. 관련 private 준비 자산은 회고와 차기 루프의 지원동기·회사 선택 이유·커리어 정합 보강 근거로만 보존한다."
+      "notes": "2차 면접 진행 후 불합격 연락을 받아 active 타깃에서 제거했다. 피드백은 기술적 자질은 충분하나 지원동기가 명확히 받아들여지지 않았다는 평가였다. 관련 private 준비 자산은 회고와 차기 루프의 지원동기·회사 선택 이유·커리어 정합 보강 근거로만 보존한다. 탈락 시점 정본은 config/verified-company-research-targets.json의 cooldown.active(CJ푸드빌)이다."
     },
     {
       "company": "CJ OliveYoung",
@@ -16,7 +16,7 @@
       "role": "Java Backend",
       "interview_date": "2026-04-21",
       "deprecated_at": "2026-05-13",
-      "notes": "면접 일정 종료 후 비활성화. 관련 산출물(study-pack, question-bank, interview/cj-oliveyoung-wellness-backend.md 등)은 참고용으로 보존, 재생성하지 않음."
+      "notes": "면접 일정 종료 후 비활성화. 관련 산출물(study-pack, question-bank, interview/cj-oliveyoung-wellness-backend.md 등)은 참고용으로 보존, 재생성하지 않음. 탈락 시점 정본은 config/verified-company-research-targets.json의 cooldown.active(CJ올리브영)이다."
     }
   ]
 }

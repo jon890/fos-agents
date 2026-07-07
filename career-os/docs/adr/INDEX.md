@@ -102,3 +102,7 @@
 | ADR-100 | position-recommender 신규 후보 강제 회전 폐기 | Accepted | [ADR-100-position-recommender-신규-후보-강제-회전-폐기.md](ADR-100-position-recommender-신규-후보-강제-회전-폐기.md) |
 | ADR-101 | position-recommender 산출물을 표준 출력 JSON으로 단일화하고 소비측이 가공한다 | Accepted; consumer backend parts superseded by [[ADR-102]] | [ADR-101-position-recommender-표준출력-json-단일화-소비측-가공.md](ADR-101-position-recommender-표준출력-json-단일화-소비측-가공.md) |
 | ADR-102 | fos-career 웹 대시보드를 폐기하고 파일 기반 피드백 루프로 회귀한다 | Accepted | [ADR-102-fos-career-웹-대시보드를-폐기하고-파일-기반-피드백-루프로-회귀한다.md](ADR-102-fos-career-웹-대시보드를-폐기하고-파일-기반-피드백-루프로-회귀한다.md) |
+| ADR-103 | 회사 키워드·AI 랭킹 규칙 단일 출처 | Accepted | [ADR-103-회사-키워드-ai-랭킹-규칙-단일-출처.md](ADR-103-회사-키워드-ai-랭킹-규칙-단일-출처.md) |
+| ADR-104 | candidate-profile core/detail 분리 + skill 매핑 | Accepted | [ADR-104-candidate-profile-core-detail-분리-skill-매핑.md](ADR-104-candidate-profile-core-detail-분리-skill-매핑.md) |
+| ADR-105 | study-progress ↔ drill 상태 분리 + weak_spots 스키마 정본 | Accepted | [ADR-105-study-progress-drill-상태-분리-weak-spots-스키마-정본.md](ADR-105-study-progress-drill-상태-분리-weak-spots-스키마-정본.md) |
+| ADR-106 | topic-file-map 폐기 + 참조 doc 정리 | Accepted | [ADR-106-topic-file-map-폐기-참조-doc-정리.md](ADR-106-topic-file-map-폐기-참조-doc-정리.md) |

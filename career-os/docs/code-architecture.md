@@ -55,15 +55,18 @@ career-os/
 │
 ├── config/                                ← 사람이 큐레이션한 정책·타깃·baseline·예외 override (ADR-069)
 │   ├── mvp-target.json                현재 active 타깃 단일 출처
-│   ├── candidate-profile.md           이력 (prose, 의도적으로 JSON 아님)
+│   ├── candidate-profile.md           이력 core — 추천·fit 판단용 사실·라벨 (prose, ADR-104)
+│   ├── candidate-profile-detail.md    이력 detail — 면접 서사·심화 (ADR-104 신규, Phase 03)
+│   ├── study-progress.json            topic 학습 이력·약점 상태 (ADR-002, data/→config/. 드릴 상태 분리 ADR-105)
+│   ├── drill-progress.json            드릴 간격 반복 상태 (ADR-105 신규, Phase 04. drill-engine.ts 소유)
 │   ├── study-pack-topics.json         legacy 대량 topic DB. plan068에서 override/seed로 축소 예정
 │   ├── study-pack-candidates.json     자동 발굴 active 후보 캐시 + 사람이 고른 seed/pin. 정본 목록 아님
 │   ├── question-bank-topics.json      interview-asset topic override 후보. public/question-bank 정본 아님
 │   ├── external-reading-sources.json  techBlog/ai/geek 외부 reading reservoir (plan002, ADR-083 이후 공고 source registry와 분리)
-│   ├── position-collection.json       position 수집 설정 (wanted jobGroupId·targetKeywords, ADR-099)
+│   ├── position-collection.json       position 수집 설정 (wanted jobGroupId + 회사 비종속 role 키워드, ADR-099·ADR-103)
+│   ├── verified-company-research-targets.json  검증 회사군 + 회사 키워드 단일 출처 (ADR-090·ADR-103. secondaryCompanies 포함)
 │   ├── candidate-config.json          후보자 구조화 사실 (experienceYears 등, ADR-099. profile.md는 prose)
 │   ├── baseline-core-files.json       baseline 분석 대상 파일 목록 (txt → JSON, plan002)
-│   ├── topic-file-map.json            legacy daily용 토픽 → 파일. fos-study inventory 기반으로 대체 예정
 │   ├── live-coding-seed-pool.json
 │   ├── live-coding-seed-candidates.json
 │   └── .env                           비밀 (GITHUB_TOKEN, DISCORD_WEBHOOK_URL 등)
@@ -198,7 +201,8 @@ config 설계 원칙:
 - 공개 질문 목록은 `public/question-bank/`에서 파생한다.
 - config에 남길 것은 현재 타깃, 후보자 baseline, 학습 진행 상태, 외부 reading reservoir, 사람이 고른 pin/override/제외 조건이다.
 - 공고 수집 설정은 `config/position-collection.json`과 `scripts/position-recommender/live-postings/` adapter가 소유한다.
-- `study-pack-topics.json`, `study-pack-candidates.json`, `topic-file-map.json`처럼 자산 목록을 복제하는 파일은 plan068에서 reader inventory와 fallback을 확인한 뒤 축소한다.
+- 회사별 탐색 키워드는 `config/verified-company-research-targets.json`이 단일 출처이고, `position-collection.json`은 회사 비종속 role 키워드만 담는다(ADR-103).
+- `study-pack-topics.json`, `study-pack-candidates.json`처럼 자산 목록을 복제하는 파일은 plan068에서 reader inventory와 fallback을 확인한 뒤 축소한다.
 
 ## 외부 의존성 (`_shared/`)
 

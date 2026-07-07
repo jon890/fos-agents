@@ -1,6 +1,6 @@
 ## ADR-001 — Daily 파일 선택 전략
 
-- Status: 결정됨
+- Status: 결정됨. topic-file-map.json 폐기는 [[ADR-106]] 참조(plan092 Phase 05 삭제, fos-study inventory로 대체).
 - Date: 2026-04-13
 
 ### 맥락
