@@ -101,20 +101,21 @@
       "ML Backend",
       "Workflow Automation"
     ],
-    "fitFraming": "현재 사용자는 AI/RAG/Vector Search/AX 전환 주도 포지션 관심이 높다. 모델 연구가 아니라 서비스 백엔드, 워크플로우/RAG, 에이전트 자동화, 품질 검증, 플랫폼 운영 경험으로 평가하고, 이 조건을 만족하는 active/open 공고를 상위에 둔다.",
+    "coreIdentity": "백엔드 코어(정합성·동시성·점진 아키텍처)에 AI를 제품·개발 생산성으로 접목하는 엔지니어. AI 전문가도 순수 백엔드도 아닌 '백엔드 코어 + AI 접목'이 일관된 정체성이다. 백엔드가 뿌리, AI는 확장이라는 서사가 'AI만 좇는다'·'AI 하다 왜 백엔드로' 양쪽 오해를 막는다.",
+    "fitFraming": "모델 연구가 아니라 서비스 백엔드, 워크플로우/RAG, 에이전트 자동화, 품질 검증, 플랫폼 운영 경험으로 평가한다. 백엔드/플랫폼 기반이 분명한 회사의 AI 접목 역할을 우선한다.",
     "rankingBias": {
-      "priority": "AI 전환 레인을 상위 배치한다. RAG, Vector Search, AX 전환 주도, AI Agent/AI 플랫폼, LLMOps/MLOps처럼 사용자의 최근 관심사가 직접 드러나는 active/open 개별 공고는 순수 결제·커머스 백엔드보다 먼저 검토한다.",
+      "priority": "백엔드 코어 + AI 접목이 함께 있는 공고를 최우선한다. 대규모 플랫폼/서비스 회사(AI-native 아님)의 백엔드 role에 에이전트·RAG·AI 플랫폼 접점이 붙은 공고가 최적이다. 서사 일관성상 이런 공고가 순수 결제·커머스 백엔드나 순수 AI-native 회사보다 먼저다.",
       "topSignals": [
+        "백엔드 코어(Java/Kotlin/Spring·Kafka·Redis·정합성) + 에이전트/RAG/AI 플랫폼 접점 결합",
         "RAG 색인/검색/OpenSearch/vector database 운영",
-        "AX 전환 주도 또는 전사 AI Transformation",
-        "AI Agent/LLM workflow/tool calling/platform backend",
-        "LLM API Gateway/Model Router/LLMOps/MLOps 플랫폼",
+        "LLM API Gateway/Model Router/Agent serving/LLMOps 플랫폼(서버 개발 비중 분명)",
         "AI 제품 백엔드·품질 검증·서빙 안정화"
       ],
       "guardrails": [
         "순수 모델 연구, 논문 중심, GPU 커널/학습 최적화 중심은 계속 낮게 본다.",
         "AI 키워드가 있어도 서버/API/플랫폼 개발 비중이 약하면 보류로 둔다.",
-        "Tech Lead/CTO/기술총괄처럼 seniority가 과한 역할은 상위 배치하지 않는다."
+        "Tech Lead/CTO/기술총괄처럼 seniority가 과한 역할은 상위 배치하지 않는다.",
+        "AI-native 회사(제품 코어가 AI)는 현재 AI 경력이 짧아 '왜 또 AI 이직' 리스크가 크므로, JD fit이 좋아도 지원동기 방어가 필요하면 강력보다 도전으로 둔다."
       ]
     },
     "preferredPatterns": [
