@@ -26,18 +26,46 @@ function loadJson(file: string): Record<string, unknown> | null {
   }
 }
 
-/** wanted 수집 설정. 파일이 없거나 깨지면 안전한 기본값으로 폴백한다. */
+/**
+ * 회사별 탐색 키워드를 verified-company-research-targets.json에서 읽는다.
+ * 단일 출처는 priorityCompanies[].wantedKeywords + secondaryCompanies[].wantedKeywords다(ADR-103).
+ * 파일을 못 읽으면 회사 키워드 없이 role 키워드만으로 진행한다(수집 자체를 막지 않는다).
+ */
+function loadCompanyWantedKeywords(): string[] {
+  const json = loadJson("verified-company-research-targets.json");
+  if (json === null) return [];
+  const companyGroups = [
+    ...(Array.isArray(json.priorityCompanies) ? json.priorityCompanies : []),
+    ...(Array.isArray(json.secondaryCompanies) ? json.secondaryCompanies : []),
+  ] as Record<string, unknown>[];
+  const keywords: string[] = [];
+  for (const company of companyGroups) {
+    const wantedKeywords = company.wantedKeywords;
+    if (Array.isArray(wantedKeywords)) {
+      for (const k of wantedKeywords) if (typeof k === "string") keywords.push(k);
+    }
+  }
+  return keywords;
+}
+
+/**
+ * wanted 수집 설정. 파일이 없거나 깨지면 안전한 기본값으로 폴백한다.
+ * targetKeywords는 position-collection.json의 회사 비종속 role 키워드와
+ * verified-company-research-targets.json의 회사 키워드를 merge한 결과다(ADR-103).
+ */
 export function loadWantedCollectionConfig(): WantedCollectionConfig {
   const json = loadJson("position-collection.json");
+  const companyKeywords = loadCompanyWantedKeywords();
   if (json === null) {
-    console.error("WARN position-collection.json 미존재 — 기본값(jobGroupId=518, targetKeywords=[]) 사용");
-    return { jobGroupId: 518, targetKeywords: [] };
+    console.error("WARN position-collection.json 미존재 — 기본값(jobGroupId=518)과 회사 키워드만 사용");
+    return { jobGroupId: 518, targetKeywords: [...new Set(companyKeywords)] };
   }
   const wanted = (json.wanted ?? {}) as Record<string, unknown>;
   const jobGroupId = typeof wanted.jobGroupId === "number" ? wanted.jobGroupId : 518;
-  const targetKeywords = Array.isArray(wanted.targetKeywords)
+  const roleKeywords = Array.isArray(wanted.targetKeywords)
     ? wanted.targetKeywords.filter((k): k is string => typeof k === "string")
     : [];
+  const targetKeywords = [...new Set([...roleKeywords, ...companyKeywords])];
   return { jobGroupId, targetKeywords };
 }
 
