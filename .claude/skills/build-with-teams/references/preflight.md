@@ -109,6 +109,23 @@ echo "main 이 앞선 commit: $(git rev-list --count HEAD..origin/main)"
   - rebase 금지 (force push 필요 → 프로젝트 force push 금지 정책 위반). merge 로 처리.
   - base 최신화는 PR 모양·충돌 해소에 영향이 크므로 사용자에게 방식을 confirm 받는다.
 
+### 실행 중 base 열화 재점검 (필수 — plan092 회고)
+
+base 신선도는 worktree 생성 시점에만 점검하면 부족하다.
+여러 phase 를 순차 실행하는 대규모 plan 은 실행에 수십 분~수 시간이 걸려, 그 사이 다른 세션이 origin/main 을 전진시킬 수 있다.
+실측 회고: worktree 생성 시 `HEAD..origin/main`=0 이었으나, 5-phase 실행 도중 다른 세션이 main 에 커밋을 머지했고, 그 커밋이 plan 과 같은 파일을 수정해 code-reviewer·docs-verifier 가 PR 직전에야 stale base 를 포착했다.
+
+따라서 **push/PR 직전(9단계)에 base 신선도를 한 번 더 확인**한다:
+
+```bash
+# cwd: worktree
+git fetch origin --quiet
+echo "main 이 앞선 commit: $(git rev-list --count HEAD..origin/main)"
+```
+
+- **0**: 그대로 push/PR.
+- **1 이상**: `git merge --no-ff origin/main` 으로 통합 (rebase 금지) → 충돌 해소 → **겹친 파일에서 양측 변경이 모두 보존됐는지 실측** (자동 병합이 깨끗해도 상대 커밋의 의미 변경이 살아있는지 grep 으로 확인) → CI 재실행. merge commit 은 같은 PR 에 포함.
+
 ## worktree 기반 격리 실행 (필수)
 
 작업 간 충돌을 방지하기 위해 반드시 **git worktree** 사용. worktree는 프로젝트 내부 `.claude/worktrees/` 하위에 생성 (프로젝트 부모 디렉터리 오염 방지).
