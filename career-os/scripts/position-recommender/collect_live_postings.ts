@@ -20,6 +20,7 @@
  *   bun collect_live_postings.ts --output <output-md> [--max-wanted N] [--source all|wanted|toss|coupang|samsung|sk|cj]
  */
 
+import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type {
@@ -33,8 +34,25 @@ import type {
 import { dedupe, keepActiveDirectPostings } from "./live-postings/validator.ts";
 import { render } from "./live-postings/render.ts";
 import { configuredSourceIds, selectAdapters } from "./live-postings/adapters/index.ts";
+import { setExcludedCompanies } from "./live-postings/policy.ts";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
+
+/**
+ * 선호제외 회사 목록을 config에서 읽어 수집 필터에 주입한다.
+ * 단일 출처는 config/verified-company-research-targets.json 의 preferenceExcluded.companies (ADR-095).
+ * config를 못 읽으면 회사 제외 없이 진행한다(수집 자체를 막지 않는다).
+ */
+function loadExcludedCompanies(): void {
+  try {
+    const path = resolve(REPO_ROOT, "career-os/config/verified-company-research-targets.json");
+    const config = JSON.parse(readFileSync(path, "utf8"));
+    const companies: string[] = config?.preferenceExcluded?.companies ?? [];
+    setExcludedCompanies(companies);
+  } catch (e) {
+    console.error(`WARN preferenceExcluded config load failed, proceeding without company exclusion: ${e}`);
+  }
+}
 
 // ---- CLI ----------------------------------------------------------------
 
@@ -92,6 +110,7 @@ function importedCountsBySource(posts: Posting[]): Map<string, number> {
 
 async function main(): Promise<number> {
   const { out, source, serverOnly, wantedLimit, includeTossArticles } = parseArgs(process.argv.slice(2));
+  loadExcludedCompanies();
   const collected: Posting[] = [];
   const errors: string[] = [];
   const sourceDiagnostics: SourceDiagnostic[] = [];

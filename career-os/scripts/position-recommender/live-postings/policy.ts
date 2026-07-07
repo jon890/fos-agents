@@ -55,20 +55,29 @@ export const HARD_DOMAIN_KEYWORDS = [
   "search", "검색", "platform", "플랫폼", "kafka", "streaming", "backend", "백엔드", "server", "서버",
 ];
 export const AI_KEYWORDS = ["llm", "rag", "openai", "gemini", "머신러닝", "인공지능"];
-export const EXCLUDED_COMPANY_KEYWORDS = [
-  "레브잇",
-  "올웨이즈",
-  "rev-it",
-  "revit",
-  "always",
-  "alway",
-  "다니엘프로젝트",
-  "리아드코퍼레이션",
-  "피닉스랩",
-  "phoenixlab",
-  "와그",
-  "waug",
-];
+// 선호제외 회사의 단일 출처는 config/verified-company-research-targets.json 의
+// preferenceExcluded.companies 다 (ADR-095). collect_live_postings.ts 가 실행 시작 시
+// setExcludedCompanies()로 이 목록을 주입한다. 아래 별칭 맵은 한국어 회사명만으로는
+// 매칭되지 않는 로마자/영문 표기를 보강하는 매칭 보조일 뿐, 회사 결정 자체가 아니다.
+const EXCLUDED_COMPANY_ALIASES: Record<string, string[]> = {
+  "레브잇": ["rev-it", "revit"],
+  "올웨이즈": ["always", "alway"],
+  "피닉스랩": ["phoenixlab"],
+  "와그(waug)": ["와그", "waug"],
+};
+let excludedCompanyKeywords: string[] = [];
+
+/** config preferenceExcluded.companies 를 정규화·별칭 확장해 수집 필터 키워드로 등록한다. */
+export function setExcludedCompanies(companies: string[]): void {
+  const set = new Set<string>();
+  for (const raw of companies) {
+    const name = norm(raw).toLowerCase();
+    if (!name) continue;
+    set.add(name);
+    for (const alias of EXCLUDED_COMPANY_ALIASES[name] ?? []) set.add(alias.toLowerCase());
+  }
+  excludedCompanyKeywords = [...set];
+}
 
 // ---- Text helpers --------------------------------------------------------
 
@@ -115,7 +124,8 @@ export function isContractRole(text: string): boolean {
 }
 
 export function isExcludedCompany(text: string): boolean {
-  return hasKeyword(text, EXCLUDED_COMPANY_KEYWORDS);
+  if (excludedCompanyKeywords.length === 0) return false;
+  return hasKeyword(text, excludedCompanyKeywords);
 }
 
 export function classify(text: string): string[] {
