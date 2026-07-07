@@ -146,12 +146,14 @@ career-os가 다루는 모든 영속 데이터의 스키마와 위치. 새 필�
 유지 원칙:
 
 - 현재 회사·직무·포지션 홈: `config/mvp-target.json`
-- 후보자 baseline과 장기 이력: `config/candidate-profile.md`
+- 후보자 baseline과 장기 이력(추천·fit 판단용 core): `config/candidate-profile.md` (ADR-104)
+- 후보자 면접 서사·심화(면접 skill용 detail): `config/candidate-profile-detail.md` (ADR-104)
 - baseline 분석용 core file pin: `config/baseline-core-files.json`
-- 학습 진행 상태와 약점 상태: `config/study-progress.json`
+- topic 학습 진행 상태와 약점 학습 상태: `config/study-progress.json` (ADR-105 — 드릴 상태는 분리)
+- 드릴 간격 반복 상태: `config/drill-progress.json` (ADR-105)
 - 외부 reading reservoir: `config/external-reading-sources.json`
-- 검증 회사군 단일 출처: `config/verified-company-research-targets.json` (ADR-090, references에서 이동)
-- position 수집 설정: `config/position-collection.json` (ADR-099) — `{ wanted: { jobGroupId, targetKeywords[] } }`. wanted.ts 하드코딩 제거
+- 검증 회사군과 회사 키워드 단일 출처: `config/verified-company-research-targets.json` (ADR-090, references에서 이동; ADR-103 회사 키워드 흡수)
+- position 수집 설정(회사 비종속 role 키워드): `config/position-collection.json` (ADR-099, ADR-103) — `{ wanted: { jobGroupId, targetKeywords[] } }`. targetKeywords는 role 키워드만, 회사 키워드는 verified가 소유
 - 후보자 구조화 사실: `config/candidate-config.json` (ADR-099) — `{ experienceYears, ... }`. 코드가 읽는 사실 정본, profile.md는 prose 서술(거울 구조)
 - position 지표 시계열: `logs/position-metrics.jsonl` (ADR-099) — 날짜별 1줄 append. `{ date, collection:{activeDirectPostings,sourceCounts,rejectCounts,adapterCoverage}, recommendation:{strongActive,newRatio,tierDist,labelCompleteness} }`
 - 지원서 export 기본 디자인 계약: `config/resume-design.md`
@@ -189,6 +191,7 @@ config diet는 plan068에서 reader inventory와 fallback을 확인한 뒤 phase
 | `priorityCompanies[].hasAdapter`, `adapterId` | 코드 | 수집 adapter 커버리지·라우팅. `false`는 adapter 추가 backlog |
 | `priorityCompanies[].careerUrls`, `wantedKeywords` | 코드+LLM | discovery entrypoint + 탐색 키워드 |
 | `priorityCompanies[].preferredDomains`, `techBlogs`, `notes` | LLM | 회사 업사이드 판단 근거 |
+| `secondaryCompanies[]` | 코드+LLM | 저-tier 회사 키워드 목록(ADR-103). priorityCompanies에 없던 회사 키워드를 담아 수집 커버리지 유지. `company`·`wantedKeywords` 중심 |
 | `cooldown.active[]`, `cooldown.notes` | LLM | 우선순위 감점 쿨다운 회사 + 해제 메모. 하드필터 아님(ADR-095) |
 | `preferenceExcluded.companies[]` | LLM | JD fit이 높아도 추천 티어에서 제외하는 선호 제외 회사(ADR-095) |
 
@@ -286,9 +289,21 @@ private/<company-slug>/<position-slug>/
 분리 파일로 생성됐던 면접 준비 리포트, 예상 질문 드릴, 1차 면접 전략, 1차 면접 체크리스트, 10일 Java 준비 재료는 active primary asset으로 유지하지 않는다.
 필요한 내용만 `interview/prep.md`에 정제해 흡수한다.
 
-### config/candidate-profile.md
+### config/candidate-profile.md (core) + config/candidate-profile-detail.md (detail)
 
-후보자 이력. 11개 섹션의 prose 마크다운. **JSON이 아닌 의도적 선택** — AI 에이전트가 context로 직접 읽는 자산이라 구조화보다 narrative 가치가 큼. 모든 주장은 `task/**` 또는 `resume/**` 경로 태깅됨 (소스 추적용).
+후보자 이력. prose 마크다운. **JSON이 아닌 의도적 선택** — AI 에이전트가 context로 직접 읽는 자산이라 구조화보다 narrative 가치가 큼. 모든 주장은 `task/**` 또는 `resume/**` 경로 태깅됨 (소스 추적용).
+
+ADR-104로 성격별 2파일로 분리한다.
+
+- `config/candidate-profile.md` (core) — 추천·fit 판단용 사실·라벨 7개 섹션.
+  지원 대상, 핵심 무기, 커리어 타임라인, 보유 기술 스택(라벨 중심·증거 축약), 입증된 강점, 약점·학습 중인 영역, 제약·스코프.
+  경로를 유지해 기존 참조 파손을 막는다.
+- `config/candidate-profile-detail.md` (detail) — 면접 서사·심화 5개 섹션.
+  주요 프로젝트 요약, 개인 프로젝트, 기술 의사결정 패턴, 협업·리더십·코드 리뷰 스타일, 면접 준비 우선순위.
+  보유 기술 스택의 증거 상세(여러 줄 서술 + `task/**` 경로)도 여기 둔다.
+- Source provenance는 `config/candidate-profile-provenance.md`가 단일 출처다. 어느 skill에도 프롬프트로 주입하지 않는다.
+
+skill별 주입 범위(core만 / core+detail)는 ADR-104의 매핑 표가 단일 출처다.
 
 ### config/study-preferences.json
 
@@ -996,7 +1011,11 @@ caller가 `.env`를 ts에 전달하는 방법: `bun --env-file=career-os/.env _s
 
 ## data/
 
-### config/study-progress.json (ADR-002, data/ → config/ 이동)
+### config/study-progress.json (ADR-002, data/ → config/ 이동; ADR-105 드릴 상태 분리)
+
+topic 학습 이력과 topic 학습 약점 상태의 단일 출처다.
+드릴 간격 반복 상태는 `config/drill-progress.json`으로 분리했다(ADR-105).
+스키마 정본은 `scripts/interview-drill/drill-engine.ts`의 topic 타입과 실데이터다.
 
 ```json
 {
@@ -1012,26 +1031,38 @@ caller가 `.env`를 ts에 전달하는 방법: `bun --env-file=career-os/.env _s
     "<topic-key>": {
       "last_studied": "YYYY-MM-DD | null",
       "study_count": "int",
-      "question_id": "string | null",
-      "pass_count": "int",
-      "shallow_count": "int",
-      "fail_count": "int",
-      "unknown_count": "int",
-      "next_review_date": "YYYY-MM-DD | null",
-      "last_passed": "YYYY-MM-DD | null",
-      "status": "active | retired"
+      "last_evaluated": "YYYY-MM-DD | null",
+      "status": "string (new | improving | strong | stale | covered-update-existing 등)"
     }
   }
 }
 ```
 
-- `question_id`: 연결된 질문 풀 ID (드릴 일별 로그와 연결).
-- `pass_count` / `shallow_count` / `fail_count` / `unknown_count`: 답변 성과 누적 횟수.
+- `weak_spots`의 이 필드는 topic 학습 상태다. `study-topic-recommender` 학습 흐름이 갱신한다.
+- `<topic-key>`는 약점 추적 식별자로 드릴·공부팩과 공유한다(ADR-097).
+- 옛 문서에 있던 `question_id`·`shallow_count`·`unknown_count`는 코드·실데이터에 없어 제거했다(ADR-105 drift 정리).
+
+### config/drill-progress.json (ADR-105 신규)
+
+드릴 간격 반복 상태의 단일 출처다.
+`tech-interview-drill`·`behavioral-interview-drill`이 공유하는 `scripts/interview-drill/drill-engine.ts`가 읽고 쓴다.
+`<topic-key>`는 study-progress와 같은 약점 추적 식별자다.
+
+```json
+{
+  "<topic-key>": {
+    "pass_count": "int",
+    "fail_count": "int",
+    "next_review_date": "YYYY-MM-DD | null",
+    "last_passed": "YYYY-MM-DD | null"
+  }
+}
+```
+
+- `pass_count` / `fail_count`: 답변 통과·실패 누적 횟수.
 - `next_review_date`: 다음 복습 예정일 (간격 반복 스케줄, ISO 8601).
 - `last_passed`: 마지막 통과 날짜 (ISO 8601, null이면 미통과).
-- `status`: `active`이면 드릴에 포함되고, `retired`이면 충분히 통과해 드릴에서 제외됨.
-
-plan086 이후 `tech-interview-drill` / `behavioral-interview-drill`이 `weak_spots` 필드를 갱신한다.
+- 신설 시 빈 `{}`로 시작한다. 실데이터에 drill 필드가 0건이라 마이그레이션 데이터 손실이 없다(ADR-105).
 
 ### data/reports/ (분석·준비 리포트 — plan017, plan086)
 
