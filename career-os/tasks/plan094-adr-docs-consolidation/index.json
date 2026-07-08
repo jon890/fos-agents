@@ -1,0 +1,39 @@
+{
+  "name": "plan094-adr-docs-consolidation",
+  "description": "career-os의 ADR(약 100개)과 의사결정 문서(data-schema·code-architecture·flow·prd·adr/INDEX)에서 stale·중복·superseded·bloat 항목을 감사해 압축·통합한다. ADR은 역사 기록이므로 '압축'은 삭제가 아니라 supersede 표기·병합·archive로 provenance를 보존한다. 어떤 항목을 정리할지 아직 모르므로 audit-first: Phase 01에서 발견(findings)하고, 사용자 리뷰·승인 뒤 Phase 02에서 정리한다.",
+  "created_at": "2026-07-08T00:00:00+09:00",
+  "updated_at": "2026-07-08T00:00:00+09:00",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 2,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "docs/adr/INDEX.md",
+    "docs/data-schema.md",
+    "docs/code-architecture.md",
+    "docs/flow.md",
+    "docs/prd.md",
+    "docs/README.md",
+    ".claude/skills/docs-check/SKILL.md"
+  ],
+  "target_repositories": [
+    {
+      "name": "career-os",
+      "path": ".",
+      "role": "ADR·docs 건전성 감사, 압축·통합, INDEX 갱신"
+    }
+  ],
+  "depends_on": [
+    "plan093(config/state 재구조화) 완료 권장 — 구조 변경이 여러 ADR·docs 경로에 영향을 주므로, 재구조화 후 감사해야 stale 판정이 정확하다",
+    "docs-check 스킬 감사 결과가 Phase 02 정리 대상의 결정 근거"
+  ],
+  "execution_policy": {
+    "phase_order": "Phase 01(감사) → 사용자 리뷰·승인 → Phase 02(정리).",
+    "parallelism": "phase 병렬 실행하지 않는다.",
+    "audit_first": "Phase 01은 발견 전용(read-only). 어떤 ADR·문서를 어떻게 정리할지는 감사 findings + 사용자 승인 뒤 확정한다. 승인 없이 ADR을 삭제·병합하지 않는다.",
+    "provenance_guard": "ADR 압축은 provenance 보존이 원칙이다. 삭제 대신 supersede 표기(어느 ADR이 대체했는지)·병합(내용 합치되 원 번호 참조 유지)·archive를 쓴다. 결정 이력을 잃지 않는다.",
+    "task_scope": "task materialization 단계에서는 tasks/plan094-adr-docs-consolidation/** 파일만 생성·갱신한다.",
+    "pr_unit": "PR은 plan 단위. phase 경계는 commit 경계."
+  }
+}
