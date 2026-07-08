@@ -176,9 +176,9 @@ spawn prompt 표준 · executor 규칙 · shutdown 절차 · phase 별 atomic co
 ### 7. 코드 품질 검사 (code-reviewer)
 
 executor 완료 후 code-reviewer 를 새로 스폰하여 SendMessage 로 검사 시작 지시. team-lead 직접 수행 금지.
-**사전 해소 점검**: `.claude/skills/_shared/pitfalls/INDEX.md` 의 code-review 카테고리 (단일 소스) 적용 확인 → 미적용 시 FIX_NEEDED (executor 재투입).
+**사전 해소 점검**: `.claude/skills/plan-and-build/references/common-pitfalls/INDEX.md` 의 code-review 카테고리 (단일 소스) 적용 확인 → 미적용 시 FIX_NEEDED (executor 재투입).
 
-code-reviewer spawn 메시지에 **"`.claude/skills/_shared/pitfalls/INDEX.md` 라우터로 이 diff(`git diff origin/main..HEAD`) 의 변경 유형에 해당하는 code-review 패턴 파일만 골라 grep 점검하라. 변경 유형이 표에 없으면 `triggers:` grep, 그래도 애매하면 `pitfalls/code-review/` 디렉터리 통째로 점검하라"** 능동 지시 포함. (전부 읽지 말고 라우터로 선택 — 컨텍스트 절약)
+code-reviewer spawn 메시지에 **"`.claude/skills/plan-and-build/references/common-pitfalls/INDEX.md` 라우터로 이 diff(`git diff origin/main..HEAD`) 의 변경 유형에 해당하는 code-review 패턴 파일만 골라 grep 점검하라. 변경 유형이 표에 없으면 `triggers:` grep, 그래도 애매하면 `pitfalls/code-review/` 디렉터리 통째로 점검하라"** 능동 지시 포함. (전부 읽지 말고 라우터로 선택 — 컨텍스트 절약)
 
 **code-reviewer가 검사할 범위**: executor가 변경한 파일만 (`git diff --name-only` 기준).
 
@@ -208,11 +208,9 @@ docs-verifier spawn 지시: **`.claude/agents/<workspace>-docs-verifier.md` 의 
    - main 직접 커밋 **금지** — 이중 진실원 회피, push 혼입 위험, PR 머지로 자동 반영
    - 재실행 방지는 3중 사전 검증 (status + 원격 브랜치 + 오픈 PR)
 7. **review 회고 (조건부 필수)** — critic REVISE / FIX_NEEDED / UPDATE_NEEDED 발생 시 트리거. 1-shot 통과 시 skip. 0건이라도 자문 수행.
-   - 회고 절차는 출처별 단일 소스를 따른다:
-     - **critic** REVISE → `_shared/retros/critic-retro.md`
-     - **code-reviewer** FIX → `_shared/retros/code-reviewer-retro.md`
-     - **docs-verifier** UPDATE/VIOLATION → `_shared/retros/docs-verifier-retro.md`
-   - commit 메시지: `docs(skill): plan{N} 회고 — ...`. 별도 회고 docs 신설 금지.
+   - 회고는 출처별로 원인·재발 방지를 정리한다: **critic** REVISE / **code-reviewer** FIX / **docs-verifier** UPDATE·VIOLATION.
+   - 별도 회고 docs를 신설하지 않는다. 재사용 가치 있는 회고는 `references/preflight.md`에 누적한다(plan032·plan092 회고 참조).
+   - commit 메시지: `docs(skill): plan{N} 회고 — ...`.
    - **위치**: worktree 브랜치에서 commit + push → PR 에 자동 포함. main 직접 commit 금지.
 8. 팀 shutdown (SendMessage `shutdown_request`)
 9. **worktree 정리 (필수)** — PR 머지 전이라도 사이클 종료 시 제거. 정리 명령: **references/preflight.md**
