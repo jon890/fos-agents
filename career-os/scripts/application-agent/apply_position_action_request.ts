@@ -1,11 +1,8 @@
 #!/usr/bin/env bun
-import { createHash } from 'crypto';
 import { readFileSync } from 'fs';
 import { z } from 'zod';
-import { DEFAULT_QUEUE_PATH, readFrontdoorQueue, updateQueueRecord } from './frontdoor_queue_io';
-import { FrontdoorQueueRecordSchema, type FrontdoorQueueRecord } from './frontdoor_queue_schema';
-import { appendNewRecord, DEFAULT_LEDGER_PATH, readLedger } from './ledger_io';
-import { ApplicationLedgerRecordSchema, type ApplicationLedgerRecord } from './ledger_schema';
+import { DEFAULT_LEDGER_PATH, readLedger } from './ledger_io';
+import { type ApplicationLedgerRecord } from './ledger_schema';
 import { DEFAULT_PRIORITY_HISTORY_PATH } from './priority_history';
 import { ACTION_STAGE_DISPLAY_VALUE, type ActionStage } from './priority_schema';
 import {
@@ -20,7 +17,6 @@ import { confirmPriority } from './run';
 type ApplyOptions = {
   requestPath?: string;
   dryRun: boolean;
-  queuePath: string;
   ledgerPath: string;
   historyPath: string;
 };
@@ -36,7 +32,6 @@ type SnapshotMismatch = {
 function parseArgs(args: string[]): ApplyOptions {
   const opts: ApplyOptions = {
     dryRun: false,
-    queuePath: DEFAULT_QUEUE_PATH,
     ledgerPath: DEFAULT_LEDGER_PATH,
     historyPath: DEFAULT_PRIORITY_HISTORY_PATH,
   };
@@ -44,7 +39,6 @@ function parseArgs(args: string[]): ApplyOptions {
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--request' && args[i + 1]) opts.requestPath = args[++i];
     else if (args[i] === '--dry-run') opts.dryRun = true;
-    else if (args[i] === '--queue' && args[i + 1]) opts.queuePath = args[++i];
     else if (args[i] === '--ledger' && args[i + 1]) opts.ledgerPath = args[++i];
     else if (args[i] === '--history' && args[i + 1]) opts.historyPath = args[++i];
     else if (args[i] === '--help') {
@@ -68,29 +62,6 @@ function effectiveStageForAction(action: PositionActionRequest['requestedAction'
 }
 
 function buildProjection(request: PositionActionRequest, opts: ApplyOptions): CurrentProjection | null {
-  if (request.recordType === 'frontdoor_queue') {
-    const record = readFrontdoorQueue(opts.queuePath).find((item) => item.queueId === request.recordId);
-    if (!record) return null;
-    const userConfirmed = record.userConfirmedPriority;
-    const actionStage = userConfirmed?.actionStage ?? record.actionStage ?? record.recommendationSnapshot?.actionStage ?? null;
-    return {
-      recordType: 'frontdoor_queue',
-      recordId: record.queueId,
-      workbenchId: `frontdoor_queue:${record.queueId}`,
-      company: record.company,
-      role: record.role,
-      url: record.url,
-      status: record.status,
-      actionStage,
-      priorityRank: userConfirmed?.priorityRank ?? record.priorityRank ?? record.recommendationSnapshot?.priorityRank ?? null,
-      prioritySource: userConfirmed ? 'user-confirmed' : record.actionStage || record.recommendationSnapshot?.actionStage ? 'recommendation' : 'none',
-      ledgerId: record.promotedApplicationId ?? null,
-      readiness: { completeCount: 0, totalCount: 7 },
-      latestRecommendationSnapshotAt: record.recommendationSnapshot?.generatedAt ?? null,
-      latestUserConfirmationAt: userConfirmed?.confirmedAt ?? null,
-    };
-  }
-
   const record = readLedger(opts.ledgerPath).find((item) => item.id === request.recordId);
   if (!record) return null;
   const userConfirmed = record.userConfirmedPriority;
@@ -158,100 +129,6 @@ function collectMismatches(
 
 function priorityRankFor(stage: ActionStage, current: CurrentProjection): number {
   return current.priorityRank ?? ACTION_STAGE_DISPLAY_VALUE[stage];
-}
-
-function generateLedgerId(company: string, role: string): string {
-  const base = `${company}-${role}`;
-  const slug = base
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 40) || 'position';
-  const hash = createHash('sha1').update(base).digest('hex').slice(0, 8);
-  const ts = Date.now().toString(36).slice(-6);
-  return `app-${slug}-${hash}-${ts}`;
-}
-
-function derivePriority(fitScore: number): 'high' | 'normal' | 'low' {
-  if (fitScore >= 85) return 'high';
-  if (fitScore >= 75) return 'normal';
-  return 'low';
-}
-
-function buildNewLedgerRecord(record: FrontdoorQueueRecord, now: string): ApplicationLedgerRecord {
-  const id = generateLedgerId(record.company, record.role);
-  const applicationDir = `applications/${id}`;
-  return ApplicationLedgerRecordSchema.parse({
-    id,
-    company: record.company,
-    role: record.role,
-    source: record.source,
-    url: record.url,
-    status: 'discovered',
-    statusUpdatedAt: now,
-    discoveredAt: now,
-    applicationDir,
-    postingPath: `${applicationDir}/posting.md`,
-    needsUserReview: false,
-    userDecision: 'pending',
-    revisionCount: 0,
-    maxRevisionCount: 3,
-    riskFlags: record.riskFlags ?? [],
-    nextActions: [
-      'run_posting_analysis',
-      'run_fit_gap_analysis',
-      'generate_resume_package',
-      'review_application_package',
-    ],
-    fitScore: record.fitScore,
-    priority: derivePriority(record.fitScore),
-    sourceFreshness: record.sourceFreshness,
-    actionableCandidate: true,
-    autonomyLevel: 'agent_only',
-    requiredUserAction: 'none',
-    agentPhase: 'ingested',
-    lastDecisionAt: now,
-    decisionReason: `frontdoor queue에서 사용자 선택 승격 (queueId: ${record.queueId}, fitScore: ${record.fitScore})`,
-    notes: record.decisionReason,
-    actionStage: 'prepare-now',
-    priorityRank: record.priorityRank ?? record.recommendationSnapshot?.priorityRank,
-    priorityReason: record.priorityReason,
-    nextAction: '지원 준비 산출물 생성을 진행한다.',
-    evidenceUrls: record.evidenceUrls.length > 0 ? record.evidenceUrls : [record.url],
-    recommendationSnapshot: record.recommendationSnapshot,
-  });
-}
-
-function promoteFrontdoor(recordId: string, opts: ApplyOptions): string {
-  const queue = readFrontdoorQueue(opts.queuePath);
-  const candidate = queue.find((record) => record.queueId === recordId);
-  if (!candidate) throw new Error(`frontdoor queue record not found: ${recordId}`);
-  if (candidate.status === 'rejected' || candidate.status === 'expired') {
-    throw new Error(`cannot promote inactive frontdoor record: ${recordId} status=${candidate.status}`);
-  }
-  if (candidate.status === 'promoted_to_ledger' && candidate.promotedApplicationId) {
-    return candidate.promotedApplicationId;
-  }
-
-  const duplicate = readLedger(opts.ledgerPath).find((record) => record.url === candidate.url);
-  const now = new Date().toISOString();
-  if (duplicate) {
-    updateQueueRecord(candidate.queueId, {
-      status: 'promoted_to_ledger',
-      promotedApplicationId: duplicate.id,
-      selectedAt: candidate.selectedAt ?? now,
-    }, opts.queuePath);
-    return duplicate.id;
-  }
-
-  const newRecord = buildNewLedgerRecord(candidate, now);
-  appendNewRecord(opts.ledgerPath, newRecord);
-  updateQueueRecord(candidate.queueId, {
-    status: 'promoted_to_ledger',
-    promotedApplicationId: newRecord.id,
-    selectedAt: now,
-  }, opts.queuePath);
-  return newRecord.id;
 }
 
 function materialPaths(record: ApplicationLedgerRecord): Record<string, string | null> {
@@ -354,27 +231,15 @@ async function main(): Promise<void> {
       return;
     }
 
-    const targetLedgerId =
-      request.requestedAction === 'prepare_application' && request.recordType === 'frontdoor_queue'
-        ? promoteFrontdoor(request.recordId, opts)
-        : request.recordType === 'ledger'
-          ? request.recordId
-          : current.ledgerId ?? null;
-
-    const priorityTargetType =
-      request.requestedAction === 'prepare_application' && targetLedgerId
-        ? 'ledger'
-        : request.recordType;
-    const priorityTargetId = priorityTargetType === 'ledger' && targetLedgerId ? targetLedgerId : request.recordId;
+    const targetLedgerId = request.recordId;
 
     const applied = confirmPriority({
-      recordId: priorityTargetId,
-      recordType: priorityTargetType,
+      recordId: targetLedgerId,
+      recordType: 'ledger',
       actionStage: effectiveActionStage,
       priorityRank: priorityRankFor(effectiveActionStage, current),
       reason: request.effectiveReason,
       changedBy: request.changedBy,
-      queuePath: opts.queuePath,
       ledgerPath: opts.ledgerPath,
       historyPath: opts.historyPath,
     });
@@ -431,7 +296,6 @@ Usage:
   cat request.json | bun scripts/application-agent/apply_position_action_request.ts [--dry-run]
 
 Options:
-  --queue <path>     frontdoor queue path
   --ledger <path>    ledger path
   --history <path>   priority history path
 `);

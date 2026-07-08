@@ -4,7 +4,7 @@ import {
   PriorityRankSchema,
 } from './priority_schema';
 
-export const PositionActionRecordTypeSchema = z.enum(['frontdoor_queue', 'ledger']);
+export const PositionActionRecordTypeSchema = z.enum(['ledger']);
 
 export const PositionActionRequestActionSchema = z.enum([
   'hold',

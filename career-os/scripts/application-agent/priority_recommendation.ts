@@ -1,15 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import {
-  type FrontdoorQueueRecord,
-  FrontdoorQueueRecordSchema,
-} from './frontdoor_queue_schema';
-import {
-  DEFAULT_QUEUE_PATH,
-  readFrontdoorQueue,
-  writeFrontdoorQueue,
-} from './frontdoor_queue_io';
-import {
   type ApplicationLedgerRecord,
   ApplicationLedgerRecordSchema,
 } from './ledger_schema';
@@ -27,7 +18,7 @@ const LIVE_POSTINGS_PATH = `${WORKSPACE_PREFIX}cache/live-position-postings.md`;
 const POSITION_RECOMMENDATION_PATH = `${WORKSPACE_PREFIX}reports/latest/position-recommendation.md`;
 const CANDIDATE_PROFILE_PATH = `${WORKSPACE_PREFIX}config/candidate-profile.md`;
 
-type RecordType = 'frontdoor_queue' | 'ledger';
+type RecordType = 'ledger';
 
 type CandidateInput = {
   recordType: RecordType;
@@ -47,7 +38,7 @@ type CandidateInput = {
   fitAnalysisPath?: string;
   reviewPath?: string;
   userConfirmedPriority?: unknown;
-  raw: FrontdoorQueueRecord | ApplicationLedgerRecord;
+  raw: ApplicationLedgerRecord;
 };
 
 type PriorityUpdate = {
@@ -62,7 +53,6 @@ type PriorityUpdate = {
 
 type CliOptions = {
   dryRun: boolean;
-  queuePath: string;
   ledgerPath: string;
   outputDir: string;
 };
@@ -70,7 +60,6 @@ type CliOptions = {
 function parseOpts(args: string[]): CliOptions {
   const opts: CliOptions = {
     dryRun: true,
-    queuePath: DEFAULT_QUEUE_PATH,
     ledgerPath: DEFAULT_LEDGER_PATH,
     outputDir: DEFAULT_OUTPUT_DIR,
   };
@@ -78,7 +67,6 @@ function parseOpts(args: string[]): CliOptions {
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--dry-run') opts.dryRun = true;
     else if (args[i] === '--write') opts.dryRun = false;
-    else if (args[i] === '--queue' && args[i + 1]) opts.queuePath = args[++i];
     else if (args[i] === '--ledger' && args[i + 1]) opts.ledgerPath = args[++i];
     else if (args[i] === '--output-dir' && args[i + 1]) opts.outputDir = args[++i];
   }
@@ -113,25 +101,6 @@ function collectMarkdownFiles(dir: string, out: string[]): void {
     if (entry.isDirectory()) collectMarkdownFiles(fullPath, out);
     else if (entry.isFile() && entry.name.endsWith('.md')) out.push(fullPath);
   }
-}
-
-function toCandidateInput(record: FrontdoorQueueRecord): CandidateInput {
-  return {
-    recordType: 'frontdoor_queue',
-    id: record.queueId,
-    company: record.company,
-    role: record.role,
-    url: record.url,
-    fitScore: record.fitScore,
-    status: record.status,
-    sourceFreshness: record.sourceFreshness,
-    rank: record.rank,
-    decisionReason: record.decisionReason,
-    riskFlags: record.riskFlags ?? [],
-    nextActions: record.nextActions ?? [],
-    userConfirmedPriority: record.userConfirmedPriority,
-    raw: record,
-  };
 }
 
 function ledgerToCandidateInput(record: ApplicationLedgerRecord): CandidateInput {
@@ -222,11 +191,7 @@ function deriveActionStage(candidate: CandidateInput): ActionStage {
   if (candidate.status === 'closed' || candidate.sourceFreshness === 'stale') {
     return 'low-priority';
   }
-  if (
-    candidate.status === 'ready_for_user_review' ||
-    candidate.status === 'start_approved' ||
-    candidate.status === 'promoted_to_ledger'
-  ) {
+  if (candidate.status === 'ready_for_user_review') {
     return 'prepare-now';
   }
   if ((candidate.fitScore ?? 0) >= 85 && candidate.sourceFreshness !== 'stale') {
@@ -294,7 +259,7 @@ function deriveFitSummary(candidate: CandidateInput, candidateProfileLoaded: boo
 }
 
 function deriveFitEvidence(candidate: CandidateInput): string[] {
-  const evidence = ['frontdoor queue 또는 ledger record'];
+  const evidence = ['ledger record'];
   if (candidate.applicationDir) evidence.push('공고별 application directory');
   if (candidate.postingPath) evidence.push('posting.md');
   if (candidate.fitAnalysisPath) evidence.push('fit-analysis.md');
@@ -427,16 +392,13 @@ function readApplicationFile(path: string | undefined): string {
   return loadOptionalText(resolved);
 }
 
-function applyUpdates<T extends FrontdoorQueueRecord | ApplicationLedgerRecord>(
+function applyUpdates<T extends ApplicationLedgerRecord>(
   records: T[],
   updates: Map<string, PriorityUpdate>,
-  idField: 'queueId' | 'id',
   schema: { parse: (input: unknown) => T },
 ): T[] {
   return records.map((record) => {
-    const id = idField === 'queueId'
-      ? (record as FrontdoorQueueRecord).queueId
-      : (record as ApplicationLedgerRecord).id;
+    const id = record.id;
     const update = updates.get(id);
     if (!update) return record;
     return schema.parse({
@@ -470,7 +432,6 @@ function renderDistribution(updates: PriorityUpdate[]): string {
 
 async function main(): Promise<void> {
   const opts = parseOpts(process.argv.slice(2));
-  const frontdoor = readFrontdoorQueue(opts.queuePath);
   const ledger = readLedger(opts.ledgerPath);
   const dailyReport = loadRecentDailyPositionReport();
 
@@ -484,10 +445,7 @@ async function main(): Promise<void> {
     candidateProfileLoaded: existsSync(CANDIDATE_PROFILE_PATH),
   };
 
-  const candidates = [
-    ...frontdoor.map(toCandidateInput),
-    ...ledger.map(ledgerToCandidateInput),
-  ];
+  const candidates = ledger.map(ledgerToCandidateInput);
 
   if (candidates.length === 0) {
     console.error('PHASE_BLOCKED: no posting input available for priority snapshot smoke');
@@ -517,33 +475,26 @@ async function main(): Promise<void> {
     });
 
   const perStageRank = new Map<ActionStage, number>();
-  const queueUpdates = new Map<string, PriorityUpdate>();
   const ledgerUpdates = new Map<string, PriorityUpdate>();
 
   for (const { candidate, stage } of ranked) {
     const priorityRank = (perStageRank.get(stage) ?? 0) + 1;
     perStageRank.set(stage, priorityRank);
     const update = buildUpdate(candidate, priorityRank, context);
-    if (candidate.recordType === 'frontdoor_queue') queueUpdates.set(candidate.id, update);
-    else ledgerUpdates.set(candidate.id, update);
+    ledgerUpdates.set(candidate.id, update);
   }
 
-  const allUpdates = [...queueUpdates.values(), ...ledgerUpdates.values()];
+  const allUpdates = [...ledgerUpdates.values()];
   console.log(`candidate count: ${candidates.length}`);
   console.log(`stage distribution: ${renderDistribution(allUpdates)}`);
   console.log(`dry-run: ${opts.dryRun ? 'yes' : 'no'}`);
 
   if (opts.dryRun) return;
 
-  writeFrontdoorQueue(
-    applyUpdates(frontdoor, queueUpdates, 'queueId', FrontdoorQueueRecordSchema),
-    opts.queuePath,
-  );
   writeLedger(
     opts.ledgerPath,
-    applyUpdates(ledger, ledgerUpdates, 'id', ApplicationLedgerRecordSchema),
+    applyUpdates(ledger, ledgerUpdates, ApplicationLedgerRecordSchema),
   );
-  console.log(`updated frontdoor records: ${queueUpdates.size}`);
   console.log(`updated ledger records: ${ledgerUpdates.size}`);
 }
 

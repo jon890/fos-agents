@@ -59,7 +59,6 @@ career-os에서 사용자에게 보이는 문서와 task 문장을 자연스럽�
 - `status`
 - `snapshot`
 - `ledger`
-- `frontdoor queue`
 - `skill`
 - `runner`
 - `proxy`
@@ -68,7 +67,6 @@ career-os에서 사용자에게 보이는 문서와 task 문장을 자연스럽�
 
 예:
 
-- `frontdoor queue`: 추천 후보 대기열
 - `ledger`: 사용자가 준비 시작을 승인한 지원 원장
 - `snapshot`: 요청 당시 상태 요약
 

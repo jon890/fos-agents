@@ -24,7 +24,7 @@ export const PriorityHistorySnapshotSchema = z
 export const PriorityHistoryEventSchema = z.object({
   eventId: z.string().min(1),
   recordId: z.string().min(1),
-  recordType: z.enum(['frontdoor_queue', 'ledger']),
+  recordType: z.enum(['ledger']),
   changedAt: z.string().min(1),
   changedBy: z.string().min(1),
   previous: PriorityHistorySnapshotSchema,
@@ -62,7 +62,7 @@ export function appendPriorityHistoryEvent(
 
 export function createPriorityHistoryEvent(input: {
   recordId: string;
-  recordType: 'frontdoor_queue' | 'ledger';
+  recordType: 'ledger';
   changedBy: string;
   previous: z.infer<typeof PriorityHistorySnapshotSchema>;
   next: z.infer<typeof UserConfirmedPrioritySchema>;

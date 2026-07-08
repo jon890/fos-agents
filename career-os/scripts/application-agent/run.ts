@@ -14,12 +14,6 @@ import {
   type ApplicationLedgerRecord,
 } from './ledger_schema';
 import {
-  DEFAULT_QUEUE_PATH,
-  readFrontdoorQueue,
-  writeFrontdoorQueue,
-} from './frontdoor_queue_io';
-import { FrontdoorQueueRecordSchema } from './frontdoor_queue_schema';
-import {
   ActionStageSchema,
   UserConfirmedPrioritySchema,
   type ActionStage,
@@ -170,28 +164,25 @@ function cmdValidate(args: string[]): void {
 
 function parseConfirmPriorityArgs(args: string[]): {
   recordId?: string;
-  recordType?: 'frontdoor_queue' | 'ledger';
+  recordType?: 'ledger';
   actionStage?: ActionStage;
   priorityRank?: number;
   reason?: string;
   changedBy: string;
-  queuePath: string;
   ledgerPath: string;
   historyPath: string;
 } {
   const parsed = {
     changedBy: 'user',
-    queuePath: DEFAULT_QUEUE_PATH,
     ledgerPath: DEFAULT_LEDGER_PATH,
     historyPath: DEFAULT_PRIORITY_HISTORY_PATH,
   } as {
     recordId?: string;
-    recordType?: 'frontdoor_queue' | 'ledger';
+    recordType?: 'ledger';
     actionStage?: ActionStage;
     priorityRank?: number;
     reason?: string;
     changedBy: string;
-    queuePath: string;
     ledgerPath: string;
     historyPath: string;
   };
@@ -200,8 +191,8 @@ function parseConfirmPriorityArgs(args: string[]): {
     if (args[i] === '--record-id' && args[i + 1]) parsed.recordId = args[++i];
     else if (args[i] === '--record-type' && args[i + 1]) {
       const recordType = args[++i];
-      if (recordType !== 'frontdoor_queue' && recordType !== 'ledger') {
-        throw new Error('--record-type must be frontdoor_queue or ledger');
+      if (recordType !== 'ledger') {
+        throw new Error('--record-type must be ledger');
       }
       parsed.recordType = recordType;
     } else if (args[i] === '--stage' && args[i + 1]) {
@@ -212,8 +203,6 @@ function parseConfirmPriorityArgs(args: string[]): {
       parsed.reason = args[++i];
     } else if (args[i] === '--changed-by' && args[i + 1]) {
       parsed.changedBy = args[++i];
-    } else if (args[i] === '--queue' && args[i + 1]) {
-      parsed.queuePath = args[++i];
     } else if (args[i] === '--ledger' && args[i + 1]) {
       parsed.ledgerPath = args[++i];
     } else if (args[i] === '--history' && args[i + 1]) {
@@ -226,19 +215,18 @@ function parseConfirmPriorityArgs(args: string[]): {
 
 export type ConfirmPriorityInput = {
   recordId: string;
-  recordType?: 'frontdoor_queue' | 'ledger';
+  recordType?: 'ledger';
   actionStage: ActionStage;
   priorityRank: number;
   reason: string;
   changedBy: string;
-  queuePath?: string;
   ledgerPath?: string;
   historyPath?: string;
 };
 
 export type ConfirmPriorityResult = {
   recordId: string;
-  recordType: 'frontdoor_queue' | 'ledger';
+  recordType: 'ledger';
   eventId: string;
   confirmedAt: string;
   messages: string[];
@@ -246,7 +234,6 @@ export type ConfirmPriorityResult = {
 
 export function confirmPriority(input: ConfirmPriorityInput): ConfirmPriorityResult {
   const opts = {
-    queuePath: DEFAULT_QUEUE_PATH,
     ledgerPath: DEFAULT_LEDGER_PATH,
     historyPath: DEFAULT_PRIORITY_HISTORY_PATH,
     ...input,
@@ -266,77 +253,42 @@ export function confirmPriority(input: ConfirmPriorityInput): ConfirmPriorityRes
     confirmedBy: opts.changedBy,
   });
 
-  if (!opts.recordType || opts.recordType === 'frontdoor_queue') {
-    const queueRecords = readFrontdoorQueue(opts.queuePath);
-    const queueIndex = queueRecords.findIndex((record) => record.queueId === opts.recordId);
-    if (queueIndex !== -1) {
-      const previous = queueRecords[queueIndex].userConfirmedPriority ?? null;
-      queueRecords[queueIndex] = FrontdoorQueueRecordSchema.parse({
-        ...queueRecords[queueIndex],
-        userConfirmedPriority: next,
-      });
-      writeFrontdoorQueue(queueRecords, opts.queuePath);
-      const event = createPriorityHistoryEvent({
-        recordId: opts.recordId,
-        recordType: 'frontdoor_queue',
-        changedBy: opts.changedBy,
-        previous,
-        next,
-        reason: opts.reason,
-        source: 'confirm-priority-command',
-        changedAt: confirmedAt,
-      });
-      appendPriorityHistoryEvent(event, opts.historyPath);
-      messages.push(`confirmed priority for frontdoor queue record: ${opts.recordId}`);
-      messages.push(`suggested next actions: ${queueRecords[queueIndex].nextAction ?? '(none)'}`);
-      return {
-        recordId: opts.recordId,
-        recordType: 'frontdoor_queue',
-        eventId: event.eventId,
-        confirmedAt,
-        messages,
-      };
-    }
+  const ledgerRecords = readLedger(opts.ledgerPath);
+  const ledgerIndex = ledgerRecords.findIndex((record) => record.id === opts.recordId);
+  if (ledgerIndex === -1) {
+    throw new Error(`record not found in ledger: ${opts.recordId}`);
   }
 
-  if (!opts.recordType || opts.recordType === 'ledger') {
-    const ledgerRecords = readLedger(opts.ledgerPath);
-    const ledgerIndex = ledgerRecords.findIndex((record) => record.id === opts.recordId);
-    if (ledgerIndex !== -1) {
-      const previous = ledgerRecords[ledgerIndex].userConfirmedPriority ?? null;
-      ledgerRecords[ledgerIndex] = {
-        ...ledgerRecords[ledgerIndex],
-        userConfirmedPriority: next,
-      };
-      writeLedger(opts.ledgerPath, ledgerRecords);
-      const event = createPriorityHistoryEvent({
-        recordId: opts.recordId,
-        recordType: 'ledger',
-        changedBy: opts.changedBy,
-        previous,
-        next,
-        reason: opts.reason,
-        source: 'confirm-priority-command',
-        changedAt: confirmedAt,
-      });
-      appendPriorityHistoryEvent(event, opts.historyPath);
-      messages.push(`confirmed priority for ledger record: ${opts.recordId}`);
-      const suggestions = buildPreparationActionSuggestions(
-        next.actionStage,
-        ledgerRecords[ledgerIndex],
-      );
-      for (const suggestion of suggestions) messages.push(suggestion);
-      return {
-        recordId: opts.recordId,
-        recordType: 'ledger',
-        eventId: event.eventId,
-        confirmedAt,
-        messages,
-      };
-    }
-  }
-
-  throw new Error(`record not found in requested priority source: ${opts.recordId}`);
+  const previous = ledgerRecords[ledgerIndex].userConfirmedPriority ?? null;
+  ledgerRecords[ledgerIndex] = {
+    ...ledgerRecords[ledgerIndex],
+    userConfirmedPriority: next,
+  };
+  writeLedger(opts.ledgerPath, ledgerRecords);
+  const event = createPriorityHistoryEvent({
+    recordId: opts.recordId,
+    recordType: 'ledger',
+    changedBy: opts.changedBy,
+    previous,
+    next,
+    reason: opts.reason,
+    source: 'confirm-priority-command',
+    changedAt: confirmedAt,
+  });
+  appendPriorityHistoryEvent(event, opts.historyPath);
+  messages.push(`confirmed priority for ledger record: ${opts.recordId}`);
+  const suggestions = buildPreparationActionSuggestions(
+    next.actionStage,
+    ledgerRecords[ledgerIndex],
+  );
+  for (const suggestion of suggestions) messages.push(suggestion);
+  return {
+    recordId: opts.recordId,
+    recordType: 'ledger',
+    eventId: event.eventId,
+    confirmedAt,
+    messages,
+  };
 }
 
 function cmdConfirmPriority(args: string[]): void {
@@ -360,7 +312,6 @@ function cmdConfirmPriority(args: string[]): void {
       priorityRank: opts.priorityRank,
       reason: opts.reason,
       changedBy: opts.changedBy,
-      queuePath: opts.queuePath,
       ledgerPath: opts.ledgerPath,
       historyPath: opts.historyPath,
     });
@@ -717,7 +668,7 @@ Options:
   --skill-timeout-ms <n>  Timeout for each skill execution (default: 1200000)
 
 Priority confirmation:
-  confirm-priority --record-id <id> [--record-type frontdoor_queue|ledger] --stage prepare-now|investigate|monitor|low-priority|hold|excluded --rank <n> --reason <text>
+  confirm-priority --record-id <id> [--record-type ledger] --stage prepare-now|investigate|monitor|low-priority|hold|excluded --rank <n> --reason <text>
 
 Safety rules (always enforced):
   - Actual job submission is never automated (checklist only)

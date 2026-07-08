@@ -84,7 +84,6 @@ career-os/
 │   ├── drill-log-YYYY-MM-DD.jsonl / behavioral-interview-web-source-scan-*.md
 │   ├── source/                      외부 수집 노트. 지원/면접과 연결되면 private by default
 │   └── application-agent/
-│       ├── frontdoor-queue.jsonl    폐기 예정 (ADR-110, Phase 06)
 │       ├── eval-cases/ / eval-reports/ / package-eval/   평가 샘플·결과 (gitignore)
 │
 ├── applications/                          ← 공고별 지원 원장과 private 지원 패키지 (ADR-107. gitignore)
@@ -364,9 +363,6 @@ state/
 
 applications/
 └── <company-slug>/<role-slug>/{posting,fit-analysis,application-package,resume-draft,cover-letter,submission-checklist,review}.md
-
-state/application-agent/
-└── frontdoor-queue.jsonl          # plan038 legacy, ADR-110 폐기 예정 (Phase 06)
 ```
 
 MVP에서는 제출 자동화를 구현하지 않는다. 브라우저 입력 보조와 최종 제출은 별도 phase 또는 ADR에서 다룬다.
@@ -384,8 +380,6 @@ scripts/application-agent/
 ├── policy.ts                      # deterministic policy decision engine + priority ranker
 ├── actions.ts                     # allowlisted local artifact generation (checklist / study-actions / profile-suggestions)
 ├── ingest_position_report.ts      # position report -> candidate ledger
-├── frontdoor_queue.ts             # plan038: position report -> frontdoor queue
-├── promote_frontdoor_candidate.ts # plan038: user-approved queue record -> ledger
 ├── skill_executor.ts              # --execute-skills 명시 시 compatibility backend로 agent-only private skills 실행
 ├── progress_notifier.ts           # --notify-discord 명시 시 private-safe progress 알림
 ├── skill_contracts.ts             # 에이전트 비종속 skill 호출 계약 + compatibility backend builder
@@ -456,7 +450,7 @@ plan055는 application-agent의 다음 축을 맞춤 이력서 패키지로 둔�
 - skill contract: 생성 문서 품질 계약을 `application-package-writer`와 `application-reviewer` 입력/출력 조건에 반영한다.
 - processor post-validation: 실제 파일 존재, freshness, review verdict, `needs_evidence` resolution을 확인한다.
 - resume exporter: `export_resume.ts`가 `resume-draft.md`와 `design.md` 계약으로 `resume.html`, `resume.pdf`를 만든다.
-- priority/application view helper: readiness를 파일 존재 여부와 ledger/frontdoor fields에서 계산한다.
+- priority/application view helper: readiness를 파일 존재 여부와 ledger fields에서 계산한다.
 
 필수 산출물:
 
@@ -487,7 +481,7 @@ plan030 freshness guard는 구현 대상이 아니라 후보 ingest 시 prerequi
 
 plan050은 새 독립 추천기를 먼저 만들지 않고 기존 collector/recommender/application-agent 자산을 연결하는 얇은 priority layer로 둔다.
 이 문단은 파일 기반 priority layer 구조를 설명한다.
-별도 DB 없이 frontdoor/ledger projection을 사용한다.
+별도 DB 없이 ledger projection을 사용한다.
 
 책임 경계:
 
@@ -500,10 +494,10 @@ plan050은 새 독립 추천기를 먼저 만들지 않고 기존 collector/reco
 - `position-recommender` agent skill은 표준 출력 JSON `recommendation.json`(ADR-094/ADR-101, schemaVersion 2)을 만든다. 적재용 `source`·`closeDate`를 포함하며, Discord 요약 같은 가공은 호출자가 맡는다(ADR-101).
 - `scripts/position-recommender/render_recommendation.ts`는 표준 출력 JSON에서 Markdown·HTML을 파생한다(입력 시 zod 검증 내장). 자체 markdown 파서 `render_report_html.ts`는 ADR-094로 폐기됐다.
   표시 구조와 CSS는 `scripts/position-recommender/templates/report.html`에 둔다.
-- `scripts/application-agent/`는 frontdoor queue, ledger, 공고별 application files, priority history를 검증하고 갱신한다.
+- `scripts/application-agent/`는 ledger, 공고별 application files, priority history를 검증하고 갱신한다.
 - `config/candidate-profile.md`와 기존 resume/profile material은 fit analysis 입력으로 재사용한다.
 - study/interview 관련 agent skill은 gap 기반 preparation action 후보를 만들 때만 호출한다.
-- `priority_view.ts`는 record type과 id로 frontdoor queue 또는 ledger record를 찾아 recommendation snapshot, fit/gap details, evidence, preparation actions, history를 요약한다.
+- `priority_view.ts`는 id로 ledger record를 찾아 recommendation snapshot, fit/gap details, evidence, preparation actions, history를 요약한다.
 
 관련 파일:
 
@@ -511,7 +505,7 @@ plan050은 새 독립 추천기를 먼저 만들지 않고 기존 collector/reco
 scripts/application-agent/
 ├── priority_schema.ts             # action stage, recommendation snapshot, user confirmed priority schema
 ├── priority_history.ts            # priority change history append/read helpers
-├── priority_recommendation.ts     # position/frontdoor/ledger inputs를 recommendation snapshot으로 정리
+├── priority_recommendation.ts     # position/ledger inputs를 recommendation snapshot으로 정리
 └── priority_view.ts               # 사람이 읽기 쉬운 priority summary projection
 
 state/
@@ -520,8 +514,7 @@ state/
 
 기존 파일 확장 후보:
 
-- `frontdoor_queue_schema.ts` — action stage와 recommendation snapshot optional fields.
-- `ledger_schema.ts` — promoted application의 confirmed priority optional fields.
+- `ledger_schema.ts` — 등록된 application의 confirmed priority optional fields.
 - `policy.ts` — `prepare-now`와 기존 actionable candidate 판단 연결.
 - `render_decision_log.ts` — priority change summary 추가.
 

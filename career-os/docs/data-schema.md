@@ -376,68 +376,9 @@ ADR-069 이후 `current_target`처럼 `state/mvp-target.json`의 현재 타깃�
 
 공고별 지원 에이전트 MVP의 비공개 상태 저장소. 실제 지원 전략, 맞춤 이력서 문구, 제출 상태, 회사별 쿨다운 판단이 들어가므로 git 추적하지 않는다.
 
-## state/application-agent/frontdoor-queue.jsonl (폐기 예정 — ADR-110)
-
-> **ADR-110 폐기 예정**: frontdoor-queue 대기열 단계를 없앤다(흐름을 "추천 → 선택 → positions-queue 등록"으로 단순화). 코드 제거는 Phase 06에서 하고, 코드가 아직 참조하는 동안만 스키마를 유지한다(ADR-098). 제거 후 이 섹션은 삭제하고 history는 ADR-110이 단일 출처다.
-
-사용자 선택 전 추천 후보 순위와 상태를 저장하는 JSONL 파일. 한 줄은 하나의 추천 후보이며, 사용자가 "N번 준비 시작"을 선택하기 전까지 `state/positions-queue.jsonl`에 넣지 않는다. 이 파일은 runtime 데이터이며 git 추적 대상이 아니다.
-ADR-081 이후 이 파일은 DB import 검증 후 삭제 대상이었고, ADR-110으로 대기열 단계 자체를 폐기한다.
-새 흐름은 이 파일을 현재 상태 정본으로 삼지 않는다.
-
-상태 enum:
-
-- `collected`: 수집됨. 아직 추천 후보로 선별되지 않았다.
-- `shortlisted`: 추천 후보로 선별됐다.
-- `needs_user_start_approval`: 사용자에게 "준비 시작" 선택을 기다린다.
-- `start_approved`: 사용자가 준비 시작을 승인했다.
-- `promoted_to_ledger`: ledger 승격이 끝났다.
-- `rejected`: 사용자가 제외했다.
-- `expired`: 공고가 만료됐거나 active 검증에 실패했다.
-
-예시 record:
-
-```json
-{
-  "queueId": "frontdoor-kakaopay-server-144295",
-  "rank": 1,
-  "company": "카카오페이",
-  "role": "서버 개발자",
-  "trackLabel": "KakaoPay AI track candidate",
-  "source": "position-recommender",
-  "url": "https://www.wanted.co.kr/wd/144295",
-  "status": "needs_user_start_approval",
-  "fitScore": 78,
-  "recommendationTier": "challenge",
-  "sourceFreshness": "fresh",
-  "selectedAt": null,
-  "promotedApplicationId": null,
-  "decisionReason": "AI 도구 활용 우대가 있는 서버 공고로, 별도 KakaoPay AI 전용 공고 URL 확인 전 임시 후보로 사용한다.",
-  "nextActions": ["await_user_start_approval"]
-}
-```
-
-필수/중요 필드:
-
-- `queueId`: frontdoor queue 안의 고유 ID.
-- `rank`: 사용자에게 보여줄 추천 순위.
-- `company`, `role`, `trackLabel`: 표시용 정보.
-- `source`, `url`: 수집 출처와 개별 공고 URL.
-- `status`: 위 상태 enum 중 하나.
-- `fitScore`, `recommendationTier`, `sourceFreshness`: 추천/검증 판단에 쓰는 보조 필드.
-- `selectedAt`: 사용자가 준비 시작을 승인한 시각. 승인 전에는 `null`.
-- `promotedApplicationId`: ledger 승격 후 연결된 application id. 승격 전에는 `null`.
-- `decisionReason`, `nextActions`: 사용자에게 보여줄 이유와 다음 액션.
-
-검증 규칙:
-
-- `sourceFreshness=stale`이면 `needs_user_start_approval`이나 `start_approved`가 될 수 없다.
-- `start_approved`는 사용자 선택 근거 없이 설정할 수 없다.
-- `promoted_to_ledger`는 `promotedApplicationId`가 있어야 한다.
-- 이미 같은 URL이나 external id가 ledger에 있으면 새 ledger record를 만들지 않고 existing application을 연결한다.
-
 ### position priority fields (implemented — plan050)
 
-plan050은 frontdoor queue와 ledger에 action stage 중심 priority layer를 추가한다.
+plan050은 ledger에 action stage 중심 priority layer를 추가한다.
 이 필드는 회사의 절대 선호 순위가 아니라 "지금 어떤 행동을 할지"를 나타낸다.
 
 기본 action stage:
@@ -516,8 +457,8 @@ priority 변경 이력을 저장하는 runtime/private audit log다.
 ```json
 {
   "eventId": "priority-20260607-kakaopay-001",
-  "recordId": "frontdoor-kakaopay-ax-202310",
-  "recordType": "frontdoor_queue",
+  "recordId": "app-kakaopay-ax-202310",
+  "recordType": "ledger",
   "changedAt": "2026-06-07T10:00:00+09:00",
   "changedBy": "user",
   "previous": {
@@ -535,14 +476,13 @@ priority 변경 이력을 저장하는 runtime/private audit log다.
 
 ### priority view projection
 
-`priority_view.ts`는 frontdoor queue, ledger, priority history, application files를 읽어 사람이 볼 요약 row를 계산한다.
+`priority_view.ts`는 ledger, priority history, application files를 읽어 사람이 볼 요약 row를 계산한다.
 이 projection은 파일에 저장되는 새 원장이 아니며, 외부 DB에도 저장하지 않는다.
 
 검증 규칙:
 
 - projection 계산은 career-os 파일을 수정하지 않는다.
 - ledger file path가 있으면 파일 존재 여부를 직접 확인하고, 없으면 `missing`으로 표시한다.
-- frontdoor queue record는 application material path가 없을 수 있으므로 `not_started` 성격으로 계산한다.
 
 ### interview answer feedback files
 
