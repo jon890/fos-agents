@@ -58,7 +58,17 @@ posting path 특정 불가 시 stderr + exit 1.
    - 공고 요구사항과 겹치는 프로젝트·기술 스택의 근거 파일 우선 선택
    - 전체 `task/**` 탐색 금지 — 관련성 판단은 프로필 인용 경로 기반
 
-### 3. 공고 분석 + 후보자 교차 분석
+### 3. 후보자 인터뷰 (지원동기·서사 확보, 필수)
+
+지원동기·커리어 방향성·회사 선택 이유는 AI가 지어내지 않는다. 공고 분석 다음 문서 작성 전에 후보자 본인에게 질문해 답을 받는다.
+질문 세트는 `references/candidate-interview-questions.md`를 따른다 (제출용 Q1~7 + 내부 판단 Q8~10).
+2차 면접 피드백이 "지원동기 불명확"이었으므로 이 단계는 지원 패키지 품질의 1급 축이다.
+
+- 대화형 실행: 질문을 후보자에게 던지고 답을 받은 뒤, 그 답을 지원동기·커버레터·직무 적합성에 반영한다. 답이 막연하면("그냥 좋아서" 등) 후속 질문으로 구체화한다. 완성 문장이 아니어도 키워드·생각 조각을 받아 서사로 다듬는다.
+- 비대화형 실행 (cron/backend 등 질문 불가): 지원동기·회사 선택 이유를 추측으로 채우지 않고 `보강 필요`로 두며, 질문 목록을 `application-package.md`·`cover-letter.md`의 `보강 필요`에 남긴다.
+- 내부 판단 질문(Q8~10)의 답은 `fit-analysis.md`의 Risk Flags·지원 우선순위와 후보자 의사결정에만 쓰고, 제출용 문구에 직접 노출하지 않는다(특히 Q10 보상).
+
+### 4. 공고 분석 + 후보자 교차 분석
 
 posting.md에서 다음을 추출:
 
@@ -73,7 +83,7 @@ candidate-profile.md + 근거 파일과 교차 분석:
 - 근거가 없거나 약한 항목은 내부 판단에서 `needs_evidence`로 취급하되, 최종 문서에는 raw label로 남기지 않는다.
   - 추측성 주장 / 이력서·task에 기재 없는 수치·성과 / 검증 불가 기술 경험 등은 `보강 필요 / 선택지 / 권장 행동`으로 작성한다.
 
-### 4. fit-analysis.md 작성
+### 5. fit-analysis.md 작성
 
 저장 경로: `career-os/data/applications/<company>/<role>/fit-analysis.md`
 
@@ -105,7 +115,7 @@ candidate-profile.md + 근거 파일과 교차 분석:
 - 총 30줄 이상
 - `sources/fos-study/`에 쓰지 않음
 
-### 5. application-package.md 작성
+### 6. application-package.md 작성
 
 저장 경로: `career-os/data/applications/<company>/<role>/application-package.md`
 
@@ -155,7 +165,7 @@ candidate-profile.md + 근거 파일과 교차 분석:
   - run_application_reviewer
 ```
 
-### 6. resume-draft.md 작성
+### 7. resume-draft.md 작성
 
 저장 경로: `career-os/data/applications/<company>/<role>/resume-draft.md`
 
@@ -187,7 +197,7 @@ candidate-profile.md + 근거 파일과 교차 분석:
   `design.md` 적용 HTML과 첨부 가능한 PDF는 별도 산출물로 구분한다.
 - 총 20줄 이상
 
-### 7. cover-letter.md 작성
+### 8. cover-letter.md 작성
 
 저장 경로: `career-os/data/applications/<company>/<role>/cover-letter.md`
 
@@ -214,7 +224,7 @@ candidate-profile.md + 근거 파일과 교차 분석:
 - 근거 부족은 `보강 필요 / 선택지 / 권장 행동` 구조로 둔다.
 - 총 20줄 이상
 
-### 8. submission-checklist.md 작성
+### 9. submission-checklist.md 작성
 
 저장 경로: `career-os/data/applications/<company>/<role>/submission-checklist.md`
 
@@ -261,6 +271,7 @@ candidate-profile.md + 근거 파일과 교차 분석:
 14. 내부 분석 섹션에는 확인된 근거 파일 경로가 유지됨
 15. candidate-profile 수정, 공개 발행, 외부 제출은 `사용자 승인 필요`로만 표현됨
 16. resume package를 언급하면 Markdown 초안 -> design.md 적용 HTML -> 첨부 가능한 PDF 체인을 구분하고, PDF를 외부 제출 자동화로 표현하지 않음
+17. 지원동기·커리어 방향성·회사 선택 이유가 후보자 인터뷰 답변에 기반하거나(대화형), 답을 못 받았으면 `보강 필요`로 표시됨(비대화형) — AI 추측 서사가 아님 (Step 3)
 
 실패 항목 있으면 수정 후 재작성. **최대 3회**. 4회째도 실패 시 `stderr: application-package-writer 검증 실패: <항목>` + exit 1.
 
@@ -289,3 +300,4 @@ candidate-profile.md + 근거 파일과 교차 분석:
 - `career-os/data/applications/ledger.jsonl` — 지원 이력 원장
 - `career-os/config/candidate-profile.md` — 후보자 프로필 core (사실·라벨)
 - `career-os/config/candidate-profile-detail.md` — 후보자 프로필 detail (프로젝트 서사·의사결정 패턴·기술 스택 증거 상세)
+- `references/candidate-interview-questions.md` — 후보자 인터뷰 질문 세트 (Step 3, 지원동기·서사 확보)
