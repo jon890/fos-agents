@@ -36,7 +36,7 @@ plan093의 실행 계약이며, Phase 01에서 이 결정을 ADR로 고정한 �
 
 - **하는 것**: `ledger_io.ts`·`ledger_schema.ts` → `positions_queue_*` git mv + 심볼(`Ledger`→`PositionsQueue` 계열) rename + import 참조 갱신. frontdoor 코드(`frontdoor_queue_builder.ts`·`frontdoor_queue_io.ts`·`frontdoor_queue_schema.ts`·`promote_frontdoor_candidate.ts`) git rm + application-agent flow에서 frontdoor 의존 제거. 승격→등록 용어를 코드 식별자·주석·docs 산문 전반에서 교체.
 - **주의**: frontdoor는 `apply_position_action_request`·`apply_priority_request`·`priority_recommendation`·`priority_view`·`run.ts` 등 8+ 파일에 얽혀 있다(단순 파일 삭제 아님). 호출 흐름을 끊고 `bun --check` + application-agent smoke로 검증한다.
-- **원자적 분리**: Phase 06(ledger rename) / Phase 07(frontdoor 제거 + 등록 용어)로 관심사를 나눠 각각 commit.
+- **원자적 분리**: Phase 06(frontdoor 제거 + 등록 용어) / Phase 07(ledger rename)로 관심사를 나눠 각각 commit. 순서 주의 — frontdoor 파일이 `./ledger_io`·`./ledger_schema`를 import하므로 frontdoor 제거를 먼저 해야 ledger rename 시 dangling import가 안 생긴다.
 
 ## 애매 항목 확정
 

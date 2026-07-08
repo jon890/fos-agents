@@ -20,6 +20,7 @@
   - verified-company의 cooldown을 state/company-cooldown.json으로 분리. **ADR-095를 신규 ADR로 supersede 표기하고 ADR-095 본문은 동결(수정 금지)**. INDEX에 supersede 관계 링크만 추가.
   - frontdoor-queue 코드 폐기 + "승격"→"등록" 용어. 과거 ADR-045(frontdoor 분리)를 신규 ADR로 supersede 표기, ADR-045 본문 동결.
 - decisions.md의 파일 이동표를 **전수 확정**(현재 data/·config/ 전 파일을 config/state/applications/reports/cache 중 하나로 분류, 애매 없음). tracked/untracked 구분을 이동표에 표기한다(tracked만 git mv).
+- `state/`로 git mv되는 tracked config 4종(`study-progress.json`·`drill-progress.json`·`mvp-target.json`·`study-pack-candidates.json`)이 `state/`에서 **tracked 유지인지 untracked 전환인지** 이동표에서 확정한다(gitignore는 기존 tracked를 자동 untrack하지 않음). tracked 유지면 Phase 05 `.gitignore` 재작성에서 negation 필요 여부를 함께 명시한다.
 - docs/data-schema.md·code-architecture.md·flow.md의 디렉터리 책임·경로를 새 구조로 갱신.
 - docs/adr/INDEX.md에 신규 ADR 행 추가.
 

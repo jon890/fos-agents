@@ -36,6 +36,6 @@
     "task_scope": "task materialization 단계에서는 tasks/plan093-config-state-restructure/** 파일만 생성·갱신한다.",
     "pr_unit": "PR은 모든 phase 완료 뒤 plan 단위로 만든다. phase 경계는 commit/push 경계다.",
     "move_guard": "tracked 파일(config/*.json 등)은 git mv로 이동해 이력을 보존한다. untracked data/ 실파일은 물리 이동하지 않고 참조 갱신 + .gitignore 경계 반영으로만 규약을 바꾼다(decisions.md 스코프 절). 파일/규약 변경 후 그 파일을 읽는 SKILL·scripts·docs·.gitignore 참조를 같은 phase에서 함께 갱신하고, live docs·scripts·.claude/skills 기준 옛 경로 참조 0 + bun --check 통과 + 새 경로 파일 부재 graceful 처리를 phase 성공 기준으로 검증한다. tasks/·frozen ADR은 grep-0 대상에서 제외한다.",
-    "code_rename_scope": "ledger→positions-queue 코드 심볼·파일명 rename과 frontdoor 코드 제거는 이 plan 범위(사용자 결정 2026-07-08, decisions.md M2=A). Phase 06(ledger rename)·Phase 07(frontdoor 제거 + 승격→등록)에서 수행한다."
+    "code_rename_scope": "ledger→positions-queue 코드 심볼·파일명 rename과 frontdoor 코드 제거는 이 plan 범위(사용자 결정 2026-07-08, decisions.md M2=A). Phase 06(frontdoor 제거 + 승격→등록)·Phase 07(ledger rename) 순으로 수행한다 — frontdoor가 ledger를 import하므로 frontdoor 제거를 먼저 해 dangling import를 원천 차단한다."
   }
 }
