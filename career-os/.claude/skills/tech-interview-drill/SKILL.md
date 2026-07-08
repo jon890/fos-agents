@@ -19,9 +19,9 @@ description: >
 - `career-os/scripts/interview-drill/drill-engine.ts` — 질문 선정·채점·기록·weak_spots 갱신
 - `career-os/public/question-bank/{java-spring,database,cs,operations,system-design}/questions.json` — 기술 면접 공개 질문 풀 (JSON 배열)
 - `career-os/private/question-bank/tech-personal.jsonl` — 개인 기술 질문 추가 풀 (있으면 merge, JSONL)
-- `career-os/config/study-progress.json` — topic 학습 상태 (`last_studied`·`study_count`·`last_evaluated`·`status`)
-- `career-os/config/drill-progress.json` — 드릴 간격 반복 상태 정본 (`pass_count`·`fail_count`·`next_review_date`, ADR-105)
-- `career-os/data/runtime/drill-log-YYYY-MM-DD.jsonl` — 드릴 일별 기록 (자동 생성)
+- `career-os/state/study-progress.json` — topic 학습 상태 (`last_studied`·`study_count`·`last_evaluated`·`status`)
+- `career-os/state/drill-progress.json` — 드릴 간격 반복 상태 정본 (`pass_count`·`fail_count`·`next_review_date`, ADR-105)
+- `career-os/state/drill-log-YYYY-MM-DD.jsonl` — 드릴 일별 기록 (자동 생성)
 
 ## 드릴 진행 흐름
 
@@ -64,7 +64,7 @@ description: >
 | ❌ 틀림 | 시그널 30% 미만 | "핵심 놓침. 핵심 답변 예시: …" |
 
 채점 후 `drill-engine.ts`의 `updateWeakSpots(question, score)`를 호출해 기록을 갱신한다.
-채점 결과와 질문을 `recordDrillLog(entry)`로 `data/runtime/drill-log-YYYY-MM-DD.jsonl`에 기록한다.
+채점 결과와 질문을 `recordDrillLog(entry)`로 `state/drill-log-YYYY-MM-DD.jsonl`에 기록한다.
 
 ### 단계 4 — "모르겠어" / "공부팩 만들어줘" 처리
 
@@ -105,10 +105,10 @@ description: >
 
 ## 기록 규칙
 
-- 드릴 로그: `career-os/data/runtime/drill-log-YYYY-MM-DD.jsonl` — 질문·점수·위임 여부 기록.
+- 드릴 로그: `career-os/state/drill-log-YYYY-MM-DD.jsonl` — 질문·점수·위임 여부 기록.
 - `updateWeakSpots(question, score)` 호출 1번으로 두 파일이 함께 갱신된다 (ADR-105).
-  - `career-os/config/study-progress.json`의 `weak_spots` — topic 학습 상태: `last_evaluated`, `study_count`, `last_studied`, `status`.
-  - `career-os/config/drill-progress.json` — 드릴 간격 반복 상태: `pass_count`, `fail_count`, `next_review_date`, `last_passed`.
+  - `career-os/state/study-progress.json`의 `weak_spots` — topic 학습 상태: `last_evaluated`, `study_count`, `last_studied`, `status`.
+  - `career-os/state/drill-progress.json` — 드릴 간격 반복 상태: `pass_count`, `fail_count`, `next_review_date`, `last_passed`.
   - `candidate-profile.md`는 수정하지 않는다 (사람이 직접 편집).
 
 ## 간격 반복 규칙

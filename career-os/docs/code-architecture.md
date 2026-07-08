@@ -237,7 +237,7 @@ career-os 워크스페이스 바깥, ai-nodes 루트의 `_shared/` 에 모든 �
 | `_shared/bin/track_task.sh` | runner 래퍼. JSONL 로그 + openclaw status diff. | 0 (apartment 사용 중) |
 | `_shared/lib/extract_claude_result.ts` | claude JSON envelope 파싱. ai-nodes plan001 통합. | 사용 중 (career-os + apartment + stock-investment 공용) |
 | `_shared/lib/notify_discord.ts` | Bun. `openclaw message send --channel discord` subprocess. `DISCORD_CHANNEL_ID` env 필수. `--media <path>`, `--presentation <json>` 옵션 지원 (ADR-021, ADR-073). | 사용 중 |
-| `career-os/scripts/interview-prep-analyzer/mvp_target_schema.ts` | Bun/zod. `config/mvp-target.json` 면접 단계 설정 검증. `parseMvpTarget()` (ADR-048). | 사용 중 (career-os 한정) |
+| `career-os/scripts/interview-prep-analyzer/mvp_target_schema.ts` | Bun/zod. `state/mvp-target.json` 면접 단계 설정 검증. `parseMvpTarget()` (ADR-048). | 사용 중 (career-os 한정) |
 | `_shared/bin/update_artifacts.py` | `data/generated-artifacts.json` upsert. | 0 (ADR-033 / plan025 이후 career-os 사용 0 — 파일 자체는 별도 plan에서 폐기 검토) |
 | `zod` (npm) | TypeScript runtime 스키마 검증. `package.json`에 의존성. | 사용 중 |
 | `_shared/types/` | TS 공통 타입 디렉터리. ClaudeUsage / TaskRunEntry / NotificationPayload 등. | 간접 사용 |
@@ -353,7 +353,7 @@ plan029는 기존 career-os skill을 새 application 상태 루프로 조립한�
   - 입력: 공고, fit 분석, 지원 패키지, candidate-profile.
   - 출력: `review.md`, pass/revise/block 판단.
 - `daily-application-digest`
-  - 입력: `data/applications/ledger.jsonl`, 오늘 변경된 application files, position/study/interview runtime report.
+  - 입력: `state/positions-queue.jsonl` (옛 `data/applications/ledger.jsonl`, ADR-108), 오늘 변경된 application files, position/study/interview runtime report.
   - 출력: `data/reports/daily/YYYY-MM-DD/application-digest/report.md` + Discord 요약.
 
 데이터 저장소:

@@ -5,7 +5,7 @@ description: 1차·최종·오퍼 단계별 면접 실전 준비를 생성하는
 
 # Interview Stage Prep
 
-현재 면접 단계(`config/mvp-target.json`의 `primary.interview` 필드)를 읽고 단계에 맞는 실전 준비 가이드를 생성하는 workflow.
+현재 면접 단계(`state/mvp-target.json`의 `primary.interview` 필드)를 읽고 단계에 맞는 실전 준비 가이드를 생성하는 workflow.
 `primary`가 `null`이면 활성 면접 타깃이 없는 상태이므로 생성하지 않는다.
 
 ## 스킬 경계 (boundary)
@@ -21,7 +21,7 @@ description: 1차·최종·오퍼 단계별 면접 실전 준비를 생성하는
 
 현재 에이전트는 다음 파일을 직접 로드한다:
 
-1. `career-os/config/mvp-target.json` — `primary.interview` (단계별 날짜/상태), `primary.company`, `primary.role`.
+1. `career-os/state/mvp-target.json` — `primary.interview` (단계별 날짜/상태), `primary.company`, `primary.role`.
    `primary`가 `null`이면 활성 면접 타깃 없음으로 처리한다.
 2. `career-os/config/candidate-profile.md` — 후보자 이력·약점·강점 core (필수)
 3. `career-os/config/candidate-profile-detail.md` — 프로젝트 서사·의사결정 패턴·면접 준비 우선순위 (필수)
@@ -142,7 +142,7 @@ description: 1차·최종·오퍼 단계별 면접 실전 준비를 생성하는
 
 ```bash
 # mvp-target.json 읽기
-cat career-os/config/mvp-target.json
+cat career-os/state/mvp-target.json
 # candidate-profile core + detail 읽기
 cat career-os/config/candidate-profile.md
 cat career-os/config/candidate-profile-detail.md
@@ -236,7 +236,7 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 
 ## References
 
-- `career-os/config/mvp-target.json` — 현재 면접 단계 (interview.first_round / final_round / offer_chat)
+- `career-os/state/mvp-target.json` — 현재 면접 단계 (interview.first_round / final_round / offer_chat)
 - `career-os/config/candidate-profile.md` — 후보자 이력·약점
 - 관련 스킬: `tech-interview-drill` — 기술 질문 드릴 (1차 면접 준비 연계)
 - 관련 스킬: `behavioral-interview-drill` — 인성 질문 드릴 (최종 면접 준비 연계)

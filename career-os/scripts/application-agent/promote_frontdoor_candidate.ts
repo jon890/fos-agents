@@ -5,7 +5,7 @@ import { appendNewRecord, readLedger } from './ledger_io';
 import { ApplicationLedgerRecordSchema, type ApplicationLedgerRecord } from './ledger_schema';
 
 const WORKSPACE_PREFIX = process.cwd().endsWith('/career-os') ? '' : 'career-os/';
-const DEFAULT_LEDGER_PATH = `${WORKSPACE_PREFIX}data/applications/ledger.jsonl`;
+const DEFAULT_LEDGER_PATH = `${WORKSPACE_PREFIX}state/positions-queue.jsonl`;
 
 function generateLedgerId(company: string, role: string): string {
   const base = `${company}-${role}`;

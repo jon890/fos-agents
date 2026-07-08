@@ -53,9 +53,10 @@ const TASK_ROOT = process.env.CAREER_OS_ROOT
   ? resolve(process.env.CAREER_OS_ROOT)
   : resolve(import.meta.dir, "..", "..");
 const CONFIG = join(TASK_ROOT, "config");
+const STATE = join(TASK_ROOT, "state");
 const RUNTIME = join(TASK_ROOT, "data", "runtime");
 const FOS_STUDY_ROOT = join(TASK_ROOT, "sources", "fos-study");
-const HISTORY_PATH = join(RUNTIME, "topic-inventory-history.jsonl");
+const HISTORY_PATH = join(STATE, "topic-inventory-history.jsonl");
 const FEED_CACHE_DIR = join(RUNTIME, "feed-cache");
 const FEED_CACHE_TTL_HOURS = 6;
 const FEED_TIMEOUT_MS = 8_000;
@@ -249,7 +250,7 @@ async function runPipeline(): Promise<void> {
   );
   const studyTopics = stripMetaTopics(studyTopicsRaw);
   const studyCandidates = safeLoad<{ topics?: TopicItem[] }>(
-    join(CONFIG, "study-pack-candidates.json"),
+    join(STATE, "study-pack-candidates.json"),
     { topics: [] }
   ).topics ?? [];
   const liveSeeds: LiveSeed[] = safeLoad<{ seeds?: LiveSeed[] }>(
@@ -420,7 +421,7 @@ async function runPipeline(): Promise<void> {
   };
 
   writeFileSync(
-    join(RUNTIME, "topic-inventory.json"),
+    join(STATE, "topic-inventory.json"),
     JSON.stringify(inventory, null, 2) + "\n",
     "utf-8"
   );
@@ -484,7 +485,7 @@ async function runPipeline(): Promise<void> {
   console.log(
     JSON.stringify(
       {
-        inventory: join(RUNTIME, "topic-inventory.json"),
+        inventory: join(STATE, "topic-inventory.json"),
         recommendation: join(RUNTIME, "morning-topic-recommendation.md"),
         backendCount: backendRecommendations.length,
         techBlogCount: techBlogRecommendations.length,
@@ -507,7 +508,7 @@ async function runPipeline(): Promise<void> {
 
 async function renderOnly(): Promise<void> {
   mkdirSync(RUNTIME, { recursive: true });
-  const inventoryPath = join(RUNTIME, "topic-inventory.json");
+  const inventoryPath = join(STATE, "topic-inventory.json");
   if (!existsSync(inventoryPath)) {
     console.error("render-only error: topic-inventory.json 없음 — 먼저 일반 refresh를 실행하세요.");
     process.exit(1);

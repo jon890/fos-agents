@@ -297,7 +297,7 @@ function checkSafetyInvariants(record: ApplicationLedgerRecord): string[] {
 
 function main(): void {
   const workspacePrefix = process.cwd().endsWith('/career-os') ? '' : 'career-os/';
-  const path = process.argv[2] ?? `${workspacePrefix}data/applications/ledger.jsonl`;
+  const path = process.argv[2] ?? `${workspacePrefix}state/positions-queue.jsonl`;
   if (!existsSync(path)) {
     console.error(`ledger not found: ${path}`);
     process.exit(2);

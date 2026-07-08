@@ -34,10 +34,10 @@ description: >
 - `career-os/scripts/interview-drill/drill-engine.ts` — 질문 선정·채점·기록·weak_spots 갱신
 - `career-os/public/question-bank/behavioral/questions.json` — 인성 면접 공개 질문 풀 (JSON 배열)
 - `career-os/private/question-bank/behavioral-personal.jsonl` — 개인 인성 질문 추가 풀 (있으면 merge, JSONL)
-- `career-os/config/mvp-target.json` — 현재 면접 대상 회사·직무·면접 단계 정본
-- `career-os/config/study-progress.json` — topic 학습 상태 (`last_studied`·`study_count`·`last_evaluated`·`status`)
-- `career-os/config/drill-progress.json` — 드릴 간격 반복 상태 정본 (`pass_count`·`fail_count`·`next_review_date`, ADR-105)
-- `career-os/data/runtime/drill-log-YYYY-MM-DD.jsonl` — 답변 연습 일별 기록 (내부 파일명은 기존 `drill-log` 유지, `drill_type: "behavioral"` 구분)
+- `career-os/state/mvp-target.json` — 현재 면접 대상 회사·직무·면접 단계 정본
+- `career-os/state/study-progress.json` — topic 학습 상태 (`last_studied`·`study_count`·`last_evaluated`·`status`)
+- `career-os/state/drill-progress.json` — 드릴 간격 반복 상태 정본 (`pass_count`·`fail_count`·`next_review_date`, ADR-105)
+- `career-os/state/drill-log-YYYY-MM-DD.jsonl` — 답변 연습 일별 기록 (내부 파일명은 기존 `drill-log` 유지, `drill_type: "behavioral"` 구분)
 - `career-os/data/runtime/behavioral-interview-target-context.md` — 현재 호출에서 생성·갱신한 면접 대상 회사 컨텍스트 (있으면 적용)
 - `references/scoring-rubric.md` — STAR·가치관 채점 기준 상세
 
@@ -45,11 +45,11 @@ description: >
 
 ### 단계 0 — 면접 대상과 회사 가치 오버레이 확인
 
-답변 연습 시작 전에 `config/mvp-target.json`의 `primary`를 읽는다.
+답변 연습 시작 전에 `state/mvp-target.json`의 `primary`를 읽는다.
 `company`, `team`, `role`, `position_focus`, `notes`, `interview.final_round`를 확인해 오늘 답변 연습의 면접 대상을 먼저 선언한다.
 
 현재 회사 컨텍스트는 `data/runtime/behavioral-interview-target-context.md`를 우선한다.
-파일이 없거나 `config/mvp-target.json`의 현재 `company_slug`와 맞지 않으면, 현재 호출에서 회사 공식 채용/회사소개 근거를 확인해 런타임 파일을 생성하거나 갱신한다.
+파일이 없거나 `state/mvp-target.json`의 현재 `company_slug`와 맞지 않으면, 현재 호출에서 회사 공식 채용/회사소개 근거를 확인해 런타임 파일을 생성하거나 갱신한다.
 회사별 컨텍스트를 skill `references/`에 넣지 않는다.
 `references/`에는 모든 회사에 반복 적용되는 일반 규칙만 둔다.
 
@@ -128,7 +128,7 @@ STAR는 답변을 구성하고 채점할 때 쓰는 내부 기준이다.
 | ❌ 틀림 | STAR 누락 또는 가치관·회사 가치 연결이 드러나지 않음 | "핵심 놓침. STAR 누락 요소: … 가치관 문제: … 회사 관점 답변 방향: …" |
 
 채점 후 `drill-engine.ts`의 `updateWeakSpots(question, score)`를 호출해 기록을 갱신한다.
-채점 결과와 질문을 `recordDrillLog(entry)`로 `data/runtime/drill-log-YYYY-MM-DD.jsonl`에 기록할 때
+채점 결과와 질문을 `recordDrillLog(entry)`로 `state/drill-log-YYYY-MM-DD.jsonl`에 기록할 때
 `drill_type: "behavioral"` 필드를 반드시 포함한다.
 회사 오버레이가 적용된 세션은 로그에 `target_company`, `target_role`, `target_value_axis`를 함께 남길 수 있으면 남긴다.
 
@@ -172,11 +172,11 @@ STAR는 답변을 구성하고 채점할 때 쓰는 내부 기준이다.
 
 ## 기록 규칙
 
-- 답변 연습 로그: `career-os/data/runtime/drill-log-YYYY-MM-DD.jsonl` — 질문·점수·위임 여부 기록.
+- 답변 연습 로그: `career-os/state/drill-log-YYYY-MM-DD.jsonl` — 질문·점수·위임 여부 기록.
   - `drill_type: "behavioral"` 필드로 기술 면접 답변 연습 기록과 구분한다.
 - `updateWeakSpots(question, score)` 호출 1번으로 두 파일이 함께 갱신된다 (ADR-105).
-  - `career-os/config/study-progress.json`의 `weak_spots` — topic 학습 상태: `last_evaluated`, `study_count`, `last_studied`, `status`.
-  - `career-os/config/drill-progress.json` — 드릴 간격 반복 상태: `pass_count`, `fail_count`, `next_review_date`, `last_passed`.
+  - `career-os/state/study-progress.json`의 `weak_spots` — topic 학습 상태: `last_evaluated`, `study_count`, `last_studied`, `status`.
+  - `career-os/state/drill-progress.json` — 드릴 간격 반복 상태: `pass_count`, `fail_count`, `next_review_date`, `last_passed`.
   - `candidate-profile.md`는 수정하지 않는다 (사람이 직접 편집).
 
 ## 간격 반복 규칙

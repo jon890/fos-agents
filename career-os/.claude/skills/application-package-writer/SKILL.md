@@ -32,7 +32,7 @@ fit/gap 판단, reviewer용 리스크, 근거 파일 경로는 내부 분석 섹
 2. `career-os/config/candidate-profile.md` — 후보자 프로필 core: 사실·라벨 (필수)
 3. `career-os/config/candidate-profile-detail.md` — 프로젝트 서사·의사결정 패턴·협업 스타일·면접 준비 우선순위·기술 스택 증거 상세 (필수)
 4. 후보자 프로필이 참조하는 근거 파일 (`task/**/*.md`, `resume/*.md`) — 필요 시 선택적으로 읽는다
-5. `career-os/data/applications/ledger.jsonl` — posting path 자동 추출 시 참조 (선택)
+5. `career-os/state/positions-queue.jsonl` — posting path 자동 추출 시 참조 (선택)
 
 ## Workflow
 
@@ -42,7 +42,7 @@ fit/gap 판단, reviewer용 리스크, 근거 파일 경로는 내부 분석 섹
 
 - 예: `/application-package-writer data/applications/tossplace/applied-ai-engineer/posting.md`
   → path = `career-os/data/applications/tossplace/applied-ai-engineer/posting.md`
-- path가 없으면 `career-os/data/applications/ledger.jsonl`을 읽어 다음 조건의 첫 항목을 후보로 선택:
+- path가 없으면 `career-os/state/positions-queue.jsonl`을 읽어 다음 조건의 첫 항목을 후보로 선택:
   - `needsUserReview=true` 또는 `status`가 `discovered|analyzing|preparing_application` 중 하나
   - 후보 선택 시 사용자에게 확인 ("TossPlace Applied AI Engineer 공고로 진행할까요?") 후 계속
 
@@ -282,7 +282,7 @@ candidate-profile.md + 근거 파일과 교차 분석:
 | posting path 특정 불가 | stderr + exit 1 |
 | posting.md 부재 | stderr + exit 1 |
 | candidate-profile.md 부재 | stderr + exit 1 |
-| ledger.jsonl 부재 (자동 선택 시) | stderr warn + posting path를 사용자에게 직접 입력 요청 |
+| positions-queue.jsonl 부재 (자동 선택 시) | stderr warn + posting path를 사용자에게 직접 입력 요청 |
 | 근거 파일 읽기 실패 | stderr warn + 해당 파일 없이 계속 진행 (`보강 필요 / 선택지 / 권장 행동` 강화) |
 | self-check 3회 실패 | stderr + exit 1, 실패 항목 명시 |
 
@@ -296,8 +296,8 @@ candidate-profile.md + 근거 파일과 교차 분석:
 ## References
 
 - `career-os/docs/adr/INDEX.md` — ADR-045 (지원 후보 ledger 분리), ADR-038 (artifact 검증 후 상태 전이) 설계 근거
-- `career-os/docs/data-schema.md` — ledger.jsonl 스키마
-- `career-os/data/applications/ledger.jsonl` — 지원 이력 원장
+- `career-os/docs/data-schema.md` — positions-queue.jsonl 스키마
+- `career-os/state/positions-queue.jsonl` — 지원 이력 원장
 - `career-os/config/candidate-profile.md` — 후보자 프로필 core (사실·라벨)
 - `career-os/config/candidate-profile-detail.md` — 후보자 프로필 detail (프로젝트 서사·의사결정 패턴·기술 스택 증거 상세)
 - `references/candidate-interview-questions.md` — 후보자 인터뷰 질문 세트 (Step 3, 지원동기·서사 확보)

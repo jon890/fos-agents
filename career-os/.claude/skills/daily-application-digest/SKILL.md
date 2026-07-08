@@ -26,7 +26,7 @@ Discord 요약에는 private 지원 전략이나 이력서 문구를 넣지 않�
 
 현재 에이전트는 다음 파일과 명령 출력을 직접 로드:
 
-1. `career-os/data/applications/ledger.jsonl` — 전체 지원 이력 원장 (필수)
+1. `career-os/state/positions-queue.jsonl` — 전체 지원 이력 원장 (필수)
 2. 각 applicationDir의 파일 (존재하는 것만):
    - `posting.md` — 공고 본문
    - `fit-analysis.md` — fit 분석 + Gap 항목
@@ -48,7 +48,7 @@ Discord 요약에는 private 지원 전략이나 이력서 문구를 넣지 않�
 
 ### 2. ledger 로드 및 applicationDir 목록 수집
 
-`career-os/data/applications/ledger.jsonl`을 읽는다.
+`career-os/state/positions-queue.jsonl`을 읽는다.
 
 각 줄을 JSON 파싱해 다음 필드를 수집:
 
@@ -201,7 +201,7 @@ report.md 작성 후 아래 항목 검증. 실패 시 해당 섹션 재작성:
 
 | 상황 | 처리 |
 |---|---|
-| `ledger.jsonl` 부재 | stderr + exit 1 |
+| `positions-queue.jsonl` 부재 | stderr + exit 1 |
 | applicationDir 내 모든 파일 부재 | stderr warn + ledger 정보만으로 요약 진행 |
 | fit-analysis.md / review.md 부재 | stderr warn + 해당 섹션 "파일 없음" 표시 |
 | 출력 디렉터리 생성 실패 | stderr + exit 1 |
@@ -238,8 +238,8 @@ bun --env-file=career-os/.env \
 ## References
 
 - `career-os/docs/adr/INDEX.md` — ADR-038 (ledger 직접 갱신 금지, artifact 검증 후 상태 전이), ADR-021 (Discord notify_discord.ts)
-- `career-os/docs/data-schema.md` — ledger.jsonl 스키마
-- `career-os/data/applications/ledger.jsonl` — 지원 이력 원장
+- `career-os/docs/data-schema.md` — positions-queue.jsonl 스키마
+- `career-os/state/positions-queue.jsonl` — 지원 이력 원장
 - `career-os/.claude/skills/application-package-writer/SKILL.md` — 생성 단계 (Phase 04)
 - `career-os/.claude/skills/application-reviewer/SKILL.md` — 검토 단계 (Phase 05)
 - `_shared/lib/notify_discord.ts` — Discord 전송 유틸리티 (cron/runner에서 사용)

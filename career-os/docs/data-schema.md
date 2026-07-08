@@ -220,7 +220,7 @@ config diet는 plan068에서 reader inventory와 fallback을 확인한 뒤 phase
 }
 ```
 
-### config/mvp-target.json (현재 타깃 단일 출처)
+### state/mvp-target.json (현재 타깃 단일 출처. ADR-107 config→state 이동)
 
 zod 검증 단일 출처: `career-os/scripts/interview-prep-analyzer/mvp_target_schema.ts` → `parseMvpTarget(path)` (ADR-048).
 
@@ -330,7 +330,7 @@ skill별 주입 범위(core만 / core+detail)는 ADR-104의 매핑 표가 단일
 ### config/study-preferences.json
 
 아침 학습 추천의 사용자 선호와 학습 제약을 담는다.
-ADR-069 이후 `current_target`처럼 `config/mvp-target.json`의 현재 타깃을 반복하는 필드는 축소 대상이다.
+ADR-069 이후 `current_target`처럼 `state/mvp-target.json`의 현재 타깃을 반복하는 필드는 축소 대상이다.
 이 파일을 유지한다면 “추천 철학, 제외할 축, 보조 관심사, 난이도 선호”처럼 타깃 config와 중복되지 않는 값만 남긴다.
 
 `secondary_targets[]` 예시 필드:
@@ -556,7 +556,7 @@ private/<company-slug>/<position-slug>/interview/
 
 규칙:
 
-- `config/mvp-target.json`의 `primary`가 `null`이면 포지션별 답변 피드백 기록은 중단한다.
+- `state/mvp-target.json`의 `primary`가 `null`이면 포지션별 답변 피드백 기록은 중단한다.
 - 답변 전문과 상세 피드백은 private 경계 안에만 둔다.
 - Discord, `sources/fos-study/`, 공개 질문 bank로 답변 원문을 복사하지 않는다.
 - 공개 가능한 기술 주제만 별도 `study-pack-writer` 입력 후보가 될 수 있다.
@@ -837,7 +837,7 @@ ADR-069 이후 이 파일은 전체 학습 자산 DB가 아니라 migration 대�
 }
 ```
 
-### config/study-pack-candidates.json (plan017 신규 — study-pack 후보 reservoir)
+### state/study-pack-candidates.json (plan017 신규 — study-pack 후보 reservoir. ADR-107 config→state 이동)
 
 `config/topics.json`의 `study-pack-candidates` namespace 분리본 (ADR-027). study-topic-recommender가 Read (replenish 로직에서 참조).
 
@@ -1096,9 +1096,9 @@ topic 학습 이력과 topic 학습 약점 상태의 단일 출처다.
 | `data/reports/stage-prep-YYYY-MM-DD.md` | `interview-stage-prep` | 1차/최종/오퍼 단계별 실전 준비 자료 |
 
 baseline 모드는 `config/baseline-core-files.json` 큐레이션 집합 사용.
-daily 모드는 토픽 기반 fos-study 파일 선택 + `config/study-progress.json` 갱신.
+daily 모드는 토픽 기반 fos-study 파일 선택 + `state/study-progress.json` 갱신.
 
-### data/runtime/drill-log-YYYY-MM-DD.jsonl (plan086 신규)
+### state/drill-log-YYYY-MM-DD.jsonl (plan086 신규. 옛 data/runtime/, ADR-107 경로 규약)
 
 `tech-interview-drill` / `behavioral-interview-drill` 실행 시 질문별 답변 성과를 누적하는 일별 로그.
 같은 날 여러 번 드릴을 돌려도 같은 파일에 append된다.
@@ -1121,7 +1121,7 @@ daily 모드는 토픽 기반 fos-study 파일 선택 + `config/study-progress.j
 - `score`: 3단계 채점 결과. `unknown`은 답변 불가 또는 채점 보류.
 - `study_pack_dispatched`: `fail`/`shallow` 점수 시 `study-pack-writer`에 비동기 위임 여부.
 
-### data/runtime/topic-inventory.json (ADR-009, ADR-033 이후 스냅샷 축소)
+### state/topic-inventory.json (ADR-009, ADR-033 이후 스냅샷 축소. 옛 data/runtime/, ADR-107 경로 규약)
 
 `refresh_topic_inventory.ts`가 매 morning 추천마다 갱신. ADR-033 이후 config pool 복사본이 아닌 **실행/진단 스냅샷**이다 — 마지막 실행의 판단 결과 + duplicate review status만 담는다.
 
@@ -1199,7 +1199,7 @@ LLM 기반 후보 refresh turn의 실행 기록.
 추천기가 고정 seed만 순회하지 않도록, 현재 학습 선호·진행 상태·최근 추천 반복·fos-study inventory를 보고 새 후보를 발굴한 결과를 남긴다.
 
 이 파일은 실행 기록이다.
-실제 추천 후보로 쓰는 active 캐시는 `config/study-pack-candidates.json`에 반영한다.
+실제 추천 후보로 쓰는 active 캐시는 `state/study-pack-candidates.json`에 반영한다.
 
 ```json
 {
@@ -1238,7 +1238,7 @@ LLM 기반 후보 refresh turn의 실행 기록.
     }
   ],
   "applied": {
-    "configPath": "config/study-pack-candidates.json",
+    "configPath": "state/study-pack-candidates.json",
     "added": ["string"],
     "updated": ["string"],
     "staled": ["string"]
@@ -1249,7 +1249,7 @@ LLM 기반 후보 refresh turn의 실행 기록.
 동반 markdown인 `data/runtime/study-topic-candidate-refresh.md`는 사람이 읽는 요약이다.
 Discord에는 민감하지 않은 후보 수, 새 후보 예시, 보류 사유만 요약한다.
 
-### config/study-pack-candidates.json (ADR-070 이후 active 후보 캐시)
+### state/study-pack-candidates.json (ADR-070 이후 active 후보 캐시. ADR-107 config→state 이동)
 
 `study-topic-recommender`가 읽는 후보 입력이다.
 전체 학습 자산 목록이나 정본 reservoir가 아니다.
@@ -1282,7 +1282,7 @@ LLM 후보 refresh가 검증을 통과한 `new` 후보만 자동 append/update�
 - 30일 이상 선택되지 않은 자동 후보는 `stale` 처리 대상이다.
 - fos-study 문서가 실제로 생긴 후보는 다음 refresh에서 `promoted` 또는 제거 후보가 된다.
 
-### data/runtime/topic-inventory-history.jsonl (ADR-010/012)
+### state/topic-inventory-history.jsonl (ADR-010/012. 옛 data/runtime/, ADR-107 경로 규약)
 
 매 모닝 추천마다 한 줄 append. ADR-010 carry-over penalty와 ADR-012 보조 카테고리 cooldown의 입력.
 
@@ -1483,7 +1483,7 @@ data/prep/
     └── checklist.md           면접 당일 최종 체크리스트
 ```
 
-- active `config/mvp-target.json`은 `prep_dir`를 들지 않는다.
+- active `state/mvp-target.json`은 `prep_dir`를 들지 않는다.
 - `interview-stage-prep` skill은 `primary.data_root` 아래 `interview/prep.md`를 정본으로 읽는다.
 - stage 산출물: `private/<company>/<position>/interview/prep.md`.
 - git 추적 ✓ — 남기는 경우 과거 히스토리 보존 가치가 있는 파일만 둔다.

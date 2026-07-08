@@ -10,9 +10,9 @@
  *   - career-os/public/question-bank/{기술 카테고리}/questions.json  (tech)
  *   - career-os/public/question-bank/behavioral/questions.json  (behavioral)
  *   - career-os/private/question-bank/{tech|behavioral}-personal.jsonl  (있으면 merge)
- *   - career-os/config/study-progress.json  (topic 학습 상태 — study-topic-recommender가 갱신)
- *   - career-os/config/drill-progress.json  (드릴 간격 반복 상태 — ADR-105, 이 엔진이 갱신)
- *   - career-os/data/runtime/drill-log-YYYY-MM-DD.jsonl  (자동 생성)
+ *   - career-os/state/study-progress.json  (topic 학습 상태 — study-topic-recommender가 갱신)
+ *   - career-os/state/drill-progress.json  (드릴 간격 반복 상태 — ADR-105, 이 엔진이 갱신)
+ *   - career-os/state/drill-log-YYYY-MM-DD.jsonl  (자동 생성)
  */
 
 import {
@@ -105,11 +105,11 @@ const TECH_CATEGORIES = [
 ] as const;
 
 function studyProgressPath(): string {
-  return join(careerOsRoot(), "config", "study-progress.json");
+  return join(careerOsRoot(), "state", "study-progress.json");
 }
 
 function drillProgressPath(): string {
-  return join(careerOsRoot(), "config", "drill-progress.json");
+  return join(careerOsRoot(), "state", "drill-progress.json");
 }
 
 function loadDrillProgress(): DrillProgress {
@@ -119,12 +119,12 @@ function loadDrillProgress(): DrillProgress {
 }
 
 function mvpTargetPath(): string {
-  return join(careerOsRoot(), "config", "mvp-target.json");
+  return join(careerOsRoot(), "state", "mvp-target.json");
 }
 
 function drillLogPath(date?: string): string {
   const d = date ?? new Date().toISOString().slice(0, 10);
-  const dir = join(careerOsRoot(), "data", "runtime");
+  const dir = join(careerOsRoot(), "state");
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   return join(dir, `drill-log-${d}.jsonl`);
 }

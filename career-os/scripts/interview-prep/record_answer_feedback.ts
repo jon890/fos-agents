@@ -72,14 +72,14 @@ function readOptional(path: string): string {
 }
 
 function resolveDataRoot(): string {
-  const targetPath = join(ROOT, "config", "mvp-target.json");
+  const targetPath = join(ROOT, "state", "mvp-target.json");
   const target = parseMvpTarget(targetPath);
   if (!target.primary) {
-    throw new Error("config/mvp-target.json primary is null; set an active interview target before recording position-specific feedback");
+    throw new Error("state/mvp-target.json primary is null; set an active interview target before recording position-specific feedback");
   }
   const dataRoot = target.primary.data_root.trim();
   if (!dataRoot || dataRoot.includes("..") || dataRoot.startsWith("/")) {
-    throw new Error("config/mvp-target.json primary.data_root must be a safe relative path");
+    throw new Error("state/mvp-target.json primary.data_root must be a safe relative path");
   }
   return join(ROOT, dataRoot);
 }

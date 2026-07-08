@@ -28,7 +28,8 @@ const scriptDir = dirname(fileURLToPath(import.meta.url));
 const rootDir = resolve(scriptDir, "../..");
 const envFile = resolve(rootDir, ".env");
 const runtimeDir = resolve(rootDir, "data/runtime");
-const inventoryPath = resolve(runtimeDir, "topic-inventory.json");
+const stateDir = resolve(rootDir, "state");
+const inventoryPath = resolve(stateDir, "topic-inventory.json");
 const markdownPath = resolve(runtimeDir, "morning-topic-recommendation.md");
 const actionDir = resolve(runtimeDir, "study-topic-actions");
 

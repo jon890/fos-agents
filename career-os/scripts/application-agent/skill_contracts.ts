@@ -237,7 +237,7 @@ export const SKILL_CONTRACTS: Readonly<Record<string, SkillContract>> = {
     description:
       '매일 기술 면접 질문에 답하고 채점·약점 환류를 기록하는 대화형 드릴.',
     autonomy: 'agent_only',
-    expectedOutputs: ['data/runtime/drill-log-{date}.jsonl'],
+    expectedOutputs: ['state/drill-log-{date}.jsonl'],
     touchesFosStudy: false,
     modifiesCandidateProfile: false,
     requiresExternalAccess: false,
@@ -253,7 +253,7 @@ export const SKILL_CONTRACTS: Readonly<Record<string, SkillContract>> = {
     description:
       '매일 인성 면접 질문에 답하고 STAR·가치관 기준으로 채점·약점 환류를 기록하는 대화형 드릴.',
     autonomy: 'agent_only',
-    expectedOutputs: ['data/runtime/drill-log-{date}.jsonl'],
+    expectedOutputs: ['state/drill-log-{date}.jsonl'],
     touchesFosStudy: false,
     modifiesCandidateProfile: false,
     requiresExternalAccess: false,

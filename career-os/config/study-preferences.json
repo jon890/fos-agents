@@ -2,7 +2,7 @@
   "updated_at": "2026-06-08",
   "purpose": "Daily study recommendation should be LLM-curated from derived inventory, progress, and user intent, not merely a fixed topic-pool rotation.",
   "selection_principles": [
-    "Reflect already studied topics from config/study-progress.json and sources/fos-study scan.",
+    "Reflect already studied topics from state/study-progress.json and sources/fos-study scan.",
     "If a candidate topic is already covered by an existing fos-study document, classify it as review/update-existing rather than a new study topic.",
     "Use config pools only as candidates, pins, exclusions, and guardrails; do not treat them as the canonical study inventory.",
     "Prefer topics that connect backend experience to near-term interview answers without copying private application material into public study topics.",

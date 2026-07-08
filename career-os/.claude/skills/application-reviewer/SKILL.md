@@ -40,7 +40,7 @@ PDF 생성은 제출 자동화가 아니며, 업로드·전송·제출 버튼 �
 7. `career-os/config/candidate-profile.md` — 후보자 프로필 core: 사실·라벨 (필수)
 8. `career-os/config/candidate-profile-detail.md` — 프로젝트 서사·의사결정 패턴·협업 스타일 (필수)
 9. fit-analysis.md 및 application-package.md의 `## 근거 파일 참조` 에 명시된 근거 파일 — 선택적으로 읽는다
-10. `career-os/data/applications/ledger.jsonl` — riskFlags / status / revisionCount 확인 (선택)
+10. `career-os/state/positions-queue.jsonl` — riskFlags / status / revisionCount 확인 (선택)
 
 ## Workflow
 
@@ -50,7 +50,7 @@ PDF 생성은 제출 자동화가 아니며, 업로드·전송·제출 버튼 �
 
 - 예: `/application-reviewer data/applications/tossplace/applied-ai-engineer`
   → dir = `career-os/data/applications/tossplace/applied-ai-engineer`
-- path가 없으면 `career-os/data/applications/ledger.jsonl`을 읽어 다음 조건의 첫 항목을 후보로 선택:
+- path가 없으면 `career-os/state/positions-queue.jsonl`을 읽어 다음 조건의 첫 항목을 후보로 선택:
   - `needsUserReview=true` 또는 `status`가 `ready_for_user_review|preparing_application|needs_revision` 중 하나
   - 후보 선택 시 사용자에게 확인 후 계속
 - dir 특정 불가 시 stderr + exit 1.
@@ -67,7 +67,7 @@ PDF 생성은 제출 자동화가 아니며, 업로드·전송·제출 버튼 �
 6. submission-checklist.md
 7. `career-os/config/candidate-profile.md` (core) + `career-os/config/candidate-profile-detail.md` (detail — 프로젝트 서사·의사결정 패턴·협업 스타일)
 8. application-package.md의 `## 근거 파일 참조` 에서 관련성 높은 근거 파일 2~5개 선택적으로 읽는다
-9. ledger.jsonl — riskFlags / revisionCount 확인
+9. positions-queue.jsonl — riskFlags / revisionCount 확인
 
 ### 3. 6개 축 심사
 
@@ -101,7 +101,7 @@ application-package.md, resume-draft.md, cover-letter.md와 fit-analysis.md를 �
 
 #### 3-5. Cooldown / Duplication Risk (쿨다운·중복 지원)
 
-ledger.jsonl의 riskFlags와 posting.md의 위험 플래그를 교차:
+positions-queue.jsonl의 riskFlags와 posting.md의 위험 플래그를 교차:
 - `toss_group_cooldown`, `duplicate_application` 등 riskFlag 존재 여부 확인
 - 동일 회사·그룹 내 복수 지원 이력이 있는지 ledger 전체 스캔
 - `revisionCount >= maxRevisionCount`이면 진행 중단 권고
@@ -219,7 +219,7 @@ review.md 작성 후 아래 항목 검증. 실패 시 해당 섹션 재작성:
 | application dir 특정 불가 | stderr + exit 1 |
 | posting.md / fit-analysis.md / application-package.md / resume-draft.md / cover-letter.md / submission-checklist.md 부재 | stderr + exit 1 |
 | candidate-profile.md 부재 | stderr + exit 1 |
-| ledger.jsonl 부재 (자동 선택 시) | stderr warn + dir를 사용자에게 직접 입력 요청 |
+| positions-queue.jsonl 부재 (자동 선택 시) | stderr warn + dir를 사용자에게 직접 입력 요청 |
 | 근거 파일 읽기 실패 | stderr warn + 해당 파일 없이 계속 진행 (evidence guard 강화) |
 | self-check 3회 실패 | stderr + exit 1, 실패 항목 명시 |
 
@@ -234,8 +234,8 @@ review.md 작성 후 아래 항목 검증. 실패 시 해당 섹션 재작성:
 ## References
 
 - `career-os/docs/adr/INDEX.md` — ADR-045 (지원 후보 ledger 분리), ADR-038 (artifact 검증 후 상태 전이) 설계 근거
-- `career-os/docs/data-schema.md` — ledger.jsonl 스키마
-- `career-os/data/applications/ledger.jsonl` — 지원 이력 원장
+- `career-os/docs/data-schema.md` — positions-queue.jsonl 스키마
+- `career-os/state/positions-queue.jsonl` — 지원 이력 원장
 - `career-os/config/candidate-profile.md` — 후보자 프로필 core (사실·라벨)
 - `career-os/config/candidate-profile-detail.md` — 후보자 프로필 detail (프로젝트 서사·의사결정 패턴·협업 스타일)
 - `career-os/.claude/skills/application-package-writer/SKILL.md` — 생성 단계 skill (Phase 04)

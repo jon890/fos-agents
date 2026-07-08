@@ -482,7 +482,7 @@ async function cmdIngestPositionReport(
   args: string[],
 ): Promise<void> {
   const partial = parseOpts(args);
-  const ledgerPath = partial.ledgerPath ?? 'data/applications/ledger.jsonl';
+  const ledgerPath = partial.ledgerPath ?? 'state/positions-queue.jsonl';
 
   if (!reportPath) {
     console.error('Usage: ingest-position-report <report-path> [--ledger <path>]');
@@ -708,7 +708,7 @@ Commands:
   confirm-priority                     Store user-confirmed action stage and priority rank
 
 Options:
-  --ledger <path>       Ledger file (default: data/applications/ledger.jsonl)
+  --ledger <path>       Ledger file (default: state/positions-queue.jsonl)
   --output-dir <path>   Output directory (default: data/runtime/application-agent)
   --format markdown|jsonl  Decision log format (default: markdown)
   --max-actions <n>     Max agent actions per run-daily (default: 5)

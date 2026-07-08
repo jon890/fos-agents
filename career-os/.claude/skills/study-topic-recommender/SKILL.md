@@ -20,13 +20,13 @@ backend 면접 준비용 morning 토픽 추천 통합 skill. replenish + recomme
 
 1. `career-os/sources/fos-study/**/*.md` — 학습 문서 inventory 정본. exclude `.git/**`, `.claude/**`, `private/**`.
 2. `career-os/config/study-pack-topics.json` — 선택 사항. 전체 목록 정본이 아니라 사람이 고른 override/fallback 후보.
-3. `career-os/config/study-pack-candidates.json` — 선택 사항. 전체 reservoir 정본이 아니라 seed/fallback 후보.
+3. `career-os/state/study-pack-candidates.json` — 선택 사항. 전체 reservoir 정본이 아니라 seed/fallback 후보.
 4. `career-os/config/external-reading-sources.json` — `techBlog / ai / geek` 외부 reading reservoir items (feedUrl, filterKeywords 포함)
 5. `career-os/config/live-coding-seed-pool.json` — primary live-coding seed pool
 6. `career-os/config/live-coding-seed-candidates.json` — candidate live-coding seeds
-7. `career-os/config/study-progress.json` — 이미 공부한 주제와 현재 보강 영역
+7. `career-os/state/study-progress.json` — 이미 공부한 주제와 현재 보강 영역
 8. `career-os/config/study-preferences.json` — 사용자의 관심 축과 추천 철학. 현재 target 중복값은 요구하지 않음.
-9. `career-os/data/runtime/topic-inventory-history.jsonl` — 최근 추천 history (cooldown 계산, 없으면 skip)
+9. `career-os/state/topic-inventory-history.jsonl` — 최근 추천 history (cooldown 계산, 없으면 skip)
 
 fos-study 산출물 진실원 (ADR-033): `career-os/sources/fos-study/` 트리의 `**/*.md` 직접 스캔.
 promote 판단 기준도 이 스캔 결과 기반 — 외부 아티팩트 목록 파일 불필요.
@@ -47,15 +47,15 @@ After inventory generation, use LLM reasoning to choose and explain what matters
 
 ### 1. Promote 자동 detect
 
-`data/runtime/topic-inventory-history.jsonl`의 최근 history entry에서 `study-pack-candidates` namespace에 있는 key 중 `sources/fos-study/<item.promotionTarget.outputPath>.md`가 실제로 존재하면 candidate → override 후보 승격 대상으로 판단한다.
+`state/topic-inventory-history.jsonl`의 최근 history entry에서 `study-pack-candidates` namespace에 있는 key 중 `sources/fos-study/<item.promotionTarget.outputPath>.md`가 실제로 존재하면 candidate → override 후보 승격 대상으로 판단한다.
 
-승격 후보가 있으면 사용자에게 안내 후 `config/study-pack-topics.json` / `config/study-pack-candidates.json` 수정 권유. 자동 수정은 하지 않는다 (사람 확인 필요). 안내 후 Step 2로 계속 진행 (사용자 응답 대기 X).
+승격 후보가 있으면 사용자에게 안내 후 `config/study-pack-topics.json` / `state/study-pack-candidates.json` 수정 권유. 자동 수정은 하지 않는다 (사람 확인 필요). 안내 후 Step 2로 계속 진행 (사용자 응답 대기 X).
 
 승격 후보가 없으면 이 단계를 건너뛴다.
 
 ### 2. Candidate refresh decision (ADR-070)
 
-`config/study-pack-candidates.json`과 최근 history를 읽어 후보 refresh 필요 여부를 판단한다.
+`state/study-pack-candidates.json`과 최근 history를 읽어 후보 refresh 필요 여부를 판단한다.
 
 **Cron 경로 하루 1회 제한 (ADR-070 D10):**
 스킬 호출 args에 새 관심사·면접 맥락이 없는 cron 자동 실행의 경우,
@@ -65,8 +65,8 @@ on-demand (스킬 args에 관심사 포함) 경우 이 제한을 적용하지 �
 
 **Trigger 조건 — 다음 중 하나라도 해당하면 refresh 실행:**
 
-- `config/study-pack-candidates.json`의 active 자동 후보(`source: "llm-candidate-refresh"`, `status: "active"`)가 5개 이하
-- `data/runtime/topic-inventory-history.jsonl` 최근 7회 entries에서 같은 domain/tag 반복이 과도함
+- `state/study-pack-candidates.json`의 active 자동 후보(`source: "llm-candidate-refresh"`, `status: "active"`)가 5개 이하
+- `state/topic-inventory-history.jsonl` 최근 7회 entries에서 같은 domain/tag 반복이 과도함
 - 스킬 호출 args에 새 관심사 또는 새 지원·면접 맥락이 포함됨
 - 기존 fos-study 문서가 현재 active 후보와 많이 겹침
 
@@ -74,7 +74,7 @@ Trigger 조건이 없으면 이 단계를 건너뛰고 Step 3으로 진행한다
 
 **Refresh 실행 (trigger 조건 해당 시):**
 
-1. `config/study-preferences.json`, `config/study-progress.json`, `data/runtime/topic-inventory-history.jsonl`을 읽는다.
+1. `config/study-preferences.json`, `state/study-progress.json`, `state/topic-inventory-history.jsonl`을 읽는다.
 2. 현재 에이전트가 위 입력과 호출 context를 바탕으로 10-20개 신규 후보를 제안하고 `/tmp/study-topic-candidate-proposals.json`에 쓴다.
 
    각 후보 필드:
@@ -145,13 +145,13 @@ script 내부 흐름 (알고리즘 상수 참고용):
 - **cooldown**: backend key 7 history entries / secondary 3 history entries
 - **RSS feed**: feed-cache TTL 6h 활용 — 반복 호출 시 네트워크 부담 없음
 - **산출물**:
-  - `data/runtime/topic-inventory.json` — fos-study sourceOfTruth + override/seed/fallback pool + 추천 결과 + 통계 (`excluded.possibleDuplicates` 배열 포함 — Step 3.5 입력)
+  - `state/topic-inventory.json` — fos-study sourceOfTruth + override/seed/fallback pool + 추천 결과 + 통계 (`excluded.possibleDuplicates` 배열 포함 — Step 3.5 입력)
   - `data/runtime/morning-topic-recommendation.md` — 사람이 읽는 마크다운 (10픽 + 오늘의 3선)
-  - `data/runtime/topic-inventory-history.jsonl` — 오늘 추천 history append
+  - `state/topic-inventory-history.jsonl` — 오늘 추천 history append
 
 ### 3.5 에이전트 duplicate review (ADR-033)
 
-`data/runtime/topic-inventory.json`을 읽고 `excluded.possibleDuplicates` 배열을 의미 판정한다.
+`state/topic-inventory.json`을 읽고 `excluded.possibleDuplicates` 배열을 의미 판정한다.
 
 각 후보를 다음 4 decision label 중 하나로 분류:
 - `new` — 의미적으로 다른 주제. 새 study-pack 추천 가능.
@@ -204,8 +204,8 @@ bun --env-file=.env \
 
 ### 4. LLM 큐레이션
 
-`data/runtime/topic-inventory.json` 읽기, `data/runtime/morning-topic-recommendation.md`,
-`config/study-progress.json`, and `config/study-preferences.json`.
+`state/topic-inventory.json` 읽기, `data/runtime/morning-topic-recommendation.md`,
+`state/study-progress.json`, and `config/study-preferences.json`.
 
 Use them to produce a concise recommendation with:
 
@@ -228,7 +228,7 @@ For Discord/cron delivery, keep Korean output concise: 3 topics, avoided axes, p
 
 자연어에 "live-coding" 키워드가 있으면 추가 처리:
 
-1. `data/runtime/topic-inventory.json`의 `pools.remainingLiveCodingSeeds` 확인. 비어 있으면 `pools.remainingLiveCodingCandidateSeeds` 확인.
+1. `state/topic-inventory.json`의 `pools.remainingLiveCodingSeeds` 확인. 비어 있으면 `pools.remainingLiveCodingCandidateSeeds` 확인.
 2. 가장 우선도 높은 seed 1개 선택 → 제목 + slug + difficulty + outputPath 출력
 3. 사용자 승인 시 `/study-pack-writer <seed-slug>` 호출 안내 (study-pack-writer로 위임)
 
@@ -241,7 +241,7 @@ For Discord/cron delivery, keep Korean output concise: 3 topics, avoided axes, p
 # A. topic-inventory.json 존재 및 필수 키
 python3 -c "
 import json, sys
-data = json.load(open('career-os/data/runtime/topic-inventory.json'))
+data = json.load(open('career-os/state/topic-inventory.json'))
 keys = ['generatedAt', 'recommendations', 'techBlogRecommendations', 'aiRecommendations', 'todayPick']
 missing = [k for k in keys if k not in data]
 if missing:
@@ -289,8 +289,8 @@ ADR-026 결정 요약 (3줄):
 - `career-os/scripts/study-topic-recommender/refresh_topic_inventory.ts` — 추천 점수 계산 + mix target + morning markdown 생성 (알고리즘 상수 포함)
 - `career-os/scripts/study-topic-recommender/refresh_candidate_pool.ts` — 후보 풀 갱신 (proposals JSON 검증 + study-pack-candidates.json append)
 - `career-os/config/study-preferences.json` — 관심 축과 추천 철학 (LLM 큐레이션 Step 4 입력)
-- `career-os/config/study-progress.json` — 학습 진도 + 약점 맵 (cooldown·promote 판단 입력)
-- `career-os/data/runtime/topic-inventory-history.jsonl` — 최근 추천 history (cooldown 계산 + cron 중복 실행 방지)
+- `career-os/state/study-progress.json` — 학습 진도 + 약점 맵 (cooldown·promote 판단 입력)
+- `career-os/state/topic-inventory-history.jsonl` — 최근 추천 history (cooldown 계산 + cron 중복 실행 방지)
 - 관련 스킬: `study-pack-writer` — 추천 토픽의 실제 학습 문서 작성 위임
 - 관련 스킬: `tech-interview-drill` / `behavioral-interview-drill` — 매일 답변 연습에서 본 skill 추천 토픽·약점을 활용
 

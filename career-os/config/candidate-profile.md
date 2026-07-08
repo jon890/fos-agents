@@ -12,7 +12,7 @@
 ## 지원 대상
 
 - **현재 타깃**: active target이 없을 수 있다.
-  회사·팀·면접 일자·포지션 핵심은 `career-os/config/mvp-target.json`이 단일 출처이며, `primary: null`이면 새 공고 탐색부터 시작한다.
+  회사·팀·면접 일자·포지션 핵심은 `career-os/state/mvp-target.json`이 단일 출처이며, `primary: null`이면 새 공고 탐색부터 시작한다.
 - **지원 가능 범위 (재사용 가능 포지셔닝)** — 두 레인으로 지원한다.
   - **백엔드 코어 레인**: 운영형 자사 서비스 백엔드. 슬롯 도메인 점진 아키텍처 개선, 테스트/검증 기반 리팩터링, AI 활용 개발 생산성이 강점이다.
   - **AI 서비스·AI 플랫폼 전환 레인**: RAG 색인, 문서 파싱 운영, 품질 검증 인프라, 에이전트 기반 개발 생산성을 차별화 자산으로 쓴다.
@@ -164,7 +164,7 @@
 - **폴리그롯 가정 금지** — 이력서·task에 기재 없는 언어/도구(예: Scala, Rust 본격 운영)는 pipeline에서 전제하지 않는다.
 - **수치 날조 금지** — TPS, 팀 규모, 성과 %, 감축율 등이 이력서·task에 명시되지 않았으면 pipeline은 "출처 문서에 기재 없음"으로 응답해야 한다. 이력서 문항1의 "447개 테스트 파일", detail 문서 JMH 수치는 출처 확인됨.
 - **실무 근거 범위** — 본 프로필은 `resume/2603_김병태_이력서_v4.md` + `task/**/*.md` + `interview/kakao-healthcare-carechat-ai-agent.md`를 1차 근거로 사용한다. 기타 이력서 버전(v1~v3, 2108/2512/2601)은 참조용.
-- **회사 특화 타깃은 active primary에서만 주입** — `config/mvp-target.json`의 `primary`가 `null`이면 회사 특화 맥락을 기본값으로 쓰지 않는다.
+- **회사 특화 타깃은 active primary에서만 주입** — `state/mvp-target.json`의 `primary`가 `null`이면 회사 특화 맥락을 기본값으로 쓰지 않는다.
 
 ---
 
