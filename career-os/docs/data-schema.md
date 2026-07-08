@@ -3,30 +3,32 @@
 career-os가 다루는 모든 영속 데이터의 스키마와 위치. 새 필드를 추가하거나 새 파일을 도입할 때 이 문서에 같이 갱신한다.
 작성 규칙은 [`README.md`](README.md)의 Data Schema 작성 규칙을 따른다.
 
-## 디렉터리 한눈에
+## 디렉터리 한눈에 (5버킷 구조 — ADR-107)
+
+`data/`를 해체하고 top-level을 5버킷으로 재편했다.
+config/state는 "이 파일이 바뀌는 트리거가 무엇인가"로 가른다(사용자 의도 = config, 시스템 실행·이벤트 = state).
+runtime 실데이터의 물리 이동은 이 plan 범위 밖이고, 경로 규약과 tracked 자산만 바꾼다(ADR-107).
 
 | 디렉터리 | 역할 | git 추적 |
 |---|---|---|
 | `.env` (워크스페이스 root) | Discord 채널 ID·GitHub 토큰 등 secret (ADR-021) | ✗ (.gitignore) |
 | `.env.example` (워크스페이스 root) | secret 키 템플릿 — git 추적되는 빈 값 가이드 (ADR-021) | ✓ |
-| `config/` | 사람이 큐레이션한 정책·현재 타깃·baseline·예외 override. 실제 학습/질문 자산 목록의 복제본으로 쓰지 않음 (ADR-069) | ✓ |
-| `config/study-progress.json` | 후보자 학습 진도 (config/로 이동) | ✓ |
-| `data/applications/` | 공고별 지원 상태, 맞춤 지원 패키지, evidence/drift review, application digest 입력 | ✗ |
+| `config/` | 사람이 큐레이션한 정책·현재 타깃·baseline·예외 override. 자산 목록 복제본으로 쓰지 않음 (ADR-069) | ✓ |
+| `state/` | 시스템 실행·이벤트 산물 (positions-queue, 학습·드릴 진도, mvp-target, topic-inventory, drill-log, company-cooldown, 수집 노트, eval) | ✗ 기본 gitignore, 5개 파일만 negation tracked (ADR-107) |
+| `applications/` | 공고별 지원 상태, 맞춤 지원 패키지, evidence/drift review | ✗ |
+| `reports/` | 사람이 읽는 생성물 (baseline·daily·job-fit·stage-prep 리포트, morning-topic-recommendation, `reports/latest/` mirror, `reports/downloads/`) | ✗ |
+| `cache/` | 재생성 가능한 캐시·transient (live-postings snapshot, feed-cache, locks, normalized) | ✗ |
 | `private/<company-slug>/<position-slug>/` | 회사·직무별 active 준비 홈. 면접·스터디·지원 산출물을 포지션 단위로 묶는 작업 홈 | ✗ |
 | `private/` | 회사·포지션별 작업 홈과 필요 시 archive. 공개용으로 다듬기 전의 준비 자료 위치 | ✗ |
 | `public/question-bank/` | 공개 가능 일반 backend/CS 면접 질문 bank. private 맥락 없이 git 추적되는 재사용 질문 자산 | ✓ |
-| `data/reports/baseline/YYYY-MM-DD/` | baseline 실행 산출물 (analysis-input, claude.result.json, report.md, fallback.md) | △ 부분적 |
-| `data/reports/daily/YYYY-MM-DD/` | daily 실행 산출물 | △ |
-| `data/runtime/` | 매 실행 갱신되는 가변 상태 (토픽 풀, 잠금, 피드 캐시, 최신 projection) | ✗ (대부분 gitignore) |
-| `data/normalized/` | 외부 소스 정규화 캐시 (현재 비어 있음 — fos-study.latest.json 정리됨) | ✗ |
-| `data/prep/` | legacy 보조 준비 자산 위치. 새 active 준비 정본은 position home의 `interview/prep.md` | ✓ |
-| `data/source/` | 수집된 외부 노트 | ✗ |
 | `logs/` | 실행 로그 (`task-runs.jsonl`, `token-usage.jsonl`) | ✗ |
 | `sources/fos-study/` | 외부 동기 저장소 (jon890/fos-study) — git submodule 같은 위치이나 실제로는 별도 clone | ✗ |
 
-## data/ 경계와 보존 원칙 (ADR-058)
+`state/`에서 negation으로 tracked를 유지하는 5개 파일: `study-progress.json`·`drill-progress.json`·`mvp-target.json`·`study-pack-candidates.json`·`company-cooldown.json` (clone 간 연속성이 필요한 저-churn 상태). 나머지 `state/**`는 untracked runtime이다.
 
-`data/` 아래 파일은 private by default다.
+## 버킷 경계와 보존 원칙 (ADR-058, ADR-107)
+
+`state/`·`applications/`·`reports/`·`cache/` 아래 파일과 `private/`는 private by default다.
 특히 지원, 면접, 후보자 이력, 회사별 전략, 수집 원문과 연결된 내용은 공개 가능성이 따로 확인되기 전까지 비공개로 본다.
 
 기본 경계:
@@ -34,16 +36,16 @@ career-os가 다루는 모든 영속 데이터의 스키마와 위치. 새 필�
 - `private/<company>/<position>/` — 포지션별 작업 홈.
   회사·포지션 맥락, 면접 준비, 답변 메모, 포지션별 학습 재료를 둔다.
   공개 가능한 기술 자료는 개인 맥락을 제거해 `sources/fos-study/`에 별도로 작성할 수 있다.
-- `data/applications/` — 실제 지원 준비 원장과 공고별 산출물의 private home.
+- `applications/` — 실제 지원 준비와 공고별 산출물의 private home.
   맞춤 이력서, 지원 전략, fit/gap 분석, review, 제출 체크리스트를 둔다.
-- `private/archive/` — public/source/report/runtime 중 어느 곳에도 바로 둘 수 없는 private-only archive 후보 위치.
-  구조 전환에서 새 정본으로 대체한 legacy runtime/report는 archive 없이 삭제할 수 있다.
-- `data/source/` — 외부에서 수집한 source text와 notes의 입력 위치.
+- `private/archive/` — public/state/report 중 어느 곳에도 바로 둘 수 없는 private-only archive 후보 위치.
+  구조 전환에서 새 정본으로 대체한 legacy state/report는 archive 없이 삭제할 수 있다.
+- `state/source/` — 외부에서 수집한 source text와 notes의 입력 위치.
   외부 공개 페이지에서 왔더라도 특정 지원, 면접, 회사 전략과 연결되면 private by default로 다룬다.
-- `data/reports/` — baseline, daily, position, interview-prep 같은 생성 리포트 위치.
+- `reports/` — baseline, daily, position, interview-prep 같은 생성 리포트 위치.
   active 판단에 쓰이는 최근 report와 참조된 report만 active로 두고, 오래된 report는 retention 검토 후 archive한다.
-- `data/runtime/` — 최신 projection, cache, lock, eval result 같은 가변 상태 위치.
-  장기 근거가 필요한 runtime 파일은 runtime에 계속 두지 않고 report, task evidence, private archive 중 하나로 승격 여부를 결정한다.
+- `state/`·`cache/` — projection, lock, eval result, 큐, 진도 같은 가변 상태 위치.
+  장기 근거가 필요한 state 파일은 그대로 두지 않고 report, task evidence, private archive 중 하나로 승격 여부를 결정한다.
 
 폐기 표기 원칙 (ADR-098):
 
@@ -145,13 +147,18 @@ career-os가 다루는 모든 영속 데이터의 스키마와 위치. 새 필�
 
 유지 원칙:
 
-- 현재 회사·직무·포지션 홈: `config/mvp-target.json`
 - 후보자 baseline과 장기 이력(추천·fit 판단용 core): `config/candidate-profile.md` (ADR-104)
 - 후보자 면접 서사·심화(면접 skill용 detail): `config/candidate-profile-detail.md` (ADR-104)
 - baseline 분석용 core file pin: `config/baseline-core-files.json`
-- topic 학습 진행 상태와 약점 학습 상태: `config/study-progress.json` (ADR-105 — 드릴 상태는 분리)
-- 드릴 간격 반복 상태: `config/drill-progress.json` (ADR-105)
 - 외부 reading reservoir: `config/external-reading-sources.json`
+
+ADR-107로 `state/`로 이동한 항목(트리거가 시스템 실행·이벤트라 config가 아님):
+
+- 현재 회사·직무·포지션 홈: `state/mvp-target.json` (탈락 시 루프가 primary→history 자동 갱신)
+- topic 학습 진행 상태와 약점 학습 상태: `state/study-progress.json` (ADR-105 — 드릴 상태는 분리)
+- 드릴 간격 반복 상태: `state/drill-progress.json` (ADR-105)
+- study-pack 후보 캐시: `state/study-pack-candidates.json`
+- 회사 cooldown: `state/company-cooldown.json` (ADR-109 — verified-company에서 분리)
 - 검증 회사군과 회사 키워드 단일 출처: `config/verified-company-research-targets.json` (ADR-090, references에서 이동; ADR-103 회사 키워드 흡수)
 - position 수집 설정(회사 비종속 role 키워드): `config/position-collection.json` (ADR-099, ADR-103) — `{ wanted: { jobGroupId, targetKeywords[] } }`. targetKeywords는 role 키워드만, 회사 키워드는 verified가 소유
 - 후보자 구조화 사실: `config/candidate-config.json` (ADR-099) — `{ experienceYears, ... }`. 코드가 읽는 사실 정본, profile.md는 prose 서술(거울 구조)
@@ -192,11 +199,26 @@ config diet는 plan068에서 reader inventory와 fallback을 확인한 뒤 phase
 | `priorityCompanies[].preferredDomains`, `notes` | LLM | 회사 업사이드 판단 근거 |
 | `priorityCompanies[].techBlogs` | LLM | 기술 블로그 URL 목록. `ref:<key>` 값은 `config/external-reading-sources.json`의 `techBlog.items[].key`를 가리키고, URL 정본은 그 파일이다. 매칭 항목이 없으면 URL을 그대로 둔다 |
 | `secondaryCompanies[]` | 코드+LLM | 저-tier 회사 키워드 목록(ADR-103). priorityCompanies에 없던 회사 키워드를 담아 수집 커버리지 유지. `company`·`wantedKeywords` 중심 |
-| `cooldown.active[]`, `cooldown.notes` | LLM | 우선순위 감점 쿨다운 회사 + 해제 메모. 하드필터 아님(ADR-095) |
 | `preferenceExcluded.companies[]` | LLM | JD fit이 높아도 추천 티어에서 제외하는 선호 제외 회사(ADR-095) |
 
+`cooldown`은 ADR-109로 `state/company-cooldown.json`으로 분리했다(지원 결과 이벤트로 갱신 = state). 본 파일에는 더 두지 않는다.
 코드가 JSON을 읽어 adapter를 라우팅하는 wire-up은 후속 plan에서 한다. 본 스키마는 양방향 소비를 전제로 설계한다.
-회사별 운영 데이터(쿨다운·선호제외)도 references 산문에서 본 파일로 흡수했다(ADR-095). references md는 방법론만 남기고 회사 데이터는 본 파일을 역참조한다.
+선호제외는 references 산문에서 본 파일로 흡수했다(ADR-095). references md는 방법론만 남기고 회사 데이터는 본 파일을 역참조한다.
+
+### state/company-cooldown.json (ADR-109 신규)
+
+우선순위 감점 쿨다운 회사와 해제 메모의 단일 출처.
+`verified-company-research-targets.json`에서 분리했다(지원 결과 이벤트로 갱신 = state).
+하드필터가 아니라 감점 신호다(ADR-095 판단 기준 유지). 해제 날짜 결정 이력이 있어 tracked를 유지한다.
+
+```json
+{
+  "active": [
+    { "company": "string", "releaseDate": "YYYY-MM-DD | null", "note": "string" }
+  ],
+  "notes": "string"
+}
+```
 
 ### config/mvp-target.json (현재 타깃 단일 출처)
 
@@ -354,11 +376,13 @@ ADR-069 이후 `current_target`처럼 `config/mvp-target.json`의 현재 타깃�
 
 공고별 지원 에이전트 MVP의 비공개 상태 저장소. 실제 지원 전략, 맞춤 이력서 문구, 제출 상태, 회사별 쿨다운 판단이 들어가므로 git 추적하지 않는다.
 
-## data/runtime/application-agent/frontdoor-queue.jsonl (legacy — plan038)
+## state/application-agent/frontdoor-queue.jsonl (폐기 예정 — ADR-110)
 
-사용자 선택 전 추천 후보 순위와 상태를 저장하는 JSONL 파일. 한 줄은 하나의 추천 후보이며, 사용자가 "N번 준비 시작"을 선택하기 전까지 `data/applications/ledger.jsonl`에 넣지 않는다. 이 파일은 runtime 데이터이며 git 추적 대상이 아니다.
-ADR-081 이후 이 파일은 DB import 검증 후 삭제 대상이다.
-새 대시보드 기능은 이 파일을 현재 상태 정본으로 삼지 않는다.
+> **ADR-110 폐기 예정**: frontdoor-queue 대기열 단계를 없앤다(흐름을 "추천 → 선택 → positions-queue 등록"으로 단순화). 코드 제거는 Phase 06에서 하고, 코드가 아직 참조하는 동안만 스키마를 유지한다(ADR-098). 제거 후 이 섹션은 삭제하고 history는 ADR-110이 단일 출처다.
+
+사용자 선택 전 추천 후보 순위와 상태를 저장하는 JSONL 파일. 한 줄은 하나의 추천 후보이며, 사용자가 "N번 준비 시작"을 선택하기 전까지 `state/positions-queue.jsonl`에 넣지 않는다. 이 파일은 runtime 데이터이며 git 추적 대상이 아니다.
+ADR-081 이후 이 파일은 DB import 검증 후 삭제 대상이었고, ADR-110으로 대기열 단계 자체를 폐기한다.
+새 흐름은 이 파일을 현재 상태 정본으로 삼지 않는다.
 
 상태 enum:
 
@@ -540,9 +564,7 @@ private/<company-slug>/<position-slug>/interview/
 ### 디렉터리 구조
 
 ```text
-data/applications/
-├── ledger.jsonl
-├── _priority-history.jsonl
+applications/
 └── <company-slug>/
     └── <role-slug>/
         ├── posting.md
@@ -552,17 +574,22 @@ data/applications/
         ├── cover-letter.md
         ├── submission-checklist.md
         └── review.md
+
+state/
+├── positions-queue.jsonl        (옛 data/applications/ledger.jsonl, ADR-108)
+└── _priority-history.jsonl
 ```
 
 TossPlace fixture 예시:
 
 ```text
-data/applications/tossplace/applied-ai-engineer/
+applications/tossplace/applied-ai-engineer/
 ```
 
-### ledger.jsonl record schema
+### positions-queue.jsonl record schema (옛 ledger.jsonl — ADR-108)
 
-검증 단일 출처: `scripts/application-agent/ledger_schema.ts`
+검증 단일 출처: `scripts/application-agent/positions_queue_schema.ts` (옛 `ledger_schema.ts`, 코드 rename은 Phase 07).
+아래 record 예시의 `applicationDir`·`*Path`는 Phase 07 경로 갱신 대상이다.
 
 ```json
 {
@@ -1001,10 +1028,11 @@ caller가 `.env`를 ts에 전달하는 방법: `bun --env-file=career-os/.env _s
 
 ## data/
 
-### config/study-progress.json (ADR-002, data/ → config/ 이동; ADR-105 드릴 상태 분리)
+### state/study-progress.json (ADR-002; ADR-105 드릴 상태 분리; ADR-107 config→state 이동)
 
 topic 학습 이력과 topic 학습 약점 상태의 단일 출처다.
-드릴 간격 반복 상태는 `config/drill-progress.json`으로 분리했다(ADR-105).
+트리거가 시스템 학습 실행이라 ADR-107로 `state/`로 옮겼다(tracked 유지, negation).
+드릴 간격 반복 상태는 `state/drill-progress.json`으로 분리했다(ADR-105).
 스키마 정본은 `scripts/interview-drill/drill-engine.ts`의 topic 타입과 실데이터다.
 
 ```json
@@ -1032,9 +1060,10 @@ topic 학습 이력과 topic 학습 약점 상태의 단일 출처다.
 - `<topic-key>`는 약점 추적 식별자로 드릴·공부팩과 공유한다(ADR-097).
 - 옛 문서에 있던 `question_id`·`shallow_count`·`unknown_count`는 코드·실데이터에 없어 제거했다(ADR-105 drift 정리).
 
-### config/drill-progress.json (ADR-105 신규)
+### state/drill-progress.json (ADR-105 신규; ADR-107 config→state 이동)
 
 드릴 간격 반복 상태의 단일 출처다.
+트리거가 드릴 실행이라 ADR-107로 `state/`로 옮겼다(tracked 유지, negation).
 `tech-interview-drill`·`behavioral-interview-drill`이 공유하는 `scripts/interview-drill/drill-engine.ts`가 읽고 쓴다.
 `<topic-key>`는 study-progress와 같은 약점 추적 식별자다.
 

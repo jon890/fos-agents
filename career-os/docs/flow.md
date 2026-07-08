@@ -72,7 +72,7 @@ career-os의 표준 진입점은 agent skill 직접 호출이다.
 Use skill: /study-topic-recommender
   -> 현재 학습 상태, 후보 풀, fos-study inventory 읽기
   -> 오늘의 학습 후보와 보강 후보 생성
-  -> data/runtime/morning-topic-recommendation.md 작성
+  -> reports/morning-topic-recommendation.md 작성
   -> 사용자가 주제 선택
   -> Use skill: /study-pack-writer <topic>
   -> 공개 가능한 기술 주제로 정규화
@@ -98,10 +98,10 @@ scheduled daily recommendation
 
 주요 산출물:
 
-- `data/runtime/topic-inventory.json`
-- `data/runtime/morning-topic-recommendation.md`
-- `data/runtime/study-topic-candidate-refresh.{json,md}`
-- `data/runtime/study-topic-actions/YYYY-MM-DD.json`
+- `state/topic-inventory.json`
+- `reports/morning-topic-recommendation.md`
+- `state/study-topic-candidate-refresh.{json,md}`
+- `state/study-topic-actions/YYYY-MM-DD.json`
 - `sources/fos-study/<category>/<topic>.md`
 
 ## 포지션 추천
@@ -118,7 +118,7 @@ Use skill: /position-recommender [context]
   -> 표준 출력 JSON(recommendation.json) 작성 — 적재용 source·closeDate 포함  [ADR-101]
   -> Markdown과 HTML report 파생
   -> 수집·추천 건강 지표를 logs/position-metrics.jsonl에 append (기준선 대비 개선 추적)  [ADR-099]
-  -> frontdoor queue 또는 application ledger 후보 갱신
+  -> 사용자 선택 후보를 positions-queue에 등록  [ADR-110]
   -> 다음 행동 후보를 지원 준비 또는 역할 fit 진단으로 넘김
 ```
 
@@ -134,19 +134,18 @@ Use skill: /position-recommender [context]
 현재 상태:
 
 - 표준 출력 JSON과 report가 추천 정본이다.
-- 선택 전 후보는 `frontdoor-queue.jsonl`에 둘 수 있고, 실제 지원 준비는 `data/applications/ledger.jsonl`로 승격한다.
+- 추천 결과에서 사용자가 바로 후보를 골라 `state/positions-queue.jsonl`에 등록한다(ADR-110로 선택 전 대기열 폐기).
 - 별도 웹 DB나 outbox를 정본으로 두지 않는다.
 - 수집 source, adapter, 진단 상세는 `code-architecture.md`와 position-recommender SKILL.md를 따른다.
 
 주요 산출물:
 
-- `data/runtime/live-position-postings.md`
-- `data/reports/daily/YYYY-MM-DD/position-recommendation/recommendation.json`
-- `data/reports/daily/YYYY-MM-DD/position-recommendation/report.md`
-- `data/reports/daily/YYYY-MM-DD/position-recommendation/report.html`
-- `data/runtime/position-recommendation.md`
-- `data/runtime/position-recommendation.html`
-- `data/runtime/application-agent/frontdoor-queue.jsonl` (legacy)
+- `cache/live-position-postings.md`
+- `reports/daily/YYYY-MM-DD/position-recommendation/recommendation.json`
+- `reports/daily/YYYY-MM-DD/position-recommendation/report.md`
+- `reports/daily/YYYY-MM-DD/position-recommendation/report.html`
+- `reports/latest/position-recommendation.md`
+- `reports/latest/position-recommendation.html`
 
 ## 지원 준비
 
@@ -157,7 +156,7 @@ Use skill: /position-recommender [context]
 ```text
 추천 후보 선택
   -> 지원 준비 시작 요청
-  -> ledger 갱신
+  -> positions-queue 등록·갱신  [ADR-108, ADR-110]
   -> posting.md 확보
   -> Use skill: /application-package-writer <posting-path>
   -> fit-analysis.md 작성
@@ -199,14 +198,14 @@ discovered
 
 주요 산출물:
 
-- `data/applications/ledger.jsonl`
-- `data/applications/<application-id>/posting.md`
-- `data/applications/<application-id>/fit-analysis.md`
-- `data/applications/<application-id>/application-package.md`
-- `data/applications/<application-id>/resume-draft.md`
-- `data/applications/<application-id>/cover-letter.md`
-- `data/applications/<application-id>/submission-checklist.md`
-- `data/applications/<application-id>/review.md`
+- `state/positions-queue.jsonl` (옛 ledger, ADR-108)
+- `applications/<application-id>/posting.md`
+- `applications/<application-id>/fit-analysis.md`
+- `applications/<application-id>/application-package.md`
+- `applications/<application-id>/resume-draft.md`
+- `applications/<application-id>/cover-letter.md`
+- `applications/<application-id>/submission-checklist.md`
+- `applications/<application-id>/review.md`
 
 ## 면접 준비
 
@@ -217,7 +216,7 @@ Use skill: /job-fit-analyzer [역할]
   -> 타깃 해석(인자 또는 mvp-target fallback) + 후보자 프로필·baseline 읽기
   -> 같은 역할 지난 진단 있으면 changeSince 반영
   -> JobFitRun JSON 정본 생성(verdict·careerPath·interviewStrategy 1급, reinforcement 부차)
-  -> data/reports/job-fit-YYYY-MM-DD-<slug>.json 작성 → render_job_fit.ts로 md 파생
+  -> reports/job-fit-YYYY-MM-DD-<slug>.json 작성 → render_job_fit.ts로 md 파생
   -> nextActions 라우팅(최우선 갭 → study-pack)  [ADR-096]
 ```
 
@@ -225,7 +224,7 @@ Use skill: /job-fit-analyzer [역할]
 Use skill: /interview-stage-prep [first-round|final-round|offer]
   -> 현재 면접 단계와 후보자 프로필 읽기
   -> 단계별 예상 질문, 리스크, 역질문, 준비 체크리스트 작성
-  -> data/reports/stage-prep-YYYY-MM-DD.md 작성
+  -> reports/stage-prep-YYYY-MM-DD.md 작성
 ```
 
 ```text
@@ -240,15 +239,15 @@ Use skill: /behavioral-interview-drill
 면접 준비의 사람용 정본은 포지션별 private home에 둔다.
 공개 가능한 기술 보강 주제만 `study-pack-writer`로 넘어간다.
 
-활성 면접 타깃이 없으면 `config/mvp-target.json`의 `primary`는 `null`일 수 있다.
+활성 면접 타깃이 없으면 `state/mvp-target.json`의 `primary`는 `null`일 수 있다.
 이때 단계별 면접 준비는 새 active 타깃이 설정될 때까지 멈추고, 드릴과 일반 질문 bank 보강은 회사별 boost 없이 계속 진행한다.
 
 주요 산출물:
 
-- `data/reports/job-fit-YYYY-MM-DD-<slug>.{json,md}` (JSON 정본 + md 파생, ADR-096)
-- `data/reports/stage-prep-YYYY-MM-DD.md`
-- `data/runtime/drill-log-YYYY-MM-DD.jsonl`
-- `config/study-progress.json`
+- `reports/job-fit-YYYY-MM-DD-<slug>.{json,md}` (JSON 정본 + md 파생, ADR-096)
+- `reports/stage-prep-YYYY-MM-DD.md`
+- `state/drill-log-YYYY-MM-DD.jsonl`
+- `state/study-progress.json`
 - `private/<company>/<position>/interview/prep.md`
 
 ## 질문 은행
@@ -266,7 +265,7 @@ Use skill: /question-bank-collector <topic>
   -> 필요한 경우 private 면접 prep에 선별 반영 후보 제공
 ```
 
-인성 면접 웹 수집 자료는 먼저 `data/runtime/behavioral-interview-web-source-scan-YYYY-MM-DD.md`에 출처와 신뢰도를 남긴다.
+인성 면접 웹 수집 자료는 먼저 `state/behavioral-interview-web-source-scan-YYYY-MM-DD.md`에 출처와 신뢰도를 남긴다.
 그중 회사명, 개인 이력, 지원 전략을 제거해 재사용 가능한 일반 질문으로 정규화할 수 있는 항목은 `public/question-bank/behavioral/questions.json`에 누적한다.
 
 특정 포지션에서 드러난 약점 질문은 `private/question-bank/{behavioral,tech}-personal.jsonl`에 남기고, 공개 가능한 일반 질문만 `public/question-bank/`로 승격한다.
@@ -292,9 +291,9 @@ application review 통과
 
 주요 산출물:
 
-- `data/applications/<application-id>/resume-draft.md`
-- `data/applications/<application-id>/resume.html`
-- `data/applications/<application-id>/resume.pdf`
+- `applications/<application-id>/resume-draft.md`
+- `applications/<application-id>/resume.html`
+- `applications/<application-id>/resume.pdf`
 
 ## 피드백 루프
 
@@ -323,9 +322,9 @@ Use skill: /position-recommender
 
 - 해당 지원은 `closed`로 둔다.
 - `userDecision`은 `rejected` 또는 notes의 outcome으로 남긴다.
-- active 면접 타깃이면 `config/mvp-target.json`의 `primary`를 `history`로 옮기고 `primary: null`로 둔다.
+- active 면접 타깃이면 `state/mvp-target.json`의 `primary`를 `history`로 옮기고 `primary: null`로 둔다.
 - 회사별 private 질문은 보존하되, 다음 추천과 드릴에서 회사별 boost로 쓰지 않는다.
-- 반복 약점은 `config/study-progress.json`, `private/question-bank/`, 다음 `job-fit` report의 `changeSince`로 이어간다.
+- 반복 약점은 `state/study-progress.json`, `private/question-bank/`, 다음 `job-fit` report의 `changeSince`로 이어간다.
 - 새 공고 탐색은 같은 회사 재지원보다 역할·도메인·갭 변화가 명확한 후보를 우선한다.
 
 ## 실행 가드
@@ -361,7 +360,7 @@ fixture 또는 실제 application package 선택
 |---|---|---|
 | dispatcher와 `run_now.sh` | career-os 활성 진입점에서 제거됨 | agent skill 직접 호출 |
 | `interview-prep-analyzer` | 제거됨 | `job-fit-analyzer`, `interview-stage-prep`, drill 계열 |
-| `frontdoor-queue.jsonl` | 선택 전 staging file | application ledger 승격 |
+| `frontdoor-queue.jsonl` | 폐기 (ADR-110, Phase 06) | 추천 → 선택 → positions-queue 등록 |
 | 범용 LLM 채팅 UI | 제거됨 | 목적별 request와 evaluator |
 | 오래된 subprocess writer 경로 | 제거됨 | 현재 에이전트가 SKILL.md workflow 수행 |
 

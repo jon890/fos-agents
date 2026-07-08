@@ -40,26 +40,84 @@ plan093의 실행 계약이며, Phase 01에서 이 결정을 ADR로 고정한 �
 
 ## 애매 항목 확정
 
-- `verified-company-research-targets.json`: **cooldown만 `state/company-cooldown.json`으로 분리**(지원 결과 이벤트로 갱신 = state). priorityCompanies·preferenceExcluded는 config 유지. → ADR-095 재검토 필요.
+- `verified-company-research-targets.json`: **cooldown만 `state/company-cooldown.json`으로 분리**(지원 결과 이벤트로 갱신 = state). priorityCompanies·preferenceExcluded는 config 유지. → ADR-109가 ADR-095 cooldown 부분을 supersede(확정).
 - `morning-topic-recommendation.md`: **reports/** (사람이 읽는 생성물).
 - `study-pack-candidates.json`: **state/** (시스템이 replenish로 채우는 풀).
 - `mvp-target.json`: **state/** (탈락 시 루프가 primary→history 자동 갱신).
 
-## 파일 이동표 (초안 — Phase 01에서 전수 확정)
+## 파일 이동표 (전수 확정 — Phase 01, ADR-107)
 
-| 현재 | → 새 위치 |
-|---|---|
-| `data/applications/ledger.jsonl` | `state/positions-queue.jsonl` |
-| `data/applications/<co>/<role>/*.md` | `applications/<co>/<role>/*.md` |
-| `config/study-progress.json`·`drill-progress.json`·`mvp-target.json`·`study-pack-candidates.json` | `state/` |
-| `verified-company-research-targets.json` cooldown 항목 | `state/company-cooldown.json` |
-| `data/runtime/topic-inventory.json`·`topic-inventory-history.jsonl`·`drill-log-*.jsonl` | `state/` |
-| `data/reports/daily/**`·`job-fit-*.md`·`baseline` | `reports/` |
-| `data/runtime/morning-topic-recommendation.md` | `reports/` |
-| `data/runtime/position-recommendation.{json,md,html}` (mirror) | `reports/latest/` |
-| `data/runtime/downloads/**` | `reports/downloads/` |
-| `data/runtime/live-position-postings.md`·`feed-cache/` | `cache/` |
-| `data/runtime/data/reports`(stray)·`position-recommendation-items.json`(ADR-101 폐기) | 삭제 |
+목적지 미정 0. tracked/untracked를 함께 표기한다.
+`git mv`는 tracked 파일에만 적용한다. untracked `data/**`는 물리 이동 대신 참조 갱신 + gitignore 경계 반영으로만 실현한다(ADR-107 스코프).
+
+### config/ (19 tracked)
+
+| 현재 | → 새 위치 | git |
+|---|---|---|
+| `config/baseline-core-files.json` | `config/`(유지) | tracked |
+| `config/candidate-config.json` | `config/`(유지) | tracked |
+| `config/candidate-profile.md` | `config/`(유지) | tracked |
+| `config/candidate-profile-detail.md` | `config/`(유지) | tracked |
+| `config/candidate-profile-provenance.md` | `config/`(유지) | tracked |
+| `config/external-reading-sources.json` | `config/`(유지) | tracked |
+| `config/live-coding-seed-pool.json` | `config/`(유지) | tracked |
+| `config/live-coding-seed-candidates.json` | `config/`(유지) | tracked |
+| `config/position-collection.json` | `config/`(유지) | tracked |
+| `config/question-bank-topics.json` | `config/`(유지) | tracked |
+| `config/resume-design.md` | `config/`(유지) | tracked |
+| `config/study-pack-topics.json` | `config/`(유지) | tracked |
+| `config/study-preferences.json` | `config/`(유지) | tracked |
+| `config/topic-profiles.json` | `config/`(유지) | tracked |
+| `config/verified-company-research-targets.json` | `config/`(유지, cooldown 키만 분리) | tracked |
+| `config/study-progress.json` | `state/study-progress.json` (git mv) | tracked 유지 (negation) |
+| `config/drill-progress.json` | `state/drill-progress.json` (git mv) | tracked 유지 (negation) |
+| `config/mvp-target.json` | `state/mvp-target.json` (git mv) | tracked 유지 (negation) |
+| `config/study-pack-candidates.json` | `state/study-pack-candidates.json` (git mv) | tracked 유지 (negation) |
+| `config/verified-company-research-targets.json`의 `cooldown` 키 | `state/company-cooldown.json` (신규 분리, ADR-109) | tracked 유지 (negation) |
+
+### data/ (전부 untracked — `**/data/` gitignore)
+
+| 현재 | → 새 위치 | git |
+|---|---|---|
+| `data/applications/ledger.jsonl` | `state/positions-queue.jsonl` (ADR-108) | untracked |
+| `data/applications/_priority-history.jsonl` | `state/_priority-history.jsonl` | untracked |
+| `data/applications/_logs/**` | `state/_logs/**` (decision log) | untracked |
+| `data/applications/<co>/<role>/*.md` | `applications/<co>/<role>/*.md` | untracked |
+| `data/applications/application-agent/frontdoor-queue.jsonl` | 폐기 (ADR-110) | untracked |
+| `data/runtime/topic-inventory.json`·`topic-inventory-history.jsonl` | `state/` | untracked |
+| `data/runtime/study-topic-candidate-refresh.{json,md}` | `state/` (실행 기록) | untracked |
+| `data/runtime/study-topic-actions/**` | `state/study-topic-actions/**` | untracked |
+| `data/runtime/topic-replenishment.json` | `state/` | untracked |
+| `data/runtime/drill-log-*.jsonl` | `state/` | untracked |
+| `data/runtime/behavioral-interview-web-source-scan-*.md` | `state/` (수집 스캔 기록) | untracked |
+| `data/runtime/application-agent/eval-cases/**` | `state/application-agent/eval-cases/**` | untracked |
+| `data/runtime/application-agent/eval-reports/**` | `state/application-agent/eval-reports/**` | untracked |
+| `data/runtime/application-agent/package-eval/**` | `state/application-agent/package-eval/**` | untracked |
+| `data/source/**` | `state/source/**` (시스템 수집 노트) | untracked |
+| `data/reports/baseline/**`·`daily/**` | `reports/baseline/**`·`reports/daily/**` | untracked |
+| `data/reports/job-fit-*.{json,md}`·`stage-prep-*.md` | `reports/` | untracked |
+| `data/runtime/morning-topic-recommendation.md` | `reports/morning-topic-recommendation.md` | untracked |
+| `data/runtime/position-recommendation.{md,html}` (mirror) | `reports/latest/` | untracked |
+| `data/runtime/downloads/**` | `reports/downloads/**` | untracked |
+| `data/prep/**` (legacy) | `reports/prep/**` (retention 검토, successor: `private/<co>/<pos>/interview/prep.md`) | untracked |
+| `data/runtime/live-position-postings.md` | `cache/live-position-postings.md` | untracked |
+| `data/runtime/feed-cache/**` | `cache/feed-cache/**` | untracked |
+| `data/runtime/locks/**` | `cache/locks/**` | untracked |
+| `data/runtime/freeform-study-pack-topic.json`·`live-coding-generated-topic.json` | `cache/` (deferred 임시) | untracked |
+| `data/normalized/**` | `cache/normalized/**` (현재 비어 있음) | untracked |
+| `data/runtime/data/reports` (stray)·`position-recommendation-items.json` (ADR-101 폐기) | 삭제 | untracked |
+
+### state/ 내 tracked 유지 결정 (Phase 05 gitignore 반영)
+
+`state/`는 `data/`처럼 기본 gitignore로 두되, 아래 5개 파일만 negation으로 tracked를 유지한다.
+
+- `state/study-progress.json` — 학습 이력·약점 상태. clone 간 연속성이 추천 품질에 직접 영향(ADR-002·ADR-105).
+- `state/drill-progress.json` — 드릴 간격 반복 상태. 위와 같은 연속성 근거(ADR-105).
+- `state/mvp-target.json` — 현재 타깃. 사람이 바로 참조하는 저-churn 상태.
+- `state/study-pack-candidates.json` — active 후보 캐시(30개 상한). clone 간 유지가 필요.
+- `state/company-cooldown.json` — 쿨다운 해제 날짜 결정 이력(ADR-109).
+
+Phase 05 gitignore 주의: `data/question-bank` negation 패턴처럼, `state/` 디렉터리를 먼저 un-ignore한 뒤 내용은 다시 ignore하고 위 5개 파일만 재-negation해야 git이 개별 파일을 추적한다(디렉터리가 통째로 ignore되면 하위 파일 negation이 먹지 않음). 나머지 `state/**`(positions-queue·topic-inventory·drill-log·eval·source 등)는 untracked runtime으로 둔다.
 
 ## 스코프 주의
 
