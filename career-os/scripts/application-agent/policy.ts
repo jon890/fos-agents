@@ -2,17 +2,17 @@ import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import {
   AgentForbiddenTargetStatuses,
-  type ApplicationLedgerRecord,
+  type ApplicationPositionsQueueRecord,
   type ApplicationStatus,
   type RequiredUserAction,
-} from './ledger_schema';
+} from './positions_queue_schema';
 import type { AgentDecision } from './agent_decision_schema';
 import { type ActionStage, priorityDisplayValue } from './priority_schema';
 
 export const STRONG_FIT_THRESHOLD = 85;
 export const NORMAL_FIT_THRESHOLD = 70;
 
-export function computePriorityScore(record: ApplicationLedgerRecord): number {
+export function computePriorityScore(record: ApplicationPositionsQueueRecord): number {
   let score = (record.fitScore ?? 0) * 0.5;
 
   const priorityBoost: Record<string, number> = {
@@ -58,13 +58,13 @@ export function computePriorityScore(record: ApplicationLedgerRecord): number {
   return score;
 }
 
-export function getEffectiveActionStage(record: ApplicationLedgerRecord): ActionStage | undefined {
+export function getEffectiveActionStage(record: ApplicationPositionsQueueRecord): ActionStage | undefined {
   return record.userConfirmedPriority?.actionStage ?? record.actionStage;
 }
 
 export function rankCandidates(
-  records: ApplicationLedgerRecord[],
-): ApplicationLedgerRecord[] {
+  records: ApplicationPositionsQueueRecord[],
+): ApplicationPositionsQueueRecord[] {
   return [...records].sort((a, b) => computePriorityScore(b) - computePriorityScore(a));
 }
 
@@ -80,7 +80,7 @@ type DecisionInput = {
 };
 
 function makeDecision(
-  record: ApplicationLedgerRecord,
+  record: ApplicationPositionsQueueRecord,
   now: string,
   input: DecisionInput,
 ): AgentDecision {
@@ -104,7 +104,7 @@ function makeDecision(
   };
 }
 
-export function decideForRecord(record: ApplicationLedgerRecord): AgentDecision {
+export function decideForRecord(record: ApplicationPositionsQueueRecord): AgentDecision {
   const now = new Date().toISOString();
   const fitScore = record.fitScore ?? 0;
   const reviewVerdict = readReviewVerdict(record);
@@ -416,7 +416,7 @@ export function decideForRecord(record: ApplicationLedgerRecord): AgentDecision 
 }
 
 function readReviewVerdict(
-  record: ApplicationLedgerRecord,
+  record: ApplicationPositionsQueueRecord,
 ): 'pass' | 'revise' | 'block' | undefined {
   const reviewPath = record.reviewPath ?? join(record.applicationDir, 'review.md');
   if (!existsSync(reviewPath)) return undefined;

@@ -4,7 +4,7 @@ import {
   PriorityRankSchema,
 } from './priority_schema';
 
-export const PositionActionRecordTypeSchema = z.enum(['ledger']);
+export const PositionActionRecordTypeSchema = z.enum(['positions-queue']);
 
 export const PositionActionRequestActionSchema = z.enum([
   'hold',
@@ -24,7 +24,7 @@ export const PositionActionRequestSnapshotSchema = z
     actionStage: ActionStageSchema.nullable().optional(),
     priorityRank: PriorityRankSchema.nullable().optional(),
     prioritySource: z.enum(['user-confirmed', 'recommendation', 'none']).optional(),
-    ledgerId: z.string().min(1).nullable().optional(),
+    positionsQueueId: z.string().min(1).nullable().optional(),
     readiness: z
       .object({
         completeCount: z.number().int().nonnegative(),
@@ -53,7 +53,7 @@ export const PositionActionResultSchema = z.object({
   message: z.string().min(1),
   recordType: PositionActionRecordTypeSchema.optional(),
   recordId: z.string().min(1).optional(),
-  ledgerId: z.string().min(1).nullable().optional(),
+  positionsQueueId: z.string().min(1).nullable().optional(),
   appliedEventId: z.string().min(1).optional(),
   requestedAction: PositionActionRequestActionSchema.optional(),
   effectiveActionStage: ActionStageSchema.nullable().optional(),
@@ -61,7 +61,7 @@ export const PositionActionResultSchema = z.object({
     .object({
       requestedAction: PositionActionRequestActionSchema,
       effectiveActionStage: ActionStageSchema.nullable(),
-      ledgerId: z.string().min(1).nullable(),
+      positionsQueueId: z.string().min(1).nullable(),
       applicationRequestId: z.number().int().positive().nullable().optional(),
       readiness: z
         .object({

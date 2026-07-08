@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 import { readFileSync } from 'fs';
 import { z } from 'zod';
-import { DEFAULT_LEDGER_PATH, readLedger } from './ledger_io';
-import { type ApplicationLedgerRecord } from './ledger_schema';
+import { DEFAULT_POSITIONS_QUEUE_PATH, readPositionsQueue } from './positions_queue_io';
+import { type ApplicationPositionsQueueRecord } from './positions_queue_schema';
 import { DEFAULT_PRIORITY_HISTORY_PATH } from './priority_history';
 import { ACTION_STAGE_DISPLAY_VALUE, type ActionStage } from './priority_schema';
 import {
@@ -17,7 +17,7 @@ import { confirmPriority } from './run';
 type ApplyOptions = {
   requestPath?: string;
   dryRun: boolean;
-  ledgerPath: string;
+  positionsQueuePath: string;
   historyPath: string;
 };
 
@@ -32,14 +32,14 @@ type SnapshotMismatch = {
 function parseArgs(args: string[]): ApplyOptions {
   const opts: ApplyOptions = {
     dryRun: false,
-    ledgerPath: DEFAULT_LEDGER_PATH,
+    positionsQueuePath: DEFAULT_POSITIONS_QUEUE_PATH,
     historyPath: DEFAULT_PRIORITY_HISTORY_PATH,
   };
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--request' && args[i + 1]) opts.requestPath = args[++i];
     else if (args[i] === '--dry-run') opts.dryRun = true;
-    else if (args[i] === '--ledger' && args[i + 1]) opts.ledgerPath = args[++i];
+    else if (args[i] === '--positions-queue' && args[i + 1]) opts.positionsQueuePath = args[++i];
     else if (args[i] === '--history' && args[i + 1]) opts.historyPath = args[++i];
     else if (args[i] === '--help') {
       showHelp();
@@ -62,14 +62,14 @@ function effectiveStageForAction(action: PositionActionRequest['requestedAction'
 }
 
 function buildProjection(request: PositionActionRequest, opts: ApplyOptions): CurrentProjection | null {
-  const record = readLedger(opts.ledgerPath).find((item) => item.id === request.recordId);
+  const record = readPositionsQueue(opts.positionsQueuePath).find((item) => item.id === request.recordId);
   if (!record) return null;
   const userConfirmed = record.userConfirmedPriority;
   const actionStage = userConfirmed?.actionStage ?? record.actionStage ?? record.recommendationSnapshot?.actionStage ?? null;
   return {
-    recordType: 'ledger',
+    recordType: 'positions-queue',
     recordId: record.id,
-    workbenchId: `ledger:${record.id}`,
+    workbenchId: `positions-queue:${record.id}`,
     company: record.company,
     role: record.role,
     url: record.url,
@@ -77,7 +77,7 @@ function buildProjection(request: PositionActionRequest, opts: ApplyOptions): Cu
     actionStage,
     priorityRank: userConfirmed?.priorityRank ?? record.priorityRank ?? record.recommendationSnapshot?.priorityRank ?? null,
     prioritySource: userConfirmed ? 'user-confirmed' : record.actionStage || record.recommendationSnapshot?.actionStage ? 'recommendation' : 'none',
-    ledgerId: record.id,
+    positionsQueueId: record.id,
     readiness: undefined,
     latestRecommendationSnapshotAt: record.recommendationSnapshot?.generatedAt ?? null,
     latestUserConfirmationAt: userConfirmed?.confirmedAt ?? null,
@@ -109,7 +109,7 @@ function collectMismatches(
     'actionStage',
     'priorityRank',
     'prioritySource',
-    'ledgerId',
+    'positionsQueueId',
     'latestRecommendationSnapshotAt',
     'latestUserConfirmationAt',
   ];
@@ -131,7 +131,7 @@ function priorityRankFor(stage: ActionStage, current: CurrentProjection): number
   return current.priorityRank ?? ACTION_STAGE_DISPLAY_VALUE[stage];
 }
 
-function materialPaths(record: ApplicationLedgerRecord): Record<string, string | null> {
+function materialPaths(record: ApplicationPositionsQueueRecord): Record<string, string | null> {
   const applicationDir = record.applicationDir ?? `applications/${record.id}`;
   return {
     postingPath: record.postingPath ?? `${applicationDir}/posting.md`,
@@ -217,13 +217,13 @@ async function main(): Promise<void> {
         message: 'dry-run passed stale guard; no career-os files were written',
         recordType: request.recordType,
         recordId: request.recordId,
-        ledgerId: current.ledgerId ?? null,
+        positionsQueueId: current.positionsQueueId ?? null,
         requestedAction: request.requestedAction,
         effectiveActionStage,
         resultSnapshot: {
           requestedAction: request.requestedAction,
           effectiveActionStage,
-          ledgerId: current.ledgerId ?? null,
+          positionsQueueId: current.positionsQueueId ?? null,
           readiness: current.readiness,
           materialPaths: null,
         },
@@ -231,21 +231,21 @@ async function main(): Promise<void> {
       return;
     }
 
-    const targetLedgerId = request.recordId;
+    const targetPositionsQueueId = request.recordId;
 
     const applied = confirmPriority({
-      recordId: targetLedgerId,
-      recordType: 'ledger',
+      recordId: targetPositionsQueueId,
+      recordType: 'positions-queue',
       actionStage: effectiveActionStage,
       priorityRank: priorityRankFor(effectiveActionStage, current),
       reason: request.effectiveReason,
       changedBy: request.changedBy,
-      ledgerPath: opts.ledgerPath,
+      positionsQueuePath: opts.positionsQueuePath,
       historyPath: opts.historyPath,
     });
 
-    const ledgerRecord = targetLedgerId
-      ? readLedger(opts.ledgerPath).find((record) => record.id === targetLedgerId)
+    const positionsQueueRecord = targetPositionsQueueId
+      ? readPositionsQueue(opts.positionsQueuePath).find((record) => record.id === targetPositionsQueueId)
       : null;
 
     printResult(result({
@@ -255,16 +255,16 @@ async function main(): Promise<void> {
       message: `position action applied: ${request.requestedAction}`,
       recordType: request.recordType,
       recordId: request.recordId,
-      ledgerId: targetLedgerId,
+      positionsQueueId: targetPositionsQueueId,
       appliedEventId: applied.eventId,
       requestedAction: request.requestedAction,
       effectiveActionStage,
       resultSnapshot: {
         requestedAction: request.requestedAction,
         effectiveActionStage,
-        ledgerId: targetLedgerId,
+        positionsQueueId: targetPositionsQueueId,
         readiness: current.readiness,
-        materialPaths: ledgerRecord ? materialPaths(ledgerRecord) : null,
+        materialPaths: positionsQueueRecord ? materialPaths(positionsQueueRecord) : null,
       },
     }));
   } catch (error) {
@@ -296,8 +296,8 @@ Usage:
   cat request.json | bun scripts/application-agent/apply_position_action_request.ts [--dry-run]
 
 Options:
-  --ledger <path>    ledger path
-  --history <path>   priority history path
+  --positions-queue <path>    positions-queue path
+  --history <path>            priority history path
 `);
 }
 

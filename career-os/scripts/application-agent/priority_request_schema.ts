@@ -5,7 +5,7 @@ import {
   UserConfirmedPrioritySchema,
 } from './priority_schema';
 
-export const PriorityRequestRecordTypeSchema = z.enum(['ledger']);
+export const PriorityRequestRecordTypeSchema = z.enum(['positions-queue']);
 
 export const PriorityRequestSnapshotSchema = z
   .object({

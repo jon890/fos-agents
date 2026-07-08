@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ApplicationStatusSchema, RequiredUserActionSchema } from './ledger_schema';
+import { ApplicationStatusSchema, RequiredUserActionSchema } from './positions_queue_schema';
 
 export const AgentDecisionSchema = z.object({
   applicationId: z.string().min(1),

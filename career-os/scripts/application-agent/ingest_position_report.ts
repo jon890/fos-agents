@@ -1,8 +1,11 @@
 import { createHash } from 'crypto';
 import { existsSync, readFileSync } from 'fs';
 import { z } from 'zod';
-import { appendNewRecord, readLedger } from './ledger_io';
-import { type ApplicationLedgerRecord, ApplicationLedgerRecordSchema } from './ledger_schema';
+import { appendNewRecord, readPositionsQueue } from './positions_queue_io';
+import {
+  type ApplicationPositionsQueueRecord,
+  ApplicationPositionsQueueRecordSchema,
+} from './positions_queue_schema';
 import { NORMAL_FIT_THRESHOLD, STRONG_FIT_THRESHOLD } from './policy';
 
 const PositionEntrySchema = z.object({
@@ -137,14 +140,17 @@ function generateId(company: string, role: string): string {
 
 function derivePriority(
   fitScore: number | undefined,
-): ApplicationLedgerRecord['priority'] {
+): ApplicationPositionsQueueRecord['priority'] {
   if (!fitScore) return 'low';
   if (fitScore >= STRONG_FIT_THRESHOLD) return 'high';
   if (fitScore >= NORMAL_FIT_THRESHOLD) return 'normal';
   return 'low';
 }
 
-export function ingestPositionReport(reportPath: string, ledgerPath: string): IngestResult {
+export function ingestPositionReport(
+  reportPath: string,
+  positionsQueuePath: string,
+): IngestResult {
   const result: IngestResult = {
     total: 0,
     added: 0,
@@ -174,7 +180,7 @@ export function ingestPositionReport(reportPath: string, ledgerPath: string): In
   }
 
   result.total = positions.length;
-  const existing = readLedger(ledgerPath);
+  const existing = readPositionsQueue(positionsQueuePath);
   const existingUrls = new Set(existing.map((r) => r.url));
   const now = new Date().toISOString();
 
@@ -188,9 +194,9 @@ export function ingestPositionReport(reportPath: string, ledgerPath: string): In
     const fitScore = pos.fitScore;
     const actionable = (fitScore ?? 0) >= NORMAL_FIT_THRESHOLD;
 
-    let record: ApplicationLedgerRecord;
+    let record: ApplicationPositionsQueueRecord;
     try {
-      record = ApplicationLedgerRecordSchema.parse({
+      record = ApplicationPositionsQueueRecordSchema.parse({
         id,
         company: pos.company,
         role: pos.role,
@@ -228,7 +234,7 @@ export function ingestPositionReport(reportPath: string, ledgerPath: string): In
       continue;
     }
 
-    appendNewRecord(ledgerPath, record);
+    appendNewRecord(positionsQueuePath, record);
     existingUrls.add(pos.url);
     result.added++;
     result.newIds.push(id);

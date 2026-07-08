@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { readFileSync } from 'fs';
 import { z } from 'zod';
-import { readLedger, DEFAULT_LEDGER_PATH } from './ledger_io';
+import { readPositionsQueue, DEFAULT_POSITIONS_QUEUE_PATH } from './positions_queue_io';
 import {
   DEFAULT_PRIORITY_HISTORY_PATH,
 } from './priority_history';
@@ -20,7 +20,7 @@ import {
 type ApplyOptions = {
   requestPath?: string;
   dryRun: boolean;
-  ledgerPath: string;
+  positionsQueuePath: string;
   historyPath: string;
 };
 
@@ -35,14 +35,14 @@ type SnapshotMismatch = {
 function parseArgs(args: string[]): ApplyOptions {
   const opts: ApplyOptions = {
     dryRun: false,
-    ledgerPath: DEFAULT_LEDGER_PATH,
+    positionsQueuePath: DEFAULT_POSITIONS_QUEUE_PATH,
     historyPath: DEFAULT_PRIORITY_HISTORY_PATH,
   };
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--request' && args[i + 1]) opts.requestPath = args[++i];
     else if (args[i] === '--dry-run') opts.dryRun = true;
-    else if (args[i] === '--ledger' && args[i + 1]) opts.ledgerPath = args[++i];
+    else if (args[i] === '--positions-queue' && args[i + 1]) opts.positionsQueuePath = args[++i];
     else if (args[i] === '--history' && args[i + 1]) opts.historyPath = args[++i];
     else if (args[i] === '--help') {
       showHelp();
@@ -59,11 +59,11 @@ async function readRequestJson(path?: string): Promise<unknown> {
 }
 
 function buildProjection(request: PriorityActionRequest, opts: ApplyOptions): CurrentProjection | null {
-  const record = readLedger(opts.ledgerPath).find((item) => item.id === request.recordId);
+  const record = readPositionsQueue(opts.positionsQueuePath).find((item) => item.id === request.recordId);
   if (!record) return null;
   const effectiveActionStage = record.userConfirmedPriority?.actionStage ?? record.actionStage ?? null;
   return {
-    recordType: 'ledger',
+    recordType: 'positions-queue',
     recordId: record.id,
     company: record.company,
     role: record.role,
@@ -144,8 +144,8 @@ function buildPlannedCommand(request: PriorityActionRequest, opts: ApplyOptions)
     request.reason,
     '--changed-by',
     request.changedBy,
-    '--ledger',
-    opts.ledgerPath,
+    '--positions-queue',
+    opts.positionsQueuePath,
     '--history',
     opts.historyPath,
   ];
@@ -259,7 +259,7 @@ async function main(): Promise<void> {
       priorityRank: request.requestedRank,
       reason: request.reason,
       changedBy: request.changedBy,
-      ledgerPath: opts.ledgerPath,
+      positionsQueuePath: opts.positionsQueuePath,
       historyPath: opts.historyPath,
     };
     const applied = confirmPriority(confirmInput);
@@ -301,8 +301,8 @@ Usage:
   cat request.json | bun scripts/application-agent/apply_priority_request.ts [--dry-run]
 
 Options:
-  --ledger <path>    ledger path
-  --history <path>   priority history path
+  --positions-queue <path>    positions-queue path
+  --history <path>            priority history path
 `);
 }
 

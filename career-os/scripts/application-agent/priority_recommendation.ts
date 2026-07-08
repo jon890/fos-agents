@@ -1,10 +1,14 @@
 import { existsSync, readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import {
-  type ApplicationLedgerRecord,
-  ApplicationLedgerRecordSchema,
-} from './ledger_schema';
-import { readLedger, writeLedger, DEFAULT_LEDGER_PATH } from './ledger_io';
+  type ApplicationPositionsQueueRecord,
+  ApplicationPositionsQueueRecordSchema,
+} from './positions_queue_schema';
+import {
+  readPositionsQueue,
+  writePositionsQueue,
+  DEFAULT_POSITIONS_QUEUE_PATH,
+} from './positions_queue_io';
 import {
   type ActionStage,
   RecommendationSnapshotSchema,
@@ -18,7 +22,7 @@ const LIVE_POSTINGS_PATH = `${WORKSPACE_PREFIX}cache/live-position-postings.md`;
 const POSITION_RECOMMENDATION_PATH = `${WORKSPACE_PREFIX}reports/latest/position-recommendation.md`;
 const CANDIDATE_PROFILE_PATH = `${WORKSPACE_PREFIX}config/candidate-profile.md`;
 
-type RecordType = 'ledger';
+type RecordType = 'positions-queue';
 
 type CandidateInput = {
   recordType: RecordType;
@@ -38,7 +42,7 @@ type CandidateInput = {
   fitAnalysisPath?: string;
   reviewPath?: string;
   userConfirmedPriority?: unknown;
-  raw: ApplicationLedgerRecord;
+  raw: ApplicationPositionsQueueRecord;
 };
 
 type PriorityUpdate = {
@@ -53,21 +57,21 @@ type PriorityUpdate = {
 
 type CliOptions = {
   dryRun: boolean;
-  ledgerPath: string;
+  positionsQueuePath: string;
   outputDir: string;
 };
 
 function parseOpts(args: string[]): CliOptions {
   const opts: CliOptions = {
     dryRun: true,
-    ledgerPath: DEFAULT_LEDGER_PATH,
+    positionsQueuePath: DEFAULT_POSITIONS_QUEUE_PATH,
     outputDir: DEFAULT_OUTPUT_DIR,
   };
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--dry-run') opts.dryRun = true;
     else if (args[i] === '--write') opts.dryRun = false;
-    else if (args[i] === '--ledger' && args[i + 1]) opts.ledgerPath = args[++i];
+    else if (args[i] === '--positions-queue' && args[i + 1]) opts.positionsQueuePath = args[++i];
     else if (args[i] === '--output-dir' && args[i + 1]) opts.outputDir = args[++i];
   }
 
@@ -103,9 +107,9 @@ function collectMarkdownFiles(dir: string, out: string[]): void {
   }
 }
 
-function ledgerToCandidateInput(record: ApplicationLedgerRecord): CandidateInput {
+function positionsQueueToCandidateInput(record: ApplicationPositionsQueueRecord): CandidateInput {
   return {
-    recordType: 'ledger',
+    recordType: 'positions-queue',
     id: record.id,
     company: record.company,
     role: record.role,
@@ -259,7 +263,7 @@ function deriveFitSummary(candidate: CandidateInput, candidateProfileLoaded: boo
 }
 
 function deriveFitEvidence(candidate: CandidateInput): string[] {
-  const evidence = ['ledger record'];
+  const evidence = ['positions-queue record'];
   if (candidate.applicationDir) evidence.push('공고별 application directory');
   if (candidate.postingPath) evidence.push('posting.md');
   if (candidate.fitAnalysisPath) evidence.push('fit-analysis.md');
@@ -392,7 +396,7 @@ function readApplicationFile(path: string | undefined): string {
   return loadOptionalText(resolved);
 }
 
-function applyUpdates<T extends ApplicationLedgerRecord>(
+function applyUpdates<T extends ApplicationPositionsQueueRecord>(
   records: T[],
   updates: Map<string, PriorityUpdate>,
   schema: { parse: (input: unknown) => T },
@@ -432,7 +436,7 @@ function renderDistribution(updates: PriorityUpdate[]): string {
 
 async function main(): Promise<void> {
   const opts = parseOpts(process.argv.slice(2));
-  const ledger = readLedger(opts.ledgerPath);
+  const positionsQueue = readPositionsQueue(opts.positionsQueuePath);
   const dailyReport = loadRecentDailyPositionReport();
 
   const context = {
@@ -445,7 +449,7 @@ async function main(): Promise<void> {
     candidateProfileLoaded: existsSync(CANDIDATE_PROFILE_PATH),
   };
 
-  const candidates = ledger.map(ledgerToCandidateInput);
+  const candidates = positionsQueue.map(positionsQueueToCandidateInput);
 
   if (candidates.length === 0) {
     console.error('PHASE_BLOCKED: no posting input available for priority snapshot smoke');
@@ -475,27 +479,27 @@ async function main(): Promise<void> {
     });
 
   const perStageRank = new Map<ActionStage, number>();
-  const ledgerUpdates = new Map<string, PriorityUpdate>();
+  const positionsQueueUpdates = new Map<string, PriorityUpdate>();
 
   for (const { candidate, stage } of ranked) {
     const priorityRank = (perStageRank.get(stage) ?? 0) + 1;
     perStageRank.set(stage, priorityRank);
     const update = buildUpdate(candidate, priorityRank, context);
-    ledgerUpdates.set(candidate.id, update);
+    positionsQueueUpdates.set(candidate.id, update);
   }
 
-  const allUpdates = [...ledgerUpdates.values()];
+  const allUpdates = [...positionsQueueUpdates.values()];
   console.log(`candidate count: ${candidates.length}`);
   console.log(`stage distribution: ${renderDistribution(allUpdates)}`);
   console.log(`dry-run: ${opts.dryRun ? 'yes' : 'no'}`);
 
   if (opts.dryRun) return;
 
-  writeLedger(
-    opts.ledgerPath,
-    applyUpdates(ledger, ledgerUpdates, ApplicationLedgerRecordSchema),
+  writePositionsQueue(
+    opts.positionsQueuePath,
+    applyUpdates(positionsQueue, positionsQueueUpdates, ApplicationPositionsQueueRecordSchema),
   );
-  console.log(`updated ledger records: ${ledgerUpdates.size}`);
+  console.log(`updated positions-queue records: ${positionsQueueUpdates.size}`);
 }
 
 main().catch((err) => {

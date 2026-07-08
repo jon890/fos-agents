@@ -137,7 +137,7 @@ export const SKILL_CONTRACTS: Readonly<Record<string, SkillContract>> = {
     touchesFosStudy: false,
     modifiesCandidateProfile: false,
     requiresExternalAccess: false,
-    prerequisiteGuards: ['ledger_exists'],
+    prerequisiteGuards: ['positions_queue_exists'],
   },
 
   'study-topic-recommender': {
