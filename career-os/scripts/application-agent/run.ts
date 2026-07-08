@@ -81,7 +81,7 @@ function parseOpts(args: string[]): Partial<RunOptions> {
 function resolveOpts(partial: Partial<RunOptions>, isDryRun = false): RunOptions {
   return {
     positionsQueuePath: partial.positionsQueuePath ?? DEFAULT_POSITIONS_QUEUE_PATH,
-    outputDir: partial.outputDir ?? 'data/runtime/application-agent',
+    outputDir: partial.outputDir ?? 'state/application-agent',
     format: partial.format ?? 'markdown',
     dryRun: isDryRun,
     maxActions: partial.maxActions ?? 5,
@@ -666,7 +666,7 @@ Commands:
 
 Options:
   --positions-queue <path>  Positions-queue file (default: state/positions-queue.jsonl)
-  --output-dir <path>   Output directory (default: data/runtime/application-agent)
+  --output-dir <path>   Output directory (default: state/application-agent)
   --format markdown|jsonl  Decision log format (default: markdown)
   --max-actions <n>     Max agent actions per run-daily (default: 5)
   --execute-skills      Execute allowed private native skills before artifact checks

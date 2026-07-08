@@ -1,7 +1,7 @@
 # Phase 02 — state/ 신설 + 이동 + positions-queue 경로 규약
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ## 목표
 

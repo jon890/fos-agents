@@ -8,7 +8,7 @@ import {
 } from './priority_schema';
 
 const WORKSPACE_PREFIX = process.cwd().endsWith('/career-os') ? '' : 'career-os/';
-export const DEFAULT_PRIORITY_HISTORY_PATH = `${WORKSPACE_PREFIX}data/applications/_priority-history.jsonl`;
+export const DEFAULT_PRIORITY_HISTORY_PATH = `${WORKSPACE_PREFIX}state/_priority-history.jsonl`;
 
 export const PriorityHistorySnapshotSchema = z
   .object({

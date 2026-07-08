@@ -11,7 +11,7 @@ application-package-writer가 생성한 공고별 지원 패키지가 실제 경
 ## 호출 후 입력 해석
 
 - application directory가 있으면 해당 디렉터리를 검토한다.
-- path가 없으면 ledger에서 `needsUserReview=true` 또는 검토 대기 상태인 항목을 후보로 고른다.
+- path가 없으면 positions-queue에서 `needsUserReview=true` 또는 검토 대기 상태인 항목을 후보로 고른다.
 - 후보를 자동 선택한 경우 사용자 확인 후 계속한다.
 
 ## 출력 정책
@@ -20,7 +20,7 @@ application-package-writer가 생성한 공고별 지원 패키지가 실제 경
 review.md는 내부 검토 문서다.
 첫 10줄 안에 `pass/revise/blocked` 판정과 가장 중요한 권장 행동을 둔다.
 
-posting, fit-analysis, application-package, ledger, riskFlag, 근거 파일 경로는 reviewer 판단 근거로 남긴다.
+posting, fit-analysis, application-package, positions-queue, riskFlag, 근거 파일 경로는 reviewer 판단 근거로 남긴다.
 제출용 문장에 대한 지적은 제출용 문장 자체와 내부 근거를 분리해서 쓴다.
 제출용으로 옮길 수 있는 수정 문구에는 내부 파일 경로, plan 번호, commit hash, runner 상태를 넣지 않는다.
 
@@ -103,7 +103,7 @@ application-package.md, resume-draft.md, cover-letter.md와 fit-analysis.md를 �
 
 positions-queue.jsonl의 riskFlags와 posting.md의 위험 플래그를 교차:
 - `toss_group_cooldown`, `duplicate_application` 등 riskFlag 존재 여부 확인
-- 동일 회사·그룹 내 복수 지원 이력이 있는지 ledger 전체 스캔
+- 동일 회사·그룹 내 복수 지원 이력이 있는지 positions-queue 전체 스캔
 - `revisionCount >= maxRevisionCount`이면 진행 중단 권고
 
 #### 3-6. User Approval Gate (사용자 승인 필요 항목)
@@ -161,7 +161,7 @@ positions-queue.jsonl의 riskFlags와 posting.md의 위험 플래그를 교차:
 
 ## Revision Requests
 
-## Ledger Update Suggestion
+## Positions Queue Update Suggestion
 ```
 
 작성 규칙:
@@ -169,7 +169,7 @@ positions-queue.jsonl의 riskFlags와 posting.md의 위험 플래그를 교차:
 - 각 축 섹션에 심사 결과 요약 + 구체 근거 문장 명시
 - `revise`일 경우 `## Revision Requests`에 agent가 수정 가능한 구체 항목 3개 이상
   근거 부족 항목은 `보강 필요 / 선택지 / 권장 행동` 구조로 쓴다.
-- `blocked`일 경우 `## Revision Requests`에 차단 근거 + source 경로(ledger/posting/riskFlag) 명시
+- `blocked`일 경우 `## Revision Requests`에 차단 근거 + source 경로(positions-queue/posting/riskFlag) 명시
 - `pass`일 경우에도 `## User Approval Gate`에 사용자 승인 필요 항목 목록화
 - 제출용 수정 문구에는 내부 파일 경로, plan 번호, commit hash, runner 상태를 넣지 않는다.
 - 내부 reviewer 근거에는 source 경로를 유지한다.
@@ -178,14 +178,14 @@ positions-queue.jsonl의 riskFlags와 posting.md의 위험 플래그를 교차:
   PDF가 있어도 외부 제출·업로드·전송은 완료로 보지 않고, 자동화 대상으로도 다루지 않는다.
 - 총 30줄 이상
 
-**Ledger Update Suggestion 섹션 (필수)**:
+**Positions Queue Update Suggestion 섹션 (필수)**:
 
 ```markdown
-## Ledger Update Suggestion
+## Positions Queue Update Suggestion
 
-- current_status: <ledger에서 읽은 현재 status>
+- current_status: <positions-queue에서 읽은 현재 status>
 - suggested_next_status: needs_revision|ready_for_user_review|blocked
-- revisionCount: <ledger revisionCount + 1 또는 현재 값>
+- revisionCount: <positions-queue revisionCount + 1 또는 현재 값>
 - needsUserReview: true
 - nextActions:
   - <판정에 따른 next action>
@@ -206,7 +206,7 @@ review.md 작성 후 아래 항목 검증. 실패 시 해당 섹션 재작성:
 9. 첫 10줄 안에 판정과 권장 행동이 있음
 10. raw `needs_evidence`가 사용자-facing 항목에 남아 있지 않고, 모두 `보강 필요 / 선택지 / 권장 행동`으로 바뀌어 있음
 11. 제출용 수정 문구에는 내부 파일 경로, plan 번호, commit hash, runner 상태가 없음
-12. 내부 reviewer 판단에는 posting/ledger/riskFlag/근거 파일 경로가 유지됨
+12. 내부 reviewer 판단에는 posting/positions-queue/riskFlag/근거 파일 경로가 유지됨
 13. candidate-profile 수정, 공개 발행, 외부 제출은 `사용자 승인 필요`로만 표현됨
 14. resume package를 검토하면 Markdown 초안 -> design.md 적용 HTML -> 첨부 가능한 PDF 체인을 구분하고, PDF를 제출 자동화 완료로 판정하지 않음
 
@@ -228,14 +228,14 @@ review.md 작성 후 아래 항목 검증. 실패 시 해당 섹션 재작성:
 - **Phase 05 연계**: application-package-writer(Phase 04)가 생성한 패키지를 독립 심사자로 교차 검증. 생성과 심사를 분리해 자기 편향을 줄임.
 - **6축 분리**: 각 리스크 유형을 독립 섹션으로 분리해 revisit 용이. revision 요청을 축 단위로 추적 가능.
 - **판정 3단계**: pass/revise/blocked로 명확히 분기 — revise는 agent 수정 루프로, blocked는 사용자 개입으로 라우팅 (Phase 07 e2e 리허설 연계).
-- **ledger 직접 갱신 금지 (ADR-038)**: ledger를 직접 수정하지 않고 `Ledger Update Suggestion`으로 사용자 의사결정 유도. 상태 전이는 artifact 검증 뒤에만.
+- **positions-queue 직접 갱신 금지 (ADR-038)**: positions-queue를 직접 수정하지 않고 `Positions Queue Update Suggestion`으로 사용자 의사결정 유도. 상태 전이는 artifact 검증 뒤에만.
 - **fixture 안전 장치**: `mvp_fixture_only` riskFlag가 있으면 판정이 `blocked` 이상을 강제 — 실제 제출 경로를 차단.
 
 ## References
 
-- `career-os/docs/adr/INDEX.md` — ADR-045 (지원 후보 ledger 분리), ADR-038 (artifact 검증 후 상태 전이) 설계 근거
+- `career-os/docs/adr/INDEX.md` — ADR-045 (지원 후보 positions-queue 분리, 옛 ledger), ADR-038 (artifact 검증 후 상태 전이) 설계 근거
 - `career-os/docs/data-schema.md` — positions-queue.jsonl 스키마
-- `career-os/state/positions-queue.jsonl` — 지원 이력 원장
+- `career-os/state/positions-queue.jsonl` — 지원 이력 positions-queue
 - `career-os/config/candidate-profile.md` — 후보자 프로필 core (사실·라벨)
 - `career-os/config/candidate-profile-detail.md` — 후보자 프로필 detail (프로젝트 서사·의사결정 패턴·협업 스타일)
 - `career-os/.claude/skills/application-package-writer/SKILL.md` — 생성 단계 skill (Phase 04)

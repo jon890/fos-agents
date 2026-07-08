@@ -18,7 +18,7 @@ private 포지션 준비 정본은 `private/<company>/<position>/interview/prep.
 - `behavioral` — STAR 형식 경험 공유, 협업, 성장, 가치관 등 일반 인성 질문.
   개인 답변, 지원 전략, 회사별 비공개 맥락은 넣지 않는다.
   개인 맞춤 인성 질문은 `private/question-bank/behavioral-personal.jsonl` 정본(interview-asset-writer 담당).
-  웹에서 수집한 면접 후기나 회사별 자료는 먼저 `data/runtime/behavioral-interview-web-source-scan-YYYY-MM-DD.md`에 출처와 신뢰도를 남기고, public-safe 일반 질문으로 정규화 가능한 항목만 `public/question-bank/behavioral/questions.json`에 누적한다.
+  웹에서 수집한 면접 후기나 회사별 자료는 먼저 `state/behavioral-interview-web-source-scan-YYYY-MM-DD.md`에 출처와 신뢰도를 남기고, public-safe 일반 질문으로 정규화 가능한 항목만 `public/question-bank/behavioral/questions.json`에 누적한다.
 
 ## 호출 후 범위 해석
 

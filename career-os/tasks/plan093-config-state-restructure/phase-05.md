@@ -1,7 +1,7 @@
 # Phase 05 — cache/ 규약 + stray 정리 + .gitignore 최종 경계
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ## 목표
 

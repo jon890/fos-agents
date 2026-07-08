@@ -17,7 +17,7 @@ import {
 import { buildSkillCommand, requiresUserApproval } from './skill_contracts';
 
 const WORKSPACE_PREFIX = process.cwd().endsWith('/career-os') ? '' : 'career-os/';
-const DEFAULT_OUTPUT_DIR = `${WORKSPACE_PREFIX}data/runtime/application-agent`;
+const DEFAULT_OUTPUT_DIR = `${WORKSPACE_PREFIX}state/application-agent`;
 const LIVE_POSTINGS_PATH = `${WORKSPACE_PREFIX}cache/live-position-postings.md`;
 const POSITION_RECOMMENDATION_PATH = `${WORKSPACE_PREFIX}reports/latest/position-recommendation.md`;
 const CANDIDATE_PROFILE_PATH = `${WORKSPACE_PREFIX}config/candidate-profile.md`;

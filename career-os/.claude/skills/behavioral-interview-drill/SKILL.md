@@ -38,7 +38,7 @@ description: >
 - `career-os/state/study-progress.json` — topic 학습 상태 (`last_studied`·`study_count`·`last_evaluated`·`status`)
 - `career-os/state/drill-progress.json` — 드릴 간격 반복 상태 정본 (`pass_count`·`fail_count`·`next_review_date`, ADR-105)
 - `career-os/state/drill-log-YYYY-MM-DD.jsonl` — 답변 연습 일별 기록 (내부 파일명은 기존 `drill-log` 유지, `drill_type: "behavioral"` 구분)
-- `career-os/data/runtime/behavioral-interview-target-context.md` — 현재 호출에서 생성·갱신한 면접 대상 회사 컨텍스트 (있으면 적용)
+- `career-os/state/behavioral-interview-target-context.md` — 현재 호출에서 생성·갱신한 면접 대상 회사 컨텍스트 (있으면 적용)
 - `references/scoring-rubric.md` — STAR·가치관 채점 기준 상세
 
 ## 답변 연습 진행 흐름
@@ -48,7 +48,7 @@ description: >
 답변 연습 시작 전에 `state/mvp-target.json`의 `primary`를 읽는다.
 `company`, `team`, `role`, `position_focus`, `notes`, `interview.final_round`를 확인해 오늘 답변 연습의 면접 대상을 먼저 선언한다.
 
-현재 회사 컨텍스트는 `data/runtime/behavioral-interview-target-context.md`를 우선한다.
+현재 회사 컨텍스트는 `state/behavioral-interview-target-context.md`를 우선한다.
 파일이 없거나 `state/mvp-target.json`의 현재 `company_slug`와 맞지 않으면, 현재 호출에서 회사 공식 채용/회사소개 근거를 확인해 런타임 파일을 생성하거나 갱신한다.
 회사별 컨텍스트를 skill `references/`에 넣지 않는다.
 `references/`에는 모든 회사에 반복 적용되는 일반 규칙만 둔다.
@@ -58,7 +58,7 @@ description: >
 웹 검색 도구가 한국어 후기 검색에서 관련 결과를 충분히 반환하지 못하거나 원문 접근이 막히면, 검색엔진 결과 페이지나 직접 원문 HTML 확인을 보조 수단으로 사용한다.
 이 경우에도 검색 결과 스니펫만으로 단정하지 않고, 접근 가능한 원문 또는 공식 페이지를 별도 근거로 표시한다.
 
-면접 후기 수집 결과는 `data/runtime/behavioral-interview-web-source-scan-YYYY-MM-DD.md`처럼 현재 호출의 런타임 자료로 저장한다.
+면접 후기 수집 결과는 `state/behavioral-interview-web-source-scan-YYYY-MM-DD.md`처럼 현재 호출의 런타임 자료로 저장한다.
 유료 기출 판매 페이지, 코칭 홍보 글, 검색 결과 스니펫은 낮은 신뢰도로 분류하고 질문 본문을 그대로 대량 전재하지 않는다.
 반복적으로 등장한 평가 의도와 질문 테마만 정규화해 답변 연습에 반영한다.
 재사용 가능한 일반 인성 질문으로 정규화할 수 있는 항목은 `public/question-bank/behavioral/questions.json`에 누적한다.
@@ -115,7 +115,7 @@ STAR는 답변을 구성하고 채점할 때 쓰는 내부 기준이다.
 
 `target_value_axis`는 내부 필드명이다.
 사용자에게는 `회사 연결 포인트`라고 말한다.
-값은 질문의 `answerSignals`, `positionFitHint`, `tags` 또는 `data/runtime/behavioral-interview-target-context.md`의 매핑에서 가장 가까운 기준을 선택한다.
+값은 질문의 `answerSignals`, `positionFitHint`, `tags` 또는 `state/behavioral-interview-target-context.md`의 매핑에서 가장 가까운 기준을 선택한다.
 
 ### 단계 3 — STAR·가치관 채점 및 즉시 피드백
 

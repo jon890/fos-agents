@@ -1,7 +1,7 @@
 # Phase 03 — applications/ 경로 규약 확정
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ## 목표
 

@@ -94,7 +94,7 @@ behavioral-interview-drill 전용 채점 rubric이다.
 
 ## 회사별 보정 기준
 
-회사별 보정은 `data/runtime/behavioral-interview-target-context.md`의 공식 근거와 매핑을 적용한다.
+회사별 보정은 `state/behavioral-interview-target-context.md`의 공식 근거와 매핑을 적용한다.
 이 파일은 skill 호출 시 현재 `state/mvp-target.json`에 맞게 생성하거나 갱신되는 런타임 데이터이다.
 skill `references/`에는 특정 회사명, 특정 공고, 특정 면접 단계의 고정 정보를 두지 않는다.
 

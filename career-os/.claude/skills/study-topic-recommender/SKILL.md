@@ -59,7 +59,7 @@ After inventory generation, use LLM reasoning to choose and explain what matters
 
 **Cron 경로 하루 1회 제한 (ADR-070 D10):**
 스킬 호출 args에 새 관심사·면접 맥락이 없는 cron 자동 실행의 경우,
-`data/runtime/study-topic-candidate-refresh.json`의 `generatedAt`이 오늘 날짜(YYYY-MM-DD)이면 이 단계를 건너뛰고 Step 3으로 진행한다.
+`state/study-topic-candidate-refresh.json`의 `generatedAt`이 오늘 날짜(YYYY-MM-DD)이면 이 단계를 건너뛰고 Step 3으로 진행한다.
 on-demand (스킬 args에 관심사 포함) 경우 이 제한을 적용하지 않는다.
 `refresh_candidate_pool.ts`를 `--trigger-kind cron-health-check`로 직접 호출하는 경우에도 동일하게 오늘 이미 실행됐으면 자동으로 skip한다 (exit 0).
 

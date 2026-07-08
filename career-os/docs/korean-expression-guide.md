@@ -58,7 +58,7 @@ career-os에서 사용자에게 보이는 문서와 task 문장을 자연스럽�
 - `payload`
 - `status`
 - `snapshot`
-- `ledger`
+- `positions-queue`
 - `skill`
 - `runner`
 - `proxy`
@@ -67,7 +67,7 @@ career-os에서 사용자에게 보이는 문서와 task 문장을 자연스럽�
 
 예:
 
-- `ledger`: 사용자가 준비 시작을 승인한 지원 원장
+- `positions-queue`: 사용자가 준비 시작을 승인한 지원 후보 대기열 (ADR-108, 옛 ledger)
 - `snapshot`: 요청 당시 상태 요약
 
 ## task 제목 작성

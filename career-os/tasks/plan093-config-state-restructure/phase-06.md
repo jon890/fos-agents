@@ -1,7 +1,7 @@
 # Phase 06 — frontdoor 코드 제거 + 승격→등록 용어
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ## 목표
 

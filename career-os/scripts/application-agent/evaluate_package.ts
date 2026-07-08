@@ -56,10 +56,10 @@ function parseArgs(args: string[]): Options {
   const slug = `${basename(dirname(applicationDir))}-${basename(applicationDir)}`;
   outputPath =
     outputPath ||
-    join('data/runtime/application-agent/package-eval', slug, 'latest-report.md');
+    join('state/application-agent/package-eval', slug, 'latest-report.md');
   jsonPath =
     jsonPath ||
-    join('data/runtime/application-agent/package-eval', slug, 'latest-report.json');
+    join('state/application-agent/package-eval', slug, 'latest-report.json');
 
   return {
     applicationDir,

@@ -88,7 +88,7 @@ runtime 실데이터의 물리 이동은 이 plan 범위 밖이고, 경로 규�
 - private 답변, 포지션별 지원 전략, 회사별 비공개 맥락을 저장하지 않는다.
 - behavioral 카테고리에는 일반 질문 본문만 둔다. 후보자 개인 답변·이력 기반 질문은 `private/question-bank/`에 둔다.
 - 인성 면접 웹 수집 자료에서 파생한 public-safe 일반 질문은 `public/question-bank/behavioral/questions.json`에 누적한다.
-  수집 근거, URL, 신뢰도, 회사별 맥락은 `data/runtime/behavioral-interview-web-source-scan-YYYY-MM-DD.md`에 둔다.
+  수집 근거, URL, 신뢰도, 회사별 맥락은 `state/behavioral-interview-web-source-scan-YYYY-MM-DD.md`에 둔다.
 - 유료 강의/문제집/면접 후기 원문을 복사하지 않는다.
 - `sources/fos-study/`로 발행하려면 별도 public-safe 문서로 재작성한다.
 
@@ -271,7 +271,7 @@ zod 검증 단일 출처: `career-os/scripts/interview-prep-analyzer/mvp_target_
   - `primary.interview.offer_chat` — 오퍼 단계 mode. nullable, 필요 시 활성화.
 - `primary.company_slug`, `primary.position_slug`, `primary.data_root` — 회사·직무별 관리 홈.
   active 타깃의 사람이 보는 자산은 `data_root` 아래에 둔다.
-  자동화는 `data_root`를 정본으로 읽고, 면접 질문 정본을 `data/runtime`이나 `reports/daily`에 중복 유지하지 않는다.
+  자동화는 `data_root`를 정본으로 읽고, 면접 질문 정본을 `state`나 `reports/daily`에 중복 유지하지 않는다.
 
 타깃 전환 시 `primary`를 `history` 앞에 push하고 새 `primary`를 채운다.
 
@@ -378,7 +378,7 @@ ADR-069 이후 `current_target`처럼 `state/mvp-target.json`의 현재 타깃�
 
 ### position priority fields (implemented — plan050)
 
-plan050은 ledger에 action stage 중심 priority layer를 추가한다.
+plan050은 positions-queue에 action stage 중심 priority layer를 추가한다.
 이 필드는 회사의 절대 선호 순위가 아니라 "지금 어떤 행동을 할지"를 나타낸다.
 
 기본 action stage:
@@ -447,7 +447,7 @@ plan050은 ledger에 action stage 중심 priority layer를 추가한다.
 - `recommendationSnapshot.generatedAt`과 source report path가 없으면 refresh 결과로 취급하지 않는다.
 - `prepare-now`에는 `nextAction`과 하나 이상의 `evidenceUrls`가 필요하다.
 
-### data/applications/_priority-history.jsonl (implemented — plan050)
+### state/_priority-history.jsonl (implemented — plan050, 옛 data/applications/, ADR-107 경로 규약)
 
 priority 변경 이력을 저장하는 runtime/private audit log다.
 한 줄은 하나의 priority 변경 이벤트다.
@@ -458,7 +458,7 @@ priority 변경 이력을 저장하는 runtime/private audit log다.
 {
   "eventId": "priority-20260607-kakaopay-001",
   "recordId": "app-kakaopay-ax-202310",
-  "recordType": "ledger",
+  "recordType": "positions-queue",
   "changedAt": "2026-06-07T10:00:00+09:00",
   "changedBy": "user",
   "previous": {
@@ -476,13 +476,13 @@ priority 변경 이력을 저장하는 runtime/private audit log다.
 
 ### priority view projection
 
-`priority_view.ts`는 ledger, priority history, application files를 읽어 사람이 볼 요약 row를 계산한다.
+`priority_view.ts`는 positions-queue, priority history, application files를 읽어 사람이 볼 요약 row를 계산한다.
 이 projection은 파일에 저장되는 새 원장이 아니며, 외부 DB에도 저장하지 않는다.
 
 검증 규칙:
 
 - projection 계산은 career-os 파일을 수정하지 않는다.
-- ledger file path가 있으면 파일 존재 여부를 직접 확인하고, 없으면 `missing`으로 표시한다.
+- positions-queue file path가 있으면 파일 존재 여부를 직접 확인하고, 없으면 `missing`으로 표시한다.
 
 ### interview answer feedback files
 
@@ -550,7 +550,7 @@ applications/tossplace/applied-ai-engineer/
   "userDecision": "pending",
   "revisionCount": 0,
   "maxRevisionCount": 3,
-  "riskFlags": ["existing_ledger_record"],
+  "riskFlags": ["existing_positions_queue_record"],
   "nextActions": ["fit_analysis"],
   "notes": "MVP fixture only; not an actual submission target."
 }
@@ -672,7 +672,7 @@ Markdown 산출물을 먼저 고정하고, 리뷰된 이력서 초안을 HTML/PD
 선택 파일:
 
 - `resume-metadata.json`: readiness/status 계산을 단순화해야 할 때만 도입한다.
-  도입 시 `ledger_schema.ts`와 파일 기반 projection 책임을 함께 문서화한다.
+  도입 시 `positions_queue_schema.ts`와 파일 기반 projection 책임을 함께 문서화한다.
 
 생성 문서 품질 계약:
 
@@ -701,7 +701,7 @@ Markdown 산출물을 먼저 고정하고, 리뷰된 이력서 초안을 HTML/PD
 
 ### application-flow-agent runtime fields (plan031 — phase-01 확정)
 
-plan031은 기존 ledger record와 호환되도록 optional runtime field를 추가한다. 기존 `status`는 큰 흐름을 유지하고, 세부 자율 실행 상태는 `agentPhase` optional 필드로 분리한다. 검증 단일 출처: `scripts/application-agent/ledger_schema.ts` (phase-02에서 확장).
+plan031은 기존 positions-queue record와 호환되도록 optional runtime field를 추가한다. 기존 `status`는 큰 흐름을 유지하고, 세부 자율 실행 상태는 `agentPhase` optional 필드로 분리한다. 검증 단일 출처: `scripts/application-agent/positions_queue_schema.ts` (phase-02에서 확장, 옛 `ledger_schema.ts`).
 
 ```json
 {
@@ -716,7 +716,7 @@ plan031은 기존 ledger record와 호환되도록 optional runtime field를 추
   "priority": "normal",
   "sourceFreshness": "fresh",
   "lastAgentAction": "schedule_retry",
-  "decisionLogPath": "data/applications/_logs/2026-05-26/application-flow-agent.md"
+  "decisionLogPath": "state/_logs/2026-05-26/application-flow-agent.md"
 }
 ```
 
@@ -1133,7 +1133,7 @@ decision 라벨 의미:
 
 writer는 deterministic scan + (가능하면) Claude review 결과를 새 markdown Write 직전에 한 번 더 확인 — 사용자가 직접 topic-key를 지정해 호출하는 경로에도 최종 검증 조건으로 동작.
 
-### data/runtime/study-topic-candidate-refresh.json (ADR-070)
+### state/study-topic-candidate-refresh.json (ADR-070, 옛 data/runtime/, ADR-107 경로 규약)
 
 LLM 기반 후보 refresh turn의 실행 기록.
 추천기가 고정 seed만 순회하지 않도록, 현재 학습 선호·진행 상태·최근 추천 반복·fos-study inventory를 보고 새 후보를 발굴한 결과를 남긴다.
@@ -1186,7 +1186,7 @@ LLM 기반 후보 refresh turn의 실행 기록.
 }
 ```
 
-동반 markdown인 `data/runtime/study-topic-candidate-refresh.md`는 사람이 읽는 요약이다.
+동반 markdown인 `state/study-topic-candidate-refresh.md`는 사람이 읽는 요약이다.
 Discord에는 민감하지 않은 후보 수, 새 후보 예시, 보류 사유만 요약한다.
 
 ### state/study-pack-candidates.json (ADR-070 이후 active 후보 캐시. ADR-107 config→state 이동)
@@ -1238,7 +1238,7 @@ LLM 후보 refresh가 검증을 통과한 `new` 후보만 자동 append/update�
 }
 ```
 
-### data/runtime/study-topic-actions/YYYY-MM-DD.json (ADR-073)
+### state/study-topic-actions/YYYY-MM-DD.json (ADR-073, 옛 data/runtime/, ADR-107 경로 규약)
 
 daily study Discord 버튼 callback을 topic 추천 결과와 연결하는 runtime snapshot.
 정본 학습 이력이나 추천 pool이 아니라, 해당 날짜 메시지의 버튼을 해석하기 위한 짧은 매핑이다.
@@ -1267,7 +1267,7 @@ daily study Discord 버튼 callback을 topic 추천 결과와 연결하는 runti
 - `career.study-pack.skip:*`는 그날 추천을 넘긴 기록이다. topic 영구 제외가 아니다.
 - 버튼 유효시간은 OpenClaw Discord `agentComponents.ttlMs` 설정을 따른다.
 
-### data/runtime/topic-replenishment.json (ADR-011)
+### state/topic-replenishment.json (ADR-011, 옛 data/runtime/, ADR-107 경로 규약)
 
 replenish 실행 결과 요약. claudeInvoked 여부, 보충된 후보 수 등.
 
@@ -1306,14 +1306,14 @@ RSS/Atom feed 디스크 캐시. 6시간 TTL.
 
 `run_from_request.sh` / `run_morning_live_coding.sh`가 쓰는 임시 토픽 컨테이너. 두 runner 모두 dispatcher 미연결 — deferred.
 
-### data/runtime/application-agent/eval-cases/
+### state/application-agent/eval-cases/ (옛 data/runtime/, ADR-107 경로 규약)
 
 커리어 에이전트가 만든 이력서 문장, 지원 패키지 문장, 리뷰 문장의 안전성을 점검하기 위한 평가 샘플. 현재는 runtime 실험 자산이라 git 추적하지 않는다.
 
 기본 파일:
 
 ```text
-data/runtime/application-agent/eval-cases/resume-package-eval-cases.md
+state/application-agent/eval-cases/resume-package-eval-cases.md
 ```
 
 케이스 형식:
@@ -1337,13 +1337,13 @@ Expected verdict: pass
 
 현재 검증 단일 출처는 `scripts/application-agent/evaluate_cases.ts`다. 이 스크립트는 샘플을 읽어 실제 판정과 기대 판정이 일치하는지 확인하고, 결과를 `eval-reports/`에 쓴다.
 
-### data/runtime/application-agent/eval-reports/
+### state/application-agent/eval-reports/ (옛 data/runtime/, ADR-107 경로 규약)
 
 `scripts/application-agent/evaluate_cases.ts` 실행 결과. 기본 산출물:
 
 ```text
-data/runtime/application-agent/eval-reports/latest-report.md
-data/runtime/application-agent/eval-reports/latest-report.json
+state/application-agent/eval-reports/latest-report.md
+state/application-agent/eval-reports/latest-report.json
 ```
 
 `latest-report.json` 주요 필드:
@@ -1370,15 +1370,15 @@ data/runtime/application-agent/eval-reports/latest-report.json
 
 이 리포트는 커리어 에이전트의 평가 기준이 바뀌었을 때 회귀 확인용으로 쓴다. 장기 보존이 필요한 리포트는 별도 report 경로로 승격하기 전까지 git에 넣지 않는다.
 
-### data/runtime/application-agent/package-eval/
+### state/application-agent/package-eval/ (옛 data/runtime/, ADR-107 경로 규약)
 
 실제 지원 패키지 평가 결과. `scripts/application-agent/evaluate_package.ts`가 `application-package.md`와 `review.md`를 읽고, 제출 전 안전 점검 리포트를 쓴다.
 
 기본 산출물:
 
 ```text
-data/runtime/application-agent/package-eval/<company-role>/latest-report.md
-data/runtime/application-agent/package-eval/<company-role>/latest-report.json
+state/application-agent/package-eval/<company-role>/latest-report.md
+state/application-agent/package-eval/<company-role>/latest-report.json
 ```
 
 `latest-report.json` 주요 필드:

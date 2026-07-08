@@ -1,7 +1,7 @@
 # Phase 01 — 결정 고정 (docs-first, ADR)
 
 **Model**: opus
-**Status**: pending
+**Status**: completed
 
 ## 목표
 

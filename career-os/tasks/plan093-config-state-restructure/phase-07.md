@@ -1,7 +1,7 @@
 # Phase 07 — ledger → positions-queue 코드 rename
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ## 목표
 

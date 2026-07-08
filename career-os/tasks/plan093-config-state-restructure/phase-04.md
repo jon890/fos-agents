@@ -1,7 +1,7 @@
 # Phase 04 — reports/ 경로 규약 재편
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ## 목표
 

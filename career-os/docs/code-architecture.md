@@ -179,7 +179,7 @@ career-os/
 │   ├── application-reviewer/
 │   │   └── SKILL.md  evidence/drift/privacy/cooldown 검토
 │   └── daily-application-digest/
-│       └── SKILL.md  application ledger 기반 daily summary
+│       └── SKILL.md  positions-queue 기반 daily summary
 │
 ├── .codex/skills/                        ← Codex 노출용 심볼릭 링크 (ADR-085)
 │   ├── application-package-writer -> ../../.claude/skills/application-package-writer
@@ -311,7 +311,7 @@ LLM이 작성하는 Markdown 산출물은 skill prompt, runner post-validation, 
 
 ## 사용자 표면
 
-사람이 보는 표면은 Markdown/HTML 리포트, private position home, application ledger, question bank, Discord 요약이다.
+사람이 보는 표면은 Markdown/HTML 리포트, private position home, positions-queue(옛 application ledger, ADR-108), question bank, Discord 요약이다.
 
 현재 인터페이스:
 
@@ -374,12 +374,12 @@ plan031은 plan029 agent skill 위에 TypeScript runtime 계층을 추가한다.
 ```text
 scripts/application-agent/
 ├── run.ts                         # command interface (run-once / run-daily / dry-run / validate / resume / ingest-position-report / report-daily)
-├── ledger_schema.ts               # ledger schema + agentPhase runtime field + transition validator (zod)
+├── positions_queue_schema.ts      # positions-queue schema + agentPhase runtime field + transition validator (zod, 옛 ledger_schema.ts, ADR-108)
 ├── agent_decision_schema.ts       # policy decision object schema (zod)
-├── ledger_io.ts                   # ledger read/write helpers
+├── positions_queue_io.ts          # positions-queue read/write helpers (옛 ledger_io.ts, ADR-108)
 ├── policy.ts                      # deterministic policy decision engine + priority ranker
 ├── actions.ts                     # allowlisted local artifact generation (checklist / study-actions / profile-suggestions)
-├── ingest_position_report.ts      # position report -> candidate ledger
+├── ingest_position_report.ts      # position report -> candidate positions-queue record
 ├── skill_executor.ts              # --execute-skills 명시 시 compatibility backend로 agent-only private skills 실행
 ├── progress_notifier.ts           # --notify-discord 명시 시 private-safe progress 알림
 ├── skill_contracts.ts             # 에이전트 비종속 skill 호출 계약 + compatibility backend builder
@@ -394,13 +394,13 @@ scripts/application-agent/
 |---|---|
 | 분석, 작성, 리뷰, 추천 근거 생성 | agent skills (LLM) |
 | 다음 action 선택 | TypeScript `policy.ts` |
-| 상태 전이 허용 여부 판정 | TypeScript `policy.ts` + `ledger_schema.ts` validator |
+| 상태 전이 허용 여부 판정 | TypeScript `policy.ts` + `positions_queue_schema.ts` validator |
 | skill 산출물 존재 검증 후 상태 갱신 | TypeScript `actions.ts` execution gate |
 | 명시 옵션에서 compatibility backend 실행 | TypeScript `skill_executor.ts` (`--execute-skills`) |
 | 단계별 진행 알림 | TypeScript `progress_notifier.ts` (`--notify-discord`) |
 | safety gate 적용 (금지 action 차단) | TypeScript `safety_gate.ts` |
 | user gate 적용 (승인 전 정지) | TypeScript `actions.ts` + `skill_contracts.ts` |
-| ledger schema 검증 | TypeScript `ledger_schema.ts` (zod) |
+| positions-queue schema 검증 | TypeScript `positions_queue_schema.ts` (zod) |
 | study action public/private 분류 | TypeScript `safety_gate.ts` (`classifyStudyAction`) |
 | 에이전트 비종속 skill 호출 contract 문서화 | TypeScript `skill_contracts.ts` |
 | daily digest public/private 분리 렌더링 | TypeScript `render_decision_log.ts` (`renderDailyDigestReport`) |
@@ -410,14 +410,14 @@ scripts/application-agent/
 `policy.ts` 결정 흐름:
 
 ```text
-현재 ledger records 읽기
+현재 positions-queue records 읽기
   -> actionable candidate 판정 (fit threshold + freshness + cooldown + duplicate)
   -> policy matrix 조회 (status + agentPhase 조합)
   -> 허용된 next action 반환 또는 user gate 발생
   -> safety_gate.ts 검증 (forbidden action / public publish / profile modification 차단)
   -> --notify-discord 명시 시 private-safe progress 알림
   -> --execute-skills 명시 시 agent-only private skill 실행
-  -> skill artifact gate 검증 (필수 산출물 없으면 ledger 전이 금지)
+  -> skill artifact gate 검증 (필수 산출물 없으면 positions-queue 전이 금지)
   -> validator로 전이 허용 여부 최종 확인
   -> agentPhase + status 갱신 + decision log append
 ```
@@ -450,7 +450,7 @@ plan055는 application-agent의 다음 축을 맞춤 이력서 패키지로 둔�
 - skill contract: 생성 문서 품질 계약을 `application-package-writer`와 `application-reviewer` 입력/출력 조건에 반영한다.
 - processor post-validation: 실제 파일 존재, freshness, review verdict, `needs_evidence` resolution을 확인한다.
 - resume exporter: `export_resume.ts`가 `resume-draft.md`와 `design.md` 계약으로 `resume.html`, `resume.pdf`를 만든다.
-- priority/application view helper: readiness를 파일 존재 여부와 ledger fields에서 계산한다.
+- priority/application view helper: readiness를 파일 존재 여부와 positions-queue fields에서 계산한다.
 
 필수 산출물:
 
@@ -470,7 +470,7 @@ applications/<company-slug>/<role-slug>/
 
 상태 경계:
 
-- career-os runner는 ledger mutation과 post-validation을 맡는다.
+- career-os runner는 positions-queue mutation과 post-validation을 맡는다.
 - 외부 제출, 로그인, public publish, candidate-profile mutation은 사용자 승인 없이는 실행하지 않는다.
 - PDF export는 로컬 첨부 파일 생성까지만 다룬다.
   채용 사이트 업로드, 전송, 제출 버튼 클릭은 자동화하지 않는다.
@@ -481,7 +481,7 @@ plan030 freshness guard는 구현 대상이 아니라 후보 ingest 시 prerequi
 
 plan050은 새 독립 추천기를 먼저 만들지 않고 기존 collector/recommender/application-agent 자산을 연결하는 얇은 priority layer로 둔다.
 이 문단은 파일 기반 priority layer 구조를 설명한다.
-별도 DB 없이 ledger projection을 사용한다.
+별도 DB 없이 positions-queue projection을 사용한다.
 
 책임 경계:
 
@@ -494,10 +494,10 @@ plan050은 새 독립 추천기를 먼저 만들지 않고 기존 collector/reco
 - `position-recommender` agent skill은 표준 출력 JSON `recommendation.json`(ADR-094/ADR-101, schemaVersion 2)을 만든다. 적재용 `source`·`closeDate`를 포함하며, Discord 요약 같은 가공은 호출자가 맡는다(ADR-101).
 - `scripts/position-recommender/render_recommendation.ts`는 표준 출력 JSON에서 Markdown·HTML을 파생한다(입력 시 zod 검증 내장). 자체 markdown 파서 `render_report_html.ts`는 ADR-094로 폐기됐다.
   표시 구조와 CSS는 `scripts/position-recommender/templates/report.html`에 둔다.
-- `scripts/application-agent/`는 ledger, 공고별 application files, priority history를 검증하고 갱신한다.
+- `scripts/application-agent/`는 positions-queue, 공고별 application files, priority history를 검증하고 갱신한다.
 - `config/candidate-profile.md`와 기존 resume/profile material은 fit analysis 입력으로 재사용한다.
 - study/interview 관련 agent skill은 gap 기반 preparation action 후보를 만들 때만 호출한다.
-- `priority_view.ts`는 id로 ledger record를 찾아 recommendation snapshot, fit/gap details, evidence, preparation actions, history를 요약한다.
+- `priority_view.ts`는 id로 positions-queue record를 찾아 recommendation snapshot, fit/gap details, evidence, preparation actions, history를 요약한다.
 
 관련 파일:
 
@@ -505,7 +505,7 @@ plan050은 새 독립 추천기를 먼저 만들지 않고 기존 collector/reco
 scripts/application-agent/
 ├── priority_schema.ts             # action stage, recommendation snapshot, user confirmed priority schema
 ├── priority_history.ts            # priority change history append/read helpers
-├── priority_recommendation.ts     # position/ledger inputs를 recommendation snapshot으로 정리
+├── priority_recommendation.ts     # position/positions-queue inputs를 recommendation snapshot으로 정리
 └── priority_view.ts               # 사람이 읽기 쉬운 priority summary projection
 
 state/
@@ -514,7 +514,7 @@ state/
 
 기존 파일 확장 후보:
 
-- `ledger_schema.ts` — 등록된 application의 confirmed priority optional fields.
+- `positions_queue_schema.ts` — 등록된 application의 confirmed priority optional fields.
 - `policy.ts` — `prepare-now`와 기존 actionable candidate 판단 연결.
 - `render_decision_log.ts` — priority change summary 추가.
 
