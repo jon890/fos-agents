@@ -1,8 +1,8 @@
 import { appendFileSync, existsSync, mkdirSync, statSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import type { AgentDecision } from './agent_decision_schema';
-import { updateLedgerRecord } from './ledger_io';
-import type { ApplicationLedgerRecord } from './ledger_schema';
+import { updatePositionsQueueRecord } from './positions_queue_io';
+import type { ApplicationPositionsQueueRecord } from './positions_queue_schema';
 import {
   type SafetyViolation,
   partitionStudyActions,
@@ -29,14 +29,14 @@ type ExpectedArtifact = {
 
 export type ActionOptions = {
   dryRun: boolean;
-  ledgerPath: string;
+  positionsQueuePath: string;
   outputDir: string;
 };
 
 export type ActionResult = {
   applicationId: string;
   decision: AgentDecision;
-  ledgerUpdated: boolean;
+  positionsQueueUpdated: boolean;
   decisionLogPath?: string;
   commandSuggestions: string[];
   executionBlocked?: boolean;
@@ -51,7 +51,7 @@ export type ActionResult = {
 
 export function buildPreparationActionSuggestions(
   actionStage: ActionStage,
-  record: Pick<ApplicationLedgerRecord, 'applicationDir' | 'postingPath' | 'url'>,
+  record: Pick<ApplicationPositionsQueueRecord, 'applicationDir' | 'postingPath' | 'url'>,
 ): string[] {
   switch (actionStage) {
     case 'prepare-now':
@@ -85,14 +85,14 @@ export function buildPreparationActionSuggestions(
 }
 
 export async function executeDecision(
-  record: ApplicationLedgerRecord,
+  record: ApplicationPositionsQueueRecord,
   decision: AgentDecision,
   opts: ActionOptions,
 ): Promise<ActionResult> {
   const result: ActionResult = {
     applicationId: record.id,
     decision,
-    ledgerUpdated: false,
+    positionsQueueUpdated: false,
     commandSuggestions: buildCommandSuggestions(record, decision),
   };
 
@@ -128,8 +128,8 @@ export async function executeDecision(
 
   if (opts.dryRun) return result;
 
-  // Update ledger with new state
-  updateLedgerRecord(opts.ledgerPath, record.id, {
+  // Update positions-queue with new state
+  updatePositionsQueueRecord(opts.positionsQueuePath, record.id, {
     status: decision.nextStatus,
     agentPhase: decision.nextAgentPhase ?? record.agentPhase,
     lastDecisionAt: decision.createdAt,
@@ -139,7 +139,7 @@ export async function executeDecision(
     confidence: decision.confidence,
     ...artifactGate.pathUpdates,
   });
-  result.ledgerUpdated = true;
+  result.positionsQueueUpdated = true;
 
   // Generate artifacts for specific decisions
   if (decision.decision === 'generate_submission_checklist') {
@@ -161,13 +161,13 @@ export async function executeDecision(
 }
 
 function validateArtifactGate(
-  record: ApplicationLedgerRecord,
+  record: ApplicationPositionsQueueRecord,
   decision: AgentDecision,
 ): {
   allowed: boolean;
   reason?: string;
   missingArtifacts?: string[];
-  pathUpdates?: Partial<ApplicationLedgerRecord>;
+  pathUpdates?: Partial<ApplicationPositionsQueueRecord>;
 } {
   const expected = expectedArtifacts(record, decision);
   if (expected.length === 0) return { allowed: true, pathUpdates: {} };
@@ -194,7 +194,7 @@ function validateArtifactGate(
     };
   }
 
-  const pathUpdates: Partial<ApplicationLedgerRecord> = {};
+  const pathUpdates: Partial<ApplicationPositionsQueueRecord> = {};
   for (const artifact of expected) {
     pathUpdates[artifact.field] = artifact.path;
   }
@@ -202,7 +202,7 @@ function validateArtifactGate(
 }
 
 function staleArtifacts(
-  record: ApplicationLedgerRecord,
+  record: ApplicationPositionsQueueRecord,
   decision: AgentDecision,
 ): string[] {
   const applicationPackagePath =
@@ -264,7 +264,7 @@ function staleArtifacts(
 }
 
 export function expectedArtifacts(
-  record: ApplicationLedgerRecord,
+  record: ApplicationPositionsQueueRecord,
   decision: AgentDecision,
 ): ExpectedArtifact[] {
   const postingPath = record.postingPath ?? join(record.applicationDir, 'posting.md');
@@ -403,7 +403,7 @@ export function expectedArtifacts(
 }
 
 function buildCommandSuggestions(
-  record: ApplicationLedgerRecord,
+  record: ApplicationPositionsQueueRecord,
   decision: AgentDecision,
 ): string[] {
   switch (decision.decision) {
@@ -445,14 +445,14 @@ function buildCommandSuggestions(
       return [
         `# Review required: ${record.applicationPackagePath ?? record.applicationDir}`,
         buildSkillCommand('resume-exporter', { applicationDir: record.applicationDir }),
-        `# To approve: update ledger record id=${record.id} userDecision=approved`,
+        `# To approve: update positions-queue record id=${record.id} userDecision=approved`,
         `# [requires user approval] candidate-profile.md 직접 편집으로 프로필을 갱신하세요.`,
       ];
 
     case 'generate_submission_checklist':
       return [
         `# Submission checklist ready — submit manually at: ${record.url}`,
-        `# After submission: update ledger record id=${record.id} status=submitted`,
+        `# After submission: update positions-queue record id=${record.id} status=submitted`,
       ];
 
     case 'generate_study_action_queue':
@@ -467,7 +467,7 @@ function buildCommandSuggestions(
 }
 
 function appendDecisionLog(
-  record: ApplicationLedgerRecord,
+  record: ApplicationPositionsQueueRecord,
   decision: AgentDecision,
 ): string {
   const dir = join(record.applicationDir, 'decisions');
@@ -478,13 +478,13 @@ function appendDecisionLog(
 }
 
 function appendArtifactGateLog(
-  record: ApplicationLedgerRecord,
+  record: ApplicationPositionsQueueRecord,
   decision: AgentDecision,
   artifactGate: {
     allowed: boolean;
     reason?: string;
     missingArtifacts?: string[];
-    pathUpdates?: Partial<ApplicationLedgerRecord>;
+    pathUpdates?: Partial<ApplicationPositionsQueueRecord>;
   },
 ): string {
   const dir = join(record.applicationDir, 'decisions');
@@ -507,7 +507,7 @@ function appendArtifactGateLog(
 }
 
 function writeSubmissionChecklist(
-  record: ApplicationLedgerRecord,
+  record: ApplicationPositionsQueueRecord,
   decision: AgentDecision,
 ): string {
   ensureDir(record.applicationDir);
@@ -527,7 +527,7 @@ function writeSubmissionChecklist(
     `- [ ] Review fit analysis: ${record.fitAnalysisPath ?? '(not set)'}`,
     `- [ ] Review final review: ${record.reviewPath ?? '(not set)'}`,
     `- [ ] Submit at: ${record.url}`,
-    `- [ ] After submission: update ledger record \`${record.id}\` status → \`submitted\``,
+    `- [ ] After submission: update positions-queue record \`${record.id}\` status → \`submitted\``,
     '',
     '## Risk Flags',
     flags,
@@ -541,7 +541,7 @@ function writeSubmissionChecklist(
 }
 
 function writePrivateStudyActions(
-  record: ApplicationLedgerRecord,
+  record: ApplicationPositionsQueueRecord,
   decision: AgentDecision,
 ): string {
   ensureDir(record.applicationDir);
@@ -595,7 +595,7 @@ function writePrivateStudyActions(
 }
 
 function writeProfileSuggestions(
-  record: ApplicationLedgerRecord,
+  record: ApplicationPositionsQueueRecord,
   decision: AgentDecision,
   outputDir: string,
 ): string {

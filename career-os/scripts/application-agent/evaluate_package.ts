@@ -23,7 +23,7 @@ type Options = {
   jsonPath: string;
 };
 
-const DEFAULT_APPLICATION_DIR = 'data/applications/tossplace/applied-ai-engineer';
+const DEFAULT_APPLICATION_DIR = 'applications/tossplace/applied-ai-engineer';
 
 function parseArgs(args: string[]): Options {
   let applicationDir = DEFAULT_APPLICATION_DIR;
@@ -56,10 +56,10 @@ function parseArgs(args: string[]): Options {
   const slug = `${basename(dirname(applicationDir))}-${basename(applicationDir)}`;
   outputPath =
     outputPath ||
-    join('data/runtime/application-agent/package-eval', slug, 'latest-report.md');
+    join('state/application-agent/package-eval', slug, 'latest-report.md');
   jsonPath =
     jsonPath ||
-    join('data/runtime/application-agent/package-eval', slug, 'latest-report.json');
+    join('state/application-agent/package-eval', slug, 'latest-report.json');
 
   return {
     applicationDir,

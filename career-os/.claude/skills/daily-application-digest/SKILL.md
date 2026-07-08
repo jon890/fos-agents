@@ -1,11 +1,11 @@
 ---
 name: daily-application-digest
-description: 지원 현황 일일 요약 report.md를 생성하는 비공개 career-os skill. "오늘 지원 현황 요약", "지원 digest", "application 일일 리포트", "지원 상태 어때", `/daily-application-digest [YYYY-MM-DD]`처럼 ledger.jsonl과 application 산출물의 상태 변화, 사용자 승인 필요 항목, agent-only 작업, 부족 역량, 오늘의 공부/면접 대비 액션을 요약해야 할 때 사용. Discord 전송, 실제 제출, 로그인, 채용 사이트 접속, fos-study write는 하지 않는다.
+description: 지원 현황 일일 요약 report.md를 생성하는 비공개 career-os skill. "오늘 지원 현황 요약", "지원 digest", "application 일일 리포트", "지원 상태 어때", `/daily-application-digest [YYYY-MM-DD]`처럼 positions-queue.jsonl과 application 산출물의 상태 변화, 사용자 승인 필요 항목, agent-only 작업, 부족 역량, 오늘의 공부/면접 대비 액션을 요약해야 할 때 사용. Discord 전송, 실제 제출, 로그인, 채용 사이트 접속, fos-study write는 하지 않는다.
 ---
 
 # Daily Application Digest
 
-application ledger 전체를 읽어 오늘의 지원 현황을 요약하는 비공개 career-os skill.
+application positions-queue 전체를 읽어 오늘의 지원 현황을 요약하는 비공개 career-os skill.
 사용자 승인 필요 항목과 agent-only 작업을 분리하고, 직무별 부족 역량과 오늘의 액션을 제안한다.
 
 ## 출력 정책
@@ -26,14 +26,14 @@ Discord 요약에는 private 지원 전략이나 이력서 문구를 넣지 않�
 
 현재 에이전트는 다음 파일과 명령 출력을 직접 로드:
 
-1. `career-os/data/applications/ledger.jsonl` — 전체 지원 이력 원장 (필수)
+1. `career-os/state/positions-queue.jsonl` — 전체 지원 이력 positions-queue (필수)
 2. 각 applicationDir의 파일 (존재하는 것만):
    - `posting.md` — 공고 본문
    - `fit-analysis.md` — fit 분석 + Gap 항목
    - `application-package.md` — 지원 패키지 초안 + 근거 보강 항목
    - `review.md` — 심사 판정 (pass/revise/blocked)
-3. `career-os/data/runtime/position-recommendation.md` — 선택. 새 공고 후보 확인 시 참조.
-4. `career-os/data/runtime/morning-topic-recommendation.md` — 선택. 오늘의 학습 추천 연계 시 참조.
+3. `career-os/reports/latest/position-recommendation.md` — 선택. 새 공고 후보 확인 시 참조.
+4. `career-os/reports/morning-topic-recommendation.md` — 선택. 오늘의 학습 추천 연계 시 참조.
 
 ## Workflow
 
@@ -44,11 +44,11 @@ Discord 요약에는 private 지원 전략이나 이력서 문구를 넣지 않�
 - 예: `/daily-application-digest 2026-05-22` → date = `2026-05-22`
 - 날짜 없으면 오늘 날짜(`YYYY-MM-DD`)를 사용.
 
-출력 경로: `career-os/data/reports/daily/<date>/application-digest/report.md`
+출력 경로: `career-os/reports/daily/<date>/application-digest/report.md`
 
-### 2. ledger 로드 및 applicationDir 목록 수집
+### 2. positions-queue 로드 및 applicationDir 목록 수집
 
-`career-os/data/applications/ledger.jsonl`을 읽는다.
+`career-os/state/positions-queue.jsonl`을 읽는다.
 
 각 줄을 JSON 파싱해 다음 필드를 수집:
 
@@ -76,20 +76,20 @@ career-os/<applicationDir>/application-package.md
 career-os/<applicationDir>/review.md
 ```
 
-존재하지 않는 파일은 skip (stderr warn). 모든 파일이 없어도 ledger 정보만으로 요약 진행.
+존재하지 않는 파일은 skip (stderr warn). 모든 파일이 없어도 positions-queue 정보만으로 요약 진행.
 
 각 파일에서 추출:
 
 - **posting.md**: company, role, riskFlags, 공고 마감일(있으면)
 - **fit-analysis.md**: Gap 분석 항목 + 근거 보강 항목 개수 + Risk Flags
-- **application-package.md**: 근거 보강 항목 목록 + Ledger Update Suggestion 섹션
+- **application-package.md**: 근거 보강 항목 목록 + Positions Queue Update Suggestion 섹션
 - **review.md**: Verdict (result / confidence) + User Approval Gate 항목 + Revision Requests
 
 ### 4. 오늘 변경 파일 식별
 
 오늘 날짜(`date`)를 기준으로 `statusUpdatedAt`이 오늘인 항목을 "오늘 상태 변경"으로 표시.
 
-파일 시스템 mtime 확인은 하지 않는다 — ledger `statusUpdatedAt` 필드로만 판단.
+파일 시스템 mtime 확인은 하지 않는다 — positions-queue `statusUpdatedAt` 필드로만 판단.
 
 ### 5. 사용자 승인 필요 항목 분리
 
@@ -140,7 +140,7 @@ fit-analysis.md의 Gap 분석에서 **해당 공고 기준 부족 역량 상위 
 
 ### 8. report.md 작성
 
-저장 경로: `career-os/data/reports/daily/<date>/application-digest/report.md`
+저장 경로: `career-os/reports/daily/<date>/application-digest/report.md`
 
 **필수 섹션 10개:**
 
@@ -201,8 +201,8 @@ report.md 작성 후 아래 항목 검증. 실패 시 해당 섹션 재작성:
 
 | 상황 | 처리 |
 |---|---|
-| `ledger.jsonl` 부재 | stderr + exit 1 |
-| applicationDir 내 모든 파일 부재 | stderr warn + ledger 정보만으로 요약 진행 |
+| `positions-queue.jsonl` 부재 | stderr + exit 1 |
+| applicationDir 내 모든 파일 부재 | stderr warn + positions-queue 정보만으로 요약 진행 |
 | fit-analysis.md / review.md 부재 | stderr warn + 해당 섹션 "파일 없음" 표시 |
 | 출력 디렉터리 생성 실패 | stderr + exit 1 |
 | self-check 3회 실패 | stderr + exit 1, 실패 항목 명시 |
@@ -216,7 +216,7 @@ cron/runner에서 아래 패턴으로 별도 전송:
 ```bash
 # report.md 생성 후 Discord 전송 (runner 책임)
 SUMMARY=$(grep -A 10 "## Discord Summary Draft" \
-  career-os/data/reports/daily/$(date +%Y-%m-%d)/application-digest/report.md \
+  career-os/reports/daily/$(date +%Y-%m-%d)/application-digest/report.md \
   | tail -n +2)
 
 bun --env-file=career-os/.env \
@@ -233,13 +233,13 @@ bun --env-file=career-os/.env \
 - **승인 게이트 명시**: 외부 제출·로그인처럼 agent가 자동 처리할 수 없는 항목을 `Needs User Approval` 섹션으로 격리 — 사용자가 한 섹션만 보면 오늘 결정해야 할 것을 파악.
 - **공개/비공개 분리 강제**: `Public-Safe Study Candidates`와 `Private Strategy Notes`를 별도 섹션으로 강제 — 회사 맞춤 전략이 fos-study 같은 공개 채널로 흘러들어가는 것을 구조적으로 차단.
 - **Discord 전송 분리**: skill이 외부 전송까지 책임지면 dry-run / 테스트 시 실수로 전송되는 리스크 발생. cron/runner가 전송 책임 — skill은 report만 생성.
-- **ledger 직접 갱신 금지**: 상태 업데이트 제안은 `Ledger Update Suggestion` 패턴으로 (ADR-038 — 상태 전이는 artifact 검증 뒤에만). report.md 안에서 제안만 — 직접 수정은 사용자 확인 후.
+- **positions-queue 직접 갱신 금지**: 상태 업데이트 제안은 `Positions Queue Update Suggestion` 패턴으로 (ADR-038 — 상태 전이는 artifact 검증 뒤에만). report.md 안에서 제안만 — 직접 수정은 사용자 확인 후.
 
 ## References
 
-- `career-os/docs/adr/INDEX.md` — ADR-038 (ledger 직접 갱신 금지, artifact 검증 후 상태 전이), ADR-021 (Discord notify_discord.ts)
-- `career-os/docs/data-schema.md` — ledger.jsonl 스키마
-- `career-os/data/applications/ledger.jsonl` — 지원 이력 원장
+- `career-os/docs/adr/INDEX.md` — ADR-038 (positions-queue 직접 갱신 금지, artifact 검증 후 상태 전이, 옛 ledger), ADR-021 (Discord notify_discord.ts)
+- `career-os/docs/data-schema.md` — positions-queue.jsonl 스키마
+- `career-os/state/positions-queue.jsonl` — 지원 이력 positions-queue
 - `career-os/.claude/skills/application-package-writer/SKILL.md` — 생성 단계 (Phase 04)
 - `career-os/.claude/skills/application-reviewer/SKILL.md` — 검토 단계 (Phase 05)
 - `_shared/lib/notify_discord.ts` — Discord 전송 유틸리티 (cron/runner에서 사용)

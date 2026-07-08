@@ -76,7 +76,7 @@
       "includeAllCheckedPostings": true,
       "includeAgentOpinion": true,
       "includeHoldAndExcludeReasons": true,
-      "outputDir": "data/runtime/downloads/"
+      "outputDir": "reports/downloads/"
     }
   }
 }

@@ -50,7 +50,7 @@ export const PrioritySchema = z.enum(['low', 'normal', 'high', 'urgent']);
 
 export const SourceFreshnessSchema = z.enum(['fresh', 'stale', 'unknown']);
 
-export const ApplicationLedgerRecordSchema = z
+export const ApplicationPositionsQueueRecordSchema = z
   .object({
     id: z.string().min(1),
     company: z.string().min(1),
@@ -131,7 +131,7 @@ export type AutonomyLevel = z.infer<typeof AutonomyLevelSchema>;
 export type RequiredUserAction = z.infer<typeof RequiredUserActionSchema>;
 export type Priority = z.infer<typeof PrioritySchema>;
 export type SourceFreshness = z.infer<typeof SourceFreshnessSchema>;
-export type ApplicationLedgerRecord = z.infer<typeof ApplicationLedgerRecordSchema>;
+export type ApplicationPositionsQueueRecord = z.infer<typeof ApplicationPositionsQueueRecordSchema>;
 
 export const AllowedStatusTransitions: Record<ApplicationStatus, ApplicationStatus[]> = {
   discovered: ['analyzing', 'blocked', 'closed'],
@@ -167,7 +167,7 @@ export function canTransition(from: ApplicationStatus, to: ApplicationStatus): b
  * Returns an array of violations; empty array means the transition is allowed.
  */
 export function validateTransition(
-  record: ApplicationLedgerRecord,
+  record: ApplicationPositionsQueueRecord,
   toStatus: ApplicationStatus,
 ): TransitionViolation[] {
   const violations: TransitionViolation[] = [];
@@ -239,7 +239,7 @@ export function validateTransition(
  * Returns true when the record is a valid target for agent action this cycle.
  * sourceFreshness=stale, closed, or submitted records are excluded.
  */
-export function isActionableCandidate(record: ApplicationLedgerRecord): boolean {
+export function isActionableCandidate(record: ApplicationPositionsQueueRecord): boolean {
   if (record.sourceFreshness === 'stale') return false;
   if (record.status === 'closed') return false;
   if (record.status === 'submitted') return false;
@@ -247,20 +247,20 @@ export function isActionableCandidate(record: ApplicationLedgerRecord): boolean 
   return true;
 }
 
-export function parseLedgerLine(line: string): ApplicationLedgerRecord {
-  return ApplicationLedgerRecordSchema.parse(JSON.parse(line));
+export function parsePositionsQueueLine(line: string): ApplicationPositionsQueueRecord {
+  return ApplicationPositionsQueueRecordSchema.parse(JSON.parse(line));
 }
 
-export function parseLedgerFile(path: string): ApplicationLedgerRecord[] {
+export function parsePositionsQueueFile(path: string): ApplicationPositionsQueueRecord[] {
   const text = readFileSync(path, 'utf-8');
   return text
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean)
-    .map(parseLedgerLine);
+    .map(parsePositionsQueueLine);
 }
 
-function checkSafetyInvariants(record: ApplicationLedgerRecord): string[] {
+function checkSafetyInvariants(record: ApplicationPositionsQueueRecord): string[] {
   const warnings: string[] = [];
 
   if (record.sourceFreshness === 'stale' && record.actionableCandidate === true) {
@@ -297,19 +297,19 @@ function checkSafetyInvariants(record: ApplicationLedgerRecord): string[] {
 
 function main(): void {
   const workspacePrefix = process.cwd().endsWith('/career-os') ? '' : 'career-os/';
-  const path = process.argv[2] ?? `${workspacePrefix}data/applications/ledger.jsonl`;
+  const path = process.argv[2] ?? `${workspacePrefix}state/positions-queue.jsonl`;
   if (!existsSync(path)) {
-    console.error(`ledger not found: ${path}`);
+    console.error(`positions-queue not found: ${path}`);
     process.exit(2);
   }
 
-  const records = parseLedgerFile(path);
+  const records = parsePositionsQueueFile(path);
   const ids = new Set<string>();
   const allWarnings: string[] = [];
 
   for (const record of records) {
     if (ids.has(record.id)) {
-      console.error(`duplicate ledger id: ${record.id}`);
+      console.error(`duplicate positions-queue id: ${record.id}`);
       process.exit(1);
     }
     ids.add(record.id);
@@ -326,7 +326,7 @@ function main(): void {
     process.exit(1);
   }
 
-  console.log(`ledger ok: ${records.length} records`);
+  console.log(`positions-queue ok: ${records.length} records`);
 }
 
 if (import.meta.main) {

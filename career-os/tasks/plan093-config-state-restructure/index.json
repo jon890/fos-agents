@@ -1,11 +1,11 @@
 {
   "name": "plan093-config-state-restructure",
-  "description": "career-os 데이터 레이아웃을 성격별 top-level 버킷으로 재구조화하고 용어를 정리한다. data/ 해체 후 config(사용자 의도·정책·사실) / state(시스템 실행 산물) / applications(지원 건별 문서) / reports(인간용 생성물) / cache(재생성 캐시)로 분리한다. ledger→positions-queue 이름 변경, verified-company의 cooldown을 state로 분리, frontdoor-queue·승격 용어 정리를 포함한다. 구분 기준·이동표·용어는 decisions.md가 정본이다. 파괴적 이동 전 Phase 01에서 ADR로 고정한다.",
+  "description": "career-os 데이터 레이아웃을 성격별 top-level 버킷으로 재구조화하고 용어를 정리한다. data/ 해체 후 config(사용자 의도·정책·사실) / state(시스템 실행 산물) / applications(지원 건별 문서) / reports(인간용 생성물) / cache(재생성 캐시)로 분리한다. ledger→positions-queue 이름 변경(코드 심볼·파일명 포함), verified-company의 cooldown을 state로 분리, frontdoor-queue 코드 제거 + 승격→등록 용어 정리를 포함한다. untracked data/ 실데이터의 물리 이동은 이 plan 범위 밖(decisions.md 스코프 절). 구분 기준·이동표·용어는 decisions.md가 정본이다. 파괴적 변경 전 Phase 01에서 ADR로 고정한다.",
   "created_at": "2026-07-08T00:00:00+09:00",
   "updated_at": "2026-07-08T00:00:00+09:00",
-  "status": "pending",
-  "current_phase": 1,
-  "total_phases": 6,
+  "status": "completed",
+  "current_phase": 8,
+  "total_phases": 8,
   "error_message": null,
   "blocked_reason": null,
   "related_docs": [
@@ -30,11 +30,12 @@
     "Phase 01에서 신규 ADR로 5버킷 구조·positions-queue·cooldown 분리를 고정한 뒤 구현"
   ],
   "execution_policy": {
-    "phase_order": "current_phase 순서대로 Phase 01부터 Phase 06까지 실행한다.",
+    "phase_order": "current_phase 순서대로 Phase 01부터 Phase 08까지 실행한다.",
     "parallelism": "같은 plan 안의 phase는 병렬 실행하지 않는다.",
-    "docs_first": "Phase 01만 docs·ADR을 수정한다. Phase 02~06 구현 phase는 docs를 수정하지 않고 결정을 구현한다. 계약 부족 시 PHASE_BLOCKED.",
+    "docs_first": "Phase 01만 docs·ADR을 수정한다. Phase 02~08 구현 phase는 docs를 수정하지 않고 결정을 구현한다. 계약 부족 시 PHASE_BLOCKED.",
     "task_scope": "task materialization 단계에서는 tasks/plan093-config-state-restructure/** 파일만 생성·갱신한다.",
     "pr_unit": "PR은 모든 phase 완료 뒤 plan 단위로 만든다. phase 경계는 commit/push 경계다.",
-    "move_guard": "git mv로 이동해 이력을 보존한다. 파일 하나 이동 후 그 파일을 읽는 SKILL·scripts·docs·ADR·.gitignore 참조를 같은 phase에서 함께 갱신하고, 끊긴 링크 0·수집/렌더/드릴 실행 성공을 phase 성공 기준으로 검증한다."
+    "move_guard": "tracked 파일(config/*.json 등)은 git mv로 이동해 이력을 보존한다. untracked data/ 실파일은 물리 이동하지 않고 참조 갱신 + .gitignore 경계 반영으로만 규약을 바꾼다(decisions.md 스코프 절). 파일/규약 변경 후 그 파일을 읽는 SKILL·scripts·docs·.gitignore 참조를 같은 phase에서 함께 갱신하고, live docs·scripts·.claude/skills 기준 옛 경로 참조 0 + bun --check 통과 + 새 경로 파일 부재 graceful 처리를 phase 성공 기준으로 검증한다. tasks/·frozen ADR은 grep-0 대상에서 제외한다.",
+    "code_rename_scope": "ledger→positions-queue 코드 심볼·파일명 rename과 frontdoor 코드 제거는 이 plan 범위(사용자 결정 2026-07-08, decisions.md M2=A). Phase 06(frontdoor 제거 + 승격→등록)·Phase 07(ledger rename) 순으로 수행한다 — frontdoor가 ledger를 import하므로 frontdoor 제거를 먼저 해 dangling import를 원천 차단한다."
   }
 }

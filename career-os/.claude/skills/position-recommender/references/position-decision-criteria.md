@@ -66,7 +66,7 @@
 ### 5. 지원 이력/쿨다운
 
 - 최근 6개월 내 지원 후 불합격 경험이 있는 회사/계열사는 하드필터로 삭제하지 않고, 우선순위를 낮추는 쿨다운 신호로 본다.
-- 쿨다운 대상은 `config/verified-company-research-targets.json`의 `cooldown`을 단일 출처로 본다(ADR-095). 쿨다운에서 풀린 회사는 active/open 개별 공고, JD fit, 회사 업사이드, 중복 지원 여부를 다른 상위 회사군과 같은 기준으로 평가한다.
+- 쿨다운 대상은 `state/company-cooldown.json`을 단일 출처로 본다(ADR-109). 쿨다운에서 풀린 회사는 active/open 개별 공고, JD fit, 회사 업사이드, 중복 지원 여부를 다른 상위 회사군과 같은 기준으로 평가한다.
 - 쿨다운 대상의 기술 블로그나 사례는 학습 참고자료로 사용할 수 있다.
 - 선호 제외 대상은 config `preferenceExcluded`를 단일 출처로 본다(ADR-095). JD fit이 높아도 회사 선호가 낮으므로 추천 티어에 올리지 않는다.
 

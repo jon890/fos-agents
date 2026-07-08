@@ -1,12 +1,8 @@
 import { existsSync } from 'fs';
 import {
-  DEFAULT_QUEUE_PATH,
-  readFrontdoorQueue,
-} from './frontdoor_queue_io';
-import {
-  DEFAULT_LEDGER_PATH,
-  readLedger,
-} from './ledger_io';
+  DEFAULT_POSITIONS_QUEUE_PATH,
+  readPositionsQueue,
+} from './positions_queue_io';
 import {
   DEFAULT_PRIORITY_HISTORY_PATH,
   readPriorityHistory,
@@ -16,7 +12,7 @@ import {
   ACTION_STAGE_DISPLAY_VALUE,
 } from './priority_schema';
 
-type RecordType = 'frontdoor_queue' | 'ledger';
+type RecordType = 'positions-queue';
 
 export type PriorityViewRow = {
   recordId: string;
@@ -42,8 +38,7 @@ export type PriorityViewRow = {
 type CliOptions = {
   dryRun: boolean;
   json: boolean;
-  queuePath: string;
-  ledgerPath: string;
+  positionsQueuePath: string;
   historyPath: string;
 };
 
@@ -51,16 +46,14 @@ function parseOpts(args: string[]): CliOptions {
   const opts: CliOptions = {
     dryRun: false,
     json: false,
-    queuePath: DEFAULT_QUEUE_PATH,
-    ledgerPath: DEFAULT_LEDGER_PATH,
+    positionsQueuePath: DEFAULT_POSITIONS_QUEUE_PATH,
     historyPath: DEFAULT_PRIORITY_HISTORY_PATH,
   };
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--dry-run') opts.dryRun = true;
     else if (args[i] === '--json') opts.json = true;
-    else if (args[i] === '--queue' && args[i + 1]) opts.queuePath = args[++i];
-    else if (args[i] === '--ledger' && args[i + 1]) opts.ledgerPath = args[++i];
+    else if (args[i] === '--positions-queue' && args[i + 1]) opts.positionsQueuePath = args[++i];
     else if (args[i] === '--history' && args[i + 1]) opts.historyPath = args[++i];
   }
 
@@ -68,12 +61,10 @@ function parseOpts(args: string[]): CliOptions {
 }
 
 export function buildPriorityViewRows(options?: {
-  queuePath?: string;
-  ledgerPath?: string;
+  positionsQueuePath?: string;
   historyPath?: string;
 }): PriorityViewRow[] {
-  const queue = readFrontdoorQueue(options?.queuePath ?? DEFAULT_QUEUE_PATH);
-  const ledger = readLedger(options?.ledgerPath ?? DEFAULT_LEDGER_PATH);
+  const positionsQueue = readPositionsQueue(options?.positionsQueuePath ?? DEFAULT_POSITIONS_QUEUE_PATH);
   const history = existsSync(options?.historyPath ?? DEFAULT_PRIORITY_HISTORY_PATH)
     ? readPriorityHistory(options?.historyPath ?? DEFAULT_PRIORITY_HISTORY_PATH)
     : [];
@@ -83,41 +74,7 @@ export function buildPriorityViewRows(options?: {
     historyCounts.set(event.recordId, (historyCounts.get(event.recordId) ?? 0) + 1);
   }
 
-  const queueRows = queue.map((record): PriorityViewRow => {
-    const userConfirmed = record.userConfirmedPriority;
-    const effectiveActionStage = userConfirmed?.actionStage ?? record.actionStage;
-    const priorityRank = userConfirmed?.priorityRank ?? record.priorityRank;
-    const prioritySource = userConfirmed
-      ? 'user-confirmed'
-      : record.actionStage
-        ? 'recommendation'
-        : 'none';
-
-    return {
-      recordId: record.queueId,
-      recordType: 'frontdoor_queue',
-      company: record.company,
-      role: record.role,
-      url: record.url,
-      effectiveActionStage,
-      priorityBadgeLabel: renderBadgeLabel(effectiveActionStage, priorityRank),
-      priorityDisplayValue: effectiveActionStage
-        ? ACTION_STAGE_DISPLAY_VALUE[effectiveActionStage]
-        : undefined,
-      priorityRank,
-      prioritySource,
-      fitSummary: record.recommendationSnapshot?.fitSummary?.summary ?? record.decisionReason,
-      gapSummary: record.recommendationSnapshot?.gapSummary?.summary,
-      nextAction: record.nextAction ?? record.nextActions?.[0],
-      riskFlags: record.riskFlags ?? [],
-      evidenceUrls: record.evidenceUrls ?? [record.url],
-      latestRecommendationSnapshotAt: record.recommendationSnapshot?.generatedAt,
-      latestUserConfirmationAt: userConfirmed?.confirmedAt,
-      priorityHistoryCount: historyCounts.get(record.queueId) ?? 0,
-    };
-  });
-
-  const ledgerRows = ledger.map((record): PriorityViewRow => {
+  const positionsQueueRows = positionsQueue.map((record): PriorityViewRow => {
     const userConfirmed = record.userConfirmedPriority;
     const effectiveActionStage = userConfirmed?.actionStage ?? record.actionStage;
     const priorityRank = userConfirmed?.priorityRank ?? record.priorityRank;
@@ -129,7 +86,7 @@ export function buildPriorityViewRows(options?: {
 
     return {
       recordId: record.id,
-      recordType: 'ledger',
+      recordType: 'positions-queue',
       company: record.company,
       role: record.role,
       url: record.url,
@@ -151,7 +108,7 @@ export function buildPriorityViewRows(options?: {
     };
   });
 
-  return [...queueRows, ...ledgerRows].sort(compareRows);
+  return [...positionsQueueRows].sort(compareRows);
 }
 
 function compareRows(a: PriorityViewRow, b: PriorityViewRow): number {
@@ -190,8 +147,7 @@ function renderDistribution(rows: PriorityViewRow[]): string {
 function main(): void {
   const opts = parseOpts(process.argv.slice(2));
   const rows = buildPriorityViewRows({
-    queuePath: opts.queuePath,
-    ledgerPath: opts.ledgerPath,
+    positionsQueuePath: opts.positionsQueuePath,
     historyPath: opts.historyPath,
   });
 

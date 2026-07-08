@@ -32,7 +32,7 @@ interview asset은 후보자 이력 기반 자료지만 `fos-study` 공개 발�
 2. `career-os/config/question-bank-topics.json` — 선택 사항. public bank 정본이 아니라 interview asset 전용 `<topic-key>` override 후보 → `outputPath` / `domain` / `title` / `inputFiles` / `promptAppend`
 3. `career-os/config/candidate-profile.md` — 후보자 이력 core: 사실·라벨 (필수)
 4. `career-os/config/candidate-profile-detail.md` — 주요 프로젝트·개인 프로젝트·의사결정 패턴·협업 등 경험 서사 (필수)
-5. `career-os/config/mvp-target.json` — `primary.company`, `primary.role` (현재 면접 타깃)
+5. `career-os/state/mvp-target.json` — `primary.company`, `primary.role` (현재 면접 타깃)
 6. `career-os/task/*` 또는 `career-os/resume/*` — `inputFiles` 명시되면 그 파일들, 아니면 candidate-profile core/detail에서 참조하는 경로
 7. (선택) `sources/fos-study/<유사 outputPath>.md` — overlap 회피
 
@@ -218,7 +218,7 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 
 - `career-os/config/candidate-profile.md` — 후보자 이력 core (사실·라벨, Q&A 질문 은행 + 마스터 플레이북 양쪽 공통 입력)
 - `career-os/config/candidate-profile-detail.md` — 후보자 이력 detail (주요 프로젝트·개인 프로젝트·의사결정 패턴·협업)
-- `career-os/config/mvp-target.json` — 현재 면접 타깃 (마스터 플레이북 cross-track 톤 기준)
+- `career-os/state/mvp-target.json` — 현재 면접 타깃 (마스터 플레이북 cross-track 톤 기준)
 - `career-os/public/question-bank/` — 공개 질문 bank 정본 (topic-key 매칭 1순위)
 - `career-os/config/question-bank-topics.json` — interview asset 전용 override 후보 (outputPath / domain / inputFiles)
 - `career-os/.claude/skills/interview-asset-writer/references/output-policy.md` — 공개 산출물 경계 정책 (내부 전략과 공개 문구 분리 기준)

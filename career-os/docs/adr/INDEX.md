@@ -45,7 +45,7 @@
 | ADR-042 | reviewer pass 판정은 사용자 검토 대기 상태로 전환한다 | Accepted | [ADR-042-reviewer-pass-판정은-사용자-검토-대기-상태로-전환한다.md](ADR-042-reviewer-pass-판정은-사용자-검토-대기-상태로-전환한다.md) |
 | ADR-043 | position-recommender 공고 수집은 source adapter + active validator로 분리 | Accepted | [ADR-043-position-recommender-공고-수집은-source-adapter-active-validator로-분리.md](ADR-043-position-recommender-공고-수집은-source-adapter-active-validator로-분리.md) |
 | ADR-044 | 큰 변경은 planning → delegated implementation → main-session verification으로 운영 | Accepted | [ADR-044-큰-변경은-planning-delegated-implementation-main-session-verification으로-운영.md](ADR-044-큰-변경은-planning-delegated-implementation-main-session-verification으로-운영.md) |
-| ADR-045 | 지원 후보 frontdoor queue를 ledger와 분리한다 | Accepted | [ADR-045-지원-후보-frontdoor-queue를-ledger와-분리한다.md](ADR-045-지원-후보-frontdoor-queue를-ledger와-분리한다.md) |
+| ADR-045 | 지원 후보 frontdoor queue를 ledger와 분리한다 | Superseded by [[ADR-110]] | [ADR-045-지원-후보-frontdoor-queue를-ledger와-분리한다.md](ADR-045-지원-후보-frontdoor-queue를-ledger와-분리한다.md) |
 | ADR-046 | fos-career 웹 대시보드를 별도 저장소로 분리한다 | Superseded by [[ADR-102]] | [ADR-046-fos-career-웹-대시보드를-별도-저장소로-분리한다.md](ADR-046-fos-career-웹-대시보드를-별도-저장소로-분리한다.md) |
 | ADR-047 | position-recommender collector adapter를 모듈 경계로 승격한다 | Accepted | [ADR-047-position-recommender-collector-adapter를-모듈-경계로-승격한다.md](ADR-047-position-recommender-collector-adapter를-모듈-경계로-승격한다.md) |
 | ADR-048 | coffeechat 자동화는 폐기하고 면접 준비 기능만 이관한다 | Accepted | [ADR-048-coffeechat-자동화는-폐기하고-면접-준비-기능만-이관한다.md](ADR-048-coffeechat-자동화는-폐기하고-면접-준비-기능만-이관한다.md) |
@@ -94,7 +94,7 @@
 | ADR-092 | 면접 준비 flow 재편: 핏 진단과 매일 답변 드릴 분리 | Accepted | [ADR-092-면접-준비-flow-재편-진단-드릴-분리.md](ADR-092-면접-준비-flow-재편-진단-드릴-분리.md) |
 | ADR-093 | skill 호출 계약은 에이전트 비종속으로 둔다 | Accepted | [ADR-093-skill-호출-계약은-에이전트-비종속으로-둔다.md](ADR-093-skill-호출-계약은-에이전트-비종속으로-둔다.md) |
 | ADR-094 | 포지션 추천 산출물을 JSON 정본으로 전환한다 | Accepted | [ADR-094-포지션-추천-산출물-json-정본-전환.md](ADR-094-포지션-추천-산출물-json-정본-전환.md) |
-| ADR-095 | 회사 업사이드 운영 데이터를 config JSON 단일 출처로 흡수한다 | Accepted | [ADR-095-회사-업사이드-운영데이터-config-흡수.md](ADR-095-회사-업사이드-운영데이터-config-흡수.md) |
+| ADR-095 | 회사 업사이드 운영 데이터를 config JSON 단일 출처로 흡수한다 | Accepted; cooldown 흡수는 [[ADR-109]]로 superseded | [ADR-095-회사-업사이드-운영데이터-config-흡수.md](ADR-095-회사-업사이드-운영데이터-config-흡수.md) |
 | ADR-096 | job-fit-analyzer를 의사결정·전략 중심으로 재정의한다 | Accepted | [ADR-096-job-fit-analyzer-의사결정-전략-재정의.md](ADR-096-job-fit-analyzer-의사결정-전략-재정의.md) |
 | ADR-097 | question-bank 정본을 public으로 1원화하고 개인 질문은 private에 둔다 | Accepted | [ADR-097-question-bank-정본-public으로-1원화하고-개인-질문은-private에-둔다.md](ADR-097-question-bank-정본-public으로-1원화하고-개인-질문은-private에-둔다.md) |
 | ADR-098 | data-schema는 현재 스키마만 담고 폐기 항목은 ADR로 위임한다 | Accepted | [ADR-098-data-schema는-현재-스키마만-담고-폐기-항목은-adr로-위임한다.md](ADR-098-data-schema는-현재-스키마만-담고-폐기-항목은-adr로-위임한다.md) |
@@ -106,3 +106,7 @@
 | ADR-104 | candidate-profile core/detail 분리 + skill 매핑 | Accepted | [ADR-104-candidate-profile-core-detail-분리-skill-매핑.md](ADR-104-candidate-profile-core-detail-분리-skill-매핑.md) |
 | ADR-105 | study-progress ↔ drill 상태 분리 + weak_spots 스키마 정본 | Accepted | [ADR-105-study-progress-drill-상태-분리-weak-spots-스키마-정본.md](ADR-105-study-progress-drill-상태-분리-weak-spots-스키마-정본.md) |
 | ADR-106 | topic-file-map 폐기 + 참조 doc 정리 | Accepted | [ADR-106-topic-file-map-폐기-참조-doc-정리.md](ADR-106-topic-file-map-폐기-참조-doc-정리.md) |
+| ADR-107 | config/state 구분 기준 + 5버킷 구조로 data/ 해체 | Accepted | [ADR-107-config-state-구분-5버킷-구조로-data-해체.md](ADR-107-config-state-구분-5버킷-구조로-data-해체.md) |
+| ADR-108 | ledger를 positions-queue로 이름 변경 (코드 심볼·파일명 포함) | Accepted | [ADR-108-ledger를-positions-queue로-이름-변경-코드-포함.md](ADR-108-ledger를-positions-queue로-이름-변경-코드-포함.md) |
+| ADR-109 | 회사 cooldown을 state/company-cooldown.json으로 분리 (ADR-095 cooldown 부분 supersede) | Accepted | [ADR-109-회사-cooldown을-state로-분리.md](ADR-109-회사-cooldown을-state로-분리.md) |
+| ADR-110 | frontdoor-queue 폐기 + "승격"→"등록" (ADR-045 supersede) | Accepted | [ADR-110-frontdoor-queue-폐기-승격을-등록으로.md](ADR-110-frontdoor-queue-폐기-승격을-등록으로.md) |

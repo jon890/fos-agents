@@ -5,7 +5,7 @@ description: 1차·최종·오퍼 단계별 면접 실전 준비를 생성하는
 
 # Interview Stage Prep
 
-현재 면접 단계(`config/mvp-target.json`의 `primary.interview` 필드)를 읽고 단계에 맞는 실전 준비 가이드를 생성하는 workflow.
+현재 면접 단계(`state/mvp-target.json`의 `primary.interview` 필드)를 읽고 단계에 맞는 실전 준비 가이드를 생성하는 workflow.
 `primary`가 `null`이면 활성 면접 타깃이 없는 상태이므로 생성하지 않는다.
 
 ## 스킬 경계 (boundary)
@@ -21,7 +21,7 @@ description: 1차·최종·오퍼 단계별 면접 실전 준비를 생성하는
 
 현재 에이전트는 다음 파일을 직접 로드한다:
 
-1. `career-os/config/mvp-target.json` — `primary.interview` (단계별 날짜/상태), `primary.company`, `primary.role`.
+1. `career-os/state/mvp-target.json` — `primary.interview` (단계별 날짜/상태), `primary.company`, `primary.role`.
    `primary`가 `null`이면 활성 면접 타깃 없음으로 처리한다.
 2. `career-os/config/candidate-profile.md` — 후보자 이력·약점·강점 core (필수)
 3. `career-os/config/candidate-profile-detail.md` — 프로젝트 서사·의사결정 패턴·면접 준비 우선순위 (필수)
@@ -46,7 +46,7 @@ description: 1차·최종·오퍼 단계별 면접 실전 준비를 생성하는
 2. `primary.data_root`가 상대 경로이면 현재 실행 중인 career-os 워크스페이스 루트 기준으로 해석한다.
    사용자가 `/home/.../career-os` 같은 절대 경로를 줬더라도, 파일 도구가 보호 정책으로 쓰기를 거부하면 곧바로 fallback하지 말고 동일 repo의 활성 워크스페이스 경로(`/opt/data/...` 등 현재 cwd 기준)로 한 번 재시도한다.
    이때 최종 응답의 저장 파일 경로는 private 절대 경로가 아니라 `primary.data_root` 기준 상대 경로로 보고한다.
-3. 경로 해석이 불가능하거나 활성 워크스페이스 기준 재시도도 실패할 때만 `data/reports/daily/YYYY-MM-DD/interview-second-round/report.md`로 fallback하고, 완료 보고에 fallback 이유를 밝힌다.
+3. 경로 해석이 불가능하거나 활성 워크스페이스 기준 재시도도 실패할 때만 `reports/daily/YYYY-MM-DD/interview-second-round/report.md`로 fallback하고, 완료 보고에 fallback 이유를 밝힌다.
 4. 저장 후 파일 존재와 비어 있지 않음, 질문 수 50개, current-practice Top 10개를 검증한다.
 
 ### 내용 구성
@@ -142,7 +142,7 @@ description: 1차·최종·오퍼 단계별 면접 실전 준비를 생성하는
 
 ```bash
 # mvp-target.json 읽기
-cat career-os/config/mvp-target.json
+cat career-os/state/mvp-target.json
 # candidate-profile core + detail 읽기
 cat career-os/config/candidate-profile.md
 cat career-os/config/candidate-profile-detail.md
@@ -154,7 +154,7 @@ cat career-os/config/candidate-profile-detail.md
 
 단계에 따라 아래 내용으로 보고서를 직접 작성한다.
 
-저장 경로: `career-os/data/reports/stage-prep-YYYY-MM-DD.md`
+저장 경로: `career-os/reports/stage-prep-YYYY-MM-DD.md`
 
 첫 줄: `# 면접 단계별 준비 가이드 — YYYY-MM-DD`
 
@@ -236,7 +236,7 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 
 ## References
 
-- `career-os/config/mvp-target.json` — 현재 면접 단계 (interview.first_round / final_round / offer_chat)
+- `career-os/state/mvp-target.json` — 현재 면접 단계 (interview.first_round / final_round / offer_chat)
 - `career-os/config/candidate-profile.md` — 후보자 이력·약점
 - 관련 스킬: `tech-interview-drill` — 기술 질문 드릴 (1차 면접 준비 연계)
 - 관련 스킬: `behavioral-interview-drill` — 인성 질문 드릴 (최종 면접 준비 연계)

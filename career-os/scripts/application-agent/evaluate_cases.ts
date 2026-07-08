@@ -30,11 +30,11 @@ type Options = {
 };
 
 const DEFAULT_CASES_PATH =
-  'data/runtime/application-agent/eval-cases/resume-package-eval-cases.md';
+  'state/application-agent/eval-cases/resume-package-eval-cases.md';
 const DEFAULT_OUTPUT_PATH =
-  'data/runtime/application-agent/eval-reports/latest-report.md';
+  'state/application-agent/eval-reports/latest-report.md';
 const DEFAULT_JSON_PATH =
-  'data/runtime/application-agent/eval-reports/latest-report.json';
+  'state/application-agent/eval-reports/latest-report.json';
 
 function parseArgs(args: string[]): Options {
   const opts: Options = {

@@ -8,7 +8,7 @@ import {
 } from './priority_schema';
 
 const WORKSPACE_PREFIX = process.cwd().endsWith('/career-os') ? '' : 'career-os/';
-export const DEFAULT_PRIORITY_HISTORY_PATH = `${WORKSPACE_PREFIX}data/applications/_priority-history.jsonl`;
+export const DEFAULT_PRIORITY_HISTORY_PATH = `${WORKSPACE_PREFIX}state/_priority-history.jsonl`;
 
 export const PriorityHistorySnapshotSchema = z
   .object({
@@ -24,7 +24,7 @@ export const PriorityHistorySnapshotSchema = z
 export const PriorityHistoryEventSchema = z.object({
   eventId: z.string().min(1),
   recordId: z.string().min(1),
-  recordType: z.enum(['frontdoor_queue', 'ledger']),
+  recordType: z.enum(['positions-queue']),
   changedAt: z.string().min(1),
   changedBy: z.string().min(1),
   previous: PriorityHistorySnapshotSchema,
@@ -62,7 +62,7 @@ export function appendPriorityHistoryEvent(
 
 export function createPriorityHistoryEvent(input: {
   recordId: string;
-  recordType: 'frontdoor_queue' | 'ledger';
+  recordType: 'positions-queue';
   changedBy: string;
   previous: z.infer<typeof PriorityHistorySnapshotSchema>;
   next: z.infer<typeof UserConfirmedPrioritySchema>;

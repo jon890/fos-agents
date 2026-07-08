@@ -44,7 +44,7 @@ IT 기업 자료를 수집할 때는 네이버, 카카오, LINE, 쿠팡, 토스,
 - `public/question-bank/`에는 private 답변, 포지션별 지원 전략, 회사별 비공개 맥락, 개인 이력 세부사항을 넣지 않는다.
 - 유료 강의, 문제집, 면접 후기 원문을 복사하지 않는다.
 - 공개 가능한 일반 지식으로 직접 재작성하고, 원문을 보존해야 하는 자료는 이 경로에 넣지 않는다.
-- 회사별 웹 수집 근거는 `data/runtime/behavioral-interview-web-source-scan-YYYY-MM-DD.md`에 남기고, 이 bank에는 재사용 가능한 일반 질문만 둔다.
+- 회사별 웹 수집 근거는 `state/behavioral-interview-web-source-scan-YYYY-MM-DD.md`에 남기고, 이 bank에는 재사용 가능한 일반 질문만 둔다.
 - `sources/fos-study/`로 자동 발행하지 않는다.
   공개 글이 필요하면 별도 요청과 검수 뒤 public-safe 문서로 재작성한다.
 - private prep.md에 반영할 때는 질문, 의도, 평가 포인트, 태그만 가져간다.

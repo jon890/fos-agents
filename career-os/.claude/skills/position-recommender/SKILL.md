@@ -35,7 +35,7 @@ Discord 요약은 내부 파일 경로, plan 번호, commit hash 같은 내부 �
 
 사용자 전달 원칙:
 - 공고·포지션 추천 리포트는 반드시 HTML 파일을 함께 생성해 첨부한다. 텍스트 표만 보내지 않는다.
-- HTML은 다운로드 전용 경로(`data/runtime/downloads/`)에 두고, 각 공고명은 개별 공고 URL로 이동하는 링크(`<a href>`)여야 한다.
+- HTML은 다운로드 전용 경로(`reports/downloads/`)에 두고, 각 공고명은 개별 공고 URL로 이동하는 링크(`<a href>`)여야 한다.
 - Discord 미리보기에는 상위 후보와 핵심 사유를 짧게 쓰되, 각 후보의 공고 링크도 포함한다.
 - 다운로드·첨부용 HTML은 전체 active/open 공고가 들어 있는 파일 하나만 만든다.
 - 부분 후보 preview HTML이나 `report.html`의 다운로드 copy는 기본 생성하지 않는다.
@@ -58,24 +58,25 @@ Hermes에서 이 skill을 실행할 때는 `skill_view(name='position-recommende
 워크스페이스 루트의 `references/<file>.md`로 가정하지 않는다.
 8. `config/position-collection.json` — 수집 키워드와 후보자 관심사(`interestProfile`, `reportPreference`) 설정. 특정 회사군/AI·플랫폼 관심사는 skill 본문에 박지 않고 이 config를 따른다.
 9. `config/verified-company-research-targets.json` — 검증된 회사 탐색 대상 목록. 추천 티어 입력이 아니라, active 개별 공고가 부족할 때 다음 수집 범위 결정에만 사용한다.
-10. (선택) `references/verified-company-discovery.md` — 수집 snapshot이 부족하고 검증 회사군을 다시 파야 할 때만 읽는 보조 탐색 가이드
-11. (선택) 사용자가 자연어로 지정한 채용공고 markdown 파일 경로 (예: `career-os/data/runtime/live-position-postings.md`)
+10. `career-os/state/company-cooldown.json` — 쿨다운 대상 회사 목록(ADR-109). 추천 시 감점 신호로 사용한다.
+11. (선택) `references/verified-company-discovery.md` — 수집 snapshot이 부족하고 검증 회사군을 다시 파야 할 때만 읽는 보조 탐색 가이드
+12. (선택) 사용자가 자연어로 지정한 채용공고 markdown 파일 경로 (예: `career-os/cache/live-position-postings.md`)
 
 ## Workflow
 
 ### 1. 채용공고 자동 수집
 
 수동 실행에서는 현재 에이전트가 필요할 때 `collect_live_postings.ts`를 직접 호출한다.
-daily/cron 운영 경로에서는 cron 소비측이 에이전트 호출 전에 `data/runtime/live-position-postings.md`를 먼저 갱신할 수 있다.
+daily/cron 운영 경로에서는 cron 소비측이 에이전트 호출 전에 `cache/live-position-postings.md`를 먼저 갱신할 수 있다.
 현재 에이전트는 수집 snapshot이 있으면 이 파일을 우선 읽는다.
 
 - daily/cron 실행에서는 수집 snapshot이 active/open 개별 공고를 하나도 만들지 못하면 실패 처리한다.
   이는 stale report를 재전송하지 않기 위한 운영 guard다.
 - 단, 호출자가 cron 지시문에서 "live collection 불가 시 기존 snapshot 사용"을 명시 허용하면 실패로 끝내지 않는다.
-  이때는 `data/runtime/live-position-postings.md`의 진단부(`direct_active_or_open_postings`, source diagnostics, mtime)를 근거로 추천하고, 최종 요약 첫 부분에 "새 수집은 못 했고 기존 snapshot을 사용했다"는 제한을 짧게 밝힌다.
+  이때는 `cache/live-position-postings.md`의 진단부(`direct_active_or_open_postings`, source diagnostics, mtime)를 근거로 추천하고, 최종 요약 첫 부분에 "새 수집은 못 했고 기존 snapshot을 사용했다"는 제한을 짧게 밝힌다.
   낮은 fit의 신규 후보를 억지로 만들지 말고, 기존 active/open 최상위 후보와 최근 반복 점검을 우선한다.
 
-수동 에이전트 실행에서 사용자 요청에 **"최신 채용"**, **"실시간 채용"**, **"Wanted"**, **"공고 가져와줘"** 키워드가 있는데 `data/runtime/live-position-postings.md`가 없거나 오래됐으면 실행:
+수동 에이전트 실행에서 사용자 요청에 **"최신 채용"**, **"실시간 채용"**, **"Wanted"**, **"공고 가져와줘"** 키워드가 있는데 `cache/live-position-postings.md`가 없거나 오래됐으면 실행:
 
 ```bash
 # bun이 있으면 기존 실행 경로
@@ -85,14 +86,14 @@ bun scripts/position-recommender/collect_live_postings.ts
 node scripts/position-recommender/collect_live_postings.ts
 ```
 
-(기본 출력 경로는 스크립트 자기 위치 기준으로 `career-os/data/runtime/live-position-postings.md`로 고정 — cwd 무관. 다른 위치로 redirect할 때만 `--output <path>` 추가.)
+(기본 출력 경로는 스크립트 자기 위치 기준으로 `career-os/cache/live-position-postings.md`로 고정 — cwd 무관. 다른 위치로 redirect할 때만 `--output <path>` 추가.)
 
 Node 실행에서 `import.meta.dir` 관련 오류가 나면 Bun 전용 경로 계산이 남아 있는 것이다. 해당 스크립트는 `dirname(fileURLToPath(import.meta.url))` 방식으로 바꾼 뒤 `node --check <script>`와 실제 수집을 다시 검증한다.
 
 - 수동 실행에서 수집 실패 (exit non-zero) 시 stderr warn 출력 후 계속 진행한다.
   단, 이 경우 강력 추천/도전 추천을 억지로 채우지 않고 후보 부족 또는 보류로 쓴다.
 - daily/cron 실행에서 수집 실패, active/open direct posting 0건, stale report/runtime은 실패로 끝낸다.
-- 수집 후에는 `data/runtime/live-position-postings.md`의 mtime, `total_collected`, `direct_active_or_open_postings`, `source_counts`, `source_diagnostics`를 확인해 **실제로 새 snapshot이 쓰였는지** 검증한다.
+- 수집 후에는 `cache/live-position-postings.md`의 mtime, `total_collected`, `direct_active_or_open_postings`, `source_counts`, `source_diagnostics`를 확인해 **실제로 새 snapshot이 쓰였는지** 검증한다.
   기존 runtime/report에 있던 공고라도 새 snapshot에서 해당 source의 `imported=0`이면 강력/도전 추천에 stale 재사용하지 않는다.
 - Coupang Careers 상세 페이지는 Node 내장 `fetch`만 403을 받고 `curl`은 200을 받는 Cloudflare fingerprint 문제가 있을 수 있다.
   `coupang-careers`가 `detail_failed`로 떨어지면 `references/coupang-cloudflare-node-fetch.md`의 curl fallback 검증 절차를 따른다.
@@ -110,8 +111,8 @@ Node 실행에서 `import.meta.dir` 관련 오류가 나면 Bun 전용 경로 �
 ### 2. 컨텍스트 + 최근 추천 이력 로드
 
 - Inputs 1~7 모두 읽는다.
-- 수집된 `career-os/data/runtime/live-position-postings.md` 또는 사용자 지정 파일을 읽는다.
-- 최근 7일 `career-os/data/reports/daily/*/position-recommendation/report.md` 중 존재하는 파일을 읽는다.
+- 수집된 `career-os/cache/live-position-postings.md` 또는 사용자 지정 파일을 읽는다.
+- 최근 7일 `career-os/reports/daily/*/position-recommendation/report.md` 중 존재하는 파일을 읽는다.
 - 사용자의 자연어 포커스 키워드 (예: "AI 서비스팀 위주") 를 분석 컨텍스트에 반영
 - 사용자의 현재 선호상 AI 서비스/AI Transformation(AX)/AI Agent/AI 플랫폼 포지션도 탐색한다. 단, 강력/도전 추천에는 서버·플랫폼 개발 전이가 분명하고 active/open 개별 공고 URL이 확인된 항목만 올린다.
 - 백엔드와 AI 전환 후보는 별도 관점으로 검토한다. 예: AI Agent/RAG/MCP/LLMOps/ML Backend/AI Platform처럼 API·서버·플랫폼·운영 자동화와 AI 응용 경험이 함께 필요한 공고.
@@ -171,12 +172,12 @@ md/html의 한국어 라벨 변환은 `render_recommendation.ts`가 담당하므
 표준 출력 JSON이 단일 산출물이다. 이 JSON 하나에서 md/html을 파생하므로 자체 markdown 파서를 거치지 않고 출력이 항상 일관된다.
 
 ```
-쓰기 → career-os/data/reports/daily/YYYY-MM-DD/position-recommendation/recommendation.json  (표준 출력 JSON)
+쓰기 → career-os/reports/daily/YYYY-MM-DD/position-recommendation/recommendation.json  (표준 출력 JSON)
 파생 → <ts-runtime> scripts/position-recommender/render_recommendation.ts --input <json> --format md   --output .../report.md
 파생 → <ts-runtime> scripts/position-recommender/render_recommendation.ts --input <json> --format html --output .../report.html
-다운로드 HTML → <ts-runtime> scripts/position-recommender/render_candidate_preview.ts --input <json> --postings data/runtime/live-position-postings.md --limit all --output data/runtime/downloads/position-recommendation-all-YYYY-MM-DD.html
-미러 → career-os/data/runtime/position-recommendation.{json,md,html}
-다운로드 → data/runtime/downloads/position-recommendation-all-YYYY-MM-DD.html 하나만 둔다.
+다운로드 HTML → <ts-runtime> scripts/position-recommender/render_candidate_preview.ts --input <json> --postings cache/live-position-postings.md --limit all --output reports/downloads/position-recommendation-all-YYYY-MM-DD.html
+미러 → career-os/reports/latest/position-recommendation.{json,md,html}
+다운로드 → reports/downloads/position-recommendation-all-YYYY-MM-DD.html 하나만 둔다.
 소비측 가공 → cron 또는 호출자: 최종 응답 Discord 요약 산문 + HTML 첨부 / 파일 기반 후속 루프
 ```
 
@@ -200,12 +201,12 @@ cron 소비측은 Markdown 리포트 검증 후 HTML 미러를 생성하고,
 Discord 알림은 리포트 전체 요약이 아니라 “클릭 가능한 카드형 후보 목록”으로 보낸다.
 
 - 공고·포지션 추천 리포트는 반드시 전체 공고 HTML 파일 하나를 함께 첨부한다.
-- HTML 파일은 `career-os/data/runtime/downloads/` 아래에 만들고, 각 후보 공고명은 개별 공고 URL로 이동하는 `<a href>` 링크여야 한다.
+- HTML 파일은 `career-os/reports/downloads/` 아래에 만들고, 각 후보 공고명은 개별 공고 URL로 이동하는 `<a href>` 링크여야 한다.
 - Discord 요약에는 강력 추천 최대 3개, 도전 추천 최대 2개를 짧게 쓴다.
-- 첨부 HTML은 항상 `--postings data/runtime/live-position-postings.md --limit all`로 전체 active/open 후보를 보여준다.
+- 첨부 HTML은 항상 `--postings cache/live-position-postings.md --limit all`로 전체 active/open 후보를 보여준다.
 - 사용자가 넓은 preview, 20개 이상 후보, 또는 전체 후보를 요청하면 임의로 50개처럼 다시 자르지 않는다.
 - 전체 후보 preview와 전체 공고 HTML에서도 `references/position-decision-criteria.md`의 "4. 역할 구성" 제외 규칙을 동일하게 적용한다.
-- **중요: `position-recommendation-full-YYYY-MM-DD.html`은 추천 리포트 전체본이지, 수집된 모든 active/open 공고 목록이 아니다.** 사용자가 "모든 공고", "전체 공고", "다 들어있는 HTML"을 요청하거나 포함 여부를 확인하면 `data/runtime/live-position-postings.md`의 `direct_active_or_open_postings`와 HTML의 공고 링크/행 수를 비교한다. 불일치하면 full report를 재전송하지 말고, snapshot의 `link_type: direct_posting` + `posting_status: active/open` + `url` 항목 전체를 표로 렌더링한 별도 HTML을 `data/runtime/downloads/position-recommendation-all-postings-YYYY-MM-DD.html`로 만들고, 링크 수가 snapshot count와 일치하는지 검증한 뒤 첨부한다.
+- **중요: `position-recommendation-full-YYYY-MM-DD.html`은 추천 리포트 전체본이지, 수집된 모든 active/open 공고 목록이 아니다.** 사용자가 "모든 공고", "전체 공고", "다 들어있는 HTML"을 요청하거나 포함 여부를 확인하면 `cache/live-position-postings.md`의 `direct_active_or_open_postings`와 HTML의 공고 링크/행 수를 비교한다. 불일치하면 full report를 재전송하지 말고, snapshot의 `link_type: direct_posting` + `posting_status: active/open` + `url` 항목 전체를 표로 렌더링한 별도 HTML을 `reports/downloads/position-recommendation-all-postings-YYYY-MM-DD.html`로 만들고, 링크 수가 snapshot count와 일치하는지 검증한 뒤 첨부한다.
 - 전체 공고 HTML에는 최소 컬럼 `순번`, `출처`, `공고 링크`, `상태`, `마감`, `태그/스킬`, `요약`을 둔다. 공고명은 개별 공고 URL로 이동하는 `<a href>` 링크여야 하며, 최종 전송 전 `<a ` 개수와 표시 행 수가 `direct_active_or_open_postings`와 일치해야 한다.
 - 각 후보 preview 또는 전체 공고 HTML 행은 다음 4줄 또는 표 컬럼을 유지한다:
   - 공고명: 회사명 — 포지션명
@@ -229,9 +230,9 @@ Hermes/Codex scheduled run에서 날짜별 `report.md`와 runtime mirror가 핵�
 
 #### Cron Markdown-only fallback
 
-호출자가 날짜별 `report.md`와 `data/runtime/position-recommendation.md` 생성을 명시했고, 현재 환경에서 `bun`/renderer를 사용할 수 없으면 stale 재전송보다 Markdown fallback을 우선한다.
+호출자가 날짜별 `report.md`와 `reports/latest/position-recommendation.md` 생성을 명시했고, 현재 환경에서 `bun`/renderer를 사용할 수 없으면 stale 재전송보다 Markdown fallback을 우선한다.
 
-- 기존 `data/runtime/live-position-postings.md` snapshot에 `direct_active_or_open_postings > 0`이고 caller가 기존 snapshot 사용을 허용한 경우에만 fallback한다.
+- 기존 `cache/live-position-postings.md` snapshot에 `direct_active_or_open_postings > 0`이고 caller가 기존 snapshot 사용을 허용한 경우에만 fallback한다.
 - 이때 표준 JSON·HTML 파생은 생략 가능하지만, `report.md`와 runtime markdown mirror는 새 날짜로 직접 작성한다.
 - fallback 제한을 첫 결론 또는 최종 cron 요약에 짧게 밝힌다: 새 수집/renderer를 못 돌렸고 기존 active-only snapshot을 사용했다.
 - 추천 티어에는 snapshot 안의 `link_type: direct_posting` + `posting_status: active/open` 개별 URL만 올리는 기존 원칙을 그대로 유지한다.
@@ -246,7 +247,7 @@ cron 환경에서 표준 JSON 작성이나 대형 파일 작성이 안전 가드
 - 사용자-facing 요약에는 “새 수집 성공/기존 snapshot 사용” 중 실제 상태만 짧게 밝히고, 내부 tool guard나 approval 세부를 길게 노출하지 않는다.
 - terminal heredoc으로 report를 직접 쓸 때 본문에 raw `&` 문자가 있으면 shell/background 가드가 오탐할 수 있으므로, 한국어 제목은 `and`/`및`으로 바꾸거나 escape해서 재시도한다.
 - cron/Codex 환경에서 대형 JSON·Markdown을 shell heredoc으로 한 번에 쓰다가 URL path의 비ASCII 문자 등으로 보안 가드가 멈추면, shell 우회 대신 `write_file`로 산출물 원문을 쓰고 필요한 단일 URL/문구만 `patch`로 보정한 뒤 renderer와 `cp` 검증 명령을 별도 terminal 호출로 실행한다.
-- Markdown fallback으로 썼더라도 HTML 전달 정책은 유지한다. 가능한 경우 active/open snapshot에서 전체 공고 HTML을 생성하고 `data/runtime/downloads/position-recommendation-all-YYYY-MM-DD.html`에 둔다. 최소한 같은 Markdown에서 안전한 HTML copy를 생성하고 `data/runtime/downloads/position-recommendation-full-YYYY-MM-DD.html`에 둔다.
+- Markdown fallback으로 썼더라도 HTML 전달 정책은 유지한다. 가능한 경우 active/open snapshot에서 전체 공고 HTML을 생성하고 `reports/downloads/position-recommendation-all-YYYY-MM-DD.html`에 둔다. 최소한 같은 Markdown에서 안전한 HTML copy를 생성하고 `reports/downloads/position-recommendation-full-YYYY-MM-DD.html`에 둔다.
 - 완료 전 `test -s`, `cmp`, HTML 링크 개수 확인 등으로 날짜별 report/runtime mirror/download HTML의 존재와 동일성을 실제로 검증한다.
 
 ## Self-check
@@ -312,7 +313,7 @@ cron 환경에서 표준 JSON 작성이나 대형 파일 작성이 안전 가드
 - **수집 선택적 호출**: 기존 `POSITION_POSTINGS_FILE` env 주입 패턴 → 자연어 인자 흡수. 매번 수집하지 않아 비용·시간 효율.
 - **env 변수 제거**: `POSITION_CONTEXT`와 `POSITION_POSTINGS_FILE` → 자연어 인자.
 - **비공개 유지**: position 분석은 후보자 본인 의사결정 자산 — fos-study publish 안 함. `publish_job_analysis.sh` 폐기 근거(ADR-030).
-- **재실행 멱등**: 날짜별 경로(`data/reports/daily/YYYY-MM-DD/...`)로 충돌 없는 복수 실행 지원.
+- **재실행 멱등**: 날짜별 경로(`reports/daily/YYYY-MM-DD/...`)로 충돌 없는 복수 실행 지원.
 
 ## References
 
@@ -321,7 +322,8 @@ cron 환경에서 표준 JSON 작성이나 대형 파일 작성이 안전 가드
 - `references/position-context-index.md` — 추천 컨텍스트 인덱스
 - `references/position-decision-criteria.md` — 랭킹·제외 기준
 - `references/company-upside-reference.md` — 회사 브랜드·규모 upside 참조
-- `config/verified-company-research-targets.json` — 검증된 탐색 대상 회사군. 회사 tier·쿨다운(`cooldown`)·선호제외(`preferenceExcluded`) 운영 데이터 단일 출처(ADR-095)
+- `config/verified-company-research-targets.json` — 검증된 탐색 대상 회사군. 회사 tier·선호제외(`preferenceExcluded`) 운영 데이터 단일 출처(ADR-095)
+- `state/company-cooldown.json` — 쿨다운 운영 데이터 단일 출처(ADR-109)
 - `references/verified-company-discovery.md` — snapshot 부족 시만 쓰는 보조 탐색 가이드
 - `scripts/position-recommender/recommendation_schema.ts` — **표준 출력 JSON zod 스키마** (ADR-094, ADR-101). recommendation.json을 채우기 전에 이 파일에서 `PositionItem`(`source`·`closeDate` 포함) 등 필드 정의를 확인한다.
 - `scripts/position-recommender/render_recommendation.ts` — 표준 출력 JSON에서 Markdown·HTML을 파생하는 렌더러. 입력 시 스키마 검증을 내장하므로 실행 자체가 self-check다.

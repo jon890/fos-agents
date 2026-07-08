@@ -1,19 +1,19 @@
 # Cron Codex Markdown delivery checklist
 
-Use this when a scheduled Hermes/Codex run asks for a daily position recommendation and explicitly names `report.md` plus `data/runtime/position-recommendation.md` as deliverables.
+Use this when a scheduled Hermes/Codex run asks for a daily position recommendation and explicitly names `report.md` plus `reports/latest/position-recommendation.md` as deliverables.
 
 ## Execution pattern
 
 1. Load the canonical `position-recommender` skill and required context files first.
 2. Try live collection with the available TypeScript runtime (`bun` first, otherwise Node 22+):
    - `node scripts/position-recommender/collect_live_postings.ts`
-3. Read the new `data/runtime/live-position-postings.md` diagnostics and use only entries with:
+3. Read the new `cache/live-position-postings.md` diagnostics and use only entries with:
    - `link_type: direct_posting`
    - `posting_status: active` or `posting_status: open`
    - an individual posting URL.
 4. If the caller only requires Markdown outputs, it is acceptable to write the dated `report.md` directly instead of forcing the JSON renderer path, provided live collection succeeded or the caller explicitly allowed an existing active-only snapshot.
-5. Mirror the report byte-for-byte to `data/runtime/position-recommendation.md`.
-6. Still generate a simple HTML copy under `data/runtime/downloads/position-recommendation-full-YYYY-MM-DD.html`; each URL in the report should become an `<a href>` link.
+5. Mirror the report byte-for-byte to `reports/latest/position-recommendation.md`.
+6. Still generate a simple HTML copy under `reports/downloads/position-recommendation-full-YYYY-MM-DD.html`; each URL in the report should become an `<a href>` link.
 7. Verify before final response:
    - dated report exists and is non-empty
    - runtime markdown exists and is byte-identical (`cmp` or equivalent)

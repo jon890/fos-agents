@@ -37,7 +37,7 @@ career-os/
 │     모든 에이전트용 정식 가이드. 워크스페이스 정책·진입점·외부 의존성.
 ├── docs/                                  ← 5 종합 문서 + 보조 영역
 │   ├── prd.md            제품 범위·MVP·기능 목록
-│   ├── data-schema.md    config/logs/runtime 스키마
+│   ├── data-schema.md    config/state/logs 스키마
 │   ├── flow.md           사용자/데이터 플로우
 │   ├── code-architecture.md  이 문서
 │   ├── adr/              아키텍처 결정 개별 파일 + INDEX (ADR-089 파일럿 전환, ai-nodes ADR-015)
@@ -54,53 +54,60 @@ career-os/
 │   ↑ skills/planning이 생성, skills/plan-and-build가 실행. 완료된 plan도 history 보존 위해 삭제 X.
 │
 ├── config/                                ← 사람이 큐레이션한 정책·타깃·baseline·예외 override (ADR-069)
-│   ├── mvp-target.json                현재 active 타깃 단일 출처
 │   ├── candidate-profile.md           이력 core — 추천·fit 판단용 사실·라벨 (prose, ADR-104)
 │   ├── candidate-profile-detail.md    이력 detail — 면접 서사·심화 (ADR-104 신규, Phase 03)
-│   ├── study-progress.json            topic 학습 이력·약점 상태 (ADR-002, data/→config/. 드릴 상태 분리 ADR-105)
-│   ├── drill-progress.json            드릴 간격 반복 상태 (ADR-105 신규, Phase 04. drill-engine.ts 소유)
 │   ├── study-pack-topics.json         legacy 대량 topic DB. plan068에서 override/seed로 축소 예정
-│   ├── study-pack-candidates.json     자동 발굴 active 후보 캐시 + 사람이 고른 seed/pin. 정본 목록 아님
 │   ├── question-bank-topics.json      interview-asset topic override 후보. public/question-bank 정본 아님
 │   ├── external-reading-sources.json  techBlog/ai/geek 외부 reading reservoir (plan002, ADR-083 이후 공고 source registry와 분리)
 │   ├── position-collection.json       position 수집 설정 (wanted jobGroupId + 회사 비종속 role 키워드, ADR-099·ADR-103)
-│   ├── verified-company-research-targets.json  검증 회사군 + 회사 키워드 단일 출처 (ADR-090·ADR-103. secondaryCompanies 포함)
+│   ├── verified-company-research-targets.json  검증 회사군 + 회사 키워드 (ADR-090·ADR-103. cooldown은 state/로 분리 ADR-109)
 │   ├── candidate-config.json          후보자 구조화 사실 (experienceYears 등, ADR-099. profile.md는 prose)
 │   ├── baseline-core-files.json       baseline 분석 대상 파일 목록 (txt → JSON, plan002)
+│   ├── study-preferences.json
+│   ├── topic-profiles.json
+│   ├── resume-design.md
 │   ├── live-coding-seed-pool.json
 │   ├── live-coding-seed-candidates.json
 │   └── .env                           비밀 (GITHUB_TOKEN, DISCORD_WEBHOOK_URL 등)
+│   (study-progress·drill-progress·mvp-target·study-pack-candidates는 ADR-107로 state/로 이동)
 │
-├── data/
-│   (study-progress.json은 config/로 이동 — ADR-002)
+├── state/                                 ← 시스템 실행·이벤트 산물 (ADR-107. 기본 gitignore, 5개 파일만 negation tracked)
+│   ├── positions-queue.jsonl        옛 data/applications/ledger.jsonl (ADR-108 rename, Phase 07)
+│   ├── _priority-history.jsonl      priority 변경 audit log
+│   ├── mvp-target.json              현재 active 타깃 (tracked. 옛 config/)
+│   ├── study-progress.json          topic 학습 이력·약점 상태 (tracked. ADR-002·ADR-105)
+│   ├── drill-progress.json          드릴 간격 반복 상태 (tracked. ADR-105)
+│   ├── study-pack-candidates.json   자동 발굴 active 후보 캐시 + seed/pin (tracked)
+│   ├── company-cooldown.json        회사 cooldown (tracked. ADR-109 verified-company에서 분리)
+│   ├── topic-inventory.json / topic-inventory-history.jsonl
+│   ├── study-topic-candidate-refresh.{json,md} / study-topic-actions/ / topic-replenishment.json
+│   ├── drill-log-YYYY-MM-DD.jsonl / behavioral-interview-web-source-scan-*.md
+│   ├── source/                      외부 수집 노트. 지원/면접과 연결되면 private by default
+│   └── application-agent/
+│       ├── eval-cases/ / eval-reports/ / package-eval/   평가 샘플·결과 (gitignore)
+│
+├── applications/                          ← 공고별 지원 원장과 private 지원 패키지 (ADR-107. gitignore)
+│   └── <company-slug>/<role-slug>/{posting,fit-analysis,application-package,resume-draft,cover-letter,submission-checklist,review}.md
+│
+├── reports/                               ← 사람이 읽는 생성물 (ADR-107. gitignore)
+│   ├── baseline/YYYY-MM-DD/          baseline 실행 결과
+│   ├── daily/YYYY-MM-DD/             daily / position 실행 결과. 오래된 report는 retention/archive 후보
+│   ├── job-fit-*.{json,md} / stage-prep-*.md
+│   ├── morning-topic-recommendation.md
+│   ├── latest/                      옛 data/runtime mirror (position-recommendation.{md,html})
+│   ├── downloads/                   Discord 첨부용 HTML
+│   └── prep/                        legacy 회사별 준비 자산. 새 정본은 private/<company>/<position>/interview/prep.md
+│
+├── cache/                                 ← 재생성 가능한 캐시·transient (ADR-107. gitignore)
+│   ├── live-position-postings.md    수집 snapshot
+│   ├── feed-cache/<sha1>.json       6h TTL (ADR-013)
+│   ├── locks/                       flock 잠금 파일들
+│   ├── normalized/                  fos-study 정규화 캐시 (현재 비어 있음)
+│   └── freeform-study-pack-topic.json / live-coding-generated-topic.json  (deferred runner용)
+│
 │   (generated-artifacts.json은 ADR-033 / plan025로 active 제거 — sources/fos-study/ 직접 스캔)
-│   (data 경계와 archive/retention 기본값은 data-schema.md의 "data/ 경계와 보존 원칙"이 단일 출처)
-│   ├── reports/
-│   │   ├── baseline/YYYY-MM-DD/  baseline 실행 결과
-│   │   └── daily/YYYY-MM-DD/     daily / position / foodville 실행 결과. 오래된 generated report는 retention/archive 후보
-│   ├── runtime/                  ← 가변 상태 (gitignore 대부분)
-│   │   ├── topic-inventory.json
-│   │   ├── topic-inventory-history.jsonl
-│   │   ├── study-topic-candidate-refresh.json
-│   │   ├── study-topic-candidate-refresh.md
-│   │   ├── study-topic-actions/YYYY-MM-DD.json
-│   │   ├── study-topic-actions/latest.json
-│   │   ├── topic-replenishment.json
-│   │   ├── morning-topic-recommendation.md
-│   │   ├── position-recommendation.md
-│   │   ├── application-agent/
-│   │   │   ├── eval-cases/           지원 패키지/이력서 문장 평가 샘플 (runtime, gitignore)
-│   │   │   ├── eval-reports/         평가 샘플 실행 결과 (runtime, gitignore)
-│   │   │   └── package-eval/         실제 지원 패키지 평가 결과 (runtime, gitignore)
-│   │   ├── feed-cache/<sha1>.json    6h TTL (ADR-013)
-│   │   ├── locks/                    flock 잠금 파일들
-│   │   ├── freeform-study-pack-topic.json   (deferred runner용)
-│   │   └── live-coding-generated-topic.json (deferred runner용)
-│   ├── applications/             data/applications/ — 공고별 지원 원장과 private 지원 패키지. gitignore
-│   ├── private/                  private/ — 포지션별 작업 홈과 archive. gitignore
-│   ├── normalized/               fos-study 정규화 캐시 (현재 비어 있음)
-│   ├── prep/                     legacy 회사별 hand-crafted 준비 자산. 새 active 준비 정본은 private/<company>/<position>/interview/prep.md
-│   └── source/                   data/source/ — 외부 수집 노트. 지원/면접과 연결되면 private by default
+│   (버킷 경계와 archive/retention 기본값은 data-schema.md의 "버킷 경계와 보존 원칙"이 단일 출처)
+│   (private/ 는 별도 top-level — 포지션별 작업 홈과 archive. gitignore)
 │
 ├── logs/                                  ← gitignore. 운영 데이터 단일 출처
 │   ├── task-runs.jsonl           모든 agent skill 실행 (옛 run_now.sh는 plan023에서 폐기)
@@ -172,7 +179,7 @@ career-os/
 │   ├── application-reviewer/
 │   │   └── SKILL.md  evidence/drift/privacy/cooldown 검토
 │   └── daily-application-digest/
-│       └── SKILL.md  application ledger 기반 daily summary
+│       └── SKILL.md  positions-queue 기반 daily summary
 │
 ├── .codex/skills/                        ← Codex 노출용 심볼릭 링크 (ADR-085)
 │   ├── application-package-writer -> ../../.claude/skills/application-package-writer
@@ -229,7 +236,7 @@ career-os 워크스페이스 바깥, ai-nodes 루트의 `_shared/` 에 모든 �
 | `_shared/bin/track_task.sh` | runner 래퍼. JSONL 로그 + openclaw status diff. | 0 (apartment 사용 중) |
 | `_shared/lib/extract_claude_result.ts` | claude JSON envelope 파싱. ai-nodes plan001 통합. | 사용 중 (career-os + apartment + stock-investment 공용) |
 | `_shared/lib/notify_discord.ts` | Bun. `openclaw message send --channel discord` subprocess. `DISCORD_CHANNEL_ID` env 필수. `--media <path>`, `--presentation <json>` 옵션 지원 (ADR-021, ADR-073). | 사용 중 |
-| `career-os/scripts/interview-prep-analyzer/mvp_target_schema.ts` | Bun/zod. `config/mvp-target.json` 면접 단계 설정 검증. `parseMvpTarget()` (ADR-048). | 사용 중 (career-os 한정) |
+| `career-os/scripts/interview-prep-analyzer/mvp_target_schema.ts` | Bun/zod. `state/mvp-target.json` 면접 단계 설정 검증. `parseMvpTarget()` (ADR-048). | 사용 중 (career-os 한정) |
 | `_shared/bin/update_artifacts.py` | `data/generated-artifacts.json` upsert. | 0 (ADR-033 / plan025 이후 career-os 사용 0 — 파일 자체는 별도 plan에서 폐기 검토) |
 | `zod` (npm) | TypeScript runtime 스키마 검증. `package.json`에 의존성. | 사용 중 |
 | `_shared/types/` | TS 공통 타입 디렉터리. ClaudeUsage / TaskRunEntry / NotificationPayload 등. | 간접 사용 |
@@ -304,23 +311,22 @@ LLM이 작성하는 Markdown 산출물은 skill prompt, runner post-validation, 
 
 ## 사용자 표면
 
-사람이 보는 표면은 Markdown/HTML 리포트, private position home, application ledger, question bank, Discord 요약이다.
+사람이 보는 표면은 Markdown/HTML 리포트, private position home, positions-queue(옛 application ledger, ADR-108), question bank, Discord 요약이다.
 
 현재 인터페이스:
 
 | 흐름 | 정본 |
 |---|---|
-| 공고 수집 | `config/position-collection.json`, `scripts/position-recommender/live-postings/`, `data/runtime/live-position-postings.md` |
+| 공고 수집 | `config/position-collection.json`, `scripts/position-recommender/live-postings/`, `cache/live-position-postings.md` |
 | 공고 추천 | `recommendation.json` 정본 + Markdown/HTML 파생 |
-| 선택 전 후보 | `data/runtime/application-agent/frontdoor-queue.jsonl` |
-| 지원 준비 | `data/applications/ledger.jsonl`, `data/applications/<application-id>/` |
-| 면접 준비 | `config/mvp-target.json`, `private/<company>/<position>/interview/prep.md`, drill log |
-| 피드백 루프 | closed/rejected 기록, `config/study-progress.json`, `private/question-bank/`, 다음 job-fit report |
+| 지원 준비 | `state/positions-queue.jsonl` (옛 ledger, ADR-108), `applications/<application-id>/` |
+| 면접 준비 | `state/mvp-target.json`, `private/<company>/<position>/interview/prep.md`, drill log |
+| 피드백 루프 | closed/rejected 기록, `state/study-progress.json`, `private/question-bank/`, 다음 job-fit report |
 
 원칙:
 
 - 추천 후보 상태와 background outbox를 외부 MySQL에 두지 않는다.
-- `frontdoor-queue.jsonl`은 선택 전 staging file이고, 지원 준비 시작 시 ledger로 승격한다.
+- 흐름은 "추천 → 사용자 선택 → positions-queue 등록"이다(ADR-110로 frontdoor-queue 대기열 폐기, "승격"→"등록").
 - HTML report는 읽기용 snapshot이고 action source가 아니다.
 - 오래 걸리는 작업은 사용자가 skill을 명시 호출하거나 agent가 현재 세션에서 이어서 실행한다.
 - 외부 제출, 로그인, 업로드, 공개 발행은 사용자 승인 없이 실행하지 않는다.
@@ -340,24 +346,23 @@ plan029는 기존 career-os skill을 새 application 상태 루프로 조립한�
 새 agent skill 후보:
 
 - `application-package-writer`
-  - 입력: 공고 URL 또는 `data/applications/**/posting.md`, `config/candidate-profile.md`, 관련 resume/task 근거.
+  - 입력: 공고 URL 또는 `applications/**/posting.md`, `config/candidate-profile.md`, 관련 resume/task 근거.
   - 출력: `fit-analysis.md`, `application-package.md`.
 - `application-reviewer`
   - 입력: 공고, fit 분석, 지원 패키지, candidate-profile.
   - 출력: `review.md`, pass/revise/block 판단.
 - `daily-application-digest`
-  - 입력: `data/applications/ledger.jsonl`, 오늘 변경된 application files, position/study/interview runtime report.
-  - 출력: `data/reports/daily/YYYY-MM-DD/application-digest/report.md` + Discord 요약.
+  - 입력: `state/positions-queue.jsonl` (옛 `data/applications/ledger.jsonl`, ADR-108), 오늘 변경된 application files, position/study/interview runtime report.
+  - 출력: `reports/daily/YYYY-MM-DD/application-digest/report.md` + Discord 요약.
 
 데이터 저장소:
 
 ```text
-data/applications/
-├── ledger.jsonl
-└── <company-slug>/<role-slug>/{posting,fit-analysis,application-package,resume-draft,cover-letter,submission-checklist,review}.md
+state/
+└── positions-queue.jsonl          # 옛 data/applications/ledger.jsonl (ADR-108)
 
-data/runtime/application-agent/
-└── frontdoor-queue.jsonl          # plan038: 사용자 선택 전 추천 후보 queue
+applications/
+└── <company-slug>/<role-slug>/{posting,fit-analysis,application-package,resume-draft,cover-letter,submission-checklist,review}.md
 ```
 
 MVP에서는 제출 자동화를 구현하지 않는다. 브라우저 입력 보조와 최종 제출은 별도 phase 또는 ADR에서 다룬다.
@@ -369,14 +374,12 @@ plan031은 plan029 agent skill 위에 TypeScript runtime 계층을 추가한다.
 ```text
 scripts/application-agent/
 ├── run.ts                         # command interface (run-once / run-daily / dry-run / validate / resume / ingest-position-report / report-daily)
-├── ledger_schema.ts               # ledger schema + agentPhase runtime field + transition validator (zod)
+├── positions_queue_schema.ts      # positions-queue schema + agentPhase runtime field + transition validator (zod, 옛 ledger_schema.ts, ADR-108)
 ├── agent_decision_schema.ts       # policy decision object schema (zod)
-├── ledger_io.ts                   # ledger read/write helpers
+├── positions_queue_io.ts          # positions-queue read/write helpers (옛 ledger_io.ts, ADR-108)
 ├── policy.ts                      # deterministic policy decision engine + priority ranker
 ├── actions.ts                     # allowlisted local artifact generation (checklist / study-actions / profile-suggestions)
-├── ingest_position_report.ts      # position report -> candidate ledger
-├── frontdoor_queue.ts             # plan038: position report -> frontdoor queue
-├── promote_frontdoor_candidate.ts # plan038: user-approved queue record -> ledger
+├── ingest_position_report.ts      # position report -> candidate positions-queue record
 ├── skill_executor.ts              # --execute-skills 명시 시 compatibility backend로 agent-only private skills 실행
 ├── progress_notifier.ts           # --notify-discord 명시 시 private-safe progress 알림
 ├── skill_contracts.ts             # 에이전트 비종속 skill 호출 계약 + compatibility backend builder
@@ -391,13 +394,13 @@ scripts/application-agent/
 |---|---|
 | 분석, 작성, 리뷰, 추천 근거 생성 | agent skills (LLM) |
 | 다음 action 선택 | TypeScript `policy.ts` |
-| 상태 전이 허용 여부 판정 | TypeScript `policy.ts` + `ledger_schema.ts` validator |
+| 상태 전이 허용 여부 판정 | TypeScript `policy.ts` + `positions_queue_schema.ts` validator |
 | skill 산출물 존재 검증 후 상태 갱신 | TypeScript `actions.ts` execution gate |
 | 명시 옵션에서 compatibility backend 실행 | TypeScript `skill_executor.ts` (`--execute-skills`) |
 | 단계별 진행 알림 | TypeScript `progress_notifier.ts` (`--notify-discord`) |
 | safety gate 적용 (금지 action 차단) | TypeScript `safety_gate.ts` |
 | user gate 적용 (승인 전 정지) | TypeScript `actions.ts` + `skill_contracts.ts` |
-| ledger schema 검증 | TypeScript `ledger_schema.ts` (zod) |
+| positions-queue schema 검증 | TypeScript `positions_queue_schema.ts` (zod) |
 | study action public/private 분류 | TypeScript `safety_gate.ts` (`classifyStudyAction`) |
 | 에이전트 비종속 skill 호출 contract 문서화 | TypeScript `skill_contracts.ts` |
 | daily digest public/private 분리 렌더링 | TypeScript `render_decision_log.ts` (`renderDailyDigestReport`) |
@@ -407,14 +410,14 @@ scripts/application-agent/
 `policy.ts` 결정 흐름:
 
 ```text
-현재 ledger records 읽기
+현재 positions-queue records 읽기
   -> actionable candidate 판정 (fit threshold + freshness + cooldown + duplicate)
   -> policy matrix 조회 (status + agentPhase 조합)
   -> 허용된 next action 반환 또는 user gate 발생
   -> safety_gate.ts 검증 (forbidden action / public publish / profile modification 차단)
   -> --notify-discord 명시 시 private-safe progress 알림
   -> --execute-skills 명시 시 agent-only private skill 실행
-  -> skill artifact gate 검증 (필수 산출물 없으면 ledger 전이 금지)
+  -> skill artifact gate 검증 (필수 산출물 없으면 positions-queue 전이 금지)
   -> validator로 전이 허용 여부 최종 확인
   -> agentPhase + status 갱신 + decision log append
 ```
@@ -447,12 +450,12 @@ plan055는 application-agent의 다음 축을 맞춤 이력서 패키지로 둔�
 - skill contract: 생성 문서 품질 계약을 `application-package-writer`와 `application-reviewer` 입력/출력 조건에 반영한다.
 - processor post-validation: 실제 파일 존재, freshness, review verdict, `needs_evidence` resolution을 확인한다.
 - resume exporter: `export_resume.ts`가 `resume-draft.md`와 `design.md` 계약으로 `resume.html`, `resume.pdf`를 만든다.
-- priority/application view helper: readiness를 파일 존재 여부와 ledger/frontdoor fields에서 계산한다.
+- priority/application view helper: readiness를 파일 존재 여부와 positions-queue fields에서 계산한다.
 
 필수 산출물:
 
 ```text
-data/applications/<company-slug>/<role-slug>/
+applications/<company-slug>/<role-slug>/
 ├── posting.md
 ├── fit-analysis.md
 ├── application-package.md
@@ -467,7 +470,7 @@ data/applications/<company-slug>/<role-slug>/
 
 상태 경계:
 
-- career-os runner는 ledger mutation과 post-validation을 맡는다.
+- career-os runner는 positions-queue mutation과 post-validation을 맡는다.
 - 외부 제출, 로그인, public publish, candidate-profile mutation은 사용자 승인 없이는 실행하지 않는다.
 - PDF export는 로컬 첨부 파일 생성까지만 다룬다.
   채용 사이트 업로드, 전송, 제출 버튼 클릭은 자동화하지 않는다.
@@ -478,7 +481,7 @@ plan030 freshness guard는 구현 대상이 아니라 후보 ingest 시 prerequi
 
 plan050은 새 독립 추천기를 먼저 만들지 않고 기존 collector/recommender/application-agent 자산을 연결하는 얇은 priority layer로 둔다.
 이 문단은 파일 기반 priority layer 구조를 설명한다.
-별도 DB 없이 frontdoor/ledger projection을 사용한다.
+별도 DB 없이 positions-queue projection을 사용한다.
 
 책임 경계:
 
@@ -491,10 +494,10 @@ plan050은 새 독립 추천기를 먼저 만들지 않고 기존 collector/reco
 - `position-recommender` agent skill은 표준 출력 JSON `recommendation.json`(ADR-094/ADR-101, schemaVersion 2)을 만든다. 적재용 `source`·`closeDate`를 포함하며, Discord 요약 같은 가공은 호출자가 맡는다(ADR-101).
 - `scripts/position-recommender/render_recommendation.ts`는 표준 출력 JSON에서 Markdown·HTML을 파생한다(입력 시 zod 검증 내장). 자체 markdown 파서 `render_report_html.ts`는 ADR-094로 폐기됐다.
   표시 구조와 CSS는 `scripts/position-recommender/templates/report.html`에 둔다.
-- `scripts/application-agent/`는 frontdoor queue, ledger, 공고별 application files, priority history를 검증하고 갱신한다.
+- `scripts/application-agent/`는 positions-queue, 공고별 application files, priority history를 검증하고 갱신한다.
 - `config/candidate-profile.md`와 기존 resume/profile material은 fit analysis 입력으로 재사용한다.
 - study/interview 관련 agent skill은 gap 기반 preparation action 후보를 만들 때만 호출한다.
-- `priority_view.ts`는 record type과 id로 frontdoor queue 또는 ledger record를 찾아 recommendation snapshot, fit/gap details, evidence, preparation actions, history를 요약한다.
+- `priority_view.ts`는 id로 positions-queue record를 찾아 recommendation snapshot, fit/gap details, evidence, preparation actions, history를 요약한다.
 
 관련 파일:
 
@@ -502,17 +505,16 @@ plan050은 새 독립 추천기를 먼저 만들지 않고 기존 collector/reco
 scripts/application-agent/
 ├── priority_schema.ts             # action stage, recommendation snapshot, user confirmed priority schema
 ├── priority_history.ts            # priority change history append/read helpers
-├── priority_recommendation.ts     # position/frontdoor/ledger inputs를 recommendation snapshot으로 정리
+├── priority_recommendation.ts     # position/positions-queue inputs를 recommendation snapshot으로 정리
 └── priority_view.ts               # 사람이 읽기 쉬운 priority summary projection
 
-data/applications/
+state/
 └── _priority-history.jsonl        # user/agent priority change audit log
 ```
 
 기존 파일 확장 후보:
 
-- `frontdoor_queue_schema.ts` — action stage와 recommendation snapshot optional fields.
-- `ledger_schema.ts` — promoted application의 confirmed priority optional fields.
+- `positions_queue_schema.ts` — 등록된 application의 confirmed priority optional fields.
 - `policy.ts` — `prepare-now`와 기존 actionable candidate 판단 연결.
 - `render_decision_log.ts` — priority change summary 추가.
 

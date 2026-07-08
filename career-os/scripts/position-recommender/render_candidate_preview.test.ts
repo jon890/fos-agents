@@ -69,7 +69,7 @@ const sampleRun: RecommendationRunType = {
   additionalTargets: [],
   recentCheck: ["반복 점검"],
   weeklyActions: { apply: "지원", resume: "이력서", study: "학습" },
-  sourceSnapshot: { collectionRunId: null, snapshotPath: "career-os/data/runtime/live-position-postings.md" }
+  sourceSnapshot: { collectionRunId: null, snapshotPath: "career-os/cache/live-position-postings.md" }
 };
 
 test("candidate preview renders clickable posting links and tier labels", () => {

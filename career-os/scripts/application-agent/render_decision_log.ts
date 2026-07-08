@@ -54,8 +54,8 @@ export function renderDecisionLogMarkdown(results: ActionResult[]): string {
         lines.push(`  \`\`\`\n  ${cmd}\n  \`\`\``);
       }
     }
-    if (r.ledgerUpdated) {
-      lines.push('- Ledger: updated');
+    if (r.positionsQueueUpdated) {
+      lines.push('- Positions-queue: updated');
     }
     if (r.submissionChecklistPath) {
       lines.push(`- Submission Checklist: ${r.submissionChecklistPath}`);

@@ -1,5 +1,5 @@
 /**
- * candidate_refresh_apply.ts — ADR-070 config/study-pack-candidates.json append/update/stale helper.
+ * candidate_refresh_apply.ts — ADR-070 state/study-pack-candidates.json append/update/stale helper.
  *
  * `new` 결정이 통과된 후보만 config에 반영한다.
  * `update-existing`, `skip`, `needs-confirmation`은 이 파일에서 config에 쓰지 않는다.
@@ -66,7 +66,7 @@ export function countActiveAutoCandidates(
 // ── apply ─────────────────────────────────────────────────────────────────────
 
 /**
- * `new` 결정을 통과한 후보만 config/study-pack-candidates.json에 append/update한다.
+ * `new` 결정을 통과한 후보만 state/study-pack-candidates.json에 append/update한다.
  *
  * 처리 순서:
  * 1. 기존 자동 후보 중 stale 대상을 status=stale로 전환한다.

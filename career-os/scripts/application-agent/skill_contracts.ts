@@ -55,7 +55,7 @@ export const SKILL_CONTRACTS: Readonly<Record<string, SkillContract>> = {
     description:
       '후보 공고 수집 및 3-tier 추천 리포트 생성. plan030 freshness guard를 prerequisite로 사용.',
     autonomy: 'agent_only',
-    expectedOutputs: ['data/runtime/position-recommendation.md'],
+    expectedOutputs: ['reports/latest/position-recommendation.md'],
     touchesFosStudy: false,
     modifiesCandidateProfile: false,
     requiresExternalAccess: false,
@@ -133,11 +133,11 @@ export const SKILL_CONTRACTS: Readonly<Record<string, SkillContract>> = {
     description:
       '지원 현황 일일 요약. public/private 분리 report.md 생성. Discord 전송은 runner 담당.',
     autonomy: 'agent_only',
-    expectedOutputs: ['data/reports/daily/{date}/application-digest/report.md'],
+    expectedOutputs: ['reports/daily/{date}/application-digest/report.md'],
     touchesFosStudy: false,
     modifiesCandidateProfile: false,
     requiresExternalAccess: false,
-    prerequisiteGuards: ['ledger_exists'],
+    prerequisiteGuards: ['positions_queue_exists'],
   },
 
   'study-topic-recommender': {
@@ -150,7 +150,7 @@ export const SKILL_CONTRACTS: Readonly<Record<string, SkillContract>> = {
     description:
       'gap 기반 private study action 후보 + RSS 보충 + 토픽 promote. 비공개 리포트.',
     autonomy: 'agent_only',
-    expectedOutputs: ['data/runtime/morning-topic-recommendation.md'],
+    expectedOutputs: ['reports/morning-topic-recommendation.md'],
     touchesFosStudy: false,
     modifiesCandidateProfile: false,
     requiresExternalAccess: false,
@@ -204,7 +204,7 @@ export const SKILL_CONTRACTS: Readonly<Record<string, SkillContract>> = {
     description:
       '타깃 직무 역할 단위 핏·갭 진단. 지원 전 또는 시즌 시작 시 비공개 리포트로 정리.',
     autonomy: 'agent_only',
-    expectedOutputs: ['data/reports/job-fit-{date}.md'],
+    expectedOutputs: ['reports/job-fit-{date}.md'],
     touchesFosStudy: false,
     modifiesCandidateProfile: false,
     requiresExternalAccess: false,
@@ -221,7 +221,7 @@ export const SKILL_CONTRACTS: Readonly<Record<string, SkillContract>> = {
     description:
       '1차·최종·오퍼 단계별 면접 실전 준비 가이드 생성. 드릴이나 공고 fit 분석은 담당하지 않음.',
     autonomy: 'agent_only',
-    expectedOutputs: ['data/reports/stage-prep-{date}.md'],
+    expectedOutputs: ['reports/stage-prep-{date}.md'],
     touchesFosStudy: false,
     modifiesCandidateProfile: false,
     requiresExternalAccess: false,
@@ -237,7 +237,7 @@ export const SKILL_CONTRACTS: Readonly<Record<string, SkillContract>> = {
     description:
       '매일 기술 면접 질문에 답하고 채점·약점 환류를 기록하는 대화형 드릴.',
     autonomy: 'agent_only',
-    expectedOutputs: ['data/runtime/drill-log-{date}.jsonl'],
+    expectedOutputs: ['state/drill-log-{date}.jsonl'],
     touchesFosStudy: false,
     modifiesCandidateProfile: false,
     requiresExternalAccess: false,
@@ -253,7 +253,7 @@ export const SKILL_CONTRACTS: Readonly<Record<string, SkillContract>> = {
     description:
       '매일 인성 면접 질문에 답하고 STAR·가치관 기준으로 채점·약점 환류를 기록하는 대화형 드릴.',
     autonomy: 'agent_only',
-    expectedOutputs: ['data/runtime/drill-log-{date}.jsonl'],
+    expectedOutputs: ['state/drill-log-{date}.jsonl'],
     touchesFosStudy: false,
     modifiesCandidateProfile: false,
     requiresExternalAccess: false,

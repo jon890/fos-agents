@@ -12,8 +12,8 @@
  *   --context <text>              관심사 맥락 요약 (민감 본문 제외, runtime JSON 에만 저장)
  *
  * 출력:
- *   data/runtime/study-topic-candidate-refresh.json
- *   data/runtime/study-topic-candidate-refresh.md
+ *   state/study-topic-candidate-refresh.json
+ *   state/study-topic-candidate-refresh.md
  *   stdout: JSON summary
  */
 
@@ -42,11 +42,11 @@ import { applyNewCandidates } from "./candidate_refresh_apply.js";
 const TASK_ROOT = process.env.CAREER_OS_ROOT
   ? resolve(process.env.CAREER_OS_ROOT)
   : resolve(import.meta.dir, "..", "..");
-const CONFIG = join(TASK_ROOT, "config");
-const RUNTIME = join(TASK_ROOT, "data", "runtime");
+const STATE = join(TASK_ROOT, "state");
+const RUNTIME = STATE;
 const FOS_STUDY_ROOT = join(TASK_ROOT, "sources", "fos-study");
-const CANDIDATES_CONFIG = join(CONFIG, "study-pack-candidates.json");
-const HISTORY_PATH = join(RUNTIME, "topic-inventory-history.jsonl");
+const CANDIDATES_CONFIG = join(STATE, "study-pack-candidates.json");
+const HISTORY_PATH = join(STATE, "topic-inventory-history.jsonl");
 const RUNTIME_JSON = join(RUNTIME, "study-topic-candidate-refresh.json");
 const RUNTIME_MD = join(RUNTIME, "study-topic-candidate-refresh.md");
 
@@ -349,12 +349,12 @@ function printHelp(): void {
       "  --context <text>              관심사 맥락 요약 (민감 본문 제외)",
       "",
       "출력:",
-      "  data/runtime/study-topic-candidate-refresh.json",
-      "  data/runtime/study-topic-candidate-refresh.md",
+      "  state/study-topic-candidate-refresh.json",
+      "  state/study-topic-candidate-refresh.md",
       "  stdout: JSON summary",
       "",
       "결정 분류:",
-      "  new               -> config/study-pack-candidates.json 자동 반영",
+      "  new               -> state/study-pack-candidates.json 자동 반영",
       "  update-existing   -> runtime report 에만 (config 미반영)",
       "  needs-confirmation -> runtime report 에만 (config 미반영)",
       "  skip              -> runtime report 에만 (config 미반영)",

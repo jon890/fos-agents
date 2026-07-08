@@ -11,7 +11,7 @@ description: 공고 1개와 후보자 프로필을 입력으로 받아 공고별
 ## 호출 후 입력 해석
 
 - posting path가 있으면 해당 파일을 사용한다.
-- posting path가 없고 "다음 지원" 흐름이면 ledger에서 후보를 고른 뒤 사용자 확인을 받는다.
+- posting path가 없고 "다음 지원" 흐름이면 positions-queue에서 후보를 고른 뒤 사용자 확인을 받는다.
 - 결과는 비공개 career-os 산출물만 생성한다.
 
 ## 출력 정책
@@ -28,11 +28,11 @@ fit/gap 판단, reviewer용 리스크, 근거 파일 경로는 내부 분석 섹
 
 현재 에이전트는 다음 파일과 명령 출력을 직접 로드:
 
-1. `career-os/data/applications/<company>/<role>/posting.md` — 공고 본문 (필수)
+1. `career-os/applications/<company>/<role>/posting.md` — 공고 본문 (필수)
 2. `career-os/config/candidate-profile.md` — 후보자 프로필 core: 사실·라벨 (필수)
 3. `career-os/config/candidate-profile-detail.md` — 프로젝트 서사·의사결정 패턴·협업 스타일·면접 준비 우선순위·기술 스택 증거 상세 (필수)
 4. 후보자 프로필이 참조하는 근거 파일 (`task/**/*.md`, `resume/*.md`) — 필요 시 선택적으로 읽는다
-5. `career-os/data/applications/ledger.jsonl` — posting path 자동 추출 시 참조 (선택)
+5. `career-os/state/positions-queue.jsonl` — posting path 자동 추출 시 참조 (선택)
 
 ## Workflow
 
@@ -40,9 +40,9 @@ fit/gap 판단, reviewer용 리스크, 근거 파일 경로는 내부 분석 섹
 
 자연어에서 posting path를 추출한다.
 
-- 예: `/application-package-writer data/applications/tossplace/applied-ai-engineer/posting.md`
-  → path = `career-os/data/applications/tossplace/applied-ai-engineer/posting.md`
-- path가 없으면 `career-os/data/applications/ledger.jsonl`을 읽어 다음 조건의 첫 항목을 후보로 선택:
+- 예: `/application-package-writer applications/tossplace/applied-ai-engineer/posting.md`
+  → path = `career-os/applications/tossplace/applied-ai-engineer/posting.md`
+- path가 없으면 `career-os/state/positions-queue.jsonl`을 읽어 다음 조건의 첫 항목을 후보로 선택:
   - `needsUserReview=true` 또는 `status`가 `discovered|analyzing|preparing_application` 중 하나
   - 후보 선택 시 사용자에게 확인 ("TossPlace Applied AI Engineer 공고로 진행할까요?") 후 계속
 
@@ -85,7 +85,7 @@ candidate-profile.md + 근거 파일과 교차 분석:
 
 ### 5. fit-analysis.md 작성
 
-저장 경로: `career-os/data/applications/<company>/<role>/fit-analysis.md`
+저장 경로: `career-os/applications/<company>/<role>/fit-analysis.md`
 
 **필수 섹션 7개:**
 
@@ -117,7 +117,7 @@ candidate-profile.md + 근거 파일과 교차 분석:
 
 ### 6. application-package.md 작성
 
-저장 경로: `career-os/data/applications/<company>/<role>/application-package.md`
+저장 경로: `career-os/applications/<company>/<role>/application-package.md`
 
 **필수 섹션 7개:**
 
@@ -136,7 +136,7 @@ candidate-profile.md + 근거 파일과 교차 분석:
 
 ## 근거 파일 참조
 
-## Ledger Update Suggestion
+## Positions Queue Update Suggestion
 ```
 
 작성 규칙:
@@ -151,12 +151,12 @@ candidate-profile.md + 근거 파일과 교차 분석:
 - 총 30줄 이상
 - `sources/fos-study/`에 쓰지 않음
 
-**Ledger Update Suggestion 섹션 (필수):**
+**Positions Queue Update Suggestion 섹션 (필수):**
 
 ```markdown
-## Ledger Update Suggestion
+## Positions Queue Update Suggestion
 
-- current_status: <posting.md 또는 ledger에서 읽은 현재 status>
+- current_status: <posting.md 또는 positions-queue에서 읽은 현재 status>
 - suggested_next_status: ready_for_user_review
 - userDecision: pending
 - needsUserReview: true
@@ -167,7 +167,7 @@ candidate-profile.md + 근거 파일과 교차 분석:
 
 ### 7. resume-draft.md 작성
 
-저장 경로: `career-os/data/applications/<company>/<role>/resume-draft.md`
+저장 경로: `career-os/applications/<company>/<role>/resume-draft.md`
 
 **필수 섹션 6개:**
 
@@ -199,7 +199,7 @@ candidate-profile.md + 근거 파일과 교차 분석:
 
 ### 8. cover-letter.md 작성
 
-저장 경로: `career-os/data/applications/<company>/<role>/cover-letter.md`
+저장 경로: `career-os/applications/<company>/<role>/cover-letter.md`
 
 **필수 섹션 5개:**
 
@@ -226,7 +226,7 @@ candidate-profile.md + 근거 파일과 교차 분석:
 
 ### 9. submission-checklist.md 작성
 
-저장 경로: `career-os/data/applications/<company>/<role>/submission-checklist.md`
+저장 경로: `career-os/applications/<company>/<role>/submission-checklist.md`
 
 **필수 섹션 5개:**
 
@@ -261,7 +261,7 @@ candidate-profile.md + 근거 파일과 교차 분석:
 4. `cover-letter.md` 줄 수 ≥ 20
 5. `submission-checklist.md` 줄 수 ≥ 15
 6. `fit-analysis.md`에 필수 7개 섹션 헤더 모두 존재
-7. `application-package.md`에 필수 7개 섹션 헤더 모두 존재 (Ledger Update Suggestion 포함)
+7. `application-package.md`에 필수 7개 섹션 헤더 모두 존재 (Positions Queue Update Suggestion 포함)
 8. `resume-draft.md`, `cover-letter.md`, `submission-checklist.md`에 각 필수 섹션 헤더 모두 존재
 9. 모든 파일 첫 10줄 안에 결론 또는 권장 행동이 있음
 10. `sources/fos-study/` 아래 어떤 파일도 쓰지 않았는지 확인
@@ -282,22 +282,22 @@ candidate-profile.md + 근거 파일과 교차 분석:
 | posting path 특정 불가 | stderr + exit 1 |
 | posting.md 부재 | stderr + exit 1 |
 | candidate-profile.md 부재 | stderr + exit 1 |
-| ledger.jsonl 부재 (자동 선택 시) | stderr warn + posting path를 사용자에게 직접 입력 요청 |
+| positions-queue.jsonl 부재 (자동 선택 시) | stderr warn + posting path를 사용자에게 직접 입력 요청 |
 | 근거 파일 읽기 실패 | stderr warn + 해당 파일 없이 계속 진행 (`보강 필요 / 선택지 / 권장 행동` 강화) |
 | self-check 3회 실패 | stderr + exit 1, 실패 항목 명시 |
 
 ## Why this design
 
 - **근거 분리 원칙**: posting 요구사항 × 후보자 근거 파일 교차 매핑으로 추측성 주장을 구조적으로 차단. 근거 부족 항목은 `보강 필요 / 선택지 / 권장 행동`으로 바꿔 후보자 스스로 보강할 포인트를 명시.
-- **ledger 연계**: ledger에서 다음 행동 후보를 자동 식별. 직접 ledger 변경은 하지 않고 `Ledger Update Suggestion`으로 사용자 의사결정 유도 (ADR-038 — 상태 전이는 artifact 검증 뒤에만).
+- **positions-queue 연계**: positions-queue에서 다음 행동 후보를 자동 식별. 직접 positions-queue 변경은 하지 않고 `Positions Queue Update Suggestion`으로 사용자 의사결정 유도 (ADR-038 — 상태 전이는 artifact 검증 뒤에만).
 - **fos-study 격리**: 지원 전략은 후보자 의사결정 자산 — 공개 저장소에 흘리지 않음.
 - **Phase 05 연계**: 본 skill이 생성한 Markdown 제출 초안을 `application-reviewer` skill이 pass/fail 판정. 본 skill은 생성만 담당.
 
 ## References
 
-- `career-os/docs/adr/INDEX.md` — ADR-045 (지원 후보 ledger 분리), ADR-038 (artifact 검증 후 상태 전이) 설계 근거
-- `career-os/docs/data-schema.md` — ledger.jsonl 스키마
-- `career-os/data/applications/ledger.jsonl` — 지원 이력 원장
+- `career-os/docs/adr/INDEX.md` — ADR-045 (지원 후보 positions-queue 분리, 옛 ledger), ADR-038 (artifact 검증 후 상태 전이) 설계 근거
+- `career-os/docs/data-schema.md` — positions-queue.jsonl 스키마
+- `career-os/state/positions-queue.jsonl` — 지원 이력 원장
 - `career-os/config/candidate-profile.md` — 후보자 프로필 core (사실·라벨)
 - `career-os/config/candidate-profile-detail.md` — 후보자 프로필 detail (프로젝트 서사·의사결정 패턴·기술 스택 증거 상세)
 - `references/candidate-interview-questions.md` — 후보자 인터뷰 질문 세트 (Step 3, 지원동기·서사 확보)

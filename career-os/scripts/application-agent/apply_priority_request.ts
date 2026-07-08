@@ -1,8 +1,7 @@
 #!/usr/bin/env bun
 import { readFileSync } from 'fs';
 import { z } from 'zod';
-import { readFrontdoorQueue, DEFAULT_QUEUE_PATH } from './frontdoor_queue_io';
-import { readLedger, DEFAULT_LEDGER_PATH } from './ledger_io';
+import { readPositionsQueue, DEFAULT_POSITIONS_QUEUE_PATH } from './positions_queue_io';
 import {
   DEFAULT_PRIORITY_HISTORY_PATH,
 } from './priority_history';
@@ -21,8 +20,7 @@ import {
 type ApplyOptions = {
   requestPath?: string;
   dryRun: boolean;
-  queuePath: string;
-  ledgerPath: string;
+  positionsQueuePath: string;
   historyPath: string;
 };
 
@@ -37,16 +35,14 @@ type SnapshotMismatch = {
 function parseArgs(args: string[]): ApplyOptions {
   const opts: ApplyOptions = {
     dryRun: false,
-    queuePath: DEFAULT_QUEUE_PATH,
-    ledgerPath: DEFAULT_LEDGER_PATH,
+    positionsQueuePath: DEFAULT_POSITIONS_QUEUE_PATH,
     historyPath: DEFAULT_PRIORITY_HISTORY_PATH,
   };
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--request' && args[i + 1]) opts.requestPath = args[++i];
     else if (args[i] === '--dry-run') opts.dryRun = true;
-    else if (args[i] === '--queue' && args[i + 1]) opts.queuePath = args[++i];
-    else if (args[i] === '--ledger' && args[i + 1]) opts.ledgerPath = args[++i];
+    else if (args[i] === '--positions-queue' && args[i + 1]) opts.positionsQueuePath = args[++i];
     else if (args[i] === '--history' && args[i + 1]) opts.historyPath = args[++i];
     else if (args[i] === '--help') {
       showHelp();
@@ -63,34 +59,11 @@ async function readRequestJson(path?: string): Promise<unknown> {
 }
 
 function buildProjection(request: PriorityActionRequest, opts: ApplyOptions): CurrentProjection | null {
-  if (request.recordType === 'frontdoor_queue') {
-    const record = readFrontdoorQueue(opts.queuePath).find((item) => item.queueId === request.recordId);
-    if (!record) return null;
-    const effectiveActionStage = record.userConfirmedPriority?.actionStage ?? record.actionStage ?? null;
-    return {
-      recordType: 'frontdoor_queue',
-      recordId: record.queueId,
-      company: record.company,
-      role: record.role,
-      url: record.url,
-      effectiveActionStage,
-      priorityRank: record.userConfirmedPriority?.priorityRank ?? record.priorityRank ?? null,
-      prioritySource: record.userConfirmedPriority
-        ? 'user-confirmed'
-        : record.actionStage
-          ? 'recommendation'
-          : 'none',
-      latestRecommendationSnapshotAt: record.recommendationSnapshot?.generatedAt ?? null,
-      latestUserConfirmationAt: record.userConfirmedPriority?.confirmedAt ?? null,
-      userConfirmedPriority: record.userConfirmedPriority ?? null,
-    };
-  }
-
-  const record = readLedger(opts.ledgerPath).find((item) => item.id === request.recordId);
+  const record = readPositionsQueue(opts.positionsQueuePath).find((item) => item.id === request.recordId);
   if (!record) return null;
   const effectiveActionStage = record.userConfirmedPriority?.actionStage ?? record.actionStage ?? null;
   return {
-    recordType: 'ledger',
+    recordType: 'positions-queue',
     recordId: record.id,
     company: record.company,
     role: record.role,
@@ -171,10 +144,8 @@ function buildPlannedCommand(request: PriorityActionRequest, opts: ApplyOptions)
     request.reason,
     '--changed-by',
     request.changedBy,
-    '--queue',
-    opts.queuePath,
-    '--ledger',
-    opts.ledgerPath,
+    '--positions-queue',
+    opts.positionsQueuePath,
     '--history',
     opts.historyPath,
   ];
@@ -288,8 +259,7 @@ async function main(): Promise<void> {
       priorityRank: request.requestedRank,
       reason: request.reason,
       changedBy: request.changedBy,
-      queuePath: opts.queuePath,
-      ledgerPath: opts.ledgerPath,
+      positionsQueuePath: opts.positionsQueuePath,
       historyPath: opts.historyPath,
     };
     const applied = confirmPriority(confirmInput);
@@ -331,9 +301,8 @@ Usage:
   cat request.json | bun scripts/application-agent/apply_priority_request.ts [--dry-run]
 
 Options:
-  --queue <path>     frontdoor queue path
-  --ledger <path>    ledger path
-  --history <path>   priority history path
+  --positions-queue <path>    positions-queue path
+  --history <path>            priority history path
 `);
 }
 

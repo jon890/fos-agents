@@ -31,7 +31,7 @@ description: 타깃 직무(역할 단위) 대비 지원 의사결정·면접 전
   자연어 역할 텍스트를 그대로 `targetRole.role`에 쓰고, 역할 텍스트에서 슬러그를 만든다.
   슬러그는 소문자·숫자·하이픈만 허용한다 (예: "AI 에이전트 백엔드" → `ai-agent-backend`).
   회사·팀이 자연어에 드러나면 `company`·`team`에 채우고, 없으면 비워 둔다.
-- **인자가 없고 `primary`가 있으면**: `config/mvp-target.json`의 `primary`를 fallback으로 쓴다.
+- **인자가 없고 `primary`가 있으면**: `state/mvp-target.json`의 `primary`를 fallback으로 쓴다.
   `targetRole.source = "mvp-target"`, `company`·`team`·`role`을 `primary`에서 읽고,
   슬러그는 `primary.position_slug`(없으면 role에서 파생)로 쓴다.
 - **인자가 없고 `primary`가 null이면**: 역할 진단을 만들지 않는다.
@@ -50,11 +50,11 @@ description: 타깃 직무(역할 단위) 대비 지원 의사결정·면접 전
 
 현재 에이전트는 다음 파일을 직접 로드한다:
 
-1. `career-os/config/mvp-target.json` — 인자 없을 때 타깃 fallback (`primary`가 null이면 fallback 없음)
+1. `career-os/state/mvp-target.json` — 인자 없을 때 타깃 fallback (`primary`가 null이면 fallback 없음)
 2. `career-os/config/candidate-profile.md` — 후보자 이력·약점 (필수)
 3. `career-os/config/baseline-core-files.json` — 큐레이션된 파일 경로 목록 (`files[].path`)
 4. `career-os/sources/fos-study/<path>` — baseline-core-files에 나열된 파일 (각 파일 읽기)
-5. (선택) `career-os/data/reports/job-fit-YYYY-MM-DD-<slug>.json` — 같은 슬러그의 가장 최근 지난 진단 (changeSince 채우기용)
+5. (선택) `career-os/reports/job-fit-YYYY-MM-DD-<slug>.json` — 같은 슬러그의 가장 최근 지난 진단 (changeSince 채우기용)
 
 ## Workflow
 
@@ -73,14 +73,14 @@ git pull 실패 시 → stderr warn + 로컬 캐시로 분석 계속.
 - Inputs 1~4를 읽는다.
   `baseline-core-files.json`이 없으면 → stderr + exit 1.
   `candidate-profile.md`가 없으면 → stderr + exit 1.
-- changeSince용 지난 진단 로드: `career-os/data/reports/`에서 같은 슬러그(`job-fit-*-<slug>.json`)의 가장 최근 지난 날짜 파일이 있으면 읽는다.
+- changeSince용 지난 진단 로드: `career-os/reports/`에서 같은 슬러그(`job-fit-*-<slug>.json`)의 가장 최근 지난 날짜 파일이 있으면 읽는다.
 
 ### 3. 분석 + JSON 정본 생성
 
 `jobfit_schema.ts`의 `JobFitRun` 구조에 맞춰 분석 결과를 JSON으로 채운다.
 사람이 읽는 Markdown은 이 JSON에서 파생하므로, 산문 markdown을 직접 쓰지 않는다.
 
-저장 경로(정본): `career-os/data/reports/job-fit-YYYY-MM-DD-<slug>.json`
+저장 경로(정본): `career-os/reports/job-fit-YYYY-MM-DD-<slug>.json`
 
 날짜는 Asia/Seoul 기준 (`TZ=Asia/Seoul date +%F`). UTC `new Date().toISOString()` 날짜를 사용하지 않는다.
 
@@ -110,8 +110,8 @@ git pull 실패 시 → stderr warn + 로컬 캐시로 분석 계속.
 정본은 구조화 JSON이다. 정본 하나에서 md를 파생하므로 자체 markdown 파서를 거치지 않고 출력이 항상 일관된다.
 
 ```
-쓰기 → career-os/data/reports/job-fit-YYYY-MM-DD-<slug>.json   (정본)
-파생 → bun scripts/job-fit-analyzer/render_job_fit.ts --input <json> --format md --output career-os/data/reports/job-fit-YYYY-MM-DD-<slug>.md
+쓰기 → career-os/reports/job-fit-YYYY-MM-DD-<slug>.json   (정본)
+파생 → bun scripts/job-fit-analyzer/render_job_fit.ts --input <json> --format md --output career-os/reports/job-fit-YYYY-MM-DD-<slug>.md
 ```
 
 `render_job_fit.ts`는 입력 JSON을 `JobFitRun.safeParse`로 먼저 검증하고, 실패하면 위반 필드를 stderr로 출력하며 exit 1한다.
@@ -209,7 +209,7 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 - `career-os/scripts/job-fit-analyzer/jobfit_schema.ts` — **산출물 정본 zod 스키마** (ADR-096). JSON을 채우기 전에 이 파일에서 `JobFitRun` 등 필드 정의를 확인한다.
 - `career-os/scripts/job-fit-analyzer/render_job_fit.ts` — 정본 JSON에서 Markdown을 파생하는 렌더러. 입력 시 스키마 검증을 내장하므로 실행 자체가 self-check다.
 - `career-os/docs/adr/INDEX.md` ADR-096 / ADR-092 — 본 설계 결정 근거
-- `career-os/config/mvp-target.json` — 인자 없을 때 타깃 fallback (company / team / role)
+- `career-os/state/mvp-target.json` — 인자 없을 때 타깃 fallback (company / team / role)
 - `career-os/config/baseline-core-files.json` — 진단 큐레이션 파일 목록
 - `career-os/.claude/skills/job-fit-analyzer/references/output-policy.md` — 비공개 산출물 정책
 - 관련 스킬: `position-recommender` — 회사 최근 동향·active 공고 추천 (경계 분리)

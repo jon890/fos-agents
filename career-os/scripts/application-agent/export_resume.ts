@@ -13,7 +13,7 @@ type Options = {
   chromeBin: string;
 };
 
-const DEFAULT_APPLICATION_DIR = 'data/applications/tossplace/applied-ai-engineer';
+const DEFAULT_APPLICATION_DIR = 'applications/tossplace/applied-ai-engineer';
 const DEFAULT_DESIGN_PATH = 'config/resume-design.md';
 
 function parseArgs(args: string[]): Options {
@@ -228,7 +228,7 @@ function showHelp(): void {
   console.log(`이력서 export helper
 
 Usage:
-  bun scripts/application-agent/export_resume.ts --application-dir data/applications/<company>/<role>
+  bun scripts/application-agent/export_resume.ts --application-dir applications/<company>/<role>
 
 Options:
   --resume <path>       Markdown 원본. 기본값: <application-dir>/resume-draft.md

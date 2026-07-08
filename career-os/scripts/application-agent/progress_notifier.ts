@@ -1,5 +1,5 @@
 import type { AgentDecision } from './agent_decision_schema';
-import type { ApplicationLedgerRecord } from './ledger_schema';
+import type { ApplicationPositionsQueueRecord } from './positions_queue_schema';
 
 export type ProgressNotifierOptions = {
   enabled: boolean;
@@ -19,12 +19,12 @@ export function createProgressNotifier(opts: ProgressNotifierOptions): ProgressN
   };
 }
 
-export function renderApplicationLabel(record: ApplicationLedgerRecord): string {
+export function renderApplicationLabel(record: ApplicationPositionsQueueRecord): string {
   return `${record.company} / ${record.role}`;
 }
 
 export function renderDecisionStartMessage(
-  record: ApplicationLedgerRecord,
+  record: ApplicationPositionsQueueRecord,
   decision: AgentDecision,
 ): string {
   return [
@@ -35,19 +35,19 @@ export function renderDecisionStartMessage(
   ].join('\n');
 }
 
-export function renderLedgerUpdatedMessage(
-  record: ApplicationLedgerRecord,
+export function renderPositionsQueueUpdatedMessage(
+  record: ApplicationPositionsQueueRecord,
   decision: AgentDecision,
 ): string {
   return [
-    '[application-agent] ledger 갱신 완료',
+    '[application-agent] positions-queue 갱신 완료',
     `대상: ${renderApplicationLabel(record)}`,
     `상태: ${record.status} -> ${decision.nextStatus}`,
   ].join('\n');
 }
 
 export function renderExecutionBlockedMessage(
-  record: ApplicationLedgerRecord,
+  record: ApplicationPositionsQueueRecord,
   reason: string | undefined,
 ): string {
   return [

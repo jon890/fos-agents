@@ -17,7 +17,7 @@
 | [`../AGENTS.md`](../AGENTS.md) | 모노레포 공통 규칙 | 모든 작업 시작 시 |
 | [`docs/README.md`](docs/README.md) | career-os 문서별 책임과 작성 규칙 | docs 작성·수정 전 |
 | [`docs/prd.md`](docs/prd.md) | 제품 가치, skill 자산, 성공 기준 | 새 기능 추가, 우선순위 결정 |
-| [`docs/data-schema.md`](docs/data-schema.md) | config, runtime, 산출물, ledger 스키마 | 데이터 파일 변경, 새 상태값 추가 |
+| [`docs/data-schema.md`](docs/data-schema.md) | config, runtime, 산출물, positions-queue 스키마 | 데이터 파일 변경, 새 상태값 추가 |
 | [`docs/flow.md`](docs/flow.md) | 사용자 입력부터 산출물까지의 흐름 | 새 실행 흐름 추가, 디버깅 |
 | [`docs/code-architecture.md`](docs/code-architecture.md) | 디렉터리 책임, 외부 의존, 실행 구조 | 코드 구조 변경, 새 스크립트 추가 |
 | [`docs/adr/INDEX.md`](docs/adr/INDEX.md) | 결정의 이유와 대안 기각 기록 | 정책 변경, 되돌리기 어려운 결정 |
@@ -98,14 +98,14 @@ study-pack 계열 작업이 아니면 프로젝트 코드처럼 편집하지 않
 
 `fos-career` 웹 대시보드 축은 ADR-102로 폐기했다.
 career-os는 별도 웹 제품 없이 수집, 리포트 생성, skill 실행, private 산출물, 피드백 루프 기록을 파일과 skill 계약으로 직접 관리한다.
-지원 후보 상태와 준비 단계는 `data/runtime/application-agent/`, `data/applications/`, `private/` 산출물에서 관리하고, 외부 DB나 outbox를 정본으로 두지 않는다.
+지원 후보 상태와 준비 단계는 `state/application-agent/`, `applications/`, `private/` 산출물에서 관리하고, 외부 DB나 outbox를 정본으로 두지 않는다.
 
 Discord에 HTML을 첨부할 때는 전역 HTML 읽기 정책을 완화하지 않는다.
-직접 첨부 대상 HTML은 `data/runtime/downloads/` 아래 파일만 허용한다.
+직접 첨부 대상 HTML은 `reports/downloads/` 아래 파일만 허용한다.
 구체적인 검증과 스테이징 절차는 `docs/flow.md` 또는 관련 task 문서를 따른다.
 
 커리어 포지션 추천, 지원 후보 비교, 면접 준비, 학습 추천처럼 사용자가 보는 리포트성 산출물은 HTML 파일도 함께 만든다.
-공고·포지션 추천 리포트는 예외 없이 `data/runtime/downloads/` 아래 HTML을 첨부하고, HTML 안의 각 공고명에는 개별 공고 URL로 이동하는 링크를 건다.
+공고·포지션 추천 리포트는 예외 없이 `reports/downloads/` 아래 HTML을 첨부하고, HTML 안의 각 공고명에는 개별 공고 URL로 이동하는 링크를 건다.
 Discord 미리보기에는 상위 후보 5~10개와 핵심 사유를 짧게 쓰되, 각 후보의 공고 링크도 함께 포함한다.
 HTML에는 개인 이력, 지원 전략, 회사별 비공개 맥락의 공개 범위를 점검하고, 채널에 노출해도 되는 요약만 담는다.
 단순 상태 보고나 한두 줄 답변은 예외로 둘 수 있다.

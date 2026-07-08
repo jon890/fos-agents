@@ -27,10 +27,11 @@ type PresentationButton = {
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const rootDir = resolve(scriptDir, "../..");
 const envFile = resolve(rootDir, ".env");
-const runtimeDir = resolve(rootDir, "data/runtime");
-const inventoryPath = resolve(runtimeDir, "topic-inventory.json");
-const markdownPath = resolve(runtimeDir, "morning-topic-recommendation.md");
-const actionDir = resolve(runtimeDir, "study-topic-actions");
+const stateDir = resolve(rootDir, "state");
+const reportsDir = resolve(rootDir, "reports");
+const inventoryPath = resolve(stateDir, "topic-inventory.json");
+const markdownPath = resolve(reportsDir, "morning-topic-recommendation.md");
+const actionDir = resolve(stateDir, "study-topic-actions");
 
 function loadEnvFileIfPresent(path: string): void {
   if (!existsSync(path)) return;

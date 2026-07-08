@@ -14,16 +14,16 @@
    - job name, schedule, deliver, workdir, prompt preview를 확인한다.
    - workdir은 file tool이 쓸 수 있는 workspace 경로여야 한다.
 2. 최신 공고 snapshot을 새로 만든다.
-   - `node scripts/position-recommender/collect_live_postings.ts --output data/runtime/live-position-postings.md`
+   - `node scripts/position-recommender/collect_live_postings.ts --output cache/live-position-postings.md`
    - `direct_active_or_open_postings > 0`인지 확인한다.
 3. 전체 공고 HTML을 생성한다.
-   - `node scripts/position-recommender/render_candidate_preview.ts --input data/runtime/position-recommendation.json --postings data/runtime/live-position-postings.md --limit all --output data/runtime/downloads/position-recommendation-all-$(TZ=Asia/Seoul date +%F).html`
+   - `node scripts/position-recommender/render_candidate_preview.ts --input reports/latest/position-recommendation.json --postings cache/live-position-postings.md --limit all --output reports/downloads/position-recommendation-all-$(TZ=Asia/Seoul date +%F).html`
 4. 제외 기준을 grep 또는 간단한 script로 확인한다.
    - Toss 루트 회사의 범용 `Server Developer (Product)` 같은 챕터/직군 단위 공고 제외.
    - `Tech Lead`, `Server Lead`, CTO/기술총괄 제외.
    - `AI Engineer (Model)`, `Applied Scientist`, `Research Scientist`, AI 모델 연구 중심 포지션 제외.
 5. HTML 전달 산출물을 확인한다.
-   - 전체 공고 HTML: `data/runtime/downloads/position-recommendation-all-YYYY-MM-DD.html`
+   - 전체 공고 HTML: `reports/downloads/position-recommendation-all-YYYY-MM-DD.html`
    - 각 공고명에 개별 공고 URL `<a href="...">`가 있어야 한다.
 6. 완료 보고에는 핵심 문서/스킬 수정 여부와 검증 결과를 밝힌다.
    - `AGENTS.md`, `SKILL.md`, `references/*.md`, cron 정의, adapter, renderer 변경은 반드시 언급한다.

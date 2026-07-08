@@ -5,7 +5,7 @@
 ## 기본 원칙
 
 - 목표는 단순 이직이 아니라 **NHN 대비 더 나은 회사/도메인/보상/브랜드/트래픽/엔지니어링 경험**으로 이동하는 것이다.
-- 쿨다운·선호제외 회사는 `config/verified-company-research-targets.json`의 `cooldown`/`preferenceExcluded`를 단일 출처로 본다(ADR-095). 선호제외 회사는 공고 fit이 좋아도 강력 추천/도전 추천에 올리지 않는다.
+- 쿨다운 회사는 `state/company-cooldown.json`을 단일 출처로 본다(ADR-109). 선호제외 회사는 `config/verified-company-research-targets.json`의 `preferenceExcluded`를 단일 출처로 본다(ADR-095). 선호제외 회사는 공고 fit이 좋아도 강력 추천/도전 추천에 올리지 않는다.
 - 작은 회사라도 도메인·역할·성장성이 압도적으로 좋으면 검토할 수 있지만, 기본 우선순위는 검증된 회사군을 먼저 본다.
 - “붙기 쉬움”보다 “이직했을 때 커리어 레버리지가 생기는가”를 우선한다.
 - 정규직 서버/백엔드 포지션을 기본으로 강하게 추천한다. 여기에 서버/플랫폼 개발 전이가 분명한 AI 서비스, AI Transformation(AX), AI Agent, AI 플랫폼 포지션도 추천 대상에 포함한다. 계약직/임시직/프리랜서/순수 비개발 직무는 제외한다.
@@ -21,7 +21,7 @@
 
 - 검증된 상위 회사군은 `config/verified-company-research-targets.json`의 `priorityCompanies`(tier 필드)를 단일 출처로 본다.
 - 대형 B2C 플랫폼, 결제·핀테크, 커머스·물류, 모빌리티처럼 트래픽·도메인·보상 레버리지가 큰 회사군을 높게 본다.
-- 토스 계열도 레버리지가 높은 상위 회사군으로 본다. 쿨다운 상태는 config `cooldown`을 단일 출처로 보고, 쿨다운이 아니면 active/open 개별 공고와 JD fit이 충분할 때 강력/도전 추천에 올릴 수 있다.
+- 토스 계열도 레버리지가 높은 상위 회사군으로 본다. 쿨다운 상태는 `state/company-cooldown.json`을 단일 출처로 보고, 쿨다운이 아니면 active/open 개별 공고와 JD fit이 충분할 때 강력/도전 추천에 올릴 수 있다.
 
 낮게 본다:
 

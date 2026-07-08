@@ -1,7 +1,7 @@
 import { existsSync, statSync } from 'fs';
 import { join } from 'path';
 import type { AgentDecision } from './agent_decision_schema';
-import type { ApplicationLedgerRecord } from './ledger_schema';
+import type { ApplicationPositionsQueueRecord } from './positions_queue_schema';
 import { buildClaudeCliArgs } from './skill_contracts';
 
 export type SkillExecutionOptions = {
@@ -28,7 +28,7 @@ type SkillInvocation = {
 };
 
 export async function executeRequiredSkills(
-  record: ApplicationLedgerRecord,
+  record: ApplicationPositionsQueueRecord,
   decision: AgentDecision,
   opts: SkillExecutionOptions,
 ): Promise<SkillExecutionResult> {
@@ -112,7 +112,7 @@ export async function executeRequiredSkills(
 }
 
 function skillInvocationsForDecision(
-  record: ApplicationLedgerRecord,
+  record: ApplicationPositionsQueueRecord,
   decision: AgentDecision,
 ): SkillInvocation[] {
   const postingPath = record.postingPath ?? join(record.applicationDir, 'posting.md');
