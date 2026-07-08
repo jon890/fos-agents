@@ -242,7 +242,7 @@ zod 검증 단일 출처: `career-os/scripts/interview-prep-analyzer/mvp_target_
           { "key": "string", "url": "string (URL)", "label": "string" }
         ],
         "source_dir": "string (data/source/ 아래 서브 디렉터리명)",
-        "report_slug": "string (data/reports/daily/<date>/<slug>/ 경로명)"
+        "report_slug": "string (reports/daily/<date>/<slug>/ 경로명)"
       },
       "final_round": null,
       "offer_chat": null
@@ -271,7 +271,7 @@ zod 검증 단일 출처: `career-os/scripts/interview-prep-analyzer/mvp_target_
   - `primary.interview.offer_chat` — 오퍼 단계 mode. nullable, 필요 시 활성화.
 - `primary.company_slug`, `primary.position_slug`, `primary.data_root` — 회사·직무별 관리 홈.
   active 타깃의 사람이 보는 자산은 `data_root` 아래에 둔다.
-  자동화는 `data_root`를 정본으로 읽고, 면접 질문 정본을 `data/runtime`이나 `data/reports/daily`에 중복 유지하지 않는다.
+  자동화는 `data_root`를 정본으로 읽고, 면접 질문 정본을 `data/runtime`이나 `reports/daily`에 중복 유지하지 않는다.
 
 타깃 전환 시 `primary`를 `history` 앞에 push하고 새 `primary`를 채운다.
 
@@ -468,7 +468,7 @@ plan050은 frontdoor queue와 ledger에 action stage 중심 priority layer를 �
   "evidenceUrls": ["https://example.com/jobs/123"],
   "recommendationSnapshot": {
     "generatedAt": "2026-06-07T09:30:00+09:00",
-    "sourceReportPath": "data/runtime/position-recommendation.md",
+    "sourceReportPath": "reports/latest/position-recommendation.md",
     "actionStage": "prepare-now",
     "priorityRank": 1,
     "postingAnalysisPath": "applications/example/backend/posting.md",
@@ -1083,17 +1083,17 @@ topic 학습 이력과 topic 학습 약점 상태의 단일 출처다.
 - `last_passed`: 마지막 통과 날짜 (ISO 8601, null이면 미통과).
 - 신설 시 빈 `{}`로 시작한다. 실데이터에 drill 필드가 0건이라 마이그레이션 데이터 손실이 없다(ADR-105).
 
-### data/reports/ (분석·준비 리포트 — plan017, plan086)
+### reports/ (분석·준비 리포트 — plan017, plan086, plan093)
 
 분석·준비 스킬 실행 산출물. 외부 publish 없음 — 내부 학습용.
 
 | 경로 | 스킬 | 내용 |
 |---|---|---|
-| `data/reports/baseline/YYYY-MM-DD/report.md` | legacy `interview-prep-analyzer` baseline | 큐레이션 10파일 + 7섹션 고위험 영역 종합 진단 |
-| `data/reports/daily/YYYY-MM-DD/report.md` | legacy `interview-prep-analyzer` daily | 토픽 1개 3-5파일 + 5섹션 집중 점검 |
-| `data/reports/job-fit-YYYY-MM-DD-<slug>.json` | `job-fit-analyzer` | **정본** JobFitRun(schemaVersion 1, `scripts/job-fit-analyzer/jobfit_schema.ts`). `verdict`(go/no-go)·`careerPath`·`interviewStrategy` 1급, `reinforcement` 부차. `targetRole`(자연어 인자 또는 mvp-target fallback + slug), `nextActions`, `changeSince`(ADR-096) |
-| `data/reports/job-fit-YYYY-MM-DD-<slug>.md` | `job-fit-analyzer` | 위 정본에서 `render_job_fit.ts --format md` 파생 |
-| `data/reports/stage-prep-YYYY-MM-DD.md` | `interview-stage-prep` | 1차/최종/오퍼 단계별 실전 준비 자료 |
+| `reports/baseline/YYYY-MM-DD/report.md` | legacy `interview-prep-analyzer` baseline | 큐레이션 10파일 + 7섹션 고위험 영역 종합 진단 |
+| `reports/daily/YYYY-MM-DD/report.md` | legacy `interview-prep-analyzer` daily | 토픽 1개 3-5파일 + 5섹션 집중 점검 |
+| `reports/job-fit-YYYY-MM-DD-<slug>.json` | `job-fit-analyzer` | **정본** JobFitRun(schemaVersion 1, `scripts/job-fit-analyzer/jobfit_schema.ts`). `verdict`(go/no-go)·`careerPath`·`interviewStrategy` 1급, `reinforcement` 부차. `targetRole`(자연어 인자 또는 mvp-target fallback + slug), `nextActions`, `changeSince`(ADR-096) |
+| `reports/job-fit-YYYY-MM-DD-<slug>.md` | `job-fit-analyzer` | 위 정본에서 `render_job_fit.ts --format md` 파생 |
+| `reports/stage-prep-YYYY-MM-DD.md` | `interview-stage-prep` | 1차/최종/오퍼 단계별 실전 준비 자료 |
 
 baseline 모드는 `config/baseline-core-files.json` 큐레이션 집합 사용.
 daily 모드는 토픽 기반 fos-study 파일 선택 + `state/study-progress.json` 갱신.
@@ -1308,7 +1308,7 @@ daily study Discord 버튼 callback을 topic 추천 결과와 연결하는 runti
 {
   "date": "YYYY-MM-DD",
   "generatedAt": "ISO-8601",
-  "markdownPath": "data/runtime/morning-topic-recommendation.md",
+  "markdownPath": "reports/morning-topic-recommendation.md",
   "recommendations": [
     {
       "index": 1,
@@ -1344,7 +1344,7 @@ replenish 실행 결과 요약. claudeInvoked 여부, 보충된 후보 수 등.
 }
 ```
 
-### data/runtime/morning-topic-recommendation.md
+### reports/morning-topic-recommendation.md
 
 `refresh_topic_inventory.ts` 산출물 (ADR-026). ADR-012의 10픽 + 오늘의 3선 마크다운. 사람이 직접 읽음.
 
@@ -1522,7 +1522,7 @@ source adapter는 official listing, official API, sitemap, keyword search에서 
 Wanted adapter는 백엔드 keyword 외에 AI Agent/RAG/MCP/LLMOps/ML Backend 계열 keyword를 함께 수집할 수 있다.
 Toss adapter는 공식 `job-groups` API의 그룹 공고와 하위 포지션을 펼쳐 snapshot에 넣는다.
 
-### data/reports/daily/YYYY-MM-DD/position-recommendation/recommendation.json (표준 출력 JSON, ADR-094/ADR-101)
+### reports/daily/YYYY-MM-DD/position-recommendation/recommendation.json (표준 출력 JSON, ADR-094/ADR-101)
 
 `position-recommender` 산출물의 단일 표준 출력. schemaVersion 2, `scripts/position-recommender/recommendation_schema.ts` zod 스키마를 따른다.
 
@@ -1533,13 +1533,13 @@ Toss adapter는 공식 `job-groups` API의 그룹 공고와 하위 포지션을 
 - 표준 출력 JSON을 호출자가 가공한다(ADR-101). cron은 Discord 요약으로 소비하며, 전달 매체는 운영의 공유 파일과 로컬·분산의 hermes API 응답이다.
 - 옛 파생 `items.json`과 daily runner는 ADR-101로 폐기됐다.
 
-### data/runtime/position-recommendation.{md,html}
+### reports/latest/position-recommendation.{md,html}
 
-recommendation.json 정본에서 파생하는 사람 읽기용 산출물.
+recommendation.json 정본에서 파생하는 사람 읽기용 산출물(mirror).
 
 - `position-recommendation.md` — `render_recommendation.ts --format md` 파생. freshness 가드·기록 호환용.
 - `position-recommendation.html` — `--format html` 파생. 아침 Discord 알림 표시용.
-- 같은 날짜 보존본은 `data/reports/daily/YYYY-MM-DD/position-recommendation/{report.md,report.html}`.
+- 같은 날짜 보존본은 `reports/daily/YYYY-MM-DD/position-recommendation/{report.md,report.html}`.
 - 표시 template 정본은 `scripts/position-recommender/templates/report.html` (스타일만 정의, JSON 데이터 바인딩).
 - template은 실행 자산이므로 `data/` 아래에 두지 않고 ASCII 중심으로 유지한다.
 

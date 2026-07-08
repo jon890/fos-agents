@@ -8,7 +8,7 @@ import {
 import { readFrontdoorQueue, writeFrontdoorQueue } from './frontdoor_queue_io';
 
 const WORKSPACE_PREFIX = process.cwd().endsWith('/career-os') ? '' : 'career-os/';
-const DEFAULT_REPORT_PATH = `${WORKSPACE_PREFIX}data/runtime/position-recommendation.md`;
+const DEFAULT_REPORT_PATH = `${WORKSPACE_PREFIX}reports/latest/position-recommendation.md`;
 const DEFAULT_OUT_PATH = `${WORKSPACE_PREFIX}data/runtime/application-agent/frontdoor-queue.jsonl`;
 
 const PROTECTED_STATUSES: FrontdoorQueueStatus[] = [

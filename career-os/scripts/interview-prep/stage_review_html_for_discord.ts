@@ -6,11 +6,11 @@ import { fileURLToPath } from "node:url";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const rootDir = resolve(scriptDir, "../..");
-const allowedSourceDir = resolve(rootDir, "data/runtime/downloads");
+const allowedSourceDir = resolve(rootDir, "reports/downloads");
 const trustedStageDir = "/tmp/openclaw/career-review-downloads";
 
 function usage(): never {
-  console.error("usage: stage_review_html_for_discord.ts <data/runtime/downloads/*.html>");
+  console.error("usage: stage_review_html_for_discord.ts <reports/downloads/*.html>");
   process.exit(2);
 }
 

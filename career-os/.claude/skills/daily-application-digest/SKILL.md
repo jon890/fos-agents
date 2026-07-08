@@ -32,8 +32,8 @@ Discord 요약에는 private 지원 전략이나 이력서 문구를 넣지 않�
    - `fit-analysis.md` — fit 분석 + Gap 항목
    - `application-package.md` — 지원 패키지 초안 + 근거 보강 항목
    - `review.md` — 심사 판정 (pass/revise/blocked)
-3. `career-os/data/runtime/position-recommendation.md` — 선택. 새 공고 후보 확인 시 참조.
-4. `career-os/data/runtime/morning-topic-recommendation.md` — 선택. 오늘의 학습 추천 연계 시 참조.
+3. `career-os/reports/latest/position-recommendation.md` — 선택. 새 공고 후보 확인 시 참조.
+4. `career-os/reports/morning-topic-recommendation.md` — 선택. 오늘의 학습 추천 연계 시 참조.
 
 ## Workflow
 
@@ -44,7 +44,7 @@ Discord 요약에는 private 지원 전략이나 이력서 문구를 넣지 않�
 - 예: `/daily-application-digest 2026-05-22` → date = `2026-05-22`
 - 날짜 없으면 오늘 날짜(`YYYY-MM-DD`)를 사용.
 
-출력 경로: `career-os/data/reports/daily/<date>/application-digest/report.md`
+출력 경로: `career-os/reports/daily/<date>/application-digest/report.md`
 
 ### 2. ledger 로드 및 applicationDir 목록 수집
 
@@ -140,7 +140,7 @@ fit-analysis.md의 Gap 분석에서 **해당 공고 기준 부족 역량 상위 
 
 ### 8. report.md 작성
 
-저장 경로: `career-os/data/reports/daily/<date>/application-digest/report.md`
+저장 경로: `career-os/reports/daily/<date>/application-digest/report.md`
 
 **필수 섹션 10개:**
 
@@ -216,7 +216,7 @@ cron/runner에서 아래 패턴으로 별도 전송:
 ```bash
 # report.md 생성 후 Discord 전송 (runner 책임)
 SUMMARY=$(grep -A 10 "## Discord Summary Draft" \
-  career-os/data/reports/daily/$(date +%Y-%m-%d)/application-digest/report.md \
+  career-os/reports/daily/$(date +%Y-%m-%d)/application-digest/report.md \
   | tail -n +2)
 
 bun --env-file=career-os/.env \

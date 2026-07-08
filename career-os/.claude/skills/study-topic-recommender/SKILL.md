@@ -146,7 +146,7 @@ script 내부 흐름 (알고리즘 상수 참고용):
 - **RSS feed**: feed-cache TTL 6h 활용 — 반복 호출 시 네트워크 부담 없음
 - **산출물**:
   - `state/topic-inventory.json` — fos-study sourceOfTruth + override/seed/fallback pool + 추천 결과 + 통계 (`excluded.possibleDuplicates` 배열 포함 — Step 3.5 입력)
-  - `data/runtime/morning-topic-recommendation.md` — 사람이 읽는 마크다운 (10픽 + 오늘의 3선)
+  - `reports/morning-topic-recommendation.md` — 사람이 읽는 마크다운 (10픽 + 오늘의 3선)
   - `state/topic-inventory-history.jsonl` — 오늘 추천 history append
 
 ### 3.5 에이전트 duplicate review (ADR-033)
@@ -204,7 +204,7 @@ bun --env-file=.env \
 
 ### 4. LLM 큐레이션
 
-`state/topic-inventory.json` 읽기, `data/runtime/morning-topic-recommendation.md`,
+`state/topic-inventory.json` 읽기, `reports/morning-topic-recommendation.md`,
 `state/study-progress.json`, and `config/study-preferences.json`.
 
 Use them to produce a concise recommendation with:
@@ -217,11 +217,11 @@ Use them to produce a concise recommendation with:
 - pool health only as a diagnostic, not as the main answer
 
 If the request is a scheduled Korean backend study-topic cron, keep the user-facing output focused on exactly 3 backend topics unless the user explicitly asks for the full 10-pick renderer output.
-The TypeScript renderer may create a broad 10-pick markdown, but the final curated report can overwrite/update `data/runtime/morning-topic-recommendation.md` into a concise Korean 3-topic report when the cron request asks for that shape.
+The TypeScript renderer may create a broad 10-pick markdown, but the final curated report can overwrite/update `reports/morning-topic-recommendation.md` into a concise Korean 3-topic report when the cron request asks for that shape.
 
 ### 5. 결과 출력
 
-Do not paste the full markdown by default. Summarize the LLM-curated picks and include the runtime path to `data/runtime/morning-topic-recommendation.md`.
+Do not paste the full markdown by default. Summarize the LLM-curated picks and include the runtime path to `reports/morning-topic-recommendation.md`.
 For Discord/cron delivery, keep Korean output concise: 3 topics, avoided axes, pool/diversity note, verification status, and the report path.
 
 ### 6. Live-coding seed 선택 (옵션)
@@ -251,7 +251,7 @@ print('[ok] topic-inventory.json 필수 키 존재')
 "
 
 # B. morning-topic-recommendation.md 비어있지 않음
-LINES=$(wc -l < career-os/data/runtime/morning-topic-recommendation.md 2>/dev/null || echo 0)
+LINES=$(wc -l < career-os/reports/morning-topic-recommendation.md 2>/dev/null || echo 0)
 echo "[lines] morning-topic-recommendation.md: $LINES"
 [ "$LINES" -ge 10 ] || { echo "SELF_CHECK_FAIL: morning-topic-recommendation.md $LINES 줄 (expected ≥10)"; exit 1; }
 
@@ -305,7 +305,7 @@ ADR-026 결정 요약 (3줄):
 
 - 예약 실행에서 사용자가 Hermes/Codex 사용을 명시하면 OpenClaw나 Claude CLI를 호출하지 않는다.
 - 최종 전달문은 시스템이 배송하므로 별도 `send_message`를 쓰지 않는다.
-- `data/runtime/morning-topic-recommendation.md`는 매 실행마다 쓰거나 갱신하고, 최종 응답에는 해당 runtime path를 포함한다.
+- `reports/morning-topic-recommendation.md`는 매 실행마다 쓰거나 갱신하고, 최종 응답에는 해당 runtime path를 포함한다.
 - 요청이 "정확히 3개 backend topic" 형태이면 broad 10-pick renderer 결과를 그대로 전달하지 말고, Step 4 큐레이션 후 `morning-topic-recommendation.md`를 간결한 3-topic 한국어 리포트로 덮어쓴다.
 - cron-safe 검증/JSON 점검은 Hermes approval 상태에 덜 민감한 `terminal` + `python3 - <<'PY'` 패턴을 우선 사용한다. `execute_code`가 정책상 제한되면 같은 로직을 터미널 Python으로 즉시 옮겨 계속 진행한다.
 - study pack 생성, fos-study publish, commit/push는 사용자가 명시하지 않으면 하지 않는다.

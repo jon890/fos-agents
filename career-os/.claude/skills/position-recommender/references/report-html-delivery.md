@@ -10,25 +10,25 @@
 
 ## 권장 산출물
 
-- 전체 공고 HTML: `data/runtime/downloads/position-recommendation-all-YYYY-MM-DD.html`
-- runtime mirror: `data/runtime/position-recommendation.{json,md,html}`
+- 전체 공고 HTML: `reports/downloads/position-recommendation-all-YYYY-MM-DD.html`
+- runtime mirror: `reports/latest/position-recommendation.{json,md,html}`
 
 ## 권장 실행 흐름
 
 ```bash
 # 내부 runtime HTML은 표준 renderer에서 생성
 node scripts/position-recommender/render_recommendation.ts \
-  --input data/runtime/position-recommendation.json \
+  --input reports/latest/position-recommendation.json \
   --format html \
-  --output data/runtime/position-recommendation.html
+  --output reports/latest/position-recommendation.html
 
 # 다운로드용 전체 active/open 공고 HTML.
 # AI 모델 연구 중심, CTO/기술총괄, Tech Lead/Server Lead, Toss 루트 회사의 범용 Server Developer 공고는 제외된다.
 node scripts/position-recommender/render_candidate_preview.ts \
-  --input data/runtime/position-recommendation.json \
+  --input reports/latest/position-recommendation.json \
   --postings data/runtime/live-position-postings.md \
   --limit all \
-  --output data/runtime/downloads/position-recommendation-all-$(TZ=Asia/Seoul date +%F).html
+  --output reports/downloads/position-recommendation-all-$(TZ=Asia/Seoul date +%F).html
 ```
 
 ## 검증 기준
@@ -45,7 +45,7 @@ node scripts/position-recommender/render_candidate_preview.ts \
 - 텍스트 표만 보내면 사용자 선호를 위반한다.
 - `position-recommendation-preview-*.html`이나 `position-recommendation-full-*.html`을 새로 만들지 않는다.
 - 회사 채용홈이나 검색 페이지 링크를 추천 티어 공고 링크로 쓰면 안 된다.
-- `data/runtime/downloads/` 밖의 HTML을 Discord에 직접 첨부하지 않는다.
+- `reports/downloads/` 밖의 HTML을 Discord에 직접 첨부하지 않는다.
 - 마감 임박/사용자 하향 판단이 있는 후보를 snapshot의 `no_deadline`만 보고 최상위로 다시 올리지 않는다.
 - Toss 루트 회사의 범용 `Server Developer (...)` 공고는 구체적 공고가 아니므로 제외한다.
 - Tech Lead/Server Lead/CTO/기술총괄 계열은 현재 seniority 대비 과도하므로 제외한다.

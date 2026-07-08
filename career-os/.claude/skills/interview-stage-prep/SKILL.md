@@ -46,7 +46,7 @@ description: 1차·최종·오퍼 단계별 면접 실전 준비를 생성하는
 2. `primary.data_root`가 상대 경로이면 현재 실행 중인 career-os 워크스페이스 루트 기준으로 해석한다.
    사용자가 `/home/.../career-os` 같은 절대 경로를 줬더라도, 파일 도구가 보호 정책으로 쓰기를 거부하면 곧바로 fallback하지 말고 동일 repo의 활성 워크스페이스 경로(`/opt/data/...` 등 현재 cwd 기준)로 한 번 재시도한다.
    이때 최종 응답의 저장 파일 경로는 private 절대 경로가 아니라 `primary.data_root` 기준 상대 경로로 보고한다.
-3. 경로 해석이 불가능하거나 활성 워크스페이스 기준 재시도도 실패할 때만 `data/reports/daily/YYYY-MM-DD/interview-second-round/report.md`로 fallback하고, 완료 보고에 fallback 이유를 밝힌다.
+3. 경로 해석이 불가능하거나 활성 워크스페이스 기준 재시도도 실패할 때만 `reports/daily/YYYY-MM-DD/interview-second-round/report.md`로 fallback하고, 완료 보고에 fallback 이유를 밝힌다.
 4. 저장 후 파일 존재와 비어 있지 않음, 질문 수 50개, current-practice Top 10개를 검증한다.
 
 ### 내용 구성
@@ -154,7 +154,7 @@ cat career-os/config/candidate-profile-detail.md
 
 단계에 따라 아래 내용으로 보고서를 직접 작성한다.
 
-저장 경로: `career-os/data/reports/stage-prep-YYYY-MM-DD.md`
+저장 경로: `career-os/reports/stage-prep-YYYY-MM-DD.md`
 
 첫 줄: `# 면접 단계별 준비 가이드 — YYYY-MM-DD`
 

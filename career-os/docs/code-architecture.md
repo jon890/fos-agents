@@ -354,7 +354,7 @@ plan029는 기존 career-os skill을 새 application 상태 루프로 조립한�
   - 출력: `review.md`, pass/revise/block 판단.
 - `daily-application-digest`
   - 입력: `state/positions-queue.jsonl` (옛 `data/applications/ledger.jsonl`, ADR-108), 오늘 변경된 application files, position/study/interview runtime report.
-  - 출력: `data/reports/daily/YYYY-MM-DD/application-digest/report.md` + Discord 요약.
+  - 출력: `reports/daily/YYYY-MM-DD/application-digest/report.md` + Discord 요약.
 
 데이터 저장소:
 

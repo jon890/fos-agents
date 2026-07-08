@@ -101,11 +101,11 @@ career-os는 별도 웹 제품 없이 수집, 리포트 생성, skill 실행, pr
 지원 후보 상태와 준비 단계는 `state/application-agent/`, `applications/`, `private/` 산출물에서 관리하고, 외부 DB나 outbox를 정본으로 두지 않는다.
 
 Discord에 HTML을 첨부할 때는 전역 HTML 읽기 정책을 완화하지 않는다.
-직접 첨부 대상 HTML은 `data/runtime/downloads/` 아래 파일만 허용한다.
+직접 첨부 대상 HTML은 `reports/downloads/` 아래 파일만 허용한다.
 구체적인 검증과 스테이징 절차는 `docs/flow.md` 또는 관련 task 문서를 따른다.
 
 커리어 포지션 추천, 지원 후보 비교, 면접 준비, 학습 추천처럼 사용자가 보는 리포트성 산출물은 HTML 파일도 함께 만든다.
-공고·포지션 추천 리포트는 예외 없이 `data/runtime/downloads/` 아래 HTML을 첨부하고, HTML 안의 각 공고명에는 개별 공고 URL로 이동하는 링크를 건다.
+공고·포지션 추천 리포트는 예외 없이 `reports/downloads/` 아래 HTML을 첨부하고, HTML 안의 각 공고명에는 개별 공고 URL로 이동하는 링크를 건다.
 Discord 미리보기에는 상위 후보 5~10개와 핵심 사유를 짧게 쓰되, 각 후보의 공고 링크도 함께 포함한다.
 HTML에는 개인 이력, 지원 전략, 회사별 비공개 맥락의 공개 범위를 점검하고, 채널에 노출해도 되는 요약만 담는다.
 단순 상태 보고나 한두 줄 답변은 예외로 둘 수 있다.

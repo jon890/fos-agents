@@ -19,6 +19,8 @@
 !**/data/question-bank/**
 # 공고별 지원 문서 (비공개, plan093 data/applications/ 후속 버킷)
 **/applications/
+# 사람용 생성 리포트 (plan093 data/reports·data/runtime 일부 후속 버킷)
+**/reports/
 **/logs/
 **/tmp/
 **/private/
