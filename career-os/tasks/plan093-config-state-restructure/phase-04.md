@@ -1,27 +1,28 @@
-# Phase 04 — reports/ 재편
+# Phase 04 — reports/ 경로 규약 재편
 
 **Model**: sonnet
 **Status**: pending
 
 ## 목표
 
-reports/ 재편 (decisions.md 이동표·기준 준수).
+reports/ top-level 버킷 규약 재편 (decisions.md 이동표·기준 준수).
 
 ## 중요 지침
 
 구현 phase다. docs·ADR을 수정하지 않는다. Phase 01 ADR·이동표를 벗어나면 PHASE_BLOCKED.
-git mv로 이력 보존. 파일 이동과 그 참조 갱신을 같은 phase에서 함께 한다.
+`data/reports/**`·`data/runtime/*` 대상은 전량 **untracked**(gitignore `**/data/`)다 — 물리 이동 없이 경로 규약 + 참조 갱신 + gitignore 경계로만 실현한다(decisions.md 스코프 절).
 
 ## 작업
 
-data/reports/**·job-fit-*.md·baseline을 reports/로, mirror(position-recommendation.*)를 reports/latest/로, downloads를 reports/downloads/로, morning-topic-recommendation.md를 reports/로 이동. 렌더러·SKILL·notify 경로 갱신.
+- 경로 규약 갱신(물리 이동 없음): `data/reports/**`·`job-fit-*.md`·`baseline`→`reports/`, mirror(`position-recommendation.*`)→`reports/latest/`, `downloads`→`reports/downloads/`, `morning-topic-recommendation.md`→`reports/`.
+- 위 경로를 쓰는 렌더러(render_recommendation·render_candidate_preview)·SKILL·notify 경로 문자열을 갱신.
+- `.gitignore`에 `reports/` 경계 반영(question-bank negation 훼손 없이).
 
 ## 성공 기준
 
-- 대상 파일이 새 위치로 이동됐다.
-- 이동 파일을 읽는 SKILL·scripts·docs·.gitignore 참조가 새 경로로 갱신됐다(끊긴 링크 0).
-- 관련 실행(수집/렌더/드릴 중 해당)이 새 경로로 성공한다.
+- 대상을 읽는 렌더러·SKILL·scripts·docs·.gitignore 참조가 `reports/` 새 경로로 갱신됐다(live docs·scripts·.claude/skills 기준 해당 옛 경로 참조 0; tasks/·frozen ADR 제외).
+- 변경 .ts `bun --check` 통과 + 렌더러가 새 경로 파일 부재/디렉터리 미존재를 graceful 처리(크래시 없음).
 
 ## 실패 조건
 
-- 이동 후 옛 경로 참조가 남아 실행이 깨지면 실패.
+- live 코드·docs·skill에 해당 옛 경로 참조가 남아 렌더/notify가 깨지면 실패.

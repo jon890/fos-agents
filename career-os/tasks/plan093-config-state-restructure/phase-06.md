@@ -1,27 +1,31 @@
-# Phase 06 — 전 경로 참조 갱신 + 검증
+# Phase 06 — ledger → positions-queue 코드 rename
 
 **Model**: sonnet
 **Status**: pending
 
 ## 목표
 
-전 경로 참조 갱신 + 검증 (decisions.md 이동표·기준 준수).
+`ledger` 코드 심볼·파일명을 `positions-queue`로 rename (decisions.md 용어표·M2=A 준수).
 
 ## 중요 지침
 
 구현 phase다. docs·ADR을 수정하지 않는다. Phase 01 ADR·이동표를 벗어나면 PHASE_BLOCKED.
-git mv로 이력 보존. 파일 이동과 그 참조 갱신을 같은 phase에서 함께 한다.
+tracked 코드 파일이므로 **git mv로 이력 보존**한다. 이 phase는 ledger rename만 — frontdoor 제거는 Phase 07.
 
 ## 작업
 
-남은 data/ 참조를 전수 grep해 0으로 만든다. 용어(승격→등록)를 docs/SKILL 산문에서 교체. 수집(collect_live_postings)·렌더(render_recommendation·render_candidate_preview)·드릴(drill-engine) 실행이 새 경로로 성공하는지 확인.
+- git mv: `scripts/application-agent/ledger_io.ts`→`positions_queue_io.ts`, `ledger_schema.ts`→`positions_queue_schema.ts`.
+- 심볼 rename: `Ledger*`·`DEFAULT_LEDGER_PATH`·`ledgerPath` 등 식별자를 `positionsQueue`/`PositionsQueue` 계열로 일관 rename. 경로 문자열 default는 Phase 02에서 정한 `state/positions-queue.jsonl` 사용.
+- import 참조 갱신: `ledger_io`/`ledger_schema`를 import하는 tracked .ts 전부(actions·apply_position_action_request·apply_priority_request·ingest_position_report·policy·priority_recommendation·priority_view·progress_notifier·run·skill_executor 등)의 import 경로·심볼 갱신.
+- run.ts의 `--ledger` CLI 옵션·help 문구를 새 용어로 갱신(호환 필요 시 결정은 Phase 01 ADR 따름).
 
 ## 성공 기준
 
-- 대상 파일이 새 위치로 이동됐다.
-- 이동 파일을 읽는 SKILL·scripts·docs·.gitignore 참조가 새 경로로 갱신됐다(끊긴 링크 0).
-- 관련 실행(수집/렌더/드릴 중 해당)이 새 경로로 성공한다.
+- `ledger_io.ts`·`ledger_schema.ts`가 `positions_queue_*`로 git mv됐다(이력 보존).
+- live scripts에 `ledger` 코드 식별자(`ledger_io`·`ledger_schema`·`Ledger`·`DEFAULT_LEDGER_PATH`) 참조 0(tasks/·frozen ADR 제외; frontdoor 파일 내부 잔존은 Phase 07이 함께 제거).
+- 변경 .ts 전부 `bun --check` 통과 + application-agent `run.ts --help` 등 진입점이 크래시 없이 로드된다.
 
 ## 실패 조건
 
-- 이동 후 옛 경로 참조가 남아 실행이 깨지면 실패.
+- import·심볼 rename 누락으로 `bun --check`가 깨지면 실패.
+- 코드 파일을 git mv 없이 옮겨 이력이 끊기면 실패.

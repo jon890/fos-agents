@@ -26,8 +26,17 @@ plan093의 실행 계약이며, Phase 01에서 이 결정을 ADR로 고정한 �
 | 옛 표현 | 새 표현 | 이유 |
 |---|---|---|
 | `ledger` / `ledger.jsonl` | `positions-queue` / `state/positions-queue.jsonl` | ledger가 과하게 넓음. 내가 밀고 있는 포지션들의 지속 큐. |
+| `ledger_io.ts`·`ledger_schema.ts` + `ledger*` 심볼 | `positions_queue_io.ts`·`positions_queue_schema.ts` + `positionsQueue*` 심볼 | 코드 식별자도 함께 rename(M2=A). 데이터 파일명과 코드 심볼을 한 용어로 통일. |
 | "승격(promote)" | "등록" | frontdoor-queue(대기열) 폐기로 승격 맥락 사라짐. 추천 후보를 positions-queue에 등록. |
-| `frontdoor-queue.jsonl` | 제거(legacy 확정) | 대기열 단계 없앰. 추천 → 선택 → positions-queue 등록. |
+| `frontdoor-queue.jsonl` + `frontdoor_queue_*.ts`·`promote_frontdoor_candidate.ts` | 제거(legacy 확정) | 대기열 단계 없앰. 추천 → 선택 → positions-queue 등록. 코드까지 제거(M2=A). |
+
+## 코드 rename 범위 — 이 plan 포함 (2026-07-08 사용자 결정 M2=A)
+
+용어 변경이 데이터 경로·산문뿐 아니라 **코드 심볼·파일명까지** 미친다.
+
+- **하는 것**: `ledger_io.ts`·`ledger_schema.ts` → `positions_queue_*` git mv + 심볼(`Ledger`→`PositionsQueue` 계열) rename + import 참조 갱신. frontdoor 코드(`frontdoor_queue_builder.ts`·`frontdoor_queue_io.ts`·`frontdoor_queue_schema.ts`·`promote_frontdoor_candidate.ts`) git rm + application-agent flow에서 frontdoor 의존 제거. 승격→등록 용어를 코드 식별자·주석·docs 산문 전반에서 교체.
+- **주의**: frontdoor는 `apply_position_action_request`·`apply_priority_request`·`priority_recommendation`·`priority_view`·`run.ts` 등 8+ 파일에 얽혀 있다(단순 파일 삭제 아님). 호출 흐름을 끊고 `bun --check` + application-agent smoke로 검증한다.
+- **원자적 분리**: Phase 06(ledger rename) / Phase 07(frontdoor 제거 + 등록 용어)로 관심사를 나눠 각각 commit.
 
 ## 애매 항목 확정
 
