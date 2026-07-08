@@ -347,7 +347,7 @@ plan029는 기존 career-os skill을 새 application 상태 루프로 조립한�
 새 agent skill 후보:
 
 - `application-package-writer`
-  - 입력: 공고 URL 또는 `data/applications/**/posting.md`, `config/candidate-profile.md`, 관련 resume/task 근거.
+  - 입력: 공고 URL 또는 `applications/**/posting.md`, `config/candidate-profile.md`, 관련 resume/task 근거.
   - 출력: `fit-analysis.md`, `application-package.md`.
 - `application-reviewer`
   - 입력: 공고, fit 분석, 지원 패키지, candidate-profile.

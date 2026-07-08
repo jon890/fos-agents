@@ -205,7 +205,7 @@ export function ingestPositionReport(reportPath: string, ledgerPath: string): In
         status: 'discovered',
         statusUpdatedAt: now,
         discoveredAt: now,
-        applicationDir: `data/applications/${id}`,
+        applicationDir: `applications/${id}`,
         fitScore,
         priority: pos.priority ?? derivePriority(fitScore),
         sourceFreshness: 'fresh',

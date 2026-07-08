@@ -340,10 +340,10 @@ ADR-069 이후 `current_target`처럼 `state/mvp-target.json`의 현재 타깃�
   "company": "TossPlace",
   "role": "Applied AI Engineer",
   "priority": 2,
-  "posting_path": "data/applications/tossplace/applied-ai-engineer/posting.md",
-  "fit_analysis_path": "data/applications/tossplace/applied-ai-engineer/fit-analysis.md",
-  "application_package_path": "data/applications/tossplace/applied-ai-engineer/application-package.md",
-  "review_path": "data/applications/tossplace/applied-ai-engineer/review.md",
+  "posting_path": "applications/tossplace/applied-ai-engineer/posting.md",
+  "fit_analysis_path": "applications/tossplace/applied-ai-engineer/fit-analysis.md",
+  "application_package_path": "applications/tossplace/applied-ai-engineer/application-package.md",
+  "review_path": "applications/tossplace/applied-ai-engineer/review.md",
   "study_goal": "string",
   "focus_axes": ["string"],
   "constraints": ["string"]
@@ -372,7 +372,7 @@ ADR-069 이후 `current_target`처럼 `state/mvp-target.json`의 현재 타깃�
 
 > **plan002 이후**: `config/external-reading-sources.json`의 `techBlog` / `ai` / `geek` category로 통합. 단일 출처는 "통합 config 스키마 (plan002 이후)" 섹션 참조.
 
-## data/applications/ (implemented base — plan029, plan031, plan038)
+## applications/ (implemented base — plan029, plan031, plan038)
 
 공고별 지원 에이전트 MVP의 비공개 상태 저장소. 실제 지원 전략, 맞춤 이력서 문구, 제출 상태, 회사별 쿨다운 판단이 들어가므로 git 추적하지 않는다.
 
@@ -471,7 +471,7 @@ plan050은 frontdoor queue와 ledger에 action stage 중심 priority layer를 �
     "sourceReportPath": "data/runtime/position-recommendation.md",
     "actionStage": "prepare-now",
     "priorityRank": 1,
-    "postingAnalysisPath": "data/applications/example/backend/posting.md",
+    "postingAnalysisPath": "applications/example/backend/posting.md",
     "fitSummary": "서버/API 경험과 AI agent workflow 관심사가 맞는다.",
     "gapSummary": "Kubernetes 운영 경험은 확인이 필요하다.",
     "preparationActions": ["package_draft", "interview_practice", "study_pack_candidate"]
@@ -601,11 +601,11 @@ applications/tossplace/applied-ai-engineer/
   "status": "discovered",
   "statusUpdatedAt": "2026-05-22T13:45:00+00:00",
   "discoveredAt": "2026-05-22T13:45:00+00:00",
-  "applicationDir": "data/applications/tossplace/applied-ai-engineer",
-  "postingPath": "data/applications/tossplace/applied-ai-engineer/posting.md",
-  "fitAnalysisPath": "data/applications/tossplace/applied-ai-engineer/fit-analysis.md",
-  "applicationPackagePath": "data/applications/tossplace/applied-ai-engineer/application-package.md",
-  "reviewPath": "data/applications/tossplace/applied-ai-engineer/review.md",
+  "applicationDir": "applications/tossplace/applied-ai-engineer",
+  "postingPath": "applications/tossplace/applied-ai-engineer/posting.md",
+  "fitAnalysisPath": "applications/tossplace/applied-ai-engineer/fit-analysis.md",
+  "applicationPackagePath": "applications/tossplace/applied-ai-engineer/application-package.md",
+  "reviewPath": "applications/tossplace/applied-ai-engineer/review.md",
   "needsUserReview": true,
   "userDecision": "pending",
   "revisionCount": 0,
@@ -757,7 +757,7 @@ Markdown 산출물을 먼저 고정하고, 리뷰된 이력서 초안을 HTML/PD
 
 ### Git 추적 정책
 
-루트 `.gitignore`의 `**/data/` 규칙 때문에 `data/applications/`의 실제 지원 산출물은 기본적으로 git 추적되지 않는다. 이는 의도된 정책이다. 스키마와 skill 명세만 git 추적하고, 공고별 맞춤 이력서/지원 전략/제출 상태는 로컬 private data로 유지한다.
+루트 `.gitignore`의 `applications/` 규칙 때문에 실제 지원 산출물은 기본적으로 git 추적되지 않는다. 이는 의도된 정책이다. 스키마와 skill 명세만 git 추적하고, 공고별 맞춤 이력서/지원 전략/제출 상태는 로컬 private data로 유지한다.
 
 ### application-flow-agent runtime fields (plan031 — phase-01 확정)
 
@@ -1446,11 +1446,11 @@ data/runtime/application-agent/package-eval/<company-role>/latest-report.json
 ```json
 {
   "generatedAt": "2026-06-05T16:49:00.000Z",
-  "applicationDir": "data/applications/tossplace/applied-ai-engineer",
+  "applicationDir": "applications/tossplace/applied-ai-engineer",
   "overall": "revise",
   "inputs": {
-    "packagePath": "data/applications/tossplace/applied-ai-engineer/application-package.md",
-    "reviewPath": "data/applications/tossplace/applied-ai-engineer/review.md"
+    "packagePath": "applications/tossplace/applied-ai-engineer/application-package.md",
+    "reviewPath": "applications/tossplace/applied-ai-engineer/review.md"
   },
   "findings": [
     {

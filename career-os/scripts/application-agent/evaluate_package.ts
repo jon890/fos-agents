@@ -23,7 +23,7 @@ type Options = {
   jsonPath: string;
 };
 
-const DEFAULT_APPLICATION_DIR = 'data/applications/tossplace/applied-ai-engineer';
+const DEFAULT_APPLICATION_DIR = 'applications/tossplace/applied-ai-engineer';
 
 function parseArgs(args: string[]): Options {
   let applicationDir = DEFAULT_APPLICATION_DIR;

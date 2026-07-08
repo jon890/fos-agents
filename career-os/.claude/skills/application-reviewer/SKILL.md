@@ -31,12 +31,12 @@ PDF 생성은 제출 자동화가 아니며, 업로드·전송·제출 버튼 �
 
 현재 에이전트는 다음 파일과 명령 출력을 직접 로드:
 
-1. `career-os/data/applications/<company>/<role>/posting.md` — 공고 본문 (필수)
-2. `career-os/data/applications/<company>/<role>/fit-analysis.md` — fit 분석 (필수)
-3. `career-os/data/applications/<company>/<role>/application-package.md` — 내부 지원 전략 초안 (필수)
-4. `career-os/data/applications/<company>/<role>/resume-draft.md` — 제출용 이력서 Markdown 초안 (필수)
-5. `career-os/data/applications/<company>/<role>/cover-letter.md` — 제출용 지원동기 Markdown 초안 (필수)
-6. `career-os/data/applications/<company>/<role>/submission-checklist.md` — 제출 전 확인 목록 (필수)
+1. `career-os/applications/<company>/<role>/posting.md` — 공고 본문 (필수)
+2. `career-os/applications/<company>/<role>/fit-analysis.md` — fit 분석 (필수)
+3. `career-os/applications/<company>/<role>/application-package.md` — 내부 지원 전략 초안 (필수)
+4. `career-os/applications/<company>/<role>/resume-draft.md` — 제출용 이력서 Markdown 초안 (필수)
+5. `career-os/applications/<company>/<role>/cover-letter.md` — 제출용 지원동기 Markdown 초안 (필수)
+6. `career-os/applications/<company>/<role>/submission-checklist.md` — 제출 전 확인 목록 (필수)
 7. `career-os/config/candidate-profile.md` — 후보자 프로필 core: 사실·라벨 (필수)
 8. `career-os/config/candidate-profile-detail.md` — 프로젝트 서사·의사결정 패턴·협업 스타일 (필수)
 9. fit-analysis.md 및 application-package.md의 `## 근거 파일 참조` 에 명시된 근거 파일 — 선택적으로 읽는다
@@ -48,8 +48,8 @@ PDF 생성은 제출 자동화가 아니며, 업로드·전송·제출 버튼 �
 
 자연어에서 application directory 또는 path를 추출한다.
 
-- 예: `/application-reviewer data/applications/tossplace/applied-ai-engineer`
-  → dir = `career-os/data/applications/tossplace/applied-ai-engineer`
+- 예: `/application-reviewer applications/tossplace/applied-ai-engineer`
+  → dir = `career-os/applications/tossplace/applied-ai-engineer`
 - path가 없으면 `career-os/state/positions-queue.jsonl`을 읽어 다음 조건의 첫 항목을 후보로 선택:
   - `needsUserReview=true` 또는 `status`가 `ready_for_user_review|preparing_application|needs_revision` 중 하나
   - 후보 선택 시 사용자에게 확인 후 계속
@@ -130,7 +130,7 @@ positions-queue.jsonl의 riskFlags와 posting.md의 위험 플래그를 교차:
 
 ### 5. review.md 작성
 
-저장 경로: `career-os/data/applications/<company>/<role>/review.md`
+저장 경로: `career-os/applications/<company>/<role>/review.md`
 
 필수 구조:
 

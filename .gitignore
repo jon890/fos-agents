@@ -17,6 +17,8 @@
 # 공개 질문 풀은 추적 (public-safe static assets)
 !**/data/question-bank/
 !**/data/question-bank/**
+# 공고별 지원 문서 (비공개, plan093 data/applications/ 후속 버킷)
+**/applications/
 **/logs/
 **/tmp/
 **/private/

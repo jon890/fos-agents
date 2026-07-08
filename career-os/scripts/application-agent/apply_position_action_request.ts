@@ -180,7 +180,7 @@ function derivePriority(fitScore: number): 'high' | 'normal' | 'low' {
 
 function buildNewLedgerRecord(record: FrontdoorQueueRecord, now: string): ApplicationLedgerRecord {
   const id = generateLedgerId(record.company, record.role);
-  const applicationDir = `data/applications/${id}`;
+  const applicationDir = `applications/${id}`;
   return ApplicationLedgerRecordSchema.parse({
     id,
     company: record.company,
@@ -255,7 +255,7 @@ function promoteFrontdoor(recordId: string, opts: ApplyOptions): string {
 }
 
 function materialPaths(record: ApplicationLedgerRecord): Record<string, string | null> {
-  const applicationDir = record.applicationDir ?? `data/applications/${record.id}`;
+  const applicationDir = record.applicationDir ?? `applications/${record.id}`;
   return {
     postingPath: record.postingPath ?? `${applicationDir}/posting.md`,
     fitAnalysisPath: record.fitAnalysisPath ?? `${applicationDir}/fit-analysis.md`,
