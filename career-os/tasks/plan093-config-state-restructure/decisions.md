@@ -56,3 +56,15 @@ plan093의 실행 계약이며, Phase 01에서 이 결정을 ADR로 고정한 �
 
 - 경로가 SKILL·scripts·docs·ADR·.gitignore 수십 곳에 박혀 있다. config만 고치면 나머지가 깨진 참조로 남는다(plan092에서 겪음).
 - 파괴적 이동 전 Phase 01에서 ADR로 결정을 고정하고, 파일별 전수 이동표를 완성한다.
+
+## runtime 데이터 마이그레이션 — 이 plan 범위 밖 (2026-07-08 사용자 결정)
+
+실측: `.gitignore:16` 의 `**/data/` 로 `data/` 전체가 untracked runtime이다.
+`data/applications/`·`data/reports/`·`data/runtime/` 의 실파일은 git 밖이고, worktree에는 존재하지 않는다(main 워킹 디렉터리에만 있음).
+따라서 이 plan은 **경로 규약(convention)과 tracked 자산만** 바꾼다. untracked 실데이터의 물리 이동은 하지 않는다.
+
+- **하는 것**: 신규 ADR·5 live docs 갱신, `.gitignore` 재작성(`**/data/` → `state/`·`reports/`·`cache/`·`applications/` 경계), tracked `config/*.json` → `state/` git mv + cooldown 분리, SKILL·scripts·docs의 경로/용어 참조 갱신.
+- **하지 않는 것**: `data/**` untracked 실파일의 물리 이동, 마이그레이션 스크립트 실행. 옛 실데이터는 사용자가 이후 직접 이전하거나 다음 실행 시 새 경로로 재생성된다.
+- **이동표의 "git mv" 문구 해석**: tracked 파일(config/*.json 등)에만 git mv를 적용한다. untracked `data/**` 항목은 물리 이동 대신 **참조 갱신 + gitignore 경계 반영**으로만 실현한다.
+- **성공 기준 조정**: 구현 phase의 "새 경로로 실행 성공"은 worktree에서 `bun --check` + 스크립트가 새 경로 파일 부재를 graceful 처리(크래시 없음) + 옛 경로 참조 0 grep으로 대체한다. 실런타임 데이터 검증은 이 plan 밖.
+- **ADR 반영**: Phase 01의 5버킷 ADR에 "runtime 실데이터 마이그레이션은 별도 후속" 을 명시한다.
