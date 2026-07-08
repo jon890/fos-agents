@@ -7,7 +7,7 @@ Use this when a scheduled Hermes/Codex run asks for a daily position recommendat
 1. Load the canonical `position-recommender` skill and required context files first.
 2. Try live collection with the available TypeScript runtime (`bun` first, otherwise Node 22+):
    - `node scripts/position-recommender/collect_live_postings.ts`
-3. Read the new `data/runtime/live-position-postings.md` diagnostics and use only entries with:
+3. Read the new `cache/live-position-postings.md` diagnostics and use only entries with:
    - `link_type: direct_posting`
    - `posting_status: active` or `posting_status: open`
    - an individual posting URL.

@@ -35,9 +35,9 @@
 
 ## Runtime posting snapshots
 
-- `data/runtime/live-position-postings.md`
-- `data/runtime/verified-company-postings-raw.md`
-- `data/runtime/*position*.md`
+- `cache/live-position-postings.md`
+- `cache/verified-company-postings-raw.md`
+- `cache/*position*.md`
 
 실제 수집 결과와 추천 리포트가 저장되는 위치다. 추천 전 최신성이 중요하면 새로 수집한다.
 

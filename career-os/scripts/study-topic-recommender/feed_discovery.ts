@@ -7,7 +7,7 @@
  * 설계 원칙:
  * - fast-xml-parser 단일 외부 의존 (Python stdlib ET 대체).
  * - 네트워크 실패는 표면화하지 않는다 — 항상 fallback(reservoir 원본)으로 복구 가능해야 한다.
- * - 디스크 캐시(data/runtime/feed-cache/)로 동일 cron 주기 내 중복 요청을 줄인다.
+ * - 디스크 캐시(cache/feed-cache/)로 동일 cron 주기 내 중복 요청을 줄인다.
  * - 타임아웃은 보수적으로 짧게 (default 8s).
  */
 

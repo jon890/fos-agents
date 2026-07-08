@@ -14,10 +14,10 @@
    - job name, schedule, deliver, workdir, prompt preview를 확인한다.
    - workdir은 file tool이 쓸 수 있는 workspace 경로여야 한다.
 2. 최신 공고 snapshot을 새로 만든다.
-   - `node scripts/position-recommender/collect_live_postings.ts --output data/runtime/live-position-postings.md`
+   - `node scripts/position-recommender/collect_live_postings.ts --output cache/live-position-postings.md`
    - `direct_active_or_open_postings > 0`인지 확인한다.
 3. 전체 공고 HTML을 생성한다.
-   - `node scripts/position-recommender/render_candidate_preview.ts --input reports/latest/position-recommendation.json --postings data/runtime/live-position-postings.md --limit all --output reports/downloads/position-recommendation-all-$(TZ=Asia/Seoul date +%F).html`
+   - `node scripts/position-recommender/render_candidate_preview.ts --input reports/latest/position-recommendation.json --postings cache/live-position-postings.md --limit all --output reports/downloads/position-recommendation-all-$(TZ=Asia/Seoul date +%F).html`
 4. 제외 기준을 grep 또는 간단한 script로 확인한다.
    - Toss 루트 회사의 범용 `Server Developer (Product)` 같은 챕터/직군 단위 공고 제외.
    - `Tech Lead`, `Server Lead`, CTO/기술총괄 제외.

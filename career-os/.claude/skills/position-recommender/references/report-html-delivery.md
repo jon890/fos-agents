@@ -26,7 +26,7 @@ node scripts/position-recommender/render_recommendation.ts \
 # AI 모델 연구 중심, CTO/기술총괄, Tech Lead/Server Lead, Toss 루트 회사의 범용 Server Developer 공고는 제외된다.
 node scripts/position-recommender/render_candidate_preview.ts \
   --input reports/latest/position-recommendation.json \
-  --postings data/runtime/live-position-postings.md \
+  --postings cache/live-position-postings.md \
   --limit all \
   --output reports/downloads/position-recommendation-all-$(TZ=Asia/Seoul date +%F).html
 ```

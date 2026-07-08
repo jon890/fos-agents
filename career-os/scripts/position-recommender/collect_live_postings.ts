@@ -57,7 +57,7 @@ function loadExcludedCompanies(): void {
 // ---- CLI ----------------------------------------------------------------
 
 function parseArgs(argv: string[]): CliArgs {
-  let out = resolve(REPO_ROOT, "career-os/data/runtime/live-position-postings.md");
+  let out = resolve(REPO_ROOT, "career-os/cache/live-position-postings.md");
   let source: SourceSelection = "all";
   let serverOnly = true;
   let wantedLimit = 120;

@@ -1348,7 +1348,7 @@ replenish 실행 결과 요약. claudeInvoked 여부, 보충된 후보 수 등.
 
 `refresh_topic_inventory.ts` 산출물 (ADR-026). ADR-012의 10픽 + 오늘의 3선 마크다운. 사람이 직접 읽음.
 
-### data/runtime/feed-cache/<sha1>.json (ADR-013)
+### cache/feed-cache/<sha1>.json (ADR-013)
 
 RSS/Atom feed 디스크 캐시. 6시간 TTL.
 
@@ -1362,7 +1362,7 @@ RSS/Atom feed 디스크 캐시. 6시간 TTL.
 }
 ```
 
-### data/runtime/freeform-study-pack-topic.json / live-coding-generated-topic.json
+### cache/freeform-study-pack-topic.json / live-coding-generated-topic.json
 
 `run_from_request.sh` / `run_morning_live_coding.sh`가 쓰는 임시 토픽 컨테이너. 두 runner 모두 dispatcher 미연결 — deferred.
 
@@ -1488,11 +1488,11 @@ data/prep/
 - stage 산출물: `private/<company>/<position>/interview/prep.md`.
 - git 추적 ✓ — 남기는 경우 과거 히스토리 보존 가치가 있는 파일만 둔다.
 
-### data/runtime/locks/
+### cache/locks/
 
 study-pack 등 중복 실행 방지용 flock 파일. 토픽별 `<task>-<topic>.lock`.
 
-### data/runtime/live-position-postings.md
+### cache/live-position-postings.md
 
 `position-recommender` 수집 단계(`collect_live_postings.ts`)가 추천 분석 전에 갱신하는 active-only 공고 snapshot.
 source adapter가 수집한 후보를 공통 validator가 걸러낸 뒤 markdown으로 렌더링한다.
