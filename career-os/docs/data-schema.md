@@ -56,7 +56,7 @@ runtime 실데이터의 물리 이동은 이 plan 범위 밖이고, 경로 규�
 ## public/question-bank/ (ADR-066, ADR-097)
 
 공개 가능 일반 backend/CS·인성 면접 질문 bank이자 **질문 정본**이다(ADR-097).
-`data/`가 gitignore/private 성격이므로, 공개 가능한 재사용 질문은 이 경로에 둔다.
+`state/`·`applications/`·`reports/`·`cache/`가 gitignore/private 성격이므로, 공개 가능한 재사용 질문은 이 경로에 둔다.
 `interview-asset-writer`, `question-bank-collector`, 드릴 엔진이 모두 이 정본을 소비한다.
 
 기본 하위 디렉터리(= category):
@@ -137,7 +137,7 @@ runtime 실데이터의 물리 이동은 이 plan 범위 밖이고, 경로 규�
 경계:
 
 - 이 경로의 질문을 `public/question-bank/`로 역유출하지 않는다.
-- 회사별 비공개 맥락·지원 전략은 질문 본문이 아니라 지원 패키지/면접 메모(`data/` private 산출물)에서 관리한다.
+- 회사별 비공개 맥락·지원 전략은 질문 본문이 아니라 지원 패키지/면접 메모(`applications/` private 산출물)에서 관리한다.
 
 ## config/
 
@@ -214,7 +214,7 @@ config diet는 plan068에서 reader inventory와 fallback을 확인한 뒤 phase
 ```json
 {
   "active": [
-    { "company": "string", "releaseDate": "YYYY-MM-DD | null", "note": "string" }
+    { "company": "string", "failedAt": "YYYY-MM (선택)", "cooldownUntil": "YYYY-MM-DD | null", "reason": "string" }
   ],
   "notes": "string"
 }
@@ -241,7 +241,7 @@ zod 검증 단일 출처: `career-os/scripts/interview-prep-analyzer/mvp_target_
         "sites": [
           { "key": "string", "url": "string (URL)", "label": "string" }
         ],
-        "source_dir": "string (data/source/ 아래 서브 디렉터리명)",
+        "source_dir": "string (state/source/ 아래 서브 디렉터리명)",
         "report_slug": "string (reports/daily/<date>/<slug>/ 경로명)"
       },
       "final_round": null,
@@ -966,7 +966,7 @@ caller가 `.env`를 ts에 전달하는 방법: `bun --env-file=career-os/.env _s
 
 `track_task.sh`가 실행 중에 쓰는 임시 상태 파일들. 끝나면 정리되지 않고 누적 — 주기적 cleanup 필요 (현재 정책 미정).
 
-## data/
+## state/
 
 ### state/study-progress.json (ADR-002; ADR-105 드릴 상태 분리; ADR-107 config→state 이동)
 

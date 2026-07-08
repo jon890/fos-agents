@@ -37,7 +37,7 @@ career-os/
 │     모든 에이전트용 정식 가이드. 워크스페이스 정책·진입점·외부 의존성.
 ├── docs/                                  ← 5 종합 문서 + 보조 영역
 │   ├── prd.md            제품 범위·MVP·기능 목록
-│   ├── data-schema.md    config/logs/runtime 스키마
+│   ├── data-schema.md    config/state/logs 스키마
 │   ├── flow.md           사용자/데이터 플로우
 │   ├── code-architecture.md  이 문서
 │   ├── adr/              아키텍처 결정 개별 파일 + INDEX (ADR-089 파일럿 전환, ai-nodes ADR-015)

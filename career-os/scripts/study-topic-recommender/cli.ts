@@ -54,7 +54,7 @@ const TASK_ROOT = process.env.CAREER_OS_ROOT
   : resolve(import.meta.dir, "..", "..");
 const CONFIG = join(TASK_ROOT, "config");
 const STATE = join(TASK_ROOT, "state");
-const RUNTIME = join(TASK_ROOT, "data", "runtime");
+const REPORTS = join(TASK_ROOT, "reports");
 const CACHE = join(TASK_ROOT, "cache");
 const FOS_STUDY_ROOT = join(TASK_ROOT, "sources", "fos-study");
 const HISTORY_PATH = join(STATE, "topic-inventory-history.jsonl");
@@ -238,7 +238,7 @@ async function pickTechBlogArticles(
 // ── pipeline ──────────────────────────────────────────────────────────────────
 
 async function runPipeline(): Promise<void> {
-  mkdirSync(RUNTIME, { recursive: true });
+  mkdirSync(REPORTS, { recursive: true });
 
   // fos-study scan (ADR-033 / ADR-069): actual files are the source of truth.
   const fosInventory = scanFosStudyInventory({ root: FOS_STUDY_ROOT });
@@ -453,7 +453,7 @@ async function runPipeline(): Promise<void> {
     }
   );
 
-  writeFileSync(join(RUNTIME, "morning-topic-recommendation.md"), mdContent, "utf-8");
+  writeFileSync(join(REPORTS, "morning-topic-recommendation.md"), mdContent, "utf-8");
 
   // append history
   const discoveredArticleUrls: string[] = [];
@@ -487,7 +487,7 @@ async function runPipeline(): Promise<void> {
     JSON.stringify(
       {
         inventory: join(STATE, "topic-inventory.json"),
-        recommendation: join(RUNTIME, "morning-topic-recommendation.md"),
+        recommendation: join(REPORTS, "morning-topic-recommendation.md"),
         backendCount: backendRecommendations.length,
         techBlogCount: techBlogRecommendations.length,
         aiCount: aiRecommendations.length,
@@ -508,7 +508,7 @@ async function runPipeline(): Promise<void> {
 // ── render-only mode (ADR-033) ────────────────────────────────────────────────
 
 async function renderOnly(): Promise<void> {
-  mkdirSync(RUNTIME, { recursive: true });
+  mkdirSync(REPORTS, { recursive: true });
   const inventoryPath = join(STATE, "topic-inventory.json");
   if (!existsSync(inventoryPath)) {
     console.error("render-only error: topic-inventory.json 없음 — 먼저 일반 refresh를 실행하세요.");
@@ -559,11 +559,11 @@ async function renderOnly(): Promise<void> {
     }
   );
 
-  writeFileSync(join(RUNTIME, "morning-topic-recommendation.md"), mdContent, "utf-8");
+  writeFileSync(join(REPORTS, "morning-topic-recommendation.md"), mdContent, "utf-8");
   console.log(JSON.stringify({
     mode: "render-only",
     inventory: inventoryPath,
-    markdown: join(RUNTIME, "morning-topic-recommendation.md"),
+    markdown: join(REPORTS, "morning-topic-recommendation.md"),
     reviewStatus: review.status,
     updateExistingCount: updateExisting.length,
   }, null, 0));

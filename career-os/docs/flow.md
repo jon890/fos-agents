@@ -60,7 +60,7 @@ career-os의 표준 진입점은 agent skill 직접 호출이다.
 - 실제 제출, 로그인, 업로드, 외부 메시지 전송은 사용자 승인 없이 수행하지 않는다.
 - `sources/fos-study/`에는 회사별 지원 전략을 쓰지 않는다.
   후보자 private 이력과 면접 답변 원문도 쓰지 않는다.
-- `data/`, `private/`, `public/`, `sources/fos-study/` 경계는 [`data-schema.md`](data-schema.md)를 따른다.
+- `state/`, `applications/`, `reports/`, `cache/`, `private/`, `public/`, `sources/fos-study/` 경계는 [`data-schema.md`](data-schema.md)를 따른다.
 - agent가 만든 제출용 문서에 근거 부족이 남으면 바로 통과시키지 않는다.
   `보강 필요`, `선택지`, `권장 행동`으로 바꿔 사용자 또는 다음 실행으로 넘긴다.
 
