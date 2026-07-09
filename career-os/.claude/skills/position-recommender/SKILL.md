@@ -59,8 +59,9 @@ Hermes에서 이 skill을 실행할 때는 `skill_view(name='position-recommende
 8. `config/position-collection.json` — 수집 키워드와 후보자 관심사(`interestProfile`, `reportPreference`) 설정. 특정 회사군/AI·플랫폼 관심사는 skill 본문에 박지 않고 이 config를 따른다.
 9. `config/verified-company-research-targets.json` — 검증된 회사 탐색 대상 목록. 추천 티어 입력이 아니라, active 개별 공고가 부족할 때 다음 수집 범위 결정에만 사용한다.
 10. `career-os/state/company-cooldown.json` — 쿨다운 대상 회사 목록(ADR-109). 추천 시 감점 신호로 사용한다.
-11. (선택) `references/verified-company-discovery.md` — 수집 snapshot이 부족하고 검증 회사군을 다시 파야 할 때만 읽는 보조 탐색 가이드
-12. (선택) 사용자가 자연어로 지정한 채용공고 markdown 파일 경로 (예: `career-os/cache/live-position-postings.md`)
+11. `career-os/config/position-filters.json` — durable 공고 필터 단일 출처(ADR-111). `excludedCompanies`(회사 선호 제외)와 `suppressedPostings`(공고 URL 억제)에 걸린 항목은 강력·도전·보류 어느 티어에도 올리지 않는다.
+12. (선택) `references/verified-company-discovery.md` — 수집 snapshot이 부족하고 검증 회사군을 다시 파야 할 때만 읽는 보조 탐색 가이드
+13. (선택) 사용자가 자연어로 지정한 채용공고 markdown 파일 경로 (예: `career-os/cache/live-position-postings.md`)
 
 ## Workflow
 
@@ -321,7 +322,8 @@ cron 환경에서 표준 JSON 작성이나 대형 파일 작성이 안전 가드
 - `references/position-context-index.md` — 추천 컨텍스트 인덱스
 - `references/position-decision-criteria.md` — 랭킹·제외 기준
 - `references/company-upside-reference.md` — 회사 브랜드·규모 upside 참조
-- `config/verified-company-research-targets.json` — 검증된 탐색 대상 회사군. 회사 tier·선호제외(`preferenceExcluded`) 운영 데이터 단일 출처(ADR-095)
+- `config/verified-company-research-targets.json` — 검증된 탐색 대상 회사군. 회사 tier·키워드 단일 출처(ADR-090, ADR-103)
+- `config/position-filters.json` — durable 공고 필터 단일 출처(ADR-111). `excludedCompanies`(회사 선호 제외, 수집 시점)와 `suppressedPostings`(공고 URL 억제, 추천 시점)
 - `state/company-cooldown.json` — 쿨다운 운영 데이터 단일 출처(ADR-109)
 - `references/verified-company-discovery.md` — snapshot 부족 시만 쓰는 보조 탐색 가이드
 - `scripts/position-recommender/recommendation_schema.ts` — **표준 출력 JSON zod 스키마** (ADR-101). recommendation.json을 채우기 전에 이 파일에서 `PositionItem`(`source`·`closeDate` 포함) 등 필드 정의를 확인한다.

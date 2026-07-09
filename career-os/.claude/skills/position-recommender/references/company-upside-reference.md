@@ -5,7 +5,7 @@
 ## 기본 원칙
 
 - 목표는 단순 이직이 아니라 **NHN 대비 더 나은 회사/도메인/보상/브랜드/트래픽/엔지니어링 경험**으로 이동하는 것이다.
-- 쿨다운 회사는 `state/company-cooldown.json`을 단일 출처로 본다(ADR-109). 선호제외 회사는 `config/verified-company-research-targets.json`의 `preferenceExcluded`를 단일 출처로 본다(ADR-095). 선호제외 회사는 공고 fit이 좋아도 강력 추천/도전 추천에 올리지 않는다.
+- 쿨다운 회사는 `state/company-cooldown.json`을 단일 출처로 본다(ADR-109). 선호제외 회사는 `config/position-filters.json`의 `excludedCompanies`를 단일 출처로 본다(ADR-111). 선호제외 회사는 공고 fit이 좋아도 강력 추천/도전 추천에 올리지 않는다.
 - 작은 회사라도 도메인·역할·성장성이 압도적으로 좋으면 검토할 수 있지만, 기본 우선순위는 검증된 회사군을 먼저 본다.
 - “붙기 쉬움”보다 “이직했을 때 커리어 레버리지가 생기는가”를 우선한다.
 - 정규직 서버/백엔드 포지션을 기본으로 강하게 추천한다. 여기에 서버/플랫폼 개발 전이가 분명한 AI 서비스, AI Transformation(AX), AI Agent, AI 플랫폼 포지션도 추천 대상에 포함한다. 계약직/임시직/프리랜서/순수 비개발 직무는 제외한다.
@@ -129,7 +129,7 @@ JD fit이 맞으면 우선 deep dive한다(config에서 `tier: "A"`인 회사).
 - 소규모 SI/솔루션/스타트업 서버 포지션
 - 백엔드 2년+ 수준의 낮은 seniority 공고
 - NHN 대비 브랜드/보상/도메인 확장이 불명확한 회사
-- `preferenceExcluded`(config) 회사처럼 JD fit은 좋아도 사용자의 회사 선호가 낮은 후보
+- `excludedCompanies`(config `position-filters.json`) 회사처럼 JD fit은 좋아도 사용자의 회사 선호가 낮은 후보
 
 강력 추천하지 않고, 시장 관찰 또는 백업으로 둔다.
 

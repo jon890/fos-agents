@@ -68,7 +68,7 @@
 | ADR-091 | career-os 스크립트 root는 위치 기준으로 해석한다 | Accepted | [ADR-091-script-career-os-root-위치-기준-해석.md](ADR-091-script-career-os-root-위치-기준-해석.md) |
 | ADR-092 | 면접 준비 flow 재편: 핏 진단과 매일 답변 드릴 분리 | Accepted | [ADR-092-면접-준비-flow-재편-진단-드릴-분리.md](ADR-092-면접-준비-flow-재편-진단-드릴-분리.md) |
 | ADR-093 | skill 호출 계약은 에이전트 비종속으로 둔다 | Accepted | [ADR-093-skill-호출-계약은-에이전트-비종속으로-둔다.md](ADR-093-skill-호출-계약은-에이전트-비종속으로-둔다.md) |
-| ADR-095 | 회사 업사이드 운영 데이터를 config JSON 단일 출처로 흡수한다 | Accepted; cooldown 흡수는 [[ADR-109]]로 superseded | [ADR-095-회사-업사이드-운영데이터-config-흡수.md](ADR-095-회사-업사이드-운영데이터-config-흡수.md) |
+| ADR-095 | 회사 업사이드 운영 데이터를 config JSON 단일 출처로 흡수한다 | Accepted; cooldown 흡수는 [[ADR-109]]로, preferenceExcluded 위치는 [[ADR-111]]로 superseded | [ADR-095-회사-업사이드-운영데이터-config-흡수.md](ADR-095-회사-업사이드-운영데이터-config-흡수.md) |
 | ADR-096 | job-fit-analyzer를 의사결정·전략 중심으로 재정의한다 | Accepted | [ADR-096-job-fit-analyzer-의사결정-전략-재정의.md](ADR-096-job-fit-analyzer-의사결정-전략-재정의.md) |
 | ADR-097 | question-bank 정본을 public으로 1원화하고 개인 질문은 private에 둔다 | Accepted | [ADR-097-question-bank-정본-public으로-1원화하고-개인-질문은-private에-둔다.md](ADR-097-question-bank-정본-public으로-1원화하고-개인-질문은-private에-둔다.md) |
 | ADR-098 | data-schema는 현재 스키마만 담고 폐기 항목은 ADR로 위임한다 | Accepted | [ADR-098-data-schema는-현재-스키마만-담고-폐기-항목은-adr로-위임한다.md](ADR-098-data-schema는-현재-스키마만-담고-폐기-항목은-adr로-위임한다.md) |
@@ -84,4 +84,5 @@
 | ADR-108 | ledger를 positions-queue로 이름 변경 (코드 심볼·파일명 포함) | Accepted | [ADR-108-ledger를-positions-queue로-이름-변경-코드-포함.md](ADR-108-ledger를-positions-queue로-이름-변경-코드-포함.md) |
 | ADR-109 | 회사 cooldown을 state/company-cooldown.json으로 분리 (ADR-095 cooldown 부분 supersede) | Accepted | [ADR-109-회사-cooldown을-state로-분리.md](ADR-109-회사-cooldown을-state로-분리.md) |
 | ADR-110 | frontdoor-queue 폐기 + "승격"→"등록" (ADR-045 supersede) | Accepted | [ADR-110-frontdoor-queue-폐기-승격을-등록으로.md](ADR-110-frontdoor-queue-폐기-승격을-등록으로.md) |
+| ADR-111 | durable 공고 필터를 config/position-filters.json으로 통합 (ADR-095 preferenceExcluded 위치 supersede) | Accepted | [ADR-111-공고-필터-config-통합.md](ADR-111-공고-필터-config-통합.md) |
 | ADR-112 | 죽은 ADR은 archive 없이 삭제하고 provenance는 두 층으로 보존한다 | Accepted | [ADR-112-죽은-adr은-archive-없이-삭제하고-provenance는-두-층으로-보존한다.md](ADR-112-죽은-adr은-archive-없이-삭제하고-provenance는-두-층으로-보존한다.md) |

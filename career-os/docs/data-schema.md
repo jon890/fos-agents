@@ -159,6 +159,7 @@ ADR-107로 `state/`로 이동한 항목(트리거가 시스템 실행·이벤트
 - 드릴 간격 반복 상태: `state/drill-progress.json` (ADR-105)
 - study-pack 후보 캐시: `state/study-pack-candidates.json`
 - 회사 cooldown: `state/company-cooldown.json` (ADR-109 — verified-company에서 분리)
+- durable 공고 필터(회사 선호 제외 + 공고 URL 억제): `config/position-filters.json` (ADR-111)
 - 검증 회사군과 회사 키워드 단일 출처: `config/verified-company-research-targets.json` (ADR-090, references에서 이동; ADR-103 회사 키워드 흡수)
 - position 수집 설정(회사 비종속 role 키워드): `config/position-collection.json` (ADR-099, ADR-103) — `{ wanted: { jobGroupId, targetKeywords[] } }`. targetKeywords는 role 키워드만, 회사 키워드는 verified가 소유
 - 후보자 구조화 사실: `config/candidate-config.json` (ADR-099) — `{ experienceYears, ... }`. 코드가 읽는 사실 정본, profile.md는 prose 서술(거울 구조)
@@ -193,11 +194,23 @@ config diet(plan068, 완료)로 정리된 상태:
 | `priorityCompanies[].preferredDomains`, `notes` | LLM | 회사 업사이드 판단 근거 |
 | `priorityCompanies[].techBlogs` | LLM | 기술 블로그 URL 목록. `ref:<key>` 값은 `config/external-reading-sources.json`의 `techBlog.items[].key`를 가리키고, URL 정본은 그 파일이다. 매칭 항목이 없으면 URL을 그대로 둔다 |
 | `secondaryCompanies[]` | 코드+LLM | 저-tier 회사 키워드 목록(ADR-103). priorityCompanies에 없던 회사 키워드를 담아 수집 커버리지 유지. `company`·`wantedKeywords` 중심 |
-| `preferenceExcluded.companies[]` | LLM | JD fit이 높아도 추천 티어에서 제외하는 선호 제외 회사(ADR-095) |
 
 `cooldown`은 ADR-109로 `state/company-cooldown.json`으로 분리했다(지원 결과 이벤트로 갱신 = state). 본 파일에는 더 두지 않는다.
+`preferenceExcluded`는 ADR-111로 `config/position-filters.json`의 `excludedCompanies`로 이관했다(durable 공고 필터 통합). 본 파일에는 더 두지 않는다.
 코드가 JSON을 읽어 adapter를 라우팅하는 wire-up은 후속 plan에서 한다. 본 스키마는 양방향 소비를 전제로 설계한다.
-선호제외는 references 산문에서 본 파일로 흡수했다(ADR-095). references md는 방법론만 남기고 회사 데이터는 본 파일을 역참조한다.
+
+### config/position-filters.json (durable 공고 필터 단일 출처, ADR-111)
+
+position-recommender가 참조하는 사람 큐레이션 제외의 단일 출처. 소비 단계가 다른 두 필드를 담는다.
+
+| 필드 | 소비자 | 설명 |
+|---|---|---|
+| `excludedCompanies[]` | 코드(수집) | 회사 단위 선호 제외. `collect_live_postings.ts`가 수집 시점에 주입해 snapshot에서 제외한다. preferenceExcluded 이관(ADR-095→ADR-111) |
+| `suppressedPostings[]` | 코드(추천)+LLM | 공고 URL 단위 억제. `render_candidate_preview.ts`가 전체 공고 HTML에서 숨기고, 추천 티어 제외는 SKILL 지시에 따라 에이전트가 수행한다. `url`·`company`·`title`·`reason` |
+
+`suppressedPostings`는 URL 단위라 같은 회사가 다른 URL로 새 공고를 올리면 다시 노출된다.
+역할 패턴(seniority·저수준 네트워크 등)의 일반 제외는 `references/position-decision-criteria.md` 방법론 산문이 담당한다.
+시한부 cooldown은 여기 두지 않는다 — `state/company-cooldown.json`이 정본이다(ADR-109·ADR-107).
 
 ### state/company-cooldown.json (ADR-109 신규)
 
