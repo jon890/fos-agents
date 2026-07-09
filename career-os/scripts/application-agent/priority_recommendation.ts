@@ -191,7 +191,6 @@ function buildUpdate(
 }
 
 function deriveActionStage(candidate: CandidateInput): ActionStage {
-  if (candidate.status === 'rejected') return 'hold';
   if (candidate.status === 'closed' || candidate.sourceFreshness === 'stale') {
     return 'low-priority';
   }
@@ -209,7 +208,6 @@ function deriveActionStage(candidate: CandidateInput): ActionStage {
 function deriveRiskFlags(candidate: CandidateInput, livePostingsText: string): string[] {
   const flags = new Set(candidate.riskFlags);
   if (candidate.sourceFreshness === 'stale') flags.add('source_stale');
-  if (candidate.status === 'rejected') flags.add('user_rejected_or_deprioritized');
   if (candidate.status === 'closed') flags.add('record_closed');
   if (!livePostingsText.includes(candidate.url)) flags.add('missing_from_latest_live_snapshot');
   if (/Kubernetes|k8s|K8s/.test(candidate.role) && !candidate.decisionReason?.includes('Kubernetes')) {
@@ -294,7 +292,6 @@ function deriveGaps(candidate: CandidateInput, sourceText: string): string[] {
   if (/AI|LLM|RAG|Agent|AX/i.test(text)) {
     gaps.add('AI agent 실무 전환 서사 정리');
   }
-  if (candidate.status === 'rejected') gaps.add('사용자 보류 사유 확인');
   return [...gaps];
 }
 
