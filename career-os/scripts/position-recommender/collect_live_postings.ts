@@ -40,17 +40,17 @@ const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 
 /**
  * 선호제외 회사 목록을 config에서 읽어 수집 필터에 주입한다.
- * 단일 출처는 config/verified-company-research-targets.json 의 preferenceExcluded.companies (ADR-095).
+ * 단일 출처는 config/position-filters.json 의 excludedCompanies (ADR-111).
  * config를 못 읽으면 회사 제외 없이 진행한다(수집 자체를 막지 않는다).
  */
 function loadExcludedCompanies(): void {
   try {
-    const path = resolve(REPO_ROOT, "career-os/config/verified-company-research-targets.json");
+    const path = resolve(REPO_ROOT, "career-os/config/position-filters.json");
     const config = JSON.parse(readFileSync(path, "utf8"));
-    const companies: string[] = config?.preferenceExcluded?.companies ?? [];
+    const companies: string[] = config?.excludedCompanies ?? [];
     setExcludedCompanies(companies);
   } catch (e) {
-    console.error(`WARN preferenceExcluded config load failed, proceeding without company exclusion: ${e}`);
+    console.error(`WARN position-filters config load failed, proceeding without company exclusion: ${e}`);
   }
 }
 
