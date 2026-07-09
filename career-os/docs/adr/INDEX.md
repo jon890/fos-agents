@@ -110,3 +110,4 @@
 | ADR-108 | ledger를 positions-queue로 이름 변경 (코드 심볼·파일명 포함) | Accepted | [ADR-108-ledger를-positions-queue로-이름-변경-코드-포함.md](ADR-108-ledger를-positions-queue로-이름-변경-코드-포함.md) |
 | ADR-109 | 회사 cooldown을 state/company-cooldown.json으로 분리 (ADR-095 cooldown 부분 supersede) | Accepted | [ADR-109-회사-cooldown을-state로-분리.md](ADR-109-회사-cooldown을-state로-분리.md) |
 | ADR-110 | frontdoor-queue 폐기 + "승격"→"등록" (ADR-045 supersede) | Accepted | [ADR-110-frontdoor-queue-폐기-승격을-등록으로.md](ADR-110-frontdoor-queue-폐기-승격을-등록으로.md) |
+| ADR-111 | 죽은 ADR은 archive 없이 삭제하고 provenance는 두 층으로 보존한다 | Accepted | [ADR-111-죽은-adr은-archive-없이-삭제하고-provenance는-두-층으로-보존한다.md](ADR-111-죽은-adr은-archive-없이-삭제하고-provenance는-두-층으로-보존한다.md) |
