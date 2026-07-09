@@ -174,17 +174,11 @@ ADR-107로 `state/`로 이동한 항목(트리거가 시스템 실행·이벤트
 - 대량 reservoir JSON은 정본이 아니라 migration 대상이다.
   필요한 항목만 curated override나 seed로 축소한다.
 
-정리 후보:
+config diet(plan068, 완료)로 정리된 상태:
 
-- `first-round-drill-core-files.json` — `interview/prep.md` 단일 정본 이후 active reader가 없으면 제거한다.
-- `study-preferences.json` — `mvp-target`과 반복되는 current target은 제거하고 추천 철학/제약만 남긴다.
-- `study-pack-topics.json`, `study-pack-candidates.json` — 전체 topic DB 역할을 중단하고 override/seed만 남긴다.
-- `topic-profiles.json` — 전역 config가 아니라 `study-pack-writer` reference나 작은 override로 이관한다.
-- `question-bank-topics.json` — `public/question-bank`와 역할을 분리하고, 필요하면 interview-asset topic override로 rename한다.
-- `live-coding-seed-pool.json`, `live-coding-seed-candidates.json` — active 추천 흐름에서 실제 사용 여부를 확인한 뒤 유지 또는 흡수한다.
-
-config diet는 plan068에서 reader inventory와 fallback을 확인한 뒤 phase 단위로 진행한다.
-삭제는 reader 제거와 검증이 끝난 뒤 수행한다.
+- `first-round-drill-core-files.json` — `interview/prep.md` 단일 정본 이후 제거됨.
+- `study-pack-candidates.json` — `state/study-pack-candidates.json`으로 이동됨(ADR-107).
+- `study-preferences.json`, `study-pack-topics.json`, `topic-profiles.json`, `question-bank-topics.json`, `live-coding-seed-pool.json`, `live-coding-seed-candidates.json` — 전체 목록 역할을 중단하고 override/seed 중심으로 축소되어 남아 있다(각 파일 섹션 참조).
 
 ### config/verified-company-research-targets.json (검증 회사군 단일 출처, ADR-090)
 
@@ -222,7 +216,7 @@ config diet는 plan068에서 reader inventory와 fallback을 확인한 뒤 phase
 
 ### state/mvp-target.json (현재 타깃 단일 출처. ADR-107 config→state 이동)
 
-zod 검증 단일 출처: `career-os/scripts/interview-prep-analyzer/mvp_target_schema.ts` → `parseMvpTarget(path)` (ADR-048).
+전용 zod 검증 스크립트는 없다(#69에서 legacy interview-prep-analyzer 스크립트 삭제). 각 skill이 파일을 직접 읽는다.
 
 ```json
 {
@@ -351,26 +345,6 @@ ADR-069 이후 `current_target`처럼 `state/mvp-target.json`의 현재 타깃�
 ```
 
 보조 트랙은 study-pack 자동 생성이나 fos-study 발행을 의미하지 않는다. cron이나 agent prompt가 이 값을 읽어 별도 report/runtime 경로에 추천만 생성한다.
-
-### config/baseline-core-files.txt
-
-> **plan002 이후**: `config/baseline-core-files.json`으로 전환. 단일 출처는 "통합 config 스키마 (plan002 이후)" 섹션 참조.
-
-### config/study-pack-topics.json (primary curated)
-
-> **plan002 이후**: `config/topics.json`의 `study-pack` namespace로 통합. 단일 출처는 "통합 config 스키마 (plan002 이후)" 섹션 참조.
-
-### config/study-topic-candidates.json (reservoir)
-
-> **plan002 이후**: `config/topics.json`의 `study-pack-candidates` namespace로 통합. 단일 출처는 "통합 config 스키마 (plan002 이후)" 섹션 참조.
-
-### config/experience-question-bank-topics.json
-
-> **plan002 이후**: `config/topics.json`의 `question-bank` namespace로 통합. 단일 출처는 "통합 config 스키마 (plan002 이후)" 섹션 참조.
-
-### config/tech-blog-sources.json / ai-topic-sources.json / geek-news-sources.json
-
-> **plan002 이후**: `config/external-reading-sources.json`의 `techBlog` / `ai` / `geek` category로 통합. 단일 출처는 "통합 config 스키마 (plan002 이후)" 섹션 참조.
 
 ## applications/ (implemented base — plan029, plan031, plan038)
 
@@ -777,29 +751,7 @@ ADR-069 이후 이 파일은 전체 학습 자산 DB가 아니라 migration 대�
 }
 ```
 
-### state/study-pack-candidates.json (plan017 신규 — study-pack 후보 reservoir. ADR-107 config→state 이동)
-
-`config/topics.json`의 `study-pack-candidates` namespace 분리본 (ADR-027). study-topic-recommender가 Read (replenish 로직에서 참조).
-
-ADR-069 이후 대량 후보 reservoir 역할은 축소 대상이다.
-추천 후보는 fos-study inventory와 최근 학습 기록에서 파생하고, 이 파일은 필요한 seed/override만 남기는 방향으로 정리한다.
-
-```json
-{
-  "_meta": {
-    "purpose": "study-pack 후보 reservoir — study-topic-recommender replenish 전용",
-    "schema_version": "1"
-  },
-  "study-pack-candidates": {
-    "<topic-key>": {
-      "domain": "string",
-      "outputPath": "string",
-      "title": "string",
-      "promptAppend": "string (선택)"
-    }
-  }
-}
-```
+현행 스키마는 "state/study-pack-candidates.json (ADR-070 이후 active 후보 캐시. ADR-107 config→state 이동)" 섹션을 단일 출처로 참조한다.
 
 ### config/question-bank-topics.json (plan017 신규 — question-bank + master namespace)
 

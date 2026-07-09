@@ -42,7 +42,7 @@ career-os/
 │   ├── code-architecture.md  이 문서
 │   ├── adr/              아키텍처 결정 개별 파일 + INDEX (ADR-089 파일럿 전환, ai-nodes ADR-015)
 │   │   ├── INDEX.md      번호·제목·Status·파일 조망 표
-│   │   └── ADR-NNN-slug.md  개별 ADR 파일 (88개)
+│   │   └── ADR-NNN-slug.md  개별 ADR 파일 (개수는 INDEX.md 참조 — 여기 숫자 고정 안 함)
 │   ├── korean-expression-guide.md  career-os 산출물 한국어 표현 가이드
 │   ├── hand-off/         외부 위임·인수인계 일회성 노트
 │   └── prep/             회사·이벤트별 운영 자산. 이벤트 종료 후 archive
@@ -144,8 +144,6 @@ career-os/
 │   │   └── evaluate_package.ts         application-package/review 문서를 제출 전 안전 기준으로 점검
 │   ├── interview-prep/
 │   │   └── stage_review_html_for_discord.ts  면접 단계 리뷰 HTML 검증 보조
-│   ├── interview-prep-analyzer/
-│   │   └── mvp_target_schema.ts        legacy 면접 단계 설정 zod 검증 보조
 │   ├── interview-drill/                (plan086 신규 — 공용 드릴 엔진, ADR-019 scripts 분리 원칙 준수)
 │   │   └── drill-engine.ts             질문 선정(간격 반복) + 채점 + 기록 + 약점 환류 + study-pack 위임
 │                                       질문 정본은 public/question-bank(일반) + private/question-bank(개인), ADR-097
@@ -236,7 +234,6 @@ career-os 워크스페이스 바깥, ai-nodes 루트의 `_shared/` 에 모든 �
 | `_shared/bin/track_task.sh` | runner 래퍼. JSONL 로그 + openclaw status diff. | 0 (apartment 사용 중) |
 | `_shared/lib/extract_claude_result.ts` | claude JSON envelope 파싱. ai-nodes plan001 통합. | 사용 중 (career-os + apartment + stock-investment 공용) |
 | `_shared/lib/notify_discord.ts` | Bun. `openclaw message send --channel discord` subprocess. `DISCORD_CHANNEL_ID` env 필수. `--media <path>`, `--presentation <json>` 옵션 지원 (ADR-021, ADR-073). | 사용 중 |
-| `career-os/scripts/interview-prep-analyzer/mvp_target_schema.ts` | Bun/zod. `state/mvp-target.json` 면접 단계 설정 검증. `parseMvpTarget()` (ADR-048). | 사용 중 (career-os 한정) |
 | `_shared/bin/update_artifacts.py` | `data/generated-artifacts.json` upsert. | 0 (ADR-033 / plan025 이후 career-os 사용 0 — 파일 자체는 별도 plan에서 폐기 검토) |
 | `zod` (npm) | TypeScript runtime 스키마 검증. `package.json`에 의존성. | 사용 중 |
 | `_shared/types/` | TS 공통 타입 디렉터리. ClaudeUsage / TaskRunEntry / NotificationPayload 등. | 간접 사용 |
