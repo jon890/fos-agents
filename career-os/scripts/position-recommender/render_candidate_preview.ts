@@ -3,6 +3,7 @@
 // 전체 report.html은 render_recommendation.ts가 담당하고, 이 파일은 공고 링크 중심 HTML 전용이다.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { RecommendationRun, type RecommendationRunType, type PositionItemType } from "./recommendation_schema.ts";
 
 type PreviewTier = "강력 추천" | "도전 추천" | "보류·주의" | "전체 후보";
@@ -75,17 +76,40 @@ function recommendationOpinionByUrl(run: RecommendationRunType): Map<string, str
   return new Map(entries.map(([url, opinion]) => [url, summarizeOpinion(opinion)]));
 }
 
+/**
+ * config/position-filters.json 의 suppressedPostings URL 집합을 읽는다 (ADR-111).
+ * 추천 시점 필터라 수집은 그대로 두고 전체 공고 HTML에서만 해당 URL을 숨긴다.
+ * config를 못 읽으면 억제 없이 진행한다(HTML 생성 자체를 막지 않는다).
+ */
+let suppressedUrlCache: Set<string> | null = null;
+function loadSuppressedUrls(): Set<string> {
+  if (suppressedUrlCache) return suppressedUrlCache;
+  const set = new Set<string>();
+  try {
+    const path = resolve(dirname(fileURLToPath(import.meta.url)), "../../config/position-filters.json");
+    const config = JSON.parse(readFileSync(path, "utf8"));
+    for (const item of config?.suppressedPostings ?? []) {
+      if (item?.url) set.add(String(item.url));
+    }
+  } catch (e) {
+    console.error(`WARN position-filters config load failed, proceeding without posting suppression: ${e}`);
+  }
+  suppressedUrlCache = set;
+  return set;
+}
+
 function parseLivePostingRows(markdown: string, run: RecommendationRunType): PreviewRow[] {
   const rows: PreviewRow[] = [];
   let current: LivePostingCandidate | null = null;
   const opinionByUrl = recommendationOpinionByUrl(run);
+  const suppressedUrls = loadSuppressedUrls();
 
   function flush(): void {
     if (!current) return;
     const status = (current.fields.posting_status ?? "").toLowerCase();
     const linkType = (current.fields.link_type ?? "").toLowerCase();
     const url = current.fields.url ?? "";
-    if ((status === "active" || status === "open") && linkType === "direct_posting" && url && !isExcludedPreviewPosting(current)) {
+    if ((status === "active" || status === "open") && linkType === "direct_posting" && url && !suppressedUrls.has(url) && !isExcludedPreviewPosting(current)) {
       const skills = splitCsv(current.fields.skills ?? "").slice(0, 8);
       const why = opinionByUrl.get(url) ?? buildFallbackOpinion(current);
       rows.push({

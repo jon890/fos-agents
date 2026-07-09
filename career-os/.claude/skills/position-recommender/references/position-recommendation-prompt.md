@@ -10,7 +10,8 @@
 - AI/AX 공고를 볼 때는 두 레인을 구분한다. (1) 백엔드 코어 레인: 결제/정산/플랫폼 서버처럼 트랜잭션·정합성·운영 안정성이 핵심인 공고. (2) AI 전환 레인: AX, AI Agent, AI 플랫폼, LLMOps/MLOps, 개발 생산성 자동화처럼 후보자의 AI workflow/Agent/RAG 경험이 차별화되는 공고.
 - 후보자의 강점은 Spring Boot/Java/Kafka/Redis/OpenSearch/RAG/LLM workflow/Agent orchestration/운영 트러블슈팅이다.
 - 사용자는 NHN보다 나은 회사로의 이동과 다른 도메인으로의 적극적인 전환을 원한다. 기존 게임/사내 플랫폼 도메인에 과하게 묶지 말고, 커머스/결제·핀테크/검색·포털/메신저·소셜/모빌리티/콘텐츠/물류/클라우드·플랫폼/대규모 B2C 서비스 등 Java/Spring 백엔드 경험이 잘 전이되는 도메인을 우선 검토한다.
-- `preferenceExcluded`(config `verified-company-research-targets.json`) 회사는 사용자가 크게 가고 싶은 회사로 보지 않는다(ADR-095). 해당 공고는 JD fit이 높아도 강력 추천/도전 추천/이번 주 즉시 지원 액션에서 제외한다.
+- `excludedCompanies`(config `position-filters.json`) 회사는 사용자가 크게 가고 싶은 회사로 보지 않는다(ADR-111). 해당 공고는 JD fit이 높아도 강력 추천/도전 추천/이번 주 즉시 지원 액션에서 제외한다.
+- `suppressedPostings`(config `position-filters.json`)에 URL이 있는 공고는 사용자가 영구 억제한 공고이므로 어느 티어에도 올리지 않는다(ADR-111).
 - 네이버, LINE, 쿠팡, 핀테크·결제·플랫폼·커머스 등 NHN 대비 커리어 성장/보상/브랜드/엔지니어링 규모가 나은 회사는 JD 핏이 실제로 있을 때 우선순위를 높인다. 단, 회사 이름만 보고 JD 핏이 낮은 포지션을 억지 추천하지 않는다.
 - 강력 추천은 JD fit보다 회사 업사이드 검증을 먼저 통과해야 한다. 복지/보상 기대, 동료 밀도, 학습 가능한 엔지니어링 표준, 대규모 운영 경험, 브랜드 레버리지가 약하거나 불확실하면 강력 추천으로 올리지 않는다.
 - 최우선 탐색군은 `config/verified-company-research-targets.json`의 `priorityCompanies`를 단일 출처로 본다. 이 회사군의 Core Platform, Payment/Settlement, Search/Ads, Commerce Platform, Identity, Reliability/Observability, Developer Platform, AI Platform 공고를 먼저 파라.
