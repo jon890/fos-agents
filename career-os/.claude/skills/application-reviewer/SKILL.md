@@ -233,7 +233,7 @@ review.md 작성 후 아래 항목 검증. 실패 시 해당 섹션 재작성:
 
 ## References
 
-- `career-os/docs/adr/INDEX.md` — ADR-045 (지원 후보 positions-queue 분리, 옛 ledger), ADR-038 (artifact 검증 후 상태 전이) 설계 근거
+- `career-os/docs/adr/INDEX.md` — ADR-110 (frontdoor-queue 폐기, 지원 후보 positions-queue 직행 등록으로 단순화), ADR-038 (artifact 검증 후 상태 전이) 설계 근거
 - `career-os/docs/data-schema.md` — positions-queue.jsonl 스키마
 - `career-os/state/positions-queue.jsonl` — 지원 이력 positions-queue
 - `career-os/config/candidate-profile.md` — 후보자 프로필 core (사실·라벨)

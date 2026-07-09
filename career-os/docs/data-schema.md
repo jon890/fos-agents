@@ -1267,7 +1267,7 @@ daily study Discord 버튼 callback을 topic 추천 결과와 연결하는 runti
 - `career.study-pack.skip:*`는 그날 추천을 넘긴 기록이다. topic 영구 제외가 아니다.
 - 버튼 유효시간은 OpenClaw Discord `agentComponents.ttlMs` 설정을 따른다.
 
-### state/topic-replenishment.json (ADR-011, 옛 data/runtime/, ADR-107 경로 규약)
+### state/topic-replenishment.json (study-topic 자동 보충 결정, 옛 data/runtime/, ADR-107 경로 규약)
 
 replenish 실행 결과 요약. claudeInvoked 여부, 보충된 후보 수 등.
 

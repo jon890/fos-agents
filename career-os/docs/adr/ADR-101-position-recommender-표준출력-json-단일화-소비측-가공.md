@@ -38,7 +38,7 @@ position-recommender의 산출물 계약을 **표준 출력 JSON(`recommendation
 - LLM 채팅 응답에 산문 요약과 JSON을 섞어 반환 — cron의 Discord 자동 전달과 충돌하고, 순수 JSON 보장이 불안정하다.
 - backend가 URL 도메인으로 `source`를 추측 — 공유 ATS 도메인에서 부정확하고 adapter 변경 시 drift한다.
 
-본 결정은 [[ADR-075]](daily runner ts 정본·sh shim)를 폐기한다.
+본 결정은 ADR-075(daily runner ts 정본·sh shim)를 폐기한다.
 [[ADR-036]]의 freshness 가드 중 reportDate 검증 책임은 스킬 self-check와 소비측 검증으로 이전한다.
 
 ### 결과

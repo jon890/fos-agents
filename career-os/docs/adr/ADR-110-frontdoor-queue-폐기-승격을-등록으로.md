@@ -2,11 +2,11 @@
 
 - Status: Accepted
 - Date: 2026-07-08
-- Supersedes: [[ADR-045]]
+- Supersedes: ADR-045
 
 ### 맥락
 
-[[ADR-045]]는 추천 후보 순위와 사용자 선택 대기 상태를 별도 frontdoor queue에 두고, 사용자가 준비 시작을 선택한 후보만 ledger로 승격하는 대기열 단계를 세웠다.
+ADR-045는 추천 후보 순위와 사용자 선택 대기 상태를 별도 frontdoor queue에 두고, 사용자가 준비 시작을 선택한 후보만 ledger로 승격하는 대기열 단계를 세웠다.
 이 대기열은 fos-career 웹 대시보드([[ADR-102]]로 폐기)가 읽는 선택 전 staging을 전제로 했다.
 
 대시보드가 사라진 지금은 대기열 단계가 흐름을 늘리기만 한다.
@@ -23,8 +23,8 @@ frontdoor-queue를 폐기하고 대기열 단계를 없앤다.
 - 용어 교체 — 지원 후보를 positions-queue에 넣는 동작의 "승격(promote)"을 "등록"으로 바꾼다. 코드 식별자·주석·docs 산문 전반에 적용한다.
 - 데이터 파일 — `data/runtime/application-agent/frontdoor-queue.jsonl`은 물리 이동 대신 폐기한다(runtime untracked, ADR-107 스코프).
 
-[[ADR-045]] 전체를 본 ADR로 대체한다.
-[[ADR-045]] 본문은 동결하고 수정하지 않는다.
+ADR-045 전체를 본 ADR로 대체한다.
+ADR-045 본문은 동결하고 수정하지 않는다.
 
 용어 교체 범위 경계:
 
