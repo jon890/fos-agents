@@ -18,7 +18,7 @@ job-fit-analyzer는 [[ADR-092]]로 daily 모드를 제거하고 역할 단위 �
 
 job-fit-analyzer를 **지원 의사결정 + 면접 전략 + 커리어 패스 정합** 중심으로 재정의한다.
 
-- 산출물 정본을 구조화 JSON `JobFitRun`(schemaVersion 1)으로 올린다([[ADR-094]] 패턴 재사용).
+- 산출물 정본을 구조화 JSON `JobFitRun`(schemaVersion 1)으로 올린다([[ADR-101]] 패턴 재사용).
   `verdict`(go/no-go)·`careerPath`·`interviewStrategy`를 1급 필드로 두고, `reinforcement`(학습 갭)는 부차 필드로 내린다.
 - **자연어 타깃 override**: `/job-fit-analyzer [역할]` 인자로 타깃을 받고, 없으면 `mvp-target.json` primary fallback.
 - **다음 스킬 연결**을 `nextActions{skill,input,why}`로 구조화한다. 최우선 갭은 study-pack 생성을 첫 액션으로 제안.
@@ -40,4 +40,4 @@ job-fit-analyzer를 **지원 의사결정 + 면접 전략 + 커리어 패스 정
 - 스키마 `scripts/job-fit-analyzer/jobfit_schema.ts`, 렌더러 `render_job_fit.ts`([[ADR-019]] scripts 분리 컨벤션).
 - 구현은 plan088 phase로 옮긴다(스키마 → 렌더러 → SKILL 재작성 → 통합 검증).
 - 데이터 스키마·흐름·코드 구조·기능 표는 `data-schema.md`·`flow.md`·`code-architecture.md`·`prd.md`에 반영한다.
-- [[ADR-092]](daily 제거·역할 단일모드) 위에 서고, [[ADR-094]](JSON 정본 패턴)를 재사용한다.
+- [[ADR-092]](daily 제거·역할 단일모드) 위에 서고, [[ADR-101]](JSON 정본 패턴)를 재사용한다.

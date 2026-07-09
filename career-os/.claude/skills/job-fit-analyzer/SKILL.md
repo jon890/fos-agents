@@ -198,7 +198,7 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 
 - **ADR-096 (의사결정·전략 재정의)**: 산출물 정본을 구조화 JSON `JobFitRun`으로 올리고, `verdict`·`careerPath`·`interviewStrategy`를 1급 필드로 둔다. `reinforcement`(학습 갭)는 부차로 내려, "공부 목록 생성기"에서 "지원 판단 + 면접 전략 + 커리어 정합" 진단으로 가치를 옮긴다.
 - **자연어 타깃 override (ADR-096)**: `/job-fit-analyzer [역할]` 인자로 타깃을 받고, 없으면 mvp-target primary fallback. mvp-target 고정을 풀어 다른 직무 탐색 진단을 우회 표기 없이 수행한다.
-- **JSON 정본 + 렌더러 파생 (ADR-096, ADR-094 패턴 재사용)**: `render_job_fit.ts`가 정본에서 md를 파생하고, self-check를 zod 검증으로 대체. 자체 markdown 파서를 폐기해 출력이 항상 일관되고, 진단 갭을 다음 스킬 입력으로 재사용하기 쉽다.
+- **JSON 정본 + 렌더러 파생 (ADR-096, ADR-101 패턴 재사용)**: `render_job_fit.ts`가 정본에서 md를 파생하고, self-check를 zod 검증으로 대체. 자체 markdown 파서를 폐기해 출력이 항상 일관되고, 진단 갭을 다음 스킬 입력으로 재사용하기 쉽다.
 - **nextActions 구조화 (ADR-096)**: 다음 스킬 라우팅을 `nextActions{skill,input,why}`로 구조화. 첫 액션은 `verdict`에 따라 분기한다 — "지원 권장/조건부"면 study-pack 보강, "보류"면 재탐색(position-recommender / 다른 역할 job-fit). 핏이 낮은데도 갭 보강 공부로만 모는 것을 막아, 진단이 의사결정 산출물임을 일관되게 유지한다.
 - **changeSince (ADR-096)**: 역할 슬러그 파일명으로 같은 역할 지난 진단 대비 변화를 보여줘 반복 진단 가치를 만든다.
 - **경계 유지 (ADR-096)**: 회사 최근 동향은 범위 밖으로 두고 position-recommender(회사 평가)와 경계를 유지한다.

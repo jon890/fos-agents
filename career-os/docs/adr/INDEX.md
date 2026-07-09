@@ -40,10 +40,8 @@
 | ADR-040 | application-flow-agent native skill 실행은 명시 옵션에서만 수행 | Accepted | [ADR-040-application-flow-agent-native-skill-실행은-명시-옵션에서만-수행.md](ADR-040-application-flow-agent-native-skill-실행은-명시-옵션에서만-수행.md) |
 | ADR-041 | application-flow-agent 실행 진행 상황은 명시 옵션으로 Discord에 알린다 | Accepted | [ADR-041-application-flow-agent-실행-진행-상황은-명시-옵션으로-discord에-알린다.md](ADR-041-application-flow-agent-실행-진행-상황은-명시-옵션으로-discord에-알린다.md) |
 | ADR-042 | reviewer pass 판정은 사용자 검토 대기 상태로 전환한다 | Accepted | [ADR-042-reviewer-pass-판정은-사용자-검토-대기-상태로-전환한다.md](ADR-042-reviewer-pass-판정은-사용자-검토-대기-상태로-전환한다.md) |
-| ADR-043 | position-recommender 공고 수집은 source adapter + active validator로 분리 | Accepted | [ADR-043-position-recommender-공고-수집은-source-adapter-active-validator로-분리.md](ADR-043-position-recommender-공고-수집은-source-adapter-active-validator로-분리.md) |
 | ADR-044 | 큰 변경은 planning → delegated implementation → main-session verification으로 운영 | Accepted | [ADR-044-큰-변경은-planning-delegated-implementation-main-session-verification으로-운영.md](ADR-044-큰-변경은-planning-delegated-implementation-main-session-verification으로-운영.md) |
-| ADR-047 | position-recommender collector adapter를 모듈 경계로 승격한다 | Accepted | [ADR-047-position-recommender-collector-adapter를-모듈-경계로-승격한다.md](ADR-047-position-recommender-collector-adapter를-모듈-경계로-승격한다.md) |
-| ADR-051 | target source coverage는 adapter-owned entrypoint로 확장한다 | Accepted | [ADR-051-target-source-coverage는-adapter-owned-entrypoint로-확장한다.md](ADR-051-target-source-coverage는-adapter-owned-entrypoint로-확장한다.md) |
+| ADR-047 | position-recommender collector를 source adapter 모듈 경계로 승격·확장한다 | Accepted | [ADR-047-position-recommender-collector-adapter를-모듈-경계로-승격한다.md](ADR-047-position-recommender-collector-adapter를-모듈-경계로-승격한다.md) |
 | ADR-052 | 지원 우선순위는 회사 순위가 아니라 action stage로 관리한다 | Accepted | [ADR-052-지원-우선순위는-회사-순위가-아니라-action-stage로-관리한다.md](ADR-052-지원-우선순위는-회사-순위가-아니라-action-stage로-관리한다.md) |
 | ADR-055 | background worktree는 완료 시 명시적으로 정리한다 | Accepted | [ADR-055-background-worktree는-완료-시-명시적으로-정리한다.md](ADR-055-background-worktree는-완료-시-명시적으로-정리한다.md) |
 | ADR-056 | resume package는 Markdown 산출물 계약을 먼저 고정한다 | Accepted | [ADR-056-resume-package는-markdown-산출물-계약을-먼저-고정한다.md](ADR-056-resume-package는-markdown-산출물-계약을-먼저-고정한다.md) |
@@ -70,7 +68,6 @@
 | ADR-091 | career-os 스크립트 root는 위치 기준으로 해석한다 | Accepted | [ADR-091-script-career-os-root-위치-기준-해석.md](ADR-091-script-career-os-root-위치-기준-해석.md) |
 | ADR-092 | 면접 준비 flow 재편: 핏 진단과 매일 답변 드릴 분리 | Accepted | [ADR-092-면접-준비-flow-재편-진단-드릴-분리.md](ADR-092-면접-준비-flow-재편-진단-드릴-분리.md) |
 | ADR-093 | skill 호출 계약은 에이전트 비종속으로 둔다 | Accepted | [ADR-093-skill-호출-계약은-에이전트-비종속으로-둔다.md](ADR-093-skill-호출-계약은-에이전트-비종속으로-둔다.md) |
-| ADR-094 | 포지션 추천 산출물을 JSON 정본으로 전환한다 | Accepted | [ADR-094-포지션-추천-산출물-json-정본-전환.md](ADR-094-포지션-추천-산출물-json-정본-전환.md) |
 | ADR-095 | 회사 업사이드 운영 데이터를 config JSON 단일 출처로 흡수한다 | Accepted; cooldown 흡수는 [[ADR-109]]로 superseded | [ADR-095-회사-업사이드-운영데이터-config-흡수.md](ADR-095-회사-업사이드-운영데이터-config-흡수.md) |
 | ADR-096 | job-fit-analyzer를 의사결정·전략 중심으로 재정의한다 | Accepted | [ADR-096-job-fit-analyzer-의사결정-전략-재정의.md](ADR-096-job-fit-analyzer-의사결정-전략-재정의.md) |
 | ADR-097 | question-bank 정본을 public으로 1원화하고 개인 질문은 private에 둔다 | Accepted | [ADR-097-question-bank-정본-public으로-1원화하고-개인-질문은-private에-둔다.md](ADR-097-question-bank-정본-public으로-1원화하고-개인-질문은-private에-둔다.md) |

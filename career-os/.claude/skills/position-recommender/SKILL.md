@@ -128,7 +128,7 @@ Node 실행에서 `import.meta.dir` 관련 오류가 나면 Bun 전용 경로 �
 
 `references/position-recommendation-prompt.md` 가이드에 따라 후보자 프로필 × 포지션 후보 교차 분석:
 
-산출물은 **표준 출력 JSON `recommendation.json`**(schemaVersion 2)이다 (ADR-094, ADR-101).
+산출물은 **표준 출력 JSON `recommendation.json`**(schemaVersion 2)이다 (ADR-101).
 아래 구조를 `scripts/position-recommender/recommendation_schema.ts` 스키마에 맞춰 채운다.
 사람이 읽는 Markdown·HTML은 이 JSON에서 파생하므로, 산문을 직접 쓰지 않는다.
 
@@ -167,7 +167,7 @@ md/html의 한국어 라벨 변환은 `render_recommendation.ts`가 담당하므
 
 근거: ADR-101 — 전달 매체를 공유 파일과 hermes API 응답 두 가지로 둬서 로컬에서도 검증할 수 있게 한다.
 
-### 4. 표준 출력 JSON 생성 (ADR-094, ADR-101)
+### 4. 표준 출력 JSON 생성 (ADR-101)
 
 표준 출력 JSON이 단일 산출물이다. 이 JSON 하나에서 md/html을 파생하므로 자체 markdown 파서를 거치지 않고 출력이 항상 일관된다.
 
@@ -252,7 +252,7 @@ cron 환경에서 표준 JSON 작성이나 대형 파일 작성이 안전 가드
 
 ## Self-check
 
-산출물 검증은 **zod 스키마 검증**으로 한다 (ADR-094). 옛 markdown grep 17항목을 스키마가 대체한다.
+산출물 검증은 **zod 스키마 검증**으로 한다 (ADR-101). 옛 markdown grep 17항목을 스키마가 대체한다.
 
 검증 실행은 별도 코드가 필요 없다. `render_recommendation.ts`가 입력 JSON을 `RecommendationRun.safeParse`로 먼저 검증하고, 실패하면 위반 필드를 stderr로 출력하며 exit 1한다.
 즉 **md/html 파생 명령을 돌리는 것이 곧 self-check**다. 파생이 성공하면 아래 스키마 조건이 모두 충족된 것이다.
@@ -305,8 +305,7 @@ cron 환경에서 표준 JSON 작성이나 대형 파일 작성이 안전 가드
 
 ## Why this design
 
-- **ADR-094**: 산출물을 표준 출력 JSON(`recommendation.json`)으로 전환. `render_recommendation.ts`가 이 JSON에서 md/html을 파생하고, self-check는 `recommendation_schema.ts` zod 검증으로 대체. 자체 markdown 파서 폐기.
-- **ADR-101**: 표준 출력 JSON을 단일 산출물로 확정. `source`·`closeDate`를 JSON에 직접 담아 소비측이 자족적으로 가공한다. cron은 Discord 요약 산문으로, backend는 hermes API 응답 JSON으로 각자 가공. `items.json` 파생과 daily runner 폐기.
+- **ADR-101**: 산출물을 표준 출력 JSON(`recommendation.json`)으로 전환. `render_recommendation.ts`가 이 JSON에서 md/html을 파생하고, self-check는 `recommendation_schema.ts` zod 검증으로 대체. 자체 markdown 파서 폐기. 표준 출력 JSON을 단일 산출물로 확정하고 `source`·`closeDate`를 JSON에 직접 담아 소비측이 자족적으로 가공한다. cron은 Discord 요약 산문으로, backend는 hermes API 응답 JSON으로 각자 가공. `items.json` 파생과 daily runner 폐기.
 - **ADR-030**: 옛 외부 subprocess 패턴 (`run_position_recommendation.sh` 76줄, `extract_position_report.ts` 45줄) → agent skill 직접 읽기/쓰기. SKILL.md 단일 진실 출처.
 - **현재 세션 실행**: skill을 읽은 현재 에이전트가 직접 실행한다. 수동 실행 지침과 cron 운영 경로의 책임을 분리한다.
 - **self-check 내재화**: `extract_position_report.ts`가 하던 첫 줄 `#` 검증과 줄 수 검증을 현재 에이전트 자체 검증으로 흡수. 외부 프로세스 불필요.
@@ -325,11 +324,11 @@ cron 환경에서 표준 JSON 작성이나 대형 파일 작성이 안전 가드
 - `config/verified-company-research-targets.json` — 검증된 탐색 대상 회사군. 회사 tier·선호제외(`preferenceExcluded`) 운영 데이터 단일 출처(ADR-095)
 - `state/company-cooldown.json` — 쿨다운 운영 데이터 단일 출처(ADR-109)
 - `references/verified-company-discovery.md` — snapshot 부족 시만 쓰는 보조 탐색 가이드
-- `scripts/position-recommender/recommendation_schema.ts` — **표준 출력 JSON zod 스키마** (ADR-094, ADR-101). recommendation.json을 채우기 전에 이 파일에서 `PositionItem`(`source`·`closeDate` 포함) 등 필드 정의를 확인한다.
+- `scripts/position-recommender/recommendation_schema.ts` — **표준 출력 JSON zod 스키마** (ADR-101). recommendation.json을 채우기 전에 이 파일에서 `PositionItem`(`source`·`closeDate` 포함) 등 필드 정의를 확인한다.
 - `scripts/position-recommender/render_recommendation.ts` — 표준 출력 JSON에서 Markdown·HTML을 파생하는 렌더러. 입력 시 스키마 검증을 내장하므로 실행 자체가 self-check다.
 - `scripts/position-recommender/render_candidate_preview.ts` — 표준 출력 JSON과 live posting snapshot에서 Discord/download용 클릭 가능한 전체 공고 HTML을 파생하는 렌더러.
 - `references/report-html-delivery.md` — 포지션 리포트 HTML 전달과 전체 공고 HTML 산출물 규칙.
 - `references/cron-operational-checks.md` — 포지션 추천 cron 변경 후 수집·HTML·제외 기준 검증 체크리스트.
 - `references/cron-codex-markdown-delivery.md` — Hermes/Codex scheduled run에서 Markdown report/runtime mirror와 HTML copy를 직접 생성·검증하는 체크리스트.
-- `career-os/docs/adr/INDEX.md` ADR-094 / ADR-030 — 본 설계 결정 근거
+- `career-os/docs/adr/INDEX.md` ADR-101 / ADR-030 — 본 설계 결정 근거
 - `career-os/docs/adr/ADR-101-position-recommender-표준출력-json-단일화-소비측-가공.md` — 표준 출력 JSON 단일화와 소비측 가공 계약
