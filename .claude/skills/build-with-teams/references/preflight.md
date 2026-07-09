@@ -126,6 +126,13 @@ echo "main 이 앞선 commit: $(git rev-list --count HEAD..origin/main)"
 - **0**: 그대로 push/PR.
 - **1 이상**: `git merge --no-ff origin/main` 으로 통합 (rebase 금지) → 충돌 해소 → **겹친 파일에서 양측 변경이 모두 보존됐는지 실측** (자동 병합이 깨끗해도 상대 커밋의 의미 변경이 살아있는지 grep 으로 확인) → CI 재실행. merge commit 은 같은 PR 에 포함.
 
+#### plan094 회고 — 신규 식별자 충돌 + 검토자 stale-diff
+
+plan094 는 위 base 열화를 다시 겪었고, 두 가지 새 함정을 확인했다.
+
+- **plan 이 새로 만든 식별자가 충돌한다**: 실행 도중 다른 세션이 머지한 커밋이 plan 이 방금 신설한 ADR 과 **같은 번호(ADR-111)** 를 선점했다. 파일명이 달라 git 충돌은 안 났지만 번호가 중복됐다. 대응: push 직전 base 재점검에서 `git merge --no-ff origin/main` 후, plan 이 신설한 번호가 origin/main 에 이미 있으면 **plan 쪽을 다음 가용 번호로 재번호**(파일·헤더·INDEX 행·task 언급)한 뒤 merge 를 마무리한다. INDEX 충돌은 양측 행을 번호순으로 살려 해소한다.
+- **검토자를 base 열화 이전에 스폰하면 stale diff 를 본다**: code-reviewer·docs-verifier 를 merge 전에 스폰하면 각자 spawn 시점의 `git diff origin/main..HEAD` 를 계산해, merge 로 이미 해소된 문제를 결함으로 보고한다(실측: 되돌림 착시·번호 충돌 둘 다 이미 고쳐진 뒤 보고됨). 대응: base 열화를 먼저 해소(merge·재번호)한 **뒤에** 검토자를 스폰하거나, 이미 스폰했으면 merge 후 `git diff` 를 다시 계산해 재판정하도록 SendMessage 로 재요청한다.
+
 ## worktree 기반 격리 실행 (필수)
 
 작업 간 충돌을 방지하기 위해 반드시 **git worktree** 사용. worktree는 프로젝트 내부 `.claude/worktrees/` 하위에 생성 (프로젝트 부모 디렉터리 오염 방지).
