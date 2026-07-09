@@ -1,4 +1,4 @@
-## ADR-111 — 죽은 ADR은 archive 없이 삭제하고 provenance는 두 층으로 보존한다
+## ADR-112 — 죽은 ADR은 archive 없이 삭제하고 provenance는 두 층으로 보존한다
 
 Status: Accepted
 Date: 2026-07-09
