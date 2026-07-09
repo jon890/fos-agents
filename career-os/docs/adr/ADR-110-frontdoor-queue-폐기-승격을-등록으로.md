@@ -23,8 +23,7 @@ frontdoor-queue를 폐기하고 대기열 단계를 없앤다.
 - 용어 교체 — 지원 후보를 positions-queue에 넣는 동작의 "승격(promote)"을 "등록"으로 바꾼다. 코드 식별자·주석·docs 산문 전반에 적용한다.
 - 데이터 파일 — `data/runtime/application-agent/frontdoor-queue.jsonl`은 물리 이동 대신 폐기한다(runtime untracked, ADR-107 스코프).
 
-ADR-045 전체를 본 ADR로 대체한다.
-ADR-045 본문은 동결하고 수정하지 않는다.
+ADR-045(plan094에서 삭제, git history 보존) 전체를 본 ADR로 대체한다.
 
 용어 교체 범위 경계:
 
@@ -46,4 +45,4 @@ ADR-045 본문은 동결하고 수정하지 않는다.
 - Phase 06에서 frontdoor 제거 + "등록" 용어 교체를 관심사 단위로 커밋한다(ADR-108 rename보다 먼저).
 - 검증은 `bun --check` + application-agent smoke + 옛 `frontdoor`·"승격" 참조 0 grep으로 한다.
 - `docs/data-schema.md`·`docs/code-architecture.md`·`docs/flow.md`에서 frontdoor-queue 스키마·경로·tombstone과 "승격" 표현을 정리한다.
-- `docs/adr/INDEX.md`의 ADR-045 Status에 본 ADR의 supersede 관계를 링크한다.
+- `docs/adr/INDEX.md`에 본 ADR의 supersede 관계를 남긴다(ADR-045는 plan094에서 삭제, git history 보존).
