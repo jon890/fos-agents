@@ -1,7 +1,7 @@
 # Phase 01 — 정책 ADR 고정 + 삭제·merge 목록 확정
 
 **Model**: opus
-**Status**: pending
+**Status**: completed
 
 ## 목표
 

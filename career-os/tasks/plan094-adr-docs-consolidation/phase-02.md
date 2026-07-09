@@ -1,7 +1,7 @@
 # Phase 02 — 죽은 ADR 23개 삭제 + 링크 정리
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ## 목표
 

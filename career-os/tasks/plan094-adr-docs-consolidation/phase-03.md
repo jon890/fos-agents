@@ -1,7 +1,7 @@
 # Phase 03 — merge (094→101, adapter 043/047/051)
 
 **Model**: sonnet
-**Status**: pending
+**Status**: completed
 
 ## 목표
 
