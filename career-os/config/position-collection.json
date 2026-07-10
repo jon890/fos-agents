@@ -40,13 +40,15 @@
         "백엔드 코어(Java/Kotlin/Spring·Kafka·Redis·정합성) + 에이전트/RAG/AI 플랫폼 접점 결합",
         "RAG 색인/검색/OpenSearch/vector database 운영",
         "LLM API Gateway/Model Router/Agent serving/LLMOps 플랫폼(서버 개발 비중 분명)",
-        "AI 제품 백엔드·품질 검증·서빙 안정화"
+        "AI 제품 백엔드·품질 검증·서빙 안정화",
+        "대규모 AI 트래픽에서 서빙 시스템 난제(배칭·GPU 활용률·p99 지연·추론 비용·autoscaling)가 열리는 백엔드/인프라 role"
       ],
       "guardrails": [
         "순수 모델 연구, 논문 중심, GPU 커널/학습 최적화 중심은 계속 낮게 본다.",
         "AI 키워드가 있어도 서버/API/플랫폼 개발 비중이 약하면 보류로 둔다.",
         "Tech Lead/CTO/기술총괄처럼 seniority가 과한 역할은 상위 배치하지 않는다.",
-        "AI-native 회사(제품 코어가 AI)는 현재 AI 경력이 짧아 '왜 또 AI 이직' 리스크가 크므로, JD fit이 좋아도 지원동기 방어가 필요하면 강력보다 도전으로 둔다."
+        "AI-native 회사(제품 코어가 AI)는 현재 AI 경력이 짧아 '왜 또 AI 이직' 리스크가 크므로, JD fit이 좋아도 지원동기 방어가 필요하면 강력보다 도전으로 둔다.",
+        "서빙이 배관 수준(규모가 작아 시스템 난제가 안 열림)에 머무는 role은 JD fit이 맞아도 흥미 적합도를 낮게 본다."
       ]
     },
     "preferredPatterns": [
