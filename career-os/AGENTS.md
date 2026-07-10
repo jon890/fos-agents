@@ -4,6 +4,8 @@
 모든 에이전트는 이 파일을 진입점으로 삼고, 상세 사양은 책임 문서와 각 skill 본문에서 확인한다.
 `CLAUDE.md`는 이 파일의 심볼릭 링크다.
 
+처음 사용하는 사람은 [README.md](README.md)에서 제품 범위와 주요 흐름을 먼저 확인한다.
+
 공통 운영 규칙은 루트 [`../AGENTS.md`](../AGENTS.md)를 따른다.
 이 파일에는 career-os에서만 다른 경계와 읽기 순서만 남긴다.
 
@@ -14,6 +16,7 @@
 
 | 문서 | 책임 | 언제 보는지 |
 |---|---|---|
+| [`README.md`](README.md) | 제품 범위, 주요 skill, 시작 흐름 | 워크스페이스를 처음 볼 때 |
 | [`../AGENTS.md`](../AGENTS.md) | 모노레포 공통 규칙 | 모든 작업 시작 시 |
 | [`docs/README.md`](docs/README.md) | career-os 문서별 책임과 작성 규칙 | docs 작성·수정 전 |
 | [`docs/prd.md`](docs/prd.md) | 제품 가치, skill 자산, 성공 기준 | 새 기능 추가, 우선순위 결정 |
