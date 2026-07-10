@@ -12,7 +12,7 @@ description: 아파트 매물 일일 시세 리포트를 생성하는 apartment 
 
 - 날짜 인자가 없으면 오늘 날짜(`YYYY-MM-DD`)를 사용한다.
 - 타깃 단지는 `apartment/config/` 또는 `.env`에서 읽는다.
-- cron 진입이면 마지막 출력이 Discord에 전달될 수 있음을 고려해 짧은 완료 요약을 남긴다.
+- cron 진입이면 마지막 출력에 생성 결과, 핵심 시장 신호, 수집 제한을 남긴다.
 
 ## 범위
 
@@ -61,7 +61,7 @@ bun scripts/apartment-daily-report/normalize_results.ts <raw-search.json 경로>
 `summary.json`을 읽은 뒤 현재 에이전트가 `data/YYYY-MM-DD/report.md`를 **직접 작성**한다.
 외부 subprocess로 자신을 재호출하지 않는다 (ADR-010 폐기 패턴).
 
-리포트는 다음 7개 섹션을 포함한 간결한 마크다운으로 작성한다:
+리포트는 다음 7개 섹션을 포함한 스캔 가능한 마크다운으로 작성한다:
 
 1. **단지 개요**
 2. **면적별 최근 실거래 요약**
@@ -75,7 +75,7 @@ bun scripts/apartment-daily-report/normalize_results.ts <raw-search.json 경로>
 
 - 없는 값은 발명하지 않는다.
 - 정보가 불완전하면 그 사실을 명시한다.
-- 톤은 실용적이고 간결하게.
+- 각 섹션은 확인된 사실, 해석, 불확실성을 구분해 실용적으로 쓴다.
 - 채팅 호환성을 위해 마크다운 표 대신 불릿 리스트를 사용한다.
 - 도움이 되는 경우 소스 URL을 언급한다.
 - "입지·상승 잠재력 메모"에서는 입력에 있는 검증된 사실(역 접근성, 주변 상업지구, 최근 가격 동향, 매물 압박 등)만 근거로 삼은 신중한 정성 판단을 제시한다.

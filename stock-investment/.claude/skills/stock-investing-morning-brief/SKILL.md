@@ -73,7 +73,7 @@ python3 scripts/stock-investing-morning-brief/collect_sources.py \
 - 과매수/과열 판단은 `rsi14`, `pctFromSma20`, `pctFrom52WeekHigh`, `volumeVsAvg20`, 최근 급등률을 함께 본다.
   대략 RSI 70 이상은 과매수권, 20일선 대비 +8~10% 이상은 단기 과열 후보, 거래량 2배 이상 동반 급등은 이벤트성 과열 후보로 해석한다.
   단, 강한 추세에서는 과매수권이 지속될 수 있다고 덧붙인다.
-- Discord 메시지로 바로 보낼 수 있게 간결하게 쓴다.
+- Discord 메시지에는 오늘의 결론, 근거, 과열·하락 위험, 다음 확인 대상을 빠짐없이 쓴다.
 
 **필수 형식:**
 
