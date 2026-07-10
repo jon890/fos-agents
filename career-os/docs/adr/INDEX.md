@@ -111,4 +111,3 @@
 | ADR-109 | 회사 cooldown을 state/company-cooldown.json으로 분리 (ADR-095 cooldown 부분 supersede) | Accepted | [ADR-109-회사-cooldown을-state로-분리.md](ADR-109-회사-cooldown을-state로-분리.md) |
 | ADR-110 | frontdoor-queue 폐기 + "승격"→"등록" (ADR-045 supersede) | Accepted | [ADR-110-frontdoor-queue-폐기-승격을-등록으로.md](ADR-110-frontdoor-queue-폐기-승격을-등록으로.md) |
 | ADR-111 | durable 공고 필터를 config/position-filters.json으로 통합 (ADR-095 preferenceExcluded 위치 supersede) | Accepted | [ADR-111-공고-필터-config-통합.md](ADR-111-공고-필터-config-통합.md) |
-| ADR-112 | GPT-5.6 모델 운영 원칙 | Accepted | [ADR-112-gpt-5-6-모델-운영-원칙.md](ADR-112-gpt-5-6-모델-운영-원칙.md) |

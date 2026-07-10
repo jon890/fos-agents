@@ -89,25 +89,20 @@ Codex 노출은 `career-os/.codex/skills/<skill>` 심볼릭 링크로 연결한�
 | `application-package-writer` | 공고별 지원 패키지 초안 작성 | [SKILL.md](.claude/skills/application-package-writer/SKILL.md), [flow](docs/flow.md) |
 | `application-reviewer` | 지원 패키지 근거, 과장, drift 검토 | [SKILL.md](.claude/skills/application-reviewer/SKILL.md), [flow](docs/flow.md) |
 | `daily-application-digest` | 지원 현황 일일 요약 작성 | [SKILL.md](.claude/skills/daily-application-digest/SKILL.md), [flow](docs/flow.md) |
-| `gpt-5-6-guidance` | OpenAI GPT-5.6 계열 선택, 프롬프트 점검, 마이그레이션 검증 | [SKILL.md](.claude/skills/gpt-5-6-guidance/SKILL.md) |
 
-## GPT-5.6 운영 원칙
+## Skill 작성 원칙
 
-OpenAI API를 새로 도입하거나 기존 호출을 변경할 때만 이 원칙을 적용한다.
-현재 career-os에는 활성 OpenAI API 호출이 없으므로 모델 설정을 추측해 추가하지 않는다.
+skill 본문은 도메인 작업에 필요한 지시와 검증만 담는다.
+공통 에이전트 동작, 일반적인 말투, 반복된 승인 문구는 여기에서 다시 지시하지 않는다.
 
-- 복잡한 품질 우선 작업에는 `gpt-5.6` 또는 `gpt-5.6-sol`을 사용한다.
-- 품질과 비용의 균형이 필요한 작업에는 `gpt-5.6-terra`를 사용한다.
-- 대량·비용 민감 작업에는 `gpt-5.6-luna`를 사용한다.
-- reasoning, 도구 호출, 다중 턴 작업은 Responses API를 우선 검토한다.
-- 기존 reasoning 설정은 첫 비교 기준으로 보존한다.
-  대표 작업에서 동일 설정과 한 단계 낮은 설정을 비교한 뒤 채택한다.
-- 프롬프트에는 목표, 관련 맥락, 제약, 필요한 근거, 성공 기준, 출력 형식만 남긴다.
-  일반적인 짧은 답변 지시나 중복된 금지 문구는 넣지 않는다.
-- 모델 변경은 task 성공, 결과 완결성, 근거 충족, 총 토큰, 지연 시간, 비용을 같은 작업군에서 비교해 검증한다.
-- 개인 사용자 요청에는 안정적이고 개인정보를 직접 드러내지 않는 `safety_identifier`를 함께 보낸다.
+- 목표, 관련 입력, 제약, 필요한 근거, 성공 기준, 출력 계약을 우선한다.
+- `짧게`, `간결하게` 같은 일반적인 축약 지시 대신 남겨야 할 결론, 근거, 주의사항, 다음 행동을 구체적으로 정한다.
+- 생성물의 길이, 표, JSON, HTML, 제출 경계처럼 도메인 결과에 필요한 형식은 유지한다.
+- 호출 가능한 도구와 참조 파일은 해당 작업에 필요한 것만 명시한다.
+- 새 제약은 실제 실패 사례나 검증 결과가 있을 때만 추가한다.
 
-세부 선택 기준과 검증 이유는 [ADR-112](docs/adr/ADR-112-gpt-5-6-모델-운영-원칙.md)를 따른다.
+OpenAI 모델을 새로 도입하거나 변경하는 요청은 공식 [Model guidance](https://developers.openai.com/api/docs/guides/latest-model)를 확인한다.
+현재 활성 실행 경로에 없는 모델 설정은 추측해 추가하지 않는다.
 
 ## 외부 저장소와 데이터 경계
 
