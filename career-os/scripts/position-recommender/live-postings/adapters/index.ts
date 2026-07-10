@@ -2,6 +2,7 @@ import type { SourceAdapter, SourceId, SourceSelection } from "../types.ts";
 import { coupangCareersAdapter } from "./coupang-careers.ts";
 import { cjCareersAdapter } from "./cj-careers.ts";
 import { kakaomobilityAdapter } from "./kakaomobility.ts";
+import { kakaobankCareersAdapter } from "./kakaobank-careers.ts";
 import { kakaopayAdapter } from "./kakaopay.ts";
 import { kakaopaySecuritiesAdapter } from "./kakaopay-securities.ts";
 import { kurlyCareersAdapter } from "./kurly-careers.ts";
@@ -18,6 +19,7 @@ const ADAPTERS: Record<SourceId, SourceAdapter> = {
   kakaopay: kakaopayAdapter,
   "kakaopay-securities": kakaopaySecuritiesAdapter,
   kakaomobility: kakaomobilityAdapter,
+  "kakaobank-careers": kakaobankCareersAdapter,
   "kurly-careers": kurlyCareersAdapter,
   "naver-careers": naverCareersAdapter,
   "samsung-careers": samsungCareersAdapter,
@@ -28,6 +30,7 @@ const ADAPTERS: Record<SourceId, SourceAdapter> = {
 const SOURCE_ALIASES: Record<string, SourceId> = {
   toss: "toss-careers",
   coupang: "coupang-careers",
+  kakaobank: "kakaobank-careers",
   kurly: "kurly-careers",
   samsung: "samsung-careers",
   sk: "sk-careers",

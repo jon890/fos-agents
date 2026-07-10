@@ -117,13 +117,13 @@
       "tier": "A",
       "company": "KakaoBank",
       "koreanName": "카카오뱅크",
-      "hasAdapter": false,
-      "adapterId": null,
-      "careerUrls": ["https://kakaobank.recruiter.co.kr/appsite/company/index"],
+      "hasAdapter": true,
+      "adapterId": "kakaobank-careers",
+      "careerUrls": ["https://recruit.kakaobank.com/jobs"],
       "wantedKeywords": ["카카오뱅크 서버 개발자", "카카오뱅크 백엔드", "카카오뱅크 플랫폼"],
       "techBlogs": ["https://tech.kakaobank.com/"],
       "preferredDomains": ["banking", "fintech", "payment", "platform", "large-scale-backend"],
-      "notes": "인터넷 전문 은행. 금융 규제 환경에서의 대규모 서버 개발 경험 레버리지. adapter 추가 backlog."
+      "notes": "인터넷 전문 은행. 공식 영입 API와 개별 공고를 수집한다. 금융 규제 환경에서의 대규모 서버 개발 경험 레버리지가 있다."
     },
     {
       "tier": "A-",
