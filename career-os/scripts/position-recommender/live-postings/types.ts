@@ -12,8 +12,9 @@ export type SourceId =
   | "naver-careers"
   | "samsung-careers"
   | "sk-careers"
-  | "cj-careers";
-export type SourceAlias = "toss" | "coupang" | "kakaobank" | "kurly" | "samsung" | "sk" | "cj";
+  | "cj-careers"
+  | "krafton-careers";
+export type SourceAlias = "toss" | "coupang" | "kakaobank" | "kurly" | "samsung" | "sk" | "cj" | "krafton";
 export type SourceSelection = SourceId | SourceAlias | "all";
 
 export type DiscoveryMode =
