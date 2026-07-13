@@ -490,6 +490,7 @@ plan050은 새 독립 추천기를 먼저 만들지 않고 기존 collector/reco
   Wanted는 broad scan 외에 선호 회사와 AI 전환 직무 keyword discovery를 수행하고,
   Toss는 공식 `job-groups` API에서 그룹 공고와 하위 포지션을 펼쳐 수집하며,
   Kakao 계열, 카카오뱅크, NAVER 계열, Coupang, Kurly는 official source entrypoint가 확인된 범위에서 adapter로 수집한다.
+  크래프톤은 게임사라 전체 채용이 아니라 공식 Greenhouse board에서 AI Frontier·AI Research·AI Transformation(AX) 조직 공고만 수집한다.
   adapter는 listing/API/sitemap root URL은 가질 수 있지만, 개별 공고 URL을 코드에 하드코딩하지 않는다.
 - `position-recommender` agent skill은 표준 출력 JSON `recommendation.json`(ADR-094/ADR-101, schemaVersion 2)을 만든다. 적재용 `source`·`closeDate`를 포함하며, Discord 요약 같은 가공은 호출자가 맡는다(ADR-101).
 - `scripts/position-recommender/render_recommendation.ts`는 표준 출력 JSON에서 Markdown·HTML을 파생한다(입력 시 zod 검증 내장). 자체 markdown 파서 `render_report_html.ts`는 ADR-094로 폐기됐다.
