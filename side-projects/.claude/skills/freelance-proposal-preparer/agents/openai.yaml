@@ -1,0 +1,4 @@
+interface:
+  display_name: "외주 제안서 준비"
+  short_description: "RFP 기반 외주 제안서와 견적을 준비하는 워크플로"
+  default_prompt: "$freelance-proposal-preparer로 이 외주 공고의 제안서와 견적을 준비해줘."
