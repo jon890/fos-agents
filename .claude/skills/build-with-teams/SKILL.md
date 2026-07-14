@@ -7,7 +7,7 @@ description: Claude Agent Teams 파이프라인 — team-lead·critic·executor�
 
 task phase를 Claude Agent Teams 파이프라인으로 실행하는 시스템. `run-phases.py` 백그라운드 실행 대신 4-5명의 에이전트가 가시적으로 협업.
 
-> **모노레포 공용 스킬** (ai-nodes ADR-018). 워크스페이스별 환경·브랜치 컨벤션은 variant(`variants/<workspace>.md`)가 본문 일반 규칙에 **우선**한다. `plan-and-build`와 병존 — 무인 cron/background는 `plan-and-build`, 대화형 가시 협업은 본 스킬.
+> **모노레포 공용 스킬** (ai-nodes ADR-018). 워크스페이스별 환경·브랜치 컨벤션은 variant(`variants/<workspace>.md`)가 본문 일반 규칙에 **우선**한다.
 
 ## 워크스페이스 컨벤션 (variant 우선)
 
@@ -138,7 +138,7 @@ team-lead가 `docs/` 하위 문서를 읽고 사용자와 논의.
 ### 4. task 파일 생성
 
 `tasks/{NNN}-{task-name}/` 디렉터리에 `index.json` + `phase-{N}.md` 생성.
-phase 프롬프트 규칙은 기존 `plan-and-build`와 동일:
+phase 프롬프트 규칙:
 
 - 원자적 단일 책임, 작업 항목 5개 이하
 - 자기완결적 (이전 대화 없이 독립 실행 가능)
@@ -176,9 +176,9 @@ spawn prompt 표준 · executor 규칙 · shutdown 절차 · phase 별 atomic co
 ### 7. 코드 품질 검사 (code-reviewer)
 
 executor 완료 후 code-reviewer 를 새로 스폰하여 SendMessage 로 검사 시작 지시. team-lead 직접 수행 금지.
-**사전 해소 점검**: `.claude/skills/plan-and-build/references/common-pitfalls/INDEX.md` 의 code-review 카테고리 (단일 소스) 적용 확인 → 미적용 시 FIX_NEEDED (executor 재투입).
+**사전 해소 점검**: `.claude/skills/_shared/common-pitfalls/INDEX.md` 의 code-review 카테고리 (단일 소스) 적용 확인 → 미적용 시 FIX_NEEDED (executor 재투입).
 
-code-reviewer spawn 메시지에 **"`.claude/skills/plan-and-build/references/common-pitfalls/INDEX.md` 라우터로 이 diff(`git diff origin/main..HEAD`) 의 변경 유형에 해당하는 code-review 패턴 파일만 골라 grep 점검하라. 변경 유형이 표에 없으면 `triggers:` grep, 그래도 애매하면 `pitfalls/code-review/` 디렉터리 통째로 점검하라"** 능동 지시 포함. (전부 읽지 말고 라우터로 선택 — 컨텍스트 절약)
+code-reviewer spawn 메시지에 **"`.claude/skills/_shared/common-pitfalls/INDEX.md` 라우터로 이 diff(`git diff origin/main..HEAD`) 의 변경 유형에 해당하는 code-review 패턴 파일만 골라 grep 점검하라. 변경 유형이 표에 없으면 `triggers:` grep, 그래도 애매하면 `pitfalls/code-review/` 디렉터리 통째로 점검하라"** 능동 지시 포함. (전부 읽지 말고 라우터로 선택 — 컨텍스트 절약)
 
 **code-reviewer가 검사할 범위**: executor가 변경한 파일만 (`git diff --name-only` 기준).
 
@@ -259,16 +259,5 @@ executor가 phase 실패 보고 시:
     → [worktree 정리 + 팀 shutdown]
     → [특이사항 집계 후 사용자 보고]  ← phase executor 보고의 특이사항 4종 누적 → 사용자 명시 보고와 PR 본문 "특이사항 및 후속" 섹션
 ```
-
-## vs plan-and-build
-
-|           | plan-and-build             | build-with-teams                 |
-| --------- | -------------------------- | -------------------------------- |
-| 실행 방식 | `run-phases.py` 백그라운드 | Claude Agent Teams 가시적 협업   |
-| 평가 단계 | 없음                       | critic APPROVE 통과 조건         |
-| docs 검증 | 없음                       | docs-verifier 자동 검증          |
-| 진행 상황 | 로그 파일 확인             | 에이전트 메시지로 실시간 확인    |
-| 실패 복구 | `--from-phase` 재시작      | team-lead 판단 → executor 재지시 |
-| 적합 규모 | 소·중                      | 중·대                            |
 
 > 워크스페이스별 환경 가정(패키지 매니저·검증 명령·setup·업무 매핑·운영 환경)은 `variants/<workspace>.md` 를 참조한다.

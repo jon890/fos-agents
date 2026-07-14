@@ -93,7 +93,7 @@ phase 검증 bash 에서 검증 대상 sigil(section mark U+00A7, tilde 등) 을
 
 ## 검증
 
-- **common-pitfalls**: `.claude/skills/plan-and-build/references/common-pitfalls/INDEX.md`. task 파일 제출 전 현재 작업 trigger 와 맞는 pattern file 을 골라 self-check.
+- **common-pitfalls**: `.claude/skills/_shared/common-pitfalls/INDEX.md`. task 파일 제출 전 현재 작업 trigger 와 맞는 pattern file 을 골라 self-check.
 - 코어 `verify-task.sh` 5 패턴에 추가로 위 phase cwd 강제·sigil escape 도 self-check 대상.
 
 ## plan 네이밍 (번호 충돌 확인)
@@ -117,5 +117,5 @@ ls career-os/docs/adr/ | grep "^ADR-{후보번호}"          # career-os 전용
   - 두 번째 커밋: `task(<workspace>): plan{N} <기능명> task 생성`
 - **push**: `git push origin main` 둘 다.
 - **HUD 갱신**: OpenClaw career 세션에서 task 파일 생성 시 `task files completed` 상태로 갱신(긴 materialize 시작 전엔 `task materializing`).
-- **핸드오프**: 별도 세션에서 `python3 skills/plan-and-build/scripts/run-phases.py <workspace>/tasks/plan{N}-<slug>` 실행 안내. 본 세션에서 phase 실행 금지 — 컨텍스트 격리가 핵심.
+- **핸드오프**: 별도 세션에서 `/build-with-teams <workspace>/tasks/plan{N}-<slug>` 실행 안내. 본 세션에서 phase 실행 금지 — 컨텍스트 격리가 핵심.
 - **원격 branch protection 으로 main 직접 push 차단**: PR 경로로 우회.

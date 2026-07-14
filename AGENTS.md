@@ -104,10 +104,7 @@ career-os의 `tasks/plan{N}-<slug>/` 흐름은 필요할 때 다른 워크스페
 
 ## 구현 실행 모델
 
-확정된 task/phase 구현은 두 실행 모델 중 하나로 진행한다(ADR-018).
-
-- 무인 cron·background 실행은 `plan-and-build`(`run-phases.py`)로 한다.
-- 대화형 가시 협업(critic 평가 + docs-verifier 검증)은 `build-with-teams`로 한다.
+확정된 task/phase 구현은 `build-with-teams`(critic 평가 + docs-verifier 검증, 대화형 가시 협업)로 진행한다(ADR-018).
 
 `build-with-teams`의 executor·docs-verifier는 실행 워크스페이스명을 prefix로 한 전용 agent를 쓴다.
 정본은 `.claude/agents/<workspace>-{executor,docs-verifier}.md`이고, 워크스페이스 환경은 `variants/<workspace>.md`가 정의한다.
@@ -186,7 +183,6 @@ Hermes 관련 질문에 답하기 전에는 기억이 아니라 공식 문서를
 - 모노레포 ADR: [`docs/adr/INDEX.md`](docs/adr/INDEX.md)
 - 문서 형식: [`docs/docs-style.md`](docs/docs-style.md)
 - planning skill (공용 코어 `~/.claude/skills/planning/SKILL.md` + 레포 특화 [`.claude/planning-overlay.md`](.claude/planning-overlay.md))
-- plan-and-build skill: [`.claude/skills/plan-and-build/SKILL.md`](.claude/skills/plan-and-build/SKILL.md)
 - build-with-teams skill: [`.claude/skills/build-with-teams/SKILL.md`](.claude/skills/build-with-teams/SKILL.md)
 - workspace-audit skill: [`.claude/skills/workspace-audit/SKILL.md`](.claude/skills/workspace-audit/SKILL.md)
 - docs-check skill: [`.claude/skills/docs-check/SKILL.md`](.claude/skills/docs-check/SKILL.md)

@@ -1,6 +1,6 @@
 # Common Pitfalls Index
 
-plan-and-build task와 phase 작성 중 반복된 실패 패턴의 라우터다.
+task와 phase 작성 중 반복된 실패 패턴의 라우터다. planning-overlay·build-with-teams 등 여러 워크스페이스 스킬이 공유하는 단일 소스다.
 
 ## 사용 순서
 
