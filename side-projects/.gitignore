@@ -1,0 +1,11 @@
+.DS_Store
+.omx/
+.playwright-mcp/
+__pycache__/
+*.pyc
+wishket-*-extract.json
+wishket-*-company-dom.json
+wishket-*-logged-in-*.json
+wishket-*-client-elements.json
+wishket-list-*-extract.json
+*-html.png

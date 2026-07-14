@@ -32,6 +32,7 @@
 | `travel/` | [`travel/AGENTS.md`](travel/AGENTS.md) | 여행별 일정과 결정 로그 |
 | `health-care/` | [`health-care/AGENTS.md`](health-care/AGENTS.md) | 무릎 재활 체크인 |
 | `ji-yoon-blog/` | [`ji-yoon-blog/AGENTS.md`](ji-yoon-blog/AGENTS.md) | 지융로그 네이버 블로그 운영, 글쓰기, 트렌드 분석 |
+| `side-projects/` | [`side-projects/AGENTS.md`](side-projects/AGENTS.md) | 개인 사이드 프로젝트와 외주 기회 운영 |
 
 ## 작업 경계
 
