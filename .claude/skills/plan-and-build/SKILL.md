@@ -78,7 +78,7 @@ ai-nodes의 docs는 단순 참조 문서가 아니라 **의사결정·기술 학
 
 ### 3. 구현 계획 초안
 
-`skills/planning/task-create.md`를 정확히 숙지한 후, 다음을 포함한 초안을 작성한다:
+`~/.claude/skills/planning/task-create.md`(공용 코어) + `.claude/planning-overlay.md`(레포 특화 index.json 스키마)를 정확히 숙지한 후, 다음을 포함한 초안을 작성한다:
 
 - phase별 분리 이유와 작업 목록
 - 성공 기준 (실행 가능한 명령어)

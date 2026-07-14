@@ -10,7 +10,7 @@ tool_catchable: false
 source:
   - apartment plan003 ADR-005 first draft
 related:
-  - ../../../../planning/references/adr-writing.md
+  - ../../../../../planning-overlay.md
 ---
 
 # 1-5. ADR 단일 책임 위반

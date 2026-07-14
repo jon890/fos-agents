@@ -9,7 +9,7 @@ tool_catchable: false
 source:
   - career-os ADR individual files pilot
 related:
-  - ../../../../planning/references/adr-writing.md
+  - ../../../../../planning-overlay.md
 ---
 
 # 3-2. ADR 저장 방식 혼용
