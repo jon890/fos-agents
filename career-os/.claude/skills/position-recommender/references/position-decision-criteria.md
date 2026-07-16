@@ -70,7 +70,7 @@
   현재 기본 지원 축이 Java/Spring 서버·백엔드이기 때문이다.
 - Payment Software Engineer처럼 결제 단말의 Android·Windows·RTOS 애플리케이션과 VAN 전문통신이 핵심인 디바이스 소프트웨어 역할은 제외한다.
 - UX Writer 등 개발 구현이 핵심이 아닌 콘텐츠·디자인 직군은 제외한다.
-- Infrastructure Automation·Operations, OpenStack Cloud Engineer처럼 인프라 팀을 위한 구축·운영과 자동화가 핵심인 역할은 제품·플랫폼 백엔드 후보에서 제외한다.
+- Infrastructure Automation·Operations, OpenStack·Private Cloud, Cloud Infrastructure, AI Infrastructure, DevSecOps, IT 인프라 구축·서버·스토리지 전문 엔지니어처럼 인프라 팀을 위한 구축·운영과 자동화가 핵심인 역할은 제품·플랫폼 백엔드 후보에서 제외한다.
 - 제목이나 필수조건이 TCP·UDP 전문통신과 저수준 네트워크 실무를 핵심으로 두는 역할은 후보자의 하드 갭으로 보고 제외한다.
 - `3년 이하`, 신입 등 현재 7년 경력보다 낮은 seniority를 명시한 공고는 추천/프리뷰 후보에서 제외한다.
 - 상품·계좌·상담 운영 Manager처럼 개발 구현이 핵심이 아닌 운영·정책·관리 직무는 추천/프리뷰 후보에서 제외한다.

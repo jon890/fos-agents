@@ -233,7 +233,7 @@ function isExcludedPreviewPosting(posting: LivePostingCandidate): boolean {
   if (/ai engineer\s*\((model|speech)\)|모델\s*엔지니어/.test(title)) return true;
   if (/ai\s*model\s*research|model\s*research|research\s*scientist|applied\s*scientist|ai\s*research|모델\s*연구/.test(text)) return true;
   if (/\b3d\b.*(map|지도|render|렌더)|(?:map|지도).*(render|렌더)|rendering\s*engine|렌더링\s*엔진|\bgraphics?\b|그래픽스?|map\s*engine/.test(title)) return true;
-  if (/\baiops\b|\bsystems?\s*engineer\b|\berp\s*ops\s*developer\b|infrastructure\s*(automation|operations)\s*engineer|openstack\s*cloud\s*engineer/.test(title)) return true;
+  if (/\baiops\b|\bsystems?\s*engineer\b|\berp\s*ops\s*developer\b|infrastructure\s*(automation|operations)\s*engineer|openstack\s*cloud\s*engineer|it\s*인프라.*엔지니어|ai\s*infrastructure|private\s*cloud.*엔지니어링|클라우드\s*인프라\s*엔지니어/.test(title)) return true;
   if (/전문통신|tcp.*전문통신/.test(title)) return true;
   if (/payment\s*software\s*engineer|ux\s*writer/.test(title)) return true;
   if (/3년\s*이하|신입/.test(title)) return true;
@@ -245,7 +245,7 @@ function isExcludedPreviewPosting(posting: LivePostingCandidate): boolean {
   if (/\bml\s*engineer\b|ml\s*infrastructure|model\s*serving|llm\s*serving|ai\s*engineer\s*\((platform|serving|ads|commerce)\)|모델\s*서빙|ml\s*인프라/.test(text)) return true;
   if (/\b(staff|senior staff)\b/.test(title)) return true;
   if (/applied\s*ai\s*engineer|ai[ -]?native\s*(engineer|개발자)|ai\s*platform\s*engineer|\bai\s*engineer\b.*\(r&d\)|자율주행\s*ai\s*엔지니어/.test(title)) return true;
-  if (/\b(sre|site reliability|devops|network|security researcher|technical account|technical program|account manager|asset manager|purchasing|compliance|hrbp|modeler)\b|\b(it manager|it planning|it governance|sox manager|call infra|financial systems|business partnership|category md|search engineer)\b|데이터\s*분석가|채널영업|총무|general affairs|보안\s*연구|네트워크\s*엔지니어|외환\s*상품|자문\s*상품|인프라\s*담당자|컴플라이언스/.test(title)) return true;
+  if (/\b(sre|site reliability|devops|devsecops|network|security researcher|technical account|technical program|account manager|asset manager|purchasing|compliance|hrbp|modeler)\b|\b(it manager|it planning|it governance|sox manager|call infra|financial systems|business partnership|category md|search engineer)\b|데이터\s*분석가|채널영업|총무|general affairs|보안\s*연구|네트워크\s*엔지니어|외환\s*상품|자문\s*상품|인프라\s*담당자|컴플라이언스/.test(title)) return true;
   if (/\bmanager\b/.test(title)) return true;
 
   const company = posting.company.toLowerCase();

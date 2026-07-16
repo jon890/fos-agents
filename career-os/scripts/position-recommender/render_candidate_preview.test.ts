@@ -268,6 +268,26 @@ test("candidate preview excludes roles with candidate-known core gaps and keeps 
   - posting_status: open
   - link_type: direct_posting
   - url: https://example.com/openstack-cloud
+- [프론텍] IT 인프라 구축 서버·스토리지 전문 엔지니어
+  - source: wanted
+  - posting_status: active
+  - link_type: direct_posting
+  - url: https://example.com/it-infrastructure-specialist
+- [트릴리온랩스] Software Engineer, AI Infrastructure
+  - source: wanted
+  - posting_status: active
+  - link_type: direct_posting
+  - url: https://example.com/ai-infrastructure
+- [다키클라우드코리아] Private Cloud 플랫폼 엔지니어링
+  - source: wanted
+  - posting_status: active
+  - link_type: direct_posting
+  - url: https://example.com/private-cloud-platform
+- [의식주컴퍼니] Senior DevSecOps / 클라우드 인프라 엔지니어
+  - source: wanted
+  - posting_status: active
+  - link_type: direct_posting
+  - url: https://example.com/cloud-infrastructure
 - [토스] Data Analytics Engineer (Feature)
   - source: toss-careers
   - posting_status: open
@@ -343,6 +363,10 @@ test("candidate preview excludes roles with candidate-known core gaps and keeps 
   assert.doesNotMatch(html, /Infrastructure Automation Engineer/);
   assert.doesNotMatch(html, /Infrastructure Operations Engineer/);
   assert.doesNotMatch(html, /OpenStack Cloud Engineer/);
+  assert.doesNotMatch(html, /IT 인프라 구축 서버·스토리지 전문 엔지니어/);
+  assert.doesNotMatch(html, /Software Engineer, AI Infrastructure/);
+  assert.doesNotMatch(html, /Private Cloud 플랫폼 엔지니어링/);
+  assert.doesNotMatch(html, /클라우드 인프라 엔지니어/);
   assert.doesNotMatch(html, /Data Analytics Engineer/);
   assert.doesNotMatch(html, /TCP·전문통신/);
   assert.doesNotMatch(html, /3년 이하/);
