@@ -39,7 +39,6 @@ Discord 요약은 내부 파일 경로, plan 번호, commit hash 같은 내부 �
 - Discord 미리보기에는 상위 후보와 핵심 사유를 짧게 쓰되, 각 후보의 공고 링크도 포함한다.
 - 다운로드·첨부용 HTML은 전체 active/open 공고가 들어 있는 파일 하나만 만든다.
 - 부분 후보 preview HTML이나 `report.html`의 다운로드 copy는 기본 생성하지 않는다.
-- AGENTS.md, SKILL.md, ADR, flow 문서처럼 다음 실행자의 행동을 바꾸는 핵심 문서를 수정했으면 완료 보고에 반드시 수정 사실과 파일 목록을 밝히고, 가능한 경우 관심사별 commit/push까지 진행한다.
 
 ## Inputs
 

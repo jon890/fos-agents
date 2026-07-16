@@ -11,7 +11,7 @@ description: 구리 럭키아파트 5동 1004호 인테리어 리모델링 레�
 ## 호출 후 입력 해석
 
 - 검색 범위는 `config/interior-reference-digest.json`과 의사결정 문서에서 읽는다.
-- cron 진입이면 마지막 assistant 출력이 Discord 요약으로 쓰일 수 있으므로 짧은 한국어 요약을 반드시 남긴다.
+- cron 진입이면 마지막 assistant 출력에 오늘 추천, 새 레퍼런스, 결정할 질문, 주요 제한을 한국어로 남긴다.
 - 사용자가 결정을 확정하기 전에는 새 항목을 검토 후보로만 기록한다.
 
 ## 정보 출처 (단일 출처)
@@ -83,7 +83,7 @@ cron 안정성을 위해 WebSearch는 한 assistant turn에 여러 개 병렬 �
 
 cron은 OpenClaw delivery `announce -> Discord`가 담당한다. Claude skill은 Discord API를 직접 호출하지 않는다.
 
-대신 cron 진입 또는 `run_with_claude.sh` 호출에서는 마지막 assistant 출력(stdout)에 Discord에 그대로 보낼 수 있는 짧은 한국어 요약을 반드시 남긴다.
+대신 cron 진입 또는 `run_with_claude.sh` 호출에서는 마지막 assistant 출력(stdout)에 Discord에서 바로 판단할 수 있는 한국어 요약을 반드시 남긴다.
 
 - `NO_REPLY` 금지
 - "완료" 상태만 말하고 끝내기 금지
@@ -121,7 +121,7 @@ cron은 OpenClaw delivery `announce -> Discord`가 담당한다. Claude skill은
 
 ## 일일 리포트 형식
 
-리포트는 짧게 유지한다:
+리포트는 원문 재서술을 반복하지 않고 판단에 필요한 정보만 유지한다:
 
 - 오늘의 추천 레퍼런스 3~5개, 각 레퍼런스별:
   - 제목/출처

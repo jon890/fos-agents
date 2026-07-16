@@ -4,7 +4,7 @@ set -euo pipefail
 TASK_ROOT="${TASK_ROOT:-$HOME/ai-nodes/stock-investment}"
 REPORT_DATE="${REPORT_DATE:-$(TZ=Asia/Seoul date +%F)}"
 
-# Load workspace env if present (DISCORD_CHANNEL_ID 등)
+# Load workspace env if present.
 ENV_FILE="${STOCK_ENV_FILE:-$HOME/ai-nodes/stock-investment/.env}"
 if [[ -f "$ENV_FILE" ]]; then
   set -a
@@ -13,18 +13,7 @@ if [[ -f "$ENV_FILE" ]]; then
   set +a
 fi
 
-NOTIFIER="$HOME/ai-nodes/_shared/lib/notify_discord.ts"
-notify_safe() {
-  local msg="$1"
-  if [[ "${SKIP_NOTIFY:-0}" == "1" ]]; then return 0; fi
-  if [[ -f "$NOTIFIER" ]]; then
-    bun run "$NOTIFIER" "$msg" || true
-  fi
-}
-
 cd "$TASK_ROOT"
-
-notify_safe "[시작] stock-investing-morning-brief 수집 및 리포트 생성 시작 (${REPORT_DATE})"
 
 stdout_file="$(mktemp)"
 stderr_file="$(mktemp)"
@@ -42,7 +31,6 @@ report_path="$TASK_ROOT/data/$REPORT_DATE/report.md"
 
 if [[ "$status" -ne 0 ]]; then
   echo "[stock-investing-morning-brief] Claude runner failed (exit=$status)" >&2
-  notify_safe "[실패] stock-investing-morning-brief Claude runner 실패 (exit=$status, ${REPORT_DATE})"
   if [[ -s "$stderr_file" ]]; then
     echo "--- stderr ---" >&2
     tail -80 "$stderr_file" >&2

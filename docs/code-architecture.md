@@ -16,6 +16,7 @@
 | `stock-investment/` | [`stock-investment/AGENTS.md`](../stock-investment/AGENTS.md) | 일일 주식과 이슈 모니터링 |
 | `travel/` | [`travel/AGENTS.md`](../travel/AGENTS.md) | 여행별 일정과 결정 로그 |
 | `health-care/` | [`health-care/AGENTS.md`](../health-care/AGENTS.md) | 무릎 재활 체크인 |
+| `side-projects/` | [`side-projects/AGENTS.md`](../side-projects/AGENTS.md) | 개인 사이드 프로젝트와 외주 기회 운영 |
 
 ## 루트 디렉터리
 

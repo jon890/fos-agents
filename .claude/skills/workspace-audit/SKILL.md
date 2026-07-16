@@ -1,6 +1,6 @@
 ---
 name: workspace-audit
-description: ai-nodes 워크스페이스를 대화형으로 감사하는 skill. `/workspace-audit`, `/workspace-audit <workspace>`, `/workspace-audit --all`, "워크스페이스 감사", "고아 config 찾아줘", "dead script 점검", "깨진 심링크 확인", "doc-code 불일치", "오래된 실행 확인"처럼 고아 config, dead 스크립트, 깨진 심링크, 문서-코드 불일치, 오래된 실행을 찾고 사용자와 결과를 정리해야 할 때 사용. 백그라운드 claude CLI를 호출하지 않고 현재 세션이 판단한다.
+description: ai-nodes 워크스페이스를 대화형으로 감사하는 skill. `/workspace-audit`, `/workspace-audit workspace`, `/workspace-audit --all`, "워크스페이스 감사", "고아 config 찾아줘", "dead script 점검", "깨진 심링크 확인", "doc-code 불일치", "오래된 실행 확인"처럼 고아 config, dead 스크립트, 깨진 심링크, 문서-코드 불일치, 오래된 실행을 찾고 사용자와 결과를 정리해야 할 때 사용. 백그라운드 claude CLI를 호출하지 않고 현재 세션이 판단한다.
 ---
 
 # 워크스페이스 감사
@@ -101,7 +101,7 @@ bash skills/workspace-audit/scripts/run_audit.sh --all
 7. **보존 가치 평가** — chat 상에서 사용자와 함께 어떤 발견이 일회성 정보가 아니라 *영구 기록 가치*가 있는지 판단한다. 가치 있는 항목만 `<workspace>/docs/decisions/`에 ADR로 옮긴다. stash 파일들은 워크스페이스 트리에 영구화하지 않는다 — 다음 audit 실행 시 덮어씀.
 
 ### 3. Chat에 요약 제시
-리포트 파일을 `Read`로 다시 읽어, 사용자에게 다음만 짧게 보여준다:
+리포트 파일을 `Read`로 다시 읽어, 사용자가 판단할 수 있는 다음 정보만 보여준다:
 
 - 워크스페이스별 Summary (severity 카운트)
 - HIGH / MED 항목만 나열 (LOW/INFO는 카운트만)

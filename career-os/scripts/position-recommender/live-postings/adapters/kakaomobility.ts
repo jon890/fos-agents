@@ -10,7 +10,7 @@ import {
   norm,
 } from "../policy.ts";
 
-const UA = "Mozilla/5.0 (OpenClaw career-os position recommender)";
+const UA = "Mozilla/5.0 (fos-agents position recommender)";
 const HOST = "https://kakaomobility.career.greetinghr.com";
 const LISTING_URL = `${HOST}/ko/guide`;
 

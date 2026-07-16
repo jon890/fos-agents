@@ -32,12 +32,12 @@ private health-care 데이터로 주간 또는 진료 전 한국어 요약을 �
 
 - `health-care/private/conditions/knee-patellar-instability/weekly-summaries/YYYY-MM-DD.md`
 
-private 산출물 작성 후 짧은 Discord 요약을 보낼 수 있다.
+private 산출물 작성 후 핵심 변화, 중단 신호, 병원에 물어볼 질문을 담은 Discord 요약을 보낼 수 있다.
 사용자가 명시적으로 요청하지 않는 한 민감한 전체 내용을 전송하지 않는다.
 
 ## 요약 구조
 
-간결한 한국어 섹션으로 작성한다:
+사용자가 진료 준비에 바로 쓸 수 있는 한국어 섹션으로 작성한다:
 
 1. 이번 주 핵심 변화
 2. 현재 남은 문제

@@ -36,7 +36,7 @@ track_task가 남기던 `logs/task-runs.jsonl` / `token-usage.jsonl`은 읽는 �
 
 ### 결과
 
-- `_shared/bin/`이 빈 디렉터리가 되고, `_shared/lib/`은 `notify_discord.ts`만 남는다.
+- `_shared/bin/`이 빈 디렉터리가 되고, runtime 중립 공용 helper만 유지한다.
 - 모노레포 실행 모델이 native 직접 호출 단일 패턴으로 명문화 — 신규 워크스페이스도 이 패턴만 따른다.
 - 운영 계측(토큰·실행 로그)은 일시 손실 — 필요 시 별도 plan으로 재설계(ADR-002 career-os 선례와 동일 판단).
 - 외부 brain의 `task-run-tracking` 페이지도 본 폐기에 맞춰 삭제(brain repo 작업).

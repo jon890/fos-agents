@@ -4,6 +4,8 @@
 모든 에이전트는 이 파일을 진입점으로 삼고, 상세 사양은 책임 문서와 각 skill 본문에서 확인한다.
 `CLAUDE.md`는 이 파일의 심볼릭 링크다.
 
+처음 사용하는 사람은 [README.md](README.md)에서 제품 범위와 주요 흐름을 먼저 확인한다.
+
 공통 운영 규칙은 루트 [`../AGENTS.md`](../AGENTS.md)를 따른다.
 이 파일에는 career-os에서만 다른 경계와 읽기 순서만 남긴다.
 
@@ -14,6 +16,7 @@
 
 | 문서 | 책임 | 언제 보는지 |
 |---|---|---|
+| [`README.md`](README.md) | 제품 범위, 주요 skill, 시작 흐름 | 워크스페이스를 처음 볼 때 |
 | [`../AGENTS.md`](../AGENTS.md) | 모노레포 공통 규칙 | 모든 작업 시작 시 |
 | [`docs/README.md`](docs/README.md) | career-os 문서별 책임과 작성 규칙 | docs 작성·수정 전 |
 | [`docs/prd.md`](docs/prd.md) | 제품 가치, skill 자산, 성공 기준 | 새 기능 추가, 우선순위 결정 |
@@ -89,6 +92,20 @@ Codex 노출은 `career-os/.codex/skills/<skill>` 심볼릭 링크로 연결한�
 | `application-package-writer` | 공고별 지원 패키지 초안 작성 | [SKILL.md](.claude/skills/application-package-writer/SKILL.md), [flow](docs/flow.md) |
 | `application-reviewer` | 지원 패키지 근거, 과장, drift 검토 | [SKILL.md](.claude/skills/application-reviewer/SKILL.md), [flow](docs/flow.md) |
 | `daily-application-digest` | 지원 현황 일일 요약 작성 | [SKILL.md](.claude/skills/daily-application-digest/SKILL.md), [flow](docs/flow.md) |
+
+## Skill 작성 원칙
+
+skill 본문은 도메인 작업에 필요한 지시와 검증만 담는다.
+공통 에이전트 동작, 일반적인 말투, 반복된 승인 문구는 여기에서 다시 지시하지 않는다.
+
+- 목표, 관련 입력, 제약, 필요한 근거, 성공 기준, 출력 계약을 우선한다.
+- `짧게`, `간결하게` 같은 일반적인 축약 지시 대신 남겨야 할 결론, 근거, 주의사항, 다음 행동을 구체적으로 정한다.
+- 생성물의 길이, 표, JSON, HTML, 제출 경계처럼 도메인 결과에 필요한 형식은 유지한다.
+- 호출 가능한 도구와 참조 파일은 해당 작업에 필요한 것만 명시한다.
+- 새 제약은 실제 실패 사례나 검증 결과가 있을 때만 추가한다.
+
+OpenAI 모델을 새로 도입하거나 변경하는 요청은 공식 [Model guidance](https://developers.openai.com/api/docs/guides/latest-model)를 확인한다.
+현재 활성 실행 경로에 없는 모델 설정은 추측해 추가하지 않는다.
 
 ## 외부 저장소와 데이터 경계
 

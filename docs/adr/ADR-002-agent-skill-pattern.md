@@ -15,7 +15,7 @@ Claude Code의 native skill 메커니즘은 `claude -p "/<skill> <args>"` 호출
 - **skill 위치 단일 출처**: 워크스페이스 root의 `.claude/skills/<name>/SKILL.md`. 이중 구조(`<ws>/skills/<name>/`)는 폐기. 모든 skill 이동.
 - **점진 마이그**: 한 skill씩 native로 전환. 첫 대상은 career-os의 study-pack-writer.
 - **자체 검증**: SKILL.md 안에 self-check 명세 + 최대 N회 재작성. 외부 validator subprocess 폐기.
-- **워크스페이스 한정 helper 점진 폐기**: `build_prompt.ts` / `study_pack_publish.ts` / `fos_study_git.ts` 같이 native skill 안에서 Claude가 Bash로 직접 처리 가능한 것은 점진 폐기. 워크스페이스 무관 헬퍼(`notify_discord.ts` 등 ADR-001 _shared/lib 자격)는 유지.
+- **워크스페이스 한정 helper 점진 폐기**: `build_prompt.ts` / `study_pack_publish.ts` / `fos_study_git.ts` 같이 native skill 안에서 Claude가 Bash로 직접 처리 가능한 것은 점진 폐기. 공용 helper는 workspace 경계와 재사용성을 만족할 때만 유지.
 - **dispatcher 폐기**: `command-router/run_now.sh` 같은 case 분기 dispatcher는 `claude -p "/<skill>"` 직접 호출로 대체. cron 진입점도 동일.
 - **track_task.sh + 토큰 회계 폐기**: 운영 가시성·메트릭은 필요 시 별도 plan으로 재설계.
 

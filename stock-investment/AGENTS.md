@@ -111,7 +111,8 @@ cron payload 갱신 이력:
 - 광범위 풀-리포 분석 금지 — config json 명시 큐 한정.
 - 재무 자문 아님 — 불확실성 명시.
 - 수집 데이터·해석 분리 — config / data / docs 책임 분리.
-- 모닝 Discord 메시지는 간결 — 상세 자산은 `data/YYYY-MM-DD/`.
+- 모닝 Discord 메시지는 오늘의 결론, 근거, 주요 위험, 확인할 다음 이벤트를 우선한다.
+  상세 자산은 `data/YYYY-MM-DD/`에 둔다.
 - 영구 자산은 워크스페이스 내부 (`~/.openclaw/workspace` 사용 안 함).
 
 ## 8. 보안 경계

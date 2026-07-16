@@ -1,0 +1,4 @@
+interface:
+  display_name: "Freelance Opportunity Reporter"
+  short_description: "AI·백엔드 외주 공고를 HTML 실행 리포트로 분류"
+  default_prompt: "$freelance-opportunity-reporter를 사용해 현재 AI 자동화와 백엔드 개발 외주 공고를 수집하고, 리모트 가능성·지원 가능성·위험을 나눈 HTML 실행 리포트를 작성한다."

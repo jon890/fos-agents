@@ -10,7 +10,7 @@ import {
   norm,
 } from "../policy.ts";
 
-const UA = "Mozilla/5.0 (OpenClaw career-os position recommender)";
+const UA = "Mozilla/5.0 (fos-agents position recommender)";
 const HOST = "https://recruit.navercorp.com";
 // JSON API used for listing (HTML page renders cards via AJAX, not SSR).
 const LIST_API = `${HOST}/rcrt/loadJobList.do`;

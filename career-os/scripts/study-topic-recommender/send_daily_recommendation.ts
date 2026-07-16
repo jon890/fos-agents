@@ -3,7 +3,6 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { config as loadDotenv } from "dotenv";
-import { notifyDiscord } from "../../../_shared/lib/notify_discord.ts";
 
 type StudyRecommendation = {
   key?: string;
@@ -16,12 +15,6 @@ type TopicInventory = {
   generatedAt?: string;
   recommendations?: StudyRecommendation[];
   updateExistingRecommendations?: Array<{ key?: string; candidatePath?: string }>;
-};
-
-type PresentationButton = {
-  label: string;
-  action: { type: "callback"; value: string };
-  style?: "primary" | "secondary" | "success" | "danger";
 };
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
@@ -126,43 +119,6 @@ function buildMessage(inventory: TopicInventory, today = kstParts()): string {
   return lines.join("\n");
 }
 
-function buildPresentation(inventory: TopicInventory, today = kstParts()) {
-  const buttons: PresentationButton[] = (inventory.recommendations ?? [])
-    .slice(0, 3)
-    .map((item, index) => ({
-      label: `${index + 1}번 초안 생성`,
-      action: {
-        type: "callback",
-        value: `career.study-pack.create:${today.date}:${index + 1}:${item.key ?? ""}`,
-      },
-      style: "primary",
-    }));
-
-  buttons.push({
-    label: "오늘은 넘김",
-    action: {
-      type: "callback",
-      value: `career.study-pack.skip:${today.date}`,
-    },
-    style: "secondary",
-  });
-
-  return {
-    title: `오늘의 백엔드 학습 추천 (${today.short})`,
-    tone: "info",
-    blocks: [
-      {
-        type: "context",
-        text: "버튼은 초안 생성 요청만 수행한다. 최종화는 별도 확인한다.",
-      },
-      {
-        type: "buttons",
-        buttons,
-      },
-    ],
-  };
-}
-
 function writeActionSnapshot(inventory: TopicInventory, today = kstParts()): void {
   mkdirSync(actionDir, { recursive: true });
   const recommendations = (inventory.recommendations ?? []).slice(0, 3).map((item, index) => ({
@@ -189,9 +145,8 @@ async function main(): Promise<void> {
   const inventory = readInventory();
   const today = kstParts();
   writeActionSnapshot(inventory, today);
-  await notifyDiscord(buildMessage(inventory, today), {
-    presentation: buildPresentation(inventory, today),
-  });
+  console.log(buildMessage(inventory, today));
+  console.log(`\nAction snapshot: ${resolve(actionDir, `${today.date}.json`)}`);
 }
 
 try {

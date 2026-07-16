@@ -13,17 +13,7 @@ if [[ -f "$ENV_FILE" ]]; then
   set +a
 fi
 
-NOTIFIER="$HOME/ai-nodes/_shared/lib/notify_discord.ts"
-notify_safe() {
-  local msg="$1"
-  if [[ -f "$NOTIFIER" ]]; then
-    bun run "$NOTIFIER" "$msg" || true
-  fi
-}
-
 cd "$TASK_ROOT"
-
-notify_safe "[시작] apartment-daily-report 데이터 수집 및 리포트 생성 시작 (${REPORT_DATE})"
 
 stdout_file="$(mktemp)"
 stderr_file="$(mktemp)"
@@ -41,7 +31,6 @@ report_path="$TASK_ROOT/data/$REPORT_DATE/report.md"
 
 if [[ "$status" -ne 0 ]]; then
   echo "[apartment-daily-report] Claude runner failed (exit=$status)" >&2
-  notify_safe "[실패] apartment-daily-report Claude runner 실패 (exit=$status, ${REPORT_DATE})"
   if [[ -s "$stderr_file" ]]; then
     echo "--- stderr ---" >&2
     tail -80 "$stderr_file" >&2

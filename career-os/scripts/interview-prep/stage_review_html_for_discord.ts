@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const rootDir = resolve(scriptDir, "../..");
 const allowedSourceDir = resolve(rootDir, "reports/downloads");
-const trustedStageDir = "/tmp/openclaw/career-review-downloads";
+const trustedStageDir = "/tmp/fos-agents/career-review-downloads";
 
 function usage(): never {
   console.error("usage: stage_review_html_for_discord.ts <reports/downloads/*.html>");

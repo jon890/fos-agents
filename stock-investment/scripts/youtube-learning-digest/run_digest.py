@@ -73,7 +73,7 @@ def save_json(path: Path, data) -> None:
 
 
 def fetch_url(url: str) -> bytes:
-    req = urllib.request.Request(url, headers={"User-Agent": "Hermes stock-youtube-learning-digest/2.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": "fos-agents stock-youtube-learning-digest/2.0"})
     with urllib.request.urlopen(req, timeout=30) as resp:
         return resp.read()
 

@@ -2,8 +2,11 @@ import type { SourceAdapter, SourceId, SourceSelection } from "../types.ts";
 import { coupangCareersAdapter } from "./coupang-careers.ts";
 import { cjCareersAdapter } from "./cj-careers.ts";
 import { kakaomobilityAdapter } from "./kakaomobility.ts";
+import { kakaobankCareersAdapter } from "./kakaobank-careers.ts";
 import { kakaopayAdapter } from "./kakaopay.ts";
 import { kakaopaySecuritiesAdapter } from "./kakaopay-securities.ts";
+import { kraftonCareersAdapter } from "./krafton-careers.ts";
+import { kurlyCareersAdapter } from "./kurly-careers.ts";
 import { naverCareersAdapter } from "./naver-careers.ts";
 import { samsungCareersAdapter } from "./samsung-careers.ts";
 import { skCareersAdapter } from "./sk-careers.ts";
@@ -17,6 +20,9 @@ const ADAPTERS: Record<SourceId, SourceAdapter> = {
   kakaopay: kakaopayAdapter,
   "kakaopay-securities": kakaopaySecuritiesAdapter,
   kakaomobility: kakaomobilityAdapter,
+  "kakaobank-careers": kakaobankCareersAdapter,
+  "krafton-careers": kraftonCareersAdapter,
+  "kurly-careers": kurlyCareersAdapter,
   "naver-careers": naverCareersAdapter,
   "samsung-careers": samsungCareersAdapter,
   "sk-careers": skCareersAdapter,
@@ -26,6 +32,9 @@ const ADAPTERS: Record<SourceId, SourceAdapter> = {
 const SOURCE_ALIASES: Record<string, SourceId> = {
   toss: "toss-careers",
   coupang: "coupang-careers",
+  kakaobank: "kakaobank-careers",
+  krafton: "krafton-careers",
+  kurly: "kurly-careers",
   samsung: "samsung-careers",
   sk: "sk-careers",
   cj: "cj-careers",

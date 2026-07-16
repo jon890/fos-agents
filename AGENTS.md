@@ -32,6 +32,7 @@
 | `travel/` | [`travel/AGENTS.md`](travel/AGENTS.md) | 여행별 일정과 결정 로그 |
 | `health-care/` | [`health-care/AGENTS.md`](health-care/AGENTS.md) | 무릎 재활 체크인 |
 | `ji-yoon-blog/` | [`ji-yoon-blog/AGENTS.md`](ji-yoon-blog/AGENTS.md) | 지융로그 네이버 블로그 운영, 글쓰기, 트렌드 분석 |
+| `side-projects/` | [`side-projects/AGENTS.md`](side-projects/AGENTS.md) | 개인 사이드 프로젝트와 외주 기회 운영 |
 
 ## 작업 경계
 
@@ -51,9 +52,9 @@
 
 사용자가 보는 분석·추천·점검 리포트는 기본적으로 HTML 파일도 함께 만든다.
 
-- Discord 답변에는 핵심 요약을 짧게 쓰고, 바로 열어볼 수 있는 HTML 다운로드 파일을 첨부한다.
+- Discord 답변에는 결론, 필요한 근거, 다음 행동을 담고 바로 열어볼 수 있는 HTML 다운로드 파일을 첨부한다.
 - 공고·포지션 추천 리포트는 예외 없이 HTML을 첨부하고, HTML 안의 각 공고명에는 개별 공고 URL로 이동하는 링크를 건다.
-- Discord 미리보기에는 상위 후보 5~10개와 핵심 사유를 짧게 쓰되, 각 후보의 공고 링크도 함께 포함한다.
+- Discord 미리보기에는 상위 후보 5~10개, 핵심 사유, 각 공고 링크를 포함한다.
 - 워크스페이스별 허용된 `data/runtime/downloads/` 같은 다운로드 전용 경로에 HTML을 만든다.
 - HTML에는 민감 정보 노출 범위를 점검하고, 공개 또는 준공개 채널에 첨부해도 되는 내용만 포함한다.
 - 단순 한두 줄 답변, 중간 진행 보고, 사용자가 명시적으로 텍스트만 원한 경우는 예외로 둘 수 있다.
@@ -67,6 +68,16 @@
 - Codex 노출: `<workspace>/.codex/skills/<skill>` 심볼릭 링크
 - 실행 환경: CLI, 서브에이전트, wrapper 중 어떤 방식을 쓸지는 환경이 결정한다.
 - skill 본문과 설명 문구는 한국어를 기본으로 작성한다.
+
+### GPT-5.6에 맞는 skill 지시
+
+skill에는 도메인 작업에 필요한 목표, 입력, 제약, 근거, 검증, 출력 계약만 둔다.
+
+- `짧게`, `간결하게` 같은 일반적인 축약 지시 대신 남겨야 할 결론, 근거, 주의사항, 다음 행동을 구체적으로 쓴다.
+- Markdown, JSON, HTML, 메시지 길이처럼 사용자 결과에 필요한 형식 제약은 유지한다.
+- 공통 에이전트 동작, 일반 말투, 반복된 승인 문구는 skill마다 복제하지 않는다.
+- 새 지시는 실제 실패 사례나 검증 결과가 있을 때만 추가한다.
+- OpenAI 모델을 도입하거나 변경할 때는 공식 [Model guidance](https://developers.openai.com/api/docs/guides/latest-model)를 확인한다.
 
 ## 모호함 대응
 
@@ -94,10 +105,7 @@ career-os의 `tasks/plan{N}-<slug>/` 흐름은 필요할 때 다른 워크스페
 
 ## 구현 실행 모델
 
-확정된 task/phase 구현은 두 실행 모델 중 하나로 진행한다(ADR-018).
-
-- 무인 cron·background 실행은 `plan-and-build`(`run-phases.py`)로 한다.
-- 대화형 가시 협업(critic 평가 + docs-verifier 검증)은 `build-with-teams`로 한다.
+확정된 task/phase 구현은 `build-with-teams`(critic 평가 + docs-verifier 검증, 대화형 가시 협업)로 진행한다(ADR-018).
 
 `build-with-teams`의 executor·docs-verifier는 실행 워크스페이스명을 prefix로 한 전용 agent를 쓴다.
 정본은 `.claude/agents/<workspace>-{executor,docs-verifier}.md`이고, 워크스페이스 환경은 `variants/<workspace>.md`가 정의한다.
@@ -160,23 +168,12 @@ AGENTS.md, SKILL.md, ADR, docs/flow.md처럼 에이전트 동작을 바꾸는 �
 - public/private/work 네임스페이스를 구분한다.
 - repo 문서에 충분히 남은 구현 세부나 하루짜리 실행 로그는 brain에 넣지 않는다.
 
-## Hermes
-
-이 repo의 일부 skill은 Hermes Agent(Nous Research) 런타임에서 실행된다.
-Hermes 관련 질문에 답하기 전에는 기억이 아니라 공식 문서를 먼저 참조한다.
-
-- 공식 문서: https://hermes-agent.nousresearch.com/docs
-- Quickstart: https://hermes-agent.nousresearch.com/docs/getting-started/quickstart
-- 로컬 런타임 홈은 `~/.hermes`이며 `config.yaml`, `skills/`, `gateway/`로 구성된다.
-- Hermes는 skill을 description으로 트리거하므로, skill 노출·확장은 description 품질로 판단한다.
-
 ## 참고
 
 - 구조와 새 워크스페이스 추가: [`docs/code-architecture.md`](docs/code-architecture.md)
 - 모노레포 ADR: [`docs/adr/INDEX.md`](docs/adr/INDEX.md)
 - 문서 형식: [`docs/docs-style.md`](docs/docs-style.md)
-- planning skill: [`.claude/skills/planning/SKILL.md`](.claude/skills/planning/SKILL.md)
-- plan-and-build skill: [`.claude/skills/plan-and-build/SKILL.md`](.claude/skills/plan-and-build/SKILL.md)
-- build-with-teams skill: [`.claude/skills/build-with-teams/SKILL.md`](.claude/skills/build-with-teams/SKILL.md)
+- planning skill (공용 코어 `~/.claude/skills/planning/SKILL.md` + 레포 특화 [`.claude/planning-overlay.md`](.claude/planning-overlay.md))
+- build-with-teams skill (공용 코어 `~/.claude/skills/build-with-teams/SKILL.md` + 레포 특화 [`.claude/build-with-teams-overlay.md`](.claude/build-with-teams-overlay.md))
 - workspace-audit skill: [`.claude/skills/workspace-audit/SKILL.md`](.claude/skills/workspace-audit/SKILL.md)
-- docs-check skill: [`.claude/skills/docs-check/SKILL.md`](.claude/skills/docs-check/SKILL.md)
+- docs-check skill (공용 코어 `~/.claude/skills/docs-check/SKILL.md` + 레포 특화 [`.claude/docs-check-overlay.md`](.claude/docs-check-overlay.md))
