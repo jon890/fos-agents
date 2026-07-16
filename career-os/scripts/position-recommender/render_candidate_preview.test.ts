@@ -198,16 +198,31 @@ test("candidate preview excludes roles with candidate-known core gaps and keeps 
   - skills: Java, Spring Boot, Kafka
   - main_tasks: 주차 플랫폼 API와 서버를 개발합니다.
   - url: https://example.com/backend
+- [토스플레이스] Server Developer (Platform)
+  - source: toss-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - skills: Java, Kotlin, Spring Framework
+  - main_tasks: API Gateway와 Monitoring 시스템을 개발하고 운영합니다.
+  - requirements: 서버 플랫폼 팀은 Server Developer, DevOps Engineer, DBA로 구성됩니다.
+  - url: https://example.com/server-platform
+- [토스뱅크] Credit Rating Modeler
+  - source: toss-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - url: https://example.com/credit-modeler
 `;
 
   const html = renderCandidatePreviewHtml(sampleRun, { postingsMarkdown: snapshot, limit: null });
 
-  assert.match(html, /표시 공고 1개/);
+  assert.match(html, /표시 공고 2개/);
   assert.match(html, /카카오모빌리티/);
+  assert.match(html, /토스플레이스/);
   assert.doesNotMatch(html, /Data Pipeline Specialist/);
   assert.doesNotMatch(html, /Server Developer \(AI Platform\)/);
   assert.doesNotMatch(html, /AI Native Full Stack Engineer/);
   assert.doesNotMatch(html, /ML Engineer \(Platform\)/);
   assert.doesNotMatch(html, /액션파워/);
   assert.doesNotMatch(html, /퇴직연금 도메인 개발자/);
+  assert.doesNotMatch(html, /Credit Rating Modeler/);
 });
