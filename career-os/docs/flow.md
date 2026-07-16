@@ -147,6 +147,9 @@ Use skill: /position-recommender [context]
 - `reports/latest/position-recommendation.md`
 - `reports/latest/position-recommendation.html`
 
+다운로드용 전체 공고 HTML은 같은 수집 실행의 snapshot만 렌더링한다.
+오늘(Asia/Seoul) 수집된 active/open 공고가 없으면 기본 렌더링을 중단하고, 이전 snapshot 사용은 명시적인 stale 허용으로만 가능하다.
+
 ## 지원 준비
 
 지원 준비 흐름은 추천 후보를 실제 지원 패키지 후보로 등록하는 과정이다.

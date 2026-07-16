@@ -24,6 +24,11 @@ interface LivePostingCandidate {
   raw: string[];
 }
 
+interface SnapshotProvenance {
+  collectionRunId: string;
+  collectedAt: string;
+}
+
 export interface CandidatePreviewOptions {
   limit?: number | null;
   title?: string;
@@ -146,6 +151,22 @@ function parseLivePostingRows(markdown: string, run: RecommendationRunType): Pre
   return sortLivePreviewRows(rows);
 }
 
+function snapshotProvenance(markdown: string): SnapshotProvenance {
+  const collectionRunId = markdown.match(/^- collection_run_id:\s*(.+)$/m)?.[1]?.trim() ?? "";
+  const collectedAt = markdown.match(/^- collected_at:\s*(.+)$/m)?.[1]?.trim() ?? "";
+  return { collectionRunId, collectedAt };
+}
+
+function koreaDate(value: string): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" })
+    .format(new Date(value))
+    .replace(/\//g, "-");
+}
+
+function snapshotActivePostingCount(markdown: string): number {
+  return Number(markdown.match(/^- direct_active_or_open_postings:\s*(\d+)$/m)?.[1] ?? "0");
+}
+
 function aiInterestScore(row: PreviewRow): number {
   const text = [row.company, row.title, row.why, ...row.keywords].join(" ").toLowerCase();
   const highSignals = ["rag", "vector", "벡터", "opensearch", "llm", "agent", "에이전트", "ax", "ai transformation", "ai 플랫폼", "ai platform", "llmops", "mlops", "model router", "gateway", "workflow", "tool calling"];
@@ -265,6 +286,10 @@ ${showTierColumn ? `  <td class="tier"><span class="badge ${badgeClass(row.tier)
     .join("\n");
 
   const conclusion = run.conclusion.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+  const provenance = options.postingsMarkdown ? snapshotProvenance(options.postingsMarkdown) : { collectionRunId: "", collectedAt: "" };
+  const freshness = provenance.collectedAt
+    ? `수집 기준: ${provenance.collectedAt} · run: ${provenance.collectionRunId || "미기록"}`
+    : "수집 기준 시각이 없는 legacy snapshot입니다.";
   return `<!doctype html>
 <html lang="ko">
 <head>
@@ -313,7 +338,7 @@ ${showTierColumn ? `  <td class="tier"><span class="badge ${badgeClass(row.tier)
 <body>
 <main>
   <h1>${escapeHtml(title)}</h1>
-  <div class="meta">생성일: ${escapeHtml(run.reportDate)} · 현재 후보자의 역할·고용 형태·핵심 기술 조건을 통과한 active/open 공고입니다. · 대규모·검증 회사 공고를 먼저 정렬합니다. · 공고명을 클릭하면 개별 공고 페이지로 이동합니다. · 표시 공고 ${rows.length}개</div>
+  <div class="meta">생성일: ${escapeHtml(run.reportDate)} · ${escapeHtml(freshness)} · 현재 후보자의 역할·고용 형태·핵심 기술 조건을 통과한 active/open 공고입니다. · 대규모·검증 회사 공고를 먼저 정렬합니다. · 공고명을 클릭하면 개별 공고 페이지로 이동합니다. · 표시 공고 ${rows.length}개</div>
   <section class="conclusion"><ul>${conclusion}</ul></section>
   <div class="table-scroll" tabindex="0" aria-label="공고 목록 가로 스크롤 영역">
     <table>
@@ -341,6 +366,7 @@ if (import.meta.main) {
   let limit: number | null = 10;
   let title = "";
   let postings = "";
+  let allowStale = false;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--input") input = args[++i] ?? "";
     else if (args[i] === "--output") output = args[++i] ?? "";
@@ -350,6 +376,7 @@ if (import.meta.main) {
     }
     else if (args[i] === "--title") title = args[++i] ?? "";
     else if (args[i] === "--postings") postings = args[++i] ?? "";
+    else if (args[i] === "--allow-stale") allowStale = true;
   }
   if (!input || !output) usage();
 
@@ -362,6 +389,13 @@ if (import.meta.main) {
   }
 
   const postingsMarkdown = postings ? readFileSync(resolve(postings), "utf-8") : undefined;
+  if (postingsMarkdown && !allowStale) {
+    const provenance = snapshotProvenance(postingsMarkdown);
+    if (!provenance.collectedAt || koreaDate(provenance.collectedAt) !== koreaDate(new Date().toISOString()) || snapshotActivePostingCount(postingsMarkdown) === 0) {
+      console.error("오늘(Asia/Seoul) 수집된 1건 이상 snapshot이 필요합니다. 먼저 수집을 다시 실행하거나 --allow-stale을 명시하세요.");
+      process.exit(1);
+    }
+  }
   const html = renderCandidatePreviewHtml(parsed.data, { limit, title: title || undefined, postingsMarkdown });
   mkdirSync(dirname(resolve(output)), { recursive: true });
   writeFileSync(resolve(output), html, "utf-8");

@@ -164,7 +164,10 @@ async function main(): Promise<number> {
     ...diagnostic,
     importedCount: importedCounts.get(diagnostic.source) ?? 0,
   }));
+  const collectedAt = new Date().toISOString();
   render(activePosts, out, {
+    collectionRunId: `position-postings-${collectedAt}`,
+    collectedAt,
     requestedSource: source,
     configuredSources: configuredSourceIds(source),
     serverOnly,

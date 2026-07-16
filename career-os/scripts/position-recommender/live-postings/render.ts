@@ -48,6 +48,8 @@ export function render(posts: Posting[], outPath: string, diagnostics: Collectio
     "",
     "## Collection Diagnostics",
     "",
+    `- collection_run_id: ${diagnostics.collectionRunId}`,
+    `- collected_at: ${diagnostics.collectedAt}`,
     `- requested_source: ${diagnostics.requestedSource}`,
     `- configured_sources: ${diagnostics.configuredSources.join(", ") || "-"}`,
     `- server_only: ${diagnostics.serverOnly}`,

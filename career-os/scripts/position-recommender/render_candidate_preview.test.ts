@@ -94,6 +94,9 @@ test("candidate preview applies limit to tiered position rows", () => {
 test("candidate preview can render all live posting rows while excluding CTO and AI model research", () => {
   const snapshot = `# Live Posting Snapshot
 
+- collection_run_id: position-postings-2026-06-21T06:00:00.000Z
+- collected_at: 2026-06-21T06:00:00.000Z
+
 - [케이존] CTO / Agentic AI 기술 총괄 리드
   - source: wanted
   - posting_status: active
@@ -144,6 +147,8 @@ test("candidate preview can render all live posting rows while excluding CTO and
   const html = renderCandidatePreviewHtml(sampleRun, { postingsMarkdown: snapshot, limit: null });
 
   assert.match(html, /표시 공고 1개/);
+  assert.match(html, /수집 기준: 2026-06-21T06:00:00.000Z/);
+  assert.match(html, /position-postings-2026-06-21T06:00:00.000Z/);
   assert.match(html, /카카오페이/);
   assert.match(html, /결제 정합성 경험과 잘 맞는다/);
   assert.match(html, /https:\/\/kakaopay\.career\.greetinghr\.com\/ko\/o\/192129/);

@@ -1404,6 +1404,8 @@ source adapter가 수집한 후보를 공통 validator가 걸러낸 뒤 markdown
 
 필수 의미 필드:
 
+- `collection_run_id`, `collected_at` — snapshot을 만든 단일 수집 실행과 ISO 8601 시각.
+  전체 공고 HTML은 이 값을 표시하며, 같은 실행의 snapshot만 기본 입력으로 허용한다.
 - `source` — 수집 adapter 이름. 예: `wanted`, `toss-careers`.
 - `discovery_mode` — 같은 source 안의 발견 경로. 예: `broad`, `target-url`, `official-listing`.
 - `link_type` — 추천 입력은 `direct_posting`만 허용.

@@ -86,6 +86,8 @@ export interface SourceAdapter {
 }
 
 export interface CollectionDiagnostics {
+  collectionRunId: string;
+  collectedAt: string;
   requestedSource: string;
   configuredSources: string[];
   serverOnly: boolean;
