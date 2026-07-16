@@ -42,7 +42,7 @@ career-os/
 │   ├── code-architecture.md  이 문서
 │   ├── adr/              아키텍처 결정 개별 파일 + INDEX (ADR-089 파일럿 전환, ai-nodes ADR-015)
 │   │   ├── INDEX.md      번호·제목·Status·파일 조망 표
-│   │   └── ADR-NNN-slug.md  개별 ADR 파일 (88개)
+│   │   └── ADR-NNN-slug.md  개별 ADR 파일 (개수는 INDEX.md 참조 — 여기 숫자 고정 안 함)
 │   ├── korean-expression-guide.md  career-os 산출물 한국어 표현 가이드
 │   ├── hand-off/         외부 위임·인수인계 일회성 노트
 │   └── prep/             회사·이벤트별 운영 자산. 이벤트 종료 후 archive
@@ -58,7 +58,7 @@ career-os/
 │   ├── candidate-profile-detail.md    이력 detail — 면접 서사·심화 (ADR-104 신규, Phase 03)
 │   ├── study-pack-topics.json         legacy 대량 topic DB. plan068에서 override/seed로 축소 예정
 │   ├── question-bank-topics.json      interview-asset topic override 후보. public/question-bank 정본 아님
-│   ├── external-reading-sources.json  techBlog/ai/geek 외부 reading reservoir (plan002, ADR-083 이후 공고 source registry와 분리)
+│   ├── external-reading-sources.json  techBlog/ai/geek 외부 reading reservoir (plan002 이후 공고 source registry와 분리)
 │   ├── position-collection.json       position 수집 설정 (wanted jobGroupId + 회사 비종속 role 키워드, ADR-099·ADR-103)
 │   ├── verified-company-research-targets.json  검증 회사군 + 회사 키워드 (ADR-090·ADR-103. cooldown은 state/로 분리 ADR-109)
 │   ├── candidate-config.json          후보자 구조화 사실 (experienceYears 등, ADR-099. profile.md는 prose)
@@ -127,9 +127,9 @@ career-os/
 │   (study-topic-recommender: run_*.sh + Python scripts 폐기 완료 — plan016. dispatcher 2 case 폐기. agent skill로 진입점 통합)
 │   (study-pack-writer + interview-asset-writer scripts 폐기 — plan013/015 agent skill로 흡수, .claude/skills/ 트리 참조)
 │   ├── position-recommender/
-│   │   ├── collect_live_postings.ts    CLI 호환 entrypoint (ADR-030, ADR-043, ADR-047)
-│   │   ├── recommendation_schema.ts    표준 출력 JSON zod 스키마 (ADR-094/ADR-101, RecommendationRun, source·closeDate 포함)
-│   │   ├── render_recommendation.ts    표준 출력 JSON에서 Markdown·HTML 파생 (ADR-094)
+│   │   ├── collect_live_postings.ts    CLI 호환 entrypoint (ADR-030, ADR-047)
+│   │   ├── recommendation_schema.ts    표준 출력 JSON zod 스키마 (ADR-101, RecommendationRun, source·closeDate 포함)
+│   │   ├── render_recommendation.ts    표준 출력 JSON에서 Markdown·HTML 파생 (ADR-101)
 │   │   ├── templates/report.html       position daily HTML 표시 template (스타일만, JSON 바인딩)
 │   │   └── live-postings/
 │   │       ├── types.ts                Posting / SourceAdapter / CollectResult 계약
@@ -144,8 +144,6 @@ career-os/
 │   │   └── evaluate_package.ts         application-package/review 문서를 제출 전 안전 기준으로 점검
 │   ├── interview-prep/
 │   │   └── stage_review_html_for_discord.ts  면접 단계 리뷰 HTML 검증 보조
-│   ├── interview-prep-analyzer/
-│   │   └── mvp_target_schema.ts        legacy 면접 단계 설정 zod 검증 보조
 │   ├── interview-drill/                (plan086 신규 — 공용 드릴 엔진, ADR-019 scripts 분리 원칙 준수)
 │   │   └── drill-engine.ts             질문 선정(간격 반복) + 채점 + 기록 + 약점 환류 + study-pack 위임
 │                                       질문 정본은 public/question-bank(일반) + private/question-bank(개인), ADR-097
@@ -236,7 +234,6 @@ career-os 워크스페이스 바깥, ai-nodes 루트의 `_shared/` 에 모든 �
 | `_shared/bin/track_task.sh` | runner 래퍼. JSONL 로그 + openclaw status diff. | 0 (apartment 사용 중) |
 | `_shared/lib/extract_claude_result.ts` | claude JSON envelope 파싱. ai-nodes plan001 통합. | 사용 중 (career-os + apartment + stock-investment 공용) |
 | `_shared/lib/notify_discord.ts` | Bun. `openclaw message send --channel discord` subprocess. `DISCORD_CHANNEL_ID` env 필수. `--media <path>`, `--presentation <json>` 옵션 지원 (ADR-021, ADR-073). | 사용 중 |
-| `career-os/scripts/interview-prep-analyzer/mvp_target_schema.ts` | Bun/zod. `state/mvp-target.json` 면접 단계 설정 검증. `parseMvpTarget()` (ADR-048). | 사용 중 (career-os 한정) |
 | `_shared/bin/update_artifacts.py` | `data/generated-artifacts.json` upsert. | 0 (ADR-033 / plan025 이후 career-os 사용 0 — 파일 자체는 별도 plan에서 폐기 검토) |
 | `zod` (npm) | TypeScript runtime 스키마 검증. `package.json`에 의존성. | 사용 중 |
 | `_shared/types/` | TS 공통 타입 디렉터리. ClaudeUsage / TaskRunEntry / NotificationPayload 등. | 간접 사용 |
@@ -492,8 +489,8 @@ plan050은 새 독립 추천기를 먼저 만들지 않고 기존 collector/reco
   Kakao 계열, 카카오뱅크, NAVER 계열, Coupang, Kurly는 official source entrypoint가 확인된 범위에서 adapter로 수집한다.
   크래프톤은 게임사라 전체 채용이 아니라 공식 Greenhouse board에서 AI Frontier·AI Research·AI Transformation(AX) 조직 공고만 수집한다.
   adapter는 listing/API/sitemap root URL은 가질 수 있지만, 개별 공고 URL을 코드에 하드코딩하지 않는다.
-- `position-recommender` agent skill은 표준 출력 JSON `recommendation.json`(ADR-094/ADR-101, schemaVersion 2)을 만든다. 적재용 `source`·`closeDate`를 포함하며, Discord 요약 같은 가공은 호출자가 맡는다(ADR-101).
-- `scripts/position-recommender/render_recommendation.ts`는 표준 출력 JSON에서 Markdown·HTML을 파생한다(입력 시 zod 검증 내장). 자체 markdown 파서 `render_report_html.ts`는 ADR-094로 폐기됐다.
+- `position-recommender` agent skill은 표준 출력 JSON `recommendation.json`(ADR-101, schemaVersion 2)을 만든다. 적재용 `source`·`closeDate`를 포함하며, Discord 요약 같은 가공은 호출자가 맡는다(ADR-101).
+- `scripts/position-recommender/render_recommendation.ts`는 표준 출력 JSON에서 Markdown·HTML을 파생한다(입력 시 zod 검증 내장). 자체 markdown 파서 `render_report_html.ts`는 ADR-101로 폐기됐다.
   표시 구조와 CSS는 `scripts/position-recommender/templates/report.html`에 둔다.
 - `scripts/application-agent/`는 positions-queue, 공고별 application files, priority history를 검증하고 갱신한다.
 - `config/candidate-profile.md`와 기존 resume/profile material은 fit analysis 입력으로 재사용한다.

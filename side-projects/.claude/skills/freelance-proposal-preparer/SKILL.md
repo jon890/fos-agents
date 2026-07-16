@@ -74,4 +74,3 @@ description: 외주 공고의 RFP·첨부·데모를 분석해 구현 범위, �
 ## 참고 자료
 
 RFP 기반 제안의 세부 대조 기준은 [references/rfp-coverage-checklist.md](references/rfp-coverage-checklist.md)를 읽는다.
-

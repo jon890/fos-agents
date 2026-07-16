@@ -35,4 +35,4 @@ position-recommender를 실사용·고도화하면서 세 가지 한계가 드�
 - `wanted.ts`·`collect_live_postings.ts`가 `position-collection.json`·`candidate-config.json`을 읽도록 한다.
 - 지표 기록 helper를 추가하고 수집·추천 후 `position-metrics.jsonl`에 append한다.
 - 구현은 plan090 phase로 옮긴다. `data-schema.md`·`flow.md`·`code-architecture.md`·`prd.md`에 반영한다.
-- 구조 정본 패턴은 [[ADR-094]](JSON 정본)·[[ADR-095]](회사데이터 config 흡수)를 재사용한다.
+- 구조 정본 패턴은 [[ADR-101]](JSON 정본)·[[ADR-095]](회사데이터 config 흡수)를 재사용한다.

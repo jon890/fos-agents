@@ -16,7 +16,7 @@
 - 서브디렉토리 책임: `data/applications/`는 지원 원장·패키지·리뷰, `data/source/`는 외부 수집 텍스트, `data/reports/`는 생성 리포트, `data/runtime/`은 가변 상태다.
 - cleanup은 삭제가 아니라 archive·tombstone·retention 원칙으로 진행한다.
 - plan048 tracked runtime file 2개는 named exception으로만 다루고 일반 정책으로 확장하지 않는다.
-- coffeechat tombstone은 후속 phase에서 active caller 부재와 history 가치를 확인한 뒤 결정한다.
+- coffeechat 자동화(ADR-034·048·067)는 별도 tombstone 없이 삭제하고 git history로 보존한다(plan094 결정, 2026-07-09).
 
 거절한 대안:
 
