@@ -229,16 +229,24 @@ function isExcludedPreviewPosting(posting: LivePostingCandidate): boolean {
   const title = posting.title.toLowerCase();
   if (/\bcto\b|chief technology officer|기술\s*총괄|기술총괄/.test(text)) return true;
   if (/tech\s*lead|server\s*lead|technical\s*lead|테크\s*리드|기술\s*리드/.test(text)) return true;
-  if (/ai engineer\s*\(model\)|ai\s*model\s*research|model\s*research|research\s*scientist|applied\s*scientist|ai\s*research|모델\s*연구/.test(text)) return true;
+  if (/team\s*leader|팀\s*(리더|리드)/.test(title)) return true;
+  if (/ai engineer\s*\((model|speech)\)|모델\s*엔지니어/.test(title)) return true;
+  if (/ai\s*model\s*research|model\s*research|research\s*scientist|applied\s*scientist|ai\s*research|모델\s*연구/.test(text)) return true;
+  if (/\b3d\b.*(map|지도|render|렌더)|(?:map|지도).*(render|렌더)|rendering\s*engine|렌더링\s*엔진|\bgraphics?\b|그래픽스?|map\s*engine/.test(title)) return true;
+  if (/\baiops\b|\bsystems?\s*engineer\b|\berp\s*ops\s*developer\b|infrastructure\s*(automation|operations)\s*engineer|openstack\s*cloud\s*engineer/.test(title)) return true;
+  if (/전문통신|tcp.*전문통신/.test(title)) return true;
+  if (/payment\s*software\s*engineer|ux\s*writer/.test(title)) return true;
+  if (/3년\s*이하|신입/.test(title)) return true;
   if (/cj\s*foodville|cj\s*푸드빌|cj푸드빌|씨제이푸드빌|cj\s*olive\s*young|cj올리브영|씨제이올리브영/.test(text)) return true;
   if (/전문계약직|계약직|임시직|프리랜서|인턴|contractor|\bcontract\b|\bintern(ship)?\b/.test(text)) return true;
-  if (/data\s*(engineer|pipeline|platform|analyst)|데이터\s*(엔지니어|파이프라인|플랫폼|분석)|ai\s*dba|\bdba\b/.test(title)) return true;
+  if (/data\s*(analytics\s*)?(engineer|pipeline|platform|analyst)|data\s*system\s*developer|데이터\s*(엔지니어|파이프라인|플랫폼|분석)|ai\s*dba|\bdba\b/.test(title)) return true;
   if (/data\s*(pipeline|warehouse|lake)|데이터\s*(파이프라인|웨어하우스|레이크)|airflow|kafka\s*connect/.test(text)) return true;
   if (/model\s*router|mcp\s*gateway|long[ -]?term\s*memory|multi[ -]?agent|agent\s*orchestration|에이전트\s*오케스트레이션|ai\s*agent\s*sdk|agent\s*(gym|platform)/.test(text)) return true;
   if (/\bml\s*engineer\b|ml\s*infrastructure|model\s*serving|llm\s*serving|ai\s*engineer\s*\((platform|serving|ads|commerce)\)|모델\s*서빙|ml\s*인프라/.test(text)) return true;
   if (/\b(staff|senior staff)\b/.test(title)) return true;
   if (/applied\s*ai\s*engineer|ai[ -]?native\s*(engineer|개발자)|ai\s*platform\s*engineer|\bai\s*engineer\b.*\(r&d\)|자율주행\s*ai\s*엔지니어/.test(title)) return true;
   if (/\b(sre|site reliability|devops|network|security researcher|technical account|technical program|account manager|asset manager|purchasing|compliance|hrbp|modeler)\b|\b(it manager|it planning|it governance|sox manager|call infra|financial systems|business partnership|category md|search engineer)\b|데이터\s*분석가|채널영업|총무|general affairs|보안\s*연구|네트워크\s*엔지니어|외환\s*상품|자문\s*상품|인프라\s*담당자|컴플라이언스/.test(title)) return true;
+  if (/\bmanager\b/.test(title)) return true;
 
   const company = posting.company.toLowerCase();
   const isTossRootCompany = company === "토스" || company === "toss";

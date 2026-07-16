@@ -56,16 +56,24 @@
 
 - “서버 개발자” 이름이 붙어 있어도 실제 역할이 제품 서버/플랫폼 서버 개발인지, 내부 도구 운영/기획/조율 중심인지 확인한다.
 - Toss `Server Developer (Product)`처럼 챕터/직군 단위의 범용 백엔드 공고이고 구체적인 팀·도메인·상품이 특정되지 않은 공고는 추천/프리뷰 후보에서 제외한다.
-- `Tech Lead`, `Server Lead`, CTO/기술총괄 계열은 현재 사용자의 seniority 대비 과도하므로 사용자가 명시적으로 요청하지 않으면 추천/프리뷰 후보에서 제외한다.
-- `AI Engineer (Model)`, `Applied Scientist`, `Research Scientist`, 모델 연구 중심 공고는 사용자가 명시적으로 요청하지 않으면 추천/프리뷰 후보에서 제외한다.
+- `Tech Lead`, `Server Lead`, `Team Leader`, 상담팀 리드, CTO/기술총괄 계열은 현재 사용자의 seniority 또는 직무 방향과 맞지 않으므로 사용자가 명시적으로 요청하지 않으면 추천/프리뷰 후보에서 제외한다.
+- `AI Engineer (Model/Speech)`, `Applied Scientist`, `Research Scientist`, 모델 연구 중심 공고는 사용자가 명시적으로 요청하지 않으면 추천/프리뷰 후보에서 제외한다.
 - LLM routing, MCP Gateway, long-term memory, multi-agent orchestration, 공용 Agent SDK·플랫폼 설계가 역할의 핵심인 공고는 추천/프리뷰 후보에서 제외한다.
   후보자는 RAG·workflow·개발 자동화 경험은 있지만, 여러 팀이 쓰는 Agent 플랫폼의 경계와 운영 모델을 주도 설계한 근거는 아직 없다.
-- Data Engineer, Data Pipeline, Data Platform, DBA와 같이 Spark, Airflow, Kafka Connect, 데이터 레이크·웨어하우스 운영을 필수로 두는 역할은 추천/프리뷰 후보에서 제외한다.
+- Data Engineer, Data Analytics Engineer, Data Pipeline, Data Platform, DBA와 같이 Spark, Airflow, Kafka Connect, 데이터 레이크·웨어하우스 운영을 필수로 두는 역할은 추천/프리뷰 후보에서 제외한다.
   문서 색인이나 Spring Batch 경험만으로 대규모 데이터 엔지니어링 필수조건을 충족했다고 해석하지 않는다.
+- Finance Data System Developer처럼 재무 마트·관리회계·데이터 플랫폼 운영이 핵심인 역할도 데이터 엔지니어링 축으로 보고 제외한다.
 - ML Engineer, 모델 서빙·ML 인프라 역할은 모델 학습, GPU 서빙, ML 플랫폼 운영이 핵심이면 추천/프리뷰 후보에서 제외한다.
   일반 서비스 백엔드에 AI 기능을 접목하는 역할은 이 규칙으로 제외하지 않는다.
-- 계약직·임시직·프리랜서·인턴, SRE·DevOps·네트워크·보안·데이터 분석·기획·운영·영업 등 비개발 직군은 추천/프리뷰 후보에서 제외한다.
+- 계약직·임시직·프리랜서·인턴, SRE·DevOps·AIOps·Systems Engineer·ERP Ops·네트워크·보안·데이터 분석·기획·운영·영업 등 비제품 백엔드 직군은 추천/프리뷰 후보에서 제외한다.
+- 3D 지도 렌더링 엔진, 그래픽스, 클라이언트 렌더링 엔진처럼 백엔드·서버 역할이 아닌 개발 직군은 추천/프리뷰 후보에서 제외한다.
   현재 기본 지원 축이 Java/Spring 서버·백엔드이기 때문이다.
+- Payment Software Engineer처럼 결제 단말의 Android·Windows·RTOS 애플리케이션과 VAN 전문통신이 핵심인 디바이스 소프트웨어 역할은 제외한다.
+- UX Writer 등 개발 구현이 핵심이 아닌 콘텐츠·디자인 직군은 제외한다.
+- Infrastructure Automation·Operations, OpenStack Cloud Engineer처럼 인프라 팀을 위한 구축·운영과 자동화가 핵심인 역할은 제품·플랫폼 백엔드 후보에서 제외한다.
+- 제목이나 필수조건이 TCP·UDP 전문통신과 저수준 네트워크 실무를 핵심으로 두는 역할은 후보자의 하드 갭으로 보고 제외한다.
+- `3년 이하`, 신입 등 현재 7년 경력보다 낮은 seniority를 명시한 공고는 추천/프리뷰 후보에서 제외한다.
+- 상품·계좌·상담 운영 Manager처럼 개발 구현이 핵심이 아닌 운영·정책·관리 직무는 추천/프리뷰 후보에서 제외한다.
 - AX 포지션은 서버 개발 비중이 충분하고 전사 주요 프로젝트/AI 전환 파이프라인 설계 역할이면 우선순위를 높인다.
 - AX가 단순 업무툴 도입, 프롬프트 운영, 내부 지원 업무 중심이면 결제서비스 같은 정통 백엔드 포지션을 더 안전하게 본다.
 - AI 전환 레인은 백엔드 코어 레인과 경쟁시키되, “커리어 서사”를 별도 평가한다. 예: 결제 서버는 백엔드 시니어 핵심 역량을 강화하고, AX/AI Agent 포지션은 후보자의 AI 도구·에이전트·자동화 경험을 더 크게 드러낼 수 있다.

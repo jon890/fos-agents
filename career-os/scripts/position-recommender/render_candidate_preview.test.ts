@@ -210,6 +210,104 @@ test("candidate preview excludes roles with candidate-known core gaps and keeps 
   - skills: Java, Spring Boot, Kafka
   - main_tasks: 주차 플랫폼 API와 서버를 개발합니다.
   - url: https://example.com/backend
+- [카카오모빌리티] 내비게이션 3D 지도 렌더링 엔진 개발자
+  - source: kakaomobility
+  - posting_status: open
+  - link_type: direct_posting
+  - skills: C++, OpenGL, Vulkan
+  - main_tasks: 내비게이션용 3D 지도 렌더링 엔진과 크로스 플랫폼 엔진 코어를 개발합니다.
+  - url: https://example.com/map-rendering-engine
+- [토스뱅크] AIOps Platform Engineer
+  - source: toss-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - main_tasks: 인프라 이상 탐지와 Self-Healing 플랫폼을 운영합니다.
+  - url: https://example.com/aiops
+- [토스증권] Systems Engineer (5년 이상)
+  - source: toss-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - url: https://example.com/systems-senior
+- [토스증권] Systems Engineer (5년 미만)
+  - source: toss-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - url: https://example.com/systems-junior
+- [토스증권] Systems Engineer (가상화)
+  - source: toss-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - url: https://example.com/systems-virtualization
+- [토스뱅크] ML Platform Team Leader
+  - source: toss-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - url: https://example.com/ml-platform-leader
+- [토스증권] ERP Ops Developer
+  - source: toss-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - url: https://example.com/erp-ops
+- [토스] AI Engineer (Speech)
+  - source: toss-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - url: https://example.com/speech-model
+- [토스뱅크] Infrastructure Automation Engineer
+  - source: toss-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - url: https://example.com/infrastructure-automation
+- [토스뱅크] Infrastructure Operations Engineer
+  - source: toss-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - url: https://example.com/infrastructure-operations
+- [토스뱅크] OpenStack Cloud Engineer
+  - source: toss-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - url: https://example.com/openstack-cloud
+- [토스] Data Analytics Engineer (Feature)
+  - source: toss-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - url: https://example.com/data-analytics
+- [토스페이먼츠] Server Developer (TCP·전문통신)
+  - source: toss-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - url: https://example.com/tcp-server
+- [토스페이먼츠] Server Developer (3년 이하)
+  - source: toss-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - url: https://example.com/junior-server
+- [토스씨엑스] 상담팀 리드 (토스플랫폼 전담팀)
+  - source: toss-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - url: https://example.com/counseling-lead
+- [토스뱅크] Finance Data System Developer
+  - source: toss-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - url: https://example.com/finance-data-system
+- [토스증권] 계좌 도메인 운영 Manager
+  - source: toss-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - url: https://example.com/account-operations-manager
+- [토스플레이스] Payment Software Engineer
+  - source: toss-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - url: https://example.com/payment-device-software
+- [토스증권] UX Writer
+  - source: toss-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - url: https://example.com/ux-writer
 - [토스플레이스] Server Developer (Platform)
   - source: toss-careers
   - posting_status: open
@@ -236,5 +334,22 @@ test("candidate preview excludes roles with candidate-known core gaps and keeps 
   assert.doesNotMatch(html, /ML Engineer \(Platform\)/);
   assert.doesNotMatch(html, /액션파워/);
   assert.doesNotMatch(html, /퇴직연금 도메인 개발자/);
+  assert.doesNotMatch(html, /3D 지도 렌더링 엔진 개발자/);
+  assert.doesNotMatch(html, /AIOps Platform Engineer/);
+  assert.doesNotMatch(html, /Systems Engineer/);
+  assert.doesNotMatch(html, /ML Platform Team Leader/);
+  assert.doesNotMatch(html, /ERP Ops Developer/);
+  assert.doesNotMatch(html, /AI Engineer \(Speech\)/);
+  assert.doesNotMatch(html, /Infrastructure Automation Engineer/);
+  assert.doesNotMatch(html, /Infrastructure Operations Engineer/);
+  assert.doesNotMatch(html, /OpenStack Cloud Engineer/);
+  assert.doesNotMatch(html, /Data Analytics Engineer/);
+  assert.doesNotMatch(html, /TCP·전문통신/);
+  assert.doesNotMatch(html, /3년 이하/);
+  assert.doesNotMatch(html, /상담팀 리드/);
+  assert.doesNotMatch(html, /Finance Data System Developer/);
+  assert.doesNotMatch(html, /계좌 도메인 운영 Manager/);
+  assert.doesNotMatch(html, /Payment Software Engineer/);
+  assert.doesNotMatch(html, /UX Writer/);
   assert.doesNotMatch(html, /Credit Rating Modeler/);
 });
