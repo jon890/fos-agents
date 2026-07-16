@@ -113,6 +113,12 @@ test("candidate preview can render all live posting rows while excluding CTO and
   - link_type: direct_posting
   - main_tasks: 토스의 유저가 매일 사용하는 여러 서비스를 개발해요. Product Chapter는 유저가 직접 사용하는 토스의 서비스를 개발해요.
   - url: https://toss.im/career/job-detail?job_id=4071141003
+- [토스] Node.js Developer
+  - source: toss-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - main_tasks: 여러 계열사의 공고를 함께 보여주는 그룹 페이지입니다.
+  - url: https://toss.im/career/job-detail?job_id=7734083003
 - [토스] Tech Lead (Server)
   - source: toss-careers
   - posting_status: open
@@ -147,6 +153,7 @@ test("candidate preview can render all live posting rows while excluding CTO and
   assert.doesNotMatch(html, /CTO/);
   assert.doesNotMatch(html, /AI Engineer \(Model\)/);
   assert.doesNotMatch(html, /Server Developer \(Product\)/);
+  assert.doesNotMatch(html, /Node\.js Developer/);
   assert.doesNotMatch(html, /Tech Lead \(Server\)/);
   assert.doesNotMatch(html, /CJ올리브영/);
   assert.doesNotMatch(html, /토스뱅크/);

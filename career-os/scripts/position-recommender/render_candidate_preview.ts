@@ -222,7 +222,8 @@ function isExcludedPreviewPosting(posting: LivePostingCandidate): boolean {
   const company = posting.company.toLowerCase();
   const isTossRootCompany = company === "토스" || company === "toss";
   const isGenericTossServer = /^server developer(?:\s*\([^)]+\)|\s*\[[^\]]+\].*)?$/i.test(posting.title.trim());
-  if (isTossRootCompany && isGenericTossServer) return true;
+  const isGenericTossNode = /^node\.js developer$/i.test(posting.title.trim());
+  if (isTossRootCompany && (isGenericTossServer || isGenericTossNode)) return true;
   return false;
 }
 
