@@ -49,7 +49,7 @@
 `## ADR-N — 제목` + Status/Date → 맥락 → 결정(거절한 대안 한 줄씩) → 결과 → (선택) 적용(포인터만, 코드 블록 금지).
 **금지**: 코드 블록(1-2줄 인용 예외) · 파일 3개 이상 나열 · 변경 이력 · 검증 수치 · TODO.
 
-## index.json 스키마 (레포 특화 — `run-phases.py` `validate_task` 강제)
+## index.json 스키마 (레포 특화)
 
 코어 task-create.md 의 스키마와 필드명·enum 값이 다르다. 이 레포는 아래를 따른다:
 
@@ -82,7 +82,7 @@
 
 ### phase 본문 path·cwd 강제 (필수)
 
-phase 본문의 모든 path 는 *ai-nodes 루트 기준* (`<workspace>/...`) 이지만 `run-phases.py` 는 `cwd=workspace` 로 phase 를 실행한다.
+phase 본문의 모든 path 는 *ai-nodes 루트 기준* (`<workspace>/...`) 이지만 build-with-teams 는 워크스페이스(worktree) 를 cwd 로 phase 를 실행한다.
 모든 phase 첫 bash 블록에 `cd "$(git rev-parse --show-toplevel)"` 로 루트 강제 후 `pwd` 확인 — 누락 시 실행 첫 phase 에서 hotfix commit 이 필요해진다 (`common-pitfalls/harness/6-7-cwd-workspace-mismatch.md`).
 Edit/Write 도구는 absolute path 를 받아 cwd 와 무관하게 동작하므로 이 강제는 bash 명령(test/grep/git 등)에만 해당한다.
 
