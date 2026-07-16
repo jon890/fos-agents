@@ -184,6 +184,13 @@ test("candidate preview excludes roles with candidate-known core gaps and keeps 
   - link_type: direct_posting
   - skills: Java, Spring Boot
   - url: https://example.com/actionpower
+- [카카오뱅크] 퇴직연금 도메인 개발자
+  - source: kakaobank-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - skills: Java, Spring Boot, RDBMS
+  - requirements: 퇴직연금 시스템 개발 및 운영 5년 이상
+  - url: https://recruit.kakaobank.com/jobs/244006
 - [카카오모빌리티] 백엔드 개발자(주차 플랫폼 개발)
   - source: kakaomobility
   - posting_status: open
@@ -202,4 +209,5 @@ test("candidate preview excludes roles with candidate-known core gaps and keeps 
   assert.doesNotMatch(html, /AI Native Full Stack Engineer/);
   assert.doesNotMatch(html, /ML Engineer \(Platform\)/);
   assert.doesNotMatch(html, /액션파워/);
+  assert.doesNotMatch(html, /퇴직연금 도메인 개발자/);
 });
