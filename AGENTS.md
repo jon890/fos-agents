@@ -184,6 +184,6 @@ Hermes 관련 질문에 답하기 전에는 기억이 아니라 공식 문서를
 - 모노레포 ADR: [`docs/adr/INDEX.md`](docs/adr/INDEX.md)
 - 문서 형식: [`docs/docs-style.md`](docs/docs-style.md)
 - planning skill (공용 코어 `~/.claude/skills/planning/SKILL.md` + 레포 특화 [`.claude/planning-overlay.md`](.claude/planning-overlay.md))
-- build-with-teams skill: [`.claude/skills/build-with-teams/SKILL.md`](.claude/skills/build-with-teams/SKILL.md)
+- build-with-teams skill (공용 코어 `~/.claude/skills/build-with-teams/SKILL.md` + 레포 특화 [`.claude/build-with-teams-overlay.md`](.claude/build-with-teams-overlay.md))
 - workspace-audit skill: [`.claude/skills/workspace-audit/SKILL.md`](.claude/skills/workspace-audit/SKILL.md)
-- docs-check skill: [`.claude/skills/docs-check/SKILL.md`](.claude/skills/docs-check/SKILL.md)
+- docs-check skill (공용 코어 `~/.claude/skills/docs-check/SKILL.md` + 레포 특화 [`.claude/docs-check-overlay.md`](.claude/docs-check-overlay.md))

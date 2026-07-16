@@ -12,6 +12,8 @@
 !**/.claude/agents/
 !**/.claude/agents/**
 !.claude/planning-overlay.md
+!.claude/build-with-teams-overlay.md
+!.claude/docs-check-overlay.md
 
 # Generated task outputs — 5버킷 경계 (decisions.md, plan093 Phase 05 최종)
 # data/ 잔여분(Phase 07/08 이관 전 application-agent eval·source·prep 등)은 안전망으로 계속 무시
