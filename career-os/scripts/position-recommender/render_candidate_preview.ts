@@ -81,35 +81,41 @@ function recommendationOpinionByUrl(run: RecommendationRunType): Map<string, str
  * 추천 시점 필터라 수집은 그대로 두고 전체 공고 HTML에서만 해당 URL을 숨긴다.
  * config를 못 읽으면 억제 없이 진행한다(HTML 생성 자체를 막지 않는다).
  */
-let suppressedUrlCache: Set<string> | null = null;
-function loadSuppressedUrls(): Set<string> {
-  if (suppressedUrlCache) return suppressedUrlCache;
-  const set = new Set<string>();
+let previewFilterCache: { suppressedUrls: Set<string>; excludedCompanies: Set<string> } | null = null;
+function normalizeCompany(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9가-힣]/g, "");
+}
+
+function loadPreviewFilters(): { suppressedUrls: Set<string>; excludedCompanies: Set<string> } {
+  if (previewFilterCache) return previewFilterCache;
+  const suppressedUrls = new Set<string>();
+  const excludedCompanies = new Set<string>();
   try {
     const path = resolve(dirname(fileURLToPath(import.meta.url)), "../../config/position-filters.json");
     const config = JSON.parse(readFileSync(path, "utf8"));
     for (const item of config?.suppressedPostings ?? []) {
-      if (item?.url) set.add(String(item.url));
+      if (item?.url) suppressedUrls.add(String(item.url));
     }
+    for (const company of config?.excludedCompanies ?? []) excludedCompanies.add(normalizeCompany(String(company)));
   } catch (e) {
     console.error(`WARN position-filters config load failed, proceeding without posting suppression: ${e}`);
   }
-  suppressedUrlCache = set;
-  return set;
+  previewFilterCache = { suppressedUrls, excludedCompanies };
+  return previewFilterCache;
 }
 
 function parseLivePostingRows(markdown: string, run: RecommendationRunType): PreviewRow[] {
   const rows: PreviewRow[] = [];
   let current: LivePostingCandidate | null = null;
   const opinionByUrl = recommendationOpinionByUrl(run);
-  const suppressedUrls = loadSuppressedUrls();
+  const { suppressedUrls, excludedCompanies } = loadPreviewFilters();
 
   function flush(): void {
     if (!current) return;
     const status = (current.fields.posting_status ?? "").toLowerCase();
     const linkType = (current.fields.link_type ?? "").toLowerCase();
     const url = current.fields.url ?? "";
-    if ((status === "active" || status === "open") && linkType === "direct_posting" && url && !suppressedUrls.has(url) && !isExcludedPreviewPosting(current)) {
+    if ((status === "active" || status === "open") && linkType === "direct_posting" && url && !suppressedUrls.has(url) && !excludedCompanies.has(normalizeCompany(current.company)) && !isExcludedPreviewPosting(current)) {
       const skills = splitCsv(current.fields.skills ?? "").slice(0, 8);
       const why = opinionByUrl.get(url) ?? buildFallbackOpinion(current);
       rows.push({
@@ -151,9 +157,15 @@ function aiInterestScore(row: PreviewRow): number {
   return high + Math.min(server, 4) - researchPenalty;
 }
 
+function companyScaleScore(company: string): number {
+  const normalized = company.toLowerCase();
+  const highScaleSignals = ["토스", "toss", "쿠팡", "coupang", "카카오", "kakao", "네이버", "naver", "크래프톤", "krafton", "컬리", "kurly", "cj올리브네트웍스", "cj one", "티맵", "tmap"];
+  return highScaleSignals.some((signal) => normalized.includes(signal)) ? 10 : 0;
+}
+
 function sortLivePreviewRows(rows: PreviewRow[]): PreviewRow[] {
   return rows
-    .map((row, index) => ({ row, index, score: aiInterestScore(row) }))
+    .map((row, index) => ({ row, index, score: companyScaleScore(row.company) + aiInterestScore(row) }))
     .sort((a, b) => b.score - a.score || a.index - b.index)
     .map((item) => item.row);
 }
@@ -193,13 +205,20 @@ function buildFallbackOpinion(posting: LivePostingCandidate): string {
 
 function isExcludedPreviewPosting(posting: LivePostingCandidate): boolean {
   const text = [posting.company, posting.title, ...Object.values(posting.fields), ...posting.raw].join(" ").toLowerCase();
+  const title = posting.title.toLowerCase();
   if (/\bcto\b|chief technology officer|기술\s*총괄|기술총괄/.test(text)) return true;
   if (/tech\s*lead|server\s*lead|technical\s*lead|테크\s*리드|기술\s*리드/.test(text)) return true;
   if (/ai engineer\s*\(model\)|ai\s*model\s*research|model\s*research|research\s*scientist|applied\s*scientist|ai\s*research|모델\s*연구/.test(text)) return true;
   if (/cj\s*foodville|cj\s*푸드빌|cj푸드빌|씨제이푸드빌|cj\s*olive\s*young|cj올리브영|씨제이올리브영/.test(text)) return true;
+  if (/전문계약직|계약직|임시직|프리랜서|인턴|contractor|\bcontract\b|\bintern(ship)?\b/.test(text)) return true;
+  if (/data\s*(engineer|pipeline|platform|analyst)|\bdba\b|데이터\s*(엔지니어|파이프라인|플랫폼|분석)|ai\s*dba/.test(text)) return true;
+  if (/model\s*router|mcp\s*gateway|long[ -]?term\s*memory|multi[ -]?agent|agent\s*orchestration|에이전트\s*오케스트레이션|ai\s*agent\s*sdk|agent\s*(gym|platform)/.test(text)) return true;
+  if (/\bml\s*engineer\b|ml\s*infrastructure|model\s*serving|llm\s*serving|ai\s*engineer\s*\((platform|serving|ads|commerce)\)|모델\s*서빙|ml\s*인프라/.test(text)) return true;
+  if (/\b(staff|senior staff)\b/.test(title)) return true;
+  if (/applied\s*ai\s*engineer|ai[ -]?native\s*(engineer|개발자)|ai\s*platform\s*engineer|\bai\s*engineer\b.*\(r&d\)|자율주행\s*ai\s*엔지니어/.test(title)) return true;
+  if (/\b(sre|site reliability|devops|network|security researcher|technical account|technical program|account manager|asset manager|purchasing|compliance|hrbp)\b|\b(it manager|it planning|it governance|sox manager|call infra|financial systems|business partnership|category md|search engineer)\b|데이터\s*분석가|채널영업|총무|general affairs|보안\s*연구|네트워크\s*엔지니어|외환\s*상품|자문\s*상품|인프라\s*담당자|컴플라이언스/.test(title)) return true;
 
   const company = posting.company.toLowerCase();
-  const title = posting.title.toLowerCase();
   const isTossRootCompany = company === "토스" || company === "toss";
   const isGenericTossServer = /^server developer(?:\s*\([^)]+\)|\s*\[[^\]]+\].*)?$/i.test(posting.title.trim());
   if (isTossRootCompany && isGenericTossServer) return true;
@@ -225,7 +244,7 @@ function codeList(values: string[]): string {
 export function renderCandidatePreviewHtml(run: RecommendationRunType, options: CandidatePreviewOptions = {}): string {
   const effectiveLimit = options.limit === undefined ? 10 : options.limit;
   const rows = applyLimit(options.postingsMarkdown ? parseLivePostingRows(options.postingsMarkdown, run) : rowsFromRun(run), effectiveLimit);
-  const title = options.title ?? (options.postingsMarkdown ? `${run.reportDate} 전체 수집 공고` : `${run.reportDate} 포지션 추천 후보`);
+  const title = options.title ?? (options.postingsMarkdown ? `${run.reportDate} 조건 통과 수집 공고` : `${run.reportDate} 포지션 추천 후보`);
   // 전체 공고 목록(--postings)은 모든 행이 "전체 후보" 단일 티어라 구분 뱃지가 정보를 담지 못한다.
   // 이 모드에서는 뱃지 컬럼을 숨기고, 추천 티어에서 직접 렌더할 때만 표시한다.
   const showTierColumn = !options.postingsMarkdown;
@@ -292,7 +311,7 @@ ${showTierColumn ? `  <td class="tier"><span class="badge ${badgeClass(row.tier)
 <body>
 <main>
   <h1>${escapeHtml(title)}</h1>
-  <div class="meta">생성일: ${escapeHtml(run.reportDate)} · 공고명을 클릭하면 개별 공고 페이지로 이동합니다. · 표시 공고 ${rows.length}개</div>
+  <div class="meta">생성일: ${escapeHtml(run.reportDate)} · 현재 후보자의 역할·고용 형태·핵심 기술 조건을 통과한 active/open 공고입니다. · 대규모·검증 회사 공고를 먼저 정렬합니다. · 공고명을 클릭하면 개별 공고 페이지로 이동합니다. · 표시 공고 ${rows.length}개</div>
   <section class="conclusion"><ul>${conclusion}</ul></section>
   <div class="table-scroll" tabindex="0" aria-label="공고 목록 가로 스크롤 영역">
     <table>

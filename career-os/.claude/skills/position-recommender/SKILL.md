@@ -37,7 +37,7 @@ Discord 요약은 내부 파일 경로, plan 번호, commit hash 같은 내부 �
 - 공고·포지션 추천 리포트는 반드시 HTML 파일을 함께 생성해 첨부한다. 텍스트 표만 보내지 않는다.
 - HTML은 다운로드 전용 경로(`reports/downloads/`)에 두고, 각 공고명은 개별 공고 URL로 이동하는 링크(`<a href>`)여야 한다.
 - Discord 미리보기에는 상위 후보와 핵심 사유를 짧게 쓰되, 각 후보의 공고 링크도 포함한다.
-- 다운로드·첨부용 HTML은 전체 active/open 공고가 들어 있는 파일 하나만 만든다.
+- 다운로드·첨부용 HTML은 전체 **후보자 조건 통과** active/open 공고가 들어 있는 파일 하나만 만든다.
 - 부분 후보 preview HTML이나 `report.html`의 다운로드 copy는 기본 생성하지 않는다.
 
 ## Inputs
@@ -203,7 +203,7 @@ Discord 알림은 리포트 전체 요약이 아니라 “클릭 가능한 카�
 - 공고·포지션 추천 리포트는 반드시 전체 공고 HTML 파일 하나를 함께 첨부한다.
 - HTML 파일은 `career-os/reports/downloads/` 아래에 만들고, 각 후보 공고명은 개별 공고 URL로 이동하는 `<a href>` 링크여야 한다.
 - Discord 요약에는 강력 추천 최대 3개, 도전 추천 최대 2개를 짧게 쓴다.
-- 첨부 HTML은 항상 `--postings cache/live-position-postings.md --limit all`로 전체 active/open 후보를 보여준다.
+- 첨부 HTML은 항상 `--postings cache/live-position-postings.md --limit all`로 수집 snapshot에서 역할 구성·고용 형태·명백한 필수조건 필터를 통과한 active/open 후보를 보여준다.
 - 사용자가 넓은 preview, 20개 이상 후보, 또는 전체 후보를 요청하면 임의로 50개처럼 다시 자르지 않는다.
 - 전체 후보 preview와 전체 공고 HTML에서도 `references/position-decision-criteria.md`의 "4. 역할 구성" 제외 규칙을 동일하게 적용한다.
 - **중요: `position-recommendation-full-YYYY-MM-DD.html`은 추천 리포트 전체본이지, 수집된 모든 active/open 공고 목록이 아니다.** 사용자가 "모든 공고", "전체 공고", "다 들어있는 HTML"을 요청하거나 포함 여부를 확인하면 `cache/live-position-postings.md`의 `direct_active_or_open_postings`와 HTML의 공고 링크/행 수를 비교한다. 불일치하면 full report를 재전송하지 말고, snapshot의 `link_type: direct_posting` + `posting_status: active/open` + `url` 항목 전체를 표로 렌더링한 별도 HTML을 `reports/downloads/position-recommendation-all-postings-YYYY-MM-DD.html`로 만들고, 링크 수가 snapshot count와 일치하는지 검증한 뒤 첨부한다.

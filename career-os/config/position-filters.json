@@ -34,6 +34,12 @@
       "company": "Coupang",
       "title": "Senior Staff Backend Engineer",
       "reason": "Senior Staff급 리딩 기대치가 현재 seniority 대비 과도하다."
+    },
+    {
+      "url": "https://job-boards.greenhouse.io/krafton/jobs/8503653002",
+      "company": "크래프톤",
+      "title": "[AI Transformation Dept.] Sr. AI Data Pipeline Specialist (7년 이상)",
+      "reason": "대규모 ETL·데이터 플랫폼 운영과 데이터 엔지니어링이 필수조건이라 현재 후보자 근거와 격차가 크다."
     }
   ],
   "excludedCompanies": [
@@ -43,6 +49,7 @@
     "리아드코퍼레이션",
     "피닉스랩",
     "와그(WAUG)",
-    "한국디지털자산수탁"
+    "한국디지털자산수탁",
+    "액션파워"
   ]
 }

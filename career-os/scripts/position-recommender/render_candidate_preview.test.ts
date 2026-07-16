@@ -151,3 +151,55 @@ test("candidate preview can render all live posting rows while excluding CTO and
   assert.doesNotMatch(html, /CJ올리브영/);
   assert.doesNotMatch(html, /토스뱅크/);
 });
+
+test("candidate preview excludes roles with candidate-known core gaps and keeps a regular backend role", () => {
+  const snapshot = `# Live Posting Snapshot
+
+- [크래프톤] AI Data Pipeline Specialist
+  - source: krafton-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - requirements: Airflow, Spark, data warehouse 운영 경험
+  - url: https://example.com/data-pipeline
+- [토스플레이스] Server Developer (AI Platform)
+  - source: toss-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - main_tasks: Model Router, MCP Gateway, long-term memory를 공용 agent platform으로 제공합니다.
+  - url: https://example.com/agent-platform
+- [크래프톤] AI Native Full Stack Engineer
+  - source: krafton-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - career_upside_risk_flags: 전문계약직 고용형태의 계약 기간 확인 필요
+  - url: https://example.com/contract
+- [토스] ML Engineer (Platform)
+  - source: toss-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - url: https://example.com/ml-platform
+- [액션파워] AI Backend 개발자
+  - source: wanted
+  - posting_status: active
+  - link_type: direct_posting
+  - skills: Java, Spring Boot
+  - url: https://example.com/actionpower
+- [카카오모빌리티] 백엔드 개발자(주차 플랫폼 개발)
+  - source: kakaomobility
+  - posting_status: open
+  - link_type: direct_posting
+  - skills: Java, Spring Boot, Kafka
+  - main_tasks: 주차 플랫폼 API와 서버를 개발합니다.
+  - url: https://example.com/backend
+`;
+
+  const html = renderCandidatePreviewHtml(sampleRun, { postingsMarkdown: snapshot, limit: null });
+
+  assert.match(html, /표시 공고 1개/);
+  assert.match(html, /카카오모빌리티/);
+  assert.doesNotMatch(html, /Data Pipeline Specialist/);
+  assert.doesNotMatch(html, /Server Developer \(AI Platform\)/);
+  assert.doesNotMatch(html, /AI Native Full Stack Engineer/);
+  assert.doesNotMatch(html, /ML Engineer \(Platform\)/);
+  assert.doesNotMatch(html, /액션파워/);
+});

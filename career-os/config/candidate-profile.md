@@ -155,6 +155,8 @@
 4. **Kubernetes 심화 튜닝** — Helm/ArgoCD 기반 GitOps 다단계(alpha/beta/real) 배포 환경과 Prometheus 모니터링은 실제 구축·운영했다(OCR 제품 배포 환경). 다만 HPA/PDB 등 세밀한 스케줄링·오토스케일 튜닝은 추가 학습 여지가 있다.
 5. **대규모 트래픽 TPS 숫자** — 이력서·task 전반에서 **구체 TPS / 레이턴시 수치는 명시하지 않음**. 과장 답변 리스크가 있으므로 "측정 여부 / 측정 방법 / 체감 단위"로 답해야 함.
 6. **대규모 실서비스 AI Agent 설계** — RAG·workflow·에이전트 자동화·품질 검증 경험은 있으나, 대규모 실서비스에서 multi-agent orchestration을 주도 설계한 이력은 아직 얕다. 실무형 AI Agent 설계가 핵심인 공고는 이 점을 보완 대상으로 둔다.
+7. **LLM routing·공용 Agent 플랫폼 설계** — 모델·도구 선택 routing, MCP Gateway, long-term memory, 여러 팀이 쓰는 agent platform의 경계·운영 모델을 설계한 실무 노하우는 아직 없다. 이 역량이 핵심인 공고는 RAG 또는 개발 자동화 경험만으로 높게 추천하지 않고 보류로 둔다.
+8. **데이터 엔지니어링·ML 데이터 플랫폼 운영** — Spring Batch 기반 RAG 색인과 문서 데이터 파이프라인 경험은 있지만, 대규모 로그·ETL 플랫폼, Spark·Kafka Connect·Airflow, 데이터 레이크·웨어하우스를 주도 운영한 근거는 없다. 이 역량을 필수조건으로 둔 AI Data Pipeline·Data Engineering 역할은 보류하고, 크래프톤 같은 회사도 백엔드 또는 AI 제품·플랫폼 역할을 우선 탐색한다.
 
 ---
 
@@ -165,6 +167,7 @@
 - **수치 날조 금지** — TPS, 팀 규모, 성과 %, 감축율 등이 이력서·task에 명시되지 않았으면 pipeline은 "출처 문서에 기재 없음"으로 응답해야 한다. 이력서 문항1의 "447개 테스트 파일", detail 문서 JMH 수치는 출처 확인됨.
 - **실무 근거 범위** — 본 프로필은 `resume/2603_김병태_이력서_v4.md` + `task/**/*.md` + `interview/kakao-healthcare-carechat-ai-agent.md`를 1차 근거로 사용한다. 기타 이력서 버전(v1~v3, 2108/2512/2601)은 참조용.
 - **회사 특화 타깃은 active primary에서만 주입** — `state/mvp-target.json`의 `primary`가 `null`이면 회사 특화 맥락을 기본값으로 쓰지 않는다.
+- **회사 규모 선호** — 다음 이직에서는 토스·쿠팡·네이버처럼 브랜드, 엔지니어링 조직 규모, 대규모 서비스 운영 밀도가 검증된 회사를 우선한다. 작은 AI 스타트업은 개별 역할이 이 기준을 명확히 상쇄할 때만 검토한다.
 
 ---
 
