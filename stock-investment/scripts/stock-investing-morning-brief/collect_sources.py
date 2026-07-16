@@ -9,14 +9,14 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) OpenClaw stock-investing-morning-brief/1.0"
+USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) fos-agents stock-investing-morning-brief/1.0"
 
 
 def fetch_text(url: str, timeout: int = 12) -> dict:
     headers = {"User-Agent": USER_AGENT}
     if "sec.gov" in url:
         # SEC requires a descriptive user-agent. Keep this non-secret and stable.
-        headers["User-Agent"] = "OpenClaw stock-investment monitor contact: local-user"
+        headers["User-Agent"] = "fos-agents stock-investment monitor contact: local-user"
     req = urllib.request.Request(url, headers=headers)
     started = time.time()
     try:

@@ -10,7 +10,7 @@ import {
   norm,
 } from "../policy.ts";
 
-const UA = "Mozilla/5.0 (OpenClaw career-os position recommender)";
+const UA = "Mozilla/5.0 (fos-agents position recommender)";
 const HOST = "https://www.samsungcareers.com";
 const LIST_URL = `${HOST}/hr/list.data`;
 const DETAIL_URL = `${HOST}/recruit/detail.data`;

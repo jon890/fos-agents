@@ -11,7 +11,7 @@ import {
   norm,
 } from "../policy.ts";
 
-const UA = "Mozilla/5.0 (OpenClaw career-os position recommender)";
+const UA = "Mozilla/5.0 (fos-agents position recommender)";
 const HOST = "https://www.skcareers.com";
 const LIST_URL = `${HOST}/Recruit/GetRecruitList`;
 const TARGET_COMPANIES = [

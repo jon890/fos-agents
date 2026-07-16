@@ -18,7 +18,7 @@ async function fetchJson(url: string, init?: RequestInit): Promise<{ ok: boolean
 }
 
 async function fetchHtml(url: string): Promise<{ ok: boolean; status: number; text: string }> {
-  const response = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (OpenClaw career-os position recommender)", "Accept-Language": "ko-KR,ko;q=0.9" }, signal: AbortSignal.timeout(20_000) });
+  const response = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (fos-agents position recommender)", "Accept-Language": "ko-KR,ko;q=0.9" }, signal: AbortSignal.timeout(20_000) });
   return { ok: response.ok, status: response.status, text: await response.text() };
 }
 

@@ -39,7 +39,6 @@
 **/logs/
 **/tmp/
 **/private/
-openclaw-orchestrator/memory/
 
 # Nested repos / published outputs managed separately
 # (디렉터리 clone 또는 ~/personal/fos-study symlink 둘 다 무시 — 끝 슬래시 없이)

@@ -3,7 +3,7 @@ import json, math, re, sys, time, urllib.parse, urllib.request, xml.etree.Elemen
 from datetime import datetime, timezone
 from pathlib import Path
 
-UA = "Mozilla/5.0 OpenClaw daily-stock-analysis-note/1.0"
+UA = "Mozilla/5.0 fos-agents daily-stock-analysis-note/1.0"
 
 
 def fetch(url, timeout=12, max_bytes=800_000):

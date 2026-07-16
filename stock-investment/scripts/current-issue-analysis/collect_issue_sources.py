@@ -7,13 +7,13 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) OpenClaw stock-investment issue-analysis/1.0"
+USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) fos-agents stock-investment issue-analysis/1.0"
 
 
 def fetch_text(url: str, timeout: int = 15) -> dict:
     headers = {"User-Agent": USER_AGENT}
     if "sec.gov" in url:
-        headers["User-Agent"] = "OpenClaw stock-investment issue analysis contact: local-user"
+        headers["User-Agent"] = "fos-agents stock-investment issue analysis contact: local-user"
     req = urllib.request.Request(url, headers=headers)
     started = time.time()
     try:

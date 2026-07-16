@@ -12,7 +12,7 @@ import {
   norm,
 } from "../policy.ts";
 
-const UA = "Mozilla/5.0 (OpenClaw career-os position recommender)";
+const UA = "Mozilla/5.0 (fos-agents position recommender)";
 const SITEMAP_URL = "https://www.coupang.jobs/sitemap.xml";
 const MAX_POSTINGS = 40;
 

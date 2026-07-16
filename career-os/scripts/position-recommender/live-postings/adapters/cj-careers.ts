@@ -11,7 +11,7 @@ import {
   norm,
 } from "../policy.ts";
 
-const UA = "Mozilla/5.0 (OpenClaw career-os position recommender)";
+const UA = "Mozilla/5.0 (fos-agents position recommender)";
 const HOST = "https://recruit.cj.net";
 const LIST_URL = `${HOST}/recruit/ko/recruit/recruit/searchNewGonggoList.fo`;
 const TARGET_COMPANY_CODES = ["E10", "F97", "J10"];

@@ -168,16 +168,6 @@ AGENTS.md, SKILL.md, ADR, docs/flow.md처럼 에이전트 동작을 바꾸는 �
 - public/private/work 네임스페이스를 구분한다.
 - repo 문서에 충분히 남은 구현 세부나 하루짜리 실행 로그는 brain에 넣지 않는다.
 
-## Hermes
-
-이 repo의 일부 skill은 Hermes Agent(Nous Research) 런타임에서 실행된다.
-Hermes 관련 질문에 답하기 전에는 기억이 아니라 공식 문서를 먼저 참조한다.
-
-- 공식 문서: https://hermes-agent.nousresearch.com/docs
-- Quickstart: https://hermes-agent.nousresearch.com/docs/getting-started/quickstart
-- 로컬 런타임 홈은 `~/.hermes`이며 `config.yaml`, `skills/`, `gateway/`로 구성된다.
-- Hermes는 skill을 description으로 트리거하므로, skill 노출·확장은 description 품질로 판단한다.
-
 ## 참고
 
 - 구조와 새 워크스페이스 추가: [`docs/code-architecture.md`](docs/code-architecture.md)

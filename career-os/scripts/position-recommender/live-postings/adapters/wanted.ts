@@ -15,7 +15,7 @@ import {
 } from "../policy.ts";
 import { loadCandidateConfig, loadWantedCollectionConfig } from "../config.ts";
 
-const UA = "Mozilla/5.0 (OpenClaw career-os position recommender)";
+const UA = "Mozilla/5.0 (fos-agents position recommender)";
 
 function isWantedActive(job: Record<string, unknown>): boolean {
   const status = norm(job.status ?? "").toLowerCase();

@@ -9,7 +9,7 @@ import {
   isServerRole,
 } from "../policy.ts";
 
-const UA = "Mozilla/5.0 (OpenClaw career-os position recommender)";
+const UA = "Mozilla/5.0 (fos-agents position recommender)";
 const HOST = "https://kurly.career.greetinghr.com";
 const LISTING_URL = `${HOST}/ko/recruiting`;
 const SERVER_TITLE_PATTERN = /\b(?:backend|server|software|devops|sre)\b|백엔드|서버|소프트웨어|플랫폼\s*엔지니어/i;

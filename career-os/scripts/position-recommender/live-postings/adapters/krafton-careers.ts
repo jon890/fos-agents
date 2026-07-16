@@ -45,7 +45,7 @@ interface GreenhouseJob {
 
 async function fetchJson(url: string): Promise<{ ok: boolean; status: number; data: unknown }> {
   const response = await fetch(url, {
-    headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0 (OpenClaw career-os position recommender)" },
+    headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0 (fos-agents position recommender)" },
     signal: AbortSignal.timeout(20_000),
   });
   return { ok: response.ok, status: response.status, data: response.ok ? await response.json() : null };

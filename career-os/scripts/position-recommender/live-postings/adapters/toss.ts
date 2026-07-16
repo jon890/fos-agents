@@ -12,7 +12,7 @@ import {
   norm,
 } from "../policy.ts";
 
-const UA = "Mozilla/5.0 (OpenClaw career-os position recommender)";
+const UA = "Mozilla/5.0 (fos-agents position recommender)";
 
 const TOSS_HOST = "https://toss.im";
 const TOSS_POSTS_API =

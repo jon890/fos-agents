@@ -38,13 +38,6 @@ import {
   executeRequiredSkills,
   type SkillExecutionResult,
 } from './skill_executor';
-import {
-  createProgressNotifier,
-  renderApplicationLabel,
-  renderDecisionStartMessage,
-  renderExecutionBlockedMessage,
-  renderPositionsQueueUpdatedMessage,
-} from './progress_notifier';
 
 type RunOptions = {
   positionsQueuePath: string;
@@ -54,7 +47,6 @@ type RunOptions = {
   maxActions: number;
   executeSkills: boolean;
   skillTimeoutMs: number;
-  notifyDiscord: boolean;
 };
 
 type AgentRunResult = ActionResult & {
@@ -71,7 +63,6 @@ function parseOpts(args: string[]): Partial<RunOptions> {
     else if (args[i] === '--max-actions' && args[i + 1])
       opts.maxActions = parseInt(args[++i]);
     else if (args[i] === '--execute-skills') opts.executeSkills = true;
-    else if (args[i] === '--notify-discord') opts.notifyDiscord = true;
     else if (args[i] === '--skill-timeout-ms' && args[i + 1])
       opts.skillTimeoutMs = parseInt(args[++i]);
   }
@@ -87,7 +78,6 @@ function resolveOpts(partial: Partial<RunOptions>, isDryRun = false): RunOptions
     maxActions: partial.maxActions ?? 5,
     executeSkills: partial.executeSkills ?? false,
     skillTimeoutMs: partial.skillTimeoutMs ?? 20 * 60 * 1000,
-    notifyDiscord: partial.notifyDiscord ?? false,
   };
 }
 
@@ -495,7 +485,6 @@ async function cmdReportDaily(args: string[]): Promise<void> {
     console.log('\n--- Discord Summary ---');
     console.log(discordSummary);
     console.log('-----------------------');
-    console.log(`\nTo send: bun _shared/lib/notify_discord.ts --channel $DISCORD_CHANNEL_ID --message "$(cat ${outPath} | grep -A 10 '## Discord Summary Draft' | tail -n +4)"`);
   }
 }
 
@@ -506,38 +495,19 @@ async function executeDecisionWithOptionalSkills(
   decision: ReturnType<typeof decideForRecord>,
   opts: RunOptions,
 ): Promise<AgentRunResult> {
-  const notifier = createProgressNotifier({
-    enabled: opts.notifyDiscord,
-    dryRun: opts.dryRun,
-  });
-
-  if (opts.executeSkills && decision.allowed) {
-    await notifier.notify(renderDecisionStartMessage(record, decision));
-  }
-
   const skillExecution =
     opts.executeSkills && decision.allowed
       ? await executeRequiredSkills(record, decision, {
           enabled: opts.executeSkills,
           dryRun: opts.dryRun,
           timeoutMs: opts.skillTimeoutMs,
-          notify: (message) => notifier.notify(message),
-          applicationLabel: renderApplicationLabel(record),
+          notify: async () => {},
+          applicationLabel: `${record.company} / ${record.role}`,
         })
       : undefined;
 
   const result = (await executeDecision(record, decision, opts)) as AgentRunResult;
   if (skillExecution) result.skillExecution = skillExecution;
-
-  if (opts.executeSkills && decision.allowed) {
-    if (result.positionsQueueUpdated) {
-      await notifier.notify(renderPositionsQueueUpdatedMessage(record, decision));
-    } else if (result.executionBlocked) {
-      await notifier.notify(
-        renderExecutionBlockedMessage(record, result.executionBlockReason),
-      );
-    }
-  }
 
   return result;
 }
@@ -633,7 +603,6 @@ function printSummary(results: AgentRunResult[], opts: RunOptions): void {
   if (!opts.dryRun) console.log(`  Positions-queue updates: ${updated}`);
   console.log(`  Dry run:              ${opts.dryRun ? 'YES (no writes)' : 'NO'}`);
   console.log(`  Execute skills:       ${opts.executeSkills ? 'YES' : 'NO'}`);
-  console.log(`  Notify Discord:       ${opts.notifyDiscord ? 'YES' : 'NO'}`);
 }
 
 function ensureDir(dir: string): void {
@@ -670,7 +639,6 @@ Options:
   --format markdown|jsonl  Decision log format (default: markdown)
   --max-actions <n>     Max agent actions per run-daily (default: 5)
   --execute-skills      Execute allowed private native skills before artifact checks
-  --notify-discord      Send concise progress notifications during real execution
   --skill-timeout-ms <n>  Timeout for each skill execution (default: 1200000)
 
 Priority confirmation:

@@ -10,7 +10,7 @@ career-os ADR-020에서 Bun TS 공용 헬퍼를 `_shared/lib/`에 단일 위치�
 - `_shared/lib/`는 **모든 워크스페이스에서 호출 가능한 헬퍼만**. 식별 기준:
   - (a) 특정 워크스페이스의 `config/`·`sources/`·`data/` import 없음
   - (b) 다중 워크스페이스에서 실제 호출 가능(또는 이론적으로 가능)
-  - 현재 자격: `notify_discord.ts`, `invoke_claude_skills.ts`, `format_cost_summary.ts`, `extract_claude_result.ts`
+  - 현재 자격: `invoke_claude_skills.ts`, `format_cost_summary.ts`, `extract_claude_result.ts`
 - **워크스페이스 한정 헬퍼는 `<workspace>/scripts/_lib/`**. career-os 기준 `career-os/scripts/_lib/` (career-os ADR-019 scripts/ 컨벤션 따름). 다른 워크스페이스도 자체 root에 같은 패턴 적용 가능 — 단 워크스페이스 격리 원칙상 다른 워크스페이스가 직접 호출 금지.
 - 헬퍼 위치 판정 식별 기준: 새 헬퍼가 `<workspace>/config/`·`<workspace>/sources/`·`<workspace>/data/` 중 하나라도 import하면 그 워크스페이스 한정.
 
