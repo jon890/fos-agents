@@ -13,6 +13,24 @@ import {
 const UA = "Mozilla/5.0 (fos-agents position recommender)";
 const HOST = "https://kakaopay.career.greetinghr.com";
 const LISTING_URL = `${HOST}/ko/main`;
+const KAKAO_CAREERS_HOST = "https://careers.kakao.com";
+const KAKAO_CAREERS_LIST_API = `${KAKAO_CAREERS_HOST}/public/api/job-list?skillSet=&part=TECHNOLOGY&company=SUBSIDIARY&employeeType=`;
+const KAKAO_CAREERS_DETAIL_API = `${KAKAO_CAREERS_HOST}/public/api/job-detail`;
+const MAX_KAKAO_CAREERS_PAGES = 20;
+
+interface KakaoCareersJob {
+  realId: string;
+  jobOfferTitle: string;
+  introduction: string;
+  companyCodeId: string;
+  companyName: string;
+  employeeTypeName: string;
+  closeFlag: boolean;
+  notApplyFlag: boolean;
+  statusCode: string;
+  regDate?: string | null;
+  endDate?: string | null;
+}
 
 async function fetchHtml(url: string): Promise<{ ok: boolean; status: number; text: string }> {
   const r = await fetch(url, {
@@ -20,6 +38,15 @@ async function fetchHtml(url: string): Promise<{ ok: boolean; status: number; te
     signal: AbortSignal.timeout(20_000),
   });
   return { ok: r.ok, status: r.status, text: await r.text() };
+}
+
+async function fetchJson<T>(url: string): Promise<T> {
+  const r = await fetch(url, {
+    headers: { "User-Agent": UA, "Accept": "application/json", "Accept-Language": "ko-KR,ko;q=0.9" },
+    signal: AbortSignal.timeout(20_000),
+  });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return await r.json() as T;
 }
 
 function absoluteUrl(pathOrUrl: string): string {
@@ -55,6 +82,73 @@ function skillsFromText(text: string): string[] {
   const skills = ["Java", "Kotlin", "Spring", "Spring Boot", "JPA", "MySQL", "Kafka", "RabbitMQ", "AWS", "Kubernetes", "Python", "TypeScript", "LLM", "MLOps"];
   const low = text.toLowerCase();
   return skills.filter((skill) => low.includes(skill.toLowerCase())).slice(0, 12);
+}
+
+function externalApplyUrl(text: string): string {
+  const href = text.match(/href=["'](https:\/\/kakaopay\.career\.greetinghr\.com\/ko\/o\/[0-9]+)["']/i)?.[1];
+  if (href) return href;
+  return text.match(/https:\/\/kakaopay\.career\.greetinghr\.com\/ko\/o\/[0-9]+/i)?.[0] ?? "";
+}
+
+function isActiveKakaoCareersJob(job: KakaoCareersJob): boolean {
+  return job.companyCodeId === "kpay" &&
+    job.statusCode === "PROGRESS" &&
+    job.closeFlag === false &&
+    job.notApplyFlag === false &&
+    !isContractRole(job.employeeTypeName);
+}
+
+async function fetchKakaoPayJobs(): Promise<KakaoCareersJob[]> {
+  const jobs: KakaoCareersJob[] = [];
+  for (let page = 1; page <= MAX_KAKAO_CAREERS_PAGES; page++) {
+    const data = await fetchJson<{ jobList?: KakaoCareersJob[] }>(`${KAKAO_CAREERS_LIST_API}&page=${page}`);
+    const pageJobs = Array.isArray(data.jobList) ? data.jobList : [];
+    jobs.push(...pageJobs.filter(isActiveKakaoCareersJob));
+    if (pageJobs.length === 0) break;
+  }
+  return jobs;
+}
+
+function postingFromKakaoCareersDetail(job: KakaoCareersJob): Posting | null {
+  const text = htmlText(job.introduction);
+  const title = cleanDetail(job.jobOfferTitle, 160);
+  const fullText = `${title} ${text}`;
+  const applyUrl = externalApplyUrl(job.introduction);
+  if (!title || !applyUrl) return null;
+  if (isExcludedCompany(fullText) || isContractRole(fullText) || isNonServerTitle(title) || !isServerRole(fullText)) return null;
+
+  return {
+    source: "kakaopay",
+    discoveryMode: "official-detail",
+    company: job.companyName || "카카오페이",
+    title,
+    url: applyUrl,
+    identityHash: `kakaopay:${job.realId}`,
+    linkType: "direct_posting",
+    postingStatus: "open",
+    activeEvidence: "Kakao Careers API detail confirms PROGRESS, not closed, regular employment, and a direct apply URL",
+    openedAt: job.regDate ?? "",
+    ...closeWindow(job.endDate ?? ""),
+    category: "기술",
+    summary: "카카오 Careers 공식 API에서 확인한 카카오페이 공고",
+    tags: classify(fullText),
+    skills: skillsFromText(fullText),
+    careerUpsideHypothesis:
+      "NHN 현재 맥락보다 결제/금융 트래픽과 AI 전환 과제를 더 직접적으로 쌓을 수 있다는 커리어 상승 가설",
+    careerUpsideEvidence: [
+      "카카오 Careers 공식 API의 active 공고 상태",
+      "Java/Kotlin/Spring 기반 서버 개발 전이성",
+      "카카오페이 결제/금융 또는 전사 AI 전환 업무 범위",
+    ],
+    careerUpsideRiskFlags: [
+      "팀별 실제 권한과 운영 범위 확인 필요",
+      "AI 전환 역할은 hands-on 서버 개발 비중 확인 필요",
+    ],
+    dueTime: job.endDate ?? "",
+    mainTasks: cleanDetail(text.match(/업무내용([\s\S]*?)(지원자격|자격요건|필요 역량|우대사항)/)?.[1] ?? text, 650),
+    requirements: cleanDetail(text.match(/(지원자격|자격요건|필요 역량)([\s\S]*?)(우대사항|접수 방법|전형 절차)/)?.[2] ?? "", 650),
+    preferred: cleanDetail(text.match(/우대사항([\s\S]*?)(접수 방법|전형 절차|유의사항)/)?.[1] ?? "", 500),
+  };
 }
 
 function postingFromDetail(url: string, html: string): Posting | null {
@@ -111,13 +205,42 @@ export const kakaopayAdapter: SourceAdapter = {
   name: "kakaopay",
   async collect(): Promise<AdapterCollectionResult> {
     const errors: string[] = [];
+    let apiJobs: KakaoCareersJob[] = [];
+    let apiFailed = 0;
+    try {
+      apiJobs = await fetchKakaoPayJobs();
+    } catch (error) {
+      apiFailed++;
+      errors.push(`kakao-careers API listing failed: ${error}`);
+    }
+
+    const apiPostings: Posting[] = [];
+    let skippedCount = 0;
+    let failedCount = apiFailed;
+    for (const listedJob of apiJobs) {
+      try {
+        const detail = await fetchJson<KakaoCareersJob>(
+          `${KAKAO_CAREERS_DETAIL_API}?id=${encodeURIComponent(listedJob.realId)}&isAvailable=true`
+        );
+        if (!isActiveKakaoCareersJob(detail)) {
+          skippedCount++;
+          continue;
+        }
+        const posting = postingFromKakaoCareersDetail(detail);
+        if (posting) apiPostings.push(posting);
+        else skippedCount++;
+      } catch (error) {
+        failedCount++;
+        errors.push(`kakao-careers detail ${listedJob.realId} failed: ${error}`);
+      }
+    }
+
     const listing = await fetchHtml(LISTING_URL);
     const urls = listing.ok ? extractDetailUrls(listing.text) : [];
     if (!listing.ok) errors.push(`kakaopay listing: HTTP ${listing.status}`);
 
-    const postings: Posting[] = [];
-    let skippedCount = 0;
-    let failedCount = listing.ok ? 0 : 1;
+    const postings: Posting[] = [...apiPostings];
+    if (!listing.ok) failedCount++;
     for (const url of urls) {
       try {
         const detail = await fetchHtml(url);
@@ -135,6 +258,7 @@ export const kakaopayAdapter: SourceAdapter = {
       }
     }
 
+    const message = `kakaopay diagnostics: kakao_api_candidates=${apiJobs.length}, greetinghr_detail_candidates=${urls.length}, accepted=${postings.length}, skipped=${skippedCount}, failed=${failedCount}`;
     return {
       postings,
       diagnostics: {
@@ -144,7 +268,7 @@ export const kakaopayAdapter: SourceAdapter = {
         skippedCount,
         failedCount,
         discoveryModes: ["official-listing", "official-detail"],
-        message: `kakaopay diagnostics: detail_candidates=${urls.length}, accepted=${postings.length}, skipped=${skippedCount}, failed=${failedCount}`,
+        message,
       },
       errors,
     };

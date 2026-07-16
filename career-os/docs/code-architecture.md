@@ -486,6 +486,7 @@ plan050은 새 독립 추천기를 먼저 만들지 않고 기존 collector/reco
   긴 JD 원문 필드는 추천 판단에 필요한 길이로 축약해 LLM 입력과 실행 시간을 줄인다.
   Wanted는 broad scan 외에 선호 회사와 AI 전환 직무 keyword discovery를 수행하고,
   Toss는 공식 `job-groups` API에서 그룹 공고와 하위 포지션을 펼쳐 수집하며,
+  카카오페이는 Kakao Careers public API의 계열사 테크 목록과 개별 상세에서 active 상태와 지원 URL을 확인한다.
   Kakao 계열, 카카오뱅크, NAVER 계열, Coupang, Kurly는 official source entrypoint가 확인된 범위에서 adapter로 수집한다.
   크래프톤은 게임사라 전체 채용이 아니라 공식 Greenhouse board에서 AI Frontier·AI Research·AI Transformation(AX) 조직 공고만 수집한다.
   adapter는 listing/API/sitemap root URL은 가질 수 있지만, 개별 공고 URL을 코드에 하드코딩하지 않는다.

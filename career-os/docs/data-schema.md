@@ -1424,6 +1424,7 @@ source diagnostics:
 - `source_errors` — runtime output에 남기는 상세 실패. 한 source 실패는 다른 source 결과를 제거하지 않는다.
 
 source adapter는 official listing, official API, sitemap, keyword search에서 발견한 후보를 import하기 전에 detail page를 fetch하고 active/open evidence를 기록한다.
+카카오페이 adapter는 Kakao Careers public API에서 `PROGRESS`, `closeFlag: false`, 정규직과 direct apply URL을 함께 확인한다.
 개별 공고 URL은 daily snapshot에서 파생되어야 하며, adapter 코드의 필수 seed로 두지 않는다.
 중복 처리는 URL 우선, URL이 불안정한 source는 hash 보조를 사용한다.
 Wanted adapter는 백엔드 keyword 외에 AI Agent/RAG/MCP/LLMOps/ML Backend 계열 keyword를 함께 수집할 수 있다.

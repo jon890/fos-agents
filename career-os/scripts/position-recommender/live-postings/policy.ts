@@ -27,7 +27,7 @@ export const NON_SERVER_TITLE_KEYWORDS = [
   "cto", "chief technology officer", "tech lead", "server lead", "technical lead", "테크 리드", "기술 리드", "기술총괄", "기술 총괄",
   "마케터", "marketing", "assistant", "어시스턴트", "정책", "e/e", "데이터 라벨링",
   // 법무·컴플라이언스
-  "legal", "counsel", "법무", "변호사", "compliance manager", "준법", "kyc", "aml", "privacy manager",
+  "legal", "counsel", "법무", "변호사", "compliance manager", "컴플라이언스", "준법", "kyc", "aml", "privacy manager",
   // 재무·회계·감사
   "finance manager", "financial manager", "strategic finance", "재무", "accounting", "회계", "audit manager",
   // 채용·인사
@@ -112,9 +112,11 @@ export function isNonServerTitle(text: string): boolean {
 
 export function isServerRole(text: string): boolean {
   const low = text.toLowerCase();
-  if (EXCLUDE_NON_SERVER_KEYWORDS.some((k) => low.includes(k))) return false;
   const hasServerKeyword = SERVER_KEYWORDS.some((k) => low.includes(k));
   const hasAiPlatformKeyword = AI_PLATFORM_ROLE_KEYWORDS.some((k) => low.includes(k));
+  // JD의 우대사항에 frontend, data 등의 인접 기술이 등장하는 것은 서버 역할을
+  // 부정하는 근거가 아니다. 비서버 키워드만 있고 서버/AI 전환 신호도 없을 때만 제외한다.
+  if (EXCLUDE_NON_SERVER_KEYWORDS.some((k) => low.includes(k)) && !hasServerKeyword && !hasAiPlatformKeyword) return false;
   if (low.includes("ml engineer") && !hasAiPlatformKeyword) return false;
   return hasServerKeyword || hasAiPlatformKeyword;
 }
