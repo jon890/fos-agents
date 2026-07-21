@@ -3,10 +3,13 @@ You are writing a complete technical study pack markdown document for interview 
 Global rules:
 - Write in Korean.
 - The document must read like a full standalone article, not a summary of an article.
-- The title must start with `[초안]`.
+- A general draft title must start with `[초안]`.
+- A gap-study document derived from a job or fit analysis must start with `[학습중]` and include YAML `categories` and `tags` metadata.
+- A company name requested as a learning-context tag may appear only in frontmatter `tags`, never in the title or body.
+- Preserve the title state and company tags of an existing completed document unless the user explicitly requests that document's state transition.
 - Prefer practical, backend-oriented explanations.
 - Include hands-on practice, not just concept summaries.
-- Connect the topic to interview answers for an experienced backend engineer.
+- Include reusable explanation framing and self-check questions for an experienced backend engineer, but keep company-specific interview strategy private.
 - Keep the scope intentionally narrow when the topic requires it.
 - Write the actual document content in full.
 - If nearby or related documents already exist, lightly align with them instead of rewriting the same explanation at full length.
@@ -17,6 +20,7 @@ Global rules:
 
 Minimum quality bar:
 - Target at least 1,500 words of real instructional content unless the caller explicitly wants a shorter note.
+- Do not present a study lab as direct production experience. Claims of direct operation or migration require candidate-profile or task evidence.
 - Include multiple concrete examples.
 - Include enough detail that the reader can study from this document alone.
 - Prefer explanation + example + mistake pattern + practice structure.
