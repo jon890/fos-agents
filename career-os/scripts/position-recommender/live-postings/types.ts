@@ -13,8 +13,11 @@ export type SourceId =
   | "samsung-careers"
   | "sk-careers"
   | "cj-careers"
-  | "krafton-careers";
-export type SourceAlias = "toss" | "coupang" | "kakaobank" | "kurly" | "samsung" | "sk" | "cj" | "krafton";
+  | "krafton-careers"
+  | "line-careers"
+  | "daangn-careers"
+  | "woowahan-careers";
+export type SourceAlias = "toss" | "coupang" | "kakaobank" | "kurly" | "samsung" | "sk" | "cj" | "krafton" | "line" | "daangn" | "woowahan";
 export type SourceSelection = SourceId | SourceAlias | "all";
 
 export type DiscoveryMode =

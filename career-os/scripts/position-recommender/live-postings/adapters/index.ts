@@ -1,6 +1,9 @@
 import type { SourceAdapter, SourceId, SourceSelection } from "../types.ts";
 import { coupangCareersAdapter } from "./coupang-careers.ts";
 import { cjCareersAdapter } from "./cj-careers.ts";
+import { daangnCareersAdapter } from "./daangn-careers.ts";
+import { lineCareersAdapter } from "./line-careers.ts";
+import { woowahanCareersAdapter } from "./woowahan-careers.ts";
 import { kakaomobilityAdapter } from "./kakaomobility.ts";
 import { kakaobankCareersAdapter } from "./kakaobank-careers.ts";
 import { kakaopayAdapter } from "./kakaopay.ts";
@@ -27,6 +30,9 @@ const ADAPTERS: Record<SourceId, SourceAdapter> = {
   "samsung-careers": samsungCareersAdapter,
   "sk-careers": skCareersAdapter,
   "cj-careers": cjCareersAdapter,
+  "line-careers": lineCareersAdapter,
+  "daangn-careers": daangnCareersAdapter,
+  "woowahan-careers": woowahanCareersAdapter,
 };
 
 const SOURCE_ALIASES: Record<string, SourceId> = {
@@ -38,6 +44,9 @@ const SOURCE_ALIASES: Record<string, SourceId> = {
   samsung: "samsung-careers",
   sk: "sk-careers",
   cj: "cj-careers",
+  line: "line-careers",
+  daangn: "daangn-careers",
+  woowahan: "woowahan-careers",
 };
 
 function normalizeSource(source: SourceSelection): SourceSelection {
