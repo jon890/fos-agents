@@ -275,13 +275,8 @@ function codeList(values: string[]): string {
   return values.map((value) => `<code>${escapeHtml(value)}</code>`).join(" ");
 }
 
-export function renderCandidatePreviewHtml(run: RecommendationRunType, options: CandidatePreviewOptions = {}): string {
-  const effectiveLimit = options.limit === undefined ? 10 : options.limit;
-  const rows = applyLimit(options.postingsMarkdown ? parseLivePostingRows(options.postingsMarkdown, run) : rowsFromRun(run), effectiveLimit);
-  const title = options.title ?? (options.postingsMarkdown ? `${run.reportDate} 조건 통과 수집 공고` : `${run.reportDate} 포지션 추천 후보`);
-  // 전체 공고 목록(--postings)은 모든 행이 "전체 후보" 단일 티어라 구분 뱃지가 정보를 담지 못한다.
-  // 이 모드에서는 뱃지 컬럼을 숨기고, 추천 티어에서 직접 렌더할 때만 표시한다.
-  const showTierColumn = !options.postingsMarkdown;
+/** 표 한 덩어리를 렌더한다. 추천 섹션은 티어 뱃지를 보이고, 전체 공고 섹션은 단일 티어라 숨긴다. */
+function renderTable(rows: PreviewRow[], showTierColumn: boolean): string {
   const rowHtml = rows
     .map(
       (row, index) => `<tr>
@@ -295,6 +290,35 @@ ${showTierColumn ? `  <td class="tier"><span class="badge ${badgeClass(row.tier)
 </tr>`,
     )
     .join("\n");
+  return `  <div class="table-scroll" tabindex="0" aria-label="공고 목록 가로 스크롤 영역">
+    <table>
+      <thead><tr><th class="rank">순위</th>${showTierColumn ? "<th>구분</th>" : ""}<th>공고 링크</th><th>키워드</th><th>핵심 판단</th></tr></thead>
+      <tbody>
+${rowHtml}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+export function renderCandidatePreviewHtml(run: RecommendationRunType, options: CandidatePreviewOptions = {}): string {
+  const effectiveLimit = options.limit === undefined ? 10 : options.limit;
+  // --postings를 주면 추천 공고와 전체 조건 통과 공고를 한 파일에 함께 담는다.
+  // 추천 티어에는 수집 snapshot 밖에서 확보한 공고도 들어가므로, 두 섹션을 나눠야 누락이 생기지 않는다.
+  const recommendedRows = rowsFromRun(run);
+  const allRows = options.postingsMarkdown ? applyLimit(parseLivePostingRows(options.postingsMarkdown, run), effectiveLimit) : [];
+  const rows = options.postingsMarkdown ? allRows : applyLimit(recommendedRows, effectiveLimit);
+  const title = options.title ?? (options.postingsMarkdown ? `${run.reportDate} 포지션 추천 및 전체 조건 통과 공고` : `${run.reportDate} 포지션 추천 후보`);
+
+  const recommendedUrls = new Set(recommendedRows.map((row) => row.url));
+  const overlapCount = allRows.filter((row) => recommendedUrls.has(row.url)).length;
+  const body = options.postingsMarkdown
+    ? `  <h2>추천 공고 <span class="count">${recommendedRows.length}건</span></h2>
+  <p class="section-note">강력 추천, 도전 추천, 보류·주의 티어입니다. 수집 snapshot 밖에서 직접 확보한 공고도 포함합니다.</p>
+${renderTable(recommendedRows, true)}
+  <h2>전체 조건 통과 공고 <span class="count">${allRows.length}건</span></h2>
+  <p class="section-note">수집 snapshot에서 역할 구성, 고용 형태, 명백한 필수조건 필터를 통과한 active/open 공고 전체입니다. 이 중 ${overlapCount}건이 위 추천 티어와 겹칩니다.</p>
+${renderTable(allRows, false)}`
+    : renderTable(rows, true);
 
   const conclusion = run.conclusion.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
   const provenance = options.postingsMarkdown ? snapshotProvenance(options.postingsMarkdown) : { collectionRunId: "", collectedAt: "" };
@@ -312,6 +336,9 @@ ${showTierColumn ? `  <td class="tier"><span class="badge ${badgeClass(row.tier)
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; color: #172033; background: #f7f8fb; }
     main { max-width: 1180px; margin: 32px auto; background: white; padding: 32px; border-radius: 18px; box-shadow: 0 10px 30px rgba(20,30,60,.08); overflow: hidden; }
     h1 { margin: 0 0 8px; font-size: 28px; }
+    h2 { margin: 32px 0 6px; font-size: 20px; }
+    h2 .count { margin-left: 6px; font-size: 13px; font-weight: 600; color: #667085; }
+    .section-note { margin: 0 0 12px; color: #667085; font-size: 13px; line-height: 1.55; }
     .meta { color: #667085; margin-bottom: 20px; line-height: 1.55; }
     .conclusion { background: #f6f8fb; border: 1px solid #e6e8ef; border-radius: 12px; padding: 14px 18px; margin-bottom: 24px; }
     .conclusion ul { margin: 0; padding-left: 20px; }
@@ -349,16 +376,9 @@ ${showTierColumn ? `  <td class="tier"><span class="badge ${badgeClass(row.tier)
 <body>
 <main>
   <h1>${escapeHtml(title)}</h1>
-  <div class="meta">생성일: ${escapeHtml(run.reportDate)} · ${escapeHtml(freshness)} · 현재 후보자의 역할·고용 형태·핵심 기술 조건을 통과한 active/open 공고입니다. · 대규모·검증 회사 공고를 먼저 정렬합니다. · 공고명을 클릭하면 개별 공고 페이지로 이동합니다. · 표시 공고 ${rows.length}개</div>
+  <div class="meta">생성일: ${escapeHtml(run.reportDate)} · ${escapeHtml(freshness)} · 현재 후보자의 역할·고용 형태·핵심 기술 조건을 통과한 active/open 공고입니다. · 대규모·검증 회사 공고를 먼저 정렬합니다. · 공고명을 클릭하면 개별 공고 페이지로 이동합니다.</div>
   <section class="conclusion"><ul>${conclusion}</ul></section>
-  <div class="table-scroll" tabindex="0" aria-label="공고 목록 가로 스크롤 영역">
-    <table>
-      <thead><tr><th class="rank">순위</th>${showTierColumn ? "<th>구분</th>" : ""}<th>공고 링크</th><th>키워드</th><th>핵심 판단</th></tr></thead>
-      <tbody>
-${rowHtml}
-      </tbody>
-    </table>
-  </div>
+${body}
 </main>
 </body>
 </html>

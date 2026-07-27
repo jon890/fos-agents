@@ -37,8 +37,9 @@ Discord 요약은 내부 파일 경로, plan 번호, commit hash 같은 내부 �
 - 공고·포지션 추천 리포트는 반드시 HTML 파일을 함께 생성해 첨부한다. 텍스트 표만 보내지 않는다.
 - HTML은 다운로드 전용 경로(`reports/downloads/`)에 두고, 각 공고명은 개별 공고 URL로 이동하는 링크(`<a href>`)여야 한다.
 - Discord 미리보기에는 상위 후보와 핵심 사유를 짧게 쓰되, 각 후보의 공고 링크도 포함한다.
-- 다운로드·첨부용 HTML은 전체 **후보자 조건 통과** active/open 공고가 들어 있는 파일 하나만 만든다.
-- 부분 후보 preview HTML이나 `report.html`의 다운로드 copy는 기본 생성하지 않는다.
+- 다운로드·첨부용 HTML은 **추천 공고와 전체 조건 통과 공고를 한 파일에 담은 통합 HTML 하나만** 만든다.
+  추천 티어에는 수집 snapshot 밖에서 확보한 공고도 들어가므로, 두 섹션을 함께 담아야 신규 발굴 공고가 첨부에서 누락되지 않는다.
+- 부분 후보 preview HTML, 전체 공고 전용 별도 HTML, `report.html`의 다운로드 copy는 만들지 않는다.
 
 ## Inputs
 
@@ -175,9 +176,9 @@ md/html의 한국어 라벨 변환은 `render_recommendation.ts`가 담당하므
 쓰기 → career-os/reports/daily/YYYY-MM-DD/position-recommendation/recommendation.json  (표준 출력 JSON)
 파생 → <ts-runtime> scripts/position-recommender/render_recommendation.ts --input <json> --format md   --output .../report.md
 파생 → <ts-runtime> scripts/position-recommender/render_recommendation.ts --input <json> --format html --output .../report.html
-다운로드 HTML → <ts-runtime> scripts/position-recommender/render_candidate_preview.ts --input <json> --postings cache/live-position-postings.md --limit all --output reports/downloads/position-recommendation-all-YYYY-MM-DD.html
+통합 HTML → <ts-runtime> scripts/position-recommender/render_candidate_preview.ts --input <json> --postings cache/live-position-postings.md --limit all --output reports/downloads/position-recommendation-all-YYYY-MM-DD.html
 미러 → career-os/reports/latest/position-recommendation.{json,md,html}
-다운로드 → reports/downloads/position-recommendation-all-YYYY-MM-DD.html 하나만 둔다.
+다운로드 → reports/downloads/position-recommendation-all-YYYY-MM-DD.html 하나만 둔다 (추천 섹션과 전체 섹션을 함께 담은 통합 파일).
 소비측 가공 → cron 또는 호출자: 최종 응답 Discord 요약 산문 + HTML 첨부 / 파일 기반 후속 루프
 ```
 
@@ -200,15 +201,18 @@ cron 소비측은 Markdown 리포트 검증 후 HTML 미러를 생성하고,
 
 Discord 알림은 리포트 전체 요약이 아니라 “클릭 가능한 카드형 후보 목록”으로 보낸다.
 
-- 공고·포지션 추천 리포트는 반드시 전체 공고 HTML 파일 하나를 함께 첨부한다.
+- 공고·포지션 추천 리포트는 반드시 통합 HTML 파일 하나를 함께 첨부한다.
+  이 파일 하나에 `추천 공고` 섹션과 `전체 조건 통과 공고` 섹션이 모두 들어간다.
 - HTML 파일은 `career-os/reports/downloads/` 아래에 만들고, 각 후보 공고명은 개별 공고 URL로 이동하는 `<a href>` 링크여야 한다.
 - Discord 요약에는 강력 추천 최대 3개, 도전 추천 최대 2개를 짧게 쓴다.
-- 첨부 HTML은 항상 `--postings cache/live-position-postings.md --limit all`로 수집 snapshot에서 역할 구성·고용 형태·명백한 필수조건 필터를 통과한 active/open 후보를 보여준다.
+- 첨부 HTML은 항상 `--postings cache/live-position-postings.md --limit all`로 만든다.
+  이 옵션이 있으면 렌더러가 추천 티어 전체와 snapshot 조건 통과 후보를 두 섹션으로 나눠 한 파일에 담는다.
 - 사용자가 넓은 preview, 20개 이상 후보, 또는 전체 후보를 요청하면 임의로 50개처럼 다시 자르지 않는다.
-- 전체 후보 preview와 전체 공고 HTML에서도 `references/position-decision-criteria.md`의 "4. 역할 구성" 제외 규칙을 동일하게 적용한다.
-- **중요: `position-recommendation-full-YYYY-MM-DD.html`은 추천 리포트 전체본이지, 수집된 모든 active/open 공고 목록이 아니다.** 사용자가 "모든 공고", "전체 공고", "다 들어있는 HTML"을 요청하거나 포함 여부를 확인하면 `cache/live-position-postings.md`의 `direct_active_or_open_postings`와 HTML의 공고 링크/행 수를 비교한다. 불일치하면 full report를 재전송하지 말고, snapshot의 `link_type: direct_posting` + `posting_status: active/open` + `url` 항목 전체를 표로 렌더링한 별도 HTML을 `reports/downloads/position-recommendation-all-postings-YYYY-MM-DD.html`로 만들고, 링크 수가 snapshot count와 일치하는지 검증한 뒤 첨부한다.
-- 전체 공고 HTML에는 최소 컬럼 `순번`, `출처`, `공고 링크`, `상태`, `마감`, `태그/스킬`, `요약`을 둔다. 공고명은 개별 공고 URL로 이동하는 `<a href>` 링크여야 하며, 최종 전송 전 `<a ` 개수와 표시 행 수가 `direct_active_or_open_postings`와 일치해야 한다.
-- 각 후보 preview 또는 전체 공고 HTML 행은 다음 4줄 또는 표 컬럼을 유지한다:
+- 전체 섹션에도 `references/position-decision-criteria.md`의 "4. 역할 구성" 제외 규칙을 동일하게 적용한다.
+- 추천 섹션과 전체 섹션의 건수는 성격이 다르다. 추천 섹션은 강력·도전·보류 티어 합계이고, 전체 섹션은 snapshot의 `direct_active_or_open_postings` 중 역할 필터를 통과한 수다. 두 숫자가 다른 것은 정상이다.
+- 사용자가 "모든 공고", "전체 공고", "다 들어있는 HTML"을 확인하면 별도 파일을 새로 만들지 말고, 통합 HTML의 전체 섹션 행 수와 snapshot의 `direct_active_or_open_postings`를 비교해 필터로 몇 건이 빠졌는지 설명한다.
+- 최종 전송 전 추천 티어의 모든 `postingUrl`이 통합 HTML 안에 있는지 확인한다. snapshot 밖에서 확보한 공고는 전체 섹션에 없으므로 추천 섹션에서만 확인된다.
+- 통합 HTML의 각 행은 다음 4줄 또는 표 컬럼을 유지한다:
   - 공고명: 회사명 — 포지션명
   - 스택: 보고서의 `검색 키워드` 또는 핵심 기술 키워드
   - 한줄: 보고서의 `왜 맞는가` 첫 문장 수준 요약
@@ -278,7 +282,8 @@ cron 환경에서 표준 JSON 작성이나 대형 파일 작성이 안전 가드
 
 파생물 확인:
 - `report.md` / `report.html` / runtime mirror가 표준 출력 JSON에서 생성됨.
-- `render_candidate_preview.ts --postings ... --limit all`로 다운로드용 전체 공고 HTML을 생성했고, 공고명 링크가 개별 공고 URL로 연결됨.
+- `render_candidate_preview.ts --postings ... --limit all`로 통합 HTML을 생성했고, `추천 공고`와 `전체 조건 통과 공고` 두 섹션이 모두 있으며, 공고명 링크가 개별 공고 URL로 연결됨.
+- 추천 티어의 모든 `postingUrl`이 통합 HTML 안에 있음. snapshot 밖에서 확보한 공고도 포함됨.
 
 스키마로 잡히지 않는 사람-facing 점검:
 - 닫힌 공고·`unknown` 상태·커리어 아티클·채용홈·검색 페이지가 추천 티어에 없음.
@@ -327,7 +332,7 @@ cron 환경에서 표준 JSON 작성이나 대형 파일 작성이 안전 가드
 - `references/verified-company-discovery.md` — snapshot 부족 시만 쓰는 보조 탐색 가이드
 - `scripts/position-recommender/recommendation_schema.ts` — **표준 출력 JSON zod 스키마** (ADR-101). recommendation.json을 채우기 전에 이 파일에서 `PositionItem`(`source`·`closeDate` 포함) 등 필드 정의를 확인한다.
 - `scripts/position-recommender/render_recommendation.ts` — 표준 출력 JSON에서 Markdown·HTML을 파생하는 렌더러. 입력 시 스키마 검증을 내장하므로 실행 자체가 self-check다.
-- `scripts/position-recommender/render_candidate_preview.ts` — 표준 출력 JSON과 live posting snapshot에서 Discord/download용 클릭 가능한 전체 공고 HTML을 파생하는 렌더러.
+- `scripts/position-recommender/render_candidate_preview.ts` — 표준 출력 JSON과 live posting snapshot에서 Discord/download용 통합 HTML을 파생하는 렌더러. `--postings`를 주면 추천 공고 섹션과 전체 조건 통과 공고 섹션을 한 파일에 담는다.
 - `references/report-html-delivery.md` — 포지션 리포트 HTML 전달과 전체 공고 HTML 산출물 규칙.
 - `references/cron-operational-checks.md` — 포지션 추천 cron 변경 후 수집·HTML·제외 기준 검증 체크리스트.
 - `references/cron-codex-markdown-delivery.md` — Hermes/Codex scheduled run에서 Markdown report/runtime mirror와 HTML copy를 직접 생성·검증하는 체크리스트.
