@@ -227,6 +227,9 @@ function buildFallbackOpinion(posting: LivePostingCandidate): string {
 function isExcludedPreviewPosting(posting: LivePostingCandidate): boolean {
   const text = [posting.company, posting.title, ...Object.values(posting.fields), ...posting.raw].join(" ").toLowerCase();
   const title = posting.title.toLowerCase();
+  if (/담당자|full[ -]?stack|풀스택/.test(title)) return true;
+  if (/model\s*operations|system\s*architecture\s*engineer|시스템\s*인프라\s*운영/.test(title)) return true;
+  if (/(?:서버\s*엔지니어|server\s*engineer)/.test(title) && /(?:\bidc\b|on[- ]?premise|온프레미스|\bvdi\b|active\s*directory|하드웨어).*(?:운영|관리|라이프사이클)/.test(text)) return true;
   if (/\bcto\b|chief technology officer|기술\s*총괄|기술총괄/.test(text)) return true;
   if (/tech\s*lead|server\s*lead|technical\s*lead|테크\s*리드|기술\s*리드/.test(text)) return true;
   if (/team\s*leader|팀\s*(리더|리드)/.test(title)) return true;
@@ -244,7 +247,7 @@ function isExcludedPreviewPosting(posting: LivePostingCandidate): boolean {
   if (/model\s*router|mcp\s*gateway|long[ -]?term\s*memory|multi[ -]?agent|agent\s*orchestration|에이전트\s*오케스트레이션|ai\s*agent\s*sdk|agent\s*(gym|platform)/.test(text)) return true;
   if (/\bml\s*engineer\b|ml\s*infrastructure|model\s*serving|llm\s*serving|ai\s*engineer\s*\((platform|serving|ads|commerce)\)|모델\s*서빙|ml\s*인프라/.test(text)) return true;
   if (/\b(staff|senior staff)\b/.test(title)) return true;
-  if (/applied\s*ai\s*engineer|ai[ -]?native\s*(engineer|개발자)|ai\s*platform\s*engineer|\bai\s*engineer\b.*\(r&d\)|자율주행\s*ai\s*엔지니어/.test(title)) return true;
+  if (/applied\s*ai\s*engineer|ai[ -]?native\s*(engineer|개발자)|ai\s*platform\s*engineer|\bai\s*engineer\b.*\(r&d\)|자율(?:주행|비행)\s*ai\s*엔지니어/.test(title)) return true;
   if (/\b(sre|site reliability|devops|devsecops|network|security researcher|technical account|technical program|account manager|asset manager|purchasing|compliance|hrbp|modeler)\b|\b(it manager|it planning|it governance|sox manager|call infra|financial systems|business partnership|category md|search engineer)\b|데이터\s*분석가|채널영업|총무|general affairs|보안\s*연구|네트워크\s*엔지니어|외환\s*상품|자문\s*상품|인프라\s*담당자|컴플라이언스/.test(title)) return true;
   if (/\bmanager\b/.test(title)) return true;
 

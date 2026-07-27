@@ -377,3 +377,70 @@ test("candidate preview excludes roles with candidate-known core gaps and keeps 
   assert.doesNotMatch(html, /UX Writer/);
   assert.doesNotMatch(html, /Credit Rating Modeler/);
 });
+
+test("candidate preview excludes non-backend operations, support, full-stack, and autonomous AI roles", () => {
+  const snapshot = `# Live Posting Snapshot
+
+- [카카오페이] 사업 담당자 - 해외 온라인 결제
+  - source: kakaopay
+  - posting_status: open
+  - link_type: direct_posting
+  - main_tasks: 결제 사업 제휴와 채널 운영을 담당합니다.
+  - url: https://example.com/business
+- [마키나락스] AI Platform & Model Operations Engineer
+  - source: wanted
+  - posting_status: active
+  - link_type: direct_posting
+  - main_tasks: 고객 환경의 AI 플랫폼 정기점검과 기술지원을 수행합니다.
+  - url: https://example.com/model-operations
+- [애자일소다] AI Platform System Architecture Engineer
+  - source: wanted
+  - posting_status: active
+  - link_type: direct_posting
+  - main_tasks: 인프라 구성과 용량 산정, Kubernetes 플랫폼 구축을 지원합니다.
+  - url: https://example.com/system-architecture
+- [신한카드] 시스템 인프라 운영
+  - source: wanted
+  - posting_status: active
+  - link_type: direct_posting
+  - main_tasks: 서버와 스토리지 인프라를 운영합니다.
+  - url: https://example.com/infrastructure-operations
+- [컬리] 서버 엔지니어
+  - source: kurly-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - main_tasks: IDC와 온프레미스 서버 OS, VDI, AD, 하드웨어 라이프사이클을 운영합니다.
+  - url: https://example.com/server-infrastructure
+- [케어랩스] 구인구직 플랫폼 풀스택 개발자
+  - source: wanted
+  - posting_status: active
+  - link_type: direct_posting
+  - main_tasks: React 프론트엔드와 백엔드를 함께 개발합니다.
+  - url: https://example.com/full-stack
+- [네오와이즈] 자율비행 AI 엔지니어
+  - source: wanted
+  - posting_status: active
+  - link_type: direct_posting
+  - main_tasks: 장애물 회피, 항법, 센서퓨전과 비전 모델을 개발합니다.
+  - url: https://example.com/autonomous-flight
+- [브릭] AI Agent 개발자
+  - source: wanted
+  - posting_status: active
+  - link_type: direct_posting
+  - main_tasks: AI API 및 Backend를 개발합니다.
+  - requirements: FastAPI 또는 Spring Boot 개발 경험
+  - url: https://example.com/agent-backend
+`;
+
+  const html = renderCandidatePreviewHtml(sampleRun, { postingsMarkdown: snapshot, limit: null });
+
+  assert.match(html, /표시 공고 1개/);
+  assert.match(html, /브릭/);
+  assert.doesNotMatch(html, /사업 담당자/);
+  assert.doesNotMatch(html, /Model Operations Engineer/);
+  assert.doesNotMatch(html, /System Architecture Engineer/);
+  assert.doesNotMatch(html, /시스템 인프라 운영/);
+  assert.doesNotMatch(html, /컬리/);
+  assert.doesNotMatch(html, /풀스택 개발자/);
+  assert.doesNotMatch(html, /자율비행 AI 엔지니어/);
+});
