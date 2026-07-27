@@ -39,7 +39,8 @@ Discord 요약은 내부 파일 경로, plan 번호, commit hash 같은 내부 �
 - Discord 미리보기에는 상위 후보와 핵심 사유를 짧게 쓰되, 각 후보의 공고 링크도 포함한다.
 - 다운로드·첨부용 HTML은 **추천 공고와 전체 조건 통과 공고를 한 파일에 담은 통합 HTML 하나만** 만든다.
   추천 티어에는 수집 snapshot 밖에서 확보한 공고도 들어가므로, 두 섹션을 함께 담아야 신규 발굴 공고가 첨부에서 누락되지 않는다.
-- 부분 후보 preview HTML, 전체 공고 전용 별도 HTML, `report.html`의 다운로드 copy는 만들지 않는다.
+- HTML 산출물은 이 통합 파일 하나뿐이다. 날짜별 `report.html`과 `reports/latest/position-recommendation.html`은 만들지 않는다.
+- 부분 후보 preview HTML과 전체 공고 전용 별도 HTML도 만들지 않는다.
 
 ## Inputs
 
@@ -170,14 +171,13 @@ md/html의 한국어 라벨 변환은 `render_recommendation.ts`가 담당하므
 
 ### 4. 표준 출력 JSON 생성 (ADR-101)
 
-표준 출력 JSON이 단일 산출물이다. 이 JSON 하나에서 md/html을 파생하므로 자체 markdown 파서를 거치지 않고 출력이 항상 일관된다.
+표준 출력 JSON이 단일 산출물이다. 이 JSON 하나에서 Markdown과 통합 HTML을 파생하므로 자체 markdown 파서를 거치지 않고 출력이 항상 일관된다.
 
 ```
 쓰기 → career-os/reports/daily/YYYY-MM-DD/position-recommendation/recommendation.json  (표준 출력 JSON)
 파생 → <ts-runtime> scripts/position-recommender/render_recommendation.ts --input <json> --format md   --output .../report.md
-파생 → <ts-runtime> scripts/position-recommender/render_recommendation.ts --input <json> --format html --output .../report.html
 통합 HTML → <ts-runtime> scripts/position-recommender/render_candidate_preview.ts --input <json> --postings cache/live-position-postings.md --limit all --output reports/downloads/position-recommendation-all-YYYY-MM-DD.html
-미러 → career-os/reports/latest/position-recommendation.{json,md,html}
+미러 → career-os/reports/latest/position-recommendation.{json,md}
 다운로드 → reports/downloads/position-recommendation-all-YYYY-MM-DD.html 하나만 둔다 (추천 섹션과 전체 섹션을 함께 담은 통합 파일).
 소비측 가공 → cron 또는 호출자: 최종 응답 Discord 요약 산문 + HTML 첨부 / 파일 기반 후속 루프
 ```
@@ -281,7 +281,7 @@ cron 환경에서 표준 JSON 작성이나 대형 파일 작성이 안전 가드
 - `reportDate`가 Asia/Seoul 오늘 날짜와 일치.
 
 파생물 확인:
-- `report.md` / `report.html` / runtime mirror가 표준 출력 JSON에서 생성됨.
+- `report.md`와 runtime mirror(`{json,md}`)가 표준 출력 JSON에서 생성됨. HTML은 다운로드 통합 파일로만 만든다.
 - `render_candidate_preview.ts --postings ... --limit all`로 통합 HTML을 생성했고, `추천 공고`와 `전체 조건 통과 공고` 두 섹션이 모두 있으며, 공고명 링크가 개별 공고 URL로 연결됨.
 - 추천 티어의 모든 `postingUrl`이 통합 HTML 안에 있음. snapshot 밖에서 확보한 공고도 포함됨.
 

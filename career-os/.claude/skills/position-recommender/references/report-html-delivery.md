@@ -21,19 +21,14 @@
 
 ## 권장 산출물
 
-- 통합 HTML: `reports/downloads/position-recommendation-all-YYYY-MM-DD.html`
-- runtime mirror: `reports/latest/position-recommendation.{json,md,html}`
+- 통합 HTML: `reports/downloads/position-recommendation-all-YYYY-MM-DD.html` (유일한 HTML 산출물)
+- runtime mirror: `reports/latest/position-recommendation.{json,md}`
 
 ## 권장 실행 흐름
 
 ```bash
-# 내부 runtime HTML은 표준 renderer에서 생성
-node scripts/position-recommender/render_recommendation.ts \
-  --input reports/latest/position-recommendation.json \
-  --format html \
-  --output reports/latest/position-recommendation.html
-
-# 다운로드용 통합 HTML(추천 공고 + 전체 조건 통과 공고).
+# HTML은 이 통합 파일 하나만 만든다. 날짜별 report.html과 latest HTML 미러는 만들지 않는다.
+# 추천 공고 섹션과 전체 조건 통과 공고 섹션이 한 파일에 들어간다.
 # AI 모델 연구 중심, CTO/기술총괄, Tech Lead/Server Lead, Toss 루트 회사의 범용 Server Developer 공고는 전체 섹션에서 제외된다.
 node scripts/position-recommender/render_candidate_preview.ts \
   --input reports/latest/position-recommendation.json \

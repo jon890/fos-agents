@@ -1441,14 +1441,14 @@ Toss adapter는 공식 `job-groups` API의 그룹 공고와 하위 포지션을 
 - 표준 출력 JSON을 호출자가 가공한다(ADR-101). cron은 Discord 요약으로 소비하며, 전달 매체는 운영의 공유 파일과 로컬·분산의 hermes API 응답이다.
 - 옛 파생 `items.json`과 daily runner는 ADR-101로 폐기됐다.
 
-### reports/latest/position-recommendation.{md,html}
+### reports/latest/position-recommendation.{json,md}
 
 recommendation.json 정본에서 파생하는 사람 읽기용 산출물(mirror).
 
 - `position-recommendation.md` — `render_recommendation.ts --format md` 파생. freshness 가드·기록 호환용.
-- `position-recommendation.html` — `--format html` 파생. 아침 Discord 알림 표시용.
-- 같은 날짜 보존본은 `reports/daily/YYYY-MM-DD/position-recommendation/{report.md,report.html}`.
-- 표시 template 정본은 `scripts/position-recommender/templates/report.html` (스타일만 정의, JSON 데이터 바인딩).
+- 같은 날짜 보존본은 `reports/daily/YYYY-MM-DD/position-recommendation/{recommendation.json,report.md}`.
+- HTML은 `reports/downloads/position-recommendation-all-YYYY-MM-DD.html` 하나만 만든다. 추천 공고 섹션과 전체 조건 통과 공고 섹션을 함께 담는다.
+- 표시 template 정본은 `scripts/position-recommender/templates/report.html` (스타일만 정의, JSON 데이터 바인딩). 현재 표준 파이프라인은 이 template을 쓰지 않고 `--format html`을 직접 호출할 때만 쓴다.
 - template은 실행 자산이므로 `data/` 아래에 두지 않고 ASCII 중심으로 유지한다.
 
 ## sources/fos-study/
