@@ -7,7 +7,9 @@ import type { Posting } from "./types.ts";
 // ---- Keyword lists -------------------------------------------------------
 
 export const SERVER_KEYWORDS = [
-  "backend", "백엔드", "server", "서버", "spring", "java", "kotlin", "api", "platform", "플랫폼", "gateway",
+  // "back-end"/"back end"는 "backend"와 같은 역할인데 표기만 다르다.
+  // 셋을 모두 두지 않으면 slug를 제목으로 바꾸는 adapter에서 공고가 조용히 탈락한다.
+  "backend", "back-end", "back end", "백엔드", "server", "서버", "spring", "java", "kotlin", "api", "platform", "플랫폼", "gateway",
   "devops", "sre", "infrastructure", "인프라",
 ];
 export const AI_PLATFORM_ROLE_KEYWORDS = [

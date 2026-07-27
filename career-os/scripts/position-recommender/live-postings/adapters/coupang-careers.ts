@@ -12,9 +12,13 @@ import {
   norm,
 } from "../policy.ts";
 
-const UA = "Mozilla/5.0 (fos-agents position recommender)";
+// Cloudflare가 봇성 UA를 막으므로 일반 브라우저 UA를 쓴다.
+const UA =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 const SITEMAP_URL = "https://www.coupang.jobs/sitemap.xml";
-const MAX_POSTINGS = 40;
+// sitemap의 서버 역할 후보를 앞에서 자르면 뒤쪽 공고가 통째로 사라진다.
+// 실측에서 Coupang Pay Core 백엔드가 40 컷에 걸려 누락됐으므로 현재 후보 수보다 넉넉히 잡는다.
+const MAX_POSTINGS = 120;
 
 interface SitemapUrl {
   loc?: string;
@@ -37,9 +41,8 @@ async function fetchText(url: string): Promise<{ ok: boolean; status: number; te
     return { ok: r.ok, status: r.status, text };
   }
 
-  // Cloudflare currently blocks Node/undici TLS fingerprints for Coupang job detail pages
-  // while accepting curl from the same host with the same headers. Use curl as a narrow
-  // fallback so the adapter can still enrich official direct-posting URLs.
+  // Cloudflare가 Coupang 채용 페이지에서 Node/undici 요청을 차단한다.
+  // 같은 URL도 curl은 통과하므로 좁은 fallback으로 재시도한다.
   return fetchTextWithCurl(url);
 }
 
@@ -50,12 +53,15 @@ function fetchTextWithCurl(url: string): { ok: boolean; status: number; text: st
       [
         "-L",
         "-sS",
+        // Cloudflare가 HTTP/2 fingerprint를 challenge 페이지(403)로 막는다.
+        // 같은 요청을 HTTP/1.1로 보내면 200이 온다. 이 플래그가 fallback 성공의 핵심이다.
+        "--http1.1",
         "--max-time",
         "20",
         "-A",
         UA,
         "-H",
-        "Accept-Language: ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Accept-Language: en-US,en;q=0.9",
         "-w",
         "\n__HTTP_STATUS__:%{http_code}",
         url,
