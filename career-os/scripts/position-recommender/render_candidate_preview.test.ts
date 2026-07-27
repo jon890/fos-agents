@@ -3,6 +3,16 @@ import { test } from "node:test";
 import { renderCandidatePreviewHtml } from "./render_candidate_preview.ts";
 import type { RecommendationRunType } from "./recommendation_schema.ts";
 
+/**
+ * 통합 HTML에서 "전체 조건 통과 공고" 섹션만 잘라낸다.
+ * 추천 티어는 사람이 고른 목록이라 snapshot 제외 규칙과 무관하게 항상 렌더된다.
+ * 따라서 제외 규칙 검증은 전체 섹션으로 범위를 좁혀야 의미가 맞는다.
+ */
+function allPostingsSection(html: string): string {
+  const index = html.indexOf("<h2>전체 조건 통과 공고");
+  return index < 0 ? "" : html.slice(index);
+}
+
 const sampleRun: RecommendationRunType = {
   schemaVersion: 2,
   reportDate: "2026-06-21",
@@ -146,7 +156,7 @@ test("candidate preview can render all live posting rows while excluding CTO and
 
   const html = renderCandidatePreviewHtml(sampleRun, { postingsMarkdown: snapshot, limit: null });
 
-  assert.match(html, /표시 공고 1개/);
+  assert.match(html, /전체 조건 통과 공고 <span class="count">1건<\/span>/);
   assert.match(html, /수집 기준: 2026-06-21T06:00:00.000Z/);
   assert.match(html, /position-postings-2026-06-21T06:00:00.000Z/);
   assert.match(html, /카카오페이/);
@@ -155,13 +165,14 @@ test("candidate preview can render all live posting rows while excluding CTO and
   assert.match(html, /table-scroll/);
   assert.match(html, /overflow-x: auto/);
   assert.match(html, /th:nth-child\(2\), td\.tier \{ display: none; \}/);
-  assert.doesNotMatch(html, /CTO/);
-  assert.doesNotMatch(html, /AI Engineer \(Model\)/);
-  assert.doesNotMatch(html, /Server Developer \(Product\)/);
-  assert.doesNotMatch(html, /Node\.js Developer/);
-  assert.doesNotMatch(html, /Tech Lead \(Server\)/);
-  assert.doesNotMatch(html, /CJ올리브영/);
-  assert.doesNotMatch(html, /토스뱅크/);
+  const allSection = allPostingsSection(html);
+  assert.doesNotMatch(allSection, /CTO/);
+  assert.doesNotMatch(allSection, /AI Engineer \(Model\)/);
+  assert.doesNotMatch(allSection, /Server Developer \(Product\)/);
+  assert.doesNotMatch(allSection, /Node\.js Developer/);
+  assert.doesNotMatch(allSection, /Tech Lead \(Server\)/);
+  assert.doesNotMatch(allSection, /CJ올리브영/);
+  assert.doesNotMatch(allSection, /토스뱅크/);
 });
 
 test("candidate preview excludes roles with candidate-known core gaps and keeps a regular backend role", () => {
@@ -345,7 +356,7 @@ test("candidate preview excludes roles with candidate-known core gaps and keeps 
 
   const html = renderCandidatePreviewHtml(sampleRun, { postingsMarkdown: snapshot, limit: null });
 
-  assert.match(html, /표시 공고 2개/);
+  assert.match(html, /전체 조건 통과 공고 <span class="count">2건<\/span>/);
   assert.match(html, /카카오모빌리티/);
   assert.match(html, /토스플레이스/);
   assert.doesNotMatch(html, /Data Pipeline Specialist/);
@@ -434,7 +445,7 @@ test("candidate preview excludes non-backend operations, support, full-stack, an
 
   const html = renderCandidatePreviewHtml(sampleRun, { postingsMarkdown: snapshot, limit: null });
 
-  assert.match(html, /표시 공고 1개/);
+  assert.match(html, /전체 조건 통과 공고 <span class="count">1건<\/span>/);
   assert.match(html, /브릭/);
   assert.doesNotMatch(html, /사업 담당자/);
   assert.doesNotMatch(html, /Model Operations Engineer/);
