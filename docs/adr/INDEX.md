@@ -29,3 +29,4 @@ ADR은 결정의 이유와 대안 기각만 담고, 현행 구조 설명은 `doc
 | ADR-017 | common-pitfalls file-per-pattern 구조 | Accepted | [ADR-017-common-pitfalls-file-per-pattern.md](ADR-017-common-pitfalls-file-per-pattern.md) |
 | ADR-018 | build-with-teams 하네스 도입 (Agent Teams 가시 협업, plan-and-build 병존) | Accepted | [ADR-018-build-with-teams-harness.md](ADR-018-build-with-teams-harness.md) |
 | ADR-019 | 외부 agent runtime 종속성을 제거한다 | Accepted | [ADR-019-runtime-framework-independence.md](ADR-019-runtime-framework-independence.md) |
+| ADR-020 | 공개 HTML 리포트는 Cloudflare Pages 직접 업로드로 게시한다 | Accepted | [ADR-020-cloudflare-pages-report-publishing.md](ADR-020-cloudflare-pages-report-publishing.md) |

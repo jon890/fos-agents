@@ -1,0 +1,12 @@
+interface:
+  display_name: "리포트 게시"
+  short_description: "검증한 HTML 리포트를 Cloudflare Pages에 게시"
+  default_prompt: "Use $report-publisher to inspect and publish this HTML report to Cloudflare Pages."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "cloudflare-api"
+      description: "Cloudflare Pages 프로젝트와 배포 상태를 조회하는 공식 API MCP"
+      transport: "streamable_http"
+      url: "https://mcp.cloudflare.com/mcp"
