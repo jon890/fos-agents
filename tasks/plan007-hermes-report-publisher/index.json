@@ -1,0 +1,41 @@
+{
+  "name": "plan007-hermes-report-publisher",
+  "description": "Hermes가 저장소 공용 report-publisher를 발견하고 제한된 Cloudflare 토큰으로 승인된 career-os HTML을 게시하도록 연결한다.",
+  "created_at": "2026-08-03T00:00:00+09:00",
+  "updated_at": "2026-08-03T00:00:00+09:00",
+  "status": "pending",
+  "current_phase": 1,
+  "total_phases": 2,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "docs/adr/ADR-020-cloudflare-pages-report-publishing.md",
+    "docs/adr/ADR-021-shared-report-publisher-skill.md",
+    "docs/code-architecture.md",
+    "career-os/docs/prd.md",
+    "career-os/docs/flow.md",
+    "career-os/docs/code-architecture.md",
+    "career-os/docs/data-schema.md"
+  ],
+  "depends_on": ["tasks/plan006-report-publisher"],
+  "phases": [
+    {
+      "number": 1,
+      "title": "position-recommender 승인형 게시 위임 연결",
+      "file": "phase-01.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "execution_profile": "standard",
+      "timeout": 900
+    },
+    {
+      "number": 2,
+      "title": "Hermes 외부 skill과 Cloudflare 비밀 변수 연결",
+      "file": "phase-02.md",
+      "status": "pending",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "execution_profile": "standard",
+      "timeout": 1200
+    }
+  ]
+}
