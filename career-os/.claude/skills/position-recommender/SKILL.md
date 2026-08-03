@@ -42,6 +42,12 @@ Discord 요약은 내부 파일 경로, plan 번호, commit hash 같은 내부 �
 - HTML 산출물은 이 통합 파일 하나뿐이다. 날짜별 `report.html`과 `reports/latest/position-recommendation.html`은 만들지 않는다.
 - 부분 후보 preview HTML과 전체 공고 전용 별도 HTML도 만들지 않는다.
 
+## 공개 게시
+
+사용자가 현재 요청에서 공개 게시를 명시한 경우에만 `/report-publisher`로 HTML 게시를 위임한다.
+게시 전에는 `references/report-html-delivery.md`의 선택적 Cloudflare Pages 게시 절차를 읽는다.
+HTML 생성이나 예약 실행만 요청받았다면 게시 승인을 추론하지 않는다.
+
 ## Inputs
 
 현재 에이전트는 다음 파일과 명령 출력을 직접 로드:

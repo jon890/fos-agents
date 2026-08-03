@@ -24,6 +24,19 @@
 - 통합 HTML: `reports/downloads/position-recommendation-all-YYYY-MM-DD.html` (유일한 HTML 산출물)
 - runtime mirror: `reports/latest/position-recommendation.{json,md}`
 
+## 선택적 Cloudflare Pages 게시
+
+현재 요청에 공개 게시 의도가 명시된 경우에만 통합 HTML을 `/report-publisher`로 넘긴다.
+
+- 게시 대상은 이번 실행에서 만든 `reports/downloads/position-recommendation-all-YYYY-MM-DD.html` 하나로 제한한다.
+- `Use skill: /report-publisher [HTML 파일 경로]` 형식으로 위임한다.
+- 게시 slug는 `position-recommendation-YYYY-MM-DD` 형식을 사용한다.
+- Cloudflare 인증, 준비 검사, 실제 업로드와 배포 검증은 `report-publisher`가 담당한다.
+- 성공하면 검증된 `public_url`과 검증 결과를 사용자에게 전달한다.
+- `branch_url`은 게시기가 HTTP 검증을 통과해 반환한 경우에만 안내한다.
+- 실패하면 로컬 HTML을 유지하고 게시 실패 사유를 별도로 알린다.
+- 토큰 값이나 로컬 비밀 정보는 본문, 명령 출력, 리포트에 기록하지 않는다.
+
 ## 권장 실행 흐름
 
 ```bash
