@@ -117,6 +117,7 @@ Use skill: /position-recommender [context]
   -> 강력 추천, 도전 추천, 보류/주의 후보 분류
   -> 표준 출력 JSON(recommendation.json) 작성 — 적재용 source·closeDate 포함  [ADR-101]
   -> Markdown과 HTML report 파생
+  -> 현재 요청에 공개 게시 승인이 있으면 /report-publisher에 HTML 게시 위임  [루트 ADR-020, ADR-021]
   -> 수집·추천 건강 지표를 logs/position-metrics.jsonl에 append (기준선 대비 개선 추적)  [ADR-099]
   -> 사용자 선택 후보를 positions-queue에 등록  [ADR-110]
   -> 다음 행동 후보를 지원 준비 또는 역할 fit 진단으로 넘김
@@ -148,6 +149,12 @@ Use skill: /position-recommender [context]
 
 다운로드용 전체 공고 HTML은 같은 수집 실행의 snapshot만 렌더링한다.
 오늘(Asia/Seoul) 수집된 active/open 공고가 없으면 기본 렌더링을 중단하고, 이전 snapshot 사용은 명시적인 stale 허용으로만 가능하다.
+
+Cloudflare Pages 게시는 선택 단계다.
+호출자는 현재 요청에 공개 게시 의도가 명시된 경우에만 `/report-publisher`를 위임한다.
+성공하면 검증된 `public_url`을 사용자 응답에 포함하고,
+실패하면 로컬 HTML을 유지한 채 게시 실패를 별도로 알린다.
+예약 실행이나 JSON 조회만으로는 공개 승인으로 간주하지 않는다.
 
 ## 지원 준비
 

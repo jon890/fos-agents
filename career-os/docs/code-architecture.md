@@ -493,6 +493,8 @@ plan050은 새 독립 추천기를 먼저 만들지 않고 기존 collector/reco
 - `position-recommender` agent skill은 표준 출력 JSON `recommendation.json`(ADR-101, schemaVersion 2)을 만든다. 적재용 `source`·`closeDate`를 포함하며, Discord 요약 같은 가공은 호출자가 맡는다(ADR-101).
 - `scripts/position-recommender/render_recommendation.ts`는 표준 출력 JSON에서 Markdown·HTML을 파생한다(입력 시 zod 검증 내장). 자체 markdown 파서 `render_report_html.ts`는 ADR-101로 폐기됐다.
   표시 구조와 CSS는 `scripts/position-recommender/templates/report.html`에 둔다.
+- 공개 게시 요청이 명시되면 `position-recommender`는 저장소 전역 `/report-publisher`에 완성된 HTML 경로를 위임한다.
+  Cloudflare 인증, 안전 검사, 파일 전송, 주소 검증은 position 스크립트에 복제하지 않는다.
 - `scripts/application-agent/`는 positions-queue, 공고별 application files, priority history를 검증하고 갱신한다.
 - `config/candidate-profile.md`와 기존 resume/profile material은 fit analysis 입력으로 재사용한다.
 - study/interview 관련 agent skill은 gap 기반 preparation action 후보를 만들 때만 호출한다.

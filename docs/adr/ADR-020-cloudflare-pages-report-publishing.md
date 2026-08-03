@@ -1,6 +1,6 @@
 ## ADR-020 — 공개 HTML 리포트는 Cloudflare Pages 직접 업로드로 게시한다
 
-- Status: Accepted
+- Status: Partially superseded by ADR-021 (2026-08-03) — Codex 전용 실행 가정만
 - Date: 2026-07-30
 
 ### 맥락

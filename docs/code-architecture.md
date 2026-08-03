@@ -28,7 +28,7 @@
 | `CLAUDE.md` | `AGENTS.md` 심볼릭 링크 |
 | `_shared/lib/` | 워크스페이스 무관 Bun TypeScript helper |
 | `_shared/types/` | 공용 TypeScript type |
-| `.agents/skills/` | Codex가 직접 탐색하는 저장소 전역 skill |
+| `.agents/skills/` | 여러 실행 환경이 함께 읽는 저장소 전역 agent skill (`report-publisher` 등) |
 | `.claude/skills/` | 저장소 전역 agent skill 정본 (`build-with-teams` 등 공용 skill 포함) |
 | `.claude/agents/` | `build-with-teams` 전용 agent (`<workspace>-executor`·`<workspace>-docs-verifier`) |
 | `.codex/skills/` | Codex 노출용 skill 심볼릭 링크 |
@@ -136,15 +136,20 @@ scripts/<skill-name>/
 ## 공용 리포트 게시
 
 `report-publisher`는 워크스페이스가 만든 공개 가능한 HTML 산출물을
-Cloudflare Pages에 게시하는 Codex 전용 skill이다.
+Cloudflare Pages에 게시하는 저장소 전역 skill이다.
 
-- 정본은 Codex 공식 저장소 경로인 `.agents/skills/report-publisher/`에 둔다.
+- 정본은 공유 agent skill 경로인 `.agents/skills/report-publisher/`에 둔다.
+- Codex는 이 경로를 직접 탐색한다.
+- 외부 skill 디렉터리를 지원하는 실행 환경은 `.agents/skills/`를 추가 탐색 경로로 등록한다.
+- 실행 환경별 wrapper, 복사본, 역방향 심볼릭 링크를 만들지 않는다.
 - 별도의 `.codex/skills` 심볼릭 링크를 만들지 않는다.
 - 게시 대상은 사용자가 명시한 HTML 파일이나 디렉터리로 제한한다.
 - 원본 워크스페이스와 저장소 루트는 직접 게시하지 않는다.
 - 실제 파일 전송은 공식 Wrangler를 사용한다.
 - Cloudflare API MCP는 프로젝트 조회와 배포 상태 확인에만 선택적으로 사용한다.
 - 게시 준비물은 임시 디렉터리에 만들고 실행 종료 시 제거한다.
+- 비대화형 실행 환경은 `CLOUDFLARE_API_TOKEN`을 비밀 변수로 주입한다.
+  실행 격리 환경이 환경 변수를 제한하면 비밀 변수 전달 허용 목록에 이 키만 추가한다.
 
 각 리포트는 하나의 Pages 미리보기 분기로 게시한다.
 Wrangler가 반환한 배포 고유 주소를 검증해 기본 공유 링크로 사용한다.
