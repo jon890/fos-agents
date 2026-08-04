@@ -5,8 +5,7 @@ import type { RecommendationRunType } from "./recommendation_schema.ts";
 
 /**
  * 통합 HTML에서 "전체 조건 통과 공고" 섹션만 잘라낸다.
- * 추천 티어는 사람이 고른 목록이라 snapshot 제외 규칙과 무관하게 항상 렌더된다.
- * 따라서 제외 규칙 검증은 전체 섹션으로 범위를 좁혀야 의미가 맞는다.
+ * 전체 공고 섹션의 snapshot 제외 규칙만 검증할 때 추천 티어를 잘라낸다.
  */
 function allPostingsSection(html: string): string {
   const index = html.indexOf("<h2>전체 조건 통과 공고");
@@ -98,6 +97,31 @@ test("candidate preview applies limit to tiered position rows", () => {
   assert.match(html, /카카오페이/);
   assert.doesNotMatch(html, /토스뱅크/);
   assert.doesNotMatch(html, /NAVER/);
+});
+
+test("candidate preview applies role exclusions to recommendation tiers", () => {
+  const run = structuredClone(sampleRun);
+  run.tiers.strong[0].company = "타인에이아이";
+  run.tiers.strong[0].title = "Backend Developer";
+  run.tiers.strong[0].postingUrl = "https://example.com/recommended-ai-native";
+  run.tiers.strong[0].whyFit = "백엔드 제품을 개발한다.";
+  run.tiers.strong[0].searchKeywords = ["MCP Gateway"];
+  run.tiers.strong[0].jdKeywords = ["Agent Platform"];
+
+  const html = renderCandidatePreviewHtml(run, { limit: 10 });
+
+  assert.doesNotMatch(html, /Backend Developer/);
+  assert.doesNotMatch(html, /MCP Gateway/);
+  assert.match(html, /Server Developer \(수신\)/);
+
+  const allowedRun = structuredClone(sampleRun);
+  allowedRun.tiers.strong[0].title = "Server(배차시스템)";
+  allowedRun.tiers.strong[0].searchKeywords = ["Java", "ML 모델 서빙"];
+  allowedRun.tiers.strong[0].jdKeywords = ["대규모 실시간 백엔드"];
+  allowedRun.tiers.strong[0].whyFit = "Java/Spring 대규모 배차 서버에 ML 모델 연동이 결합된 제품 백엔드 역할이다.";
+
+  const allowedHtml = renderCandidatePreviewHtml(allowedRun, { limit: 10 });
+  assert.match(allowedHtml, /Server\(배차시스템\)/);
 });
 
 
@@ -434,6 +458,48 @@ test("candidate preview excludes non-backend operations, support, full-stack, an
   - link_type: direct_posting
   - main_tasks: 장애물 회피, 항법, 센서퓨전과 비전 모델을 개발합니다.
   - url: https://example.com/autonomous-flight
+- [타인에이아이] AI-Native Developer
+  - source: wanted
+  - posting_status: active
+  - link_type: direct_posting
+  - main_tasks: Agentic DevOps와 Service Ops를 담당합니다.
+  - url: https://example.com/ai-native-developer
+- [데이터얼라이언스] GPU클라우드 엔터프라이즈 세일즈 리드
+  - source: wanted
+  - posting_status: active
+  - link_type: direct_posting
+  - main_tasks: 엔터프라이즈 영업과 파트너 세일즈를 담당합니다.
+  - url: https://example.com/gpu-cloud-sales
+- [파이오링크] ADC(L4-L7 스위치) 애플리케이션 개발
+  - source: wanted
+  - posting_status: active
+  - link_type: direct_posting
+  - requirements: network daemon, TCP/IP, 패킷 분석 경험
+  - url: https://example.com/network-daemon
+- [우아한형제들] 로보틱스 S/W 엔지니어링(SLAM 개발)
+  - source: woowahan-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - main_tasks: 자율주행 로봇의 SLAM을 개발합니다.
+  - url: https://example.com/slam
+- [우아한형제들] 로보틱스 S/W 엔지니어링
+  - source: woowahan-careers
+  - posting_status: open
+  - link_type: direct_posting
+  - main_tasks: 자율주행 로봇의 SLAM 알고리즘과 로보틱스 ML을 개발합니다.
+  - url: https://example.com/robotics-ml
+- [포토위젯] AI 서비스 인프라 엔지니어
+  - source: wanted
+  - posting_status: active
+  - link_type: direct_posting
+  - main_tasks: AI 인프라와 클라우드 운영을 담당합니다.
+  - url: https://example.com/ai-service-infra
+- [카카오모빌리티] 자율주행 시스템 엔지니어 (R&D)
+  - source: kakaomobility
+  - posting_status: open
+  - link_type: direct_posting
+  - main_tasks: 자율주행 차량 시스템 인프라 운영 및 유지보수와 데이터 구축 환경을 관리합니다.
+  - url: https://example.com/autonomous-system-engineer
 - [브릭] AI Agent 개발자
   - source: wanted
   - posting_status: active
@@ -441,12 +507,20 @@ test("candidate preview excludes non-backend operations, support, full-stack, an
   - main_tasks: AI API 및 Backend를 개발합니다.
   - requirements: FastAPI 또는 Spring Boot 개발 경험
   - url: https://example.com/agent-backend
+- [정상회사] Java 백엔드 개발자
+  - source: wanted
+  - posting_status: active
+  - link_type: direct_posting
+  - main_tasks: Java와 Spring Boot로 제품 API를 개발합니다.
+  - preferred: TCP/IP 기본 이해
+  - url: https://example.com/java-backend
 `;
 
   const html = renderCandidatePreviewHtml(sampleRun, { postingsMarkdown: snapshot, limit: null });
 
-  assert.match(html, /전체 조건 통과 공고 <span class="count">1건<\/span>/);
+  assert.match(html, /전체 조건 통과 공고 <span class="count">2건<\/span>/);
   assert.match(html, /브릭/);
+  assert.match(html, /Java 백엔드 개발자/);
   assert.doesNotMatch(html, /사업 담당자/);
   assert.doesNotMatch(html, /Model Operations Engineer/);
   assert.doesNotMatch(html, /System Architecture Engineer/);
@@ -454,4 +528,11 @@ test("candidate preview excludes non-backend operations, support, full-stack, an
   assert.doesNotMatch(html, /컬리/);
   assert.doesNotMatch(html, /풀스택 개발자/);
   assert.doesNotMatch(html, /자율비행 AI 엔지니어/);
+  assert.doesNotMatch(html, /AI-Native Developer/);
+  assert.doesNotMatch(html, /세일즈 리드/);
+  assert.doesNotMatch(html, /ADC\(L4-L7 스위치\)/);
+  assert.doesNotMatch(html, /SLAM 개발/);
+  assert.doesNotMatch(html, /로보틱스 S\/W 엔지니어링/);
+  assert.doesNotMatch(html, /AI 서비스 인프라 엔지니어/);
+  assert.doesNotMatch(html, /자율주행 시스템 엔지니어/);
 });

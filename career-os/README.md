@@ -9,6 +9,8 @@
 - 지원 가능한 공고를 찾을 때: `/position-recommender`
 - 공고별 지원 초안을 만들 때: `/application-package-writer <posting-path>`
 - 지원 패키지를 검토할 때: `/application-reviewer <application-dir>`
+- HTML 이력서를 높은 기준으로 채점하고 개선할 때: `/resume-evaluator <resume.html>`
+- 이력서 주장과 실제 코드·Git 이력을 대조할 때: `/resume-evidence-auditor <resume.html>`
 - 역할 적합도와 면접 전략을 볼 때: `/job-fit-analyzer <role>`
 - 면접 단계별 준비를 만들 때: `/interview-stage-prep`
 - 기술 또는 인성 답변을 연습할 때: `/tech-interview-drill`, `/behavioral-interview-drill`
@@ -19,7 +21,7 @@
 ## 작업 흐름
 
 1. 활성 공고를 수집하고 지원 후보를 판단한다.
-2. 공고별 지원 패키지를 만들고 근거·과장·공개 범위를 검토한다.
+2. 공고별 지원 패키지를 만들고 근거·과장·공개 범위를 검토한 뒤 HTML 이력서를 반복 개선한다.
 3. 역할 fit, 면접 단계, 답변 드릴 결과를 다음 준비 행동에 반영한다.
 4. 기술 학습과 질문 은행은 공개 가능한 자산으로 축적한다.
 

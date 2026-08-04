@@ -1,8 +1,6 @@
 # AGENTS.md — career-os 워크스페이스
 
 `career-os`는 커리어 성장, 회사·공고 적합도 분석, 면접 준비, 지원 준비 자동화를 위한 독립 워크스페이스다.
-모든 에이전트는 이 파일을 진입점으로 삼고, 상세 사양은 책임 문서와 각 skill 본문에서 확인한다.
-`CLAUDE.md`는 이 파일의 심볼릭 링크다.
 
 처음 사용하는 사람은 [README.md](README.md)에서 제품 범위와 주요 흐름을 먼저 확인한다.
 
@@ -14,16 +12,18 @@
 작업 범위에 맞는 단일 출처를 먼저 연다.
 같은 정의를 여러 문서에 복제하지 않는다.
 
-| 문서 | 책임 | 언제 보는지 |
-|---|---|---|
-| [`README.md`](README.md) | 제품 범위, 주요 skill, 시작 흐름 | 워크스페이스를 처음 볼 때 |
-| [`../AGENTS.md`](../AGENTS.md) | 모노레포 공통 규칙 | 모든 작업 시작 시 |
-| [`docs/README.md`](docs/README.md) | career-os 문서별 책임과 작성 규칙 | docs 작성·수정 전 |
-| [`docs/prd.md`](docs/prd.md) | 제품 가치, skill 자산, 성공 기준 | 새 기능 추가, 우선순위 결정 |
-| [`docs/data-schema.md`](docs/data-schema.md) | config, runtime, 산출물, positions-queue 스키마 | 데이터 파일 변경, 새 상태값 추가 |
-| [`docs/flow.md`](docs/flow.md) | 사용자 입력부터 산출물까지의 흐름 | 새 실행 흐름 추가, 디버깅 |
-| [`docs/code-architecture.md`](docs/code-architecture.md) | 디렉터리 책임, 외부 의존, 실행 구조 | 코드 구조 변경, 새 스크립트 추가 |
-| [`docs/adr/INDEX.md`](docs/adr/INDEX.md) | 결정의 이유와 대안 기각 기록 | 정책 변경, 되돌리기 어려운 결정 |
+
+| 문서                                                       | 책임                                        | 언제 보는지              |
+| -------------------------------------------------------- | ----------------------------------------- | ------------------- |
+| [`README.md`](README.md)                                 | 제품 범위, 주요 skill, 시작 흐름                    | 워크스페이스를 처음 볼 때      |
+| [`../AGENTS.md`](../AGENTS.md)                           | 모노레포 공통 규칙                                | 모든 작업 시작 시          |
+| [`docs/README.md`](docs/README.md)                       | career-os 문서별 책임과 작성 규칙                   | docs 작성·수정 전        |
+| [`docs/prd.md`](docs/prd.md)                             | 제품 가치, skill 자산, 성공 기준                    | 새 기능 추가, 우선순위 결정    |
+| [`docs/data-schema.md`](docs/data-schema.md)             | config, runtime, 산출물, positions-queue 스키마 | 데이터 파일 변경, 새 상태값 추가 |
+| [`docs/flow.md`](docs/flow.md)                           | 사용자 입력부터 산출물까지의 흐름                        | 새 실행 흐름 추가, 디버깅     |
+| [`docs/code-architecture.md`](docs/code-architecture.md) | 디렉터리 책임, 외부 의존, 실행 구조                     | 코드 구조 변경, 새 스크립트 추가 |
+| [`docs/adr/INDEX.md`](docs/adr/INDEX.md)                 | 결정의 이유와 대안 기각 기록                          | 정책 변경, 되돌리기 어려운 결정  |
+
 
 ## 작업 경계
 
@@ -43,77 +43,13 @@
 - 개인 이력, 지원 전략, 회사별 비공개 맥락은 `career-os/data/` 아래 비공개 산출물에 둔다.
 - 공개 글에는 민감한 개인 정보, 정확한 주소, 비공개 내부 정보를 쓰지 않는다.
 
-## 계획과 구현
-
-계획과 구현의 기본 규칙은 루트 [`../AGENTS.md`](../AGENTS.md)의 planning, background worktree, commit 규칙을 따른다.
-career-os에서는 다음 차이만 추가로 지킨다.
-
-- 구현 전에는 관련 `docs/` 또는 `docs/adr/` 결정을 먼저 고정한다.
-- docs 작성·수정 전에는 [`docs/README.md`](docs/README.md)의 문서별 책임을 확인한다.
-- 실행 계획은 `tasks/plan{N}-<slug>/` 아래에 보존한다.
-- 각 plan은 `index.json`과 `phase-NN.md`를 가진다.
-- phase 문서는 실행 가능한 성공 기준, 보류 조건, 실패 조건을 포함한다.
-- 여러 phase를 건드리는 구현은 별도 worktree와 branch를 기본값으로 둔다.
-- career-os 전용 별도 worktree는 `career-os/.codex/worktrees/<branch-slug>/` 아래에 만든다.
-  `career-os` 루트에서 실행한다면 `.codex/worktrees/<branch-slug>/` 경로를 사용한다.
-- worktree 디렉터리 이름은 branch 이름의 `/`를 `-`로 바꾼 kebab-case slug를 기본값으로 둔다.
-- worktree branch 이름은 `codex/<topic>` 또는 `fix/<topic>`처럼 작업 성격이 드러나게 둔다.
-- worktree 생성 전에는 같은 경로와 branch가 이미 있는지 `git worktree list`와 `git branch --list`로 확인한다.
-- worktree 완료 전에는 해당 worktree에서 `git status --short`를 확인하고, clean 상태면 `git worktree remove <path>`로 정리한다.
-- 같은 plan 안의 phase는 명시적 예외가 없으면 순서대로 실행한다.
-- task나 phase를 실행하기 전에는 `docs/adr/INDEX.md`에서 관련 결정을 확인한다.
-
-새 아키텍처 결정은 `docs/adr/ADR-NNN-slug.md` 파일과 `docs/adr/INDEX.md` 행을 함께 추가한다.
-긴 운영 절차와 장애 회고는 이 파일이 아니라 ADR, task, flow 문서에 둔다.
-AGENTS.md, SKILL.md, ADR, flow 문서처럼 다음 실행자의 행동을 바꾸는 핵심 문서를 수정했으면 완료 보고에 반드시 알리고, 관련 변경은 관심사별 commit/push 대상으로 본다.
-
-## Skill 진입점
-
-현재 표준은 에이전트 비종속 skill 호출이다.
-문서와 skill 간 위임은 `/<skill> [args]` 형태의 의도 표현으로 적는다.
-어떤 CLI나 서브에이전트로 실행할지는 실행 환경이 결정한다.
-
-정본은 `career-os/.claude/skills/<skill>/SKILL.md`다.
-Codex 노출은 `career-os/.codex/skills/<skill>` 심볼릭 링크로 연결한다.
-각 skill의 상세 입력, 산출물, 금지사항은 해당 `SKILL.md`와 `docs/flow.md`를 따른다.
-리포트와 application-agent가 다음 행동을 안내할 때는 `Use skill: /<skill> [args]`처럼 에이전트 비종속 표현을 쓴다.
-
-| Skill | 책임 | 상세 |
-|---|---|---|
-| `study-pack-writer` | 공개 가능한 기술 학습 문서 초안 작성 | [SKILL.md](.claude/skills/study-pack-writer/SKILL.md), [flow](docs/flow.md) |
-| `study-topic-recommender` | 아침 학습 토픽 추천과 후보 풀 보충 | [SKILL.md](.claude/skills/study-topic-recommender/SKILL.md), [flow](docs/flow.md) |
-| `question-bank-collector` | 공개 가능한 일반 backend/CS 질문 bank 보강 | [SKILL.md](.claude/skills/question-bank-collector/SKILL.md), [flow](docs/flow.md) |
-| `interview-asset-writer` | 후보자 이력 기반 면접 자산 초안 작성 | [SKILL.md](.claude/skills/interview-asset-writer/SKILL.md), [flow](docs/flow.md) |
-| `tech-interview-drill` | 기술 면접 일일 답변 드릴 | [SKILL.md](.claude/skills/tech-interview-drill/SKILL.md), [flow](docs/flow.md) |
-| `behavioral-interview-drill` | 인성 면접 일일 답변 드릴 | [SKILL.md](.claude/skills/behavioral-interview-drill/SKILL.md), [flow](docs/flow.md) |
-| `interview-stage-prep` | 면접 단계별 실전 준비 | [SKILL.md](.claude/skills/interview-stage-prep/SKILL.md), [flow](docs/flow.md) |
-| `job-fit-analyzer` | 타깃 직무 기준 핏과 갭 진단 | [SKILL.md](.claude/skills/job-fit-analyzer/SKILL.md), [flow](docs/flow.md) |
-| `position-recommender` | 활성 공고 수집과 지원 후보 추천 | [SKILL.md](.claude/skills/position-recommender/SKILL.md), [flow](docs/flow.md) |
-| `application-package-writer` | 공고별 지원 패키지 초안 작성 | [SKILL.md](.claude/skills/application-package-writer/SKILL.md), [flow](docs/flow.md) |
-| `application-reviewer` | 지원 패키지 근거, 과장, drift 검토 | [SKILL.md](.claude/skills/application-reviewer/SKILL.md), [flow](docs/flow.md) |
-| `daily-application-digest` | 지원 현황 일일 요약 작성 | [SKILL.md](.claude/skills/daily-application-digest/SKILL.md), [flow](docs/flow.md) |
-
-## Skill 작성 원칙
-
-skill 본문은 도메인 작업에 필요한 지시와 검증만 담는다.
-공통 에이전트 동작, 일반적인 말투, 반복된 승인 문구는 여기에서 다시 지시하지 않는다.
-
-- 목표, 관련 입력, 제약, 필요한 근거, 성공 기준, 출력 계약을 우선한다.
-- `짧게`, `간결하게` 같은 일반적인 축약 지시 대신 남겨야 할 결론, 근거, 주의사항, 다음 행동을 구체적으로 정한다.
-- 생성물의 길이, 표, JSON, HTML, 제출 경계처럼 도메인 결과에 필요한 형식은 유지한다.
-- 호출 가능한 도구와 참조 파일은 해당 작업에 필요한 것만 명시한다.
-- 새 제약은 실제 실패 사례나 검증 결과가 있을 때만 추가한다.
-
-OpenAI 모델을 새로 도입하거나 변경하는 요청은 공식 [Model guidance](https://developers.openai.com/api/docs/guides/latest-model)를 확인한다.
-현재 활성 실행 경로에 없는 모델 설정은 추측해 추가하지 않는다.
-
 ## 외부 저장소와 데이터 경계
 
 `sources/fos-study`는 외부 동기 저장소다.
 study-pack 계열 작업이 아니면 프로젝트 코드처럼 편집하지 않는다.
 게시 목적 글은 작성 후 필요한 README나 index를 갱신하고, 검증 후 commit/push한다.
 
-`fos-career` 웹 대시보드 축은 ADR-102로 폐기했다.
+
 career-os는 별도 웹 제품 없이 수집, 리포트 생성, skill 실행, private 산출물, 피드백 루프 기록을 파일과 skill 계약으로 직접 관리한다.
 지원 후보 상태와 준비 단계는 `state/application-agent/`, `applications/`, `private/` 산출물에서 관리하고, 외부 DB나 outbox를 정본으로 두지 않는다.
 
@@ -134,16 +70,3 @@ HTML에는 개인 이력, 지원 전략, 회사별 비공개 맥락의 공개 �
 대신 리서치, 핵심 포인트, 말하기 구조, 셀프 점검 질문, 피해야 할 표현을 제공하고, 사용자의 원문 답변을 받은 뒤 구조·근거·표현을 다듬는다.
 이 원칙은 사용자가 에이전트 답변을 외우는 방식이 아니라, 스스로 생각한 내용을 바탕으로 자신의 밸류를 만들기 위함이다.
 
-## fos-brain 연동
-
-단일 정책은 루트 [`../AGENTS.md`](../AGENTS.md)의 fos-brain 섹션을 따른다.
-career-os에서는 산출물 성격에 따라 네임스페이스를 고른다.
-
-| 산출물 | 네임스페이스 |
-|---|---|
-| 공개 가능한 학습 지식, 일반 면접 지식 | `public` |
-| 개인 baseline, 면접 자산, 커리어 데이터 | `private` |
-| 회사 업무 맥락 | `work` |
-
-brain 쓰기는 사용자 승인 후에만 수행한다.
-하루짜리 실행 로그, 단순 cron 성공/실패, repo 문서에 이미 충분한 구현 세부는 brain에 넣지 않는다.

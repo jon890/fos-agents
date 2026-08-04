@@ -176,12 +176,24 @@ career-os/
 │   │   └── SKILL.md  공고별 fit/gap + 맞춤 지원 패키지 작성
 │   ├── application-reviewer/
 │   │   └── SKILL.md  evidence/drift/privacy/cooldown 검토
+│   ├── resume-evaluator/
+│   │   ├── SKILL.md  인사·기술 리더 관점 100점 채점과 최대 3회 HTML 개선 루프
+│   │   ├── references/scoring-rubric.md
+│   │   ├── scripts/check_resume_html.ts
+│   │   └── evals/evals.json
+│   ├── resume-evidence-auditor/
+│   │   ├── SKILL.md  이력서 주장과 코드·테스트·Git·업무 문서 교차 검증
+│   │   ├── references/claim-model.md
+│   │   ├── scripts/validate_claim_ledger.ts
+│   │   └── evals/evals.json
 │   └── daily-application-digest/
 │       └── SKILL.md  positions-queue 기반 daily summary
 │
 ├── .codex/skills/                        ← Codex 노출용 심볼릭 링크 (ADR-085)
 │   ├── application-package-writer -> ../../.claude/skills/application-package-writer
 │   ├── application-reviewer -> ../../.claude/skills/application-reviewer
+│   ├── resume-evaluator -> ../../.claude/skills/resume-evaluator
+│   ├── resume-evidence-auditor -> ../../.claude/skills/resume-evidence-auditor
 │   ├── behavioral-interview-drill -> ../../.claude/skills/behavioral-interview-drill  (plan086 신규)
 │   ├── daily-application-digest -> ../../.claude/skills/daily-application-digest
 │   ├── interview-asset-writer -> ../../.claude/skills/interview-asset-writer

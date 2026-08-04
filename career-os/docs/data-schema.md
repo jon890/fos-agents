@@ -651,6 +651,9 @@ Markdown 산출물을 먼저 고정하고, 리뷰된 이력서 초안을 HTML/PD
   파일이 없으면 `config/resume-design.md`를 사용한다.
 - `resume.html`: `resume-draft.md`와 디자인 계약에서 만든 HTML 제출물.
 - `resume.pdf`: HTML을 headless Chrome으로 출력한 첨부 가능한 PDF.
+- `resume-scorecard.md`: 인사 담당자·기술 리더·제출 품질 관점의 반복 채점과 수정 기록. 내부 검토용이며 제출물에 포함하지 않는다.
+- `claim-ledger.json`: 제출 문구를 구현·소유권·결과 세 축으로 분해한 근거 원장. 코드·테스트·Git·문서 증거와 안전한 대체 문구를 기록한다.
+- `evidence-audit.md`: claim ledger를 사람이 읽을 수 있게 요약한 사실성 감사 결과. 내부 검토용이며 제출물에 포함하지 않는다.
 - `cover-letter.md`: 지원동기/자기소개서 초안.
   회사와 공고 맥락을 반영하되 검증되지 않은 성과를 단정하지 않는다.
 - `submission-checklist.md`: 수동 제출 전 확인 항목.

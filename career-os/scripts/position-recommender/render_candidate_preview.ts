@@ -15,6 +15,7 @@ interface PreviewRow {
   url: string;
   why: string;
   keywords: string[];
+  filterEvidence?: string;
 }
 
 interface LivePostingCandidate {
@@ -52,11 +53,12 @@ function positionRow(tier: PreviewTier, item: PositionItemType): PreviewRow {
     url: item.postingUrl,
     why: item.whyFit,
     keywords: item.searchKeywords,
+    filterEvidence: [...item.searchKeywords, ...item.jdKeywords].join(" "),
   };
 }
 
 function rowsFromRun(run: RecommendationRunType): PreviewRow[] {
-  return [
+  const rows = [
     ...run.tiers.strong.map((item) => positionRow("강력 추천", item)),
     ...run.tiers.stretch.map((item) => positionRow("도전 추천", item)),
     ...run.tiers.hold
@@ -68,8 +70,21 @@ function rowsFromRun(run: RecommendationRunType): PreviewRow[] {
         url: item.link,
         why: item.reason,
         keywords: ["보류", "확인 필요"],
+        filterEvidence: item.reason,
       })),
   ];
+  const { suppressedUrls, excludedCompanies } = loadPreviewFilters();
+  return rows.filter((row) =>
+    !suppressedUrls.has(row.url)
+    && !excludedCompanies.has(normalizeCompany(row.company))
+    && !isExcludedPreviewPosting({ company: row.company, title: row.title, fields: { main_tasks: row.why }, raw: [] })
+    && !hasExcludedRecommendedEvidence(row.filterEvidence ?? ""),
+  );
+}
+
+function hasExcludedRecommendedEvidence(value: string): boolean {
+  const evidence = value.toLowerCase();
+  return /model\s*router|mcp\s*gateway|long[ -]?term\s*memory|multi[ -]?agent\s*orchestration|agent\s*(sdk|platform)|공용\s*agent\s*플랫폼|에이전트\s*오케스트레이션/.test(evidence);
 }
 
 function recommendationOpinionByUrl(run: RecommendationRunType): Map<string, string> {
@@ -226,6 +241,7 @@ function buildFallbackOpinion(posting: LivePostingCandidate): string {
 
 function isExcludedPreviewPosting(posting: LivePostingCandidate): boolean {
   const text = [posting.company, posting.title, ...Object.values(posting.fields), ...posting.raw].join(" ").toLowerCase();
+  const coreRoleText = [posting.title, posting.fields.main_tasks, posting.fields.requirements].filter(Boolean).join(" ").toLowerCase();
   const title = posting.title.toLowerCase();
   if (/담당자|full[ -]?stack|풀스택/.test(title)) return true;
   if (/model\s*operations|system\s*architecture\s*engineer|시스템\s*인프라\s*운영/.test(title)) return true;
@@ -236,8 +252,11 @@ function isExcludedPreviewPosting(posting: LivePostingCandidate): boolean {
   if (/ai engineer\s*\((model|speech)\)|모델\s*엔지니어/.test(title)) return true;
   if (/ai\s*model\s*research|model\s*research|research\s*scientist|applied\s*scientist|ai\s*research|모델\s*연구/.test(text)) return true;
   if (/\b3d\b.*(map|지도|render|렌더)|(?:map|지도).*(render|렌더)|rendering\s*engine|렌더링\s*엔진|\bgraphics?\b|그래픽스?|map\s*engine/.test(title)) return true;
-  if (/\baiops\b|\bsystems?\s*engineer\b|\berp\s*ops\s*developer\b|infrastructure\s*(automation|operations)\s*engineer|openstack\s*cloud\s*engineer|it\s*인프라.*엔지니어|ai\s*infrastructure|private\s*cloud.*엔지니어링|클라우드\s*인프라\s*엔지니어/.test(title)) return true;
+  if (/\bslam\b|로보틱스.*(?:ml|머신러닝)|자율주행.*(?:ml|머신러닝)/.test(coreRoleText)) return true;
+  if (/\baiops\b|\bsystems?\s*engineer\b|시스템\s*엔지니어|\berp\s*ops\s*developer\b|infrastructure\s*(automation|operations)\s*engineer|openstack\s*cloud\s*engineer|it\s*인프라.*엔지니어|ai\s*infrastructure|private\s*cloud.*엔지니어링|클라우드\s*인프라\s*엔지니어/.test(title)) return true;
   if (/전문통신|tcp.*전문통신/.test(title)) return true;
+  if (/network\s*daemon|l4\s*-?\s*l7/.test(title)) return true;
+  if (/network\s*daemon/.test(coreRoleText) || (/tcp\s*\/\s*ip/.test(coreRoleText) && /패킷\s*(?:분석|처리)|packet\s*(?:analysis|processing)/.test(coreRoleText))) return true;
   if (/payment\s*software\s*engineer|ux\s*writer/.test(title)) return true;
   if (/3년\s*이하|신입/.test(title)) return true;
   if (/cj\s*foodville|cj\s*푸드빌|cj푸드빌|씨제이푸드빌|cj\s*olive\s*young|cj올리브영|씨제이올리브영/.test(text)) return true;
@@ -247,8 +266,8 @@ function isExcludedPreviewPosting(posting: LivePostingCandidate): boolean {
   if (/model\s*router|mcp\s*gateway|long[ -]?term\s*memory|multi[ -]?agent|agent\s*orchestration|에이전트\s*오케스트레이션|ai\s*agent\s*sdk|agent\s*(gym|platform)/.test(text)) return true;
   if (/\bml\s*engineer\b|ml\s*infrastructure|model\s*serving|llm\s*serving|ai\s*engineer\s*\((platform|serving|ads|commerce)\)|모델\s*서빙|ml\s*인프라/.test(text)) return true;
   if (/\b(staff|senior staff)\b/.test(title)) return true;
-  if (/applied\s*ai\s*engineer|ai[ -]?native\s*(engineer|개발자)|ai\s*platform\s*engineer|\bai\s*engineer\b.*\(r&d\)|자율(?:주행|비행)\s*ai\s*엔지니어/.test(title)) return true;
-  if (/\b(sre|site reliability|devops|devsecops|network|security researcher|technical account|technical program|account manager|asset manager|purchasing|compliance|hrbp|modeler)\b|\b(it manager|it planning|it governance|sox manager|call infra|financial systems|business partnership|category md|search engineer)\b|데이터\s*분석가|채널영업|총무|general affairs|보안\s*연구|네트워크\s*엔지니어|외환\s*상품|자문\s*상품|인프라\s*담당자|컴플라이언스/.test(title)) return true;
+  if (/applied\s*ai\s*engineer|ai[ -]?native\s*(engineer|developer|개발자)|ai\s*platform\s*engineer|\bai\s*engineer\b.*\(r&d\)|자율(?:주행|비행)\s*ai\s*엔지니어|ai.*인프라\s*엔지니어/.test(title)) return true;
+  if (/\b(sre|site reliability|devops|devsecops|network|security researcher|technical account|technical program|account manager|asset manager|purchasing|compliance|hrbp|modeler)\b|\bsales\s*(lead|manager|representative|specialist|consultant)\b|\b(it manager|it planning|it governance|sox manager|call infra|financial systems|business partnership|category md|search engineer)\b|데이터\s*분석가|채널영업|기술영업|영업.*(?:리드|담당)|세일즈\s*(?:리드|매니저|담당|영업)|총무|general affairs|보안\s*연구|네트워크\s*엔지니어|외환\s*상품|자문\s*상품|인프라\s*담당자|컴플라이언스/.test(title)) return true;
   if (/\bmanager\b/.test(title)) return true;
 
   const company = posting.company.toLowerCase();

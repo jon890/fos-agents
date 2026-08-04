@@ -287,7 +287,13 @@ application review 통과
   -> resume-draft.md 확인
   -> design.md 또는 기본 이력서 디자인 계약 적용
   -> resume.html 생성
-  -> resume.pdf 생성
+  -> Use skill: /resume-evidence-auditor <resume.html>
+  -> 업무 문서·코드·테스트·Git 이력과 주장 교차 검증
+  -> claim-ledger.json + evidence-audit.md 생성
+  -> Use skill: /resume-evaluator <resume.html>
+  -> 인사 40점 + 기술 45점 + 제출 품질 15점으로 채점
+  -> 90점 이상과 평가자별 하한을 충족할 때까지 최대 3회 개선
+  -> 필요할 때만 resume.pdf로 변환해 출력 상태 검증
   -> 사용자 검토 대기
 ```
 
@@ -295,7 +301,10 @@ application review 통과
 
 - `applications/<application-id>/resume-draft.md`
 - `applications/<application-id>/resume.html`
-- `applications/<application-id>/resume.pdf`
+- `applications/<application-id>/resume-scorecard.md`
+- `applications/<application-id>/claim-ledger.json`
+- `applications/<application-id>/evidence-audit.md`
+- `applications/<application-id>/resume.pdf` — 필요할 때만 만드는 검증·첨부용 파생 파일
 
 ## 피드백 루프
 
