@@ -25,6 +25,18 @@
 상세 확인 전 공고도 원자료에 저장한다.
 적합하지 않은 공고는 `eligibility_status`와 `exclusion_reason`으로 분류한다.
 
+`collection[]` 항목에는 아래 필드를 저장한다.
+
+- `platform`
+- `source_id`
+- `source_url`
+- `advertised_count`: 플랫폼이 표시한 전체 건수. 없으면 `null`
+- `pages_scanned`
+- `stopped_after_no_new_ids`
+- `coverage_expected`: 표시 건수와 대조할 수 있으면 `true`
+- `coverage_note`: 대조 결과와 중단 근거를 사람이 읽을 문장으로 남긴다.
+  `audit_collection.py`의 계산에는 쓰이지 않는다.
+
 ## 원자료 형식
 
 `reports/freelance-opportunities-YYYY-MM-DD.json`은 아래 구조를 사용한다.
@@ -38,7 +50,9 @@
       "source_id": "wishket-outsourcing-open",
       "advertised_count": 50,
       "pages_scanned": 5,
-      "stopped_after_no_new_ids": 2
+      "stopped_after_no_new_ids": 2,
+      "coverage_expected": true,
+      "coverage_note": "표시 50건과 고유 ID 50건이 일치했다."
     }
   ],
   "items": [
@@ -75,10 +89,15 @@
 목록 API로 수집하는 범위는 위 절차를 아래처럼 바꿔 적용한다.
 원티드 긱스가 이 경우다.
 
-- 화면의 표시 건수 대신 응답의 전체 건수 필드를 기준값으로 쓴다.
+- 화면의 표시 건수 대신 응답의 전체 건수를 `advertised_count`에 넣는다.
+  `audit_collection.py`는 이 필드만 기준값으로 읽는다.
+  비워 두면 `coverage_status`가 `unchecked`가 되어 누락을 검사할 수 없다.
 - 페이지를 응답이 빌 때까지 넘기고 확보한 고유 ID 수를 그 기준값과 대조한다.
-- 응답 필드로 근무 형태를 걸러낼 수 있으면 목록 단계에서 걸러내고,
-  걸러낸 건수를 `coverage_note`에 남겨 누락과 구분한다.
+- **응답 필드로 상주 여부를 알 수 있어도 수집 단계에서 버리지 않는다.**
+  전부 저장한 뒤 `eligibility_status`와 `exclusion_reason`으로 거른다.
+  수집 단계에서 버리면 고유 ID 수가 기준값보다 작아져
+  분류 제외가 수집 누락으로 잡힌다.
+- 응답 필드로 걸러낸 건수의 내역은 `coverage_note`에 적어 사람이 읽게 남긴다.
 
 수집이 불완전하면 리포트를 만들 수는 있다.
 다만 `전수 수집`이라고 표현하지 않는다.
