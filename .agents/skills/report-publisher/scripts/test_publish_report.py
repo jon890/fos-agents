@@ -150,6 +150,11 @@ class PublishReportTests(unittest.TestCase):
         with self.assertRaisesRegex(PUBLISH_REPORT.PublishError, "production branch"):
             self.prepare(source, "main")
 
+    def test_branch_alias_limit_matches_measured_cloudflare_behavior(self) -> None:
+        # 실측값이다. 28자를 넘긴 slug로 배포하면 Cloudflare가 별칭을 잘라
+        # expected_branch_url과 다른 주소를 만든다. 상수를 바꾸면 이 테스트가 깨져야 한다.
+        self.assertEqual(PUBLISH_REPORT.MAX_BRANCH_ALIAS_LENGTH, 28)
+
     def test_slug_one_over_branch_alias_limit_is_rejected(self) -> None:
         source = self.repo / "report.html"
         source.write_text("<title>Sample</title>", encoding="utf-8")
