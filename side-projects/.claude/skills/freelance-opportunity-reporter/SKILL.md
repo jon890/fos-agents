@@ -1,7 +1,7 @@
 ---
 name: freelance-opportunity-reporter
 description: >-
-  위시켓, 프리모아, Upwork, Contra 같은 플랫폼의 현재 외주 코딩 공고를 수집하고,
+  위시켓, 프리모아, 원티드 긱스의 현재 외주 코딩 공고를 수집하고,
   지원 가능성과 위험을 분류해 HTML 실행 리포트를 만든다.
   AI 자동화, 백엔드 API·데이터·인증·연동 개발, MVP, 대시보드, 크롤링,
   챗봇, 내부 도구, 작은 웹·앱 후보 탐색, 일간·주간 리드 스캔,
@@ -22,20 +22,22 @@ description: >-
 - 혼자 또는 작은 agent 팀으로 수행한다.
 - 원격 또는 대부분 원격인 일을 우선한다.
 - 외주 이력이 없으면 첫 후기와 거래 이력을 만들기 좋은 단기 공고를 별도 후보군으로 평가한다.
-- 작은 웹 도구, 업무자동화, 대시보드, 스크래핑, API 연동, 챗봇, MVP 일부, 관리자 화면을 우선한다.
-- AI 여부와 무관하게 범위가 닫힌 백엔드 개발을 함께 수집한다.
-  - API 서버와 외부 서비스 연동
-  - 인증과 권한
-  - DB 모델링과 마이그레이션
-  - 데이터 수집과 처리
-  - 백오피스 백엔드
-  - 기존 서비스 기능 추가와 안정화
-- 대형 앱 전체 구축, 장기 상주, 금융·의료·보안 핵심 시스템은 보수적으로 본다.
+
+무엇을 잘 맞는 공고로 보고 무엇을 거절하는지는 `references/classification.md`가 단일 출처다.
+같은 기준을 이 파일에 옮겨 적지 않는다.
+워크스페이스 `CLAUDE.md`에 상위 정책이 있으면 그것이 `classification.md`보다 우선한다.
 
 ## 작업 절차
 
 1. 수집 범위를 정한다.
-   기본 수집 대상은 위시켓과 프리모아의 공개 프로젝트 목록이다.
+   기본 수집 대상은 아래 세 곳의 공개 프로젝트 목록이다.
+
+   | 플랫폼 | 목록 | 필터와 주의 |
+   | --- | --- | --- |
+   | 위시켓 | `wishket.com/project/` | `외주(도급)` 필터를 걸고 모집 중만 본다.<br>목록 이동에 `?page=N`이 먹지 않아 페이지네이션을 눌러 순회한다. |
+   | 프리모아 | `freemoa.net/m4/s41?page=N` | `도급`만 본다. `기간제 상주`는 제외한다.<br>상세 본문은 로그인이 필요하다. |
+   | 원티드 긱스 | `wanted.co.kr/gigs/api-v2/projects` | 공개 목록 API를 쓴다.<br>`work_place`가 `office`면 제외하고 `remote`·`both`만 본다.<br>월 단위 기간제 인력 계약이 대부분이라 도급 납품 과업만 남긴다. |
+
    기본 검색 축은 아래처럼 두 갈래로 둔다.
 
    - AI·자동화: AI 자동화, RAG, 챗봇, 업무자동화, 크롤링, 대시보드, API 연동
@@ -53,9 +55,7 @@ description: >-
 2. 최신 자료를 확인한다.
    공고, 수수료, 플랫폼 정책은 바뀔 수 있으므로 웹 검색이나 브라우저로 현재 페이지를 확인한다.
    블로그 요약보다 공식 목록, 고객센터, 가격 정책 페이지를 우선한다.
-   수집 절차와 원자료 형식은 `references/collection.md`를 읽고 따른다.
-   플랫폼이 표시한 전체 건수와 실제로 확보한 고유 공고 ID 수를 비교한다.
-   차이가 남으면 전수 수집으로 표현하지 않고 누락 가능성과 실패 지점을 리포트 첫 부분에 표시한다.
+   수집 절차, 누락 검사, 불완전할 때의 보고 방식은 `references/collection.md`를 읽고 따른다.
 
 3. 공고 필드를 정리한다.
    다음 항목을 가능한 범위에서 뽑는다.
@@ -100,23 +100,18 @@ description: >-
    - `avoid`: 위험이 크거나, 범위가 넓거나, 가격이 맞지 않는 후보
 
 6. 리포트를 작성한다.
-   사용자의 외주 이력이 0회이면 첫 수주 후보를 일반 수익성 후보보다 먼저 제시한다.
-   첫 수주 후보가 없으면 일반 상위 후보를 먼저 제시한다.
-   사용자가 전체 시장을 보고 싶어 하면, 모집 마감과 기간제를 제외한 해당 플랫폼의 전수 목록을 함께 제시하고 적합도 순으로 정렬한다.
-   전수 목록이 여러 페이지면 수집 페이지 수와 총 건수를 명시한다.
-   각 후보마다 지원 이유, 숨은 위험, 첫 질문, 지원 각도를 함께 쓴다.
-   수수료나 정책 숫자는 출처를 붙인다.
-   표와 상세 섹션의 공고명은 상세 페이지로 가는 클릭 가능한 링크로 만든다.
-   리포트는 항상 HTML 파일 하나로만 만든다.
-   Markdown, PDF, DOCX 등 다른 형식의 리포트는 만들지 않는다.
-   출력 경로는 `reports/freelance-opportunity-report-YYYY-MM-DD.html`로 고정한다.
-   수집 근거는 `reports/freelance-opportunities-YYYY-MM-DD.json`에 저장한다.
-   JSON은 사용자용 리포트가 아니라 수집 검증용 원자료로 취급한다.
-   HTML에는 UTF-8 선언, 반응형 viewport, 제목, 기준일, 외부 링크, 모바일에서도 읽을 수 있는 표 스타일을 포함한다.
-   생성 뒤에는 HTML 파일의 필수 섹션, 공고 상세 링크, `git diff --check`를 확인한다.
-   추가 공고를 나중에 발견하면 별도 긴급 섹션에 덧붙이지 않는다.
-   원자료에 합친 뒤 점수, 후보 수, 결론, 표 순위, 이번 회차 액션을 다시 계산한다.
-   이전 실행의 원자료가 있으면 신규 공고를 `새로 발견`으로 표시한다.
+   파일 형식, 경로, 섹션 순서는 `결과물 형식`을 따른다.
+   내용을 배치할 때만 아래를 적용한다.
+
+   - 외주 이력이 0회이면 첫 수주 후보를 일반 수익성 후보보다 먼저 제시한다.
+     첫 수주 후보가 없으면 일반 상위 후보를 먼저 제시한다.
+   - 각 후보마다 지원 이유, 숨은 위험, 첫 질문, 지원 각도를 함께 쓴다.
+   - 수수료나 정책 숫자는 출처를 붙인다.
+   - 이전 실행의 원자료가 있으면 신규 공고를 `새로 발견`으로 표시한다.
+   - 추가 공고를 나중에 발견해도 별도 긴급 섹션에 덧붙이지 않는다.
+     원자료에 합친 뒤 점수, 후보 수, 결론, 표 순위, 이번 회차 액션을 다시 계산한다.
+   - 사용자가 전체 시장을 보고 싶어 하면 모집 마감과 기간제를 제외한 전수 목록을
+     적합도 순으로 함께 제시한다.
 
 7. 운영 루프를 붙인다.
    반복 실행 계획이 필요하면 `references/operating-loop.md`를 읽는다.
@@ -129,14 +124,18 @@ description: >-
 
 ## 결과물 형식
 
-리포트는 `reports/freelance-opportunity-report-YYYY-MM-DD.html` 하나로 작성한다.
-수집 근거는 `reports/freelance-opportunities-YYYY-MM-DD.json`에 항상 저장한다.
-JSON은 사용자용 리포트가 아니라 누락과 중복을 검사하는 내부 근거다.
+| 산출물 | 경로 | 성격 |
+| --- | --- | --- |
+| 리포트 | `reports/freelance-opportunity-report-YYYY-MM-DD.html` | 사용자용. HTML 하나만 만든다.<br>Markdown, PDF, DOCX는 만들지 않는다. |
+| 수집 근거 | `reports/freelance-opportunities-YYYY-MM-DD.json` | 내부용. 누락과 중복을 검사하는 원자료다. |
+
+HTML에는 UTF-8 선언, 반응형 viewport, 제목, 기준일, 공고 상세 링크,
+모바일에서도 읽을 수 있는 표 스타일을 포함한다.
+표와 상세 섹션의 공고명은 상세 페이지로 가는 클릭 가능한 링크로 만든다.
 
 HTML 본문은 아래 순서로 구성한다.
 
 - 수집 범위와 날짜
-- 수집 완전성
 - 결론
 - 첫 수주 후보
 - 상위 후보 표
@@ -148,15 +147,36 @@ HTML 본문은 아래 순서로 구성한다.
 - 이번 회차 액션
 - 의논할 결정
 
+수집 완전성은 리포트 섹션으로 넣지 않는다.
+표시 건수 대조 결과, 중복·필수 필드 검사 결과, 상세 접근 실패, 수집 방법상의 우회는
+리포트를 전달하는 채팅 응답에 적는다.
+
 외부에 지원문·댓글을 실제 등록하기 전에는 HTML 리포트와 별도로 채팅에 본문 미리보기를 제공한다.
+
+## 검증
+
+원자료와 점수를 아래 순서로 검사한다.
+
+```bash
+python3 .claude/skills/freelance-opportunity-reporter/scripts/audit_collection.py reports/freelance-opportunities-YYYY-MM-DD.json --pretty
+python3 .claude/skills/freelance-opportunity-reporter/scripts/score_opportunities.py reports/freelance-opportunities-YYYY-MM-DD.json --remote-only --first-win --pretty
+```
+
+리포트를 만든 뒤 아래를 확인한다.
+
+- HTML의 필수 섹션이 모두 있는지
+- 공고명이 상세 페이지 링크로 연결되는지
+- `git diff --check`
 
 ## 보조 자료
 
-- `references/collection.md`: 공고 ID 기반 수집과 누락 검사 기준
-- `references/classification.md`: 지원/보류/거절 분류 기준
-- `references/operating-loop.md`: 반복 운영 루프와 지표 기준
-- `scripts/audit_collection.py`: 원자료 중복, 필수 필드, 수집 건수 검사 스크립트
-- `scripts/score_opportunities.py`: JSON 공고 목록 점수 계산 스크립트
+| 파일 | 언제 읽는지 |
+| --- | --- |
+| `references/collection.md` | 목록을 수집하고 누락을 검사할 때 |
+| `references/classification.md` | 지원·보류·거절을 나눌 때 |
+| `references/operating-loop.md` | 반복 실행 계획을 붙일 때 |
+| `scripts/audit_collection.py` | 원자료의 중복·필수 필드·수집 건수를 검사할 때 |
+| `scripts/score_opportunities.py` | 공고 목록의 점수를 계산할 때 |
 
 점수 계산 스크립트 입력 예시:
 
@@ -181,9 +201,4 @@ HTML 본문은 아래 순서로 구성한다.
 ]
 ```
 
-수집 원자료와 점수를 아래 순서로 검사한다.
-
-```bash
-python3 .claude/skills/freelance-opportunity-reporter/scripts/audit_collection.py reports/freelance-opportunities-YYYY-MM-DD.json --pretty
-python3 .claude/skills/freelance-opportunity-reporter/scripts/score_opportunities.py reports/freelance-opportunities-YYYY-MM-DD.json --remote-only --first-win --pretty
-```
+실행 명령은 `검증`에 있다.
