@@ -47,6 +47,11 @@ python3 .agents/skills/report-publisher/scripts/publish_report.py publish \
 - 단일 HTML 파일은 HTTPS URL, 문서 내부 앵커, 전화·메일 링크만 참조해야 한다.
 - 로컬 CSS, JavaScript, 이미지가 있으면 `index.html`을 포함한 디렉터리를 입력한다.
 - `slug`는 영문 소문자, 숫자, 하이픈만 사용한다.
+- `slug`는 **28자 이내로 짓는다.**
+  Cloudflare Pages가 분기 별칭 서브도메인을 28자로 잘라내기 때문이다.
+  더 길면 `branch_url` 검증이 항상 실패해 안정 주소를 못 주고,
+  앞 28자가 같은 두 리포트는 같은 별칭을 공유해 서로를 덮어쓴다.
+  예: `freelance-2026-08-05`(20자)는 되고 `freelance-opportunity-2026-08-05`(32자)는 막힌다.
 - production branch인 `main`은 `slug`로 사용할 수 없다.
 - 같은 `slug`를 다시 게시해도 검증된 배포 고유 주소를 우선 전달한다.
 - Cloudflare가 분기 별칭을 제공하고 실제 검증까지 통과한 경우에만

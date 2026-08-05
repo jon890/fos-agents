@@ -150,6 +150,26 @@ class PublishReportTests(unittest.TestCase):
         with self.assertRaisesRegex(PUBLISH_REPORT.PublishError, "production branch"):
             self.prepare(source, "main")
 
+    def test_slug_one_over_branch_alias_limit_is_rejected(self) -> None:
+        source = self.repo / "report.html"
+        source.write_text("<title>Sample</title>", encoding="utf-8")
+        slug = "a" * (PUBLISH_REPORT.MAX_BRANCH_ALIAS_LENGTH + 1)
+        with self.assertRaisesRegex(
+            PUBLISH_REPORT.PublishError,
+            f"{PUBLISH_REPORT.MAX_BRANCH_ALIAS_LENGTH}자",
+        ):
+            self.prepare(source, slug)
+
+    def test_slug_at_branch_alias_limit_matches_expected_alias(self) -> None:
+        source = self.repo / "report.html"
+        source.write_text("<title>Sample</title>", encoding="utf-8")
+        slug = "a" * PUBLISH_REPORT.MAX_BRANCH_ALIAS_LENGTH
+        prepared = self.prepare(source, slug)
+        self.assertEqual(
+            prepared.expected_branch_url,
+            f"https://{slug}.fos-reports.pages.dev/",
+        )
+
     def test_published_deployment_url_is_primary_when_alias_is_missing(self) -> None:
         prepared = PUBLISH_REPORT.PreparedReport(
             source="report.html",

@@ -22,6 +22,10 @@ from typing import Iterable
 WRANGLER_VERSION = "4.115.0"
 DEFAULT_PROJECT = "fos-reports"
 MAX_FILE_COUNT = 1_000
+# Cloudflare Pages는 분기 별칭 서브도메인을 28자로 잘라낸다.
+# slug가 이보다 길면 별칭 주소가 slug와 달라져 검증이 실패하고,
+# 앞 28자가 같은 두 리포트는 같은 별칭을 공유해 서로를 덮어쓴다.
+MAX_BRANCH_ALIAS_LENGTH = 28
 MAX_FILE_BYTES = 25 * 1024 * 1024
 MAX_TOTAL_BYTES = 100 * 1024 * 1024
 SLUG_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$")
@@ -147,6 +151,15 @@ def validate_slug(slug: str) -> None:
 
 
 def validate_report_slug(slug: str) -> None:
+    # 길이를 먼저 본다. validate_slug의 1-63자 메시지가 앞서면
+    # 64자 이상 slug를 준 사용자가 정작 지켜야 하는 28자 상한을 안내받지 못한다.
+    if len(slug) > MAX_BRANCH_ALIAS_LENGTH:
+        raise PublishError(
+            f"리포트 slug는 {MAX_BRANCH_ALIAS_LENGTH}자 이내여야 합니다. "
+            f"Cloudflare Pages가 분기 별칭 주소를 {MAX_BRANCH_ALIAS_LENGTH}자로 잘라내므로 "
+            f"더 길면 안정 주소를 검증할 수 없고 앞부분이 같은 리포트끼리 주소가 겹칩니다: "
+            f"{slug} ({len(slug)}자)"
+        )
     validate_slug(slug)
     if slug == "main":
         raise PublishError("production branch인 main은 리포트 slug로 사용할 수 없습니다.")
