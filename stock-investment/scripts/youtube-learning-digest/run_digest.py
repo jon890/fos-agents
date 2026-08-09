@@ -15,6 +15,8 @@ import re
 import subprocess
 import sys
 import textwrap
+import time
+import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
 from collections import Counter
@@ -73,9 +75,27 @@ def save_json(path: Path, data) -> None:
 
 
 def fetch_url(url: str) -> bytes:
-    req = urllib.request.Request(url, headers={"User-Agent": "fos-agents stock-youtube-learning-digest/2.0"})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return resp.read()
+    # YouTube's RSS endpoint currently rejects non-browser-like agents for some
+    # channels (500/404), even though the same public feed is available normally.
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/135 Safari/537.36",
+            "Accept": "application/atom+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.8",
+        },
+    )
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return resp.read()
+        except urllib.error.HTTPError as exc:
+            # Public YouTube RSS sporadically returns 5xx; retry those only.
+            if exc.code < 500 or attempt == 2:
+                raise
+            time.sleep(2**attempt)
+    raise RuntimeError("unreachable")
 
 
 def parse_dt(value: str) -> datetime:
