@@ -36,3 +36,4 @@
 - `daily-health-coaching`: 무릎 `current-context.md` + 건강검진 `current-context.md` + `health-coaching-plan-2026-06-29.md` + 공개 재활 config → 짧은 아침 종합 건강 코칭. 무릎 중단 기준, 식단 조절점, 저충격 운동, 진료/추적검사 리마인더를 포함한다.
 - `knee-progress-intake`: 사용자 보고 → `progress-log.jsonl` append + 필요 시 `current-context.md` 업데이트 제안. 추론은 `확인 필요`로 분리한다.
 - `weekly-knee-clinic-summary`: 최근 경과 + OCR 요약 + 현재 컨텍스트 → 병원 제출용 요약과 질문 리스트 초안. Claude 사용 가능하나 진단/처방은 금지한다.
+- `personalized-healthy-meal-research`: 건강 목표·증상 조정 규칙 → 조건 충돌표 → 공신력 있는 건강 근거 → 최소 6개 축의 요리 영상 조사 → 재료군 기반 메뉴·대체재·회전표·장보기 생성. 공개 HTML은 비식별화하고 사용자 요청이 있을 때만 게시한다.

@@ -29,6 +29,12 @@
 - 출력: `weekly-summaries/YYYY-MM-DD.md` 및 Discord 요약
 - 원칙: Claude 사용 가능. 진단/처방 금지, 병원 질문과 경과 요약 중심.
 
+### `.claude/skills/personalized-healthy-meal-research/`
+
+- 입력: 사용자 건강 목표·조리 환경, 필요 시 `private/conditions/*/current-context.md`, 공신력 있는 건강 자료, 검증한 요리 영상
+- 출력: 재료군 기반 메뉴 12~18개, 대체 규칙, 7일 회전표, 장보기 목록, 관련 유튜브 링크·썸네일, 선택적 비식별 HTML 리포트
+- 원칙: 특정 식재료를 고정하지 않고 역할별 재료군으로 설계한다. 영상은 조리법 자료로만 사용하며 건강 효과 근거와 분리한다. 개인 건강 정보는 공개 산출물에 복사하지 않는다.
+
 ## 알림/cron
 
 - 매일 아침 체크인은 OpenClaw cron이 담당한다.
