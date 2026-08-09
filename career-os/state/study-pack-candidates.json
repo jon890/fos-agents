@@ -364,7 +364,7 @@
       ],
       "source": "llm-candidate-refresh",
       "generatedAt": "2026-06-09T05:01:34.336Z",
-      "status": "active",
+      "status": "stale",
       "sourceSignals": [
         "plan069-rollout",
         "observability-gap",
@@ -387,7 +387,7 @@
       ],
       "source": "llm-candidate-refresh",
       "generatedAt": "2026-06-09T05:01:34.336Z",
-      "status": "active",
+      "status": "stale",
       "sourceSignals": [
         "plan069-rollout",
         "resilience",
@@ -410,7 +410,7 @@
       ],
       "source": "llm-candidate-refresh",
       "generatedAt": "2026-06-09T05:01:34.336Z",
-      "status": "active",
+      "status": "stale",
       "sourceSignals": [
         "plan069-rollout",
         "message-queue",
@@ -433,7 +433,7 @@
       ],
       "source": "llm-candidate-refresh",
       "generatedAt": "2026-06-09T05:01:34.336Z",
-      "status": "active",
+      "status": "stale",
       "sourceSignals": [
         "plan069-rollout",
         "api-contract",
@@ -441,6 +441,138 @@
       ],
       "promotionTarget": {
         "outputPath": "testing/spring-cloud-contract-api-evolution.md"
+      }
+    },
+    {
+      "key": "kafka-partition-key-ordering-hot-partition",
+      "title": "Kafka 파티션 키·순서 보장·Hot Partition 설계",
+      "domain": "kafka",
+      "tag": "deepen",
+      "difficulty": "advanced",
+      "estMinutes": 50,
+      "whyNow": [
+        "Kafka 약점인 파티셔닝·순서 보장을 운영 질문까지 연결한다",
+        "정합성 요구와 처리량 트레이드오프를 설명하기 좋다"
+      ],
+      "source": "llm-candidate-refresh",
+      "generatedAt": "2026-07-10T22:47:17.523Z",
+      "status": "active",
+      "sourceSignals": [
+        "study-progress:kafka-design",
+        "candidate-profile:message-queue-gap"
+      ],
+      "promotionTarget": {
+        "outputPath": "kafka/partition-key-ordering-hot-partition.md"
+      }
+    },
+    {
+      "key": "transactional-outbox-polling-cdc-tradeoffs",
+      "title": "Transactional Outbox: Polling·CDC·재처리 경계",
+      "domain": "architecture",
+      "tag": "deepen",
+      "difficulty": "advanced",
+      "estMinutes": 55,
+      "whyNow": [
+        "트랜잭션 이후 이벤트 발행 경험을 과장 없이 구조화한다",
+        "Kafka·멱등 소비자와 이어지는 정합성 축을 보강한다"
+      ],
+      "source": "llm-candidate-refresh",
+      "generatedAt": "2026-07-10T22:47:17.523Z",
+      "status": "active",
+      "sourceSignals": [
+        "candidate-profile:transaction-boundary",
+        "study-preferences:kafka-outbox"
+      ],
+      "promotionTarget": {
+        "outputPath": "architecture/transactional-outbox-polling-cdc-tradeoffs.md"
+      }
+    },
+    {
+      "key": "redis-hot-key-cache-stampede-consistency",
+      "title": "Redis Hot Key·Cache Stampede·정합성 보호",
+      "domain": "redis",
+      "tag": "deepen",
+      "difficulty": "advanced",
+      "estMinutes": 50,
+      "whyNow": [
+        "캐시 갱신 중 읽기 보호 실무 경험을 범용 운영 설계로 확장한다",
+        "단순 Cache-Aside 반복 대신 장애 모드를 다룬다"
+      ],
+      "source": "llm-candidate-refresh",
+      "generatedAt": "2026-07-10T22:47:17.523Z",
+      "status": "active",
+      "sourceSignals": [
+        "candidate-profile:cache-consistency",
+        "study-preferences:redis"
+      ],
+      "promotionTarget": {
+        "outputPath": "database/redis/hot-key-cache-stampede-consistency.md"
+      }
+    },
+    {
+      "key": "spring-webflux-virtual-threads-blocking-boundaries",
+      "title": "Spring WebFlux·Virtual Threads·Blocking 경계 선택",
+      "domain": "spring",
+      "tag": "deepen",
+      "difficulty": "advanced",
+      "estMinutes": 50,
+      "whyNow": [
+        "WebFlux와 Java 21 virtual threads 운영 경험을 선택 기준으로 정리한다",
+        "I/O 모델·backpressure·blocking 격리 꼬리질문에 대비한다"
+      ],
+      "source": "llm-candidate-refresh",
+      "generatedAt": "2026-07-10T22:47:17.523Z",
+      "status": "active",
+      "sourceSignals": [
+        "candidate-profile:webflux",
+        "interest-axis:java-spring"
+      ],
+      "promotionTarget": {
+        "outputPath": "java/spring/webflux-virtual-threads-blocking-boundaries.md"
+      }
+    },
+    {
+      "key": "opensearch-index-lifecycle-schema-migration",
+      "title": "OpenSearch 인덱스 수명주기·매핑 변경·무중단 재색인",
+      "domain": "search",
+      "tag": "deepen",
+      "difficulty": "advanced",
+      "estMinutes": 50,
+      "whyNow": [
+        "OpenSearch 설계 경험을 운영 가능한 인덱스 변경 전략으로 확장한다",
+        "RAG·검색 서비스의 재색인과 롤백 질문에 대비한다"
+      ],
+      "source": "llm-candidate-refresh",
+      "generatedAt": "2026-07-10T22:47:17.523Z",
+      "status": "active",
+      "sourceSignals": [
+        "candidate-profile:opensearch",
+        "interest-axis:rag-opensearch"
+      ],
+      "promotionTarget": {
+        "outputPath": "search/opensearch-index-lifecycle-schema-migration.md"
+      }
+    },
+    {
+      "key": "database-deadlock-diagnosis-retry-design",
+      "title": "DB Deadlock 진단·재시도·락 순서 설계",
+      "domain": "mysql",
+      "tag": "interview",
+      "difficulty": "advanced",
+      "estMinutes": 45,
+      "whyNow": [
+        "SELECT FOR UPDATE와 상태 갱신 경험을 장애 진단 답변으로 연결한다",
+        "격리수준 암기보다 재현·관측·복구를 다룬다"
+      ],
+      "source": "llm-candidate-refresh",
+      "generatedAt": "2026-07-10T22:47:17.523Z",
+      "status": "active",
+      "sourceSignals": [
+        "candidate-profile:select-for-update",
+        "interest-axis:backend-architecture"
+      ],
+      "promotionTarget": {
+        "outputPath": "database/mysql/deadlock-diagnosis-retry-design.md"
       }
     }
   ]
