@@ -36,6 +36,19 @@
 - `screw removal`은 “나사 제거”, `retained screw`는 “잔존 나사”로 설명한다.
 - 전문 용어만 나열하지 말고, 그 용어가 현재 증상·검사·운동 제한과 어떤 관련이 있는지 한 문장으로 덧붙인다.
 
+## 개인 건강 데이터 라우팅
+
+- 키, 체중, 검사 수치, 질환, 운동 반응과 개인 목표는 개인정보로 취급하며 `AGENTS.md`, `docs/`, `config/`에 구체적인 값을 기록하지 않는다.
+- 신체 기준선과 감량 목표의 정본은 `private/conditions/metabolic-weight/current-context.md`에서 확인한다.
+- 무릎 상태와 운동 반응은 `private/conditions/knee-patellar-instability/`, 건강검진과 대사 건강 맥락은 `private/conditions/health-screening-2026-06-10/`에서 확인한다.
+- 공개 운영 문서에는 개인 값을 복사하지 않고, private 문서를 읽어 답변하라는 라우팅 원칙만 둔다.
+
+## 시간축 판단 원칙
+
+- 무릎 상태와 운동 허용 범위를 판단할 때 마지막 진료일, 진료 후 경과 일수, 이후 증상 추세, 현재 가능한 활동, 운동 당일과 다음날 반응을 항상 함께 본다.
+- 과거 진료 당시의 제한을 현재에 기계적으로 고정하지 않는다. 다만 최신 전문의 제한과 충돌하는 운동은 증상 추세와 재평가 근거 없이 임의로 확대하지 않는다.
+- 최신 개인 상태는 `private/conditions/knee-patellar-instability/current-context.md`, 경과는 `progress-log.jsonl`, 검진 맥락은 `private/conditions/health-screening-2026-06-10/`에서 우선 확인한다.
+
 ## 현재 관리 트랙
 
 - `private/conditions/knee-patellar-instability/` — 슬개골 재발성 탈구 수술 이력 및 최근 무릎 불안정 증상
