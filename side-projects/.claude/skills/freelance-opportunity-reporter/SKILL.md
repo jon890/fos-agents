@@ -2,10 +2,10 @@
 name: freelance-opportunity-reporter
 description: >-
   위시켓, 프리모아, 원티드 긱스의 현재 외주 코딩 공고를 수집하고,
-  지원 가능성과 위험을 분류해 HTML 실행 리포트를 만든다.
+  지원 가능성과 위험을 분류해 HTML 실행 리포트를 Cloudflare Pages에 게시한다.
   AI 자동화, 백엔드 API·데이터·인증·연동 개발, MVP, 대시보드, 크롤링,
   챗봇, 내부 도구, 작은 웹·앱 후보 탐색, 일간·주간 리드 스캔,
-  지원 후보 선정과 지원·보류·거절 판단이 필요할 때 사용한다.
+  지원 후보 선정, 지원·보류·거절 판단, 검증된 공유 링크가 필요할 때 사용한다.
 ---
 
 # Freelance Opportunity Reporter
@@ -36,13 +36,13 @@ description: >-
    | --- | --- | --- |
    | 위시켓 | `wishket.com/project/` | `외주(도급)` 필터를 걸고 모집 중만 본다.<br>목록 이동에 `?page=N`이 먹지 않아 페이지네이션을 눌러 순회한다. |
    | 프리모아 | `freemoa.net/m4/s41?page=N` | `도급`만 본다. `기간제 상주`는 제외한다.<br>상세 본문은 로그인이 필요하다. |
-   | 원티드 긱스 | `wanted.co.kr/gigs/api-v2/projects` | 공개 목록 API를 쓴다.<br>`work_place`가 `office`면 제외하고 `remote`·`both`만 본다.<br>월 단위 기간제 인력 계약이 대부분이라 도급 납품 과업만 남긴다. |
+   | 원티드 긱스 | `wanted.co.kr/gigs/api-v2/projects` | 공개 API를 쓴다.<br>`office`는 제외한다.<br>`remote`·`both` 중 도급 납품만 남긴다. |
 
    기본 검색 축은 아래처럼 두 갈래로 둔다.
 
    - AI·자동화: AI 자동화, RAG, 챗봇, 업무자동화, 크롤링, 대시보드, API 연동
    - 백엔드
-     - 프레임워크: FastAPI, Django, Flask, Node.js, NestJS, Spring Boot
+     - 프레임워크: FastAPI, Node.js, NestJS, Spring Boot
      - API와 인증: REST API, GraphQL, OAuth, 결제 제외 인증
      - 데이터: PostgreSQL, MySQL, Redis, ETL, 데이터 파이프라인
      - 작업 유형: API 서버, 관리자 API, 기존 서비스 기능 추가
@@ -99,7 +99,7 @@ description: >-
    - `clarify-first`: 매력은 있지만 상주, 범위, 권한, 검수 기준을 먼저 확인해야 하는 후보
    - `avoid`: 위험이 크거나, 범위가 넓거나, 가격이 맞지 않는 후보
 
-6. 리포트를 작성한다.
+6. 리포트를 작성하고 게시한다.
    파일 형식, 경로, 섹션 순서는 `결과물 형식`을 따른다.
    내용을 배치할 때만 아래를 적용한다.
 
@@ -112,6 +112,10 @@ description: >-
      원자료에 합친 뒤 점수, 후보 수, 결론, 표 순위, 이번 회차 액션을 다시 계산한다.
    - 사용자가 전체 시장을 보고 싶어 하면 모집 마감과 기간제를 제외한 전수 목록을
      적합도 순으로 함께 제시한다.
+   - HTML과 원자료는 게시·검증을 위한 임시 파일로만 만든다.
+   - HTML은 `report-publisher` 스킬로 Cloudflare Pages에 게시한다.
+   - 공개 URL 검증이 끝나면 임시 HTML과 원자료를 삭제한다.
+   - 게시에 실패해도 저장소의 `reports/`나 다른 영구 경로에 결과물을 남기지 않는다.
 
 7. 운영 루프를 붙인다.
    반복 실행 계획이 필요하면 `references/operating-loop.md`를 읽는다.
@@ -124,10 +128,15 @@ description: >-
 
 ## 결과물 형식
 
-| 산출물 | 경로 | 성격 |
+사용자에게 전달하는 최종 산출물은 검증된 Cloudflare Pages 주소다.
+
+| 산출물 | 위치 | 성격 |
 | --- | --- | --- |
-| 리포트 | `reports/freelance-opportunity-report-YYYY-MM-DD.html` | 사용자용. HTML 하나만 만든다.<br>Markdown, PDF, DOCX는 만들지 않는다. |
-| 수집 근거 | `reports/freelance-opportunities-YYYY-MM-DD.json` | 내부용. 누락과 중복을 검사하는 원자료다. |
+| 공개 리포트 | Cloudflare Pages `public_url` | 사용자용 최종 산출물이다.<br>검증된 HTTPS 주소만 전달한다. |
+| 임시 HTML | `data/runtime/downloads/freelance-opportunity-report-YYYY-MM-DD.html` | 게시 입력으로만 사용한다.<br>게시 검증 후 삭제한다. |
+| 임시 원자료 | `data/runtime/downloads/freelance-opportunities-YYYY-MM-DD.json` | 누락과 중복을 검사한다.<br>게시하지 않고 실행 종료 전에 삭제한다. |
+
+Cloudflare Pages 게시가 실패하면 로컬 파일 링크로 대신 완료하지 않는다.
 
 HTML에는 UTF-8 선언, 반응형 viewport, 제목, 기준일, 공고 상세 링크,
 모바일에서도 읽을 수 있는 표 스타일을 포함한다.
@@ -147,26 +156,39 @@ HTML 본문은 아래 순서로 구성한다.
 - 이번 회차 액션
 - 의논할 결정
 
-수집 완전성은 리포트 섹션으로 넣지 않는다.
-표시 건수 대조 결과, 중복·필수 필드 검사 결과, 상세 접근 실패, 수집 방법상의 우회는
-리포트를 전달하는 채팅 응답에 적는다.
+## 게시
 
-외부에 지원문·댓글을 실제 등록하기 전에는 HTML 리포트와 별도로 채팅에 본문 미리보기를 제공한다.
+게시 단계에서는 `report-publisher` 스킬을 읽고 그대로 따른다.
+
+- 게시 대상은 임시 HTML 한 파일로 제한한다.
+- Pages 프로젝트는 `fos-reports`를 사용한다.
+- `slug`는 `freelance-YYYY-MM-DD`로 만든다.
+- `prepare` 결과에서 파일 수, 크기, 경고, 민감 정보 노출을 확인한다.
+- 이 스킬 호출에는 게시 요청이 포함된 것으로 보고 별도 게시 확인 없이 진행한다.
+- 반환된 `public_url`을 브라우저로 열어 HTTP 성공, 문서 제목, 주요 본문을 확인한다.
+- `branch_url`은 `report-publisher`가 실제 검증한 경우에만 안정 주소로 안내한다.
+- 게시 성공과 실패 모두에서 임시 HTML과 원자료를 정확한 경로로 삭제한다.
+
+Cloudflare 인증이나 게시 권한이 없어 게시하지 못하면 작업을 완료로 간주하지 않는다.
+실패 원인과 필요한 권한만 보고하고 로컬 산출물은 전달하지 않는다.
 
 ## 검증
 
 원자료와 점수를 아래 순서로 검사한다.
 
 ```bash
-python3 .claude/skills/freelance-opportunity-reporter/scripts/audit_collection.py reports/freelance-opportunities-YYYY-MM-DD.json --pretty
-python3 .claude/skills/freelance-opportunity-reporter/scripts/score_opportunities.py reports/freelance-opportunities-YYYY-MM-DD.json --remote-only --first-win --pretty
+python3 .claude/skills/freelance-opportunity-reporter/scripts/audit_collection.py data/runtime/downloads/freelance-opportunities-YYYY-MM-DD.json --pretty
+python3 .claude/skills/freelance-opportunity-reporter/scripts/score_opportunities.py data/runtime/downloads/freelance-opportunities-YYYY-MM-DD.json --remote-only --first-win --pretty
 ```
 
 리포트를 만든 뒤 아래를 확인한다.
 
 - HTML의 필수 섹션이 모두 있는지
 - 공고명이 상세 페이지 링크로 연결되는지
-- `git diff --check`
+- Orca 브라우저에서 데스크톱과 모바일 레이아웃이 읽히는지
+- `report-publisher prepare` 검사가 통과하는지
+- 게시된 `public_url`의 제목과 주요 본문이 로컬 검증 결과와 같은지
+- 임시 HTML과 원자료가 실행 종료 후 남지 않았는지
 
 ## 보조 자료
 

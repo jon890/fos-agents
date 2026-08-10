@@ -39,7 +39,8 @@
 
 ## 원자료 형식
 
-`reports/freelance-opportunities-YYYY-MM-DD.json`은 아래 구조를 사용한다.
+실행 중 만드는 임시 원자료 `freelance-opportunities-YYYY-MM-DD.json`은 아래 구조를 사용한다.
+경로와 삭제 시점은 `SKILL.md`의 `결과물 형식`을 따른다.
 
 ```json
 {

@@ -1,4 +1,4 @@
 interface:
   display_name: "Freelance Opportunity Reporter"
-  short_description: "외주 공고의 수집 누락을 검사하고 첫 수주·일반 후보를 분류"
-  default_prompt: "$freelance-opportunity-reporter를 사용해 현재 외주 공고를 공고 ID 기준으로 수집하고, 누락 여부를 검사한 뒤 첫 수주 후보와 일반 수익성 후보를 나눈 HTML 실행 리포트를 작성한다."
+  short_description: "외주 공고를 분류해 Cloudflare Pages 리포트로 게시"
+  default_prompt: "$freelance-opportunity-reporter로 외주 공고를 수집·분류해 Cloudflare Pages에 게시하고 검증된 링크를 반환한다."
