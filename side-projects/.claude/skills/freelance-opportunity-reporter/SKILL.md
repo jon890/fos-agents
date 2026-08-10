@@ -35,8 +35,8 @@ description: >-
    | 플랫폼 | 목록 | 필터와 주의 |
    | --- | --- | --- |
    | 위시켓 | `wishket.com/project/` | `외주(도급)` 필터를 걸고 모집 중만 본다.<br>목록 이동에 `?page=N`이 먹지 않아 페이지네이션을 눌러 순회한다. |
-   | 프리모아 | `freemoa.net/m4/s41?page=N` | `도급`만 본다. `기간제 상주`는 제외한다.<br>상세 본문은 로그인이 필요하다. |
-   | 원티드 긱스 | `wanted.co.kr/gigs/api-v2/projects` | 공개 API를 쓴다.<br>`office`는 제외한다.<br>`remote`·`both` 중 도급 납품만 남긴다. |
+   | 프리모아 | `freemoa.net/m4/s41?page=N` | `도급(원격)` 필터를 적용한다.<br>`모집중`과 `마감임박`만 남기고 `마감`은 제외한다.<br>기존 Orca 로그인 세션을 먼저 사용한다. |
+   | 원티드 긱스 | `wanted.co.kr/gigs/api-v2/projects` | 공개 API를 쓴다.<br>최종 리포트에는 `work_place == remote`인 공고만 남긴다.<br>`office`와 `both`는 제외한다. |
 
    기본 검색 축은 아래처럼 두 갈래로 둔다.
 
@@ -77,6 +77,9 @@ description: >-
 
    공고 상세 URL은 반드시 저장한다.
    목록 URL만으로 리포트를 끝내지 않는다.
+   리포트의 표, 상세 설명, 결론에서 공고를 언급할 때는 제목을 상세 URL 링크로 표시한다.
+   기간이나 공고 식별자만으로 공고를 가리키지 않는다.
+   공고 식별자는 링크된 제목 옆의 보조 정보로만 표시할 수 있다.
    프리모아처럼 카드에 `data-pno`만 있는 경우 실제 클릭 URL이나 상세 URL 패턴을 확인한다.
    상세 URL을 끝내 얻지 못한 경우에는 해당 공고를 `상세 링크 미확인`으로 표시하고 분석 근거가 목록 요약임을 명시한다.
    적합하지 않은 공고도 원자료에서 삭제하지 않는다.
@@ -185,6 +188,7 @@ python3 .claude/skills/freelance-opportunity-reporter/scripts/score_opportunitie
 
 - HTML의 필수 섹션이 모두 있는지
 - 공고명이 상세 페이지 링크로 연결되는지
+- 기간이나 공고 식별자만으로 공고를 가리킨 문장이 없는지
 - Orca 브라우저에서 데스크톱과 모바일 레이아웃이 읽히는지
 - `report-publisher prepare` 검사가 통과하는지
 - 게시된 `public_url`의 제목과 주요 본문이 로컬 검증 결과와 같은지
