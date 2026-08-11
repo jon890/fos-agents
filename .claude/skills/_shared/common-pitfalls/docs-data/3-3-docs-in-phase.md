@@ -7,7 +7,7 @@ triggers:
   - 정책 문서
 tool_catchable: false
 source:
-  - ai-nodes docs-first policy
+  - fos-agents docs-first policy
 related: []
 ---
 

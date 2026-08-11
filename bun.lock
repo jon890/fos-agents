@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "ai-nodes",
+      "name": "fos-agents",
       "dependencies": {
         "dotenv": "^17.4.2",
         "fast-xml-parser": "^5.8.0",

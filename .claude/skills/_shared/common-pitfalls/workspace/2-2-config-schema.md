@@ -7,7 +7,7 @@ triggers:
   - data-schema
 tool_catchable: false
 source:
-  - ai-nodes docs-first policy
+  - fos-agents docs-first policy
 related: []
 ---
 

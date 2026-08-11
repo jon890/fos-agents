@@ -7,7 +7,7 @@ triggers:
   - atomic commit
 tool_catchable: false
 source:
-  - ai-nodes git commit policy
+  - fos-agents git commit policy
 related: []
 ---
 

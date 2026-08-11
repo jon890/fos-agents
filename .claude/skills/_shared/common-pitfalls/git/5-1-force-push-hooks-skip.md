@@ -8,7 +8,7 @@ triggers:
   - destructive
 tool_catchable: true
 source:
-  - ai-nodes git safety policy
+  - fos-agents git safety policy
 related: []
 ---
 

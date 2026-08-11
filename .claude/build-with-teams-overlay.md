@@ -1,6 +1,6 @@
 # build-with-teams 오버레이 — fos-agents
 
-공용 코어(`~/.claude/skills/build-with-teams`)에 fos-agents(ai-nodes) 특화를 주입한다.
+공용 코어(`~/.claude/skills/build-with-teams`)에 fos-agents 특화를 주입한다.
 코어가 뼈대, 아래 내용이 이 레포의 살점이다.
 
 ## 전용 agent (executor·docs-verifier)
@@ -26,7 +26,7 @@ career-os 는 TypeScript 를 bun 으로 실행하고 스키마 검증에 zod 를
 
 ## worktree 직후 setup
 
-career-os 는 ai-nodes 루트에서 `bun install` 1회(이미 설치돼 있으면 생략) 외 추가 setup 이 없다.
+career-os 는 fos-agents 루트에서 `bun install` 1회(이미 설치돼 있으면 생략) 외 추가 setup 이 없다.
 그 외 워크스페이스는 문서화된 setup 절차가 없다.
 
 ## 코드 규칙 권위 (워크스페이스별)

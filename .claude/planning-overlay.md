@@ -1,9 +1,9 @@
 # planning 오버레이 — fos-agents
 
-공용 코어(`~/.claude/skills/planning`)에 fos-agents(ai-nodes) 특화를 주입한다.
+공용 코어(`~/.claude/skills/planning`)에 fos-agents 특화를 주입한다.
 코어의 8단계 skeleton 을 이 레포의 도메인(멀티 워크스페이스 CLI/agent 스킬)·docs 컨벤션·검증에 맞춰 채운다.
 
-## 도메인: ai-nodes 멀티 워크스페이스 CLI
+## 도메인: fos-agents 멀티 워크스페이스 CLI
 
 - 이 레포는 여러 독립 워크스페이스로 구성된 모노레포다.
 - **3단계 (호출 시나리오)**: 시니어 워크플로 디자이너 관점. 새 기능이 어떤 skill·script·env 변수·cron 트리거로 호출되는지, 명령 인자/플래그 조합을 구체화. 정상/에러/빈 상태/권한·잠금 충돌 점검.
@@ -79,7 +79,7 @@
 
 ### phase 본문 path·cwd 강제 (필수)
 
-phase 본문의 모든 path 는 *ai-nodes 루트 기준* (`<workspace>/...`) 이지만 build-with-teams 는 워크스페이스(worktree) 를 cwd 로 phase 를 실행한다.
+phase 본문의 모든 path 는 *fos-agents 루트 기준* (`<workspace>/...`) 이지만 build-with-teams 는 워크스페이스(worktree) 를 cwd 로 phase 를 실행한다.
 모든 phase 첫 bash 블록에 `cd "$(git rev-parse --show-toplevel)"` 로 루트 강제 후 `pwd` 확인 — 누락 시 실행 첫 phase 에서 hotfix commit 이 필요해진다 (`common-pitfalls/harness/6-7-cwd-workspace-mismatch.md`).
 Edit/Write 도구는 absolute path 를 받아 cwd 와 무관하게 동작하므로 이 강제는 bash 명령(test/grep/git 등)에만 해당한다.
 
@@ -96,7 +96,7 @@ phase 검증 bash 에서 검증 대상 sigil(section mark U+00A7, tilde 등) 을
 ## plan 네이밍 (번호 충돌 확인)
 
 ```bash
-# cwd: ai-nodes root
+# cwd: fos-agents root
 ls <scope>/docs/adr/ | grep "^ADR-{후보번호}"
 ```
 

@@ -1,11 +1,11 @@
-# Code Architecture — ai-nodes 모노레포
+# Code Architecture — fos-agents 모노레포
 
-이 문서는 ai-nodes 루트의 현행 코드와 문서 구조를 설명한다.
+이 문서는 fos-agents 루트의 현행 코드와 문서 구조를 설명한다.
 결정의 이유와 대안 기각은 [`docs/adr/INDEX.md`](adr/INDEX.md)를 따른다.
 
 ## 모노레포 구조
 
-`ai-nodes`는 여러 독립 워크스페이스를 담는 컨테이너다.
+`fos-agents`는 여러 독립 워크스페이스를 담는 컨테이너다.
 각 최상위 워크스페이스는 자체 `AGENTS.md`와 책임 문서를 가진다.
 워크스페이스 자산은 서로 교차 참조하지 않는다.
 

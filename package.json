@@ -1,5 +1,5 @@
 {
-  "name": "ai-nodes",
+  "name": "fos-agents",
   "version": "0.0.0",
   "private": true,
   "description": "fos-agents 모노레포 TypeScript 실행 환경",

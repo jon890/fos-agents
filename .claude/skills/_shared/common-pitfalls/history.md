@@ -3,7 +3,7 @@
 각 항목 실제 발생 사례는 시간순 1줄로 누적한다.
 본문 pattern file에는 사례를 중복하지 않는다.
 
-- 2026-05-13: 초안. fos-blog `_shared/common-pitfalls.md` 1 패턴과 ai-nodes 워크스페이스 규약 2-5를 추가했다.
+- 2026-05-13: 초안. fos-blog `_shared/common-pitfalls.md` 1 패턴과 fos-agents 워크스페이스 규약 2-5를 추가했다.
 - 2026-05-13: plan001-adr-cleanup. 1-4와 6번 category를 신설했다.
 - 2026-05-13: plan002-config-consolidation. 6-4와 6-5를 신설했다.
 - 2026-05-13: plan004-shared-helpers-ts. 6-1을 강화했다.
