@@ -125,14 +125,14 @@ Hermes/Codex cron에서 `bun`이 없지만 Node/npx가 있으면, 작업을 실�
 `import.meta.dir` 호환을 위해 `CAREER_OS_ROOT`를 명시한다.
 
 ```bash
-CAREER_OS_ROOT=/opt/data/ai-nodes/career-os \
+CAREER_OS_ROOT="$(pwd)" \
   npx --yes tsx scripts/study-topic-recommender/refresh_topic_inventory.ts
 ```
 
 render-only도 동일하게 fallback 가능하다.
 
 ```bash
-CAREER_OS_ROOT=/opt/data/ai-nodes/career-os \
+CAREER_OS_ROOT="$(pwd)" \
   npx --yes tsx scripts/study-topic-recommender/refresh_topic_inventory.ts --render-only
 ```
 

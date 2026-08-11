@@ -5,7 +5,7 @@ description: stock-investment 워크스페이스에서 Circle Internet Group(CRC
 
 # 주식 모닝 브리핑
 
-정식 워크스페이스: `~/ai-nodes/stock-investment`
+정식 워크스페이스: `stock-investment/`
 
 ## 범위
 
@@ -24,12 +24,12 @@ description: stock-investment 워크스페이스에서 Circle Internet Group(CRC
 
 ## 워크플로
 
-운영 진입점은 `bash ~/ai-nodes/stock-investment/scripts/stock-investing-morning-brief/run_with_claude.sh`다.
+운영 진입점은 `bash scripts/stock-investing-morning-brief/run_with_claude.sh`다.
 대화형 실행에서는 현재 에이전트가 아래 단계를 직접 수행한다.
 
 ### Step 1 — 수집
 
-다음 명령을 Bash 도구로 실행한다 (cwd: `~/ai-nodes/stock-investment`):
+다음 명령을 `stock-investment/`에서 실행한다.
 
 ```bash
 REPORT_DATE=$(TZ=Asia/Seoul date +%F)

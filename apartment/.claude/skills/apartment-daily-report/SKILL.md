@@ -20,14 +20,15 @@ description: 아파트 매물 일일 시세 리포트를 생성하는 apartment 
 
 - 단지명: 엘지원앙아파트 (LG원앙)
 - 위치: 경기 구리시 수택동 854-2 / 체육관로 54
-- 산출물 루트: `~/ai-nodes/apartment/data/YYYY-MM-DD/`
+- 산출물 루트: `apartment/data/YYYY-MM-DD/`
 
 타깃 변경 시 `apartment/config/` 또는 `.env`에서 읽는다 — 이 SKILL.md에 단지명을 hard-code하지 않는다.
 
 ## 워크플로
 
 현재 에이전트가 직접 수행하는 5단계 파이프라인.
-산출물 경로: `data/YYYY-MM-DD/{raw-search.json, summary.json, report.md}` (cwd: `~/ai-nodes/apartment`).
+산출물 경로: `data/YYYY-MM-DD/{raw-search.json, summary.json, report.md}`.
+작업 디렉터리는 `apartment/`다.
 
 ### 1단계: 타깃 메타 로드
 
@@ -120,5 +121,5 @@ bun scripts/apartment-daily-report/normalize_results.ts <raw-search.json 경로>
 
 ## 아키텍처
 
-정식 구현체는 `~/ai-nodes/apartment/`.
+정식 구현체는 `apartment/`에 둔다.
 저장소 밖 스케줄러와 전달 채널은 이 skill의 실행 계약이 아니다.

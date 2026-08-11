@@ -16,11 +16,11 @@ description: 구리 럭키아파트 5동 1004호 인테리어 리모델링 레�
 
 ## 정보 출처 (단일 출처)
 
-- 작업 디렉터리: `~/ai-nodes/apartment`
-- 의사결정 노트: `~/ai-nodes/apartment/docs/interior/lucky-5-1004-interior-decisions.md`
-- 레퍼런스 노트북: `~/ai-nodes/apartment/docs/interior/interior-references.md`
-- 설정 파일: `~/ai-nodes/apartment/config/interior-reference-digest.json`
-- 산출물 루트: `~/ai-nodes/apartment/data/interior-reference-digest/`
+- 작업 디렉터리: `apartment/`
+- 의사결정 노트: `apartment/docs/interior/lucky-5-1004-interior-decisions.md`
+- 레퍼런스 노트북: `apartment/docs/interior/interior-references.md`
+- 설정 파일: `apartment/config/interior-reference-digest.json`
+- 산출물 루트: `apartment/data/interior-reference-digest/`
 
 ## 워크플로
 

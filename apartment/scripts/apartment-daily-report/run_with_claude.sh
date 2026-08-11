@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TASK_ROOT="${TASK_ROOT:-$HOME/ai-nodes/apartment}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TASK_ROOT="${TASK_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 REPORT_DATE="${REPORT_DATE:-$(date +%F)}"
 
 # Load workspace env if present (NAVER_COOKIE 등 선택적 인증 정보)
-ENV_FILE="${APARTMENT_ENV_FILE:-$HOME/ai-nodes/apartment/.env}"
+ENV_FILE="${APARTMENT_ENV_FILE:-$TASK_ROOT/.env}"
 if [[ -f "$ENV_FILE" ]]; then
   set -a
   # shellcheck disable=SC1090

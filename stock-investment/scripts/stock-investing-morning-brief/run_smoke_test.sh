@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
-TASK_ROOT="${TASK_ROOT:-$HOME/ai-nodes/stock-investment}"
-SKILL_DIR="$(cd "$(dirname "$0")" && pwd)"
+SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TASK_ROOT="${TASK_ROOT:-$(cd "$SKILL_DIR/../.." && pwd)}"
 REPORT_DATE="${REPORT_DATE:-smoke-$(TZ=Asia/Seoul date +%Y%m%dT%H%M%S)}"
 OUTDIR="$TASK_ROOT/data/$REPORT_DATE"
 

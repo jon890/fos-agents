@@ -11,7 +11,7 @@
   "themes": {
     "ai-semiconductor-infrastructure": {
       "issueKey": "ai-semiconductor-infrastructure",
-      "manualCommand": "~/ai-nodes/stock-investment/skills/current-issue-analysis/scripts/run_issue_report.sh ai-semiconductor-infrastructure",
+      "manualCommand": "bash scripts/current-issue-analysis/run_with_claude.sh ai-semiconductor-infrastructure",
       "triggerCandidates": [
         "SMH daily close change >= +4% or <= -4%",
         "NVDA/AMD/AVGO/TSM/ASML/VRT daily close change >= +5% or <= -5%",

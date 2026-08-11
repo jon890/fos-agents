@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TASK_ROOT="${TASK_ROOT:-$HOME/ai-nodes/stock-investment}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TASK_ROOT="${TASK_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 REPORT_DATE="${REPORT_DATE:-$(TZ=Asia/Seoul date +%F)}"
 ISSUE_KEY="${1:-}"
 
 # Load workspace env if present.
-ENV_FILE="${STOCK_ENV_FILE:-$HOME/ai-nodes/stock-investment/.env}"
+ENV_FILE="${STOCK_ENV_FILE:-$TASK_ROOT/.env}"
 if [[ -f "$ENV_FILE" ]]; then
   set -a
   # shellcheck disable=SC1090

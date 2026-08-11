@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TASK_ROOT="${TASK_ROOT:-$HOME/ai-nodes/apartment}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TASK_ROOT="${TASK_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 REQUEST_TEXT="${*:-}"
 REPORT_DATE="${REPORT_DATE:-$(date +%F)}"
 

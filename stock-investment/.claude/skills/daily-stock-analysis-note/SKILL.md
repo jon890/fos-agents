@@ -5,7 +5,7 @@ description: 미국·한국 AI/기술주 한 종목을 한국어 블로그형 �
 
 # 일일 주식 분석 노트
 
-정식 워크스페이스: `~/ai-nodes/stock-investment`
+정식 워크스페이스: `stock-investment/`
 
 ## 정책
 
@@ -19,12 +19,12 @@ description: 미국·한국 AI/기술주 한 종목을 한국어 블로그형 �
 
 ## 워크플로
 
-운영 진입점은 `bash ~/ai-nodes/stock-investment/scripts/daily-stock-analysis-note/run_with_claude.sh`다.
+운영 진입점은 `bash scripts/daily-stock-analysis-note/run_with_claude.sh`다.
 대화형 실행에서는 현재 에이전트가 아래 단계를 직접 수행한다.
 
 ### Step 1 — 수집
 
-다음 명령을 Bash 도구로 실행한다 (cwd: `~/ai-nodes/stock-investment`):
+다음 명령을 `stock-investment/`에서 실행한다.
 
 ```bash
 REPORT_DATE=$(TZ=Asia/Seoul date +%F)
@@ -123,7 +123,8 @@ TICKER_VAL=$(python3 -c "import json; print(json.load(open('$SEL',encoding='utf-
 NAME_VAL=$(python3 -c "import json; print(json.load(open('$SEL',encoding='utf-8'))['selected']['name'])")
 SLUG=$(printf '%s' "$TICKER_VAL" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g; s/-\+/-/g; s/^-//; s/-$//')
 BLOG_REL="finance/investing/ai-tech-stock/${REPORT_DATE}-${SLUG}.md"
-FOS_STUDY="$HOME/ai-nodes/career-os/sources/fos-study"
+FOS_AGENTS_ROOT="$(git rev-parse --show-toplevel)"
+FOS_STUDY="$FOS_AGENTS_ROOT/career-os/sources/fos-study"
 BLOG_MD="$FOS_STUDY/$BLOG_REL"
 HISTORY_JSON="data/daily-notes/history.json"
 

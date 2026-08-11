@@ -5,7 +5,7 @@ description: 자산제곱, 월가아재의 과학적 투자 같은 주식 유튜
 
 # 주식 유튜브 학습 요약
 
-정식 워크스페이스: `~/ai-nodes/stock-investment`
+정식 워크스페이스: `stock-investment/`
 
 ## 목적
 
@@ -58,7 +58,7 @@ description: 자산제곱, 월가아재의 과학적 투자 같은 주식 유튜
 ## 실행
 
 ```bash
-cd ~/ai-nodes/stock-investment
+cd stock-investment
 python3 scripts/youtube-learning-digest/run_digest.py
 ```
 
@@ -82,7 +82,7 @@ Hermes cron은 “후보 감지 스크립트 + 후보가 있을 때만 LLM 요�
 - deliver: `discord:1500817157515247706` (#주식토크)
 - no_agent: `false`
 - script: `stock_youtube_learning_digest.sh`
-- workdir: `~/ai-nodes/stock-investment`
+- workdir: `stock-investment/`
 - enabled_toolsets: `file`
 
 스크립트는 신규/유효 후보가 없으면 stdout을 비운다. 후보가 있으면 자막과 메타데이터를 JSON으로 출력하고, 그때만 cron agent가 고품질 한국어 요약을 작성해 Discord로 보낸다.
