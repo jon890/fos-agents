@@ -8,7 +8,7 @@ triggers:
   - commitSha false
 tool_catchable: false
 source:
-  - plan013-study-pack-writer-native
+  - study-pack-writer 전환 사례
 related: []
 ---
 

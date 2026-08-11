@@ -205,7 +205,7 @@ add vs update는 `git status --porcelain` 자동 판단. push 실패 시 stderr 
 
 ## Why this design
 
-- **두 형식 흡수 (plan015 사용자 통찰)**: master playbook과 Q&A 질문 은행은 모두 *후보자 이력 기반 면접 자산*. 학습 문서(study-pack-writer)와 책임 분리 — 본 skill은 *이력 중심*, study-pack-writer는 *주제 중심*. 두 형식을 한 skill로 묶고 분기 처리.
+- **두 형식 흡수**: master playbook과 Q&A 질문 은행은 모두 *후보자 이력 기반 면접 자산*. 학습 문서(study-pack-writer)와 책임 분리 — 본 skill은 *이력 중심*, study-pack-writer는 *주제 중심*. 두 형식을 한 skill로 묶고 분기 처리.
 - **Self-check가 JSON schema 대체**: 옛 `--json-schema` + renderer 패턴은 외부 subprocess의 부산물. native에서는 현재 에이전트 자체 검증으로 동등 효과.
 - **재작성 ≤3회 cap**: 무한 루프 차단. 그래도 실패하면 본질 문제 (topic 모호, 입력 부족) — 사용자 개입 필요.
 - **Publish + notify 셸 명령 통합**: 옛 외부 publish/notify shell을 셸 명령 도구로 직접. 의존 줄임.

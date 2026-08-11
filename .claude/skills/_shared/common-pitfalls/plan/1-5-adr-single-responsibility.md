@@ -8,7 +8,7 @@ triggers:
   - supersede
 tool_catchable: false
 source:
-  - apartment plan003 ADR-005 first draft
+  - apartment ADR 검토 사례
 related:
   - ../../../../../planning-overlay.md
 ---

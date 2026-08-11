@@ -84,7 +84,7 @@ export const ApplicationPositionsQueueRecordSchema = z
     riskFlags: z.array(z.string().min(1)).default([]),
     nextActions: z.array(z.string().min(1)).default([]),
     notes: z.string().optional(),
-    // Runtime fields (optional — backward compatible with plan029 records)
+    // 기존 레코드와 호환되는 선택적 runtime 필드
     agentPhase: z.string().optional(),
     nextRunAt: z.string().optional(),
     lastDecisionAt: z.string().optional(),

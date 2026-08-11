@@ -7,7 +7,7 @@ triggers:
   - stdout
 tool_catchable: false
 source:
-  - plan002-config-consolidation
+  - 설정 통합 사례
 related: []
 ---
 

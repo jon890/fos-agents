@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
  * morning topic recommendation pipeline — CLI entry point.
- * ADR-035: god-script 분해 컨벤션 적용 (plan027 phase-02).
+ * ADR-035: god-script 분해 컨벤션 적용.
  *
  * ADR-009: reservoir-based, file-backed.
  * ADR-010: score-based backend selection with mix targets.

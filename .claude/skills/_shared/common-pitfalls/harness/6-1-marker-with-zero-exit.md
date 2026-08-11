@@ -7,7 +7,7 @@ triggers:
   - exit code
 tool_catchable: false
 source:
-  - plan004-shared-helpers-ts
+  - 공용 helper 전환 사례
 related: []
 ---
 

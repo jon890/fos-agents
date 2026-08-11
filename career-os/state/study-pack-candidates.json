@@ -366,7 +366,7 @@
       "generatedAt": "2026-06-09T05:01:34.336Z",
       "status": "stale",
       "sourceSignals": [
-        "plan069-rollout",
+        "candidate-rollout",
         "observability-gap",
         "recent-domain-diversity"
       ],
@@ -389,7 +389,7 @@
       "generatedAt": "2026-06-09T05:01:34.336Z",
       "status": "stale",
       "sourceSignals": [
-        "plan069-rollout",
+        "candidate-rollout",
         "resilience",
         "interview-arc"
       ],
@@ -412,7 +412,7 @@
       "generatedAt": "2026-06-09T05:01:34.336Z",
       "status": "stale",
       "sourceSignals": [
-        "plan069-rollout",
+        "candidate-rollout",
         "message-queue",
         "consistency"
       ],
@@ -435,7 +435,7 @@
       "generatedAt": "2026-06-09T05:01:34.336Z",
       "status": "stale",
       "sourceSignals": [
-        "plan069-rollout",
+        "candidate-rollout",
         "api-contract",
         "testing-gap"
       ],

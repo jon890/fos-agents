@@ -53,13 +53,13 @@ export const SKILL_CONTRACTS: Readonly<Record<string, SkillContract>> = {
       slashCommand: 'position-recommender',
     },
     description:
-      '후보 공고 수집 및 3-tier 추천 리포트 생성. plan030 freshness guard를 prerequisite로 사용.',
+      '후보 공고 수집 및 3-tier 추천 리포트 생성. 공고 최신성 검사를 prerequisite로 사용.',
     autonomy: 'agent_only',
     expectedOutputs: ['reports/latest/position-recommendation.md'],
     touchesFosStudy: false,
     modifiesCandidateProfile: false,
     requiresExternalAccess: false,
-    prerequisiteGuards: ['plan030_freshness_guard'],
+    prerequisiteGuards: ['posting_freshness_guard'],
   },
 
   'application-package-writer': {

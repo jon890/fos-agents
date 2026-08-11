@@ -43,7 +43,7 @@ build-with-teams 는 그 스키마로 만들어진 task 를 그대로 실행하�
 ## plan/ADR 번호 재확인
 
 worktree 생성 직전, planning 오버레이의 "plan 네이밍 (번호 충돌 확인)" 스캔을 한 번 더 실행한다.
-다른 세션이 그 사이 같은 번호를 선점했을 수 있다(실측: plan088·ADR-096 충돌 사례).
+다른 세션이 그 사이 같은 plan 또는 ADR 번호를 선점했을 수 있다.
 
 ## common-pitfalls 경로
 

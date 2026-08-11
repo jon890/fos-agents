@@ -7,8 +7,7 @@ triggers:
   - run-phases.py
 tool_catchable: false
 source:
-  - plan024
-  - plan002 first-run hotfix
+  - 워크스페이스 경로 불일치 사례
 related: []
 ---
 

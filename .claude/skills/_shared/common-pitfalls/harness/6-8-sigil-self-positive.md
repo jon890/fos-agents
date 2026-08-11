@@ -8,8 +8,7 @@ triggers:
   - self-positive
 tool_catchable: false
 source:
-  - plan024
-  - plan002 first-run hotfix
+  - 실행 전 검증 오탐 사례
 related: []
 ---
 
