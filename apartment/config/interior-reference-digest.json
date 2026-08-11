@@ -34,8 +34,8 @@
     ],
     "dailyReportRequirement": "매일 추천 레퍼런스마다 화이트와 우드의 비율, 우드 색감, 우리 집 적용 가능 포인트를 짧게 평가한다"
   },
-  "currentDecisionNote": "/home/bifos/ai-nodes/apartment/docs/interior/lucky-5-1004-interior-decisions.md",
-  "outputRoot": "/home/bifos/ai-nodes/apartment/data/interior-reference-digest",
+  "currentDecisionNote": "docs/interior/lucky-5-1004-interior-decisions.md",
+  "outputRoot": "data/interior-reference-digest",
   "sourcePriority": [
     {
       "name": "오늘의집",
@@ -126,7 +126,7 @@
     "autoAppendDecisions": false,
     "scheduleRecommendation": "0 9 * * * Asia/Seoul"
   },
-  "referenceNotebook": "/home/bifos/ai-nodes/apartment/docs/interior/interior-references.md",
+  "referenceNotebook": "docs/interior/interior-references.md",
   "evaluationFocus": [
     "처음 인테리어를 진행하는 사용자 관점에서 업체 신뢰도와 설명 품질을 1차 필터링",
     "동일 단지/유사 평형 사례 우선",
