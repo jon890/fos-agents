@@ -297,6 +297,22 @@ class RenderReportTest(unittest.TestCase):
 
         self.assertEqual(ranked[0]["recommended_track"], "first-win")
 
+    def test_action_list_puts_apply_now_before_clarify_first(self) -> None:
+        apply_now = {**self.items[0], "project_id": "apply", "title": "바로 지원 공고"}
+        clarify = {
+            **self.items[1],
+            "project_id": "clarify",
+            "title": "먼저 확인 공고",
+            "fit": 3,
+            "risk": 4,
+            "portfolio": 2,
+        }
+
+        document = render_document([clarify, apply_now], "2026-08-11")
+        action_section = document.split("<h2>이번 회차 액션</h2>", 1)[1].split("</section>", 1)[0]
+
+        self.assertLess(action_section.index("바로 지원 공고"), action_section.index("먼저 확인 공고"))
+
 
 class AssembleReportDataTest(unittest.TestCase):
     def test_adds_audit_fields_and_excludes_non_remote_rows(self) -> None:
@@ -334,6 +350,29 @@ class AssembleReportDataTest(unittest.TestCase):
         self.assertEqual(payload["items"][0]["eligibility_status"], "candidate")
         self.assertEqual(payload["items"][1]["eligibility_status"], "excluded")
         self.assertEqual(audit(payload)["status"], "complete")
+
+    def test_excludes_rows_with_unconfirmed_remote_status(self) -> None:
+        rows = [
+            {
+                "platform": "위시켓",
+                "project_id": "157442",
+                "title": "프라이빗 백엔드 공고",
+                "url": "https://www.wishket.com/project/157442/",
+                "registered_at": None,
+                "list_page": 1,
+                "detail_status": "inaccessible",
+                "remote_only_pass": None,
+                "fit": 5,
+            }
+        ]
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "wishket.json"
+            path.write_text(json.dumps(rows), encoding="utf-8")
+
+            payload = assemble([path], "2026-08-11T10:30:00+09:00")
+
+        self.assertEqual(payload["items"][0]["eligibility_status"], "excluded")
+        self.assertEqual(payload["items"][0]["exclusion_reason"], "완전 원격 조건을 확인하지 못함")
 
     def test_related_items_do_not_hide_primary_list_gap(self) -> None:
         def item(project_id: str, source: str) -> dict:

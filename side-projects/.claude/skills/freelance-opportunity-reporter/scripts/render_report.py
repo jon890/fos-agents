@@ -117,7 +117,11 @@ def render_document(items: list[dict], report_date: str) -> str:
         platform: [row for row in rows if selected_action(row) != "avoid"][:3]
         for platform, rows in by_platform.items()
     }
-    actions = sorted(review, key=rank_key, reverse=True)[:3]
+    actions = sorted(
+        review,
+        key=lambda row: (selected_action(row) == "apply-now", rank_key(row)),
+        reverse=True,
+    )[:3]
 
     top_sections = "".join(
         f'<section class="platform"><h3>{escape(platform)}</h3>{render_table(rows, platform + " 상위 후보") if rows else "<p>현재 추천 기준을 통과한 후보가 없습니다.</p>"}</section>'
@@ -186,7 +190,7 @@ def render_document(items: list[dict], report_date: str) -> str:
   <header>
     <p class="sub">{escape(report_date)} 기준 · 지원자 수는 수집 시점의 현재 값</p>
     <h1>외주 기회 리포트</h1>
-    <p>원격 조건을 통과했거나 원격 가능성을 확인할 코딩 외주 가운데, 백엔드와 AI 연동 경험을 활용하기 좋은 공고를 우선했습니다.</p>
+    <p>원격 조건을 통과한 코딩 외주 가운데, 백엔드와 AI 연동 경험을 활용하기 좋은 공고를 우선했습니다.</p>
     {access_note}
     <div class="metrics">
       <div class="metric"><span>검토 후보</span><strong>{len(review)}</strong></div>

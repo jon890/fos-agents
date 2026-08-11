@@ -21,6 +21,8 @@ def source_id(platform: str) -> str:
 def eligibility(item: dict) -> tuple[str, str | None]:
     if item.get("remote_only_pass") is False:
         return "excluded", "완전 원격 조건을 충족하지 않음"
+    if item.get("remote_only_pass") is not True:
+        return "excluded", "완전 원격 조건을 확인하지 못함"
     if float(item.get("fit", 0)) < 2:
         return "excluded", "코딩 외주 또는 사용자 경험 범위와 맞지 않음"
     return "candidate", None
