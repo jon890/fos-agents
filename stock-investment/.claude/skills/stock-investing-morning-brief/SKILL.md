@@ -127,16 +127,10 @@ python3 scripts/stock-investing-morning-brief/collect_sources.py \
 ※ 자동 수집 기반 요약이며, 투자 판단은 추가 확인 필요.
 ```
 
-### Step 3 — 알림
+### Step 3 — 결과 반환
 
-report.md 작성 완료 후 Discord에 전송한다.
-`SKIP_NOTIFY=1`이면 건너뛴다.
-
-```bash
-if [[ "${SKIP_NOTIFY:-0}" != "1" ]]; then
-  bun run ~/ai-nodes/_shared/lib/notify_discord.ts "$(cat data/$REPORT_DATE/report.md)"
-fi
-```
+report.md 경로와 공개 가능한 짧은 요약을 표준 출력으로 반환한다.
+외부 전달은 저장소 밖 호출자가 처리한다.
 
 ## 산출물
 
@@ -149,9 +143,8 @@ fi
 | 파일 | 역할 |
 |---|---|
 | `scripts/stock-investing-morning-brief/collect_sources.py` | 수집기 (Python, yfinance/requests) |
-| `scripts/stock-investing-morning-brief/run_with_claude.sh` | thin wrapper (agent skill 호출, Discord 시작/실패 알림) |
+| `scripts/stock-investing-morning-brief/run_with_claude.sh` | thin wrapper (agent skill 호출, 결과 반환) |
 | `scripts/stock-investing-morning-brief/run_smoke_test.sh` | 수집 헬스체크 (Claude 없음) |
-| `_shared/lib/notify_discord.ts` | Discord 알림 정본 (ADR-002) |
 | `config/watchlist.json` | 수집 종목 목록 |
 | `config/sources.json` | 수집 소스 URL 목록 |
 

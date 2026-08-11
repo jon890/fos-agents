@@ -16,7 +16,6 @@ History: 기존 `docs/decisions/001~007.md` 는 plan004에서 git rm 완료 — 
 | ADR | 제목 | Status | 한 줄 요약 |
 |---|---|---|---|
 | ADR-001 | 워크스페이스 ai-nodes 표준 구조 적용 시작 | Accepted | 5문서 + AGENTS 한글화 + CLAUDE 심링크 + tasks/ (plan001). 분리 패턴 (plan002) + AGENTS 강화 (plan003) + decisions 폐기 (plan004) 시리즈 완료 |
-| ADR-002 | Discord 알림을 _shared/lib/notify_discord.ts로 통합 | Accepted | 워크스페이스 셸 notify_discord.sh 폐기, ts 정본 통합 (apartment ADR-009 미러) |
 | ADR-003 | 3 skill native 전환 (외부 subprocess 폐기) | Accepted | claude json+extractor+track_task 래핑 폐기, native 직접 호출. Python 수집기 유지. apartment ADR-010 미러 |
 | ADR-004 | 프로필 쓰기 범위를 stock-investment 내부로 제한 | Accepted | 다른 워크스페이스와 외부 git 저장소 직접 수정을 금지하고 발행은 내부 초안+메타데이터로 분리 |
 
@@ -76,42 +75,6 @@ ai-nodes 표준 구조 적용 시리즈 시작. 3 plan 분할:
 
 ---
 
-## ADR-002 — Discord 알림을 `_shared/lib/notify_discord.ts`로 통합
-
-**Status**: Accepted
-**Date**: 2026-05-29
-
-### 맥락
-
-stock-investment는 워크스페이스 한정 셸 notifier `scripts/<name>/notify_discord.sh`로 Discord 알림을 보낸다.
-morning-brief와 current-issue-analysis가 각자 notify_discord.sh를 두고, daily-note는 morning-brief의 notify_discord.sh를 cross-skill로 참조한다.
-
-apartment는 ADR-009로 워크스페이스 셸 notifier를 폐기하고 `_shared/lib/notify_discord.ts` 정본으로 통합했다(openclaw subprocess + 10s 타임아웃, `DISCORD_CHANNEL_ID` 필수).
-stock도 같은 정본을 쓰면 알림 인프라가 모노레포 단일 출처로 수렴한다.
-
-### 결정
-
-stock-investment 3 skill의 Discord 알림을 `_shared/lib/notify_discord.ts`로 통합한다.
-
-- 워크스페이스 셸 `notify_discord.sh`(morning-brief, current-issue) git rm.
-- daily-note의 cross-skill notify_discord.sh 참조 제거 — `_shared/lib/notify_discord.ts` 직접 호출.
-- thin wrapper와 native skill이 `bun run _shared/lib/notify_discord.ts "<메시지>"`로 호출.
-
-거절한 대안:
-
-- 셸 notifier 유지 — apartment와 불일치, 타임아웃·정본 중복 지속.
-- 별도 후속 plan으로 분리 — native 전환에서 어차피 러너를 재작성하므로 함께 처리가 효율적.
-
-### 결과
-
-- 모노레포 Discord 알림이 `_shared/lib/notify_discord.ts` 단일 정본으로 수렴(apartment·stock 공통).
-- cross-skill notifier 참조 제거로 daily-note 독립성 확보.
-- 단점: native 전환과 같은 plan에서 두 변경이 함께 진행 — phase 검증으로 분리.
-
-**적용**: ADR-003 native 전환과 같은 plan010(stock plan006)에서 동시 적용. 각 skill phase에서 notify_discord.sh git rm + ts 호출 전환.
-
----
-
 ## ADR-003 — 3 skill native 전환 (외부 subprocess 패턴 폐기)
 
 **Status**: Accepted
@@ -120,7 +83,7 @@ stock-investment 3 skill의 Discord 알림을 `_shared/lib/notify_discord.ts`로
 ### 맥락
 
 stock-investment 3 skill(stock-investing-morning-brief, current-issue-analysis, daily-stock-analysis-note)이 모두 외부 subprocess 패턴이다.
-각 `run_*.sh`가 `_shared/bin/track_task.sh`로 self-wrap되고, `claude --output-format json`을 호출한 뒤 `_shared/lib/extract_claude_result.ts`로 envelope를 파싱해 report.md를 만든다.
+각 `run_*.sh`가 외부 agent subprocess 결과를 파싱해 report.md를 만들고 실행 로그를 별도로 기록했다.
 
 apartment가 ADR-010(plan010)으로 daily-report를 native skill 직접 호출로 전환해 패턴을 검증했다.
 stock 3 skill은 apartment daily-report와 동일 구조라 같은 패턴을 복제한다.
@@ -178,7 +141,7 @@ GitHub token 같은 비밀값도 채팅·문서·로그가 아니라 Hermes secr
 이 프로필의 기본 쓰기 범위를 `stock-investment/` 내부로 제한한다.
 
 - 허용 범위는 `AGENTS.md`, `docs/`, `config/`, `scripts/`, `.claude/skills/`, `.codex/skills/`, `data/`, `logs/`, `tasks/`다.
-- `career-os`, `apartment`, `travel`, `health-care`, `ji-yoon-blog`, `_shared`, `career-os/sources/fos-study`, 다른 git 저장소, Hermes 다른 프로필 디렉터리는 직접 수정하지 않는다.
+- `career-os`, `apartment`, `travel`, `health-care`, `ji-yoon-blog`, `career-os/sources/fos-study`, 다른 git 저장소, Hermes 다른 프로필 디렉터리는 직접 수정하지 않는다.
 - 사용자가 해당 턴에서 파일 경로와 목적을 명시하고 승인한 경우에만 단발성 예외를 허용한다.
 - 블로그 글은 `stock-investment/data/publish/` 아래 초안과 발행 요청 메타데이터로 준비한다.
 - 실제 `fos-study` 반영, commit/push, Jenkins 싱크, 공개 블로그 URL 확인은 별도 승인된 발행 프로필·Jenkins·수동 작업으로 넘긴다.
@@ -187,7 +150,7 @@ GitHub token 같은 비밀값도 채팅·문서·로그가 아니라 Hermes secr
 거절한 대안:
 
 - `career-os/sources/fos-study` 직접 쓰기 유지: 프로필 경계를 흐리고 사용자의 보안 요구와 충돌한다.
-- `_shared` helper 직접 수정 허용: 공용 영향이 있으므로 이 프로필의 기본 권한 밖에 둔다.
+- 다른 워크스페이스 helper 직접 수정 허용: 공용 영향이 있으므로 이 프로필의 기본 권한 밖에 둔다.
 - 비밀값을 문서나 skill에 기록: 공개·로그 노출 위험이 있어 금지한다.
 
 ### 결과

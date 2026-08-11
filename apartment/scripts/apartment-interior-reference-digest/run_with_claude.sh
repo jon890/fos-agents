@@ -6,7 +6,7 @@ REQUEST_TEXT="${*:-}"
 REPORT_DATE="${REPORT_DATE:-$(date +%F)}"
 
 if [[ -z "$REQUEST_TEXT" ]]; then
-  REQUEST_TEXT="cron 실행: 오늘의 인테리어 추천을 생성하고, report.md 저장/레퍼런스 노트 갱신/Discord용 요약까지 출력해줘. 오늘 추천은 화이트/아이보리 기반에 밝은 오크·애쉬 우드를 20~30% 정도 섞은 레퍼런스를 우선해줘."
+  REQUEST_TEXT="cron 실행: 오늘의 인테리어 추천을 생성하고, report.md 저장/레퍼런스 노트 갱신/공개 가능한 짧은 요약까지 출력해줘. 오늘 추천은 화이트/아이보리 기반에 밝은 오크·애쉬 우드를 20~30% 정도 섞은 레퍼런스를 우선해줘."
 fi
 
 cd "$TASK_ROOT"

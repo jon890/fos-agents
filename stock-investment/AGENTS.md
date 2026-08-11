@@ -10,7 +10,7 @@
 |---|---|---|
 | `docs/prd.md` | 제품 범위·MVP 타깃·기능 표·미연결 항목 | 새 기능 추가 / 우선순위 결정 |
 | `docs/data-schema.md` | config (6 json) / data / logs / .env 스키마 | 데이터 파일 변경 / 새 config 도입 |
-| `docs/flow.md` | 3 skill 데이터 흐름 (수집→Claude→Discord/git) | 흐름 추가 / 디버깅 |
+| `docs/flow.md` | 3 skill 데이터 흐름 (수집→분석→파일·표준 출력) | 흐름 추가 / 디버깅 |
 | `docs/code-architecture.md` | 디렉터리 트리·skill 표준·외부 의존 | 코드 구조 변경 / 새 스킬 추가 |
 | `docs/adr.md` | stock-investment 한정 ADR 누적 (현재 ADR-001~003). 모노레포 레벨: `../docs/adr.md` | 결정의 *왜* |
 
@@ -40,8 +40,7 @@ CRCL (Circle) + BTC + GOOGL/GOOG + QQQ + AI 반도체/인프라.
 - **투자 가설 누적**: `data/thesis-tracker/<ticker>.json` — 종목별 시계열 thesis 추적.
 - **발행 준비 산출물**: `stock-investment/data/publish/` — 블로그 글 초안, 발행 요청 메타데이터, 싱크 확인 대기 상태를 이 워크스페이스 안에만 보관한다.
 - **외부 발행 대상**: 다른 워크스페이스나 외부 git 저장소를 이 프로필에서 직접 수정하지 않는다. `fos-study` 반영은 별도 승인된 발행 프로필·Jenkins·수동 작업으로 넘긴다.
-- **비밀 정보**: `.env` (워크스페이스 root, gitignore) 또는 Hermes secrets — `DISCORD_CHANNEL_ID`, GitHub token 등. 비밀값은 채팅·문서·로그에 쓰지 않는다.
-- **운영 상태 (cron)**: Hermes/cron 상태는 읽기 전용 참조만 허용한다.
+- **비밀 정보**: `.env` (워크스페이스 root, gitignore) 또는 실행 환경의 secret 저장소를 사용한다. 비밀값은 채팅·문서·로그에 쓰지 않는다.
 
 회사명·티커·테마를 어떤 markdown에도 박지 않는다 — config json 한 곳만 수정해서 전환.
 
@@ -52,7 +51,6 @@ CRCL (Circle) + BTC + GOOGL/GOOG + QQQ + AI 반도체/인프라.
 - **테마 단위 추적**: 종목 개별보다 *테마 (AI 반도체 / 인프라 / 금융 서비스 / 암호화폐 등)* 단위로 catalyst·뉴스 묶음.
 - **검증된 사실·해석 분리**: 가격·뉴스 timestamp는 *수집 raw* 보존 + Claude 해석은 *별도 섹션*.
 - **불확실성 명시**: 추측·예측은 *추측이라 명시*. 사실로 위장 금지.
-- **세션 격리**: 각 cron job은 `sessionTarget: isolated` — 다른 워크스페이스 컨텍스트 누수 회피.
 
 ## 4-3. fos-study 블로그 발행 의미
 
@@ -69,12 +67,12 @@ CRCL (Circle) + BTC + GOOGL/GOOG + QQQ + AI 반도체/인프라.
 
 4 skill — ADR-006/013 분리 패턴 (`scripts/<name>/` + `.claude/skills/<name>/` 정본 + `.codex/skills/<name>/` 노출, plan002 적용).
 
-| skill | 호출 시점 | 트리거 | 산출물 발행 |
+| skill | 권장 시점 | 호출 방식 | 산출물 |
 |---|---|---|---|
-| `stock-investing-morning-brief` | 매일 08:00 Asia/Seoul | cron `0 8 * * *` (openclaw, isolated session) | Discord 채널 announce (failureAlert) |
-| `stock-youtube-learning-digest` | 매일 08:20 Asia/Seoul | Hermes cron `20 8 * * *` + 후보 감지 script + 후보 있을 때 LLM 요약 | 신규/유효 영상이 있을 때만 #주식토크 delivery |
-| `daily-stock-analysis-note` | 매일 09:00 Asia/Seoul | cron `0 9 * * *` (openclaw, isolated session) | Discord delivery + 워크스페이스 내부 분석 노트 생성 |
-| `current-issue-analysis` | 사용자 수동 호출 | 자연어 또는 슬래시 | Discord 알림 (선택) |
+| `stock-investing-morning-brief` | 매일 08:00 Asia/Seoul | agent skill 또는 thin wrapper | 일일 브리핑 파일과 stdout 요약 |
+| `stock-youtube-learning-digest` | 매일 08:20 Asia/Seoul | 후보 감지 script와 agent skill | 신규 영상 학습 요약 |
+| `daily-stock-analysis-note` | 매일 09:00 Asia/Seoul | agent skill 또는 thin wrapper | 워크스페이스 내부 분석 노트와 stdout 요약 |
+| `current-issue-analysis` | 사용자 수동 호출 | 자연어 또는 슬래시 | 현안 분석 파일과 stdout 요약 |
 
 ```bash
 # 운영 호환 skill 진입점 (.claude/skills/ 자동 로드)
@@ -97,10 +95,8 @@ cron payload 갱신 이력:
 - `.claude/skills/` — agent skill 정본.
 - `.codex/skills/` — Codex 노출용 심볼릭 링크.
 - `claude` CLI — 운영 호환 skill 직접 호출 (`claude -p "/<skill>"`).
-- `_shared/lib/notify_discord.ts` — Discord 알림 정본 (ADR-002, bun run 호출).
 - `python3` — 수집기 스크립트 (collect_*.py). yfinance, requests 등.
 - `uv` — YouTube 자막 추출 의존성 `youtube-transcript-api`를 `uv run --with`로 임시 실행.
-- `bun` — notify_discord.ts 실행. root `package.json` + `bun install` 1회.
 - `stock-investment/data/publish` — 블로그 발행 준비 초안과 메타데이터를 워크스페이스 내부에 보관한다. 외부 `fos-study` 반영은 이 프로필에서 직접 수행하지 않는다.
 
 상세는 `docs/code-architecture.md` 외부 의존성 섹션.
@@ -111,16 +107,16 @@ cron payload 갱신 이력:
 - 광범위 풀-리포 분석 금지 — config json 명시 큐 한정.
 - 재무 자문 아님 — 불확실성 명시.
 - 수집 데이터·해석 분리 — config / data / docs 책임 분리.
-- 모닝 Discord 메시지는 오늘의 결론, 근거, 주요 위험, 확인할 다음 이벤트를 우선한다.
+- 모닝 요약은 오늘의 결론, 근거, 주요 위험, 확인할 다음 이벤트를 우선한다.
   상세 자산은 `data/YYYY-MM-DD/`에 둔다.
-- 영구 자산은 워크스페이스 내부 (`~/.openclaw/workspace` 사용 안 함).
+- 영구 자산은 워크스페이스 내부에 둔다.
 
 ## 8. 보안 경계
 
 이 프로필의 기본 쓰기 범위는 `stock-investment/` 워크스페이스 내부로 제한한다.
 
 - 허용: `stock-investment/AGENTS.md`, `docs/`, `config/`, `scripts/`, `.claude/skills/`, `.codex/skills/`, `data/`, `logs/`, `tasks/`.
-- 금지: `../career-os`, `../apartment`, `../travel`, `../health-care`, `../ji-yoon-blog`, `../_shared`, `career-os/sources/fos-study`, 다른 git 저장소, Hermes 다른 프로필 디렉터리 직접 수정.
+- 금지: `../career-os`, `../apartment`, `../travel`, `../health-care`, `../ji-yoon-blog`, `career-os/sources/fos-study`, 다른 git 저장소, Hermes 다른 프로필 디렉터리 직접 수정.
 - 예외: 사용자가 해당 턴에서 파일 경로와 목적을 명시하고 승인한 경우에만 단발성으로 수행한다.
   예외 작업 전에는 대상 파일, 변경 이유, 공개/비밀 영향, 되돌릴 방법을 먼저 보고한다.
 - 비밀값은 Hermes secrets 또는 워크스페이스 `.env`에만 둔다.
@@ -133,7 +129,7 @@ cron payload 갱신 이력:
 - 재실행 가능 + 날짜 단위 멱등.
 - 불확실성 명시 — 검증된 사실과 해석 분리.
 - 새 결정은 `docs/adr.md` 누적 (개별 ADR 파일 신설 금지, ai-nodes ADR-018).
-- 비밀 정보 (`DISCORD_CHANNEL_ID`, GitHub token 등)는 Hermes secrets 또는 `.env`에 둔다. `.env.example` template 참고.
+- 비밀 정보는 실행 환경의 secret 저장소 또는 `.env`에 둔다. `.env.example` template을 참고한다.
 
 ## 10. fos-brain 연동
 

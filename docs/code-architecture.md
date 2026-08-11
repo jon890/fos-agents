@@ -26,8 +26,6 @@
 |---|---|
 | `AGENTS.md` | 모든 에이전트를 위한 공통 행동 규칙 |
 | `CLAUDE.md` | `AGENTS.md` 심볼릭 링크 |
-| `_shared/lib/` | 워크스페이스 무관 Bun TypeScript helper |
-| `_shared/types/` | 공용 TypeScript type |
 | `.agents/skills/` | Codex가 직접 탐색하는 저장소 전역 skill |
 | `.claude/skills/` | 저장소 전역 agent skill 정본 (`build-with-teams` 등 공용 skill 포함) |
 | `.claude/agents/` | `build-with-teams` 전용 agent (`<workspace>-executor`·`<workspace>-docs-verifier`) |
@@ -36,7 +34,6 @@
 | `docs/code-architecture.md` | 현재 구조와 책임 경계 |
 | `docs/docs-style.md` | 문서 작성 형식 정책 |
 
-`_shared/`에는 특정 워크스페이스의 `config/`, `sources/`, `data/`에 의존하는 코드를 두지 않는다.
 워크스페이스 한정 helper는 `<workspace>/scripts/<skill>/` 내부에 둔다.
 
 ## 워크스페이스 표준 트리

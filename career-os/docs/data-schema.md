@@ -11,7 +11,7 @@ runtime 실데이터의 물리 이동은 이 plan 범위 밖이고, 경로 규�
 
 | 디렉터리 | 역할 | git 추적 |
 |---|---|---|
-| `.env` (워크스페이스 root) | Discord 채널 ID·GitHub 토큰 등 secret (ADR-021) | ✗ (.gitignore) |
+| `.env` (워크스페이스 root) | GitHub 토큰 등 secret (ADR-021) | ✗ (.gitignore) |
 | `.env.example` (워크스페이스 root) | secret 키 템플릿 — git 추적되는 빈 값 가이드 (ADR-021) | ✓ |
 | `config/` | 사람이 큐레이션한 정책·현재 타깃·baseline·예외 override. 자산 목록 복제본으로 쓰지 않음 (ADR-069) | ✓ |
 | `state/` | 시스템 실행·이벤트 산물 (positions-queue, 학습·드릴 진도, mvp-target, topic-inventory, drill-log, company-cooldown, 수집 노트, eval) | ✗ 기본 gitignore, 5개 파일만 negation tracked (ADR-107) |
@@ -21,7 +21,7 @@ runtime 실데이터의 물리 이동은 이 plan 범위 밖이고, 경로 규�
 | `private/<company-slug>/<position-slug>/` | 회사·직무별 active 준비 홈. 면접·스터디·지원 산출물을 포지션 단위로 묶는 작업 홈 | ✗ |
 | `private/` | 회사·포지션별 작업 홈과 필요 시 archive. 공개용으로 다듬기 전의 준비 자료 위치 | ✗ |
 | `public/question-bank/` | 공개 가능 일반 backend/CS 면접 질문 bank. private 맥락 없이 git 추적되는 재사용 질문 자산 | ✓ |
-| `logs/` | 실행 로그 (`task-runs.jsonl`, `token-usage.jsonl`) | ✗ |
+| `logs/` | 추천 지표와 skill 평가 로그 | ✗ |
 | `sources/fos-study/` | 외부 동기 저장소 (jon890/fos-study) — git submodule 같은 위치이나 실제로는 별도 clone | ✗ |
 
 `state/`에서 negation으로 tracked를 유지하는 5개 파일: `study-progress.json`·`drill-progress.json`·`mvp-target.json`·`study-pack-candidates.json`·`company-cooldown.json` (clone 간 연속성이 필요한 저-churn 상태). 나머지 `state/**`는 untracked runtime이다.
@@ -880,9 +880,6 @@ ADR-021로 워크스페이스 secret 위치를 `<ws>/config/.env` → `<ws>/.env
 `career-os/.env` 스키마:
 
 ```bash
-# Discord 채널 ID (필수 — 누락 시 notify_discord.ts가 exit 1로 실패)
-DISCORD_CHANNEL_ID=
-
 # fos-study publish용 GitHub API
 GITHUB_TOKEN=
 GITHUB_REPO_OWNER=jon890
@@ -891,48 +888,6 @@ GITHUB_REPO_BRANCH=main
 ```
 
 `career-os/.env.example`은 위와 같은 키 + 빈 값. git 추적 ✓.
-
-caller가 `.env`를 ts에 전달하는 방법: `bun --env-file=career-os/.env _shared/lib/notify_discord.ts "<message>"` (ADR-021 결정).
-
-## logs/
-
-### logs/task-runs.jsonl
-
-`track_task.sh`가 매 실행마다 한 줄씩 append. career-os는 plan023 이후 native skill 직접 실행으로 전환 — `TaskRunEntry` 자동 기록은 apartment 등 `track_task.sh` 사용 워크스페이스에서만 유효. career-os 실행 이력은 Discord 알림 경유.
-
-```json
-{
-  "run_id": "YYYYMMDDTHHMMSS-PID",
-  "task_name": "career-os:<command>:<topic?>",
-  "start_time": "ISO-8601",
-  "end_time": "ISO-8601",
-  "duration_sec": "int",
-  "status": "success | failed",
-  "exit_code": "int",
-  "command": "string (전체 실행 명령)",
-  "model": "string (예: claude-sonnet-4-6, claude-opus-4-7[1m]) — ADR-014 이후 채워짐",
-  "tokens_in_delta": "int",
-  "tokens_out_delta": "int",
-  "cached_tokens_delta": "int",
-  "cache_read_input_tokens": "int",
-  "cache_hit_percent_start/end": "int",
-  "cost_usd": "float",
-  "service_tier": "standard | priority | ...",
-  "claude_session_id": "string",
-  "claude_result_uuid": "string",
-  "usage_raw": "object (Claude usage JSON 원본)",
-  "model_usage": "object",
-  "file_metrics_before/after": "object (report/input/target-list 파일 메트릭)"
-}
-```
-
-### logs/token-usage.jsonl
-
-`task-runs.jsonl`과 동일 스키마. 별도 파일로 token-usage만 다시 보고자 할 때 빠른 grep용.
-
-### logs/.usage-status/ (임시 폴더)
-
-`track_task.sh`가 실행 중에 쓰는 임시 상태 파일들. 끝나면 정리되지 않고 누적 — 주기적 cleanup 필요 (현재 정책 미정).
 
 ## state/
 
@@ -1208,7 +1163,7 @@ LLM 후보 refresh가 검증을 통과한 `new` 후보만 자동 append/update�
 
 ### state/study-topic-actions/YYYY-MM-DD.json (ADR-073, 옛 data/runtime/, ADR-107 경로 규약)
 
-daily study Discord 버튼 callback을 topic 추천 결과와 연결하는 runtime snapshot.
+daily study action callback을 topic 추천 결과와 연결하는 runtime snapshot.
 정본 학습 이력이나 추천 pool이 아니라, 해당 날짜 메시지의 버튼을 해석하기 위한 짧은 매핑이다.
 `latest.json`은 가장 최근 날짜 파일의 mirror다.
 
@@ -1233,7 +1188,7 @@ daily study Discord 버튼 callback을 topic 추천 결과와 연결하는 runti
 
 - `career.study-pack.create:*`는 study-pack 초안 생성 요청이다. 공개 최종화나 `[초안]` 제거 승인이 아니다.
 - `career.study-pack.skip:*`는 그날 추천을 넘긴 기록이다. topic 영구 제외가 아니다.
-- 버튼 유효시간은 OpenClaw Discord `agentComponents.ttlMs` 설정을 따른다.
+- 외부 전달 계층이 버튼을 제공한다면 유효시간과 callback 처리를 그 계층에서 정한다.
 
 ### state/topic-replenishment.json (study-topic 자동 보충 결정, 옛 data/runtime/, ADR-107 경로 규약)
 

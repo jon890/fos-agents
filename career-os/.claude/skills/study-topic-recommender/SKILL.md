@@ -279,7 +279,7 @@ echo "[self-check] OK"
 
 ADR-026 결정 요약 (3줄):
 
-1. **Python → TypeScript**: 모노레포 ts 표준 (_shared/lib, plan004 ADR-020) 일관성. 외부 RSS XML 파싱은 `fast-xml-parser`로 대체.
+1. **Python → TypeScript**: career-os 실행 코드는 `scripts/`에 둔다. 외부 RSS XML 파싱은 `fast-xml-parser`로 처리한다.
 2. **알고리즘 결정론 보존**: 점수(RECENT_PENALTY/WEAK_AREA_BONUS/CARRYOVER) + mix target + cooldown 로직을 ts에 동등 이식. Python·ts 출력 diff=0 검증은 phase-02에서 별도 진행.
 3. **replenish + promote + live-coding 흡수**: 이전 topic-pool-replenisher + dispatcher 3 case(recommend-topics / live-coding-dispatch / replenish-topics)를 단일 agent skill 진입점으로 통합.
 

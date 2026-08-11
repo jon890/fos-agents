@@ -34,11 +34,12 @@ cron 운영 경로의 자동 실행은 cron 소비측이 다루고, 수동 skill
 Discord 요약은 내부 파일 경로, plan 번호, commit hash 같은 내부 맥락을 포함하지 않는다.
 
 사용자 전달 원칙:
-- 공고·포지션 추천 리포트는 반드시 HTML 파일을 함께 생성해 첨부한다. 텍스트 표만 보내지 않는다.
-- HTML은 다운로드 전용 경로(`reports/downloads/`)에 두고, 각 공고명은 개별 공고 URL로 이동하는 링크(`<a href>`)여야 한다.
+- 공고·포지션 추천 리포트는 반드시 게시 준비용 HTML 파일을 함께 생성한다. 텍스트 표만 보내지 않는다.
+- HTML은 게시 준비 경로(`reports/downloads/`)에 두고, 각 공고명은 개별 공고 URL로 이동하는 링크(`<a href>`)여야 한다.
 - Discord 미리보기에는 상위 후보와 핵심 사유를 짧게 쓰되, 각 후보의 공고 링크도 포함한다.
-- 다운로드·첨부용 HTML은 **추천 공고와 전체 조건 통과 공고를 한 파일에 담은 통합 HTML 하나만** 만든다.
-  추천 티어에는 수집 snapshot 밖에서 확보한 공고도 들어가므로, 두 섹션을 함께 담아야 신규 발굴 공고가 첨부에서 누락되지 않는다.
+- 게시 준비용 HTML은 **추천 공고와 전체 조건 통과 공고를 한 파일에 담은 통합 HTML 하나만** 만든다.
+  추천 티어에는 수집 snapshot 밖에서 확보한 공고도 들어가므로, 두 섹션을 함께 담아야 신규 발굴 공고가 게시본에서 누락되지 않는다.
+- 사용자가 외부 게시나 공유 URL 생성을 명시하면 `report-publisher`로 공개 범위를 점검하고 검증된 URL을 전달한다.
 - HTML 산출물은 이 통합 파일 하나뿐이다. 날짜별 `report.html`과 `reports/latest/position-recommendation.html`은 만들지 않는다.
 - 부분 후보 preview HTML과 전체 공고 전용 별도 HTML도 만들지 않는다.
 
@@ -179,7 +180,7 @@ md/html의 한국어 라벨 변환은 `render_recommendation.ts`가 담당하므
 통합 HTML → <ts-runtime> scripts/position-recommender/render_candidate_preview.ts --input <json> --postings cache/live-position-postings.md --limit all --output reports/downloads/position-recommendation-all-YYYY-MM-DD.html
 미러 → career-os/reports/latest/position-recommendation.{json,md}
 다운로드 → reports/downloads/position-recommendation-all-YYYY-MM-DD.html 하나만 둔다 (추천 섹션과 전체 섹션을 함께 담은 통합 파일).
-소비측 가공 → cron 또는 호출자: 최종 응답 Discord 요약 산문 + HTML 첨부 / 파일 기반 후속 루프
+소비측 가공 → cron 또는 호출자: 공개 가능한 요약 / 검증된 게시 URL / 파일 기반 후속 루프
 ```
 
 `<ts-runtime>`은 `bun`이 있으면 `bun`, 없으면 Node 22+의 `node`를 사용한다. 렌더러나 수집기가 `import.meta.dir`에 의존해 Node에서 실패하면 `dirname(fileURLToPath(import.meta.url))`로 바꾸고 `node --check` 후 실제 렌더링까지 확인한다.
@@ -189,23 +190,17 @@ md/html의 한국어 라벨 변환은 `render_recommendation.ts`가 담당하므
 daily/cron 실행에서 오늘 날짜 표준 출력 JSON을 새로 쓰지 못하면 성공으로 끝내지 않는다.
 후속 가공은 호출자 책임이다(ADR-101). skill은 표준 출력 JSON과 파생물을 정확히 만드는 데 집중한다.
 
-### 5. Discord 알림
+### 5. 외부 공유
 
-현재 에이전트는 skill 내부에서 Discord 알림을 직접 보내지 않는다.
+이 skill은 표준 출력 JSON과 HTML 리포트까지만 만든다.
+사용자가 외부 게시나 공유 URL 생성을 명시하면 `report-publisher`를 사용한다.
+공개 범위와 배포 결과를 검증한 URL만 전달한다.
 
-daily/cron 실행의 Discord 전송은 cron 소비측(호출자)이 freshness check 통과 후 `_shared/lib/notify_discord.ts`로 수행한다(ADR-101).
-cron 소비측은 Markdown 리포트 검증 후 HTML 미러를 생성하고,
-아침 Discord 알림에 HTML 파일을 첨부한다.
-이는 cron 소비측이 실행 조율과 외부 전송을 맡고,
-현재 에이전트가 리포트 생성·자기 검증에 집중하게 하기 위함이다.
-
-Discord 알림은 리포트 전체 요약이 아니라 “클릭 가능한 카드형 후보 목록”으로 보낸다.
-
-- 공고·포지션 추천 리포트는 반드시 통합 HTML 파일 하나를 함께 첨부한다.
-  이 파일 하나에 `추천 공고` 섹션과 `전체 조건 통과 공고` 섹션이 모두 들어간다.
+- 공유 리포트에는 `추천 공고`와 `전체 조건 통과 공고` 섹션을 함께 담는다.
+- 외부 전달 채널과 시점은 저장소 밖 호출자가 결정한다.
 - HTML 파일은 `career-os/reports/downloads/` 아래에 만들고, 각 후보 공고명은 개별 공고 URL로 이동하는 `<a href>` 링크여야 한다.
 - Discord 요약에는 강력 추천 최대 3개, 도전 추천 최대 2개를 짧게 쓴다.
-- 첨부 HTML은 항상 `--postings cache/live-position-postings.md --limit all`로 만든다.
+- 게시 준비용 HTML은 항상 `--postings cache/live-position-postings.md --limit all`로 만든다.
   이 옵션이 있으면 렌더러가 추천 티어 전체와 snapshot 조건 통과 후보를 두 섹션으로 나눠 한 파일에 담는다.
 - 사용자가 넓은 preview, 20개 이상 후보, 또는 전체 후보를 요청하면 임의로 50개처럼 다시 자르지 않는다.
 - 전체 섹션에도 `references/position-decision-criteria.md`의 "4. 역할 구성" 제외 규칙을 동일하게 적용한다.
@@ -306,7 +301,7 @@ cron 환경에서 표준 JSON 작성이나 대형 파일 작성이 안전 가드
 | 사용자 지정 파일 path 부재 | stderr warn을 출력하고 해당 파일 없이 계속 진행 |
 | 오늘 날짜 report/runtime 미생성 | stale output으로 간주하고 stderr 출력 후 exit 1 |
 | self-check 3회 실패 | `position-recommender 검증 실패: <항목>`를 출력하고 exit 1 |
-| Discord notify 실패 | agent skill 내부에서는 호출하지 않음. cron 소비측이 stderr warn 후 계속 |
+| 외부 전달 실패 | agent skill 범위 밖의 실패로 분리하고 생성 산출물은 유지 |
 
 ## Why this design
 
@@ -332,8 +327,8 @@ cron 환경에서 표준 JSON 작성이나 대형 파일 작성이 안전 가드
 - `references/verified-company-discovery.md` — snapshot 부족 시만 쓰는 보조 탐색 가이드
 - `scripts/position-recommender/recommendation_schema.ts` — **표준 출력 JSON zod 스키마** (ADR-101). recommendation.json을 채우기 전에 이 파일에서 `PositionItem`(`source`·`closeDate` 포함) 등 필드 정의를 확인한다.
 - `scripts/position-recommender/render_recommendation.ts` — 표준 출력 JSON에서 Markdown·HTML을 파생하는 렌더러. 입력 시 스키마 검증을 내장하므로 실행 자체가 self-check다.
-- `scripts/position-recommender/render_candidate_preview.ts` — 표준 출력 JSON과 live posting snapshot에서 Discord/download용 통합 HTML을 파생하는 렌더러. `--postings`를 주면 추천 공고 섹션과 전체 조건 통과 공고 섹션을 한 파일에 담는다.
-- `references/report-html-delivery.md` — 포지션 리포트 HTML 전달과 전체 공고 HTML 산출물 규칙.
+- `scripts/position-recommender/render_candidate_preview.ts` — 표준 출력 JSON과 live posting snapshot에서 게시 준비용 통합 HTML을 파생하는 렌더러. `--postings`를 주면 추천 공고 섹션과 전체 조건 통과 공고 섹션을 한 파일에 담는다.
+- `references/report-html-delivery.md` — 포지션 리포트 HTML 게시와 전체 공고 HTML 산출물 규칙.
 - `references/cron-operational-checks.md` — 포지션 추천 cron 변경 후 수집·HTML·제외 기준 검증 체크리스트.
 - `references/cron-codex-markdown-delivery.md` — Hermes/Codex scheduled run에서 Markdown report/runtime mirror와 HTML copy를 직접 생성·검증하는 체크리스트.
 - `career-os/docs/adr/INDEX.md` ADR-101 / ADR-030 — 본 설계 결정 근거

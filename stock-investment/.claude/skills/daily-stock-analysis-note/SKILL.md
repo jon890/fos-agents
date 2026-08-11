@@ -109,11 +109,10 @@ Read 후 `data/daily-notes/$REPORT_DATE/report.md`를 직접 Write한다.
 13. `## 투자 메모`
 14. 마지막: `> 면책: 이 글은 개인 공부용 기업 분석 노트이며 투자 권유가 아닙니다.`
 
-### Step 3 — fos-study 발행 + 알림
+### Step 3 — fos-study 발행 준비와 결과 반환
 
 report.md Write 완료 후 아래 Bash 블록을 한 번에 실행한다.
 `SKIP_PUSH=1`이면 git push를 건너뛴다.
-`SKIP_NOTIFY=1`이면 Discord 알림을 건너뛴다.
 
 ```bash
 REPORT_DATE=$(TZ=Asia/Seoul date +%F)
@@ -183,27 +182,9 @@ echo "Selected: $NAME_VAL ($TICKER_VAL)"
 echo "Wrote: $OUTDIR/report.md"
 echo "Published: $BLOG_MD"
 echo "Push status: $PUSH_STATUS"
-
-# Discord 알림
-if [[ "${SKIP_NOTIFY:-0}" != "1" ]]; then
-  SUMMARY=$(python3 - "$OUTDIR/report.md" "$TICKER_VAL" "$NAME_VAL" "$BLOG_REL" "$PUSH_STATUS" <<'PYEOF'
-import sys, re
-text = open(sys.argv[1], encoding='utf-8').read()
-ticker, name, rel, status = sys.argv[2:6]
-m = re.search(r'## 한 줄 결론\s*(.+?)(?:\n## |\Z)', text, re.S)
-conclusion = re.sub(r'\s+', ' ', m.group(1)).strip() if m else ''
-if len(conclusion) > 600:
-    conclusion = conclusion[:600].rstrip() + '…'
-print(f"[오늘의 AI/기술주 분석 후보] {name}({ticker})")
-if conclusion:
-    print(conclusion)
-print(f"전체 글: {rel}")
-print(f"발행 상태: {status}")
-PYEOF
-)
-  bun run ~/ai-nodes/_shared/lib/notify_discord.ts "$SUMMARY"
-fi
 ```
+
+외부 전달에 사용할 수 있도록 결론과 산출물 경로를 표준 출력으로 반환한다.
 
 cross-workspace 쓰기 예외 (ADR-001): `career-os/sources/fos-study`는 투자 공부 블로그 발행 목적 단방향 쓰기다.
 
@@ -220,8 +201,7 @@ cross-workspace 쓰기 예외 (ADR-001): `career-os/sources/fos-study`는 투자
 |---|---|
 | `scripts/daily-stock-analysis-note/collect_daily_note_inputs.py` | 수집기 (Python; universe.json + history.json rotation + TICKER env → selected.json + raw-inputs.json) |
 | `scripts/daily-stock-analysis-note/sanitize_fos_study_markdown.py` | fos-study Markdown sanitize (in-place) |
-| `scripts/daily-stock-analysis-note/run_with_claude.sh` | thin wrapper (agent skill 호출, Discord 시작/실패 알림) |
-| `_shared/lib/notify_discord.ts` | Discord 알림 정본 (ADR-002) |
+| `scripts/daily-stock-analysis-note/run_with_claude.sh` | thin wrapper (agent skill 호출, 결과 반환) |
 | `config/daily-stock-universe.json` | 후보 풀 (US 17 + KR 13) |
 | `data/daily-notes/history.json` | 종목 선택 이력 + rotation 패널티 |
 | `config/catalysts.json` | catalyst 이벤트 목록 (optional) |

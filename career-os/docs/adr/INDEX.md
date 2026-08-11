@@ -21,7 +21,7 @@
 | ADR-017 | cj-oliveyoung-java-backend-prep 거대 skill 분해 | Accepted | [ADR-017-cj-oliveyoung-java-backend-prep-거대-skill-분해.md](ADR-017-cj-oliveyoung-java-backend-prep-거대-skill-분해.md) |
 | ADR-018 | docs/ 운영 정책: 휘발성 vs 영속, learn → ADR 흡수 흐름 | Partially superseded by [[ADR-032]] (2026-05-17, learn 영역 폐기 — hand-off/prep 유지 결정은 살아있음) — 5문서 + docs/data 분리 부분은 ai-nodes ADR-004 (2026-05-18)로 모노레포 격상 (Lifted) | [ADR-018-docs-운영-정책-휘발성-vs-영속-learn-adr-흡수-흐름.md](ADR-018-docs-운영-정책-휘발성-vs-영속-learn-adr-흡수-흐름.md) |
 | ADR-019 | career-os: Claude Code skill 폴더와 실행 스크립트 디렉터리 분리 | Accepted | [ADR-019-career-os-claude-code-skill-폴더와-실행-스크립트-디렉터리-분리.md](ADR-019-career-os-claude-code-skill-폴더와-실행-스크립트-디렉터리-분리.md) |
-| ADR-020 | 공용 헬퍼 TS(Bun) 마이그레이션: 점진 + _shared/lib·types 단일 위치 | Accepted | [ADR-020-공용-헬퍼-ts-bun-마이그레이션-점진-_shared-lib-types-단일-위치.md](ADR-020-공용-헬퍼-ts-bun-마이그레이션-점진-_shared-lib-types-단일-위치.md) |
+| ADR-020 | 공용 헬퍼 TS(Bun) 마이그레이션: 점진 + _shared/lib·types 단일 위치 | Superseded by ai-nodes ADR-011 | [ADR-020-공용-헬퍼-ts-bun-마이그레이션-점진-_shared-lib-types-단일-위치.md](ADR-020-공용-헬퍼-ts-bun-마이그레이션-점진-_shared-lib-types-단일-위치.md) |
 | ADR-021 | Discord 알림 openclaw 경유 + 워크스페이스 `.env` 격리 | Archived (2026-06-29, OpenClaw 전환 문서 정리) — .env 워크스페이스 root 격리 결정은 ai-nodes ADR-004 참조 | 삭제됨 |
 | ADR-022 | 도메인 헬퍼 TS(Bun) 마이그레이션 | Accepted | [ADR-022-도메인-헬퍼-ts-bun-마이그레이션.md](ADR-022-도메인-헬퍼-ts-bun-마이그레이션.md) |
 | ADR-025 | Skills 정리 + 한글화 정책 | 채택됨 | [ADR-025-skills-정리-한글화-정책.md](ADR-025-skills-정리-한글화-정책.md) |
@@ -33,7 +33,7 @@
 | ADR-032 | learn/ 영역 폐기 — 회고 흐름 chat + ADR/스킬 직접 흡수로 단순화 |  | [ADR-032-learn-영역-폐기-회고-흐름-chat-adr-스킬-직접-흡수로-단순화.md](ADR-032-learn-영역-폐기-회고-흐름-chat-adr-스킬-직접-흡수로-단순화.md) |
 | ADR-033 | fos-study source tree를 study artifact 단일 진실원으로 사용 | Accepted | [ADR-033-fos-study-source-tree를-study-artifact-단일-진실원으로-사용.md](ADR-033-fos-study-source-tree를-study-artifact-단일-진실원으로-사용.md) |
 | ADR-035 | ts 헬퍼 모듈 분해 컨벤션 (source / transform / render / cli 4 레이어) | Accepted | [ADR-035-ts-헬퍼-모듈-분해-컨벤션-source-transform-render-cli-4-레이어.md](ADR-035-ts-헬퍼-모듈-분해-컨벤션-source-transform-render-cli-4-레이어.md) |
-| ADR-036 | position-recommender daily freshness guard + recommendation rotation | Accepted; 신규 후보 강제 회전은 [[ADR-100]]로 superseded; reportDate freshness 검증 책임은 [[ADR-101]]로 스킬 self-check·소비측 이전 | [ADR-036-position-recommender-daily-freshness-guard-recommendation-rotation.md](ADR-036-position-recommender-daily-freshness-guard-recommendation-rotation.md) |
+| ADR-036 | position-recommender daily freshness guard + recommendation rotation | Partially superseded by ADR-100, ADR-101, and ai-nodes ADR-020 | [ADR-036-position-recommender-daily-freshness-guard-recommendation-rotation.md](ADR-036-position-recommender-daily-freshness-guard-recommendation-rotation.md) |
 | ADR-037 | application-flow-agent runtime은 policy decision engine 중심 | Accepted | [ADR-037-application-flow-agent-runtime은-policy-decision-engine-중심.md](ADR-037-application-flow-agent-runtime은-policy-decision-engine-중심.md) |
 | ADR-038 | application-flow-agent 상태 전이는 skill artifact 검증 뒤에만 수행 | Accepted | [ADR-038-application-flow-agent-상태-전이는-skill-artifact-검증-뒤에만-수행.md](ADR-038-application-flow-agent-상태-전이는-skill-artifact-검증-뒤에만-수행.md) |
 | ADR-039 | position-recommender 추천 단위는 개별 active/open 공고 | Accepted | [ADR-039-position-recommender-추천-단위는-개별-active-open-공고.md](ADR-039-position-recommender-추천-단위는-개별-active-open-공고.md) |
@@ -55,10 +55,10 @@
 | ADR-070 | study topic 후보 풀은 LLM refresh turn이 발굴하고 config에는 active 캐시만 반영한다 | Accepted | [ADR-070-study-topic-후보-풀은-llm-refresh-turn이-발굴하고-config에는-active-캐시만-반영한다.md](ADR-070-study-topic-후보-풀은-llm-refresh-turn이-발굴하고-config에는-active-캐시만-반영한다.md) |
 | ADR-071 | study-topic-recommender 자동 실행은 bypassPermissions로 호출한다 | Accepted | [ADR-071-study-topic-recommender-자동-실행은-bypasspermissions로-호출한다.md](ADR-071-study-topic-recommender-자동-실행은-bypasspermissions로-호출한다.md) |
 | ADR-072 | daily study cron은 주제 3개만 보내는 lean path로 둔다 | Accepted | [ADR-072-daily-study-cron은-주제-3개만-보내는-lean-path로-둔다.md](ADR-072-daily-study-cron은-주제-3개만-보내는-lean-path로-둔다.md) |
-| ADR-073 | daily study 추천은 Discord 버튼으로 초안 생성을 요청할 수 있다 | Accepted | [ADR-073-daily-study-추천은-discord-버튼으로-초안-생성을-요청할-수-있다.md](ADR-073-daily-study-추천은-discord-버튼으로-초안-생성을-요청할-수-있다.md) |
+| ADR-073 | daily study 추천은 Discord 버튼으로 초안 생성을 요청할 수 있다 | Partially superseded by ai-nodes ADR-011 | [ADR-073-daily-study-추천은-discord-버튼으로-초안-생성을-요청할-수-있다.md](ADR-073-daily-study-추천은-discord-버튼으로-초안-생성을-요청할-수-있다.md) |
 | ADR-074 | position source coverage는 official adapter와 Wanted target discovery를 함께 쓴다 | Accepted | [ADR-074-position-source-coverage는-official-adapter와-wanted-target-discovery를-함께-쓴다.md](ADR-074-position-source-coverage는-official-adapter와-wanted-target-discovery를-함께-쓴다.md) |
 | ADR-079 | 포지션 수집은 동적 discovery를 우선하고 개별 공고 URL seed를 제거한다 | Accepted | [ADR-079-포지션-수집은-동적-discovery를-우선하고-개별-공고-url-seed를-제거한다.md](ADR-079-포지션-수집은-동적-discovery를-우선하고-개별-공고-url-seed를-제거한다.md) |
-| ADR-080 | position daily HTML 리포트는 template 기반 표시 미러로 둔다 | Accepted | [ADR-080-position-daily-html-리포트는-template-기반-표시-미러로-둔다.md](ADR-080-position-daily-html-리포트는-template-기반-표시-미러로-둔다.md) |
+| ADR-080 | position daily HTML 리포트는 template 기반 표시 미러로 둔다 | Accepted; 게시 경로는 루트 ADR-020으로 대체됨 | [ADR-080-position-daily-html-리포트는-template-기반-표시-미러로-둔다.md](ADR-080-position-daily-html-리포트는-template-기반-표시-미러로-둔다.md) |
 | ADR-085 | career-os skill을 Codex에 심볼릭 링크로 노출한다 | Accepted | [ADR-085-career-os-skill을-codex에-심볼릭-링크로-노출한다.md](ADR-085-career-os-skill을-codex에-심볼릭-링크로-노출한다.md) |
 | ADR-086 | skill 출력 정책은 공통 reference로 둔다 | Accepted | [ADR-086-skill-출력-정책은-공통-reference로-둔다.md](ADR-086-skill-출력-정책은-공통-reference로-둔다.md) |
 | ADR-087 | skill 트리거는 frontmatter description에 둔다 | Accepted | [ADR-087-skill-트리거는-frontmatter-description에-둔다.md](ADR-087-skill-트리거는-frontmatter-description에-둔다.md) |

@@ -14,10 +14,8 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["bun-types"],
     "paths": {
-      "@shared/lib/*": ["./_shared/lib/*"],
-      "@shared/types/*": ["./_shared/types/*"],
       "@career-os/_lib/*": ["./career-os/scripts/_lib/*"]
     }
   },
-  "include": ["_shared/**/*.ts", "career-os/scripts/**/*.ts"]
+  "include": ["career-os/scripts/**/*.ts"]
 }

@@ -243,29 +243,13 @@ prd.md 8번 미연결 항목 — 현재 디렉터리만 존재, 자동화 미실
 workspace-audit skill 결과물.
 형식은 audit 시점마다 다를 수 있음.
 
-## 3. logs/ 스키마
-
-ADR-003 native 전환으로 `_shared/bin/track_task.sh` self-wrap를 제거했다.
-`logs/task-runs.jsonl` 은 stock-investment에서 더 이상 생성되지 않는다 (후속 모노레포 plan 폐기 예정).
-
-### 3-1. logs/task-runs.jsonl
-
-ADR-003으로 stock-investment 미생성.
-후속 모노레포 정리 plan에서 파일 제거 예정.
-
-### 3-2. logs/token-usage.jsonl
-
-openclaw cron 실행 메타데이터. 상세 토큰 분류 포함.
-
 ## 4. .env 스키마
 
 계획: plan003에서 도입. 현재는 `.env.example` placeholder.
 
 | 변수 | 필수 여부 | 설명 |
 |---|---|---|
-| `DISCORD_CHANNEL_ID` | 필수 | Discord `#주식토크` 채널 ID (openclaw 경유 알림) |
 | `TZ` | 권장 | `Asia/Seoul` (현재 run_daily_note.sh에 하드코드 — .env 이전 검토 중) |
-| `SKIP_NOTIFY` | 선택 | `1` 설정 시 Discord 알림 억제 (로컬 테스트용) |
 | `SKIP_PUSH` | 선택 | `1` 설정 시 fos-study git push 억제 (daily-note 전용) |
 | `TICKER` | 선택 | daily-note 종목 수동 지정 (예: `TICKER=NVDA`) |
 | `CLAUDE_TIMEOUT_SECONDS` | 선택 | Claude CLI 타임아웃 (기본 120초) |

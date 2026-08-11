@@ -200,14 +200,10 @@ cat career-os/config/candidate-profile-detail.md
 - `candidate-profile.md` 실제 이력 인용 (generic advice 금지, 후보자 근거 필수)
 - 메타 보고 문구 금지 ("파일이 생성되었습니다" 등) — 보고서 본문만 작성
 
-### 4. Discord 알림
+### 4. 외부 전달
 
-```bash
-bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
-  "[완료] interview-stage-prep: 단계별 면접 준비 가이드 생성"
-```
-
-알림 실패는 비치명적 — stderr warn만, skill 자체는 success 종료.
+가이드 경로와 공개 가능한 짧은 요약을 표준 출력으로 반환한다.
+외부 전달은 저장소 밖 호출자가 처리한다.
 
 ## Self-check
 
@@ -232,7 +228,7 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 | candidate-profile.md 없음 | stderr + exit 1 |
 | interview 필드 모두 null | 범용 체크리스트 출력 (exit 0) |
 | self-check 3회 실패 | stderr + exit 1, 실패 항목 명시 |
-| Discord notify 실패 | stderr warn, skill success |
+| 외부 전달 실패 | skill 범위 밖의 실패로 분리하고 생성 산출물은 유지 |
 
 ## References
 

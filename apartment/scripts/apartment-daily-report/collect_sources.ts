@@ -213,7 +213,7 @@ async function main(): Promise<void> {
     notes: [
       ...notes,
       "collector -> normalize -> Claude synthesis 구조는 유지했다.",
-      "runner의 Discord 알림 경로는 변경하지 않았다.",
+      "외부 전달은 runner 밖의 호출자가 담당한다.",
       "수집 결과에 없는 값은 Claude가 채우지 말고 불확실성으로 남겨야 한다.",
     ],
   };

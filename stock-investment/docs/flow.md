@@ -10,13 +10,12 @@ stock-investment 워크스페이스의 **데이터 흐름 및 실행 흐름** �
 ```
 사용자/cron
   └─► thin wrapper (run_with_claude.sh)
-        ├─► Discord 시작 알림 (notify_discord.ts)
         └─► claude -p "/<skill>" (native 직접 호출)
               └─► native skill (SKILL.md) 이 워크플로 수행
                     ├─► Python 수집기를 python3 Bash로 호출
                     │     └─► collect_*.py → 수집 산출물 (JSON)
                     ├─► 수집 산출물 Read → report.md 직접 Write (Claude 합성)
-                    └─► notify_discord.ts (완료/요약)
+                    └─► report 경로와 공개 가능한 요약을 stdout으로 반환
 ```
 
 track_task.sh self-wrap는 ADR-003으로 제거됨 (ADR-003 참조).
@@ -29,7 +28,6 @@ Claude native skill을 직접 호출한다.
 ```
 Step 1  thin wrapper 진입
         cd ~/ai-nodes/stock-investment
-        Discord 시작 알림 (notify_discord.ts, bun run)
         claude --permission-mode bypassPermissions -p "/stock-investing-morning-brief"
 
 Step 2  native skill 이 워크플로 수행 (SKILL.md 기준)
@@ -39,9 +37,9 @@ Step 2  native skill 이 워크플로 수행 (SKILL.md 기준)
                     data/YYYY-MM-DD/raw-news.json
         - 수집 산출물 Read → data/YYYY-MM-DD/report.md 직접 Write
 
-Step 3  알림 + 폴백
-        완료/요약: native skill 이 notify_discord.ts 호출 (SKILL.md 지시)
-        실패: thin wrapper 가 Discord 실패 알림
+Step 3  결과 반환
+        완료/요약: native skill이 stdout으로 반환
+        실패: thin wrapper가 stderr와 종료 코드 반환
 ```
 
 ## 3. current-issue-analysis 흐름
@@ -53,7 +51,6 @@ Claude native skill을 직접 호출한다.
 Step 1  thin wrapper 진입
         issue-key 인자를 wrapper 가 전달
         cd ~/ai-nodes/stock-investment
-        Discord 시작 알림 (notify_discord.ts, bun run)
         claude --permission-mode bypassPermissions -p "/current-issue-analysis <issue-key>"
 
 Step 2  native skill 이 워크플로 수행 (SKILL.md 기준)
@@ -63,9 +60,9 @@ Step 2  native skill 이 워크플로 수행 (SKILL.md 기준)
             산출물: data/issues/YYYY-MM-DD/<issue-key>/raw-sources.json
         - 수집 산출물 Read → data/issues/YYYY-MM-DD/<issue-key>/report.md 직접 Write
 
-Step 3  알림 + 폴백
-        완료/요약: native skill 이 notify_discord.ts 호출 (SKILL.md 지시)
-        실패: thin wrapper 가 Discord 실패 알림
+Step 3  결과 반환
+        완료/요약: native skill이 stdout으로 반환
+        실패: thin wrapper가 stderr와 종료 코드 반환
 ```
 
 트리거 조건 (현재 수동):
@@ -84,7 +81,6 @@ Claude native skill을 직접 호출한다.
 ```
 Step 1  thin wrapper 진입
         cd ~/ai-nodes/stock-investment
-        Discord 시작 알림 (notify_discord.ts, bun run)
         claude --permission-mode bypassPermissions -p "/daily-stock-analysis-note"
 
 Step 2  native skill 이 워크플로 수행 (SKILL.md 기준)
@@ -105,9 +101,9 @@ Step 3  워크스페이스 내부 발행 준비
           stock-investment/data/publish/YYYY-MM-DD-<slug>.md
         실제 fos-study 반영, commit/push, Jenkins 싱크는 이 프로필에서 직접 수행하지 않음
 
-Step 4  알림 + 폴백
-        완료/요약: native skill 이 notify_discord.ts 호출 (SKILL.md 지시)
-        실패: thin wrapper 가 Discord 실패 알림
+Step 4  결과 반환
+        완료/요약: native skill이 stdout으로 반환
+        실패: thin wrapper가 stderr와 종료 코드 반환
 ```
 
 cross-workspace 쓰기 금지:
@@ -118,20 +114,10 @@ cross-workspace 쓰기 금지:
 
 ## 5. 공통 흐름
 
-### 5-1. Discord 알림
+### 5-1. 외부 전달
 
-`_shared/lib/notify_discord.ts` 단일 진입점 (ADR-002, ai-nodes 공용).
-thin wrapper 가 `bun run` 으로 호출.
-
-```
-인자: <message>
-  └─► DISCORD_CHANNEL_ID 환경변수 확인 (누락 시 exit 1)
-        └─► openclaw message send --channel discord --target channel:<id> (10s 타임아웃)
-```
-
-SKIP_NOTIFY=1 로 로컬 테스트 시 억제 가능.
-
-ADR-002 이전에는 워크스페이스 한정 `notify_discord.sh` 사용 — `_shared/lib/notify_discord.ts`로 통합 (ADR-002 참조).
+runner는 로컬 파일, 표준 출력, 종료 코드만 계약으로 삼는다.
+전달 채널과 자동 실행 시점은 저장소 밖에서 선택한다.
 
 ## 6. 직접 호출 진입점
 
@@ -154,6 +140,6 @@ bash stock-investment/scripts/daily-stock-analysis-note/run_with_claude.sh
 # 종목 수동 지정
 TICKER=NVDA bash stock-investment/scripts/daily-stock-analysis-note/run_with_claude.sh
 
-# 알림·발행 없이 로컬 테스트
-SKIP_NOTIFY=1 SKIP_PUSH=1 bash stock-investment/scripts/daily-stock-analysis-note/run_with_claude.sh
+# 발행 없이 로컬 테스트
+SKIP_PUSH=1 bash stock-investment/scripts/daily-stock-analysis-note/run_with_claude.sh
 ```

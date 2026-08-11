@@ -129,7 +129,6 @@ ai-nodes ADR-004: 비밀 정보는 워크스페이스 root `.env` 격리. `.env.
 |---|---|---|
 | `NAVER_COOKIE` | 권장 | NID_AUT+NID_SES 쿠키 문자열. 없으면 Naver 수집 비활성화 |
 | `NAVER_BEARER` | 선택 | Bearer JWT 수동 주입 fallback. 미설정 시 agent-browser 자동 추출 시도 |
-| `DISCORD_WEBHOOK_URL` | 권장 | Discord 알림 발송 대상 |
 
 ## 2. data/ (산출물)
 

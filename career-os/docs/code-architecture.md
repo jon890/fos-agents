@@ -35,6 +35,7 @@ career-os의 디렉터리 구조·계층 책임·외부 의존성. 새 스킬·�
 career-os/
 ├── AGENTS.md (= CLAUDE.md 심볼릭 링크)
 │     모든 에이전트용 정식 가이드. 워크스페이스 정책·진입점·외부 의존성.
+├── .env                                    비밀 값 (gitignore)
 ├── docs/                                  ← 5 종합 문서 + 보조 영역
 │   ├── prd.md            제품 범위·MVP·기능 목록
 │   ├── data-schema.md    config/state/logs 스키마
@@ -67,8 +68,7 @@ career-os/
 │   ├── topic-profiles.json
 │   ├── resume-design.md
 │   ├── live-coding-seed-pool.json
-│   ├── live-coding-seed-candidates.json
-│   └── .env                           비밀 (GITHUB_TOKEN, DISCORD_WEBHOOK_URL 등)
+│   └── live-coding-seed-candidates.json
 │   (study-progress·drill-progress·mvp-target·study-pack-candidates는 ADR-107로 state/로 이동)
 │
 ├── state/                                 ← 시스템 실행·이벤트 산물 (ADR-107. 기본 gitignore, 5개 파일만 negation tracked)
@@ -95,7 +95,7 @@ career-os/
 │   ├── job-fit-*.{json,md} / stage-prep-*.md
 │   ├── morning-topic-recommendation.md
 │   ├── latest/                      옛 data/runtime mirror (position-recommendation.{md,html})
-│   ├── downloads/                   Discord 첨부용 HTML
+│   ├── downloads/                   외부 게시 준비용 HTML
 │   └── prep/                        legacy 회사별 준비 자산. 새 정본은 private/<company>/<position>/interview/prep.md
 │
 ├── cache/                                 ← 재생성 가능한 캐시·transient (ADR-107. gitignore)
@@ -120,7 +120,7 @@ career-os/
 │   ├── study-topic-recommender/
 │   │   ├── refresh_topic_inventory.ts    ADR-009/010/012/013 종합 엔진 (ADR-026 Python → TypeScript). ADR-033 이후 fos-study 직접 스캔
 │   │   ├── refresh_candidate_pool.ts      ADR-070 LLM 후보 발굴 + 검증 + config 자동 반영 entrypoint
-│   │   ├── send_daily_recommendation.ts  ADR-073 daily lean Discord 메시지 + 버튼 payload 발송
+│   │   ├── send_daily_recommendation.ts  ADR-073 추천 요약과 action snapshot 생성
 │   │   ├── feed_discovery.ts             ADR-013 RSS/Atom 파서 (ADR-026 Python → TypeScript)
 │   │   ├── fos_study_inventory.ts        fos-study 트리 스캔 helper (ADR-033, plan025 신규 — 필요 시 분리)
 │   │   └── duplicate_detection.ts        deterministic dedupe helper (ADR-033, plan025 신규 — writer도 참조)
@@ -221,34 +221,16 @@ config 설계 원칙:
 - 회사별 탐색 키워드는 `config/verified-company-research-targets.json`이 단일 출처이고, `position-collection.json`은 회사 비종속 role 키워드만 담는다(ADR-103).
 - `study-pack-topics.json`, `study-pack-candidates.json`처럼 자산 목록을 복제하는 파일은 plan068에서 reader inventory와 fallback을 확인한 뒤 축소한다.
 
-## 외부 의존성 (`_shared/`)
+## 외부 의존성
 
-career-os 워크스페이스 바깥, ai-nodes 루트의 `_shared/` 에 모든 워크스페이스가 공유하는 헬퍼. (ADR-020)
+career-os 실행 코드는 워크스페이스 안의 `scripts/`에 둔다.
+루트 `package.json`과 `tsconfig.json`은 TypeScript 실행 환경만 제공한다.
 
-```
-~/ai-nodes/
-├── package.json                              # Bun 프로젝트 루트
-├── tsconfig.json
-├── .gitignore                                # node_modules 포함
-└── _shared/                                  ← 모든 워크스페이스 공용 코드 (ADR-020)
-    ├── bin/                                  ← shell 계열.
-    │   ├── track_task.sh                     # 트래커. career-os 사용 0, apartment 사용 중.
-    │   └── update_artifacts.py               # career-os 사용 0 (plan025 / ADR-033 이후). 잔존 파일.
-    ├── lib/                                  ← TS(Bun) 헬퍼.
-    │   ├── notify_discord.ts                 # Discord 알림 (career-os 사용 중)
-    │   └── extract_claude_result.ts          # claude JSON envelope 파싱. career-os + apartment + stock-investment 공용 (ai-nodes plan001 통합).
-    └── types/                                ← TS 공통 타입.
-        └── (ClaudeUsage / TaskRunEntry / NotificationPayload 등)
-```
-
-| 파일 | 책임 | career-os 사용 |
-|---|---|---|
-| `_shared/bin/track_task.sh` | runner 래퍼. JSONL 로그 + openclaw status diff. | 0 (apartment 사용 중) |
-| `_shared/lib/extract_claude_result.ts` | claude JSON envelope 파싱. ai-nodes plan001 통합. | 사용 중 (career-os + apartment + stock-investment 공용) |
-| `_shared/lib/notify_discord.ts` | Bun. `openclaw message send --channel discord` subprocess. `DISCORD_CHANNEL_ID` env 필수. `--media <path>`, `--presentation <json>` 옵션 지원 (ADR-021, ADR-073). | 사용 중 |
-| `_shared/bin/update_artifacts.py` | `data/generated-artifacts.json` upsert. | 0 (ADR-033 / plan025 이후 career-os 사용 0 — 파일 자체는 별도 plan에서 폐기 검토) |
-| `zod` (npm) | TypeScript runtime 스키마 검증. `package.json`에 의존성. | 사용 중 |
-| `_shared/types/` | TS 공통 타입 디렉터리. ClaudeUsage / TaskRunEntry / NotificationPayload 등. | 간접 사용 |
+| 의존성 | 책임 |
+|---|---|
+| `zod` | 실행 입력과 산출물 스키마 검증 |
+| `fast-xml-parser` | RSS와 Atom 수집 결과 파싱 |
+| `dotenv` | 명시한 워크스페이스 `.env` 로드 |
 
 ## Agent Skill 진입점 패턴 (plan023 dispatcher 폐기 이후)
 
@@ -264,15 +246,13 @@ Codex 발견 경로는 `.codex/skills` 심볼릭 링크를 사용한다.
 # legacy cron/runner는 compatibility backend로만 특정 CLI를 사용할 수 있음
 # 사용자-facing 계약은 항상 /<skill-name> [args]
 
-# Discord 알림 (notify_discord.ts 직접 호출)
-bun --env-file=career-os/.env _shared/lib/notify_discord.ts "[완료] <message>"
-
-# daily study 추천 버튼 포함 알림
+# daily study 추천 요약과 action snapshot 생성
 cd career-os
 bun --env-file=.env scripts/study-topic-recommender/send_daily_recommendation.ts
 ```
 
-각 agent skill의 SKILL.md가 알림·자기 검증(self-check) 책임을 직접 담는다.
+각 agent skill의 SKILL.md가 산출물과 자기 검증 책임을 직접 담는다.
+외부 전달은 저장소 밖 호출자가 표준 출력과 생성 파일을 사용해 처리한다.
 
 ### SKILL.md 권장 섹션 구성
 
@@ -314,7 +294,6 @@ LLM이 작성하는 Markdown 산출물은 skill prompt, runner post-validation, 
 ## 인근 워크스페이스와의 관계
 
 - **다른 워크스페이스 자산 참조 금지** — apartment/, stock-investment/, travel/는 별개 격리 영역.
-- ai-nodes 루트의 `_shared/bin/`만 모든 워크스페이스가 공유.
 - ai-nodes 루트의 `skills/`는 전역 공용 스킬 (`workspace-audit`, `agent-browser`).
 - career-os 워크스페이스 audit은 `bash skills/workspace-audit/scripts/run_audit.sh career-os`로 실행. 산출물은 `/tmp/workspace-audit-career-os/`에 stash (영구화 X — 보존 가치는 ADR로 lift).
 
@@ -346,7 +325,7 @@ LLM이 작성하는 Markdown 산출물은 skill prompt, runner post-validation, 
 |---|---|
 | 새 agent skill 추가 | `.claude/skills/<name>/SKILL.md` + `scripts/<name>/` (필요 시) + 본 문서 디렉터리 트리 + `flow.md` 명령별 흐름 + `prd.md` 기능 표 |
 | 새 config 추가 | `data-schema.md` config 섹션 + `prd.md` (사용자 가시 자산이면) |
-| 새 외부 의존 (`_shared/lib/`) | 본 문서의 외부 의존성 표 + ADR 추가 |
+| 새 외부 의존 | 본 문서의 외부 의존성 표 + ADR 추가 |
 
 ## application agent MVP (plan029)
 

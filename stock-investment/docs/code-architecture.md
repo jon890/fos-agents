@@ -10,7 +10,7 @@ stock-investment/
 ├── AGENTS.md                         # 워크스페이스 가이드 (plan001 한글화)
 ├── CLAUDE.md → AGENTS.md             # Claude Code 자동 로드 심링크 (plan001)
 ├── TOOLS.md                          # 수집 도구 참고 문서
-├── .env                              # 비밀 정보 (DISCORD_CHANNEL_ID 등, gitignore)
+├── .env                              # 비밀 정보 (gitignore)
 ├── .env.example                      # template
 │
 ├── config/                           # 읽기 전용 설정 JSON (6개)
@@ -94,24 +94,18 @@ claude -p "/daily-stock-analysis-note"
 | 계층 | 책임 | 수정 시 영향 |
 |---|---|---|
 | `config/` | 종목·소스·테마·프로필 정의 | runner가 읽기 전용 참조 — config 변경으로 동작 변경 |
-| `scripts/<name>/run_with_claude.sh` | thin wrapper:<br>Discord 시작/실패 알림<br>claude -p 직접 호출 (ADR-003) | 진입점 변경 + 알림 흐름 |
+| `scripts/<name>/run_with_claude.sh` | thin wrapper:<br>claude -p 직접 호출<br>stdout·stderr·종료 코드 반환 | 진입점 변경 + 결과 반환 흐름 |
 | `scripts/<name>/collect_*.py` | Python 수집기:<br>가격·뉴스 수집 (yfinance, requests)<br>수집 산출물 JSON 생성 | 수집 데이터 구조·소스 |
 | `.claude/skills/<name>/SKILL.md + references/` | skill 설명 (frontmatter) + 프롬프트 | Claude Code 자동 로드 + 응답 품질 |
 | `data/` | 런타임 산출물 (git 미추적) | 실행 결과 — 코드에 영향 없음 |
-| `_shared/lib/notify_discord.ts` | Discord 알림 정본 (ADR-002) | 모든 skill 알림 |
 
 ## 4. 외부 의존성
 
 | 의존 | 역할 | 비고 |
 |---|---|---|
-| `_shared/bin/track_task.sh` | (미사용) self-wrap + logs 기록 | ADR-003으로 미사용.<br>후속 모노레포 plan 폐기 예정 |
-| `_shared/lib/extract_claude_result.ts` | (미사용) Claude JSON envelope 파싱 | ADR-003으로 미사용.<br>후속 모노레포 plan 폐기 예정 |
-| `_shared/lib/notify_discord.ts` | Discord 알림 (openclaw 경유, 10s 타임아웃) | ADR-002 도입.<br>`DISCORD_CHANNEL_ID` 필수 |
 | `claude` CLI | native skill 직접 호출 | `claude -p "/<skill>"` |
 | `python3` | 수집기 스크립트 (collect_*.py) | yfinance, requests 등 |
-| `bun` | notify_discord.ts 실행 | root `package.json` + `bun install` 1회 |
 | `stock-investment/data/publish` | 발행 준비 초안과 메타데이터 | 외부 `fos-study` 반영은 이 프로필에서 직접 수행하지 않음 |
-| Discord | `#주식토크` 채널 알림 | `DISCORD_CHANNEL_ID` 필요 |
 
 ## 5. 비용·실행 규율
 

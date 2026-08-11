@@ -207,39 +207,23 @@ report.md 작성 후 아래 항목 검증. 실패 시 해당 섹션 재작성:
 | 출력 디렉터리 생성 실패 | stderr + exit 1 |
 | self-check 3회 실패 | stderr + exit 1, 실패 항목 명시 |
 
-## Discord 전송 연계
+## 외부 전달
 
-Discord 전송은 이 skill에서 직접 수행하지 않는다.
-
-cron/runner에서 아래 패턴으로 별도 전송:
-
-```bash
-# report.md 생성 후 Discord 전송 (runner 책임)
-SUMMARY=$(grep -A 10 "## Discord Summary Draft" \
-  career-os/reports/daily/$(date +%Y-%m-%d)/application-digest/report.md \
-  | tail -n +2)
-
-bun --env-file=career-os/.env \
-  _shared/lib/notify_discord.ts \
-  --channel "$DISCORD_CHANNEL_ID" \
-  --message "$SUMMARY"
-```
-
-`DISCORD_CHANNEL_ID` env는 `career-os/.env`에서 로드 (ADR-021).
+이 skill은 `report.md`와 공개 가능한 짧은 요약을 만든다.
+외부 전달은 저장소 밖 호출자가 표준 출력과 생성 파일을 사용해 처리한다.
 
 ## Why this design
 
 - **생성·검토·요약 3단 분리**: application-package-writer(생성) → application-reviewer(검토) → daily-application-digest(요약). 각 skill은 단일 책임.
 - **승인 게이트 명시**: 외부 제출·로그인처럼 agent가 자동 처리할 수 없는 항목을 `Needs User Approval` 섹션으로 격리 — 사용자가 한 섹션만 보면 오늘 결정해야 할 것을 파악.
 - **공개/비공개 분리 강제**: `Public-Safe Study Candidates`와 `Private Strategy Notes`를 별도 섹션으로 강제 — 회사 맞춤 전략이 fos-study 같은 공개 채널로 흘러들어가는 것을 구조적으로 차단.
-- **Discord 전송 분리**: skill이 외부 전송까지 책임지면 dry-run / 테스트 시 실수로 전송되는 리스크 발생. cron/runner가 전송 책임 — skill은 report만 생성.
+- **외부 전달 분리**: skill은 report와 안전한 요약만 생성한다. 전달 채널과 시점은 저장소 밖에서 결정한다.
 - **positions-queue 직접 갱신 금지**: 상태 업데이트 제안은 `Positions Queue Update Suggestion` 패턴으로 (ADR-038 — 상태 전이는 artifact 검증 뒤에만). report.md 안에서 제안만 — 직접 수정은 사용자 확인 후.
 
 ## References
 
-- `career-os/docs/adr/INDEX.md` — ADR-038 (positions-queue 직접 갱신 금지, artifact 검증 후 상태 전이, 옛 ledger), ADR-021 (Discord notify_discord.ts)
+- `career-os/docs/adr/INDEX.md` — ADR-038 (positions-queue 직접 갱신 금지, artifact 검증 후 상태 전이, 옛 ledger)
 - `career-os/docs/data-schema.md` — positions-queue.jsonl 스키마
 - `career-os/state/positions-queue.jsonl` — 지원 이력 positions-queue
 - `career-os/.claude/skills/application-package-writer/SKILL.md` — 생성 단계 (Phase 04)
 - `career-os/.claude/skills/application-reviewer/SKILL.md` — 검토 단계 (Phase 05)
-- `_shared/lib/notify_discord.ts` — Discord 전송 유틸리티 (cron/runner에서 사용)

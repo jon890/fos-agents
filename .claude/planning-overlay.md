@@ -5,11 +5,11 @@
 
 ## 도메인: ai-nodes 멀티 워크스페이스 CLI
 
-- 이 레포는 여러 워크스페이스(`apartment`, `career-os`, `health-care`, `ji-yoon-blog`, `stock-investment`, `travel`, `_shared` 등)로 구성된 모노레포다. 각 워크스페이스는 독립 `docs/`·`tasks/`·`data/`를 가진다.
+- 이 레포는 여러 워크스페이스(`apartment`, `career-os`, `health-care`, `ji-yoon-blog`, `stock-investment`, `travel` 등)로 구성된 모노레포다. 각 워크스페이스는 독립 `docs/`·`tasks/`·`data/`를 가진다.
 - **3단계 (호출 시나리오)**: 시니어 워크플로 디자이너 관점. 새 기능이 어떤 skill·script·env 변수·cron 트리거로 호출되는지, 명령 인자/플래그 조합을 구체화. 정상/에러/빈 상태/권한·잠금 충돌 점검.
 - **4~5단계 (인터페이스/API)**: 화면이 아니라 CLI 시그니처와 script helper 인터페이스로 구체화. 새 config 파일이면 정확한 JSON 스키마, 새 runtime 상태면 `<workspace>/data/runtime/` 위치 + 스키마.
 - **6단계 (코드 구조)**: 새 스킬 디렉터리 vs 기존 스킬 확장, 새 script helper vs 기존 helper 확장. skill 이 다른 skill 을 위임할 때 CLI 하드코딩 없이 `/<skill> [args]` 의도 표현 사용.
-- **워크스페이스 격리 (필수)**: 다른 워크스페이스의 코드·데이터를 import/read/write 하지 않는다. 참조가 필요하면 정당화를 명시하고 사용자 확인을 받는다. `_shared/lib/`는 예외(공용 helper).
+- **워크스페이스 격리 (필수)**: 다른 워크스페이스의 코드·데이터를 import/read/write 하지 않는다. 참조가 필요하면 정당화를 명시하고 사용자 확인을 받는다.
 - **ADR-015 데이터/문서 분리**: 데이터는 항상 `<workspace>/data/`, docs 는 의사결정·학습만 (데이터를 docs/ 아래 두지 않는다).
 - **구현 중 문서 수정 금지 설계**: 구현 phase 가 docs/ADR/정책 문서를 고치지 않아도 될 만큼 계획 단계에서 계약을 닫는다. 구현 중 문서 수정이 필요할 가능성이 보이면 task 를 확정하지 말고 열린 결정으로 되돌린다.
 

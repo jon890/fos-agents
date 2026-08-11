@@ -116,22 +116,18 @@ NHN 판교 사옥 (`경기 성남시 분당구 대왕판교로645번길 16`) 차
 
 Discord/블로그 출력에 내부 수집 경로, raw report 경로, raw JSON 경로 미포함. raw Naver 검증 라벨(OWNER/DOC/NDOC/NONE)을 사용자 노출 금지 — 내부 신뢰 신호로만 사용.
 
-### 6-8. 알림 패턴
+### 6-8. 외부 전달
 
-`_shared/lib/notify_discord.ts` (bun run, ADR-009) 호출:
-- 시작 알림
-- 완료 알림 (소요 시간 포함)
-- 실패 알림
-
-별도 start-notice cron 의존 금지. ai-nodes 표준 알림 패턴.
+runner는 결과 경로와 공개 가능한 짧은 요약을 표준 출력으로 반환한다.
+외부 전달 채널과 자동 실행 시점은 저장소 밖에서 결정한다.
 
 ## 7. 비기능 요구사항
 
 - **재실행 가능성**: 같은 날 같은 명령을 여러 번 돌려도 정합성 깨지지 않음 (날짜별 멱등).
 - **불확실성 명시**: 추정치는 추정 명기. 검증된 사실과 추론 구분.
-- **알림**: 시작/완료/실패 Discord 3단계 (ai-nodes 표준).
+- **실행 결과**: 로컬 파일, 표준 출력, 종료 코드로 성공과 실패를 구분한다.
 - **격리**: 다른 워크스페이스(career-os, stock-investment, travel)와 자산 교차 참조 없음.
-- **비밀**: `.env` (워크스페이스 root, ai-nodes ADR-004). `NAVER_COOKIE`, `NAVER_BEARER` (선택), `DISCORD_WEBHOOK_URL`. 템플릿: `.env.example`.
+- **비밀**: `.env` (워크스페이스 root, ai-nodes ADR-004). `NAVER_COOKIE`, `NAVER_BEARER` (선택). 템플릿: `.env.example`.
 
 ## 8. 의도적으로 안 하는 것
 
