@@ -128,7 +128,7 @@ cron payload 갱신 이력:
 
 - 재실행 가능 + 날짜 단위 멱등.
 - 불확실성 명시 — 검증된 사실과 해석 분리.
-- 새 결정은 `docs/adr.md` 누적 (개별 ADR 파일 신설 금지, ai-nodes ADR-018).
+- 새 결정은 `docs/adr.md`에 누적한다.
 - 비밀 정보는 실행 환경의 secret 저장소 또는 `.env`에 둔다. `.env.example` template을 참고한다.
 
 ## 10. fos-brain 연동

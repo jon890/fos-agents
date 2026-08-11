@@ -37,7 +37,8 @@ job-fit-analyzer를 **지원 의사결정 + 면접 전략 + 커리어 패스 정
 
 ### 적용
 
-- 스키마 `scripts/job-fit-analyzer/jobfit_schema.ts`, 렌더러 `render_job_fit.ts`([[ADR-019]] scripts 분리 컨벤션).
-- 구현은 plan088 phase로 옮긴다(스키마 → 렌더러 → SKILL 재작성 → 통합 검증).
+- 스키마는 `scripts/job-fit-analyzer/jobfit_schema.ts`에 둔다.
+- 렌더러는 `scripts/job-fit-analyzer/render_job_fit.ts`에 둔다.
 - 데이터 스키마·흐름·코드 구조·기능 표는 `data-schema.md`·`flow.md`·`code-architecture.md`·`prd.md`에 반영한다.
-- [[ADR-092]](daily 제거·역할 단일모드) 위에 서고, [[ADR-101]](JSON 정본 패턴)를 재사용한다.
+- 역할 단위 진단은 [[ADR-092]]를 따른다.
+- JSON 정본 구조는 [[ADR-101]]을 재사용한다.

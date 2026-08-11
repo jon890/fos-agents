@@ -32,7 +32,6 @@
 | `.codex/skills/` | Codex 노출용 skill 심볼릭 링크 |
 | `docs/adr/` | 모노레포 레벨 ADR |
 | `docs/code-architecture.md` | 현재 구조와 책임 경계 |
-| `docs/docs-style.md` | 문서 작성 형식 정책 |
 
 워크스페이스 한정 helper는 `<workspace>/scripts/<skill>/` 내부에 둔다.
 
@@ -92,7 +91,6 @@ ln -s AGENTS.md CLAUDE.md
 | `code-architecture.md` | 디렉터리 책임, skill 구조, 외부 의존성 |
 | `adr.md` 또는 `adr/` | 결정의 이유와 대안 기각 |
 
-문서 형식은 [`docs/docs-style.md`](docs-style.md)를 따른다.
 같은 정의를 여러 문서에 본문으로 복제하지 않는다.
 
 ## Tasks

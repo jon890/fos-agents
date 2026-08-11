@@ -1,43 +1,26 @@
-## ADR-013 — agent skill 정본과 Codex 노출 경로를 분리한다
+## ADR-013 — agent skill 정본과 실행 도구별 노출 경로를 분리한다
 
-- Status: Partially superseded by ADR-014 (2026-06-16) — repo 전역 정본 경로 부분만
+- Status: Accepted
 - Date: 2026-06-16
 
 ### 맥락
 
-Claude CLI 호출 비용 문제 때문에 기존 `.claude/skills` workflow를 Codex에서도 직접 실행할 필요가 생겼다.
-단순 wrapper로 `claude -p`를 호출하면 비용 문제가 해결되지 않는다.
-반대로 `.claude/skills`와 `.codex/skills`에 본문을 복사하면 skill 내용이 갈라질 위험이 크다.
-
-Codex skill 선택은 `SKILL.md` 본문을 읽기 전에 frontmatter의 `name`과 `description`만 보고 이뤄진다.
-따라서 본문 `When to use`에 자연어 trigger를 많이 두는 구조는 Codex 호출 정확도에 도움이 작다.
+같은 workflow를 여러 agent에서 사용하려고 SKILL.md를 복사하면 내용이 갈라진다.
+실행 도구가 탐색하는 경로는 서로 다르므로 정본과 노출 경로를 구분해야 한다.
 
 ### 결정
 
-- 모든 워크스페이스의 skill 정본은 `<workspace>/.claude/skills/<skill>/SKILL.md`로 유지한다.
-- Codex 노출은 `<workspace>/.codex/skills/<skill>` 심볼릭 링크로 둔다.
-- repo 전역 skill 정본은 `skills/<skill>/SKILL.md`로 유지한다.
-- repo 전역 Codex 노출은 `.codex/skills/<skill>` 심볼릭 링크로 둔다.
-- `SKILL.md` frontmatter에는 `name`과 `description`만 둔다.
-- skill 사용 여부를 결정하는 자연어 trigger, 슬래시 호출 형태, 주요 라우팅 경계는 `description`에 둔다.
-- 본문에는 이미 호출된 뒤 필요한 입력 해석, 범위 해석, 실행 절차만 둔다.
-- 운영 runner의 `run_with_claude.sh`와 `claude -p` 경로는 호환 계층으로 유지할 수 있다.
-  새 대화형 작업에서는 현재 에이전트가 같은 SKILL.md를 직접 읽고 실행한다.
+- 워크스페이스 skill 정본은 `<workspace>/.claude/skills/<skill>/`에 둔다.
+- 필요한 경우 `<workspace>/.codex/skills/<skill>` 심볼릭 링크로 Codex에 노출한다.
+- Codex 전용 저장소 workflow는 `.agents/skills/<skill>/`에 둘 수 있다.
+- compatibility 경로는 정본으로 취급하지 않는다.
+- trigger와 라우팅 정보는 SKILL.md frontmatter description에 둔다.
+
+### 거절한 대안
+
+- 도구별로 SKILL.md를 복사하면 수정 누락과 동작 차이가 생긴다.
+- 모든 skill을 한 전역 디렉터리에 두면 워크스페이스 데이터 경계가 흐려진다.
 
 ### 결과
 
-- Codex가 apartment, stock-investment, health-care, career-os, repo 전역 skill을 같은 본문으로 읽을 수 있다.
-- skill 본문 복사로 인한 Claude/Codex drift를 피한다.
-- 새 skill을 추가할 때는 `.claude/skills` 또는 `skills/` 정본을 만들고 대응 `.codex/skills` 링크를 추가하면 된다.
-- description 품질이 skill 호출 정확도의 1차 기준이 된다.
-
-### 적용
-
-- `.codex/skills/`
-- `apartment/.codex/skills/`
-- `stock-investment/.codex/skills/`
-- `health-care/.codex/skills/`
-- `<workspace>/.claude/skills/*/SKILL.md`
-- `skills/*/SKILL.md`
-
----
+workflow 본문은 한 곳에서 관리하면서 필요한 실행 도구에만 노출할 수 있다.

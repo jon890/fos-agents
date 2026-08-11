@@ -54,7 +54,6 @@ AI 전환 레인의 랭킹·다운랭크 규칙도 네 곳에 분산됐다.
 
 ### 적용
 
-- 구현은 plan092 Phase 02로 옮긴다.
 - verified JSON에 `secondaryCompanies` 목록을 추가하고, non-priority 회사 키워드를 이동한다.
 - `position-collection.json.targetKeywords`에서 회사명이 붙은 키워드를 제거하고 role 키워드만 남긴다.
 - 수집 코드(`scripts/position-recommender/`)가 두 소스를 merge하도록 wire-up한다.

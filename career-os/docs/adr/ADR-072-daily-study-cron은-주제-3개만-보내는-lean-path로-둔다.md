@@ -1,27 +1,21 @@
-## ADR-072 — daily study cron은 주제 3개만 보내는 lean path로 둔다
+## ADR-072 — daily study 자동화는 주제 3개를 만드는 lean path로 둔다
 
 - Status: Accepted
 - Date: 2026-06-09
 
 ### 맥락
 
-ADR-071로 native `study-topic-recommender`의 비대화형 권한 대기 문제는 해결했다.
-하지만 daily cron을 매번 native Claude skill로 실행하면 토큰 비용이 크고, Discord 결과도 실행 로그 중심으로 길어질 수 있다.
-
-사용자가 원하는 daily 경험은 운영 로그가 아니라 오늘 공부할 주제만 빠르게 보는 것이다.
-후보 refresh, 의미 기반 중복 검토, 긴 큐레이션 설명은 필요할 때 on-demand로 실행하면 충분하다.
+매일 자동화에 전체 skill 흐름과 후보 발굴을 포함하면 비용과 출력 소음이 커진다.
+사용자가 매일 필요로 하는 것은 운영 로그가 아니라 오늘 공부할 주제다.
 
 ### 결정
 
-- daily study cron은 native Claude skill을 호출하지 않는다.
-- daily study cron은 `refresh_topic_inventory.ts`를 직접 실행한다.
-- Discord에는 `recommendations[0:3]`의 제목, 짧은 이유, 추천한 이유 묶음, 일부러 피한 축만 보낸다.
-- 실행 로그, self-check 전문, 비용·토큰 세부사항은 Discord 요약에 남기지 않는다.
-- full report 경로는 짧게 남긴다.
-- 후보 refresh가 필요하면 on-demand `claude --permission-mode bypassPermissions -p "/study-topic-recommender ..."`로 별도 실행한다.
+- 자동화 entrypoint는 `scripts/study-topic-recommender/send_daily_recommendation.ts`로 둔다.
+- entrypoint는 topic inventory를 갱신하고 최상위 3개 주제를 표준 출력으로 내보낸다.
+- 출력은 제목, 짧은 이유, 선택 축, 피한 축을 담는다.
+- 후보 refresh와 긴 큐레이션은 필요할 때 skill로 실행한다.
+- 스케줄과 외부 전달은 저장소 밖의 실행 환경이 선택한다.
 
 ### 결과
 
-- 매일 알림의 토큰 비용과 채널 소음을 줄인다.
-- 사용자는 `#병태-이직준비방`에서 바로 공부할 주제만 본다.
-- 동적 후보 발굴 경로는 유지하되 매일 cron의 기본 비용으로 만들지 않는다.
+매일 자동화는 결정론적인 로컬 스크립트로 동작하고 외부 runtime에 의존하지 않는다.

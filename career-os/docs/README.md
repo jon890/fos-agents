@@ -1,7 +1,6 @@
 # 문서 작성 가이드 — career-os
 
 career-os 문서를 작성하거나 수정하기 전에 확인하는 문서 책임 가이드다.
-문체와 Markdown 형식은 repo root [`../../docs/docs-style.md`](../../docs/docs-style.md)를 따른다.
 이 문서는 career-os 안에서 각 문서가 어떤 가치를 제공해야 하는지 정의한다.
 또한 각 문서에 무엇을 담지 말아야 하는지 함께 정한다.
 

@@ -33,6 +33,6 @@
 
 ### 적용
 
-- 데이터 모델(weak_spots 확장 필드, 드릴 일별 로그), 흐름, 코드 구조, README 플로우차트는 plan086 docs 단계에서 확정한다.
-- 본 결정은 [[ADR-027]](단일 skill 통합) · ADR-048(stage 확장, 이후 coffeechat 클러스터와 함께 삭제·git history 보존)의 통합 전제를 일부 대체하고, [[ADR-028]](candidate-baseline-suggester 도입)을 폐기한다.
-- 기술·인성 드릴의 공용 엔진 배치는 career-os scripts 분리 원칙([[ADR-019]])과 _lib 폐기([[ADR-031]])를 고려해 plan086 code-architecture 단계에서 정한다.
+- 드릴 상태는 [[ADR-105]]를 따른다.
+- 공개 질문 자산은 [[ADR-097]]를 따른다.
+- 드릴 공용 코드는 `scripts/interview-drill/`에 둔다.

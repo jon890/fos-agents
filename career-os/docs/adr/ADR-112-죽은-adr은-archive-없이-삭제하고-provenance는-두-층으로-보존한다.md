@@ -15,7 +15,7 @@ career-os ADR은 개별 파일로 관리한다(ADR-089).
 
 `archive/` 방식은 "지금 사는 결정"과 "죽은 결정"을 한 저장소에 계속 병존시킨다.
 살아있지도 삭제되지도 않은 중간 상태가 쌓이면 어느 것이 현행인지 판단 비용이 커진다.
-plan092·093 병합 후 docs-check 5축 감사에서도 죽은 ADR 잔재가 stale 참조와 dangling 링크의 주 원인으로 확인됐다.
+docs-check 감사에서 죽은 ADR 잔재가 stale 참조와 dangling 링크의 주 원인으로 확인됐다.
 
 ## Decision
 
@@ -42,5 +42,5 @@ plan092·093 병합 후 docs-check 5축 감사에서도 죽은 ADR 잔재가 sta
   - dangling `[[ADR-NNN]]` 링크 정리
   - provenance 층 확정(tombstone `Supersedes` 보정 포함)
   - grep 잔여 참조 0 검증
-- tombstone 없이 삭제한 클러스터의 이유는 git history와 관련 task 기록으로만 추적한다.
+- tombstone 없이 삭제한 클러스터의 이유는 Git 이력으로만 추적한다.
 - ADR 결번(예: 004·007·024·029·076)은 정상이며 broken link가 아니다.

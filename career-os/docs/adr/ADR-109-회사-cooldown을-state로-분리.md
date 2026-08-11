@@ -9,7 +9,7 @@
 [[ADR-095]]는 회사별 운영 데이터(쿨다운·선호제외)를 `config/verified-company-research-targets.json` 단일 출처로 흡수했다.
 당시 판단은 "tier가 config에 있으니 운영 데이터도 config"였다.
 
-그러나 plan093의 config/state 구분 기준(ADR-107)으로 다시 보면 둘의 트리거가 다르다.
+그러나 ADR-107의 config/state 구분 기준으로 다시 보면 둘의 변경 트리거가 다르다.
 
 - `cooldown` — 지원 결과 이벤트로 갱신한다. 시스템 실행·이벤트가 트리거이므로 state다.
 - `priorityCompanies`·`preferenceExcluded` — 사용자가 검증군과 선호를 의도적으로 정한다. config다.

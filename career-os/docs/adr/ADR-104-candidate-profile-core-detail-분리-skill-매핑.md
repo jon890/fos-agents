@@ -77,7 +77,6 @@ meta는 어느 파일에도 프롬프트로 주입하지 않는다.
 
 ### 적용
 
-- 구현은 plan092 Phase 03으로 옮긴다.
 - detail 5개 섹션을 `config/candidate-profile.md`에서 `config/candidate-profile-detail.md`로 이동한다.
 - core의 "보유 기술 스택"을 라벨 중심으로 축약하고, 증거 상세는 detail로 옮긴다.
 - 9개 skill의 SKILL.md Inputs를 위 매핑대로 갱신한다.

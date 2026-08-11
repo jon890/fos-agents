@@ -15,7 +15,6 @@ career-os의 주요 자동화는 `.claude/skills/<skill>/SKILL.md`에 정리되�
 - `.claude/skills/<skill>/SKILL.md`를 agent skill 정본으로 유지한다.
 - Claude 전용 표현은 현재 에이전트가 직접 파일을 읽고 쓰며 셸 명령을 실행하는 표현으로 바꾼다.
 - Codex 노출 경로는 `.codex/skills/<skill>` 심볼릭 링크로 둔다.
-- `docs-audit`는 `sources/fos-study` 외부 repo로 향하는 기존 심볼릭 링크이므로 이번 Codex 링크 대상에서 제외한다.
 - 기존 cron/runner 파일명에 남은 `claude`는 호환 계층 이름으로만 본다. 새 대화형 작업에서는 Claude CLI wrapper를 추가하지 않는다.
 
 ### 거절한 대안

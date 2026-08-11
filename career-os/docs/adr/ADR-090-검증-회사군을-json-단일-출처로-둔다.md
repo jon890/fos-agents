@@ -20,7 +20,7 @@
 - 스키마를 코드와 LLM 양방향 소비를 고려해 설계한다.
   - 코드용 — `hasAdapter`·`adapterId`·`careerUrls`·`wantedKeywords`로 수집 커버리지와 discovery.
   - LLM용 — `tier`·`koreanName`·`preferredDomains`·`techBlogs`·`notes`로 업사이드 판단.
-- `hasAdapter: false`인 회사는 adapter 추가 backlog로 본다([[ADR-091]] 후속 plan082 대상).
+- `hasAdapter: false`인 회사는 adapter 추가 후보로 본다.
 - `decision-criteria.md`·`prompt.md`의 텍스트 "최우선 탐색군" 목록은 제거하고 JSON을 역참조한다(거울 구조).
 - 거절한 대안 — 텍스트 정본: 구조화(URL·도메인·adapter 상태) 이점을 잃는다. JSON 폐지: 업사이드 메타와 탐색 가이드를 LLM에 줄 단일 소스가 사라진다.
 
@@ -28,5 +28,5 @@
 
 - 검증 회사군 정의가 한 곳에 모인다. LLM 업사이드 판단과 추가 수집 대상이 단일 소스를 본다.
 - `hasAdapter`로 수집 커버리지가 가시화돼 adapter 추가 우선순위를 식별한다.
-- 코드가 JSON을 읽어 adapter를 라우팅하는 wire-up은 후속 plan에서 한다 — 본 ADR은 그 위에서 동작할 양방향 스키마까지만 확정한다.
+- 코드와 LLM은 같은 JSON을 사용하되 각자 필요한 필드만 읽는다.
 - 단점 — 회사를 확장할 때 메타(career URL·선호 도메인)를 채우는 수작업이 든다.

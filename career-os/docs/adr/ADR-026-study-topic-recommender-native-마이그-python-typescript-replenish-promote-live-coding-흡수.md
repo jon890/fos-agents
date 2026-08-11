@@ -5,7 +5,7 @@
 
 ### 맥락
 
-study-pack-writer(plan013), interview-asset-writer(plan015)는 native skill로 전환됐지만,
+study-pack-writer와 interview-asset-writer는 agent skill로 전환됐지만,
 study-topic-recommender만 옛 외부 subprocess 패턴(622줄 Python 알고리즘 + 외부 RSS 의존)이 남아 있었다.
 topic-pool-replenisher 폐기로 replenish + promote 자동화가 끊어진 갭도 있었다.
 사용자 의도는 단일 진입점 호출 시마다 replenish + recommend + promote를 자동 처리하는 것이다.
@@ -19,7 +19,7 @@ topic-pool-replenisher 폐기로 replenish + promote 자동화가 끊어진 갭�
 
 ### 거절한 대안
 
-- Python 그대로 + Bash wrapper만: 모노레포 TypeScript 표준([[ADR-020]]/022) 위반.
+- Python 그대로 두고 Bash wrapper만 추가하면 언어와 실행 경계가 다시 분산된다.
 - Python 폐기 + Claude 자연어로 알고리즘 전부 추론: 점수·mix target 결정론 손실.
 - skill rename: rename 파급 비용 대비 의미 명확성 향상이 불충분.
 

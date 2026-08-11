@@ -73,7 +73,6 @@ fos-agents/
 | [`.codex/skills/`](.codex/skills/) | Codex에서 사용할 skill 심볼릭 링크 |
 | [`docs/code-architecture.md`](docs/code-architecture.md) | 현재 디렉터리 구조와 책임 경계 |
 | [`docs/adr/INDEX.md`](docs/adr/INDEX.md) | 모노레포 수준의 주요 결정과 이유 |
-| [`docs/docs-style.md`](docs/docs-style.md) | Markdown과 운영 문서 작성 규칙 |
 
 `CLAUDE.md`는 각 `AGENTS.md`를 가리키는 심볼릭 링크다.
 두 파일을 따로 수정하지 않는다.

@@ -14,7 +14,6 @@
 | -------------------------------------------------------- | ------------- | --------------------------- |
 | [`docs/code-architecture.md`](docs/code-architecture.md) | 루트와 워크스페이스 구조 | 디렉터리, skill, 공용 helper 변경   |
 | [`docs/adr/INDEX.md`](docs/adr/INDEX.md)                 | 모노레포 결정 이유    | 공통 정책, 구조 변경, 되돌리기 어려운 결정   |
-| [`docs/docs-style.md`](docs/docs-style.md)               | 문서 작성 형식      | docs, ADR, AGENTS, SKILL 작성 |
 | `<workspace>/AGENTS.md`                                  | 워크스페이스별 정책    | 특정 워크스페이스 작업 시작             |
 
 

@@ -1,161 +1,62 @@
 # ADR — stock-investment
 
-stock-investment 워크스페이스 아키텍처 결정 누적.
-새 결정은 가장 아래에 추가.
-
-형식: `## ADR-N — 제목` + Status / Date 라인 + 맥락 / 결정 / 결과 3섹션.
-
-모노레포 레벨 ADR: `../docs/adr.md`.
-
-History: 기존 `docs/decisions/001~007.md` 는 plan004에서 git rm 완료 — 자료는 plan001 phase-01에서 5문서 (prd/data-schema/flow/code-architecture/adr)로 재분배됨.
-
----
+stock-investment에만 적용되는 살아 있는 결정을 기록한다.
+공통 결정은 [루트 ADR INDEX](../../docs/adr/INDEX.md)를 따른다.
 
 ## Quick Index
 
-| ADR | 제목 | Status | 한 줄 요약 |
-|---|---|---|---|
-| ADR-001 | 워크스페이스 ai-nodes 표준 구조 적용 시작 | Accepted | 5문서 + AGENTS 한글화 + CLAUDE 심링크 + tasks/ (plan001). 분리 패턴 (plan002) + AGENTS 강화 (plan003) + decisions 폐기 (plan004) 시리즈 완료 |
-| ADR-003 | 3 skill native 전환 (외부 subprocess 폐기) | Accepted | claude json+extractor+track_task 래핑 폐기, native 직접 호출. Python 수집기 유지. apartment ADR-010 미러 |
-| ADR-004 | 프로필 쓰기 범위를 stock-investment 내부로 제한 | Accepted | 다른 워크스페이스와 외부 git 저장소 직접 수정을 금지하고 발행은 내부 초안+메타데이터로 분리 |
+| ADR | 제목 | Status |
+|---|---|---|
+| ADR-003 | skill과 수집 코드의 실행 경계 | Accepted |
+| ADR-004 | 쓰기 범위를 stock-investment 내부로 제한 | Accepted |
 
----
+## ADR-003 — skill과 수집 코드의 실행 경계
 
-## ADR-001 — 워크스페이스 ai-nodes 표준 구조 적용 시작
-
-**Status**: Accepted
-**Date**: 2026-05-20
+- Status: Accepted
+- Date: 2026-05-29
 
 ### 맥락
 
-stock-investment는 2026-05-05 운영 시작 이후 ai-nodes 표준 구조 (ADR-004) 미적용 상태로 유지됐다.
-발견 시점 (2026-05-20 audit):
-
-- 5문서 부재 (`docs/decisions/*` 7개만 — 기존 ADR 형식, 모노레포 표준 ADR-006 미적용)
-- AGENTS.md 영문 짧음 (라우팅 / 외부 의존성 명세 미흡)
-- CLAUDE.md 심링크 부재 (Claude Code 자동 로드 미활용)
-- `tasks/` 부재 (plan 시스템 미운영)
-- `.claude/skills/` 부재 (3 skill native 진입점 미등록)
-- `skills/<name>/scripts/` 통합 패턴 (ai-nodes ADR-006 분리 표준 미적용)
-
-워크스페이스 격리 원칙상 stock-investment를 *의도된 비대칭*으로 둘 수 있으나, 활성 운영 (매일 data 누적) 워크스페이스가 표준 부재 상태로 반복 audit drift 발생.
-표준화로 전환한다.
+시장 데이터 수집은 결정론적 코드가 필요하고, 해석과 문서 작성은 agent workflow가 적합하다.
+두 책임을 runner 하나에 섞으면 실행 도구와 결과 형식이 강하게 결합된다.
 
 ### 결정
 
-ai-nodes 표준 구조 적용 시리즈 시작. 3 plan 분할:
+- Python collector는 원천 데이터 수집과 정규화를 담당한다.
+- 각 SKILL.md는 수집 결과를 읽고 분석 문서와 공개 가능한 요약을 만든다.
+- runner는 로컬 파일, 표준 출력, 종료 코드만 외부 계약으로 둔다.
+- 특정 agent CLI, 전달 채널, 외부 게시를 skill의 필수 동작으로 두지 않는다.
 
-1. **plan001 (본 plan)**: docs 영역.
-   - 5문서 신설
-   - AGENTS.md 한글화
-   - CLAUDE.md 심링크
-   - `tasks/` 신설
-   - `decisions/*` 7개는 5문서로 재분배 후 plan004에서 git rm 완료.
-2. **plan002**: ADR-006 분리 패턴 마이그.
-   - `skills/<name>/scripts/` → `scripts/<name>/` + `.claude/skills/<name>/{SKILL.md, references/}`
-   - 3 skill 모두 적용.
-3. **plan003**: AGENTS.md 강화 (4-1 진실 출처 + 4-2 투자 컨텍스트 + cron 시점 표).
-4. **plan004**: `decisions/*` 7 파일 git rm + workspace-structure.md 매트릭스 stock-investment 항목 ?→O 갱신. .env는 plan001 phase-02 시점에 사용자 직접 신설 완료.
+### 거절한 대안
 
-거절한 대안:
-
-- 의도된 비대칭 공식화 ADR — 활성 운영 + audit drift 누적 상태에서 비표준 유지 비용 > 표준화 비용.
-- 단일 큰 plan — 4-5 phase 한 번에 처리. rollback 복잡 + cron 영향 phase 안에 섞임. 시리즈가 안전.
-- `decisions/*` 그대로 유지 + adr.md만 신규 — ai-nodes ADR-018 (개별 ADR 파일 신설 금지) 위반.
+- 수집까지 agent 추론에 맡기면 데이터 재현성과 오류 분리가 약해진다.
+- 외부 전달을 runner에 넣으면 실행 환경에 종속된다.
 
 ### 결과
 
-- 워크스페이스 5문서 활성화 — drift 추적 단일 출처.
-- Claude Code 자동 로드 → `claude -p "/<skill>"` 진입점 (plan002 후).
-- `ai-nodes/docs/workspace-structure.md` 표에서 stock-investment 항목 갱신 (plan003 완료 후).
-- 향후 plan 사이클 (`tasks/plan{N}-<slug>/`) 운영 가능.
-- cron 운영 중단 없음 — plan001은 docs only. plan002 분리 마이그 시 cron 호출 경로 갱신 필요 (별도 plan에서 결정).
+수집 실패와 분석 실패를 분리하고 같은 workflow를 여러 실행 도구에서 사용할 수 있다.
 
-적용: plan001 (5문서 + AGENTS) → plan002 (분리 패턴) → plan003 (AGENTS 강화) → plan004 (decisions/ git rm + workspace-structure ✓).
+## ADR-004 — 쓰기 범위를 stock-investment 내부로 제한
 
----
-
-## ADR-003 — 3 skill native 전환 (외부 subprocess 패턴 폐기)
-
-**Status**: Accepted
-**Date**: 2026-05-29
+- Status: Accepted
+- Date: 2026-07-03
 
 ### 맥락
 
-stock-investment 3 skill(stock-investing-morning-brief, current-issue-analysis, daily-stock-analysis-note)이 모두 외부 subprocess 패턴이다.
-각 `run_*.sh`가 외부 agent subprocess 결과를 파싱해 report.md를 만들고 실행 로그를 별도로 기록했다.
-
-apartment가 ADR-010(plan010)으로 daily-report를 native skill 직접 호출로 전환해 패턴을 검증했다.
-stock 3 skill은 apartment daily-report와 동일 구조라 같은 패턴을 복제한다.
-`track_task.sh`가 남기는 `task-runs.jsonl`은 읽는 소비자가 없는 write-only 계측이다.
+투자 분석 workflow가 다른 워크스페이스나 외부 저장소를 직접 수정하면 데이터와 승인 경계가 흐려진다.
 
 ### 결정
 
-3 skill을 native skill 직접 호출로 전환한다(apartment ADR-010 미러).
+- 기본 쓰기 범위는 `stock-investment/` 내부로 제한한다.
+- 다른 워크스페이스와 외부 저장소는 사용자가 대상과 목적을 명시한 경우에만 수정한다.
+- 공개 글은 내부 초안으로 만들고 실제 발행은 별도 승인 단계로 둔다.
+- 비밀 값은 워크스페이스 `.env`에만 둔다.
 
-- Python 수집기(`collect_*.py`, `sanitize_fos_study_markdown.py`)는 유지한다.
-  결정론적 데이터 수집이라 Claude로 재구현하지 않는다.
-  native SKILL.md가 `python3` Bash로 호출한다.
-- `claude --output-format json` + `extract_claude_result.ts` 추출 단계는 폐기한다.
-  Claude가 수집 산출물을 Read하고 report.md를 직접 Write한다.
-- `track_task.sh` self-wrap을 제거한다.
-- 진입점은 interior·apartment의 `run_with_claude.sh` thin wrapper 패턴.
-  `claude -p "/<skill>"` 호출 + Discord 시작/실패 알림(완료/요약은 native).
-  current-issue는 issue-key 인자를 wrapper가 전달.
-- daily-note의 fos-study 발행(`sanitize_fos_study_markdown.py` + git push)은 native skill 워크플로에 명시해 유지(cross-workspace 단방향 쓰기, ADR-001 예외).
+### 거절한 대안
 
-연쇄 폐기 자산(`track_task.sh`, `update_artifacts.py`, `extract_claude_result.ts` 파일 자체)은 본 plan 범위가 아니다.
-본 전환으로 ai-nodes 전체에서 호출처가 0이 되므로, 후속 ai-nodes 모노레포 정리 plan에서 파일을 제거한다.
-
-거절한 대안:
-
-- 옛 subprocess 패턴 유지 — career-os·apartment가 입증한 drift·복잡도 영구화.
-- Python 수집기를 TS로 동시 마이그 — native 전환과 무관한 별개 축, 범위 확대.
-- skill당 별도 plan — 동일 패턴 복제라 과분할, 한 plan 4 phase로 충분.
+- 다른 워크스페이스에 직접 발행하면 소유권과 검토 단계를 우회한다.
+- 비밀 값을 문서나 skill에 기록하면 공개 저장소와 로그에 노출될 수 있다.
 
 ### 결과
 
-- 3 skill이 apartment·interior와 동일 native 패턴으로 수렴 — 모노레포 일관성.
-- `claude.result.json` / fallback 산출물 폐기.
-- ai-nodes 전체에서 `track_task.sh` / `extract_claude_result.ts` / `update_artifacts.py` 호출처 0 — 후속 모노레포 정리 plan의 선결 조건 충족.
-- 단점: native skill이 데이터 파이프라인 오케스트레이션까지 책임 — 수집 실패 처리를 SKILL.md가 명시해야 함.
-
-**적용**: `stock-investment/.claude/skills/<name>/SKILL.md`(native 재작성) + `scripts/<name>/run_with_claude.sh`(신규) + 옛 `run_*.sh` 폐기. `stock-investment/tasks/plan006-skills-native-migration` phase 참조.
-
----
-
-## ADR-004 — 프로필 쓰기 범위를 stock-investment 내부로 제한
-
-**Status**: Accepted
-**Date**: 2026-07-03
-
-### 맥락
-
-이 프로필은 Discord `#주식토크`에서 주식·경제 분석, 가격 확인, 뉴스 해석, 학습 자산 생성을 담당한다.
-이전 운영 문서에는 `career-os/sources/fos-study`에 직접 쓰고 git push하는 예외가 남아 있었다.
-하지만 사용자는 이 프로필이 다른 워크스페이스를 건드리지 않고, 주식/금융 워크스페이스 내부에서만 작업되기를 원한다.
-GitHub token 같은 비밀값도 채팅·문서·로그가 아니라 Hermes secrets 또는 워크스페이스 `.env`에서 관리해야 한다.
-
-### 결정
-
-이 프로필의 기본 쓰기 범위를 `stock-investment/` 내부로 제한한다.
-
-- 허용 범위는 `AGENTS.md`, `docs/`, `config/`, `scripts/`, `.claude/skills/`, `.codex/skills/`, `data/`, `logs/`, `tasks/`다.
-- `career-os`, `apartment`, `travel`, `health-care`, `ji-yoon-blog`, `career-os/sources/fos-study`, 다른 git 저장소, Hermes 다른 프로필 디렉터리는 직접 수정하지 않는다.
-- 사용자가 해당 턴에서 파일 경로와 목적을 명시하고 승인한 경우에만 단발성 예외를 허용한다.
-- 블로그 글은 `stock-investment/data/publish/` 아래 초안과 발행 요청 메타데이터로 준비한다.
-- 실제 `fos-study` 반영, commit/push, Jenkins 싱크, 공개 블로그 URL 확인은 별도 승인된 발행 프로필·Jenkins·수동 작업으로 넘긴다.
-- 비밀값은 Hermes secrets 또는 워크스페이스 `.env`에만 둔다.
-
-거절한 대안:
-
-- `career-os/sources/fos-study` 직접 쓰기 유지: 프로필 경계를 흐리고 사용자의 보안 요구와 충돌한다.
-- 다른 워크스페이스 helper 직접 수정 허용: 공용 영향이 있으므로 이 프로필의 기본 권한 밖에 둔다.
-- 비밀값을 문서나 skill에 기록: 공개·로그 노출 위험이 있어 금지한다.
-
-### 결과
-
-- stock-investment 프로필은 분석과 초안 생성까지 책임진다.
-- 외부 발행은 명시 승인된 별도 단계로 분리된다.
-- 이전 cross-workspace 발행 예외는 폐기된다.
-- GitHub token 같은 비밀값은 Hermes secrets 또는 `.env`를 통해서만 주입한다.
+stock-investment는 분석과 초안 생성까지 책임지고 외부 발행은 분리한다.

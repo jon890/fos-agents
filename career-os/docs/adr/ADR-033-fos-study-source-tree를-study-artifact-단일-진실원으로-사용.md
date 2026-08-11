@@ -22,7 +22,7 @@ inventory 갱신과 upsert가 분리되어 동기화가 보장되지 않았고, 
 ### 거절한 대안
 
 - `generated-artifacts.json` 유지 + cross-sync 도입: drift 자체를 없애지 못하며 두 진실원을 정당화할 수 없다.
-- duplicate detection helper를 `_shared/lib`로 즉시 승격: career-os/fos-study 구조에 강하게 묶여 있어 ADR-001 위반.
+- duplicate detection helper를 저장소 공용 영역으로 승격하면 career-os와 fos-study 결합이 공용 경계로 새어 나간다.
 - duplicate review를 TS에서 직접 Claude API 호출: provider-free 원칙 위배이며 native skill이 단일 출처여야 한다.
 - fos-study 자동 `git pull` 후 스캔: 추천 입력 무결성이 흔들리므로 사용자 로컬 clone 상태 그대로 사용한다.
 

@@ -32,5 +32,5 @@ config 자체가 root 아래에 있어 "root 위치를 config에 적는다"는 �
 
 ### 적용
 
-- 위치 기준 도출은 Bun `import.meta.dir` 기준이다(모노레포 Bun 표준, [[ADR-020]]).
+- 위치 기준 도출은 Bun `import.meta.dir`을 사용한다.
 - 셸 스크립트는 `BASH_SOURCE` 기준으로 동일하게 도출한다.

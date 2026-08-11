@@ -44,7 +44,6 @@ career-os/
 │   ├── adr/              아키텍처 결정 개별 파일 + INDEX (ADR-089 파일럿 전환, ai-nodes ADR-015)
 │   │   ├── INDEX.md      번호·제목·Status·파일 조망 표
 │   │   └── ADR-NNN-slug.md  개별 ADR 파일 (개수는 INDEX.md 참조 — 여기 숫자 고정 안 함)
-│   ├── korean-expression-guide.md  career-os 산출물 한국어 표현 가이드
 │   ├── hand-off/         외부 위임·인수인계 일회성 노트
 │   └── prep/             회사·이벤트별 운영 자산. 이벤트 종료 후 archive
 │

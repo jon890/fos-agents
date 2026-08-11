@@ -53,7 +53,6 @@ topic 학습 상태는 `config/study-progress.json`의 `weak_spots`에 잔류한
 
 ### 적용
 
-- 구현은 plan092 Phase 04로 옮긴다.
 - `config/drill-progress.json`을 빈 `{}` 상태로 신설한다.
 - 드릴 필드 read/write 코드 경로는 `scripts/interview-drill/drill-engine.ts` 하나다.
   이 파일은 tech-interview-drill·behavioral-interview-drill 두 드릴이 공유하므로, drill-engine.ts를 1회 갱신하면 두 드릴이 함께 커버된다.

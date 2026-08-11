@@ -1,32 +1,26 @@
-## ADR-058 — data cleanup은 private boundary와 retention을 먼저 고정한다
+## ADR-058 — private boundary와 retention을 먼저 고정한다
 
 - Status: Accepted
 - Date: 2026-06-07
 
 ### 맥락
 
-[[ADR-062]] 이후 포지션별 작업 홈이 루트 `private/` 아래로 이동했다.
-지원·면접·회사별 전략이 섞이는 `data/` 파일은 공개 가능성을 추정하기 어렵고,
-오래된 파일을 바로 삭제하면 검증 evidence와 history 맥락을 잃는다.
-따라서 cleanup은 삭제보다 경계와 보존 원칙을 먼저 고정해야 한다.
+지원, 면접, 회사별 전략 자료는 공개 가능성을 경로만으로 추정하기 어렵다.
+생성 산출물을 모두 보존하면 현재 상태와 오래된 결과를 구분하기 어렵다.
 
 ### 결정
 
-- `data/` 아래 파일은 private by default로 본다. 공개 승격은 별도 review와 사용자 승인으로만 한다.
-- 서브디렉토리 책임: `data/applications/`는 지원 원장·패키지·리뷰, `data/source/`는 외부 수집 텍스트, `data/reports/`는 생성 리포트, `data/runtime/`은 가변 상태다.
-- cleanup은 삭제가 아니라 archive·tombstone·retention 원칙으로 진행한다.
-- plan048 tracked runtime file 2개는 named exception으로만 다루고 일반 정책으로 확장하지 않는다.
-- coffeechat 자동화(ADR-034·048·067)는 별도 tombstone 없이 삭제하고 git history로 보존한다(plan094 결정, 2026-07-09).
+- `private/`, `applications/`, `state/`, `reports/`, `cache/`는 기본적으로 비공개 영역으로 본다.
+- 공개 승격은 민감 정보 검토와 사용자 승인 후에만 수행한다.
+- 재생성 가능한 cache와 일시 report는 retention 기준에 따라 제거한다.
+- 완전히 폐기한 기능과 산출물은 tombstone을 늘리지 않고 Git 이력으로 보존할 수 있다.
+- 비공개 원문은 task나 공개 docs에 복사하지 않는다.
 
-거절한 대안:
+### 거절한 대안
 
-- 오래된 파일을 바로 삭제하기: history와 검증 evidence를 잃고 private 경계를 확정하지 못한다.
-- 모든 report를 영구 보존하기: runtime이 cache처럼 누적되어 active 판단이 흐려진다.
-- `data/source/`를 public-safe로 보기: 지원/면접 맥락과 결합되면 private 분석 입력이 된다.
-- tracked runtime exception을 일반 정책으로 인정하기: `data/runtime/` 가변 상태 원칙과 충돌한다.
+- 모든 report를 영구 보존하면 현재 판단을 방해한다.
+- 수집 원문을 자동으로 public-safe로 간주하면 개인 맥락이 누출될 수 있다.
 
 ### 결과
 
-- cleanup은 archive·tombstone·retention 기반으로 진행되며 삭제 중심이 아니다.
-- future worker는 private 원문을 task/docs에 복사하지 않고 path와 classification만 다룬다.
-- 이후 정리 시 이 ADR을 기준으로 named decision을 남긴다.
+산출물 정리는 경로의 책임과 retention을 기준으로 수행한다.

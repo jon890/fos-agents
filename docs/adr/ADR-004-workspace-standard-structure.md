@@ -1,52 +1,28 @@
-## ADR-004 — 워크스페이스 표준 구조 정식화
+## ADR-004 — 워크스페이스는 공통 문서 책임과 데이터 경계를 공유한다
 
 - Status: Accepted
 - Date: 2026-05-18
 
 ### 맥락
 
-career-os와 apartment 두 워크스페이스가 5문서 컨벤션 + AGENTS.md/CLAUDE.md 심링크 + tasks/plan{N}-<slug>/ 영역 + .env 워크스페이스 root + docs vs data 분리 패턴으로 수렴. 다른 워크스페이스(stock-investment, travel) 신규 추가 시 동일 청사진 필요.
-
-기존 워크스페이스 정책 분산:
-
-- career-os ADR-018: docs/ 운영 정책 (5문서 + adr.md 단일 누적). 워크스페이스 한정 결정.
-- career-os ADR-021: Discord 알림 openclaw 경유 + .env 워크스페이스 root 격리. 워크스페이스 한정 결정.
-- career-os ADR-019: scripts/ 분리. 워크스페이스 한정 예외로 보존.
-
-분산된 워크스페이스 ADR 중 모든 워크스페이스 공통 적용 부분은 모노레포 레벨로 격상 필요.
+워크스페이스마다 문서 이름과 비밀 값 위치가 다르면 새 작업이 현재 구조를 다시 추론해야 한다.
+반대로 사용하지 않는 디렉터리까지 강제로 만들면 빈 구조가 늘어난다.
 
 ### 결정
 
-ai-nodes 모노레포의 워크스페이스 표준 구조를 `ai-nodes/docs/workspace-structure.md`에 정식화. 본 문서가 현재 구조 단일 출처, ADR-004는 결정의 *왜* 책임.
+- 각 워크스페이스는 `AGENTS.md`를 행동 규칙과 문서 라우팅의 진입점으로 둔다.
+- 제품 설명은 `README.md`, 현재 구조는 `docs/`가 담당한다.
+- 비밀 값은 워크스페이스 루트 `.env`에 두고 공개 템플릿은 `.env.example`에 둔다.
+- 데이터, 상태, 생성물은 워크스페이스 경계를 벗어나지 않는다.
+- 실행 중인 계획만 `tasks/`에 두며 완료하거나 폐기한 계획은 Git 이력으로 보존한다.
+- 자동화가 없는 워크스페이스에는 `scripts/`, `config/`, skill 디렉터리를 강제하지 않는다.
 
-표준 내용:
+### 거절한 대안
 
-1. 디렉터리 트리 — AGENTS.md / CLAUDE.md 심링크 / .env / .env.example / config/ / docs/ 5문서 / skills/<name>/{SKILL.md, references/, scripts/} / .claude/skills/<name>/ / tasks/plan{N}-<slug>/ / data/ / logs/. **(2026-05-19 ADR-006: skills/<name>/ 부분 폐기, scripts/<name>/ + .claude/skills/<name>/ 분리로 변경)**
-2. AGENTS.md + CLAUDE.md 심링크 — Claude Code 자동 로드.
-3. docs/ 5문서 — prd / data-schema / flow / code-architecture / adr.md. ADR 누적 (개별 파일 신설 금지).
-4. .env 워크스페이스 root + .env.example 템플릿 — 워크스페이스별 격리.
-5. tasks/plan{N}-<kebab-slug>/ — planning + plan-and-build 영구 보관.
-6. skills/<name>/ 통합 구조 + native skill 우선 등록.
-
-career-os ADR-018 (docs/ 운영 정책) / ADR-021 (.env 워크스페이스 root 부분)을 본 ADR-004로 모노레포 격상. career-os ADR 본문 Status 라인에 `Lifted to ai-nodes ADR-004 (2026-05-18)` 표기.
-
-거절한 대안:
-
-- 워크스페이스별 독립 ADR 유지 (격상 안 함) — 같은 결정이 4 워크스페이스 ADR에 중복 표기 → drift 위험.
-- 단일 거대 ADR 대신 디렉터리·5문서·.env·docs vs data·tasks/plan 별 분리 ADR — 새 워크스페이스 추가 시 N개 ADR 동시 적용. UX 나쁨.
+- 모든 워크스페이스를 동일한 전체 트리로 만들면 빈 디렉터리와 설명이 늘어난다.
+- 워크스페이스마다 독립 규칙을 두면 같은 정책이 반복되고 서로 어긋난다.
 
 ### 결과
 
-- 새 워크스페이스 추가 시 `workspace-structure.md` 청사진만 따르면 됨. ADR-004는 청사진 정당화.
-- career-os ADR-018/021의 공통 적용 부분은 ADR-004로 격상. 워크스페이스 한정 부분 (career-os ADR-019 scripts/ 분리, ADR-021 Discord openclaw 부분)은 워크스페이스 ADR에 남음.
-- workspace-structure.md 9번 매트릭스로 각 워크스페이스 표준 준수도 추적.
-- 의도된 비대칭 (career-os ADR-019)도 명시되어 표준 이탈 결정 자체로 가시화.
-
-### 적용
-
-- `ai-nodes/docs/workspace-structure.md` (신설, 본 ADR의 적용 청사진)
-- `ai-nodes/AGENTS.md` 1번 / 3-4 / 9번 / 10번 갱신
-- `career-os/docs/adr.md` ADR-018 / ADR-021 Status 라인 격상 표기
-- apartment 워크스페이스가 plan001에서 본 표준의 적용 첫 사례 (career-os는 plan023까지 진행으로 이미 표준 준수)
-
----
+공통 책임은 유지하면서 워크스페이스별 필요한 구조만 둘 수 있다.
+현재 디렉터리 설명은 루트와 각 워크스페이스의 `docs/code-architecture.md`가 담당한다.
