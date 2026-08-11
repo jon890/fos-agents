@@ -40,7 +40,7 @@ career-os의 반복 업무가 어떤 입력에서 시작해 어떤 처리 주체
 
 career-os의 표준 진입점은 agent skill 직접 호출이다.
 문서와 산출물은 `Use skill: /<skill> [args]` 형태로 다음 행동을 안내한다.
-특정 에이전트 CLI나 runner는 무인 실행을 위한 호환 계층이며, workflow 계약이 아니다.
+특정 실행 구현은 무인 실행을 위한 호환 계층이며, workflow 계약이 아니다.
 
 공통 처리 흐름:
 
@@ -48,7 +48,7 @@ career-os의 표준 진입점은 agent skill 직접 호출이다.
 사용자 요청 또는 예약 실행
   -> 대응 SKILL.md 확인
   -> 입력 파일과 공개/비공개 경계 확인
-  -> agent 또는 runner가 필요한 도구 실행
+  -> agent 또는 runtime이 필요한 도구 실행
   -> 산출물 작성
   -> 검증과 안전 경계 확인
   -> 다음 행동 또는 사용자 승인 대기 상태 기록
@@ -150,7 +150,7 @@ Use skill: /position-recommender [context]
 오늘(Asia/Seoul) 수집된 active/open 공고가 없으면 기본 렌더링을 중단하고, 이전 snapshot 사용은 명시적인 stale 허용으로만 가능하다.
 사용자가 외부 게시 또는 공유 URL 생성을 명시하면 `report-publisher`를 사용한다.
 공개 범위를 검사한 뒤 Cloudflare Pages에 게시한다.
-Discord에는 게시와 내용 검증을 통과한 URL만 전달한다.
+외부 공유 응답에는 게시와 내용 검증을 통과한 URL만 전달한다.
 
 ## 지원 준비
 
@@ -203,7 +203,7 @@ discovered
 
 주요 산출물:
 
-- `state/positions-queue.jsonl` (옛 ledger, ADR-108)
+- `state/positions-queue.jsonl`
 - `applications/<application-id>/posting.md`
 - `applications/<application-id>/fit-analysis.md`
 - `applications/<application-id>/application-package.md`
@@ -312,7 +312,7 @@ application review 통과
 ## 피드백 루프
 
 지원 루프는 탈락이나 보류에서 끝나지 않고 다음 탐색과 보강으로 돌아간다.
-웹 대시보드 없이 파일과 skill 산출물이 루프 상태를 드러낸다.
+파일과 skill 산출물이 루프 상태를 드러낸다.
 
 표준 루프:
 
@@ -365,18 +365,10 @@ fixture 또는 실제 application package 선택
 
 평가 결과는 실제 제출 자동화가 아니라 생성 품질 회귀를 막기 위한 guardrail이다.
 
-## 폐기 흐름과 tombstone
+## 폐기 이력 경계
 
-현재 활성 흐름을 이해하는 데 필요한 폐기 이력만 남긴다.
+현재 활성 흐름을 이해하는 데 필요하지 않은 폐기 이력은 flow 본문에 남기지 않는다.
 상세 마이그레이션 기록은 ADR과 task 기록을 따른다.
-
-| 항목 | 현재 상태 | 현재 대체 흐름 |
-|---|---|---|
-| dispatcher와 `run_now.sh` | career-os 활성 진입점에서 제거됨 | agent skill 직접 호출 |
-| `interview-prep-analyzer` | 제거됨 | `job-fit-analyzer`, `interview-stage-prep`, drill 계열 |
-| `frontdoor-queue.jsonl` | 폐기 (ADR-110, Phase 06) | 추천 → 선택 → positions-queue 등록 |
-| 범용 LLM 채팅 UI | 제거됨 | 목적별 request와 evaluator |
-| 오래된 subprocess writer 경로 | 제거됨 | 현재 에이전트가 SKILL.md workflow 수행 |
 
 ## 실패 동작
 

@@ -5,14 +5,14 @@ career-os가 다루는 모든 영속 데이터의 스키마와 위치. 새 필�
 
 ## 디렉터리 한눈에 (5버킷 구조 — ADR-107)
 
-`data/`를 해체하고 top-level을 5버킷으로 재편했다.
+top-level을 5버킷으로 재편했다.
 config/state는 "이 파일이 바뀌는 트리거가 무엇인가"로 가른다(사용자 의도 = config, 시스템 실행·이벤트 = state).
-runtime 실데이터의 물리 이동은 이 plan 범위 밖이고, 경로 규약과 tracked 자산만 바꾼다(ADR-107).
+현재 구조에서는 `config/`, `state/`, `applications/`, `reports/`, `cache/`가 각자의 책임을 갖는다.
 
 | 디렉터리 | 역할 | git 추적 |
 |---|---|---|
-| `.env` (워크스페이스 root) | GitHub 토큰 등 secret (ADR-021) | ✗ (.gitignore) |
-| `.env.example` (워크스페이스 root) | secret 키 템플릿 — git 추적되는 빈 값 가이드 (ADR-021) | ✓ |
+| `.env` (워크스페이스 root) | GitHub 토큰 등 secret | ✗ (.gitignore) |
+| `.env.example` (워크스페이스 root) | secret 키 템플릿 — git 추적되는 빈 값 가이드 | ✓ |
 | `config/` | 사람이 큐레이션한 정책·현재 타깃·baseline·예외 override. 자산 목록 복제본으로 쓰지 않음 (ADR-069) | ✓ |
 | `state/` | 시스템 실행·이벤트 산물 (positions-queue, 학습·드릴 진도, mvp-target, topic-inventory, drill-log, company-cooldown, 수집 노트, eval) | ✗ 기본 gitignore, 5개 파일만 negation tracked (ADR-107) |
 | `applications/` | 공고별 지원 상태, 맞춤 지원 패키지, evidence/drift review | ✗ |
@@ -51,7 +51,7 @@ runtime 실데이터의 물리 이동은 이 plan 범위 밖이고, 경로 규�
 
 - 폐기·제거된 항목은 이 문서에 스키마를 남기지 않는다. 문서 비대화와 노이즈를 줄인다.
 - 폐기 이유와 history는 해당 ADR이 단일 출처다.
-- 단, applier·runner 등 코드가 아직 참조하는 항목은 legacy라도 스키마를 유지한다.
+- 단, applier·processor 등 코드가 아직 참조하는 항목은 legacy라도 스키마를 유지한다.
 
 ## public/question-bank/ (ADR-066, ADR-097)
 
@@ -175,7 +175,7 @@ ADR-107로 `state/`로 이동한 항목(트리거가 시스템 실행·이벤트
 - 대량 reservoir JSON은 정본이 아니라 migration 대상이다.
   필요한 항목만 curated override나 seed로 축소한다.
 
-config diet(plan068, 완료)로 정리된 상태:
+config 축소 이후 상태:
 
 - `first-round-drill-core-files.json` — `interview/prep.md` 단일 정본 이후 제거됨.
 - `study-pack-candidates.json` — `state/study-pack-candidates.json`으로 이동됨(ADR-107).
@@ -197,7 +197,7 @@ config diet(plan068, 완료)로 정리된 상태:
 
 `cooldown`은 ADR-109로 `state/company-cooldown.json`으로 분리했다(지원 결과 이벤트로 갱신 = state). 본 파일에는 더 두지 않는다.
 `preferenceExcluded`는 ADR-111로 `config/position-filters.json`의 `excludedCompanies`로 이관했다(durable 공고 필터 통합). 본 파일에는 더 두지 않는다.
-코드가 JSON을 읽어 adapter를 라우팅하는 wire-up은 후속 plan에서 한다. 본 스키마는 양방향 소비를 전제로 설계한다.
+코드는 JSON을 읽어 adapter 라우팅과 LLM 판단에 사용한다.
 
 ### config/position-filters.json (durable 공고 필터 단일 출처, ADR-111)
 
@@ -357,15 +357,15 @@ ADR-069 이후 `current_target`처럼 `state/mvp-target.json`의 현재 타깃�
 }
 ```
 
-보조 트랙은 study-pack 자동 생성이나 fos-study 발행을 의미하지 않는다. cron이나 agent prompt가 이 값을 읽어 별도 report/runtime 경로에 추천만 생성한다.
+보조 트랙은 study-pack 자동 생성이나 fos-study 발행을 의미하지 않는다. agent prompt가 이 값을 읽어 별도 report/runtime 경로에 추천만 생성한다.
 
-## applications/ (implemented base — plan029, plan031, plan038)
+## applications/
 
 공고별 지원 에이전트 MVP의 비공개 상태 저장소. 실제 지원 전략, 맞춤 이력서 문구, 제출 상태, 회사별 쿨다운 판단이 들어가므로 git 추적하지 않는다.
 
-### position priority fields (implemented — plan050)
+### position priority fields
 
-plan050은 positions-queue에 action stage 중심 priority layer를 추가한다.
+positions-queue는 action stage 중심 priority layer를 포함한다.
 이 필드는 회사의 절대 선호 순위가 아니라 "지금 어떤 행동을 할지"를 나타낸다.
 
 기본 action stage:
@@ -375,7 +375,7 @@ plan050은 positions-queue에 action stage 중심 priority layer를 추가한다
 - `monitor`: active/open 상태를 유지하며 주기적으로 본다.
 - `low-priority`: 가능성은 있으나 지금 준비하지 않는다.
 - `hold`: 판단 보류 또는 조건 대기.
-- `excluded`: 추천/대시보드 준비 후보에서 제외한다.
+- `excluded`: 추천/준비 후보에서 제외한다.
 
 사용자 표시용 숫자 매핑:
 
@@ -434,7 +434,7 @@ plan050은 positions-queue에 action stage 중심 priority layer를 추가한다
 - `recommendationSnapshot.generatedAt`과 source report path가 없으면 refresh 결과로 취급하지 않는다.
 - `prepare-now`에는 `nextAction`과 하나 이상의 `evidenceUrls`가 필요하다.
 
-### state/_priority-history.jsonl (implemented — plan050, 옛 data/applications/, ADR-107 경로 규약)
+### state/_priority-history.jsonl
 
 priority 변경 이력을 저장하는 runtime/private audit log다.
 한 줄은 하나의 priority 변경 이벤트다.
@@ -485,7 +485,7 @@ private/<company-slug>/<position-slug>/interview/
 
 - `state/mvp-target.json`의 `primary`가 `null`이면 포지션별 답변 피드백 기록은 중단한다.
 - 답변 전문과 상세 피드백은 private 경계 안에만 둔다.
-- Discord, `sources/fos-study/`, 공개 질문 bank로 답변 원문을 복사하지 않는다.
+- 외부 공유 요약, `sources/fos-study/`, 공개 질문 bank로 답변 원문을 복사하지 않는다.
 - 공개 가능한 기술 주제만 별도 `study-pack-writer` 입력 후보가 될 수 있다.
 
 ### 디렉터리 구조
@@ -503,7 +503,7 @@ applications/
         └── review.md
 
 state/
-├── positions-queue.jsonl        (옛 data/applications/ledger.jsonl, ADR-108)
+├── positions-queue.jsonl
 └── _priority-history.jsonl
 ```
 
@@ -513,10 +513,9 @@ TossPlace fixture 예시:
 applications/tossplace/applied-ai-engineer/
 ```
 
-### positions-queue.jsonl record schema (옛 ledger.jsonl — ADR-108)
+### positions-queue.jsonl record schema
 
-검증 단일 출처: `scripts/application-agent/positions_queue_schema.ts` (옛 `ledger_schema.ts`, 코드 rename은 Phase 07).
-아래 record 예시의 `applicationDir`·`*Path`는 Phase 07 경로 갱신 대상이다.
+검증 단일 출처: `scripts/application-agent/positions_queue_schema.ts`.
 
 ```json
 {
@@ -634,9 +633,9 @@ closed
 - `submission-checklist.md`: 사용자가 수동 제출 전에 확인할 체크리스트.
 - `review.md`: evidence guard, drift review, 개인정보/공개 금지 정보, 사용자 승인 필요 항목.
 
-### Resume Package Contract (completed — plan055)
+### Resume Package Contract
 
-plan055는 지원 패키지의 전략 문서와 제출용 문서를 분리한다.
+지원 패키지는 전략 문서와 제출용 문서를 분리한다.
 Markdown 산출물을 먼저 고정하고, 리뷰된 이력서 초안을 HTML/PDF로 내보낸다.
 산출물 체인은 `Markdown 이력서 초안 -> design.md 적용 HTML 이력서 -> HTML을 PDF로 변환한 완성 PDF 이력서`다.
 외부 제출 자동화는 여전히 범위 밖이다.
@@ -666,13 +665,9 @@ Markdown 산출물을 먼저 고정하고, 리뷰된 이력서 초안을 HTML/PD
 
 생성 문서 품질 계약:
 
-- 첫 10줄 안에 결론을 둔다.
-- 섹션 제목은 한국어 우선으로 쓴다.
-- 본문은 자연스러운 한국어 문장으로 작성한다.
 - 내부 분석과 제출용 문구를 분리한다.
 - `needs_evidence`는 그대로 두지 않는다.
   `보강 필요 / 선택지 / 권장 행동`으로 바꾼다.
-- 긴 문단과 영어-heavy label을 피한다.
 
 `needs_evidence` resolution loop:
 
@@ -689,9 +684,9 @@ Markdown 산출물을 먼저 고정하고, 리뷰된 이력서 초안을 HTML/PD
 
 루트 `.gitignore`의 `applications/` 규칙 때문에 실제 지원 산출물은 기본적으로 git 추적되지 않는다. 이는 의도된 정책이다. 스키마와 skill 명세만 git 추적하고, 공고별 맞춤 이력서/지원 전략/제출 상태는 로컬 private data로 유지한다.
 
-### application-flow-agent runtime fields (plan031 — phase-01 확정)
+### application-flow-agent runtime fields
 
-plan031은 기존 positions-queue record와 호환되도록 optional runtime field를 추가한다. 기존 `status`는 큰 흐름을 유지하고, 세부 자율 실행 상태는 `agentPhase` optional 필드로 분리한다. 검증 단일 출처: `scripts/application-agent/positions_queue_schema.ts` (phase-02에서 확장, 옛 `ledger_schema.ts`).
+positions-queue record는 optional runtime field를 가진다. 기존 `status`는 큰 흐름을 유지하고, 세부 자율 실행 상태는 `agentPhase` optional 필드로 분리한다. 검증 단일 출처는 `scripts/application-agent/positions_queue_schema.ts`다.
 
 ```json
 {
@@ -710,7 +705,7 @@ plan031은 기존 positions-queue record와 호환되도록 optional runtime fie
 }
 ```
 
-`agentPhase` enum (확정 — plan031 phase-01):
+`agentPhase` enum:
 
 | 값 | 의미 |
 |---|---|
@@ -743,9 +738,9 @@ plan031은 기존 positions-queue record와 호환되도록 optional runtime fie
 - `ready_for_user_review` 이후 외부 제출 action은 항상 사용자 승인 필요 상태로 남긴다.
 - fit score 70점 미만이면 `actionable_candidate`로 전이할 수 없다.
 
-### config/study-pack-topics.json (plan017 신규 — study-pack namespace 단일 책임)
+### config/study-pack-topics.json
 
-`config/topics.json`의 `study-pack` namespace 분리본 (ADR-027). study-pack-writer + study-topic-recommender가 Read. 55 키.
+study-pack-writer와 study-topic-recommender가 읽는 topic override와 fallback topic 파일이다.
 
 ADR-069 이후 이 파일은 전체 학습 자산 DB가 아니라 migration 대상이다.
 실제 학습 문서 inventory는 `sources/fos-study/`에서 파생하고, 이 파일에 남길 값은 사람이 의도적으로 고른 override, pin, fallback topic 정도로 축소한다.
@@ -769,9 +764,9 @@ ADR-069 이후 이 파일은 전체 학습 자산 DB가 아니라 migration 대�
 
 현행 스키마는 "state/study-pack-candidates.json (ADR-070 이후 active 후보 캐시. ADR-107 config→state 이동)" 섹션을 단일 출처로 참조한다.
 
-### config/question-bank-topics.json (plan017 신규 — question-bank + master namespace)
+### config/question-bank-topics.json
 
-`config/topics.json`의 `question-bank` + `master` namespace 분리본 (ADR-027). interview-asset-writer가 Read.
+interview-asset-writer가 읽는 question-bank와 master topic override 파일이다.
 
 ADR-066 이후 공개 가능 일반 질문 bank의 정본은 `public/question-bank/`다.
 이 파일은 공개 질문 bank 자체를 대표하지 않는다.
@@ -857,7 +852,7 @@ skill 전용 작성 가이드라면 `.claude/skills/study-pack-writer/references
 
 ### config/baseline-core-files.json
 
-`config/baseline-core-files.txt` (ADR-003) → JSON 전환 (plan002).
+baseline 분석 대상 core file 목록이다.
 
 ```json
 {
@@ -875,7 +870,7 @@ skill 전용 작성 가이드라면 `.claude/skills/study-pack-writer/references
 
 ## .env / Secrets (워크스페이스 root)
 
-ADR-021로 워크스페이스 secret 위치를 `<ws>/config/.env` → `<ws>/.env`(워크스페이스 root)로 이동. `.env.example`도 같은 위치.
+워크스페이스 secret은 `<ws>/.env`에 둔다. `.env.example`도 같은 위치다.
 
 `career-os/.env` 스키마:
 
@@ -946,7 +941,7 @@ topic 학습 이력과 topic 학습 약점 상태의 단일 출처다.
 - `last_passed`: 마지막 통과 날짜 (ISO 8601, null이면 미통과).
 - 신설 시 빈 `{}`로 시작한다. 실데이터에 drill 필드가 0건이라 마이그레이션 데이터 손실이 없다(ADR-105).
 
-### reports/ (분석·준비 리포트 — plan017, plan086, plan093)
+### reports/
 
 분석·준비 스킬 실행 산출물. 외부 publish 없음 — 내부 학습용.
 
@@ -961,7 +956,7 @@ topic 학습 이력과 topic 학습 약점 상태의 단일 출처다.
 baseline 모드는 `config/baseline-core-files.json` 큐레이션 집합 사용.
 daily 모드는 토픽 기반 fos-study 파일 선택 + `state/study-progress.json` 갱신.
 
-### state/drill-log-YYYY-MM-DD.jsonl (plan086 신규. 옛 data/runtime/, ADR-107 경로 규약)
+### state/drill-log-YYYY-MM-DD.jsonl
 
 `tech-interview-drill` / `behavioral-interview-drill` 실행 시 질문별 답변 성과를 누적하는 일별 로그.
 같은 날 여러 번 드릴을 돌려도 같은 파일에 append된다.
@@ -984,7 +979,7 @@ daily 모드는 토픽 기반 fos-study 파일 선택 + `state/study-progress.js
 - `score`: 3단계 채점 결과. `unknown`은 답변 불가 또는 채점 보류.
 - `study_pack_dispatched`: `fail`/`shallow` 점수 시 `study-pack-writer`에 비동기 위임 여부.
 
-### state/topic-inventory.json (ADR-009, ADR-033 이후 스냅샷 축소. 옛 data/runtime/, ADR-107 경로 규약)
+### state/topic-inventory.json
 
 `refresh_topic_inventory.ts`가 매 morning 추천마다 갱신. ADR-033 이후 config pool 복사본이 아닌 **실행/진단 스냅샷**이다 — 마지막 실행의 판단 결과 + duplicate review status만 담는다.
 
@@ -1056,7 +1051,7 @@ decision 라벨 의미:
 
 writer는 deterministic scan + (가능하면) Claude review 결과를 새 markdown Write 직전에 한 번 더 확인 — 사용자가 직접 topic-key를 지정해 호출하는 경로에도 최종 검증 조건으로 동작.
 
-### state/study-topic-candidate-refresh.json (ADR-070, 옛 data/runtime/, ADR-107 경로 규약)
+### state/study-topic-candidate-refresh.json
 
 LLM 기반 후보 refresh turn의 실행 기록.
 추천기가 고정 seed만 순회하지 않도록, 현재 학습 선호·진행 상태·최근 추천 반복·fos-study inventory를 보고 새 후보를 발굴한 결과를 남긴다.
@@ -1110,7 +1105,7 @@ LLM 기반 후보 refresh turn의 실행 기록.
 ```
 
 동반 markdown인 `state/study-topic-candidate-refresh.md`는 사람이 읽는 요약이다.
-Discord에는 민감하지 않은 후보 수, 새 후보 예시, 보류 사유만 요약한다.
+외부 공유 요약에는 민감하지 않은 후보 수, 새 후보 예시, 보류 사유만 담는다.
 
 ### state/study-pack-candidates.json (ADR-070 이후 active 후보 캐시. ADR-107 config→state 이동)
 
@@ -1145,7 +1140,7 @@ LLM 후보 refresh가 검증을 통과한 `new` 후보만 자동 append/update�
 - 30일 이상 선택되지 않은 자동 후보는 `stale` 처리 대상이다.
 - fos-study 문서가 실제로 생긴 후보는 다음 refresh에서 `promoted` 또는 제거 후보가 된다.
 
-### state/topic-inventory-history.jsonl (ADR-010/012. 옛 data/runtime/, ADR-107 경로 규약)
+### state/topic-inventory-history.jsonl
 
 매 모닝 추천마다 한 줄 append. ADR-010 carry-over penalty와 ADR-012 보조 카테고리 cooldown의 입력.
 
@@ -1161,7 +1156,7 @@ LLM 후보 refresh가 검증을 통과한 `new` 후보만 자동 append/update�
 }
 ```
 
-### state/study-topic-actions/YYYY-MM-DD.json (ADR-073, 옛 data/runtime/, ADR-107 경로 규약)
+### state/study-topic-actions/YYYY-MM-DD.json
 
 daily study action callback을 topic 추천 결과와 연결하는 runtime snapshot.
 정본 학습 이력이나 추천 pool이 아니라, 해당 날짜 메시지의 버튼을 해석하기 위한 짧은 매핑이다.
@@ -1190,7 +1185,7 @@ daily study action callback을 topic 추천 결과와 연결하는 runtime snaps
 - `career.study-pack.skip:*`는 그날 추천을 넘긴 기록이다. topic 영구 제외가 아니다.
 - 외부 전달 계층이 버튼을 제공한다면 유효시간과 callback 처리를 그 계층에서 정한다.
 
-### state/topic-replenishment.json (study-topic 자동 보충 결정, 옛 data/runtime/, ADR-107 경로 규약)
+### state/topic-replenishment.json
 
 replenish 실행 결과 요약. claudeInvoked 여부, 보충된 후보 수 등.
 
@@ -1225,11 +1220,7 @@ RSS/Atom feed 디스크 캐시. 6시간 TTL.
 }
 ```
 
-### cache/freeform-study-pack-topic.json / live-coding-generated-topic.json
-
-`run_from_request.sh` / `run_morning_live_coding.sh`가 쓰는 임시 토픽 컨테이너. 두 runner 모두 dispatcher 미연결 — deferred.
-
-### state/application-agent/eval-cases/ (옛 data/runtime/, ADR-107 경로 규약)
+### state/application-agent/eval-cases/
 
 커리어 에이전트가 만든 이력서 문장, 지원 패키지 문장, 리뷰 문장의 안전성을 점검하기 위한 평가 샘플. 현재는 runtime 실험 자산이라 git 추적하지 않는다.
 
@@ -1260,7 +1251,7 @@ Expected verdict: pass
 
 현재 검증 단일 출처는 `scripts/application-agent/evaluate_cases.ts`다. 이 스크립트는 샘플을 읽어 실제 판정과 기대 판정이 일치하는지 확인하고, 결과를 `eval-reports/`에 쓴다.
 
-### state/application-agent/eval-reports/ (옛 data/runtime/, ADR-107 경로 규약)
+### state/application-agent/eval-reports/
 
 `scripts/application-agent/evaluate_cases.ts` 실행 결과. 기본 산출물:
 
@@ -1293,7 +1284,7 @@ state/application-agent/eval-reports/latest-report.json
 
 이 리포트는 커리어 에이전트의 평가 기준이 바뀌었을 때 회귀 확인용으로 쓴다. 장기 보존이 필요한 리포트는 별도 report 경로로 승격하기 전까지 git에 넣지 않는다.
 
-### state/application-agent/package-eval/ (옛 data/runtime/, ADR-107 경로 규약)
+### state/application-agent/package-eval/
 
 실제 지원 패키지 평가 결과. `scripts/application-agent/evaluate_package.ts`가 `application-package.md`와 `review.md`를 읽고, 제출 전 안전 점검 리포트를 쓴다.
 
@@ -1333,23 +1324,10 @@ state/application-agent/package-eval/<company-role>/latest-report.json
 
 이 리포트는 runtime 점검 결과라 git에 넣지 않는다. 사용자 검토 후 보존 가치가 생긴 결론만 `review.md`나 별도 비공개 report로 승격한다.
 
-### data/prep/<company-or-stage-slug>/ (legacy)
+### private/<company>/<position>/interview/prep.md
 
-회사/면접 단계별 hand-crafted 준비 자산의 옛 위치다.
-새 active 면접 준비 정본은 `private/<company>/<position>/interview/prep.md`다.
-`data/prep/`는 보조 입력이나 과거 task evidence가 필요할 때만 참조한다.
-
-```
-data/prep/
-└── <company-or-stage-slug>/   (예: cj-foodville-first-round)
-    ├── strategy.md            회사/면접 단계 분석 + 후보자 포지셔닝 힌트
-    └── checklist.md           면접 당일 최종 체크리스트
-```
-
-- active `state/mvp-target.json`은 `prep_dir`를 들지 않는다.
-- `interview-stage-prep` skill은 `primary.data_root` 아래 `interview/prep.md`를 정본으로 읽는다.
-- stage 산출물: `private/<company>/<position>/interview/prep.md`.
-- git 추적 ✓ — 남기는 경우 과거 히스토리 보존 가치가 있는 파일만 둔다.
+회사/면접 단계별 active 준비 정본이다.
+`interview-stage-prep` skill은 `state/mvp-target.json`의 `primary.data_root` 아래 `interview/prep.md`를 읽는다.
 
 ### cache/locks/
 
@@ -1396,8 +1374,8 @@ Toss adapter는 공식 `job-groups` API의 그룹 공고와 하위 포지션을 
 - 사람용 14개 라벨 외에 적재용 `source`(수집 adapter 식별자)와 `closeDate`(마감일 문자열 또는 null)를 `PositionItem`(강력·도전 티어)에 둔다(ADR-101).
 - `source`·`closeDate`는 수집 snapshot에서 채운다.
 - tier 상한(강력 3 / 도전 2 / 보류 3), `linkEvidenceLevel` enum(active/open만), 추천 티어 개별 공고 URL 강제, 강력 추천 `stretchGap` 금지를 스키마가 보장한다.
-- 표준 출력 JSON을 호출자가 가공한다(ADR-101). cron은 Discord 요약으로 소비하며, 전달 매체는 운영의 공유 파일과 로컬·분산의 hermes API 응답이다.
-- 옛 파생 `items.json`과 daily runner는 ADR-101로 폐기됐다.
+- 표준 출력 JSON을 호출자가 공개 가능한 공유 요약으로 가공한다.
+- 옛 파생 `items.json`은 ADR-101로 폐기됐다.
 
 ### reports/latest/position-recommendation.{json,md}
 
@@ -1407,7 +1385,7 @@ recommendation.json 정본에서 파생하는 사람 읽기용 산출물(mirror)
 - 같은 날짜 보존본은 `reports/daily/YYYY-MM-DD/position-recommendation/{recommendation.json,report.md}`.
 - HTML은 `reports/downloads/position-recommendation-all-YYYY-MM-DD.html` 하나만 만든다. 추천 공고 섹션과 전체 조건 통과 공고 섹션을 함께 담는다.
 - 표시 template 정본은 `scripts/position-recommender/templates/report.html` (스타일만 정의, JSON 데이터 바인딩). 현재 표준 파이프라인은 이 template을 쓰지 않고 `--format html`을 직접 호출할 때만 쓴다.
-- template은 실행 자산이므로 `data/` 아래에 두지 않고 ASCII 중심으로 유지한다.
+- template은 실행 자산이므로 별도 데이터 버킷에 두지 않고 ASCII 중심으로 유지한다.
 
 ## sources/fos-study/
 

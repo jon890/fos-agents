@@ -5,6 +5,7 @@
 ## 시작
 
 현재 작업에 맞는 skill을 직접 호출한다.
+각 skill은 `SKILL.md`에 입력, 산출물, 검증, 안전 경계를 담는다.
 
 - 지원 가능한 공고를 찾을 때: `/position-recommender`
 - 공고별 지원 초안을 만들 때: `/application-package-writer <posting-path>`
@@ -17,6 +18,19 @@
 - 오늘 학습 주제를 고를 때: `/study-topic-recommender`
 
 각 skill의 입력, 산출물, 검증, 안전 경계는 해당 `SKILL.md`가 단일 출처다.
+
+## 설정
+
+clone 뒤 확인할 기본 파일:
+
+- `.env.example`: 필요한 secret 키 이름.
+- `config/candidate-profile.md`: 후보자 프로필 정본.
+- `config/position-collection.json`: 공고 수집 설정.
+- `config/position-filters.json`: 제외 회사와 억제 공고 URL.
+- `state/mvp-target.json`: 현재 면접·지원 타깃.
+
+`.env`는 워크스페이스 루트에 두고 git에 올리지 않는다.
+외부 게시, 제출, 로그인, 업로드, 메시지 전송은 사용자 승인 후에만 수행한다.
 
 ## 작업 흐름
 
@@ -31,9 +45,16 @@
 
 - `config/`에는 후보자 기준, 정책, 사람이 고른 override를 둔다.
 - `state/`에는 현재 타깃, 학습·드릴 진행, cooldown 같은 실행 상태를 둔다.
-- `applications/`, `private/`, `data/`에는 지원 전략과 개인 산출물을 둔다.
+- `applications/`, `private/`, `reports/`, `cache/`에는 지원 전략, 개인 산출물, 실행 결과, 재생성 가능한 캐시를 둔다.
 - `public/question-bank/`, `sources/fos-study/`에는 공개 가능한 일반 지식만 둔다.
 - 실제 제출, 로그인, 업로드, 외부 메시지 전송, 공개 발행은 사용자 승인 후에만 수행한다.
+
+## 검증
+
+문서 변경 뒤에는 현재 파일 구조와 낡은 실행기·경로·전달 매체 표현이 남았는지 확인한다.
+구조 변경이면 `scripts/`, `config/`, `state/`, `reports/`, `applications/`, `cache/`의 실제 파일과 문서 설명을 대조한다.
+
+TypeScript 스크립트 변경이 있으면 루트에서 `bunx tsc --noEmit`과 해당 스크립트의 검증 명령을 실행한다.
 
 ## 문서
 
