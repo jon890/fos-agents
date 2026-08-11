@@ -4,7 +4,7 @@ apartment 워크스페이스의 아키텍처 결정을 시간순으로 누적 �
 
 형식: `## ADR-N — 제목` + status / date 라인 + **맥락 / 결정 / 결과** 3섹션. 폐기·supersede는 status 라인에 명기.
 
-모노레포 레벨 ADR (워크스페이스 간 공통 정책): [../../docs/adr.md](../../docs/adr.md).
+모노레포 공통 결정은 [루트 ADR INDEX](../../docs/adr/INDEX.md)를 따른다.
 
 ---
 

@@ -19,14 +19,13 @@ Date: 2026-07-03
 
 정본 경로:
 
-- `data/runtime/application-agent/frontdoor-queue.jsonl`
-- `data/applications/ledger.jsonl`
-- `data/applications/_priority-history.jsonl`
-- `data/reports/daily/YYYY-MM-DD/position-recommendation/recommendation.json`
+- `state/positions-queue.jsonl`
+- `state/_priority-history.jsonl`
+- `reports/daily/YYYY-MM-DD/position-recommendation/recommendation.json`
 - `private/<company>/<position>/`
-- `config/mvp-target.json`
+- `state/mvp-target.json`
 
-`config/mvp-target.json`은 active target이 없으면 `primary: null`을 허용한다.
+`state/mvp-target.json`은 active target이 없으면 `primary: null`을 허용한다.
 종료된 타깃은 `history[]`에 `outcome`과 피드백 요약을 남긴다.
 
 ## Consequences

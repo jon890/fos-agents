@@ -14,7 +14,8 @@ CJ푸드빌 면접 준비가 dashboard, markdown 보기, 질문 선택, 답변 �
 ### 결정
 
 - 회사·포지션별 active 준비 홈은 `private/<company-slug>/<position-slug>/`에 둔다.
-- `config/mvp-target.json`의 `primary.data_root`를 정본 경로로 사용하고, dashboard와 자동화는 이 경로를 따른다.
+- `state/mvp-target.json`의 `primary.data_root`를 정본 경로로 사용한다.
+- 파일 기반 자동화는 이 경로를 따른다.
 - 면접 질문 정본을 runtime/report 경로에 중복 유지하지 않는다.
 - 구조 전환으로 대체된 legacy runtime/report는 archive 없이 삭제할 수 있다.
 - 새 코드는 legacy fallback을 추가하지 않는다. 필요한 호환은 일회성 migration으로 끝낸다.
@@ -24,6 +25,6 @@ CJ푸드빌 면접 준비가 dashboard, markdown 보기, 질문 선택, 답변 �
 ### 결과
 
 - 포지션별 준비 자료와 시스템 runtime/report의 경계가 명확해진다.
-- dashboard는 `data_root` 하나를 따라가면 현재 포지션의 면접 연습, report, study 자료를 찾을 수 있다.
+- 자동화는 `data_root` 하나로 현재 포지션의 면접 연습, report, study 자료를 찾을 수 있다.
 - legacy fallback을 제거해 경로 drift와 중복 산출물이 줄어든다.
 - 공개 공부팩 발행 흐름은 유지하되, 개인 답변과 지원 전략이 그대로 공개되는 일은 막는다.

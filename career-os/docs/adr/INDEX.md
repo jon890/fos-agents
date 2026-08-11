@@ -22,7 +22,6 @@
 | ADR-018 | docs/ 운영 정책: 휘발성 vs 영속, learn → ADR 흡수 흐름 | Partially superseded by [[ADR-032]] (2026-05-17, learn 영역 폐기 — hand-off/prep 유지 결정은 살아있음) — 5문서 + docs/data 분리 부분은 ai-nodes ADR-004 (2026-05-18)로 모노레포 격상 (Lifted) | [ADR-018-docs-운영-정책-휘발성-vs-영속-learn-adr-흡수-흐름.md](ADR-018-docs-운영-정책-휘발성-vs-영속-learn-adr-흡수-흐름.md) |
 | ADR-019 | career-os: Claude Code skill 폴더와 실행 스크립트 디렉터리 분리 | Accepted | [ADR-019-career-os-claude-code-skill-폴더와-실행-스크립트-디렉터리-분리.md](ADR-019-career-os-claude-code-skill-폴더와-실행-스크립트-디렉터리-분리.md) |
 | ADR-020 | 공용 헬퍼 TS(Bun) 마이그레이션: 점진 + _shared/lib·types 단일 위치 | Superseded by ai-nodes ADR-011 | [ADR-020-공용-헬퍼-ts-bun-마이그레이션-점진-_shared-lib-types-단일-위치.md](ADR-020-공용-헬퍼-ts-bun-마이그레이션-점진-_shared-lib-types-단일-위치.md) |
-| ADR-021 | Discord 알림 openclaw 경유 + 워크스페이스 `.env` 격리 | Archived (2026-06-29, OpenClaw 전환 문서 정리) — .env 워크스페이스 root 격리 결정은 ai-nodes ADR-004 참조 | 삭제됨 |
 | ADR-022 | 도메인 헬퍼 TS(Bun) 마이그레이션 | Accepted | [ADR-022-도메인-헬퍼-ts-bun-마이그레이션.md](ADR-022-도메인-헬퍼-ts-bun-마이그레이션.md) |
 | ADR-025 | Skills 정리 + 한글화 정책 | 채택됨 | [ADR-025-skills-정리-한글화-정책.md](ADR-025-skills-정리-한글화-정책.md) |
 | ADR-026 | study-topic-recommender native 마이그 + Python → TypeScript + replenish/promote/live-coding 흡수 |  | [ADR-026-study-topic-recommender-native-마이그-python-typescript-replenish-promote-live-coding-흡수.md](ADR-026-study-topic-recommender-native-마이그-python-typescript-replenish-promote-live-coding-흡수.md) |

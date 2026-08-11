@@ -25,7 +25,7 @@ ADR-085로 `career-os/.claude/skills`를 정본으로 두고 `career-os/.codex/s
 - `application-agent`의 기본 command suggestion은 에이전트 비종속 표현을 사용한다.
 - `--execute-skills`처럼 runner가 실제로 작업을 실행해야 하는 경우에만 compatibility backend를 선택한다.
 - `career-os/TOOLS.md`는 자동 로드 지시 파일이 아니고 정보가 중복되므로 제거한다.
-  현재 타깃은 `docs/prd.md`와 `config/mvp-target.json`, 호출 정책은 `AGENTS.md`와 본 ADR을 따른다.
+  현재 타깃은 `state/mvp-target.json`, 호출 정책은 `AGENTS.md`와 본 ADR을 따른다.
 - 제거된 `interview-prep-analyzer` 계약은 되살리지 않는다.
   현재 면접 준비 흐름은 `job-fit-analyzer`, `interview-stage-prep`, `tech-interview-drill`, `behavioral-interview-drill`로 나뉜다.
 
