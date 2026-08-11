@@ -59,21 +59,19 @@ bash stock-investment/scripts/daily-stock-analysis-note/run_with_claude.sh
 | `data/daily-notes/history.json` | 종목 선택 이력 (중복 방지 rotation) |
 | `data/thesis-tracker/<ticker-slug>.json` | 종목별 투자 가설 누적 로그 |
 | `data/audit/` | workspace-audit 결과 |
-| `logs/token-usage.jsonl` | 토큰 사용 상세 |
 
-fos-study 발행 (daily-stock-analysis-note만):
+fos-study 발행 준비 (daily-stock-analysis-note만):
 
-- `career-os/sources/fos-study/finance/investing/ai-tech-stock/YYYY-MM-DD-<slug>.md`
+- `data/publish/YYYY-MM-DD-<slug>.md`
 
 ## 6. 비기능 요구사항
 
 - **재실행 가능성**: 같은 날 같은 명령을 여러 번 돌려도 정합성이 깨지지 않음 (날짜별 멱등).
-- **비용 추적**: `logs/token-usage.jsonl` — openclaw cron 실행 메타데이터.
-- **Discord 알림**: 완료 시 `#주식토크` 채널. `SKIP_NOTIFY=1` 로 억제 가능.
+- **실행 결과**: 로컬 파일, 표준 출력, 종료 코드로 성공과 실패를 구분한다.
 - **격리**: 다른 워크스페이스 (apartment, career-os, travel) 자산 교차 참조 없음.
-  - 예외: daily-stock-analysis-note는 발행 목적으로 `career-os/sources/fos-study` 에 단방향 쓰기 (decisions/005 기반 예외 — ADR-001 미위반).
+  외부 저장소 반영은 별도 승인된 발행 단계로 넘긴다.
 - **불확실성 명시**: 추정치는 추정으로 명기. 검증된 사실과 추론 구분.
-- **비밀**: 워크스페이스 root `.env` 관리 (plan003에서 도입 예정). `DISCORD_CHANNEL_ID` 필수.
+- **비밀**: 워크스페이스 root `.env`에서 관리한다.
 
 ## 7. 의도적으로 안 하는 것
 

@@ -8,7 +8,7 @@ apartment 워크스페이스의 **디렉터리 구조·책임·외부 의존성*
 apartment/
 ├── AGENTS.md                        # 워크스페이스 가이드 진입점
 ├── CLAUDE.md -> AGENTS.md           # 심링크
-├── .env                             # 비밀 정보 (NAVER_COOKIE, DISCORD_WEBHOOK_URL 등)
+├── .env                             # 비밀 정보 (NAVER_COOKIE 등)
 ├── .env.example                     # 템플릿
 │
 ├── config/
@@ -95,33 +95,28 @@ apartment/
 ```bash
 # run_with_claude.sh 상단 패턴
 cd "$TASK_ROOT"
-notify_safe "[시작] ..."          # Discord 시작 알림 (bun run notify_discord.ts)
 claude --permission-mode bypassPermissions -p "/<skill> ${REQUEST}"
-# stdout 비면 report.md 경로 폴백, exit!=0이면 Discord 실패 알림
+# stdout 비면 report.md 경로 폴백, exit!=0이면 stderr와 종료 코드 반환
 ```
 
-native skill이 SKILL.md 기준으로 수집·정규화 TS(bun Bash)·합성·완료 알림을 직접 수행.
+native skill이 SKILL.md 기준으로 수집·정규화 TS와 합성을 수행한다.
+runner는 결과 경로와 공개 가능한 요약을 표준 출력으로 반환한다.
 `track_task.sh` self-wrap는 ADR-010으로 폐기 — `task-runs.jsonl` 미생성.
 
 ## 5. 외부 의존성
 
 | 의존성 | 위치 | 상태 | 역할 |
 |---|---|---|---|
-| `track_task.sh` | `_shared/bin/track_task.sh` | apartment 미사용 (ADR-010) | self-wrap 제거.<br>stock-investment만 잔존 |
-| `extract_claude_result.ts` | `_shared/lib/extract_claude_result.ts` | apartment 미사용 (ADR-010) | json envelope 추출 폐기 — Claude가 report.md 직접 Write |
 | `claude` CLI | 시스템 설치 | 사용 중 | native skill 직접 호출 (`claude -p "/<skill>"`) |
 | `agent-browser` CLI | 로컬 설치 필수 | 사용 중 | Naver Bearer JWT 자동 추출 (ADR-001) |
 | Bun runtime | 시스템 (ai-nodes root `bun install`) | 사용 중 (ADR-003) | 수집·정규화 TS 헬퍼 실행 (collect_sources / normalize_results / load_target_meta) |
-| `notify_discord.ts` | `_shared/lib/notify_discord.ts` | 사용 중 (ADR-009) | Discord 알림 (openclaw 경유, thin wrapper + native skill이 `bun run`으로 호출) |
-
-`notify_discord.ts` — ADR-009로 apartment 도입. 워크스페이스 한정 `notify_discord.sh` / `notify_discord_media.sh`를 폐기하고 `_shared/lib`의 ts 정본으로 통합 (openclaw subprocess + 10s 타임아웃, `DISCORD_CHANNEL_ID` 필수). `extract_claude_result.ts`는 ADR-010으로 apartment에서 미사용 — stock-investment만 잔존(후속 모노레포 plan에서 폐기 예정). apartment는 ADR-003 이후 Shell + TS 표준 확장.
 
 ## 6. 언어 분포
 
 | 언어 | 파일 수 (추정) | 역할 |
 |---|---|---|
 | Shell | 3 | thin wrapper `run_with_claude.sh` × 2 (daily-report ADR-010 + interior)<br>+ `run_smoke_test.sh`<br>`run_report.sh`는 ADR-010 폐기 |
-| Python | 0 | apartment-daily-report 안 Python 0. ai-nodes plan001 이후 `_shared/bin/extract_claude_result.py` git rm — `_shared/lib/extract_claude_result.ts`가 단일 출처 |
+| Python | 0 | apartment-daily-report 안 Python 0 |
 | TypeScript | 7 | `_lib/load_target_meta.ts` (plan002) + collect_sources / collect_naver_api / naver_api_schemas (plan003) + collect_hogangnono / collect_kbland (plan004) + normalize_results (plan005) |
 
 apartment는 ADR-003으로 TypeScript 도입 시작 (plan002). plan003 (Naver / sources) + plan004 (Hogangnono / KB) + plan005 (normalize) 마이그 완료. plan006 (build_weekly_listing_trend)는 ADR-008로 폐기 (dead code + PIL 의존 제거). apartment Python 완전 제거 — ai-nodes "stdlib only" 진술 정합화.

@@ -144,14 +144,10 @@ git pull 실패 시 → stderr warn + 로컬 캐시로 분석 계속.
 
 각 액션은 어떤 스킬에 무엇을 입력으로 넘기고 왜 그 행동인지를 명시한다.
 
-### 7. Discord 알림 (셸 명령)
+### 7. 외부 전달
 
-```bash
-bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
-  "[완료] job-fit-analyzer: <slug> 역할 핏 진단 리포트 생성"
-```
-
-알림 실패는 비치명적 — stderr warn만, skill 자체는 success 종료.
+리포트 경로와 공개 가능한 짧은 요약을 표준 출력으로 반환한다.
+외부 전달은 저장소 밖 호출자가 처리한다.
 
 ## Self-check
 
@@ -192,7 +188,7 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 | candidate-profile.md 없음 | stderr + exit 1 |
 | 지난 진단 JSON 없음 | changeSince 생략하고 계속 진행 |
 | self-check(스키마 검증) 3회 실패 | stderr + exit 1, 실패 필드 명시 |
-| Discord notify 실패 | stderr warn, skill success |
+| 외부 전달 실패 | skill 범위 밖의 실패로 분리하고 생성 산출물은 유지 |
 
 ## Why this design
 

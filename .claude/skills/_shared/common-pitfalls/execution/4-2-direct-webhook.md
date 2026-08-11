@@ -24,4 +24,5 @@ phase가 `curl`로 Discord webhook을 직접 호출한다.
 
 ## Self-check
 
-알림은 `_shared/lib/notify_discord.ts` 또는 워크스페이스에서 승인된 helper를 경유한다.
+저장소 실행 코드는 외부 메시지를 직접 전송하지 않는다.
+로컬 파일과 표준 출력을 계약으로 두고, 외부 전달은 저장소 밖에서 처리한다.

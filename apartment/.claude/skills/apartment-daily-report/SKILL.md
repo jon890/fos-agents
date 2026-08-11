@@ -87,14 +87,10 @@ bun scripts/apartment-daily-report/normalize_results.ts <raw-search.json 경로>
 
 `claude.result.json` / `report.fallback.md`는 생성하지 않는다 (ADR-010 폐기).
 
-### 5단계: 알림
+### 5단계: 외부 전달
 
-```bash
-bun ../_shared/lib/notify_discord.ts "<완료 요약 메시지>"
-```
-
-리포트 생성 완료 및 요약을 Discord로 전송한다.
-시작·실패 알림은 thin wrapper(`run_with_claude.sh`) 담당 — 이 SKILL.md 범위 외.
+리포트 경로와 공개 가능한 짧은 요약을 표준 출력으로 반환한다.
+외부 전달은 저장소 밖 호출자가 처리한다.
 
 ## 경계
 
@@ -108,14 +104,14 @@ bun ../_shared/lib/notify_discord.ts "<완료 요약 메시지>"
 
 - 가격·수량이 없으면 발명하지 않는다 — 소스 실패 시 raw 보존
 - 불확실성 섹션을 생략하지 않는다
-- `~/.openclaw/` 아래 파일을 직접 수정하지 않는다 (wrapper는 위임·스케줄 글루만)
+- 저장소 밖 스케줄러와 전달 설정을 직접 수정하지 않는다
 - 타깃 단지명을 이 SKILL.md 또는 스크립트에 hard-code하지 않는다
 
 ## 파일 및 의존성
 
 | 항목 | 경로 | 용도 |
 |---|---|---|
-| 메인 러너 | `scripts/apartment-daily-report/run_with_claude.sh` | thin wrapper — 시작/실패 알림 + native skill 호출 |
+| 메인 러너 | `scripts/apartment-daily-report/run_with_claude.sh` | thin wrapper — native skill 호출과 결과 반환 |
 | 스모크 테스트 | `scripts/apartment-daily-report/run_smoke_test.sh` | 빠른 동작 확인 |
 | 타깃 메타 로더 | `scripts/_lib/load_target_meta.ts` | focus-unit.json → 단지 메타 (ADR-002) |
 | 수집기 | `scripts/apartment-daily-report/collect_sources.ts` | 소스별 원시 데이터 → raw-search.json |
@@ -125,4 +121,4 @@ bun ../_shared/lib/notify_discord.ts "<완료 요약 메시지>"
 ## 아키텍처
 
 정식 구현체는 `~/ai-nodes/apartment/`.
-`~/.openclaw/workspace/skills/apartment-daily-report/`는 위임·스케줄 글루만 담는 wrapper — wrapper 변경은 최소화한다.
+저장소 밖 스케줄러와 전달 채널은 이 skill의 실행 계약이 아니다.

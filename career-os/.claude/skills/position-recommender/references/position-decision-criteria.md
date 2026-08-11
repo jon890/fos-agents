@@ -49,7 +49,7 @@
 - 검증된 회사군의 Core Platform, Payment/Settlement, Search/Ads, Commerce Platform, Identity, Reliability/Observability, Developer Platform, AI Platform 공고를 먼저 deep dive한다.
 - 대기업/유명 회사라도 JD 핏이 약하면 억지 추천하지 않는다.
 - 작은 스타트업·낮은 인지도 회사·불명확한 계열사·저연차 공고는 JD fit이 좋아도 강력 추천하지 않는다. 회사/보상/팀 규모/학습 환경이 검증되기 전에는 도전 추천도 신중히 하고, 기본은 관찰/보류 후보로 둔다.
-  다운로드용 조건 통과 공고 HTML에서는 검증된 대규모 회사 공고를 먼저 정렬한다.
+  게시 준비용 조건 통과 공고 HTML에서는 검증된 대규모 회사 공고를 먼저 정렬한다.
   작은 회사 공고는 Java/Spring 서버·백엔드 전이성이 제목 또는 JD에 명확할 때만 뒤쪽 후보로 유지한다.
 
 ### 4. 역할 구성

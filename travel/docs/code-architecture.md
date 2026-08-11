@@ -82,7 +82,7 @@ runtime 설정 없음.
 |---|---|---|
 | `claude` CLI | 대화 + 문서 작성 보조 | 필수 |
 
-다른 워크스페이스 공용 도구(Python / Bun / agent-browser / `_shared/`)에 의존하지 않는다.
+다른 워크스페이스의 Python, Bun, agent-browser 도구에 의존하지 않는다.
 이 워크스페이스는 독립 문서 도구다.
 
 ## 5. 다른 워크스페이스와 비교

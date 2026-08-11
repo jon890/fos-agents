@@ -1,6 +1,6 @@
 ---
 name: interview-asset-writer
-description: 후보자 이력 기반 면접 자산 마크다운 초안을 생성하는 career-os skill. "면접 자료 만들어줘", "경험 기반 질문 정리", "AI 서비스팀 면접 질문 은행", "experience qbank", "자기소개 플레이북", "마스터 플레이북", `/interview-asset-writer <topic>`처럼 후보자 이력서·task 노트 기반 Q&A 질문 은행이나 마스터 플레이북이 필요할 때 사용. 일반 기술 토픽 학습 문서는 study-pack-writer로 라우팅. 사용자가 명시적으로 공개 발행을 승인한 경우에만 sources/fos-study commit/push를 수행한다.
+description: 후보자 이력 기반 면접 자산 마크다운 초안을 생성하는 career-os skill. "면접 자료 만들어줘", "경험 기반 질문 정리", "AI 서비스팀 면접 질문 은행", "experience qbank", "자기소개 플레이북", "마스터 플레이북", `/interview-asset-writer [topic]`처럼 후보자 이력서·task 노트 기반 Q&A 질문 은행이나 마스터 플레이북이 필요할 때 사용. 일반 기술 토픽 학습 문서는 study-pack-writer로 라우팅. 사용자가 명시적으로 공개 발행을 승인한 경우에만 sources/fos-study commit/push를 수행한다.
 ---
 
 # Interview Asset Writer
@@ -144,14 +144,10 @@ git push origin main
 
 add vs update는 `git status --porcelain` 자동 판단. push 실패 시 stderr + exit 1 (silent 실패 금지).
 
-### 7. Discord 알림 (셸 명령)
+### 7. 외부 전달
 
-```bash
-bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
-  "[완료] interview-asset <topic-key>: sources/fos-study/<outputPath>.md"
-```
-
-알림 실패는 비치명적 — stderr warn만, skill 자체는 success 종료.
+산출물 경로와 공개 가능한 짧은 요약을 표준 출력으로 반환한다.
+외부 전달은 저장소 밖 호출자가 처리한다.
 
 ## 개인 질문 풀 생성
 
@@ -205,7 +201,7 @@ bun --env-file=career-os/.env _shared/lib/notify_discord.ts \
 | candidate-profile / task / resume 필수 입력 부재 | stderr + exit 1 |
 | self-check 3회 실패 | stderr + exit 1, 실패 항목 명시 |
 | 승인된 publish의 git push 실패 (권한/충돌) | stderr + exit 1 |
-| Discord notify 실패 | stderr warn, skill success |
+| 외부 전달 실패 | skill 범위 밖의 실패로 분리하고 생성 산출물은 유지 |
 
 ## Why this design
 

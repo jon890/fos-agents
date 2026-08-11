@@ -188,7 +188,8 @@ tags: [학습중, 금융도메인, JPA, 트랜잭션격리]
 - `references/fos-study-writing-rules.md` 모든 규칙 준수
 
 파일 쓰기로 `career-os/sources/fos-study/<outputPath>.md`에 직접 저장.
-Hermes/현재 에이전트에서 실행 중이면 외부 Claude CLI에게 다시 위임하지 말고, 현재 세션의 `write_file` 또는 `patch` 도구로 저장한다. 파일 수정 권한 오류가 나면 `pwd`, `whoami`, 대상 경로 `stat`, 쓰기 테스트를 확인하고, `/opt/data/workspaces/career` wrapper가 아니라 `/home/bifos/ai-nodes/career-os` 정본 경로를 우선 사용한다.
+현재 에이전트에서 실행 중이면 외부 Claude CLI에게 다시 위임하지 말고, 현재 세션의 파일 수정 도구로 저장한다.
+파일 수정 권한 오류가 나면 `git rev-parse --show-toplevel`, `pwd`, `whoami`, 대상 경로 `stat`으로 저장소와 권한을 확인한다.
 
 ### 6. Self-check (재작성 ≤3회)
 
@@ -243,22 +244,10 @@ git push origin main
 
 `<domain>`은 topic에서 추출(database/redis/kafka/java/infra/architecture). add vs update는 `git status --porcelain`으로 자동 판단 — 신규 파일이면 add, 기존 파일 수정이면 update. push 실패 시 stderr + exit 1 (silent 실패 금지).
 
-### 8. Discord 알림
+### 8. 외부 전달
 
-권장 실행 경로는 OpenClaw wrapper가 호출하는 `scripts/study-pack-writer/run_with_discord_notify.ts "<topic>"` 이다.
-이 wrapper는 다음 알림을 보장한다.
-- `[시작] study-pack-writer: <topic>` — 에이전트 실행 직전
-- `[완료] study-pack-writer: <topic> (fos-study <sha>)` — exit 0 후
-- `[에러] study-pack-writer 실패: <topic>` — non-zero exit 후 최근 로그 포함
-
-agent skill 내부에서 직접 알림을 보낼 때는 다음 도구를 사용한다.
-
-```bash
-bun --env-file=career-os/.env ../_shared/lib/notify_discord.ts \
-  "[완료] study-pack-writer <topic-key>: sources/fos-study/<outputPath>.md"
-```
-
-알림 실패는 비치명적 — stderr warn만, skill 자체는 success 종료.
+생성한 문서 경로와 공개 가능한 짧은 요약을 표준 출력으로 반환한다.
+외부 전달은 저장소 밖 호출자가 처리한다.
 
 ## Error handling
 
@@ -269,7 +258,7 @@ bun --env-file=career-os/.env ../_shared/lib/notify_discord.ts \
 | 승인된 publish 단계의 git pull 실패 | stderr + exit 1, git stderr 그대로 |
 | self-check 3회 실패 | stderr + exit 1, 실패 항목 명시 |
 | 승인된 publish의 git push 실패 (권한/충돌) | stderr + exit 1, git stderr 그대로 |
-| Discord notify 실패 | stderr warn, skill은 success |
+| 외부 전달 실패 | 이 skill 범위 밖의 실패로 분리하고 생성 산출물은 유지 |
 | duplicate guard skip / needs-user-confirmation | stderr + exit 1, matched 문서 경로 + 사유 명시 |
 | duplicate guard update-existing 진입 | 새 파일 생성 금지, 기존 matched 문서 patch 모드로 전환 |
 
@@ -277,7 +266,7 @@ bun --env-file=career-os/.env ../_shared/lib/notify_discord.ts \
 
 - **Self-check 본 skill 안에 박는 이유**: 옛 외부 validator를 현재 에이전트 자체 검증으로. SKILL.md 단일 진실 출처.
 - **재작성 ≤3회**: 무한 루프 차단. 3회로도 통과 못 하면 본질 문제 (topic 모호, 입력 부족) — 사용자 개입 필요.
-- **Publish + notify 분리**: 기본은 초안 생성 후 사용자 승인 전에는 publish하지 않는다. 승인된 publish에서는 `scripts/study-pack-writer/run_with_discord_notify.ts` wrapper가 시작/완료/에러 알림을 담당한다. agent skill의 완료 알림은 보조 경로로 유지한다.
+- **생성과 발행 분리**: 기본은 초안 생성 후 사용자 승인 전에는 publish하지 않는다. 승인된 publish만 별도 단계에서 수행한다.
 - **Duplicate guard (ADR-033)**: recommender·writer가 같은 4 decision schema를 공유. 사용자가 직접 호출한 주제에도 동일 게이트 — fos-study 진실원과 drift 없음.
 
 ## References

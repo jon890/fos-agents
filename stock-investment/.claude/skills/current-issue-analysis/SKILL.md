@@ -1,6 +1,6 @@
 ---
 name: current-issue-analysis
-description: stock-investment 현안을 한국어 심층 분석 리포트로 생성하는 skill. "CLARITY Act 분석해줘", "BTC 규제 리포트 써줘", "Circle 정책 현안 분석", "AI 반도체 이슈 브리핑해줘", "Google 촉매 분석", `/current-issue-analysis <issue-key>`처럼 미국 CLARITY Act, 암호화폐 규제, 스테이블코인 정책, Circle/USDC, Bitcoin, Nasdaq, Google, AI 반도체/인프라 일회성 현안 분석이 필요할 때 사용. 매수·매도 지시를 하지 않고 공식 자료와 언론 해석을 구분한다.
+description: stock-investment 현안을 한국어 심층 분석 리포트로 생성하는 skill. "CLARITY Act 분석해줘", "BTC 규제 리포트 써줘", "Circle 정책 현안 분석", "AI 반도체 이슈 브리핑해줘", "Google 촉매 분석", `/current-issue-analysis [issue-key]`처럼 미국 CLARITY Act, 암호화폐 규제, 스테이블코인 정책, Circle/USDC, Bitcoin, Nasdaq, Google, AI 반도체/인프라 일회성 현안 분석이 필요할 때 사용. 매수·매도 지시를 하지 않고 공식 자료와 언론 해석을 구분한다.
 ---
 
 # 현안 분석
@@ -102,16 +102,10 @@ python3 scripts/current-issue-analysis/collect_issue_sources.py \
 ※ 자동 수집 기반 현안 분석이며, 법률/투자 판단은 추가 확인 필요.
 ```
 
-### Step 4 — 알림
+### Step 4 — 결과 반환
 
-report.md 작성 완료 후 Discord에 전송한다.
-`SKIP_NOTIFY=1`이면 건너뛴다.
-
-```bash
-if [[ "${SKIP_NOTIFY:-0}" != "1" ]]; then
-  bun run ~/ai-nodes/_shared/lib/notify_discord.ts "$(cat data/issues/$REPORT_DATE/$ISSUE_KEY/report.md)"
-fi
-```
+report.md 경로와 공개 가능한 짧은 요약을 표준 출력으로 반환한다.
+외부 전달은 저장소 밖 호출자가 처리한다.
 
 ## 산출물
 
@@ -123,8 +117,7 @@ fi
 | 파일 | 역할 |
 |---|---|
 | `scripts/current-issue-analysis/collect_issue_sources.py` | 수집기 (Python, requests) |
-| `scripts/current-issue-analysis/run_with_claude.sh` | thin wrapper (issue-key 인자 전달, agent skill 호출, Discord 시작/실패 알림) |
-| `_shared/lib/notify_discord.ts` | Discord 알림 정본 (ADR-002) |
+| `scripts/current-issue-analysis/run_with_claude.sh` | thin wrapper (issue-key 인자 전달, agent skill 호출, 결과 반환) |
 | `config/current-issues.json` | 현안 토픽 큐 (issue-key 목록, defaultIssue) |
 
 ## 경계

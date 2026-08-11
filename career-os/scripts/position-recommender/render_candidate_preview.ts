@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 포지션 추천 JSON과 live posting snapshot에서 Discord 첨부용 전체 공고 HTML을 생성한다.
+// 포지션 추천 JSON과 live posting snapshot에서 외부 게시 준비용 전체 공고 HTML을 생성한다.
 // 전체 report.html은 render_recommendation.ts가 담당하고, 이 파일은 공고 링크 중심 HTML 전용이다.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";

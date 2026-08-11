@@ -20,7 +20,6 @@ apartment 워크스페이스의 아키텍처 결정을 시간순으로 누적 �
 | ADR-006 | Python collector 오케스트레이션: import 통합 | Accepted | collect_sources.ts가 ts collector를 import. subprocess 패턴 폐기 (단 미마이그 collector는 Bun.spawn(python3) 임시). idiomatic ts + 타입 안전 |
 | ADR-007 | 외부 API 응답 스키마 검증: zod 도입 | Accepted | mvp_target_schema.ts 패턴 동일. passthrough() 적극 사용. drift 조기 차단 |
 | ADR-008 | 주간 호가 트렌드 추적 폐기 (build_weekly_listing_trend) | Accepted | dead code (호출자 0) + PIL 외부 의존 동시 제거. plan006 TS 마이그 대신 자산 폐기. 가시화 필요 시 별도 plan |
-| ADR-009 | Discord 알림을 _shared/lib/notify_discord.ts로 통합 | Accepted | 워크스페이스 셸 notifier 폐기, ts 정본 통합 |
 | ADR-010 | apartment-daily-report native skill 전환 (외부 subprocess 폐기) | Accepted | 외부 subprocess(json+extractor+track_task) 폐기, native 직접 호출. 수집 TS 유지. (B) 마이그 파일럿 |
 
 ---
@@ -58,7 +57,7 @@ apartment 일일 리포트는 Naver Land 데이터를 주요 축으로 삼아 �
 2. API 3개(`overview`, `prices`, `articles`)만 정식 수집 대상으로 삼는다. 나머지 엔드포인트(search, map, SSR 페이지)는 건드리지 않는다.
 3. 쿠키는 사용자 수동 갱신한다. NID_SES 만료 시(실측 수주~수개월) `.env`의 `NAVER_COOKIE=...` 복사/붙여넣기.
 4. Bearer JWT는 agent-browser로 자동 추출한다. 매 수집 실행마다 쿠키 주입된 agent-browser 세션에서 `new.land.naver.com/`을 로드해 SPA 발급 토큰을 가로챈다. 실패 시 `NAVER_BEARER` 환경변수로 수동 주입 fallback.
-5. 호출 정책: 요청 간 2초 sleep, 429 시 지수 백오프 (2→4→8s, 3회), 실패 지속 시 마지막 성공 스냅샷 fallback + Discord 알림.
+5. 호출 정책: 요청 간 2초 sleep, 429 시 지수 백오프 (2→4→8s, 3회), 실패 지속 시 마지막 성공 스냅샷 fallback과 실패 상태 반환.
 
 **거절한 대안**:
 - Puppeteer/Playwright: `/404` 차단 + DevTools 감지로 불가
@@ -114,7 +113,7 @@ apartment 일일 리포트는 Naver Land 데이터를 주요 축으로 삼아 �
 
 ### 맥락
 
-apartment 현재 언어 분포: Shell 5 + Python 6 + TypeScript 0. ai-nodes 차원 Bun runtime + `_shared/lib/notify_discord.ts` 등 ts 인프라 존재하지만 apartment 미도입.
+apartment에는 당시 TypeScript 실행 코드가 없었고 수집기는 Shell과 Python으로 구성됐다.
 
 ADR-002에서 focus-unit.json 읽기 헬퍼 도입 시점에 언어 선택 결정점 — 본 결정은 단일 헬퍼를 넘어 apartment 워크스페이스의 **언어 표준 변경** 시작점. 사용자는 python 가독성 제약 표명, ts 선호 명시. career-os는 ADR-020에서 TypeScript 표준 격상한 선례.
 
@@ -299,53 +298,11 @@ dead code + 의존성 충돌 + TS 마이그 비용 = 효익 부재.
 
 ### 결과
 
-- apartment Python collector 0 (`extract_claude_result.py`만 잔존 — `_shared/bin/`에 위치한 ai-nodes 공용 헬퍼라 별도 정책).
+- apartment Python collector 0.
 - PIL 외부 의존 제거 → ai-nodes `CLAUDE.md` "stdlib only" 진술 정합화.
 - 가시화 필요 시 별도 plan에서 재도입 — 사용자 호출 의도 확립 + 자동화 wire-up 결정 동시에 검토.
 
 **적용**: `apartment/scripts/apartment-daily-report/build_weekly_listing_trend.py` git rm (plan006). `apartment/docs/code-architecture.md` 언어 통계 갱신.
-
----
-
-## ADR-009 — Discord 알림을 `_shared/lib/notify_discord.ts`로 통합 (셸 notifier 폐기)
-
-**Status**: Accepted
-**Date**: 2026-05-23
-
-### 맥락
-
-apartment는 `scripts/apartment-daily-report/notify_discord.sh` (message) + `notify_discord_media.sh` (media) 두 셸 스크립트로 Discord 알림. 둘 다 `openclaw message send`를 직접 래핑 — ai-nodes 공용 `_shared/lib/notify_discord.ts` (ADR-021, openclaw subprocess + `--media` + 10s 타임아웃)와 기능 중복.
-
-발견:
-
-- `notify_discord.ts`가 message + media를 모두 커버 — 셸 두 변종이 정본의 부분집합.
-- `notify_discord_media.sh`는 **호출자 0** — 어느 runner·cron도 부르지 않는 dead code.
-- `notify_discord.sh`는 `run_report.sh`의 `notify_safe` 래퍼에서만 사용.
-- 셸은 채널 ID 하드코딩 fallback(`1496746450468733038`) 보유 / ts는 `DISCORD_CHANNEL_ID` env 필수. apartment `.env`에 동일 값이 이미 존재하고 `run_report.sh`가 `set -a`로 export → 마이그레이션 안전.
-- 셸은 타임아웃 없음 / ts는 10s 타임아웃 — openclaw 매달림 방어 우위.
-- 같은 셸 패턴이 stock-investment에도 중복 존재 — 모노레포 전반 drift 신호 (단 워크스페이스 격리 원칙상 별건).
-
-### 결정
-
-apartment Discord 알림을 `_shared/lib/notify_discord.ts` 단일 정본으로 통합.
-
-1. `run_report.sh`의 `NOTIFIER`를 `$HOME/ai-nodes/_shared/lib/notify_discord.ts`로 교체, `notify_safe`가 `bun run`으로 호출 (`extract_claude_result.ts` 호출 패턴과 동일).
-2. `notify_discord.sh` + `notify_discord_media.sh` git rm.
-3. flow / code-architecture / prd 문서 동기화 — flow 4번에 webhook+curl로 잘못 기록돼 있던 알림 흐름도 실제 openclaw 방식으로 정정.
-
-**거절한 대안**:
-
-- 셸 유지 — 정본과 기능 중복 + 타임아웃 부재 + drift 지속.
-- apartment + stock-investment 동시 통합 — 워크스페이스 격리 원칙(ai-nodes ADR-001)상 별건. stock 통합은 별도 결정으로 분리.
-- media 변종만 삭제(부분 정리) — 중복의 근본 원인(정본 미사용)을 남김.
-
-### 결과
-
-- apartment Discord 알림이 ai-nodes 공용 정본 단일 출처로 정착. Shell 5 → 3.
-- `_shared/lib/notify_discord.ts` 상태 미사용 → 사용 중 (ADR-003 본문의 "apartment 미도입" 상태 supersede).
-- 타임아웃 보강으로 알림 단계 견고성 상승.
-
-**적용**: `apartment/scripts/apartment-daily-report/run_report.sh` (NOTIFIER + notify_safe), `notify_discord.sh` / `notify_discord_media.sh` git rm, `apartment/docs/{flow,code-architecture,prd}.md` 동기화.
 
 ---
 
@@ -357,8 +314,7 @@ apartment Discord 알림을 `_shared/lib/notify_discord.ts` 단일 정본으로 
 ### 맥락
 
 `apartment-daily-report`는 외부 subprocess 패턴으로 남아 있다.
-`run_report.sh`가 `claude --print --output-format json`을 호출하고 `_shared/lib/extract_claude_result.ts`로 envelope를 파싱해 report.md를 만든다.
-실행 전체는 `_shared/bin/track_task.sh`로 self-wrap된다.
+기존 `run_report.sh`는 외부 agent subprocess 결과를 파싱해 report.md를 만들고 실행 로그를 별도로 기록했다.
 
 이 패턴은 두 부담을 남긴다.
 
@@ -419,7 +375,8 @@ stock-investment 전환까지 끝나 호출처가 0이 된 뒤 후속 ai-nodes �
 - 단일 출처는 계속 `docs/interior/*.md`다.
 - HTML은 표시용 산출물이며 날짜별 `data/interior-reference-digest/YYYY-MM-DD/decision-view.html`에 둔다.
 - HTML에는 확정 결정, 남은 결정, 현장 확인 항목을 구분해 표시한다.
-- 사용자가 "보여줘"처럼 열람을 요청하면 Discord에는 HTML 전문을 붙이지 않고 핵심 요약과 HTML 파일 첨부를 전달한다.
+- 사용자가 "보여줘"처럼 열람을 요청하면 핵심 요약과 로컬 HTML 경로를 전달한다.
+- 외부 게시를 명시적으로 요청하면 루트 `report-publisher`로 공개 범위를 점검한 뒤 검증된 URL을 전달한다.
 - cron/자동 실행처럼 직접 열람 요청이 없는 경우에는 핵심 요약과 파일 경로만 전달한다.
 
 ### 결과

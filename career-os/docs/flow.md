@@ -52,7 +52,7 @@ career-os의 표준 진입점은 agent skill 직접 호출이다.
   -> 산출물 작성
   -> 검증과 안전 경계 확인
   -> 다음 행동 또는 사용자 승인 대기 상태 기록
-  -> 필요한 경우 Discord 알림
+  -> 필요한 경우 외부 전달 계층에 결과 반환
 ```
 
 공통 안전 경계:
@@ -86,8 +86,8 @@ Use skill: /study-topic-recommender
 ```text
 scheduled daily recommendation
   -> topic inventory refresh
-  -> 상위 추천 3개와 버튼 payload 생성
-  -> Discord 알림
+  -> 상위 추천 3개와 action snapshot 생성
+  -> 공개 가능한 요약 반환
   -> 사용자가 버튼 또는 자연어로 초안 생성을 요청
   -> study-pack-writer 실행 요청으로 연결
 ```
@@ -146,8 +146,11 @@ Use skill: /position-recommender [context]
 - `reports/latest/position-recommendation.{json,md}`
 - `reports/downloads/position-recommendation-all-YYYY-MM-DD.html` (유일한 HTML 산출물)
 
-다운로드용 전체 공고 HTML은 같은 수집 실행의 snapshot만 렌더링한다.
+게시 준비용 전체 공고 HTML은 같은 수집 실행의 snapshot만 렌더링한다.
 오늘(Asia/Seoul) 수집된 active/open 공고가 없으면 기본 렌더링을 중단하고, 이전 snapshot 사용은 명시적인 stale 허용으로만 가능하다.
+사용자가 외부 게시 또는 공유 URL 생성을 명시하면 `report-publisher`를 사용한다.
+공개 범위를 검사한 뒤 Cloudflare Pages에 게시한다.
+Discord에는 게시와 내용 검증을 통과한 URL만 전달한다.
 
 ## 지원 준비
 
@@ -378,7 +381,7 @@ fixture 또는 실제 application package 선택
 ## 실패 동작
 
 실패는 조용히 통과시키지 않는다.
-흐름별 실패는 report, stderr, Discord 알림 중 적절한 위치에 남긴다.
+흐름별 실패는 report 또는 stderr에 남긴다.
 
 공통 실패 흐름:
 
@@ -388,7 +391,7 @@ fixture 또는 실제 application package 선택
   -> 실패 사유 기록
   -> 자동 재시도 가능 여부 판단
   -> 사용자 승인이나 입력이 필요하면 대기 상태로 전환
-  -> 필요한 경우 Discord 실패 알림
+  -> 저장소 밖 호출자에 실패 상태 반환
 ```
 
 실패 기준:
