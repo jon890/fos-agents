@@ -52,7 +52,9 @@
 │   ├── data-schema.md
 │   ├── flow.md
 │   ├── code-architecture.md
-│   └── adr.md
+│   └── adr/
+│       ├── INDEX.md
+│       └── ADR-NNN-slug.md
 ├── scripts/
 │   └── <skill-name>/
 ├── .claude/
@@ -64,8 +66,8 @@
 └── logs/
 ```
 
-career-os는 `docs/adr/` 개별 파일 구조를 사용한다.
-다른 워크스페이스는 단일 `docs/adr.md` 구조를 사용한다.
+모든 워크스페이스는 `docs/adr/INDEX.md`와 결정별 ADR 파일을 사용한다.
+현재 기술 결정이 없는 워크스페이스는 `INDEX.md`만 둔다.
 travel처럼 자동화가 없는 문서 중심 워크스페이스는 `config/`, `scripts/`, `.claude/skills/`, `data/`, `logs/`가 없을 수 있다.
 
 ## Agent Guide
@@ -87,10 +89,10 @@ ln -s AGENTS.md CLAUDE.md
 | 문서 | 책임 |
 |---|---|
 | `prd.md` | 제품 범위, 기능 표, 성공 기준 |
-| `data-schema.md` | config, runtime, 산출물, ledger 스키마 |
+| `data-schema.md` | config, state, 산출물 스키마 |
 | `flow.md` | 사용자 입력부터 산출물까지의 흐름 |
 | `code-architecture.md` | 디렉터리 책임, skill 구조, 외부 의존성 |
-| `adr.md` 또는 `adr/` | 결정의 이유와 대안 기각 |
+| `adr/INDEX.md` | 현재 기술 결정과 개별 ADR 링크 |
 
 같은 정의를 여러 문서에 본문으로 복제하지 않는다.
 
@@ -142,7 +144,6 @@ caller가 필요한 워크스페이스 `.env`를 명시적으로 전달한다.
 
 | 워크스페이스 | 예외 |
 |---|---|
-| `career-os/` | `docs/adr/` 개별 ADR 파일 구조 |
 | `travel/` | 자동화 script와 workspace-level skill이 없는 문서 중심 워크스페이스 |
 
 ## 새 워크스페이스 추가
@@ -151,7 +152,7 @@ caller가 필요한 워크스페이스 `.env`를 명시적으로 전달한다.
 
 ```bash
 WS=<workspace-name>
-mkdir -p "$WS"/{docs,config,scripts,tasks,data,logs}
+mkdir -p "$WS"/{docs/adr,config,scripts,data,logs}
 mkdir -p "$WS"/.claude/skills
 ln -s AGENTS.md "$WS"/CLAUDE.md
 ```
@@ -160,7 +161,7 @@ ln -s AGENTS.md "$WS"/CLAUDE.md
 
 - `$WS/AGENTS.md` 작성
 - `$WS/CLAUDE.md` 심볼릭 링크 확인
-- `$WS/docs/{prd,data-schema,flow,code-architecture,adr}.md` placeholder 작성
+- `$WS/docs/{prd,data-schema,flow,code-architecture}.md`와 `$WS/docs/adr/INDEX.md` 작성
 - `$WS/config/`와 `.env.example` 작성
 - `$WS/.gitignore`에 워크스페이스별 생성물과 비밀 파일 반영
 - 루트 `README.md`, `AGENTS.md`, 이 문서의 워크스페이스 표 갱신

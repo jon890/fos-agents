@@ -12,7 +12,7 @@
 | [`docs/data-schema.md`](docs/data-schema.md) | config, data, 산출물 스키마 |
 | [`docs/flow.md`](docs/flow.md) | 실행 흐름과 산출물 생성 순서 |
 | [`docs/code-architecture.md`](docs/code-architecture.md) | 현재 디렉터리와 코드 책임 |
-| [`docs/adr.md`](docs/adr.md) | apartment 한정 결정 이유 |
+| [`docs/adr/INDEX.md`](docs/adr/INDEX.md) | apartment 한정 기술 결정 |
 
 모노레포 공통 결정은 [`../docs/adr/INDEX.md`](../docs/adr/INDEX.md)를 따른다.
 

@@ -12,7 +12,7 @@
 | [`docs/flow.md`](docs/flow.md) | trip 생성부터 종료까지의 흐름 |
 | [`docs/data-schema.md`](docs/data-schema.md) | trip 디렉터리와 파일 스키마 |
 | [`docs/code-architecture.md`](docs/code-architecture.md) | 현재 디렉터리 구조와 의도적으로 없는 항목 |
-| [`docs/adr.md`](docs/adr.md) | travel 한정 결정 이유 |
+| [`docs/adr/INDEX.md`](docs/adr/INDEX.md) | travel 한정 기술 결정 |
 
 모노레포 공통 결정은 [`../docs/adr/INDEX.md`](../docs/adr/INDEX.md)를 따른다.
 

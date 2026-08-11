@@ -17,7 +17,8 @@ travel/
 │   ├── data-schema.md
 │   ├── flow.md
 │   ├── code-architecture.md
-│   └── adr.md
+│   └── adr/
+│       └── INDEX.md
 └── trips/
     └── <trip-id>/
         ├── docs/
@@ -37,7 +38,7 @@ travel/
 | `docs/prd.md` | 워크스페이스 범위와 성공 기준 |
 | `docs/flow.md` | trip 생성·정리 흐름 |
 | `docs/data-schema.md` | trip 디렉터리와 파일 구조 |
-| `docs/adr.md` | travel 한정 결정 이유 |
+| `docs/adr/INDEX.md` | travel 한정 기술 결정 |
 | `trips/<trip-id>/docs/` | trip별 핵심 문서 |
 | `trips/<trip-id>/data/` | 예약 파일과 보조 자료 |
 | `trips/<trip-id>/memory/` | 세션 기록과 회고 |

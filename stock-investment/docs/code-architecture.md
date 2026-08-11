@@ -1,7 +1,7 @@
 # Code Architecture — stock-investment
 
 이 문서는 현재 디렉터리 구조와 실행 책임을 설명한다.
-결정의 이유는 `docs/adr.md`를 따른다.
+결정의 이유는 `docs/adr/INDEX.md`를 따른다.
 
 ## 디렉터리
 

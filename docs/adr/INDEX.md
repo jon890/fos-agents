@@ -12,3 +12,5 @@ ADR은 결정의 이유와 대안 기각만 담고, 현행 구조 설명은 `doc
 |---|---|---|---|
 | ADR-019 | 외부 agent runtime 종속성을 제거한다 | Accepted | [ADR-019-runtime-framework-independence.md](ADR-019-runtime-framework-independence.md) |
 | ADR-020 | 공개 HTML 리포트는 Cloudflare Pages 직접 업로드로 게시한다 | Accepted | [ADR-020-cloudflare-pages-report-publishing.md](ADR-020-cloudflare-pages-report-publishing.md) |
+| ADR-021 | 결정론적 처리와 agent 해석을 분리한다 | Accepted | [ADR-021-deterministic-agent-boundary.md](ADR-021-deterministic-agent-boundary.md) |
+| ADR-022 | 외부 데이터는 경계에서 스키마로 검증한다 | Accepted | [ADR-022-external-data-schema-validation.md](ADR-022-external-data-schema-validation.md) |

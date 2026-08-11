@@ -61,5 +61,5 @@ trips/<trip-id>/
 | `docs/data-schema.md` | 본 문서 |
 | `docs/flow.md` | 사용자 흐름 |
 | `docs/code-architecture.md` | 디렉터리 구조 |
-| `docs/adr.md` | 결정 이유 |
+| `docs/adr/INDEX.md` | 기술 결정 이유 |
 | `.env.example` | 기본 환경 값 템플릿 |

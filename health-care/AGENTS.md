@@ -12,7 +12,7 @@
 | `docs/code-architecture.md` | 현재 구조와 skill 경계 |
 | `docs/data-schema.md` | 공개 config와 private data 스키마 |
 | `docs/flow.md` | intake, tracking, clinic prep 흐름 |
-| `docs/adr.md` | 결정 이력 |
+| `docs/adr/INDEX.md` | 기술 결정 |
 
 ## 안전 원칙
 
@@ -52,4 +52,4 @@
 - 병원 제출용 문서는 짧고 정확하게 만든다.
 - 재활 강화 단계는 의료진 또는 물리치료사 확인 전에는 보수적으로 둔다.
 - 참고할 만한 경과는 `private/conditions/.../current-context.md` 또는 `progress-log.jsonl`에 남긴다.
-- 일반화 가능한 운영 결정은 `docs/adr.md` 또는 `config/`에 남긴다.
+- 기술 대안 선택은 `docs/adr/`에 남기고 일반 기준은 `config/`에 둔다.

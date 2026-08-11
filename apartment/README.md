@@ -48,7 +48,7 @@ agent skill로 위임할 때는 `/apartment-daily-report` 또는 `/apartment-int
 bash apartment/scripts/apartment-daily-report/run_smoke_test.sh
 ```
 
-TypeScript 파일을 바꿨다면 변경 파일에 대해 `bun --check <file.ts>`를 실행한다.
+TypeScript 파일을 바꿨다면 루트에서 `bunx tsc --noEmit`을 실행한다.
 문서만 바꿨다면 `rg`와 `find`로 문서에 적은 경로가 실제로 존재하는지 확인한다.
 
 ## 문서
@@ -60,4 +60,4 @@ TypeScript 파일을 바꿨다면 변경 파일에 대해 `bun --check <file.ts>
 | [`docs/data-schema.md`](docs/data-schema.md) | config와 산출물 스키마 |
 | [`docs/code-architecture.md`](docs/code-architecture.md) | 디렉터리와 코드 책임 |
 | [`docs/interior/`](docs/interior/) | 인테리어 결정 원본 |
-| [`docs/adr.md`](docs/adr.md) | apartment 한정 결정 이유 |
+| [`docs/adr/INDEX.md`](docs/adr/INDEX.md) | apartment 한정 기술 결정 |

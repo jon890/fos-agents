@@ -13,7 +13,7 @@
 | `docs/code-architecture.md` | 현재 디렉터리와 실행 구조 | 코드 구조 변경, 스크립트 추가 |
 | `docs/data-schema.md` | config와 산출물 스키마 | 데이터 파일 변경 |
 | `docs/flow.md` | 수집부터 결과 반환까지의 흐름 | 실행 흐름 변경, 디버깅 |
-| `docs/adr.md` | 결정 이력 | 결정 이유 확인 |
+| `docs/adr/INDEX.md` | 기술 결정 | 결정 이유 확인 |
 
 ## 작업 경계
 
@@ -49,4 +49,4 @@
 - 새 종목, 테마, 소스는 `config/`에 추가한다.
 - 새 산출물 경로는 `docs/data-schema.md`에 먼저 정의한다.
 - 새 실행 흐름은 `docs/flow.md`에 반영한다.
-- 새 결정은 `docs/adr.md`에 누적한다.
+- 새 기술 결정은 `docs/adr/INDEX.md`와 개별 ADR 파일에 반영한다.

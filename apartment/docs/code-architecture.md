@@ -21,7 +21,9 @@ apartment/
 │   ├── data-schema.md
 │   ├── flow.md
 │   ├── code-architecture.md
-│   ├── adr.md
+│   ├── adr/
+│   │   ├── INDEX.md
+│   │   └── ADR-NNN-slug.md
 │   └── interior/
 ├── scripts/
 │   ├── _lib/
