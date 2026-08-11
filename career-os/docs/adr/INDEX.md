@@ -35,11 +35,8 @@
 | ADR-073 | daily study action snapshot | Accepted | [ADR-073-daily-study-추천은-action-snapshot으로-후속-작업을-연결한다.md](ADR-073-daily-study-추천은-action-snapshot으로-후속-작업을-연결한다.md) |
 | ADR-074 | position source coverage는 official adapter와 Wanted target discovery를 함께 쓴다 | Accepted | [ADR-074-position-source-coverage는-official-adapter와-wanted-target-discovery를-함께-쓴다.md](ADR-074-position-source-coverage는-official-adapter와-wanted-target-discovery를-함께-쓴다.md) |
 | ADR-079 | 포지션 수집은 동적 discovery를 우선하고 개별 공고 URL seed를 제거한다 | Accepted | [ADR-079-포지션-수집은-동적-discovery를-우선하고-개별-공고-url-seed를-제거한다.md](ADR-079-포지션-수집은-동적-discovery를-우선하고-개별-공고-url-seed를-제거한다.md) |
-| ADR-080 | position daily HTML 리포트는 template 기반 표시 미러로 둔다 | Accepted; 게시 경로는 루트 ADR-020으로 대체됨 | [ADR-080-position-daily-html-리포트는-template-기반-표시-미러로-둔다.md](ADR-080-position-daily-html-리포트는-template-기반-표시-미러로-둔다.md) |
 | ADR-085 | career-os skill을 Codex에 심볼릭 링크로 노출한다 | Accepted | [ADR-085-career-os-skill을-codex에-심볼릭-링크로-노출한다.md](ADR-085-career-os-skill을-codex에-심볼릭-링크로-노출한다.md) |
-| ADR-086 | skill 출력 정책은 공통 reference로 둔다 | Accepted | [ADR-086-skill-출력-정책은-공통-reference로-둔다.md](ADR-086-skill-출력-정책은-공통-reference로-둔다.md) |
 | ADR-087 | skill 트리거는 frontmatter description에 둔다 | Accepted | [ADR-087-skill-트리거는-frontmatter-description에-둔다.md](ADR-087-skill-트리거는-frontmatter-description에-둔다.md) |
-| ADR-089 | career-os ADR을 개별 파일로 관리한다 | Accepted | [ADR-089-career-os-adr을-개별-파일로-관리한다.md](ADR-089-career-os-adr을-개별-파일로-관리한다.md) |
 | ADR-090 | 검증 회사군을 config JSON 단일 출처로 둔다 | Accepted | [ADR-090-검증-회사군을-json-단일-출처로-둔다.md](ADR-090-검증-회사군을-json-단일-출처로-둔다.md) |
 | ADR-091 | career-os 스크립트 root는 위치 기준으로 해석한다 | Accepted | [ADR-091-script-career-os-root-위치-기준-해석.md](ADR-091-script-career-os-root-위치-기준-해석.md) |
 | ADR-092 | 면접 준비 flow 재편: 핏 진단과 매일 답변 드릴 분리 | Accepted | [ADR-092-면접-준비-flow-재편-진단-드릴-분리.md](ADR-092-면접-준비-flow-재편-진단-드릴-분리.md) |
@@ -47,7 +44,6 @@
 | ADR-095 | 회사 업사이드 운영 데이터를 config JSON 단일 출처로 흡수한다 | Accepted; cooldown 흡수는 [[ADR-109]]로, preferenceExcluded 위치는 [[ADR-111]]로 superseded | [ADR-095-회사-업사이드-운영데이터-config-흡수.md](ADR-095-회사-업사이드-운영데이터-config-흡수.md) |
 | ADR-096 | job-fit-analyzer를 의사결정·전략 중심으로 재정의한다 | Accepted | [ADR-096-job-fit-analyzer-의사결정-전략-재정의.md](ADR-096-job-fit-analyzer-의사결정-전략-재정의.md) |
 | ADR-097 | question-bank 정본을 public으로 1원화하고 개인 질문은 private에 둔다 | Accepted | [ADR-097-question-bank-정본-public으로-1원화하고-개인-질문은-private에-둔다.md](ADR-097-question-bank-정본-public으로-1원화하고-개인-질문은-private에-둔다.md) |
-| ADR-098 | data-schema는 현재 스키마만 담고 폐기 항목은 ADR로 위임한다 | Accepted | [ADR-098-data-schema는-현재-스키마만-담고-폐기-항목은-adr로-위임한다.md](ADR-098-data-schema는-현재-스키마만-담고-폐기-항목은-adr로-위임한다.md) |
 | ADR-099 | position-recommender 수집 설정 외부화 + 후보자 config + 지표 시계열 | Accepted | [ADR-099-position-수집설정-외부화-후보자config-지표시계열.md](ADR-099-position-수집설정-외부화-후보자config-지표시계열.md) |
 | ADR-100 | position-recommender 신규 후보 강제 회전 폐기 | Accepted | [ADR-100-position-recommender-신규-후보-강제-회전-폐기.md](ADR-100-position-recommender-신규-후보-강제-회전-폐기.md) |
 | ADR-101 | position-recommender 산출물을 표준 출력 JSON으로 단일화하고 소비측이 가공한다 | Accepted; consumer backend parts superseded by [[ADR-102]] | [ADR-101-position-recommender-표준출력-json-단일화-소비측-가공.md](ADR-101-position-recommender-표준출력-json-단일화-소비측-가공.md) |
@@ -60,4 +56,3 @@
 | ADR-109 | 회사 cooldown을 state/company-cooldown.json으로 분리 (ADR-095 cooldown 부분 supersede) | Accepted | [ADR-109-회사-cooldown을-state로-분리.md](ADR-109-회사-cooldown을-state로-분리.md) |
 | ADR-110 | frontdoor-queue 폐기 + "승격"→"등록" (ADR-045 supersede) | Accepted | [ADR-110-frontdoor-queue-폐기-승격을-등록으로.md](ADR-110-frontdoor-queue-폐기-승격을-등록으로.md) |
 | ADR-111 | durable 공고 필터를 config/position-filters.json으로 통합 (ADR-095 preferenceExcluded 위치 supersede) | Accepted | [ADR-111-공고-필터-config-통합.md](ADR-111-공고-필터-config-통합.md) |
-| ADR-112 | 죽은 ADR은 archive 없이 삭제하고 provenance는 두 층으로 보존한다 | Accepted | [ADR-112-죽은-adr은-archive-없이-삭제하고-provenance는-두-층으로-보존한다.md](ADR-112-죽은-adr은-archive-없이-삭제하고-provenance는-두-층으로-보존한다.md) |

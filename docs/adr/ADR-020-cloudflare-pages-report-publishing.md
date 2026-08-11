@@ -13,22 +13,20 @@ Cloudflare Pages는 완성된 정적 파일을 직접 업로드하고 배포별 
 ### 결정
 
 - 공개 가능한 리포트만 별도 임시 디렉터리에 복사해 게시한다.
-- 게시 workflow는 Codex가 직접 탐색하는 `.agents/skills`에 둔다.
+- 게시 workflow는 저장소의 `report-publisher` skill로 관리한다.
 - 실제 파일 전송은 공식 Wrangler의 Pages 직접 업로드를 사용한다.
 - 리포트별 미리보기 분기를 사용해 운영 분기와 다른 리포트를 덮어쓰지 않는다.
 - Wrangler가 반환한 배포 고유 주소를 검증해 기본 공유 링크로 사용한다.
 - 분기 별칭은 실제 HTTP 검증을 통과한 경우에만 안정적인 주소로 안내한다.
 - Cloudflare API MCP는 관리 작업에 선택적으로 사용한다.
 - 저장소 루트나 워크스페이스 전체를 게시 대상으로 허용하지 않는다.
-- 이 결정은 [career-os ADR-080](../../career-os/docs/adr/ADR-080-position-daily-html-리포트는-template-기반-표시-미러로-둔다.md)의 Discord HTML 직접 첨부 경로를 대체한다.
+- 외부 직접 첨부 대신 승인 기반 Cloudflare Pages 게시 경로를 사용한다.
 
 거절한 대안:
 
 - 자체 정적 호스팅은 외부 접근과 운영 책임이 늘어나므로 채택하지 않는다.
 - Cloudflare API MCP 단독 업로드는 파일 해시와 다중 파일 전송 책임이 커서 채택하지 않는다.
 - 리포트별 Pages 프로젝트는 프로젝트 수와 관리 대상이 늘어나므로 채택하지 않는다.
-- `.claude/skills` 정본과 `.codex/skills` 심볼릭 링크 조합은
-  이 Codex 전용 workflow에 중복 경로가 생기므로 채택하지 않는다.
 
 ### 결과
 

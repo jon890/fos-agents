@@ -45,12 +45,12 @@ config/state는 "이 파일이 바뀌는 트리거가 무엇인가"로 가른다
 - `reports/` — baseline, daily, position, interview-prep 같은 생성 리포트 위치.
   active 판단에 쓰이는 최근 report와 참조된 report만 active로 두고, 오래된 report는 retention 검토 후 archive한다.
 - `state/`·`cache/` — projection, lock, eval result, 큐, 진도 같은 가변 상태 위치.
-  장기 근거가 필요한 state 파일은 그대로 두지 않고 report, task evidence, private archive 중 하나로 승격 여부를 결정한다.
+  장기 근거가 필요한 state 파일은 그대로 두지 않고 report, 검증 근거, private archive 중 하나로 승격 여부를 결정한다.
 
-폐기 표기 원칙 (ADR-098):
+문서 유지 원칙:
 
 - 폐기·제거된 항목은 이 문서에 스키마를 남기지 않는다. 문서 비대화와 노이즈를 줄인다.
-- 폐기 이유와 history는 해당 ADR이 단일 출처다.
+- 폐기 이력은 Git 이력에서 확인한다.
 - 단, applier·processor 등 코드가 아직 참조하는 항목은 legacy라도 스키마를 유지한다.
 
 ## public/question-bank/ (ADR-066, ADR-097)
