@@ -18,7 +18,6 @@
 ```text
 fos-agents/
 ├── AGENTS.md
-├── _shared/
 ├── docs/
 ├── apartment/
 ├── career-os/
@@ -68,8 +67,6 @@ fos-agents/
 | 경로 | 내용 |
 |---|---|
 | [`AGENTS.md`](AGENTS.md) | 모든 워크스페이스에 적용되는 공통 운영 규칙 |
-| [`_shared/lib/`](_shared/lib/) | 워크스페이스와 무관한 Bun TypeScript helper |
-| [`_shared/types/`](_shared/types/) | 공용 TypeScript type |
 | [`.claude/skills/`](.claude/skills/) | 저장소 전역 agent skill 정본 |
 | [`.codex/skills/`](.codex/skills/) | Codex에서 사용할 skill 심볼릭 링크 |
 | [`docs/code-architecture.md`](docs/code-architecture.md) | 현재 디렉터리 구조와 책임 경계 |

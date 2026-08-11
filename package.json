@@ -2,7 +2,7 @@
   "name": "ai-nodes",
   "version": "0.0.0",
   "private": true,
-  "description": "ai-nodes 워크스페이스 공용 TS 헬퍼 (ADR-019)",
+  "description": "fos-agents 모노레포 TypeScript 실행 환경",
   "type": "module",
   "devDependencies": {
     "@types/bun": "latest",
