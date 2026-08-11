@@ -30,7 +30,7 @@ task와 phase 작성 중 반복된 실패 패턴의 라우터다. planning-overl
 | 2-1 | workspace | 다른 워크스페이스, cross-workspace | [2-1-cross-workspace-assets.md](workspace/2-1-cross-workspace-assets.md) | path가 현재 workspace, `_shared`, `.claude/skills` 범위 |
 | 2-2 | workspace | 새 config, 스키마 누락 | [2-2-config-schema.md](workspace/2-2-config-schema.md) | 새 config와 data-schema 갱신 동반 |
 | 3-1 | docs-data | docs 아래 데이터, json, csv | [3-1-data-under-docs.md](docs-data/3-1-data-under-docs.md) | 데이터는 `<workspace>/data/` |
-| 3-2 | docs-data | ADR 저장 위치, 개별 ADR, append | [3-2-adr-storage-mix.md](docs-data/3-2-adr-storage-mix.md) | root와 career-os는 `docs/adr/`, 그 외는 `docs/adr.md` |
+| 3-2 | docs-data | ADR 저장 위치, 개별 ADR, INDEX | [3-2-adr-storage-mix.md](docs-data/3-2-adr-storage-mix.md) | 모든 scope에서 개별 ADR과 INDEX 동시 갱신 |
 | 3-3 | docs-data | phase에서 docs 수정, docs-first | [3-3-docs-in-phase.md](docs-data/3-3-docs-in-phase.md) | docs 변경은 task 실행 전 별도 commit |
 | 4-1 | execution | agent CLI, skill 위임, 하드코딩 | [4-1-agent-cli-hardcoding.md](execution/4-1-agent-cli-hardcoding.md) | skill 위임은 `/<skill> [args]` 의도 표현 |
 | 4-2 | execution | Discord, webhook, curl, 알림 | [4-2-direct-webhook.md](execution/4-2-direct-webhook.md) | 공용 알림 helper 경유 |

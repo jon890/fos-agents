@@ -5,12 +5,11 @@
 
 ## 도메인: ai-nodes 멀티 워크스페이스 CLI
 
-- 이 레포는 여러 워크스페이스(`apartment`, `career-os`, `health-care`, `ji-yoon-blog`, `stock-investment`, `travel` 등)로 구성된 모노레포다. 각 워크스페이스는 독립 `docs/`·`tasks/`·`data/`를 가진다.
+- 이 레포는 여러 독립 워크스페이스로 구성된 모노레포다.
 - **3단계 (호출 시나리오)**: 시니어 워크플로 디자이너 관점. 새 기능이 어떤 skill·script·env 변수·cron 트리거로 호출되는지, 명령 인자/플래그 조합을 구체화. 정상/에러/빈 상태/권한·잠금 충돌 점검.
-- **4~5단계 (인터페이스/API)**: 화면이 아니라 CLI 시그니처와 script helper 인터페이스로 구체화. 새 config 파일이면 정확한 JSON 스키마, 새 runtime 상태면 `<workspace>/data/runtime/` 위치 + 스키마.
+- **4~5단계 (인터페이스/API)**: 화면이 아니라 CLI 시그니처와 script helper 인터페이스로 구체화. 새 config나 상태 파일은 해당 워크스페이스 `data-schema.md`의 책임 경계와 스키마를 따른다.
 - **6단계 (코드 구조)**: 새 스킬 디렉터리 vs 기존 스킬 확장, 새 script helper vs 기존 helper 확장. skill 이 다른 skill 을 위임할 때 CLI 하드코딩 없이 `/<skill> [args]` 의도 표현 사용.
 - **워크스페이스 격리 (필수)**: 다른 워크스페이스의 코드·데이터를 import/read/write 하지 않는다. 참조가 필요하면 정당화를 명시하고 사용자 확인을 받는다.
-- **ADR-015 데이터/문서 분리**: 데이터는 항상 `<workspace>/data/`, docs 는 의사결정·학습만 (데이터를 docs/ 아래 두지 않는다).
 - **구현 중 문서 수정 금지 설계**: 구현 phase 가 docs/ADR/정책 문서를 고치지 않아도 될 만큼 계획 단계에서 계약을 닫는다. 구현 중 문서 수정이 필요할 가능성이 보이면 task 를 확정하지 말고 열린 결정으로 되돌린다.
 
 ## docs 컨벤션
@@ -26,14 +25,12 @@
 | 기술 결정 (왜) | ADR (아래 위치 규칙) |
 | 인수인계 메모 | `docs/hand-off/` |
 
-**단일 소스 원칙**: 같은 정보를 두 문서에 적지 않는다. 다른 문서가 참조해야 하면 ADR 번호로 링크.
-형식 정책(semantic line break·괄호 중첩 금지 등)은 `docs/docs-style.md`(ADR-005) 가 단일 출처.
+**단일 소스 원칙**: 같은 정보를 두 문서에 적지 않는다. 다른 문서가 참조해야 하면 책임 문서로 링크한다.
 
-### ADR 저장 위치 (워크스페이스별 상이 — 필수 확인)
+### ADR 저장 위치
 
-- **ai-nodes 루트 / career-os**: `docs/adr/ADR-NNN-slug.md` 새 파일 + `docs/adr/INDEX.md` 행 추가.
-- **그 외 워크스페이스**: `<workspace>/docs/adr.md` 맨 아래 *append* (개별 파일 신설 금지).
-- 워크스페이스 방식을 섞지 않는다 (혼용은 `common-pitfalls/docs-data/3-2-adr-storage-mix.md` 패턴).
+- 루트와 모든 워크스페이스는 `docs/adr/ADR-NNN-slug.md` 새 파일과 `docs/adr/INDEX.md` 행을 함께 추가한다.
+- 현재 기술 결정이 없으면 `INDEX.md`만 유지한다.
 
 ### ADR 가치 판단 점검 (작성 전 필수 자문)
 
@@ -100,10 +97,7 @@ phase 검증 bash 에서 검증 대상 sigil(section mark U+00A7, tilde 등) 을
 
 ```bash
 # cwd: ai-nodes root
-ls <workspace>/tasks/ | grep "plan{후보번호}"
-grep "^## ADR-{후보번호}" <workspace>/docs/adr.md        # career-os 제외
-ls docs/adr/ | grep "^ADR-{후보번호}"                    # ai-nodes root
-ls career-os/docs/adr/ | grep "^ADR-{후보번호}"          # career-os 전용
+ls <scope>/docs/adr/ | grep "^ADR-{후보번호}"
 ```
 
 다음 가용 번호 사용. plan/ADR 번호는 워크스페이스별로 독립적.
@@ -112,7 +106,7 @@ ls career-os/docs/adr/ | grep "^ADR-{후보번호}"          # career-os 전용
 ## branch / 커밋 / 핸드오프
 
 - **branch**: `main`.
-- **커밋 분리 (docs-first, ADR-015)**: docs 변경과 task 파일을 **별도 커밋 두 개**로 분리.
+- **커밋 분리**: docs 변경과 실행 계획은 별도 관심사로 분리.
   - 첫 커밋: `docs(<workspace>): <기능명> 관련 ADR + 명세 갱신`
   - 두 번째 커밋: `task(<workspace>): plan{N} <기능명> task 생성`
 - **push**: `git push origin main` 둘 다.

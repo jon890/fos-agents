@@ -13,12 +13,10 @@ plan 완료 후 또는 새 ADR 추가 후에는 Quick Index sync 를 함께 확�
 
 | 범위 | ADR 저장 방식 | 5문서 |
 |---|---|---|
-| ai-nodes 루트 | `docs/adr/ADR-NNN-slug.md` 개별 파일 + `docs/adr/INDEX.md` | `docs/code-architecture.md`, `docs/docs-style.md` (prd·data-schema·flow 는 워크스페이스 단위라 루트에 없음) |
-| career-os | `career-os/docs/adr/ADR-NNN-slug.md` 개별 파일 + `career-os/docs/adr/INDEX.md` (ADR-015 파일럿) | `career-os/docs/{prd,data-schema,flow,code-architecture}.md` |
-| 그 외 워크스페이스 (apartment·stock-investment·travel·health-care) | `<workspace>/docs/adr.md` 단일 누적 파일 (ADR-004 표준) | `<workspace>/docs/{prd,data-schema,flow,code-architecture}.md` |
+| ai-nodes 루트 | `docs/adr/ADR-NNN-slug.md` + `docs/adr/INDEX.md` | `docs/code-architecture.md` |
+| 모든 워크스페이스 | `<workspace>/docs/adr/ADR-NNN-slug.md` + `<workspace>/docs/adr/INDEX.md` | `<workspace>/docs/{prd,data-schema,flow,code-architecture}.md` |
 
-scope 는 현재 `career-os`/`ai-nodes`/`all` 만 지원한다.
-그 외 워크스페이스 감사가 필요하면 이 오버레이의 대상 파일 수집 명령을 그 워크스페이스 경로로 바꿔 수동 실행한다.
+워크스페이스 범위가 지정되면 해당 경로의 `docs/`와 `AGENTS.md`, `README.md`를 검사한다.
 
 ## docs-verifier 전용 agent
 
@@ -69,17 +67,10 @@ for skill in career-os/.claude/skills/*/SKILL.md; do
 done
 ```
 
-## 금지 용어 (코어의 `§`·Bold+괄호 검사에 더해 fos-agents 고유 항목)
-
-- **매트릭스**(matrix) — "표"로 대체.
-- **폐기된 실행 지시문** — `Output only valid JSON` / `Do not output markdown` / `claude --json-schema` 류. native skill 전환(ADR-011) 이후 유효하지 않다.
+## 폐기된 실행 지시문
 
 ```bash
-# cwd: ai-nodes root — 대상: career-os/docs/*.md docs/*.md docs/adr/INDEX.md
-#      career-os/.claude/skills/*/SKILL.md .claude/skills/*/SKILL.md
-grep -n "매트릭스\|matrix" <파일> && echo "PROHIBITED: 금지 외래어"
+# cwd: ai-nodes root
 grep -n "Output only valid JSON\|Do not output markdown\|claude --json-schema" <파일> \
   && echo "PROHIBITED: 폐기된 실행 지시문"
 ```
-
-`docs/docs-style.md` 는 정책 원문이라 위 예시 표현을 포함할 수 있다 — 검사에서 제외한다.

@@ -67,7 +67,7 @@ model: sonnet
 |---|---|
 | 데이터 스키마 변경 | `docs/data-schema.md` |
 | 새 실행 흐름 추가 | `docs/flow.md` |
-| 새 결정 (되돌리기 어려운) | `docs/adr/ADR-NNN-slug.md` 신규 파일 + `docs/adr/INDEX.md` 행 추가 (ADR-089 개별파일 관리) |
+| 새 기술 결정 | `docs/adr/ADR-NNN-slug.md` 신규 파일 + `docs/adr/INDEX.md` 행 추가 |
 | 디렉터리 구조 변경 | `docs/code-architecture.md` |
 | 제품 가치·skill 추가 | `docs/prd.md` |
 | skill 폴더·실행 파일 분리 | ADR-019 |

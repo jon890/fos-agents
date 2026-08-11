@@ -36,18 +36,17 @@ disallowedTools: Write, Edit
 | `docs/data-schema.md` | config·runtime·산출물·ledger 스키마 |
 | `docs/flow.md` | 사용자 입력부터 산출물까지의 실행 흐름 |
 | `docs/code-architecture.md` | 디렉터리 책임, 외부 의존, 실행 구조 |
-| `docs/adr/` | 결정 근거 개별 파일 + INDEX (ADR-089 개별파일 관리) |
+| `docs/adr/` | 기술 결정 근거 개별 파일 + INDEX |
 
 같은 정의를 두 문서에 중복 작성하지 않는다.
 각 문서는 자기 책임만 담는다.
 
-## ADR 관리 원칙 (ADR-089)
+## ADR 관리 원칙
 
 ADR 은 개별 파일(`docs/adr/ADR-NNN-slug.md`)과 `docs/adr/INDEX.md` 행을 **함께** 관리한다.
 
 - 새 결정 → `ADR-NNN-slug.md` 신규 파일 + `INDEX.md` 행 추가 동시.
 - INDEX 에 행이 있는데 파일이 없거나, 파일이 있는데 INDEX 에 없으면 정합 위반.
-- ADR-089: 개별파일 관리. ADR-015: docs 피드백 루프·data 위치 정책 (별개 결정 — 혼용 금지).
 
 주요 ADR 번호 참조:
 
@@ -55,20 +54,8 @@ ADR 은 개별 파일(`docs/adr/ADR-NNN-slug.md`)과 `docs/adr/INDEX.md` 행을 
 |---|---|
 | ADR-019 | skill 폴더(`.claude/skills/`) 와 실행 파일(`scripts/`) 분리 |
 | ADR-069 | config 는 정책·타깃·예외만, 자산 목록은 파생 |
-| ADR-089 | ADR 개별 파일 관리 (`ADR-NNN-slug.md` + INDEX 행 동기) |
 | ADR-093 | skill 호출 에이전트 비종속 (`claude -p` 하드코딩 금지) |
 | ADR-097 | question-bank 정본은 `public/question-bank/` 로 1원화 |
-
-## docs-style 준수 기준
-
-career-os docs 는 루트 `docs/docs-style.md` 규칙을 따른다.
-
-- **한 문장 한 줄** (semantic line break): 문장이 끝나면 줄바꿈.
-- **항목 3개 이상은 목록**: 콤마 나열 대신 bullet list.
-- **본문 평문 문장 동사 종결**: "측정 필요." → "측정한다." (list·표·헤더는 명사구 허용).
-- **섹션 기호 금지**: `§` 기호 사용 금지.
-- **생소한 한자어·압축 조어 회피**: 풀어 쓴다.
-- **한 문서에 자기 책임만**: 구현 상세와 변경 이력을 docs 본문에 누적하지 않는다.
 
 ## 공개 경계 (sources/fos-study/)
 
@@ -90,7 +77,7 @@ career-os docs 는 루트 `docs/docs-style.md` 규칙을 따른다.
 코드에서 제거·변경된 skill·스크립트·schema·ADR 결정이 docs 에 잔존하면 부패.
 
 ```bash
-# ADR INDEX ↔ 실제 파일 동기화 확인 (ADR-089)
+# ADR INDEX ↔ 실제 파일 동기화 확인
 FILES=$(ls career-os/docs/adr/ADR-[0-9]*.md 2>/dev/null | xargs -I{} basename {} | grep -oE '^ADR-[0-9]+' | sort -u)
 INDEX=$(grep -oE 'ADR-[0-9]+' career-os/docs/adr/INDEX.md 2>/dev/null | sort -u)
 diff <(echo "$FILES") <(echo "$INDEX") || echo "WARN: ADR INDEX 정합 위반"
@@ -158,25 +145,14 @@ done
 - 실험 결과 수치 (ADR-097 question-bank 1원화 결정 근거)
 - 대안 기각 근거 (ADR-093 에이전트 비종속 결정)
 
-## F. 가독성 (Readability) — 모든 docs
+## F. 가독성 — 링크와 구조
 
-docs-style 6규칙 위반 점검:
+한국어 표현 교정은 실행 hook이 담당한다.
+이 verifier는 깨진 링크, 과도한 중첩, 문서 책임 혼합만 확인한다.
 
-```bash
-# 한 줄에 문장 2개 이상 (semantic line break 위반)
-grep -rnE '\. [가-힣A-Z].*\. [가-힣A-Z]' career-os/docs/ 2>/dev/null
+대상은 `career-os/docs/**/*.md`, `career-os/AGENTS.md`, `career-os/README.md`다.
 
-# 섹션 기호 사용 금지
-grep -rnE '§' career-os/docs/ career-os/AGENTS.md 2>/dev/null
-
-# 숫자 prefix heading
-grep -rnE '^## [0-9]+\.' career-os/docs/ 2>/dev/null
-```
-
-대상: `career-os/docs/*.md` / `career-os/AGENTS.md` / `career-os/tasks/**/*.md`.
-코드 블록·표·디렉터리 트리는 미적용.
-
-분류: Critical (A 부패·D 중복·F 가독성 규칙 1-2 위반) / Warning (B 과대화·C 추론성·E 자명성·F 규칙 3-6 위반) / Safe.
+분류는 Critical, Warning, Safe를 사용한다.
 
 ## planning 영향 표 대조
 

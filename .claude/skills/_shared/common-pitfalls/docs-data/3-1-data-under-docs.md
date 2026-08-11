@@ -8,7 +8,7 @@ triggers:
   - csv
 tool_catchable: true
 source:
-  - ADR-015 docs feedback loop data location policy
+  - workspace data boundary
 related: []
 ---
 
@@ -20,10 +20,10 @@ phase가 `<workspace>/docs/<some>.json` 또는 `.jsonl` 파일을 생성한다.
 
 ## 왜
 
-`docs/`는 의사결정과 운영 문서를 담는다.
-데이터는 `<workspace>/data/`에 둔다.
+`docs/`는 설명과 기술 결정 문서를 담는다.
+데이터는 해당 워크스페이스의 `data-schema.md`가 지정한 경로에 둔다.
 
 ## Self-check
 
-산출물이 `*.json`, `*.jsonl`, `*.csv` 같은 데이터면 `<workspace>/data/`에 둔다.
-의사결정이나 인수인계 markdown이면 `<workspace>/docs/{adr,hand-off}` 또는 task phase 산출물에 둔다.
+산출물이 `*.json`, `*.jsonl`, `*.csv` 같은 데이터면 `data-schema.md`의 책임 경계를 확인한다.
+기술 결정은 `docs/adr/`, 인수인계 문서는 `docs/hand-off/`에 둔다.

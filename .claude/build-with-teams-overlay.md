@@ -19,8 +19,8 @@ critic·code-reviewer 는 모든 워크스페이스에서 공용 agent(`oh-my-cl
 
 | 워크스페이스 | 검증 명령 |
 |---|---|
-| career-os | 변경 스크립트 실행(`bun <변경.ts>`) + 타입 검사(`bun --check <변경.ts>`) + Python 수집기 변경 시 `python3 <변경.py>` smoke. 별도 빌드 단계 없음 |
-| 그 외 | 문서화된 검증 명령 없음 — team-lead 가 진행 전 사용자에게 확인 |
+| career-os | 관련 테스트 + `bunx tsc --noEmit` + Python 수집기 변경 시 해당 smoke test |
+| 그 외 | 각 워크스페이스 `README.md`의 검증 명령 |
 
 career-os 는 TypeScript 를 bun 으로 실행하고 스키마 검증에 zod 를 쓴다.
 
@@ -29,16 +29,10 @@ career-os 는 TypeScript 를 bun 으로 실행하고 스키마 검증에 zod 를
 career-os 는 ai-nodes 루트에서 `bun install` 1회(이미 설치돼 있으면 생략) 외 추가 setup 이 없다.
 그 외 워크스페이스는 문서화된 setup 절차가 없다.
 
-## PR 제목 (워크스페이스별)
-
-career-os: `<type>(career-os): <한글 subject>`.
-`type` 은 `feat`·`fix`·`docs`·`refactor`·`test`·`chore` 등.
-그 외 워크스페이스는 루트 `AGENTS.md` "Commit And PR" 절의 `<type>[(scope)]: <한글 subject>` 형식을 따른다.
-
 ## 코드 규칙 권위 (워크스페이스별)
 
 career-os: `career-os/AGENTS.md` + `career-os/docs/`의 5문서(`prd.md`·`data-schema.md`·`flow.md`·`code-architecture.md`·`adr/`).
-그 외 워크스페이스: `<workspace>/AGENTS.md` + `<workspace>/docs/`의 5문서(ADR 은 `adr.md` 단일 누적 파일).
+그 외 워크스페이스: `<workspace>/AGENTS.md` + `<workspace>/docs/`의 책임 문서와 `adr/`.
 executor·code-reviewer 프롬프트에는 위 권위 문서를 참조로 인용한다.
 
 ## index.json 스키마
@@ -58,5 +52,5 @@ executor 스폰 프롬프트의 환경 함정은 전용 agent 정의(`<Domain_Ru
 
 ## 노하우 누적 위치
 
-review 회고에서 나온 재사용 가치 있는 발견은 `.claude/skills/_shared/common-pitfalls/`(파일-per-패턴, ADR-017)에 누적한다.
+review 회고에서 나온 재사용 가치 있는 발견은 `.claude/skills/_shared/common-pitfalls/`에 누적한다.
 새 문서를 신설하지 않는다.
