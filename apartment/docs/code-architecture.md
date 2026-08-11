@@ -1,122 +1,82 @@
 # Code Architecture — apartment
 
-apartment 워크스페이스의 **디렉터리 구조·책임·외부 의존성** 단일 출처. 코드 구조 변경·새 skill 추가 시 이 문서가 기준.
+이 문서는 apartment 워크스페이스의 현재 디렉터리와 코드 책임을 설명한다.
 
-## 1. 디렉터리 트리
+## 디렉터리
 
-```
+```text
 apartment/
-├── AGENTS.md                        # 워크스페이스 가이드 진입점
-├── CLAUDE.md -> AGENTS.md           # 심링크
-├── .env                             # 비밀 정보 (NAVER_COOKIE 등)
-├── .env.example                     # 템플릿
-│
+├── AGENTS.md
+├── README.md
+├── CLAUDE.md -> AGENTS.md
+├── .env.example
 ├── config/
-│   ├── README.md                    # config 파일 역할과 평면도 보관 규칙
-│   ├── focus-unit.json              # 포커스 평형 메타데이터 단일 출처 (59A, ADR-002)
-│   ├── guri-buy-complexes.json      # Guri 광역 탐색 후보 단지 단일 출처
+│   ├── README.md
+│   ├── focus-unit.json
+│   ├── guri-buy-complexes.json
 │   ├── interior-reference-digest.json
-│   └── lucky-24-floorplan.json      # 럭키 24평 참고 평면도 메타데이터, 원본 이미지 경로/해시 포함
-│
-├── scripts/                            # 워크스페이스 레벨 공용 헬퍼 (ADR-003)
-│   ├── _lib/
-│   │   └── load_target_meta.ts         # focus-unit.json read + env override (ADR-002, plan002)
-│   ├── apartment-daily-report/         # skill 실행 파일 (plan007, ADR-004)
-│   │   ├── run_with_claude.sh          # 운영 진입점: native skill 직접 호출 (ADR-010, plan010)
-│   │   ├── run_smoke_test.sh           # 헬스 체크 진입점
-│   │   ├── run_guri_buy_search.sh
-│   │   ├── collect_sources.ts          # ADR-006 (import 통합 오케스트레이터, plan003)
-│   │   ├── collect_naver_api.ts        # ADR-001 (Naver API 3 endpoint), plan003 마이그
-│   │   ├── naver_api_schemas.ts        # ADR-007 (zod 응답 스키마), plan003
-│   │   ├── collect_hogangnono.ts       # plan004 마이그 (HTML regex 파서)
-│   │   ├── collect_kbland.ts           # plan004 마이그 (HTML regex 파서)
-│   │   └── normalize_results.ts        # plan005 마이그 (zod 입력/출력 스키마)
-│   └── apartment-interior-reference-digest/  # skill 실행 파일 (plan007, ADR-004)
-│       └── run_with_claude.sh          # 운영 cron 진입점: Claude native skill 호출
-│
+│   └── lucky-24-floorplan.json
 ├── docs/
 │   ├── prd.md
 │   ├── data-schema.md
 │   ├── flow.md
-│   ├── code-architecture.md         # 이 파일
+│   ├── code-architecture.md
 │   ├── adr.md
-│   └── interior/                    # 인테리어 결정 영역 (skill 도메인 자산)
-│       ├── interior-references.md
-│       ├── lucky-5-1004-interior-decisions.md
-│       ├── lucky-5-1004-decision-queue.md
-│       ├── lucky-5-1004-decision-summary.md
-│       ├── lucky-5-1004-field-checklist.md
-│       └── lucky-5-1004-contractor-brief.md
-│
-├── .claude/
-│   └── skills/
-│       ├── apartment-daily-report/       # native skill 등록 (컨텍스트 자산)
-│       │   ├── SKILL.md
-│       │   └── references/
-│       └── apartment-interior-reference-digest/  # native skill 등록 (plan007, ADR-004)
-│           ├── SKILL.md
-│           └── references/
-│
-├── tasks/
-│   └── plan{N}-<slug>/
-│       ├── index.json
-│       └── phase-NN.md
-│
-├── data/                            # gitignored — 산출물
-│   ├── YYYY-MM-DD/
-│   ├── YYYY-MM-DD-HHMM-guri-buy-search/
-│   ├── interior-reference-digest/YYYY-MM-DD/
-│   ├── interior/floorplans/lucky-24/ # 럭키 24평 참고 평면도 원본 이미지/README
-│   └── audit/YYYY-MM-DD.md
-│
-└── logs/                            # gitignored — 실행 메타데이터
-    ├── task-runs.jsonl
-    ├── token-usage.jsonl
-    └── .usage-status/
+│   └── interior/
+├── scripts/
+│   ├── _lib/
+│   │   └── load_target_meta.ts
+│   ├── apartment-daily-report/
+│   │   ├── run_with_claude.sh
+│   │   ├── run_smoke_test.sh
+│   │   ├── collect_sources.ts
+│   │   ├── collect_naver_api.ts
+│   │   ├── naver_api_schemas.ts
+│   │   ├── collect_hogangnono.ts
+│   │   ├── collect_kbland.ts
+│   │   └── normalize_results.ts
+│   └── apartment-interior-reference-digest/
+│       └── run_with_claude.sh
+└── .claude/
+    └── skills/
+        ├── apartment-daily-report/
+        └── apartment-interior-reference-digest/
 ```
 
-## 2. skill 구조 표준
+`data/`와 실제 `.env`는 실행 산출물과 비밀 값 영역이다.
 
-`scripts/<name>/`(실행 파일) + `.claude/skills/<name>/{SKILL.md, references/}`(컨텍스트 자산) 분리 구조 — ai-nodes ADR-006 표준 (plan007, ADR-004 적용).
+## 코드 책임
 
-실행 파일과 컨텍스트 자산을 분리 관리. `skills/` 통합 구조는 ADR-004에서 폐기.
+| 경로 | 책임 |
+|---|---|
+| `scripts/_lib/load_target_meta.ts` | `focus-unit.json`을 읽어 타깃 메타데이터를 제공한다. |
+| `scripts/apartment-daily-report/collect_sources.ts` | 세 수집기를 호출해 `raw-search.json`을 만든다. |
+| `scripts/apartment-daily-report/collect_naver_api.ts` | Naver Land API 수집과 인증 상태를 처리한다. |
+| `scripts/apartment-daily-report/collect_hogangnono.ts` | Hogangnono 데이터를 수집한다. |
+| `scripts/apartment-daily-report/collect_kbland.ts` | KB Land 데이터를 수집한다. |
+| `scripts/apartment-daily-report/normalize_results.ts` | raw 결과를 `summary.json` 구조로 정규화한다. |
+| `scripts/apartment-daily-report/run_smoke_test.sh` | 수집기와 정규화기 빠른 검증을 실행한다. |
+| `scripts/*/run_with_claude.sh` | skill 호출, stdout/stderr/exit code 반환을 담당한다. |
+| `.claude/skills/*/SKILL.md` | agent가 수행할 workflow 계약을 담는다. |
 
-## 3. native skill 등록 (.claude/skills/)
+## 실행 계약
 
-| skill 이름 | 등록 상태 | 호출 방법 |
-|---|---|---|
-| apartment-daily-report | 등록 (native, ADR-010) | `claude -p "/apartment-daily-report"` 또는 `bash apartment/scripts/apartment-daily-report/run_with_claude.sh` |
-| apartment-interior-reference-digest | 등록 | `claude -p "/apartment-interior-reference-digest"` 또는 `bash apartment/scripts/apartment-interior-reference-digest/run_with_claude.sh` |
+runner는 로컬 파일, 표준 출력, 표준 에러, 종료 코드만 계약으로 삼는다.
+외부 전달 채널과 자동 실행 시점은 저장소 밖에서 정한다.
 
-## 4. Runner 패턴
+## 의존성
 
-두 skill 모두 native thin wrapper 패턴 (daily-report는 ADR-010, interior는 plan007).
+| 의존성 | 용도 |
+|---|---|
+| Bun runtime | TypeScript 수집기와 정규화기 실행 |
+| zod | 외부 응답과 정규화 결과 스키마 검증 |
+| agent-browser | Naver Land 인증 토큰 fallback 수집 |
+| agent 실행 환경 | `.claude/skills` workflow 수행 |
 
-```bash
-# run_with_claude.sh 상단 패턴
-cd "$TASK_ROOT"
-claude --permission-mode bypassPermissions -p "/<skill> ${REQUEST}"
-# stdout 비면 report.md 경로 폴백, exit!=0이면 stderr와 종료 코드 반환
-```
+## 언어
 
-native skill이 SKILL.md 기준으로 수집·정규화 TS와 합성을 수행한다.
-runner는 결과 경로와 공개 가능한 요약을 표준 출력으로 반환한다.
-`track_task.sh` self-wrap는 ADR-010으로 폐기 — `task-runs.jsonl` 미생성.
-
-## 5. 외부 의존성
-
-| 의존성 | 위치 | 상태 | 역할 |
-|---|---|---|---|
-| `claude` CLI | 시스템 설치 | 사용 중 | native skill 직접 호출 (`claude -p "/<skill>"`) |
-| `agent-browser` CLI | 로컬 설치 필수 | 사용 중 | Naver Bearer JWT 자동 추출 (ADR-001) |
-| Bun runtime | 시스템 (ai-nodes root `bun install`) | 사용 중 (ADR-003) | 수집·정규화 TS 헬퍼 실행 (collect_sources / normalize_results / load_target_meta) |
-
-## 6. 언어 분포
-
-| 언어 | 파일 수 (추정) | 역할 |
-|---|---|---|
-| Shell | 3 | thin wrapper `run_with_claude.sh` × 2 (daily-report ADR-010 + interior)<br>+ `run_smoke_test.sh`<br>`run_report.sh`는 ADR-010 폐기 |
-| Python | 0 | apartment-daily-report 안 Python 0 |
-| TypeScript | 7 | `_lib/load_target_meta.ts` (plan002) + collect_sources / collect_naver_api / naver_api_schemas (plan003) + collect_hogangnono / collect_kbland (plan004) + normalize_results (plan005) |
-
-apartment는 ADR-003으로 TypeScript 도입 시작 (plan002). plan003 (Naver / sources) + plan004 (Hogangnono / KB) + plan005 (normalize) 마이그 완료. plan006 (build_weekly_listing_trend)는 ADR-008로 폐기 (dead code + PIL 의존 제거). apartment Python 완전 제거 — ai-nodes "stdlib only" 진술 정합화.
+| 언어 | 현재 역할 |
+|---|---|
+| TypeScript | 수집, 정규화, config 로딩 |
+| Shell | runner와 smoke test |
+| Python | smoke test의 JSON shape 확인용 짧은 검증 코드 |

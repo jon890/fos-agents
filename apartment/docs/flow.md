@@ -1,120 +1,64 @@
 # Flow — apartment
 
-apartment 워크스페이스의 **데이터 플로우 및 실행 흐름** 단일 출처. 새 흐름 추가·디버깅 시 이 문서가 기준.
+이 문서는 apartment의 현재 실행 흐름만 설명한다.
+외부 스케줄러와 전달 채널은 저장소 밖에서 정한다.
 
-## 1. 전체 흐름 개요
+## 일일 시세 리포트
 
-두 skill 모두 Claude native skill 직접 호출 패턴 (daily-report는 ADR-010, interior는 plan007).
-
-```
-사용자/cron
-  └─► thin wrapper (run_with_claude.sh)
-        └─► claude -p "/<skill>" (native 직접 호출)
-              └─► native skill (SKILL.md) 가 워크플로 수행
-                    ├─► (daily-report) 수집·정규화 TS 헬퍼를 bun Bash로 호출
-                    │     ├─► collect_sources.ts → raw-search.json
-                    │     └─► normalize_results.ts → summary.json
-                    ├─► summary.json Read → report.md 직접 Write (Claude 합성)
-                    └─► report 경로와 공개 가능한 요약을 stdout으로 반환
+```text
+run_with_claude.sh
+  -> /apartment-daily-report
+  -> load_target_meta.ts
+  -> collect_sources.ts
+  -> normalize_results.ts
+  -> data/YYYY-MM-DD/report.md
+  -> stdout 요약과 종료 코드 반환
 ```
 
-track_task.sh self-wrap는 ADR-010으로 제거됨.
+세부 흐름:
 
-## 2. apartment-daily-report 흐름 (native, ADR-010)
+1. `run_with_claude.sh`가 `apartment/.env`를 읽는다.
+2. skill이 `config/focus-unit.json`에서 타깃 메타데이터를 읽는다.
+3. `collect_sources.ts`가 Naver Land, Hogangnono, KB Land 수집 결과를 `raw-search.json`으로 쓴다.
+4. `normalize_results.ts`가 `summary.json`을 만든다.
+5. skill이 `summary.json`을 읽고 `report.md`를 작성한다.
+6. runner가 stdout, stderr, exit code로 결과를 반환한다.
 
-운영 진입점은 `scripts/apartment-daily-report/run_with_claude.sh` — Claude native skill을 직접 호출한다 (interior와 동일 패턴).
+수집 결과에 없는 가격과 매물 수는 채우지 않는다.
+소스 실패는 report와 raw 데이터에 남긴다.
 
-```
-Step 1  thin wrapper 진입
-        cd ~/ai-nodes/apartment
-        claude --permission-mode bypassPermissions -p "/apartment-daily-report"
+## 수집 smoke test
 
-Step 2  native skill이 워크플로 수행 (SKILL.md 기준)
-        - load_target_meta.ts (bun) → 타깃 메타 (focus-unit.json, ADR-002)
-        - collect_sources.ts (bun) → raw-search.json (ADR-006 import 통합)
-            네이버 API 3 endpoint (쿠키+Bearer, ADR-001, zod ADR-007)
-            + 호갱노노 / KB랜드 HTML 파서 (plan004)
-        - normalize_results.ts (bun) → summary.json (plan005, 59A alias 매칭)
-        - summary.json Read → report.md 직접 Write (Claude 합성)
-
-Step 3  결과 반환 + 폴백
-        완료/요약: native skill이 stdout으로 반환
-        실패: thin wrapper가 stderr와 종료 코드 반환
-        stdout 비면 wrapper가 report.md 경로 안내 (interior 폴백 패턴)
+```text
+run_smoke_test.sh
+  -> collect_sources.ts
+  -> normalize_results.ts
+  -> JSON shape 확인
+  -> stdout에 smoke 결과 출력
 ```
 
-산출물·TS 헬퍼 유지 범위의 결정 근거는 ADR-010 참조.
+Claude 합성을 거치지 않고 수집기와 정규화기만 확인한다.
+일일 리포트 수집 계층을 바꿨을 때 가장 먼저 실행한다.
 
-### 2-1. smoke 흐름
+## 인테리어 레퍼런스 디제스트
 
-`scripts/run_smoke_test.sh` — Claude 호출 없는 수집기/정규화기 헬스 체크.
-
-```
-.env 로드 → collect_sources.ts (limited mode) → normalize_results.ts
-→ summary.json 생성 여부 확인 → exit 0/1
-```
-
-현재: 단순 헬스 체크. 보류 항목: routine health check로 확장 (섹션 1 prd.md 10번 참조).
-
-## 3. apartment-interior-reference-digest 흐름
-
-운영 cron의 진입점은 `scripts/apartment-interior-reference-digest/run_with_claude.sh` — Claude native skill을 직접 호출한다.
-
-### 3-1. Claude native skill 운영 흐름
-
-`scripts/apartment-interior-reference-digest/run_with_claude.sh` 진입점.
-
-```
-Step 1  apartment workspace로 이동
-        cd ~/ai-nodes/apartment
-
-Step 2  Claude native skill 호출
-        claude --permission-mode bypassPermissions -p "/apartment-interior-reference-digest <요청>"
-
-Step 3  Claude native skill이 전체 workflow 수행
-        .claude/skills/apartment-interior-reference-digest/SKILL.md 기준
-        config/interior-reference-digest.json + docs/interior/* 읽기
-        웹 검색/fetch → 후보 평가 → report.md 작성
-        의사결정/남은 결정 표시가 필요한 경우 decision-view.html도 함께 작성
-        docs/interior/interior-references.md 갱신
-
-Step 4  stdout 요약
-        Claude는 외부 전달에 사용할 수 있는 한국어 요약을 stdout 마지막에 출력
-        NO_REPLY 금지
-        추천 레퍼런스는 R 번호 + 제목 + 원문 링크(`<https://...>`) 포함
-        오늘 결정할 3개 질문은 단순 A/B/C가 아니라 대표 예시/사진 링크,
-        초보자용 비교 포인트, 추천 이유를 함께 포함
-        HTML 의사결정 뷰를 만든 경우 decision-view.html 경로 포함
-        저장소 밖 호출자는 stdout과 생성 파일을 필요한 채널로 전달할 수 있음
+```text
+run_with_claude.sh
+  -> /apartment-interior-reference-digest
+  -> config/interior-reference-digest.json
+  -> docs/interior/*.md
+  -> 웹 검색과 후보 평가
+  -> data/interior-reference-digest/YYYY-MM-DD/report.md
+  -> 필요 시 decision-view.html
+  -> stdout 요약과 종료 코드 반환
 ```
 
-## 4. 외부 전달
+의사결정 원본은 계속 `docs/interior/*.md`다.
+HTML은 사용자가 빠르게 보기 위한 표시용 산출물이다.
+새 결정이 생기면 Markdown 원본을 먼저 갱신하고 HTML을 다시 만든다.
 
-runner는 로컬 파일, 표준 출력, 종료 코드만 계약으로 삼는다.
-전달 채널과 자동 실행 시점은 저장소 밖에서 선택한다.
+## 외부 게시
 
-## 5. 트래커 + logs
-
-apartment 두 skill 모두 native 직접 호출이라 `track_task.sh`를 경유하지 않는다.
-`task-runs.jsonl` / `token-usage.jsonl`은 더 생성되지 않는다.
-폐기 경위·잔존 사용처는 ADR-010 참조.
-
-## 6. 직접 호출 진입점
-
-cron 진입과 동일한 경로.
-
-```bash
-# 일일 리포트 (native, ADR-010)
-bash apartment/scripts/apartment-daily-report/run_with_claude.sh
-# 또는
-claude -p "/apartment-daily-report"
-
-# 인테리어 디제스트
-bash apartment/scripts/apartment-interior-reference-digest/run_with_claude.sh "오늘의 인테리어 추천"
-
-# 수집기/정규화기 헬스 체크 (Claude 호출 없음)
-bash apartment/scripts/apartment-daily-report/run_smoke_test.sh
-
-# Guri 광역 매수 탐색 (별도 진입점)
-bash apartment/scripts/apartment-daily-report/run_guri_buy_search.sh
-```
+사용자가 공유 URL 생성을 명시하면 루트 `report-publisher`를 사용한다.
+게시 대상은 공개 가능한 HTML 파일이나 디렉터리로 제한한다.
+민감 정보가 있으면 게시하지 않는다.

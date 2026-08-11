@@ -6,16 +6,17 @@
 ## 모노레포 구조
 
 `ai-nodes`는 여러 독립 워크스페이스를 담는 컨테이너다.
-각 최상위 워크스페이스는 자체 `AGENTS.md`, `docs/`, `config/`, `scripts/`, `tasks/`, `data/`, `logs/`를 가진다.
+각 최상위 워크스페이스는 자체 `AGENTS.md`와 책임 문서를 가진다.
 워크스페이스 자산은 서로 교차 참조하지 않는다.
 
 | 워크스페이스 | 가이드 | 책임 |
 |---|---|---|
 | `apartment/` | [`apartment/AGENTS.md`](../apartment/AGENTS.md) | 아파트 시세와 인테리어 리포트 |
-| `career-os/` | [`career-os/AGENTS.md`](../career-os/AGENTS.md) | 커리어, 면접, 지원 준비 자동화 |
-| `stock-investment/` | [`stock-investment/AGENTS.md`](../stock-investment/AGENTS.md) | 일일 주식과 이슈 모니터링 |
+| `career-os/` | [`career-os/AGENTS.md`](../career-os/AGENTS.md) | 커리어, 면접, 지원 준비 |
+| `stock-investment/` | [`stock-investment/AGENTS.md`](../stock-investment/AGENTS.md) | 주식과 이슈 모니터링 |
 | `travel/` | [`travel/AGENTS.md`](../travel/AGENTS.md) | 여행별 일정과 결정 로그 |
 | `health-care/` | [`health-care/AGENTS.md`](../health-care/AGENTS.md) | 무릎 재활 체크인 |
+| `ji-yoon-blog/` | [`ji-yoon-blog/AGENTS.md`](../ji-yoon-blog/AGENTS.md) | 지융로그 콘텐츠 운영 |
 | `side-projects/` | [`side-projects/AGENTS.md`](../side-projects/AGENTS.md) | 개인 사이드 프로젝트와 외주 기회 운영 |
 
 ## 루트 디렉터리
@@ -27,13 +28,12 @@
 | `AGENTS.md` | 모든 에이전트를 위한 공통 행동 규칙 |
 | `CLAUDE.md` | `AGENTS.md` 심볼릭 링크 |
 | `.agents/skills/` | Codex가 직접 탐색하는 저장소 전역 skill |
-| `.claude/skills/` | 저장소 전역 agent skill 정본 (`build-with-teams` 등 공용 skill 포함) |
-| `.claude/agents/` | `build-with-teams` 전용 agent (`<workspace>-executor`·`<workspace>-docs-verifier`) |
-| `.codex/skills/` | Codex 노출용 skill 심볼릭 링크 |
+| `.claude/skills/` | 루트에서 쓰는 agent skill과 공용 참조 |
+| `.claude/agents/` | repo-local agent 정의 |
 | `docs/adr/` | 모노레포 레벨 ADR |
 | `docs/code-architecture.md` | 현재 구조와 책임 경계 |
 
-워크스페이스 한정 helper는 `<workspace>/scripts/<skill>/` 내부에 둔다.
+워크스페이스 한정 helper는 해당 워크스페이스 내부에 둔다.
 
 ## 워크스페이스 표준 트리
 
@@ -65,7 +65,8 @@
 ```
 
 career-os는 `docs/adr/` 개별 파일 구조를 사용한다.
-다른 워크스페이스는 아직 단일 `docs/adr.md` 구조를 사용한다.
+다른 워크스페이스는 단일 `docs/adr.md` 구조를 사용한다.
+travel처럼 자동화가 없는 문서 중심 워크스페이스는 `config/`, `scripts/`, `.claude/skills/`, `data/`, `logs/`가 없을 수 있다.
 
 ## Agent Guide
 
@@ -93,27 +94,9 @@ ln -s AGENTS.md CLAUDE.md
 
 같은 정의를 여러 문서에 본문으로 복제하지 않는다.
 
-## Tasks
-
-실행 중인 계획만 `<workspace>/tasks/plan{N}-<slug>/` 아래에 둔다.
-번호는 워크스페이스별로 독립이다.
-
-```text
-tasks/
-└── plan{N}-<slug>/
-    ├── index.json
-    ├── phase-01.md
-    └── phase-NN.md
-```
-
-완료하거나 폐기한 plan은 현재 트리에서 제거하고 Git 이력으로 보존한다.
-구현 phase는 확정된 task 계약을 실행하는 단계다.
-구현 중 문서 결정이 필요해지면 phase를 보류하고 planning으로 되돌린다.
-
 ## Skills
 
-agent skill의 정본은 `.claude/skills/<skill>/SKILL.md`다.
-Codex 노출은 `.codex/skills/<skill>` 심볼릭 링크를 사용한다.
+워크스페이스 skill의 본문은 `<workspace>/.claude/skills/<skill>/SKILL.md`에 둔다.
 문서에서 skill을 위임할 때는 `/<skill> [args]` 형태의 의도 표현을 쓴다.
 
 ```text
@@ -180,5 +163,4 @@ ln -s AGENTS.md "$WS"/CLAUDE.md
 - `$WS/docs/{prd,data-schema,flow,code-architecture,adr}.md` placeholder 작성
 - `$WS/config/`와 `.env.example` 작성
 - `$WS/.gitignore`에 워크스페이스별 생성물과 비밀 파일 반영
-- 첫 plan을 `$WS/tasks/plan001-<slug>/`에 생성
 - 루트 `README.md`, `AGENTS.md`, 이 문서의 워크스페이스 표 갱신
