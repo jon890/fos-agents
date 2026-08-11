@@ -39,7 +39,7 @@
 ## 2. tasks/ 영역
 
 planning + plan-and-build 스킬로 운영. 형태: `tasks/plan{N}-<slug>/`.
-완료된 plan도 history 보존 — 삭제하지 않는다.
+실행 중인 plan만 두며 완료하거나 폐기한 plan은 Git 이력으로 보존한다.
 
 ## 3. 목적
 

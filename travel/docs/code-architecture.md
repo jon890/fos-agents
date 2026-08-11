@@ -20,9 +20,6 @@ travel/
 │   ├── code-architecture.md       # 본 문서
 │   └── adr.md                     # 아키텍처 결정 누적
 │
-├── tasks/                         # plan 사이클 영역
-│   └── plan{N}-<slug>/            # planning + plan-and-build 스킬 운영
-│
 ├── trips/                         # trip-instance 영역 (동적)
 │   └── <trip-id>/                 # trip별 독립 디렉터리
 │       ├── docs/                  # 마크다운 문서
@@ -49,7 +46,6 @@ travel/
 |---|---|---|
 | 워크스페이스 | `travel/` | ai-nodes 독립 워크스페이스 root |
 | 문서 | `travel/docs/` | 5문서 + 인덱스 |
-| plan | `travel/tasks/` | plan 사이클 영역 |
 | trip-instance | `travel/trips/<trip-id>/` | trip별 독립 컨텍스트 |
 | trip 문서 | `trips/<trip-id>/docs/` | 마크다운 3종 + 특화 문서 |
 | trip 자료 | `trips/<trip-id>/data/` | 예약·보조 파일 |

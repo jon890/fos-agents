@@ -64,9 +64,6 @@ stock-investment/
 │       ├── SKILL.md
 │       └── references/blog-note-prompt.md
 │
-└── tasks/                            # plan 사이클 영구 영역
-    ├── plan001-workspace-standard-bootstrap/
-    └── plan002-skills-folder-retirement/
 ```
 
 ## 2. skill 배치 패턴 (ADR-006 분리, plan002 적용 완료)

@@ -48,12 +48,6 @@ career-os/
 │   ├── hand-off/         외부 위임·인수인계 일회성 노트
 │   └── prep/             회사·이벤트별 운영 자산. 이벤트 종료 후 archive
 │
-├── tasks/                                 ← planning 산출물 (실행 대기 또는 실행 중)
-│   └── plan{N}-<kebab-slug>/
-│       ├── index.json                    task 메타데이터 + phase 목록 (run-phases.py가 검증)
-│       └── phase-NN.md                   각 phase의 자기완결 프롬프트
-│   ↑ skills/planning이 생성, skills/plan-and-build가 실행. 완료된 plan도 history 보존 위해 삭제 X.
-│
 ├── config/                                ← 사람이 큐레이션한 정책·타깃·baseline·예외 override (ADR-069)
 │   ├── candidate-profile.md           이력 core — 추천·fit 판단용 사실·라벨 (prose, ADR-104)
 │   ├── candidate-profile-detail.md    이력 detail — 면접 서사·심화 (ADR-104 신규, Phase 03)

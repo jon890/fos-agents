@@ -81,7 +81,6 @@ Claude와 나눈 대화 중 기억해둘 내용을 날짜별 마크다운으로 
 | `docs/flow.md` | 사용자 대화 흐름 | 낮음 |
 | `docs/code-architecture.md` | 디렉터리 트리·의존성 | 낮음 |
 | `docs/adr.md` | 아키텍처 결정 누적 | 결정 발생 시 |
-| `tasks/plan{N}-<slug>/` | plan 사이클 영역 | plan 진행 시 |
 | `trips/<trip-id>/` | trip-instance (동적) | trip마다 |
 | `data/audit/` | workspace-audit 결과 | audit 실행 시 |
 | `memory/` | 워크스페이스 레벨 세션 기록 | 간헐적 |

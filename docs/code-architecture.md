@@ -61,8 +61,6 @@
 │       └── <skill-name>/
 │           ├── SKILL.md
 │           └── references/
-├── tasks/
-│   └── plan{N}-<kebab-slug>/
 ├── data/
 └── logs/
 ```
@@ -99,7 +97,7 @@ ln -s AGENTS.md CLAUDE.md
 
 ## Tasks
 
-계획 파일은 `<workspace>/tasks/plan{N}-<slug>/` 아래에 둔다.
+실행 중인 계획만 `<workspace>/tasks/plan{N}-<slug>/` 아래에 둔다.
 번호는 워크스페이스별로 독립이다.
 
 ```text
@@ -110,7 +108,7 @@ tasks/
     └── phase-NN.md
 ```
 
-완료된 plan도 history 보존 목적으로 삭제하지 않는다.
+완료하거나 폐기한 plan은 현재 트리에서 제거하고 Git 이력으로 보존한다.
 구현 phase는 확정된 task 계약을 실행하는 단계다.
 구현 중 문서 결정이 필요해지면 phase를 보류하고 planning으로 되돌린다.
 

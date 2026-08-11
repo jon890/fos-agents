@@ -28,7 +28,7 @@
 ## 작업 경계
 
 현재 타깃, 회사명, 공고, 면접 일정, 학습 우선순위처럼 자주 바뀌는 상태는 `AGENTS.md`에 쓰지 않는다.
-해당 상태는 `config/`, `data/`, `tasks/`, `logs/`의 책임 파일에서 관리한다.
+해당 상태는 `config/`, `state/`, `applications/`, `reports/`, `logs/`의 책임 파일에서 관리한다.
 
 - 후보자 프로필의 정본은 `config/candidate-profile.md`다.
 - 공개 학습 자료는 `sources/fos-study/`에서 파생한다.

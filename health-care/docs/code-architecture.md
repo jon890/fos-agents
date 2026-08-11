@@ -6,7 +6,6 @@
 - `private/`: 민감한 개인 의료 컨텍스트와 경과 기록. gitignore 대상.
 - `docs/`: 제품 범위, 데이터 책임, 흐름, 아키텍처, ADR.
 - `.claude/skills/`: Claude native skill 컨텍스트 자산 (SKILL.md + references/). ADR-006 분리 표준 적용 (plan002 phase-02).
-- `tasks/`: planning/plan-and-build 실행 계획.
 
 ## 예정 skill 경계
 
