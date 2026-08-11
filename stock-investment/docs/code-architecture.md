@@ -1,118 +1,62 @@
 # Code Architecture — stock-investment
 
-stock-investment 워크스페이스의 **디렉터리 구조·skill 배치·외부 의존성** 단일 출처.
-코드 구조 변경 또는 새 skill 추가 시 이 문서가 기준.
+이 문서는 현재 디렉터리 구조와 실행 책임을 설명한다.
+결정의 이유는 `docs/adr.md`를 따른다.
 
-## 1. 디렉터리 트리 (ADR-006 분리 패턴 + ADR-003 native 전환 적용)
+## 디렉터리
 
-```
+```text
 stock-investment/
-├── AGENTS.md                         # 워크스페이스 가이드 (plan001 한글화)
-├── CLAUDE.md → AGENTS.md             # Claude Code 자동 로드 심링크 (plan001)
-├── TOOLS.md                          # 수집 도구 참고 문서
-├── .env                              # 비밀 정보 (gitignore)
-├── .env.example                      # template
-│
-├── config/                           # 읽기 전용 설정 JSON (6개)
-│   ├── catalysts.json                # 종목별 이벤트 catalyst
-│   ├── current-issues.json           # 현안 분석 토픽 큐
-│   ├── daily-stock-universe.json     # daily-note 후보 종목 풀
-│   ├── sources.json                  # morning-brief 뉴스·가격 소스
-│   ├── theme-reports.json            # Core + Theme 구조 메타데이터
-│   └── watchlist.json                # 종목 감시 프로필
-│
-├── data/                             # 실행 산출물 (런타임, git 미추적)
-│   ├── YYYY-MM-DD/                   # morning-brief 일자별 산출물
-│   ├── issues/YYYY-MM-DD/<issue>/    # current-issue-analysis 산출물
-│   ├── daily-notes/
-│   │   ├── YYYY-MM-DD/               # daily-stock-analysis-note 런타임 산출물
-│   │   └── history.json              # 종목 선택 이력 (기존 발행 제외 + rotation 보정)
-│   ├── thesis-tracker/               # 종목별 투자 가설 누적 로그 (JSON)
-│   └── audit/                        # workspace-audit 결과
-│
-├── docs/                             # 결정·정책 문서
-│   ├── prd.md                        # 제품 범위·기능 명세
-│   ├── data-schema.md                # config·data·logs·.env 스키마
-│   ├── flow.md                       # 실행 흐름
-│   ├── code-architecture.md          # 본 문서
-│   └── adr.md                        # ADR 누적
-│   # docs/decisions/ — plan004에서 git rm 완료
-│
-├── logs/                             # 실행 메타데이터
-│   └── .gitkeep
-│
-├── scripts/                          # 실행 스크립트 (ADR-006 분리, plan002)
-│   ├── stock-investing-morning-brief/
-│   │   ├── run_with_claude.sh        # 운영 진입점: native skill 직접 호출 (ADR-003)
-│   │   └── collect_sources.py        # Python 수집기 (유지)
+├── AGENTS.md
+├── README.md
+├── TOOLS.md
+├── .env.example
+├── config/
+├── data/
+├── docs/
+├── logs/
+├── scripts/
 │   ├── current-issue-analysis/
-│   │   ├── run_with_claude.sh        # 운영 진입점: native skill 직접 호출 (ADR-003)
-│   │   └── collect_issue_sources.py  # Python 수집기 (유지)
-│   └── daily-stock-analysis-note/
-│       ├── run_with_claude.sh        # 운영 진입점: native skill 직접 호출 (ADR-003)
-│       ├── collect_daily_note_inputs.py  # Python 수집기 (유지)
-│       └── sanitize_fos_study_markdown.py  # fos-study 발행 정규화 (유지)
-│
-├── .claude/skills/                   # Claude Code 컨텍스트 자산 (ADR-006 분리, plan002)
+│   ├── daily-stock-analysis-note/
 │   ├── stock-investing-morning-brief/
-│   │   ├── SKILL.md
-│   │   └── references/claude-prompt.md
-│   ├── current-issue-analysis/
-│   │   ├── SKILL.md
-│   │   └── references/
-│   └── daily-stock-analysis-note/
-│       ├── SKILL.md
-│       └── references/blog-note-prompt.md
-│
+│   └── youtube-learning-digest/
+├── .claude/skills/
+└── .codex/skills/
 ```
 
-## 2. skill 배치 패턴 (ADR-006 분리, plan002 적용 완료)
+| 경로 | 책임 |
+|---|---|
+| `config/` | 사람이 관리하는 종목, 테마, 소스, 현안 큐 |
+| `scripts/<skill>/` | 수집기, wrapper, 후처리 스크립트 |
+| `.claude/skills/<skill>/` | skill 설명과 reference |
+| `.codex/skills/<skill>/` | Codex에서 사용할 skill 링크 |
+| `data/` | 날짜별 실행 산출물 |
+| `data/publish/` | 외부 발행 전 초안 |
+| `logs/` | 필요한 경우 실행 로그 |
+| `docs/` | 현재 구조, 흐름, 스키마, 결정 |
 
-```
-scripts/<name>/               # 실행 스크립트 (thin wrapper + Python 수집기)
-.claude/skills/<name>/
-├── SKILL.md                  # skill 설명 + frontmatter (Claude Code 자동 로드)
-└── references/               # 프롬프트, 참고 자료
-```
+## Skill과 스크립트
 
-ai-nodes ADR-006 분리 표준 적용.
-runner는 `scripts/<name>/`에, SKILL.md / references/는 `.claude/skills/<name>/`에 위치.
-
-native skill 진입점:
-
-```bash
-claude -p "/stock-investing-morning-brief"
-claude -p "/current-issue-analysis <issue-key>"
-claude -p "/daily-stock-analysis-note"
-```
-
-## 3. 계층 책임
-
-| 계층 | 책임 | 수정 시 영향 |
+| skill | scripts 경로 | 책임 |
 |---|---|---|
-| `config/` | 종목·소스·테마·프로필 정의 | runner가 읽기 전용 참조 — config 변경으로 동작 변경 |
-| `scripts/<name>/run_with_claude.sh` | thin wrapper:<br>claude -p 직접 호출<br>stdout·stderr·종료 코드 반환 | 진입점 변경 + 결과 반환 흐름 |
-| `scripts/<name>/collect_*.py` | Python 수집기:<br>가격·뉴스 수집 (yfinance, requests)<br>수집 산출물 JSON 생성 | 수집 데이터 구조·소스 |
-| `.claude/skills/<name>/SKILL.md + references/` | skill 설명 (frontmatter) + 프롬프트 | Claude Code 자동 로드 + 응답 품질 |
-| `data/` | 런타임 산출물 (git 미추적) | 실행 결과 — 코드에 영향 없음 |
+| `stock-investing-morning-brief` | `scripts/stock-investing-morning-brief/` | 가격·뉴스 수집과 아침 브리핑 생성 |
+| `current-issue-analysis` | `scripts/current-issue-analysis/` | 현안별 소스 수집과 분석 보고서 생성 |
+| `daily-stock-analysis-note` | `scripts/daily-stock-analysis-note/` | 일일 종목 선택, 분석, 발행 초안 준비 |
+| `stock-youtube-learning-digest` | `scripts/youtube-learning-digest/` | 투자 학습 영상 후보 요약 |
 
-## 4. 외부 의존성
+wrapper는 로컬 파일, 표준 출력, 종료 코드만 계약으로 삼는다.
+외부 전달 채널과 자동 실행 시점은 저장소 밖에서 정한다.
 
-| 의존 | 역할 | 비고 |
-|---|---|---|
-| `claude` CLI | native skill 직접 호출 | `claude -p "/<skill>"` |
-| `python3` | 수집기 스크립트 (collect_*.py) | yfinance, requests 등 |
-| `stock-investment/data/publish` | 발행 준비 초안과 메타데이터 | 외부 `fos-study` 반영은 이 프로필에서 직접 수행하지 않음 |
+## 외부 의존
 
-## 5. 비용·실행 규율
+| 의존 | 용도 |
+|---|---|
+| `python3` | 가격, 뉴스, 현안 소스 수집 |
+| `uv` | YouTube 자막 수집 의존성 임시 실행 |
+| agent runtime | `.claude/skills` 또는 `.codex/skills` 실행 |
 
-- 광범위 풀-리포 분석 금지 — 비용 급증 방지.
-- 수집 실패 시 raw 파일 보존 — 재수집 없이 수집 결과 보존.
-- daily-stock-analysis-note: `data/daily-notes/history.json`으로 이미 발행된 종목의 신규 노트 중복 생성을 막고, 남은 후보 안에서 rotation 보정을 적용.
+## 변경 기준
 
-## 6. 결정 문서 경로
-
-- 워크스페이스 ADR: `docs/adr.md`
-- 모노레포 ADR: `../docs/adr.md` (ai-nodes/docs/adr.md)
-- 분리 패턴 표준: 모노레포 ADR-006
-- 5문서 책임 영역 청사진: `../docs/workspace-structure.md` 2번·6번
+- 새 config 파일은 `docs/data-schema.md`에 스키마를 추가한다.
+- 새 skill은 `scripts/<name>/`, `.claude/skills/<name>/`, `.codex/skills/<name>/` 관계를 맞춘다.
+- 외부 저장소에 직접 쓰는 기능은 이 워크스페이스에 넣지 않는다.
