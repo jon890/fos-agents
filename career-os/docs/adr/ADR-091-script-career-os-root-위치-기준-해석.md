@@ -5,10 +5,10 @@
 
 ### 맥락
 
-career-os TS·셸 헬퍼들이 작업 root를 `~/ai-nodes/career-os`로 하드코딩하고 있었다.
-일부는 `homedir()/ai-nodes/career-os`, 일부는 Linux 절대경로 `/home/bifos/ai-nodes/career-os`로 기본값이 제각각이었고, 일부만 `CAREER_OS_ROOT` env override를 지원했다.
+career-os TS·셸 헬퍼들이 작업 root를 특정 checkout 위치로 하드코딩하고 있었다.
+헬퍼마다 기본값이 달랐고 일부만 `CAREER_OS_ROOT` env override를 지원했다.
 
-이 때문에 repo가 `~/ai-nodes/career-os`가 아닌 다른 위치(예: `~/personal/fos-agents/career-os`)에 체크아웃되면 스크립트가 엉뚱한 디렉터리를 읽고 빈 결과를 냈다.
+이 때문에 repo를 다른 위치에 체크아웃하면 스크립트가 엉뚱한 디렉터리를 읽고 빈 결과를 냈다.
 실제로 study-topic-recommender 실행이 비어 있는 추천을 생성한 원인이 이 하드코딩이었다.
 
 ### 결정
@@ -26,7 +26,7 @@ config 자체가 root 아래에 있어 "root 위치를 config에 적는다"는 �
 
 ### 결과
 
-- 운영 머신(repo가 `~/ai-nodes/career-os`)과 개발 체크아웃(`~/personal/fos-agents/career-os`) 양쪽에서 같은 스크립트가 정상 동작한다.
+- checkout 위치와 관계없이 같은 스크립트가 정상 동작한다.
 - 새 스크립트도 위치 기준 도출 + `CAREER_OS_ROOT` override 패턴을 따른다.
 - 하드코딩된 홈 절대경로가 사라져 OS·사용자명 의존이 제거된다.
 
