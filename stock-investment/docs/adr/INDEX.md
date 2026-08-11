@@ -7,4 +7,3 @@ stock-investment에만 적용되는 기술 결정을 기록한다.
 
 - [ADR-019 — 외부 agent runtime 종속성 제거](../../../docs/adr/ADR-019-runtime-framework-independence.md)
 - [ADR-021 — 결정론적 처리와 agent 해석 분리](../../../docs/adr/ADR-021-deterministic-agent-boundary.md)
-- [ADR-022 — 외부 데이터 경계 검증](../../../docs/adr/ADR-022-external-data-schema-validation.md)
