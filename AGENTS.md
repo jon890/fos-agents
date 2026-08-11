@@ -41,7 +41,7 @@
 - 공용 helper는 워크스페이스 무관 코드만 `_shared/`에 둔다.
 - 워크스페이스 한정 helper는 `<workspace>/scripts/<skill>/`에 둔다.
 - 비밀 값은 각 워크스페이스의 `.env`에 둔다.
-- 공개 repo에 커밋되는 문서와 task에는 private home-server 절대 경로를 쓰지 않는다.
+- 공개 저장소에 커밋되는 문서와 task에는 환경 종속 절대 경로, 내부 호스트명, 계정명 등 비공개 실행 환경 식별자를 포함하지 않는다.
 - `career-os/sources/fos-study`는 별도 동기 저장소다. study-pack 계열 작업이 아니면 프로젝트 코드처럼 편집하지 않는다.
 
 ## Git 커밋
