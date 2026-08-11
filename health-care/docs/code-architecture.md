@@ -1,42 +1,52 @@
 # Code Architecture — health-care
 
-## 레이어
+이 문서는 현재 구조와 skill 경계를 설명한다.
+민감 데이터는 `private/` 아래에만 둔다.
 
-- `config/`: 공개 가능한 정책과 일반화된 재활 플랜.
-- `private/`: 민감한 개인 의료 컨텍스트와 경과 기록. gitignore 대상.
-- `docs/`: 제품 범위, 데이터 책임, 흐름, 아키텍처, ADR.
-- `.claude/skills/`: Claude native skill 컨텍스트 자산 (SKILL.md + references/). ADR-006 분리 표준 적용 (plan002 phase-02).
+## 디렉터리
 
-## 예정 skill 경계
+```text
+health-care/
+├── AGENTS.md
+├── README.md
+├── TOOLS.md
+├── .env.example
+├── config/
+├── private/
+│   ├── conditions/
+│   └── reports/
+├── docs/
+├── .claude/skills/
+└── .codex/skills/
+```
 
-### `.claude/skills/daily-health-coaching/`
+| 경로 | 책임 |
+|---|---|
+| `config/` | 공개 가능한 정책과 일반 재활·생활 관리 기준 |
+| `private/conditions/` | 질환·증상별 개인 문맥과 경과 |
+| `private/reports/` | 병원 제출, 진료 준비, 개인 리포트 |
+| `.claude/skills/` | skill 정본 |
+| `.codex/skills/` | Codex용 skill 링크 |
+| `docs/` | 현재 구조, 흐름, 스키마, 결정 |
 
-- 입력: `private/conditions/knee-patellar-instability/current-context.md`, `config/knee-running-recovery-plan.md`
-- 추가 입력: `config/knee-rehab-exercise-sets.md`
-- 출력: Discord용 짧은 체크인 메시지와 오늘의 재활 운동 세트 또는 `private/.../daily-checkins/` 저장본
-- 원칙: Claude 없이도 동작 가능한 보수적 안내. 판단 최소화. 불확실하면 낮은 단계 운동 세트를 선택.
+## Skill 경계
 
-### `.claude/skills/knee-progress-intake/`
+| skill | 입력 | 출력 |
+|---|---|---|
+| `daily-health-coaching` | private 건강 문맥, 공개 재활 config | 하루 체크인과 보수적 행동 안내 |
+| `knee-progress-intake` | 사용자의 증상·운동 보고 | `progress-log.jsonl` append와 최신 요약 갱신 제안 |
+| `weekly-knee-clinic-summary` | 최신 context와 경과 로그 | 병원 제출용 요약과 질문 리스트 |
+| `personalized-healthy-meal-research` | 건강 목표, 조리 환경, 공개·공신력 자료 | 메뉴 후보, 대체 규칙, 장보기 목록, 선택적 비식별 리포트 |
 
-- 입력: 사용자가 채널에 남긴 증상/운동/다음날 반응
-- 출력: `progress-log.jsonl` append 및 `current-context.md`의 최신 상태 갱신 제안
-- 원칙: 사용자가 말한 사실만 구조화. 추론은 `확인 필요`로 분리.
+## 외부 의존
 
-### `.claude/skills/weekly-knee-clinic-summary/`
+- agent runtime은 `.claude/skills` 또는 `.codex/skills`를 실행한다.
+- 웹 검색은 최신 의료기관·공공기관 자료가 필요할 때만 사용한다.
+- 외부 전송과 공개 게시 기본값은 금지다.
 
-- 입력: `current-context.md`, `progress-log.jsonl`, 최근 daily checkin, OCR 요약
-- 출력: `weekly-summaries/YYYY-MM-DD.md` 및 Discord 요약
-- 원칙: Claude 사용 가능. 진단/처방 금지, 병원 질문과 경과 요약 중심.
+## 변경 기준
 
-### `.claude/skills/personalized-healthy-meal-research/`
-
-- 입력: 사용자 건강 목표·조리 환경, 필요 시 `private/conditions/*/current-context.md`, 공신력 있는 건강 자료, 검증한 요리 영상
-- 출력: 재료군 기반 메뉴 12~18개, 대체 규칙, 7일 회전표, 장보기 목록, 관련 유튜브 링크·썸네일, 선택적 비식별 HTML 리포트
-- 원칙: 특정 식재료를 고정하지 않고 역할별 재료군으로 설계한다. 영상은 조리법 자료로만 사용하며 건강 효과 근거와 분리한다. 개인 건강 정보는 공개 산출물에 복사하지 않는다.
-
-## 알림/cron
-
-- 매일 아침 체크인은 OpenClaw cron이 담당한다.
-- cron payload는 `/daily-health-coaching` 또는 동등한 스킬 호출로 유지하고, 무릎 재활·식단·건강검진 기반 코칭 변경은 skill/private context/config 문서에서 관리한다.
-- 플랫폼 내부 식별자는 repo 문서에 기록하지 않는다.
-- 배송 대상은 OpenClaw 로컬 cron/config에서만 관리한다.
+- 개인 상태 변화는 `private/conditions/<track>/`에 남긴다.
+- 일반화 가능한 기준만 `config/`로 승격한다.
+- 새 skill은 `.claude/skills/<name>/`과 `.codex/skills/<name>/` 관계를 맞춘다.
+- 구조가 바뀌면 이 문서와 `docs/data-schema.md`, `docs/flow.md`를 함께 확인한다.

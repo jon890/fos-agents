@@ -1,39 +1,68 @@
-# Workflow — health-care
+# Flow — health-care
 
-## 1. Intake
+이 문서는 건강 기록과 리포트 생성 흐름을 설명한다.
+모든 흐름은 진단·처방을 대신하지 않는다.
 
-- 사용자가 증상/검사/진료 내용을 제공한다.
-- 원본은 `private/conditions/<track>/source-*.md`에 보존한다.
-- 요약은 `current-context.md`에 업데이트한다.
+## Intake
 
-## 2. Clinic prep
+```text
+사용자 보고
+  -> 증상·검사·진료 안내 구분
+  -> 원본 또는 요약을 private track에 저장
+  -> current-context.md 갱신 제안
+  -> 확인 필요 항목 분리
+```
 
-- 병원 제출용 1페이지 요약
-- 의사에게 물어볼 질문
-- 검사/MRI/재활 시작 시점 등 확인 필요 항목
+기준 경로:
 
-## 3. Progress tracking
+- `private/conditions/<track>/current-context.md`
+- `private/conditions/<track>/progress-log.jsonl`
+- `private/conditions/<track>/source-*.md`
 
-- 통증, 불안정감, 붓기, 가동범위, 보행/계단, 시행 조치, 다음날 반응을 기록한다.
-- 악화 신호가 있으면 1개월 대기 대신 재진 기준을 다시 확인한다.
+## Daily Coaching
 
-## 4. Rehab support
+```text
+daily-health-coaching
+  -> private 최신 문맥 확인
+  -> 공개 재활·생활 관리 config 확인
+  -> 오늘 할 행동과 중단 기준 생성
+  -> 필요 시 진료 확인 항목 제시
+```
 
-- 급성기에는 강화보다 보호·염증 완화·관절 강직 방지를 우선한다.
-- 운동마다 중단 기준을 함께 둔다.
-- 아침 체크인은 `config/knee-rehab-exercise-sets.md`에서 현재 단계에 맞는 운동 세트를 골라 짧게 안내한다.
-- 운동 세트는 최대치가 아니라 안전하게 시작할 기본치로 제안한다.
+private context가 없으면 공개 config만 사용하고 한계를 명시한다.
 
+## Progress Tracking
 
-## Public config policy
+```text
+knee-progress-intake
+  -> 통증, 불안정감, 붓기, 보행, 운동, 다음날 반응 구조화
+  -> progress-log.jsonl append
+  -> current-context.md 갱신 필요 여부 판단
+```
 
-- `config/`에는 공개되어도 괜찮은 일반화된 정책과 플랜만 둔다.
-- 원본 진료기록과 상세 증상 컨텍스트는 `private/`에만 보관한다.
-- 경계가 애매하면 커밋/푸시 전에 사용자와 논의한다.
+사용자가 말하지 않은 증상은 추론하지 않는다.
+위험 신호가 있으면 재평가 기준을 우선한다.
 
-## 5. Skill flow plan
+## Clinic Summary
 
-- `daily-health-coaching`: 무릎 `current-context.md` + 건강검진 `current-context.md` + `health-coaching-plan-2026-06-29.md` + 공개 재활 config → 짧은 아침 종합 건강 코칭. 무릎 중단 기준, 식단 조절점, 저충격 운동, 진료/추적검사 리마인더를 포함한다.
-- `knee-progress-intake`: 사용자 보고 → `progress-log.jsonl` append + 필요 시 `current-context.md` 업데이트 제안. 추론은 `확인 필요`로 분리한다.
-- `weekly-knee-clinic-summary`: 최근 경과 + OCR 요약 + 현재 컨텍스트 → 병원 제출용 요약과 질문 리스트 초안. Claude 사용 가능하나 진단/처방은 금지한다.
-- `personalized-healthy-meal-research`: 건강 목표·증상 조정 규칙 → 조건 충돌표 → 공신력 있는 건강 근거 → 최소 6개 축의 요리 영상 조사 → 재료군 기반 메뉴·대체재·회전표·장보기 생성. 공개 HTML은 비식별화하고 사용자 요청이 있을 때만 게시한다.
+```text
+weekly-knee-clinic-summary
+  -> 최신 context와 경과 로그 읽기
+  -> 확정 사실, 사용자 보고, OCR 불확실성, 확인 필요 분리
+  -> 1페이지 요약과 질문 리스트 생성
+```
+
+의료진에게 보여줄 문서는 짧게 쓴다.
+진단명이나 치료 방향을 새로 단정하지 않는다.
+
+## Meal Research
+
+```text
+personalized-healthy-meal-research
+  -> 건강 목표와 제한 확인
+  -> 공신력 자료와 조리 영상 분리
+  -> 메뉴, 대체 규칙, 회전표, 장보기 목록 생성
+```
+
+개인 검사 수치와 병력은 공개 리포트에 복사하지 않는다.
+비식별 HTML을 만들더라도 공개 전 범위를 점검한다.

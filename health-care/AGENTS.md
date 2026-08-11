@@ -1,96 +1,55 @@
 # AGENTS.md — health-care 워크스페이스
 
-`~/ai-nodes/health-care`는 개인 건강 기록·진료 준비·재활 경과 추적을 위한 독립 워크스페이스다.
+`health-care`는 개인 건강 기록, 재활 경과, 진료 준비를 관리하는 독립 워크스페이스다.
+이 파일은 행동 규칙과 라우팅만 담는다.
 
+## 읽기 순서
 
-## 문서 라우팅
-
-- `docs/prd.md` — 제품 범위, MVP 기능, 성공/비범위
-- `docs/data-schema.md` — 공개 config와 private data 스키마
-- `docs/flow.md` — intake, tracking, clinic prep, skill flow
-- `docs/code-architecture.md` — 디렉터리/skill 경계/cron 책임
-- `docs/adr.md` — 의사결정의 왜
-- `CLAUDE.md` — Claude/Codex가 같은 운영 기준을 보도록 `AGENTS.md`와 동기화
-
-## 목적
-
-- 병력/증상/복약/진료 기록을 일관된 문맥으로 유지한다.
-- 병원 진료 전에 핵심 요약과 질문 리스트를 만든다.
-- 재활/생활 관리 계획은 의료진 판단을 보완하는 기록·정리 수준으로 다룬다.
-- 증상 변화, 위험 신호, 재방문 기준을 추적한다.
+| 문서 | 책임 |
+|---|---|
+| `README.md` | 범위, 설정, 실행, 검증 |
+| `docs/prd.md` | 제품 범위와 비범위 |
+| `docs/code-architecture.md` | 현재 구조와 skill 경계 |
+| `docs/data-schema.md` | 공개 config와 private data 스키마 |
+| `docs/flow.md` | intake, tracking, clinic prep 흐름 |
+| `docs/adr.md` | 결정 이력 |
 
 ## 안전 원칙
 
-- 진단·처방·치료 결정을 대신하지 않는다.
-- 급성 악화, 신경/혈류 이상, 심한 통증, 반복 탈구/불안정, 잠김/걸림, 붓기 증가 등은 의료기관 재평가를 우선한다.
-- 운동/재활 제안은 보수적으로 작성하고, 통증·불안정감·붓기 증가 시 중단 기준을 함께 둔다.
-- 개인 의료 정보는 기본적으로 비공개로 취급한다. 공개 블로그/외부 전송 금지.
+- 진단, 처방, 치료 결정을 대신하지 않는다.
+- 급성 악화, 신경·혈류 이상, 심한 통증, 반복 탈구, 잠김, 붓기 증가는 의료기관 재평가를 우선한다.
+- 재활 제안은 보수적으로 작성하고 중단 기준을 함께 둔다.
+- 개인 의료 정보는 기본적으로 비공개로 취급한다.
 
-## 설명 원칙
+## 데이터 경계
 
-- 사용자는 의학 전문가가 아니므로, 의료 설명은 쉬운 한국어를 기본으로 쓴다.
-- 의학 전문 용어는 먼저 일상어로 풀어 설명하고, 필요할 때 원어를 괄호로 덧붙인다.
-- `lateral release`는 “슬개골 바깥쪽으로 당기는 조직을 풀어주는 수술”처럼 설명한다.
-- `modified Fulkerson osteotomy`는 “정강이뼈에서 슬개건이 붙는 부위를 잘라 위치를 조정해 슬개골이 더 안정적으로 움직이게 하는 수술”처럼 설명한다.
-- `trochleoplasty`는 “슬개골이 지나가는 허벅지뼈의 홈을 더 안정적으로 만들어 주는 수술”처럼 설명한다.
-- `screw removal`은 “나사 제거”, `retained screw`는 “잔존 나사”로 설명한다.
-- 전문 용어만 나열하지 말고, 그 용어가 현재 증상·검사·운동 제한과 어떤 관련이 있는지 한 문장으로 덧붙인다.
+- 민감 건강 기록은 `private/` 아래에 둔다.
+- 공개 가능한 일반 정책과 비식별 플랜만 `config/`와 `docs/`에 둔다.
+- 개인 수치, 검사 결과, 진료 기록, 복약 정보는 `AGENTS.md`, `docs/`, `config/`에 복사하지 않는다.
+- 공개 여부가 애매하면 공개하지 않는다.
 
-## 개인 건강 데이터 라우팅
+## 주요 트랙
 
-- 키, 체중, 검사 수치, 질환, 운동 반응과 개인 목표는 개인정보로 취급하며 `AGENTS.md`, `docs/`, `config/`에 구체적인 값을 기록하지 않는다.
-- 신체 기준선과 감량 목표의 정본은 `private/conditions/metabolic-weight/current-context.md`에서 확인한다.
-- 무릎 상태와 운동 반응은 `private/conditions/knee-patellar-instability/`, 건강검진과 대사 건강 맥락은 `private/conditions/health-screening-2026-06-10/`에서 확인한다.
-- 공개 운영 문서에는 개인 값을 복사하지 않고, private 문서를 읽어 답변하라는 라우팅 원칙만 둔다.
+| 트랙 | 기준 경로 |
+|---|---|
+| 무릎 슬개골 불안정과 재활 | `private/conditions/knee-patellar-instability/` |
+| 건강검진 기반 생활 관리 | `private/conditions/health-screening-2026-06-10/` |
+| 공개 재활 기준 | `config/knee-running-recovery-plan.md`, `config/knee-rehab-exercise-sets.md` |
 
-## 시간축 판단 원칙
+## 주요 skill
 
-- 무릎 상태와 운동 허용 범위를 판단할 때 마지막 진료일, 진료 후 경과 일수, 이후 증상 추세, 현재 가능한 활동, 운동 당일과 다음날 반응을 항상 함께 본다.
-- 과거 진료 당시의 제한을 현재에 기계적으로 고정하지 않는다. 다만 최신 전문의 제한과 충돌하는 운동은 증상 추세와 재평가 근거 없이 임의로 확대하지 않는다.
-- 최신 개인 상태는 `private/conditions/knee-patellar-instability/current-context.md`, 경과는 `progress-log.jsonl`, 검진 맥락은 `private/conditions/health-screening-2026-06-10/`에서 우선 확인한다.
-
-## 현재 관리 트랙
-
-- `private/conditions/knee-patellar-instability/` — 슬개골 재발성 탈구 수술 이력 및 최근 무릎 불안정 증상
-
-## 디렉터리
-
-- `config/` — 외부 공개 가능 정책, 일반화된 회복 플랜, 비식별 운영 기준
-- `private/conditions/` — 질환/증상별 원본 문맥, 경과 기록, 진료 노트. 민감정보이므로 git 커밋하지 않는다.
-- `private/reports/` — 병원 후보 조사, 진료 준비 요약, 개인 증상·수술 이력·복약 맥락이 들어간 리포트. 민감정보이므로 git 커밋하지 않는다.
-- `docs/` — 워크플로/ADR/운영 문서
-- `.claude/skills/` — agent skill 정본 (SKILL.md + references/). ADR-006 분리 표준.
-- `.codex/skills/` — Codex 노출용 심볼릭 링크.
-
-## Private Storage Rule
-
-- 민감 건강 기록은 `private/`에 둔다. 폴더명만 봐도 비공개 영역임을 알 수 있게 하기 위함이다.
-- `data/`를 private 대용으로 쓰지 않는다. 기존 `data/conditions/` 경로는 `private/conditions/`로 이전했다.
-- 현재 무릎 트랙의 기준 경로는 `private/conditions/knee-patellar-instability/`다.
-- 경과 로그는 `progress-log.jsonl`, 최신 요약은 `current-context.md`, 맞춤 재활 계획은 `rehab-plan-YYYY-MM-DD.md`에 둔다.
-- 병원 후보 조사, 진료 준비 리포트, 의료진에게 전달할 요약처럼 개인 건강 맥락이 들어간 산출물은 `private/reports/`에 둔다.
-- 루트 `reports/`는 기본적으로 사용하지 않는다. 완전 비식별 공개 산출물일 때만 예외적으로 쓰고, 그 전에는 공개/비공개 경계를 확인한다.
-- `private/`는 ai-nodes `.gitignore` 대상이어야 하며, 커밋·공개·외부 전송 전에 사용자 확인을 우선한다.
-- 공개 가능한 일반 정책과 비식별 재활 기준만 `config/`나 `docs/`에 둔다.
+| skill | 목적 |
+|---|---|
+| `daily-health-coaching` | 매일 건강·재활 체크인 생성 |
+| `knee-progress-intake` | 증상과 운동 반응 구조화 |
+| `weekly-knee-clinic-summary` | 병원 제출용 경과 요약 초안 |
+| `personalized-healthy-meal-research` | 건강 목표 기반 식단 리서치 |
 
 ## 작업 방식
 
-0. Discord `#병태건강` 채널에서 커밋/푸시 요청을 받으면 `health-care/` 관련 파일만 대상으로 삼고, 다른 워크스페이스 변경은 건드리지 않는다.
-1. 공개/비공개 경계가 애매하면 임의로 결정하지 말고 사용자와 먼저 논의한다.
-2. 먼저 사용자의 증상 기록과 의료기관 안내를 구분한다.
-3. 확정 사실 / 기억 기반 / 추론 / 확인 필요를 분리한다.
-4. 병원 제출용 문서는 짧고 정확하게 만든다.
-5. 재활 계획은 “안전한 범위 유지” 중심으로 제안하고, 강화 단계는 의료진/물리치료사 확인 후 진행한다.
-6. 애매한 부분은 임의로 넘기지 말고 질문하거나 `확인 필요`로 남긴다.
-7. 아침 종합 건강 코칭 변경은 `.claude/skills/daily-health-coaching/SKILL.md`, `private/conditions/health-screening-2026-06-10/current-context.md`, `private/conditions/health-screening-2026-06-10/health-coaching-plan-2026-06-29.md`, `config/knee-running-recovery-plan.md`, `config/knee-rehab-exercise-sets.md`, `docs/flow.md`, `docs/code-architecture.md`를 함께 확인한다.
-8. 이후 참고 자료로 남길 만한 사용자 경과는 `private/conditions/.../current-context.md`에, 일반화 가능한 운영 결정은 `docs/adr.md` 또는 `config/`에 남긴다.
-
-## fos-brain 연동
-
-이 워크스페이스 agents의 brain 읽기/쓰기 규약.
-단일 정책은 ai-nodes 루트 `AGENTS.md` 13번 + ADR-009(구조) / ADR-010(쓰기 안전·프라이버시).
-
-- 접근: thin caller — brain-search(읽기) / brain-add(쓰기). brain 로직 재구현 금지.
-- cron 무인 실행: brain-search 읽기만. brain-add 적재는 discord 대화 세션에서 사람 검토 후.
-- 산출물 네임스페이스 라우팅:
-  - 무릎 재활·건강 데이터 → private.
+- 사용자의 증상 기록과 의료기관 안내를 구분한다.
+- 확정 사실, 사용자 보고, 추론, 확인 필요를 분리한다.
+- 병원 제출용 문서는 짧고 정확하게 만든다.
+- 재활 강화 단계는 의료진 또는 물리치료사 확인 전에는 보수적으로 둔다.
+- 참고할 만한 경과는 `private/conditions/.../current-context.md` 또는 `progress-log.jsonl`에 남긴다.
+- 일반화 가능한 운영 결정은 `docs/adr.md` 또는 `config/`에 남긴다.
