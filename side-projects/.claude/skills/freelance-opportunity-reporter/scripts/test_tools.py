@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import json
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
+from assemble_report_data import assemble
 from audit_collection import audit
+from render_report import load_candidates, rank_key, render_document
 from score_opportunities import first_win_sort_key, score
 
 
@@ -217,6 +222,118 @@ class AuditCollectionTest(unittest.TestCase):
 
         self.assertEqual(result["status"], "incomplete")
         self.assertEqual(result["untracked_sources"], ["wishket-outsourcing-open"])
+
+
+class RenderReportTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.items = [
+            {
+                "platform": "위시켓",
+                "project_id": str(index),
+                "title": f"백엔드 공고 {index}",
+                "url": f"https://example.com/{index}",
+                "budget_display": "1,000만 원",
+                "budget_krw": 10_000_000,
+                "duration_display": "30일",
+                "duration_days": 30,
+                "applicants": index,
+                "fit": 5,
+                "risk": 2,
+                "portfolio": 5,
+                "remote": 5,
+                "remote_only_pass": True,
+                "scope_clarity": 5,
+                "delivery_confidence": 5,
+                "experience_match": 5,
+                "reputation_value": 5,
+                "fit_comment": "백엔드 경험과 잘 맞는다.",
+                "check_first": "검수 범위를 확인한다.",
+                "eligibility_status": "candidate",
+            }
+            for index in range(1, 5)
+        ]
+
+    def test_uses_same_eight_columns_and_limits_shortlist(self) -> None:
+        document = render_document(self.items, "2026-08-11")
+
+        header = "<th>공고</th><th>예산</th><th>기간</th><th>지원자</th><th>적합도</th><th>판단</th><th>한줄평</th><th>먼저 확인할 것</th>"
+        self.assertEqual(document.count(header), 2)
+        self.assertEqual(document.count('aria-label="위시켓 상위 후보"'), 1)
+        top_table = document.split('aria-label="위시켓 상위 후보"', 1)[1].split("</table>", 1)[0]
+        self.assertEqual(top_table.count("<tr>"), 4)
+        self.assertIn("4명", document)
+
+    def test_excludes_non_candidate_rows_from_report(self) -> None:
+        payload = {"items": [self.items[0], {**self.items[1], "eligibility_status": "excluded"}]}
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "items.json"
+            path.write_text(json.dumps(payload), encoding="utf-8")
+
+            candidates = load_candidates(path)
+
+        self.assertEqual([row["project_id"] for row in candidates], ["1"])
+
+    def test_discloses_unknown_remote_status(self) -> None:
+        document = render_document(
+            [{**self.items[0], "remote_only_pass": None}],
+            "2026-08-11",
+        )
+
+        self.assertIn("공개 상세만으로 원격 여부를 확정할 수 없어", document)
+
+    def test_ranks_viable_first_win_before_standard_candidate(self) -> None:
+        first_win = score(
+            {
+                **self.items[0],
+                "duration_days": 8,
+                "duration_display": "8일",
+                "risk": 3,
+            },
+            remote_only=True,
+        )
+        standard = score(self.items[1], remote_only=True)
+
+        ranked = sorted([standard, first_win], key=rank_key, reverse=True)
+
+        self.assertEqual(ranked[0]["recommended_track"], "first-win")
+
+
+class AssembleReportDataTest(unittest.TestCase):
+    def test_adds_audit_fields_and_excludes_non_remote_rows(self) -> None:
+        rows = [
+            {
+                "platform": "원티드 긱스",
+                "project_id": "1",
+                "title": "원격 백엔드",
+                "url": "https://example.com/1",
+                "registered_at": None,
+                "list_page": 1,
+                "detail_status": "confirmed",
+                "remote_only_pass": True,
+                "fit": 5,
+            },
+            {
+                "platform": "원티드 긱스",
+                "project_id": "2",
+                "title": "상주 백엔드",
+                "url": "https://example.com/2",
+                "registered_at": None,
+                "list_page": 1,
+                "detail_status": "confirmed",
+                "remote_only_pass": False,
+                "fit": 5,
+            },
+        ]
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "wanted.json"
+            path.write_text(json.dumps(rows), encoding="utf-8")
+
+            payload = assemble([path], "2026-08-11T10:30:00+09:00")
+
+        self.assertEqual(payload["collection"][0]["advertised_count"], 2)
+        self.assertEqual(payload["items"][0]["eligibility_status"], "candidate")
+        self.assertEqual(payload["items"][1]["eligibility_status"], "excluded")
+        self.assertEqual(audit(payload)["status"], "complete")
 
     def test_related_items_do_not_hide_primary_list_gap(self) -> None:
         def item(project_id: str, source: str) -> dict:

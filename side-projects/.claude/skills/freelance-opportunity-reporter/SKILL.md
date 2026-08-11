@@ -108,13 +108,15 @@ description: >-
 
    - 상단 추천 표에는 사용자가 개수를 지정하지 않으면 플랫폼별 상위 후보를 최대 3개만 제시한다.
    - 상단 추천 표와 하단 `수집한 공고 목록`은 같은 표 양식을 사용한다.
-   - 공통 열은 `공고`, `예산`, `기간`, `적합도`, `판단`, `한줄평`, `먼저 확인할 것` 순서다.
+   - 공통 열은 `공고`, `예산`, `기간`, `지원자`, `적합도`, `판단`, `한줄평`,
+     `먼저 확인할 것` 순서다.
    - `공고`에는 상세 페이지 링크를 건다.
+   - `지원자`에는 수집 시점의 현재 지원자 수를 `N명`으로 표시한다.
    - `적합도`에는 일반 점수 또는 첫 수주 적합도 중 실제 추천 관점과 점수를 함께 쓴다.
    - `판단`은 `바로 지원`, `조건 확인 후 지원`, `비추천` 중 하나로 쓴다.
    - `한줄평`에는 사용자 경력과의 적합 이유를 한 문장으로 쓴다.
    - `먼저 확인할 것`에는 가장 큰 위험이나 지원 전 확인 조건을 한 문장으로 쓴다.
-   - 예산이나 기간을 확인하지 못했으면 임의로 추정하지 않고 `미확인`으로 표시한다.
+   - 예산, 기간, 지원자 수를 확인하지 못했으면 임의로 추정하지 않고 `미확인`으로 표시한다.
    - 대표 숫자는 `검토 후보`, `바로 지원`, `조건 확인 후 지원`만 사용한다.
    - 수집 건수, 마감·상주 제외 건수, 페이지 순회 같은 작업 과정은 HTML에 쓰지 않는다.
    - 제외 과정을 설명하지 말고 최종 후보와 지원 판단만 쓴다.
@@ -136,6 +138,15 @@ description: >-
    - HTML은 `report-publisher` 스킬로 Cloudflare Pages에 게시한다.
    - 공개 URL 검증이 끝나면 임시 HTML과 원자료를 삭제한다.
    - 게시에 실패해도 저장소의 `reports/`나 다른 영구 경로에 결과물을 남기지 않는다.
+
+   원자료 검사가 끝나면 날짜별 전용 생성기를 만들지 않고 공용 생성기를 실행한다.
+
+   ```bash
+   python3 .claude/skills/freelance-opportunity-reporter/scripts/render_report.py \
+     data/runtime/downloads/freelance-opportunities-YYYY-MM-DD.json \
+     --date YYYY-MM-DD \
+     --output data/runtime/downloads/freelance-opportunity-report-YYYY-MM-DD.html
+   ```
 
 7. 운영 루프를 붙인다.
    반복 실행 계획이 필요하면 `references/operating-loop.md`를 읽는다.
@@ -197,9 +208,12 @@ Cloudflare 인증이나 게시 권한이 없어 게시하지 못하면 작업을
 
 ## 검증
 
-원자료와 점수를 아래 순서로 검사한다.
+플랫폼별 수집 파일을 공용 스크립트로 조립한 뒤 원자료와 점수를 검사한다.
 
 ```bash
+python3 .claude/skills/freelance-opportunity-reporter/scripts/assemble_report_data.py \
+  data/runtime/downloads/*-enriched-YYYY-MM-DD.json \
+  --output data/runtime/downloads/freelance-opportunities-YYYY-MM-DD.json
 python3 .claude/skills/freelance-opportunity-reporter/scripts/audit_collection.py data/runtime/downloads/freelance-opportunities-YYYY-MM-DD.json --pretty
 python3 .claude/skills/freelance-opportunity-reporter/scripts/score_opportunities.py data/runtime/downloads/freelance-opportunities-YYYY-MM-DD.json --remote-only --first-win --pretty
 ```
@@ -210,8 +224,8 @@ python3 .claude/skills/freelance-opportunity-reporter/scripts/score_opportunitie
 - 상단 플랫폼별 상위 후보가 사용자 지정 수 또는 기본 3개를 넘지 않는지
 - 하단 `수집한 공고 목록`에 최종 수집 범위의 공고가 플랫폼별로 모두 있는지
 - 상단과 하단 표의 열, 열 순서, 판단 배지, 값 형식이 같은지
-- 하단 표의 모든 행에 공고 상세 링크, 예산, 기간, 적합도, 판단, 한줄평,
-  먼저 확인할 것이 있는지
+- 하단 표의 모든 행에 공고 상세 링크, 예산, 기간, 지원자, 적합도, 판단,
+  한줄평, 먼저 확인할 것이 있는지
 - 하단 목록이 링크만 있는 목록이나 축약 표로 렌더링되지 않았는지
 - 하단의 같은 플랫폼 표가 적합도 내림차순인지
 - 대표 숫자 외의 수집·제외 통계와 필터 과정 설명이 없는지
@@ -229,8 +243,10 @@ python3 .claude/skills/freelance-opportunity-reporter/scripts/score_opportunitie
 | `references/collection.md` | 목록을 수집하고 누락을 검사할 때 |
 | `references/classification.md` | 지원·보류·거절을 나눌 때 |
 | `references/operating-loop.md` | 반복 실행 계획을 붙일 때 |
+| `scripts/assemble_report_data.py` | 플랫폼별 수집 결과를 감사 가능한 원자료로 합칠 때 |
 | `scripts/audit_collection.py` | 원자료의 중복·필수 필드·수집 건수를 검사할 때 |
 | `scripts/score_opportunities.py` | 공고 목록의 점수를 계산할 때 |
+| `scripts/render_report.py` | 검사한 원자료를 공통 8열 HTML 리포트로 만들 때 |
 
 점수 계산 스크립트 입력 예시:
 
