@@ -798,7 +798,7 @@ ADR-066 이후 공개 가능 일반 질문 bank의 정본은 `public/question-ba
 
 ### config/external-reading-sources.json
 
-3개 외부 reading source config 파일 통합본 (`tech-blog-sources`, `ai-topic-sources`, `geek-news-sources`).
+외부 읽을거리 소스를 카테고리와 무관한 공통 구조로 관리하는 설정이다.
 `study-topic-recommender`의 보조 읽을거리 추천과 `position-recommender`의 `techBlogSignal` 판단에만 사용한다.
 공고 수집 source registry가 아니다.
 공고 수집 source 설정은 `config/position-collection.json`과 career-os `live-postings` adapter registry가 소유한다.
@@ -806,30 +806,38 @@ ADR-066 이후 공개 가능 일반 질문 bank의 정본은 `public/question-ba
 ```json
 {
   "_meta": {
-    "purpose": "tech-blog / ai / geek-news external reading reservoir 단일 출처",
-    "schema_version": "1",
-    "categories": ["techBlog", "ai", "geek"]
+    "purpose": "study-topic-recommender 외부 읽을거리 소스의 단일 출처",
+    "schemaVersion": 2
   },
-  "techBlog": {
-    "_meta": { "purpose": "..." },
-    "items": [
-      {
-        "key": "string",
-        "title": "string",
-        "source": "string",
-        "url": "string",
-        "feedUrl": "string (선택)",
-        "filterKeywords": ["string"],
-        "tags": ["string"],
-        "whyNow": "string",
-        "estMinutes": "number"
-      }
-    ]
+  "categories": {
+    "techBlog": {"label": "기술 블로그", "slots": 3, "requireDiscoveredArticle": true},
+    "ai": {"label": "AI 실전", "slots": 1, "requireDiscoveredArticle": false},
+    "geek": {"label": "개발 동향", "slots": 1, "requireDiscoveredArticle": false}
   },
-  "ai": { "...같은 구조..." },
-  "geek": { "...같은 구조..." }
+  "sources": [
+    {
+      "key": "string",
+      "category": "techBlog | ai | geek",
+      "title": "string",
+      "enabled": true,
+      "priority": 1,
+      "source": "string",
+      "url": "HTTPS URL",
+      "feedUrl": "HTTPS RSS/Atom URL (선택)",
+      "filterKeywords": ["string"],
+      "tags": ["string"],
+      "whyNow": ["string"],
+      "estMinutes": 25
+    }
+  ]
 }
 ```
+
+소스는 `manage_reading_sources.ts`로 조회, 검증, 추가, 비활성화, 우선순위 변경을 수행한다.
+`render_source_catalog.ts`는 활성 소스, 실시간 HTTP·RSS 응답, 원문 추적성 신뢰도를 HTML로 만든다.
+
+신뢰도는 내용의 진실성을 보증하는 평판 점수가 아니다.
+발행 주체의 직접성, HTTPS 원문, RSS 제공, 실행 시점의 응답 여부를 평가한다.
 
 ### config/topic-profiles.json
 
@@ -1020,7 +1028,6 @@ daily 모드는 토픽 기반 fos-study 파일 선택 + `state/study-progress.js
   },
   "recommendations": [],
   "updateExistingRecommendations": [],
-  "todayPick": {},
   "discovery": {}
 }
 ```
@@ -1151,7 +1158,6 @@ LLM 후보 refresh가 검증을 통과한 `new` 후보만 자동 append/update�
   "techBlogKeys": [...],
   "aiKeys": [...],
   "geekKeys": [...],
-  "todayPickKeys": {"backend": "...", "techBlog": "...", "ai": "..."},
   "articleUrls": ["string", ...]
 }
 ```
@@ -1204,7 +1210,21 @@ replenish 실행 결과 요약. claudeInvoked 여부, 보충된 후보 수 등.
 
 ### reports/morning-topic-recommendation.md
 
-`refresh_topic_inventory.ts` 산출물 (ADR-026). ADR-012의 10픽 + 오늘의 3선 마크다운. 사람이 직접 읽음.
+`refresh_topic_inventory.ts`가 하루 단위의 카테고리별 읽을거리를 정리한 마크다운이다.
+회사 기술 블로그와 GeekNews 계열 읽을거리를 먼저 배치한다.
+에이전트가 제안한 백엔드 공부 후보는 별도 카테고리로 뒤에 배치한다.
+
+### reports/downloads/morning-reading-YYYY-MM-DD.html
+
+`topic-inventory.json`에서 파생한 공개 가능한 학습 추천 HTML이다.
+학습 주제, 공개 추천 이유, HTTPS 읽을거리 링크만 포함한다.
+각 카테고리에는 제목, 간단한 요약, 추천 이유를 표시한다.
+공유 URL이 필요하면 이 단일 파일을 `report-publisher`로 게시한다.
+
+### reports/downloads/study-reading-sources-YYYY-MM-DD.html
+
+`external-reading-sources.json`에서 파생한 공개 가능한 소스 현황 HTML이다.
+활성 소스 목록, 원문·RSS 응답 상태, 원문 추적성 신뢰도를 표시한다.
 
 ### cache/feed-cache/<sha1>.json (ADR-013)
 

@@ -107,12 +107,17 @@ career-os/
 │
 ├── scripts/                              ← 실행 파일 영역. career-os 한정 컨벤션.
 │   ├── study-topic-recommender/
-│   │   ├── refresh_topic_inventory.ts    ADR-009/010/012/013 종합 엔진 (ADR-026 Python → TypeScript). ADR-033 이후 fos-study 직접 스캔
-│   │   ├── refresh_candidate_pool.ts      ADR-070 LLM 후보 발굴 + 검증 + config 자동 반영 entrypoint
-│   │   ├── send_daily_recommendation.ts  ADR-073 추천 요약과 action snapshot 생성
-│   │   ├── feed_discovery.ts             ADR-013 RSS/Atom 파서 (ADR-026 Python → TypeScript)
-│   │   ├── fos_study_inventory.ts        fos-study 트리 스캔 helper
-│   │   └── duplicate_detection.ts        deterministic dedupe helper
+│   │   ├── refresh_topic_inventory.ts    추천 목록과 Markdown·HTML 생성
+│   │   ├── refresh_candidate_pool.ts     후보 발굴 결과 검증과 반영
+│   │   ├── manage_reading_sources.ts     외부 읽을거리 조회·검증·편집
+│   │   ├── render_source_catalog.ts       등록 소스와 원문 추적성 신뢰도 HTML 생성
+│   │   ├── validate_outputs.ts            추천 산출물과 공개 범위 검증
+│   │   ├── reading_sources.ts             읽을거리 설정 정규화와 검증
+│   │   ├── render/{markdown,html}.ts       같은 추천 정본의 표시 변환
+│   │   ├── send_daily_recommendation.ts  추천 요약과 action snapshot 생성
+│   │   ├── feed_discovery.ts             RSS/Atom 수집과 캐시
+│   │   ├── fos_study_inventory.ts        fos-study 트리 스캔
+│   │   └── duplicate_detection.ts        결정론적 중복 후보 탐지
 │   ├── position-recommender/
 │   │   ├── collect_live_postings.ts    공고 수집 entrypoint (ADR-030, ADR-047)
 │   │   ├── recommendation_schema.ts    표준 출력 JSON zod 스키마 (ADR-101, RecommendationRun, source·closeDate 포함)
@@ -154,7 +159,8 @@ career-os/
 │   ├── interview-stage-prep/
 │   │   └── SKILL.md  1차/최종/오퍼 단계별 실전 준비 자료 생성
 │   ├── study-topic-recommender/
-│   │   └── SKILL.md
+│   │   ├── SKILL.md
+│   │   └── references/source-management.md   외부 읽을거리 소스 관리 명령
 │   ├── study-pack-writer/{SKILL.md, references/}
 │   ├── interview-asset-writer/
 │   │   ├── SKILL.md
