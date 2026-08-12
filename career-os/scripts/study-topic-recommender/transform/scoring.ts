@@ -27,9 +27,6 @@ export const TAG_PRIORITY: Record<string, number> = {
   "live-coding": 0,
 };
 
-// key suppression: cooldown|recent history entries — SECONDARY for secondary, BACKEND for backend keys
-export const SECONDARY_COOLDOWN_ENTRIES = 3;
-
 // ── pure utility ──────────────────────────────────────────────────────────────
 
 export function countMap(items: string[]): Map<string, number> {

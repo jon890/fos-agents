@@ -1,6 +1,5 @@
-import type { ReservoirItem } from "../feed_discovery.js";
 import type { PossibleDuplicate } from "../duplicate_detection.js";
-import type { TopicItem, BackendItem, LiveSeed, Recommendation, UpdateExistingItem } from "./types.js";
+import type { TopicItem, BackendItem, LiveSeed, UpdateExistingItem } from "./types.js";
 import {
   BACKEND_MIX_TARGET,
   backendDomainGroup,
@@ -98,7 +97,7 @@ export function pickBackendRecommendations(
     }
   }
 
-  // Final fallback: only repeat domains when the reservoir is genuinely narrow.
+  // 후보 풀이 좁을 때만 같은 분야를 예비 선택한다.
   if (chosen.length < targetTotal) {
     for (const item of pool) {
       const key = item.key ?? "";
@@ -110,34 +109,6 @@ export function pickBackendRecommendations(
   }
 
   return chosen.slice(0, targetTotal);
-}
-
-// ── secondary recommendations ─────────────────────────────────────────────────
-
-/**
- * 비-backend 카테고리(tech-blog / AI / geek) 추천 선택.
- *
- * 1차: cooldown(최근 history N개) 안에 없는 항목을 reservoir 순서대로 선택.
- * 2차: 부족하면 recently_shown 포함해서라도 채움.
- * reservoir 순서는 사람이 큐레이션한 우선도이므로 추가 정렬을 하지 않는다.
- */
-export function pickSecondary(
-  items: ReservoirItem[],
-  recentlyShownKeys: Set<string>,
-  limit: number
-): Recommendation[] {
-  if (items.length === 0) return [];
-  const fresh = items.filter((item) => !recentlyShownKeys.has(item.key ?? ""));
-  const chosen: Recommendation[] = fresh.slice(0, limit).map((i) => ({ ...i }));
-  if (chosen.length >= limit) return chosen;
-  const chosenKeys = new Set(chosen.map((item) => item.key));
-  for (const item of items) {
-    if (chosenKeys.has(item.key)) continue;
-    chosen.push({ ...item });
-    chosenKeys.add(item.key);
-    if (chosen.length >= limit) break;
-  }
-  return chosen.slice(0, limit);
 }
 
 // ── duplicate review helpers (ADR-033) ───────────────────────────────────────

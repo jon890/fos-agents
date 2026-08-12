@@ -11,11 +11,11 @@ describe("외부 읽을거리 소스", () => {
 
     expect(converted._meta.schemaVersion).toBe(2);
     expect(converted.sources[0].category).toBe("techBlog");
-    expect(converted.sources[0].priority).toBe(1);
+    expect(converted.sources[0].enabled).toBe(true);
     expect(validateReadingSources(converted)).toEqual([]);
   });
 
-  test("비활성 소스를 제외하고 우선순위로 정렬한다", () => {
+  test("비활성 소스만 제외하고 등록 순서를 유지한다", () => {
     const normalized = normalizeReadingSources({
       categories: {
         techBlog: { label: "기술 블로그", slots: 2, requireDiscoveredArticle: true },
@@ -23,14 +23,14 @@ describe("외부 읽을거리 소스", () => {
         geek: { label: "동향", slots: 1, requireDiscoveredArticle: false },
       },
       sources: [
-        { key: "later", title: "나중", category: "techBlog", priority: 20 },
-        { key: "first", title: "먼저", category: "techBlog", priority: 10 },
-        { key: "off", title: "끔", category: "techBlog", enabled: false, priority: 1 },
+        { key: "later", title: "나중", category: "techBlog" },
+        { key: "first", title: "먼저", category: "techBlog" },
+        { key: "off", title: "끔", category: "techBlog", enabled: false },
       ],
     });
 
     expect(normalized.itemsByCategory.techBlog.map((item) => item.key))
-      .toEqual(["first", "later"]);
+      .toEqual(["later", "first"]);
   });
 
   test("평문 HTTP URL을 거부한다", () => {

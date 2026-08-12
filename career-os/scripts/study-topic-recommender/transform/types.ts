@@ -1,7 +1,6 @@
-import type { ReservoirItem } from "../feed_discovery.js";
 import type { PossibleDuplicate } from "../duplicate_detection.js";
 
-export type { ReservoirItem, PossibleDuplicate };
+export type { PossibleDuplicate };
 
 export interface StudyTopicEntry {
   outputPath?: string;
@@ -47,14 +46,11 @@ export interface HistoryEntry {
   [key: string]: unknown;
 }
 
-export interface DiscoveryLogEntry {
-  key?: string;
-  status: "ok" | "no-feed" | "no-match";
+export interface Recommendation extends TopicItem {
+  category?: string;
+  url?: string;
   feedUrl?: string;
-  articleUrl?: string;
-}
-
-export interface Recommendation extends TopicItem, ReservoirItem {
+  tags?: string[];
   discoveredArticle?: {
     title: string;
     url: string;

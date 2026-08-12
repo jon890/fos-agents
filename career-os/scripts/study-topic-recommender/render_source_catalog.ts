@@ -140,7 +140,7 @@ function renderCard(
     ? "high"
     : assessment.grade === "보통" ? "medium" : "low";
   return `<article class="card">
-    <div class="card-head"><span class="priority">우선순위 ${escapeHtml(source.priority ?? "-")}</span><span class="grade ${gradeClass}">${assessment.grade} · ${assessment.score}</span></div>
+    <div class="card-head"><span class="priority">활성 소스</span><span class="grade ${gradeClass}">${assessment.grade} · ${assessment.score}</span></div>
     <h3>${heading}</h3>
     <p class="topic">${escapeHtml(source.title)}</p>
     <p class="type">${escapeHtml(assessment.sourceType)}</p>

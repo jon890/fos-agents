@@ -43,7 +43,6 @@ export function renderSecondaryItem(
   const article = item.discoveredArticle;
 
   if (article?.url) {
-    // ADR-013: 실 글 제목/URL을 1순위로 노출하고, 원본 reservoir 카드는 fallback 컨텍스트로만 둔다.
     const title = article.title || item.title || item.key || "제목 없음";
     const lines = [`${idx}. **${title}**`];
     if (source) lines.push(`   - ${sourceLabel}: ${source}`);
@@ -62,10 +61,7 @@ export function renderSecondaryItem(
   const lines = [`${idx}. **${item.title ?? item.key ?? "제목 없음"}**`];
   if (source) lines.push(`   - ${sourceLabel}: ${source}`);
   if (item.url) lines.push(`   - 링크: ${item.url}`);
-  if (item.feedUrl)
-    lines.push(
-      "   - (피드 fetch 실패 또는 매칭 글 없음 — reservoir 카드로 표시)"
-    );
+  if (item.feedUrl) lines.push("   - 피드 후보를 가져오지 못해 출처 페이지로 표시한다.");
   if (item.tags && Array.isArray(item.tags))
     lines.push(`   - 태그: ${(item.tags as string[]).join(", ")}`);
   if (item.estMinutes) lines.push(`   - 예상 시간: ${item.estMinutes}분`);
@@ -172,7 +168,7 @@ export function buildMorningMarkdown(
     `- 신규 curated study topic 남음: ${stats.uncoveredCurated}개`,
     `- live-coding primary seed 남음: ${stats.remainingLive}개`,
     `- live-coding candidate seed 남음: ${stats.remainingLiveCandidates}개`,
-    `- tech-blog reservoir: ${stats.techBlogItems}개 / AI reservoir: ${stats.aiTopicItems}개 / geek reservoir: ${stats.geekNewsItems}개`,
+    `- 활성 외부 소스: 기술 블로그 ${stats.techBlogItems}개, AI ${stats.aiTopicItems}개, 개발 동향 ${stats.geekNewsItems}개`,
     `- fos-study 스캔: ${stats.scannedMarkdownCount}개 .md 파일`,
     `- deterministic 중복 후보: ${stats.possibleDuplicates}개`,
     "",

@@ -1,4 +1,4 @@
-import type { StudyTopicEntry, TopicItem, LiveSeed, HistoryEntry } from "./types.js";
+import type { StudyTopicEntry, TopicItem, LiveSeed } from "./types.js";
 
 export function artifactDomainLabel(outputPath: string): string {
   if (outputPath.startsWith("database/mysql/")) return "mysql";
@@ -52,18 +52,4 @@ export function getCandidateRecommendations(
     const promotedPath = item.promotionTarget?.outputPath;
     return !(promotedPath && fosStudyPaths.has(promotedPath));
   });
-}
-
-export function collectRecentKeys(
-  entries: HistoryEntry[],
-  field: keyof Pick<HistoryEntry, "techBlogKeys" | "aiKeys" | "geekKeys">
-): Set<string> {
-  const keys = new Set<string>();
-  for (const entry of entries) {
-    const vals = entry[field] as string[] | undefined;
-    for (const key of vals ?? []) {
-      keys.add(key);
-    }
-  }
-  return keys;
 }

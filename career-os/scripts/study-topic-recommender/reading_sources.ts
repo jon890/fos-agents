@@ -1,37 +1,23 @@
 import { readFileSync } from "node:fs";
-import type { ReservoirItem } from "./feed_discovery.js";
+import {
+  READING_CATEGORIES,
+  isReadingCategory,
+  isReadingSourceAdapterId,
+  type NormalizedReadingSources,
+  type ReadingCategory,
+  type ReadingCategoryPolicy,
+  type ReadingSource,
+  type ReadingSourcesConfigV2,
+} from "./reading_contracts.js";
 
-export const READING_CATEGORIES = ["techBlog", "ai", "geek"] as const;
-export type ReadingCategory = (typeof READING_CATEGORIES)[number];
-
-export interface ReadingCategoryPolicy {
-  label: string;
-  slots: number;
-  requireDiscoveredArticle: boolean;
-}
-
-export interface ReadingSource extends ReservoirItem {
-  key: string;
-  category: ReadingCategory;
-  title: string;
-  enabled?: boolean;
-  priority?: number;
-}
-
-export interface ReadingSourcesConfigV2 {
-  _meta: {
-    purpose: string;
-    schemaVersion: 2;
-  };
-  categories: Record<ReadingCategory, ReadingCategoryPolicy>;
-  sources: ReadingSource[];
-}
-
-export interface NormalizedReadingSources {
-  categories: Record<ReadingCategory, ReadingCategoryPolicy>;
-  sources: ReadingSource[];
-  itemsByCategory: Record<ReadingCategory, ReadingSource[]>;
-}
+export {
+  READING_CATEGORIES,
+  type NormalizedReadingSources,
+  type ReadingCategory,
+  type ReadingCategoryPolicy,
+  type ReadingSource,
+  type ReadingSourcesConfigV2,
+} from "./reading_contracts.js";
 
 const DEFAULT_POLICIES: Record<ReadingCategory, ReadingCategoryPolicy> = {
   techBlog: {
@@ -53,10 +39,6 @@ const DEFAULT_POLICIES: Record<ReadingCategory, ReadingCategoryPolicy> = {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isCategory(value: unknown): value is ReadingCategory {
-  return typeof value === "string" && READING_CATEGORIES.includes(value as ReadingCategory);
 }
 
 function validateHttps(value: unknown, field: string, key: string, errors: string[]): void {
@@ -97,13 +79,12 @@ function legacySources(raw: Record<string, unknown>): ReadingSource[] {
     const items = Array.isArray(section.items) ? section.items : [];
     return items
       .filter(isRecord)
-      .map((item, index) => ({
+      .map((item) => ({
         ...item,
         key: String(item.key ?? ""),
         title: String(item.title ?? item.key ?? ""),
         category,
         enabled: item.enabled !== false,
-        priority: Number(item.priority ?? index + 1),
       })) as ReadingSource[];
   });
 }
@@ -114,13 +95,12 @@ export function toReadingSourcesV2(raw: unknown): ReadingSourcesConfigV2 {
   const rawSources = Array.isArray(root.sources) ? root.sources : legacySources(root);
   const sources = rawSources
     .filter(isRecord)
-    .map((item, index) => ({
+    .map((item) => ({
       ...item,
       key: String(item.key ?? ""),
       title: String(item.title ?? item.key ?? ""),
       category: item.category,
       enabled: item.enabled !== false,
-      priority: Number(item.priority ?? index + 1),
     })) as ReadingSource[];
 
   return {
@@ -152,13 +132,25 @@ export function validateReadingSources(config: ReadingSourcesConfigV2): string[]
     if (!source.key) errors.push("소스 key가 비어 있다.");
     if (keys.has(source.key)) errors.push(`중복 key: ${source.key}`);
     keys.add(source.key);
-    if (!isCategory(source.category)) errors.push(`${source.key}.category가 올바르지 않다.`);
+    if (!isReadingCategory(source.category)) errors.push(`${source.key}.category가 올바르지 않다.`);
     if (!source.title) errors.push(`${source.key}.title이 비어 있다.`);
-    if (!Number.isFinite(source.priority)) errors.push(`${source.key}.priority는 숫자여야 한다.`);
+    if (source.enabled !== undefined && typeof source.enabled !== "boolean") {
+      errors.push(`${source.key}.enabled는 boolean이어야 한다.`);
+    }
+    if (source.adapter && !isReadingSourceAdapterId(source.adapter)) {
+      errors.push(`${source.key}.adapter는 feed 또는 page여야 한다.`);
+    }
+    if (source.adapter === "feed" && !source.feedUrl) {
+      errors.push(`${source.key}.adapter가 feed이면 feedUrl이 필요하다.`);
+    }
+    if (source.adapter === "page" && !source.url) {
+      errors.push(`${source.key}.adapter가 page이면 url이 필요하다.`);
+    }
     validateHttps(source.url, "url", source.key, errors);
     validateHttps(source.feedUrl, "feedUrl", source.key, errors);
-    if (source.whyNow !== undefined && !Array.isArray(source.whyNow)) {
-      errors.push(`${source.key}.whyNow는 배열이어야 한다.`);
+    if (source.estMinutes !== undefined &&
+      (!Number.isInteger(source.estMinutes) || source.estMinutes <= 0)) {
+      errors.push(`${source.key}.estMinutes는 양의 정수여야 한다.`);
     }
   }
   return errors;
@@ -172,8 +164,7 @@ export function normalizeReadingSources(raw: unknown): NormalizedReadingSources 
   }
 
   const active = config.sources
-    .filter((source) => source.enabled !== false)
-    .sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
+    .filter((source) => source.enabled !== false);
   const itemsByCategory = Object.fromEntries(
     READING_CATEGORIES.map((category) => [
       category,

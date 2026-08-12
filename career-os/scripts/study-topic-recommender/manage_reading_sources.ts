@@ -30,14 +30,6 @@ function option(name: string): string | undefined {
   return index >= 0 ? process.argv[index + 1] : undefined;
 }
 
-function repeatedOption(name: string): string[] {
-  const values: string[] = [];
-  for (let i = 0; i < process.argv.length; i += 1) {
-    if (process.argv[i] === `--${name}` && process.argv[i + 1]) values.push(process.argv[i + 1]);
-  }
-  return values;
-}
-
 function requiredOption(name: string): string {
   const value = option(name);
   if (!value) throw new Error(`--${name} 값이 필요하다.`);
@@ -67,15 +59,12 @@ function printHelp(): void {
   manage_reading_sources.ts add --category <값> --key <키> --title <제목> [옵션]
   manage_reading_sources.ts enable <키>
   manage_reading_sources.ts disable <키>
-  manage_reading_sources.ts set-priority <키> <숫자>
   manage_reading_sources.ts set-slots <카테고리> <숫자>
   manage_reading_sources.ts normalize
 
 add 옵션:
   --source <출처> --url <HTTPS URL> --feed-url <HTTPS URL>
-  --minutes <분> --priority <숫자>
-  --tag <태그> --keyword <키워드> --why <추천 이유>
-  같은 배열 옵션은 여러 번 지정할 수 있다.`);
+  --adapter <feed|page> --minutes <분>`);
 }
 
 function listSources(): void {
@@ -85,12 +74,11 @@ function listSources(): void {
   const items = config.sources
     .filter((item) => !category || item.category === category)
     .filter((item) => includeDisabled || item.enabled !== false)
-    .sort((a, b) => a.category.localeCompare(b.category) || (a.priority ?? 0) - (b.priority ?? 0))
-    .map((item) => ({
+    .map((item, index) => ({
       key: item.key,
       category: item.category,
       enabled: item.enabled !== false,
-      priority: item.priority,
+      registrationOrder: index + 1,
       title: item.title,
       feedUrl: item.feedUrl,
     }));
@@ -102,24 +90,17 @@ function addSource(): void {
   const key = requiredOption("key");
   if (config.sources.some((item) => item.key === key)) throw new Error(`이미 존재하는 key다: ${key}`);
   const minutes = option("minutes");
-  const priority = option("priority");
   const source: ReadingSource = {
     key,
     category: categoryOption(),
     title: requiredOption("title"),
     enabled: true,
-    priority: priority ? Number(priority) : config.sources.length + 1,
   };
   if (option("source")) source.source = option("source");
   if (option("url")) source.url = option("url");
   if (option("feed-url")) source.feedUrl = option("feed-url");
+  if (option("adapter")) source.adapter = option("adapter") as ReadingSource["adapter"];
   if (minutes) source.estMinutes = Number(minutes);
-  const tags = repeatedOption("tag");
-  const keywords = repeatedOption("keyword");
-  const reasons = repeatedOption("why");
-  if (tags.length > 0) source.tags = tags;
-  if (keywords.length > 0) source.filterKeywords = keywords;
-  if (reasons.length > 0) source.whyNow = reasons;
   config.sources.push(source);
   saveConfig(config);
   console.log(JSON.stringify({ status: "added", key }, null, 2));
@@ -132,16 +113,6 @@ function setEnabled(enabled: boolean): void {
   sourceByKey(config.sources, key).enabled = enabled;
   saveConfig(config);
   console.log(JSON.stringify({ status: enabled ? "enabled" : "disabled", key }, null, 2));
-}
-
-function setPriority(): void {
-  const config = loadConfig();
-  const key = process.argv[3];
-  const priority = Number(process.argv[4]);
-  if (!key || !Number.isFinite(priority)) throw new Error("소스 key와 숫자 priority가 필요하다.");
-  sourceByKey(config.sources, key).priority = priority;
-  saveConfig(config);
-  console.log(JSON.stringify({ status: "priority-updated", key, priority }, null, 2));
 }
 
 function setSlots(): void {
@@ -183,7 +154,6 @@ function main(): void {
   if (command === "add") return addSource();
   if (command === "enable") return setEnabled(true);
   if (command === "disable") return setEnabled(false);
-  if (command === "set-priority") return setPriority();
   if (command === "set-slots") return setSlots();
   if (command === "normalize") return normalizeConfig();
   throw new Error(`알 수 없는 명령: ${command}`);

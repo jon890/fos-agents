@@ -1,14 +1,6 @@
 /**
- * RSS/Atom feed discovery for morning recommendation secondary categories.
- *
- * ADR-013: tech-blog / AI / geek 카테고리 추천에 실제 최신 글 title + URL을
- * 부착하기 위한 가벼운 RSS/Atom discovery 레이어.
- *
- * 설계 원칙:
- * - fast-xml-parser 단일 외부 의존 (Python stdlib ET 대체).
- * - 네트워크 실패는 표면화하지 않는다 — 항상 fallback(reservoir 원본)으로 복구 가능해야 한다.
- * - 디스크 캐시(cache/feed-cache/)로 동일 cron 주기 내 중복 요청을 줄인다.
- * - 타임아웃은 보수적으로 짧게 (default 8s).
+ * RSS·Atom 파싱과 캐시를 담당하는 feed 어댑터 하부 모듈.
+ * 개별 네트워크 실패는 빈 후보로 반환해 다른 소스 수집을 계속한다.
  */
 
 import { createHash } from "crypto";
@@ -21,8 +13,6 @@ export const USER_AGENT =
 export const DEFAULT_TIMEOUT_MS = 8_000;
 export const DEFAULT_CACHE_TTL_HOURS = 6;
 
-// ── types ─────────────────────────────────────────────────────────────────────
-
 export interface FeedEntry {
   title: string;
   link: string;
@@ -33,13 +23,6 @@ export interface CachePayload {
   fetchedAt: string;
   feedUrl: string;
   entries: FeedEntry[];
-}
-
-export interface ReservoirItem {
-  key?: string;
-  feedUrl?: string;
-  filterKeywords?: string[];
-  [key: string]: unknown;
 }
 
 // ── XML parser setup ─────────────────────────────────────────────────────────
@@ -226,17 +209,6 @@ export async function fetchFeedCached(
 
 // ── relevance keywords (Python 원본과 동일) ───────────────────────────────────
 
-export const GENERIC_BACKEND_RELEVANCE_KEYWORDS: string[] = [
-  "backend", "백엔드", "server", "서버", "spring", "java", "kotlin",
-  "mysql", "db", "database", "데이터베이스", "redis", "cache", "캐시",
-  "kafka", "flink", "rocksdb", "starrocks", "stream", "streaming", "스트림",
-  "transaction", "트랜잭션", "race condition", "경쟁 조건", "동시성",
-  "distributed", "분산", "messaging", "메시징", "queue", "event", "이벤트",
-  "architecture", "아키텍처", "scale", "scaling", "확장", "slo", "sli",
-  "storage", "스토리지", "검색", "search", "운영", "성능", "performance",
-  "batch", "배치", "eks", "kubernetes", "autoscaling", "오토스케일링",
-];
-
 export const LOW_SIGNAL_TITLE_KEYWORDS: string[] = [
   "세미나", "현장 스케치", "참가 신청", "사전 안내", "공채", "코딩테스트",
   "문제해설", "학생에서 개발자로", "직무", "디자인 직무", "프론트", "front",
@@ -254,63 +226,6 @@ function keywordScore(title: string, keywords: string[]): number {
   );
 }
 
-/**
- * Choose a non-excluded article from a feed.
- *
- * Prefer item-specific keyword matches, but do not fall back to a vague reservoir
- * card when a real backend-relevant article exists. Broad company feeds often use
- * titles such as "Flink 운영기" or "경쟁 조건 문제" that are useful even when they
- * miss the narrow source card keywords.
- */
-export function selectArticle(
-  entries: FeedEntry[],
-  filterKeywords?: string[],
-  excludeUrls?: Set<string>
-): FeedEntry | null {
-  const excluded = excludeUrls ?? new Set<string>();
-  const candidates = entries.filter(
-    (e) =>
-      e.link &&
-      !excluded.has(e.link) &&
-      keywordScore(e.title ?? "", LOW_SIGNAL_TITLE_KEYWORDS) === 0
-  );
-
-  if (candidates.length === 0) return null;
-
-  if (filterKeywords && filterKeywords.length > 0) {
-    const exactMatches = candidates.filter(
-      (e) => keywordScore(e.title ?? "", filterKeywords) > 0
-    );
-    if (exactMatches.length > 0) return exactMatches[0];
-
-    const relevanceMatches = candidates
-      .map((e) => ({
-        score: keywordScore(e.title ?? "", GENERIC_BACKEND_RELEVANCE_KEYWORDS),
-        entry: e,
-      }))
-      .filter(({ score }) => score > 0)
-      // stable sort (feed order = newest-first), higher score first
-      .sort((a, b) => b.score - a.score);
-
-    if (relevanceMatches.length > 0) return relevanceMatches[0].entry;
-    return null;
-  }
-
-  return candidates[0];
-}
-
-// ── public entry point ────────────────────────────────────────────────────────
-
-export async function discoverForItem(
-  item: ReservoirItem,
-  cacheDir: string,
-  excludeUrls?: Set<string>,
-  ttlHours: number = DEFAULT_CACHE_TTL_HOURS,
-  timeoutMs: number = DEFAULT_TIMEOUT_MS
-): Promise<FeedEntry | null> {
-  const feedUrl = item.feedUrl;
-  if (!feedUrl) return null;
-  const entries = await fetchFeedCached(feedUrl, cacheDir, ttlHours, timeoutMs);
-  if (entries.length === 0) return null;
-  return selectArticle(entries, item.filterKeywords, excludeUrls);
+export function isLowSignalTitle(title: string): boolean {
+  return keywordScore(title, LOW_SIGNAL_TITLE_KEYWORDS) > 0;
 }
