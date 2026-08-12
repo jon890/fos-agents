@@ -34,6 +34,6 @@ export const feedSourceAdapter: ReadingSourceAdapter = {
         };
       })
       .filter((item): item is NonNullable<typeof item> => item !== null)
-      .slice(0, context.maxArticlesPerFeed);
+      .slice(0, context.maxCandidatesPerSource);
   },
 };

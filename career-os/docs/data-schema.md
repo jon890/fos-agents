@@ -835,7 +835,9 @@ ADR-066 이후 공개 가능 일반 질문 bank의 정본은 `public/question-ba
 
 수집은 모든 활성 소스를 대상으로 한다.
 숫자형 소스 우선순위와 고정 키워드는 두지 않는다.
-`feed` 어댑터는 RSS·Atom 항목을 수집하고 `page` 어댑터는 공개 페이지를 후보로 만든다.
+`feed` 어댑터는 RSS·Atom 항목을 수집한다.
+`page` 어댑터는 공개 페이지와 같은 호스트의 링크를 수집한다.
+페이지 탐색이 실패하면 출처 페이지 자체를 후보로 유지한다.
 
 신뢰도는 내용의 진실성을 보증하는 평판 점수가 아니다.
 발행 주체의 직접성, HTTPS 원문, RSS 제공, 실행 시점의 응답 여부를 평가한다.
@@ -1183,7 +1185,7 @@ LLM 후보 refresh가 검증을 통과한 `new` 후보만 자동 append/update�
     "selection": "llm",
     "fixedKeywordsUsed": false,
     "sourcePriorityUsed": false,
-    "maxArticlesPerFeed": 8
+    "maxCandidatesPerSource": 8
   },
   "candidates": [
     {
@@ -1194,7 +1196,7 @@ LLM 후보 refresh가 검증을 통과한 `new` 후보만 자동 append/update�
       "title": "글 제목",
       "url": "HTTPS URL",
       "published": "ISO-8601 또는 빈 문자열",
-      "kind": "feed-article | source-page",
+      "kind": "feed-article | page-link | source-page",
       "recentlyRecommended": false,
       "estMinutes": 20
     }

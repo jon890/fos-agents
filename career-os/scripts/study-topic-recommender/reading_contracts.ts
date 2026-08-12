@@ -2,15 +2,16 @@ import type { Recommendation } from "./transform/types.js";
 
 export const READING_CATEGORIES = ["techBlog", "ai", "geek"] as const;
 export const READING_SOURCE_ADAPTER_IDS = ["feed", "page"] as const;
-export const READING_CANDIDATE_KINDS = ["feed-article", "source-page"] as const;
+export const READING_CANDIDATE_KINDS = ["feed-article", "page-link", "source-page"] as const;
 export const READING_COLLECTION_STATUSES = [
   "collected",
+  "page-links",
   "source-page",
   "no-public-url",
   "feed-empty",
 ] as const;
 
-export const DEFAULT_MAX_ARTICLES_PER_FEED = 8;
+export const DEFAULT_MAX_CANDIDATES_PER_SOURCE = 8;
 export const READING_SELECTION_TEXT_MAX_LENGTH = 300;
 
 export type ReadingCategory = (typeof READING_CATEGORIES)[number];
@@ -96,7 +97,7 @@ export interface ReadingCandidatePool {
     selection: "llm";
     fixedKeywordsUsed: false;
     sourcePriorityUsed: false;
-    maxArticlesPerFeed: number;
+    maxCandidatesPerSource: number;
   };
   candidates: ReadingCandidate[];
   collectionLog: ReadingCollectionLog[];

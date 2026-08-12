@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import {
-  DEFAULT_MAX_ARTICLES_PER_FEED,
+  DEFAULT_MAX_CANDIDATES_PER_SOURCE,
   isReadingCandidateKind,
   isReadingCollectionStatus,
   isReadingCategory,
@@ -31,7 +31,7 @@ async function collectSource(
   source: ReadingSource,
   cacheDir: string,
   recentUrls: Set<string>,
-  maxArticlesPerFeed: number,
+  maxCandidatesPerSource: number,
   cacheTtlHours: number,
   timeoutMs: number
 ): Promise<{ candidates: ReadingCandidate[]; log: ReadingCollectionLog }> {
@@ -46,7 +46,7 @@ async function collectSource(
     cacheDir,
     cacheTtlHours,
     timeoutMs,
-    maxArticlesPerFeed,
+    maxCandidatesPerSource,
   });
   const candidates = collected.map((item) => ({
     id: candidateId(source.key, item.url),
@@ -66,7 +66,11 @@ async function collectSource(
       sourceKey: source.key,
       status: candidates.length === 0
         ? "feed-empty"
-        : adapter.id === "feed" ? "collected" : "source-page",
+        : adapter.id === "feed"
+          ? "collected"
+          : candidates.some((candidate) => candidate.kind === "page-link")
+            ? "page-links"
+            : "source-page",
       candidateCount: candidates.length,
     },
   };
@@ -76,16 +80,16 @@ export async function collectReadingCandidatePool(input: {
   readingSources: NormalizedReadingSources;
   cacheDir: string;
   recentUrls?: Set<string>;
-  maxArticlesPerFeed?: number;
+  maxCandidatesPerSource?: number;
   cacheTtlHours?: number;
   timeoutMs?: number;
 }): Promise<ReadingCandidatePool> {
-  const maxArticlesPerFeed = input.maxArticlesPerFeed ?? DEFAULT_MAX_ARTICLES_PER_FEED;
+  const maxCandidatesPerSource = input.maxCandidatesPerSource ?? DEFAULT_MAX_CANDIDATES_PER_SOURCE;
   const results = await Promise.all(input.readingSources.sources.map((source) => collectSource(
     source,
     input.cacheDir,
     input.recentUrls ?? new Set<string>(),
-    maxArticlesPerFeed,
+    maxCandidatesPerSource,
     input.cacheTtlHours ?? 6,
     input.timeoutMs ?? 8_000
   )));
@@ -95,7 +99,7 @@ export async function collectReadingCandidatePool(input: {
       selection: "llm",
       fixedKeywordsUsed: false,
       sourcePriorityUsed: false,
-      maxArticlesPerFeed,
+      maxCandidatesPerSource,
     },
     candidates: results.flatMap((result) => result.candidates),
     collectionLog: results.map((result) => result.log),
@@ -121,8 +125,8 @@ export function validateReadingCandidatePool(pool: unknown): string[] {
     if (pool.policy.selection !== "llm") errors.push("policy.selection은 llm이어야 한다.");
     if (pool.policy.fixedKeywordsUsed !== false) errors.push("고정 키워드 사용은 허용하지 않는다.");
     if (pool.policy.sourcePriorityUsed !== false) errors.push("소스 우선순위 사용은 허용하지 않는다.");
-    if (!Number.isInteger(pool.policy.maxArticlesPerFeed) || Number(pool.policy.maxArticlesPerFeed) <= 0) {
-      errors.push("policy.maxArticlesPerFeed는 양의 정수여야 한다.");
+    if (!Number.isInteger(pool.policy.maxCandidatesPerSource) || Number(pool.policy.maxCandidatesPerSource) <= 0) {
+      errors.push("policy.maxCandidatesPerSource는 양의 정수여야 한다.");
     }
   }
   if (!Array.isArray(pool.candidates)) return [...errors, "candidates가 배열이 아니다."];

@@ -28,7 +28,7 @@ const pool: ReadingCandidatePool = {
     selection: "llm",
     fixedKeywordsUsed: false,
     sourcePriorityUsed: false,
-    maxArticlesPerFeed: 8,
+    maxCandidatesPerSource: 8,
   },
   candidates: [
     {
