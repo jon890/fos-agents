@@ -10,7 +10,7 @@
 | ADR-013 | 외부 읽을거리는 전체 수집 후 모델이 선별한다 | 결정됨 | [ADR-013-외부-읽을거리는-전체-수집-후-모델이-선별한다.md](ADR-013-외부-읽을거리는-전체-수집-후-모델이-선별한다.md) |
 | ADR-019 | skill 문서와 실행 코드 분리 | Accepted | [ADR-019-career-os-claude-code-skill-폴더와-실행-스크립트-디렉터리-분리.md](ADR-019-career-os-claude-code-skill-폴더와-실행-스크립트-디렉터리-분리.md) |
 | ADR-027 | 면접 핏 진단 통합과 토픽 설정 분리 | Partially superseded by [[ADR-092]] | [ADR-027-knowledge-gap-analyzer-interview-prep-analyzer-통합-native-마이그-topics-json-namespace-분리.md](ADR-027-knowledge-gap-analyzer-interview-prep-analyzer-통합-native-마이그-topics-json-namespace-분리.md) |
-| ADR-033 | fos-study source tree를 study artifact 단일 진실원으로 사용 | Accepted | [ADR-033-fos-study-source-tree를-study-artifact-단일-진실원으로-사용.md](ADR-033-fos-study-source-tree를-study-artifact-단일-진실원으로-사용.md) |
+| ADR-033 | fos-study tree를 학습 이력 정본으로 사용 | Accepted | [ADR-033-fos-study-tree를-학습-이력-정본으로-사용.md](ADR-033-fos-study-tree를-학습-이력-정본으로-사용.md) |
 | ADR-035 | TypeScript 실행 코드는 책임별 모듈로 분리한다 | 결정됨 | [ADR-035-typescript-실행-코드는-책임별-모듈로-분리한다.md](ADR-035-typescript-실행-코드는-책임별-모듈로-분리한다.md) |
 | ADR-037 | application-flow-agent runtime은 policy decision engine 중심 | Accepted | [ADR-037-application-flow-agent-runtime은-policy-decision-engine-중심.md](ADR-037-application-flow-agent-runtime은-policy-decision-engine-중심.md) |
 | ADR-038 | application-flow-agent 상태 전이는 skill artifact 검증 뒤에만 수행 | Accepted | [ADR-038-application-flow-agent-상태-전이는-skill-artifact-검증-뒤에만-수행.md](ADR-038-application-flow-agent-상태-전이는-skill-artifact-검증-뒤에만-수행.md) |
@@ -26,7 +26,6 @@
 | ADR-063 | 면접 준비 사람용 정본은 단일 prep.md로 관리한다 | Accepted | [ADR-063-면접-준비-사람용-정본은-단일-prep-md로-관리한다.md](ADR-063-면접-준비-사람용-정본은-단일-prep-md로-관리한다.md) |
 | ADR-066 | 공개 가능 일반 면접 질문 bank는 public/question-bank에 둔다 | Accepted | [ADR-066-공개-가능-일반-면접-질문-bank는-public-question-bank에-둔다.md](ADR-066-공개-가능-일반-면접-질문-bank는-public-question-bank에-둔다.md) |
 | ADR-069 | config는 정책·타깃·예외만 남기고 자산 목록은 파생한다 | Accepted | [ADR-069-config는-정책-타깃-예외만-남기고-자산-목록은-파생한다.md](ADR-069-config는-정책-타깃-예외만-남기고-자산-목록은-파생한다.md) |
-| ADR-070 | study topic 후보 풀은 LLM refresh turn이 발굴하고 config에는 active 캐시만 반영한다 | Accepted | [ADR-070-study-topic-후보-풀은-llm-refresh-turn이-발굴하고-config에는-active-캐시만-반영한다.md](ADR-070-study-topic-후보-풀은-llm-refresh-turn이-발굴하고-config에는-active-캐시만-반영한다.md) |
 | ADR-074 | position source coverage는 official adapter와 Wanted target discovery를 함께 쓴다 | Accepted | [ADR-074-position-source-coverage는-official-adapter와-wanted-target-discovery를-함께-쓴다.md](ADR-074-position-source-coverage는-official-adapter와-wanted-target-discovery를-함께-쓴다.md) |
 | ADR-079 | 포지션 수집은 동적 discovery를 우선하고 개별 공고 URL seed를 제거한다 | Accepted | [ADR-079-포지션-수집은-동적-discovery를-우선하고-개별-공고-url-seed를-제거한다.md](ADR-079-포지션-수집은-동적-discovery를-우선하고-개별-공고-url-seed를-제거한다.md) |
 | ADR-085 | career-os skill을 Codex에 심볼릭 링크로 노출한다 | Accepted | [ADR-085-career-os-skill을-codex에-심볼릭-링크로-노출한다.md](ADR-085-career-os-skill을-codex에-심볼릭-링크로-노출한다.md) |

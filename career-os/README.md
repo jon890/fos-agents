@@ -15,7 +15,7 @@
 - 역할 적합도와 면접 전략을 볼 때: `/job-fit-analyzer <role>`
 - 면접 단계별 준비를 만들 때: `/interview-stage-prep`
 - 기술 또는 인성 답변을 연습할 때: `/tech-interview-drill`, `/behavioral-interview-drill`
-- 오늘 학습 주제를 고를 때: `/study-topic-recommender`
+- 오늘 읽을 기술 자료를 고를 때: `/study-topic-recommender`
 
 각 skill의 입력, 산출물, 검증, 안전 경계는 해당 `SKILL.md`가 단일 출처다.
 

@@ -14,9 +14,9 @@ config/state는 "이 파일이 바뀌는 트리거가 무엇인가"로 가른다
 | `.env` (워크스페이스 root) | GitHub 토큰 등 secret | ✗ (.gitignore) |
 | `.env.example` (워크스페이스 root) | secret 키 템플릿 — git 추적되는 빈 값 가이드 | ✓ |
 | `config/` | 사람이 큐레이션한 정책·현재 타깃·baseline·예외 override. 자산 목록 복제본으로 쓰지 않음 (ADR-069) | ✓ |
-| `state/` | 시스템 실행·이벤트 산물 (positions-queue, 학습·드릴 진도, mvp-target, topic-inventory, drill-log, company-cooldown, 수집 노트, eval) | ✗ 기본 gitignore, 5개 파일만 negation tracked (ADR-107) |
+| `state/` | 시스템 실행·이벤트 산물 (positions-queue, 학습·드릴 진도, morning-reading, drill-log, company-cooldown, 수집 노트, eval) | ✗ 기본 gitignore, 4개 파일만 negation tracked (ADR-107) |
 | `applications/` | 공고별 지원 상태, 맞춤 지원 패키지, evidence/drift review | ✗ |
-| `reports/` | 사람이 읽는 생성물 (baseline·daily·job-fit·stage-prep 리포트, morning-topic-recommendation, `reports/latest/` mirror, `reports/downloads/`) | ✗ |
+| `reports/` | 사람이 읽는 생성물 (baseline·daily·job-fit·stage-prep 리포트, morning-reading, `reports/latest/` mirror, `reports/downloads/`) | ✗ |
 | `cache/` | 재생성 가능한 캐시·transient (live-postings snapshot, feed-cache, locks, normalized) | ✗ |
 | `private/<company-slug>/<position-slug>/` | 회사·직무별 active 준비 홈. 면접·스터디·지원 산출물을 포지션 단위로 묶는 작업 홈 | ✗ |
 | `private/` | 회사·포지션별 작업 홈과 필요 시 archive. 공개용으로 다듬기 전의 준비 자료 위치 | ✗ |
@@ -24,7 +24,8 @@ config/state는 "이 파일이 바뀌는 트리거가 무엇인가"로 가른다
 | `logs/` | 추천 지표와 skill 평가 로그 | ✗ |
 | `sources/fos-study/` | 외부 동기 저장소 (jon890/fos-study) — git submodule 같은 위치이나 실제로는 별도 clone | ✗ |
 
-`state/`에서 negation으로 tracked를 유지하는 5개 파일: `study-progress.json`·`drill-progress.json`·`mvp-target.json`·`study-pack-candidates.json`·`company-cooldown.json` (clone 간 연속성이 필요한 저-churn 상태). 나머지 `state/**`는 untracked runtime이다.
+`state/`에서 negation으로 tracked를 유지하는 4개 파일은 `study-progress.json`, `drill-progress.json`, `mvp-target.json`, `company-cooldown.json`이다.
+나머지 `state/**`는 untracked runtime이다.
 
 ## 버킷 경계와 보존 원칙 (ADR-058, ADR-107)
 
@@ -71,7 +72,7 @@ config/state는 "이 파일이 바뀌는 트리거가 무엇인가"로 가른다
 질문 항목 기본 필드:
 
 - `id`
-- `topic` (ADR-097 — `study-progress.json` `weak_spots` 키. 드릴·`study-topic-recommender`·공부팩이 공유하는 약점 추적 식별자)
+- `topic` (ADR-097 — `study-progress.json` `weak_spots` 키. 드릴과 `study-topic-recommender`가 공유하는 약점 추적 식별자)
 - `category`
 - `difficulty`
 - `question`
@@ -150,14 +151,13 @@ config/state는 "이 파일이 바뀌는 트리거가 무엇인가"로 가른다
 - 후보자 baseline과 장기 이력(추천·fit 판단용 core): `config/candidate-profile.md` (ADR-104)
 - 후보자 면접 서사·심화(면접 skill용 detail): `config/candidate-profile-detail.md` (ADR-104)
 - baseline 분석용 core file pin: `config/baseline-core-files.json`
-- 외부 읽을거리 수집 대상: `config/external-reading-sources.json`
+- 외부 읽을거리 수집 대상: `config/external-reading-sources.ts`
 
 ADR-107로 `state/`로 이동한 항목(트리거가 시스템 실행·이벤트라 config가 아님):
 
 - 현재 회사·직무·포지션 홈: `state/mvp-target.json` (탈락 시 루프가 primary→history 자동 갱신)
 - topic 학습 진행 상태와 약점 학습 상태: `state/study-progress.json` (ADR-105 — 드릴 상태는 분리)
 - 드릴 간격 반복 상태: `state/drill-progress.json` (ADR-105)
-- study-pack 후보 캐시: `state/study-pack-candidates.json`
 - 회사 cooldown: `state/company-cooldown.json` (ADR-109 — verified-company에서 분리)
 - durable 공고 필터(회사 선호 제외 + 공고 URL 억제): `config/position-filters.json` (ADR-111)
 - 검증 회사군과 회사 키워드 단일 출처: `config/verified-company-research-targets.json` (ADR-090, references에서 이동; ADR-103 회사 키워드 흡수)
@@ -178,8 +178,8 @@ ADR-107로 `state/`로 이동한 항목(트리거가 시스템 실행·이벤트
 config 축소 이후 상태:
 
 - `first-round-drill-core-files.json` — `interview/prep.md` 단일 정본 이후 제거됨.
-- `study-pack-candidates.json` — `state/study-pack-candidates.json`으로 이동됨(ADR-107).
-- `study-preferences.json`, `study-pack-topics.json`, `topic-profiles.json`, `question-bank-topics.json`, `live-coding-seed-pool.json`, `live-coding-seed-candidates.json` — 전체 목록 역할을 중단하고 override/seed 중심으로 축소되어 남아 있다(각 파일 섹션 참조).
+- 학습 주제 후보와 선호 설정 파일은 제거했다.
+  아침 읽을거리의 학습 방향은 `sources/fos-study/`의 실제 문서와 최근 발행 이력에서 판단한다.
 
 ### config/verified-company-research-targets.json (검증 회사군 단일 출처, ADR-090)
 
@@ -192,7 +192,7 @@ config 축소 이후 상태:
 | `priorityCompanies[].hasAdapter`, `adapterId` | 코드 | 수집 adapter 커버리지·라우팅. `false`는 adapter 추가 backlog |
 | `priorityCompanies[].careerUrls`, `wantedKeywords` | 코드+LLM | discovery entrypoint + 탐색 키워드 |
 | `priorityCompanies[].preferredDomains`, `notes` | LLM | 회사 업사이드 판단 근거 |
-| `priorityCompanies[].techBlogs` | LLM | 기술 블로그 URL 목록. `ref:<key>` 값은 `config/external-reading-sources.json`의 `techBlog.items[].key`를 가리키고, URL 정본은 그 파일이다. 매칭 항목이 없으면 URL을 그대로 둔다 |
+| `priorityCompanies[].techBlogs` | LLM | 기술 블로그 URL 목록. `ref:<key>` 값은 `config/external-reading-sources.ts`의 source key를 가리킨다. |
 | `secondaryCompanies[]` | 코드+LLM | 저-tier 회사 키워드 목록(ADR-103). priorityCompanies에 없던 회사 키워드를 담아 수집 커버리지 유지. `company`·`wantedKeywords` 중심 |
 
 `cooldown`은 ADR-109로 `state/company-cooldown.json`으로 분리했다(지원 결과 이벤트로 갱신 = state). 본 파일에는 더 두지 않는다.
@@ -290,7 +290,7 @@ position-recommender가 참조하는 사람 큐레이션 제외의 단일 출처
 이 위치는 공개용 자료가 아니라 포지션별 작업 홈이다.
 회사·포지션 맥락, 면접 질문, 답변 메모, 피드백, 지원 준비가 섞일 수 있다.
 자동화는 이 경로를 정본으로 읽는다.
-공개 가능한 기술 공부팩은 이 작업 홈의 내용을 그대로 복사하지 않고, 개인 답변·지원 전략·회사별 민감 맥락을 제거해 `sources/fos-study/`에 따로 작성한다.
+이 작업 홈의 개인 답변, 지원 전략, 회사별 민감 맥락은 `sources/fos-study/`에 복사하지 않는다.
 
 권장 구조:
 
@@ -333,31 +333,6 @@ ADR-104로 성격별 2파일로 분리한다.
 - Source provenance는 `config/candidate-profile-provenance.md`가 단일 출처다. 어느 skill에도 프롬프트로 주입하지 않는다.
 
 skill별 주입 범위(core만 / core+detail)는 ADR-104의 매핑 표가 단일 출처다.
-
-### config/study-preferences.json
-
-아침 학습 추천의 사용자 선호와 학습 제약을 담는다.
-ADR-069 이후 `current_target`처럼 `state/mvp-target.json`의 현재 타깃을 반복하는 필드는 축소 대상이다.
-이 파일을 유지한다면 “추천 철학, 제외할 축, 보조 관심사, 난이도 선호”처럼 타깃 config와 중복되지 않는 값만 남긴다.
-
-`secondary_targets[]` 예시 필드:
-
-```json
-{
-  "company": "TossPlace",
-  "role": "Applied AI Engineer",
-  "priority": 2,
-  "posting_path": "applications/tossplace/applied-ai-engineer/posting.md",
-  "fit_analysis_path": "applications/tossplace/applied-ai-engineer/fit-analysis.md",
-  "application_package_path": "applications/tossplace/applied-ai-engineer/application-package.md",
-  "review_path": "applications/tossplace/applied-ai-engineer/review.md",
-  "study_goal": "string",
-  "focus_axes": ["string"],
-  "constraints": ["string"]
-}
-```
-
-보조 트랙은 study-pack 자동 생성이나 fos-study 발행을 의미하지 않는다. agent prompt가 이 값을 읽어 별도 report/runtime 경로에 추천만 생성한다.
 
 ## applications/
 
@@ -486,7 +461,7 @@ private/<company-slug>/<position-slug>/interview/
 - `state/mvp-target.json`의 `primary`가 `null`이면 포지션별 답변 피드백 기록은 중단한다.
 - 답변 전문과 상세 피드백은 private 경계 안에만 둔다.
 - 외부 공유 요약, `sources/fos-study/`, 공개 질문 bank로 답변 원문을 복사하지 않는다.
-- 공개 가능한 기술 주제만 별도 `study-pack-writer` 입력 후보가 될 수 있다.
+- 공개 가능한 기술 주제만 외부 읽을거리 추천의 학습 신호가 될 수 있다.
 
 ### 디렉터리 구조
 
@@ -678,7 +653,7 @@ Markdown 산출물을 먼저 고정하고, 리뷰된 이력서 초안을 HTML/PD
 4. 근거가 확인되기 전에는 제출용 문서에 강한 주장으로 쓰지 않는다.
 5. 해결 상태를 `review.md` 또는 선택적 `resume-metadata.json`에 남긴다.
 
-공개 가능한 기술 학습 자료는 이 디렉터리가 아니라 `sources/fos-study/`에 기존 `study-pack-writer` 정책으로만 발행한다.
+공개 가능한 기술 학습 자료의 발행은 career-os 실행 범위 밖에서 사용자가 별도로 관리한다.
 
 ### Git 추적 정책
 
@@ -738,32 +713,6 @@ positions-queue record는 optional runtime field를 가진다. 기존 `status`�
 - `ready_for_user_review` 이후 외부 제출 action은 항상 사용자 승인 필요 상태로 남긴다.
 - fit score 70점 미만이면 `actionable_candidate`로 전이할 수 없다.
 
-### config/study-pack-topics.json
-
-study-pack-writer와 study-topic-recommender가 읽는 topic override와 fallback topic 파일이다.
-
-ADR-069 이후 이 파일은 전체 학습 자산 DB가 아니라 migration 대상이다.
-실제 학습 문서 inventory는 `sources/fos-study/`에서 파생하고, 이 파일에 남길 값은 사람이 의도적으로 고른 override, pin, fallback topic 정도로 축소한다.
-
-```json
-{
-  "_meta": {
-    "purpose": "study-pack-writer + study-topic-recommender 전용 topic 메타데이터",
-    "schema_version": "1"
-  },
-  "study-pack": {
-    "<topic-key>": {
-      "domain": "string",
-      "outputPath": "string (fos-study 기준 상대 경로)",
-      "title": "string",
-      "promptAppend": "string (선택)"
-    }
-  }
-}
-```
-
-현행 스키마는 "state/study-pack-candidates.json (ADR-070 이후 active 후보 캐시. ADR-107 config→state 이동)" 섹션을 단일 출처로 참조한다.
-
 ### config/question-bank-topics.json
 
 interview-asset-writer가 읽는 question-bank와 master topic override 파일이다.
@@ -796,70 +745,44 @@ ADR-066 이후 공개 가능 일반 질문 bank의 정본은 `public/question-ba
 }
 ```
 
-### config/external-reading-sources.json
+### config/external-reading-sources.ts
 
 외부 읽을거리 수집 대상을 카테고리와 무관한 공통 구조로 관리하는 설정이다.
 `study-topic-recommender`의 보조 읽을거리 추천과 `position-recommender`의 `techBlogSignal` 판단에만 사용한다.
 공고 수집 source registry가 아니다.
 공고 수집 source 설정은 `config/position-collection.json`과 career-os `live-postings` adapter registry가 소유한다.
 
-```json
-{
-  "_meta": {
-    "purpose": "study-topic-recommender 외부 읽을거리 소스의 단일 출처",
-    "schemaVersion": 2
+```ts
+export const externalReadingSources = {
+  _meta: { purpose: "외부 읽을거리 소스", schemaVersion: 3 },
+  categories: {
+    techBlog: { slots: 3 },
+    geek: { slots: 1 },
   },
-  "categories": {
-    "techBlog": {"label": "기술 블로그", "slots": 3, "requireDiscoveredArticle": true},
-    "ai": {"label": "AI 실전", "slots": 1, "requireDiscoveredArticle": false},
-    "geek": {"label": "개발 동향", "slots": 1, "requireDiscoveredArticle": false}
-  },
-  "sources": [
+  sources: [
     {
-      "key": "string",
-      "category": "techBlog | ai | geek",
-      "title": "string",
-      "enabled": true,
-      "source": "string",
-      "url": "HTTPS URL",
-      "feedUrl": "HTTPS RSS/Atom URL (선택)",
-      "adapter": "feed | page",
-      "estMinutes": 25
-    }
-  ]
-}
+      key: "daangn-tech",
+      category: "techBlog",
+      title: "당근 tech",
+      url: "https://medium.com/daangn",
+      adapter: "page",
+    },
+  ],
+} satisfies ReadingSourcesConfig;
 ```
 
-소스는 `manage_reading_sources.ts`로 조회, 검증, 추가, 비활성화한다.
+소스는 TypeScript의 `satisfies`와 Zod로 검증한다.
+`manage_reading_sources.ts`는 조회, 검증, 추가 객체 초안을 제공한다.
 `render_source_catalog.ts`는 활성 소스, 실시간 HTTP·RSS 응답, 원문 추적성 신뢰도를 HTML로 만든다.
 
 수집은 모든 활성 소스를 대상으로 한다.
 숫자형 소스 우선순위와 고정 키워드는 두지 않는다.
 `feed` 어댑터는 RSS·Atom 항목을 수집한다.
 `page` 어댑터는 공개 페이지와 같은 호스트의 링크를 수집한다.
-페이지 탐색이 실패하면 출처 페이지 자체를 후보로 유지한다.
+페이지 탐색이 실패하면 해당 소스는 수집 0건으로 기록한다.
 
 신뢰도는 내용의 진실성을 보증하는 평판 점수가 아니다.
 발행 주체의 직접성, HTTPS 원문, RSS 제공, 실행 시점의 응답 여부를 평가한다.
-
-### config/topic-profiles.json
-
-study-pack-writer가 토픽 family별로 작성 emphasis와 출력 경로 패턴을 참고하는 메타데이터. SKILL.md Inputs에서 Read. 옛 `.claude/skills/study-pack-writer/references/topic-profiles.md`를 JSON으로 옮긴 것 (config 컨벤션 정렬).
-
-ADR-069 이후 전역 config에 둘 필요가 있는지 재검토한다.
-skill 전용 작성 가이드라면 `.claude/skills/study-pack-writer/references/`로 이관하는 것이 우선 후보다.
-
-```json
-{
-  "<family-key>": {
-    "topicHints": ["string"],
-    "emphasis": ["string"],
-    "outputPathPatterns": ["string"]
-  }
-}
-```
-
-현재 family: `mysql`, `redis`, `kafka`, `spring-jpa`. topic-key가 어느 family의 `topicHints`에 속하는지 매칭 → 해당 family의 `emphasis`와 `outputPathPatterns` 적용.
 
 ### config/baseline-core-files.json
 
@@ -926,7 +849,7 @@ topic 학습 이력과 topic 학습 약점 상태의 단일 출처다.
 ```
 
 - `weak_spots`의 이 필드는 topic 학습 상태다. `study-topic-recommender` 학습 흐름이 갱신한다.
-- `<topic-key>`는 약점 추적 식별자로 드릴·공부팩과 공유한다(ADR-097).
+- `<topic-key>`는 약점 추적 식별자로 드릴과 읽을거리 추천이 공유한다(ADR-097).
 - 옛 문서에 있던 `question_id`·`shallow_count`·`unknown_count`는 코드·실데이터에 없어 제거했다(ADR-105 drift 정리).
 
 ### state/drill-progress.json (ADR-105 신규; ADR-107 config→state 이동)
@@ -980,200 +903,47 @@ daily 모드는 토픽 기반 fos-study 파일 선택 + `state/study-progress.js
   "question_text": "string",
   "answer_summary": "string",
   "score": "pass | shallow | fail | unknown",
-  "topics": ["string", "..."],
-  "study_pack_dispatched": "boolean"
+  "topics": ["string", "..."]
 }
 ```
 
 - `drill_type`: `tech`(기술 면접)이면 기술 채점 rubric, `behavioral`이면 STAR·가치관 관점 채점 rubric 적용.
 - `answer_summary`: 사용자 답변 요약 (1문장).
 - `score`: 3단계 채점 결과. `unknown`은 답변 불가 또는 채점 보류.
-- `study_pack_dispatched`: `fail`/`shallow` 점수 시 `study-pack-writer`에 비동기 위임 여부.
 
-### state/topic-inventory.json
+### state/morning-reading.json
 
-`refresh_topic_inventory.ts`가 매 morning 추천마다 갱신. ADR-033 이후 config pool 복사본이 아닌 **실행/진단 스냅샷**이다 — 마지막 실행의 판단 결과 + duplicate review status만 담는다.
+이번 실행의 외부 읽을거리 추천 정본이다.
+수집하지 않은 글과 모델이 새로 만든 학습 후보는 포함하지 않는다.
 
 ```json
 {
   "generatedAt": "ISO-8601",
   "sourceOfTruth": {
-    "kind": "fos-study",
-    "root": "sources/fos-study",
-    "scannedMarkdownCount": "int",
-    "excludedDirs": [".git", ".claude"]
+    "config": "config/external-reading-sources.ts",
+    "collectedArticles": "state/reading-candidates.json"
   },
   "counts": {
-    "configStudyTopicOverrides": "int",
-    "configStudyTopicFallbackCandidates": "int",
-    "derivedFosStudyFallbackCandidates": "int",
-    "existingFosStudyMarkdownFiles": "int",
-    "remainingCuratedStudyTopics": "int",
-    "remainingCandidateStudyTopics": "int",
-    "remainingLiveCodingSeeds": "int",
-    "duplicateCandidates": "int",
-    "techBlogSources": "int",
-    "aiSources": "int",
-    "geekSources": "int",
-    "readingCandidates": "int"
+    "activeSources": 18,
+    "sourcesWithCandidates": 17,
+    "collectedArticles": 120,
+    "techBlogSources": 11,
+    "geekSources": 7
   },
-  "remaining": {
-    "curatedStudyTopicKeys": ["<topic-key>", ...],
-    "candidateStudyTopicKeys": ["<topic-key>", ...],
-    "liveCodingSlugs": ["<slug>", ...]
-  },
-  "excluded": {
-    "exactPathMatches": [{ "key": "string", "candidatePath": "string", "matchedPath": "string" }],
-    "normalizedPathMatches": [{ "key": "string", "candidatePath": "string", "matchedPath": "string" }],
-    "possibleDuplicates": [{ "key": "string", "candidatePath": "string", "matchedPath": "string", "reason": "string" }]
-  },
-  "claudeDuplicateReview": {
-    "status": "ok | skipped | failed",
-    "reviewedAt": "ISO-8601 | null",
-    "items": [
-      { "key": "string", "candidatePath": "string", "matchedPath": "string", "decision": "new | update-existing | skip | needs-user-confirmation", "reason": "string" }
-    ]
-  },
-  "recommendations": [],
-  "techBlogRecommendations": [],
-  "aiRecommendations": [],
-  "geekRecommendations": [],
-  "updateExistingRecommendations": [],
-  "discovery": {}
-}
-```
-
-`recommendations`는 백엔드 학습 후보를 담는다.
-외부 읽을거리는 카테고리별 추천 배열에 나누어 기록한다.
-`discovery`는 후보 풀 경로와 소스별 수집 결과를 담는다.
-
-### Duplicate decision schema (ADR-033)
-
-`study-topic-recommender`와 `study-pack-writer`가 공유하는 중복 판정 공통 스키마. inventory의 `claudeDuplicateReview.items[]` 그리고 writer의 duplicate guard 입력/출력 모두 같은 모양을 사용한다.
-
-```json
-{
-  "key": "string (topic-key)",
-  "candidatePath": "string (fos-study 기준 상대 경로)",
-  "matchedPath": "string (기존 fos-study 문서 경로 또는 null)",
-  "decision": "new | update-existing | skip | needs-user-confirmation",
-  "reason": "string (한 줄 설명)",
-  "confidence": "high | medium | low"
-}
-```
-
-decision 라벨 의미:
-
-- `new` — 새 study pack 생성/추천 가능. 기존 문서와 의미 중복 없음.
-- `update-existing` — 새 파일 생성 금지. 기존 문서 보강 후보. `matchedPath` 필수.
-- `skip` — visible recommendation에서 제외. writer에서 호출되면 작성 중단.
-- `needs-user-confirmation` — 애매. 사용자 확인 없이는 새 파일 생성 금지.
-
-writer는 deterministic scan + (가능하면) Claude review 결과를 새 markdown Write 직전에 한 번 더 확인 — 사용자가 직접 topic-key를 지정해 호출하는 경로에도 최종 검증 조건으로 동작.
-
-### state/study-topic-candidate-refresh.json
-
-LLM 기반 후보 refresh turn의 실행 기록.
-추천기가 고정 seed만 순회하지 않도록, 현재 학습 선호·진행 상태·최근 추천 반복·fos-study inventory를 보고 새 후보를 발굴한 결과를 남긴다.
-
-이 파일은 실행 기록이다.
-실제 추천 후보로 쓰는 active 캐시는 `state/study-pack-candidates.json`에 반영한다.
-
-```json
-{
-  "generatedAt": "ISO-8601",
-  "trigger": {
-    "kind": "on-demand | cron-health-check | recommendation-needs-refresh",
-    "reason": "string",
-    "sourceMessage": "string | null"
-  },
-  "inputs": {
-    "fosStudyMarkdownCount": "int",
-    "recentHistoryEntries": "int",
-    "remainingNewCandidates": "int",
-    "dominantRecentDomains": ["string"]
-  },
-  "proposals": [
-    {
-      "key": "string",
-      "title": "string",
-      "domain": "string",
-      "tag": "new | deepen | interview | live-coding",
-      "difficulty": "string",
-      "estMinutes": "int",
-      "whyNow": ["string"],
-      "promotionTarget": { "outputPath": "string" },
-      "sourceSignals": ["string"]
-    }
-  ],
-  "decisions": [
-    {
-      "key": "string",
-      "decision": "new | update-existing | skip | needs-confirmation",
-      "candidatePath": "string",
-      "matchedPath": "string | null",
-      "reason": "string"
-    }
-  ],
-  "applied": {
-    "configPath": "state/study-pack-candidates.json",
-    "added": ["string"],
-    "updated": ["string"],
-    "staled": ["string"]
+  "collectionLog": [],
+  "recommendations": {
+    "techBlog": [],
+    "geek": []
   }
 }
 ```
 
-동반 markdown인 `state/study-topic-candidate-refresh.md`는 사람이 읽는 요약이다.
-외부 공유 요약에는 민감하지 않은 후보 수, 새 후보 예시, 보류 사유만 담는다.
+### state/morning-reading-history.jsonl
 
-### state/study-pack-candidates.json (ADR-070 이후 active 후보 캐시. ADR-107 config→state 이동)
-
-`study-topic-recommender`가 읽는 후보 입력이다.
-전체 학습 자산 목록이나 정본 후보 목록이 아니다.
-LLM 후보 refresh가 검증을 통과한 `new` 후보만 자동 append/update한다.
-
-자동 반영 항목은 다음 필드를 가진다.
+최근 추천 반복을 피하기 위한 URL 이력이다.
 
 ```json
-{
-  "key": "string",
-  "title": "string",
-  "domain": "string",
-  "tag": "new | deepen | interview | live-coding",
-  "difficulty": "string",
-  "estMinutes": "int",
-  "whyNow": ["string"],
-  "source": "llm-candidate-refresh",
-  "generatedAt": "ISO-8601",
-  "status": "active | stale | promoted",
-  "sourceSignals": ["string"],
-  "promotionTarget": { "outputPath": "string" }
-}
-```
-
-운영 규칙:
-
-- `new`만 config에 반영한다.
-- `update-existing`, `skip`, `needs-confirmation`은 runtime report에만 남긴다.
-- active 자동 후보는 기본 30개를 넘기지 않는다.
-- 30일 이상 선택되지 않은 자동 후보는 `stale` 처리 대상이다.
-- fos-study 문서가 실제로 생긴 후보는 다음 refresh에서 `promoted` 또는 제거 후보가 된다.
-
-### state/topic-inventory-history.jsonl
-
-매 모닝 추천마다 한 줄을 추가한다.
-백엔드 반복 억제와 외부 글의 최근 추천 표시 입력으로 사용한다.
-
-```json
-{
-  "generatedAt": "ISO-8601",
-  "keys": ["<backend-key>", ...],
-  "techBlogKeys": [...],
-  "aiKeys": [...],
-  "geekKeys": [...],
-  "articleUrls": ["string", ...]
-}
+{"generatedAt":"ISO-8601","articleUrls":["https://example.com/article"]}
 ```
 
 ### state/reading-candidates.json
@@ -1192,13 +962,12 @@ LLM 후보 refresh가 검증을 통과한 `new` 후보만 자동 append/update�
       "id": "source-key:hash",
       "sourceKey": "source-key",
       "sourceName": "출처",
-      "category": "techBlog | ai | geek",
+      "category": "techBlog | geek",
       "title": "글 제목",
       "url": "HTTPS URL",
       "published": "ISO-8601 또는 빈 문자열",
-      "kind": "feed-article | page-link | source-page",
-      "recentlyRecommended": false,
-      "estMinutes": 20
+      "kind": "feed-article | page-link",
+      "recentlyRecommended": false
     }
   ],
   "collectionLog": []
@@ -1209,39 +978,20 @@ LLM 후보 refresh가 검증을 통과한 `new` 후보만 자동 append/update�
 최종 선택 파일은 이 후보의 `id`만 참조한다.
 런타임은 존재하는 ID, 카테고리, 출처 다양성, 설정된 추천 수를 검증한다.
 
-### state/topic-replenishment.json
+### reports/morning-reading.md
 
-replenish 실행 결과 요약. claudeInvoked 여부, 보충된 후보 수 등.
-
-```json
-{
-  "generatedAt": "ISO-8601",
-  "claudeInvoked": "bool",
-  "requestedGenerationCount": "int",
-  "before": {"candidateCount": "int", "primaryUncovered": "int", ...},
-  "after": {...},
-  "accepted": [...],
-  "rejected": [...],
-  "promoted": [...]
-}
-```
-
-### reports/morning-topic-recommendation.md
-
-`refresh_topic_inventory.ts`가 하루 단위의 카테고리별 읽을거리를 정리한 마크다운이다.
-회사 기술 블로그와 GeekNews 계열 읽을거리를 먼저 배치한다.
-에이전트가 제안한 백엔드 공부 후보는 별도 카테고리로 뒤에 배치한다.
+`build_morning_reading.ts`가 외부 소스 추천을 카테고리별로 정리한 마크다운이다.
 
 ### reports/downloads/morning-reading-YYYY-MM-DD.html
 
-`topic-inventory.json`에서 파생한 공개 가능한 학습 추천 HTML이다.
-학습 주제, 공개 추천 이유, HTTPS 읽을거리 링크만 포함한다.
+`morning-reading.json`에서 파생한 공개 가능한 읽을거리 HTML이다.
+공개 글 제목, 요약, 추천 이유, HTTPS 링크만 포함한다.
 각 카테고리에는 제목, 간단한 요약, 추천 이유를 표시한다.
 공유 URL이 필요하면 이 단일 파일을 `report-publisher`로 게시한다.
 
 ### reports/downloads/study-reading-sources-YYYY-MM-DD.html
 
-`external-reading-sources.json`에서 파생한 공개 가능한 소스 현황 HTML이다.
+`external-reading-sources.ts`에서 파생한 공개 가능한 소스 현황 HTML이다.
 활성 소스 목록, 원문·RSS 응답 상태, 원문 추적성 신뢰도를 표시한다.
 
 ### cache/feed-cache/<sha1>.json (ADR-013)
@@ -1367,10 +1117,6 @@ state/application-agent/package-eval/<company-role>/latest-report.json
 회사/면접 단계별 active 준비 정본이다.
 `interview-stage-prep` skill은 `state/mvp-target.json`의 `primary.data_root` 아래 `interview/prep.md`를 읽는다.
 
-### cache/locks/
-
-study-pack 등 중복 실행 방지용 flock 파일. 토픽별 `<task>-<topic>.lock`.
-
 ### cache/live-position-postings.md
 
 `position-recommender` 수집 단계(`collect_live_postings.ts`)가 추천 분석 전에 갱신하는 active-only 공고 snapshot.
@@ -1427,6 +1173,7 @@ recommendation.json 정본에서 파생하는 사람 읽기용 산출물(mirror)
 
 ## sources/fos-study/
 
-외부 git 저장소 (jon890/fos-study). career-os가 마크다운만 읽고, study-pack 종류 명령이 commit + push한다.
+외부 git 저장소다.
+career-os는 실제 학습 이력을 추천 문맥으로 읽으며 자동으로 수정하거나 발행하지 않는다.
 
 career-os가 손대지 말아야 할 영역: `.claude/**` (별도 스킬 정의), `.git/**`.

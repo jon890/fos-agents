@@ -33,7 +33,7 @@ Date: 2026-07-03
 - 별도 dashboard DB, request queue, outbox worker를 새 정본으로 두지 않는다.
 - current docs와 schema에서 `fos-career` 세부 스키마는 tombstone으로 줄인다.
 - 과거 ADR과 task 기록은 history로 보존한다.
-- 새 실행 루프는 `position-recommender -> job-fit-analyzer -> study-pack/application package -> interview-stage/drill -> feedback 기록 -> 다시 position-recommender`를 기본으로 한다.
+- 새 실행 루프는 `position-recommender -> job-fit-analyzer -> 외부 읽을거리 추천/application package -> interview-stage/drill -> feedback 기록 -> 다시 position-recommender`를 기본으로 한다.
 - 다음 지원 준비에서는 지원동기와 회사 선택 이유를 reviewer와 면접 준비의 1급 점검 축으로 둔다.
 
 ## Supersedes

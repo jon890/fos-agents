@@ -26,5 +26,5 @@ career-os의 `config/`는 처음에는 사람이 큐레이션한 입력을 모�
 
 - 공부 자산의 단일 진실 출처가 `sources/fos-study/`로 선명해진다.
 - config drift와 2중 관리가 줄어든다.
-- 새 공부팩이나 질문 bank 보강이 config 수동 편집 없이 추천 흐름에 반영된다.
+- 새 학습 문서나 질문 bank 보강이 config 수동 편집 없이 추천 흐름에 반영된다.
 - config는 "무엇을 어떻게 우선할지"만 담고, "무엇이 존재하는지"는 파일 트리와 validator가 판단한다.

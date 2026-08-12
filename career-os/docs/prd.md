@@ -76,14 +76,14 @@ career-os는 아래 문제를 줄이는 데 집중한다.
 - 현재 자산:
   `/job-fit-analyzer`, `/interview-stage-prep`, `/tech-interview-drill`, `/behavioral-interview-drill`, `/interview-asset-writer`.
 - 주요 산출물: 역할 fit JSON/리포트, 단계별 준비 자료, 드릴 로그, 면접 자산.
-- 다음 가치: 드릴 결과와 공고별 gap을 다음 질문 선택과 study pack 추천에 반영한다.
+- 다음 가치: 드릴 결과와 공고별 gap을 다음 질문과 외부 읽을거리 선택에 반영한다.
 
 ### 학습 자산
 
-- 사용자 가치: 공부할 주제를 고르고 공개 가능한 자료로 축적한다.
-- 현재 자산: `/study-topic-recommender`, `/study-pack-writer`, `/question-bank-collector`.
-- 주요 산출물: morning 추천, study pack, public question bank.
-- 다음 가치: 공개 가능 질문과 study pack이 private 준비를 돕되, 비공개 맥락을 노출하지 않게 한다.
+- 사용자 가치: 신뢰할 수 있는 외부 자료에서 오늘 읽을 내용을 고른다.
+- 현재 자산: `/study-topic-recommender`, `/question-bank-collector`.
+- 주요 산출물: 아침 읽을거리 추천, 공개 질문 은행.
+- 다음 가치: 실제 학습 이력과 약점을 추천 품질에 반영한다.
 
 ### 피드백 루프
 
@@ -142,7 +142,7 @@ career-os는 아래 문제를 줄이는 데 집중한다.
 - `/interview-asset-writer`는 후보자 이력 기반 Q&A와 플레이북을 만든다.
 
 드릴은 정답 문서 생성이 아니라 답변 품질을 높이는 반복 루프다.
-모르는 질문은 실패가 아니라 다음 study pack 또는 question bank 보강 후보가 된다.
+모르는 질문은 실패가 아니라 다음 외부 읽을거리 또는 question bank 보강 신호가 된다.
 
 ### 학습 자산
 
@@ -152,20 +152,19 @@ career-os는 아래 문제를 줄이는 데 집중한다.
 
 역할:
 
-- `/study-topic-recommender`는 오늘 공부할 후보와 보강할 기존 문서를 추천한다.
-- `/study-pack-writer`는 공개 가능한 기술 토픽을 study pack으로 작성한다.
+- `/study-topic-recommender`는 등록된 외부 소스에서 오늘 읽을 기술 자료를 추천한다.
 - `/question-bank-collector`는 일반 backend/CS 질문을 공개 가능한 질문 은행으로 정리한다.
 
 ### 피드백 루프
 
-피드백 루프는 공고 분석, 핏 분석, 공부자료 생성, 이력서 작성, 1차·2차 면접 대비를 하나의 반복으로 묶는다.
+피드백 루프는 공고 분석, 핏 분석, 외부 자료 학습, 이력서 작성, 면접 대비를 하나의 반복으로 묶는다.
 결과가 좋지 않았을 때 기술 부족으로만 단순화하지 않고, 회사 선택 이유, 지원동기, 커리어 경로 설명까지 원인 후보로 기록한다.
 
 기본 원칙:
 
 - 탈락이나 지원 취소는 `closed/rejected`로 남기고 active target에서 제거한다.
 - 면접 피드백은 기술, 지원동기, 커뮤니케이션, 커리어 정합 축으로 분리한다.
-- 공개 가능한 기술 보강만 study pack으로 보낸다.
+- 공개 가능한 기술 보강만 외부 읽을거리 추천에 반영한다.
 - 지원동기와 회사별 전략은 private 산출물에만 둔다.
 - 다음 포지션 추천은 직전 실패 원인을 반영해 역할과 회사 선택 기준을 조정한다.
 
@@ -175,7 +174,7 @@ career-os는 아래 문제를 줄이는 데 집중한다.
 
 | 범위 | 위치 | 허용 내용 |
 |---|---|---|
-| Public-safe | `public/question-bank/`, `sources/fos-study/` | 일반 기술 지식, 공개 가능한 질문, 회사명 없는 study pack |
+| Public-safe | `public/question-bank/`, `sources/fos-study/` | 공개 가능한 질문과 사용자가 발행한 학습 이력 |
 | Private | `applications/`, `private/`, `state/` | 지원 전략, 후보자 맥락, 면접 답변, reviewer 판단 |
 | Config | `config/` | 후보자 프로필, 정책, 예외 override (ADR-069) |
 | State | `state/` | 현재 타깃, 학습·드릴 진행 상태, positions-queue, cooldown (ADR-107) |
@@ -229,7 +228,7 @@ career-os가 잘 작동하면 사용자는 매일 아래 질문에 답할 수 �
 
 1. 추천 후보, 지원 패키지, reviewer 지적, 드릴 결과를 하나의 상태 루프로 연결한다.
 2. 지원동기와 회사 선택 이유를 reviewer와 면접 준비의 1급 점검 축으로 올린다.
-3. 질문 은행과 study pack을 약점 기반으로 재선별해 면접 준비에 되먹인다.
+3. 질문 은행과 외부 읽을거리를 약점 기반으로 재선별해 면접 준비에 되먹인다.
 4. 지원 패키지의 evidence gap을 이력서 초안, 면접 질문, 공부 주제로 자동 분해한다.
 5. 공개 가능한 지식 자산은 fos-study와 question bank로 축적하고, private 판단은 career-os 내부에만 남긴다.
 

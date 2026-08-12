@@ -11,7 +11,7 @@ career-os의 반복 업무가 어떤 입력에서 시작해 어떤 처리 주체
 |---|---|---|
 | [문서 책임](#문서-책임) | flow.md에 둘 내용인지 판단할 때 | 문서 경계 |
 | [공통 실행 계약](#공통-실행-계약) | 모든 skill 공통 규칙 확인 | 실행, 알림, 안전 경계 |
-| [일상 학습](#일상-학습) | 오늘 공부 추천과 study pack 생성 | 추천 리포트, fos-study 초안 |
+| [일상 학습](#일상-학습) | 오늘 읽을 외부 기술 자료 추천 | 추천 리포트 |
 | [포지션 추천](#포지션-추천) | 공고 수집과 지원 후보 생성 | 추천 JSON, report, 후보 상태 |
 | [지원 준비](#지원-준비) | 지원 패키지, 리뷰, 이력서 초안 | 공고별 application 산출물 |
 | [면접 준비](#면접-준비) | 역할 핏 진단, 단계별 준비, 답변 연습 | 면접 준비 자료, 답변 연습 로그 |
@@ -66,38 +66,27 @@ career-os의 표준 진입점은 agent skill 직접 호출이다.
 
 ## 일상 학습
 
-매일 학습 흐름은 주제 추천에서 시작해 공개 가능한 기술 문서 초안으로 이어진다.
+매일 학습 흐름은 외부 기술 자료 수집과 아침 읽을거리 추천으로 끝난다.
 
 ```text
 Use skill: /study-topic-recommender
   -> 외부 소스 설정과 최근 추천 이력 읽기
-  -> 모든 활성 소스에서 후보를 결정적으로 수집
-  -> 모델이 전체 후보와 원문을 보고 카테고리별 읽을거리 선별
-  -> 후보 ID, 카테고리, 출처 다양성, 개수 검증
-  -> 학습 상태, 후보 풀, fos-study inventory 읽기
-  -> 에이전트가 제안한 백엔드 공부 후보를 별도 선정
-  -> topic-inventory.json에서 Markdown과 공개용 HTML 파생
+  -> 모든 활성 소스에서 글을 결정적으로 수집
+  -> 모델이 수집 결과와 원문을 보고 카테고리별 읽을거리 선별
+  -> 수집 ID, 카테고리, 출처 다양성, 개수 검증
+  -> morning-reading.json에서 Markdown과 공개용 HTML 파생
   -> 외부 게시 요청이면 report-publisher로 HTML 검사·게시
-  -> 사용자가 주제 선택
-  -> Use skill: /study-pack-writer <topic>
-  -> 공개 가능한 기술 주제로 정규화
-  -> 중복 문서와 public-safe 경계 확인
-  -> sources/fos-study/<category>/<topic>.md 작성
-  -> fos-study commit 및 push
 ```
 
-`study-topic-recommender`는 후보 추천과 promote 판단을 수행한다.
-`study-pack-writer`는 실제 공개 문서 초안을 만든다.
-중복 판정, 후보 refresh, live-coding seed 세부 규칙은 각 SKILL.md와 관련 ADR을 정본으로 본다.
+`study-topic-recommender`는 외부 글을 생성하지 않고 수집된 자료만 추천한다.
 
 주요 산출물:
 
-- `state/topic-inventory.json`
+- `state/morning-reading.json`
 - `state/reading-candidates.json`
-- `reports/morning-topic-recommendation.md`
+- `state/morning-reading-history.jsonl`
+- `reports/morning-reading.md`
 - `reports/downloads/morning-reading-YYYY-MM-DD.html`
-- `state/study-topic-candidate-refresh.{json,md}`
-- `sources/fos-study/<category>/<topic>.md`
 
 ## 포지션 추천
 
@@ -217,7 +206,7 @@ Use skill: /job-fit-analyzer [역할]
   -> 같은 역할 지난 진단 있으면 changeSince 반영
   -> JobFitRun JSON 정본 생성(verdict·careerPath·interviewStrategy 1급, reinforcement 부차)
   -> reports/job-fit-YYYY-MM-DD-<slug>.json 작성 → render_job_fit.ts로 md 파생
-  -> nextActions 라우팅(최우선 갭 → study-pack)  [ADR-096]
+  -> nextActions 라우팅(최우선 갭 → 외부 읽을거리 추천)  [ADR-096]
 ```
 
 ```text
@@ -233,11 +222,11 @@ Use skill: /behavioral-interview-drill
   -> 질문 풀과 약점 기록 읽기
   -> 사용자 답변 1개를 채점
   -> 답변 연습 로그와 약점 상태 갱신
-  -> 필요한 경우 study-pack-writer 위임 후보 생성
+  -> 다음 읽을거리 추천에 반영할 약점 기록
 ```
 
 면접 준비의 사람용 정본은 포지션별 private home에 둔다.
-공개 가능한 기술 보강 주제만 `study-pack-writer`로 넘어간다.
+공개 가능한 기술 보강 주제만 다음 외부 읽을거리 추천에 사용한다.
 
 활성 면접 타깃이 없으면 `state/mvp-target.json`의 `primary`는 `null`일 수 있다.
 이때 단계별 면접 준비는 새 active 타깃이 설정될 때까지 멈추고, 드릴과 일반 질문 bank 보강은 회사별 boost 없이 계속 진행한다.
@@ -317,7 +306,7 @@ Use skill: /position-recommender
   -> 후보 선택
   -> Use skill: /job-fit-analyzer [역할 또는 공고 요약]
   -> fit/gap과 nextActions 생성
-  -> Use skill: /study-pack-writer <public-safe-gap-topic>
+  -> Use skill: /study-topic-recommender
   -> Use skill: /application-package-writer <posting-path>
   -> Use skill: /application-reviewer <application-dir>
   -> 사용자 수동 제출

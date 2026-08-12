@@ -18,7 +18,7 @@ ADR-038로 `application-flow-agent`는 필수 산출물이 없으면 ledger 상�
 - `call_application_package_writer`는 `application-package-writer` 후 `application-reviewer`를 순차 실행한다.
 - skill 실행 후에도 [[ADR-038]] execution gate가 필수 산출물을 다시 검증한다.
 - revision 상태에서는 기존 package 존재만으로 전이하지 않고, `application-package.md`가 `review.md`보다 최신인지 확인한다.
-- `study-pack-writer`, `interview-asset-writer`, `candidate-baseline-suggester`처럼 공개 발행/프로필 반영/사용자 승인 경계가 있는 skill은 자동 실행 대상에서 제외한다.
+- `interview-asset-writer`처럼 공개 발행 경계가 있는 skill은 자동 실행 대상에서 제외한다.
 
 ### 결과
 

@@ -5,7 +5,7 @@
 
 ### 맥락
 
-`config/candidate-profile.md`는 9개 skill이 공유하는 프롬프트 주입 입력이다.
+`config/candidate-profile.md`는 여러 skill이 공유하는 프롬프트 주입 입력이다.
 
 - 추천·fit 판단 skill(position-recommender, job-fit-analyzer)은 사실·라벨만 필요하다.
 - 면접 서사 skill(interview-asset-writer, interview-stage-prep)은 프로젝트 서사·의사결정 패턴까지 필요하다.
@@ -13,7 +13,7 @@
 
 1차 slim(Source provenance 분리)은 완료됐다(`candidate-profile-provenance.md`).
 provenance는 어떤 skill도 판단에 쓰지 않던 추적 정보라 부작용 없이 분리됐다.
-남은 심화 slim은 면접 서사 섹션을 별도 파일로 나누는 것인데, 이는 9개 skill의 Inputs를 함께 바꾸는 변경이라 ADR로 고정한다.
+남은 심화 slim은 면접 서사 섹션을 별도 파일로 나누는 것이다.
 
 ### 결정
 
@@ -63,7 +63,6 @@ meta는 어느 파일에도 프롬프트로 주입하지 않는다.
 |---|---|---|
 | position-recommender | core | 공고 fit·추천 판단만 한다. 면접 서사가 불필요하다. |
 | job-fit-analyzer | core | 역할 fit·강점/약점·커리어 패스를 판단한다. strengths·weaknesses·constraints·timeline이 모두 core다. |
-| study-pack-writer | core | 학습 문서 초안 작성에 약점·기술 스택 라벨이면 충분하다. |
 | tech-interview-drill | core | 질문 풀·weak_spots로 동작한다. profile 참조는 "수정 금지" 안내 목적이다. |
 | behavioral-interview-drill | core | 위와 동일하다. profile 참조는 "수정 금지" 안내 목적이다. |
 | application-package-writer | core + detail | 맞춤 지원 패키지·positioning에 프로젝트 서사·의사결정 패턴이 필요하다. |
@@ -71,7 +70,7 @@ meta는 어느 파일에도 프롬프트로 주입하지 않는다.
 | interview-asset-writer | core + detail | 프로젝트·경험 기반 개인 질문을 생성한다. 주요 프로젝트·개인 프로젝트·의사결정 패턴·협업이 필요하다. |
 | interview-stage-prep | core + detail | 실전 면접 준비에 이력 인용·의사결정 패턴·면접 준비 우선순위가 필요하다. |
 
-- core 전용: position-recommender, job-fit-analyzer, study-pack-writer, tech-interview-drill, behavioral-interview-drill.
+- core 전용: position-recommender, job-fit-analyzer, tech-interview-drill, behavioral-interview-drill.
 - core + detail: application-package-writer, application-reviewer, interview-asset-writer, interview-stage-prep.
 - provenance 파일은 근거 파일 경로가 필요한 skill(application-package-writer 등)이 별도로 읽는다.
 
@@ -79,6 +78,6 @@ meta는 어느 파일에도 프롬프트로 주입하지 않는다.
 
 - detail 5개 섹션을 `config/candidate-profile.md`에서 `config/candidate-profile-detail.md`로 이동한다.
 - core의 "보유 기술 스택"을 라벨 중심으로 축약하고, 증거 상세는 detail로 옮긴다.
-- 9개 skill의 SKILL.md Inputs를 위 매핑대로 갱신한다.
+- 관련 skill의 SKILL.md Inputs를 위 매핑대로 갱신한다.
 - `data-schema.md`·`code-architecture.md`의 candidate-profile 설명에 core/detail 분리를 반영한다.
 - 1차 slim(provenance 분리) 패턴은 그대로 유지한다.

@@ -1,6 +1,6 @@
 # Candidate Profile
 
-> 이 문서는 career-os 파이프라인(study-pack / question-bank / interview-master)에서 Claude 프롬프트의 candidate context로 주입되는 단일 출처입니다.
+> 이 문서는 career-os 추천, 지원, 면접 파이프라인에 주입되는 후보자 맥락의 단일 출처입니다.
 > 이 파일(core)은 추천·fit 판단용 사실·라벨을 담습니다.
 > 프로젝트 서사·의사결정 패턴·협업 스타일·면접 준비 우선순위·기술 스택 증거 상세는 `config/candidate-profile-detail.md`(detail)로 분리했습니다.
 > 면접 서사 skill(application-package-writer, application-reviewer, interview-asset-writer, interview-stage-prep)은 core와 detail을 함께 읽습니다.

@@ -20,7 +20,7 @@ TypeScript 실행 코드를 다음 책임으로 분리한다.
 - `reading_contracts.ts`는 읽을거리 타입과 허용 상수를 맡는다.
 - `cli.ts`는 각 단계를 조립하고 최종 상태를 기록한다.
 
-공개 실행 경로는 `refresh_topic_inventory.ts`다.
+아침 읽을거리의 공개 실행 경로는 `build_morning_reading.ts`다.
 이 파일은 `cli.ts`의 `main`을 호출하는 호환 진입점으로 유지한다.
 
 거절한 대안:

@@ -11,21 +11,20 @@ career-os의 디렉터리 구조·계층 책임·외부 의존성. 새 스킬·�
 │   /<skill-name> [args]                                      │
 │   - SKILL.md 자동 로드 → 현재 에이전트가 직접 실행          │
 │   - .claude/skills 정본 + .codex/skills 심볼릭 링크          │
-│   - 14개: study/interview/application/position/resume 계열   │
+│   - study/interview/application/position/resume 계열         │
 │   - compatibility backend는 내부 구현 세부사항               │
 └────────────────┬────────────────────────────────────────────┘
                  │
 ┌────────────────┴────────────────────────────────────────────┐
 │ 스킬별 스크립트 (필요 시)                                    │
 │   scripts/<skill-name>/*.ts                                 │
-│   - 외부 수집기 (collect_*.ts), 인벤토리 갱신               │
-│     (refresh_topic_inventory.ts) 등 Bun 실행               │
+│   - 외부 수집기와 리포트 생성기 등 Bun 실행                  │
 └────────────────┬────────────────────────────────────────────┘
                  │
 ┌────────────────┴────────────────────────────────────────────┐
 │ 외부 동기 저장소                                              │
 │   sources/fos-study/  (jon890/fos-study git repo)            │
-│   - study-pack / interview-asset가 commit + push             │
+│   - 추천 모델이 실제 학습 이력을 읽는 입력                    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -51,19 +50,15 @@ career-os/
 │   ├── candidate-profile.md           이력 core — 추천·fit 판단용 사실·라벨 (prose, ADR-104)
 │   ├── candidate-profile-detail.md    이력 detail — 면접 서사·심화
 │   ├── candidate-profile-provenance.md  프로필 근거 출처
-│   ├── study-pack-topics.json         study-pack override와 fallback topic
 │   ├── question-bank-topics.json      interview-asset topic override 후보. public/question-bank 정본 아님
-│   ├── external-reading-sources.json  techBlog/ai/geek 외부 읽을거리 수집 대상
+│   ├── external-reading-sources.ts    기술 블로그와 개발 동향 수집 대상
 │   ├── position-collection.json       position 수집 설정 (wanted jobGroupId + 회사 비종속 role 키워드, ADR-099·ADR-103)
 │   ├── verified-company-research-targets.json  검증 회사군 + 회사 키워드 (ADR-090·ADR-103. cooldown은 state/로 분리 ADR-109)
 │   ├── candidate-config.json          후보자 구조화 사실 (experienceYears 등, ADR-099. profile.md는 prose)
 │   ├── baseline-core-files.json       fit 분석용 큐레이션 파일 목록
 │   ├── position-filters.json          제외 회사와 억제 공고 URL
-│   ├── study-preferences.json
-│   ├── topic-profiles.json
 │   ├── resume-design.md
-│   ├── live-coding-seed-pool.json
-│   └── live-coding-seed-candidates.json
+│   └── 기타 skill별 정책과 예외
 │
 ├── state/                                 ← 시스템 실행·이벤트 산물
 │   ├── positions-queue.jsonl        지원 후보 상태 큐
@@ -71,10 +66,9 @@ career-os/
 │   ├── mvp-target.json              현재 active 타깃 (tracked)
 │   ├── study-progress.json          topic 학습 이력·약점 상태 (tracked. ADR-002·ADR-105)
 │   ├── drill-progress.json          드릴 간격 반복 상태 (tracked. ADR-105)
-│   ├── study-pack-candidates.json   자동 발굴 active 후보 캐시 + seed/pin (tracked)
 │   ├── company-cooldown.json        회사 cooldown (tracked. ADR-109 verified-company에서 분리)
-│   ├── topic-inventory.json / topic-inventory-history.jsonl
-│   ├── reading-candidates.json / study-topic-candidate-refresh.{json,md} / topic-replenishment.json
+│   ├── morning-reading.json / morning-reading-history.jsonl
+│   ├── reading-candidates.json      외부 소스에서 수집한 글의 실행 스냅샷
 │   ├── drill-log-YYYY-MM-DD.jsonl / behavioral-interview-web-source-scan-*.md
 │   ├── source/                      외부 수집 노트. 지원/면접과 연결되면 private by default
 │   └── application-agent/
@@ -87,7 +81,7 @@ career-os/
 │   ├── baseline/YYYY-MM-DD/          baseline 실행 결과
 │   ├── daily/YYYY-MM-DD/             daily / position 실행 결과. 오래된 report는 retention/archive 후보
 │   ├── job-fit-*.{json,md} / stage-prep-*.md
-│   ├── morning-topic-recommendation.md
+│   ├── morning-reading.md
 │   ├── latest/                      position-recommendation.{json,md} mirror
 │   ├── downloads/                   외부 게시 준비용 HTML
 │   └── prep/                        legacy 회사별 준비 자산. 새 정본은 private/<company>/<position>/interview/prep.md
@@ -107,28 +101,21 @@ career-os/
 │
 ├── scripts/                              ← 실행 파일 영역. career-os 한정 컨벤션.
 │   ├── study-topic-recommender/
-│   │   ├── refresh_topic_inventory.ts    안정적인 공개 실행 진입점
-│   │   ├── cli.ts                        수집·선별·백엔드 추천 단계 조립
-│   │   ├── refresh_candidate_pool.ts     후보 갱신 공개 진입점
-│   │   ├── candidate_refresh_cli.ts      후보 검증·반영 단계 조립
-│   │   ├── candidate_refresh_args.ts     CLI 인자 파싱과 허용 상수 검증
-│   │   ├── candidate_refresh_decision.ts 중복 결과의 후보 결정 변환
-│   │   ├── manage_reading_sources.ts     외부 읽을거리 조회·검증·편집
+│   │   ├── build_morning_reading.ts      공개 실행 진입점
+│   │   ├── morning_reading_cli.ts        수집·선별·리포트 단계 조립
+│   │   ├── manage_reading_sources.ts     외부 읽을거리 조회·검증·추가 초안
 │   │   ├── render_source_catalog.ts       등록 소스와 원문 추적성 신뢰도 HTML 생성
 │   │   ├── validate_outputs.ts            추천 산출물과 공개 범위 검증
-│   │   ├── reading_contracts.ts           읽을거리 타입과 허용 상수
-│   │   ├── reading_sources.ts             소스 설정 정규화와 검증
+│   │   ├── reading_contracts.ts           Zod 스키마, 타입, 허용 상수
+│   │   ├── reading_sources.ts             정적 소스 설정 검증과 정규화
 │   │   ├── reading_candidate_pool.ts      전체 소스 후보 수집과 풀 검증
-│   │   ├── reading_stage.ts               후보 준비와 모델 선택 적용
+│   │   ├── reading_selection.ts           모델 선택 검증과 추천 변환
+│   │   ├── reading_stage.ts               수집 결과 준비와 모델 선택 적용
 │   │   ├── source/adapters/               feed/page 수집 어댑터와 레지스트리
 │   │   ├── source/feed.ts                 RSS/Atom 파싱과 캐시
-│   │   ├── transform/reading_selection.ts 모델 선택 검증과 추천 변환
-│   │   ├── persistence/                   추천 이력과 후보 갱신 입력 로드
-│   │   ├── render/candidate_refresh.ts    후보 갱신 Markdown 변환
-│   │   ├── render/{markdown,html,inventory}.ts
+│   │   ├── persistence/history.ts         최근 추천 URL 이력
+│   │   ├── render/{markdown,html,report}.ts
 │   │   │                                   같은 추천 정본의 표시 변환
-│   │   ├── fos_study_inventory.ts        fos-study 트리 스캔
-│   │   └── duplicate_detection.ts        결정론적 중복 후보 탐지
 │   ├── position-recommender/
 │   │   ├── collect_live_postings.ts    공고 수집 entrypoint (ADR-030, ADR-047)
 │   │   ├── recommendation_schema.ts    표준 출력 JSON zod 스키마 (ADR-101, RecommendationRun, source·closeDate 포함)
@@ -154,12 +141,11 @@ career-os/
 │   ├── interview-prep/
 │   │   └── 면접 단계 리뷰 HTML 검증 보조
 │   ├── interview-drill/
-│   │   └── drill-engine.ts             질문 선정(간격 반복) + 채점 + 기록 + 약점 환류 + study-pack 위임
+│   │   └── drill-engine.ts             질문 선정(간격 반복) + 채점 + 기록 + 약점 환류
 │                                       질문 정본은 public/question-bank(일반) + private/question-bank(개인), ADR-097
 │                                       (tech-interview-drill, behavioral-interview-drill 공유 — ADR-031 준수, scripts/_lib 미사용)
 │
 ├── .claude/skills/                       ← agent skill 정본
-│   ├── _shared/references/output-policy.md
 │   ├── job-fit-analyzer/               (ADR-096 의사결정·전략 재정의)
 │   │   └── SKILL.md  지원 의사결정 + 면접 전략 + 커리어 패스 정합. 정본 JSON → md 파생
 │   │       (실행 자산: scripts/job-fit-analyzer/{jobfit_schema.ts, render_job_fit.ts}, ADR-019 분리)
@@ -172,7 +158,6 @@ career-os/
 │   ├── study-topic-recommender/
 │   │   ├── SKILL.md
 │   │   └── references/source-management.md   외부 읽을거리 소스 관리 명령
-│   ├── study-pack-writer/{SKILL.md, references/}
 │   ├── interview-asset-writer/
 │   │   ├── SKILL.md
 │   │   └── references/output-policy.md
@@ -212,14 +197,13 @@ career-os/
 │   ├── job-fit-analyzer -> ../../.claude/skills/job-fit-analyzer
 │   ├── position-recommender -> ../../.claude/skills/position-recommender
 │   ├── question-bank-collector -> ../../.claude/skills/question-bank-collector
-│   ├── study-pack-writer -> ../../.claude/skills/study-pack-writer
 │   ├── study-topic-recommender -> ../../.claude/skills/study-topic-recommender
 │   └── tech-interview-drill -> ../../.claude/skills/tech-interview-drill
 │
 └── sources/
     └── fos-study/                ← 외부 동기 git repo (jon890/fos-study)
         ├── interview/, database/, java/, kafka/, architecture/, ...
-        └── (공개 승인된 study-pack 산출물이 여기로 반영됨)
+        └── (사용자가 실제로 학습하고 발행한 문서)
 ```
 
 config 설계 원칙:
@@ -231,7 +215,8 @@ config 설계 원칙:
 - 현재 타깃과 학습 진행 상태는 `state/`가 소유한다.
 - 공고 수집 설정은 `config/position-collection.json`과 `scripts/position-recommender/live-postings/` adapter가 소유한다.
 - 회사별 탐색 키워드는 `config/verified-company-research-targets.json`이 단일 출처이고, `position-collection.json`은 회사 비종속 role 키워드만 담는다(ADR-103).
-- `study-pack-topics.json`은 전체 학습 자산 목록이 아니라 사람이 고른 override와 fallback topic만 담는다.
+- 아침 읽을거리 소스는 `external-reading-sources.ts`에서 타입 검증되는 상수로 관리한다.
+- 학습 방향은 별도 후보 설정이 아니라 `sources/fos-study/`의 실제 문서와 최근 이력에서 판단한다.
 
 ## 외부 의존성
 
