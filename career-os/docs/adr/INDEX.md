@@ -7,14 +7,11 @@
 |---|---|---|---|
 | ADR-002 | 학습 진도 추적 | 결정됨 | [ADR-002-학습-진도-추적.md](ADR-002-학습-진도-추적.md) |
 | ADR-003 | Baseline 청킹 제거 | 결정됨 | [ADR-003-baseline-청킹-제거.md](ADR-003-baseline-청킹-제거.md) |
-| ADR-009 | Morning topic reservoir + recommendation pipeline | Partially superseded by [[ADR-062]] | [ADR-009-morning-topic-reservoir-recommendation-pipeline.md](ADR-009-morning-topic-reservoir-recommendation-pipeline.md) |
-| ADR-010 | Recommendation scoring + mix targets | Accepted | [ADR-010-recommendation-scoring-mix-targets.md](ADR-010-recommendation-scoring-mix-targets.md) |
-| ADR-013 | RSS·Atom discovery 레이어 부착 | Accepted | [ADR-013-rss-atom-discovery-레이어-부착.md](ADR-013-rss-atom-discovery-레이어-부착.md) |
+| ADR-013 | 외부 읽을거리는 전체 수집 후 모델이 선별한다 | 결정됨 | [ADR-013-외부-읽을거리는-전체-수집-후-모델이-선별한다.md](ADR-013-외부-읽을거리는-전체-수집-후-모델이-선별한다.md) |
 | ADR-019 | skill 문서와 실행 코드 분리 | Accepted | [ADR-019-career-os-claude-code-skill-폴더와-실행-스크립트-디렉터리-분리.md](ADR-019-career-os-claude-code-skill-폴더와-실행-스크립트-디렉터리-분리.md) |
-| ADR-026 | study-topic-recommender native 마이그 + Python → TypeScript + replenish/promote/live-coding 흡수 |  | [ADR-026-study-topic-recommender-native-마이그-python-typescript-replenish-promote-live-coding-흡수.md](ADR-026-study-topic-recommender-native-마이그-python-typescript-replenish-promote-live-coding-흡수.md) |
 | ADR-027 | 면접 핏 진단 통합과 토픽 설정 분리 | Partially superseded by [[ADR-092]] | [ADR-027-knowledge-gap-analyzer-interview-prep-analyzer-통합-native-마이그-topics-json-namespace-분리.md](ADR-027-knowledge-gap-analyzer-interview-prep-analyzer-통합-native-마이그-topics-json-namespace-분리.md) |
 | ADR-033 | fos-study source tree를 study artifact 단일 진실원으로 사용 | Accepted | [ADR-033-fos-study-source-tree를-study-artifact-단일-진실원으로-사용.md](ADR-033-fos-study-source-tree를-study-artifact-단일-진실원으로-사용.md) |
-| ADR-035 | ts 헬퍼 모듈 분해 컨벤션 (source / transform / render / cli 4 레이어) | Accepted | [ADR-035-ts-헬퍼-모듈-분해-컨벤션-source-transform-render-cli-4-레이어.md](ADR-035-ts-헬퍼-모듈-분해-컨벤션-source-transform-render-cli-4-레이어.md) |
+| ADR-035 | TypeScript 실행 코드는 책임별 모듈로 분리한다 | 결정됨 | [ADR-035-typescript-실행-코드는-책임별-모듈로-분리한다.md](ADR-035-typescript-실행-코드는-책임별-모듈로-분리한다.md) |
 | ADR-037 | application-flow-agent runtime은 policy decision engine 중심 | Accepted | [ADR-037-application-flow-agent-runtime은-policy-decision-engine-중심.md](ADR-037-application-flow-agent-runtime은-policy-decision-engine-중심.md) |
 | ADR-038 | application-flow-agent 상태 전이는 skill artifact 검증 뒤에만 수행 | Accepted | [ADR-038-application-flow-agent-상태-전이는-skill-artifact-검증-뒤에만-수행.md](ADR-038-application-flow-agent-상태-전이는-skill-artifact-검증-뒤에만-수행.md) |
 | ADR-039 | position-recommender 추천 단위는 개별 active/open 공고 | Accepted | [ADR-039-position-recommender-추천-단위는-개별-active-open-공고.md](ADR-039-position-recommender-추천-단위는-개별-active-open-공고.md) |
@@ -30,7 +27,6 @@
 | ADR-066 | 공개 가능 일반 면접 질문 bank는 public/question-bank에 둔다 | Accepted | [ADR-066-공개-가능-일반-면접-질문-bank는-public-question-bank에-둔다.md](ADR-066-공개-가능-일반-면접-질문-bank는-public-question-bank에-둔다.md) |
 | ADR-069 | config는 정책·타깃·예외만 남기고 자산 목록은 파생한다 | Accepted | [ADR-069-config는-정책-타깃-예외만-남기고-자산-목록은-파생한다.md](ADR-069-config는-정책-타깃-예외만-남기고-자산-목록은-파생한다.md) |
 | ADR-070 | study topic 후보 풀은 LLM refresh turn이 발굴하고 config에는 active 캐시만 반영한다 | Accepted | [ADR-070-study-topic-후보-풀은-llm-refresh-turn이-발굴하고-config에는-active-캐시만-반영한다.md](ADR-070-study-topic-후보-풀은-llm-refresh-turn이-발굴하고-config에는-active-캐시만-반영한다.md) |
-| ADR-073 | daily study action snapshot | Accepted | [ADR-073-daily-study-추천은-action-snapshot으로-후속-작업을-연결한다.md](ADR-073-daily-study-추천은-action-snapshot으로-후속-작업을-연결한다.md) |
 | ADR-074 | position source coverage는 official adapter와 Wanted target discovery를 함께 쓴다 | Accepted | [ADR-074-position-source-coverage는-official-adapter와-wanted-target-discovery를-함께-쓴다.md](ADR-074-position-source-coverage는-official-adapter와-wanted-target-discovery를-함께-쓴다.md) |
 | ADR-079 | 포지션 수집은 동적 discovery를 우선하고 개별 공고 URL seed를 제거한다 | Accepted | [ADR-079-포지션-수집은-동적-discovery를-우선하고-개별-공고-url-seed를-제거한다.md](ADR-079-포지션-수집은-동적-discovery를-우선하고-개별-공고-url-seed를-제거한다.md) |
 | ADR-085 | career-os skill을 Codex에 심볼릭 링크로 노출한다 | Accepted | [ADR-085-career-os-skill을-codex에-심볼릭-링크로-노출한다.md](ADR-085-career-os-skill을-codex에-심볼릭-링크로-노출한다.md) |

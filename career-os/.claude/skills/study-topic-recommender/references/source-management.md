@@ -13,12 +13,14 @@ JSON을 직접 편집하기보다 관리 명령을 우선 사용한다.
   - `techBlog`, `ai`, `geek` 중 하나다.
 - `enabled`
   - `false`면 삭제하지 않고 추천에서 제외한다.
-- `priority`
-  - 같은 카테고리에서 값이 작은 소스를 먼저 검토한다.
+- `adapter`
+  - `feed`는 RSS·Atom 항목을 수집한다.
+  - `page`는 공개 페이지 자체를 후보로 만든다.
 - `feedUrl`
   - RSS 또는 Atom 피드가 있을 때 사용한다.
-- `filterKeywords`
-  - 피드 글 제목에서 우선할 키워드다.
+
+숫자형 우선순위와 고정 키워드는 두지 않는다.
+활성 소스 전체를 수집한 뒤 모델이 오늘의 맥락에 맞는 글을 고른다.
 
 ## 조회와 검증
 
@@ -35,27 +37,22 @@ bun scripts/study-topic-recommender/manage_reading_sources.ts list --include-dis
 bun scripts/study-topic-recommender/manage_reading_sources.ts add \
   --category techBlog \
   --key example-engineering \
-  --title "Example Engineering 최신 백엔드 글" \
+  --title "Example Engineering" \
   --source "Example Engineering" \
   --url "https://example.com/engineering" \
   --feed-url "https://example.com/engineering/feed.xml" \
-  --minutes 25 \
-  --priority 20 \
-  --tag backend \
-  --keyword kafka \
-  --keyword spring \
-  --why "실제 운영 사례를 면접 답변에 연결하기 좋다"
+  --adapter feed \
+  --minutes 25
 ```
 
-`--tag`, `--keyword`, `--why`는 여러 번 지정할 수 있다.
 URL과 피드 URL은 HTTPS만 허용한다.
+`adapter`를 생략하면 `feedUrl`, `url` 순으로 추론한다.
 
-## 활성 상태와 우선순위
+## 활성 상태와 추천 수
 
 ```bash
 bun scripts/study-topic-recommender/manage_reading_sources.ts disable <key>
 bun scripts/study-topic-recommender/manage_reading_sources.ts enable <key>
-bun scripts/study-topic-recommender/manage_reading_sources.ts set-priority <key> <숫자>
 bun scripts/study-topic-recommender/manage_reading_sources.ts set-slots <카테고리> <숫자>
 ```
 

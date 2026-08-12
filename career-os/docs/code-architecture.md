@@ -53,7 +53,7 @@ career-os/
 │   ├── candidate-profile-provenance.md  프로필 근거 출처
 │   ├── study-pack-topics.json         study-pack override와 fallback topic
 │   ├── question-bank-topics.json      interview-asset topic override 후보. public/question-bank 정본 아님
-│   ├── external-reading-sources.json  techBlog/ai/geek 외부 reading reservoir
+│   ├── external-reading-sources.json  techBlog/ai/geek 외부 읽을거리 수집 대상
 │   ├── position-collection.json       position 수집 설정 (wanted jobGroupId + 회사 비종속 role 키워드, ADR-099·ADR-103)
 │   ├── verified-company-research-targets.json  검증 회사군 + 회사 키워드 (ADR-090·ADR-103. cooldown은 state/로 분리 ADR-109)
 │   ├── candidate-config.json          후보자 구조화 사실 (experienceYears 등, ADR-099. profile.md는 prose)
@@ -74,7 +74,7 @@ career-os/
 │   ├── study-pack-candidates.json   자동 발굴 active 후보 캐시 + seed/pin (tracked)
 │   ├── company-cooldown.json        회사 cooldown (tracked. ADR-109 verified-company에서 분리)
 │   ├── topic-inventory.json / topic-inventory-history.jsonl
-│   ├── study-topic-candidate-refresh.{json,md} / study-topic-actions/ / topic-replenishment.json
+│   ├── reading-candidates.json / study-topic-candidate-refresh.{json,md} / topic-replenishment.json
 │   ├── drill-log-YYYY-MM-DD.jsonl / behavioral-interview-web-source-scan-*.md
 │   ├── source/                      외부 수집 노트. 지원/면접과 연결되면 private by default
 │   └── application-agent/
@@ -107,15 +107,26 @@ career-os/
 │
 ├── scripts/                              ← 실행 파일 영역. career-os 한정 컨벤션.
 │   ├── study-topic-recommender/
-│   │   ├── refresh_topic_inventory.ts    추천 목록과 Markdown·HTML 생성
-│   │   ├── refresh_candidate_pool.ts     후보 발굴 결과 검증과 반영
+│   │   ├── refresh_topic_inventory.ts    안정적인 공개 실행 진입점
+│   │   ├── cli.ts                        수집·선별·백엔드 추천 단계 조립
+│   │   ├── refresh_candidate_pool.ts     후보 갱신 공개 진입점
+│   │   ├── candidate_refresh_cli.ts      후보 검증·반영 단계 조립
+│   │   ├── candidate_refresh_args.ts     CLI 인자 파싱과 허용 상수 검증
+│   │   ├── candidate_refresh_decision.ts 중복 결과의 후보 결정 변환
 │   │   ├── manage_reading_sources.ts     외부 읽을거리 조회·검증·편집
 │   │   ├── render_source_catalog.ts       등록 소스와 원문 추적성 신뢰도 HTML 생성
 │   │   ├── validate_outputs.ts            추천 산출물과 공개 범위 검증
-│   │   ├── reading_sources.ts             읽을거리 설정 정규화와 검증
-│   │   ├── render/{markdown,html}.ts       같은 추천 정본의 표시 변환
-│   │   ├── send_daily_recommendation.ts  추천 요약과 action snapshot 생성
-│   │   ├── feed_discovery.ts             RSS/Atom 수집과 캐시
+│   │   ├── reading_contracts.ts           읽을거리 타입과 허용 상수
+│   │   ├── reading_sources.ts             소스 설정 정규화와 검증
+│   │   ├── reading_candidate_pool.ts      전체 소스 후보 수집과 풀 검증
+│   │   ├── reading_stage.ts               후보 준비와 모델 선택 적용
+│   │   ├── source/adapters/               feed/page 수집 어댑터와 레지스트리
+│   │   ├── source/feed.ts                 RSS/Atom 파싱과 캐시
+│   │   ├── transform/reading_selection.ts 모델 선택 검증과 추천 변환
+│   │   ├── persistence/                   추천 이력과 후보 갱신 입력 로드
+│   │   ├── render/candidate_refresh.ts    후보 갱신 Markdown 변환
+│   │   ├── render/{markdown,html,inventory}.ts
+│   │   │                                   같은 추천 정본의 표시 변환
 │   │   ├── fos_study_inventory.ts        fos-study 트리 스캔
 │   │   └── duplicate_detection.ts        결정론적 중복 후보 탐지
 │   ├── position-recommender/
@@ -216,7 +227,7 @@ config 설계 원칙:
 - config는 전체 자산 목록을 담는 DB가 아니다.
 - 학습 문서 목록은 `sources/fos-study/`에서 파생한다.
 - 공개 질문 목록은 `public/question-bank/`에서 파생한다.
-- config에 남길 것은 후보자 baseline, 외부 reading reservoir, 사람이 고른 pin/override/제외 조건이다.
+- config에 남길 것은 후보자 baseline, 외부 읽을거리 수집 대상, 사람이 고른 pin/override/제외 조건이다.
 - 현재 타깃과 학습 진행 상태는 `state/`가 소유한다.
 - 공고 수집 설정은 `config/position-collection.json`과 `scripts/position-recommender/live-postings/` adapter가 소유한다.
 - 회사별 탐색 키워드는 `config/verified-company-research-targets.json`이 단일 출처이고, `position-collection.json`은 회사 비종속 role 키워드만 담는다(ADR-103).
@@ -239,17 +250,8 @@ career-os 실행 코드는 워크스페이스 안의 `scripts/`에 둔다.
 Claude, Codex, Gemini 같은 에이전트는 같은 SKILL.md를 공유한다.
 Codex 발견 경로는 `.codex/skills` 심볼릭 링크를 사용한다.
 
-```bash
-# 표준 호출
-/<skill-name> [args]
-
-# compatibility backend는 내부 구현일 때만 사용
-# 사용자-facing 계약은 항상 /<skill-name> [args]
-
-# daily study 추천 요약과 action snapshot 생성
-cd career-os
-bun --env-file=.env scripts/study-topic-recommender/send_daily_recommendation.ts
-```
+사용자-facing 계약은 `/<skill-name> [args]` 형식이다.
+호환 실행 코드는 스킬 내부 구현으로만 사용한다.
 
 각 agent skill의 SKILL.md가 산출물과 자기 검증 책임을 직접 담는다.
 외부 전달은 저장소 밖 호출자가 표준 출력과 생성 파일을 사용해 처리한다.
@@ -266,7 +268,6 @@ career-os agent skill의 SKILL.md는 아래 섹션 구성을 권장한다.
 - Workflow — 수집·분석·산출·검증 단계.
 - Self-check — 산출물 자기 검증. 독립 섹션이면 `## Self-check` 레벨로 둔다.
 - Error handling — 입력 부재·실패 시 동작. 표 형태를 권장한다.
-- Why this design — 결정 근거. 관련 ADR 번호를 인용한다.
 - References — 관련 스킬 cross-ref와 핵심 docs 포인터. ADR 재나열이 아니라 포인터 역할.
 
 질문·검증·금지선처럼 스킬 고유 섹션은 위 구성에 더한다.

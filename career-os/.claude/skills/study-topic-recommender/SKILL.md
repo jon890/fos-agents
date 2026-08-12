@@ -73,23 +73,65 @@ TypeScript 목록 생성기는 후보와 다양성 안전장치를 제공한다.
 
 ### 2. 외부 소스 우선 추천 생성
 
-`career-os/`에서 다음 명령을 실행한다.
+먼저 모든 활성 소스의 후보를 결정적으로 수집한다.
 
 ```bash
 bun --env-file=.env \
-  scripts/study-topic-recommender/refresh_topic_inventory.ts
+  scripts/study-topic-recommender/refresh_topic_inventory.ts \
+  --collect-only
+```
+
+`state/reading-candidates.json`의 전체 후보를 읽고 다음 순서로 판단한다.
+
+1. 제목, 출처, 발행 시각, 최근 추천 여부를 보고 카테고리별 후보를 좁힌다.
+2. 좁힌 후보의 공개 원문을 열어 실제 내용과 현재성을 확인한다.
+3. 현재 학습 취향과 최근 이력을 반영해 추천을 고른다.
+4. 선택 결과를 `/tmp/study-reading-selection.json`에 쓴다.
+
+선택 파일은 다음 계약을 따른다.
+
+```json
+{
+  "selections": {
+    "techBlog": [
+      {
+        "candidateId": "후보 풀의 ID",
+        "summary": "글의 핵심 요약",
+        "reason": "오늘 읽을 이유"
+      }
+    ],
+    "ai": [],
+    "geek": []
+  }
+}
+```
+
+각 배열은 카테고리의 `slots` 수와 일치해야 한다.
+한 카테고리 안에서는 서로 다른 출처를 고른다.
+
+그다음 검증된 모델 선택으로 전체 추천을 생성한다.
+
+```bash
+bun --env-file=.env \
+  scripts/study-topic-recommender/refresh_topic_inventory.ts \
+  --candidate-pool state/reading-candidates.json \
+  --reading-selection /tmp/study-reading-selection.json
 ```
 
 주요 계산 규칙은 다음과 같다.
 
 - 하루 단위로 아침 읽을거리를 구성한다.
-- 회사 기술 블로그와 GeekNews 계열 외부 소스를 먼저 수집한다.
+- 등록된 활성 외부 소스를 모두 수집한다.
+- 고정 키워드와 숫자형 소스 우선순위는 사용하지 않는다.
+- 행사 일정처럼 명백한 저신호 항목만 결정적으로 제외한다.
+- 주제 적합도와 추천 이유는 현재 모델이 전체 후보를 보고 판단한다.
 - 외부 수집이 끝난 뒤 `fos-study`와 후보 풀을 스캔해 백엔드 공부 후보를 계산한다.
 - 회사 기술 블로그, GeekNews와 개발 동향, AI 실전, 백엔드 공부 후보 순으로 구성한다.
 - 각 항목에는 제목, 간단한 요약, 추천 이유를 표시한다.
 - 백엔드 항목 수는 `study-preferences.json`의 `morning_report.backend_slots`를 따른다.
 - 외부 읽을거리 수는 `external-reading-sources.json`의 카테고리별 `slots`를 따른다.
-- 백엔드 주제는 최근 7회, 보조 읽을거리는 최근 3회 추천을 기준으로 반복을 줄인다.
+- 백엔드 주제는 최근 이력을 기준으로 반복을 줄인다.
+- 외부 글의 최근 추천 여부는 모델 판단 입력으로 제공한다.
 - RSS 캐시는 6시간 동안 재사용한다.
 
 다음 산출물을 만든다.
@@ -102,6 +144,8 @@ bun --env-file=.env \
   - 공개 가능한 추천만 담은 게시 준비용 HTML이다.
 - `state/topic-inventory-history.jsonl`
   - 오늘 추천 이력을 한 줄 추가한다.
+- `state/reading-candidates.json`
+  - 모든 활성 소스에서 결정적으로 수집한 모델 입력 후보 풀이다.
 
 ### 3. 다음 실행을 위한 후보 풀 보충
 

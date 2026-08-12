@@ -150,7 +150,7 @@ config/state는 "이 파일이 바뀌는 트리거가 무엇인가"로 가른다
 - 후보자 baseline과 장기 이력(추천·fit 판단용 core): `config/candidate-profile.md` (ADR-104)
 - 후보자 면접 서사·심화(면접 skill용 detail): `config/candidate-profile-detail.md` (ADR-104)
 - baseline 분석용 core file pin: `config/baseline-core-files.json`
-- 외부 reading reservoir: `config/external-reading-sources.json`
+- 외부 읽을거리 수집 대상: `config/external-reading-sources.json`
 
 ADR-107로 `state/`로 이동한 항목(트리거가 시스템 실행·이벤트라 config가 아님):
 
@@ -798,7 +798,7 @@ ADR-066 이후 공개 가능 일반 질문 bank의 정본은 `public/question-ba
 
 ### config/external-reading-sources.json
 
-외부 읽을거리 소스를 카테고리와 무관한 공통 구조로 관리하는 설정이다.
+외부 읽을거리 수집 대상을 카테고리와 무관한 공통 구조로 관리하는 설정이다.
 `study-topic-recommender`의 보조 읽을거리 추천과 `position-recommender`의 `techBlogSignal` 판단에만 사용한다.
 공고 수집 source registry가 아니다.
 공고 수집 source 설정은 `config/position-collection.json`과 career-os `live-postings` adapter registry가 소유한다.
@@ -820,21 +820,22 @@ ADR-066 이후 공개 가능 일반 질문 bank의 정본은 `public/question-ba
       "category": "techBlog | ai | geek",
       "title": "string",
       "enabled": true,
-      "priority": 1,
       "source": "string",
       "url": "HTTPS URL",
       "feedUrl": "HTTPS RSS/Atom URL (선택)",
-      "filterKeywords": ["string"],
-      "tags": ["string"],
-      "whyNow": ["string"],
+      "adapter": "feed | page",
       "estMinutes": 25
     }
   ]
 }
 ```
 
-소스는 `manage_reading_sources.ts`로 조회, 검증, 추가, 비활성화, 우선순위 변경을 수행한다.
+소스는 `manage_reading_sources.ts`로 조회, 검증, 추가, 비활성화한다.
 `render_source_catalog.ts`는 활성 소스, 실시간 HTTP·RSS 응답, 원문 추적성 신뢰도를 HTML로 만든다.
+
+수집은 모든 활성 소스를 대상으로 한다.
+숫자형 소스 우선순위와 고정 키워드는 두지 않는다.
+`feed` 어댑터는 RSS·Atom 항목을 수집하고 `page` 어댑터는 공개 페이지를 후보로 만든다.
 
 신뢰도는 내용의 진실성을 보증하는 평판 점수가 아니다.
 발행 주체의 직접성, HTTPS 원문, RSS 제공, 실행 시점의 응답 여부를 평가한다.
@@ -1001,13 +1002,18 @@ daily 모드는 토픽 기반 fos-study 파일 선택 + `state/study-progress.js
     "excludedDirs": [".git", ".claude"]
   },
   "counts": {
-    "configCuratedStudyTopics": "int",
-    "configStudyTopicCandidates": "int",
+    "configStudyTopicOverrides": "int",
+    "configStudyTopicFallbackCandidates": "int",
+    "derivedFosStudyFallbackCandidates": "int",
     "existingFosStudyMarkdownFiles": "int",
     "remainingCuratedStudyTopics": "int",
     "remainingCandidateStudyTopics": "int",
     "remainingLiveCodingSeeds": "int",
-    "duplicateCandidates": "int"
+    "duplicateCandidates": "int",
+    "techBlogSources": "int",
+    "aiSources": "int",
+    "geekSources": "int",
+    "readingCandidates": "int"
   },
   "remaining": {
     "curatedStudyTopicKeys": ["<topic-key>", ...],
@@ -1027,12 +1033,17 @@ daily 모드는 토픽 기반 fos-study 파일 선택 + `state/study-progress.js
     ]
   },
   "recommendations": [],
+  "techBlogRecommendations": [],
+  "aiRecommendations": [],
+  "geekRecommendations": [],
   "updateExistingRecommendations": [],
   "discovery": {}
 }
 ```
 
-ADR-026 Python → TypeScript 마이그 결정은 유지. ADR-033 이후 fos-study 트리 스캔 결과(`excluded.*`)가 추가되고 옛 `pools.uncoveredCuratedStudyTopics` 등 config 복사본 필드는 `remaining.*`로 키만 압축.
+`recommendations`는 백엔드 학습 후보를 담는다.
+외부 읽을거리는 카테고리별 추천 배열에 나누어 기록한다.
+`discovery`는 후보 풀 경로와 소스별 수집 결과를 담는다.
 
 ### Duplicate decision schema (ADR-033)
 
@@ -1117,7 +1128,7 @@ LLM 기반 후보 refresh turn의 실행 기록.
 ### state/study-pack-candidates.json (ADR-070 이후 active 후보 캐시. ADR-107 config→state 이동)
 
 `study-topic-recommender`가 읽는 후보 입력이다.
-전체 학습 자산 목록이나 정본 reservoir가 아니다.
+전체 학습 자산 목록이나 정본 후보 목록이 아니다.
 LLM 후보 refresh가 검증을 통과한 `new` 후보만 자동 append/update한다.
 
 자동 반영 항목은 다음 필드를 가진다.
@@ -1149,7 +1160,8 @@ LLM 후보 refresh가 검증을 통과한 `new` 후보만 자동 append/update�
 
 ### state/topic-inventory-history.jsonl
 
-매 모닝 추천마다 한 줄 append. ADR-010 carry-over penalty와 ADR-012 보조 카테고리 cooldown의 입력.
+매 모닝 추천마다 한 줄을 추가한다.
+백엔드 반복 억제와 외부 글의 최근 추천 표시 입력으로 사용한다.
 
 ```json
 {
@@ -1162,34 +1174,38 @@ LLM 후보 refresh가 검증을 통과한 `new` 후보만 자동 append/update�
 }
 ```
 
-### state/study-topic-actions/YYYY-MM-DD.json
-
-daily study action callback을 topic 추천 결과와 연결하는 runtime snapshot.
-정본 학습 이력이나 추천 pool이 아니라, 해당 날짜 메시지의 버튼을 해석하기 위한 짧은 매핑이다.
-`latest.json`은 가장 최근 날짜 파일의 mirror다.
+### state/reading-candidates.json
 
 ```json
 {
-  "date": "YYYY-MM-DD",
   "generatedAt": "ISO-8601",
-  "markdownPath": "reports/morning-topic-recommendation.md",
-  "recommendations": [
+  "policy": {
+    "selection": "llm",
+    "fixedKeywordsUsed": false,
+    "sourcePriorityUsed": false,
+    "maxArticlesPerFeed": 8
+  },
+  "candidates": [
     {
-      "index": 1,
-      "key": "topic-key",
-      "title": "string",
-      "action": "career.study-pack.create:YYYY-MM-DD:1:topic-key"
+      "id": "source-key:hash",
+      "sourceKey": "source-key",
+      "sourceName": "출처",
+      "category": "techBlog | ai | geek",
+      "title": "글 제목",
+      "url": "HTTPS URL",
+      "published": "ISO-8601 또는 빈 문자열",
+      "kind": "feed-article | source-page",
+      "recentlyRecommended": false,
+      "estMinutes": 20
     }
   ],
-  "skipAction": "career.study-pack.skip:YYYY-MM-DD"
+  "collectionLog": []
 }
 ```
 
-운영 규칙:
-
-- `career.study-pack.create:*`는 study-pack 초안 생성 요청이다. 공개 최종화나 `[초안]` 제거 승인이 아니다.
-- `career.study-pack.skip:*`는 그날 추천을 넘긴 기록이다. topic 영구 제외가 아니다.
-- 외부 전달 계층이 버튼을 제공한다면 유효시간과 callback 처리를 그 계층에서 정한다.
+모든 활성 외부 소스에서 결정적으로 수집한 모델 입력이다.
+최종 선택 파일은 이 후보의 `id`만 참조한다.
+런타임은 존재하는 ID, 카테고리, 출처 다양성, 설정된 추천 수를 검증한다.
 
 ### state/topic-replenishment.json
 
