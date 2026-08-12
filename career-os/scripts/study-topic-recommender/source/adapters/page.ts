@@ -73,12 +73,6 @@ export const pageSourceAdapter: ReadingSourceAdapter = {
   async collect(source, context) {
     const url = safeHttpsUrl(source.url);
     if (!url) return [];
-    const sourcePage = {
-      title: String(source.source || source.title || source.key),
-      url,
-      published: "",
-      kind: "source-page" as const,
-    };
     try {
       const response = await fetch(url, {
         headers: { "User-Agent": "career-os-morning/1.0" },
@@ -88,13 +82,11 @@ export const pageSourceAdapter: ReadingSourceAdapter = {
         const links = extractPageLinks(
           await response.text(),
           url,
-          Math.max(0, context.maxCandidatesPerSource - 1)
+          context.maxCandidatesPerSource
         );
-        if (links.length > 0) return [sourcePage, ...links];
+        return links;
       }
-    } catch {
-      // 아래 출처 페이지 후보로 복구한다.
-    }
-    return [sourcePage];
+    } catch {}
+    return [];
   },
 };

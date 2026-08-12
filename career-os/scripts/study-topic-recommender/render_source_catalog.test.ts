@@ -13,7 +13,7 @@ describe("읽을거리 소스 현황 리포트", () => {
     };
     const curated: ReadingSource = {
       key: "curated",
-      category: "ai",
+      category: "geek",
       title: "비교 학습 주제",
     };
 
@@ -26,7 +26,7 @@ describe("읽을거리 소스 현황 리포트", () => {
   test("HTML 값을 이스케이프하고 HTTPS 링크만 노출한다", () => {
     const source: ReadingSource = {
       key: "unsafe",
-      category: "ai",
+      category: "geek",
       title: "<script>alert(1)</script>",
       url: "http://example.com",
     };

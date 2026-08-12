@@ -10,10 +10,9 @@ import {
   loadReadingCandidatePool,
 } from "./reading_candidate_pool.js";
 import {
-  deterministicFallbackSelection,
   loadValidatedReadingSelection,
   recommendationsFromSelection,
-} from "./transform/reading_selection.js";
+} from "./reading_selection.js";
 
 export interface ReadingCollectionInput {
   readingSources: NormalizedReadingSources;
@@ -23,6 +22,7 @@ export interface ReadingCollectionInput {
   candidatePoolPath?: string;
   cacheTtlHours: number;
   timeoutMs: number;
+  maxCandidatesPerSource: number;
 }
 
 export async function prepareReadingCandidatePool(
@@ -34,6 +34,7 @@ export async function prepareReadingCandidatePool(
         readingSources: input.readingSources,
         cacheDir: input.cacheDir,
         recentUrls: input.recentUrls,
+        maxCandidatesPerSource: input.maxCandidatesPerSource,
         cacheTtlHours: input.cacheTtlHours,
         timeoutMs: input.timeoutMs,
       });
@@ -45,14 +46,15 @@ export async function prepareReadingCandidatePool(
 export function selectReadings(input: {
   pool: ReadingCandidatePool;
   readingSources: NormalizedReadingSources;
-  selectionPath?: string;
+  selectionPath: string;
 }): ReadingSelectionResult {
-  const selection = input.selectionPath
-    ? loadValidatedReadingSelection(resolve(input.selectionPath), input.pool, input.readingSources)
-    : deterministicFallbackSelection(input.pool, input.readingSources);
+  const selection = loadValidatedReadingSelection(
+    resolve(input.selectionPath),
+    input.pool,
+    input.readingSources
+  );
 
   return {
     recommendations: recommendationsFromSelection(selection, input.pool),
-    selectionMode: input.selectionPath ? "llm" : "deterministic-fallback",
   };
 }

@@ -1,15 +1,7 @@
-import type { BackendItem, Recommendation } from "../transform/types.js";
-
-export interface MorningHtmlInput {
-  generatedAt?: string;
-  recommendations: BackendItem[];
-  techBlogRecommendations: Recommendation[];
-  aiRecommendations: Recommendation[];
-  geekRecommendations: Recommendation[];
-  targetMinutes?: number;
-  reviewStatus: string;
-  updateExistingCount: number;
-}
+import type {
+  MorningReadingReport,
+  ReadingRecommendation,
+} from "../reading_contracts.js";
 
 function escapeHtml(value: unknown): string {
   return String(value ?? "")
@@ -20,19 +12,15 @@ function escapeHtml(value: unknown): string {
     .replaceAll("'", "&#39;");
 }
 
-function safeHttpsUrl(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" ? url.toString() : null;
-  } catch {
-    return null;
-  }
+function safeHttpsUrl(value: string): string {
+  const url = new URL(value);
+  if (url.protocol !== "https:") throw new Error(`HTTPS가 아닌 추천 URL: ${value}`);
+  return url.toString();
 }
 
-function kstDate(generatedAt?: string): string {
-  const parsed = generatedAt ? new Date(generatedAt) : new Date();
-  const date = Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+function kstDate(generatedAt: string): string {
+  const date = new Date(generatedAt);
+  if (Number.isNaN(date.getTime())) throw new Error(`유효하지 않은 generatedAt: ${generatedAt}`);
   return new Intl.DateTimeFormat("sv-SE", {
     timeZone: "Asia/Seoul",
     year: "numeric",
@@ -41,48 +29,17 @@ function kstDate(generatedAt?: string): string {
   }).format(date);
 }
 
-function titleOf(item: BackendItem | Recommendation | null): string {
-  if (!item) return "추천 없음";
-  const article = "discoveredArticle" in item
-    ? (item as Recommendation).discoveredArticle
-    : undefined;
-  return article?.title || item.title || item.key || "제목 없음";
-}
-
-function linkOf(item: Recommendation): string | null {
-  return safeHttpsUrl(item.discoveredArticle?.url || item.url);
-}
-
-function renderReasons(item: Recommendation): string {
-  const reasons = Array.isArray(item.whyNow) ? item.whyNow : [];
-  const [summary = "핵심 내용을 빠르게 파악할 수 있는 읽을거리입니다.", ...rest] = reasons;
-  const recommendation = rest.length > 0
-    ? rest.join(" ")
-    : "오늘의 관심 주제와 연결해 읽기 좋은 후보입니다.";
-  return `<p class="summary">${escapeHtml(summary)}</p>
-    <p class="reason"><strong>추천 이유</strong>${escapeHtml(recommendation)}</p>`;
-}
-
-function renderMeta(item: Recommendation, kind: "backend" | "reading"): string {
-  const parts: string[] = [];
-  if (kind === "backend" && item.domain) parts.push(escapeHtml(item.domain));
-  if (item.difficulty) parts.push(`난이도 ${escapeHtml(item.difficulty)}`);
-  if (item.estMinutes) parts.push(`${escapeHtml(item.estMinutes)}분`);
-  if (item.source) parts.push(escapeHtml(item.source));
-  if (item.category) parts.push(escapeHtml(item.category));
-  return parts.length > 0 ? `<p class="meta">${parts.join(" · ")}</p>` : "";
-}
-
-function renderCard(item: Recommendation, kind: "backend" | "reading"): string {
-  const title = escapeHtml(titleOf(item));
-  const link = linkOf(item);
-  const heading = link
-    ? `<a href="${escapeHtml(link)}" target="_blank" rel="noreferrer">${title}</a>`
-    : title;
+function renderCard(item: ReadingRecommendation): string {
+  const url = safeHttpsUrl(item.url);
+  const published = item.published
+    ? `<p class="published">게시 ${escapeHtml(item.published)}</p>`
+    : "";
   return `<article class="card">
-    <h3>${heading}</h3>
-    ${renderMeta(item, kind)}
-    ${renderReasons(item)}
+    <h3><a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${escapeHtml(item.title)}</a></h3>
+    <p class="meta">${escapeHtml(item.sourceName)}</p>
+    ${published}
+    <p class="summary">${escapeHtml(item.summary)}</p>
+    <p class="reason"><strong>추천 이유</strong>${escapeHtml(item.reason)}</p>
   </article>`;
 }
 
@@ -90,12 +47,11 @@ function renderSection(
   id: string,
   title: string,
   description: string,
-  items: Recommendation[],
-  kind: "backend" | "reading"
+  items: ReadingRecommendation[]
 ): string {
   const cards = items.length > 0
-    ? items.map((item) => renderCard(item, kind)).join("\n")
-    : '<p class="empty">이번 실행에서 추천할 항목을 찾지 못했습니다.</p>';
+    ? items.map(renderCard).join("\n")
+    : '<p class="empty">이번 실행에서 추천할 글을 찾지 못했습니다.</p>';
   return `<section id="${escapeHtml(id)}">
     <div class="section-heading">
       <div><p class="eyebrow">${escapeHtml(description)}</p><h2>${escapeHtml(title)}</h2></div>
@@ -105,25 +61,14 @@ function renderSection(
   </section>`;
 }
 
-export function morningHtmlFilename(generatedAt?: string): string {
+export function morningHtmlFilename(generatedAt: string): string {
   return `morning-reading-${kstDate(generatedAt)}.html`;
 }
 
-export function buildMorningHtml(input: MorningHtmlInput): string {
-  const date = kstDate(input.generatedAt);
-  const allItems = [
-    ...input.recommendations,
-    ...input.techBlogRecommendations,
-    ...input.aiRecommendations,
-    ...input.geekRecommendations,
-  ];
-  const estimatedMinutes = allItems.reduce(
-    (sum, item) => sum + (typeof item.estMinutes === "number" ? item.estMinutes : 0),
-    0
-  );
-  const reviewNote = input.reviewStatus === "ok"
-    ? `기존 자료와 겹치는 후보 ${input.updateExistingCount}건은 새 문서보다 보강 대상으로 분류했습니다.`
-    : "중복 후보의 의미 검토가 끝나지 않아 기존 자료 보강 판단은 잠정적입니다.";
+export function buildMorningHtml(report: MorningReadingReport): string {
+  const date = kstDate(report.generatedAt);
+  const recommendationCount =
+    report.recommendations.techBlog.length + report.recommendations.geek.length;
 
   return `<!doctype html>
 <html lang="ko">
@@ -153,6 +98,7 @@ export function buildMorningHtml(input: MorningHtmlInput): string {
     .card a { color:inherit; text-decoration-color:#a9b5ff; text-underline-offset:4px; }
     .card a:hover { color:var(--accent); }
     .meta { margin:10px 0 0; color:var(--green); font-size:.82rem; font-weight:750; }
+    .published { margin:4px 0 0; color:var(--muted); font-size:.78rem; }
     .summary { margin:16px 0 0; color:var(--muted); font-size:.93rem; }
     .reason { margin:14px 0 0; padding-top:14px; border-top:1px solid var(--line); color:var(--muted); font-size:.88rem; }
     .reason strong { display:block; margin-bottom:3px; color:var(--ink); font-size:.78rem; }
@@ -166,19 +112,17 @@ export function buildMorningHtml(input: MorningHtmlInput): string {
   <header class="hero">
     <p class="eyebrow">Career OS · ${escapeHtml(date)}</p>
     <h1>오늘 아침 읽을거리</h1>
-    <p class="lead">출근 후 하루 학습을 시작할 때 읽고 생각할 내용을 카테고리별로 정리했습니다. 모두 읽기보다 오늘 필요한 순서대로 골라 보세요.</p>
+    <p class="lead">등록된 외부 소스에서 오늘 읽을 만한 글을 골랐습니다. 회사 기술 블로그를 먼저 읽고 개발 동향을 이어서 살펴보세요.</p>
     <div class="overview">
-      <span>${allItems.length}개 읽을거리</span>
-      <span>예상 ${estimatedMinutes}분</span>
-      <span>하루 학습 목표 ${escapeHtml(input.targetMinutes ?? 120)}분</span>
+      <span>${recommendationCount}개 추천</span>
+      <span>${report.counts.collectedArticles}개 글 검토</span>
+      <span>${report.counts.sourcesWithCandidates}/${report.counts.activeSources}개 소스 응답</span>
     </div>
   </header>
-  ${renderSection("tech-blog", "회사 기술 블로그", "먼저 읽는 운영 사례", input.techBlogRecommendations, "reading")}
-  ${renderSection("geek", "GeekNews와 개발 동향", "다음으로 훑는 업계 신호", input.geekRecommendations, "reading")}
-  ${renderSection("ai", "AI 실전 읽을거리", "제품과 운영 관점", input.aiRecommendations, "reading")}
-  ${renderSection("backend", "백엔드 공부 후보", "에이전트가 제안한 심화 주제", input.recommendations, "backend")}
-  <aside class="note">${escapeHtml(reviewNote)}</aside>
-  <footer>이 리포트는 하루 학습의 시작점을 고르는 공개 가능한 아침 읽을거리입니다.</footer>
+  ${renderSection("tech-blog", "회사 기술 블로그", "먼저 읽는 운영 사례", report.recommendations.techBlog)}
+  ${renderSection("geek", "GeekNews와 개발 동향", "다음으로 훑는 업계 신호", report.recommendations.geek)}
+  <aside class="note">추천은 이 실행에서 외부 소스로부터 수집한 글만 사용했습니다.</aside>
+  <footer>이 리포트에는 공개 URL과 공개 가능한 추천 설명만 포함합니다.</footer>
 </main>
 </body>
 </html>

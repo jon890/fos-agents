@@ -1,29 +1,13 @@
 #!/usr/bin/env bun
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { externalReadingSources } from "../../config/external-reading-sources.js";
 import {
   READING_CATEGORIES,
   type ReadingCategory,
   type ReadingSource,
-  toReadingSourcesV2,
-  validateReadingSources,
+  parseReadingSourcesConfig,
 } from "./reading_sources.js";
 
-const ROOT = process.env.CAREER_OS_ROOT
-  ? resolve(process.env.CAREER_OS_ROOT)
-  : resolve(import.meta.dir, "..", "..");
-const CONFIG_PATH = resolve(ROOT, "config", "external-reading-sources.json");
-
-function loadConfig() {
-  if (!existsSync(CONFIG_PATH)) throw new Error(`설정 파일이 없다: ${CONFIG_PATH}`);
-  return toReadingSourcesV2(JSON.parse(readFileSync(CONFIG_PATH, "utf8")) as unknown);
-}
-
-function saveConfig(config: ReturnType<typeof loadConfig>): void {
-  const errors = validateReadingSources(config);
-  if (errors.length > 0) throw new Error(errors.join("\n"));
-  writeFileSync(CONFIG_PATH, `${JSON.stringify(config, null, 2)}\n`, "utf8");
-}
+const config = parseReadingSourcesConfig(externalReadingSources);
 
 function option(name: string): string | undefined {
   const index = process.argv.indexOf(`--${name}`);
@@ -44,31 +28,22 @@ function categoryOption(): ReadingCategory {
   return value as ReadingCategory;
 }
 
-function sourceByKey(sources: ReadingSource[], key: string): ReadingSource {
-  const source = sources.find((item) => item.key === key);
-  if (!source) throw new Error(`소스를 찾을 수 없다: ${key}`);
-  return source;
-}
-
 function printHelp(): void {
   console.log(`외부 읽을거리 소스 관리
 
 사용법:
   manage_reading_sources.ts validate
-  manage_reading_sources.ts list [--category techBlog|ai|geek] [--include-disabled]
-  manage_reading_sources.ts add --category <값> --key <키> --title <제목> [옵션]
-  manage_reading_sources.ts enable <키>
-  manage_reading_sources.ts disable <키>
-  manage_reading_sources.ts set-slots <카테고리> <숫자>
-  manage_reading_sources.ts normalize
+  manage_reading_sources.ts list [--category techBlog|geek] [--include-disabled]
+  manage_reading_sources.ts template --category <값> --key <키> --title <제목> [옵션]
 
-add 옵션:
-  --source <출처> --url <HTTPS URL> --feed-url <HTTPS URL>
-  --adapter <feed|page> --minutes <분>`);
+template 옵션:
+  --url <HTTPS URL> --feed-url <HTTPS URL>
+  --adapter <feed|page>
+
+정본: config/external-reading-sources.ts`);
 }
 
 function listSources(): void {
-  const config = loadConfig();
   const category = option("category");
   const includeDisabled = process.argv.includes("--include-disabled");
   const items = config.sources
@@ -85,77 +60,33 @@ function listSources(): void {
   console.log(JSON.stringify(items, null, 2));
 }
 
-function addSource(): void {
-  const config = loadConfig();
-  const key = requiredOption("key");
-  if (config.sources.some((item) => item.key === key)) throw new Error(`이미 존재하는 key다: ${key}`);
-  const minutes = option("minutes");
+function printTemplate(): void {
   const source: ReadingSource = {
-    key,
+    key: requiredOption("key"),
     category: categoryOption(),
     title: requiredOption("title"),
     enabled: true,
   };
-  if (option("source")) source.source = option("source");
   if (option("url")) source.url = option("url");
   if (option("feed-url")) source.feedUrl = option("feed-url");
   if (option("adapter")) source.adapter = option("adapter") as ReadingSource["adapter"];
-  if (minutes) source.estMinutes = Number(minutes);
-  config.sources.push(source);
-  saveConfig(config);
-  console.log(JSON.stringify({ status: "added", key }, null, 2));
-}
-
-function setEnabled(enabled: boolean): void {
-  const config = loadConfig();
-  const key = process.argv[3];
-  if (!key) throw new Error("소스 key가 필요하다.");
-  sourceByKey(config.sources, key).enabled = enabled;
-  saveConfig(config);
-  console.log(JSON.stringify({ status: enabled ? "enabled" : "disabled", key }, null, 2));
-}
-
-function setSlots(): void {
-  const config = loadConfig();
-  const category = process.argv[3];
-  const slots = Number(process.argv[4]);
-  if (!READING_CATEGORIES.includes(category as ReadingCategory) || !Number.isInteger(slots) || slots < 0) {
-    throw new Error("카테고리와 0 이상의 정수 slots가 필요하다.");
-  }
-  config.categories[category as ReadingCategory].slots = slots;
-  saveConfig(config);
-  console.log(JSON.stringify({ status: "slots-updated", category, slots }, null, 2));
-}
-
-function validateConfig(): void {
-  const config = loadConfig();
-  const errors = validateReadingSources(config);
-  if (errors.length > 0) throw new Error(errors.join("\n"));
-  const counts = Object.fromEntries(
-    READING_CATEGORIES.map((category) => [
-      category,
-      config.sources.filter((item) => item.category === category && item.enabled !== false).length,
-    ])
-  );
-  console.log(JSON.stringify({ status: "ok", schemaVersion: 2, counts }, null, 2));
-}
-
-function normalizeConfig(): void {
-  const config = loadConfig();
-  saveConfig(config);
-  console.log(JSON.stringify({ status: "normalized", schemaVersion: 2, sources: config.sources.length }, null, 2));
+  parseReadingSourcesConfig({ ...config, sources: [...config.sources, source] });
+  console.log(JSON.stringify(source, null, 2));
 }
 
 function main(): void {
   const command = process.argv[2] ?? "help";
   if (command === "help" || command === "--help" || command === "-h") return printHelp();
-  if (command === "validate") return validateConfig();
+  if (command === "validate") {
+    console.log(JSON.stringify({
+      status: "ok",
+      schemaVersion: config._meta.schemaVersion,
+      sources: config.sources.length,
+    }, null, 2));
+    return;
+  }
   if (command === "list") return listSources();
-  if (command === "add") return addSource();
-  if (command === "enable") return setEnabled(true);
-  if (command === "disable") return setEnabled(false);
-  if (command === "set-slots") return setSlots();
-  if (command === "normalize") return normalizeConfig();
+  if (command === "template") return printTemplate();
   throw new Error(`알 수 없는 명령: ${command}`);
 }
 

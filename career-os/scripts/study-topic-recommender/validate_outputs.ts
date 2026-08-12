@@ -1,20 +1,14 @@
 #!/usr/bin/env bun
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
+import { morningReadingReportSchema } from "./reading_contracts.js";
 import { morningHtmlFilename } from "./render/html.js";
 
 const ROOT = process.env.CAREER_OS_ROOT
   ? resolve(process.env.CAREER_OS_ROOT)
   : resolve(import.meta.dir, "..", "..");
-const inventoryPath = resolve(ROOT, "state", "topic-inventory.json");
-const markdownPath = resolve(ROOT, "reports", "morning-topic-recommendation.md");
-const requiredKeys = [
-  "generatedAt",
-  "recommendations",
-  "techBlogRecommendations",
-  "aiRecommendations",
-  "geekRecommendations",
-];
+const reportPath = resolve(ROOT, "state", "morning-reading.json");
+const markdownPath = resolve(ROOT, "reports", "morning-reading.md");
 const forbiddenHtmlPatterns = [
   /\/Users\//,
   /\/home\//,
@@ -25,16 +19,17 @@ const forbiddenHtmlPatterns = [
 ];
 
 function requireFile(path: string): void {
-  if (!existsSync(path) || statSync(path).size === 0) throw new Error(`산출물이 없거나 비어 있다: ${path}`);
+  if (!existsSync(path) || statSync(path).size === 0) {
+    throw new Error(`산출물이 없거나 비어 있다: ${path}`);
+  }
 }
 
 function main(): void {
-  requireFile(inventoryPath);
+  requireFile(reportPath);
   requireFile(markdownPath);
-  const inventory = JSON.parse(readFileSync(inventoryPath, "utf8")) as Record<string, unknown>;
-  const missing = requiredKeys.filter((key) => !(key in inventory));
-  if (missing.length > 0) throw new Error(`topic-inventory.json 누락 키: ${missing.join(", ")}`);
-
+  const report = morningReadingReportSchema.parse(
+    JSON.parse(readFileSync(reportPath, "utf8")) as unknown
+  );
   const markdownLines = readFileSync(markdownPath, "utf8").split(/\r?\n/).length;
   if (markdownLines < 10) throw new Error(`마크다운이 너무 짧다: ${markdownLines}줄`);
 
@@ -42,7 +37,7 @@ function main(): void {
     ROOT,
     "reports",
     "downloads",
-    morningHtmlFilename(String(inventory.generatedAt ?? ""))
+    morningHtmlFilename(report.generatedAt)
   );
   requireFile(htmlPath);
   const html = readFileSync(htmlPath, "utf8");
@@ -55,7 +50,7 @@ function main(): void {
 
   console.log(JSON.stringify({
     status: "ok",
-    inventory: inventoryPath,
+    report: reportPath,
     markdown: markdownPath,
     html: htmlPath,
     markdownLines,

@@ -1,42 +1,55 @@
 import { describe, expect, test } from "bun:test";
-import { normalizeReadingSources, toReadingSourcesV2, validateReadingSources } from "./reading_sources.js";
+import {
+  normalizeReadingSources,
+  parseReadingSourcesConfig,
+  validateReadingSources,
+} from "./reading_sources.js";
+
+function config(sources: unknown[]) {
+  return {
+    _meta: {
+      purpose: "테스트 외부 읽을거리 소스",
+      schemaVersion: 3,
+    },
+    categories: {
+      techBlog: { slots: 2 },
+      geek: { slots: 1 },
+    },
+    sources,
+  };
+}
 
 describe("외부 읽을거리 소스", () => {
-  test("이전 카테고리 구조를 공통 소스 구조로 변환한다", () => {
-    const converted = toReadingSourcesV2({
-      techBlog: { items: [{ key: "blog", title: "블로그", url: "https://example.com" }] },
-      ai: { items: [{ key: "ai", title: "AI" }] },
+  test("이전 스키마를 묵시적으로 보정하지 않는다", () => {
+    expect(() => parseReadingSourcesConfig({
+      techBlog: { items: [] },
       geek: { items: [] },
-    });
-
-    expect(converted._meta.schemaVersion).toBe(2);
-    expect(converted.sources[0].category).toBe("techBlog");
-    expect(converted.sources[0].enabled).toBe(true);
-    expect(validateReadingSources(converted)).toEqual([]);
+    })).toThrow("외부 읽을거리 설정 오류");
   });
 
   test("비활성 소스만 제외하고 등록 순서를 유지한다", () => {
-    const normalized = normalizeReadingSources({
-      categories: {
-        techBlog: { label: "기술 블로그", slots: 2, requireDiscoveredArticle: true },
-        ai: { label: "AI", slots: 1, requireDiscoveredArticle: false },
-        geek: { label: "동향", slots: 1, requireDiscoveredArticle: false },
-      },
-      sources: [
-        { key: "later", title: "나중", category: "techBlog" },
-        { key: "first", title: "먼저", category: "techBlog" },
-        { key: "off", title: "끔", category: "techBlog", enabled: false },
-      ],
-    });
+    const normalized = normalizeReadingSources(config([
+      { key: "later", title: "나중", category: "techBlog", url: "https://later.example.com" },
+      { key: "first", title: "먼저", category: "techBlog", url: "https://first.example.com" },
+      { key: "off", title: "끔", category: "techBlog", url: "https://off.example.com", enabled: false },
+    ]));
 
     expect(normalized.itemsByCategory.techBlog.map((item) => item.key))
       .toEqual(["later", "first"]);
   });
 
   test("평문 HTTP URL을 거부한다", () => {
-    const converted = toReadingSourcesV2({
-      sources: [{ key: "bad", title: "잘못된 소스", category: "ai", url: "http://example.com" }],
-    });
-    expect(validateReadingSources(converted)).toContain("bad.url는 HTTPS URL이어야 한다.");
+    const errors = validateReadingSources(config([
+      { key: "bad", title: "잘못된 소스", category: "geek", url: "http://example.com" },
+    ]));
+    expect(errors.some((error) => error.includes("sources.0.url") && error.includes("HTTPS URL")))
+      .toBe(true);
+  });
+
+  test("제목 누락을 key로 채우지 않고 거부한다", () => {
+    const errors = validateReadingSources(config([
+      { key: "missing-title", category: "geek", url: "https://example.com" },
+    ]));
+    expect(errors.some((error) => error.includes("sources.0.title"))).toBe(true);
   });
 });

@@ -24,7 +24,7 @@ describe("읽을거리 소스 어댑터", () => {
     })?.id).toBe("feed");
     expect(resolveReadingSourceAdapter({
       key: "page",
-      category: "ai",
+      category: "geek",
       title: "페이지",
       url: "https://example.com",
     })?.id).toBe("page");

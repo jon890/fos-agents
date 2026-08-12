@@ -1,7 +1,7 @@
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
-import type { HistoryEntry } from "../transform/types.js";
+import type { ReadingHistoryEntry } from "../reading_contracts.js";
 
-function parseHistoryLine(line: string): HistoryEntry | undefined {
+function parseHistoryLine(line: string): ReadingHistoryEntry | undefined {
   try {
     const value = JSON.parse(line) as unknown;
     if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
@@ -14,10 +14,6 @@ function parseHistoryLine(line: string): HistoryEntry | undefined {
     };
     return {
       generatedAt: typeof record.generatedAt === "string" ? record.generatedAt : undefined,
-      keys: stringArray("keys"),
-      techBlogKeys: stringArray("techBlogKeys"),
-      aiKeys: stringArray("aiKeys"),
-      geekKeys: stringArray("geekKeys"),
       articleUrls: stringArray("articleUrls"),
     };
   } catch {
@@ -25,7 +21,7 @@ function parseHistoryLine(line: string): HistoryEntry | undefined {
   }
 }
 
-export function loadRecentHistory(path: string, maxEntries: number): HistoryEntry[] {
+export function loadRecentHistory(path: string, maxEntries: number): ReadingHistoryEntry[] {
   if (!existsSync(path)) return [];
   try {
     return readFileSync(path, "utf8")
@@ -33,23 +29,18 @@ export function loadRecentHistory(path: string, maxEntries: number): HistoryEntr
       .map((line) => line.trim())
       .filter(Boolean)
       .map(parseHistoryLine)
-      .filter((entry): entry is HistoryEntry => entry !== undefined)
+      .filter((entry): entry is ReadingHistoryEntry => entry !== undefined)
       .slice(-maxEntries);
   } catch {
     return [];
   }
 }
 
-export function loadLatestKeys(path: string): Set<string> {
-  const [latest] = loadRecentHistory(path, 1);
-  return new Set(latest?.keys ?? []);
-}
-
 export function appendHistory(
   path: string,
-  payload: Omit<HistoryEntry, "generatedAt">
+  payload: Omit<ReadingHistoryEntry, "generatedAt">
 ): void {
-  const entry: HistoryEntry = {
+  const entry: ReadingHistoryEntry = {
     generatedAt: new Date().toISOString(),
     ...payload,
   };

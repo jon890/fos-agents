@@ -1,8 +1,9 @@
 #!/usr/bin/env bun
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { externalReadingSources } from "../../config/external-reading-sources.js";
 import {
-  loadReadingSources,
+  normalizeReadingSources,
   type ReadingCategory,
   type ReadingSource,
 } from "./reading_sources.js";
@@ -22,10 +23,9 @@ export type ReliabilityAssessment = {
 const ROOT = process.env.CAREER_OS_ROOT
   ? resolve(process.env.CAREER_OS_ROOT)
   : resolve(import.meta.dir, "..", "..");
-const CONFIG_PATH = resolve(ROOT, "config", "external-reading-sources.json");
 const DOWNLOADS = resolve(ROOT, "reports", "downloads");
 const COMMUNITY_HOSTS = new Set(["news.hada.io", "news.ycombinator.com"]);
-const CATEGORY_ORDER: ReadingCategory[] = ["techBlog", "geek", "ai"];
+const CATEGORY_ORDER: ReadingCategory[] = ["techBlog", "geek"];
 
 function escapeHtml(value: unknown): string {
   return String(value ?? "")
@@ -132,7 +132,7 @@ function renderCard(
   feedProbe: ProbeResult
 ): string {
   const url = safeHttpsUrl(source.url);
-  const title = escapeHtml(source.source || source.title);
+  const title = escapeHtml(source.title);
   const heading = url
     ? `<a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${title}</a>`
     : title;
@@ -142,7 +142,6 @@ function renderCard(
   return `<article class="card">
     <div class="card-head"><span class="priority">활성 소스</span><span class="grade ${gradeClass}">${assessment.grade} · ${assessment.score}</span></div>
     <h3>${heading}</h3>
-    <p class="topic">${escapeHtml(source.title)}</p>
     <p class="type">${escapeHtml(assessment.sourceType)}</p>
     <p class="reason">${escapeHtml(assessment.reason)}</p>
     <dl>
@@ -164,10 +163,10 @@ export function buildSourceCatalogHtml(input: {
   const categoryLabels: Record<ReadingCategory, string> = {
     techBlog: "회사 기술 블로그",
     geek: "GeekNews와 개발 동향",
-    ai: "AI 실전 소스",
   };
   const sections = CATEGORY_ORDER.map((category) => {
     const sources = input.sources.filter((source) => source.category === category);
+    if (sources.length === 0) return "";
     const cards = sources.map((source) => renderCard(
       source,
       input.assessments.get(source.key)!,
@@ -193,7 +192,7 @@ export function buildSourceCatalogHtml(input: {
   <header class="hero">
     <p class="eyebrow">Career OS · ${escapeHtml(input.date)}</p>
     <h1>학습 읽을거리 소스 현황</h1>
-    <p class="lead">현재 활성화된 기술 블로그, 개발 동향, AI 학습 소스를 한눈에 확인할 수 있도록 정리했습니다.</p>
+    <p class="lead">현재 활성화된 기술 블로그와 개발 동향 소스를 한눈에 확인할 수 있도록 정리했습니다.</p>
     <div class="metrics"><span>전체 ${input.sources.length}개</span><span>신뢰도 높음 ${gradeCounts.높음}</span><span>보통 ${gradeCounts.보통}</span><span>낮음 ${gradeCounts.낮음}</span></div>
     <p class="method">신뢰도는 내용의 무조건적인 진실성을 뜻하지 않습니다. 발행 주체의 직접성, HTTPS 원문, RSS 제공, 이번 실행의 HTTP 응답 여부를 합산한 원문 추적성 지표입니다. 커뮤니티 글은 반드시 링크된 1차 출처를 다시 확인해야 합니다.</p>
   </header>
@@ -205,7 +204,7 @@ export function buildSourceCatalogHtml(input: {
 
 async function main(): Promise<void> {
   const liveCheck = !process.argv.includes("--offline");
-  const readingSources = loadReadingSources(CONFIG_PATH);
+  const readingSources = normalizeReadingSources(externalReadingSources);
   const pageProbes = new Map<string, ProbeResult>();
   const feedProbes = new Map<string, ProbeResult>();
 
