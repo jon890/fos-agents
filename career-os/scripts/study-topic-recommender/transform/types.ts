@@ -44,7 +44,6 @@ export interface HistoryEntry {
   aiKeys?: string[];
   geekKeys?: string[];
   articleUrls?: string[];
-  todayPickKeys?: Record<string, string | null>;
   [key: string]: unknown;
 }
 
@@ -61,12 +60,6 @@ export interface Recommendation extends TopicItem, ReservoirItem {
     url: string;
     published: string;
   };
-}
-
-export interface SourcesConfig {
-  techBlog?: { items: ReservoirItem[] };
-  ai?: { items: ReservoirItem[] };
-  geek?: { items: ReservoirItem[] };
 }
 
 export interface UpdateExistingItem {

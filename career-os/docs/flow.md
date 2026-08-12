@@ -70,9 +70,12 @@ career-os의 표준 진입점은 agent skill 직접 호출이다.
 
 ```text
 Use skill: /study-topic-recommender
-  -> 현재 학습 상태, 후보 풀, fos-study inventory 읽기
-  -> 오늘의 학습 후보와 보강 후보 생성
-  -> reports/morning-topic-recommendation.md 작성
+  -> 외부 소스 설정과 최근 추천 이력 읽기
+  -> 여러 회사의 기술 블로그와 GeekNews 원문 우선 수집
+  -> 학습 상태, 후보 풀, fos-study inventory 읽기
+  -> 에이전트가 제안한 백엔드 공부 후보를 별도 선정
+  -> topic-inventory.json에서 Markdown과 공개용 HTML 파생
+  -> 외부 게시 요청이면 report-publisher로 HTML 검사·게시
   -> 사용자가 주제 선택
   -> Use skill: /study-pack-writer <topic>
   -> 공개 가능한 기술 주제로 정규화
@@ -86,7 +89,7 @@ Use skill: /study-topic-recommender
 ```text
 scheduled daily recommendation
   -> topic inventory refresh
-  -> 상위 추천 3개와 action snapshot 생성
+  -> 하루 분량의 카테고리별 읽을거리와 action snapshot 생성
   -> 공개 가능한 요약 반환
   -> 사용자가 버튼 또는 자연어로 초안 생성을 요청
   -> study-pack-writer 실행 요청으로 연결
@@ -100,6 +103,7 @@ scheduled daily recommendation
 
 - `state/topic-inventory.json`
 - `reports/morning-topic-recommendation.md`
+- `reports/downloads/morning-reading-YYYY-MM-DD.html`
 - `state/study-topic-candidate-refresh.{json,md}`
 - `state/study-topic-actions/YYYY-MM-DD.json`
 - `sources/fos-study/<category>/<topic>.md`

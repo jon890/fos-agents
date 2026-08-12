@@ -8,12 +8,18 @@ type StudyRecommendation = {
   key?: string;
   title?: string;
   domain?: string;
+  source?: string;
   whyNow?: string[];
+  url?: string;
+  discoveredArticle?: { title?: string; url?: string };
 };
 
 type TopicInventory = {
   generatedAt?: string;
   recommendations?: StudyRecommendation[];
+  techBlogRecommendations?: StudyRecommendation[];
+  geekRecommendations?: StudyRecommendation[];
+  aiRecommendations?: StudyRecommendation[];
   updateExistingRecommendations?: Array<{ key?: string; candidatePath?: string }>;
 };
 
@@ -47,7 +53,7 @@ function kstParts(date = new Date()): { date: string; short: string } {
 }
 
 function titleOf(item: StudyRecommendation): string {
-  return item.title || item.key || "(untitled)";
+  return item.discoveredArticle?.title || item.title || item.key || "(untitled)";
 }
 
 function reasonOf(item: StudyRecommendation): string {
@@ -84,7 +90,7 @@ function readInventory(): TopicInventory {
 }
 
 function buildMessage(inventory: TopicInventory, today = kstParts()): string {
-  const items = inventory.recommendations?.slice(0, 3) ?? [];
+  const items = inventory.recommendations ?? [];
   const domains = [...new Set(items.map((item) => item.domain).filter(Boolean))];
   const avoided = (inventory.updateExistingRecommendations ?? [])
     .slice(0, 4)
@@ -93,17 +99,28 @@ function buildMessage(inventory: TopicInventory, today = kstParts()): string {
     .map(humanizeKey);
 
   const lines: string[] = [
-    `오늘의 백엔드 학습 추천 (${today.short})`,
-    "다음 지원 루프 대비 — 백엔드 운영·정합성·지원동기 보강에 연결하기 좋은 주제를 골랐어요.",
-    "",
-    "오늘의 백엔드 3선",
+    `오늘 아침 읽을거리 (${today.short})`,
+    "회사 기술 블로그와 개발 동향을 먼저 보고, 백엔드 공부 후보를 별도로 정리했어요.",
   ];
 
-  items.forEach((item, index) => {
-    lines.push(`${index + 1}. ${titleOf(item)} — ${reasonOf(item)}`);
-  });
+  const sections: Array<[string, StudyRecommendation[]]> = [
+    ["회사 기술 블로그", inventory.techBlogRecommendations ?? []],
+    ["GeekNews와 개발 동향", inventory.geekRecommendations ?? []],
+    ["AI 실전 읽을거리", inventory.aiRecommendations ?? []],
+    ["백엔드 공부 후보", items],
+  ];
+  for (const [title, recommendations] of sections) {
+    lines.push("", title);
+    if (recommendations.length === 0) {
+      lines.push("- 추천 없음");
+      continue;
+    }
+    recommendations.forEach((item) => {
+      lines.push(`- ${titleOf(item)} — ${reasonOf(item)}`);
+    });
+  }
 
-  lines.push("", "왜 이 셋인가");
+  lines.push("", "백엔드 후보 선정 이유");
   if (domains.length > 0) {
     lines.push(`- ${domains.join(", ")} 축을 묶어서 운영 환경에서 생기는 장애 전파, 정합성, 관찰성 질문에 답하기 좋음.`);
   }
@@ -121,7 +138,7 @@ function buildMessage(inventory: TopicInventory, today = kstParts()): string {
 
 function writeActionSnapshot(inventory: TopicInventory, today = kstParts()): void {
   mkdirSync(actionDir, { recursive: true });
-  const recommendations = (inventory.recommendations ?? []).slice(0, 3).map((item, index) => ({
+  const recommendations = (inventory.recommendations ?? []).map((item, index) => ({
     index: index + 1,
     key: item.key,
     title: item.title,

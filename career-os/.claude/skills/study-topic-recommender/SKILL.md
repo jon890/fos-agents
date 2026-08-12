@@ -1,311 +1,275 @@
 ---
 name: study-topic-recommender
-description: backend 면접 준비용 morning 학습 토픽 추천, RSS feed 기반 후보 풀 보충, 학습 완료 토픽 promote 후보 산출, live-coding seed 선택을 통합 처리하는 career-os skill. "오늘 뭐 공부할까", "morning recommend", "오늘 학습 추천", "토픽 풀 갱신", "추천 갱신", "study topic 추천", "live-coding 1개 골라줘", "아침 학습 추천", `/study-topic-recommender`처럼 학습 주제 추천이나 후보 풀 갱신이 필요할 때 사용. 호출 시마다 replenish + recommend + promote 판단을 수행하지만 fos-study publish와 자동 config 수정은 하지 않는다.
+description: 백엔드 면접 준비를 위한 아침 학습 주제를 추천하고, RSS 기반 읽을거리 수집, 후보 풀 보충, 기존 문서 보강 판단, 라이브 코딩 주제 선택을 처리하는 career-os 스킬. "오늘 뭐 공부할까", "오늘 학습 추천", "토픽 풀 갱신", "추천 갱신", "학습 주제 추천", "라이브 코딩 1개 골라줘", `/study-topic-recommender`처럼 매일 공부할 주제나 읽을거리 추천이 필요할 때 사용한다. 공개 가능한 HTML 리포트를 함께 만들며, 사용자가 공유 URL이나 외부 게시를 요청하면 report-publisher로 게시한다.
 ---
 
-# Study Topic Recommender
+# 매일 학습 주제 추천
 
-backend 면접 준비용 morning 토픽 추천 통합 skill. replenish + recommend + promote 흐름을 단일 호출로 자동 처리.
+백엔드 면접 준비에 필요한 학습 주제와 기술 읽을거리를 한 번에 추천한다.
+후보 보충, 추천, 기존 문서 보강 판단을 단일 흐름으로 처리한다.
 
-## 호출 후 범위 해석
+## 요청 해석
 
-- 추천 요청이면 morning topic 추천을 생성한다.
-- 토픽 풀 갱신 신호가 있으면 RSS/feed 기반 후보 보충을 포함한다.
-- live-coding 신호가 있으면 seed 선택을 포함한다.
-- 실제 문서 작성은 `study-pack-writer`로 위임하고, promote 후보는 사용자 확인 후 수동 적용한다.
+- 일반 추천 요청이면 오늘의 학습 주제와 읽을거리를 생성한다.
+- 후보 풀 갱신 요청이면 RSS와 현재 학습 상태를 반영해 후보를 보충한다.
+- 라이브 코딩 요청이면 연습 문제 후보를 하나 고른다.
+- 실제 학습 문서 작성은 `study-pack-writer`에 맡긴다.
+- 후보 승격과 설정 변경은 사용자 확인 없이 자동 적용하지 않는다.
+- 외부 게시 요청이 있으면 HTML 생성 후 `report-publisher`를 사용한다.
 
-## Inputs
+## 입력
 
-현재 에이전트는 다음 파일과 명령 출력을 직접 로드:
+다음 파일과 명령 출력을 직접 읽는다.
 
-1. `career-os/sources/fos-study/**/*.md` — 학습 문서 inventory 정본. exclude `.git/**`, `.claude/**`, `private/**`.
-2. `career-os/config/study-pack-topics.json` — 선택 사항. 전체 목록 정본이 아니라 사람이 고른 override/fallback 후보.
-3. `career-os/state/study-pack-candidates.json` — 선택 사항. 전체 reservoir 정본이 아니라 seed/fallback 후보.
-4. `career-os/config/external-reading-sources.json` — `techBlog / ai / geek` 외부 reading reservoir items (feedUrl, filterKeywords 포함)
-5. `career-os/config/live-coding-seed-pool.json` — primary live-coding seed pool
-6. `career-os/config/live-coding-seed-candidates.json` — candidate live-coding seeds
-7. `career-os/state/study-progress.json` — 이미 공부한 주제와 현재 보강 영역
-8. `career-os/config/study-preferences.json` — 사용자의 관심 축과 추천 철학. 현재 target 중복값은 요구하지 않음.
-9. `career-os/state/topic-inventory-history.jsonl` — 최근 추천 history (cooldown 계산, 없으면 skip)
+1. `career-os/sources/fos-study/**/*.md`
+   - 학습 문서 목록의 단일 출처다.
+   - `.git/**`, `.claude/**`, `private/**`는 제외한다.
+2. `career-os/config/study-pack-topics.json`
+   - 사람이 선택한 우선 후보와 예비 후보를 담는다.
+3. `career-os/state/study-pack-candidates.json`
+   - 자동 생성한 후보와 예비 후보를 담는다.
+4. `career-os/config/external-reading-sources.json`
+   - 기술 블로그, AI, 개발 동향 읽을거리와 RSS 설정을 담는다.
+5. `career-os/config/live-coding-seed-pool.json`
+   - 우선 라이브 코딩 문제 목록이다.
+6. `career-os/config/live-coding-seed-candidates.json`
+   - 예비 라이브 코딩 문제 목록이다.
+7. `career-os/state/study-progress.json`
+   - 이미 공부한 주제와 보강 영역을 담는다.
+8. `career-os/config/study-preferences.json`
+   - 사용자의 관심 축과 추천 원칙을 담는다.
+9. `career-os/state/topic-inventory-history.jsonl`
+   - 최근 추천 이력과 반복 방지 계산에 사용한다.
 
-fos-study 산출물 진실원 (ADR-033): `career-os/sources/fos-study/` 트리의 `**/*.md` 직접 스캔.
-promote 판단 기준도 이 스캔 결과 기반 — 외부 아티팩트 목록 파일 불필요.
-config 일부가 없거나 JSON parse에 실패해도 실제 fos-study inventory와 deterministic fallback 후보로 추천을 계속한다.
+`sources/fos-study/` 실제 파일 트리를 학습 산출물의 단일 출처로 사용한다.
+일부 설정 파일이 없거나 JSON 해석에 실패해도 실제 파일 목록과 결정론적 예비 후보로 추천을 계속한다.
 
-## Recommendation philosophy
+## 추천 원칙
 
-The TypeScript inventory script is a candidate generator and diversity guardrail, not the final brain.
-After inventory generation, use LLM reasoning to choose and explain what matters today:
+TypeScript 목록 생성기는 후보와 다양성 안전장치를 제공한다.
+최종 추천과 설명은 현재 에이전트가 다음 기준으로 다듬는다.
 
-- reflect already studied topics and generated fos-study artifacts
-- reflect the current target, interview date, and first-round readiness
-- reflect the user's interest axes in `study-preferences.json`
-- avoid stale weak-area assumptions, especially generic DB tuning, unless the specific topic is useful for today's interview context
-- do not merely rotate a fixed pool when another topic better fits the current learning arc
+- 이미 공부했거나 학습 문서가 존재하는 주제를 반복하지 않는다.
+- 현재 목표, 면접 일정, 1차 면접 준비도를 반영한다.
+- `study-preferences.json`의 관심 축을 반영한다.
+- 오래된 약점 가정에 매이지 않는다.
+- 일반적인 DB 튜닝은 오늘의 맥락에 실제로 도움이 될 때만 추천한다.
+- 더 적합한 주제가 있으면 고정 후보를 단순 순환하지 않는다.
+- 여러 회사의 기술 블로그와 GeekNews 계열 읽을거리를 먼저 제시한다.
+- 에이전트가 제안한 백엔드 공부 후보는 외부 읽을거리와 분리한다.
 
-## Workflow
+## 실행 흐름
 
-### 1. Promote 자동 detect
+### 1. 승격 후보 확인
 
-`state/topic-inventory-history.jsonl`의 최근 history entry에서 `study-pack-candidates` namespace에 있는 key 중 `sources/fos-study/<item.promotionTarget.outputPath>.md`가 실제로 존재하면 candidate → override 후보 승격 대상으로 판단한다.
+`state/topic-inventory-history.jsonl`의 최근 이력을 읽는다.
+`study-pack-candidates` 후보의 `promotionTarget.outputPath`에 해당하는 문서가 `sources/fos-study/`에 생겼으면 승격 후보로 본다.
 
-승격 후보가 있으면 사용자에게 안내 후 `config/study-pack-topics.json` / `state/study-pack-candidates.json` 수정 권유. 자동 수정은 하지 않는다 (사람 확인 필요). 안내 후 Step 2로 계속 진행 (사용자 응답 대기 X).
+승격 후보가 있으면 다음 설정 정리를 사용자에게 권한다.
+자동 수정하지 않고 다음 단계로 계속 진행한다.
 
-승격 후보가 없으면 이 단계를 건너뛴다.
+- `config/study-pack-topics.json`
+- `state/study-pack-candidates.json`
 
-### 2. Candidate refresh decision (ADR-070)
+### 2. 외부 소스 우선 추천 생성
 
-`state/study-pack-candidates.json`과 최근 history를 읽어 후보 refresh 필요 여부를 판단한다.
-
-**Cron 경로 하루 1회 제한 (ADR-070 D10):**
-스킬 호출 args에 새 관심사·면접 맥락이 없는 cron 자동 실행의 경우,
-`state/study-topic-candidate-refresh.json`의 `generatedAt`이 오늘 날짜(YYYY-MM-DD)이면 이 단계를 건너뛰고 Step 3으로 진행한다.
-on-demand (스킬 args에 관심사 포함) 경우 이 제한을 적용하지 않는다.
-`refresh_candidate_pool.ts`를 `--trigger-kind cron-health-check`로 직접 호출하는 경우에도 동일하게 오늘 이미 실행됐으면 자동으로 skip한다 (exit 0).
-
-**Trigger 조건 — 다음 중 하나라도 해당하면 refresh 실행:**
-
-- `state/study-pack-candidates.json`의 active 자동 후보(`source: "llm-candidate-refresh"`, `status: "active"`)가 5개 이하
-- `state/topic-inventory-history.jsonl` 최근 7회 entries에서 같은 domain/tag 반복이 과도함
-- 스킬 호출 args에 새 관심사 또는 새 지원·면접 맥락이 포함됨
-- 기존 fos-study 문서가 현재 active 후보와 많이 겹침
-
-Trigger 조건이 없으면 이 단계를 건너뛰고 Step 3으로 진행한다.
-
-**Refresh 실행 (trigger 조건 해당 시):**
-
-1. `config/study-preferences.json`, `state/study-progress.json`, `state/topic-inventory-history.jsonl`을 읽는다.
-2. 현재 에이전트가 위 입력과 호출 context를 바탕으로 10-20개 신규 후보를 제안하고 `/tmp/study-topic-candidate-proposals.json`에 쓴다.
-
-   각 후보 필드:
-   ```json
-   {
-     "key": "kebab-case-unique-key",
-     "title": "후보 제목",
-     "domain": "backend|infra|...",
-     "tag": "new|deepen|interview|live-coding",
-     "difficulty": "beginner|intermediate|advanced",
-     "estMinutes": 60,
-     "whyNow": ["이유 1"],
-     "promotionTarget": { "outputPath": "domain/topic-slug" },
-     "sourceSignals": ["study-preferences", "history-gap"]
-   }
-   ```
-
-3. `refresh_candidate_pool.ts`를 셸 명령으로 호출한다:
-   ```bash
-   bun --env-file=.env \
-     scripts/study-topic-recommender/refresh_candidate_pool.ts \
-     --proposals /tmp/study-topic-candidate-proposals.json \
-     --trigger-kind recommendation-needs-refresh \
-     --trigger-reason "<trigger 조건 요약>" \
-     [--context "<on-demand 관심사 요약 — 민감 본문 제외>"]
-   ```
-
-4. 성공 시: stdout의 `decisions.new` 수를 확인하고 진행 상황을 간략히 출력한다.
-5. 실패 시: 오류를 기록하고 Step 3으로 계속 진행한다. **refresh 실패로 전체 추천을 중단하지 않는다.**
-
-**Context와 config 반영 구분:**
-
-- 호출 args에 on-demand 관심사·맥락이 있으면 trigger 판단에 반영하고, `--context`에는 공개 가능한 요약만 전달한다.
-  민감 본문(지원 회사명·비공개 답변 등)은 포함하지 않는다.
-- `--context`는 runtime JSON(`study-topic-candidate-refresh.json`)에만 저장되며 SKILL.md 예시나 Discord 메시지에 그대로 남기지 않는다.
-- Step 3.6의 `refresh_topic_inventory.ts --render-only`는 이 단계와 별개로 morning markdown만 재생성하며 config를 변경하지 않는다.
-
-### 3. Replenish + Recommend
-
-ts script를 셸 명령으로 직접 호출:
+`career-os/`에서 다음 명령을 실행한다.
 
 ```bash
 bun --env-file=.env \
   scripts/study-topic-recommender/refresh_topic_inventory.ts
 ```
 
-Hermes/Codex cron에서 `bun`이 없지만 Node/npx가 있으면, 작업을 실패로 끝내지 말고 같은 TypeScript 엔트리포인트를 `tsx`로 실행한다.
-`import.meta.dir` 호환을 위해 `CAREER_OS_ROOT`를 명시한다.
+주요 계산 규칙은 다음과 같다.
+
+- 하루 단위로 아침 읽을거리를 구성한다.
+- 회사 기술 블로그와 GeekNews 계열 외부 소스를 먼저 수집한다.
+- 외부 수집이 끝난 뒤 `fos-study`와 후보 풀을 스캔해 백엔드 공부 후보를 계산한다.
+- 회사 기술 블로그, GeekNews와 개발 동향, AI 실전, 백엔드 공부 후보 순으로 구성한다.
+- 각 항목에는 제목, 간단한 요약, 추천 이유를 표시한다.
+- 백엔드 항목 수는 `study-preferences.json`의 `morning_report.backend_slots`를 따른다.
+- 외부 읽을거리 수는 `external-reading-sources.json`의 카테고리별 `slots`를 따른다.
+- 백엔드 주제는 최근 7회, 보조 읽을거리는 최근 3회 추천을 기준으로 반복을 줄인다.
+- RSS 캐시는 6시간 동안 재사용한다.
+
+다음 산출물을 만든다.
+
+- `state/topic-inventory.json`
+  - 추천 계산과 중복 후보의 정본이다.
+- `reports/morning-topic-recommendation.md`
+  - 전체 추천을 담은 로컬 마크다운이다.
+- `reports/downloads/morning-reading-YYYY-MM-DD.html`
+  - 공개 가능한 추천만 담은 게시 준비용 HTML이다.
+- `state/topic-inventory-history.jsonl`
+  - 오늘 추천 이력을 한 줄 추가한다.
+
+### 3. 다음 실행을 위한 후보 풀 보충
+
+오늘의 외부 읽을거리와 백엔드 후보를 만든 뒤 후보 풀 상태를 확인한다.
+다음 조건 중 하나라도 맞으면 이후 실행을 위해 후보를 보충한다.
+
+- 활성 자동 후보가 5개 이하다.
+- 최근 7회 추천에서 같은 분야나 분류가 지나치게 반복됐다.
+- 요청에 새로운 관심사, 지원 맥락, 면접 맥락이 포함됐다.
+- 기존 학습 문서와 활성 후보가 많이 겹친다.
+
+같은 날짜에 자동 보충 결과가 이미 있으면 반복해서 보충하지 않는다.
+`state/study-topic-candidate-refresh.json`의 `generatedAt`이 오늘이면 이 단계를 건너뛴다.
+사용자가 새 관심사를 함께 준 요청에는 이 제한을 적용하지 않는다.
+
+보충이 필요하면 다음 순서로 처리한다.
+
+1. 학습 취향, 학습 상태, 최근 추천 이력을 읽는다.
+2. 신규 후보 10~20개를 `/tmp/study-topic-candidate-proposals.json`에 쓴다.
+3. 다음 명령을 실행한다.
 
 ```bash
-CAREER_OS_ROOT="$(pwd)" \
-  npx --yes tsx scripts/study-topic-recommender/refresh_topic_inventory.ts
+bun --env-file=.env \
+  scripts/study-topic-recommender/refresh_candidate_pool.ts \
+  --proposals /tmp/study-topic-candidate-proposals.json \
+  --trigger-kind recommendation-needs-refresh \
+  --trigger-reason "<보충 이유>" \
+  [--context "<공개 가능한 관심사 요약>"]
 ```
 
-render-only도 동일하게 fallback 가능하다.
+`--context`에는 회사명, 비공개 답변, 개인 이력 원문을 넣지 않는다.
+보충 실패는 이미 만든 오늘의 리포트에 영향을 주지 않는다.
 
-```bash
-CAREER_OS_ROOT="$(pwd)" \
-  npx --yes tsx scripts/study-topic-recommender/refresh_topic_inventory.ts --render-only
-```
+### 4. 중복 후보 의미 검토
 
-이 fallback은 Hermes/Codex 실행 경로의 호환 수단이다.
-OpenClaw나 Claude CLI를 대신 호출하지 않는다.
+`state/topic-inventory.json`의 `excluded.possibleDuplicates`를 확인한다.
+후보 문서 경로와 기존 문서의 첫 30줄까지만 읽고 다음 값 중 하나로 분류한다.
 
-script 내부 흐름 (알고리즘 상수 참고용):
-- **점수 계산**: `RECENT_PENALTY_PER=3 / RECENT_KEY_PENALTY_PER=8 / WEAK_AREA_BONUS=1 / CARRYOVER_PENALTY=2`
-- **mix target**: backend 3 (new:1 + deepen:1 + live-coding:1) / tech-blog 3 / AI 3 / geek 1
-- **cooldown**: backend key 7 history entries / secondary 3 history entries
-- **RSS feed**: feed-cache TTL 6h 활용 — 반복 호출 시 네트워크 부담 없음
-- **산출물**:
-  - `state/topic-inventory.json` — fos-study sourceOfTruth + override/seed/fallback pool + 추천 결과 + 통계 (`excluded.possibleDuplicates` 배열 포함 — Step 3.5 입력)
-  - `reports/morning-topic-recommendation.md` — 사람이 읽는 마크다운 (10픽 + 오늘의 3선)
-  - `state/topic-inventory-history.jsonl` — 오늘 추천 history append
+- `new`: 의미가 다른 새 주제다.
+- `update-existing`: 같은 핵심 주제이므로 기존 문서를 보강한다.
+- `skip`: 추천에서 제외한다.
+- `needs-user-confirmation`: 경계가 모호해 사용자 판단이 필요하다.
 
-### 3.5 에이전트 duplicate review (ADR-033)
-
-`state/topic-inventory.json`을 읽고 `excluded.possibleDuplicates` 배열을 의미 판정한다.
-
-각 후보를 다음 4 decision label 중 하나로 분류:
-- `new` — 의미적으로 다른 주제. 새 study-pack 추천 가능.
-- `update-existing` — 같은 핵심 주제. 기존 문서 보강 후보.
-- `skip` — visible recommendation에서 제외.
-- `needs-user-confirmation` — 애매. 사용자 확인 필요.
-
-판정 결과를 inventory의 `claudeDuplicateReview` 객체에 쓴다.
-필드명은 기존 renderer와 호환하기 위해 유지한다.
+판정 결과는 `claudeDuplicateReview`에 기록한다.
 
 ```json
 {
   "status": "ok",
-  "reviewedAt": "ISO-8601 now",
+  "reviewedAt": "ISO-8601 시각",
   "items": [
-    { "key": "...", "candidatePath": "...", "matchedPath": "...", "decision": "...", "reason": "..." }
+    {
+      "key": "후보 키",
+      "candidatePath": "후보 경로",
+      "matchedPath": "기존 경로",
+      "decision": "update-existing",
+      "reason": "판정 이유"
+    }
   ]
 }
 ```
 
-판정 입력 최소화: candidate.candidatePath / matched.matchedPath / 옵션으로 matched 파일의 첫 30줄만. 본문 전체는 비용 큼.
+중복 후보가 있는데 `status`가 `skipped`라고 해서 그대로 믿지 않는다.
+현재 에이전트가 모든 후보를 직접 검토한 뒤 `status`를 `ok`로 바꾼다.
 
-review 실행 자체가 실패하면 (에이전트 호출 자체가 안 되거나 schema 위반):
-- `claudeDuplicateReview.status = "failed"` + `reviewedAt = now` + `items = []`로 쓴다
-- 추천 전체는 실패시키지 않음 — 다음 단계로 진행
-- morning markdown에 warning 표시 책임은 rendering 단계 (Step 3.6)
+검토 자체가 실패하면 다음 상태를 기록하고 추천 흐름은 계속한다.
 
-`possibleDuplicates`가 0개이면 review skip.
-inventory의 `claudeDuplicateReview.status = "skipped"` 그대로 유지하고 다음 단계로 진행.
+```json
+{
+  "status": "failed",
+  "reviewedAt": "ISO-8601 시각",
+  "items": []
+}
+```
 
-Pitfall: `refresh_topic_inventory.ts` may leave `claudeDuplicateReview.status = "skipped"` even when `excluded.possibleDuplicates` is non-empty in Hermes/Codex cron runs.
-Do not trust `skipped` blindly.
-If `possibleDuplicates.length > 0`, the current agent must perform the review itself, write `claudeDuplicateReview.status = "ok"` with one item per duplicate, then run `refresh_topic_inventory.ts --render-only`.
-This is especially important before overwriting the broad renderer output with the concise 3-topic cron report, because the pool/diversity diagnosis should mention which duplicates are update-existing vs genuinely new.
+중복 후보가 없으면 `skipped` 상태를 유지한다.
 
-### 3.6 morning markdown 재생성
+### 5. 표시 산출물 재생성
 
-`claudeDuplicateReview`를 inventory에 반영한 뒤 markdown을 재생성한다.
-**주의: 일반 `refresh_topic_inventory.ts` 재호출은 inventory를 다시 계산하면서 review 결과를 덮어쓸 수 있으므로 금지한다.**
+중복 검토 결과를 기록한 뒤 일반 추천 명령을 다시 실행하지 않는다.
+일반 실행은 방금 기록한 검토 결과를 덮어쓴다.
 
-render-only 모드로 재생성:
+다음 명령으로 마크다운과 HTML만 다시 만든다.
 
 ```bash
 bun --env-file=.env \
   scripts/study-topic-recommender/refresh_topic_inventory.ts --render-only
 ```
 
-`--render-only` 모드는 기존 `topic-inventory.json`을 읽고 markdown만 다시 쓴다.
-`claudeDuplicateReview` 결과가 반영된 "기존 문서 보강 후보 (최대 5)" 섹션과 (status=failed이면) 상단 warning 라인이 출력된다.
+### 6. 최종 추천 정리
 
-### 4. LLM 큐레이션
+다음 파일을 읽고 사용자에게 보여줄 추천을 간결하게 정리한다.
 
-`state/topic-inventory.json` 읽기, `reports/morning-topic-recommendation.md`,
-`state/study-progress.json`, and `config/study-preferences.json`.
+- `state/topic-inventory.json`
+- `reports/morning-topic-recommendation.md`
+- `state/study-progress.json`
+- `config/study-preferences.json`
 
-Use them to produce a concise recommendation with:
+최종 응답에는 다음 내용을 담는다.
 
-- today's recommended 3 backend study topics
-- short reasons for each topic
-- one explicit note on axes avoided because they were already studied or recently repeated
-- a brief pool/diversity diagnosis
-- 1-3 external reading picks only when the user asks for reading picks or the delivery channel has room
-- pool health only as a diagnostic, not as the main answer
+- 카테고리별 오늘의 읽을거리
+- 각 항목의 제목, 짧은 요약, 추천 이유
+- 이미 공부했거나 최근 반복돼 제외한 축
+- 후보 풀과 다양성 상태
+- 마크다운과 HTML 산출물 경로
 
-If the request is a scheduled Korean backend study-topic cron, keep the user-facing output focused on exactly 3 backend topics unless the user explicitly asks for the full 10-pick renderer output.
-The TypeScript renderer may create a broad 10-pick markdown, but the final curated report can overwrite/update `reports/morning-topic-recommendation.md` into a concise Korean 3-topic report when the cron request asks for that shape.
+전체 마크다운을 채팅에 그대로 붙이지 않는다.
 
-### 5. 결과 출력
+### 7. HTML 게시
 
-Do not paste the full markdown by default. Summarize the LLM-curated picks and include the runtime path to `reports/morning-topic-recommendation.md`.
-For Discord/cron delivery, keep Korean output concise: 3 topics, avoided axes, pool/diversity note, verification status, and the report path.
+HTML에는 공개 가능한 학습 주제, 추천 이유, HTTPS 읽을거리 링크만 포함한다.
+후보자 프로필, 회사별 지원 전략, 로컬 절대 경로, 내부 상태 원문은 포함하지 않는다.
 
-### 6. Live-coding seed 선택 (옵션)
+사용자가 공유 URL 또는 외부 게시를 요청하면 루트의 `report-publisher` 스킬을 읽고 그대로 따른다.
 
-자연어에 "live-coding" 키워드가 있으면 추가 처리:
+- 스킬 경로: `../.agents/skills/report-publisher/SKILL.md`
+- 게시 대상: `reports/downloads/morning-reading-YYYY-MM-DD.html` 단일 파일
+- 게시 이름: `morning-reading-YYYY-MM-DD`
+- 워크스페이스나 `reports/` 전체를 게시하지 않는다.
+- 게시 전 로컬 렌더링과 공개 범위 검사를 수행한다.
+- 게시 후 배포 주소의 HTTP 상태, 제목, 주요 본문을 확인한다.
 
-1. `state/topic-inventory.json`의 `pools.remainingLiveCodingSeeds` 확인. 비어 있으면 `pools.remainingLiveCodingCandidateSeeds` 확인.
-2. 가장 우선도 높은 seed 1개 선택 → 제목 + slug + difficulty + outputPath 출력
-3. 사용자 승인 시 `/study-pack-writer <seed-slug>` 호출 안내 (study-pack-writer로 위임)
+사용자가 게시를 요청하지 않았으면 HTML까지만 만들고 외부 전송은 하지 않는다.
 
-## Self-check
+### 8. 라이브 코딩 주제 선택
 
-셸 명령 호출 종료 후 현재 에이전트가 직접 검증한다.
-검증 명령을 반드시 실행할 것 — prose로 추정 보고하면 PHASE_FAILED:
+요청에 라이브 코딩이 포함되면 다음 순서로 처리한다.
+
+1. `pools.remainingLiveCodingSeeds`를 확인한다.
+2. 비어 있으면 `pools.remainingLiveCodingCandidateSeeds`를 확인한다.
+3. 가장 우선도가 높은 후보 하나의 제목, `slug`, 난이도, 출력 경로를 안내한다.
+4. 사용자가 선택하면 `/study-pack-writer <seed-slug>` 실행을 안내한다.
+
+## 자체 점검
+
+실행 후 다음 검증을 반드시 수행한다.
 
 ```bash
-# A. topic-inventory.json 존재 및 필수 키
-python3 -c "
-import json, sys
-data = json.load(open('career-os/state/topic-inventory.json'))
-keys = ['generatedAt', 'recommendations', 'techBlogRecommendations', 'aiRecommendations', 'todayPick']
-missing = [k for k in keys if k not in data]
-if missing:
-    print('SELF_CHECK_FAIL: topic-inventory.json 누락 키', missing)
-    sys.exit(1)
-print('[ok] topic-inventory.json 필수 키 존재')
-"
-
-# B. morning-topic-recommendation.md 비어있지 않음
-LINES=$(wc -l < career-os/reports/morning-topic-recommendation.md 2>/dev/null || echo 0)
-echo "[lines] morning-topic-recommendation.md: $LINES"
-[ "$LINES" -ge 10 ] || { echo "SELF_CHECK_FAIL: morning-topic-recommendation.md $LINES 줄 (expected ≥10)"; exit 1; }
-
-echo "[self-check] OK"
+bun scripts/study-topic-recommender/validate_outputs.ts
+bun scripts/study-topic-recommender/manage_reading_sources.ts validate
 ```
 
-검증 실패 시 오류 원인을 진단하고 사용자에게 보고한다. silent 성공 금지.
+실패하면 원인을 진단하고 사용자에게 알린다.
+검증 없이 성공했다고 보고하지 않는다.
 
-## Error handling
+## 실패 처리
 
 | 상황 | 처리 |
 |---|---|
-| RSS fetch 실패 | feed-cache TTL 범위 내면 캐시 사용. 캐시도 없으면 해당 항목 skip, 나머지 정상 진행 |
-| `bun` 미설치 | stderr 출력 + 설치 안내 (`brew install bun` 또는 공식 설치) + exit 1 |
-| ts script exit code ≠ 0 | stderr 내용 그대로 사용자에게 보고. silent 실패 금지 |
-| topic-inventory.json 미생성 | 오류 원인 진단 후 사용자 보고 |
-| candidate 없음 (pool 고갈) | 경고 메시지 + inventory는 정상 기록 + 사용자에게 `replenish` 필요 안내 |
-| live-coding seed pool 비어있음 | 단계 4 skip + "seed pool 비어 있음 — live-coding seed 후보 갱신 필요" 안내 |
-| history.jsonl 부재 | 빈 history로 처리 (첫 실행 시 정상 상태) |
-| duplicate review 실패 | `claudeDuplicateReview.status = "failed"`, items = []. 추천 전체는 계속. `--render-only`로 markdown warning 표시 |
-| possibleDuplicates 0개 | review skip. `status = "skipped"` 그대로. 보강 후보 섹션 "없음" 표시 |
-| review 결과 schema 위반 | "failed" 처리 + stderr 로그. 추천 계속 |
+| RSS 수집 실패 | 유효한 캐시가 있으면 사용하고, 없으면 해당 항목만 제외한다. |
+| `bun` 미설치 | 설치 방법을 안내하고 중단한다. |
+| 추천 스크립트 실패 | 표준 오류를 확인하고 원인을 보고한다. |
+| `topic-inventory.json` 미생성 | 원인을 진단하고 성공으로 처리하지 않는다. |
+| 후보 풀 고갈 | 목록은 기록하고 후보 보충이 필요하다고 안내한다. |
+| 라이브 코딩 후보 없음 | 라이브 코딩 단계만 건너뛰고 후보 갱신 필요를 알린다. |
+| 추천 이력 없음 | 첫 실행으로 보고 빈 이력으로 계속한다. |
+| 중복 검토 실패 | 실패 상태를 기록하고 표시 산출물에 경고를 포함한다. |
+| HTML 공개 검사 실패 | 게시하지 않고 노출 항목을 제거한 뒤 다시 검사한다. |
+| Cloudflare Pages 게시 실패 | 로컬 HTML은 유지하고 게시 오류를 그대로 보고한다. |
 
-## Why this design
+## 소스 관리
 
-ADR-026 결정 요약 (3줄):
-
-1. **Python → TypeScript**: career-os 실행 코드는 `scripts/`에 둔다. 외부 RSS XML 파싱은 `fast-xml-parser`로 처리한다.
-2. **알고리즘 결정론 보존**: 점수(RECENT_PENALTY/WEAK_AREA_BONUS/CARRYOVER) + mix target + cooldown 로직을 ts에 동등 이식. Python·ts 출력 diff=0 검증은 phase-02에서 별도 진행.
-3. **replenish + promote + live-coding 흡수**: 이전 topic-pool-replenisher + dispatcher 3 case(recommend-topics / live-coding-dispatch / replenish-topics)를 단일 agent skill 진입점으로 통합.
-
-## References
-
-- `career-os/docs/adr/INDEX.md` — ADR-026 Python→TypeScript 전환 + replenish/promote/live-coding 통합 설계 근거, ADR-070 cron 실행 하루 1회 제한 설계 근거
-- `career-os/scripts/study-topic-recommender/refresh_topic_inventory.ts` — 추천 점수 계산 + mix target + morning markdown 생성 (알고리즘 상수 포함)
-- `career-os/scripts/study-topic-recommender/refresh_candidate_pool.ts` — 후보 풀 갱신 (proposals JSON 검증 + study-pack-candidates.json append)
-- `career-os/config/study-preferences.json` — 관심 축과 추천 철학 (LLM 큐레이션 Step 4 입력)
-- `career-os/state/study-progress.json` — 학습 진도 + 약점 맵 (cooldown·promote 판단 입력)
-- `career-os/state/topic-inventory-history.jsonl` — 최근 추천 history (cooldown 계산 + cron 중복 실행 방지)
-- 관련 스킬: `study-pack-writer` — 추천 토픽의 실제 학습 문서 작성 위임
-- 관련 스킬: `tech-interview-drill` / `behavioral-interview-drill` — 매일 답변 연습에서 본 skill 추천 토픽·약점을 활용
+읽을거리 소스를 추가하거나 비활성화하거나 우선순위를 바꿀 때만
+[`references/source-management.md`](references/source-management.md)를 읽고 관리 명령을 사용한다.
 
 ## 호출 예시
 
 ```bash
 /study-topic-recommender
-/study-topic-recommender live-coding 1개 골라줘
+/study-topic-recommender 오늘 추천을 HTML로 게시해줘
+/study-topic-recommender 라이브 코딩 1개 골라줘
 ```
-
-## Cron / Hermes-Codex 실행 메모
-
-- 예약 실행에서 사용자가 Hermes/Codex 사용을 명시하면 OpenClaw나 Claude CLI를 호출하지 않는다.
-- 최종 전달문은 시스템이 배송하므로 별도 `send_message`를 쓰지 않는다.
-- `reports/morning-topic-recommendation.md`는 매 실행마다 쓰거나 갱신하고, 최종 응답에는 해당 runtime path를 포함한다.
-- 요청이 "정확히 3개 backend topic" 형태이면 broad 10-pick renderer 결과를 그대로 전달하지 말고, Step 4 큐레이션 후 `morning-topic-recommendation.md`를 간결한 3-topic 한국어 리포트로 덮어쓴다.
-- cron-safe 검증/JSON 점검은 Hermes approval 상태에 덜 민감한 `terminal` + `python3 - <<'PY'` 패턴을 우선 사용한다. `execute_code`가 정책상 제한되면 같은 로직을 터미널 Python으로 즉시 옮겨 계속 진행한다.
-- study pack 생성, fos-study publish, commit/push는 사용자가 명시하지 않으면 하지 않는다.

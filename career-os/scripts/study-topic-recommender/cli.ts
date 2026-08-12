@@ -5,7 +5,7 @@
  *
  * ADR-009: reservoir-based, file-backed.
  * ADR-010: score-based backend selection with mix targets.
- * ADR-012: 10-item daily curation (backend 3 / tech-blog 3 / AI 3 / geek 1) + today pick 3.
+ * 하루 읽기 설정에 따라 카테고리별 추천 수를 조정한다.
  * ADR-013: secondary 카테고리에 RSS/Atom discovery로 실제 최신 글 1편을 부착.
  * ADR-033: sources/fos-study를 generated study artifact 단일 진실원으로 사용.
  */
@@ -18,9 +18,6 @@ import { deterministicDedupe, type DuplicateCandidateInput, type PossibleDuplica
 import {
   SECONDARY_COOLDOWN_ENTRIES,
   BACKEND_KEY_COOLDOWN_ENTRIES,
-  TECH_BLOG_SLOTS,
-  AI_SLOTS,
-  GEEK_SLOTS,
   countMap,
 } from "./transform/scoring.js";
 import { pickBackendRecommendations, pickSecondary, buildUpdateExisting } from "./transform/recommend.js";
@@ -33,6 +30,7 @@ import {
   collectRecentKeys,
 } from "./transform/filter.js";
 import { buildMorningMarkdown } from "./render/markdown.js";
+import { buildMorningHtml, morningHtmlFilename } from "./render/html.js";
 import type {
   StudyTopicEntry,
   TopicItem,
@@ -41,9 +39,9 @@ import type {
   HistoryEntry,
   DiscoveryLogEntry,
   Recommendation,
-  SourcesConfig,
   UpdateExistingItem,
 } from "./transform/types.js";
+import { loadReadingSources } from "./reading_sources.js";
 
 // ── paths ─────────────────────────────────────────────────────────────────────
 
@@ -55,6 +53,7 @@ const TASK_ROOT = process.env.CAREER_OS_ROOT
 const CONFIG = join(TASK_ROOT, "config");
 const STATE = join(TASK_ROOT, "state");
 const REPORTS = join(TASK_ROOT, "reports");
+const DOWNLOADS = join(REPORTS, "downloads");
 const CACHE = join(TASK_ROOT, "cache");
 const FOS_STUDY_ROOT = join(TASK_ROOT, "sources", "fos-study");
 const HISTORY_PATH = join(STATE, "topic-inventory-history.jsonl");
@@ -239,10 +238,7 @@ async function pickTechBlogArticles(
 
 async function runPipeline(): Promise<void> {
   mkdirSync(REPORTS, { recursive: true });
-
-  // fos-study scan (ADR-033 / ADR-069): actual files are the source of truth.
-  const fosInventory = scanFosStudyInventory({ root: FOS_STUDY_ROOT });
-  const fosStudyPaths = new Set(fosInventory.markdownPathsRelative);
+  mkdirSync(DOWNLOADS, { recursive: true });
 
   // load config as optional override/seed/fallback, never as the canonical inventory
   const studyTopicsRaw = safeLoad<Record<string, StudyTopicEntry>>(
@@ -262,10 +258,72 @@ async function runPipeline(): Promise<void> {
     join(CONFIG, "live-coding-seed-candidates.json"),
     { seeds: [] }
   ).seeds ?? [];
-  const sources = safeLoad<SourcesConfig>(join(CONFIG, "external-reading-sources.json"), {});
-  const techBlogItems: ReservoirItem[] = sources.techBlog?.items ?? [];
-  const aiTopicItems: ReservoirItem[] = sources.ai?.items ?? [];
-  const geekNewsItems: ReservoirItem[] = sources.geek?.items ?? [];
+  const readingSources = loadReadingSources(join(CONFIG, "external-reading-sources.json"));
+  const studyPreferences = safeLoad<{
+    morning_report?: { backend_slots?: number; target_minutes?: number };
+  }>(join(CONFIG, "study-preferences.json"), {});
+  const backendSlots = Math.max(
+    0,
+    Math.min(5, Math.floor(studyPreferences.morning_report?.backend_slots ?? 1))
+  );
+  const targetMinutes = Math.max(
+    15,
+    Math.floor(studyPreferences.morning_report?.target_minutes ?? 120)
+  );
+  const techBlogItems: ReservoirItem[] = readingSources.itemsByCategory.techBlog;
+  const aiTopicItems: ReservoirItem[] = readingSources.itemsByCategory.ai;
+  const geekNewsItems: ReservoirItem[] = readingSources.itemsByCategory.geek;
+
+  // 외부 읽을거리를 먼저 수집한다. 로컬 후보 풀 계산은 외부 수집이 끝난 뒤 수행한다.
+  const recentHistory = loadRecentHistory(SECONDARY_COOLDOWN_ENTRIES);
+  const recentTechBlogKeys = collectRecentKeys(recentHistory, "techBlogKeys");
+  const recentAiKeys = collectRecentKeys(recentHistory, "aiKeys");
+  const recentGeekKeys = collectRecentKeys(recentHistory, "geekKeys");
+  const articleUrlHistory = loadRecentHistory(RECENT_ARTICLE_URL_LOOKBACK);
+  const recentArticleUrls = new Set<string>(
+    articleUrlHistory.flatMap((entry) => entry.articleUrls ?? []).filter(Boolean) as string[]
+  );
+  const aiRecommendations = pickSecondary(
+    aiTopicItems,
+    recentAiKeys,
+    readingSources.categories.ai.slots
+  );
+  const geekRecommendations = pickSecondary(
+    geekNewsItems,
+    recentGeekKeys,
+    readingSources.categories.geek.slots
+  );
+  const discoveryExclude = new Set(recentArticleUrls);
+  let techBlogRecommendations: Recommendation[];
+  let techBlogDiscoveryLog: DiscoveryLogEntry[];
+  if (readingSources.categories.techBlog.requireDiscoveredArticle) {
+    [techBlogRecommendations, techBlogDiscoveryLog] = await pickTechBlogArticles(
+      techBlogItems,
+      recentTechBlogKeys,
+      readingSources.categories.techBlog.slots,
+      discoveryExclude
+    );
+  } else {
+    techBlogRecommendations = pickSecondary(
+      techBlogItems,
+      recentTechBlogKeys,
+      readingSources.categories.techBlog.slots
+    );
+    techBlogDiscoveryLog = await attachDiscoveredArticles(
+      techBlogRecommendations,
+      discoveryExclude
+    );
+  }
+
+  let discoveryLog: DiscoveryLogEntry[] = [...techBlogDiscoveryLog];
+  for (const group of [geekRecommendations, aiRecommendations]) {
+    const groupLog = await attachDiscoveredArticles(group, discoveryExclude);
+    discoveryLog = discoveryLog.concat(groupLog);
+  }
+
+  // fos-study scan (ADR-033 / ADR-069): actual files are the source of truth.
+  const fosInventory = scanFosStudyInventory({ root: FOS_STUDY_ROOT });
+  const fosStudyPaths = new Set(fosInventory.markdownPathsRelative);
 
   // deterministic dedupe (ADR-033)
   const dedupeInputs: DuplicateCandidateInput[] = [
@@ -314,54 +372,26 @@ async function runPipeline(): Promise<void> {
     withMtime.slice(0, 10).map(({ path }) => artifactDomainLabel(path))
   );
 
-  // history
-  const recentHistory = loadRecentHistory(SECONDARY_COOLDOWN_ENTRIES);
+  // 백엔드 후보 이력
   const backendKeyHistory = loadRecentHistory(BACKEND_KEY_COOLDOWN_ENTRIES);
   const recentBackendKeyCounts = countMap(backendKeyHistory.flatMap((e) => e.keys ?? []));
   const yesterdayKeys = loadYesterdayKeys();
-  const recentTechBlogKeys = collectRecentKeys(recentHistory, "techBlogKeys");
-  const recentAiKeys = collectRecentKeys(recentHistory, "aiKeys");
-  const recentGeekKeys = collectRecentKeys(recentHistory, "geekKeys");
-  const articleUrlHistory = loadRecentHistory(RECENT_ARTICLE_URL_LOOKBACK);
-  const recentArticleUrls = new Set<string>(
-    articleUrlHistory.flatMap((e) => e.articleUrls ?? []).filter(Boolean) as string[]
-  );
 
-  // recommendations
+  // 외부 읽을거리 다음에 백엔드 공부 후보를 계산한다.
   const backendRecommendations = pickBackendRecommendations(
     yesterdayKeys,
     backendCandidatePool,
     remainingLive,
     remainingLiveCandidates,
     recentDomainCounts,
-    recentBackendKeyCounts
+    recentBackendKeyCounts,
+    backendSlots
   );
-  const aiRecommendations = pickSecondary(aiTopicItems, recentAiKeys, AI_SLOTS);
-  const geekRecommendations = pickSecondary(geekNewsItems, recentGeekKeys, GEEK_SLOTS);
-
-  const discoveryExclude = new Set(recentArticleUrls);
-  const [techBlogRecommendations, techBlogDiscoveryLog] = await pickTechBlogArticles(
-    techBlogItems,
-    recentTechBlogKeys,
-    TECH_BLOG_SLOTS,
-    discoveryExclude
-  );
-
-  let discoveryLog: DiscoveryLogEntry[] = [...techBlogDiscoveryLog];
-  for (const group of [aiRecommendations, geekRecommendations]) {
-    const groupLog = await attachDiscoveredArticles(group, discoveryExclude);
-    discoveryLog = discoveryLog.concat(groupLog);
-  }
-
-  const todayPick = {
-    backend: backendRecommendations[0] ?? null,
-    techBlog: techBlogRecommendations[0] ?? null,
-    ai: aiRecommendations[0] ?? null,
-  };
 
   // write topic-inventory.json (ADR-033 새 스냅샷 스키마)
+  const generatedAt = new Date().toISOString();
   const inventory = {
-    generatedAt: new Date().toISOString(),
+    generatedAt,
     sourceOfTruth: {
       kind: "fos-study",
       root: "sources/fos-study",
@@ -373,6 +403,14 @@ async function runPipeline(): Promise<void> {
       studyPackCandidates: "seed/fallback 후보",
       liveCodingSeeds: "사람이 고른 seed 후보",
       sources: "외부 reading reservoir",
+    },
+    reportPlan: {
+      unit: "day",
+      targetMinutes,
+      backendSlots,
+      categorySlots: Object.fromEntries(
+        Object.entries(readingSources.categories).map(([key, value]) => [key, value.slots])
+      ),
     },
     counts: {
       configStudyTopicOverrides: Object.keys(studyTopics).length,
@@ -409,7 +447,6 @@ async function runPipeline(): Promise<void> {
     techBlogRecommendations,
     aiRecommendations,
     geekRecommendations,
-    todayPick,
     updateExistingRecommendations: buildUpdateExisting(
       { status: "skipped", items: [] },
       deterministicUpdateExisting
@@ -438,7 +475,6 @@ async function runPipeline(): Promise<void> {
     techBlogRecommendations,
     aiRecommendations,
     geekRecommendations,
-    todayPick,
     updateExisting,
     "skipped",
     {
@@ -454,6 +490,21 @@ async function runPipeline(): Promise<void> {
   );
 
   writeFileSync(join(REPORTS, "morning-topic-recommendation.md"), mdContent, "utf-8");
+  const htmlPath = join(DOWNLOADS, morningHtmlFilename(generatedAt));
+  writeFileSync(
+    htmlPath,
+    buildMorningHtml({
+      generatedAt,
+      recommendations: backendRecommendations,
+      techBlogRecommendations,
+      aiRecommendations,
+      geekRecommendations,
+      targetMinutes,
+      reviewStatus: "skipped",
+      updateExistingCount: updateExisting.length,
+    }),
+    "utf-8"
+  );
 
   // append history
   const discoveredArticleUrls: string[] = [];
@@ -470,11 +521,6 @@ async function runPipeline(): Promise<void> {
     aiKeys: aiRecommendations.filter((r) => r.key).map((r) => r.key!),
     geekKeys: geekRecommendations.filter((r) => r.key).map((r) => r.key!),
     articleUrls: discoveredArticleUrls,
-    todayPickKeys: {
-      backend: todayPick.backend?.key ?? null,
-      techBlog: todayPick.techBlog?.key ?? null,
-      ai: todayPick.ai?.key ?? null,
-    },
   });
 
   // stdout JSON (Python 원본과 동일 형식)
@@ -488,6 +534,7 @@ async function runPipeline(): Promise<void> {
       {
         inventory: join(STATE, "topic-inventory.json"),
         recommendation: join(REPORTS, "morning-topic-recommendation.md"),
+        html: htmlPath,
         backendCount: backendRecommendations.length,
         techBlogCount: techBlogRecommendations.length,
         aiCount: aiRecommendations.length,
@@ -509,6 +556,7 @@ async function runPipeline(): Promise<void> {
 
 async function renderOnly(): Promise<void> {
   mkdirSync(REPORTS, { recursive: true });
+  mkdirSync(DOWNLOADS, { recursive: true });
   const inventoryPath = join(STATE, "topic-inventory.json");
   if (!existsSync(inventoryPath)) {
     console.error("render-only error: topic-inventory.json 없음 — 먼저 일반 refresh를 실행하세요.");
@@ -516,11 +564,11 @@ async function renderOnly(): Promise<void> {
   }
 
   const inventory = readJson<{
+    generatedAt?: string;
     recommendations?: BackendItem[];
     techBlogRecommendations?: Recommendation[];
     aiRecommendations?: Recommendation[];
     geekRecommendations?: Recommendation[];
-    todayPick?: { backend: BackendItem | null; techBlog: Recommendation | null; ai: Recommendation | null };
     claudeDuplicateReview?: { status: string; items?: UpdateExistingItem[] };
     excluded?: { possibleDuplicates?: PossibleDuplicate[] };
     counts?: {
@@ -533,6 +581,7 @@ async function renderOnly(): Promise<void> {
       duplicateCandidates?: number;
     };
     sourceOfTruth?: { scannedMarkdownCount?: number };
+    reportPlan?: { targetMinutes?: number };
   }>(inventoryPath);
 
   const review = inventory.claudeDuplicateReview ?? { status: "skipped", items: [] };
@@ -544,7 +593,6 @@ async function renderOnly(): Promise<void> {
     inventory.techBlogRecommendations ?? [],
     inventory.aiRecommendations ?? [],
     inventory.geekRecommendations ?? [],
-    inventory.todayPick ?? { backend: null, techBlog: null, ai: null },
     updateExisting,
     review.status,
     {
@@ -560,10 +608,26 @@ async function renderOnly(): Promise<void> {
   );
 
   writeFileSync(join(REPORTS, "morning-topic-recommendation.md"), mdContent, "utf-8");
+  const htmlPath = join(DOWNLOADS, morningHtmlFilename(inventory.generatedAt));
+  writeFileSync(
+    htmlPath,
+    buildMorningHtml({
+      generatedAt: inventory.generatedAt,
+      recommendations: inventory.recommendations ?? [],
+      techBlogRecommendations: inventory.techBlogRecommendations ?? [],
+      aiRecommendations: inventory.aiRecommendations ?? [],
+      geekRecommendations: inventory.geekRecommendations ?? [],
+      targetMinutes: inventory.reportPlan?.targetMinutes,
+      reviewStatus: review.status,
+      updateExistingCount: updateExisting.length,
+    }),
+    "utf-8"
+  );
   console.log(JSON.stringify({
     mode: "render-only",
     inventory: inventoryPath,
     markdown: join(REPORTS, "morning-topic-recommendation.md"),
+    html: htmlPath,
     reviewStatus: review.status,
     updateExistingCount: updateExisting.length,
   }, null, 0));

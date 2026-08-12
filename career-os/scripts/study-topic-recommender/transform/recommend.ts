@@ -2,13 +2,12 @@ import type { ReservoirItem } from "../feed_discovery.js";
 import type { PossibleDuplicate } from "../duplicate_detection.js";
 import type { TopicItem, BackendItem, LiveSeed, Recommendation, UpdateExistingItem } from "./types.js";
 import {
-  BACKEND_TARGET_TOTAL,
   BACKEND_MIX_TARGET,
   backendDomainGroup,
   scoreBackendItem,
 } from "./scoring.js";
 
-// ── backend recommendations (ADR-010 점수 기반 + ADR-012 3-item mix target) ──
+// ── backend recommendations (점수 기반 + 설정 가능한 하루 추천 수) ──
 
 export function pickBackendRecommendations(
   yesterdayKeysSet: Set<string>,
@@ -16,14 +15,16 @@ export function pickBackendRecommendations(
   remainingLive: LiveSeed[],
   remainingLiveCandidates: LiveSeed[],
   recentDomainCounts: Map<string, number>,
-  recentBackendKeyCounts: Map<string, number>
+  recentBackendKeyCounts: Map<string, number>,
+  targetTotal: number
 ): BackendItem[] {
+  if (targetTotal <= 0) return [];
   const pool: BackendItem[] = candidateRecommendations.map((item) => ({ ...item }));
 
   const liveItemSource =
     remainingLive.length > 0
-      ? remainingLive.slice(0, 3)
-      : remainingLiveCandidates.slice(0, 3);
+      ? remainingLive.slice(0, targetTotal)
+      : remainingLiveCandidates.slice(0, targetTotal);
 
   for (const seed of liveItemSource) {
     pool.push({
@@ -75,12 +76,12 @@ export function pickBackendRecommendations(
       chosenKeys.add(key);
       usedDomains.add(domain);
       usedTags.set(tag, tagCount + 1);
-      if (chosen.length >= BACKEND_TARGET_TOTAL) break;
+      if (chosen.length >= targetTotal) break;
     }
   }
 
   // Second pass: if one mix slot is impossible, still prefer a fresh domain and non-recent key.
-  if (chosen.length < BACKEND_TARGET_TOTAL) {
+  if (chosen.length < targetTotal) {
     for (const item of pool) {
       const key = item.key ?? "";
       const domain = backendDomainGroup(item.domain);
@@ -93,22 +94,22 @@ export function pickBackendRecommendations(
       chosen.push(item);
       chosenKeys.add(key);
       usedDomains.add(domain);
-      if (chosen.length >= BACKEND_TARGET_TOTAL) break;
+      if (chosen.length >= targetTotal) break;
     }
   }
 
   // Final fallback: only repeat domains when the reservoir is genuinely narrow.
-  if (chosen.length < BACKEND_TARGET_TOTAL) {
+  if (chosen.length < targetTotal) {
     for (const item of pool) {
       const key = item.key ?? "";
       if (chosenKeys.has(key)) continue;
       chosen.push(item);
       chosenKeys.add(key);
-      if (chosen.length >= BACKEND_TARGET_TOTAL) break;
+      if (chosen.length >= targetTotal) break;
     }
   }
 
-  return chosen.slice(0, BACKEND_TARGET_TOTAL);
+  return chosen.slice(0, targetTotal);
 }
 
 // ── secondary recommendations ─────────────────────────────────────────────────

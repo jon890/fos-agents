@@ -10,7 +10,8 @@
 
 ### 결정
 
-- 추천 3개와 후속 작업 식별자를 `state/study-topic-actions/YYYY-MM-DD.json`에 저장한다.
+- 해당 날짜의 백엔드 공부 후보와 후속 작업 식별자를 `state/study-topic-actions/YYYY-MM-DD.json`에 저장한다.
+- 후보 수는 `config/study-preferences.json`의 `morning_report.backend_slots`를 따른다.
 - 최신 snapshot은 `state/study-topic-actions/latest.json`에 같이 저장한다.
 - `career.study-pack.create:*`는 학습 자료 초안 생성 요청이며 공개 발행 승인이 아니다.
 - `career.study-pack.skip:*`는 해당 날의 추천을 넘긴 기록이며 영구 제외가 아니다.
@@ -19,3 +20,4 @@
 ### 결과
 
 저장소는 runtime에 중립적인 action 계약만 소유하고 외부 전달은 별도 계층에 맡긴다.
+추천 개수나 전달 채널이 바뀌어도 action 식별자 구조는 유지된다.

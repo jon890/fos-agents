@@ -1,6 +1,5 @@
 // ── scoring constants (ADR-009/010/012) ──────────────────────────────────────
 
-export const BACKEND_TARGET_TOTAL = 3;
 export const BACKEND_MIX_TARGET: Record<string, number> = {
   new: 1,
   deepen: 1,
@@ -28,10 +27,6 @@ export const TAG_PRIORITY: Record<string, number> = {
   "live-coding": 0,
 };
 
-// ADR-012: 보조 카테고리 슬롯
-export const TECH_BLOG_SLOTS = 3;
-export const AI_SLOTS = 3;
-export const GEEK_SLOTS = 1;
 // key suppression: cooldown|recent history entries — SECONDARY for secondary, BACKEND for backend keys
 export const SECONDARY_COOLDOWN_ENTRIES = 3;
 

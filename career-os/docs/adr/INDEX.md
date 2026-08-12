@@ -9,7 +9,6 @@
 | ADR-003 | Baseline 청킹 제거 | 결정됨 | [ADR-003-baseline-청킹-제거.md](ADR-003-baseline-청킹-제거.md) |
 | ADR-009 | Morning topic reservoir + recommendation pipeline | Partially superseded by [[ADR-062]] | [ADR-009-morning-topic-reservoir-recommendation-pipeline.md](ADR-009-morning-topic-reservoir-recommendation-pipeline.md) |
 | ADR-010 | Recommendation scoring + mix targets | Accepted | [ADR-010-recommendation-scoring-mix-targets.md](ADR-010-recommendation-scoring-mix-targets.md) |
-| ADR-012 | Morning 추천을 10픽 + 오늘의 3선으로 확장 | Accepted | [ADR-012-morning-추천을-10픽-오늘의-3선으로-확장.md](ADR-012-morning-추천을-10픽-오늘의-3선으로-확장.md) |
 | ADR-013 | RSS·Atom discovery 레이어 부착 | Accepted | [ADR-013-rss-atom-discovery-레이어-부착.md](ADR-013-rss-atom-discovery-레이어-부착.md) |
 | ADR-019 | skill 문서와 실행 코드 분리 | Accepted | [ADR-019-career-os-claude-code-skill-폴더와-실행-스크립트-디렉터리-분리.md](ADR-019-career-os-claude-code-skill-폴더와-실행-스크립트-디렉터리-분리.md) |
 | ADR-026 | study-topic-recommender native 마이그 + Python → TypeScript + replenish/promote/live-coding 흡수 |  | [ADR-026-study-topic-recommender-native-마이그-python-typescript-replenish-promote-live-coding-흡수.md](ADR-026-study-topic-recommender-native-마이그-python-typescript-replenish-promote-live-coding-흡수.md) |
@@ -31,7 +30,6 @@
 | ADR-066 | 공개 가능 일반 면접 질문 bank는 public/question-bank에 둔다 | Accepted | [ADR-066-공개-가능-일반-면접-질문-bank는-public-question-bank에-둔다.md](ADR-066-공개-가능-일반-면접-질문-bank는-public-question-bank에-둔다.md) |
 | ADR-069 | config는 정책·타깃·예외만 남기고 자산 목록은 파생한다 | Accepted | [ADR-069-config는-정책-타깃-예외만-남기고-자산-목록은-파생한다.md](ADR-069-config는-정책-타깃-예외만-남기고-자산-목록은-파생한다.md) |
 | ADR-070 | study topic 후보 풀은 LLM refresh turn이 발굴하고 config에는 active 캐시만 반영한다 | Accepted | [ADR-070-study-topic-후보-풀은-llm-refresh-turn이-발굴하고-config에는-active-캐시만-반영한다.md](ADR-070-study-topic-후보-풀은-llm-refresh-turn이-발굴하고-config에는-active-캐시만-반영한다.md) |
-| ADR-072 | daily study 자동화는 주제 3개를 만드는 lean path로 둔다 | Accepted | [ADR-072-daily-study-cron은-주제-3개만-보내는-lean-path로-둔다.md](ADR-072-daily-study-cron은-주제-3개만-보내는-lean-path로-둔다.md) |
 | ADR-073 | daily study action snapshot | Accepted | [ADR-073-daily-study-추천은-action-snapshot으로-후속-작업을-연결한다.md](ADR-073-daily-study-추천은-action-snapshot으로-후속-작업을-연결한다.md) |
 | ADR-074 | position source coverage는 official adapter와 Wanted target discovery를 함께 쓴다 | Accepted | [ADR-074-position-source-coverage는-official-adapter와-wanted-target-discovery를-함께-쓴다.md](ADR-074-position-source-coverage는-official-adapter와-wanted-target-discovery를-함께-쓴다.md) |
 | ADR-079 | 포지션 수집은 동적 discovery를 우선하고 개별 공고 URL seed를 제거한다 | Accepted | [ADR-079-포지션-수집은-동적-discovery를-우선하고-개별-공고-url-seed를-제거한다.md](ADR-079-포지션-수집은-동적-discovery를-우선하고-개별-공고-url-seed를-제거한다.md) |

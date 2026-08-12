@@ -13,16 +13,19 @@ export function renderBackendItem(idx: number, item: Recommendation): string[] {
     "live-coding": "live-coding",
   };
   const label = tagLabel[item.tag ?? "new"] ?? item.tag ?? "new";
+  const [summary = "백엔드 실무와 면접 준비에 연결할 수 있는 학습 후보다.", ...reasons] =
+    item.whyNow ?? [];
+  const reason = reasons.length > 0
+    ? reasons.join(" ")
+    : "오늘의 학습 관심 축과 연결해 깊게 보기 좋다.";
   const lines = [
     `${idx}. **${label} 추천 — ${item.title}**`,
     `   - 분야: ${item.domain ?? "unknown"}`,
     `   - 난이도: ${item.difficulty ?? "중"}`,
     `   - 예상 학습 시간: ${item.estMinutes ?? 45}분`,
-    "   - 왜 지금 추천하는지",
+    `   - 간단한 요약: ${summary}`,
+    `   - 추천 이유: ${reason}`,
   ];
-  for (const reason of item.whyNow ?? []) {
-    lines.push(`     - ${reason}`);
-  }
   return lines;
 }
 
@@ -49,12 +52,10 @@ export function renderSecondaryItem(
     if (item.tags && Array.isArray(item.tags))
       lines.push(`   - 태그: ${(item.tags as string[]).join(", ")}`);
     if (item.estMinutes) lines.push(`   - 예상 시간: ${item.estMinutes}분`);
-    if (item.whyNow && Array.isArray(item.whyNow)) {
-      lines.push("   - 왜 지금 보면 좋은지");
-      for (const reason of item.whyNow as string[]) {
-        lines.push(`     - ${reason}`);
-      }
-    }
+    const [summary = "원문에서 실무 사례와 핵심 흐름을 확인할 수 있다.", ...reasons] =
+      Array.isArray(item.whyNow) ? item.whyNow : [];
+    lines.push(`   - 간단한 요약: ${summary}`);
+    lines.push(`   - 추천 이유: ${reasons.join(" ") || "오늘의 관심 주제와 연결해 읽기 좋다."}`);
     return lines;
   }
 
@@ -68,12 +69,10 @@ export function renderSecondaryItem(
   if (item.tags && Array.isArray(item.tags))
     lines.push(`   - 태그: ${(item.tags as string[]).join(", ")}`);
   if (item.estMinutes) lines.push(`   - 예상 시간: ${item.estMinutes}분`);
-  if (item.whyNow && Array.isArray(item.whyNow)) {
-    lines.push("   - 왜 지금 보면 좋은지");
-    for (const reason of item.whyNow as string[]) {
-      lines.push(`     - ${reason}`);
-    }
-  }
+  const [summary = "해당 출처에서 관련 기술 흐름을 확인할 수 있다.", ...reasons] =
+    Array.isArray(item.whyNow) ? item.whyNow : [];
+  lines.push(`   - 간단한 요약: ${summary}`);
+  lines.push(`   - 추천 이유: ${reasons.join(" ") || "오늘의 관심 주제와 연결해 읽기 좋다."}`);
   return lines;
 }
 
@@ -82,13 +81,14 @@ export function buildMorningMarkdown(
   techBlogRecommendations: Recommendation[],
   aiRecommendations: Recommendation[],
   geekRecommendations: Recommendation[],
-  todayPick: { backend: BackendItem | null; techBlog: Recommendation | null; ai: Recommendation | null },
   updateExisting: UpdateExistingItem[],
   reviewStatus: string,
   stats: MorningMarkdownStats
 ): string {
   const lines: string[] = [
-    "# 오늘의 학습/리딩 추천 (10픽 + 오늘의 3선)",
+    "# 오늘 아침 읽을거리",
+    "",
+    "하루 학습을 시작할 때 읽고 생각할 주제를 카테고리별로 정리했다.",
     "",
   ];
 
@@ -96,19 +96,7 @@ export function buildMorningMarkdown(
     lines.push("> ⚠️ LLM duplicate review 실패 — 추천은 deterministic dedupe 기준입니다.", "");
   }
 
-  lines.push("## 백엔드 스터디 주제 (3)", "");
-  if (backendRecommendations.length > 0) {
-    for (let i = 0; i < backendRecommendations.length; i++) {
-      lines.push(...renderBackendItem(i + 1, backendRecommendations[i] as Recommendation), "");
-    }
-  } else {
-    lines.push(
-      '- (reservoir 비어 있음 — `Use skill: /study-topic-recommender` 로 보충)',
-      ""
-    );
-  }
-
-  lines.push("## 회사·엔지니어링 기술 블로그 (3)", "");
+  lines.push(`## 회사·엔지니어링 기술 블로그 (${techBlogRecommendations.length})`, "");
   if (techBlogRecommendations.length > 0) {
     for (let i = 0; i < techBlogRecommendations.length; i++) {
       lines.push(
@@ -120,19 +108,7 @@ export function buildMorningMarkdown(
     lines.push("- (`config/external-reading-sources.json` techBlog 비어 있음)", "");
   }
 
-  lines.push("## AI 관련 (3)", "");
-  if (aiRecommendations.length > 0) {
-    for (let i = 0; i < aiRecommendations.length; i++) {
-      lines.push(
-        ...renderSecondaryItem(i + 1, aiRecommendations[i], "category", "분야"),
-        ""
-      );
-    }
-  } else {
-    lines.push("- (`config/external-reading-sources.json` ai 비어 있음)", "");
-  }
-
-  lines.push("## Geek/뉴스/산업 흐름 (1)", "");
+  lines.push(`## GeekNews와 개발 동향 (${geekRecommendations.length})`, "");
   if (geekRecommendations.length > 0) {
     for (let i = 0; i < geekRecommendations.length; i++) {
       lines.push(
@@ -144,26 +120,28 @@ export function buildMorningMarkdown(
     lines.push("- (`config/external-reading-sources.json` geek 비어 있음)", "");
   }
 
-  lines.push("## 오늘의 3선 (각 카테고리에서 1개씩)", "");
-  const pickLabels: [string, BackendItem | Recommendation | null][] = [
-    ["백엔드", todayPick.backend],
-    ["기술 블로그", todayPick.techBlog],
-    ["AI", todayPick.ai],
-  ];
-  for (const [label, pick] of pickLabels) {
-    if (!pick) {
-      lines.push(`- ${label}: (없음)`);
-      continue;
+  lines.push(`## AI 실전 읽을거리 (${aiRecommendations.length})`, "");
+  if (aiRecommendations.length > 0) {
+    for (let i = 0; i < aiRecommendations.length; i++) {
+      lines.push(
+        ...renderSecondaryItem(i + 1, aiRecommendations[i], "category", "분야"),
+        ""
+      );
     }
-    const article = (pick as Recommendation).discoveredArticle;
-    if (article?.url) {
-      const title = article.title || pick.title || pick.key || "제목 없음";
-      lines.push(`- **${label}**: ${title}`);
-      lines.push(`  - ${article.url}`);
-    } else {
-      const title = pick.title || pick.key || "제목 없음";
-      lines.push(`- **${label}**: ${title}`);
+  } else {
+    lines.push("- (`config/external-reading-sources.json` ai 비어 있음)", "");
+  }
+
+  lines.push(`## 에이전트가 제안한 백엔드 공부 후보 (${backendRecommendations.length})`, "");
+  if (backendRecommendations.length > 0) {
+    for (let i = 0; i < backendRecommendations.length; i++) {
+      lines.push(...renderBackendItem(i + 1, backendRecommendations[i] as Recommendation), "");
     }
+  } else {
+    lines.push(
+      '- (후보가 비어 있음 — `Use skill: /study-topic-recommender`로 보충)',
+      ""
+    );
   }
 
   lines.push(
