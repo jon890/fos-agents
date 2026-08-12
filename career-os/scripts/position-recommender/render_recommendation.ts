@@ -97,7 +97,7 @@ export function toMarkdown(run: RecommendationRunType): string {
   out.push("## 이번 주 액션 플랜");
   out.push(`- 지원/검색: ${run.weeklyActions.apply}`);
   out.push(`- 이력서 보강: ${run.weeklyActions.resume}`);
-  out.push(`- study-pack / question-bank: ${run.weeklyActions.study}`);
+  out.push(`- 학습 자료 / question-bank: ${run.weeklyActions.study}`);
   out.push("");
   return out.join("\n");
 }
@@ -192,7 +192,7 @@ export function toReportHtml(run: RecommendationRunType): string {
 
   parts.push(`<h2>최근 반복 점검</h2>\n${bulletList(run.recentCheck)}`);
   parts.push(
-    `<h2>이번 주 액션 플랜</h2>\n<dl class="fields">${field("지원/검색", escapeHtml(run.weeklyActions.apply))}${field("이력서 보강", escapeHtml(run.weeklyActions.resume))}${field("study-pack / question-bank", escapeHtml(run.weeklyActions.study))}</dl>`,
+    `<h2>이번 주 액션 플랜</h2>\n<dl class="fields">${field("지원/검색", escapeHtml(run.weeklyActions.apply))}${field("이력서 보강", escapeHtml(run.weeklyActions.resume))}${field("학습 자료 / question-bank", escapeHtml(run.weeklyActions.study))}</dl>`,
   );
   return parts.join("\n");
 }

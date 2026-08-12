@@ -105,12 +105,12 @@ career-os/<applicationDir>/review.md
 
 - `nextActions`에 `fit_analysis` / `review_application_package` / `run_application_reviewer` 등 내부 skill 연계 작업
 - review.md의 `revise` 판정에서 agent 수정 가능 항목
-- evidence 수집 자동화 가능 항목 (draft revise, study-pack 후보 생성 등)
+- evidence 수집과 외부 기술 자료 추천처럼 자동화 가능한 항목
 - `revisionCount < maxRevisionCount`이면 재시도 가능 판단
 
 ### 6. 공개/비공개 분리
 
-다음은 `Public-Safe Study Candidates`에 포함:
+다음은 `Public-Safe Learning Signals`에 포함:
 
 - fit-analysis.md Gap 분석에서 추출한 **순수 기술 학습 주제** (LangGraph, Evaluation Framework 설계 패턴 등)
 - application-package.md의 면접 대비 포인트에서 추출한 기술 토픽
@@ -135,7 +135,7 @@ fit-analysis.md의 Gap 분석에서 **해당 공고 기준 부족 역량 상위 
 오늘의 공부/면접 대비 액션 1~3개 제안:
 
 - Gap Focus에서 도출한 보강 가능한 항목
-- 당장 학습 가능한 기술 토픽 (study-pack-writer로 연계 가능한 것)
+- 외부 읽을거리 추천의 우선순위로 사용할 기술 토픽
 - job-fit-analyzer로 심화 분석 가능한 항목
 
 ### 8. report.md 작성

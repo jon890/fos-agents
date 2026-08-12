@@ -4,7 +4,7 @@
  * 공용 답변 연습 엔진 — tech-interview-drill · behavioral-interview-drill 공통 로직
  *
  * 간격 반복 기반 질문 선정, 답변 채점, 답변 연습 로그 기록, weak_spots 갱신,
- * study-pack-writer 위임 판단을 담당한다.
+ * 질문 선정, 채점, 기록, 약점 환류를 담당한다.
  *
  * 의존 파일:
  *   - career-os/public/question-bank/{기술 카테고리}/questions.json  (tech)
@@ -431,26 +431,6 @@ export function updateWeakSpots(
 
   drillProgress[question.topic] = drillEntry;
   writeFileSync(drillProgressPath(), JSON.stringify(drillProgress, null, 2) + "\n", "utf-8");
-}
-
-// ─── study-pack-writer 위임 판단 ─────────────────────────────────────────────
-
-/**
- * 같은 토픽 2회 이상 틀림·모름이면 true 반환.
- * 과생성 방지: 오늘 이미 dispatched 기록이 있으면 false.
- */
-export function shouldDispatchStudyPack(
-  drillProgress: DrillProgress,
-  topic: string,
-  alreadyDispatchedToday: Set<string>
-): boolean {
-  if (alreadyDispatchedToday.has(topic)) return false;
-
-  const ws = drillProgress[topic];
-  if (!ws) return false;
-
-  const failCount = ws.fail_count ?? 0;
-  return failCount >= 2;
 }
 
 // ─── CLI 직접 실행 (진단용) ───────────────────────────────────────────────────

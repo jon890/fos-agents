@@ -14,7 +14,7 @@ import {
   RecommendationSnapshotSchema,
   type RecommendationSnapshot,
 } from './priority_schema';
-import { buildSkillCommand, requiresUserApproval } from './skill_contracts';
+import { buildSkillCommand } from './skill_contracts';
 
 const WORKSPACE_PREFIX = process.cwd().endsWith('/career-os') ? '' : 'career-os/';
 const DEFAULT_OUTPUT_DIR = `${WORKSPACE_PREFIX}state/application-agent`;
@@ -329,14 +329,8 @@ function derivePreparationActions(stage: ActionStage, candidate: CandidateInput)
       { kind: 'investigate' as const, label: '공고 URL과 역할 범위 재확인' },
       {
         kind: 'study-topic' as const,
-        label: '약점 기반 학습 후보 추천',
+        label: '약점을 반영한 외부 읽을거리 추천',
         command: buildSkillCommand('study-topic-recommender'),
-      },
-      {
-        kind: 'study-pack' as const,
-        label: '공개 가능 주제만 공부팩 후보로 분리',
-        command: buildSkillCommand('study-pack-writer', { topic: '<public-safe-topic>' }),
-        requiresUserApproval: requiresUserApproval('study-pack-writer'),
       },
     ];
   }

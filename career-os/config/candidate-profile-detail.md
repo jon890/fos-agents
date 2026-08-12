@@ -213,7 +213,7 @@
 
 1. **JPA N+1 & 페치 전략 질의응답**
    - `@EntityGraph` / fetch join / `default_batch_fetch_size` / `open-in-view=false`.
-   - 상태: study-pack 1편 작성 완료, 구술 면접 연습 반복 필요.
+   - 상태: 기술 학습 문서 1편 작성 완료, 구술 면접 연습 반복 필요.
 2. **Redis 캐싱 패턴 확장**
    - Write-Through / Write-Behind / Read-Through / Cache Stampede / Hot Key.
    - Cache-Aside + Kafka 하이브리드, Hot Key, TTL/invalidation, 장애 시 fallback 복기.

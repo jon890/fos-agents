@@ -51,7 +51,7 @@
         "architecture/resilience-patterns.md"
       ],
       "source": "manual-reconciliation",
-      "note": "Already covered; future recommendation should be refresh/update-existing, not a fresh study-pack."
+      "note": "Already covered; future recommendations should prefer review or newer external material."
     }
   ],
   "weak_spots": {

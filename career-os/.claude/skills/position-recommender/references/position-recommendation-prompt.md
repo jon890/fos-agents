@@ -30,7 +30,7 @@
 - Python/Kubernetes/ML 모델링처럼 제한적 경험인 영역은 과장하지 말고 "보완 필요"로 둔다.
 - 포지션 추천은 단순 직무명 나열이 아니라, 실제 지원 전략으로 쓸 수 있어야 한다.
 - 후보자가 블로그/스터디팩으로 학습 문서를 쌓고 있으므로, 각 포지션마다 다음 준비 액션을 연결한다.
-- 검증된 회사군 탐색에서는 `config/verified-company-research-targets.json`의 회사군과 `config/external-reading-sources.json` (`techBlog` 카테고리)의 기술블로그 신호를 적극 활용한다.
+- 검증된 회사군 탐색에서는 `config/verified-company-research-targets.json`의 회사군과 `config/external-reading-sources.ts`의 `techBlog` 소스를 활용한다.
 
 출력 형식:
 # <YYYY-MM-DD> 포지션 추천 리포트
@@ -104,4 +104,4 @@ daily runner가 이 첫 줄로 stale report를 막는다.
 ## 이번 주 액션 플랜
 - 지원/검색 액션 1개
 - 이력서 보강 액션 1개
-- study-pack 또는 question-bank 생성 후보 1개
+- 외부 읽을거리 추천 또는 question-bank 보강 후보 1개

@@ -307,11 +307,11 @@ export function renderDailyDigestReport(
   }
   lines.push('');
 
-  // 6. Public-Safe Study Candidates
-  lines.push('## Public-Safe Study Candidates');
+  // 6. Public-Safe Learning Signals
+  lines.push('## Public-Safe Learning Signals');
   lines.push('');
   lines.push('> Pure technical topics only — no company names, resume text, or application strategy.');
-  lines.push('> Safe to use with `/study-pack-writer` (requires user approval before running).');
+  lines.push('> Use these signals when selecting external reading with `/study-topic-recommender`.');
   lines.push('');
   if (publicSafe.length === 0) {
     lines.push('- (none identified this cycle — run `/study-topic-recommender` for suggestions)');

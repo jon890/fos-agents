@@ -8,7 +8,7 @@ import {
   partitionStudyActions,
   validateSafetyGate,
 } from './safety_gate';
-import { buildSkillCommand, requiresUserApproval } from './skill_contracts';
+import { buildSkillCommand } from './skill_contracts';
 import type { ActionStage } from './priority_schema';
 
 type ArtifactField =
@@ -68,7 +68,6 @@ export function buildPreparationActionSuggestions(
       return [
         `# Recheck active/open posting URL: ${record.url}`,
         buildSkillCommand('study-topic-recommender'),
-        `# [requires user approval] ${buildSkillCommand('study-pack-writer', { topic: '<public-safe-topic>' })}`,
       ];
     case 'monitor':
       return [
@@ -428,16 +427,10 @@ function buildCommandSuggestions(
 
     case 'generate_study_actions':
     case 'scheduled_retry': {
-      const studyCmds = [
+      return [
         buildSkillCommand('job-fit-analyzer'),
         buildSkillCommand('study-topic-recommender'),
       ];
-      if (requiresUserApproval('study-pack-writer')) {
-        studyCmds.push(
-          `# [requires user approval] ${buildSkillCommand('study-pack-writer', { topic: '<topic>' })}`,
-        );
-      }
-      return studyCmds;
     }
 
     case 'await_user_approval':
@@ -567,8 +560,8 @@ function writePrivateStudyActions(
     '',
     '> This file is private. Do not share in public channels or fos-study.',
     '',
-    '## Public-Safe Study Candidates',
-    '> Pure technical topics — safe to use with study-pack-writer (requires user approval)',
+    '## Public-Safe Learning Signals',
+    '> Pure technical topics that can guide the next external reading recommendation',
     '',
     publicSection,
     '',
@@ -586,7 +579,6 @@ function writePrivateStudyActions(
     `\`\`\``,
     buildSkillCommand('job-fit-analyzer'),
     buildSkillCommand('study-topic-recommender'),
-    `# [requires user approval] ${buildSkillCommand('study-pack-writer', { topic: '<public-safe-topic>' })}`,
     `\`\`\``,
   ].join('\n');
 

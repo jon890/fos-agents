@@ -50,7 +50,7 @@ description: >
 
 <question>
 
-1문장으로 핵심만 답변해 주세요. ("모르겠어" / "공부팩 만들어줘"도 OK)
+1문장으로 핵심만 답변해 주세요. 모르면 "모르겠어"라고 답해도 됩니다.
 ```
 
 ### 단계 3 — 채점 및 즉시 피드백
@@ -66,23 +66,18 @@ description: >
 채점 후 `drill-engine.ts`의 `updateWeakSpots(question, score)`를 호출해 기록을 갱신한다.
 채점 결과와 질문을 `recordDrillLog(entry)`로 `state/drill-log-YYYY-MM-DD.jsonl`에 기록한다.
 
-### 단계 4 — "모르겠어" / "공부팩 만들어줘" 처리
+### 단계 4 — "모르겠어" 처리
 
 사용자가 모름을 표시하면:
 
-1. `scoreAnswer(answer, question)` → `"unknown"` 처리로 `updateWeakSpots` 호출.
-2. **백그라운드 서브에이전트**로 `study-pack-writer <topic>` 실행 — non-blocking.
-   - 현재 드릴은 중단하지 않고 즉시 다음 질문으로 이동.
-   - 완료 메시지: "📦 <topic> 공부팩을 백그라운드에서 생성 중입니다. 드릴 계속 진행합니다."
-3. `shouldDispatchStudyPack(drillProgress, topic, dispatchedToday)` — 중복 방지.
-   같은 토픽을 당일 이미 위임했으면 "이미 생성 요청됨" 메시지 후 다음 질문으로.
+1. `scoreAnswer(answer, question)`을 `"unknown"`으로 처리한다.
+2. `updateWeakSpots`로 약점을 기록한다.
+3. 정답의 핵심 신호를 짧게 알려주고 다음 질문으로 이동한다.
 
 ### 단계 5 — 약점 환류 (자동)
 
-드릴 중 `shouldDispatchStudyPack` 조건 확인:
-- 같은 토픽 2회 이상 `fail` 또는 `unknown`이면 자동으로 `study-pack-writer <topic>` 위임.
-- 당일 동일 토픽 중복 위임 방지: `alreadyDispatchedToday` Set 유지.
-- 과생성 방지 메시지: "[약점 감지] <topic> 공부팩을 백그라운드에서 생성합니다. (당일 1회 한정)"
+같은 토픽에서 `fail` 또는 `unknown`이 반복되면 약점 상태와 복습일만 갱신한다.
+`study-topic-recommender`는 다음 실행에서 이 기록을 읽고 관련 외부 자료의 추천 우선순위를 판단한다.
 
 ### 단계 6 — 드릴 완료 요약
 
@@ -100,12 +95,12 @@ description: >
     2. <topic> — fail N회
     3. <topic> — fail N회
 
-  📦 공부팩 생성 요청: <topic>, <topic>  (백그라운드 처리 중)
+  다음 읽을거리 반영 대상: <topic>, <topic>
 ```
 
 ## 기록 규칙
 
-- 드릴 로그: `career-os/state/drill-log-YYYY-MM-DD.jsonl` — 질문·점수·위임 여부 기록.
+- 드릴 로그: `career-os/state/drill-log-YYYY-MM-DD.jsonl` — 질문과 점수 기록.
 - `updateWeakSpots(question, score)` 호출 1번으로 두 파일이 함께 갱신된다 (ADR-105).
   - `career-os/state/study-progress.json`의 `weak_spots` — topic 학습 상태: `last_evaluated`, `study_count`, `last_studied`, `status`.
   - `career-os/state/drill-progress.json` — 드릴 간격 반복 상태: `pass_count`, `fail_count`, `next_review_date`, `last_passed`.
@@ -123,15 +118,6 @@ description: >
 | 3회 → 4회 | 14일 후 |
 | 4회 → 5회 | 30일 후 |
 | 5회 이상 | 60일 후 |
-
-## 공부팩 위임 (백그라운드)
-
-부족 토픽의 공부팩이 필요하면 `study-pack-writer` 스킬에 위임한다.
-
-- 위임은 백그라운드(non-blocking)로 한다 — 드릴 세션은 기다리지 않고 다음 질문으로 계속한다.
-- 넘기는 것은 **대상 토픽**뿐이다. 그 토픽의 공부팩 생성은 study-pack-writer가 담당한다.
-- 어떻게 실행할지(서브에이전트·백그라운드 호출 방식)는 실행 환경에 맡긴다. 이 스킬은 "어떤 토픽으로 study-pack-writer를 호출할지"만 정하고 CLI 명령을 직접 박지 않는다.
-- 완료 알림·결과 회수는 실행 환경의 알림 경로를 따른다.
 
 ## 개인 질문 즉석 생성
 
@@ -151,5 +137,5 @@ description: >
 
 - behavioral-interview-drill 진행 금지 (별도 스킬 담당).
 - 면접 단계별 준비 금지 (interview-stage-prep 담당).
-- fos-study 발행 금지 (study-pack-writer 담당).
+- fos-study 발행 금지.
 - candidate-profile.md 직접 수정 금지 (사람이 직접 편집).

@@ -41,7 +41,6 @@ export const PreparationActionSchema = z.object({
     'package-draft',
     'application-review',
     'study-topic',
-    'study-pack',
     'interview-practice',
     'monitor',
     'investigate',

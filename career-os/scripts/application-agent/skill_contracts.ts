@@ -148,32 +148,13 @@ export const SKILL_CONTRACTS: Readonly<Record<string, SkillContract>> = {
       claudeCli: { permissionMode: 'bypassPermissions' },
     },
     description:
-      'gap 기반 private study action 후보 + RSS 보충 + 토픽 promote. 비공개 리포트.',
+      '외부 기술 자료를 수집하고 실제 학습 이력과 현재 약점을 반영한 아침 읽을거리 리포트를 생성.',
     autonomy: 'agent_only',
-    expectedOutputs: ['reports/morning-topic-recommendation.md'],
+    expectedOutputs: ['reports/morning-reading.md', 'reports/downloads/morning-reading-{date}.html'],
     touchesFosStudy: false,
     modifiesCandidateProfile: false,
-    requiresExternalAccess: false,
+    requiresExternalAccess: true,
     prerequisiteGuards: [],
-  },
-
-  'study-pack-writer': {
-    skillName: 'study-pack-writer',
-    invocation: {
-      kind: 'agent_skill',
-      slashCommand: 'study-pack-writer',
-      argsTemplate: '{topic}',
-    },
-    description:
-      'backend study pack 작성 후 sources/fos-study에 commit/push. public-safe topic만 허용.',
-    autonomy: 'user_approval_required',
-    expectedOutputs: ['sources/fos-study/{category}/{topic}.md'],
-    touchesFosStudy: true,
-    modifiesCandidateProfile: false,
-    requiresExternalAccess: false,
-    prerequisiteGuards: ['topic_is_public_safe', 'no_candidate_info_in_topic'],
-    approvalGateReason:
-      'fos-study는 공개 저장소 — 회사명·이력서 문구·지원 전략이 포함되지 않도록 사용자 승인 필요',
   },
 
   'interview-asset-writer': {

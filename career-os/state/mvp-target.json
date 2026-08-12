@@ -16,7 +16,7 @@
       "role": "Java Backend",
       "interview_date": "2026-04-21",
       "deprecated_at": "2026-05-13",
-      "notes": "면접 일정 종료 후 비활성화. 관련 산출물(study-pack, question-bank, interview/cj-oliveyoung-wellness-backend.md 등)은 참고용으로 보존, 재생성하지 않음. 탈락 시점 정본은 config/verified-company-research-targets.json의 cooldown.active(CJ올리브영)이다."
+      "notes": "면접 일정 종료 후 비활성화. 관련 학습 자료, question-bank, interview/cj-oliveyoung-wellness-backend.md 등은 참고용으로 보존하고 재생성하지 않음. 탈락 시점 정본은 config/verified-company-research-targets.json의 cooldown.active(CJ올리브영)이다."
     }
   ]
 }

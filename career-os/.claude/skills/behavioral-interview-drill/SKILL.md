@@ -110,7 +110,7 @@ STAR는 답변을 구성하고 채점할 때 쓰는 내부 기준이다.
 <question>
 
 구체적인 상황, 본인 행동, 결과가 드러나게 짧게 답변해 주세요.
-("모르겠어" / "공부팩 만들어줘"도 OK)
+모르면 "모르겠어"라고 답해도 됩니다.
 ```
 
 `target_value_axis`는 내부 필드명이다.
@@ -132,24 +132,18 @@ STAR는 답변을 구성하고 채점할 때 쓰는 내부 기준이다.
 `drill_type: "behavioral"` 필드를 반드시 포함한다.
 회사 오버레이가 적용된 세션은 로그에 `target_company`, `target_role`, `target_value_axis`를 함께 남길 수 있으면 남긴다.
 
-### 단계 4 — "모르겠어" / "공부팩 만들어줘" 처리
+### 단계 4 — "모르겠어" 처리
 
 사용자가 모름을 표시하면:
 
-1. `scoreAnswer(answer, question)` → `"unknown"` 처리로 `updateWeakSpots` 호출.
-2. **백그라운드 서브에이전트**로 `study-pack-writer <topic>` 실행 — non-blocking.
-   - 현재 답변 연습은 중단하지 않고 즉시 다음 질문으로 이동.
-   - 완료 메시지: "📦 <topic> 공부팩을 백그라운드에서 생성 중입니다. 답변 연습을 계속 진행합니다."
-3. `shouldDispatchStudyPack(drillProgress, topic, dispatchedToday)` — 중복 방지.
-   같은 토픽을 당일 이미 위임했으면 "이미 생성 요청됨" 메시지 후 다음 질문으로.
+1. `scoreAnswer(answer, question)`을 `"unknown"`으로 처리한다.
+2. `updateWeakSpots`로 약점을 기록한다.
+3. 답변을 구성할 핵심 기준을 짧게 알려주고 다음 질문으로 이동한다.
 
 ### 단계 5 — 약점 환류 (자동)
 
-답변 연습 중 `shouldDispatchStudyPack` 조건 확인:
-- 같은 역량 범주(category: 협업·문제해결·리더십·성장 등) 2회 이상 `fail` 또는 `unknown`이면
-  자동으로 `study-pack-writer <category>` 위임.
-- 당일 동일 역량 범주 중복 위임 방지: `alreadyDispatchedToday` Set 유지.
-- 과생성 방지 메시지: "[약점 감지] <category> 공부팩을 백그라운드에서 생성합니다. (당일 1회 한정)"
+같은 역량 범주에서 `fail` 또는 `unknown`이 반복되면 약점 상태와 복습일만 갱신한다.
+이 기록은 다음 질문 선택과 면접 준비 우선순위에 반영한다.
 
 ### 단계 6 — 답변 연습 완료 요약
 
@@ -167,12 +161,12 @@ STAR는 답변을 구성하고 채점할 때 쓰는 내부 기준이다.
     2. <category> — fail N회
     3. <category> — fail N회
 
-  📦 공부팩 생성 요청: <topic>, <topic>  (백그라운드 처리 중)
+  다음 복습 우선 범주: <category>, <category>
 ```
 
 ## 기록 규칙
 
-- 답변 연습 로그: `career-os/state/drill-log-YYYY-MM-DD.jsonl` — 질문·점수·위임 여부 기록.
+- 답변 연습 로그: `career-os/state/drill-log-YYYY-MM-DD.jsonl` — 질문과 점수 기록.
   - `drill_type: "behavioral"` 필드로 기술 면접 답변 연습 기록과 구분한다.
 - `updateWeakSpots(question, score)` 호출 1번으로 두 파일이 함께 갱신된다 (ADR-105).
   - `career-os/state/study-progress.json`의 `weak_spots` — topic 학습 상태: `last_evaluated`, `study_count`, `last_studied`, `status`.
@@ -192,15 +186,6 @@ STAR는 답변을 구성하고 채점할 때 쓰는 내부 기준이다.
 | 4회 → 5회 | 30일 후 |
 | 5회 이상 | 60일 후 |
 
-## 공부팩 위임 (백그라운드)
-
-부족 토픽의 공부팩이 필요하면 `study-pack-writer` 스킬에 위임한다.
-
-- 위임은 백그라운드(non-blocking)로 한다 — 답변 연습 세션은 기다리지 않고 다음 질문으로 계속한다.
-- 넘기는 것은 **대상 토픽**뿐이다. 그 토픽의 공부팩 생성은 study-pack-writer가 담당한다.
-- 어떻게 실행할지(서브에이전트·백그라운드 호출 방식)는 실행 환경에 맡긴다. 이 스킬은 "어떤 토픽으로 study-pack-writer를 호출할지"만 정하고 CLI 명령을 직접 박지 않는다.
-- 완료 알림·결과 회수는 실행 환경의 알림 경로를 따른다.
-
 ## 개인 질문 즉석 생성
 
 답변 연습 중 사용자가 "이 경험으로 질문 만들어줘", "내 경험 기반 질문 추가", "개인 질문 생성" 같은 요청을 하면
@@ -219,5 +204,5 @@ STAR는 답변을 구성하고 채점할 때 쓰는 내부 기준이다.
 
 - tech-interview-drill 진행 금지 (별도 스킬 담당).
 - 면접 단계별 준비 금지 (interview-stage-prep 담당).
-- fos-study 발행 금지 (study-pack-writer 담당).
+- fos-study 발행 금지.
 - candidate-profile.md 직접 수정 금지 (사람이 직접 편집).

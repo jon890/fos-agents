@@ -1,6 +1,6 @@
 ---
 name: interview-asset-writer
-description: 후보자 이력 기반 면접 자산 마크다운 초안을 생성하는 career-os skill. "면접 자료 만들어줘", "경험 기반 질문 정리", "AI 서비스팀 면접 질문 은행", "experience qbank", "자기소개 플레이북", "마스터 플레이북", `/interview-asset-writer [topic]`처럼 후보자 이력서·task 노트 기반 Q&A 질문 은행이나 마스터 플레이북이 필요할 때 사용. 일반 기술 토픽 학습 문서는 study-pack-writer로 라우팅. 사용자가 명시적으로 공개 발행을 승인한 경우에만 sources/fos-study commit/push를 수행한다.
+description: 후보자 이력 기반 면접 자산 마크다운 초안을 생성하는 career-os skill. "면접 자료 만들어줘", "경험 기반 질문 정리", "AI 서비스팀 면접 질문 은행", "experience qbank", "자기소개 플레이북", "마스터 플레이북", `/interview-asset-writer [topic]`처럼 후보자 이력서·task 노트 기반 Q&A 질문 은행이나 마스터 플레이북이 필요할 때 사용. 사용자가 명시적으로 공개 발행을 승인한 경우에만 sources/fos-study commit/push를 수행한다.
 ---
 
 # Interview Asset Writer
@@ -22,7 +22,7 @@ interview asset은 후보자 이력 기반 자료지만 `fos-study` 공개 발�
 
 - `qbank`, `question-bank`, "질문 은행", "Q&A" 신호가 있으면 Q&A 질문 은행 형식으로 작성한다.
 - `master`, `playbook`, "마스터", "플레이북" 신호가 있으면 마스터 플레이북 형식으로 작성한다.
-- 일반 기술 토픽 학습 문서로 보이면 `study-pack-writer`로 라우팅한다.
+- 일반 기술 자료 추천 요청은 `study-topic-recommender`로 라우팅한다.
 
 ## Inputs
 
@@ -203,13 +203,6 @@ add vs update는 `git status --porcelain` 자동 판단. push 실패 시 stderr 
 | 승인된 publish의 git push 실패 (권한/충돌) | stderr + exit 1 |
 | 외부 전달 실패 | skill 범위 밖의 실패로 분리하고 생성 산출물은 유지 |
 
-## Why this design
-
-- **두 형식 흡수**: master playbook과 Q&A 질문 은행은 모두 *후보자 이력 기반 면접 자산*. 학습 문서(study-pack-writer)와 책임 분리 — 본 skill은 *이력 중심*, study-pack-writer는 *주제 중심*. 두 형식을 한 skill로 묶고 분기 처리.
-- **Self-check가 JSON schema 대체**: 옛 `--json-schema` + renderer 패턴은 외부 subprocess의 부산물. native에서는 현재 에이전트 자체 검증으로 동등 효과.
-- **재작성 ≤3회 cap**: 무한 루프 차단. 그래도 실패하면 본질 문제 (topic 모호, 입력 부족) — 사용자 개입 필요.
-- **Publish + notify 셸 명령 통합**: 옛 외부 publish/notify shell을 셸 명령 도구로 직접. 의존 줄임.
-
 ## References
 
 - `career-os/config/candidate-profile.md` — 후보자 이력 core (사실·라벨, Q&A 질문 은행 + 마스터 플레이북 양쪽 공통 입력)
@@ -218,6 +211,6 @@ add vs update는 `git status --porcelain` 자동 판단. push 실패 시 stderr 
 - `career-os/public/question-bank/` — 공개 질문 bank 정본 (topic-key 매칭 1순위)
 - `career-os/config/question-bank-topics.json` — interview asset 전용 override 후보 (outputPath / domain / inputFiles)
 - `career-os/.claude/skills/interview-asset-writer/references/output-policy.md` — 공개 산출물 경계 정책 (내부 전략과 공개 문구 분리 기준)
-- 관련 스킬: `study-pack-writer` — 일반 기술 토픽 학습 문서 (이력 기반 자산과 책임 분리)
+- 관련 스킬: `study-topic-recommender` — 외부 기술 자료 추천
 - 관련 스킬: `question-bank-collector` — 공개 일반 backend/CS 질문 bank 보강
 - 관련 스킬: `job-fit-analyzer` — 직무 핏·갭 진단 (본 skill 산출물을 입력으로 사용)
