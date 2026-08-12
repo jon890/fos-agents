@@ -144,10 +144,12 @@ metadata:
 - 식사 상황: 아침, 도시락, 저녁, 비상식
 - 건강 조정: 저염, 저포화지방, 순한 양념
 
-가능하면 다음 수집기를 사용한다.
+먼저 `youtube-video-research` skill을 로드하고 `skill_view` 결과의 `skill_dir`를 확인한다.
+그 경로를 환경변수로 지정해 수집기를 실행한다.
 
 ```bash
-python3 /opt/data/skills/media/youtube-video-research/scripts/collect_youtube_candidates.py \
+YOUTUBE_RESEARCH_SKILL_DIR='<skill_view 결과의 skill_dir>'
+python3 "$YOUTUBE_RESEARCH_SKILL_DIR/scripts/collect_youtube_candidates.py" \
   --query '<검색어 1>' --axis '<축 1>' \
   --query '<검색어 2>' --axis '<축 2>' \
   --limit 10 --out-dir /tmp/<research-name>
