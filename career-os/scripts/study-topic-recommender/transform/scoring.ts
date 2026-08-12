@@ -1,4 +1,4 @@
-// ── scoring constants (ADR-009/010/012) ──────────────────────────────────────
+// ── 백엔드 추천 점수 상수 ────────────────────────────────────────────────────
 
 export const BACKEND_MIX_TARGET: Record<string, number> = {
   new: 1,
@@ -48,7 +48,7 @@ export function backendDomainGroup(domain: string | undefined): string {
   return d || "unknown";
 }
 
-/** Pure scoring for a single backend candidate (ADR-009/010). */
+/** 백엔드 후보 하나의 반복도와 관심 분야 점수를 계산한다. */
 export function scoreBackendItem(
   key: string,
   domain: string,

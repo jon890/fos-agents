@@ -26,7 +26,7 @@ import type {
 } from "./transform/types.js";
 import { loadReadingSources } from "./reading_sources.js";
 import { prepareReadingCandidatePool, selectReadings } from "./reading_stage.js";
-import { appendHistory, loadLatestKeys, loadRecentHistory } from "./state/history.js";
+import { appendHistory, loadLatestKeys, loadRecentHistory } from "./persistence/history.js";
 import { buildFosStudyFallbackCandidates } from "./transform/fos_study_fallback.js";
 import { renderExistingInventory } from "./render/inventory.js";
 
