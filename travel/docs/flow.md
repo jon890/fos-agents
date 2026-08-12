@@ -1,6 +1,7 @@
 # Flow — travel
 
 travel은 자동화 runner 없이 사용자가 대화 중 문서를 갱신하는 흐름만 가진다.
+모든 trip 문서는 Git이 무시하는 `private/trips/` 아래에서 작성한다.
 
 ## trip 생성
 
@@ -8,9 +9,9 @@ travel은 자동화 runner 없이 사용자가 대화 중 문서를 갱신하는
 사용자 요청
   -> 목적지와 기간 확인
   -> trip-id 결정
-  -> trips/<trip-id>/ 디렉터리 생성
+  -> private/trips/<trip-id>/ 디렉터리 생성
   -> 기본 문서 생성
-  -> docs/index.md 갱신
+  -> private/trips/index.md 갱신
 ```
 
 기본 문서:
@@ -61,7 +62,7 @@ trip-overview.md + itinerary.md 검토
 
 ```text
 귀가 후
-  -> docs/index.md 상태 갱신
+  -> private/trips/index.md 상태 갱신
   -> 필요하면 memory/에 회고 작성
 ```
 

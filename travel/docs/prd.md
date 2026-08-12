@@ -6,7 +6,7 @@ travel 워크스페이스는 여행별 문서를 안전하게 누적 관리하�
 ## 목적
 
 - trip별 일정, 예약 정보, 의사결정을 한 디렉터리에 모은다.
-- 전체 trip 목록을 `docs/index.md`에서 확인한다.
+- 개인 trip 목록을 `private/trips/index.md`에서 확인한다.
 - 예약 정보와 개인 일정을 외부 공개 경계 밖에 둔다.
 
 ## 사용자
@@ -18,13 +18,13 @@ travel 워크스페이스는 여행별 문서를 안전하게 누적 관리하�
 
 | 기능 | 산출물 |
 |---|---|
-| trip 생성 | `trips/<trip-id>/` |
-| 예약·고정 정보 정리 | `trips/<trip-id>/docs/trip-overview.md` |
-| Day별 일정 정리 | `trips/<trip-id>/docs/itinerary.md` |
-| 결정 기록 | `trips/<trip-id>/docs/decision-log.md` |
-| trip별 보조 자료 보관 | `trips/<trip-id>/data/` |
-| 출발 전 체크리스트와 HTML 등 산출물 | `trips/<trip-id>/output/` |
-| 전체 trip 목록 갱신 | `docs/index.md` |
+| trip 생성 | `private/trips/<trip-id>/` |
+| 예약·고정 정보 정리 | `private/trips/<trip-id>/docs/trip-overview.md` |
+| Day별 일정 정리 | `private/trips/<trip-id>/docs/itinerary.md` |
+| 결정 기록 | `private/trips/<trip-id>/docs/decision-log.md` |
+| trip별 보조 자료 보관 | `private/trips/<trip-id>/data/` |
+| 출발 전 체크리스트와 HTML 등 산출물 | `private/trips/<trip-id>/output/` |
+| 개인 trip 목록 갱신 | `private/trips/index.md` |
 
 ## 의도적으로 안 하는 것
 
@@ -35,7 +35,8 @@ travel 워크스페이스는 여행별 문서를 안전하게 누적 관리하�
 
 ## 성공 기준
 
-- 모든 trip이 `docs/index.md`에 있다.
+- 모든 trip이 `private/trips/index.md`에 있다.
 - 각 trip의 핵심 정보가 `trip-overview.md`, `itinerary.md`, `decision-log.md`로 나뉜다.
 - 예약 정보와 개인 일정이 공개 문서나 외부 저장소로 복사되지 않는다.
+- `git ls-files travel/`에 trip 데이터가 나오지 않는다.
 - 자동화가 없는 현재 구조를 문서가 그대로 설명한다.

@@ -1,7 +1,8 @@
 # Data Schema — travel
 
 이 문서는 travel의 trip 디렉터리와 파일 구조를 설명한다.
-전체 trip 목록은 `docs/index.md`가 단일 출처다.
+개인 trip 목록은 `private/trips/index.md`가 단일 출처다.
+이 문서에는 구조만 두고 실제 trip 내용을 복사하지 않는다.
 
 ## trip-id
 
@@ -16,7 +17,7 @@
 ## trip 구조
 
 ```text
-trips/<trip-id>/
+private/trips/<trip-id>/
 ├── docs/
 │   ├── trip-overview.md
 │   ├── itinerary.md
@@ -56,7 +57,8 @@ trips/<trip-id>/
 |---|---|
 | `AGENTS.md` | 작업 규칙과 문서 라우팅 |
 | `README.md` | 시작 안내 |
-| `docs/index.md` | 전체 trip 목록 |
+| `docs/index.md` | 공개 trip 목록과 공개 경계 |
+| `private/trips/index.md` | 개인 trip 목록 (Git 무시) |
 | `docs/prd.md` | 제품 범위 |
 | `docs/data-schema.md` | 본 문서 |
 | `docs/flow.md` | 사용자 흐름 |

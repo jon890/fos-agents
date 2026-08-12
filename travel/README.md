@@ -6,25 +6,21 @@
 ## 시작하기
 
 1. [`AGENTS.md`](AGENTS.md)를 읽는다.
-2. [`docs/index.md`](docs/index.md)에서 기존 trip을 확인한다.
-3. 새 여행이면 `trips/<trip-id>/`를 만든다.
+2. `private/trips/index.md`에서 기존 trip을 확인한다.
+3. 새 여행이면 `private/trips/<trip-id>/`를 만든다.
 4. `trip-overview.md`, `itinerary.md`, `decision-log.md`를 채운다.
 
 ## 현재 trip
 
-| trip | 설명 |
-|---|---|
-| `trips/osaka-2026-05` | 2026-05 오사카 여행 |
-| `trips/paju-heyri-2026-05` | 파주 헤이리 반나절 데이트 |
-| `trips/gunsan-daejeon-2026-08` | 2026-08 군산·대전 여행 |
-| `trips/cheonho-2026-08` | 2026-08 천호 반나절 데이트 |
+실제 trip 목록은 개인 날짜와 목적지를 포함하므로 공개 저장소에 두지 않는다.
+`private/trips/index.md`를 따른다.
 
-전체 목록은 [`docs/index.md`](docs/index.md)를 따른다.
+공개 승인된 trip만 [`docs/index.md`](docs/index.md)에 올린다.
 
 ## trip 구조
 
 ```text
-trips/<trip-id>/
+private/trips/<trip-id>/
 ├── docs/
 │   ├── trip-overview.md
 │   ├── itinerary.md
@@ -54,8 +50,10 @@ trips/<trip-id>/
 문서 변경 후에는 아래를 확인한다.
 
 ```bash
-find travel/trips -maxdepth 2 -type f | sort
+find travel/private/trips -maxdepth 2 -type f | sort
 rg -n "채널 ID|환경 종속 경로|내부 호스트" travel/AGENTS.md travel/README.md travel/docs
+git ls-files travel/ | rg "trips/" || echo "trip 데이터가 tracked 되지 않음"
 ```
 
-`docs/index.md`의 trip 목록과 실제 `trips/` 하위 디렉터리가 맞는지도 함께 본다.
+`private/trips/index.md`의 trip 목록과 실제 `private/trips/` 하위 디렉터리가 맞는지도 함께 본다.
+마지막 명령은 개인 trip 데이터가 다시 Git에 올라가지 않았는지 확인한다.

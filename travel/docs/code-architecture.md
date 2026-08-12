@@ -19,30 +19,33 @@ travel/
 │   ├── code-architecture.md
 │   └── adr/
 │       └── INDEX.md
-└── trips/
-    └── <trip-id>/
-        ├── docs/
-        │   ├── trip-overview.md
-        │   ├── itinerary.md
-        │   └── decision-log.md
-        ├── data/
-        ├── memory/
-        └── output/
+└── private/                  # Git 무시 (.gitignore `**/private/`)
+    └── trips/
+        ├── index.md
+        └── <trip-id>/
+            ├── docs/
+            │   ├── trip-overview.md
+            │   ├── itinerary.md
+            │   └── decision-log.md
+            ├── data/
+            ├── memory/
+            └── output/
 ```
 
 ## 책임
 
 | 경로 | 책임 |
 |---|---|
-| `docs/index.md` | 전체 trip 목록 |
+| `docs/index.md` | 공개 trip 목록과 공개 경계 |
 | `docs/prd.md` | 워크스페이스 범위와 성공 기준 |
 | `docs/flow.md` | trip 생성·정리 흐름 |
 | `docs/data-schema.md` | trip 디렉터리와 파일 구조 |
 | `docs/adr/INDEX.md` | travel 한정 기술 결정 |
-| `trips/<trip-id>/docs/` | trip별 핵심 문서 |
-| `trips/<trip-id>/data/` | 예약 파일과 보조 자료 |
-| `trips/<trip-id>/memory/` | 세션 기록과 회고 |
-| `trips/<trip-id>/output/` | 체크리스트, HTML, 이미지 산출물 |
+| `private/trips/index.md` | 개인 trip 목록 |
+| `private/trips/<trip-id>/docs/` | trip별 핵심 문서 |
+| `private/trips/<trip-id>/data/` | 예약 파일과 보조 자료 |
+| `private/trips/<trip-id>/memory/` | 세션 기록과 회고 |
+| `private/trips/<trip-id>/output/` | 체크리스트, HTML, 이미지 산출물 |
 
 ## 의도적으로 없는 항목
 
