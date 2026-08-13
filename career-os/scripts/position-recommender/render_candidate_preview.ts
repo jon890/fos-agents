@@ -1,10 +1,10 @@
-#!/usr/bin/env node
-// 포지션 추천 JSON과 live posting snapshot에서 외부 게시 준비용 전체 공고 HTML을 생성한다.
-// 전체 report.html은 render_recommendation.ts가 담당하고, 이 파일은 공고 링크 중심 HTML 전용이다.
+#!/usr/bin/env bun
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { RecommendationRun, type RecommendationRunType, type PositionItemType } from "./recommendation_schema.ts";
+import { loadPostingCandidatePool } from "./live-postings/candidate_pool.ts";
+import type { PostingCandidatePool } from "./live-postings/contracts.ts";
+import { RecommendationRun, type PositionItemType, type RecommendationRunType } from "./recommendation_schema.ts";
+import { validateRecommendationAgainstPool } from "./validate_recommendation.ts";
 
 type PreviewTier = "강력 추천" | "도전 추천" | "보류·주의" | "전체 후보";
 
@@ -15,34 +15,17 @@ interface PreviewRow {
   url: string;
   why: string;
   keywords: string[];
-  filterEvidence?: string;
-}
-
-interface LivePostingCandidate {
-  company: string;
-  title: string;
-  fields: Record<string, string>;
-  raw: string[];
-}
-
-interface SnapshotProvenance {
-  collectionRunId: string;
-  collectedAt: string;
 }
 
 export interface CandidatePreviewOptions {
   limit?: number | null;
   title?: string;
-  postingsMarkdown?: string;
+  candidatePool?: PostingCandidatePool;
 }
 
 function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
 function positionRow(tier: PreviewTier, item: PositionItemType): PreviewRow {
@@ -52,235 +35,42 @@ function positionRow(tier: PreviewTier, item: PositionItemType): PreviewRow {
     title: item.title,
     url: item.postingUrl,
     why: item.whyFit,
-    keywords: item.searchKeywords,
-    filterEvidence: [...item.searchKeywords, ...item.jdKeywords].join(" "),
+    keywords: item.jdKeywords,
   };
 }
 
-function rowsFromRun(run: RecommendationRunType): PreviewRow[] {
-  const rows = [
+function recommendationRows(run: RecommendationRunType): PreviewRow[] {
+  return [
     ...run.tiers.strong.map((item) => positionRow("강력 추천", item)),
     ...run.tiers.stretch.map((item) => positionRow("도전 추천", item)),
-    ...run.tiers.hold
-      .filter((item) => item.link && item.link !== "-")
-      .map((item) => ({
-        tier: "보류·주의" as const,
-        company: item.company,
-        title: item.title,
-        url: item.link,
-        why: item.reason,
-        keywords: ["보류", "확인 필요"],
-        filterEvidence: item.reason,
-      })),
+    ...run.tiers.hold.filter((item) => item.link !== "-").map((item) => ({
+      tier: "보류·주의" as const,
+      company: item.company,
+      title: item.title,
+      url: item.link,
+      why: item.reason,
+      keywords: ["보류"],
+    })),
   ];
-  const { suppressedUrls, excludedCompanies } = loadPreviewFilters();
-  return rows.filter((row) =>
-    !suppressedUrls.has(row.url)
-    && !excludedCompanies.has(normalizeCompany(row.company))
-    && !isExcludedPreviewPosting({ company: row.company, title: row.title, fields: { main_tasks: row.why }, raw: [] })
-    && !hasExcludedRecommendedEvidence(row.filterEvidence ?? ""),
-  );
 }
 
-function hasExcludedRecommendedEvidence(value: string): boolean {
-  const evidence = value.toLowerCase();
-  return /model\s*router|mcp\s*gateway|long[ -]?term\s*memory|multi[ -]?agent\s*orchestration|agent\s*(sdk|platform)|공용\s*agent\s*플랫폼|에이전트\s*오케스트레이션/.test(evidence);
-}
-
-function recommendationOpinionByUrl(run: RecommendationRunType): Map<string, string> {
-  const entries = [
-    ...run.tiers.strong.map((item) => [item.postingUrl, item.whyFit] as const),
-    ...run.tiers.stretch.map((item) => [item.postingUrl, `${item.whyFit} ${item.stretchGap}`] as const),
-    ...run.tiers.hold.filter((item) => item.link && item.link !== "-").map((item) => [item.link, item.reason] as const),
-  ];
-  return new Map(entries.map(([url, opinion]) => [url, summarizeOpinion(opinion)]));
-}
-
-/**
- * config/position-filters.json 의 suppressedPostings URL 집합을 읽는다 (ADR-111).
- * 추천 시점 필터라 수집은 그대로 두고 전체 공고 HTML에서만 해당 URL을 숨긴다.
- * config를 못 읽으면 억제 없이 진행한다(HTML 생성 자체를 막지 않는다).
- */
-let previewFilterCache: { suppressedUrls: Set<string>; excludedCompanies: Set<string> } | null = null;
-function normalizeCompany(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9가-힣]/g, "");
-}
-
-function loadPreviewFilters(): { suppressedUrls: Set<string>; excludedCompanies: Set<string> } {
-  if (previewFilterCache) return previewFilterCache;
-  const suppressedUrls = new Set<string>();
-  const excludedCompanies = new Set<string>();
-  try {
-    const path = resolve(dirname(fileURLToPath(import.meta.url)), "../../config/position-filters.json");
-    const config = JSON.parse(readFileSync(path, "utf8"));
-    for (const item of config?.suppressedPostings ?? []) {
-      if (item?.url) suppressedUrls.add(String(item.url));
-    }
-    for (const company of config?.excludedCompanies ?? []) excludedCompanies.add(normalizeCompany(String(company)));
-  } catch (e) {
-    console.error(`WARN position-filters config load failed, proceeding without posting suppression: ${e}`);
-  }
-  previewFilterCache = { suppressedUrls, excludedCompanies };
-  return previewFilterCache;
-}
-
-function parseLivePostingRows(markdown: string, run: RecommendationRunType): PreviewRow[] {
-  const rows: PreviewRow[] = [];
-  let current: LivePostingCandidate | null = null;
-  const opinionByUrl = recommendationOpinionByUrl(run);
-  const { suppressedUrls, excludedCompanies } = loadPreviewFilters();
-
-  function flush(): void {
-    if (!current) return;
-    const status = (current.fields.posting_status ?? "").toLowerCase();
-    const linkType = (current.fields.link_type ?? "").toLowerCase();
-    const url = current.fields.url ?? "";
-    if ((status === "active" || status === "open") && linkType === "direct_posting" && url && !suppressedUrls.has(url) && !excludedCompanies.has(normalizeCompany(current.company)) && !isExcludedPreviewPosting(current)) {
-      const skills = splitCsv(current.fields.skills ?? "").slice(0, 8);
-      const why = opinionByUrl.get(url) ?? buildFallbackOpinion(current);
-      rows.push({
-        tier: "전체 후보",
-        company: current.company,
-        title: current.title,
-        url,
-        why,
-        keywords: skills.length > 0 ? skills : [current.fields.source ?? "수집 공고"],
-      });
-    }
-    current = null;
-  }
-
-  for (const line of markdown.split(/\r?\n/)) {
-    const header = line.match(/^- \[([^\]]+)\] (.+)$/);
-    if (header) {
-      flush();
-      current = { company: header[1].trim(), title: header[2].trim(), fields: {}, raw: [line] };
-      continue;
-    }
-    if (!current) continue;
-    current.raw.push(line);
-    const field = line.trim().match(/^- ([a-zA-Z0-9_]+):\s*(.*)$/);
-    if (field) current.fields[field[1]] = field[2].trim();
-  }
-  flush();
-  return sortLivePreviewRows(rows);
-}
-
-function snapshotProvenance(markdown: string): SnapshotProvenance {
-  const collectionRunId = markdown.match(/^- collection_run_id:\s*(.+)$/m)?.[1]?.trim() ?? "";
-  const collectedAt = markdown.match(/^- collected_at:\s*(.+)$/m)?.[1]?.trim() ?? "";
-  return { collectionRunId, collectedAt };
-}
-
-function koreaDate(value: string): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" })
-    .format(new Date(value))
-    .replace(/\//g, "-");
-}
-
-function snapshotActivePostingCount(markdown: string): number {
-  return Number(markdown.match(/^- direct_active_or_open_postings:\s*(\d+)$/m)?.[1] ?? "0");
-}
-
-function aiInterestScore(row: PreviewRow): number {
-  const text = [row.company, row.title, row.why, ...row.keywords].join(" ").toLowerCase();
-  const highSignals = ["rag", "vector", "벡터", "opensearch", "llm", "agent", "에이전트", "ax", "ai transformation", "ai 플랫폼", "ai platform", "llmops", "mlops", "model router", "gateway", "workflow", "tool calling"];
-  const serverSignals = ["backend", "백엔드", "server", "서버", "spring", "java", "kotlin", "api", "platform", "플랫폼"];
-  const researchOnlySignals = ["research scientist", "applied scientist", "model research", "모델 연구", "논문"];
-  const high = highSignals.reduce((sum, signal) => sum + (text.includes(signal) ? 3 : 0), 0);
-  const server = serverSignals.reduce((sum, signal) => sum + (text.includes(signal) ? 1 : 0), 0);
-  const researchPenalty = researchOnlySignals.some((signal) => text.includes(signal)) ? 20 : 0;
-  return high + Math.min(server, 4) - researchPenalty;
-}
-
-function companyScaleScore(company: string): number {
-  const normalized = company.toLowerCase();
-  const highScaleSignals = ["토스", "toss", "쿠팡", "coupang", "카카오", "kakao", "네이버", "naver", "크래프톤", "krafton", "컬리", "kurly", "cj올리브네트웍스", "cj one", "티맵", "tmap"];
-  return highScaleSignals.some((signal) => normalized.includes(signal)) ? 10 : 0;
-}
-
-function sortLivePreviewRows(rows: PreviewRow[]): PreviewRow[] {
-  return rows
-    .map((row, index) => ({ row, index, score: companyScaleScore(row.company) + aiInterestScore(row) }))
-    .sort((a, b) => b.score - a.score || a.index - b.index)
-    .map((item) => item.row);
-}
-
-function splitCsv(value: string): string[] {
-  return value.split(",").map((item) => item.trim()).filter(Boolean);
-}
-
-function firstNonEmpty(values: Array<string | undefined>): string {
-  return values.find((value) => value && value.trim())?.trim() ?? "개별 active/open 공고로 수집된 전체 후보입니다.";
-}
-
-function summarizeText(value: string, maxLength = 220): string {
-  const sanitized = value.replace(/CTO/g, "기술 조직").replace(/\s+/g, " ").trim();
-  if (sanitized.length <= maxLength) return sanitized;
-  return `${sanitized.slice(0, maxLength - 1)}…`;
-}
-
-function sentenceLimit(value: string, maxSentences = 3): string {
-  const sanitized = summarizeText(value, 360);
-  const sentences = sanitized
-    .split(/(?<=[.!?。！？])\s+|(?<=다\.)\s+|(?<=요\.)\s+|(?<=임\.)\s+|(?<=음\.)\s+/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-  return summarizeText((sentences.length ? sentences : [sanitized]).slice(0, maxSentences).join(" "), 260);
-}
-
-function summarizeOpinion(value: string): string {
-  return sentenceLimit(value, 3);
-}
-
-function buildFallbackOpinion(posting: LivePostingCandidate): string {
-  const roleSummary = sentenceLimit(firstNonEmpty([posting.fields.main_tasks, posting.fields.requirements, posting.fields.summary]), 2);
-  const risk = sentenceLimit(firstNonEmpty([posting.fields.career_upside_risk_flags, posting.fields.preferred, "세부 JD와 seniority 기대치를 확인해야 합니다."]), 1);
-  return summarizeText(`추천 티어에는 올리지 않았지만 active/open 후보로 유지할 만한 공고입니다. ${roleSummary} 확인 포인트는 ${risk}`, 280);
-}
-
-function isExcludedPreviewPosting(posting: LivePostingCandidate): boolean {
-  const text = [posting.company, posting.title, ...Object.values(posting.fields), ...posting.raw].join(" ").toLowerCase();
-  const coreRoleText = [posting.title, posting.fields.main_tasks, posting.fields.requirements].filter(Boolean).join(" ").toLowerCase();
-  const title = posting.title.toLowerCase();
-  if (/담당자|full[ -]?stack|풀스택/.test(title)) return true;
-  if (/model\s*operations|system\s*architecture\s*engineer|시스템\s*인프라\s*운영/.test(title)) return true;
-  if (/(?:서버\s*엔지니어|server\s*engineer)/.test(title) && /(?:\bidc\b|on[- ]?premise|온프레미스|\bvdi\b|active\s*directory|하드웨어).*(?:운영|관리|라이프사이클)/.test(text)) return true;
-  if (/\bcto\b|chief technology officer|기술\s*총괄|기술총괄/.test(text)) return true;
-  if (/tech\s*lead|server\s*lead|technical\s*lead|테크\s*리드|기술\s*리드/.test(text)) return true;
-  if (/team\s*leader|팀\s*(리더|리드)/.test(title)) return true;
-  if (/ai engineer\s*\((model|speech)\)|모델\s*엔지니어/.test(title)) return true;
-  if (/ai\s*model\s*research|model\s*research|research\s*scientist|applied\s*scientist|ai\s*research|모델\s*연구/.test(text)) return true;
-  if (/\b3d\b.*(map|지도|render|렌더)|(?:map|지도).*(render|렌더)|rendering\s*engine|렌더링\s*엔진|\bgraphics?\b|그래픽스?|map\s*engine/.test(title)) return true;
-  if (/\bslam\b|로보틱스.*(?:ml|머신러닝)|자율주행.*(?:ml|머신러닝)/.test(coreRoleText)) return true;
-  if (/\baiops\b|\bsystems?\s*engineer\b|시스템\s*엔지니어|\berp\s*ops\s*developer\b|infrastructure\s*(automation|operations)\s*engineer|openstack\s*cloud\s*engineer|it\s*인프라.*엔지니어|ai\s*infrastructure|private\s*cloud.*엔지니어링|클라우드\s*인프라\s*엔지니어/.test(title)) return true;
-  if (/전문통신|tcp.*전문통신/.test(title)) return true;
-  if (/network\s*daemon|l4\s*-?\s*l7/.test(title)) return true;
-  if (/network\s*daemon/.test(coreRoleText) || (/tcp\s*\/\s*ip/.test(coreRoleText) && /패킷\s*(?:분석|처리)|packet\s*(?:analysis|processing)/.test(coreRoleText))) return true;
-  if (/payment\s*software\s*engineer|ux\s*writer/.test(title)) return true;
-  if (/3년\s*이하|신입/.test(title)) return true;
-  if (/cj\s*foodville|cj\s*푸드빌|cj푸드빌|씨제이푸드빌|cj\s*olive\s*young|cj올리브영|씨제이올리브영/.test(text)) return true;
-  if (/전문계약직|계약직|임시직|프리랜서|인턴|contractor|\bcontract\b|\bintern(ship)?\b/.test(text)) return true;
-  if (/data\s*(analytics\s*)?(engineer|pipeline|platform|analyst)|data\s*system\s*developer|데이터\s*(엔지니어|파이프라인|플랫폼|분석)|ai\s*dba|\bdba\b/.test(title)) return true;
-  if (/data\s*(pipeline|warehouse|lake)|데이터\s*(파이프라인|웨어하우스|레이크)|airflow|kafka\s*connect/.test(text)) return true;
-  if (/model\s*router|mcp\s*gateway|long[ -]?term\s*memory|multi[ -]?agent|agent\s*orchestration|에이전트\s*오케스트레이션|ai\s*agent\s*sdk|agent\s*(gym|platform)/.test(text)) return true;
-  if (/\bml\s*engineer\b|ml\s*infrastructure|model\s*serving|llm\s*serving|ai\s*engineer\s*\((platform|serving|ads|commerce)\)|모델\s*서빙|ml\s*인프라/.test(text)) return true;
-  if (/\b(staff|senior staff)\b/.test(title)) return true;
-  if (/applied\s*ai\s*engineer|ai[ -]?native\s*(engineer|developer|개발자)|ai\s*platform\s*engineer|\bai\s*engineer\b.*\(r&d\)|자율(?:주행|비행)\s*ai\s*엔지니어|ai.*인프라\s*엔지니어/.test(title)) return true;
-  if (/\b(sre|site reliability|devops|devsecops|network|security researcher|technical account|technical program|account manager|asset manager|purchasing|compliance|hrbp|modeler)\b|\bsales\s*(lead|manager|representative|specialist|consultant)\b|\b(it manager|it planning|it governance|sox manager|call infra|financial systems|business partnership|category md|search engineer)\b|데이터\s*분석가|채널영업|기술영업|영업.*(?:리드|담당)|세일즈\s*(?:리드|매니저|담당|영업)|총무|general affairs|보안\s*연구|네트워크\s*엔지니어|외환\s*상품|자문\s*상품|인프라\s*담당자|컴플라이언스/.test(title)) return true;
-  if (/\bmanager\b/.test(title)) return true;
-
-  const company = posting.company.toLowerCase();
-  const isTossRootCompany = company === "토스" || company === "toss";
-  const isGenericTossServer = /^server developer(?:\s*\([^)]+\)|\s*\[[^\]]+\].*)?$/i.test(posting.title.trim());
-  const isGenericTossNode = /^node\.js developer$/i.test(posting.title.trim());
-  if (isTossRootCompany && (isGenericTossServer || isGenericTossNode)) return true;
-  return false;
+function candidateRows(pool: PostingCandidatePool, run: RecommendationRunType): PreviewRow[] {
+  const opinions = new Map<string, string>([
+    ...run.tiers.strong.map((item) => [item.candidateId, item.whyFit] as const),
+    ...run.tiers.stretch.map((item) => [item.candidateId, `${item.whyFit} ${item.stretchGap}`] as const),
+  ]);
+  return pool.candidates.map((candidate) => ({
+    tier: "전체 후보",
+    company: candidate.company,
+    title: candidate.title,
+    url: candidate.url,
+    why: opinions.get(candidate.id) ?? "추천 티어에 선정되지 않은 수집 후보입니다.",
+    keywords: candidate.skills.length > 0 ? candidate.skills.slice(0, 8) : ["기술 정보 없음"],
+  }));
 }
 
 function applyLimit(rows: PreviewRow[], limit: number | null | undefined): PreviewRow[] {
-  if (limit == null) return rows;
-  return rows.slice(0, Math.max(1, limit));
+  return limit == null ? rows : rows.slice(0, Math.max(1, limit));
 }
 
 function badgeClass(tier: PreviewTier): string {
@@ -290,164 +80,69 @@ function badgeClass(tier: PreviewTier): string {
   return "all";
 }
 
-function codeList(values: string[]): string {
-  return values.map((value) => `<code>${escapeHtml(value)}</code>`).join(" ");
-}
-
-/** 표 한 덩어리를 렌더한다. 추천 섹션은 티어 뱃지를 보이고, 전체 공고 섹션은 단일 티어라 숨긴다. */
-function renderTable(rows: PreviewRow[], showTierColumn: boolean): string {
-  const rowHtml = rows
-    .map(
-      (row, index) => `<tr>
+function renderTable(rows: PreviewRow[], showTier: boolean): string {
+  const body = rows.map((row, index) => `<tr>
   <td class="rank">${index + 1}</td>
-${showTierColumn ? `  <td class="tier"><span class="badge ${badgeClass(row.tier)}">${escapeHtml(row.tier)}</span></td>\n` : ""}  <td>
-    <a class="title" href="${escapeHtml(row.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(row.company)} — ${escapeHtml(row.title)}</a>
-    <div class="url">${escapeHtml(row.url)}</div>
-  </td>
-  <td class="keywords">${codeList(row.keywords)}</td>
+  ${showTier ? `<td><span class="badge ${badgeClass(row.tier)}">${escapeHtml(row.tier)}</span></td>` : ""}
+  <td><a class="title" href="${escapeHtml(row.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(row.company)} — ${escapeHtml(row.title)}</a><div class="url">${escapeHtml(row.url)}</div></td>
+  <td>${row.keywords.map((keyword) => `<code>${escapeHtml(keyword)}</code>`).join(" ")}</td>
   <td class="note">${escapeHtml(row.why)}</td>
-</tr>`,
-    )
-    .join("\n");
-  return `  <div class="table-scroll" tabindex="0" aria-label="공고 목록 가로 스크롤 영역">
-    <table>
-      <thead><tr><th class="rank">순위</th>${showTierColumn ? "<th>구분</th>" : ""}<th>공고 링크</th><th>키워드</th><th>핵심 판단</th></tr></thead>
-      <tbody>
-${rowHtml}
-      </tbody>
-    </table>
-  </div>`;
+</tr>`).join("\n");
+  return `<div class="table-scroll" tabindex="0"><table><thead><tr><th>순위</th>${showTier ? "<th>구분</th>" : ""}<th>공고 링크</th><th>기술</th><th>판단</th></tr></thead><tbody>${body}</tbody></table></div>`;
 }
 
-export function renderCandidatePreviewHtml(run: RecommendationRunType, options: CandidatePreviewOptions = {}): string {
-  const effectiveLimit = options.limit === undefined ? 10 : options.limit;
-  // --postings를 주면 추천 공고와 전체 조건 통과 공고를 한 파일에 함께 담는다.
-  // 추천 티어에는 수집 snapshot 밖에서 확보한 공고도 들어가므로, 두 섹션을 나눠야 누락이 생기지 않는다.
-  const recommendedRows = rowsFromRun(run);
-  const allRows = options.postingsMarkdown ? applyLimit(parseLivePostingRows(options.postingsMarkdown, run), effectiveLimit) : [];
-  const rows = options.postingsMarkdown ? allRows : applyLimit(recommendedRows, effectiveLimit);
-  const title = options.title ?? (options.postingsMarkdown ? `${run.reportDate} 포지션 추천 및 전체 조건 통과 공고` : `${run.reportDate} 포지션 추천 후보`);
-
-  const recommendedUrls = new Set(recommendedRows.map((row) => row.url));
-  const overlapCount = allRows.filter((row) => recommendedUrls.has(row.url)).length;
-  const body = options.postingsMarkdown
-    ? `  <h2>추천 공고 <span class="count">${recommendedRows.length}건</span></h2>
-  <p class="section-note">강력 추천, 도전 추천, 보류·주의 티어입니다. 수집 snapshot 밖에서 직접 확보한 공고도 포함합니다.</p>
-${renderTable(recommendedRows, true)}
-  <h2>전체 조건 통과 공고 <span class="count">${allRows.length}건</span></h2>
-  <p class="section-note">수집 snapshot에서 역할 구성, 고용 형태, 명백한 필수조건 필터를 통과한 active/open 공고 전체입니다. 이 중 ${overlapCount}건이 위 추천 티어와 겹칩니다.</p>
-${renderTable(allRows, false)}`
-    : renderTable(rows, true);
-
-  const conclusion = run.conclusion.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
-  const provenance = options.postingsMarkdown ? snapshotProvenance(options.postingsMarkdown) : { collectionRunId: "", collectedAt: "" };
-  const freshness = provenance.collectedAt
-    ? `수집 기준: ${provenance.collectedAt} · run: ${provenance.collectionRunId || "미기록"}`
-    : "수집 기준 시각이 없는 legacy snapshot입니다.";
+export function renderCandidatePreviewHtml(
+  run: RecommendationRunType,
+  options: CandidatePreviewOptions = {},
+): string {
+  const limit = options.limit === undefined ? 10 : options.limit;
+  const recommended = recommendationRows(run);
+  const candidates = options.candidatePool ? applyLimit(candidateRows(options.candidatePool, run), limit) : [];
+  const shown = options.candidatePool ? candidates : applyLimit(recommended, limit);
+  const title = options.title ?? `${run.reportDate} 포지션 추천`;
+  const collection = options.candidatePool
+    ? `${options.candidatePool.collectedAt} · 실행 ${options.candidatePool.collectionRunId}`
+    : "후보풀 정보 없음";
+  const content = options.candidatePool
+    ? `<h2>추천 공고 <span>${recommended.length}건</span></h2>${renderTable(recommended, true)}
+       <h2>수집된 전체 후보 <span>${candidates.length}건</span></h2>
+       <p class="section-note">고정 선호 키워드로 순위를 매기지 않은 외부 공고 후보풀입니다.</p>${renderTable(candidates, false)}`
+    : renderTable(shown, true);
+  const conclusions = run.conclusion.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
   return `<!doctype html>
-<html lang="ko">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${escapeHtml(title)}</title>
-  <style>
-    :root { color-scheme: light; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; color: #172033; background: #f7f8fb; }
-    main { max-width: 1180px; margin: 32px auto; background: white; padding: 32px; border-radius: 18px; box-shadow: 0 10px 30px rgba(20,30,60,.08); overflow: hidden; }
-    h1 { margin: 0 0 8px; font-size: 28px; }
-    h2 { margin: 32px 0 6px; font-size: 20px; }
-    h2 .count { margin-left: 6px; font-size: 13px; font-weight: 600; color: #667085; }
-    .section-note { margin: 0 0 12px; color: #667085; font-size: 13px; line-height: 1.55; }
-    .meta { color: #667085; margin-bottom: 20px; line-height: 1.55; }
-    .conclusion { background: #f6f8fb; border: 1px solid #e6e8ef; border-radius: 12px; padding: 14px 18px; margin-bottom: 24px; }
-    .conclusion ul { margin: 0; padding-left: 20px; }
-    .table-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; border: 1px solid #e6e8ef; border-radius: 12px; }
-    .table-scroll:focus { outline: 2px solid #84caff; outline-offset: 2px; }
-    table { width: 100%; min-width: 920px; border-collapse: collapse; font-size: 14px; }
-    th, td { padding: 12px 10px; border-bottom: 1px solid #e6e8ef; vertical-align: top; }
-    th { text-align: left; background: #f1f4f9; color: #344054; position: sticky; top: 0; }
-    .rank { width: 44px; text-align: right; color: #667085; font-variant-numeric: tabular-nums; }
-    .title { font-weight: 750; color: #155eef; text-decoration: none; }
-    .title:hover { text-decoration: underline; }
-    .url { margin-top: 5px; color: #667085; font-size: 12px; overflow-wrap: anywhere; }
-    .note { color: #344054; line-height: 1.55; min-width: 260px; }
-    .keywords code { display: inline-block; margin: 0 4px 4px 0; padding: 2px 6px; border-radius: 999px; background: #eef4ff; color: #3538cd; font-size: 12px; }
-    .badge { display: inline-block; min-width: 64px; text-align: center; border-radius: 999px; padding: 4px 8px; font-size: 12px; font-weight: 700; }
-    .badge.strong { background: #ecfdf3; color: #027a48; }
-    .badge.stretch { background: #eff8ff; color: #175cd3; }
-    .badge.hold { background: #fff7ed; color: #b54708; }
-    .badge.all { background: #f2f4f7; color: #344054; }
-    @media (max-width: 720px) {
-      body { background: white; }
-      main { margin: 0; padding: 22px 16px; border-radius: 0; box-shadow: none; overflow: visible; }
-      h1 { font-size: 24px; line-height: 1.25; word-break: keep-all; }
-      .meta { font-size: 14px; }
-      .conclusion { padding: 12px 14px; }
-      .table-scroll { margin: 0 -16px; width: calc(100% + 32px); border-left: 0; border-right: 0; border-radius: 0; }
-      table { min-width: 760px; font-size: 13px; }
-      th, td { padding: 10px 8px; }
-      th:nth-child(2), td.tier { display: none; }
-      .note { min-width: 280px; max-width: 340px; }
-      .url { font-size: 11px; }
-    }
-  </style>
-</head>
-<body>
-<main>
-  <h1>${escapeHtml(title)}</h1>
-  <div class="meta">생성일: ${escapeHtml(run.reportDate)} · ${escapeHtml(freshness)} · 현재 후보자의 역할·고용 형태·핵심 기술 조건을 통과한 active/open 공고입니다. · 대규모·검증 회사 공고를 먼저 정렬합니다. · 공고명을 클릭하면 개별 공고 페이지로 이동합니다.</div>
-  <section class="conclusion"><ul>${conclusion}</ul></section>
-${body}
-</main>
-</body>
-</html>
-`;
-}
-
-function usage(): never {
-  console.error("usage: render_candidate_preview.ts --input <recommendation.json> --postings <live-position-postings.md> --limit all --output <all-postings.html> [--title <title>]");
-  process.exit(2);
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escapeHtml(title)}</title><style>
+body{margin:0;background:#f5f7fb;color:#172033;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}main{max-width:1180px;margin:32px auto;padding:32px;background:#fff;border-radius:18px;box-shadow:0 10px 30px #14203c14}h1{margin:0 0 8px}h2{margin:32px 0 8px}h2 span{font-size:13px;color:#667085}.meta,.section-note{color:#667085;line-height:1.6}.conclusion{padding:14px 18px;background:#f6f8fb;border:1px solid #e6e8ef;border-radius:12px}.table-scroll{overflow-x:auto;border:1px solid #e6e8ef;border-radius:12px}table{width:100%;min-width:900px;border-collapse:collapse;font-size:14px}th,td{padding:12px 10px;border-bottom:1px solid #e6e8ef;vertical-align:top;text-align:left}th{background:#f1f4f9}.rank{width:44px;text-align:right;color:#667085}.title{font-weight:750;color:#155eef;text-decoration:none}.url{margin-top:5px;color:#667085;font-size:12px;overflow-wrap:anywhere}.note{min-width:260px;line-height:1.55}code{display:inline-block;margin:0 4px 4px 0;padding:2px 6px;border-radius:999px;background:#eef4ff;color:#3538cd}.badge{display:inline-block;padding:4px 8px;border-radius:999px;font-weight:700}.strong{background:#ecfdf3;color:#027a48}.stretch{background:#eff8ff;color:#175cd3}.hold{background:#fff7ed;color:#b54708}@media(max-width:720px){main{margin:0;padding:22px 16px;border-radius:0}.table-scroll{margin:0 -16px;width:calc(100% + 32px)}}
+</style></head><body><main><h1>${escapeHtml(title)}</h1><p class="meta">생성일 ${escapeHtml(run.reportDate)} · 수집 기준 ${escapeHtml(collection)}</p><section class="conclusion"><ul>${conclusions}</ul></section>${content}</main></body></html>`;
 }
 
 if (import.meta.main) {
   const args = process.argv.slice(2);
-  let input = "";
-  let output = "";
-  let limit: number | null = 10;
-  let title = "";
-  let postings = "";
-  let allowStale = false;
-  for (let i = 0; i < args.length; i++) {
-    if (args[i] === "--input") input = args[++i] ?? "";
-    else if (args[i] === "--output") output = args[++i] ?? "";
-    else if (args[i] === "--limit") {
-      const value = args[++i] ?? "10";
-      limit = value === "all" ? null : Number(value) || 10;
-    }
-    else if (args[i] === "--title") title = args[++i] ?? "";
-    else if (args[i] === "--postings") postings = args[++i] ?? "";
-    else if (args[i] === "--allow-stale") allowStale = true;
+  const value = (name: string): string | undefined => {
+    const index = args.indexOf(name);
+    return index >= 0 ? args[index + 1] : undefined;
+  };
+  const input = value("--input");
+  const output = value("--output");
+  const candidates = value("--candidates");
+  if (!input || !output || !candidates) {
+    console.error("사용법: render_candidate_preview.ts --input <recommendation.json> --candidates <posting-candidates.json> --output <report.html> [--limit all|N]");
+    process.exit(2);
   }
-  if (!input || !output) usage();
-
-  const raw = JSON.parse(readFileSync(resolve(input), "utf-8"));
-  const parsed = RecommendationRun.safeParse(raw);
+  const parsed = RecommendationRun.safeParse(JSON.parse(readFileSync(resolve(input), "utf8")) as unknown);
   if (!parsed.success) {
-    console.error("recommendation.json schema 검증 실패:");
-    for (const issue of parsed.error.issues) console.error(`  - ${issue.path.join(".")}: ${issue.message}`);
+    parsed.error.issues.forEach((issue) => console.error(`${issue.path.join(".")}: ${issue.message}`));
     process.exit(1);
   }
-
-  const postingsMarkdown = postings ? readFileSync(resolve(postings), "utf-8") : undefined;
-  if (postingsMarkdown && !allowStale) {
-    const provenance = snapshotProvenance(postingsMarkdown);
-    if (!provenance.collectedAt || koreaDate(provenance.collectedAt) !== koreaDate(new Date().toISOString()) || snapshotActivePostingCount(postingsMarkdown) === 0) {
-      console.error("오늘(Asia/Seoul) 수집된 1건 이상 snapshot이 필요합니다. 먼저 수집을 다시 실행하거나 --allow-stale을 명시하세요.");
-      process.exit(1);
-    }
+  const pool = loadPostingCandidatePool(resolve(candidates));
+  const errors = validateRecommendationAgainstPool(parsed.data, pool);
+  if (errors.length > 0) {
+    errors.forEach((error) => console.error(error));
+    process.exit(1);
   }
-  const html = renderCandidatePreviewHtml(parsed.data, { limit, title: title || undefined, postingsMarkdown });
+  const limitValue = value("--limit");
+  const limit = limitValue === "all" ? null : limitValue ? Number(limitValue) : 10;
   mkdirSync(dirname(resolve(output)), { recursive: true });
-  writeFileSync(resolve(output), html, "utf-8");
-  console.log(`candidate preview html: ${resolve(output)}`);
+  writeFileSync(resolve(output), renderCandidatePreviewHtml(parsed.data, { candidatePool: pool, limit }), "utf8");
+  console.log(`포지션 추천 HTML: ${resolve(output)}`);
 }

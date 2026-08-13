@@ -1,9 +1,5 @@
 import type { AdapterCollectionResult, DiscoveryMode, Posting, SourceAdapter } from "../types.ts";
 import {
-  AI_KEYWORDS,
-  AI_PLATFORM_ROLE_KEYWORDS,
-  HARD_DOMAIN_KEYWORDS,
-  SERVER_KEYWORDS,
   cleanDetail,
   classify,
   closeWindow,
@@ -13,7 +9,7 @@ import {
   isServerRole,
   norm,
 } from "../policy.ts";
-import { loadCandidateConfig, loadWantedCollectionConfig } from "../config.ts";
+import { loadWantedCollectionConfig } from "../config.ts";
 
 const UA = "Mozilla/5.0 (fos-agents position recommender)";
 
@@ -30,26 +26,6 @@ async function wantedDetail(pid: number): Promise<Record<string, unknown>> {
   if (!r.ok) throw new Error(`wanted detail ${pid}: HTTP ${r.status}`);
   const data = (await r.json()) as Record<string, unknown>;
   return (data.job as Record<string, unknown>) ?? {};
-}
-
-async function wantedKeywordSearch(query: string, years: string, limit = 12): Promise<number[]> {
-  const params = new URLSearchParams({
-    query,
-    country: "kr",
-    job_sort: "job.latest_order",
-    years,
-    locations: "all",
-    limit: String(limit),
-  });
-  const r = await fetch(`https://www.wanted.co.kr/api/chaos/search/v1/position?${params}`, {
-    headers: { "User-Agent": UA },
-    signal: AbortSignal.timeout(20_000),
-  });
-  if (!r.ok) throw new Error(`wanted keyword-search ${query}: HTTP ${r.status}`);
-  const data = (await r.json()) as { data?: unknown[] };
-  return (data.data ?? [])
-    .map((rawItem) => (rawItem as Record<string, unknown>).id)
-    .filter((id): id is number => typeof id === "number");
 }
 
 function wantedPidFromUrl(url: string): number | null {
@@ -140,7 +116,6 @@ function postingFromWantedDetail(
 
 async function fetchWanted(
   jobGroupId: number,
-  years: string,
   limit = 120,
   serverOnly = true,
   includeDetail = true
@@ -149,7 +124,6 @@ async function fetchWanted(
     job_group_id: String(jobGroupId),
     country: "kr",
     job_sort: "job.latest_order",
-    years,
     locations: "all",
     limit: String(limit),
   });
@@ -169,13 +143,9 @@ async function fetchWanted(
     const title = norm(item.position);
     const categoryText = norm(catTagObj.text);
     const text = `${company} ${title} ${categoryText}`;
-    const low = text.toLowerCase();
-
     if (isExcludedCompany(text)) continue;
     if (serverOnly && isNonServerTitle(`${title} ${categoryText}`)) continue;
     if (serverOnly && !isServerRole(text)) continue;
-    if (![...HARD_DOMAIN_KEYWORDS, ...AI_KEYWORDS, ...SERVER_KEYWORDS, ...AI_PLATFORM_ROLE_KEYWORDS].some((k) => low.includes(k))) continue;
-
     const pid = item.id as number;
     let detail: Record<string, unknown> = {};
     if (includeDetail && pid) {
@@ -199,74 +169,23 @@ async function fetchWanted(
   return out;
 }
 
-async function fetchWantedKeywordTargets(
-  targetKeywords: string[],
-  years: string,
-  serverOnly = true
-): Promise<{
-  postings: Posting[];
-  searchedCount: number;
-  skippedCount: number;
-  failedCount: number;
-  errors: string[];
-}> {
-  const postings: Posting[] = [];
-  const seenPids = new Set<number>();
-  let skippedCount = 0;
-  let failedCount = 0;
-  let searchedCount = 0;
-  const errors: string[] = [];
-
-  for (const keyword of targetKeywords) {
-    try {
-      const pids = await wantedKeywordSearch(keyword, years);
-      searchedCount += pids.length;
-      for (const pid of pids) {
-        if (seenPids.has(pid)) continue;
-        seenPids.add(pid);
-        try {
-          const detail = await wantedDetail(pid);
-          const posting = postingFromWantedDetail(pid, detail, "target-keyword", serverOnly);
-          if (posting) postings.push(posting);
-          else skippedCount++;
-        } catch (error) {
-          failedCount++;
-          errors.push(`wanted target-keyword detail ${pid}: ${error}`);
-        }
-      }
-    } catch (error) {
-      failedCount++;
-      errors.push(`${error}`);
-    }
-  }
-  return { postings, searchedCount, skippedCount, failedCount, errors };
-}
-
 export const wantedAdapter: SourceAdapter = {
   id: "wanted",
   name: "wanted",
   async collect({ serverOnly, wantedLimit }): Promise<AdapterCollectionResult> {
-    const { jobGroupId, targetKeywords } = loadWantedCollectionConfig();
-    const years = String(loadCandidateConfig().experienceYears);
-    const broad = await fetchWanted(jobGroupId, years, wantedLimit, serverOnly, true);
-    const keywordTargets = await fetchWantedKeywordTargets(targetKeywords, years, serverOnly);
-    const postings = [...broad, ...keywordTargets.postings];
+    const { jobGroupId } = loadWantedCollectionConfig();
+    const postings = await fetchWanted(jobGroupId, wantedLimit, serverOnly, true);
     return {
       postings,
       diagnostics: {
         source: "wanted",
-        status: keywordTargets.failedCount > 0 ? "partial" : "ok",
+        status: "ok",
         collectedCount: postings.length,
-        skippedCount: keywordTargets.skippedCount,
-        failedCount: keywordTargets.failedCount,
-        discoveryModes: ["broad", "target-keyword"],
-        message:
-          `wanted diagnostics: broad=${broad.length}, ` +
-          `target_keyword=${keywordTargets.postings.length}/${keywordTargets.searchedCount}, ` +
-          `target_skipped=${keywordTargets.skippedCount}, ` +
-          `target_failed=${keywordTargets.failedCount}`,
+        skippedCount: 0,
+        failedCount: 0,
+        discoveryModes: ["broad"],
+        message: `wanted diagnostics: broad=${postings.length}`,
       },
-      errors: [...keywordTargets.errors],
     };
   },
 };

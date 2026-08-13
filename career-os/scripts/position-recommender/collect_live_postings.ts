@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Collect lightweight public job postings for position recommendation.
+ * 포지션 추천에 사용할 공개 채용공고를 수집한다.
  *
  * Structure:
  * - Source adapters: per-source fetch + source-specific active checks (Wanted, Toss).
@@ -14,13 +14,13 @@
  *   fetched and parsed, and only individual postings with verified JD content +
  *   apply evidence are kept. Career articles themselves are never rendered.
  *
- * Output: markdown summary for Claude position recommender.
+ * JSON 후보풀이 기준 데이터이며 Markdown은 사람이 확인하는 호환 산출물이다.
  *
  * Usage:
- *   bun collect_live_postings.ts --output <output-md> [--max-wanted N] [--source all|wanted|toss|coupang|kakaobank|krafton|kurly|samsung|sk|cj]
+ *   bun collect_live_postings.ts --json-output <output-json> [--output <output-md>]
  */
 
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type {
@@ -35,6 +35,7 @@ import { dedupe, keepActiveDirectPostings } from "./live-postings/validator.ts";
 import { render } from "./live-postings/render.ts";
 import { configuredSourceIds, selectAdapters } from "./live-postings/adapters/index.ts";
 import { setExcludedCompanies } from "./live-postings/policy.ts";
+import { buildPostingCandidatePool } from "./live-postings/candidate_pool.ts";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -56,8 +57,9 @@ function loadExcludedCompanies(): void {
 
 // ---- CLI ----------------------------------------------------------------
 
-function parseArgs(argv: string[]): CliArgs {
-  let out = resolve(REPO_ROOT, "career-os/cache/live-position-postings.md");
+export function parseArgs(argv: string[]): CliArgs {
+  let markdownOut = resolve(REPO_ROOT, "career-os/cache/live-position-postings.md");
+  let jsonOut = resolve(REPO_ROOT, "career-os/state/posting-candidates.json");
   let source: SourceSelection = "all";
   let serverOnly = true;
   let wantedLimit = 120;
@@ -66,7 +68,9 @@ function parseArgs(argv: string[]): CliArgs {
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if ((arg === "--out" || arg === "--output") && argv[i + 1]) {
-      out = argv[++i];
+      markdownOut = argv[++i];
+    } else if (arg === "--json-output" && argv[i + 1]) {
+      jsonOut = argv[++i];
     } else if (arg === "--source" && argv[i + 1]) {
       const s = argv[++i];
       if (
@@ -101,7 +105,7 @@ function parseArgs(argv: string[]): CliArgs {
       includeTossArticles = true;
     }
   }
-  return { out, source, serverOnly, wantedLimit, includeTossArticles };
+  return { markdownOut, jsonOut, source, serverOnly, wantedLimit, includeTossArticles };
 }
 
 function isAdapterCollectionResult(value: Posting[] | AdapterCollectionResult): value is AdapterCollectionResult {
@@ -115,7 +119,7 @@ function importedCountsBySource(posts: Posting[]): Map<string, number> {
 }
 
 async function main(): Promise<number> {
-  const { out, source, serverOnly, wantedLimit, includeTossArticles } = parseArgs(process.argv.slice(2));
+  const { markdownOut, jsonOut, source, serverOnly, wantedLimit, includeTossArticles } = parseArgs(process.argv.slice(2));
   loadExcludedCompanies();
   const collected: Posting[] = [];
   const errors: string[] = [];
@@ -165,7 +169,7 @@ async function main(): Promise<number> {
     importedCount: importedCounts.get(diagnostic.source) ?? 0,
   }));
   const collectedAt = new Date().toISOString();
-  render(activePosts, out, {
+  const diagnostics = {
     collectionRunId: `position-postings-${collectedAt}`,
     collectedAt,
     requestedSource: source,
@@ -175,14 +179,24 @@ async function main(): Promise<number> {
     includeTossArticles,
     sourceDiagnostics: normalizedDiagnostics,
     errors,
-  } satisfies CollectionDiagnostics);
+  } satisfies CollectionDiagnostics;
+  const { pool, validationErrors } = buildPostingCandidatePool(activePosts, diagnostics);
+  mkdirSync(dirname(resolve(jsonOut)), { recursive: true });
+  writeFileSync(resolve(jsonOut), `${JSON.stringify(pool, null, 2)}\n`, "utf8");
+  render(pool.candidates, markdownOut, diagnostics);
+  console.log(`posting candidate pool: ${resolve(jsonOut)} (${pool.candidates.length}건)`);
+  if (validationErrors.length > 0) {
+    console.error(`WARN posting schema errors: ${validationErrors.join("; ")}`);
+  }
   if (errors.length > 0) {
     console.error(`WARN source errors: ${errors.join("; ")}`);
   }
   return 0;
 }
 
-main().then(process.exit).catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+if (import.meta.main) {
+  main().then(process.exit).catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}

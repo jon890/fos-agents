@@ -1,76 +1,15 @@
-// Posting model and shared contracts for live-postings collection.
+// 어댑터 실행 계약. 외부 데이터 모델은 contracts.ts의 Zod 스키마에서 추론한다.
 
-export type SourceId =
-  | "wanted"
-  | "toss-careers"
-  | "coupang-careers"
-  | "kakaopay"
-  | "kakaopay-securities"
-  | "kakaomobility"
-  | "kakaobank-careers"
-  | "kurly-careers"
-  | "naver-careers"
-  | "samsung-careers"
-  | "sk-careers"
-  | "cj-careers"
-  | "krafton-careers"
-  | "line-careers"
-  | "daangn-careers"
-  | "woowahan-careers";
+import type { DiscoveryMode, Posting, SourceDiagnostic, SourceId } from "./contracts.ts";
+
+export type { DiscoveryMode, Posting, SourceDiagnostic, SourceId } from "./contracts.ts";
+
 export type SourceAlias = "toss" | "coupang" | "kakaobank" | "kurly" | "samsung" | "sk" | "cj" | "krafton" | "line" | "daangn" | "woowahan";
 export type SourceSelection = SourceId | SourceAlias | "all";
-
-export type DiscoveryMode =
-  | "broad"
-  | "target-url"
-  | "target-keyword"
-  | "official-listing"
-  | "official-sitemap"
-  | "official-detail";
-
-export type SourceDiagnosticStatus = "ok" | "partial" | "failed";
-
-export interface Posting {
-  source: string;
-  discoveryMode?: DiscoveryMode;
-  company: string;
-  title: string;
-  url: string;
-  identityHash?: string;
-  linkType: "direct_posting" | "career_article" | "search_page";
-  postingStatus: "active" | "open" | "unknown";
-  activeEvidence: string;
-  openedAt: string;
-  closesAt: string;
-  daysUntilClose: string;
-  closeUrgency: "urgent" | "soon" | "normal" | "no_deadline" | "unknown";
-  category: string;
-  summary: string;
-  tags: string[];
-  skills: string[];
-  careerUpsideHypothesis?: string;
-  careerUpsideEvidence?: string[];
-  careerUpsideRiskFlags?: string[];
-  dueTime: string;
-  mainTasks: string;
-  requirements: string;
-  preferred: string;
-}
 
 export interface AdapterOptions {
   serverOnly: boolean;
   wantedLimit: number;
-}
-
-export interface SourceDiagnostic {
-  source: string;
-  status: SourceDiagnosticStatus;
-  collectedCount: number;
-  importedCount: number;
-  skippedCount: number;
-  failedCount: number;
-  discoveryModes: DiscoveryMode[];
-  message: string;
 }
 
 export interface AdapterCollectionResult {
@@ -92,7 +31,7 @@ export interface CollectionDiagnostics {
   collectionRunId: string;
   collectedAt: string;
   requestedSource: string;
-  configuredSources: string[];
+  configuredSources: SourceId[];
   serverOnly: boolean;
   wantedLimit: number;
   includeTossArticles: boolean;
@@ -101,7 +40,8 @@ export interface CollectionDiagnostics {
 }
 
 export interface CliArgs {
-  out: string;
+  markdownOut: string;
+  jsonOut: string;
   source: SourceSelection;
   serverOnly: boolean;
   wantedLimit: number;

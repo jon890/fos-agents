@@ -1,8 +1,9 @@
-// position-recommender 산출물 정본 스키마 (ADR-101).
+// position-recommender 추천 결과의 기준 스키마.
 // 에이전트가 이 스키마에 맞는 recommendation.json을 생성하면,
 // 렌더러가 여기서 HTML / Markdown / Discord 카드용 데이터를 파생한다.
 // SKILL self-check는 이 스키마 검증으로 대체한다.
 import { z } from "zod";
+import { sourceIdSchema } from "./live-postings/contracts.ts";
 
 /** 회사/규모 업사이드 신호. HTML 배지와 요약 필드로 직접 매핑된다. */
 export const UpsideLevel = z.enum(["강함", "중간", "약함"]);
@@ -20,6 +21,7 @@ export const CompanyUpside = z.object({
 
 /** 강력/도전 추천 포지션 1건. SKILL 14개 라벨을 손실 없이 담는다. */
 export const PositionItem = z.object({
+  candidateId: z.string().min(1),
   rank: z.number().int().positive(),
   company: z.string().min(1),
   title: z.string().min(1),
@@ -27,7 +29,7 @@ export const PositionItem = z.object({
   exploreLink: z.string().default("-"), // 추천 티어에서는 항상 "-"
   linkEvidenceLevel: LinkEvidenceLevel,
   postingPeriod: z.string().min(1), // closes_at / days_until_close / urgency
-  source: z.string().min(1), // 수집 adapter 식별자 (예: naver-careers, kakaopay). enum 미사용 — adapter 목록 단일 출처는 registry(ADR-101)
+  source: sourceIdSchema,
   closeDate: z.string().nullable(), // 기계 적재용 마감일 문자열 또는 null (사람용 자유문자열 postingPeriod와 별도)
   searchKeywords: z.array(z.string().min(1)).min(1),
   whyFit: z.string().min(1),
@@ -66,7 +68,7 @@ export const WeeklyActions = z.object({
 
 export const RecommendationRun = z
   .object({
-    schemaVersion: z.literal(2),
+    schemaVersion: z.literal(3),
     reportDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), // Asia/Seoul 기준
     generatedAt: z.string().min(1),
     conclusion: z.array(z.string().min(1)).min(1), // 한 줄 결론 (첫 10줄 결론 보장)
@@ -80,8 +82,8 @@ export const RecommendationRun = z
     recentCheck: z.array(z.string().min(1)).min(1), // 최근 반복 점검
     weeklyActions: WeeklyActions,
     sourceSnapshot: z.object({
-      collectionRunId: z.string().nullable(),
-      snapshotPath: z.string().min(1),
+      collectionRunId: z.string().min(1),
+      candidatePoolPath: z.string().min(1),
     }),
   })
   .superRefine((run, ctx) => {
