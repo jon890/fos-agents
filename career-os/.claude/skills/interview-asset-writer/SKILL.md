@@ -29,8 +29,7 @@ interview asset은 후보자 이력 기반 자료지만 `fos-study` 공개 발�
 
 1. `career-os/public/question-bank/` inventory — 공개 질문 bank 정본. 질문 본문은 public-safe JSON에서만 읽는다.
 2. `career-os/config/question-bank-topics.json` — 선택 사항. public bank 정본이 아니라 interview asset 전용 `<topic-key>` override 후보 → `outputPath` / `domain` / `title` / `inputFiles` / `promptAppend`
-3. `career-os/config/candidate-profile.md` — 후보자 이력 core: 사실·라벨 (필수)
-4. `career-os/config/candidate-profile-detail.md` — 주요 프로젝트·개인 프로젝트·의사결정 패턴·협업 등 경험 서사 (필수)
+3. `career-os/config/candidate-profile.md` — 후보자 기준과 경력 자료 진입점 (필수)
 5. `career-os/state/current-target.json` — `primary.company`, `primary.role` (현재 면접 타깃)
 6. `career-os/task/*` 또는 `career-os/resume/*` — `inputFiles` 명시되면 그 파일들, 아니면 candidate-profile core/detail에서 참조하는 경로
 7. (선택) `sources/fos-study/<유사 outputPath>.md` — overlap 회피
@@ -150,7 +149,7 @@ add vs update는 `git status --porcelain` 자동 판단. push 실패 시 stderr 
 
 ## 개인 질문 풀 생성
 
-`candidate-profile-detail.md`의 프로젝트·경험 서사(+ core `candidate-profile.md`의 강점·기술 스택 라벨) 기반으로 드릴에서 쓸 수 있는 개인 맞춤 질문을 생성한다.
+`candidate-profile.md`에서 연결한 프로젝트·경험 서사를 바탕으로 답변 연습에 쓸 개인 맞춤 질문을 생성한다.
 일반 워크플로(fos-study 마크다운 발행)와 별개의 독립 모드다.
 
 ### 트리거
@@ -159,7 +158,7 @@ add vs update는 `git status --porcelain` 자동 판단. push 실패 시 stderr 
 
 ### 입력
 
-`career-os/config/candidate-profile-detail.md` — 주요 프로젝트·개인 프로젝트·의사결정 패턴 섹션에서 근거를 추출한다. 기술 스택 라벨·강점은 core `career-os/config/candidate-profile.md`를 함께 참조한다.
+`career-os/config/candidate-profile.md`에서 최신 경력 자료와 업무 근거를 찾아 읽는다.
 
 ### 출력
 
@@ -204,8 +203,7 @@ add vs update는 `git status --porcelain` 자동 판단. push 실패 시 stderr 
 
 ## References
 
-- `career-os/config/candidate-profile.md` — 후보자 이력 core (사실·라벨, Q&A 질문 은행 + 마스터 플레이북 양쪽 공통 입력)
-- `career-os/config/candidate-profile-detail.md` — 후보자 이력 detail (주요 프로젝트·개인 프로젝트·의사결정 패턴·협업)
+- `career-os/config/candidate-profile.md` — 후보자 기준과 최신 경력 자료 진입점
 - `career-os/state/current-target.json` — 현재 면접 타깃 (마스터 플레이북 cross-track 톤 기준)
 - `career-os/public/question-bank/` — 공개 질문 bank 정본 (topic-key 매칭 1순위)
 - `career-os/config/question-bank-topics.json` — interview asset 전용 override 후보 (outputPath / domain / inputFiles)

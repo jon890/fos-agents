@@ -149,9 +149,7 @@ config/state는 "이 파일이 바뀌는 트리거가 무엇인가"로 가른다
 
 유지 원칙:
 
-- 후보자 baseline과 장기 이력(추천·fit 판단용 core): `config/candidate-profile.md` (ADR-104)
-- 후보자 면접 서사·심화(면접 skill용 detail): `config/candidate-profile-detail.md` (ADR-104)
-- baseline 분석용 core file pin: `config/baseline-core-files.json`
+- 후보자 기준과 최신 경력 자료 진입점: `config/candidate-profile.md`
 - 외부 읽을거리 수집 대상: `config/external-reading-sources.ts`
 
 ADR-107로 `state/`로 이동한 항목(트리거가 시스템 실행·이벤트라 config가 아님):
@@ -308,22 +306,14 @@ private/<company-slug>/<position-slug>/
 분리 파일로 생성됐던 면접 준비 리포트, 예상 질문 드릴, 1차 면접 전략, 1차 면접 체크리스트, 10일 Java 준비 재료는 active primary asset으로 유지하지 않는다.
 필요한 내용만 `interview/prep.md`에 정제해 흡수한다.
 
-### config/candidate-profile.md (core) + config/candidate-profile-detail.md (detail)
+### config/candidate-profile.md
 
-후보자 이력. prose 마크다운. **JSON이 아닌 의도적 선택** — AI 에이전트가 context로 직접 읽는 자산이라 구조화보다 narrative 가치가 큼. 모든 주장은 `task/**` 또는 `resume/**` 경로 태깅됨 (소스 추적용).
+포지션 추천, 지원 전략과 면접 준비가 공통으로 읽는 후보자 기준이다.
+목표 역할, 경력 타임라인, 대표 강점, 보완 영역과 사실 표현 경계를 담는다.
 
-ADR-104로 성격별 2파일로 분리한다.
-
-- `config/candidate-profile.md` (core) — 추천·fit 판단용 사실·라벨 7개 섹션.
-  지원 대상, 핵심 무기, 커리어 타임라인, 보유 기술 스택(라벨 중심·증거 축약), 입증된 강점, 약점·학습 중인 영역, 제약·스코프.
-  경로를 유지해 기존 참조 파손을 막는다.
-- `config/candidate-profile-detail.md` (detail) — 면접 서사·심화 5개 섹션.
-  주요 프로젝트 요약, 개인 프로젝트, 기술 의사결정 패턴, 협업·리더십·코드 리뷰 스타일, 면접 준비 우선순위.
-  보유 기술 스택의 증거 상세(여러 줄 서술 + `task/**` 경로)도 여기 둔다.
-- 각 사실의 근거 경로는 core 또는 detail의 해당 항목에 직접 둔다.
-  별도 provenance 파일을 중복 정본으로 유지하지 않는다.
-
-skill별 주입 범위(core만 / core+detail)는 ADR-104의 매핑 표가 단일 출처다.
+경력기술서 전체를 이 파일에 복제하지 않는다.
+프로필은 `sources/fos-study/resume/`의 최신 경력 자료와 `sources/fos-study/task/` 업무 기록으로 가는 진입점을 제공한다.
+스킬은 필요한 프로젝트 근거만 직접 읽는다.
 
 ## applications/
 
@@ -777,24 +767,6 @@ export const externalReadingSources = {
 신뢰도는 내용의 진실성을 보증하는 평판 점수가 아니다.
 발행 주체의 직접성, HTTPS 원문, RSS 제공, 실행 시점의 응답 여부를 평가한다.
 
-### config/baseline-core-files.json
-
-baseline 분석 대상 core file 목록이다.
-
-```json
-{
-  "_meta": {
-    "purpose": "baseline 분석 대상 큐레이션된 core 파일 목록 (ADR-003)",
-    "schema_version": "1"
-  },
-  "files": [
-    {"path": "interview/kakao-healthcare-carechat-ai-agent.md", "note": "선택적 — 토픽별 컨텍스트"}
-  ]
-}
-```
-
-`note` 필드는 선택. 단순 path 배열보다 per-file 메타데이터(우선도, 코멘트) 가능. 25개 초과 시 ADR-003 청킹 재도입 검토.
-
 ## .env / Secrets (워크스페이스 root)
 
 워크스페이스 secret은 `<ws>/.env`에 둔다. `.env.example`도 같은 위치다.
@@ -879,9 +851,6 @@ topic 학습 이력과 topic 학습 약점 상태의 단일 출처다.
 | `reports/job-fit-YYYY-MM-DD-<slug>.json` | `job-fit-analyzer` | **정본** JobFitRun(schemaVersion 1, `scripts/job-fit-analyzer/jobfit_schema.ts`). `verdict`(go/no-go)·`careerPath`·`interviewStrategy` 1급, `reinforcement` 부차. `targetRole`(자연어 인자 또는 current-target fallback + slug), `nextActions`, `changeSince`(ADR-096) |
 | `reports/job-fit-YYYY-MM-DD-<slug>.md` | `job-fit-analyzer` | 위 정본에서 `render_job_fit.ts --format md` 파생 |
 | `reports/stage-prep-YYYY-MM-DD.md` | `interview-stage-prep` | 1차/최종/오퍼 단계별 실전 준비 자료 |
-
-baseline 모드는 `config/baseline-core-files.json` 큐레이션 집합 사용.
-daily 모드는 토픽 기반 fos-study 파일 선택 + `state/study-progress.json` 갱신.
 
 ### state/drill-log-YYYY-MM-DD.jsonl
 

@@ -28,8 +28,7 @@ fit/gap 판단, reviewer용 리스크, 근거 파일 경로는 내부 분석 섹
 현재 에이전트는 다음 파일과 명령 출력을 직접 로드:
 
 1. `career-os/applications/<company>/<role>/posting.md` — 공고 본문 (필수)
-2. `career-os/config/candidate-profile.md` — 후보자 프로필 core: 사실·라벨 (필수)
-3. `career-os/config/candidate-profile-detail.md` — 프로젝트 서사·의사결정 패턴·협업 스타일·면접 준비 우선순위·기술 스택 증거 상세 (필수)
+2. `career-os/config/candidate-profile.md` — 후보자 기준과 경력 자료 진입점 (필수)
 4. 후보자 프로필이 참조하는 근거 파일 (`task/**/*.md`, `resume/*.md`) — 필요 시 선택적으로 읽는다
 5. `career-os/state/positions-queue.jsonl` — posting path 자동 추출 시 참조 (선택)
 
@@ -52,7 +51,7 @@ posting path 특정 불가 시 stderr + exit 1.
 순서대로 읽는다:
 
 1. posting.md
-2. `career-os/config/candidate-profile.md` (core) + `career-os/config/candidate-profile-detail.md` (detail — 프로젝트 서사·의사결정 패턴·협업 스타일·면접 준비 우선순위)
+2. `career-os/config/candidate-profile.md`와 여기서 연결한 최신 경력 자료
 3. 후보자 프로필에 직접 인용된 경로 중 공고와 관련된 근거 파일 2~5개를 읽는다.
    - 공고 요구사항과 겹치는 프로젝트와 기술 스택의 근거를 우선한다.
    - 고정된 출처 목록을 따로 유지하지 않고 실제 파일 존재 여부를 확인한다.
@@ -297,6 +296,5 @@ candidate-profile.md + 근거 파일과 교차 분석:
 - `career-os/docs/adr/INDEX.md` — ADR-110 (frontdoor-queue 폐기, 지원 후보 positions-queue 직행 등록으로 단순화), ADR-038 (artifact 검증 후 상태 전이) 설계 근거
 - `career-os/docs/data-schema.md` — positions-queue.jsonl 스키마
 - `career-os/state/positions-queue.jsonl` — 지원 이력 원장
-- `career-os/config/candidate-profile.md` — 후보자 프로필 core (사실·라벨)
-- `career-os/config/candidate-profile-detail.md` — 후보자 프로필 detail (프로젝트 서사·의사결정 패턴·기술 스택 증거 상세)
+- `career-os/config/candidate-profile.md` — 후보자 기준과 최신 경력 자료 진입점
 - `references/candidate-interview-questions.md` — 후보자 인터뷰 질문 세트 (Step 3, 지원동기·서사 확보)

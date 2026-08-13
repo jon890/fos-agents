@@ -23,8 +23,7 @@ description: 1차·최종·오퍼 단계별 면접 실전 준비를 생성하는
 
 1. `career-os/state/current-target.json` — `primary.interview` (단계별 날짜/상태), `primary.company`, `primary.role`.
    `primary`가 `null`이면 활성 면접 타깃 없음으로 처리한다.
-2. `career-os/config/candidate-profile.md` — 후보자 이력·약점·강점 core (필수)
-3. `career-os/config/candidate-profile-detail.md` — 프로젝트 서사·의사결정 패턴·면접 준비 우선순위 (필수)
+2. `career-os/config/candidate-profile.md` — 후보자 기준과 경력 자료 진입점 (필수)
 
 최종/2차 인성면접 산출물을 생성할 때는 추가로 확인한다:
 
@@ -145,7 +144,6 @@ description: 1차·최종·오퍼 단계별 면접 실전 준비를 생성하는
 cat career-os/state/current-target.json
 # candidate-profile core + detail 읽기
 cat career-os/config/candidate-profile.md
-cat career-os/config/candidate-profile-detail.md
 ```
 
 파일이 없으면 → stderr + exit 1.
@@ -233,7 +231,7 @@ cat career-os/config/candidate-profile-detail.md
 ## References
 
 - `career-os/state/current-target.json` — 현재 면접 단계 (interview.first_round / final_round / offer_chat)
-- `career-os/config/candidate-profile.md` — 후보자 이력·약점
+- `career-os/config/candidate-profile.md` — 후보자 기준과 최신 경력 자료 진입점
 - 관련 스킬: `tech-interview-drill` — 기술 질문 드릴 (1차 면접 준비 연계)
 - 관련 스킬: `behavioral-interview-drill` — 인성 질문 드릴 (최종 면접 준비 연계)
 - 관련 스킬: `application-package-writer` — 개별 공고 fit 분석

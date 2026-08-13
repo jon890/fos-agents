@@ -19,7 +19,7 @@ HTML 이력서의 사실 감사와 렌더 평가는 각각 전용 스킬에 맡�
 - `cover-letter.md`
 - `submission-checklist.md`
 - `config/candidate-profile.md`
-- 필요한 경우 `config/candidate-profile-detail.md`
+- 프로필에서 연결한 최신 경력 자료와 업무 근거
 - 선택적으로 `state/positions-queue.jsonl`
 
 입력 경로가 없으면 검토 대기 후보를 찾을 수 있다.

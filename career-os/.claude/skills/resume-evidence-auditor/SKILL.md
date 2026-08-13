@@ -12,7 +12,7 @@ description: 이력서·포트폴리오의 주장을 실제 코드, 테스트, G
 
 - 감사할 최종 이력서 파일
 - `config/candidate-profile.md`
-- 필요한 경우 `config/candidate-profile-detail.md`
+- 프로필에서 연결한 최신 경력 자료와 업무 근거
 - 같은 지원 디렉터리의 공고와 지원 자료
 - 프로필에 직접 연결된 `sources/fos-study/` 근거
 - 관련 코드, 테스트와 Git 이력

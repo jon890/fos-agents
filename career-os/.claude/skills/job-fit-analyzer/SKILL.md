@@ -52,9 +52,8 @@ description: 타깃 직무(역할 단위) 대비 지원 의사결정·면접 전
 
 1. `career-os/state/current-target.json` — 인자 없을 때만 읽는 선택 입력
 2. `career-os/config/candidate-profile.md` — 후보자 이력·약점 (필수)
-3. `career-os/config/baseline-core-files.json` — 큐레이션된 파일 경로 목록 (`files[].path`)
-4. `career-os/sources/fos-study/<path>` — baseline-core-files에 나열된 파일 (각 파일 읽기)
-5. (선택) `career-os/reports/job-fit-YYYY-MM-DD-<slug>.json` — 같은 슬러그의 가장 최근 지난 진단 (changeSince 채우기용)
+3. `candidate-profile.md`에서 연결한 최신 경력기술서와 관련 업무 근거
+4. (선택) `career-os/reports/job-fit-YYYY-MM-DD-<slug>.json` — 같은 슬러그의 가장 최근 지난 진단
 
 ## Workflow
 
@@ -71,7 +70,6 @@ git pull 실패 시 → stderr warn + 로컬 캐시로 분석 계속.
 
 - 호출 인자에서 타깃을 해석한다 (위 "호출 후 타깃 해석").
 - Inputs 1~4를 읽는다.
-  `baseline-core-files.json`이 없으면 → stderr + exit 1.
   `candidate-profile.md`가 없으면 → stderr + exit 1.
 - changeSince용 지난 진단 로드: `career-os/reports/`에서 같은 슬러그(`job-fit-*-<slug>.json`)의 가장 최근 지난 날짜 파일이 있으면 읽는다.
 
@@ -184,7 +182,6 @@ git pull 실패 시 → stderr warn + 로컬 캐시로 분석 계속.
 |---|---|
 | fos-study git pull 실패 | stderr warn + 로컬 캐시로 분석 계속 |
 | 인자 없음 + current-target 파일 없음 | stderr + exit 1, `/position-recommender` 또는 명시 역할 입력 안내 |
-| baseline-core-files.json 없음 | stderr + exit 1 |
 | candidate-profile.md 없음 | stderr + exit 1 |
 | 지난 진단 JSON 없음 | changeSince 생략하고 계속 진행 |
 | self-check(스키마 검증) 3회 실패 | stderr + exit 1, 실패 필드 명시 |
@@ -196,7 +193,6 @@ git pull 실패 시 → stderr warn + 로컬 캐시로 분석 계속.
 - `career-os/scripts/job-fit-analyzer/render_job_fit.ts` — 정본 JSON에서 Markdown을 파생하는 렌더러. 입력 시 스키마 검증을 내장하므로 실행 자체가 self-check다.
 - `career-os/docs/adr/INDEX.md` ADR-096 / ADR-092 — 본 설계 결정 근거
 - `career-os/state/current-target.json` — 인자 없을 때 타깃 fallback (company / team / role)
-- `career-os/config/baseline-core-files.json` — 진단 큐레이션 파일 목록
 - 관련 스킬: `position-recommender` — 회사 최근 동향·active 공고 추천 (경계 분리)
 - 관련 스킬: `application-package-writer` — 개별 공고 단위 fit 분석 (라우팅 대상)
 - 관련 스킬: `study-topic-recommender` — 외부 기술 자료 추천

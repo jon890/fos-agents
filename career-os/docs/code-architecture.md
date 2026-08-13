@@ -47,13 +47,11 @@ career-os/
 │   └── prep/             회사·이벤트별 운영 자산. 이벤트 종료 후 archive
 │
 ├── config/                                ← 사람이 큐레이션한 정책·baseline·예외 override
-│   ├── candidate-profile.md           이력 core — 추천·fit 판단용 사실·라벨 (prose, ADR-104)
-│   ├── candidate-profile-detail.md    이력 detail — 면접 서사·심화
+│   ├── candidate-profile.md           후보자 기준과 최신 경력 자료 진입점
 │   ├── question-bank-topics.json      interview-asset topic override 후보. public/question-bank 정본 아님
 │   ├── external-reading-sources.ts    기술 블로그와 개발 동향 수집 대상
 │   ├── position-collection.ts         공고 소스와 어댑터 수집 설정
 │   ├── verified-company-research-targets.json  검증 회사군 + 회사 키워드 (ADR-090·ADR-103. cooldown은 state/로 분리 ADR-109)
-│   ├── baseline-core-files.json       fit 분석용 큐레이션 파일 목록
 │   ├── current-target.example.json    로컬 현재 지원 대상 예시
 │   ├── position-filters.json          제외 회사와 억제 공고 URL
 │   ├── resume-design.md
