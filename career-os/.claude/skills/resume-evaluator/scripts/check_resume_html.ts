@@ -1,33 +1,18 @@
 #!/usr/bin/env bun
 
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from "node:fs";
+import { RESUME_HTML_CONTRACT } from "./resume_html_contract.ts";
 
-type Check = {
+export type Check = {
   name: string;
   passed: boolean;
   detail: string;
 };
 
-const path = process.argv[2];
-
-if (!path || !existsSync(path)) {
-  console.error(JSON.stringify({ passed: false, error: 'resume.html 경로를 찾을 수 없습니다.' }, null, 2));
-  process.exit(2);
-}
-
-const html = readFileSync(path, 'utf8');
-const pageCount = [...html.matchAll(/class=["'][^"']*\bresume-page\b[^"']*["']/g)].length;
-const requiredIds = ['profile', 'selected-work', 'career', 'motivation', 'skills'];
-const internalLeakPatterns = [
-  /\/Users\//,
-  /fos-study/i,
-  /(?:^|["'\s>])task\//i,
-  /needs_evidence/i,
-  /\bplan\d{2,}\b/i,
-  /검토 중|초안입니다/,
-];
-
-const checks: Check[] = [
+export function checkResumeHtml(path: string) {
+  const html = readFileSync(path, "utf8");
+  const pageCount = [...html.matchAll(/class=["'][^"']*\bresume-page\b[^"']*["']/g)].length;
+  const checks: Check[] = [
   {
     name: '한국어 문서 선언',
     passed: /<html[^>]+lang=["']ko["']/i.test(html),
@@ -45,13 +30,14 @@ const checks: Check[] = [
   },
   {
     name: '2쪽 페이지 구조',
-    passed: pageCount === 2,
-    detail: `resume-page가 2개여야 합니다. 현재 ${pageCount}개입니다.`,
+    passed: pageCount === RESUME_HTML_CONTRACT.pageCount,
+    detail: `resume-page가 ${RESUME_HTML_CONTRACT.pageCount}개여야 합니다. 현재 ${pageCount}개입니다.`,
   },
   {
     name: '필수 섹션',
-    passed: requiredIds.every((id) => new RegExp(`id=["']${id}["']`).test(html)),
-    detail: `필수 id: ${requiredIds.join(', ')}`,
+    passed: RESUME_HTML_CONTRACT.requiredSectionIds.every((id) =>
+      new RegExp(`id=["']${id}["']`).test(html)),
+    detail: `필수 id: ${RESUME_HTML_CONTRACT.requiredSectionIds.join(", ")}`,
   },
   {
     name: '연락 수단',
@@ -68,7 +54,7 @@ const checks: Check[] = [
   },
   {
     name: '내부 근거 경로 비노출',
-    passed: internalLeakPatterns.every((pattern) => !pattern.test(html)),
+    passed: RESUME_HTML_CONTRACT.internalLeakPatterns.every((pattern) => !pattern.test(html)),
     detail: '로컬 경로, 근거 저장소명, 내부 검토 토큰을 제출물에 포함하지 않습니다.',
   },
   {
@@ -76,20 +62,29 @@ const checks: Check[] = [
     passed: /print-color-adjust\s*:\s*exact/i.test(html),
     detail: '인쇄 시 강조색이 유지되도록 print-color-adjust를 설정합니다.',
   },
-];
+  ];
 
-const failed = checks.filter((check) => !check.passed);
-const result = {
-  passed: failed.length === 0,
-  file: path,
-  checks,
-  summary: {
-    passed: checks.length - failed.length,
-    failed: failed.length,
-    total: checks.length,
-  },
-};
+  const failed = checks.filter((check) => !check.passed);
+  return {
+    passed: failed.length === 0,
+    file: path,
+    checks,
+    summary: {
+      passed: checks.length - failed.length,
+      failed: failed.length,
+      total: checks.length,
+    },
+  };
+}
 
-console.log(JSON.stringify(result, null, 2));
-process.exit(failed.length === 0 ? 0 : 1);
+if (import.meta.main) {
+  const path = process.argv[2];
+  if (!path || !existsSync(path)) {
+    console.error(JSON.stringify({ passed: false, error: "resume.html 경로를 찾을 수 없습니다." }, null, 2));
+    process.exit(2);
+  }
 
+  const result = checkResumeHtml(path);
+  console.log(JSON.stringify(result, null, 2));
+  process.exit(result.passed ? 0 : 1);
+}

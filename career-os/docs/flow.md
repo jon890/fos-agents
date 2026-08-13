@@ -276,10 +276,12 @@ application review 통과
   -> resume.html 생성
   -> Use skill: /resume-evidence-auditor <resume.html>
   -> 업무 문서·코드·테스트·Git 이력과 주장 교차 검증
-  -> claim-ledger.json + evidence-audit.md 생성
+  -> 현재 resume.html의 경로와 제출 문구 해시를 포함한 claim-ledger.json 생성
+  -> evidence-audit.md 생성
   -> Use skill: /resume-evaluator <resume.html>
   -> 인사 40점 + 기술 45점 + 제출 품질 15점으로 채점
   -> 90점 이상과 평가자별 하한을 충족할 때까지 최대 3회 개선
+  -> 제출 문구가 바뀌면 근거 감사를 다시 실행
   -> 필요할 때만 resume.pdf로 변환해 출력 상태 검증
   -> 사용자 검토 대기
 ```
