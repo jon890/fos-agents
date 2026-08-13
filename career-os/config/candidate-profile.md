@@ -1,9 +1,9 @@
-# Candidate Profile
+# 후보자 프로필
 
-> 이 문서는 career-os 추천, 지원, 면접 파이프라인에 주입되는 후보자 맥락의 단일 출처입니다.
-> 이 파일(core)은 추천·fit 판단용 사실·라벨을 담습니다.
-> 프로젝트 서사·의사결정 패턴·협업 스타일·면접 준비 우선순위·기술 스택 증거 상세는 `config/candidate-profile-detail.md`(detail)로 분리했습니다.
-> 면접 서사 skill(application-package-writer, application-reviewer, interview-asset-writer, interview-stage-prep)은 core와 detail을 함께 읽습니다.
+> 이 문서는 추천, 지원, 면접에서 공통으로 읽는 후보자 정보의 기준 원본입니다.
+> 이 파일은 경력, 강점, 약점, 지원 방향을 간결하게 정리합니다.
+> 프로젝트별 근거와 면접 준비 내용은 `config/candidate-profile-detail.md`에 둡니다.
+> 면접 문서를 만드는 스킬은 두 파일을 함께 읽습니다.
 > 사실관계는 `sources/fos-study/resume/2603_김병태_이력서_v4.md` 및 `sources/fos-study/task/**`에 근거합니다.
 > 출처가 없는 수치·성과는 기재하지 않습니다.
 
@@ -11,12 +11,21 @@
 
 ## 지원 대상
 
-- **현재 타깃**: active target이 없을 수 있다.
+- **현재 지원 대상**: 진행 중인 지원 대상이 없을 수 있다.
   회사·팀·면접 일자·포지션 핵심은 `career-os/state/mvp-target.json`이 단일 출처이며, `primary: null`이면 새 공고 탐색부터 시작한다.
-- **지원 가능 범위 (재사용 가능 포지셔닝)** — 두 레인으로 지원한다.
-  - **백엔드 코어 레인**: 운영형 자사 서비스 백엔드. 슬롯 도메인 점진 아키텍처 개선, 테스트/검증 기반 리팩터링, AI 활용 개발 생산성이 강점이다.
-  - **AI 서비스·AI 플랫폼 전환 레인**: RAG 색인, 문서 파싱 운영, 품질 검증 인프라, 에이전트 기반 개발 생산성을 차별화 자산으로 쓴다.
-  - **핵심 스택**: Spring Boot 3 / Java 17·21 / JPA / Redis / OpenSearch.
+- **지원 가능 분야**
+  - **백엔드 중심 역할**: 운영형 자사 서비스 백엔드를 우선한다.
+    점진적 구조 개선, 테스트 기반 리팩터링, 인공지능 활용 개발 생산성이 강점이다.
+  - **인공지능 서비스·플랫폼 역할**: RAG 색인 파이프라인과 문서 파싱 서비스 구축·운영 경험을 활용한다.
+    담당 범위는 **RAG의 앞단인 수집·정규화·벡터 색인**이다.
+    검색 API 구현과 검색 품질 최적화는 담당하지 않았다.
+    "RAG 시스템을 설계했다"로 넓히지 않는다 — 범위를 먼저 긋고 그 안에서 답하는 편이 방어에 유리하다.
+  - **핵심 기술**
+    - Spring Boot 3
+    - Java 17·21
+    - JPA
+    - Redis
+    - OpenSearch
 - **포지셔닝 한 줄**: "백엔드 코어(정합성·동시성·점진 아키텍처) 위에 AI를 제품·개발 생산성으로 접목해 온 백엔드 개발자." — AI 전문가도, 순수 백엔드도 아닌 **백엔드 코어에 AI를 접목하는 사람**이 일관된 정체성이다.
 - **커리어 서사 원칙**: 백엔드가 뿌리, AI는 그 위의 확장이다. 이 서사가 "AI만 좇는다"·"AI 하다 왜 다시 백엔드로" 양쪽 오해를 모두 막는다. 그래서 백엔드/플랫폼 기반이 분명한 회사의 AI 접목 역할을 우선한다.
 
@@ -34,7 +43,7 @@
 3. **복잡한 구현을 테스트·검증 가능한 구조로 바꾸는 습관**
    - Spring Batch RAG 색인 파이프라인을 Step 단위로 분리해 실패를 격리했다. — `task/ai-service-team/rag-vector-search-batch.md`
    - 비대해진 문서 파싱 모듈을 입력/적재/변환/생성 단계로 분해해 변경 비용을 줄였다. — `task/ai-service-team/playground-document-parser.md`
-   - 출력 회귀 검증(NED)과 golden 채점을 나눠, 회귀 차단과 안전한 품질 개선을 동시에 가능하게 했다. — `task/ai-service-team/playground-document-parser.md`
+   - 출력 회귀 검증과 정답지 채점을 나눠 안전한 품질 개선이 가능하게 했다. — `task/ai-service-team/playground-document-parser.md`
 4. **운영 문제를 끝까지 파는 문제 해결력**
    - graceful shutdown 503을 종료 예산 설계(preStop·grace)로 제거했다. — `task/ai-service-team/graceful-shutdown-503-fix.md`
    - 문서 파싱 워커 RSS 증가를 메모리 단편화로 진단해 `malloc_trim`으로 해결했다. — `task/ai-service-team/glibc-malloc-trim-python-leak.md`
@@ -52,7 +61,7 @@
 | 2022.02 ~ 2022.11 | 더퓨쳐컴퍼니 | Node.js 백엔드.<br>· 게임 아이템 거래소 **체결 엔진·호가창**을 Redis Streams/RediSearch 기반으로 구현<br>· 블록체인 입출금 데몬 설계 (`task/the-future-company/`) |
 | 2023.01 ~ 2024.03 | SB 개발팀 (스포츠 베팅 플랫폼) | Java 11 / Spring Boot 2.6 백엔드.<br>· **인메모리 reloadable 캐시와 읽기 락 기반 캐시 정합성** — 갱신 중 조회 보호, 응답 객체 재활용으로 GC 압력 감소<br>· KYC 서버(Azure Blob 저장·6개월 자동 삭제)<br>· 추천/미션 보상 프로그램, 분산 정산 워커 (`task/sb-dev-team/`) |
 | 2024.06 ~ 2025.11 | NHN NSC 슬롯개발팀 | Spring Boot 3.x / Java 17 / MySQL / Redis.<br>· 신규 슬롯 8종 개발, **슬롯 엔진 추상화**(`SlotTemplate`·`BaseSlotService`)<br>· **RCC(RTP Cache Control)** 백그라운드 캐시 시스템<br>· **StampedLock** 기반 정적 데이터 갱신 중 동시성 해결<br>· **AliasMethod O(1)** 스핀 최적화<br>· **Cursor Rules 20종 이상** 구축 및 AI 에이전트 단독 슬롯 3종 구현 (`task/nsc-slot/`) |
-| 2025.12 ~ 현재 | NHN AI 서비스 개발팀 | Spring Boot 3 / Java 21 / Spring Batch / OpenSearch + Python/FastAPI 문서 파싱 운영.<br>· 사내 RAG용 **다중 소스 벡터 색인 배치**(위키·업무·문서·음성 STT) 설계·구현, **AsyncItemProcessor** I/O 병렬화, 전략 패턴 메타데이터 Provider<br>· 문서 파싱 파이프라인 최다 기여자 — 품질 검증·워커 운영 개선<br>· Next.js 기반 사내 AI 웹툰 제작 MVP 풀스택<br>· 보조로 NHN Cloud OCR 제품 API(Java 21 · Spring WebFlux)와 배포 환경(K8s/Helm/ArgoCD)에 기여 (`task/ai-service-team/`) |
+| 2025.12 ~ 현재 | NHN AI 서비스 개발팀 | Spring Boot 3 / Java 21 / Spring Batch / OpenSearch, Python/FastAPI 문서 파싱 운영.<br>· 사내 RAG **색인 계층** 담당 — 다중 소스 벡터 색인 배치(위키·업무·문서·음성 STT) 설계·구현, **AsyncItemProcessor** 입출력 병렬화, 전략 패턴 기반 메타데이터 제공자.<br>&nbsp;&nbsp;검색 API 구현과 검색 품질 최적화는 담당 범위가 아니었다.<br>· 문서 파싱 서비스 최다 기여자 — 품질 검증 체계, 워커 풀·메모리 운영 개선, 모듈 분해<br>· Next.js 기반 사내 AI 웹툰 제작 MVP 풀스택<br>· 보조로 NHN Cloud OCR 제품 API(Java 21 · Spring WebFlux)와 배포 환경(K8s/Helm/ArgoCD)에 기여 (`task/ai-service-team/`) |
 
 - 총 개발 경력은 **약 7년차**로 본다. 별도 SI 개발 경험 약 3년이 있으며, 현재 이력/프로젝트 문서에 상세히 정리된 최근 경력은 위 표 기준이다.
 - NHN 재직 자체는 4년차이지만, 경력기술서 기준 **"시니어 Java 백엔드 실무"는 2023.01부터 약 3년+** 축적.
@@ -61,14 +70,13 @@
 
 ---
 
-## 보유 기술 스택 (라벨 중심)
+## 보유 기술 요약
 
-라벨: **실전 운영**(운영 환경 트래픽을 받음) / **설계 경험**(새로 설계·도입) / **사용 경험**(기능 단위로 사용).
-각 항목의 여러 줄 서술과 증거 경로는 detail의 "보유 기술 스택 (증거 상세)"를 따른다.
+숙련도는 **실전 운영**, **설계 경험**, **사용 경험**으로 구분한다.
+구체적인 수행 내용과 근거 경로는 상세 프로필의 "보유 기술 근거"를 따른다.
 
-### 언어 / 런타임
+### 언어와 실행 환경
 - **Java 17 · Java 21** (실전 운영, 4년+)
-- **Kotlin** (실전 운영) — SB 어드민 백엔드. Java 경험 기반이라 갭으로 보지 않는다.
 - **TypeScript / Node.js (NestJS)** (실전 운영, 2022~2024 일부)
 - **Python** (운영 개선 경험) — 문서 파싱 서비스 워커·운영 진단. 주력 제품 서버 언어 근거는 제한적.
 
@@ -82,41 +90,32 @@
 - **QueryDSL** (실전 운영)
 - **Project Reactor** (사용 경험)
 
-### 메시징 / 이벤트
+### 메시징과 이벤트
 - **Apache Kafka** (사용·패턴 이해) — 운영·튜닝을 핵심 강점으로 내세우지 않는다.
 - **RabbitMQ Fanout** (사용 경험) — 캐시 갱신 전파 맥락. 본인 강점은 캐시 리로드·읽기 보호.
-- **TCP/UDP·저수준 네트워크 프로토콜** (제한적) — 직접 설계·운영 근거 제한적, 필수 공고는 우선순위 낮춤.
 
-### 데이터 / 스토리지
+### 데이터와 저장소
 - **MySQL 8.x** (실전 운영)
 - **Redis** (실전 운영 + 설계)
 - **OpenSearch** (실전 운영 + 설계)
-- **Ehcache (JSR-107)** (실전 운영)
 - **Prisma / PostgreSQL** (사용 경험)
-- **Azure Blob Storage** (사용 경험)
-- **DB 샤딩** (실전 운영)
-- **다중 DataSource** (실전 운영)
 - **Flyway** (사용 경험)
 
-### 동시성 / 성능
+### 동시성과 성능
 - **StampedLock** (실전 운영)
 - **ReentrantReadWriteLock** (실전 운영)
 - **AliasMethod (O(1) 가중치 랜덤)** (설계 경험)
-- **ThreadLocalRandom vs SecureRandom** (JMH 기반 결정)
 - **AtomicReference / Welford's Online Algorithm** (실전) — ThreadLocal 공유 버그·시뮬레이터 OOM 해결.
-- **CompletableFuture 병렬 조율 + ThreadPool 튜닝** (실전 운영)
 - **SELECT FOR UPDATE 행 선점** (실전 운영)
 
-### 인프라 / 운영
+### 인프라와 운영
 - **NHN Cloud** (실전 운영)
-- **Azure** (개발 경험, 운영 제한)
 - **NHN Cloud Container Service** (실전 운영, 제약 경험)
 - **Envoy / gRPC / supervisord** (실전 운영)
 - **FastAPI / ProcessPoolExecutor / GPU 워커 풀** (운영 개선 경험)
 - **Kubernetes / Helm / ArgoCD (GitOps) + Prometheus** (실전 운영) — HPA/PDB 심화 튜닝은 학습 여지.
 - **Docker** (사용 경험)
 - **Jenkins** (사용 경험)
-- **Testcontainers / JUnit 5 / MockRestServiceServer / spring-batch-test** (실전 운영)
 - **출력 품질 검증 / golden set / NED / 표 셀 F1** (설계 경험)
 
 ### 테스트
@@ -124,13 +123,13 @@
 
 ---
 
-## 입증된 강점 (with evidence)
+## 근거로 확인된 강점
 
 > 추상어 금지. 실제 에피소드 기반. 각 항목 뒤에 증거 파일 경로.
 
 1. **슬롯 도메인 점진 아키텍처 개선** — 슬롯 5종 이상을 직접 만들며 반복 패턴을 확인한 뒤 `SlotTemplate`, `BaseSlotService`, `ExtraConfig` 분리로 구조를 개선했다. `task/nsc-slot/slot-engine-abstraction.md`
 2. **AI 활용 개발 생산성 인프라 구축** — Cursor Rules 20종 이상, 에이전트 단독 슬롯 구현 3종, `by agent` 커밋 태깅으로 AI 작업 범위를 분리 추적했다. `resume/2603_김병태_이력서_v4.md` 문항2·4, `task/nsc-slot/ai-tool-adoption.md`
-3. **검증 가능한 파이프라인 설계** — Spring Batch 11 Step RAG 색인과 문서 파싱 품질 검증(NED·golden·표 셀 F1)으로 실패 격리와 회귀 차단을 함께 설계했다. `task/ai-service-team/rag-vector-search-batch.md`, `task/ai-service-team/playground-document-parser.md`
+3. **검증 가능한 처리 흐름 설계** — Spring Batch 11단계 RAG 색인과 문서 파싱 품질 검증으로 실패 격리와 회귀 차단을 함께 설계했다. `task/ai-service-team/rag-vector-search-batch.md`, `task/ai-service-team/playground-document-parser.md`
 4. **알고리즘 기반 성능 개선 실제 적용 + 측정** — AliasMethod O(n)→O(1), Welford's Online Algorithm으로 OOM 제거, JMH 근거. `task/nsc-slot/slot-spin-performance.md`, `task/nsc-slot/slot-simulator-oom.md`
 5. **캐시 갱신 중 읽기 보호 경험** — 다중 서버 캐시가 MQ Fanout으로 갱신되는 구조에서, refresh 구간을 StampedLock·ReentrantReadWriteLock으로 보호해 NPE를 막고 응답 객체를 재활용했다. Fanout 발행 인프라는 팀 공용이고, 본인 기여는 리로드·읽기 보호 계층이다. `task/nsc-slot/slot-engine-abstraction.md`, `task/sb-dev-team/cache-architecture.md`
 6. **제약 조건 하에서 운영 문제 해결** — NHN Cloud Container Service의 `terminationGracePeriodSeconds` 30s 고정 하에 preStop 15s + gRPC grace 12s + 여유 3s 예산 설계로 503 제거. `task/ai-service-team/graceful-shutdown-503-fix.md`
@@ -154,9 +153,15 @@
 3. **Kafka 운영 디테일** — Outbox 설계·운영 경험은 있으나, **파티셔닝 키 선택 / Consumer Group rebalance / Exactly-Once Semantics / Lag 모니터링** 같은 운영 이슈에서 깊이가 부족할 수 있음.
 4. **Kubernetes 심화 튜닝** — Helm/ArgoCD 기반 GitOps 다단계(alpha/beta/real) 배포 환경과 Prometheus 모니터링은 실제 구축·운영했다(OCR 제품 배포 환경). 다만 HPA/PDB 등 세밀한 스케줄링·오토스케일 튜닝은 추가 학습 여지가 있다.
 5. **대규모 트래픽 TPS 숫자** — 이력서·task 전반에서 **구체 TPS / 레이턴시 수치는 명시하지 않음**. 과장 답변 리스크가 있으므로 "측정 여부 / 측정 방법 / 체감 단위"로 답해야 함.
-6. **대규모 실서비스 AI Agent 설계** — RAG·workflow·에이전트 자동화·품질 검증 경험은 있으나, 대규모 실서비스에서 multi-agent orchestration을 주도 설계한 이력은 아직 얕다. 실무형 AI Agent 설계가 핵심인 공고는 이 점을 보완 대상으로 둔다.
+6. **대규모 인공지능 에이전트 설계** — RAG, 작업 흐름 자동화, 품질 검증 경험은 있다.
+   다만 대규모 서비스에서 여러 에이전트의 실행 흐름을 주도적으로 설계한 이력은 아직 얕다.
+   이 역량이 핵심인 공고는 보완 대상으로 둔다.
 7. **LLM routing·공용 Agent 플랫폼 설계** — 모델·도구 선택 routing, MCP Gateway, long-term memory, 여러 팀이 쓰는 agent platform의 경계·운영 모델을 설계한 실무 노하우는 아직 없다. 이 역량이 핵심인 공고는 RAG 또는 개발 자동화 경험만으로 높게 추천하지 않고 보류로 둔다.
 8. **데이터 엔지니어링·ML 데이터 플랫폼 운영** — Spring Batch 기반 RAG 색인과 문서 데이터 파이프라인 경험은 있지만, 대규모 로그·ETL 플랫폼, Spark·Kafka Connect·Airflow, 데이터 레이크·웨어하우스를 주도 운영한 근거는 없다. 이 역량을 필수조건으로 둔 AI Data Pipeline·Data Engineering 역할은 보류하고, 크래프톤 같은 회사도 백엔드 또는 AI 제품·플랫폼 역할을 우선 탐색한다.
+9. **RAG 검색 품질** — 색인 계층은 담당했지만 검색 API를 구현한 적이 없다.
+   청킹 크기와 중첩 조정, 재정렬, 혼합 검색, 재현율 측정 경험도 없다.
+   색인 결정을 검색 품질 기준으로 내린 사례는 있다(구조 보존을 위한 ADF→Markdown 변환, 내용 혼입을 막기 위한 ZIP 엔트리 분리). 판단 근거는 있으나 측정은 하지 않았다.
+   검색 품질 최적화가 핵심인 공고는 보류한다.
 
 ---
 
@@ -164,14 +169,21 @@
 
 - **Kotlin은 갭이 아님** — SB 어드민 백엔드를 Kotlin·Spring Boot로 운영한 실무 경험이 있고, Java 경험자라 적응 부담이 낮다. Kotlin 요건 공고를 Java/Spring 공고와 동일 기준으로 평가한다.
 - **폴리그롯 가정 금지** — 이력서·task에 기재 없는 언어/도구(예: Scala, Rust 본격 운영)는 pipeline에서 전제하지 않는다.
-- **수치 날조 금지** — TPS, 팀 규모, 성과 %, 감축율 등이 이력서·task에 명시되지 않았으면 pipeline은 "출처 문서에 기재 없음"으로 응답해야 한다. 이력서 문항1의 "447개 테스트 파일", detail 문서 JMH 수치는 출처 확인됨.
+- **수치 날조 금지** — 처리량, 팀 규모, 성과, 감축률 등이 근거 문서에 없으면 "출처 문서에 기재 없음"으로 표시한다.
+  이력서의 "447개 테스트 파일"과 상세 프로필의 JMH 수치는 근거가 확인됐다.
 - **실무 근거 범위** — 본 프로필은 `resume/2603_김병태_이력서_v4.md` + `task/**/*.md` + `interview/kakao-healthcare-carechat-ai-agent.md`를 1차 근거로 사용한다. 기타 이력서 버전(v1~v3, 2108/2512/2601)은 참조용.
-- **회사 특화 타깃은 active primary에서만 주입** — `state/mvp-target.json`의 `primary`가 `null`이면 회사 특화 맥락을 기본값으로 쓰지 않는다.
+- **회사별 정보는 진행 중인 지원 대상에만 적용** — `state/mvp-target.json`의 `primary`가 `null`이면 회사별 맥락을 기본값으로 쓰지 않는다.
 - **회사 규모 선호** — 다음 이직에서는 토스·쿠팡·네이버처럼 브랜드, 엔지니어링 조직 규모, 대규모 서비스 운영 밀도가 검증된 회사를 우선한다. 작은 AI 스타트업은 개별 역할이 이 기준을 명확히 상쇄할 때만 검토한다.
+- **AI 협업 경계 (면접 방어 범위)** — 2026년부터 개발 대부분을 AI 에이전트 협업으로 수행한다. 2025년까지의 작업은 본인이 직접 작성했다.
+  - 2022~2025년 작업(거래소 체결 엔진, 캐시 아키텍처, 슬롯 엔진 추상화, 동시성, 점진 리팩터링)은 코드 세부까지 방어 가능하다.
+  - 2026년 작업(색인 배치, 웹툰 MVP, 문서 파싱 서비스, OCR 진입점 이전)은 설계 판단이 본인 것이고 코드 세부는 에이전트 비중이 크다.
+- **공고 채점 규칙** — 공고의 "담당 업무"를 "자격 요건"처럼 채점하지 않는다.
+  담당 업무는 그 팀이 앞으로 만들 것의 목록이고, 특히 신설 팀은 팀 내부에도 경험자가 없다.
+  적합도는 명시된 지원 자격과 우대 사항으로 판정하고, 담당 업무는 면접 대비 범위로만 쓴다.
 
 ---
 
 ## 관련 파일
 
-- 면접 서사·심화(프로젝트 서사·의사결정 패턴·협업 스타일·면접 준비 우선순위·기술 스택 증거 상세): `config/candidate-profile-detail.md`
-- 각 사실의 근거는 본문과 detail 문서에 직접 연결된 `sources/fos-study/` 경로를 따른다.
+- 프로젝트별 근거와 면접 준비 내용: `config/candidate-profile-detail.md`
+- 각 사실의 근거는 본문과 상세 프로필에 직접 연결된 `sources/fos-study/` 경로를 따른다.

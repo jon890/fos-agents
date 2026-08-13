@@ -1,22 +1,22 @@
-# Candidate Profile — Detail
+# 후보자 상세 프로필
 
-> 이 문서는 `config/candidate-profile.md`(core)의 면접 서사·심화 동반 파일입니다.
-> core가 추천·fit 판단용 사실·라벨을 담고, 이 파일은 프로젝트 서사·의사결정 패턴·협업 스타일·면접 준비 우선순위를 담습니다.
-> core와 함께 프롬프트에 주입하는 skill: application-package-writer, application-reviewer, interview-asset-writer, interview-stage-prep.
-> 추천·fit skill(position-recommender, job-fit-analyzer 등)은 core만 읽습니다.
+> 이 문서는 `config/candidate-profile.md`를 보완하는 상세 근거 파일입니다.
+> 요약 프로필은 추천과 적합도 판단에 필요한 사실을 담습니다.
+> 이 파일은 프로젝트 서사, 기술 선택, 협업 방식, 면접 준비 내용을 담습니다.
+> 지원 문서와 면접 문서를 만드는 스킬은 두 파일을 함께 읽습니다.
+> 포지션 추천과 직무 적합도 분석은 요약 프로필만 읽습니다.
 > 사실관계 근거는 각 항목에 직접 연결된 `sources/fos-study/` 경로를 따릅니다.
 
 ---
 
-## 보유 기술 스택 (증거 상세)
+## 보유 기술 근거
 
-> core "보유 기술 스택"이 라벨 중심 요약을 담고, 이 섹션이 각 항목의 여러 줄 서술과 증거 경로를 담는다.
+> 요약 프로필의 보유 기술을 뒷받침하는 수행 내용과 근거 경로를 정리한다.
 
-라벨: **실전 운영**(운영 환경 트래픽을 받음) / **설계 경험**(새로 설계·도입) / **사용 경험**(기능 단위로 사용).
+숙련도는 **실전 운영**, **설계 경험**, **사용 경험**으로 구분한다.
 
-### 언어 / 런타임
+### 언어와 실행 환경
 - **Java 17 · Java 21** (실전 운영, 4년+) — `task/nsc-slot/slot-engine-abstraction.md`, `task/ai-service-team/rag-vector-search-batch.md`
-- **Kotlin** (실전 운영, SB 어드민 백엔드) — Kotlin·Spring Boot 2.6 기반 운영 어드민 백엔드를 다수 파일 규모로 개발했다(관리 API·보안 필터·트랜잭션 후 스토리지/큐 전달·Elasticsearch 조회 동기화). Java 실전 운영 경험 기반이라 적응 부담이 낮아 갭으로 보지 않는다. (SB 어드민 백엔드 실무)
 - **TypeScript / Node.js (NestJS)** (실전 운영, 2022~2024 일부) — `task/the-future-company/`, `task/sb-dev-team/kyc-system.md`
 - **Python** (운영 개선 경험, 제한적 제품 백엔드) — FastAPI 기반 문서 파싱 서비스의 멀티프로세스 워커 풀, OCR 호출, RSS 증가 진단, `malloc_trim` 적용, graceful shutdown 문제를 다뤘다.
   단, Python을 주력 제품 서버 언어로 장기간 운영한 근거는 제한적이다.
@@ -30,15 +30,12 @@
 - **Spring Batch** (설계 경험, 2026.01~) — 11 Step 파이프라인, `AsyncItemProcessor`, `@JobScope`, `CompositeItemProcessor`. `task/ai-service-team/rag-vector-search-batch.md`
 - **JPA / Hibernate** (실전 운영) — 엔티티 매핑, QueryDSL, 커밋 이후 갱신 이벤트 처리 경험. `resume/2603_김병태_이력서_v4.md` 문항1
 - **QueryDSL** (실전 운영) — `task/nsc-slot/`, `task/sb-dev-team/`
-- **Project Reactor** (사용 경험) — `task/nsc-slot/simulator-template.md` (ReactiveSimulator)
 
-### 메시징 / 이벤트
+### 메시징과 이벤트
 - **Apache Kafka** (사용·패턴 이해) — 비동기 처리와 이벤트 발행 패턴을 접했으나, Kafka 운영·파티셔닝·Consumer Group 튜닝을 핵심 강점으로 내세우지는 않는다.
 - **RabbitMQ Fanout (캐시 갱신 전파 맥락)** (사용 경험) — 다중 서버 캐시 갱신이 Fanout으로 전파되는 구조에서, 본인은 갱신 중 읽기 보호와 NPE 방지 쪽을 구현했다. Fanout 발행 인프라 자체는 팀 공용이며, 본인 강점은 캐시 리로드·동시성 보호다. `task/nsc-slot/`, `task/sb-dev-team/cache-architecture.md`
-- **TCP/UDP·Socket 서버·저수준 네트워크 프로토콜** — HTTP API, gRPC 경계 트러블슈팅, MQ, Redis Streams 사용 경험은 있으나, TCP/UDP socket server, custom protocol, Netty 기반 네트워크 서버 아키텍처를 직접 설계·운영한 근거는 제한적이다.
-  해당 경험을 필수로 요구하는 공고에서는 강점으로 과장하지 않고, 지원 우선순위를 낮춘다.
 
-### 데이터 / 스토리지
+### 데이터와 저장소
 - **MySQL 8.x** (실전 운영) — 복합 인덱스 추가로 캐시 충족 판정 쿼리 개선. `task/nsc-slot/rcc-rtp-cache-control.md`
 - **Redis** (실전 운영 + 설계) — 거래소 호가창, 체결 엔진(Redis Streams / RediSearch / Redis JSON). `task/the-future-company/trading-engine.md`
 - **OpenSearch** (실전 운영 + 설계) — 벡터 색인, 벌크 색인, 삭제 동기화, `_refresh` Step 설계. `task/ai-service-team/rag-vector-search-batch.md`
@@ -46,28 +43,21 @@
 - **Prisma / PostgreSQL** (사용 경험) — KYC 서버. `task/sb-dev-team/kyc-system.md`
 - **Azure Blob Storage** (사용 경험) — 신분증 업로드 · 6개월 자동 삭제 배치. `task/sb-dev-team/kyc-system.md`
 - **DB 샤딩** (실전 운영) — 유저 데이터가 샤드로 분산 저장되어, 조회 시 샤드를 직접 지정해 컨텍스트를 전환하는 정합성 처리. `task/sb-dev-team/referral-program.md`
-- **다중 DataSource** (실전 운영) — `@Qualifier` 기반 Repository 분기로 두 환경 DB를 한 앱에서 비교/복사. `task/nsc-slot/admin-slot-compare-copy.md`
 - **Flyway** (사용 경험) — 상태 구조 변경 시 스키마 마이그레이션을 기능과 동시 설계. `task/nsc-slot/global-personal-data.md`
 
-### 동시성 / 성능
+### 동시성과 성능
 - **StampedLock** (실전 운영) — 정적 데이터 갱신 중 읽기 차단 + `tryReadLock` 타임아웃 2.5s. `task/nsc-slot/slot-engine-abstraction.md`
 - **ReentrantReadWriteLock** (실전 운영) — `task/sb-dev-team/cache-architecture.md`
 - **AliasMethod (O(1) 가중치 랜덤)** (설계 경험) — 누적합 방식 대체. `task/nsc-slot/slot-spin-performance.md`
-- **ThreadLocalRandom vs SecureRandom** (JMH 기반 결정) — `task/nsc-slot/slot-spin-performance.md`
 - **AtomicReference / Welford's Online Algorithm** — ThreadLocal 공유 상태 버그 해결, 시뮬레이터 OOM 제거. `task/nsc-slot/slot-simulator-jackpot-pool.md`, `task/nsc-slot/slot-simulator-oom.md`
-- **CompletableFuture 병렬 실행 조율 + ThreadPool 튜닝** (실전 운영) — `supplyAsync`+`allOf` 병렬 조립, `CallerRunsPolicy` 백프레셔, 개별 실패 격리, 진행률 폴링. `task/nsc-slot/admin-asset-async-sync.md`
 - **SELECT FOR UPDATE 행 선점** (실전 운영) — 다중 서버 정산 워커의 중복 처리 방지 + 멱등성. `task/sb-dev-team/referral-program.md`
 
-### 인프라 / 운영
+### 인프라와 운영
 - **NHN Cloud** (실전 운영) — 퍼블릭 클라우드. 서비스 배포·운영에 활발히 활용. `task/sb-dev-team/README.md`, `task/ai-service-team/`
-- **Azure** (개발 경험, 운영 제한) — 애플리케이션 개발 맥락에서 사용. 인프라 운영은 별도 DevOps 팀이 담당해 직접 운영 경험은 제한적이다.
-- **NHN Cloud Container Service** (실전 운영, 제약 경험) — `terminationGracePeriodSeconds` 30s 고정 제약 하 예산 설계. `task/ai-service-team/graceful-shutdown-503-fix.md`
-- **Envoy / gRPC / supervisord** (실전 운영) — preStop + SIGTERM 핸들러 조합 설계 + OCR 추론 서비스의 gRPC + Envoy 기반 GPU 모델 서빙 운영(대용량 이미지 대응 버퍼 한도 조정 등). `task/ai-service-team/graceful-shutdown-503-fix.md`, (OCR 추론 서비스 실무)
 - **FastAPI / ProcessPoolExecutor / GPU 워커 풀** (운영 개선 경험) — 문서 파싱 API의 OCR 워커 병렬화, 대기열 관측, 워커 오류 복구 구조 개선. `task/ai-service-team/playground-document-parser.md`
 - **Kubernetes / Helm / ArgoCD (GitOps) + Prometheus** (실전 운영) — OCR 제품의 다단계(alpha/beta/real) 배포 환경과 모니터링을 구축·운영. HPA/PDB 심화 튜닝은 학습 여지. (OCR 제품 배포 환경 실무)
 - **Docker** (사용 경험) — 실제 운영 배포 파이프라인에서 사용.
 - **Jenkins** (사용 경험) — `Jenkinsfile_deploy_real` 수정. `task/ai-service-team/graceful-shutdown-503-fix.md`
-- **Testcontainers / JUnit 5 / MockRestServiceServer / spring-batch-test** (실전 운영) — `task/ai-service-team/rag-vector-search-batch.md`
 - **출력 품질 검증 / golden set / NED / 표 셀 F1** (설계 경험) — 문서 파싱 결과 회귀 검증과 정답지 채점 체계를 구축했다. `task/ai-service-team/playground-document-parser.md`
 
 ### 테스트
@@ -108,35 +98,37 @@
 - **기술적 핵심**: `@Async` + 스레드풀 / DB 유니크 키 기반 동시성 / 인터페이스 기반 슬롯별 전략 / 로그 테이블 컬럼 확장으로 관측성 확보.
 - 출처: `task/nsc-slot/rcc-rtp-cache-control.md`
 
-### 5. 슬롯 스핀 성능 최적화 (NSC 슬롯팀, 2025.01~2025.02)
-- **문제**: 100만 스핀 시뮬레이터가 10분+ 소요. 가중치 랜덤이 O(n) 누적합, 랜덤 생성기가 `SecureRandom`으로 과도한 락 경합.
-- **접근**: **AliasMethod** 사전 테이블로 O(1) 선택 전환, `ThreadLocalRandom`으로 교체, 필드 보관 금지 규칙 정립.
-- **결과 (출처 명시 범위)**: JMH 기준 `ThreadLocalRandom` 70.241 ops/s vs `SecureRandom` 1.197 ops/s (약 58배). 시뮬레이션 실제 경과 시간 단축 기재는 정성적.
-- **기술적 핵심**: 알고리즘 치환(Alias Method) / JMH 기반 결정 / ThreadLocal 의미 이해.
-- 출처: `task/nsc-slot/slot-spin-performance.md`
-
-### 6. 인메모리 캐시 정합성·읽기 보호 (SB 개발팀, 2023~2024)
+### 5. 인메모리 캐시 정합성·읽기 보호 (SB 개발팀, 2023~2024)
 - **문제**: 정적 설정 데이터를 인메모리로 캐싱하는데, 갱신이 일어나는 동안 들어오는 조회 요청이 부분 상태를 보거나 새 객체를 매번 만들어 GC 압력이 커지는 문제가 있었다.
 - **접근**: `AbstractStaticReloadable` 기반 인메모리 리로드 캐시를 구성하고, 갱신 구간을 `ReentrantReadWriteLock`으로 보호했다. 응답 시 새 객체를 만들지 않고 기존 객체를 재활용하도록 바꿨다.
 - **결과 (출처 명시 범위)**: 갱신 중 조회에서 부분 상태 노출 없이 캐시 정합성을 유지하고 GC 압력을 낮췄다.
 - **기술적 핵심**: 인메모리 리로드 캐시 / `ReentrantReadWriteLock` 읽기 보호 / 객체 재활용. (전 서버 동시 무효화를 위한 MQ 발행 계층은 다른 담당자가 구현했고, 본인 기여는 캐시 리로드·읽기 보호 계층이다.)
 - 출처: `task/sb-dev-team/cache-architecture.md`
 
-### 7. AI 에이전트 기반 슬롯 개발 (NSC 슬롯팀, 2025.04~2025.11)
+### 6. AI 에이전트 기반 슬롯 개발 (NSC 슬롯팀, 2025.04~2025.11)
 - **문제**: 복잡한 슬롯 도메인에서 에이전트가 엉뚱한 클래스 import / 존재하지 않는 메서드 호출 빈발.
 - **접근**: **Cursor Rules 20종 이상** 구축 — 공통 도메인 객체/패키지 경로, 슬롯별 전용 규칙, RCC 패키지 구조. 팀 내 전파.
 - **결과 (출처 명시 범위)**: Slot 41 / 44 / 47 **에이전트 단독 구현**. `by agent` 커밋 태깅으로 추적. 팀 사이클 단축(정성적).
-- **기술적 핵심**: 도메인 지식 문서화 / 에이전트 컨텍스트 관리 / 검토-first 워크플로.
+- **기술적 핵심**
+  - 도메인 지식 문서화
+  - 에이전트 문맥 관리
+  - 검토를 먼저 하는 작업 흐름
 - 출처: `task/nsc-slot/ai-tool-adoption.md`, `resume/2603_김병태_이력서_v4.md` 문항2·4
 
-### 8. AI 웹툰 제작 도구 MVP — 12일 단독 풀스택 (AI 서비스팀 TF, 2026.04.06~2026.04.18)
+### 7. AI 웹툰 제작 도구 MVP — 12일 단독 풀스택 (AI 서비스팀 TF, 2026.04.06~2026.04.18)
 - **문제**: 웹소설 원작으로 운영자가 작가 없이 웹툰 컷 이미지까지 뽑는 MVP를, **프론트/백/DB/AI 파이프라인 전부 혼자서 12일**에. 소설 분석 → 세계관 → 캐릭터 시트 → 각색 → 글콘티 → 60컷 이미지까지 6단계 풀 파이프라인 범위.
 - **접근**: Next.js 16 (App Router · Server Actions · SSE) + TypeScript strict + PostgreSQL + Prisma 7 + Zod 4 단일 코드베이스. AI는 `@google/genai` 단일 SDK (Gemini 3 LLM + gemini-3-pro-image-preview). **Gemini 모델 전략을 "퀄리티 우선 + fallback"으로 뒤집어** `pro → flash → lite` 순 fallback (ADR-072), 429 시 같은 모델 대기 금지 → 바로 다음 모델. **전역 Rate Limit Tracker** (`Map<model, expireAt>`)로 요청 간 429 정보 공유 (ADR-069). Gemini **Context Caching**으로 동일 소설 반복 분석 입력 토큰 절감 (ADR-045). **통합 분석**(API 경계 ≠ 논리 경계) 설계로 토큰 비용 절감, **Promise.allSettled** 기반 60컷 일괄 생성 부분 성공 처리, **Grounding 재주입 + Project Cache**로 프롬프트 환각 차단, **이미지 레퍼런스**로 캐릭터 외형 고정(텍스트 프롬프트 한계 우회), **Zod 단일 소스 + 레이어별 분리 타입 시스템**, **Container/Presenter 패턴**으로 디자이너와 충돌 해소. 앞 단계 수정 시 이후 단계 확정 연쇄 해제 (FR30). Claude Code 하네스 기반 **에이전트 팀**(main Opus 논의 → plan 파일 → Sonnet executor 실행 → critic APPROVE/REVISE → docs-verifier 문서 정합성) 조율, 하네스 자체가 **vibe 코딩에서 spec 기반 코딩으로 진화**.
 - **결과 (출처 명시 범위)**: 12일간 **199 plan / 760 커밋**. 본인은 대부분 논의·계획·검토를 담당, 실제 타이핑은 에이전트가 수행. MVP 범위(Phase 1 1~5단계) 완성, 동영상/음악(Phase 2)은 제외. 정량 성과 지표(사용자 수·생성 수 등)는 출처 문서에 기재 없음.
-- **기술적 핵심**: **에이전트 파이프라인 설계자** 레벨의 AI 협업 (툴 사용자 수준을 넘어섬) / 풀스택 단일 타입 안전성(Zod 단일 소스) / 재시도·폴백 전략 설계 / 운영 관측성(`GET /api/model-status`) / 비용 의사결정 ("싸 보이는 모델이 재생성 반복으로 더 비싸지는" trade-off 역전) / docs-first 원칙 / Server Action ≠ AI 계층 ≠ DB 계층 레이어 분리.
+- **기술적 핵심**
+  - 에이전트 실행 흐름 설계와 검토
+  - Zod 기반 단일 타입 체계
+  - 재시도와 대체 모델 전환 전략
+  - `GET /api/model-status`를 통한 운영 상태 확인
+  - 재생성 비용까지 고려한 모델 선택
+  - 서버 동작, 인공지능 호출, 데이터베이스 계층 분리
 - 출처: `task/ai-service-team/webtoon-maker-ai-pipeline.md`
 
-### 9. Playground 문서 파싱 파이프라인 (AI 서비스 개발팀, 2026.05~현재)
+### 8. Playground 문서 파싱 파이프라인 (AI 서비스 개발팀, 2026.05~현재)
 - **개요**: 사내 LLM workflow 제품 Playground의 문서 입력 정규화 서비스. PDF/DOC(X)/PPTX/XLSX/HWP/이미지 등 다양한 포맷을 markdown으로 변환하며, 한국어는 NHN Cloud OCR·일본어는 PaddleOCR을 내부 호출. Python 3.11 · FastAPI · docling(+TableFormer) · ProcessPoolExecutor 워커 풀 · Docker(CUDA)/GPU.
 - **주요 기여**:
   - OCR 처리를 한 건씩 처리에서 멀티프로세스 워커 풀(한국어/일본어/우선순위) 병렬 구조로 전환 — 인스턴스당 워커 4개(운영 8대), OCR 모델 백엔드가 최대 16 인스턴스까지 확장되는 점을 고려한 설정
@@ -151,7 +143,7 @@
 - **기술적 핵심**: 출력 품질 검증 인프라(회귀 검증 + 정답지 채점) 설계로 안전한 반복 개선 환경 구축 / 멀티프로세스 GPU 워커 풀 운영·메모리 단편화 진단 / 런타임 내부 구조 이해 기반 운영 지표 해석 / 일회성 테스트 환경 자동화(자체 CLI) / 상태 오염 자원의 격리·재시작 설계.
 - 출처: `task/ai-service-team/playground-document-parser.md`
 
-### 10. 분산 정산 워커 (SB 개발팀)
+### 9. 분산 정산 워커 (SB 개발팀)
 - **문제**: 여러 서버가 함께 도는 환경에서 메시지 기반 정산 후처리가 중복 처리되면 안 됨. 샤딩된 데이터의 정합성도 지켜야 함.
 - **접근**: MQ 메시지를 소비하는 다중 서버 정산 워커가 상태 머신(초기→진행→완료)과 `SELECT FOR UPDATE` 행 선점으로 작업을 나눠 갖고 중복 정산을 차단. 샤딩된 데이터는 엔티티에서 읽지 않고 샤드를 직접 지정해 한 메서드 안에서 샤드 경계를 처리, 실패 케이스 후처리 방어 로직을 강화.
 - **결과 (출처 명시 범위)**: 다중 서버 분산 정산의 중복 방지·정합성 구조에 기여. 정산 로직 상세는 비공개.
@@ -165,13 +157,16 @@
 
 ### dooray-cli — 업무 자동화 CLI (`@bifos/dooray-cli`, npm 공개 배포)
 - Dooray REST API와 IMAP/SMTP를 단일 CLI로 통합해 터미널·AI 에이전트에서 업무/위키/메일/첨부를 자동화. TypeScript · Node.js · Commander.js.
-- AI 에이전트 친화 설계 — 전 명령 `--json` / `--quiet` 출력 계약 + 비대화형 분기(`--no-confirm`, `--body-file`)로 에이전트가 파싱·체이닝하도록 구성, 669줄 에이전트 skill 동봉.
+- 인공지능 에이전트가 사용하기 쉬운 출력 계약을 설계했다.
+  모든 명령이 `--json`과 `--quiet`을 지원하고, `--no-confirm`과 `--body-file`로 비대화형 실행이 가능하다.
+  에이전트용 스킬도 함께 제공한다.
 - 다형 입력 해석기(URL 3형식 / 프로젝트코드+번호 / ID / 멤버 자동 분기), 약 396커밋, npm 공개 배포.
 - CI에서 PR 리뷰를 LLM 4-에이전트(TypeScript/Conventions/Security/Architecture)로 자동화.
 
 ### nhncloud-cli — NHN Cloud 통합 CLI (`@bifos/nhncloud-cli`, npm 공개 배포)
 - NHN Cloud 98개 명령(Log & Crash, Deploy, Compute, VPC, Volume, Floating IP, NCR, NKS)을 AWS CLI 방식으로 통합. TypeScript · Node.js · Commander.js. 약 349커밋, 현재도 활발히 개발.
-- 에이전트 자기기술(self-describing) 설계 — `commands --json`이 명령 트리 메타데이터를 출력해 에이전트가 런타임에 전체 카탈로그를 발견. 명령별 정규화된 `--json` shape + 표준 종료 코드 규약으로 안전한 자동 운영·프로비저닝 지원.
+- 에이전트가 스스로 명령 구조를 파악할 수 있게 설계했다.
+  `commands --json`이 명령 트리 정보를 출력하고, 모든 명령은 일관된 JSON 구조와 종료 코드를 사용한다.
 
 ### fos-accountbook — 가계부 풀스택 (개인)
 - Spring Boot 4 / Java 21 백엔드(JPA · Flyway · Spring Security+JWT · OpenAPI, Layered Architecture) + Next.js 16 / React 19 프론트(NextAuth OAuth). 최신 Spring Boot 4 실전 근거.
@@ -180,7 +175,7 @@
 
 ## 기술 의사결정 패턴
 
-> 실제 에피소드 기반 trade-off 처리 방식.
+> 실제 사례에서 상충하는 조건을 판단한 방식을 정리한다.
 
 1. **YAGNI vs 미래 확장성** — 슬롯 5종이 쌓인 뒤에야 `SlotTemplate`을 도입. "처음부터 추상화했으면 잘못된 경계를 그었을 것"을 명시적으로 판단. `task/nsc-slot/slot-engine-abstraction.md`
 2. **보안 vs 성능** — `SecureRandom`의 암호학적 강도가 슬롯 서버 내부에서 불필요하다고 판단해 `ThreadLocalRandom`으로 전환. JMH 벤치마크로 58배 차이 근거. `task/nsc-slot/slot-spin-performance.md`
@@ -192,7 +187,7 @@
 
 ---
 
-## 협업 / 리더십 / 코드 리뷰 스타일
+## 협업과 코드 검토 방식
 
 > task 문서와 이력서에 드러난 실제 흔적 기반.
 
@@ -209,14 +204,15 @@
 
 ## 면접 준비 우선순위
 
-> 약점 섹션과 1:1 매핑. 구체 액션과 상태. 약점 정본은 core `config/candidate-profile.md`의 "약점 / 학습 중인 영역"이다.
+> 요약 프로필의 "약점과 학습 중인 영역"에 맞춰 구체적인 준비 내용과 상태를 정리한다.
 
 1. **JPA N+1 & 페치 전략 질의응답**
    - `@EntityGraph` / fetch join / `default_batch_fetch_size` / `open-in-view=false`.
    - 상태: 기술 학습 문서 1편 작성 완료, 구술 면접 연습 반복 필요.
 2. **Redis 캐싱 패턴 확장**
    - Write-Through / Write-Behind / Read-Through / Cache Stampede / Hot Key.
-   - Cache-Aside + Kafka 하이브리드, Hot Key, TTL/invalidation, 장애 시 fallback 복기.
+   - Cache-Aside와 Kafka를 결합한 구조를 복기한다.
+   - 집중 키, 만료 시간, 무효화, 장애 시 대체 경로를 정리한다.
    - 상태: 범용 백엔드 면접 답변으로 재사용 가능하게 정리 중.
 3. **Kafka 운영 질문 대비**
    - Consumer Group Rebalance, Partition 키 전략, Exactly-Once, Idempotent Producer.
