@@ -49,7 +49,6 @@ career-os/
 ├── config/                                ← 사람이 큐레이션한 정책·baseline·예외 override
 │   ├── candidate-profile.md           이력 core — 추천·fit 판단용 사실·라벨 (prose, ADR-104)
 │   ├── candidate-profile-detail.md    이력 detail — 면접 서사·심화
-│   ├── candidate-profile-provenance.md  프로필 근거 출처
 │   ├── question-bank-topics.json      interview-asset topic override 후보. public/question-bank 정본 아님
 │   ├── external-reading-sources.ts    기술 블로그와 개발 동향 수집 대상
 │   ├── position-collection.json       position 수집 설정 (wanted jobGroupId + 회사 비종속 role 키워드, ADR-099·ADR-103)
@@ -159,8 +158,7 @@ career-os/
 │   │   ├── SKILL.md
 │   │   └── references/source-management.md   외부 읽을거리 소스 관리 명령
 │   ├── interview-asset-writer/
-│   │   ├── SKILL.md
-│   │   └── references/output-policy.md
+│   │   └── SKILL.md
 │   ├── question-bank-collector/
 │   │   └── SKILL.md   (일반 backend/CS 질문 bank 수집과 public-safe normalizer)
 │   ├── position-recommender/

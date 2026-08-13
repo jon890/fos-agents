@@ -330,7 +330,8 @@ ADR-104로 성격별 2파일로 분리한다.
 - `config/candidate-profile-detail.md` (detail) — 면접 서사·심화 5개 섹션.
   주요 프로젝트 요약, 개인 프로젝트, 기술 의사결정 패턴, 협업·리더십·코드 리뷰 스타일, 면접 준비 우선순위.
   보유 기술 스택의 증거 상세(여러 줄 서술 + `task/**` 경로)도 여기 둔다.
-- Source provenance는 `config/candidate-profile-provenance.md`가 단일 출처다. 어느 skill에도 프롬프트로 주입하지 않는다.
+- 각 사실의 근거 경로는 core 또는 detail의 해당 항목에 직접 둔다.
+  별도 provenance 파일을 중복 정본으로 유지하지 않는다.
 
 skill별 주입 범위(core만 / core+detail)는 ADR-104의 매핑 표가 단일 출처다.
 
@@ -626,7 +627,9 @@ Markdown 산출물을 먼저 고정하고, 리뷰된 이력서 초안을 HTML/PD
 - `resume.html`: `resume-draft.md`와 디자인 계약에서 만든 HTML 제출물.
 - `resume.pdf`: HTML을 headless Chrome으로 출력한 첨부 가능한 PDF.
 - `resume-scorecard.md`: 인사 담당자·기술 리더·제출 품질 관점의 반복 채점과 수정 기록. 내부 검토용이며 제출물에 포함하지 않는다.
-- `claim-ledger.json`: 제출 문구를 구현·소유권·결과 세 축으로 분해한 근거 원장. 코드·테스트·Git·문서 증거와 안전한 대체 문구를 기록한다.
+- `claim-ledger.json`: 제출 문구를 구현·소유권·결과 세 축으로 분해한 근거 원장.
+  `schemaVersion`, 감사 대상 상대 경로, 제출 문구 SHA-256, 생성 시각과 주장별 근거를 기록한다.
+  감사 대상이나 제출 문구가 달라지면 재사용하지 않는다.
 - `evidence-audit.md`: claim ledger를 사람이 읽을 수 있게 요약한 사실성 감사 결과. 내부 검토용이며 제출물에 포함하지 않는다.
 - `cover-letter.md`: 지원동기/자기소개서 초안.
   회사와 공고 맥락을 반영하되 검증되지 않은 성과를 단정하지 않는다.

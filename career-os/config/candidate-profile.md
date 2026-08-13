@@ -174,4 +174,4 @@
 ## 관련 파일
 
 - 면접 서사·심화(프로젝트 서사·의사결정 패턴·협업 스타일·면접 준비 우선순위·기술 스택 증거 상세): `config/candidate-profile-detail.md`
-- 근거 파일 ↔ 섹션 매핑과 미래 업데이트 규칙(프롬프트 주입 대상에서 제외): `config/candidate-profile-provenance.md`
+- 각 사실의 근거는 본문과 detail 문서에 직접 연결된 `sources/fos-study/` 경로를 따른다.

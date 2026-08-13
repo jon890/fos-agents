@@ -11,13 +11,11 @@
 - 면접 서사 skill(interview-asset-writer, interview-stage-prep)은 프로젝트 서사·의사결정 패턴까지 필요하다.
 - 두 성격이 한 파일에 있어, 추천 skill도 면접용 심화 서사를 통째로 프롬프트에 주입한다.
 
-1차 slim(Source provenance 분리)은 완료됐다(`candidate-profile-provenance.md`).
-provenance는 어떤 skill도 판단에 쓰지 않던 추적 정보라 부작용 없이 분리됐다.
-남은 심화 slim은 면접 서사 섹션을 별도 파일로 나누는 것이다.
+프로필 본문에는 추천 판단과 면접 서사가 함께 있어 모든 skill이 불필요한 문맥까지 읽었다.
 
 ### 결정
 
-profile을 성격별로 core·detail·meta로 나눈다.
+profile을 성격별로 core와 detail로 나눈다.
 
 core는 추천·fit 판단용 사실·라벨이며, 경로 `config/candidate-profile.md`를 유지한다.
 기존 참조 파손을 막기 위해 core가 원래 경로를 그대로 쓴다.
@@ -38,10 +36,8 @@ detail은 면접 서사·심화이며, 신규 파일 `config/candidate-profile-d
 - 협업·리더십·코드 리뷰 스타일
 - 면접 준비 우선순위
 
-meta는 어느 파일에도 프롬프트로 주입하지 않는다.
-
-- Source provenance — 이미 `candidate-profile-provenance.md`로 분리됨.
-  core·detail 어느 파일에도 넣지 않는다.
+근거 경로는 해당 사실과 함께 core 또는 detail에 둔다.
+별도 provenance 파일은 사실과 어긋나기 쉬운 중복 정본이므로 두지 않는다.
 
 "보유 기술 스택" 증거 축약 기준을 함께 고정한다.
 
@@ -72,7 +68,7 @@ meta는 어느 파일에도 프롬프트로 주입하지 않는다.
 
 - core 전용: position-recommender, job-fit-analyzer, tech-interview-drill, behavioral-interview-drill.
 - core + detail: application-package-writer, application-reviewer, interview-asset-writer, interview-stage-prep.
-- provenance 파일은 근거 파일 경로가 필요한 skill(application-package-writer 등)이 별도로 읽는다.
+- 근거 파일이 필요한 skill은 core와 detail에 직접 인용된 경로를 읽는다.
 
 ### 적용
 
@@ -80,4 +76,3 @@ meta는 어느 파일에도 프롬프트로 주입하지 않는다.
 - core의 "보유 기술 스택"을 라벨 중심으로 축약하고, 증거 상세는 detail로 옮긴다.
 - 관련 skill의 SKILL.md Inputs를 위 매핑대로 갱신한다.
 - `data-schema.md`·`code-architecture.md`의 candidate-profile 설명에 core/detail 분리를 반영한다.
-- 1차 slim(provenance 분리) 패턴은 그대로 유지한다.

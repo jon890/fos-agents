@@ -4,7 +4,7 @@
 > core가 추천·fit 판단용 사실·라벨을 담고, 이 파일은 프로젝트 서사·의사결정 패턴·협업 스타일·면접 준비 우선순위를 담습니다.
 > core와 함께 프롬프트에 주입하는 skill: application-package-writer, application-reviewer, interview-asset-writer, interview-stage-prep.
 > 추천·fit skill(position-recommender, job-fit-analyzer 등)은 core만 읽습니다.
-> 사실관계 근거와 provenance는 `config/candidate-profile-provenance.md`를 따릅니다.
+> 사실관계 근거는 각 항목에 직접 연결된 `sources/fos-study/` 경로를 따릅니다.
 
 ---
 
