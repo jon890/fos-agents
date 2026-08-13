@@ -1,8 +1,11 @@
-// Active-snapshot boundary: only direct individual postings with verified active/open status
-// are kept. This is the single barrier that prevents career_article / search_page links
-// and unknown-status postings from leaking into the snapshot regardless of source.
+// 소스별 상태를 정규화한 뒤 모든 공고에 적용하는 공통 생명주기 경계다.
 
-import type { Posting } from "./types.ts";
+import type {
+  Posting,
+  PostingEligibilityDecision,
+  PostingEligibilityPolicy,
+  PostingRejectionCode,
+} from "./types.ts";
 
 const ACTIVE_POSTING_STATUSES: ReadonlySet<Posting["postingStatus"]> = new Set(["active", "open"]);
 
@@ -27,13 +30,69 @@ export function dedupe(posts: Posting[]): Posting[] {
   });
 }
 
+function isExpired(posting: Posting, evaluatedAt: Date): boolean {
+  const remainingDays = Number(posting.daysUntilClose);
+  if (Number.isFinite(remainingDays) && remainingDays < 0) return true;
+
+  const dateOnly = posting.closesAt.match(/^(\d{4}-\d{2}-\d{2})(?:$|T)/)?.[1];
+  if (!dateOnly) return false;
+  const evaluatedDate = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(evaluatedAt);
+  return dateOnly < evaluatedDate;
+}
+
+export const activePostingEligibilityPolicy: PostingEligibilityPolicy = {
+  evaluate(posting, evaluatedAt = new Date()): PostingEligibilityDecision {
+    if (posting.linkType !== "direct_posting") {
+      return { eligible: false, rejectionCode: "not_direct_posting" };
+    }
+    if (!ACTIVE_POSTING_STATUSES.has(posting.postingStatus)) {
+      return { eligible: false, rejectionCode: "unverified_status" };
+    }
+    if (isExpired(posting, evaluatedAt)) {
+      return { eligible: false, rejectionCode: "expired_deadline" };
+    }
+    return { eligible: true };
+  },
+};
+
+export interface PostingEligibilityResult {
+  eligible: Posting[];
+  rejectedCounts: Partial<Record<PostingRejectionCode, number>>;
+  rejectedBySource: Map<string, number>;
+}
+
+export function filterEligiblePostings(
+  posts: Posting[],
+  evaluatedAt = new Date(),
+  policy: PostingEligibilityPolicy = activePostingEligibilityPolicy,
+): PostingEligibilityResult {
+  const eligible: Posting[] = [];
+  const rejectedCounts: Partial<Record<PostingRejectionCode, number>> = {};
+  const rejectedBySource = new Map<string, number>();
+  for (const posting of posts) {
+    const decision = policy.evaluate(posting, evaluatedAt);
+    if (decision.eligible) {
+      eligible.push(posting);
+      continue;
+    }
+    if (decision.rejectionCode) {
+      rejectedCounts[decision.rejectionCode] = (rejectedCounts[decision.rejectionCode] ?? 0) + 1;
+    }
+    rejectedBySource.set(posting.source, (rejectedBySource.get(posting.source) ?? 0) + 1);
+  }
+  return { eligible, rejectedCounts, rejectedBySource };
+}
+
 function roleKey(posting: Posting): string {
   const normalize = (value: string) => value.normalize("NFKC").replace(/\s+/g, "").toLowerCase();
   return `${normalize(posting.company)}|${normalize(posting.title)}`;
 }
 
 export function keepActiveDirectPostings(posts: Posting[]): Posting[] {
-  return posts.filter(
-    (p) => p.linkType === "direct_posting" && ACTIVE_POSTING_STATUSES.has(p.postingStatus)
-  );
+  return filterEligiblePostings(posts).eligible;
 }

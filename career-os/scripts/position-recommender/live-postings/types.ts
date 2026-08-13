@@ -27,6 +27,21 @@ export interface SourceAdapter {
   note?: string;
 }
 
+export type PostingRejectionCode =
+  | "not_direct_posting"
+  | "unverified_status"
+  | "expired_deadline";
+
+export interface PostingEligibilityDecision {
+  eligible: boolean;
+  rejectionCode?: PostingRejectionCode;
+}
+
+/** 모든 소스가 공통으로 통과해야 하는 공고 생명주기 계약 */
+export interface PostingEligibilityPolicy {
+  evaluate(posting: Posting, evaluatedAt?: Date): PostingEligibilityDecision;
+}
+
 export interface CollectionDiagnostics {
   collectionRunId: string;
   collectedAt: string;
@@ -40,7 +55,6 @@ export interface CollectionDiagnostics {
 }
 
 export interface CliArgs {
-  markdownOut: string;
   jsonOut: string;
   source: SourceSelection;
   serverOnly: boolean;

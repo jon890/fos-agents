@@ -1,4 +1,4 @@
-// Collection policy: keyword lists, role filters, close-window helpers, and sort key.
+// Collection policy: keyword lists, role filters, and close-window helpers.
 // Collector responsibility ends at clean active/open direct posting candidates.
 // Ranking, fit/gap, and career narrative belong to the /position-recommender LLM report.
 
@@ -202,22 +202,4 @@ export function closeWindow(rawDueTime: unknown): Pick<Posting, "closesAt" | "da
     daysUntilClose: String(days),
     closeUrgency: urgency,
   };
-}
-
-// ---- Sort key (used by renderer) ----------------------------------------
-
-export const TAG_PRIORITY: Record<string, number> = {
-  "internet-bank/fintech": 0,
-  "commerce/payment": 1,
-  "search/rag": 2,
-  "backend-platform": 3,
-  "ai-service": 4,
-  other: 9,
-};
-
-export function postSortKey(p: Posting): [number, number] {
-  const text = [p.title, p.mainTasks, p.requirements, p.preferred, ...p.skills].join(" ");
-  const javaBonus = hasKeyword(text, JAVA_SPRING_KEYWORDS) ? 0 : 1;
-  const tagMin = Math.min(...p.tags.map((t) => TAG_PRIORITY[t] ?? 9));
-  return [javaBonus, tagMin];
 }

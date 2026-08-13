@@ -18,7 +18,7 @@ import { buildSkillCommand } from './skill_contracts';
 
 const WORKSPACE_PREFIX = process.cwd().endsWith('/career-os') ? '' : 'career-os/';
 const DEFAULT_OUTPUT_DIR = `${WORKSPACE_PREFIX}state/application-agent`;
-const LIVE_POSTINGS_PATH = `${WORKSPACE_PREFIX}cache/live-position-postings.md`;
+const POSTING_CANDIDATES_PATH = `${WORKSPACE_PREFIX}state/posting-candidates.json`;
 const POSITION_RECOMMENDATION_PATH = `${WORKSPACE_PREFIX}reports/latest/position-recommendation.md`;
 const CANDIDATE_PROFILE_PATH = `${WORKSPACE_PREFIX}config/candidate-profile.md`;
 
@@ -81,6 +81,17 @@ function parseOpts(args: string[]): CliOptions {
 function loadOptionalText(path: string): string {
   if (!existsSync(path)) return '';
   return readFileSync(path, 'utf-8');
+}
+
+function loadCandidatePoolText(path: string): string {
+  const text = loadOptionalText(path);
+  if (!text) return '';
+  try {
+    const parsed = JSON.parse(text) as { candidates?: unknown[] };
+    return JSON.stringify(parsed.candidates ?? []);
+  } catch {
+    return '';
+  }
 }
 
 function loadRecentDailyPositionReport(): { path?: string; text: string } {
@@ -209,7 +220,7 @@ function deriveRiskFlags(candidate: CandidateInput, livePostingsText: string): s
   const flags = new Set(candidate.riskFlags);
   if (candidate.sourceFreshness === 'stale') flags.add('source_stale');
   if (candidate.status === 'closed') flags.add('record_closed');
-  if (!livePostingsText.includes(candidate.url)) flags.add('missing_from_latest_live_snapshot');
+  if (!livePostingsText.includes(candidate.url)) flags.add('missing_from_latest_candidate_pool');
   if (/Kubernetes|k8s|K8s/.test(candidate.role) && !candidate.decisionReason?.includes('Kubernetes')) {
     flags.add('kubernetes_depth_check');
   }
@@ -433,8 +444,8 @@ async function main(): Promise<void> {
   const context = {
     sourceReportPath: existsSync(POSITION_RECOMMENDATION_PATH)
       ? POSITION_RECOMMENDATION_PATH
-      : LIVE_POSTINGS_PATH,
-    livePostingsText: loadOptionalText(LIVE_POSTINGS_PATH),
+      : POSTING_CANDIDATES_PATH,
+    livePostingsText: loadCandidatePoolText(POSTING_CANDIDATES_PATH),
     recommendationText: loadOptionalText(POSITION_RECOMMENDATION_PATH),
     dailyReportText: dailyReport.text,
     candidateProfileLoaded: existsSync(CANDIDATE_PROFILE_PATH),

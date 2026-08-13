@@ -14,10 +14,10 @@
  *   fetched and parsed, and only individual postings with verified JD content +
  *   apply evidence are kept. Career articles themselves are never rendered.
  *
- * JSON 후보풀이 기준 데이터이며 Markdown은 사람이 확인하는 호환 산출물이다.
+ * 결과는 Zod로 검증한 JSON 후보풀 하나로 저장한다.
  *
  * Usage:
- *   bun collect_live_postings.ts --json-output <output-json> [--output <output-md>]
+ *   bun collect_live_postings.ts --output <output-json>
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -31,8 +31,7 @@ import type {
   SourceDiagnostic,
   SourceSelection,
 } from "./live-postings/types.ts";
-import { dedupe, keepActiveDirectPostings } from "./live-postings/validator.ts";
-import { render } from "./live-postings/render.ts";
+import { dedupe, filterEligiblePostings } from "./live-postings/validator.ts";
 import { configuredSourceIds, selectAdapters } from "./live-postings/adapters/index.ts";
 import { setExcludedCompanies } from "./live-postings/policy.ts";
 import { buildPostingCandidatePool } from "./live-postings/candidate_pool.ts";
@@ -58,7 +57,6 @@ function loadExcludedCompanies(): void {
 // ---- CLI ----------------------------------------------------------------
 
 export function parseArgs(argv: string[]): CliArgs {
-  let markdownOut = resolve(REPO_ROOT, "career-os/cache/live-position-postings.md");
   let jsonOut = resolve(REPO_ROOT, "career-os/state/posting-candidates.json");
   let source: SourceSelection = "all";
   let serverOnly = true;
@@ -67,9 +65,7 @@ export function parseArgs(argv: string[]): CliArgs {
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if ((arg === "--out" || arg === "--output") && argv[i + 1]) {
-      markdownOut = argv[++i];
-    } else if (arg === "--json-output" && argv[i + 1]) {
+    if ((arg === "--out" || arg === "--output" || arg === "--json-output") && argv[i + 1]) {
       jsonOut = argv[++i];
     } else if (arg === "--source" && argv[i + 1]) {
       const s = argv[++i];
@@ -105,7 +101,7 @@ export function parseArgs(argv: string[]): CliArgs {
       includeTossArticles = true;
     }
   }
-  return { markdownOut, jsonOut, source, serverOnly, wantedLimit, includeTossArticles };
+  return { jsonOut, source, serverOnly, wantedLimit, includeTossArticles };
 }
 
 function isAdapterCollectionResult(value: Posting[] | AdapterCollectionResult): value is AdapterCollectionResult {
@@ -119,7 +115,7 @@ function importedCountsBySource(posts: Posting[]): Map<string, number> {
 }
 
 async function main(): Promise<number> {
-  const { markdownOut, jsonOut, source, serverOnly, wantedLimit, includeTossArticles } = parseArgs(process.argv.slice(2));
+  const { jsonOut, source, serverOnly, wantedLimit, includeTossArticles } = parseArgs(process.argv.slice(2));
   loadExcludedCompanies();
   const collected: Posting[] = [];
   const errors: string[] = [];
@@ -162,11 +158,13 @@ async function main(): Promise<number> {
     }
   }
 
-  const activePosts = keepActiveDirectPostings(dedupe(collected));
+  const eligibility = filterEligiblePostings(dedupe(collected));
+  const activePosts = eligibility.eligible;
   const importedCounts = importedCountsBySource(activePosts);
   const normalizedDiagnostics = sourceDiagnostics.map((diagnostic) => ({
     ...diagnostic,
     importedCount: importedCounts.get(diagnostic.source) ?? 0,
+    skippedCount: diagnostic.skippedCount + (eligibility.rejectedBySource.get(diagnostic.source) ?? 0),
   }));
   const collectedAt = new Date().toISOString();
   const diagnostics = {
@@ -178,12 +176,14 @@ async function main(): Promise<number> {
     wantedLimit,
     includeTossArticles,
     sourceDiagnostics: normalizedDiagnostics,
-    errors,
+    errors: [
+      ...errors,
+      ...Object.entries(eligibility.rejectedCounts).map(([reason, count]) => `lifecycle:${reason}=${count}`),
+    ],
   } satisfies CollectionDiagnostics;
   const { pool, validationErrors } = buildPostingCandidatePool(activePosts, diagnostics);
   mkdirSync(dirname(resolve(jsonOut)), { recursive: true });
   writeFileSync(resolve(jsonOut), `${JSON.stringify(pool, null, 2)}\n`, "utf8");
-  render(pool.candidates, markdownOut, diagnostics);
   console.log(`posting candidate pool: ${resolve(jsonOut)} (${pool.candidates.length}건)`);
   if (validationErrors.length > 0) {
     console.error(`WARN posting schema errors: ${validationErrors.join("; ")}`);

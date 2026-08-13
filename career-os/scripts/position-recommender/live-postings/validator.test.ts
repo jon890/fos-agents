@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { Posting } from "./types.ts";
-import { dedupe } from "./validator.ts";
+import { dedupe, filterEligiblePostings } from "./validator.ts";
 
 function posting(overrides: Partial<Posting>): Posting {
   return {
@@ -40,4 +40,33 @@ test("같은 회사와 역할의 공식 개별 공고가 있으면 Wanted 항목
 
 test("공식 개별 공고가 없으면 Wanted 항목을 유지한다", () => {
   expect(dedupe([posting({})])).toHaveLength(1);
+});
+
+test("마감일이 지난 공고는 모델 입력 전에 제외한다", () => {
+  const result = filterEligiblePostings(
+    [posting({ closesAt: "2026-08-12", daysUntilClose: "-1" })],
+    new Date("2026-08-13T00:00:00+09:00"),
+  );
+
+  expect(result.eligible).toHaveLength(0);
+  expect(result.rejectedCounts.expired_deadline).toBe(1);
+});
+
+test("마감일이 오늘이면 당일까지 지원 가능한 후보로 유지한다", () => {
+  const result = filterEligiblePostings(
+    [posting({ closesAt: "2026-08-13", daysUntilClose: "0" })],
+    new Date("2026-08-13T12:00:00+09:00"),
+  );
+
+  expect(result.eligible).toHaveLength(1);
+});
+
+test("상태 미확인과 비개별 링크를 결정적으로 제외한다", () => {
+  const result = filterEligiblePostings([
+    posting({ postingStatus: "unknown" }),
+    posting({ linkType: "career_article", url: "https://example.com/careers/article" }),
+  ]);
+
+  expect(result.eligible).toHaveLength(0);
+  expect(result.rejectedCounts).toEqual({ unverified_status: 1, not_direct_posting: 1 });
 });
