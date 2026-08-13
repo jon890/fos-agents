@@ -57,8 +57,8 @@ export const HARD_DOMAIN_KEYWORDS = [
   "search", "검색", "platform", "플랫폼", "kafka", "streaming", "backend", "백엔드", "server", "서버",
 ];
 export const AI_KEYWORDS = ["llm", "rag", "openai", "gemini", "머신러닝", "인공지능"];
-// 선호제외 회사의 단일 출처는 config/position-filters.json 의
-// excludedCompanies 다 (ADR-111). collect_live_postings.ts 가 실행 시작 시
+// 선호 제외 회사는 config/position-filters.json의 excludedCompanies에서 읽는다.
+// collect_live_postings.ts가 실행 시작 시
 // setExcludedCompanies()로 이 목록을 주입한다. 아래 별칭 맵은 한국어 회사명만으로는
 // 매칭되지 않는 로마자/영문 표기를 보강하는 매칭 보조일 뿐, 회사 결정 자체가 아니다.
 const EXCLUDED_COMPANY_ALIASES: Record<string, string[]> = {
@@ -69,7 +69,7 @@ const EXCLUDED_COMPANY_ALIASES: Record<string, string[]> = {
 };
 let excludedCompanyKeywords: string[] = [];
 
-/** config position-filters.json 의 excludedCompanies 를 정규화·별칭 확장해 수집 필터 키워드로 등록한다. */
+/** config/position-filters.json의 excludedCompanies를 정규화하고 별칭을 확장한다. */
 export function setExcludedCompanies(companies: string[]): void {
   const set = new Set<string>();
   for (const raw of companies) {

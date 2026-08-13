@@ -2,7 +2,7 @@
   "_meta": {
     "purpose": "포지션 추천 전 검증된 회사군을 폭넓게 탐색하기 위한 회사/채널 레퍼런스. Wanted, 공식 career, 기술블로그를 함께 확인한다.",
     "policy": "서버/백엔드 정규직 공고만 추천 후보로 올린다. 회사명만 보고 추천하지 말고 active 공고, JD fit, 회사/규모 업사이드, 기술블로그/엔지니어링 시그널을 함께 본다.",
-    "usage": "position-recommender runner가 이 파일을 프롬프트 컨텍스트로 포함한다. 사람이 수동 web_search/web_fetch를 할 때도 이 목록을 우선 탐색 대상으로 사용한다. hasAdapter/adapterId는 코드 수집 라우팅에 사용한다. 쿨다운 운영 데이터는 state/company-cooldown.json이 단일 출처다(ADR-109). 선호제외·공고 억제 등 durable 공고 필터의 단일 출처는 config/position-filters.json이다(ADR-111). 회사별 탐색 키워드의 단일 출처는 이 파일이다(ADR-103). priorityCompanies가 검증 회사군 키워드를, secondaryCompanies가 그 밖의 저-tier 회사 키워드를 소유한다. techBlogs의 `ref:<key>`는 config/external-reading-sources.ts의 source key를 가리킨다."
+    "usage": "position-recommender가 회사별 탐색 채널과 adapter를 찾을 때 사용한다. priorityCompanies는 우선 탐색 회사를, secondaryCompanies는 추가 탐색 회사를 담는다. techBlogs의 ref:<key>는 config/external-reading-sources.ts의 source key를 가리킨다. 회사·공고 제외는 config/position-filters.json에서 관리한다."
   },
   "priorityCompanies": [
     {
@@ -164,7 +164,7 @@
   ],
   "secondaryCompanies": [
     {
-      "_comment": "priorityCompanies에 없는 저-tier 탐색 대상. 강력/도전 추천 기준은 아니고, 수집 커버리지 유지를 위한 탐색 키워드 seed다(ADR-103).",
+      "_comment": "priorityCompanies에 없는 추가 탐색 대상이다. 추천 등급이 아니라 수집 범위를 넓히기 위한 목록이다.",
       "company": "Samsung SDS",
       "koreanName": "삼성SDS",
       "wantedKeywords": ["삼성SDS 백엔드", "삼성SDS 클라우드", "삼성SDS AI 플랫폼"]

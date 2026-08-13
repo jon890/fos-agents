@@ -27,8 +27,8 @@ interview asset은 후보자 이력 기반 자료지만 `fos-study` 공개 발�
 
 현재 에이전트는 다음 파일과 명령 출력을 직접 로드:
 
-1. `career-os/public/question-bank/` inventory — 공개 질문 bank 정본. 질문 본문은 public-safe JSON에서만 읽는다.
-2. `career-os/config/question-bank-topics.json` — 선택 사항. public bank 정본이 아니라 interview asset 전용 `<topic-key>` override 후보 → `outputPath` / `domain` / `title` / `inputFiles` / `promptAppend`
+1. `career-os/public/question-bank/` inventory — 공개 질문 은행. 질문 본문은 공개 가능한 JSON에서만 읽는다.
+2. `career-os/config/question-bank-topics.json` — 선택 사항. 면접 자료 전용 `<topic-key>` 예외 설정이다.
 3. `career-os/config/candidate-profile.md` — 후보자 기준과 경력 자료 진입점 (필수)
 5. `career-os/state/current-target.json` — `primary.company`, `primary.role` (현재 면접 타깃)
 6. `career-os/task/*` 또는 `career-os/resume/*` — `inputFiles` 명시되면 그 파일들, 아니면 candidate-profile core/detail에서 참조하는 경로
@@ -167,7 +167,7 @@ add vs update는 `git status --porcelain` 자동 판단. push 실패 시 stderr 
 
 출력 디렉터리 `private/`는 git에서 무시되며 공개 저장소에 올라가지 않는다.
 
-### 스키마 (드릴 정본과 동일 필드)
+### 스키마
 
 ```json
 {
@@ -205,7 +205,7 @@ add vs update는 `git status --porcelain` 자동 판단. push 실패 시 stderr 
 
 - `career-os/config/candidate-profile.md` — 후보자 기준과 최신 경력 자료 진입점
 - `career-os/state/current-target.json` — 현재 면접 타깃 (마스터 플레이북 cross-track 톤 기준)
-- `career-os/public/question-bank/` — 공개 질문 bank 정본 (topic-key 매칭 1순위)
+- `career-os/public/question-bank/` — 공개 질문 은행이며 topic-key를 먼저 매칭하는 입력
 - `career-os/config/question-bank-topics.json` — interview asset 전용 override 후보 (outputPath / domain / inputFiles)
 - 관련 스킬: `study-topic-recommender` — 외부 기술 자료 추천
 - 관련 스킬: `question-bank-collector` — 공개 일반 backend/CS 질문 bank 보강

@@ -1,7 +1,8 @@
 # 공개 질문 bank
 
 일반 backend/CS 면접 질문을 공개 가능한 형태로 모아 두는 저장소다.
-포지션별 준비 정본은 `private/<company>/<position>/interview/prep.md`이며, 이 bank는 그곳으로 선별 반영할 원천 질문만 담는다.
+포지션별 준비 문서는 `private/<company>/<position>/interview/prep.md`에 둔다.
+이 질문 은행은 그 문서로 선별할 공개 가능한 일반 질문만 담는다.
 
 ## 카테고리
 
@@ -28,7 +29,9 @@
 - `publicSafe`: 공개 가능 여부.
 - `positionFitHint`: private prep.md로 선별할 때 참고할 적합도 힌트.
 - `normalizedFrom`: 원문 복사가 아니라 어떤 축으로 정규화했는지 적는 메모.
-- `topic`: 질문이 다루는 개념 단위(kebab-case). `study-progress.json`의 `weak_spots` 키와 동일한 값을 쓴다.
+- `topic`: 질문이 다루는 개념 단위다.
+  - kebab-case를 사용한다.
+  - 드릴 진행 상태와 같은 topic 식별자를 사용한다.
 - `tags`: 약점 기반 질문 재선별에 쓸 일반 태그.
 - `followUps`: 꼬리 질문 후보.
 

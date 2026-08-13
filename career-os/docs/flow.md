@@ -1,380 +1,116 @@
-# Flow - career-os 사용자와 데이터 흐름
+# 실행 흐름
 
-career-os의 반복 업무가 어떤 입력에서 시작해 어떤 처리 주체를 거치는지 정리한다.
-또한 어떤 산출물과 다음 상태로 이어지는지 함께 정리한다.
-이 문서는 빠른 경로 파악을 위한 지도이며, 구현 세부사항을 담지 않는다.
-작성 규칙은 [`README.md`](README.md)의 Flow 작성 규칙을 따른다.
-
-## 빠른 이동
-
-| 영역 | 언제 보는지 | 핵심 산출물 |
-|---|---|---|
-| [문서 책임](#문서-책임) | flow.md에 둘 내용인지 판단할 때 | 문서 경계 |
-| [공통 실행 계약](#공통-실행-계약) | 모든 skill 공통 규칙 확인 | 실행, 알림, 안전 경계 |
-| [일상 학습](#일상-학습) | 오늘 읽을 외부 기술 자료 추천 | 추천 리포트 |
-| [포지션 추천](#포지션-추천) | 공고 수집과 지원 후보 생성 | 추천 JSON, report, 후보 상태 |
-| [지원 준비](#지원-준비) | 지원 패키지, 리뷰, 이력서 초안 | 공고별 application 산출물 |
-| [면접 준비](#면접-준비) | 역할 핏 진단, 단계별 준비, 답변 연습 | 면접 준비 자료, 답변 연습 로그 |
-| [질문 은행](#질문-은행) | 공개 가능한 질문 풀 수집과 보강 흐름 | `public/question-bank/` |
-| [이력서 패키지](#이력서-패키지) | 검토된 이력서 초안 변환 | `resume.html`, `resume.pdf` |
-| [피드백 루프](#피드백-루프) | 탈락·면접·리뷰 결과를 다음 탐색과 학습으로 환류 | closed 기록, 약점, next action |
-| [실행 가드](#실행-가드) | 평가, stale guard, 사용자 승인 경계 | 검증 결과, 차단 상태 |
-| [폐기 흐름과 tombstone](#폐기-흐름과-tombstone) | 폐기된 흐름 확인 | tombstone 요약 |
-| [실패 동작](#실패-동작) | 실패 시 어디서 멈추는지 확인 | 실패 알림과 재시도 기준 |
-
-## 문서 책임
-
-`flow.md`에는 흐름을 판단하는 데 필요한 최소 정보를 둔다.
-각 섹션은 다음 질문에 답해야 한다.
-
-- 무엇이 이 흐름을 시작하는가.
-- 어떤 입력을 읽는가.
-- 누가 처리하는가.
-- 어떤 산출물을 쓰는가.
-- 다음 상태나 다음 사용자 행동은 무엇인가.
-- 어떤 안전 경계에서 멈추는가.
-
-다른 문서와의 책임 경계는 [`README.md`](README.md)의 문서별 책임 표를 따른다.
-
-## 공통 실행 계약
-
-career-os의 표준 진입점은 agent skill 직접 호출이다.
-문서와 산출물은 `Use skill: /<skill> [args]` 형태로 다음 행동을 안내한다.
-특정 실행 구현은 무인 실행을 위한 호환 계층이며, workflow 계약이 아니다.
-
-공통 처리 흐름:
-
-```text
-사용자 요청 또는 예약 실행
-  -> 대응 SKILL.md 확인
-  -> 입력 파일과 공개/비공개 경계 확인
-  -> agent 또는 runtime이 필요한 도구 실행
-  -> 산출물 작성
-  -> 검증과 안전 경계 확인
-  -> 다음 행동 또는 사용자 승인 대기 상태 기록
-  -> 필요한 경우 외부 전달 계층에 결과 반환
-```
-
-공통 안전 경계:
-
-- 실제 제출, 로그인, 업로드, 외부 메시지 전송은 사용자 승인 없이 수행하지 않는다.
-- `sources/fos-study/`에는 회사별 지원 전략을 쓰지 않는다.
-  후보자 private 이력과 면접 답변 원문도 쓰지 않는다.
-- `state/`, `applications/`, `reports/`, `cache/`, `private/`, `public/`, `sources/fos-study/` 경계는 [`data-schema.md`](data-schema.md)를 따른다.
-- agent가 만든 제출용 문서에 근거 부족이 남으면 바로 통과시키지 않는다.
-  `보강 필요`, `선택지`, `권장 행동`으로 바꿔 사용자 또는 다음 실행으로 넘긴다.
-
-## 일상 학습
-
-매일 학습 흐름은 외부 기술 자료 수집과 아침 읽을거리 추천으로 끝난다.
-
-```text
-Use skill: /study-topic-recommender
-  -> 외부 소스 설정과 최근 추천 이력 읽기
-  -> 모든 활성 소스에서 글을 결정적으로 수집
-  -> 모델이 수집 결과와 원문을 보고 카테고리별 읽을거리 선별
-  -> 수집 ID, 카테고리, 출처 다양성, 개수 검증
-  -> morning-reading.json에서 Markdown과 공개용 HTML 파생
-  -> 외부 게시 요청이면 report-publisher로 HTML 검사·게시
-```
-
-`study-topic-recommender`는 외부 글을 생성하지 않고 수집된 자료만 추천한다.
-
-주요 산출물:
-
-- `state/morning-reading.json`
-- `state/reading-candidates.json`
-- `state/morning-reading-history.jsonl`
-- `reports/morning-reading.md`
-- `reports/downloads/morning-reading-YYYY-MM-DD.html`
+career-os의 각 흐름은 외부 입력을 검증하고, 사용자 판단에 필요한 산출물을 만든 뒤, 승인 없이는 외부 상태를 바꾸지 않는 데서 끝난다.
 
 ## 포지션 추천
 
-포지션 추천 흐름은 active/open 공고 후보를 모은다.
-그 뒤 지원 가능성을 평가해 다음 행동 후보로 만든다.
+외부 채용 소스의 열린 공고에서 실제 지원 후보를 고른다.
 
-```text
-Use skill: /position-recommender [context]
-  -> 수집 설정(config/position-collection.json) + 후보자 경력(config/candidate-config.json) 읽기  [ADR-099]
-  -> 등록된 source에서 active/open 공고 후보 수집 (wanted years는 경력 기반)
-  -> 후보자 프로필과 최근 추천 이력 읽기
-  -> 강력 추천, 도전 추천, 보류/주의 후보 분류
-  -> 표준 출력 JSON(recommendation.json) 작성 — 적재용 source·closeDate 포함  [ADR-101]
-  -> Markdown과 HTML report 파생
-  -> 수집·추천 건강 지표를 logs/position-metrics.jsonl에 append (기준선 대비 개선 추적)  [ADR-099]
-  -> 사용자 선택 후보를 positions-queue에 등록  [ADR-110]
-  -> 다음 행동 후보를 지원 준비 또는 역할 fit 진단으로 넘김
-```
+1. `config/position-collection.ts`와 회사별 채널 설정을 읽는다.
+2. 소스 어댑터가 개별 공고를 공통 형태로 수집한다.
+3. 스크립트가 종료 여부, 마감일, URL 중복, 명시적 제외를 검사한다.
+4. 유효한 공고만 로컬 후보풀에 저장한다.
+5. 모델이 후보자 프로필과 원문 공고를 읽고 추천 대상을 선별한다.
+6. 추천 결과가 후보풀의 공고와 정확히 일치하는지 검증한다.
+7. 같은 추천 데이터에서 Markdown과 HTML 리포트를 만든다.
+8. 사용자는 공고 원문을 확인하고 지원 또는 제외를 결정한다.
 
-추천 판단의 큰 기준:
+모델은 닫힌 공고를 추측해 제거하지 않는다.
+마감일과 활성 상태처럼 명시적으로 확인할 수 있는 조건은 수집 코드가 처리한다.
 
-- 추천 티어에 오르려면 active/open 개별 공고 URL이 있어야 한다.
-- Java/Spring 서버와 백엔드 정규직을 기본 레인으로 본다.
-- AI 서비스, AI Agent, AI 플랫폼 공고는 별도 레인으로 평가한다.
-  단, 서버와 플랫폼 개발 전이성이 명확해야 한다.
-- 순수 연구, PM, 프론트엔드, 데이터 엔지니어 중심 공고는 추천 티어에서 제외한다.
-  사용자가 별도로 요청하면 예외로 다룬다.
+## 지원 후보 등록과 우선순위
 
-현재 상태:
+사용자가 지원 검토를 선택한 공고를 실행 가능한 상태로 관리한다.
 
-- 표준 출력 JSON과 report가 추천 정본이다.
-- 추천 결과에서 사용자가 바로 후보를 골라 `state/positions-queue.jsonl`에 등록한다(ADR-110로 선택 전 대기열 폐기).
-- 별도 웹 DB나 outbox를 정본으로 두지 않는다.
-- 수집 source, adapter, 진단 상세는 `code-architecture.md`와 position-recommender SKILL.md를 따른다.
+1. 검증된 추천 공고를 지원 후보 목록에 등록한다.
+2. application agent가 마감, 준비 상태, 사용자 검토 필요 여부를 평가한다.
+3. 우선순위 변경 요청은 스키마와 안전 정책을 통과한 뒤 반영한다.
+4. 상태 변경 이유는 결정 로그에 남긴다.
 
-주요 산출물:
+회사의 서열보다 지금 해야 할 행동과 마감 위험을 우선한다.
+실제 채용 사이트 제출은 수행하지 않는다.
 
-- `cache/live-position-postings.md`
-- `reports/daily/YYYY-MM-DD/position-recommendation/recommendation.json`
-- `reports/daily/YYYY-MM-DD/position-recommendation/report.md`
-- `reports/latest/position-recommendation.{json,md}`
-- `reports/downloads/position-recommendation-all-YYYY-MM-DD.html` (유일한 HTML 산출물)
+## 지원 패키지 작성과 검토
 
-게시 준비용 전체 공고 HTML은 같은 수집 실행의 snapshot만 렌더링한다.
-오늘(Asia/Seoul) 수집된 active/open 공고가 없으면 기본 렌더링을 중단하고, 이전 snapshot 사용은 명시적인 stale 허용으로만 가능하다.
-사용자가 외부 게시 또는 공유 URL 생성을 명시하면 `report-publisher`를 사용한다.
-공개 범위를 검사한 뒤 Cloudflare Pages에 게시한다.
-외부 공유 응답에는 게시와 내용 검증을 통과한 URL만 전달한다.
+선택한 공고 하나에 맞춘 지원 자료를 만들고 제출 가능성을 검증한다.
 
-## 지원 준비
+1. 공고 원문, `config/candidate-profile.md`, 연결된 최신 이력 자료를 읽는다.
+2. 지원 적합도와 근거가 있는 성과를 추린다.
+3. 지원 패키지, 이력서 초안, 자기소개 자료, 점검표를 만든다.
+4. reviewer가 필수 요구사항, 과장, 누락, 공개 범위를 검사한다.
+5. 판정은 `pass`, `revise`, `blocked` 중 하나로 남긴다.
+6. `pass`여도 사용자 검토 대기 상태에서 멈춘다.
 
-지원 준비 흐름은 추천 후보를 실제 지원 패키지 후보로 등록하는 과정이다.
-자동화는 내부 산출물 작성과 검토까지만 수행한다.
-제출은 사용자 승인 뒤 별도 행동으로 남긴다.
+## 이력서 근거 감사와 개선
 
-```text
-추천 후보 선택
-  -> 지원 준비 시작 요청
-  -> positions-queue 등록·갱신  [ADR-108, ADR-110]
-  -> posting.md 확보
-  -> Use skill: /application-package-writer <posting-path>
-  -> fit-analysis.md 작성
-  -> application-package.md 작성
-  -> resume-draft.md 작성
-  -> cover-letter.md 작성
-  -> submission-checklist.md 작성
-  -> Use skill: /application-reviewer <application-dir>
-  -> review.md 작성
-  -> pass, revise, blocked 중 하나로 판정
-  -> 사용자 검토 대기
-```
+이력서 문장을 실제 업무 근거에 연결하고 HTML 결과를 반복 개선한다.
 
-application-agent runtime은 상태 전이를 검증하고 다음 action을 제안한다.
-필수 산출물이 없으면 상태를 앞당기지 않고 command suggestion만 남긴다.
+1. 최신 이력서와 후보자 프로필에서 검증할 주장을 추출한다.
+2. 업무 문서, 코드, 테스트, Git 이력, 공개 결과물을 대조한다.
+3. 소유권과 수치의 범위를 판정해 근거 장부를 만든다.
+4. 근거가 약한 문장은 삭제하거나 확인 가능한 표현으로 낮춘다.
+5. evaluator가 내용, 가독성, 채용 공고 적합도, HTML 품질을 채점한다.
+6. 정적 검사와 실제 브라우저 렌더링으로 페이지 수와 잘림을 확인한다.
 
-대표 상태 흐름:
+개인 연락처가 포함된 이력서는 사용자의 명시적 요청 없이 공개 게시하지 않는다.
 
-```text
-discovered
-  -> analyzing
-  -> preparing_application
-  -> needs_revision
-  -> ready_for_user_review
-  -> approved
-  -> submitted
-  -> interview_prep
-  -> closed 또는 blocked
-```
+## 역할 적합도와 면접 준비
 
-안전 경계:
+선택한 역할을 지원할지 판단하고 면접 단계의 다음 행동을 정한다.
 
-- `ready_for_user_review` 이후에는 사람이 제출 여부를 결정한다.
-- 실제 채용 사이트 입력과 제출은 자동화하지 않는다.
-- 근거 없는 정량 성과, private 정보 노출, 직무 요구사항 오독은 review에서 멈춘다.
-  판정은 revise 또는 blocked로 남긴다.
-- 불합격, 지원 취소, 마감 종료는 `closed`와 `userDecision=rejected` 또는 그에 준하는 notes로 남긴다.
-  이후 같은 회사·역할은 새 지원으로 자동 재개하지 않고 피드백 루프로 돌린다.
+1. 역할 인자나 선택적인 `state/current-target.json`을 읽는다.
+2. 역할 요구사항과 후보자 근거를 비교한다.
+3. 지원 판단, 커리어 연결점, 면접 전략, 다음 행동을 구조화 결과로 만든다.
+4. 면접 단계가 있으면 해당 단계에 필요한 조사와 연습 항목을 만든다.
+5. 사용자가 자신의 답변을 말하면 에이전트가 구조와 근거를 보강한다.
 
-주요 산출물:
+현재 지원 대상 파일이 없으면 역할을 명시적으로 입력받아 실행한다.
 
-- `state/positions-queue.jsonl`
-- `applications/<application-id>/posting.md`
-- `applications/<application-id>/fit-analysis.md`
-- `applications/<application-id>/application-package.md`
-- `applications/<application-id>/resume-draft.md`
-- `applications/<application-id>/cover-letter.md`
-- `applications/<application-id>/submission-checklist.md`
-- `applications/<application-id>/review.md`
+## 기술·인성 답변 드릴
 
-## 면접 준비
+짧은 답변을 반복하고 약점을 다음 실행에 반영한다.
 
-면접 준비 흐름은 역할 단위 진단, 단계별 준비, 매일 면접 답변 연습으로 나뉜다.
+1. 공개 질문 은행과 개인 질문 자료에서 문제를 고른다.
+2. 사용자가 먼저 자신의 답변을 작성한다.
+3. 에이전트가 정확성, 구조, 근거, 전달력을 평가한다.
+4. 보완할 핵심과 다음 복습 시점을 정한다.
+5. `state/drill-progress.json`에 진행 상태를 갱신한다.
 
-```text
-Use skill: /job-fit-analyzer [역할]
-  -> 타깃 해석(인자 또는 current-target fallback) + 후보자 프로필·baseline 읽기
-  -> 같은 역할 지난 진단 있으면 changeSince 반영
-  -> JobFitRun JSON 정본 생성(verdict·careerPath·interviewStrategy 1급, reinforcement 부차)
-  -> reports/job-fit-YYYY-MM-DD-<slug>.json 작성 → render_job_fit.ts로 md 파생
-  -> nextActions 라우팅(최우선 갭 → 외부 읽을거리 추천)  [ADR-096]
-```
+완성 답변을 먼저 길게 제공하지 않는다.
+사용자의 생각을 바탕으로 실제 말할 수 있는 답변을 만드는 데 집중한다.
 
-```text
-Use skill: /interview-stage-prep [first-round|final-round|offer]
-  -> 현재 면접 단계와 후보자 프로필 읽기
-  -> 단계별 예상 질문, 리스크, 역질문, 준비 체크리스트 작성
-  -> reports/stage-prep-YYYY-MM-DD.md 작성
-```
+## 아침 읽을거리 추천
 
-```text
-Use skill: /tech-interview-drill
-Use skill: /behavioral-interview-drill
-  -> 질문 풀과 약점 기록 읽기
-  -> 사용자 답변 1개를 채점
-  -> 답변 연습 로그와 약점 상태 갱신
-  -> 다음 읽을거리 추천에 반영할 약점 기록
-```
+등록된 외부 소스에서 그날 읽을 가치가 높은 글을 선별한다.
 
-면접 준비의 사람이 읽는 기준 문서는 포지션별 private home에 둔다.
-공개 가능한 기술 보강 주제만 다음 외부 읽을거리 추천에 사용한다.
+1. `config/external-reading-sources.ts`의 활성 소스를 모두 읽는다.
+2. 피드와 페이지 어댑터가 최신 글을 결정적으로 수집한다.
+3. URL 중복과 수집 실패를 정리해 후보풀을 만든다.
+4. 모델이 글의 내용, 시의성, 출처 신뢰도, 사용자 경력 방향을 함께 보고 선별한다.
+5. 회사 기술 블로그와 개발 동향 자료를 먼저 제시한다.
+6. 같은 선별 결과에서 Markdown과 HTML을 만든다.
+7. 리포트에는 카테고리, 제목, 요약, 추천 이유, 원문 링크를 담는다.
 
-현재 지원 대상이 없으면 `state/current-target.json` 자체가 없다.
-이때 단계별 면접 준비는 새 active 타깃이 설정될 때까지 멈추고, 드릴과 일반 질문 bank 보강은 회사별 boost 없이 계속 진행한다.
+외부 자료가 없는 학습 주제를 모델이 새로 만들지 않는다.
+AI 관련 글도 출처의 일반 글과 같은 기준으로 평가하며 별도 AI 구역을 만들지 않는다.
 
-주요 산출물:
+## 질문 은행 갱신
 
-- `reports/job-fit-YYYY-MM-DD-<slug>.{json,md}` (JSON 기준 데이터에서 Markdown 파생)
-- `reports/stage-prep-YYYY-MM-DD.md`
-- `state/drill-log-YYYY-MM-DD.jsonl`
-- `private/<company>/<position>/interview/prep.md`
+공개 가능한 일반 질문과 개인 경험 질문을 분리한다.
 
-## 질문 은행
+1. 공개 질문 후보의 중복과 표현을 검증한다.
+2. 일반화할 수 있는 질문만 `public/question-bank/`에 추가한다.
+3. 개인 경력이나 비공개 업무에서 나온 질문은 `private/question-bank/`에 둔다.
+4. 드릴은 두 범위를 합쳐 사용할 수 있지만 공개 산출물에는 개인 질문을 포함하지 않는다.
 
-질문 bank 흐름은 공개 가능한 일반 backend와 CS 질문을 수집하고 정규화한다.
-회사별 답변, 지원 전략, 비공개 면접 맥락은 넣지 않는다.
+## HTML 리포트 게시
 
-```text
-Use skill: /question-bank-collector <topic>
-  -> 공개 가능한 source와 기존 질문 풀 읽기
-  -> 질문 후보 생성
-  -> public-safe 여부와 중복 여부 확인
-  -> category, difficulty, intent, answer signals 정규화
-  -> public/question-bank/ 갱신
-  -> 필요한 경우 private 면접 prep에 선별 반영 후보 제공
-```
+사용자가 공유 링크를 요청했을 때만 외부 게시까지 이어간다.
 
-인성 면접 웹 수집 자료는 먼저 `state/behavioral-interview-web-source-scan-YYYY-MM-DD.md`에 출처와 신뢰도를 남긴다.
-그중 회사명, 개인 이력, 지원 전략을 제거해 재사용 가능한 일반 질문으로 정규화할 수 있는 항목은 `public/question-bank/behavioral/questions.json`에 누적한다.
+1. 리포트 HTML을 `reports/downloads/`에 만든다.
+2. 개인 정보, 비공개 회사 맥락, 로컬 절대 경로를 검사한다.
+3. `report-publisher` skill로 Cloudflare Pages에 게시한다.
+4. 게시된 페이지와 핵심 링크가 열리는지 확인한다.
+5. 검증된 URL과 다음 행동을 사용자에게 전달한다.
 
-특정 포지션에서 드러난 약점 질문은 `private/question-bank/{behavioral,tech}-personal.jsonl`에 남기고, 공개 가능한 일반 질문만 `public/question-bank/`로 승격한다.
-
-주요 산출물:
-
-- `public/question-bank/<category>/questions.json` (질문 정본, behavioral 포함 — ADR-097)
-- `private/question-bank/{behavioral,tech}-personal.jsonl` (개인 맞춤 질문 정본)
-
-## 이력서 패키지
-
-resume package 흐름은 검토된 이력서 초안을 첨부 가능한 파일로 변환한다.
-외부 제출이나 업로드는 포함하지 않는다.
-
-```text
-application review 통과
-  -> resume-draft.md 확인
-  -> design.md 또는 기본 이력서 디자인 계약 적용
-  -> resume.html 생성
-  -> Use skill: /resume-evidence-auditor <resume.html>
-  -> 업무 문서·코드·테스트·Git 이력과 주장 교차 검증
-  -> 현재 resume.html의 경로와 제출 문구 해시를 포함한 claim-ledger.json 생성
-  -> evidence-audit.md 생성
-  -> Use skill: /resume-evaluator <resume.html>
-  -> 인사 40점 + 기술 45점 + 제출 품질 15점으로 채점
-  -> 90점 이상과 평가자별 하한을 충족할 때까지 최대 3회 개선
-  -> 제출 문구가 바뀌면 근거 감사를 다시 실행
-  -> 필요할 때만 resume.pdf로 변환해 출력 상태 검증
-  -> 사용자 검토 대기
-```
-
-주요 산출물:
-
-- `applications/<application-id>/resume-draft.md`
-- `applications/<application-id>/resume.html`
-- `applications/<application-id>/resume-scorecard.md`
-- `applications/<application-id>/claim-ledger.json`
-- `applications/<application-id>/evidence-audit.md`
-- `applications/<application-id>/resume.pdf` — 필요할 때만 만드는 검증·첨부용 파생 파일
-
-## 피드백 루프
-
-지원 루프는 탈락이나 보류에서 끝나지 않고 다음 탐색과 보강으로 돌아간다.
-파일과 skill 산출물이 루프 상태를 드러낸다.
-
-표준 루프:
-
-```text
-Use skill: /position-recommender
-  -> 추천 JSON/report 생성
-  -> 후보 선택
-  -> Use skill: /job-fit-analyzer [역할 또는 공고 요약]
-  -> fit/gap과 nextActions 생성
-  -> Use skill: /study-topic-recommender
-  -> Use skill: /application-package-writer <posting-path>
-  -> Use skill: /application-reviewer <application-dir>
-  -> 사용자 수동 제출
-  -> 1차 면접이면 /interview-stage-prep first-round + drill
-  -> 2차/최종이면 /interview-stage-prep final-round + behavioral drill
-  -> 결과 기록
-  -> closed/rejected면 약점·공고 선택 기준·다음 탐색 조건으로 환류
-```
-
-탈락 피드백 처리:
-
-- 해당 지원은 `closed`로 둔다.
-- `userDecision`은 `rejected` 또는 notes의 outcome으로 남긴다.
-- 현재 면접 대상이면 로컬 `state/current-target.json`을 삭제한다.
-- 회사별 private 질문은 보존하되, 다음 추천과 드릴에서 회사별 boost로 쓰지 않는다.
-- 반복 약점은 `state/drill-progress.json`, `private/question-bank/`, 다음 `job-fit` report의 `changeSince`로 이어간다.
-- 새 공고 탐색은 같은 회사 재지원보다 역할·도메인·갭 변화가 명확한 후보를 우선한다.
-
-## 실행 가드
-
-runtime guard는 자동화가 잘못된 상태 전이를 만들지 않게 막는다.
-
-주요 guard:
-
-- freshness guard: 오래된 포지션 추천이나 stale snapshot으로 지원 준비를 시작하지 않는다.
-- artifact guard: 필수 산출물이 없으면 다음 상태로 넘기지 않는다.
-- user gate: 제출, 공개, 외부 전송, 민감 정보 수정은 사용자 승인 전 멈춘다.
-- cooldown guard: 회사나 그룹 단위 쿨다운을 무시하지 않는다.
-- privacy guard: private 지원 전략과 공개 산출물 경계를 확인한다.
-
-평가 흐름:
-
-```text
-fixture 또는 실제 application package 선택
-  -> evaluator 실행
-  -> pass, revise, blocked 판정
-  -> report 작성
-  -> regression 신호 확인
-```
-
-평가 결과는 실제 제출 자동화가 아니라 생성 품질 회귀를 막기 위한 guardrail이다.
-
-## 폐기 이력 경계
-
-현재 활성 흐름을 이해하는 데 필요하지 않은 폐기 이력은 flow 본문에 남기지 않는다.
-상세 마이그레이션 기록은 ADR과 task 기록을 따른다.
-
-## 실패 동작
-
-실패는 조용히 통과시키지 않는다.
-흐름별 실패는 report 또는 stderr에 남긴다.
-
-공통 실패 흐름:
-
-```text
-실행 또는 검증 실패
-  -> 현재 상태 유지
-  -> 실패 사유 기록
-  -> 자동 재시도 가능 여부 판단
-  -> 사용자 승인이나 입력이 필요하면 대기 상태로 전환
-  -> 저장소 밖 호출자에 실패 상태 반환
-```
-
-실패 기준:
-
-- compatibility backend timeout은 실패로 기록한다.
-- fos-study push 실패는 silent 처리하지 않는다.
-- validator 실패는 재시도 가능 범위에서만 반복한다.
-- stale request는 원장을 쓰지 않고 stale 상태로 멈춘다.
-- blocked 판정은 사용자가 명시적으로 해제하기 전까지 자동 진행하지 않는다.
+로컬 HTML 생성과 외부 게시 승인은 서로 다른 단계다.

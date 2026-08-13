@@ -1,5 +1,5 @@
 {
-  "_comment": "최근 6개월 내 지원 후 불합격 등으로 우선순위를 낮추는 회사(하드필터 아님, 감점). 추천 시 이 목록을 단일 출처로 본다. verified-company-research-targets.json의 cooldown 키에서 분리(ADR-109).",
+  "_comment": "최근 지원 결과 등으로 일정 기간 우선순위를 낮출 회사다. 완전 제외가 아니라 추천 점수만 낮춘다.",
   "active": [
     {
       "company": "CJ올리브영",

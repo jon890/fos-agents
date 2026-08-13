@@ -6,7 +6,8 @@ description: 공개 가능한 일반 backend/CS 면접 질문을 career-os publi
 # Question Bank Collector
 
 공개 가능한 일반 backend/CS 면접 질문을 `public/question-bank/`에 모으고 보강하는 agent skill이다.
-private 포지션 준비 정본은 `private/<company>/<position>/interview/prep.md`이며, 이 skill은 public bank와 private prep 경계를 분리한다.
+포지션별 비공개 준비 문서는 `private/<company>/<position>/interview/prep.md`다.
+이 skill은 공개 질문 은행과 비공개 준비 문서의 경계를 지킨다.
 
 ## 보강 대상 카테고리
 
@@ -17,7 +18,7 @@ private 포지션 준비 정본은 `private/<company>/<position>/interview/prep.
 - `system-design` — 시스템 설계 질문
 - `behavioral` — STAR 형식 경험 공유, 협업, 성장, 가치관 등 일반 인성 질문.
   개인 답변, 지원 전략, 회사별 비공개 맥락은 넣지 않는다.
-  개인 맞춤 인성 질문은 `private/question-bank/behavioral-personal.jsonl` 정본(interview-asset-writer 담당).
+  개인 맞춤 인성 질문은 `private/question-bank/behavioral-personal.jsonl`에 둔다.
   웹에서 수집한 면접 후기나 회사별 자료는 먼저 `state/behavioral-interview-web-source-scan-YYYY-MM-DD.md`에 출처와 신뢰도를 남기고, public-safe 일반 질문으로 정규화 가능한 항목만 `public/question-bank/behavioral/questions.json`에 누적한다.
 
 ## 호출 후 범위 해석
@@ -31,7 +32,8 @@ private 포지션 준비 정본은 `private/<company>/<position>/interview/prep.
 - `public/question-bank/README.md`
 - `public/question-bank/{java-spring,database,cs,operations,system-design,behavioral}/questions.json`
 - `scripts/question-bank-collector/validate.ts`의 `scanQuestionBankInventory()` 결과.
-  public/question-bank inventory 정본이며, `config/question-bank-topics.json`을 정본으로 사용하지 않는다.
+  공개 질문 은행의 실제 파일을 검사한다.
+  `config/question-bank-topics.json`은 질문 데이터로 사용하지 않는다.
 - 필요한 경우 공개 가능한 기존 study topic 이름.
 - 포지션 맞춤 선별을 명시한 경우에만 `private/<company>/<position>/interview/prep.md`.
 

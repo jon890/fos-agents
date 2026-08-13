@@ -6,7 +6,8 @@ description: 타깃 직무(역할 단위) 대비 지원 의사결정·면접 전
 # Job Fit Analyzer
 
 타깃 직무(역할 단위) 기준으로 **지원 의사결정 + 면접 전략 + 커리어 패스 정합**을 진단하는 workflow (ADR-096).
-산출물 정본은 구조화 JSON `JobFitRun`이고, `verdict`(go/no-go)·`careerPath`·`interviewStrategy`를 1급 가치로 둔다.
+구조화 JSON `JobFitRun`을 결과의 기준 데이터로 사용한다.
+`verdict`(go/no-go)·`careerPath`·`interviewStrategy`를 1급 가치로 둔다.
 학습 갭(`reinforcement`)은 부차 필드로 내리고, 다음 스킬 라우팅은 `nextActions`로 구조화한다.
 
 ## 스킬 경계 (boundary)
@@ -73,12 +74,12 @@ git pull 실패 시 → stderr warn + 로컬 캐시로 분석 계속.
   `candidate-profile.md`가 없으면 → stderr + exit 1.
 - changeSince용 지난 진단 로드: `career-os/reports/`에서 같은 슬러그(`job-fit-*-<slug>.json`)의 가장 최근 지난 날짜 파일이 있으면 읽는다.
 
-### 3. 분석 + JSON 정본 생성
+### 3. 분석과 기준 JSON 생성
 
 `jobfit_schema.ts`의 `JobFitRun` 구조에 맞춰 분석 결과를 JSON으로 채운다.
 사람이 읽는 Markdown은 이 JSON에서 파생하므로, 산문 markdown을 직접 쓰지 않는다.
 
-저장 경로(정본): `career-os/reports/job-fit-YYYY-MM-DD-<slug>.json`
+저장 경로: `career-os/reports/job-fit-YYYY-MM-DD-<slug>.json`
 
 날짜는 Asia/Seoul 기준 (`TZ=Asia/Seoul date +%F`). UTC `new Date().toISOString()` 날짜를 사용하지 않는다.
 
@@ -103,17 +104,18 @@ git pull 실패 시 → stderr warn + 로컬 캐시로 분석 계속.
 - DB는 약점 가능성이 높은 영역으로 다루고 학습 노트 뒷받침 여부를 검증한다.
 - 근거가 부족하면 raw `needs_evidence` 토큰을 쓰지 말고, `evidenceSupport`·`interviewRisk`에 보강 필요·선택지·권장 행동으로 풀어 쓴다.
 
-### 4. 산출물 생성 — JSON 정본 + 파생
+### 4. 기준 JSON과 표시 산출물 생성
 
-정본은 구조화 JSON이다. 정본 하나에서 md를 파생하므로 자체 markdown 파서를 거치지 않고 출력이 항상 일관된다.
+구조화 JSON 하나에서 Markdown을 만들므로 출력이 일관된다.
 
 ```
-쓰기 → career-os/reports/job-fit-YYYY-MM-DD-<slug>.json   (정본)
+쓰기 → career-os/reports/job-fit-YYYY-MM-DD-<slug>.json   (기준 데이터)
 파생 → bun scripts/job-fit-analyzer/render_job_fit.ts --input <json> --format md --output career-os/reports/job-fit-YYYY-MM-DD-<slug>.md
 ```
 
 `render_job_fit.ts`는 입력 JSON을 `JobFitRun.safeParse`로 먼저 검증하고, 실패하면 위반 필드를 stderr로 출력하며 exit 1한다.
-자체 markdown을 직접 작성하지 않는다 — 렌더러가 정본에서 파생한다.
+Markdown을 직접 작성하지 않는다.
+렌더러가 기준 JSON에서 만든다.
 
 ### 5. changeSince — 지난 진단 대비 변화
 
@@ -164,7 +166,7 @@ git pull 실패 시 → stderr warn + 로컬 캐시로 분석 계속.
 
 파생물 확인:
 
-- `job-fit-YYYY-MM-DD-<slug>.md`가 정본 JSON에서 생성됨.
+- `job-fit-YYYY-MM-DD-<slug>.md`가 기준 JSON에서 생성됨.
 
 스키마로 잡히지 않는 사람-facing 점검:
 
@@ -189,8 +191,8 @@ git pull 실패 시 → stderr warn + 로컬 캐시로 분석 계속.
 
 ## References
 
-- `career-os/scripts/job-fit-analyzer/jobfit_schema.ts` — **산출물 정본 zod 스키마** (ADR-096). JSON을 채우기 전에 이 파일에서 `JobFitRun` 등 필드 정의를 확인한다.
-- `career-os/scripts/job-fit-analyzer/render_job_fit.ts` — 정본 JSON에서 Markdown을 파생하는 렌더러. 입력 시 스키마 검증을 내장하므로 실행 자체가 self-check다.
+- `career-os/scripts/job-fit-analyzer/jobfit_schema.ts` — 결과 JSON의 Zod 스키마. JSON을 채우기 전에 `JobFitRun` 필드 정의를 확인한다.
+- `career-os/scripts/job-fit-analyzer/render_job_fit.ts` — 기준 JSON에서 Markdown을 만드는 렌더러. 입력 검증도 수행한다.
 - `career-os/docs/adr/INDEX.md` ADR-096 / ADR-092 — 본 설계 결정 근거
 - `career-os/state/current-target.json` — 인자 없을 때 타깃 fallback (company / team / role)
 - 관련 스킬: `position-recommender` — 회사 최근 동향·active 공고 추천 (경계 분리)

@@ -32,7 +32,7 @@ Discord 요약에는 private 지원 전략이나 이력서 문구를 넣지 않�
    - `application-package.md` — 지원 패키지 초안 + 근거 보강 항목
    - `review.md` — 심사 판정 (pass/revise/blocked)
 3. `career-os/reports/latest/position-recommendation.md` — 선택. 새 공고 후보 확인 시 참조.
-4. `career-os/reports/morning-topic-recommendation.md` — 선택. 오늘의 학습 추천 연계 시 참조.
+4. `career-os/reports/morning-reading.md` — 선택. 오늘의 외부 읽을거리 추천과 연결할 때 참조.
 
 ## Workflow
 

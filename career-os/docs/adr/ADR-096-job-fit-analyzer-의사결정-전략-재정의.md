@@ -18,7 +18,8 @@ job-fit-analyzer는 [[ADR-092]]로 daily 모드를 제거하고 역할 단위 �
 
 job-fit-analyzer를 **지원 의사결정 + 면접 전략 + 커리어 패스 정합** 중심으로 재정의한다.
 
-- 산출물 정본을 구조화 JSON `JobFitRun`(schemaVersion 1)으로 올린다([[ADR-101]] 패턴 재사용).
+- 구조화 JSON `JobFitRun`을 결과의 기준 데이터로 사용한다.
+  - `schemaVersion`은 1이다.
   `verdict`(go/no-go)·`careerPath`·`interviewStrategy`를 1급 필드로 두고, `reinforcement`(학습 갭)는 부차 필드로 내린다.
 - **자연어 타깃 override**: `/job-fit-analyzer [역할]` 인자로 타깃을 받고, 없으면 `current-target.json` primary fallback.
 - **다음 스킬 연결**을 `nextActions{skill,input,why}`로 구조화한다. 최우선 갭은 외부 읽을거리 추천 입력으로 전달한다.
@@ -31,7 +32,7 @@ job-fit-analyzer를 **지원 의사결정 + 면접 전략 + 커리어 패스 정
 
 - job-fit이 학습 목록 생성을 넘어 의사결정·전략 산출물로 선다.
 - 자연어 타깃으로 추천(position-recommender)한 직무를 바로 진단할 수 있다.
-- JSON 정본으로 다음 스킬 입력 재사용이 쉬워진다.
+- 기준 JSON으로 다음 skill의 입력 재사용이 쉬워진다.
 - 같은 역할 반복 진단 시 변화(`changeSince`)를 보여줘 반복 가치가 생긴다.
 - 회사 최근 동향은 범위 밖으로 두고 position-recommender(회사 평가)와 경계를 유지한다.
 
@@ -41,4 +42,4 @@ job-fit-analyzer를 **지원 의사결정 + 면접 전략 + 커리어 패스 정
 - 렌더러는 `scripts/job-fit-analyzer/render_job_fit.ts`에 둔다.
 - 데이터 스키마·흐름·코드 구조·기능 표는 `data-schema.md`·`flow.md`·`code-architecture.md`·`prd.md`에 반영한다.
 - 역할 단위 진단은 [[ADR-092]]를 따른다.
-- JSON 정본 구조는 [[ADR-101]]을 재사용한다.
+- JSON 결과를 기준으로 표시 파일을 만드는 방식은 [[ADR-101]]을 재사용한다.

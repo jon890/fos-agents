@@ -33,6 +33,7 @@
 
 ### 적용
 
-- 드릴 상태는 [[ADR-105]]를 따른다.
-- 공개 질문 자산은 [[ADR-097]]를 따른다.
+- 드릴 상태는 `state/drill-progress.json`에 둔다.
+- 일반 질문은 `public/question-bank/`에 둔다.
+- 개인 질문은 `private/question-bank/`에 둔다.
 - 드릴 공용 코드는 `scripts/interview-drill/`에 둔다.

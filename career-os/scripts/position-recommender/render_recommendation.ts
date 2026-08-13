@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
-// ADR-101: recommendation.json 정본 하나에서 Markdown과 HTML을 파생한다.
-// 정본이 구조이므로 출력이 깨지지 않고, HTML은 JSON에서 직접 시맨틱 구조로 생성한다.
+// recommendation.json 기준 데이터 하나에서 Markdown과 HTML을 만든다.
+// HTML은 검증된 JSON을 직접 시맨틱 구조로 변환한다.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";

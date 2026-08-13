@@ -6,7 +6,7 @@ description: 근거 감사를 마친 공고 맞춤 HTML 이력서를 100점 기�
 # 이력서 평가
 
 검증된 사실의 범위 안에서 HTML 이력서의 설득력과 제출 품질을 개선한다.
-사실성의 정본은 `resume-evidence-auditor`가 만든 원장이다.
+사실성은 `resume-evidence-auditor`가 만든 근거 장부를 기준으로 판단한다.
 
 ## 입력
 

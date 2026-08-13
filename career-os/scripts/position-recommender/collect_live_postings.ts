@@ -40,7 +40,7 @@ const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 
 /**
  * 선호제외 회사 목록을 config에서 읽어 수집 필터에 주입한다.
- * 단일 출처는 config/position-filters.json 의 excludedCompanies (ADR-111).
+ * 제외 회사는 config/position-filters.json의 excludedCompanies에서 읽는다.
  * config를 못 읽으면 회사 제외 없이 진행한다(수집 자체를 막지 않는다).
  */
 function loadExcludedCompanies(): void {

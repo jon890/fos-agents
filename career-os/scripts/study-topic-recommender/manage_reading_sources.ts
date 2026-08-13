@@ -40,7 +40,7 @@ template 옵션:
   --url <HTTPS URL> --feed-url <HTTPS URL>
   --adapter <feed|page>
 
-정본: config/external-reading-sources.ts`);
+기준 설정: config/external-reading-sources.ts`);
 }
 
 function listSources(): void {

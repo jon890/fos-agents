@@ -1,6 +1,6 @@
 # 외부 읽을거리 소스 관리
 
-`config/external-reading-sources.ts`를 단일 출처로 사용한다.
+읽을거리 소스는 `config/external-reading-sources.ts`에서 관리한다.
 소스 키는 주제가 아니라 발행처를 식별한다.
 
 좋은 키:

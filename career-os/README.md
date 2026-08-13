@@ -17,7 +17,7 @@
 - 기술 또는 인성 답변을 연습할 때: `/tech-interview-drill`, `/behavioral-interview-drill`
 - 오늘 읽을 기술 자료를 고를 때: `/study-topic-recommender`
 
-각 skill의 입력, 산출물, 검증, 안전 경계는 해당 `SKILL.md`가 단일 출처다.
+각 skill의 입력, 산출물, 검증, 안전 경계는 해당 `SKILL.md`에서 확인한다.
 
 ## 설정
 
@@ -45,8 +45,8 @@ clone 뒤 확인할 기본 파일:
 
 ## 데이터 경계
 
-- `config/`에는 후보자 기준, 정책, 사람이 고른 override를 둔다.
-- `state/`에는 현재 타깃, 학습·드릴 진행, cooldown 같은 실행 상태를 둔다.
+- `config/`에는 후보자 기준, 정책, 사람이 고른 예외를 둔다.
+- `state/`에는 현재 타깃, 드릴 진행, cooldown 같은 실행 상태를 둔다.
 - `applications/`, `private/`, `reports/`, `cache/`에는 지원 전략, 개인 산출물, 실행 결과, 재생성 가능한 캐시를 둔다.
 - `public/question-bank/`, `sources/fos-study/`에는 공개 가능한 일반 지식만 둔다.
 - 실제 제출, 로그인, 업로드, 외부 메시지 전송, 공개 발행은 사용자 승인 후에만 수행한다.

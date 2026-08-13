@@ -293,7 +293,7 @@ candidate-profile.md + 근거 파일과 교차 분석:
 
 ## References
 
-- `career-os/docs/adr/INDEX.md` — ADR-110 (frontdoor-queue 폐기, 지원 후보 positions-queue 직행 등록으로 단순화), ADR-038 (artifact 검증 후 상태 전이) 설계 근거
+- `career-os/docs/adr/ADR-038-application-flow-agent-상태-전이는-skill-artifact-검증-뒤에만-수행.md` — 산출물 검증 뒤 상태 전이 결정
 - `career-os/docs/data-schema.md` — positions-queue.jsonl 스키마
 - `career-os/state/positions-queue.jsonl` — 지원 이력 원장
 - `career-os/config/candidate-profile.md` — 후보자 기준과 최신 경력 자료 진입점

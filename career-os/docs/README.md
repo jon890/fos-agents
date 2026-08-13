@@ -83,7 +83,7 @@ flow 문서는 “무엇이 시작되어 어디까지 이어지는가”를 설�
 
 ## Data Schema 작성 규칙
 
-data-schema 문서는 저장 구조의 단일 출처다.
+data-schema 문서는 저장 구조의 현재 계약을 설명한다.
 새 config, state file, report JSON, positions-queue field를 만들면 여기에 반영한다.
 
 data-schema에는 스키마와 보존 경계를 적는다.
@@ -95,7 +95,7 @@ code-architecture 문서는 코드와 디렉터리 책임을 설명한다.
 새 script, helper, skill directory, 외부 repo 연결이 생기면 여기에 반영한다.
 
 전체 구현 코드나 함수 전수 목록은 쓰지 않는다.
-구현 세부는 코드가 단일 출처다.
+구현 세부는 코드에서 확인한다.
 
 ## ADR 작성 규칙
 
