@@ -27,6 +27,7 @@ export const NON_SERVER_TITLE_KEYWORDS = [
   "데이터 엔지니어", "data scientist", "데이터 사이언티스트", "ai research", "research scientist",
   "applied scientist", "ai engineer (model)", "model researcher", "모델 연구",
   "cto", "chief technology officer", "tech lead", "server lead", "technical lead", "테크 리드", "기술 리드", "기술총괄", "기술 총괄",
+  "manager", "team leader", "팀장", "조직장",
   "마케터", "marketing", "assistant", "어시스턴트", "정책", "e/e", "데이터 라벨링",
   // 법무·컴플라이언스
   "legal", "counsel", "법무", "변호사", "compliance manager", "컴플라이언스", "준법", "kyc", "aml", "privacy manager",
@@ -47,6 +48,7 @@ export const NON_SERVER_TITLE_KEYWORDS = [
 ];
 export const CONTRACT_KEYWORDS = [
   "계약직", "contract", "contractor", "temporary", "temp", "freelance", "프리랜서",
+  "intern", "internship", "인턴", "체험형", "현장실습",
 ];
 export const JAVA_SPRING_KEYWORDS = [
   "java", "spring", "spring boot", "springboot", "jpa", "hibernate", "kotlin",

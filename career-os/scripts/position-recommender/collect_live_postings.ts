@@ -31,7 +31,11 @@ import type {
   SourceDiagnostic,
   SourceSelection,
 } from "./live-postings/types.ts";
-import { dedupe, filterEligiblePostings } from "./live-postings/validator.ts";
+import {
+  createPostingEligibilityPolicy,
+  dedupe,
+  filterEligiblePostings,
+} from "./live-postings/validator.ts";
 import { configuredSourceIds, selectAdapters } from "./live-postings/adapters/index.ts";
 import { setExcludedCompanies } from "./live-postings/policy.ts";
 import { buildPostingCandidatePool } from "./live-postings/candidate_pool.ts";
@@ -43,14 +47,19 @@ const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
  * 제외 회사는 config/position-filters.json의 excludedCompanies에서 읽는다.
  * config를 못 읽으면 회사 제외 없이 진행한다(수집 자체를 막지 않는다).
  */
-function loadExcludedCompanies(): void {
+function loadPositionFilters(): ReadonlySet<string> {
   try {
     const path = resolve(REPO_ROOT, "career-os/config/position-filters.json");
     const config = JSON.parse(readFileSync(path, "utf8"));
     const companies: string[] = config?.excludedCompanies ?? [];
     setExcludedCompanies(companies);
+    const suppressedUrls = (config?.suppressedPostings ?? [])
+      .map((posting: { url?: unknown }) => posting.url)
+      .filter((url: unknown): url is string => typeof url === "string" && url.length > 0);
+    return new Set(suppressedUrls);
   } catch (e) {
     console.error(`WARN position-filters config load failed, proceeding without company exclusion: ${e}`);
+    return new Set();
   }
 }
 
@@ -116,7 +125,7 @@ function importedCountsBySource(posts: Posting[]): Map<string, number> {
 
 async function main(): Promise<number> {
   const { jsonOut, source, serverOnly, wantedLimit, includeTossArticles } = parseArgs(process.argv.slice(2));
-  loadExcludedCompanies();
+  const suppressedUrls = loadPositionFilters();
   const collected: Posting[] = [];
   const errors: string[] = [];
   const sourceDiagnostics: SourceDiagnostic[] = [];
@@ -158,7 +167,11 @@ async function main(): Promise<number> {
     }
   }
 
-  const eligibility = filterEligiblePostings(dedupe(collected));
+  const eligibility = filterEligiblePostings(
+    dedupe(collected),
+    new Date(),
+    createPostingEligibilityPolicy({ suppressedUrls, serverOnly }),
+  );
   const activePosts = eligibility.eligible;
   const importedCounts = importedCountsBySource(activePosts);
   const normalizedDiagnostics = sourceDiagnostics.map((diagnostic) => ({

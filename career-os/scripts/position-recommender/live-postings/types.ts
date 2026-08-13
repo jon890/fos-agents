@@ -30,7 +30,11 @@ export interface SourceAdapter {
 export type PostingRejectionCode =
   | "not_direct_posting"
   | "unverified_status"
-  | "expired_deadline";
+  | "expired_deadline"
+  | "suppressed_posting"
+  | "excluded_company"
+  | "ineligible_employment"
+  | "not_target_role";
 
 export interface PostingEligibilityDecision {
   eligible: boolean;
@@ -40,6 +44,11 @@ export interface PostingEligibilityDecision {
 /** 모든 소스가 공통으로 통과해야 하는 공고 생명주기 계약 */
 export interface PostingEligibilityPolicy {
   evaluate(posting: Posting, evaluatedAt?: Date): PostingEligibilityDecision;
+}
+
+export interface PostingEligibilityOptions {
+  suppressedUrls?: ReadonlySet<string>;
+  serverOnly?: boolean;
 }
 
 export interface CollectionDiagnostics {

@@ -3,9 +3,16 @@
 import type {
   Posting,
   PostingEligibilityDecision,
+  PostingEligibilityOptions,
   PostingEligibilityPolicy,
   PostingRejectionCode,
 } from "./types.ts";
+import {
+  isContractRole,
+  isExcludedCompany,
+  isNonServerTitle,
+  isServerRole,
+} from "./policy.ts";
 
 const ACTIVE_POSTING_STATUSES: ReadonlySet<Posting["postingStatus"]> = new Set(["active", "open"]);
 
@@ -45,20 +52,50 @@ function isExpired(posting: Posting, evaluatedAt: Date): boolean {
   return dateOnly < evaluatedDate;
 }
 
-export const activePostingEligibilityPolicy: PostingEligibilityPolicy = {
-  evaluate(posting, evaluatedAt = new Date()): PostingEligibilityDecision {
-    if (posting.linkType !== "direct_posting") {
-      return { eligible: false, rejectionCode: "not_direct_posting" };
-    }
-    if (!ACTIVE_POSTING_STATUSES.has(posting.postingStatus)) {
-      return { eligible: false, rejectionCode: "unverified_status" };
-    }
-    if (isExpired(posting, evaluatedAt)) {
-      return { eligible: false, rejectionCode: "expired_deadline" };
-    }
-    return { eligible: true };
-  },
-};
+export function createPostingEligibilityPolicy(
+  options: PostingEligibilityOptions = {},
+): PostingEligibilityPolicy {
+  const suppressedUrls = options.suppressedUrls ?? new Set<string>();
+  const serverOnly = options.serverOnly ?? true;
+  return {
+    evaluate(posting, evaluatedAt = new Date()): PostingEligibilityDecision {
+      if (suppressedUrls.has(posting.url)) {
+        return { eligible: false, rejectionCode: "suppressed_posting" };
+      }
+      if (posting.linkType !== "direct_posting") {
+        return { eligible: false, rejectionCode: "not_direct_posting" };
+      }
+      if (!ACTIVE_POSTING_STATUSES.has(posting.postingStatus)) {
+        return { eligible: false, rejectionCode: "unverified_status" };
+      }
+      if (isExpired(posting, evaluatedAt)) {
+        return { eligible: false, rejectionCode: "expired_deadline" };
+      }
+
+      const fullText = [
+        posting.company,
+        posting.title,
+        posting.category,
+        posting.summary,
+        posting.mainTasks,
+        posting.requirements,
+        posting.preferred,
+      ].join(" ");
+      if (isExcludedCompany(posting.company)) {
+        return { eligible: false, rejectionCode: "excluded_company" };
+      }
+      if (isContractRole(fullText)) {
+        return { eligible: false, rejectionCode: "ineligible_employment" };
+      }
+      if (serverOnly && (isNonServerTitle(posting.title) || !isServerRole(fullText))) {
+        return { eligible: false, rejectionCode: "not_target_role" };
+      }
+      return { eligible: true };
+    },
+  };
+}
+
+export const activePostingEligibilityPolicy = createPostingEligibilityPolicy();
 
 export interface PostingEligibilityResult {
   eligible: Posting[];
