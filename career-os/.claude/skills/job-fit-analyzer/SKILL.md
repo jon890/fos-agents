@@ -31,25 +31,26 @@ description: 타깃 직무(역할 단위) 대비 지원 의사결정·면접 전
   자연어 역할 텍스트를 그대로 `targetRole.role`에 쓰고, 역할 텍스트에서 슬러그를 만든다.
   슬러그는 소문자·숫자·하이픈만 허용한다 (예: "AI 에이전트 백엔드" → `ai-agent-backend`).
   회사·팀이 자연어에 드러나면 `company`·`team`에 채우고, 없으면 비워 둔다.
-- **인자가 없고 `primary`가 있으면**: `state/mvp-target.json`의 `primary`를 fallback으로 쓴다.
-  `targetRole.source = "mvp-target"`, `company`·`team`·`role`을 `primary`에서 읽고,
+- **인자가 없고 `primary`가 있으면**: `state/current-target.json`의 `primary`를 fallback으로 쓴다.
+  `targetRole.source = "current-target"`, `company`·`team`·`role`을 `primary`에서 읽고,
   슬러그는 `primary.position_slug`(없으면 role에서 파생)로 쓴다.
-- **인자가 없고 `primary`가 null이면**: 역할 진단을 만들지 않는다.
+- **인자가 없고 현재 지원 대상 파일이 없으면**: 역할 진단을 만들지 않는다.
   먼저 `/position-recommender`로 새 후보를 찾거나 `/job-fit-analyzer [자연어 역할]`로 명시 타깃을 받는다.
 
-자연어 역할로 진단하면 position-recommender가 추천한 직무를 mvp-target 고정 없이 바로 진단할 수 있다.
+자연어 역할로 진단하면 position-recommender가 추천한 직무를 current-target 고정 없이 바로 진단할 수 있다.
 
 ## 출력 정책
 
 진단은 비공개 내부 분석이지만 사용자가 바로 다음 행동을 정할 수 있어야 한다.
-정본 JSON의 `verdict`와 `nextActions`가 첫 결론·다음 행동 역할을 하고, `render_job_fit.ts`가 md 첫 줄에 한 줄 결론을 둔다.
+기준 JSON의 `verdict`와 `nextActions`가 첫 결론·다음 행동 역할을 한다.
+`render_job_fit.ts`는 Markdown 첫 줄에 한 줄 결론을 둔다.
 후보자 근거, 타깃 역할 맥락, 리스크 판단은 내부 분석에 유지한다.
 
 ## Inputs
 
 현재 에이전트는 다음 파일을 직접 로드한다:
 
-1. `career-os/state/mvp-target.json` — 인자 없을 때 타깃 fallback (`primary`가 null이면 fallback 없음)
+1. `career-os/state/current-target.json` — 인자 없을 때만 읽는 선택 입력
 2. `career-os/config/candidate-profile.md` — 후보자 이력·약점 (필수)
 3. `career-os/config/baseline-core-files.json` — 큐레이션된 파일 경로 목록 (`files[].path`)
 4. `career-os/sources/fos-study/<path>` — baseline-core-files에 나열된 파일 (각 파일 읽기)
@@ -158,7 +159,7 @@ git pull 실패 시 → stderr warn + 로컬 캐시로 분석 계속.
 스키마 검증 (`render_job_fit.ts` 실행 시 자동) — `jobfit_schema.ts`의 `JobFitRun`이 보장:
 
 - `schemaVersion` 1, `reportDate`·`generatedAt` 존재.
-- `targetRole.source`가 `argument` 또는 `mvp-target` enum, `slug`가 소문자·숫자·하이픈.
+- `targetRole.source`가 `argument` 또는 `current-target` enum, `slug`가 소문자·숫자·하이픈.
 - `verdict`·`careerPath`·`interviewStrategy` 1급 필드 채워짐.
 - `strengths`·`gaps`·`nextActions` 최소 1개 이상.
 - `verdict.recommendation`·`confidence`, `gaps[].priority`, `careerPath.alignmentWithCurrent`가 enum 값.
@@ -182,7 +183,7 @@ git pull 실패 시 → stderr warn + 로컬 캐시로 분석 계속.
 | 상황 | 처리 |
 |---|---|
 | fos-study git pull 실패 | stderr warn + 로컬 캐시로 분석 계속 |
-| 인자 없음 + mvp-target primary null | stderr + exit 1, `/position-recommender` 또는 명시 역할 입력 안내 |
+| 인자 없음 + current-target 파일 없음 | stderr + exit 1, `/position-recommender` 또는 명시 역할 입력 안내 |
 | baseline-core-files.json 없음 | stderr + exit 1 |
 | candidate-profile.md 없음 | stderr + exit 1 |
 | 지난 진단 JSON 없음 | changeSince 생략하고 계속 진행 |
@@ -194,7 +195,7 @@ git pull 실패 시 → stderr warn + 로컬 캐시로 분석 계속.
 - `career-os/scripts/job-fit-analyzer/jobfit_schema.ts` — **산출물 정본 zod 스키마** (ADR-096). JSON을 채우기 전에 이 파일에서 `JobFitRun` 등 필드 정의를 확인한다.
 - `career-os/scripts/job-fit-analyzer/render_job_fit.ts` — 정본 JSON에서 Markdown을 파생하는 렌더러. 입력 시 스키마 검증을 내장하므로 실행 자체가 self-check다.
 - `career-os/docs/adr/INDEX.md` ADR-096 / ADR-092 — 본 설계 결정 근거
-- `career-os/state/mvp-target.json` — 인자 없을 때 타깃 fallback (company / team / role)
+- `career-os/state/current-target.json` — 인자 없을 때 타깃 fallback (company / team / role)
 - `career-os/config/baseline-core-files.json` — 진단 큐레이션 파일 목록
 - 관련 스킬: `position-recommender` — 회사 최근 동향·active 공고 추천 (경계 분리)
 - 관련 스킬: `application-package-writer` — 개별 공고 단위 fit 분석 (라우팅 대상)

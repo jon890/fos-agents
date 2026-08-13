@@ -27,7 +27,8 @@ career-os는 커리어 전환 과정을 매일 재실행 가능한 로컬 워크
 사용자는 매일 공고와 학습 주제를 확인한다.
 그 안에서 지원 후보를 고르고, 공고별 지원 패키지를 만들고, 면접 답변을 연습한다.
 
-현재 집중 타깃은 `state/mvp-target.json`이 단일 출처다.
+현재 집중 대상이 있으면 로컬 `state/current-target.json`으로 관리한다.
+대상이 없으면 파일을 두지 않는다.
 회사명, 팀명, 면접일 같은 자주 바뀌는 상태는 PRD에 박지 않는다.
 
 ## 해결할 문제
@@ -88,7 +89,7 @@ career-os는 아래 문제를 줄이는 데 집중한다.
 ### 피드백 루프
 
 - 사용자 가치: 탈락, 보류, reviewer 지적, 면접 피드백을 다음 탐색과 지원동기에 반영한다.
-- 현재 자산: `state/mvp-target.json`, positions-queue, job-fit report, drill log, private question bank.
+- 현재 자산: `state/current-target.json`, positions-queue, job-fit report, drill log, private question bank.
 - 주요 산출물: closed/rejected 기록, nextActions, 약점 기록, 지원동기 보강 후보.
 - 다음 가치: 기술 갭뿐 아니라 회사 선택 이유와 커리어 정합을 반복 평가한다.
 
@@ -134,7 +135,7 @@ career-os는 아래 문제를 줄이는 데 집중한다.
 역할:
 
 - `/job-fit-analyzer [역할]`은 지원 의사결정, 면접 전략, 커리어 패스 정합성을 진단한다.
-  자연어 역할 인자가 없으면 `state/mvp-target.json`을 기준으로 삼는다.
+  자연어 역할 인자가 없으면 `state/current-target.json`을 기준으로 삼는다.
   JSON 정본과 Markdown 리포트를 함께 남긴다.
 - `/interview-stage-prep`은 1차, 최종, 오퍼 단계별 준비 자료를 만든다.
 - `/tech-interview-drill`은 기술 답변을 짧게 연습하고 약점에 반영한다.
@@ -178,7 +179,7 @@ career-os는 아래 문제를 줄이는 데 집중한다.
 | Private | `applications/`, `private/`, `state/` | 지원 전략, 후보자 맥락, 면접 답변, reviewer 판단 |
 | Config | `config/` | 후보자 프로필, 정책, 예외 override (ADR-069) |
 | State | `state/` | 현재 타깃, 학습·드릴 진행 상태, positions-queue, cooldown (ADR-107) |
-| Feedback state | `state/mvp-target.json`, `applications/`, `private/` | active target, closed outcome, private feedback |
+| Feedback state | `state/current-target.json`, `applications/`, `private/` | active target, closed outcome, private feedback |
 
 공개 가능 여부가 애매하면 private으로 둔다.
 공개 발행은 사용자의 명시 승인 후에만 수행한다.

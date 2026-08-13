@@ -202,7 +202,7 @@ discovered
 
 ```text
 Use skill: /job-fit-analyzer [역할]
-  -> 타깃 해석(인자 또는 mvp-target fallback) + 후보자 프로필·baseline 읽기
+  -> 타깃 해석(인자 또는 current-target fallback) + 후보자 프로필·baseline 읽기
   -> 같은 역할 지난 진단 있으면 changeSince 반영
   -> JobFitRun JSON 정본 생성(verdict·careerPath·interviewStrategy 1급, reinforcement 부차)
   -> reports/job-fit-YYYY-MM-DD-<slug>.json 작성 → render_job_fit.ts로 md 파생
@@ -225,18 +225,17 @@ Use skill: /behavioral-interview-drill
   -> 다음 읽을거리 추천에 반영할 약점 기록
 ```
 
-면접 준비의 사람용 정본은 포지션별 private home에 둔다.
+면접 준비의 사람이 읽는 기준 문서는 포지션별 private home에 둔다.
 공개 가능한 기술 보강 주제만 다음 외부 읽을거리 추천에 사용한다.
 
-활성 면접 타깃이 없으면 `state/mvp-target.json`의 `primary`는 `null`일 수 있다.
+현재 지원 대상이 없으면 `state/current-target.json` 자체가 없다.
 이때 단계별 면접 준비는 새 active 타깃이 설정될 때까지 멈추고, 드릴과 일반 질문 bank 보강은 회사별 boost 없이 계속 진행한다.
 
 주요 산출물:
 
-- `reports/job-fit-YYYY-MM-DD-<slug>.{json,md}` (JSON 정본 + md 파생, ADR-096)
+- `reports/job-fit-YYYY-MM-DD-<slug>.{json,md}` (JSON 기준 데이터에서 Markdown 파생)
 - `reports/stage-prep-YYYY-MM-DD.md`
 - `state/drill-log-YYYY-MM-DD.jsonl`
-- `state/study-progress.json`
 - `private/<company>/<position>/interview/prep.md`
 
 ## 질문 은행
@@ -322,9 +321,9 @@ Use skill: /position-recommender
 
 - 해당 지원은 `closed`로 둔다.
 - `userDecision`은 `rejected` 또는 notes의 outcome으로 남긴다.
-- active 면접 타깃이면 `state/mvp-target.json`의 `primary`를 `history`로 옮기고 `primary: null`로 둔다.
+- 현재 면접 대상이면 로컬 `state/current-target.json`을 삭제한다.
 - 회사별 private 질문은 보존하되, 다음 추천과 드릴에서 회사별 boost로 쓰지 않는다.
-- 반복 약점은 `state/study-progress.json`, `private/question-bank/`, 다음 `job-fit` report의 `changeSince`로 이어간다.
+- 반복 약점은 `state/drill-progress.json`, `private/question-bank/`, 다음 `job-fit` report의 `changeSince`로 이어간다.
 - 새 공고 탐색은 같은 회사 재지원보다 역할·도메인·갭 변화가 명확한 후보를 우선한다.
 
 ## 실행 가드

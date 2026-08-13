@@ -14,7 +14,7 @@
 ### 결정
 
 - 회사·포지션별 active 준비 홈은 `private/<company-slug>/<position-slug>/`에 둔다.
-- `state/mvp-target.json`의 `primary.data_root`를 정본 경로로 사용한다.
+- `state/current-target.json`의 `primary.data_root`를 정본 경로로 사용한다.
 - 파일 기반 자동화는 이 경로를 따른다.
 - 면접 질문 정본을 runtime/report 경로에 중복 유지하지 않는다.
 - 구조 전환으로 대체된 legacy runtime/report는 archive 없이 삭제할 수 있다.

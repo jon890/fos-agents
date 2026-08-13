@@ -13,8 +13,8 @@ config/state는 "이 파일이 바뀌는 트리거가 무엇인가"로 가른다
 |---|---|---|
 | `.env` (워크스페이스 root) | GitHub 토큰 등 secret | ✗ (.gitignore) |
 | `.env.example` (워크스페이스 root) | secret 키 템플릿 — git 추적되는 빈 값 가이드 | ✓ |
-| `config/` | 사람이 큐레이션한 정책·현재 타깃·baseline·예외 override. 자산 목록 복제본으로 쓰지 않음 (ADR-069) | ✓ |
-| `state/` | 시스템 실행·이벤트 산물 (positions-queue, 학습·드릴 진도, morning-reading, drill-log, company-cooldown, 수집 노트, eval) | ✗ 기본 gitignore, 4개 파일만 negation tracked (ADR-107) |
+| `config/` | 사람이 고른 정책·예시·후보자 자료·예외 | ✓ |
+| `state/` | 시스템 실행·이벤트 산물 | ✗ 기본 gitignore, 답변 연습과 회사 cooldown만 추적 |
 | `applications/` | 공고별 지원 상태, 맞춤 지원 패키지, evidence/drift review | ✗ |
 | `reports/` | 사람이 읽는 생성물 (baseline·daily·job-fit·stage-prep 리포트, morning-reading, `reports/latest/` mirror, `reports/downloads/`) | ✗ |
 | `cache/` | 재생성 가능한 캐시·transient (live-postings snapshot, feed-cache, locks, normalized) | ✗ |
@@ -24,7 +24,8 @@ config/state는 "이 파일이 바뀌는 트리거가 무엇인가"로 가른다
 | `logs/` | 추천 지표와 skill 평가 로그 | ✗ |
 | `sources/fos-study/` | 외부 동기 저장소 (jon890/fos-study) — git submodule 같은 위치이나 실제로는 별도 clone | ✗ |
 
-`state/`에서 negation으로 tracked를 유지하는 4개 파일은 `study-progress.json`, `drill-progress.json`, `mvp-target.json`, `company-cooldown.json`이다.
+`state/`에서 Git으로 추적하는 파일은 `drill-progress.json`과 `company-cooldown.json`이다.
+`current-target.json`을 포함한 나머지 파일은 로컬 실행 상태다.
 나머지 `state/**`는 untracked runtime이다.
 
 ## 버킷 경계와 보존 원칙 (ADR-058, ADR-107)
@@ -40,7 +41,7 @@ config/state는 "이 파일이 바뀌는 트리거가 무엇인가"로 가른다
 - `applications/` — 실제 지원 준비와 공고별 산출물의 private home.
   맞춤 이력서, 지원 전략, fit/gap 분석, review, 제출 체크리스트를 둔다.
 - `private/archive/` — public/state/report 중 어느 곳에도 바로 둘 수 없는 private-only archive 후보 위치.
-  구조 전환에서 새 정본으로 대체한 legacy state/report는 archive 없이 삭제할 수 있다.
+  구조 전환에서 새 기준 데이터로 대체한 낡은 state/report는 보관 없이 삭제할 수 있다.
 - `state/source/` — 외부에서 수집한 source text와 notes의 입력 위치.
   외부 공개 페이지에서 왔더라도 특정 지원, 면접, 회사 전략과 연결되면 private by default로 다룬다.
 - `reports/` — baseline, daily, position, interview-prep 같은 생성 리포트 위치.
@@ -155,14 +156,12 @@ config/state는 "이 파일이 바뀌는 트리거가 무엇인가"로 가른다
 
 ADR-107로 `state/`로 이동한 항목(트리거가 시스템 실행·이벤트라 config가 아님):
 
-- 현재 회사·직무·포지션 홈: `state/mvp-target.json` (탈락 시 루프가 primary→history 자동 갱신)
-- topic 학습 진행 상태와 약점 학습 상태: `state/study-progress.json` (ADR-105 — 드릴 상태는 분리)
-- 드릴 간격 반복 상태: `state/drill-progress.json` (ADR-105)
+- 현재 회사·직무·포지션 홈: 로컬 `state/current-target.json`
+- 답변 연습의 간격 반복 상태: `state/drill-progress.json`
 - 회사 cooldown: `state/company-cooldown.json` (ADR-109 — verified-company에서 분리)
 - durable 공고 필터(회사 선호 제외 + 공고 URL 억제): `config/position-filters.json` (ADR-111)
 - 검증 회사군과 회사 키워드 단일 출처: `config/verified-company-research-targets.json` (ADR-090, references에서 이동; ADR-103 회사 키워드 흡수)
-- position 수집 설정(회사 비종속 role 키워드): `config/position-collection.json` (ADR-099, ADR-103) — `{ wanted: { jobGroupId, targetKeywords[] } }`. targetKeywords는 role 키워드만, 회사 키워드는 verified가 소유
-- 후보자 구조화 사실: `config/candidate-config.json` (ADR-099) — `{ experienceYears, ... }`. 코드가 읽는 사실 정본, profile.md는 prose 서술(거울 구조)
+- position 수집 설정: `config/position-collection.ts`
 - position 지표 시계열: `logs/position-metrics.jsonl` (ADR-099) — 날짜별 1줄 append. `{ date, collection:{activeDirectPostings,sourceCounts,rejectCounts,adapterCoverage}, recommendation:{strongActive,newRatio,tierDist,labelCompleteness} }`
 - 지원서 export 기본 디자인 계약: `config/resume-design.md`
 - 사람이 명시적으로 고른 추천 guardrail, pin, 제외, seed override
@@ -227,9 +226,12 @@ position-recommender가 참조하는 사람 큐레이션 제외의 단일 출처
 }
 ```
 
-### state/mvp-target.json (현재 타깃 단일 출처. ADR-107 config→state 이동)
+### state/current-target.json
 
-전용 zod 검증 스크립트는 없다(#69에서 legacy interview-prep-analyzer 스크립트 삭제). 각 skill이 파일을 직접 읽는다.
+현재 준비 중인 지원 대상 하나를 담는 로컬 파일이다.
+Git에 올리지 않으며 대상이 없으면 파일을 만들지 않는다.
+형식은 `scripts/current-target/current_target_schema.ts`로 검증한다.
+새 파일은 `config/current-target.example.json`을 복사해 만든다.
 
 ```json
 {
@@ -254,33 +256,21 @@ position-recommender가 참조하는 사람 큐레이션 제외의 단일 출처
       "final_round": null,
       "offer_chat": null
     }
-  },
-  "history": [
-    {
-      "company": "string",
-      "team": "string",
-      "role": "string",
-      "interview_date": "YYYY-MM-DD",
-      "deprecated_at": "YYYY-MM-DD",
-      "notes": "string (선택)"
-    }
-  ]
+  }
 }
 ```
 
-- `primary` — 활성 타깃이 없으면 `null`일 수 있다.
-  탈락, 지원 취소, 종료 후 다음 active target이 정해지지 않았을 때 사용한다.
-- `history[].outcome` — 선택 필드.
-  `rejected`, `withdrawn`, `closed`, `completed` 중 하나다.
+- `primary` — 현재 준비 중인 대상이다.
 - `primary.interview` — 면접 단계별 컨테이너.
   - `primary.interview.first_round` — 1차 면접 mode. 활성. 필드: sites, source_dir, report_slug.
   - `primary.interview.final_round` — 최종 면접 mode. nullable, 필요 시 활성화.
   - `primary.interview.offer_chat` — 오퍼 단계 mode. nullable, 필요 시 활성화.
 - `primary.company_slug`, `primary.position_slug`, `primary.data_root` — 회사·직무별 관리 홈.
-  active 타깃의 사람이 보는 자산은 `data_root` 아래에 둔다.
-  자동화는 `data_root`를 정본으로 읽고, 면접 질문 정본을 `state`나 `reports/daily`에 중복 유지하지 않는다.
+  현재 대상의 사람이 보는 자산은 `data_root` 아래에 둔다.
+  자동화는 `data_root`를 기준 경로로 읽고 면접 질문을 다른 상태 파일에 복제하지 않는다.
 
-타깃 전환 시 `primary`를 `history` 앞에 push하고 새 `primary`를 채운다.
+지원이 종료되면 파일을 삭제한다.
+종료 결과와 회사별 재지원 제한은 지원 산출물과 `state/company-cooldown.json`에서 관리한다.
 
 ### private/<company-slug>/<position-slug>/ (position home)
 
@@ -449,7 +439,7 @@ priority 변경 이력을 저장하는 runtime/private audit log다.
 
 ### interview answer feedback files
 
-면접 답변과 피드백은 별도 웹 DB가 아니라 active `mvp-target`의 `primary.data_root` 아래에 저장한다.
+면접 답변과 피드백은 별도 웹 DB가 아니라 active `current-target`의 `primary.data_root` 아래에 저장한다.
 
 ```text
 private/<company-slug>/<position-slug>/interview/
@@ -459,7 +449,7 @@ private/<company-slug>/<position-slug>/interview/
 
 규칙:
 
-- `state/mvp-target.json`의 `primary`가 `null`이면 포지션별 답변 피드백 기록은 중단한다.
+- `state/current-target.json`이 없으면 포지션별 답변 피드백 기록은 중단한다.
 - 답변 전문과 상세 피드백은 private 경계 안에만 둔다.
 - 외부 공유 요약, `sources/fos-study/`, 공개 질문 bank로 답변 원문을 복사하지 않는다.
 - 공개 가능한 기술 주제만 외부 읽을거리 추천의 학습 신호가 될 수 있다.
@@ -886,7 +876,7 @@ topic 학습 이력과 topic 학습 약점 상태의 단일 출처다.
 |---|---|---|
 | `reports/baseline/YYYY-MM-DD/report.md` | legacy `interview-prep-analyzer` baseline | 큐레이션 10파일 + 7섹션 고위험 영역 종합 진단 |
 | `reports/daily/YYYY-MM-DD/report.md` | legacy `interview-prep-analyzer` daily | 토픽 1개 3-5파일 + 5섹션 집중 점검 |
-| `reports/job-fit-YYYY-MM-DD-<slug>.json` | `job-fit-analyzer` | **정본** JobFitRun(schemaVersion 1, `scripts/job-fit-analyzer/jobfit_schema.ts`). `verdict`(go/no-go)·`careerPath`·`interviewStrategy` 1급, `reinforcement` 부차. `targetRole`(자연어 인자 또는 mvp-target fallback + slug), `nextActions`, `changeSince`(ADR-096) |
+| `reports/job-fit-YYYY-MM-DD-<slug>.json` | `job-fit-analyzer` | **정본** JobFitRun(schemaVersion 1, `scripts/job-fit-analyzer/jobfit_schema.ts`). `verdict`(go/no-go)·`careerPath`·`interviewStrategy` 1급, `reinforcement` 부차. `targetRole`(자연어 인자 또는 current-target fallback + slug), `nextActions`, `changeSince`(ADR-096) |
 | `reports/job-fit-YYYY-MM-DD-<slug>.md` | `job-fit-analyzer` | 위 정본에서 `render_job_fit.ts --format md` 파생 |
 | `reports/stage-prep-YYYY-MM-DD.md` | `interview-stage-prep` | 1차/최종/오퍼 단계별 실전 준비 자료 |
 
@@ -1118,7 +1108,7 @@ state/application-agent/package-eval/<company-role>/latest-report.json
 ### private/<company>/<position>/interview/prep.md
 
 회사/면접 단계별 active 준비 정본이다.
-`interview-stage-prep` skill은 `state/mvp-target.json`의 `primary.data_root` 아래 `interview/prep.md`를 읽는다.
+`interview-stage-prep` skill은 `state/current-target.json`의 `primary.data_root` 아래 `interview/prep.md`를 읽는다.
 
 ### cache/live-position-postings.md
 

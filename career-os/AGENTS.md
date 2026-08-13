@@ -30,7 +30,7 @@
 현재 타깃, 회사명, 공고, 면접 일정, 학습 우선순위처럼 자주 바뀌는 상태는 `AGENTS.md`에 쓰지 않는다.
 해당 상태는 `config/`, `state/`, `applications/`, `reports/`, `logs/`의 책임 파일에서 관리한다.
 
-- 후보자 프로필의 정본은 `config/candidate-profile.md`다.
+- 후보자 프로필의 기준 원본은 `config/candidate-profile.md`다.
 - 공개 학습 자료는 `sources/fos-study/`에서 파생한다.
 - 공개 질문 목록은 `public/question-bank/`에서 파생한다.
 - `config/`에는 사람이 고른 정책, pin, override, 제외 조건만 둔다.
@@ -50,7 +50,8 @@
 
 
 career-os는 별도 웹 제품 없이 수집, 리포트 생성, skill 실행, private 산출물, 피드백 루프 기록을 파일과 skill 계약으로 직접 관리한다.
-지원 후보 상태와 준비 단계는 `state/application-agent/`, `applications/`, `private/` 산출물에서 관리하고, 외부 DB나 outbox를 정본으로 두지 않는다.
+지원 후보 상태와 준비 단계는 `state/application-agent/`, `applications/`, `private/` 산출물에서 관리한다.
+외부 DB나 outbox를 기준 데이터로 두지 않는다.
 
 외부 게시 준비용 HTML은 `reports/downloads/` 아래에 만든다.
 사용자가 외부 게시 또는 공유 URL 생성을 명시하면 루트의 `report-publisher` 스킬을 사용한다.

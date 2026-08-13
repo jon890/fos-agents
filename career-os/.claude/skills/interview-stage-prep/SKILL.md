@@ -5,7 +5,7 @@ description: 1차·최종·오퍼 단계별 면접 실전 준비를 생성하는
 
 # Interview Stage Prep
 
-현재 면접 단계(`state/mvp-target.json`의 `primary.interview` 필드)를 읽고 단계에 맞는 실전 준비 가이드를 생성하는 workflow.
+현재 면접 단계(`state/current-target.json`의 `primary.interview` 필드)를 읽고 단계에 맞는 실전 준비 가이드를 생성하는 workflow.
 `primary`가 `null`이면 활성 면접 타깃이 없는 상태이므로 생성하지 않는다.
 
 ## 스킬 경계 (boundary)
@@ -21,7 +21,7 @@ description: 1차·최종·오퍼 단계별 면접 실전 준비를 생성하는
 
 현재 에이전트는 다음 파일을 직접 로드한다:
 
-1. `career-os/state/mvp-target.json` — `primary.interview` (단계별 날짜/상태), `primary.company`, `primary.role`.
+1. `career-os/state/current-target.json` — `primary.interview` (단계별 날짜/상태), `primary.company`, `primary.role`.
    `primary`가 `null`이면 활성 면접 타깃 없음으로 처리한다.
 2. `career-os/config/candidate-profile.md` — 후보자 이력·약점·강점 core (필수)
 3. `career-os/config/candidate-profile-detail.md` — 프로젝트 서사·의사결정 패턴·면접 준비 우선순위 (필수)
@@ -33,10 +33,10 @@ description: 1차·최종·오퍼 단계별 면접 실전 준비를 생성하는
 
 ## 2차/최종·인성면접 daily artifact 모드
 
-트리거: `second-round`, `final`, `personality-draft`, `2차`, `최종`, `인성면접`, 또는 `mvp-target.json`에 1차 종료/2차 대비 문구가 있을 때.
+트리거: `second-round`, `final`, `personality-draft`, `2차`, `최종`, `인성면접`, 또는 `current-target.json`에 1차 종료/2차 대비 문구가 있을 때.
 
 이 모드에서는 1차 기술면접 드릴을 만들지 않는다.
-`mvp-target.json`에 오래된 1차 표현이 남아 있어도 1차가 종료됐다는 최신 지시와 `primary.notes`를 우선해 2차/최종·인성면접으로 작성한다.
+`current-target.json`에 오래된 1차 표현이 남아 있어도 1차가 종료됐다는 최신 지시와 `primary.notes`를 우선해 2차/최종·인성면접으로 작성한다.
 
 ### 산출물 경로
 
@@ -126,7 +126,7 @@ description: 1차·최종·오퍼 단계별 면접 실전 준비를 생성하는
 
 ## 단계 감지
 
-`mvp-target.json`의 `primary.interview` 필드를 읽어 현재 단계를 판단한다.
+`current-target.json`의 `primary.interview` 필드를 읽어 현재 단계를 판단한다.
 `primary`가 `null`이면 stderr에 활성 면접 타깃이 없다고 쓰고 exit 1로 종료한다:
 
 | 필드 | 단계 | 준비 모드 |
@@ -141,8 +141,8 @@ description: 1차·최종·오퍼 단계별 면접 실전 준비를 생성하는
 ### 1. Context 로드
 
 ```bash
-# mvp-target.json 읽기
-cat career-os/state/mvp-target.json
+# current-target.json 읽기
+cat career-os/state/current-target.json
 # candidate-profile core + detail 읽기
 cat career-os/config/candidate-profile.md
 cat career-os/config/candidate-profile-detail.md
@@ -178,7 +178,7 @@ cat career-os/config/candidate-profile-detail.md
 
 #### 오퍼 협상 준비 섹션
 
-1. **협상 개요** — 오퍼 날짜·조건 요약 (mvp-target.json 기준)
+1. **협상 개요** — 오퍼 날짜·조건 요약 (current-target.json 기준)
 2. **보상 체크리스트** — 기본급·인센티브·스톡옵션·연봉 인상 기준 확인 항목
 3. **성장 기회 체크리스트** — 교육 지원·승진 경로·프로젝트 자율성 확인 항목
 4. **팀 환경 체크리스트** — 온보딩·코드 리뷰 문화·근무 방식 확인 항목
@@ -196,7 +196,7 @@ cat career-os/config/candidate-profile-detail.md
 ### 3. 공통 출력 규칙
 
 - 한국어 작성
-- `mvp-target.json`의 `primary.company` · `primary.team` · `primary.role` 명시
+- `current-target.json`의 `primary.company` · `primary.team` · `primary.role` 명시
 - `candidate-profile.md` 실제 이력 인용 (generic advice 금지, 후보자 근거 필수)
 - 메타 보고 문구 금지 ("파일이 생성되었습니다" 등) — 보고서 본문만 작성
 
@@ -211,7 +211,7 @@ cat career-os/config/candidate-profile-detail.md
 
 1. 첫 줄 `# ` 시작
 2. 현재 단계에 맞는 섹션 헤더 모두 존재
-3. `mvp-target.json` 회사·롤 명시 여부 확인
+3. `current-target.json` 회사·롤 명시 여부 확인
 4. `candidate-profile.md` 이력 인용 1건 이상
 5. 한국어 작성 확인
 6. generic advice 없이 후보자 근거 기반 내용으로 구성
@@ -223,8 +223,8 @@ cat career-os/config/candidate-profile-detail.md
 
 | 상황 | 처리 |
 |---|---|
-| mvp-target.json 없음 | stderr + exit 1 |
-| mvp-target.json primary null | stderr + exit 1 |
+| current-target.json 없음 | stderr + exit 1 |
+| current-target.json 없음 | stderr + exit 1 |
 | candidate-profile.md 없음 | stderr + exit 1 |
 | interview 필드 모두 null | 범용 체크리스트 출력 (exit 0) |
 | self-check 3회 실패 | stderr + exit 1, 실패 항목 명시 |
@@ -232,7 +232,7 @@ cat career-os/config/candidate-profile-detail.md
 
 ## References
 
-- `career-os/state/mvp-target.json` — 현재 면접 단계 (interview.first_round / final_round / offer_chat)
+- `career-os/state/current-target.json` — 현재 면접 단계 (interview.first_round / final_round / offer_chat)
 - `career-os/config/candidate-profile.md` — 후보자 이력·약점
 - 관련 스킬: `tech-interview-drill` — 기술 질문 드릴 (1차 면접 준비 연계)
 - 관련 스킬: `behavioral-interview-drill` — 인성 질문 드릴 (최종 면접 준비 연계)

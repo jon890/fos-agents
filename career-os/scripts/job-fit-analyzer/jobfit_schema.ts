@@ -1,11 +1,11 @@
-// job-fit-analyzer 산출물 정본 스키마 (ADR-096).
+// job-fit-analyzer 산출물 기준 스키마 (ADR-096).
 // 에이전트가 이 스키마에 맞는 job-fit-YYYY-MM-DD-<slug>.json을 생성하면,
 // render_job_fit.ts가 여기서 Markdown을 파생한다.
 // SKILL self-check는 이 스키마 검증으로 대체한다.
 import { z } from "zod";
 
 export const TargetRole = z.object({
-  source: z.enum(["argument", "mvp-target"]),
+  source: z.enum(["argument", "current-target"]),
   company: z.string().optional(),
   team: z.string().optional(),
   role: z.string().min(1),

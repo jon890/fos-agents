@@ -24,12 +24,14 @@
 clone 뒤 확인할 기본 파일:
 
 - `.env.example`: 필요한 secret 키 이름.
-- `config/candidate-profile.md`: 후보자 프로필 정본.
-- `config/position-collection.json`: 공고 수집 설정.
+- `config/candidate-profile.md`: 후보자 프로필 기준 원본.
+- `config/position-collection.ts`: 공고 수집 설정과 검증.
 - `config/position-filters.json`: 제외 회사와 억제 공고 URL.
-- `state/mvp-target.json`: 현재 면접·지원 타깃.
+- `config/current-target.example.json`: 현재 지원 대상 로컬 파일의 예시.
 
 `.env`는 워크스페이스 루트에 두고 git에 올리지 않는다.
+진행 중인 지원 대상이 있으면 예시를 `state/current-target.json`으로 복사해 실제 값으로 바꾼다.
+이 파일은 현재 대상 하나만 담으며 Git에 올리지 않는다.
 외부 게시, 제출, 로그인, 업로드, 메시지 전송은 사용자 승인 후에만 수행한다.
 
 ## 작업 흐름

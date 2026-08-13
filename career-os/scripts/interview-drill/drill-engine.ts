@@ -22,6 +22,10 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join, dirname } from "node:path";
+import {
+  loadCurrentTarget,
+  type CurrentTarget,
+} from "../current-target/current_target_schema.ts";
 
 // ─── 타입 정의 ────────────────────────────────────────────────────────────────
 
@@ -65,12 +69,6 @@ export interface DrillLogEntry {
   targetValueAxis?: string;
 }
 
-interface PrimaryTarget {
-  company?: string;
-  company_slug?: string;
-  role?: string;
-}
-
 // ─── 경로 헬퍼 ───────────────────────────────────────────────────────────────
 
 function repoRoot(): string {
@@ -100,8 +98,8 @@ function loadDrillProgress(): DrillProgress {
   return JSON.parse(readFileSync(path, "utf-8")) as DrillProgress;
 }
 
-function mvpTargetPath(): string {
-  return join(careerOsRoot(), "state", "mvp-target.json");
+function currentTargetPath(): string {
+  return join(careerOsRoot(), "state", "current-target.json");
 }
 
 function drillLogPath(date?: string): string {
@@ -209,17 +207,12 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function loadPrimaryTarget(): PrimaryTarget | null {
-  const path = mvpTargetPath();
-  if (!existsSync(path)) return null;
-
+function loadPrimaryTarget(): CurrentTarget | null {
   try {
-    const parsed = JSON.parse(readFileSync(path, "utf-8")) as {
-      primary?: PrimaryTarget;
-    };
-    return parsed.primary ?? null;
-  } catch {
-    console.warn(`[drill-engine] mvp-target.json 파싱 실패, 타깃 boost 생략: ${path}`);
+    return loadCurrentTarget(currentTargetPath());
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[drill-engine] 현재 지원 대상 파싱 실패, 우선순위 보정 생략: ${message}`);
     return null;
   }
 }
@@ -227,7 +220,7 @@ function loadPrimaryTarget(): PrimaryTarget | null {
 function targetPriorityBoost(
   drillType: DrillType,
   question: DrillQuestion,
-  target: PrimaryTarget | null
+  target: CurrentTarget | null
 ): number {
   if (drillType !== "behavioral" || target == null) return 0;
 

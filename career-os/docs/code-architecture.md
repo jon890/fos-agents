@@ -51,10 +51,10 @@ career-os/
 │   ├── candidate-profile-detail.md    이력 detail — 면접 서사·심화
 │   ├── question-bank-topics.json      interview-asset topic override 후보. public/question-bank 정본 아님
 │   ├── external-reading-sources.ts    기술 블로그와 개발 동향 수집 대상
-│   ├── position-collection.json       position 수집 설정 (wanted jobGroupId + 회사 비종속 role 키워드, ADR-099·ADR-103)
+│   ├── position-collection.ts         공고 소스와 어댑터 수집 설정
 │   ├── verified-company-research-targets.json  검증 회사군 + 회사 키워드 (ADR-090·ADR-103. cooldown은 state/로 분리 ADR-109)
-│   ├── candidate-config.json          후보자 구조화 사실 (experienceYears 등, ADR-099. profile.md는 prose)
 │   ├── baseline-core-files.json       fit 분석용 큐레이션 파일 목록
+│   ├── current-target.example.json    로컬 현재 지원 대상 예시
 │   ├── position-filters.json          제외 회사와 억제 공고 URL
 │   ├── resume-design.md
 │   └── 기타 skill별 정책과 예외
@@ -62,9 +62,8 @@ career-os/
 ├── state/                                 ← 시스템 실행·이벤트 산물
 │   ├── positions-queue.jsonl        지원 후보 상태 큐
 │   ├── _priority-history.jsonl      priority 변경 audit log
-│   ├── mvp-target.json              현재 active 타깃 (tracked)
-│   ├── study-progress.json          topic 학습 이력·약점 상태 (tracked. ADR-002·ADR-105)
-│   ├── drill-progress.json          드릴 간격 반복 상태 (tracked. ADR-105)
+│   ├── current-target.json          현재 지원 대상 하나를 담는 로컬 상태
+│   ├── drill-progress.json          답변 연습의 간격 반복 상태
 │   ├── company-cooldown.json        회사 cooldown (tracked. ADR-109 verified-company에서 분리)
 │   ├── morning-reading.json / morning-reading-history.jsonl
 │   ├── reading-candidates.json      외부 소스에서 수집한 글의 실행 스냅샷
@@ -290,7 +289,7 @@ LLM이 작성하는 Markdown 산출물은 skill prompt, processor post-validatio
 | 공고 수집 | `config/position-collection.json`, `scripts/position-recommender/live-postings/`, `cache/live-position-postings.md` |
 | 공고 추천 | `recommendation.json` 정본 + Markdown/HTML 파생 |
 | 지원 준비 | `state/positions-queue.jsonl`, `applications/<application-id>/` |
-| 면접 준비 | `state/mvp-target.json`, `private/<company>/<position>/interview/prep.md`, drill log |
+| 면접 준비 | `state/current-target.json`, `private/<company>/<position>/interview/prep.md`, drill log |
 | 피드백 루프 | closed/rejected 기록, `state/study-progress.json`, `private/question-bank/`, 다음 job-fit report |
 
 원칙:

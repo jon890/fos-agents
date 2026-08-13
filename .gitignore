@@ -26,7 +26,6 @@
 **/state/*
 # 연속성이 필요한 답변 연습·지원 상태만 추적
 !**/state/drill-progress.json
-!**/state/mvp-target.json
 !**/state/company-cooldown.json
 # 공고별 지원 문서 (비공개)
 **/applications/

@@ -23,9 +23,10 @@ Date: 2026-07-03
 - `state/_priority-history.jsonl`
 - `reports/daily/YYYY-MM-DD/position-recommendation/recommendation.json`
 - `private/<company>/<position>/`
-- `state/mvp-target.json`
+- `state/current-target.json`
 
-`state/mvp-target.json`은 active target이 없으면 `primary: null`을 허용한다.
+`state/current-target.json`은 현재 지원 대상이 있을 때만 로컬에 둔다.
+대상이 없으면 파일을 삭제한다.
 종료된 타깃은 `history[]`에 `outcome`과 피드백 요약을 남긴다.
 
 ## Consequences

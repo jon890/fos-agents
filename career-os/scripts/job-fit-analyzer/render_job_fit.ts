@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// ADR-096 phase-02: JobFitRun 정본 JSON에서 사람 읽기용 Markdown을 파생한다.
+// ADR-096 phase-02: JobFitRun 기준 JSON에서 사람 읽기용 Markdown을 파생한다.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { JobFitRun, type JobFitRunType } from "./jobfit_schema.ts";
@@ -8,8 +8,8 @@ export function toMarkdown(run: JobFitRunType): string {
   const out: string[] = [];
   const role = run.targetRole;
   const sourceTag =
-    role.source === "mvp-target"
-      ? " (타깃: mvp-target fallback)"
+    role.source === "current-target"
+      ? " (현재 지원 대상 기준)"
       : ` (인자 역할: ${role.role})`;
 
   out.push(`# 타깃 직무 핏 진단 — ${run.reportDate} · ${role.role}${sourceTag}`);

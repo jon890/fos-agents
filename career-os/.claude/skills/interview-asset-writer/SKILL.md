@@ -31,7 +31,7 @@ interview asset은 후보자 이력 기반 자료지만 `fos-study` 공개 발�
 2. `career-os/config/question-bank-topics.json` — 선택 사항. public bank 정본이 아니라 interview asset 전용 `<topic-key>` override 후보 → `outputPath` / `domain` / `title` / `inputFiles` / `promptAppend`
 3. `career-os/config/candidate-profile.md` — 후보자 이력 core: 사실·라벨 (필수)
 4. `career-os/config/candidate-profile-detail.md` — 주요 프로젝트·개인 프로젝트·의사결정 패턴·협업 등 경험 서사 (필수)
-5. `career-os/state/mvp-target.json` — `primary.company`, `primary.role` (현재 면접 타깃)
+5. `career-os/state/current-target.json` — `primary.company`, `primary.role` (현재 면접 타깃)
 6. `career-os/task/*` 또는 `career-os/resume/*` — `inputFiles` 명시되면 그 파일들, 아니면 candidate-profile core/detail에서 참조하는 경로
 7. (선택) `sources/fos-study/<유사 outputPath>.md` — overlap 회피
 
@@ -87,7 +87,7 @@ Inputs 1~5 모두 읽는다. `inputFiles` 명시되면 task/resume 추가로 읽
 
 본문 구조:
 - 5 섹션 모두 포함: 자기소개 / 커리어 narrative / 기술 의사결정 스타일 / 역질문 / 최종 체크리스트
-- **회사 불문 cross-track 톤** — 특정 회사명·면접일 직접 박지 않음 (mvp-target.json 값 참고만)
+- **회사 불문 cross-track 톤** — 특정 회사명·면접일 직접 박지 않음 (current-target.json 값 참고만)
 
 #### 공통 출력 규칙
 
@@ -206,7 +206,7 @@ add vs update는 `git status --porcelain` 자동 판단. push 실패 시 stderr 
 
 - `career-os/config/candidate-profile.md` — 후보자 이력 core (사실·라벨, Q&A 질문 은행 + 마스터 플레이북 양쪽 공통 입력)
 - `career-os/config/candidate-profile-detail.md` — 후보자 이력 detail (주요 프로젝트·개인 프로젝트·의사결정 패턴·협업)
-- `career-os/state/mvp-target.json` — 현재 면접 타깃 (마스터 플레이북 cross-track 톤 기준)
+- `career-os/state/current-target.json` — 현재 면접 타깃 (마스터 플레이북 cross-track 톤 기준)
 - `career-os/public/question-bank/` — 공개 질문 bank 정본 (topic-key 매칭 1순위)
 - `career-os/config/question-bank-topics.json` — interview asset 전용 override 후보 (outputPath / domain / inputFiles)
 - 관련 스킬: `study-topic-recommender` — 외부 기술 자료 추천

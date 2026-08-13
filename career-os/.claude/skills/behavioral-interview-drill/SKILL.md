@@ -34,7 +34,7 @@ description: >
 - `career-os/scripts/interview-drill/drill-engine.ts` — 질문 선정·채점·기록·복습 일정 갱신
 - `career-os/public/question-bank/behavioral/questions.json` — 인성 면접 공개 질문 풀 (JSON 배열)
 - `career-os/private/question-bank/behavioral-personal.jsonl` — 개인 인성 질문 추가 풀 (있으면 merge, JSONL)
-- `career-os/state/mvp-target.json` — 현재 면접 대상 회사·직무·면접 단계의 기준 데이터
+- `career-os/state/current-target.json` — 현재 면접 대상이 있을 때만 만드는 로컬 상태
 - `career-os/state/drill-progress.json` — 답변 연습 복습 상태 (`pass_count`·`fail_count`·`next_review_date`)
 - `career-os/state/drill-log-YYYY-MM-DD.jsonl` — 답변 연습 일별 기록 (내부 파일명은 기존 `drill-log` 유지, `drill_type: "behavioral"` 구분)
 - `career-os/state/behavioral-interview-target-context.md` — 현재 호출에서 생성·갱신한 면접 대상 회사 컨텍스트 (있으면 적용)
@@ -44,11 +44,11 @@ description: >
 
 ### 단계 0 — 면접 대상과 회사 가치 오버레이 확인
 
-답변 연습 시작 전에 `state/mvp-target.json`의 `primary`를 읽는다.
+답변 연습 시작 전에 `state/current-target.json`이 있으면 `primary`를 읽는다.
 `company`, `team`, `role`, `position_focus`, `notes`, `interview.final_round`를 확인해 오늘 답변 연습의 면접 대상을 먼저 선언한다.
 
 현재 회사 컨텍스트는 `state/behavioral-interview-target-context.md`를 우선한다.
-파일이 없거나 `state/mvp-target.json`의 현재 `company_slug`와 맞지 않으면, 현재 호출에서 회사 공식 채용/회사소개 근거를 확인해 런타임 파일을 생성하거나 갱신한다.
+파일이 없거나 `state/current-target.json`의 현재 `company_slug`와 맞지 않으면, 현재 호출에서 회사 공식 채용/회사소개 근거를 확인해 런타임 파일을 생성하거나 갱신한다.
 회사별 컨텍스트를 skill `references/`에 넣지 않는다.
 `references/`에는 모든 회사에 반복 적용되는 일반 규칙만 둔다.
 
@@ -69,7 +69,8 @@ description: >
 - 회사 미션·비전·핵심가치.
 - 현재 지원 직무와 팀의 업무 맥락.
 
-타깃이 없거나 회사 공식 근거를 확인하지 못하면 일반 인성 면접 답변 연습으로 진행한다.
+파일이 없거나 타깃이 없으면 일반 인성 면접 답변 연습으로 진행한다.
+회사 공식 근거를 확인하지 못한 경우에도 일반 답변 연습으로 진행한다.
 근거가 없는 회사 가치나 면접 기준을 단정하지 않는다.
 
 ### 단계 1 — 답변 연습 시작 안내
