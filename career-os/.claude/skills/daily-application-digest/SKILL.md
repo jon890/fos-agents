@@ -10,7 +10,6 @@ application positions-queue 전체를 읽어 오늘의 지원 현황을 요약�
 
 ## 출력 정책
 
-먼저 `references/output-policy.md`를 읽고 비공개 산출물 정책을 따른다.
 application digest는 여러 지원 산출물을 한 화면으로 요약하므로 사용자가 바로 판단할 수 있어야 한다.
 첫 10줄 안에 오늘의 결론, 승인 필요 항목, 또는 권장 행동 중 하나를 둔다.
 내부 분석, 제출용 문구, Discord 요약 후보를 분리한다.

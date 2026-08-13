@@ -12,7 +12,6 @@ description: 후보자 이력 기반 면접 자산 마크다운 초안을 생성
 
 ## 출력 정책
 
-먼저 `references/output-policy.md`를 읽고 공개 산출물 정책을 따른다.
 interview asset은 후보자 이력 기반 자료지만 `fos-study` 공개 발행 경로를 가진다.
 후보자 private 평가, 특정 회사 지원 전략, reviewer 판단은 공개 본문에 복사하지 않는다.
 후보자 이력 근거는 공개 가능하도록 일반화하고, 내부 URL과 비공개 시스템명은 제거하거나 비공개 career-os note로 분리한다.
@@ -210,7 +209,6 @@ add vs update는 `git status --porcelain` 자동 판단. push 실패 시 stderr 
 - `career-os/state/mvp-target.json` — 현재 면접 타깃 (마스터 플레이북 cross-track 톤 기준)
 - `career-os/public/question-bank/` — 공개 질문 bank 정본 (topic-key 매칭 1순위)
 - `career-os/config/question-bank-topics.json` — interview asset 전용 override 후보 (outputPath / domain / inputFiles)
-- `career-os/.claude/skills/interview-asset-writer/references/output-policy.md` — 공개 산출물 경계 정책 (내부 전략과 공개 문구 분리 기준)
 - 관련 스킬: `study-topic-recommender` — 외부 기술 자료 추천
 - 관련 스킬: `question-bank-collector` — 공개 일반 backend/CS 질문 bank 보강
 - 관련 스킬: `job-fit-analyzer` — 직무 핏·갭 진단 (본 skill 산출물을 입력으로 사용)

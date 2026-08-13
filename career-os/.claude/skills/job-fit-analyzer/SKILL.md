@@ -41,7 +41,6 @@ description: 타깃 직무(역할 단위) 대비 지원 의사결정·면접 전
 
 ## 출력 정책
 
-먼저 `references/output-policy.md`를 읽고 비공개 산출물 정책을 따른다.
 진단은 비공개 내부 분석이지만 사용자가 바로 다음 행동을 정할 수 있어야 한다.
 정본 JSON의 `verdict`와 `nextActions`가 첫 결론·다음 행동 역할을 하고, `render_job_fit.ts`가 md 첫 줄에 한 줄 결론을 둔다.
 후보자 근거, 타깃 역할 맥락, 리스크 판단은 내부 분석에 유지한다.
@@ -197,7 +196,6 @@ git pull 실패 시 → stderr warn + 로컬 캐시로 분석 계속.
 - `career-os/docs/adr/INDEX.md` ADR-096 / ADR-092 — 본 설계 결정 근거
 - `career-os/state/mvp-target.json` — 인자 없을 때 타깃 fallback (company / team / role)
 - `career-os/config/baseline-core-files.json` — 진단 큐레이션 파일 목록
-- `career-os/.claude/skills/job-fit-analyzer/references/output-policy.md` — 비공개 산출물 정책
 - 관련 스킬: `position-recommender` — 회사 최근 동향·active 공고 추천 (경계 분리)
 - 관련 스킬: `application-package-writer` — 개별 공고 단위 fit 분석 (라우팅 대상)
 - 관련 스킬: `study-topic-recommender` — 외부 기술 자료 추천

@@ -16,7 +16,6 @@ description: 공고 1개와 후보자 프로필을 입력으로 받아 공고별
 
 ## 출력 정책
 
-먼저 `references/output-policy.md`를 읽고 비공개 산출물 정책을 따른다.
 지원 패키지는 내부 분석 문서와 제출용 문구 후보가 섞이기 쉬우므로 경계를 먼저 고정한다.
 fit/gap 판단, reviewer용 리스크, 근거 파일 경로는 내부 분석 섹션에 둔다.
 이력서 bullet·지원동기처럼 제출용으로 옮길 수 있는 문장에는 내부 경로, plan 번호, commit hash, runner 상태를 넣지 않는다.
@@ -54,9 +53,9 @@ posting path 특정 불가 시 stderr + exit 1.
 
 1. posting.md
 2. `career-os/config/candidate-profile.md` (core) + `career-os/config/candidate-profile-detail.md` (detail — 프로젝트 서사·의사결정 패턴·협업 스타일·면접 준비 우선순위)
-3. `career-os/config/candidate-profile-provenance.md`의 근거 파일 매핑에서 관련성 높은 근거 파일 2~5개 선택적으로 읽는다
-   - 공고 요구사항과 겹치는 프로젝트·기술 스택의 근거 파일 우선 선택
-   - 전체 `task/**` 탐색 금지 — 관련성 판단은 프로필 인용 경로 기반
+3. 후보자 프로필에 직접 인용된 경로 중 공고와 관련된 근거 파일 2~5개를 읽는다.
+   - 공고 요구사항과 겹치는 프로젝트와 기술 스택의 근거를 우선한다.
+   - 고정된 출처 목록을 따로 유지하지 않고 실제 파일 존재 여부를 확인한다.
 
 ### 3. 후보자 인터뷰 (지원동기·서사 확보, 필수)
 

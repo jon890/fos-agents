@@ -26,7 +26,6 @@ cron 운영 경로의 자동 실행은 cron 소비측이 다루고, 수동 skill
 
 ## 출력 정책
 
-먼저 `references/output-policy.md`를 읽고 비공개 산출물 정책을 따른다.
 포지션 추천 리포트는 비공개 내부 분석이지만 사용자가 바로 결정을 내릴 수 있어야 한다.
 첫 10줄 안에 오늘 가장 추천하는 행동, 추천 후보가 부족한 이유, 또는 보류 판단 중 하나를 둔다.
 내부 분석에는 근거 경로와 수집 snapshot 근거를 유지한다.
@@ -49,11 +48,10 @@ Discord 요약은 내부 파일 경로, plan 번호, commit hash 같은 내부 �
 
 1. `career-os/config/candidate-profile.md` — 후보자 프로필 core: 경력·기술 스택 라벨·강점·약점·제약 (추천·fit 판단용). 면접 서사 detail은 읽지 않는다.
 2. `career-os/config/external-reading-sources.ts` (`techBlog` 소스) — 엔지니어링 블로그 신호 판단. 공고 수집 source registry가 아님
-3. `references/output-policy.md` — 비공개 산출물과 Discord 요약 정책
-4. `references/position-recommendation-prompt.md` — 추천 분석과 출력 형식 가이드
-5. `references/position-context-index.md` — 추천 컨텍스트 인덱스 (도메인·회사 우선순위)
-6. `references/position-decision-criteria.md` — 랭킹·제외 기준 (role-fit 점수 기준 포함)
-7. `references/company-upside-reference.md` — 회사 브랜드·규모·성장 upside 참조
+3. `references/position-recommendation-prompt.md` — 추천 분석과 출력 형식 가이드
+4. `references/position-context-index.md` — 추천 컨텍스트 인덱스 (도메인·회사 우선순위)
+5. `references/position-decision-criteria.md` — 랭킹·제외 기준 (role-fit 점수 기준 포함)
+6. `references/company-upside-reference.md` — 회사 브랜드·규모·성장 upside 참조
 
 주의: 위 `references/...`는 skill linked file 기준 경로다.
 Hermes에서 이 skill을 실행할 때는 `skill_view(name='position-recommender', file_path='references/<file>.md')`로 읽거나, 파일 도구를 써야 하면 `career-os/.claude/skills/position-recommender/references/<file>.md`를 사용한다.
@@ -317,7 +315,6 @@ cron 환경에서 표준 JSON 작성이나 대형 파일 작성이 안전 가드
 ## References
 
 - `references/position-recommendation-prompt.md` — 분석 프롬프트 가이드
-- `references/output-policy.md` — 비공개 산출물과 Discord 요약 정책
 - `references/position-context-index.md` — 추천 컨텍스트 인덱스
 - `references/position-decision-criteria.md` — 랭킹·제외 기준
 - `references/company-upside-reference.md` — 회사 브랜드·규모 upside 참조
