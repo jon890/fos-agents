@@ -24,8 +24,7 @@
 !**/data/question-bank/**
 # 시스템 실행·이벤트 산물
 **/state/*
-# 연속성이 필요한 학습/드릴 상태 5개만 tracked 유지 (ADR-002·ADR-105·ADR-109)
-!**/state/study-progress.json
+# 연속성이 필요한 답변 연습·지원 상태만 추적
 !**/state/drill-progress.json
 !**/state/mvp-target.json
 !**/state/company-cooldown.json

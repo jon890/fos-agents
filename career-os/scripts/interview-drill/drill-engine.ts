@@ -3,15 +3,14 @@
 /**
  * 공용 답변 연습 엔진 — tech-interview-drill · behavioral-interview-drill 공통 로직
  *
- * 간격 반복 기반 질문 선정, 답변 채점, 답변 연습 로그 기록, weak_spots 갱신,
+ * 간격 반복 기반 질문 선정, 답변 채점, 답변 연습 로그 기록, 복습 상태 갱신,
  * 질문 선정, 채점, 기록, 약점 환류를 담당한다.
  *
  * 의존 파일:
  *   - career-os/public/question-bank/{기술 카테고리}/questions.json  (tech)
  *   - career-os/public/question-bank/behavioral/questions.json  (behavioral)
  *   - career-os/private/question-bank/{tech|behavioral}-personal.jsonl  (있으면 merge)
- *   - career-os/state/study-progress.json  (topic 학습 상태 — study-topic-recommender가 갱신)
- *   - career-os/state/drill-progress.json  (드릴 간격 반복 상태 — ADR-105, 이 엔진이 갱신)
+ *   - career-os/state/drill-progress.json  (드릴 간격 반복 상태)
  *   - career-os/state/drill-log-YYYY-MM-DD.jsonl  (자동 생성)
  */
 
@@ -43,15 +42,7 @@ export interface DrillQuestion {
   sequenceHint?: "opening" | "early" | "middle" | "late" | "closing";
 }
 
-/** topic 학습 상태 — study-progress.json weak_spots (study-topic-recommender 흐름이 갱신) */
-export interface TopicWeakSpotEntry {
-  last_studied: string | null;
-  study_count: number;
-  last_evaluated: string | null;
-  status: string;
-}
-
-/** 드릴 간격 반복 상태 — drill-progress.json (ADR-105, drill-engine.ts가 갱신) */
+/** 드릴 간격 반복 상태 */
 export interface DrillProgressEntry {
   pass_count?: number;
   fail_count?: number;
@@ -60,11 +51,6 @@ export interface DrillProgressEntry {
 }
 
 export type DrillProgress = Record<string, DrillProgressEntry>;
-
-export interface StudyProgress {
-  sessions: unknown[];
-  weak_spots: Record<string, TopicWeakSpotEntry>;
-}
 
 export interface DrillLogEntry {
   ts: string;
@@ -103,10 +89,6 @@ const TECH_CATEGORIES = [
   "operations",
   "system-design",
 ] as const;
-
-function studyProgressPath(): string {
-  return join(careerOsRoot(), "state", "study-progress.json");
-}
 
 function drillProgressPath(): string {
   return join(careerOsRoot(), "state", "drill-progress.json");
@@ -213,7 +195,7 @@ export function loadQuestionBank(drillType: DrillType): DrillQuestion[] {
 const REVIEW_INTERVALS_DAYS = [1, 3, 7, 14, 30, 60];
 
 function nextReviewDays(passCount: number): number {
-  const idx = Math.min(passCount, REVIEW_INTERVALS_DAYS.length - 1);
+  const idx = Math.min(Math.max(passCount - 1, 0), REVIEW_INTERVALS_DAYS.length - 1);
   return REVIEW_INTERVALS_DAYS[idx];
 }
 
@@ -368,41 +350,19 @@ export function recordDrillLog(entry: DrillLogEntry): void {
   appendFileSync(path, JSON.stringify(entry) + "\n", "utf-8");
 }
 
-// ─── weak_spots 갱신 (ADR-105: topic 학습 상태 + 드릴 상태 분리 저장) ──────────
+// ─── 복습 상태 갱신 ──────────────────────────────────────────────────────────
 
 /**
- * topic 학습 상태(study-progress.json)와 드릴 간격 반복 상태(drill-progress.json)를
- * 함께 갱신한다. 두 파일 모두 `topic` 키로 같은 약점을 가리킨다(ADR-097).
+ * 질문 주제별 통과·실패 횟수와 다음 복습일을 갱신한다.
  */
-export function updateWeakSpots(
+export function updateDrillProgressState(
+  progress: DrillProgress,
   question: DrillQuestion,
-  score: ScoreResult
-): void {
-  const todayStr = today();
-
-  // 1) topic 학습 상태 — study-progress.json weak_spots
-  const studyPath = studyProgressPath();
-  if (!existsSync(studyPath)) {
-    console.error(`[drill-engine] study-progress.json 없음: ${studyPath}`);
-    return;
-  }
-
-  const progress: StudyProgress = JSON.parse(readFileSync(studyPath, "utf-8"));
-  if (!progress.weak_spots) progress.weak_spots = {};
-
-  const topicEntry: TopicWeakSpotEntry = progress.weak_spots[question.topic] ?? {
-    last_studied: null,
-    study_count: 0,
-    last_evaluated: null,
-    status: "new",
-  };
-
-  topicEntry.last_evaluated = todayStr;
-  topicEntry.study_count = (topicEntry.study_count ?? 0) + 1;
-
-  // 2) 드릴 간격 반복 상태 — drill-progress.json
-  const drillProgress = loadDrillProgress();
-  const drillEntry: DrillProgressEntry = drillProgress[question.topic] ?? {
+  score: ScoreResult,
+  evaluatedAt = today(),
+): DrillProgress {
+  const nextProgress = structuredClone(progress);
+  const drillEntry: DrillProgressEntry = nextProgress[question.topic] ?? {
     pass_count: 0,
     fail_count: 0,
     next_review_date: null,
@@ -412,25 +372,23 @@ export function updateWeakSpots(
   if (score === "pass") {
     drillEntry.pass_count = (drillEntry.pass_count ?? 0) + 1;
     drillEntry.fail_count = drillEntry.fail_count ?? 0;
-    drillEntry.last_passed = todayStr;
-    topicEntry.last_studied = todayStr;
-    drillEntry.next_review_date = addDays(todayStr, nextReviewDays(drillEntry.pass_count));
-    topicEntry.status = drillEntry.pass_count >= 3 ? "strong" : "improving";
+    drillEntry.last_passed = evaluatedAt;
+    drillEntry.next_review_date = addDays(evaluatedAt, nextReviewDays(drillEntry.pass_count));
   } else if (score === "shallow") {
     drillEntry.fail_count = (drillEntry.fail_count ?? 0) + 1;
-    drillEntry.next_review_date = addDays(todayStr, 1); // 내일 재시도
-    topicEntry.status = "shallow";
+    drillEntry.next_review_date = addDays(evaluatedAt, 1);
   } else if (score === "fail" || score === "unknown") {
     drillEntry.fail_count = (drillEntry.fail_count ?? 0) + 1;
-    drillEntry.next_review_date = addDays(todayStr, 1);
-    topicEntry.status = score === "unknown" ? "unknown" : "stale";
+    drillEntry.next_review_date = addDays(evaluatedAt, 1);
   }
 
-  progress.weak_spots[question.topic] = topicEntry;
-  writeFileSync(studyPath, JSON.stringify(progress, null, 2) + "\n", "utf-8");
+  nextProgress[question.topic] = drillEntry;
+  return nextProgress;
+}
 
-  drillProgress[question.topic] = drillEntry;
-  writeFileSync(drillProgressPath(), JSON.stringify(drillProgress, null, 2) + "\n", "utf-8");
+export function updateDrillProgress(question: DrillQuestion, score: ScoreResult): void {
+  const nextProgress = updateDrillProgressState(loadDrillProgress(), question, score);
+  writeFileSync(drillProgressPath(), JSON.stringify(nextProgress, null, 2) + "\n", "utf-8");
 }
 
 // ─── CLI 직접 실행 (진단용) ───────────────────────────────────────────────────

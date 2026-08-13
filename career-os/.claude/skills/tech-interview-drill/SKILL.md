@@ -16,11 +16,10 @@ description: >
 
 ## 의존 자산
 
-- `career-os/scripts/interview-drill/drill-engine.ts` — 질문 선정·채점·기록·weak_spots 갱신
+- `career-os/scripts/interview-drill/drill-engine.ts` — 질문 선정·채점·기록·복습 일정 갱신
 - `career-os/public/question-bank/{java-spring,database,cs,operations,system-design}/questions.json` — 기술 면접 공개 질문 풀 (JSON 배열)
 - `career-os/private/question-bank/tech-personal.jsonl` — 개인 기술 질문 추가 풀 (있으면 merge, JSONL)
-- `career-os/state/study-progress.json` — topic 학습 상태 (`last_studied`·`study_count`·`last_evaluated`·`status`)
-- `career-os/state/drill-progress.json` — 드릴 간격 반복 상태 정본 (`pass_count`·`fail_count`·`next_review_date`, ADR-105)
+- `career-os/state/drill-progress.json` — 답변 연습 복습 상태 (`pass_count`·`fail_count`·`next_review_date`)
 - `career-os/state/drill-log-YYYY-MM-DD.jsonl` — 드릴 일별 기록 (자동 생성)
 
 ## 드릴 진행 흐름
@@ -63,7 +62,7 @@ description: >
 | ⚠ 얕음 | 시그널 30~70% | "방향은 맞으나 얕음. 추가로 알아야 할 것: …" |
 | ❌ 틀림 | 시그널 30% 미만 | "핵심 놓침. 핵심 답변 예시: …" |
 
-채점 후 `drill-engine.ts`의 `updateWeakSpots(question, score)`를 호출해 기록을 갱신한다.
+채점 후 `drill-engine.ts`의 `updateDrillProgress(question, score)`를 호출해 기록을 갱신한다.
 채점 결과와 질문을 `recordDrillLog(entry)`로 `state/drill-log-YYYY-MM-DD.jsonl`에 기록한다.
 
 ### 단계 4 — "모르겠어" 처리
@@ -71,13 +70,13 @@ description: >
 사용자가 모름을 표시하면:
 
 1. `scoreAnswer(answer, question)`을 `"unknown"`으로 처리한다.
-2. `updateWeakSpots`로 약점을 기록한다.
+2. `updateDrillProgress`로 복습 일정을 기록한다.
 3. 정답의 핵심 신호를 짧게 알려주고 다음 질문으로 이동한다.
 
 ### 단계 5 — 약점 환류 (자동)
 
 같은 토픽에서 `fail` 또는 `unknown`이 반복되면 약점 상태와 복습일만 갱신한다.
-`study-topic-recommender`는 다음 실행에서 이 기록을 읽고 관련 외부 자료의 추천 우선순위를 판단한다.
+다음 답변 연습에서 이 기록을 읽고 복습 질문의 우선순위를 정한다.
 
 ### 단계 6 — 드릴 완료 요약
 
@@ -101,9 +100,8 @@ description: >
 ## 기록 규칙
 
 - 드릴 로그: `career-os/state/drill-log-YYYY-MM-DD.jsonl` — 질문과 점수 기록.
-- `updateWeakSpots(question, score)` 호출 1번으로 두 파일이 함께 갱신된다 (ADR-105).
-  - `career-os/state/study-progress.json`의 `weak_spots` — topic 학습 상태: `last_evaluated`, `study_count`, `last_studied`, `status`.
-  - `career-os/state/drill-progress.json` — 드릴 간격 반복 상태: `pass_count`, `fail_count`, `next_review_date`, `last_passed`.
+- `updateDrillProgress(question, score)`가 `career-os/state/drill-progress.json`을 갱신한다.
+  통과·실패 횟수, 다음 복습일, 마지막 통과일을 기록한다.
   - `candidate-profile.md`는 수정하지 않는다 (사람이 직접 편집).
 
 ## 간격 반복 규칙
