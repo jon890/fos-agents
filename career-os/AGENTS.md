@@ -53,14 +53,15 @@ career-os는 별도 웹 제품 없이 수집, 리포트 생성, skill 실행, pr
 지원 후보 상태와 준비 단계는 `state/application-agent/`, `applications/`, `private/` 산출물에서 관리한다.
 외부 DB나 outbox를 기준 데이터로 두지 않는다.
 
-외부 게시 준비용 HTML은 `reports/downloads/` 아래에 만든다.
+외부 게시용 HTML은 시스템 임시 디렉터리에 만든다.
 사용자가 외부 게시 또는 공유 URL 생성을 명시하면 루트의 `report-publisher` 스킬을 사용한다.
 게시 전 공개 범위를 검사하고, Cloudflare Pages 배포 결과를 검증한 뒤 URL을 전달한다.
 구체적인 생성 흐름은 `docs/flow.md`를 따른다.
 게시 절차는 `../.agents/skills/report-publisher/SKILL.md`를 따른다.
 
 커리어 포지션 추천, 지원 후보 비교, 면접 준비, 학습 추천처럼 사용자가 보는 리포트성 산출물은 HTML 파일도 함께 만든다.
-공고·포지션 추천 리포트는 `reports/downloads/` 아래에 HTML을 만든다.
+게시용 HTML과 중간 데이터는 임시 실행 경로에만 만들고 게시 검증 뒤 삭제한다.
+사용자가 로컬 사본을 명시적으로 요청한 경우에만 지정한 경로에 보존한다.
 HTML의 각 공고명에는 개별 공고 URL을 건다.
 외부 공유가 승인된 경우 사용자에게 다음 내용을 제공한다.
 

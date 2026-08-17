@@ -136,9 +136,9 @@ Zod 검증을 통과한 값만 수집 코드가 사용한다.
 
 활성 상태를 확인할 수 없거나 개별 공고 URL이 없는 항목은 추천 후보로 승격하지 않는다.
 
-### `reports/latest/position-recommendation.json`
+### 실행 중 생성되는 포지션 추천 데이터
 
-모델이 후보풀에서 선별한 추천 결과다.
+모델이 임시 후보풀에서 선별한 실행별 추천 결과다.
 형식은 `scripts/position-recommender/recommendation_schema.ts`가 검증한다.
 
 핵심 필드:
@@ -150,12 +150,13 @@ Zod 검증을 통과한 값만 수집 코드가 사용한다.
 - 다음 행동
 
 추천 항목의 URL과 공고 정보는 후보풀 원문과 일치해야 한다.
-Markdown과 HTML은 이 결과에서 만든다.
+게시용 HTML은 이 결과에서 만든다.
+후보풀, 추천 JSON과 HTML은 게시 검증 뒤 삭제한다.
 
 ## 지원 후보와 패키지
 
 `scripts/application-agent/positions_queue_schema.ts`가 지원 후보 상태를 정의한다.
-상태 변경은 action request와 안전 게이트를 통과한 뒤 적용한다.
+상태 변경은 action request와 안전 검사를 통과한 뒤 적용한다.
 
 공고별 `applications/<company>/<position>/`에는 다음 산출물을 둘 수 있다.
 
@@ -208,12 +209,13 @@ Markdown과 HTML은 이 결과에서 만든다.
 ## Reports와 Cache
 
 - `reports/latest/`: 다른 도구가 읽을 최신 구조화 결과
-- `reports/downloads/`: 사용자가 열거나 게시할 공개 가능 HTML
+- 시스템 임시 디렉터리: 게시 전 공개 가능 HTML과 실행별 중간 데이터
 - `reports/*.md`: 사람이 읽는 로컬 리포트
 - `cache/`: 피드와 공고에서 다시 만들 수 있는 중간 결과
 
 HTML 게시 전에는 개인 정보, 비공개 업무 내용, 로컬 절대 경로를 검사한다.
 외부 공유 URL은 `report-publisher` skill이 게시와 검증을 마친 뒤 제공한다.
+게시용 임시 파일은 검증 뒤 삭제하며 사용자가 보존을 요청한 경우에만 지정 경로에 남긴다.
 
 ## 보존과 공개 범위
 

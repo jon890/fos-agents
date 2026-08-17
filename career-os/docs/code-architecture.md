@@ -39,14 +39,14 @@ career-os/
 어댑터는 원문 응답을 공통 `LivePosting` 형태로 바꾼다.
 후보풀 정책은 개별 공고 URL, 활성 상태, 마감일, 중복을 결정적으로 검사한다.
 
-수집 결과는 로컬 후보풀에 저장한다.
+수집 결과는 실행별 임시 후보풀에 저장한다.
 모델은 후보풀에 존재하는 공고만 선별하고, `recommendation_schema.ts`가 결과 구조와 원문 일치 여부를 검사한다.
-Markdown과 HTML은 검증된 추천 JSON에서 파생한다.
+HTML은 검증된 추천 JSON에서 파생하며 게시 검증 뒤 임시 데이터와 함께 삭제한다.
 
 ## 지원 상태와 패키지
 
 `scripts/application-agent/`는 공고 등록, 우선순위, 패키지 검토 판정, 상태 전이를 담당한다.
-상태 전이는 `positions_queue_schema.ts`와 안전 게이트를 통과한 뒤에만 적용한다.
+상태 전이는 `positions_queue_schema.ts`와 안전 검사를 통과한 뒤에만 적용한다.
 
 공고별 문서는 `applications/<company>/<position>/`에 둔다.
 개인 근거와 면접 준비 자료는 `private/<company>/<position>/`에 둔다.
@@ -82,8 +82,10 @@ Markdown과 HTML은 검증된 추천 JSON에서 파생한다.
 
 ## 리포트 게시
 
-사용자가 보는 HTML은 `reports/downloads/` 아래에 만든다.
+외부 게시용 HTML은 시스템 임시 디렉터리에 만든다.
 외부 공유가 요청되면 루트의 `report-publisher` skill이 민감 정보 검사, Cloudflare Pages 게시, URL 검증을 담당한다.
+게시가 끝나면 임시 HTML을 삭제한다.
+사용자가 로컬 사본을 요청한 경우에만 지정한 경로에 보존한다.
 
 개인 연락처와 비공개 지원 전략이 있는 이력서는 공개 리포트 게시 흐름과 분리한다.
 
