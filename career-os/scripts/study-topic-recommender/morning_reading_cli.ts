@@ -88,6 +88,7 @@ async function run(): Promise<void> {
       collectedArticles: candidatePool.candidates.length,
       techBlogSources: readingSources.itemsByCategory.techBlog.length,
       geekSources: readingSources.itemsByCategory.geek.length,
+      aiSources: readingSources.itemsByCategory.ai.length,
       videoSources: readingSources.itemsByCategory.video.length,
     },
     collectionLog: candidatePool.collectionLog,
@@ -103,6 +104,7 @@ async function run(): Promise<void> {
     articleUrls: [
       ...recommendations.techBlog,
       ...recommendations.geek,
+      ...recommendations.ai,
       ...recommendations.video,
     ].map((item) => item.url),
   });
@@ -113,6 +115,7 @@ async function run(): Promise<void> {
     ...artifacts,
     techBlogCount: recommendations.techBlog.length,
     geekCount: recommendations.geek.length,
+    aiCount: recommendations.ai.length,
     videoCount: recommendations.video.length,
     sourcesAttempted: readingSources.sources.length,
     sourcesWithCandidates,

@@ -40,6 +40,7 @@ export function buildMorningMarkdown(report: MorningReadingReport): string {
     "",
     ...renderSection("회사·엔지니어링 기술 블로그", report.recommendations.techBlog),
     ...renderSection("GeekNews와 개발 동향", report.recommendations.geek),
+    ...renderSection("AI 공식 문서와 연구", report.recommendations.ai),
     ...renderSection("영상 추천", report.recommendations.video),
     "## 수집 상태",
     "",

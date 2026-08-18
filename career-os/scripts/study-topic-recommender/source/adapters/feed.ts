@@ -1,4 +1,4 @@
-import { fetchFeedCached, isLowSignalTitle } from "../feed.js";
+import { fetchFeedCached } from "../feed.js";
 import type { ReadingSourceAdapter } from "./types.js";
 
 function safeHttpsUrl(value: unknown): string | null {
@@ -25,7 +25,7 @@ export const feedSourceAdapter: ReadingSourceAdapter = {
     return entries
       .map((entry) => {
         const url = safeHttpsUrl(entry.link);
-        if (!url || !entry.title || isLowSignalTitle(entry.title)) return null;
+        if (!url || !entry.title) return null;
         return {
           title: entry.title,
           url,

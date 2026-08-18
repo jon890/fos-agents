@@ -70,6 +70,7 @@ export function buildMorningHtml(report: MorningReadingReport): string {
   const recommendationCount =
     report.recommendations.techBlog.length
     + report.recommendations.geek.length
+    + report.recommendations.ai.length
     + report.recommendations.video.length;
 
   return `<!doctype html>
@@ -114,7 +115,7 @@ export function buildMorningHtml(report: MorningReadingReport): string {
   <header class="hero">
     <p class="eyebrow">Career OS · ${escapeHtml(date)}</p>
     <h1>오늘 아침 읽을거리</h1>
-    <p class="lead">등록된 외부 소스에서 오늘 볼 만한 글과 영상을 골랐습니다. 회사 기술 블로그와 개발 동향을 읽고, 영상으로 실전 관점을 넓혀보세요.</p>
+    <p class="lead">회사 기술 블로그와 개발 동향을 먼저 읽고, AI 공식 문서·연구와 영상으로 실전 관점을 넓혀보세요.</p>
     <div class="overview">
       <span>${recommendationCount}개 추천</span>
       <span>${report.counts.collectedArticles}개 글 검토</span>
@@ -123,6 +124,7 @@ export function buildMorningHtml(report: MorningReadingReport): string {
   </header>
   ${renderSection("tech-blog", "회사 기술 블로그", "먼저 읽는 운영 사례", report.recommendations.techBlog)}
   ${renderSection("geek", "GeekNews와 개발 동향", "다음으로 훑는 업계 신호", report.recommendations.geek)}
+  ${renderSection("ai", "AI 공식 문서와 연구", "모델·에이전트·하네스의 최신 변화", report.recommendations.ai)}
   ${renderSection("video", "영상 추천", "출근길에 보는 실전 설명", report.recommendations.video)}
   <aside class="note">추천은 이 실행에서 외부 소스로부터 수집한 글만 사용했습니다.</aside>
   <footer>이 리포트에는 공개 URL과 공개 가능한 추천 설명만 포함합니다.</footer>

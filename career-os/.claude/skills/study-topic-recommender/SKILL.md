@@ -1,6 +1,6 @@
 ---
 name: study-topic-recommender
-description: 등록된 회사 기술 블로그, GeekNews·개발 동향과 YouTube 채널에서 최신 자료를 수집하고, 아침에 볼 자료를 선별해 임시 HTML 리포트로 만든 뒤 Cloudflare Pages에 게시하는 career-os 스킬. "오늘 뭐 읽을까", "오늘 공부할 글 추천", "아침 읽을거리", "기술 블로그 추천", "영상 추천", "학습 주제 추천", `/study-topic-recommender`처럼 외부 기술 자료 추천이 필요할 때 사용한다.
+description: 등록된 회사 기술 블로그, GeekNews, AI 공식 문서·연구와 YouTube 채널에서 최신 자료를 수집하고, 아침에 볼 자료를 선별해 임시 HTML 리포트로 만든 뒤 Cloudflare Pages에 게시하는 career-os 스킬. "오늘 뭐 읽을까", "오늘 공부할 글 추천", "아침 읽을거리", "기술 블로그 추천", "AI 연구 동향", "영상 추천", "학습 주제 추천", `/study-topic-recommender`처럼 외부 기술 자료 추천이 필요할 때 사용한다.
 ---
 
 # 아침 읽을거리 추천
@@ -13,8 +13,8 @@ description: 등록된 회사 기술 블로그, GeekNews·개발 동향과 YouTu
   - 발행처와 카테고리별 추천 수
 - `sources/fos-study/**/*.md`
   - 실제 학습 문서와 최근 학습 방향
-- `state/morning-reading-history.jsonl`
-  - 기존 추천 URL
+- `fos-brain`의 비공개 학습 관심사
+  - 사용자가 직접 밝힌 관심과 기술 친숙도
 
 소스를 추가하거나 점검할 때
 [`references/source-management.md`](references/source-management.md)를 읽는다.
@@ -49,6 +49,7 @@ CAREER_OS_ROOT=<RUN_DIR> bun --env-file=.env \
 ### 3. 글 선별
 
 후보풀 전체와 최근 학습 문서를 읽는다.
+`brain-search`로 현재 학습 관심사와 기술 친숙도를 조회한다.
 
 ```bash
 rg --files sources/fos-study -g '*.md'
@@ -59,10 +60,21 @@ git -C sources/fos-study log -n 20 --name-only --format= -- '*.md'
 
 1. 최근 추천 여부, 발행 시각과 출처로 검토 범위를 좁힌다.
 2. 공개 원문에서 제목과 실제 내용을 확인한다.
-3. 구현 세부, 운영 경험과 최근 학습 흐름의 연결성을 판단한다.
+3. 구현 세부, 운영 경험과 현재 관심사의 연결성을 판단한다.
 4. 서로 다른 출처에서 카테고리별 `slots` 수만큼 고른다.
 
-AI 관련 글도 출처의 다른 글과 같은 기준으로 판단한다.
+`ai`는 OpenAI, Anthropic과 xAI의 공식 자료를 우선한다.
+모델 발표에 한정하지 않고 다음 내용을 함께 판단한다.
+
+- 에이전트와 하네스
+- 도구 사용과 개발 워크플로
+- 평가, 신뢰성, 안전성과 보안
+- 추론, 서빙, 성능과 비용
+- 문맥, 메모리와 검색
+- API, SDK와 개발자 플랫폼
+- 연구 논문과 시스템 카드
+
+공식 페이지에서 수집한 전체 후보를 먼저 확인한 뒤 오늘 읽을 자료를 선별한다.
 선택 결과는 `<RUN_DIR>/reading-selection.json`에 만든다.
 
 ```json
@@ -76,6 +88,13 @@ AI 관련 글도 출처의 다른 글과 같은 기준으로 판단한다.
       }
     ],
     "geek": [],
+    "ai": [
+      {
+        "candidateId": "수집 결과의 AI 공식 자료 ID",
+        "summary": "공식 원문에서 확인한 핵심 요약",
+        "reason": "현재 학습 관심사와 연결되는 이유"
+      }
+    ],
     "video": [
       {
         "candidateId": "수집 결과의 영상 ID",
@@ -113,6 +132,7 @@ bun scripts/study-topic-recommender/manage_reading_sources.ts validate
 공개 HTML은 다음 내용으로 구성한다.
 
 - 공개 글 제목과 HTTPS 원문 URL
+- AI 공식 문서·연구 제목과 HTTPS 원문 URL
 - 공개 영상 제목과 YouTube 원문 URL
 - 공개 가능한 요약과 추천 이유
 - 수집 시각과 소스별 수집 상태
@@ -144,6 +164,7 @@ find "<RUN_DIR>" -depth -type d -exec rmdir {} \;
 
 - 활성 외부 소스에서 새 후보풀이 생성됐다.
 - 추천 수와 출처 다양성이 카테고리 설정과 일치한다.
+- AI 추천이 공식 원문을 근거로 모델·에이전트·하네스·연구 범위를 폭넓게 검토했다.
 - 요약과 추천 이유가 확인한 원문을 반영한다.
 - 리포트와 소스 설정 검증이 통과했다.
 - `report-publisher`가 Cloudflare Pages 공개 URL을 검증했다.

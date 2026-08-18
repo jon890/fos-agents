@@ -9,11 +9,12 @@ const report: MorningReadingReport = {
     collectedArticles: "state/reading-candidates.json",
   },
   counts: {
-    activeSources: 19,
-    sourcesWithCandidates: 18,
+    activeSources: 27,
+    sourcesWithCandidates: 26,
     collectedArticles: 128,
     techBlogSources: 11,
     geekSources: 7,
+    aiSources: 8,
     videoSources: 1,
   },
   collectionLog: [],
@@ -38,6 +39,16 @@ const report: MorningReadingReport = {
       summary: "동향 요약",
       reason: "동향 이유",
     }],
+    ai: [{
+      sourceKey: "openai-research",
+      sourceName: "OpenAI Research",
+      category: "ai",
+      title: "에이전트 평가 연구",
+      url: "https://openai.com/research/example",
+      published: "2026-08-12",
+      summary: "에이전트 평가 방법을 설명한다.",
+      reason: "하네스 신뢰성 관점과 연결된다.",
+    }],
     video: [{
       sourceKey: "tech-bridge-youtube",
       sourceName: "Tech Bridge YouTube",
@@ -57,6 +68,7 @@ describe("아침 읽을거리 마크다운", () => {
 
     expect(markdown).toContain("## 회사·엔지니어링 기술 블로그");
     expect(markdown).toContain("## GeekNews와 개발 동향");
+    expect(markdown).toContain("## AI 공식 문서와 연구");
     expect(markdown).toContain("## 영상 추천");
     expect(markdown).not.toContain("백엔드 공부 후보");
     expect(markdown).not.toContain("AI 실전");

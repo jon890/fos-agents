@@ -10,10 +10,11 @@ import {
 import { normalizeReadingSources } from "./reading_sources.js";
 
 const sources = normalizeReadingSources({
-  _meta: { purpose: "테스트", schemaVersion: 4 },
+  _meta: { purpose: "테스트", schemaVersion: 5 },
   categories: {
     techBlog: { slots: 1 },
     geek: { slots: 0 },
+    ai: { slots: 0 },
     video: { slots: 0 },
   },
   sources: [
@@ -63,6 +64,7 @@ describe("읽을거리 후보 풀", () => {
       selections: {
         techBlog: [{ candidateId: "missing", summary: "요약", reason: "이유" }],
         geek: [],
+        ai: [],
         video: [],
       },
     };
@@ -75,6 +77,7 @@ describe("읽을거리 후보 풀", () => {
       selections: {
         techBlog: [{ candidateId: "b:1", summary: "새 글 요약", reason: "오늘 읽을 이유" }],
         geek: [],
+        ai: [],
         video: [],
       },
     };

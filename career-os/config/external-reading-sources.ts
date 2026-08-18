@@ -3,7 +3,7 @@ import type { ReadingSourcesConfig } from "../scripts/study-topic-recommender/re
 export const externalReadingSources = {
   "_meta": {
     "purpose": "study-topic-recommender가 수집할 외부 읽을거리 소스",
-    "schemaVersion": 4
+    "schemaVersion": 5
   },
   "categories": {
     "techBlog": {
@@ -11,6 +11,9 @@ export const externalReadingSources = {
     },
     "geek": {
       "slots": 1
+    },
+    "ai": {
+      "slots": 2
     },
     "video": {
       "slots": 1
@@ -169,6 +172,70 @@ export const externalReadingSources = {
       "title": "OpenJDK Loom",
       "url": "https://openjdk.org/projects/loom/",
       "category": "geek",
+      "enabled": true,
+      "adapter": "page"
+    },
+    {
+      "key": "openai-research",
+      "title": "OpenAI Research",
+      "url": "https://openai.com/research/",
+      "category": "ai",
+      "enabled": true,
+      "adapter": "page"
+    },
+    {
+      "key": "openai-developers",
+      "title": "OpenAI Developers",
+      "url": "https://developers.openai.com/",
+      "category": "ai",
+      "enabled": true,
+      "adapter": "page"
+    },
+    {
+      "key": "openai-news",
+      "title": "OpenAI News",
+      "url": "https://openai.com/news/",
+      "category": "ai",
+      "enabled": true,
+      "adapter": "page"
+    },
+    {
+      "key": "anthropic-research",
+      "title": "Anthropic Research",
+      "url": "https://www.anthropic.com/research",
+      "category": "ai",
+      "enabled": true,
+      "adapter": "page"
+    },
+    {
+      "key": "anthropic-news",
+      "title": "Anthropic Newsroom",
+      "url": "https://www.anthropic.com/news",
+      "category": "ai",
+      "enabled": true,
+      "adapter": "page"
+    },
+    {
+      "key": "anthropic-developers",
+      "title": "Claude Platform Docs",
+      "url": "https://platform.claude.com/docs/en/home",
+      "category": "ai",
+      "enabled": true,
+      "adapter": "page"
+    },
+    {
+      "key": "xai-news",
+      "title": "xAI News",
+      "url": "https://x.ai/news",
+      "category": "ai",
+      "enabled": true,
+      "adapter": "page"
+    },
+    {
+      "key": "xai-developers",
+      "title": "xAI Developer Docs",
+      "url": "https://docs.x.ai/overview",
+      "category": "ai",
       "enabled": true,
       "adapter": "page"
     },

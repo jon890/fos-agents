@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const READING_CATEGORIES = ["techBlog", "geek", "video"] as const;
+export const READING_CATEGORIES = ["techBlog", "geek", "ai", "video"] as const;
 export const READING_SOURCE_ADAPTER_IDS = ["feed", "page"] as const;
 export const READING_CANDIDATE_KINDS = ["feed-article", "feed-video", "page-link"] as const;
 export const READING_COLLECTION_STATUSES = [
@@ -10,7 +10,7 @@ export const READING_COLLECTION_STATUSES = [
   "no-articles",
 ] as const;
 
-export const DEFAULT_MAX_CANDIDATES_PER_SOURCE = 8;
+export const DEFAULT_MAX_CANDIDATES_PER_SOURCE = 24;
 export const READING_CANDIDATE_EXCERPT_MAX_LENGTH = 2_000;
 export const READING_SELECTION_TEXT_MAX_LENGTH = 300;
 
@@ -63,11 +63,12 @@ export const readingSourceSchema = z.object({
 export const readingSourcesConfigSchema = z.object({
   _meta: z.object({
     purpose: nonEmptyString,
-    schemaVersion: z.literal(4),
+    schemaVersion: z.literal(5),
   }),
   categories: z.object({
     techBlog: readingCategoryPolicySchema,
     geek: readingCategoryPolicySchema,
+    ai: readingCategoryPolicySchema,
     video: readingCategoryPolicySchema,
   }),
   sources: z.array(readingSourceSchema),
@@ -138,6 +139,7 @@ export const readingSelectionSchema = z.object({
   selections: z.object({
     techBlog: z.array(readingSelectionItemSchema),
     geek: z.array(readingSelectionItemSchema),
+    ai: z.array(readingSelectionItemSchema),
     video: z.array(readingSelectionItemSchema),
   }),
 });
@@ -165,12 +167,14 @@ export const morningReadingReportSchema = z.object({
     collectedArticles: z.number().int().nonnegative(),
     techBlogSources: z.number().int().nonnegative(),
     geekSources: z.number().int().nonnegative(),
+    aiSources: z.number().int().nonnegative(),
     videoSources: z.number().int().nonnegative(),
   }),
   collectionLog: z.array(readingCollectionLogSchema),
   recommendations: z.object({
     techBlog: z.array(readingRecommendationSchema),
     geek: z.array(readingRecommendationSchema),
+    ai: z.array(readingRecommendationSchema),
     video: z.array(readingRecommendationSchema),
   }),
 });

@@ -33,7 +33,7 @@ function printHelp(): void {
 
 사용법:
   manage_reading_sources.ts validate
-  manage_reading_sources.ts list [--category techBlog|geek|video] [--include-disabled]
+  manage_reading_sources.ts list [--category techBlog|geek|ai|video] [--include-disabled]
   manage_reading_sources.ts template --category <값> --key <키> --title <제목> [옵션]
 
 template 옵션:

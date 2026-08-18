@@ -1,12 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { isLowSignalTitle, parseFeed } from "./feed.js";
+import { parseFeed } from "./feed.js";
 
 describe("외부 피드 글 선택", () => {
-  test("행사 일정은 결정적 저신호 항목으로 분류한다", () => {
-    expect(isLowSignalTitle("Postgres Summit 2026 Schedule is now live")).toBe(true);
-    expect(isLowSignalTitle("PostgreSQL 19 beta release notes")).toBe(false);
-  });
-
   test("YouTube Atom 피드의 영상 설명을 후보 근거로 읽는다", () => {
     const entries = parseFeed(`<?xml version="1.0" encoding="UTF-8"?>
       <feed xmlns="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">

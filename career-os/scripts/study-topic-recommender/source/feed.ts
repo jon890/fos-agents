@@ -222,26 +222,3 @@ export async function fetchFeedCached(
   }
   return entries;
 }
-
-// ── relevance keywords (Python 원본과 동일) ───────────────────────────────────
-
-export const LOW_SIGNAL_TITLE_KEYWORDS: string[] = [
-  "세미나", "현장 스케치", "참가 신청", "사전 안내", "공채", "코딩테스트",
-  "문제해설", "학생에서 개발자로", "직무", "디자인 직무", "프론트", "front",
-  "conference", "summit", "schedule", "registration", "webinar", "meetup",
-  "컨퍼런스", "서밋", "일정 공개", "등록 안내", "웨비나", "밋업",
-];
-
-// ── article selection ─────────────────────────────────────────────────────────
-
-function keywordScore(title: string, keywords: string[]): number {
-  const lower = title.toLowerCase();
-  return keywords.reduce(
-    (sum, kw) => sum + (kw && lower.includes(kw.toLowerCase()) ? 1 : 0),
-    0
-  );
-}
-
-export function isLowSignalTitle(title: string): boolean {
-  return keywordScore(title, LOW_SIGNAL_TITLE_KEYWORDS) > 0;
-}

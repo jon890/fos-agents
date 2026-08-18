@@ -25,7 +25,7 @@ const ROOT = process.env.CAREER_OS_ROOT
   : resolve(import.meta.dir, "..", "..");
 const DOWNLOADS = resolve(ROOT, "reports", "downloads");
 const COMMUNITY_HOSTS = new Set(["news.hada.io", "news.ycombinator.com"]);
-const CATEGORY_ORDER: ReadingCategory[] = ["techBlog", "geek", "video"];
+const CATEGORY_ORDER: ReadingCategory[] = ["techBlog", "geek", "ai", "video"];
 
 function escapeHtml(value: unknown): string {
   return String(value ?? "")
@@ -163,6 +163,7 @@ export function buildSourceCatalogHtml(input: {
   const categoryLabels: Record<ReadingCategory, string> = {
     techBlog: "회사 기술 블로그",
     geek: "GeekNews와 개발 동향",
+    ai: "AI 공식 문서와 연구",
     video: "영상 채널",
   };
   const sections = CATEGORY_ORDER.map((category) => {
@@ -193,7 +194,7 @@ export function buildSourceCatalogHtml(input: {
   <header class="hero">
     <p class="eyebrow">Career OS · ${escapeHtml(input.date)}</p>
     <h1>학습 읽을거리 소스 현황</h1>
-    <p class="lead">현재 활성화된 기술 블로그, 개발 동향과 영상 채널을 한눈에 확인할 수 있도록 정리했습니다.</p>
+    <p class="lead">현재 활성화된 기술 블로그, 개발 동향, AI 공식 자료와 영상 채널을 한눈에 정리했습니다.</p>
     <div class="metrics"><span>전체 ${input.sources.length}개</span><span>신뢰도 높음 ${gradeCounts.높음}</span><span>보통 ${gradeCounts.보통}</span><span>낮음 ${gradeCounts.낮음}</span></div>
     <p class="method">신뢰도는 내용의 무조건적인 진실성을 뜻하지 않습니다. 발행 주체의 직접성, HTTPS 원문, RSS 제공, 이번 실행의 HTTP 응답 여부를 합산한 원문 추적성 지표입니다. 커뮤니티 글은 반드시 링크된 1차 출처를 다시 확인해야 합니다.</p>
   </header>

@@ -22,9 +22,9 @@
   - 뉴스, 큐레이션, 릴리스 동향 채널이다.
 - `video`
   - 공식 YouTube 채널처럼 공개 영상 피드를 제공하는 발행 채널이다.
-
-AI 전용 카테고리는 두지 않는다.
-AI 자료도 발행처 형식에 따라 기존 카테고리에 등록한다.
+- `ai`
+  - 프론티어 모델 기업이 직접 발행하는 문서, 연구, 기술 발표 채널이다.
+  - 모델, 에이전트, 하네스, 평가, 안전성, 추론과 개발 도구를 함께 수집한다.
 
 ## 조회와 검증
 
@@ -32,6 +32,7 @@ AI 자료도 발행처 형식에 따라 기존 카테고리에 등록한다.
 bun scripts/study-topic-recommender/manage_reading_sources.ts validate
 bun scripts/study-topic-recommender/manage_reading_sources.ts list
 bun scripts/study-topic-recommender/manage_reading_sources.ts list --category techBlog
+bun scripts/study-topic-recommender/manage_reading_sources.ts list --category ai
 bun scripts/study-topic-recommender/manage_reading_sources.ts list --category video
 bun scripts/study-topic-recommender/manage_reading_sources.ts list --include-disabled
 ```

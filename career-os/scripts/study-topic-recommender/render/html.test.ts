@@ -14,6 +14,7 @@ const baseReport: MorningReadingReport = {
     collectedArticles: 8,
     techBlogSources: 1,
     geekSources: 1,
+    aiSources: 0,
     videoSources: 0,
   },
   collectionLog: [],
@@ -29,6 +30,7 @@ const baseReport: MorningReadingReport = {
       reason: "현재 운영 관점과 연결된다.",
     }],
     geek: [],
+    ai: [],
     video: [],
   },
 };
@@ -44,6 +46,7 @@ describe("아침 읽을거리 HTML", () => {
     expect(html).not.toContain("예상 0분");
     expect(html).not.toContain("하루 학습 목표 120분");
     expect(html).toContain("추천 이유");
+    expect(html).toContain("AI 공식 문서와 연구");
     expect(html).toContain("영상 추천");
   });
 

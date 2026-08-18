@@ -1,5 +1,4 @@
 import type { ReadingSourceAdapter } from "./types.js";
-import { isLowSignalTitle } from "../feed.js";
 
 const NAVIGATION_TITLES = new Set([
   "home",
@@ -47,7 +46,7 @@ export function extractPageLinks(html: string, sourceUrl: string, limit: number)
   const pattern = /<a\b[^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
   for (const match of html.matchAll(pattern)) {
     const title = decodeHtml(match[2] ?? "");
-    if (title.length < 4 || NAVIGATION_TITLES.has(title.toLowerCase()) || isLowSignalTitle(title)) {
+    if (title.length < 4 || NAVIGATION_TITLES.has(title.toLowerCase())) {
       continue;
     }
     let url: URL;
