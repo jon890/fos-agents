@@ -39,7 +39,7 @@ export function buildMorningMarkdown(report: MorningReadingReport): string {
     "등록된 외부 소스에서 수집한 글 가운데 오늘 읽을 자료를 골랐다.",
     "",
     ...renderSection("회사·엔지니어링 기술 블로그", report.recommendations.techBlog),
-    ...renderSection("GeekNews와 개발 동향", report.recommendations.geek),
+    ...renderSection("GeekNews와 엔지니어링 인사이트", report.recommendations.geek),
     ...renderSection("AI 공식 문서와 연구", report.recommendations.ai),
     ...renderSection("영상 추천", report.recommendations.video),
     "## 수집 상태",

@@ -67,7 +67,7 @@ describe("아침 읽을거리 마크다운", () => {
     const markdown = buildMorningMarkdown(report);
 
     expect(markdown).toContain("## 회사·엔지니어링 기술 블로그");
-    expect(markdown).toContain("## GeekNews와 개발 동향");
+    expect(markdown).toContain("## GeekNews와 엔지니어링 인사이트");
     expect(markdown).toContain("## AI 공식 문서와 연구");
     expect(markdown).toContain("## 영상 추천");
     expect(markdown).not.toContain("백엔드 공부 후보");

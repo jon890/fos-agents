@@ -123,7 +123,7 @@ export function buildMorningHtml(report: MorningReadingReport): string {
     </div>
   </header>
   ${renderSection("tech-blog", "회사 기술 블로그", "먼저 읽는 운영 사례", report.recommendations.techBlog)}
-  ${renderSection("geek", "GeekNews와 개발 동향", "다음으로 훑는 업계 신호", report.recommendations.geek)}
+  ${renderSection("geek", "GeekNews와 엔지니어링 인사이트", "업계 신호와 성장 관점", report.recommendations.geek)}
   ${renderSection("ai", "AI 공식 문서와 연구", "모델·에이전트·하네스의 최신 변화", report.recommendations.ai)}
   ${renderSection("video", "영상 추천", "출근길에 보는 실전 설명", report.recommendations.video)}
   <aside class="note">추천은 이 실행에서 외부 소스로부터 수집한 글만 사용했습니다.</aside>

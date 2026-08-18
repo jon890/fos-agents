@@ -10,7 +10,7 @@ export const externalReadingSources = {
       "slots": 3
     },
     "geek": {
-      "slots": 1
+      "slots": 2
     },
     "ai": {
       "slots": 2

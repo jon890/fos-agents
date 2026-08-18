@@ -23,6 +23,19 @@ const sources = normalizeReadingSources({
   ],
 });
 
+const repeatedSourceSelection = normalizeReadingSources({
+  _meta: { purpose: "테스트", schemaVersion: 5 },
+  categories: {
+    techBlog: { slots: 2 },
+    geek: { slots: 0 },
+    ai: { slots: 0 },
+    video: { slots: 0 },
+  },
+  sources: [
+    { key: "a", title: "A", category: "techBlog", url: "https://a.example.com" },
+  ],
+});
+
 const pool: ReadingCandidatePool = {
   generatedAt: "2026-08-12T00:00:00Z",
   policy: {
@@ -93,6 +106,33 @@ describe("읽을거리 후보 풀", () => {
       summary: "새 글 요약",
       reason: "오늘 읽을 이유",
     });
+  });
+
+  test("좋은 후보라면 같은 출처에서 여러 글을 선택할 수 있다", () => {
+    const selection = {
+      selections: {
+        techBlog: [
+          { candidateId: "a:1", summary: "첫 글", reason: "첫 이유" },
+          { candidateId: "a:2", summary: "둘째 글", reason: "둘째 이유" },
+        ],
+        geek: [],
+        ai: [],
+        video: [],
+      },
+    };
+    const sameSourcePool: ReadingCandidatePool = {
+      ...pool,
+      candidates: [
+        pool.candidates[0],
+        {
+          ...pool.candidates[0],
+          id: "a:2",
+          title: "다른 글",
+          url: "https://example.com/another",
+        },
+      ],
+    };
+    expect(validateReadingSelection(selection, sameSourcePool, repeatedSourceSelection)).toEqual([]);
   });
 
   test("고정 키워드 사용을 선언한 후보 풀을 거부한다", () => {
