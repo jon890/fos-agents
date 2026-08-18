@@ -46,6 +46,8 @@ python3 .agents/skills/report-publisher/scripts/publish_report.py publish \
 
 - 단일 HTML 파일은 HTTPS URL, 문서 내부 앵커, 전화·메일 링크만 참조해야 한다.
 - 로컬 CSS, JavaScript, 이미지가 있으면 `index.html`을 포함한 디렉터리를 입력한다.
+- 게시 대상은 현재 저장소 또는 시스템 임시 디렉터리 안에 둔다.
+- 실행별 산출물은 시스템 임시 디렉터리에서 직접 게시하고 검증 뒤 정리한다.
 - `slug`는 영문 소문자, 숫자, 하이픈만 사용한다.
 - `slug`는 **28자 이내로 짓는다.**
   Cloudflare Pages가 분기 별칭 서브도메인을 28자로 잘라내기 때문이다.

@@ -50,6 +50,30 @@ class PublishReportTests(unittest.TestCase):
         self.assertEqual(result.entry, "index.html")
         self.assertEqual(result.files, ["index.html"])
 
+    def test_system_temp_html_is_prepared_without_exposing_absolute_path(self) -> None:
+        source = self.root / "study-run" / "report.html"
+        source.parent.mkdir()
+        source.write_text("<title>임시 리포트</title>", encoding="utf-8")
+
+        result = self.prepare(source)
+
+        self.assertEqual(result.source, "system-temp/report.html")
+
+    def test_path_outside_repo_and_system_temp_is_rejected(self) -> None:
+        source = self.root / "outside" / "report.html"
+        source.parent.mkdir()
+        source.write_text("<title>범위 밖</title>", encoding="utf-8")
+        fake_temp = self.repo / "system-temp"
+        fake_temp.mkdir()
+
+        with mock.patch.object(
+            PUBLISH_REPORT.tempfile,
+            "gettempdir",
+            return_value=str(fake_temp),
+        ):
+            with self.assertRaisesRegex(PUBLISH_REPORT.PublishError, "시스템 임시"):
+                self.prepare(source)
+
     def test_single_html_with_local_asset_is_rejected(self) -> None:
         source = self.repo / "report.html"
         source.write_text('<img src="photo.png">', encoding="utf-8")

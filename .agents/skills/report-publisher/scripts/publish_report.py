@@ -170,15 +170,24 @@ def ensure_source_scope(source: Path, root: Path) -> Path:
         resolved = source.resolve(strict=True)
     except FileNotFoundError as exc:
         raise PublishError(f"게시 대상을 찾을 수 없습니다: {source}") from exc
-    try:
-        relative = resolved.relative_to(root)
-    except ValueError as exc:
-        raise PublishError("게시 대상은 현재 저장소 안에 있어야 합니다.") from exc
-    if not relative.parts:
-        raise PublishError("저장소 루트는 게시할 수 없습니다.")
+    temp_root = Path(tempfile.gettempdir()).resolve()
+    in_repo = resolved.is_relative_to(root)
+    in_temp = resolved.is_relative_to(temp_root)
+    if not in_repo and not in_temp:
+        raise PublishError(
+            "게시 대상은 현재 저장소 또는 시스템 임시 디렉터리 안에 있어야 합니다."
+        )
+    if resolved in {root, temp_root}:
+        raise PublishError("저장소나 시스템 임시 디렉터리의 루트는 게시할 수 없습니다.")
     if resolved.is_symlink() or source.is_symlink():
         raise PublishError("심볼릭 링크는 게시 대상으로 사용할 수 없습니다.")
     return resolved
+
+
+def source_label(source: Path, root: Path) -> str:
+    if source.is_relative_to(root):
+        return str(source.relative_to(root))
+    return f"system-temp/{source.name}"
 
 
 def is_hidden_or_blocked(path: Path, base: Path) -> str | None:
@@ -370,7 +379,7 @@ def prepare_report(
         if path.is_file()
     )
     return PreparedReport(
-        source=str(source.relative_to(root)),
+        source=source_label(source, root),
         slug=slug,
         project_name=project_name,
         entry=entry_name,
