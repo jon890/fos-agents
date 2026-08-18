@@ -38,7 +38,7 @@ function printHelp(): void {
 
 template 옵션:
   --url <HTTPS URL> --feed-url <HTTPS URL>
-  --adapter <feed|page>
+  --adapter <feed|page|youtube>
 
 기준 설정: config/external-reading-sources.ts`);
 }

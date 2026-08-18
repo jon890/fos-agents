@@ -246,7 +246,7 @@ export const externalReadingSources = {
       "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UC895rbZX2iXLTDfji7W4PfA",
       "category": "video",
       "enabled": true,
-      "adapter": "feed"
+      "adapter": "youtube"
     }
   ]
 } satisfies ReadingSourcesConfig;

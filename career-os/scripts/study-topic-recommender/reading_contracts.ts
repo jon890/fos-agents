@@ -1,8 +1,13 @@
 import { z } from "zod";
 
 export const READING_CATEGORIES = ["techBlog", "geek", "ai", "video"] as const;
-export const READING_SOURCE_ADAPTER_IDS = ["feed", "page"] as const;
-export const READING_CANDIDATE_KINDS = ["feed-article", "feed-video", "page-link"] as const;
+export const READING_SOURCE_ADAPTER_IDS = ["feed", "page", "youtube"] as const;
+export const READING_CANDIDATE_KINDS = [
+  "feed-article",
+  "feed-video",
+  "page-link",
+  "page-video",
+] as const;
 export const READING_COLLECTION_STATUSES = [
   "collected",
   "page-links",
@@ -56,6 +61,13 @@ export const readingSourceSchema = z.object({
       code: "custom",
       path: ["url"],
       message: "page 어댑터에는 url이 필요하다.",
+    });
+  }
+  if (source.adapter === "youtube" && !source.url) {
+    context.addIssue({
+      code: "custom",
+      path: ["url"],
+      message: "youtube 어댑터에는 채널 url이 필요하다.",
     });
   }
 });

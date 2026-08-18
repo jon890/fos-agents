@@ -36,6 +36,15 @@ function decodeHtml(value: string): string {
     .trim();
 }
 
+function linkTitle(value: string): string {
+  const heading = value.match(/<h[1-6]\b[^>]*>([\s\S]*?)<\/h[1-6]>/i);
+  if (heading) return decodeHtml(heading[1]);
+  const namedTitle = value.match(
+    /<([a-z][a-z0-9]*)\b[^>]*\bclass\s*=\s*["'][^"']*title[^"']*["'][^>]*>([\s\S]*?)<\/\1>/i
+  );
+  return decodeHtml(namedTitle?.[2] ?? value);
+}
+
 function comparableHost(hostname: string): string {
   return hostname.replace(/^www\./, "").toLowerCase();
 }
@@ -45,7 +54,7 @@ export function extractPageLinks(html: string, sourceUrl: string, limit: number)
   const found = new Map<string, { title: string; url: string; published: string; kind: "page-link" }>();
   const pattern = /<a\b[^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
   for (const match of html.matchAll(pattern)) {
-    const title = decodeHtml(match[2] ?? "");
+    const title = linkTitle(match[2] ?? "");
     if (title.length < 4 || NAVIGATION_TITLES.has(title.toLowerCase())) {
       continue;
     }

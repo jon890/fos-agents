@@ -29,4 +29,14 @@ describe("읽을거리 소스 어댑터", () => {
       url: "https://example.com",
     })?.id).toBe("page");
   });
+
+  test("YouTube 채널 전용 어댑터를 선택한다", () => {
+    expect(resolveReadingSourceAdapter({
+      key: "video",
+      category: "video",
+      title: "영상 채널",
+      url: "https://www.youtube.com/@example",
+      adapter: "youtube",
+    })?.id).toBe("youtube");
+  });
 });

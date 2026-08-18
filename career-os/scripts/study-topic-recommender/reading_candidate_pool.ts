@@ -59,9 +59,9 @@ async function collectSource(
       sourceKey: source.key,
       status: candidates.length === 0
         ? "no-articles"
-        : adapter.id === "feed"
-          ? "collected"
-          : "page-links",
+        : adapter.id === "page"
+          ? "page-links"
+          : "collected",
       candidateCount: candidates.length,
     },
   };

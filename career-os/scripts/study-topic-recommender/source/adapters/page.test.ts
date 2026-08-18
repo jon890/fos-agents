@@ -24,4 +24,28 @@ describe("페이지 읽을거리 어댑터", () => {
       },
     ]);
   });
+
+  test("카드 링크에서는 설명 대신 제목 요소를 사용한다", () => {
+    const html = `
+      <a href="/research/multiagent">
+        <span>Aug 13, 2026</span>
+        <h3>Patterns and problems in emerging multiagent systems</h3>
+        <p>긴 연구 설명</p>
+      </a>
+    `;
+    expect(extractPageLinks(html, "https://example.com/research", 8)[0]?.title)
+      .toBe("Patterns and problems in emerging multiagent systems");
+  });
+
+  test("제목 클래스가 있는 목록에서는 날짜와 분류를 제외한다", () => {
+    const html = `
+      <a href="/research/multiagent">
+        <time>Aug 13, 2026</time>
+        <span class="publication-subject">Frontier Red Team</span>
+        <span class="publication-title">Patterns and problems in emerging multiagent systems</span>
+      </a>
+    `;
+    expect(extractPageLinks(html, "https://example.com/research", 8)[0]?.title)
+      .toBe("Patterns and problems in emerging multiagent systems");
+  });
 });

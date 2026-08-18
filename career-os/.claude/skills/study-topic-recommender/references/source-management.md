@@ -58,6 +58,7 @@ YouTube 채널은 채널 ID 기반 공식 Atom 피드를 `feedUrl`로 등록한�
 `adapter`를 생략하면 실행기가 `feedUrl`, `url` 순으로 어댑터를 고른다.
 명시한 `feed` 어댑터에는 `feedUrl`이 필요하다.
 명시한 `page` 어댑터에는 `url`이 필요하다.
+명시한 `youtube` 어댑터에는 채널 `url`이 필요하다.
 
 수정 후 다음 검증을 실행한다.
 
