@@ -1,4 +1,4 @@
-# Code Architecture — fos-agents 모노레포
+# Code Architecture
 
 이 문서는 fos-agents 루트의 현행 코드와 문서 구조를 설명한다.
 결정의 이유와 대안 기각은 [`docs/adr/INDEX.md`](adr/INDEX.md)를 따른다.
