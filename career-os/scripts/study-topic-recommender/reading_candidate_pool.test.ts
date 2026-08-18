@@ -7,34 +7,6 @@ import {
   recommendationsFromSelection,
   validateReadingSelection,
 } from "./reading_selection.js";
-import { normalizeReadingSources } from "./reading_sources.js";
-
-const sources = normalizeReadingSources({
-  _meta: { purpose: "테스트", schemaVersion: 5 },
-  categories: {
-    techBlog: { slots: 1 },
-    geek: { slots: 0 },
-    ai: { slots: 0 },
-    video: { slots: 0 },
-  },
-  sources: [
-    { key: "a", title: "A", category: "techBlog", url: "https://a.example.com" },
-    { key: "b", title: "B", category: "techBlog", url: "https://b.example.com" },
-  ],
-});
-
-const repeatedSourceSelection = normalizeReadingSources({
-  _meta: { purpose: "테스트", schemaVersion: 5 },
-  categories: {
-    techBlog: { slots: 2 },
-    geek: { slots: 0 },
-    ai: { slots: 0 },
-    video: { slots: 0 },
-  },
-  sources: [
-    { key: "a", title: "A", category: "techBlog", url: "https://a.example.com" },
-  ],
-});
 
 const pool: ReadingCandidatePool = {
   generatedAt: "2026-08-12T00:00:00Z",
@@ -81,7 +53,7 @@ describe("읽을거리 후보 풀", () => {
         video: [],
       },
     };
-    expect(validateReadingSelection(selection, pool, sources))
+    expect(validateReadingSelection(selection, pool))
       .toContain("수집 결과에 없는 candidateId: missing");
   });
 
@@ -94,7 +66,7 @@ describe("읽을거리 후보 풀", () => {
         video: [],
       },
     };
-    expect(validateReadingSelection(selection, pool, sources)).toEqual([]);
+    expect(validateReadingSelection(selection, pool)).toEqual([]);
     const recommendations = recommendationsFromSelection(selection, pool);
     expect(recommendations.techBlog[0]).toEqual({
       sourceKey: "b",
@@ -108,7 +80,7 @@ describe("읽을거리 후보 풀", () => {
     });
   });
 
-  test("좋은 후보라면 같은 출처에서 여러 글을 선택할 수 있다", () => {
+  test("좋은 후보는 개수와 출처에 관계없이 모두 선택할 수 있다", () => {
     const selection = {
       selections: {
         techBlog: [
@@ -132,7 +104,7 @@ describe("읽을거리 후보 풀", () => {
         },
       ],
     };
-    expect(validateReadingSelection(selection, sameSourcePool, repeatedSourceSelection)).toEqual([]);
+    expect(validateReadingSelection(selection, sameSourcePool)).toEqual([]);
   });
 
   test("고정 키워드 사용을 선언한 후보 풀을 거부한다", () => {

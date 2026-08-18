@@ -60,4 +60,19 @@ describe("아침 읽을거리 HTML", () => {
     expect(morningHtmlFilename("2026-08-11T15:30:00.000Z"))
       .toBe("morning-reading-2026-08-12.html");
   });
+
+  test("선택된 추천을 개수 제한 없이 모두 카드로 렌더링한다", () => {
+    const report = structuredClone(baseReport);
+    report.recommendations.techBlog = Array.from({ length: 12 }, (_, index) => ({
+      ...baseReport.recommendations.techBlog[0],
+      title: `읽을거리 ${index + 1}`,
+      url: `https://example.com/article-${index + 1}`,
+    }));
+
+    const html = buildMorningHtml(report);
+
+    expect(html.match(/<article class="card">/g)?.length).toBe(12);
+    expect(html).toContain("12개 추천");
+    expect(html).toContain("읽을거리 12");
+  });
 });

@@ -71,7 +71,6 @@ async function run(): Promise<void> {
   }
   const { recommendations } = selectReadings({
     pool: candidatePool,
-    readingSources,
     selectionPath,
   });
   const sourcesWithCandidates = candidatePool.collectionLog

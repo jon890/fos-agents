@@ -4,7 +4,6 @@ import {
   readingSourcesConfigSchema,
   type NormalizedReadingSources,
   type ReadingCategory,
-  type ReadingCategoryPolicy,
   type ReadingSource,
   type ReadingSourcesConfig,
 } from "./reading_contracts.js";
@@ -13,7 +12,6 @@ export {
   READING_CATEGORIES,
   type NormalizedReadingSources,
   type ReadingCategory,
-  type ReadingCategoryPolicy,
   type ReadingSource,
   type ReadingSourcesConfig,
 } from "./reading_contracts.js";
@@ -47,7 +45,6 @@ export function normalizeReadingSources(raw: unknown): NormalizedReadingSources 
   ) as Record<ReadingCategory, ReadingSource[]>;
 
   return {
-    categories: config.categories,
     sources: active,
     itemsByCategory,
   };

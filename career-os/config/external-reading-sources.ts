@@ -3,21 +3,7 @@ import type { ReadingSourcesConfig } from "../scripts/study-topic-recommender/re
 export const externalReadingSources = {
   "_meta": {
     "purpose": "study-topic-recommender가 수집할 외부 읽을거리 소스",
-    "schemaVersion": 5
-  },
-  "categories": {
-    "techBlog": {
-      "slots": 3
-    },
-    "geek": {
-      "slots": 2
-    },
-    "ai": {
-      "slots": 2
-    },
-    "video": {
-      "slots": 1
-    }
+    "schemaVersion": 6
   },
   "sources": [
     {

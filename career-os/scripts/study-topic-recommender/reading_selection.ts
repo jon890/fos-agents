@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import {
   READING_CATEGORIES,
   readingSelectionSchema,
-  type NormalizedReadingSources,
   type ReadingCandidatePool,
   type ReadingCategory,
   type ReadingRecommendation,
@@ -14,8 +13,7 @@ export type { ReadingSelection, ReadingSelectionItem } from "./reading_contracts
 
 export function validateReadingSelection(
   selection: unknown,
-  pool: ReadingCandidatePool,
-  readingSources: NormalizedReadingSources
+  pool: ReadingCandidatePool
 ): string[] {
   const parsed = readingSelectionSchema.safeParse(selection);
   if (!parsed.success) {
@@ -28,10 +26,6 @@ export function validateReadingSelection(
   const candidatesById = new Map(pool.candidates.map((candidate) => [candidate.id, candidate]));
   for (const category of READING_CATEGORIES) {
     const items = parsed.data.selections[category];
-    const availableCandidates = pool.candidates
-      .filter((candidate) => candidate.category === category).length;
-    const expected = Math.min(readingSources.categories[category].slots, availableCandidates);
-    if (items.length !== expected) errors.push(`selections.${category}는 ${expected}개여야 한다.`);
     const seenCandidates = new Set<string>();
     for (const rawItem of items) {
       const candidateId = rawItem.candidateId;
@@ -50,11 +44,10 @@ export function validateReadingSelection(
 
 export function loadValidatedReadingSelection(
   path: string,
-  pool: ReadingCandidatePool,
-  readingSources: NormalizedReadingSources
+  pool: ReadingCandidatePool
 ): ReadingSelection {
   const raw = JSON.parse(readFileSync(path, "utf8")) as unknown;
-  const errors = validateReadingSelection(raw, pool, readingSources);
+  const errors = validateReadingSelection(raw, pool);
   if (errors.length > 0) throw new Error(`읽을거리 선택 검증 실패:\n- ${errors.join("\n- ")}`);
   return readingSelectionSchema.parse(raw);
 }

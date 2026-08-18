@@ -45,13 +45,11 @@ export async function prepareReadingCandidatePool(
 
 export function selectReadings(input: {
   pool: ReadingCandidatePool;
-  readingSources: NormalizedReadingSources;
   selectionPath: string;
 }): ReadingSelectionResult {
   const selection = loadValidatedReadingSelection(
     resolve(input.selectionPath),
-    input.pool,
-    input.readingSources
+    input.pool
   );
 
   return {

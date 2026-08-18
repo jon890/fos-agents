@@ -29,10 +29,6 @@ export const readingSourceAdapterIdSchema = z.enum(READING_SOURCE_ADAPTER_IDS);
 export const readingCandidateKindSchema = z.enum(READING_CANDIDATE_KINDS);
 export const readingCollectionStatusSchema = z.enum(READING_COLLECTION_STATUSES);
 
-export const readingCategoryPolicySchema = z.object({
-  slots: z.number().int().nonnegative(),
-});
-
 export const readingSourceSchema = z.object({
   key: nonEmptyString,
   category: readingCategorySchema,
@@ -75,13 +71,7 @@ export const readingSourceSchema = z.object({
 export const readingSourcesConfigSchema = z.object({
   _meta: z.object({
     purpose: nonEmptyString,
-    schemaVersion: z.literal(5),
-  }),
-  categories: z.object({
-    techBlog: readingCategoryPolicySchema,
-    geek: readingCategoryPolicySchema,
-    ai: readingCategoryPolicySchema,
-    video: readingCategoryPolicySchema,
+    schemaVersion: z.literal(6),
   }),
   sources: z.array(readingSourceSchema),
 }).superRefine((config, context) => {
@@ -195,7 +185,6 @@ export type ReadingCategory = z.infer<typeof readingCategorySchema>;
 export type ReadingSourceAdapterId = z.infer<typeof readingSourceAdapterIdSchema>;
 export type ReadingCandidateKind = z.infer<typeof readingCandidateKindSchema>;
 export type ReadingCollectionStatus = z.infer<typeof readingCollectionStatusSchema>;
-export type ReadingCategoryPolicy = z.infer<typeof readingCategoryPolicySchema>;
 export type ReadingSource = z.infer<typeof readingSourceSchema>;
 export type ReadingSourcesConfig = z.infer<typeof readingSourcesConfigSchema>;
 export type ReadingCandidate = z.infer<typeof readingCandidateSchema>;
@@ -207,7 +196,6 @@ export type ReadingRecommendation = z.infer<typeof readingRecommendationSchema>;
 export type MorningReadingReport = z.infer<typeof morningReadingReportSchema>;
 
 export interface NormalizedReadingSources {
-  categories: Record<ReadingCategory, ReadingCategoryPolicy>;
   sources: ReadingSource[];
   itemsByCategory: Record<ReadingCategory, ReadingSource[]>;
 }
