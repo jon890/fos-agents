@@ -65,13 +65,3 @@ YouTube 채널은 채널 ID 기반 공식 Atom 피드를 `feedUrl`로 등록한�
 bun scripts/study-topic-recommender/manage_reading_sources.ts validate
 bun test scripts/study-topic-recommender
 ```
-
-## 소스 현황 리포트
-
-```bash
-RUN_DIR="$(mktemp -d -t study-source-catalog)"
-CAREER_OS_ROOT="$RUN_DIR" bun scripts/study-topic-recommender/render_source_catalog.ts
-```
-
-결과는 시스템 임시 경로의 `reports/downloads/`에 생성된다.
-네트워크 확인 없이 설정만 렌더링하려면 `--offline`을 붙인다.

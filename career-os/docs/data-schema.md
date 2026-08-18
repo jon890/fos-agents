@@ -64,7 +64,7 @@ Zod 검증을 통과한 값만 수집 코드가 사용한다.
 - `adapter`
 - `feedUrl` 또는 `url`
 - `enabled`
-- 출처 분류와 신뢰도 정보
+- 출처 분류
 
 ### `config/current-target.example.json`
 
