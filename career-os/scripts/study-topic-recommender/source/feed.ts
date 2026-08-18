@@ -7,6 +7,7 @@ import { createHash } from "crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { XMLParser } from "fast-xml-parser";
+import { READING_CANDIDATE_EXCERPT_MAX_LENGTH } from "../reading_contracts.js";
 
 export const USER_AGENT =
   "career-os-morning/1.0 (+https://github.com/jon890/career-os; daily morning recommendation discovery)";
@@ -17,6 +18,7 @@ export interface FeedEntry {
   title: string;
   link: string;
   published: string;
+  description?: string;
 }
 
 export interface CachePayload {
@@ -53,6 +55,21 @@ function resolveAtomLink(links: unknown[]): string {
   return best;
 }
 
+function textValue(value: unknown): string {
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number") return String(value);
+  if (typeof value !== "object" || value === null) return "";
+  return String((value as Record<string, unknown>)["#text"] ?? "").trim();
+}
+
+function normalizeDescription(value: unknown): string | undefined {
+  const text = textValue(value)
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text ? text.slice(0, READING_CANDIDATE_EXCERPT_MAX_LENGTH) : undefined;
+}
+
 export function parseFeed(xmlText: string): FeedEntry[] {
   const parser = buildParser();
   let parsed: Record<string, unknown>;
@@ -79,6 +96,7 @@ export function parseFeed(xmlText: string): FeedEntry[] {
         title: String(item.title ?? "").trim(),
         link: String(item.link ?? "").trim(),
         published: String(item.pubDate ?? item["dc:date"] ?? "").trim(),
+        description: normalizeDescription(item.description ?? item.content),
       });
     }
     return entries;
@@ -100,19 +118,17 @@ export function parseFeed(xmlText: string): FeedEntry[] {
         : [];
       const link = resolveAtomLink(links as unknown[]);
 
-      const titleRaw = item.title;
-      const title =
-        typeof titleRaw === "object" && titleRaw !== null
-          ? String((titleRaw as Record<string, unknown>)["#text"] ?? "").trim()
-          : String(titleRaw ?? "").trim();
-
-      const publishedRaw = item.published ?? item.updated;
-      const published =
-        typeof publishedRaw === "object" && publishedRaw !== null
-          ? String((publishedRaw as Record<string, unknown>)["#text"] ?? "").trim()
-          : String(publishedRaw ?? "").trim();
-
-      entries.push({ title, link, published });
+      const group = typeof item.group === "object" && item.group !== null
+        ? item.group as Record<string, unknown>
+        : undefined;
+      entries.push({
+        title: textValue(item.title),
+        link,
+        published: textValue(item.published ?? item.updated),
+        description: normalizeDescription(
+          item.summary ?? item.content ?? group?.description
+        ),
+      });
     }
     return entries;
   }

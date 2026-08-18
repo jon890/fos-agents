@@ -9,11 +9,12 @@ const report: MorningReadingReport = {
     collectedArticles: "state/reading-candidates.json",
   },
   counts: {
-    activeSources: 18,
-    sourcesWithCandidates: 17,
-    collectedArticles: 120,
+    activeSources: 19,
+    sourcesWithCandidates: 18,
+    collectedArticles: 128,
     techBlogSources: 11,
     geekSources: 7,
+    videoSources: 1,
   },
   collectionLog: [],
   recommendations: {
@@ -37,6 +38,16 @@ const report: MorningReadingReport = {
       summary: "동향 요약",
       reason: "동향 이유",
     }],
+    video: [{
+      sourceKey: "tech-bridge-youtube",
+      sourceName: "Tech Bridge YouTube",
+      category: "video",
+      title: "에이전트 도구 연결 패턴",
+      url: "https://www.youtube.com/watch?v=example",
+      published: "2026-08-17",
+      summary: "도구 연결 방식을 비교한다.",
+      reason: "에이전트 설계에 바로 적용할 수 있다.",
+    }],
   },
 };
 
@@ -46,6 +57,7 @@ describe("아침 읽을거리 마크다운", () => {
 
     expect(markdown).toContain("## 회사·엔지니어링 기술 블로그");
     expect(markdown).toContain("## GeekNews와 개발 동향");
+    expect(markdown).toContain("## 영상 추천");
     expect(markdown).not.toContain("백엔드 공부 후보");
     expect(markdown).not.toContain("AI 실전");
     expect(markdown).toContain("간단한 요약: 글 요약");

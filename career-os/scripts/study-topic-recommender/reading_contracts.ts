@@ -1,8 +1,8 @@
 import { z } from "zod";
 
-export const READING_CATEGORIES = ["techBlog", "geek"] as const;
+export const READING_CATEGORIES = ["techBlog", "geek", "video"] as const;
 export const READING_SOURCE_ADAPTER_IDS = ["feed", "page"] as const;
-export const READING_CANDIDATE_KINDS = ["feed-article", "page-link"] as const;
+export const READING_CANDIDATE_KINDS = ["feed-article", "feed-video", "page-link"] as const;
 export const READING_COLLECTION_STATUSES = [
   "collected",
   "page-links",
@@ -11,6 +11,7 @@ export const READING_COLLECTION_STATUSES = [
 ] as const;
 
 export const DEFAULT_MAX_CANDIDATES_PER_SOURCE = 8;
+export const READING_CANDIDATE_EXCERPT_MAX_LENGTH = 2_000;
 export const READING_SELECTION_TEXT_MAX_LENGTH = 300;
 
 const nonEmptyString = z.string().trim().min(1);
@@ -62,11 +63,12 @@ export const readingSourceSchema = z.object({
 export const readingSourcesConfigSchema = z.object({
   _meta: z.object({
     purpose: nonEmptyString,
-    schemaVersion: z.literal(3),
+    schemaVersion: z.literal(4),
   }),
   categories: z.object({
     techBlog: readingCategoryPolicySchema,
     geek: readingCategoryPolicySchema,
+    video: readingCategoryPolicySchema,
   }),
   sources: z.array(readingSourceSchema),
 }).superRefine((config, context) => {
@@ -91,6 +93,7 @@ export const readingCandidateSchema = z.object({
   title: nonEmptyString,
   url: httpsUrl,
   published: z.string(),
+  excerpt: z.string().max(READING_CANDIDATE_EXCERPT_MAX_LENGTH).optional(),
   kind: readingCandidateKindSchema,
   recentlyRecommended: z.boolean(),
 });
@@ -135,6 +138,7 @@ export const readingSelectionSchema = z.object({
   selections: z.object({
     techBlog: z.array(readingSelectionItemSchema),
     geek: z.array(readingSelectionItemSchema),
+    video: z.array(readingSelectionItemSchema),
   }),
 });
 
@@ -161,11 +165,13 @@ export const morningReadingReportSchema = z.object({
     collectedArticles: z.number().int().nonnegative(),
     techBlogSources: z.number().int().nonnegative(),
     geekSources: z.number().int().nonnegative(),
+    videoSources: z.number().int().nonnegative(),
   }),
   collectionLog: z.array(readingCollectionLogSchema),
   recommendations: z.object({
     techBlog: z.array(readingRecommendationSchema),
     geek: z.array(readingRecommendationSchema),
+    video: z.array(readingRecommendationSchema),
   }),
 });
 

@@ -87,5 +87,6 @@ export function recommendationsFromSelection(
   return {
     techBlog: buildCategory("techBlog"),
     geek: buildCategory("geek"),
+    video: buildCategory("video"),
   };
 }

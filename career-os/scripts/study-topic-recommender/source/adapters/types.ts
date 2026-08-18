@@ -7,6 +7,7 @@ export interface CollectedReading {
   title: string;
   url: string;
   published: string;
+  excerpt?: string;
   kind: ReadingCandidateKind;
 }
 

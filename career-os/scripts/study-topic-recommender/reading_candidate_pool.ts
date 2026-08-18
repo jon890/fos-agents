@@ -49,6 +49,7 @@ async function collectSource(
     title: item.title,
     url: item.url,
     published: item.published,
+    excerpt: item.excerpt,
     kind: item.kind,
     recentlyRecommended: recentUrls.has(item.url),
   }));

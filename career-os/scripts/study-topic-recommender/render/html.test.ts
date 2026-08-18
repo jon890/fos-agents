@@ -14,6 +14,7 @@ const baseReport: MorningReadingReport = {
     collectedArticles: 8,
     techBlogSources: 1,
     geekSources: 1,
+    videoSources: 0,
   },
   collectionLog: [],
   recommendations: {
@@ -28,6 +29,7 @@ const baseReport: MorningReadingReport = {
       reason: "현재 운영 관점과 연결된다.",
     }],
     geek: [],
+    video: [],
   },
 };
 
@@ -42,6 +44,7 @@ describe("아침 읽을거리 HTML", () => {
     expect(html).not.toContain("예상 0분");
     expect(html).not.toContain("하루 학습 목표 120분");
     expect(html).toContain("추천 이유");
+    expect(html).toContain("영상 추천");
   });
 
   test("HTTPS가 아닌 추천 URL을 거부한다", () => {

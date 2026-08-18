@@ -3,13 +3,16 @@ import type { ReadingSourcesConfig } from "../scripts/study-topic-recommender/re
 export const externalReadingSources = {
   "_meta": {
     "purpose": "study-topic-recommender가 수집할 외부 읽을거리 소스",
-    "schemaVersion": 3
+    "schemaVersion": 4
   },
   "categories": {
     "techBlog": {
       "slots": 3
     },
     "geek": {
+      "slots": 1
+    },
+    "video": {
       "slots": 1
     }
   },
@@ -168,6 +171,15 @@ export const externalReadingSources = {
       "category": "geek",
       "enabled": true,
       "adapter": "page"
+    },
+    {
+      "key": "tech-bridge-youtube",
+      "title": "Tech Bridge YouTube",
+      "url": "https://www.youtube.com/@TechBridge-KR",
+      "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UC895rbZX2iXLTDfji7W4PfA",
+      "category": "video",
+      "enabled": true,
+      "adapter": "feed"
     }
   ]
 } satisfies ReadingSourcesConfig;

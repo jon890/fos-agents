@@ -30,7 +30,8 @@ export const feedSourceAdapter: ReadingSourceAdapter = {
           title: entry.title,
           url,
           published: entry.published || "",
-          kind: "feed-article" as const,
+          excerpt: entry.description,
+          kind: source.category === "video" ? "feed-video" as const : "feed-article" as const,
         };
       })
       .filter((item): item is NonNullable<typeof item> => item !== null)

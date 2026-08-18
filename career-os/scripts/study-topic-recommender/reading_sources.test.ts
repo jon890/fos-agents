@@ -9,11 +9,12 @@ function config(sources: unknown[]) {
   return {
     _meta: {
       purpose: "테스트 외부 읽을거리 소스",
-      schemaVersion: 3,
+      schemaVersion: 4,
     },
     categories: {
       techBlog: { slots: 2 },
       geek: { slots: 1 },
+      video: { slots: 1 },
     },
     sources,
   };
