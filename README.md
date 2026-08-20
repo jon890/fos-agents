@@ -16,6 +16,7 @@
 | 워크스페이스 | 책임 | 시작 문서 |
 |---|---|---|
 | [`apartment/`](apartment/) | 아파트 시세 조사와 인테리어 의사결정 리포트 | [`apartment/README.md`](apartment/README.md) |
+| [`accountbook/`](accountbook/) | 금융 스크린샷 기반 가계부 입력 자동화 | [`accountbook/AGENTS.md`](accountbook/AGENTS.md) |
 | [`career-os/`](career-os/) | 커리어 성장, 공고 추천, 면접·지원 준비 | [`career-os/AGENTS.md`](career-os/AGENTS.md) |
 | [`health-care/`](health-care/) | 건강 기록, 진료 준비, 재활 경과 관리 | [`health-care/AGENTS.md`](health-care/AGENTS.md) |
 | [`ji-yoon-blog/`](ji-yoon-blog/) | 지융로그 네이버 블로그 콘텐츠 운영 | [`ji-yoon-blog/AGENTS.md`](ji-yoon-blog/AGENTS.md) |

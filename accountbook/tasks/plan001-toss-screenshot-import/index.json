@@ -1,0 +1,47 @@
+{
+  "name": "plan001-toss-screenshot-import",
+  "description": "토스 소비 화면을 검증된 거래 후보로 변환하고 승인 뒤 기존 가계부 API에 등록한다",
+  "created_at": "2026-08-20T03:00:00+00:00",
+  "updated_at": "2026-08-20T07:00:00+00:00",
+  "status": "completed",
+  "current_phase": 3,
+  "total_phases": 3,
+  "error_message": null,
+  "blocked_reason": null,
+  "related_docs": [
+    "accountbook/docs/prd.md",
+    "accountbook/docs/flow.md",
+    "accountbook/docs/data-schema.md",
+    "accountbook/docs/code-architecture.md",
+    "accountbook/docs/adr/ADR-001-vision-extraction-deterministic-validation.md"
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "거래 후보 스키마와 검증기 구현",
+      "file": "phase-01.md",
+      "status": "completed",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 900
+    },
+    {
+      "number": 2,
+      "title": "승인과 accountbook API 등록 구현",
+      "file": "phase-02.md",
+      "status": "completed",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 900
+    },
+    {
+      "number": 3,
+      "title": "agent skill과 샘플 검증 완성",
+      "file": "phase-03.md",
+      "status": "completed",
+      "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "model": "sonnet",
+      "timeout": 900
+    }
+  ]
+}

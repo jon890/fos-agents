@@ -1,0 +1,4 @@
+interface:
+  display_name: "가계부 스크린샷 가져오기"
+  short_description: "토스 스크린샷을 검증된 가계부 거래 후보로 변환합니다"
+  default_prompt: "$accountbook-screenshot-import로 이 토스 스크린샷의 거래를 추출하고 검증해 주세요."

@@ -23,6 +23,7 @@
 | 워크스페이스 | 가이드 | 책임 |
 |---|---|---|
 | `apartment/` | [`apartment/AGENTS.md`](apartment/AGENTS.md) | 아파트 시세와 인테리어 리포트 |
+| `accountbook/` | [`accountbook/AGENTS.md`](accountbook/AGENTS.md) | 가계부 입력 자동화 |
 | `career-os/` | [`career-os/AGENTS.md`](career-os/AGENTS.md) | 커리어, 면접, 지원 준비 |
 | `stock-investment/` | [`stock-investment/AGENTS.md`](stock-investment/AGENTS.md) | 주식과 이슈 모니터링 |
 | `travel/` | [`travel/AGENTS.md`](travel/AGENTS.md) | 여행 일정과 결정 로그 |
