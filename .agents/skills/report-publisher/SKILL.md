@@ -38,9 +38,10 @@ python3 .agents/skills/report-publisher/scripts/publish_report.py publish \
   --confirm-public
 ```
 
-5. 반환된 `public_url`을 브라우저로 연다.
-6. HTTP 성공, 문서 제목, 주요 본문을 확인한 뒤 `public_url`을 전달한다.
-   `branch_url`이 함께 반환된 경우에만 같은 리포트의 안정적인 별칭으로 안내한다.
+5. 반환된 `public_url`을 브라우저로 열어 HTTP 성공, 문서 제목과 주요 본문을 확인한다.
+6. `branch_url`이 반환되면 같은 내용을 가리키는지 추가로 검증한다.
+7. 검증된 `branch_url`을 안정적인 사용자용 주소로 우선 전달한다.
+   `branch_url`이 없거나 검증에 실패한 경우에만 검증된 `public_url`을 전달한다.
 
 ## 입력 규칙
 
@@ -55,7 +56,8 @@ python3 .agents/skills/report-publisher/scripts/publish_report.py publish \
   앞 28자가 같은 두 리포트는 같은 별칭을 공유해 서로를 덮어쓴다.
   예: `freelance-2026-08-05`(20자)는 되고 `freelance-opportunity-2026-08-05`(32자)는 막힌다.
 - production branch인 `main`은 `slug`로 사용할 수 없다.
-- 같은 `slug`를 다시 게시해도 검증된 배포 고유 주소를 우선 전달한다.
+- 같은 `slug`를 다시 게시하면 검증된 `branch_url`을 안정적인 사용자용 주소로 우선 전달한다.
+- `public_url`은 배포별 검증 증거와 `branch_url` 실패 시 대체 주소로 사용한다.
 - Cloudflare가 분기 별칭을 제공하고 실제 검증까지 통과한 경우에만
   같은 `slug`의 안정적인 주소로 `branch_url`을 사용한다.
 - 서로 다른 리포트는 서로 다른 `slug`를 사용한다.
