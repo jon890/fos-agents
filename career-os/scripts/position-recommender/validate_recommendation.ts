@@ -14,6 +14,25 @@ export function validateRecommendationAgainstPool(
     errors.push("추천 결과의 수집 실행 ID가 후보풀과 다르다.");
   }
   const byId = new Map(pool.candidates.map((candidate) => [candidate.id, candidate]));
+  const rankingById = new Map(run.candidateRanking.map((item) => [item.candidateId, item]));
+  const unknownRankedIds = run.candidateRanking
+    .map((item) => item.candidateId)
+    .filter((candidateId) => !byId.has(candidateId));
+  if (unknownRankedIds.length > 0) {
+    errors.push(`전체 후보 순위에 후보풀 밖의 공고가 있다: ${unknownRankedIds.slice(0, 5).join(", ")}`);
+  }
+  const missingRankedIds = pool.candidates
+    .map((candidate) => candidate.id)
+    .filter((candidateId) => !rankingById.has(candidateId));
+  if (missingRankedIds.length > 0) {
+    errors.push(`전체 후보 순위에서 ${missingRankedIds.length}개 공고가 누락됐다: ${missingRankedIds.slice(0, 5).join(", ")}`);
+  }
+  const orderedRanks = run.candidateRanking.map((item) => item.rank).sort((a, b) => a - b);
+  const hasContiguousRanks = orderedRanks.length === pool.candidates.length
+    && orderedRanks.every((rank, index) => rank === index + 1);
+  if (!hasContiguousRanks) {
+    errors.push(`전체 후보 순위는 1부터 ${pool.candidates.length}까지 중복 없이 이어져야 한다.`);
+  }
   const selectedIds = new Set<string>();
   for (const item of [...run.tiers.strong, ...run.tiers.stretch]) {
     const candidate = byId.get(item.candidateId);
@@ -27,6 +46,10 @@ export function validateRecommendationAgainstPool(
     if (item.company !== candidate.company) errors.push(`${item.candidateId}: 회사명이 후보풀과 다르다.`);
     if (item.title !== candidate.title) errors.push(`${item.candidateId}: 공고명이 후보풀과 다르다.`);
     if (item.source !== candidate.source) errors.push(`${item.candidateId}: 소스가 후보풀과 다르다.`);
+    const ranking = rankingById.get(item.candidateId);
+    if (ranking && ranking.rank !== item.rank) {
+      errors.push(`${item.candidateId}: 추천 순위와 전체 후보 순위가 다르다.`);
+    }
   }
   return errors;
 }

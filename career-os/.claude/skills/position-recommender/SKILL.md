@@ -15,7 +15,7 @@ description: 후보자 프로필과 현재 열린 외부 채용공고를 비교�
 - `config/candidate-profile.md`
 - `config/position-filters.json`
 - `state/company-cooldown.json`
-- `references/position-decision-criteria.md`
+- [`references/position-decision-criteria.md`](references/position-decision-criteria.md)
 
 등록 소스 밖의 회사를 추가 탐색할 때 `config/verified-company-research-targets.json`을 읽는다.
 세부 경력 근거가 판단에 필요할 때 프로필에서 연결한 최신 경력 자료와 업무 기록을 읽는다.
@@ -27,16 +27,19 @@ description: 후보자 프로필과 현재 열린 외부 채용공고를 비교�
 시스템 임시 디렉터리에 이번 실행 전용 경로를 만든다.
 
 ```bash
-mktemp -d -t position-recommender
+mktemp -d "${TMPDIR:-/tmp}/position-recommender.XXXXXX"
 ```
 
 반환된 절대 경로를 아래 명령의 `<RUN_DIR>`에 넣는다.
 후보풀, 추천 JSON과 HTML은 모두 `<RUN_DIR>`에 만든다.
 
+TypeScript 실행기 `<TS_RUNTIME>`은 `bun`이 있으면 `bun`, 없으면 TypeScript를 직접 실행할 수 있는 Node.js 22.18 이상을 사용한다.
+둘 다 사용할 수 없으면 실행을 중단하고 필요한 런타임을 알린다.
+
 ### 2. 외부 공고 수집
 
 ```bash
-bun scripts/position-recommender/collect_live_postings.ts \
+<TS_RUNTIME> scripts/position-recommender/collect_live_postings.ts \
   --output <RUN_DIR>/posting-candidates.json
 ```
 
@@ -71,8 +74,11 @@ bun scripts/position-recommender/collect_live_postings.ts \
 공고의 담당 업무는 미래 업무 범위다.
 필수 자격과 전이 가능한 경험을 구분해 채점한다.
 
-추천 결과는 `scripts/position-recommender/recommendation_schema.ts`의 `schemaVersion: 3`에 맞춘다.
+추천 결과는 `scripts/position-recommender/recommendation_schema.ts`의 `schemaVersion: 4`에 맞춘다.
 강력 추천과 도전 추천의 각 항목에는 후보풀의 `candidateId`를 그대로 넣는다.
+`candidateRanking`에는 후보풀의 모든 공고를 적합도 순서로 한 번씩 넣는다.
+순위는 1부터 후보 수까지 이어져야 하며, 강력 추천과 도전 추천의 순위와 일치해야 한다.
+각 순위에는 공개 가능한 `oneLineReason`을 한 문장으로 작성한다.
 결과는 `<RUN_DIR>/recommendation.json`에만 만든다.
 
 확인할 수 없는 값은 `확인 필요` 또는 `정보 없음`으로 표시한다.
@@ -80,7 +86,7 @@ bun scripts/position-recommender/collect_live_postings.ts \
 ### 4. 결과 검증
 
 ```bash
-bun scripts/position-recommender/validate_recommendation.ts \
+<TS_RUNTIME> scripts/position-recommender/validate_recommendation.ts \
   --input <RUN_DIR>/recommendation.json \
   --candidates <RUN_DIR>/posting-candidates.json
 ```
@@ -91,13 +97,16 @@ bun scripts/position-recommender/validate_recommendation.ts \
 - 추천 ID가 서로 다르다.
 - 회사명, 공고명, URL과 소스가 후보 원문과 일치한다.
 - 추천 결과와 후보풀의 수집 실행 ID가 일치한다.
+- 전체 후보가 빠짐없이 중복 없이 순위에 포함된다.
+- 전체 후보 순위가 1부터 후보 수까지 이어진다.
+- 추천 순위와 전체 후보 순위가 일치한다.
 
 검증이 실패하면 JSON을 고친 뒤 다시 실행한다.
 
 ### 5. 임시 HTML 생성
 
 ```bash
-bun scripts/position-recommender/render_candidate_preview.ts \
+<TS_RUNTIME> scripts/position-recommender/render_candidate_preview.ts \
   --input <RUN_DIR>/recommendation.json \
   --candidates <RUN_DIR>/posting-candidates.json \
   --limit all \
@@ -106,12 +115,19 @@ bun scripts/position-recommender/render_candidate_preview.ts \
 
 HTML에는 다음 내용을 담는다.
 
-- 결론과 다음 행동
-- 강력 추천과 도전 추천
-- 추천 이유와 준비할 점
-- 수집된 전체 후보
+- 모델이 작성한 간단한 결론
+- 강력 추천 3건을 우선 비교하는 카드
+- 도전 추천과 보류·주의를 잇는 압축 목록
+- 추천 이유와 기술 태그
+- 적합도 순위와 한 줄 판단이 있는 전체 후보 접이식 목록
+- 전체 후보의 회사, 공고명, 기술과 판단 검색 및 빠른 필터
 - 각 공고의 개별 링크
-- 수집 시각과 실행 ID
+- 연월일·시간 단위의 간단한 생성·수집 시각
+
+데스크톱에서는 강력 추천 카드를 3열로 보여주고 모바일에서는 1열로 바꾼다.
+모바일에서 표와 가로 스크롤을 사용하지 않으며 주요 링크의 터치 높이는 44px 이상으로 둔다.
+강력 추천 개수는 제목 가까이에 `3 강력 추천`처럼 의미가 드러나게 표시한다.
+수집 실행 ID는 기본 화면에서 강조하지 않고 `수집 정보` 상세 영역에 둔다.
 
 외부 공유용 HTML은 공개 공고 정보와 일반화한 추천 근거로 구성한다.
 
@@ -132,7 +148,8 @@ Cloudflare Pages 준비, 게시와 검증은 `report-publisher`로 실행한다.
 - 공고 URL은 공개된 HTTPS 개별 공고 링크다.
 
 `report-publisher`의 준비 검사, Cloudflare Pages 업로드, 공개 URL 검증을 모두 따른다.
-최종 응답에는 검증된 공개 URL과 핵심 추천 결과를 함께 전달한다.
+최종 응답에는 검증된 `branch_url`을 우선 전달하고, 없으면 검증된 `public_url`을 전달한다.
+핵심 추천 결과는 최종 공개 리포트와 일치시킨다.
 
 ### 7. 임시 파일 정리
 
@@ -155,6 +172,7 @@ rmdir "<RUN_DIR>"
 - 모든 추천 공고가 후보 ID로 연결됐다.
 - 후보풀 대조 검증이 통과했다.
 - HTML이 검증된 추천 JSON에서 생성됐다.
+- 전체 후보 순위와 한 줄 판단이 후보풀 전체를 포함한다.
 - HTML의 모든 공고 링크가 개별 공고 URL이다.
 - 확인할 수 없는 값이 불확실성 표기로 드러난다.
 - `report-publisher`가 Cloudflare Pages 공개 URL을 검증했다.

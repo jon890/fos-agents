@@ -18,7 +18,7 @@ const diagnostics: CollectionDiagnostics = {
 const { pool } = buildPostingCandidatePool([posting], diagnostics);
 const candidate = pool.candidates[0];
 const run = RecommendationRun.parse({
-  schemaVersion: 3, reportDate: "2026-08-13", generatedAt: "2026-08-13T09:00:00+09:00",
+  schemaVersion: 4, reportDate: "2026-08-13", generatedAt: "2026-08-13T09:00:00+09:00",
   conclusion: ["지원 검토 가치가 있다."], background: ["외부 공고 후보풀에서 선별했다."],
   tiers: { strong: [{
     candidateId: candidate.id, rank: 1, company: candidate.company, title: candidate.title,
@@ -27,16 +27,26 @@ const run = RecommendationRun.parse({
     whyFit: "백엔드 운영 경험과 맞는다.", candidateEvidence: ["Java 운영"], jdKeywords: ["Java", "Spring"],
     companyUpside: { level: "중간", reason: "추가 확인 필요" }, welfareLearning: "정보 없음",
     techBlogSignal: "정보 없음", businessRisk: "정보 없음", ambiguity: "팀 범위 확인 필요", prepAction: "운영 사례 정리",
-  }], stretch: [], hold: [] }, additionalTargets: [], recentCheck: ["중복 없음"],
+  }], stretch: [], hold: [] },
+  candidateRanking: [{ candidateId: candidate.id, rank: 1, oneLineReason: "Java·Spring 운영 경험이 역할과 직접 연결된다." }],
+  additionalTargets: [], recentCheck: ["중복 없음"],
   weeklyActions: { apply: "공고 확인", resume: "경험 정리", study: "기술 복기" },
   sourceSnapshot: { collectionRunId: pool.collectionRunId, candidatePoolPath: "state/posting-candidates.json" },
 });
 
 test("추천 공고와 외부 후보풀을 같은 HTML에 표시한다", () => {
   const html = renderCandidatePreviewHtml(run, { candidatePool: pool, limit: null });
-  expect(html).toContain("추천 공고");
-  expect(html).toContain("수집된 전체 후보");
+  expect(html).toContain("hero-card");
+  expect(html).toContain("</strong><span>강력 추천");
+  expect(html).toContain("전체 후보 적합도 순위");
+  expect(html).toContain("Java·Spring 운영 경험이 역할과 직접 연결된다.");
+  expect(html).toContain("candidate-filter");
+  expect(html).toContain(".priority-grid{grid-template-columns:1fr}");
+  expect(html).toContain("min-height:44px");
+  expect(html).toContain("08.13 09:00 수집");
   expect(html).toContain(candidate.url);
   expect(html).toContain("백엔드 운영 경험과 맞는다.");
   expect(html).toContain(pool.collectionRunId);
+  expect(html).not.toContain("<table");
+  expect(html).not.toContain("min-width:900px");
 });

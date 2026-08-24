@@ -66,9 +66,17 @@ export const WeeklyActions = z.object({
   study: z.string().min(1),
 });
 
+export const CandidateRankingItem = z.object({
+  candidateId: z.string().min(1),
+  rank: z.number().int().positive(),
+  oneLineReason: z.string().trim().min(1).max(160).refine((value) => !/[\r\n]/.test(value), {
+    message: "한 줄 판단에는 줄바꿈을 넣지 않는다",
+  }),
+});
+
 export const RecommendationRun = z
   .object({
-    schemaVersion: z.literal(3),
+    schemaVersion: z.literal(4),
     reportDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), // Asia/Seoul 기준
     generatedAt: z.string().min(1),
     conclusion: z.array(z.string().min(1)).min(1), // 한 줄 결론 (첫 10줄 결론 보장)
@@ -78,6 +86,7 @@ export const RecommendationRun = z
       stretch: z.array(PositionItem).max(2),
       hold: z.array(HoldItem).max(3),
     }),
+    candidateRanking: z.array(CandidateRankingItem).min(1),
     additionalTargets: z.array(AdditionalTarget).max(3),
     recentCheck: z.array(z.string().min(1)).min(1), // 최근 반복 점검
     weeklyActions: WeeklyActions,
@@ -87,6 +96,26 @@ export const RecommendationRun = z
     }),
   })
   .superRefine((run, ctx) => {
+    const rankedIds = new Set<string>();
+    const ranks = new Set<number>();
+    run.candidateRanking.forEach((item, index) => {
+      if (rankedIds.has(item.candidateId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["candidateRanking", index, "candidateId"],
+          message: `전체 후보 순위에 중복 공고 ID가 있다: ${item.candidateId}`,
+        });
+      }
+      if (ranks.has(item.rank)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["candidateRanking", index, "rank"],
+          message: `전체 후보 순위에 중복 순위가 있다: ${item.rank}`,
+        });
+      }
+      rankedIds.add(item.candidateId);
+      ranks.add(item.rank);
+    });
     // 강력 추천에는 stretchGap을 쓰지 않는다 (도전 전용 필드).
     run.tiers.strong.forEach((item, i) => {
       if (item.stretchGap !== undefined) {
@@ -121,3 +150,4 @@ export const RecommendationRun = z
 
 export type RecommendationRunType = z.infer<typeof RecommendationRun>;
 export type PositionItemType = z.infer<typeof PositionItem>;
+export type CandidateRankingItemType = z.infer<typeof CandidateRankingItem>;
