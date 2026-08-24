@@ -265,7 +265,7 @@ export function renderApplicationPackageHtml(
     .readiness-do_not_apply, .evidence-blocked { color: var(--red); background: var(--red-soft); }
     .quick-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
     .quick-links a { padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; color: #33415b; background: #f8fafc; font-weight: 700; font-size: 13px; text-decoration: none; }
-    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 22px; margin-top: 22px; align-items: start; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 22px; min-width: 0; margin-top: 22px; align-items: start; }
     .cards { display: grid; gap: 14px; min-width: 0; }
     .review-card, .source-drawer {
       border: 1px solid var(--line);
@@ -273,7 +273,8 @@ export function renderApplicationPackageHtml(
       background: var(--paper);
       box-shadow: 0 5px 18px rgba(29, 44, 75, .045);
     }
-    .review-card { padding: 24px 26px; scroll-margin-top: 20px; }
+    .review-card { min-width: 0; padding: 24px 26px; scroll-margin-top: 20px; }
+    .card-body { min-width: 0; }
     .review-card h2 { margin: 0 0 14px; font-size: 20px; line-height: 1.3; letter-spacing: -.02em; }
     .card-body > :first-child, .drawer-body > :first-child { margin-top: 0; }
     .card-body > :last-child, .drawer-body > :last-child { margin-bottom: 0; }
@@ -282,7 +283,7 @@ export function renderApplicationPackageHtml(
     li { margin: 6px 0; }
     code { padding: 2px 5px; border-radius: 5px; color: #244079; background: #edf2fa; font: 650 .86em/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
     blockquote { margin: 14px 0; padding: 12px 14px; border-left: 4px solid var(--blue); color: #45516a; background: var(--blue-soft); }
-    .table-scroll { width: 100%; overflow-x: auto; margin: 14px 0; border: 1px solid var(--line); border-radius: 10px; }
+    .table-scroll { width: 100%; max-width: 100%; overflow-x: auto; margin: 14px 0; border: 1px solid var(--line); border-radius: 10px; }
     table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 14px; }
     th, td { padding: 11px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
     th { color: #34405a; background: #f4f7fb; font-size: 12px; }

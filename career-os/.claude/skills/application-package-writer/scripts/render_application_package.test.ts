@@ -35,6 +35,8 @@ describe("renderApplicationPackage", () => {
     expect(html).toContain('<meta name="viewport"');
     expect(html).toContain("내 답변 필요");
     expect(html).toContain('class="review-card"');
+    expect(html).toContain(".review-card { min-width: 0;");
+    expect(html).toContain(".table-scroll { width: 100%; max-width: 100%;");
     expect(html).toContain("이력서 초안");
     expect(html).toContain("지원 문항 초안");
     expect(html).toContain("후보자 인터뷰 기록");
