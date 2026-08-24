@@ -29,6 +29,19 @@ description: >-
 
 ## 작업 절차
 
+0. 당일 미게시 산출물을 먼저 복구한다.
+   `data/runtime/downloads/`에 오늘 날짜의 `freelance-opportunities-YYYY-MM-DD.json` 또는
+   `freelance-opportunity-report-YYYY-MM-DD.html`이 남아 있으면 수집을 반복하지 않는다.
+   아래 마감 스크립트를 먼저 실행하고 게시에 성공하면 1-6단계를 건너뛴다.
+
+   ```bash
+   python3 .claude/skills/freelance-opportunity-reporter/scripts/finalize_report.py \
+     --date YYYY-MM-DD
+   ```
+
+   스크립트의 `candidate_count`, `apply_now_count`, `clarify_first_count`,
+   `top_candidates`, 검증된 URL로 최종 응답을 만든다.
+
 1. 수집 범위를 정한다.
    기본 수집 대상은 아래 세 곳의 공개 프로젝트 목록이다.
 
@@ -60,6 +73,11 @@ description: >-
    위시켓은 보고서 작성 전에 Orca의 로그인 상태를 확인한다.
    로그아웃 상태이거나 상세 본문을 볼 수 없으면 사용자에게 로그인을 요청하고 보고서 생성을 멈춘다.
    로그인 후에도 프라이빗 매칭 등으로 원격 조건을 확인할 수 없는 공고는 후보에서 제외한다.
+
+   Hermes 자동 실행에서는 플랫폼별 브라우저 수집을 서로 다른 호출 묶음으로 나눈다.
+   한 번의 `execute_code`에서 35회 이상 외부 도구를 호출하지 않는다.
+   호출이 길어지면 현재 플랫폼의 `*-enriched-YYYY-MM-DD.json`을 먼저 저장하고 다음 호출에서 계속한다.
+   HTML을 직접 만들거나 게시 명령을 여러 번 호출하지 않고 6단계의 마감 스크립트에 호출 여유를 남긴다.
 
 3. 공고 필드를 정리한다.
    다음 항목을 가능한 범위에서 뽑는다.
@@ -143,14 +161,18 @@ description: >-
    - 공개 URL 검증이 끝나면 임시 HTML과 원자료를 삭제한다.
    - 게시에 실패해도 저장소의 `reports/`나 다른 영구 경로에 결과물을 남기지 않는다.
 
-   원자료 검사가 끝나면 날짜별 전용 생성기를 만들지 않고 공용 생성기를 실행한다.
+   플랫폼별 `*-enriched-YYYY-MM-DD.json`을 만들었으면 아래 마감 스크립트를 즉시 실행한다.
+   이 스크립트가 조립, 감사, 점수 계산, HTML 생성, Cloudflare Pages 게시,
+   공개 URL 검증과 당일 임시 파일 정리를 한 번에 수행한다.
 
    ```bash
-   python3 .claude/skills/freelance-opportunity-reporter/scripts/render_report.py \
-     data/runtime/downloads/freelance-opportunities-YYYY-MM-DD.json \
-     --date YYYY-MM-DD \
-     --output data/runtime/downloads/freelance-opportunity-report-YYYY-MM-DD.html
+   python3 .claude/skills/freelance-opportunity-reporter/scripts/finalize_report.py \
+     --date YYYY-MM-DD
    ```
+
+   일부 플랫폼 수집에 실패해도 다른 플랫폼의 검증된 후보가 1건 이상 있으면 부분 성공으로 게시한다.
+   누락된 플랫폼과 접근 제한은 최종 응답에 한 줄로 알린다.
+   마감 스크립트가 실패하면 당일 산출물을 보존해 같은 날 다음 실행이 0단계에서 복구하게 한다.
 
 7. 운영 루프를 붙인다.
    반복 실행 계획이 필요하면 `references/operating-loop.md`를 읽는다.
@@ -167,7 +189,7 @@ description: >-
 
 | 산출물 | 위치 | 성격 |
 | --- | --- | --- |
-| 공개 리포트 | Cloudflare Pages `public_url` | 사용자용 최종 산출물이다.<br>검증된 HTTPS 주소만 전달한다. |
+| 공개 리포트 | Cloudflare Pages `branch_url` | 사용자용 최종 산출물이다.<br>검증된 안정 주소를 우선하고, 없으면 검증된 `public_url`을 전달한다. |
 | 임시 HTML | `data/runtime/downloads/freelance-opportunity-report-YYYY-MM-DD.html` | 게시 입력으로만 사용한다.<br>게시 검증 후 삭제한다. |
 | 임시 원자료 | `data/runtime/downloads/freelance-opportunities-YYYY-MM-DD.json` | 누락과 중복을 검사한다.<br>게시하지 않고 실행 종료 전에 삭제한다. |
 
@@ -196,7 +218,7 @@ HTML 본문은 아래 순서로 구성한다.
 
 ## 게시
 
-게시 단계에서는 `report-publisher` 스킬을 읽고 그대로 따른다.
+게시 단계에서는 `report-publisher` 스킬의 검사와 검증을 `finalize_report.py`가 호출한다.
 
 - 게시 대상은 임시 HTML 한 파일로 제한한다.
 - Pages 프로젝트는 `fos-reports`를 사용한다.
@@ -204,8 +226,10 @@ HTML 본문은 아래 순서로 구성한다.
 - `prepare` 결과에서 파일 수, 크기, 경고, 민감 정보 노출을 확인한다.
 - 이 스킬 호출에는 게시 요청이 포함된 것으로 보고 별도 게시 확인 없이 진행한다.
 - 반환된 `public_url`을 브라우저로 열어 HTTP 성공, 문서 제목, 주요 본문을 확인한다.
-- `branch_url`은 `report-publisher`가 실제 검증한 경우에만 안정 주소로 안내한다.
-- 게시 성공과 실패 모두에서 임시 HTML과 원자료를 정확한 경로로 삭제한다.
+- `branch_url`도 `report-publisher`가 검증했으면 사용자용 안정 주소로 우선 전달한다.
+- `branch_url`이 없거나 검증에 실패한 경우에만 검증된 `public_url`을 전달한다.
+- 게시 성공 시 임시 HTML과 원자료를 정확한 경로로 삭제한다.
+- 게시 실패 시에는 당일 산출물을 보존해 0단계 복구 입력으로 사용한다.
 
 Cloudflare 인증이나 게시 권한이 없어 게시하지 못하면 작업을 완료로 간주하지 않는다.
 실패 원인과 필요한 권한만 보고하고 로컬 산출물은 전달하지 않는다.
@@ -239,7 +263,7 @@ python3 .claude/skills/freelance-opportunity-reporter/scripts/score_opportunitie
 - 기간이나 공고 식별자만으로 공고를 가리킨 문장이 없는지
 - Orca 브라우저에서 데스크톱과 모바일 레이아웃이 읽히는지
 - `report-publisher prepare` 검사가 통과하는지
-- 게시된 `public_url`의 제목과 주요 본문이 로컬 검증 결과와 같은지
+- 사용자에게 전달할 `branch_url` 또는 `public_url`의 제목과 주요 본문이 로컬 검증 결과와 같은지
 - 임시 HTML과 원자료가 실행 종료 후 남지 않았는지
 
 ## 보조 자료

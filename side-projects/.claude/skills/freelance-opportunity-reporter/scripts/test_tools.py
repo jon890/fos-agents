@@ -9,6 +9,7 @@ from tempfile import TemporaryDirectory
 
 from assemble_report_data import assemble
 from audit_collection import audit
+from finalize_report import artifact_paths, build_summary, render_html
 from render_report import load_candidates, rank_key, render_document
 from score_opportunities import first_win_sort_key, score
 
@@ -415,6 +416,59 @@ class AssembleReportDataTest(unittest.TestCase):
         self.assertEqual(result["status"], "incomplete")
         self.assertEqual(result["coverage"][0]["missing_count"], 1)
         self.assertEqual(result["coverage"][1]["coverage_status"], "not-applicable")
+
+
+class FinalizeReportTest(unittest.TestCase):
+    def test_builds_summary_and_html_from_validated_combined_data(self) -> None:
+        item = {
+            "platform": "위시켓",
+            "project_id": "1",
+            "title": "백엔드 자동화",
+            "url": "https://example.com/1",
+            "registered_at": "2026-08-24",
+            "collected_at": "2026-08-24T07:30:00+09:00",
+            "list_page": 1,
+            "collection_source": "wishket-active-scope",
+            "detail_status": "confirmed",
+            "eligibility_status": "candidate",
+            "exclusion_reason": None,
+            "budget_krw": 10_000_000,
+            "duration_days": 30,
+            "applicants": 3,
+            "fit": 5,
+            "risk": 2,
+            "portfolio": 5,
+            "remote": 5,
+            "remote_only_pass": True,
+            "scope_clarity": 5,
+            "delivery_confidence": 5,
+            "experience_match": 5,
+            "reputation_value": 5,
+        }
+        payload = {
+            "collection": [
+                {
+                    "platform": "위시켓",
+                    "source_id": "wishket-active-scope",
+                    "advertised_count": 1,
+                }
+            ],
+            "items": [item],
+        }
+        with TemporaryDirectory() as directory:
+            runtime_dir = Path(directory)
+            paths = artifact_paths(runtime_dir, "2026-08-24")
+            combined = paths["combined"]
+            self.assertIsInstance(combined, Path)
+            combined.write_text(json.dumps(payload), encoding="utf-8")
+            summary = build_summary(combined)
+            html_path = paths["html"]
+            self.assertIsInstance(html_path, Path)
+            render_html(combined, html_path, "2026-08-24")
+
+            self.assertEqual(summary["candidate_count"], 1)
+            self.assertEqual(summary["audit_status"], "complete")
+            self.assertIn("수집한 공고 목록", html_path.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":
