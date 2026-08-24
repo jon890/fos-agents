@@ -9,16 +9,22 @@ accountbook/
 ├── .env.example
 ├── docs/
 ├── scripts/accountbook-screenshot-import/
+├── scripts/accountbook-weekly-import/
 ├── .claude/skills/accountbook-screenshot-import/
+├── .claude/skills/accountbook-weekly-import/
 ├── .codex/skills/accountbook-screenshot-import
+├── .codex/skills/accountbook-weekly-import
 └── private/
 ```
 
 | 경로 | 책임 |
 |---|---|
 | `.claude/skills/accountbook-screenshot-import/` | agent workflow 정본 |
+| `.claude/skills/accountbook-weekly-import/` | inbox scan, vision 반복과 조건부 무인 등록 workflow 정본 |
 | `.codex/skills/accountbook-screenshot-import` | Codex가 정본 skill을 찾는 링크 |
+| `.codex/skills/accountbook-weekly-import` | Codex가 주간 workflow 정본을 찾는 링크 |
 | `scripts/accountbook-screenshot-import/` | 스키마 검증, 승인 표시와 API 등록 |
+| `scripts/accountbook-weekly-import/` | inbox queue, 자동 승인 정책과 주간 상태 전이 |
 | `docs/` | 제품, 흐름, 저장 계약과 기술 결정 |
 | `private/` | 이미지, 거래 후보, 인증과 전송 상태 |
 
@@ -36,6 +42,9 @@ TypeScript script는 다음 책임을 가진다.
 - 사용자 승인과 전송 상태를 기록한다.
 - 기존 accountbook API를 호출하고 부분 성공을 복구한다.
 
+주간 skill은 기존 화면 추출 계약과 등록 script를 재사용한다.
+새 helper는 이미지 SHA-256 queue, `weekly-safe-v1` 판정과 inbox 상태 이동만 담당하며 vision 판단과 accountbook API client를 복제하지 않는다.
+
 agent의 추출 결과가 상태 변경에 쓰이기 전에 결정적 검증을 거치므로 루트 [ADR-021](../../docs/adr/ADR-021-deterministic-agent-boundary.md)을 따른다.
 
 ## 외부 의존
@@ -47,6 +56,8 @@ agent의 추출 결과가 상태 변경에 쓰이기 전에 결정적 검증을 
 
 특정 agent CLI, 스케줄러와 메시지 채널에 의존하지 않는다.
 실행 runtime 선택은 루트 [ADR-019](../../docs/adr/ADR-019-runtime-framework-independence.md)를 따른다.
+iPhone 업로드 adapter는 PNG와 sidecar manifest를 `private/inbox/new/`에 원자적으로 전달한다.
+adapter의 네트워크 노출, 인증과 예약 설정은 저장소 밖 운영 책임이다.
 
 ## 확장 기준
 

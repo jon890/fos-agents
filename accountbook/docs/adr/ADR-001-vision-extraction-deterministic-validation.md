@@ -15,6 +15,11 @@
 - 사용자 승인과 결정적 검증을 모두 통과한 후보만 기존 accountbook API에 등록한다.
 - 선형 workflow와 private 상태 파일로 복구 가능한 동안은 LangGraph를 도입하지 않는다.
 
+### 대체된 부분
+
+[ADR-002](ADR-002-weekly-safe-policy-auto-submission.md)는 사용자 승인 요구 중 주간 실행을 대체한다.
+대화형 실행은 사용자 승인을 유지하고, 주간 실행은 결정적 안전 정책을 승인 주체로 사용할 수 있다.
+
 ### 거절한 대안
 
 - macOS Vision 전용 구현은 Linux 기반 홈서버와 runtime 독립 경계를 만족하지 못한다.
