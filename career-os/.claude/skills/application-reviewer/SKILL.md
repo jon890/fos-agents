@@ -1,11 +1,12 @@
 ---
 name: application-reviewer
-description: application-package-writer가 만든 공고별 Markdown 지원 패키지를 검토해 pass, revise, blocked 판정을 내리는 career-os 스킬. "지원 패키지 검토해줘", "review.md 만들어줘", "지원서 점검"처럼 공고 적합성, 문서 정합성, 제출 문구 안전성과 진행 제한을 확인할 때 사용한다.
+description: application-package-writer가 만든 공고별 Markdown 지원 패키지를 자동 실행이나 명시적인 독립 검토에서 교차 검사하는 내부 career-os 스킬. 사용자가 일반적인 지원 준비를 요청하면 직접 노출하지 않고 application-package-writer가 사용자 검토를 진행한다. application agent가 review.md 판정을 요구하거나 사용자가 독립 검토를 명시했을 때만 사용한다.
 ---
 
 # 지원 패키지 검토
 
-공고별 Markdown 지원 패키지를 제출 전 단계에서 검토한다.
+공고별 Markdown 지원 패키지를 자동 상태 전이 전에 독립적으로 검토한다.
+일반적인 대화형 지원 준비에서는 별도 사용자 단계로 만들지 않는다.
 HTML 이력서의 사실 감사와 렌더 평가는 각각 전용 스킬에 맡긴다.
 
 ## 입력
@@ -13,11 +14,11 @@ HTML 이력서의 사실 감사와 렌더 평가는 각각 전용 스킬에 맡�
 지원 디렉터리에서 다음 파일을 읽는다.
 
 - `posting.md`
-- `fit-analysis.md`
+- `candidate-interview.md`
 - `application-package.md`
 - `resume-draft.md`
-- `cover-letter.md`
-- `submission-checklist.md`
+- `application-package.html`
+- 별도 지원 문항이 있으면 `application-answers.md`
 - `config/candidate-profile.md`
 - 프로필에서 연결한 최신 경력 자료와 업무 근거
 - 선택적으로 `state/positions-queue.jsonl`
@@ -28,7 +29,7 @@ HTML 이력서의 사실 감사와 렌더 평가는 각각 전용 스킬에 맡�
 ## 검토 축
 
 - 공고 적합성: 필수 조건과 역할 해석이 공고 원문과 일치하는지 확인한다.
-- 패키지 정합성: 분석, 전략, 이력서 초안, 지원동기와 체크리스트가 서로 모순되지 않는지 확인한다.
+- 패키지 정합성: 지원 판단, 후보자 답변, 이력서 초안과 별도 지원 문항이 서로 모순되지 않는지 확인한다.
 - 제출 문구 안전성: 프로필 근거보다 강한 수치, 역할, 기술과 인과 표현을 찾는다.
 - 개인정보와 공개 범위: 내부 정보, 타인 정보와 로컬 경로가 제출 문서에 없는지 확인한다.
 - 중복 지원과 진행 제한: 쿨다운, 중복 지원, 마감과 반복 횟수를 확인한다.
@@ -70,10 +71,14 @@ HTML 구조, A4 출력과 렌더 품질은 `resume-evaluator`의 책임이다.
 ## 검증
 
 ```bash
+bun career-os/.claude/skills/application-package-writer/scripts/validate_application_package.ts \
+  <application-directory>
+
 bun career-os/.claude/skills/application-reviewer/scripts/validate_review.ts \
   <application-directory>
 ```
 
+지원 패키지 계약이 먼저 통과해야 review 판정을 확정할 수 있다.
 검증 실패를 수정한 뒤 판정을 확정한다.
 `sources/fos-study/`와 후보자 프로필은 읽기 전용으로 다룬다.
 실제 제출, 로그인, 외부 전송과 공개 발행은 하지 않는다.

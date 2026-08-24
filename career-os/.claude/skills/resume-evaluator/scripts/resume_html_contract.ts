@@ -1,6 +1,6 @@
 export const RESUME_HTML_CONTRACT = {
   pageCount: 2,
-  requiredSectionIds: ["profile", "selected-work", "career", "motivation", "skills"],
+  requiredSectionIds: ["profile", "selected-work", "career", "skills"],
   internalLeakPatterns: [
     /\/Users\//,
     /fos-study/i,

@@ -1,10 +1,9 @@
 export const REQUIRED_APPLICATION_FILES = [
   "posting.md",
-  "fit-analysis.md",
+  "candidate-interview.md",
   "application-package.md",
   "resume-draft.md",
-  "cover-letter.md",
-  "submission-checklist.md",
+  "application-package.html",
 ] as const;
 
 export const REQUIRED_REVIEW_HEADINGS = [

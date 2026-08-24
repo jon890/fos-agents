@@ -13,11 +13,10 @@ type Options = {
   chromeBin: string;
 };
 
-const DEFAULT_APPLICATION_DIR = 'applications/tossplace/applied-ai-engineer';
 const DEFAULT_DESIGN_PATH = 'config/resume-design.md';
 
 function parseArgs(args: string[]): Options {
-  let applicationDir = DEFAULT_APPLICATION_DIR;
+  let applicationDir = '';
   let resumePath = '';
   let designPath = '';
   let htmlPath = '';
@@ -36,6 +35,12 @@ function parseArgs(args: string[]): Options {
       showHelp();
       process.exit(0);
     }
+  }
+
+  if (!applicationDir) {
+    console.error('--application-dir가 필요합니다.');
+    showHelp();
+    process.exit(2);
   }
 
   resumePath = resumePath || join(applicationDir, 'resume-draft.md');
@@ -86,19 +91,42 @@ function escapeHtml(text: string): string {
 function inlineMarkdown(text: string): string {
   const escaped = escapeHtml(text);
   return escaped
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+|mailto:[^\s)]+)\)/g, '<a href="$2">$1</a>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/`([^`]+)`/g, '<code>$1</code>');
 }
 
-function renderMarkdown(markdown: string): string {
+function sectionId(title: string): string | undefined {
+  const normalized = title.replace(/[*`_]/g, '').trim();
+  if (/^(프로필|제출용 요약|요약)/.test(normalized)) return 'profile';
+  if (/^(주요 프로젝트|핵심 경험|선택 경험|맞춤 경력)/.test(normalized)) return 'selected-work';
+  if (/^경력/.test(normalized)) return 'career';
+  if (/^(지원 동기|지원동기)/.test(normalized)) return 'motivation';
+  if (/^(기술|기술 범위|스킬)/.test(normalized)) return 'skills';
+  return undefined;
+}
+
+export function renderMarkdownPages(markdown: string): [string, string] {
   const lines = markdown.replace(/\r\n/g, '\n').split('\n');
-  const html: string[] = [];
+  const pages: [string[], string[]] = [[], []];
+  let pageIndex: 0 | 1 = 0;
   let list: 'ul' | 'ol' | null = null;
+  let sectionOpen = false;
+
+  const html = () => pages[pageIndex];
 
   const closeList = () => {
     if (list) {
-      html.push(`</${list}>`);
+      html().push(`</${list}>`);
       list = null;
+    }
+  };
+
+  const closeSection = () => {
+    closeList();
+    if (sectionOpen) {
+      html().push('</section>');
+      sectionOpen = false;
     }
   };
 
@@ -113,7 +141,15 @@ function renderMarkdown(markdown: string): string {
     if (heading) {
       closeList();
       const level = heading[1].length;
-      html.push(`<h${level}>${inlineMarkdown(heading[2].trim())}</h${level}>`);
+      const title = heading[2].trim();
+      if (level === 2) {
+        closeSection();
+        const id = sectionId(title);
+        if (pageIndex === 0 && (id === 'career' || id === 'skills')) pageIndex = 1;
+        html().push(id ? `<section id="${id}">` : '<section>');
+        sectionOpen = true;
+      }
+      html().push(`<h${level}>${inlineMarkdown(title)}</h${level}>`);
       continue;
     }
 
@@ -122,9 +158,9 @@ function renderMarkdown(markdown: string): string {
       if (list !== 'ul') {
         closeList();
         list = 'ul';
-        html.push('<ul>');
+        html().push('<ul>');
       }
-      html.push(`<li>${inlineMarkdown(unordered[1].trim())}</li>`);
+      html().push(`<li>${inlineMarkdown(unordered[1].trim())}</li>`);
       continue;
     }
 
@@ -133,18 +169,18 @@ function renderMarkdown(markdown: string): string {
       if (list !== 'ol') {
         closeList();
         list = 'ol';
-        html.push('<ol>');
+        html().push('<ol>');
       }
-      html.push(`<li>${inlineMarkdown(ordered[1].trim())}</li>`);
+      html().push(`<li>${inlineMarkdown(ordered[1].trim())}</li>`);
       continue;
     }
 
     closeList();
-    html.push(`<p>${inlineMarkdown(line.trim())}</p>`);
+    html().push(`<p>${inlineMarkdown(line.trim())}</p>`);
   }
 
-  closeList();
-  return html.join('\n');
+  closeSection();
+  return [pages[0].join('\n'), pages[1].join('\n')];
 }
 
 function extractCss(designMarkdown: string): string {
@@ -153,17 +189,23 @@ function extractCss(designMarkdown: string): string {
 
   return `
 @page { size: A4; margin: 14mm; }
-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif; color: #18181b; line-height: 1.45; }
-main { max-width: 760px; margin: 0 auto; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif; color: #18181b; line-height: 1.45; }
+.resume-page { max-width: 760px; min-height: 267mm; margin: 0 auto; }
 h1 { font-size: 24pt; margin: 0 0 8px; }
 h2 { font-size: 12pt; margin: 18px 0 8px; border-bottom: 1px solid #d4d4d8; color: #047857; }
 li { margin: 3px 0; }
+@media print {
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .resume-page { break-after: page; page-break-after: always; }
+  .resume-page:last-child { break-after: auto; page-break-after: auto; }
+}
 `;
 }
 
-function renderHtml(resumeMarkdown: string, designMarkdown: string): string {
+export function renderHtml(resumeMarkdown: string, designMarkdown: string): string {
   const css = extractCss(designMarkdown);
-  const body = renderMarkdown(resumeMarkdown);
+  const [firstPage, secondPage] = renderMarkdownPages(resumeMarkdown);
 
   return `<!doctype html>
 <html lang="ko">
@@ -176,8 +218,11 @@ ${css}
   </style>
 </head>
 <body>
-  <main>
-${body}
+  <main class="resume-page">
+${firstPage}
+  </main>
+  <main class="resume-page">
+${secondPage}
   </main>
 </body>
 </html>
@@ -239,4 +284,4 @@ Options:
 `);
 }
 
-main();
+if (import.meta.main) main();

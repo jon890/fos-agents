@@ -71,14 +71,13 @@ export const SKILL_CONTRACTS: Readonly<Record<string, SkillContract>> = {
       claudeCli: { permissionMode: 'bypassPermissions' },
     },
     description:
-      '공고별 fit-analysis.md + application-package.md + 제출용 Markdown 초안 생성. 근거 없는 주장은 보강 필요 / 선택지 / 권장 행동으로 분리.',
+      '공고별 지원 판단, 후보자 인터뷰, 근거 매핑과 맞춤 이력서를 한 흐름에서 준비하고 하나의 로컬 HTML 검토 화면으로 제공.',
     autonomy: 'agent_only',
     expectedOutputs: [
-      '{applicationDir}/fit-analysis.md',
+      '{applicationDir}/candidate-interview.md',
       '{applicationDir}/application-package.md',
       '{applicationDir}/resume-draft.md',
-      '{applicationDir}/cover-letter.md',
-      '{applicationDir}/submission-checklist.md',
+      '{applicationDir}/application-package.html',
     ],
     touchesFosStudy: false,
     modifiesCandidateProfile: false,
@@ -95,7 +94,7 @@ export const SKILL_CONTRACTS: Readonly<Record<string, SkillContract>> = {
       claudeCli: { permissionMode: 'bypassPermissions' },
     },
     description:
-      '지원 패키지와 제출용 Markdown 초안 심사 — evidence/drift/exaggeration/privacy/resume readiness/cooldown 축 검토 후 pass/revise/blocked 판정.',
+      '자동 상태 전이 또는 명시적인 독립 검토에서 지원 패키지를 교차 검사하고 pass/revise/blocked 판정.',
     autonomy: 'agent_only',
     expectedOutputs: ['{applicationDir}/review.md'],
     touchesFosStudy: false,

@@ -163,12 +163,19 @@ Zod 검증을 통과한 값만 수집 코드가 사용한다.
 
 공고별 `applications/<company>/<position>/`에는 다음 산출물을 둘 수 있다.
 
-- 적합도 분석
-- 지원 패키지
-- 이력서 초안
-- 자기소개 자료
-- 제출 점검표
-- reviewer 판정
+- `candidate-interview.md`: 후보자 원문 답변, 정리한 핵심과 제출 반영 여부
+- `application-package.md`: 공고·회사 기준, 후보자 근거, 지원 판단, 승부처, 공백과 다음 행동을 담은 원본
+- `resume-draft.md`: HTML과 PDF로 변환할 제출용 이력서 원본
+- `application-package.html`: 위 원본과 이력서 초안을 묶은 로컬 검토 화면
+- `application-answers.md`: 지원 사이트가 별도 문항을 요구할 때만 만드는 제출 문구
+- `review.md`: 자동 상태 전이나 독립 검토에 사용하는 내부 판정
+
+기본 산출물은 앞의 네 파일이다.
+`application-answers.md`와 `review.md`는 조건이 맞을 때만 만든다.
+최종 제출 단계에서는 `resume.html`과 `resume.pdf`를 파생한다.
+
+`application-package.md`의 준비 상태는 `ready`, `needs_user_input`, `revise`, `do_not_apply` 중 하나다.
+이 상태는 합격 가능성 점수가 아니라 현재 근거와 사용자 확인을 기준으로 한 제출 준비 상태다.
 
 개인 근거와 면접 준비는 `private/<company>/<position>/`에 둔다.
 

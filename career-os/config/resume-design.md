@@ -60,8 +60,9 @@ body {
   line-height: 1.45;
 }
 
-main {
+.resume-page {
   max-width: 760px;
+  min-height: 267mm;
   margin: 0 auto;
 }
 
@@ -116,5 +117,22 @@ code {
 
 .design-note {
   display: none;
+}
+
+@media print {
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .resume-page {
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .resume-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
 }
 ```

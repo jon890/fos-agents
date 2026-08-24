@@ -9,13 +9,14 @@
 
 ### 결정
 
-- `scripts/application-agent/actions.ts`에 execution gate를 둔다.
+- 검증하는 최신 산출물 목록은 [ADR-103](ADR-103-지원-준비는-단일-사용자-진입점과-내부-검증으로-제공한다.md)이 이 결정을 일부 대체한다.
+- `scripts/application-agent/actions.ts`에 실행 사전 점검을 둔다.
 - 상태 전이를 동반하는 skill 기반 decision은 필수 산출물이 존재할 때만 ledger를 갱신한다.
-  - `run_fit_analysis`: `fit-analysis.md`
-  - `draft_application_package` / `revise_application_package`: `application-package.md`
-  - `call_application_package_writer`: `application-package.md` + `review.md`
+  - `run_fit_analysis`: `application-package.md`
+  - `draft_application_package` / `revise_application_package`: 지원 준비의 기본 원본과 로컬 검토 HTML
+  - `call_application_package_writer`: 지원 준비의 기본 원본, 로컬 검토 HTML과 `review.md`
 - 산출물이 없으면 decision log와 command suggestion은 남기되, ledger status/agentPhase는 변경하지 않는다.
-- safety gate는 금지 action을 막고, execution gate는 아직 수행되지 않은 skill 결과를 근거로 한 false-positive 전이를 막는다.
+- 안전 사전 점검은 금지 action을 막고, 실행 사전 점검은 아직 수행되지 않은 skill 결과를 근거로 한 false-positive 전이를 막는다.
 
 ### 결과
 

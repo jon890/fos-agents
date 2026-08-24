@@ -45,10 +45,17 @@ HTML은 검증된 추천 JSON에서 파생하며 게시 검증 뒤 임시 데이
 
 ## 지원 상태와 패키지
 
-`scripts/application-agent/`는 공고 등록, 우선순위, 패키지 검토 판정, 상태 전이를 담당한다.
+`application-package-writer`는 사용자가 호출하는 지원 준비 진입점이다.
+공고와 회사 기준 확인, 후보자 인터뷰, 근거 매핑과 제출 초안을 한 흐름으로 연결한다.
+`application-reviewer`는 자동 상태 전이와 명시적인 독립 검토에서만 사용하는 내부 검사다.
+
+`scripts/application-agent/`는 공고 등록, 우선순위, 내부 패키지 검토 판정과 상태 전이를 담당한다.
 상태 전이는 `positions_queue_schema.ts`와 안전 검사를 통과한 뒤에만 적용한다.
 
 공고별 문서는 `applications/<company>/<position>/`에 둔다.
+기준 원본은 `candidate-interview.md`, `application-package.md`, `resume-draft.md`다.
+사용자는 이 원본을 묶은 `application-package.html`에서 검토한다.
+별도 지원 문항과 내부 검토 문서는 필요한 경우에만 추가한다.
 개인 근거와 면접 준비 자료는 `private/<company>/<position>/`에 둔다.
 실제 제출은 이 모듈의 책임이 아니다.
 

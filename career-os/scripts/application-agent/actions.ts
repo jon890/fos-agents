@@ -13,8 +13,10 @@ import type { ActionStage } from './priority_schema';
 
 type ArtifactField =
   | 'postingPath'
+  | 'candidateInterviewPath'
   | 'fitAnalysisPath'
   | 'applicationPackagePath'
+  | 'applicationPackageHtmlPath'
   | 'resumeDraftPath'
   | 'coverLetterPath'
   | 'submissionChecklistPath'
@@ -59,10 +61,6 @@ export function buildPreparationActionSuggestions(
         buildSkillCommand('application-package-writer', {
           postingPath: record.postingPath ?? `${record.applicationDir}/posting.md`,
         }),
-        buildSkillCommand('application-reviewer', {
-          applicationDir: record.applicationDir,
-        }),
-        buildSkillCommand('job-fit-analyzer'),
       ];
     case 'investigate':
       return [
@@ -206,17 +204,24 @@ function staleArtifacts(
 ): string[] {
   const applicationPackagePath =
     record.applicationPackagePath ?? join(record.applicationDir, 'application-package.md');
+  const candidateInterviewPath =
+    record.candidateInterviewPath ?? join(record.applicationDir, 'candidate-interview.md');
   const resumeDraftPath = record.resumeDraftPath ?? join(record.applicationDir, 'resume-draft.md');
-  const coverLetterPath = record.coverLetterPath ?? join(record.applicationDir, 'cover-letter.md');
-  const submissionChecklistPath =
-    record.submissionChecklistPath ?? join(record.applicationDir, 'submission-checklist.md');
+  const applicationPackageHtmlPath =
+    record.applicationPackageHtmlPath ?? join(record.applicationDir, 'application-package.html');
   const reviewPath = record.reviewPath ?? join(record.applicationDir, 'review.md');
+  const generatedPaths = [
+    candidateInterviewPath,
+    applicationPackagePath,
+    resumeDraftPath,
+    applicationPackageHtmlPath,
+  ];
 
   if (
     decision.decision === 'revise_application_package' &&
     existsSync(applicationPackagePath) &&
     existsSync(reviewPath) &&
-    [applicationPackagePath, resumeDraftPath, coverLetterPath, submissionChecklistPath].some(
+    generatedPaths.some(
       (path) => existsSync(path) && statSync(path).mtimeMs <= statSync(reviewPath).mtimeMs,
     )
   ) {
@@ -227,11 +232,9 @@ function staleArtifacts(
 
   if (
     decision.decision === 'call_application_package_writer' &&
-    [applicationPackagePath, resumeDraftPath, coverLetterPath, submissionChecklistPath].every(
-      (path) => existsSync(path),
-    ) &&
+    generatedPaths.every((path) => existsSync(path)) &&
     existsSync(reviewPath) &&
-    [applicationPackagePath, resumeDraftPath, coverLetterPath, submissionChecklistPath].some(
+    generatedPaths.some(
       (path) => statSync(reviewPath).mtimeMs < statSync(path).mtimeMs,
     )
   ) {
@@ -267,22 +270,22 @@ export function expectedArtifacts(
   decision: AgentDecision,
 ): ExpectedArtifact[] {
   const postingPath = record.postingPath ?? join(record.applicationDir, 'posting.md');
-  const fitAnalysisPath = record.fitAnalysisPath ?? join(record.applicationDir, 'fit-analysis.md');
+  const candidateInterviewPath =
+    record.candidateInterviewPath ?? join(record.applicationDir, 'candidate-interview.md');
   const applicationPackagePath =
     record.applicationPackagePath ?? join(record.applicationDir, 'application-package.md');
+  const applicationPackageHtmlPath =
+    record.applicationPackageHtmlPath ?? join(record.applicationDir, 'application-package.html');
   const resumeDraftPath = record.resumeDraftPath ?? join(record.applicationDir, 'resume-draft.md');
-  const coverLetterPath = record.coverLetterPath ?? join(record.applicationDir, 'cover-letter.md');
-  const submissionChecklistPath =
-    record.submissionChecklistPath ?? join(record.applicationDir, 'submission-checklist.md');
   const reviewPath = record.reviewPath ?? join(record.applicationDir, 'review.md');
 
   switch (decision.decision) {
     case 'run_fit_analysis':
       return [
         {
-          field: 'fitAnalysisPath',
-          label: 'fit analysis',
-          path: fitAnalysisPath,
+          field: 'applicationPackagePath',
+          label: 'application package',
+          path: applicationPackagePath,
           freshnessRole: 'generated',
         },
       ];
@@ -291,6 +294,12 @@ export function expectedArtifacts(
     case 'revise_application_package':
       return [
         {
+          field: 'candidateInterviewPath',
+          label: 'candidate interview',
+          path: candidateInterviewPath,
+          freshnessRole: 'generated',
+        },
+        {
           field: 'applicationPackagePath',
           label: 'application package',
           path: applicationPackagePath,
@@ -303,15 +312,9 @@ export function expectedArtifacts(
           freshnessRole: 'generated',
         },
         {
-          field: 'coverLetterPath',
-          label: 'cover letter',
-          path: coverLetterPath,
-          freshnessRole: 'generated',
-        },
-        {
-          field: 'submissionChecklistPath',
-          label: 'submission checklist',
-          path: submissionChecklistPath,
+          field: 'applicationPackageHtmlPath',
+          label: 'application package HTML',
+          path: applicationPackageHtmlPath,
           freshnessRole: 'generated',
         },
       ];
@@ -319,6 +322,12 @@ export function expectedArtifacts(
     case 'call_application_package_writer':
       return [
         {
+          field: 'candidateInterviewPath',
+          label: 'candidate interview',
+          path: candidateInterviewPath,
+          freshnessRole: 'generated',
+        },
+        {
           field: 'applicationPackagePath',
           label: 'application package',
           path: applicationPackagePath,
@@ -331,15 +340,9 @@ export function expectedArtifacts(
           freshnessRole: 'generated',
         },
         {
-          field: 'coverLetterPath',
-          label: 'cover letter',
-          path: coverLetterPath,
-          freshnessRole: 'generated',
-        },
-        {
-          field: 'submissionChecklistPath',
-          label: 'submission checklist',
-          path: submissionChecklistPath,
+          field: 'applicationPackageHtmlPath',
+          label: 'application package HTML',
+          path: applicationPackageHtmlPath,
           freshnessRole: 'generated',
         },
         {
@@ -359,9 +362,9 @@ export function expectedArtifacts(
           freshnessRole: 'source',
         },
         {
-          field: 'fitAnalysisPath',
-          label: 'fit analysis',
-          path: fitAnalysisPath,
+          field: 'candidateInterviewPath',
+          label: 'candidate interview',
+          path: candidateInterviewPath,
           freshnessRole: 'generated',
         },
         {
@@ -377,15 +380,9 @@ export function expectedArtifacts(
           freshnessRole: 'generated',
         },
         {
-          field: 'coverLetterPath',
-          label: 'cover letter',
-          path: coverLetterPath,
-          freshnessRole: 'generated',
-        },
-        {
-          field: 'submissionChecklistPath',
-          label: 'submission checklist',
-          path: submissionChecklistPath,
+          field: 'applicationPackageHtmlPath',
+          label: 'application package HTML',
+          path: applicationPackageHtmlPath,
           freshnessRole: 'generated',
         },
         {
@@ -413,7 +410,6 @@ function buildCommandSuggestions(
         buildSkillCommand('application-package-writer', {
           postingPath: record.postingPath ?? join(record.applicationDir, 'posting.md'),
         }),
-        buildSkillCommand('application-reviewer', { applicationDir: record.applicationDir }),
       ];
 
     case 'run_fit_analysis':

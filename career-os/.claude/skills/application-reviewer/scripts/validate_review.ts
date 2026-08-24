@@ -56,7 +56,7 @@ export function validateReview(applicationDirectory: string): ReviewValidation {
     errors.push("사용자 검토 문서에 내부 상태명 needs_evidence를 노출하지 않습니다.");
   }
 
-  const submissionFiles = ["resume-draft.md", "cover-letter.md"] as const;
+  const submissionFiles = ["resume-draft.md", "application-answers.md"] as const;
   for (const file of submissionFiles) {
     const path = join(directory, file);
     if (!existsSync(path)) continue;

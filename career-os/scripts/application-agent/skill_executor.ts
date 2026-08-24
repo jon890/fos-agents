@@ -71,7 +71,7 @@ export async function executeRequiredSkills(
     );
 
     const run = await runClaudeCliBackend(invocation, opts.timeoutMs);
-    if (!run.ok) {
+    if (run.ok === false) {
       result.failed = `${invocation.skillName}: ${run.error}`;
       await opts.notify?.(
         [
@@ -116,20 +116,22 @@ function skillInvocationsForDecision(
   decision: AgentDecision,
 ): SkillInvocation[] {
   const postingPath = record.postingPath ?? join(record.applicationDir, 'posting.md');
-  const fitAnalysisPath = record.fitAnalysisPath ?? join(record.applicationDir, 'fit-analysis.md');
+  const candidateInterviewPath =
+    record.candidateInterviewPath ?? join(record.applicationDir, 'candidate-interview.md');
   const applicationPackagePath =
     record.applicationPackagePath ?? join(record.applicationDir, 'application-package.md');
+  const applicationPackageHtmlPath =
+    record.applicationPackageHtmlPath ?? join(record.applicationDir, 'application-package.html');
   const reviewPath = record.reviewPath ?? join(record.applicationDir, 'review.md');
 
   const packageWriter: SkillInvocation = {
     skillName: 'application-package-writer',
     substitutions: { postingPath },
     expectedOutputs: [
-      fitAnalysisPath,
+      candidateInterviewPath,
       applicationPackagePath,
       join(record.applicationDir, 'resume-draft.md'),
-      join(record.applicationDir, 'cover-letter.md'),
-      join(record.applicationDir, 'submission-checklist.md'),
+      applicationPackageHtmlPath,
     ],
   };
   const reviewer: SkillInvocation = {
@@ -144,7 +146,7 @@ function skillInvocationsForDecision(
       return [
         {
           ...packageWriter,
-          expectedOutputs: [fitAnalysisPath],
+          expectedOutputs: [applicationPackagePath],
         },
       ];
     case 'draft_application_package':
