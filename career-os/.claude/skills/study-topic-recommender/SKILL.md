@@ -24,17 +24,20 @@ description: 등록된 회사 기술 블로그, GeekNews, AI 공식 문서·연�
 ### 1. 임시 실행 경로 준비
 
 ```bash
-mktemp -d -t study-topic-recommender
+mktemp -d "${TMPDIR:-/tmp}/study-topic-recommender.XXXXXX"
 ```
 
 반환된 절대 경로를 `<RUN_DIR>`로 사용한다.
 후보풀, 선택 JSON, 추천 데이터, Markdown과 HTML은 모두 `<RUN_DIR>`에 만든다.
 기존 추천 이력을 활용할 때 `<RUN_DIR>/state/`에 복사한다.
 
+TypeScript 실행기 `<TS_RUNTIME>`은 `bun`이 있으면 `bun`, 없으면 TypeScript를 직접 실행할 수 있는 Node.js 22.18 이상을 사용한다.
+둘 다 사용할 수 없으면 실행을 중단하고 필요한 런타임을 알린다.
+
 ### 2. 외부 글 수집
 
 ```bash
-CAREER_OS_ROOT=<RUN_DIR> bun --env-file=.env \
+CAREER_OS_ROOT=<RUN_DIR> <TS_RUNTIME> --env-file=.env \
   scripts/study-topic-recommender/build_morning_reading.ts \
   --collect-only
 ```
@@ -123,7 +126,7 @@ git -C sources/fos-study log -n 20 --name-only --format= -- '*.md'
 ### 4. 임시 리포트 생성
 
 ```bash
-CAREER_OS_ROOT=<RUN_DIR> bun --env-file=.env \
+CAREER_OS_ROOT=<RUN_DIR> <TS_RUNTIME> --env-file=.env \
   scripts/study-topic-recommender/build_morning_reading.ts \
   --candidate-pool <RUN_DIR>/state/reading-candidates.json \
   --reading-selection <RUN_DIR>/reading-selection.json
@@ -134,9 +137,9 @@ CAREER_OS_ROOT=<RUN_DIR> bun --env-file=.env \
 ### 5. 검증
 
 ```bash
-CAREER_OS_ROOT=<RUN_DIR> bun \
+CAREER_OS_ROOT=<RUN_DIR> <TS_RUNTIME> \
   scripts/study-topic-recommender/validate_outputs.ts
-bun scripts/study-topic-recommender/manage_reading_sources.ts validate
+<TS_RUNTIME> scripts/study-topic-recommender/manage_reading_sources.ts validate
 ```
 
 `collectionLog`의 수집 상태를 최종 응답에 반영한다.
@@ -156,18 +159,25 @@ bun scripts/study-topic-recommender/manage_reading_sources.ts validate
 - 공개 이름: `morning-YYYY-MM-DD`
 - Pages 프로젝트: `fos-reports`
 
-검증된 `public_url`과 핵심 추천 결과를 최종 응답에 전달한다.
-`branch_url` 검증 결과가 있으면 안정적인 주소로 함께 전달한다.
+검증된 `branch_url`이 있으면 안정적인 사용자용 주소로 우선 전달한다.
+`branch_url`이 없거나 검증에 실패한 경우에만 검증된 `public_url`을 전달한다.
+핵심 추천 결과는 최종 공개 리포트와 일치시킨다.
 
 ### 7. 임시 파일 정리
 
 게시 검증 뒤 `<RUN_DIR>`의 파일과 빈 디렉터리를 순서대로 정리한다.
 삭제 전 경로가 시스템 임시 디렉터리 아래에 있고 이름이 `study-topic-recommender`로 시작하는지 확인한다.
+아래 두 명령은 각각 별도의 terminal 호출로 실행한다.
+조건문, `rm`, `node -e`나 다른 명령과 한 호출에 합치지 않는다.
 
 ```bash
 find "<RUN_DIR>" -type f -exec unlink {} \;
 find "<RUN_DIR>" -depth -type d -exec rmdir {} \;
 ```
+
+별도 미리보기 파일을 만들었다면 각 파일을 `unlink "<절대 경로>"` 한 호출로 정리한다.
+리포트 게시와 공개 URL 검증이 끝난 뒤 정리만 실패하면 전체 작업을 실패로 바꾸지 않는다.
+검증된 링크와 추천 결과를 전달하고 정리하지 못한 경로를 경고로 남긴다.
 
 사용자가 로컬 사본을 요청하면 지정한 경로에 별도 파일을 만든다.
 
@@ -179,4 +189,4 @@ find "<RUN_DIR>" -depth -type d -exec rmdir {} \;
 - 요약과 추천 이유가 확인한 원문을 반영한다.
 - 리포트와 소스 설정 검증이 통과했다.
 - `report-publisher`가 Cloudflare Pages 공개 URL을 검증했다.
-- `<RUN_DIR>` 제거가 성공했다.
+- `<RUN_DIR>` 정리를 시도했고, 실패한 경우 게시 성공을 덮어쓰지 않는 경고로 기록했다.
