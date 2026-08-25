@@ -3,15 +3,18 @@ import {
   chmodSync,
   closeSync,
   existsSync,
+  linkSync,
+  lstatSync,
   mkdirSync,
   openSync,
   readFileSync,
   readdirSync,
   renameSync,
+  statSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { basename, extname, join, parse, resolve } from "node:path";
+import { basename, dirname, extname, isAbsolute, join, parse, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { z } from "zod";
 import {
@@ -20,7 +23,9 @@ import {
   type WeeklyState,
   type WeeklyStateItem,
   weeklyStateSchema,
+  type WeeklyLastErrorCode,
   type WeeklyTerminalStatus,
+  weeklyQueueSchema,
   type WeeklyWorkItem,
 } from "./contracts.ts";
 
@@ -173,6 +178,12 @@ function terminalDirectoryForStatus(privateRoot: string, status: WeeklyTerminalS
   return layout.failedDir;
 }
 
+function recoveredPairErrorCode(status: WeeklyTerminalStatus): WeeklyLastErrorCode | null {
+  if (status === "submitted") return null;
+  if (status === "needs_review") return "RECOVERED_NEEDS_REVIEW_PAIR";
+  return "RECOVERED_FAILED_PAIR";
+}
+
 function listMaybePairs(directory: string): MaybePair[] {
   if (!existsSync(directory)) return [];
   const pairs = new Map<string, MaybePair>();
@@ -301,7 +312,6 @@ function quarantineInvalidPairs(privateRoot: string, state: WeeklyState, now?: D
         if (manifest.imageFile !== basename(pair.imagePath)) throw new Error("MANIFEST_IMAGE_FILE_MISMATCH");
       } catch {
         const imageSha256 = computeSha256(pair.imagePath);
-        moveMaybePairToFailed(privateRoot, pair);
         const previous = state.items[imageSha256];
         state.items[imageSha256] = {
           status: "failed",
@@ -311,6 +321,9 @@ function quarantineInvalidPairs(privateRoot: string, state: WeeklyState, now?: D
           selectedDates: previous?.selectedDates ?? [],
           updatedAt: nowIso(now),
         };
+        weeklyStateSchema.parse(state);
+        writeWeeklyState(privateRoot, state);
+        moveMaybePairToFailed(privateRoot, pair);
         changed = true;
       }
     }
@@ -329,7 +342,7 @@ function reconcileTerminalPairs(privateRoot: string, state: WeeklyState, now?: D
       const item = state.items[imageSha256];
       if (item?.status !== "processing") continue;
       item.status = status;
-      item.lastErrorCode = status === "submitted" ? null : `RECOVERED_${status.toUpperCase()}_PAIR`;
+      item.lastErrorCode = recoveredPairErrorCode(status);
       item.updatedAt = nowIso(now);
       changed = true;
     }
@@ -358,6 +371,43 @@ function reconcileTerminalSplitPairs(privateRoot: string, state: WeeklyState): v
   }
 }
 
+function reconcileFailedInvalidSplitPairs(privateRoot: string, state: WeeklyState, now?: Date): boolean {
+  const layout = ensureWeeklyPrivateLayout(privateRoot);
+  const sourcePairs = [
+    ...listMaybePairs(layout.newDir),
+    ...listMaybePairs(layout.processingDir),
+  ];
+  const sourceManifests = new Map(
+    sourcePairs
+      .filter((pair) => pair.manifestPath)
+      .map((pair) => [pair.base, pair.manifestPath as string]),
+  );
+  let changed = false;
+  for (const failedPair of listMaybePairs(layout.failedDir)) {
+    if (!failedPair.imagePath || failedPair.manifestPath) continue;
+    const sourceManifestPath = sourceManifests.get(failedPair.base);
+    if (!sourceManifestPath) continue;
+    const targetManifestPath = join(layout.failedDir, basename(sourceManifestPath));
+    if (existsSync(targetManifestPath)) throw new Error("TARGET_ALREADY_EXISTS");
+    safeRename(sourceManifestPath, targetManifestPath);
+    chmodSync(targetManifestPath, 0o600);
+    const imageSha256 = computeSha256(failedPair.imagePath);
+    const previous = state.items[imageSha256];
+    if (previous?.status !== "failed" || previous.lastErrorCode !== "INVALID_INBOX_MANIFEST") {
+      state.items[imageSha256] = {
+        status: "failed",
+        batchId: previous?.batchId ?? null,
+        attempts: previous?.attempts ?? 0,
+        lastErrorCode: "INVALID_INBOX_MANIFEST",
+        selectedDates: previous?.selectedDates ?? [],
+        updatedAt: nowIso(now),
+      };
+      changed = true;
+    }
+  }
+  return changed;
+}
+
 function reconcileProcessingPairs(privateRoot: string, state: WeeklyState, now?: Date): boolean {
   let changed = false;
   for (const pair of listCompletePairs(privateRoot, "processing")) {
@@ -378,27 +428,47 @@ export function reconcileWeeklyInbox(privateRoot: string, now?: Date): WeeklySta
   ensureWeeklyPrivateLayout(privateRoot);
   mergeSplitPairs(privateRoot);
   const state = loadWeeklyState(privateRoot);
+  const invalidSplitChanged = reconcileFailedInvalidSplitPairs(privateRoot, state, now);
   const quarantineChanged = quarantineInvalidPairs(privateRoot, state, now);
   const terminalChanged = reconcileTerminalPairs(privateRoot, state, now);
   reconcileTerminalSplitPairs(privateRoot, state);
   const processingChanged = reconcileProcessingPairs(privateRoot, state, now);
-  if (quarantineChanged || terminalChanged || processingChanged) writeWeeklyState(privateRoot, state);
+  if (invalidSplitChanged || quarantineChanged || terminalChanged || processingChanged) writeWeeklyState(privateRoot, state);
   return state;
 }
 
 function createLockFile(lockPath: string, payload: LockFile): boolean {
+  const tempPath = join(
+    dirname(lockPath),
+    `.${basename(lockPath)}.${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`,
+  );
   let fd = -1;
+  let tempCreated = false;
   try {
-    fd = openSync(lockPath, "wx", 0o600);
+    fd = openSync(tempPath, "wx", 0o600);
+    tempCreated = true;
     writeFileSync(fd, `${JSON.stringify(payload, null, 2)}\n`);
     closeSync(fd);
     fd = -1;
+    chmodSync(tempPath, 0o600);
+    linkSync(tempPath, lockPath);
     chmodSync(lockPath, 0o600);
     return true;
   } catch (error) {
     if (fd >= 0) closeSync(fd);
-    if (error && typeof error === "object" && "code" in error && error.code === "EEXIST") return false;
+    if (error && typeof error === "object" && "code" in error && error.code === "EEXIST" && tempCreated) return false;
     throw error;
+  } finally {
+    if (existsSync(tempPath)) unlinkSync(tempPath);
+  }
+}
+
+function readExistingLockOrStaleDecision(lockPath: string, now?: Date): { existing: LockFile | null; stale: boolean } {
+  try {
+    const existing = lockFileSchema.parse(JSON.parse(readFileSync(lockPath, "utf8")));
+    return { existing, stale: nowMillis(now) - Date.parse(existing.lockedAt) >= LOCK_LEASE_MS };
+  } catch {
+    return { existing: null, stale: nowMillis(now) - statSync(lockPath).mtimeMs >= LOCK_LEASE_MS };
   }
 }
 
@@ -419,10 +489,10 @@ export function acquireWeeklyRunLock(
     if (!createLockFile(lockPath, lockPayload)) throw new Error("LOCK_ALREADY_EXISTS");
   } catch (error) {
     if (!(error instanceof Error) || error.message !== "LOCK_ALREADY_EXISTS") throw error;
-    const existing = lockFileSchema.parse(JSON.parse(readFileSync(lockPath, "utf8")));
-    if (existing.runId === runId) {
+    const { existing, stale } = readExistingLockOrStaleDecision(lockPath, now);
+    if (existing?.runId === runId) {
       chmodSync(lockPath, 0o600);
-    } else if (nowMillis(now) - Date.parse(existing.lockedAt) >= LOCK_LEASE_MS) {
+    } else if (stale) {
       const stalePath = join(locksDir, `.weekly-import.lock.stale.${Date.now()}.${process.pid}.${Math.random().toString(16).slice(2)}`);
       try {
         renameSync(lockPath, stalePath);
@@ -511,17 +581,39 @@ function parseArgs(args: string[]): { privateRoot: string; runId: string; output
   return { privateRoot, runId, output };
 }
 
+function resolveOutputPathUnderState(privateRoot: string, output: string): string {
+  const { stateDir } = ensureWeeklyPrivateLayout(privateRoot);
+  const stateRoot = resolve(stateDir);
+  const outputPath = resolve(output);
+  try {
+    lstatSync(outputPath);
+    throw new Error("TARGET_ALREADY_EXISTS");
+  } catch (error) {
+    if (!(error && typeof error === "object" && "code" in error && error.code === "ENOENT")) throw error;
+  }
+  const parentPath = resolve(dirname(outputPath));
+  const relativeParentPath = relative(stateRoot, parentPath);
+  if (relativeParentPath.startsWith("..") || isAbsolute(relativeParentPath)) {
+    throw new Error("OUTPUT_OUTSIDE_PRIVATE_STATE");
+  }
+  const relativePath = relative(stateRoot, outputPath);
+  if (relativePath === "" || relativePath.startsWith("..") || isAbsolute(relativePath)) {
+    throw new Error("OUTPUT_OUTSIDE_PRIVATE_STATE");
+  }
+  return outputPath;
+}
+
 export function main(args = process.argv.slice(2)): void {
   const options = parseArgs(args);
-  if (existsSync(options.output)) throw new Error("TARGET_ALREADY_EXISTS");
+  const outputPath = resolveOutputPathUnderState(options.privateRoot, options.output);
   acquireWeeklyRunLock(options.privateRoot, options.runId);
   const items = scanAndClaimInbox({ privateRoot: options.privateRoot, runId: options.runId });
-  writeJsonFile0600(options.output, {
+  writeJsonFile0600(outputPath, weeklyQueueSchema.parse({
     schemaVersion: 1,
     runId: options.runId,
     generatedAt: nowIso(),
     items,
-  }, false);
+  }), false);
 }
 
 const entrypoint = process.argv[1] ? pathToFileURL(process.argv[1]).href : "";

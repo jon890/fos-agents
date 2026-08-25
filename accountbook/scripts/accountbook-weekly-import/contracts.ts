@@ -30,11 +30,23 @@ export const weeklyTerminalStatusSchema = z.enum([
   "failed",
 ]);
 
+export const weeklyLastErrorCodeSchema = z.enum([
+  "ACCOUNTBOOK_API_4XX",
+  "EXISTING_TRANSACTION_REQUIRES_REVIEW",
+  "INVALID_INBOX_MANIFEST",
+  "RECOVERED_FAILED_PAIR",
+  "RECOVERED_NEEDS_REVIEW_PAIR",
+  "SUBMIT_REQUIRES_REVIEW",
+  "WEEKLY_DATE_CONFLICT",
+  "WEEKLY_INPUT_INVALID",
+  "WEEKLY_POLICY_REJECTED",
+]);
+
 export const weeklyStateItemSchema = z.object({
   status: weeklyItemStatusSchema,
   batchId: z.string().regex(/^toss-[a-f0-9]{16}$/).nullable(),
   attempts: z.number().int().nonnegative(),
-  lastErrorCode: z.string().trim().min(1).max(100).nullable(),
+  lastErrorCode: weeklyLastErrorCodeSchema.nullable(),
   selectedDates: z.array(isoDateSchema),
   updatedAt: isoDateTimeSchema,
 });
@@ -55,9 +67,29 @@ export const weeklyWorkItemSchema = z.object({
   state: weeklyStateItemSchema,
 });
 
+export const weeklyQueueSchema = z.object({
+  schemaVersion: z.literal(1),
+  runId: z.string().trim().min(1),
+  generatedAt: isoDateTimeSchema,
+  items: z.array(weeklyWorkItemSchema),
+});
+
+export const weeklyRunPlanSchema = z.object({
+  schemaVersion: z.literal(1),
+  runId: z.string().trim().min(1),
+  queuePath: z.string().trim().min(1),
+  items: z.array(z.object({
+    imageSha256: z.string().regex(/^[a-f0-9]{64}$/),
+    validatedPath: z.string().trim().min(1),
+  })),
+});
+
 export type InboxSidecarManifest = z.infer<typeof inboxSidecarManifestSchema>;
 export type WeeklyItemStatus = z.infer<typeof weeklyItemStatusSchema>;
 export type WeeklyTerminalStatus = z.infer<typeof weeklyTerminalStatusSchema>;
+export type WeeklyLastErrorCode = z.infer<typeof weeklyLastErrorCodeSchema>;
 export type WeeklyStateItem = z.infer<typeof weeklyStateItemSchema>;
 export type WeeklyState = z.infer<typeof weeklyStateSchema>;
 export type WeeklyWorkItem = z.infer<typeof weeklyWorkItemSchema>;
+export type WeeklyQueue = z.infer<typeof weeklyQueueSchema>;
+export type WeeklyRunPlan = z.infer<typeof weeklyRunPlanSchema>;

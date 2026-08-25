@@ -6,7 +6,8 @@ description: 주간 inbox의 토스 소비 화면 PNG와 sidecar manifest를 비
 # accountbook-weekly-import
 
 주간 inbox의 신규 토스 화면을 처리하고, 안전 정책을 통과한 항목만 accountbook에 등록한다.
-이 skill은 여러 이미지를 조정하는 역할만 맡고, OCR 판정과 API 전송 안전성은 결정적 script에 맡긴다.
+이 skill은 이미지 추출과 validated plan 생성까지만 조정한다.
+날짜 충돌, 정책 평가, 제출, finalize, lock 해제는 `run_weekly_import.ts`가 맡는다.
 
 ## 입력과 실행 경계
 
@@ -69,76 +70,55 @@ queue가 비어 있으면 성공으로 종료하고 `finally`에서 lock 해제�
   --output <RUN_DIR>/validated.json
 ```
 
-8. 각 item마다 validator가 선택한 날짜를 `finalize_inbox.ts record-dates`로 기록한다.
+8. 모든 item의 validated 결과를 모아 run plan을 만든다.
+   plan은 `accountbook/private/state/<RUN_ID>-<ATTEMPT_ID>-plan.json`에 파일 mode `0600`으로 저장한다.
+   `queuePath`와 각 `validatedPath`는 `accountbook/private` 아래의 절대 경로여야 한다.
+   manifest 경로는 plan에 복제하지 말고 queue에서 가져온다.
+   vision 또는 validation 단계에서 확정 실패한 item은 안정 코드로 `failed` finalize한 뒤 plan에서 제외할 수 있다.
+   아직 `processing`인 item은 plan에서 누락하지 않는다.
+
+```json
+{
+  "schemaVersion": 1,
+  "runId": "<RUN_ID>",
+  "queuePath": "<ABSOLUTE_PRIVATE_ROOT>/state/<RUN_ID>-<ATTEMPT_ID>-queue.json",
+  "items": [
+    {
+      "imageSha256": "<64 hex>",
+      "validatedPath": "<ABSOLUTE_PRIVATE_ROOT>/imports/<BATCH_ID>/validated.json"
+    }
+  ]
+}
+```
+
+9. plan을 `run_weekly_import.ts`에 넘긴다.
+   이 script가 다음 작업을 순서대로 처리한다.
+
+- plan 경로가 privateRoot 밖이면 API 호출 전에 중단한다.
+- queue와 plan의 `runId`가 다르면 API 호출 전에 중단한다.
+- 현재 `processing`인 queue item과 plan의 hash 집합이 다르거나 중복 hash가 있으면 API 호출 전에 중단한다.
+- state가 `processing`인 item만 처리한다.
+- 모든 `validated.json`을 먼저 parse한다.
+- 모든 이미지의 선택 날짜를 state에 기록한다.
+- 이미지 간 날짜 충돌을 사전 점검한다.
+- 날짜 충돌 item은 `needs_review`로 finalize하고 POST하지 않는다.
+- `weekly-safe-v1` 정책을 통과한 item만 `approved.json`으로 submit한다.
+- submit 결과를 안정 코드로 분류해 finalize한다.
+- `finally`에서 같은 `runId` lock 해제를 시도한다.
 
 ```bash
-<TS_RUNTIME> accountbook/scripts/accountbook-weekly-import/finalize_inbox.ts record-dates \
+<TS_RUNTIME> accountbook/scripts/accountbook-weekly-import/run_weekly_import.ts \
   --private-root accountbook/private \
-  --image-sha256 <IMAGE_SHA256> \
-  --selected-dates <YYYY-MM-DD[,YYYY-MM-DD...]>
-```
-
-9. 모든 item의 `selectedDates`를 모은다.
-   같은 날짜가 둘 이상의 이미지에 있으면 관련 item은 모두 `needs_review`로 finalize하고, 해당 item은 POST하지 않는다.
-
-```bash
-<TS_RUNTIME> accountbook/scripts/accountbook-weekly-import/finalize_inbox.ts finalize \
-  --private-root accountbook/private \
-  --image-sha256 <IMAGE_SHA256> \
-  --status needs_review \
-  --last-error-code WEEKLY_DATE_CONFLICT
-```
-
-10. 날짜 충돌이 없는 item만 `evaluate_policy.ts`로 평가한다.
-   `weekly-policy.json`은 감사용이고, `submit_import.ts`에는 전달하지 않는다.
-
-```bash
-<TS_RUNTIME> accountbook/scripts/accountbook-weekly-import/evaluate_policy.ts \
-  --validated <RUN_DIR>/validated.json \
-  --manifest <WORK_ITEM_MANIFEST_PATH> \
-  --policy-output <RUN_DIR>/weekly-policy.json \
-  --approved-output <RUN_DIR>/approved.json
-```
-
-`evaluate_policy.ts`가 exit `3`이면 정책 차단이다.
-이 경우 `needs_review`로 finalize하고 POST하지 않는다.
-exit `2`이면 입력 오류나 형식 오류이므로 `failed`로 finalize한다.
-
-11. `eligible`이 `true`인 item만 `approved.json`을 `submit_import.ts`에 전달한다.
-   `eligible`이 `false`이면 `needs_review`로 finalize한다.
-
-```bash
-<TS_RUNTIME> accountbook/scripts/accountbook-screenshot-import/submit_import.ts \
-  --input <RUN_DIR>/approved.json \
-  --state-dir accountbook/private/state \
-  --env accountbook/.env \
-  --confirm <BATCH_ID>
-```
-
-12. submit 결과를 안정 코드로 분류해 finalize한다.
-
-```bash
-<TS_RUNTIME> accountbook/scripts/accountbook-weekly-import/finalize_inbox.ts finalize \
-  --private-root accountbook/private \
-  --image-sha256 <IMAGE_SHA256> \
-  --status submitted \
-  --batch-id <BATCH_ID>
+  --plan accountbook/private/state/<RUN_ID>-<ATTEMPT_ID>-plan.json \
+  --env accountbook/.env
 ```
 
 - submit 성공: `submitted`
-- 정책 차단 exit `3`: `needs_review`, `lastErrorCode=WEEKLY_POLICY_REJECTED`
+- 정책 차단: `needs_review`, `lastErrorCode=WEEKLY_POLICY_REJECTED`
 - 기존 동일 거래: `needs_review`, `lastErrorCode=EXISTING_TRANSACTION_REQUIRES_REVIEW`
 - 명확한 API 4xx 같은 확정 실패: `failed`, `lastErrorCode=ACCOUNTBOOK_API_4XX`
 - 네트워크 단절, timeout, 연결 종료처럼 POST 결과가 불명확한 실패: finalize하지 않고 `processing`을 유지한다.
   재실행은 private submission state와 기존 거래 조회로만 복구한다.
-
-13. 어떤 중간 오류가 있어도 `finally`에서 같은 `runId`로 `release-lock`을 시도한다.
-
-```bash
-<TS_RUNTIME> accountbook/scripts/accountbook-weekly-import/finalize_inbox.ts release-lock \
-  --private-root accountbook/private \
-  --run-id <RUN_ID>
-```
 
 ## POST 안전 규칙
 

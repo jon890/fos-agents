@@ -3,6 +3,8 @@ import { basename, extname, join, parse } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   isoDateSchema,
+  weeklyLastErrorCodeSchema,
+  type WeeklyLastErrorCode,
   weeklyTerminalStatusSchema,
   type WeeklyTerminalStatus,
   weeklyStateSchema,
@@ -27,7 +29,7 @@ export type FinalizeInboxItemOptions = {
   imageSha256: string;
   status: WeeklyTerminalStatus;
   batchId?: string | null;
-  lastErrorCode?: string | null;
+  lastErrorCode?: WeeklyLastErrorCode | null;
   now?: Date;
 };
 
@@ -109,7 +111,7 @@ type FinalizeCliOptions = {
   selectedDates: string[];
   status: WeeklyTerminalStatus | "";
   batchId: string | null;
-  lastErrorCode: string | null;
+  lastErrorCode: WeeklyLastErrorCode | null;
   runId: string;
 };
 
@@ -132,7 +134,7 @@ function parseArgs(args: string[]): FinalizeCliOptions {
     else if (arg === "--selected-dates") options.selectedDates = (args[++index] ?? "").split(",").filter(Boolean);
     else if (arg === "--status") options.status = weeklyTerminalStatusSchema.parse(args[++index] ?? "");
     else if (arg === "--batch-id") options.batchId = args[++index] ?? "";
-    else if (arg === "--last-error-code") options.lastErrorCode = args[++index] ?? "";
+    else if (arg === "--last-error-code") options.lastErrorCode = weeklyLastErrorCodeSchema.parse(args[++index] ?? "");
     else if (arg === "--run-id") options.runId = args[++index] ?? "";
     else throw new Error(`UNKNOWN_ARGUMENT:${arg}`);
   }

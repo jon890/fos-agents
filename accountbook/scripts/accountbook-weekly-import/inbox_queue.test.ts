@@ -7,10 +7,12 @@ import {
   renameSync,
   rmSync,
   statSync,
+  symlinkSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import { createHash } from "node:crypto";
 import { finalizeInboxItem, recordValidatedDates } from "./finalize_inbox.ts";
 import {
@@ -181,6 +183,33 @@ describe("weekly inbox queue", () => {
       .toBe(false);
   });
 
+  test("partial legacy lock은 24시간 전까지 다른 run을 차단한다", () => {
+    const privateRoot = makePrivateRoot();
+    const { locksDir } = ensureWeeklyPrivateLayout(privateRoot);
+    const lockPath = join(locksDir, "weekly-import.lock");
+    writeFileSync(lockPath, "", { mode: 0o600 });
+    utimesSync(lockPath, new Date("2026-08-21T00:00:00.000Z"), new Date("2026-08-21T00:00:00.000Z"));
+
+    expect(() => acquireWeeklyRunLock(privateRoot, "run-2", new Date("2026-08-21T23:59:59.000Z")))
+      .toThrow("WEEKLY_IMPORT_LOCKED");
+    expect(readFileSync(lockPath, "utf8")).toBe("");
+  });
+
+  test("24시간 이상 지난 partial legacy lock은 mtime 기준으로 인계한다", () => {
+    const privateRoot = makePrivateRoot();
+    const { locksDir } = ensureWeeklyPrivateLayout(privateRoot);
+    const lockPath = join(locksDir, "weekly-import.lock");
+    writeFileSync(lockPath, "{", { mode: 0o600 });
+    utimesSync(lockPath, new Date("2026-08-20T00:00:00.000Z"), new Date("2026-08-20T00:00:00.000Z"));
+
+    const takeover = acquireWeeklyRunLock(privateRoot, "run-2", new Date("2026-08-21T00:00:01.000Z"));
+
+    expect(takeover.lockPath).toBe(lockPath);
+    expect(JSON.parse(readFileSync(lockPath, "utf8")).runId).toBe("run-2");
+    expect(readdirSorted(locksDir).some((entry) => entry.endsWith(".tmp"))).toBe(false);
+    expect(readdirSorted(locksDir).some((entry) => entry.startsWith(".weekly-import.lock.stale."))).toBe(false);
+  });
+
   test("stale lock 인계 뒤 새 owner lock을 지우지 않고 quarantine은 삭제한다", () => {
     const privateRoot = makePrivateRoot();
     acquireWeeklyRunLock(privateRoot, "run-1", new Date("2026-08-20T00:00:00.000Z"));
@@ -236,7 +265,7 @@ describe("weekly inbox queue", () => {
 
   test("scan CLI는 lock을 유지하고 mode 0600 queue JSON을 쓴다", () => {
     const privateRoot = makePrivateRoot();
-    const queuePath = join(privateRoot, "queue.json");
+    const queuePath = join(privateRoot, "state", "queue.json");
     writeInboxPair(privateRoot);
 
     const result = runBunScript([
@@ -253,13 +282,15 @@ describe("weekly inbox queue", () => {
     const queue = JSON.parse(readFileSync(queuePath, "utf8"));
     expect(queue.runId).toBe("run-1");
     expect(queue.items).toHaveLength(1);
+    expect(isAbsolute(queue.items[0].imagePath)).toBe(true);
+    expect(isAbsolute(queue.items[0].manifestPath)).toBe(true);
     expect(statSync(queuePath).mode & 0o777).toBe(0o600);
     expect(existsSync(join(privateRoot, "state", "locks", "weekly-import.lock"))).toBe(true);
   });
 
   test("scan CLI는 기존 queue output을 overwrite하지 않고 실패한다", () => {
     const privateRoot = makePrivateRoot();
-    const queuePath = join(privateRoot, "queue.json");
+    const queuePath = join(privateRoot, "state", "queue.json");
     ensureWeeklyPrivateLayout(privateRoot);
     writeFileSync(queuePath, "{}\n", { mode: 0o600 });
 
@@ -274,6 +305,47 @@ describe("weekly inbox queue", () => {
     ]);
 
     expect(result.exitCode).not.toBe(0);
+    expect(existsSync(join(privateRoot, "state", "locks", "weekly-import.lock"))).toBe(false);
+  });
+
+  test("scan CLI는 output이 dangling symlink이면 lock 전에 실패한다", () => {
+    const privateRoot = makePrivateRoot();
+    const queuePath = join(privateRoot, "state", "dangling-queue.json");
+    ensureWeeklyPrivateLayout(privateRoot);
+    symlinkSync(join(privateRoot, "state", "missing-target.json"), queuePath);
+
+    const result = runBunScript([
+      "accountbook/scripts/accountbook-weekly-import/scan_inbox.ts",
+      "--private-root",
+      privateRoot,
+      "--run-id",
+      "run-1",
+      "--output",
+      queuePath,
+    ]);
+
+    expect(result.exitCode).not.toBe(0);
+    expect(new TextDecoder().decode(result.stderr)).toContain("TARGET_ALREADY_EXISTS");
+    expect(existsSync(join(privateRoot, "state", "locks", "weekly-import.lock"))).toBe(false);
+  });
+
+  test("scan CLI는 output이 privateRoot/state 밖이면 lock 전에 실패한다", () => {
+    const privateRoot = makePrivateRoot();
+    const queuePath = join(privateRoot, "queue.json");
+    ensureWeeklyPrivateLayout(privateRoot);
+
+    const result = runBunScript([
+      "accountbook/scripts/accountbook-weekly-import/scan_inbox.ts",
+      "--private-root",
+      privateRoot,
+      "--run-id",
+      "run-1",
+      "--output",
+      queuePath,
+    ]);
+
+    expect(result.exitCode).not.toBe(0);
+    expect(new TextDecoder().decode(result.stderr)).toContain("OUTPUT_OUTSIDE_PRIVATE_STATE");
     expect(existsSync(join(privateRoot, "state", "locks", "weekly-import.lock"))).toBe(false);
   });
 
@@ -336,6 +408,29 @@ describe("weekly inbox queue", () => {
     });
   });
 
+  test("invalid manifest 격리 중 image만 failed로 이동된 split pair는 다음 scan에서 수렴한다", () => {
+    const privateRoot = makePrivateRoot();
+    writeInboxPair(privateRoot);
+    const { newDir, failedDir } = ensureWeeklyPrivateLayout(privateRoot);
+    renameSync(join(newDir, "source.png"), join(failedDir, "source.png"));
+    writeFileSync(join(newDir, "source.json"), `${JSON.stringify({
+      schemaVersion: 1,
+      source: "ios-shortcut",
+      imageFile: "other.png",
+      capturedAt: "2026-08-20T01:02:03.000Z",
+      receivedAt: "2026-08-20T01:03:03.000Z",
+    }, null, 2)}\n`);
+
+    expect(scanAndClaimInbox({ privateRoot })).toEqual([]);
+    expect(existsSync(join(failedDir, "source.png"))).toBe(true);
+    expect(existsSync(join(failedDir, "source.json"))).toBe(true);
+    expect(existsSync(join(newDir, "source.json"))).toBe(false);
+    expect(loadWeeklyState(privateRoot).items[sha256()]).toMatchObject({
+      status: "failed",
+      lastErrorCode: "INVALID_INBOX_MANIFEST",
+    });
+  });
+
   test("terminal 디렉터리 이동 뒤 state가 processing이면 디렉터리 상태로 보정한다", () => {
     const privateRoot = makePrivateRoot();
     writeInboxPair(privateRoot);
@@ -377,7 +472,7 @@ describe("weekly inbox queue", () => {
           status: "failed",
           batchId: null,
           attempts: 1,
-          lastErrorCode: "CRASH_AFTER_STATE_WRITE",
+          lastErrorCode: "RECOVERED_FAILED_PAIR",
           selectedDates: [],
           updatedAt: "2026-08-21T00:00:00.000Z",
         },
