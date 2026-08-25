@@ -53,6 +53,16 @@ export const OutcomeAxisSchema = axis([
   "contradicted",
 ]);
 
+export const ExperienceDepthAxisSchema = axis([
+  "usage_verified",
+  "delivery_verified",
+  "operations_verified",
+  "user_attested",
+  "not_claimed",
+  "unsupported",
+  "contradicted",
+]);
+
 export const ClaimSchema = z.object({
   id: z.string().min(1),
   text: z.string().min(1),
@@ -69,12 +79,28 @@ export const ClaimSchema = z.object({
   implementation: ImplementationAxisSchema,
   ownership: OwnershipAxisSchema,
   outcome: OutcomeAxisSchema,
+  experienceDepth: ExperienceDepthAxisSchema.optional(),
   verdict: z.enum(["safe", "soften", "ask_user", "remove"]),
   proposedText: z.string().min(1),
-}).strict();
+}).strict().superRefine((claim, context) => {
+  const claimsOperationalDepth =
+    /주력|숙련|전문|노하우|트러블슈팅|운영(?=\s*(?:·|$)|했|하|해|경험|문제|역량)/.test(claim.text);
+  const requiresExperienceDepth =
+    claim.type === "timeline" ||
+    claim.type === "technology" ||
+    claimsOperationalDepth;
+
+  if (requiresExperienceDepth && !claim.experienceDepth) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["experienceDepth"],
+      message: "기술 범위·기간·운영·숙련도 주장에는 경험 깊이 판정이 필요합니다.",
+    });
+  }
+});
 
 export const ClaimLedgerSchema = z.object({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.literal(2),
   artifact: z.string().min(1),
   artifactTextSha256: z.string().regex(/^[a-f0-9]{64}$/),
   generatedAt: z.string().min(1),

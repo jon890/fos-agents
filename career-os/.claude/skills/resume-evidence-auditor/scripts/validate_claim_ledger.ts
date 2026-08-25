@@ -45,7 +45,38 @@ function contextualErrors(ledger: ClaimLedger): string[] {
       errors.push(`${claim.id}: unsupported 또는 contradicted 상태는 safe일 수 없습니다.`);
     }
 
-    const allEvidence = axes.flatMap((axis) => axis.evidence);
+    if (claim.verdict !== "safe") {
+      errors.push(`${claim.id}: ${claim.verdict} 판정이 남아 있어 제출 준비가 끝나지 않았습니다.`);
+    }
+
+    const experience = claim.experienceDepth;
+    if (
+      claim.verdict === "safe" &&
+      experience &&
+      ["unsupported", "contradicted"].includes(experience.status)
+    ) {
+      errors.push(`${claim.id}: 경험 깊이가 ${experience.status}이면 safe일 수 없습니다.`);
+    }
+
+    const claimsOperationalDepth =
+      /주력|숙련|전문|노하우|트러블슈팅|운영(?=\s*(?:·|$)|했|하|해|경험|문제|역량)/.test(claim.text);
+    if (
+      claim.verdict === "safe" &&
+      claimsOperationalDepth &&
+      experience &&
+      !["operations_verified", "user_attested"].includes(experience.status)
+    ) {
+      errors.push(`${claim.id}: 숙련도·운영 깊이 표현에는 운영 근거 또는 사용자 확인이 필요합니다.`);
+    }
+
+    const combinesTechnologyDuration =
+      /\d+\s*년/.test(claim.text) &&
+      /[A-Za-z0-9.+#-]+(?:와|과|·|,)\s*[A-Za-z0-9.+#-]+/.test(claim.text);
+    if (claim.verdict === "safe" && combinesTechnologyDuration) {
+      errors.push(`${claim.id}: 하나의 기간을 여러 기술에 함께 적용하지 말고 기술별로 분리해야 합니다.`);
+    }
+
+    const allEvidence = [...axes, ...(experience ? [experience] : [])].flatMap((axis) => axis.evidence);
     if (/\d/.test(claim.text) && allEvidence.length === 0) {
       errors.push(`${claim.id}: 수치가 있는 주장에는 근거가 필요합니다.`);
     }

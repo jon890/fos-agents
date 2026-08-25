@@ -24,7 +24,7 @@ function fixture() {
   writeFileSync(evidence, "# 근거\n검색 파이프라인 구현 기록");
 
   const data = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     artifact: "resume.html",
     artifactTextSha256: artifactTextSha256(artifact),
     generatedAt: "2026-08-12T00:00:00.000Z",
@@ -79,5 +79,71 @@ describe("validateClaimLedger", () => {
     const result = validateClaimLedger(ledger, artifact);
     expect(result.passed).toBe(false);
     expect(result.errors.join("\n")).toContain("제출 문구가 변경되었습니다");
+  });
+
+  test("사용자 확인이 남은 원장은 제출 준비 완료로 통과시키지 않는다", () => {
+    const { artifact, data, ledger } = fixture();
+    data.claims[0].verdict = "ask_user";
+    writeFileSync(ledger, JSON.stringify(data));
+    const result = validateClaimLedger(ledger, artifact);
+    expect(result.passed).toBe(false);
+    expect(result.errors.join("\n")).toContain("ask_user 판정이 남아 있어");
+  });
+
+  test("Kotlin 코드 기여만으로 Kotlin 운영 노하우를 통과시키지 않는다", () => {
+    const { artifact, data, ledger } = fixture();
+    writeFileSync(artifact, "<html><body><p>Kotlin 운영 노하우를 보유했습니다.</p></body></html>");
+    data.artifactTextSha256 = artifactTextSha256(artifact);
+    data.claims[0].text = "Kotlin 운영 노하우를 보유했습니다.";
+    data.claims[0].type = "technology";
+    data.claims[0].experienceDepth = {
+      status: "delivery_verified",
+      evidence: [{ kind: "git", path: data.claims[0].implementation.evidence[0].path, supports: "기능 커밋" }],
+    };
+    writeFileSync(ledger, JSON.stringify(data));
+    const result = validateClaimLedger(ledger, artifact);
+    expect(result.passed).toBe(false);
+    expect(result.errors.join("\n")).toContain("숙련도·운영 깊이 표현에는");
+  });
+
+  test("기술 숙련도 주장에 경험 깊이 판정이 없으면 거부한다", () => {
+    const { artifact, data, ledger } = fixture();
+    writeFileSync(artifact, "<html><body><p>Kotlin을 주력 기술로 사용했습니다.</p></body></html>");
+    data.artifactTextSha256 = artifactTextSha256(artifact);
+    data.claims[0].text = "Kotlin을 주력 기술로 사용했습니다.";
+    data.claims[0].type = "technology";
+    writeFileSync(ledger, JSON.stringify(data));
+    const result = validateClaimLedger(ledger, artifact);
+    expect(result.passed).toBe(false);
+    expect(result.errors.join("\n")).toContain("experienceDepth");
+  });
+
+  test("운영 노하우를 주장하면서 경험 깊이를 주장하지 않았다고 표시할 수 없다", () => {
+    const { artifact, data, ledger } = fixture();
+    writeFileSync(artifact, "<html><body><p>Kotlin 운영 노하우를 보유했습니다.</p></body></html>");
+    data.artifactTextSha256 = artifactTextSha256(artifact);
+    data.claims[0].text = "Kotlin 운영 노하우를 보유했습니다.";
+    data.claims[0].type = "technology";
+    data.claims[0].experienceDepth = { status: "not_claimed", evidence: [] };
+    writeFileSync(ledger, JSON.stringify(data));
+    const result = validateClaimLedger(ledger, artifact);
+    expect(result.passed).toBe(false);
+    expect(result.errors.join("\n")).toContain("숙련도·운영 깊이 표현에는");
+  });
+
+  test("여러 기술에 하나의 경력 기간을 적용하면 기술별 분리를 요구한다", () => {
+    const { artifact, data, ledger } = fixture();
+    writeFileSync(artifact, "<html><body><p>7년 동안 Java와 Kotlin 백엔드를 개발했습니다.</p></body></html>");
+    data.artifactTextSha256 = artifactTextSha256(artifact);
+    data.claims[0].text = "7년 동안 Java와 Kotlin 백엔드를 개발했습니다.";
+    data.claims[0].type = "timeline";
+    data.claims[0].experienceDepth = {
+      status: "delivery_verified",
+      evidence: [{ kind: "git", path: data.claims[0].implementation.evidence[0].path, supports: "기능 커밋" }],
+    };
+    writeFileSync(ledger, JSON.stringify(data));
+    const result = validateClaimLedger(ledger, artifact);
+    expect(result.passed).toBe(false);
+    expect(result.errors.join("\n")).toContain("기술별로 분리해야 합니다");
   });
 });

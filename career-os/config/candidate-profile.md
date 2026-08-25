@@ -9,7 +9,7 @@
 
 백엔드 안정성과 운영 경험을 바탕으로 AI 제품과 개발 생산성을 함께 개선하는 역할을 우선합니다.
 
-- Java·Kotlin과 Spring Boot 기반 제품 백엔드
+- Java와 Spring Boot 기반 제품 백엔드
 - RAG 색인, 문서 파싱과 AI 제품을 다루는 백엔드·플랫폼
 - 개발 도구와 AI 에이전트 실행 환경을 만드는 개발 생산성
 - 브랜드, 엔지니어링 조직 규모와 대규모 서비스 운영 경험을 기대할 수 있는 회사
@@ -27,7 +27,7 @@
 | --- | --- | --- |
 | 2025.12–현재 | NHN AI 서비스 개발 | Spring Batch·OpenSearch 벡터 색인, Python·FastAPI 문서 파싱 운영, OCR API·배포 안정화, Next.js AI 제품 |
 | 2024.06–2025.11 | NHN 슬롯 백엔드 개발 | Java 17·Spring Boot 3, 신규 슬롯 5종, 점진 리팩터링, 캐시 동시성, 성능 개선, AI 개발 방식 도입 |
-| 2023.01–2024.03 | NHN 스포츠 플랫폼 개발 | Java·Kotlin 백엔드, 캐시·정산, 상태 기반 보상, 다국어 시스템 |
+| 2023.01–2024.03 | NHN 스포츠 플랫폼 개발 | Java 중심 백엔드, 캐시·정산, 상태 기반 보상, 다국어 시스템 |
 | 2022.02–2022.11 | 더퓨쳐컴퍼니 백엔드 개발 | TypeScript·NestJS, Redis 기반 거래 체결, 블록체인 입출금 |
 | 2018.08–2020.12<br>2021.07–2022.01 | 엠씨에스텍 SI 개발 | Java·Spring 공공기관 시스템, 배치와 레거시 현대화 |
 
@@ -86,7 +86,7 @@ RAG 경험은 수집, 정규화, 임베딩과 벡터 색인 계층으로 한정�
 
 | 범위 | 기술 |
 | --- | --- |
-| 주력 | Java 11·17·21, Kotlin, Spring Boot 2.6·3.x, Spring Batch, JPA, QueryDSL |
+| 주력 | Java 11·17·21, Spring Boot 2.6·3.x, Spring Batch, JPA, QueryDSL |
 | 데이터 | MySQL, PostgreSQL, Redis, OpenSearch, Ehcache |
 | AI 서비스 | RAG 색인, 문서 파싱, OCR 연동, Gemini API, Python·FastAPI 운영 개선 |
 | 웹 제품 | TypeScript, Node.js, NestJS, Next.js, React, Svelte |
@@ -95,6 +95,8 @@ RAG 경험은 수집, 정규화, 임베딩과 벡터 색인 계층으로 한정�
 
 Spring WebFlux 경험은 OCR API의 `WebClient`와 Reactor Netty 연결 관리 범위로 설명합니다.
 Apache Kafka는 사용 경험이 있지만 파티셔닝, 재조정과 지연 운영을 핵심 강점으로 내세우지 않습니다.
+Kotlin 어드민 코드베이스의 기능 개발 이력은 있지만 Kotlin 고유의 운영·트러블슈팅 노하우는 확인되지 않았습니다.
+Kotlin을 주력 언어나 깊이 있는 애플리케이션 경험으로 소개하지 않습니다.
 
 ## 보완 영역
 
