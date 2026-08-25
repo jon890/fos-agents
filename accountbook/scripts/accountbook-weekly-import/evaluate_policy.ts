@@ -36,6 +36,11 @@ function parseDateParts(date: string): { year: number; month: number; day: numbe
   return { year, month, day };
 }
 
+function dateOnlyMillis(date: string): number {
+  const { year, month, day } = parseDateParts(date);
+  return Date.UTC(year, month - 1, day);
+}
+
 function captureTime(manifest: InboxSidecarManifest): number {
   const millis = Date.parse(manifest.capturedAt);
   if (Number.isNaN(millis)) throw new Error("INVALID_MANIFEST_CAPTURED_AT");
@@ -70,10 +75,18 @@ export function evaluateWeeklySafePolicy(
   if (Date.parse(validated.sourceImage.capturedAt) !== capturedAtMillis) {
     addReason(reasons, "SOURCE_CAPTURED_AT_MISMATCH");
   }
+  const capturedDateMillis = dateOnlyMillis(manifest.capturedAt.slice(0, 10));
 
   for (const day of validated.days.filter((candidateDay) => candidateDay.selectedForImport)) {
     if (day.validation.status !== "exact") addReason(reasons, "SELECTED_DAY_NOT_EXACT");
     if (day.completeness !== "complete") addReason(reasons, "SELECTED_DAY_INCOMPLETE");
+    if (manifest.source === "hermes-discord") {
+      const selectedDateMillis = dateOnlyMillis(day.date);
+      if (selectedDateMillis > capturedDateMillis) addReason(reasons, "DISCORD_DATE_IN_FUTURE");
+      if (capturedDateMillis - selectedDateMillis > MAX_CAPTURE_AGE_MS) {
+        addReason(reasons, "DISCORD_DATE_OUTSIDE_AUTO_WINDOW");
+      }
+    }
 
     const evidence = day.dateEvidence;
     if (!evidence) {

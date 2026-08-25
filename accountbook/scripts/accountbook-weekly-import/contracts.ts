@@ -10,7 +10,7 @@ const basenameSchema = z.string()
 
 export const inboxSidecarManifestSchema = z.object({
   schemaVersion: z.literal(1),
-  source: z.literal("ios-shortcut"),
+  source: z.enum(["ios-shortcut", "hermes-discord"]),
   imageFile: basenameSchema,
   capturedAt: isoDateTimeSchema,
   receivedAt: isoDateTimeSchema,
