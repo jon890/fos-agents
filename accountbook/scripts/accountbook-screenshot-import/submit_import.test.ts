@@ -6,6 +6,7 @@ import { approveImport } from "./approve_import.ts";
 import type { ExtractedImport } from "./contracts.ts";
 import { submitImport, type SubmitConfig } from "./submit_import.ts";
 import { validateImport } from "./validate_candidates.ts";
+import { evaluateWeeklySafePolicy } from "../accountbook-weekly-import/evaluate_policy.ts";
 
 const tempDirs: string[] = [];
 const CONFIG: SubmitConfig = {
@@ -47,6 +48,7 @@ function extractedFixture(): ExtractedImport {
       {
         date: "2026-08-19",
         dateSource: "user-confirmed" as const,
+        dateEvidence: null,
         completeness: "complete" as const,
         selectedForImport: true,
         expectedTotals: { expense: 12000, income: 500 },
@@ -124,6 +126,84 @@ describe("submitImport", () => {
       },
     })).rejects.toThrow("IMPORT_NOT_APPROVED");
     expect(called).toBe(false);
+  });
+
+  test("승인 출처와 정책 버전 조합이 틀리면 API를 호출하기 전에 차단한다", async () => {
+    const batch = approvedFixture();
+    const forged = {
+      ...batch,
+      approvalSource: "weekly-policy" as const,
+      approvalPolicyVersion: null,
+    };
+    let fetchCount = 0;
+
+    await expect(submitImport(forged, {
+      stateDir: stateDir(),
+      config: CONFIG,
+      fetchImpl: async () => {
+        fetchCount += 1;
+        return jsonResponse({});
+      },
+    })).rejects.toThrow("INVALID_APPROVAL_SOURCE_POLICY_COMBINATION");
+    expect(fetchCount).toBe(0);
+  });
+
+  test("주간 실행 요구가 있으면 사용자 승인 batch를 API 호출 전에 차단한다", async () => {
+    const batch = approvedFixture();
+    let fetchCount = 0;
+
+    await expect(submitImport(batch, {
+      stateDir: stateDir(),
+      config: CONFIG,
+      requireWeeklyPolicyApproval: true,
+      fetchImpl: async () => {
+        fetchCount += 1;
+        return jsonResponse({});
+      },
+    })).rejects.toThrow("WEEKLY_POLICY_APPROVAL_REQUIRED");
+    expect(fetchCount).toBe(0);
+  });
+
+  test("주간 실행 요구가 있으면 승인 출처 필드가 없는 legacy approved도 API 호출 전에 차단한다", async () => {
+    const batch = approvedFixture();
+    const legacy = {
+      ...batch,
+      approvalSource: undefined,
+      approvalPolicyVersion: undefined,
+    };
+    let fetchCount = 0;
+
+    await expect(submitImport(legacy, {
+      stateDir: stateDir(),
+      config: CONFIG,
+      requireWeeklyPolicyApproval: true,
+      fetchImpl: async () => {
+        fetchCount += 1;
+        return jsonResponse({});
+      },
+    })).rejects.toThrow("WEEKLY_POLICY_APPROVAL_REQUIRED");
+    expect(fetchCount).toBe(0);
+  });
+
+  test("weekly-policy.json을 submit에 직접 전달하면 API를 호출하기 전에 차단한다", async () => {
+    const policy = evaluateWeeklySafePolicy(approvedFixture(), {
+      schemaVersion: 1,
+      source: "ios-shortcut",
+      imageFile: "sample.png",
+      capturedAt: "2026-08-20T10:17:53+09:00",
+      receivedAt: "2026-08-20T10:18:53+09:00",
+    }, new Date("2026-08-20T02:00:00Z"));
+    let fetchCount = 0;
+
+    await expect(submitImport(policy, {
+      stateDir: stateDir(),
+      config: CONFIG,
+      fetchImpl: async () => {
+        fetchCount += 1;
+        return jsonResponse({});
+      },
+    })).rejects.toThrow();
+    expect(fetchCount).toBe(0);
   });
 
   test("승인된 수입과 지출을 기존 API payload로 등록한다", async () => {
@@ -300,5 +380,29 @@ describe("submitImport", () => {
       fetchImpl: retryFetch,
     })).rejects.toThrow("EXISTING_TRANSACTION_REQUIRES_REVIEW");
     expect(retryPostCount).toBe(0);
+  });
+
+  test("POST 5xx는 failed로 확정하지 않고 submitting 상태를 유지한다", async () => {
+    const extracted = extractedFixture();
+    extracted.days[0].transactions = [extracted.days[0].transactions[0]];
+    extracted.days[0].expectedTotals = { expense: 12000, income: 0 };
+    const validated = validateImport(extracted);
+    const batch = approveImport(validated, validated.batchId);
+    const privateState = stateDir();
+
+    await expect(submitImport(batch, {
+      stateDir: privateState,
+      config: CONFIG,
+      fetchImpl: async (input, init) => {
+        const common = commonResponse(String(input), init);
+        if (common) return common;
+        if ((init?.method ?? "GET") === "GET") return jsonResponse({ data: { items: [] } });
+        return jsonResponse({ error: "server error" }, 500);
+      },
+    })).rejects.toThrow("ACCOUNTBOOK_API_500");
+
+    const state = JSON.parse(readFileSync(join(privateState, "submissions.json"), "utf8"));
+    const candidate = state.batches[batch.batchId].candidates[batch.days[0].transactions[0].candidateId];
+    expect(candidate.status).toBe("submitting");
   });
 });

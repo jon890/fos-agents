@@ -59,6 +59,7 @@ type SubmitOptions = {
   config: SubmitConfig;
   fetchImpl?: FetchLike;
   now?: () => Date;
+  requireWeeklyPolicyApproval?: boolean;
 };
 
 export type SubmitSummary = {
@@ -279,10 +280,26 @@ function statusCounts(batch: BatchSubmission): Omit<SubmitSummary, "batchId"> {
   };
 }
 
+function assertValidApprovalCombination(batch: ValidatedImport): void {
+  const approvalSource = batch.approvalSource ?? "user";
+  const approvalPolicyVersion = batch.approvalPolicyVersion ?? null;
+  if (approvalSource === "user" && approvalPolicyVersion === null) return;
+  if (approvalSource === "weekly-policy" && approvalPolicyVersion === "weekly-safe-v1") return;
+  throw new Error("INVALID_APPROVAL_SOURCE_POLICY_COMBINATION");
+}
+
+function assertWeeklyPolicyApproval(batch: ValidatedImport): void {
+  if (batch.approvalSource !== "weekly-policy" || batch.approvalPolicyVersion !== "weekly-safe-v1") {
+    throw new Error("WEEKLY_POLICY_APPROVAL_REQUIRED");
+  }
+}
+
 export async function submitImport(raw: unknown, options: SubmitOptions): Promise<SubmitSummary> {
   const batch = validatedImportSchema.parse(raw);
   if (!batch.validation.submissionReady) throw new Error("IMPORT_NOT_SUBMITTABLE");
   if (batch.reviewStatus !== "approved" || !batch.reviewedAt) throw new Error("IMPORT_NOT_APPROVED");
+  assertValidApprovalCombination(batch);
+  if (options.requireWeeklyPolicyApproval) assertWeeklyPolicyApproval(batch);
 
   const fetchImpl = options.fetchImpl ?? fetch;
   const config: SubmitConfig = {
@@ -378,7 +395,7 @@ export async function submitImport(raw: unknown, options: SubmitOptions): Promis
         };
         atomicPrivateJsonWrite(statePath, state);
       } catch (error) {
-        if (error instanceof ApiError) {
+        if (error instanceof ApiError && error.status >= 400 && error.status < 500) {
           currentBatch.candidates[id] = { status: "failed", updatedAt: nowIso(options.now) };
         }
         currentBatch.status = "partial";

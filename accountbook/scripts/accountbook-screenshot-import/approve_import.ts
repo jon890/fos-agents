@@ -19,6 +19,8 @@ export function approveImport(
     ...input,
     reviewStatus: "approved",
     reviewedAt: (options.now?.() ?? new Date()).toISOString(),
+    approvalSource: "user",
+    approvalPolicyVersion: null,
   };
 }
 

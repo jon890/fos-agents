@@ -33,6 +33,29 @@ describe("inspectPng", () => {
     expect(result.sha256).toHaveLength(64);
   });
 
+  test("--captured-at에 해당하는 원본 생성 시각 override를 사용한다", () => {
+    const png = Buffer.alloc(24);
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]).copy(png, 0);
+    png.writeUInt32BE(1179, 16);
+    png.writeUInt32BE(2556, 20);
+
+    const result = inspectPng(tempFile("sample.png", png), "2026-08-20T10:17:53+09:00");
+
+    expect(result.capturedAt).toBe("2026-08-20T10:17:53+09:00");
+  });
+
+  test("잘못된 captured-at override를 거절한다", () => {
+    const png = Buffer.alloc(24);
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]).copy(png, 0);
+    png.writeUInt32BE(1179, 16);
+    png.writeUInt32BE(2556, 20);
+
+    expect(() => inspectPng(tempFile("sample.png", png), "not-a-date"))
+      .toThrow("INVALID_CAPTURED_AT");
+    expect(() => inspectPng(tempFile("sample.png", png), "2026-08-20"))
+      .toThrow("INVALID_CAPTURED_AT");
+  });
+
   test("PNG가 아닌 파일을 거절한다", () => {
     expect(() => inspectPng(tempFile("sample.txt", Buffer.from("not an image"))))
       .toThrow("SOURCE_FORMAT_UNSUPPORTED:PNG_REQUIRED");
