@@ -33,7 +33,7 @@ skill은 모든 `validated.json`과 manifest 경로를 주간 실행 plan에 기
 ### 4. 결정적 주간 실행기
 
 `accountbook/scripts/accountbook-weekly-import/run_weekly_import.ts`에 검증 이후 실행 entrypoint를 구현한다.
-주간 실행 plan의 모든 경로가 private root 안에 있고 이미지 상태가 `processing`인지 검증한 뒤, 전체 선택 날짜 충돌 검사를 마치기 전에는 submit을 시작하지 않는다.
+주간 실행 plan의 모든 경로가 private root 안에 있고 scan queue에서 아직 `processing`인 이미지 집합과 plan의 이미지 집합이 정확히 같은지 검증한 뒤, 전체 선택 날짜 충돌 검사를 마치기 전에는 submit을 시작하지 않는다.
 submit에는 `weekly-safe-v1` 승인 출처를 필수로 요구하고, 거래 생성 POST의 5xx와 네트워크 오류는 `submitting` 상태를 유지해 재실행에서 새 POST를 보내지 않는다.
 모든 `lastErrorCode`는 허용된 안정 코드로만 기록한다.
 

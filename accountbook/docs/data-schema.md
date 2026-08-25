@@ -154,8 +154,9 @@ validator는 `batchId`, 거래별 `candidateId`와 다음 상태를 추가한다
 | `reasons` | 문자열 배열 | 민감 본문이 없는 안정된 차단 사유 코드 |
 | `evaluatedAt` | RFC 3339 datetime | 판정 시각 |
 
-주간 실행 plan은 `schemaVersion: 1`, `runId`와 `items` 배열을 가진다.
-각 item은 `imageSha256`, `validatedPath`, `manifestPath`를 포함하며 두 경로는 `private/` 안에 있어야 한다.
+주간 실행 plan은 `schemaVersion: 1`, `runId`, `queuePath`와 `items` 배열을 가진다.
+각 item은 `imageSha256`과 `validatedPath`를 포함하며 모든 경로는 `private/` 안에 있어야 한다.
+실행기는 queue에서 아직 `processing`인 이미지 집합과 plan의 이미지 집합이 정확히 같은지 확인하고 manifest 경로는 queue에서만 가져온다.
 결정적 주간 실행기는 모든 item의 날짜 충돌 검사를 끝낸 뒤에만 submit을 시작한다.
 주간 submit은 `approvalSource: weekly-policy`, `approvalPolicyVersion: weekly-safe-v1` 조합만 허용한다.
 
