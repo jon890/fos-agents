@@ -16,6 +16,8 @@ vision 지원 agent가 주간 inbox를 비대화형으로 처리하고 안전 �
 scan 결과가 비면 성공 종료하고, 모든 work item에 기존 `/accountbook-screenshot-import`의 추출 계약을 재사용해 vision 추출과 검증을 먼저 완료한다.
 모든 `selectedDates`를 기록한 뒤 날짜가 둘 이상 이미지에 나타나면 관련 항목을 전부 `needs_review`로 finalize하고 POST하지 않는다.
 충돌 없는 항목만 정책 평가, approved JSON submit, finalize 순서로 처리한다.
+성공·검토·실패를 모두 finalize한 뒤 같은 run ID로 lease lock을 해제한다.
+중간 오류가 발생해도 `finally` 경계에서 lock 해제를 시도하되, POST 결과가 불명확한 항목의 상태는 바꾸지 않는다.
 특정 agent CLI, scheduler와 알림 API를 직접 호출하지 않는다.
 
 ### 2. Codex 노출과 agent metadata
