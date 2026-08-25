@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { renderHtml } from "./export_resume.ts";
+import { CHROME_PDF_FLAGS, renderHtml } from "./export_resume.ts";
 import { checkResumeHtml } from "../../.claude/skills/resume-evaluator/scripts/check_resume_html.ts";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -41,5 +41,9 @@ describe("resume exporter", () => {
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
+  });
+
+  test("PDF에 로컬 경로와 인쇄 시각을 노출하지 않는다", () => {
+    expect(CHROME_PDF_FLAGS).toContain("--no-pdf-header-footer");
   });
 });

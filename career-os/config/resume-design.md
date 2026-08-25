@@ -53,6 +53,7 @@
 
 body {
   margin: 0;
+  padding: 24px 20px;
   background: var(--paper);
   color: var(--ink);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
@@ -64,6 +65,12 @@ body {
   max-width: 760px;
   min-height: 267mm;
   margin: 0 auto;
+}
+
+.resume-page + .resume-page {
+  margin-top: 28px;
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
 }
 
 h1 {
@@ -120,12 +127,17 @@ code {
 }
 
 @media print {
+  body {
+    padding: 0;
+  }
+
   * {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
   .resume-page {
+    min-height: auto;
     break-after: page;
     page-break-after: always;
   }
@@ -133,6 +145,12 @@ code {
   .resume-page:last-child {
     break-after: auto;
     page-break-after: auto;
+  }
+
+  .resume-page + .resume-page {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
   }
 }
 ```

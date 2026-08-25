@@ -13,7 +13,14 @@ type Options = {
   chromeBin: string;
 };
 
-const DEFAULT_DESIGN_PATH = 'config/resume-design.md';
+const CAREER_OS_ROOT = resolve(import.meta.dir, '../..');
+const DEFAULT_DESIGN_PATH = join(CAREER_OS_ROOT, 'config/resume-design.md');
+export const CHROME_PDF_FLAGS = [
+  '--headless',
+  '--disable-gpu',
+  '--no-sandbox',
+  '--no-pdf-header-footer',
+] as const;
 
 function parseArgs(args: string[]): Options {
   let applicationDir = '';
@@ -190,15 +197,18 @@ function extractCss(designMarkdown: string): string {
   return `
 @page { size: A4; margin: 14mm; }
 * { box-sizing: border-box; }
-body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif; color: #18181b; line-height: 1.45; }
+body { margin: 0; padding: 24px 20px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif; color: #18181b; line-height: 1.45; }
 .resume-page { max-width: 760px; min-height: 267mm; margin: 0 auto; }
+.resume-page + .resume-page { margin-top: 28px; padding-top: 28px; border-top: 1px solid #d4d4d8; }
 h1 { font-size: 24pt; margin: 0 0 8px; }
 h2 { font-size: 12pt; margin: 18px 0 8px; border-bottom: 1px solid #d4d4d8; color: #047857; }
 li { margin: 3px 0; }
 @media print {
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .resume-page { break-after: page; page-break-after: always; }
+  body { padding: 0; }
+  .resume-page { min-height: auto; break-after: page; page-break-after: always; }
   .resume-page:last-child { break-after: auto; page-break-after: auto; }
+  .resume-page + .resume-page { margin-top: 0; padding-top: 0; border-top: 0; }
 }
 `;
 }
@@ -240,9 +250,7 @@ function renderPdf(opts: Options): void {
   const result = spawnSync(
     opts.chromeBin,
     [
-      '--headless',
-      '--disable-gpu',
-      '--no-sandbox',
+      ...CHROME_PDF_FLAGS,
       `--print-to-pdf=${resolve(opts.pdfPath)}`,
       htmlUrl,
     ],
