@@ -30,6 +30,7 @@
 | `private/state/auth.json` | 갱신된 refresh token | token 교체 또는 폐기 시 |
 | `private/state/submissions.json` | 후보별 API 전송 상태 | 등록 이력 확인 기간 |
 | `private/state/weekly-import.json` | 이미지별 주간 처리 상태 | 등록 이력 확인 기간 |
+| `private/state/<run-id>-<attempt-id>-plan.json` | 검증된 주간 입력과 실행 순서 | 주간 실행 확인 기간 |
 | `private/state/locks/` | 실행 중 batch 잠금 | 정상 종료 시 제거 |
 | `private/state/locks/weekly-import.lock` | 주간 skill 전체 실행 lease | 정상 종료 또는 stale 인계 시 제거 |
 
@@ -153,6 +154,11 @@ validator는 `batchId`, 거래별 `candidateId`와 다음 상태를 추가한다
 | `reasons` | 문자열 배열 | 민감 본문이 없는 안정된 차단 사유 코드 |
 | `evaluatedAt` | RFC 3339 datetime | 판정 시각 |
 
+주간 실행 plan은 `schemaVersion: 1`, `runId`와 `items` 배열을 가진다.
+각 item은 `imageSha256`, `validatedPath`, `manifestPath`를 포함하며 두 경로는 `private/` 안에 있어야 한다.
+결정적 주간 실행기는 모든 item의 날짜 충돌 검사를 끝낸 뒤에만 submit을 시작한다.
+주간 submit은 `approvalSource: weekly-policy`, `approvalPolicyVersion: weekly-safe-v1` 조합만 허용한다.
+
 ## 주간 처리 상태
 
 `weekly-import.json`은 `schemaVersion: 1`, `policyVersion: weekly-safe-v1`과 이미지 SHA-256을 key로 하는 `items` 객체를 가진다.
@@ -162,11 +168,14 @@ validator는 `batchId`, 거래별 `candidateId`와 다음 상태를 추가한다
 | `status` | `queued`, `processing`, `submitted`, `needs_review`, `failed` | 이미지 처리 상태 |
 | `batchId` | 문자열 또는 `null` | 추출 뒤 생성된 batch ID |
 | `attempts` | 0 이상의 정수 | 처리 시작 횟수 |
-| `lastErrorCode` | 문자열 또는 `null` | 민감 본문이 없는 안정된 오류 코드 |
+| `lastErrorCode` | 허용된 문자열 또는 `null` | 민감 본문이 없는 안정된 오류 코드 |
 | `selectedDates` | `YYYY-MM-DD` 문자열 배열 | validator가 선택한 날짜, 중복 없는 정렬값 |
 | `updatedAt` | RFC 3339 datetime | 마지막 상태 변경 시각 |
 
 주간 상태 JSON은 원자적으로 교체하고 마지막 줄바꿈을 포함한다.
+
+`lastErrorCode`는 script가 정의한 enum만 허용한다.
+OCR 원문, 거래 설명, API 응답 본문과 예외 메시지를 그대로 저장하지 않는다.
 
 `weekly-import.lock`은 `schemaVersion: 1`, `runId`, `lockedAt`을 가진 mode `0600` JSON이다.
 `runId`는 한 번의 skill 실행에서 고정하며 lock 해제 때 일치해야 한다.

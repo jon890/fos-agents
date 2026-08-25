@@ -87,9 +87,10 @@ inbox/new의 PNG와 sidecar manifest 탐색
   -> 처리 대상을 inbox/processing으로 원자 이동
   -> 모든 이미지에 기존 화면 추출 계약 적용
   -> 모든 이미지의 결정적 validator 실행
-  -> 선택 날짜를 모아 이미지 간 같은 날짜 충돌 검사
-  -> weekly-safe-v1 평가
-  -> 통과: policy 승인 파일 생성 후 기존 submit 실행
+  -> validated 경로와 manifest 경로를 weekly run plan에 기록
+  -> 결정적 주간 실행기가 모든 선택 날짜의 이미지 간 충돌 검사
+  -> 결정적 주간 실행기가 weekly-safe-v1 평가와 주간 승인 출처 강제
+  -> 통과: policy 승인 파일 생성 후 weekly 모드로 기존 submit 실행
   -> 차단: needs-review로 이미지와 manifest 이동
   -> 확정 실패: failed로 이동
   -> 성공: processed로 이동하고 주간 요약 출력
@@ -131,3 +132,5 @@ reconciliation은 accountbook POST를 호출하지 않는다.
 한 이미지 안의 완전한 날짜는 잘린 다른 날짜와 별개로 자동 등록할 수 있다.
 여러 이미지에 선택된 같은 날짜가 있으면 관련 이미지를 모두 `needs-review`로 보내고 POST하지 않는다.
 기존 동일 거래와 불명확한 POST 복구는 대화형 실행과 같은 규칙으로 멈춘다.
+거래 생성 POST의 5xx와 네트워크 오류는 결과가 불명확하므로 `submitting`을 유지한다.
+재실행은 기존 거래 조회로만 복구하며 새 POST를 보내지 않는다.

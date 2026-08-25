@@ -35,10 +35,14 @@ agent에서 다음 의도로 skill을 호출한다.
 ## 검증
 
 ```bash
-bun test accountbook/scripts/accountbook-screenshot-import
+bun test accountbook/scripts/accountbook-screenshot-import \
+  accountbook/scripts/accountbook-weekly-import
 bunx tsc --noEmit --strict --skipLibCheck --target ESNext --module ESNext \
   --moduleResolution bundler --allowImportingTsExtensions --types bun-types \
-  accountbook/scripts/accountbook-screenshot-import/*.ts
+  accountbook/scripts/accountbook-screenshot-import/*.ts \
+  accountbook/scripts/accountbook-weekly-import/*.ts
 python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py \
   accountbook/.claude/skills/accountbook-screenshot-import
+python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py \
+  accountbook/.claude/skills/accountbook-weekly-import
 ```

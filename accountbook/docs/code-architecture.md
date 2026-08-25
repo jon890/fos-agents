@@ -24,7 +24,7 @@ accountbook/
 | `.codex/skills/accountbook-screenshot-import` | Codex가 정본 skill을 찾는 링크 |
 | `.codex/skills/accountbook-weekly-import` | Codex가 주간 workflow 정본을 찾는 링크 |
 | `scripts/accountbook-screenshot-import/` | 스키마 검증, 승인 표시와 API 등록 |
-| `scripts/accountbook-weekly-import/` | inbox queue, 자동 승인 정책과 주간 상태 전이 |
+| `scripts/accountbook-weekly-import/` | inbox queue, 자동 승인 정책, 검증 후 주간 실행과 상태 전이 |
 | `docs/` | 제품, 흐름, 저장 계약과 기술 결정 |
 | `private/` | 이미지, 거래 후보, 인증과 전송 상태 |
 
@@ -42,8 +42,9 @@ TypeScript script는 다음 책임을 가진다.
 - 사용자 승인과 전송 상태를 기록한다.
 - 기존 accountbook API를 호출하고 부분 성공을 복구한다.
 
-주간 skill은 기존 화면 추출 계약과 등록 script를 재사용한다.
-새 helper는 이미지 SHA-256 queue, `weekly-safe-v1` 판정과 inbox 상태 이동만 담당하며 vision 판단과 accountbook API client를 복제하지 않는다.
+주간 skill은 기존 화면 추출 계약으로 각 이미지의 `validated.json`까지 만든다.
+그 뒤 `run_weekly_import.ts`가 모든 이미지의 선택 날짜 충돌, `weekly-safe-v1` 승인, 주간 승인 출처, submit과 inbox 완료 순서를 결정적으로 강제한다.
+주간 script는 기존 accountbook API client를 재사용하며 vision 판단을 복제하지 않는다.
 
 agent의 추출 결과가 상태 변경에 쓰이기 전에 결정적 검증을 거치므로 루트 [ADR-021](../../docs/adr/ADR-021-deterministic-agent-boundary.md)을 따른다.
 
