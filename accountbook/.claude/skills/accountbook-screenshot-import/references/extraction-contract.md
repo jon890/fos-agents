@@ -29,6 +29,9 @@
 - 화면의 `N월`과 `N일 요일`을 조합한다.
 - 화면에 연도가 없으면 이미지 생성 시각보다 미래가 되지 않는 가장 가까운 연도를 사용한다.
 - 파일 생성 시각으로 연도를 채우면 `dateSource`는 `file-metadata`다.
+- 주간 inbox의 sidecar manifest가 원본 사진 생성 시각을 제공하면 그 값으로 연도만 채운다.
+  이때 `dateSource`는 `upload-metadata`이고, `dateEvidence`에는 화면에서 읽은 `screenMonth`, `screenDay`와 `yearSource: upload-metadata`를 넣는다.
+  화면에서 읽은 월·일 없이 전체 날짜를 sidecar 시각으로 만들지 않는다.
 - 사용자가 연도를 직접 확인하면 `user-confirmed`다.
 - 상태 표시줄의 현재 시각을 거래 시각으로 사용하지 않는다.
 
