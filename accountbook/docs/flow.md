@@ -104,7 +104,8 @@ inbox/new의 PNG와 sidecar manifest 탐색
 
 run lock은 명령 프로세스가 끝나도 파일로 유지하며 skill 전체 수명을 보호한다.
 같은 run ID는 중단된 실행을 이어갈 수 있고, 다른 run ID는 lock 생성 후 24시간 안에는 시작할 수 없다.
-24시간이 지난 lock은 stale로 간주하되 새 실행이 디렉터리와 상태를 먼저 수렴시킨 뒤에만 인계한다.
+24시간이 지난 lock은 stale로 간주한다.
+새 실행은 lock을 원자적으로 인계한 뒤 디렉터리와 상태를 수렴시키며, 복구를 마치기 전에는 POST하지 않는다.
 
 재시작 reconciliation은 다음 순서로 수행한다.
 
