@@ -31,6 +31,7 @@
 | `private/state/submissions.json` | 후보별 API 전송 상태 | 등록 이력 확인 기간 |
 | `private/state/weekly-import.json` | 이미지별 주간 처리 상태 | 등록 이력 확인 기간 |
 | `private/state/locks/` | 실행 중 batch 잠금 | 정상 종료 시 제거 |
+| `private/state/locks/weekly-import.lock` | 주간 skill 전체 실행 lease | 정상 종료 또는 stale 인계 시 제거 |
 
 ## inbox sidecar manifest
 
@@ -166,6 +167,10 @@ validator는 `batchId`, 거래별 `candidateId`와 다음 상태를 추가한다
 | `updatedAt` | RFC 3339 datetime | 마지막 상태 변경 시각 |
 
 주간 상태 JSON은 원자적으로 교체하고 마지막 줄바꿈을 포함한다.
+
+`weekly-import.lock`은 `schemaVersion: 1`, `runId`, `lockedAt`을 가진 mode `0600` JSON이다.
+`runId`는 한 번의 skill 실행에서 고정하며 lock 해제 때 일치해야 한다.
+다른 run ID는 `lockedAt`부터 24시간 동안 lock을 인계할 수 없다.
 
 모든 JSON 파일은 마지막 줄바꿈을 포함한다.
 `private/` 하위 디렉터리는 `0700`, 파일은 `0600` 권한을 사용한다.

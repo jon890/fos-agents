@@ -81,6 +81,8 @@ API 결과를 확정할 수 없으면 자동 재전송하지 않는다.
 
 ```text
 inbox/new의 PNG와 sidecar manifest 탐색
+  -> run ID로 24시간 lease lock 획득
+  -> 이전 실행의 디렉터리와 weekly state 불일치 복구
   -> 이미지 SHA-256 기준 처리 이력 확인
   -> 처리 대상을 inbox/processing으로 원자 이동
   -> 모든 이미지에 기존 화면 추출 계약 적용
@@ -91,6 +93,7 @@ inbox/new의 PNG와 sidecar manifest 탐색
   -> 차단: needs-review로 이미지와 manifest 이동
   -> 확정 실패: failed로 이동
   -> 성공: processed로 이동하고 주간 요약 출력
+  -> 같은 run ID로 lease lock 해제
 ```
 
 신규 이미지가 없으면 `no_new_images`를 출력하고 성공 종료한다.
@@ -98,6 +101,20 @@ inbox/new의 PNG와 sidecar manifest 탐색
 동일한 주간 실행이 겹치면 batch lock을 얻은 실행만 진행한다.
 실행이 중단돼 `processing`에 남은 항목은 상태 파일과 batch 기록을 기준으로 복구하며 무조건 다시 POST하지 않는다.
 한 실행의 모든 이미지에서 추출과 검증을 먼저 끝낸 뒤에만 정책 승인과 POST 단계로 넘어간다.
+
+run lock은 명령 프로세스가 끝나도 파일로 유지하며 skill 전체 수명을 보호한다.
+같은 run ID는 중단된 실행을 이어갈 수 있고, 다른 run ID는 lock 생성 후 24시간 안에는 시작할 수 없다.
+24시간이 지난 lock은 stale로 간주하되 새 실행이 디렉터리와 상태를 먼저 수렴시킨 뒤에만 인계한다.
+
+재시작 reconciliation은 다음 순서로 수행한다.
+
+- `new`와 `processing`에 PNG와 manifest가 갈라졌으면 두 파일을 `processing`에 모은다.
+- `processing`에 완전한 pair가 있지만 state가 없으면 SHA-256으로 `processing` 상태를 복원한다.
+- state가 terminal인데 pair가 `processing`에 있으면 state가 가리키는 terminal 디렉터리로 이동을 끝낸다.
+- pair가 terminal 디렉터리에 있고 state가 `processing`이면 디렉터리 상태로 state를 보정한다.
+
+reconciliation은 accountbook POST를 호출하지 않는다.
+복구 뒤에도 pair와 state를 결정할 수 없으면 자동 등록하지 않고 `failed`로 격리한다.
 
 `weekly-safe-v1`은 다음 조건을 모두 요구한다.
 
