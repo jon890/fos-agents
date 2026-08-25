@@ -6,6 +6,7 @@ import { approveImport } from "./approve_import.ts";
 import type { ExtractedImport } from "./contracts.ts";
 import { submitImport, type SubmitConfig } from "./submit_import.ts";
 import { validateImport } from "./validate_candidates.ts";
+import { evaluateWeeklySafePolicy } from "../accountbook-weekly-import/evaluate_policy.ts";
 
 const tempDirs: string[] = [];
 const CONFIG: SubmitConfig = {
@@ -47,6 +48,7 @@ function extractedFixture(): ExtractedImport {
       {
         date: "2026-08-19",
         dateSource: "user-confirmed" as const,
+        dateEvidence: null,
         completeness: "complete" as const,
         selectedForImport: true,
         expectedTotals: { expense: 12000, income: 500 },
@@ -124,6 +126,47 @@ describe("submitImport", () => {
       },
     })).rejects.toThrow("IMPORT_NOT_APPROVED");
     expect(called).toBe(false);
+  });
+
+  test("승인 출처와 정책 버전 조합이 틀리면 API를 호출하기 전에 차단한다", async () => {
+    const batch = approvedFixture();
+    const forged = {
+      ...batch,
+      approvalSource: "weekly-policy" as const,
+      approvalPolicyVersion: null,
+    };
+    let fetchCount = 0;
+
+    await expect(submitImport(forged, {
+      stateDir: stateDir(),
+      config: CONFIG,
+      fetchImpl: async () => {
+        fetchCount += 1;
+        return jsonResponse({});
+      },
+    })).rejects.toThrow("INVALID_APPROVAL_SOURCE_POLICY_COMBINATION");
+    expect(fetchCount).toBe(0);
+  });
+
+  test("weekly-policy.json을 submit에 직접 전달하면 API를 호출하기 전에 차단한다", async () => {
+    const policy = evaluateWeeklySafePolicy(approvedFixture(), {
+      schemaVersion: 1,
+      source: "ios-shortcut",
+      imageFile: "sample.png",
+      capturedAt: "2026-08-20T10:17:53+09:00",
+      receivedAt: "2026-08-20T10:18:53+09:00",
+    }, new Date("2026-08-20T02:00:00Z"));
+    let fetchCount = 0;
+
+    await expect(submitImport(policy, {
+      stateDir: stateDir(),
+      config: CONFIG,
+      fetchImpl: async () => {
+        fetchCount += 1;
+        return jsonResponse({});
+      },
+    })).rejects.toThrow();
+    expect(fetchCount).toBe(0);
   });
 
   test("승인된 수입과 지출을 기존 API payload로 등록한다", async () => {

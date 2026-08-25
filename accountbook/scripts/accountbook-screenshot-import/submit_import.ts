@@ -279,10 +279,19 @@ function statusCounts(batch: BatchSubmission): Omit<SubmitSummary, "batchId"> {
   };
 }
 
+function assertValidApprovalCombination(batch: ValidatedImport): void {
+  const approvalSource = batch.approvalSource ?? "user";
+  const approvalPolicyVersion = batch.approvalPolicyVersion ?? null;
+  if (approvalSource === "user" && approvalPolicyVersion === null) return;
+  if (approvalSource === "weekly-policy" && approvalPolicyVersion === "weekly-safe-v1") return;
+  throw new Error("INVALID_APPROVAL_SOURCE_POLICY_COMBINATION");
+}
+
 export async function submitImport(raw: unknown, options: SubmitOptions): Promise<SubmitSummary> {
   const batch = validatedImportSchema.parse(raw);
   if (!batch.validation.submissionReady) throw new Error("IMPORT_NOT_SUBMITTABLE");
   if (batch.reviewStatus !== "approved" || !batch.reviewedAt) throw new Error("IMPORT_NOT_APPROVED");
+  assertValidApprovalCombination(batch);
 
   const fetchImpl = options.fetchImpl ?? fetch;
   const config: SubmitConfig = {

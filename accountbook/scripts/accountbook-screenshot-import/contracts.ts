@@ -4,6 +4,13 @@ export const confidenceSchema = z.enum(["high", "medium", "low"]);
 
 const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const isoDateTimeSchema = z.string().datetime({ offset: true });
+const dateSourceSchema = z.enum(["screen", "file-metadata", "upload-metadata", "user-confirmed"]);
+
+export const dateEvidenceSchema = z.object({
+  screenMonth: z.number().int().min(1).max(12),
+  screenDay: z.number().int().min(1).max(31),
+  yearSource: dateSourceSchema,
+});
 
 export const transactionSchema = z.object({
   rowIndex: z.number().int().positive(),
@@ -25,7 +32,8 @@ export const transactionSchema = z.object({
 
 export const extractedDaySchema = z.object({
   date: isoDateSchema,
-  dateSource: z.enum(["screen", "file-metadata", "user-confirmed"]),
+  dateSource: dateSourceSchema,
+  dateEvidence: dateEvidenceSchema.nullable().optional(),
   completeness: z.enum(["complete", "partial"]),
   selectedForImport: z.boolean().optional(),
   expectedTotals: z.object({
@@ -84,6 +92,8 @@ export const validatedDaySchema = extractedDaySchema.extend({
 export const validatedImportSchema = extractedImportSchema.omit({ days: true }).extend({
   batchId: z.string().regex(/^toss-[a-f0-9]{16}$/),
   reviewedAt: isoDateTimeSchema.nullable(),
+  approvalSource: z.enum(["user", "weekly-policy"]).optional(),
+  approvalPolicyVersion: z.enum(["weekly-safe-v1"]).nullable().optional(),
   days: z.array(validatedDaySchema),
   validation: z.object({
     submissionReady: z.boolean(),
@@ -98,6 +108,7 @@ export const validatedImportSchema = extractedImportSchema.omit({ days: true }).
 export type ExtractedImport = z.infer<typeof extractedImportSchema>;
 export type ExtractedDay = z.infer<typeof extractedDaySchema>;
 export type ExtractedTransaction = z.infer<typeof transactionSchema>;
+export type DateEvidence = z.infer<typeof dateEvidenceSchema>;
 export type ValidatedImport = z.infer<typeof validatedImportSchema>;
 export type ValidatedDay = z.infer<typeof validatedDaySchema>;
 export type ValidatedTransaction = z.infer<typeof validatedTransactionSchema>;
