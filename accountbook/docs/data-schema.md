@@ -34,7 +34,7 @@
 | `private/state/locks/` | 실행 중 batch 잠금 | 정상 종료 시 제거 |
 | `private/state/locks/weekly-import.lock` | 주간 skill 전체 실행 lease | 정상 종료 또는 stale 인계 시 제거 |
 
-## inbox sidecar manifest
+## 입력함 보조 정보 파일
 
 업로드 adapter는 같은 basename의 PNG와 JSON을 함께 저장한다.
 임시 확장자로 두 파일을 모두 쓴 뒤 JSON을 마지막에 최종 이름으로 바꿔 완성된 입력임을 표시한다.
@@ -42,13 +42,16 @@
 | 필드 | 형식 | 제약 |
 |---|---|---|
 | `schemaVersion` | `1` | 고정 |
-| `source` | `ios-shortcut` | 고정 |
+| `source` | `ios-shortcut`, `hermes-discord` | 입력 경로 |
 | `imageFile` | basename | 절대 경로와 경로 구분자 금지 |
-| `capturedAt` | RFC 3339 datetime | iPhone 사진 원본 생성 시각 |
+| `capturedAt` | RFC 3339 datetime | iPhone 원본 생성 시각 또는 Discord 수신 시각 |
 | `receivedAt` | RFC 3339 datetime | 홈서버 수신 시각 |
 
 PNG의 SHA-256은 서버가 직접 계산한다.
 sidecar가 없거나 `capturedAt`이 유효하지 않으면 대화형 검토는 가능하지만 주간 자동 승인에는 사용할 수 없다.
+`ios-shortcut`은 사진 원본 생성 시각을 `capturedAt`에 기록한다.
+`hermes-discord`는 Discord가 원본 생성 시각을 보장하지 않으므로 Hermes가 첨부 파일을 받은 시각을 `capturedAt`과 `receivedAt`에 기록한다.
+Discord 입력은 선택한 거래 날짜가 이 시각을 기준으로 최근 14일 안에 있을 때만 연도를 자동 판단한다.
 
 ## 추출 입력
 

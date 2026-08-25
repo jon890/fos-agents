@@ -8,6 +8,7 @@
 - TypeScript 검증기가 날짜, 금액, 행 구조와 일별 합계를 검사한다.
 - 대화형 후보는 사용자가 확정한 뒤 기존 accountbook 수입·지출 API에 등록한다.
 - 주간 실행은 `weekly-safe-v1` 정책을 통과한 후보만 자동 등록한다.
+- Hermes가 Discord에서 받은 이미지는 비공개 입력함으로 옮긴 뒤 같은 안전 정책으로 즉시 처리한다.
 - 이미지 해시와 private 등록 상태로 같은 실행의 중복 전송을 막는다.
 
 OCR 엔진 자체를 제공하지 않으며 vision 입력을 지원하지 않는 runtime에서는 실행을 중단한다.
@@ -25,11 +26,12 @@ agent에서 다음 의도로 skill을 호출한다.
 ```text
 /accountbook-screenshot-import <이미지 경로>
 /accountbook-weekly-import --inbox accountbook/private/inbox/new --mode auto-safe
+/accountbook-discord-import <Hermes가 제공한 첨부 이미지 경로>
 ```
 
 처음 실행은 후보 미리보기에서 멈춘다.
 후보를 확인한 뒤 등록을 명시하면 기존 accountbook API를 호출한다.
-주간 실행 시점과 iPhone 업로드 방식은 저장소 밖 runtime에서 설정한다.
+주간 실행 시점과 Hermes의 Discord 사용자·채널 권한은 저장소 밖 실행 환경에서 설정한다.
 권장 schedule은 매주 월요일 04:00 `Asia/Seoul`이다.
 
 ## 검증

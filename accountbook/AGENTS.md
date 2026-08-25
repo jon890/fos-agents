@@ -38,9 +38,16 @@
 - 스케줄러와 외부 agent runtime은 저장소 밖에서 선택한다.
 - vision 입력을 지원하지 않는 runtime에서는 `OCR_UNAVAILABLE`로 중단한다.
 
+## 스킬 문체
+
+- 스킬의 제목, 설명과 실행 절차는 자연스러운 한국어로 작성한다.
+- 명령어, 경로, 파일명, 코드 식별자와 상태값처럼 정확한 원문이 필요한 값만 영문으로 유지한다.
+- `inbox`, `queue`, `submit`, `finalize`처럼 동작을 설명하는 일반 문장에서는 각각 입력함, 작업 목록, 등록, 처리 완료처럼 뜻이 분명한 한국어를 사용한다.
+
 ## 현재 skill
 
 | skill | 목적 |
 |---|---|
 | `accountbook-screenshot-import` | 토스 소비 화면을 검증된 수입·지출 후보로 변환하고 사용자 확인 뒤 등록 |
-| `accountbook-weekly-import` | inbox의 신규 토스 화면을 주간 단위로 검증하고 안전 정책 통과분만 자동 등록 |
+| `accountbook-weekly-import` | 입력함의 신규 토스 화면을 주간 단위로 검증하고 안전 정책 통과분만 자동 등록 |
+| `accountbook-discord-import` | Hermes가 받은 Discord 첨부 이미지를 비공개 입력함으로 옮기고 안전 정책 통과분만 즉시 등록 |
