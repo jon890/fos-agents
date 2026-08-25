@@ -4,3 +4,4 @@
 |---|---|---|---|---:|---:|---:|---:|:---:|---:|---|
 | 2026-08-20 | planning | plan001-toss-screenshot-import | - | 3 | - | - | 0 | 없음 | 0 | task files completed |
 | 2026-08-25 | planning | plan002-weekly-safe-import | - | 3 | - | - | 0 | 없음 | 1 | task files completed |
+| 2026-08-25 | build-with-teams | plan002-weekly-safe-import | A | 3 | 1 | 1 | 0 | 없음 | 0 | 구현·검증 완료 |
