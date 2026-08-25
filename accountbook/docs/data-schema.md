@@ -51,7 +51,8 @@ PNG의 SHA-256은 서버가 직접 계산한다.
 보조 정보 파일이 없거나 `capturedAt`이 유효하지 않으면 대화형 검토는 가능하지만 주간 자동 승인에는 사용할 수 없다.
 `ios-shortcut`은 사진 원본 생성 시각을 `capturedAt`에 기록한다.
 `hermes-discord`는 Discord가 원본 생성 시각을 보장하지 않으므로 Hermes가 첨부 파일을 받은 시각을 `capturedAt`과 `receivedAt`에 기록한다.
-Discord 입력은 선택한 거래 날짜가 이 시각을 기준으로 최근 14일 안에 있을 때만 연도를 자동 판단한다.
+Discord 입력은 `Asia/Seoul` 달력 날짜를 수신일로 사용한다.
+선택한 거래 날짜가 이 수신일 기준 최근 14일 안에 있을 때만 연도를 자동 판단한다.
 
 ## 추출 입력
 
