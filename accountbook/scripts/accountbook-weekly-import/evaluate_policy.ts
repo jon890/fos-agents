@@ -41,17 +41,42 @@ function dateOnlyMillis(date: string): number {
   return Date.UTC(year, month - 1, day);
 }
 
+function dateOnlyMillisFromParts(parts: { year: number; month: number; day: number }): number {
+  return Date.UTC(parts.year, parts.month - 1, parts.day);
+}
+
 function captureTime(manifest: InboxSidecarManifest): number {
   const millis = Date.parse(manifest.capturedAt);
   if (Number.isNaN(millis)) throw new Error("INVALID_MANIFEST_CAPTURED_AT");
   return millis;
 }
 
+function koreaDateParts(instant: string): { year: number; month: number; day: number } {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(instant));
+  const value = (type: "year" | "month" | "day") => {
+    const part = parts.find((candidate) => candidate.type === type)?.value;
+    if (!part) throw new Error("INVALID_MANIFEST_CAPTURED_AT");
+    return Number(part);
+  };
+  return { year: value("year"), month: value("month"), day: value("day") };
+}
+
+function manifestCalendarDateParts(manifest: InboxSidecarManifest): { year: number; month: number; day: number } {
+  if (manifest.source === "hermes-discord") return koreaDateParts(manifest.capturedAt);
+  return parseDateParts(manifest.capturedAt.slice(0, 10));
+}
+
 function expectedUploadMetadataYear(manifest: InboxSidecarManifest, screenMonth: number, screenDay: number): number {
-  const [capturedYear, capturedMonth, capturedDay] = manifest.capturedAt
-    .slice(0, 10)
-    .split("-")
-    .map(Number);
+  const {
+    year: capturedYear,
+    month: capturedMonth,
+    day: capturedDay,
+  } = manifestCalendarDateParts(manifest);
   if (screenMonth < capturedMonth || (screenMonth === capturedMonth && screenDay <= capturedDay)) {
     return capturedYear;
   }
@@ -75,7 +100,7 @@ export function evaluateWeeklySafePolicy(
   if (Date.parse(validated.sourceImage.capturedAt) !== capturedAtMillis) {
     addReason(reasons, "SOURCE_CAPTURED_AT_MISMATCH");
   }
-  const capturedDateMillis = dateOnlyMillis(manifest.capturedAt.slice(0, 10));
+  const capturedDateMillis = dateOnlyMillisFromParts(manifestCalendarDateParts(manifest));
 
   for (const day of validated.days.filter((candidateDay) => candidateDay.selectedForImport)) {
     if (day.validation.status !== "exact") addReason(reasons, "SELECTED_DAY_NOT_EXACT");

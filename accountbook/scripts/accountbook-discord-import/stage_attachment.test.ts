@@ -51,6 +51,24 @@ function runCli(args: string[]): ReturnType<typeof Bun.spawnSync> {
   });
 }
 
+async function runCliAsync(args: string[]): Promise<{
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+}> {
+  const proc = Bun.spawn(["bun", "accountbook/scripts/accountbook-discord-import/stage_attachment.ts", ...args], {
+    cwd: process.cwd(),
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [exitCode, stdout, stderr] = await Promise.all([
+    proc.exited,
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+  ]);
+  return { exitCode, stdout, stderr };
+}
+
 describe("stageDiscordAttachment", () => {
   test("Discord PNG를 입력함에 보조 정보 파일과 함께 적재한다", () => {
     const dir = tempDir();
@@ -168,5 +186,31 @@ describe("stageDiscordAttachment", () => {
     const stdout = new TextDecoder().decode(result.stdout);
     expect(stdout).not.toContain("sensitive-original-name");
     expect(JSON.parse(stdout).status).toBe("staged");
+  });
+
+  test("동시에 같은 이미지를 수신해도 하나의 완성된 pair만 남긴다", async () => {
+    const dir = tempDir();
+    const privateRoot = join(dir, "private");
+    const inputPath = writeInput(dir);
+
+    const results = await Promise.all([
+      runCliAsync([
+        "--input", inputPath,
+        "--private-root", privateRoot,
+        "--received-at", "2026-08-20T01:17:53.000Z",
+      ]),
+      runCliAsync([
+        "--input", inputPath,
+        "--private-root", privateRoot,
+        "--received-at", "2026-08-20T01:17:53.000Z",
+      ]),
+    ]);
+
+    expect(results.map((result) => result.exitCode)).toEqual([0, 0]);
+    const statuses = results.map((result) => JSON.parse(result.stdout).status).sort();
+    expect(statuses).toEqual(["already_staged", "staged"]);
+    const base = `discord-${sha256().slice(0, 16)}`;
+    expect(existsSync(join(privateRoot, "inbox", "new", `${base}.png`))).toBe(true);
+    expect(existsSync(join(privateRoot, "inbox", "new", `${base}.json`))).toBe(true);
   });
 });

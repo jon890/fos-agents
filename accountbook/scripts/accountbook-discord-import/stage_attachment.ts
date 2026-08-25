@@ -3,15 +3,15 @@ import {
   chmodSync,
   copyFileSync,
   existsSync,
+  linkSync,
   lstatSync,
   mkdirSync,
   readFileSync,
-  renameSync,
   statSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { basename, extname, join, resolve } from "node:path";
+import { extname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { inboxSidecarManifestSchema } from "../accountbook-weekly-import/contracts.ts";
 
@@ -54,12 +54,20 @@ function sha256(path: string): string {
 function ensureNewDir(privateRoot: string): string {
   const root = resolve(privateRoot);
   const inbox = join(root, "inbox");
-  const newDir = join(inbox, "new");
-  for (const directory of [root, inbox, newDir]) {
+  const directories = [
+    root,
+    inbox,
+    join(inbox, "new"),
+    join(inbox, "processing"),
+    join(inbox, "processed"),
+    join(inbox, "needs-review"),
+    join(inbox, "failed"),
+  ];
+  for (const directory of directories) {
     mkdirSync(directory, { recursive: true, mode: 0o700 });
     chmodSync(directory, 0o700);
   }
-  return newDir;
+  return join(inbox, "new");
 }
 
 function sameCompletePair(options: {
@@ -83,6 +91,18 @@ function sameCompletePair(options: {
 function writeJson0600(path: string, value: unknown, replace = false): void {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600, flag: replace ? "w" : "wx" });
   chmodSync(path, 0o600);
+}
+
+function publishNoClobber(tempPath: string, targetPath: string): boolean {
+  try {
+    linkSync(tempPath, targetPath);
+    chmodSync(targetPath, 0o600);
+    unlinkSync(tempPath);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "EEXIST") return false;
+    throw error;
+  }
 }
 
 function removeIfExists(path: string): void {
@@ -126,11 +146,31 @@ export function stageDiscordAttachment(options: StageDiscordAttachmentOptions): 
   try {
     copyFileSync(inputPath, tempImagePath);
     chmodSync(tempImagePath, 0o600);
-    renameSync(tempImagePath, imagePath);
-    chmodSync(imagePath, 0o600);
     writeJson0600(tempManifestPath, manifest);
-    renameSync(tempManifestPath, manifestPath);
-    chmodSync(manifestPath, 0o600);
+    if (!publishNoClobber(tempImagePath, imagePath)) {
+      removeIfExists(tempImagePath);
+      if (sameCompletePair({ imagePath, manifestPath, imageSha256, imageFile })) {
+        removeIfExists(tempManifestPath);
+        return { status: "already_staged", imageSha256, imagePath, manifestPath };
+      }
+      if (existsSync(imagePath) && !existsSync(manifestPath) && sha256(imagePath) === imageSha256) {
+        if (publishNoClobber(tempManifestPath, manifestPath)) {
+          return { status: "already_staged", imageSha256, imagePath, manifestPath };
+        }
+        if (sameCompletePair({ imagePath, manifestPath, imageSha256, imageFile })) {
+          removeIfExists(tempManifestPath);
+          return { status: "already_staged", imageSha256, imagePath, manifestPath };
+        }
+      }
+      throw new Error("DISCORD_INBOX_PAIR_CONFLICT");
+    }
+    if (!publishNoClobber(tempManifestPath, manifestPath)) {
+      removeIfExists(tempManifestPath);
+      if (sameCompletePair({ imagePath, manifestPath, imageSha256, imageFile })) {
+        return { status: "staged", imageSha256, imagePath, manifestPath };
+      }
+      throw new Error("DISCORD_INBOX_PAIR_CONFLICT");
+    }
     return { status: "staged", imageSha256, imagePath, manifestPath };
   } catch (error) {
     removeIfExists(tempImagePath);

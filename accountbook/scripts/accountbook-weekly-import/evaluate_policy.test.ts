@@ -91,6 +91,18 @@ function decisionReasons(batch: ValidatedImport, sidecar = manifest()) {
   return evaluateWeeklySafePolicy(batch, sidecar, new Date("2026-08-20T02:00:00Z")).reasons;
 }
 
+function validatedAtCapturedAt(
+  capturedAt: string,
+  overrides: Partial<ExtractedImport["days"][number]> = {},
+): ValidatedImport {
+  return validated(overrides, {
+    sourceImage: {
+      ...extractedFixture().sourceImage,
+      capturedAt,
+    },
+  });
+}
+
 function runPolicyCli(args: string[]): ReturnType<typeof Bun.spawnSync> {
   return Bun.spawnSync(["bun", "accountbook/scripts/accountbook-weekly-import/evaluate_policy.ts", ...args], {
     cwd: process.cwd(),
@@ -216,6 +228,71 @@ describe("evaluateWeeklySafePolicy", () => {
       manifest("2026-08-20T10:17:53+09:00", "hermes-discord"),
       new Date("2026-08-20T02:00:00Z"),
     ).reasons).toContain("DISCORD_DATE_IN_FUTURE");
+  });
+
+  test("Discord 입력은 UTC 전날이어도 한국 날짜의 당일 거래를 승인한다", () => {
+    const capturedAt = "2026-08-19T15:05:00.000Z";
+
+    expect(evaluateWeeklySafePolicy(
+      validatedAtCapturedAt(capturedAt, {
+        date: "2026-08-20",
+        dateEvidence: { screenMonth: 8, screenDay: 20, yearSource: "upload-metadata" },
+      }),
+      manifest(capturedAt, "hermes-discord"),
+      new Date("2026-08-20T02:00:00Z"),
+    ).eligible).toBe(true);
+  });
+
+  test("Discord 입력은 UTC 전날이어도 한국 날짜 기준 14일 경계를 허용한다", () => {
+    const capturedAt = "2026-08-19T15:05:00.000Z";
+
+    expect(evaluateWeeklySafePolicy(
+      validatedAtCapturedAt(capturedAt, {
+        date: "2026-08-06",
+        dateEvidence: { screenMonth: 8, screenDay: 6, yearSource: "upload-metadata" },
+      }),
+      manifest(capturedAt, "hermes-discord"),
+      new Date("2026-08-20T02:00:00Z"),
+    ).eligible).toBe(true);
+  });
+
+  test("Discord 입력은 UTC 전날이어도 한국 날짜 기준 15일 전을 차단한다", () => {
+    const capturedAt = "2026-08-19T15:05:00.000Z";
+
+    expect(evaluateWeeklySafePolicy(
+      validatedAtCapturedAt(capturedAt, {
+        date: "2026-08-05",
+        dateEvidence: { screenMonth: 8, screenDay: 5, yearSource: "upload-metadata" },
+      }),
+      manifest(capturedAt, "hermes-discord"),
+      new Date("2026-08-20T02:00:00Z"),
+    ).reasons).toContain("DISCORD_DATE_OUTSIDE_AUTO_WINDOW");
+  });
+
+  test("Discord 입력은 UTC 전날이어도 한국 날짜 기준 미래 거래를 차단한다", () => {
+    const capturedAt = "2026-08-19T15:05:00.000Z";
+
+    expect(evaluateWeeklySafePolicy(
+      validatedAtCapturedAt(capturedAt, {
+        date: "2026-08-21",
+        dateEvidence: { screenMonth: 8, screenDay: 21, yearSource: "upload-metadata" },
+      }),
+      manifest(capturedAt, "hermes-discord"),
+      new Date("2026-08-20T02:00:00Z"),
+    ).reasons).toContain("DISCORD_DATE_IN_FUTURE");
+  });
+
+  test("Discord 입력의 upload metadata 연도는 한국 날짜 기준으로 계산한다", () => {
+    const capturedAt = "2026-12-31T16:00:00.000Z";
+
+    expect(evaluateWeeklySafePolicy(
+      validatedAtCapturedAt(capturedAt, {
+        date: "2027-01-01",
+        dateEvidence: { screenMonth: 1, screenDay: 1, yearSource: "upload-metadata" },
+      }),
+      manifest(capturedAt, "hermes-discord"),
+      new Date("2027-01-01T02:00:00Z"),
+    ).eligible).toBe(true);
   });
 
   test("upload metadata 연도는 캡처 로컬 날짜 이하의 가장 최근 화면 월일만 승인한다", () => {
