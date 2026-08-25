@@ -1,0 +1,38 @@
+{
+  "skill_name": "accountbook-discord-import",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "현재 Discord 메시지에 첨부한 토스 소비 내역 PNG 한 장을 가계부에 등록해 줘.",
+      "expected_output": "PNG 한 장을 비공개 입력함에 적재하고 기존 주간 가져오기 스킬에 즉시 위임한 뒤, 민감 정보 없이 등록·검토·실패 건수를 회신한다.",
+      "files": [],
+      "expectations": [
+        "stage_attachment.ts로 첨부 파일을 적재한다.",
+        "accountbook-weekly-import 스킬에 안전 자동 등록을 위임한다.",
+        "거래 설명, 계좌, 원본 경로와 인증 값을 회신하지 않는다."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Discord에서 가계부 등록해 줘. 이 메시지에는 첨부 이미지가 없어.",
+      "expected_output": "PNG 한 장을 첨부하도록 안내하고 파일 적재와 accountbook API 호출을 모두 하지 않는다.",
+      "files": [],
+      "expectations": [
+        "첨부 파일이 정확히 한 개가 아니므로 중단한다.",
+        "stage_attachment.ts와 accountbook-weekly-import를 호출하지 않는다.",
+        "accountbook API를 호출하지 않는다."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "현재 Discord 메시지에 첨부한 토스 PNG 두 장을 한꺼번에 가계부에 등록해 줘.",
+      "expected_output": "한 메시지에는 PNG 한 장만 보낼 수 있다고 안내하고 파일 적재와 accountbook API 호출을 모두 하지 않는다.",
+      "files": [],
+      "expectations": [
+        "첨부 파일이 두 개이므로 두 파일 모두 적재하지 않는다.",
+        "accountbook-weekly-import를 호출하지 않는다.",
+        "민감한 거래 내용을 회신하지 않는다."
+      ]
+    }
+  ]
+}

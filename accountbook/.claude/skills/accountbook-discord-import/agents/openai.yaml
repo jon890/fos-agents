@@ -1,0 +1,4 @@
+interface:
+  display_name: "Discord 가계부 이미지 가져오기"
+  short_description: "Discord의 토스 PNG를 안전한 가계부 등록 흐름으로 보냅니다"
+  default_prompt: "$accountbook-discord-import로 현재 Discord 메시지의 토스 PNG 한 장을 가계부에 안전하게 등록해 주세요."
