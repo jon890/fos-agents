@@ -1,4 +1,4 @@
-# AGENTS.md — career-os 워크스페이스
+# career-os 워크스페이스 지침
 
 `career-os`는 커리어 성장, 회사·공고 적합도 분석, 면접 준비, 지원 준비 자동화를 위한 독립 워크스페이스다.
 
@@ -19,7 +19,7 @@
 | [`../AGENTS.md`](../AGENTS.md)                           | 모노레포 공통 규칙                                | 모든 작업 시작 시          |
 | [`docs/README.md`](docs/README.md)                       | career-os 문서별 책임과 작성 규칙                   | docs 작성·수정 전        |
 | [`docs/prd.md`](docs/prd.md)                             | 제품 가치, skill 자산, 성공 기준                    | 새 기능 추가, 우선순위 결정    |
-| [`docs/data-schema.md`](docs/data-schema.md)             | config, runtime, 산출물, positions-queue 스키마 | 데이터 파일 변경, 새 상태값 추가 |
+| [`docs/data-schema.md`](docs/data-schema.md)             | config, runtime과 산출물 스키마                  | 데이터 파일 변경, 새 상태값 추가 |
 | [`docs/flow.md`](docs/flow.md)                           | 사용자 입력부터 산출물까지의 흐름                        | 새 실행 흐름 추가, 디버깅     |
 | [`docs/code-architecture.md`](docs/code-architecture.md) | 디렉터리 책임, 외부 의존, 실행 구조                     | 코드 구조 변경, 새 스크립트 추가 |
 | [`docs/adr/INDEX.md`](docs/adr/INDEX.md)                 | 결정의 이유와 대안 기각 기록                          | 정책 변경, 되돌리기 어려운 결정  |
@@ -50,7 +50,7 @@
 
 
 career-os는 별도 웹 제품 없이 수집, 리포트 생성, skill 실행, private 산출물, 피드백 루프 기록을 파일과 skill 계약으로 직접 관리한다.
-지원 후보 상태와 준비 단계는 `state/application-agent/`, `applications/`, `private/` 산출물에서 관리한다.
+지원 준비 상태는 각 `applications/` 디렉터리의 `application-package.md`에서 관리한다.
 외부 DB나 outbox를 기준 데이터로 두지 않는다.
 
 외부 게시용 HTML은 시스템 임시 디렉터리에 만든다.
@@ -65,7 +65,7 @@ career-os는 별도 웹 제품 없이 수집, 리포트 생성, skill 실행, pr
 HTML의 각 공고명에는 개별 공고 URL을 건다.
 외부 공유가 승인된 경우 사용자에게 다음 내용을 제공한다.
 
-- 상위 후보 5~10개와 핵심 사유
+- 상위 우선 검토 카드와 전체 후보 순위의 핵심 사유
 - 각 후보의 공고 링크
 - 검증된 리포트 URL
 

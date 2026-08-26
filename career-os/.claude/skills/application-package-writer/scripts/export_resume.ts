@@ -13,7 +13,7 @@ type Options = {
   chromeBin: string;
 };
 
-const CAREER_OS_ROOT = resolve(import.meta.dir, '../..');
+const CAREER_OS_ROOT = resolve(import.meta.dir, '../../../..');
 const DEFAULT_DESIGN_PATH = join(CAREER_OS_ROOT, 'config/resume-design.md');
 export const CHROME_PDF_FLAGS = [
   '--headless',
@@ -281,7 +281,8 @@ function showHelp(): void {
   console.log(`이력서 export helper
 
 Usage:
-  bun scripts/application-agent/export_resume.ts --application-dir applications/<company>/<role>
+  bun career-os/.claude/skills/application-package-writer/scripts/export_resume.ts \
+    --application-dir career-os/applications/<company>/<role>
 
 Options:
   --resume <path>       Markdown 원본. 기본값: <application-dir>/resume-draft.md

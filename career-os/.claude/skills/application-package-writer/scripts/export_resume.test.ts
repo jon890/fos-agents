@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { CHROME_PDF_FLAGS, renderHtml } from "./export_resume.ts";
-import { checkResumeHtml } from "../../.claude/skills/resume-evaluator/scripts/check_resume_html.ts";
+import { checkResumeHtml } from "../../resume-evaluator/scripts/check_resume_html.ts";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

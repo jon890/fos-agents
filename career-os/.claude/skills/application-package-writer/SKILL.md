@@ -20,8 +20,9 @@ description: 공고 하나를 실제 지원 가능한 상태로 준비하는 car
 - 이력서와 면접에서 무엇을 검증받아야 하는가?
 - 다음 행동은 무엇인가?
 
-`application-package.html`은 지원 판단, 근거, 이력서 초안과 남은 질문을 묶어 보여주는 로컬 검토 화면이다.
-실제 제출 파일은 `resume.pdf`이며, 지원 사이트가 별도 문항을 요구할 때만 `application-answers.md`를 추가한다.
+`application-package.html`은 지원 판단, 근거, 제출 문서와 남은 질문을 묶어 보여주는 유일한 로컬 검토 화면이다.
+실제 제출 파일은 `resume.pdf`다. 공고나 지원 화면이 경력기술서를 받으면 `career-description.pdf`를 추가하고, 한 파일만 받을 때는 두 문서를 합친 `submission.pdf`도 만든다.
+지원 사이트가 별도 문항을 요구할 때만 application-answers.md를 추가한다.
 
 ## 입력
 
@@ -106,15 +107,16 @@ description: 공고 하나를 실제 지원 가능한 상태로 준비하는 car
 
 ### 산출물 작성
 
-지원 디렉터리에 다음 핵심 파일만 만든다.
+초안 단계에는 다음 핵심 파일만 만든다.
 
 - `candidate-interview.md`: 사용자 원문 답변과 정리된 핵심
 - `application-package.md`: 요구사항·회사 기준·경력 근거와 다음 행동을 통합한 원본
 - `resume-draft.md`: 맞춤 HTML과 PDF의 Markdown 원본
 - `application-package.html`: 위 원본과 이력서 초안을 묶은 로컬 검토 화면
 
-지원 사이트가 자기소개나 별도 질문을 요구할 때만 `application-answers.md`를 만든다.
-`review.md`, 근거 원장과 점수표는 자동화와 내부 검증이 필요할 때만 만든다.
+지원 사이트가 자기소개나 별도 질문을 요구할 때만 application-answers.md를 만든다.
+근거 원장과 점수표는 최종 제출 문서를 검증할 때만 만든다.
+경력기술서를 받는 공고에는 `career-description-draft.md`를 추가한다.
 
 `application-package.md`에는 다음 섹션을 둔다.
 
@@ -154,9 +156,10 @@ description: 공고 하나를 실제 지원 가능한 상태로 준비하는 car
 5. 입사 후 기여 시나리오가 제품 사용자에게 닿는가?
 
 사용자 답변을 `candidate-interview.md`에 반영한 뒤 제출 문장을 갱신한다.
-자동 실행처럼 독립 검토가 필요한 경우에만 `application-reviewer`를 내부 단계로 호출한다.
+공고 원문, 인터뷰 답변, 지원동기와 제출 문서를 다시 읽어 서로 모순되는 역할·수치·동기가 없는지 확인한다.
+주장 단위 사실 검증과 렌더 평가는 아래 전용 내부 단계에서 수행한다.
 
-### 검증과 최종 이력서
+### 검증과 최종 제출 문서
 
 먼저 지원 패키지 계약을 검사하고 하나의 HTML로 묶는다.
 
@@ -168,15 +171,38 @@ bun career-os/.claude/skills/application-package-writer/scripts/render_applicati
   <application-directory>
 ```
 
-검사가 통과하고 사용자 확인 항목이 해결되면 다음 순서로 최종 이력서를 준비한다.
+검사가 통과하고 사용자 확인 항목이 해결되면 다음 순서로 제출 문서를 준비한다.
 
-1. `resume-exporter`로 `resume.html`과 `resume.pdf`를 만든다.
-2. `resume-evidence-auditor`로 제출 문장의 근거와 소유권을 감사한다.
-3. `resume-evaluator`로 설득력, 정보 구조와 실제 렌더링을 평가한다.
-4. 보이는 문구가 바뀌면 근거 감사를 다시 실행한다.
+1. 다음 명령으로 `resume.html`과 `resume.pdf`를 만든다.
+
+```bash
+bun career-os/.claude/skills/application-package-writer/scripts/export_resume.ts \
+  --application-dir <application-directory>
+```
+2. 경력기술서가 필요하면 `career-description.html`과 `career-description.pdf`를 별도로 만든다.
+3. `resume-evidence-auditor`로 각 HTML 제출 문서의 근거와 소유권을 따로 감사한다.
+4. `resume-evaluator`로 각 문서의 설득력, 정보 구조와 실제 렌더링을 평가한다.
+5. 보이는 문구가 바뀌면 해당 문서의 근거 감사와 평가를 다시 실행한다.
+6. 다음 명령으로 각 PDF의 파일 해시를 기록한다. 경력기술서가 있으면 같은 버전의 두 PDF를 `submission.pdf`로 합친다.
+
+```bash
+bun career-os/.claude/skills/application-package-writer/scripts/build_submission_bundle.ts \
+  <application-directory>
+```
+
+7. 다음 명령으로 제출 문서, 원장, 점수표와 PDF manifest의 해시가 모두 일치하는지 검사한다.
+
+```bash
+bun career-os/.claude/skills/application-package-writer/scripts/validate_submission_bundle.ts \
+  <application-directory>
+```
+
+8. 마지막으로 `render_application_package.ts`를 다시 실행해 현재 상태와 제출 파일 링크를 `application-package.html`에 반영한다.
 
 한 번의 사용자 요청 안에서 위 단계를 이어가되, 사용자만 확정할 수 있는 사실이 남으면 `needs_user_input`에서 멈춘다.
 근거 원장에 `soften`, `ask_user`, `remove`가 남아 있어도 멈춘다.
+점수표에는 대상 파일명, `artifactTextSha256`, `verdict: pass`가 있어야 한다.
+`readiness: ready`는 `validate_submission_bundle.ts`까지 통과한 뒤에만 최종 상태로 사용한다.
 
 ## 안전 경계
 
@@ -192,6 +218,9 @@ bun career-os/.claude/skills/application-package-writer/scripts/render_applicati
 - `references/candidate-interview-questions.md`
 - `references/application-quality-rubric.md`
 - `scripts/validate_application_package.ts`
+- `scripts/validate_submission_bundle.ts`
+- `scripts/build_submission_bundle.ts`
 - `scripts/render_application_package.ts`
+- `scripts/export_resume.ts`
 - `config/candidate-profile.md`
 - `config/resume-design.md`

@@ -9,7 +9,7 @@ career-os/
 ├── .claude/skills/       사용자 작업별 skill
 ├── .codex/skills/        Codex에서 같은 skill을 노출하는 링크
 ├── config/               사람이 관리하는 프로필과 수집·제외 정책
-├── scripts/              검증, 수집, 변환, 상태 전이 코드
+├── scripts/              검증, 수집과 변환 코드
 ├── state/                실행 사이에 유지하는 로컬 상태
 ├── applications/         공고별 지원 패키지
 ├── private/              개인 경력 근거와 비공개 준비 자료
@@ -23,7 +23,7 @@ career-os/
 ## Skill과 실행 코드
 
 `SKILL.md`는 입력, 실행 순서, 산출물, 검증, 안전 경계를 설명한다.
-반복되는 수집, 파싱, 상태 전이, 렌더링, 검증은 `scripts/`의 TypeScript로 구현한다.
+반복되는 수집, 파싱, 렌더링과 검증은 `scripts/`의 TypeScript로 구현한다.
 
 하나의 스크립트가 수집과 추천, 렌더링을 모두 책임지지 않는다.
 외부 응답은 경계에서 검증한 뒤 내부 타입으로 변환한다.
@@ -43,19 +43,16 @@ career-os/
 모델은 후보풀에 존재하는 공고만 선별하고, `recommendation_schema.ts`가 결과 구조와 원문 일치 여부를 검사한다.
 HTML은 검증된 추천 JSON에서 파생하며 게시 검증 뒤 임시 데이터와 함께 삭제한다.
 
-## 지원 상태와 패키지
+## 지원 패키지
 
 `application-package-writer`는 사용자가 호출하는 지원 준비 진입점이다.
 공고와 회사 기준 확인, 후보자 인터뷰, 근거 매핑과 제출 초안을 한 흐름으로 연결한다.
-`application-reviewer`는 자동 상태 전이와 명시적인 독립 검토에서만 사용하는 내부 검사다.
-
-`scripts/application-agent/`는 공고 등록, 우선순위, 내부 패키지 검토 판정과 상태 전이를 담당한다.
-상태 전이는 `positions_queue_schema.ts`와 안전 검사를 통과한 뒤에만 적용한다.
+반복 가능한 계약 검사, HTML·PDF 변환과 제출 묶음 검증은 스킬의 `scripts/`에 둔다.
 
 공고별 문서는 `applications/<company>/<position>/`에 둔다.
 기준 원본은 `candidate-interview.md`, `application-package.md`, `resume-draft.md`다.
 사용자는 이 원본을 묶은 `application-package.html`에서 검토한다.
-별도 지원 문항과 내부 검토 문서는 필요한 경우에만 추가한다.
+별도 지원 문항과 경력기술서는 필요한 경우에만 추가한다.
 개인 근거와 면접 준비 자료는 `private/<company>/<position>/`에 둔다.
 실제 제출은 이 모듈의 책임이 아니다.
 
@@ -64,18 +61,17 @@ HTML은 검증된 추천 JSON에서 파생하며 게시 검증 뒤 임시 데이
 `config/candidate-profile.md`는 추천과 지원 준비에 필요한 후보자 요약과 확인된 경력 경계를 제공한다.
 세부 성과는 문서 안에서 연결한 최신 이력 자료와 실제 작업 저장소를 확인한다.
 
-이력서 감사 결과와 주장별 근거 장부는 `private/resume-audit/`에 둔다.
+제출 문서의 감사 결과와 주장별 근거 장부는 해당 `applications/<company>/<position>/`에 둔다.
 공개 가능한 이력 자료는 별도 `sources/fos-study/` 저장소에서 관리한다.
 
-## 현재 지원 대상과 면접 드릴
+## 현재 지원 대상과 면접 답변 연습
 
 현재 지원 대상은 필요할 때만 `state/current-target.json`에 둔다.
 파일이 없으면 선택된 대상이 없는 상태다.
 형식은 `scripts/current-target/current_target_schema.ts`가 검증한다.
 
-`scripts/interview-drill/`은 기술·인성 드릴의 공통 진행과 복습 상태를 처리한다.
+`scripts/interview-drill/`은 `interview-practice`의 기술·인성 모드에서 공통 진행과 복습 상태를 처리한다.
 복습 상태는 `state/drill-progress.json` 하나에 저장한다.
-역할 진단과 출력은 `scripts/job-fit-analyzer/`가 담당한다.
 
 ## 아침 읽을거리
 

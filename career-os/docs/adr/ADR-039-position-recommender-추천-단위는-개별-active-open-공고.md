@@ -1,4 +1,4 @@
-## ADR-039 — position-recommender는 현재 열린 개별 공고를 추천한다
+## ADR-039 position-recommender는 현재 열린 개별 공고를 추천한다
 
 - Status: Accepted
 - Date: 2026-06-04
@@ -6,7 +6,7 @@
 ### 맥락
 
 회사 이름, 채용 홈, 기술 블로그, 뉴스는 지원할 수 있는 공고가 아니다.
-이런 lead를 추천과 섞으면 후속 지원 패키지와 `state/positions-queue.jsonl` 품질이 떨어진다.
+이런 lead를 추천과 섞으면 사용자가 고르는 후속 지원 후보의 품질이 떨어진다.
 
 ### 결정
 

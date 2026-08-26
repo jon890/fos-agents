@@ -34,11 +34,23 @@ describe("renderApplicationPackage", () => {
 
     expect(html).toContain('<meta name="viewport"');
     expect(html).toContain("내 답변 필요");
+    expect(html).toContain("제출 파일 검증 필요");
     expect(html).toContain('class="review-card"');
     expect(html).toContain(".review-card { min-width: 0;");
     expect(html).toContain(".table-scroll { width: 100%; max-width: 100%;");
     expect(html).toContain("이력서 초안");
     expect(html).toContain("지원 문항 초안");
     expect(html).toContain("후보자 인터뷰 기록");
+  });
+
+  test("존재하는 경력기술서와 통합 PDF 링크를 같은 화면에 표시한다", () => {
+    const directory = fixture();
+    writeFileSync(join(directory, "career-description.html"), "<main>경력기술서</main>");
+    writeFileSync(join(directory, "career-description.pdf"), "pdf");
+    writeFileSync(join(directory, "submission.pdf"), "pdf");
+
+    const html = readFileSync(renderApplicationPackage(directory), "utf8");
+    expect(html).toContain('href="career-description.pdf"');
+    expect(html).toContain('href="submission.pdf"');
   });
 });

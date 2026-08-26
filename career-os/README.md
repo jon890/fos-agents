@@ -8,16 +8,12 @@
 각 skill은 `SKILL.md`에 입력, 산출물, 검증, 안전 경계를 담는다.
 
 - 지원 가능한 공고를 찾을 때: `/position-recommender`
-- 공고별 지원 초안을 만들 때: `/application-package-writer <posting-path>`
-- 지원 패키지를 검토할 때: `/application-reviewer <application-dir>`
-- HTML 이력서를 높은 기준으로 채점하고 개선할 때: `/resume-evaluator <resume.html>`
-- 이력서 주장과 실제 코드·Git 이력을 대조할 때: `/resume-evidence-auditor <resume.html>`
-- 역할 적합도와 면접 전략을 볼 때: `/job-fit-analyzer <role>`
-- 면접 단계별 준비를 만들 때: `/interview-stage-prep`
-- 기술 또는 인성 답변을 연습할 때: `/tech-interview-drill`, `/behavioral-interview-drill`
+- 공고별 지원 문서와 검증 결과를 준비할 때: `/application-package-writer <posting-path>`
+- 기술 또는 인성 면접 답변을 연습할 때: `/interview-practice <tech|behavioral>`
 - 오늘 읽거나 볼 기술 자료를 고를 때: `/study-topic-recommender`
 
-각 skill의 입력, 산출물, 검증, 안전 경계는 해당 `SKILL.md`에서 확인한다.
+`resume-evidence-auditor`, `resume-evaluator`와 `question-bank-collector`는 위 흐름이 필요할 때 호출하는 내부 검증·보조 스킬이다.
+각 스킬의 입력, 산출물, 검증, 안전 경계는 해당 `SKILL.md`에서 확인한다.
 
 ## 설정
 
@@ -37,8 +33,8 @@ clone 뒤 확인할 기본 파일:
 ## 작업 흐름
 
 1. 활성 공고를 수집하고 지원 후보를 판단한다.
-2. 공고별 지원 패키지를 만들고 근거·과장·공개 범위를 검토한 뒤 HTML 이력서를 반복 개선한다.
-3. 역할 fit, 면접 단계, 답변 드릴 결과를 다음 준비 행동에 반영한다.
+2. 공고별 지원 패키지를 만들고 근거·과장·공개 범위를 검토한 뒤 제출 문서를 반복 개선한다.
+3. 면접 답변 연습 결과를 다음 복습과 준비 행동에 반영한다.
 4. 기술 학습과 질문 은행은 공개 가능한 자산으로 축적한다.
 
 세부 흐름은 [docs/flow.md](docs/flow.md)를 따른다.
@@ -46,7 +42,7 @@ clone 뒤 확인할 기본 파일:
 ## 데이터 경계
 
 - `config/`에는 후보자 기준, 정책, 사람이 고른 예외를 둔다.
-- `state/`에는 현재 타깃, 드릴 진행, cooldown 같은 실행 상태를 둔다.
+- `state/`에는 현재 타깃, 답변 연습 진행, cooldown 같은 실행 상태를 둔다.
 - `applications/`, `private/`, `reports/`, `cache/`에는 지원 전략, 개인 산출물, 실행 결과, 재생성 가능한 캐시를 둔다.
 - `public/question-bank/`, `sources/fos-study/`에는 공개 가능한 일반 지식만 둔다.
 - 실제 제출, 로그인, 업로드, 외부 메시지 전송, 공개 발행은 사용자 승인 후에만 수행한다.

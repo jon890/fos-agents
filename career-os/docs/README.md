@@ -1,4 +1,4 @@
-# 문서 작성 가이드 — career-os
+# career-os 문서 작성 가이드
 
 career-os 문서를 작성하거나 수정하기 전에 확인하는 문서 책임 가이드다.
 이 문서는 career-os 안에서 각 문서가 어떤 가치를 제공해야 하는지 정의한다.
@@ -84,7 +84,7 @@ flow 문서는 “무엇이 시작되어 어디까지 이어지는가”를 설�
 ## Data Schema 작성 규칙
 
 data-schema 문서는 저장 구조의 현재 계약을 설명한다.
-새 config, state file, report JSON, positions-queue field를 만들면 여기에 반영한다.
+새 config, state 파일과 report JSON을 만들면 여기에 반영한다.
 
 data-schema에는 스키마와 보존 경계를 적는다.
 제품 가치, 실행 순서, UI 요구사항은 다른 문서로 보낸다.

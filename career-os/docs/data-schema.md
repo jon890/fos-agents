@@ -98,13 +98,13 @@ Zod 검증을 통과한 값만 수집 코드가 사용한다.
 
 ### `state/drill-progress.json`
 
-기술·인성 답변 드릴의 진행과 복습 상태를 관리한다.
+기술·인성 면접 답변 연습의 진행과 복습 상태를 관리한다.
 
 포함 내용:
 
 - 질문별 시도와 최근 결과
 - 다시 볼 질문과 복습 시점
-- 기술·인성 드릴이 공유하는 진행 정보
+- 기술·인성 모드가 공유하는 진행 정보
 
 학습 주제 생성 상태와 섞지 않는다.
 
@@ -158,10 +158,7 @@ Zod 검증을 통과한 값만 수집 코드가 사용한다.
 게시용 HTML은 이 결과에서 만든다.
 후보풀, 추천 JSON과 HTML은 게시 검증 뒤 삭제한다.
 
-## 지원 후보와 패키지
-
-`scripts/application-agent/positions_queue_schema.ts`가 지원 후보 상태를 정의한다.
-상태 변경은 action request와 안전 검사를 통과한 뒤 적용한다.
+## 지원 패키지
 
 공고별 `applications/<company>/<position>/`에는 다음 산출물을 둘 수 있다.
 
@@ -170,26 +167,30 @@ Zod 검증을 통과한 값만 수집 코드가 사용한다.
 - `resume-draft.md`: HTML과 PDF로 변환할 제출용 이력서 원본
 - `application-package.html`: 위 원본과 이력서 초안을 묶은 로컬 검토 화면
 - `application-answers.md`: 지원 사이트가 별도 문항을 요구할 때만 만드는 제출 문구
-- `review.md`: 자동 상태 전이나 독립 검토에 사용하는 내부 판정
 
 기본 산출물은 앞의 네 파일이다.
-`application-answers.md`와 `review.md`는 조건이 맞을 때만 만든다.
+`application-answers.md`는 조건이 맞을 때만 만든다.
 최종 제출 단계에서는 `resume.html`과 `resume.pdf`를 파생한다.
+경력기술서가 필요한 지원 건은 `career-description.html`, `career-description.pdf`와 한 파일 제출용 `submission.pdf`를 추가한다.
+`submission-manifest.json`은 각 PDF의 파일 해시와 원본 HTML의 문구 해시를 연결한다.
 
 `application-package.md`의 준비 상태는 `ready`, `needs_user_input`, `revise`, `do_not_apply` 중 하나다.
 이 상태는 합격 가능성 점수가 아니라 현재 근거와 사용자 확인을 기준으로 한 제출 준비 상태다.
 
 개인 근거와 면접 준비는 `private/<company>/<position>/`에 둔다.
 
-## 이력서 근거 감사
+## 제출 문서 근거 감사
 
-`private/resume-audit/<resume-id>/`는 공개하지 않는 검증 자료다.
+근거 감사 자료는 대상 제출 문서와 같은 `applications/<company>/<position>/`에 둔다.
 
 주요 파일:
 
 - `claim-ledger.json`: 이력서 주장, 근거, 판정, 소유권 범위
 - `evidence-audit.md`: 사람이 읽는 근거 감사 결과
 - `resume-scorecard.md`: 이력서 평가와 남은 개선점
+- `career-description-claim-ledger.json`: 경력기술서 주장과 근거 판정
+- `career-description-scorecard.md`: 경력기술서 평가와 남은 개선점
+- `submission-manifest.json`: 현재 HTML과 PDF 제출 묶음의 해시
 
 근거 장부는 대상 HTML의 내용 해시와 연결해 다른 버전의 증거를 잘못 재사용하지 않게 한다.
 `schemaVersion: 2`부터 기술 범위, 경력 기간, 운영과 숙련도 주장은 `experienceDepth`에 사용, 기능 개발, 운영 깊이 또는 사용자 확인 수준을 기록한다.
@@ -197,10 +198,7 @@ Zod 검증을 통과한 값만 수집 코드가 사용한다.
 `resume-scorecard.md`에는 블라인드 채용 담당자·기술 리더 판정, 경쟁상 차단 항목, 근거 방어 결과와 통제할 수 없는 위험을 기록한다.
 총점만으로 `pass`를 만들지 않으며 두 블라인드 검토자가 모두 통과해야 한다.
 
-## 역할 진단과 면접 자료
-
-`job-fit-analyzer`는 구조화 JSON을 만들고 Markdown을 표시 결과로 만든다.
-결과에는 지원 판단, 경력 연결점, 면접 전략, 다음 행동을 포함한다.
+## 면접 자료
 
 개인 면접 자료는 `private/<company>/<position>/interview/`에 둔다.
 공개 가능한 일반 질문은 `public/question-bank/`에 둔다.

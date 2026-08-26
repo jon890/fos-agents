@@ -1,6 +1,6 @@
 ---
 name: resume-evidence-auditor
-description: 이력서·포트폴리오의 주장을 실제 코드, 테스트, Git 이력, 문서와 사용자 확인에 대조해 과장과 소유권 확대를 차단하는 career-os 스킬. "이력서 근거 검증", "코드와 경력 대조", "resume evidence audit"처럼 제출 문구의 사실 검증이 필요할 때 사용한다.
+description: 이력서·경력기술서·포트폴리오의 주장을 실제 코드, 테스트, Git 이력, 문서와 사용자 확인에 대조해 과장과 소유권 확대를 차단하는 career-os 내부 스킬. "이력서 근거 검증", "경력기술서 사실 확인", "코드와 경력 대조", "resume evidence audit"처럼 제출 문구의 사실 검증이 필요할 때 사용한다.
 ---
 
 # 이력서 근거 감사
@@ -30,12 +30,12 @@ description: 이력서·포트폴리오의 주장을 실제 코드, 테스트, G
 5. 코드 사용 이력을 숙련도나 운영 노하우로 확대하지 않는다.
 6. 후보자만 확인할 수 있는 경험 깊이가 결론을 바꾸면 `ask_user`로 남기고 한 번에 한 질문만 확인한다.
 7. 근거보다 강한 문장은 약화하거나 삭제한다.
-8. `claim-ledger.json`과 `evidence-audit.md`를 이력서와 같은 디렉터리에 만든다.
+8. 이력서는 `claim-ledger.json`과 `evidence-audit.md`, 경력기술서는 `career-description-claim-ledger.json`과 `career-description-evidence-audit.md`를 같은 디렉터리에 만든다.
 9. 다음 명령으로 원장과 제출 파일의 일치 여부를 검증한다.
 
 ```bash
 bun career-os/.claude/skills/resume-evidence-auditor/scripts/validate_claim_ledger.ts \
-  <claim-ledger.json> --artifact <resume.html>
+  <claim-ledger.json> --artifact <submission-document.html>
 ```
 
 원장에는 다음 식별 정보를 반드시 기록한다.

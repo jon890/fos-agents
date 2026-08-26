@@ -1,9 +1,9 @@
 ---
 name: resume-evaluator
-description: 근거 감사를 마친 공고 맞춤 HTML·PDF 이력서를 블라인드 채용 검토와 100점 기준으로 엄격하게 평가하고 설득력, 구조, 가독성과 A4 출력 품질을 개선하는 career-os 스킬. "이력서 채점해줘", "HTML 이력서 평가", "이력서 하드 리뷰", "resume score"처럼 제출 전 경쟁력 검증이 필요할 때 사용한다.
+description: 근거 감사를 마친 공고 맞춤 이력서 또는 경력기술서를 블라인드 채용 검토와 엄격한 기준으로 평가하고 설득력, 구조, 가독성과 A4 출력 품질을 개선하는 career-os 내부 스킬. "이력서 채점해줘", "경력기술서 평가", "HTML 이력서 하드 리뷰", "resume score"처럼 제출 전 경쟁력 검증이 필요할 때 사용한다.
 ---
 
-# 이력서 평가
+# 제출 문서 평가
 
 검증된 사실의 범위 안에서 HTML 이력서의 설득력과 제출 품질을 개선한다.
 사실성은 `resume-evidence-auditor`가 만든 근거 장부를 기준으로 판단한다.
@@ -11,8 +11,8 @@ description: 근거 감사를 마친 공고 맞춤 HTML·PDF 이력서를 블라
 
 ## 입력
 
-- `applications/<company>/<role>/resume.html`
-- 같은 디렉터리의 `claim-ledger.json`
+- `applications/<company>/<role>/resume.html` 또는 `career-description.html`
+- 같은 문서를 가리키는 근거 원장
 - 공고 또는 `posting.md`
 - 후보자 프로필
 - `references/scoring-rubric.md`
@@ -44,7 +44,7 @@ bun career-os/.claude/skills/resume-evaluator/scripts/check_resume_html.ts <resu
 5. 근거 장부와 후보자 자료를 읽고 대표 주장마다 면접에서 방어 가능한지 확인한다.
 6. 실제 브라우저 렌더에서 글자 겹침, 잘림, 링크, 대비와 페이지 넘침을 확인한다.
 7. `references/scoring-rubric.md`로 인사 40점, 기술 45점, 제출 품질 15점을 처음부터 채점한다.
-   기존 점수는 참고하거나 이어받지 않는다.
+   기존 점수는 참고하거나 이어받지 않는다. 경력기술서는 같은 기준을 쓰되 프로젝트별 문제, 본인 판단, 결과와 직무 연결의 완결성을 더 중점으로 본다.
 8. 탈락 가능성이 큰 문제부터 HTML과 문구를 수정한다.
 9. 보이는 문구가 바뀌면 근거 감사를 다시 실행한다.
 10. 블라인드 검토, 근거 방어, 정적 검사와 실제 렌더를 모두 다시 확인한다.
@@ -87,8 +87,16 @@ bun career-os/.claude/skills/resume-evaluator/scripts/check_resume_html.ts <resu
 
 ## 산출물
 
-- 개선된 `resume.html`
-- 같은 디렉터리의 `resume-scorecard.md`
+- 개선된 제출 HTML
+- 이력서는 resume-scorecard.md, 경력기술서는 career-description-scorecard.md
+
+점수표 첫 10줄에는 다음 식별자를 기록한다.
+
+```markdown
+- artifact: `resume.html`
+- artifactTextSha256: `<현재 근거 원장과 같은 64자리 해시>`
+- verdict: `pass|revise|blocked`
+```
 
 점수표에는 블라인드 판정, 두 평가자 점수, 경쟁상 차단 항목, 근거 방어 결과, 실제 수정, 자동 검사와 통제할 수 없는 위험을 남긴다.
 내부 경로와 검토 상태는 제출 HTML에 넣지 않는다.

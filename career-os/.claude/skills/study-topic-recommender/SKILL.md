@@ -31,13 +31,10 @@ mktemp -d "${TMPDIR:-/tmp}/study-topic-recommender.XXXXXX"
 후보풀, 선택 JSON, 추천 데이터, Markdown과 HTML은 모두 `<RUN_DIR>`에 만든다.
 기존 추천 이력을 활용할 때 `<RUN_DIR>/state/`에 복사한다.
 
-TypeScript 실행기 `<TS_RUNTIME>`은 `bun`이 있으면 `bun`, 없으면 TypeScript를 직접 실행할 수 있는 Node.js 22.18 이상을 사용한다.
-둘 다 사용할 수 없으면 실행을 중단하고 필요한 런타임을 알린다.
-
 ### 2. 외부 글 수집
 
 ```bash
-CAREER_OS_ROOT=<RUN_DIR> <TS_RUNTIME> --env-file=.env \
+CAREER_OS_ROOT=<RUN_DIR> bun --env-file=.env \
   scripts/study-topic-recommender/build_morning_reading.ts \
   --collect-only
 ```
@@ -126,7 +123,7 @@ git -C sources/fos-study log -n 20 --name-only --format= -- '*.md'
 ### 4. 임시 리포트 생성
 
 ```bash
-CAREER_OS_ROOT=<RUN_DIR> <TS_RUNTIME> --env-file=.env \
+CAREER_OS_ROOT=<RUN_DIR> bun --env-file=.env \
   scripts/study-topic-recommender/build_morning_reading.ts \
   --candidate-pool <RUN_DIR>/state/reading-candidates.json \
   --reading-selection <RUN_DIR>/reading-selection.json
@@ -137,9 +134,9 @@ CAREER_OS_ROOT=<RUN_DIR> <TS_RUNTIME> --env-file=.env \
 ### 5. 검증
 
 ```bash
-CAREER_OS_ROOT=<RUN_DIR> <TS_RUNTIME> \
+CAREER_OS_ROOT=<RUN_DIR> bun \
   scripts/study-topic-recommender/validate_outputs.ts
-<TS_RUNTIME> scripts/study-topic-recommender/manage_reading_sources.ts validate
+bun scripts/study-topic-recommender/manage_reading_sources.ts validate
 ```
 
 `collectionLog`의 수집 상태를 최종 응답에 반영한다.
@@ -161,7 +158,6 @@ CAREER_OS_ROOT=<RUN_DIR> <TS_RUNTIME> \
 
 검증된 `branch_url`이 있으면 안정적인 사용자용 주소로 우선 전달한다.
 `branch_url`이 없거나 검증에 실패한 경우에만 검증된 `public_url`을 전달한다.
-핵심 추천 결과는 최종 공개 리포트와 일치시킨다.
 
 ### 7. 임시 파일 정리
 
@@ -178,8 +174,6 @@ find "<RUN_DIR>" -depth -type d -exec rmdir {} \;
 별도 미리보기 파일을 만들었다면 각 파일을 `unlink "<절대 경로>"` 한 호출로 정리한다.
 리포트 게시와 공개 URL 검증이 끝난 뒤 정리만 실패하면 전체 작업을 실패로 바꾸지 않는다.
 검증된 링크와 추천 결과를 전달하고 정리하지 못한 경로를 경고로 남긴다.
-
-사용자가 로컬 사본을 요청하면 지정한 경로에 별도 파일을 만든다.
 
 ## 완료 조건
 

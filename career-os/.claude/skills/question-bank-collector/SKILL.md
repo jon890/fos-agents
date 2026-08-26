@@ -33,7 +33,6 @@ description: 공개 가능한 일반 backend/CS 면접 질문을 career-os publi
 - `public/question-bank/{java-spring,database,cs,operations,system-design,behavioral}/questions.json`
 - `scripts/question-bank-collector/validate.ts`의 `scanQuestionBankInventory()` 결과.
   공개 질문 은행의 실제 파일을 검사한다.
-  `config/question-bank-topics.json`은 질문 데이터로 사용하지 않는다.
 - 필요한 경우 공개 가능한 기존 study topic 이름.
 - 포지션 맞춤 선별을 명시한 경우에만 `private/<company>/<position>/interview/prep.md`.
 

@@ -33,13 +33,10 @@ mktemp -d "${TMPDIR:-/tmp}/position-recommender.XXXXXX"
 반환된 절대 경로를 아래 명령의 `<RUN_DIR>`에 넣는다.
 후보풀, 추천 JSON과 HTML은 모두 `<RUN_DIR>`에 만든다.
 
-TypeScript 실행기 `<TS_RUNTIME>`은 `bun`이 있으면 `bun`, 없으면 TypeScript를 직접 실행할 수 있는 Node.js 22.18 이상을 사용한다.
-둘 다 사용할 수 없으면 실행을 중단하고 필요한 런타임을 알린다.
-
 ### 2. 외부 공고 수집
 
 ```bash
-<TS_RUNTIME> scripts/position-recommender/collect_live_postings.ts \
+bun scripts/position-recommender/collect_live_postings.ts \
   --output <RUN_DIR>/posting-candidates.json
 ```
 
@@ -88,7 +85,7 @@ TypeScript 실행기 `<TS_RUNTIME>`은 `bun`이 있으면 `bun`, 없으면 TypeS
 ### 4. 결과 검증
 
 ```bash
-<TS_RUNTIME> scripts/position-recommender/validate_recommendation.ts \
+bun scripts/position-recommender/validate_recommendation.ts \
   --input <RUN_DIR>/recommendation.json \
   --candidates <RUN_DIR>/posting-candidates.json
 ```
@@ -108,7 +105,7 @@ TypeScript 실행기 `<TS_RUNTIME>`은 `bun`이 있으면 `bun`, 없으면 TypeS
 ### 5. 임시 HTML 생성
 
 ```bash
-<TS_RUNTIME> scripts/position-recommender/render_candidate_preview.ts \
+bun scripts/position-recommender/render_candidate_preview.ts \
   --input <RUN_DIR>/recommendation.json \
   --candidates <RUN_DIR>/posting-candidates.json \
   --limit all \
@@ -155,7 +152,6 @@ Cloudflare Pages 준비, 게시와 검증은 `report-publisher`로 실행한다.
 
 `report-publisher`의 준비 검사, Cloudflare Pages 업로드, 공개 URL 검증을 모두 따른다.
 최종 응답에는 검증된 `branch_url`을 우선 전달하고, 없으면 검증된 `public_url`을 전달한다.
-핵심 추천 결과는 최종 공개 리포트와 일치시킨다.
 
 ### 7. 임시 파일 정리
 
@@ -169,8 +165,6 @@ for file in index.html recommendation.json posting-candidates.json; do
 done
 rmdir "<RUN_DIR>"
 ```
-
-사용자가 로컬 사본을 요청하면 지정한 경로에 별도 파일을 만든다.
 
 ## 완료 조건
 

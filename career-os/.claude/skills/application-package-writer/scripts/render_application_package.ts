@@ -3,6 +3,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { validateApplicationPackage } from "./validate_application_package.ts";
+import { validateSubmissionBundle } from "./validate_submission_bundle.ts";
 
 type PackageStatus = {
   readiness: "ready" | "needs_user_input" | "revise" | "do_not_apply";
@@ -17,6 +18,11 @@ type MarkdownSection = {
 type RenderAssets = {
   resumeHtml?: boolean;
   resumePdf?: boolean;
+  careerDescriptionHtml?: boolean;
+  careerDescriptionPdf?: boolean;
+  submissionPdf?: boolean;
+  submissionReady?: boolean;
+  submissionBlocker?: string;
 };
 
 const READINESS_LABELS: Record<PackageStatus["readiness"], string> = {
@@ -197,7 +203,14 @@ export function renderApplicationPackageHtml(
     '<a href="resume-draft.md">이력서 원문</a>',
     assets.resumeHtml ? '<a href="resume.html">이력서 HTML</a>' : "",
     assets.resumePdf ? '<a href="resume.pdf">이력서 PDF</a>' : "",
+    assets.careerDescriptionHtml ? '<a href="career-description.html">경력기술서 HTML</a>' : "",
+    assets.careerDescriptionPdf ? '<a href="career-description.pdf">경력기술서 PDF</a>' : "",
+    assets.submissionPdf ? '<a href="submission.pdf">통합 제출 PDF</a>' : "",
   ].filter(Boolean).join("");
+  const submissionLabel = assets.submissionReady ? "제출 파일 검증 완료" : "제출 파일 검증 필요";
+  const submissionDetail = assets.submissionReady
+    ? "현재 제출 문서, 근거 원장과 점수표의 버전이 일치합니다."
+    : assets.submissionBlocker ?? "최종 제출 파일과 검토 결과를 같은 버전으로 맞춰야 합니다.";
 
   return `<!doctype html>
 <html lang="ko">
@@ -344,6 +357,7 @@ export function renderApplicationPackageHtml(
       <div class="status-row" aria-label="지원 준비 상태">
         <span class="status readiness-${status.readiness}">${READINESS_LABELS[status.readiness]}</span>
         <span class="status evidence-${status.evidence}">${EVIDENCE_LABELS[status.evidence]}</span>
+        <span class="status ${assets.submissionReady ? "evidence-safe" : "evidence-revise"}" title="${escapeHtml(submissionDetail)}">${submissionLabel}</span>
       </div>
       ${links ? `<nav class="quick-links" aria-label="제출 파일">${links}</nav>` : ""}
     </header>
@@ -381,6 +395,7 @@ export function renderApplicationPackage(applicationDirectory: string, outputPat
   const interviewMarkdown = read(join(directory, "candidate-interview.md"));
   const resumeMarkdown = read(join(directory, "resume-draft.md"));
   const answersPath = join(directory, "application-answers.md");
+  const submission = validateSubmissionBundle(directory);
   const html = renderApplicationPackageHtml(
     packageMarkdown,
     interviewMarkdown,
@@ -389,6 +404,11 @@ export function renderApplicationPackage(applicationDirectory: string, outputPat
     {
       resumeHtml: existsSync(join(directory, "resume.html")),
       resumePdf: existsSync(join(directory, "resume.pdf")),
+      careerDescriptionHtml: existsSync(join(directory, "career-description.html")),
+      careerDescriptionPdf: existsSync(join(directory, "career-description.pdf")),
+      submissionPdf: existsSync(join(directory, "submission.pdf")),
+      submissionReady: submission.passed,
+      submissionBlocker: submission.errors[0],
     },
   );
   const destination = resolve(outputPath ?? join(directory, "application-package.html"));

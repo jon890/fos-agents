@@ -5,6 +5,22 @@ export const REQUIRED_PACKAGE_FILES = [
   "resume-draft.md",
 ] as const;
 
+export const REQUIRED_RESUME_SUBMISSION_FILES = [
+  "resume.html",
+  "resume.pdf",
+  "claim-ledger.json",
+  "resume-scorecard.md",
+  "submission-manifest.json",
+] as const;
+
+export const REQUIRED_CAREER_DESCRIPTION_FILES = [
+  "career-description.html",
+  "career-description.pdf",
+  "career-description-claim-ledger.json",
+  "career-description-scorecard.md",
+  "submission.pdf",
+] as const;
+
 export const REQUIRED_HEADINGS: Readonly<Record<string, readonly string[]>> = {
   "candidate-interview.md": ["## 확보된 답변", "## 미확인 질문"],
   "application-package.md": [

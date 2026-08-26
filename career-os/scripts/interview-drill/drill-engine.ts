@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 /**
- * 공용 답변 연습 엔진 — tech-interview-drill · behavioral-interview-drill 공통 로직
+ * interview-practice의 기술·인성 모드가 공유하는 답변 연습 엔진
  *
  * 간격 반복 기반 질문 선정, 답변 채점, 답변 연습 로그 기록, 복습 상태 갱신,
  * 질문 선정, 채점, 기록, 약점 환류를 담당한다.
