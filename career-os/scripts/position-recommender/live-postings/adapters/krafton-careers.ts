@@ -1,5 +1,5 @@
 import type { AdapterCollectionResult, Posting, SourceAdapter } from "../types.ts";
-import { classify, cleanDetail, closeWindow, isExcludedCompany, norm } from "../policy.ts";
+import { classify, cleanDetail, closeWindow, norm } from "../policy.ts";
 
 // KRAFTON은 Greenhouse 공개 board(token: krafton)를 쓴다.
 // content=true 한 번의 listing 호출로 전체 공고의 JD 본문·마감·부서·고용형태를 모두 받는다.
@@ -83,7 +83,6 @@ export function parseKraftonJob(job: GreenhouseJob): Posting | null {
   const text = htmlText(job.content);
   const dept = norm(job.departments?.map((d) => d.name).join(", "));
   const fullText = `${title} ${dept} ${text}`;
-  if (isExcludedCompany(fullText)) return null;
 
   const deadline = norm(job.application_deadline ?? "");
   return {

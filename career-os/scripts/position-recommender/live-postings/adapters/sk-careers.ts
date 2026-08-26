@@ -5,7 +5,6 @@ import {
   closeWindow,
   hasKeyword,
   isContractRole,
-  isExcludedCompany,
   isNonServerTitle,
   isServerRole,
   norm,
@@ -135,7 +134,6 @@ async function postingFromJob(job: SkJob): Promise<Posting | null> {
   const detailText = await fetchDetailText(id);
   const fullText = `${company} ${title} ${job.jobRole ?? ""} ${job.recruitType ?? ""} ${job.workingType ?? ""} ${detailText}`;
   const roleText = `${company} ${title} ${job.jobRole ?? ""} ${job.recruitType ?? ""} ${job.workingType ?? ""}`;
-  if (isExcludedCompany(fullText)) return null;
   if (isContractRole(roleText)) return null;
   if (isNonServerTitle(title)) return null;
   if (!isServerRole(roleText) && !hasKeyword(roleText, ["software engineering", "sre", "cloud-native", "platform"])) return null;

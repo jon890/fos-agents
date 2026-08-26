@@ -34,11 +34,14 @@ bun career-os/.claude/skills/resume-evidence-auditor/scripts/validate_claim_ledg
 
 2. `references/hard-review.md`를 읽고 블라인드 검토를 먼저 수행한다.
    이 단계에서는 공고와 제출할 정확한 PDF·HTML만 읽고, 기존 점수표와 지원 패키지의 해설은 읽지 않는다.
-3. 다음 명령으로 HTML 계약을 검사한다.
+3. 다음 명령으로 문서 파일명에 맞는 HTML 계약을 검사한다.
 
 ```bash
 bun career-os/.claude/skills/resume-evaluator/scripts/check_resume_html.ts <resume.html>
 ```
+
+`career-description.html`에는 경력기술서 전용 필수 섹션을 적용한다.
+파일명이 표준 이름이 아니면 `--document-type resume|career-description`을 명시한다.
 
 4. 블라인드 채용 담당자와 기술 리더가 각각 `pass` 또는 `reject`를 선택하고 근거를 기록한다.
 5. 근거 장부와 후보자 자료를 읽고 대표 주장마다 면접에서 방어 가능한지 확인한다.

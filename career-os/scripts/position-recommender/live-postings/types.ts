@@ -32,7 +32,6 @@ export type PostingRejectionCode =
   | "unverified_status"
   | "expired_deadline"
   | "suppressed_posting"
-  | "excluded_company"
   | "ineligible_employment"
   | "not_target_role";
 

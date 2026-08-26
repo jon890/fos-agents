@@ -24,7 +24,15 @@ function resolveLedgerArtifact(ledgerPath: string, artifact: string): string {
   return isAbsolute(artifact) ? artifact : resolve(dirname(resolve(ledgerPath)), artifact);
 }
 
-function evidencePathExists(path: string): boolean {
+function evidencePathExists(path: string, kind: string): boolean {
+  if (/^https?:\/\//i.test(path)) {
+    try {
+      const url = new URL(path);
+      return kind === "runtime" && url.protocol === "https:" && !url.username && !url.password;
+    } catch {
+      return false;
+    }
+  }
   return existsSync(path) || (!isAbsolute(path) && existsSync(resolve(process.cwd(), path)));
 }
 
@@ -101,7 +109,7 @@ function contextualErrors(ledger: ClaimLedger): string[] {
     }
 
     for (const evidence of allEvidence) {
-      if (!evidencePathExists(evidence.path)) {
+      if (!evidencePathExists(evidence.path, evidence.kind)) {
         errors.push(`${claim.id}: 근거 경로가 존재하지 않습니다: ${evidence.path}`);
       }
     }

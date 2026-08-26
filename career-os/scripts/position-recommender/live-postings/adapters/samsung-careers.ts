@@ -4,7 +4,6 @@ import {
   classify,
   closeWindow,
   isContractRole,
-  isExcludedCompany,
   isNonServerTitle,
   isServerRole,
   norm,
@@ -160,7 +159,6 @@ function postingFromDetail(listItem: SamsungListItem, detail: SamsungDetailRespo
   ].map((v) => cleanDetail(v, 1200)).filter(Boolean).join(" ");
   const fullText = `${company} ${title} ${listItem.tags.join(" ")} ${detailText}`;
 
-  if (isExcludedCompany(fullText)) return null;
   if (isContractRole(fullText)) return null;
   if (isNonServerTitle(title)) return null;
   if (!isServerRole(fullText)) return null;

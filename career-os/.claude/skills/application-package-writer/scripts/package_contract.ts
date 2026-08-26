@@ -3,6 +3,7 @@ export const REQUIRED_PACKAGE_FILES = [
   "candidate-interview.md",
   "application-package.md",
   "resume-draft.md",
+  "interview-questions.json",
 ] as const;
 
 export const REQUIRED_RESUME_SUBMISSION_FILES = [

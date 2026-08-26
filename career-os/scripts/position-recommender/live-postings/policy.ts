@@ -59,30 +59,6 @@ export const HARD_DOMAIN_KEYWORDS = [
   "search", "검색", "platform", "플랫폼", "kafka", "streaming", "backend", "백엔드", "server", "서버",
 ];
 export const AI_KEYWORDS = ["llm", "rag", "openai", "gemini", "머신러닝", "인공지능"];
-// 선호 제외 회사는 config/position-filters.json의 excludedCompanies에서 읽는다.
-// collect_live_postings.ts가 실행 시작 시
-// setExcludedCompanies()로 이 목록을 주입한다. 아래 별칭 맵은 한국어 회사명만으로는
-// 매칭되지 않는 로마자/영문 표기를 보강하는 매칭 보조일 뿐, 회사 결정 자체가 아니다.
-const EXCLUDED_COMPANY_ALIASES: Record<string, string[]> = {
-  "레브잇": ["rev-it", "revit"],
-  "올웨이즈": ["always", "alway"],
-  "피닉스랩": ["phoenixlab"],
-  "와그(waug)": ["와그", "waug"],
-};
-let excludedCompanyKeywords: string[] = [];
-
-/** config/position-filters.json의 excludedCompanies를 정규화하고 별칭을 확장한다. */
-export function setExcludedCompanies(companies: string[]): void {
-  const set = new Set<string>();
-  for (const raw of companies) {
-    const name = norm(raw).toLowerCase();
-    if (!name) continue;
-    set.add(name);
-    for (const alias of EXCLUDED_COMPANY_ALIASES[name] ?? []) set.add(alias.toLowerCase());
-  }
-  excludedCompanyKeywords = [...set];
-}
-
 // ---- Text helpers --------------------------------------------------------
 
 export function norm(text: unknown): string {
@@ -127,11 +103,6 @@ export function isServerRole(text: string): boolean {
 
 export function isContractRole(text: string): boolean {
   return hasKeyword(text, CONTRACT_KEYWORDS);
-}
-
-export function isExcludedCompany(text: string): boolean {
-  if (excludedCompanyKeywords.length === 0) return false;
-  return hasKeyword(text, excludedCompanyKeywords);
 }
 
 export function classify(text: string): string[] {

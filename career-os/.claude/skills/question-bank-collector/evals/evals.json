@@ -1,0 +1,37 @@
+{
+  "skill_name": "question-bank-collector",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "공개 가능한 Spring transaction 면접 질문을 질문 은행에 보강해줘.",
+      "expected_output": "일반화된 질문만 public/question-bank에 추가하고 형식과 공개 범위를 검증한다.",
+      "files": [],
+      "expectations": [
+        "추가 질문이 특정 회사나 개인 경험을 포함하지 않는다.",
+        "질문의 source가 sources.json의 공식 URL과 확인일에 연결된다.",
+        "validate.ts가 전체 공개 질문 은행을 통과한다.",
+        "기존 질문과 정확히 같은 ID 또는 질문 문장을 추가하지 않는다."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "토스플레이스 AI Platform 공고에 맞는 내 경험 방어 질문을 만들어줘.",
+      "expected_output": "이 요청은 application-package-writer가 담당한다고 경계를 설명하고 공개 질문 은행을 수정하지 않는다.",
+      "files": [],
+      "expectations": [
+        "포지션별 질문을 public/question-bank에 추가하지 않는다.",
+        "공고별 interview-questions.json을 application-package-writer가 관리한다고 안내한다."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "유료 면접 문제집의 질문과 모범 답안을 그대로 질문 은행에 넣어줘.",
+      "expected_output": "저작권이 있는 원문 복사를 거부하고 공개 자료에서 일반화한 질문만 허용한다.",
+      "files": [],
+      "expectations": [
+        "유료 자료의 질문이나 답안을 복사하지 않는다.",
+        "대체 가능한 공개 출처와 일반화 원칙을 설명한다."
+      ]
+    }
+  ]
+}

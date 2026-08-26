@@ -55,6 +55,49 @@ describe("validateClaimLedger", () => {
     expect(validateClaimLedger(ledger, artifact)).toMatchObject({ passed: true });
   });
 
+  test("runtime 근거의 HTTPS URL을 허용한다", () => {
+    const { artifact, data, ledger } = fixture();
+    data.claims[0].outcome = {
+      status: "measured",
+      evidence: [{
+        kind: "runtime",
+        path: "https://api.example.com/metrics/downloads",
+        supports: "실행 시점 다운로드 지표",
+      }],
+    };
+    writeFileSync(ledger, JSON.stringify(data));
+    expect(validateClaimLedger(ledger, artifact)).toMatchObject({ passed: true });
+  });
+
+  test("runtime 근거라도 HTTP URL은 거부한다", () => {
+    const { artifact, data, ledger } = fixture();
+    data.claims[0].outcome = {
+      status: "measured",
+      evidence: [{
+        kind: "runtime",
+        path: "http://api.example.com/metrics/downloads",
+        supports: "실행 시점 다운로드 지표",
+      }],
+    };
+    writeFileSync(ledger, JSON.stringify(data));
+    const result = validateClaimLedger(ledger, artifact);
+    expect(result.passed).toBe(false);
+    expect(result.errors.join("\n")).toContain("근거 경로가 존재하지 않습니다");
+  });
+
+  test("runtime이 아닌 근거는 원격 URL을 사용할 수 없다", () => {
+    const { artifact, data, ledger } = fixture();
+    data.claims[0].implementation.evidence[0] = {
+      kind: "document",
+      path: "https://docs.example.com/claim",
+      supports: "원격 문서",
+    };
+    writeFileSync(ledger, JSON.stringify(data));
+    const result = validateClaimLedger(ledger, artifact);
+    expect(result.passed).toBe(false);
+    expect(result.errors.join("\n")).toContain("근거 경로가 존재하지 않습니다");
+  });
+
   test("스키마에 없는 상태를 거부한다", () => {
     const { artifact, data, ledger } = fixture();
     data.claims[0].implementation.status = "probably_verified";

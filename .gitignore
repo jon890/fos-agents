@@ -24,9 +24,8 @@
 !**/data/question-bank/**
 # 시스템 실행·이벤트 산물
 **/state/*
-# 연속성이 필요한 답변 연습·지원 상태만 추적
+# 연속성이 필요한 답변 연습 상태만 추적
 !**/state/drill-progress.json
-!**/state/company-cooldown.json
 # 공고별 지원 문서 (비공개)
 **/applications/
 # 사람용 생성 리포트

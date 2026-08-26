@@ -79,7 +79,7 @@ Git 작성 이력도 운영 성과나 단독 소유권을 자동으로 증명하
 
 ## 다른 스킬과의 경계
 
-- `application-reviewer`는 Markdown 지원 패키지의 정합성을 검토한다.
+- `application-package-writer`는 Markdown 지원 패키지의 정합성과 제출 준비 흐름을 관리한다.
 - `resume-evaluator`는 검증된 이력서의 설득력, 구조와 렌더링을 개선한다.
 - 제출 문구가 바뀌면 이 스킬로 다시 감사한다.
 

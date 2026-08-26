@@ -46,12 +46,12 @@ Zod 검증을 통과한 값만 수집 코드가 사용한다.
 
 ### `config/position-filters.json`
 
-사용자가 명시적으로 정한 지속적인 제외만 관리한다.
+사용자가 명시적으로 억제한 개별 공고만 관리한다.
 
-- `excludedCompanies`: 수집 단계에서 제외할 회사명
 - `suppressedPostings`: 추천 결과에서 숨길 개별 공고 URL과 이유
 
-일시적인 회사 쿨다운은 이 파일에 넣지 않는다.
+회사 이름으로 후보를 수집 단계에서 제외하지 않는다.
+회사별 선호, 탈락 이력과 지원 우선순위는 private brain의 현재 커리어 상태를 검색해 추천 순위에서 판단한다.
 
 ### `config/external-reading-sources.ts`
 
@@ -66,35 +66,7 @@ Zod 검증을 통과한 값만 수집 코드가 사용한다.
 - `enabled`
 - 출처 분류
 
-### `config/current-target.example.json`
-
-로컬 현재 지원 대상 파일의 예시다.
-실제 값은 `state/current-target.json`에 두며 커밋하지 않는다.
-
 ## State
-
-### `state/current-target.json`
-
-선택된 현재 지원 대상 하나를 담는 선택적 로컬 파일이다.
-파일이 없으면 선택된 대상이 없다.
-
-최상위 `primary`에 현재 대상 하나를 둔다.
-
-필수 필드:
-
-- `company`, `role`
-- `company_slug`, `position_slug`
-- `data_root`
-
-선택 필드:
-
-- `team`, `position_focus`, `notes`
-- `interview_date`
-- `interview.first_round`, `final_round`, `offer_chat`
-
-형식은 `scripts/current-target/current_target_schema.ts`가 검증한다.
-`data_root`는 `private/<회사 식별자>/<포지션 식별자>` 형태다.
-과거 대상 이력은 이 파일에 누적하지 않는다.
 
 ### `state/drill-progress.json`
 
@@ -107,11 +79,6 @@ Zod 검증을 통과한 값만 수집 코드가 사용한다.
 - 기술·인성 모드가 공유하는 진행 정보
 
 학습 주제 생성 상태와 섞지 않는다.
-
-### `state/company-cooldown.json`
-
-특정 회사를 일정 기간 추천에서 낮추거나 제외하는 운영 상태다.
-지속적인 제외 정책과 분리하며, 기한이 끝나면 다시 평가할 수 있어야 한다.
 
 ### 실행 중 생성되는 읽을거리 데이터
 
@@ -165,11 +132,12 @@ Zod 검증을 통과한 값만 수집 코드가 사용한다.
 - `candidate-interview.md`: 후보자 원문 답변, 정리한 핵심과 제출 반영 여부
 - `application-package.md`: 공고·회사 기준, 후보자 근거, 지원 판단, 승부처, 공백과 다음 행동을 담은 원본
 - `resume-draft.md`: HTML과 PDF로 변환할 제출용 이력서 원본
-- `application-package.html`: 위 원본과 이력서 초안을 묶은 로컬 검토 화면
-- `application-answers.md`: 지원 사이트가 별도 문항을 요구할 때만 만드는 제출 문구
+- `interview-questions.json`: 공고 책임, 근거 방어와 경험 공백에서 만든 포지션별 질문
 
-기본 산출물은 앞의 네 파일이다.
-`application-answers.md`는 조건이 맞을 때만 만든다.
+위 네 파일이 기본 원본이다.
+`application-package.html`은 기본 원본과 현재 제출 파일을 묶은 로컬 검토 화면이다.
+지원 사이트가 별도 문항을 요구하면 `application-answers.md`를 추가한다.
+경력기술서를 받는 공고에는 `career-description-draft.md`를 추가한다.
 최종 제출 단계에서는 `resume.html`과 `resume.pdf`를 파생한다.
 경력기술서가 필요한 지원 건은 `career-description.html`, `career-description.pdf`와 한 파일 제출용 `submission.pdf`를 추가한다.
 `submission-manifest.json`은 각 PDF의 파일 해시와 원본 HTML의 문구 해시를 연결한다.
@@ -200,8 +168,11 @@ Zod 검증을 통과한 값만 수집 코드가 사용한다.
 
 ## 면접 자료
 
-개인 면접 자료는 `private/<company>/<position>/interview/`에 둔다.
+현재 지원 대상은 private brain에서 찾고 대응하는 `applications/<company>/<position>/`을 실행 경로로 사용한다.
+포지션별 질문은 해당 지원 디렉터리의 `interview-questions.json`에 둔다.
 공개 가능한 일반 질문은 `public/question-bank/`에 둔다.
+질문 출처의 공식 URL, 게시자, 확인일과 적용 범위는 `public/question-bank/sources.json`에 둔다.
+각 질문의 `source`는 이 레지스트리의 식별자를 참조한다.
 개인 경험에서 파생한 질문은 `private/question-bank/`에 둔다.
 
 ## 아침 읽을거리
@@ -236,7 +207,7 @@ HTML 게시 전에는 개인 정보, 비공개 업무 내용, 로컬 절대 경�
 ## 보존과 공개 범위
 
 - `config/`와 공개 질문 은행은 검토 후 Git으로 관리한다.
-- 로컬 현재 대상과 실행 상태는 필요할 때만 유지한다.
+- 현재 지원 대상과 회사별 지원 판단은 private brain에서 관리한다.
 - cache와 다시 만들 수 있는 중간 리포트는 장기 이력으로 취급하지 않는다.
 - 개인 연락처, 회사별 지원 전략, 근거 감사 원문은 공개 리포트에 포함하지 않는다.
 - 경력 자료를 공개할 때도 비공개 회사 정보와 로컬 경로를 제거한다.

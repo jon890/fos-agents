@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { validateApplicationPackage } from "./validate_application_package.ts";
 import { validateSubmissionBundle } from "./validate_submission_bundle.ts";
+import { loadApplicationInterviewQuestions } from "../../../../scripts/interview-drill/application_question_schema.ts";
 
 type PackageStatus = {
   readiness: "ready" | "needs_user_input" | "revise" | "do_not_apply";
@@ -37,6 +38,12 @@ const EVIDENCE_LABELS: Record<PackageStatus["evidence"], string> = {
   revise: "근거 표현 조정",
   blocked: "근거 확인 전 사용 금지",
 };
+
+const QUESTION_ORIGIN_LABELS = {
+  posting_requirement: "공고 핵심 책임",
+  evidence_defense: "제출 근거 방어",
+  experience_gap: "경험 공백 확인",
+} as const;
 
 function read(path: string): string {
   return readFileSync(path, "utf8");
@@ -179,12 +186,34 @@ function supportingDetails(title: string, markdown: string, open = false): strin
   </details>`;
 }
 
+function renderInterviewQuestions(applicationDirectory: string): string {
+  const file = loadApplicationInterviewQuestions(applicationDirectory);
+  return file.questions
+    .map((question, index) => {
+      const signals = question.answerSignals.map((signal) => `- ${signal}`).join("\n");
+      const followUps = question.followUps?.map((followUp) => `- ${followUp}`).join("\n");
+      return [
+        `### ${index + 1}. ${question.question}`,
+        `출처: ${QUESTION_ORIGIN_LABELS[question.origin]}`,
+        `의도: ${question.intent}`,
+        "답변에서 확인할 신호:",
+        signals,
+        `근거 경계: ${question.evidenceBoundary}`,
+        followUps ? `꼬리 질문:\n${followUps}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+    })
+    .join("\n\n");
+}
+
 export function renderApplicationPackageHtml(
   packageMarkdown: string,
   interviewMarkdown: string,
   resumeMarkdown: string,
   answersMarkdown?: string,
   assets: RenderAssets = {},
+  questionsMarkdown?: string,
 ): string {
   const title = documentTitle(packageMarkdown);
   const status = statusFrom(packageMarkdown);
@@ -376,6 +405,7 @@ export function renderApplicationPackageHtml(
     </div>
 
     <section class="supporting" aria-label="원문과 제출 초안">
+      ${questionsMarkdown ? supportingDetails("포지션별 면접 질문", questionsMarkdown) : ""}
       ${supportingDetails("이력서 초안", resumeMarkdown, true)}
       ${answersMarkdown ? supportingDetails("지원 문항 초안", answersMarkdown) : ""}
       ${supportingDetails("후보자 인터뷰 기록", interviewMarkdown)}
@@ -410,6 +440,7 @@ export function renderApplicationPackage(applicationDirectory: string, outputPat
       submissionReady: submission.passed,
       submissionBlocker: submission.errors[0],
     },
+    renderInterviewQuestions(directory),
   );
   const destination = resolve(outputPath ?? join(directory, "application-package.html"));
   mkdirSync(dirname(destination), { recursive: true });

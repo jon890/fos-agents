@@ -7,6 +7,7 @@ import {
   REQUIRED_PACKAGE_FILES,
   SUBMISSION_LEAK_PATTERNS,
 } from "./package_contract.ts";
+import { loadApplicationInterviewQuestions } from "../../../../scripts/interview-drill/application_question_schema.ts";
 
 export type PackageValidation = {
   passed: boolean;
@@ -27,6 +28,12 @@ export function validateApplicationPackage(applicationDirectory: string): Packag
     if (!existsSync(join(directory, file))) errors.push(`필수 파일이 없습니다: ${file}`);
   }
   if (errors.length > 0) return { passed: false, applicationDirectory: directory, errors };
+
+  try {
+    loadApplicationInterviewQuestions(directory);
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : String(error));
+  }
 
   for (const [file, headings] of Object.entries(REQUIRED_HEADINGS)) {
     const content = read(join(directory, file));

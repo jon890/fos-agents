@@ -1,9 +1,32 @@
 #!/usr/bin/env bun
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative, sep } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 
 type Difficulty = "basic" | "intermediate" | "advanced";
+type QuestionSourceType = "official-reference-set" | "official-career-guidance";
+
+export interface QuestionSourceReference {
+  title: string;
+  publisher: string;
+  url: string;
+}
+
+export interface QuestionSource {
+  id: string;
+  label: string;
+  sourceType: QuestionSourceType;
+  checkedAt: string;
+  scope: string;
+  normalizationNote: string;
+  references: QuestionSourceReference[];
+}
+
+export interface QuestionSourceRegistry {
+  schemaVersion: 1;
+  sources: QuestionSource[];
+}
 
 export interface QuestionItem {
   id: string;
@@ -33,6 +56,8 @@ export interface QuestionBankInventoryItem {
   difficulty: Difficulty;
   tagsCandidate: string[];
   source: string;
+  sourceCheckedAt: string;
+  sourceReferenceUrls: string[];
   publicSafe: true;
   signalCount: number;
   followUpCount: number;
@@ -51,14 +76,16 @@ export interface QuestionBankInventory {
   bankRoot: string;
   scannedFileCount: number;
   scannedQuestionCount: number;
+  registeredSourceCount: number;
   categories: QuestionBankInventoryCategory[];
   items: QuestionBankInventoryItem[];
 }
 
-const ROOT = process.cwd();
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const BANK_ROOT = join(ROOT, "public", "question-bank");
 const CATEGORIES = ["java-spring", "database", "cs", "operations", "system-design", "behavioral"];
 const DIFFICULTIES = new Set(["basic", "intermediate", "advanced"]);
+const SOURCE_TYPES = new Set<QuestionSourceType>(["official-reference-set", "official-career-guidance"]);
 const REQUIRED_FIELDS: Array<keyof QuestionItem> = [
   "id",
   "category",
@@ -105,6 +132,74 @@ export function readJsonArray(path: string): QuestionItem[] {
   }
   assert(Array.isArray(parsed), `${path}: expected JSON array`);
   return parsed as QuestionItem[];
+}
+
+export function readSourceRegistry(path: string): QuestionSourceRegistry {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(readFileSync(path, "utf-8"));
+  } catch (error) {
+    throw new Error(`${path}: JSON parse failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  assert(typeof parsed === "object" && parsed !== null && !Array.isArray(parsed), `${path}: expected JSON object`);
+  return parsed as QuestionSourceRegistry;
+}
+
+function isIsoDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
+
+function validateHttpsUrl(path: string, sourceId: string, url: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error(`${path}: ${sourceId} has invalid reference URL ${url}`);
+  }
+  assert(parsed.protocol === "https:", `${path}: ${sourceId} reference URL must use https`);
+  assert(!parsed.username && !parsed.password, `${path}: ${sourceId} reference URL must not contain credentials`);
+}
+
+export function validateSourceRegistry(path: string, registry: QuestionSourceRegistry): Map<string, QuestionSource> {
+  assert(registry.schemaVersion === 1, `${path}: schemaVersion must be 1`);
+  assert(Array.isArray(registry.sources) && registry.sources.length > 0, `${path}: sources must be a non-empty array`);
+
+  const sourcesById = new Map<string, QuestionSource>();
+  for (const source of registry.sources) {
+    assert(typeof source === "object" && source !== null, `${path}: source entry must be an object`);
+    assert(typeof source.id === "string" && /^public-[a-z0-9-]+$/.test(source.id), `${path}: invalid source id ${source.id}`);
+    assert(!sourcesById.has(source.id), `${path}: duplicate source id ${source.id}`);
+    assert(typeof source.label === "string" && source.label.trim().length >= 5, `${path}: ${source.id} label is too short`);
+    assert(SOURCE_TYPES.has(source.sourceType), `${path}: ${source.id} has invalid sourceType ${source.sourceType}`);
+    assert(typeof source.checkedAt === "string" && isIsoDate(source.checkedAt), `${path}: ${source.id} checkedAt must be YYYY-MM-DD`);
+    assert(typeof source.scope === "string" && source.scope.trim().length >= 15, `${path}: ${source.id} scope is too short`);
+    assert(typeof source.normalizationNote === "string" && source.normalizationNote.trim().length >= 20, `${path}: ${source.id} normalizationNote is too short`);
+    assert(Array.isArray(source.references) && source.references.length > 0, `${path}: ${source.id} needs references`);
+
+    const referenceUrls = new Set<string>();
+    for (const reference of source.references) {
+      assert(typeof reference.title === "string" && reference.title.trim().length >= 5, `${path}: ${source.id} reference title is too short`);
+      assert(typeof reference.publisher === "string" && reference.publisher.trim().length >= 2, `${path}: ${source.id} reference publisher is too short`);
+      assert(typeof reference.url === "string", `${path}: ${source.id} reference URL must be a string`);
+      validateHttpsUrl(path, source.id, reference.url);
+      assert(!referenceUrls.has(reference.url), `${path}: ${source.id} has duplicate reference URL ${reference.url}`);
+      referenceUrls.add(reference.url);
+    }
+    sourcesById.set(source.id, source);
+  }
+  return sourcesById;
+}
+
+export function resolveQuestionSource(
+  path: string,
+  item: QuestionItem,
+  sourcesById: Map<string, QuestionSource>,
+): QuestionSource {
+  const source = sourcesById.get(item.source);
+  assert(source, `${path}: ${item.id} source ${item.source} is not registered in public/question-bank/sources.json`);
+  return source;
 }
 
 export function validateTextSafety(path: string, item: QuestionItem): void {
@@ -155,7 +250,12 @@ function fileMtime(path: string): { mtimeMs: number | null; updatedAt: string | 
   }
 }
 
-function toInventoryItem(root: string, path: string, item: QuestionItem): QuestionBankInventoryItem {
+function toInventoryItem(
+  root: string,
+  path: string,
+  item: QuestionItem,
+  source: QuestionSource,
+): QuestionBankInventoryItem {
   const { mtimeMs, updatedAt } = fileMtime(path);
   return {
     path: normalizeRelativePath(root, path),
@@ -164,6 +264,8 @@ function toInventoryItem(root: string, path: string, item: QuestionItem): Questi
     difficulty: item.difficulty,
     tagsCandidate: item.tags ?? [],
     source: item.source,
+    sourceCheckedAt: source.checkedAt,
+    sourceReferenceUrls: source.references.map((reference) => reference.url),
     publicSafe: true,
     signalCount: item.answerSignals.length,
     followUpCount: item.followUps?.length ?? 0,
@@ -178,9 +280,14 @@ export function scanQuestionBankInventory(opts: QuestionBankInventoryOptions = {
 
   assert(existsSync(bankRoot), `${bankRoot} does not exist`);
   assert(existsSync(join(bankRoot, "README.md")), "public/question-bank/README.md is missing");
+  const sourceRegistryPath = join(bankRoot, "sources.json");
+  assert(existsSync(sourceRegistryPath), "public/question-bank/sources.json is missing");
+  const sourceRegistry = readSourceRegistry(sourceRegistryPath);
+  const sourcesById = validateSourceRegistry(sourceRegistryPath, sourceRegistry);
 
   const ids = new Set<string>();
   const questions = new Map<string, string>();
+  const usedSourceIds = new Set<string>();
   const categories: QuestionBankInventoryCategory[] = [];
   const inventoryItems: QuestionBankInventoryItem[] = [];
   let scannedFileCount = 0;
@@ -209,7 +316,9 @@ export function scanQuestionBankInventory(opts: QuestionBankInventoryOptions = {
         const duplicateOwner = questions.get(normalizedQuestion);
         assert(!duplicateOwner, `${path}: duplicate question with ${duplicateOwner}`);
         questions.set(normalizedQuestion, item.id);
-        inventoryItems.push(toInventoryItem(root, path, item));
+        const source = resolveQuestionSource(path, item, sourcesById);
+        usedSourceIds.add(item.source);
+        inventoryItems.push(toInventoryItem(root, path, item, source));
         categoryQuestionCount++;
         total++;
       }
@@ -218,6 +327,9 @@ export function scanQuestionBankInventory(opts: QuestionBankInventoryOptions = {
   }
 
   assert(total >= 15, `expected at least 15 seed questions, got ${total}`);
+  for (const sourceId of sourcesById.keys()) {
+    assert(usedSourceIds.has(sourceId), `${sourceRegistryPath}: unused source ${sourceId}`);
+  }
   inventoryItems.sort((a, b) => a.key.localeCompare(b.key));
 
   return {
@@ -225,6 +337,7 @@ export function scanQuestionBankInventory(opts: QuestionBankInventoryOptions = {
     bankRoot,
     scannedFileCount,
     scannedQuestionCount: total,
+    registeredSourceCount: sourcesById.size,
     categories,
     items: inventoryItems,
   };
@@ -237,6 +350,7 @@ export function main(): void {
       status: "ok",
       categories: inventory.categories.length,
       questions: inventory.scannedQuestionCount,
+      sources: inventory.registeredSourceCount,
     }, null, 2));
   } catch (error) {
     fail(error instanceof Error ? error.message : String(error));

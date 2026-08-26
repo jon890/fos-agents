@@ -20,10 +20,26 @@ function validResume(): string {
   return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><style>@page { size: A4; } @media print { * { print-color-adjust: exact; } }</style></head><body><main class="resume-page">${sections}<a href="mailto:user@example.com">email</a><a href="https://github.com/user">github</a></main><main class="resume-page"></main></body></html>`;
 }
 
+function validCareerDescription(): string {
+  const sections = RESUME_HTML_CONTRACT.requiredSectionIds
+    .filter((id) => ["career", "skills"].includes(id))
+    .map((id) => `<section id="${id}">${id}</section>`)
+    .join("");
+  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><style>@page { size: A4; } @media print { * { print-color-adjust: exact; } }</style></head><body><main class="resume-page">${sections}<a href="mailto:user@example.com">email</a><a href="https://github.com/user">github</a></main><main class="resume-page"></main></body></html>`;
+}
+
 function writeResume(html: string): string {
   const directory = mkdtempSync(join(tmpdir(), "resume-html-"));
   tempDirectories.push(directory);
   const path = join(directory, "resume.html");
+  writeFileSync(path, html);
+  return path;
+}
+
+function writeCareerDescription(html: string): string {
+  const directory = mkdtempSync(join(tmpdir(), "career-description-html-"));
+  tempDirectories.push(directory);
+  const path = join(directory, "career-description.html");
   writeFileSync(path, html);
   return path;
 }
@@ -37,5 +53,11 @@ describe("checkResumeHtml", () => {
     const result = checkResumeHtml(writeResume(validResume().replace("</body>", "/Users/private</body>")));
     expect(result.passed).toBe(false);
     expect(result.checks.find((check) => check.name === "내부 근거 경로 비노출")?.passed).toBe(false);
+  });
+
+  test("경력기술서에는 경력기술서 전용 섹션 계약을 적용한다", () => {
+    const result = checkResumeHtml(writeCareerDescription(validCareerDescription()));
+    expect(result.passed).toBe(true);
+    expect(result.documentKind).toBe("career-description");
   });
 });

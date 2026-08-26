@@ -4,7 +4,6 @@ import {
   classify,
   closeWindow,
   isContractRole,
-  isExcludedCompany,
   isNonServerTitle,
   isServerRole,
   norm,
@@ -115,7 +114,7 @@ function postingFromKakaoCareersDetail(job: KakaoCareersJob): Posting | null {
   const fullText = `${title} ${text}`;
   const applyUrl = externalApplyUrl(job.introduction);
   if (!title || !applyUrl) return null;
-  if (isExcludedCompany(fullText) || isContractRole(fullText) || isNonServerTitle(title) || !isServerRole(fullText)) return null;
+  if (isContractRole(fullText) || isNonServerTitle(title) || !isServerRole(fullText)) return null;
 
   return {
     source: "kakaopay",
@@ -159,7 +158,6 @@ function postingFromDetail(url: string, html: string): Posting | null {
   const title = htmlTitle(html);
   const fullText = `${title} ${text}`;
   if (!title) return null;
-  if (isExcludedCompany(fullText)) return null;
   if (isContractRole(fullText)) return null;
   if (isNonServerTitle(title)) return null;
   if (!isServerRole(fullText)) return null;

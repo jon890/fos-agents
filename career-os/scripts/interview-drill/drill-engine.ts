@@ -10,6 +10,7 @@
  *   - career-os/public/question-bank/{기술 카테고리}/questions.json  (tech)
  *   - career-os/public/question-bank/behavioral/questions.json  (behavioral)
  *   - career-os/private/question-bank/{tech|behavioral}-personal.jsonl  (있으면 merge)
+ *   - applications/<company>/<position>/interview-questions.json  (--application-dir로 지정)
  *   - career-os/state/drill-progress.json  (드릴 간격 반복 상태)
  *   - career-os/state/drill-log-YYYY-MM-DD.jsonl  (자동 생성)
  */
@@ -23,9 +24,9 @@ import {
 } from "node:fs";
 import { join, dirname } from "node:path";
 import {
-  loadCurrentTarget,
-  type CurrentTarget,
-} from "../current-target/current_target_schema.ts";
+  loadApplicationInterviewQuestions,
+  type ApplicationInterviewQuestion,
+} from "./application_question_schema.ts";
 
 // ─── 타입 정의 ────────────────────────────────────────────────────────────────
 
@@ -44,6 +45,9 @@ export interface DrillQuestion {
   positionFitHint?: string;
   tags?: string[];
   sequenceHint?: "opening" | "early" | "middle" | "late" | "closing";
+  origin?: ApplicationInterviewQuestion["origin"];
+  evidenceBoundary?: string;
+  sourceScope?: "public" | "personal" | "application";
 }
 
 /** 드릴 간격 반복 상태 */
@@ -96,10 +100,6 @@ function loadDrillProgress(): DrillProgress {
   const path = drillProgressPath();
   if (!existsSync(path)) return {};
   return JSON.parse(readFileSync(path, "utf-8")) as DrillProgress;
-}
-
-function currentTargetPath(): string {
-  return join(careerOsRoot(), "state", "current-target.json");
 }
 
 function drillLogPath(date?: string): string {
@@ -163,7 +163,7 @@ function mergePrivateQuestions(
         );
         continue;
       }
-      privateQuestions.push(q as DrillQuestion);
+      privateQuestions.push({ ...(q as DrillQuestion), sourceScope: "personal" });
     } catch {
       console.warn(`[drill-engine] private JSONL 파싱 실패, 건너뜀: ${line.slice(0, 80)}`);
     }
@@ -171,13 +171,31 @@ function mergePrivateQuestions(
   return [...base, ...privateQuestions];
 }
 
-export function loadQuestionBank(drillType: DrillType): DrillQuestion[] {
+function loadApplicationQuestions(
+  applicationDirectory: string | undefined,
+  drillType: DrillType,
+): DrillQuestion[] {
+  if (!applicationDirectory) return [];
+
+  return loadApplicationInterviewQuestions(applicationDirectory).questions
+    .filter((item) => item.drillType === drillType)
+    .map((item) => ({ ...item, sourceScope: "application" }));
+}
+
+export function loadQuestionBank(
+  drillType: DrillType,
+  applicationDirectory?: string,
+): DrillQuestion[] {
   const publicQuestions =
     drillType === "tech"
       ? loadPublicTechQuestions()
       : loadPublicBehavioralQuestions();
 
-  const merged = mergePrivateQuestions(publicQuestions, drillType);
+  const withPersonalQuestions = mergePrivateQuestions(publicQuestions, drillType);
+  const merged = [
+    ...withPersonalQuestions,
+    ...loadApplicationQuestions(applicationDirectory, drillType),
+  ];
 
   if (merged.length === 0) {
     console.error(
@@ -207,27 +225,8 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function loadPrimaryTarget(): CurrentTarget | null {
-  try {
-    return loadCurrentTarget(currentTargetPath());
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.warn(`[drill-engine] 현재 지원 대상 파싱 실패, 우선순위 보정 생략: ${message}`);
-    return null;
-  }
-}
-
-function targetPriorityBoost(
-  drillType: DrillType,
-  question: DrillQuestion,
-  target: CurrentTarget | null
-): number {
-  if (drillType !== "behavioral" || target == null) return 0;
-
-  const companySlug = target.company_slug?.toLowerCase() ?? "";
-  if (!companySlug) return 0;
-
-  return question.id.toLowerCase().startsWith(`${companySlug}-`) ? 10 : 0;
+function applicationPriorityBoost(question: DrillQuestion): number {
+  return question.sourceScope === "application" ? 10 : 0;
 }
 
 function difficultyOrder(difficulty: DrillQuestion["difficulty"]): number {
@@ -261,13 +260,13 @@ function sequenceOrder(question: DrillQuestion): number {
 export function selectQuestions(
   drillType: DrillType,
   drillProgress: DrillProgress,
-  maxCount = 5
+  maxCount = 5,
+  applicationDirectory?: string,
 ): DrillQuestion[] {
-  const bank = loadQuestionBank(drillType);
+  const bank = loadQuestionBank(drillType, applicationDirectory);
   if (bank.length === 0) return [];
 
   const todayStr = today();
-  const primaryTarget = loadPrimaryTarget();
 
   // 각 질문의 우선순위 점수 계산
   const scored = bank.map((q) => {
@@ -289,7 +288,7 @@ export function selectQuestions(
     else if (isDue) priority = 1; // 일반 복습
 
     if (priority >= 0) {
-      priority += targetPriorityBoost(drillType, q, primaryTarget);
+      priority += applicationPriorityBoost(q);
     }
 
     return { q, priority };
@@ -388,9 +387,18 @@ export function updateDrillProgress(question: DrillQuestion, score: ScoreResult)
 
 if (import.meta.main) {
   const drillType: DrillType = (process.argv[2] as DrillType) ?? "tech";
+  const applicationDirectoryIndex = process.argv.indexOf("--application-dir");
+  const applicationDirectory =
+    applicationDirectoryIndex >= 0 ? process.argv[applicationDirectoryIndex + 1] : undefined;
   const drillProgress = loadDrillProgress();
 
-  const questions = selectQuestions(drillType, drillProgress);
+  let questions: DrillQuestion[];
+  try {
+    questions = selectQuestions(drillType, drillProgress, 5, applicationDirectory);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
   if (questions.length === 0) {
     console.log(
       "오늘 연습할 질문이 없습니다. /question-bank-collector 로 질문 풀을 보강하세요."

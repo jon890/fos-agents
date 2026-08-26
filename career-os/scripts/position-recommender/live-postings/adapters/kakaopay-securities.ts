@@ -4,7 +4,6 @@ import {
   classify,
   closeWindow,
   isContractRole,
-  isExcludedCompany,
   isNonServerTitle,
   isServerRole,
   norm,
@@ -98,7 +97,6 @@ function postingFromDetail(url: string, html: string): Posting | null {
   if (!title) return null;
   if (status !== "in_progress") return null;
   if (!/지원하기/.test(text)) return null;
-  if (isExcludedCompany(fullText)) return null;
   if (isContractRole(fullText) || /intern|인턴|contract/i.test(employment)) return null;
   if (isNonServerTitle(title)) return null;
   if (!isServerRole(roleSignal) && !isServerRole(fullText)) return null;

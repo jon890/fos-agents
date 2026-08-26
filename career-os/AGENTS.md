@@ -27,8 +27,9 @@
 
 ## 작업 경계
 
-현재 타깃, 회사명, 공고, 면접 일정, 학습 우선순위처럼 자주 바뀌는 상태는 `AGENTS.md`에 쓰지 않는다.
-해당 상태는 `config/`, `state/`, `applications/`, `reports/`, `logs/`의 책임 파일에서 관리한다.
+현재 지원 대상과 회사별 지원 판단은 private brain에서 관리한다.
+공고별 지원 문서와 면접 질문은 `applications/`에 두고, 답변 연습 진행처럼 저장소 실행에 필요한 상태만 `state/`에 둔다.
+회사명, 공고, 면접 일정과 학습 우선순위처럼 자주 바뀌는 상태를 `AGENTS.md`에 쓰지 않는다.
 
 - 후보자 프로필의 기준 원본은 `config/candidate-profile.md`다.
 - 공개 학습 자료는 `sources/fos-study/`에서 파생한다.

@@ -14,11 +14,12 @@ description: 후보자 프로필과 현재 열린 외부 채용공고를 비교�
 
 - `config/candidate-profile.md`
 - `config/position-filters.json`
-- `state/company-cooldown.json`
 - [`references/position-decision-criteria.md`](references/position-decision-criteria.md)
 
 등록 소스 밖의 회사를 추가 탐색할 때 `config/verified-company-research-targets.json`을 읽는다.
 세부 경력 근거가 판단에 필요할 때 프로필에서 연결한 최신 경력 자료와 업무 기록을 읽는다.
+현재 지원 대상, 지원 이력이나 회사별 재지원 간격이 순위에 영향을 주면 `brain-search`로 private brain을 확인한다.
+저장소 안에 별도 쿨다운 상태 파일을 만들지 않는다.
 
 ## 실행
 
@@ -47,7 +48,8 @@ bun scripts/position-recommender/collect_live_postings.ts \
 - `collectedAt`이 이번 실행 시각이다.
 - `candidates`가 1건 이상이다.
 - 추천에 사용할 소스의 진단 상태가 성공 또는 부분 성공이다.
-- 후보는 개별 공고 URL을 가진 `active` 또는 `open` 상태다.
+- 후보는 `linkType: direct_posting`이며 개별 공고 URL을 가진다.
+- 후보의 `postingStatus`는 `active` 또는 `open`이다.
 - 후보의 마감 상태가 `no_deadline`이거나 마감일이 현재 실행 시각 이후다.
 
 현재 수집 성공을 모델 선별의 선행 조건으로 삼는다.
@@ -66,7 +68,7 @@ bun scripts/position-recommender/collect_live_postings.ts \
 - 회사와 사업의 이직 가치
 - 경력 수준과 고용 형태
 - 현재 약점으로 준비 가능한 범위
-- 지원 이력과 일시적인 쿨다운
+- private brain에서 확인한 지원 이력과 재지원 간격
 
 공고의 담당 업무는 미래 업무 범위다.
 필수 자격과 전이 가능한 경험을 구분해 채점한다.

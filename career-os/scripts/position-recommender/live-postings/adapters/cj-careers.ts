@@ -5,7 +5,6 @@ import {
   closeWindow,
   hasKeyword,
   isContractRole,
-  isExcludedCompany,
   isNonServerTitle,
   isServerRole,
   norm,
@@ -126,7 +125,6 @@ async function postingFromJob(job: CjJob): Promise<Posting | null> {
   const detailText = await fetchDetailText(id);
   const fullText = `${company} ${title} ${job.job_cd_nm ?? ""} ${job.location_cd_nm ?? ""} ${detailText}`;
   const roleText = `${company} ${title} ${job.job_cd_nm ?? ""} ${job.location_cd_nm ?? ""}`;
-  if (isExcludedCompany(fullText)) return null;
   if (isContractRole(roleText)) return null;
   if (isNonServerTitle(title)) return null;
   if (!isServerRole(roleText) && !hasKeyword(roleText, ["백엔드개발", "backend engineer"])) return null;

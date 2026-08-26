@@ -6,7 +6,6 @@ import {
   closeWindow,
   hasKeyword,
   isContractRole,
-  isExcludedCompany,
   isNonServerTitle,
   isServerRole,
   norm,

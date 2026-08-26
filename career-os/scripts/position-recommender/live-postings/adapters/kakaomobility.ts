@@ -4,7 +4,6 @@ import {
   classify,
   closeWindow,
   isContractRole,
-  isExcludedCompany,
   isNonServerTitle,
   isServerRole,
   norm,
@@ -65,7 +64,6 @@ function postingFromDetail(url: string, html: string): Posting | null {
   const title = htmlTitle(html);
   const fullText = `${title} ${text}`;
   if (!title) return null;
-  if (isExcludedCompany(fullText)) return null;
   if (isContractRole(fullText)) return null;
   if (isNonServerTitle(title)) return null;
   if (!isServerRole(fullText)) return null;

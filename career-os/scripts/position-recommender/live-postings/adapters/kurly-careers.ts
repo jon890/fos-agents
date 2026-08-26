@@ -4,7 +4,6 @@ import {
   classify,
   closeWindow,
   isContractRole,
-  isExcludedCompany,
   isNonServerTitle,
   isServerRole,
 } from "../policy.ts";
@@ -64,7 +63,7 @@ export function parseKurlyPosting(url: string, html: string): Posting | null {
 
   const title = htmlTitle(html);
   const fullText = `${title} ${text}`;
-  if (!title || isExcludedCompany(fullText) || isContractRole(fullText)) return null;
+  if (!title || isContractRole(fullText)) return null;
   if (isNonServerTitle(title) || !SERVER_TITLE_PATTERN.test(title) || !isServerRole(fullText)) return null;
 
   const id = url.match(/\/o\/([0-9]+)/)?.[1] ?? url;

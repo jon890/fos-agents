@@ -1,6 +1,7 @@
-export const RESUME_HTML_CONTRACT = {
+export type SubmissionDocumentKind = "resume" | "career-description";
+
+const sharedContract = {
   pageCount: 2,
-  requiredSectionIds: ["profile", "selected-work", "career", "skills"],
   internalLeakPatterns: [
     /\/Users\//,
     /fos-study/i,
@@ -10,3 +11,18 @@ export const RESUME_HTML_CONTRACT = {
     /검토 중|초안입니다/,
   ],
 } as const;
+
+export const SUBMISSION_HTML_CONTRACTS = {
+  resume: {
+    ...sharedContract,
+    label: "이력서",
+    requiredSectionIds: ["profile", "selected-work", "career", "skills"],
+  },
+  "career-description": {
+    ...sharedContract,
+    label: "경력기술서",
+    requiredSectionIds: ["career", "skills"],
+  },
+} as const;
+
+export const RESUME_HTML_CONTRACT = SUBMISSION_HTML_CONTRACTS.resume;

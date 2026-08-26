@@ -33,7 +33,7 @@ career-os/
 
 `config/position-collection.ts`는 외부 채용 소스의 탐색 범위를 타입과 함께 관리한다.
 회사별 탐색 채널은 `config/verified-company-research-targets.json`에 둔다.
-사용자가 정한 회사·공고 제외는 `config/position-filters.json`에 둔다.
+사용자가 정한 개별 공고 억제는 `config/position-filters.json`에 둔다.
 
 `scripts/position-recommender/live-postings/`는 외부 소스 어댑터의 공통 계약과 수집 정책을 구현한다.
 어댑터는 원문 응답을 공통 `LivePosting` 형태로 바꾼다.
@@ -50,8 +50,9 @@ HTML은 검증된 추천 JSON에서 파생하며 게시 검증 뒤 임시 데이
 반복 가능한 계약 검사, HTML·PDF 변환과 제출 묶음 검증은 스킬의 `scripts/`에 둔다.
 
 공고별 문서는 `applications/<company>/<position>/`에 둔다.
-기준 원본은 `candidate-interview.md`, `application-package.md`, `resume-draft.md`다.
-사용자는 이 원본을 묶은 `application-package.html`에서 검토한다.
+기준 원본은 `candidate-interview.md`, `application-package.md`, `resume-draft.md`와 `interview-questions.json`이다.
+포지션별 질문은 공고 책임, 근거 방어와 경험 공백에서 파생한다.
+사용자는 이 원본과 현재 제출 파일을 묶은 `application-package.html`에서 검토한다.
 별도 지원 문항과 경력기술서는 필요한 경우에만 추가한다.
 개인 근거와 면접 준비 자료는 `private/<company>/<position>/`에 둔다.
 실제 제출은 이 모듈의 책임이 아니다.
@@ -66,12 +67,16 @@ HTML은 검증된 추천 JSON에서 파생하며 게시 검증 뒤 임시 데이
 
 ## 현재 지원 대상과 면접 답변 연습
 
-현재 지원 대상은 필요할 때만 `state/current-target.json`에 둔다.
-파일이 없으면 선택된 대상이 없는 상태다.
-형식은 `scripts/current-target/current_target_schema.ts`가 검증한다.
+현재 지원 대상은 private brain에서 검색한다.
+skill은 brain에서 찾은 회사와 역할을 대응하는 `applications/<company>/<position>/` 경로로 해석해 실행 스크립트에 명시적으로 전달한다.
+TypeScript 스크립트가 brain을 직접 조회하지 않는다.
 
 `scripts/interview-drill/`은 `interview-practice`의 기술·인성 모드에서 공통 진행과 복습 상태를 처리한다.
+공고별 `interview-questions.json`을 명시하면 공개 공통 질문과 개인 질문보다 먼저 연습한다.
 복습 상태는 `state/drill-progress.json` 하나에 저장한다.
+
+`public/question-bank/sources.json`은 공개 공통 질문이 참조하는 공식 URL과 확인일을 관리한다.
+`scripts/question-bank-collector/validate.ts`는 질문 구조와 공개 범위뿐 아니라 출처 등록과 URL 형식도 함께 검사한다.
 
 ## 아침 읽을거리
 

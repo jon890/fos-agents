@@ -31,10 +31,11 @@ description: 공고 하나를 실제 지원 가능한 상태로 준비하는 car
 3. 후보자 프로필에서 연결한 최신 경력 자료와 관련 업무 근거
 4. 필요하면 로컬 프로젝트의 코드, 테스트, Git 이력과 기술 결정 문서
 5. `applications/<company>/<role>/candidate-interview.md`가 있으면 기존 답변
-6. `state/positions-queue.jsonl`이 있으면 현재 지원 상태
 
-공고 경로가 없으면 현재 지원 후보를 찾는다.
-후보가 없거나 둘 이상이면 임의로 선택하지 말고 정확히 한 가지 질문으로 대상을 확정한다.
+공고 경로가 없으면 `brain-search`로 private brain의 현재 지원 대상을 먼저 확인한다.
+brain에서 찾은 회사와 역할에 대응하는 `applications/<company>/<role>/` 디렉터리를 사용한다.
+brain에 현재 대상이 없거나 대응하는 지원 디렉터리가 없거나 둘 이상이면 임의로 선택하지 말고 정확히 한 가지 질문으로 대상을 확정한다.
+`state/current-target.json`을 현재 대상의 기준으로 만들지 않는다.
 
 ## 실행 흐름
 
@@ -113,6 +114,7 @@ description: 공고 하나를 실제 지원 가능한 상태로 준비하는 car
 - `application-package.md`: 요구사항·회사 기준·경력 근거와 다음 행동을 통합한 원본
 - `resume-draft.md`: 맞춤 HTML과 PDF의 Markdown 원본
 - `application-package.html`: 위 원본과 이력서 초안을 묶은 로컬 검토 화면
+- `interview-questions.json`: 공고 책임, 근거 방어와 경험 공백에서 만든 포지션별 질문
 
 지원 사이트가 자기소개나 별도 질문을 요구할 때만 application-answers.md를 만든다.
 근거 원장과 점수표는 최종 제출 문서를 검증할 때만 만든다.
@@ -134,6 +136,22 @@ description: 공고 하나를 실제 지원 가능한 상태로 준비하는 car
 ## 사용자 확인 필요
 ## 다음 행동
 ```
+
+`면접에서 검증받을 내용`을 작성한 뒤 다음 세 출처로 질문을 구조화한다.
+
+- `posting_requirement`: 공고가 직접 요구하는 책임과 설계 판단
+- `evidence_defense`: 이력서와 경력기술서의 핵심 경험을 방어하는 질문
+- `experience_gap`: 직접 해보지 않은 영역과 모호한 근거를 확인하는 질문
+
+질문은 `interview-questions.json` 하나에 저장하고 다음 명령으로 검증한다.
+
+```bash
+bun career-os/scripts/interview-drill/application_question_schema.ts \
+  <application-directory>
+```
+
+각 질문에는 답변에서 확인할 신호와 `evidenceBoundary`를 함께 기록한다.
+공백 질문의 답변 신호는 경험을 꾸미는 모범 답안이 아니라 설계 원칙, 인접 근거와 학습 경계를 확인해야 한다.
 
 첫 10줄 안에 아래 상태를 기록한다.
 
@@ -179,7 +197,16 @@ bun career-os/.claude/skills/application-package-writer/scripts/render_applicati
 bun career-os/.claude/skills/application-package-writer/scripts/export_resume.ts \
   --application-dir <application-directory>
 ```
-2. 경력기술서가 필요하면 `career-description.html`과 `career-description.pdf`를 별도로 만든다.
+2. 경력기술서가 필요하면 다음 명령으로 `career-description.html`과 `career-description.pdf`를 별도로 만든다.
+
+```bash
+bun career-os/.claude/skills/application-package-writer/scripts/export_resume.ts \
+  --application-dir <application-directory> \
+  --resume <application-directory>/career-description-draft.md \
+  --design <application-directory>/career-description-design.md \
+  --html <application-directory>/career-description.html \
+  --pdf <application-directory>/career-description.pdf
+```
 3. `resume-evidence-auditor`로 각 HTML 제출 문서의 근거와 소유권을 따로 감사한다.
 4. `resume-evaluator`로 각 문서의 설득력, 정보 구조와 실제 렌더링을 평가한다.
 5. 보이는 문구가 바뀌면 해당 문서의 근거 감사와 평가를 다시 실행한다.

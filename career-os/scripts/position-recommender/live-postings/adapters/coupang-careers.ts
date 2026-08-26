@@ -6,7 +6,6 @@ import {
   classify,
   closeWindow,
   isContractRole,
-  isExcludedCompany,
   isNonServerTitle,
   isServerRole,
   norm,
@@ -189,7 +188,6 @@ function postingFromSitemapUrl(item: SitemapUrl): Posting | null {
   const fullText = `Coupang ${title}`;
 
   if (!id || !title) return null;
-  if (isExcludedCompany(fullText)) return null;
   if (isContractRole(fullText)) return null;
   if (isNonServerTitle(title)) return null;
   if (!isServerRole(fullText)) return null;

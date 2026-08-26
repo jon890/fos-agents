@@ -12,7 +12,8 @@ description: 기술 또는 인성 면접 질문을 한 번에 하나씩 연습�
 
 - `mode=tech`: Java·Spring, 데이터베이스, CS, 운영, 시스템 설계 질문
 - `mode=behavioral`: 협업, 문제 해결, 실패, 고객 영향, 가치관 질문
-- `state/current-target.json`: 있으면 현재 회사와 역할 맥락을 적용
+- private brain의 현재 지원 대상: 포지션별 연습을 요청했으면 `brain-search`로 확인
+- `applications/<company>/<role>/interview-questions.json`: 공고 책임, 근거 방어와 경험 공백 질문
 - `state/drill-progress.json`: 질문별 복습 상태
 
 사용자가 모드를 정하지 않았고 의도가 불분명할 때만 기술 또는 인성 중 하나를 묻는다.
@@ -20,12 +21,21 @@ description: 기술 또는 인성 면접 질문을 한 번에 하나씩 연습�
 
 ## 질문 선택
 
-`scripts/interview-drill/drill-engine.ts`의 `selectQuestions(mode, progress)`를 사용한다.
+현재 지원 대상이 있으면 brain에서 찾은 회사와 역할에 대응하는 지원 디렉터리를 확인한다.
+다음 명령처럼 `--application-dir`를 명시해 공고별 질문을 공통 질문보다 우선한다.
+
+```bash
+bun career-os/scripts/interview-drill/drill-engine.ts tech \
+  --application-dir career-os/applications/<company>/<role>
+```
+
+현재 대상이 없거나 일반 연습을 요청했으면 `--application-dir`를 생략한다.
+`scripts/interview-drill/drill-engine.ts`의 `selectQuestions(mode, progress, count, applicationDirectory)`를 사용한다.
 기술 질문은 `public/question-bank/{java-spring,database,cs,operations,system-design}/questions.json`, 인성 질문은 `public/question-bank/behavioral/questions.json`에서 읽는다.
 `private/question-bank/{tech|behavioral}-personal.jsonl`이 있으면 함께 사용한다.
 질문 풀이 비어 있으면 `question-bank-collector`로 공개 가능한 일반 질문을 보강하도록 안내하고 끝낸다.
 
-현재 지원 대상이 있으면 공고와 회사 공식 자료에서 확인한 책임·가치만 질문 순서와 후속 질문에 반영한다.
+현재 지원 대상이 있으면 공고와 회사 공식 자료에서 확인한 책임, 이력서 근거 방어와 명시한 경험 공백만 질문 순서와 후속 질문에 반영한다.
 근거 없는 회사 기준이나 인터넷 후기를 평가 기준으로 단정하지 않는다.
 
 ## 진행
@@ -60,6 +70,7 @@ description: 기술 또는 인성 면접 질문을 한 번에 하나씩 연습�
 - 일별 기록: `state/drill-log-YYYY-MM-DD.jsonl`
 - 기술과 인성은 `drillType`으로 구분한다.
 - 개인 경험 기반 질문은 `private/question-bank/`에만 추가한다.
+- 포지션별 질문은 해당 지원 디렉터리의 `interview-questions.json`에만 둔다.
 - `sources/fos-study/`와 `config/candidate-profile.md`는 수정하지 않는다.
 - 실제 면접 일정, 지원 전략과 회사별 비공개 정보는 공개 질문 은행에 넣지 않는다.
 

@@ -9,7 +9,6 @@ import type {
 } from "./types.ts";
 import {
   isContractRole,
-  isExcludedCompany,
   isNonServerTitle,
   isServerRole,
 } from "./policy.ts";
@@ -81,9 +80,6 @@ export function createPostingEligibilityPolicy(
         posting.requirements,
         posting.preferred,
       ].join(" ");
-      if (isExcludedCompany(posting.company)) {
-        return { eligible: false, rejectionCode: "excluded_company" };
-      }
       if (isContractRole(fullText)) {
         return { eligible: false, rejectionCode: "ineligible_employment" };
       }

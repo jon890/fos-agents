@@ -4,7 +4,6 @@ import {
   classify,
   closeWindow,
   isContractRole,
-  isExcludedCompany,
   isNonServerTitle,
   isServerRole,
   norm,
@@ -66,7 +65,6 @@ function postingFromWantedDetail(
   const fullText = `${company} ${title} ${fallback?.category ?? ""} ${employeeType} ${detailText}`;
 
   if (!company || !title) return null;
-  if (isExcludedCompany(fullText)) return null;
   if (isContractRole(fullText)) return null;
   if (serverOnly && isNonServerTitle(title)) return null;
   if (serverOnly && !isServerRole(fullText)) return null;
@@ -143,7 +141,6 @@ async function fetchWanted(
     const title = norm(item.position);
     const categoryText = norm(catTagObj.text);
     const text = `${company} ${title} ${categoryText}`;
-    if (isExcludedCompany(text)) continue;
     if (serverOnly && isNonServerTitle(`${title} ${categoryText}`)) continue;
     if (serverOnly && !isServerRole(text)) continue;
     const pid = item.id as number;

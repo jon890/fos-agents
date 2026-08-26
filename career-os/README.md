@@ -22,18 +22,16 @@ clone 뒤 확인할 기본 파일:
 - `.env.example`: 필요한 secret 키 이름.
 - `config/candidate-profile.md`: 후보자 프로필 기준 원본.
 - `config/position-collection.ts`: 공고 수집 설정과 검증.
-- `config/position-filters.json`: 제외 회사와 억제 공고 URL.
-- `config/current-target.example.json`: 현재 지원 대상 로컬 파일의 예시.
+- `config/position-filters.json`: 억제할 개별 공고 URL.
 
 `.env`는 워크스페이스 루트에 두고 git에 올리지 않는다.
-진행 중인 지원 대상이 있으면 예시를 `state/current-target.json`으로 복사해 실제 값으로 바꾼다.
-이 파일은 현재 대상 하나만 담으며 Git에 올리지 않는다.
+진행 중인 지원 대상은 private brain에서 확인하고 공고별 실행 자료는 `applications/<company>/<role>/`에서 관리한다.
 외부 게시, 제출, 로그인, 업로드, 메시지 전송은 사용자 승인 후에만 수행한다.
 
 ## 작업 흐름
 
 1. 활성 공고를 수집하고 지원 후보를 판단한다.
-2. 공고별 지원 패키지를 만들고 근거·과장·공개 범위를 검토한 뒤 제출 문서를 반복 개선한다.
+2. 공고별 지원 패키지를 만들고 근거 감사, 블라인드 평가와 HTML·PDF 검증을 통과할 때까지 제출 문서를 개선한다.
 3. 면접 답변 연습 결과를 다음 복습과 준비 행동에 반영한다.
 4. 기술 학습과 질문 은행은 공개 가능한 자산으로 축적한다.
 
@@ -42,7 +40,7 @@ clone 뒤 확인할 기본 파일:
 ## 데이터 경계
 
 - `config/`에는 후보자 기준, 정책, 사람이 고른 예외를 둔다.
-- `state/`에는 현재 타깃, 답변 연습 진행, cooldown 같은 실행 상태를 둔다.
+- `state/`에는 답변 연습 진행처럼 저장소 실행에 필요한 상태만 둔다.
 - `applications/`, `private/`, `reports/`, `cache/`에는 지원 전략, 개인 산출물, 실행 결과, 재생성 가능한 캐시를 둔다.
 - `public/question-bank/`, `sources/fos-study/`에는 공개 가능한 일반 지식만 둔다.
 - 실제 제출, 로그인, 업로드, 외부 메시지 전송, 공개 발행은 사용자 승인 후에만 수행한다.

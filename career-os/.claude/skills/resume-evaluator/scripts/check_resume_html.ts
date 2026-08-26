@@ -1,7 +1,11 @@
 #!/usr/bin/env bun
 
 import { existsSync, readFileSync } from "node:fs";
-import { RESUME_HTML_CONTRACT } from "./resume_html_contract.ts";
+import { basename } from "node:path";
+import {
+  SUBMISSION_HTML_CONTRACTS,
+  type SubmissionDocumentKind,
+} from "./resume_html_contract.ts";
 
 export type Check = {
   name: string;
@@ -9,8 +13,16 @@ export type Check = {
   detail: string;
 };
 
-export function checkResumeHtml(path: string) {
+export function inferDocumentKind(path: string): SubmissionDocumentKind {
+  return basename(path) === "career-description.html" ? "career-description" : "resume";
+}
+
+export function checkResumeHtml(
+  path: string,
+  documentKind: SubmissionDocumentKind = inferDocumentKind(path),
+) {
   const html = readFileSync(path, "utf8");
+  const contract = SUBMISSION_HTML_CONTRACTS[documentKind];
   const pageCount = [...html.matchAll(/class=["'][^"']*\bresume-page\b[^"']*["']/g)].length;
   const checks: Check[] = [
   {
@@ -30,14 +42,14 @@ export function checkResumeHtml(path: string) {
   },
   {
     name: '2쪽 페이지 구조',
-    passed: pageCount === RESUME_HTML_CONTRACT.pageCount,
-    detail: `resume-page가 ${RESUME_HTML_CONTRACT.pageCount}개여야 합니다. 현재 ${pageCount}개입니다.`,
+    passed: pageCount === contract.pageCount,
+    detail: `${contract.label}의 resume-page가 ${contract.pageCount}개여야 합니다. 현재 ${pageCount}개입니다.`,
   },
   {
     name: '필수 섹션',
-    passed: RESUME_HTML_CONTRACT.requiredSectionIds.every((id) =>
+    passed: contract.requiredSectionIds.every((id) =>
       new RegExp(`id=["']${id}["']`).test(html)),
-    detail: `필수 id: ${RESUME_HTML_CONTRACT.requiredSectionIds.join(", ")}`,
+    detail: `${contract.label} 필수 id: ${contract.requiredSectionIds.join(", ")}`,
   },
   {
     name: '연락 수단',
@@ -54,7 +66,7 @@ export function checkResumeHtml(path: string) {
   },
   {
     name: '내부 근거 경로 비노출',
-    passed: RESUME_HTML_CONTRACT.internalLeakPatterns.every((pattern) => !pattern.test(html)),
+    passed: contract.internalLeakPatterns.every((pattern) => !pattern.test(html)),
     detail: '로컬 경로, 근거 저장소명, 내부 검토 토큰을 제출물에 포함하지 않습니다.',
   },
   {
@@ -68,6 +80,7 @@ export function checkResumeHtml(path: string) {
   return {
     passed: failed.length === 0,
     file: path,
+    documentKind,
     checks,
     summary: {
       passed: checks.length - failed.length,
@@ -80,11 +93,18 @@ export function checkResumeHtml(path: string) {
 if (import.meta.main) {
   const path = process.argv[2];
   if (!path || !existsSync(path)) {
-    console.error(JSON.stringify({ passed: false, error: "resume.html 경로를 찾을 수 없습니다." }, null, 2));
+    console.error(JSON.stringify({ passed: false, error: "제출 HTML 경로를 찾을 수 없습니다." }, null, 2));
     process.exit(2);
   }
 
-  const result = checkResumeHtml(path);
+  const kindIndex = process.argv.indexOf("--document-type");
+  const explicitKind = kindIndex >= 0 ? process.argv[kindIndex + 1] : undefined;
+  if (explicitKind && explicitKind !== "resume" && explicitKind !== "career-description") {
+    console.error(JSON.stringify({ passed: false, error: "document-type은 resume 또는 career-description이어야 합니다." }, null, 2));
+    process.exit(2);
+  }
+
+  const result = checkResumeHtml(path, explicitKind as SubmissionDocumentKind | undefined);
   console.log(JSON.stringify(result, null, 2));
   process.exit(result.passed ? 0 : 1);
 }
