@@ -123,22 +123,6 @@ export const SKILL_CONTRACTS: Readonly<Record<string, SkillContract>> = {
     prerequisiteGuards: ['resume_draft_exists', 'review_pass_or_user_requested_export'],
   },
 
-  'daily-application-digest': {
-    skillName: 'daily-application-digest',
-    invocation: {
-      kind: 'agent_skill',
-      slashCommand: 'daily-application-digest',
-    },
-    description:
-      '지원 현황 일일 요약. public/private 분리 report.md 생성. Discord 전송은 runner 담당.',
-    autonomy: 'agent_only',
-    expectedOutputs: ['reports/daily/{date}/application-digest/report.md'],
-    touchesFosStudy: false,
-    modifiesCandidateProfile: false,
-    requiresExternalAccess: false,
-    prerequisiteGuards: ['positions_queue_exists'],
-  },
-
   'study-topic-recommender': {
     skillName: 'study-topic-recommender',
     invocation: {

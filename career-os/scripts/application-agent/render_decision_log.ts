@@ -415,8 +415,6 @@ function buildDiscordSummary(
     lines.push(`📚 Study candidate: ${publicSafeTopics[0]}`);
   }
 
-  lines.push(`🔄 Next: run /daily-application-digest for full analysis`);
-
   return lines.slice(0, 6);
 }
 
