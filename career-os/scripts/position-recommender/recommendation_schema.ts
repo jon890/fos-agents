@@ -82,9 +82,9 @@ export const RecommendationRun = z
     conclusion: z.array(z.string().min(1)).min(1), // 한 줄 결론 (첫 10줄 결론 보장)
     background: z.array(z.string().min(1)).min(1), // 추천 배경 요약
     tiers: z.object({
-      strong: z.array(PositionItem).max(3),
-      stretch: z.array(PositionItem).max(2),
-      hold: z.array(HoldItem).max(3),
+      strong: z.array(PositionItem),
+      stretch: z.array(PositionItem),
+      hold: z.array(HoldItem),
     }),
     candidateRanking: z.array(CandidateRankingItem).min(1),
     additionalTargets: z.array(AdditionalTarget).max(3),
