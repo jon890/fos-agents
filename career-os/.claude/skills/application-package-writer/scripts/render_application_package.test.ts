@@ -21,7 +21,7 @@ function fixture(): string {
   }
   writeFileSync(
     join(directory, "application-package.md"),
-    `# 토스플레이스 AI Platform 지원 준비\n\n- readiness: needs_user_input\n- evidence: safe\n- 공식 공고: https://example.com/job\n- 근거: sources/fos-study/task/example.md\n\n${REQUIRED_HEADINGS["application-package.md"].join("\n\n내용\n\n")}`,
+    `# 토스플레이스 AI Platform 지원 준비\n\n- readiness: needs_user_input\n- evidence: safe\n- human-confirmation: needs_input\n- 공식 공고: https://example.com/job\n- 근거: sources/fos-study/task/example.md\n\n${REQUIRED_HEADINGS["application-package.md"].join("\n\n내용\n\n")}`,
   );
   writeFileSync(
     join(directory, "interview-questions.json"),
@@ -59,6 +59,7 @@ describe("renderApplicationPackage", () => {
 
     expect(html).toContain('<meta name="viewport"');
     expect(html).toContain("내 답변 필요");
+    expect(html).toContain("내 경험 확인 필요");
     expect(html).toContain("제출 파일 검증 필요");
     expect(html).toContain('class="review-card"');
     expect(html).toContain(".review-card { min-width: 0;");

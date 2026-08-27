@@ -13,6 +13,7 @@ export type PackageValidation = {
   passed: boolean;
   applicationDirectory: string;
   readiness?: "ready" | "needs_user_input" | "revise" | "do_not_apply";
+  humanConfirmation?: "complete" | "needs_input";
   errors: string[];
 };
 
@@ -51,6 +52,15 @@ export function validateApplicationPackage(applicationDirectory: string): Packag
   if (!/^- evidence:\s*(safe|revise|blocked)\s*$/m.test(opening)) {
     errors.push("application-package.md 첫 10줄에 evidence 판정이 필요합니다.");
   }
+  const humanConfirmationMatch = opening.match(
+    /^- human-confirmation:\s*(complete|needs_input)\s*$/m,
+  );
+  if (!humanConfirmationMatch) {
+    errors.push("application-package.md 첫 10줄에 human-confirmation 판정이 필요합니다.");
+  }
+  if (readinessMatch?.[1] === "ready" && humanConfirmationMatch?.[1] !== "complete") {
+    errors.push("readiness가 ready이면 human-confirmation은 complete여야 합니다.");
+  }
 
   if (!/https?:\/\//.test(packageText)) {
     errors.push("application-package.md에 공고 또는 회사 공식 URL이 필요합니다.");
@@ -71,6 +81,7 @@ export function validateApplicationPackage(applicationDirectory: string): Packag
     passed: errors.length === 0,
     applicationDirectory: directory,
     readiness: readinessMatch?.[1] as PackageValidation["readiness"],
+    humanConfirmation: humanConfirmationMatch?.[1] as PackageValidation["humanConfirmation"],
     errors,
   };
 }

@@ -1,11 +1,11 @@
 ---
 name: application-package-writer
-description: 공고 하나를 실제 지원 가능한 상태로 준비하는 career-os 스킬. "이 공고 지원 준비", "지원서 만들어줘", "지원 패키지", "맞춤 이력서", "지원동기 정리", "이 회사에 지원하고 싶어"처럼 개별 공고의 지원 판단, 후보자 인터뷰, 근거 매핑, 맞춤 이력서와 지원 문구, 면접 방어 포인트가 필요할 때 사용한다. 사용자는 이 스킬 하나만 호출하며, 근거 감사와 최종 이력서 평가는 내부 단계로 연결한다. 실제 제출, 로그인과 외부 전송은 하지 않는다.
+description: 공고 하나의 지원 가치, 회사·포지션 기준, 후보자 인터뷰, 경험 연결, 지원동기, 공백과 면접 검증 포인트를 준비하는 career-os 스킬. "이 공고 지원 준비", "지원서 준비", "지원 패키지", "지원동기 정리", "이 회사에 지원하고 싶어"처럼 개별 공고의 지원 전략이 필요할 때 사용한다. 이력서·경력기술서 작성과 검증은 resume-preparer로 연결한다. 실제 제출, 로그인과 외부 전송은 하지 않는다.
 ---
 
 # 지원 준비
 
-공고 하나에 지원할 이유와 승부처를 정하고, 실제 제출에 사용할 이력서와 지원 문구를 만든다.
+공고 하나에 지원할 이유와 승부처를 정하고, 지원 전략과 문구를 만든 뒤 제출 문서 준비로 연결한다.
 사용자에게 문서 묶음을 떠넘기지 말고 `application-package.md`를 중심으로 현재 판단과 다음 행동을 설명한다.
 
 ## 사용자에게 주는 결과
@@ -60,6 +60,7 @@ brain에 현재 대상이 없거나 대응하는 지원 디렉터리가 없거�
 `references/candidate-interview-questions.md`를 읽는다.
 이미 답한 내용은 다시 묻지 않고 `candidate-interview.md`에 누적한다.
 한 번에 질문 하나만 던지며, 완성 문장 대신 키워드와 생각 조각을 받아도 된다.
+질문할 때는 왜 후보자 확인이 필요한지, 어떤 제출 문장이나 면접 질문이 달라지는지 먼저 짧게 설명한다.
 
 다음 네 항목이 확보되기 전에는 지원동기를 완성하지 않는다.
 
@@ -68,33 +69,27 @@ brain에 현재 대상이 없거나 대응하는 지원 디렉터리가 없거�
 - 바로 기여할 수 있는 경험과 본인 역할
 - 약한 영역과 보완 방법
 
+대표 사례에는 후보자만 확정할 수 있는 다음 내용을 확인한다.
+
+- 당시 실제로 중요했던 제약
+- 후보자가 직접 내린 판단과 책임 범위
+- 검토했지만 사용하지 않은 대안과 이유
+- 결과를 확인한 방법과 확인하지 못한 범위
+- 다시 한다면 바꿀 판단
+
+코드와 문서가 사실을 뒷받침해도 당시 판단, 동기와 말로 설명할 수 있는지는 자동으로 확정하지 않는다.
+제출에 사용할 대표 사례를 후보자가 30초로 요약하고 2분 동안 문제, 제약, 판단과 결과로 설명할 준비가 안 됐다면 포지션별 근거 방어 질문과 다음 행동에 남긴다.
+완성 답변을 대신 작성하지 말고 답변 구조, 이미 확인한 근거, 예상 후속 질문과 과장하지 않을 경계를 제공한 뒤 후보자가 먼저 말하게 한다.
+
 ### 근거와 적합성 분석
 
 `references/application-quality-rubric.md`를 읽는다.
 공고 요구사항과 회사 기준을 후보자 근거에 연결한다.
 
 `brain`과 경력기술서는 탐색을 위한 색인으로 사용한다.
-중요한 경험, 수치, 소유권과 기술 판단은 가능하면 로컬 프로젝트에서 다시 확인한다.
-
-- 실제 코드와 테스트가 존재하는가?
-- 현재 사용자의 Git 기여 이력과 변경 범위가 연결되는가?
-- 결과 수치는 같은 조건의 비교나 운영 기록으로 재현되는가?
-- ADR, 회고 또는 코드 변화에서 당시 판단과 기각한 대안이 확인되는가?
-- 현재 코드가 과거 문서의 설명과 달라졌는가?
-
-로컬 프로젝트를 확인할 수 없거나 결과 근거가 없으면 기존 문장을 사실로 확정하지 않는다.
-`사용자 확인`으로 남기고, 학습 내용과 운영 경험을 분리한다.
-
-기술 이름이 코드와 Git 이력에 나타나더라도 다음 수준을 구분한다.
-
-- 사용: 해당 기술의 코드베이스를 읽거나 수정했다.
-- 기능 개발: 본인 커밋과 테스트로 기능 변경 범위를 확인했다.
-- 운영 깊이: 장애, 배포, 성능, 관측 또는 기술 고유 문제를 진단하고 해결한 근거가 있다.
-- 주력 역량: 여러 문제에 반복 적용한 판단과 후보자 확인이 있다.
-
-코드와 커밋만으로 운영 깊이나 주력 역량을 확정하지 않는다.
-경력 기간과 여러 기술을 한 문장에 묶을 때는 기술별 실제 기간이 같은지 확인한다.
-로컬 근거로 결론을 낼 수 없고 제출 문구가 달라진다면 `references/candidate-interview-questions.md`의 경험 깊이 질문으로 전환한다.
+지원 판단이 달라지는 핵심 경험은 가능하면 로컬 프로젝트에서 확인한다.
+로컬 근거로 결론을 낼 수 없으면 기존 문장을 사실로 확정하지 않고 `사용자 확인`으로 남긴다.
+코드 존재, 본인 소유권, 결과와 운영 깊이를 주장 단위로 감사하는 일은 `resume-preparer`가 담당한다.
 
 각 판단을 다음 중 하나로 구분한다.
 
@@ -104,21 +99,18 @@ brain에 현재 대상이 없거나 대응하는 지원 디렉터리가 없거�
 - `사용자 확인`: 후보자만 확정할 수 있는 동기, 역할 또는 결과다.
 
 학습 경험을 운영 경험으로, 팀 성과를 단독 성과로 바꾸지 않는다.
-수치와 강한 소유권 표현은 코드, 테스트, Git, 운영 기록 또는 사용자 확인이 있을 때만 쓴다.
 
-### 산출물 작성
+### 지원 전략 산출물 작성
 
-초안 단계에는 다음 핵심 파일만 만든다.
+지원 전략 단계에는 다음 핵심 파일만 만든다.
 
 - `candidate-interview.md`: 사용자 원문 답변과 정리된 핵심
 - `application-package.md`: 요구사항·회사 기준·경력 근거와 다음 행동을 통합한 원본
-- `resume-draft.md`: 맞춤 HTML과 PDF의 Markdown 원본
-- `application-package.html`: 위 원본과 이력서 초안을 묶은 로컬 검토 화면
 - `interview-questions.json`: 공고 책임, 근거 방어와 경험 공백에서 만든 포지션별 질문
 
 지원 사이트가 자기소개나 별도 질문을 요구할 때만 application-answers.md를 만든다.
-근거 원장과 점수표는 최종 제출 문서를 검증할 때만 만든다.
-경력기술서를 받는 공고에는 `career-description-draft.md`를 추가한다.
+이력서, 경력기술서, 근거 원장, 점수표와 PDF는 `resume-preparer`가 만든다.
+`application-package.html`은 두 단계의 결과를 마지막에 하나로 묶는다.
 
 `application-package.md`에는 다음 섹션을 둔다.
 
@@ -158,10 +150,11 @@ bun career-os/scripts/interview-drill/application_question_schema.ts \
 ```markdown
 - readiness: ready|needs_user_input|revise|do_not_apply
 - evidence: safe|revise|blocked
+- human-confirmation: complete|needs_input
 ```
 
-이력서 프로젝트는 공고의 공식 안내가 있으면 그 구조를 우선한다.
-안내가 없으면 문제, 중요성과 제약, 본인 역할과 판단, 결과와 검증 순서로 쓴다.
+`human-confirmation`은 지원동기, 본인 역할, 실제 제약, 대안, 결과의 확인 범위처럼 후보자만 확정할 수 있는 항목의 상태다.
+하나라도 제출 문구를 바꿀 미확인 항목이 있으면 `needs_input`으로 두며, `readiness: ready`와 함께 사용할 수 없다.
 
 ### 사용자와 검토
 
@@ -173,63 +166,24 @@ bun career-os/scripts/interview-drill/application_question_schema.ts \
 4. 약한 영역을 숨기지 않고 전환 가능한 경험을 설명했는가?
 5. 입사 후 기여 시나리오가 제품 사용자에게 닿는가?
 
-사용자 답변을 `candidate-interview.md`에 반영한 뒤 제출 문장을 갱신한다.
-공고 원문, 인터뷰 답변, 지원동기와 제출 문서를 다시 읽어 서로 모순되는 역할·수치·동기가 없는지 확인한다.
-주장 단위 사실 검증과 렌더 평가는 아래 전용 내부 단계에서 수행한다.
+사용자 답변을 `candidate-interview.md`에 반영한 뒤 지원 판단과 문구를 갱신한다.
+공고 원문, 인터뷰 답변과 지원동기를 다시 읽어 서로 모순되는 역할·수치·동기가 없는지 확인한다.
 
-### 검증과 최종 제출 문서
+### 이력서 제출 준비로 연결
 
-먼저 지원 패키지 계약을 검사하고 하나의 HTML로 묶는다.
+지원 전략과 사람 확인이 준비되면 같은 사용자 요청 안에서 `resume-preparer`를 호출한다.
+사용자에게 별도 스킬 실행 순서를 맡기지 않는다.
 
-```bash
-bun career-os/.claude/skills/application-package-writer/scripts/validate_application_package.ts \
-  <application-directory>
+`resume-preparer`는 다음 책임을 한 흐름으로 수행한다.
 
-bun career-os/.claude/skills/application-package-writer/scripts/render_application_package.ts \
-  <application-directory>
-```
+- 이력서와 필요한 경력기술서 작성
+- 사람만 확정할 수 있는 경험 판단과 설명 준비
+- 주장별 근거 감사
+- 블라인드 하드 리뷰와 실제 렌더 검증
+- HTML, PDF와 제출 묶음 생성
 
-검사가 통과하고 사용자 확인 항목이 해결되면 다음 순서로 제출 문서를 준비한다.
-
-1. 다음 명령으로 `resume.html`과 `resume.pdf`를 만든다.
-
-```bash
-bun career-os/.claude/skills/application-package-writer/scripts/export_resume.ts \
-  --application-dir <application-directory>
-```
-2. 경력기술서가 필요하면 다음 명령으로 `career-description.html`과 `career-description.pdf`를 별도로 만든다.
-
-```bash
-bun career-os/.claude/skills/application-package-writer/scripts/export_resume.ts \
-  --application-dir <application-directory> \
-  --resume <application-directory>/career-description-draft.md \
-  --design <application-directory>/career-description-design.md \
-  --html <application-directory>/career-description.html \
-  --pdf <application-directory>/career-description.pdf
-```
-3. `resume-evidence-auditor`로 각 HTML 제출 문서의 근거와 소유권을 따로 감사한다.
-4. `resume-evaluator`로 각 문서의 설득력, 정보 구조와 실제 렌더링을 평가한다.
-5. 보이는 문구가 바뀌면 해당 문서의 근거 감사와 평가를 다시 실행한다.
-6. 다음 명령으로 각 PDF의 파일 해시를 기록한다. 경력기술서가 있으면 같은 버전의 두 PDF를 `submission.pdf`로 합친다.
-
-```bash
-bun career-os/.claude/skills/application-package-writer/scripts/build_submission_bundle.ts \
-  <application-directory>
-```
-
-7. 다음 명령으로 제출 문서, 원장, 점수표와 PDF manifest의 해시가 모두 일치하는지 검사한다.
-
-```bash
-bun career-os/.claude/skills/application-package-writer/scripts/validate_submission_bundle.ts \
-  <application-directory>
-```
-
-8. 마지막으로 `render_application_package.ts`를 다시 실행해 현재 상태와 제출 파일 링크를 `application-package.html`에 반영한다.
-
-한 번의 사용자 요청 안에서 위 단계를 이어가되, 사용자만 확정할 수 있는 사실이 남으면 `needs_user_input`에서 멈춘다.
-근거 원장에 `soften`, `ask_user`, `remove`가 남아 있어도 멈춘다.
-점수표에는 대상 파일명, `artifactTextSha256`, `verdict: pass`가 있어야 한다.
-`readiness: ready`는 `validate_submission_bundle.ts`까지 통과한 뒤에만 최종 상태로 사용한다.
+사용자만 확정할 수 있는 지원동기나 사실이 남으면 `needs_user_input`에서 멈춘다.
+지원 전략만 요청한 경우에도 다음 행동에 이력서 준비 상태를 명시한다.
 
 ## 안전 경계
 
@@ -245,9 +199,6 @@ bun career-os/.claude/skills/application-package-writer/scripts/validate_submiss
 - `references/candidate-interview-questions.md`
 - `references/application-quality-rubric.md`
 - `scripts/validate_application_package.ts`
-- `scripts/validate_submission_bundle.ts`
-- `scripts/build_submission_bundle.ts`
 - `scripts/render_application_package.ts`
-- `scripts/export_resume.ts`
 - `config/candidate-profile.md`
-- `config/resume-design.md`
+- `resume-preparer`

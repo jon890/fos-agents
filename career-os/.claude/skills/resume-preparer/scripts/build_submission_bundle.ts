@@ -3,7 +3,7 @@
 import { existsSync, statSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
-import { artifactTextSha256 } from "../../resume-evidence-auditor/scripts/artifact_identity.ts";
+import { artifactTextSha256 } from "./artifact_identity.ts";
 import { fileSha256, type SubmissionManifest } from "./submission_manifest.ts";
 
 function requireCurrentPdf(htmlPath: string, pdfPath: string): void {

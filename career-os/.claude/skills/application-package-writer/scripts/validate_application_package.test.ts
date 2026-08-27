@@ -21,7 +21,7 @@ function fixture(): string {
   }
   writeFileSync(
     join(directory, "application-package.md"),
-    `# 지원 준비\n\n- readiness: ready\n- evidence: safe\n- 공식 공고: https://example.com/job\n- 근거: sources/fos-study/task/example.md\n\n${REQUIRED_HEADINGS["application-package.md"].join("\n\n내용\n\n")}`,
+    `# 지원 준비\n\n- readiness: ready\n- evidence: safe\n- human-confirmation: complete\n- 공식 공고: https://example.com/job\n- 근거: sources/fos-study/task/example.md\n\n${REQUIRED_HEADINGS["application-package.md"].join("\n\n내용\n\n")}`,
   );
   writeFileSync(
     join(directory, "interview-questions.json"),
@@ -69,5 +69,29 @@ describe("validateApplicationPackage", () => {
     const result = validateApplicationPackage(directory);
     expect(result.passed).toBe(false);
     expect(result.errors.join("\n")).toContain("interview-questions.json 형식");
+  });
+
+  test("사람 확인 상태가 없으면 거부한다", () => {
+    const directory = fixture();
+    const path = join(directory, "application-package.md");
+    const content = Bun.file(path).text();
+    return content.then((text) => {
+      writeFileSync(path, text.replace("- human-confirmation: complete\n", ""));
+      const result = validateApplicationPackage(directory);
+      expect(result.passed).toBe(false);
+      expect(result.errors.join("\n")).toContain("human-confirmation 판정");
+    });
+  });
+
+  test("사람 확인이 남은 패키지를 ready로 판정하지 않는다", () => {
+    const directory = fixture();
+    const path = join(directory, "application-package.md");
+    const content = Bun.file(path).text();
+    return content.then((text) => {
+      writeFileSync(path, text.replace("human-confirmation: complete", "human-confirmation: needs_input"));
+      const result = validateApplicationPackage(directory);
+      expect(result.passed).toBe(false);
+      expect(result.errors.join("\n")).toContain("human-confirmation은 complete");
+    });
   });
 });

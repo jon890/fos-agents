@@ -2,12 +2,12 @@
 
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
-import { artifactTextSha256 } from "../../resume-evidence-auditor/scripts/artifact_identity.ts";
-import { validateClaimLedger } from "../../resume-evidence-auditor/scripts/validate_claim_ledger.ts";
+import { artifactTextSha256 } from "./artifact_identity.ts";
+import { validateClaimLedger } from "./validate_claim_ledger.ts";
 import {
   REQUIRED_CAREER_DESCRIPTION_FILES,
   REQUIRED_RESUME_SUBMISSION_FILES,
-} from "./package_contract.ts";
+} from "./resume_submission_contract.ts";
 import { fileSha256, SubmissionManifestSchema } from "./submission_manifest.ts";
 
 export type SubmissionBundleValidation = {
@@ -17,13 +17,13 @@ export type SubmissionBundleValidation = {
   artifacts: string[];
 };
 
-function packageStatus(directory: string): { readiness?: string; evidence?: string } {
+function packageStatus(directory: string): { evidence?: string; humanConfirmation?: string } {
   const path = join(directory, "application-package.md");
   if (!existsSync(path)) return {};
   const opening = readFileSync(path, "utf8").split(/\r?\n/).slice(0, 10).join("\n");
   return {
-    readiness: opening.match(/^- readiness:\s*(\S+)\s*$/m)?.[1],
     evidence: opening.match(/^- evidence:\s*(\S+)\s*$/m)?.[1],
+    humanConfirmation: opening.match(/^- human-confirmation:\s*(\S+)\s*$/m)?.[1],
   };
 }
 
@@ -123,11 +123,11 @@ export function validateSubmissionBundle(applicationDirectory: string): Submissi
   const errors: string[] = [];
   const status = packageStatus(directory);
 
-  if (status.readiness !== "ready") {
-    errors.push("application-package.md의 readiness가 ready가 아닙니다.");
-  }
   if (status.evidence !== "safe") {
     errors.push("application-package.md의 evidence가 safe가 아닙니다.");
+  }
+  if (status.humanConfirmation !== "complete") {
+    errors.push("application-package.md의 human-confirmation이 complete가 아닙니다.");
   }
 
   requireFiles(directory, REQUIRED_RESUME_SUBMISSION_FILES, errors);

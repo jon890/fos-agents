@@ -3,12 +3,13 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { validateApplicationPackage } from "./validate_application_package.ts";
-import { validateSubmissionBundle } from "./validate_submission_bundle.ts";
+import { validateSubmissionBundle } from "../../resume-preparer/scripts/validate_submission_bundle.ts";
 import { loadApplicationInterviewQuestions } from "../../../../scripts/interview-drill/application_question_schema.ts";
 
 type PackageStatus = {
   readiness: "ready" | "needs_user_input" | "revise" | "do_not_apply";
   evidence: "safe" | "revise" | "blocked";
+  humanConfirmation: "complete" | "needs_input";
 };
 
 type MarkdownSection = {
@@ -37,6 +38,11 @@ const EVIDENCE_LABELS: Record<PackageStatus["evidence"], string> = {
   safe: "근거 안전",
   revise: "근거 표현 조정",
   blocked: "근거 확인 전 사용 금지",
+};
+
+const HUMAN_CONFIRMATION_LABELS: Record<PackageStatus["humanConfirmation"], string> = {
+  complete: "사람 확인 완료",
+  needs_input: "내 경험 확인 필요",
 };
 
 const QUESTION_ORIGIN_LABELS = {
@@ -171,8 +177,11 @@ export function renderMarkdown(markdown: string): string {
 function statusFrom(markdown: string): PackageStatus {
   const readiness = markdown.match(/^- readiness:\s*(ready|needs_user_input|revise|do_not_apply)\s*$/m)?.[1];
   const evidence = markdown.match(/^- evidence:\s*(safe|revise|blocked)\s*$/m)?.[1];
-  if (!readiness || !evidence) throw new Error("지원 준비 상태를 읽을 수 없습니다.");
-  return { readiness, evidence } as PackageStatus;
+  const humanConfirmation = markdown.match(/^- human-confirmation:\s*(complete|needs_input)\s*$/m)?.[1];
+  if (!readiness || !evidence || !humanConfirmation) {
+    throw new Error("지원 준비 상태를 읽을 수 없습니다.");
+  }
+  return { readiness, evidence, humanConfirmation } as PackageStatus;
 }
 
 function documentTitle(markdown: string): string {
@@ -302,8 +311,8 @@ export function renderApplicationPackageHtml(
     .hero-copy { max-width: 820px; margin: 18px 0 0; color: #39455b; font-size: clamp(17px, 2vw, 20px); }
     .status-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
     .status { display: inline-flex; align-items: center; min-height: 34px; padding: 6px 11px; border-radius: 8px; font-weight: 750; font-size: 13px; }
-    .readiness-ready, .evidence-safe { color: var(--green); background: var(--green-soft); }
-    .readiness-needs_user_input, .readiness-revise, .evidence-revise { color: var(--amber); background: var(--amber-soft); }
+    .readiness-ready, .evidence-safe, .human-complete { color: var(--green); background: var(--green-soft); }
+    .readiness-needs_user_input, .readiness-revise, .evidence-revise, .human-needs_input { color: var(--amber); background: var(--amber-soft); }
     .readiness-do_not_apply, .evidence-blocked { color: var(--red); background: var(--red-soft); }
     .quick-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
     .quick-links a { padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; color: #33415b; background: #f8fafc; font-weight: 700; font-size: 13px; text-decoration: none; }
@@ -386,6 +395,7 @@ export function renderApplicationPackageHtml(
       <div class="status-row" aria-label="지원 준비 상태">
         <span class="status readiness-${status.readiness}">${READINESS_LABELS[status.readiness]}</span>
         <span class="status evidence-${status.evidence}">${EVIDENCE_LABELS[status.evidence]}</span>
+        <span class="status human-${status.humanConfirmation}">${HUMAN_CONFIRMATION_LABELS[status.humanConfirmation]}</span>
         <span class="status ${assets.submissionReady ? "evidence-safe" : "evidence-revise"}" title="${escapeHtml(submissionDetail)}">${submissionLabel}</span>
       </div>
       ${links ? `<nav class="quick-links" aria-label="제출 파일">${links}</nav>` : ""}

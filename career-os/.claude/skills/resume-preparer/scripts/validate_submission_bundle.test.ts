@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { artifactTextSha256 } from "../../resume-evidence-auditor/scripts/artifact_identity.ts";
+import { artifactTextSha256 } from "./artifact_identity.ts";
 import { fileSha256 } from "./submission_manifest.ts";
 import { validateSubmissionBundle } from "./validate_submission_bundle.ts";
 
@@ -15,7 +15,7 @@ afterEach(() => {
 function fixture(): string {
   const directory = mkdtempSync(join(tmpdir(), "submission-bundle-"));
   directories.push(directory);
-  writeFileSync(join(directory, "application-package.md"), "# 지원\n\n- readiness: ready\n- evidence: safe\n");
+  writeFileSync(join(directory, "application-package.md"), "# 지원\n\n- readiness: revise\n- evidence: safe\n- human-confirmation: complete\n");
   writeFileSync(join(directory, "resume.html"), "<main>검증된 이력서</main>");
   writeFileSync(join(directory, "resume.pdf"), "pdf");
   const hash = artifactTextSha256(join(directory, "resume.html"));
@@ -81,5 +81,16 @@ describe("validateSubmissionBundle", () => {
     const result = validateSubmissionBundle(directory);
     expect(result.passed).toBe(false);
     expect(result.errors.join("\n")).toContain("resume.pdf 해시");
+  });
+
+  test("사람 확인이 남으면 제출 묶음을 통과시키지 않는다", () => {
+    const directory = fixture();
+    writeFileSync(
+      join(directory, "application-package.md"),
+      "# 지원\n\n- readiness: needs_user_input\n- evidence: safe\n- human-confirmation: needs_input\n",
+    );
+    const result = validateSubmissionBundle(directory);
+    expect(result.passed).toBe(false);
+    expect(result.errors.join("\n")).toContain("human-confirmation이 complete");
   });
 });

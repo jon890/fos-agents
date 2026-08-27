@@ -281,7 +281,7 @@ function showHelp(): void {
   console.log(`이력서 export helper
 
 Usage:
-  bun career-os/.claude/skills/application-package-writer/scripts/export_resume.ts \
+  bun career-os/.claude/skills/resume-preparer/scripts/export_resume.ts \
     --application-dir career-os/applications/<company>/<role>
 
 Options:
