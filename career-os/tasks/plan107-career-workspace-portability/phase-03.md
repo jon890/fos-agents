@@ -28,11 +28,13 @@ application HTML·PDF fixture도 일반 파일과 같은 방식으로 재현되�
 
 첫 client가 publish한 뒤 오래된 parent revision을 가진 두 번째 client의 publish가 거절되는지 검증한다.
 중간에 끊긴 export, 잘린 tar, publish 오류에서도 remote current와 두 번째 client의 로컬 변경이 그대로 남아야 한다.
+`started`, `staged`, `backed_up`, `applied`, `restoring`, `completed` journal 상태마다 재실행 복구 결과를 검증한다.
 
 ### 4. 문서와 출력 경계 검증
 
 CLI 도움말과 JSON 오류에서 호스트, 계정, key 경로와 관리 파일 본문이 노출되지 않는지 검사한다.
 README·PRD·flow·아키텍처·스키마·ADR의 명칭과 명령 계약을 코드와 대조한다.
+`WORKSPACE_DIRTY`, `REMOTE_UNINITIALIZED`, `REVISION_CONFLICT`, `INVALID_MANIFEST`, `TRANSFER_FAILED`, `TRANSPORT_UNAVAILABLE`, `RESTORE_REQUIRED`가 계약된 상황에서만 반환되는지 확인한다.
 
 ### 5. 완료 상태 갱신
 
@@ -53,6 +55,7 @@ README·PRD·flow·아키텍처·스키마·ADR의 명칭과 명령 계약을 �
 # cwd: fos-agents root
 bun test ./career-os/scripts/career-workspace
 bunx tsc --noEmit --pretty false
+git check-ignore -v career-os/.career-sync/sync-state.json career-os/.career-sync/prepare-journal.json career-os/.career-sync/staging/file career-os/.career-sync/backup/file
 git diff --check
 ```
 

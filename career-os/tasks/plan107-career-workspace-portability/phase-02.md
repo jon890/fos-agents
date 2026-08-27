@@ -19,13 +19,18 @@
 `career-os/scripts/career-workspace/transport.ts`에 `status`, `export`, `publish` 계약을 정의한다.
 SSH transport는 shell 문자열을 조합하지 않고 인자 배열로 원격 `career-storage` 명령만 호출한다.
 Hermes 검증과 회귀 테스트를 위한 local transport도 같은 응답 스키마를 사용한다.
+wire 계약의 단일 출처는 `contracts.ts`의 Zod schema와 `career-os/docs/data-schema.md`다.
+`status` JSON, `export --revision` tar, `publish` tar와 성공·오류 JSON의 필드·위치를 두 파일에서 같은 이름으로 유지한다.
 
 ### 2. `check`와 `prepare`
 
 `career-workspace check --json`은 local·remote revision, 로컬 변경 상태와 transport 상태를 구조화한다.
 `prepare`는 로컬이 dirty면 중단하고, 원격 tar를 `career-os/.career-sync/`의 staging에 받은 뒤 manifest·경로·hash를 검증한다.
-검증 뒤 기존 세 관리 root를 backup으로 옮기는 순서와 새 root 반영 상태를 `prepare-journal.json`에 기록한다.
-교체가 실패하거나 다음 실행에서 미완 journal을 발견하면 backup을 복구하며, 복구가 끝날 때까지 로컬 기준 상태를 갱신하지 않는다.
+검증 뒤 기존 세 관리 root를 backup으로 옮기는 순서와 새 root 반영 상태를 `prepare-journal.json`에 root별로 기록한다.
+journal 상태는 `started`, `staged`, `backed_up`, `applied`, `restoring`, `restored`, `completed`로 제한하고 root별 `hadOriginal`, `backupDone`, `applyDone`을 둔다.
+기존 root가 없는 항목은 `hadOriginal: false`로 기록한다.
+교체가 실패하거나 다음 실행에서 미완 journal을 발견하면 상태와 실제 경로를 함께 확인해 새 root를 제거하고 backup을 복구한다.
+`completed` 뒤 새 root와 sync state의 hash가 일치할 때만 staging·backup·journal을 정리하며, 모순은 `RESTORE_REQUIRED`로 중단한다.
 
 ### 3. `diff`와 `publish`
 
@@ -52,6 +57,8 @@ Hermes 검증과 회귀 테스트를 위한 local transport도 같은 응답 스
 | `career-os/scripts/career-workspace/local-transport.ts` | Hermes·테스트용 local transport |
 | `career-os/scripts/career-workspace/cli.ts` | `check`, `prepare`, `diff`, `publish` |
 | `career-os/.env.example` | 값 없는 환경 설정 표면 |
+| `career-os/docs/data-schema.md` | wire schema와 journal 상태 계약 |
+| `career-os/docs/flow.md` | 중단 복구와 오류 흐름 |
 
 ## 검증
 

@@ -36,6 +36,7 @@ release manifest는 draft 필드에 서버가 부여한 `revision`과 `createdAt
 
 `career-os/scripts/career-workspace/local-state.ts`에 `career-os/.career-sync/sync-state.json`, `career-os/.career-sync/prepare-journal.json` 스키마와 `inspectLocalWorkspace(root, syncState)`를 구현한다.
 마지막 prepare revision과 현재 digest를 비교해 `clean`, `dirty`, `uninitialized`, `invalid`를 구분하며 로컬 파일을 수정하지 않는다.
+root `.gitignore`는 `career-os/.career-sync/` 전체를 제외해 기준 상태, staging과 backup이 Git 후보가 되지 않게 한다.
 
 ### 5. 계약 회귀 테스트
 
@@ -49,6 +50,7 @@ release manifest는 draft 필드에 서버가 부여한 `revision`과 `createdAt
 | `career-os/scripts/career-workspace/manifest.ts` | 파일 수집과 결정적 digest |
 | `career-os/scripts/career-workspace/local-state.ts` | prepare 기준과 dirty 판정 |
 | `career-os/scripts/career-workspace/*.test.ts` | 계약 회귀 테스트 |
+| `.gitignore` | `career-os/.career-sync/` 제외 |
 
 ## 검증
 
@@ -56,6 +58,7 @@ release manifest는 draft 필드에 서버가 부여한 `revision`과 `createdAt
 # cwd: fos-agents root
 bun test ./career-os/scripts/career-workspace/manifest.test.ts ./career-os/scripts/career-workspace/local-state.test.ts
 bunx tsc --noEmit --pretty false
+git check-ignore -v career-os/.career-sync/sync-state.json career-os/.career-sync/prepare-journal.json career-os/.career-sync/staging/file career-os/.career-sync/backup/file
 git diff --check
 ```
 

@@ -35,6 +35,33 @@ prepare 중에는 같은 디렉터리의 임시 staging, backup과 `prepare-jour
 이 디렉터리는 Git과 원격 release에 포함하지 않는다.
 prepare는 현재 로컬 hash가 마지막 동기화 상태와 다르면 파일을 교체하지 않으며, 중단된 journal이 있으면 새 작업 전에 기존 root를 복구한다.
 
+`prepare-journal.json`은 transaction 식별자, `started`, `staged`, `backed_up`, `applied`, `restoring`, `restored`, `completed` 상태와 root별 `hadOriginal`, `backupDone`, `applyDone`을 기록한다.
+`started`와 `staged`는 기존 root를 건드리지 않았으므로 staging만 정리한다.
+`backed_up`, `applied`와 `restoring`은 root별 상태와 실제 경로를 대조해 새 root를 제거하고 backup을 복구한다.
+원래 root가 없던 항목은 `hadOriginal: false`로 기록하고 복구 때 새 root만 제거한다.
+`completed`는 새 root와 `sync-state.json`의 hash가 일치할 때만 backup과 journal을 정리한다.
+기록과 실제 경로가 모순되면 자동 판단하지 않고 `RESTORE_REQUIRED`로 중단한다.
+
+## 비공개 작업 전송 계약
+
+원격 명령은 다음 세 동작만 제공한다.
+
+- `career-storage status`: 본문 없이 호출하고 `RemoteStatusResult` JSON을 stdout으로 반환한다.
+- `career-storage export --revision <revision>`: 해당 immutable release를 tar stdout으로 반환한다.
+- `career-storage publish`: `workspace-draft.json`과 세 관리 root가 든 tar를 stdin으로 받고 `RemotePublishResult` JSON을 stdout으로 반환한다.
+
+export tar의 최상위에는 `workspace-manifest.json`, `applications/`, `private/`, `state/`만 허용한다.
+publish tar의 최상위에는 `workspace-draft.json`과 같은 세 관리 root만 허용한다.
+
+`RemoteStatusResult`는 `schemaVersion`, `action: "status"`, `ok: true`, `workspace`와 nullable `current`를 가진다.
+`current`는 `revision`, `contentDigest`, `createdAt`, `fileCount`를 가진다.
+`RemotePublishResult`는 `schemaVersion`, `action: "publish"`, `ok: true`, `revision`, `contentDigest`, `createdAt`, `fileCount`, `noChange`를 가진다.
+
+성공 JSON만 stdout에 기록한다.
+실패는 nonzero 종료 코드와 stderr의 `schemaVersion`, `action`, `ok: false`, `code`를 가진 JSON으로 반환한다.
+공통 오류 코드는 `WORKSPACE_DIRTY`, `REMOTE_UNINITIALIZED`, `REVISION_CONFLICT`, `INVALID_MANIFEST`, `TRANSFER_FAILED`, `TRANSPORT_UNAVAILABLE`, `RESTORE_REQUIRED`다.
+오류에는 파일 본문, 호스트, 계정, key 경로와 비밀값을 포함하지 않는다.
+
 Markdown, JSON, 검토용 HTML, PDF와 실제 제출 묶음은 해당 application 디렉터리 안에서 함께 동기화한다.
 게시 뒤 삭제하는 공개 리포트와 원본에서 다시 만들 수 있는 cache는 release에 포함하지 않는다.
 
