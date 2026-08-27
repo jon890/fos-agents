@@ -5,11 +5,38 @@ career-os는 사람이 관리하는 설정, 실행 상태, 비공개 산출물, 
 ## 저장 원칙
 
 - `config/`에는 오래 유지할 프로필과 정책을 둔다.
-- `state/`에는 실행 사이에 유지할 현재 상태를 둔다.
-- `applications/`와 `private/`에는 개인 지원 자료를 둔다.
+- `state/`, `applications/`와 `private/`는 홈서버 release와 동기화하는 로컬 작업본이다.
 - `reports/`에는 구조화 결과와 사람이 읽는 리포트를 둔다.
 - `cache/`에는 원본에서 다시 만들 수 있는 수집 결과를 둔다.
 - `public/`과 `sources/fos-study/`에는 공개 가능한 자료만 둔다.
+
+## 비공개 작업 release
+
+홈서버의 각 release는 `applications`, `private`, `state`와 `workspace-manifest.json`을 가진다.
+release 디렉터리는 생성 뒤 수정하지 않으며 검증을 통과한 release만 `current` 상대 링크가 가리킨다.
+
+manifest는 다음 필드를 가진다.
+
+- `schemaVersion`: 현재 값 `1`
+- `workspace`: 고정값 `career-os`
+- `revision`: 홈서버가 부여한 release 식별자
+- `parentRevision`: publish가 시작할 때 확인한 이전 revision
+- `createdAt`: 홈서버가 기록한 UTC 시각
+- `producer`: 결과를 만든 skill과 `interactive` 또는 `automation` 실행 방식
+- `contentDigest`: 정렬한 파일 경로, 크기와 SHA-256에서 만든 전체 digest
+- `files`: 상대 경로, byte 크기와 SHA-256 목록
+
+파일 경로는 `applications/`, `private/`, `state/` 중 하나로 시작해야 한다.
+일반 파일만 허용하고 symlink, `.env`, `.omc`, log, cache와 임시 파일은 거부한다.
+같은 `contentDigest`를 다시 publish하면 새 release를 만들지 않는다.
+
+로컬 `career-os/.career-sync/sync-state.json`은 마지막으로 준비한 `revision`, `contentDigest`와 파일 hash를 기록한다.
+prepare 중에는 같은 디렉터리의 임시 staging, backup과 `prepare-journal.json`으로 세 관리 root의 교체·복구 상태를 기록한다.
+이 디렉터리는 Git과 원격 release에 포함하지 않는다.
+prepare는 현재 로컬 hash가 마지막 동기화 상태와 다르면 파일을 교체하지 않으며, 중단된 journal이 있으면 새 작업 전에 기존 root를 복구한다.
+
+Markdown, JSON, 검토용 HTML, PDF와 실제 제출 묶음은 해당 application 디렉터리 안에서 함께 동기화한다.
+게시 뒤 삭제하는 공개 리포트와 원본에서 다시 만들 수 있는 cache는 release에 포함하지 않는다.
 
 ## Config
 
@@ -65,6 +92,7 @@ Zod 검증을 통과한 값만 수집 코드가 사용한다.
 - 기술·인성 모드가 공유하는 진행 정보
 
 학습 주제 생성 상태와 섞지 않는다.
+이 파일은 public 저장소에서 추적하지 않고 비공개 작업 release로 동기화한다.
 
 ### 실행 중 생성되는 읽을거리 데이터
 
@@ -216,6 +244,7 @@ HTML 게시 전에는 개인 정보, 비공개 업무 내용, 로컬 절대 경�
 ## 보존과 공개 범위
 
 - `config/`와 공개 질문 은행은 검토 후 Git으로 관리한다.
+- 지원 원본, 개인 질문과 답변 연습 상태는 홈서버의 비공개 작업 release로 동기화한다.
 - 현재 지원 대상과 회사별 지원 판단은 private brain에서 관리한다.
 - cache와 다시 만들 수 있는 중간 리포트는 장기 이력으로 취급하지 않는다.
 - 개인 연락처, 회사별 지원 전략, 근거 감사 원문은 공개 리포트에 포함하지 않는다.
