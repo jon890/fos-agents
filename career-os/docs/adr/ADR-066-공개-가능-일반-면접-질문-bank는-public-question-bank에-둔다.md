@@ -12,7 +12,7 @@ private 지원/면접 맥락과 분리된 공개 가능 자산 위치가 필요�
 ### 결정
 
 - 공개 가능 일반 질문 bank는 `public/question-bank/` 아래에 두고 git 추적한다.
-- `public/question-bank/`는 private 지원과 면접 맥락을 포함하지 않으며 하위 범위는 java-spring, database, cs, operations, system-design, behavioral이다.
+- `public/question-bank/`는 private 지원과 면접 맥락을 포함하지 않는다. 현재 카테고리는 `public/question-bank/README.md`를 단일 출처로 삼는다.
 - 질문 항목은 단순 암기 질문을 그대로 저장하지 않고 backend 실무형으로 정규화한다.
 - 질문 출처는 `public/question-bank/sources.json`에서 공식 URL, 게시자, 확인일, 적용 범위와 정규화 방식을 관리한다.
 - 각 질문의 `source`는 출처 레지스트리에 등록된 식별자만 사용한다.

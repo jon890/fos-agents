@@ -49,10 +49,7 @@ description: 기술·인성·포지션별 면접 질문을 준비하고 한 번�
 질문마다 답변에서 확인할 신호와 `evidenceBoundary`를 기록한다.
 공백 질문에는 경험을 꾸미는 모범 답안이 아니라 설계 원칙, 인접 근거와 학습 경계를 넣는다.
 
-```bash
-bun career-os/scripts/interview-drill/application_question_schema.ts \
-  <application-directory>
-```
+저장하거나 수정한 질문은 `application-package-writer`가 지정한 공고별 질문 검사기로 검증한다.
 
 ## 질문 선택
 

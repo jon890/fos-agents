@@ -29,7 +29,7 @@
 
 - `public/question-bank/README.md`
 - `public/question-bank/sources.json`
-- `public/question-bank/{java-spring,database,cs,operations,system-design,behavioral}/questions.json`
+- `public/question-bank/README.md`에 등록된 각 카테고리의 `questions.json`
 - `scripts/question-bank-collector/validate.ts`의 `scanQuestionBankInventory()` 결과.
   공개 질문 은행의 실제 파일을 검사한다.
 - 필요한 경우 공개 가능한 기존 study topic 이름.
