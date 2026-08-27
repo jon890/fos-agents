@@ -15,7 +15,7 @@ related: []
 
 ## 증상
 
-phase가 `<workspace>/config/<new>.json`을 신설하지만 `docs/data-schema.md`를 갱신하지 않는다.
+phase가 `<workspace>/config/<new>.json`을 신설하지만 `<workspace>/docs/data-schema.md`를 갱신하지 않는다.
 
 ## 왜
 

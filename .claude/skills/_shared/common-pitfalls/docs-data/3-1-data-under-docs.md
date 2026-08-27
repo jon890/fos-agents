@@ -26,4 +26,4 @@ phase가 `<workspace>/docs/<some>.json` 또는 `.jsonl` 파일을 생성한다.
 ## Self-check
 
 산출물이 `*.json`, `*.jsonl`, `*.csv` 같은 데이터면 `data-schema.md`의 책임 경계를 확인한다.
-기술 결정은 `docs/adr/`, 인수인계 문서는 `docs/hand-off/`에 둔다.
+기술 결정은 `<workspace>/docs/adr/`, 인수인계 문서는 해당 워크스페이스가 정한 문서 경계에 둔다.

@@ -1,4 +1,4 @@
-# AGENTS.md — ji-yoon-blog 워크스페이스
+# ji-yoon-blog 워크스페이스 지침
 
 `ji-yoon-blog`는 지융로그 네이버 블로그 운영을 위한 독립 워크스페이스다.
 이 파일은 작업 경계와 콘텐츠 라우팅만 담는다.

@@ -1,56 +1,21 @@
-# build-with-teams 오버레이 — fos-agents
+# build-with-teams 오버레이
 
-공용 코어(`~/.claude/skills/build-with-teams`)에 fos-agents 특화를 주입한다.
-코어가 뼈대, 아래 내용이 이 레포의 살점이다.
+공용 `build-with-teams` 계약에 이 저장소의 실행 경계만 추가한다.
 
-## 전용 agent (executor·docs-verifier)
+## 역할 선택
 
-executor·docs-verifier 는 실행 워크스페이스명을 prefix 로 한 전용 agent 를 쓴다.
-정본은 `.claude/agents/<workspace>-{executor,docs-verifier}.md`.
+- `career-os` 구현에는 `.claude/agents/career-os-executor.md`의 경계를 적용한다.
+- `career-os` 문서 검증에는 `.claude/agents/career-os-docs-verifier.md`의 읽기 전용 경계를 적용한다.
+- 다른 워크스페이스는 설치된 범용 `executor`, `code-reviewer`, `verifier` 역할을 사용하고 해당 워크스페이스 `AGENTS.md`를 우선한다.
+- 역할 이름은 현재 실행 환경이 제공하는 이름으로 해석한다. 과거 플러그인의 정규화된 역할 이름을 문서에 고정하지 않는다.
 
-| 워크스페이스 | executor | docs-verifier |
-|---|---|---|
-| career-os | `career-os-executor` | `career-os-docs-verifier` |
-| 그 외 (apartment·stock-investment·travel·health-care·ji-yoon-blog·side-projects) | 전용 agent 없음 — `oh-my-claudecode:executor` 로 대체 | 전용 agent 없음 — team-lead 가 진행 전 사용자에게 확인 |
+Codex에서 실행할 때는 공용 스킬이 지정한 executor 실행 형태 판정 검사를 `critic` 평가 전과 실행 역할 생성 직전에 통과시킨다.
 
-critic·code-reviewer 는 모든 워크스페이스에서 공용 agent(`oh-my-claudecode:critic`, `oh-my-claudecode:code-reviewer`)를 쓴다.
+## 검증과 책임
 
-## 통합 검증 명령 (워크스페이스별 — CLAUDE.md 에 없으면 이 표를 따른다)
+- 검증 명령은 해당 워크스페이스의 `AGENTS.md`, `README.md`, 변경한 스킬의 검증 절을 따른다.
+- 문서가 명령을 제공하지 않으면 변경 동작을 증명하는 가장 작은 테스트를 선택하고 검증 공백을 보고한다.
+- 구현 역할은 commit과 push를 하지 않는다. 통합과 Git 상태 변경은 리더가 맡는다.
+- 검토 역할은 읽기 전용으로 실행하며 수정과 Git 상태 변경을 허용하지 않는다.
 
-| 워크스페이스 | 검증 명령 |
-|---|---|
-| career-os | 관련 테스트 + `bunx tsc --noEmit` + Python 수집기 변경 시 해당 smoke test |
-| 그 외 | 각 워크스페이스 `README.md`의 검증 명령 |
-
-career-os 는 TypeScript 를 bun 으로 실행하고 스키마 검증에 zod 를 쓴다.
-
-## worktree 직후 setup
-
-career-os 는 fos-agents 루트에서 `bun install` 1회(이미 설치돼 있으면 생략) 외 추가 setup 이 없다.
-그 외 워크스페이스는 문서화된 setup 절차가 없다.
-
-## 코드 규칙 권위 (워크스페이스별)
-
-career-os: `career-os/AGENTS.md` + `career-os/docs/`의 5문서(`prd.md`·`data-schema.md`·`flow.md`·`code-architecture.md`·`adr/`).
-그 외 워크스페이스: `<workspace>/AGENTS.md` + `<workspace>/docs/`의 책임 문서와 `adr/`.
-executor·code-reviewer 프롬프트에는 위 권위 문서를 참조로 인용한다.
-
-## index.json 스키마
-
-planning 오버레이(`.claude/planning-overlay.md`)의 "index.json 스키마" 절이 단일 소스다.
-build-with-teams 는 그 스키마로 만들어진 task 를 그대로 실행하며 별도 필드를 추가하지 않는다.
-
-## plan/ADR 번호 재확인
-
-worktree 생성 직전, planning 오버레이의 "plan 네이밍 (번호 충돌 확인)" 스캔을 한 번 더 실행한다.
-다른 세션이 그 사이 같은 plan 또는 ADR 번호를 선점했을 수 있다.
-
-## common-pitfalls 경로
-
-critic·code-reviewer·docs-verifier 가 사전 해소 점검할 패턴 파일은 `.claude/skills/_shared/common-pitfalls/INDEX.md` (라우터) 다.
-executor 스폰 프롬프트의 환경 함정은 전용 agent 정의(`<Domain_Rules>`)가 단일 소스이므로 반복하지 않는다.
-
-## 노하우 누적 위치
-
-review 회고에서 나온 재사용 가치 있는 발견은 `.claude/skills/_shared/common-pitfalls/`에 누적한다.
-새 문서를 신설하지 않는다.
+task 형식과 plan 번호 규칙은 공용 `planning` 계약과 `.claude/planning-overlay.md`를 단일 출처로 사용한다.

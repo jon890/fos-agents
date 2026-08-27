@@ -1,76 +1,41 @@
-# docs-check 오버레이 — fos-agents
+# docs-check 오버레이
 
-공용 코어(`~/.claude/skills/docs-check`)에 fos-agents 특화를 주입한다.
-코어가 뼈대, 아래 내용이 이 레포의 살점이다.
+공용 `docs-check`에 fos-agents의 문서 경계와 실측 검사를 추가한다.
 
-## scope 해석
+## 범위
 
-scope 는 `career-os` / `fos-agents` / `all` 중 하나다.
-scope 가 없으면 `all` 로 본다.
-plan 완료 후 또는 새 ADR 추가 후에는 Quick Index sync 를 함께 확인한다.
+- scope가 워크스페이스 이름이면 해당 디렉터리의 `AGENTS.md`, `README.md`, `docs/`와 변경된 스킬 문서를 검사한다.
+- `fos-agents` 또는 `root`는 루트 문서와 공용 하네스를 검사한다.
+- `all`은 모든 워크스페이스를 검사한다.
+- scope가 없으면 현재 작업 경로와 변경 파일에서 가장 좁은 범위를 추론한다. 여러 범위가 섞였을 때만 `all`을 사용한다.
 
-## docs 구조와 문서 목록
+`career-os`는 `.claude/agents/career-os-docs-verifier.md`의 경계를 적용한다. 별도 검토 역할을 사용할 때는 읽기 전용 컨텍스트로 격리하고 수정, commit, push 권한을 주지 않는다.
 
-| 범위 | ADR 저장 방식 | 5문서 |
-|---|---|---|
-| fos-agents 루트 | `docs/adr/ADR-NNN-slug.md` + `docs/adr/INDEX.md` | `docs/code-architecture.md` |
-| 모든 워크스페이스 | `<workspace>/docs/adr/ADR-NNN-slug.md` + `<workspace>/docs/adr/INDEX.md` | `<workspace>/docs/{prd,data-schema,flow,code-architecture}.md` |
+## 구조 검사
 
-워크스페이스 범위가 지정되면 해당 경로의 `docs/`와 `AGENTS.md`, `README.md`를 검사한다.
-
-## docs-verifier 전용 agent
-
-career-os scope 는 `career-os-docs-verifier`(`.claude/agents/career-os-docs-verifier.md`)를 우선 쓴다 — 검증 항목·grep 명령의 단일 소스다.
-fos-agents 루트 scope 는 전용 agent 가 없다 — 범용 read-only 에이전트(`verifier` 등)에 위임하거나 위임 불가 시 메인이 직접 6축을 점검한다.
-
-## 코드 ↔ docs 부패 검사 (grep 명령)
-
-### ADR Quick Index ↔ 본문 sync
+ADR 파일과 INDEX는 제목의 Markdown 단계와 관계없이 식별자가 같아야 한다.
 
 ```bash
-# cwd: fos-agents root
-# career-os: 개별 파일 + INDEX.md
-BODY=$(grep -rhoE '^## ADR-[0-9]+' career-os/docs/adr/ 2>/dev/null | grep -oE 'ADR-[0-9]+' | sort -u)
-INDEX=$(grep -oE 'ADR-[0-9]+' career-os/docs/adr/INDEX.md 2>/dev/null | sort -u)
-diff <(echo "$BODY") <(echo "$INDEX") && echo "OK: career-os ADR Index synced"
-
-# fos-agents root: 개별 파일 + INDEX.md
-BODY=$(grep -rhoE '^## ADR-[0-9]+' docs/adr/ADR-*.md 2>/dev/null | grep -oE 'ADR-[0-9]+' | sort -u)
-INDEX=$(grep -oE 'ADR-[0-9]+' docs/adr/INDEX.md 2>/dev/null | sort -u)
-diff <(echo "$BODY") <(echo "$INDEX") && echo "OK: docs/adr Index synced"
+scope=career-os
+files=$(find "$scope/docs/adr" -maxdepth 1 -type f -name 'ADR-[0-9]*.md' -exec basename {} \; | grep -oE '^ADR-[0-9]+' | sort -u)
+index=$(grep -oE 'ADR-[0-9]+' "$scope/docs/adr/INDEX.md" | sort -u)
+diff <(printf '%s\n' "$files") <(printf '%s\n' "$index")
 ```
 
-### Config schema alignment (career-os 전용)
-
-`career-os/config/*.json` 최상위 파일명이 `career-os/docs/data-schema.md` 에 문서화됐는지 확인한다.
+문서에 적힌 설정과 스킬은 확장자나 개수를 가정하지 않고 실제 경로와 소비 코드를 함께 확인한다.
 
 ```bash
-# cwd: fos-agents root
-for cfg in career-os/config/*.json; do
-  name=$(basename "$cfg" .json)
-  grep -q "$name" career-os/docs/data-schema.md \
-    || echo "SCHEMA_MISSING: $cfg not documented in data-schema.md"
-done
+rg -n 'config/[^ )`]+' <scope>/README.md <scope>/AGENTS.md <scope>/docs
+rg -n '<skill-name>|<config-name>' <scope>/scripts <scope>/.claude/skills <scope>/docs
 ```
 
-### Skill docs coverage (career-os 전용)
+경로 문자열의 존재만으로 사용 중이라고 판정하지 않는다. 실행 진입점에서 읽는지, 문서 전용 참조인지, 생성 산출물인지 구분한다.
 
-`career-os/.claude/skills/*/SKILL.md` 각 skill 이름이 career-os 5문서 중 하나에 언급되는지 확인한다.
+## 저장소 고유 실패 조건
 
-```bash
-# cwd: fos-agents root
-for skill in career-os/.claude/skills/*/SKILL.md; do
-  [ -f "$skill" ] || continue
-  name=$(basename "$(dirname "$skill")")
-  grep -q "$name" career-os/docs/prd.md career-os/docs/flow.md career-os/docs/code-architecture.md \
-    || echo "SKILL_DOC_MISSING: $name not referenced in career-os docs"
-done
-```
+- 다른 워크스페이스 자산을 실행 의존성으로 사용한다.
+- 공개 문서에 환경 종속 절대 경로, 내부 호스트, 계정이나 비공개 식별자가 남는다.
+- 제거된 스킬, 런타임, 전달 매체 또는 실행 명령을 현재 경로처럼 안내한다.
+- 코드에서 자명한 목록과 범용 작업 요령을 장문으로 반복해 에이전트 판단을 제한한다.
 
-## 폐기된 실행 지시문
-
-```bash
-# cwd: fos-agents root
-grep -n "Output only valid JSON\|Do not output markdown\|claude --json-schema" <파일> \
-  && echo "PROHIBITED: 폐기된 실행 지시문"
-```
+고정 개수와 순서는 제품 계약, 안전 경계 또는 실측 회귀 조건일 때만 유지한다.

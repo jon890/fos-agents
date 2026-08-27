@@ -29,7 +29,7 @@
 | `AGENTS.md` | 모든 에이전트를 위한 공통 행동 규칙 |
 | `CLAUDE.md` | `AGENTS.md` 심볼릭 링크 |
 | `.agents/skills/` | Codex가 직접 탐색하는 저장소 전역 skill |
-| `.claude/skills/` | 루트에서 쓰는 agent skill과 공용 참조 |
+| `.claude/skills/_shared/` | 여러 실행 역할이 함께 쓰는 실측 함정 참조 |
 | `.claude/agents/` | repo-local agent 정의 |
 | `docs/adr/` | 모노레포 레벨 ADR |
 | `docs/code-architecture.md` | 현재 구조와 책임 경계 |
@@ -109,7 +109,7 @@ scripts/<skill-name>/
 └── references/
 ```
 
-`scripts/`는 실행 파일과 helper를 담고, `.claude/skills/`는 에이전트가 읽을 workflow 계약을 담는다.
+`scripts/`는 실행 파일과 helper를 담고, `.claude/skills/`는 에이전트가 읽을 작업 계약을 담는다.
 실행 환경이 어떤 CLI나 서브에이전트를 쓸지는 환경이 결정한다.
 
 ## 공용 리포트 게시

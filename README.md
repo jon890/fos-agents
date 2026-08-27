@@ -49,7 +49,7 @@
 | [`docs/code-architecture.md`](docs/code-architecture.md) | 현재 디렉터리 구조와 책임 경계 |
 | [`docs/adr/INDEX.md`](docs/adr/INDEX.md) | 모노레포 수준의 주요 결정과 이유 |
 | [`.agents/skills/report-publisher/`](.agents/skills/report-publisher/) | 공개 가능한 HTML 리포트 게시 skill |
-| [`.claude/skills/`](.claude/skills/) | 루트에서 쓰는 agent skill과 공용 참조 |
+| [`.claude/skills/_shared/`](.claude/skills/_shared/) | 여러 실행 역할이 함께 쓰는 실측 함정 참조 |
 
 `CLAUDE.md`는 `AGENTS.md`를 가리키는 심볼릭 링크다.
 두 파일을 따로 수정하지 않는다.
@@ -71,7 +71,7 @@
 | 범위 | 예시 검증 |
 |---|---|
 | apartment 수집기 | `bash apartment/scripts/apartment-daily-report/run_smoke_test.sh` |
-| TypeScript 파일 | `bun --check <file.ts>` |
+| TypeScript 파일 | `bunx tsc --noEmit`과 관련 테스트 |
 | 문서 링크와 구조 | `rg`와 `find`로 실제 경로 대조 |
 | HTML 리포트 게시 | `report-publisher` 실행 후 배포 URL HTTP 확인 |
 
