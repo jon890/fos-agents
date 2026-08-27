@@ -95,6 +95,17 @@ bun career-os/.claude/skills/resume-preparer/scripts/export_resume.ts \
 디자인은 `config/resume-design.md`를 기본으로 사용한다.
 단일 열, 선택 가능한 텍스트, 본문 안의 연락처와 독립 실행 가능한 A4 PDF를 유지한다.
 
+기본 렌더러는 경력 섹션 앞에서 페이지를 나눈다.
+제출처가 분량을 제한하면 그 기준을 우선한다.
+제한이 없으면 근거의 양, 중복과 읽기 편의성으로 분량을 정하고, 의미 단위 사이에 다음 표시를 필요한 만큼 넣어 분할 위치를 조정한다.
+
+```markdown
+<!-- resume-page-break -->
+```
+
+프로젝트나 경력 항목의 문장 중간에서는 나누지 않는다.
+페이지 균형을 맞추려고 본문 글자 크기와 줄 간격부터 줄이지 않으며, 섹션 순서와 분할 위치를 먼저 조정한다.
+
 ### 주장 근거 감사
 
 `references/claim-model.md`를 읽는다.
@@ -153,6 +164,7 @@ bun career-os/.claude/skills/resume-preparer/scripts/validate_submission_bundle.
 - 채용 담당자와 기술 리더가 모두 `pass`
 - 점수표의 기준 점수와 파일 해시가 현재 제출 문서와 일치
 - HTML 정적 검사와 실제 A4 렌더 결함 0개
+- 페이지 사이의 정보량과 여백이 현저히 치우치지 않음
 - PDF manifest와 현재 파일 해시 일치
 - 대표 사례별 30초·2분 설명과 근거 방어 질문 준비
 

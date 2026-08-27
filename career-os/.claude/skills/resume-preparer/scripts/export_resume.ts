@@ -21,6 +21,7 @@ export const CHROME_PDF_FLAGS = [
   '--no-sandbox',
   '--no-pdf-header-footer',
 ] as const;
+export const PAGE_BREAK_MARKER = '<!-- resume-page-break -->';
 
 function parseArgs(args: string[]): Options {
   let applicationDir = '';
@@ -113,14 +114,39 @@ function sectionId(title: string): string | undefined {
   return undefined;
 }
 
-export function renderMarkdownPages(markdown: string): [string, string] {
+export function renderMarkdownPages(markdown: string): string[] {
   const lines = markdown.replace(/\r\n/g, '\n').split('\n');
-  const pages: [string[], string[]] = [[], []];
-  let pageIndex: 0 | 1 = 0;
+  const pageBreakIndexes = lines
+    .map((line, index) => line.trim() === PAGE_BREAK_MARKER ? index : -1)
+    .filter((index) => index >= 0);
+  let previousPageBreakIndex = -1;
+  for (const pageBreakIndex of pageBreakIndexes) {
+    const pageHasContent = lines
+      .slice(previousPageBreakIndex + 1, pageBreakIndex)
+      .some((line) => line.trim() && line.trim() !== PAGE_BREAK_MARKER);
+    if (!pageHasContent) {
+      throw new Error(`${PAGE_BREAK_MARKER} 앞에는 페이지에 표시할 내용이 필요합니다.`);
+    }
+    previousPageBreakIndex = pageBreakIndex;
+  }
+  if (
+    pageBreakIndexes.length > 0 &&
+    !lines.slice(previousPageBreakIndex + 1).some((line) => line.trim())
+  ) {
+    throw new Error(`${PAGE_BREAK_MARKER} 뒤에는 페이지에 표시할 내용이 필요합니다.`);
+  }
+  const hasExplicitPageBreak = pageBreakIndexes.length > 0;
+  const pages: string[][] = [[]];
+  let pageIndex = 0;
   let list: 'ul' | 'ol' | null = null;
   let sectionOpen = false;
+  let headerOpen = true;
+  let headerParagraphIndex = 0;
+  let currentSectionId: string | undefined;
+  let currentSectionTitle = '';
 
   const html = () => pages[pageIndex];
+  pages[0].push('<header class="resume-header">');
 
   const closeList = () => {
     if (list) {
@@ -137,8 +163,39 @@ export function renderMarkdownPages(markdown: string): [string, string] {
     }
   };
 
-  for (const rawLine of lines) {
+  const closeHeader = () => {
+    if (!headerOpen) return;
+    closeList();
+    pages[0].push('</header>');
+    headerOpen = false;
+  };
+
+  const openContinuationSection = () => {
+    if (!currentSectionTitle) return;
+    const id = currentSectionId ? ` data-section="${currentSectionId}"` : '';
+    html().push(
+      `<section class="section-continuation"${id} data-continuation-label="${escapeHtml(currentSectionTitle)} · 계속">`,
+    );
+    sectionOpen = true;
+  };
+
+  const startNewPage = (continueCurrentSection: boolean) => {
+    closeHeader();
+    closeSection();
+    pages.push([]);
+    pageIndex += 1;
+    if (continueCurrentSection) openContinuationSection();
+  };
+
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+    const rawLine = lines[lineIndex];
     const line = rawLine.trimEnd();
+    if (line.trim() === PAGE_BREAK_MARKER) {
+      const nextContentLine = lines.slice(lineIndex + 1).find((candidate) => candidate.trim());
+      const startsNewSection = /^##\s+/.test(nextContentLine?.trim() ?? '');
+      startNewPage(!startsNewSection);
+      continue;
+    }
     if (!line.trim()) {
       closeList();
       continue;
@@ -150,11 +207,16 @@ export function renderMarkdownPages(markdown: string): [string, string] {
       const level = heading[1].length;
       const title = heading[2].trim();
       if (level === 2) {
+        closeHeader();
         closeSection();
         const id = sectionId(title);
-        if (pageIndex === 0 && (id === 'career' || id === 'skills')) pageIndex = 1;
+        if (!hasExplicitPageBreak && pageIndex === 0 && (id === 'career' || id === 'skills')) {
+          startNewPage(false);
+        }
         html().push(id ? `<section id="${id}">` : '<section>');
         sectionOpen = true;
+        currentSectionId = id;
+        currentSectionTitle = title.replace(/[*`_]/g, '').trim();
       }
       html().push(`<h${level}>${inlineMarkdown(title)}</h${level}>`);
       continue;
@@ -183,11 +245,27 @@ export function renderMarkdownPages(markdown: string): [string, string] {
     }
 
     closeList();
-    html().push(`<p>${inlineMarkdown(line.trim())}</p>`);
+    const text = line.trim();
+    let className = '';
+    if (headerOpen) {
+      headerParagraphIndex += 1;
+      className = /mailto:|https:\/\/github\.com\//i.test(text)
+        ? 'contact-line'
+        : headerParagraphIndex === 1
+          ? 'headline'
+          : '';
+    } else if (/^\d{4}\.\d{2}\s+-\s+(?:\d{4}\.\d{2}|현재)$/.test(text)) {
+      className = 'period';
+    } else if (/^기술\s*:/.test(text)) {
+      className = 'stack';
+    }
+    const classAttribute = className ? ` class="${className}"` : '';
+    html().push(`<p${classAttribute}>${inlineMarkdown(text)}</p>`);
   }
 
+  closeHeader();
   closeSection();
-  return [pages[0].join('\n'), pages[1].join('\n')];
+  return pages.map((page) => page.join('\n'));
 }
 
 function extractCss(designMarkdown: string): string {
@@ -215,7 +293,20 @@ li { margin: 3px 0; }
 
 export function renderHtml(resumeMarkdown: string, designMarkdown: string): string {
   const css = extractCss(designMarkdown);
-  const [firstPage, secondPage] = renderMarkdownPages(resumeMarkdown);
+  const pages = renderMarkdownPages(resumeMarkdown);
+  const pageNumberWidth = Math.max(2, String(pages.length).length);
+  const renderedPages = pages.map((page, index) => {
+    const ordinal = String(index + 1).padStart(pageNumberWidth, '0');
+    const total = String(pages.length).padStart(pageNumberWidth, '0');
+    const role = index === 0
+      ? 'resume-page--first'
+      : index === pages.length - 1
+        ? 'resume-page--last'
+        : 'resume-page--continuation';
+    return `  <main class="resume-page ${role}" data-page="${ordinal} / ${total}">
+${page}
+  </main>`;
+  }).join('\n');
 
   return `<!doctype html>
 <html lang="ko">
@@ -228,15 +319,14 @@ ${css}
   </style>
 </head>
 <body>
-  <main class="resume-page">
-${firstPage}
-  </main>
-  <main class="resume-page">
-${secondPage}
-  </main>
+${renderedPages}
 </body>
 </html>
 `;
+}
+
+export function countHtmlPages(html: string): number {
+  return [...html.matchAll(/class=["'][^"']*\bresume-page\b[^"']*["']/g)].length;
 }
 
 function writeHtml(path: string, html: string): void {
@@ -244,7 +334,7 @@ function writeHtml(path: string, html: string): void {
   writeFileSync(path, html, 'utf-8');
 }
 
-function renderPdf(opts: Options): void {
+function renderPdf(opts: Options, expectedPageCount: number): number {
   mkdirSync(dirname(opts.pdfPath), { recursive: true });
   const htmlUrl = `file://${resolve(opts.htmlPath)}`;
   const result = spawnSync(
@@ -261,6 +351,27 @@ function renderPdf(opts: Options): void {
     console.error(result.stderr || result.stdout || 'Chrome PDF rendering failed');
     process.exit(result.status ?? 1);
   }
+
+  const pageCount = readPdfPageCount(opts.pdfPath);
+  if (pageCount !== expectedPageCount) {
+    console.error(
+      `HTML에서 의도한 ${expectedPageCount}쪽과 PDF의 ${pageCount ?? '확인 불가'}쪽이 일치하지 않습니다.`,
+    );
+    process.exit(1);
+  }
+  return pageCount;
+}
+
+export function readPdfPageCount(path: string): number | undefined {
+  const source = readFileSync(path).toString('latin1');
+  const patterns = [
+    /\/Type\s*\/Pages\b[\s\S]{0,512}?\/Count\s+(\d+)/g,
+    /\/Count\s+(\d+)[\s\S]{0,512}?\/Type\s*\/Pages\b/g,
+  ];
+  const counts = patterns.flatMap((pattern) =>
+    [...source.matchAll(pattern)].map((match) => Number.parseInt(match[1], 10)),
+  );
+  return counts.length > 0 ? Math.max(...counts) : undefined;
 }
 
 function main(): void {
@@ -268,12 +379,14 @@ function main(): void {
   const resumeMarkdown = readRequired(opts.resumePath);
   const designMarkdown = readRequired(opts.designPath);
   const html = renderHtml(resumeMarkdown, designMarkdown);
+  const expectedPageCount = countHtmlPages(html);
 
   writeHtml(opts.htmlPath, html);
-  renderPdf(opts);
+  const renderedPageCount = renderPdf(opts, expectedPageCount);
 
   console.log(`HTML 이력서: ${opts.htmlPath}`);
   console.log(`PDF 이력서: ${opts.pdfPath}`);
+  console.log(`PDF 페이지: ${renderedPageCount}쪽`);
   console.log('외부 제출 자동화: 실행하지 않음');
 }
 

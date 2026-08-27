@@ -23,7 +23,24 @@ export function checkResumeHtml(
 ) {
   const html = readFileSync(path, "utf8");
   const contract = SUBMISSION_HTML_CONTRACTS[documentKind];
-  const pageCount = [...html.matchAll(/class=["'][^"']*\bresume-page\b[^"']*["']/g)].length;
+  const pageBlocks = [...html.matchAll(
+    /(<main\b[^>]*class=["'][^"']*\bresume-page\b[^"']*["'][^>]*>)([\s\S]*?)<\/main>/gi,
+  )];
+  const pageTags = pageBlocks.map((match) => match[1]);
+  const pageCount = pageTags.length;
+  const pageNumberWidth = Math.max(2, String(pageCount).length);
+  const hasSequentialPageLabels = pageTags.every((tag, index) => {
+    const ordinal = String(index + 1).padStart(pageNumberWidth, "0");
+    const total = String(pageCount).padStart(pageNumberWidth, "0");
+    return new RegExp(`data-page=["']${ordinal} / ${total}["']`, "i").test(tag);
+  });
+  const everyPageHasText = pageBlocks.every((match) =>
+    match[2]
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&(?:nbsp|#160);/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim().length > 0,
+  );
   const checks: Check[] = [
   {
     name: '한국어 문서 선언',
@@ -41,9 +58,22 @@ export function checkResumeHtml(
     detail: '@page size: A4와 @media print가 필요합니다.',
   },
   {
-    name: '2쪽 페이지 구조',
-    passed: pageCount === contract.pageCount,
-    detail: `${contract.label}의 resume-page가 ${contract.pageCount}개여야 합니다. 현재 ${pageCount}개입니다.`,
+    name: '페이지 구조',
+    passed: pageCount >= contract.minimumPageCount,
+    detail: `${contract.label}에는 resume-page가 최소 ${contract.minimumPageCount}개 필요합니다. 현재 ${pageCount}개입니다.`,
+  },
+  {
+    name: '페이지별 정보 위계',
+    passed:
+      /class=["'][^"']*\bresume-header\b[^"']*["']/i.test(html) &&
+      pageTags[0]?.includes('resume-page--first') === true &&
+      hasSequentialPageLabels,
+    detail: '첫 페이지의 이름·역할 header와 실제 페이지 수에 맞는 순차 표지가 필요합니다.',
+  },
+  {
+    name: '빈 페이지 없음',
+    passed: pageCount > 0 && everyPageHasText,
+    detail: '각 resume-page에는 제출 문서의 실제 텍스트가 있어야 합니다.',
   },
   {
     name: '필수 섹션',

@@ -1,7 +1,7 @@
 export type SubmissionDocumentKind = "resume" | "career-description";
 
 const sharedContract = {
-  pageCount: 2,
+  minimumPageCount: 1,
   internalLeakPatterns: [
     /\/Users\//,
     /fos-study/i,
