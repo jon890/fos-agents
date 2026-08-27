@@ -39,20 +39,6 @@ Zod 검증을 통과한 값만 수집 코드가 사용한다.
 
 후보자 선호와 회사 평가는 이 파일에 넣지 않는다.
 
-### `config/verified-company-research-targets.json`
-
-회사별 공식 채용 페이지, 수집 어댑터, 검색 이름, 기술 블로그를 관리한다.
-회사가 좋은지 여부를 확정하는 목록이 아니라 탐색 채널 목록이다.
-
-### `config/position-filters.json`
-
-사용자가 명시적으로 억제한 개별 공고만 관리한다.
-
-- `suppressedPostings`: 추천 결과에서 숨길 개별 공고 URL과 이유
-
-회사 이름으로 후보를 수집 단계에서 제외하지 않는다.
-회사별 선호, 탈락 이력과 지원 우선순위는 private brain의 현재 커리어 상태를 검색해 추천 순위에서 판단한다.
-
 ### `config/external-reading-sources.ts`
 
 아침 읽을거리의 외부 글·영상 소스와 수집 어댑터를 관리한다.

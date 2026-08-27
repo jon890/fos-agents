@@ -20,7 +20,7 @@
  *   bun collect_live_postings.ts --output <output-json>
  */
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type {
@@ -40,24 +40,6 @@ import { configuredSourceIds, selectAdapters } from "./live-postings/adapters/in
 import { buildPostingCandidatePool } from "./live-postings/candidate_pool.ts";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
-
-/**
- * 사용자가 억제한 개별 공고 URL을 읽는다.
- * config를 못 읽으면 개별 공고 억제 없이 진행한다.
- */
-function loadPositionFilters(): ReadonlySet<string> {
-  try {
-    const path = resolve(REPO_ROOT, "career-os/config/position-filters.json");
-    const config = JSON.parse(readFileSync(path, "utf8"));
-    const suppressedUrls = (config?.suppressedPostings ?? [])
-      .map((posting: { url?: unknown }) => posting.url)
-      .filter((url: unknown): url is string => typeof url === "string" && url.length > 0);
-    return new Set(suppressedUrls);
-  } catch (e) {
-    console.error(`WARN position-filters config load failed, proceeding without posting suppression: ${e}`);
-    return new Set();
-  }
-}
 
 // ---- CLI ----------------------------------------------------------------
 
@@ -121,7 +103,6 @@ function importedCountsBySource(posts: Posting[]): Map<string, number> {
 
 async function main(): Promise<number> {
   const { jsonOut, source, serverOnly, wantedLimit, includeTossArticles } = parseArgs(process.argv.slice(2));
-  const suppressedUrls = loadPositionFilters();
   const collected: Posting[] = [];
   const errors: string[] = [];
   const sourceDiagnostics: SourceDiagnostic[] = [];
@@ -166,7 +147,7 @@ async function main(): Promise<number> {
   const eligibility = filterEligiblePostings(
     dedupe(collected),
     new Date(),
-    createPostingEligibilityPolicy({ suppressedUrls, serverOnly }),
+    createPostingEligibilityPolicy({ serverOnly }),
   );
   const activePosts = eligibility.eligible;
   const importedCounts = importedCountsBySource(activePosts);

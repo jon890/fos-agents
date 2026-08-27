@@ -13,10 +13,8 @@ description: 후보자 프로필과 현재 열린 외부 채용공고를 비교�
 항상 다음 파일을 읽는다.
 
 - `config/candidate-profile.md`
-- `config/position-filters.json`
 - [`references/position-decision-criteria.md`](references/position-decision-criteria.md)
 
-등록 소스 밖의 회사를 추가 탐색할 때 `config/verified-company-research-targets.json`을 읽는다.
 세부 경력 근거가 판단에 필요할 때 프로필에서 연결한 최신 경력 자료와 업무 기록을 읽는다.
 현재 지원 대상, 지원 이력이나 회사별 재지원 간격이 순위에 영향을 주면 `brain-search`로 private brain을 확인한다.
 저장소 안에 별도 쿨다운 상태 파일을 만들지 않는다.

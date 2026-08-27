@@ -71,18 +71,6 @@ test("상태 미확인과 비개별 링크를 결정적으로 제외한다", () 
   expect(result.rejectedCounts).toEqual({ unverified_status: 1, not_direct_posting: 1 });
 });
 
-test("사용자가 억제한 개별 공고 URL은 모델 입력 전에 제외한다", () => {
-  const target = posting({});
-  const result = filterEligiblePostings(
-    [target],
-    new Date("2026-08-13T12:00:00+09:00"),
-    createPostingEligibilityPolicy({ suppressedUrls: new Set([target.url]) }),
-  );
-
-  expect(result.eligible).toHaveLength(0);
-  expect(result.rejectedCounts).toEqual({ suppressed_posting: 1 });
-});
-
 test("비대상 직무와 비정규 고용은 모든 소스의 공통 경계에서 제외한다", () => {
   const result = filterEligiblePostings([
     posting({ title: "Business Partnership Manager", mainTasks: "서버 조직과 협업" }),

@@ -54,13 +54,9 @@ function isExpired(posting: Posting, evaluatedAt: Date): boolean {
 export function createPostingEligibilityPolicy(
   options: PostingEligibilityOptions = {},
 ): PostingEligibilityPolicy {
-  const suppressedUrls = options.suppressedUrls ?? new Set<string>();
   const serverOnly = options.serverOnly ?? true;
   return {
     evaluate(posting, evaluatedAt = new Date()): PostingEligibilityDecision {
-      if (suppressedUrls.has(posting.url)) {
-        return { eligible: false, rejectionCode: "suppressed_posting" };
-      }
       if (posting.linkType !== "direct_posting") {
         return { eligible: false, rejectionCode: "not_direct_posting" };
       }

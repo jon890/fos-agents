@@ -24,7 +24,6 @@ clone 뒤 확인할 기본 파일:
 - `.env.example`: 필요한 secret 키 이름.
 - `config/candidate-profile.md`: 후보자 프로필 기준 원본.
 - `config/position-collection.ts`: 공고 수집 설정과 검증.
-- `config/position-filters.json`: 억제할 개별 공고 URL.
 
 `.env`는 워크스페이스 루트에 두고 git에 올리지 않는다.
 진행 중인 지원 대상은 private brain에서 확인하고 공고별 실행 자료는 `applications/<company>/<role>/`에서 관리한다.

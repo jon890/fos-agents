@@ -8,7 +8,7 @@ career-os는 skill이 실행 계약을 설명하고 TypeScript 스크립트가 �
 career-os/
 ├── .claude/skills/       사용자 작업별 skill
 ├── .codex/skills/        Codex에서 같은 skill을 노출하는 링크
-├── config/               사람이 관리하는 프로필과 수집·제외 정책
+├── config/               사람이 관리하는 프로필과 수집 정책
 ├── scripts/              검증, 수집과 변환 코드
 ├── state/                실행 사이에 유지하는 로컬 상태
 ├── applications/         공고별 지원 패키지
@@ -32,12 +32,11 @@ career-os/
 ## 공고 추천
 
 `config/position-collection.ts`는 외부 채용 소스의 탐색 범위를 타입과 함께 관리한다.
-회사별 탐색 채널은 `config/verified-company-research-targets.json`에 둔다.
-사용자가 정한 개별 공고 억제는 `config/position-filters.json`에 둔다.
+회사별 채널은 소스 어댑터와 공개 채용 페이지에서 동적으로 찾는다.
 
 `scripts/position-recommender/live-postings/`는 외부 소스 어댑터의 공통 계약과 수집 정책을 구현한다.
 어댑터는 원문 응답을 공통 `LivePosting` 형태로 바꾼다.
-후보풀 정책은 개별 공고 URL, 활성 상태, 마감일, 중복을 결정적으로 검사한다.
+후보풀 정책은 개별 공고 URL, 활성 상태, 마감일, 고용 형태, 역할과 중복을 결정적으로 검사한다.
 
 수집 결과는 실행별 임시 후보풀에 저장한다.
 모델은 후보풀에 존재하는 공고만 선별하고, `recommendation_schema.ts`가 결과 구조와 원문 일치 여부를 검사한다.

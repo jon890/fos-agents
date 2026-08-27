@@ -31,7 +31,6 @@ export type PostingRejectionCode =
   | "not_direct_posting"
   | "unverified_status"
   | "expired_deadline"
-  | "suppressed_posting"
   | "ineligible_employment"
   | "not_target_role";
 
@@ -46,7 +45,6 @@ export interface PostingEligibilityPolicy {
 }
 
 export interface PostingEligibilityOptions {
-  suppressedUrls?: ReadonlySet<string>;
   serverOnly?: boolean;
 }
 
