@@ -22,7 +22,7 @@
 | 경로 | 용도 |
 |---|---|
 | `config/` | watchlist, 뉴스 소스, 현안 큐, 종목 후보 |
-| `scripts/` | 수집기와 thin wrapper |
+| `scripts/` | 수집기와 smoke 검사 |
 | `.claude/skills/` | agent skill 정본 |
 | `.codex/skills/` | Codex 노출용 skill 링크 |
 | `data/` | 실행 산출물 |
@@ -43,21 +43,7 @@ YouTube 학습 요약은 필요 시 `uv`로 임시 의존성을 실행한다.
 
 ## 실행
 
-```bash
-# 아침 브리핑
-bash stock-investment/scripts/stock-investing-morning-brief/run_with_claude.sh
-
-# 특정 현안 분석
-bash stock-investment/scripts/current-issue-analysis/run_with_claude.sh us-clarity-act
-
-# 일일 종목 분석
-bash stock-investment/scripts/daily-stock-analysis-note/run_with_claude.sh
-
-# 종목 수동 지정
-TICKER=NVDA bash stock-investment/scripts/daily-stock-analysis-note/run_with_claude.sh
-```
-
-agent skill을 직접 호출할 수 있는 환경에서는 아래 이름을 사용한다.
+아래 스킬을 현재 에이전트 환경에서 직접 호출한다.
 
 - `/stock-investing-morning-brief`
 - `/current-issue-analysis <issue-key>`
@@ -70,10 +56,6 @@ agent skill을 직접 호출할 수 있는 환경에서는 아래 이름을 사�
 # 수집기 smoke
 bash stock-investment/scripts/stock-investing-morning-brief/run_smoke_test.sh
 
-# 셸 문법
-bash -n stock-investment/scripts/stock-investing-morning-brief/run_with_claude.sh
-bash -n stock-investment/scripts/current-issue-analysis/run_with_claude.sh
-bash -n stock-investment/scripts/daily-stock-analysis-note/run_with_claude.sh
 ```
 
 문서 구조와 산출물 계약은 `stock-investment/docs/code-architecture.md`, `stock-investment/docs/data-schema.md`, `stock-investment/docs/flow.md`를 확인한다.

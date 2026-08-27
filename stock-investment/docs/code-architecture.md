@@ -1,4 +1,4 @@
-# Code Architecture — stock-investment
+# stock-investment 코드 아키텍처
 
 이 문서는 현재 디렉터리 구조와 실행 책임을 설명한다.
 결정의 이유는 `docs/adr/INDEX.md`를 따른다.
@@ -27,7 +27,7 @@ stock-investment/
 | 경로 | 책임 |
 |---|---|
 | `config/` | 사람이 관리하는 종목, 테마, 소스, 현안 큐 |
-| `scripts/<skill>/` | 수집기, wrapper, 후처리 스크립트 |
+| `scripts/<skill>/` | 수집기와 결정적 후처리 스크립트 |
 | `.claude/skills/<skill>/` | skill 설명과 reference |
 | `.codex/skills/<skill>/` | Codex에서 사용할 skill 링크 |
 | `data/` | 날짜별 실행 산출물 |
@@ -44,7 +44,7 @@ stock-investment/
 | `daily-stock-analysis-note` | `scripts/daily-stock-analysis-note/` | 일일 종목 선택, 분석, 발행 초안 준비 |
 | `stock-youtube-learning-digest` | `scripts/youtube-learning-digest/` | 투자 학습 영상 후보 요약 |
 
-wrapper는 로컬 파일, 표준 출력, 종료 코드만 계약으로 삼는다.
+스킬은 수집기를 호출하고 로컬 파일과 종료 코드로 결과를 검증한다.
 외부 전달 채널과 자동 실행 시점은 저장소 밖에서 정한다.
 
 ## 외부 의존

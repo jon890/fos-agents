@@ -1,4 +1,4 @@
-# Flow — stock-investment
+# stock-investment 실행 흐름
 
 이 문서는 현재 실행 흐름을 설명한다.
 실행 결과는 로컬 파일, 표준 출력, 종료 코드로 판단한다.
@@ -20,11 +20,7 @@
 
 ## Morning Brief
 
-진입점:
-
-```bash
-bash stock-investment/scripts/stock-investing-morning-brief/run_with_claude.sh
-```
+진입점은 `/stock-investing-morning-brief` 스킬이다.
 
 흐름:
 
@@ -41,11 +37,7 @@ bash stock-investment/scripts/stock-investing-morning-brief/run_smoke_test.sh
 
 ## Current Issue Analysis
 
-진입점:
-
-```bash
-bash stock-investment/scripts/current-issue-analysis/run_with_claude.sh <issue-key>
-```
+진입점은 `/current-issue-analysis <issue-key>` 스킬이다.
 
 흐름:
 
@@ -56,12 +48,7 @@ bash stock-investment/scripts/current-issue-analysis/run_with_claude.sh <issue-k
 
 ## Daily Stock Analysis Note
 
-진입점:
-
-```bash
-bash stock-investment/scripts/daily-stock-analysis-note/run_with_claude.sh
-TICKER=NVDA bash stock-investment/scripts/daily-stock-analysis-note/run_with_claude.sh
-```
+진입점은 `/daily-stock-analysis-note` 스킬이다. 티커가 필요하면 요청 인자로 명시한다.
 
 흐름:
 
