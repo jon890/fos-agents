@@ -3,6 +3,7 @@
 일반 backend/CS 면접 질문을 공개 가능한 형태로 모아 두는 저장소다.
 포지션별 질문은 `application-package-writer`가 공고별 `interview-questions.json`에 만든다.
 이 질문 은행은 여러 포지션에서 다시 쓸 수 있는 공개 가능한 일반 질문만 담는다.
+질문 추가와 보강은 `interview-practice`의 공개 질문 유지보수 절차에서 수행한다.
 
 ## 카테고리
 
@@ -11,6 +12,7 @@
 - `cs/` — Network, OS, 자료구조, 알고리즘 기초 질문.
 - `operations/` — 장애 대응, 배포, 로그, metric, tracing, 운영 자동화 질문.
 - `system-design/` — backend architecture, 확장성, consistency, queue, storage 설계 질문.
+- `ai-platform/` — RAG, 검색, Agent, Tool, 모델 서빙과 AI Platform 질문.
 - `behavioral/` — 협업, 성장, 커뮤니케이션, 오너십 등 인성·역량 면접 질문.
   웹 수집 자료에서 public-safe로 정규화한 일반 인성 질문도 이 경로에 누적한다.
 
@@ -22,6 +24,7 @@
 - `id`: 카테고리 prefix를 포함한 고유 id.
 - `category`: 디렉터리 이름과 같은 카테고리.
 - `difficulty`: `basic`, `intermediate`, `advanced` 중 하나.
+- `bar`: 선택 필드다. `production`, `large-scale`, `global-scale` 중 질문이 확인하는 책임 수준을 기록한다.
 - `question`: 면접에서 물어볼 질문.
 - `intent`: 질문 의도.
 - `answerSignals`: 좋은 답변에서 기대하는 평가 포인트.
@@ -34,6 +37,7 @@
   - 드릴 진행 상태와 같은 topic 식별자를 사용한다.
 - `tags`: 약점 기반 질문 재선별에 쓸 일반 태그.
 - `followUps`: 꼬리 질문 후보.
+  실제 연습에서는 답변 내용에 따라 판단, 반례, 운영과 근거 경계 순으로 선택한다.
 
 ## 출처 레지스트리
 
@@ -57,6 +61,8 @@
 기술 질문은 공식 표준, 제품 문서와 프로젝트 문서를 근거로 삼는다.
 인성 질문은 회사가 직접 공개한 채용 안내와 컬처 자료를 근거로 삼는다.
 공개 후기와 개인 회고는 후보 탐색에만 참고하며 공식 참조 묶음을 대체하지 않는다.
+기술 블로그, 공개 영상과 GitHub 면접 가이드는 질문 범위와 실무 사례를 찾는 자료로만 사용한다.
+답변 신호의 기술 사실은 공식 문서, 표준 또는 프로젝트 문서로 다시 검증한다.
 
 ## 경계
 

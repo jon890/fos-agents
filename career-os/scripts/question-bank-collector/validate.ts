@@ -5,6 +5,7 @@ import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 type Difficulty = "basic" | "intermediate" | "advanced";
+type InterviewBar = "production" | "large-scale" | "global-scale";
 type QuestionSourceType = "official-reference-set" | "official-career-guidance";
 
 export interface QuestionSourceReference {
@@ -32,6 +33,7 @@ export interface QuestionItem {
   id: string;
   category: string;
   difficulty: Difficulty;
+  bar?: InterviewBar;
   question: string;
   intent: string;
   answerSignals: string[];
@@ -54,6 +56,7 @@ export interface QuestionBankInventoryItem {
   key: string;
   category: string;
   difficulty: Difficulty;
+  bar: InterviewBar;
   tagsCandidate: string[];
   source: string;
   sourceCheckedAt: string;
@@ -83,8 +86,9 @@ export interface QuestionBankInventory {
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const BANK_ROOT = join(ROOT, "public", "question-bank");
-const CATEGORIES = ["java-spring", "database", "cs", "operations", "system-design", "behavioral"];
+const CATEGORIES = ["java-spring", "database", "cs", "operations", "system-design", "ai-platform", "behavioral"];
 const DIFFICULTIES = new Set(["basic", "intermediate", "advanced"]);
+const INTERVIEW_BARS = new Set(["production", "large-scale", "global-scale"]);
 const SOURCE_TYPES = new Set<QuestionSourceType>(["official-reference-set", "official-career-guidance"]);
 const REQUIRED_FIELDS: Array<keyof QuestionItem> = [
   "id",
@@ -219,6 +223,9 @@ export function validateItem(path: string, item: QuestionItem, expectedCategory:
   assert(typeof item.id === "string" && item.id.startsWith(`${expectedCategory}-`), `${path}: invalid id ${item.id}`);
   assert(item.category === expectedCategory, `${path}: ${item.id} category must be ${expectedCategory}`);
   assert(DIFFICULTIES.has(item.difficulty), `${path}: ${item.id} invalid difficulty ${item.difficulty}`);
+  if (item.bar !== undefined) {
+    assert(INTERVIEW_BARS.has(item.bar), `${path}: ${item.id} invalid bar ${item.bar}`);
+  }
   assert(typeof item.question === "string" && item.question.trim().length >= 20, `${path}: ${item.id} question too short`);
   assert(typeof item.intent === "string" && item.intent.trim().length >= 10, `${path}: ${item.id} intent too short`);
   assert(Array.isArray(item.answerSignals) && item.answerSignals.length >= 2, `${path}: ${item.id} needs answerSignals`);
@@ -262,6 +269,13 @@ function toInventoryItem(
     key: item.id,
     category: item.category,
     difficulty: item.difficulty,
+    bar: item.bar ?? (
+      item.difficulty === "basic"
+        ? "production"
+        : item.difficulty === "intermediate"
+          ? "large-scale"
+          : "global-scale"
+    ),
     tagsCandidate: item.tags ?? [],
     source: item.source,
     sourceCheckedAt: source.checkedAt,

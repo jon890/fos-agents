@@ -187,6 +187,46 @@
       ]
     },
     {
+      "id": "public-ai-platform-reference",
+      "label": "RAG, Agent와 모델 서빙 공식 참조 묶음",
+      "sourceType": "official-reference-set",
+      "checkedAt": "2026-08-27",
+      "scope": "검색 품질, Agent 평가, Tool 권한, 모델 서빙과 공통 AI Platform 운영 질문",
+      "normalizationNote": "공식 문서의 기능 설명을 품질 지표, 실패 격리, 권한과 운영 판단을 함께 묻는 질문으로 바꿨다.",
+      "references": [
+        {
+          "title": "Optimizing search quality",
+          "publisher": "OpenSearch",
+          "url": "https://docs.opensearch.org/latest/search-plugins/search-relevance/index/"
+        },
+        {
+          "title": "Hybrid search",
+          "publisher": "OpenSearch",
+          "url": "https://docs.opensearch.org/latest/vector-search/ai-search/hybrid-search/index/"
+        },
+        {
+          "title": "Demystifying evals for AI agents",
+          "publisher": "Anthropic",
+          "url": "https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents"
+        },
+        {
+          "title": "Authorization",
+          "publisher": "Model Context Protocol",
+          "url": "https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization"
+        },
+        {
+          "title": "Metrics",
+          "publisher": "vLLM",
+          "url": "https://docs.vllm.ai/en/latest/design/metrics/"
+        },
+        {
+          "title": "How evals drive the next chapter in AI for businesses",
+          "publisher": "OpenAI",
+          "url": "https://openai.com/index/evals-drive-next-chapter-of-ai/"
+        }
+      ]
+    },
+    {
       "id": "public-general-behavioral-knowledge",
       "label": "일반 경험 면접 공식 참조 묶음",
       "sourceType": "official-career-guidance",

@@ -27,6 +27,12 @@ import {
   loadApplicationInterviewQuestions,
   type ApplicationInterviewQuestion,
 } from "./application_question_schema.ts";
+import {
+  INTERVIEW_BARS,
+  inferredInterviewBar,
+  type FollowUpAxis,
+  type InterviewBar,
+} from "./follow-up-policy.ts";
 
 // ─── 타입 정의 ────────────────────────────────────────────────────────────────
 
@@ -38,6 +44,7 @@ export interface DrillQuestion {
   topic: string;
   category: string;
   difficulty: "basic" | "intermediate" | "advanced";
+  bar?: InterviewBar;
   question: string;
   intent: string;
   answerSignals: string[];
@@ -71,6 +78,11 @@ export interface DrillLogEntry {
   targetCompany?: string;
   targetRole?: string;
   targetValueAxis?: string;
+  rootQuestionId?: string;
+  parentQuestion?: string;
+  followUpDepth?: number;
+  followUpAxis?: FollowUpAxis;
+  stopReason?: "depth-limit" | "needs-study" | "answer-complete" | "session-ended";
 }
 
 // ─── 경로 헬퍼 ───────────────────────────────────────────────────────────────
@@ -90,6 +102,7 @@ const TECH_CATEGORIES = [
   "cs",
   "operations",
   "system-design",
+  "ai-platform",
 ] as const;
 
 function drillProgressPath(): string {
@@ -200,7 +213,7 @@ export function loadQuestionBank(
   if (merged.length === 0) {
     console.error(
       `[drill-engine] 질문 풀 없음 (${drillType})\n` +
-        `  → /question-bank-collector ${drillType} 로 보강하세요.`
+        `  → /interview-practice ${drillType} 질문 은행 보강으로 준비하세요.`
     );
   }
   return merged;
@@ -227,6 +240,54 @@ function today(): string {
 
 function applicationPriorityBoost(question: DrillQuestion): number {
   return question.sourceScope === "application" ? 10 : 0;
+}
+
+function interviewBar(question: DrillQuestion): InterviewBar {
+  return question.bar ?? inferredInterviewBar(question.difficulty);
+}
+
+function barPriorityBoost(question: DrillQuestion, targetBar?: InterviewBar): number {
+  if (!targetBar) return 0;
+  const targetIndex = INTERVIEW_BARS.indexOf(targetBar);
+  const questionIndex = INTERVIEW_BARS.indexOf(interviewBar(question));
+  const distance = Math.abs(targetIndex - questionIndex);
+  if (distance === 0) return 2;
+  if (distance === 1) return 1;
+  return 0;
+}
+
+function isWithinTargetBarWindow(
+  question: DrillQuestion,
+  targetBar?: InterviewBar,
+): boolean {
+  if (!targetBar) return true;
+
+  const questionIndex = INTERVIEW_BARS.indexOf(interviewBar(question));
+  const targetIndex = INTERVIEW_BARS.indexOf(targetBar);
+  if (targetBar === "global-scale") {
+    return questionIndex >= targetIndex - 1;
+  }
+  return questionIndex >= targetIndex && questionIndex <= targetIndex + 1;
+}
+
+function selectWithStretch(
+  pool: Array<{ q: DrillQuestion; priority: number }>,
+  count: number,
+  targetBar?: InterviewBar,
+): Array<{ q: DrillQuestion; priority: number }> {
+  const selected = pool.slice(0, count);
+  if (!targetBar || count === 0 || targetBar === "global-scale") return selected;
+
+  const targetIndex = INTERVIEW_BARS.indexOf(targetBar);
+  const stretchBar = INTERVIEW_BARS[targetIndex + 1];
+  if (!stretchBar || selected.some((item) => interviewBar(item.q) === stretchBar)) {
+    return selected;
+  }
+
+  const stretchQuestion = pool.find((item) => interviewBar(item.q) === stretchBar);
+  if (!stretchQuestion) return selected;
+
+  return [...selected.slice(0, -1), stretchQuestion];
 }
 
 function difficultyOrder(difficulty: DrillQuestion["difficulty"]): number {
@@ -262,6 +323,7 @@ export function selectQuestions(
   drillProgress: DrillProgress,
   maxCount = 5,
   applicationDirectory?: string,
+  targetBar?: InterviewBar,
 ): DrillQuestion[] {
   const bank = loadQuestionBank(drillType, applicationDirectory);
   if (bank.length === 0) return [];
@@ -289,15 +351,35 @@ export function selectQuestions(
 
     if (priority >= 0) {
       priority += applicationPriorityBoost(q);
+      priority += barPriorityBoost(q, targetBar);
     }
 
     return { q, priority };
   });
 
-  const selected = scored
-    .filter((s) => s.priority >= 0)
-    .sort((a, b) => b.priority - a.priority)
-    .slice(0, maxCount);
+  const eligible = scored
+    .filter((s) => s.priority >= 0 && isWithinTargetBarWindow(s.q, targetBar))
+    .sort((a, b) => b.priority - a.priority);
+
+  let selected = selectWithStretch(eligible, maxCount, targetBar);
+  if (applicationDirectory && maxCount > 1) {
+    const applicationQuota = Math.max(1, Math.ceil(maxCount * 0.6));
+    const applicationQuestions = selectWithStretch(
+      eligible.filter((item) => item.q.sourceScope === "application"),
+      applicationQuota,
+      targetBar,
+    );
+    const sharedQuestions = eligible
+      .filter((item) => item.q.sourceScope !== "application")
+      .slice(0, maxCount - applicationQuestions.length);
+    const selectedIds = new Set(
+      [...applicationQuestions, ...sharedQuestions].map((item) => item.q.id),
+    );
+    const fill = eligible
+      .filter((item) => !selectedIds.has(item.q.id))
+      .slice(0, maxCount - applicationQuestions.length - sharedQuestions.length);
+    selected = [...applicationQuestions, ...sharedQuestions, ...fill];
+  }
 
   return selected
     .sort((a, b) => {
@@ -390,18 +472,23 @@ if (import.meta.main) {
   const applicationDirectoryIndex = process.argv.indexOf("--application-dir");
   const applicationDirectory =
     applicationDirectoryIndex >= 0 ? process.argv[applicationDirectoryIndex + 1] : undefined;
+  const targetBarIndex = process.argv.indexOf("--target-bar");
+  const requestedTargetBar = targetBarIndex >= 0 ? process.argv[targetBarIndex + 1] : undefined;
+  const targetBar = INTERVIEW_BARS.includes(requestedTargetBar as InterviewBar)
+    ? requestedTargetBar as InterviewBar
+    : undefined;
   const drillProgress = loadDrillProgress();
 
   let questions: DrillQuestion[];
   try {
-    questions = selectQuestions(drillType, drillProgress, 5, applicationDirectory);
+    questions = selectQuestions(drillType, drillProgress, 5, applicationDirectory, targetBar);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
   if (questions.length === 0) {
     console.log(
-      "오늘 연습할 질문이 없습니다. /question-bank-collector 로 질문 풀을 보강하세요."
+      "오늘 연습할 질문이 없습니다. /interview-practice 질문 은행 보강으로 준비하세요."
     );
   } else {
     console.log(`[${drillType}] 오늘 연습 질문 ${questions.length}개:`);

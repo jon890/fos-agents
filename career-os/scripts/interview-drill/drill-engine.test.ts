@@ -74,4 +74,40 @@ describe("지원별 질문 선택", () => {
     expect(selected[0]?.id).toBe("test-position-specific-question");
     expect(selected[0]?.sourceScope).toBe("application");
   });
+
+  test("다섯 문제 세션은 포지션 질문만으로 채우지 않는다", () => {
+    const directory = mkdtempSync(join(tmpdir(), "drill-mixed-application-"));
+    temporaryDirectories.push(directory);
+    writeFileSync(
+      join(directory, "interview-questions.json"),
+      JSON.stringify({
+        schemaVersion: 1,
+        company: "테스트 회사",
+        role: "Backend Developer",
+        sourceDocuments: ["posting.md"],
+        questions: Array.from({ length: 5 }, (_, index) => ({
+          id: `test-position-${index + 1}`,
+          drillType: "tech",
+          topic: `position-${index + 1}`,
+          category: "system-design",
+          difficulty: "advanced",
+          bar: index === 4 ? "global-scale" : "large-scale",
+          question: `여러 팀이 사용하는 플랫폼의 설계 판단 ${index + 1}을 구체적으로 설명해 주세요.`,
+          intent: "포지션별 시스템 설계 판단을 확인한다.",
+          answerSignals: ["제약", "트레이드오프"],
+          positionFitHint: "지원 포지션의 플랫폼 책임과 연결한다.",
+          origin: "posting_requirement",
+          evidenceBoundary: "설계 답변이며 직접 운영 경험으로 확대하지 않는다.",
+        })),
+      }),
+    );
+
+    const selected = selectQuestions("tech", {}, 5, directory, "large-scale");
+    expect(selected.filter((item) => item.sourceScope === "application")).toHaveLength(3);
+    expect(selected.filter((item) => item.sourceScope !== "application")).toHaveLength(2);
+    expect(selected.some((item) => item.bar === "global-scale")).toBeTrue();
+    expect(
+      selected.every((item) => item.bar !== "production" && item.difficulty !== "basic"),
+    ).toBeTrue();
+  });
 });

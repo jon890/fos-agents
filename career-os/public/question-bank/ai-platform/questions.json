@@ -1,0 +1,170 @@
+[
+  {
+    "id": "ai-platform-001",
+    "category": "ai-platform",
+    "difficulty": "intermediate",
+    "bar": "large-scale",
+    "question": "RAG 검색 품질을 개선할 때 어떤 query set과 relevance judgment를 만들고, Precision@K와 nDCG 같은 지표를 어떻게 해석하겠습니까?",
+    "intent": "검색 품질을 감각이 아니라 재현 가능한 평가셋과 순위 지표로 개선하는지 확인한다.",
+    "answerSignals": [
+      "실제 질문 분포와 실패 사례를 반영한 query set 구성",
+      "도메인 담당자가 확인한 relevance judgment와 평가 기준 버전 관리",
+      "후보 포함 여부와 순위 품질을 서로 다른 지표와 query slice로 분석"
+    ],
+    "source": "public-ai-platform-reference",
+    "publicSafe": true,
+    "positionFitHint": "RAG, 검색 플랫폼과 AI 제품의 retrieval 품질 책임을 확인할 때 사용한다.",
+    "normalizedFrom": "OpenSearch 검색 품질 평가 절차를 평가셋 설계와 지표 해석 질문으로 정규화",
+    "topic": "rag-retrieval-evaluation",
+    "tags": ["rag", "retrieval", "evaluation", "ndcg", "precision"],
+    "followUps": [
+      "전체 nDCG는 올랐지만 특정 업무 질문의 결과가 나빠지면 어떻게 판단합니까?",
+      "offline 지표 개선을 실제 사용자 검색 성공과 어떻게 연결합니까?",
+      "정답 문서가 계속 바뀌는 환경에서 judgment의 신선도를 어떻게 유지합니까?"
+    ]
+  },
+  {
+    "id": "ai-platform-002",
+    "category": "ai-platform",
+    "difficulty": "intermediate",
+    "bar": "large-scale",
+    "question": "키워드 검색과 벡터 검색을 결합할 때 점수 정규화와 순위 기반 결합 중 무엇을 선택하고 어떻게 검증하겠습니까?",
+    "intent": "hybrid search를 기본값으로 적용하지 않고 query 특성과 평가 데이터로 결합 방식을 고르는지 확인한다.",
+    "answerSignals": [
+      "키워드와 의미 검색이 강한 query 유형을 분리",
+      "score 분포를 보존할 필요와 RRF처럼 순위만 사용할 때의 차이",
+      "동일 query set과 judgment로 설정별 품질과 latency를 비교"
+    ],
+    "source": "public-ai-platform-reference",
+    "publicSafe": true,
+    "positionFitHint": "OpenSearch 기반 RAG, 검색 파이프라인과 reranking 설계를 확인할 때 사용한다.",
+    "normalizedFrom": "OpenSearch hybrid search의 score 기반과 rank 기반 결합을 선택 판단 질문으로 정규화",
+    "topic": "hybrid-search-ranking",
+    "tags": ["rag", "hybrid-search", "rrf", "ranking"],
+    "followUps": [
+      "두 검색기의 점수 분포가 배포 후 바뀌면 어떤 문제가 생깁니까?",
+      "hybrid search가 latency 예산을 넘으면 어떤 단계부터 줄이겠습니까?",
+      "새 embedding 모델을 적용할 때 기존 keyword 가중치를 그대로 유지할 수 있습니까?"
+    ]
+  },
+  {
+    "id": "ai-platform-003",
+    "category": "ai-platform",
+    "difficulty": "advanced",
+    "bar": "global-scale",
+    "question": "Agent 품질을 최종 답변만으로 평가하지 않고 task, trial, grader와 실행 trace로 나눈다면 각각 무엇을 기록하겠습니까?",
+    "intent": "비결정적인 다단계 Agent를 재현 가능한 실험과 실패 원인 분석 구조로 평가하는지 확인한다.",
+    "answerSignals": [
+      "입력과 성공 조건이 명확한 task 및 반복 trial",
+      "정적 검사, 모델 평가와 사람 평가의 역할 분리",
+      "모델 응답뿐 아니라 Tool 호출, 상태 변경과 중간 결과를 포함한 trace 보존"
+    ],
+    "source": "public-ai-platform-reference",
+    "publicSafe": true,
+    "positionFitHint": "여러 팀이 사용하는 Agent 평가 기반과 품질 회귀 체계를 확인할 때 사용한다.",
+    "normalizedFrom": "Anthropic Agent 평가 용어와 절차를 플랫폼 운영 설계 질문으로 정규화",
+    "topic": "agent-evaluation-trace",
+    "tags": ["agent", "evaluation", "trace", "grader"],
+    "followUps": [
+      "같은 task의 trial 결과 편차가 크면 배포 판단을 어떻게 내립니까?",
+      "최종 답은 맞지만 잘못된 Tool을 호출했다면 통과시킬 수 있습니까?",
+      "grader 모델을 교체할 때 과거 평가 결과와 어떻게 비교합니까?"
+    ]
+  },
+  {
+    "id": "ai-platform-004",
+    "category": "ai-platform",
+    "difficulty": "advanced",
+    "bar": "global-scale",
+    "question": "조회 Tool과 상태 변경 Tool을 Agent에 제공할 때 인증, 사용자 권한, 실행 전 확인과 감사 로그를 어느 계층에서 강제하겠습니까?",
+    "intent": "Agent의 자연어 판단에 권한을 맡기지 않고 transport, gateway와 도메인 계층에 안전 경계를 두는지 확인한다.",
+    "answerSignals": [
+      "사용자 위임과 서비스 간 인증을 구분하고 최소 권한 적용",
+      "상태 변경은 구조화된 실행 계획과 명시적 사용자 확인 후 수행",
+      "멱등 키, 요청자, 변경 전후와 결과를 감사 가능한 형태로 기록"
+    ],
+    "source": "public-ai-platform-reference",
+    "publicSafe": true,
+    "positionFitHint": "MCP Gateway, 업무 Agent와 실제 사용자용 Tool의 안전성을 확인할 때 사용한다.",
+    "normalizedFrom": "MCP authorization 흐름을 Agent Tool의 권한과 상태 변경 경계 질문으로 정규화",
+    "topic": "agent-tool-authorization",
+    "tags": ["agent", "mcp", "authorization", "idempotency", "audit"],
+    "followUps": [
+      "Tool 실행은 성공했지만 Agent 응답이 실패하면 사용자는 무엇을 확인할 수 있어야 합니까?",
+      "사용자가 같은 변경 요청을 다시 보내면 중복 실행을 어떻게 막습니까?",
+      "prompt injection으로 권한이 없는 Tool 호출이 시도되면 어느 계층에서 차단합니까?"
+    ]
+  },
+  {
+    "id": "ai-platform-005",
+    "category": "ai-platform",
+    "difficulty": "advanced",
+    "bar": "global-scale",
+    "question": "vLLM 기반 모델 서빙에서 처리량과 응답 시간을 함께 관리하려면 어떤 요청 지표와 엔진 지표를 보고 용량을 조정하겠습니까?",
+    "intent": "자체 모델 서빙을 단순 GPU 사용률이 아니라 사용자 SLO와 내부 병목을 연결해 운영하는지 확인한다.",
+    "answerSignals": [
+      "TTFT, inter-token latency와 end-to-end latency를 사용자 경험과 연결",
+      "running, waiting 요청과 KV cache 사용률로 병목 위치를 구분",
+      "prompt와 output token 분포를 반영한 부하 테스트와 용량 계획"
+    ],
+    "source": "public-ai-platform-reference",
+    "publicSafe": true,
+    "positionFitHint": "vLLM, inference gateway와 자체 호스팅 LLM 운영 깊이를 확인할 때 사용한다.",
+    "normalizedFrom": "vLLM 공식 metrics를 SLO와 용량 계획 판단 질문으로 정규화",
+    "topic": "llm-serving-capacity",
+    "tags": ["vllm", "inference", "metrics", "capacity", "latency"],
+    "followUps": [
+      "GPU 사용률은 낮지만 TTFT가 증가하면 무엇부터 확인합니까?",
+      "긴 prompt 요청이 짧은 요청의 latency를 악화시키면 어떻게 격리합니까?",
+      "fallback 모델로 전환할 때 품질 저하를 어떻게 감지하고 사용자에게 드러냅니까?"
+    ]
+  },
+  {
+    "id": "ai-platform-006",
+    "category": "ai-platform",
+    "difficulty": "advanced",
+    "bar": "global-scale",
+    "question": "여러 제품 팀이 함께 쓰는 Model Router를 설계할 때 품질, 비용, latency와 장애 상태를 어떤 정책으로 분리하고 변경을 어떻게 검증하겠습니까?",
+    "intent": "모델 선택을 단순 fallback 목록이 아니라 제품 요구와 운영 상태를 반영하는 정책으로 설계하는지 확인한다.",
+    "answerSignals": [
+      "요청 유형, 품질 등급과 고객별 예산을 명시적인 정책 입력으로 사용",
+      "timeout, rate limit, circuit breaker와 fallback의 적용 순서",
+      "정책 버전별 shadow 또는 제한된 트래픽 검증과 품질 회귀 확인"
+    ],
+    "source": "public-ai-platform-reference",
+    "publicSafe": true,
+    "positionFitHint": "Model Router와 inference gateway를 공통 플랫폼으로 운영하는 판단을 확인할 때 사용한다.",
+    "normalizedFrom": "공식 평가와 모델 서빙 관측 지표를 라우팅 정책 변경 질문으로 정규화",
+    "topic": "model-router-policy",
+    "tags": ["model-router", "inference", "cost", "latency", "reliability"],
+    "followUps": [
+      "가장 저렴한 모델이 특정 고객 업무에서만 실패하면 라우팅 정책을 어떻게 나눕니까?",
+      "모든 fallback 모델이 동시에 느릴 때 요청을 계속 받겠습니까?",
+      "정책 변경으로 비용은 줄었지만 품질이 낮아졌는지 어떤 eval로 확인합니까?"
+    ]
+  },
+  {
+    "id": "ai-platform-007",
+    "category": "ai-platform",
+    "difficulty": "intermediate",
+    "bar": "large-scale",
+    "question": "AI Platform 사용 팀의 요구를 공통 기능으로 승격할 때 어떤 증거를 모으고 제품별 예외와 플랫폼 계약을 어떻게 나누겠습니까?",
+    "intent": "내부 플랫폼을 기술 묶음이 아니라 사용자의 반복 문제를 해결하는 제품으로 운영하는지 확인한다.",
+    "answerSignals": [
+      "여러 팀에서 반복되는 문제, 사용 빈도와 실패 비용을 함께 확인",
+      "공통 계약과 제품 팀이 소유할 정책을 분리",
+      "작은 실험, 사용 지표와 정성 피드백으로 승격 여부를 재검토"
+    ],
+    "source": "public-ai-platform-reference",
+    "publicSafe": true,
+    "positionFitHint": "플랫폼 사용자 요구를 재사용 가능한 기능으로 전환하는 역량을 확인할 때 사용한다.",
+    "normalizedFrom": "공식 eval의 업무별 성공 기준과 Agent 운영 사례를 내부 플랫폼 제품 판단 질문으로 정규화",
+    "topic": "ai-platform-product-feedback",
+    "tags": ["platform", "product", "feedback", "adoption"],
+    "followUps": [
+      "한 팀만 강하게 요구하는 기능을 공통 플랫폼에 넣을 기준은 무엇입니까?",
+      "기능 사용량은 높지만 사용자 만족도가 낮으면 무엇을 확인합니까?",
+      "공통 계약 변경이 여러 팀을 깨뜨리지 않게 어떻게 배포합니까?"
+    ]
+  }
+]

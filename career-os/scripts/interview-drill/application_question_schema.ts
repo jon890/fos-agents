@@ -14,6 +14,7 @@ const question = z.object({
   topic: slug,
   category: slug,
   difficulty: z.enum(["basic", "intermediate", "advanced"]),
+  bar: z.enum(["production", "large-scale", "global-scale"]).optional(),
   question: z.string().min(20),
   intent: z.string().min(10),
   answerSignals: z.array(z.string().min(1)).min(2),
