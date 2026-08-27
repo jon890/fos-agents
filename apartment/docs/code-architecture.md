@@ -1,4 +1,4 @@
-# Code Architecture — apartment
+# apartment 코드 아키텍처
 
 이 문서는 apartment 워크스페이스의 현재 디렉터리와 코드 책임을 설명한다.
 
@@ -29,7 +29,6 @@ apartment/
 │   ├── _lib/
 │   │   └── load_target_meta.ts
 │   ├── apartment-daily-report/
-│   │   ├── run_with_claude.sh
 │   │   ├── run_smoke_test.sh
 │   │   ├── collect_sources.ts
 │   │   ├── collect_naver_api.ts
@@ -37,8 +36,6 @@ apartment/
 │   │   ├── collect_hogangnono.ts
 │   │   ├── collect_kbland.ts
 │   │   └── normalize_results.ts
-│   └── apartment-interior-reference-digest/
-│       └── run_with_claude.sh
 └── .claude/
     └── skills/
         ├── apartment-daily-report/
@@ -58,12 +55,11 @@ apartment/
 | `scripts/apartment-daily-report/collect_kbland.ts` | KB Land 데이터를 수집한다. |
 | `scripts/apartment-daily-report/normalize_results.ts` | raw 결과를 `summary.json` 구조로 정규화한다. |
 | `scripts/apartment-daily-report/run_smoke_test.sh` | 수집기와 정규화기 빠른 검증을 실행한다. |
-| `scripts/*/run_with_claude.sh` | skill 호출, stdout/stderr/exit code 반환을 담당한다. |
 | `.claude/skills/*/SKILL.md` | agent가 수행할 workflow 계약을 담는다. |
 
 ## 실행 계약
 
-runner는 로컬 파일, 표준 출력, 표준 에러, 종료 코드만 계약으로 삼는다.
+스킬은 로컬 파일과 실행한 수집기의 종료 코드로 결과를 검증한다.
 외부 전달 채널과 자동 실행 시점은 저장소 밖에서 정한다.
 
 ## 의존성
@@ -80,5 +76,5 @@ runner는 로컬 파일, 표준 출력, 표준 에러, 종료 코드만 계약�
 | 언어 | 현재 역할 |
 |---|---|
 | TypeScript | 수집, 정규화, config 로딩 |
-| Shell | runner와 smoke test |
+| Shell | smoke test |
 | Python | smoke test의 JSON shape 확인용 짧은 검증 코드 |

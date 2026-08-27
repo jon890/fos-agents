@@ -27,18 +27,12 @@ Guri 광역 탐색 후보와 제외 기준은 [`config/guri-buy-complexes.json`]
 
 ## 실행
 
+`/apartment-daily-report` 또는 `/apartment-interior-reference-digest` 스킬을 호출한다.
+수집기와 정규화기만 확인할 때는 아래 smoke test를 사용한다.
+
 ```bash
-# 일일 리포트
-bash apartment/scripts/apartment-daily-report/run_with_claude.sh
-
-# 인테리어 레퍼런스 디제스트
-bash apartment/scripts/apartment-interior-reference-digest/run_with_claude.sh "오늘의 인테리어 추천"
-
-# 수집기와 정규화기 빠른 확인
 bash apartment/scripts/apartment-daily-report/run_smoke_test.sh
 ```
-
-agent skill로 위임할 때는 `/apartment-daily-report` 또는 `/apartment-interior-reference-digest` 의도 표현을 쓴다.
 
 ## 검증
 

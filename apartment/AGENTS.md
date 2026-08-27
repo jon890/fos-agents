@@ -1,4 +1,4 @@
-# AGENTS.md — apartment 워크스페이스
+# apartment 워크스페이스 지침
 
 `apartment/`는 아파트 시세 조사와 인테리어 의사결정 리포트를 다루는 독립 워크스페이스다.
 상세 구조와 흐름은 `docs/` 책임 문서를 따른다.
@@ -27,17 +27,12 @@
 
 ## 진입점
 
-```bash
-bash apartment/scripts/apartment-daily-report/run_with_claude.sh
-bash apartment/scripts/apartment-interior-reference-digest/run_with_claude.sh "오늘의 인테리어 추천"
-bash apartment/scripts/apartment-daily-report/run_smoke_test.sh
-```
-
-agent skill로 위임할 때는 아래 의도 표현을 사용한다.
-실행 환경이 실제 CLI 호출 방식을 결정한다.
+실행 환경이 아래 스킬 의도를 해석한다.
 
 - `/apartment-daily-report`
 - `/apartment-interior-reference-digest`
+
+수집 계층만 확인할 때는 `bash apartment/scripts/apartment-daily-report/run_smoke_test.sh`를 실행한다.
 
 ## 운영 원칙
 
