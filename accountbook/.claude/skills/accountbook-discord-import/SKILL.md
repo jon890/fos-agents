@@ -43,11 +43,8 @@ Hermes가 현재 메시지의 첨부 파일에 부여한 로컬 경로를 `<ATTA
 
 적재 결과가 `staged` 또는 `already_staged`이면 `accountbook-weekly-import` 스킬에 다음 의도로 즉시 위임한다.
 
-```text
-/accountbook-weekly-import --inbox accountbook/private/inbox/new --mode auto-safe
-```
-
-위 문자열을 별도 명령줄 도구 호출로 조립하지 않는다.
+`/accountbook-weekly-import --inbox accountbook/private/inbox/new --mode auto-safe` 의도로 위임한다.
+이 문자열을 별도 명령줄 도구 호출로 조립하지 않는다.
 현재 에이전트가 제공하는 스킬 호출 방식으로 `accountbook-weekly-import`를 실행한다.
 이미지 인식이나 accountbook API 호출을 이 스킬에서 직접 구현하지 않는다.
 

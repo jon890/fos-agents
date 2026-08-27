@@ -40,37 +40,12 @@ description: 주간 입력함의 토스 소비 화면 PNG와 보조 정보 파�
 작업 목록이 비어 있으면 성공으로 종료하고 `finally`에서 잠금 해제를 시도한다.
 
 3. 각 작업 항목의 이미지를 이미지 인식 기능으로 읽는다.
-   [토스 화면 추출 계약](../accountbook-screenshot-import/references/extraction-contract.md)을 사용한다.
-   화면 행, 일별 합계, 날짜 잘림 규칙을 이 스킬에 복제하지 않는다.
-4. 각 작업 항목의 SHA-256 앞 16자로 `BATCH_ID=toss-<16 hex>`와 `RUN_DIR=accountbook/private/imports/<BATCH_ID>`를 정한다.
-   `secure_private_run.ts`를 먼저 실행해 실행 경로와 권한을 만든다.
+   `accountbook-screenshot-import`의 추출 계약과 비공개 실행 경로 생성, 원본 검사, 후보 검증 절차를 그대로 사용한다.
+   이 흐름에서는 사용자 미리보기와 개별 등록 단계만 실행하지 않는다.
+4. 보조 정보 파일의 원본 생성 시각을 `inspect_source.ts`의 `--captured-at`에 전달한다.
+5. 각 항목의 `<RUN_DIR>/validated.json`이 만들어지고 비공개 경로 권한이 적용됐는지 확인한다.
 
-```bash
-<TS_RUNTIME> accountbook/scripts/accountbook-screenshot-import/secure_private_run.ts \
-  --private-root accountbook/private \
-  --batch-id <BATCH_ID>
-```
-
-5. `inspect_source.ts`에는 보조 정보 파일의 원본 생성 시각을 넘긴다.
-
-```bash
-<TS_RUNTIME> accountbook/scripts/accountbook-screenshot-import/inspect_source.ts \
-  --input <WORK_ITEM_IMAGE_PATH> \
-  --captured-at <MANIFEST_CAPTURED_AT> \
-  --output <RUN_DIR>/source-image.json
-```
-
-6. 이미지 인식 결과를 `<RUN_DIR>/extracted.json`에 쓴다.
-   작성 직후 `secure_private_run.ts`를 다시 실행해 비공개 디렉터리 `0700`과 파일 `0600` 권한을 강제한다.
-7. `validate_candidates.ts`로 `<RUN_DIR>/validated.json`을 만든다.
-
-```bash
-<TS_RUNTIME> accountbook/scripts/accountbook-screenshot-import/validate_candidates.ts \
-  --input <RUN_DIR>/extracted.json \
-  --output <RUN_DIR>/validated.json
-```
-
-8. 모든 작업 항목의 검증 결과를 모아 실행 계획을 만든다.
+6. 모든 작업 항목의 검증 결과를 모아 실행 계획을 만든다.
    실행 계획은 `accountbook/private/state/<RUN_ID>-<ATTEMPT_ID>-plan.json`에 파일 권한 `0600`으로 저장한다.
    `queuePath`와 각 `validatedPath`는 `accountbook/private` 아래의 절대 경로여야 한다.
    보조 정보 파일 경로는 실행 계획에 복제하지 말고 작업 목록에서 가져온다.
@@ -91,7 +66,7 @@ description: 주간 입력함의 토스 소비 화면 PNG와 보조 정보 파�
 }
 ```
 
-9. 실행 계획을 `run_weekly_import.ts`에 넘긴다.
+7. 실행 계획을 `run_weekly_import.ts`에 넘긴다.
    이 스크립트가 다음 작업을 순서대로 처리한다.
 
 - 실행 계획 경로가 `privateRoot` 밖이면 API 호출 전에 중단한다.
