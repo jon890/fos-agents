@@ -8,11 +8,13 @@
 각 skill은 `SKILL.md`에 입력, 산출물, 검증, 안전 경계를 담는다.
 
 - 지원 가능한 공고를 찾을 때: `/position-recommender`
-- 공고별 지원 문서와 검증 결과를 준비할 때: `/application-package-writer <posting-path>`
-- 기술 또는 인성 면접 답변을 연습할 때: `/interview-practice <tech|behavioral>`
+- 공고별 지원 판단과 전략을 준비할 때: `/application-package-writer <posting-path>`
+- 이력서·경력기술서를 작성하고 검증할 때: `/resume-preparer <application-directory>`
+- 기술·인성·포지션별 면접 질문을 준비하고 연습할 때: `/interview-practice <tech|behavioral>`
 - 오늘 읽거나 볼 기술 자료를 고를 때: `/study-topic-recommender`
 
-`resume-evidence-auditor`, `resume-evaluator`와 `question-bank-collector`는 위 흐름이 필요할 때 호출하는 내부 검증·보조 스킬이다.
+`application-package-writer`는 전체 지원 요청에서 `resume-preparer`까지 연결한다.
+`interview-practice`는 공개 질문 보강도 내부 유지보수 절차로 처리한다.
 각 스킬의 입력, 산출물, 검증, 안전 경계는 해당 `SKILL.md`에서 확인한다.
 
 ## 설정

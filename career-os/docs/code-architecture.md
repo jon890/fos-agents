@@ -46,8 +46,12 @@ HTML은 검증된 추천 JSON에서 파생하며 게시 검증 뒤 임시 데이
 ## 지원 패키지
 
 `application-package-writer`는 사용자가 호출하는 지원 준비 진입점이다.
-공고와 회사 기준 확인, 후보자 인터뷰, 근거 매핑과 제출 초안을 한 흐름으로 연결한다.
-반복 가능한 계약 검사, HTML·PDF 변환과 제출 묶음 검증은 스킬의 `scripts/`에 둔다.
+공고와 회사 기준 확인, 후보자 인터뷰, 근거 매핑과 지원 전략을 한 흐름으로 연결한다.
+반복 가능한 지원 패키지 계약 검사와 로컬 검토 화면 생성은 이 스킬의 `scripts/`에 둔다.
+
+`resume-preparer`는 지원 전략을 이력서와 경력기술서로 변환하는 제출 문서 진입점이다.
+문서 작성, 사람 확인, 주장 근거 감사, 블라인드 하드 리뷰, HTML·PDF 변환과 제출 묶음 검증을 순서대로 수행한다.
+사실 감사와 설득력 평가는 별도 참고 문서와 검사 스크립트로 분리하지만 별도 스킬로 노출하지 않는다.
 
 공고별 문서는 `applications/<company>/<position>/`에 둔다.
 기준 원본은 `candidate-interview.md`, `application-package.md`, `resume-draft.md`와 `interview-questions.json`이다.
@@ -55,7 +59,7 @@ HTML은 검증된 추천 JSON에서 파생하며 게시 검증 뒤 임시 데이
 사용자는 이 원본과 현재 제출 파일을 묶은 `application-package.html`에서 검토한다.
 별도 지원 문항과 경력기술서는 필요한 경우에만 추가한다.
 개인 근거와 면접 준비 자료는 `private/<company>/<position>/`에 둔다.
-실제 제출은 이 모듈의 책임이 아니다.
+실제 제출은 두 스킬의 책임이 아니다.
 
 ## 후보자 프로필과 이력서
 
@@ -72,11 +76,17 @@ skill은 brain에서 찾은 회사와 역할을 대응하는 `applications/<comp
 TypeScript 스크립트가 brain을 직접 조회하지 않는다.
 
 `scripts/interview-drill/`은 `interview-practice`의 기술·인성 모드에서 공통 진행과 복습 상태를 처리한다.
-공고별 `interview-questions.json`을 명시하면 공개 공통 질문과 개인 질문보다 먼저 연습한다.
+공고별 `interview-questions.json`을 명시하면 포지션 질문 세 개와 공통 기반 질문 두 개를 기본으로 섞는다.
+`follow-up-policy.ts`는 답변 수준에 따른 꼬리질문 축과 최대 깊이를 제공한다.
 복습 상태는 `state/drill-progress.json` 하나에 저장한다.
 
+`config/interview-question-sources.ts`는 공식 문서, 기술 블로그, 공개 영상과 GitHub 가이드의 역할을 구분한다.
+`scripts/interview-question-sources/`는 기존 읽을거리 수집 어댑터를 재사용해 실행별 후보풀을 만들고 설정과 후보 형식을 검증한다.
+수집 후보는 질문의 정답 근거가 아니며, 공개 질문의 답변 신호는 공식 참조에서 다시 검증한다.
+
 `public/question-bank/sources.json`은 공개 공통 질문이 참조하는 공식 URL과 확인일을 관리한다.
-`scripts/question-bank-collector/validate.ts`는 질문 구조와 공개 범위뿐 아니라 출처 등록과 URL 형식도 함께 검사한다.
+공개 질문 보강은 `interview-practice`의 필요할 때만 읽는 참고 문서가 안내한다.
+`scripts/question-bank-collector/validate.ts`는 독립된 검증 모듈로 남아 질문 구조, 공개 범위, 출처 등록과 URL 형식을 검사한다.
 
 ## 아침 읽을거리
 

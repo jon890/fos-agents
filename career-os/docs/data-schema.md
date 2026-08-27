@@ -135,6 +135,7 @@ Zod 검증을 통과한 값만 수집 코드가 사용한다.
 - `interview-questions.json`: 공고 책임, 근거 방어와 경험 공백에서 만든 포지션별 질문
 
 위 네 파일이 기본 원본이다.
+`application-package-writer`는 지원 판단과 후보자 인터뷰를 관리하고, `resume-preparer`는 `resume-draft.md`와 제출 문서를 관리한다.
 `application-package.html`은 기본 원본과 현재 제출 파일을 묶은 로컬 검토 화면이다.
 지원 사이트가 별도 문항을 요구하면 `application-answers.md`를 추가한다.
 경력기술서를 받는 공고에는 `career-description-draft.md`를 추가한다.
@@ -144,12 +145,15 @@ Zod 검증을 통과한 값만 수집 코드가 사용한다.
 
 `application-package.md`의 준비 상태는 `ready`, `needs_user_input`, `revise`, `do_not_apply` 중 하나다.
 이 상태는 합격 가능성 점수가 아니라 현재 근거와 사용자 확인을 기준으로 한 제출 준비 상태다.
+첫 10줄의 `human-confirmation`은 동기, 본인 역할, 당시 제약, 기각한 대안과 결과의 확인 범위처럼 후보자만 확정할 수 있는 항목의 상태다.
+값은 `complete` 또는 `needs_input`이며, `needs_input`이면 준비 상태를 `ready`로 둘 수 없다.
 
 개인 근거와 면접 준비는 `private/<company>/<position>/`에 둔다.
 
 ## 제출 문서 근거 감사
 
 근거 감사 자료는 대상 제출 문서와 같은 `applications/<company>/<position>/`에 둔다.
+작성, 근거 감사와 평가는 `resume-preparer`의 순차 단계이며 별도 사용자 스킬로 나누지 않는다.
 
 주요 파일:
 
@@ -174,6 +178,25 @@ Zod 검증을 통과한 값만 수집 코드가 사용한다.
 질문 출처의 공식 URL, 게시자, 확인일과 적용 범위는 `public/question-bank/sources.json`에 둔다.
 각 질문의 `source`는 이 레지스트리의 식별자를 참조한다.
 개인 경험에서 파생한 질문은 `private/question-bank/`에 둔다.
+
+`config/interview-question-sources.ts`는 질문 후보를 찾을 외부 출처를 관리한다.
+각 출처는 고유 `key`, 출처 종류, 사용 역할, 주제, URL과 수집 어댑터를 가진다.
+기술 블로그, 공개 영상과 GitHub 가이드는 사례 발견이나 범위 확인 역할만 가지며 정답 근거 역할을 가질 수 없다.
+
+질문의 선택 `bar`는 다음 공개 능력 수준 중 하나다.
+
+- `production`: 한 서비스의 정확성, 장애 복구와 운영 지표를 책임지는 수준
+- `large-scale`: 대규모 제품과 여러 팀이 쓰는 계약, 용량과 변경 안전성을 판단하는 수준
+- `global-scale`: 다중 리전과 조직 공통 기반의 실패 격리, 보안과 장기 trade-off를 주도하는 수준
+
+현재 직장, 목표 회사와 개인 경험 경계는 private brain에서 실행할 때만 읽는다.
+이 정보는 `bar` 값이나 공개 질문 본문에 복제하지 않는다.
+
+실행별 `interview-source-candidates.json`은 시스템 임시 경로에 둔다.
+각 후보는 출처 식별자, 출처 종류와 역할, 주제, 제목, URL, 게시 시각, 공개 설명과 자료 종류를 가진다.
+후보풀은 질문 승격 뒤 삭제하며 장기 상태로 보존하지 않는다.
+
+일별 답변 기록은 꼬리질문일 때 원 질문 식별자, 부모 질문, 깊이, 확인 축과 중단 이유를 선택 필드로 가진다.
 
 ## 아침 읽을거리
 
