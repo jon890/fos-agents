@@ -8,13 +8,14 @@ export const producerModeSchema = z.enum(["interactive", "automation"]);
 
 const nonEmptyString = z.string().trim().min(1);
 const sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
+export const revisionSchema = nonEmptyString.regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
 
-export const workspaceRelativePathSchema = nonEmptyString.superRefine((path, context) => {
+export const workspaceRelativePathSchema = z.string().min(1).superRefine((path, context) => {
   const parts = path.split("/");
   if (
     path.startsWith("/")
     || path.includes("\\")
-    || path.includes("\0")
+    || /[\0-\x1F\x7F]/.test(path)
     || parts.some((part) => part === "" || part === "." || part === "..")
   ) {
     context.addIssue({
@@ -45,14 +46,14 @@ export const careerWorkspaceFileEntrySchema = z.object({
 export const CareerWorkspaceDraftManifestSchema = z.object({
   schemaVersion: z.literal(CAREER_WORKSPACE_SCHEMA_VERSION),
   workspace: z.literal(CAREER_WORKSPACE_NAME),
-  parentRevision: nonEmptyString.nullable(),
+  parentRevision: revisionSchema.nullable(),
   producer: careerWorkspaceProducerSchema,
   contentDigest: sha256Schema,
   files: z.array(careerWorkspaceFileEntrySchema),
 }).strict();
 
 export const CareerWorkspaceReleaseManifestSchema = CareerWorkspaceDraftManifestSchema.extend({
-  revision: nonEmptyString,
+  revision: revisionSchema,
   createdAt: z.iso.datetime(),
 }).strict();
 
@@ -85,6 +86,45 @@ export const workspaceDraftResultSchema = z.object({
   excluded: z.array(excludedWorkspacePathSchema),
 }).strict();
 
+export const remoteStatusResultSchema = z.object({
+  schemaVersion: z.literal(CAREER_WORKSPACE_SCHEMA_VERSION),
+  action: z.literal("status"),
+  ok: z.literal(true),
+  workspace: z.literal(CAREER_WORKSPACE_NAME),
+  current: z.object({
+    revision: revisionSchema,
+    contentDigest: sha256Schema,
+    createdAt: z.iso.datetime(),
+    fileCount: z.number().int().nonnegative(),
+  }).strict().nullable(),
+}).strict();
+
+export const remotePublishResultSchema = z.object({
+  schemaVersion: z.literal(CAREER_WORKSPACE_SCHEMA_VERSION),
+  action: z.literal("publish"),
+  ok: z.literal(true),
+  revision: revisionSchema,
+  contentDigest: sha256Schema,
+  createdAt: z.iso.datetime(),
+  fileCount: z.number().int().nonnegative(),
+  noChange: z.boolean(),
+}).strict();
+
+export const remoteErrorResultSchema = z.object({
+  schemaVersion: z.literal(CAREER_WORKSPACE_SCHEMA_VERSION),
+  action: z.enum(["status", "export", "publish", "prepare", "check", "diff"]),
+  ok: z.literal(false),
+  code: z.enum([
+    "WORKSPACE_DIRTY",
+    "REMOTE_UNINITIALIZED",
+    "REVISION_CONFLICT",
+    "INVALID_MANIFEST",
+    "TRANSFER_FAILED",
+    "TRANSPORT_UNAVAILABLE",
+    "RESTORE_REQUIRED",
+  ]),
+}).strict();
+
 export type CareerWorkspaceProducer = z.infer<typeof careerWorkspaceProducerSchema>;
 export type CareerWorkspaceFileEntry = z.infer<typeof careerWorkspaceFileEntrySchema>;
 export type CareerWorkspaceDraftManifest = z.infer<typeof CareerWorkspaceDraftManifestSchema>;
@@ -92,3 +132,6 @@ export type CareerWorkspaceReleaseManifest = z.infer<typeof CareerWorkspaceRelea
 export type ExcludedWorkspacePath = z.infer<typeof excludedWorkspacePathSchema>;
 export type RejectedWorkspacePath = z.infer<typeof rejectedWorkspacePathSchema>;
 export type WorkspaceDraftResult = z.infer<typeof workspaceDraftResultSchema>;
+export type RemoteStatusResult = z.infer<typeof remoteStatusResultSchema>;
+export type RemotePublishResult = z.infer<typeof remotePublishResultSchema>;
+export type RemoteErrorResult = z.infer<typeof remoteErrorResultSchema>;

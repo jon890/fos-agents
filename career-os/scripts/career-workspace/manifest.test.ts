@@ -115,10 +115,11 @@ describe("workspace manifest", () => {
     });
   });
 
-  test("workspace relative path schema는 빈 segment, 현재 디렉터리 segment, NUL을 거부한다", () => {
+  test("workspace relative path schema는 빈 segment, 현재 디렉터리 segment, control 문자를 거부한다", () => {
     expect(() => workspaceRelativePathSchema.parse("applications/resume.md")).not.toThrow();
     expect(() => workspaceRelativePathSchema.parse("applications//resume.md")).toThrow();
     expect(() => workspaceRelativePathSchema.parse("applications/./resume.md")).toThrow();
     expect(() => workspaceRelativePathSchema.parse("applications/resume.md\0")).toThrow();
+    expect(() => workspaceRelativePathSchema.parse("applications/resume.md\n")).toThrow();
   });
 });

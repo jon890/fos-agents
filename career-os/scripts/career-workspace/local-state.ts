@@ -2,6 +2,7 @@ import { z } from "zod";
 import { buildWorkspaceDraft, digestWorkspaceFiles, sortWorkspaceFiles, WorkspaceManifestError } from "./manifest.ts";
 import {
   careerWorkspaceFileEntrySchema,
+  revisionSchema,
   type CareerWorkspaceProducer,
 } from "./contracts.ts";
 
@@ -11,7 +12,7 @@ export const PREPARE_JOURNAL_PATH = "career-os/.career-sync/prepare-journal.json
 export const careerWorkspaceSyncStateSchema = z.object({
   schemaVersion: z.literal(1),
   workspace: z.literal("career-os"),
-  revision: z.string().trim().min(1),
+  revision: revisionSchema,
   contentDigest: z.string().regex(/^[a-f0-9]{64}$/),
   files: z.array(careerWorkspaceFileEntrySchema),
 }).strict();
@@ -20,7 +21,7 @@ export const prepareJournalSchema = z.object({
   schemaVersion: z.literal(1),
   workspace: z.literal("career-os"),
   transactionId: z.string().trim().min(1),
-  revision: z.string().trim().min(1).nullable(),
+  revision: revisionSchema.nullable(),
   status: z.enum(["started", "staged", "backed_up", "applied", "restoring", "restored", "completed"]),
   roots: z.object({
     applications: journalRootStateSchema(),
