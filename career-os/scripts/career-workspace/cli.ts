@@ -29,6 +29,14 @@ export interface CliContext {
 
 export async function runCareerWorkspaceCli(args: string[], context = createDefaultContext()): Promise<unknown> {
   const command = args[0];
+  if (!command || command === "help" || command === "--help" || command === "-h") {
+    return {
+      schemaVersion: CAREER_WORKSPACE_SCHEMA_VERSION,
+      action: "help",
+      ok: true,
+      commands: ["check --json", "prepare", "diff", "publish"],
+    };
+  }
   if (command === "check") {
     return checkWorkspace(context);
   }

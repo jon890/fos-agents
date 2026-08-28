@@ -1,14 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { mkdir, mkdtemp, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readFile, readlink, rename, rm, stat, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import {
-  CAREER_WORKSPACE_MANAGED_ROOTS,
-  CareerWorkspaceReleaseManifestSchema,
-  type RemoteStatusResult,
-} from "./contracts.ts";
+import { CareerWorkspaceReleaseManifestSchema, type RemoteStatusResult } from "./contracts.ts";
+import { createManagedRoots, writeFixtureRelease } from "./fixtures/filesystem-storage.ts";
 import { buildWorkspaceDraft } from "./manifest.ts";
 import { LocalCareerWorkspaceTransport } from "./local-transport.ts";
+import { switchCurrentSymlink } from "./local-transport.ts";
 import { checkWorkspace, diffWorkspace, prepareWorkspace, publishWorkspace, type CliContext } from "./cli.ts";
 import { createTarFromDirectory } from "./tar-utils.ts";
 import { TransportError, type CareerWorkspaceTransport } from "./transport.ts";
@@ -46,6 +44,58 @@ describe("career workspace cli", () => {
     expect(await Bun.file(path.join(fixture.workspaceRoot, ".career-sync", "prepare-journal.json")).exists()).toBe(false);
   }));
 
+  test("fixture storage는 immutable release와 상대 current symlink를 사용한다", async () => withFixture(async (fixture) => {
+    await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "resume" });
+
+    const currentPath = path.join(fixture.storageRoot, "current");
+    expect((await lstat(currentPath)).isSymbolicLink()).toBe(true);
+    expect(await readlink(currentPath)).toBe("releases/rev-1");
+  }));
+
+  test.each(["plain-file", "broken-link", "revision-mismatch"] as const)(
+    "fixture storage는 잘못된 current(%s)를 초기화 전 상태로 숨기지 않는다",
+    async (variant) => withFixture(async (fixture) => {
+      await mkdir(fixture.storageRoot, { recursive: true });
+      if (variant === "plain-file") {
+        await writeFile(path.join(fixture.storageRoot, "current"), "rev-1");
+      } else if (variant === "broken-link") {
+        await symlink("releases/missing", path.join(fixture.storageRoot, "current"));
+      } else {
+        await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "resume" });
+        const manifestPath = path.join(fixture.storageRoot, "releases", "rev-1", "workspace-manifest.json");
+        const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+        await writeFile(manifestPath, JSON.stringify({ ...manifest, revision: "rev-other" }));
+      }
+
+      await expect(new LocalCareerWorkspaceTransport(fixture.storageRoot).status()).rejects.toMatchObject({
+        result: { action: "status", code: "INVALID_MANIFEST" },
+      });
+    }),
+  );
+
+  test("두 독립 client가 HTML/PDF 포함 같은 revision, manifest, 전체 hash를 재현한다", async () => withFixture(async (fixture) => {
+    await createRemoteRelease(fixture, "rev-1", {
+      "applications/toss/application-package.html": "<html><body>review</body></html>",
+      "applications/toss/submission.pdf": "%PDF-1.4\n",
+      "private/toss/evidence.md": "evidence",
+      "state/drill-progress.json": "{}",
+    });
+    const first = { ...fixture, workspaceRoot: path.join(fixture.tempRoot, "client-a") };
+    const second = { ...fixture, workspaceRoot: path.join(fixture.tempRoot, "client-b") };
+    await createManagedRoots(first.workspaceRoot);
+    await createManagedRoots(second.workspaceRoot);
+
+    const firstResult = await prepareWorkspace(makeContext(first));
+    const secondResult = await prepareWorkspace(makeContext(second));
+    const firstDraft = await buildWorkspaceDraft(first.workspaceRoot, producer, { parentRevision: firstResult.revision });
+    const secondDraft = await buildWorkspaceDraft(second.workspaceRoot, producer, { parentRevision: secondResult.revision });
+
+    expect(firstResult.revision).toBe("rev-1");
+    expect(secondResult.revision).toBe("rev-1");
+    expect(secondDraft.manifest.contentDigest).toBe(firstDraft.manifest.contentDigest);
+    expect(secondDraft.manifest.files).toEqual(firstDraft.manifest.files);
+  }));
+
   test("prepare는 sync-state 없는 로컬 파일을 dirty로 보고 보존한다", async () => withFixture(async (fixture) => {
     await writeFile(path.join(fixture.workspaceRoot, "applications", "local.md"), "local");
     await createRemoteRelease(fixture, "rev-1", { "applications/remote.md": "remote" });
@@ -64,6 +114,17 @@ describe("career workspace cli", () => {
       result: { code: "INVALID_MANIFEST" },
     });
     expect(await exists(path.join(fixture.workspaceRoot, "applications"))).toBe(true);
+  }));
+
+  test("prepare는 계약 top-level root가 빠진 tar를 거부하고 기존 파일을 보존한다", async () => withFixture(async (fixture) => {
+    await createRemoteRelease(fixture, "rev-1", { "applications/local.md": "local" });
+    await prepareWorkspace(makeContext(fixture));
+    const archive = await createReleaseArchiveWithoutState(fixture, "rev-2", { "applications/remote.md": "remote" });
+
+    await expect(prepareWorkspace(makeContext(fixture, new BadExportTransport(archive, "rev-2")))).rejects.toMatchObject({
+      result: { action: "prepare", code: "INVALID_MANIFEST" },
+    });
+    expect(await readFile(path.join(fixture.workspaceRoot, "applications", "local.md"), "utf8")).toBe("local");
   }));
 
   test("prepare는 release manifest와 파일 hash가 다르면 거부한다", async () => withFixture(async (fixture) => {
@@ -124,6 +185,43 @@ describe("career workspace cli", () => {
     expect(await readFile(path.join(fixture.workspaceRoot, "applications", "remote.md"), "utf8")).toBe("remote");
     expect(await exists(path.join(fixture.workspaceRoot, "applications", "new-partial.md"))).toBe(false);
   }));
+
+  test.each(["started", "staged", "restoring"] as const)(
+    "prepare는 %s journal 재실행을 정리하고 새 release를 적용한다",
+    async (status) => withFixture(async (fixture) => {
+      await writeFile(path.join(fixture.workspaceRoot, "applications", "old.md"), "old");
+      const oldDraft = await buildWorkspaceDraft(fixture.workspaceRoot, producer, { parentRevision: "rev-old" });
+      await mkdir(path.join(fixture.workspaceRoot, ".career-sync"), { recursive: true });
+      await writeFile(path.join(fixture.workspaceRoot, ".career-sync", "sync-state.json"), JSON.stringify({
+        schemaVersion: 1,
+        workspace: "career-os",
+        revision: "rev-old",
+        contentDigest: oldDraft.manifest.contentDigest,
+        files: oldDraft.manifest.files,
+      }));
+      if (status === "staged") {
+        await mkdir(path.join(fixture.workspaceRoot, ".career-sync", "staging", "applications"), { recursive: true });
+      }
+      await writeFile(path.join(fixture.workspaceRoot, ".career-sync", "prepare-journal.json"), JSON.stringify({
+        schemaVersion: 1,
+        workspace: "career-os",
+        transactionId: `tx-${status}`,
+        revision: "rev-old",
+        status,
+        roots: {
+          applications: { hadOriginal: false, backupDone: false, applyDone: false },
+          private: { hadOriginal: false, backupDone: false, applyDone: false },
+          state: { hadOriginal: false, backupDone: false, applyDone: false },
+        },
+      }));
+      await createRemoteRelease(fixture, "rev-1", { "applications/remote.md": "remote" });
+
+      await prepareWorkspace(makeContext(fixture));
+
+      expect(await readFile(path.join(fixture.workspaceRoot, "applications", "remote.md"), "utf8")).toBe("remote");
+      expect(await exists(path.join(fixture.workspaceRoot, ".career-sync", "prepare-journal.json"))).toBe(false);
+    }),
+  );
 
   test("prepare는 새 target과 backup이 함께 남은 crash-window를 복구한다", async () => withFixture(async (fixture) => {
     await writeFile(path.join(fixture.workspaceRoot, "applications", "old.md"), "old");
@@ -200,7 +298,7 @@ describe("career workspace cli", () => {
     await createRemoteRelease(fixture, "rev-1", { "applications/old.md": "old" });
     await prepareWorkspace(makeContext(fixture));
     const brokenArchive = await createReleaseArchiveWithoutState(fixture, "rev-2", { "applications/new.md": "new" });
-    await writeFile(path.join(fixture.storageRoot, "current"), "rev-2");
+    await switchCurrentSymlink(fixture.storageRoot, "rev-2");
 
     await expect(prepareWorkspace(makeContext(fixture, new BadExportTransport(brokenArchive, "rev-2")))).rejects.toBeTruthy();
 
@@ -224,6 +322,26 @@ describe("career workspace cli", () => {
       result: { code: "TRANSFER_FAILED" },
     });
     expect(await readFile(path.join(fixture.workspaceRoot, "applications", "local.md"), "utf8")).toBe("local");
+  }));
+
+  test("truncated export는 local roots와 remote current를 보존한다", async () => withFixture(async (fixture) => {
+    await createRemoteRelease(fixture, "rev-1", { "applications/local.md": "local" });
+    await prepareWorkspace(makeContext(fixture));
+    const beforeCurrent = await readlink(path.join(fixture.storageRoot, "current"));
+    const marker = `TRUNCATE-MARKER-${"x".repeat(4096)}`;
+    await createRemoteRelease(fixture, "rev-2", { "state/large.txt": marker });
+    const fullArchive = await new LocalCareerWorkspaceTransport(fixture.storageRoot).export("rev-2");
+    await switchCurrentSymlink(fixture.storageRoot, "rev-1");
+    const markerOffset = findBytes(fullArchive, new TextEncoder().encode("TRUNCATE-MARKER-"));
+    expect(markerOffset).toBeGreaterThan(0);
+    const truncated = fullArchive.subarray(0, markerOffset + 64);
+
+    await expect(prepareWorkspace(makeContext(fixture, new BadExportTransport(truncated, "rev-2")))).rejects.toMatchObject({
+      result: { action: "prepare", code: "TRANSFER_FAILED" },
+    });
+
+    expect(await readFile(path.join(fixture.workspaceRoot, "applications", "local.md"), "utf8")).toBe("local");
+    expect(await readlink(path.join(fixture.storageRoot, "current"))).toBe(beforeCurrent);
   }));
 
   test("completed journal은 현재 hash가 sync-state와 맞으면 cleanup한다", async () => withFixture(async (fixture) => {
@@ -280,6 +398,36 @@ describe("career workspace cli", () => {
     expect(await readFile(path.join(fixture.workspaceRoot, "applications", "resume.md"), "utf8")).toBe("local");
   }));
 
+  test("publish revision collision은 기존 release와 current를 보존한다", async () => withFixture(async (fixture) => {
+    await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
+    await prepareWorkspace(makeContext(fixture));
+    await writeFile(path.join(fixture.workspaceRoot, "applications", "resume.md"), "after");
+    const transport = new LocalCareerWorkspaceTransport(fixture.storageRoot, { revisionFactory: () => "rev-1" });
+
+    await expect(publishWorkspace(makeContext(fixture, transport))).rejects.toMatchObject({
+      result: { code: "REVISION_CONFLICT" },
+    });
+    expect(await readFile(path.join(fixture.storageRoot, "releases", "rev-1", "applications", "resume.md"), "utf8")).toBe("before");
+    expect(await readlink(path.join(fixture.storageRoot, "current"))).toBe("releases/rev-1");
+  }));
+
+  test("publish 전송 실패는 로컬 변경과 remote current를 보존한다", async () => withFixture(async (fixture) => {
+    await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
+    await prepareWorkspace(makeContext(fixture));
+    await writeFile(path.join(fixture.workspaceRoot, "applications", "resume.md"), "local-change");
+    const beforeCurrent = await readlink(path.join(fixture.storageRoot, "current"));
+    const transport = new FailingPublishTransport(new LocalCareerWorkspaceTransport(fixture.storageRoot));
+
+    await expect(publishWorkspace(makeContext(fixture, transport))).rejects.toMatchObject({
+      result: { action: "publish", code: "TRANSFER_FAILED" },
+    });
+
+    expect(await readFile(path.join(fixture.workspaceRoot, "applications", "resume.md"), "utf8")).toBe("local-change");
+    expect(await readlink(path.join(fixture.storageRoot, "current"))).toBe(beforeCurrent);
+    const syncState = JSON.parse(await readFile(path.join(fixture.workspaceRoot, ".career-sync", "sync-state.json"), "utf8"));
+    expect(syncState.revision).toBe("rev-1");
+  }));
+
   test("publish는 성공하면 sync-state를 새 revision으로 갱신한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
     await prepareWorkspace(makeContext(fixture));
@@ -310,6 +458,49 @@ describe("career workspace cli", () => {
     await expect(transport.publish(archive)).rejects.toMatchObject({
       result: { action: "publish", code: "INVALID_MANIFEST" },
     });
+  }));
+
+  test("CLI help와 error는 환경 host/account/key path와 파일 본문을 노출하지 않는다", async () => withFixture(async (fixture) => {
+    const cliPath = path.join(import.meta.dir, "cli.ts");
+    await writeFile(path.join(fixture.workspaceRoot, "applications", "secret-body.md"), "file-body-secret");
+    const secretEnv = {
+      ...process.env,
+      CAREER_WORKSPACE_ROOT: fixture.workspaceRoot,
+      CAREER_WORKSPACE_SSH_TARGET: "account@example.internal",
+      CAREER_WORKSPACE_SSH_ARGS: "-i /private/key/path",
+      CAREER_WORKSPACE_REMOTE_COMMAND: "career-storage",
+    };
+    const help = Bun.spawn(["bun", cliPath, "help"], {
+      cwd: path.resolve(import.meta.dir, "../../.."),
+      env: secretEnv,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [helpStdout, helpStderr] = await Promise.all([
+      new Response(help.stdout).text(),
+      new Response(help.stderr).text(),
+      help.exited,
+    ]);
+    const helpOutput = `${helpStdout}${helpStderr}`;
+    expect(helpOutput).not.toContain("example.internal");
+    expect(helpOutput).not.toContain("/private/key/path");
+    expect(helpOutput).not.toContain("file-body-secret");
+
+    const error = Bun.spawn(["bun", cliPath, "unknown"], {
+      cwd: path.resolve(import.meta.dir, "../../.."),
+      env: secretEnv,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [errorStdout, errorStderr] = await Promise.all([
+      new Response(error.stdout).text(),
+      new Response(error.stderr).text(),
+      error.exited,
+    ]);
+    const errorOutput = `${errorStdout}${errorStderr}`;
+    expect(errorOutput).not.toContain("example.internal");
+    expect(errorOutput).not.toContain("/private/key/path");
+    expect(errorOutput).not.toContain("file-body-secret");
   }));
 
   test("CLI 프로세스는 성공 JSON을 stdout에, 오류 JSON을 stderr에만 쓴다", async () => withFixture(async (fixture) => {
@@ -415,6 +606,27 @@ class FailingExportTransport implements CareerWorkspaceTransport {
   }
 }
 
+class FailingPublishTransport implements CareerWorkspaceTransport {
+  constructor(private readonly delegate: CareerWorkspaceTransport) {}
+
+  status() {
+    return this.delegate.status();
+  }
+
+  export(revision: string) {
+    return this.delegate.export(revision);
+  }
+
+  async publish(): Promise<never> {
+    throw new TransportError({
+      schemaVersion: 1,
+      action: "publish",
+      ok: false,
+      code: "TRANSFER_FAILED",
+    });
+  }
+}
+
 async function withFixture(run: (fixture: Fixture) => Promise<void>): Promise<void> {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "career-cli-"));
   const fixture = {
@@ -443,6 +655,10 @@ async function createRemoteRelease(
   files: Record<string, string>,
   options: { corruptDigest?: boolean } = {},
 ) {
+  if (!options.corruptDigest) {
+    await writeFixtureRelease(fixture.storageRoot, revision, producer, files);
+    return;
+  }
   const releaseRoot = path.join(fixture.storageRoot, "releases", revision);
   await createManagedRoots(releaseRoot);
   for (const [relativePath, body] of Object.entries(files)) {
@@ -459,7 +675,7 @@ async function createRemoteRelease(
   });
   await writeFile(path.join(releaseRoot, "workspace-manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
   await mkdir(fixture.storageRoot, { recursive: true });
-  await writeFile(path.join(fixture.storageRoot, "current"), revision);
+  await switchCurrentSymlink(fixture.storageRoot, revision);
 }
 
 async function createReleaseArchiveWithoutState(
@@ -485,12 +701,6 @@ async function createReleaseArchiveWithoutState(
   return createTarFromDirectory(releaseRoot, ["workspace-manifest.json", "applications", "private"]);
 }
 
-async function createManagedRoots(root: string) {
-  for (const managedRoot of CAREER_WORKSPACE_MANAGED_ROOTS) {
-    await mkdir(path.join(root, managedRoot), { recursive: true });
-  }
-}
-
 async function exists(target: string): Promise<boolean> {
   try {
     await stat(target);
@@ -498,4 +708,16 @@ async function exists(target: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+function findBytes(haystack: Uint8Array, needle: Uint8Array): number {
+  outer: for (let offset = 0; offset <= haystack.byteLength - needle.byteLength; offset += 1) {
+    for (let index = 0; index < needle.byteLength; index += 1) {
+      if (haystack[offset + index] !== needle[index]) {
+        continue outer;
+      }
+    }
+    return offset;
+  }
+  return -1;
 }

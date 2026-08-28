@@ -1,4 +1,5 @@
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { lstat, mkdtemp, mkdir, readFile, readlink, rename, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {
@@ -17,7 +18,10 @@ import { copyManagedRoots, createTarFromDirectory, extractTarToDirectory, safeRe
 import { buildWorkspaceDraft } from "./manifest.ts";
 
 export class LocalCareerWorkspaceTransport implements CareerWorkspaceTransport {
-  constructor(private readonly storageRoot: string) {}
+  constructor(
+    private readonly storageRoot: string,
+    private readonly options: { revisionFactory?: () => string } = {},
+  ) {}
 
   async status() {
     const current = await this.readCurrentManifest();
@@ -38,12 +42,17 @@ export class LocalCareerWorkspaceTransport implements CareerWorkspaceTransport {
   }
 
   async export(revision: string): Promise<Uint8Array> {
-    revisionSchema.parse(revision);
+    if (!revisionSchema.safeParse(revision).success) {
+      throw new TransportError(makeRemoteError("export", "INVALID_MANIFEST"));
+    }
     const releaseDir = path.join(this.storageRoot, "releases", revision);
+    if (!await exists(releaseDir)) {
+      throw new TransportError(makeRemoteError("export", "REMOTE_UNINITIALIZED"));
+    }
     try {
       return await createTarFromDirectory(releaseDir, ["workspace-manifest.json", ...CAREER_WORKSPACE_MANAGED_ROOTS]);
     } catch {
-      throw new TransportError(makeRemoteError("export", "REMOTE_UNINITIALIZED"));
+      throw new TransportError(makeRemoteError("export", "TRANSFER_FAILED"));
     }
   }
 
@@ -57,7 +66,7 @@ export class LocalCareerWorkspaceTransport implements CareerWorkspaceTransport {
       if (actualDraft.manifest.contentDigest !== draft.contentDigest) {
         throw new TransportError(makeRemoteError("publish", "INVALID_MANIFEST"));
       }
-      const current = await this.readCurrentManifest();
+      const current = await this.readCurrentManifest("publish");
       if ((current?.revision ?? null) !== draft.parentRevision) {
         throw new TransportError(makeRemoteError("publish", "REVISION_CONFLICT"));
       }
@@ -75,18 +84,21 @@ export class LocalCareerWorkspaceTransport implements CareerWorkspaceTransport {
       }
 
       const createdAt = new Date().toISOString();
-      const revision = `rev-${Date.now()}`;
+      const revision = this.options.revisionFactory?.() ?? `rev-${Date.now()}-${randomUUID().slice(0, 12)}`;
       const releaseManifest = CareerWorkspaceReleaseManifestSchema.parse({
         ...draft,
         revision,
         createdAt,
       });
       const releaseDir = path.join(this.storageRoot, "releases", revision);
+      if (await exists(releaseDir)) {
+        throw new TransportError(makeRemoteError("publish", "REVISION_CONFLICT"));
+      }
       await mkdir(releaseDir, { recursive: true });
       await copyManagedRoots(tempRoot, releaseDir);
       await writeFile(path.join(releaseDir, "workspace-manifest.json"), `${JSON.stringify(releaseManifest, null, 2)}\n`);
       await mkdir(this.storageRoot, { recursive: true });
-      await writeFile(path.join(this.storageRoot, "current"), revision);
+      await switchCurrentSymlink(this.storageRoot, revision);
 
       return remotePublishResultSchema.parse({
         schemaVersion: CAREER_WORKSPACE_SCHEMA_VERSION,
@@ -98,20 +110,80 @@ export class LocalCareerWorkspaceTransport implements CareerWorkspaceTransport {
         fileCount: releaseManifest.files.length,
         noChange: false,
       });
+    } catch (error) {
+      if (error instanceof TransportError) {
+        throw error;
+      }
+      throw new TransportError(makeRemoteError("publish", "TRANSPORT_UNAVAILABLE"));
     } finally {
       await safeRemove(tempRoot);
     }
   }
 
-  private async readCurrentManifest(): Promise<CareerWorkspaceReleaseManifest | null> {
+  private async readCurrentManifest(action: "status" | "publish" = "status"): Promise<CareerWorkspaceReleaseManifest | null> {
+    const currentPath = path.join(this.storageRoot, "current");
+    let current;
     try {
-      const revision = (await readFile(path.join(this.storageRoot, "current"), "utf8")).trim();
-      return CareerWorkspaceReleaseManifestSchema.parse(JSON.parse(
-        await readFile(path.join(this.storageRoot, "releases", revision, "workspace-manifest.json"), "utf8"),
-      ));
-    } catch {
-      return null;
+      current = await lstat(currentPath);
+    } catch (error) {
+      if (isNotFoundError(error)) {
+        return null;
+      }
+      throw invalidCurrent(action);
     }
+
+    try {
+      if (!current.isSymbolicLink()) {
+        throw invalidCurrent(action);
+      }
+      const target = await readlink(currentPath);
+      const revision = path.basename(target);
+      if (target !== `releases/${revision}`) {
+        throw invalidCurrent(action);
+      }
+      revisionSchema.parse(revision);
+      const rawManifest = await readFile(path.join(this.storageRoot, "releases", revision, "workspace-manifest.json"), "utf8");
+      const manifest = CareerWorkspaceReleaseManifestSchema.parse(JSON.parse(rawManifest));
+      if (manifest.revision !== revision) {
+        throw invalidCurrent(action);
+      }
+      return manifest;
+    } catch (error) {
+      if (error instanceof TransportError) {
+        throw error;
+      }
+      throw invalidCurrent(action);
+    }
+  }
+}
+
+function invalidCurrent(action: "status" | "publish"): TransportError {
+  return new TransportError(makeRemoteError(action, "INVALID_MANIFEST"));
+}
+
+function isNotFoundError(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
+}
+
+export async function switchCurrentSymlink(storageRoot: string, revision: string): Promise<void> {
+  revisionSchema.parse(revision);
+  await mkdir(storageRoot, { recursive: true });
+  const tempLink = path.join(storageRoot, `current.${process.pid}.${randomUUID()}.tmp`);
+  try {
+    await symlink(path.join("releases", revision), tempLink);
+    await rename(tempLink, path.join(storageRoot, "current"));
+  } catch (error) {
+    await rm(tempLink, { force: true });
+    throw error;
+  }
+}
+
+async function exists(target: string): Promise<boolean> {
+  try {
+    await lstat(target);
+    return true;
+  } catch {
+    return false;
   }
 }
 

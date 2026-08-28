@@ -79,6 +79,7 @@ export async function safeRemove(target: string): Promise<void> {
 
 function validateTarEntries(archive: Uint8Array, allowed: readonly string[], action: TarAction): void {
   const allowedSet = new Set(allowed);
+  const seenExactTopLevels = new Set<string>();
   let offset = 0;
   let entryCount = 0;
   while (offset + 512 <= archive.byteLength) {
@@ -94,19 +95,54 @@ function validateTarEntries(archive: Uint8Array, allowed: readonly string[], act
     if (!Number.isFinite(size) || size < 0) {
       throw new TransportError(makeRemoteError(action, "INVALID_MANIFEST"));
     }
-    validateTarPath(fullName, allowedSet, action);
     if (!["0", "5"].includes(typeFlag)) {
       throw new TransportError(makeRemoteError(action, "INVALID_MANIFEST"));
     }
+    const entryPath = validateTarPath(fullName, allowedSet, action);
+    validateTopLevelType(entryPath, typeFlag, action);
+    if (entryPath.normalized === entryPath.topLevel) {
+      seenExactTopLevels.add(entryPath.topLevel);
+    }
     entryCount += 1;
-    offset += 512 + Math.ceil(size / 512) * 512;
+    const nextOffset = offset + 512 + Math.ceil(size / 512) * 512;
+    if (nextOffset > archive.byteLength) {
+      throw new TransportError(makeRemoteError(action, "TRANSFER_FAILED"));
+    }
+    offset = nextOffset;
   }
   if (entryCount === 0) {
     throw new TransportError(makeRemoteError(action, "INVALID_MANIFEST"));
   }
+  for (const required of allowed) {
+    if (!seenExactTopLevels.has(required)) {
+      throw new TransportError(makeRemoteError(action, "INVALID_MANIFEST"));
+    }
+  }
 }
 
-function validateTarPath(rawName: string, allowedSet: ReadonlySet<string>, action: TarAction): void {
+function validateTopLevelType(
+  entryPath: { normalized: string; topLevel: string },
+  typeFlag: string,
+  action: TarAction,
+): void {
+  const isExactTopLevel = entryPath.normalized === entryPath.topLevel;
+  const expectsFile = entryPath.topLevel === "workspace-manifest.json" || entryPath.topLevel === "workspace-draft.json";
+  if (expectsFile) {
+    if (!isExactTopLevel || typeFlag !== "0") {
+      throw new TransportError(makeRemoteError(action, "INVALID_MANIFEST"));
+    }
+    return;
+  }
+  if (isExactTopLevel && typeFlag !== "5") {
+    throw new TransportError(makeRemoteError(action, "INVALID_MANIFEST"));
+  }
+}
+
+function validateTarPath(
+  rawName: string,
+  allowedSet: ReadonlySet<string>,
+  action: TarAction,
+): { normalized: string; topLevel: string } {
   const normalized = rawName.replace(/^\.\//, "").replace(/\/$/, "");
   const parts = normalized.split("/");
   const hasUnsafeSegment = normalized === ""
@@ -117,6 +153,7 @@ function validateTarPath(rawName: string, allowedSet: ReadonlySet<string>, actio
   if (hasUnsafeSegment || !allowedSet.has(parts[0])) {
     throw new TransportError(makeRemoteError(action, "INVALID_MANIFEST"));
   }
+  return { normalized, topLevel: parts[0] };
 }
 
 async function verifyExtractedTree(root: string, action: TarAction): Promise<void> {
