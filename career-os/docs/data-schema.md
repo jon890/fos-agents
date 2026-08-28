@@ -5,14 +5,14 @@ career-os는 사람이 관리하는 설정, 실행 상태, 비공개 산출물, 
 ## 저장 원칙
 
 - `config/`에는 오래 유지할 프로필과 정책을 둔다.
-- `state/`, `applications/`와 `private/`는 홈서버 release와 동기화하는 로컬 작업본이다.
+- `applications/`, `library/`와 `state/`는 홈서버 release와 동기화하는 로컬 작업본이다.
 - `reports/`에는 구조화 결과와 사람이 읽는 리포트를 둔다.
 - `cache/`에는 원본에서 다시 만들 수 있는 수집 결과를 둔다.
 - `public/`과 `sources/fos-study/`에는 공개 가능한 자료만 둔다.
 
 ## 비공개 작업 release
 
-홈서버의 각 release는 `applications`, `private`, `state`와 `workspace-manifest.json`을 가진다.
+홈서버의 각 release는 `applications`, `library`, `state`와 `workspace-manifest.json`을 가진다.
 release 디렉터리는 생성 뒤 수정하지 않으며 검증을 통과한 release만 `current` 상대 링크가 가리킨다.
 
 manifest는 다음 필드를 가진다.
@@ -26,7 +26,7 @@ manifest는 다음 필드를 가진다.
 - `contentDigest`: 정렬한 파일 경로, 크기와 SHA-256에서 만든 전체 digest
 - `files`: 상대 경로, byte 크기와 SHA-256 목록
 
-파일 경로는 `applications/`, `private/`, `state/` 중 하나로 시작해야 한다.
+파일 경로는 `applications/`, `library/`, `state/` 중 하나로 시작해야 한다.
 일반 파일만 허용하고 symlink, `.env`, `.omc`, log, cache와 임시 파일은 거부한다.
 같은 `contentDigest`를 다시 publish하면 새 release를 만들지 않는다.
 
@@ -50,7 +50,7 @@ prepare는 현재 로컬 hash가 마지막 동기화 상태와 다르면 파일�
 - `career-storage export --revision <revision>`: 해당 immutable release를 tar stdout으로 반환한다.
 - `career-storage publish`: `workspace-draft.json`과 세 관리 root가 든 tar를 stdin으로 받고 `RemotePublishResult` JSON을 stdout으로 반환한다.
 
-export tar의 최상위에는 `workspace-manifest.json`, `applications/`, `private/`, `state/`만 허용한다.
+export tar의 최상위에는 `workspace-manifest.json`, `applications/`, `library/`, `state/`만 허용한다.
 publish tar의 최상위에는 `workspace-draft.json`과 같은 세 관리 root만 허용한다.
 
 `RemoteStatusResult`는 `schemaVersion`, `action: "status"`, `ok: true`, `workspace`와 nullable `current`를 가진다.
@@ -189,7 +189,9 @@ Zod 검증을 통과한 값만 수집 코드가 사용한다.
 첫 10줄의 `human-confirmation`은 동기, 본인 역할, 당시 제약, 기각한 대안과 결과의 확인 범위처럼 후보자만 확정할 수 있는 항목의 상태다.
 값은 `complete` 또는 `needs_input`이며, `needs_input`이면 준비 상태를 `ready`로 둘 수 없다.
 
-개인 근거와 면접 준비는 `private/<company>/<position>/`에 둔다.
+공고별 개인 근거와 면접 준비는 해당 `applications/<company>/<position>/`에 둔다.
+여러 지원에서 재사용하는 개인 질문은 `library/question-bank/`에 둔다.
+특정 지원에 종속되지 않는 이력서 기준본은 `library/resume-baselines/`에 둔다.
 
 ## 제출 문서 근거 감사
 
@@ -218,7 +220,7 @@ Zod 검증을 통과한 값만 수집 코드가 사용한다.
 공개 가능한 일반 질문은 `public/question-bank/`에 둔다.
 질문 출처의 공식 URL, 게시자, 확인일과 적용 범위는 `public/question-bank/sources.json`에 둔다.
 각 질문의 `source`는 이 레지스트리의 식별자를 참조한다.
-개인 경험에서 파생한 질문은 `private/question-bank/`에 둔다.
+개인 경험에서 파생한 질문은 `library/question-bank/`에 둔다.
 
 `config/interview-question-sources.ts`는 질문 후보를 찾을 외부 출처를 관리한다.
 각 출처는 고유 `key`, 출처 종류, 사용 역할, 주제, URL과 수집 어댑터를 가진다.

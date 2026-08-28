@@ -6,7 +6,7 @@
 
 ## 목표
 
-`applications`, `private`, `state`를 하나의 검증 가능한 작업 revision으로 표현하고, prepare 전에 로컬 변경을 잃지 않도록 판정한다.
+`applications`, `library`, `state`를 하나의 검증 가능한 작업 revision으로 표현하고, prepare 전에 로컬 변경을 잃지 않도록 판정한다.
 
 **범위 외**: 홈서버 파일 변경, SSH 연결, 기존 파일 이관과 career skill 수정은 수행하지 않는다.
 
@@ -23,9 +23,10 @@ release manifest는 draft 필드에 서버가 부여한 `revision`과 `createdAt
 
 ### 2. 관리 경로와 제외 규칙
 
-관리 root는 `applications`, `private`, `state`로 고정한다.
+관리 root는 `applications`, `library`, `state`로 고정한다.
 심볼릭 링크, `.env`, `.omc`, log, cache, 임시 파일은 draft 생성 전에 거부하거나 제외하며 결과에 상대 경로와 판정 코드만 남긴다.
 `prepare`는 제외 대상 중 `.env`, 숨김 파일과 `.omc`를 발견하면 `WORKSPACE_DIRTY`로 중단해 로컬 파일을 잃지 않게 한다.
+`.DS_Store`와 `Thumbs.db`는 재생성 가능한 운영체제 메타데이터로 분류해 작업 변경에서 제외한다.
 지원서 원본 Markdown·JSON과 최종 HTML·PDF·제출 파일은 관리 대상에 포함한다.
 
 ### 3. 결정적 digest 생성

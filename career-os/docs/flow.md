@@ -7,7 +7,7 @@ career-os의 각 흐름은 외부 입력을 검증하고, 사용자 판단에 �
 공통 CLI는 다음 준비와 반영 절차를 구현한다.
 운영 `career-storage`와 연결한 뒤 `application-package-writer`, `resume-preparer`와 `interview-practice`의 진입점에 이 절차를 적용한다.
 
-1. 로컬 `applications`, `private`와 `state`가 마지막으로 받은 revision에서 바뀌지 않았는지 검사한다.
+1. 로컬 `applications`, `library`와 `state`가 마지막으로 받은 revision에서 바뀌지 않았는지 검사한다.
 2. 홈서버의 현재 revision과 manifest를 확인한다.
 3. 로컬 변경이 없으면 현재 release를 임시 경로로 받고 파일 hash와 허용 경로를 검증한다.
 4. 검증된 작업본만 기존 로컬 경로에 반영한다.
@@ -23,6 +23,7 @@ prepare가 중단되면 다음 실행은 journal과 실제 root를 대조해 기
 journal과 실제 경로가 모순되면 자동 정리하지 않고 `RESTORE_REQUIRED`로 중단한다.
 재생성 가능한 cache와 게시 뒤 삭제하는 임시 리포트는 동기화하지 않는다.
 관리 root 안의 `.env`, 숨김 파일과 `.omc`는 원격으로 보내지 않으며, `prepare`가 발견하면 삭제하지 않고 `WORKSPACE_DIRTY`로 중단한다.
+`.DS_Store`와 `Thumbs.db`는 운영체제 메타데이터로 분류해 작업 변경에서 제외한다.
 
 ## 포지션 추천
 
@@ -126,7 +127,7 @@ AI 공식 자료는 모델, 에이전트, 하네스, 평가와 개발 도구를 
 4. 출처 묶음을 `public/question-bank/sources.json`에 등록하거나 기존 항목을 재사용한다.
 5. 공개 질문 후보의 중복, 목표 수준, 답변 신호와 꼬리질문 깊이를 검증한다.
 6. 일반화할 수 있는 질문만 `public/question-bank/`에 추가한다.
-7. 개인 경력에서 반복해서 연습할 일반 질문은 `private/question-bank/`에 둔다.
+7. 개인 경력에서 반복해서 연습할 일반 질문은 `library/question-bank/`에 둔다.
 8. 공고와 지원 근거에서 나온 포지션별 질문은 해당 `applications/` 디렉터리의 `interview-questions.json`에 둔다.
 9. 답변 연습은 세 범위를 합쳐 사용할 수 있지만 공개 산출물에는 개인 질문과 포지션별 질문을 포함하지 않는다.
 10. 일반 연습에서는 질문 은행을 수정하지 않으며, 공개·개인·포지션 질문 묶음이 모두 비었을 때만 필요한 최소 질문을 보강하고 연습을 이어간다.

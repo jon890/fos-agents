@@ -15,6 +15,8 @@
 각 환경은 현재 release를 로컬 작업 경로에 준비하고, 실행 시작 revision이 유지됐을 때만 새 release를 원자적으로 반영한다.
 공통 client와 파일 보존 계약을 먼저 구현하고, 운영 server와 기존 career skill 연결은 후속 작업으로 나눈다.
 연결을 마치면 사용자는 새 동기화 skill을 고르지 않고 기존 career skill을 계속 호출한다.
+첫 운영 계약의 관리 root는 `applications`, `library`, `state`로 고정한다.
+이 결정 전에는 운영 release와 로컬 sync state가 없었으므로 초기 `schemaVersion: 1`에 바로 반영한다.
 
 ## 기각한 대안
 
@@ -29,3 +31,4 @@
 동시 publish와 전송 실패가 현재 release를 바꾸지 않도록 운영 server도 같은 충돌 계약을 구현해야 한다.
 cache와 임시 공개 리포트는 환경마다 다시 만들고 동기화하지 않는다.
 관리 root 안의 `.env`, 숨김 파일과 `.omc`는 동기화 대상에서 제외하되, `prepare` 중 삭제하지 않도록 로컬 변경으로 판정해 중단한다.
+`.DS_Store`와 `Thumbs.db`는 운영체제가 다시 만드는 메타데이터이므로 작업 변경으로 보지 않는다.
