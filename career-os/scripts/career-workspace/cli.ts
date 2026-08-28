@@ -7,6 +7,7 @@ import {
   CAREER_WORKSPACE_SCHEMA_VERSION,
   type CareerWorkspaceFileEntry,
   type CareerWorkspaceProducer,
+  type ExcludedWorkspacePath,
   type RemoteErrorResult,
 } from "./contracts.ts";
 import { buildWorkspaceDraft, compareCodeUnits, digestWorkspaceFiles, sortWorkspaceFiles } from "./manifest.ts";
@@ -262,15 +263,23 @@ async function restoreIncompleteJournal(root: string): Promise<void> {
   if (!parsed.success) {
     throw new TransportError(makeRemoteError("prepare", "RESTORE_REQUIRED"));
   }
-  if (parsed.data.status === "restored") {
-    await cleanupCompletedJournal(root);
-    return;
-  }
-  if (parsed.data.status === "completed" || await matchesCommittedWorkspace(root, parsed.data)) {
-    await cleanupCompletedJournal(root);
-    return;
-  }
   const journal = parsed.data;
+  if (journal.status === "restored") {
+    await cleanupCompletedJournal(root);
+    return;
+  }
+  if (journal.status === "completed") {
+    if (!hasCompletedJournalShape(journal)) {
+      throw new TransportError(makeRemoteError("prepare", "RESTORE_REQUIRED"));
+    }
+    await cleanupCompletedJournal(root);
+    return;
+  }
+  await assertJournalEvidenceConsistent(root, journal);
+  if (await matchesCommittedWorkspace(root, journal)) {
+    await cleanupCompletedJournal(root);
+    return;
+  }
   journal.status = "restoring";
   await writeJournal(root, journal);
   await rollbackJournal(root, journal);
@@ -303,6 +312,14 @@ async function inspectLocal(context: CliContext, syncState: CareerWorkspaceSyncS
   const draft = await buildWorkspaceDraft(context.root, context.producer, { parentRevision: syncState?.revision ?? null }).catch(() => null);
   if (!draft) {
     return { status: "invalid", revision: syncState?.revision ?? null, contentDigest: null, fileCount: 0 };
+  }
+  if (draft.excluded.some((entry) => isPrepareBlockingExclusion(entry.code))) {
+    return {
+      status: "dirty",
+      revision: syncState?.revision ?? null,
+      contentDigest: draft.manifest.contentDigest,
+      fileCount: draft.manifest.files.length,
+    };
   }
   if (!syncState) {
     return { status: "uninitialized", revision: null, contentDigest: draft.manifest.contentDigest, fileCount: draft.manifest.files.length };
@@ -447,6 +464,28 @@ function isContradictoryJournalEvidence(
     return true;
   }
   return false;
+}
+
+async function assertJournalEvidenceConsistent(root: string, journal: PrepareJournal): Promise<void> {
+  for (const managedRoot of CAREER_WORKSPACE_MANAGED_ROOTS) {
+    const rootState = journal.roots[managedRoot];
+    const backupExists = await exists(path.join(syncDirectory(root), "backup", managedRoot));
+    const targetExists = await exists(path.join(root, managedRoot));
+    if (isContradictoryJournalEvidence(rootState, backupExists, targetExists)) {
+      throw new TransportError(makeRemoteError("prepare", "RESTORE_REQUIRED"));
+    }
+  }
+}
+
+function hasCompletedJournalShape(journal: PrepareJournal): boolean {
+  return CAREER_WORKSPACE_MANAGED_ROOTS.every((managedRoot) => {
+    const rootState = journal.roots[managedRoot];
+    return rootState.backupDone && rootState.applyDone;
+  });
+}
+
+function isPrepareBlockingExclusion(code: ExcludedWorkspacePath["code"]): boolean {
+  return code === "excluded-env" || code === "excluded-hidden" || code === "excluded-omc";
 }
 
 async function cleanupCompletedJournal(root: string): Promise<void> {

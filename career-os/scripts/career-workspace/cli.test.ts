@@ -106,6 +106,19 @@ describe("career workspace cli", () => {
     expect(await readFile(path.join(fixture.workspaceRoot, "applications", "local.md"), "utf8")).toBe("local");
   }));
 
+  test("prepare는 manifest에서 제외한 로컬 비밀 파일을 dirty로 보고 보존한다", async () => withFixture(async (fixture) => {
+    await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
+    await prepareWorkspace(makeContext(fixture));
+    await writeFile(path.join(fixture.workspaceRoot, "applications", ".env"), "LOCAL_SECRET=value");
+    await createRemoteRelease(fixture, "rev-2", { "applications/resume.md": "after" });
+
+    await expect(prepareWorkspace(makeContext(fixture))).rejects.toMatchObject({
+      result: { action: "prepare", code: "WORKSPACE_DIRTY" },
+    });
+    expect(await readFile(path.join(fixture.workspaceRoot, "applications", ".env"), "utf8")).toBe("LOCAL_SECRET=value");
+    expect(await readFile(path.join(fixture.workspaceRoot, "applications", "resume.md"), "utf8")).toBe("before");
+  }));
+
   test("prepare는 손상 tar를 거부하고 기존 파일을 보존한다", async () => withFixture(async (fixture) => {
     const archive = await createTarFromDirectory(fixture.workspaceRoot, ["applications"]);
     const context = makeContext(fixture, new BadExportTransport(archive));
@@ -291,7 +304,7 @@ describe("career workspace cli", () => {
       schemaVersion: 1,
       workspace: "career-os",
       revision: "rev-old",
-      contentDigest: "0".repeat(64),
+      contentDigest: oldDraft.manifest.contentDigest,
       files: oldDraft.manifest.files,
     }));
     await writeFile(path.join(fixture.workspaceRoot, ".career-sync", "prepare-journal.json"), JSON.stringify({
@@ -453,7 +466,7 @@ describe("career workspace cli", () => {
   test("sync-state 반영 뒤 남은 applied journal은 새 작업본을 rollback하지 않고 cleanup한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/new.md": "new" });
     await prepareWorkspace(makeContext(fixture));
-    await mkdir(path.join(fixture.workspaceRoot, ".career-sync", "backup", "applications"), { recursive: true });
+    await createManagedRoots(path.join(fixture.workspaceRoot, ".career-sync", "backup"));
     await writeFile(path.join(fixture.workspaceRoot, ".career-sync", "backup", "applications", "old.md"), "old");
     await writeFile(path.join(fixture.workspaceRoot, ".career-sync", "prepare-journal.json"), JSON.stringify({
       schemaVersion: 1,
