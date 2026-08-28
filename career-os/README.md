@@ -25,8 +25,9 @@ clone 뒤 확인할 기본 파일:
 - `config/candidate-profile.md`: 후보자 프로필 기준 원본.
 - `config/position-collection.ts`: 공고 수집 설정과 검증.
 
-비공개 지원 자료를 쓰는 skill은 실행 전에 홈서버의 현재 파일 revision을 로컬 작업 경로에 준비한다.
-사용자는 별도 동기화 명령을 고르지 않고 기존 skill을 그대로 호출한다.
+`scripts/career-workspace/`에는 비공개 작업 파일의 manifest, 준비, 차이 확인과 발행을 담당하는 공통 CLI가 있다.
+현재는 로컬 fixture로 파일 보존 계약까지 검증한 상태다.
+운영 홈서버의 `career-storage`와 기존 skill 자동 연결은 후속 작업에서 적용한다.
 
 `.env`는 워크스페이스 루트에 두고 git에 올리지 않는다.
 진행 중인 지원 대상은 private brain에서 확인하고 공고별 실행 자료는 `applications/<company>/<role>/`에서 관리한다.
@@ -44,7 +45,7 @@ clone 뒤 확인할 기본 파일:
 ## 데이터 경계
 
 - `config/`에는 후보자 기준, 정책, 사람이 고른 예외를 둔다.
-- `state/`, `applications/`와 `private/`는 로컬 작업본이며 홈서버의 비공개 파일 release와 동기화한다.
+- `state/`, `applications/`와 `private/`는 홈서버 파일 release와 동기화할 로컬 작업본이다.
 - `reports/`와 `cache/`에는 로컬 실행 결과와 재생성 가능한 캐시를 둔다.
 - `public/question-bank/`, `sources/fos-study/`에는 공개 가능한 일반 지식만 둔다.
 - 실제 제출, 로그인, 업로드, 외부 메시지 전송, 공개 발행은 사용자 승인 후에만 수행한다.

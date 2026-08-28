@@ -13,7 +13,8 @@
 
 비공개 작업 파일은 홈서버의 일반 디렉터리에 immutable release로 보관한다.
 각 환경은 현재 release를 로컬 작업 경로에 준비하고, 실행 시작 revision이 유지됐을 때만 새 release를 원자적으로 반영한다.
-사용자는 새 동기화 skill을 고르지 않고 기존 career skill을 계속 호출한다.
+공통 client와 파일 보존 계약을 먼저 구현하고, 운영 server와 기존 career skill 연결은 후속 작업으로 나눈다.
+연결을 마치면 사용자는 새 동기화 skill을 고르지 않고 기존 career skill을 계속 호출한다.
 
 ## 기각한 대안
 
@@ -23,6 +24,7 @@
 
 ## 결과
 
-세 실행 환경은 기존 파일 경로와 skill을 유지하면서 같은 현재 revision을 사용한다.
-동시 publish와 전송 실패는 현재 release를 바꾸지 않으며 로컬 결과를 복구할 수 있다.
+공통 client는 기존 파일 경로를 유지하면서 같은 revision을 준비하고 발행할 수 있다.
+운영 server와 skill 연결을 마치면 세 실행 환경이 이 계약을 함께 사용한다.
+동시 publish와 전송 실패가 현재 release를 바꾸지 않도록 운영 server도 같은 충돌 계약을 구현해야 한다.
 cache와 임시 공개 리포트는 환경마다 다시 만들고 동기화하지 않는다.

@@ -2,9 +2,10 @@
 
 career-os의 각 흐름은 외부 입력을 검증하고, 사용자 판단에 필요한 산출물을 만든 뒤, 승인 없이는 외부 상태를 바꾸지 않는 데서 끝난다.
 
-## 비공개 작업 파일 준비와 반영
+## 비공개 작업 파일의 목표 흐름
 
-`application-package-writer`, `resume-preparer`와 `interview-practice`는 비공개 파일을 읽거나 쓰기 전에 같은 준비 절차를 사용한다.
+공통 CLI는 다음 준비와 반영 절차를 구현한다.
+운영 `career-storage`와 연결한 뒤 `application-package-writer`, `resume-preparer`와 `interview-practice`의 진입점에 이 절차를 적용한다.
 
 1. 로컬 `applications`, `private`와 `state`가 마지막으로 받은 revision에서 바뀌지 않았는지 검사한다.
 2. 홈서버의 현재 revision과 manifest를 확인한다.
