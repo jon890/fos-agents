@@ -327,6 +327,41 @@ describe("career workspace cli", () => {
     expect(await readFile(path.join(fixture.workspaceRoot, ".career-sync", "backup", "applications", "backup.md"), "utf8")).toBe("backup");
   }));
 
+  test("prepare는 기록되지 않은 backup만 남아도 자동 복구하지 않고 중단한다", async () => withFixture(async (fixture) => {
+    await writeFile(path.join(fixture.workspaceRoot, "applications", "old.md"), "old");
+    const oldDraft = await buildWorkspaceDraft(fixture.workspaceRoot, producer, { parentRevision: "rev-old" });
+    await mkdir(path.join(fixture.workspaceRoot, ".career-sync", "backup"), { recursive: true });
+    await writeFile(path.join(fixture.workspaceRoot, ".career-sync", "sync-state.json"), JSON.stringify({
+      schemaVersion: 1,
+      workspace: "career-os",
+      revision: "rev-old",
+      contentDigest: oldDraft.manifest.contentDigest,
+      files: oldDraft.manifest.files,
+    }));
+    await rename(
+      path.join(fixture.workspaceRoot, "applications"),
+      path.join(fixture.workspaceRoot, ".career-sync", "backup", "applications"),
+    );
+    await writeFile(path.join(fixture.workspaceRoot, ".career-sync", "prepare-journal.json"), JSON.stringify({
+      schemaVersion: 1,
+      workspace: "career-os",
+      transactionId: "tx-unrecorded-backup",
+      revision: "rev-old",
+      status: "started",
+      roots: {
+        applications: { hadOriginal: false, backupDone: false, applyDone: false },
+        private: { hadOriginal: false, backupDone: false, applyDone: false },
+        state: { hadOriginal: false, backupDone: false, applyDone: false },
+      },
+    }));
+
+    await expect(prepareWorkspace(makeContext(fixture))).rejects.toMatchObject({
+      result: { action: "prepare", code: "RESTORE_REQUIRED" },
+    });
+    expect(await exists(path.join(fixture.workspaceRoot, "applications"))).toBe(false);
+    expect(await readFile(path.join(fixture.workspaceRoot, ".career-sync", "backup", "applications", "old.md"), "utf8")).toBe("old");
+  }));
+
   test("prepare는 원본 기록에 필요한 backup이 없으면 target을 지우지 않고 중단한다", async () => withFixture(async (fixture) => {
     await writeFile(path.join(fixture.workspaceRoot, "applications", "old.md"), "old");
     const oldDraft = await buildWorkspaceDraft(fixture.workspaceRoot, producer, { parentRevision: "rev-old" });

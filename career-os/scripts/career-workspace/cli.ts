@@ -455,7 +455,7 @@ function isContradictoryJournalEvidence(
   targetExists: boolean,
 ): boolean {
   if (backupExists && !rootState.backupDone) {
-    return targetExists;
+    return true;
   }
   if (backupExists && !rootState.hadOriginal) {
     return rootState.backupDone;
