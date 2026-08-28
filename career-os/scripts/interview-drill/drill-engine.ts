@@ -9,7 +9,7 @@
  * 의존 파일:
  *   - career-os/public/question-bank/{기술 카테고리}/questions.json  (tech)
  *   - career-os/public/question-bank/behavioral/questions.json  (behavioral)
- *   - career-os/private/question-bank/{tech|behavioral}-personal.jsonl  (있으면 merge)
+ *   - career-os/library/question-bank/{tech|behavioral}-personal.jsonl  (있으면 merge)
  *   - applications/<company>/<position>/interview-questions.json  (--application-dir로 지정)
  *   - career-os/state/drill-progress.json  (드릴 간격 반복 상태)
  *   - career-os/state/drill-log-YYYY-MM-DD.jsonl  (자동 생성)
@@ -141,17 +141,17 @@ function loadPublicBehavioralQuestions(): DrillQuestion[] {
   return JSON.parse(readFileSync(path, "utf-8")) as DrillQuestion[];
 }
 
-function mergePrivateQuestions(
+function mergePersonalQuestions(
   base: DrillQuestion[],
   drillType: DrillType
 ): DrillQuestion[] {
-  const privatePath = join(
+  const personalPath = join(
     careerOsRoot(),
-    "private",
+    "library",
     "question-bank",
     `${drillType}-personal.jsonl`
   );
-  if (!existsSync(privatePath)) return base;
+  if (!existsSync(personalPath)) return base;
 
   const requiredFields: (keyof DrillQuestion)[] = [
     "id",
@@ -162,26 +162,26 @@ function mergePrivateQuestions(
     "intent",
     "answerSignals",
   ];
-  const lines = readFileSync(privatePath, "utf-8")
+  const lines = readFileSync(personalPath, "utf-8")
     .split("\n")
     .filter((l) => l.trim());
-  const privateQuestions: DrillQuestion[] = [];
+  const personalQuestions: DrillQuestion[] = [];
   for (const line of lines) {
     try {
       const q = JSON.parse(line) as Partial<DrillQuestion>;
       const missing = requiredFields.filter((f) => !q[f]);
       if (missing.length > 0) {
         console.warn(
-          `[drill-engine] private 항목 건너뜀 (누락 필드: ${missing.join(", ")}): ${line.slice(0, 80)}`
+          `[drill-engine] personal 항목 건너뜀 (누락 필드: ${missing.join(", ")}): ${line.slice(0, 80)}`
         );
         continue;
       }
-      privateQuestions.push({ ...(q as DrillQuestion), sourceScope: "personal" });
+      personalQuestions.push({ ...(q as DrillQuestion), sourceScope: "personal" });
     } catch {
-      console.warn(`[drill-engine] private JSONL 파싱 실패, 건너뜀: ${line.slice(0, 80)}`);
+      console.warn(`[drill-engine] personal JSONL 파싱 실패, 건너뜀: ${line.slice(0, 80)}`);
     }
   }
-  return [...base, ...privateQuestions];
+  return [...base, ...personalQuestions];
 }
 
 function loadApplicationQuestions(
@@ -204,7 +204,7 @@ export function loadQuestionBank(
       ? loadPublicTechQuestions()
       : loadPublicBehavioralQuestions();
 
-  const withPersonalQuestions = mergePrivateQuestions(publicQuestions, drillType);
+  const withPersonalQuestions = mergePersonalQuestions(publicQuestions, drillType);
   const merged = [
     ...withPersonalQuestions,
     ...loadApplicationQuestions(applicationDirectory, drillType),

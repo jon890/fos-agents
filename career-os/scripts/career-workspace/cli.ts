@@ -370,7 +370,7 @@ function makeJournal(revision: string): PrepareJournal {
     status: "started",
     roots: {
       applications: { hadOriginal: false, backupDone: false, applyDone: false },
-      private: { hadOriginal: false, backupDone: false, applyDone: false },
+      library: { hadOriginal: false, backupDone: false, applyDone: false },
       state: { hadOriginal: false, backupDone: false, applyDone: false },
     },
   };

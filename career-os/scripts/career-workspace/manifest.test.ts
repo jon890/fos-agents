@@ -11,7 +11,7 @@ let tempRoot: string;
 beforeEach(async () => {
   tempRoot = await mkdtemp(path.join(os.tmpdir(), "career-workspace-"));
   await mkdir(path.join(tempRoot, "applications", "toss"), { recursive: true });
-  await mkdir(path.join(tempRoot, "private"), { recursive: true });
+  await mkdir(path.join(tempRoot, "library"), { recursive: true });
   await mkdir(path.join(tempRoot, "state"), { recursive: true });
 });
 
@@ -23,7 +23,7 @@ afterEach(async () => {
 describe("workspace manifest", () => {
   test("관리 root의 정상 파일로 draft manifest를 만든다", async () => {
     await writeFile(path.join(tempRoot, "applications", "toss", "resume.pdf"), "pdf");
-    await writeFile(path.join(tempRoot, "private", "memo.md"), "memo");
+    await writeFile(path.join(tempRoot, "library", "memo.md"), "memo");
     await writeFile(path.join(tempRoot, "state", "drill-progress.json"), "{}");
 
     const draft = await buildWorkspaceDraft(tempRoot, producer, { parentRevision: "rev-1" });
@@ -32,7 +32,7 @@ describe("workspace manifest", () => {
     expect(draft.manifest.parentRevision).toBe("rev-1");
     expect(draft.manifest.files.map((file) => file.path)).toEqual([
       "applications/toss/resume.pdf",
-      "private/memo.md",
+      "library/memo.md",
       "state/drill-progress.json",
     ]);
   });
@@ -83,12 +83,13 @@ describe("workspace manifest", () => {
     expect(() => workspaceRelativePathSchema.parse("applications")).toThrow();
   });
 
-  test("env, omc, log, cache, 임시 파일은 제외 사유로 남긴다", async () => {
+  test("비밀·캐시·시스템 메타데이터는 제외 사유로 남긴다", async () => {
     await mkdir(path.join(tempRoot, "applications", ".omc"), { recursive: true });
-    await mkdir(path.join(tempRoot, "private", "cache"), { recursive: true });
+    await mkdir(path.join(tempRoot, "library", "cache"), { recursive: true });
     await writeFile(path.join(tempRoot, "applications", ".env"), "SECRET=value");
     await writeFile(path.join(tempRoot, "applications", ".omc", "runtime.json"), "{}");
-    await writeFile(path.join(tempRoot, "private", "cache", "candidate.json"), "{}");
+    await writeFile(path.join(tempRoot, "library", ".DS_Store"), "metadata");
+    await writeFile(path.join(tempRoot, "library", "cache", "candidate.json"), "{}");
     await writeFile(path.join(tempRoot, "state", "run.log"), "log");
     await writeFile(path.join(tempRoot, "state", "draft.tmp"), "tmp");
     await writeFile(path.join(tempRoot, "state", "keep.json"), "{}");
@@ -99,7 +100,8 @@ describe("workspace manifest", () => {
     expect(draft.excluded.map((item) => [item.path, item.code])).toEqual([
       ["applications/.env", "excluded-env"],
       ["applications/.omc", "excluded-omc"],
-      ["private/cache", "excluded-cache"],
+      ["library/.DS_Store", "excluded-system-metadata"],
+      ["library/cache", "excluded-cache"],
       ["state/draft.tmp", "excluded-temp"],
       ["state/run.log", "excluded-log"],
     ]);
@@ -128,6 +130,8 @@ describe("workspace manifest", () => {
 
   test("workspace relative path schema는 빈 segment, 현재 디렉터리 segment, control 문자를 거부한다", () => {
     expect(() => workspaceRelativePathSchema.parse("applications/resume.md")).not.toThrow();
+    expect(() => workspaceRelativePathSchema.parse("library/question-bank/personal.jsonl")).not.toThrow();
+    expect(() => workspaceRelativePathSchema.parse("private/question-bank/personal.jsonl")).toThrow();
     expect(() => workspaceRelativePathSchema.parse("applications//resume.md")).toThrow();
     expect(() => workspaceRelativePathSchema.parse("applications/./resume.md")).toThrow();
     expect(() => workspaceRelativePathSchema.parse("applications/resume.md\0")).toThrow();

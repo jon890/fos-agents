@@ -195,6 +195,9 @@ function classifyRelativePath(relativePath: string): PathDecision {
   if (basename === ".env" || basename.startsWith(".env.")) {
     return { type: "excluded", code: "excluded-env" };
   }
+  if (basename === ".DS_Store" || basename === "Thumbs.db") {
+    return { type: "excluded", code: "excluded-system-metadata" };
+  }
   if (parts.includes(".omc")) {
     return { type: "excluded", code: "excluded-omc" };
   }

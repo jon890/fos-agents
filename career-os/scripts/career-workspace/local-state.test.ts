@@ -15,7 +15,7 @@ let tempRoot: string;
 beforeEach(async () => {
   tempRoot = await mkdtemp(path.join(os.tmpdir(), "career-workspace-state-"));
   await mkdir(path.join(tempRoot, "applications"), { recursive: true });
-  await mkdir(path.join(tempRoot, "private"), { recursive: true });
+  await mkdir(path.join(tempRoot, "library"), { recursive: true });
   await mkdir(path.join(tempRoot, "state"), { recursive: true });
   await writeFile(path.join(tempRoot, "state", "drill-progress.json"), "{}");
 });
@@ -132,7 +132,7 @@ describe("local workspace state", () => {
       status: "backed_up",
       roots: {
         applications: { hadOriginal: true, backupDone: true, applyDone: false },
-        private: { hadOriginal: false, backupDone: true, applyDone: false },
+        library: { hadOriginal: false, backupDone: true, applyDone: false },
         state: { hadOriginal: true, backupDone: true, applyDone: false },
       },
     })).not.toThrow();
@@ -145,7 +145,7 @@ describe("local workspace state", () => {
       status: "unknown",
       roots: {
         applications: { hadOriginal: true, backupDone: true, applyDone: false },
-        private: { hadOriginal: true, backupDone: true, applyDone: false },
+        library: { hadOriginal: true, backupDone: true, applyDone: false },
         state: { hadOriginal: true, backupDone: true, applyDone: false },
       },
     })).toThrow();

@@ -65,7 +65,7 @@ bun career-os/scripts/interview-drill/drill-engine.ts tech \
 현재 대상이 없거나 일반 연습을 요청했으면 `--application-dir`를 생략한다.
 `scripts/interview-drill/drill-engine.ts`의 `selectQuestions(mode, progress, count, applicationDirectory, targetBar)`를 사용한다.
 기술 질문은 `public/question-bank/{java-spring,database,cs,operations,system-design,ai-platform}/questions.json`, 인성 질문은 `public/question-bank/behavioral/questions.json`에서 읽는다.
-`private/question-bank/{tech|behavioral}-personal.jsonl`이 있으면 함께 사용한다.
+`library/question-bank/{tech|behavioral}-personal.jsonl`이 있으면 함께 사용한다.
 질문 풀이 비어 있으면 `references/question-bank-maintenance.md`를 읽고 요청 범위에 필요한 최소 공개 질문을 공식 자료에서 보강한 뒤 검증하고 연습을 이어간다.
 
 현재 지원 대상이 있으면 공고와 회사 공식 자료에서 확인한 책임, 이력서 근거 방어와 명시한 경험 공백만 질문 순서와 후속 질문에 반영한다.
@@ -116,7 +116,7 @@ bun career-os/scripts/interview-drill/drill-engine.ts tech \
 - 진행 상태: `state/drill-progress.json`
 - 일별 기록: `state/drill-log-YYYY-MM-DD.jsonl`
 - 기술과 인성은 `drillType`으로 구분한다.
-- 개인 경험 기반 질문은 `private/question-bank/`에만 추가한다.
+- 개인 경험 기반 질문은 `library/question-bank/`에만 추가한다.
 - 포지션별 질문은 해당 지원 디렉터리의 `interview-questions.json`에만 둔다.
 - `sources/fos-study/`와 `config/candidate-profile.md`는 수정하지 않는다.
 - 실제 면접 일정, 지원 전략과 회사별 비공개 정보는 공개 질문 은행에 넣지 않는다.

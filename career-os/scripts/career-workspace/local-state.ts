@@ -25,7 +25,7 @@ export const prepareJournalSchema = z.object({
   status: z.enum(["started", "staged", "backed_up", "applied", "restoring", "restored", "completed"]),
   roots: z.object({
     applications: journalRootStateSchema(),
-    private: journalRootStateSchema(),
+    library: journalRootStateSchema(),
     state: journalRootStateSchema(),
   }).strict(),
 }).strict();

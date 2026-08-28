@@ -77,7 +77,7 @@ describe("career workspace cli", () => {
     await createRemoteRelease(fixture, "rev-1", {
       "applications/toss/application-package.html": "<html><body>review</body></html>",
       "applications/toss/submission.pdf": "%PDF-1.4\n",
-      "private/toss/evidence.md": "evidence",
+      "library/toss/evidence.md": "evidence",
       "state/drill-progress.json": "{}",
     });
     const first = { ...fixture, workspaceRoot: path.join(fixture.tempRoot, "client-a") };
@@ -117,6 +117,19 @@ describe("career workspace cli", () => {
     });
     expect(await readFile(path.join(fixture.workspaceRoot, "applications", ".env"), "utf8")).toBe("LOCAL_SECRET=value");
     expect(await readFile(path.join(fixture.workspaceRoot, "applications", "resume.md"), "utf8")).toBe("before");
+  }));
+
+  test("prepare는 시스템 메타데이터를 작업 변경으로 보지 않고 새 release를 적용한다", async () => withFixture(async (fixture) => {
+    await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
+    await prepareWorkspace(makeContext(fixture));
+    await writeFile(path.join(fixture.workspaceRoot, "library", ".DS_Store"), "metadata");
+    await createRemoteRelease(fixture, "rev-2", { "applications/resume.md": "after" });
+
+    const result = await prepareWorkspace(makeContext(fixture));
+
+    expect(result.revision).toBe("rev-2");
+    expect(await readFile(path.join(fixture.workspaceRoot, "applications", "resume.md"), "utf8")).toBe("after");
+    expect(await exists(path.join(fixture.workspaceRoot, "library", ".DS_Store"))).toBe(false);
   }));
 
   test("prepare는 손상 tar를 거부하고 기존 파일을 보존한다", async () => withFixture(async (fixture) => {
@@ -208,7 +221,7 @@ describe("career workspace cli", () => {
       status: "applied",
       roots: {
         applications: { hadOriginal: true, backupDone: true, applyDone: true },
-        private: { hadOriginal: false, backupDone: false, applyDone: false },
+        library: { hadOriginal: false, backupDone: false, applyDone: false },
         state: { hadOriginal: false, backupDone: false, applyDone: false },
       },
     }));
@@ -244,7 +257,7 @@ describe("career workspace cli", () => {
         status,
         roots: {
           applications: { hadOriginal: false, backupDone: false, applyDone: false },
-          private: { hadOriginal: false, backupDone: false, applyDone: false },
+          library: { hadOriginal: false, backupDone: false, applyDone: false },
           state: { hadOriginal: false, backupDone: false, applyDone: false },
         },
       }));
@@ -283,7 +296,7 @@ describe("career workspace cli", () => {
       status: "backed_up",
       roots: {
         applications: { hadOriginal: true, backupDone: true, applyDone: false },
-        private: { hadOriginal: false, backupDone: false, applyDone: false },
+        library: { hadOriginal: false, backupDone: false, applyDone: false },
         state: { hadOriginal: false, backupDone: false, applyDone: false },
       },
     }));
@@ -315,7 +328,7 @@ describe("career workspace cli", () => {
       status: "started",
       roots: {
         applications: { hadOriginal: false, backupDone: false, applyDone: false },
-        private: { hadOriginal: false, backupDone: false, applyDone: false },
+        library: { hadOriginal: false, backupDone: false, applyDone: false },
         state: { hadOriginal: false, backupDone: false, applyDone: false },
       },
     }));
@@ -350,7 +363,7 @@ describe("career workspace cli", () => {
       status: "started",
       roots: {
         applications: { hadOriginal: false, backupDone: false, applyDone: false },
-        private: { hadOriginal: false, backupDone: false, applyDone: false },
+        library: { hadOriginal: false, backupDone: false, applyDone: false },
         state: { hadOriginal: false, backupDone: false, applyDone: false },
       },
     }));
@@ -381,7 +394,7 @@ describe("career workspace cli", () => {
       status: "applied",
       roots: {
         applications: { hadOriginal: true, backupDone: true, applyDone: true },
-        private: { hadOriginal: false, backupDone: true, applyDone: true },
+        library: { hadOriginal: false, backupDone: true, applyDone: true },
         state: { hadOriginal: false, backupDone: true, applyDone: true },
       },
     }));
@@ -393,7 +406,7 @@ describe("career workspace cli", () => {
   }));
 
   test("prepare는 원본이 없던 root의 새 target이 남은 crash-window를 제거한다", async () => withFixture(async (fixture) => {
-    await rm(path.join(fixture.workspaceRoot, "private"), { recursive: true, force: true });
+    await rm(path.join(fixture.workspaceRoot, "library"), { recursive: true, force: true });
     await mkdir(path.join(fixture.workspaceRoot, ".career-sync"), { recursive: true });
     await writeFile(path.join(fixture.workspaceRoot, ".career-sync", "sync-state.json"), JSON.stringify({
       schemaVersion: 1,
@@ -402,8 +415,8 @@ describe("career workspace cli", () => {
       contentDigest: (await buildWorkspaceDraft(fixture.workspaceRoot, producer)).manifest.contentDigest,
       files: (await buildWorkspaceDraft(fixture.workspaceRoot, producer)).manifest.files,
     }));
-    await mkdir(path.join(fixture.workspaceRoot, "private"), { recursive: true });
-    await writeFile(path.join(fixture.workspaceRoot, "private", "new.md"), "new");
+    await mkdir(path.join(fixture.workspaceRoot, "library"), { recursive: true });
+    await writeFile(path.join(fixture.workspaceRoot, "library", "new.md"), "new");
     await writeFile(path.join(fixture.workspaceRoot, ".career-sync", "prepare-journal.json"), JSON.stringify({
       schemaVersion: 1,
       workspace: "career-os",
@@ -412,7 +425,7 @@ describe("career workspace cli", () => {
       status: "backed_up",
       roots: {
         applications: { hadOriginal: true, backupDone: true, applyDone: true },
-        private: { hadOriginal: false, backupDone: true, applyDone: false },
+        library: { hadOriginal: false, backupDone: true, applyDone: false },
         state: { hadOriginal: true, backupDone: true, applyDone: true },
       },
     }));
@@ -422,7 +435,7 @@ describe("career workspace cli", () => {
 
     await prepareWorkspace(makeContext(fixture));
 
-    expect(await exists(path.join(fixture.workspaceRoot, "private", "new.md"))).toBe(false);
+    expect(await exists(path.join(fixture.workspaceRoot, "library", "new.md"))).toBe(false);
   }));
 
   test("prepare 교체 중 실패하면 즉시 rollback해 기존 root를 보존한다", async () => withFixture(async (fixture) => {
@@ -488,7 +501,7 @@ describe("career workspace cli", () => {
       status: "completed",
       roots: {
         applications: { hadOriginal: true, backupDone: true, applyDone: true },
-        private: { hadOriginal: true, backupDone: true, applyDone: true },
+        library: { hadOriginal: true, backupDone: true, applyDone: true },
         state: { hadOriginal: true, backupDone: true, applyDone: true },
       },
     }));
@@ -511,7 +524,7 @@ describe("career workspace cli", () => {
       status: "applied",
       roots: {
         applications: { hadOriginal: true, backupDone: true, applyDone: true },
-        private: { hadOriginal: true, backupDone: true, applyDone: true },
+        library: { hadOriginal: true, backupDone: true, applyDone: true },
         state: { hadOriginal: true, backupDone: true, applyDone: true },
       },
     }));
@@ -534,7 +547,7 @@ describe("career workspace cli", () => {
       status: "restored",
       roots: {
         applications: { hadOriginal: true, backupDone: true, applyDone: true },
-        private: { hadOriginal: true, backupDone: true, applyDone: true },
+        library: { hadOriginal: true, backupDone: true, applyDone: true },
         state: { hadOriginal: true, backupDone: true, applyDone: true },
       },
     }));
@@ -664,8 +677,8 @@ describe("career workspace cli", () => {
   test("publish는 manifest allowlist 파일만 release에 올려 secret 파일 왕복을 막는다", async () => withFixture(async (fixture) => {
     await writeFile(path.join(fixture.workspaceRoot, "applications", "resume.md"), "resume");
     await writeFile(path.join(fixture.workspaceRoot, "applications", ".env"), "SECRET=value");
-    await mkdir(path.join(fixture.workspaceRoot, "private", "cache"), { recursive: true });
-    await writeFile(path.join(fixture.workspaceRoot, "private", "cache", "secret.json"), "{\"token\":\"secret\"}");
+    await mkdir(path.join(fixture.workspaceRoot, "library", "cache"), { recursive: true });
+    await writeFile(path.join(fixture.workspaceRoot, "library", "cache", "secret.json"), "{\"token\":\"secret\"}");
     await writeFile(path.join(fixture.workspaceRoot, "state", "run.log"), "secret log");
 
     const result = await publishWorkspace(makeContext(fixture));
@@ -674,12 +687,12 @@ describe("career workspace cli", () => {
     const currentRevision = path.basename(await readlink(path.join(fixture.storageRoot, "current")));
     expect(await readFile(path.join(fixture.storageRoot, "releases", currentRevision, "applications", "resume.md"), "utf8")).toBe("resume");
     expect(await exists(path.join(fixture.storageRoot, "releases", currentRevision, "applications", ".env"))).toBe(false);
-    expect(await exists(path.join(fixture.storageRoot, "releases", currentRevision, "private", "cache", "secret.json"))).toBe(false);
+    expect(await exists(path.join(fixture.storageRoot, "releases", currentRevision, "library", "cache", "secret.json"))).toBe(false);
     expect(await exists(path.join(fixture.storageRoot, "releases", currentRevision, "state", "run.log"))).toBe(false);
   }));
 
   test("publish는 missing managed root를 빈 directory로 패키징한다", async () => withFixture(async (fixture) => {
-    await rm(path.join(fixture.workspaceRoot, "private"), { recursive: true, force: true });
+    await rm(path.join(fixture.workspaceRoot, "library"), { recursive: true, force: true });
     await rm(path.join(fixture.workspaceRoot, "state"), { recursive: true, force: true });
     await writeFile(path.join(fixture.workspaceRoot, "applications", "resume.md"), "resume");
 
@@ -704,7 +717,7 @@ describe("career workspace cli", () => {
     await writeFile(path.join(draftRoot, "applications", ".env"), "SECRET=value");
     const draft = await buildWorkspaceDraft(draftRoot, producer, { parentRevision: null });
     await writeFile(path.join(draftRoot, "workspace-draft.json"), `${JSON.stringify(draft.manifest, null, 2)}\n`);
-    const archive = await createTarFromDirectory(draftRoot, ["workspace-draft.json", "applications", "private", "state"]);
+    const archive = await createTarFromDirectory(draftRoot, ["workspace-draft.json", "applications", "library", "state"]);
 
     await expect(new LocalCareerWorkspaceTransport(fixture.storageRoot).publish(archive)).rejects.toMatchObject({
       result: { action: "publish", code: "INVALID_MANIFEST" },
@@ -951,7 +964,7 @@ async function createReleaseArchiveWithoutState(
 ): Promise<Uint8Array> {
   const releaseRoot = path.join(fixture.tempRoot, "broken-release");
   await mkdir(path.join(releaseRoot, "applications"), { recursive: true });
-  await mkdir(path.join(releaseRoot, "private"), { recursive: true });
+  await mkdir(path.join(releaseRoot, "library"), { recursive: true });
   for (const [relativePath, body] of Object.entries(files)) {
     const target = path.join(releaseRoot, relativePath);
     await mkdir(path.dirname(target), { recursive: true });
@@ -964,7 +977,7 @@ async function createReleaseArchiveWithoutState(
     createdAt: "2026-08-28T00:00:00.000Z",
   });
   await writeFile(path.join(releaseRoot, "workspace-manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
-  return createTarFromDirectory(releaseRoot, ["workspace-manifest.json", "applications", "private"]);
+  return createTarFromDirectory(releaseRoot, ["workspace-manifest.json", "applications", "library"]);
 }
 
 async function exists(target: string): Promise<boolean> {

@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const CAREER_WORKSPACE_SCHEMA_VERSION = 1;
 export const CAREER_WORKSPACE_NAME = "career-os";
-export const CAREER_WORKSPACE_MANAGED_ROOTS = ["applications", "private", "state"] as const;
+export const CAREER_WORKSPACE_MANAGED_ROOTS = ["applications", "library", "state"] as const;
 
 export const producerModeSchema = z.enum(["interactive", "automation"]);
 
@@ -66,6 +66,7 @@ export const excludedWorkspacePathSchema = z.object({
     "excluded-cache",
     "excluded-temp",
     "excluded-career-sync",
+    "excluded-system-metadata",
     "excluded-hidden",
     "excluded-unmanaged-root",
   ]),
