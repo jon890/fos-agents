@@ -60,6 +60,26 @@ describe("transport safety boundary", () => {
     )).rejects.toMatchObject({ result: { code: "INVALID_MANIFEST" } });
   });
 
+  test("tar EOF record 두 개가 없으면 전송 손상으로 거부한다", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "career-tar-"));
+    try {
+      await mkdir(path.join(root, "applications"), { recursive: true });
+      await writeFile(path.join(root, "applications", "resume.md"), "resume");
+      const archive = await createTarFromDirectory(root, ["applications"]);
+      let lastNonZero = archive.byteLength - 1;
+      while (lastNonZero >= 0 && archive[lastNonZero] === 0) {
+        lastNonZero -= 1;
+      }
+      const archiveWithoutEof = archive.subarray(0, Math.ceil((lastNonZero + 1) / 512) * 512);
+
+      await expect(validateTarTopLevel(archiveWithoutEof, ["applications"], "export")).rejects.toMatchObject({
+        result: { code: "TRANSFER_FAILED" },
+      });
+    } finally {
+      await safeRemove(root);
+    }
+  });
+
   test("revision은 path traversal과 argv option 형태를 허용하지 않는다", () => {
     expect(() => revisionSchema.parse("rev-1")).not.toThrow();
     expect(() => revisionSchema.parse("../rev-1")).toThrow();
@@ -68,11 +88,21 @@ describe("transport safety boundary", () => {
 
   test("SSH 설정은 원격 shell 메타문자와 잘못된 target을 거부하고 요청 action을 보존한다", () => {
     expect(() => validateSshConfig({ sshTarget: "host", remoteCommand: "career-storage", sshArgs: ["-p", "10022"] })).not.toThrow();
+    expect(() => validateSshConfig({
+      sshTarget: "host",
+      remoteCommand: "career-storage",
+      sshArgs: ["-i", "/safe/key", "-o", "IdentitiesOnly=yes", "-o", "StrictHostKeyChecking=accept-new"],
+    })).not.toThrow();
     expect(() => validateSshConfig({ sshTarget: "-bad", remoteCommand: "career-storage" })).toThrow();
     expect(() => validateSshConfig({ sshTarget: "host", remoteCommand: "career-storage --bad" })).toThrow();
     expect(() => validateSshConfig({ sshTarget: "host;touch", remoteCommand: "career-storage" })).toThrow();
     expect(() => validateSshConfig({ sshTarget: "host", remoteCommand: "career-storage;touch" })).toThrow();
     expect(() => validateSshConfig({ sshTarget: "host", remoteCommand: "career-storage", sshArgs: ["bad\narg"] })).toThrow();
+    expect(() => validateSshConfig({ sshTarget: "host", remoteCommand: "career-storage", sshArgs: ["-p", "70000"] })).toThrow();
+    expect(() => validateSshConfig({ sshTarget: "host", remoteCommand: "career-storage", sshArgs: ["-i", "/safe/key with-space"] })).toThrow();
+    expect(() => validateSshConfig({ sshTarget: "host", remoteCommand: "career-storage", sshArgs: ["-F", "/tmp/config"] })).toThrow();
+    expect(() => validateSshConfig({ sshTarget: "host", remoteCommand: "career-storage", sshArgs: ["-o", "ProxyCommand=sh"] })).toThrow();
+    expect(() => validateSshConfig({ sshTarget: "host", remoteCommand: "career-storage", sshArgs: ["-o", "StrictHostKeyChecking=no"] })).toThrow();
     try {
       validateSshConfig({ sshTarget: "host", remoteCommand: "bad;command" }, "publish");
       throw new Error("expected validation failure");
@@ -108,7 +138,7 @@ describe("transport safety boundary", () => {
 });
 
 function makeTarWithName(name: string, typeFlag = "0"): Uint8Array {
-  const header = new Uint8Array(1024);
+  const header = new Uint8Array(1536);
   writeTarString(header, 0, 100, name);
   writeTarString(header, 100, 8, "0000644");
   writeTarString(header, 108, 8, "0000000");

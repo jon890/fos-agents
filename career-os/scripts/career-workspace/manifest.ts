@@ -131,6 +131,13 @@ async function collectPath(
     return;
   }
 
+  if (CAREER_WORKSPACE_MANAGED_ROOTS.includes(relativePath as (typeof CAREER_WORKSPACE_MANAGED_ROOTS)[number])) {
+    if (!entryStat.isDirectory()) {
+      result.rejected.push({ path: relativePath, code: "rejected-non-regular" });
+      return;
+    }
+  }
+
   if (entryStat.isDirectory()) {
     const children = (await readdir(absolutePath)).toSorted(compareCodeUnits);
     for (const child of children) {

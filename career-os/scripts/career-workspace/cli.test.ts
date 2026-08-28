@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { lstat, mkdir, mkdtemp, readFile, readlink, rename, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readFile, readdir, readlink, rename, rm, stat, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { CareerWorkspaceReleaseManifestSchema, type RemoteStatusResult } from "./contracts.ts";
@@ -138,6 +138,18 @@ describe("career workspace cli", () => {
     expect(await readFile(path.join(fixture.workspaceRoot, "applications", "resume.md"), "utf8")).toBe("before");
   }));
 
+  test("prepare는 manifest 밖 extra 파일이 섞인 release를 거부하고 기존 파일을 보존한다", async () => withFixture(async (fixture) => {
+    await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
+    await prepareWorkspace(makeContext(fixture));
+    await createReleaseWithManifestExtra(fixture, "rev-2");
+
+    await expect(prepareWorkspace(makeContext(fixture))).rejects.toMatchObject({
+      result: { action: "prepare", code: "INVALID_MANIFEST" },
+    });
+    expect(await readFile(path.join(fixture.workspaceRoot, "applications", "resume.md"), "utf8")).toBe("before");
+    expect(await exists(path.join(fixture.workspaceRoot, "applications", ".env"))).toBe(false);
+  }));
+
   test("prepare는 손상된 sync-state를 RESTORE_REQUIRED로 중단한다", async () => withFixture(async (fixture) => {
     await mkdir(path.join(fixture.workspaceRoot, ".career-sync"), { recursive: true });
     await writeFile(path.join(fixture.workspaceRoot, ".career-sync", "sync-state.json"), "{ broken");
@@ -145,6 +157,15 @@ describe("career workspace cli", () => {
 
     await expect(prepareWorkspace(makeContext(fixture))).rejects.toMatchObject({
       result: { code: "RESTORE_REQUIRED" },
+    });
+  }));
+
+  test("prepare는 깨진 prepare journal JSON을 RESTORE_REQUIRED로 중단한다", async () => withFixture(async (fixture) => {
+    await mkdir(path.join(fixture.workspaceRoot, ".career-sync"), { recursive: true });
+    await writeFile(path.join(fixture.workspaceRoot, ".career-sync", "prepare-journal.json"), "{ broken");
+
+    await expect(prepareWorkspace(makeContext(fixture))).rejects.toMatchObject({
+      result: { action: "prepare", code: "RESTORE_REQUIRED" },
     });
   }));
 
@@ -259,6 +280,68 @@ describe("career workspace cli", () => {
 
     expect(await exists(path.join(fixture.workspaceRoot, "applications", "new.md"))).toBe(false);
     expect(await readFile(path.join(fixture.workspaceRoot, "applications", "remote.md"), "utf8")).toBe("remote");
+  }));
+
+  test("prepare는 journal flag와 실제 backup/target 조합이 모순이면 삭제하지 않고 중단한다", async () => withFixture(async (fixture) => {
+    await writeFile(path.join(fixture.workspaceRoot, "applications", "old.md"), "old");
+    const oldDraft = await buildWorkspaceDraft(fixture.workspaceRoot, producer, { parentRevision: "rev-old" });
+    await mkdir(path.join(fixture.workspaceRoot, ".career-sync", "backup", "applications"), { recursive: true });
+    await writeFile(path.join(fixture.workspaceRoot, ".career-sync", "backup", "applications", "backup.md"), "backup");
+    await writeFile(path.join(fixture.workspaceRoot, ".career-sync", "sync-state.json"), JSON.stringify({
+      schemaVersion: 1,
+      workspace: "career-os",
+      revision: "rev-old",
+      contentDigest: "0".repeat(64),
+      files: oldDraft.manifest.files,
+    }));
+    await writeFile(path.join(fixture.workspaceRoot, ".career-sync", "prepare-journal.json"), JSON.stringify({
+      schemaVersion: 1,
+      workspace: "career-os",
+      transactionId: "tx-contradictory",
+      revision: "rev-old",
+      status: "started",
+      roots: {
+        applications: { hadOriginal: false, backupDone: false, applyDone: false },
+        private: { hadOriginal: false, backupDone: false, applyDone: false },
+        state: { hadOriginal: false, backupDone: false, applyDone: false },
+      },
+    }));
+
+    await expect(prepareWorkspace(makeContext(fixture))).rejects.toMatchObject({
+      result: { action: "prepare", code: "RESTORE_REQUIRED" },
+    });
+    expect(await readFile(path.join(fixture.workspaceRoot, "applications", "old.md"), "utf8")).toBe("old");
+    expect(await readFile(path.join(fixture.workspaceRoot, ".career-sync", "backup", "applications", "backup.md"), "utf8")).toBe("backup");
+  }));
+
+  test("prepare는 원본 기록에 필요한 backup이 없으면 target을 지우지 않고 중단한다", async () => withFixture(async (fixture) => {
+    await writeFile(path.join(fixture.workspaceRoot, "applications", "old.md"), "old");
+    const oldDraft = await buildWorkspaceDraft(fixture.workspaceRoot, producer, { parentRevision: "rev-old" });
+    await mkdir(path.join(fixture.workspaceRoot, ".career-sync"), { recursive: true });
+    await writeFile(path.join(fixture.workspaceRoot, ".career-sync", "sync-state.json"), JSON.stringify({
+      schemaVersion: 1,
+      workspace: "career-os",
+      revision: "rev-old",
+      contentDigest: oldDraft.manifest.contentDigest,
+      files: oldDraft.manifest.files,
+    }));
+    await writeFile(path.join(fixture.workspaceRoot, ".career-sync", "prepare-journal.json"), JSON.stringify({
+      schemaVersion: 1,
+      workspace: "career-os",
+      transactionId: "tx-missing-backup",
+      revision: "rev-new",
+      status: "applied",
+      roots: {
+        applications: { hadOriginal: true, backupDone: true, applyDone: true },
+        private: { hadOriginal: false, backupDone: true, applyDone: true },
+        state: { hadOriginal: false, backupDone: true, applyDone: true },
+      },
+    }));
+
+    await expect(prepareWorkspace(makeContext(fixture))).rejects.toMatchObject({
+      result: { action: "prepare", code: "RESTORE_REQUIRED" },
+    });
+    expect(await readFile(path.join(fixture.workspaceRoot, "applications", "old.md"), "utf8")).toBe("old");
   }));
 
   test("prepare는 원본이 없던 root의 새 target이 남은 crash-window를 제거한다", async () => withFixture(async (fixture) => {
@@ -392,6 +475,28 @@ describe("career workspace cli", () => {
     expect(await exists(path.join(fixture.workspaceRoot, ".career-sync", "backup"))).toBe(false);
   }));
 
+  test("restored journal 정리 중 중단됐으면 현재 작업본 hash를 확인하고 cleanup을 재시도한다", async () => withFixture(async (fixture) => {
+    await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "resume" });
+    await prepareWorkspace(makeContext(fixture));
+    await writeFile(path.join(fixture.workspaceRoot, ".career-sync", "prepare-journal.json"), JSON.stringify({
+      schemaVersion: 1,
+      workspace: "career-os",
+      transactionId: "tx-restored-cleanup",
+      revision: "rev-1",
+      status: "restored",
+      roots: {
+        applications: { hadOriginal: true, backupDone: true, applyDone: true },
+        private: { hadOriginal: true, backupDone: true, applyDone: true },
+        state: { hadOriginal: true, backupDone: true, applyDone: true },
+      },
+    }));
+
+    await prepareWorkspace(makeContext(fixture));
+
+    expect(await readFile(path.join(fixture.workspaceRoot, "applications", "resume.md"), "utf8")).toBe("resume");
+    expect(await exists(path.join(fixture.workspaceRoot, ".career-sync", "prepare-journal.json"))).toBe(false);
+  }));
+
   test("diff는 마지막 prepare 기준의 추가, 수정, 삭제를 요약한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", {
       "applications/delete.md": "delete",
@@ -436,6 +541,26 @@ describe("career workspace cli", () => {
     expect(await readlink(path.join(fixture.storageRoot, "current"))).toBe("releases/rev-1");
   }));
 
+  test("current 전환에 실패하면 승격한 release와 staging을 정리하고 이전 current를 보존한다", async () => withFixture(async (fixture) => {
+    await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
+    await prepareWorkspace(makeContext(fixture));
+    await writeFile(path.join(fixture.workspaceRoot, "applications", "resume.md"), "after");
+    const transport = new LocalCareerWorkspaceTransport(fixture.storageRoot, {
+      revisionFactory: () => "rev-failed-switch",
+      switchCurrent: async () => {
+        throw new Error("injected current switch failure");
+      },
+    });
+
+    await expect(publishWorkspace(makeContext(fixture, transport))).rejects.toMatchObject({
+      result: { action: "publish", code: "TRANSPORT_UNAVAILABLE" },
+    });
+
+    expect(await readlink(path.join(fixture.storageRoot, "current"))).toBe("releases/rev-1");
+    expect(await exists(path.join(fixture.storageRoot, "releases", "rev-failed-switch"))).toBe(false);
+    expect((await readdir(path.join(fixture.storageRoot, "releases"))).some((entry) => entry.startsWith(".staging-"))).toBe(false);
+  }));
+
   test("publish 전송 실패는 로컬 변경과 remote current를 보존한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
     await prepareWorkspace(makeContext(fixture));
@@ -466,6 +591,45 @@ describe("career workspace cli", () => {
     expect(syncState.contentDigest).toBe(result.contentDigest);
   }));
 
+  test("local transport는 동시 publish를 lock 안 current 재확인으로 하나만 성공시킨다", async () => withFixture(async (fixture) => {
+    await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
+    const first = { ...fixture, workspaceRoot: path.join(fixture.tempRoot, "client-a") };
+    const second = { ...fixture, workspaceRoot: path.join(fixture.tempRoot, "client-b") };
+    await createManagedRoots(first.workspaceRoot);
+    await createManagedRoots(second.workspaceRoot);
+    await prepareWorkspace(makeContext(first));
+    await prepareWorkspace(makeContext(second));
+    await writeFile(path.join(first.workspaceRoot, "applications", "resume.md"), "first");
+    await writeFile(path.join(second.workspaceRoot, "applications", "resume.md"), "second");
+    const sharedTransport = new LocalCareerWorkspaceTransport(fixture.storageRoot);
+
+    const results = await Promise.allSettled([
+      publishWorkspace(makeContext(first, sharedTransport)),
+      publishWorkspace(makeContext(second, sharedTransport)),
+    ]);
+
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    const rejected = results.find((result) => result.status === "rejected");
+    expect(rejected).toMatchObject({ reason: { result: { action: "publish", code: "REVISION_CONFLICT" } } });
+  }));
+
+  test("publish는 manifest allowlist 파일만 release에 올려 secret 파일 왕복을 막는다", async () => withFixture(async (fixture) => {
+    await writeFile(path.join(fixture.workspaceRoot, "applications", "resume.md"), "resume");
+    await writeFile(path.join(fixture.workspaceRoot, "applications", ".env"), "SECRET=value");
+    await mkdir(path.join(fixture.workspaceRoot, "private", "cache"), { recursive: true });
+    await writeFile(path.join(fixture.workspaceRoot, "private", "cache", "secret.json"), "{\"token\":\"secret\"}");
+    await writeFile(path.join(fixture.workspaceRoot, "state", "run.log"), "secret log");
+
+    const result = await publishWorkspace(makeContext(fixture));
+
+    expect(result).toMatchObject({ action: "publish", ok: true });
+    const currentRevision = path.basename(await readlink(path.join(fixture.storageRoot, "current")));
+    expect(await readFile(path.join(fixture.storageRoot, "releases", currentRevision, "applications", "resume.md"), "utf8")).toBe("resume");
+    expect(await exists(path.join(fixture.storageRoot, "releases", currentRevision, "applications", ".env"))).toBe(false);
+    expect(await exists(path.join(fixture.storageRoot, "releases", currentRevision, "private", "cache", "secret.json"))).toBe(false);
+    expect(await exists(path.join(fixture.storageRoot, "releases", currentRevision, "state", "run.log"))).toBe(false);
+  }));
+
   test("publish는 missing managed root를 빈 directory로 패키징한다", async () => withFixture(async (fixture) => {
     await rm(path.join(fixture.workspaceRoot, "private"), { recursive: true, force: true });
     await rm(path.join(fixture.workspaceRoot, "state"), { recursive: true, force: true });
@@ -481,6 +645,20 @@ describe("career workspace cli", () => {
     const archive = await createTarFromDirectory(fixture.workspaceRoot, ["applications"]);
 
     await expect(transport.publish(archive)).rejects.toMatchObject({
+      result: { action: "publish", code: "INVALID_MANIFEST" },
+    });
+  }));
+
+  test("local publish는 draft manifest 밖 extra 파일이 섞인 archive를 거부한다", async () => withFixture(async (fixture) => {
+    const draftRoot = path.join(fixture.tempRoot, "bad-draft");
+    await createManagedRoots(draftRoot);
+    await writeFile(path.join(draftRoot, "applications", "resume.md"), "resume");
+    await writeFile(path.join(draftRoot, "applications", ".env"), "SECRET=value");
+    const draft = await buildWorkspaceDraft(draftRoot, producer, { parentRevision: null });
+    await writeFile(path.join(draftRoot, "workspace-draft.json"), `${JSON.stringify(draft.manifest, null, 2)}\n`);
+    const archive = await createTarFromDirectory(draftRoot, ["workspace-draft.json", "applications", "private", "state"]);
+
+    await expect(new LocalCareerWorkspaceTransport(fixture.storageRoot).publish(archive)).rejects.toMatchObject({
       result: { action: "publish", code: "INVALID_MANIFEST" },
     });
   }));
@@ -700,6 +878,21 @@ async function createRemoteRelease(
   });
   await writeFile(path.join(releaseRoot, "workspace-manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
   await mkdir(fixture.storageRoot, { recursive: true });
+  await switchCurrentSymlink(fixture.storageRoot, revision);
+}
+
+async function createReleaseWithManifestExtra(fixture: Fixture, revision: string): Promise<void> {
+  const releaseRoot = path.join(fixture.storageRoot, "releases", revision);
+  await createManagedRoots(releaseRoot);
+  await writeFile(path.join(releaseRoot, "applications", "resume.md"), "after");
+  await writeFile(path.join(releaseRoot, "applications", ".env"), "SECRET=value");
+  const draft = await buildWorkspaceDraft(releaseRoot, producer, { parentRevision: null });
+  const manifest = CareerWorkspaceReleaseManifestSchema.parse({
+    ...draft.manifest,
+    revision,
+    createdAt: "2026-08-28T00:00:00.000Z",
+  });
+  await writeFile(path.join(releaseRoot, "workspace-manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
   await switchCurrentSymlink(fixture.storageRoot, revision);
 }
 

@@ -58,11 +58,7 @@ export function validateSshConfig(config: SshTransportConfig, action: SshAction 
   ) {
     throw new TransportError(makeRemoteError(action, "TRANSPORT_UNAVAILABLE"));
   }
-  for (const arg of config.sshArgs ?? []) {
-    if (isUnsafeToken(arg)) {
-      throw new TransportError(makeRemoteError(action, "TRANSPORT_UNAVAILABLE"));
-    }
-  }
+  validateSshArgs(config.sshArgs ?? [], action);
 }
 
 export function buildSshInvocationArgs(config: SshTransportConfig, commandArgs: string[]): string[] {
@@ -77,6 +73,63 @@ export function buildSshInvocationArgs(config: SshTransportConfig, commandArgs: 
 
 function isUnsafeToken(token: string): boolean {
   return token.length === 0 || /[\0-\x1F\x7F]/.test(token);
+}
+
+function validateSshArgs(args: readonly string[], action: SshAction): void {
+  for (let index = 0; index < args.length; index += 1) {
+    const option = args[index];
+    if (isUnsafeToken(option)) {
+      throw new TransportError(makeRemoteError(action, "TRANSPORT_UNAVAILABLE"));
+    }
+    if (option === "-p") {
+      index += 1;
+      validatePort(args[index], action);
+      continue;
+    }
+    if (option === "-i") {
+      index += 1;
+      validateKeyPath(args[index], action);
+      continue;
+    }
+    if (option === "-o") {
+      index += 1;
+      validateSshOption(args[index], action);
+      continue;
+    }
+    throw new TransportError(makeRemoteError(action, "TRANSPORT_UNAVAILABLE"));
+  }
+}
+
+function validatePort(port: string | undefined, action: SshAction): void {
+  if (!port || !/^[0-9]{1,5}$/.test(port)) {
+    throw new TransportError(makeRemoteError(action, "TRANSPORT_UNAVAILABLE"));
+  }
+  const parsed = Number(port);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) {
+    throw new TransportError(makeRemoteError(action, "TRANSPORT_UNAVAILABLE"));
+  }
+}
+
+function validateKeyPath(keyPath: string | undefined, action: SshAction): void {
+  if (
+    !keyPath
+    || isUnsafeToken(keyPath)
+    || keyPath.startsWith("-")
+    || /\s/.test(keyPath)
+    || keyPath.split("/").some((segment) => segment === "." || segment === "..")
+  ) {
+    throw new TransportError(makeRemoteError(action, "TRANSPORT_UNAVAILABLE"));
+  }
+}
+
+function validateSshOption(option: string | undefined, action: SshAction): void {
+  if (
+    option !== "IdentitiesOnly=yes"
+    && option !== "StrictHostKeyChecking=yes"
+    && option !== "StrictHostKeyChecking=accept-new"
+  ) {
+    throw new TransportError(makeRemoteError(action, "TRANSPORT_UNAVAILABLE"));
+  }
 }
 
 async function runRemoteCommand(

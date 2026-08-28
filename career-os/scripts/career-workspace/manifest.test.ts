@@ -72,6 +72,17 @@ describe("workspace manifest", () => {
     });
   });
 
+  test("managed root 자체가 file이면 manifest 파일로 포함하지 않고 거부한다", async () => {
+    await rm(path.join(tempRoot, "applications"), { recursive: true, force: true });
+    await writeFile(path.join(tempRoot, "applications"), "not-directory");
+
+    await expect(buildWorkspaceDraft(tempRoot, producer)).rejects.toMatchObject({
+      name: "WorkspaceManifestError",
+      rejected: [{ path: "applications", code: "rejected-non-regular" }],
+    });
+    expect(() => workspaceRelativePathSchema.parse("applications")).toThrow();
+  });
+
   test("env, omc, log, cache, 임시 파일은 제외 사유로 남긴다", async () => {
     await mkdir(path.join(tempRoot, "applications", ".omc"), { recursive: true });
     await mkdir(path.join(tempRoot, "private", "cache"), { recursive: true });

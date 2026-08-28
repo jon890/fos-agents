@@ -24,7 +24,7 @@ export const workspaceRelativePathSchema = z.string().min(1).superRefine((path, 
     });
   }
 
-  if (!CAREER_WORKSPACE_MANAGED_ROOTS.some((root) => path === root || path.startsWith(`${root}/`))) {
+  if (!CAREER_WORKSPACE_MANAGED_ROOTS.some((root) => path.startsWith(`${root}/`))) {
     context.addIssue({
       code: "custom",
       message: `workspace path must start with ${CAREER_WORKSPACE_MANAGED_ROOTS.join(", ")}`,

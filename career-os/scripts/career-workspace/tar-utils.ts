@@ -1,6 +1,6 @@
-import { cp, lstat, mkdir, readdir, rm, writeFile } from "node:fs/promises";
+import { copyFile, lstat, mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { CAREER_WORKSPACE_MANAGED_ROOTS, type RemoteErrorResult } from "./contracts.ts";
+import { CAREER_WORKSPACE_MANAGED_ROOTS, type CareerWorkspaceFileEntry, type RemoteErrorResult } from "./contracts.ts";
 import { compareCodeUnits } from "./manifest.ts";
 import { makeRemoteError, TransportError } from "./transport.ts";
 
@@ -47,15 +47,14 @@ export async function validateTarTopLevel(archive: Uint8Array, allowed: readonly
   validateTarEntries(toBytes(archive), allowed, action);
 }
 
-export async function copyManagedRoots(from: string, to: string): Promise<void> {
+export async function copyManifestFiles(from: string, to: string, files: readonly CareerWorkspaceFileEntry[]): Promise<void> {
   for (const root of CAREER_WORKSPACE_MANAGED_ROOTS) {
-    const source = path.join(from, root);
-    const target = path.join(to, root);
-    if (await exists(source)) {
-      await cp(source, target, { recursive: true, force: true, errorOnExist: false });
-    } else {
-      await mkdir(target, { recursive: true });
-    }
+    await mkdir(path.join(to, root), { recursive: true });
+  }
+  for (const file of files) {
+    const target = path.join(to, file.path);
+    await mkdir(path.dirname(target), { recursive: true });
+    await copyFile(path.join(from, file.path), target);
   }
 }
 
@@ -82,9 +81,17 @@ function validateTarEntries(archive: Uint8Array, allowed: readonly string[], act
   const seenExactTopLevels = new Set<string>();
   let offset = 0;
   let entryCount = 0;
+  let sawEndOfArchive = false;
   while (offset + 512 <= archive.byteLength) {
     const header = archive.subarray(offset, offset + 512);
     if (header.every((byte) => byte === 0)) {
+      if (offset + 1024 > archive.byteLength || !archive.subarray(offset + 512, offset + 1024).every((byte) => byte === 0)) {
+        throw new TransportError(makeRemoteError(action, "TRANSFER_FAILED"));
+      }
+      if (!archive.subarray(offset + 1024).every((byte) => byte === 0)) {
+        throw new TransportError(makeRemoteError(action, "INVALID_MANIFEST"));
+      }
+      sawEndOfArchive = true;
       break;
     }
     const name = tarString(header, 0, 100);
@@ -109,6 +116,9 @@ function validateTarEntries(archive: Uint8Array, allowed: readonly string[], act
       throw new TransportError(makeRemoteError(action, "TRANSFER_FAILED"));
     }
     offset = nextOffset;
+  }
+  if (!sawEndOfArchive) {
+    throw new TransportError(makeRemoteError(action, "TRANSFER_FAILED"));
   }
   if (entryCount === 0) {
     throw new TransportError(makeRemoteError(action, "INVALID_MANIFEST"));
@@ -170,15 +180,6 @@ async function verifyExtractedTree(root: string, action: TarAction): Promise<voi
     if (fileStat.isDirectory()) {
       await verifyExtractedTree(absolute, action);
     }
-  }
-}
-
-async function exists(target: string): Promise<boolean> {
-  try {
-    await lstat(target);
-    return true;
-  } catch {
-    return false;
   }
 }
 

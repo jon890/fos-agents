@@ -9,7 +9,7 @@ import {
   type CareerWorkspaceProducer,
   type RemoteErrorResult,
 } from "./contracts.ts";
-import { buildWorkspaceDraft, digestWorkspaceFiles, sortWorkspaceFiles } from "./manifest.ts";
+import { buildWorkspaceDraft, compareCodeUnits, digestWorkspaceFiles, sortWorkspaceFiles } from "./manifest.ts";
 import {
   careerWorkspaceSyncStateSchema,
   prepareJournalSchema,
@@ -19,7 +19,7 @@ import {
 import { LocalCareerWorkspaceTransport } from "./local-transport.ts";
 import { SshCareerWorkspaceTransport } from "./ssh-transport.ts";
 import { makeRemoteError, TransportError, type CareerWorkspaceTransport } from "./transport.ts";
-import { copyManagedRoots, createTarFromDirectory, extractTarToDirectory, safeRemove, validateTarTopLevel } from "./tar-utils.ts";
+import { copyManifestFiles, createTarFromDirectory, extractTarToDirectory, listRelativeFiles, safeRemove, validateTarTopLevel } from "./tar-utils.ts";
 
 export interface CliContext {
   root: string;
@@ -200,7 +200,7 @@ export async function publishWorkspace(context: CliContext) {
   await safeRemove(tempDir);
   await mkdir(tempDir, { recursive: true });
   try {
-    await copyManagedRoots(context.root, tempDir);
+    await copyManifestFiles(context.root, tempDir, draft.manifest.files);
     await writeFile(path.join(tempDir, "workspace-draft.json"), `${JSON.stringify(draft.manifest, null, 2)}\n`);
     const archive = await createTarFromDirectory(tempDir, ["workspace-draft.json", ...CAREER_WORKSPACE_MANAGED_ROOTS]);
     const result = await context.transport.publish(archive);
@@ -228,7 +228,15 @@ async function validateExtractedRelease(stagingDir: string) {
     const draft = await buildWorkspaceDraft(stagingDir, manifest.producer, { parentRevision: manifest.parentRevision });
     const actualFiles = JSON.stringify(sortWorkspaceFiles(draft.manifest.files));
     const expectedFiles = JSON.stringify(sortWorkspaceFiles(manifest.files));
-    if (draft.manifest.contentDigest !== manifest.contentDigest || actualFiles !== expectedFiles) {
+    const extractedFiles = (await listRelativeFiles(stagingDir))
+      .filter((file) => file !== "workspace-manifest.json")
+      .toSorted(compareCodeUnits);
+    const expectedExtractedFiles = manifest.files.map((file) => file.path).toSorted(compareCodeUnits);
+    if (
+      draft.manifest.contentDigest !== manifest.contentDigest
+      || actualFiles !== expectedFiles
+      || JSON.stringify(extractedFiles) !== JSON.stringify(expectedExtractedFiles)
+    ) {
       throw new TransportError(makeRemoteError("prepare", "INVALID_MANIFEST"));
     }
     return manifest;
@@ -245,9 +253,18 @@ async function restoreIncompleteJournal(root: string): Promise<void> {
   if (!await exists(file)) {
     return;
   }
-  const parsed = prepareJournalSchema.safeParse(JSON.parse(await readFile(file, "utf8")));
+  let parsed;
+  try {
+    parsed = prepareJournalSchema.safeParse(JSON.parse(await readFile(file, "utf8")));
+  } catch {
+    throw new TransportError(makeRemoteError("prepare", "RESTORE_REQUIRED"));
+  }
   if (!parsed.success) {
     throw new TransportError(makeRemoteError("prepare", "RESTORE_REQUIRED"));
+  }
+  if (parsed.data.status === "restored") {
+    await cleanupCompletedJournal(root);
+    return;
   }
   if (parsed.data.status === "completed" || await matchesCommittedWorkspace(root, parsed.data)) {
     await cleanupCompletedJournal(root);
@@ -396,6 +413,9 @@ async function rollbackJournal(root: string, journal: PrepareJournal): Promise<v
     const backup = path.join(syncDirectory(root), "backup", managedRoot);
     const backupExists = await exists(backup);
     const targetExists = await exists(target);
+    if (isContradictoryJournalEvidence(rootState, backupExists, targetExists)) {
+      throw new TransportError(makeRemoteError("prepare", "RESTORE_REQUIRED"));
+    }
     const shouldRemoveTarget = rootState.applyDone
       || (backupExists && targetExists)
       || (rootState.backupDone && !rootState.hadOriginal && targetExists);
@@ -410,6 +430,23 @@ async function rollbackJournal(root: string, journal: PrepareJournal): Promise<v
     }
   }
   await safeRemove(path.join(syncDirectory(root), "staging"));
+}
+
+function isContradictoryJournalEvidence(
+  rootState: PrepareJournal["roots"][typeof CAREER_WORKSPACE_MANAGED_ROOTS[number]],
+  backupExists: boolean,
+  targetExists: boolean,
+): boolean {
+  if (backupExists && !rootState.backupDone) {
+    return targetExists;
+  }
+  if (backupExists && !rootState.hadOriginal) {
+    return rootState.backupDone;
+  }
+  if (rootState.hadOriginal && !backupExists) {
+    return true;
+  }
+  return false;
 }
 
 async function cleanupCompletedJournal(root: string): Promise<void> {
@@ -439,10 +476,18 @@ if (import.meta.main) {
     const result = await runCareerWorkspaceCli(process.argv.slice(2));
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   } catch (error) {
+    const action = commandAction(process.argv[2]);
     const result: RemoteErrorResult = error instanceof TransportError
       ? error.result
-      : makeRemoteError("check", "TRANSPORT_UNAVAILABLE");
+      : makeRemoteError(action, "TRANSPORT_UNAVAILABLE");
     process.stderr.write(`${JSON.stringify(result)}\n`);
     process.exit(1);
   }
+}
+
+function commandAction(command: string | undefined): RemoteErrorResult["action"] {
+  if (command === "prepare" || command === "diff" || command === "publish" || command === "check") {
+    return command;
+  }
+  return "check";
 }
