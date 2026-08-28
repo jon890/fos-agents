@@ -22,6 +22,7 @@ career-os의 각 흐름은 외부 입력을 검증하고, 사용자 판단에 �
 prepare가 중단되면 다음 실행은 journal과 실제 root를 대조해 기존 작업본으로 복구한 뒤에만 새 release를 받는다.
 journal과 실제 경로가 모순되면 자동 정리하지 않고 `RESTORE_REQUIRED`로 중단한다.
 재생성 가능한 cache와 게시 뒤 삭제하는 임시 리포트는 동기화하지 않는다.
+관리 root 안의 `.env`, 숨김 파일과 `.omc`는 원격으로 보내지 않으며, `prepare`가 발견하면 삭제하지 않고 `WORKSPACE_DIRTY`로 중단한다.
 
 ## 포지션 추천
 

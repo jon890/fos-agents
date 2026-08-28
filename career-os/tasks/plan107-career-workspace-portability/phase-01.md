@@ -25,6 +25,7 @@ release manifest는 draft 필드에 서버가 부여한 `revision`과 `createdAt
 
 관리 root는 `applications`, `private`, `state`로 고정한다.
 심볼릭 링크, `.env`, `.omc`, log, cache, 임시 파일은 draft 생성 전에 거부하거나 제외하며 결과에 상대 경로와 판정 코드만 남긴다.
+`prepare`는 제외 대상 중 `.env`, 숨김 파일과 `.omc`를 발견하면 `WORKSPACE_DIRTY`로 중단해 로컬 파일을 잃지 않게 한다.
 지원서 원본 Markdown·JSON과 최종 HTML·PDF·제출 파일은 관리 대상에 포함한다.
 
 ### 3. 결정적 digest 생성
