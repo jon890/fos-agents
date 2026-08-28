@@ -367,6 +367,31 @@ describe("career workspace cli", () => {
     expect(await exists(path.join(fixture.workspaceRoot, ".career-sync", "prepare-journal.json"))).toBe(false);
   }));
 
+  test("sync-state 반영 뒤 남은 applied journal은 새 작업본을 rollback하지 않고 cleanup한다", async () => withFixture(async (fixture) => {
+    await createRemoteRelease(fixture, "rev-1", { "applications/new.md": "new" });
+    await prepareWorkspace(makeContext(fixture));
+    await mkdir(path.join(fixture.workspaceRoot, ".career-sync", "backup", "applications"), { recursive: true });
+    await writeFile(path.join(fixture.workspaceRoot, ".career-sync", "backup", "applications", "old.md"), "old");
+    await writeFile(path.join(fixture.workspaceRoot, ".career-sync", "prepare-journal.json"), JSON.stringify({
+      schemaVersion: 1,
+      workspace: "career-os",
+      transactionId: "tx-sync-state-committed",
+      revision: "rev-1",
+      status: "applied",
+      roots: {
+        applications: { hadOriginal: true, backupDone: true, applyDone: true },
+        private: { hadOriginal: true, backupDone: true, applyDone: true },
+        state: { hadOriginal: true, backupDone: true, applyDone: true },
+      },
+    }));
+
+    await prepareWorkspace(makeContext(fixture));
+
+    expect(await readFile(path.join(fixture.workspaceRoot, "applications", "new.md"), "utf8")).toBe("new");
+    expect(await exists(path.join(fixture.workspaceRoot, "applications", "old.md"))).toBe(false);
+    expect(await exists(path.join(fixture.workspaceRoot, ".career-sync", "backup"))).toBe(false);
+  }));
+
   test("diff는 마지막 prepare 기준의 추가, 수정, 삭제를 요약한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", {
       "applications/delete.md": "delete",

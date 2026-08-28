@@ -107,6 +107,7 @@ export async function prepareWorkspace(context: CliContext) {
   await writeJournal(context.root, journal);
 
   const manifest = await validateExtractedRelease(stagingDir);
+  let syncStateCommitted = false;
   try {
     await mkdir(backupDir, { recursive: true });
     for (const managedRoot of CAREER_WORKSPACE_MANAGED_ROOTS) {
@@ -130,6 +131,10 @@ export async function prepareWorkspace(context: CliContext) {
     journal.status = "applied";
     await writeJournal(context.root, journal);
 
+    const after = await buildWorkspaceDraft(context.root, manifest.producer, { parentRevision: manifest.revision });
+    if (after.manifest.contentDigest !== manifest.contentDigest) {
+      throw new TransportError(makeRemoteError("prepare", "RESTORE_REQUIRED"));
+    }
     await writeSyncState(context.root, {
       schemaVersion: CAREER_WORKSPACE_SCHEMA_VERSION,
       workspace: CAREER_WORKSPACE_NAME,
@@ -137,15 +142,14 @@ export async function prepareWorkspace(context: CliContext) {
       contentDigest: manifest.contentDigest,
       files: manifest.files,
     });
-    const after = await buildWorkspaceDraft(context.root, manifest.producer, { parentRevision: manifest.revision });
-    if (after.manifest.contentDigest !== manifest.contentDigest) {
-      throw new TransportError(makeRemoteError("prepare", "RESTORE_REQUIRED"));
-    }
+    syncStateCommitted = true;
     journal.status = "completed";
     await writeJournal(context.root, journal);
     await cleanupCompletedJournal(context.root);
   } catch (error) {
-    await rollbackJournal(context.root, journal);
+    if (!syncStateCommitted) {
+      await rollbackJournal(context.root, journal);
+    }
     throw error;
   }
 
@@ -245,7 +249,7 @@ async function restoreIncompleteJournal(root: string): Promise<void> {
   if (!parsed.success) {
     throw new TransportError(makeRemoteError("prepare", "RESTORE_REQUIRED"));
   }
-  if (parsed.data.status === "completed") {
+  if (parsed.data.status === "completed" || await matchesCommittedWorkspace(root, parsed.data)) {
     await cleanupCompletedJournal(root);
     return;
   }
@@ -258,6 +262,24 @@ async function restoreIncompleteJournal(root: string): Promise<void> {
   await safeRemove(path.join(syncDirectory(root), "staging"));
   await safeRemove(path.join(syncDirectory(root), "backup"));
   await rm(file, { force: true });
+}
+
+async function matchesCommittedWorkspace(root: string, journal: PrepareJournal): Promise<boolean> {
+  if (!journal.revision) {
+    return false;
+  }
+  const syncState = await readSyncState(root);
+  if (syncState.kind !== "valid" || syncState.state.revision !== journal.revision) {
+    return false;
+  }
+  try {
+    const draft = await buildWorkspaceDraft(root, { skill: "career-workspace", mode: "interactive" }, {
+      parentRevision: journal.revision,
+    });
+    return draft.manifest.contentDigest === syncState.state.contentDigest;
+  } catch {
+    return false;
+  }
 }
 
 async function inspectLocal(context: CliContext, syncState: CareerWorkspaceSyncState | null) {
