@@ -6,8 +6,8 @@ import {
   classify,
   closeWindow,
   isContractRole,
-  isNonServerTitle,
-  isServerRole,
+  isNonTargetTitle,
+  isTargetRole,
   norm,
 } from "../policy.ts";
 
@@ -189,8 +189,8 @@ function postingFromSitemapUrl(item: SitemapUrl): Posting | null {
 
   if (!id || !title) return null;
   if (isContractRole(fullText)) return null;
-  if (isNonServerTitle(title)) return null;
-  if (!isServerRole(fullText)) return null;
+  if (isNonTargetTitle(title)) return null;
+  if (!isTargetRole(fullText)) return null;
 
   const lastmod = norm(item.lastmod);
   const summary =

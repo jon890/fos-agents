@@ -5,8 +5,8 @@ import {
   closeWindow,
   hasKeyword,
   isContractRole,
-  isNonServerTitle,
-  isServerRole,
+  isNonTargetTitle,
+  isTargetRole,
   norm,
 } from "../policy.ts";
 
@@ -135,8 +135,8 @@ async function postingFromJob(job: SkJob): Promise<Posting | null> {
   const fullText = `${company} ${title} ${job.jobRole ?? ""} ${job.recruitType ?? ""} ${job.workingType ?? ""} ${detailText}`;
   const roleText = `${company} ${title} ${job.jobRole ?? ""} ${job.recruitType ?? ""} ${job.workingType ?? ""}`;
   if (isContractRole(roleText)) return null;
-  if (isNonServerTitle(title)) return null;
-  if (!isServerRole(roleText) && !hasKeyword(roleText, ["software engineering", "sre", "cloud-native", "platform"])) return null;
+  if (isNonTargetTitle(title)) return null;
+  if (!isTargetRole(roleText) && !hasKeyword(roleText, ["software engineering", "sre", "cloud-native", "platform"])) return null;
 
   const due = normalizeDate(job.end);
   return {

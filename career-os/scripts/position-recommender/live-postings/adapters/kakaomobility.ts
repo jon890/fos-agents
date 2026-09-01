@@ -4,8 +4,8 @@ import {
   classify,
   closeWindow,
   isContractRole,
-  isNonServerTitle,
-  isServerRole,
+  isNonTargetTitle,
+  isTargetRole,
   norm,
 } from "../policy.ts";
 
@@ -65,8 +65,8 @@ function postingFromDetail(url: string, html: string): Posting | null {
   const fullText = `${title} ${text}`;
   if (!title) return null;
   if (isContractRole(fullText)) return null;
-  if (isNonServerTitle(title)) return null;
-  if (!isServerRole(fullText)) return null;
+  if (isNonTargetTitle(title)) return null;
+  if (!isTargetRole(fullText)) return null;
 
   const id = url.match(/\/o\/([0-9]+)/)?.[1] ?? url;
   const isAlwaysOpen = /수시채용|상시채용|채용 완료 시 조기 마감|상시 영입/.test(text);

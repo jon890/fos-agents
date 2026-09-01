@@ -4,8 +4,8 @@ import {
   classify,
   closeWindow,
   isContractRole,
-  isNonServerTitle,
-  isServerRole,
+  isNonTargetTitle,
+  isTargetRole,
 } from "../policy.ts";
 
 const UA = "Mozilla/5.0 (fos-agents position recommender)";
@@ -64,7 +64,7 @@ export function parseKurlyPosting(url: string, html: string): Posting | null {
   const title = htmlTitle(html);
   const fullText = `${title} ${text}`;
   if (!title || isContractRole(fullText)) return null;
-  if (isNonServerTitle(title) || !SERVER_TITLE_PATTERN.test(title) || !isServerRole(fullText)) return null;
+  if (isNonTargetTitle(title) || !SERVER_TITLE_PATTERN.test(title) || !isTargetRole(fullText)) return null;
 
   const id = url.match(/\/o\/([0-9]+)/)?.[1] ?? url;
   return {

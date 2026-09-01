@@ -4,8 +4,8 @@ import {
   classify,
   closeWindow,
   isContractRole,
-  isNonServerTitle,
-  isServerRole,
+  isNonTargetTitle,
+  isTargetRole,
   norm,
 } from "../policy.ts";
 
@@ -48,7 +48,7 @@ async function fetchJobListJson(): Promise<Array<{ id: string; title: string; em
 
 function htmlText(html: string): string {
   // The detail page navigation menu includes ALL job category names ("Frontend Android iOS Backend ..."),
-  // which triggers EXCLUDE_NON_SERVER_KEYWORDS and makes isServerRole() return false for every posting.
+  // which triggers NON_TARGET_ROLE_KEYWORDS and makes isTargetRole() return false for every posting.
   // Extract only the job-description section (detail_wrap div → site_wrap/body) to avoid nav contamination.
   const detailWrapIdx = html.indexOf('class="detail_wrap"');
   const siteWrapIdx = html.indexOf('class="site_wrap"');
@@ -88,8 +88,8 @@ function postingFromDetail(item: { id: string; title: string }, html: string): P
   const fullText = `${title} ${text}`;
   if (!title) return null;
   if (isContractRole(fullText) || /인턴|intern|체험형/i.test(fullText)) return null;
-  if (isNonServerTitle(title)) return null;
-  if (!isServerRole(fullText)) return null;
+  if (isNonTargetTitle(title)) return null;
+  if (!isTargetRole(fullText)) return null;
 
   const dueRaw =
     text.match(/Application period\s*([0-9.\-~\s:]+)/i)?.[1] ??

@@ -49,8 +49,9 @@ SSH client는 `career-storage`를 원격 호출하고, 홈서버의 Hermes는 �
 
 ## 공고 추천
 
-`config/position-collection.ts`는 외부 채용 소스의 탐색 범위를 타입과 함께 관리한다.
 회사별 채널은 소스 어댑터와 공개 채용 페이지에서 동적으로 찾는다.
+Wanted adapter는 개발 전체 직군 `518`을 기술 상수로 사용하고, 백엔드와 AI Platform 역할 경계는 공통 수집 정책에서 적용한다.
+후보자 선호와 회사 평가는 수집 상수에 넣지 않고 추천 단계에서 판단한다.
 
 `scripts/position-recommender/live-postings/`는 외부 소스 어댑터의 공통 계약과 수집 정책을 구현한다.
 어댑터는 원문 응답을 공통 `LivePosting` 형태로 바꾼다.

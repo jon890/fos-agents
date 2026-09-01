@@ -89,17 +89,6 @@ SSH 환경은 `CAREER_WORKSPACE_SSH_TARGET`, `CAREER_WORKSPACE_SSH_ARGS`와 `CAR
 세부 프로젝트 사실을 여러 설정 파일에 복제하지 않는다.
 최신 이력 자료와 실제 저장소를 함께 확인한다.
 
-### `config/position-collection.ts`
-
-외부 채용 소스의 탐색 범위를 관리하는 TypeScript 설정이다.
-Zod 검증을 통과한 값만 수집 코드가 사용한다.
-
-현재 필드:
-
-- `wanted.jobGroupId`: Wanted 직군 식별자
-
-후보자 선호와 회사 평가는 이 파일에 넣지 않는다.
-
 ### `config/external-reading-sources.ts`
 
 아침 읽을거리의 외부 글·영상 소스와 수집 어댑터를 관리한다.

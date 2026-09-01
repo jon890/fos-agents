@@ -4,8 +4,8 @@ import {
   classify,
   closeWindow,
   isContractRole,
-  isNonServerTitle,
-  isServerRole,
+  isNonTargetTitle,
+  isTargetRole,
   norm,
 } from "../policy.ts";
 
@@ -98,8 +98,8 @@ function postingFromDetail(url: string, html: string): Posting | null {
   if (status !== "in_progress") return null;
   if (!/지원하기/.test(text)) return null;
   if (isContractRole(fullText) || /intern|인턴|contract/i.test(employment)) return null;
-  if (isNonServerTitle(title)) return null;
-  if (!isServerRole(roleSignal) && !isServerRole(fullText)) return null;
+  if (isNonTargetTitle(title)) return null;
+  if (!isTargetRole(roleSignal) && !isTargetRole(fullText)) return null;
 
   const id = url.match(/\/job_posting\/([A-Za-z0-9]+)/)?.[1] ?? url;
   return {

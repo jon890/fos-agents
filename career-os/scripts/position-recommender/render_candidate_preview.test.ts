@@ -13,7 +13,7 @@ const posting: Posting = {
 };
 const diagnostics: CollectionDiagnostics = {
   collectionRunId: "run-1", collectedAt: "2026-08-13T00:00:00.000Z", requestedSource: "all",
-  configuredSources: ["wanted"], serverOnly: true, wantedLimit: 120, includeTossArticles: false,
+  configuredSources: ["wanted"], wantedLimit: 120, includeTossArticles: false,
   sourceDiagnostics: [], errors: [],
 };
 const postings = Array.from({ length: 11 }, (_, index): Posting => ({

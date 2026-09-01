@@ -4,8 +4,8 @@ import {
   classify,
   closeWindow,
   isContractRole,
-  isNonServerTitle,
-  isServerRole,
+  isNonTargetTitle,
+  isTargetRole,
   norm,
 } from "../policy.ts";
 
@@ -160,10 +160,10 @@ function postingFromDetail(listItem: SamsungListItem, detail: SamsungDetailRespo
   const fullText = `${company} ${title} ${listItem.tags.join(" ")} ${detailText}`;
 
   if (isContractRole(fullText)) return null;
-  if (isNonServerTitle(title)) return null;
-  if (!isServerRole(fullText)) return null;
+  if (isNonTargetTitle(title)) return null;
+  if (!isTargetRole(fullText)) return null;
 
-  const mainItem = items.find((item) => isServerRole(`${item.titleKr ?? ""} ${item.taskKr ?? ""}`)) ?? items[0];
+  const mainItem = items.find((item) => isTargetRole(`${item.titleKr ?? ""} ${item.taskKr ?? ""}`)) ?? items[0];
   const due = normalizeDate(result?.enddate) || listItem.period.match(/~\s*([0-9.]+)/)?.[1]?.replace(/\./g, "-") || "";
   return {
     source: "samsung-careers",

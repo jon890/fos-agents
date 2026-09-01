@@ -4,8 +4,8 @@ import {
   classify,
   closeWindow,
   isContractRole,
-  isNonServerTitle,
-  isServerRole,
+  isNonTargetTitle,
+  isTargetRole,
   norm,
 } from "../policy.ts";
 
@@ -114,7 +114,7 @@ function postingFromKakaoCareersDetail(job: KakaoCareersJob): Posting | null {
   const fullText = `${title} ${text}`;
   const applyUrl = externalApplyUrl(job.introduction);
   if (!title || !applyUrl) return null;
-  if (isContractRole(fullText) || isNonServerTitle(title) || !isServerRole(fullText)) return null;
+  if (isContractRole(fullText) || isNonTargetTitle(title) || !isTargetRole(fullText)) return null;
 
   return {
     source: "kakaopay",
@@ -159,8 +159,8 @@ function postingFromDetail(url: string, html: string): Posting | null {
   const fullText = `${title} ${text}`;
   if (!title) return null;
   if (isContractRole(fullText)) return null;
-  if (isNonServerTitle(title)) return null;
-  if (!isServerRole(fullText)) return null;
+  if (isNonTargetTitle(title)) return null;
+  if (!isTargetRole(fullText)) return null;
 
   const id = url.match(/\/o\/([0-9]+)/)?.[1] ?? url;
   const isAlwaysOpen = /상시 영입|상시채용|채용 완료 시 조기 마감|수시 채용/.test(text);

@@ -5,7 +5,7 @@ import { createPostingEligibilityPolicy, dedupe, filterEligiblePostings } from "
 function posting(overrides: Partial<Posting>): Posting {
   return {
     source: "wanted",
-    discoveryMode: "target-keyword",
+    discoveryMode: "broad",
     company: "컬리",
     title: "핀테크 백엔드 개발자 (결제)",
     url: "https://www.wanted.co.kr/wd/334745",

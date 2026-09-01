@@ -4,13 +4,13 @@ import {
   classify,
   closeWindow,
   isContractRole,
-  isNonServerTitle,
-  isServerRole,
+  isNonTargetTitle,
+  isTargetRole,
   norm,
 } from "../policy.ts";
-import { loadWantedCollectionConfig } from "../config.ts";
-
 const UA = "Mozilla/5.0 (fos-agents position recommender)";
+// Wanted의 개발 전체 직군이다. 백엔드와 AI Platform 후보는 후속 역할 경계에서 선별한다.
+const WANTED_DEVELOPMENT_JOB_GROUP_ID = 518;
 
 function isWantedActive(job: Record<string, unknown>): boolean {
   const status = norm(job.status ?? "").toLowerCase();
@@ -36,7 +36,7 @@ function postingFromWantedDetail(
   pid: number,
   detail: Record<string, unknown>,
   discoveryMode: DiscoveryMode,
-  serverOnly: boolean,
+  targetRoleOnly: boolean,
   fallback?: {
     company?: string;
     title?: string;
@@ -66,8 +66,8 @@ function postingFromWantedDetail(
 
   if (!company || !title) return null;
   if (isContractRole(fullText)) return null;
-  if (serverOnly && isNonServerTitle(title)) return null;
-  if (serverOnly && !isServerRole(fullText)) return null;
+  if (targetRoleOnly && isNonTargetTitle(title)) return null;
+  if (targetRoleOnly && !isTargetRole(fullText)) return null;
 
   const skillTags = (detail.skill_tags as unknown[]) ?? [];
   const skills = skillTags
@@ -115,7 +115,7 @@ function postingFromWantedDetail(
 async function fetchWanted(
   jobGroupId: number,
   limit = 120,
-  serverOnly = true,
+  targetRoleOnly = true,
   includeDetail = true
 ): Promise<Posting[]> {
   const params = new URLSearchParams({
@@ -141,8 +141,8 @@ async function fetchWanted(
     const title = norm(item.position);
     const categoryText = norm(catTagObj.text);
     const text = `${company} ${title} ${categoryText}`;
-    if (serverOnly && isNonServerTitle(`${title} ${categoryText}`)) continue;
-    if (serverOnly && !isServerRole(text)) continue;
+    if (targetRoleOnly && isNonTargetTitle(`${title} ${categoryText}`)) continue;
+    if (targetRoleOnly && !isTargetRole(text)) continue;
     const pid = item.id as number;
     let detail: Record<string, unknown> = {};
     if (includeDetail && pid) {
@@ -155,7 +155,7 @@ async function fetchWanted(
     if (includeDetail && (Object.keys(detail).length === 0 || !isWantedActive(detail))) continue;
 
     const addressObj = (item.address ?? {}) as Record<string, unknown>;
-    const posting = postingFromWantedDetail(pid, detail, "broad", serverOnly, {
+    const posting = postingFromWantedDetail(pid, detail, "broad", targetRoleOnly, {
       company,
       title,
       category: categoryText,
@@ -169,9 +169,13 @@ async function fetchWanted(
 export const wantedAdapter: SourceAdapter = {
   id: "wanted",
   name: "wanted",
-  async collect({ serverOnly, wantedLimit }): Promise<AdapterCollectionResult> {
-    const { jobGroupId } = loadWantedCollectionConfig();
-    const postings = await fetchWanted(jobGroupId, wantedLimit, serverOnly, true);
+  async collect({ targetRoleOnly, wantedLimit }): Promise<AdapterCollectionResult> {
+    const postings = await fetchWanted(
+      WANTED_DEVELOPMENT_JOB_GROUP_ID,
+      wantedLimit,
+      targetRoleOnly,
+      true,
+    );
     return {
       postings,
       diagnostics: {

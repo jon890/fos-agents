@@ -1,7 +1,7 @@
 // 우아한형제들 채용 수집기.
 // 채용 사이트는 SPA라 HTML에 공고가 없지만, 화면이 쓰는 /w1/recruits API가 공개돼 있어 이걸 단일 출처로 쓴다.
 import type { AdapterCollectionResult, Posting, SourceAdapter } from "../types.ts";
-import { cleanDetail, classify, closeWindow, isContractRole, isNonServerTitle, isServerRole } from "../policy.ts";
+import { cleanDetail, classify, closeWindow, isContractRole, isNonTargetTitle, isTargetRole } from "../policy.ts";
 
 const UA = "Mozilla/5.0 (fos-agents position recommender)";
 const HOST = "https://career.woowahan.com";
@@ -76,9 +76,9 @@ export function parseWoowahanRecruit(recruit: WoowaRecruit, contents: string): P
   const body = htmlToText(contents);
   const fullText = `${title} ${body}`;
   if (isContractRole(fullText)) return null;
-  if (isNonServerTitle(title)) return null;
+  if (isNonTargetTitle(title)) return null;
   // 제목이 `Server(배차시스템)`처럼 도메인만 담고 스택을 안 적는 경우가 있어 본문까지 함께 본다.
-  if (!isServerRole(fullText)) return null;
+  if (!isTargetRole(fullText)) return null;
 
   const closesAt = normalizeCloseDate(recruit.recruitEndDate);
   return {
@@ -143,7 +143,7 @@ export const woowahanCareersAdapter: SourceAdapter = {
     // 제목만으로 1차 후보를 좁힌 뒤 상세를 받는다.
     const candidates = list.filter((recruit) => {
       const name = recruit.recruitName ?? "";
-      if (!name || isNonServerTitle(name)) return false;
+      if (!name || isNonTargetTitle(name)) return false;
       return /server|서버|백엔드|backend|플랫폼|platform|엔지니어링|engineer/i.test(name);
     });
 

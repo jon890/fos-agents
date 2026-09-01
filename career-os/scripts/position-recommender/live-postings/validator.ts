@@ -9,8 +9,8 @@ import type {
 } from "./types.ts";
 import {
   isContractRole,
-  isNonServerTitle,
-  isServerRole,
+  isNonTargetTitle,
+  isTargetRole,
 } from "./policy.ts";
 
 const ACTIVE_POSTING_STATUSES: ReadonlySet<Posting["postingStatus"]> = new Set(["active", "open"]);
@@ -54,7 +54,7 @@ function isExpired(posting: Posting, evaluatedAt: Date): boolean {
 export function createPostingEligibilityPolicy(
   options: PostingEligibilityOptions = {},
 ): PostingEligibilityPolicy {
-  const serverOnly = options.serverOnly ?? true;
+  const targetRoleOnly = options.targetRoleOnly ?? true;
   return {
     evaluate(posting, evaluatedAt = new Date()): PostingEligibilityDecision {
       if (posting.linkType !== "direct_posting") {
@@ -79,7 +79,7 @@ export function createPostingEligibilityPolicy(
       if (isContractRole(fullText)) {
         return { eligible: false, rejectionCode: "ineligible_employment" };
       }
-      if (serverOnly && (isNonServerTitle(posting.title) || !isServerRole(fullText))) {
+      if (targetRoleOnly && (isNonTargetTitle(posting.title) || !isTargetRole(fullText))) {
         return { eligible: false, rejectionCode: "not_target_role" };
       }
       return { eligible: true };

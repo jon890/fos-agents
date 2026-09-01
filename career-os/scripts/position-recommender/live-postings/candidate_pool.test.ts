@@ -29,7 +29,6 @@ const diagnostics: CollectionDiagnostics = {
   collectedAt: "2026-08-13T00:00:00.000Z",
   requestedSource: "all",
   configuredSources: ["wanted"],
-  serverOnly: false,
   wantedLimit: 120,
   includeTossArticles: false,
   sourceDiagnostics: [{

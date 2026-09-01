@@ -1,5 +1,5 @@
 import type { AdapterCollectionResult, Posting, SourceAdapter } from "../types.ts";
-import { cleanDetail, classify, closeWindow, isContractRole, isNonServerTitle, isServerRole, norm } from "../policy.ts";
+import { cleanDetail, classify, closeWindow, isContractRole, isNonTargetTitle, isTargetRole, norm } from "../policy.ts";
 
 const HOST = "https://recruit.kakaobank.com";
 const LISTING_URL = `${HOST}/api/recruits`;
@@ -42,7 +42,7 @@ export function parseKakaoBankPosting(notice: RecruitNotice, html: string): Post
   const title = norm(notice.recruitNoticeName);
   const fullText = `${title} ${notice.recruitClassName} ${text}`;
   if (!title || !/지원|모집기간|접수기간/.test(text)) return null;
-  if (isContractRole(fullText) || isNonServerTitle(title) || !isServerRole(fullText)) return null;
+  if (isContractRole(fullText) || isNonTargetTitle(title) || !isTargetRole(fullText)) return null;
   const url = `${HOST}/jobs/${notice.recruitNoticeSn}`;
   return {
     source: "kakaobank-careers", discoveryMode: "official-detail", company: "카카오뱅크", title, url,

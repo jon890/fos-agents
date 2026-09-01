@@ -35,8 +35,6 @@ export const SOURCE_ALIASES = [
 
 export const DISCOVERY_MODES = [
   "broad",
-  "target-url",
-  "target-keyword",
   "official-listing",
   "official-sitemap",
   "official-detail",

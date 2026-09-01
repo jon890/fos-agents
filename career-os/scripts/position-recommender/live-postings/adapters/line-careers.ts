@@ -2,7 +2,7 @@
 // 사이트가 Gatsby 정적 빌드라 목록 HTML에는 공고 링크가 없다(클라이언트 렌더).
 // 대신 Gatsby가 함께 배포하는 page-data.json이 Strapi 원본 데이터를 그대로 담고 있어 이걸 단일 출처로 쓴다.
 import type { AdapterCollectionResult, Posting, SourceAdapter } from "../types.ts";
-import { cleanDetail, classify, closeWindow, isContractRole, isNonServerTitle, isServerRole } from "../policy.ts";
+import { cleanDetail, classify, closeWindow, isContractRole, isNonTargetTitle, isTargetRole } from "../policy.ts";
 
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 const HOST = "https://careers.linecorp.com";
@@ -71,8 +71,8 @@ export function isKoreaEngineeringServerJob(job: StrapiJob): boolean {
   const title = job.title || job.title_en || "";
   const fullText = `${title} ${names(job.job_fields).join(" ")}`;
   if (isContractRole(fullText)) return false;
-  if (isNonServerTitle(title)) return false;
-  return isServerRole(fullText);
+  if (isNonTargetTitle(title)) return false;
+  return isTargetRole(fullText);
 }
 
 function detailUrl(id: number): string {

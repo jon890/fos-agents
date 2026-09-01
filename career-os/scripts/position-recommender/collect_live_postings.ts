@@ -50,7 +50,7 @@ export class CliUsageError extends Error {
 export function parseArgs(argv: string[]): CliArgs {
   let jsonOut: string | undefined;
   let source: SourceSelection = "all";
-  let serverOnly = true;
+  let targetRoleOnly = true;
   let wantedLimit = 120;
   let includeTossArticles = false;
 
@@ -86,8 +86,8 @@ export function parseArgs(argv: string[]): CliArgs {
       ) source = s;
     } else if (arg === "--max-wanted" && argv[i + 1]) {
       wantedLimit = parseInt(argv[++i], 10);
-    } else if (arg === "--no-server-only") {
-      serverOnly = false;
+    } else if (arg === "--all-development-roles" || arg === "--no-server-only") {
+      targetRoleOnly = false;
     } else if (arg === "--include-toss-articles") {
       includeTossArticles = true;
     }
@@ -95,7 +95,7 @@ export function parseArgs(argv: string[]): CliArgs {
   if (!jsonOut) {
     throw new CliUsageError("--output <output-json> is required");
   }
-  return { jsonOut, source, serverOnly, wantedLimit, includeTossArticles };
+  return { jsonOut, source, targetRoleOnly, wantedLimit, includeTossArticles };
 }
 
 function isAdapterCollectionResult(value: Posting[] | AdapterCollectionResult): value is AdapterCollectionResult {
@@ -109,14 +109,14 @@ function importedCountsBySource(posts: Posting[]): Map<string, number> {
 }
 
 async function main(): Promise<number> {
-  const { jsonOut, source, serverOnly, wantedLimit, includeTossArticles } = parseArgs(process.argv.slice(2));
+  const { jsonOut, source, targetRoleOnly, wantedLimit, includeTossArticles } = parseArgs(process.argv.slice(2));
   const collected: Posting[] = [];
   const errors: string[] = [];
   const sourceDiagnostics: SourceDiagnostic[] = [];
 
   for (const adapter of selectAdapters(source, includeTossArticles)) {
     try {
-      const result = await adapter.collect({ serverOnly, wantedLimit });
+      const result = await adapter.collect({ targetRoleOnly, wantedLimit });
       if (isAdapterCollectionResult(result)) {
         collected.push(...result.postings);
         sourceDiagnostics.push({ ...result.diagnostics, importedCount: 0 });
@@ -154,7 +154,7 @@ async function main(): Promise<number> {
   const eligibility = filterEligiblePostings(
     dedupe(collected),
     new Date(),
-    createPostingEligibilityPolicy({ serverOnly }),
+    createPostingEligibilityPolicy({ targetRoleOnly }),
   );
   const activePosts = eligibility.eligible;
   const importedCounts = importedCountsBySource(activePosts);
@@ -169,7 +169,6 @@ async function main(): Promise<number> {
     collectedAt,
     requestedSource: source,
     configuredSources: configuredSourceIds(source),
-    serverOnly,
     wantedLimit,
     includeTossArticles,
     sourceDiagnostics: normalizedDiagnostics,

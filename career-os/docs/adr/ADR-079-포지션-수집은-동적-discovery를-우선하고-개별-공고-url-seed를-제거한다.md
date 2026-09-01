@@ -1,4 +1,4 @@
-## ADR-079 — 포지션 수집은 동적 discovery를 우선하고 개별 공고 URL seed를 제거한다
+## ADR-079 포지션 수집은 동적 discovery를 우선하고 개별 공고 URL seed를 제거한다
 
 - Status: Accepted
 - Date: 2026-06-14
@@ -12,13 +12,13 @@ AI 전환 직무를 더 넓게 보려면 Toss, Wanted, 카카오계열, NAVER �
 
 ### 결정
 
-- adapter의 기본 발견 방식은 official listing, official API, sitemap, keyword search다.
+- adapter의 기본 발견 방식은 official listing, official API와 sitemap이다.
 - 개별 공고 URL이나 Wanted 공고 ID는 adapter 코드에 하드코딩하지 않는다.
 - 허용되는 URL 상수는 source discovery에 필요한 root entrypoint다.
   예: careers listing URL, public API URL, sitemap URL.
 - 특정 공고 URL은 테스트 fixture, 문서 예시, 과거 리포트 검증 자료로만 둔다.
 - Toss는 공식 `job-groups` API를 1차 source로 유지한다.
-- Wanted는 broad scan과 keyword search로 선호 회사와 AI 전환 직무를 수집한다.
+- Wanted는 개발 전체 직군을 broad scan하고 공통 역할 경계로 백엔드와 AI Platform 후보를 선별한다.
 - 카카오계열은 GreetingHR 또는 공식 careers listing에서 detail URL을 발견하는 adapter를 계열사별로 확장한다.
 - NAVER 계열은 공식 careers listing/API가 확인된 source만 adapter에 추가한다.
 - Coupang은 공식 sitemap source를 유지하고, detail fetch 차단 시 diagnostics와 risk flag로 남긴다.
@@ -29,5 +29,5 @@ AI 전환 직무를 더 넓게 보려면 Toss, Wanted, 카카오계열, NAVER �
 
 - 닫힌 과거 공고가 daily queue와 phase 검증을 막지 않는다.
 - source별 coverage는 코드에 박힌 공고 ID가 아니라 발견 가능한 active 공고로 결정된다.
-- AI/Backend 전환 직무 recall은 keyword/API/listing coverage로 높이고, 추천 티어는 여전히 active/open 개별 공고만 허용한다.
+- AI/Backend 전환 직무 recall은 Wanted broad scan과 공식 API·listing coverage로 높이고, 추천 티어는 여전히 active/open 개별 공고만 허용한다.
 - 단점은 공식 listing/API 구조가 바뀔 때 source별 parser 유지보수가 필요하다는 점이다.

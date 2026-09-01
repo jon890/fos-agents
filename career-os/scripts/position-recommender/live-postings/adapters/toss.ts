@@ -6,8 +6,8 @@ import {
   closeWindow,
   hasKeyword,
   isContractRole,
-  isNonServerTitle,
-  isServerRole,
+  isNonTargetTitle,
+  isTargetRole,
   norm,
 } from "../policy.ts";
 
@@ -30,9 +30,9 @@ const TOSS_MAX_JOB_DETAILS = 80;
 const TOSS_EXCLUDE_EMPLOYMENT = [
   ...CONTRACT_KEYWORDS, "intern", "인턴", "internship", "체험형", "현장실습",
 ];
-const TOSS_SERVER_TITLE_KEYWORDS = [
+const TOSS_TARGET_TITLE_KEYWORDS = [
   "backend", "백엔드", "server", "서버", "node.js", "nodejs", "java", "spring", "kotlin",
-  // AI/Platform/Infra titles — downstream isServerRole() still filters out pure research/DS roles
+  // AI/Platform/Infra titles — downstream isTargetRole() still filters out pure research/DS roles
   "ai", "agent", "llm", "platform", "플랫폼", "infra", "sre", "devops",
 ];
 
@@ -388,7 +388,7 @@ function parseTossJDSections(content: string): {
   };
 }
 
-function postingFromTossApiJob(group: TossJobGroup, job: TossJob, serverOnly: boolean): TossParse {
+function postingFromTossApiJob(group: TossJobGroup, job: TossJob, targetRoleOnly: boolean): TossParse {
   const id = job.id ?? group.id;
   const title = norm(job.title ?? group.title);
   const content = tossJobDescription(job);
@@ -404,8 +404,8 @@ function postingFromTossApiJob(group: TossJobGroup, job: TossJob, serverOnly: bo
   if (hasKeyword(fullText, TOSS_EXCLUDE_EMPLOYMENT)) return { reject: "contract_intern_freelance" };
   const specificityReject = tossRoleSpecificityReject(company, title, content);
   if (specificityReject) return { reject: specificityReject };
-  if (serverOnly && isNonServerTitle(title)) return { reject: "not_server_title" };
-  if (serverOnly && !isServerRole(fullText)) return { reject: "not_server" };
+  if (targetRoleOnly && isNonTargetTitle(title)) return { reject: "not_target_title" };
+  if (targetRoleOnly && !isTargetRole(fullText)) return { reject: "not_target_role" };
 
   const due = job.application_deadline || tossMetadata(job, ["클로징 일자", "ExpiryDate"]);
   return {
@@ -431,7 +431,7 @@ function postingFromTossApiJob(group: TossJobGroup, job: TossJob, serverOnly: bo
   };
 }
 
-async function collectTossJobGroups(serverOnly: boolean): Promise<{
+async function collectTossJobGroups(targetRoleOnly: boolean): Promise<{
   postings: Posting[];
   totalJobs: number;
   rejected: Record<string, number>;
@@ -449,7 +449,7 @@ async function collectTossJobGroups(serverOnly: boolean): Promise<{
     const jobs = group.jobs && group.jobs.length > 0 ? group.jobs : group.primary_job ? [group.primary_job] : [];
     for (const job of jobs) {
       totalJobs++;
-      const parsed = postingFromTossApiJob(group, job, serverOnly);
+      const parsed = postingFromTossApiJob(group, job, targetRoleOnly);
       if (parsed.posting) postings.push(parsed.posting);
       else if (parsed.reject) reject(parsed.reject);
     }
@@ -466,7 +466,7 @@ interface TossParse {
 function parseTossJobDetail(
   url: string,
   res: TossFetchResult,
-  serverOnly: boolean
+  targetRoleOnly: boolean
 ): TossParse {
   if (!res.ok) return { reject: "http" };
   const html = res.text;
@@ -499,9 +499,9 @@ function parseTossJobDetail(
   const specificityReject = tossRoleSpecificityReject(company, title, content);
   if (specificityReject) return { reject: specificityReject };
 
-  if (serverOnly && isNonServerTitle(title)) return { reject: "not_server" };
-  if (serverOnly && !hasKeyword(title, TOSS_SERVER_TITLE_KEYWORDS)) return { reject: "not_server_title" };
-  if (serverOnly && !isServerRole(fullText)) return { reject: "not_server" };
+  if (targetRoleOnly && isNonTargetTitle(title)) return { reject: "not_target_role" };
+  if (targetRoleOnly && !hasKeyword(title, TOSS_TARGET_TITLE_KEYWORDS)) return { reject: "not_target_title" };
+  if (targetRoleOnly && !isTargetRole(fullText)) return { reject: "not_target_role" };
 
   const department = deepFindStringAny(roots, TOSS_DEPARTMENT_KEYS);
   const dueRaw = deepFindStringAny(roots, TOSS_DEADLINE_KEYS);
@@ -536,7 +536,7 @@ function parseTossJobDetail(
 export const tossAdapter: SourceAdapter = {
   id: "toss-careers",
   name: "toss-careers",
-  async collect({ serverOnly }): Promise<AdapterCollectionResult> {
+  async collect({ targetRoleOnly }): Promise<AdapterCollectionResult> {
     const rejected: Record<string, number> = {};
     const reject = (r: string) => {
       rejected[r] = (rejected[r] ?? 0) + 1;
@@ -550,7 +550,7 @@ export const tossAdapter: SourceAdapter = {
     // 0. Official listing API. This is the main Toss careers source; it exposes
     // grouped positions and sub-positions such as AI Engineer (Platform/Model/etc).
     try {
-      const api = await collectTossJobGroups(serverOnly);
+      const api = await collectTossJobGroups(targetRoleOnly);
       apiAccepted = api.postings.length;
       apiTotalJobs = api.totalJobs;
       out.push(...api.postings);
@@ -608,7 +608,7 @@ export const tossAdapter: SourceAdapter = {
         reject("http");
         continue;
       }
-      const parsed = parseTossJobDetail(url, res, serverOnly);
+      const parsed = parseTossJobDetail(url, res, targetRoleOnly);
       if (parsed.posting) out.push(parsed.posting);
       else if (parsed.reject) reject(parsed.reject);
     }

@@ -1,7 +1,7 @@
 // 당근 채용 수집기.
 // 채용 사이트는 클라이언트 렌더라 HTML 파싱이 불안정하지만, Greenhouse job board API가 공개돼 있어 이걸 단일 출처로 쓴다.
 import type { AdapterCollectionResult, Posting, SourceAdapter } from "../types.ts";
-import { cleanDetail, classify, closeWindow, isContractRole, isNonServerTitle, isServerRole } from "../policy.ts";
+import { cleanDetail, classify, closeWindow, isContractRole, isNonTargetTitle, isTargetRole } from "../policy.ts";
 
 const UA = "Mozilla/5.0 (fos-agents position recommender)";
 const BOARD_URL = "https://boards-api.greenhouse.io/v1/boards/daangn/jobs?content=true";
@@ -75,8 +75,8 @@ export function parseDaangnJob(job: GreenhouseJob): Posting | null {
   // 당근 JD 하단 공정채용 안내문에 "최대 3개월 계약직으로 근무할 수 있어요" 같은 문구가 있어,
   // 본문 전체로 판정하면 정규직 공고가 전부 계약직으로 잘못 걸린다.
   if (isContractRole(title)) return null;
-  if (isNonServerTitle(title)) return null;
-  if (!isServerRole(`${title} ${(job.departments ?? []).map((d) => d.name ?? "").join(" ")}`)) return null;
+  if (isNonTargetTitle(title)) return null;
+  if (!isTargetRole(`${title} ${(job.departments ?? []).map((d) => d.name ?? "").join(" ")}`)) return null;
 
   const closesAt = (job.application_deadline ?? "").slice(0, 10);
   return {

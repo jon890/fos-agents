@@ -5,8 +5,8 @@ import {
   closeWindow,
   hasKeyword,
   isContractRole,
-  isNonServerTitle,
-  isServerRole,
+  isNonTargetTitle,
+  isTargetRole,
   norm,
 } from "../policy.ts";
 
@@ -126,8 +126,8 @@ async function postingFromJob(job: CjJob): Promise<Posting | null> {
   const fullText = `${company} ${title} ${job.job_cd_nm ?? ""} ${job.location_cd_nm ?? ""} ${detailText}`;
   const roleText = `${company} ${title} ${job.job_cd_nm ?? ""} ${job.location_cd_nm ?? ""}`;
   if (isContractRole(roleText)) return null;
-  if (isNonServerTitle(title)) return null;
-  if (!isServerRole(roleText) && !hasKeyword(roleText, ["백엔드개발", "backend engineer"])) return null;
+  if (isNonTargetTitle(title)) return null;
+  if (!isTargetRole(roleText) && !hasKeyword(roleText, ["백엔드개발", "backend engineer"])) return null;
 
   const due = job.zz_till_hire === "Y" ? "" : norm(job.zz_end_dt_str);
   return {

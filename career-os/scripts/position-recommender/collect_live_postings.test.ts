@@ -12,6 +12,23 @@ describe("collect_live_postings 인자", () => {
 
     expect(args.jsonOut).toBe("/tmp/posting-candidates.json");
     expect(args.source).toBe("wanted");
+    expect(args.targetRoleOnly).toBe(true);
+  });
+
+  test("개발 전체 직무 수집 인자와 기존 별칭을 지원한다", () => {
+    const currentArgs = parseArgs([
+      "--output",
+      "/tmp/posting-candidates.json",
+      "--all-development-roles",
+    ]);
+    const args = parseArgs([
+      "--output",
+      "/tmp/posting-candidates.json",
+      "--no-server-only",
+    ]);
+
+    expect(currentArgs.targetRoleOnly).toBe(false);
+    expect(args.targetRoleOnly).toBe(false);
   });
 
   test("출력 경로가 없으면 저장소 state에 쓰지 않고 중단한다", () => {

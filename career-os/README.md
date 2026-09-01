@@ -23,7 +23,6 @@ clone 뒤 확인할 기본 파일:
 
 - `.env.example`: 필요한 secret 키 이름.
 - `config/candidate-profile.md`: 후보자 프로필 기준 원본.
-- `config/position-collection.ts`: 공고 수집 설정과 검증.
 
 `scripts/career-workspace/`에는 비공개 작업 파일의 manifest, 준비, 차이 확인과 발행을 담당하는 공통 CLI가 있다.
 홈서버의 `career-storage`는 검증된 release를 보관하고, 세 작성 skill은 실행 전 준비와 성공 뒤 발행을 자동으로 수행한다.

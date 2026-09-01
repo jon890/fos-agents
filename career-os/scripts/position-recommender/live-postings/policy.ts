@@ -6,7 +6,7 @@ import type { Posting } from "./types.ts";
 
 // ---- Keyword lists -------------------------------------------------------
 
-export const SERVER_KEYWORDS = [
+export const BACKEND_PLATFORM_ROLE_KEYWORDS = [
   // "back-end"/"back end"는 "backend"와 같은 역할인데 표기만 다르다.
   // 셋을 모두 두지 않으면 slug를 제목으로 바꾸는 adapter에서 공고가 조용히 탈락한다.
   "backend", "back-end", "back end", "백엔드", "server", "서버", "spring", "java", "kotlin", "api", "platform", "플랫폼", "gateway",
@@ -17,11 +17,11 @@ export const AI_PLATFORM_ROLE_KEYWORDS = [
   "ai 플랫폼", "ai플랫폼", "ai 서비스", "ai 엔지니어", "프로덕트 엔지니어", "전사 주요 프로젝트",
   "업무 자동화", "개발 생산성", "workflow", "tool calling", "memory",
 ];
-export const EXCLUDE_NON_SERVER_KEYWORDS = [
+export const NON_TARGET_ROLE_KEYWORDS = [
   "data engineer", "데이터 엔지니어", "data scientist", "데이터 사이언티스트", "ai research", "research engineer",
   "frontend", "front-end", "프론트", "android", "ios", "qa", "product designer", "ux", "마케터",
 ];
-export const NON_SERVER_TITLE_KEYWORDS = [
+export const NON_TARGET_TITLE_KEYWORDS = [
   "기획", "서비스 기획", "product manager", "product owner", "프로덕트 매니저", "po", "pm", "planner",
   "designer", "디자이너", "qa", "frontend", "프론트", "android", "ios", "data engineer",
   "데이터 엔지니어", "data scientist", "데이터 사이언티스트", "ai research", "research scientist",
@@ -44,7 +44,7 @@ export const NON_SERVER_TITLE_KEYWORDS = [
   // 운영 관리 (server operations/SRE와 구분하기 위해 복합 표현 사용)
   "operations manager", "운영 매니저",
   // 보안 직무 (security engineer 단독은 정보보안 직무)
-  "security engineer",
+  "security engineer", "보안 엔지니어",
 ];
 export const CONTRACT_KEYWORDS = [
   "계약직", "contract", "contractor", "temporary", "temp", "freelance", "프리랜서",
@@ -86,19 +86,19 @@ export function cleanDetail(text: unknown, limit = 420): string {
 
 // ---- Role filters --------------------------------------------------------
 
-export function isNonServerTitle(text: string): boolean {
-  return hasKeyword(text, NON_SERVER_TITLE_KEYWORDS);
+export function isNonTargetTitle(text: string): boolean {
+  return hasKeyword(text, NON_TARGET_TITLE_KEYWORDS);
 }
 
-export function isServerRole(text: string): boolean {
+export function isTargetRole(text: string): boolean {
   const low = text.toLowerCase();
-  const hasServerKeyword = SERVER_KEYWORDS.some((k) => low.includes(k));
+  const hasBackendPlatformKeyword = BACKEND_PLATFORM_ROLE_KEYWORDS.some((k) => low.includes(k));
   const hasAiPlatformKeyword = AI_PLATFORM_ROLE_KEYWORDS.some((k) => low.includes(k));
-  // JD의 우대사항에 frontend, data 등의 인접 기술이 등장하는 것은 서버 역할을
-  // 부정하는 근거가 아니다. 비서버 키워드만 있고 서버/AI 전환 신호도 없을 때만 제외한다.
-  if (EXCLUDE_NON_SERVER_KEYWORDS.some((k) => low.includes(k)) && !hasServerKeyword && !hasAiPlatformKeyword) return false;
+  // JD의 우대사항에 frontend, data 등의 인접 기술이 등장하는 것은 목표 역할을
+  // 부정하는 근거가 아니다. 비대상 키워드만 있고 백엔드나 AI Platform 신호도 없을 때만 제외한다.
+  if (NON_TARGET_ROLE_KEYWORDS.some((k) => low.includes(k)) && !hasBackendPlatformKeyword && !hasAiPlatformKeyword) return false;
   if (low.includes("ml engineer") && !hasAiPlatformKeyword) return false;
-  return hasServerKeyword || hasAiPlatformKeyword;
+  return hasBackendPlatformKeyword || hasAiPlatformKeyword;
 }
 
 export function isContractRole(text: string): boolean {

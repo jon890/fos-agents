@@ -8,7 +8,7 @@ export type SourceAlias = "toss" | "coupang" | "kakaobank" | "kurly" | "samsung"
 export type SourceSelection = SourceId | SourceAlias | "all";
 
 export interface AdapterOptions {
-  serverOnly: boolean;
+  targetRoleOnly: boolean;
   wantedLimit: number;
 }
 
@@ -45,7 +45,7 @@ export interface PostingEligibilityPolicy {
 }
 
 export interface PostingEligibilityOptions {
-  serverOnly?: boolean;
+  targetRoleOnly?: boolean;
 }
 
 export interface CollectionDiagnostics {
@@ -53,7 +53,6 @@ export interface CollectionDiagnostics {
   collectedAt: string;
   requestedSource: string;
   configuredSources: SourceId[];
-  serverOnly: boolean;
   wantedLimit: number;
   includeTossArticles: boolean;
   sourceDiagnostics: SourceDiagnostic[];
@@ -63,7 +62,7 @@ export interface CollectionDiagnostics {
 export interface CliArgs {
   jsonOut: string;
   source: SourceSelection;
-  serverOnly: boolean;
+  targetRoleOnly: boolean;
   wantedLimit: number;
   includeTossArticles: boolean;
 }
