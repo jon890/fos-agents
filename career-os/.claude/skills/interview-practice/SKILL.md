@@ -13,7 +13,8 @@ description: 기술·인성·포지션별 면접 질문을 준비하고 한 번�
 포지션 질문, 개인 질문 또는 연습 상태를 읽기 전에 다음 명령으로 홈서버의 현재 release를 준비한다.
 
 ```bash
-bun career-os/scripts/career-workspace/cli.ts skill begin interview-practice --json
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts" \
+  skill begin interview-practice --json
 ```
 
 명령이 실패하면 오래된 질문이나 진행 상태로 연습을 계속하지 않는다.
@@ -23,7 +24,8 @@ bun career-os/scripts/career-workspace/cli.ts skill begin interview-practice --j
 변경이 없으면 새 release를 만들지 않으며, 발행 실패 때도 로컬 기록은 보존한다.
 
 ```bash
-bun career-os/scripts/career-workspace/cli.ts skill finish interview-practice --json
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts" \
+  skill finish interview-practice --json
 ```
 
 ## 작업 유형

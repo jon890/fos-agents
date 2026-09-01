@@ -13,7 +13,8 @@ description: 공고에 맞춘 이력서·경력기술서를 작성하고 사람 
 `applications`, `library` 또는 `state`를 읽기 전에 다음 명령으로 홈서버의 현재 release를 준비한다.
 
 ```bash
-bun career-os/scripts/career-workspace/cli.ts skill begin resume-preparer --json
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts" \
+  skill begin resume-preparer --json
 ```
 
 명령이 실패하면 기존 로컬 파일을 근거로 문서를 고치지 않는다.
@@ -23,7 +24,8 @@ bun career-os/scripts/career-workspace/cli.ts skill begin resume-preparer --json
 검증에 실패한 초안은 발행하지 않으며, 발행이 실패해도 로컬 결과는 보존한다.
 
 ```bash
-bun career-os/scripts/career-workspace/cli.ts skill finish resume-preparer --json
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts" \
+  skill finish resume-preparer --json
 ```
 
 ## 입력

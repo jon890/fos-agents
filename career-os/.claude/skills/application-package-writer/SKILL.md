@@ -13,7 +13,8 @@ description: 공고 하나의 지원 가치, 회사·포지션 기준, 후보자
 `applications`, `library` 또는 `state`를 읽기 전에 다음 명령으로 홈서버의 현재 release를 준비한다.
 
 ```bash
-bun career-os/scripts/career-workspace/cli.ts skill begin application-package-writer --json
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts" \
+  skill begin application-package-writer --json
 ```
 
 명령이 실패하면 기존 로컬 파일로 작성을 계속하지 않는다.
@@ -23,7 +24,8 @@ bun career-os/scripts/career-workspace/cli.ts skill begin application-package-wr
 변경이 없으면 새 release를 만들지 않으며, 발행이 실패하면 로컬 결과를 지우지 않는다.
 
 ```bash
-bun career-os/scripts/career-workspace/cli.ts skill finish application-package-writer --json
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts" \
+  skill finish application-package-writer --json
 ```
 
 ## 사용자에게 주는 결과
