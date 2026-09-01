@@ -37,7 +37,7 @@ resume 환경은 Chrome과 `pdftoppm`이 있는 client에서만 HTML·PDF 렌더
 ### 5. 완료 상태와 운영 기록
 
 모든 검증이 통과하면 `career-os/tasks/plan108-career-private-activation/index.json`의 `status`를 `completed`, `current_phases`를 `4`로 갱신한다.
-검증한 revision, 환경별 transport, 충돌 판정과 파일 hash 비교 결과를 비밀값 없이 실행 기록에 남긴다.
+검증한 revision, 환경별 transport, 충돌 판정과 파일 hash 비교 결과를 비밀값 없이 완료 응답과 커밋에서 확인한다.
 
 ## Critical Files
 
@@ -45,7 +45,6 @@ resume 환경은 Chrome과 `pdftoppm`이 있는 client에서만 HTML·PDF 렌더
 | --- | --- |
 | `career-os/scripts/career-workspace/*.test.ts` | 외부 client·Hermes·충돌 검증 |
 | `career-os/tasks/plan108-career-private-activation/index.json` | 완료 상태 갱신 |
-| `career-os/docs/retrospectives/RUNS.md` | 다중 환경 검증 근거 |
 
 ## 검증
 

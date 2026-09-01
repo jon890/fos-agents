@@ -39,7 +39,7 @@ phase 1에서 승인 가능한 파일만 임시 로컬 workspace에 복사한다
 
 ### 5. 이관 기록과 원본 보존
 
-비밀값 없이 source label, 새 revision, 파일 수, digest와 검증 결과를 실행 기록에 남긴다.
+비밀값 없이 source label, 새 revision, 파일 수, digest와 검증 결과를 완료 응답과 커밋에서 확인한다.
 원래 로컬 파일은 plan 전체가 완료될 때까지 그대로 유지하고 자동 삭제 작업을 추가하지 않는다.
 
 ## Critical Files
@@ -48,7 +48,6 @@ phase 1에서 승인 가능한 파일만 임시 로컬 workspace에 복사한다
 | --- | --- |
 | `career-os/.career-sync/` | 로컬 이관 계획과 prepare 기준 상태 |
 | 홈서버 `career-storage/releases/<revision>/` | 최초 immutable release |
-| `career-os/docs/retrospectives/RUNS.md` | 비밀값 없는 이관 증거 |
 
 ## 검증
 
