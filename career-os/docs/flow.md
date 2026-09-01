@@ -4,8 +4,7 @@ career-os의 각 흐름은 외부 입력을 검증하고, 사용자 판단에 �
 
 ## 비공개 작업 파일의 목표 흐름
 
-공통 CLI는 다음 준비와 반영 절차를 구현한다.
-운영 `career-storage`와 연결한 뒤 `application-package-writer`, `resume-preparer`와 `interview-practice`의 진입점에 이 절차를 적용한다.
+`application-package-writer`, `resume-preparer`와 `interview-practice`는 공통 CLI로 다음 준비와 반영 절차를 실행한다.
 
 1. 로컬 `applications`, `library`와 `state`가 마지막으로 받은 revision에서 바뀌지 않았는지 검사한다.
 2. 홈서버의 현재 revision과 manifest를 확인한다.

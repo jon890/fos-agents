@@ -26,10 +26,11 @@ clone 뒤 확인할 기본 파일:
 - `config/position-collection.ts`: 공고 수집 설정과 검증.
 
 `scripts/career-workspace/`에는 비공개 작업 파일의 manifest, 준비, 차이 확인과 발행을 담당하는 공통 CLI가 있다.
-현재는 로컬 fixture로 파일 보존 계약까지 검증한 상태다.
-운영 홈서버의 `career-storage`와 기존 skill 자동 연결은 후속 작업에서 적용한다.
+홈서버의 `career-storage`는 검증된 release를 보관하고, 세 작성 skill은 실행 전 준비와 성공 뒤 발행을 자동으로 수행한다.
+직접 상태를 확인할 때는 `bun career-os/scripts/career-workspace/cli.ts check --json`을 실행한다.
 
 `.env`는 워크스페이스 루트에 두고 git에 올리지 않는다.
+SSH client는 원격 transport 값을 넣고, 홈서버의 Hermes는 `CAREER_WORKSPACE_LOCAL_TRANSPORT_ROOT`로 같은 저장소를 직접 읽는다.
 진행 중인 지원 대상은 private brain에서 확인하고 공고별 실행 자료는 `applications/<company>/<role>/`에서 관리한다.
 외부 게시, 제출, 로그인, 업로드, 메시지 전송은 사용자 승인 후에만 수행한다.
 

@@ -8,6 +8,24 @@ description: 기술·인성·포지션별 면접 질문을 준비하고 한 번�
 사용자가 먼저 답하고 에이전트가 근거, 구조와 표현을 보강한다.
 완성 답변을 먼저 써 주거나 단계별 준비 문서를 별도로 만들지 않는다.
 
+## 비공개 작업본 동기화
+
+포지션 질문, 개인 질문 또는 연습 상태를 읽기 전에 다음 명령으로 홈서버의 현재 release를 준비한다.
+
+```bash
+bun career-os/scripts/career-workspace/cli.ts skill begin interview-practice --json
+```
+
+명령이 실패하면 오래된 질문이나 진행 상태로 연습을 계속하지 않는다.
+오류 코드와 로컬 파일이 보존됐다는 사실만 알리고 중단한다.
+
+질문 또는 연습 상태를 정상적으로 검증해 기록한 뒤 다음 명령을 실행한다.
+변경이 없으면 새 release를 만들지 않으며, 발행 실패 때도 로컬 기록은 보존한다.
+
+```bash
+bun career-os/scripts/career-workspace/cli.ts skill finish interview-practice --json
+```
+
 ## 작업 유형
 
 - 답변 연습: 기술 또는 인성 질문을 고르고 답변을 평가해 복습 상태에 반영한다.

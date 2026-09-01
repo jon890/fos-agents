@@ -65,6 +65,11 @@ publish tar의 최상위에는 `workspace-draft.json`과 같은 세 관리 root�
 Markdown, JSON, 검토용 HTML, PDF와 실제 제출 묶음은 해당 application 디렉터리 안에서 함께 동기화한다.
 게시 뒤 삭제하는 공개 리포트와 원본에서 다시 만들 수 있는 cache는 release에 포함하지 않는다.
 
+client의 `.env`는 작업 경로와 transport만 주입한다.
+SSH 환경은 `CAREER_WORKSPACE_SSH_TARGET`, `CAREER_WORKSPACE_SSH_ARGS`와 `CAREER_WORKSPACE_REMOTE_COMMAND`를 사용한다.
+홈서버의 Hermes는 `CAREER_WORKSPACE_LOCAL_TRANSPORT_ROOT`로 같은 저장소를 직접 읽는다.
+근거 원장의 `${PROJECTS_ROOT}`와 `${PERSONAL_ROOT}`는 환경마다 같은 이름의 변수로 해석하며 release에는 환경별 절대 경로를 저장하지 않는다.
+
 ## Config
 
 ### `config/candidate-profile.md`
