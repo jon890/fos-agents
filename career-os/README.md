@@ -46,14 +46,15 @@ clone 뒤 확인할 기본 파일:
 
 - `config/`에는 후보자 기준, 정책, 사람이 고른 예외를 둔다.
 - `applications/`, `library/`와 `state/`는 홈서버 파일 release와 동기화할 로컬 작업본이다.
-- `reports/`와 `cache/`에는 로컬 실행 결과와 재생성 가능한 캐시를 둔다.
+- 게시용 HTML과 실행별 중간 데이터는 시스템 임시 디렉터리에 두고 검증 뒤 삭제한다.
+- `cache/`에는 원본에서 다시 만들 수 있는 수집 결과를 둔다.
 - `public/question-bank/`, `sources/fos-study/`에는 공개 가능한 일반 지식만 둔다.
 - 실제 제출, 로그인, 업로드, 외부 메시지 전송, 공개 발행은 사용자 승인 후에만 수행한다.
 
 ## 검증
 
 문서 변경 뒤에는 현재 파일 구조와 낡은 실행기·경로·전달 매체 표현이 남았는지 확인한다.
-구조 변경이면 `scripts/`, `config/`, `applications/`, `library/`, `state/`, `reports/`, `cache/`의 실제 파일과 문서 설명을 대조한다.
+구조 변경이면 `scripts/`, `config/`, `applications/`, `library/`, `state/`, `cache/`와 시스템 임시 산출물의 설명을 대조한다.
 
 TypeScript 스크립트 변경이 있으면 루트에서 `bunx tsc --noEmit`과 해당 스크립트의 검증 명령을 실행한다.
 
