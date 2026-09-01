@@ -1,21 +1,21 @@
 ---
 name: position-recommender
-description: 후보자 프로필과 현재 열린 외부 채용공고를 비교해 지원할 포지션을 추천하고 임시 HTML 리포트를 Cloudflare Pages에 게시하는 career-os 스킬. "지원할 포지션 추천", "갈 만한 회사 찾아줘", "최신 백엔드 공고 분석", "이직 후보 추천"처럼 실제 공고 탐색과 지원 우선순위가 필요할 때 사용한다.
+description: 현재 경력·역할 선호와 열린 외부 채용공고를 비교해 지원 우선순위를 카드형 HTML로 만드는 career-os 스킬. "지원할 포지션 추천", "갈 만한 회사 찾아줘", "최신 백엔드 공고 분석", "이직 후보 추천"처럼 실제 공고 탐색과 지원 우선순위가 필요할 때 사용한다. 외부 게시는 사용자가 공유 링크를 요청했을 때만 수행한다.
 ---
 
 # 포지션 추천
 
 외부 소스에서 현재 열린 공고를 먼저 수집한다.
-후보자 프로필과 전체 후보풀을 모델이 비교해 추천한다.
+private brain의 현재 커리어 정보와 전체 후보풀을 모델이 비교해 추천한다.
 
 ## 입력
 
-항상 다음 파일을 읽는다.
+항상 다음 정보를 읽는다.
 
-- `config/candidate-profile.md`
+- `brain-search`로 확인한 현재 경력, 역할 선호와 경험 경계
 - [`references/position-decision-criteria.md`](references/position-decision-criteria.md)
 
-세부 경력 근거가 판단에 필요할 때 프로필에서 연결한 최신 경력 자료와 업무 기록을 읽는다.
+세부 경력 근거가 판단에 필요하면 `sources/fos-study/`와 실제 프로젝트 기록을 확인한다.
 현재 지원 대상, 지원 이력이나 회사별 재지원 간격이 순위에 영향을 주면 `brain-search`로 private brain을 확인한다.
 저장소 안에 별도 쿨다운 상태 파일을 만들지 않는다.
 
@@ -35,7 +35,7 @@ mktemp -d "${TMPDIR:-/tmp}/position-recommender.XXXXXX"
 ### 2. 외부 공고 수집
 
 ```bash
-bun scripts/position-recommender/collect_live_postings.ts \
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/position-recommender/collect_live_postings.ts" \
   --output <RUN_DIR>/posting-candidates.json
 ```
 
@@ -55,7 +55,7 @@ bun scripts/position-recommender/collect_live_postings.ts \
 
 ### 3. 모델 선별
 
-모델은 후보풀 전체와 후보자 프로필을 비교한다.
+모델은 후보풀 전체와 private brain에서 확인한 현재 커리어 정보를 비교한다.
 추천 순위는 후보자 근거와 아래 판단 축으로 정한다.
 닫힘 여부와 마감일은 수집기의 판정을 사용한다.
 
@@ -85,7 +85,7 @@ bun scripts/position-recommender/collect_live_postings.ts \
 ### 4. 결과 검증
 
 ```bash
-bun scripts/position-recommender/validate_recommendation.ts \
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/position-recommender/validate_recommendation.ts" \
   --input <RUN_DIR>/recommendation.json \
   --candidates <RUN_DIR>/posting-candidates.json
 ```
@@ -105,7 +105,7 @@ bun scripts/position-recommender/validate_recommendation.ts \
 ### 5. 임시 HTML 생성
 
 ```bash
-bun scripts/position-recommender/render_candidate_preview.ts \
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/position-recommender/render_candidate_preview.ts" \
   --input <RUN_DIR>/recommendation.json \
   --candidates <RUN_DIR>/posting-candidates.json \
   --limit all \
@@ -134,10 +134,10 @@ HTML에는 다음 내용을 담는다.
 
 외부 공유용 HTML은 공개 공고 정보와 일반화한 추천 근거로 구성한다.
 
-### 6. Cloudflare Pages 게시
+### 6. 로컬 검토와 선택적 게시
 
-사용자가 포지션 추천을 요청하면 HTML을 `report-publisher`로 게시해 바로 열 수 있는 링크를 제공한다.
-Cloudflare Pages 준비, 게시와 검증은 `report-publisher`로 실행한다.
+생성한 HTML을 실제 브라우저에서 열어 카드, 검색, 모바일 배치와 공고 링크를 확인한다.
+사용자가 외부 공유 링크를 요청했을 때만 `report-publisher`로 Cloudflare Pages 준비, 게시와 검증을 수행한다.
 
 `report-publisher`에 다음 값을 전달한다.
 
@@ -150,12 +150,12 @@ Cloudflare Pages 준비, 게시와 검증은 `report-publisher`로 실행한다.
 - 내용은 공개 공고 정보와 일반화한 추천 근거로 한정된다.
 - 공고 URL은 공개된 HTTPS 개별 공고 링크다.
 
-`report-publisher`의 준비 검사, Cloudflare Pages 업로드, 공개 URL 검증을 모두 따른다.
+게시를 요청한 경우 `report-publisher`의 준비 검사, Cloudflare Pages 업로드와 공개 URL 검증을 모두 따른다.
 최종 응답에는 검증된 `branch_url`을 우선 전달하고, 없으면 검증된 `public_url`을 전달한다.
 
 ### 7. 임시 파일 정리
 
-게시 성공 여부와 관계없이 최종 응답 전에 `<RUN_DIR>`을 삭제한다.
+로컬 렌더 또는 게시 검증을 마친 뒤 최종 응답 전에 `<RUN_DIR>`을 삭제한다.
 삭제 전 경로가 시스템 임시 디렉터리 아래에 있고 이름이 `position-recommender`로 시작하는지 확인한다.
 아래 명령으로 알려진 파일을 삭제하고 빈 디렉터리를 제거한다.
 
@@ -175,7 +175,7 @@ rmdir "<RUN_DIR>"
 - 전체 후보 순위와 한 줄 판단이 후보풀 전체를 포함한다.
 - HTML의 모든 공고 링크가 개별 공고 URL이다.
 - 확인할 수 없는 값이 불확실성 표기로 드러난다.
-- `report-publisher`가 Cloudflare Pages 공개 URL을 검증했다.
+- 외부 게시를 요청한 경우 `report-publisher`가 Cloudflare Pages 공개 URL을 검증했다.
 - 알려진 임시 파일 삭제와 `<RUN_DIR>`의 `rmdir`가 성공했다.
 
 ## 관련 파일

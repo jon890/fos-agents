@@ -11,7 +11,7 @@ public `fos-agents` 저장소는 skill과 실행 코드를 소유한다.
 career-os/
 ├── .claude/skills/       사용자 작업별 skill
 ├── .codex/skills/        Codex에서 같은 skill을 노출하는 링크
-├── config/               사람이 관리하는 프로필과 수집 정책
+├── config/               사람이 관리하는 수집 정책과 디자인
 ├── scripts/              검증, 수집과 변환 코드
 ├── applications/         동기화되는 로컬 지원 패키지
 ├── library/              여러 지원에서 재사용하는 비공개 자료
@@ -21,6 +21,29 @@ career-os/
 ├── sources/fos-study/    별도 저장소에서 관리하는 공개 학습·이력 자료
 └── docs/                 제품, 흐름, 데이터, 기술 결정 문서
 ```
+
+## 파일 개요
+
+| 경로 | 책임 |
+| --- | --- |
+| `.claude/skills/<name>/SKILL.md` | 사용자 요청별 실행 계약의 관리 원본 |
+| `.claude/skills/_shared/` | 여러 skill이 공유하는 비공개 작업본 동기화 계약 |
+| `.codex/skills/<name>` | Codex가 같은 skill을 읽는 링크 |
+| `config/*.ts` | 공고, 읽을거리와 면접 자료의 수집 정책 |
+| `config/resume-design.md` | 이력서와 경력기술서의 기본 시각 기준 |
+| `scripts/career-workspace/` | 비공개 작업본의 준비, 차이 확인과 release 반영 |
+| `scripts/position-recommender/` | 활성 공고 수집, 추천 검증과 HTML 생성 |
+| `scripts/study-topic-recommender/` | 읽을거리 수집, 선별 결과 검증과 HTML 생성 |
+| `scripts/interview-drill/` | 질문 선택, 꼬리질문과 복습 상태 관리 |
+| `applications/<company>/<position>/` | 공고별 지원 전략, 제출 문서와 면접 질문 |
+| `library/` | 여러 지원에서 재사용하는 비공개 질문과 이력서 기준본 |
+| `state/` | 답변 연습처럼 다음 실행에 필요한 상태 |
+| `public/question-bank/` | 공개 가능한 일반 면접 질문과 출처 |
+| `sources/fos-study/` | 별도 저장소에서 관리하는 공개 학습·경력 근거 |
+| `docs/` | 제품 가치, 흐름, 데이터 계약, 코드 구조와 결정 이유 |
+
+현재 경력, 역할 선호와 경험 경계는 이 저장소에 복제하지 않는다.
+skill이 private brain에서 조회하고, 제출에 사용할 세부 성과는 `sources/fos-study/`와 실제 프로젝트 근거로 다시 확인한다.
 
 ## Skill과 실행 코드
 
@@ -59,7 +82,8 @@ Wanted adapter는 개발 전체 직군 `518`을 기술 상수로 사용하고, �
 
 수집 결과는 실행별 임시 후보풀에 저장한다.
 모델은 후보풀에 존재하는 공고만 선별하고, `recommendation_schema.ts`가 결과 구조와 원문 일치 여부를 검사한다.
-HTML은 검증된 추천 JSON에서 파생하며 게시 검증 뒤 임시 데이터와 함께 삭제한다.
+HTML은 검증된 추천 JSON에서 파생한다.
+외부 게시를 요청하면 게시 검증 뒤 임시 데이터와 함께 삭제하고, 게시하지 않으면 사용자에게 로컬 검토 경로를 전달한 뒤 정리한다.
 
 ## 지원 패키지
 
@@ -80,10 +104,11 @@ HTML은 검증된 추천 JSON에서 파생하며 게시 검증 뒤 임시 데이
 여러 지원에서 재사용하는 개인 질문과 이력서 기준본만 `library/`에 둔다.
 실제 제출은 두 스킬의 책임이 아니다.
 
-## 후보자 프로필과 이력서
+## 후보자 지식과 이력서
 
-`config/candidate-profile.md`는 추천과 지원 준비에 필요한 후보자 요약과 확인된 경력 경계를 제공한다.
-세부 성과는 문서 안에서 연결한 최신 이력 자료와 실제 작업 저장소를 확인한다.
+현재 경력, 역할 선호와 경험 경계의 기준 원본은 private brain이다.
+skill은 필요한 정보를 실행 시점에 조회하고 TypeScript 스크립트에 명시적인 입력으로 전달한다.
+세부 성과는 공개 가능한 `sources/fos-study/`와 실제 작업 저장소에서 다시 확인한다.
 
 제출 문서의 감사 결과와 주장별 근거 장부는 해당 `applications/<company>/<position>/`에 둔다.
 공개 가능한 이력 자료는 별도 `sources/fos-study/` 저장소에서 관리한다.

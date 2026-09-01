@@ -1,6 +1,6 @@
 ---
 name: study-topic-recommender
-description: 등록된 회사 기술 블로그, GeekNews, AI 공식 문서·연구와 YouTube 채널에서 최신 자료를 수집하고, 읽을 가치가 있는 자료를 모두 카드형 HTML 리포트로 만든 뒤 Cloudflare Pages에 게시하는 career-os 스킬. "오늘 뭐 읽을까", "오늘 공부할 글 추천", "아침 읽을거리", "기술 블로그 추천", "AI 연구 동향", "영상 추천", "학습 주제 추천", `/study-topic-recommender`처럼 외부 기술 자료 추천이 필요할 때 사용한다.
+description: 등록된 회사 기술 블로그, GeekNews, AI 공식 문서·연구와 YouTube 채널에서 최신 자료를 수집하고 읽을 가치가 있는 자료를 카드형 HTML로 만드는 career-os 스킬. "오늘 뭐 읽을까", "오늘 공부할 글 추천", "아침 읽을거리", "기술 블로그 추천", "AI 연구 동향", "영상 추천", "학습 주제 추천", `/study-topic-recommender`처럼 외부 기술 자료 추천이 필요할 때 사용한다. 외부 게시는 사용자가 공유 링크를 요청했을 때만 수행한다.
 ---
 
 # 아침 읽을거리 추천
@@ -34,8 +34,8 @@ mktemp -d "${TMPDIR:-/tmp}/study-topic-recommender.XXXXXX"
 ### 2. 외부 글 수집
 
 ```bash
-CAREER_OS_ROOT=<RUN_DIR> bun --env-file=.env \
-  scripts/study-topic-recommender/build_morning_reading.ts \
+CAREER_OS_ROOT=<RUN_DIR> bun --env-file="$(git rev-parse --show-toplevel)/career-os/.env" \
+  "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender/build_morning_reading.ts" \
   --collect-only
 ```
 
@@ -52,9 +52,11 @@ CAREER_OS_ROOT=<RUN_DIR> bun --env-file=.env \
 `brain-search`로 현재 학습 관심사와 기술 친숙도를 조회한다.
 
 ```bash
-rg --files sources/fos-study -g '*.md'
-git -C sources/fos-study log -n 20 --name-only --format= -- '*.md'
+rg --files "$(git rev-parse --show-toplevel)/career-os/sources/fos-study" -g '*.md'
+git -C "$(git rev-parse --show-toplevel)/career-os/sources/fos-study" log --name-only --format= -- '*.md'
 ```
+
+이력은 최근 학습 방향과 반복 주제를 복원할 만큼만 읽고, 고정 개수만 보고 방향을 확정하지 않는다.
 
 카테고리별로 다음 순서로 고른다.
 
@@ -123,8 +125,8 @@ git -C sources/fos-study log -n 20 --name-only --format= -- '*.md'
 ### 4. 임시 리포트 생성
 
 ```bash
-CAREER_OS_ROOT=<RUN_DIR> bun --env-file=.env \
-  scripts/study-topic-recommender/build_morning_reading.ts \
+CAREER_OS_ROOT=<RUN_DIR> bun --env-file="$(git rev-parse --show-toplevel)/career-os/.env" \
+  "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender/build_morning_reading.ts" \
   --candidate-pool <RUN_DIR>/state/reading-candidates.json \
   --reading-selection <RUN_DIR>/reading-selection.json
 ```
@@ -136,8 +138,8 @@ CAREER_OS_ROOT=<RUN_DIR> bun --env-file=.env \
 
 ```bash
 CAREER_OS_ROOT=<RUN_DIR> bun \
-  scripts/study-topic-recommender/validate_outputs.ts
-bun scripts/study-topic-recommender/manage_reading_sources.ts validate
+  "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender/validate_outputs.ts"
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender/manage_reading_sources.ts" validate
 ```
 
 `collectionLog`의 수집 상태를 최종 응답에 반영한다.
@@ -149,20 +151,21 @@ bun scripts/study-topic-recommender/manage_reading_sources.ts validate
 - 공개 가능한 요약과 추천 이유
 - 수집 시각과 소스별 수집 상태
 
-### 6. Cloudflare Pages 게시
+### 6. 로컬 검토와 선택적 게시
 
-`report-publisher`로 아래 값을 준비, 게시하고 검증한다.
+생성한 HTML을 실제 브라우저에서 열어 카드, 원문 링크와 모바일 배치를 확인한다.
+사용자가 외부 공유 링크를 요청했을 때만 `report-publisher`로 아래 값을 준비, 게시하고 검증한다.
 
 - 게시 대상: `<RUN_DIR>/morning-reading-YYYY-MM-DD.html`
 - 공개 이름: `morning-YYYY-MM-DD`
 - Pages 프로젝트: `fos-reports`
 
-검증된 `branch_url`이 있으면 안정적인 사용자용 주소로 우선 전달한다.
-`branch_url`이 없거나 검증에 실패한 경우에만 검증된 `public_url`을 전달한다.
+게시를 요청했고 검증된 `branch_url`이 있으면 사용자용 주소로 우선 전달한다.
+`branch_url`이 없으면 검증된 `public_url`을 전달한다.
 
 ### 7. 임시 파일 정리
 
-게시 검증 뒤 `<RUN_DIR>`의 파일과 빈 디렉터리를 순서대로 정리한다.
+로컬 렌더 또는 게시 검증 뒤 `<RUN_DIR>`의 파일과 빈 디렉터리를 순서대로 정리한다.
 삭제 전 경로가 시스템 임시 디렉터리 아래에 있고 이름이 `study-topic-recommender`로 시작하는지 확인한다.
 아래 두 명령은 각각 별도의 terminal 호출로 실행한다.
 조건문, `rm`, `node -e`나 다른 명령과 한 호출에 합치지 않는다.
@@ -173,8 +176,8 @@ find "<RUN_DIR>" -depth -type d -exec rmdir {} \;
 ```
 
 별도 미리보기 파일을 만들었다면 각 파일을 `unlink "<절대 경로>"` 한 호출로 정리한다.
-리포트 게시와 공개 URL 검증이 끝난 뒤 정리만 실패하면 전체 작업을 실패로 바꾸지 않는다.
-검증된 링크와 추천 결과를 전달하고 정리하지 못한 경로를 경고로 남긴다.
+렌더링 또는 게시 검증이 끝난 뒤 정리만 실패하면 전체 작업을 실패로 바꾸지 않는다.
+추천 결과와 정리하지 못한 경로를 알리고, 게시를 요청한 경우 검증된 링크도 전달한다.
 
 ## 완료 조건
 
@@ -183,5 +186,5 @@ find "<RUN_DIR>" -depth -type d -exec rmdir {} \;
 - AI 추천이 공식 원문을 근거로 모델·에이전트·하네스·연구 범위를 폭넓게 검토했다.
 - 요약과 추천 이유가 확인한 원문을 반영한다.
 - 리포트와 소스 설정 검증이 통과했다.
-- `report-publisher`가 Cloudflare Pages 공개 URL을 검증했다.
+- 외부 게시를 요청한 경우 `report-publisher`가 Cloudflare Pages 공개 URL을 검증했다.
 - `<RUN_DIR>` 정리를 시도했고, 실패한 경우 게시 성공을 덮어쓰지 않는 경고로 기록했다.

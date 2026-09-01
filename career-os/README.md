@@ -19,14 +19,16 @@
 
 ## 설정
 
-clone 뒤 확인할 기본 파일:
-
-- `.env.example`: 필요한 secret 키 이름.
-- `config/candidate-profile.md`: 후보자 프로필 기준 원본.
+clone 뒤에는 `.env.example`에서 필요한 secret 키 이름을 확인한다.
+현재 경력, 역할 선호와 경험 경계는 private brain이 기준 원본이다.
 
 `scripts/career-workspace/`에는 비공개 작업 파일의 manifest, 준비, 차이 확인과 발행을 담당하는 공통 CLI가 있다.
 홈서버의 `career-storage`는 검증된 release를 보관하고, 세 작성 skill은 실행 전 준비와 성공 뒤 발행을 자동으로 수행한다.
-직접 상태를 확인할 때는 `bun career-os/scripts/career-workspace/cli.ts check --json`을 실행한다.
+직접 상태를 확인할 때는 저장소 루트에서 다음 명령을 실행한다.
+
+```bash
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts" check --json
+```
 
 `.env`는 워크스페이스 루트에 두고 git에 올리지 않는다.
 SSH client는 원격 transport 값을 넣고, 홈서버의 Hermes는 `CAREER_WORKSPACE_LOCAL_TRANSPORT_ROOT`로 같은 저장소를 직접 읽는다.
@@ -44,7 +46,7 @@ SSH client는 원격 transport 값을 넣고, 홈서버의 Hermes는 `CAREER_WOR
 
 ## 데이터 경계
 
-- `config/`에는 후보자 기준, 정책, 사람이 고른 예외를 둔다.
+- `config/`에는 수집 정책과 사람이 고른 예외를 둔다.
 - `applications/`, `library/`와 `state/`는 홈서버 파일 release와 동기화할 로컬 작업본이다.
 - 게시용 HTML과 실행별 중간 데이터는 시스템 임시 디렉터리에 두고 검증 뒤 삭제한다.
 - `cache/`에는 원본에서 다시 만들 수 있는 수집 결과를 둔다.
@@ -66,4 +68,3 @@ TypeScript 스크립트 변경이 있으면 루트에서 `bunx tsc --noEmit`과 
 - [docs/data-schema.md](docs/data-schema.md): config·state·산출물 스키마
 - [docs/code-architecture.md](docs/code-architecture.md): 디렉터리와 구현 책임
 - [docs/adr/INDEX.md](docs/adr/INDEX.md): 중요한 결정의 이유
-- [docs/README.md](docs/README.md): 문서 작성 책임과 형식

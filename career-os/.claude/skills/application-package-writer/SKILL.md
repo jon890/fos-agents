@@ -10,23 +10,7 @@ description: 공고 하나의 지원 가치, 회사·포지션 기준, 후보자
 
 ## 비공개 작업본 동기화
 
-`applications`, `library` 또는 `state`를 읽기 전에 다음 명령으로 홈서버의 현재 release를 준비한다.
-
-```bash
-bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts" \
-  skill begin application-package-writer --json
-```
-
-명령이 실패하면 기존 로컬 파일로 작성을 계속하지 않는다.
-오류 코드와 로컬 파일이 보존됐다는 사실만 알리고 중단한다.
-
-산출물 검사까지 성공한 뒤 다음 명령을 실행한다.
-변경이 없으면 새 release를 만들지 않으며, 발행이 실패하면 로컬 결과를 지우지 않는다.
-
-```bash
-bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts" \
-  skill finish application-package-writer --json
-```
+[`career-workspace-sync.md`](../../../.claude/skills/_shared/career-workspace-sync.md)를 `SKILL_NAME=application-package-writer`로 적용한다.
 
 ## 사용자에게 주는 결과
 
@@ -47,8 +31,8 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 ## 입력
 
 1. `applications/<company>/<role>/posting.md`
-2. `config/candidate-profile.md`
-3. 후보자 프로필에서 연결한 최신 경력 자료와 관련 업무 근거
+2. `brain-search`로 확인한 현재 경력, 역할 선호와 경험 경계
+3. `sources/fos-study/`의 최신 공개 경력 자료와 관련 업무 근거
 4. 필요하면 로컬 프로젝트의 코드, 테스트, Git 이력과 기술 결정 문서
 5. `applications/<company>/<role>/candidate-interview.md`가 있으면 기존 답변
 
@@ -71,7 +55,7 @@ brain에 현재 대상이 없거나 대응하는 지원 디렉터리가 없거�
 - 필수 경험과 우대 경험
 - 이력서 작성 안내와 채용 단계
 - 팀이 강조하는 판단 방식과 운영 책임
-- 공식 문화 기준 중 이 포지션과 직접 관련된 3개에서 5개
+- 공식 문화 기준 중 이 포지션의 판단과 행동을 실제로 구분하는 항목
 
 확인 시각과 공식 URL을 `posting.md` 또는 `application-package.md`에 남긴다.
 
@@ -106,7 +90,7 @@ brain에 현재 대상이 없거나 대응하는 지원 디렉터리가 없거�
 `references/application-quality-rubric.md`를 읽는다.
 공고 요구사항과 회사 기준을 후보자 근거에 연결한다.
 
-`brain`과 경력기술서는 탐색을 위한 색인으로 사용한다.
+private brain과 기존 경력기술서는 탐색을 위한 색인으로 사용한다.
 지원 판단이 달라지는 핵심 경험은 가능하면 로컬 프로젝트에서 확인한다.
 로컬 근거로 결론을 낼 수 없으면 기존 문장을 사실로 확정하지 않고 `사용자 확인`으로 남긴다.
 코드 존재, 본인 소유권, 결과와 운영 깊이를 주장 단위로 감사하는 일은 `resume-preparer`가 담당한다.
@@ -131,7 +115,7 @@ brain에 현재 대상이 없거나 대응하는 지원 디렉터리가 없거�
 - `interview-questions.json`: 공고 책임, 근거 방어와 경험 공백에서 만든 포지션별 질문
 
 지원 사이트가 자기소개나 별도 질문을 요구할 때만 application-answers.md를 만든다.
-이력서, 경력기술서, 근거 원장, 점수표와 PDF는 `resume-preparer`가 만든다.
+이력서, 경력기술서, 근거 원장, 검토표와 PDF는 `resume-preparer`가 만든다.
 `application-package.html`은 두 단계의 결과를 마지막에 하나로 묶는다.
 
 `application-package.md`에는 다음 섹션을 둔다.
@@ -160,7 +144,7 @@ brain에 현재 대상이 없거나 대응하는 지원 디렉터리가 없거�
 질문은 `interview-questions.json` 하나에 저장하고 다음 명령으로 검증한다.
 
 ```bash
-bun career-os/scripts/interview-drill/application_question_schema.ts \
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/interview-drill/application_question_schema.ts" \
   <application-directory>
 ```
 
@@ -210,7 +194,7 @@ bun career-os/scripts/interview-drill/application_question_schema.ts \
 ## 안전 경계
 
 - 실제 지원, 로그인, 업로드와 외부 전송은 하지 않는다.
-- `sources/fos-study/`와 후보자 프로필은 읽기 전용이다.
+- private brain과 `sources/fos-study/`는 읽기 전용이다.
 - 내부 파일 경로와 검토 상태를 제출 문장에 넣지 않는다.
 - 로컬 프로젝트에서 찾은 사내 식별자, 호스트, 자격증명과 비공개 수치는 제출 문장에 옮기지 않는다.
 - `application-package.html`은 로컬 검토용이며 공개 게시하지 않는다.
@@ -222,5 +206,5 @@ bun career-os/scripts/interview-drill/application_question_schema.ts \
 - `references/application-quality-rubric.md`
 - `scripts/validate_application_package.ts`
 - `scripts/render_application_package.ts`
-- `config/candidate-profile.md`
+- `brain-search`
 - `resume-preparer`

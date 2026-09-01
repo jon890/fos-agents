@@ -27,11 +27,11 @@ mktemp -d "${TMPDIR:-/tmp}/interview-question-sources.XXXXXX"
 반환 경로를 `<RUN_DIR>`로 사용한다.
 
 ```bash
-bun career-os/scripts/interview-question-sources/cli.ts validate
-bun career-os/scripts/interview-question-sources/cli.ts collect \
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/interview-question-sources/cli.ts" validate
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/interview-question-sources/cli.ts" collect \
   --output <RUN_DIR>/interview-source-candidates.json \
   --cache-dir <RUN_DIR>/cache
-bun career-os/scripts/question-bank-collector/validate.ts
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/question-bank-collector/validate.ts"
 ```
 
 일부 출처가 실패해도 다른 출처의 후보가 있으면 계속한다.
@@ -64,7 +64,7 @@ find <RUN_DIR> -depth -type d -exec rmdir {} \;
 | `global-scale` | 모호한 문제를 정의하고 다중 리전·조직 공통 기반의 실패 격리, 보안과 장기 trade-off를 주도한다. |
 
 현재 회사는 시작 수준을 추정하는 입력일 뿐 질문을 낮추거나 높이는 고정 서열이 아니다.
-NHN보다 높은 목표를 준비할 때는 현재 근거를 방어하는 질문, 목표 역할 질문과 한 단계 높은 확장 질문을 함께 둔다.
+현재보다 높은 목표를 준비할 때는 현재 근거를 방어하는 질문, 목표 역할 질문과 한 단계 높은 확장 질문을 함께 둔다.
 목표가 `large-scale`이면 `production` 질문은 기본 세션에서 제외하고, `large-scale`과 `global-scale` 질문만 선별한다.
 단, 이전 연습에서 확인한 기본기 공백은 별도 복습 항목으로 다룬다.
 

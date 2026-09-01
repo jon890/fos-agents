@@ -5,7 +5,7 @@
 
 ### 맥락
 
-포지션 추천은 NHN보다 나은 회사군을 우선 탐색해야 한다.
+포지션 추천은 현재보다 이직 가치가 높은 회사와 역할을 우선 탐색해야 한다.
 하지만 daily runner 기본 Wanted broad scan만으로는 카카오, 네이버, 쿠팡, 라인 같은 선호 회사의 active 공고가 자주 누락된다.
 반대로 모든 회사의 공식 채용 사이트가 안정적인 API를 제공하지는 않는다.
 특히 Coupang 공식 careers는 curl/agent-browser 접근에서 Cloudflare 차단을 반환할 수 있다.

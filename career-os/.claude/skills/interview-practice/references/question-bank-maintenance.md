@@ -59,7 +59,7 @@
 6. 각 항목에 category, difficulty, question, intent, answerSignals, source, publicSafe, positionFitHint, normalizedFrom, tags, followUps를 채운다.
    목표 수준을 구분해야 하면 `bar`도 기록한다.
 7. public bank만 보강하는 요청이면 `public/question-bank/`만 수정한다.
-8. 보강 후 `bun career-os/scripts/question-bank-collector/validate.ts`를 실행한다.
+8. 보강 후 저장소 루트의 `career-os/scripts/question-bank-collector/validate.ts`를 실행한다.
 
 ### behavioral 웹 수집 승격 규칙
 
@@ -96,7 +96,7 @@
 변경 뒤 다음 명령을 실행한다.
 
 ```bash
-bun career-os/scripts/question-bank-collector/validate.ts
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/question-bank-collector/validate.ts"
 git diff --check
 git status --short sources/fos-study
 ```

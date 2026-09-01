@@ -29,12 +29,12 @@
 ## 조회와 검증
 
 ```bash
-bun scripts/study-topic-recommender/manage_reading_sources.ts validate
-bun scripts/study-topic-recommender/manage_reading_sources.ts list
-bun scripts/study-topic-recommender/manage_reading_sources.ts list --category techBlog
-bun scripts/study-topic-recommender/manage_reading_sources.ts list --category ai
-bun scripts/study-topic-recommender/manage_reading_sources.ts list --category video
-bun scripts/study-topic-recommender/manage_reading_sources.ts list --include-disabled
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender/manage_reading_sources.ts" validate
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender/manage_reading_sources.ts" list
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender/manage_reading_sources.ts" list --category techBlog
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender/manage_reading_sources.ts" list --category ai
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender/manage_reading_sources.ts" list --category video
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender/manage_reading_sources.ts" list --include-disabled
 ```
 
 ## 소스 추가
@@ -42,7 +42,7 @@ bun scripts/study-topic-recommender/manage_reading_sources.ts list --include-dis
 다음 명령으로 타입 검증을 통과하는 객체 초안을 만든다.
 
 ```bash
-bun scripts/study-topic-recommender/manage_reading_sources.ts template \
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender/manage_reading_sources.ts" template \
   --category techBlog \
   --key example-engineering \
   --title "Example Engineering" \
@@ -63,6 +63,6 @@ YouTube 채널은 채널 ID 기반 공식 Atom 피드를 `feedUrl`로 등록한�
 수정 후 다음 검증을 실행한다.
 
 ```bash
-bun scripts/study-topic-recommender/manage_reading_sources.ts validate
-bun test scripts/study-topic-recommender
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender/manage_reading_sources.ts" validate
+bun test "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender"
 ```

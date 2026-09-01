@@ -1,6 +1,6 @@
 ---
 name: interview-practice
-description: 기술·인성·포지션별 면접 질문을 준비하고 한 번에 하나씩 연습하며, 답변 평가와 복습 상태를 관리하는 career-os 스킬. "면접 준비", "면접 연습", "기술 면접 질문", "인성 면접 답변", "STAR 연습", "모의 질문", "약점 복습", "질문 은행 보강", "Java/Spring/DB/운영 질문 모아줘"처럼 질문 준비·수집·연습이 필요할 때 사용한다. 공개 질문 보강은 내부 유지보수 절차로 처리한다.
+description: 기술·인성·포지션별 면접 질문을 준비하고 한 번에 하나씩 연습하며, 답변 평가와 복습 상태를 관리하는 career-os 스킬. "면접 준비", "면접 연습", "기술 면접 질문", "인성 면접 답변", "STAR 연습", "모의 질문", "약점 복습", "질문 은행 보강"처럼 질문 준비·수집·연습이 필요할 때 사용한다. 공개 질문 보강은 내부 유지보수 절차로 처리한다.
 ---
 
 # 면접 준비와 답변 연습
@@ -10,23 +10,7 @@ description: 기술·인성·포지션별 면접 질문을 준비하고 한 번�
 
 ## 비공개 작업본 동기화
 
-포지션 질문, 개인 질문 또는 연습 상태를 읽기 전에 다음 명령으로 홈서버의 현재 release를 준비한다.
-
-```bash
-bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts" \
-  skill begin interview-practice --json
-```
-
-명령이 실패하면 오래된 질문이나 진행 상태로 연습을 계속하지 않는다.
-오류 코드와 로컬 파일이 보존됐다는 사실만 알리고 중단한다.
-
-질문 또는 연습 상태를 정상적으로 검증해 기록한 뒤 다음 명령을 실행한다.
-변경이 없으면 새 release를 만들지 않으며, 발행 실패 때도 로컬 기록은 보존한다.
-
-```bash
-bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts" \
-  skill finish interview-practice --json
-```
+[`career-workspace-sync.md`](../../../.claude/skills/_shared/career-workspace-sync.md)를 `SKILL_NAME=interview-practice`로 적용한다.
 
 ## 작업 유형
 
@@ -41,7 +25,7 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 
 ## 입력과 모드
 
-- `mode=tech`: Java·Spring, 데이터베이스, CS, 운영, 시스템 설계 질문
+- `mode=tech`: 현재 주력 backend 기술, 데이터베이스, CS, 운영, 시스템 설계 질문
 - `mode=behavioral`: 협업, 문제 해결, 실패, 고객 영향, 가치관 질문
 - private brain의 현재 지원 대상: 포지션별 연습을 요청했으면 `brain-search`로 확인
 - `applications/<company>/<role>/interview-questions.json`: 공고 책임, 근거 방어와 경험 공백 질문
@@ -77,8 +61,8 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 다음 명령처럼 `--application-dir`를 명시해 공고별 질문을 공통 질문보다 우선한다.
 
 ```bash
-bun career-os/scripts/interview-drill/drill-engine.ts tech \
-  --application-dir career-os/applications/<company>/<role> \
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/interview-drill/drill-engine.ts" tech \
+  --application-dir "$(git rev-parse --show-toplevel)/career-os/applications/<company>/<role>" \
   --target-bar <production|large-scale|global-scale>
 ```
 
@@ -138,7 +122,7 @@ bun career-os/scripts/interview-drill/drill-engine.ts tech \
 - 기술과 인성은 `drillType`으로 구분한다.
 - 개인 경험 기반 질문은 `library/question-bank/`에만 추가한다.
 - 포지션별 질문은 해당 지원 디렉터리의 `interview-questions.json`에만 둔다.
-- `sources/fos-study/`와 `config/candidate-profile.md`는 수정하지 않는다.
+- private brain과 `sources/fos-study/`는 수정하지 않는다.
 - 실제 면접 일정, 지원 전략과 회사별 비공개 정보는 공개 질문 은행에 넣지 않는다.
 - 유료 강의, 문제집과 면접 후기의 질문·답변 원문을 공개 질문 은행에 복사하지 않는다.
 

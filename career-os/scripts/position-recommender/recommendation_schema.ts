@@ -1,6 +1,6 @@
 // position-recommender 추천 결과의 기준 스키마.
 // 에이전트가 이 스키마에 맞는 recommendation.json을 생성하면,
-// 렌더러가 여기서 HTML / Markdown / Discord 카드용 데이터를 파생한다.
+// 렌더러가 여기서 HTML과 Markdown 데이터를 파생한다.
 // SKILL self-check는 이 스키마 검증으로 대체한다.
 import { z } from "zod";
 import { sourceIdSchema } from "./live-postings/contracts.ts";

@@ -10,30 +10,15 @@ description: 공고에 맞춘 이력서·경력기술서를 작성하고 사람 
 
 ## 비공개 작업본 동기화
 
-`applications`, `library` 또는 `state`를 읽기 전에 다음 명령으로 홈서버의 현재 release를 준비한다.
-
-```bash
-bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts" \
-  skill begin resume-preparer --json
-```
-
-명령이 실패하면 기존 로컬 파일을 근거로 문서를 고치지 않는다.
-오류 코드와 로컬 파일이 보존됐다는 사실만 알리고 중단한다.
-
-사람 확인, 근거 감사, 렌더링과 제출 묶음 검사가 모두 성공한 뒤 다음 명령을 실행한다.
-검증에 실패한 초안은 발행하지 않으며, 발행이 실패해도 로컬 결과는 보존한다.
-
-```bash
-bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts" \
-  skill finish resume-preparer --json
-```
+[`career-workspace-sync.md`](../../../.claude/skills/_shared/career-workspace-sync.md)를 `SKILL_NAME=resume-preparer`로 적용한다.
 
 ## 입력
 
 - `applications/<company>/<role>/posting.md`
 - `applications/<company>/<role>/candidate-interview.md`
 - `applications/<company>/<role>/application-package.md`
-- `config/candidate-profile.md`와 연결된 최신 경력 근거
+- `brain-search`로 확인한 현재 경력, 역할 선호와 경험 경계
+- `sources/fos-study/`의 최신 공개 경력 근거
 - 필요하면 로컬 프로젝트의 코드, 테스트, Git 이력과 기술 결정 문서
 - 기본 디자인 `config/resume-design.md` 또는 공고별 `design.md`
 
@@ -45,7 +30,7 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 - `resume-draft.md`, `resume.html`, `resume.pdf`
 - 경력기술서가 필요한 경우 대응하는 Markdown, HTML과 PDF
 - 주장별 근거 원장과 사람이 읽는 감사 결과
-- 블라인드 판정과 점수표
+- 블라인드 판정과 검토표
 - 한 파일 제출이 필요할 때 `submission.pdf`
 - 대표 사례의 30초·2분 설명과 남은 연습 항목
 
@@ -81,7 +66,7 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 안내가 없으면 문제, 중요성과 제약, 본인 역할과 판단, 결과와 검증 순서로 쓴다.
 
 첫 사례는 가장 복잡한 프로젝트가 아니라 다음 단계로 넘길 이유를 가장 빨리 설명하는 사례다.
-대표 사례는 두세 개로 제한하고, 기술 목록보다 공고 책임과 연결되는 판단 근거를 앞에 둔다.
+대표 사례는 공고 적합성을 증명하는 가장 작은 묶음으로 고르고, 기술 목록보다 공고 책임과 연결되는 판단 근거를 앞에 둔다.
 이력서는 선별된 근거를, 경력기술서는 프로젝트별 판단과 구현 맥락을 담당한다.
 
 ### Markdown 작성과 설명 준비
@@ -92,7 +77,7 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 이력서 초안까지 준비되면 다음 명령으로 지원 패키지 계약을 검사한다.
 
 ```bash
-bun career-os/.claude/skills/application-package-writer/scripts/validate_application_package.ts \
+bun "$(git rev-parse --show-toplevel)/career-os/.claude/skills/application-package-writer/scripts/validate_application_package.ts" \
   <application-directory>
 ```
 
@@ -107,7 +92,7 @@ bun career-os/.claude/skills/application-package-writer/scripts/validate_applica
 ### HTML과 PDF 생성
 
 ```bash
-bun career-os/.claude/skills/resume-preparer/scripts/export_resume.ts \
+bun "$(git rev-parse --show-toplevel)/career-os/.claude/skills/resume-preparer/scripts/export_resume.ts" \
   --application-dir <application-directory>
 ```
 
@@ -139,7 +124,7 @@ bun career-os/.claude/skills/resume-preparer/scripts/export_resume.ts \
 다음 명령으로 원장과 제출 문구가 같은 버전인지 확인한다.
 
 ```bash
-bun career-os/.claude/skills/resume-preparer/scripts/validate_claim_ledger.ts \
+bun "$(git rev-parse --show-toplevel)/career-os/.claude/skills/resume-preparer/scripts/validate_claim_ledger.ts" \
   <claim-ledger.json> --artifact <submission-document.html>
 ```
 
@@ -153,26 +138,27 @@ bun career-os/.claude/skills/resume-preparer/scripts/validate_claim_ledger.ts \
 그 뒤 근거 원장으로 대표 주장을 방어하고 실제 브라우저 렌더에서 글자 겹침, 잘림, 링크, 대비와 페이지 넘침을 확인한다.
 
 ```bash
-bun career-os/.claude/skills/resume-preparer/scripts/check_resume_html.ts \
+bun "$(git rev-parse --show-toplevel)/career-os/.claude/skills/resume-preparer/scripts/check_resume_html.ts" \
   <submission-document.html>
 ```
 
-최대 세 번 개선한다.
+수정 가능한 차단 항목이 남아 있으면 다시 작성하고 검토한다.
+근거를 더 찾거나 사용자 확인을 받아야만 고칠 수 있으면 `blocked` 또는 `needs_input`으로 멈추고 필요한 확인을 한 가지씩 요청한다.
 보이는 문구가 바뀌면 근거 감사를 다시 수행한다.
 스타일만 바뀌고 문구 해시가 같으면 기존 원장을 재사용할 수 있다.
 
-점수표에는 대상 파일, `artifactTextSha256`, `verdict`와 두 블라인드 판정을 기록한다.
-점수 기준을 넘어도 한 검토자가 `reject`이거나 경쟁상 차단 항목이 남으면 `pass`가 아니다.
+검토표에는 대상 파일, `artifactTextSha256`, `verdict`와 두 블라인드 판정을 기록한다.
+한 검토자가 `reject`이거나 경쟁상 차단 항목이 남으면 `pass`가 아니다.
 
 ### 제출 묶음 검증
 
 모든 사람 확인과 문서별 검증이 끝나면 PDF 해시를 기록하고 필요한 경우 통합 PDF를 만든다.
 
 ```bash
-bun career-os/.claude/skills/resume-preparer/scripts/build_submission_bundle.ts \
+bun "$(git rev-parse --show-toplevel)/career-os/.claude/skills/resume-preparer/scripts/build_submission_bundle.ts" \
   <application-directory>
 
-bun career-os/.claude/skills/resume-preparer/scripts/validate_submission_bundle.ts \
+bun "$(git rev-parse --show-toplevel)/career-os/.claude/skills/resume-preparer/scripts/validate_submission_bundle.ts" \
   <application-directory>
 ```
 
@@ -184,7 +170,7 @@ bun career-os/.claude/skills/resume-preparer/scripts/validate_submission_bundle.
 - `human-confirmation: complete`
 - 모든 주장 판정이 `safe`
 - 채용 담당자와 기술 리더가 모두 `pass`
-- 점수표의 기준 점수와 파일 해시가 현재 제출 문서와 일치
+- 검토표의 판정과 파일 해시가 현재 제출 문서와 일치
 - HTML 정적 검사와 실제 A4 렌더 결함 0개
 - 페이지 사이의 정보량과 여백이 현저히 치우치지 않음
 - PDF manifest와 현재 파일 해시 일치

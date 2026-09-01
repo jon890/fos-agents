@@ -14,7 +14,6 @@
 | -------------------------------------------------------- | ------------------------ | ------------------- |
 | [`README.md`](README.md)                                 | 제품 범위, 주요 skill, 시작 흐름   | 워크스페이스를 처음 볼 때      |
 | [`../AGENTS.md`](../AGENTS.md)                           | 모노레포 공통 규칙               | 모든 작업 시작 시          |
-| [`docs/README.md`](docs/README.md)                       | career-os 문서별 책임과 작성 규칙  | docs 작성·수정 전        |
 | [`docs/prd.md`](docs/prd.md)                             | 제품 가치, skill 자산, 성공 기준   | 새 기능 추가, 우선순위 결정    |
 | [`docs/data-schema.md`](docs/data-schema.md)             | config, runtime과 산출물 스키마 | 데이터 파일 변경, 새 상태값 추가 |
 | [`docs/flow.md`](docs/flow.md)                           | 사용자 입력부터 산출물까지의 흐름       | 새 실행 흐름 추가, 디버깅     |
@@ -28,7 +27,7 @@
 공고별 지원 문서와 면접 질문은 `applications/`에 두고, 답변 연습 진행처럼 저장소 실행에 필요한 상태만 `state/`에 둔다.
 회사명, 공고, 면접 일정과 학습 우선순위처럼 자주 바뀌는 상태를 `AGENTS.md`에 쓰지 않는다.
 
-- 후보자 프로필의 기준 원본은 `config/candidate-profile.md`다.
+- 현재 경력, 역할 선호와 경험 경계는 private brain에서 확인한다.
 - 공개 학습 자료는 `sources/fos-study/`에서 파생한다.
 - 공개 질문 목록은 `public/question-bank/`에서 파생한다.
 - `config/`에는 사람이 고른 정책, pin, override, 제외 조건만 둔다.
@@ -50,23 +49,9 @@ career-os는 수집, 리포트 생성, skill 실행, private 산출물, 피드�
 지원 준비 상태는 각 `applications/` 디렉터리의 `application-package.md`에서 관리한다.
 
 
-외부 게시용 HTML은 시스템 임시 디렉터리에 만든다.
-사용자가 외부 게시 또는 공유 URL 생성을 명시하면 루트의 `report-publisher` 스킬을 사용한다.
-게시 전 공개 범위를 검사하고, Cloudflare Pages 배포 결과를 검증한 뒤 URL을 전달한다.
-구체적인 생성 흐름은 `docs/flow.md`를 따른다.
-게시 절차는 `../.agents/skills/report-publisher/SKILL.md`를 따른다.
-
-커리어 포지션 추천, 지원 후보 비교, 면접 준비, 학습 추천처럼 사용자가 보는 리포트성 산출물은 HTML 파일도 함께 만든다.
-게시용 HTML과 중간 데이터는 임시 실행 경로에만 만들고 게시 검증 뒤 삭제한다.
-HTML의 각 공고명에는 개별 공고 URL을 건다.
-외부 공유가 승인된 경우 사용자에게 다음 내용을 제공한다.
-
-- 상위 우선 검토 카드와 전체 후보 순위의 핵심 사유
-- 각 후보의 공고 링크
-- 검증된 리포트 URL
-
-게시용 HTML에는 개인 이력, 지원 전략, 회사별 비공개 맥락을 포함하지 않고 공개 가능한 요약만 담는다.
-단순 상태 보고나 한두 줄 답변은 예외로 둘 수 있다.
+사용자가 보는 분석·추천 결과는 HTML로 만들고 구체적인 생성 흐름은 [`docs/flow.md`](docs/flow.md)를 따른다.
+외부 게시를 명시한 경우에만 [`report-publisher`](../.agents/skills/report-publisher/SKILL.md)로 공개 범위와 배포 결과를 검증한다.
+개인 이력, 지원 전략과 회사별 비공개 맥락은 공개 HTML에 포함하지 않는다.
 
 ## 면접 준비 운영 원칙
 
