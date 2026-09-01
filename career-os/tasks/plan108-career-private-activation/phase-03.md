@@ -30,10 +30,10 @@
 관리 root를 변경한 실행만 `diff`를 계산하고 새 release를 publish한다.
 생성·검증이 실패한 산출물은 publish하지 않으며, publish 충돌이나 연결 실패에서는 로컬 결과를 유지하고 current revision을 바꾸지 않는다.
 
-### 4. Git과 로컬 상태 경계
+### 4. Git과 로컬 상태 경계 검증
 
-root `.gitignore`에 `career-os/.career-sync/`와 관리 root의 비공개 파일 경계를 반영한다.
-현재 추적 중인 개인 연습 상태는 홈서버 release에 포함한 사실을 검증한 뒤 public Git index에서만 제거한다.
+plan107이 root `.gitignore`에 반영한 `career-os/.career-sync/`와 관리 root의 비공개 파일 경계를 검증한다.
+`career-os/state/drill-progress.json`이 public Git index에서 이미 제거됐고 최초 홈서버 release에서 복구되는지 확인한다.
 사용자의 다른 미커밋 파일은 수정·이동·stage하지 않는다.
 
 ### 5. skill과 회귀 검증
@@ -48,8 +48,6 @@ root `.gitignore`에 `career-os/.career-sync/`와 관리 root의 비공개 파�
 | `career-os/.claude/skills/application-package-writer/SKILL.md` | 패키지 prepare·publish 연결 |
 | `career-os/.claude/skills/resume-preparer/SKILL.md` | 이력서 prepare·publish 연결 |
 | `career-os/.claude/skills/interview-practice/SKILL.md` | 면접 자료 prepare·publish 연결 |
-| `.gitignore` | 로컬 상태와 비공개 파일 경계 |
-| `career-os/state/drill-progress.json` | 검증 뒤 public Git index에서 제거 |
 
 ## 검증
 
@@ -68,4 +66,4 @@ git diff --check
 ## Blocked 조건
 
 - skill 관리 원본이 불명확하거나 홈서버 최초 release 복구 검증이 끝나지 않았으면 skill을 수정하지 않는다.
-- 개인 연습 상태가 remote release에 포함됐음을 증명하지 못하면 public Git index에서 제거하지 않는다.
+- 개인 연습 상태가 remote release에 포함됐음을 증명하지 못하면 skill 연결을 완료 처리하지 않는다.

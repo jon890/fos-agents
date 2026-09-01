@@ -35,6 +35,7 @@ phase 1에서 승인 가능한 파일만 임시 로컬 workspace에 복사한다
 
 빈 임시 workspace에서 새 current release를 prepare하고 전체 파일의 경로, 크기와 SHA-256을 이관 계획과 비교한다.
 지원서 HTML·PDF와 개인 면접 자료도 열 수 있는 일반 파일로 복구되는지 확인한다.
+`state/drill-progress.json`이 이관 계획에 있으면 같은 파일 hash로 복구되는지 확인한다.
 
 ### 5. 이관 기록과 원본 보존
 
