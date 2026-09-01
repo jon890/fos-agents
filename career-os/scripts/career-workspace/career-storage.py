@@ -57,7 +57,7 @@ def write_json(value: object) -> None:
 
 def storage_root() -> Path:
     configured = os.environ.get("CAREER_STORAGE_ROOT")
-    root = Path(configured).expanduser() if configured else Path.home() / ".local/share/career-storage/career-os"
+    root = Path(configured).expanduser() if configured else Path.home() / ".hermes/storage/career-os"
     return root.resolve()
 
 
