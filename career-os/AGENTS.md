@@ -9,16 +9,17 @@
 
 ## 읽기 순서
 
-| 문서                                                       | 책임                                        | 언제 보는지              |
-| -------------------------------------------------------- | ----------------------------------------- | ------------------- |
-| [`README.md`](README.md)                                 | 제품 범위, 주요 skill, 시작 흐름                    | 워크스페이스를 처음 볼 때      |
-| [`../AGENTS.md`](../AGENTS.md)                           | 모노레포 공통 규칙                                | 모든 작업 시작 시          |
-| [`docs/README.md`](docs/README.md)                       | career-os 문서별 책임과 작성 규칙                   | docs 작성·수정 전        |
-| [`docs/prd.md`](docs/prd.md)                             | 제품 가치, skill 자산, 성공 기준                    | 새 기능 추가, 우선순위 결정    |
-| [`docs/data-schema.md`](docs/data-schema.md)             | config, runtime과 산출물 스키마                  | 데이터 파일 변경, 새 상태값 추가 |
-| [`docs/flow.md`](docs/flow.md)                           | 사용자 입력부터 산출물까지의 흐름                        | 새 실행 흐름 추가, 디버깅     |
-| [`docs/code-architecture.md`](docs/code-architecture.md) | 디렉터리 책임, 외부 의존, 실행 구조                     | 코드 구조 변경, 새 스크립트 추가 |
-| [`docs/adr/INDEX.md`](docs/adr/INDEX.md)                 | 결정의 이유와 대안 기각 기록                          | 정책 변경, 되돌리기 어려운 결정  |
+
+| 문서                                                       | 책임                       | 언제 보는지              |
+| -------------------------------------------------------- | ------------------------ | ------------------- |
+| [`README.md`](README.md)                                 | 제품 범위, 주요 skill, 시작 흐름   | 워크스페이스를 처음 볼 때      |
+| [`../AGENTS.md`](../AGENTS.md)                           | 모노레포 공통 규칙               | 모든 작업 시작 시          |
+| [`docs/README.md`](docs/README.md)                       | career-os 문서별 책임과 작성 규칙  | docs 작성·수정 전        |
+| [`docs/prd.md`](docs/prd.md)                             | 제품 가치, skill 자산, 성공 기준   | 새 기능 추가, 우선순위 결정    |
+| [`docs/data-schema.md`](docs/data-schema.md)             | config, runtime과 산출물 스키마 | 데이터 파일 변경, 새 상태값 추가 |
+| [`docs/flow.md`](docs/flow.md)                           | 사용자 입력부터 산출물까지의 흐름       | 새 실행 흐름 추가, 디버깅     |
+| [`docs/code-architecture.md`](docs/code-architecture.md) | 디렉터리 책임, 외부 의존, 실행 구조    | 코드 구조 변경, 새 스크립트 추가 |
+| [`docs/adr/INDEX.md`](docs/adr/INDEX.md)                 | 결정의 이유와 대안 기각 기록         | 정책 변경, 되돌리기 어려운 결정  |
 
 
 ## 작업 경계
@@ -45,10 +46,9 @@
 `sources/fos-study`는 외부 동기 저장소이자 학습 이력의 읽기 전용 입력이다.
 이 워크스페이스에서는 프로젝트 코드처럼 편집하거나 자동 발행하지 않는다.
 
-
-career-os는 별도 웹 제품 없이 수집, 리포트 생성, skill 실행, private 산출물, 피드백 루프 기록을 파일과 skill 계약으로 직접 관리한다.
+career-os는 수집, 리포트 생성, skill 실행, private 산출물, 피드백 루프 기록을 파일과 skill 계약으로 직접 관리한다.
 지원 준비 상태는 각 `applications/` 디렉터리의 `application-package.md`에서 관리한다.
-외부 DB나 outbox를 기준 데이터로 두지 않는다.
+
 
 외부 게시용 HTML은 시스템 임시 디렉터리에 만든다.
 사용자가 외부 게시 또는 공유 URL 생성을 명시하면 루트의 `report-publisher` 스킬을 사용한다.
@@ -58,7 +58,6 @@ career-os는 별도 웹 제품 없이 수집, 리포트 생성, skill 실행, pr
 
 커리어 포지션 추천, 지원 후보 비교, 면접 준비, 학습 추천처럼 사용자가 보는 리포트성 산출물은 HTML 파일도 함께 만든다.
 게시용 HTML과 중간 데이터는 임시 실행 경로에만 만들고 게시 검증 뒤 삭제한다.
-사용자가 로컬 사본을 명시적으로 요청한 경우에만 지정한 경로에 보존한다.
 HTML의 각 공고명에는 개별 공고 URL을 건다.
 외부 공유가 승인된 경우 사용자에게 다음 내용을 제공한다.
 
