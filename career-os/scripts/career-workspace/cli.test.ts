@@ -7,7 +7,15 @@ import { createManagedRoots, writeFixtureRelease } from "./fixtures/filesystem-s
 import { buildWorkspaceDraft } from "./manifest.ts";
 import { LocalCareerWorkspaceTransport } from "./local-transport.ts";
 import { switchCurrentSymlink } from "./local-transport.ts";
-import { checkWorkspace, diffWorkspace, prepareWorkspace, publishWorkspace, type CliContext } from "./cli.ts";
+import {
+  beginSkillWorkspace,
+  checkWorkspace,
+  diffWorkspace,
+  finishSkillWorkspace,
+  prepareWorkspace,
+  publishWorkspace,
+  type CliContext,
+} from "./cli.ts";
 import { createTarFromDirectory } from "./tar-utils.ts";
 import { TransportError, type CareerWorkspaceTransport } from "./transport.ts";
 
@@ -29,6 +37,48 @@ describe("career workspace cli", () => {
       workspace: "career-os",
       local: { status: "uninitialized" },
       remote: { action: "status", current: null },
+    });
+  }));
+
+  test("skill begin은 같은 revision의 clean 작업본을 다시 받지 않는다", async () => withFixture(async (fixture) => {
+    await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "resume" });
+    await prepareWorkspace(makeContext(fixture));
+
+    const result = await beginSkillWorkspace(makeContext(fixture), "resume-preparer");
+
+    expect(result).toMatchObject({ action: "skill-begin", skill: "resume-preparer", revision: "rev-1", noChange: true });
+    expect(await Bun.file(path.join(fixture.workspaceRoot, ".career-sync", "skill-session.json")).exists()).toBe(true);
+  }));
+
+  test("skill finish는 변경이 있을 때만 새 release를 발행한다", async () => withFixture(async (fixture) => {
+    await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
+    await prepareWorkspace(makeContext(fixture));
+    await beginSkillWorkspace(makeContext(fixture), "application-package-writer");
+    const unchanged = await finishSkillWorkspace(makeContext(fixture), "application-package-writer");
+    expect(unchanged).toMatchObject({ action: "skill-finish", noChange: true, revision: "rev-1" });
+
+    await beginSkillWorkspace(makeContext(fixture), "application-package-writer");
+    await writeFile(path.join(fixture.workspaceRoot, "applications/resume.md"), "after");
+    const changed = await finishSkillWorkspace(makeContext(fixture), "application-package-writer");
+    expect(changed).toMatchObject({ action: "skill-finish", noChange: false });
+    expect((await checkWorkspace(makeContext(fixture))).local.status).toBe("clean");
+  }));
+
+  test("skill session은 허용한 작성 skill만 받는다", async () => withFixture(async (fixture) => {
+    await expect(beginSkillWorkspace(makeContext(fixture), "position-recommender")).rejects.toMatchObject({
+      result: { code: "INVALID_MANIFEST" },
+    });
+  }));
+
+  test("성공한 begin이 없거나 다른 skill 세션이면 finish를 거절한다", async () => withFixture(async (fixture) => {
+    await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
+    await prepareWorkspace(makeContext(fixture));
+    await expect(finishSkillWorkspace(makeContext(fixture), "resume-preparer")).rejects.toMatchObject({
+      result: { code: "RESTORE_REQUIRED" },
+    });
+    await beginSkillWorkspace(makeContext(fixture), "application-package-writer");
+    await expect(finishSkillWorkspace(makeContext(fixture), "resume-preparer")).rejects.toMatchObject({
+      result: { code: "RESTORE_REQUIRED" },
     });
   }));
 

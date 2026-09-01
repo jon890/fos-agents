@@ -31,6 +31,8 @@ manifest는 다음 필드를 가진다.
 같은 `contentDigest`를 다시 publish하면 새 release를 만들지 않는다.
 
 로컬 `career-os/.career-sync/sync-state.json`은 마지막으로 준비한 `revision`, `contentDigest`와 파일 hash를 기록한다.
+`skill-session.json`은 성공한 작성 skill의 이름, 시작 revision과 시작 시각을 기록한다.
+같은 skill의 완료 단계만 이 기록을 소비할 수 있으며 성공한 발행이나 무변경 종료 뒤 삭제한다.
 prepare 중에는 같은 디렉터리의 임시 staging, backup과 `prepare-journal.json`으로 세 관리 root의 교체·복구 상태를 기록한다.
 이 디렉터리는 Git과 원격 release에 포함하지 않는다.
 prepare는 현재 로컬 hash가 마지막 동기화 상태와 다르면 파일을 교체하지 않으며, 중단된 journal이 있으면 새 작업 전에 기존 root를 복구한다.
@@ -64,6 +66,11 @@ publish tar의 최상위에는 `workspace-draft.json`과 같은 세 관리 root�
 
 Markdown, JSON, 검토용 HTML, PDF와 실제 제출 묶음은 해당 application 디렉터리 안에서 함께 동기화한다.
 게시 뒤 삭제하는 공개 리포트와 원본에서 다시 만들 수 있는 cache는 release에 포함하지 않는다.
+
+client의 `.env`는 작업 경로와 transport만 주입한다.
+SSH 환경은 `CAREER_WORKSPACE_SSH_TARGET`, `CAREER_WORKSPACE_SSH_ARGS`와 `CAREER_WORKSPACE_REMOTE_COMMAND`를 사용한다.
+홈서버의 Hermes는 `CAREER_WORKSPACE_LOCAL_TRANSPORT_ROOT`로 같은 저장소를 직접 읽는다.
+근거 원장의 `${PROJECTS_ROOT}`와 `${PERSONAL_ROOT}`는 환경마다 같은 이름의 변수로 해석하며 release에는 환경별 절대 경로를 저장하지 않는다.
 
 ## Config
 

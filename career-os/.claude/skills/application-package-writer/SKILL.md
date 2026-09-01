@@ -8,6 +8,26 @@ description: 공고 하나의 지원 가치, 회사·포지션 기준, 후보자
 공고 하나에 지원할 이유와 승부처를 정하고, 지원 전략과 문구를 만든 뒤 제출 문서 준비로 연결한다.
 사용자에게 문서 묶음을 떠넘기지 말고 `application-package.md`를 중심으로 현재 판단과 다음 행동을 설명한다.
 
+## 비공개 작업본 동기화
+
+`applications`, `library` 또는 `state`를 읽기 전에 다음 명령으로 홈서버의 현재 release를 준비한다.
+
+```bash
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts" \
+  skill begin application-package-writer --json
+```
+
+명령이 실패하면 기존 로컬 파일로 작성을 계속하지 않는다.
+오류 코드와 로컬 파일이 보존됐다는 사실만 알리고 중단한다.
+
+산출물 검사까지 성공한 뒤 다음 명령을 실행한다.
+변경이 없으면 새 release를 만들지 않으며, 발행이 실패하면 로컬 결과를 지우지 않는다.
+
+```bash
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts" \
+  skill finish application-package-writer --json
+```
+
 ## 사용자에게 주는 결과
 
 사용자가 가장 먼저 볼 파일은 `application-package.md`다.
@@ -90,6 +110,8 @@ brain에 현재 대상이 없거나 대응하는 지원 디렉터리가 없거�
 지원 판단이 달라지는 핵심 경험은 가능하면 로컬 프로젝트에서 확인한다.
 로컬 근거로 결론을 낼 수 없으면 기존 문장을 사실로 확정하지 않고 `사용자 확인`으로 남긴다.
 코드 존재, 본인 소유권, 결과와 운영 깊이를 주장 단위로 감사하는 일은 `resume-preparer`가 담당한다.
+근거 경로가 `${PROJECTS_ROOT}` 또는 `${PERSONAL_ROOT}`로 시작하면 같은 이름의 환경 변수로 바꿔 읽는다.
+해당 환경 변수가 없으면 경로를 추측하지 않고 그 근거를 현재 환경에서 확인할 수 없다고 판정한다.
 
 각 판단을 다음 중 하나로 구분한다.
 

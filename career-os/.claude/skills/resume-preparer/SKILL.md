@@ -8,6 +8,26 @@ description: 공고에 맞춘 이력서·경력기술서를 작성하고 사람 
 지원 전략을 채용 담당자가 빠르게 이해하고 면접에서 방어할 수 있는 제출 문서로 바꾼다.
 작성, 사실 감사와 설득력 평가는 서로 다른 내부 단계로 유지하지만 사용자는 이 스킬 하나만 호출한다.
 
+## 비공개 작업본 동기화
+
+`applications`, `library` 또는 `state`를 읽기 전에 다음 명령으로 홈서버의 현재 release를 준비한다.
+
+```bash
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts" \
+  skill begin resume-preparer --json
+```
+
+명령이 실패하면 기존 로컬 파일을 근거로 문서를 고치지 않는다.
+오류 코드와 로컬 파일이 보존됐다는 사실만 알리고 중단한다.
+
+사람 확인, 근거 감사, 렌더링과 제출 묶음 검사가 모두 성공한 뒤 다음 명령을 실행한다.
+검증에 실패한 초안은 발행하지 않으며, 발행이 실패해도 로컬 결과는 보존한다.
+
+```bash
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts" \
+  skill finish resume-preparer --json
+```
+
 ## 입력
 
 - `applications/<company>/<role>/posting.md`
@@ -110,6 +130,8 @@ bun career-os/.claude/skills/resume-preparer/scripts/export_resume.ts \
 
 `references/claim-model.md`를 읽는다.
 제출할 정확한 HTML의 각 주장을 구현, 소유권, 결과와 경험 깊이로 나누고 코드, 테스트, Git, 문서, 실행 결과와 사용자 확인에 대조한다.
+근거 원장의 `${PROJECTS_ROOT}`와 `${PERSONAL_ROOT}`는 같은 이름의 환경 변수로 바꿔 읽는다.
+해당 환경 변수가 없으면 경로를 추측하지 않고 다른 근거를 찾거나 사용자 확인으로 낮춘다.
 
 - 이력서: `claim-ledger.json`, `evidence-audit.md`
 - 경력기술서: `career-description-claim-ledger.json`, `career-description-evidence-audit.md`

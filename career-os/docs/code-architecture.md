@@ -34,9 +34,9 @@ career-os/
 ## 실행 환경 준비
 
 `scripts/career-workspace/`는 Hermes, Codex CLI와 Claude Code가 공유하는 파일 준비·차이 검사·반영 경계다.
-manifest 생성과 검증, 로컬 기준 상태 확인, SSH transport와 검증용 local transport를 책임별 모듈로 나눈다.
-현재 공통 CLI와 local fixture까지 구현했으며 운영 `career-storage`와 기존 skill 자동 연결은 후속 작업 범위다.
-연결을 마치면 사용자는 이 helper를 직접 고르지 않고 기존 career-os skill을 계속 호출한다.
+manifest 생성과 검증, 로컬 기준 상태 확인, SSH transport, 홈서버 명령과 검증용 local transport를 책임별 모듈로 나눈다.
+`career-storage.py`는 홈서버에서 표준 입력과 출력으로 release를 발행하고 내보낸다.
+사용자는 이 helper를 직접 고르지 않고 기존 career-os skill을 계속 호출한다.
 
 각 환경은 `applications`, `library`와 `state`를 일반 로컬 디렉터리로 사용한다.
 원격 파일을 network filesystem으로 직접 편집하지 않으며, 준비 단계는 검증한 release만 임시 경로에서 로컬로 교체한다.
@@ -44,7 +44,8 @@ manifest 생성과 검증, 로컬 기준 상태 확인, SSH transport와 검증�
 
 `.claude/skills/`가 skill 관리 원본이다.
 `.codex/skills/`는 같은 디렉터리를 가리키며 Hermes cron은 `career-os`를 작업 디렉터리로 사용한다.
-후속 연결에서도 환경별 차이는 transport 설정에만 두고 지원 판단과 문서 작성 절차를 복제하지 않는다.
+환경별 차이는 `.env`의 transport 설정에만 두고 지원 판단과 문서 작성 절차를 복제하지 않는다.
+SSH client는 `career-storage`를 원격 호출하고, 홈서버의 Hermes는 같은 저장 경로를 local transport로 읽는다.
 
 ## 공고 추천
 

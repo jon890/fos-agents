@@ -1,5 +1,6 @@
 import { cp, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { config as loadEnv } from "dotenv";
 import {
   CAREER_WORKSPACE_MANAGED_ROOTS,
   CareerWorkspaceReleaseManifestSchema,
@@ -21,6 +22,7 @@ import { LocalCareerWorkspaceTransport } from "./local-transport.ts";
 import { SshCareerWorkspaceTransport } from "./ssh-transport.ts";
 import { makeRemoteError, TransportError, type CareerWorkspaceTransport } from "./transport.ts";
 import { copyManifestFiles, createTarFromDirectory, extractTarToDirectory, listRelativeFiles, safeRemove, validateTarTopLevel } from "./tar-utils.ts";
+import { buildMigrationPlan, stageMigrationPlan, type MigrationResolution } from "./migration.ts";
 
 export interface CliContext {
   root: string;
@@ -35,7 +37,16 @@ export async function runCareerWorkspaceCli(args: string[], context = createDefa
       schemaVersion: CAREER_WORKSPACE_SCHEMA_VERSION,
       action: "help",
       ok: true,
-      commands: ["check --json", "prepare", "diff", "publish"],
+      commands: [
+        "check --json",
+        "prepare",
+        "diff",
+        "publish",
+        "skill begin <skill> --json",
+        "skill finish <skill> --json",
+        "migrate plan --json",
+        "migrate stage --destination <path> --json",
+      ],
     };
   }
   if (command === "check") {
@@ -50,7 +61,114 @@ export async function runCareerWorkspaceCli(args: string[], context = createDefa
   if (command === "publish") {
     return publishWorkspace(context);
   }
+  if (command === "skill" && args[1] === "begin") {
+    return beginSkillWorkspace(context, args[2]);
+  }
+  if (command === "skill" && args[1] === "finish") {
+    return finishSkillWorkspace(context, args[2]);
+  }
+  if (command === "migrate" && args[1] === "plan") {
+    const plan = await buildMigrationPlan({
+      workspaceRoot: context.root,
+      resolutions: await readMigrationResolutions(context.root),
+    });
+    if (args.includes("--write")) {
+      await mkdir(syncDirectory(context.root), { recursive: true });
+      await writeAtomicJson(path.join(syncDirectory(context.root), "migration-plan.json"), plan);
+    }
+    return plan;
+  }
+  if (command === "migrate" && args[1] === "stage") {
+    const destinationIndex = args.indexOf("--destination");
+    const destination = destinationIndex >= 0 ? args[destinationIndex + 1] : undefined;
+    if (!destination) throw new TransportError(makeRemoteError("check", "INVALID_MANIFEST"));
+    const resolutions = await readMigrationResolutions(context.root);
+    const plan = await buildMigrationPlan({ workspaceRoot: context.root, resolutions });
+    const result = await stageMigrationPlan({ workspaceRoot: context.root, resolutions, destination: path.resolve(destination), plan });
+    return {
+      schemaVersion: CAREER_WORKSPACE_SCHEMA_VERSION,
+      action: "migrate-stage",
+      ok: true,
+      ...result,
+    };
+  }
   throw new TransportError(makeRemoteError("check", "INVALID_MANIFEST"));
+}
+
+const managedSkills = new Set(["application-package-writer", "resume-preparer", "interview-practice"]);
+
+export async function beginSkillWorkspace(context: CliContext, skill: string | undefined) {
+  validateManagedSkill(skill);
+  if (await exists(skillSessionPath(context.root))) {
+    throw new TransportError(makeRemoteError("check", "RESTORE_REQUIRED"));
+  }
+  const checked = await checkWorkspace({ ...context, producer: { ...context.producer, skill } });
+  if (
+    checked.local.status === "clean"
+    && checked.remote.current
+    && checked.local.revision === checked.remote.current.revision
+  ) {
+    const result = {
+      schemaVersion: CAREER_WORKSPACE_SCHEMA_VERSION,
+      action: "skill-begin",
+      ok: true,
+      skill,
+      revision: checked.remote.current.revision,
+      noChange: true,
+    };
+    await writeSkillSession(context.root, skill, checked.remote.current.revision);
+    return result;
+  }
+  const prepared = await prepareWorkspace({ ...context, producer: { ...context.producer, skill } });
+  await writeSkillSession(context.root, skill, prepared.revision);
+  return { ...prepared, action: "skill-begin", skill, noChange: false };
+}
+
+export async function finishSkillWorkspace(context: CliContext, skill: string | undefined) {
+  validateManagedSkill(skill);
+  const skillContext = { ...context, producer: { ...context.producer, skill } };
+  const session = await readSkillSession(context.root);
+  const syncState = await readSyncState(context.root);
+  if (
+    !session
+    || session.skill !== skill
+    || syncState.kind !== "valid"
+    || syncState.state.revision !== session.revision
+  ) {
+    throw new TransportError(makeRemoteError("check", "RESTORE_REQUIRED"));
+  }
+  const difference = await diffWorkspace(skillContext);
+  if (difference.added.length === 0 && difference.modified.length === 0 && difference.deleted.length === 0) {
+    const checked = await checkWorkspace(skillContext);
+    const result = {
+      schemaVersion: CAREER_WORKSPACE_SCHEMA_VERSION,
+      action: "skill-finish",
+      ok: true,
+      skill,
+      revision: checked.local.revision,
+      noChange: true,
+    };
+    await rm(skillSessionPath(context.root), { force: true });
+    return result;
+  }
+  const published = await publishWorkspace(skillContext);
+  await rm(skillSessionPath(context.root), { force: true });
+  return { ...published, action: "skill-finish", skill };
+}
+
+function validateManagedSkill(skill: string | undefined): asserts skill is string {
+  if (!skill || !managedSkills.has(skill)) {
+    throw new TransportError(makeRemoteError("check", "INVALID_MANIFEST"));
+  }
+}
+
+async function readMigrationResolutions(root: string): Promise<MigrationResolution[]> {
+  const file = path.join(syncDirectory(root), "migration-resolutions.json");
+  if (!await exists(file)) {
+    return [];
+  }
+  const parsed = JSON.parse(await readFile(file, "utf8")) as { resolutions?: MigrationResolution[] };
+  return parsed.resolutions ?? [];
 }
 
 export async function checkWorkspace(context: CliContext) {
@@ -382,6 +500,7 @@ async function writeJournal(root: string, journal: PrepareJournal): Promise<void
 }
 
 function createDefaultContext(): CliContext {
+  loadWorkspaceEnvironment();
   const env = process.env;
   const root = path.resolve(env.CAREER_WORKSPACE_ROOT || "career-os");
   const localRoot = env.CAREER_WORKSPACE_LOCAL_TRANSPORT_ROOT;
@@ -402,6 +521,12 @@ function createDefaultContext(): CliContext {
   };
 }
 
+function loadWorkspaceEnvironment(): void {
+  const configured = process.env.CAREER_WORKSPACE_ENV_FILE;
+  const defaultFile = path.basename(process.cwd()) === "career-os" ? ".env" : path.join("career-os", ".env");
+  loadEnv({ path: configured || defaultFile, quiet: true });
+}
+
 function syncDirectory(root: string): string {
   return path.join(root, ".career-sync");
 }
@@ -412,6 +537,41 @@ function syncStatePath(root: string): string {
 
 function journalPath(root: string): string {
   return path.join(syncDirectory(root), "prepare-journal.json");
+}
+
+function skillSessionPath(root: string): string {
+  return path.join(syncDirectory(root), "skill-session.json");
+}
+
+async function writeSkillSession(root: string, skill: string, revision: string): Promise<void> {
+  await mkdir(syncDirectory(root), { recursive: true });
+  await writeAtomicJson(skillSessionPath(root), {
+    schemaVersion: CAREER_WORKSPACE_SCHEMA_VERSION,
+    workspace: CAREER_WORKSPACE_NAME,
+    skill,
+    revision,
+    startedAt: new Date().toISOString(),
+  });
+}
+
+async function readSkillSession(root: string): Promise<{ skill: string; revision: string } | null> {
+  if (!await exists(skillSessionPath(root))) return null;
+  try {
+    const value = JSON.parse(await readFile(skillSessionPath(root), "utf8")) as Record<string, unknown>;
+    if (
+      value.schemaVersion !== CAREER_WORKSPACE_SCHEMA_VERSION
+      || value.workspace !== CAREER_WORKSPACE_NAME
+      || typeof value.skill !== "string"
+      || !managedSkills.has(value.skill)
+      || typeof value.revision !== "string"
+      || typeof value.startedAt !== "string"
+    ) {
+      return null;
+    }
+    return { skill: value.skill, revision: value.revision };
+  } catch {
+    return null;
+  }
 }
 
 async function exists(filePath: string): Promise<boolean> {
