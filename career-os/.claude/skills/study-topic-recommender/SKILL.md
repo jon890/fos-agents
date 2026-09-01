@@ -129,7 +129,8 @@ CAREER_OS_ROOT=<RUN_DIR> bun --env-file=.env \
   --reading-selection <RUN_DIR>/reading-selection.json
 ```
 
-게시 대상은 `<RUN_DIR>/reports/downloads/morning-reading-YYYY-MM-DD.html`이다.
+게시 대상은 `<RUN_DIR>/morning-reading-YYYY-MM-DD.html`이다.
+사람이 읽는 Markdown은 `<RUN_DIR>/morning-reading.md`에 만든다.
 
 ### 5. 검증
 
@@ -152,7 +153,7 @@ bun scripts/study-topic-recommender/manage_reading_sources.ts validate
 
 `report-publisher`로 아래 값을 준비, 게시하고 검증한다.
 
-- 게시 대상: `<RUN_DIR>/reports/downloads/morning-reading-YYYY-MM-DD.html`
+- 게시 대상: `<RUN_DIR>/morning-reading-YYYY-MM-DD.html`
 - 공개 이름: `morning-YYYY-MM-DD`
 - Pages 프로젝트: `fos-reports`
 

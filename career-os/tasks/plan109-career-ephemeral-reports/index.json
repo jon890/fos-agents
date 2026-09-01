@@ -1,10 +1,10 @@
 {
   "name": "plan109-career-ephemeral-reports",
   "description": "저장소의 영구 reports 경로를 없애고 공개 리포트를 명시적인 시스템 임시 경로에서만 생성한다.",
-  "status": "pending",
+  "status": "completed",
   "created_at": "2026-09-01",
   "total_phases": 2,
-  "current_phases": 1,
+  "current_phases": 2,
   "phases": [
     {
       "number": 1,
