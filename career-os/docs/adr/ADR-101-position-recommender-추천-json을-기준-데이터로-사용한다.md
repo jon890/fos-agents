@@ -1,4 +1,4 @@
-## ADR-101 — position-recommender 추천 JSON을 기준 데이터로 사용한다
+## ADR-101 position-recommender 추천 JSON을 기준 데이터로 사용한다
 
 - Status: Accepted
 - Date: 2026-06-19
@@ -10,7 +10,7 @@
 
 ### 결정
 
-- `reports/latest/position-recommendation.json`을 추천 결과의 기준 데이터로 사용한다.
+- 실행별 시스템 임시 경로의 `recommendation.json`을 해당 실행의 추천 기준 데이터로 사용한다.
 - `scripts/position-recommender/recommendation_schema.ts`가 형식을 검증한다.
 - Markdown과 HTML은 검증된 JSON에서 만든다.
 - 불완전한 중간 JSON과 별도 일일 실행기는 보존하지 않는다.
@@ -23,3 +23,4 @@
 ### 결과
 
 추천 생성, 검증, Markdown·HTML 렌더링이 같은 데이터 계약을 사용한다.
+게시 검증이 끝나면 기준 JSON과 파생 산출물을 함께 삭제한다.

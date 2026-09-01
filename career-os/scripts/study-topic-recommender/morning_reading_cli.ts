@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { mkdirSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { externalReadingSources } from "../../config/external-reading-sources.js";
 import {
   DEFAULT_MAX_CANDIDATES_PER_SOURCE,
@@ -10,17 +10,7 @@ import { normalizeReadingSources } from "./reading_sources.js";
 import { prepareReadingCandidatePool, selectReadings } from "./reading_stage.js";
 import { appendHistory, loadRecentHistory } from "./persistence/history.js";
 import { renderExistingReport, writeReportArtifacts } from "./render/report.js";
-
-const ROOT = process.env.CAREER_OS_ROOT
-  ? resolve(process.env.CAREER_OS_ROOT)
-  : resolve(import.meta.dir, "..", "..");
-const STATE_DIR = join(ROOT, "state");
-const REPORTS_DIR = join(ROOT, "reports");
-const DOWNLOADS_DIR = join(REPORTS_DIR, "downloads");
-const CACHE_DIR = join(ROOT, "cache", "feed-cache");
-const REPORT_PATH = join(STATE_DIR, "morning-reading.json");
-const HISTORY_PATH = join(STATE_DIR, "morning-reading-history.jsonl");
-const CANDIDATE_POOL_PATH = join(STATE_DIR, "reading-candidates.json");
+import { resolveStudyRunRoot, StudyRunPathError } from "./runtime-paths.js";
 
 const FEED_CACHE_TTL_HOURS = 6;
 const FEED_TIMEOUT_MS = 8_000;
@@ -31,20 +21,23 @@ function argumentValue(name: string): string | undefined {
   return index >= 0 ? process.argv[index + 1] : undefined;
 }
 
-async function run(): Promise<void> {
-  mkdirSync(STATE_DIR, { recursive: true });
-  mkdirSync(REPORTS_DIR, { recursive: true });
-  mkdirSync(DOWNLOADS_DIR, { recursive: true });
+async function run(root: string): Promise<void> {
+  const stateDir = join(root, "state");
+  const cacheDir = join(root, "cache", "feed-cache");
+  const reportPath = join(stateDir, "morning-reading.json");
+  const historyPath = join(stateDir, "morning-reading-history.jsonl");
+  const candidatePoolPath = join(stateDir, "reading-candidates.json");
+  mkdirSync(stateDir, { recursive: true });
 
   const readingSources = normalizeReadingSources(externalReadingSources);
   const recentArticleUrls = new Set(
-    loadRecentHistory(HISTORY_PATH, RECENT_ARTICLE_URL_LOOKBACK)
+    loadRecentHistory(historyPath, RECENT_ARTICLE_URL_LOOKBACK)
       .flatMap((entry) => entry.articleUrls ?? [])
   );
   const candidatePool = await prepareReadingCandidatePool({
     readingSources,
-    outputPath: CANDIDATE_POOL_PATH,
-    cacheDir: CACHE_DIR,
+    outputPath: candidatePoolPath,
+    cacheDir,
     recentUrls: recentArticleUrls,
     candidatePoolPath: argumentValue("--candidate-pool"),
     cacheTtlHours: FEED_CACHE_TTL_HOURS,
@@ -55,7 +48,7 @@ async function run(): Promise<void> {
   if (process.argv.includes("--collect-only")) {
     console.log(JSON.stringify({
       mode: "collect-only",
-      candidatePool: CANDIDATE_POOL_PATH,
+      candidatePool: candidatePoolPath,
       sourceCount: readingSources.sources.length,
       candidateCount: candidatePool.candidates.length,
       collectionLog: candidatePool.collectionLog,
@@ -93,13 +86,12 @@ async function run(): Promise<void> {
     collectionLog: candidatePool.collectionLog,
     recommendations,
   };
-  writeFileSync(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+  writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
   const artifacts = writeReportArtifacts({
     report,
-    reportsDir: REPORTS_DIR,
-    downloadsDir: DOWNLOADS_DIR,
+    outputDir: root,
   });
-  appendHistory(HISTORY_PATH, {
+  appendHistory(historyPath, {
     articleUrls: [
       ...recommendations.techBlog,
       ...recommendations.geek,
@@ -109,8 +101,8 @@ async function run(): Promise<void> {
   });
 
   console.log(JSON.stringify({
-    report: REPORT_PATH,
-    candidatePool: CANDIDATE_POOL_PATH,
+    report: reportPath,
+    candidatePool: candidatePoolPath,
     ...artifacts,
     techBlogCount: recommendations.techBlog.length,
     geekCount: recommendations.geek.length,
@@ -119,28 +111,35 @@ async function run(): Promise<void> {
     sourcesAttempted: readingSources.sources.length,
     sourcesWithCandidates,
     candidateCount: candidatePool.candidates.length,
-    history: HISTORY_PATH,
+    history: historyPath,
   }));
 }
 
 export async function main(): Promise<void> {
+  const root = resolveStudyRunRoot();
+  const stateDir = join(root, "state");
   if (process.argv.includes("--render-only")) {
     console.log(JSON.stringify({
       mode: "render-only",
       ...renderExistingReport({
-        stateDir: STATE_DIR,
-        reportsDir: REPORTS_DIR,
-        downloadsDir: DOWNLOADS_DIR,
+        stateDir,
+        outputDir: root,
       }),
     }));
     return;
   }
-  await run();
+  await run(root);
+}
+
+export function reportMorningReadingError(error: unknown): never {
+  if (error instanceof StudyRunPathError) {
+    console.error(error.message);
+    process.exit(error.exitCode);
+  }
+  console.error("study-topic-recommender error:", error);
+  process.exit(1);
 }
 
 if (import.meta.main) {
-  main().catch((error) => {
-    console.error("study-topic-recommender error:", error);
-    process.exit(1);
-  });
+  main().catch(reportMorningReadingError);
 }

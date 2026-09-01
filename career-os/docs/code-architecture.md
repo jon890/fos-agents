@@ -17,7 +17,6 @@ career-os/
 ├── library/              여러 지원에서 재사용하는 비공개 자료
 ├── state/                동기화되는 도구 실행 상태
 ├── public/               공개 가능한 질문 은행
-├── reports/              구조화 결과와 사람이 읽는 리포트
 ├── cache/                다시 만들 수 있는 수집 결과
 ├── sources/fos-study/    별도 저장소에서 관리하는 공개 학습·이력 자료
 └── docs/                 제품, 흐름, 데이터, 기술 결정 문서
@@ -112,6 +111,7 @@ TypeScript 스크립트가 brain을 직접 조회하지 않는다.
 `config/external-reading-sources.ts`는 읽을거리 소스와 어댑터 종류를 타입 안전하게 관리한다.
 `scripts/study-topic-recommender/source/`는 글과 영상 피드 수집 경계다.
 후보풀, 선별, 이력, Markdown·HTML 렌더링은 각각 분리된 모듈이 담당한다.
+실행기는 시스템 임시 디렉터리 아래의 명시적인 실행 경로만 사용하며 저장소에 리포트 디렉터리를 만들지 않는다.
 YouTube 채널은 공식 Atom 피드를 기존 피드 어댑터로 수집한다.
 
 수집 단계는 등록된 소스의 글과 영상을 결정적으로 가져온다.
@@ -121,6 +121,7 @@ YouTube 채널은 공식 Atom 피드를 기존 피드 어댑터로 수집한다.
 ## 리포트 게시
 
 외부 게시용 HTML은 시스템 임시 디렉터리에 만든다.
+실행 경로 바로 아래에 검증할 구조화 데이터, Markdown과 HTML을 두며 별도 `reports/` 계층을 만들지 않는다.
 외부 공유가 요청되면 루트의 `report-publisher` skill이 민감 정보 검사, Cloudflare Pages 게시, URL 검증을 담당한다.
 게시가 끝나면 임시 HTML을 삭제한다.
 사용자가 로컬 사본을 요청한 경우에만 지정한 경로에 보존한다.

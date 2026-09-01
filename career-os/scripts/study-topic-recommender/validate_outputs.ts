@@ -1,14 +1,10 @@
 #!/usr/bin/env bun
 import { existsSync, readFileSync, statSync } from "node:fs";
-import { resolve } from "node:path";
+import { join } from "node:path";
 import { morningReadingReportSchema } from "./reading_contracts.js";
 import { morningHtmlFilename } from "./render/html.js";
+import { resolveStudyRunRoot, StudyRunPathError } from "./runtime-paths.js";
 
-const ROOT = process.env.CAREER_OS_ROOT
-  ? resolve(process.env.CAREER_OS_ROOT)
-  : resolve(import.meta.dir, "..", "..");
-const reportPath = resolve(ROOT, "state", "morning-reading.json");
-const markdownPath = resolve(ROOT, "reports", "morning-reading.md");
 const forbiddenHtmlPatterns = [
   /\/Users\//,
   /\/home\//,
@@ -25,6 +21,9 @@ function requireFile(path: string): void {
 }
 
 function main(): void {
+  const root = resolveStudyRunRoot();
+  const reportPath = join(root, "state", "morning-reading.json");
+  const markdownPath = join(root, "morning-reading.md");
   requireFile(reportPath);
   requireFile(markdownPath);
   const report = morningReadingReportSchema.parse(
@@ -33,12 +32,7 @@ function main(): void {
   const markdownLines = readFileSync(markdownPath, "utf8").split(/\r?\n/).length;
   if (markdownLines < 10) throw new Error(`마크다운이 너무 짧다: ${markdownLines}줄`);
 
-  const htmlPath = resolve(
-    ROOT,
-    "reports",
-    "downloads",
-    morningHtmlFilename(report.generatedAt)
-  );
+  const htmlPath = join(root, morningHtmlFilename(report.generatedAt));
   requireFile(htmlPath);
   const html = readFileSync(htmlPath, "utf8");
   if (!html.includes("<title>") || !html.includes("오늘 아침 읽을거리")) {
@@ -60,6 +54,10 @@ function main(): void {
 try {
   main();
 } catch (error) {
+  if (error instanceof StudyRunPathError) {
+    console.error(error.message);
+    process.exit(error.exitCode);
+  }
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);
 }

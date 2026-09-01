@@ -9,13 +9,11 @@ import { buildMorningMarkdown } from "./markdown.js";
 
 export function writeReportArtifacts(input: {
   report: MorningReadingReport;
-  reportsDir: string;
-  downloadsDir: string;
+  outputDir: string;
 }): { markdownPath: string; htmlPath: string } {
-  mkdirSync(input.reportsDir, { recursive: true });
-  mkdirSync(input.downloadsDir, { recursive: true });
-  const markdownPath = join(input.reportsDir, "morning-reading.md");
-  const htmlPath = join(input.downloadsDir, morningHtmlFilename(input.report.generatedAt));
+  mkdirSync(input.outputDir, { recursive: true });
+  const markdownPath = join(input.outputDir, "morning-reading.md");
+  const htmlPath = join(input.outputDir, morningHtmlFilename(input.report.generatedAt));
   writeFileSync(markdownPath, buildMorningMarkdown(input.report), "utf8");
   writeFileSync(htmlPath, buildMorningHtml(input.report), "utf8");
   return { markdownPath, htmlPath };
@@ -23,8 +21,7 @@ export function writeReportArtifacts(input: {
 
 export function renderExistingReport(input: {
   stateDir: string;
-  reportsDir: string;
-  downloadsDir: string;
+  outputDir: string;
 }): { reportPath: string; markdownPath: string; htmlPath: string } {
   const reportPath = join(input.stateDir, "morning-reading.json");
   if (!existsSync(reportPath)) {
@@ -37,8 +34,7 @@ export function renderExistingReport(input: {
     reportPath,
     ...writeReportArtifacts({
       report,
-      reportsDir: input.reportsDir,
-      downloadsDir: input.downloadsDir,
+      outputDir: input.outputDir,
     }),
   };
 }
