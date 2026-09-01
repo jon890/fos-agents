@@ -99,13 +99,16 @@ const managedSkills = new Set(["application-package-writer", "resume-preparer", 
 
 export async function beginSkillWorkspace(context: CliContext, skill: string | undefined) {
   validateManagedSkill(skill);
+  if (await exists(skillSessionPath(context.root))) {
+    throw new TransportError(makeRemoteError("check", "RESTORE_REQUIRED"));
+  }
   const checked = await checkWorkspace({ ...context, producer: { ...context.producer, skill } });
   if (
     checked.local.status === "clean"
     && checked.remote.current
     && checked.local.revision === checked.remote.current.revision
   ) {
-    return {
+    const result = {
       schemaVersion: CAREER_WORKSPACE_SCHEMA_VERSION,
       action: "skill-begin",
       ok: true,
@@ -113,18 +116,31 @@ export async function beginSkillWorkspace(context: CliContext, skill: string | u
       revision: checked.remote.current.revision,
       noChange: true,
     };
+    await writeSkillSession(context.root, skill, checked.remote.current.revision);
+    return result;
   }
   const prepared = await prepareWorkspace({ ...context, producer: { ...context.producer, skill } });
+  await writeSkillSession(context.root, skill, prepared.revision);
   return { ...prepared, action: "skill-begin", skill, noChange: false };
 }
 
 export async function finishSkillWorkspace(context: CliContext, skill: string | undefined) {
   validateManagedSkill(skill);
   const skillContext = { ...context, producer: { ...context.producer, skill } };
+  const session = await readSkillSession(context.root);
+  const syncState = await readSyncState(context.root);
+  if (
+    !session
+    || session.skill !== skill
+    || syncState.kind !== "valid"
+    || syncState.state.revision !== session.revision
+  ) {
+    throw new TransportError(makeRemoteError("check", "RESTORE_REQUIRED"));
+  }
   const difference = await diffWorkspace(skillContext);
   if (difference.added.length === 0 && difference.modified.length === 0 && difference.deleted.length === 0) {
     const checked = await checkWorkspace(skillContext);
-    return {
+    const result = {
       schemaVersion: CAREER_WORKSPACE_SCHEMA_VERSION,
       action: "skill-finish",
       ok: true,
@@ -132,8 +148,11 @@ export async function finishSkillWorkspace(context: CliContext, skill: string | 
       revision: checked.local.revision,
       noChange: true,
     };
+    await rm(skillSessionPath(context.root), { force: true });
+    return result;
   }
   const published = await publishWorkspace(skillContext);
+  await rm(skillSessionPath(context.root), { force: true });
   return { ...published, action: "skill-finish", skill };
 }
 
@@ -518,6 +537,41 @@ function syncStatePath(root: string): string {
 
 function journalPath(root: string): string {
   return path.join(syncDirectory(root), "prepare-journal.json");
+}
+
+function skillSessionPath(root: string): string {
+  return path.join(syncDirectory(root), "skill-session.json");
+}
+
+async function writeSkillSession(root: string, skill: string, revision: string): Promise<void> {
+  await mkdir(syncDirectory(root), { recursive: true });
+  await writeAtomicJson(skillSessionPath(root), {
+    schemaVersion: CAREER_WORKSPACE_SCHEMA_VERSION,
+    workspace: CAREER_WORKSPACE_NAME,
+    skill,
+    revision,
+    startedAt: new Date().toISOString(),
+  });
+}
+
+async function readSkillSession(root: string): Promise<{ skill: string; revision: string } | null> {
+  if (!await exists(skillSessionPath(root))) return null;
+  try {
+    const value = JSON.parse(await readFile(skillSessionPath(root), "utf8")) as Record<string, unknown>;
+    if (
+      value.schemaVersion !== CAREER_WORKSPACE_SCHEMA_VERSION
+      || value.workspace !== CAREER_WORKSPACE_NAME
+      || typeof value.skill !== "string"
+      || !managedSkills.has(value.skill)
+      || typeof value.revision !== "string"
+      || typeof value.startedAt !== "string"
+    ) {
+      return null;
+    }
+    return { skill: value.skill, revision: value.revision };
+  } catch {
+    return null;
+  }
 }
 
 async function exists(filePath: string): Promise<boolean> {

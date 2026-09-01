@@ -31,6 +31,8 @@ manifest는 다음 필드를 가진다.
 같은 `contentDigest`를 다시 publish하면 새 release를 만들지 않는다.
 
 로컬 `career-os/.career-sync/sync-state.json`은 마지막으로 준비한 `revision`, `contentDigest`와 파일 hash를 기록한다.
+`skill-session.json`은 성공한 작성 skill의 이름, 시작 revision과 시작 시각을 기록한다.
+같은 skill의 완료 단계만 이 기록을 소비할 수 있으며 성공한 발행이나 무변경 종료 뒤 삭제한다.
 prepare 중에는 같은 디렉터리의 임시 staging, backup과 `prepare-journal.json`으로 세 관리 root의 교체·복구 상태를 기록한다.
 이 디렉터리는 Git과 원격 release에 포함하지 않는다.
 prepare는 현재 로컬 hash가 마지막 동기화 상태와 다르면 파일을 교체하지 않으며, 중단된 journal이 있으면 새 작업 전에 기존 root를 복구한다.

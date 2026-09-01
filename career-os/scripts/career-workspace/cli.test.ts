@@ -47,14 +47,17 @@ describe("career workspace cli", () => {
     const result = await beginSkillWorkspace(makeContext(fixture), "resume-preparer");
 
     expect(result).toMatchObject({ action: "skill-begin", skill: "resume-preparer", revision: "rev-1", noChange: true });
+    expect(await Bun.file(path.join(fixture.workspaceRoot, ".career-sync", "skill-session.json")).exists()).toBe(true);
   }));
 
   test("skill finish는 변경이 있을 때만 새 release를 발행한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
     await prepareWorkspace(makeContext(fixture));
+    await beginSkillWorkspace(makeContext(fixture), "application-package-writer");
     const unchanged = await finishSkillWorkspace(makeContext(fixture), "application-package-writer");
     expect(unchanged).toMatchObject({ action: "skill-finish", noChange: true, revision: "rev-1" });
 
+    await beginSkillWorkspace(makeContext(fixture), "application-package-writer");
     await writeFile(path.join(fixture.workspaceRoot, "applications/resume.md"), "after");
     const changed = await finishSkillWorkspace(makeContext(fixture), "application-package-writer");
     expect(changed).toMatchObject({ action: "skill-finish", noChange: false });
@@ -64,6 +67,18 @@ describe("career workspace cli", () => {
   test("skill session은 허용한 작성 skill만 받는다", async () => withFixture(async (fixture) => {
     await expect(beginSkillWorkspace(makeContext(fixture), "position-recommender")).rejects.toMatchObject({
       result: { code: "INVALID_MANIFEST" },
+    });
+  }));
+
+  test("성공한 begin이 없거나 다른 skill 세션이면 finish를 거절한다", async () => withFixture(async (fixture) => {
+    await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
+    await prepareWorkspace(makeContext(fixture));
+    await expect(finishSkillWorkspace(makeContext(fixture), "resume-preparer")).rejects.toMatchObject({
+      result: { code: "RESTORE_REQUIRED" },
+    });
+    await beginSkillWorkspace(makeContext(fixture), "application-package-writer");
+    await expect(finishSkillWorkspace(makeContext(fixture), "resume-preparer")).rejects.toMatchObject({
+      result: { code: "RESTORE_REQUIRED" },
     });
   }));
 
