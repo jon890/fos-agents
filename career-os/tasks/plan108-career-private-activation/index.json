@@ -1,10 +1,10 @@
 {
   "name": "plan108-career-private-activation",
   "description": "기존 비공개 커리어 파일을 홈서버 release로 이관하고 작성 skill에 prepare·publish 흐름을 연결한다.",
-  "status": "pending",
+  "status": "completed",
   "created_at": "2026-08-27",
   "total_phases": 4,
-  "current_phases": 1,
+  "current_phases": 4,
   "phases": [
     {
       "number": 1,
