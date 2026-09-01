@@ -25,6 +25,10 @@ clone 뒤 확인할 기본 파일:
 - `config/candidate-profile.md`: 후보자 프로필 기준 원본.
 - `config/position-collection.ts`: 공고 수집 설정과 검증.
 
+`scripts/career-workspace/`에는 비공개 작업 파일의 manifest, 준비, 차이 확인과 발행을 담당하는 공통 CLI가 있다.
+현재는 로컬 fixture로 파일 보존 계약까지 검증한 상태다.
+운영 홈서버의 `career-storage`와 기존 skill 자동 연결은 후속 작업에서 적용한다.
+
 `.env`는 워크스페이스 루트에 두고 git에 올리지 않는다.
 진행 중인 지원 대상은 private brain에서 확인하고 공고별 실행 자료는 `applications/<company>/<role>/`에서 관리한다.
 외부 게시, 제출, 로그인, 업로드, 메시지 전송은 사용자 승인 후에만 수행한다.
@@ -41,15 +45,15 @@ clone 뒤 확인할 기본 파일:
 ## 데이터 경계
 
 - `config/`에는 후보자 기준, 정책, 사람이 고른 예외를 둔다.
-- `state/`에는 답변 연습 진행처럼 저장소 실행에 필요한 상태만 둔다.
-- `applications/`, `private/`, `reports/`, `cache/`에는 지원 전략, 개인 산출물, 실행 결과, 재생성 가능한 캐시를 둔다.
+- `applications/`, `library/`와 `state/`는 홈서버 파일 release와 동기화할 로컬 작업본이다.
+- `reports/`와 `cache/`에는 로컬 실행 결과와 재생성 가능한 캐시를 둔다.
 - `public/question-bank/`, `sources/fos-study/`에는 공개 가능한 일반 지식만 둔다.
 - 실제 제출, 로그인, 업로드, 외부 메시지 전송, 공개 발행은 사용자 승인 후에만 수행한다.
 
 ## 검증
 
 문서 변경 뒤에는 현재 파일 구조와 낡은 실행기·경로·전달 매체 표현이 남았는지 확인한다.
-구조 변경이면 `scripts/`, `config/`, `state/`, `reports/`, `applications/`, `cache/`의 실제 파일과 문서 설명을 대조한다.
+구조 변경이면 `scripts/`, `config/`, `applications/`, `library/`, `state/`, `reports/`, `cache/`의 실제 파일과 문서 설명을 대조한다.
 
 TypeScript 스크립트 변경이 있으면 루트에서 `bunx tsc --noEmit`과 해당 스크립트의 검증 명령을 실행한다.
 

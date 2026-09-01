@@ -1,0 +1,32 @@
+{
+  "name": "plan107-career-workspace-portability",
+  "description": "홈서버의 immutable 파일 release를 안전하게 준비하고 발행할 공통 client와 파일 보존 계약을 구현한다.",
+  "status": "completed",
+  "created_at": "2026-08-27",
+  "total_phases": 3,
+  "current_phases": 3,
+  "completion_notes": [
+    "Phase 03까지 로컬 fixture 기반으로 manifest, transport, CLI, 실패 보존과 다중 client 재현 회귀 검증을 완료했다.",
+    "운영 홈서버 career-storage 구현과 기존 skill 활성화는 후속 plan에서 수행한다."
+  ],
+  "phases": [
+    {
+      "number": 1,
+      "title": "manifest와 로컬 변경 판정 계약 구현",
+      "file": "phase-01.md",
+      "execution_profile": "deep"
+    },
+    {
+      "number": 2,
+      "title": "전송 계층과 workspace CLI 구현",
+      "file": "phase-02.md",
+      "execution_profile": "deep"
+    },
+    {
+      "number": 3,
+      "title": "실패 보존과 다중 client 회귀 검증",
+      "file": "phase-03.md",
+      "execution_profile": "deep"
+    }
+  ]
+}

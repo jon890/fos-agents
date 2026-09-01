@@ -1,4 +1,4 @@
-## ADR-058 — private boundary와 retention을 먼저 고정한다
+## ADR-058 비공개 경계와 보존 기준을 먼저 고정한다
 
 - Status: Accepted
 - Date: 2026-06-07
@@ -10,7 +10,7 @@
 
 ### 결정
 
-- `private/`, `applications/`, `state/`, `reports/`, `cache/`는 기본적으로 비공개 영역으로 본다.
+- `applications/`, `library/`, `state/`, `reports/`, `cache/`는 기본적으로 비공개 영역으로 본다.
 - 공개 승격은 민감 정보 검토와 사용자 승인 후에만 수행한다.
 - 재생성 가능한 cache와 일시 report는 retention 기준에 따라 제거한다.
 - 완전히 폐기한 기능과 산출물은 tombstone을 늘리지 않고 Git 이력으로 보존할 수 있다.

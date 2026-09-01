@@ -2,6 +2,9 @@
 
 career-os는 skill이 실행 계약을 설명하고 TypeScript 스크립트가 반복 가능한 처리를 담당하는 파일 기반 워크스페이스다.
 
+public `fos-agents` 저장소는 skill과 실행 코드를 소유한다.
+비공개 작업 파일은 각 환경의 기존 경로에서 다루고 홈서버의 immutable file release를 기준으로 동기화한다.
+
 ## 디렉터리 구조
 
 ```text
@@ -10,9 +13,9 @@ career-os/
 ├── .codex/skills/        Codex에서 같은 skill을 노출하는 링크
 ├── config/               사람이 관리하는 프로필과 수집 정책
 ├── scripts/              검증, 수집과 변환 코드
-├── state/                실행 사이에 유지하는 로컬 상태
-├── applications/         공고별 지원 패키지
-├── private/              개인 경력 근거와 비공개 준비 자료
+├── applications/         동기화되는 로컬 지원 패키지
+├── library/              여러 지원에서 재사용하는 비공개 자료
+├── state/                동기화되는 도구 실행 상태
 ├── public/               공개 가능한 질문 은행
 ├── reports/              구조화 결과와 사람이 읽는 리포트
 ├── cache/                다시 만들 수 있는 수집 결과
@@ -28,6 +31,21 @@ career-os/
 하나의 스크립트가 수집과 추천, 렌더링을 모두 책임지지 않는다.
 외부 응답은 경계에서 검증한 뒤 내부 타입으로 변환한다.
 구조화 데이터 검증에는 Zod를 사용하고, 표시 문자열은 렌더러에서만 만든다.
+
+## 실행 환경 준비
+
+`scripts/career-workspace/`는 Hermes, Codex CLI와 Claude Code가 공유하는 파일 준비·차이 검사·반영 경계다.
+manifest 생성과 검증, 로컬 기준 상태 확인, SSH transport와 검증용 local transport를 책임별 모듈로 나눈다.
+현재 공통 CLI와 local fixture까지 구현했으며 운영 `career-storage`와 기존 skill 자동 연결은 후속 작업 범위다.
+연결을 마치면 사용자는 이 helper를 직접 고르지 않고 기존 career-os skill을 계속 호출한다.
+
+각 환경은 `applications`, `library`와 `state`를 일반 로컬 디렉터리로 사용한다.
+원격 파일을 network filesystem으로 직접 편집하지 않으며, 준비 단계는 검증한 release만 임시 경로에서 로컬로 교체한다.
+반영 단계는 실행 시작 revision이 홈서버 현재 값과 일치할 때만 새 release를 만든다.
+
+`.claude/skills/`가 skill 관리 원본이다.
+`.codex/skills/`는 같은 디렉터리를 가리키며 Hermes cron은 `career-os`를 작업 디렉터리로 사용한다.
+후속 연결에서도 환경별 차이는 transport 설정에만 두고 지원 판단과 문서 작성 절차를 복제하지 않는다.
 
 ## 공고 추천
 
@@ -57,7 +75,8 @@ HTML은 검증된 추천 JSON에서 파생하며 게시 검증 뒤 임시 데이
 포지션별 질문은 공고 책임, 근거 방어와 경험 공백에서 파생한다.
 사용자는 이 원본과 현재 제출 파일을 묶은 `application-package.html`에서 검토한다.
 별도 지원 문항과 경력기술서는 필요한 경우에만 추가한다.
-개인 근거와 면접 준비 자료는 `private/<company>/<position>/`에 둔다.
+공고별 개인 근거와 면접 준비 자료도 같은 `applications/<company>/<position>/`에 둔다.
+여러 지원에서 재사용하는 개인 질문과 이력서 기준본만 `library/`에 둔다.
 실제 제출은 두 스킬의 책임이 아니다.
 
 ## 후보자 프로필과 이력서
@@ -78,6 +97,7 @@ TypeScript 스크립트가 brain을 직접 조회하지 않는다.
 공고별 `interview-questions.json`을 명시하면 포지션 질문 세 개와 공통 기반 질문 두 개를 기본으로 섞는다.
 `follow-up-policy.ts`는 답변 수준에 따른 꼬리질문 축과 최대 깊이를 제공한다.
 복습 상태는 `state/drill-progress.json` 하나에 저장한다.
+후보풀과 리포트 중간 파일처럼 다시 만들 수 있는 실행 자료는 `state/`에 두지 않는다.
 
 `config/interview-question-sources.ts`는 공식 문서, 기술 블로그, 공개 영상과 GitHub 가이드의 역할을 구분한다.
 `scripts/interview-question-sources/`는 기존 읽을거리 수집 어댑터를 재사용해 실행별 후보풀을 만들고 설정과 후보 형식을 검증한다.
@@ -111,5 +131,7 @@ YouTube 채널은 공식 Atom 피드를 기존 피드 어댑터로 수집한다.
 
 - 채용 사이트와 기술 블로그는 읽기 전용 입력이다.
 - `sources/fos-study/`는 별도 Git 저장소다.
-- `.env`와 비공개 상태는 커밋하지 않는다.
+- `.env`는 Git에 커밋하지 않는다.
+- 홈서버 주소, 계정과 저장 경로는 환경 설정에서만 주입하고 공개 문서나 결과 JSON에 기록하지 않는다.
+- 비공개 작업 파일의 이전 release와 복구 경계는 홈서버 private 인프라가 소유한다.
 - 외부 제출과 공개 게시에는 사용자 승인이 필요하다.

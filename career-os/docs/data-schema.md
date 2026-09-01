@@ -5,11 +5,65 @@ career-os는 사람이 관리하는 설정, 실행 상태, 비공개 산출물, 
 ## 저장 원칙
 
 - `config/`에는 오래 유지할 프로필과 정책을 둔다.
-- `state/`에는 실행 사이에 유지할 현재 상태를 둔다.
-- `applications/`와 `private/`에는 개인 지원 자료를 둔다.
+- `applications/`, `library/`와 `state/`는 홈서버 release와 동기화하는 로컬 작업본이다.
 - `reports/`에는 구조화 결과와 사람이 읽는 리포트를 둔다.
 - `cache/`에는 원본에서 다시 만들 수 있는 수집 결과를 둔다.
 - `public/`과 `sources/fos-study/`에는 공개 가능한 자료만 둔다.
+
+## 비공개 작업 release
+
+홈서버의 각 release는 `applications`, `library`, `state`와 `workspace-manifest.json`을 가진다.
+release 디렉터리는 생성 뒤 수정하지 않으며 검증을 통과한 release만 `current` 상대 링크가 가리킨다.
+
+manifest는 다음 필드를 가진다.
+
+- `schemaVersion`: 현재 값 `1`
+- `workspace`: 고정값 `career-os`
+- `revision`: 홈서버가 부여한 release 식별자
+- `parentRevision`: publish가 시작할 때 확인한 이전 revision
+- `createdAt`: 홈서버가 기록한 UTC 시각
+- `producer`: 결과를 만든 skill과 `interactive` 또는 `automation` 실행 방식
+- `contentDigest`: 정렬한 파일 경로, 크기와 SHA-256에서 만든 전체 digest
+- `files`: 상대 경로, byte 크기와 SHA-256 목록
+
+파일 경로는 `applications/`, `library/`, `state/` 중 하나로 시작해야 한다.
+일반 파일만 허용하고 symlink, `.env`, `.omc`, log, cache와 임시 파일은 거부한다.
+같은 `contentDigest`를 다시 publish하면 새 release를 만들지 않는다.
+
+로컬 `career-os/.career-sync/sync-state.json`은 마지막으로 준비한 `revision`, `contentDigest`와 파일 hash를 기록한다.
+prepare 중에는 같은 디렉터리의 임시 staging, backup과 `prepare-journal.json`으로 세 관리 root의 교체·복구 상태를 기록한다.
+이 디렉터리는 Git과 원격 release에 포함하지 않는다.
+prepare는 현재 로컬 hash가 마지막 동기화 상태와 다르면 파일을 교체하지 않으며, 중단된 journal이 있으면 새 작업 전에 기존 root를 복구한다.
+
+`prepare-journal.json`은 transaction 식별자, `started`, `staged`, `backed_up`, `applied`, `restoring`, `restored`, `completed` 상태와 root별 `hadOriginal`, `backupDone`, `applyDone`을 기록한다.
+`started`와 `staged`는 기존 root를 건드리지 않았으므로 staging만 정리한다.
+`backed_up`, `applied`와 `restoring`은 root별 상태와 실제 경로를 대조해 새 root를 제거하고 backup을 복구한다.
+원래 root가 없던 항목은 `hadOriginal: false`로 기록하고 복구 때 새 root만 제거한다.
+`completed`는 새 root와 `sync-state.json`의 hash가 일치할 때만 backup과 journal을 정리한다.
+기록과 실제 경로가 모순되면 자동 판단하지 않고 `RESTORE_REQUIRED`로 중단한다.
+
+## 비공개 작업 전송 계약
+
+원격 명령은 다음 세 동작만 제공한다.
+
+- `career-storage status`: 본문 없이 호출하고 `RemoteStatusResult` JSON을 stdout으로 반환한다.
+- `career-storage export --revision <revision>`: 해당 immutable release를 tar stdout으로 반환한다.
+- `career-storage publish`: `workspace-draft.json`과 세 관리 root가 든 tar를 stdin으로 받고 `RemotePublishResult` JSON을 stdout으로 반환한다.
+
+export tar의 최상위에는 `workspace-manifest.json`, `applications/`, `library/`, `state/`만 허용한다.
+publish tar의 최상위에는 `workspace-draft.json`과 같은 세 관리 root만 허용한다.
+
+`RemoteStatusResult`는 `schemaVersion`, `action: "status"`, `ok: true`, `workspace`와 nullable `current`를 가진다.
+`current`는 `revision`, `contentDigest`, `createdAt`, `fileCount`를 가진다.
+`RemotePublishResult`는 `schemaVersion`, `action: "publish"`, `ok: true`, `revision`, `contentDigest`, `createdAt`, `fileCount`, `noChange`를 가진다.
+
+성공 JSON만 stdout에 기록한다.
+실패는 nonzero 종료 코드와 stderr의 `schemaVersion`, `action`, `ok: false`, `code`를 가진 JSON으로 반환한다.
+공통 오류 코드는 `WORKSPACE_DIRTY`, `REMOTE_UNINITIALIZED`, `REVISION_CONFLICT`, `INVALID_MANIFEST`, `TRANSFER_FAILED`, `TRANSPORT_UNAVAILABLE`, `RESTORE_REQUIRED`다.
+오류에는 파일 본문, 호스트, 계정, key 경로와 비밀값을 포함하지 않는다.
+
+Markdown, JSON, 검토용 HTML, PDF와 실제 제출 묶음은 해당 application 디렉터리 안에서 함께 동기화한다.
+게시 뒤 삭제하는 공개 리포트와 원본에서 다시 만들 수 있는 cache는 release에 포함하지 않는다.
 
 ## Config
 
@@ -65,6 +119,7 @@ Zod 검증을 통과한 값만 수집 코드가 사용한다.
 - 기술·인성 모드가 공유하는 진행 정보
 
 학습 주제 생성 상태와 섞지 않는다.
+이 파일은 public 저장소에서 추적하지 않고 비공개 작업 release로 동기화한다.
 
 ### 실행 중 생성되는 읽을거리 데이터
 
@@ -134,7 +189,9 @@ Zod 검증을 통과한 값만 수집 코드가 사용한다.
 첫 10줄의 `human-confirmation`은 동기, 본인 역할, 당시 제약, 기각한 대안과 결과의 확인 범위처럼 후보자만 확정할 수 있는 항목의 상태다.
 값은 `complete` 또는 `needs_input`이며, `needs_input`이면 준비 상태를 `ready`로 둘 수 없다.
 
-개인 근거와 면접 준비는 `private/<company>/<position>/`에 둔다.
+공고별 개인 근거와 면접 준비는 해당 `applications/<company>/<position>/`에 둔다.
+여러 지원에서 재사용하는 개인 질문은 `library/question-bank/`에 둔다.
+특정 지원에 종속되지 않는 이력서 기준본은 `library/resume-baselines/`에 둔다.
 
 ## 제출 문서 근거 감사
 
@@ -163,7 +220,7 @@ Zod 검증을 통과한 값만 수집 코드가 사용한다.
 공개 가능한 일반 질문은 `public/question-bank/`에 둔다.
 질문 출처의 공식 URL, 게시자, 확인일과 적용 범위는 `public/question-bank/sources.json`에 둔다.
 각 질문의 `source`는 이 레지스트리의 식별자를 참조한다.
-개인 경험에서 파생한 질문은 `private/question-bank/`에 둔다.
+개인 경험에서 파생한 질문은 `library/question-bank/`에 둔다.
 
 `config/interview-question-sources.ts`는 질문 후보를 찾을 외부 출처를 관리한다.
 각 출처는 고유 `key`, 출처 종류, 사용 역할, 주제, URL과 수집 어댑터를 가진다.
@@ -216,6 +273,7 @@ HTML 게시 전에는 개인 정보, 비공개 업무 내용, 로컬 절대 경�
 ## 보존과 공개 범위
 
 - `config/`와 공개 질문 은행은 검토 후 Git으로 관리한다.
+- 지원 원본, 개인 질문과 답변 연습 상태는 홈서버의 비공개 작업 release로 동기화한다.
 - 현재 지원 대상과 회사별 지원 판단은 private brain에서 관리한다.
 - cache와 다시 만들 수 있는 중간 리포트는 장기 이력으로 취급하지 않는다.
 - 개인 연락처, 회사별 지원 전략, 근거 감사 원문은 공개 리포트에 포함하지 않는다.

@@ -22,7 +22,6 @@
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import type {
   AdapterCollectionResult,
   CollectionDiagnostics,
@@ -39,12 +38,17 @@ import {
 import { configuredSourceIds, selectAdapters } from "./live-postings/adapters/index.ts";
 import { buildPostingCandidatePool } from "./live-postings/candidate_pool.ts";
 
-const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
-
 // ---- CLI ----------------------------------------------------------------
 
+export class CliUsageError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CliUsageError";
+  }
+}
+
 export function parseArgs(argv: string[]): CliArgs {
-  let jsonOut = resolve(REPO_ROOT, "career-os/state/posting-candidates.json");
+  let jsonOut: string | undefined;
   let source: SourceSelection = "all";
   let serverOnly = true;
   let wantedLimit = 120;
@@ -87,6 +91,9 @@ export function parseArgs(argv: string[]): CliArgs {
     } else if (arg === "--include-toss-articles") {
       includeTossArticles = true;
     }
+  }
+  if (!jsonOut) {
+    throw new CliUsageError("--output <output-json> is required");
   }
   return { jsonOut, source, serverOnly, wantedLimit, includeTossArticles };
 }
@@ -186,7 +193,7 @@ async function main(): Promise<number> {
 
 if (import.meta.main) {
   main().then(process.exit).catch((e) => {
-    console.error(e);
-    process.exit(1);
+    console.error(e instanceof Error ? e.message : String(e));
+    process.exit(e instanceof CliUsageError ? 2 : 1);
   });
 }
