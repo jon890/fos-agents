@@ -22,7 +22,7 @@ export async function createTarFromDirectory(root: string, entries: readonly str
   if (exitCode !== 0) {
     throw new Error("tar create failed");
   }
-  return stdout;
+  return toUint8Array(stdout);
 }
 
 type TarAction = RemoteErrorResult["action"];
@@ -33,7 +33,7 @@ export async function extractTarToDirectory(
   allowed: readonly string[],
   action: TarAction,
 ): Promise<void> {
-  const archiveBytes = toBytes(archive);
+  const archiveBytes = toUint8Array(archive);
   validateTarEntries(archiveBytes, allowed, action);
   await mkdir(destination, { recursive: true });
   const archivePath = path.join(destination, ".archive.tar");
@@ -51,7 +51,7 @@ export async function extractTarToDirectory(
 }
 
 export async function validateTarTopLevel(archive: Uint8Array, allowed: readonly string[], action: TarAction): Promise<void> {
-  validateTarEntries(toBytes(archive), allowed, action);
+  validateTarEntries(toUint8Array(archive), allowed, action);
 }
 
 export async function validateCareerWorkspaceReleaseArchive(
@@ -251,7 +251,7 @@ function tarString(header: Uint8Array, start: number, length: number): string {
   return new TextDecoder().decode(end >= 0 ? slice.subarray(0, end) : slice);
 }
 
-function toBytes(archive: Uint8Array | ArrayBuffer): Uint8Array {
+export function toUint8Array(archive: Uint8Array | ArrayBuffer): Uint8Array {
   return archive instanceof Uint8Array ? archive : new Uint8Array(archive);
 }
 

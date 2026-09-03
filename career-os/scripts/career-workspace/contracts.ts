@@ -111,9 +111,22 @@ export const remotePublishResultSchema = z.object({
   noChange: z.boolean(),
 }).strict();
 
+export const careerStorageMigrationResultSchema = z.object({
+  schemaVersion: z.literal(CAREER_WORKSPACE_SCHEMA_VERSION),
+  action: z.literal("migrate"),
+  ok: z.literal(true),
+  revision: revisionSchema,
+  contentDigest: sha256Schema,
+  fileCount: z.number().int().nonnegative(),
+  sourceArchiveSha256: sha256Schema,
+  destinationArchiveSha256: sha256Schema,
+  noChange: z.boolean(),
+  pointerWritten: z.boolean(),
+}).strict();
+
 export const remoteErrorResultSchema = z.object({
   schemaVersion: z.literal(CAREER_WORKSPACE_SCHEMA_VERSION),
-  action: z.enum(["status", "export", "publish", "prepare", "check", "diff"]),
+  action: z.enum(["status", "export", "publish", "prepare", "check", "diff", "migrate"]),
   ok: z.literal(false),
   code: z.enum([
     "WORKSPACE_DIRTY",
@@ -135,4 +148,5 @@ export type RejectedWorkspacePath = z.infer<typeof rejectedWorkspacePathSchema>;
 export type WorkspaceDraftResult = z.infer<typeof workspaceDraftResultSchema>;
 export type RemoteStatusResult = z.infer<typeof remoteStatusResultSchema>;
 export type RemotePublishResult = z.infer<typeof remotePublishResultSchema>;
+export type CareerStorageMigrationResult = z.infer<typeof careerStorageMigrationResultSchema>;
 export type RemoteErrorResult = z.infer<typeof remoteErrorResultSchema>;

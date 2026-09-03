@@ -34,7 +34,7 @@ migration 성공 결과는 `schemaVersion: 1`, `action: "migrate"`, `ok: true`, 
 
 같은 revision의 archive, manifest, release descriptor와 hash가 모두 같으면 migration 재실행을 무변경 성공으로 처리한다.
 같은 key의 byte가 다르거나 다른 current pointer가 있으면 `REVISION_CONFLICT`로 중단한다.
-부분 업로드 객체와 기존 파일 release는 자동 삭제하지 않고 객체 key와 판정 코드만 결과에 기록한다.
+부분 업로드 객체와 기존 파일 release는 자동 삭제하지 않고, 실패 결과에는 객체 key 없이 판정 코드만 기록한다.
 
 ### 4. 홈서버 SeaweedFS 설치
 

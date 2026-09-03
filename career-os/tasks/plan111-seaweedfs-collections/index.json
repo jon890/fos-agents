@@ -1,10 +1,10 @@
 {
   "name": "plan111-seaweedfs-collections",
   "description": "외부 SeaweedFS의 career-os bucket에 비공개 작업 release를 보관하고 기존 파일 release를 검증해 이전한다.",
-  "status": "pending",
+  "status": "completed",
   "created_at": "2026-09-03",
   "total_phases": 3,
-  "current_phases": 0,
+  "current_phases": 3,
   "phases": [
     {
       "number": 1,
