@@ -1,69 +1,98 @@
-# Naver Blog preview automation
+# 네이버 블로그 미리보기 자동화
 
-This reference explains how to prepare or register a Naver Blog preview/draft.
+네이버 블로그에 미리보기나 임시저장을 준비하는 절차를 담는다.
 
-## Important safety rule
+## 지켜야 할 안전 규칙
 
-Never ask the user to paste a Naver password, one-time code, recovery code, or cookie into chat. Use direct browser login or a dedicated local browser profile.
+네이버 비밀번호, 일회용 인증번호, 복구 코드, 쿠키를 대화창에 붙여 달라고 요청하지 않는다.
+브라우저에서 사용자가 직접 로그인하거나, 전용 브라우저 프로필을 쓴다.
 
-## Recommended login methods
+## 로그인 방법
 
-### 1. Best: user logs in directly in the controlled browser
+### 사용자가 브라우저에서 직접 로그인
 
-1. Open Naver Blog write page with browser automation.
-2. If the login page appears, stop and ask the user to complete login directly in the browser UI.
-3. After login completes, continue automation.
-4. Save as draft or open preview only. Do not publish unless explicitly asked.
+가장 권장하는 방법이다.
 
-This avoids sharing credentials with the agent.
+1. 브라우저 자동화로 네이버 블로그 글쓰기 화면을 연다.
+2. 로그인 화면이 나오면 멈추고, 사용자에게 브라우저에서 직접 로그인해 달라고 요청한다.
+3. 로그인이 끝나면 자동화를 이어간다.
+4. 임시저장이나 미리보기까지만 한다.
+발행은 명시적인 요청이 있을 때만 한다.
 
-### 2. Persistent local browser profile
+### 브라우저 프로필 유지
 
-If Hermes/browser supports a persistent browser profile, configure one profile for Naver work and let the user log in once. Future sessions can reuse the login cookies.
+브라우저가 프로필 유지를 지원하면 네이버 작업용 프로필을 하나 만들고
+사용자가 한 번 로그인한 뒤 그 세션을 재사용한다.
 
-Use only on a trusted machine. Do not export or paste cookies.
+신뢰할 수 있는 기기에서만 쓴다.
+쿠키를 내보내거나 붙여넣지 않는다.
 
-### 3. Manual copy-paste fallback
+### 수동 등록용 패키지
 
-If browser automation is blocked, produce a `preview-package`:
+브라우저 자동화가 막히면 사용자가 직접 붙여넣을 패키지를 만든다.
 
-- Recommended title.
-- Body text.
-- Photo slots.
-- Tags.
-- Short paste order.
+- 제목 후보
+- 본문 전문
+- 사진 위치와 순서
+- 태그 목록
+- 붙여넣는 순서
 
-The user copies it into Naver manually.
+## 하지 않는 것
 
-## Not recommended
+- 네이버 아이디와 비밀번호를 대화창이나 메신저로 주고받기
+- 세션 쿠키 공유
+- 캡차나 보안 확인 우회
+- 사용자의 최종 확인 없이 발행
 
-- Sharing Naver ID/password in Discord or chat.
-- Sharing session cookies.
-- Automating CAPTCHA or bypassing security checks.
-- Publishing without a final user confirmation.
+## 자동화 절차
 
-## Browser automation procedure
+브라우저 조작은 `~/.claude/scripts/browser-driver`로 한다.
+브라우저 도구를 직접 부르면 실패해도 종료 코드가 0이라 오류가 드러나지 않는다.
+명령 목록은 `browser-driver help`가 소유하므로 첫 명령 전에 읽는다.
 
-1. Navigate to Naver Blog write page.
-2. Detect state:
-   - Login page: ask user to log in in browser.
-   - Editor page: continue.
-   - Bot/security challenge: stop and ask user to complete it manually.
-3. Insert title.
-4. Insert body in blocks. Use plain text first. Add images only if image files are available and the editor exposes upload controls.
-5. Add tags if the editor has a tag field.
-6. Click preview or save draft.
-7. Verify by reading the editor state or preview title/body.
+1. 네이버 블로그 글쓰기 화면으로 이동한다.
+2. 현재 상태를 판별한다.
+   - 로그인 화면이면 사용자에게 로그인을 요청한다.
+   - 편집기 화면이면 이어간다.
+   - 보안 확인 화면이면 멈추고 사용자 조작을 요청한다.
+3. 제목을 넣는다.
+4. 본문을 문단 단위로 넣는다.
+   글자를 먼저 넣고, 이미지 파일이 있고 편집기가 업로드를 허용할 때만 사진을 넣는다.
+5. 태그 입력란이 있으면 태그를 넣는다.
+6. 미리보기를 열거나 임시저장한다.
+7. 편집기 상태나 미리보기의 제목과 본문을 읽어 실제로 반영됐는지 확인한다.
 
-## Output status language
+## 결과를 알리는 표현
 
-Be exact:
+실제로 확인한 것만 말한다.
 
-- `미리보기 초안 등록 완료` only if the editor/preview was actually created and verified.
-- `로그인 필요로 중단` if login is required.
-- `네이버 보안 확인으로 중단` if a challenge blocks automation.
-- `수동 등록용 패키지 생성 완료` if only title/body/tags were prepared.
+| 상황 | 표현 |
+| --- | --- |
+| 미리보기나 임시저장이 만들어지고 확인까지 끝남 | 미리보기 초안 등록 완료 |
+| 로그인이 필요해 멈춤 | 로그인 필요로 중단 |
+| 보안 확인에 막힘 | 네이버 보안 확인으로 중단 |
+| 제목, 본문, 태그만 준비함 | 수동 등록용 패키지 생성 완료 |
 
-## Current known limit
+## 알려진 제약
 
-Opening `https://blog.naver.com/PostWriteForm.naver?blogId=mywldbs` without an existing session redirects to Naver login. The agent can continue only after the user logs in directly in the browser/session.
+세션 없이 `https://blog.naver.com/PostWriteForm.naver?blogId=mywldbs`를 열면
+네이버 로그인 화면으로 넘어간다.
+사용자가 브라우저에서 직접 로그인한 뒤에야 자동화를 이어갈 수 있다.
+
+## 글 수집은 로그인이 필요 없다
+
+발행된 글을 읽는 것은 로그인 없이 된다.
+페르소나 조사에 쓰는 수집기가 이 경로를 쓴다.
+
+| 용도 | 경로 |
+| --- | --- |
+| 글 목록 | `PostTitleListAsync.naver` |
+| 본문 | `PostView.naver` |
+| 태그 | `BlogTagListInfo.naver` |
+
+태그 조회는 `Referer` 헤더가 있어야 응답한다.
+`logNoList`라는 이름과 달리 여러 건을 콤마로 이어 보내면 빈 목록이 온다.
+글마다 따로 요청해야 한다.
+
+요청이 빠르면 429로 거절하므로 간격을 늘려가며 다시 요청한다.
+목록과 본문은 `scripts/collect_naver_posts.py`가, 태그는 `scripts/enrich_naver_posts.py`가 다룬다.
