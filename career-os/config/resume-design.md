@@ -81,6 +81,7 @@ body {
   display: block;
   align-self: flex-end;
   margin-top: auto;
+  margin-right: 1mm;
   padding-top: 6mm;
   content: attr(data-page);
   color: #8a93a1;
