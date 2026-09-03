@@ -94,4 +94,52 @@ describe("validateApplicationPackage", () => {
       expect(result.errors.join("\n")).toContain("human-confirmation은 complete");
     });
   });
+
+  test("구조화된 지원서 입력값을 검증한다", () => {
+    const directory = fixture();
+    writeFileSync(join(directory, "application-form.json"), JSON.stringify({
+      schemaVersion: 1,
+      formUrl: "https://example.com/job/apply",
+      verifiedAt: "2026-09-03",
+      status: "fields_verified",
+      profileSource: "private-brain:career-application-profile",
+      sections: [{
+        title: "기본 정보",
+        fields: [{ id: "name", label: "이름", value: "김병태", source: "profile", required: true }],
+      }],
+      attachments: [{ label: "이력서", file: "resume.pdf", required: true }],
+      questions: [],
+      submission: { autofill: "ready_for_preview", finalSubmit: "requires_user_approval" },
+      notes: [],
+    }));
+
+    expect(validateApplicationPackage(directory).passed).toBe(true);
+  });
+
+  test("기존 application-answers.md가 남으면 마이그레이션을 요구한다", () => {
+    const directory = fixture();
+    writeFileSync(join(directory, "application-answers.md"), "# 지원 문항");
+
+    const result = validateApplicationPackage(directory);
+    expect(result.passed).toBe(false);
+    expect(result.errors.join("\n")).toContain("application-form.json으로 옮겨야 합니다");
+  });
+
+  test("claim ledger를 반복하는 감사 문서가 남으면 거부한다", () => {
+    const directory = fixture();
+    writeFileSync(join(directory, "evidence-audit.md"), "# 중복 감사");
+
+    const result = validateApplicationPackage(directory);
+    expect(result.passed).toBe(false);
+    expect(result.errors.join("\n")).toContain("중복 중간 문서는 보존하지 않습니다");
+  });
+
+  test("계약에 없는 파일이 추가되면 거부한다", () => {
+    const directory = fixture();
+    writeFileSync(join(directory, "review-notes.md"), "# 임시 검토");
+
+    const result = validateApplicationPackage(directory);
+    expect(result.passed).toBe(false);
+    expect(result.errors.join("\n")).toContain("지원 패키지 계약에 없는 파일입니다");
+  });
 });

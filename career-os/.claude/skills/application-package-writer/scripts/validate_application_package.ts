@@ -1,12 +1,15 @@
 #!/usr/bin/env bun
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import {
+  ALLOWED_PACKAGE_FILES,
   REQUIRED_HEADINGS,
   REQUIRED_PACKAGE_FILES,
+  REDUNDANT_PACKAGE_FILES,
   SUBMISSION_LEAK_PATTERNS,
 } from "./package_contract.ts";
+import { loadApplicationForm } from "./application_form_schema.ts";
 import { loadApplicationInterviewQuestions } from "../../../../scripts/interview-drill/application_question_schema.ts";
 
 export type PackageValidation = {
@@ -27,6 +30,16 @@ export function validateApplicationPackage(applicationDirectory: string): Packag
 
   for (const file of REQUIRED_PACKAGE_FILES) {
     if (!existsSync(join(directory, file))) errors.push(`필수 파일이 없습니다: ${file}`);
+  }
+  for (const file of REDUNDANT_PACKAGE_FILES) {
+    if (existsSync(join(directory, file))) errors.push(`중복 중간 문서는 보존하지 않습니다: ${file}`);
+  }
+  const allowedFiles = new Set<string>(ALLOWED_PACKAGE_FILES);
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    if (entry.name === "application-answers.md") continue;
+    if (entry.isFile() && !allowedFiles.has(entry.name)) {
+      errors.push(`지원 패키지 계약에 없는 파일입니다: ${entry.name}`);
+    }
   }
   if (errors.length > 0) return { passed: false, applicationDirectory: directory, errors };
 
@@ -69,7 +82,28 @@ export function validateApplicationPackage(applicationDirectory: string): Packag
     errors.push("application-package.md에 후보자 근거 경로가 필요합니다.");
   }
 
-  for (const file of ["resume-draft.md", "application-answers.md"] as const) {
+  const legacyAnswersPath = join(directory, "application-answers.md");
+  if (existsSync(legacyAnswersPath)) {
+    errors.push("application-answers.md는 사용하지 않습니다. 지원서 입력값과 서술형 답변을 application-form.json으로 옮겨야 합니다.");
+  }
+
+  const applicationFormPath = join(directory, "application-form.json");
+  if (existsSync(applicationFormPath)) {
+    try {
+      const form = loadApplicationForm(applicationFormPath);
+      for (const question of form.questions) {
+        for (const pattern of SUBMISSION_LEAK_PATTERNS) {
+          if (pattern.test(question.answer)) {
+            errors.push(`application-form.json의 ${question.id} 답변에 제출용이 아닌 내부 정보가 있습니다: ${pattern}`);
+          }
+        }
+      }
+    } catch (error) {
+      errors.push(`application-form.json 형식이 올바르지 않습니다: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  for (const file of ["resume-draft.md"] as const) {
     if (!existsSync(join(directory, file))) continue;
     const content = read(join(directory, file));
     for (const pattern of SUBMISSION_LEAK_PATTERNS) {

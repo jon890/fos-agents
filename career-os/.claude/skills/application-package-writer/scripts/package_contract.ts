@@ -32,3 +32,26 @@ export const SUBMISSION_LEAK_PATTERNS = [
   /\b(?:plan|task)[-_ ]?\d{2,}\b/i,
   /\b[0-9a-f]{40}\b/i,
 ] as const;
+
+export const REDUNDANT_PACKAGE_FILES = [
+  "evidence-audit.md",
+  "career-description-evidence-audit.md",
+  "career-description-design.md",
+] as const;
+
+export const ALLOWED_PACKAGE_FILES = [
+  ...REQUIRED_PACKAGE_FILES,
+  "application-form.json",
+  "application-package.html",
+  "career-description-draft.md",
+  "career-description.html",
+  "career-description.pdf",
+  "career-description-claim-ledger.json",
+  "career-description-scorecard.md",
+  "claim-ledger.json",
+  "resume.html",
+  "resume.pdf",
+  "resume-scorecard.md",
+  "submission-manifest.json",
+  "submission.pdf",
+] as const;
