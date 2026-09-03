@@ -224,17 +224,41 @@ SSH 환경은 `CAREER_WORKSPACE_SSH_TARGET`, `CAREER_WORKSPACE_SSH_ARGS`와 `CAR
 
 ## 아침 읽을거리
 
-수집 후보는 외부 원문 URL, 출처, 제목과 게시 시각을 포함한다.
+수집 후보는 외부 원문 URL, 정규화한 `contentKey`, 출처, 제목과 게시 시각을 포함한다.
 피드가 제공하는 경우 요약 판단에 사용할 공개 설명문을 `excerpt`에 담는다.
-선별 결과는 같은 항목 식별자를 참조한다.
+`previouslyRecommended`는 누적 이력에 같은 `contentKey`가 있는지를 나타낸다.
+선별 결과는 같은 항목 식별자를 참조하며 `previouslyRecommended: true`인 후보를 선택할 수 없다.
 
-리포트 항목에는 다음 정보를 담는다.
+선별 결과와 리포트는 공부 주제 배열을 기준으로 사용한다.
+각 공부 주제는 다음 정보를 담는다.
 
-- 카테고리
-- 제목과 원문 URL
-- 출처
-- 간단한 요약
-- 추천 이유
+- `title`: 외부 자료에서 도출한 공부 주제
+- `careerQuestion`: 현재 업무나 다음 역할에 적용해 볼 질문
+- `items`: 주제에 연결한 한 개 이상의 추천 자료
+
+각 추천 자료는 카테고리, 제목과 원문 URL, 출처, 간단한 요약, 추천 이유와 커리어 연결 유형을 가진다.
+커리어 연결 유형은 `current-work`, `target-role`, `engineering-judgment`, `product-business` 중 하나다.
+
+### `state/morning-study-history.json`
+
+검증을 통과해 사용자에게 제공할 준비가 끝난 추천 자료의 누적 이력이다.
+이 파일은 홈서버 비공개 작업 release로 동기화하며 임시 리포트와 분리한다.
+
+- `schemaVersion`: 현재 값 `1`
+- `entries`: 과거 추천 자료 배열
+- `entries[].contentKey`: 정규화한 원문을 식별하는 유일 키
+- `entries[].canonicalUrl`: 추적 query와 fragment를 제거한 HTTPS 원문 URL
+- `entries[].sourceKey`: 등록된 출처 식별자
+- `entries[].category`: 수집 카테고리
+- `entries[].title`: 추천 당시 제목
+- `entries[].studyTopic`: 추천 당시 공부 주제
+- `entries[].careerValue`: 추천 당시 커리어 연결 유형
+- `entries[].recommendedAt`: 이력에 반영한 UTC 시각
+- `entries[].reportId`: 추천이 포함된 일별 리포트 식별자
+
+`contentKey`는 파일 안에서 유일해야 한다.
+YouTube 영상은 video ID를 키에 포함하고 일반 글은 정규화한 URL의 SHA-256으로 키를 만든다.
+이력 갱신은 임시 파일을 같은 디렉터리에 쓴 뒤 rename하며, 기존 이력을 읽거나 검증하지 못하면 빈 이력으로 대체하지 않는다.
 
 원문에 없는 예상 학습 시간, 난이도, 분야를 임의 기본값으로 채우지 않는다.
 값이 필요하지만 확인할 수 없으면 명시적으로 정보가 없다고 표시한다.
@@ -252,7 +276,7 @@ HTML 게시 전에는 개인 정보, 비공개 업무 내용, 로컬 절대 경�
 ## 보존과 공개 범위
 
 - `config/`와 공개 질문 은행은 검토 후 Git으로 관리한다.
-- 지원 원본, 개인 질문과 답변 연습 상태는 홈서버의 비공개 작업 release로 동기화한다.
+- 지원 원본, 개인 질문, 답변 연습 상태와 아침 공부 추천 이력은 홈서버의 비공개 작업 release로 동기화한다.
 - 현재 경력, 역할 선호, 경험 경계와 지원 대상은 private brain에서 관리한다.
 - cache와 다시 만들 수 있는 임시 산출물은 장기 이력으로 취급하지 않는다.
 - 개인 연락처, 회사별 지원 전략, 근거 감사 원문은 공개 리포트에 포함하지 않는다.
