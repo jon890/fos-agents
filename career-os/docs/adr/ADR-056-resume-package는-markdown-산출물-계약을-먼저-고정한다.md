@@ -1,4 +1,4 @@
-## ADR-056 — resume package는 Markdown 산출물 계약을 먼저 고정한다
+## ADR-056 resume package는 Markdown 산출물 계약을 먼저 고정한다
 
 - Status: Accepted
 - Date: 2026-06-07
@@ -13,7 +13,7 @@
 - 기본 산출물 수와 사용자 검토 방식은 [ADR-103](ADR-103-지원-준비는-단일-사용자-진입점과-내부-검증으로-제공한다.md)이 이 결정을 일부 대체한다.
 - `application-package.md`는 내부 지원 전략과 초안 방향을 담는다.
 - 제출용 이력서 초안은 `resume-draft.md`로 분리한다.
-- 별도 지원 문항은 채용 사이트가 요구할 때만 `application-answers.md`로 만든다.
+- 브라우저 자동 입력을 준비할 때 공통 프로필 스냅샷, 회사별 선택값, 첨부 파일과 별도 지원 문항을 `application-form.json`으로 만든다.
 - 근거 부족은 보강 필요, 선택지, 권장 행동으로 나누어 해결한다.
 - 산출물은 사용자 검토 전에 외부로 제출하거나 전송하지 않는다.
 - 첨부용 HTML/PDF 생성은 ADR-059를 따른다.
