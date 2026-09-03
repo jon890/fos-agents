@@ -1,7 +1,14 @@
-import { copyFile, lstat, mkdir, readdir, rm, writeFile } from "node:fs/promises";
+import { copyFile, lstat, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
-import { CAREER_WORKSPACE_MANAGED_ROOTS, type CareerWorkspaceFileEntry, type RemoteErrorResult } from "./contracts.ts";
-import { compareCodeUnits } from "./manifest.ts";
+import {
+  CAREER_WORKSPACE_MANAGED_ROOTS,
+  CareerWorkspaceReleaseManifestSchema,
+  type CareerWorkspaceFileEntry,
+  type CareerWorkspaceReleaseManifest,
+  type RemoteErrorResult,
+} from "./contracts.ts";
+import { buildWorkspaceDraft, compareCodeUnits } from "./manifest.ts";
 import { makeRemoteError, TransportError } from "./transport.ts";
 
 export async function createTarFromDirectory(root: string, entries: readonly string[]): Promise<Uint8Array> {
@@ -45,6 +52,61 @@ export async function extractTarToDirectory(
 
 export async function validateTarTopLevel(archive: Uint8Array, allowed: readonly string[], action: TarAction): Promise<void> {
   validateTarEntries(toBytes(archive), allowed, action);
+}
+
+export async function validateCareerWorkspaceReleaseArchive(
+  archive: Uint8Array,
+  expectedManifest: CareerWorkspaceReleaseManifest,
+  action: TarAction,
+): Promise<void> {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "career-release-validate-"));
+  try {
+    await extractTarToDirectory(
+      archive,
+      tempRoot,
+      ["workspace-manifest.json", ...CAREER_WORKSPACE_MANAGED_ROOTS],
+      action,
+    );
+
+    let archivedManifest: CareerWorkspaceReleaseManifest;
+    try {
+      archivedManifest = CareerWorkspaceReleaseManifestSchema.parse(JSON.parse(
+        await readFile(path.join(tempRoot, "workspace-manifest.json"), "utf8"),
+      ));
+    } catch {
+      throw new TransportError(makeRemoteError(action, "INVALID_MANIFEST"));
+    }
+
+    const actualDraft = await buildWorkspaceDraft(tempRoot, archivedManifest.producer, {
+      parentRevision: archivedManifest.parentRevision,
+    });
+    const extractedFiles = (await listRelativeFiles(tempRoot))
+      .filter((file) => file !== "workspace-manifest.json")
+      .toSorted(compareCodeUnits);
+    const expectedFiles = archivedManifest.files.map((file) => file.path).toSorted(compareCodeUnits);
+
+    if (
+      !sameJson(archivedManifest, expectedManifest)
+      || !sameJson(actualDraft.manifest, {
+        schemaVersion: archivedManifest.schemaVersion,
+        workspace: archivedManifest.workspace,
+        parentRevision: archivedManifest.parentRevision,
+        producer: archivedManifest.producer,
+        contentDigest: archivedManifest.contentDigest,
+        files: archivedManifest.files,
+      })
+      || !sameJson(extractedFiles, expectedFiles)
+    ) {
+      throw new TransportError(makeRemoteError(action, "INVALID_MANIFEST"));
+    }
+  } catch (error) {
+    if (error instanceof TransportError) {
+      throw error;
+    }
+    throw new TransportError(makeRemoteError(action, "INVALID_MANIFEST"));
+  } finally {
+    await safeRemove(tempRoot);
+  }
 }
 
 export async function copyManifestFiles(from: string, to: string, files: readonly CareerWorkspaceFileEntry[]): Promise<void> {
@@ -191,4 +253,8 @@ function tarString(header: Uint8Array, start: number, length: number): string {
 
 function toBytes(archive: Uint8Array | ArrayBuffer): Uint8Array {
   return archive instanceof Uint8Array ? archive : new Uint8Array(archive);
+}
+
+function sameJson(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
 }
