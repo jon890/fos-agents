@@ -1,27 +1,36 @@
 ---
 name: study-topic-recommender
-description: 등록된 회사 기술 블로그, GeekNews, AI 공식 문서·연구와 YouTube 채널에서 최신 자료를 수집하고 읽을 가치가 있는 자료를 카드형 HTML로 만드는 career-os 스킬. "오늘 뭐 읽을까", "오늘 공부할 글 추천", "아침 읽을거리", "기술 블로그 추천", "AI 연구 동향", "영상 추천", "학습 주제 추천", `/study-topic-recommender`처럼 외부 기술 자료 추천이 필요할 때 사용한다. 외부 게시는 사용자가 공유 링크를 요청했을 때만 수행한다.
+description: 등록된 기술 블로그, 개발 동향, AI 자료와 YouTube 채널에서 이전 추천을 제외하고 현재 업무와 다음 커리어에 연결할 아침 공부 주제를 만드는 career-os 스킬. "오늘 뭐 읽을까", "오늘 공부할 글 추천", "아침 읽을거리", "기술 블로그 추천", "영상 추천", "학습 주제 추천", `/study-topic-recommender`처럼 외부 기술 자료 추천이 필요할 때 사용한다. 외부 게시는 사용자가 공유 링크를 요청했을 때만 수행한다.
 ---
 
-# 아침 읽을거리 추천
+# 아침 공부 주제 추천
 
-등록된 외부 소스의 전체 후보와 최근 학습 흐름을 비교해 오늘 읽거나 볼 자료를 고른다.
+등록된 외부 소스의 전체 후보, 누적 추천 이력과 현재 커리어 방향을 비교해 오늘 공부할 주제를 고른다.
 
 ## 입력
 
-- `config/external-reading-sources.ts`
-  - 발행처와 카테고리
-- `sources/fos-study/**/*.md`
-  - 실제 학습 문서와 최근 학습 방향
-- `fos-brain`의 비공개 학습 관심사
-  - 사용자가 직접 밝힌 관심과 기술 친숙도
+- `config/external-reading-sources.ts`: 발행처, 카테고리와 수집 방식
+- `state/morning-study-history.json`: 이전에 추천한 글과 영상
+- `sources/fos-study/**/*.md`: 실제 학습 문서와 최근 학습 방향
+- `fos-brain`의 private 커리어 현황과 학습 관심사
 
-소스를 추가하거나 점검할 때
-[`references/source-management.md`](references/source-management.md)를 읽는다.
+소스를 추가하거나 점검할 때 [소스 관리](references/source-management.md)를 읽는다.
 
 ## 실행
 
-### 1. 임시 실행 경로 준비
+### 1. 비공개 작업본 준비
+
+저장소 루트에서 다음 명령을 실행한다.
+
+```bash
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts" \
+  skill begin study-topic-recommender --json
+```
+
+준비가 실패하면 오래된 로컬 이력으로 추천을 계속하지 않는다.
+원격 release와 로컬 파일이 보존됐다는 사실을 알리고 중단한다.
+
+### 2. 임시 실행 경로 준비
 
 ```bash
 mktemp -d "${TMPDIR:-/tmp}/study-topic-recommender.XXXXXX"
@@ -29,112 +38,91 @@ mktemp -d "${TMPDIR:-/tmp}/study-topic-recommender.XXXXXX"
 
 반환된 절대 경로를 `<RUN_DIR>`로 사용한다.
 후보풀, 선택 JSON, 추천 데이터, Markdown과 HTML은 모두 `<RUN_DIR>`에 만든다.
-기존 추천 이력을 활용할 때 `<RUN_DIR>/state/`에 복사한다.
+영구 이력 경로는 `<REPO_ROOT>/career-os/state/morning-study-history.json`이다.
 
-### 2. 외부 글 수집
+### 3. 외부 자료 수집
 
 ```bash
 CAREER_OS_ROOT=<RUN_DIR> bun --env-file="$(git rev-parse --show-toplevel)/career-os/.env" \
   "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender/build_morning_reading.ts" \
+  --history-file "$(git rev-parse --show-toplevel)/career-os/state/morning-study-history.json" \
   --collect-only
 ```
 
 `<RUN_DIR>/state/reading-candidates.json`에서 다음 조건을 확인한다.
 
 - 모든 항목은 등록된 외부 소스에서 수집됐다.
-- `candidates`가 1건 이상이다.
 - `collectionLog`에 소스별 상태와 후보 수가 기록됐다.
+- `previouslyRecommended: true`인 자료는 선택하지 않는다.
 - 피드가 제공하는 `excerpt`는 글이나 영상 내용을 판단하는 근거로 사용한다.
 
-### 3. 글 선별
+후보가 없거나 모두 이전 추천이면 빈 주제 결과를 만들 수 있다.
+과거 자료를 다시 채우지 않는다.
 
-후보풀 전체와 최근 학습 문서를 읽는다.
-`brain-search`로 현재 학습 관심사와 기술 친숙도를 조회한다.
+### 4. 커리어 방향과 최근 학습 확인
+
+`brain-search`로 private `career-status`, `career-position-preferences`, `learning-interests`를 확인한다.
+`sources/fos-study`는 최근 학습 방향과 실제로 다룬 주제를 복원할 만큼만 읽는다.
 
 ```bash
 rg --files "$(git rev-parse --show-toplevel)/career-os/sources/fos-study" -g '*.md'
 git -C "$(git rev-parse --show-toplevel)/career-os/sources/fos-study" log --name-only --format= -- '*.md'
 ```
 
-이력은 최근 학습 방향과 반복 주제를 복원할 만큼만 읽고, 고정 개수만 보고 방향을 확정하지 않는다.
+private 커리어 정보는 선별에만 사용하고 공개 리포트에 회사명, 지원 상태나 비공개 경험을 쓰지 않는다.
 
-카테고리별로 다음 순서로 고른다.
+### 5. 공부 주제 선별
 
-1. 최근 추천 여부, 발행 시각과 출처로 검토 범위를 좁힌다.
-2. 공개 원문에서 제목과 실제 내용을 확인한다.
-3. 구현 세부, 운영 경험과 현재 관심사의 연결성을 판단한다.
-4. 읽을 가치가 있다고 판단한 후보를 모두 선택한다.
+먼저 각 후보가 다음 중 하나에 구체적으로 연결되는지 확인한다.
 
-추천 개수 대신 각 카드의 제목, 요약과 추천 이유가 사용자의 선택을 돕는다.
-품질을 낮추지 않는 범위에서 출처를 다양하게 구성한다.
+- `current-work`: 현재 업무의 구현, 품질, 장애 복구나 운영 판단
+- `target-role`: 목표 역할에서 요구하는 설계와 경험 확장
+- `engineering-judgment`: 대안, 실패 조건과 결과가 있는 기술 판단
+- `product-business`: 실제 제품, 조직, 사용자 가치나 수익화 판단
 
-`geek`에서는 최신 기술 소식뿐 아니라 좋은 엔지니어가 되는 데 필요한 글도 고른다.
-적합한 후보가 있으면 다음 관점의 글을 추천에 포함한다.
+공식 자료나 최신 소식이라는 이유만으로 추천하지 않는다.
+API 사용 순서만 나열한 문서, 기능 발표 요약, 전이할 판단이 없는 안전성·업계 소식, 입문 문법과 홍보성 영상은 제외한다.
+비즈까페는 AI와 산업 변화가 제품·조직·사업 판단으로 이어질 때 선택한다.
+조코딩과 양실장의 바이브코딩대학은 AI 제품 구현, 에이전트 운영, 업무 자동화와 실제 서비스·수익화 판단이 있을 때 선택한다.
 
-- 역할과 책임의 변화
-- 기술적 판단과 문제 해결 방식
-- 협업, 멘토링과 리더십
-- 커리어 성장과 생산성
-
-`ai`는 OpenAI, Anthropic과 xAI의 공식 자료를 우선한다.
-모델 발표에 한정하지 않고 다음 내용을 함께 판단한다.
-
-- 에이전트와 하네스
-- 도구 사용과 개발 워크플로
-- 평가, 신뢰성, 안전성과 보안
-- 추론, 서빙, 성능과 비용
-- 문맥, 메모리와 검색
-- API, SDK와 개발자 플랫폼
-- 연구 논문과 시스템 카드
-
-공식 페이지에서 수집한 전체 후보를 먼저 확인한 뒤 오늘 읽을 자료를 선별한다.
+통과한 자료를 외부 원문에서 도출한 공부 주제로 묶는다.
+각 주제에는 사용자가 자신의 업무나 다음 역할에 적용해 볼 `careerQuestion`을 작성한다.
+주제마다 영문 소문자와 숫자를 하이픈으로 연결한 안정적인 `topicKey`를 붙인다.
+같은 개념은 실행 날짜가 달라도 같은 `topicKey`를 사용하며, 후보풀의 `recentStudyTopicKeys`에 있는 주제는 선택하지 않는다.
 선택 결과는 `<RUN_DIR>/reading-selection.json`에 만든다.
 
 ```json
 {
-  "selections": {
-    "techBlog": [
-      {
-        "candidateId": "수집 결과의 ID",
-        "summary": "원문에서 확인한 핵심 요약",
-        "reason": "오늘 읽을 이유"
-      }
-    ],
-    "geek": [],
-    "ai": [
-      {
-        "candidateId": "수집 결과의 AI 공식 자료 ID",
-        "summary": "공식 원문에서 확인한 핵심 요약",
-        "reason": "현재 학습 관심사와 연결되는 이유"
-      }
-    ],
-    "video": [
-      {
-        "candidateId": "수집 결과의 영상 ID",
-        "summary": "영상 설명과 공개 원문에서 확인한 핵심 요약",
-        "reason": "오늘 볼 이유"
-      }
-    ]
-  }
+  "topics": [
+    {
+      "topicKey": "operable-ai-products",
+      "title": "운영 가능한 AI 제품을 만드는 판단",
+      "careerQuestion": "현재 서비스에서 자동화를 늘릴 때 어떤 실패를 먼저 막아야 하는가?",
+      "items": [
+        {
+          "candidateId": "수집 결과의 ID",
+          "summary": "원문에서 확인한 핵심 내용",
+          "reason": "현재 업무나 다음 역할에서 이 자료를 볼 이유",
+          "careerValue": "engineering-judgment"
+        }
+      ]
+    }
+  ]
 }
 ```
 
-요약과 추천 이유는 공개 원문과 피드 설명을 근거로 작성한다.
-영상은 채널 이름, 영상 제목, 공개 설명과 게시 시각을 함께 확인한다.
+추천할 자료가 없으면 `{"topics": []}`를 사용한다.
+추천 개수를 채우기 위해 기준 미달 자료를 포함하지 않는다.
 
-### 4. 임시 리포트 생성
+### 6. 임시 리포트 생성과 검증
 
 ```bash
 CAREER_OS_ROOT=<RUN_DIR> bun --env-file="$(git rev-parse --show-toplevel)/career-os/.env" \
   "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender/build_morning_reading.ts" \
+  --history-file "$(git rev-parse --show-toplevel)/career-os/state/morning-study-history.json" \
   --candidate-pool <RUN_DIR>/state/reading-candidates.json \
   --reading-selection <RUN_DIR>/reading-selection.json
 ```
-
-게시 대상은 `<RUN_DIR>/morning-reading-YYYY-MM-DD.html`이다.
-사람이 읽는 Markdown은 `<RUN_DIR>/morning-reading.md`에 만든다.
-
-### 5. 검증
 
 ```bash
 CAREER_OS_ROOT=<RUN_DIR> bun \
@@ -142,49 +130,57 @@ CAREER_OS_ROOT=<RUN_DIR> bun \
 bun "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender/manage_reading_sources.ts" validate
 ```
 
-`collectionLog`의 수집 상태를 최종 응답에 반영한다.
-공개 HTML은 다음 내용으로 구성한다.
+게시 대상은 `<RUN_DIR>/morning-reading-YYYY-MM-DD.html`이다.
+사람이 읽는 Markdown은 `<RUN_DIR>/morning-reading.md`에 만든다.
+HTML은 공부 주제, 커리어 질문과 연결 자료를 같은 순서로 보여줘야 한다.
 
-- 공개 글 제목과 HTTPS 원문 URL
-- AI 공식 문서·연구 제목과 HTTPS 원문 URL
-- 공개 영상 제목과 YouTube 원문 URL
-- 공개 가능한 요약과 추천 이유
-- 수집 시각과 소스별 수집 상태
+### 7. 누적 이력과 홈서버 release 반영
 
-### 6. 로컬 검토와 선택적 게시
+출력 검증이 통과한 뒤에만 다음 명령을 순서대로 실행한다.
 
-생성한 HTML을 실제 브라우저에서 열어 카드, 원문 링크와 모바일 배치를 확인한다.
-사용자가 외부 공유 링크를 요청했을 때만 `report-publisher`로 아래 값을 준비, 게시하고 검증한다.
+```bash
+CAREER_OS_ROOT=<RUN_DIR> bun \
+  "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender/build_morning_reading.ts" \
+  --history-file "$(git rev-parse --show-toplevel)/career-os/state/morning-study-history.json" \
+  --commit-history
+```
+
+```bash
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts" \
+  skill finish study-topic-recommender --json
+```
+
+이력 반영이나 release 발행이 실패하면 로컬 이력과 임시 리포트를 삭제하지 않는다.
+같은 날짜의 리포트, 같은 `contentKey`나 직전 리포트와 같은 `topicKey`를 다시 반영하지 않는다.
+
+### 8. 로컬 검토와 선택적 게시
+
+생성한 HTML을 실제 브라우저에서 열어 주제 순서, 카드, 원문 링크와 모바일 배치를 확인한다.
+사용자가 외부 공유 링크를 요청했을 때만 `report-publisher`로 게시하고 공개 URL을 검증한다.
 
 - 게시 대상: `<RUN_DIR>/morning-reading-YYYY-MM-DD.html`
 - 공개 이름: `morning-YYYY-MM-DD`
 - Pages 프로젝트: `fos-reports`
 
-게시를 요청했고 검증된 `branch_url`이 있으면 사용자용 주소로 우선 전달한다.
-`branch_url`이 없으면 검증된 `public_url`을 전달한다.
+### 9. 임시 파일 정리
 
-### 7. 임시 파일 정리
-
-로컬 렌더 또는 게시 검증 뒤 `<RUN_DIR>`의 파일과 빈 디렉터리를 순서대로 정리한다.
+로컬 렌더 또는 게시 검증과 홈서버 release 반영이 모두 끝난 뒤 `<RUN_DIR>`을 정리한다.
 삭제 전 경로가 시스템 임시 디렉터리 아래에 있고 이름이 `study-topic-recommender`로 시작하는지 확인한다.
-아래 두 명령은 각각 별도의 terminal 호출로 실행한다.
-조건문, `rm`, `node -e`나 다른 명령과 한 호출에 합치지 않는다.
 
 ```bash
 find "<RUN_DIR>" -type f -exec unlink {} \;
 find "<RUN_DIR>" -depth -type d -exec rmdir {} \;
 ```
 
-별도 미리보기 파일을 만들었다면 각 파일을 `unlink "<절대 경로>"` 한 호출로 정리한다.
-렌더링 또는 게시 검증이 끝난 뒤 정리만 실패하면 전체 작업을 실패로 바꾸지 않는다.
-추천 결과와 정리하지 못한 경로를 알리고, 게시를 요청한 경우 검증된 링크도 전달한다.
+정리만 실패하면 검증된 추천과 게시 결과를 실패로 바꾸지 않는다.
 
 ## 완료 조건
 
-- 활성 외부 소스에서 새 후보풀이 생성됐다.
-- 읽을 가치가 있다고 판단한 후보가 개수 제한 없이 추천에 포함됐다.
-- AI 추천이 공식 원문을 근거로 모델·에이전트·하네스·연구 범위를 폭넓게 검토했다.
-- 요약과 추천 이유가 확인한 원문을 반영한다.
+- 홈서버 최신 이력을 준비하고 이전 추천과 같은 자료를 선택하지 않았다.
+- 직전 리포트와 같은 공부 주제를 다시 선택하지 않았다.
+- 추천 자료가 현재 업무, 목표 역할, 엔지니어링 판단 또는 제품·사업 관점에 연결된다.
+- 자료가 공부 주제와 커리어 질문으로 묶였다.
 - 리포트와 소스 설정 검증이 통과했다.
-- 외부 게시를 요청한 경우 `report-publisher`가 Cloudflare Pages 공개 URL을 검증했다.
-- `<RUN_DIR>` 정리를 시도했고, 실패한 경우 게시 성공을 덮어쓰지 않는 경고로 기록했다.
+- 검증된 추천만 누적 이력과 홈서버 release에 반영됐다.
+- 외부 게시를 요청한 경우에만 검증된 공개 URL을 제공했다.
+- 임시 실행 경로 정리를 시도했고 실패한 경우 남은 경로를 알렸다.

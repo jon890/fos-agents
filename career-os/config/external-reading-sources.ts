@@ -233,6 +233,33 @@ export const externalReadingSources = {
       "category": "video",
       "enabled": true,
       "adapter": "youtube"
+    },
+    {
+      "key": "bzcf-youtube",
+      "title": "BZCF | 비즈까페",
+      "url": "https://www.youtube.com/@B_ZCF",
+      "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCWgXoKQ4rl7SY9UHuAwxvzQ",
+      "category": "video",
+      "enabled": true,
+      "adapter": "youtube"
+    },
+    {
+      "key": "jocoding-youtube",
+      "title": "조코딩 JoCoding",
+      "url": "https://www.youtube.com/@jocoding",
+      "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCQNE2JmbasNYbjGAcuBiRRg",
+      "category": "video",
+      "enabled": true,
+      "adapter": "youtube"
+    },
+    {
+      "key": "vibe-coding-university-youtube",
+      "title": "양실장의 바이브코딩대학",
+      "url": "https://www.youtube.com/@VibecodingUniversity",
+      "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCKdKdx5-eLZUmAgsdvxkKiA",
+      "category": "video",
+      "enabled": true,
+      "adapter": "youtube"
     }
   ]
 } satisfies ReadingSourcesConfig;

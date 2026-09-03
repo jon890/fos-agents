@@ -54,6 +54,8 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender/
 출력한 객체를 `externalReadingSources.sources`에 추가한다.
 URL과 피드 URL은 HTTPS만 허용한다.
 YouTube 채널은 채널 ID 기반 공식 Atom 피드를 `feedUrl`로 등록한다.
+채널 검색 결과의 표시 이름만 믿지 않고 채널 URL, channel ID와 Atom feed의 `<title>`이 같은 채널인지 확인한다.
+`youtube` 어댑터는 Atom feed를 먼저 사용하고 feed가 없거나 비었을 때만 공개 채널 페이지를 보조 경로로 사용한다.
 
 `adapter`를 생략하면 실행기가 `feedUrl`, `url` 순으로 어댑터를 고른다.
 명시한 `feed` 어댑터에는 `feedUrl`이 필요하다.
@@ -66,3 +68,12 @@ YouTube 채널은 채널 ID 기반 공식 Atom 피드를 `feedUrl`로 등록한�
 bun "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender/manage_reading_sources.ts" validate
 bun test "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender"
 ```
+
+실제 feed도 확인한다.
+
+```bash
+curl -L --fail --silent --show-error \
+  "https://www.youtube.com/feeds/videos.xml?channel_id=<CHANNEL_ID>"
+```
+
+응답의 feed title이 등록할 채널과 다르면 설정을 추가하지 않는다.

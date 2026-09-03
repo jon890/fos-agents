@@ -9,6 +9,7 @@ import {
   type ReadingSource,
 } from "./reading_contracts.js";
 import { resolveReadingSourceAdapter } from "./source/adapters/index.js";
+import { canonicalizeReadingUrl, readingContentKey } from "./url_identity.js";
 
 export type { ReadingCandidate, ReadingCandidatePool, ReadingCollectionLog } from "./reading_contracts.js";
 
@@ -23,7 +24,7 @@ function candidateId(sourceKey: string, url: string): string {
 async function collectSource(
   source: ReadingSource,
   cacheDir: string,
-  recentUrls: Set<string>,
+  previousContentKeys: Set<string>,
   maxCandidatesPerSource: number,
   cacheTtlHours: number,
   timeoutMs: number
@@ -41,18 +42,27 @@ async function collectSource(
     timeoutMs,
     maxCandidatesPerSource,
   });
-  const candidates = collected.map((item) => ({
-    id: candidateId(source.key, item.url),
-    sourceKey: source.key,
-    sourceName: sourceName(source),
-    category: source.category,
-    title: item.title,
-    url: item.url,
-    published: item.published,
-    excerpt: item.excerpt,
-    kind: item.kind,
-    recentlyRecommended: recentUrls.has(item.url),
-  }));
+  const candidatesByContentKey = new Map<string, ReadingCandidate>();
+  for (const item of collected) {
+    const canonicalUrl = canonicalizeReadingUrl(item.url);
+    const contentKey = readingContentKey(canonicalUrl);
+    if (candidatesByContentKey.has(contentKey)) continue;
+    candidatesByContentKey.set(contentKey, {
+      id: candidateId(source.key, canonicalUrl),
+      contentKey,
+      canonicalUrl,
+      sourceKey: source.key,
+      sourceName: sourceName(source),
+      category: source.category,
+      title: item.title,
+      url: canonicalUrl,
+      published: item.published,
+      excerpt: item.excerpt,
+      kind: item.kind,
+      previouslyRecommended: previousContentKeys.has(contentKey),
+    });
+  }
+  const candidates = [...candidatesByContentKey.values()];
   return {
     candidates,
     log: {
@@ -70,7 +80,8 @@ async function collectSource(
 export async function collectReadingCandidatePool(input: {
   readingSources: NormalizedReadingSources;
   cacheDir: string;
-  recentUrls?: Set<string>;
+  previousContentKeys?: Set<string>;
+  recentStudyTopicKeys?: Set<string>;
   maxCandidatesPerSource: number;
   cacheTtlHours: number;
   timeoutMs: number;
@@ -79,20 +90,27 @@ export async function collectReadingCandidatePool(input: {
   const results = await Promise.all(input.readingSources.sources.map((source) => collectSource(
     source,
     input.cacheDir,
-    input.recentUrls ?? new Set<string>(),
+    input.previousContentKeys ?? new Set<string>(),
     maxCandidatesPerSource,
     input.cacheTtlHours,
     input.timeoutMs
   )));
+  const candidatesByContentKey = new Map<string, ReadingCandidate>();
+  for (const candidate of results.flatMap((result) => result.candidates)) {
+    if (!candidatesByContentKey.has(candidate.contentKey)) {
+      candidatesByContentKey.set(candidate.contentKey, candidate);
+    }
+  }
   return {
     generatedAt: new Date().toISOString(),
+    recentStudyTopicKeys: [...(input.recentStudyTopicKeys ?? new Set<string>())].sort(),
     policy: {
       selection: "llm",
       fixedKeywordsUsed: false,
       sourcePriorityUsed: false,
       maxCandidatesPerSource,
     },
-    candidates: results.flatMap((result) => result.candidates),
+    candidates: [...candidatesByContentKey.values()],
     collectionLog: results.map((result) => result.log),
   };
 }

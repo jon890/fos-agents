@@ -8,37 +8,41 @@ import {
 } from "./reading_contracts.js";
 import { normalizeReadingSources } from "./reading_sources.js";
 import { prepareReadingCandidatePool, selectReadings } from "./reading_stage.js";
-import { appendHistory, loadRecentHistory } from "./persistence/history.js";
+import {
+  appendReportToHistory,
+  historyContentKeys,
+  loadMorningStudyHistory,
+  loadReportForHistory,
+  recentStudyTopicKeys,
+  resolveMorningStudyHistoryPath,
+} from "./persistence/history.js";
 import { renderExistingReport, writeReportArtifacts } from "./render/report.js";
 import { resolveStudyRunRoot, StudyRunPathError } from "./runtime-paths.js";
 
 const FEED_CACHE_TTL_HOURS = 6;
 const FEED_TIMEOUT_MS = 8_000;
-const RECENT_ARTICLE_URL_LOOKBACK = 7;
 
 function argumentValue(name: string): string | undefined {
   const index = process.argv.indexOf(name);
   return index >= 0 ? process.argv[index + 1] : undefined;
 }
 
-async function run(root: string): Promise<void> {
+async function run(root: string, historyPath: string): Promise<void> {
   const stateDir = join(root, "state");
   const cacheDir = join(root, "cache", "feed-cache");
   const reportPath = join(stateDir, "morning-reading.json");
-  const historyPath = join(stateDir, "morning-reading-history.jsonl");
   const candidatePoolPath = join(stateDir, "reading-candidates.json");
   mkdirSync(stateDir, { recursive: true });
 
   const readingSources = normalizeReadingSources(externalReadingSources);
-  const recentArticleUrls = new Set(
-    loadRecentHistory(historyPath, RECENT_ARTICLE_URL_LOOKBACK)
-      .flatMap((entry) => entry.articleUrls ?? [])
-  );
+  const history = loadMorningStudyHistory(historyPath);
+  const previousContentKeys = historyContentKeys(history);
   const candidatePool = await prepareReadingCandidatePool({
     readingSources,
     outputPath: candidatePoolPath,
     cacheDir,
-    recentUrls: recentArticleUrls,
+    previousContentKeys,
+    recentStudyTopicKeys: recentStudyTopicKeys(history),
     candidatePoolPath: argumentValue("--candidate-pool"),
     cacheTtlHours: FEED_CACHE_TTL_HOURS,
     timeoutMs: FEED_TIMEOUT_MS,
@@ -62,7 +66,7 @@ async function run(root: string): Promise<void> {
       "--reading-selection이 필요하다. 먼저 --collect-only로 외부 글을 수집한 뒤 모델 선택 파일을 제공해야 한다."
     );
   }
-  const { recommendations } = selectReadings({
+  const { topics } = selectReadings({
     pool: candidatePool,
     selectionPath,
   });
@@ -84,30 +88,24 @@ async function run(root: string): Promise<void> {
       videoSources: readingSources.itemsByCategory.video.length,
     },
     collectionLog: candidatePool.collectionLog,
-    recommendations,
+    topics,
   };
   writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
   const artifacts = writeReportArtifacts({
     report,
     outputDir: root,
   });
-  appendHistory(historyPath, {
-    articleUrls: [
-      ...recommendations.techBlog,
-      ...recommendations.geek,
-      ...recommendations.ai,
-      ...recommendations.video,
-    ].map((item) => item.url),
-  });
+  const recommendations = topics.flatMap((topic) => topic.items);
 
   console.log(JSON.stringify({
     report: reportPath,
     candidatePool: candidatePoolPath,
     ...artifacts,
-    techBlogCount: recommendations.techBlog.length,
-    geekCount: recommendations.geek.length,
-    aiCount: recommendations.ai.length,
-    videoCount: recommendations.video.length,
+    topicCount: topics.length,
+    techBlogCount: recommendations.filter((item) => item.category === "techBlog").length,
+    geekCount: recommendations.filter((item) => item.category === "geek").length,
+    aiCount: recommendations.filter((item) => item.category === "ai").length,
+    videoCount: recommendations.filter((item) => item.category === "video").length,
     sourcesAttempted: readingSources.sources.length,
     sourcesWithCandidates,
     candidateCount: candidatePool.candidates.length,
@@ -128,7 +126,19 @@ export async function main(): Promise<void> {
     }));
     return;
   }
-  await run(root);
+  const historyPath = resolveMorningStudyHistoryPath(argumentValue("--history-file"));
+  if (process.argv.includes("--commit-history")) {
+    const reportPath = join(stateDir, "morning-reading.json");
+    const history = appendReportToHistory(historyPath, loadReportForHistory(reportPath));
+    console.log(JSON.stringify({
+      mode: "commit-history",
+      history: historyPath,
+      reportCount: history.reports.length,
+      entryCount: history.entries.length,
+    }));
+    return;
+  }
+  await run(root, historyPath);
 }
 
 export function reportMorningReadingError(error: unknown): never {

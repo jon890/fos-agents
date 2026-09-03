@@ -35,7 +35,7 @@ function main(): void {
   const htmlPath = join(root, morningHtmlFilename(report.generatedAt));
   requireFile(htmlPath);
   const html = readFileSync(htmlPath, "utf8");
-  if (!html.includes("<title>") || !html.includes("오늘 아침 읽을거리")) {
+  if (!html.includes("<title>") || !html.includes("오늘 아침 공부 주제")) {
     throw new Error("HTML 제목이나 주요 본문이 없다.");
   }
   for (const pattern of forbiddenHtmlPatterns) {

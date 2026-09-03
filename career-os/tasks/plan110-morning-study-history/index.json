@@ -1,0 +1,28 @@
+{
+  "name": "plan110-morning-study-history",
+  "description": "아침 공부 추천 이력을 홈서버 release에 누적하고 커리어 인사이트 중심 주제와 사용자 지정 YouTube 소스를 제공한다.",
+  "status": "completed",
+  "created_at": "2026-09-03",
+  "total_phases": 3,
+  "current_phases": 3,
+  "phases": [
+    {
+      "number": 1,
+      "title": "누적 추천 이력과 중복 차단",
+      "file": "phase-01.md",
+      "execution_profile": "standard"
+    },
+    {
+      "number": 2,
+      "title": "커리어 인사이트 중심 공부 주제 리포트",
+      "file": "phase-02.md",
+      "execution_profile": "standard"
+    },
+    {
+      "number": 3,
+      "title": "YouTube 소스 확장과 실행 절차 정합성",
+      "file": "phase-03.md",
+      "execution_profile": "standard"
+    }
+  ]
+}
