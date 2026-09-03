@@ -3,7 +3,7 @@
 career-os는 skill이 실행 계약을 설명하고 TypeScript 스크립트가 반복 가능한 처리를 담당하는 파일 기반 워크스페이스다.
 
 public `fos-agents` 저장소는 skill과 실행 코드를 소유한다.
-비공개 작업 파일은 각 환경의 기존 경로에서 다루고 홈서버의 immutable file release를 기준으로 동기화한다.
+비공개 작업 파일은 각 환경의 기존 경로에서 다루고 홈서버 `career-os` S3 collection의 immutable release를 기준으로 동기화한다.
 
 ## 디렉터리 구조
 
@@ -57,8 +57,9 @@ skill이 private brain에서 조회하고, 제출에 사용할 세부 성과는 
 ## 실행 환경 준비
 
 `scripts/career-workspace/`는 Hermes, Codex CLI와 Claude Code가 공유하는 파일 준비·차이 검사·반영 경계다.
-manifest 생성과 검증, 로컬 기준 상태 확인, SSH transport, 홈서버 명령과 검증용 local transport를 책임별 모듈로 나눈다.
-`career-storage.py`는 홈서버에서 표준 입력과 출력으로 release를 발행하고 내보낸다.
+manifest 생성과 검증, 로컬 기준 상태 확인, SSH·command transport, 홈서버 명령과 검증용 local transport를 책임별 모듈로 나눈다.
+S3 storage adapter는 홈서버에서 표준 입력과 출력으로 release를 발행하고 내보낸다.
+기존 `career-storage.py`는 이전 검증과 복구 기간에만 파일 release를 읽는 구현으로 남긴다.
 사용자는 이 helper를 직접 고르지 않고 기존 career-os skill을 계속 호출한다.
 
 각 환경은 `applications`, `library`와 `state`를 일반 로컬 디렉터리로 사용한다.
@@ -68,7 +69,8 @@ manifest 생성과 검증, 로컬 기준 상태 확인, SSH transport, 홈서버
 `.claude/skills/`가 skill 관리 원본이다.
 `.codex/skills/`는 같은 디렉터리를 가리키며 Hermes cron은 `career-os`를 작업 디렉터리로 사용한다.
 환경별 차이는 `.env`의 transport 설정에만 두고 지원 판단과 문서 작성 절차를 복제하지 않는다.
-SSH client는 `career-storage`를 원격 호출하고, 홈서버의 Hermes는 같은 저장 경로를 local transport로 읽는다.
+SSH client는 `career-storage`를 원격 호출하고, 홈서버의 Hermes는 같은 명령을 command transport로 호출한다.
+두 경로는 같은 홈서버 잠금과 S3 pointer 갱신 계약을 사용한다.
 
 ## 공고 추천
 

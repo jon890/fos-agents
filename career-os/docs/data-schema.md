@@ -5,15 +5,16 @@ career-os는 사람이 관리하는 설정, 실행 상태, 비공개 산출물, 
 ## 저장 원칙
 
 - `config/`에는 오래 유지할 수집 정책과 디자인 기준을 둔다.
-- `applications/`, `library/`와 `state/`는 홈서버 release와 동기화하는 로컬 작업본이다.
+- `applications/`, `library/`와 `state/`는 홈서버 `career-os` S3 collection의 release와 동기화하는 로컬 작업본이다.
 - `cache/`에는 원본에서 다시 만들 수 있는 수집 결과를 둔다.
 - `public/`과 `sources/fos-study/`에는 공개 가능한 자료만 둔다.
 - 게시용 HTML과 실행별 중간 데이터는 시스템 임시 디렉터리에 두고 검증 뒤 삭제한다.
 
 ## 비공개 작업 release
 
-홈서버의 각 release는 `applications`, `library`, `state`와 `workspace-manifest.json`을 가진다.
-release 디렉터리는 생성 뒤 수정하지 않으며 검증을 통과한 release만 `current` 상대 링크가 가리킨다.
+홈서버의 `career-os` bucket은 release별 archive, manifest와 descriptor를 가진다.
+`releases/<revision>/workspace.tar`, `releases/<revision>/workspace-manifest.json`과 `releases/<revision>/release.json`은 생성 뒤 수정하지 않는다.
+검증을 통과한 release만 `pointers/current.json`이 가리킨다.
 
 manifest는 다음 필드를 가진다.
 
@@ -29,6 +30,13 @@ manifest는 다음 필드를 가진다.
 파일 경로는 `applications/`, `library/`, `state/` 중 하나로 시작해야 한다.
 일반 파일만 허용하고 symlink, `.env`, `.omc`, log, cache와 임시 파일은 거부한다.
 같은 `contentDigest`를 다시 publish하면 새 release를 만들지 않는다.
+
+`releases/<revision>/release.json`은 `schemaVersion`, `workspace`, `revision`, `contentDigest`, `createdAt`, `fileCount`, `archiveKey`, `archiveSha256`, `manifestKey`, `manifestSha256`를 가진다.
+과거 revision을 export할 때 이 descriptor를 기준으로 archive와 manifest의 hash를 검증한다.
+
+`pointers/current.json`은 같은 식별·요약 필드와 `descriptorKey`, `descriptorSha256`을 가진다.
+현재 pointer는 같은 revision의 `releases/<revision>/release.json`만 가리킬 수 있다.
+archive를 export할 때는 `archiveSha256`, release manifest와 내부 파일 hash를 모두 검증한다.
 
 로컬 `career-os/.career-sync/sync-state.json`은 마지막으로 준비한 `revision`, `contentDigest`와 파일 hash를 기록한다.
 `skill-session.json`은 성공한 작성 skill의 이름, 시작 revision과 시작 시각을 기록한다.
@@ -69,7 +77,8 @@ Markdown, JSON, 검토용 HTML, PDF와 실제 제출 묶음은 해당 applicatio
 
 client의 `.env`는 작업 경로와 transport만 주입한다.
 SSH 환경은 `CAREER_WORKSPACE_SSH_TARGET`, `CAREER_WORKSPACE_SSH_ARGS`와 `CAREER_WORKSPACE_REMOTE_COMMAND`를 사용한다.
-홈서버의 Hermes는 `CAREER_WORKSPACE_LOCAL_TRANSPORT_ROOT`로 같은 저장소를 직접 읽는다.
+홈서버의 Hermes는 command transport로 같은 `career-storage` 명령을 호출한다.
+S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 client에 전달하지 않는다.
 근거 원장의 `${PROJECTS_ROOT}`와 `${PERSONAL_ROOT}`는 환경마다 같은 이름의 변수로 해석하며 release에는 환경별 절대 경로를 저장하지 않는다.
 
 ## Config

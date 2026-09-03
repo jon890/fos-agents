@@ -1,0 +1,28 @@
+{
+  "name": "plan111-seaweedfs-collections",
+  "description": "외부 SeaweedFS의 career-os bucket에 비공개 작업 release를 보관하고 기존 파일 release를 검증해 이전한다.",
+  "status": "pending",
+  "created_at": "2026-09-03",
+  "total_phases": 3,
+  "current_phases": 0,
+  "phases": [
+    {
+      "number": 1,
+      "title": "S3 release 객체와 current pointer",
+      "file": "phase-01.md",
+      "execution_profile": "deep"
+    },
+    {
+      "number": 2,
+      "title": "홈서버 명령과 공통 publish 잠금",
+      "file": "phase-02.md",
+      "execution_profile": "deep"
+    },
+    {
+      "number": 3,
+      "title": "파일 release 이전과 연결 검증",
+      "file": "phase-03.md",
+      "execution_profile": "deep"
+    }
+  ]
+}
