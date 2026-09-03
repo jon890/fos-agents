@@ -20,6 +20,7 @@ description: 공고에 맞춘 이력서·경력기술서를 작성하고 사람 
 - `brain-search`로 확인한 현재 경력, 역할 선호와 경험 경계
 - `sources/fos-study/`의 최신 공개 경력 근거
 - 필요하면 로컬 프로젝트의 코드, 테스트, Git 이력과 기술 결정 문서
+- 공통 작성 기준 `config/resume-writing-style.md`
 - 기본 디자인 `config/resume-design.md` 또는 공고별 `design.md`
 
 지원 디렉터리가 없거나 지원 판단과 후보자 인터뷰가 준비되지 않았으면 `application-package-writer`로 먼저 연결한다.
@@ -27,12 +28,11 @@ description: 공고에 맞춘 이력서·경력기술서를 작성하고 사람 
 
 ## 사용자에게 주는 결과
 
-- `resume-draft.md`, `resume.html`, `resume.pdf`
-- 경력기술서가 필요한 경우 대응하는 Markdown, HTML과 PDF
-- 주장별 근거 원장과 사람이 읽는 감사 결과
-- 블라인드 판정과 검토표
-- 한 파일 제출이 필요할 때 `submission.pdf`
-- 대표 사례의 30초·2분 설명과 남은 연습 항목
+사용자가 직접 확인할 자료는 `application-package.html`과 현재 공고가 요구하는 최종 PDF다.
+대표 사례의 30초·2분 설명과 남은 연습 항목도 같은 HTML에서 확인한다.
+
+Markdown 원본, 제출 문서 HTML, claim ledger, scorecard와 manifest는 재생성과 검증을 위해 내부에 유지한다.
+경력기술서나 한 파일 제출본은 공고가 요구할 때만 만든다.
 
 지원 판단과 제출 상태는 기존 `application-package.md`와 `application-package.html`에서 함께 보여준다.
 별도 진행 요약 문서를 만들지 않는다.
@@ -49,7 +49,8 @@ description: 공고에 맞춘 이력서·경력기술서를 작성하고 사람 
 - 다시 한다면 바꿀 판단
 - 제출 문구가 자신의 생각과 경험을 정확히 나타내는지
 
-미확인 항목이 있으면 질문 하나만 제시한다.
+서로 독립적으로 답할 수 있고 같은 제출 판단을 보완하는 미확인 항목은 최대 6개까지 한 번에 묶는다.
+한 답이 다음 질문을 바꾸거나 민감한 사실 하나만 확인해야 하면 한 질문만 제시한다.
 질문에는 필요한 이유, 이미 확인한 사실, 답에 따라 달라지는 제출 문장, 답변 구조, 예상 후속 질문과 과장하지 않을 경계를 함께 제공한다.
 완성 답변을 먼저 쓰지 않고 후보자가 키워드나 생각 조각으로 먼저 답하게 한다.
 
@@ -71,8 +72,20 @@ description: 공고에 맞춘 이력서·경력기술서를 작성하고 사람 
 
 ### Markdown 작성과 설명 준비
 
+[`resume-writing-style.md`](../../../config/resume-writing-style.md)를 끝까지 읽고 이력서와 경력기술서의 모든 문장에 적용한다.
+공고의 공식 작성 안내가 충돌하면 공고 안내를 우선한다.
+
 `resume-draft.md`를 만들거나 수정한다.
 지원 화면이 경력기술서를 받으면 `career-description-draft.md`도 별도로 만든다.
+초안이 갖춰지면 `../application-package-writer/references/full-document-review.md`를 읽고 지원 전략, 이력서, 경력기술서와 지원서 답변을 함께 검토한다.
+한 문장의 정정 사항은 같은 경험을 가리키는 모든 제출 문구와 근거 원장에 전파한다.
+
+렌더링 전에 다음 항목을 다시 확인한다.
+
+- 추상적인 표현이 제품, 문제와 수행한 작업을 가리지 않는가?
+- 지표 이름을 몰라도 무엇을 비교하고 확인했는지 이해할 수 있는가?
+- 전후 수치의 입력, 실행 조건과 평가 기준이 같은가?
+- RAG, Agent와 운영 경험을 실제 담당한 계층보다 넓혀 쓰지 않았는가?
 
 이력서 초안까지 준비되면 다음 명령으로 지원 패키지 계약을 검사한다.
 
@@ -118,8 +131,11 @@ bun "$(git rev-parse --show-toplevel)/career-os/.claude/skills/resume-preparer/s
 근거 원장의 `${PROJECTS_ROOT}`와 `${PERSONAL_ROOT}`는 같은 이름의 환경 변수로 바꿔 읽는다.
 해당 환경 변수가 없으면 경로를 추측하지 않고 다른 근거를 찾거나 사용자 확인으로 낮춘다.
 
-- 이력서: `claim-ledger.json`, `evidence-audit.md`
-- 경력기술서: `career-description-claim-ledger.json`, `career-description-evidence-audit.md`
+- 이력서: `claim-ledger.json`
+- 경력기술서: `career-description-claim-ledger.json`
+
+claim ledger를 사람이 읽는 문장으로 다시 풀어 쓴 evidence audit는 만들지 않는다.
+대표 사례의 30초·2분 설명과 방어할 판단은 `interview-questions.json`에 합친다.
 
 다음 명령으로 원장과 제출 문구가 같은 버전인지 확인한다.
 
@@ -190,5 +206,7 @@ bun "$(git rev-parse --show-toplevel)/career-os/.claude/skills/resume-preparer/s
 - `references/claim-model.md`
 - `references/hard-review.md`
 - `references/scoring-rubric.md`
+- `../../../config/resume-writing-style.md`
 - `../../../config/resume-design.md`
 - `../application-package-writer/references/candidate-interview-questions.md`
+- `../application-package-writer/references/full-document-review.md`
