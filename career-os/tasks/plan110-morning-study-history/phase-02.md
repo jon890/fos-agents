@@ -17,13 +17,13 @@
 ### 1. 공부 주제 선택 계약
 
 `readingSelectionSchema`를 `topics` 배열 중심으로 바꾼다.
-각 topic은 `title`, `careerQuestion`, 한 개 이상의 `items`를 가지며 각 item은 `candidateId`, `summary`, `reason`, `careerValue`를 가진다.
+각 topic은 안정적인 kebab-case `topicKey`, `title`, `careerQuestion`, 한 개 이상의 `items`를 가지며 각 item은 `candidateId`, `summary`, `reason`, `careerValue`를 가진다.
 `careerValue`는 `current-work`, `target-role`, `engineering-judgment`, `product-business` 중 하나만 허용한다.
 추천할 자료가 없으면 빈 `topics` 배열을 허용한다.
 
 ### 2. 커리어 연결 검증
 
-선택 검증은 후보 ID, 카테고리, 실행 내 중복, 이전 추천 여부, 문자열 길이와 topic별 항목 수를 검사한다.
+선택 검증은 후보 ID, 실행 내 중복, 이전 추천 여부, 직전 리포트와 같은 `topicKey`, 문자열 길이와 topic별 항목 수를 검사한다.
 스킬의 모델 선별 규칙은 현재 업무 적용, 목표 역할 준비, 구체적인 기술 판단, 제품·조직·수익화 관점 중 하나가 원문에 있어야 통과하도록 정의한다.
 API 사용 순서만 나열한 문서, 기능 발표 요약, 전이할 판단이 없는 안전성·업계 소식은 공식 자료여도 제외한다.
 

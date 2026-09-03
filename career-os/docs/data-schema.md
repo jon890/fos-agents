@@ -227,11 +227,14 @@ SSH 환경은 `CAREER_WORKSPACE_SSH_TARGET`, `CAREER_WORKSPACE_SSH_ARGS`와 `CAR
 수집 후보는 외부 원문 URL, 정규화한 `contentKey`, 출처, 제목과 게시 시각을 포함한다.
 피드가 제공하는 경우 요약 판단에 사용할 공개 설명문을 `excerpt`에 담는다.
 `previouslyRecommended`는 누적 이력에 같은 `contentKey`가 있는지를 나타낸다.
+후보풀의 `recentStudyTopicKeys`는 직전 리포트에 포함된 공부 주제 키다.
 선별 결과는 같은 항목 식별자를 참조하며 `previouslyRecommended: true`인 후보를 선택할 수 없다.
+직전 리포트와 같은 `topicKey`도 선택할 수 없다.
 
 선별 결과와 리포트는 공부 주제 배열을 기준으로 사용한다.
 각 공부 주제는 다음 정보를 담는다.
 
+- `topicKey`: 날짜가 달라도 같은 개념을 식별하는 kebab-case 키
 - `title`: 외부 자료에서 도출한 공부 주제
 - `careerQuestion`: 현재 업무나 다음 역할에 적용해 볼 질문
 - `items`: 주제에 연결한 한 개 이상의 추천 자료
@@ -245,6 +248,7 @@ SSH 환경은 `CAREER_WORKSPACE_SSH_TARGET`, `CAREER_WORKSPACE_SSH_ARGS`와 `CAR
 이 파일은 홈서버 비공개 작업 release로 동기화하며 임시 리포트와 분리한다.
 
 - `schemaVersion`: 현재 값 `1`
+- `reports`: 반영을 마친 일별 리포트 식별자와 추천 시각 배열
 - `entries`: 과거 추천 자료 배열
 - `entries[].contentKey`: 정규화한 원문을 식별하는 유일 키
 - `entries[].canonicalUrl`: 추적 query와 fragment를 제거한 HTTPS 원문 URL
@@ -252,11 +256,14 @@ SSH 환경은 `CAREER_WORKSPACE_SSH_TARGET`, `CAREER_WORKSPACE_SSH_ARGS`와 `CAR
 - `entries[].category`: 수집 카테고리
 - `entries[].title`: 추천 당시 제목
 - `entries[].studyTopic`: 추천 당시 공부 주제
+- `entries[].studyTopicKey`: 추천 당시 공부 주제의 안정적인 식별자
 - `entries[].careerValue`: 추천 당시 커리어 연결 유형
 - `entries[].recommendedAt`: 이력에 반영한 UTC 시각
 - `entries[].reportId`: 추천이 포함된 일별 리포트 식별자
 
 `contentKey`는 파일 안에서 유일해야 한다.
+`reports[].reportId`도 파일 안에서 유일해야 하며 같은 날짜의 리포트를 두 번 반영하지 않는다.
+다음 실행은 가장 최근 `reportId`의 `studyTopicKey`를 읽어 직전 리포트와 같은 주제 선택을 거부한다.
 YouTube 영상은 video ID를 키에 포함하고 일반 글은 정규화한 URL의 SHA-256으로 키를 만든다.
 이력 갱신은 임시 파일을 같은 디렉터리에 쓴 뒤 rename하며, 기존 이력을 읽거나 검증하지 못하면 빈 이력으로 대체하지 않는다.
 

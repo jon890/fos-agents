@@ -22,8 +22,8 @@ YouTube 영상은 `youtube:<videoId>`, 일반 글은 추적 query와 fragment를
 
 ### 2. 누적 이력 스키마와 원자적 저장
 
-`reading_contracts.ts`에 `schemaVersion: 1`과 `entries` 배열을 가진 이력 스키마를 추가한다.
-각 entry는 `contentKey`, `canonicalUrl`, `sourceKey`, `category`, `title`, `studyTopic`, `careerValue`, `recommendedAt`, `reportId`를 가진다.
+`reading_contracts.ts`에 `schemaVersion: 1`, 반영한 일별 `reports`와 추천 자료 `entries` 배열을 가진 이력 스키마를 추가한다.
+각 entry는 `contentKey`, `canonicalUrl`, `sourceKey`, `category`, `title`, `studyTopic`, `studyTopicKey`, `careerValue`, `recommendedAt`, `reportId`를 가진다.
 `persistence/history.ts`는 파일이 없을 때만 빈 이력을 반환하고, JSON 손상과 중복 `contentKey`는 실패로 처리한다.
 저장은 같은 디렉터리의 임시 파일을 rename하는 방식으로 기존 파일을 원자적으로 교체한다.
 

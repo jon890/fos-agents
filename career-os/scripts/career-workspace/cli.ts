@@ -95,7 +95,12 @@ export async function runCareerWorkspaceCli(args: string[], context = createDefa
   throw new TransportError(makeRemoteError("check", "INVALID_MANIFEST"));
 }
 
-const managedSkills = new Set(["application-package-writer", "resume-preparer", "interview-practice"]);
+const managedSkills = new Set([
+  "application-package-writer",
+  "resume-preparer",
+  "interview-practice",
+  "study-topic-recommender",
+]);
 
 export async function beginSkillWorkspace(context: CliContext, skill: string | undefined) {
   validateManagedSkill(skill);

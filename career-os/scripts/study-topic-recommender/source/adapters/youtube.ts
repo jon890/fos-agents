@@ -1,4 +1,5 @@
 import type { CollectedReading, ReadingSourceAdapter } from "./types.js";
+import { feedSourceAdapter } from "./feed.js";
 
 type JsonObject = Record<string, unknown>;
 
@@ -152,6 +153,14 @@ export const youtubeSourceAdapter: ReadingSourceAdapter = {
   id: "youtube",
   supports: (source) => Boolean(source.url?.includes("youtube.com/")),
   async collect(source, context) {
+    if (source.feedUrl) {
+      try {
+        const feedItems = await feedSourceAdapter.collect(source, context);
+        if (feedItems.length > 0) return feedItems;
+      } catch {
+        // 공개 채널 페이지 fallback은 Atom feed 장애 때만 사용한다.
+      }
+    }
     const url = source.url ? channelVideosUrl(source.url) : null;
     if (!url) return [];
     try {

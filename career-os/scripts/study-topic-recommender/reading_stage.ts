@@ -11,14 +11,15 @@ import {
 } from "./reading_candidate_pool.js";
 import {
   loadValidatedReadingSelection,
-  recommendationsFromSelection,
+  topicsFromSelection,
 } from "./reading_selection.js";
 
 export interface ReadingCollectionInput {
   readingSources: NormalizedReadingSources;
   outputPath: string;
   cacheDir: string;
-  recentUrls: Set<string>;
+  previousContentKeys: Set<string>;
+  recentStudyTopicKeys: Set<string>;
   candidatePoolPath?: string;
   cacheTtlHours: number;
   timeoutMs: number;
@@ -28,16 +29,25 @@ export interface ReadingCollectionInput {
 export async function prepareReadingCandidatePool(
   input: ReadingCollectionInput
 ): Promise<ReadingCandidatePool> {
-  const pool = input.candidatePoolPath
+  const loadedPool = input.candidatePoolPath
     ? loadReadingCandidatePool(resolve(input.candidatePoolPath))
     : await collectReadingCandidatePool({
         readingSources: input.readingSources,
         cacheDir: input.cacheDir,
-        recentUrls: input.recentUrls,
+        previousContentKeys: input.previousContentKeys,
+        recentStudyTopicKeys: input.recentStudyTopicKeys,
         maxCandidatesPerSource: input.maxCandidatesPerSource,
         cacheTtlHours: input.cacheTtlHours,
         timeoutMs: input.timeoutMs,
       });
+  const pool = {
+    ...loadedPool,
+    recentStudyTopicKeys: [...input.recentStudyTopicKeys].sort(),
+    candidates: loadedPool.candidates.map((candidate) => ({
+      ...candidate,
+      previouslyRecommended: input.previousContentKeys.has(candidate.contentKey),
+    })),
+  };
 
   writeFileSync(input.outputPath, `${JSON.stringify(pool, null, 2)}\n`, "utf8");
   return pool;
@@ -53,6 +63,6 @@ export function selectReadings(input: {
   );
 
   return {
-    recommendations: recommendationsFromSelection(selection, input.pool),
+    topics: topicsFromSelection(selection, input.pool),
   };
 }

@@ -70,6 +70,15 @@ describe("career workspace cli", () => {
     });
   }));
 
+  test("study-topic-recommender는 추천 이력을 새 release로 반영한다", async () => withFixture(async (fixture) => {
+    await createRemoteRelease(fixture, "rev-1", { "state/morning-study-history.json": "{}" });
+    await prepareWorkspace(makeContext(fixture));
+    await beginSkillWorkspace(makeContext(fixture), "study-topic-recommender");
+    await writeFile(path.join(fixture.workspaceRoot, "state", "morning-study-history.json"), "{\"schemaVersion\":1}\n");
+    const result = await finishSkillWorkspace(makeContext(fixture), "study-topic-recommender");
+    expect(result).toMatchObject({ action: "skill-finish", skill: "study-topic-recommender", noChange: false });
+  }));
+
   test("성공한 begin이 없거나 다른 skill 세션이면 finish를 거절한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
     await prepareWorkspace(makeContext(fixture));
