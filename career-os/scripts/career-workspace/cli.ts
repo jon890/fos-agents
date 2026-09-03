@@ -18,6 +18,7 @@ import {
   type CareerWorkspaceSyncState,
   type PrepareJournal,
 } from "./local-state.ts";
+import { CommandCareerWorkspaceTransport } from "./command-transport.ts";
 import { LocalCareerWorkspaceTransport } from "./local-transport.ts";
 import { SshCareerWorkspaceTransport } from "./ssh-transport.ts";
 import { makeRemoteError, TransportError, type CareerWorkspaceTransport } from "./transport.ts";
@@ -508,22 +509,30 @@ function createDefaultContext(): CliContext {
   loadWorkspaceEnvironment();
   const env = process.env;
   const root = path.resolve(env.CAREER_WORKSPACE_ROOT || "career-os");
-  const localRoot = env.CAREER_WORKSPACE_LOCAL_TRANSPORT_ROOT;
-  const transport = localRoot
-    ? new LocalCareerWorkspaceTransport(localRoot)
-    : new SshCareerWorkspaceTransport({
-        sshTarget: env.CAREER_WORKSPACE_SSH_TARGET || "",
-        remoteCommand: env.CAREER_WORKSPACE_REMOTE_COMMAND || "career-storage",
-        sshArgs: env.CAREER_WORKSPACE_SSH_ARGS?.split(" ").filter(Boolean),
-      });
   return {
     root,
-    transport,
+    transport: createCareerWorkspaceTransport(env),
     producer: {
       skill: env.CAREER_WORKSPACE_PRODUCER_SKILL || "career-workspace",
       mode: env.CAREER_WORKSPACE_PRODUCER_MODE === "automation" ? "automation" : "interactive",
     },
   };
+}
+
+export function createCareerWorkspaceTransport(
+  environment: Readonly<Record<string, string | undefined>>,
+): CareerWorkspaceTransport {
+  if (environment.CAREER_WORKSPACE_COMMAND) {
+    return new CommandCareerWorkspaceTransport({ command: environment.CAREER_WORKSPACE_COMMAND });
+  }
+  if (environment.CAREER_WORKSPACE_LOCAL_TRANSPORT_ROOT) {
+    return new LocalCareerWorkspaceTransport(environment.CAREER_WORKSPACE_LOCAL_TRANSPORT_ROOT);
+  }
+  return new SshCareerWorkspaceTransport({
+    sshTarget: environment.CAREER_WORKSPACE_SSH_TARGET || "",
+    remoteCommand: environment.CAREER_WORKSPACE_REMOTE_COMMAND || "career-storage",
+    sshArgs: environment.CAREER_WORKSPACE_SSH_ARGS?.split(" ").filter(Boolean),
+  });
 }
 
 function loadWorkspaceEnvironment(): void {

@@ -36,6 +36,12 @@
 
 워크스페이스 한정 helper는 해당 워크스페이스 내부에 둔다.
 
+## 외부 서비스
+
+홈서버의 S3 호환 객체 저장소는 이 저장소가 배포하거나 운영하는 워크스페이스가 아니다.
+각 워크스페이스는 자기 bucket의 데이터 계약과 adapter만 관리한다.
+공통 endpoint, credential과 bucket 격리 조건은 [`home-server-object-storage.md`](home-server-object-storage.md)를 따른다.
+
 ## 워크스페이스 표준 트리
 
 새 워크스페이스는 아래 구조를 기본값으로 삼는다.

@@ -12,13 +12,18 @@
 
 ## 결정
 
-비공개 작업 파일은 홈서버의 일반 디렉터리에 immutable release로 보관한다.
+비공개 작업 파일은 홈서버의 immutable release로 보관한다.
 각 환경은 현재 release를 로컬 작업 경로에 준비하고, 실행 시작 revision이 유지됐을 때만 새 release를 원자적으로 반영한다.
 공통 client와 파일 보존 계약을 먼저 구현하고, 운영 server와 기존 career skill 연결은 후속 작업으로 나눈다.
 연결을 마치면 사용자는 새 동기화 skill을 고르지 않고 기존 career skill을 계속 호출한다.
 첫 운영 계약의 관리 root는 `applications`, `library`, `state`로 고정한다.
 아침 공부 추천처럼 다음 실행의 중복 방지에 필요한 누적 이력도 `state`에 두고 같은 release 계약으로 동기화한다.
 이 결정 전에는 운영 release와 로컬 sync state가 없었으므로 초기 `schemaVersion: 1`에 바로 반영한다.
+
+## 대체된 부분
+
+홈서버 일반 디렉터리를 저장 매체로 사용한다는 결정은 [ADR-108](ADR-108-비공개-작업-release는-범용-s3-collection에-보관한다.md)이 S3 collection으로 대체한다.
+immutable release, 부모 revision 검사와 client 계약은 그대로 유지한다.
 
 ## 기각한 대안
 

@@ -4,10 +4,19 @@ import os from "node:os";
 import path from "node:path";
 import { revisionSchema } from "./contracts.ts";
 import { buildSshInvocationArgs, validateSshConfig } from "./ssh-transport.ts";
-import { createTarFromDirectory, safeRemove, validateTarTopLevel } from "./tar-utils.ts";
+import { createTarFromDirectory, safeRemove, toUint8Array, validateTarTopLevel } from "./tar-utils.ts";
 import { parseRemoteError } from "./transport.ts";
 
 describe("transport safety boundary", () => {
+  test("Bun이 tar stdout을 ArrayBuffer로 반환해도 Uint8Array로 정규화한다", () => {
+    const arrayBuffer = new Uint8Array([0, 1, 127, 255]).buffer;
+
+    const normalized = toUint8Array(arrayBuffer);
+
+    expect(normalized).toBeInstanceOf(Uint8Array);
+    expect([...normalized]).toEqual([0, 1, 127, 255]);
+  });
+
   test("tar에 symlink가 있으면 추출 전에 거부한다", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "career-tar-"));
     try {

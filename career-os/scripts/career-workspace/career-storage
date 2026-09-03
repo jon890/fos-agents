@@ -1,0 +1,42 @@
+#!/bin/sh
+
+umask 077
+
+fail() {
+  action=$1
+  code=$2
+  printf '{"schemaVersion":1,"action":"%s","ok":false,"code":"%s"}\n' "$action" "$code" >&2
+  exit 1
+}
+
+case "${1-}" in
+  export|publish)
+    action=$1
+    ;;
+  *)
+    action=status
+    ;;
+esac
+
+executable=${CAREER_STORAGE_S3_EXECUTABLE-}
+if [ -z "$executable" ] || [ ! -f "$executable" ] || [ ! -x "$executable" ]; then
+  fail "$action" TRANSPORT_UNAVAILABLE
+fi
+
+if [ "${1-}" != publish ]; then
+  exec "$executable" "$@"
+fi
+
+lock_file=${CAREER_STORAGE_LOCK_FILE-}
+if [ -z "$lock_file" ] || ! command -v flock >/dev/null 2>&1; then
+  fail publish TRANSPORT_UNAVAILABLE
+fi
+
+if ! : >> "$lock_file"; then
+  fail publish TRANSPORT_UNAVAILABLE
+fi
+exec 9>> "$lock_file"
+if ! flock --nonblock 9; then
+  fail publish REVISION_CONFLICT
+fi
+exec "$executable" "$@"
