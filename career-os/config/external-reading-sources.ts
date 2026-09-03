@@ -260,6 +260,15 @@ export const externalReadingSources = {
       "category": "video",
       "enabled": true,
       "adapter": "youtube"
+    },
+    {
+      "key": "science-adam-youtube",
+      "title": "사이언스 아담 Science Adam",
+      "url": "https://www.youtube.com/@ScienceADAM",
+      "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UC3ofpYNO2gLwV0fgcuFG8tA",
+      "category": "video",
+      "enabled": true,
+      "adapter": "youtube"
     }
   ]
 } satisfies ReadingSourcesConfig;
