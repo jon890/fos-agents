@@ -6,9 +6,9 @@ import {
   revisionSchema,
   type RemoteErrorResult,
   type CareerWorkspaceReleaseManifest,
-} from "./contracts.ts";
-import { createTarFromDirectory, validateCareerWorkspaceReleaseArchive } from "./tar-utils.ts";
-import { makeRemoteError, TransportError } from "./transport.ts";
+} from "../../contracts.ts";
+import { createTarFromDirectory, validateCareerWorkspaceReleaseArchive } from "../../tar-utils.ts";
+import { makeRemoteError, TransportError } from "../../transport.ts";
 
 export interface FileReleaseSnapshot {
   revision: string;

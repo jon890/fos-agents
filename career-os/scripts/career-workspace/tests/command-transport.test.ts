@@ -2,10 +2,9 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { chmod, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { CommandCareerWorkspaceTransport } from "./command-transport.ts";
-import { createCareerWorkspaceTransport } from "./cli.ts";
-import { LocalCareerWorkspaceTransport } from "./local-transport.ts";
-import { SshCareerWorkspaceTransport } from "./ssh-transport.ts";
+import { CommandCareerWorkspaceTransport } from "../command-transport.ts";
+import { createCareerWorkspaceTransport } from "../cli.ts";
+import { SshCareerWorkspaceTransport } from "../ssh-transport.ts";
 
 const temporaryRoots: string[] = [];
 
@@ -62,18 +61,14 @@ describe("command career workspace transport", () => {
     expect(await exists(marker)).toBe(false);
   });
 
-  test("command, local, SSH 순으로 transport를 선택하고 client는 S3 credential을 요구하지 않는다", async () => {
+  test("command를 우선하고 없으면 SSH transport를 선택하며 client는 S3 credential을 요구하지 않는다", async () => {
     const fixture = await createCommandFixture();
     const command = createCareerWorkspaceTransport({
       CAREER_WORKSPACE_COMMAND: fixture.command,
-      CAREER_WORKSPACE_LOCAL_TRANSPORT_ROOT: path.join(fixture.root, "local-storage"),
     });
     expect(command).toBeInstanceOf(CommandCareerWorkspaceTransport);
     expect(await command.status()).toMatchObject({ action: "status", ok: true });
 
-    expect(createCareerWorkspaceTransport({
-      CAREER_WORKSPACE_LOCAL_TRANSPORT_ROOT: path.join(fixture.root, "local-storage"),
-    })).toBeInstanceOf(LocalCareerWorkspaceTransport);
     expect(createCareerWorkspaceTransport({
       CAREER_WORKSPACE_SSH_TARGET: "host",
       CAREER_WORKSPACE_REMOTE_COMMAND: "career-storage",
@@ -90,7 +85,7 @@ describe("command career workspace transport", () => {
     environment.CAREER_WORKSPACE_COMMAND = fixture.command;
     environment.CAREER_WORKSPACE_ROOT = path.join(fixture.root, "workspace");
     environment.CAREER_WORKSPACE_ENV_FILE = path.join(fixture.root, "missing.env");
-    const proc = Bun.spawn(["bun", path.join(import.meta.dir, "cli.ts"), "check"], {
+    const proc = Bun.spawn(["bun", path.join(import.meta.dir, "../cli.ts"), "check"], {
       env: environment,
       stdout: "pipe",
       stderr: "pipe",

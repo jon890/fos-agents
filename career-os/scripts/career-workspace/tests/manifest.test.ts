@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { CareerWorkspaceDraftManifestSchema, workspaceRelativePathSchema } from "./contracts.ts";
-import { buildWorkspaceDraft, compareCodeUnits, WorkspaceManifestError } from "./manifest.ts";
+import { CareerWorkspaceDraftManifestSchema, workspaceRelativePathSchema } from "../contracts.ts";
+import { buildWorkspaceDraft, compareCodeUnits, WorkspaceManifestError } from "../manifest.ts";
 
 const producer = { skill: "test", mode: "interactive" } as const;
 let tempRoot: string;
@@ -120,7 +120,7 @@ describe("workspace manifest", () => {
         return body;
       },
     }));
-    const { buildWorkspaceDraft: buildWithChangingRead } = await import(`./manifest.ts?changing=${Date.now()}`);
+    const { buildWorkspaceDraft: buildWithChangingRead } = await import(`../manifest.ts?changing=${Date.now()}`);
 
     await expect(buildWithChangingRead(tempRoot, producer)).rejects.toMatchObject({
       name: "WorkspaceManifestError",

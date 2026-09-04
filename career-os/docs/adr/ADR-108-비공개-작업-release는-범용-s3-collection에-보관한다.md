@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-03
+- Updated: 2026-09-04
 
 ## 맥락
 
@@ -26,4 +27,4 @@ Hermes도 SeaweedFS 데이터 볼륨을 직접 읽지 않고 같은 명령을 �
 
 기존 `CareerWorkspaceTransport`의 `status`, `export`, `publish`와 오류 계약은 바뀌지 않는다.
 저장소 장애나 credential 오류는 작업 쓰기를 중단하며 이전 current pointer를 유지한다.
-기존 파일 release는 S3 archive의 hash와 client 흐름을 확인한 뒤에도 자동 삭제하지 않고 복구용으로 보존한다.
+기존 파일 release 데이터는 별도 백업으로 보존할 수 있지만 현재 실행 코드는 파일 release를 읽지 않는다.

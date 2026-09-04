@@ -1,8 +1,8 @@
 ## ADR-107 비공개 커리어 산출물은 홈서버 파일 release로 동기화한다
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-08-27
-- Updated: 2026-09-03
+- Updated: 2026-09-04
 
 ## 맥락
 

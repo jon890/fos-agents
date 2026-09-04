@@ -6,6 +6,21 @@ career-os의 각 흐름은 외부 입력을 검증하고, 사용자 판단에 �
 
 `application-package-writer`, `resume-preparer`, `interview-practice`와 `study-topic-recommender`는 공통 CLI로 다음 준비와 반영 절차를 실행한다.
 
+```text
+작성 skill
+  └─ 로컬 CLI
+       ├─ 외부 개발 환경: SSH로 홈서버 명령 호출
+       └─ 홈서버 Hermes: 같은 홈서버 명령을 직접 호출
+            └─ publish 잠금
+                 └─ S3 release 검증과 current pointer 변경
+                      └─ Bun S3Client
+                           └─ SeaweedFS의 career-os bucket
+```
+
+로컬 CLI는 S3 credential을 읽지 않는다.
+홈서버 명령만 SeaweedFS에 접근하며, 외부 개발 환경과 Hermes가 같은 release 계약을 사용한다.
+파일별 책임과 코드를 읽는 순서는 [`scripts/career-workspace/README.md`](../scripts/career-workspace/README.md)에서 확인한다.
+
 1. 로컬 `applications`, `library`와 `state`가 마지막으로 받은 revision에서 바뀌지 않았는지 검사한다.
 2. 홈서버의 현재 revision과 manifest를 확인한다.
 3. 로컬 변경이 없으면 현재 release를 임시 경로로 받고 파일 hash와 허용 경로를 검증한다.

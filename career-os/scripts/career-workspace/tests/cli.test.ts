@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { lstat, mkdir, mkdtemp, readFile, readdir, readlink, rename, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { chmod, lstat, mkdir, mkdtemp, readFile, readdir, readlink, rename, rm, stat, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { CareerWorkspaceReleaseManifestSchema, type RemoteStatusResult } from "./contracts.ts";
+import { CareerWorkspaceReleaseManifestSchema, type RemoteStatusResult } from "../contracts.ts";
 import { createManagedRoots, writeFixtureRelease } from "./fixtures/filesystem-storage.ts";
-import { buildWorkspaceDraft } from "./manifest.ts";
-import { LocalCareerWorkspaceTransport } from "./local-transport.ts";
-import { switchCurrentSymlink } from "./local-transport.ts";
+import { buildWorkspaceDraft } from "../manifest.ts";
+import { LocalCareerWorkspaceTransport } from "./fixtures/filesystem-transport.ts";
+import { switchCurrentSymlink } from "./fixtures/filesystem-transport.ts";
 import {
   beginSkillWorkspace,
   checkWorkspace,
@@ -14,10 +14,11 @@ import {
   finishSkillWorkspace,
   prepareWorkspace,
   publishWorkspace,
+  runCareerWorkspaceCli,
   type CliContext,
-} from "./cli.ts";
-import { createTarFromDirectory } from "./tar-utils.ts";
-import { TransportError, type CareerWorkspaceTransport } from "./transport.ts";
+} from "../cli.ts";
+import { createTarFromDirectory } from "../tar-utils.ts";
+import { TransportError, type CareerWorkspaceTransport } from "../transport.ts";
 
 const producer = { skill: "test", mode: "interactive" } as const;
 
@@ -28,6 +29,23 @@ interface Fixture {
 }
 
 describe("career workspace cli", () => {
+  test("help는 현재 사용하는 동기화와 skill 명령만 보여준다", async () => withFixture(async (fixture) => {
+    const result = await runCareerWorkspaceCli(["help"], makeContext(fixture));
+
+    expect(result).toMatchObject({
+      action: "help",
+      ok: true,
+      commands: [
+        "check --json",
+        "prepare",
+        "diff",
+        "publish",
+        "skill begin <skill> --json",
+        "skill finish <skill> --json",
+      ],
+    });
+  }));
+
   test("check는 local과 remote 상태를 구조화한다", async () => withFixture(async (fixture) => {
     const result = await checkWorkspace(makeContext(fixture));
 
@@ -711,7 +729,7 @@ describe("career workspace cli", () => {
     expect(syncState.contentDigest).toBe(result.contentDigest);
   }));
 
-  test("local transport는 동시 publish를 lock 안 current 재확인으로 하나만 성공시킨다", async () => withFixture(async (fixture) => {
+  test("filesystem fixture는 동시 publish를 lock 안 current 재확인으로 하나만 성공시킨다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
     const first = { ...fixture, workspaceRoot: path.join(fixture.tempRoot, "client-a") };
     const second = { ...fixture, workspaceRoot: path.join(fixture.tempRoot, "client-b") };
@@ -784,7 +802,7 @@ describe("career workspace cli", () => {
   }));
 
   test("CLI help와 error는 환경 host/account/key path와 파일 본문을 노출하지 않는다", async () => withFixture(async (fixture) => {
-    const cliPath = path.join(import.meta.dir, "cli.ts");
+    const cliPath = path.join(import.meta.dir, "../cli.ts");
     await writeFile(path.join(fixture.workspaceRoot, "applications", "secret-body.md"), "file-body-secret");
     const secretEnv = {
       ...process.env,
@@ -794,7 +812,7 @@ describe("career workspace cli", () => {
       CAREER_WORKSPACE_REMOTE_COMMAND: "career-storage",
     };
     const help = Bun.spawn(["bun", cliPath, "help"], {
-      cwd: path.resolve(import.meta.dir, "../../.."),
+      cwd: path.resolve(import.meta.dir, "../../../.."),
       env: secretEnv,
       stdout: "pipe",
       stderr: "pipe",
@@ -810,7 +828,7 @@ describe("career workspace cli", () => {
     expect(helpOutput).not.toContain("file-body-secret");
 
     const error = Bun.spawn(["bun", cliPath, "unknown"], {
-      cwd: path.resolve(import.meta.dir, "../../.."),
+      cwd: path.resolve(import.meta.dir, "../../../.."),
       env: secretEnv,
       stdout: "pipe",
       stderr: "pipe",
@@ -827,14 +845,17 @@ describe("career workspace cli", () => {
   }));
 
   test("CLI 프로세스는 성공 JSON을 stdout에, 오류 JSON을 stderr에만 쓴다", async () => withFixture(async (fixture) => {
-    const cliPath = path.join(import.meta.dir, "cli.ts");
+    const cliPath = path.join(import.meta.dir, "../cli.ts");
+    const commandPath = path.join(fixture.tempRoot, "career-storage-test");
+    await writeFile(commandPath, "#!/bin/sh\nprintf '{\"schemaVersion\":1,\"action\":\"status\",\"ok\":true,\"workspace\":\"career-os\",\"current\":null}\\n'\n");
+    await chmod(commandPath, 0o700);
     const commonEnv = {
       ...process.env,
       CAREER_WORKSPACE_ROOT: fixture.workspaceRoot,
-      CAREER_WORKSPACE_LOCAL_TRANSPORT_ROOT: fixture.storageRoot,
+      CAREER_WORKSPACE_COMMAND: commandPath,
     };
     const ok = Bun.spawn(["bun", cliPath, "check"], {
-      cwd: path.resolve(import.meta.dir, "../../.."),
+      cwd: path.resolve(import.meta.dir, "../../../.."),
       env: commonEnv,
       stdout: "pipe",
       stderr: "pipe",
@@ -849,7 +870,7 @@ describe("career workspace cli", () => {
     expect(okStderr).toBe("");
 
     const fail = Bun.spawn(["bun", cliPath, "prepare"], {
-      cwd: path.resolve(import.meta.dir, "../../.."),
+      cwd: path.resolve(import.meta.dir, "../../../.."),
       env: commonEnv,
       stdout: "pipe",
       stderr: "pipe",
@@ -865,7 +886,7 @@ describe("career workspace cli", () => {
   }));
 
   test("테스트 fixture는 repo root의 storage/workspace 디렉터리에 누출되지 않는다", async () => {
-    const repoRoot = path.resolve(import.meta.dir, "../../..");
+    const repoRoot = path.resolve(import.meta.dir, "../../../..");
 
     expect(await exists(path.join(repoRoot, "storage"))).toBe(false);
     expect(await exists(path.join(repoRoot, "workspace"))).toBe(false);

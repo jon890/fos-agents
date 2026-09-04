@@ -2,8 +2,8 @@ import { describe, expect, test } from "bun:test";
 import path from "node:path";
 import {
   runCareerStorageS3,
-} from "./career-storage-s3.ts";
-import { TransportError, type CareerWorkspaceTransport } from "./transport.ts";
+} from "../career-storage-s3.ts";
+import { TransportError, type CareerWorkspaceTransport } from "../transport.ts";
 
 describe("career-storage S3 entrypoint", () => {
   test("status, export와 publish를 기존 transport 계약으로 전달한다", async () => {
@@ -90,7 +90,7 @@ describe("career-storage S3 entrypoint", () => {
       },
     });
     try {
-      const proc = Bun.spawn(["bun", path.join(import.meta.dir, "career-storage-s3.ts"), "status"], {
+      const proc = Bun.spawn(["bun", path.join(import.meta.dir, "../career-storage-s3.ts"), "status"], {
         env: {
           ...process.env,
           CAREER_STORAGE_S3_ENDPOINT: server.url.origin,
@@ -119,7 +119,7 @@ describe("career-storage S3 entrypoint", () => {
   test("프로세스 실패는 stdout을 비우고 구조화 오류만 stderr에 기록한다", async () => {
     const accessKey = "process-access-key";
     const secretKey = "process-secret-key";
-    const proc = Bun.spawn(["bun", path.join(import.meta.dir, "career-storage-s3.ts"), "status", "extra"], {
+    const proc = Bun.spawn(["bun", path.join(import.meta.dir, "../career-storage-s3.ts"), "status", "extra"], {
       env: {
         ...process.env,
         CAREER_STORAGE_S3_ENDPOINT: "not-a-url",

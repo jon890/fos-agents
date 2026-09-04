@@ -24,6 +24,7 @@ clone 뒤에는 `.env.example`에서 필요한 secret 키 이름을 확인한다
 
 `scripts/career-workspace/`에는 비공개 작업 파일의 manifest, 준비, 차이 확인과 발행을 담당하는 공통 CLI가 있다.
 홈서버의 `career-storage`는 `career-os` S3 bucket에 검증된 불변 release를 보관하고 검증이 끝난 뒤 current pointer를 바꾼다.
+코드를 확인할 때는 [`scripts/career-workspace/README.md`](scripts/career-workspace/README.md)의 정상 실행 경로부터 읽는다.
 세 작성 skill은 실행 전 준비와 성공 뒤 발행을 자동으로 수행한다.
 로컬 작업본과 원격 release 차이를 확인할 때는 저장소 루트에서 다음 명령을 실행한다.
 
@@ -34,8 +35,7 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 `.env`는 워크스페이스 루트에 두고 git에 올리지 않는다.
 홈서버에서는 S3 실행 파일을 빌드하고 `CAREER_STORAGE_S3_EXECUTABLE`, 공용 publish 잠금과 네 `CAREER_STORAGE_S3_*` 값을 서비스 환경에 둔다.
 SSH client는 원격 transport 값을 넣고, 홈서버의 Hermes는 `CAREER_WORKSPACE_COMMAND`로 같은 `career-storage` 명령을 호출한다.
-기존 파일 release는 migration 뒤에도 복구용으로 보존한다.
-설치, migration, 상태 확인과 복구 순서는 [홈서버 객체 저장소 연결 계약](../docs/home-server-object-storage.md)을 따른다.
+설치, 상태 확인과 복구 순서는 [홈서버 객체 저장소 연결 계약](../docs/home-server-object-storage.md)을 따른다.
 진행 중인 지원 대상은 private brain에서 확인하고 공고별 실행 자료는 `applications/<company>/<role>/`에서 관리한다.
 외부 게시, 제출, 로그인, 업로드, 메시지 전송은 사용자 승인 후에만 수행한다.
 

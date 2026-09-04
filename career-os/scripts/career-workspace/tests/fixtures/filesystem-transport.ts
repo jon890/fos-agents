@@ -11,11 +11,11 @@ import {
   remotePublishResultSchema,
   remoteStatusResultSchema,
   revisionSchema,
-} from "./contracts.ts";
+} from "../../contracts.ts";
 import { readCurrentFileReleaseManifest } from "./file-release.ts";
-import { makeRemoteError, TransportError, type CareerWorkspaceTransport } from "./transport.ts";
-import { copyManifestFiles, createTarFromDirectory, extractTarToDirectory, listRelativeFiles, safeRemove, validateTarTopLevel } from "./tar-utils.ts";
-import { buildWorkspaceDraft, compareCodeUnits } from "./manifest.ts";
+import { makeRemoteError, TransportError, type CareerWorkspaceTransport } from "../../transport.ts";
+import { copyManifestFiles, createTarFromDirectory, extractTarToDirectory, listRelativeFiles, safeRemove, validateTarTopLevel } from "../../tar-utils.ts";
+import { buildWorkspaceDraft, compareCodeUnits } from "../../manifest.ts";
 
 export class LocalCareerWorkspaceTransport implements CareerWorkspaceTransport {
   constructor(

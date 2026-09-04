@@ -2,10 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { link, mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { revisionSchema } from "./contracts.ts";
-import { buildSshInvocationArgs, validateSshConfig } from "./ssh-transport.ts";
-import { createTarFromDirectory, safeRemove, toUint8Array, validateTarTopLevel } from "./tar-utils.ts";
-import { parseRemoteError } from "./transport.ts";
+import { revisionSchema } from "../contracts.ts";
+import { buildSshInvocationArgs, validateSshConfig } from "../ssh-transport.ts";
+import { createTarFromDirectory, safeRemove, toUint8Array, validateTarTopLevel } from "../tar-utils.ts";
+import { parseRemoteError } from "../transport.ts";
 
 describe("transport safety boundary", () => {
   test("Bun이 tar stdout을 ArrayBuffer로 반환해도 Uint8Array로 정규화한다", () => {

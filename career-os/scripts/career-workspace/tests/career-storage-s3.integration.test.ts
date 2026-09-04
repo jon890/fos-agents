@@ -1,7 +1,7 @@
 import { describe, test } from "bun:test";
 import { createHash, randomUUID } from "node:crypto";
 import { S3Client } from "bun";
-import { CareerStorageS3EnvironmentSchema } from "./s3-storage-contracts.ts";
+import { CareerStorageS3EnvironmentSchema } from "../s3-storage-contracts.ts";
 
 const REQUIRED_ENVIRONMENT = [
   "CAREER_STORAGE_S3_ENDPOINT",

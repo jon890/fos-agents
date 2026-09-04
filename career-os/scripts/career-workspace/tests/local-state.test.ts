@@ -2,12 +2,12 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { buildWorkspaceDraft } from "./manifest.ts";
+import { buildWorkspaceDraft } from "../manifest.ts";
 import {
   careerWorkspaceSyncStateSchema,
   inspectLocalWorkspace,
   prepareJournalSchema,
-} from "./local-state.ts";
+} from "../local-state.ts";
 
 const producer = { skill: "test", mode: "interactive" } as const;
 let tempRoot: string;

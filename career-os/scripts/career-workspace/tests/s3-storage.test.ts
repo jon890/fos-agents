@@ -6,19 +6,19 @@ import path from "node:path";
 import {
   CAREER_WORKSPACE_MANAGED_ROOTS,
   type CareerWorkspaceProducer,
-} from "./contracts.ts";
-import { buildWorkspaceDraft } from "./manifest.ts";
+} from "../contracts.ts";
+import { buildWorkspaceDraft } from "../manifest.ts";
 import {
   createS3ObjectStoreFromEnvironment,
   S3ObjectStoreError,
   type S3ObjectStore,
-} from "./s3-object-store.ts";
+} from "../s3-object-store.ts";
 import {
   CareerStoragePointerSchema,
   CareerStorageReleaseDescriptorSchema,
-} from "./s3-storage-contracts.ts";
-import { S3CareerWorkspaceTransport } from "./s3-storage.ts";
-import { createTarFromDirectory, safeRemove } from "./tar-utils.ts";
+} from "../s3-storage-contracts.ts";
+import { S3CareerWorkspaceTransport } from "../s3-storage.ts";
+import { createTarFromDirectory, safeRemove } from "../tar-utils.ts";
 
 const producer: CareerWorkspaceProducer = {
   skill: "application-package-writer",

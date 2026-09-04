@@ -19,11 +19,9 @@ import {
   type PrepareJournal,
 } from "./local-state.ts";
 import { CommandCareerWorkspaceTransport } from "./command-transport.ts";
-import { LocalCareerWorkspaceTransport } from "./local-transport.ts";
 import { SshCareerWorkspaceTransport } from "./ssh-transport.ts";
 import { makeRemoteError, TransportError, type CareerWorkspaceTransport } from "./transport.ts";
 import { copyManifestFiles, createTarFromDirectory, extractTarToDirectory, listRelativeFiles, safeRemove, validateTarTopLevel } from "./tar-utils.ts";
-import { buildMigrationPlan, stageMigrationPlan, type MigrationResolution } from "./migration.ts";
 
 export interface CliContext {
   root: string;
@@ -45,8 +43,6 @@ export async function runCareerWorkspaceCli(args: string[], context = createDefa
         "publish",
         "skill begin <skill> --json",
         "skill finish <skill> --json",
-        "migrate plan --json",
-        "migrate stage --destination <path> --json",
       ],
     };
   }
@@ -67,31 +63,6 @@ export async function runCareerWorkspaceCli(args: string[], context = createDefa
   }
   if (command === "skill" && args[1] === "finish") {
     return finishSkillWorkspace(context, args[2]);
-  }
-  if (command === "migrate" && args[1] === "plan") {
-    const plan = await buildMigrationPlan({
-      workspaceRoot: context.root,
-      resolutions: await readMigrationResolutions(context.root),
-    });
-    if (args.includes("--write")) {
-      await mkdir(syncDirectory(context.root), { recursive: true });
-      await writeAtomicJson(path.join(syncDirectory(context.root), "migration-plan.json"), plan);
-    }
-    return plan;
-  }
-  if (command === "migrate" && args[1] === "stage") {
-    const destinationIndex = args.indexOf("--destination");
-    const destination = destinationIndex >= 0 ? args[destinationIndex + 1] : undefined;
-    if (!destination) throw new TransportError(makeRemoteError("check", "INVALID_MANIFEST"));
-    const resolutions = await readMigrationResolutions(context.root);
-    const plan = await buildMigrationPlan({ workspaceRoot: context.root, resolutions });
-    const result = await stageMigrationPlan({ workspaceRoot: context.root, resolutions, destination: path.resolve(destination), plan });
-    return {
-      schemaVersion: CAREER_WORKSPACE_SCHEMA_VERSION,
-      action: "migrate-stage",
-      ok: true,
-      ...result,
-    };
   }
   throw new TransportError(makeRemoteError("check", "INVALID_MANIFEST"));
 }
@@ -166,15 +137,6 @@ function validateManagedSkill(skill: string | undefined): asserts skill is strin
   if (!skill || !managedSkills.has(skill)) {
     throw new TransportError(makeRemoteError("check", "INVALID_MANIFEST"));
   }
-}
-
-async function readMigrationResolutions(root: string): Promise<MigrationResolution[]> {
-  const file = path.join(syncDirectory(root), "migration-resolutions.json");
-  if (!await exists(file)) {
-    return [];
-  }
-  const parsed = JSON.parse(await readFile(file, "utf8")) as { resolutions?: MigrationResolution[] };
-  return parsed.resolutions ?? [];
 }
 
 export async function checkWorkspace(context: CliContext) {
@@ -524,9 +486,6 @@ export function createCareerWorkspaceTransport(
 ): CareerWorkspaceTransport {
   if (environment.CAREER_WORKSPACE_COMMAND) {
     return new CommandCareerWorkspaceTransport({ command: environment.CAREER_WORKSPACE_COMMAND });
-  }
-  if (environment.CAREER_WORKSPACE_LOCAL_TRANSPORT_ROOT) {
-    return new LocalCareerWorkspaceTransport(environment.CAREER_WORKSPACE_LOCAL_TRANSPORT_ROOT);
   }
   return new SshCareerWorkspaceTransport({
     sshTarget: environment.CAREER_WORKSPACE_SSH_TARGET || "",

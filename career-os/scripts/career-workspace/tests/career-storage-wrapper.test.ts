@@ -3,7 +3,7 @@ import { chmod, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/pr
 import os from "node:os";
 import path from "node:path";
 
-const wrapper = path.join(import.meta.dir, "career-storage");
+const wrapper = path.join(import.meta.dir, "../career-storage");
 const temporaryRoots: string[] = [];
 
 afterEach(async () => {

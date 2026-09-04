@@ -58,10 +58,24 @@ skill이 private brain에서 조회하고, 제출에 사용할 세부 성과는 
 ## 실행 환경 준비
 
 `scripts/career-workspace/`는 Hermes, Codex CLI와 Claude Code가 공유하는 파일 준비·차이 검사·반영 경계다.
-manifest 생성과 검증, 로컬 기준 상태 확인, SSH·command transport, 홈서버 명령과 검증용 local transport를 책임별 모듈로 나눈다.
+manifest 생성과 검증, 로컬 기준 상태 확인, SSH와 command transport, 홈서버 명령을 책임별 모듈로 나눈다.
 S3 storage adapter는 홈서버에서 표준 입력과 출력으로 release를 발행하고 내보낸다.
-기존 `career-storage.py`는 이전 검증과 복구 기간에만 파일 release를 읽는 구현으로 남긴다.
+회귀 테스트와 fixture는 `tests/`에 분리한다.
 사용자는 이 helper를 직접 고르지 않고 기존 career-os skill을 계속 호출한다.
+
+정상 실행 경로를 이해할 때는 다음 파일만 순서대로 읽는다.
+
+| 순서 | 파일 | 책임 |
+| --- | --- | --- |
+| 1 | `cli.ts` | 준비, 차이 확인, 발행과 skill 실행 전후 처리 |
+| 2 | `command-transport.ts`, `ssh-transport.ts` | 홈서버의 `career-storage` 호출 |
+| 3 | `career-storage` | 홈서버 publish 직렬화 |
+| 4 | `career-storage-s3.ts` | 홈서버 명령의 입력과 출력 |
+| 5 | `s3-storage.ts` | 불변 release 검증과 current pointer 변경 |
+| 6 | `s3-object-store.ts` | Bun `S3Client`를 통한 객체 읽기와 쓰기 |
+
+`contracts.ts`, `manifest.ts`, `local-state.ts`, `tar-utils.ts`는 위 실행 경로가 공유하는 검증 코드다.
+동작을 수정하지 않는다면 `tests/`는 읽지 않아도 된다.
 
 각 환경은 `applications`, `library`와 `state`를 일반 로컬 디렉터리로 사용한다.
 원격 파일을 network filesystem으로 직접 편집하지 않으며, 준비 단계는 검증한 release만 임시 경로에서 로컬로 교체한다.
@@ -145,7 +159,7 @@ TypeScript 스크립트가 brain을 직접 조회하지 않는다.
 `scripts/study-topic-recommender/source/`는 글과 영상 피드 수집 경계다.
 후보풀, 선별, 누적 이력, 공부 주제 구성과 Markdown·HTML 렌더링은 각각 분리된 모듈이 담당한다.
 실행기는 시스템 임시 디렉터리 아래의 명시적인 실행 경로만 사용하며 저장소에 리포트 디렉터리를 만들지 않는다.
-누적 추천 이력은 `state/morning-study-history.json`에 두고 홈서버 파일 release로 동기화한다.
+누적 추천 이력은 `state/morning-study-history.json`에 두고 홈서버 S3 release로 동기화한다.
 임시 실행 경로는 누적 이력을 읽기만 하며, 출력 검증이 끝난 뒤 별도 완료 동작이 이력을 원자적으로 갱신한다.
 YouTube 채널은 공식 Atom 피드를 우선 사용하고 피드를 읽을 수 없을 때만 공개 채널 페이지를 보조 경로로 사용한다.
 

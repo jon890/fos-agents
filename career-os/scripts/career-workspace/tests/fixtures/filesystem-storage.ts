@@ -1,8 +1,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { CAREER_WORKSPACE_MANAGED_ROOTS, CareerWorkspaceReleaseManifestSchema, type CareerWorkspaceProducer } from "../contracts.ts";
-import { buildWorkspaceDraft } from "../manifest.ts";
-import { switchCurrentSymlink } from "../local-transport.ts";
+import { CAREER_WORKSPACE_MANAGED_ROOTS, CareerWorkspaceReleaseManifestSchema, type CareerWorkspaceProducer } from "../../contracts.ts";
+import { buildWorkspaceDraft } from "../../manifest.ts";
+import { switchCurrentSymlink } from "./filesystem-transport.ts";
 
 export async function createManagedRoots(root: string): Promise<void> {
   for (const managedRoot of CAREER_WORKSPACE_MANAGED_ROOTS) {

@@ -41,8 +41,9 @@ master, filer, volume과 WebDAV 포트는 외부에 게시하지 않는다.
 저장소 루트에서 다음 명령으로 S3 실행 파일을 만든다.
 
 ```bash
-bun ./career-os/scripts/career-workspace/build-career-storage.ts \
-  --output "${CAREER_STORAGE_BUILD_OUTPUT}"
+bun build --compile \
+  ./career-os/scripts/career-workspace/career-storage-s3.ts \
+  --outfile "${CAREER_STORAGE_BUILD_OUTPUT}"
 ```
 
 빌드한 실행 파일과 `career-os/scripts/career-workspace/career-storage` wrapper를 저장소 밖 서비스 명령 경로에 설치한다.
@@ -67,7 +68,7 @@ wrapper는 모든 publish를 같은 `flock` 잠금으로 직렬화하고 나머�
 그다음 저장소 루트에서 S3 환경을 불러와 opt-in 검증을 실행한다.
 
 ```bash
-bun test ./career-os/scripts/career-workspace/career-storage-s3.integration.test.ts
+bun test ./career-os/scripts/career-workspace/tests/career-storage-s3.integration.test.ts
 ```
 
 이 검증은 네 `CAREER_STORAGE_S3_*` 값이 모두 있을 때만 실행된다.
@@ -81,48 +82,30 @@ bun test ./career-os/scripts/career-workspace/career-storage-s3.integration.test
 Admin UI에서도 시험 객체가 보였다가 삭제 뒤 사라졌는지 확인한다.
 출력과 운영 기록에는 endpoint, bucket, 객체 key와 credential을 남기지 않는다.
 
-## 파일 release 이전
+## 상태 확인
 
-client와 Hermes의 publish를 멈추고 S3 `status`가 `current: null`인지 먼저 확인한다.
-기존 파일 release의 백업 상태와 `current` revision을 기록한 뒤 다음 명령을 한 번 실행한다.
-
-```bash
-bun ./career-os/scripts/career-workspace/migrate-career-storage.ts \
-  --source "${FILESYSTEM_RELEASE_ROOT}"
-```
-
-명령은 원본 `current` symlink와 release manifest, archive와 파일 SHA-256을 읽기 전용으로 검증한다.
-같은 revision, `createdAt`과 `contentDigest`를 유지한 채 archive, manifest와 descriptor를 올린다.
-업로드한 descriptor와 S3 export를 다시 검증한 뒤에만 `pointers/current.json`을 쓴다.
-
-동일한 migration을 재실행하면 객체를 덮어쓰지 않고 `noChange: true`를 반환한다.
-같은 key의 byte가 다르거나 다른 current pointer가 있으면 `REVISION_CONFLICT`로 중단한다.
-실패해도 부분 업로드 객체와 기존 파일 release를 자동 삭제하지 않는다.
-
-## 전환과 상태 확인
-
-이전 결과의 source와 destination archive SHA-256이 같은지 확인한다.
-설치한 명령의 `status`와 `export --revision` 결과도 원본 revision, manifest와 파일 hash에 맞는지 확인한다.
+설치한 명령의 `status`로 현재 revision을 확인한다.
+`export --revision` 결과의 manifest와 파일 hash가 해당 revision에 맞는지도 확인한다.
 
 ```bash
 "${CAREER_STORAGE_COMMAND}" status
-"${CAREER_STORAGE_COMMAND}" export --revision "${MIGRATED_REVISION}" > "${EXPORT_CHECK_FILE}"
+"${CAREER_STORAGE_COMMAND}" export --revision "${CURRENT_REVISION}" > "${EXPORT_CHECK_FILE}"
 ```
 
-검증을 마친 뒤 외부 client는 SSH transport로 같은 `career-storage` 명령을 호출한다.
+외부 client는 SSH transport로 같은 `career-storage` 명령을 호출한다.
 홈서버 Hermes는 `CAREER_WORKSPACE_COMMAND`에 그 명령의 절대경로를 지정해 command transport를 사용한다.
-전환 뒤 client와 Hermes에서 읽기, 상태 확인과 무변경 publish를 각각 확인한다.
+client와 Hermes에서 읽기, 상태 확인과 무변경 publish를 각각 확인한다.
 
-기존 파일 release와 이전 실행 파일은 복구용으로 계속 보존한다.
-단일 노드 SeaweedFS는 백업이 아니므로 원본 삭제는 이 전환과 분리한 결정으로 다룬다.
+단일 노드 SeaweedFS는 백업이 아니다.
+데이터 볼륨 백업과 복구는 Career OS 코드가 아니라 홈서버 저장소 서비스에서 관리한다.
 
-## 전환 복구
+## 장애 복구
 
-전환 뒤 검증이 실패하면 새 publish를 중단하고 다음 순서로 돌아간다.
+상태 확인이나 publish가 실패하면 다음 순서로 복구한다.
 
-1. Hermes 환경에서 command transport를 제거하고 보존한 local transport root를 복원한다.
-2. Hermes 컨테이너만 다시 만들어 파일 release 상태를 확인한다.
-3. SSH wrapper는 보존한 파일 storage 명령으로 되돌린다.
-4. SeaweedFS와 기존 release는 원인 조사와 재검증을 위해 그대로 둔다.
+1. 외부 client와 Hermes의 새 publish를 중단한다.
+2. `career-storage status`와 SeaweedFS Admin UI에서 current pointer와 release 객체를 확인한다.
+3. credential, endpoint와 실행 파일 설정을 고친 뒤 `career-storage` 명령을 다시 배포한다.
+4. `status`와 `export --revision` 검증을 통과한 뒤 publish를 다시 허용한다.
 
-복구 중에도 S3의 부분 객체나 기존 파일 release를 자동 삭제하지 않는다.
+복구 중에는 S3의 부분 객체나 current pointer를 자동 삭제하지 않는다.
