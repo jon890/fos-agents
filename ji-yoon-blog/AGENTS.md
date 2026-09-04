@@ -23,6 +23,9 @@
 | `references/ji-yung-persona.md` | 지융로그 페르소나 |
 | `references/category-style-map.md` | 카테고리별 글쓰기 모듈 |
 | `references/preview-automation.md` | 네이버 미리보기 자동화 경계 |
+| `docs/flow.md` | 사진에서 임시저장까지의 흐름과 실패 처리 |
+| `docs/data-schema.md` | 사진 저장소 객체와 초안 계약 |
+| `docs/code-architecture.md` | 디렉터리 책임과 실행 경계 |
 | `scripts/` | 블로그 전수 수집과 페르소나 집계 |
 | `.claude/skills/naver-blog-draft/` | 사진에서 네이버 임시저장까지 가는 글쓰기 절차 |
 | `README.md` | 사람이 읽는 워크스페이스 소개 |
