@@ -28,53 +28,45 @@ description: >
 
 ## 준비
 
-홈서버 접속 정보가 워크스페이스 `.env`에 있어야 한다.
-`.env.example`이 필요한 항목을 보여준다.
+홈서버 접속 정보가 워크스페이스 `.env` 에 있어야 한다.
+`.env.example` 이 필요한 항목을 보여준다.
 
 ```bash
-python3 .claude/skills/naver-blog-draft/scripts/seaweed_s3.py list
+python3 .claude/skills/naver-blog-draft/scripts/photos.py folders
 ```
 
+만들어 둔 폴더 목록과 폴더마다 사진이 몇 장 있는지 보여준다.
 설정이 없으면 어느 항목이 비었는지 알려준다.
 그 상태로는 아래 단계를 진행할 수 없으므로 지융에게 값을 요청하고 멈춘다.
 
 ## 1. 사진 올릴 자리 만들기
 
-지융이 아직 사진을 올리지 않았으면 업로드 페이지를 만들어 준다.
+지융이 아직 사진을 올리지 않았으면 폴더를 만들어 준다.
 
 ```bash
-python3 .claude/skills/naver-blog-draft/scripts/make_upload_page.py 2026-09-04-순돌이곱창
+python3 .claude/skills/naver-blog-draft/scripts/photos.py new 순돌이곱창
 ```
 
-폴더 이름은 `날짜-장소`로 짓는다.
 장소는 상호명을 그대로 쓴다.
+날짜는 명령이 오늘 날짜로 붙이므로 따로 넣지 않는다.
 
 명령이 출력하는 주소를 지융에게 준다.
-아이폰에서 그 주소를 열어 사진을 고르면 바로 올라간다.
+아이폰에서 그 주소를 열면 `storage.fosworld.co.kr` 의 Admin UI 파일 화면이 뜨고,
+그 화면에서 사진을 여러 장 한 번에 고를 수 있다.
+Cloudflare Access 로그인은 처음 한 번만 하고, 그 뒤에는 쿠키가 남아 바로 열린다.
 
-이 주소는 기본 24시간 뒤에 만료된다.
-지융이 나중에 올리겠다고 하면 `--hours`로 늘린다.
-사진이 100장을 넘을 것 같으면 `--slots`를 올린다.
-
-브라우저에 비밀 키를 두지 않는다.
-서명한 업로드 주소만 페이지에 심으므로, 주소가 새어도 그 폴더에 사진을 넣는 것 말고는 할 수 없다.
+아이폰에서 무엇을 누르는지는 스킬의 `references/iphone-upload.md` 가 소유한다.
 
 ## 2. 사진 읽기
 
 ```bash
-python3 .claude/skills/naver-blog-draft/scripts/photo_set.py
+python3 .claude/skills/naver-blog-draft/scripts/photos.py pull 2026-09-04-순돌이곱창 \
+  --out ./drafts/순돌이곱창/photos
 ```
 
-인자 없이 부르면 올라와 있는 폴더 목록과 장수를 보여준다.
-
-```bash
-python3 .claude/skills/naver-blog-draft/scripts/photo_set.py \
-  photos/2026-09-04-순돌이곱창/ --download ./drafts/순돌이곱창/photos
-```
-
-사진을 내려받고 순서를 잡는다.
-순서는 촬영시각으로 세운다.
+사진을 맥북으로 받고 촬영시각 순으로 번호를 붙인다.
 촬영시각이 없는 사진은 이름 순서로 뒤에 붙는다.
+받은 파일 이름은 `001-<원본 이름>` 형태이므로 초안의 `path` 도 그 이름을 가리켜야 한다.
 
 내려받은 사진을 실제로 본다.
 무엇이 찍혔는지 보지 않고 본문을 쓰지 않는다.
@@ -115,7 +107,7 @@ python3 .claude/skills/naver-blog-draft/scripts/photo_set.py \
 }
 ```
 
-`path`는 초안 파일이 있는 자리에서 본 상대 경로다.
+블록의 종류와 필드는 `ji-yoon-blog/docs/data-schema.md` 의 초안 절이 소유한다.
 
 블록 순서는 페르소나 문서의 기본 흐름을 따른다.
 사진 한 장에 글 묶음 하나가 붙고, 그 묶음은 서너 줄이다.
@@ -138,17 +130,28 @@ python3 .claude/skills/naver-blog-draft/scripts/build_preview.py \
 
 ## 6. 네이버 임시저장
 
-브라우저 조작은 `~/.claude/scripts/browser-driver`로 한다.
-첫 명령 전에 `browser-driver help`를 읽는다.
+브라우저 조작은 `~/.claude/scripts/browser-driver` 로 한다.
+브라우저 도구를 직접 부르면 실패해도 종료 코드가 0 이라 오류가 드러나지 않는다.
+명령 목록은 `browser-driver help` 가 소유하므로 첫 명령 전에 읽는다.
 
-절차와 중단 조건은 `references/preview-automation.md`가 소유한다.
-로그인 화면이나 보안 확인이 나오면 멈추고 지융에게 넘긴다.
+네이버 로그인은 전용 브라우저 프로필에 한 번 해 두고 그 세션을 재사용한다.
+프로필 준비와 안전 규칙은 워크스페이스의 `references/preview-automation.md` 가 소유한다.
 
-넣는 순서는 제목, 본문, 사진, 태그다.
-사진은 내려받은 파일을 편집기에 올린다.
+1. 네이버 블로그 글쓰기 화면을 연다.
+2. 지금 화면이 무엇인지 판별한다.
+   로그인 화면이나 보안 확인 화면이면 멈추고 지융에게 넘긴다.
+3. 지융이 고른 제목 하나를 제목 입력란에 넣는다.
+4. 본문을 `draft.json` 의 `blocks` 순서대로 넣는다.
+   `text` 블록은 `lines` 를 줄 단위로 넣는다.
+   줄을 한 문장으로 합치지 않는다. 지융의 글은 문단의 절반이 문장 중간에서 끊긴다.
+   `image` 블록 자리에서는 `pull` 이 번호를 붙인 로컬 파일을 편집기에 올린다.
+   사진과 본문의 앞뒤 순서는 `blocks` 배열이 정한다.
+5. 태그 입력란에 태그를 넣는다.
+6. 임시저장한다.
+7. 편집기 상태를 읽어 제목과 본문, 사진이 실제로 들어갔는지 확인한다.
 
-끝나면 편집기 상태를 읽어 실제로 들어갔는지 확인한다.
 확인한 것만 완료라고 말한다.
+멈춘 경우에 쓸 표현은 `ji-yoon-blog/docs/flow.md` 의 상태 표시 표가 소유한다.
 
 ## 하지 않는 것
 

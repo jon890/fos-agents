@@ -1,33 +1,36 @@
-"""한 글에 쓸 사진 묶음을 읽어 순서를 잡는다.
+"""내려받은 사진 묶음을 촬영시각 순서로 세우고 번호를 붙인다.
 
-사진은 홈서버의 `photos/<날짜>-<장소>/` 아래에 있다.
-올린 순서는 뒤섞일 수 있으므로 촬영시각으로 다시 세운다.
-촬영시각이 없으면 파일 이름 순서를 쓴다.
+사진은 `photos.py pull` 이 내려놓은 로컬 디렉터리에 있다.
+아이폰에서 올린 순서는 뒤섞일 수 있으므로 촬영시각으로 다시 세운다.
+촬영시각을 읽지 못하면 파일 이름 순서를 쓴다.
+
+S3 에 직접 붙지 않는다.
+맥북에 credential 을 내려놓지 않으려고 입력을 로컬 디렉터리로 한정했다.
 
 Pillow 없이 JPEG 의 EXIF 만 직접 읽는다.
 이 워크스페이스의 다른 스크립트가 모두 의존성 없는 파이썬이라 맞춘다.
 
 사용법:
-    python3 photo_set.py                                # 폴더 목록
-    python3 photo_set.py photos/2026-09-04-순돌이곱창/    # 그 묶음의 사진 순서
-    python3 photo_set.py photos/2026-09-04-순돌이곱창/ --download ./tmp
+    python3 photo_set.py ./drafts/2026-09-04-순돌이곱창
+    python3 photo_set.py ./drafts/2026-09-04-순돌이곱창 --renumber
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import struct
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
-from seaweed_s3 import S3ConfigError, SeaweedS3, load_env  # noqa: E402
-
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".heic", ".heif", ".webp"}
+EXIF_SUFFIXES = {".jpg", ".jpeg"}
 DATETIME_ORIGINAL = 0x9003
 DATETIME_DIGITIZED = 0x9004
 EXIF_IFD_POINTER = 0x8769
+
+ORDER_PREFIX = re.compile(r"^\d{3}-")
 
 
 def _read_ifd(data: bytes, offset: int, big: bool, wanted: set[int], found: dict[int, str]) -> None:
@@ -82,65 +85,96 @@ def shot_at(image: bytes) -> str:
     return ""
 
 
-def photo_set(s3: SeaweedS3, prefix: str, need_shot_time: bool = True) -> list[dict]:
-    objects, _ = s3.list(prefix)
-    photos = [o for o in objects if Path(o["key"]).suffix.lower() in IMAGE_SUFFIXES]
+def shot_at_file(path: Path) -> str:
+    """파일에서 촬영시각을 읽는다. 읽지 못하면 빈 문자열이다."""
+    if path.suffix.lower() not in EXIF_SUFFIXES:
+        return ""
+    try:
+        with path.open("rb") as handle:
+            # EXIF 는 파일 앞쪽에 있으므로 앞부분만 읽는다
+            return shot_at(handle.read(256 * 1024))
+    except OSError:
+        return ""
 
-    for p in photos:
-        p["name"] = Path(p["key"]).name
-        p["shotAt"] = ""
-        if need_shot_time and Path(p["key"]).suffix.lower() in (".jpg", ".jpeg"):
-            try:
-                p["shotAt"] = shot_at(s3.get(p["key"]))
-            except Exception:
-                p["shotAt"] = ""
+
+def base_name(name: str) -> str:
+    """이미 붙어 있는 번호 접두사를 떼어낸 이름을 돌려준다."""
+    return ORDER_PREFIX.sub("", name, count=1)
+
+
+def photo_set(directory: Path | str, need_shot_time: bool = True) -> list[dict]:
+    """디렉터리의 사진을 촬영시각 순서로 세워 번호를 매긴 목록을 돌려준다."""
+    root = Path(directory)
+    photos = []
+    for path in root.iterdir():
+        if not path.is_file() or path.suffix.lower() not in IMAGE_SUFFIXES:
+            continue
+        photos.append(
+            {
+                "name": path.name,
+                "baseName": base_name(path.name),
+                "path": str(path),
+                "size": path.stat().st_size,
+                "shotAt": shot_at_file(path) if need_shot_time else "",
+            }
+        )
 
     # 촬영시각이 있으면 그것으로, 없으면 이름으로 세운다.
-    photos.sort(key=lambda p: (p["shotAt"] or "9999", p["name"]))
+    photos.sort(key=lambda p: (p["shotAt"] or "9999", p["baseName"]))
     for i, p in enumerate(photos, 1):
         p["order"] = i
     return photos
 
 
+def renumber(directory: Path | str, need_shot_time: bool = True) -> list[dict]:
+    """사진 이름 앞에 순서 번호를 붙인다. 이미 붙은 번호는 새 번호로 바꾼다."""
+    root = Path(directory)
+    photos = photo_set(root, need_shot_time=need_shot_time)
+
+    # 목표 이름이 다른 사진의 현재 이름과 겹칠 수 있으므로 임시 이름을 거친다.
+    staged = []
+    for p in photos:
+        current = root / p["name"]
+        temporary = root / f".renumber-{p['order']:03d}-{p['baseName']}"
+        current.rename(temporary)
+        staged.append((temporary, p))
+
+    for temporary, p in staged:
+        target = root / f"{p['order']:03d}-{p['baseName']}"
+        temporary.rename(target)
+        p["name"] = target.name
+        p["path"] = str(target)
+    return photos
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("prefix", nargs="?", default="")
-    parser.add_argument("--download", help="사진을 이 디렉터리에 내려받는다")
+    parser = argparse.ArgumentParser(description="사진 묶음을 촬영시각 순서로 세운다")
+    parser.add_argument("directory", help="사진이 들어 있는 디렉터리")
+    parser.add_argument("--renumber", action="store_true", help="순서 번호를 파일 이름에 붙인다")
     parser.add_argument("--no-exif", action="store_true", help="촬영시각을 읽지 않는다")
     args = parser.parse_args()
 
-    try:
-        s3 = SeaweedS3()
-    except S3ConfigError as exc:
-        print(exc, file=sys.stderr)
+    root = Path(args.directory)
+    if not root.is_dir():
+        print(f"디렉터리가 없다: {root}", file=sys.stderr)
         return 2
 
-    if not args.prefix:
-        base = load_env().get("JI_YOON_BLOG_PHOTO_PREFIX", "photos/")
-        _, folders = s3.list(base, delimiter="/")
-        if not folders:
-            print(f"{base} 아래에 사진 묶음이 없다", file=sys.stderr)
-            return 1
-        for f in sorted(folders):
-            objects, _ = s3.list(f)
-            print(f"{f}  사진 {len(objects)}장")
-        return 0
-
-    photos = photo_set(s3, args.prefix, need_shot_time=not args.no_exif)
+    need_shot_time = not args.no_exif
+    photos = renumber(root, need_shot_time) if args.renumber else photo_set(root, need_shot_time)
     if not photos:
-        print(f"{args.prefix} 아래에 사진이 없다", file=sys.stderr)
+        print(f"{root} 아래에 사진이 없다", file=sys.stderr)
         return 1
-
-    if args.download:
-        out = Path(args.download)
-        out.mkdir(parents=True, exist_ok=True)
-        for p in photos:
-            target = out / f"{p['order']:03d}-{p['name']}"
-            target.write_bytes(s3.get(p["key"]))
-            p["localPath"] = str(target)
 
     print(json.dumps(photos, ensure_ascii=False, indent=2))
     print(f"사진 {len(photos)}장", file=sys.stderr)
+
+    if need_shot_time:
+        missing = [p["name"] for p in photos if not p["shotAt"]]
+        if missing:
+            print(
+                f"촬영시각을 읽지 못한 사진이 {len(missing)}장이다. 이름 순서로 세웠다.",
+                file=sys.stderr,
+            )
     return 0
 
 
