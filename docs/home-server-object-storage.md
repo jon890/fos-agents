@@ -17,7 +17,12 @@ Admin UI는 bucket과 객체를 확인하는 운영 화면이다.
 
 ## collection 등록
 
-첫 collection은 `career-os` bucket이다.
+현재 등록된 collection은 둘이다.
+
+| collection key | bucket | 무엇을 담나 | 워크스페이스 문서 |
+| --- | --- | --- | --- |
+| `career-os` | `career-os` | 비공개 작업 release | `career-os/docs/` |
+| `ji-yoon-blog` | `ji-yoon-blog` | 블로그 글에 쓸 사진 원본 | `ji-yoon-blog/docs/data-schema.md` |
 새 워크스페이스가 객체 저장소를 사용하려면 다음 정보를 해당 워크스페이스 문서와 환경 설정에 추가한다.
 
 | 항목 | 조건 |
@@ -29,6 +34,41 @@ Admin UI는 bucket과 객체를 확인하는 운영 화면이다.
 | object schema | 객체 key, 불변 조건, 현재 상태와 삭제 규칙 |
 
 credential과 실제 endpoint는 `.env`에만 두고 공개 문서와 결과 JSON에는 기록하지 않는다.
+
+### 권한 표기가 실제로 막는 범위
+
+`Write`는 PUT과 DELETE를 함께 포함한다.
+SeaweedFS에서 쓰기와 삭제를 갈라 줄 수 없고, 삭제 요청은 HTTP 204로 성공한다.
+실측으로 확인했다.
+
+삭제를 막아야 하면 권한 표기가 아니라 그 워크스페이스 코드에 삭제 경로를 두지 않는 것으로 처리한다.
+
+## Admin UI 접근 범위
+
+Admin UI에는 자체 로그인이 없다.
+`/files` 화면이 인증 없이 열리고 별도 로그인 경로가 없다.
+
+외부에서 여는 경로의 보호막은 Cloudflare Access 하나뿐이다.
+Access를 지난 요청은 모든 bucket의 파일을 보고 지울 수 있다.
+bucket별 격리는 S3 credential에만 적용되며 Admin UI에는 적용되지 않는다.
+
+Access 정책을 넓힐 때는 이 점을 함께 판단한다.
+
+## 워크스페이스별 준비
+
+각 워크스페이스가 자기 절차를 소유한다.
+공통으로 필요한 것은 bucket 생성, credential 발급, mode 600 환경 파일, 권한 경계 확인이다.
+
+새 collection을 더할 때는 다음을 확인한다.
+
+1. bucket을 만든다.
+2. 그 bucket 권한만 가진 credential을 발급하고 정적 S3 설정에 더한다.
+3. 설정을 반영한다. 정적 설정 파일은 읽기 전용으로 마운트되므로 컨테이너를 다시 시작해야 한다.
+4. 자기 bucket 읽기와 쓰기, 다른 bucket 거부, 익명 요청 거부를 확인한다.
+5. 기존 collection이 영향받지 않았는지 함께 확인한다.
+
+정적 설정을 고칠 때는 먼저 백업한다.
+그 파일이 모든 collection의 credential을 함께 담고 있어, 잘못 쓰면 다른 워크스페이스가 함께 멈춘다.
 
 ## Career OS 서비스 준비
 
