@@ -1,21 +1,24 @@
 import { describe, expect, test } from "bun:test";
 import {
   CHROME_PDF_FLAGS,
+  DEFAULT_DESIGN_PATH,
   PAGE_BREAK_MARKER,
   countHtmlPages,
+  extractCss,
   readPdfPageCount,
   renderHtml,
   renderMarkdownPages,
 } from "./export_resume.ts";
 import { checkResumeHtml } from "./check_resume_html.ts";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const design = `\`\`\`css
+const designCss = `
 @page { size: A4; margin: 14mm; }
 @media print { * { print-color-adjust: exact; } .resume-page { break-after: page; } }
-\`\`\``;
+`;
+const designMarkdown = `\`\`\`css${designCss}\`\`\``;
 
 const resume = `# 홍길동
 
@@ -47,7 +50,7 @@ describe("resume exporter", () => {
     const directory = mkdtempSync(join(tmpdir(), "resume-export-"));
     try {
       const path = join(directory, "resume.html");
-      writeFileSync(path, renderHtml(resume, design));
+      writeFileSync(path, renderHtml(resume, designMarkdown, "design.md"));
       expect(checkResumeHtml(path).passed).toBe(true);
     } finally {
       rmSync(directory, { recursive: true, force: true });
@@ -76,6 +79,74 @@ describe("resume exporter", () => {
     expect(secondPage).toContain('class="period"');
   });
 
+  test("공고별 디자인이 없으면 스킬 CSS를 기본값으로 사용한다", () => {
+    const directory = mkdtempSync(join(tmpdir(), "resume-design-default-"));
+    try {
+      const designCss = readFileSync(DEFAULT_DESIGN_PATH, "utf-8");
+      const path = join(directory, "resume.html");
+      writeFileSync(path, renderHtml(resume, designCss, DEFAULT_DESIGN_PATH));
+
+      expect(checkResumeHtml(path).passed).toBe(true);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("CSS 원문을 디자인 입력으로 사용할 수 있다", () => {
+    const directory = mkdtempSync(join(tmpdir(), "resume-design-local-"));
+    try {
+      const path = join(directory, "resume.html");
+      writeFileSync(path, renderHtml(resume, designCss, "design.css"));
+      expect(checkResumeHtml(path).passed).toBe(true);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("빈 디자인 입력은 거부한다", () => {
+    expect(() => extractCss("")).toThrow("design CSS가 비어 있습니다.");
+  });
+
+  test("css 코드 블록이 없는 Markdown 디자인은 거부한다", () => {
+    expect(() => extractCss("# 디자인\n\n본문 설명", "design.md")).toThrow(
+      "Markdown 디자인 파일에는 css 코드 블록이 필요합니다.",
+    );
+  });
+
+  test("CLI는 css 코드 블록이 없는 Markdown 디자인을 오류로 종료한다", () => {
+    const directory = mkdtempSync(join(tmpdir(), "resume-design-cli-"));
+    try {
+      const resumePath = join(directory, "evidence", "resume-draft.md");
+      const designPath = join(directory, "design.md");
+      const htmlPath = join(directory, "review", "resume.html");
+      mkdirSync(join(directory, "evidence"), { recursive: true });
+      writeFileSync(resumePath, resume);
+      writeFileSync(designPath, "# 디자인\n\n본문 설명");
+
+      const result = Bun.spawnSync({
+        cmd: [
+          "bun",
+          join(import.meta.dir, "export_resume.ts"),
+          "--application-dir",
+          directory,
+          "--design",
+          designPath,
+          "--html",
+          htmlPath,
+          "--chrome-bin",
+          "/not-used",
+        ],
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+
+      expect(result.exitCode).toBe(2);
+      expect(result.stderr.toString()).toContain("Markdown 디자인 파일에는 css 코드 블록이 필요합니다.");
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
   test("명시적 구분은 경력 항목 사이에서 페이지를 나누고 연속 표지를 만든다", () => {
     const markedResume = resume.replace(
       "## 기술",
@@ -96,7 +167,7 @@ describe("resume exporter", () => {
     const markedResume = resume
       .replace("## 경력", `${PAGE_BREAK_MARKER}\n\n## 경력`)
       .replace("## 기술", `${PAGE_BREAK_MARKER}\n\n## 기술`);
-    const html = renderHtml(markedResume, design);
+    const html = renderHtml(markedResume, designMarkdown);
 
     expect(renderMarkdownPages(markedResume)).toHaveLength(3);
     expect(countHtmlPages(html)).toBe(3);

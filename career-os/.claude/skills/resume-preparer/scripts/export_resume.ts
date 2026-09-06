@@ -13,8 +13,8 @@ type Options = {
   chromeBin: string;
 };
 
-const CAREER_OS_ROOT = resolve(import.meta.dir, '../../../..');
-const DEFAULT_DESIGN_PATH = join(CAREER_OS_ROOT, 'config/resume-design.md');
+const SKILL_ROOT = resolve(import.meta.dir, '..');
+export const DEFAULT_DESIGN_PATH = join(SKILL_ROOT, 'assets/resume.css');
 export const CHROME_PDF_FLAGS = [
   '--headless',
   '--disable-gpu',
@@ -52,17 +52,12 @@ function parseArgs(args: string[]): Options {
   }
 
   resumePath = resumePath || join(applicationDir, 'evidence', 'resume-draft.md');
-  designPath = designPath || resolveDesignPath(applicationDir);
+  designPath = designPath || DEFAULT_DESIGN_PATH;
   htmlPath = htmlPath || join(applicationDir, 'review', 'resume.html');
   pdfPath = pdfPath || join(applicationDir, 'resume.pdf');
   chromeBin = chromeBin || resolveChromeBin();
 
   return { applicationDir, resumePath, designPath, htmlPath, pdfPath, chromeBin };
-}
-
-function resolveDesignPath(applicationDir: string): string {
-  const localDesign = join(applicationDir, 'design.md');
-  return existsSync(localDesign) ? localDesign : DEFAULT_DESIGN_PATH;
 }
 
 function resolveChromeBin(): string {
@@ -268,31 +263,27 @@ export function renderMarkdownPages(markdown: string): string[] {
   return pages.map((page) => page.join('\n'));
 }
 
-function extractCss(designMarkdown: string): string {
-  const match = designMarkdown.match(/```css\s*([\s\S]*?)```/);
+export function extractCss(designSource: string, designPath = ''): string {
+  const trimmed = designSource.trim();
+  if (!trimmed) {
+    throw new Error('design CSS가 비어 있습니다.');
+  }
+
+  const match = designSource.match(/```css\s*([\s\S]*?)```/);
   if (match?.[1]?.trim()) return match[1].trim();
 
-  return `
-@page { size: A4; margin: 14mm; }
-* { box-sizing: border-box; }
-body { margin: 0; padding: 24px 20px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif; color: #18181b; line-height: 1.45; }
-.resume-page { max-width: 760px; min-height: 267mm; margin: 0 auto; }
-.resume-page + .resume-page { margin-top: 28px; padding-top: 28px; border-top: 1px solid #d4d4d8; }
-h1 { font-size: 24pt; margin: 0 0 8px; }
-h2 { font-size: 12pt; margin: 18px 0 8px; border-bottom: 1px solid #d4d4d8; color: #047857; }
-li { margin: 3px 0; }
-@media print {
-  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  body { padding: 0; }
-  .resume-page { min-height: auto; break-after: page; page-break-after: always; }
-  .resume-page:last-child { break-after: auto; page-break-after: auto; }
-  .resume-page + .resume-page { margin-top: 0; padding-top: 0; border-top: 0; }
-}
-`;
+  if (/\.md$/i.test(designPath)) {
+    throw new Error('Markdown 디자인 파일에는 css 코드 블록이 필요합니다.');
+  }
+  if (!/[{}]/.test(trimmed)) {
+    throw new Error('design 입력은 CSS 원문 또는 css 코드 블록이어야 합니다.');
+  }
+
+  return trimmed;
 }
 
-export function renderHtml(resumeMarkdown: string, designMarkdown: string): string {
-  const css = extractCss(designMarkdown);
+export function renderHtml(resumeMarkdown: string, designSource: string, designPath = ''): string {
+  const css = extractCss(designSource, designPath);
   const pages = renderMarkdownPages(resumeMarkdown);
   const pageNumberWidth = Math.max(2, String(pages.length).length);
   const renderedPages = pages.map((page, index) => {
@@ -377,8 +368,14 @@ export function readPdfPageCount(path: string): number | undefined {
 function main(): void {
   const opts = parseArgs(process.argv.slice(2));
   const resumeMarkdown = readRequired(opts.resumePath);
-  const designMarkdown = readRequired(opts.designPath);
-  const html = renderHtml(resumeMarkdown, designMarkdown);
+  const designSource = readRequired(opts.designPath);
+  let html: string;
+  try {
+    html = renderHtml(resumeMarkdown, designSource, opts.designPath);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(2);
+  }
   const expectedPageCount = countHtmlPages(html);
 
   writeHtml(opts.htmlPath, html);
@@ -399,7 +396,7 @@ Usage:
 
 Options:
   --resume <path>       Markdown 원본. 기본값: <application-dir>/evidence/resume-draft.md
-  --design <path>       design.md 원본. 기본값: <application-dir>/design.md, fallback config/resume-design.md
+  --design <path>       CSS 또는 css 코드 블록이 있는 Markdown. 기본값: resume-preparer/assets/resume.css
   --html <path>         HTML 출력. 기본값: <application-dir>/review/resume.html
   --pdf <path>          PDF 출력. 기본값: <application-dir>/resume.pdf
   --chrome-bin <path>   Chrome/Chromium binary. 기본값: CHROME_BIN 또는 common system paths

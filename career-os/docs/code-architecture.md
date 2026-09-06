@@ -11,7 +11,7 @@ public `fos-agents` 저장소는 skill과 실행 코드를 소유한다.
 career-os/
 ├── .claude/skills/       사용자 작업별 skill
 ├── .codex/skills/        Codex에서 같은 skill을 노출하는 링크
-├── config/               사람이 관리하는 수집 정책과 디자인
+├── config/               사람이 관리하는 수집 정책
 ├── scripts/              검증, 수집과 변환 코드
 ├── applications/         동기화되는 로컬 지원 패키지
 ├── library/              여러 지원에서 재사용하는 비공개 자료
@@ -30,8 +30,9 @@ career-os/
 | `.claude/skills/application-package-writer/templates/` | 검토 화면의 HTML 골격과 CSS |
 | `.codex/skills/<name>` | Codex가 같은 skill을 읽는 링크 |
 | `config/*.ts` | 공고, 읽을거리와 면접 자료의 수집 정책 |
-| `config/resume-writing-style.md` | 모든 이력서와 경력기술서에 적용하는 표현과 근거 범위 기준 |
-| `config/resume-design.md` | 이력서와 경력기술서의 기본 시각 기준 |
+| `.claude/skills/resume-preparer/references/resume-writing-style.md` | 모든 이력서와 경력기술서에 적용하는 표현과 근거 범위 기준 |
+| `.claude/skills/resume-preparer/references/resume-design.md` | 이력서와 경력기술서의 기본 시각 기준 |
+| `.claude/skills/resume-preparer/assets/resume.css` | 이력서와 경력기술서의 기본 CSS |
 | `scripts/career-workspace/` | 비공개 작업본의 준비, 차이 확인과 release 반영 |
 | `scripts/position-recommender/` | 활성 공고 수집, 추천 검증과 HTML 생성 |
 | `scripts/study-topic-recommender/` | 읽을거리 수집, 선별 결과 검증과 HTML 생성 |
@@ -111,8 +112,9 @@ HTML은 검증된 추천 JSON에서 파생한다.
 반복 가능한 지원 패키지 계약 검사와 로컬 검토 화면 생성은 이 스킬의 `scripts/`에 둔다.
 
 `resume-preparer`는 지원 전략을 이력서와 경력기술서로 변환하는 제출 문서 진입점이다.
-문서 작성, 사람 확인, 주장 근거 감사, 블라인드 하드 리뷰, HTML·PDF 변환과 제출 묶음 검증을 순서대로 수행한다.
+문서 작성, 사람 확인, 주장 근거 감사, 인사담당자와 실무담당자 리뷰, HTML·PDF 변환과 제출 묶음 검증을 순서대로 수행한다.
 사실 감사와 설득력 평가는 별도 참고 문서와 검사 스크립트로 분리하지만 별도 스킬로 노출하지 않는다.
+면접 말하기 준비와 꼬리질문 연습은 `interview-practice`가 담당한다.
 
 공고별 문서는 `applications/<company>/<position>/`에 세 층으로 둔다.
 최상위에는 사용자가 직접 여는 `application-package.html`과 제출 PDF만 두고, 기준 원본은 `evidence/`에, 내부 검증 자료는 `review/`에 둔다.
