@@ -29,13 +29,12 @@ description: 공고 하나의 지원 가치, 회사·포지션 기준, 후보자
 브라우저 자동 입력을 준비할 때는 공통 프로필, 회사별 선택값과 서술형 답변을 `evidence/application-form.json` 하나에 구조화한다.
 공통 개인정보의 기준은 private brain의 `career-application-profile`이며, 후보자 인터뷰에 복제하지 않는다.
 
-검토 화면의 첫 영역에는 다음 자료만 보여준다.
+화면은 준비 상태, 결론, 제출 후보 PDF와 조건부 지원서 입력값을 탭 밖 상단에 고정하고 본문을 네 탭으로 나눈다.
+탭 목록과 각 탭이 담는 것은 `career-os/docs/data-schema.md`의 「검토 화면」이 소유한다.
 
-- 현재 공고의 제출 후보 PDF
-- 브라우저 자동 입력을 준비할 때만 지원서 입력값 요약
+HTML 골격과 CSS는 `templates/application-package.html`과 `templates/application-package.css`에 둔다.
+화면 구조를 바꿀 때는 렌더러가 아니라 이 두 파일을 먼저 고친다.
 
-첫 화면의 지원 전략은 승부처, 지원동기, 공백과 다음 행동만 펼쳐 보여준다.
-회사 기준, 전체 근거, 기여 시나리오, 이력서 원문, 개별 PDF, 면접 질문과 후보자 인터뷰 기록은 닫힌 상세 자료로 제공한다.
 근거 장부, 점수표, manifest와 HTML 중간 파일은 검증에 사용하되 사용자용 링크로 나열하지 않는다.
 층별 파일 배치는 `career-os/docs/data-schema.md`의 「지원 패키지」가 소유한다.
 

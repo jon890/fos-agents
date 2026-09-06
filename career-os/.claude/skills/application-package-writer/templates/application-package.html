@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>{{TITLE}}</title>
+  <style>
+{{STYLE}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="hero" id="conclusion">
+      <p class="eyebrow">APPLICATION REVIEW DESK</p>
+      <h1>{{TITLE}}</h1>
+      <div class="status-row" aria-label="지원 준비 상태">
+        {{STATUS_BADGES}}
+      </div>
+      {{CONCLUSION}}
+    </header>
+
+    {{PRIMARY_FILES}}
+
+    <div class="tabs">
+      {{TAB_BUTTONS}}
+      <div class="tab-panels">
+        {{TAB_PANELS}}
+      </div>
+    </div>
+
+    <footer>로컬 검토용 문서입니다. 실제 제출이나 외부 공개는 별도 승인 뒤 진행합니다. 생성 시각: {{GENERATED_AT}}</footer>
+  </main>
+</body>
+</html>
