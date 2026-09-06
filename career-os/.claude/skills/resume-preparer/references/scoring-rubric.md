@@ -25,7 +25,7 @@
 - `revise`: 문장, 구조, 근거 선택이나 렌더링을 고치면 차단 신호를 없앨 수 있다.
 - `blocked`: 후보자 확인이나 새로운 근거 없이는 사실 문제를 해결할 수 없다.
 
-`resume-scorecard.md`에는 아래 식별자와 판정 근거를 기록한다.
+`review/resume-scorecard.md`에는 아래 식별자와 판정 근거를 기록한다.
 
 ```markdown
 - artifact: `resume.html`

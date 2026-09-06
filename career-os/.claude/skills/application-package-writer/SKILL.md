@@ -6,7 +6,7 @@ description: 공고 하나의 지원 가치, 회사·포지션 기준, 후보자
 # 지원 준비
 
 공고 하나에 지원할 이유와 승부처를 정하고, 지원 전략과 문구를 만든 뒤 제출 문서 준비로 연결한다.
-사용자에게 문서 묶음을 떠넘기지 말고 `application-package.md`를 중심으로 현재 판단과 다음 행동을 설명한다.
+사용자에게 문서 묶음을 떠넘기지 말고 `evidence/application-package.md`를 중심으로 현재 판단과 다음 행동을 설명한다.
 
 ## 비공개 작업본 동기화
 
@@ -15,7 +15,7 @@ description: 공고 하나의 지원 가치, 회사·포지션 기준, 후보자
 ## 사용자에게 주는 결과
 
 사용자가 가장 먼저 볼 파일은 `application-package.html`이다.
-이 화면은 `application-package.md`를 기준 원본으로 삼고 다음 질문에 한 화면 안에서 답해야 한다.
+이 화면은 `evidence/application-package.md`를 기준 원본으로 삼고 다음 질문에 한 화면 안에서 답해야 한다.
 
 - 이 공고에 지원할 가치가 있는가?
 - 회사와 팀은 어떤 사람을 찾고 있는가?
@@ -26,7 +26,7 @@ description: 공고 하나의 지원 가치, 회사·포지션 기준, 후보자
 
 `application-package.html`은 지원 판단, 근거, 제출 문서와 남은 질문을 묶어 보여주는 유일한 로컬 검토 화면이다.
 실제 제출 파일은 현재 지원 화면의 첨부 조건에 맞는 PDF 하나를 우선한다. 이력서만 받으면 `resume.pdf`, 경력기술서를 별도로 받으면 `career-description.pdf`, 한 파일만 받으면 두 문서를 합친 `submission.pdf`를 사용한다.
-브라우저 자동 입력을 준비할 때는 공통 프로필, 회사별 선택값과 서술형 답변을 `application-form.json` 하나에 구조화한다.
+브라우저 자동 입력을 준비할 때는 공통 프로필, 회사별 선택값과 서술형 답변을 `evidence/application-form.json` 하나에 구조화한다.
 공통 개인정보의 기준은 private brain의 `career-application-profile`이며, 후보자 인터뷰에 복제하지 않는다.
 
 검토 화면의 첫 영역에는 다음 자료만 보여준다.
@@ -37,16 +37,15 @@ description: 공고 하나의 지원 가치, 회사·포지션 기준, 후보자
 첫 화면의 지원 전략은 승부처, 지원동기, 공백과 다음 행동만 펼쳐 보여준다.
 회사 기준, 전체 근거, 기여 시나리오, 이력서 원문, 개별 PDF, 면접 질문과 후보자 인터뷰 기록은 닫힌 상세 자료로 제공한다.
 근거 장부, 점수표, manifest와 HTML 중간 파일은 검증에 사용하되 사용자용 링크로 나열하지 않는다.
-현재 생성기와 검증기는 공고 디렉터리 바로 아래의 파일명을 계약으로 사용하므로 화면 정리를 위해 파일을 복제하거나 임의로 하위 디렉터리로 옮기지 않는다.
-물리적 디렉터리 분리는 모든 생성기, 검증기와 비공개 작업본 동기화 계약을 함께 바꾸는 별도 마이그레이션으로 다룬다.
+층별 파일 배치는 `career-os/docs/data-schema.md`의 「지원 패키지」가 소유한다.
 
 ## 입력
 
-1. `applications/<company>/<role>/posting.md`
+1. `applications/<company>/<role>/evidence/posting.md`
 2. `brain-search`로 확인한 현재 경력, 역할 선호와 경험 경계
 3. `sources/fos-study/`의 최신 공개 경력 자료와 관련 업무 근거
 4. 필요하면 로컬 프로젝트의 코드, 테스트, Git 이력과 기술 결정 문서
-5. `applications/<company>/<role>/candidate-interview.md`가 있으면 기존 답변
+5. `applications/<company>/<role>/evidence/candidate-interview.md`가 있으면 기존 답변
 
 공고 경로가 없으면 `brain-search`로 private brain의 현재 지원 대상을 먼저 확인한다.
 brain에서 찾은 회사와 역할에 대응하는 `applications/<company>/<role>/` 디렉터리를 사용한다.
@@ -69,12 +68,12 @@ brain에 현재 대상이 없거나 대응하는 지원 디렉터리가 없거�
 - 팀이 강조하는 판단 방식과 운영 책임
 - 공식 문화 기준 중 이 포지션의 판단과 행동을 실제로 구분하는 항목
 
-확인 시각과 공식 URL을 `posting.md` 또는 `application-package.md`에 남긴다.
+확인 시각과 공식 URL을 `evidence/posting.md` 또는 `evidence/application-package.md`에 남긴다.
 
 ### 후보자 인터뷰
 
 `references/candidate-interview-questions.md`를 읽는다.
-이미 답한 내용은 다시 묻지 않고 `candidate-interview.md`에 누적한다.
+이미 답한 내용은 다시 묻지 않고 `evidence/candidate-interview.md`에 누적한다.
 제출 판단이 함께 달라지는 질문은 최대 6개까지 한 번에 묶는다.
 한 가지 답이 다음 질문의 전제가 되거나 민감한 사실 하나만 확인하면 한 질문만 제시한다.
 완성 문장 대신 키워드와 생각 조각을 받아도 된다.
@@ -124,31 +123,25 @@ private brain과 기존 경력기술서는 탐색을 위한 색인으로 사용�
 
 지원 전략 단계에는 다음 핵심 파일만 만든다.
 
-- `candidate-interview.md`: 사용자 원문 답변과 정리된 핵심
-- `application-package.md`: 요구사항·회사 기준·경력 근거와 다음 행동을 통합한 원본
-- `interview-questions.json`: 공고 책임, 근거 방어와 경험 공백에서 만든 포지션별 질문
+- `evidence/candidate-interview.md`: 사용자 원문 답변과 정리된 핵심
+- `evidence/application-package.md`: 요구사항·회사 기준·경력 근거와 다음 행동을 통합한 원본
+- `evidence/interview-questions.json`: 공고 책임, 근거 방어와 경험 공백에서 만든 포지션별 질문
 
-지원서 자동 입력을 준비할 때만 `application-form.json`을 만든다.
+지원서 자동 입력을 준비할 때만 `evidence/application-form.json`을 만든다.
 이 파일은 private brain에서 확인한 공통 프로필의 현재 값, 회사별 입력 선택, 첨부 파일, 서술형 질문과 답변을 한 번의 제출 스냅샷으로 묶는다.
 서술형 문항이 없으면 `questions`를 빈 배열로 둔다.
 이력서, 경력기술서, 근거 원장, 검토표와 PDF는 `resume-preparer`가 만든다.
 `application-package.html`은 두 단계의 결과를 마지막에 하나로 묶는다.
 
-### 파일 보존 기준
+### 만들지 않는 자료
 
-파일 수보다 다시 만들 수 있는지와 검증 책임이 있는지를 기준으로 보존한다.
+층별 파일 배치는 `career-os/docs/data-schema.md`의 「지원 패키지」가 소유한다.
 
-- 기준 원본: `posting.md`, `candidate-interview.md`, `application-package.md`, `resume-draft.md`, `interview-questions.json`
-- 조건부 원본: `application-form.json`, `career-description-draft.md`
-- 사용자 확인 자료: `application-package.html`, 현재 공고가 요구하는 최종 PDF
-- 내부 검증 자료: 제출 문서 HTML, claim ledger, scorecard와 `submission-manifest.json`
-- 만들지 않는 자료: claim ledger를 다시 풀어 쓴 evidence audit, 공통 디자인을 복제한 공고별 design 문서와 이전 제출 PDF
-
-내부 검증 자료는 사용자가 읽지 않지만 현재 제출 문구와 PDF가 같은 버전인지 증명하므로 유지한다.
+claim ledger를 다시 풀어 쓴 evidence audit, 공통 디자인을 복제한 공고별 design 문서와 이전 제출 PDF는 만들지 않는다.
 중간 설명 문서가 기존 원본이나 구조화 데이터와 같은 내용을 반복하면 만들지 않는다.
-검증기는 이 목록과 제출 문서 계약에 없는 파일을 거부해 임시 검토 문서가 계속 늘어나지 않게 한다.
+검증기는 스키마에 없는 파일과 층이 어긋난 파일을 거부해 임시 검토 문서가 계속 늘어나지 않게 한다.
 
-`application-package.md`에는 다음 섹션을 둔다.
+`evidence/application-package.md`에는 다음 섹션을 둔다.
 
 ```markdown
 ## 결론
@@ -171,7 +164,7 @@ private brain과 기존 경력기술서는 탐색을 위한 색인으로 사용�
 - `evidence_defense`: 이력서와 경력기술서의 핵심 경험을 방어하는 질문
 - `experience_gap`: 직접 해보지 않은 영역과 모호한 근거를 확인하는 질문
 
-질문은 `interview-questions.json` 하나에 저장하고 다음 명령으로 검증한다.
+질문은 `evidence/interview-questions.json` 하나에 저장하고 다음 명령으로 검증한다.
 
 ```bash
 bun "$(git rev-parse --show-toplevel)/career-os/scripts/interview-drill/application_question_schema.ts" \
@@ -202,7 +195,7 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/interview-drill/applicat
 4. 약한 영역을 숨기지 않고 전환 가능한 경험을 설명했는가?
 5. 입사 후 기여 시나리오가 제품 사용자에게 닿는가?
 
-사용자 답변을 `candidate-interview.md`에 반영한 뒤 지원 판단과 문구를 갱신한다.
+사용자 답변을 `evidence/candidate-interview.md`에 반영한 뒤 지원 판단과 문구를 갱신한다.
 공고 원문, 인터뷰 답변과 지원동기를 다시 읽어 서로 모순되는 역할·수치·동기가 없는지 확인한다.
 초안을 사용자에게 보여주기 전에 `references/full-document-review.md`를 읽고 지원 전략, 이력서, 경력기술서와 지원서 답변의 외부 문장을 전수 검토한다.
 사용자가 한 문장을 정정하면 같은 경험을 가리키는 모든 문서와 근거 원장을 찾아 같은 범위 오류가 반복되는지 확인한다.

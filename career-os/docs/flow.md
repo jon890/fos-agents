@@ -178,7 +178,7 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 5. 공개 질문 후보의 중복, 목표 수준, 답변 신호와 꼬리질문 깊이를 검증한다.
 6. 일반화할 수 있는 질문만 `public/question-bank/`에 추가한다.
 7. 개인 경력에서 반복해서 연습할 일반 질문은 `library/question-bank/`에 둔다.
-8. 공고와 지원 근거에서 나온 포지션별 질문은 해당 `applications/` 디렉터리의 `interview-questions.json`에 둔다.
+8. 공고와 지원 근거에서 나온 포지션별 질문은 해당 `applications/` 디렉터리의 `evidence/interview-questions.json`에 둔다.
 9. 답변 연습은 세 범위를 합쳐 사용할 수 있지만 공개 산출물에는 개인 질문과 포지션별 질문을 포함하지 않는다.
 10. 일반 연습에서는 질문 은행을 수정하지 않으며, 공개·개인·포지션 질문 묶음이 모두 비었을 때만 필요한 최소 질문을 보강하고 연습을 이어간다.
 
