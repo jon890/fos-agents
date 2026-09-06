@@ -214,7 +214,7 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 
 지원 패키지 검증기는 이 스키마에 없는 파일과 층이 어긋난 파일을 거부해 일회성 검토 문서가 쌓이지 않게 한다.
 
-`application-package.md`의 준비 상태는 `ready`, `needs_user_input`, `revise`, `do_not_apply` 중 하나다.
+`evidence/application-package.md`의 준비 상태는 `ready`, `needs_user_input`, `revise`, `do_not_apply` 중 하나다.
 이 상태는 합격 가능성 점수가 아니라 현재 근거와 사용자 확인을 기준으로 한 제출 준비 상태다.
 첫 10줄의 `human-confirmation`은 동기, 본인 역할, 당시 제약, 기각한 대안과 결과의 확인 범위처럼 후보자만 확정할 수 있는 항목의 상태다.
 값은 `complete` 또는 `needs_input`이며, `needs_input`이면 준비 상태를 `ready`로 둘 수 없다.
@@ -225,30 +225,23 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 
 ## 제출 문서 근거 감사
 
-근거 감사 자료는 대상 제출 문서와 같은 `applications/<company>/<position>/`에 둔다.
+근거 감사 자료는 대상 제출 문서와 같은 지원 디렉터리의 `review/`에 둔다.
+파일 목록은 위 「지원 패키지」의 `review/`가 소유한다.
 작성, 근거 감사와 평가는 `resume-preparer`의 순차 단계이며 별도 사용자 스킬로 나누지 않는다.
 
-주요 파일:
-
-- `claim-ledger.json`: 이력서 주장, 근거, 판정, 소유권 범위
-- `resume-scorecard.md`: 이력서 평가와 남은 개선점
-- `career-description-claim-ledger.json`: 경력기술서 주장과 근거 판정
-- `career-description-scorecard.md`: 경력기술서 평가와 남은 개선점
-- `submission-manifest.json`: 현재 HTML과 PDF 제출 묶음의 해시
-
 claim ledger를 다시 설명하는 evidence audit는 별도 파일로 만들지 않는다.
-대표 사례의 설명 준비와 방어할 판단은 `interview-questions.json`이 담당한다.
+대표 사례의 설명 준비와 방어할 판단은 `evidence/interview-questions.json`이 담당한다.
 
 근거 장부는 대상 HTML의 내용 해시와 연결해 다른 버전의 증거를 잘못 재사용하지 않게 한다.
 `schemaVersion: 2`부터 기술 범위, 경력 기간, 운영과 숙련도 주장은 `experienceDepth`에 사용, 기능 개발, 운영 깊이 또는 사용자 확인 수준을 기록한다.
 `safe`가 아닌 판정이 하나라도 남으면 제출 준비가 끝난 것으로 보지 않는다.
-`resume-scorecard.md`에는 블라인드 채용 담당자·기술 리더 판정, 경쟁상 차단 항목, 근거 방어 결과와 통제할 수 없는 위험을 기록한다.
+`review/resume-scorecard.md`에는 블라인드 채용 담당자·기술 리더 판정, 경쟁상 차단 항목, 근거 방어 결과와 통제할 수 없는 위험을 기록한다.
 정량 점수로 약한 필수 조건을 상쇄하지 않으며 두 블라인드 검토자가 모두 통과해야 한다.
 
 ## 면접 자료
 
 현재 지원 대상은 private brain에서 찾고 대응하는 `applications/<company>/<position>/`을 실행 경로로 사용한다.
-포지션별 질문은 해당 지원 디렉터리의 `interview-questions.json`에 둔다.
+포지션별 질문은 해당 지원 디렉터리의 `evidence/interview-questions.json`에 둔다.
 공개 가능한 일반 질문은 `public/question-bank/`에 둔다.
 질문 출처의 공식 URL, 게시자, 확인일과 적용 범위는 `public/question-bank/sources.json`에 둔다.
 각 질문의 `source`는 이 레지스트리의 식별자를 참조한다.
