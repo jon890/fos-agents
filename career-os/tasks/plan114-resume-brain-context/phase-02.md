@@ -31,8 +31,14 @@ Phase 01의 SKILL.md와 두 참조를 대상으로 한다.
 ### 2. 독립 실행 검증
 
 작성 과정과 의도한 답변을 보지 않은 검토자가 최소 세 시나리오를 합성 입력으로 실행한다.
+executor는 평가 시나리오를 추가한 뒤 team-lead에게 별도 검토자 배정을 요청한다.
+team-lead는 구현에 참여하지 않은 네이티브 검토자를 배정하고, 스킬과 합성 사용자 입력·검색 응답만 전달한다.
+검토자에게 expected_output, expectations와 작성자 설명은 전달하지 않는다.
 관찰 대상은 실제 선택한 조회 질문, 적용한 출처, 미확인 문장의 처리, 저장 제안과 실행의 구분이다.
 실제 brain과 진행 중인 지원 데이터는 수정하지 않는 평가로 실행한다.
+검토자는 합성 응답을 사용한 모의 실행임을 밝히고 시나리오별 입력, 실제 응답과 관찰 결과를 team-lead에게 회신한다.
+team-lead는 원문 관찰 기록을 저장소 밖 임시 파일에 보존하고 executor에게 결과를 전달한다.
+executor는 완료 보고의 「검증」에 시나리오별 관찰 결과와 기록의 절대경로를 남긴다.
 발견된 문제를 해당 phase 담당자에게 돌려 수정하고 재검증한다.
 
 ### 3. 회귀 테스트
@@ -50,10 +56,13 @@ python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py career-o
 ~/.claude/scripts/korean-style-check.sh career-os/.claude/skills/resume-preparer/SKILL.md career-os/.claude/skills/resume-preparer/references/resume-taste.md career-os/.claude/skills/resume-preparer/references/brain-context.md
 python3 ~/.claude/scripts/check-readability.py career-os/.claude/skills/resume-preparer/SKILL.md career-os/.claude/skills/resume-preparer/references/resume-taste.md career-os/.claude/skills/resume-preparer/references/brain-context.md
 git diff --check
+python3 -c 'import json; from pathlib import Path; d=json.loads(Path("career-os/.claude/skills/resume-preparer/evals/evals.json").read_text()); e=d["evals"]; ids=[x["id"] for x in e]; assert d["skill_name"]=="resume-preparer" and len(ids)==len(set(ids)) and set(range(1,15)).issubset(ids); assert all(isinstance(x["prompt"],str) and x["prompt"].strip() and isinstance(x["expected_output"],str) and x["expected_output"].strip() and isinstance(x["files"],list) and isinstance(x["expectations"],list) and x["expectations"] and all(isinstance(v,str) and v.strip() for v in x["expectations"]) for x in e); print("평가 JSON 필수 필드와 고유 식별자 확인 완료")'
 ```
 
 - 기존 스킬 테스트 통과
 - 새 평가 시나리오의 실제 관찰 결과와 실패 시 보완 내용 기록
+- 별도 검토자가 수행한 최소 세 시나리오의 모의 실행 원문과 임시 기록 경로가 executor 보고에 포함됨
+- 평가 JSON 구조와 식별자 검사 통과
 - quick_validate.py, 한국어·가독성 검사, git diff --check 통과
 
 ## Critical Files

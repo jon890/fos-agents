@@ -85,11 +85,13 @@ python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py career-o
 ~/.claude/scripts/korean-style-check.sh career-os/.claude/skills/resume-preparer/SKILL.md career-os/.claude/skills/resume-preparer/references/resume-taste.md career-os/.claude/skills/resume-preparer/references/brain-context.md
 python3 ~/.claude/scripts/check-readability.py career-os/.claude/skills/resume-preparer/SKILL.md career-os/.claude/skills/resume-preparer/references/resume-taste.md career-os/.claude/skills/resume-preparer/references/brain-context.md
 git diff --check
+python3 -c 'from pathlib import Path; p=Path("career-os/.claude/skills/resume-preparer"); s=(p/"SKILL.md").read_text(); sections=s.split("### "); checks={"2.": "brain-context.md", "3.": "resume-taste.md"}; assert all(any(part.startswith(step) and f"](references/{name})" in part for part in sections) and (p/"references"/name).is_file() for step,name in checks.items()); print("단계별 참조 링크와 대상 파일 확인 완료")'
 ```
 
 - quick_validate.py: resume-preparer에 대해 종료 코드 0
 - 한국어·가독성 검사: 변경한 Markdown에 대해 종료 코드 0
 - git diff --check: 종료 코드 0
+- 단계별 링크 검사: 대표 사례 사실 확인에서 brain-context.md, 원고 작성에서 resume-taste.md로 이동하는 링크와 파일 존재 확인
 
 ## Critical Files
 
