@@ -51,9 +51,9 @@ function parseArgs(args: string[]): Options {
     process.exit(2);
   }
 
-  resumePath = resumePath || join(applicationDir, 'resume-draft.md');
+  resumePath = resumePath || join(applicationDir, 'evidence', 'resume-draft.md');
   designPath = designPath || resolveDesignPath(applicationDir);
-  htmlPath = htmlPath || join(applicationDir, 'resume.html');
+  htmlPath = htmlPath || join(applicationDir, 'review', 'resume.html');
   pdfPath = pdfPath || join(applicationDir, 'resume.pdf');
   chromeBin = chromeBin || resolveChromeBin();
 
@@ -398,10 +398,15 @@ Usage:
     --application-dir career-os/applications/<company>/<role>
 
 Options:
-  --resume <path>       Markdown 원본. 기본값: <application-dir>/resume-draft.md
+  --resume <path>       Markdown 원본. 기본값: <application-dir>/evidence/resume-draft.md
   --design <path>       design.md 원본. 기본값: <application-dir>/design.md, fallback config/resume-design.md
-  --html <path>         HTML 출력. 기본값: <application-dir>/resume.html
+  --html <path>         HTML 출력. 기본값: <application-dir>/review/resume.html
   --pdf <path>          PDF 출력. 기본값: <application-dir>/resume.pdf
+
+경력기술서는 같은 규칙을 플래그로 지정한다.
+  --resume <application-dir>/evidence/career-description-draft.md
+  --html <application-dir>/review/career-description.html
+  --pdf <application-dir>/career-description.pdf
   --chrome-bin <path>   Chrome/Chromium binary. 기본값: CHROME_BIN 또는 common system paths
 `);
 }

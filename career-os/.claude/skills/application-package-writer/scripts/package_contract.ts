@@ -1,14 +1,14 @@
 export const REQUIRED_PACKAGE_FILES = [
-  "posting.md",
-  "candidate-interview.md",
-  "application-package.md",
-  "resume-draft.md",
-  "interview-questions.json",
+  "evidence/posting.md",
+  "evidence/candidate-interview.md",
+  "evidence/application-package.md",
+  "evidence/resume-draft.md",
+  "evidence/interview-questions.json",
 ] as const;
 
 export const REQUIRED_HEADINGS: Readonly<Record<string, readonly string[]>> = {
-  "candidate-interview.md": ["## 확보된 답변", "## 미확인 질문"],
-  "application-package.md": [
+  "evidence/candidate-interview.md": ["## 확보된 답변", "## 미확인 질문"],
+  "evidence/application-package.md": [
     "## 결론",
     "## 회사와 포지션이 찾는 사람",
     "## 요구사항과 근거",
@@ -22,7 +22,7 @@ export const REQUIRED_HEADINGS: Readonly<Record<string, readonly string[]>> = {
     "## 사용자 확인 필요",
     "## 다음 행동",
   ],
-  "resume-draft.md": ["## 프로필", "## 주요 프로젝트", "## 경력", "## 기술"],
+  "evidence/resume-draft.md": ["## 프로필", "## 주요 프로젝트", "## 경력", "## 기술"],
 };
 
 export const SUBMISSION_LEAK_PATTERNS = [
@@ -39,19 +39,41 @@ export const REDUNDANT_PACKAGE_FILES = [
   "career-description-design.md",
 ] as const;
 
-export const ALLOWED_PACKAGE_FILES = [
-  ...REQUIRED_PACKAGE_FILES,
-  "application-form.json",
+/** 디렉터리 최상위에 두는 파일. 사용자가 직접 연다. */
+export const TOP_LEVEL_FILES = [
   "application-package.html",
-  "career-description-draft.md",
-  "career-description.html",
-  "career-description.pdf",
-  "career-description-claim-ledger.json",
-  "career-description-scorecard.md",
-  "claim-ledger.json",
-  "resume.html",
   "resume.pdf",
-  "resume-scorecard.md",
-  "submission-manifest.json",
+  "career-description.pdf",
   "submission.pdf",
+] as const;
+
+/** `evidence/`에 두는 파일. 기준 원본 Markdown과 구조화 입력이다. */
+export const EVIDENCE_FILES = [
+  "posting.md",
+  "candidate-interview.md",
+  "application-package.md",
+  "resume-draft.md",
+  "interview-questions.json",
+  "career-description-draft.md",
+  "application-form.json",
+] as const;
+
+/** `review/`에 두는 파일. 검증기가 읽고 쓴다. */
+export const REVIEW_FILES = [
+  "resume.html",
+  "career-description.html",
+  "claim-ledger.json",
+  "career-description-claim-ledger.json",
+  "resume-scorecard.md",
+  "career-description-scorecard.md",
+  "submission-manifest.json",
+] as const;
+
+export const EVIDENCE_DIRECTORY = "evidence";
+export const REVIEW_DIRECTORY = "review";
+
+export const ALLOWED_PACKAGE_FILES = [
+  ...TOP_LEVEL_FILES,
+  ...EVIDENCE_FILES.map((file) => `${EVIDENCE_DIRECTORY}/${file}`),
+  ...REVIEW_FILES.map((file) => `${REVIEW_DIRECTORY}/${file}`),
 ] as const;

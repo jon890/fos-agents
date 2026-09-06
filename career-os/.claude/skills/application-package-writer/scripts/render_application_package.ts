@@ -622,10 +622,10 @@ export function renderApplicationPackage(applicationDirectory: string, outputPat
   const validation = validateApplicationPackage(directory);
   if (!validation.passed) throw new Error(validation.errors.join("\n"));
 
-  const packageMarkdown = read(join(directory, "application-package.md"));
-  const interviewMarkdown = read(join(directory, "candidate-interview.md"));
-  const resumeMarkdown = read(join(directory, "resume-draft.md"));
-  const applicationFormPath = join(directory, "application-form.json");
+  const packageMarkdown = read(join(directory, "evidence", "application-package.md"));
+  const interviewMarkdown = read(join(directory, "evidence", "candidate-interview.md"));
+  const resumeMarkdown = read(join(directory, "evidence", "resume-draft.md"));
+  const applicationFormPath = join(directory, "evidence", "application-form.json");
   const submission = validateSubmissionBundle(directory);
   const html = renderApplicationPackageHtml(
     packageMarkdown,

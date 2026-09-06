@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -45,13 +45,14 @@ describe("지원별 질문 선택", () => {
   test("명시한 지원 디렉터리의 질문을 공통 질문보다 우선한다", () => {
     const directory = mkdtempSync(join(tmpdir(), "drill-application-"));
     temporaryDirectories.push(directory);
+    mkdirSync(join(directory, "evidence"), { recursive: true });
     writeFileSync(
-      join(directory, "interview-questions.json"),
+      join(directory, "evidence", "interview-questions.json"),
       JSON.stringify({
         schemaVersion: 1,
         company: "테스트 회사",
         role: "AI Platform Server Developer",
-        sourceDocuments: ["application-package.md"],
+        sourceDocuments: ["evidence/application-package.md"],
         questions: [
           {
             id: "test-position-specific-question",
@@ -78,13 +79,14 @@ describe("지원별 질문 선택", () => {
   test("다섯 문제 세션은 포지션 질문만으로 채우지 않는다", () => {
     const directory = mkdtempSync(join(tmpdir(), "drill-mixed-application-"));
     temporaryDirectories.push(directory);
+    mkdirSync(join(directory, "evidence"), { recursive: true });
     writeFileSync(
-      join(directory, "interview-questions.json"),
+      join(directory, "evidence", "interview-questions.json"),
       JSON.stringify({
         schemaVersion: 1,
         company: "테스트 회사",
         role: "Backend Developer",
-        sourceDocuments: ["posting.md"],
+        sourceDocuments: ["evidence/posting.md"],
         questions: Array.from({ length: 5 }, (_, index) => ({
           id: `test-position-${index + 1}`,
           drillType: "tech",

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadApplicationInterviewQuestions } from "./application_question_schema.ts";
@@ -41,7 +41,8 @@ function validFile() {
 function writeQuestionFile(value: unknown): string {
   const directory = mkdtempSync(join(tmpdir(), "application-questions-"));
   temporaryDirectories.push(directory);
-  writeFileSync(join(directory, "interview-questions.json"), JSON.stringify(value));
+  mkdirSync(join(directory, "evidence"), { recursive: true });
+  writeFileSync(join(directory, "evidence", "interview-questions.json"), JSON.stringify(value));
   return directory;
 }
 

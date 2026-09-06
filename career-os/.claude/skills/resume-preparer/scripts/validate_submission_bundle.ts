@@ -18,7 +18,7 @@ export type SubmissionBundleValidation = {
 };
 
 function packageStatus(directory: string): { evidence?: string; humanConfirmation?: string } {
-  const path = join(directory, "application-package.md");
+  const path = join(directory, "evidence", "application-package.md");
   if (!existsSync(path)) return {};
   const opening = readFileSync(path, "utf8").split(/\r?\n/).slice(0, 10).join("\n");
   return {
@@ -76,20 +76,20 @@ function validateAuditedArtifact(
 }
 
 function validateManifest(directory: string, hasCareerDescription: boolean, errors: string[]): void {
-  const manifestPath = join(directory, "submission-manifest.json");
+  const manifestPath = join(directory, "review", "submission-manifest.json");
   if (!existsSync(manifestPath)) return;
 
   const parsed = SubmissionManifestSchema.safeParse(JSON.parse(readFileSync(manifestPath, "utf8")));
   if (!parsed.success) {
-    errors.push(...parsed.error.issues.map((issue) => `submission-manifest.json ${issue.path.join(".")}: ${issue.message}`));
+    errors.push(...parsed.error.issues.map((issue) => `review/submission-manifest.json ${issue.path.join(".")}: ${issue.message}`));
     return;
   }
 
   const expected = [
-    { kind: "resume", file: "resume.pdf", sourceHtml: "resume.html" },
+    { kind: "resume", file: "resume.pdf", sourceHtml: "review/resume.html" },
     ...(hasCareerDescription
       ? [
-          { kind: "career_description", file: "career-description.pdf", sourceHtml: "career-description.html" },
+          { kind: "career_description", file: "career-description.pdf", sourceHtml: "review/career-description.html" },
           { kind: "combined", file: "submission.pdf" },
         ]
       : []),
@@ -99,17 +99,17 @@ function validateManifest(directory: string, hasCareerDescription: boolean, erro
     const artifact = parsed.data.artifacts.find((candidate) => candidate.kind === item.kind);
     const filePath = join(directory, item.file);
     if (!artifact) {
-      errors.push(`submission-manifest.json에 ${item.kind} 항목이 없습니다.`);
+      errors.push(`review/submission-manifest.json에 ${item.kind} 항목이 없습니다.`);
       continue;
     }
     if (artifact.file !== item.file || !existsSync(filePath) || artifact.sha256 !== fileSha256(filePath)) {
-      errors.push(`submission-manifest.json의 ${item.file} 해시가 현재 파일과 다릅니다.`);
+      errors.push(`review/submission-manifest.json의 ${item.file} 해시가 현재 파일과 다릅니다.`);
     }
     if ("sourceHtml" in item && item.sourceHtml) {
       const htmlPath = join(directory, item.sourceHtml);
       if (!existsSync(htmlPath)) continue;
       if (artifact.sourceHtml !== item.sourceHtml || artifact.sourceTextSha256 !== artifactTextSha256(htmlPath)) {
-        errors.push(`submission-manifest.json의 ${item.file} 원본 HTML 해시가 현재 문구와 다릅니다.`);
+        errors.push(`review/submission-manifest.json의 ${item.file} 원본 HTML 해시가 현재 문구와 다릅니다.`);
       }
       if (existsSync(filePath) && statSync(filePath).mtimeMs < statSync(htmlPath).mtimeMs) {
         errors.push(`${item.file}이 원본 HTML보다 오래됐습니다.`);
@@ -124,26 +124,26 @@ export function validateSubmissionBundle(applicationDirectory: string): Submissi
   const status = packageStatus(directory);
 
   if (status.evidence !== "safe") {
-    errors.push("application-package.md의 evidence가 safe가 아닙니다.");
+    errors.push("evidence/application-package.md의 evidence가 safe가 아닙니다.");
   }
   if (status.humanConfirmation !== "complete") {
-    errors.push("application-package.md의 human-confirmation이 complete가 아닙니다.");
+    errors.push("evidence/application-package.md의 human-confirmation이 complete가 아닙니다.");
   }
 
   requireFiles(directory, REQUIRED_RESUME_SUBMISSION_FILES, errors);
-  validateAuditedArtifact(directory, "resume.html", "claim-ledger.json", "resume-scorecard.md", errors);
+  validateAuditedArtifact(directory, "review/resume.html", "review/claim-ledger.json", "review/resume-scorecard.md", errors);
 
   const hasCareerDescription = [
-    "career-description-draft.md",
+    "evidence/career-description-draft.md",
     ...REQUIRED_CAREER_DESCRIPTION_FILES,
   ].some((file) => existsSync(join(directory, file)));
   if (hasCareerDescription) {
     requireFiles(directory, REQUIRED_CAREER_DESCRIPTION_FILES, errors);
     validateAuditedArtifact(
       directory,
-      "career-description.html",
-      "career-description-claim-ledger.json",
-      "career-description-scorecard.md",
+      "review/career-description.html",
+      "review/career-description-claim-ledger.json",
+      "review/career-description-scorecard.md",
       errors,
     );
   }

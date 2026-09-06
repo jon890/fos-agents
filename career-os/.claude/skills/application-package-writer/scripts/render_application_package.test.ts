@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { REQUIRED_HEADINGS, REQUIRED_PACKAGE_FILES } from "./package_contract.ts";
 import { renderApplicationPackage, renderMarkdown } from "./render_application_package.ts";
 
@@ -11,25 +11,33 @@ afterEach(() => {
   for (const directory of directories.splice(0)) rmSync(directory, { force: true, recursive: true });
 });
 
+function write(directory: string, relativePath: string, content: string): void {
+  const path = join(directory, relativePath);
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, content, "utf8");
+}
+
 function fixture(): string {
   const directory = mkdtempSync(join(tmpdir(), "application-package-render-"));
   directories.push(directory);
   for (const file of REQUIRED_PACKAGE_FILES) {
-    if (file === "interview-questions.json") continue;
+    if (file === "evidence/interview-questions.json") continue;
     const headings = (REQUIRED_HEADINGS[file] ?? []).join("\n\n내용\n\n");
-    writeFileSync(join(directory, file), `# ${file}\n\n${headings}\n`, "utf8");
+    write(directory, file, `# ${file}\n\n${headings}\n`);
   }
-  writeFileSync(
-    join(directory, "application-package.md"),
-    `# 토스플레이스 AI Platform 지원 준비\n\n- readiness: needs_user_input\n- evidence: safe\n- human-confirmation: needs_input\n- 공식 공고: https://example.com/job\n- 근거: sources/fos-study/task/example.md\n\n${REQUIRED_HEADINGS["application-package.md"].join("\n\n내용\n\n")}`,
+  write(
+    directory,
+    "evidence/application-package.md",
+    `# 토스플레이스 AI Platform 지원 준비\n\n- readiness: needs_user_input\n- evidence: safe\n- human-confirmation: needs_input\n- 공식 공고: https://example.com/job\n- 근거: sources/fos-study/task/example.md\n\n${REQUIRED_HEADINGS["evidence/application-package.md"].join("\n\n내용\n\n")}`,
   );
-  writeFileSync(
-    join(directory, "interview-questions.json"),
+  write(
+    directory,
+    "evidence/interview-questions.json",
     JSON.stringify({
       schemaVersion: 1,
       company: "토스플레이스",
       role: "AI Platform Server Developer",
-      sourceDocuments: ["application-package.md"],
+      sourceDocuments: ["evidence/application-package.md"],
       questions: [
         {
           id: "tossplace-position-question",
@@ -47,7 +55,7 @@ function fixture(): string {
       ]
     }),
   );
-  writeFileSync(join(directory, "application-form.json"), JSON.stringify({
+  write(directory, "evidence/application-form.json", JSON.stringify({
     schemaVersion: 1,
     formUrl: "https://example.com/job/apply",
     verifiedAt: "2026-09-03",
@@ -95,8 +103,8 @@ describe("renderApplicationPackage", () => {
     expect(html.match(/<details class="strategy-drawer"/g)).toHaveLength(1);
     expect(html.match(/<details class="form-drawer"/g)).toHaveLength(1);
     expect(html).not.toContain('<details class="source-drawer" open>');
-    expect(html).not.toContain('href="resume-draft.md"');
-    expect(html).not.toContain('href="application-form.json"');
+    expect(html).not.toContain('href="evidence/resume-draft.md"');
+    expect(html).not.toContain('href="evidence/application-form.json"');
   });
 
   test("저장소 안의 상대 경로를 검토 화면의 링크로 렌더링한다", () => {
@@ -109,16 +117,16 @@ describe("renderApplicationPackage", () => {
 
   test("존재하는 경력기술서와 통합 PDF 링크를 같은 화면에 표시한다", () => {
     const directory = fixture();
-    writeFileSync(join(directory, "career-description.html"), "<main>경력기술서</main>");
-    writeFileSync(join(directory, "career-description.pdf"), "pdf");
-    writeFileSync(join(directory, "submission.pdf"), "pdf");
+    write(directory, "review/career-description.html", "<main>경력기술서</main>");
+    write(directory, "career-description.pdf", "pdf");
+    write(directory, "submission.pdf", "pdf");
 
     const html = readFileSync(renderApplicationPackage(directory), "utf8");
     expect(html).toContain("제출 후보");
     expect(html).toContain("제출용 통합 PDF");
     expect(html).toContain('href="career-description.pdf"');
     expect(html).toContain('href="submission.pdf"');
-    expect(html).not.toContain('href="career-description.html"');
+    expect(html).not.toContain('href="review/career-description.html"');
     expect(html.match(/class="file-card/g)).toHaveLength(2);
   });
 });
