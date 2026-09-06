@@ -2,6 +2,8 @@
 
 **Execution profile**: deep
 
+**근거 문서**: `ji-yoon-blog/docs/flow.md` 의 상태 표시와 실패 절, `ji-yoon-blog/docs/data-schema.md` 의 초안 절
+
 ---
 
 ## 목표
@@ -80,7 +82,7 @@
 끝나면 편집기 상태를 읽어 제목과 본문이 실제로 들어갔는지 확인한다.
 확인한 것만 완료라고 말한다.
 
-### 4. 미리보기 생성기 점검
+### 4. 미리보기 생성기 테스트
 
 `ji-yoon-blog/.claude/skills/naver-blog-draft/scripts/build_preview.py` 는 고칠 것이 없는지 확인한다.
 

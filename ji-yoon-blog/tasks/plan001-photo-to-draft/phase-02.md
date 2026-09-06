@@ -2,6 +2,8 @@
 
 **Execution profile**: deep
 
+**근거 문서**: `ji-yoon-blog/docs/flow.md` 의 사진 전송 부담 절, `ji-yoon-blog/docs/code-architecture.md` 의 의존 방향 절
+
 ---
 
 ## 목표
@@ -86,7 +88,7 @@ SSH 실패는 종료 코드로 판별해 멈춘다.
 JPEG 의 EXIF 를 직접 읽는 함수는 그대로 둔다.
 작은 끝과 큰 끝 바이트 순서를 모두 다루는 코드가 이미 검증돼 있다.
 
-### 4. 검증 갱신
+### 4. 촬영시각 정렬 테스트 갱신
 
 `ji-yoon-blog/.claude/skills/naver-blog-draft/scripts/test_photo_set.py` 를 고친다.
 
