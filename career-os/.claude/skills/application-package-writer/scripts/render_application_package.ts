@@ -365,21 +365,31 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]["key"];
 
+/** CSS 가 탭 키마다 선택자를 하드코딩하므로 테스트가 두 곳을 대조한다. */
+export const TAB_KEYS: readonly TabKey[] = TABS.map((tab) => tab.key);
+
 function readTemplate(name: string): string {
   return read(join(TEMPLATE_DIRECTORY, name));
 }
 
 /** 치환 이름을 모두 채우고, 남은 이름이 있으면 그 이름을 담은 오류를 낸다. */
 export function fillTemplate(template: string, values: Readonly<Record<string, string>>): string {
-  let filled = template;
-  for (const [name, value] of Object.entries(values)) {
-    filled = filled.replaceAll(`{{${name}}}`, value);
-  }
-  const remaining = [...new Set([...filled.matchAll(/\{\{\s*([A-Z_]+)\s*\}\}/g)].map((match) => match[1]))];
-  if (remaining.length > 0) {
-    throw new Error(`템플릿에 채우지 못한 치환 이름이 남았습니다: ${remaining.join(", ")}`);
+  const remaining = new Set<string>();
+  // 콜백 반환값은 치환 패턴으로 해석되지 않으므로 본문의 달러 기호가 그대로 남는다.
+  const filled = template.replace(/\{\{\s*([A-Z_]+)\s*\}\}/g, (match, name: string) => {
+    if (Object.hasOwn(values, name)) return values[name];
+    remaining.add(name);
+    return match;
+  });
+  if (remaining.size > 0) {
+    throw new Error(`템플릿에 채우지 못한 치환 이름이 남았습니다: ${[...remaining].join(", ")}`);
   }
   return filled;
+}
+
+/** 섹션 제목이 `h2`이므로 본문 제목을 한 단계 낮춰 단계가 뒤집히지 않게 한다. */
+function demoteHeadings(markdown: string): string {
+  return markdown.replace(/^(#{1,3})(\s+)/gm, "#$1$2");
 }
 
 function tabPanelBody(sections: readonly MarkdownSection[]): string {
@@ -408,7 +418,7 @@ function buildTabs(
   const bodies: Partial<Record<TabKey, string>> = {
     fit: tabPanelBody(fitSections),
     strategy: tabPanelBody([...strategySections, ...extraSections]),
-    posting: postingMarkdown ? supportingSection("공고 원문", postingMarkdown) : undefined,
+    posting: postingMarkdown ? supportingSection("공고 원문", demoteHeadings(postingMarkdown)) : undefined,
     detail: detailTabBody(interviewMarkdown, resumeMarkdown, assets, questionsMarkdown),
   };
 
@@ -431,7 +441,7 @@ ${bodies[tab.key]}
 
   return {
     buttons: `${inputs}
-      <div class="tab-buttons" role="tablist">
+      <div class="tab-buttons">
         ${labels}
       </div>`,
     panels,

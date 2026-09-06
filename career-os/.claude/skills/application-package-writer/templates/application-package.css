@@ -71,19 +71,14 @@ a.file-card:hover { border-color: #9eb4ef; background: var(--blue-soft); }
 .file-card span { color: var(--blue); font-size: 12px; font-weight: 800; }
 .file-card strong { font-size: 15px; }
 .file-card small { color: var(--muted); font-size: 12px; line-height: 1.55; }
-.layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 22px; min-width: 0; margin-top: 22px; align-items: start; }
-.cards { display: grid; gap: 14px; min-width: 0; }
-.review-card, .source-drawer, .strategy-drawer, .form-drawer {
+.form-drawer {
   border: 1px solid var(--line);
   border-radius: 16px;
   background: var(--paper);
   box-shadow: 0 5px 18px rgba(29, 44, 75, .045);
 }
-.review-card { min-width: 0; padding: 24px 26px; scroll-margin-top: 20px; }
-.card-body { min-width: 0; }
-.review-card h2 { margin: 0 0 14px; font-size: 20px; line-height: 1.3; letter-spacing: -.02em; }
-.card-body > :first-child, .drawer-body > :first-child { margin-top: 0; }
-.card-body > :last-child, .drawer-body > :last-child { margin-bottom: 0; }
+.drawer-body > :first-child { margin-top: 0; }
+.drawer-body > :last-child { margin-bottom: 0; }
 p { margin: 10px 0; overflow-wrap: anywhere; }
 ul, ol { margin: 10px 0; padding-left: 22px; }
 li { margin: 6px 0; }
@@ -94,18 +89,11 @@ table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 14p
 th, td { padding: 11px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
 th { color: #34405a; background: #f4f7fb; font-size: 12px; }
 tr:last-child td { border-bottom: 0; }
-.review-rail { position: sticky; top: 18px; display: grid; gap: 12px; }
-.rail-card { padding: 18px; border: 1px solid #cbd6e6; border-radius: 16px; background: #f8faff; }
-.rail-card h2 { margin: 0 0 8px; font-size: 15px; }
-.rail-card p { margin: 0; color: var(--muted); font-size: 13px; }
-.rail-card a { display: block; padding: 7px 0; border-bottom: 1px solid #dfe6f1; color: #39455b; font-size: 13px; font-weight: 700; text-decoration: none; }
-.rail-card a:last-child { border-bottom: 0; }
-.supporting { display: grid; gap: 12px; margin-top: 22px; }
-.source-drawer, .strategy-drawer, .form-drawer { overflow: hidden; margin-top: 22px; }
-.source-drawer summary, .strategy-drawer summary, .form-drawer summary { display: flex; justify-content: space-between; gap: 18px; padding: 18px 20px; cursor: pointer; list-style: none; font-weight: 800; }
-.source-drawer summary::-webkit-details-marker, .strategy-drawer summary::-webkit-details-marker, .form-drawer summary::-webkit-details-marker { display: none; }
-.source-drawer summary span, .strategy-drawer summary span, .form-drawer summary span { color: var(--muted); font-size: 12px; font-weight: 650; }
-.source-drawer[open] summary, .strategy-drawer[open] summary, .form-drawer[open] summary { border-bottom: 1px solid var(--line); }
+.form-drawer { overflow: hidden; margin-top: 22px; }
+.form-drawer summary { display: flex; justify-content: space-between; gap: 18px; padding: 18px 20px; cursor: pointer; list-style: none; font-weight: 800; }
+.form-drawer summary::-webkit-details-marker { display: none; }
+.form-drawer summary span { color: var(--muted); font-size: 12px; font-weight: 650; }
+.form-drawer[open] summary { border-bottom: 1px solid var(--line); }
 .drawer-body { padding: 22px; overflow-wrap: anywhere; }
 .drawer-body h1 { font-size: 24px; }
 .drawer-body h2 { margin-top: 24px; font-size: 18px; }
@@ -163,14 +151,7 @@ footer { padding: 24px 4px 0; color: var(--muted); font-size: 12px; text-align: 
   .hero::before { inset: 0 0 auto; width: 100%; height: 5px; }
   h1 { font-size: 31px; }
   .hero-copy { font-size: 16px; }
-  .layout { display: flex; flex-direction: column-reverse; gap: 12px; margin-top: 12px; }
-  .review-rail { position: static; width: 100%; }
-  .rail-card:first-child { display: none; }
-  .cards { width: 100%; gap: 10px; }
-  .review-card { padding: 20px 18px; border-radius: 13px; }
-  .review-card h2 { font-size: 18px; }
-  .supporting { margin-top: 12px; }
-  .source-drawer summary, .strategy-drawer summary, .form-drawer summary { padding: 17px 18px; }
+  .form-drawer summary { padding: 17px 18px; }
   .drawer-body { padding: 18px; }
   .primary-files { margin-top: 12px; padding: 18px; }
   .file-grid { grid-template-columns: 1fr; }
@@ -185,10 +166,7 @@ footer { padding: 24px 4px 0; color: var(--muted); font-size: 12px; text-align: 
 @media print {
   body { background: #fff; }
   .shell { width: 100%; padding: 0; }
-  .hero, .review-card, .source-drawer { box-shadow: none; }
-  .review-rail { display: none; }
-  .layout { display: block; }
-  .review-card { break-inside: avoid; margin-bottom: 10px; }
+  .hero { box-shadow: none; }
   .tab-buttons { display: none; }
   .tab-panel { display: block; break-inside: avoid; margin-bottom: 10px; box-shadow: none; }
 }

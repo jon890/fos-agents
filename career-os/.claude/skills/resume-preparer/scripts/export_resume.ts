@@ -402,12 +402,12 @@ Options:
   --design <path>       design.md 원본. 기본값: <application-dir>/design.md, fallback config/resume-design.md
   --html <path>         HTML 출력. 기본값: <application-dir>/review/resume.html
   --pdf <path>          PDF 출력. 기본값: <application-dir>/resume.pdf
+  --chrome-bin <path>   Chrome/Chromium binary. 기본값: CHROME_BIN 또는 common system paths
 
 경력기술서는 같은 규칙을 플래그로 지정한다.
   --resume <application-dir>/evidence/career-description-draft.md
   --html <application-dir>/review/career-description.html
   --pdf <application-dir>/career-description.pdf
-  --chrome-bin <path>   Chrome/Chromium binary. 기본값: CHROME_BIN 또는 common system paths
 `);
 }
 

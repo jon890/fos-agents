@@ -38,20 +38,26 @@ const EXPECTED_PATH_BY_NAME: ReadonlyMap<string, string> = new Map([
   ...REVIEW_FILES.map((file) => [file, `${REVIEW_DIRECTORY}/${file}`] as const),
 ]);
 
-/** 디렉터리 최상위와 두 층 디렉터리의 파일을 층 접두사가 붙은 상대 경로로 모은다. */
-function collectPackageFiles(directory: string): string[] {
+/** 공고 디렉터리 아래의 모든 파일을 상대 경로로 모은다. 숨김 항목은 운영 산출물이므로 제외한다. */
+function collectPackageFiles(directory: string, prefix = ""): string[] {
   const files: string[] = [];
-  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+  for (const entry of readdirSync(join(directory, prefix), { withFileTypes: true })) {
+    if (entry.name.startsWith(".")) continue;
+    const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
     if (entry.isDirectory()) {
-      if (entry.name !== EVIDENCE_DIRECTORY && entry.name !== REVIEW_DIRECTORY) continue;
-      for (const child of readdirSync(join(directory, entry.name), { withFileTypes: true })) {
-        if (child.isFile()) files.push(`${entry.name}/${child.name}`);
-      }
+      files.push(...collectPackageFiles(directory, relativePath));
       continue;
     }
-    if (entry.isFile()) files.push(entry.name);
+    if (entry.isFile()) files.push(relativePath);
   }
   return files;
+}
+
+/** 최상위이거나 `evidence/`, `review/` 바로 아래인 경로만 층 판정 대상이다. */
+function isKnownLayerPath(relativePath: string): boolean {
+  const segments = relativePath.split("/");
+  if (segments.length === 1) return true;
+  return segments.length === 2 && (segments[0] === EVIDENCE_DIRECTORY || segments[0] === REVIEW_DIRECTORY);
 }
 
 function tableCells(row: string): string[] {
@@ -65,17 +71,25 @@ function validateFitTable(packageText: string, errors: string[]): void {
   const rest = packageText.slice(start + FIT_TABLE_HEADING.length);
   const nextHeadingIndex = rest.search(/^## /m);
   const section = nextHeadingIndex >= 0 ? rest.slice(0, nextHeadingIndex) : rest;
-  const rows = section
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.startsWith("|"));
+  const lines = section.split(/\r?\n/).map((line) => line.trim());
+  const dividerIndex = lines.findIndex(
+    (line, index) =>
+      index > 0 &&
+      lines[index - 1].startsWith("|") &&
+      /^\|(?:\s*:?-{3,}:?\s*\|)+$/.test(line),
+  );
+  const dataRows: string[] = [];
+  for (let index = dividerIndex + 1; dividerIndex > 0 && index < lines.length; index += 1) {
+    if (!lines[index].startsWith("|")) break;
+    dataRows.push(lines[index]);
+  }
 
-  if (rows.length < 3) {
+  if (dividerIndex < 1 || dataRows.length === 0) {
     errors.push(`${FIT_TABLE_HEADING} 섹션에는 머리행, 구분행과 데이터 행을 가진 표가 필요합니다.`);
     return;
   }
 
-  const header = tableCells(rows[0]);
+  const header = tableCells(lines[dividerIndex - 1]);
   const headerMatches =
     header.length === FIT_TABLE_HEADERS.length &&
     FIT_TABLE_HEADERS.every((title, index) => header[index] === title);
@@ -88,7 +102,7 @@ function validateFitTable(packageText: string, errors: string[]): void {
 
   const verdictIndex = FIT_TABLE_HEADERS.indexOf("판정");
   const allowedVerdicts = new Set<string>(FIT_TABLE_VERDICTS);
-  for (const row of rows.slice(2)) {
+  for (const row of dataRows) {
     const verdict = tableCells(row)[verdictIndex] ?? "";
     if (!allowedVerdicts.has(verdict)) {
       errors.push(
@@ -116,8 +130,13 @@ export function validateApplicationPackage(applicationDirectory: string): Packag
   const allowedFiles = new Set<string>(ALLOWED_PACKAGE_FILES);
   for (const relativePath of collectPackageFiles(directory)) {
     const name = basename(relativePath);
-    if (name === "application-answers.md") continue;
+    // 아래 legacy 검사가 마이그레이션 문구로 따로 보고한다.
+    if (name === "application-answers.md" && isKnownLayerPath(relativePath)) continue;
     if (allowedFiles.has(relativePath)) continue;
+    if (!isKnownLayerPath(relativePath)) {
+      errors.push(`지원 패키지 계약에 없는 파일입니다: ${relativePath}`);
+      continue;
+    }
     const expectedPath = EXPECTED_PATH_BY_NAME.get(name);
     if (expectedPath) {
       errors.push(`지원 패키지 파일의 층이 어긋났습니다: ${relativePath}에 있지만 ${expectedPath}에 있어야 합니다.`);
@@ -168,9 +187,11 @@ export function validateApplicationPackage(applicationDirectory: string): Packag
     errors.push("evidence/application-package.md에 후보자 근거 경로가 필요합니다.");
   }
 
-  const legacyAnswersPath = join(directory, EVIDENCE_DIRECTORY, "application-answers.md");
-  if (existsSync(legacyAnswersPath)) {
-    errors.push("application-answers.md는 사용하지 않습니다. 지원서 입력값과 서술형 답변을 evidence/application-form.json으로 옮겨야 합니다.");
+  for (const layer of ["", `${EVIDENCE_DIRECTORY}/`, `${REVIEW_DIRECTORY}/`]) {
+    const legacyAnswersPath = `${layer}application-answers.md`;
+    if (existsSync(join(directory, legacyAnswersPath))) {
+      errors.push(`${legacyAnswersPath}는 사용하지 않습니다. 지원서 입력값과 서술형 답변을 evidence/application-form.json으로 옮겨야 합니다.`);
+    }
   }
 
   const applicationFormPath = join(directory, EVIDENCE_DIRECTORY, "application-form.json");

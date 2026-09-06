@@ -196,6 +196,78 @@ describe("validateApplicationPackage", () => {
     expect(result.errors.join("\n")).toContain("표의 판정은 확인됨, 인접 경험, 공백, 사용자 확인 중 하나여야 합니다: 대체로 맞음");
   });
 
+  test("적합도 표의 머리행 이름이 다르면 거부한다", () => {
+    const directory = fixture();
+    const path = join(directory, "evidence", "application-package.md");
+    write(directory, "evidence/application-package.md", readFileSync(path, "utf8").replace("| 공고 구분 |", "| 구분 |"));
+
+    const result = validateApplicationPackage(directory);
+    expect(result.passed).toBe(false);
+    expect(result.errors.join("\n")).toContain("표의 머리행은 공고 항목, 공고 구분, 근거, 판정 순서여야 합니다");
+  });
+
+  test("적합도 표의 열 순서가 뒤바뀌면 거부한다", () => {
+    const directory = fixture();
+    const path = join(directory, "evidence", "application-package.md");
+    write(
+      directory,
+      "evidence/application-package.md",
+      readFileSync(path, "utf8").replace(
+        "| 공고 항목 | 공고 구분 | 근거 | 판정 |",
+        "| 공고 항목 | 근거 | 공고 구분 | 판정 |",
+      ),
+    );
+
+    const result = validateApplicationPackage(directory);
+    expect(result.passed).toBe(false);
+    expect(result.errors.join("\n")).toContain("표의 머리행은 공고 항목, 공고 구분, 근거, 판정 순서여야 합니다");
+  });
+
+  test("적합도 섹션에 표가 없으면 거부한다", () => {
+    const directory = fixture();
+    const path = join(directory, "evidence", "application-package.md");
+    write(directory, "evidence/application-package.md", readFileSync(path, "utf8").replace(FIT_TABLE, "표 없이 서술만 남긴다."));
+
+    const result = validateApplicationPackage(directory);
+    expect(result.passed).toBe(false);
+    expect(result.errors.join("\n")).toContain("머리행, 구분행과 데이터 행을 가진 표가 필요합니다");
+  });
+
+  test("적합도 섹션에 표가 둘이어도 첫 표만 검사한다", () => {
+    const directory = fixture();
+    const path = join(directory, "evidence", "application-package.md");
+    write(
+      directory,
+      "evidence/application-package.md",
+      readFileSync(path, "utf8").replace(
+        FIT_TABLE,
+        `${FIT_TABLE}\n\n| 참고 자료 | 확인 범위 | 관점 | 비고 |\n| --- | --- | --- | --- |\n| 공고 | 공식 | 책임 확인 | 없음 |`,
+      ),
+    );
+
+    expect(validateApplicationPackage(directory).passed).toBe(true);
+  });
+
+  test("최상위 application-answers.md도 마이그레이션을 요구한다", () => {
+    const directory = fixture();
+    write(directory, "application-answers.md", "# 지원 문항");
+
+    const result = validateApplicationPackage(directory);
+    expect(result.passed).toBe(false);
+    expect(result.errors.join("\n")).toContain("application-answers.md는 사용하지 않습니다");
+  });
+
+  test("계약에 없는 하위 디렉터리의 파일을 거부한다", () => {
+    const directory = fixture();
+    write(directory, "notes/scratch.md", "# 임시 검토");
+    write(directory, "evidence/sub/resume.html", "<main></main>");
+
+    const result = validateApplicationPackage(directory);
+    expect(result.passed).toBe(false);
+    expect(result.errors.join("\n")).toContain("지원 패키지 계약에 없는 파일입니다: notes/scratch.md");
+    expect(result.errors.join("\n")).toContain("지원 패키지 계약에 없는 파일입니다: evidence/sub/resume.html");
+  });
+
   test("evidence 파일이 최상위에 있으면 발견 경로와 기대 경로를 담아 거부한다", () => {
     const directory = fixture();
     renameSync(

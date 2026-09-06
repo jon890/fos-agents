@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { TAB_KEYS } from "./render_application_package.ts";
 import { FIT_TABLE_HEADING, REQUIRED_HEADINGS, REQUIRED_PACKAGE_FILES } from "./package_contract.ts";
 import {
   fillTemplate,
@@ -158,6 +159,24 @@ describe("renderApplicationPackage", () => {
 
     expect(strategy).toContain("임시 메모");
     expect(strategy.indexOf("임시 메모")).toBeGreaterThan(strategy.indexOf("다음 행동"));
+  });
+
+  test("치환 값의 달러 기호를 치환 패턴으로 해석하지 않는다", () => {
+    expect(fillTemplate("<p>{{TITLE}}</p>", { TITLE: "가$&나" })).toBe("<p>가$&나</p>");
+    expect(fillTemplate("<p>{{TITLE}}</p>끝", { TITLE: "가$'나" })).toBe("<p>가$'나</p>끝");
+    expect(fillTemplate("<p>{{TITLE}}</p>", { TITLE: "월 $$5000" })).toBe("<p>월 $$5000</p>");
+  });
+
+  test("탭 키마다 선택된 패널을 보이게 하는 CSS 규칙이 있다", () => {
+    const css = readFileSync(
+      join(import.meta.dir, "..", "templates", "application-package.css"),
+      "utf8",
+    );
+
+    for (const key of TAB_KEYS) {
+      expect(css).toContain(`#tab-${key}:checked ~ .tab-panels > #panel-${key}`);
+      expect(css).toContain(`#tab-${key}:checked ~ .tab-buttons label[for="tab-${key}"]`);
+    }
   });
 
   test("채우지 못한 치환 이름이 남으면 그 이름을 담은 오류를 낸다", () => {
