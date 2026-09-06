@@ -155,7 +155,7 @@ bun "$(git rev-parse --show-toplevel)/career-os/.claude/skills/resume-preparer/s
 
 ```bash
 bun "$(git rev-parse --show-toplevel)/career-os/.claude/skills/resume-preparer/scripts/check_resume_html.ts" \
-  <submission-document.html>
+  <review/submission-document.html>
 ```
 
 수정 가능한 차단 항목이 남아 있으면 다시 작성하고 검토한다.
