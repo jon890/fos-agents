@@ -233,6 +233,29 @@ describe("renderApplicationPackage", () => {
     expect(html.match(/class="file-card/g)).toHaveLength(2);
   });
 
+  test("표 셀의 <br> 는 줄바꿈으로 살아나고 다른 태그는 이스케이프된다", () => {
+    const table = [
+      "| 공고 항목 | 공고 구분 | 근거 | 판정 |",
+      "| --- | --- | --- | --- |",
+      "| Model Router 표준화 | 주요 업무 | 직접 근거가 없다.<br>「보완할 공백」과 같다. | 공백 |",
+      "| <script>alert(1)</script> | 기대 경험 | 태그는 이스케이프된다 | 공백 |",
+    ].join("\n");
+    const body = REQUIRED_HEADINGS["evidence/application-package.md"]
+      .map((heading) => (heading === FIT_TABLE_HEADING ? `${heading}\n\n${table}` : `${heading}\n\n내용`))
+      .join("\n\n");
+
+    const html = renderApplicationPackageHtml(
+      `# 지원 준비\n\n- readiness: ready\n- evidence: safe\n- human-confirmation: complete\n\n${body}`,
+      "# 인터뷰",
+      "# 이력서",
+    );
+
+    expect(html).toContain("직접 근거가 없다.<br>「보완할 공백」과 같다.");
+    expect(html).not.toContain("&lt;br&gt;");
+    expect(html).not.toContain("<script>alert(1)</script>");
+    expect(html).toContain("&lt;script&gt;");
+  });
+
   test("공고 원문 탭은 evidence/posting.md 내용을 담는다", () => {
     const directory = fixture();
     write(directory, "evidence/posting.md", "# 공고\n\n전에 없던 Proactive한 매장 관리 경험\n");

@@ -85,8 +85,16 @@ function escapeHtml(text: string): string {
     .replaceAll('"', "&quot;");
 }
 
+/**
+ * 표 셀 안의 줄바꿈은 `<br>` 로 적는다. 셀 안 개행이 먹히지 않는 렌더러가 있기 때문이다.
+ * escape 뒤에 이 태그만 되살린다. 다른 태그는 이스케이프된 채로 둔다.
+ */
+function restoreLineBreaks(escaped: string): string {
+  return escaped.replace(/&lt;br\s*\/?&gt;/gi, "<br>");
+}
+
 function inlineMarkdown(text: string): string {
-  return escapeHtml(text)
+  return restoreLineBreaks(escapeHtml(text))
     .replace(
       /\[([^\]]+)]\(((?:https?:\/\/|mailto:|(?:\.\.?\/)+|\/|#)[^\s)]+)\)/g,
       '<a href="$2">$1</a>',
