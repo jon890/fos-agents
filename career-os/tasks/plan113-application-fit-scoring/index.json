@@ -1,10 +1,10 @@
 {
   "name": "plan113-application-fit-scoring",
   "description": "application-package-writer 의 목표를 적합도 판정으로 세우고 실행 절차를 단계 표로 바꾼 뒤, 판정을 가중 점수와 색 원으로 표시한다.",
-  "status": "pending",
+  "status": "in_progress",
   "created_at": "2026-09-06",
   "total_phases": 3,
-  "current_phase": 1,
+  "current_phase": 2,
   "phases": [
     {
       "number": 1,
