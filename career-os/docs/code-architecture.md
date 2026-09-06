@@ -27,7 +27,6 @@ career-os/
 | 경로 | 책임 |
 | --- | --- |
 | `.claude/skills/<name>/SKILL.md` | 사용자 요청별 실행 계약의 관리 원본 |
-| `.claude/skills/_shared/` | 여러 skill이 공유하는 비공개 작업본 동기화 계약 |
 | `.codex/skills/<name>` | Codex가 같은 skill을 읽는 링크 |
 | `config/*.ts` | 공고, 읽을거리와 면접 자료의 수집 정책 |
 | `config/resume-writing-style.md` | 모든 이력서와 경력기술서에 적용하는 표현과 근거 범위 기준 |
@@ -41,6 +40,7 @@ career-os/
 | `state/` | 답변 연습처럼 다음 실행에 필요한 상태 |
 | `public/question-bank/` | 공개 가능한 일반 면접 질문과 출처 |
 | `sources/fos-study/` | 별도 저장소에서 관리하는 공개 학습·경력 근거 |
+| `docs/workspace-sync.md` | 여러 skill이 공유하는 비공개 작업본 동기화 계약 |
 | `docs/` | 제품 가치, 흐름, 데이터 계약, 코드 구조와 결정 이유 |
 
 현재 경력, 역할 선호와 경험 경계는 이 저장소에 복제하지 않는다.

@@ -10,7 +10,7 @@ description: 기술·인성·포지션별 면접 질문을 준비하고 한 번�
 
 ## 비공개 작업본 동기화
 
-[`career-workspace-sync.md`](../../../.claude/skills/_shared/career-workspace-sync.md)를 `SKILL_NAME=interview-practice`로 적용한다.
+[`workspace-sync.md`](../../../docs/workspace-sync.md)를 `SKILL_NAME=interview-practice`로 적용한다.
 
 ## 작업 유형
 

@@ -10,7 +10,7 @@ description: 공고 하나의 지원 가치, 회사·포지션 기준, 후보자
 
 ## 비공개 작업본 동기화
 
-[`career-workspace-sync.md`](../../../.claude/skills/_shared/career-workspace-sync.md)를 `SKILL_NAME=application-package-writer`로 적용한다.
+[`workspace-sync.md`](../../../docs/workspace-sync.md)를 `SKILL_NAME=application-package-writer`로 적용한다.
 
 ## 사용자에게 주는 결과
 

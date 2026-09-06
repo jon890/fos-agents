@@ -10,7 +10,7 @@ description: 공고에 맞춘 이력서·경력기술서를 작성하고 사람 
 
 ## 비공개 작업본 동기화
 
-[`career-workspace-sync.md`](../../../.claude/skills/_shared/career-workspace-sync.md)를 `SKILL_NAME=resume-preparer`로 적용한다.
+[`workspace-sync.md`](../../../docs/workspace-sync.md)를 `SKILL_NAME=resume-preparer`로 적용한다.
 
 ## 입력
 
