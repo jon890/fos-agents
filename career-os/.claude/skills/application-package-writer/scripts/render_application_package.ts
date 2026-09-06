@@ -6,6 +6,14 @@ import { validateApplicationPackage } from "./validate_application_package.ts";
 import { validateSubmissionBundle } from "../../resume-preparer/scripts/validate_submission_bundle.ts";
 import { loadApplicationInterviewQuestions } from "../../../../scripts/interview-drill/application_question_schema.ts";
 import { loadApplicationForm, type ApplicationForm } from "./application_form_schema.ts";
+import {
+  calculateFitScore,
+  fitScoreColor,
+  parseFitTable,
+  type FitColor,
+  type FitScore,
+  type FitSection,
+} from "./fit_score.ts";
 
 type PackageStatus = {
   readiness: "ready" | "needs_user_input" | "revise" | "do_not_apply";
@@ -72,6 +80,16 @@ const QUESTION_ORIGIN_LABELS = {
   evidence_defense: "제출 근거 방어",
   experience_gap: "경험 공백 확인",
 } as const;
+
+const FIT_SECTION_LABELS: readonly FitSection[] = ["주요 업무", "기대 경험", "우대 경험"];
+
+const FIT_COLOR_LABELS: Record<FitColor, string> = {
+  excellent: "진한 초록",
+  good: "초록",
+  fair: "노랑",
+  weak: "주황",
+  none: "빨강",
+};
 
 function read(path: string): string {
   return readFileSync(path, "utf8");
@@ -278,6 +296,32 @@ function primaryFiles(applicationForm: ApplicationForm | undefined, assets: Rend
       ${submissionCard}
       ${formCard}
     </div>
+  </section>`;
+}
+
+function formatFitScore(score: number): string {
+  return Number.isInteger(score) ? String(score) : score.toFixed(1);
+}
+
+function fitCircle(label: string, score: number | null, total = false): string {
+  const color = score === null ? "none" : fitScoreColor(score);
+  const value = score === null ? "해당 없음" : formatFitScore(score);
+  const ariaScore = score === null ? "해당 없음" : `${formatFitScore(score)}점`;
+  return `<article class="fit-meter${total ? " fit-meter-total" : ""}">
+      <div class="fit-circle fit-${color}${score === null ? " is-empty" : ""}" aria-label="${escapeHtml(`${label} ${ariaScore}, 색 ${FIT_COLOR_LABELS[color]}`)}">
+        <span>${escapeHtml(value)}</span>
+      </div>
+      <strong class="fit-label">${escapeHtml(label)}</strong>
+    </article>`;
+}
+
+export function renderFitScore(score: FitScore): string {
+  return `<section class="fit-score" aria-labelledby="fit-score-title">
+    <div class="fit-meter-row">
+      ${fitCircle("적합도 총점", score.total, true)}
+      ${FIT_SECTION_LABELS.map((section) => fitCircle(section, score.sectionScores[section])).join("\n      ")}
+    </div>
+    <p class="fit-boundary" id="fit-score-title">적합도 총점은 합격 확률이 아닙니다. 공고 요구와 현재 확보한 근거가 얼마나 맞닿아 있는지 보여주는 검토 점수입니다.</p>
   </section>`;
 }
 
@@ -508,6 +552,9 @@ export function renderApplicationPackageHtml(
   const status = statusFrom(packageMarkdown);
   const sections = splitSections(packageMarkdown);
   const conclusion = sections.find((section) => section.title === "결론");
+  const fitScore = sections.some((section) => section.title === "공고 항목별 적합도")
+    ? renderFitScore(calculateFitScore(parseFitTable(packageMarkdown)))
+    : "";
   const tabs = buildTabs(sections, interviewMarkdown, resumeMarkdown, assets, questionsMarkdown, postingMarkdown);
   const submissionLabel = assets.submissionReady ? "제출 검증 완료" : "제출 준비 중";
   const statusBadges = [
@@ -525,6 +572,7 @@ export function renderApplicationPackageHtml(
     TITLE: escapeHtml(title),
     STYLE: readTemplate("application-package.css"),
     STATUS_BADGES: statusBadges,
+    FIT_SCORE: fitScore,
     CONCLUSION: [
       conclusion ? `<div class="hero-copy">${renderMarkdown(conclusion.body)}</div>` : "",
       heroNotes ? `<div class="hero-notes">${heroNotes}</div>` : "",

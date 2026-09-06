@@ -270,8 +270,8 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/interview-drill/applicat
 브라우저 자동 입력을 준비할 때는 공통 프로필, 회사별 선택값과 서술형 답변을 `evidence/application-form.json` 하나에 구조화한다.
 공통 개인정보의 기준은 private brain의 `career-application-profile`이며, 후보자 인터뷰에 복제하지 않는다.
 
-화면은 준비 상태, 결론, 제출 후보 PDF와 조건부 지원서 입력값을 탭 밖 상단에 고정하고 본문을 네 탭으로 나눈다.
-탭 목록과 각 탭이 담는 것은 `career-os/docs/data-schema.md`의 「검토 화면」이 소유한다.
+화면은 준비 상태, 적합도 총점, 결론, 제출 후보 PDF와 조건부 지원서 입력값을 탭 밖 상단에 고정하고 본문을 네 탭으로 나눈다.
+적합도 총점의 계산식과 색 구간, 탭 목록과 각 탭이 담는 것은 `career-os/docs/data-schema.md`의 「검토 화면」과 「적합도 판정과 점수」가 소유한다.
 
 HTML 골격과 CSS는 `templates/application-package.html`과 `templates/application-package.css`에 둔다.
 화면 구조를 바꿀 때는 렌더러가 아니라 이 두 파일을 먼저 고친다.

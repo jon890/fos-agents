@@ -8,12 +8,19 @@ import {
   fillTemplate,
   renderApplicationPackage,
   renderApplicationPackageHtml,
+  renderFitScore,
   renderMarkdown,
 } from "./render_application_package.ts";
 
 const FIT_TABLE = `| 공고 항목 | 공고 구분 | 근거 | 판정 |
 | --- | --- | --- | --- |
 | 공통 기반 표준화 | 주요 업무 | 공통 모듈 분리 경험 | 확인됨 |
+| 자체 호스팅 모델 운영 | 우대 경험 | 직접 근거 없음 | 공백 |`;
+
+const FULL_FIT_TABLE = `| 공고 항목 | 공고 구분 | 근거 | 판정 |
+| --- | --- | --- | --- |
+| 공통 기반 표준화 | 주요 업무 | 공통 모듈 분리 경험 | 확인됨 |
+| AI 플랫폼 운영 | 기대 경험 | LLM 서비스 운영 경험 | 강한 인접 |
 | 자체 호스팅 모델 운영 | 우대 경험 | 직접 근거 없음 | 공백 |`;
 
 const directories: string[] = [];
@@ -25,6 +32,12 @@ afterEach(() => {
 function packageBody(): string {
   return REQUIRED_HEADINGS["evidence/application-package.md"]
     .map((heading) => (heading === FIT_TABLE_HEADING ? `${heading}\n\n${FIT_TABLE}` : `${heading}\n\n내용`))
+    .join("\n\n");
+}
+
+function packageBodyWithFitTable(table: string): string {
+  return REQUIRED_HEADINGS["evidence/application-package.md"]
+    .map((heading) => (heading === FIT_TABLE_HEADING ? `${heading}\n\n${table}` : `${heading}\n\n내용`))
     .join("\n\n");
 }
 
@@ -202,6 +215,85 @@ describe("renderApplicationPackage", () => {
     expect(html.match(/<details class="form-drawer"/g)).toHaveLength(1);
   });
 
+  test("적합도 총점 원 하나와 구분별 소계 원 셋을 상단에 보여준다", () => {
+    const html = renderApplicationPackageHtml(
+      `# 지원 준비\n\n- readiness: ready\n- evidence: safe\n- human-confirmation: complete\n\n${packageBodyWithFitTable(FULL_FIT_TABLE)}`,
+      "# 인터뷰",
+      "# 이력서",
+    );
+
+    expect(html.match(/class="fit-circle\s/g)).toHaveLength(4);
+    expect(html).toContain("적합도 총점");
+    for (const label of ["주요 업무", "기대 경험", "우대 경험"]) {
+      expect(html).toContain(`>${label}</strong>`);
+    }
+    expect(html.match(/class="fit-circle[^"]*" aria-label="/g)).toHaveLength(4);
+    expect(html).toContain("적합도 총점 75점, 색 초록");
+    expect(html).toContain("주요 업무 100점, 색 진한 초록");
+    expect(html).toContain("기대 경험 75점, 색 초록");
+    expect(html).toContain("우대 경험 0점, 색 빨강");
+  });
+
+  test("점수 구간에 맞는 CSS 변수 이름을 원에 적용한다", () => {
+    const html = renderFitScore({
+      total: 90,
+      sectionScores: { "주요 업무": 60, "기대 경험": 25, "우대 경험": 24.9 },
+      judgmentCounts: { 확인됨: 0, "강한 인접": 0, "인접 경험": 0, 공백: 0, "사용자 확인": 0 },
+      excludedCount: 0,
+    });
+
+    expect(html).toContain("fit-circle fit-excellent");
+    expect(html).toContain("fit-circle fit-fair");
+    expect(html).toContain("주요 업무 60점, 색 노랑");
+  });
+
+  test("총점 원 옆에 합격 확률이 아니라는 경계 문구가 있다", () => {
+    const html = renderFitScore({
+      total: 90,
+      sectionScores: { "주요 업무": 90, "기대 경험": 90, "우대 경험": 90 },
+      judgmentCounts: { 확인됨: 3, "강한 인접": 0, "인접 경험": 0, 공백: 0, "사용자 확인": 0 },
+      excludedCount: 0,
+    });
+
+    expect(html).toContain("합격 확률이 아닙니다");
+    expect(html).toContain("공고 요구와 현재 확보한 근거");
+  });
+
+  test("구분 소계가 null이면 해당 없음 원을 보여준다", () => {
+    const html = renderFitScore({
+      total: 100,
+      sectionScores: { "주요 업무": 100, "기대 경험": null, "우대 경험": 100 },
+      judgmentCounts: { 확인됨: 2, "강한 인접": 0, "인접 경험": 0, 공백: 0, "사용자 확인": 1 },
+      excludedCount: 1,
+    });
+
+    expect(html).toContain("해당 없음");
+    expect(html).toContain("기대 경험 해당 없음, 색 빨강");
+    expect(html).toContain("fit-circle fit-none is-empty");
+  });
+
+  test("적합도 절이 없는 문서도 HTML로 렌더링하고 치환 이름을 남기지 않는다", () => {
+    const html = renderApplicationPackageHtml(
+      "# 지원 준비\n\n- readiness: ready\n- evidence: safe\n- human-confirmation: complete\n\n## 결론\n\n내용",
+      "# 인터뷰",
+      "# 이력서",
+    );
+
+    expect(html).not.toContain('<section class="fit-score"');
+    expect(html).not.toContain("{{");
+  });
+
+  test("renderApplicationPackage는 적합도 절이 없는 패키지의 파일 생성을 거부한다", () => {
+    const directory = fixture();
+    write(
+      directory,
+      "evidence/application-package.md",
+      `# 토스플레이스 AI Platform 지원 준비\n\n- readiness: needs_user_input\n- evidence: safe\n- human-confirmation: needs_input\n- 공식 공고: https://example.com/job\n- 근거: sources/fos-study/task/example.md\n\n${packageBodyWithFitTable("내용")}`,
+    );
+
+    expect(() => renderApplicationPackage(directory)).toThrow("섹션에는 머리행, 구분행과 데이터 행을 가진 표가 필요합니다");
+  });
+
   test("상세 자료 탭에 이력서 원문, 면접 질문과 인터뷰 기록을 담는다", () => {
     const detail = panelText(readFileSync(renderApplicationPackage(fixture()), "utf8"), "detail");
 
@@ -266,7 +358,11 @@ describe("renderApplicationPackage", () => {
       "- 문장 끝: https://toss.im/company 를 확인한다.",
     ].join("\n");
     const body = REQUIRED_HEADINGS["evidence/application-package.md"]
-      .map((heading) => (heading === "## 결론" ? `${heading}\n\n${links}` : `${heading}\n\n내용`))
+      .map((heading) => {
+        if (heading === "## 결론") return `${heading}\n\n${links}`;
+        if (heading === FIT_TABLE_HEADING) return `${heading}\n\n${FIT_TABLE}`;
+        return `${heading}\n\n내용`;
+      })
       .join("\n\n");
 
     const html = renderApplicationPackageHtml(
