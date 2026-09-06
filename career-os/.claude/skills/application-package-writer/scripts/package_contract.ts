@@ -1,3 +1,6 @@
+import { FIT_JUDGMENT_SCORES, type FitJudgment } from "./fit_score.ts";
+export { FIT_TABLE_HEADING, FIT_TABLE_HEADERS } from "./fit_score.ts";
+
 export const REQUIRED_PACKAGE_FILES = [
   "evidence/posting.md",
   "evidence/candidate-interview.md",
@@ -26,10 +29,7 @@ export const REQUIRED_HEADINGS: Readonly<Record<string, readonly string[]>> = {
   "evidence/resume-draft.md": ["## 프로필", "## 주요 프로젝트", "## 경력", "## 기술"],
 };
 
-/** 「공고 항목별 적합도」 표의 머리행. 순서까지 계약이다. */
-export const FIT_TABLE_HEADING = "## 공고 항목별 적합도";
-export const FIT_TABLE_HEADERS = ["공고 항목", "공고 구분", "근거", "판정"] as const;
-export const FIT_TABLE_VERDICTS = ["확인됨", "인접 경험", "공백", "사용자 확인"] as const;
+export const FIT_TABLE_VERDICTS: readonly FitJudgment[] = Object.keys(FIT_JUDGMENT_SCORES) as FitJudgment[];
 
 export const SUBMISSION_LEAK_PATTERNS = [
   /\/Users\//,

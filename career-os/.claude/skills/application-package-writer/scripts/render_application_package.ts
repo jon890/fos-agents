@@ -6,6 +6,14 @@ import { validateApplicationPackage } from "./validate_application_package.ts";
 import { validateSubmissionBundle } from "../../resume-preparer/scripts/validate_submission_bundle.ts";
 import { loadApplicationInterviewQuestions } from "../../../../scripts/interview-drill/application_question_schema.ts";
 import { loadApplicationForm, type ApplicationForm } from "./application_form_schema.ts";
+import {
+  calculateFitScore,
+  fitScoreColor,
+  parseFitTable,
+  type FitColor,
+  type FitScore,
+  type FitSection,
+} from "./fit_score.ts";
 
 type PackageStatus = {
   readiness: "ready" | "needs_user_input" | "revise" | "do_not_apply";
@@ -73,6 +81,16 @@ const QUESTION_ORIGIN_LABELS = {
   experience_gap: "경험 공백 확인",
 } as const;
 
+const FIT_SECTION_LABELS: readonly FitSection[] = ["주요 업무", "기대 경험", "우대 경험"];
+
+const FIT_COLOR_LABELS: Record<FitColor, string> = {
+  excellent: "진한 초록",
+  good: "초록",
+  fair: "노랑",
+  weak: "주황",
+  none: "빨강",
+};
+
 function read(path: string): string {
   return readFileSync(path, "utf8");
 }
@@ -85,14 +103,37 @@ function escapeHtml(text: string): string {
     .replaceAll('"', "&quot;");
 }
 
+/**
+ * 표 셀 안의 줄바꿈은 `<br>` 로 적는다. 셀 안 개행이 먹히지 않는 렌더러가 있기 때문이다.
+ * escape 뒤에 이 태그만 되살린다. 다른 태그는 이스케이프된 채로 둔다.
+ */
+function restoreLineBreaks(escaped: string): string {
+  return escaped.replace(/&lt;br\s*\/?&gt;/gi, "<br>");
+}
+
+/** 끝에 붙은 구두점은 주소에서 뺀다. 문장 끝의 마침표와 쉼표가 주소에 딸려 들어가지 않게 한다. */
+const BARE_URL = /https?:\/\/[^\s<>"']+[^\s<>"'.,;:!?)\]]/g;
+
+/**
+ * 이미 링크나 코드로 만들어진 구간은 건드리지 않고, 남은 맨 주소만 링크로 만든다.
+ * `split` 의 캡처 그룹이 결과에 포함되므로 홀수 자리가 보호 구간이다.
+ */
+function autoLink(html: string): string {
+  return html
+    .split(/(<a\s[^>]*>[\s\S]*?<\/a>|<code>[\s\S]*?<\/code>)/g)
+    .map((part, index) => (index % 2 === 1 ? part : part.replace(BARE_URL, '<a href="$&">$&</a>')))
+    .join("");
+}
+
 function inlineMarkdown(text: string): string {
-  return escapeHtml(text)
+  const linked = restoreLineBreaks(escapeHtml(text))
     .replace(
       /\[([^\]]+)]\(((?:https?:\/\/|mailto:|(?:\.\.?\/)+|\/|#)[^\s)]+)\)/g,
       '<a href="$2">$1</a>',
     )
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/`([^`]+)`/g, "<code>$1</code>");
+  return autoLink(linked);
 }
 
 function slug(text: string): string {
@@ -258,12 +299,39 @@ function primaryFiles(applicationForm: ApplicationForm | undefined, assets: Rend
   </section>`;
 }
 
+function formatFitScore(score: number): string {
+  return Number.isInteger(score) ? String(score) : score.toFixed(1);
+}
+
+function fitCircle(label: string, score: number | null, total = false): string {
+  const color = score === null ? "none" : fitScoreColor(score);
+  const pendingTotal = total && score === null;
+  const value = score === null ? (pendingTotal ? "판정 대기" : "해당 없음") : formatFitScore(score);
+  const ariaScore = score === null ? (pendingTotal ? "판정이 아직 없습니다" : "해당 없음") : `${formatFitScore(score)}점`;
+  return `<article class="fit-meter${total ? " fit-meter-total" : ""}">
+      <div class="fit-circle fit-${color}${score === null ? " is-empty" : ""}" aria-label="${escapeHtml(`${label} ${ariaScore}, 색 ${FIT_COLOR_LABELS[color]}`)}">
+        <span>${escapeHtml(value)}</span>
+      </div>
+      <strong class="fit-label">${escapeHtml(label)}</strong>
+    </article>`;
+}
+
+export function renderFitScore(score: FitScore): string {
+  return `<section class="fit-score" aria-labelledby="fit-score-title">
+    <div class="fit-meter-row">
+      ${fitCircle("적합도 총점", score.total, true)}
+      ${FIT_SECTION_LABELS.map((section) => fitCircle(section, score.sectionScores[section])).join("\n      ")}
+    </div>
+    <p class="fit-boundary" id="fit-score-title">적합도 총점은 합격 확률이 아닙니다. 공고 요구와 현재 확보한 근거가 얼마나 맞닿아 있는지 보여주는 검토 점수입니다.</p>
+  </section>`;
+}
+
 function userFacingBlocker(error: string): string {
   if (error.includes("resume-scorecard.md의 verdict")) {
-    return "이력서가 채용 담당자와 기술 리더 검토를 통과하도록 문장을 보강해야 합니다.";
+    return "이력서가 인사담당자와 실무담당자 리뷰를 통과하도록 문장을 보강해야 합니다.";
   }
   if (error.includes("career-description-scorecard.md의 verdict")) {
-    return "경력기술서가 채용 담당자와 기술 리더 검토를 통과하도록 문장을 보강해야 합니다.";
+    return "경력기술서가 인사담당자와 실무담당자 리뷰를 통과하도록 문장을 보강해야 합니다.";
   }
   if (error.includes("해시") || error.includes("오래됐습니다")) {
     return "PDF와 최신 원문의 버전을 다시 맞춰야 합니다.";
@@ -356,10 +424,11 @@ function renderInterviewQuestions(applicationDirectory: string): string {
     .join("\n\n");
 }
 
+/** 순서가 화면 순서이고 첫 항목이 기본 선택이다. 공고 원문을 먼저 읽고 적합도를 본다. */
 const TABS = [
+  { key: "posting", label: "공고 원문" },
   { key: "fit", label: "공고 적합도" },
   { key: "strategy", label: "지원 전략" },
-  { key: "posting", label: "공고 원문" },
   { key: "detail", label: "상세 자료" },
 ] as const;
 
@@ -484,6 +553,9 @@ export function renderApplicationPackageHtml(
   const status = statusFrom(packageMarkdown);
   const sections = splitSections(packageMarkdown);
   const conclusion = sections.find((section) => section.title === "결론");
+  const fitScore = sections.some((section) => section.title === "공고 항목별 적합도")
+    ? renderFitScore(calculateFitScore(parseFitTable(packageMarkdown)))
+    : "";
   const tabs = buildTabs(sections, interviewMarkdown, resumeMarkdown, assets, questionsMarkdown, postingMarkdown);
   const submissionLabel = assets.submissionReady ? "제출 검증 완료" : "제출 준비 중";
   const statusBadges = [
@@ -501,6 +573,7 @@ export function renderApplicationPackageHtml(
     TITLE: escapeHtml(title),
     STYLE: readTemplate("application-package.css"),
     STATUS_BADGES: statusBadges,
+    FIT_SCORE: fitScore,
     CONCLUSION: [
       conclusion ? `<div class="hero-copy">${renderMarkdown(conclusion.body)}</div>` : "",
       heroNotes ? `<div class="hero-notes">${heroNotes}</div>` : "",

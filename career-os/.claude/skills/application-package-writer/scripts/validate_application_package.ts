@@ -6,9 +6,6 @@ import {
   ALLOWED_PACKAGE_FILES,
   EVIDENCE_DIRECTORY,
   EVIDENCE_FILES,
-  FIT_TABLE_HEADERS,
-  FIT_TABLE_HEADING,
-  FIT_TABLE_VERDICTS,
   REQUIRED_HEADINGS,
   REQUIRED_PACKAGE_FILES,
   REDUNDANT_PACKAGE_FILES,
@@ -18,6 +15,7 @@ import {
   TOP_LEVEL_FILES,
 } from "./package_contract.ts";
 import { loadApplicationForm } from "./application_form_schema.ts";
+import { calculateFitScore, parseFitTable, type FitScore } from "./fit_score.ts";
 import { loadApplicationInterviewQuestions } from "../../../../scripts/interview-drill/application_question_schema.ts";
 
 export type PackageValidation = {
@@ -25,6 +23,7 @@ export type PackageValidation = {
   applicationDirectory: string;
   readiness?: "ready" | "needs_user_input" | "revise" | "do_not_apply";
   humanConfirmation?: "complete" | "needs_input";
+  fitScore?: FitScore;
   errors: string[];
 };
 
@@ -58,58 +57,6 @@ function isKnownLayerPath(relativePath: string): boolean {
   const segments = relativePath.split("/");
   if (segments.length === 1) return true;
   return segments.length === 2 && (segments[0] === EVIDENCE_DIRECTORY || segments[0] === REVIEW_DIRECTORY);
-}
-
-function tableCells(row: string): string[] {
-  return row.replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim());
-}
-
-/** 「공고 항목별 적합도」 표의 머리행과 판정 값을 계약과 대조한다. */
-function validateFitTable(packageText: string, errors: string[]): void {
-  const start = packageText.indexOf(FIT_TABLE_HEADING);
-  if (start < 0) return;
-  const rest = packageText.slice(start + FIT_TABLE_HEADING.length);
-  const nextHeadingIndex = rest.search(/^## /m);
-  const section = nextHeadingIndex >= 0 ? rest.slice(0, nextHeadingIndex) : rest;
-  const lines = section.split(/\r?\n/).map((line) => line.trim());
-  const dividerIndex = lines.findIndex(
-    (line, index) =>
-      index > 0 &&
-      lines[index - 1].startsWith("|") &&
-      /^\|(?:\s*:?-{3,}:?\s*\|)+$/.test(line),
-  );
-  const dataRows: string[] = [];
-  for (let index = dividerIndex + 1; dividerIndex > 0 && index < lines.length; index += 1) {
-    if (!lines[index].startsWith("|")) break;
-    dataRows.push(lines[index]);
-  }
-
-  if (dividerIndex < 1 || dataRows.length === 0) {
-    errors.push(`${FIT_TABLE_HEADING} 섹션에는 머리행, 구분행과 데이터 행을 가진 표가 필요합니다.`);
-    return;
-  }
-
-  const header = tableCells(lines[dividerIndex - 1]);
-  const headerMatches =
-    header.length === FIT_TABLE_HEADERS.length &&
-    FIT_TABLE_HEADERS.every((title, index) => header[index] === title);
-  if (!headerMatches) {
-    errors.push(
-      `${FIT_TABLE_HEADING} 표의 머리행은 ${FIT_TABLE_HEADERS.join(", ")} 순서여야 합니다: ${header.join(", ")}`,
-    );
-    return;
-  }
-
-  const verdictIndex = FIT_TABLE_HEADERS.indexOf("판정");
-  const allowedVerdicts = new Set<string>(FIT_TABLE_VERDICTS);
-  for (const row of dataRows) {
-    const verdict = tableCells(row)[verdictIndex] ?? "";
-    if (!allowedVerdicts.has(verdict)) {
-      errors.push(
-        `${FIT_TABLE_HEADING} 표의 판정은 ${FIT_TABLE_VERDICTS.join(", ")} 중 하나여야 합니다: ${verdict}`,
-      );
-    }
-  }
 }
 
 export function validateApplicationPackage(applicationDirectory: string): PackageValidation {
@@ -178,7 +125,12 @@ export function validateApplicationPackage(applicationDirectory: string): Packag
     errors.push("readiness가 ready이면 human-confirmation은 complete여야 합니다.");
   }
 
-  validateFitTable(packageText, errors);
+  let fitScore: FitScore | undefined;
+  try {
+    fitScore = calculateFitScore(parseFitTable(packageText));
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : String(error));
+  }
 
   if (!/https?:\/\//.test(packageText)) {
     errors.push("evidence/application-package.md에 공고 또는 회사 공식 URL이 필요합니다.");
@@ -223,6 +175,7 @@ export function validateApplicationPackage(applicationDirectory: string): Packag
     applicationDirectory: directory,
     readiness: readinessMatch?.[1] as PackageValidation["readiness"],
     humanConfirmation: humanConfirmationMatch?.[1] as PackageValidation["humanConfirmation"],
+    fitScore,
     errors,
   };
 }
