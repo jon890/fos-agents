@@ -1,15 +1,26 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { REQUIRED_HEADINGS, REQUIRED_PACKAGE_FILES } from "./package_contract.ts";
+import { FIT_TABLE_HEADING, REQUIRED_HEADINGS, REQUIRED_PACKAGE_FILES } from "./package_contract.ts";
 import { validateApplicationPackage } from "./validate_application_package.ts";
+
+const FIT_TABLE = `| 공고 항목 | 공고 구분 | 근거 | 판정 |
+| --- | --- | --- | --- |
+| 공통 기반 표준화 | 주요 업무 | 공통 모듈 분리 경험 | 확인됨 |
+| 자체 호스팅 모델 운영 | 우대 경험 | 직접 근거 없음 | 공백 |`;
 
 const directories: string[] = [];
 
 afterEach(() => {
   for (const directory of directories.splice(0)) rmSync(directory, { force: true, recursive: true });
 });
+
+function packageBody(): string {
+  return REQUIRED_HEADINGS["evidence/application-package.md"]
+    .map((heading) => (heading === FIT_TABLE_HEADING ? `${heading}\n\n${FIT_TABLE}` : `${heading}\n\n내용`))
+    .join("\n\n");
+}
 
 function write(directory: string, relativePath: string, content: string): void {
   const path = join(directory, relativePath);
@@ -28,7 +39,7 @@ function fixture(): string {
   write(
     directory,
     "evidence/application-package.md",
-    `# 지원 준비\n\n- readiness: ready\n- evidence: safe\n- human-confirmation: complete\n- 공식 공고: https://example.com/job\n- 근거: sources/fos-study/task/example.md\n\n${REQUIRED_HEADINGS["evidence/application-package.md"].join("\n\n내용\n\n")}`,
+    `# 지원 준비\n\n- readiness: ready\n- evidence: safe\n- human-confirmation: complete\n- 공식 공고: https://example.com/job\n- 근거: sources/fos-study/task/example.md\n\n${packageBody()}`,
   );
   write(
     directory,
@@ -161,6 +172,28 @@ describe("validateApplicationPackage", () => {
     write(directory, "review/submission-manifest.json", "{}");
 
     expect(validateApplicationPackage(directory).passed).toBe(true);
+  });
+
+  test("네 열 머리행과 계약된 판정 값을 가진 적합도 표는 통과한다", () => {
+    const directory = fixture();
+    const text = readFileSync(join(directory, "evidence", "application-package.md"), "utf8");
+    expect(text).toContain("| 공고 항목 | 공고 구분 | 근거 | 판정 |");
+
+    expect(validateApplicationPackage(directory).passed).toBe(true);
+  });
+
+  test("적합도 표의 판정에 계약에 없는 값이 있으면 거부한다", () => {
+    const directory = fixture();
+    const path = join(directory, "evidence", "application-package.md");
+    write(
+      directory,
+      "evidence/application-package.md",
+      readFileSync(path, "utf8").replace("| 확인됨 |", "| 대체로 맞음 |"),
+    );
+
+    const result = validateApplicationPackage(directory);
+    expect(result.passed).toBe(false);
+    expect(result.errors.join("\n")).toContain("표의 판정은 확인됨, 인접 경험, 공백, 사용자 확인 중 하나여야 합니다: 대체로 맞음");
   });
 
   test("evidence 파일이 최상위에 있으면 발견 경로와 기대 경로를 담아 거부한다", () => {

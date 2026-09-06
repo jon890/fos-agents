@@ -6,6 +6,9 @@ import {
   ALLOWED_PACKAGE_FILES,
   EVIDENCE_DIRECTORY,
   EVIDENCE_FILES,
+  FIT_TABLE_HEADERS,
+  FIT_TABLE_HEADING,
+  FIT_TABLE_VERDICTS,
   REQUIRED_HEADINGS,
   REQUIRED_PACKAGE_FILES,
   REDUNDANT_PACKAGE_FILES,
@@ -49,6 +52,50 @@ function collectPackageFiles(directory: string): string[] {
     if (entry.isFile()) files.push(entry.name);
   }
   return files;
+}
+
+function tableCells(row: string): string[] {
+  return row.replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim());
+}
+
+/** 「공고 항목별 적합도」 표의 머리행과 판정 값을 계약과 대조한다. */
+function validateFitTable(packageText: string, errors: string[]): void {
+  const start = packageText.indexOf(FIT_TABLE_HEADING);
+  if (start < 0) return;
+  const rest = packageText.slice(start + FIT_TABLE_HEADING.length);
+  const nextHeadingIndex = rest.search(/^## /m);
+  const section = nextHeadingIndex >= 0 ? rest.slice(0, nextHeadingIndex) : rest;
+  const rows = section
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("|"));
+
+  if (rows.length < 3) {
+    errors.push(`${FIT_TABLE_HEADING} 섹션에는 머리행, 구분행과 데이터 행을 가진 표가 필요합니다.`);
+    return;
+  }
+
+  const header = tableCells(rows[0]);
+  const headerMatches =
+    header.length === FIT_TABLE_HEADERS.length &&
+    FIT_TABLE_HEADERS.every((title, index) => header[index] === title);
+  if (!headerMatches) {
+    errors.push(
+      `${FIT_TABLE_HEADING} 표의 머리행은 ${FIT_TABLE_HEADERS.join(", ")} 순서여야 합니다: ${header.join(", ")}`,
+    );
+    return;
+  }
+
+  const verdictIndex = FIT_TABLE_HEADERS.indexOf("판정");
+  const allowedVerdicts = new Set<string>(FIT_TABLE_VERDICTS);
+  for (const row of rows.slice(2)) {
+    const verdict = tableCells(row)[verdictIndex] ?? "";
+    if (!allowedVerdicts.has(verdict)) {
+      errors.push(
+        `${FIT_TABLE_HEADING} 표의 판정은 ${FIT_TABLE_VERDICTS.join(", ")} 중 하나여야 합니다: ${verdict}`,
+      );
+    }
+  }
 }
 
 export function validateApplicationPackage(applicationDirectory: string): PackageValidation {
@@ -111,6 +158,8 @@ export function validateApplicationPackage(applicationDirectory: string): Packag
   if (readinessMatch?.[1] === "ready" && humanConfirmationMatch?.[1] !== "complete") {
     errors.push("readiness가 ready이면 human-confirmation은 complete여야 합니다.");
   }
+
+  validateFitTable(packageText, errors);
 
   if (!/https?:\/\//.test(packageText)) {
     errors.push("evidence/application-package.md에 공고 또는 회사 공식 URL이 필요합니다.");

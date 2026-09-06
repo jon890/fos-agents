@@ -2,14 +2,25 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { REQUIRED_HEADINGS, REQUIRED_PACKAGE_FILES } from "./package_contract.ts";
+import { FIT_TABLE_HEADING, REQUIRED_HEADINGS, REQUIRED_PACKAGE_FILES } from "./package_contract.ts";
 import { renderApplicationPackage, renderMarkdown } from "./render_application_package.ts";
+
+const FIT_TABLE = `| 공고 항목 | 공고 구분 | 근거 | 판정 |
+| --- | --- | --- | --- |
+| 공통 기반 표준화 | 주요 업무 | 공통 모듈 분리 경험 | 확인됨 |
+| 자체 호스팅 모델 운영 | 우대 경험 | 직접 근거 없음 | 공백 |`;
 
 const directories: string[] = [];
 
 afterEach(() => {
   for (const directory of directories.splice(0)) rmSync(directory, { force: true, recursive: true });
 });
+
+function packageBody(): string {
+  return REQUIRED_HEADINGS["evidence/application-package.md"]
+    .map((heading) => (heading === FIT_TABLE_HEADING ? `${heading}\n\n${FIT_TABLE}` : `${heading}\n\n내용`))
+    .join("\n\n");
+}
 
 function write(directory: string, relativePath: string, content: string): void {
   const path = join(directory, relativePath);
@@ -28,7 +39,7 @@ function fixture(): string {
   write(
     directory,
     "evidence/application-package.md",
-    `# 토스플레이스 AI Platform 지원 준비\n\n- readiness: needs_user_input\n- evidence: safe\n- human-confirmation: needs_input\n- 공식 공고: https://example.com/job\n- 근거: sources/fos-study/task/example.md\n\n${REQUIRED_HEADINGS["evidence/application-package.md"].join("\n\n내용\n\n")}`,
+    `# 토스플레이스 AI Platform 지원 준비\n\n- readiness: needs_user_input\n- evidence: safe\n- human-confirmation: needs_input\n- 공식 공고: https://example.com/job\n- 근거: sources/fos-study/task/example.md\n\n${packageBody()}`,
   );
   write(
     directory,

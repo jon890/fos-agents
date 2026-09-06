@@ -10,7 +10,8 @@ export const REQUIRED_HEADINGS: Readonly<Record<string, readonly string[]>> = {
   "evidence/candidate-interview.md": ["## 확보된 답변", "## 미확인 질문"],
   "evidence/application-package.md": [
     "## 결론",
-    "## 회사와 포지션이 찾는 사람",
+    "## 공고 항목별 적합도",
+    "## 공개 자료로 확인한 팀과 인접 사례",
     "## 요구사항과 근거",
     "## 이 포지션에서의 승부처",
     "## 지원동기",
@@ -24,6 +25,11 @@ export const REQUIRED_HEADINGS: Readonly<Record<string, readonly string[]>> = {
   ],
   "evidence/resume-draft.md": ["## 프로필", "## 주요 프로젝트", "## 경력", "## 기술"],
 };
+
+/** 「공고 항목별 적합도」 표의 머리행. 순서까지 계약이다. */
+export const FIT_TABLE_HEADING = "## 공고 항목별 적합도";
+export const FIT_TABLE_HEADERS = ["공고 항목", "공고 구분", "근거", "판정"] as const;
+export const FIT_TABLE_VERDICTS = ["확인됨", "인접 경험", "공백", "사용자 확인"] as const;
 
 export const SUBMISSION_LEAK_PATTERNS = [
   /\/Users\//,
