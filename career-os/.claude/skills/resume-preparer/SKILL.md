@@ -14,9 +14,9 @@ description: 공고에 맞춘 이력서·경력기술서를 작성하고 사람 
 
 ## 입력
 
-- `applications/<company>/<role>/posting.md`
-- `applications/<company>/<role>/candidate-interview.md`
-- `applications/<company>/<role>/application-package.md`
+- `applications/<company>/<role>/evidence/posting.md`
+- `applications/<company>/<role>/evidence/candidate-interview.md`
+- `applications/<company>/<role>/evidence/application-package.md`
 - `brain-search`로 확인한 현재 경력, 역할 선호와 경험 경계
 - `sources/fos-study/`의 최신 공개 경력 근거
 - 필요하면 로컬 프로젝트의 코드, 테스트, Git 이력과 기술 결정 문서
@@ -34,7 +34,7 @@ description: 공고에 맞춘 이력서·경력기술서를 작성하고 사람 
 Markdown 원본, 제출 문서 HTML, claim ledger, scorecard와 manifest는 재생성과 검증을 위해 내부에 유지한다.
 경력기술서나 한 파일 제출본은 공고가 요구할 때만 만든다.
 
-지원 판단과 제출 상태는 기존 `application-package.md`와 `application-package.html`에서 함께 보여준다.
+지원 판단과 제출 상태는 기존 `evidence/application-package.md`와 `application-package.html`에서 함께 보여준다.
 별도 진행 요약 문서를 만들지 않는다.
 
 ## 사람과 AI의 책임
@@ -54,13 +54,13 @@ Markdown 원본, 제출 문서 HTML, claim ledger, scorecard와 manifest는 재�
 질문에는 필요한 이유, 이미 확인한 사실, 답에 따라 달라지는 제출 문장, 답변 구조, 예상 후속 질문과 과장하지 않을 경계를 함께 제공한다.
 완성 답변을 먼저 쓰지 않고 후보자가 키워드나 생각 조각으로 먼저 답하게 한다.
 
-제출 문구를 바꿀 사람 확인이 남으면 `application-package.md`의 `human-confirmation`을 `needs_input`으로 두며 최종 제출 준비를 진행하지 않는다.
+제출 문구를 바꿀 사람 확인이 남으면 `evidence/application-package.md`의 `human-confirmation`을 `needs_input`으로 두며 최종 제출 준비를 진행하지 않는다.
 
 ## 실행 흐름
 
 ### 제출 방향과 대표 근거 선택
 
-`posting.md`, `candidate-interview.md`, `application-package.md`와 `interview-questions.json`이 있는지 먼저 확인한다.
+`evidence/posting.md`, `evidence/candidate-interview.md`, `evidence/application-package.md`와 `evidence/interview-questions.json`이 있는지 먼저 확인한다.
 없으면 임의로 채우지 않고 `application-package-writer`로 연결한다.
 
 공고의 공식 이력서 안내가 있으면 그 구조를 우선한다.
@@ -75,8 +75,8 @@ Markdown 원본, 제출 문서 HTML, claim ledger, scorecard와 manifest는 재�
 [`resume-writing-style.md`](../../../config/resume-writing-style.md)를 끝까지 읽고 이력서와 경력기술서의 모든 문장에 적용한다.
 공고의 공식 작성 안내가 충돌하면 공고 안내를 우선한다.
 
-`resume-draft.md`를 만들거나 수정한다.
-지원 화면이 경력기술서를 받으면 `career-description-draft.md`도 별도로 만든다.
+`evidence/resume-draft.md`를 만들거나 수정한다.
+지원 화면이 경력기술서를 받으면 `evidence/career-description-draft.md`도 별도로 만든다.
 초안이 갖춰지면 `../application-package-writer/references/full-document-review.md`를 읽고 지원 전략, 이력서, 경력기술서와 지원서 답변을 함께 검토한다.
 한 문장의 정정 사항은 같은 경험을 가리키는 모든 제출 문구와 근거 원장에 전파한다.
 
@@ -100,7 +100,7 @@ bun "$(git rev-parse --show-toplevel)/career-os/.claude/skills/application-packa
 - 2분: 중요성, 제약, 대안, 선택 이유, 실행, 검증과 남은 한계를 설명한다.
 
 설명이 막히는 문장은 더 그럴듯하게 다듬지 않는다.
-근거를 더 확인하거나 표현을 낮추고 `interview-questions.json`에 `evidence_defense` 질문으로 남긴다.
+근거를 더 확인하거나 표현을 낮추고 `evidence/interview-questions.json`에 `evidence_defense` 질문으로 남긴다.
 
 ### HTML과 PDF 생성
 
@@ -131,17 +131,17 @@ bun "$(git rev-parse --show-toplevel)/career-os/.claude/skills/resume-preparer/s
 근거 원장의 `${PROJECTS_ROOT}`와 `${PERSONAL_ROOT}`는 같은 이름의 환경 변수로 바꿔 읽는다.
 해당 환경 변수가 없으면 경로를 추측하지 않고 다른 근거를 찾거나 사용자 확인으로 낮춘다.
 
-- 이력서: `claim-ledger.json`
-- 경력기술서: `career-description-claim-ledger.json`
+- 이력서: `review/claim-ledger.json`
+- 경력기술서: `review/career-description-claim-ledger.json`
 
 claim ledger를 사람이 읽는 문장으로 다시 풀어 쓴 evidence audit는 만들지 않는다.
-대표 사례의 30초·2분 설명과 방어할 판단은 `interview-questions.json`에 합친다.
+대표 사례의 30초·2분 설명과 방어할 판단은 `evidence/interview-questions.json`에 합친다.
 
 다음 명령으로 원장과 제출 문구가 같은 버전인지 확인한다.
 
 ```bash
 bun "$(git rev-parse --show-toplevel)/career-os/.claude/skills/resume-preparer/scripts/validate_claim_ledger.ts" \
-  <claim-ledger.json> --artifact <submission-document.html>
+  <review/claim-ledger.json> --artifact <review/submission-document.html>
 ```
 
 `soften`, `ask_user`, `remove`가 하나라도 남으면 평가로 넘어가지 않는다.
@@ -155,7 +155,7 @@ bun "$(git rev-parse --show-toplevel)/career-os/.claude/skills/resume-preparer/s
 
 ```bash
 bun "$(git rev-parse --show-toplevel)/career-os/.claude/skills/resume-preparer/scripts/check_resume_html.ts" \
-  <submission-document.html>
+  <review/submission-document.html>
 ```
 
 수정 가능한 차단 항목이 남아 있으면 다시 작성하고 검토한다.
@@ -178,7 +178,7 @@ bun "$(git rev-parse --show-toplevel)/career-os/.claude/skills/resume-preparer/s
   <application-directory>
 ```
 
-검증이 통과한 뒤 `application-package.md`를 `readiness: ready`로 바꾸고 지원 패키지 계약과 제출 묶음 검사를 다시 실행한다.
+검증이 통과한 뒤 `evidence/application-package.md`를 `readiness: ready`로 바꾸고 지원 패키지 계약과 제출 묶음 검사를 다시 실행한다.
 마지막으로 `application-package-writer/scripts/render_application_package.ts`를 실행해 현재 제출 파일과 다음 행동을 검토 화면에 반영한다.
 
 ## 통과 조건

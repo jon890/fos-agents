@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
-import { existsSync, statSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { artifactTextSha256 } from "./artifact_identity.ts";
 import { fileSha256, type SubmissionManifest } from "./submission_manifest.ts";
@@ -17,18 +17,18 @@ function requireCurrentPdf(htmlPath: string, pdfPath: string): void {
 
 export function buildSubmissionBundle(applicationDirectory: string): string {
   const directory = resolve(applicationDirectory);
-  const resumeHtml = join(directory, "resume.html");
+  const resumeHtml = join(directory, "review", "resume.html");
   const resumePdf = join(directory, "resume.pdf");
   requireCurrentPdf(resumeHtml, resumePdf);
 
-  const careerHtml = join(directory, "career-description.html");
+  const careerHtml = join(directory, "review", "career-description.html");
   const careerPdf = join(directory, "career-description.pdf");
   const hasCareerDescription = existsSync(careerHtml) || existsSync(careerPdf);
   const artifacts: SubmissionManifest["artifacts"] = [{
     kind: "resume",
     file: "resume.pdf",
     sha256: fileSha256(resumePdf),
-    sourceHtml: "resume.html",
+    sourceHtml: "review/resume.html",
     sourceTextSha256: artifactTextSha256(resumeHtml),
   }];
 
@@ -45,7 +45,7 @@ export function buildSubmissionBundle(applicationDirectory: string): string {
         kind: "career_description",
         file: "career-description.pdf",
         sha256: fileSha256(careerPdf),
-        sourceHtml: "career-description.html",
+        sourceHtml: "review/career-description.html",
         sourceTextSha256: artifactTextSha256(careerHtml),
       },
       {
@@ -61,7 +61,8 @@ export function buildSubmissionBundle(applicationDirectory: string): string {
     generatedAt: new Date().toISOString(),
     artifacts,
   };
-  const output = join(directory, "submission-manifest.json");
+  const output = join(directory, "review", "submission-manifest.json");
+  mkdirSync(dirname(output), { recursive: true });
   writeFileSync(output, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
   return output;
 }

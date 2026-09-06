@@ -1,15 +1,15 @@
 export const REQUIRED_RESUME_SUBMISSION_FILES = [
-  "resume.html",
+  "review/resume.html",
   "resume.pdf",
-  "claim-ledger.json",
-  "resume-scorecard.md",
-  "submission-manifest.json",
+  "review/claim-ledger.json",
+  "review/resume-scorecard.md",
+  "review/submission-manifest.json",
 ] as const;
 
 export const REQUIRED_CAREER_DESCRIPTION_FILES = [
-  "career-description.html",
+  "review/career-description.html",
   "career-description.pdf",
-  "career-description-claim-ledger.json",
-  "career-description-scorecard.md",
+  "review/career-description-claim-ledger.json",
+  "review/career-description-scorecard.md",
   "submission.pdf",
 ] as const;

@@ -31,12 +31,23 @@ type ActionItem = {
   body: string;
 };
 
-const PRIMARY_SECTION_TITLES = new Set([
+/** 탭 밖 상단에 고정하는 섹션. 어느 탭을 보고 있든 보여야 한다. */
+const TOP_SECTION_TITLES = new Set(["결론", "제출 준비 상태", "사용자 확인 필요"]);
+
+const FIT_TAB_SECTION_TITLES = ["공고 항목별 적합도", "공개 자료로 확인한 팀과 인접 사례"] as const;
+
+const STRATEGY_TAB_SECTION_TITLES = [
+  "요구사항과 근거",
   "이 포지션에서의 승부처",
   "지원동기",
+  "입사 후 기여 시나리오",
   "보완할 공백",
+  "회사 문화와의 연결",
+  "면접에서 검증받을 내용",
   "다음 행동",
-]);
+] as const;
+
+const TEMPLATE_DIRECTORY = resolve(import.meta.dir, "../templates");
 
 const READINESS_LABELS: Record<PackageStatus["readiness"], string> = {
   ready: "제출 검토 가능",
@@ -203,7 +214,7 @@ function documentTitle(markdown: string): string {
 }
 
 function supportingSection(title: string, markdown: string): string {
-  return `<section class="supporting-section">
+  return `<section class="supporting-section" id="${slug(title)}">
     <h2>${escapeHtml(title)}</h2>
     ${renderMarkdown(markdown)}
   </section>`;
@@ -324,31 +335,6 @@ function applicationFormPanel(form: ApplicationForm | undefined): string {
   </details>`;
 }
 
-function supportingDetails(
-  interviewMarkdown: string,
-  resumeMarkdown: string,
-  assets: RenderAssets,
-  questionsMarkdown?: string,
-): string {
-  const individualPdfs = [
-    assets.resumePdf ? '<a href="resume.pdf">이력서 PDF</a>' : "",
-    assets.careerDescriptionPdf ? '<a href="career-description.pdf">경력기술서 PDF</a>' : "",
-  ].filter(Boolean).join("");
-  const sections = [
-    supportingSection("이력서 원문", resumeMarkdown),
-    questionsMarkdown ? supportingSection("포지션별 면접 질문", questionsMarkdown) : "",
-    supportingSection("후보자 인터뷰 기록", interviewMarkdown),
-  ].filter(Boolean).join("\n");
-
-  return `<details class="source-drawer">
-    <summary>상세 자료<span>필요할 때만 펼치기</span></summary>
-    <div class="drawer-body">
-      ${individualPdfs ? `<nav class="secondary-files" aria-label="개별 제출 PDF">${individualPdfs}</nav>` : ""}
-      ${sections}
-    </div>
-  </details>`;
-}
-
 function renderInterviewQuestions(applicationDirectory: string): string {
   const file = loadApplicationInterviewQuestions(applicationDirectory);
   return file.questions
@@ -370,6 +356,120 @@ function renderInterviewQuestions(applicationDirectory: string): string {
     .join("\n\n");
 }
 
+const TABS = [
+  { key: "fit", label: "공고 적합도" },
+  { key: "strategy", label: "지원 전략" },
+  { key: "posting", label: "공고 원문" },
+  { key: "detail", label: "상세 자료" },
+] as const;
+
+type TabKey = (typeof TABS)[number]["key"];
+
+/** CSS 가 탭 키마다 선택자를 하드코딩하므로 테스트가 두 곳을 대조한다. */
+export const TAB_KEYS: readonly TabKey[] = TABS.map((tab) => tab.key);
+
+function readTemplate(name: string): string {
+  return read(join(TEMPLATE_DIRECTORY, name));
+}
+
+/** 치환 이름을 모두 채우고, 남은 이름이 있으면 그 이름을 담은 오류를 낸다. */
+export function fillTemplate(template: string, values: Readonly<Record<string, string>>): string {
+  const remaining = new Set<string>();
+  // 콜백 반환값은 치환 패턴으로 해석되지 않으므로 본문의 달러 기호가 그대로 남는다.
+  const filled = template.replace(/\{\{\s*([A-Z_]+)\s*\}\}/g, (match, name: string) => {
+    if (Object.hasOwn(values, name)) return values[name];
+    remaining.add(name);
+    return match;
+  });
+  if (remaining.size > 0) {
+    throw new Error(`템플릿에 채우지 못한 치환 이름이 남았습니다: ${[...remaining].join(", ")}`);
+  }
+  return filled;
+}
+
+/** 섹션 제목이 `h2`이므로 본문 제목을 한 단계 낮춰 단계가 뒤집히지 않게 한다. */
+function demoteHeadings(markdown: string): string {
+  return markdown.replace(/^(#{1,3})(\s+)/gm, "#$1$2");
+}
+
+function tabPanelBody(sections: readonly MarkdownSection[]): string {
+  return sections.map((section) => supportingSection(section.title, section.body)).join("\n");
+}
+
+function buildTabs(
+  sections: readonly MarkdownSection[],
+  interviewMarkdown: string,
+  resumeMarkdown: string,
+  assets: RenderAssets,
+  questionsMarkdown: string | undefined,
+  postingMarkdown: string | undefined,
+): { buttons: string; panels: string } {
+  const byTitle = (title: string) => sections.find((section) => section.title === title);
+  const fitSections = FIT_TAB_SECTION_TITLES.map(byTitle).filter((section) => section !== undefined);
+  const strategySections = STRATEGY_TAB_SECTION_TITLES.map(byTitle).filter((section) => section !== undefined);
+  const placed = new Set<string>([
+    ...TOP_SECTION_TITLES,
+    ...FIT_TAB_SECTION_TITLES,
+    ...STRATEGY_TAB_SECTION_TITLES,
+  ]);
+  // 표에 없는 섹션은 화면에서 사라지지 않도록 지원 전략 탭 끝에 붙인다.
+  const extraSections = sections.filter((section) => !placed.has(section.title));
+
+  const bodies: Partial<Record<TabKey, string>> = {
+    fit: tabPanelBody(fitSections),
+    strategy: tabPanelBody([...strategySections, ...extraSections]),
+    posting: postingMarkdown ? supportingSection("공고 원문", demoteHeadings(postingMarkdown)) : undefined,
+    detail: detailTabBody(interviewMarkdown, resumeMarkdown, assets, questionsMarkdown),
+  };
+
+  const activeTabs = TABS.filter((tab) => bodies[tab.key] !== undefined);
+  const inputs = activeTabs
+    .map((tab, index) =>
+      `<input type="radio" name="tab" class="tab-input" id="tab-${tab.key}"${index === 0 ? " checked" : ""}>`,
+    )
+    .join("\n      ");
+  const labels = activeTabs
+    .map((tab) => `<label for="tab-${tab.key}">${escapeHtml(tab.label)}</label>`)
+    .join("\n        ");
+  const panels = activeTabs
+    .map(
+      (tab) => `<section class="tab-panel" id="panel-${tab.key}" aria-label="${escapeHtml(tab.label)}">
+${bodies[tab.key]}
+        </section>`,
+    )
+    .join("\n        ");
+
+  return {
+    buttons: `${inputs}
+      <div class="tab-buttons">
+        ${labels}
+      </div>`,
+    panels,
+  };
+}
+
+function detailTabBody(
+  interviewMarkdown: string,
+  resumeMarkdown: string,
+  assets: RenderAssets,
+  questionsMarkdown?: string,
+): string {
+  const individualPdfs = [
+    assets.resumePdf ? '<a href="resume.pdf">이력서 PDF</a>' : "",
+    assets.careerDescriptionPdf ? '<a href="career-description.pdf">경력기술서 PDF</a>' : "",
+  ].filter(Boolean).join("");
+  const sections = [
+    supportingSection("이력서 원문", resumeMarkdown),
+    questionsMarkdown ? supportingSection("포지션별 면접 질문", questionsMarkdown) : "",
+    supportingSection("후보자 인터뷰 기록", interviewMarkdown),
+  ].filter(Boolean).join("\n");
+
+  return [
+    individualPdfs ? `<nav class="secondary-files" aria-label="개별 제출 PDF">${individualPdfs}</nav>` : "",
+    sections,
+  ].filter(Boolean).join("\n");
+}
+
 export function renderApplicationPackageHtml(
   packageMarkdown: string,
   interviewMarkdown: string,
@@ -377,244 +477,43 @@ export function renderApplicationPackageHtml(
   applicationForm?: ApplicationForm,
   assets: RenderAssets = {},
   questionsMarkdown?: string,
+  postingMarkdown?: string,
+  generatedAt?: string,
 ): string {
   const title = documentTitle(packageMarkdown);
   const status = statusFrom(packageMarkdown);
   const sections = splitSections(packageMarkdown);
   const conclusion = sections.find((section) => section.title === "결론");
-  const primarySections = sections.filter((section) => PRIMARY_SECTION_TITLES.has(section.title));
-  const secondarySections = sections.filter(
-    (section) => section.title !== "결론" && !PRIMARY_SECTION_TITLES.has(section.title),
-  );
-  const cards = primarySections
-    .map(
-      (section) => `<article class="review-card" id="${slug(section.title)}">
-        <h2>${escapeHtml(section.title)}</h2>
-        <div class="card-body">${renderMarkdown(section.body)}</div>
-      </article>`,
-    )
-    .join("\n");
-  const secondaryDetails = secondarySections
+  const tabs = buildTabs(sections, interviewMarkdown, resumeMarkdown, assets, questionsMarkdown, postingMarkdown);
+  const submissionLabel = assets.submissionReady ? "제출 검증 완료" : "제출 준비 중";
+  const statusBadges = [
+    `<span class="status readiness-${status.readiness}">${READINESS_LABELS[status.readiness]}</span>`,
+    `<span class="status evidence-${status.evidence}">${EVIDENCE_LABELS[status.evidence]}</span>`,
+    `<span class="status human-${status.humanConfirmation}">${HUMAN_CONFIRMATION_LABELS[status.humanConfirmation]}</span>`,
+    `<span class="status ${assets.submissionReady ? "evidence-safe" : "evidence-revise"}">${submissionLabel}</span>`,
+  ].join("\n        ");
+  const heroNotes = sections
+    .filter((section) => section.title !== "결론" && TOP_SECTION_TITLES.has(section.title))
     .map((section) => supportingSection(section.title, section.body))
     .join("\n");
-  const submissionLabel = assets.submissionReady ? "제출 검증 완료" : "제출 준비 중";
 
-  return `<!doctype html>
-<html lang="ko">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light">
-  <title>${escapeHtml(title)}</title>
-  <style>
-    :root {
-      --canvas: #eef2f7;
-      --paper: #ffffff;
-      --ink: #172033;
-      --muted: #687286;
-      --line: #d9e0e9;
-      --blue: #2d5fe8;
-      --blue-soft: #edf2ff;
-      --green: #117a55;
-      --green-soft: #eaf7f1;
-      --amber: #9a5a0a;
-      --amber-soft: #fff3df;
-      --red: #a63d4d;
-      --red-soft: #fff0f2;
-      --shadow: 0 12px 34px rgba(29, 44, 75, .08);
-    }
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; background: var(--canvas); }
-    body {
-      margin: 0;
-      color: var(--ink);
-      background:
-        linear-gradient(90deg, rgba(45, 95, 232, .045) 1px, transparent 1px) 0 0 / 28px 28px,
-        var(--canvas);
-      font-family: Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      font-size: 16px;
-      line-height: 1.68;
-      word-break: keep-all;
-    }
-    a { color: var(--blue); text-underline-offset: 3px; overflow-wrap: anywhere; }
-    a:focus-visible, summary:focus-visible { outline: 3px solid #9bb5ff; outline-offset: 3px; }
-    .shell { width: min(1120px, calc(100% - 40px)); margin: 0 auto; padding: 36px 0 72px; }
-    .hero {
-      position: relative;
-      overflow: hidden;
-      padding: 34px;
-      border: 1px solid #cfd9e8;
-      border-radius: 22px;
-      background: var(--paper);
-      box-shadow: var(--shadow);
-    }
-    .hero::before {
-      content: "";
-      position: absolute;
-      inset: 0 auto 0 0;
-      width: 7px;
-      background: var(--blue);
-    }
-    .eyebrow { margin: 0 0 9px; color: var(--blue); font: 750 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; }
-    h1 { max-width: 820px; margin: 0; font-size: clamp(30px, 5vw, 52px); line-height: 1.08; letter-spacing: -.04em; }
-    .hero-copy { max-width: 820px; margin: 18px 0 0; color: #39455b; font-size: clamp(17px, 2vw, 20px); }
-    .status-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
-    .status { display: inline-flex; align-items: center; min-height: 34px; padding: 6px 11px; border-radius: 8px; font-weight: 750; font-size: 13px; }
-    .readiness-ready, .evidence-safe, .human-complete { color: var(--green); background: var(--green-soft); }
-    .readiness-needs_user_input, .readiness-revise, .evidence-revise, .human-needs_input { color: var(--amber); background: var(--amber-soft); }
-    .readiness-do_not_apply, .evidence-blocked { color: var(--red); background: var(--red-soft); }
-    .action-panel { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 20px; margin-top: 22px; padding: 22px; border: 1px solid #cfd9e8; border-radius: 16px; background: #172033; color: #fff; box-shadow: var(--shadow); }
-    .action-panel h2 { margin: 0; font-size: 22px; }
-    .action-panel .eyebrow { margin-bottom: 4px; color: #9bb5ff; }
-    .action-panel ul { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
-    .action-panel li { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 12px; margin: 0; padding: 12px 14px; border-radius: 10px; background: rgba(255,255,255,.08); }
-    .action-panel li strong { color: #b8c9ff; font-size: 13px; }
-    .action-panel li span { font-size: 14px; }
-    .primary-files { display: grid; gap: 16px; margin-top: 22px; padding: 22px; border: 1px solid #cfd9e8; border-radius: 16px; background: var(--paper); box-shadow: var(--shadow); }
-    .primary-files h2 { margin: 0 0 4px; font-size: 19px; }
-    .primary-files p { margin: 0; color: var(--muted); font-size: 14px; }
-    .file-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-    .file-card { display: grid; align-content: start; gap: 5px; min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); background: #f8fafc; text-decoration: none; }
-    a.file-card:hover { border-color: #9eb4ef; background: var(--blue-soft); }
-    .file-card.pending { border-style: dashed; }
-    .file-card span { color: var(--blue); font-size: 12px; font-weight: 800; }
-    .file-card strong { font-size: 15px; }
-    .file-card small { color: var(--muted); font-size: 12px; line-height: 1.55; }
-    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 22px; min-width: 0; margin-top: 22px; align-items: start; }
-    .cards { display: grid; gap: 14px; min-width: 0; }
-    .review-card, .source-drawer, .strategy-drawer, .form-drawer {
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      background: var(--paper);
-      box-shadow: 0 5px 18px rgba(29, 44, 75, .045);
-    }
-    .review-card { min-width: 0; padding: 24px 26px; scroll-margin-top: 20px; }
-    .card-body { min-width: 0; }
-    .review-card h2 { margin: 0 0 14px; font-size: 20px; line-height: 1.3; letter-spacing: -.02em; }
-    .card-body > :first-child, .drawer-body > :first-child { margin-top: 0; }
-    .card-body > :last-child, .drawer-body > :last-child { margin-bottom: 0; }
-    p { margin: 10px 0; overflow-wrap: anywhere; }
-    ul, ol { margin: 10px 0; padding-left: 22px; }
-    li { margin: 6px 0; }
-    code { padding: 2px 5px; border-radius: 5px; color: #244079; background: #edf2fa; font: 650 .86em/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
-    blockquote { margin: 14px 0; padding: 12px 14px; border-left: 4px solid var(--blue); color: #45516a; background: var(--blue-soft); }
-    .table-scroll { width: 100%; max-width: 100%; overflow-x: auto; margin: 14px 0; border: 1px solid var(--line); border-radius: 10px; }
-    table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 14px; }
-    th, td { padding: 11px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
-    th { color: #34405a; background: #f4f7fb; font-size: 12px; }
-    tr:last-child td { border-bottom: 0; }
-    .review-rail { position: sticky; top: 18px; display: grid; gap: 12px; }
-    .rail-card { padding: 18px; border: 1px solid #cbd6e6; border-radius: 16px; background: #f8faff; }
-    .rail-card h2 { margin: 0 0 8px; font-size: 15px; }
-    .rail-card p { margin: 0; color: var(--muted); font-size: 13px; }
-    .rail-card a { display: block; padding: 7px 0; border-bottom: 1px solid #dfe6f1; color: #39455b; font-size: 13px; font-weight: 700; text-decoration: none; }
-    .rail-card a:last-child { border-bottom: 0; }
-    .supporting { display: grid; gap: 12px; margin-top: 22px; }
-    .source-drawer, .strategy-drawer, .form-drawer { overflow: hidden; margin-top: 22px; }
-    .source-drawer summary, .strategy-drawer summary, .form-drawer summary { display: flex; justify-content: space-between; gap: 18px; padding: 18px 20px; cursor: pointer; list-style: none; font-weight: 800; }
-    .source-drawer summary::-webkit-details-marker, .strategy-drawer summary::-webkit-details-marker, .form-drawer summary::-webkit-details-marker { display: none; }
-    .source-drawer summary span, .strategy-drawer summary span, .form-drawer summary span { color: var(--muted); font-size: 12px; font-weight: 650; }
-    .source-drawer[open] summary, .strategy-drawer[open] summary, .form-drawer[open] summary { border-bottom: 1px solid var(--line); }
-    .drawer-body { padding: 22px; overflow-wrap: anywhere; }
-    .drawer-body h1 { font-size: 24px; }
-    .drawer-body h2 { margin-top: 24px; font-size: 18px; }
-    .drawer-body h3 { margin-top: 18px; font-size: 16px; }
-    .secondary-files { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
-    .secondary-files a { padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; color: #33415b; background: #f8fafc; font-size: 13px; font-weight: 700; text-decoration: none; }
-    .supporting-section { padding: 4px 0 22px; border-bottom: 1px solid var(--line); }
-    .supporting-section + .supporting-section { padding-top: 22px; }
-    .supporting-section:last-child { padding-bottom: 0; border-bottom: 0; }
-    .supporting-section > h2:first-child { margin-top: 0; }
-    .form-meta { margin: 0 0 20px; color: var(--muted); font-size: 13px; }
-    .form-section { padding: 0 0 20px; border-bottom: 1px solid var(--line); }
-    .form-section + .form-section { padding-top: 20px; }
-    .form-section:last-child { padding-bottom: 0; border-bottom: 0; }
-    .form-section h3 { margin: 0 0 12px; font-size: 17px; }
-    .form-section dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
-    .form-section dl div { min-width: 0; padding: 11px 12px; border-radius: 9px; background: #f6f8fb; }
-    .form-section dt { color: var(--muted); font-size: 12px; }
-    .form-section dd { margin: 3px 0 0; font-weight: 700; overflow-wrap: anywhere; }
-    .question-answer { padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: #f8fafc; }
-    .question-answer + .question-answer { margin-top: 10px; }
-    .question-answer h4 { margin: 0 0 8px; font-size: 15px; }
-    .question-answer p { white-space: pre-wrap; }
-    .question-answer small { color: var(--muted); }
-    footer { padding: 24px 4px 0; color: var(--muted); font-size: 12px; text-align: center; }
-    @media (max-width: 760px) {
-      body { background: var(--canvas); font-size: 15px; }
-      .shell { width: min(100% - 24px, 680px); padding: 12px 0 44px; }
-      .hero { padding: 25px 20px 23px; border-radius: 16px; }
-      .hero::before { inset: 0 0 auto; width: 100%; height: 5px; }
-      h1 { font-size: 31px; }
-      .hero-copy { font-size: 16px; }
-      .layout { display: flex; flex-direction: column-reverse; gap: 12px; margin-top: 12px; }
-      .review-rail { position: static; width: 100%; }
-      .rail-card:first-child { display: none; }
-      .cards { width: 100%; gap: 10px; }
-      .review-card { padding: 20px 18px; border-radius: 13px; }
-      .review-card h2 { font-size: 18px; }
-      .supporting { margin-top: 12px; }
-      .source-drawer summary, .strategy-drawer summary, .form-drawer summary { padding: 17px 18px; }
-      .drawer-body { padding: 18px; }
-      .primary-files { margin-top: 12px; padding: 18px; }
-      .file-grid { grid-template-columns: 1fr; }
-      .action-panel { grid-template-columns: 1fr; gap: 12px; margin-top: 12px; padding: 18px; }
-      .action-panel li { grid-template-columns: 90px minmax(0, 1fr); }
-      .form-section dl { grid-template-columns: 1fr; }
-    }
-    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
-    @media print {
-      body { background: #fff; }
-      .shell { width: 100%; padding: 0; }
-      .hero, .review-card, .source-drawer { box-shadow: none; }
-      .review-rail { display: none; }
-      .layout { display: block; }
-      .review-card { break-inside: avoid; margin-bottom: 10px; }
-    }
-  </style>
-</head>
-<body>
-  <main class="shell">
-    <header class="hero" id="${slug(conclusion?.title ?? "결론")}">
-      <p class="eyebrow">APPLICATION REVIEW DESK</p>
-      <h1>${escapeHtml(title)}</h1>
-      ${conclusion ? `<div class="hero-copy">${renderMarkdown(conclusion.body)}</div>` : ""}
-      <div class="status-row" aria-label="지원 준비 상태">
-        <span class="status readiness-${status.readiness}">${READINESS_LABELS[status.readiness]}</span>
-        <span class="status evidence-${status.evidence}">${EVIDENCE_LABELS[status.evidence]}</span>
-        <span class="status human-${status.humanConfirmation}">${HUMAN_CONFIRMATION_LABELS[status.humanConfirmation]}</span>
-        <span class="status ${assets.submissionReady ? "evidence-safe" : "evidence-revise"}">${submissionLabel}</span>
-      </div>
-    </header>
-
-    ${actionPanel(status, assets)}
-    ${primaryFiles(applicationForm, assets)}
-
-    <div class="layout">
-      <section class="cards" aria-label="지원 검토 내용">${cards}</section>
-      <aside class="review-rail" aria-label="검토 안내">
-        <section class="rail-card">
-          <h2>검토 순서</h2>
-          <p>지금 할 일과 제출 자료를 먼저 확인하세요. 승부처, 지원동기와 보완할 공백을 읽고 세부 근거는 필요한 경우에만 펼칩니다.</p>
-        </section>
-        <nav class="rail-card" aria-label="빠른 이동">
-          ${primarySections.map((section) => `<a href="#${slug(section.title)}">${escapeHtml(section.title)}</a>`).join("\n")}
-        </nav>
-      </aside>
-    </div>
-
-    ${applicationFormPanel(applicationForm)}
-    <details class="strategy-drawer">
-      <summary>지원 전략 상세<span>회사 기준, 근거와 기여 시나리오</span></summary>
-      <div class="drawer-body">${secondaryDetails}</div>
-    </details>
-    <section class="supporting" aria-label="상세 자료">
-      ${supportingDetails(interviewMarkdown, resumeMarkdown, assets, questionsMarkdown)}
-    </section>
-    <footer>로컬 검토용 문서입니다. 실제 제출이나 외부 공개는 별도 승인 뒤 진행합니다.</footer>
-  </main>
-</body>
-</html>`;
+  return fillTemplate(readTemplate("application-package.html"), {
+    TITLE: escapeHtml(title),
+    STYLE: readTemplate("application-package.css"),
+    STATUS_BADGES: statusBadges,
+    CONCLUSION: [
+      conclusion ? `<div class="hero-copy">${renderMarkdown(conclusion.body)}</div>` : "",
+      heroNotes ? `<div class="hero-notes">${heroNotes}</div>` : "",
+    ].filter(Boolean).join("\n      "),
+    PRIMARY_FILES: [
+      actionPanel(status, assets),
+      primaryFiles(applicationForm, assets),
+      applicationFormPanel(applicationForm),
+    ].filter(Boolean).join("\n    "),
+    TAB_BUTTONS: tabs.buttons,
+    TAB_PANELS: tabs.panels,
+    GENERATED_AT: escapeHtml(generatedAt ?? new Date().toISOString()),
+  });
 }
 
 export function renderApplicationPackage(applicationDirectory: string, outputPath?: string): string {
@@ -622,10 +521,11 @@ export function renderApplicationPackage(applicationDirectory: string, outputPat
   const validation = validateApplicationPackage(directory);
   if (!validation.passed) throw new Error(validation.errors.join("\n"));
 
-  const packageMarkdown = read(join(directory, "application-package.md"));
-  const interviewMarkdown = read(join(directory, "candidate-interview.md"));
-  const resumeMarkdown = read(join(directory, "resume-draft.md"));
-  const applicationFormPath = join(directory, "application-form.json");
+  const packageMarkdown = read(join(directory, "evidence", "application-package.md"));
+  const interviewMarkdown = read(join(directory, "evidence", "candidate-interview.md"));
+  const resumeMarkdown = read(join(directory, "evidence", "resume-draft.md"));
+  const applicationFormPath = join(directory, "evidence", "application-form.json");
+  const postingPath = join(directory, "evidence", "posting.md");
   const submission = validateSubmissionBundle(directory);
   const html = renderApplicationPackageHtml(
     packageMarkdown,
@@ -640,6 +540,7 @@ export function renderApplicationPackage(applicationDirectory: string, outputPat
       submissionBlockers: submission.errors,
     },
     renderInterviewQuestions(directory),
+    existsSync(postingPath) ? read(postingPath) : undefined,
   );
   const destination = resolve(outputPath ?? join(directory, "application-package.html"));
   mkdirSync(dirname(destination), { recursive: true });

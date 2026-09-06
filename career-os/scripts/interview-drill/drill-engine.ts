@@ -10,7 +10,7 @@
  *   - career-os/public/question-bank/{기술 카테고리}/questions.json  (tech)
  *   - career-os/public/question-bank/behavioral/questions.json  (behavioral)
  *   - career-os/library/question-bank/{tech|behavioral}-personal.jsonl  (있으면 merge)
- *   - applications/<company>/<position>/interview-questions.json  (--application-dir로 지정)
+ *   - applications/<company>/<position>/evidence/interview-questions.json  (--application-dir로 지정)
  *   - career-os/state/drill-progress.json  (드릴 간격 반복 상태)
  *   - career-os/state/drill-log-YYYY-MM-DD.jsonl  (자동 생성)
  */

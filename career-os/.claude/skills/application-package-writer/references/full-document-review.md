@@ -5,10 +5,10 @@
 
 ## 검토 대상
 
-- `application-package.md`에서 사용자가 먼저 읽는 결론, 승부처, 지원동기, 공백과 다음 행동
-- `resume-draft.md`의 프로필, 프로젝트, 경력과 기술 목록
-- 경력기술서가 있으면 `career-description-draft.md` 전체
-- `application-form.json`의 서술형 답변
+- `evidence/application-package.md`에서 사용자가 먼저 읽는 결론, 승부처, 지원동기, 공백과 다음 행동
+- `evidence/resume-draft.md`의 프로필, 프로젝트, 경력과 기술 목록
+- 경력기술서가 있으면 `evidence/career-description-draft.md` 전체
+- `evidence/application-form.json`의 서술형 답변
 - 위 원본에서 생성한 HTML과 PDF의 실제 표시 문구
 
 내부 근거 경로와 검토 상태는 제출 문장이 아니므로 표현 검토에서 제외하되, 외부 문장과 근거가 같은 범위를 가리키는지는 확인한다.
@@ -50,4 +50,4 @@
 수정된 문구는 주장 근거 감사와 하드 리뷰를 다시 받아야 한다.
 
 전수 검토 결과를 별도 Markdown 파일로 만들지 않는다.
-고칠 수 있는 내용은 원본에 반영하고, 남은 사실 질문은 `candidate-interview.md`, 근거 판정은 claim ledger, 설득력 판정은 scorecard에 기록한다.
+고칠 수 있는 내용은 원본에 반영하고, 남은 사실 질문은 `evidence/candidate-interview.md`, 근거 판정은 claim ledger, 설득력 판정은 scorecard에 기록한다.

@@ -1,0 +1,28 @@
+{
+  "name": "plan112-application-output-layers",
+  "description": "지원 산출물을 최상위·evidence·review 세 층으로 나누고 검토 화면을 네 탭으로 바꾼다.",
+  "status": "completed",
+  "created_at": "2026-09-06",
+  "total_phases": 3,
+  "current_phase": 3,
+  "phases": [
+    {
+      "number": 1,
+      "title": "산출물 경로를 세 층으로 바꾼다",
+      "file": "phase-01.md",
+      "execution_profile": "deep"
+    },
+    {
+      "number": 2,
+      "title": "지원 전략 원본에 공고 항목별 적합도를 넣는다",
+      "file": "phase-02.md",
+      "execution_profile": "standard"
+    },
+    {
+      "number": 3,
+      "title": "검토 화면을 탭으로 바꾸고 템플릿을 분리한다",
+      "file": "phase-03.md",
+      "execution_profile": "deep"
+    }
+  ]
+}

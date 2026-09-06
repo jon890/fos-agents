@@ -46,7 +46,7 @@
 이 워크스페이스에서는 프로젝트 코드처럼 편집하거나 자동 발행하지 않는다.
 
 career-os는 수집, 리포트 생성, skill 실행, private 산출물, 피드백 루프 기록을 파일과 skill 계약으로 직접 관리한다.
-지원 준비 상태는 각 `applications/` 디렉터리의 `application-package.md`에서 관리한다.
+지원 준비 상태는 각 `applications/` 디렉터리의 `evidence/application-package.md`에서 관리한다.
 
 
 사용자가 보는 분석·추천 결과는 HTML로 만들고 구체적인 생성 흐름은 [`docs/flow.md`](docs/flow.md)를 따른다.

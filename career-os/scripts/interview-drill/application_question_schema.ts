@@ -42,7 +42,7 @@ export type ApplicationInterviewQuestionsFile = z.infer<
 export function applicationQuestionFilePath(inputPath: string): string {
   const absolute = resolve(inputPath);
   if (existsSync(absolute) && statSync(absolute).isDirectory()) {
-    return join(absolute, "interview-questions.json");
+    return join(absolute, "evidence", "interview-questions.json");
   }
   return absolute;
 }
@@ -79,7 +79,7 @@ export function loadApplicationInterviewQuestions(
 if (import.meta.main) {
   const inputPath = process.argv[2];
   if (!inputPath) {
-    console.error("사용법: application_question_schema.ts <application-directory|interview-questions.json>");
+    console.error("사용법: application_question_schema.ts <application-directory|evidence/interview-questions.json>");
     process.exit(2);
   }
 

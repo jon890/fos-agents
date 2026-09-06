@@ -28,7 +28,7 @@ description: 기술·인성·포지션별 면접 질문을 준비하고 한 번�
 - `mode=tech`: 현재 주력 backend 기술, 데이터베이스, CS, 운영, 시스템 설계 질문
 - `mode=behavioral`: 협업, 문제 해결, 실패, 고객 영향, 가치관 질문
 - private brain의 현재 지원 대상: 포지션별 연습을 요청했으면 `brain-search`로 확인
-- `applications/<company>/<role>/interview-questions.json`: 공고 책임, 근거 방어와 경험 공백 질문
+- `applications/<company>/<role>/evidence/interview-questions.json`: 공고 책임, 근거 방어와 경험 공백 질문
 - `state/drill-progress.json`: 질문별 복습 상태
 
 사용자가 모드를 정하지 않았고 의도가 불분명할 때만 기술 또는 인성 중 하나를 묻는다.
@@ -43,7 +43,7 @@ description: 기술·인성·포지션별 면접 질문을 준비하고 한 번�
 
 ## 포지션 질문 준비
 
-현재 지원 대상이 있으면 공고, `application-package.md`, 최신 이력서와 경력기술서에서 질문을 만든다.
+현재 지원 대상이 있으면 공고, `evidence/application-package.md`, 최신 이력서와 경력기술서에서 질문을 만든다.
 질문은 다음 출처를 구분한다.
 
 - `posting_requirement`: 공고가 직접 요구하는 책임과 설계 판단
@@ -121,7 +121,7 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/interview-drill/drill-en
 - 일별 기록: `state/drill-log-YYYY-MM-DD.jsonl`
 - 기술과 인성은 `drillType`으로 구분한다.
 - 개인 경험 기반 질문은 `library/question-bank/`에만 추가한다.
-- 포지션별 질문은 해당 지원 디렉터리의 `interview-questions.json`에만 둔다.
+- 포지션별 질문은 해당 지원 디렉터리의 `evidence/interview-questions.json`에만 둔다.
 - private brain과 `sources/fos-study/`는 수정하지 않는다.
 - 실제 면접 일정, 지원 전략과 회사별 비공개 정보는 공개 질문 은행에 넣지 않는다.
 - 유료 강의, 문제집과 면접 후기의 질문·답변 원문을 공개 질문 은행에 복사하지 않는다.

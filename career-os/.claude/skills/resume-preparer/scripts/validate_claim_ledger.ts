@@ -181,7 +181,7 @@ if (import.meta.main) {
   if (!ledgerPath || !artifactPath || !existsSync(ledgerPath)) {
     console.error(JSON.stringify({
       passed: false,
-      error: "사용법: validate_claim_ledger.ts <claim-ledger.json> --artifact <resume.html>",
+      error: "사용법: validate_claim_ledger.ts <review/claim-ledger.json> --artifact <review/resume.html>",
     }, null, 2));
     process.exit(2);
   }

@@ -164,30 +164,57 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 
 ## 지원 패키지
 
-공고별 `applications/<company>/<position>/`에는 다음 산출물을 둘 수 있다.
+공고별 `applications/<company>/<position>/`는 세 층으로 나뉜다.
+파일이 어느 층에 있는지가 누가 그 파일을 여는지를 정한다.
 
+| 층 | 여는 주체 | 담는 것 |
+| --- | --- | --- |
+| 디렉터리 최상위 | 사용자 | `application-package.html`과 현재 공고가 요구하는 제출 PDF |
+| `evidence/` | skill과 사람 | 기준 원본 Markdown과 구조화 입력 |
+| `review/` | 검증기 | 근거 장부, 점수표, manifest와 제출 문서 HTML |
+
+### 최상위
+
+- `application-package.html`: 기준 원본과 현재 제출 파일을 묶은 로컬 검토 화면
+- `resume.pdf`: 이력서 제출본
+- `career-description.pdf`: 경력기술서를 받는 공고에만 둔다
+- `submission.pdf`: 한 파일 제출을 요구하는 공고에만 둔다
+
+### `evidence/`
+
+- `posting.md`: 공고 원문을 항목으로 나눈 기준본이며 원문 표현이 판단을 가르는 곳은 낱말을 그대로 남긴다
 - `candidate-interview.md`: 후보자 원문 답변, 정리한 핵심과 제출 반영 여부
-- `application-package.md`: 공고·회사 기준, 후보자 근거, 지원 판단, 승부처, 공백과 다음 행동을 담은 원본
+- `application-package.md`: 공고 항목별 적합도, 후보자 근거, 지원 판단, 승부처, 공백과 다음 행동을 담은 원본
 - `resume-draft.md`: HTML과 PDF로 변환할 제출용 이력서 원본
 - `interview-questions.json`: 공고 책임, 근거 방어와 경험 공백에서 만든 포지션별 질문
+- `career-description-draft.md`: 경력기술서를 받는 공고에만 둔다
+- `application-form.json`: 브라우저 자동 입력을 준비할 때만 둔다
 
-위 네 파일이 기본 원본이다.
+앞의 다섯이 기본 원본이다.
 `application-package-writer`는 지원 판단과 후보자 인터뷰를 관리하고, `resume-preparer`는 `resume-draft.md`와 제출 문서를 관리한다.
-`application-package.html`은 기본 원본과 현재 제출 파일을 묶은 로컬 검토 화면이다.
-첫 영역에는 현재 할 일, 제출 후보 PDF와 조건부 지원서 입력값만 표시한다.
-승부처, 지원동기, 공백과 다음 행동만 펼쳐 보여주고 회사 기준, 전체 근거, 기여 시나리오, 이력서 원문, 개별 PDF, 면접 질문과 후보자 인터뷰 기록은 닫힌 상세 영역에 표시한다.
-근거 장부, 점수표, manifest와 제출 문서 HTML은 링크로 노출하지 않는다.
-현재 파일은 생성기와 검증기의 상대 경로 계약을 유지하기 위해 공고 디렉터리 바로 아래에 둔다.
-브라우저 자동 입력을 준비하면 `application-form.json`을 추가한다.
-이 파일은 private brain 공통 프로필의 현재 스냅샷, 회사별 선택값, 첨부 파일과 서술형 질문을 구조화한다.
+`application-form.json`은 private brain 공통 프로필의 현재 스냅샷, 회사별 선택값, 첨부 파일과 서술형 질문을 구조화한다.
 서술형 문항이 없는 지원 건은 `questions`를 빈 배열로 둔다.
-경력기술서를 받는 공고에는 `career-description-draft.md`를 추가한다.
-최종 제출 단계에서는 `resume.html`과 `resume.pdf`를 파생한다.
-경력기술서가 필요한 지원 건은 `career-description.html`, `career-description.pdf`와 한 파일 제출용 `submission.pdf`를 추가한다.
-`submission-manifest.json`은 각 PDF의 파일 해시와 원본 HTML의 문구 해시를 연결한다.
-지원 패키지 검증기는 이 스키마에 없는 파일을 거부해 일회성 검토 문서가 공고 디렉터리에 쌓이지 않게 한다.
 
-`application-package.md`의 준비 상태는 `ready`, `needs_user_input`, `revise`, `do_not_apply` 중 하나다.
+### `review/`
+
+- `resume.html`과 `career-description.html`: PDF를 만든 원본
+- `claim-ledger.json`과 `career-description-claim-ledger.json`: 주장별 근거 장부
+- `resume-scorecard.md`와 `career-description-scorecard.md`: 블라인드 하드 리뷰 결과
+- `submission-manifest.json`: 각 PDF의 파일 해시와 원본 HTML의 문구 해시를 연결한다
+
+이 층의 파일은 사용자용 링크로 노출하지 않는다.
+검증에는 사용하므로 현재 제출 문구와 PDF가 같은 버전인지 증명한다.
+
+### 검토 화면
+
+`application-package.html`은 준비 상태, 결론, 제출 PDF와 조건부 지원서 입력값을 탭 밖 상단에 고정한다.
+본문은 `공고 적합도`, `지원 전략`, `공고 원문`, `상세 자료` 네 탭으로 나눈다.
+`공고 적합도` 탭의 첫 내용은 공고 항목 하나에 한 행을 주는 적합도 표다.
+`공고 원문` 탭은 `evidence/posting.md`를 읽어 보여주며 원문을 다른 파일에 복제하지 않는다.
+
+지원 패키지 검증기는 이 스키마에 없는 파일과 층이 어긋난 파일을 거부해 일회성 검토 문서가 쌓이지 않게 한다.
+
+`evidence/application-package.md`의 준비 상태는 `ready`, `needs_user_input`, `revise`, `do_not_apply` 중 하나다.
 이 상태는 합격 가능성 점수가 아니라 현재 근거와 사용자 확인을 기준으로 한 제출 준비 상태다.
 첫 10줄의 `human-confirmation`은 동기, 본인 역할, 당시 제약, 기각한 대안과 결과의 확인 범위처럼 후보자만 확정할 수 있는 항목의 상태다.
 값은 `complete` 또는 `needs_input`이며, `needs_input`이면 준비 상태를 `ready`로 둘 수 없다.
@@ -198,30 +225,23 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 
 ## 제출 문서 근거 감사
 
-근거 감사 자료는 대상 제출 문서와 같은 `applications/<company>/<position>/`에 둔다.
+근거 감사 자료는 대상 제출 문서와 같은 지원 디렉터리의 `review/`에 둔다.
+파일 목록은 위 「지원 패키지」의 `review/`가 소유한다.
 작성, 근거 감사와 평가는 `resume-preparer`의 순차 단계이며 별도 사용자 스킬로 나누지 않는다.
 
-주요 파일:
-
-- `claim-ledger.json`: 이력서 주장, 근거, 판정, 소유권 범위
-- `resume-scorecard.md`: 이력서 평가와 남은 개선점
-- `career-description-claim-ledger.json`: 경력기술서 주장과 근거 판정
-- `career-description-scorecard.md`: 경력기술서 평가와 남은 개선점
-- `submission-manifest.json`: 현재 HTML과 PDF 제출 묶음의 해시
-
 claim ledger를 다시 설명하는 evidence audit는 별도 파일로 만들지 않는다.
-대표 사례의 설명 준비와 방어할 판단은 `interview-questions.json`이 담당한다.
+대표 사례의 설명 준비와 방어할 판단은 `evidence/interview-questions.json`이 담당한다.
 
 근거 장부는 대상 HTML의 내용 해시와 연결해 다른 버전의 증거를 잘못 재사용하지 않게 한다.
 `schemaVersion: 2`부터 기술 범위, 경력 기간, 운영과 숙련도 주장은 `experienceDepth`에 사용, 기능 개발, 운영 깊이 또는 사용자 확인 수준을 기록한다.
 `safe`가 아닌 판정이 하나라도 남으면 제출 준비가 끝난 것으로 보지 않는다.
-`resume-scorecard.md`에는 블라인드 채용 담당자·기술 리더 판정, 경쟁상 차단 항목, 근거 방어 결과와 통제할 수 없는 위험을 기록한다.
+`review/resume-scorecard.md`에는 블라인드 채용 담당자·기술 리더 판정, 경쟁상 차단 항목, 근거 방어 결과와 통제할 수 없는 위험을 기록한다.
 정량 점수로 약한 필수 조건을 상쇄하지 않으며 두 블라인드 검토자가 모두 통과해야 한다.
 
 ## 면접 자료
 
 현재 지원 대상은 private brain에서 찾고 대응하는 `applications/<company>/<position>/`을 실행 경로로 사용한다.
-포지션별 질문은 해당 지원 디렉터리의 `interview-questions.json`에 둔다.
+포지션별 질문은 해당 지원 디렉터리의 `evidence/interview-questions.json`에 둔다.
 공개 가능한 일반 질문은 `public/question-bank/`에 둔다.
 질문 출처의 공식 URL, 게시자, 확인일과 적용 범위는 `public/question-bank/sources.json`에 둔다.
 각 질문의 `source`는 이 레지스트리의 식별자를 참조한다.
