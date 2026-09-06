@@ -1,0 +1,28 @@
+{
+  "name": "plan001-photo-to-draft",
+  "description": "홈서버 사진 저장소를 SSH 경유로 연결하고 아이폰으로 올린 사진에서 지융로그 초안과 네이버 임시저장까지 만든다.",
+  "status": "pending",
+  "created_at": "2026-09-04",
+  "total_phases": 3,
+  "current_phases": 0,
+  "phases": [
+    {
+      "number": 1,
+      "title": "홈서버 사진 저장소 접근",
+      "file": "phase-01.md",
+      "execution_profile": "deep"
+    },
+    {
+      "number": 2,
+      "title": "맥북 사진 전달과 촬영시각 순서",
+      "file": "phase-02.md",
+      "execution_profile": "deep"
+    },
+    {
+      "number": 3,
+      "title": "스킬 절차와 네이버 임시저장",
+      "file": "phase-03.md",
+      "execution_profile": "deep"
+    }
+  ]
+}
