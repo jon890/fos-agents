@@ -17,11 +17,12 @@ export type SubmissionBundleValidation = {
   artifacts: string[];
 };
 
-function packageStatus(directory: string): { evidence?: string; humanConfirmation?: string } {
+function packageStatus(directory: string): { readiness?: string; evidence?: string; humanConfirmation?: string } {
   const path = join(directory, "evidence", "application-package.md");
   if (!existsSync(path)) return {};
   const opening = readFileSync(path, "utf8").split(/\r?\n/).slice(0, 10).join("\n");
   return {
+    readiness: opening.match(/^- readiness:\s*(\S+)\s*$/m)?.[1],
     evidence: opening.match(/^- evidence:\s*(\S+)\s*$/m)?.[1],
     humanConfirmation: opening.match(/^- human-confirmation:\s*(\S+)\s*$/m)?.[1],
   };
@@ -123,6 +124,9 @@ export function validateSubmissionBundle(applicationDirectory: string): Submissi
   const errors: string[] = [];
   const status = packageStatus(directory);
 
+  if (status.readiness !== "ready") {
+    errors.push("evidence/application-package.md의 readiness가 ready가 아닙니다.");
+  }
   if (status.evidence !== "safe") {
     errors.push("evidence/application-package.md의 evidence가 safe가 아닙니다.");
   }
