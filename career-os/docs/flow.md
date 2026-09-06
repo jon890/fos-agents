@@ -40,6 +40,27 @@ journal과 실제 경로가 모순되면 자동 정리하지 않고 `RESTORE_REQ
 관리 root 안의 `.env`, 숨김 파일과 `.omc`는 원격으로 보내지 않으며, `prepare`가 발견하면 삭제하지 않고 `WORKSPACE_DIRTY`로 중단한다.
 `.DS_Store`와 `Thumbs.db`는 운영체제 메타데이터로 분류해 작업 변경에서 제외한다.
 
+### skill이 실행하는 명령
+
+`applications`, `library` 또는 `state`를 읽기 전에 저장소 루트 기준 CLI에 현재 skill 이름을 전달한다.
+
+```bash
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts" \
+  skill begin <SKILL_NAME> --json
+```
+
+이 명령이 실패하면 기존 로컬 파일로 작업을 계속하지 않는다.
+오류 코드와 로컬 파일이 보존됐다는 사실을 알리고 중단한다.
+
+산출물과 상태 검사가 성공한 뒤 같은 이름으로 완료 단계를 실행한다.
+
+```bash
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts" \
+  skill finish <SKILL_NAME> --json
+```
+
+완료 단계가 실패해도 로컬 결과를 지우지 않는다.
+
 ## 포지션 추천
 
 외부 채용 소스의 열린 공고에서 실제 지원 후보를 고른다.

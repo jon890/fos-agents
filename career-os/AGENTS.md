@@ -19,7 +19,6 @@
 | [`docs/flow.md`](docs/flow.md)                           | 사용자 입력부터 산출물까지의 흐름       | 새 실행 흐름 추가, 디버깅     |
 | [`docs/code-architecture.md`](docs/code-architecture.md) | 디렉터리 책임, 외부 의존, 실행 구조    | 코드 구조 변경, 새 스크립트 추가 |
 | [`docs/adr/INDEX.md`](docs/adr/INDEX.md)                 | 결정의 이유와 대안 기각 기록         | 정책 변경, 되돌리기 어려운 결정  |
-| [`docs/workspace-sync.md`](docs/workspace-sync.md)       | 비공개 작업본 동기화 계약           | skill 실행 전후 동기화 처리   |
 
 
 ## 작업 경계
