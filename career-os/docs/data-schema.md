@@ -4,7 +4,7 @@ career-os는 사람이 관리하는 설정, 실행 상태, 비공개 산출물, 
 
 ## 저장 원칙
 
-- `config/`에는 오래 유지할 수집 정책과 디자인 기준을 둔다.
+- `config/`에는 오래 유지할 수집 정책을 둔다.
 - `applications/`, `library/`와 `state/`는 홈서버 `career-os` S3 collection의 release와 동기화하는 로컬 작업본이다.
 - `cache/`에는 원본에서 다시 만들 수 있는 수집 결과를 둔다.
 - `public/`과 `sources/fos-study/`에는 공개 가능한 자료만 둔다.
@@ -81,13 +81,21 @@ SSH 환경은 `CAREER_WORKSPACE_SSH_TARGET`, `CAREER_WORKSPACE_SSH_ARGS`와 `CAR
 S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 client에 전달하지 않는다.
 근거 원장의 `${PROJECTS_ROOT}`와 `${PERSONAL_ROOT}`는 환경마다 같은 이름의 변수로 해석하며 release에는 환경별 절대 경로를 저장하지 않는다.
 
-## Config
+## 스킬 참조
 
-### `config/resume-writing-style.md`
+### `.claude/skills/resume-preparer/references/resume-writing-style.md`
 
 모든 공고의 이력서와 경력기술서에 공통으로 적용하는 작성 기준이다.
 구체적인 업무를 먼저 쓰는 방법, 지표를 설명하는 순서, 전후 비교 조건과 실제 담당 범위를 관리한다.
 `resume-preparer`는 제출 문서를 작성하거나 수정하기 전에 이 파일을 읽고 렌더링 전에 다시 점검한다.
+
+### `.claude/skills/resume-preparer/references/resume-design.md`
+
+모든 공고의 이력서와 경력기술서에 기본으로 적용하는 디자인 판단과 검증 기준이다.
+기본 CSS는 `.claude/skills/resume-preparer/assets/resume.css`에 둔다.
+공고별 스타일은 `export_resume.ts --design <path>`에 CSS 파일이나 `css` 코드 블록이 있는 Markdown 파일을 명시한다.
+
+## Config
 
 ### `config/external-reading-sources.ts`
 
@@ -199,7 +207,7 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 
 - `resume.html`과 `career-description.html`: PDF를 만든 원본
 - `claim-ledger.json`과 `career-description-claim-ledger.json`: 주장별 근거 장부
-- `resume-scorecard.md`와 `career-description-scorecard.md`: 블라인드 하드 리뷰 결과
+- `resume-scorecard.md`와 `career-description-scorecard.md`: 인사담당자와 실무담당자 리뷰 결과
 - `submission-manifest.json`: 각 PDF의 파일 해시와 원본 HTML의 문구 해시를 연결한다
 
 이 층의 파일은 사용자용 링크로 노출하지 않는다.
@@ -255,10 +263,10 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 
 `evidence/application-package.md`의 준비 상태는 `ready`, `needs_user_input`, `revise`, `do_not_apply` 중 하나다.
 이 상태는 합격 가능성 점수가 아니라 현재 근거와 사용자 확인을 기준으로 한 제출 준비 상태다.
-첫 10줄의 `human-confirmation`은 동기, 본인 역할, 당시 제약, 기각한 대안과 결과의 확인 범위처럼 후보자만 확정할 수 있는 항목의 상태다.
+첫 10줄의 `human-confirmation`은 본인 역할, 당시 제약, 기각한 대안, 결과의 확인 범위와 제출 문구 동의처럼 후보자만 확정할 수 있는 사실과 표현 확인 상태다.
 값은 `complete` 또는 `needs_input`이며, `needs_input`이면 준비 상태를 `ready`로 둘 수 없다.
 
-공고별 개인 근거와 면접 준비는 해당 `applications/<company>/<position>/`에 둔다.
+공고별 개인 근거와 면접 질문은 해당 `applications/<company>/<position>/`에 둔다.
 여러 지원에서 재사용하는 개인 질문은 `library/question-bank/`에 둔다.
 특정 지원에 종속되지 않는 이력서 기준본은 `library/resume-baselines/`에 둔다.
 
@@ -269,12 +277,13 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 작성, 근거 감사와 평가는 `resume-preparer`의 순차 단계이며 별도 사용자 스킬로 나누지 않는다.
 
 claim ledger를 다시 설명하는 evidence audit는 별도 파일로 만들지 않는다.
-대표 사례의 설명 준비와 방어할 판단은 `evidence/interview-questions.json`이 담당한다.
+면접에서 확인할 질문은 필요할 때 `evidence/interview-questions.json`에 선택적으로 남긴다.
+질문 생성 여부와 답변 여부는 제출 문서의 준비 상태를 결정하지 않는다.
 
 근거 장부는 대상 HTML의 내용 해시와 연결해 다른 버전의 증거를 잘못 재사용하지 않게 한다.
 `schemaVersion: 2`부터 기술 범위, 경력 기간, 운영과 숙련도 주장은 `experienceDepth`에 사용, 기능 개발, 운영 깊이 또는 사용자 확인 수준을 기록한다.
 `safe`가 아닌 판정이 하나라도 남으면 제출 준비가 끝난 것으로 보지 않는다.
-`review/resume-scorecard.md`에는 블라인드 채용 담당자·기술 리더 판정, 경쟁상 차단 항목, 근거 방어 결과와 통제할 수 없는 위험을 기록한다.
+`review/resume-scorecard.md`에는 독립된 인사담당자와 실무담당자 판정, 경쟁상 차단 항목, 근거 방어 결과와 통제할 수 없는 위험을 기록한다.
 정량 점수로 약한 필수 조건을 상쇄하지 않으며 두 블라인드 검토자가 모두 통과해야 한다.
 
 ## 면접 자료
