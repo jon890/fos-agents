@@ -27,7 +27,6 @@ career-os/
 | 경로 | 책임 |
 | --- | --- |
 | `.claude/skills/<name>/SKILL.md` | 사용자 요청별 실행 계약의 관리 원본 |
-| `.claude/skills/_shared/` | 여러 skill이 공유하는 비공개 작업본 동기화 계약 |
 | `.codex/skills/<name>` | Codex가 같은 skill을 읽는 링크 |
 | `config/*.ts` | 공고, 읽을거리와 면접 자료의 수집 정책 |
 | `config/resume-writing-style.md` | 모든 이력서와 경력기술서에 적용하는 표현과 근거 범위 기준 |
