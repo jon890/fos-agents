@@ -37,7 +37,9 @@ bun career-os/scripts/career-workspace/cli.ts skill begin resume-preparer --json
 ### 2. 대표 사례 사실 확인
 
 `evidence/candidate-interview.md`에서 대표 사례에 대해 이미 확인한 내용을 읽는다.
-현재 경력, 역할 선호와 경험 경계의 추가 확인이 필요하면 `brain-search`로 찾는다.
+현재 경력, 역할 선호와 경험 경계는 [references/brain-context.md](references/brain-context.md)에 따라 `brain-search`로 조회한다.
+같은 편집 흐름에서 이미 확인한 정보는 재사용하고, 추가 사실이 필요하거나 사용자 정정이 생긴 부분만 다시 조회한다.
+조회 결과가 없거나 도구가 실패하면 그 차이를 밝히고 현재 확인된 근거로 편집을 계속한다.
 
 후보자만 확정할 수 있는 항목은 제출 문장을 바꾸는 사실과 표현 동의로 제한한다.
 서로 독립적인 질문은 최대 6개까지 묶고, 한 답이 다음 질문을 바꾸면 한 가지씩 확인한다.
@@ -54,10 +56,11 @@ bun career-os/scripts/career-workspace/cli.ts skill begin resume-preparer --json
 공고의 공식 작성 안내를 우선하고, 회사별 기준이 있으면 `career-os/library/company-notes/<회사>.md`에서 이력서 안내와 전형 구조를 확인한다.
 공식 안내가 없으면 문제, 중요성과 제약, 본인 역할과 판단, 결과와 검증 순서로 쓴다.
 
+- 개인 작성 취향: [references/resume-taste.md](references/resume-taste.md)
 - 공통 작성 기준: [references/resume-writing-style.md](references/resume-writing-style.md)
 - 심사자 관점: [references/reviewer-lens.md](references/reviewer-lens.md)
 
-기준이 충돌하면 **공고 안내, 회사별 기준, 공통 작성 기준, 심사자 관점 순**으로 적용한다.
+기준이 충돌하면 **공고 안내, 회사별 기준, 개인 작성 취향, 공통 작성 기준, 심사자 관점 순**으로 적용한다.
 첫 사례는 다음 단계로 넘길 이유를 가장 빨리 설명하는 사례로 고른다.
 
 - `evidence/resume-draft.md`에는 공고에 맞는 대표 근거를 선별한다.
@@ -66,6 +69,8 @@ bun career-os/scripts/career-workspace/cli.ts skill begin resume-preparer --json
 원고와 산출물 형식은 [career-os/docs/data-schema.md](../../../docs/data-schema.md)의 「지원 패키지」를 따른다.
 같은 경험의 대상, 역할, 수치와 기간을 지원 전략, 이력서, 경력기술서와 지원서 답변에서 맞춘다.
 참조는 [career-os/.claude/skills/application-package-writer/references/full-document-review.md](../application-package-writer/references/full-document-review.md)다.
+사용자와 새로 합의한 내용이 개인 작성 취향이면 `resume-taste.md` 갱신 후보로, 재사용할 개인 사실이나 결정이면 `brain-add` 미리보기 후보로, 지원별 표현과 수치이면 기존 `candidate-interview.md` 계약으로 나눈다.
+`brain-add`의 저장 후보 판정, 사용자 승인과 public 또는 private 선택은 해당 스킬의 계약을 따른다.
 
 문서 검토 중 면접에서 확인할 질문을 발견하면 `evidence/interview-questions.json`에 선택적으로 남긴다.
 답변 연습과 말하기 준비는 `interview-practice`로 이어간다.
