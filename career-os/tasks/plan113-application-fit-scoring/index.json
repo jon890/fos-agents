@@ -1,6 +1,6 @@
 {
   "name": "plan113-application-fit-scoring",
-  "description": "application-package-writer 의 목표를 적합도 판정으로 세우고, 판정을 가중 점수와 색 원으로 표시한다.",
+  "description": "application-package-writer 의 목표를 적합도 판정으로 세우고 실행 절차를 단계 표로 바꾼 뒤, 판정을 가중 점수와 색 원으로 표시한다.",
   "status": "pending",
   "created_at": "2026-09-06",
   "total_phases": 3,
@@ -8,7 +8,7 @@
   "phases": [
     {
       "number": 1,
-      "title": "스킬 목표와 실행 절차를 다시 쓴다",
+      "title": "스킬 목표와 실행 절차를 다시 쓰고 산출물 계약을 제자리로 옮긴다",
       "file": "phase-01.md",
       "execution_profile": "deep"
     },
