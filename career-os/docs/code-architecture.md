@@ -27,6 +27,7 @@ career-os/
 | 경로 | 책임 |
 | --- | --- |
 | `.claude/skills/<name>/SKILL.md` | 사용자 요청별 실행 계약의 관리 원본 |
+| `.claude/skills/application-package-writer/templates/` | 검토 화면의 HTML 골격과 CSS |
 | `.codex/skills/<name>` | Codex가 같은 skill을 읽는 링크 |
 | `config/*.ts` | 공고, 읽을거리와 면접 자료의 수집 정책 |
 | `config/resume-writing-style.md` | 모든 이력서와 경력기술서에 적용하는 표현과 근거 범위 기준 |
@@ -35,7 +36,9 @@ career-os/
 | `scripts/position-recommender/` | 활성 공고 수집, 추천 검증과 HTML 생성 |
 | `scripts/study-topic-recommender/` | 읽을거리 수집, 선별 결과 검증과 HTML 생성 |
 | `scripts/interview-drill/` | 질문 선택, 꼬리질문과 복습 상태 관리 |
-| `applications/<company>/<position>/` | 공고별 지원 전략, 제출 문서와 면접 질문 |
+| `applications/<company>/<position>/` | 사용자가 여는 검토 화면과 제출 PDF |
+| `applications/<company>/<position>/evidence/` | 공고 원문, 후보자 인터뷰, 지원 전략과 제출 문서 원본 |
+| `applications/<company>/<position>/review/` | 근거 장부, 점수표, manifest와 제출 문서 HTML |
 | `library/` | 여러 지원에서 재사용하는 비공개 질문과 이력서 기준본 |
 | `state/` | 답변 연습처럼 다음 실행에 필요한 상태 |
 | `public/question-bank/` | 공개 가능한 일반 면접 질문과 출처 |
@@ -111,12 +114,14 @@ HTML은 검증된 추천 JSON에서 파생한다.
 문서 작성, 사람 확인, 주장 근거 감사, 블라인드 하드 리뷰, HTML·PDF 변환과 제출 묶음 검증을 순서대로 수행한다.
 사실 감사와 설득력 평가는 별도 참고 문서와 검사 스크립트로 분리하지만 별도 스킬로 노출하지 않는다.
 
-공고별 문서는 `applications/<company>/<position>/`에 둔다.
-기준 원본은 `candidate-interview.md`, `application-package.md`, `resume-draft.md`와 `interview-questions.json`이다.
+공고별 문서는 `applications/<company>/<position>/`에 세 층으로 둔다.
+최상위에는 사용자가 직접 여는 `application-package.html`과 제출 PDF만 두고, 기준 원본은 `evidence/`에, 내부 검증 자료는 `review/`에 둔다.
+기준 원본은 `evidence/`의 `posting.md`, `candidate-interview.md`, `application-package.md`, `resume-draft.md`와 `interview-questions.json`이다.
 포지션별 질문은 공고 책임, 근거 방어와 경험 공백에서 파생한다.
-사용자는 `application-package.html`의 첫 영역에서 현재 할 일, 지원 판단, 실제 제출 PDF와 지원서 입력값만 확인한다.
-회사 기준, 전체 근거, 이력서 원문, 면접 질문과 후보자 인터뷰 기록은 같은 화면의 닫힌 상세 영역에서 필요할 때 확인한다.
-생성기와 검증기는 공고 디렉터리 바로 아래의 파일명을 계약으로 사용하며, 렌더러가 사용자용 자료와 내부 자료를 화면에서 구분한다.
+사용자는 `application-package.html` 상단에서 준비 상태, 지원 판단, 실제 제출 PDF와 지원서 입력값을 확인한다.
+본문은 `공고 적합도`, `지원 전략`, `공고 원문`, `상세 자료` 네 탭으로 나뉜다.
+생성기와 검증기는 이 세 층의 경로를 계약으로 사용한다.
+층별 파일 목록은 [`data-schema.md`](data-schema.md)의 「지원 패키지」가 소유한다.
 브라우저 자동 입력용 `application-form.json`과 경력기술서는 필요한 경우에만 추가한다.
 공통 개인정보는 private brain에서 가져오고 후보자 인터뷰에는 복제하지 않는다.
 공고별 개인 근거와 면접 준비 자료도 같은 `applications/<company>/<position>/`에 둔다.
