@@ -21,6 +21,8 @@ description: 공고에 맞춘 이력서·경력기술서를 작성하고 사람 
 - `sources/fos-study/`의 최신 공개 경력 근거
 - 필요하면 로컬 프로젝트의 코드, 테스트, Git 이력과 기술 결정 문서
 - 공통 작성 기준 `config/resume-writing-style.md`
+- 심사자 관점 `references/reviewer-lens.md`
+- 회사별 채용 기준 `library/company-notes/<회사>.md`가 있으면 함께 읽는다
 - 기본 디자인 `config/resume-design.md` 또는 공고별 `design.md`
 
 지원 디렉터리가 없거나 지원 판단과 후보자 인터뷰가 준비되지 않았으면 `application-package-writer`로 먼저 연결한다.
@@ -74,6 +76,14 @@ Markdown 원본, 제출 문서 HTML, claim ledger, scorecard와 manifest는 재�
 
 [`resume-writing-style.md`](../../../config/resume-writing-style.md)를 끝까지 읽고 이력서와 경력기술서의 모든 문장에 적용한다.
 공고의 공식 작성 안내가 충돌하면 공고 안내를 우선한다.
+
+[`references/reviewer-lens.md`](references/reviewer-lens.md)를 함께 읽는다.
+심사자가 어떤 문장을 튜토리얼로 판정하는지, 운영을 겪은 사람만 쓰는 서술이 무엇인지, 소유 범위를 어떻게 드러내는지가 여기 있다.
+지원 회사의 `library/company-notes/<회사>.md`가 있으면 그 회사의 이력서 가이드와 전형 구조도 확인한다.
+없으면 만들지 않고 공고와 회사 공식 자료만 사용한다.
+
+세 자료의 우선순위는 좁은 쪽이 이긴다.
+공고의 작성 안내가 가장 먼저이고, 그다음이 회사별 기준, 마지막이 공통 작성 기준과 심사자 관점이다.
 
 `evidence/resume-draft.md`를 만들거나 수정한다.
 지원 화면이 경력기술서를 받으면 `evidence/career-description-draft.md`도 별도로 만든다.
