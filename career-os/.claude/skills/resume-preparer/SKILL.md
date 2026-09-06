@@ -19,7 +19,8 @@ description: 공고가 찾는 역량과 후보자의 강한 경험을 연결하�
 | 4 | 디자인과 PDF 검증 | 독립 실행 가능한 A4 HTML과 PDF를 실제 화면에서 검증한다. |
 | 5 | 정확한 HTML의 주장 감사 | 현재 HTML의 각 주장을 근거와 대조한 원장을 만든다. |
 | 6 | 인사담당자와 실무담당자 리뷰 | 채용 관점의 설득력과 기술 경험을 각각 검토한다. |
-| 7 | 제출 묶음 검증과 동기화 | 최종 제출 파일과 검토 화면을 완성하고 작업본을 반영한다. |
+| 7 | 사용자가 고른 것을 원칙으로 남긴다 | 다음 지원에도 쓸 표현과 배치를 개인 작성 원칙에 반영한다. |
+| 8 | 제출 묶음 검증과 동기화 | 최종 제출 파일과 검토 화면을 완성하고 작업본을 반영한다. |
 
 ### 1. 지원 작업본 준비
 
@@ -60,6 +61,9 @@ bun career-os/scripts/career-workspace/cli.ts skill begin resume-preparer --json
 - 공통 작성 기준: [references/resume-writing-style.md](references/resume-writing-style.md)
 - 심사자 관점: [references/reviewer-lens.md](references/reviewer-lens.md)
 
+개인 작성 취향은 지금까지의 지원에서 사용자가 고른 문구, 표기와 배치를 모아 둔 문서다.
+새 지원을 시작할 때 이 문서를 먼저 읽고 그 기준으로 초안을 쓴다. 같은 지시를 다시 받지 않기 위해서다.
+
 기준이 충돌하면 **공고 안내, 회사별 기준, 개인 작성 취향, 공통 작성 기준, 심사자 관점 순**으로 적용한다.
 첫 사례는 다음 단계로 넘길 이유를 가장 빨리 설명하는 사례로 고른다.
 
@@ -80,6 +84,9 @@ bun career-os/scripts/career-workspace/cli.ts skill begin resume-preparer --json
 제출처가 분량을 제한하면 그 기준을 우선한다.
 제한이 없으면 근거의 양, 중복과 읽기 편의성으로 분량을 정하고, 의미 단위 사이에 `<!-- resume-page-break -->`를 필요한 만큼 넣어 분할 위치를 조정한다.
 페이지 균형은 본문 글자 크기와 줄 간격보다 섹션 순서와 분할 위치로 먼저 조정한다.
+
+디자인 파일은 `--design`으로 지정한다. 지정하지 않으면 기본 CSS가 적용되어 지원 회사의 강조색과 로고가 빠진다.
+지원별 디자인은 `career-os/library/resume-baselines/<지원>-resume.css`에 두고 로고를 그 안에 포함한다.
 
 [references/resume-design.md](references/resume-design.md) 기준으로 HTML과 PDF를 실제로 열어 글자 겹침, 잘림, 링크, 대비와 페이지 넘침을 확인한다.
 렌더링은 [scripts/export_resume.ts](scripts/export_resume.ts) `--application-dir <지원 디렉터리>`로 수행한다.
@@ -106,7 +113,14 @@ HTML 정적 검사는 [scripts/check_resume_html.ts](scripts/check_resume_html.t
 검토 절차는 [references/hard-review.md](references/hard-review.md), 판정과 기록 형식은 [references/scoring-rubric.md](references/scoring-rubric.md)를 따른다.
 두 관점의 수정 의견을 반영하고, 서류 통과를 권하기 어려운 문제가 해소될 때까지 다시 검토한다.
 
-### 7. 제출 묶음 검증과 동기화
+### 7. 사용자가 고른 것을 원칙으로 남긴다
+
+이 지원에서 사용자가 고르거나 되돌린 표현, 표기와 배치 중 다음 지원에도 적용할 것을 개인 작성 원칙에 반영한다.
+회사 이름, 기간, 수치처럼 이 지원에만 해당하는 값은 후보자 확인 기록에 남긴다.
+
+한 번의 수정으로 끝내면 다음 지원에서 같은 지시를 다시 받는다.
+
+### 8. 제출 묶음 검증과 동기화
 
 문서 검증과 독립 리뷰가 끝나면 `evidence/application-package.md`를 `readiness: ready`로 바꾸고 다음 순서로 실행한다.
 각 명령에는 지원 디렉터리를 전달한다.

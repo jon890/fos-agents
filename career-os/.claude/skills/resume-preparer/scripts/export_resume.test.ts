@@ -6,6 +6,7 @@ import {
   countHtmlPages,
   extractCss,
   readPdfPageCount,
+  documentTitle,
   renderHtml,
   renderMarkdownPages,
 } from "./export_resume.ts";
@@ -181,5 +182,44 @@ describe("resume exporter", () => {
   test("내용 없는 페이지를 만드는 구분 표시는 거부한다", () => {
     expect(() => renderMarkdownPages(`${PAGE_BREAK_MARKER}\n${resume}`)).toThrow();
     expect(() => renderMarkdownPages(`${resume}\n${PAGE_BREAK_MARKER}`)).toThrow();
+  });
+
+  test("4단계 제목을 회사 아래 프로젝트 제목으로 렌더링한다", () => {
+    const markdown = `# 김테스트
+
+## 주요 프로젝트
+
+### 회사
+
+#### 프로젝트 이름
+
+- 한 일
+`;
+    const [page] = renderMarkdownPages(markdown);
+    expect(page).toContain("<h3>회사</h3>");
+    expect(page).toContain("<h4>프로젝트 이름</h4>");
+  });
+
+  test("들여쓴 목록을 중첩 목록으로 렌더링한다", () => {
+    const markdown = `# 김테스트
+
+## 주요 프로젝트
+
+- 상위 항목
+  - 하위 항목
+- 다음 상위 항목
+`;
+    const [page] = renderMarkdownPages(markdown);
+    expect(page).toContain("<li>상위 항목</li>\n<ul>\n<li>하위 항목</li>\n</ul>");
+    expect(page.match(/<ul>/g)).toHaveLength(2);
+    expect(page.match(/<\/ul>/g)).toHaveLength(2);
+  });
+
+  test("문서 제목을 첫 번째 제목에서 가져온다", () => {
+    expect(documentTitle("# 김테스트 경력기술서\n\n본문")).toBe("김테스트 경력기술서");
+    expect(documentTitle("본문만 있는 문서")).toBe("이력서");
+    expect(renderHtml("# 김테스트 경력기술서\n\n## 프로필\n\n내용\n", designCss)).toContain(
+      "<title>김테스트 경력기술서</title>",
+    );
   });
 });

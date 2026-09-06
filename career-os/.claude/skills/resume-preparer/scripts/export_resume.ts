@@ -133,7 +133,7 @@ export function renderMarkdownPages(markdown: string): string[] {
   const hasExplicitPageBreak = pageBreakIndexes.length > 0;
   const pages: string[][] = [[]];
   let pageIndex = 0;
-  let list: 'ul' | 'ol' | null = null;
+  const listStack: { tag: 'ul' | 'ol'; indent: number }[] = [];
   let sectionOpen = false;
   let headerOpen = true;
   let headerParagraphIndex = 0;
@@ -144,10 +144,25 @@ export function renderMarkdownPages(markdown: string): string[] {
   pages[0].push('<header class="resume-header">');
 
   const closeList = () => {
-    if (list) {
-      html().push(`</${list}>`);
-      list = null;
+    while (listStack.length > 0) {
+      html().push(`</${listStack.pop()!.tag}>`);
     }
+  };
+
+  const openListItem = (tag: 'ul' | 'ol', indent: number, text: string) => {
+    while (listStack.length > 0 && indent < listStack[listStack.length - 1].indent) {
+      html().push(`</${listStack.pop()!.tag}>`);
+    }
+    const top = listStack[listStack.length - 1];
+    if (!top || indent > top.indent) {
+      listStack.push({ tag, indent });
+      html().push(`<${tag}>`);
+    } else if (top.tag !== tag) {
+      html().push(`</${listStack.pop()!.tag}>`);
+      listStack.push({ tag, indent });
+      html().push(`<${tag}>`);
+    }
+    html().push(`<li>${inlineMarkdown(text)}</li>`);
   };
 
   const closeSection = () => {
@@ -196,7 +211,7 @@ export function renderMarkdownPages(markdown: string): string[] {
       continue;
     }
 
-    const heading = line.match(/^(#{1,3})\s+(.+)$/);
+    const heading = line.match(/^(#{1,4})\s+(.+)$/);
     if (heading) {
       closeList();
       const level = heading[1].length;
@@ -217,25 +232,15 @@ export function renderMarkdownPages(markdown: string): string[] {
       continue;
     }
 
-    const unordered = line.match(/^\s*[-*]\s+(.+)$/);
+    const unordered = line.match(/^(\s*)[-*]\s+(.+)$/);
     if (unordered) {
-      if (list !== 'ul') {
-        closeList();
-        list = 'ul';
-        html().push('<ul>');
-      }
-      html().push(`<li>${inlineMarkdown(unordered[1].trim())}</li>`);
+      openListItem('ul', unordered[1].length, unordered[2].trim());
       continue;
     }
 
-    const ordered = line.match(/^\s*\d+\.\s+(.+)$/);
+    const ordered = line.match(/^(\s*)\d+\.\s+(.+)$/);
     if (ordered) {
-      if (list !== 'ol') {
-        closeList();
-        list = 'ol';
-        html().push('<ol>');
-      }
-      html().push(`<li>${inlineMarkdown(ordered[1].trim())}</li>`);
+      openListItem('ol', ordered[1].length, ordered[2].trim());
       continue;
     }
 
@@ -249,6 +254,8 @@ export function renderMarkdownPages(markdown: string): string[] {
         : headerParagraphIndex === 1
           ? 'headline'
           : '';
+    } else if (/^재직 기간\s*:/.test(text)) {
+      className = 'company-period';
     } else if (/^\d{4}\.\d{2}\s+-\s+(?:\d{4}\.\d{2}|현재)$/.test(text)) {
       className = 'period';
     } else if (/^기술\s*:/.test(text)) {
@@ -282,11 +289,25 @@ export function extractCss(designSource: string, designPath = ''): string {
   return trimmed;
 }
 
+export function documentTitle(resumeMarkdown: string): string {
+  const heading = resumeMarkdown.match(/^#\s+(.+)$/m);
+  return heading ? heading[1].replace(/[*`_]/g, '').trim() : '이력서';
+}
+
+export function inlineCompanyPeriod(html: string): string {
+  return html.replace(
+    /<h3>([\s\S]*?)<\/h3>\s*<p class="company-period">([\s\S]*?)<\/p>/g,
+    '<h3>$1<span class="company-period">$2</span></h3>',
+  );
+}
+
 export function renderHtml(resumeMarkdown: string, designSource: string, designPath = ''): string {
   const css = extractCss(designSource, designPath);
+  const title = documentTitle(resumeMarkdown);
   const pages = renderMarkdownPages(resumeMarkdown);
   const pageNumberWidth = Math.max(2, String(pages.length).length);
   const renderedPages = pages.map((page, index) => {
+    page = inlineCompanyPeriod(page);
     const ordinal = String(index + 1).padStart(pageNumberWidth, '0');
     const total = String(pages.length).padStart(pageNumberWidth, '0');
     const role = index === 0
@@ -304,7 +325,7 @@ ${page}
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>이력서</title>
+  <title>${escapeHtml(title)}</title>
   <style>
 ${css}
   </style>
