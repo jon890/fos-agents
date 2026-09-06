@@ -305,8 +305,9 @@ function formatFitScore(score: number): string {
 
 function fitCircle(label: string, score: number | null, total = false): string {
   const color = score === null ? "none" : fitScoreColor(score);
-  const value = score === null ? "해당 없음" : formatFitScore(score);
-  const ariaScore = score === null ? "해당 없음" : `${formatFitScore(score)}점`;
+  const pendingTotal = total && score === null;
+  const value = score === null ? (pendingTotal ? "판정 대기" : "해당 없음") : formatFitScore(score);
+  const ariaScore = score === null ? (pendingTotal ? "판정이 아직 없습니다" : "해당 없음") : `${formatFitScore(score)}점`;
   return `<article class="fit-meter${total ? " fit-meter-total" : ""}">
       <div class="fit-circle fit-${color}${score === null ? " is-empty" : ""}" aria-label="${escapeHtml(`${label} ${ariaScore}, 색 ${FIT_COLOR_LABELS[color]}`)}">
         <span>${escapeHtml(value)}</span>
@@ -327,10 +328,10 @@ export function renderFitScore(score: FitScore): string {
 
 function userFacingBlocker(error: string): string {
   if (error.includes("resume-scorecard.md의 verdict")) {
-    return "이력서가 채용 담당자와 기술 리더 검토를 통과하도록 문장을 보강해야 합니다.";
+    return "이력서가 인사담당자와 실무담당자 리뷰를 통과하도록 문장을 보강해야 합니다.";
   }
   if (error.includes("career-description-scorecard.md의 verdict")) {
-    return "경력기술서가 채용 담당자와 기술 리더 검토를 통과하도록 문장을 보강해야 합니다.";
+    return "경력기술서가 인사담당자와 실무담당자 리뷰를 통과하도록 문장을 보강해야 합니다.";
   }
   if (error.includes("해시") || error.includes("오래됐습니다")) {
     return "PDF와 최신 원문의 버전을 다시 맞춰야 합니다.";

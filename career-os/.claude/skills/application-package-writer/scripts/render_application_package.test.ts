@@ -272,6 +272,40 @@ describe("renderApplicationPackage", () => {
     expect(html).toContain("fit-circle fit-none is-empty");
   });
 
+  test("총점이 null이면 판정 대기 문구를 보여주고 구분 소계 null은 해당 없음으로 둔다", () => {
+    const html = renderFitScore({
+      total: null,
+      sectionScores: { "주요 업무": null, "기대 경험": null, "우대 경험": null },
+      judgmentCounts: { 확인됨: 0, "강한 인접": 0, "인접 경험": 0, 공백: 0, "사용자 확인": 3 },
+      excludedCount: 3,
+    });
+
+    expect(html).toContain("판정 대기");
+    expect(html).toContain("적합도 총점 판정이 아직 없습니다, 색 빨강");
+    expect(html).toContain("주요 업무 해당 없음, 색 빨강");
+    expect(html).toContain("기대 경험 해당 없음, 색 빨강");
+    expect(html).toContain("우대 경험 해당 없음, 색 빨강");
+    expect(html.match(/해당 없음/g)).toHaveLength(6);
+  });
+
+  test("모든 적합도 행이 사용자 확인이어도 HTML로 렌더링하고 치환 이름을 남기지 않는다", () => {
+    const userConfirmationTable = `| 공고 항목 | 공고 구분 | 근거 | 판정 |
+| --- | --- | --- | --- |
+| 본인 역할 확인 | 주요 업무 | | 사용자 확인 |
+| LLM 운영 범위 확인 | 기대 경험 | | 사용자 확인 |
+| 자체 호스팅 경험 확인 | 우대 경험 | | 사용자 확인 |`;
+    const html = renderApplicationPackageHtml(
+      `# 지원 준비\n\n- readiness: needs_user_input\n- evidence: safe\n- human-confirmation: needs_input\n\n${packageBodyWithFitTable(userConfirmationTable)}`,
+      "# 인터뷰",
+      "# 이력서",
+    );
+
+    expect(html).toContain("판정 대기");
+    expect(html).toContain("적합도 총점 판정이 아직 없습니다, 색 빨강");
+    expect(html.match(/class="fit-circle\s/g)).toHaveLength(4);
+    expect(html).not.toContain("{{");
+  });
+
   test("적합도 절이 없는 문서도 HTML로 렌더링하고 치환 이름을 남기지 않는다", () => {
     const html = renderApplicationPackageHtml(
       "# 지원 준비\n\n- readiness: ready\n- evidence: safe\n- human-confirmation: complete\n\n## 결론\n\n내용",

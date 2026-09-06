@@ -178,7 +178,7 @@ bun career-os/.claude/skills/application-package-writer/scripts/validate_applica
 - 이력서와 필요한 경력기술서 작성
 - 사람만 확정할 수 있는 경험 판단과 설명 준비
 - 주장별 근거 감사
-- 블라인드 하드 리뷰와 실제 렌더 검증
+- 인사담당자와 실무담당자 리뷰와 실제 렌더 검증
 - HTML, PDF와 제출 묶음 생성
 
 사용자만 확정할 수 있는 지원동기나 사실이 남으면 `needs_user_input`에서 멈춘다.
