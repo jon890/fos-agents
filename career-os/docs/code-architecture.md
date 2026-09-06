@@ -127,10 +127,15 @@ HTML은 검증된 추천 JSON에서 파생한다.
 브라우저 자동 입력용 `application-form.json`과 경력기술서는 필요한 경우에만 추가한다.
 공통 개인정보는 private brain에서 가져오고 후보자 인터뷰에는 복제하지 않는다.
 공고별 개인 근거와 면접 준비 자료도 같은 `applications/<company>/<position>/`에 둔다.
-여러 지원에서 재사용하는 개인 질문과 이력서 기준본만 `library/`에 둔다.
+여러 지원에서 재사용하는 개인 질문과 이력서 원고 기준본은 `library/`에 둔다.
+작성 취향은 아래 「후보자 지식과 이력서」의 스킬 참조가 담당한다.
 실제 제출은 두 스킬의 책임이 아니다.
 
 ## 후보자 지식과 이력서
+
+이력서 작성 취향은 `.claude/skills/resume-preparer/references/resume-taste.md`가 소유한다.
+조회 시점과 환원 분기는 같은 스킬의 `references/brain-context.md`에 두고 필요한 단계에서 읽는다.
+스킬은 개인 맥락 조회를 `brain-search`, 새 개인 지식의 저장 제안을 `brain-add`로 연결한다.
 
 현재 경력, 역할 선호와 경험 경계의 기준 원본은 private brain이다.
 skill은 필요한 정보를 실행 시점에 조회하고 TypeScript 스크립트에 명시적인 입력으로 전달한다.
