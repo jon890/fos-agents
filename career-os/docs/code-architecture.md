@@ -134,7 +134,6 @@ HTML은 검증된 추천 JSON에서 파생한다.
 skill은 필요한 정보를 실행 시점에 조회하고 TypeScript 스크립트에 명시적인 입력으로 전달한다.
 세부 성과는 공개 가능한 `sources/fos-study/`와 실제 작업 저장소에서 다시 확인한다.
 
-제출 문서의 감사 결과와 주장별 근거 장부는 해당 `applications/<company>/<position>/`에 둔다.
 공개 가능한 이력 자료는 별도 `sources/fos-study/` 저장소에서 관리한다.
 
 ## 현재 지원 대상과 면접 답변 연습
