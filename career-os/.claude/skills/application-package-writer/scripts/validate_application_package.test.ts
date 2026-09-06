@@ -193,7 +193,55 @@ describe("validateApplicationPackage", () => {
 
     const result = validateApplicationPackage(directory);
     expect(result.passed).toBe(false);
-    expect(result.errors.join("\n")).toContain("표의 판정은 확인됨, 인접 경험, 공백, 사용자 확인 중 하나여야 합니다: 대체로 맞음");
+    expect(result.errors.join("\n")).toContain("표의 판정은 확인됨, 강한 인접, 인접 경험, 공백, 사용자 확인 중 하나여야 합니다: 대체로 맞음");
+  });
+
+  test("강한 인접 판정을 허용하고 검증 결과에 75점과 소계를 반환한다", () => {
+    const directory = fixture();
+    const path = join(directory, "evidence", "application-package.md");
+    write(directory, "evidence/application-package.md", readFileSync(path, "utf8").replace(
+      FIT_TABLE,
+      "| 공고 항목 | 공고 구분 | 근거 | 판정 |\n| --- | --- | --- | --- |\n| 공통 API | 주요 업무 | 같은 문제 유형의 개발 경험 | 강한 인접 |",
+    ));
+
+    const result = validateApplicationPackage(directory);
+    expect(result.passed).toBe(true);
+    expect(result.errors).toEqual([]);
+    expect(result.fitScore).toEqual({
+      total: 75,
+      sectionScores: { "주요 업무": 75, "기대 경험": null, "우대 경험": null },
+      judgmentCounts: { 확인됨: 0, "강한 인접": 1, "인접 경험": 0, 공백: 0, "사용자 확인": 0 },
+      excludedCount: 0,
+    });
+  });
+
+  test.each([
+    ["구분", "| 주요 업무 |", "| 있으면 좋음 |", "공고 구분은 주요 업무, 기대 경험, 우대 경험 중 하나"],
+    ["근거", "| 공통 모듈 분리 경험 |", "|  |", "사용자 확인이 아닌 항목에는 근거가 필요"],
+    ["중복 항목", "| 자체 호스팅 모델 운영 |", "| 공통 기반 표준화 |", "공고 항목이 중복"],
+  ])("적합도 표에 %s 오류가 있으면 거부하고 점수를 반환하지 않는다", (_name, before, after, message) => {
+    const directory = fixture();
+    const path = join(directory, "evidence", "application-package.md");
+    write(directory, "evidence/application-package.md", readFileSync(path, "utf8").replace(before, after));
+
+    const result = validateApplicationPackage(directory);
+    expect(result.passed).toBe(false);
+    expect(result.errors.join("\n")).toContain(message);
+    expect(result.fitScore).toBeUndefined();
+  });
+
+  test("근거가 빈 사용자 확인 행은 허용하며 총점의 분모에서 제외한다", () => {
+    const directory = fixture();
+    const path = join(directory, "evidence", "application-package.md");
+    write(directory, "evidence/application-package.md", readFileSync(path, "utf8").replace(
+      "| 직접 근거 없음 | 공백 |", "| | 사용자 확인 |",
+    ));
+
+    const result = validateApplicationPackage(directory);
+    expect(result.passed).toBe(true);
+    expect(result.fitScore?.total).toBe(100);
+    expect(result.fitScore?.sectionScores["우대 경험"]).toBeNull();
+    expect(result.fitScore?.excludedCount).toBe(1);
   });
 
   test("적합도 표의 머리행 이름이 다르면 거부한다", () => {
