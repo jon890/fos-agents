@@ -1,0 +1,12 @@
+{
+  "name": "plan114-resume-brain-context",
+  "description": "이력서 취향을 스킬에서 소유하고 필요한 개인 맥락 조회와 지식 환원을 작성 단계에 연결한다.",
+  "status": "completed",
+  "created_at": "2026-09-06",
+  "total_phases": 2,
+  "current_phase": 2,
+  "phases": [
+    { "number": 1, "file": "phase-01.md", "execution_profile": "standard" },
+    { "number": 2, "file": "phase-02.md", "execution_profile": "standard" }
+  ]
+}

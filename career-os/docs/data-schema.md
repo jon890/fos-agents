@@ -268,7 +268,11 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 
 공고별 개인 근거와 면접 질문은 해당 `applications/<company>/<position>/`에 둔다.
 여러 지원에서 재사용하는 개인 질문은 `library/question-bank/`에 둔다.
-특정 지원에 종속되지 않는 이력서 기준본은 `library/resume-baselines/`에 둔다.
+특정 지원에 종속되지 않는 이력서 원고 기준본은 `library/resume-baselines/`에 둔다.
+
+재사용할 작성 취향의 기준 원본은 `.claude/skills/resume-preparer/references/resume-taste.md`다.
+brain에는 경력, 역할 선호와 경험 경계 등 개인 지식을 두고, 지원별 사실과 표현 확인은 `evidence/candidate-interview.md`의 기존 계약을 따른다.
+작성 취향은 스킬에서 유지하고, brain 검색 결과는 해당 문장을 판단하는 데 필요한 출처와 범위만 지원 기록에 연결한다.
 
 ## 제출 문서 근거 감사
 
