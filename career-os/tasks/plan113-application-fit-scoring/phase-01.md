@@ -68,15 +68,19 @@ plan112가 같은 파일의 동기화 경로와 화면 서술을 이미 바꿨�
 「실행 흐름」 절의 산문 다섯 덩어리를 단계 표 하나와 단계별 절로 나눈다.
 표의 열은 `단계`, `이름`, `정할 것`, `reference` 넷이다.
 
-| 단계 | 이름 | 정할 것 |
-| --- | --- | --- |
-| 1 | 공고 해체 | 공고 항목을 컴포넌트 단위로 쪼갠 목록과 각 항목의 구분 |
-| 2 | 근거 수집 | 각 항목에 연결할 후보자 근거와 그 근거를 확인한 위치 |
-| 3 | 적합도 판정 | 항목별 판정과 구분별 소계, 총점 |
-| 4 | 후보자 인터뷰 | 후보자만 확정할 수 있는 동기, 역할, 제약과 결과 범위 |
-| 5 | 지원 전략 작성 | 승부처, 지원동기, 기여 시나리오와 공백 보완 계획 |
-| 6 | 사용자 검토 | 지원동기가 본인 생각과 같은지, 본인 역할과 팀 역할이 구분됐는지, 가장 강한 사례가 공고의 핵심 문제와 연결되는지, 약한 영역을 숨기지 않았는지, 기여 시나리오가 제품 사용자에게 닿는지 |
-| 7 | 제출 문서 연결 | `resume-preparer` 호출과 준비 상태 |
+| 단계 | 이름 | 정할 것 | reference |
+| --- | --- | --- | --- |
+| 1 | 공고 해체 | 공고 항목을 컴포넌트 단위로 쪼갠 목록과 각 항목의 구분 | `references/fit-judgment.md` |
+| 2 | 근거 수집 | 각 항목에 연결할 후보자 근거와 그 근거를 확인한 위치 | `references/fit-judgment.md` |
+| 3 | 적합도 판정 | 항목별 판정과 구분별 소계, 총점 | `references/fit-judgment.md` |
+| 4 | 후보자 인터뷰 | 후보자만 확정할 수 있는 동기, 역할, 제약과 결과 범위 | `references/candidate-interview-questions.md` |
+| 5 | 지원 전략 작성 | 승부처, 지원동기, 기여 시나리오와 공백 보완 계획 | `references/application-quality-rubric.md` |
+| 6 | 사용자 검토 | 동기, 역할 구분, 핵심 사례, 공백과 기여 시나리오의 사용자 확인 | `references/full-document-review.md` |
+| 7 | 제출 문서 연결 | `resume-preparer` 호출과 준비 상태 | `../resume-preparer/SKILL.md` |
+
+단계 6은 지원동기가 본인 생각과 같은지, 본인 역할과 팀 역할이 구분됐는지 확인한다.
+가장 강한 사례가 공고의 핵심 문제와 연결되는지, 약한 영역을 숨기지 않았는지,
+기여 시나리오가 제품 사용자에게 닿는지도 확인한다.
 
 단계 1부터 3까지가 이 스킬의 목표를 직접 수행하는 구간이다.
 단계 3의 판정이 나오기 전에 지원동기와 승부처를 쓰지 않는다.
@@ -227,7 +231,9 @@ head -20 career-os/.claude/skills/application-package-writer/SKILL.md | grep -c 
 ```bash
 # cwd: 저장소 루트 (fos-agents)
 grep -c "^## 산출물 계약" career-os/.claude/skills/application-package-writer/SKILL.md
-sed -n '/^### 만들지 않는 자료/,/^#/p' career-os/.claude/skills/application-package-writer/SKILL.md | grep -c "공고 항목별 적합도"
+fit_contract_count=$(sed -n '/^### 만들지 않는 자료/,/^#/p' career-os/.claude/skills/application-package-writer/SKILL.md | grep -c "공고 항목별 적합도" || true)
+echo "$fit_contract_count"
+test "$fit_contract_count" -eq 0
 ```
 
 첫 명령은 `1`, 둘째 명령은 `0` 이어야 한다.
@@ -236,7 +242,9 @@ sed -n '/^### 만들지 않는 자료/,/^#/p' career-os/.claude/skills/applicati
 
 ```bash
 # cwd: 저장소 루트 (fos-agents)
-grep -c "넷 중 하나만 쓴다" career-os/.claude/skills/application-package-writer/SKILL.md
+old_verdict_count=$(grep -c "넷 중 하나만 쓴다" career-os/.claude/skills/application-package-writer/SKILL.md || true)
+echo "$old_verdict_count"
+test "$old_verdict_count" -eq 0
 grep -c "^\*\*역할:" career-os/.claude/skills/application-package-writer/SKILL.md
 ```
 

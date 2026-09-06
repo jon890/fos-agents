@@ -62,6 +62,9 @@ plan112 phase 02가 이 표의 존재와 머리행, 판정 값을 검사하는 �
 
 plan112가 넣은 검사에 다음을 더한다.
 
+판정 값 목록의 실제 소유 파일은 `scripts/package_contract.ts`의 `FIT_TABLE_VERDICTS`다.
+이 목록이 phase 01의 `FIT_JUDGMENT_SCORES`에서 다섯 값을 가져오게 연결해 중복 정의를 피한다.
+
 - `공고 구분` 열의 값이 `주요 업무`, `기대 경험`, `우대 경험` 중 하나여야 한다.
 - `판정`이 `사용자 확인`이 아닌 행에는 `근거` 열이 비어 있으면 안 된다.
 - 같은 `공고 항목` 문구가 두 행에 있으면 거부한다.
@@ -97,6 +100,7 @@ plan112 phase 02가 만든 적합도 표에 `공고 구분` 열이 없거나 판
 
 `career-os/.claude/skills/application-package-writer/scripts/validate_application_package.test.ts`에 다음을 더한다.
 
+- 정상: `강한 인접` 판정이 있는 표를 허용하고 75점으로 계산한다.
 - 실패: `공고 구분`에 `있으면 좋음`처럼 계약에 없는 값이 있으면 거부한다.
 - 실패: 판정이 `확인됨`인데 `근거` 열이 비어 있으면 거부한다.
 - 실패: 같은 공고 항목 문구가 두 행에 있으면 거부한다.
@@ -142,6 +146,7 @@ grep -c "공고 구분" \
 | `career-os/.claude/skills/application-package-writer/scripts/fit_score.ts` | 수정 |
 | `career-os/.claude/skills/application-package-writer/scripts/fit_score.test.ts` | 수정 |
 | `career-os/.claude/skills/application-package-writer/scripts/validate_application_package.ts` | 수정 |
+| `career-os/.claude/skills/application-package-writer/scripts/package_contract.ts` | 수정 |
 | `career-os/.claude/skills/application-package-writer/scripts/validate_application_package.test.ts` | 수정 |
 | `career-os/.claude/skills/application-package-writer/SKILL.md` | 수정 |
 | `career-os/applications/tossplace/server-developer-ai-platform/evidence/application-package.md` | 수정 |

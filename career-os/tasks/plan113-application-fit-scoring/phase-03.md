@@ -62,7 +62,10 @@ plan112 phase 03이 검토 화면을 네 탭으로 바꾸고 HTML 골격과 CSS�
 - 총점 원 옆에 경계 문구를 둔다. 이 점수가 합격 확률이 아니라 공고 요구와 현재 근거가 맞닿은 정도라는 내용이다.
 
 호출부는 phase 02의 `parseFitTable`과 `calculateFitScore`로 점수를 얻는다.
-적합도 절이 없는 문서는 `{{FIT_SCORE}}`를 빈 문자열로 채우고 화면을 만든다. 오류로 중단하지 않는다.
+순수 HTML 함수 `renderApplicationPackageHtml`은 적합도 절이 없는 입력도
+`{{FIT_SCORE}}`를 빈 문자열로 채워 렌더링한다. 이 함수는 누락 때문에 중단하지 않는다.
+파일을 생성하는 `renderApplicationPackage`와 CLI는 기존 `validateApplicationPackage` 검증을 유지한다.
+필수 적합도 절이나 표가 없으면 파일 생성은 거부하며, 잘못된 표를 빈 상태로 숨기지 않는다.
 
 ### 4. `career-os/applications/tossplace/server-developer-ai-platform/application-package.html`을 다시 만든다
 
@@ -84,9 +87,12 @@ plan112 phase 03이 검토 화면을 네 탭으로 바꾸고 HTML 골격과 CSS�
 - 정상: 점수 구간에 맞는 CSS 변수 이름이 원에 적용된다. 90점은 `--fit-excellent`, 60점은 `--fit-fair`를 쓴다.
 - 정상: 총점 원 옆에 합격 확률이 아니라는 경계 문구가 있다.
 - 빈 상태: 한 구분의 소계가 `null`이면 그 원에 `해당 없음`이 있다.
-- 빈 상태: 적합도 절이 없는 문서도 오류 없이 화면이 만들어지고 `{{FIT_SCORE}}` 자리가 빈 채로 남지 않는다.
+- 빈 상태: `renderApplicationPackageHtml`에 적합도 절이 없는 문서를 전달해도 오류 없이 HTML을 반환하고 치환 이름이 남지 않는다.
+- 실패: `renderApplicationPackage`는 적합도 절이나 표가 없는 패키지의 파일 생성을 기존 검증기로 거부한다.
 
-모든 검증이 통과하면 `career-os/tasks/plan113-application-fit-scoring/index.json`의 `status`를 `completed`로, `current_phase`를 `3`으로 바꾼다.
+모든 phase와 독립 검토, 통합 검증이 통과하면 team-lead가
+`career-os/tasks/plan113-application-fit-scoring/index.json`의 `status`를 `completed`로,
+`current_phase`를 `3`으로 바꾼다. executor는 완료 상태를 직접 기록하지 않는다.
 
 ---
 
@@ -122,7 +128,9 @@ grep -c 'class="fit-circle' \
 
 ```bash
 # cwd: 저장소 루트 (fos-agents)
-grep -c '{{' career-os/applications/tossplace/server-developer-ai-platform/application-package.html
+unresolved_token_count=$(grep -c '{{' career-os/applications/tossplace/server-developer-ai-platform/application-package.html || true)
+echo "$unresolved_token_count"
+test "$unresolved_token_count" -eq 0
 ```
 
 `0`이 나와야 한다.
