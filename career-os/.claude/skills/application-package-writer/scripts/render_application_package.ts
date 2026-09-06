@@ -93,14 +93,29 @@ function restoreLineBreaks(escaped: string): string {
   return escaped.replace(/&lt;br\s*\/?&gt;/gi, "<br>");
 }
 
+/** 끝에 붙은 구두점은 주소에서 뺀다. 문장 끝의 마침표와 쉼표가 주소에 딸려 들어가지 않게 한다. */
+const BARE_URL = /https?:\/\/[^\s<>"']+[^\s<>"'.,;:!?)\]]/g;
+
+/**
+ * 이미 링크나 코드로 만들어진 구간은 건드리지 않고, 남은 맨 주소만 링크로 만든다.
+ * `split` 의 캡처 그룹이 결과에 포함되므로 홀수 자리가 보호 구간이다.
+ */
+function autoLink(html: string): string {
+  return html
+    .split(/(<a\s[^>]*>[\s\S]*?<\/a>|<code>[\s\S]*?<\/code>)/g)
+    .map((part, index) => (index % 2 === 1 ? part : part.replace(BARE_URL, '<a href="$&">$&</a>')))
+    .join("");
+}
+
 function inlineMarkdown(text: string): string {
-  return restoreLineBreaks(escapeHtml(text))
+  const linked = restoreLineBreaks(escapeHtml(text))
     .replace(
       /\[([^\]]+)]\(((?:https?:\/\/|mailto:|(?:\.\.?\/)+|\/|#)[^\s)]+)\)/g,
       '<a href="$2">$1</a>',
     )
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/`([^`]+)`/g, "<code>$1</code>");
+  return autoLink(linked);
 }
 
 function slug(text: string): string {
@@ -364,10 +379,11 @@ function renderInterviewQuestions(applicationDirectory: string): string {
     .join("\n\n");
 }
 
+/** 순서가 화면 순서이고 첫 항목이 기본 선택이다. 공고 원문을 먼저 읽고 적합도를 본다. */
 const TABS = [
+  { key: "posting", label: "공고 원문" },
   { key: "fit", label: "공고 적합도" },
   { key: "strategy", label: "지원 전략" },
-  { key: "posting", label: "공고 원문" },
   { key: "detail", label: "상세 자료" },
 ] as const;
 

@@ -110,11 +110,12 @@ describe("renderApplicationPackage", () => {
 
     expect(html.match(/type="radio" name="tab"/g)).toHaveLength(4);
     expect(html.match(/<section class="tab-panel"/g)).toHaveLength(4);
-    expect(html).toContain('<input type="radio" name="tab" class="tab-input" id="tab-fit" checked>');
-    expect(html).not.toContain('id="tab-strategy" checked');
-    for (const label of ["공고 적합도", "지원 전략", "공고 원문", "상세 자료"]) {
+    expect(html).toContain('<input type="radio" name="tab" class="tab-input" id="tab-posting" checked>');
+    expect(html).not.toContain('id="tab-fit" checked');
+    for (const label of ["공고 원문", "공고 적합도", "지원 전략", "상세 자료"]) {
       expect(html).toContain(`>${label}</label>`);
     }
+    expect(html.indexOf(">공고 원문</label>")).toBeLessThan(html.indexOf(">공고 적합도</label>"));
     expect(html).not.toContain("{{");
   });
 
@@ -147,6 +148,7 @@ describe("renderApplicationPackage", () => {
     expect(html).not.toContain('id="panel-posting"');
     expect(html).not.toContain(">공고 원문</label>");
     expect(html).toContain('id="tab-fit" checked');
+    expect(html).not.toContain('id="tab-posting"');
   });
 
   test("표에 없는 섹션은 지원 전략 패널 끝에 붙는다", () => {
@@ -254,6 +256,30 @@ describe("renderApplicationPackage", () => {
     expect(html).not.toContain("&lt;br&gt;");
     expect(html).not.toContain("<script>alert(1)</script>");
     expect(html).toContain("&lt;script&gt;");
+  });
+
+  test("맨 주소는 링크가 되고 이미 링크나 코드인 것은 그대로 둔다", () => {
+    const links = [
+      "- 공식 공고: https://toss.im/career/job-detail?job_id=7733044003",
+      "- 이미 링크: [토스 채용](https://toss.im/career)",
+      "- 코드 안: `https://example.com/not-a-link`",
+      "- 문장 끝: https://toss.im/company 를 확인한다.",
+    ].join("\n");
+    const body = REQUIRED_HEADINGS["evidence/application-package.md"]
+      .map((heading) => (heading === "## 결론" ? `${heading}\n\n${links}` : `${heading}\n\n내용`))
+      .join("\n\n");
+
+    const html = renderApplicationPackageHtml(
+      `# 지원 준비\n\n- readiness: ready\n- evidence: safe\n- human-confirmation: complete\n\n${body}`,
+      "# 인터뷰",
+      "# 이력서",
+    );
+
+    expect(html).toContain('<a href="https://toss.im/career/job-detail?job_id=7733044003">');
+    expect(html).toContain('<a href="https://toss.im/career">토스 채용</a>');
+    expect(html).not.toContain("<code><a href=");
+    expect(html).toContain("<code>https://example.com/not-a-link</code>");
+    expect(html).toContain('<a href="https://toss.im/company">https://toss.im/company</a> 를');
   });
 
   test("공고 원문 탭은 evidence/posting.md 내용을 담는다", () => {
