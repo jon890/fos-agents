@@ -17,13 +17,9 @@ description: 공고가 찾는 사람과 후보자의 경험, 이력과 방향성
 
 [`flow.md`의 「비공개 작업 파일의 목표 흐름」](../../../docs/flow.md#비공개-작업-파일의-목표-흐름)을 `SKILL_NAME=application-package-writer`로 적용한다.
 
-## 입력
+## 지원 대상 확인
 
-1. `applications/<company>/<role>/evidence/posting.md`
-2. `brain-search`로 확인한 현재 경력, 역할 선호와 경험 경계
-3. `sources/fos-study/`의 최신 공개 경력 자료와 관련 업무 근거
-4. 필요하면 로컬 프로젝트의 코드, 테스트, Git 이력과 기술 결정 문서
-5. `applications/<company>/<role>/evidence/candidate-interview.md`가 있으면 기존 답변
+`applications/<company>/<role>/evidence/posting.md`를 기준으로 지원 대상을 정한다.
 
 공고 경로가 없으면 `brain-search`로 private brain의 현재 지원 대상을 먼저 확인한다.
 brain에서 찾은 회사와 역할에 대응하는 `applications/<company>/<role>/` 디렉터리를 사용한다.
@@ -33,6 +29,7 @@ brain에 현재 대상이 없거나 대응하는 지원 디렉터리가 없거�
 ## 실행 흐름
 
 각 단계에 진입할 때 표의 reference를 읽고, 단계별 통과 조건을 확인한다.
+근거 자료는 해당 단계에서 필요한 범위만 찾아 읽는다.
 
 | 단계 | 이름 | 정할 것 | reference |
 | --- | --- | --- | --- |
@@ -54,6 +51,7 @@ brain에 현재 대상이 없거나 대응하는 지원 디렉터리가 없거�
 
 ### 단계 1: 공고 해체
 
+대상 디렉터리의 `evidence/posting.md`를 읽는다.
 공고 URL이 있으면 공식 페이지에서 현재 열려 있는지 다시 확인한다.
 회사 인재상과 일하는 방식은 회사 공식 채용·회사 소개 자료만 사용한다.
 일반적인 좋은 개발자 특성을 회사 기준처럼 쓰지 않는다.
@@ -106,6 +104,7 @@ bun career-os/.claude/skills/application-package-writer/scripts/validate_applica
 ### 단계 4: 후보자 인터뷰
 
 `references/candidate-interview-questions.md`를 읽는다.
+`evidence/candidate-interview.md`가 있으면 기존 답변을 확인한다.
 이미 답한 내용은 다시 묻지 않고 `evidence/candidate-interview.md`에 누적한다.
 제출 판단이 함께 달라지는 질문은 최대 6개까지 한 번에 묶는다.
 한 가지 답이 다음 질문의 전제가 되거나 민감한 사실 하나만 확인하면 한 질문만 제시한다.
