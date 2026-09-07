@@ -1,11 +1,12 @@
 #!/usr/bin/env bun
-import { mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { externalReadingSources } from "../../config/external-reading-sources.js";
 import {
   DEFAULT_MAX_CANDIDATES_PER_SOURCE,
   type MorningReadingReport,
 } from "./reading_contracts.js";
+import { loadReadingCandidatePool } from "./reading_candidate_pool.js";
 import { normalizeReadingSources } from "./reading_sources.js";
 import { prepareReadingCandidatePool, selectReadings } from "./reading_stage.js";
 import {
@@ -19,7 +20,17 @@ import {
 import { renderExistingReport, writeReportArtifacts } from "./render/report.js";
 import { resolveStudyRunRoot, StudyRunPathError } from "./runtime-paths.js";
 import { StudyLibraryApiError, createStudyLibraryClient } from "./study-library/client.js";
+import {
+  buildReportCountsFromLibrary,
+  prepareStudyLibraryCandidates,
+  studyLibraryMetaPath,
+  type StudyLibraryCandidateMeta,
+} from "./study-library/candidates.js";
 import { collectAndIngestStudyLibrary, type LibraryCollectMode } from "./study-library/ingestion.js";
+import {
+  commitRecommendationRun,
+  recordPublication,
+} from "./study-library/recommendations.js";
 import { syncStudyLibrarySources } from "./study-library/source-sync.js";
 
 const FEED_CACHE_TTL_HOURS = 6;
@@ -52,15 +63,39 @@ function parseMaxItems(): number {
   return value;
 }
 
-function assertLibraryUsage(mode: LibraryCollectMode): void {
-  if (!hasFlag("--collect-only")) {
-    throw new StudyRunPathError("--library는 현재 --collect-only와 함께 사용해야 한다.");
-  }
+function requiredArgument(name: string): string {
+  const value = argumentValue(name);
+  if (!value?.trim()) throw new StudyRunPathError(`${name} 값이 필요하다.`);
+  return value;
+}
+
+function parseCandidateLimit(): number | undefined {
+  const raw = argumentValue("--limit");
+  if (!raw) return undefined;
+  const value = Number(raw);
+  if (!Number.isInteger(value)) throw new StudyRunPathError("--limit은 정수여야 한다.");
+  return value;
+}
+
+function assertLibraryUsage(): void {
   for (const flag of ["--history-file", "--commit-history", "--render-only"]) {
     if (hasFlag(flag)) {
-      throw new StudyRunPathError(`--library --collect-only는 ${flag}와 함께 사용할 수 없다.`);
+      throw new StudyRunPathError(`--library는 ${flag}와 함께 사용할 수 없다.`);
     }
   }
+  const actionCount = [
+    hasFlag("--collect-only"),
+    hasFlag("--prepare-candidates"),
+    Boolean(argumentValue("--reading-selection")),
+    hasFlag("--commit-recommendation"),
+    hasFlag("--record-publication"),
+  ].filter(Boolean).length;
+  if (actionCount !== 1) {
+    throw new StudyRunPathError("--library는 collect, prepare-candidates, reading-selection, commit-recommendation, record-publication 중 하나만 실행해야 한다.");
+  }
+}
+
+function assertLibraryCollectUsage(mode: LibraryCollectMode): void {
   if (hasFlag("--reset-cursor")) {
     if (mode !== "archive" || !argumentValue("--source-key")) {
       throw new StudyRunPathError("--reset-cursor는 --library --collect-only --mode archive --source-key <key> 조합에서만 사용할 수 있다.");
@@ -70,7 +105,7 @@ function assertLibraryUsage(mode: LibraryCollectMode): void {
 
 async function runLibraryCollectOnly(readingSources: ReturnType<typeof normalizeReadingSources>): Promise<void> {
   const mode = parseMode();
-  assertLibraryUsage(mode);
+  assertLibraryCollectUsage(mode);
   const client = createStudyLibraryClient();
   await syncStudyLibrarySources(client);
   const result = await collectAndIngestStudyLibrary({
@@ -84,6 +119,126 @@ async function runLibraryCollectOnly(readingSources: ReturnType<typeof normalize
     youtubeApiKey: process.env.YOUTUBE_DATA_API_KEY,
   });
   console.log(JSON.stringify(result));
+}
+
+async function runLibraryPrepareCandidates(root: string): Promise<void> {
+  const client = createStudyLibraryClient();
+  const candidatePoolPath = join(root, "state", "reading-candidates.json");
+  const result = await prepareStudyLibraryCandidates({
+    client,
+    outputPath: candidatePoolPath,
+    filters: {
+      sourceKey: argumentValue("--source-key"),
+      category: argumentValue("--category") as StudyLibraryCandidateMeta["filters"]["category"],
+      publishedFrom: argumentValue("--published-from"),
+      publishedTo: argumentValue("--published-to"),
+      limit: parseCandidateLimit(),
+      cursor: argumentValue("--cursor"),
+    },
+  });
+  console.log(JSON.stringify({
+    mode: "prepare-candidates",
+    library: true,
+    candidatePool: result.candidatePoolPath,
+    meta: result.metaPath,
+    candidateCount: result.candidateCount,
+    historyVersion: result.historyVersion,
+    nextCursor: result.nextCursor,
+  }));
+}
+
+function loadStudyLibraryMeta(candidatePoolPath: string): StudyLibraryCandidateMeta {
+  return JSON.parse(readFileSync(studyLibraryMetaPath(candidatePoolPath), "utf8")) as StudyLibraryCandidateMeta;
+}
+
+async function runLibrarySelection(root: string): Promise<void> {
+  const stateDir = join(root, "state");
+  const reportPath = join(stateDir, "morning-reading.json");
+  const candidatePoolPath = resolve(requiredArgument("--candidate-pool"));
+  const candidatePool = loadReadingCandidatePool(candidatePoolPath);
+  const meta = loadStudyLibraryMeta(candidatePoolPath);
+  const { topics } = selectReadings({
+    pool: candidatePool,
+    selectionPath: requiredArgument("--reading-selection"),
+  });
+  const report: MorningReadingReport = {
+    generatedAt: new Date().toISOString(),
+    sourceOfTruth: {
+      config: "config/external-reading-sources.ts",
+      collectedArticles: "state/reading-candidates.json",
+    },
+    counts: buildReportCountsFromLibrary({ candidatePool, meta }),
+    collectionLog: candidatePool.collectionLog,
+    topics,
+  };
+  mkdirSync(stateDir, { recursive: true });
+  writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+  const artifacts = writeReportArtifacts({
+    report,
+    outputDir: root,
+  });
+  console.log(JSON.stringify({
+    mode: "reading-selection",
+    library: true,
+    report: reportPath,
+    html: artifacts.htmlPath,
+    topicCount: topics.length,
+  }));
+}
+
+async function runLibraryCommitRecommendation(): Promise<void> {
+  const client = createStudyLibraryClient();
+  const result = await commitRecommendationRun({
+    client,
+    reportPath: requiredArgument("--report"),
+  });
+  console.log(JSON.stringify({
+    mode: "commit-recommendation",
+    library: true,
+    reportId: result.reportId,
+    historyVersion: result.historyVersion,
+  }));
+}
+
+async function runLibraryRecordPublication(): Promise<void> {
+  const client = createStudyLibraryClient();
+  const result = await recordPublication({
+    client,
+    reportId: requiredArgument("--report-id"),
+    channel: requiredArgument("--channel"),
+    externalId: requiredArgument("--external-id"),
+    publishedAt: requiredArgument("--published-at"),
+    url: requiredArgument("--url"),
+  });
+  console.log(JSON.stringify({
+    mode: "record-publication",
+    library: true,
+    publicationId: result.publicationId,
+  }));
+}
+
+async function runLibrary(root: string, readingSources: ReturnType<typeof normalizeReadingSources>): Promise<void> {
+  assertLibraryUsage();
+  if (hasFlag("--collect-only")) {
+    await runLibraryCollectOnly(readingSources);
+    return;
+  }
+  if (hasFlag("--prepare-candidates")) {
+    await runLibraryPrepareCandidates(root);
+    return;
+  }
+  if (argumentValue("--reading-selection")) {
+    await runLibrarySelection(root);
+    return;
+  }
+  if (hasFlag("--commit-recommendation")) {
+    await runLibraryCommitRecommendation();
+    return;
+  }
+  if (hasFlag("--record-publication")) {
+    await runLibraryRecordPublication();
+    return;
+  }
 }
 
 async function run(root: string, historyPath: string): Promise<void> {
@@ -176,7 +331,7 @@ export async function main(): Promise<void> {
   const root = resolveStudyRunRoot(process.env, argumentValue("--run-dir"));
   const readingSources = normalizeReadingSources(externalReadingSources);
   if (hasFlag("--library")) {
-    await runLibraryCollectOnly(readingSources);
+    await runLibrary(root, readingSources);
     return;
   }
   const stateDir = join(root, "state");
