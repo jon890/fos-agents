@@ -72,6 +72,7 @@ const managedSkills = new Set([
   "resume-preparer",
   "interview-practice",
   "study-topic-recommender",
+  "sync-profile",
 ]);
 
 export async function beginSkillWorkspace(context: CliContext, skill: string | undefined) {

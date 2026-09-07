@@ -12,6 +12,7 @@
 - 이력서·경력기술서를 작성하고 검증할 때: `/resume-preparer <application-directory>`
 - 기술·인성·포지션별 면접 질문을 준비하고 연습할 때: `/interview-practice <tech|behavioral>`
 - 오늘 읽거나 볼 기술 자료를 고를 때: `/study-topic-recommender`
+- 원티드, LinkedIn, GitHub 프로필을 갱신할 때: `/sync-profile`
 
 `application-package-writer`는 전체 지원 요청에서 `resume-preparer`까지 연결한다.
 `interview-practice`는 공개 질문 보강도 내부 유지보수 절차로 처리한다.
