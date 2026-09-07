@@ -7,6 +7,24 @@ export const externalReadingSources = {
   },
   "sources": [
     {
+      "key": "kurly-tech",
+      "title": "컬리 기술 블로그",
+      "url": "https://helloworld.kurly.com/",
+      "feedUrl": "https://helloworld.kurly.com/rss.xml",
+      "category": "techBlog",
+      "enabled": true,
+      "adapter": "feed"
+    },
+    {
+      "key": "oliveyoung-tech",
+      "title": "올리브영 테크블로그",
+      "url": "https://oliveyoung.tech/",
+      "feedUrl": "https://oliveyoung.tech/rss.xml",
+      "category": "techBlog",
+      "enabled": true,
+      "adapter": "feed"
+    },
+    {
       "key": "woowahan-tech",
       "title": "우아한형제들 tech",
       "url": "https://techblog.woowahan.com/",
@@ -224,6 +242,24 @@ export const externalReadingSources = {
       "category": "ai",
       "enabled": true,
       "adapter": "page"
+    },
+    {
+      "key": "woowatech-youtube",
+      "title": "우아한테크",
+      "url": "https://www.youtube.com/@woowatech",
+      "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UC-mOekGSesms0agFntnQang",
+      "category": "video",
+      "enabled": true,
+      "adapter": "youtube"
+    },
+    {
+      "key": "kakao-tech-youtube",
+      "title": "카카오테크",
+      "url": "https://www.youtube.com/@kakaotech",
+      "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCdQF7F6hwjSpulj_fwB9iDQ",
+      "category": "video",
+      "enabled": true,
+      "adapter": "youtube"
     },
     {
       "key": "tech-bridge-youtube",

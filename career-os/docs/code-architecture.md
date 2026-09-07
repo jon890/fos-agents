@@ -167,11 +167,69 @@ TypeScript 스크립트가 brain을 직접 조회하지 않는다.
 
 `config/external-reading-sources.ts`는 읽을거리 소스와 어댑터 종류를 타입 안전하게 관리한다.
 `scripts/study-topic-recommender/source/`는 글과 영상 피드 수집 경계다.
-후보풀, 선별, 누적 이력, 공부 주제 구성과 Markdown·HTML 렌더링은 각각 분리된 모듈이 담당한다.
+후보풀, 선별, 누적 이력, 공부 주제 구성과 HTML 렌더링은 각각 분리된 모듈이 담당한다.
 실행기는 시스템 임시 디렉터리 아래의 명시적인 실행 경로만 사용하며 저장소에 리포트 디렉터리를 만들지 않는다.
 누적 추천 이력은 `state/morning-study-history.json`에 두고 홈서버 S3 release로 동기화한다.
 임시 실행 경로는 누적 이력을 읽기만 하며, 출력 검증이 끝난 뒤 별도 완료 동작이 이력을 원자적으로 갱신한다.
 YouTube 채널은 공식 Atom 피드를 우선 사용하고 피드를 읽을 수 없을 때만 공개 채널 페이지를 보조 경로로 사용한다.
+
+다음은 명시적으로 선택하는 library 모드의 현재 클라이언트 구조다.
+클라이언트는 mock HTTP로 검증했으며 운영 서버 적용과 웹 UI 구현은 별도 작업이다.
+현재 기본 실행은 기존 파일모드 구조를 따른다.
+실행 CLI와 실패 복구는 [`flow.md`](flow.md#학습자료-api-연동모드)가 소유하고, 저장 모델과 payload 매핑은 [`data-schema.md`](data-schema.md#학습자료-api-연동-상태)가 소유한다.
+`scripts/study-topic-recommender/study-library/`는 fos-blog 학습자료 API 호출, 서비스 인증 헤더, 응답 Zod 검증과 기존 후보풀 타입 변환만 맡는다.
+이 디렉터리는 MySQL 드라이버나 서버 저장 로직을 갖지 않으며, DB 스키마와 HTTP endpoint 정의는 [fos-blog 학습자료 HTTP 계약](https://github.com/jon890/fos-blog/blob/study-library-planning/docs/api/study-library.md)을 단일 출처로 둔다.
+`scripts/study-topic-recommender/source/archive/`는 sitemap과 YouTube uploads playlist 같은 과거 수집 cursor를 해석한다.
+source 어댑터는 원문 발견과 메타 추출만 하고, 자료 저장과 cursor 진행은 study-library client가 API 응답으로 확인한다.
+archive 진입점은 `config/external-reading-sources.ts`에 복제하지 않고 sourceKey별 registry로 둔다.
+registry에는 Kurly와 OliveYoung sitemap index URL, Kakao sitemap URL과 `/posts/` prefix, YouTube uploads playlist ID 해석 규칙을 둔다.
+따라서 config schemaVersion은 이 변경에서 올리지 않는다.
+Kurly와 OliveYoung의 최근 수집 adapter는 계속 `feed`이고, archive registry에서만 sitemap index 수집기를 사용한다.
+
+파일모드와 library 모드는 실행 진입점에서 분리한다.
+기본 파일모드는 기존 `skill begin`, `state/morning-study-history.json`, `--commit-history` 흐름을 유지한다.
+library 모드는 legacy state를 읽거나 `skill begin`에 의존하지 않고, 후보 조회와 추천 이력을 API에서 가져온다.
+연동모드에서 API 호출이 실패하면 파일모드로 자동 전환하지 않는다.
+연동모드는 후보 준비, HTML 생성, 출력 검증, 추천 저장을 CLI 명령으로 분리한다.
+검증 전에는 recommendation-runs를 저장하지 않는다.
+단, 실제 legacy `state/morning-study-history.json`을 읽는 import preview는 기존 private 작업본 동기화가 필요하므로 `skill begin`과 `skill finish` 예외를 둔다.
+`runtime-paths.ts`는 기존 `CAREER_OS_ROOT`와 새 `--run-dir`를 함께 해석한다.
+둘 다 주어졌는데 다른 경로이면 사용법 오류로 중단하고, 둘 중 하나만 있으면 같은 시스템 임시 실행 경로 검증을 적용한다.
+`validate_outputs.ts`도 같은 경로 해석을 사용한다.
+
+연동모드는 다음 환경값을 사용한다.
+
+| 이름 | 의미 |
+| --- | --- |
+| `STUDY_LIBRARY_URL` | fos-blog API origin. HTTPS URL이며 path, query, hash와 credentials가 없어야 한다 |
+| `STUDY_SERVICE_TOKEN` | 서비스 인증 Bearer 토큰. 브라우저 세션과 별개다 |
+| `YOUTUBE_DATA_API_KEY` | 선택값. 있으면 YouTube uploads playlist 과거 수집을 사용한다 |
+
+서비스 요청은 `Authorization: Bearer <STUDY_SERVICE_TOKEN>`을 보낸다.
+브라우저 관리자 쿠키나 세션을 복제하지 않는다.
+값이 없거나 origin 형식이 맞지 않으면 `--library` 실행은 시작 전에 실패한다.
+fetch는 `redirect: "error"`와 timeout 10초를 적용한다.
+네트워크 오류와 5xx 응답은 같은 본문과 같은 멱등 키로 최대 2회 재시도한다.
+4xx 응답은 재시도하지 않는다.
+
+구현 위치는 다음처럼 나눈다.
+
+| 경로 | 책임 |
+| --- | --- |
+| `scripts/study-topic-recommender/study-library/client.ts` | fetch, 인증 헤더, 오류 변환, 응답 검증 |
+| `scripts/study-topic-recommender/study-library/contracts.ts` | API 소비 DTO의 Zod 스키마. 서버 계약 복제 대신 필요한 응답 모양만 검증 |
+| `scripts/study-topic-recommender/study-library/source-sync.ts` | sourceKey 등록, version 조회와 config 변환 |
+| `scripts/study-topic-recommender/study-library/ingestion.ts` | mode별 cursor 조회, 자료 배치 저장과 멱등 키 생성 |
+| `scripts/study-topic-recommender/study-library/candidates.ts` | 후보 페이지 조회와 기존 후보풀 변환 |
+| `scripts/study-topic-recommender/study-library/recommendations.ts` | 기존 report를 recommendation-runs와 publications 요청으로 변환 |
+| `scripts/study-topic-recommender/study-library/imports.ts` | legacy history와 Pages manifest를 import preview payload로 변환 |
+| `scripts/study-topic-recommender/source/archive/` | sitemap index, 단일 sitemap posts 필터, YouTube uploads playlist cursor 해석 |
+| `scripts/study-topic-recommender/morning_reading_cli.ts` | `--run-dir`, `--library`, `--mode`, `--source-key`, `--prepare-candidates`, `--commit-recommendation`, `--record-publication`, `--import-preview` 분기 |
+| `scripts/study-topic-recommender/runtime-paths.ts` | `CAREER_OS_ROOT`와 `--run-dir` 공통 경로 검증. 둘 다 있으면 값이 같을 때만 허용 |
+| `scripts/study-topic-recommender/validate_outputs.ts` | `--run-dir` 또는 공통 경로 해석 결과로 report와 HTML 검증 |
+
+새 런타임 의존성은 추가하지 않는다.
+Bun, TypeScript, fetch와 기존 Zod 의존성으로 구현한다.
 
 수집 단계는 등록된 소스의 글과 영상을 결정적으로 가져온다.
 코드는 URL을 정규화한 `contentKey`로 이전 추천을 판정하고 모델 선택 검증에서 재선택을 거부한다.
@@ -182,7 +240,7 @@ YouTube 채널은 공식 Atom 피드를 우선 사용하고 피드를 읽을 수
 ## 리포트 게시
 
 외부 게시용 HTML은 시스템 임시 디렉터리에 만든다.
-실행 경로 바로 아래에 검증할 구조화 데이터, Markdown과 HTML을 두며 별도 `reports/` 계층을 만들지 않는다.
+실행 경로 바로 아래에 검증할 구조화 데이터와 HTML 등 해당 skill의 산출물을 두며 별도 `reports/` 계층을 만들지 않는다.
 외부 공유가 요청되면 루트의 `report-publisher` skill이 민감 정보 검사, Cloudflare Pages 게시, URL 검증을 담당한다.
 게시가 끝나면 임시 HTML을 삭제한다.
 사용자가 로컬 사본을 요청한 경우에만 지정한 경로에 보존한다.

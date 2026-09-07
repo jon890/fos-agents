@@ -366,9 +366,108 @@ YouTube 영상은 video ID를 키에 포함하고 일반 글은 정규화한 URL
 원문에 없는 예상 학습 시간, 난이도, 분야를 임의 기본값으로 채우지 않는다.
 값이 필요하지만 확인할 수 없으면 명시적으로 정보가 없다고 표시한다.
 
+### 학습자료 API 연동 상태
+
+이 절은 명시적으로 선택하는 library 모드의 현재 클라이언트 계약이다.
+운영 서버 적용과 웹 UI 구현은 별도 작업이다.
+현재 기본 실행의 누적 추천 이력은 위 `state/morning-study-history.json` 계약을 따른다.
+
+`--library` 실행에서 누적 자료, 즐겨찾기, 읽음, 메모와 추천 이력은 fos-blog의 기존 MySQL에 있는 별도 study 테이블이 소유한다.
+career-os는 이 테이블에 직접 접속하지 않고 HTTP API만 사용한다.
+HTTP endpoint, 오류 코드와 저장 제약은 [fos-blog 학습자료 HTTP 계약](https://github.com/jon890/fos-blog/blob/study-library-planning/docs/api/study-library.md)이 단일 출처다.
+이 저장소 문서는 클라이언트가 필요한 매핑과 로컬 설정만 설명한다.
+
+career-os의 기존 `ReadingSource`는 API 소스 등록 요청으로 변환한다.
+`key`는 `sourceKey`, `title`, `category`, `url`, `feedUrl`, `adapter`, `enabled`는 같은 의미로 보낸다.
+API가 필수로 요구하는 `expectedVersion`은 `GET /sources` 결과의 version 또는 새 소스의 `0`에서 가져온다.
+필드가 비어 있으면 추정값을 만들지 않고, 없는 URL 필드는 명시적인 `null`로 보낸다.
+archive 수집 진입점은 config 필드가 아니라 sourceKey별 고정 registry가 소유하므로 `config/external-reading-sources.ts`의 schemaVersion은 바꾸지 않는다.
+Kurly와 OliveYoung은 최근 수집에서는 계속 `feed` adapter이고, archive mode에서만 registry의 sitemap index 수집기를 사용한다.
+
+API 후보 `Candidate`는 기존 후보풀의 `ReadingCandidate`로 변환한다.
+`Candidate.id`는 `contentKey`이며 기존 선택 파일의 `candidateId`로 사용한다.
+`recentStudyTopicKeys`는 후보풀의 같은 필드로 전달하고 `historyVersion`은 후보풀 옆 meta 파일에 보존한다.
+`historyVersion`은 recommendation-runs 요청 본문에 넣지 않는다.
+서버가 추천 저장 시점에 직전 주제와 누적 추천 집합을 다시 검증한다.
+`previouslyRecommended`는 서버 응답값을 사용하며 로컬 파일 이력으로 덮어쓰지 않는다.
+library 후보풀은 API 후보 조회 결과이므로 `collectionLog`를 빈 배열로 둔다.
+HTML report의 counts는 `activeSources`를 `GET /sources`의 enabled 소스 수, `sourcesWithCandidates`를 후보에 나타난 sourceKey 수, `collectedArticles`를 후보풀 길이로 계산한다.
+카테고리별 source count도 enabled 소스 목록에서 계산한다.
+
+연동모드에서 cursor는 sourceKey와 mode별로 서버가 관리한다.
+career-os가 해석하는 archive cursor의 내부 형태는 아래처럼 adapter별로 제한한다.
+이 값은 API에는 opaque JSON으로 저장되며, 서버는 내용을 해석하지 않는다.
+
+| adapter | mode | cursor 예시 | 의미 |
+| --- | --- | --- | --- |
+| `feed` | `recent` | `{"lastSeen":["url:..."],"fetchedAt":"2026-09-07T00:00:00.000Z"}` | 최근 피드 중 이미 본 정규 URL 키 |
+| `page` | `archive` | `{"sitemapIndexUrl":"https://.../sitemap-index.xml","indexDigest":"sha256:...","pendingSitemaps":["https://.../post-sitemap.xml"],"completedSitemaps":[],"currentSitemap":null,"lastUrl":null,"done":false}` | sitemap index 기반 과거 URL 탐색 위치 |
+| `page` | `archive` | `{"sitemapUrl":"https://tech.kakao.com/sitemap.xml","sitemapDigest":"sha256:...","onlyPathPrefix":"/posts/","lastUrl":"https://...","done":false}` | 단일 sitemap에서 posts URL만 읽은 위치 |
+| `youtube` | `archive` | `{"uploadsPlaylistId":"UU...","pageToken":"...","pendingVideoIds":[],"apiKeyRequired":true,"done":false}` | YouTube Data API uploads playlist 페이지 안의 남은 영상 |
+| `youtube` | `recent` | `{"rssOnly":true,"lastSeen":["youtube:..."]}` | API 키가 없어 RSS 최근 영상만 수집한 상태 |
+
+sitemap index cursor의 `currentSitemapDigest`는 처리 중인 sitemap 본문 변경을 감지한다.
+큰 목록을 축약하면 `pendingSitemapsTrimmed:true`와 누적 `completedSitemapCount`로 같은 index에서 남은 목록을 다시 계산한다.
+YouTube archive cursor는 `pendingVideoIds`와 함께 `pendingVideos`에 아직 저장하지 않은 영상의 `videoId`, `title`, `published`를 보존한다.
+`nextPageToken`은 현재 페이지의 남은 영상을 모두 저장한 뒤 사용할 다음 페이지 위치다.
+마지막 페이지의 남은 영상까지 저장해야 `done:true`가 된다.
+
+자료 배치 저장 요청의 `items`는 100개 이하로 보낸다.
+recent의 `lastSeen`은 현재 정상 응답에서 확인한 기존 키와 이번 배치에 저장할 새 키를 보존한다.
+아직 저장하지 않은 자료는 실행 한도에 걸렸더라도 `lastSeen`에 넣지 않는다.
+다음 응답에 없는 키는 제거할 수 있으며, 다시 수집되면 서버가 contentKey로 같은 자료를 갱신한다.
+feed와 page recent는 `fetchedAt`을 기록하고 YouTube recent는 API 키 없이 RSS를 사용하며 `rssOnly:true`를 기록한다.
+library 수집은 정상 빈 문서와 HTTP·파싱 실패를 구분하며 stale cache로 실패를 대신하지 않는다.
+수집기 한도는 배치 크기와 외부 요청량을 제한하기 위한 값이며 누적 자료의 보관 한도로 쓰지 않는다.
+최근 feed 수집 자료는 `feed-article` 또는 `feed-video` kind를 사용한다.
+archive sitemap 자료는 `page-link`, YouTube uploads 자료는 `page-video` kind를 사용해 같은 sourceKey라도 수집 경로를 구분한다.
+수집 실패, 파싱 실패, API 키 부재처럼 다음 위치를 확정할 수 없는 경우에는 `POST /ingestions`를 보내지 않는다.
+정상적인 빈 페이지를 확인했을 때만 items 빈 배열과 다음 cursor를 보낼 수 있다.
+sitemap index나 sitemap 본문이 이전 digest와 달라지면 변경을 감지한 상태로 실패하고 cursor를 진행하지 않는다.
+다시 처음부터 수집해야 할 때는 `--reset-cursor`를 `--library --collect-only --mode archive --source-key <key>`와 함께 실행한다.
+reset도 cursor 단독 API를 쓰지 않고 기존 cursor version을 읽은 뒤 초기 cursor에서 만든 자료 배치와 다음 cursor를 ingestion으로 원자 저장한다.
+성공한 ingestion만 기존 cursor를 교체하며, 충돌하면 기존 cursor를 유지한다.
+`done:true`인 archive 재수집도 같은 옵션을 사용한다.
+cursor 직렬화 크기는 API 계약의 64 KiB 제한을 넘지 않아야 하며, 초과가 예상되면 pending 목록을 다음 실행에서 다시 계산할 수 있는 작은 상태로 줄인다.
+모든 archive cursor는 더 수집할 항목이 없을 때 `done:true`로 저장한다.
+
+추천 저장은 기존 `MorningReadingReport`를 API `recommendation-runs` payload로 변환해 보낸다.
+`reportId`는 서울 날짜의 `morning-YYYY-MM-DD`, `generatedAt`은 UTC ISO 문자열을 사용한다.
+HTML은 기존 렌더러가 만들며, Markdown 리포트는 만들지 않는다.
+HTML과 report JSON 검증이 끝난 뒤 `--commit-recommendation --report <RUN_DIR>/state/morning-reading.json` 명령이 같은 `generatedAt`을 재사용해 저장한다.
+게시가 별도로 성공한 뒤에만 publications 기록을 보낸다.
+publication의 `idempotencyKey`는 `publication:` 뒤에 고정 순서 `{reportId,channel,publishedAt,externalId,url}` JSON의 UTF-8 SHA-256 hex를 붙인다.
+추천 저장이 실패하면 완료로 보지 않고, 파일 이력에 대신 쓰지 않는다.
+
+### Pages manifest와 import payload
+
+이 절은 library 모드의 현재 import preview 입력과 출력 계약이다.
+기존 Pages 노출 이력은 API payload와 분리한 manifest envelope로 읽는다.
+서버 API에는 envelope를 보내지 않고, API `ImportReport` 규격의 `reports`만 보낸다.
+
+Pages manifest는 다음 필드를 가진다.
+
+- `schemaVersion`: 현재 값 `1`
+- `reports`: API `ImportReport`와 같은 `reportId`, `generatedAt`, `topics` 구조
+- `reports[].provenance.sourcePageUrl`: 해당 리포트를 확인한 기존 Pages HTTPS URL
+- `reports[].provenance.localHtmlPath`: 선택값. 에이전트가 승인된 URL에서 받아 둔 HTML 파일 경로
+
+`provenance`는 career-os가 기존 노출 위치를 추적하기 위한 envelope 필드다.
+API에 `POST /imports/dry-run`을 보내기 전에는 각 report에서 제거한다.
+`ImportTopic`과 `ImportItem` 필드는 fos-blog HTTP 계약을 따른다.
+기존 이력에 없는 `careerQuestion`, `summary`, `reason`, `careerValue`는 `null`로 보존한다.
+임의 문장, 분류와 URL을 추정하지 않는다.
+
+import preview의 `importKey`는 `import:` 뒤에 canonical JSON reports의 UTF-8 SHA-256 hex를 붙인다.
+canonical JSON은 객체 키를 재귀적으로 사전순 정렬하고 배열 순서는 보존한 뒤 공백 없이 직렬화한다.
+같은 reports 입력은 같은 importKey를 만들고, null 보존값을 포함해 reports가 바뀌면 다른 importKey를 만든다.
+`--output`은 본인 관리자 UI가 바로 받을 raw `{importKey,reports}`만 저장한다.
+dry-run 응답은 `<output>.preview.json`, 변환 오류는 `<output>.errors.json`에 분리해 저장한다.
+변환 오류가 있으면 payload를 저장하거나 API 요청을 보내지 않는다.
+
 ## 임시 산출물과 Cache
 
-- 시스템 임시 디렉터리: 게시 전 공개 가능 HTML, Markdown과 실행별 중간 데이터
+- 시스템 임시 디렉터리: 게시 전 공개 가능 HTML과 실행별 중간 데이터. 추가 문서 형식은 해당 skill 계약을 따른다.
 - `cache/`: 피드와 공고에서 다시 만들 수 있는 중간 결과
 
 HTML 게시 전에는 개인 정보, 비공개 업무 내용, 로컬 절대 경로를 검사한다.
