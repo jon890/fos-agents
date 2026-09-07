@@ -20,8 +20,13 @@ function requireFile(path: string): void {
   }
 }
 
+function argumentValue(name: string): string | undefined {
+  const index = process.argv.indexOf(name);
+  return index >= 0 ? process.argv[index + 1] : undefined;
+}
+
 function main(): void {
-  const root = resolveStudyRunRoot();
+  const root = resolveStudyRunRoot(process.env, argumentValue("--run-dir"));
   const reportPath = join(root, "state", "morning-reading.json");
   requireFile(reportPath);
   const report = morningReadingReportSchema.parse(

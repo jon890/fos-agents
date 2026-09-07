@@ -18,6 +18,9 @@ import {
 } from "./persistence/history.js";
 import { renderExistingReport, writeReportArtifacts } from "./render/report.js";
 import { resolveStudyRunRoot, StudyRunPathError } from "./runtime-paths.js";
+import { StudyLibraryApiError, createStudyLibraryClient } from "./study-library/client.js";
+import { collectAndIngestStudyLibrary, type LibraryCollectMode } from "./study-library/ingestion.js";
+import { syncStudyLibrarySources } from "./study-library/source-sync.js";
 
 const FEED_CACHE_TTL_HOURS = 6;
 const FEED_TIMEOUT_MS = 8_000;
@@ -25,6 +28,62 @@ const FEED_TIMEOUT_MS = 8_000;
 function argumentValue(name: string): string | undefined {
   const index = process.argv.indexOf(name);
   return index >= 0 ? process.argv[index + 1] : undefined;
+}
+
+function hasFlag(name: string): boolean {
+  return process.argv.includes(name);
+}
+
+function parseMode(): LibraryCollectMode {
+  const mode = argumentValue("--mode") ?? "recent";
+  if (mode !== "recent" && mode !== "archive") {
+    throw new StudyRunPathError("--mode는 recent 또는 archive여야 한다.");
+  }
+  return mode;
+}
+
+function parseMaxItems(): number {
+  const raw = argumentValue("--max-items");
+  if (!raw) return DEFAULT_MAX_CANDIDATES_PER_SOURCE;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 0) {
+    throw new StudyRunPathError("--max-items는 0 이상의 정수여야 한다.");
+  }
+  return value;
+}
+
+function assertLibraryUsage(mode: LibraryCollectMode): void {
+  if (!hasFlag("--collect-only")) {
+    throw new StudyRunPathError("--library는 현재 --collect-only와 함께 사용해야 한다.");
+  }
+  for (const flag of ["--history-file", "--commit-history", "--render-only"]) {
+    if (hasFlag(flag)) {
+      throw new StudyRunPathError(`--library --collect-only는 ${flag}와 함께 사용할 수 없다.`);
+    }
+  }
+  if (hasFlag("--reset-cursor")) {
+    if (mode !== "archive" || !argumentValue("--source-key")) {
+      throw new StudyRunPathError("--reset-cursor는 --library --collect-only --mode archive --source-key <key> 조합에서만 사용할 수 있다.");
+    }
+  }
+}
+
+async function runLibraryCollectOnly(readingSources: ReturnType<typeof normalizeReadingSources>): Promise<void> {
+  const mode = parseMode();
+  assertLibraryUsage(mode);
+  const client = createStudyLibraryClient();
+  await syncStudyLibrarySources(client);
+  const result = await collectAndIngestStudyLibrary({
+    client,
+    sources: readingSources.sources,
+    mode,
+    sourceKey: argumentValue("--source-key"),
+    maxItems: parseMaxItems(),
+    resetCursor: hasFlag("--reset-cursor"),
+    timeoutMs: FEED_TIMEOUT_MS,
+    youtubeApiKey: process.env.YOUTUBE_DATA_API_KEY,
+  });
+  console.log(JSON.stringify(result));
 }
 
 async function run(root: string, historyPath: string): Promise<void> {
@@ -114,9 +173,14 @@ async function run(root: string, historyPath: string): Promise<void> {
 }
 
 export async function main(): Promise<void> {
-  const root = resolveStudyRunRoot();
+  const root = resolveStudyRunRoot(process.env, argumentValue("--run-dir"));
+  const readingSources = normalizeReadingSources(externalReadingSources);
+  if (hasFlag("--library")) {
+    await runLibraryCollectOnly(readingSources);
+    return;
+  }
   const stateDir = join(root, "state");
-  if (process.argv.includes("--render-only")) {
+  if (hasFlag("--render-only")) {
     console.log(JSON.stringify({
       mode: "render-only",
       ...renderExistingReport({
@@ -127,7 +191,7 @@ export async function main(): Promise<void> {
     return;
   }
   const historyPath = resolveMorningStudyHistoryPath(argumentValue("--history-file"));
-  if (process.argv.includes("--commit-history")) {
+  if (hasFlag("--commit-history")) {
     const reportPath = join(stateDir, "morning-reading.json");
     const history = appendReportToHistory(historyPath, loadReportForHistory(reportPath));
     console.log(JSON.stringify({
@@ -145,6 +209,15 @@ export function reportMorningReadingError(error: unknown): never {
   if (error instanceof StudyRunPathError) {
     console.error(error.message);
     process.exit(error.exitCode);
+  }
+  if (error instanceof StudyLibraryApiError) {
+    console.error(JSON.stringify({
+      error: {
+        code: error.code ?? `HTTP_${error.status}`,
+        requestId: error.requestId ?? null,
+      },
+    }));
+    process.exit(1);
   }
   console.error("study-topic-recommender error:", error);
   process.exit(1);
