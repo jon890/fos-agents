@@ -173,7 +173,8 @@ TypeScript 스크립트가 brain을 직접 조회하지 않는다.
 임시 실행 경로는 누적 이력을 읽기만 하며, 출력 검증이 끝난 뒤 별도 완료 동작이 이력을 원자적으로 갱신한다.
 YouTube 채널은 공식 Atom 피드를 우선 사용하고 피드를 읽을 수 없을 때만 공개 채널 페이지를 보조 경로로 사용한다.
 
-다음 library 연동 구조는 구현 전 계획이다.
+다음은 명시적으로 선택하는 library 모드의 현재 클라이언트 구조다.
+클라이언트는 mock HTTP로 검증했으며 운영 서버 적용과 웹 UI 구현은 별도 작업이다.
 현재 기본 실행은 기존 파일모드 구조를 따른다.
 실행 CLI와 실패 복구는 [`flow.md`](flow.md#학습자료-api-연동모드)가 소유하고, 저장 모델과 payload 매핑은 [`data-schema.md`](data-schema.md#학습자료-api-연동-상태)가 소유한다.
 `scripts/study-topic-recommender/study-library/`는 fos-blog 학습자료 API 호출, 서비스 인증 헤더, 응답 Zod 검증과 기존 후보풀 타입 변환만 맡는다.

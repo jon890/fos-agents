@@ -3,10 +3,10 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ReadingSource } from "../reading_contracts.js";
-import { main } from "../morning_reading_cli.js";
+import { main, reportMorningReadingError } from "../morning_reading_cli.js";
 import { canonicalizeReadingUrl, readingContentKey } from "../url_identity.js";
 import { collectAndIngestStudyLibrary, type StudyLibraryIngestionPayload } from "./ingestion.js";
-import type { StudyLibraryClient } from "./client.js";
+import { StudyLibraryApiError, type StudyLibraryClient } from "./client.js";
 
 function response(body: unknown, init: ResponseInit = {}): Response {
   return new Response(typeof body === "string" ? body : JSON.stringify(body), {
@@ -153,6 +153,7 @@ describe("study-library ingestion", () => {
     for (const fetchImpl of [
       async () => response("down", { status: 500 }),
       async () => response("<rss><channel>", { status: 200 }),
+      async () => response("<note><title>not feed</title></note>", { status: 200 }),
     ]) {
       const failed = new MockClient();
       const result = await collectAndIngestStudyLibrary({
@@ -167,6 +168,47 @@ describe("study-library ingestion", () => {
       expect(result.statuses[0].status).toBe("failed");
       expect(failed.payloads).toHaveLength(0);
     }
+  });
+
+  test("정상 RSS, Atom, HTML 구조는 성공하고 plain text page는 실패한다", async () => {
+    for (const xml of [
+      rss([{ title: "RSS", url: "https://example.com/rss" }]),
+      `<?xml version="1.0"?><feed><entry><title>Atom</title><link rel="alternate" href="https://example.com/atom" /></entry></feed>`,
+    ]) {
+      const mock = new MockClient();
+      await collectAndIngestStudyLibrary({
+        client: mock as unknown as StudyLibraryClient,
+        sources: [feedSource],
+        mode: "recent",
+        maxItems: 10,
+        timeoutMs: 1000,
+        fetchImpl: async () => response(xml),
+      });
+      expect(mock.payloads).toHaveLength(1);
+    }
+
+    const html = new MockClient();
+    await collectAndIngestStudyLibrary({
+      client: html as unknown as StudyLibraryClient,
+      sources: [pageSource],
+      mode: "recent",
+      maxItems: 10,
+      timeoutMs: 1000,
+      fetchImpl: async () => response("<!doctype html><html><body><a href='/post'>Post title</a></body></html>"),
+    });
+    expect(html.payloads).toHaveLength(1);
+
+    const plainText = new MockClient();
+    const result = await collectAndIngestStudyLibrary({
+      client: plainText as unknown as StudyLibraryClient,
+      sources: [pageSource],
+      mode: "recent",
+      maxItems: 10,
+      timeoutMs: 1000,
+      fetchImpl: async () => response("not html"),
+    });
+    expect(result.statuses[0].status).toBe("failed");
+    expect(plainText.payloads).toHaveLength(0);
   });
 
   test("YouTube recent는 API 키 없이 RSS를 수집하고 rssOnly와 lastSeen을 보존한다", async () => {
@@ -237,6 +279,22 @@ describe("study-library ingestion", () => {
     expect(mock.payloads).toHaveLength(0);
   });
 
+  test("정상 빈 archive sitemap은 빈 배치와 다음 cursor를 ingestion으로 저장한다", async () => {
+    const mock = new MockClient();
+    await collectAndIngestStudyLibrary({
+      client: mock as unknown as StudyLibraryClient,
+      sources: [{ ...feedSource, key: "kakao-tech" }],
+      mode: "archive",
+      maxItems: 10,
+      timeoutMs: 1000,
+      fetchImpl: async () => response("<urlset/>"),
+    });
+
+    expect(mock.payloads).toHaveLength(1);
+    expect(mock.payloads[0].items).toEqual([]);
+    expect(mock.payloads[0].cursor).toMatchObject({ done: true });
+  });
+
   test("--reset-cursor는 기존 cursor version을 expectedCursorVersion으로 보내고 standalone reset API를 호출하지 않는다", async () => {
     const mock = new MockClient();
     mock.cursor = {
@@ -300,6 +358,26 @@ describe("study-library ingestion", () => {
     expect(mock.payloads).toHaveLength(0);
   });
 
+  test("sourceKey 오타와 maxItems 0은 수집 전에 실패한다", async () => {
+    const mock = new MockClient();
+    await expect(collectAndIngestStudyLibrary({
+      client: mock as unknown as StudyLibraryClient,
+      sources: [feedSource],
+      mode: "recent",
+      sourceKey: "missing-source",
+      maxItems: 10,
+      timeoutMs: 1000,
+    })).rejects.toThrow("sourceKey");
+
+    await expect(collectAndIngestStudyLibrary({
+      client: mock as unknown as StudyLibraryClient,
+      sources: [feedSource],
+      mode: "recent",
+      maxItems: 0,
+      timeoutMs: 1000,
+    })).rejects.toThrow("maxItems");
+  });
+
   test("max-items가 100을 넘으면 각 ingestion cursor가 실제 저장분만 반영한다", async () => {
     const mock = new MockClient();
     const items = Array.from({ length: 150 }, (_, index) => ({
@@ -341,6 +419,40 @@ describe("library collect-only CLI", () => {
     }
   });
 
+  test("CLI는 source-key 오타와 max-items 0을 usage error로 처리한다", async () => {
+    const originalArgv = process.argv;
+    const directory = mkdtempSync(join(tmpdir(), "study-topic-recommender."));
+    process.env.CAREER_OS_ROOT = directory;
+    process.env.STUDY_LIBRARY_URL = "https://study.example.com";
+    process.env.STUDY_SERVICE_TOKEN = "test-token-123456789012345678901234567890";
+    try {
+      process.argv = [
+        "bun",
+        "morning_reading_cli.ts",
+        "--library",
+        "--collect-only",
+        "--source-key",
+        "missing-source",
+      ];
+      await expect(main()).rejects.toThrow("sourceKey");
+
+      process.argv = [
+        "bun",
+        "morning_reading_cli.ts",
+        "--library",
+        "--collect-only",
+        "--source-key",
+        "kurly-tech",
+        "--max-items",
+        "0",
+      ];
+      await expect(main()).rejects.toThrow("--max-items");
+    } finally {
+      process.argv = originalArgv;
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
   test("--library --collect-only --mode recent --run-dir는 파일모드 history를 읽지 않는다", async () => {
     const originalArgv = process.argv;
     const originalFetch = globalThis.fetch;
@@ -358,17 +470,21 @@ describe("library collect-only CLI", () => {
       "--source-key",
       "kurly-tech",
       "--max-items",
-      "0",
+      "1",
     ];
     process.env.STUDY_LIBRARY_URL = "https://study.example.com";
     process.env.STUDY_SERVICE_TOKEN = "test-token-123456789012345678901234567890";
-    globalThis.fetch = (async (url: URL, init: RequestInit) => {
-      requests.push(`${init.method} ${url.pathname}${url.search}`);
-      if (init.method === "GET" && url.pathname.endsWith("/sources")) return response({ sources: [] }, { headers: { "Content-Type": "application/json" } });
-      if (init.method === "PUT") {
+    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+      const parsedUrl = new URL(String(url));
+      requests.push(`${init?.method ?? "GET"} ${parsedUrl.pathname}${parsedUrl.search}`);
+      if (String(url) === "https://helloworld.kurly.com/rss.xml") {
+        return response("<?xml version=\"1.0\"?><rss><channel></channel></rss>");
+      }
+      if (init?.method === "GET" && parsedUrl.pathname.endsWith("/sources")) return response({ sources: [] }, { headers: { "Content-Type": "application/json" } });
+      if (init?.method === "PUT") {
         return response({
           source: {
-            sourceKey: decodeURIComponent(url.pathname.split("/").at(-1) ?? ""),
+            sourceKey: decodeURIComponent(parsedUrl.pathname.split("/").at(-1) ?? ""),
             title: "Source",
             category: "techBlog",
             url: "https://example.com",
@@ -380,7 +496,7 @@ describe("library collect-only CLI", () => {
           version: 1,
         }, { headers: { "Content-Type": "application/json" } });
       }
-      if (init.method === "GET" && url.pathname.includes("/cursor")) {
+      if (init?.method === "GET" && parsedUrl.pathname.includes("/cursor")) {
         return response({ sourceKey: "kurly-tech", mode: "recent", cursor: null, version: 0 }, { headers: { "Content-Type": "application/json" } });
       }
       return response({ idempotencyKey: "ok", acceptedCount: 0, cursorVersion: 1 }, { headers: { "Content-Type": "application/json" } });
@@ -395,5 +511,95 @@ describe("library collect-only CLI", () => {
     }
 
     expect(requests.some((request) => request.includes("/cursor?mode=recent"))).toBe(true);
+  });
+
+  test("API 429 오류 JSON에는 retryAfter가 있으면 포함한다", () => {
+    const originalError = console.error;
+    const originalExit = process.exit;
+    const messages: string[] = [];
+    console.error = (message?: unknown) => {
+      messages.push(String(message));
+    };
+    process.exit = ((code?: string | number | null) => {
+      throw new Error(`exit:${code}`);
+    }) as typeof process.exit;
+    const error = new StudyLibraryApiError({
+      status: 429,
+      code: "RATE_LIMITED",
+      requestId: "req-429",
+    }) as StudyLibraryApiError & { retryAfter?: number };
+    error.retryAfter = 7;
+
+    try {
+      expect(() => reportMorningReadingError(error)).toThrow("exit:1");
+    } finally {
+      console.error = originalError;
+      process.exit = originalExit;
+    }
+
+    expect(JSON.parse(messages[0])).toEqual({
+      error: {
+        code: "RATE_LIMITED",
+        requestId: "req-429",
+        retryAfter: 7,
+      },
+    });
+  });
+
+  test("CLI collect-only API 429 출력에는 retryAfter를 포함한다", async () => {
+    const originalArgv = process.argv;
+    const originalFetch = globalThis.fetch;
+    const originalError = console.error;
+    const originalExit = process.exit;
+    const directory = mkdtempSync(join(tmpdir(), "study-topic-recommender."));
+    const messages: string[] = [];
+    process.argv = [
+      "bun",
+      "morning_reading_cli.ts",
+      "--library",
+      "--collect-only",
+      "--source-key",
+      "kurly-tech",
+    ];
+    process.env.CAREER_OS_ROOT = directory;
+    process.env.STUDY_LIBRARY_URL = "https://study.example.com";
+    process.env.STUDY_SERVICE_TOKEN = "test-token-123456789012345678901234567890";
+    globalThis.fetch = (async () => new Response(JSON.stringify({
+      error: {
+        code: "RATE_LIMITED",
+        message: "slow down",
+        requestId: "req-cli-429",
+      },
+    }), {
+      status: 429,
+      headers: {
+        "Content-Type": "application/json",
+        "Retry-After": "11",
+      },
+    })) as unknown as typeof fetch;
+    console.error = (message?: unknown) => {
+      messages.push(String(message));
+    };
+    process.exit = ((code?: string | number | null) => {
+      throw new Error(`exit:${code}`);
+    }) as typeof process.exit;
+
+    try {
+      await expect(main().catch(reportMorningReadingError)).rejects.toThrow("exit:1");
+    } finally {
+      process.argv = originalArgv;
+      globalThis.fetch = originalFetch;
+      console.error = originalError;
+      process.exit = originalExit;
+      rmSync(directory, { recursive: true, force: true });
+    }
+
+    expect(JSON.parse(messages[0])).toEqual({
+      error: {
+        code: "RATE_LIMITED",
+        requestId: "req-cli-429",
+        retryAfter: 11,
+      },
+    });
   });
 });

@@ -368,7 +368,8 @@ YouTube 영상은 video ID를 키에 포함하고 일반 글은 정규화한 URL
 
 ### 학습자료 API 연동 상태
 
-이 절은 구현 전 계획이다.
+이 절은 명시적으로 선택하는 library 모드의 현재 클라이언트 계약이다.
+운영 서버 적용과 웹 UI 구현은 별도 작업이다.
 현재 기본 실행의 누적 추천 이력은 위 `state/morning-study-history.json` 계약을 따른다.
 
 `--library` 실행에서 누적 자료, 즐겨찾기, 읽음, 메모와 추천 이력은 fos-blog의 기존 MySQL에 있는 별도 study 테이블이 소유한다.
@@ -405,6 +406,12 @@ career-os가 해석하는 archive cursor의 내부 형태는 아래처럼 adapte
 | `youtube` | `archive` | `{"uploadsPlaylistId":"UU...","pageToken":"...","pendingVideoIds":[],"apiKeyRequired":true,"done":false}` | YouTube Data API uploads playlist 페이지 안의 남은 영상 |
 | `youtube` | `recent` | `{"rssOnly":true,"lastSeen":["youtube:..."]}` | API 키가 없어 RSS 최근 영상만 수집한 상태 |
 
+sitemap index cursor의 `currentSitemapDigest`는 처리 중인 sitemap 본문 변경을 감지한다.
+큰 목록을 축약하면 `pendingSitemapsTrimmed:true`와 누적 `completedSitemapCount`로 같은 index에서 남은 목록을 다시 계산한다.
+YouTube archive cursor는 `pendingVideoIds`와 함께 `pendingVideos`에 아직 저장하지 않은 영상의 `videoId`, `title`, `published`를 보존한다.
+`nextPageToken`은 현재 페이지의 남은 영상을 모두 저장한 뒤 사용할 다음 페이지 위치다.
+마지막 페이지의 남은 영상까지 저장해야 `done:true`가 된다.
+
 자료 배치 저장 요청의 `items`는 100개 이하로 보낸다.
 recent의 `lastSeen`은 현재 정상 응답에서 확인한 기존 키와 이번 배치에 저장할 새 키를 보존한다.
 아직 저장하지 않은 자료는 실행 한도에 걸렸더라도 `lastSeen`에 넣지 않는다.
@@ -434,7 +441,7 @@ publication의 `idempotencyKey`는 `publication:` 뒤에 고정 순서 `{reportI
 
 ### Pages manifest와 import payload
 
-이 절은 구현 전 계획이다.
+이 절은 library 모드의 현재 import preview 입력과 출력 계약이다.
 기존 Pages 노출 이력은 API payload와 분리한 manifest envelope로 읽는다.
 서버 API에는 envelope를 보내지 않고, API `ImportReport` 규격의 `reports`만 보낸다.
 

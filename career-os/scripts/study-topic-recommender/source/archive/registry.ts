@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { XMLParser } from "fast-xml-parser";
+import { XMLParser, XMLValidator } from "fast-xml-parser";
 import type { ReadingSource } from "../../reading_contracts.js";
 import type { CollectedReading } from "../adapters/types.js";
 
@@ -24,6 +24,12 @@ export interface ArchiveCollectContext {
 }
 
 export type ArchiveCursor = Record<string, unknown>;
+
+interface PendingYoutubeVideo {
+  videoId: string;
+  title?: string;
+  published?: string;
+}
 
 export interface ArchiveCollectResult {
   status: "collected" | "skipped" | "unavailable" | "failed";
@@ -93,8 +99,15 @@ function safeHttpsUrl(value: string): string | null {
 }
 
 function xmlLocations(xml: string, rootName: "sitemapindex" | "urlset"): string[] {
+  const validation = XMLValidator.validate(xml);
+  if (validation !== true) {
+    throw new Error("sitemap XML 파싱 실패");
+  }
   const parsed = asRecord(parser().parse(xml));
   const root = asRecord(parsed[rootName]);
+  if (parsed[rootName] === undefined) {
+    throw new Error(`sitemap root가 ${rootName}이 아니다.`);
+  }
   const rows = rootName === "sitemapindex" ? root.sitemap : root.url;
   const values = Array.isArray(rows) ? rows : rows ? [rows] : [];
   return values
@@ -120,7 +133,7 @@ function trimCursor(cursor: ArchiveCursor): ArchiveCursor {
         ...next,
         pendingSitemaps: [],
         pendingSitemapsTrimmed: true,
-        completedSitemapCount: Array.isArray(next.completedSitemaps) ? next.completedSitemaps.length : 0,
+        completedSitemapCount: typeof next.completedSitemapCount === "number" ? next.completedSitemapCount : 0,
       };
       continue;
     }
@@ -128,12 +141,9 @@ function trimCursor(cursor: ArchiveCursor): ArchiveCursor {
       next = {
         ...next,
         completedSitemaps: [],
-        completedSitemapCount: Array.isArray(next.completedSitemaps) ? next.completedSitemaps.length : next.completedSitemapCount,
+        completedSitemapCount: (typeof next.completedSitemapCount === "number" ? next.completedSitemapCount : 0)
+          + next.completedSitemaps.length,
       };
-      continue;
-    }
-    if (Array.isArray(next.pendingVideoIds) && next.pendingVideoIds.length > 0) {
-      next = { ...next, pendingVideoIds: [] };
       continue;
     }
     throw new Error("archive cursor가 64KiB를 초과한다.");
@@ -185,7 +195,9 @@ function initialYoutubeCursor(source: ReadingSource): ArchiveCursor | null {
   return {
     uploadsPlaylistId,
     pageToken: null,
+    nextPageToken: null,
     pendingVideoIds: [],
+    pendingVideos: [],
     apiKeyRequired: true,
     done: false,
   };
@@ -301,14 +313,16 @@ async function collectSitemapIndex(
     throw new Error("sitemap index digest가 변경되어 cursor를 진행할 수 없다.");
   }
   const allSitemaps = xmlLocations(indexXml, "sitemapindex");
-  const completed = new Set(Array.isArray(cursor.completedSitemaps) ? cursor.completedSitemaps.filter((v): v is string => typeof v === "string") : []);
   const completedCount = typeof cursor.completedSitemapCount === "number"
     ? cursor.completedSitemapCount
-    : completed.size;
+    : Array.isArray(cursor.completedSitemaps)
+      ? cursor.completedSitemaps.filter((v): v is string => typeof v === "string").length
+      : 0;
+  const completed = new Set<string>();
   const pendingWasTrimmed = cursor.pendingSitemapsTrimmed === true;
   let pending = Array.isArray(cursor.pendingSitemaps) && typeof cursor.indexDigest === "string" && !pendingWasTrimmed
     ? cursor.pendingSitemaps.filter((v): v is string => typeof v === "string")
-    : allSitemaps.slice(completedCount).filter((url) => !completed.has(url));
+    : allSitemaps.slice(completedCount);
   let currentSitemap = typeof cursor.currentSitemap === "string" ? cursor.currentSitemap : pending.shift() ?? null;
   let lastUrl = typeof cursor.lastUrl === "string" ? cursor.lastUrl : null;
   if (pendingWasTrimmed && currentSitemap) {
@@ -337,6 +351,7 @@ async function collectSitemapIndex(
   }
 
   const done = !currentSitemap && pending.length === 0;
+  const nextCompletedSitemapCount = completedCount + completed.size;
   return {
     status: "collected",
     items,
@@ -345,6 +360,7 @@ async function collectSitemapIndex(
       indexDigest,
       pendingSitemaps: pending,
       completedSitemaps: [...completed],
+      completedSitemapCount: nextCompletedSitemapCount,
       currentSitemap,
       currentSitemapDigest,
       lastUrl,
@@ -353,13 +369,31 @@ async function collectSitemapIndex(
   };
 }
 
-function videoItem(videoId: string, title?: string, publishedAt?: string): CollectedReading {
+function videoItem(videoId: string, title?: string, published?: string): CollectedReading {
   return {
     title: title?.trim() || `YouTube video ${videoId}`,
     url: `https://www.youtube.com/watch?v=${videoId}`,
-    published: publishedAt ?? "",
+    published: published ?? "",
     kind: "page-video",
   };
+}
+
+function pendingVideosFromCursor(cursor: ArchiveCursor): PendingYoutubeVideo[] {
+  if (Array.isArray(cursor.pendingVideos)) {
+    return cursor.pendingVideos
+      .map((value) => asRecord(value))
+      .filter((value) => typeof value.videoId === "string")
+      .map((value) => ({
+        videoId: value.videoId as string,
+        title: typeof value.title === "string" ? value.title : undefined,
+        published: typeof value.published === "string" ? value.published : undefined,
+      }));
+  }
+  return Array.isArray(cursor.pendingVideoIds)
+    ? cursor.pendingVideoIds
+      .filter((value): value is string => typeof value === "string")
+      .map((videoId) => ({ videoId }))
+    : [];
 }
 
 async function collectYoutubeUploads(
@@ -381,31 +415,53 @@ async function collectYoutubeUploads(
   if (!uploadsPlaylistId) {
     return { status: "skipped", reason: "uploads playlist를 계산할 수 없다.", items: [], cursor: null };
   }
-  const pending = Array.isArray(cursor.pendingVideoIds)
-    ? cursor.pendingVideoIds.filter((value): value is string => typeof value === "string")
-    : [];
-  const items: CollectedReading[] = pending.slice(0, context.maxItems).map((videoId) => videoItem(videoId));
-  if (items.length >= context.maxItems) {
+  const pending = pendingVideosFromCursor(cursor);
+  const acceptedPending = pending.slice(0, context.maxItems);
+  const items: CollectedReading[] = acceptedPending.map((video) => videoItem(video.videoId, video.title, video.published));
+  const remainingPending = pending.slice(acceptedPending.length);
+  const cursorPageToken = typeof cursor.pageToken === "string" ? cursor.pageToken : null;
+  const cursorNextPageToken = typeof cursor.nextPageToken === "string" ? cursor.nextPageToken : null;
+  if (items.length >= context.maxItems || remainingPending.length > 0) {
     return {
       status: "collected",
       items,
       cursor: trimCursor({
         uploadsPlaylistId,
-        pageToken: typeof cursor.pageToken === "string" ? cursor.pageToken : null,
-        pendingVideoIds: pending.slice(items.length),
+        pageToken: cursorPageToken,
+        nextPageToken: cursorNextPageToken,
+        pendingVideoIds: remainingPending.map((video) => video.videoId),
+        pendingVideos: remainingPending,
         apiKeyRequired: true,
         done: false,
       }),
     };
   }
+  if (pending.length > 0 && !cursorNextPageToken) {
+    return {
+      status: "collected",
+      items,
+      cursor: trimCursor({
+        uploadsPlaylistId,
+        pageToken: null,
+        nextPageToken: null,
+        pendingVideoIds: [],
+        pendingVideos: [],
+        apiKeyRequired: true,
+        done: true,
+      }),
+    };
+  }
 
+  const pageTokenForRequest = pending.length > 0 && cursorNextPageToken
+    ? cursorNextPageToken
+    : cursorPageToken;
   const url = new URL("https://www.googleapis.com/youtube/v3/playlistItems");
   url.searchParams.set("part", "snippet,contentDetails");
   url.searchParams.set("playlistId", uploadsPlaylistId);
   url.searchParams.set("maxResults", "50");
   url.searchParams.set("key", context.youtubeApiKey);
-  if (typeof cursor.pageToken === "string" && cursor.pageToken) {
-    url.searchParams.set("pageToken", cursor.pageToken);
+  if (pageTokenForRequest) {
+    url.searchParams.set("pageToken", pageTokenForRequest);
   }
 
   const raw = await fetchText(url.toString(), context);
@@ -414,29 +470,31 @@ async function collectYoutubeUploads(
     items?: Array<{ contentDetails?: { videoId?: string }; snippet?: { title?: string; publishedAt?: string } }>;
   };
   const pageItems = Array.isArray(parsed.items) ? parsed.items : [];
-  const pageVideos: Array<{ videoId: string; title?: string; publishedAt?: string }> = [];
+  const pageVideos: PendingYoutubeVideo[] = [];
   for (const item of pageItems) {
     const videoId = item.contentDetails?.videoId;
     if (typeof videoId === "string") {
       pageVideos.push({
         videoId,
         title: item.snippet?.title,
-        publishedAt: item.snippet?.publishedAt,
+        published: item.snippet?.publishedAt,
       });
     }
   }
   const remainingCapacity = context.maxItems - items.length;
   const accepted = pageVideos.slice(0, remainingCapacity);
-  items.push(...accepted.map((item) => videoItem(item.videoId, item.title, item.publishedAt)));
-  const leftover = pageVideos.slice(accepted.length).map((item) => item.videoId);
+  items.push(...accepted.map((item) => videoItem(item.videoId, item.title, item.published)));
+  const leftover = pageVideos.slice(accepted.length);
   const nextPageToken = parsed.nextPageToken ?? null;
   return {
     status: "collected",
     items,
     cursor: trimCursor({
       uploadsPlaylistId,
-      pageToken: leftover.length > 0 ? (typeof cursor.pageToken === "string" ? cursor.pageToken : null) : nextPageToken,
-      pendingVideoIds: leftover,
+      pageToken: leftover.length > 0 ? pageTokenForRequest : nextPageToken,
+      nextPageToken: leftover.length > 0 ? nextPageToken : null,
+      pendingVideoIds: leftover.map((item) => item.videoId),
+      pendingVideos: leftover,
       apiKeyRequired: true,
       done: leftover.length === 0 && !nextPageToken,
     }),

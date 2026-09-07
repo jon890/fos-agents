@@ -124,7 +124,10 @@ export const studyLibraryImportDryRunResultSchema = z.object({
   previewHash: nonEmptyString,
   historyVersion: z.number().int().nonnegative(),
   counts: z.record(z.string(), z.number().int().nonnegative()),
-  warnings: z.array(z.string()),
+  warnings: z.array(z.object({
+    code: nonEmptyString,
+    message: z.string(),
+  })),
 });
 
 export const studyLibraryApiErrorSchema = z.object({

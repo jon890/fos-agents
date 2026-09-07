@@ -167,7 +167,8 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 
 ### 학습자료 API 연동모드
 
-이 절은 구현 전 계획이다.
+이 절은 명시적으로 선택하는 library 모드의 현재 CLI 계약이다.
+클라이언트는 mock HTTP로 검증했으며 운영 서버 적용과 웹 UI 구현은 별도 작업이다.
 현재 기본 실행은 위 파일모드 계약을 따른다.
 저장 모델, cursor, 후보와 이관 payload는 [`data-schema.md`](data-schema.md#학습자료-api-연동-상태)가 소유한다.
 환경값, HTTP 동작과 모듈 배치는 [`code-architecture.md`](code-architecture.md#아침-읽을거리)가 소유한다.

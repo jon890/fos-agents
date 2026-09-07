@@ -246,7 +246,7 @@ describe("study-library import preview CLI", () => {
         previewHash: "preview-hash-1",
         historyVersion: 7,
         counts: { reports: 3, topics: 2, items: 2 },
-        warnings: ["중복 자료가 과거 report에 있다."],
+        warnings: [{ code: "DUPLICATED_CONTENT", message: "중복 자료가 과거 report에 있다." }],
       });
     });
 
@@ -258,6 +258,9 @@ describe("study-library import preview CLI", () => {
     expect(raw).not.toHaveProperty("previewHash");
     expect(preview.previewHash).toBe("preview-hash-1");
     expect(preview.counts).toEqual({ reports: 3, topics: 2, items: 2 });
+    expect(preview.warnings).toEqual([
+      { code: "DUPLICATED_CONTENT", message: "중복 자료가 과거 report에 있다." },
+    ]);
     expect(JSON.parse(logs[0])).toMatchObject({
       mode: "import-preview",
       library: true,

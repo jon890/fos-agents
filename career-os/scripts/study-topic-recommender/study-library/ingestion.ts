@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { XMLValidator } from "fast-xml-parser";
+import { XMLParser, XMLValidator } from "fast-xml-parser";
 import type { ReadingSource } from "../reading_contracts.js";
 import { parseFeed } from "../source/feed.js";
 import { extractPageLinks } from "../source/adapters/page.js";
@@ -172,6 +172,15 @@ function validXml(xml: string): boolean {
   return XMLValidator.validate(xml) === true;
 }
 
+function hasFeedRoot(xml: string): boolean {
+  const parsed = new XMLParser({ removeNSPrefix: true }).parse(xml) as Record<string, unknown>;
+  return typeof parsed === "object" && parsed !== null && (parsed.rss !== undefined || parsed.feed !== undefined);
+}
+
+function looksLikeHtmlDocument(html: string): boolean {
+  return /<!doctype\s+html\b|<html\b|<body\b|<a\b/i.test(html);
+}
+
 async function collectRecentSource(input: {
   source: ReadingSource;
   cursor: RecentCursor;
@@ -185,11 +194,13 @@ async function collectRecentSource(input: {
     if (input.source.adapter === "page") {
       if (!input.source.url) throw new Error("page source URL 없음");
       const html = await fetchText(input.source.url, input.timeoutMs, input.fetchImpl);
+      if (!looksLikeHtmlDocument(html)) throw new Error("page HTML 구조가 아니다.");
       collected.push(...extractPageLinks(html, input.source.url, Number.MAX_SAFE_INTEGER));
     } else {
       if (!input.source.feedUrl) throw new Error("feed URL 없음");
       const xml = await fetchText(input.source.feedUrl, input.timeoutMs, input.fetchImpl);
       if (!validXml(xml)) throw new Error("feed XML 파싱 실패");
+      if (!hasFeedRoot(xml)) throw new Error("feed root가 rss 또는 feed가 아니다.");
       const entries = parseFeed(xml);
       for (const entry of entries) {
         try {
@@ -334,15 +345,22 @@ async function collectOneBatch(input: {
 
 function selectedSources(sources: ReadingSource[], sourceKey?: string): ReadingSource[] {
   if (!sourceKey) return sources;
-  return sources.filter((source) => source.key === sourceKey);
+  const selected = sources.filter((source) => source.key === sourceKey);
+  if (selected.length === 0) {
+    throw new Error(`활성 소스에서 sourceKey를 찾을 수 없다: ${sourceKey}`);
+  }
+  return selected;
 }
 
 export async function collectAndIngestStudyLibrary(input: CollectAndIngestOptions): Promise<CollectAndIngestResult> {
+  if (!Number.isInteger(input.maxItems) || input.maxItems <= 0) {
+    throw new Error("maxItems는 양의 정수여야 한다.");
+  }
   const sources = selectedSources(input.sources, input.sourceKey);
   const statuses: LibraryCollectStatus[] = [];
   let acceptedCount = 0;
   let cursorUpdates = 0;
-  const maxItems = Math.max(0, input.maxItems);
+  const maxItems = input.maxItems;
   const collectedAt = (input.now ?? (() => new Date()))().toISOString();
 
   for (const source of sources) {

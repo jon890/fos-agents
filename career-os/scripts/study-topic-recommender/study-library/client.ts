@@ -30,16 +30,19 @@ export class StudyLibraryApiError extends Error {
   readonly status: number;
   readonly code?: string;
   readonly requestId?: string;
+  readonly retryAfter?: number;
 
-  constructor(input: { status: number; code?: string; requestId?: string }) {
+  constructor(input: { status: number; code?: string; requestId?: string; retryAfter?: number }) {
     const parts = [`HTTP ${input.status}`];
     if (input.code) parts.push(input.code);
     if (input.requestId) parts.push(`requestId=${input.requestId}`);
+    if (input.retryAfter !== undefined) parts.push(`retryAfter=${input.retryAfter}`);
     super(`학습자료 API 요청 실패: ${parts.join(" ")}`);
     this.name = "StudyLibraryApiError";
     this.status = input.status;
     this.code = input.code;
     this.requestId = input.requestId;
+    this.retryAfter = input.retryAfter;
   }
 }
 
@@ -115,18 +118,68 @@ function isRetryableStatus(status: number): boolean {
   return status >= 500 && status <= 599;
 }
 
-async function parseApiError(response: Response): Promise<{ code?: string; requestId?: string }> {
+function parseRetryAfter(response: Response): number | undefined {
+  if (response.status !== 429) return undefined;
+  const raw = response.headers.get("Retry-After")?.trim();
+  if (!raw || !/^\d+$/.test(raw)) return undefined;
+  const seconds = Number(raw);
+  return Number.isSafeInteger(seconds) ? seconds : undefined;
+}
+
+class StudyLibraryBodyReadError extends Error {
+  constructor() {
+    super("학습자료 API 응답 본문 읽기 실패");
+    this.name = "StudyLibraryBodyReadError";
+  }
+}
+
+class StudyLibraryMalformedJsonError extends Error {
+  constructor() {
+    super("학습자료 API JSON 응답 파싱 실패");
+    this.name = "StudyLibraryMalformedJsonError";
+  }
+}
+
+class StudyLibraryResponseValidationError extends Error {
+  constructor(issues: { path: PropertyKey[]; message: string }[]) {
+    super(`학습자료 API 응답 검증 실패: ${formatIssues(issues)}`);
+    this.name = "StudyLibraryResponseValidationError";
+  }
+}
+
+async function readJsonBody(response: Response): Promise<unknown> {
+  try {
+    return await response.json();
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw new StudyLibraryMalformedJsonError();
+    }
+    throw new StudyLibraryBodyReadError();
+  }
+}
+
+async function cancelResponseBody(response: Response): Promise<void> {
+  try {
+    await response.body?.cancel();
+  } catch {
+    throw new StudyLibraryBodyReadError();
+  }
+}
+
+async function parseApiError(response: Response): Promise<{ code?: string; requestId?: string; retryAfter?: number }> {
   let raw: unknown;
   try {
-    raw = await response.json();
-  } catch {
-    return {};
+    raw = await readJsonBody(response);
+  } catch (error) {
+    if (error instanceof StudyLibraryMalformedJsonError) return { retryAfter: parseRetryAfter(response) };
+    throw error;
   }
   const parsed = studyLibraryApiErrorSchema.safeParse(raw);
-  if (!parsed.success) return {};
+  if (!parsed.success) return { retryAfter: parseRetryAfter(response) };
   return {
     code: parsed.data.error.code,
     requestId: parsed.data.error.requestId,
+    retryAfter: parseRetryAfter(response),
   };
 }
 
@@ -180,7 +233,34 @@ export class StudyLibraryClient {
           redirect: "error",
           signal: controller.signal,
         });
+        if (!response.ok) {
+          if (isRetryableStatus(response.status) && attempt < this.maxRetries) {
+            await cancelResponseBody(response);
+            continue;
+          }
+          const apiError = await parseApiError(response);
+          throw new StudyLibraryApiError({
+            status: response.status,
+            code: apiError.code,
+            requestId: apiError.requestId,
+            retryAfter: apiError.retryAfter,
+          });
+        }
+
+        const parsedBody = await readJsonBody(response);
+        const parsed = schema.safeParse(parsedBody);
+        if (!parsed.success) {
+          throw new StudyLibraryResponseValidationError(parsed.error.issues);
+        }
+        return parsed.data;
       } catch (error) {
+        if (
+          error instanceof StudyLibraryApiError ||
+          error instanceof StudyLibraryMalformedJsonError ||
+          error instanceof StudyLibraryResponseValidationError
+        ) {
+          throw error;
+        }
         if (attempt >= this.maxRetries) {
           throw new Error("학습자료 API 네트워크 요청 실패");
         }
@@ -188,25 +268,6 @@ export class StudyLibraryClient {
       } finally {
         clearTimeout(timer);
       }
-
-      if (!response.ok) {
-        if (isRetryableStatus(response.status) && attempt < this.maxRetries) {
-          continue;
-        }
-        const apiError = await parseApiError(response);
-        throw new StudyLibraryApiError({
-          status: response.status,
-          code: apiError.code,
-          requestId: apiError.requestId,
-        });
-      }
-
-      const parsedBody = await response.json();
-      const parsed = schema.safeParse(parsedBody);
-      if (!parsed.success) {
-        throw new Error(`학습자료 API 응답 검증 실패: ${formatIssues(parsed.error.issues)}`);
-      }
-      return parsed.data;
     }
     throw new Error("학습자료 API 네트워크 요청 실패");
   }

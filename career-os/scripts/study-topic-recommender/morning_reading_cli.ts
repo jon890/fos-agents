@@ -58,8 +58,8 @@ function parseMaxItems(): number {
   const raw = argumentValue("--max-items");
   if (!raw) return DEFAULT_MAX_CANDIDATES_PER_SOURCE;
   const value = Number(raw);
-  if (!Number.isInteger(value) || value < 0) {
-    throw new StudyRunPathError("--max-items는 0 이상의 정수여야 한다.");
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new StudyRunPathError("--max-items는 양의 정수여야 한다.");
   }
   return value;
 }
@@ -112,14 +112,19 @@ function assertLibraryCollectUsage(mode: LibraryCollectMode): void {
 async function runLibraryCollectOnly(readingSources: ReturnType<typeof normalizeReadingSources>): Promise<void> {
   const mode = parseMode();
   assertLibraryCollectUsage(mode);
+  const maxItems = parseMaxItems();
+  const sourceKey = argumentValue("--source-key");
+  if (sourceKey && !readingSources.sources.some((source) => source.key === sourceKey)) {
+    throw new StudyRunPathError(`활성 소스에서 sourceKey를 찾을 수 없다: ${sourceKey}`);
+  }
   const client = createStudyLibraryClient();
   await syncStudyLibrarySources(client);
   const result = await collectAndIngestStudyLibrary({
     client,
     sources: readingSources.sources,
     mode,
-    sourceKey: argumentValue("--source-key"),
-    maxItems: parseMaxItems(),
+    sourceKey,
+    maxItems,
     resetCursor: hasFlag("--reset-cursor"),
     timeoutMs: FEED_TIMEOUT_MS,
     youtubeApiKey: process.env.YOUTUBE_DATA_API_KEY,
@@ -397,10 +402,12 @@ export function reportMorningReadingError(error: unknown): never {
     process.exit(error.exitCode);
   }
   if (error instanceof StudyLibraryApiError) {
+    const retryAfter = (error as StudyLibraryApiError & { retryAfter?: number }).retryAfter;
     console.error(JSON.stringify({
       error: {
         code: error.code ?? `HTTP_${error.status}`,
         requestId: error.requestId ?? null,
+        ...(error.status === 429 && retryAfter !== undefined ? { retryAfter } : {}),
       },
     }));
     process.exit(1);
