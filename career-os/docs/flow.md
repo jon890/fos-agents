@@ -145,6 +145,9 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 ## 아침 읽을거리 추천
 
 등록된 외부 소스에서 그날 읽거나 볼 가치가 높은 자료를 선별한다.
+기본 실행은 기존 파일모드이며, 사용자가 명시적으로 `--library`를 지정하면 블로그 학습자료 API를 단일 원격 저장소로 사용한다.
+
+### 파일모드
 
 1. 공통 CLI가 홈서버의 최신 `state/` release를 준비한다.
 2. `state/morning-study-history.json`에서 이전에 추천한 자료의 `contentKey`와 직전 리포트의 `studyTopicKey`를 읽는다.
@@ -160,11 +163,117 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 12. 사용자가 공유 링크를 요청했으면 `report-publisher`로 Cloudflare Pages에 게시하고 공개 URL을 검증한다.
 13. 로컬 검토 또는 게시 검증을 마치면 시스템 임시 경로의 실행 자료를 정리한다.
 
+홈서버 release 충돌이나 이력 반영 실패가 발생하면 임시 리포트와 로컬 이력을 보존하고 이전 원격 release를 바꾸지 않는다.
+
+### 학습자료 API 연동모드
+
+이 절은 구현 전 계획이다.
+현재 기본 실행은 위 파일모드 계약을 따른다.
+저장 모델, cursor, 후보와 이관 payload는 [`data-schema.md`](data-schema.md#학습자료-api-연동-상태)가 소유한다.
+환경값, HTTP 동작과 모듈 배치는 [`code-architecture.md`](code-architecture.md#아침-읽을거리)가 소유한다.
+
+```mermaid
+sequenceDiagram
+    participant Skill as study-topic-recommender
+    participant Client as career-os study-library client
+    participant Blog as fos-blog study API
+    participant Model as 모델 선택
+    Skill->>Client: --library 실행과 환경 검증
+    Client->>Blog: 소스 등록과 mode별 cursor 조회
+    Client->>Skill: sourceKey와 mode에 맞는 수집 실행
+    Skill->>Client: 자료 묶음과 다음 cursor
+    Client->>Blog: 자료 묶음과 cursor 원자 저장
+    Blog-->>Client: 저장 영수증 또는 충돌
+    Client->>Blog: 후보 페이지와 historyVersion 조회
+    Client-->>Model: 기존 후보풀 스키마로 변환한 전체 후보
+    Model-->>Client: topic과 candidateId 선택
+    Client->>Skill: 기존 검증과 HTML 렌더링
+    Client->>Blog: recommendation-runs 저장
+    Blog-->>Client: historyVersion
+    opt 외부 게시 요청
+        Skill->>Skill: report-publisher로 게시
+        Client->>Blog: publications 기록
+    end
+```
+
+연동모드는 브라우저 관리자 세션을 복제하지 않는다.
+career-os는 `STUDY_LIBRARY_URL`과 `STUDY_SERVICE_TOKEN`으로 서비스 인증을 사용하며, [fos-blog 학습자료 HTTP 계약](https://github.com/jon890/fos-blog/blob/study-library-planning/docs/api/study-library.md)을 단일 HTTP 계약으로 읽는다.
+API 장애, 인증 실패, 충돌이 발생하면 파일 이력으로 fallback하거나 dual-write하지 않고 오류를 알린다.
+수집 실패는 빈 페이지로 전송하지 않으며, cursor 저장은 서버가 자료 배치와 같은 트랜잭션으로 성공한 뒤에만 진행된 것으로 본다.
+
+최근 수집과 과거 수집은 같은 소스라도 `mode=recent`와 `mode=archive` cursor를 분리한다.
+각 실행의 20개 또는 48개 같은 수집 한도는 요청량 제한일 뿐 누적 보관 한도가 아니다.
+Kurly와 OliveYoung은 archive registry의 sitemap index에서 하위 sitemap을 따라가고, Kakao는 sitemap의 `/posts/` URL만 수집한다.
+YouTube는 API 키가 있으면 uploads playlist와 pageToken으로 과거 영상을 수집하고, API 키가 없으면 RSS 최근 수집만 가능하다고 출력한다.
+YouTube uploads playlist는 한 페이지 50개 단위라서 pageToken만으로 48개씩 저장하면 남은 2개가 유실될 수 있다.
+cursor는 pendingVideoIds로 현재 페이지에서 아직 저장하지 않은 video ID를 보존하고, 페이지의 모든 영상을 처리한 뒤에만 nextPageToken으로 이동한다.
+추천 저장은 HTML과 report JSON 검증 후 별도 commit 명령으로 수행하며, `generatedAt`을 다시 만들지 않는다.
+
+실행 명령은 모두 저장소 루트에서 실행한다.
+`<RUN_DIR>`는 시스템 임시 디렉터리 아래의 실행별 경로다.
+
+```bash
+# cwd: 저장소 루트
+bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
+  --run-dir <RUN_DIR> --library --collect-only --mode recent
+bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
+  --run-dir <RUN_DIR> --library --collect-only --mode archive --source-key kurly-tech --max-items 48
+bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
+  --run-dir <RUN_DIR> --library --prepare-candidates --limit 100
+bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
+  --run-dir <RUN_DIR> --library \
+  --candidate-pool <RUN_DIR>/state/reading-candidates.json \
+  --reading-selection <RUN_DIR>/reading-selection.json
+bun career-os/scripts/study-topic-recommender/validate_outputs.ts --run-dir <RUN_DIR>
+bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
+  --run-dir <RUN_DIR> --library --commit-recommendation \
+  --report <RUN_DIR>/state/morning-reading.json
+```
+
+archive cursor를 처음부터 다시 만들 때는 `--reset-cursor`를 함께 지정한다.
+이 옵션은 `--library --collect-only --mode archive --source-key <key>` 조합에서만 허용한다.
+standalone reset API는 없고, 기존 cursor version을 읽은 뒤 초기 cursor에서 만든 자료 배치와 다음 cursor를 ingestion으로 원자 저장한다.
+이미 `done:true`인 archive를 다시 수집할 때도 같은 옵션을 사용한다.
+
+외부 게시가 성공하면 아래 명령으로 publications 기록만 추가한다.
+
+```bash
+# cwd: 저장소 루트
+bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
+  --run-dir <RUN_DIR> --library --record-publication \
+  --report-id morning-YYYY-MM-DD --channel cloudflare-pages \
+  --external-id morning-YYYY-MM-DD --published-at 2026-09-07T00:00:00.000Z \
+  --url https://example.com/morning-YYYY-MM-DD
+```
+
+기존 이력 가져오기는 본인 관리자 UI에 올릴 raw import payload와 dry-run preview를 만든다.
+실제 legacy `state/morning-study-history.json`을 읽는 import preview는 기존 private 작업본 동기화가 필요하므로 `skill begin study-topic-recommender` 뒤에 실행하고, 산출물 보존이 끝나면 `skill finish study-topic-recommender`를 수행한다.
+테스트는 fixture history와 fixture pages manifest만 사용해 begin/finish를 요구하지 않는다.
+
+```bash
+# cwd: 저장소 루트
+bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
+  --run-dir <RUN_DIR> --library --import-preview \
+  --history-file career-os/state/morning-study-history.json \
+  --pages-manifest <PAGES_MANIFEST_JSON> \
+  --output <RUN_DIR>/study-library-import-preview.json
+```
+
+추천·수집 실행의 `--library`는 `--history-file`, `--commit-history`, `--render-only`와 함께 사용할 수 없다.
+`--import-preview`만 legacy 파일을 읽어야 하므로 `--history-file`을 예외적으로 받는다.
+연동모드는 파일모드의 `state/morning-study-history.json`을 갱신하지 않는다.
+`--render-only`는 원격 쓰기를 하지 않으며 파일모드 전용으로 유지한다.
+API 장애, 인증 실패, 충돌이 발생하면 파일 이력으로 fallback하거나 dual-write하지 않고 오류를 알린다.
+`401`, `403`, `409`, `413`, `429`, `503`은 오류 코드와 requestId를 포함해 출력하고, 토큰과 원문 payload는 출력하지 않는다.
+`429`는 응답의 `Retry-After` 초를 표시하되 자동 장시간 대기는 하지 않는다.
+멱등 요청은 같은 본문과 같은 idempotencyKey로만 재시도한다.
+같은 키에 다른 본문이 필요하면 새 cursor 조회부터 다시 시작한다.
+응답 유실이 의심될 때도 로컬에서 성공으로 간주하지 않고 서버 영수증 재응답이나 충돌 응답으로 판정한다.
+
 외부 자료가 없는 학습 주제를 모델이 새로 만들지 않는다.
 공식 문서, 모델 발표와 최신 소식이라는 이유만으로 추천하지 않는다.
 기능 사용법만 나열하거나 사용자의 역할에서 전이할 판단이 없는 자료는 제외한다.
 새로운 후보가 없으면 과거 자료를 다시 채우지 않고 빈 상태를 보여준다.
-홈서버 release 충돌이나 이력 반영 실패가 발생하면 임시 리포트와 로컬 이력을 보존하고 이전 원격 release를 바꾸지 않는다.
 `study-topic-recommender` 호출만으로 외부 게시를 승인한 것으로 보지 않는다.
 
 ## 이력서 작성 중 개인 맥락 조회와 환원
