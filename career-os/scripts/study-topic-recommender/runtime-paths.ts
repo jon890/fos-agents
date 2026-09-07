@@ -13,22 +13,17 @@ export class StudyRunPathError extends Error {
   }
 }
 
-function realPathOrUsageError(path: string): string {
+function realPathOrUsageError(path: string, label: string): string {
   try {
     return realpathSync(path);
   } catch {
-    throw new StudyRunPathError("CAREER_OS_ROOT는 이미 생성된 시스템 임시 실행 경로여야 한다.");
+    throw new StudyRunPathError(`${label}는 이미 생성된 시스템 임시 실행 경로여야 한다.`);
   }
 }
 
-export function resolveStudyRunRoot(environment: NodeJS.ProcessEnv = process.env): string {
-  const configuredRoot = environment.CAREER_OS_ROOT;
-  if (!configuredRoot) {
-    throw new StudyRunPathError("CAREER_OS_ROOT에 시스템 임시 실행 경로를 지정해야 한다.");
-  }
-
-  const systemTempRoot = realPathOrUsageError(tmpdir());
-  const runRoot = realPathOrUsageError(resolve(configuredRoot));
+function validateRunRoot(path: string, label: string): string {
+  const systemTempRoot = realPathOrUsageError(tmpdir(), label);
+  const runRoot = realPathOrUsageError(resolve(path), label);
   const relativePath = relative(systemTempRoot, runRoot);
   const isInsideSystemTemp = relativePath !== ""
     && !relativePath.startsWith("..")
@@ -36,9 +31,26 @@ export function resolveStudyRunRoot(environment: NodeJS.ProcessEnv = process.env
 
   if (!isInsideSystemTemp || !basename(runRoot).startsWith(RUN_DIRECTORY_PREFIX)) {
     throw new StudyRunPathError(
-      "CAREER_OS_ROOT는 시스템 임시 디렉터리 아래의 study-topic-recommender.* 경로여야 한다."
+      `${label}는 시스템 임시 디렉터리 아래의 study-topic-recommender.* 경로여야 한다.`
     );
   }
 
   return runRoot;
+}
+
+export function resolveStudyRunRoot(
+  environment: NodeJS.ProcessEnv = process.env,
+  runDir?: string
+): string {
+  const configuredRoot = environment.CAREER_OS_ROOT;
+  if (!configuredRoot && !runDir) {
+    throw new StudyRunPathError("CAREER_OS_ROOT 또는 --run-dir에 시스템 임시 실행 경로를 지정해야 한다.");
+  }
+
+  const envRoot = configuredRoot ? validateRunRoot(configuredRoot, "CAREER_OS_ROOT") : undefined;
+  const cliRoot = runDir ? validateRunRoot(runDir, "--run-dir") : undefined;
+  if (envRoot && cliRoot && envRoot !== cliRoot) {
+    throw new StudyRunPathError("CAREER_OS_ROOT와 --run-dir는 같은 실행 경로를 가리켜야 한다.");
+  }
+  return cliRoot ?? envRoot!;
 }

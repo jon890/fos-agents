@@ -18,6 +18,8 @@ describe("아침 읽을거리 실행 경로", () => {
     temporaryDirectories.push(directory);
 
     expect(resolveStudyRunRoot({ CAREER_OS_ROOT: directory })).toBe(realpathSync(directory));
+    expect(resolveStudyRunRoot({}, directory)).toBe(realpathSync(directory));
+    expect(resolveStudyRunRoot({ CAREER_OS_ROOT: directory }, directory)).toBe(realpathSync(directory));
   });
 
   test("명시적 실행 경로가 없으면 중단한다", () => {
@@ -32,6 +34,14 @@ describe("아침 읽을거리 실행 경로", () => {
     expect(() => resolveStudyRunRoot({ CAREER_OS_ROOT: resolve(import.meta.dir, "..") }))
       .toThrow(StudyRunPathError);
   });
+
+  test("--run-dir와 CAREER_OS_ROOT가 다르면 사용법 오류로 실패한다", () => {
+    const first = mkdtempSync(join(tmpdir(), "study-topic-recommender."));
+    const second = mkdtempSync(join(tmpdir(), "study-topic-recommender."));
+    temporaryDirectories.push(first, second);
+
+    expect(() => resolveStudyRunRoot({ CAREER_OS_ROOT: first }, second)).toThrow(StudyRunPathError);
+  });
 });
 
 test("CLI 경로 오류는 stack trace와 절대 경로를 출력하지 않는다", () => {
@@ -42,7 +52,7 @@ test("CLI 경로 오류는 stack trace와 절대 경로를 출력하지 않는�
     const stderr = result.stderr.toString();
 
     expect(result.exitCode).toBe(2);
-    expect(stderr).toBe("CAREER_OS_ROOT에 시스템 임시 실행 경로를 지정해야 한다.\n");
+    expect(stderr).toBe("CAREER_OS_ROOT 또는 --run-dir에 시스템 임시 실행 경로를 지정해야 한다.\n");
     expect(stderr).not.toContain("StudyRunPathError");
     expect(stderr).not.toContain(import.meta.dir);
   }
@@ -61,4 +71,19 @@ test("CLI는 시스템 임시 디렉터리 밖 경로를 오류에 노출하지 
   expect(stderr).toContain("시스템 임시 디렉터리");
   expect(stderr).not.toContain("StudyRunPathError");
   expect(stderr).not.toContain(rejectedPath);
+});
+
+test("validate_outputs.ts --run-dir는 같은 실행 경로를 읽는다", () => {
+  const directory = mkdtempSync(join(tmpdir(), "study-topic-recommender."));
+  temporaryDirectories.push(directory);
+
+  const result = Bun.spawnSync([
+    "bun",
+    resolve(import.meta.dir, "validate_outputs.ts"),
+    "--run-dir",
+    directory,
+  ], { env: { ...process.env, CAREER_OS_ROOT: directory } });
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stderr.toString()).toContain("산출물이 없거나 비어 있다");
 });

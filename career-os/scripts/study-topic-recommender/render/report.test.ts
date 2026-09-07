@@ -12,14 +12,13 @@ afterEach(() => {
 });
 
 describe("아침 읽을거리 산출물", () => {
-  test("실행 경로 바로 아래에 주제 중심 Markdown과 HTML을 만든다", () => {
+  test("실행 경로 바로 아래에 HTML만 만든다", () => {
     const outputDir = mkdtempSync(join(tmpdir(), "study-topic-recommender."));
     temporaryDirectories.push(outputDir);
     const artifacts = writeReportArtifacts({ report: morningReadingReportFixture, outputDir });
-    expect(artifacts.markdownPath).toBe(join(outputDir, "morning-reading.md"));
     expect(artifacts.htmlPath).toBe(join(outputDir, "morning-reading-2026-08-12.html"));
-    expect(readFileSync(artifacts.markdownPath, "utf8")).toContain("운영 가능한 AI 제품");
     expect(readFileSync(artifacts.htmlPath, "utf8")).toContain("운영 가능한 AI 제품");
+    expect(existsSync(join(outputDir, "morning-reading.md"))).toBe(false);
     expect(existsSync(join(outputDir, "reports"))).toBe(false);
   });
 });
