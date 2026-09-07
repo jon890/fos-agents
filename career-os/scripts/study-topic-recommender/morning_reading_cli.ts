@@ -32,6 +32,7 @@ import {
   recordPublication,
 } from "./study-library/recommendations.js";
 import { syncStudyLibrarySources } from "./study-library/source-sync.js";
+import { createImportPreview } from "./study-library/imports.js";
 
 const FEED_CACHE_TTL_HOURS = 6;
 const FEED_TIMEOUT_MS = 8_000;
@@ -78,10 +79,14 @@ function parseCandidateLimit(): number | undefined {
 }
 
 function assertLibraryUsage(): void {
-  for (const flag of ["--history-file", "--commit-history", "--render-only"]) {
+  const importPreview = hasFlag("--import-preview");
+  for (const flag of ["--commit-history", "--render-only"]) {
     if (hasFlag(flag)) {
       throw new StudyRunPathError(`--library는 ${flag}와 함께 사용할 수 없다.`);
     }
+  }
+  if (hasFlag("--history-file") && !importPreview) {
+    throw new StudyRunPathError("--library는 --history-file과 함께 사용할 수 없다. 단 --import-preview에서는 허용한다.");
   }
   const actionCount = [
     hasFlag("--collect-only"),
@@ -89,9 +94,10 @@ function assertLibraryUsage(): void {
     Boolean(argumentValue("--reading-selection")),
     hasFlag("--commit-recommendation"),
     hasFlag("--record-publication"),
+    importPreview,
   ].filter(Boolean).length;
   if (actionCount !== 1) {
-    throw new StudyRunPathError("--library는 collect, prepare-candidates, reading-selection, commit-recommendation, record-publication 중 하나만 실행해야 한다.");
+    throw new StudyRunPathError("--library는 collect, prepare-candidates, reading-selection, commit-recommendation, record-publication, import-preview 중 하나만 실행해야 한다.");
   }
 }
 
@@ -217,6 +223,27 @@ async function runLibraryRecordPublication(): Promise<void> {
   }));
 }
 
+async function runLibraryImportPreview(): Promise<void> {
+  const client = createStudyLibraryClient();
+  const result = await createImportPreview({
+    client,
+    historyFile: requiredArgument("--history-file"),
+    pagesManifest: requiredArgument("--pages-manifest"),
+    output: requiredArgument("--output"),
+  });
+  if (result.errors.length > 0) {
+    throw new StudyRunPathError(`이관 입력 변환 오류 ${result.errors.length}건`);
+  }
+  console.log(JSON.stringify({
+    mode: "import-preview",
+    library: true,
+    output: requiredArgument("--output"),
+    preview: `${requiredArgument("--output")}.preview.json`,
+    reportCount: result.payload.reports.length,
+    historyVersion: result.preview.historyVersion,
+  }));
+}
+
 async function runLibrary(root: string, readingSources: ReturnType<typeof normalizeReadingSources>): Promise<void> {
   assertLibraryUsage();
   if (hasFlag("--collect-only")) {
@@ -237,6 +264,10 @@ async function runLibrary(root: string, readingSources: ReturnType<typeof normal
   }
   if (hasFlag("--record-publication")) {
     await runLibraryRecordPublication();
+    return;
+  }
+  if (hasFlag("--import-preview")) {
+    await runLibraryImportPreview();
     return;
   }
 }

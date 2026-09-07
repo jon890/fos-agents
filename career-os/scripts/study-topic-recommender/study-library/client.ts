@@ -4,6 +4,7 @@ import {
   studyLibraryCandidatePageSchema,
   studyLibraryCursorResultSchema,
   studyLibraryIngestionResultSchema,
+  studyLibraryImportDryRunResultSchema,
   studyLibraryPublicationResultSchema,
   studyLibraryRecommendationRunResultSchema,
   studyLibrarySourcesResponseSchema,
@@ -11,6 +12,7 @@ import {
   type StudyLibraryCandidatePage,
   type StudyLibraryCursorResult,
   type StudyLibraryIngestionResult,
+  type StudyLibraryImportDryRunResult,
   type StudyLibraryPublicationResult,
   type StudyLibraryRecommendationRunResult,
   type StudyLibrarySourcePutPayload,
@@ -245,6 +247,10 @@ export class StudyLibraryClient {
 
   async createPublication(body: unknown): Promise<StudyLibraryPublicationResult> {
     return this.request("POST", "/publications", studyLibraryPublicationResultSchema, { body });
+  }
+
+  async createImportDryRun(body: unknown): Promise<StudyLibraryImportDryRunResult> {
+    return this.request("POST", "/imports/dry-run", studyLibraryImportDryRunResultSchema, { body });
   }
 }
 
