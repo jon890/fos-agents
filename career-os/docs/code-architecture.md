@@ -167,7 +167,7 @@ TypeScript 스크립트가 brain을 직접 조회하지 않는다.
 
 `config/external-reading-sources.ts`는 읽을거리 소스와 어댑터 종류를 타입 안전하게 관리한다.
 `scripts/study-topic-recommender/source/`는 글과 영상 피드 수집 경계다.
-후보풀, 선별, 누적 이력, 공부 주제 구성과 Markdown·HTML 렌더링은 각각 분리된 모듈이 담당한다.
+후보풀, 선별, 누적 이력, 공부 주제 구성과 HTML 렌더링은 각각 분리된 모듈이 담당한다.
 실행기는 시스템 임시 디렉터리 아래의 명시적인 실행 경로만 사용하며 저장소에 리포트 디렉터리를 만들지 않는다.
 누적 추천 이력은 `state/morning-study-history.json`에 두고 홈서버 S3 release로 동기화한다.
 임시 실행 경로는 누적 이력을 읽기만 하며, 출력 검증이 끝난 뒤 별도 완료 동작이 이력을 원자적으로 갱신한다.
@@ -182,7 +182,7 @@ YouTube 채널은 공식 Atom 피드를 우선 사용하고 피드를 읽을 수
 ## 리포트 게시
 
 외부 게시용 HTML은 시스템 임시 디렉터리에 만든다.
-실행 경로 바로 아래에 검증할 구조화 데이터, Markdown과 HTML을 두며 별도 `reports/` 계층을 만들지 않는다.
+실행 경로 바로 아래에 검증할 구조화 데이터와 HTML 등 해당 skill의 산출물을 두며 별도 `reports/` 계층을 만들지 않는다.
 외부 공유가 요청되면 루트의 `report-publisher` skill이 민감 정보 검사, Cloudflare Pages 게시, URL 검증을 담당한다.
 게시가 끝나면 임시 HTML을 삭제한다.
 사용자가 로컬 사본을 요청한 경우에만 지정한 경로에 보존한다.

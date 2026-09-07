@@ -23,14 +23,10 @@ function requireFile(path: string): void {
 function main(): void {
   const root = resolveStudyRunRoot();
   const reportPath = join(root, "state", "morning-reading.json");
-  const markdownPath = join(root, "morning-reading.md");
   requireFile(reportPath);
-  requireFile(markdownPath);
   const report = morningReadingReportSchema.parse(
     JSON.parse(readFileSync(reportPath, "utf8")) as unknown
   );
-  const markdownLines = readFileSync(markdownPath, "utf8").split(/\r?\n/).length;
-  if (markdownLines < 10) throw new Error(`마크다운이 너무 짧다: ${markdownLines}줄`);
 
   const htmlPath = join(root, morningHtmlFilename(report.generatedAt));
   requireFile(htmlPath);
@@ -45,9 +41,7 @@ function main(): void {
   console.log(JSON.stringify({
     status: "ok",
     report: reportPath,
-    markdown: markdownPath,
     html: htmlPath,
-    markdownLines,
   }, null, 2));
 }
 
