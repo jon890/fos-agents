@@ -88,14 +88,21 @@ scripts/wanted_list_fields.sh "$H" all    # 직무와 직책까지
 
 **편집 화면에 값이 보이는 것은 저장의 증거가 아니다.** 서버에서 다시 읽는다.
 
+**응답에 `data` 래퍼가 없다.** `careers` 가 최상위에 바로 있다.
+`resumeKey` 에 `=` 가 들어 있어 `encodeURIComponent` 로 감싸야 한다.
+
 ```bash
 $B js "$H" '(async function(){
-  var r = await fetch("/api/chaos/resumes/v2/<resumeKey>", {headers:{accept:"application/json"}});
-  var d = (await r.json()).data;
-  return (d.careers||[]).flatMap(function(c){ return (c.projects||[]); })
+  var key = location.pathname.split("/").pop();
+  var j = await (await fetch("/api/chaos/resumes/v2/" + encodeURIComponent(key), {headers:{accept:"application/json"}})).json();
+  return (j.careers||[]).flatMap(function(c){ return (c.projects||[]); })
     .map(function(p){ return p.title + " | " + (p.description||"").length + "자"; }).join("\n");
 })()'
 ```
+
+최상위 키는 `resume`, `careers`, `technical_projects`, `language_certs`,
+`educations`, `activities`, `links`, `skills`, `ai_competencies` 다.
+`resume` 에는 소개와 연락처가 들어 있고 경력은 `careers` 가 담는다.
 
 **AI 활용 경험은 저장돼도 편집 화면에 렌더링되지 않을 때가 있다.**
 
