@@ -121,6 +121,10 @@ CLI mock 테스트와 skill quick_validate로 실행 계약을 검증한다.
 # cwd: 저장소 루트
 bun test career-os/scripts/study-topic-recommender/study-library/imports.test.ts career-os/scripts/study-topic-recommender/persistence/history.test.ts
 python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py career-os/.claude/skills/study-topic-recommender
+~/.claude/scripts/korean-style-check.sh career-os/.claude/skills/study-topic-recommender/SKILL.md
+~/.claude/scripts/korean-style-check.sh career-os/.claude/skills/study-topic-recommender/references/execution.md
+python3 ~/.claude/scripts/check-readability.py career-os/.claude/skills/study-topic-recommender/SKILL.md
+python3 ~/.claude/scripts/check-readability.py career-os/.claude/skills/study-topic-recommender/references/execution.md
 bun career-os/scripts/study-topic-recommender/manage_reading_sources.ts validate
 bunx tsc -p tsconfig.json
 git diff --check

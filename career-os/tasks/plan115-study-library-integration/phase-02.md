@@ -55,6 +55,18 @@ cursor JSON은 64 KiB를 넘지 않아야 하며, 초과가 예상되면 pending
 
 ### 2. career-os/scripts/study-topic-recommender/study-library/ingestion.ts 자료 배치 저장을 구현한다
 
+recent 수집은 library 전용 strict 수집 경계를 사용한다.
+기존 파일모드 adapter의 실패 처리와 cache fallback 동작은 유지한다.
+library 수집에서는 HTTP 실패, 파싱 실패와 stale cache를 성공으로 바꾸지 않고 ingestion을 보내지 않는다.
+정상 문서 구조를 검증한 빈 feed나 빈 페이지만 성공한 빈 수집으로 취급한다.
+recent cursor는 `lastSeen`에 직전 성공 수집에서 확인한 contentKey를 보존하고, feed와 page는 `fetchedAt`에 확인 시각을 기록한다.
+YouTube recent는 `rssOnly:true`와 `lastSeen`을 사용하고 API 키 없이 공식 RSS를 수집한다.
+이번 응답에서 이미 `lastSeen`에 있는 자료는 제외하며 새 자료를 maxItems까지만 보낸다.
+한도로 아직 저장하지 못한 자료의 키는 다음 lastSeen에 넣지 않는다.
+다음 lastSeen은 현재 응답에 있는 기존 키와 이번에 저장할 키만 합쳐 cursor 크기 제한 안에서 보존한다.
+키가 cursor에서 빠져 다시 수집돼도 서버의 contentKey upsert가 중복 자료 생성을 막는다.
+다음 cursor는 ingestion 성공 응답을 받은 경우에만 진행된 것으로 처리한다.
+
 `GET /sources/{sourceKey}/cursor?mode=recent|archive`로 cursor와 version을 읽는다.
 수집 결과를 API item으로 변환하고, `expectedCursorVersion`과 `idempotencyKey`를 포함해 `POST /ingestions`로 보낸다.
 한 배치는 100개 이하로 자른다.
@@ -99,6 +111,10 @@ CLI 인자와 환경값이 둘 다 있으면 같은 실제 경로일 때만 허�
 
 다음을 검증한다.
 
+- recent cursor의 lastSeen 자료는 제외하고 새 자료와 다음 cursor를 함께 저장한다.
+- recent 한도로 남은 자료는 lastSeen에 넣지 않아 다음 실행에서 수집할 수 있다.
+- 정상 빈 feed는 빈 ingestion을 보내고, HTTP 실패·파싱 실패·stale cache는 ingestion을 보내지 않는다.
+- YouTube recent는 API 키 없이 RSS를 수집하고 rssOnly와 lastSeen을 보존한다.
 - Kurly와 OliveYoung sitemap index cursor가 다음 sitemap과 URL 위치를 보존한다.
 - Kakao 수집기는 `/posts/` 경로만 후보로 만든다.
 - YouTube API 키가 없으면 archive ingestion 요청을 보내지 않고 상태를 출력한다.

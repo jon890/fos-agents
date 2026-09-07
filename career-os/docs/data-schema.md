@@ -406,6 +406,11 @@ career-os가 해석하는 archive cursor의 내부 형태는 아래처럼 adapte
 | `youtube` | `recent` | `{"rssOnly":true,"lastSeen":["youtube:..."]}` | API 키가 없어 RSS 최근 영상만 수집한 상태 |
 
 자료 배치 저장 요청의 `items`는 100개 이하로 보낸다.
+recent의 `lastSeen`은 현재 정상 응답에서 확인한 기존 키와 이번 배치에 저장할 새 키를 보존한다.
+아직 저장하지 않은 자료는 실행 한도에 걸렸더라도 `lastSeen`에 넣지 않는다.
+다음 응답에 없는 키는 제거할 수 있으며, 다시 수집되면 서버가 contentKey로 같은 자료를 갱신한다.
+feed와 page recent는 `fetchedAt`을 기록하고 YouTube recent는 API 키 없이 RSS를 사용하며 `rssOnly:true`를 기록한다.
+library 수집은 정상 빈 문서와 HTTP·파싱 실패를 구분하며 stale cache로 실패를 대신하지 않는다.
 수집기 한도는 배치 크기와 외부 요청량을 제한하기 위한 값이며 누적 자료의 보관 한도로 쓰지 않는다.
 최근 feed 수집 자료는 `feed-article` 또는 `feed-video` kind를 사용한다.
 archive sitemap 자료는 `page-link`, YouTube uploads 자료는 `page-video` kind를 사용해 같은 sourceKey라도 수집 경로를 구분한다.
