@@ -122,17 +122,6 @@ export function buildLinePosting(job: StrapiJob, detailBody: string): Posting {
     summary: cities ? `근무지: ${cities}. LINE Careers 공식 공고` : "LINE Careers 공식 공고",
     tags: classify(fullText),
     skills: skillsFromText(fullText),
-    careerUpsideHypothesis:
-      "LINE의 글로벌 메시징·결제 플랫폼에서 대규모 트래픽 백엔드와 AI 접목 경험을 확장할 수 있다는 커리어 상승 가설",
-    careerUpsideEvidence: [
-      "LINE Careers 공식 page-data의 publish/is_public 상태",
-      "Java/Spring 기반 서버 개발 전이성",
-      "글로벌 메시징·결제 서비스의 대규모 트래픽 도메인 신호",
-    ],
-    careerUpsideRiskFlags: [
-      "해외 출장·근무 요구 여부와 협업 언어 확인 필요",
-      "팀별 실제 서버 개발 비중과 담당 도메인 확인 필요",
-    ],
     dueTime: closesAt,
     mainTasks: sectionFrom(detailBody, /담당\s*업무|주요\s*업무|What you will do/i, /자격\s*요건|지원\s*자격|Qualifications|우대\s*사항/i) || cleanDetail(detailBody, 650),
     requirements: sectionFrom(detailBody, /자격\s*요건|지원\s*자격|Qualifications/i, /우대\s*사항|Preferred|전형\s*절차|근무\s*조건/i),

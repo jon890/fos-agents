@@ -132,17 +132,6 @@ function postingFromKakaoCareersDetail(job: KakaoCareersJob): Posting | null {
     summary: "카카오 Careers 공식 API에서 확인한 카카오페이 공고",
     tags: classify(fullText),
     skills: skillsFromText(fullText),
-    careerUpsideHypothesis:
-      "NHN 현재 맥락보다 결제/금융 트래픽과 AI 전환 과제를 더 직접적으로 쌓을 수 있다는 커리어 상승 가설",
-    careerUpsideEvidence: [
-      "카카오 Careers 공식 API의 active 공고 상태",
-      "Java/Kotlin/Spring 기반 서버 개발 전이성",
-      "카카오페이 결제/금융 또는 전사 AI 전환 업무 범위",
-    ],
-    careerUpsideRiskFlags: [
-      "팀별 실제 권한과 운영 범위 확인 필요",
-      "AI 전환 역할은 hands-on 서버 개발 비중 확인 필요",
-    ],
     dueTime: job.endDate ?? "",
     mainTasks: cleanDetail(text.match(/업무내용([\s\S]*?)(지원자격|자격요건|필요 역량|우대사항)/)?.[1] ?? text, 650),
     requirements: cleanDetail(text.match(/(지원자격|자격요건|필요 역량)([\s\S]*?)(우대사항|접수 방법|전형 절차)/)?.[2] ?? "", 650),
@@ -180,17 +169,6 @@ function postingFromDetail(url: string, html: string): Posting | null {
     summary: "카카오페이 공식 GreetingHR 공고",
     tags: classify(fullText),
     skills: skillsFromText(fullText),
-    careerUpsideHypothesis:
-      "NHN 현재 맥락보다 결제/금융 트래픽과 AI 전환 과제를 더 직접적으로 쌓을 수 있다는 커리어 상승 가설",
-    careerUpsideEvidence: [
-      "공식 JD의 결제/금융 또는 AX/AI 업무 범위",
-      "Java/Kotlin/Spring 기반 서버 개발 전이성",
-      "카카오페이 브랜드와 핀테크 도메인 신호",
-    ],
-    careerUpsideRiskFlags: [
-      "팀별 실제 권한과 운영 범위 확인 필요",
-      "AI 전환 역할은 hands-on 서버 개발 비중 확인 필요",
-    ],
     dueTime: isAlwaysOpen ? "" : "",
     mainTasks: cleanDetail(text.match(/업무내용([\s\S]*?)(필요 역량|지원자격|자격요건|선호 역량|우대사항)/)?.[1] ?? text, 650),
     requirements: cleanDetail(text.match(/(필요 역량\/경험|지원자격|자격요건)([\s\S]*?)(선호 역량|우대사항|지원 안내)/)?.[2] ?? "", 650),

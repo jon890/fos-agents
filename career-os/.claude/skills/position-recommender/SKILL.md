@@ -73,8 +73,7 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/position-recommender/col
 `상향`, `동일`, `하향`, `확인 필요` 중 하나로 정하고 근거를 한 줄씩 적는다.
 축 이름과 판정 규칙은 [`references/position-decision-criteria.md`](references/position-decision-criteria.md)의 「업사이드 축」이 소유한다.
 
-**후보풀의 `careerUpsideHypothesis`를 판정 근거로 옮기지 않는다.**
-수집기가 회사마다 고정 문구를 넣어, 같은 회사의 다른 공고에 같은 값이 들어간다.
+**후보풀에 업사이드 판정 근거가 없다.** 공고 원문과 회사 공개 자료에서 축마다 직접 확인한다.
 
 공고의 담당 업무는 미래 업무 범위다.
 필수 자격과 전이 가능한 경험을 구분해 채점한다.

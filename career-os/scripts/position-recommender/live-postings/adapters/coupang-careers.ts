@@ -212,18 +212,6 @@ function postingFromSitemapUrl(item: SitemapUrl): Posting | null {
     summary,
     tags: classify(fullText),
     skills: skillsFromTitle(title),
-    careerUpsideHypothesis:
-      "Coupang/Coupang Pay의 대규모 커머스·결제·플랫폼 환경에서 NHN보다 강한 트래픽과 보상/브랜드 레버리지를 얻을 수 있다는 커리어 상승 가설",
-    careerUpsideEvidence: [
-      "Coupang 공식 Careers sitemap direct job URL",
-      "대규모 커머스·결제·물류·광고·AI 플랫폼 도메인",
-      "사용자 선호 타깃 회사군에 포함",
-    ],
-    careerUpsideRiskFlags: [
-      "상세 fetch 실패 시 JD 본문과 근무지 확인 필요",
-      "Staff/Sr.Staff급 공고는 연차 기준 mismatch 가능성 확인 필요",
-      "상세 확인 전에는 즉시 지원보다 추가 확인 액션이 우선",
-    ],
     dueTime: "",
     mainTasks: summary,
     requirements: "공식 상세 페이지 확인 필요. sitemap URL title 기반으로만 서버/플랫폼 후보를 선별했다.",
@@ -271,10 +259,6 @@ function enrichWithDetail(posting: Posting, html: string): Posting {
     summary: location ? `Location: ${location}. ${description || posting.summary}` : description || posting.summary,
     tags: classify(fullText),
     skills,
-    careerUpsideRiskFlags: [
-      "Staff/Sr.Staff급 공고는 연차 기준 mismatch 가능성 확인 필요",
-      "상세 JD가 있어도 실제 팀/레벨/지원 가능성은 recruiter 확인 필요",
-    ],
     dueTime: updated || posting.dueTime,
     mainTasks: responsibilities || description || posting.mainTasks,
     requirements: finalRequirements,

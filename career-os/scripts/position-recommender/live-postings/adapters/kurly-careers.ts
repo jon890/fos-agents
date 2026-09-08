@@ -83,17 +83,6 @@ export function parseKurlyPosting(url: string, html: string): Posting | null {
     summary: "컬리 공식 GreetingHR 공고",
     tags: classify(fullText),
     skills: skillsFromText(fullText),
-    careerUpsideHypothesis:
-      "신선식품 커머스와 결제·정산 플랫폼에서 Java/Kotlin 서버 운영 경험을 확장할 수 있다는 커리어 상승 가설",
-    careerUpsideEvidence: [
-      "공식 JD의 커머스, 결제, 정산 또는 풀필먼트 업무 범위",
-      "Java/Kotlin/Spring 기반 서버 개발 전이성",
-      "컬리의 커머스·풀필먼트 플랫폼 도메인 신호",
-    ],
-    careerUpsideRiskFlags: [
-      "팀별 실제 서버 개발 비중과 운영 권한 확인 필요",
-      "사업과 조직의 안정성은 공고 외 근거로 별도 확인 필요",
-    ],
     dueTime: "",
     mainTasks: cleanDetail(
       text.match(/(?:주요\s*업무|담당\s*업무|업무\s*내용)([\s\S]*?)(?:자격\s*요건|자격요건|지원\s*자격|지원자격|우대\s*사항|우대사항)/)?.[1] ?? text,

@@ -112,17 +112,6 @@ function postingFromDetail(item: { id: string; title: string }, html: string): P
     summary: "NAVER Careers 공식 공고",
     tags: classify(fullText),
     skills: skillsFromText(fullText),
-    careerUpsideHypothesis:
-      "검색, 플랫폼, 대규모 트래픽, AI 전환 경험을 NHN보다 강한 브랜드와 엔지니어링 밀도에서 쌓을 수 있다는 커리어 상승 가설",
-    careerUpsideEvidence: [
-      "NAVER 공식 Careers active 공고",
-      "검색/플랫폼/AI 또는 서버 개발 전이성",
-      "네이버 D2와 대규모 서비스 엔지니어링 신호",
-    ],
-    careerUpsideRiskFlags: [
-      "공고별 경력/인턴 여부와 hands-on 서버 개발 비중 확인 필요",
-      "연구/기획 중심 역할은 추천 티어에서 제외 필요",
-    ],
     dueTime: norm(dueRaw),
     mainTasks: cleanDetail(text.match(/Responsibilities([\s\S]*?)(Qualifications|Required|Preferred|지원자격|필요역량)/i)?.[1] ?? text, 650),
     requirements: cleanDetail(text.match(/(Qualifications|Required|지원자격|필요역량)([\s\S]*?)(Preferred|우대사항|전형절차|Application)/i)?.[2] ?? "", 650),

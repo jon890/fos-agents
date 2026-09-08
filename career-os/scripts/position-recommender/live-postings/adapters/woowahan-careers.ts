@@ -97,17 +97,6 @@ export function parseWoowahanRecruit(recruit: WoowaRecruit, contents: string): P
     summary: "우아한형제들 공식 채용 공고",
     tags: classify(fullText),
     skills: skillsFromText(fullText),
-    careerUpsideHypothesis:
-      "배달의민족의 국내 최대 실시간 O2O 트래픽에서 대용량 백엔드와 ML 연동 경험을 확장할 수 있다는 커리어 상승 가설",
-    careerUpsideEvidence: [
-      "우아한형제들 공식 채용 API의 진행 중 공고 상태",
-      "Java/Kotlin/Spring 기반 서버 개발 전이성",
-      "실시간 주문·배차·정산의 대규모 트래픽 도메인 신호",
-    ],
-    careerUpsideRiskFlags: [
-      "AWS 운영 요건이 있으면 현재 클라우드 경험과의 차이 확인 필요",
-      "팀별 서버 개발과 ML 파이프라인 비중 확인 필요",
-    ],
     dueTime: closesAt,
     mainTasks: section(body, /\[업무내용\]|업무\s*내용|주요\s*업무|담당\s*업무/i, /\[지원자격\]|지원\s*자격|자격\s*요건|\[우대사항\]/i) || cleanDetail(body, 650),
     requirements: section(body, /\[지원자격\]|지원\s*자격|자격\s*요건/i, /\[우대사항\]|우대\s*사항|\[개발환경\]|전형\s*절차/i),

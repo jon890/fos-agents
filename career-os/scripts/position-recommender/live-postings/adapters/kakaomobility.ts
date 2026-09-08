@@ -86,17 +86,6 @@ function postingFromDetail(url: string, html: string): Posting | null {
     summary: "카카오모빌리티 공식 GreetingHR 공고",
     tags: classify(fullText),
     skills: skillsFromText(fullText),
-    careerUpsideHypothesis:
-      "모빌리티, 물류, 위치 기반 플랫폼에서 대규모 백엔드와 AI/Agent 전환 경험을 쌓을 수 있다는 커리어 상승 가설",
-    careerUpsideEvidence: [
-      "공식 JD의 물류/모빌리티/AI 또는 서버 플랫폼 업무 범위",
-      "카카오모빌리티 브랜드와 대규모 O2O 플랫폼 도메인 신호",
-      "Java/Kotlin/Spring 기반 서버 개발 전이성",
-    ],
-    careerUpsideRiskFlags: [
-      "팀별 서버 개발 비중과 운영 권한 확인 필요",
-      "AI/R&D 역할은 순수 연구 비중 확인 필요",
-    ],
     dueTime: "",
     mainTasks: cleanDetail(
       text.match(/(?:합류하게\s*되면\s*이런\s*일을\s*하게\s*됩니다|하게\s*될\s*일|담당\s*업무|업무\s*내용)([\s\S]*?)(?:필요\s*역량\/경험|선호\s*역량\/경험|이런\s*분을\s*찾습니다|이런\s*분이\s*필요해요|지원\s*자격|지원자격|자격\s*요건|자격요건|필요\s*역량|필요역량|이런\s*분이면\s*더\s*좋습니다|우대\s*사항|우대사항)/)?.[1] ?? text, 650),

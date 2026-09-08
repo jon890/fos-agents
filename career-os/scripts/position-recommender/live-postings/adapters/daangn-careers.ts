@@ -95,17 +95,6 @@ export function parseDaangnJob(job: GreenhouseJob): Posting | null {
     summary: `근무지: ${job.location?.name ?? "SEOUL"}. 당근 공식 Greenhouse 공고`,
     tags: classify(fullText),
     skills: skillsFromText(fullText),
-    careerUpsideHypothesis:
-      "국내 최대 지역 생활 커뮤니티 트래픽과 당근페이·광고 플랫폼에서 서버 개발과 AI 접목 경험을 확장할 수 있다는 커리어 상승 가설",
-    careerUpsideEvidence: [
-      "당근 공식 Greenhouse board의 open 공고 상태",
-      "Kotlin/Java/Spring 기반 서버 개발 전이성",
-      "지역 커뮤니티·커머스·결제의 대규모 트래픽 도메인 신호",
-    ],
-    careerUpsideRiskFlags: [
-      "팀별 실제 서버 개발 비중과 AI 업무 비중 확인 필요",
-      "버티컬 조직은 수익화 경로와 투자 우선순위 확인 필요",
-    ],
     dueTime: closesAt,
     mainTasks: section(body, /이런\s*일을\s*해요|주요\s*업무|담당\s*업무|What you will do/i, /이런\s*분을\s*찾고\s*있어요|자격\s*요건|지원\s*자격|이런\s*경험/i) || cleanDetail(body, 650),
     requirements: section(body, /이런\s*분을\s*찾고\s*있어요|자격\s*요건|지원\s*자격|Qualifications/i, /이런\s*경험|우대\s*사항|Preferred|이런\s*환경|합류\s*여정|전형/i),

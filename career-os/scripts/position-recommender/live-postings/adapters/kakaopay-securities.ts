@@ -118,17 +118,6 @@ function postingFromDetail(url: string, html: string): Posting | null {
     summary: location,
     tags: classify(fullText),
     skills: skillsFromText(fullText),
-    careerUpsideHypothesis:
-      "NHN 현재 맥락보다 금융 플랫폼과 내부 AI Agent/개발자 플랫폼 경험을 더 강하게 만들 수 있다는 커리어 상승 가설",
-    careerUpsideEvidence: [
-      "공식 JD의 AI Agent, Multi-Agent, RAG, Tool/Memory 또는 플랫폼 업무 범위",
-      "금융/증권 도메인과 내부 플랫폼 개발 신호",
-      "개발 생산성 자동화와 서버/API 설계 전이성",
-    ],
-    careerUpsideRiskFlags: [
-      "Kubernetes/cloud 필수 수준이 높아 준비 비용 큼",
-      "AI 역할은 모델/데이터 파이프라인 비중이 서버 개발보다 클 수 있음",
-    ],
     dueTime: deadlineType === "until_filled" ? "" : norm(recruitment.deadlineValue),
     mainTasks: cleanDetail(text.match(/업무내용([\s\S]*?)(자격요건|지원자격|우대사항)/)?.[1] ?? text, 650),
     requirements: cleanDetail(text.match(/(자격요건|지원자격)([\s\S]*?)(우대사항|채용 프로세스)/)?.[2] ?? "", 650),
