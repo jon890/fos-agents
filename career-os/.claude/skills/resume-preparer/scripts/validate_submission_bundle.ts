@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { existsSync, readFileSync, statSync } from "node:fs";
+import { runCli } from "../../../../scripts/lib/cli.ts";
 import { basename, join, resolve } from "node:path";
 import { artifactTextSha256 } from "./artifact_identity.ts";
 import { validateClaimLedger } from "./validate_claim_ledger.ts";
@@ -162,12 +163,12 @@ export function validateSubmissionBundle(applicationDirectory: string): Submissi
 }
 
 if (import.meta.main) {
-  const directory = process.argv[2];
-  if (!directory) {
-    console.error(JSON.stringify({ passed: false, error: "사용법: validate_submission_bundle.ts <application-directory>" }, null, 2));
-    process.exit(2);
-  }
-  const result = validateSubmissionBundle(directory);
-  console.log(JSON.stringify(result, null, 2));
-  process.exit(result.passed ? 0 : 1);
+  await runCli(
+    {
+      name: "validate_submission_bundle.ts",
+      summary: "제출 묶음의 파일과 해시가 manifest 와 맞는지 검사한다.",
+      positional: [{ name: "<application-directory>", description: "지원 디렉터리" }],
+    },
+    ({ positional }) => validateSubmissionBundle(positional[0]),
+  );
 }

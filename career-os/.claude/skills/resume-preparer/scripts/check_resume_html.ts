@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { existsSync, readFileSync } from "node:fs";
+import { runCli, UsageError } from "../../../../scripts/lib/cli.ts";
 import { basename } from "node:path";
 import {
   SUBMISSION_HTML_CONTRACTS,
@@ -121,20 +122,24 @@ export function checkResumeHtml(
 }
 
 if (import.meta.main) {
-  const path = process.argv[2];
-  if (!path || !existsSync(path)) {
-    console.error(JSON.stringify({ passed: false, error: "제출 HTML 경로를 찾을 수 없습니다." }, null, 2));
-    process.exit(2);
-  }
-
-  const kindIndex = process.argv.indexOf("--document-type");
-  const explicitKind = kindIndex >= 0 ? process.argv[kindIndex + 1] : undefined;
-  if (explicitKind && explicitKind !== "resume" && explicitKind !== "career-description") {
-    console.error(JSON.stringify({ passed: false, error: "document-type은 resume 또는 career-description이어야 합니다." }, null, 2));
-    process.exit(2);
-  }
-
-  const result = checkResumeHtml(path, explicitKind as SubmissionDocumentKind | undefined);
-  console.log(JSON.stringify(result, null, 2));
-  process.exit(result.passed ? 0 : 1);
+  await runCli(
+    {
+      name: "check_resume_html.ts",
+      summary: "제출 HTML 이 독립 실행, A4 인쇄와 대비 기준을 지키는지 검사한다.",
+      positional: [{ name: "<제출 HTML>", description: "검사할 HTML 경로" }],
+      options: {
+        "--document-type": {
+          value: true,
+          description: "resume 또는 career-description. 주지 않으면 파일명으로 판정한다",
+          pattern: /^(resume|career-description)$/,
+        },
+      },
+    },
+    ({ positional, options }) => {
+      const path = positional[0];
+      if (!existsSync(path)) throw new UsageError(`제출 HTML 을 찾을 수 없습니다: ${path}`);
+      const kind = options["--document-type"] as SubmissionDocumentKind | undefined;
+      return checkResumeHtml(path, kind);
+    },
+  );
 }

@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
+import { runCli } from "../../../../scripts/lib/cli.ts";
 import { dirname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { artifactTextSha256 } from "./artifact_identity.ts";
@@ -68,15 +69,15 @@ export function buildSubmissionBundle(applicationDirectory: string): string {
 }
 
 if (import.meta.main) {
-  const directory = process.argv[2];
-  if (!directory) {
-    console.error("사용법: build_submission_bundle.ts <application-directory>");
-    process.exit(2);
-  }
-  try {
-    console.log(buildSubmissionBundle(directory));
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exit(1);
-  }
+  await runCli(
+    {
+      name: "build_submission_bundle.ts",
+      summary: "제출할 PDF 와 manifest 를 지원 디렉터리에 만든다.",
+      positional: [{ name: "<application-directory>", description: "지원 디렉터리" }],
+    },
+    ({ positional }) => {
+      console.log(buildSubmissionBundle(positional[0]));
+    },
+    { json: false },
+  );
 }

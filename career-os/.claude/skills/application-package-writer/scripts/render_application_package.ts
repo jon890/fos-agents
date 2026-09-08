@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { runCli } from "../../../../scripts/lib/cli.ts";
 import { dirname, join, resolve } from "node:path";
 import { validateApplicationPackage } from "./validate_application_package.ts";
 import { validateSubmissionBundle } from "../../resume-preparer/scripts/validate_submission_bundle.ts";
@@ -622,16 +623,18 @@ export function renderApplicationPackage(applicationDirectory: string, outputPat
 }
 
 if (import.meta.main) {
-  const directory = process.argv[2];
-  const outputPath = process.argv[3];
-  if (!directory) {
-    console.error("사용법: render_application_package.ts <application-directory> [output-path]");
-    process.exit(2);
-  }
-  try {
-    console.log(renderApplicationPackage(directory, outputPath));
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exit(1);
-  }
+  await runCli(
+    {
+      name: "render_application_package.ts",
+      summary: "지원 판단과 근거를 검토 화면 HTML 로 만든다.",
+      positional: [
+        { name: "<application-directory>", description: "지원 디렉터리" },
+        { name: "[output-path]", description: "출력 경로. 생략하면 기본 위치에 만든다", required: false },
+      ],
+    },
+    ({ positional }) => {
+      console.log(renderApplicationPackage(positional[0], positional[1]));
+    },
+    { json: false },
+  );
 }

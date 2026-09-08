@@ -32,7 +32,8 @@ career-os/
 | `config/*.ts` | 공고, 읽을거리와 면접 자료의 수집 정책 |
 | `.claude/skills/resume-preparer/references/resume-writing-style.md` | 모든 이력서와 경력기술서에 적용하는 표현과 근거 범위 기준 |
 | `.claude/skills/resume-preparer/references/resume-design.md` | 이력서와 경력기술서의 기본 시각 기준 |
-| `.claude/skills/resume-preparer/assets/resume.css` | 이력서와 경력기술서의 기본 CSS |
+| `.claude/skills/resume-preparer/templates/` | 이력서 HTML 골격, 기본 CSS 와 회사·학교 로고 |
+| `scripts/lib/cli.ts` | 스킬 스크립트를 CLI 로 감싸는 공통 부분 |
 | `scripts/career-workspace/` | 비공개 작업본의 준비, 차이 확인과 release 반영 |
 | `scripts/position-recommender/` | 활성 공고 수집, 추천 검증과 HTML 생성 |
 | `scripts/study-topic-recommender/` | 읽을거리 수집, 선별 결과 검증과 HTML 생성 |
@@ -48,6 +49,41 @@ career-os/
 
 현재 경력, 역할 선호와 경험 경계는 이 저장소에 복제하지 않는다.
 skill이 private brain에서 조회하고, 제출에 사용할 세부 성과는 `sources/fos-study/`와 실제 프로젝트 근거로 다시 확인한다.
+
+## 스킬 스크립트의 CLI 계약
+
+스킬 스크립트는 `scripts/lib/cli.ts` 의 `runCli` 로 감싼다.
+인자 파싱, 사용법 오류 처리와 결과 출력이 스크립트마다 같은 모양으로 되풀이되면
+그 스크립트가 무엇을 검사하고 무엇을 만드는지가 가려진다.
+
+```typescript
+if (import.meta.main) {
+  await runCli(
+    {
+      name: "validate_claim_ledger.ts",
+      summary: "제출 HTML 의 각 주장이 근거와 맞는지 원장으로 검사한다.",
+      positional: [{ name: "<claim-ledger.json>", description: "검사할 주장 원장" }],
+      options: { "--artifact": { value: true, description: "원장이 가리키는 제출 HTML" } },
+    },
+    ({ positional, options }) => validateClaimLedger(positional[0], options["--artifact"] as string),
+  );
+}
+```
+
+종료 코드는 셋으로 고정한다.
+
+| 코드 | 뜻 |
+| --- | --- |
+| 0 | 통과 |
+| 1 | 검사나 실행 실패 |
+| 2 | 사용법 오류. 인자가 없거나 값이 규격에 맞지 않다 |
+
+사용법 오류를 1과 나누는 이유는 호출하는 쪽이 재시도할지 인자를 고칠지 가리기 위해서다.
+
+- 검사 스크립트는 `{ passed: boolean }` 을 돌려준다. `runCli` 가 그 값으로 0과 1을 가른다.
+- 파일을 만드는 스크립트는 아무것도 돌려주지 않고 `{ json: false }` 를 준다. 예외가 없으면 0으로 끝난다.
+- 인자 규격은 `pattern` 으로 적는다. 검사 코드를 본문에 두지 않는다.
+- `--help` 는 `runCli` 가 spec 으로 만든다. 도움말 문자열을 따로 쓰지 않는다.
 
 ## Skill과 실행 코드
 

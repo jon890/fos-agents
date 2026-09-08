@@ -3,6 +3,7 @@
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { artifactTextSha256 } from "./artifact_identity.ts";
+import { runCli, UsageError } from "../../../../scripts/lib/cli.ts";
 import { ClaimLedgerSchema, type ClaimLedger } from "./claim_ledger_schema.ts";
 
 export type ClaimLedgerValidation = {
@@ -170,23 +171,22 @@ export function validateClaimLedger(
   };
 }
 
-function argumentValue(name: string): string | undefined {
-  const index = process.argv.indexOf(name);
-  return index >= 0 ? process.argv[index + 1] : undefined;
-}
-
 if (import.meta.main) {
-  const ledgerPath = process.argv[2];
-  const artifactPath = argumentValue("--artifact");
-  if (!ledgerPath || !artifactPath || !existsSync(ledgerPath)) {
-    console.error(JSON.stringify({
-      passed: false,
-      error: "사용법: validate_claim_ledger.ts <review/claim-ledger.json> --artifact <review/resume.html>",
-    }, null, 2));
-    process.exit(2);
-  }
-
-  const result = validateClaimLedger(ledgerPath, artifactPath);
-  console.log(JSON.stringify(result, null, 2));
-  process.exit(result.passed ? 0 : 1);
+  await runCli(
+    {
+      name: "validate_claim_ledger.ts",
+      summary: "제출 HTML 의 각 주장이 근거와 맞는지 원장으로 검사한다.",
+      positional: [{ name: "<claim-ledger.json>", description: "검사할 주장 원장" }],
+      options: {
+        "--artifact": { value: true, description: "원장이 가리키는 제출 HTML" },
+      },
+    },
+    ({ positional, options }) => {
+      const ledgerPath = positional[0];
+      const artifactPath = options["--artifact"] as string | undefined;
+      if (!artifactPath) throw new UsageError("--artifact 가 필요합니다.");
+      if (!existsSync(ledgerPath)) throw new UsageError(`원장을 찾을 수 없습니다: ${ledgerPath}`);
+      return validateClaimLedger(ledgerPath, artifactPath);
+    },
+  );
 }

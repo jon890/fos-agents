@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { runCli } from "../../../../scripts/lib/cli.ts";
 import { basename, join, resolve } from "node:path";
 import {
   ALLOWED_PACKAGE_FILES,
@@ -181,12 +182,12 @@ export function validateApplicationPackage(applicationDirectory: string): Packag
 }
 
 if (import.meta.main) {
-  const directory = process.argv[2];
-  if (!directory) {
-    console.error(JSON.stringify({ passed: false, error: "사용법: validate_application_package.ts <application-directory>" }, null, 2));
-    process.exit(2);
-  }
-  const result = validateApplicationPackage(directory);
-  console.log(JSON.stringify(result, null, 2));
-  process.exit(result.passed ? 0 : 1);
+  await runCli(
+    {
+      name: "validate_application_package.ts",
+      summary: "지원 디렉터리가 패키지 계약의 파일과 절을 갖췄는지 검사한다.",
+      positional: [{ name: "<application-directory>", description: "검사할 지원 디렉터리" }],
+    },
+    ({ positional }) => validateApplicationPackage(positional[0]),
+  );
 }
