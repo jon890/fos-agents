@@ -14,10 +14,60 @@ export const LinkEvidenceLevel = z.enum([
   "개별 공고 open 확인",
 ]);
 
-export const CompanyUpside = z.object({
-  level: UpsideLevel,
+/**
+ * 현재 직장 대비 업사이드를 재는 축. 사용자가 이직 동기로 확인한 넷이다.
+ * 기준값은 private brain의 `career-status`가 소유하고, 여기서는 이름만 고정한다.
+ *
+ * 축 이름은 사용자 진술에서 그대로 왔다. 「문제의 재미」처럼 넓은 이름은
+ * 공고에서 무엇을 확인해야 하는지가 정해지지 않아 판정이 인상으로 흐른다.
+ */
+export const UPSIDE_AXES = [
+  "문제의 난도",
+  "오너십과 파는 깊이",
+  "도메인 확장 여지",
+  "보상",
+] as const;
+export const UpsideAxis = z.enum(UPSIDE_AXES);
+
+/** 축별 판정 방향. 현재 직장의 기준값과 비교한 결과다. */
+export const UpsideDirection = z.enum(["상향", "동일", "하향", "확인 필요"]);
+
+export const UpsideAxisJudgment = z.object({
+  axis: UpsideAxis,
+  direction: UpsideDirection,
+  /** 공고와 회사 자료에서 확인한 근거. 회사 단위 고정 문구를 그대로 옮기지 않는다. */
   reason: z.string().min(1),
 });
+
+export const CompanyUpside = z
+  .object({
+    level: UpsideLevel,
+    reason: z.string().min(1),
+    /** 네 축을 빠짐없이 판정한다. 한 덩어리 요약만으로는 어느 축이 올라가는지 알 수 없다. */
+    axes: z.array(UpsideAxisJudgment).length(UPSIDE_AXES.length),
+  })
+  .superRefine((upside, ctx) => {
+    const seen = new Set<string>();
+    for (const [index, judgment] of upside.axes.entries()) {
+      if (seen.has(judgment.axis)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["axes", index, "axis"],
+          message: `업사이드 축이 중복됐다: ${judgment.axis}`,
+        });
+      }
+      seen.add(judgment.axis);
+    }
+    for (const axis of UPSIDE_AXES) {
+      if (!seen.has(axis)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["axes"],
+          message: `업사이드 축 판정이 빠졌다: ${axis}`,
+        });
+      }
+    }
+  });
 
 /** 강력/도전 추천 포지션 1건. SKILL 14개 라벨을 손실 없이 담는다. */
 export const PositionItem = z.object({
@@ -69,6 +119,8 @@ export const WeeklyActions = z.object({
 export const CandidateRankingItem = z.object({
   candidateId: z.string().min(1),
   rank: z.number().int().positive(),
+  /** 네 축을 합친 종합 방향. 축별 근거는 추천 티어 항목이 갖는다. */
+  upsideDirection: UpsideDirection,
   oneLineReason: z.string().trim().min(1).max(160).refine((value) => !/[\r\n]/.test(value), {
     message: "한 줄 판단에는 줄바꿈을 넣지 않는다",
   }),
@@ -76,7 +128,7 @@ export const CandidateRankingItem = z.object({
 
 export const RecommendationRun = z
   .object({
-    schemaVersion: z.literal(4),
+    schemaVersion: z.literal(5),
     reportDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), // Asia/Seoul 기준
     generatedAt: z.string().min(1),
     conclusion: z.array(z.string().min(1)).min(1), // 한 줄 결론 (첫 10줄 결론 보장)
@@ -151,3 +203,4 @@ export const RecommendationRun = z
 export type RecommendationRunType = z.infer<typeof RecommendationRun>;
 export type PositionItemType = z.infer<typeof PositionItem>;
 export type CandidateRankingItemType = z.infer<typeof CandidateRankingItem>;
+export type UpsideAxisJudgmentType = z.infer<typeof UpsideAxisJudgment>;

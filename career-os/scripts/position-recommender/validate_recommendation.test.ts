@@ -20,17 +20,27 @@ test("모델이 후보풀에 없는 공고를 추천하지 못하게 막는다",
   const { pool } = buildPostingCandidatePool([posting], diagnostics);
   const candidate = pool.candidates[0];
   const run = RecommendationRun.parse({
-    schemaVersion: 4, reportDate: "2026-08-13", generatedAt: "2026-08-13T09:00:00+09:00",
+    schemaVersion: 5, reportDate: "2026-08-13", generatedAt: "2026-08-13T09:00:00+09:00",
     conclusion: ["결론"], background: ["배경"],
     tiers: { strong: [{
       candidateId: "wanted:missing", rank: 1, company: candidate.company, title: candidate.title,
       postingUrl: candidate.url, exploreLink: "-", linkEvidenceLevel: "개별 공고 active 확인",
       postingPeriod: "상시", source: candidate.source, closeDate: null, searchKeywords: ["Java"],
       whyFit: "적합", candidateEvidence: ["경험"], jdKeywords: ["Java"],
-      companyUpside: { level: "중간", reason: "확인" }, welfareLearning: "확인 필요",
+      companyUpside: {
+        level: "중간",
+        reason: "추가 확인 필요",
+        axes: [
+          { axis: "문제의 난도", direction: "상향", reason: "공고가 대규모 트래픽 환경을 명시한다." },
+          { axis: "오너십과 파는 깊이", direction: "확인 필요", reason: "팀의 문제 정의 범위가 공고에 없다." },
+          { axis: "도메인 확장 여지", direction: "상향", reason: "인접 제품군이 여러 개다." },
+          { axis: "보상", direction: "확인 필요", reason: "공고에 보상 구간이 없다." },
+        ],
+      },
+      welfareLearning: "확인 필요",
       techBlogSignal: "확인 필요", businessRisk: "확인 필요", ambiguity: "확인 필요", prepAction: "준비",
     }], stretch: [], hold: [] },
-    candidateRanking: [{ candidateId: candidate.id, rank: 1, oneLineReason: "Java 경험은 맞지만 추천 ID가 잘못됐다." }],
+    candidateRanking: [{ candidateId: candidate.id, rank: 1, upsideDirection: "확인 필요", oneLineReason: "Java 경험은 맞지만 추천 ID가 잘못됐다." }],
     additionalTargets: [], recentCheck: ["확인"],
     weeklyActions: { apply: "지원", resume: "수정", study: "학습" },
     sourceSnapshot: { collectionRunId: pool.collectionRunId, candidatePoolPath: "state/posting-candidates.json" },
@@ -46,7 +56,7 @@ test("전체 후보 순위에서 누락된 공고를 검출한다", () => {
   };
   const { pool } = buildPostingCandidatePool([posting, secondPosting], diagnostics);
   const run = RecommendationRun.parse({
-    schemaVersion: 4,
+    schemaVersion: 5,
     reportDate: "2026-08-13",
     generatedAt: "2026-08-13T09:00:00+09:00",
     conclusion: ["결론"],
@@ -55,6 +65,7 @@ test("전체 후보 순위에서 누락된 공고를 검출한다", () => {
     candidateRanking: [{
       candidateId: pool.candidates[0].id,
       rank: 1,
+      upsideDirection: "상향",
       oneLineReason: "Java 경험이 역할과 연결된다.",
     }],
     additionalTargets: [],

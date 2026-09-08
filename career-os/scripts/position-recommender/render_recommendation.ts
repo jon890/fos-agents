@@ -8,6 +8,7 @@ import {
   RecommendationRun,
   type PositionItemType,
   type RecommendationRunType,
+  type UpsideAxisJudgmentType,
 } from "./recommendation_schema.ts";
 
 const DEFAULT_TEMPLATE = resolve(dirname(fileURLToPath(import.meta.url)), "templates/report.html");
@@ -42,6 +43,10 @@ function positionToMarkdown(item: PositionItemType, isStretch: boolean): string 
   for (const ev of item.candidateEvidence) lines.push(`     - ${ev}`);
   lines.push(`   - JD에서 노려야 할 키워드: ${kw(item.jdKeywords)}`);
   lines.push(`   - 회사/규모 업사이드: ${item.companyUpside.level} — ${item.companyUpside.reason}`);
+  lines.push(`   - 현재 직장 대비 축별 판정:`);
+  for (const axis of item.companyUpside.axes) {
+    lines.push(`     - ${axis.axis}: ${axis.direction} — ${axis.reason}`);
+  }
   lines.push(`   - 복지/학습 환경 판단: ${item.welfareLearning}`);
   lines.push(`   - 기술블로그/엔지니어링 시그널: ${item.techBlogSignal}`);
   lines.push(`   - 사업/조직/seniority 리스크: ${item.businessRisk}`);
@@ -110,6 +115,29 @@ function badgeHtml(level: string): string {
   return `<span class="badge ${cls}">${escapeHtml(level)}</span>`;
 }
 
+function directionClass(direction: string): string {
+  const map: Record<string, string> = {
+    "상향": "badge-strong",
+    "동일": "badge-mid",
+    "하향": "badge-weak",
+    "확인 필요": "badge-mid",
+  };
+  return map[direction] ?? "badge-mid";
+}
+
+/** 축별 판정을 한 눈에 비교할 수 있게 축 이름, 방향 배지와 근거를 한 줄씩 놓는다. */
+function upsideAxesHtml(axes: UpsideAxisJudgmentType[]): string {
+  const rows = axes
+    .map(
+      (axis) =>
+        `<li><span class="axis-name">${escapeHtml(axis.axis)}</span>` +
+        `<span class="badge ${directionClass(axis.direction)}">${escapeHtml(axis.direction)}</span>` +
+        `<span class="axis-reason">${escapeHtml(axis.reason)}</span></li>`,
+    )
+    .join("");
+  return `<ul class="sub upside-axes">${rows}</ul>`;
+}
+
 function linkOrText(value: string): string {
   if (/^https?:\/\//.test(value)) {
     return `<a href="${escapeHtml(value)}">${escapeHtml(value)}</a>`;
@@ -142,6 +170,7 @@ function positionCardHtml(item: PositionItemType, isStretch: boolean): string {
   );
   f.push(field("JD에서 노려야 할 키워드", codeList(item.jdKeywords)));
   f.push(field("회사/규모 업사이드", `${badgeHtml(item.companyUpside.level)} ${escapeHtml(item.companyUpside.reason)}`));
+  f.push(field("현재 직장 대비 축별 판정", upsideAxesHtml(item.companyUpside.axes)));
   f.push(field("복지/학습 환경 판단", escapeHtml(item.welfareLearning)));
   f.push(field("기술블로그/엔지니어링 시그널", escapeHtml(item.techBlogSignal)));
   f.push(field("사업/조직/seniority 리스크", escapeHtml(item.businessRisk)));

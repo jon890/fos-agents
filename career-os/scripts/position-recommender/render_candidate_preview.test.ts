@@ -41,7 +41,16 @@ function positionItem(candidate: PostingCandidate, rank: number, isStretch = fal
     whyFit: isStretch ? "AI 서비스 운영 경험을 확장할 수 있다." : "백엔드 운영 경험과 맞는다.",
     candidateEvidence: isStretch ? ["RAG 운영"] : ["Java 운영"],
     jdKeywords: isStretch ? ["Java", "RAG"] : ["Java", "Spring"],
-    companyUpside: { level: "중간", reason: "추가 확인 필요" },
+    companyUpside: {
+      level: "중간",
+      reason: "추가 확인 필요",
+      axes: [
+        { axis: "문제의 난도", direction: "상향", reason: "공고가 대규모 트래픽 환경을 명시한다." },
+        { axis: "오너십과 파는 깊이", direction: "확인 필요", reason: "팀의 문제 정의 범위가 공고에 없다." },
+        { axis: "도메인 확장 여지", direction: "상향", reason: "인접 제품군이 여러 개다." },
+        { axis: "보상", direction: "확인 필요", reason: "공고에 보상 구간이 없다." },
+      ],
+    },
     welfareLearning: "정보 없음",
     techBlogSignal: "정보 없음",
     businessRisk: "정보 없음",
@@ -52,7 +61,7 @@ function positionItem(candidate: PostingCandidate, rank: number, isStretch = fal
 }
 
 const run = RecommendationRun.parse({
-  schemaVersion: 4, reportDate: "2026-08-13", generatedAt: "2026-08-13T09:00:00+09:00",
+  schemaVersion: 5, reportDate: "2026-08-13", generatedAt: "2026-08-13T09:00:00+09:00",
   conclusion: ["지원 검토 가치가 있다."], background: ["외부 공고 후보풀에서 선별했다."],
   tiers: {
     strong: pool.candidates.slice(0, 4).map((candidate, index) => positionItem(candidate, index + 1)),
@@ -67,6 +76,7 @@ const run = RecommendationRun.parse({
   candidateRanking: pool.candidates.map((candidate, index) => ({
     candidateId: candidate.id,
     rank: index + 1,
+    upsideDirection: "상향",
     oneLineReason: index === 0
       ? "Java·Spring 운영 경험이 역할과 직접 연결된다."
       : `${candidate.title}의 역할 범위와 후보자 경험을 비교했다.`,

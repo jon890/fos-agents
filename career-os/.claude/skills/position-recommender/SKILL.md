@@ -63,19 +63,27 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/position-recommender/col
 
 - 명시된 지원 자격과 후보자 근거
 - 역할에서 얻을 기술적 성장
-- 회사와 사업의 이직 가치
+- 현재 직장 대비 업사이드를 네 축으로 나눈 판정
 - 경력 수준과 고용 형태
 - 현재 약점으로 준비 가능한 범위
-- private brain에서 확인한 지원 이력과 재지원 간격
+- private brain에서 확인한 지원 이력, 재지원 간격과 탐색 시급성
+
+업사이드는 회사 단위가 아니라 공고 단위로 판정한다.
+`문제의 난도`, `오너십과 파는 깊이`, `도메인 확장 여지`, `보상` 넷을 각각
+`상향`, `동일`, `하향`, `확인 필요` 중 하나로 정하고 근거를 한 줄씩 적는다.
+축 이름과 판정 규칙은 [`references/position-decision-criteria.md`](references/position-decision-criteria.md)의 「업사이드 축」이 소유한다.
+
+**후보풀의 `careerUpsideHypothesis`를 판정 근거로 옮기지 않는다.**
+수집기가 회사마다 고정 문구를 넣어, 같은 회사의 다른 공고에 같은 값이 들어간다.
 
 공고의 담당 업무는 미래 업무 범위다.
 필수 자격과 전이 가능한 경험을 구분해 채점한다.
 
-추천 결과는 `scripts/position-recommender/recommendation_schema.ts`의 `schemaVersion: 4`에 맞춘다.
+추천 결과는 `scripts/position-recommender/recommendation_schema.ts`의 `schemaVersion: 5`에 맞춘다.
 강력 추천과 도전 추천의 각 항목에는 후보풀의 `candidateId`를 그대로 넣는다.
 `candidateRanking`에는 후보풀의 모든 공고를 적합도 순서로 한 번씩 넣는다.
 순위는 1부터 후보 수까지 이어져야 하며, 강력 추천과 도전 추천의 순위와 일치해야 한다.
-각 순위에는 공개 가능한 `oneLineReason`을 한 문장으로 작성한다.
+각 순위에는 공개 가능한 `oneLineReason`을 한 문장으로 작성하고, 네 축을 합친 `upsideDirection`을 함께 넣는다.
 후보풀 전체를 분석하고 강력 추천과 도전 추천 기준을 통과한 공고는 개수 제한 없이 모두 해당 단계에 넣는다.
 정해진 개수를 채우려고 기준 미달 공고를 추천으로 올리지 않는다.
 결과는 `<RUN_DIR>/recommendation.json`에만 만든다.
@@ -120,6 +128,8 @@ HTML에는 다음 내용을 담는다.
 - 우선 검토 3건 다음의 모든 추천 공고를 잇는 압축 목록
 - 추천 공고와 분리한 보류·주의 목록
 - 추천 이유와 기술 태그
+- 추천 공고의 축별 업사이드 판정과 근거
+- 전체 후보 목록의 업사이드 종합 방향 배지
 - 적합도 순위와 한 줄 판단이 있는 전체 후보 접이식 목록
 - 전체 후보의 회사, 공고명, 기술과 판단 검색 및 빠른 필터
 - 각 공고의 개별 링크
@@ -173,6 +183,7 @@ rmdir "<RUN_DIR>"
 - 후보풀 대조 검증이 통과했다.
 - HTML이 검증된 추천 JSON에서 생성됐다.
 - 전체 후보 순위와 한 줄 판단이 후보풀 전체를 포함한다.
+- 추천 공고마다 네 축의 업사이드 판정과 근거가 있다.
 - HTML의 모든 공고 링크가 개별 공고 URL이다.
 - 확인할 수 없는 값이 불확실성 표기로 드러난다.
 - 외부 게시를 요청한 경우 `report-publisher`가 Cloudflare Pages 공개 URL을 검증했다.
