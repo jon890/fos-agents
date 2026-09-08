@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { parseArgs } from "./collect_live_postings.ts";
+import { SOURCE_ALIASES, SOURCE_IDS } from "./live-postings/contracts.ts";
 
 describe("collect_live_postings 인자", () => {
   test("JSON 후보풀 출력 경로를 받는다", () => {
@@ -29,6 +30,19 @@ describe("collect_live_postings 인자", () => {
 
     expect(currentArgs.targetRoleOnly).toBe(false);
     expect(args.targetRoleOnly).toBe(false);
+  });
+
+  test("어댑터에 등록된 모든 소스 이름과 별칭을 받는다", () => {
+    for (const name of [...SOURCE_IDS, ...SOURCE_ALIASES]) {
+      const args = parseArgs(["--output", "/tmp/posting-candidates.json", "--source", name]);
+      expect(args.source).toBe(name);
+    }
+  });
+
+  test("모르는 소스 이름은 전체 수집으로 떨어지지 않고 중단한다", () => {
+    expect(() =>
+      parseArgs(["--output", "/tmp/posting-candidates.json", "--source", "woowahaan"])
+    ).toThrow("is not a known source");
   });
 
   test("출력 경로가 없으면 저장소 state에 쓰지 않고 중단한다", () => {

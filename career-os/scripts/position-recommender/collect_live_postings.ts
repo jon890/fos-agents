@@ -36,6 +36,7 @@ import {
   filterEligiblePostings,
 } from "./live-postings/validator.ts";
 import { configuredSourceIds, selectAdapters } from "./live-postings/adapters/index.ts";
+import { SOURCE_ALIASES, SOURCE_IDS } from "./live-postings/contracts.ts";
 import { buildPostingCandidatePool } from "./live-postings/candidate_pool.ts";
 
 // ---- CLI ----------------------------------------------------------------
@@ -46,6 +47,8 @@ export class CliUsageError extends Error {
     this.name = "CliUsageError";
   }
 }
+
+const KNOWN_SOURCES = new Set<string>([...SOURCE_IDS, ...SOURCE_ALIASES, "all"]);
 
 export function parseArgs(argv: string[]): CliArgs {
   let jsonOut: string | undefined;
@@ -60,30 +63,13 @@ export function parseArgs(argv: string[]): CliArgs {
       jsonOut = argv[++i];
     } else if (arg === "--source" && argv[i + 1]) {
       const s = argv[++i];
-      if (
-        s === "wanted" ||
-        s === "toss" ||
-        s === "toss-careers" ||
-        s === "coupang" ||
-        s === "coupang-careers" ||
-        s === "kakaobank" ||
-        s === "kakaobank-careers" ||
-        s === "kurly" ||
-        s === "kurly-careers" ||
-        s === "krafton" ||
-        s === "krafton-careers" ||
-        s === "kakaopay" ||
-        s === "kakaopay-securities" ||
-        s === "kakaomobility" ||
-        s === "naver-careers" ||
-        s === "samsung" ||
-        s === "samsung-careers" ||
-        s === "sk" ||
-        s === "sk-careers" ||
-        s === "cj" ||
-        s === "cj-careers" ||
-        s === "all"
-      ) source = s;
+      // 어댑터 목록이 단일 소스다. 여기에 이름을 복제하면 새 소스가 조용히 무시된다.
+      if (!KNOWN_SOURCES.has(s)) {
+        throw new CliUsageError(
+          `--source ${s} is not a known source. known: ${[...KNOWN_SOURCES].sort().join(", ")}`
+        );
+      }
+      source = s as SourceSelection;
     } else if (arg === "--max-wanted" && argv[i + 1]) {
       wantedLimit = parseInt(argv[++i], 10);
     } else if (arg === "--all-development-roles" || arg === "--no-server-only") {
