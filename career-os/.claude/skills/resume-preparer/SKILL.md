@@ -90,6 +90,8 @@ bun career-os/scripts/career-workspace/cli.ts skill begin resume-preparer --json
 
 [references/resume-design.md](references/resume-design.md) 기준으로 HTML과 PDF를 실제로 열어 글자 겹침, 잘림, 링크, 대비와 페이지 넘침을 확인한다.
 렌더링은 [scripts/export_resume.ts](scripts/export_resume.ts) `--application-dir <지원 디렉터리>`로 수행한다.
+지원별 브랜드 강조색은 같은 명령의 `--accent "#RRGGBB"`로 준다.
+HTML 골격과 CSS, 로고는 `templates/`가 소유하며 화면 구조를 바꿀 때는 렌더러가 아니라 그 파일들을 먼저 고친다.
 경력기술서는 같은 명령의 `--resume`, `--html`, `--pdf`에 해당 경로를 지정한다.
 HTML 정적 검사는 [scripts/check_resume_html.ts](scripts/check_resume_html.ts) `<HTML 경로>`로 수행한다.
 

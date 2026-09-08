@@ -1,0 +1,8 @@
+{
+  "note": "이력서의 h3 제목과 로고 파일을 잇는다. 제목이 key 로 시작하면 그 로고를 붙인다. 없는 회사는 로고 없이 렌더한다.",
+  "map": {
+    "NHN": "nhn.png",
+    "더퓨쳐컴퍼니": "the-future-company.png",
+    "전남대학교": "chonnam-national-university.png"
+  }
+}

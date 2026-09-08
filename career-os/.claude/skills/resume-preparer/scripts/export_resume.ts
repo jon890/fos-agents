@@ -11,10 +11,15 @@ type Options = {
   htmlPath: string;
   pdfPath: string;
   chromeBin: string;
+  accent: string;
 };
 
 const SKILL_ROOT = resolve(import.meta.dir, '..');
-export const DEFAULT_DESIGN_PATH = join(SKILL_ROOT, 'assets/resume.css');
+export const TEMPLATE_DIR = join(SKILL_ROOT, 'templates');
+export const DEFAULT_DESIGN_PATH = join(TEMPLATE_DIR, 'resume.css');
+export const DOCUMENT_TEMPLATE_PATH = join(TEMPLATE_DIR, 'resume.html');
+export const PAGE_TEMPLATE_PATH = join(TEMPLATE_DIR, 'resume-page.html');
+export const LOGO_DIR = join(TEMPLATE_DIR, 'logos');
 export const CHROME_PDF_FLAGS = [
   '--headless',
   '--disable-gpu',
@@ -30,6 +35,7 @@ function parseArgs(args: string[]): Options {
   let htmlPath = '';
   let pdfPath = '';
   let chromeBin = process.env.CHROME_BIN ?? '';
+  let accent = '';
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -39,6 +45,7 @@ function parseArgs(args: string[]): Options {
     else if (arg === '--html' && args[i + 1]) htmlPath = args[++i];
     else if (arg === '--pdf' && args[i + 1]) pdfPath = args[++i];
     else if (arg === '--chrome-bin' && args[i + 1]) chromeBin = args[++i];
+    else if (arg === '--accent' && args[i + 1]) accent = args[++i];
     else if (arg === '--help') {
       showHelp();
       process.exit(0);
@@ -57,7 +64,12 @@ function parseArgs(args: string[]): Options {
   pdfPath = pdfPath || join(applicationDir, 'resume.pdf');
   chromeBin = chromeBin || resolveChromeBin();
 
-  return { applicationDir, resumePath, designPath, htmlPath, pdfPath, chromeBin };
+  if (accent && !/^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/.test(accent)) {
+    console.error(`--accent는 #RGB 또는 #RRGGBB 형식이어야 합니다: ${accent}`);
+    process.exit(2);
+  }
+
+  return { applicationDir, resumePath, designPath, htmlPath, pdfPath, chromeBin, accent };
 }
 
 function resolveChromeBin(): string {
@@ -294,6 +306,48 @@ export function documentTitle(resumeMarkdown: string): string {
   return heading ? heading[1].replace(/[*`_]/g, '').trim() : '이력서';
 }
 
+/**
+ * `templates/logos/index.json` 의 map 을 읽어 회사·학교 로고를 base64 로 인라인한다.
+ * h3 제목이 key 로 시작하면 그 로고를 붙인다. 순서가 아니라 이름으로 판정하므로
+ * 이력서 구성이 바뀌어도 엉뚱한 자리에 붙지 않는다. 없는 이름은 로고 없이 렌더한다.
+ */
+export function inlineOrganizationLogos(html: string): string {
+  const dir = LOGO_DIR;
+  const indexPath = join(dir, 'index.json');
+  if (!existsSync(indexPath)) return html;
+
+  let map: Record<string, string>;
+  try {
+    map = JSON.parse(readFileSync(indexPath, 'utf8')).map ?? {};
+  } catch {
+    return html;
+  }
+
+  return html.replace(/<h3>([\s\S]*?)<\/h3>/g, (whole, inner: string) => {
+    const label = inner.replace(/<[^>]*>[\s\S]*$/, '').replace(/&[a-z]+;/g, ' ').trim();
+    const key = Object.keys(map).find((name) => label.startsWith(name));
+    if (!key) return whole;
+
+    const file = join(dir, map[key]);
+    if (!existsSync(file)) return whole;
+
+    const mime = file.endsWith('.svg') ? 'image/svg+xml' : 'image/png';
+    const data = readFileSync(file).toString('base64');
+    return `<h3><span class="org-logo" style="background-image:url(data:${mime};base64,${data})"></span>${inner}</h3>`;
+  });
+}
+
+/** 템플릿의 {{KEY}} 를 값으로 바꾼다. 값 안의 {{...}} 는 다시 치환하지 않는다. */
+export function fillTemplate(template: string, values: Record<string, string>): string {
+  return template.replace(/\{\{([A-Z_]+)\}\}/g, (whole, key: string) => {
+    const value = values[key];
+    if (value === undefined) {
+      throw new Error(`템플릿 자리 ${whole} 에 넣을 값이 없습니다.`);
+    }
+    return value;
+  });
+}
+
 export function inlineCompanyPeriod(html: string): string {
   return html.replace(
     /<h3>([\s\S]*?)<\/h3>\s*<p class="company-period">([\s\S]*?)<\/p>/g,
@@ -301,13 +355,14 @@ export function inlineCompanyPeriod(html: string): string {
   );
 }
 
-export function renderHtml(resumeMarkdown: string, designSource: string, designPath = ''): string {
-  const css = extractCss(designSource, designPath);
+export function renderHtml(resumeMarkdown: string, designSource: string, designPath = '', accent = ''): string {
+  const base = extractCss(designSource, designPath);
+  const css = accent ? `${base}\n:root { --accent: ${accent}; }` : base;
   const title = documentTitle(resumeMarkdown);
   const pages = renderMarkdownPages(resumeMarkdown);
   const pageNumberWidth = Math.max(2, String(pages.length).length);
+  const pageTemplate = readFileSync(PAGE_TEMPLATE_PATH, 'utf8').replace(/\n$/, '');
   const renderedPages = pages.map((page, index) => {
-    page = inlineCompanyPeriod(page);
     const ordinal = String(index + 1).padStart(pageNumberWidth, '0');
     const total = String(pages.length).padStart(pageNumberWidth, '0');
     const role = index === 0
@@ -315,26 +370,18 @@ export function renderHtml(resumeMarkdown: string, designSource: string, designP
       : index === pages.length - 1
         ? 'resume-page--last'
         : 'resume-page--continuation';
-    return `  <main class="resume-page ${role}" data-page="${ordinal} / ${total}">
-${page}
-  </main>`;
+    return fillTemplate(pageTemplate, {
+      PAGE_ROLE: role,
+      PAGE_NUMBER: `${ordinal} / ${total}`,
+      PAGE_BODY: inlineOrganizationLogos(inlineCompanyPeriod(page)),
+    });
   }).join('\n');
 
-  return `<!doctype html>
-<html lang="ko">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${escapeHtml(title)}</title>
-  <style>
-${css}
-  </style>
-</head>
-<body>
-${renderedPages}
-</body>
-</html>
-`;
+  return fillTemplate(readFileSync(DOCUMENT_TEMPLATE_PATH, 'utf8'), {
+    TITLE: escapeHtml(title),
+    STYLE: css,
+    PAGES: renderedPages,
+  });
 }
 
 export function countHtmlPages(html: string): number {
@@ -392,7 +439,7 @@ function main(): void {
   const designSource = readRequired(opts.designPath);
   let html: string;
   try {
-    html = renderHtml(resumeMarkdown, designSource, opts.designPath);
+    html = renderHtml(resumeMarkdown, designSource, opts.designPath, opts.accent);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exit(2);
@@ -417,9 +464,10 @@ Usage:
 
 Options:
   --resume <path>       Markdown 원본. 기본값: <application-dir>/evidence/resume-draft.md
-  --design <path>       CSS 또는 css 코드 블록이 있는 Markdown. 기본값: resume-preparer/assets/resume.css
+  --design <path>       스타일 전체를 대체한다. 기본값: resume-preparer/templates/resume.css
   --html <path>         HTML 출력. 기본값: <application-dir>/review/resume.html
   --pdf <path>          PDF 출력. 기본값: <application-dir>/resume.pdf
+  --accent <#RRGGBB>    강조색만 덮어쓴다. 기본 CSS를 복제하지 않고 지원별 브랜드 색을 적용할 때 쓴다
   --chrome-bin <path>   Chrome/Chromium binary. 기본값: CHROME_BIN 또는 common system paths
 
 경력기술서는 같은 규칙을 플래그로 지정한다.

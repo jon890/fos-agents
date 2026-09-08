@@ -1,8 +1,37 @@
 # 이력서 디자인 계약
 
 이 파일은 이력서와 경력기술서를 HTML과 PDF로 바꿀 때 적용할 디자인 판단과 검증 기준이다.
-실제 기본 스타일은 `career-os/.claude/skills/resume-preparer/assets/resume.css`가 소유한다.
-공고별 스타일을 쓰는 경우 `export_resume.ts --design <path>`에 CSS 파일이나 `css` 코드 블록이 있는 Markdown 파일을 명시한다.
+실제 화면은 `templates/` 아래 네 자산이 소유한다.
+
+| 파일 | 담는 것 |
+| --- | --- |
+| `templates/resume.html` | 문서 골격. `{{TITLE}}`, `{{STYLE}}`, `{{PAGES}}` 자리를 채운다 |
+| `templates/resume-page.html` | 한 쪽의 골격. `{{PAGE_ROLE}}`, `{{PAGE_NUMBER}}`, `{{PAGE_BODY}}` 자리를 채운다 |
+| `templates/resume.css` | 기본 스타일 |
+| `templates/logos/` | 회사와 학교 로고, 그리고 이름을 잇는 `index.json` |
+
+**화면 구조를 바꿀 때는 렌더러가 아니라 이 파일들을 먼저 고친다.**
+`export_resume.ts` 는 자리를 채우는 일만 하고 마크업을 만들지 않는다.
+템플릿에 `{{KEY}}` 를 새로 두면 렌더러에 그 값을 넘기는 코드를 함께 더한다.
+값이 없으면 렌더가 실패하므로 자리만 두고 잊는 일이 생기지 않는다.
+
+## 로고를 더하는 방법
+
+`templates/logos/` 에 이미지를 두고 `index.json` 의 `map` 에 한 줄을 더한다.
+
+```json
+{ "map": { "NHN": "nhn.png" } }
+```
+
+**이력서의 `h3` 제목이 key 로 시작하면 그 로고가 붙는다.**
+순서가 아니라 이름으로 판정하므로 절 배치가 바뀌어도 엉뚱한 자리에 붙지 않는다.
+매핑에 없는 이름은 로고 없이 렌더한다.
+
+## 강조색
+
+지원별 브랜드 색은 `export_resume.ts --accent "#RRGGBB"` 로 준다.
+기본 CSS 를 복제한 공고별 design 문서를 만들지 않는다.
+`--design <path>` 는 스타일 전체를 대체하므로 완전히 다른 판을 쓸 때만 사용한다.
 
 ## 독자와 목적
 

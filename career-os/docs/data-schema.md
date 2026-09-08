@@ -92,7 +92,7 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 ### `.claude/skills/resume-preparer/references/resume-design.md`
 
 모든 공고의 이력서와 경력기술서에 기본으로 적용하는 디자인 판단과 검증 기준이다.
-기본 CSS는 `.claude/skills/resume-preparer/assets/resume.css`에 둔다.
+이력서 HTML 골격과 기본 CSS, 로고는 `.claude/skills/resume-preparer/templates/`에 둔다.
 공고별 스타일은 `export_resume.ts --design <path>`에 CSS 파일이나 `css` 코드 블록이 있는 Markdown 파일을 명시한다.
 
 ## Config
