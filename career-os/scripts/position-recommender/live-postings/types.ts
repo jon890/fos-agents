@@ -65,4 +65,6 @@ export interface CliArgs {
   targetRoleOnly: boolean;
   wantedLimit: number;
   includeTossArticles: boolean;
+  /** 실패 소스가 이 개수를 넘으면 실행을 실패로 끝낸다. */
+  maxFailedSources: number;
 }
