@@ -112,12 +112,19 @@ function postingFromWantedDetail(
   };
 }
 
+interface WantedCollection {
+  postings: Posting[];
+  /** 상세 요청이나 파싱이 실패해 판단하지 못한 공고 수. */
+  failedCount: number;
+  errors: string[];
+}
+
 async function fetchWanted(
   jobGroupId: number,
   limit = 120,
   targetRoleOnly = true,
   includeDetail = true
-): Promise<Posting[]> {
+): Promise<WantedCollection> {
   const params = new URLSearchParams({
     job_group_id: String(jobGroupId),
     country: "kr",
@@ -133,6 +140,8 @@ async function fetchWanted(
   const data = (await r.json()) as { data?: unknown[] };
 
   const out: Posting[] = [];
+  const errors: string[] = [];
+  let failedCount = 0;
   for (const rawItem of data.data ?? []) {
     const item = rawItem as Record<string, unknown>;
     const companyObj = (item.company ?? {}) as Record<string, unknown>;
@@ -148,7 +157,11 @@ async function fetchWanted(
     if (includeDetail && pid) {
       try {
         detail = await wantedDetail(pid);
-      } catch {
+      } catch (error) {
+        // 이 실패를 세지 않으면 상세 API 가 전부 죽은 날도 오류 0건으로 보고된다.
+        // wanted 는 후보를 가장 많이 넣는 소스라 그 실행이 정상으로 읽힌다.
+        failedCount++;
+        errors.push(`wanted detail ${pid}: ${error}`);
         continue;
       }
     }
@@ -163,14 +176,14 @@ async function fetchWanted(
     });
     if (posting) out.push(posting);
   }
-  return out;
+  return { postings: out, failedCount, errors };
 }
 
 export const wantedAdapter: SourceAdapter = {
   id: "wanted",
   name: "wanted",
   async collect({ targetRoleOnly, wantedLimit }): Promise<AdapterCollectionResult> {
-    const postings = await fetchWanted(
+    const { postings, failedCount, errors } = await fetchWanted(
       WANTED_DEVELOPMENT_JOB_GROUP_ID,
       wantedLimit,
       targetRoleOnly,
@@ -180,13 +193,14 @@ export const wantedAdapter: SourceAdapter = {
       postings,
       diagnostics: {
         source: "wanted",
-        status: "ok",
+        status: failedCount > 0 ? "partial" : "ok",
         collectedCount: postings.length,
         skippedCount: 0,
-        failedCount: 0,
+        failedCount,
         discoveryModes: ["broad"],
-        message: `wanted diagnostics: broad=${postings.length}`,
+        message: `wanted diagnostics: broad=${postings.length}, failed=${failedCount}`,
       },
+      errors,
     };
   },
 };

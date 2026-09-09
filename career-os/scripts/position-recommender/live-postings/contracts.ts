@@ -76,6 +76,17 @@ export const postingCandidateSchema = postingSchema.extend({
   id: nonEmptyString,
 }).strict();
 
+/**
+ * 소스별 수집 진단. 세 개수의 뜻을 어댑터가 임의로 정하지 않는다.
+ * `collection_health.ts` 가 이 값으로 실행 전체의 성패를 판정하기 때문이다.
+ *
+ * - `collectedCount`: 어댑터가 `Posting` 으로 만들어 넘긴 공고 수. 원본 목록 건수가 아니다.
+ * - `importedCount`: 그중 공통 생명주기 검사를 통과해 후보풀에 들어간 수. 수집기가 채운다.
+ * - `skippedCount`: 대상 역할이나 고용 형태가 아니어서 의도적으로 뺀 수.
+ * - `failedCount`: 요청이나 파싱이 실패해 판단하지 못한 수.
+ *
+ * 원본 목록 건수처럼 소스마다 다른 값은 `message` 에 적는다.
+ */
 export const sourceDiagnosticSchema = z.object({
   source: sourceIdSchema,
   status: z.enum(["ok", "partial", "failed"]),
