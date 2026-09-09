@@ -50,6 +50,25 @@ export class CliUsageError extends Error {
 
 const KNOWN_SOURCES = new Set<string>([...SOURCE_IDS, ...SOURCE_ALIASES, "all"]);
 
+function requireValue(option: string, raw: string | undefined): string {
+  if (raw === undefined || raw === "") {
+    throw new CliUsageError(`${option} requires a value`);
+  }
+  return raw;
+}
+
+/**
+ * `Number` 는 공백을 0, `0x10` 을 16, `2.5` 를 2.5 로 받는다.
+ * `parseInt` 는 `many` 를 NaN 으로 받고 그대로 흘린다.
+ * 형식을 먼저 확인한 뒤 변환한다.
+ */
+function requireNonNegativeInteger(option: string, raw: string | undefined): number {
+  if (raw === undefined || !/^\d+$/.test(raw)) {
+    throw new CliUsageError(`${option} ${raw ?? "(없음)"} must be a non-negative integer`);
+  }
+  return Number(raw);
+}
+
 export function parseArgs(argv: string[]): CliArgs {
   let jsonOut: string | undefined;
   let source: SourceSelection = "all";
@@ -59,10 +78,10 @@ export function parseArgs(argv: string[]): CliArgs {
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if ((arg === "--out" || arg === "--output" || arg === "--json-output") && argv[i + 1]) {
-      jsonOut = argv[++i];
-    } else if (arg === "--source" && argv[i + 1]) {
-      const s = argv[++i];
+    if (arg === "--out" || arg === "--output" || arg === "--json-output") {
+      jsonOut = requireValue(arg, argv[++i]);
+    } else if (arg === "--source") {
+      const s = requireValue(arg, argv[++i]);
       // 어댑터 목록이 단일 소스다. 여기에 이름을 복제하면 새 소스가 조용히 무시된다.
       if (!KNOWN_SOURCES.has(s)) {
         throw new CliUsageError(
@@ -70,12 +89,15 @@ export function parseArgs(argv: string[]): CliArgs {
         );
       }
       source = s as SourceSelection;
-    } else if (arg === "--max-wanted" && argv[i + 1]) {
-      wantedLimit = parseInt(argv[++i], 10);
+    } else if (arg === "--max-wanted") {
+      wantedLimit = requireNonNegativeInteger(arg, argv[++i]);
     } else if (arg === "--all-development-roles" || arg === "--no-server-only") {
       targetRoleOnly = false;
     } else if (arg === "--include-toss-articles") {
       includeTossArticles = true;
+    } else if (arg.startsWith("--")) {
+      // 모르는 이름이 조건 없이 기본 동작으로 흐르면 오타가 드러나지 않는다.
+      throw new CliUsageError(`${arg} is not a known option`);
     }
   }
   if (!jsonOut) {

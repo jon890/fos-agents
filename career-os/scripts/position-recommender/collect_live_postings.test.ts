@@ -49,6 +49,39 @@ describe("collect_live_postings 인자", () => {
     expect(() => parseArgs([])).toThrow("--output <output-json> is required");
   });
 
+  test("모르는 옵션 이름은 기본 동작으로 흐르지 않고 중단한다", () => {
+    expect(() =>
+      parseArgs(["--output", "/tmp/posting-candidates.json", "--max-wantd", "5"])
+    ).toThrow("--max-wantd is not a known option");
+  });
+
+  test("값을 받는 옵션에 값이 없으면 중단한다", () => {
+    expect(() => parseArgs(["--output"])).toThrow("--output requires a value");
+    expect(() => parseArgs(["--output", "/tmp/o.json", "--source"])).toThrow(
+      "--source requires a value"
+    );
+  });
+
+  test("공고 수 상한이 음수, 소수, 공백, 16진수, 문자열이면 중단한다", () => {
+    for (const raw of ["-1", "2.5", " ", "", "0x10", "1e2", "many"]) {
+      expect(() =>
+        parseArgs(["--output", "/tmp/posting-candidates.json", "--max-wanted", raw])
+      ).toThrow("must be a non-negative integer");
+    }
+  });
+
+  test("공고 수 상한에 값을 주지 않으면 기본값으로 흐르지 않고 중단한다", () => {
+    expect(() =>
+      parseArgs(["--output", "/tmp/posting-candidates.json", "--max-wanted"])
+    ).toThrow("must be a non-negative integer");
+  });
+
+  test("공고 수 상한을 정수로 주면 그 값을 쓴다", () => {
+    expect(
+      parseArgs(["--output", "/tmp/posting-candidates.json", "--max-wanted", "30"]).wantedLimit
+    ).toBe(30);
+  });
+
   test("출력 경로 누락 오류는 절대 경로나 stack trace를 노출하지 않는다", async () => {
     const process = Bun.spawn(["bun", `${import.meta.dir}/collect_live_postings.ts`], {
       stdout: "pipe",
