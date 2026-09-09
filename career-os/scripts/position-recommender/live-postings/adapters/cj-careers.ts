@@ -188,7 +188,8 @@ export const cjCareersAdapter: SourceAdapter = {
       diagnostics: {
         source: "cj-careers",
         status: failedCount > 0 ? "partial" : "ok",
-        collectedCount: rawCount,
+        // 원본 목록 건수는 message 의 raw 가 갖는다. 계약상 이 값은 넘긴 공고 수다.
+        collectedCount: postings.length,
         skippedCount,
         failedCount,
         discoveryModes: ["official-listing", "official-detail"],

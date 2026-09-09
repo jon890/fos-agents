@@ -38,6 +38,7 @@ import {
 import { configuredSourceIds, selectAdapters } from "./live-postings/adapters/index.ts";
 import { SOURCE_ALIASES, SOURCE_IDS } from "./live-postings/contracts.ts";
 import { buildPostingCandidatePool } from "./live-postings/candidate_pool.ts";
+import { DEFAULT_MAX_FAILED_SOURCES, judgeCollectionHealth } from "./live-postings/collection_health.ts";
 
 // ---- CLI ----------------------------------------------------------------
 
@@ -50,19 +51,39 @@ export class CliUsageError extends Error {
 
 const KNOWN_SOURCES = new Set<string>([...SOURCE_IDS, ...SOURCE_ALIASES, "all"]);
 
+function requireValue(option: string, raw: string | undefined): string {
+  if (raw === undefined || raw === "") {
+    throw new CliUsageError(`${option} requires a value`);
+  }
+  return raw;
+}
+
+/**
+ * `Number` 는 공백을 0, `0x10` 을 16, `2.5` 를 2.5 로 받는다.
+ * `parseInt` 는 `many` 를 NaN 으로 받고 그대로 흘린다.
+ * 형식을 먼저 확인한 뒤 변환한다.
+ */
+function requireNonNegativeInteger(option: string, raw: string | undefined): number {
+  if (raw === undefined || !/^\d+$/.test(raw)) {
+    throw new CliUsageError(`${option} ${raw ?? "(없음)"} must be a non-negative integer`);
+  }
+  return Number(raw);
+}
+
 export function parseArgs(argv: string[]): CliArgs {
   let jsonOut: string | undefined;
   let source: SourceSelection = "all";
   let targetRoleOnly = true;
   let wantedLimit = 120;
   let includeTossArticles = false;
+  let maxFailedSources: number | undefined;
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if ((arg === "--out" || arg === "--output" || arg === "--json-output") && argv[i + 1]) {
-      jsonOut = argv[++i];
-    } else if (arg === "--source" && argv[i + 1]) {
-      const s = argv[++i];
+    if (arg === "--out" || arg === "--output" || arg === "--json-output") {
+      jsonOut = requireValue(arg, argv[++i]);
+    } else if (arg === "--source") {
+      const s = requireValue(arg, argv[++i]);
       // 어댑터 목록이 단일 소스다. 여기에 이름을 복제하면 새 소스가 조용히 무시된다.
       if (!KNOWN_SOURCES.has(s)) {
         throw new CliUsageError(
@@ -70,18 +91,32 @@ export function parseArgs(argv: string[]): CliArgs {
         );
       }
       source = s as SourceSelection;
-    } else if (arg === "--max-wanted" && argv[i + 1]) {
-      wantedLimit = parseInt(argv[++i], 10);
+    } else if (arg === "--max-wanted") {
+      wantedLimit = requireNonNegativeInteger(arg, argv[++i]);
     } else if (arg === "--all-development-roles" || arg === "--no-server-only") {
       targetRoleOnly = false;
     } else if (arg === "--include-toss-articles") {
       includeTossArticles = true;
+    } else if (arg === "--max-failed-sources") {
+      maxFailedSources = requireNonNegativeInteger(arg, argv[++i]);
+    } else if (arg.startsWith("--")) {
+      // 모르는 이름이 조건 없이 기본 동작으로 흐르면 오타가 드러나지 않는다.
+      throw new CliUsageError(`${arg} is not a known option`);
     }
   }
   if (!jsonOut) {
     throw new CliUsageError("--output <output-json> is required");
   }
-  return { jsonOut, source, targetRoleOnly, wantedLimit, includeTossArticles };
+  // 단일 소스 수집에서는 그 소스의 실패가 곧 실행 전체의 실패다.
+  const defaultMaxFailed = source === "all" ? DEFAULT_MAX_FAILED_SOURCES : 0;
+  return {
+    jsonOut,
+    source,
+    targetRoleOnly,
+    wantedLimit,
+    includeTossArticles,
+    maxFailedSources: maxFailedSources ?? defaultMaxFailed,
+  };
 }
 
 function isAdapterCollectionResult(value: Posting[] | AdapterCollectionResult): value is AdapterCollectionResult {
@@ -95,7 +130,8 @@ function importedCountsBySource(posts: Posting[]): Map<string, number> {
 }
 
 async function main(): Promise<number> {
-  const { jsonOut, source, targetRoleOnly, wantedLimit, includeTossArticles } = parseArgs(process.argv.slice(2));
+  const { jsonOut, source, targetRoleOnly, wantedLimit, includeTossArticles, maxFailedSources } =
+    parseArgs(process.argv.slice(2));
   const collected: Posting[] = [];
   const errors: string[] = [];
   const sourceDiagnostics: SourceDiagnostic[] = [];
@@ -172,6 +208,16 @@ async function main(): Promise<number> {
   }
   if (errors.length > 0) {
     console.error(`WARN source errors: ${errors.join("; ")}`);
+  }
+  // 후보풀은 위에서 이미 썼다. 사람이 실패 실행의 내용을 열어 볼 수 있어야 하기 때문이다.
+  // 종료 코드만 실패로 바꿔 크론과 후속 단계가 이 실행을 정상으로 읽지 않게 한다.
+  const health = judgeCollectionHealth(normalizedDiagnostics, maxFailedSources, pool.candidates.length);
+  for (const warning of health.warnings) {
+    console.error(`WARN collection health: ${warning}`);
+  }
+  if (!health.ok) {
+    console.error(`FAIL collection health: ${health.reasons.join(" / ")}`);
+    return 1;
   }
   return 0;
 }

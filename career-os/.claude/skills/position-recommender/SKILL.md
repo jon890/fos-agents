@@ -41,11 +41,42 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/position-recommender/col
 
 `<RUN_DIR>/posting-candidates.json`이 이번 실행의 추천 입력이다.
 
-다음을 확인한다.
+**종료 코드를 먼저 본다.** 후보풀 파일은 실패해도 남으므로 파일이 있다는 것만으로 성공으로 읽지 않는다.
+
+| 종료 코드 | 뜻 | 다음 행동 |
+| --- | --- | --- |
+| 0 | 판정 통과 | `WARN collection health` 줄이 있으면 그 내용을 사용자에게 알린 뒤 계속한다 |
+| 1 | 실패 소스가 허용 개수를 넘었거나 후보가 0건 | 아래 재확인 절차를 따른다 |
+| 2 | 인자를 잘못 줬다 | 명령을 고쳐 다시 돌린다 |
+
+허용 개수는 전체 수집이 2개, 단일 소스 수집이 0개다.
+
+**종료 코드가 0이어도 `WARN collection health` 줄을 읽는다.**
+허용 범위 안에서 실패한 소스의 이름이 여기 나온다.
+그 소스가 사용자의 지원 대상 회사면 결과가 줄어든 실행이므로 사용자에게 알린다.
+
+종료 코드가 1이면 `FAIL collection health` 줄이 사유를 담는다.
+실패한 소스를 단독으로 다시 돌려 일시적 장애인지 어댑터 결함인지 가른다.
+
+```bash
+bun "$(git rev-parse --show-toplevel)/career-os/scripts/position-recommender/collect_live_postings.ts" \
+  --source <실패한 소스> --output <RUN_DIR>/probe.json
+```
+
+재확인은 종료 코드보다 `sourceDiagnostics`의 `message`를 읽어 판단한다.
+단일 소스 수집은 허용 개수가 0이라, 상세 요청 하나만 실패해도 종료 코드가 1이 된다.
+목록 요청이 성공하고 공고를 하나 이상 넘겼으면 어댑터는 살아 있다.
+그 소스를 뺀 채 전체 수집을 다시 돌릴지, 원인을 먼저 고칠지는 사용자가 정한다.
+
+목록 요청부터 실패하면 그 어댑터의 결함이다. 추천을 진행하지 않고 사용자에게 알린다.
+
+허용 개수를 바꿔야 하면 `--max-failed-sources <개수>`를 준다.
+이 값을 올려서 진행할지는 사용자가 정한다.
+
+이어서 후보풀 내용을 확인한다.
 
 - `collectedAt`이 이번 실행 시각이다.
 - `candidates`가 1건 이상이다.
-- 추천에 사용할 소스의 진단 상태가 성공 또는 부분 성공이다.
 - 후보는 `linkType: direct_posting`이며 개별 공고 URL을 가진다.
 - 후보의 `postingStatus`는 `active` 또는 `open`이다.
 - 후보의 마감 상태가 `no_deadline`이거나 마감일이 현재 실행 시각 이후다.

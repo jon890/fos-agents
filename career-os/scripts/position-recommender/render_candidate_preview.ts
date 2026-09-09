@@ -3,7 +3,12 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { loadPostingCandidatePool } from "./live-postings/candidate_pool.ts";
 import type { PostingCandidatePool } from "./live-postings/contracts.ts";
-import { RecommendationRun, type PositionItemType, type RecommendationRunType } from "./recommendation_schema.ts";
+import {
+  RecommendationRun,
+  type PositionItemType,
+  type RecommendationRunType,
+  type UpsideAxisJudgmentType,
+} from "./recommendation_schema.ts";
 import { validateRecommendationAgainstPool } from "./validate_recommendation.ts";
 
 type PreviewTier = "강력 추천" | "도전 추천" | "보류·주의" | "전체 후보";

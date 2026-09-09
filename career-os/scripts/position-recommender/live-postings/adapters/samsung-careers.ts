@@ -208,10 +208,16 @@ export const samsungCareersAdapter: SourceAdapter = {
         }
         collectedRaw += list.items.length;
         for (const item of list.items) {
+          // fetchDetail 은 요청 실패와 파싱 실패에 null 을 돌려준다.
+          // 그것을 skipped 로 세면 상세 API 가 전부 죽은 날도 오류 0건으로 보고된다.
           const detail = await fetchDetail(item.seq);
+          if (!detail) {
+            failedCount++;
+            errors.push(`samsung-careers detail ${item.seq}: 응답을 읽지 못했다`);
+          }
           const posting = postingFromDetail(item, detail);
           if (posting) postings.push(posting);
-          else skippedCount++;
+          else if (detail) skippedCount++;
         }
       } catch (error) {
         failedCount++;
@@ -224,7 +230,8 @@ export const samsungCareersAdapter: SourceAdapter = {
       diagnostics: {
         source: "samsung-careers",
         status: failedCount > 0 ? "partial" : "ok",
-        collectedCount: collectedRaw,
+        // 원본 목록 건수는 message 의 raw 가 갖는다. 계약상 이 값은 넘긴 공고 수다.
+        collectedCount: postings.length,
         skippedCount,
         failedCount,
         discoveryModes: ["official-listing", "official-detail"],
