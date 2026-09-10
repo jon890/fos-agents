@@ -39,6 +39,7 @@ import { configuredSourceIds, selectAdapters } from "./live-postings/adapters/in
 import { SOURCE_ALIASES, SOURCE_IDS } from "./live-postings/contracts.ts";
 import { buildPostingCandidatePool } from "./live-postings/candidate_pool.ts";
 import { DEFAULT_MAX_FAILED_SOURCES, judgeCollectionHealth } from "./live-postings/collection_health.ts";
+import { filterExcludedPostings, loadPositionExclusions } from "./live-postings/exclusions.ts";
 
 // ---- CLI ----------------------------------------------------------------
 
@@ -77,11 +78,14 @@ export function parseArgs(argv: string[]): CliArgs {
   let wantedLimit = 120;
   let includeTossArticles = false;
   let maxFailedSources: number | undefined;
+  let exclusionsConfig: string | undefined;
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--out" || arg === "--output" || arg === "--json-output") {
       jsonOut = requireValue(arg, argv[++i]);
+    } else if (arg === "--exclusions-config") {
+      exclusionsConfig = requireValue(arg, argv[++i]);
     } else if (arg === "--source") {
       const s = requireValue(arg, argv[++i]);
       // 어댑터 목록이 단일 소스다. 여기에 이름을 복제하면 새 소스가 조용히 무시된다.
@@ -111,6 +115,7 @@ export function parseArgs(argv: string[]): CliArgs {
   const defaultMaxFailed = source === "all" ? DEFAULT_MAX_FAILED_SOURCES : 0;
   return {
     jsonOut,
+    exclusionsConfig,
     source,
     targetRoleOnly,
     wantedLimit,
@@ -129,14 +134,17 @@ function importedCountsBySource(posts: Posting[]): Map<string, number> {
   return counts;
 }
 
-async function main(): Promise<number> {
-  const { jsonOut, source, targetRoleOnly, wantedLimit, includeTossArticles, maxFailedSources } =
-    parseArgs(process.argv.slice(2));
+export async function collectLivePostings(
+  args: CliArgs,
+  adapters = selectAdapters(args.source, args.includeTossArticles),
+): Promise<number> {
+  const { jsonOut, source, targetRoleOnly, wantedLimit, includeTossArticles, maxFailedSources } = args;
+  const exclusions = loadPositionExclusions(args.exclusionsConfig);
   const collected: Posting[] = [];
   const errors: string[] = [];
   const sourceDiagnostics: SourceDiagnostic[] = [];
 
-  for (const adapter of selectAdapters(source, includeTossArticles)) {
+  for (const adapter of adapters) {
     try {
       const result = await adapter.collect({ targetRoleOnly, wantedLimit });
       if (isAdapterCollectionResult(result)) {
@@ -178,12 +186,14 @@ async function main(): Promise<number> {
     new Date(),
     createPostingEligibilityPolicy({ targetRoleOnly }),
   );
-  const activePosts = eligibility.eligible;
+  const personalFilter = filterExcludedPostings(eligibility.eligible, exclusions);
+  const activePosts = personalFilter.eligible;
   const importedCounts = importedCountsBySource(activePosts);
   const normalizedDiagnostics = sourceDiagnostics.map((diagnostic) => ({
     ...diagnostic,
     importedCount: importedCounts.get(diagnostic.source) ?? 0,
-    skippedCount: diagnostic.skippedCount + (eligibility.rejectedBySource.get(diagnostic.source) ?? 0),
+    skippedCount: diagnostic.skippedCount + (eligibility.rejectedBySource.get(diagnostic.source) ?? 0)
+      + (personalFilter.rejectedBySource.get(diagnostic.source) ?? 0),
   }));
   const collectedAt = new Date().toISOString();
   const diagnostics = {
@@ -223,7 +233,7 @@ async function main(): Promise<number> {
 }
 
 if (import.meta.main) {
-  main().then(process.exit).catch((e) => {
+  Promise.resolve().then(() => collectLivePostings(parseArgs(process.argv.slice(2)))).then(process.exit).catch((e) => {
     console.error(e instanceof Error ? e.message : String(e));
     process.exit(e instanceof CliUsageError ? 2 : 1);
   });

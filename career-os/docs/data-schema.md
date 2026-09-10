@@ -10,6 +10,39 @@ career-os는 사람이 관리하는 설정, 실행 상태, 비공개 산출물, 
 - `public/`과 `sources/fos-study/`에는 공개 가능한 자료만 둔다.
 - 게시용 HTML과 실행별 중간 데이터는 시스템 임시 디렉터리에 두고 검증 뒤 삭제한다.
 
+## 개인 공고 제외 설정
+
+`config/position-exclusions.ts`는 필수 개인 정책 파일의 상대 경로를 지정한다.
+정책 본문은 Git에서 제외되는 `state/private-config/position-exclusions.json`에 둔다.
+`state/private-config/`는 사람이 관리하는 비공개 설정을 기존 release로 전송하기 위한 예외이며, 실행 결과나 지원 이력 저장소가 아니다.
+지원 결과와 재지원 간격의 원본은 계속 private brain에 둔다.
+
+```json
+{
+  "schemaVersion": 1,
+  "exclusions": [
+    { "source": "wanted", "identityHash": "wanted:example-id" }
+  ]
+}
+```
+
+각 규칙은 정식 `source`와 `identityHash`, HTTPS `url` 중 하나 이상을 가진다.
+같은 소스에서 식별자나 정규화 URL 중 하나가 일치하면 제외한다.
+URL은 fragment, `utm_*`, `fbclid`, `gclid`를 제거하고 query 순서와 마지막 슬래시를 정규화한다.
+공고 ID를 담는 query는 보존한다.
+회사명, 직무명, 지원 결과, 기간과 와일드카드는 규칙 필드로 허용하지 않는다.
+새 ID로 등록된 공고는 명시된 식별자나 URL이 일치하지 않으면 유지한다.
+
+수집기는 설정을 외부 요청 전에 읽고, 누락이나 형식 오류가 있으면 종료 코드 1로 중단한다.
+규칙이 필요 없는 환경은 사람이 확인한 `exclusions: []`를 명시한다.
+`--exclusions-config <파일>`은 검증이나 명시적인 별도 설정에 사용하며 같은 검증을 적용한다.
+일반 실행은 스크립트가 속한 워크스페이스의 기본 경로를 읽는다.
+
+규칙 갱신은 기존 `prepare`, `diff`, `publish` 절차로 현재 release를 준비하고 변경 파일을 확인한 뒤 반영한다.
+다른 환경은 추천 스킬의 `prepare` 단계에서 같은 release를 받는다.
+새 수집 코드와 스킬 배포 전에는 원격 규칙 저장만으로 자동 추천에 적용되지 않는다.
+선택 이유는 [개인 공고 제외 정책 ADR](adr/ADR-114-개인-공고-제외-정책을-비공개-release로-전송한다.md)을 따른다.
+
 ## 비공개 작업 release
 
 홈서버의 `career-os` bucket은 release별 archive, manifest와 descriptor를 가진다.

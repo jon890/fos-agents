@@ -34,6 +34,18 @@ mktemp -d "${TMPDIR:-/tmp}/position-recommender.XXXXXX"
 
 ### 2. 외부 공고 수집
 
+먼저 기존 비공개 release를 준비한다. 개인 제외 설정도 이 release에 포함된다.
+준비가 실패하면 수집과 모델 선별을 중단한다.
+
+```bash
+CAREER_WORKSPACE_ROOT="$(git rev-parse --show-toplevel)/career-os" \
+  bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts" prepare --json
+```
+
+설정 위치와 형식은 [데이터 구조](../../../docs/data-schema.md#개인-공고-제외-설정)를 따른다.
+설정이 없거나 잘못되면 빈 규칙을 만들거나 필터를 생략하지 않고 복구한다.
+공통 수집기는 명시적으로 제외된 공고를 후보풀 생성 전에 제거한다.
+
 ```bash
 bun "$(git rev-parse --show-toplevel)/career-os/scripts/position-recommender/collect_live_postings.ts" \
   --output <RUN_DIR>/posting-candidates.json
@@ -41,7 +53,8 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/position-recommender/col
 
 `<RUN_DIR>/posting-candidates.json`이 이번 실행의 추천 입력이다.
 
-**종료 코드를 먼저 본다.** 후보풀 파일은 실패해도 남으므로 파일이 있다는 것만으로 성공으로 읽지 않는다.
+**종료 코드를 먼저 본다.** 수집 실패 시 후보풀 파일이 남을 수 있으므로 파일이 있다는 것만으로 성공으로 읽지 않는다.
+`FAIL position exclusions`이면 설정 오류다. 설정을 복구하기 전에는 기존 후보풀도 사용하지 않는다.
 
 | 종료 코드 | 뜻 | 다음 행동 |
 | --- | --- | --- |

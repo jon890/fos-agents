@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, rmSync } from "node:fs";
+import { existsSync, rmSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { parseArgs } from "./collect_live_postings.ts";
 import { SOURCE_ALIASES, SOURCE_IDS } from "./live-postings/contracts.ts";
@@ -127,11 +127,14 @@ describe("collect_live_postings 인자", () => {
   // 아래 검사는 판정을 붙인 이유 자체를 지킨다.
   // 종료 코드 계산을 후보풀 쓰기보다 앞으로 옮기거나 실패 반환을 되돌리면 여기서 잡힌다.
   test("소스가 실패하면 후보풀을 남기고 종료 코드 1로 끝낸다", async () => {
-    const out = `${tmpdir()}/posting-candidates-${crypto.randomUUID()}.json`;
+    const dir = mkdtempSync(`${tmpdir()}/posting-candidates-`);
+    const out = `${dir}/pool.json`;
+    const exclusions = `${dir}/exclusions.json`;
+    writeFileSync(exclusions, JSON.stringify({ schemaVersion: 1, exclusions: [] }));
     // 닫힌 포트를 프록시로 지정해 네트워크 없이 연결 실패를 만든다.
     const blocked = { HTTPS_PROXY: "http://127.0.0.1:1", HTTP_PROXY: "http://127.0.0.1:1" };
     const child = Bun.spawn(
-      ["bun", `${import.meta.dir}/collect_live_postings.ts`, "--source", "woowahan", "--output", out],
+      ["bun", `${import.meta.dir}/collect_live_postings.ts`, "--source", "woowahan", "--output", out, "--exclusions-config", exclusions],
       { stdout: "pipe", stderr: "pipe", env: { ...process.env, ...blocked } },
     );
     const [stderr, exitCode] = await Promise.all([
@@ -145,7 +148,7 @@ describe("collect_live_postings 인자", () => {
       expect(stderr).toContain("woowahan-careers");
       expect(existsSync(out)).toBe(true);
     } finally {
-      rmSync(out, { force: true });
+      rmSync(dir, { recursive: true, force: true });
     }
   }, 60_000);
 
