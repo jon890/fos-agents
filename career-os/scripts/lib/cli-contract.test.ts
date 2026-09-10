@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { buildPostingCandidatePool } from "../position-recommender/live-postings/candidate_pool.ts";
@@ -7,7 +7,10 @@ import { validateRecommendationFiles } from "../position-recommender/validate_re
 import { writeCandidatePreview } from "../position-recommender/render_candidate_preview.ts";
 import { writeRecommendation } from "../position-recommender/render_recommendation.ts";
 import { runInterviewQuestionSources } from "../interview-question-sources/cli.ts";
-import { buildReadingSourceTemplate, listReadingSources } from "../study-topic-recommender/manage_reading_sources.ts";
+import {
+  buildReadingSourceTemplate,
+  listReadingSources,
+} from "../study-topic-recommender/manage_reading_sources.ts";
 import { validateMorningReadingOutputs } from "../study-topic-recommender/validate_outputs.ts";
 import { firstOptionValue } from "./cli.ts";
 
@@ -19,11 +22,14 @@ let output: string;
 
 function invoke(script: string, args: string[] = [], imported = false) {
   const path = resolve(scripts, script);
-  const command = imported ? ["-e", `await import(${JSON.stringify(path)})`, ...args] : [path, ...args];
+  const command = imported
+    ? ["-e", `await import(${JSON.stringify(path)})`, ...args]
+    : [path, ...args];
   const result = Bun.spawnSync([process.execPath, ...command], {
     cwd: directory,
     env: { ...process.env, CAREER_OS_ROOT: "", TMPDIR: tmpdir() },
-    stdout: "pipe", stderr: "pipe",
+    stdout: "pipe",
+    stderr: "pipe",
   });
   return { code: result.exitCode, out: result.stdout.toString(), err: result.stderr.toString() };
 }
@@ -33,23 +39,65 @@ beforeAll(() => {
   input = join(directory, "recommendation.json");
   candidates = join(directory, "pool.json");
   output = join(directory, "report.html");
-  const { pool } = buildPostingCandidatePool([{
-    source: "wanted", company: "예시", title: "백엔드 개발자", url: "https://example.com/jobs/1",
-    linkType: "direct_posting", postingStatus: "active", activeEvidence: "상세 API 상태 확인",
-    openedAt: "", closesAt: "", daysUntilClose: "", closeUrgency: "no_deadline", category: "개발",
-    summary: "", tags: [], skills: ["Java"], dueTime: "", mainTasks: "서버 개발", requirements: "Java", preferred: "",
-  }], {
-    collectionRunId: "test-run", collectedAt: "2026-08-13T00:00:00.000Z", requestedSource: "all",
-    configuredSources: ["wanted"], wantedLimit: 120, includeTossArticles: false, sourceDiagnostics: [], errors: [],
-  });
+  const { pool } = buildPostingCandidatePool(
+    [
+      {
+        source: "wanted",
+        company: "예시",
+        title: "백엔드 개발자",
+        url: "https://example.com/jobs/1",
+        linkType: "direct_posting",
+        postingStatus: "active",
+        activeEvidence: "상세 API 상태 확인",
+        openedAt: "",
+        closesAt: "",
+        daysUntilClose: "",
+        closeUrgency: "no_deadline",
+        category: "개발",
+        summary: "",
+        tags: [],
+        skills: ["Java"],
+        dueTime: "",
+        mainTasks: "서버 개발",
+        requirements: "Java",
+        preferred: "",
+      },
+    ],
+    {
+      collectionRunId: "test-run",
+      collectedAt: "2026-08-13T00:00:00.000Z",
+      requestedSource: "all",
+      configuredSources: ["wanted"],
+      wantedLimit: 120,
+      includeTossArticles: false,
+      sourceDiagnostics: [],
+      errors: [],
+    },
+  );
   writeFileSync(candidates, JSON.stringify(pool));
-  writeFileSync(input, JSON.stringify({
-    schemaVersion: 5, reportDate: "2026-08-13", generatedAt: "2026-08-13T09:00:00+09:00",
-    conclusion: ["결론"], background: ["배경"], tiers: { strong: [], stretch: [], hold: [] },
-    candidateRanking: [{ candidateId: pool.candidates[0].id, rank: 1, upsideDirection: "확인 필요", oneLineReason: "추가 확인이 필요하다." }],
-    additionalTargets: [], recentCheck: ["확인"], weeklyActions: { apply: "지원", resume: "수정", study: "학습" },
-    sourceSnapshot: { collectionRunId: pool.collectionRunId, candidatePoolPath: "pool.json" },
-  }));
+  writeFileSync(
+    input,
+    JSON.stringify({
+      schemaVersion: 5,
+      reportDate: "2026-08-13",
+      generatedAt: "2026-08-13T09:00:00+09:00",
+      conclusion: ["결론"],
+      background: ["배경"],
+      tiers: { strong: [], stretch: [], hold: [] },
+      candidateRanking: [
+        {
+          candidateId: pool.candidates[0].id,
+          rank: 1,
+          upsideDirection: "확인 필요",
+          oneLineReason: "추가 확인이 필요하다.",
+        },
+      ],
+      additionalTargets: [],
+      recentCheck: ["확인"],
+      weeklyActions: { apply: "지원", resume: "수정", study: "학습" },
+      sourceSnapshot: { collectionRunId: pool.collectionRunId, candidatePoolPath: "pool.json" },
+    }),
+  );
   writeFileSync(join(directory, "invalid.json"), "{}");
 });
 
@@ -69,26 +117,56 @@ describe("CLI 밖에서 호출하는 핵심 함수", () => {
 
   test("생성 함수는 경로를 반환하고 실패하면 기존 출력 파일을 보존한다", () => {
     const target = join(directory, "core-output.html");
-    expect(writeCandidatePreview(input, candidates, target)).toEqual({ passed: true, outputPath: target });
-    expect(writeRecommendation(input, target, "md")).toEqual({ status: "written", outputPath: target });
+    expect(writeCandidatePreview(input, candidates, target)).toEqual({
+      passed: true,
+      outputPath: target,
+    });
+    expect(writeRecommendation(input, target, "html")).toEqual({
+      status: "written",
+      outputPath: target,
+    });
     const content = readFileSync(target, "utf8");
     expect(writeRecommendation(input, target, "pdf")).toEqual({ status: "unsupported-format" });
-    expect(writeCandidatePreview(join(directory, "invalid.json"), candidates, target).passed).toBe(false);
+    expect(writeRecommendation(input, target, "md")).toEqual({ status: "unsupported-format" });
+    expect(writeCandidatePreview(join(directory, "invalid.json"), candidates, target).passed).toBe(
+      false,
+    );
     expect(readFileSync(target, "utf8")).toBe(content);
   });
 
   test("질문 소스 함수는 stdout 대신 데이터를 반환한다", async () => {
     expect(await runInterviewQuestionSources("validate", [])).toMatchObject({ status: "ok" });
     expect(Array.isArray(await runInterviewQuestionSources("list", []))).toBe(true);
-    await expect(runInterviewQuestionSources("collect", [])).rejects.toThrow("collect에는 --output과 --cache-dir가 필요하다.");
+    await expect(runInterviewQuestionSources("collect", [])).rejects.toThrow(
+      "collect에는 --output과 --cache-dir가 필요하다.",
+    );
   });
 
   test("읽을거리 목록과 템플릿은 명시한 입력으로 생성한다", () => {
     const sources = listReadingSources("techBlog", true);
     expect(sources.length).toBeGreaterThan(0);
-    expect(sources.every((source, index) => source.category === "techBlog" && source.registrationOrder === index + 1)).toBe(true);
-    const template = buildReadingSourceTemplate(["--key", "core-example", "--category", "techBlog", "--title", "예시", "--feed-url", "https://example.com/feed.xml"]);
-    expect(template).toEqual({ key: "core-example", category: "techBlog", title: "예시", enabled: true, feedUrl: "https://example.com/feed.xml" });
+    expect(
+      sources.every(
+        (source, index) => source.category === "techBlog" && source.registrationOrder === index + 1,
+      ),
+    ).toBe(true);
+    const template = buildReadingSourceTemplate([
+      "--key",
+      "core-example",
+      "--category",
+      "techBlog",
+      "--title",
+      "예시",
+      "--feed-url",
+      "https://example.com/feed.xml",
+    ]);
+    expect(template).toEqual({
+      key: "core-example",
+      category: "techBlog",
+      title: "예시",
+      enabled: true,
+      feedUrl: "https://example.com/feed.xml",
+    });
   });
 
   test("산출물 검사 실패는 호출자에게 예외로 전달한다", () => {
@@ -120,8 +198,18 @@ describe("추천 CLI 호환 계약", () => {
   });
 
   test("검증기는 첫 중복 옵션을 선택하고 모르는 옵션과 위치 인자를 무시한다", () => {
-    expect(invoke(validator, ["ignored", "--input", input, "--input", "missing", "--candidates", candidates, "--unknown"]))
-      .toEqual({ code: 0, out: "추천 결과와 공고 후보풀이 일치합니다.\n", err: "" });
+    expect(
+      invoke(validator, [
+        "ignored",
+        "--input",
+        input,
+        "--input",
+        "missing",
+        "--candidates",
+        candidates,
+        "--unknown",
+      ]),
+    ).toEqual({ code: 0, out: "추천 결과와 공고 후보풀이 일치합니다.\n", err: "" });
   });
 
   test("검증 실패 문구와 출력 채널을 렌더러도 보존한다", () => {
@@ -130,7 +218,9 @@ describe("추천 CLI 호환 계약", () => {
     expect(validation.code).toBe(1);
     expect(validation.out).toBe("");
     expect(validation.err).toContain("schemaVersion:");
-    expect(invoke(preview, ["--input", invalid, "--candidates", "missing", "--output", output])).toEqual(validation);
+    expect(
+      invoke(preview, ["--input", invalid, "--candidates", "missing", "--output", output]),
+    ).toEqual(validation);
   });
 
   test("후보풀 불일치는 HTML을 만들기 전에 실패한다", () => {
@@ -138,29 +228,125 @@ describe("추천 CLI 호환 계약", () => {
     const run = JSON.parse(readFileSync(input, "utf8"));
     run.sourceSnapshot.collectionRunId = "another-run";
     writeFileSync(bad, JSON.stringify(run));
-    expect(invoke(preview, ["--input", bad, "--candidates", candidates, "--output", output]))
-      .toEqual({ code: 1, out: "", err: "추천 결과의 수집 실행 ID가 후보풀과 다르다.\n" });
+    expect(
+      invoke(preview, ["--input", bad, "--candidates", candidates, "--output", output]),
+    ).toEqual({ code: 1, out: "", err: "추천 결과의 수집 실행 ID가 후보풀과 다르다.\n" });
   });
 
   test("미리보기 기본값과 all, 숫자 limit은 HTML과 텍스트 성공 출력을 유지한다", () => {
     for (const limit of [[], ["--limit", "all"], ["--limit", "1"], ["--limit", "0"]]) {
-      const result = invoke(preview, ["--input", input, "--candidates", candidates, "--output", output, ...limit]);
+      const result = invoke(preview, [
+        "--input",
+        input,
+        "--candidates",
+        candidates,
+        "--output",
+        output,
+        ...limit,
+      ]);
       expect(result).toEqual({ code: 0, out: `포지션 추천 HTML: ${output}\n`, err: "" });
       expect(readFileSync(output, "utf8")).toContain("<!doctype html>");
     }
   });
 
-  test("md/html 렌더러는 마지막 중복 옵션과 기존 format 검증 순서를 유지한다", () => {
-    for (const format of ["md", "html"]) {
-      expect(invoke(renderer, ["--input", "missing", "--input", input, "--output", output, "--format", format]))
-        .toEqual({ code: 0, out: `recommendation ${format}: ${output}\n`, err: "" });
+  test("HTML 렌더러는 마지막 중복 옵션과 기존 format 검증 순서를 유지한다", () => {
+    for (const format of ["html"]) {
+      expect(
+        invoke(renderer, [
+          "ignored",
+          "--input",
+          "missing",
+          "--input",
+          input,
+          "--output",
+          output,
+          "--format",
+          "md",
+          "--format",
+          format,
+          "--unknown",
+        ]),
+      ).toEqual({ code: 0, out: `recommendation ${format}: ${output}\n`, err: "" });
       expect(readFileSync(output, "utf8").length).toBeGreaterThan(100);
     }
     const invalid = invoke(renderer, ["--input", input, "--output", output, "--format", "pdf"]);
     expect(invalid).toEqual(invoke(renderer));
-    const schemaFirst = invoke(renderer, ["--input", join(directory, "invalid.json"), "--output", output, "--format", "pdf"]);
+    const schemaFirst = invoke(renderer, [
+      "--input",
+      join(directory, "invalid.json"),
+      "--output",
+      output,
+      "--format",
+      "pdf",
+    ]);
     expect(schemaFirst.code).toBe(1);
     expect(schemaFirst.err).toStartWith("recommendation.json schema 검증 실패:\n");
+  });
+
+  test("Markdown은 사용법 오류이며 새 출력도 기존 출력 변경도 없다", () => {
+    const path = join(directory, "unsupported.md");
+    const result = invoke(renderer, ["--input", input, "--output", path, "--format", "md"]);
+    expect(result).toEqual(invoke(renderer));
+    expect(result.err).toContain("--format <html>");
+    expect(result.err).not.toContain("md|html");
+    expect(existsSync(path)).toBe(false);
+    writeFileSync(path, "기존 개인 파일");
+    expect(invoke(renderer, ["--input", input, "--output", path, "--format", "md"])).toEqual(
+      result,
+    );
+    expect(readFileSync(path, "utf8")).toBe("기존 개인 파일");
+  });
+
+  test("다른 cwd의 상대 입력·출력·custom template과 기본 자산 경로를 지원한다", () => {
+    writeFileSync(
+      join(directory, "custom.html"),
+      "<main>{{title}}|{{reportHtml}}|{{sourceDiagnosticsHtml}}</main>",
+    );
+    expect(
+      invoke(renderer, [
+        "--input",
+        "recommendation.json",
+        "--format",
+        "html",
+        "--output",
+        "relative.html",
+        "--template",
+        "custom.html",
+      ]).code,
+    ).toBe(0);
+    expect(readFileSync(join(directory, "relative.html"), "utf8")).toStartWith(
+      "<main>2026-08-13 포지션 추천 리포트|",
+    );
+    expect(
+      invoke(preview, [
+        "--input",
+        "recommendation.json",
+        "--candidates",
+        "pool.json",
+        "--output",
+        "relative-preview.html",
+      ]).code,
+    ).toBe(0);
+    expect(readFileSync(join(directory, "relative-preview.html"), "utf8")).toContain(
+      "candidate-filter",
+    );
+  });
+
+  test("잘못된 추천 스키마는 형식 오류보다 먼저 실패하며 새 출력을 만들지 않는다", () => {
+    for (const format of ["html", "md"]) {
+      const path = join(directory, `invalid-${format}.html`);
+      const result = invoke(renderer, [
+        "--input",
+        "invalid.json",
+        "--format",
+        format,
+        "--output",
+        path,
+      ]);
+      expect(result.code).toBe(1);
+      expect(result.err).toStartWith("recommendation.json schema 검증 실패:");
+      expect(existsSync(path)).toBe(false);
+    }
   });
 
   test("파일 읽기 실패는 기존 uncaught 오류와 코드 1을 유지한다", () => {
@@ -178,7 +364,14 @@ describe("추천 CLI 호환 계약", () => {
   });
 
   test("import는 실행하거나 출력하지 않는다", () => {
-    for (const script of [validator, preview, renderer, "interview-drill/application_question_schema.ts", "interview-drill/drill-engine.ts", "study-topic-recommender/morning_reading_cli.ts"]) {
+    for (const script of [
+      validator,
+      preview,
+      renderer,
+      "interview-drill/application_question_schema.ts",
+      "interview-drill/drill-engine.ts",
+      "study-topic-recommender/morning_reading_cli.ts",
+    ]) {
       expect(invoke(script, [], true)).toEqual({ code: 0, out: "", err: "" });
     }
   });
@@ -193,7 +386,11 @@ describe("기존 명령 및 공용 runCli", () => {
     expect(JSON.parse(result.out)).toMatchObject({ status: "ok" });
     expect(invoke(script, [], true)).toEqual({ code: 0, out: "", err: "" });
     expect(Array.isArray(JSON.parse(invoke(script, ["list"]).out))).toBe(true);
-    expect(invoke(script, ["collect"])).toEqual({ code: 1, out: "", err: "collect에는 --output과 --cache-dir가 필요하다.\n" });
+    expect(invoke(script, ["collect"])).toEqual({
+      code: 1,
+      out: "",
+      err: "collect에는 --output과 --cache-dir가 필요하다.\n",
+    });
   });
 
   test("읽을거리 관리의 help, JSON 템플릿과 첫 옵션값을 보존한다", () => {
@@ -203,36 +400,89 @@ describe("기존 명령 및 공용 runCli", () => {
     expect(help.err).toBe("");
     expect(invoke(script, ["--help"])).toEqual(help);
     expect(invoke(script, [], true)).toEqual({ code: 0, out: "", err: "" });
-    expect(invoke(script, ["template"])).toEqual({ code: 1, out: "", err: "--key 값이 필요하다.\n" });
-    const list = invoke(script, ["list", "--category", "techBlog", "--category", "video", "--include-disabled"]);
+    expect(invoke(script, ["template"])).toEqual({
+      code: 1,
+      out: "",
+      err: "--key 값이 필요하다.\n",
+    });
+    const list = invoke(script, [
+      "list",
+      "--category",
+      "techBlog",
+      "--category",
+      "video",
+      "--include-disabled",
+    ]);
     expect(list.code).toBe(0);
-    expect(JSON.parse(list.out).every((item: { category: string }) => item.category === "techBlog")).toBe(true);
-    const template = invoke(script, ["template", "--key", "example-test-feed", "--category", "techBlog", "--title", "예시", "--feed-url", "https://example.com/feed.xml", "--adapter", "feed"]);
+    expect(
+      JSON.parse(list.out).every((item: { category: string }) => item.category === "techBlog"),
+    ).toBe(true);
+    const template = invoke(script, [
+      "template",
+      "--key",
+      "example-test-feed",
+      "--category",
+      "techBlog",
+      "--title",
+      "예시",
+      "--feed-url",
+      "https://example.com/feed.xml",
+      "--adapter",
+      "feed",
+    ]);
     expect(template.code).toBe(0);
     expect(template.err).toBe("");
-    expect(JSON.parse(template.out)).toEqual({ key: "example-test-feed", category: "techBlog", title: "예시", enabled: true, feedUrl: "https://example.com/feed.xml", adapter: "feed" });
+    expect(JSON.parse(template.out)).toEqual({
+      key: "example-test-feed",
+      category: "techBlog",
+      title: "예시",
+      enabled: true,
+      feedUrl: "https://example.com/feed.xml",
+      adapter: "feed",
+    });
   });
 
   test("아침 읽을거리의 경로 검증이 네트워크 실행보다 먼저 실패한다", () => {
-    for (const script of ["study-topic-recommender/morning_reading_cli.ts", "study-topic-recommender/build_morning_reading.ts"]) {
-      expect(invoke(script, ["--library", "--collect-only"]))
-        .toEqual({ code: 2, out: "", err: "CAREER_OS_ROOT 또는 --run-dir에 시스템 임시 실행 경로를 지정해야 한다.\n" });
+    for (const script of [
+      "study-topic-recommender/morning_reading_cli.ts",
+      "study-topic-recommender/build_morning_reading.ts",
+    ]) {
+      expect(invoke(script, ["--library", "--collect-only"])).toEqual({
+        code: 2,
+        out: "",
+        err: "CAREER_OS_ROOT 또는 --run-dir에 시스템 임시 실행 경로를 지정해야 한다.\n",
+      });
     }
   });
 
   test("산출물 검증기의 경로 실패 코드 2를 보존하고 import는 실행하지 않는다", () => {
     const script = "study-topic-recommender/validate_outputs.ts";
     const result = invoke(script);
-    expect(result).toEqual({ code: 2, out: "", err: "CAREER_OS_ROOT 또는 --run-dir에 시스템 임시 실행 경로를 지정해야 한다.\n" });
+    expect(result).toEqual({
+      code: 2,
+      out: "",
+      err: "CAREER_OS_ROOT 또는 --run-dir에 시스템 임시 실행 경로를 지정해야 한다.\n",
+    });
     expect(invoke(script, [], true)).toEqual({ code: 0, out: "", err: "" });
   });
 
   test("기존 runCli의 JSON, help와 사용법 오류 계약을 보존한다", () => {
     const fixture = join(directory, "run-cli.ts");
-    writeFileSync(fixture, `import { runCli, UsageError } from ${JSON.stringify(join(scripts, "lib/cli.ts"))};\nawait runCli({name: 'fixture', summary: 'test', positional: [{name:'input', description:'input'}]}, ({positional}) => {if(positional[0] === 'usage') throw new UsageError('bad input'); if(positional[0] === 'error') throw new Error('failed'); return {passed: positional[0] === 'ok', value: positional[0]};});`);
-    expect(invoke(fixture, ["ok"])).toEqual({ code: 0, out: '{\n  "passed": true,\n  "value": "ok"\n}\n', err: "" });
+    writeFileSync(
+      fixture,
+      `import { runCli, UsageError } from ${JSON.stringify(join(scripts, "lib/cli.ts"))};\nawait runCli({name: 'fixture', summary: 'test', positional: [{name:'input', description:'input'}]}, ({positional}) => {if(positional[0] === 'usage') throw new UsageError('bad input'); if(positional[0] === 'error') throw new Error('failed'); return {passed: positional[0] === 'ok', value: positional[0]};});`,
+    );
+    expect(invoke(fixture, ["ok"])).toEqual({
+      code: 0,
+      out: '{\n  "passed": true,\n  "value": "ok"\n}\n',
+      err: "",
+    });
     expect(invoke(fixture, ["no"]).code).toBe(1);
-    expect(invoke(fixture, ["error"])).toEqual({ code: 1, out: "", err: '{\n  "passed": false,\n  "error": "failed"\n}\n' });
+    expect(invoke(fixture, ["error"])).toEqual({
+      code: 1,
+      out: "",
+      err: '{\n  "passed": false,\n  "error": "failed"\n}\n',
+    });
     expect(invoke(fixture, ["--help"]).code).toBe(0);
     expect(invoke(fixture, ["usage"]).code).toBe(2);
     expect(invoke(fixture).code).toBe(2);

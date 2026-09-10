@@ -1,3 +1,4 @@
+import { formatSeoulIsoDate } from "../../lib/date-format.ts";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { morningReadingReportSchema, type MorningReadingReport } from "../reading_contracts.js";
@@ -37,17 +38,6 @@ export interface RecordPublicationInput {
   url: string | null;
 }
 
-function seoulDate(isoDate: string): string {
-  const date = new Date(isoDate);
-  if (Number.isNaN(date.getTime())) throw new Error(`유효하지 않은 generatedAt: ${isoDate}`);
-  return new Intl.DateTimeFormat("sv-SE", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(date);
-}
-
 function canonicalJson(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
@@ -71,7 +61,7 @@ function assertHttpsUrlOrNull(value: string | null): void {
 }
 
 export function reportIdForMorningReading(report: MorningReadingReport): string {
-  return `morning-${seoulDate(report.generatedAt)}`;
+  return `morning-${formatSeoulIsoDate(report.generatedAt)}`;
 }
 
 export function loadMorningReadingReport(path: string): MorningReadingReport {

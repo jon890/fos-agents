@@ -1,0 +1,106 @@
+<template id="list-item"><li>{{value}}</li></template>
+
+<template id="preview-archive"
+  ><details class="archive">
+    <summary>
+      <span
+        ><span class="archive-title">전체 후보 적합도 순위 {{count}}건</span
+        ><span class="archive-note">LLM의 한 줄 판단과 함께 필요할 때 펼쳐보세요.</span></span
+      >
+    </summary>
+    <div class="candidate-search">
+      <label for="candidate-filter">회사, 공고명, 기술이나 판단 검색</label
+      ><input
+        id="candidate-filter"
+        type="search"
+        placeholder="예: 카카오, Spring, AI Platform"
+        autocomplete="off"
+      />
+      <p id="filter-status" aria-live="polite">전체 {{count}}건</p>
+      <div class="quick-filters" aria-label="빠른 필터">
+        <button type="button" data-filter="" aria-pressed="true">전체</button
+        ><button type="button" data-filter="ai|rag|agent|llm" aria-pressed="false">AI·RAG</button
+        ><button type="button" data-filter="java|spring" aria-pressed="false">Java·Spring</button
+        ><button type="button" data-filter="platform|플랫폼" aria-pressed="false">플랫폼</button
+        ><button type="button" data-filter="kotlin" aria-pressed="false">Kotlin</button>
+      </div>
+    </div>
+    <div class="candidate-list">{{candidates}}</div>
+  </details></template
+>
+
+<template id="preview-axes"
+  ><ul class="upside-axes">
+    {{items}}
+  </ul></template
+>
+
+<template id="preview-axis"
+  ><li>
+    <span class="axis-name">{{axis}}</span
+    ><span class="axis-dir dir-{{className}}">{{direction}}</span
+    ><span class="axis-reason">{{reason}}</span>
+  </li></template
+>
+
+<template id="preview-badge"
+  ><span class="upside upside-{{className}}" title="현재 직장 대비 업사이드"
+    >{{direction}}</span
+  ></template
+>
+
+<template id="preview-board-row"
+  ><article class="board-row {{className}}">
+    <span class="board-rank">{{rank}}</span><span class="tier-label">{{tier}}</span>
+    <div class="board-copy">
+      <p>{{company}}</p>
+      <h3><a href="{{url}}" target="_blank" rel="noopener noreferrer">{{title}}</a></h3>
+      <span>{{why}}</span>
+    </div>
+    {{chips}}
+  </article></template
+>
+
+<template id="preview-board"
+  ><div class="section-head">
+    <h2>{{title}}</h2>
+    <span class="count">{{count}}건</span>
+  </div>
+  <section class="board {{className}}">{{rows}}</section></template
+>
+
+<template id="preview-candidate"
+  ><article class="candidate-row" data-search="{{search}}">
+    <span class="candidate-rank">{{rank}}</span>
+    <div class="candidate-copy">
+      <a href="{{url}}" target="_blank" rel="noopener noreferrer">{{company}} — {{title}}</a>
+      <p>{{why}}</p>
+    </div>
+    {{badge}} {{chips}}
+  </article></template
+>
+
+<template id="preview-chip"><span class="chip">{{value}}</span></template>
+
+<template id="preview-chips"><div class="chips">{{chips}}</div></template>
+
+<template id="preview-empty"
+  ><p class="empty-state">오늘 기준을 통과한 추천 공고가 없습니다.</p></template
+>
+
+<template id="preview-hero"
+  ><article class="hero-card {{className}}">
+    <div class="hero-rank">{{rank}}</div>
+    <span class="tier-label">{{tier}}</span>
+    <p class="company">{{company}}</p>
+    <h3>{{title}}</h3>
+    <p class="rationale">{{why}}</p>
+    {{axes}}{{chips}}<a href="{{url}}" target="_blank" rel="noopener noreferrer">공고 열기 ↗</a>
+  </article></template
+>
+
+<template id="preview-script"
+  ><script>
+    {{script}}
+  </script></template
+>

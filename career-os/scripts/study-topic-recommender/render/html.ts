@@ -1,3 +1,4 @@
+import { formatSeoulIsoDate } from "../../lib/date-format.ts";
 import type { MorningReadingReport, ReadingCareerValue, ReadingRecommendation } from "../reading_contracts.js";
 
 const CAREER_VALUE_LABELS: Record<ReadingCareerValue, string> = {
@@ -20,17 +21,6 @@ function safeHttpsUrl(value: string): string {
   const url = new URL(value);
   if (url.protocol !== "https:") throw new Error(`HTTPS가 아닌 추천 URL: ${value}`);
   return url.toString();
-}
-
-function kstDate(generatedAt: string): string {
-  const date = new Date(generatedAt);
-  if (Number.isNaN(date.getTime())) throw new Error(`유효하지 않은 generatedAt: ${generatedAt}`);
-  return new Intl.DateTimeFormat("sv-SE", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(date);
 }
 
 function renderCard(item: ReadingRecommendation): string {
@@ -56,11 +46,11 @@ function renderTopics(report: MorningReadingReport): string {
 }
 
 export function morningHtmlFilename(generatedAt: string): string {
-  return `morning-reading-${kstDate(generatedAt)}.html`;
+  return `morning-reading-${formatSeoulIsoDate(generatedAt)}.html`;
 }
 
 export function buildMorningHtml(report: MorningReadingReport): string {
-  const date = kstDate(report.generatedAt);
+  const date = formatSeoulIsoDate(report.generatedAt);
   const recommendationCount = report.topics.reduce((count, topic) => count + topic.items.length, 0);
 
   return `<!doctype html>

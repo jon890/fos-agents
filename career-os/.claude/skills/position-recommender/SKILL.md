@@ -155,6 +155,11 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/position-recommender/val
 
 ### 5. 임시 HTML 생성
 
+포지션 추천은 HTML만 생성한다.
+Markdown 리포트는 만들지 않으며 추천 JSON과 후보풀 JSON은 검증 입력으로 유지한다.
+상세 렌더 명령을 직접 사용하는 경우에도 `--format html`만 허용한다.
+화면·카드·스타일·검색을 수정하는 위치와 검증 명령은 [코드 아키텍처](../../../docs/code-architecture.md#포지션-추천-렌더)를 따른다.
+
 ```bash
 bun "$(git rev-parse --show-toplevel)/career-os/scripts/position-recommender/render_candidate_preview.ts" \
   --input <RUN_DIR>/recommendation.json \

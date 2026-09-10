@@ -515,6 +515,8 @@ dry-run 응답은 `<output>.preview.json`, 변환 오류는 `<output>.errors.jso
 
 HTML 게시 전에는 개인 정보, 비공개 업무 내용, 로컬 절대 경로를 검사한다.
 포지션 추천 HTML은 전체 추천 중 상위 3건의 우선 검토 카드, 나머지 추천의 압축 목록, 별도 보류·주의 목록과 전체 후보 순위의 접이식 검색 목록으로 표시한다.
+포지션 추천은 HTML만 생성하며 Markdown 리포트는 만들지 않는다.
+`recommendation.json`과 후보풀 JSON은 검증 입력으로 유지하고 기존 개인 Markdown 파일은 삭제하지 않는다.
 외부 공유 URL은 `report-publisher` skill이 게시와 검증을 마친 뒤 제공한다.
 게시용 임시 파일은 검증 뒤 삭제하며 사용자가 보존을 요청한 경우에만 지정 경로에 남긴다.
 

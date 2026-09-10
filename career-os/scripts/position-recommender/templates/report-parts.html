@@ -1,0 +1,113 @@
+<template id="list-item"><li>{{value}}</li></template>
+
+<template id="report-axes"
+  ><ul class="sub upside-axes">
+    {{items}}
+  </ul></template
+>
+
+<template id="report-axis"
+  ><li>
+    <span class="axis-name">{{axis}}</span><span class="badge {{className}}">{{direction}}</span
+    ><span class="axis-reason">{{reason}}</span>
+  </li></template
+>
+
+<template id="report-badge"><span class="badge {{className}}">{{value}}</span></template>
+
+<template id="report-card"
+  ><li class="card">
+    <div class="card-head">
+      <span class="rank">{{rank}}</span>
+      <h3>{{company}} — {{title}}</h3>
+    </div>
+    <dl class="fields">{{fields}}</dl>
+  </li></template
+>
+
+<template id="report-cards"
+  ><ol class="cards">
+    {{cards}}
+  </ol></template
+>
+
+<template id="report-code"><code>{{value}}</code></template>
+
+<template id="report-content"
+  ><h2>한 줄 결론</h2>
+  {{conclusion}}
+  <h2>추천 배경 요약</h2>
+  {{background}} {{strong}} {{stretch}}
+  <h2>추가 수집 대상</h2>
+  <p class="note">개별 active 공고 URL 미확보 회사 — 다음 수집 범위 결정용.</p>
+  <ol class="cards">
+    {{targets}}
+  </ol>
+  <h2 class="tier-hold">보류·주의 포지션</h2>
+  <ol class="cards">
+    {{holds}}
+  </ol>
+  <h2>최근 반복 점검</h2>
+  {{recentCheck}}
+  <h2>이번 주 액션 플랜</h2>
+  <dl class="fields">
+    <dt>지원/검색</dt>
+    <dd>{{apply}}</dd>
+    <dt>이력서 보강</dt>
+    <dd>{{resume}}</dd>
+    <dt>학습 자료 / question-bank</dt>
+    <dd>{{study}}</dd>
+  </dl></template
+>
+
+<template id="report-empty"><p class="empty">해당 없음</p></template>
+
+<template id="report-field"
+  ><dt>{{label}}</dt>
+  <dd>{{value}}</dd></template
+>
+
+<template id="report-hold"
+  ><li class="card hold">
+    <div class="card-head"><h3>{{company}} — {{title}}</h3></div>
+    <dl class="fields">
+      <dt>링크</dt>
+      <dd>{{link}}</dd>
+      <dt>보류 이유</dt>
+      <dd>{{reason}}</dd>
+    </dl>
+  </li></template
+>
+
+<template id="report-link"><a href="{{url}}">{{url}}</a></template>
+
+<template id="report-list"
+  ><ul>
+    {{items}}
+  </ul></template
+>
+
+<template id="report-sub-list"
+  ><ul class="sub">
+    {{items}}
+  </ul></template
+>
+
+<template id="report-target"
+  ><li class="card lead">
+    <div class="card-head"><h3>{{company}}</h3></div>
+    <dl class="fields">
+      <dt>탐색 링크</dt>
+      <dd>{{link}}</dd>
+      <dt>추가 수집 이유</dt>
+      <dd>{{reason}}</dd>
+      <dt>다음 수집 포인트</dt>
+      <dd>{{nextCollectionPoint}}</dd>
+    </dl>
+  </li></template
+>
+
+<template id="report-tier"
+  ><h2 class="{{className}}">{{title}}</h2>
+  {{content}}</template
+>

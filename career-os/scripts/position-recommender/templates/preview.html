@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{{title}}</title>
+    <style>
+      {{css}}
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="masthead">
+        <div class="masthead-top">
+          <div>
+            <p class="eyebrow">POSITION RECOMMENDATION</p>
+            <div class="title-line">
+              <h1>{{title}}</h1>
+              <span class="recommendation-count"
+                ><strong>{{recommendationCount}}</strong
+                ><span class="recommendation-label"
+                  ><span>추천 공고</span
+                  ><small>강력 {{strongCount}} · 도전 {{stretchCount}}</small></span
+                ></span
+              >
+            </div>
+          </div>
+          <div class="meta-group">
+            <p class="compact-meta">
+              <span>{{reportDate}} 생성</span><span>{{collectedShort}} 수집</span>
+            </p>
+            <details class="provenance" data-run-id="{{collectionRunId}}">
+              <summary>수집 정보</summary>
+              <div><span>{{collectedFull}} 수집</span><span>{{runType}} 실행</span></div>
+            </details>
+          </div>
+        </div>
+        <section class="conclusion" aria-label="오늘의 추천 요약">
+          <ul>
+            {{conclusions}}
+          </ul>
+        </section>
+      </header>
+      <div class="section-head">
+        <h2>우선 검토</h2>
+        <span class="count">상위 {{featuredCount}}건</span>
+      </div>
+      <section class="priority-grid">{{heroCards}}</section>
+      {{additionalSection}} {{holdSection}} {{archive}}
+    </main>
+    {{filterScript}}
+  </body>
+</html>

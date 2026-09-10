@@ -125,15 +125,15 @@ if (import.meta.main) {
 
 수정할 때는 Java 서비스처럼 입력을 받아 결과를 돌려주는 핵심 함수부터 읽는다.
 파일 끝의 CLI 진입점은 컨트롤러처럼 인자를 전달하고 결과를 출력한다.
-추천 판정은 `validateRecommendationAgainstPool`, 화면 내용은 `toMarkdown`, `toHtml`,
-`renderCandidatePreviewHtml`에서 고친다.
+추천 판정은 `validateRecommendationAgainstPool`에서 고친다.
+추천 화면 변경 위치는 아래 「포지션 추천 렌더」를 따른다.
 옵션 조회 규칙은 `scripts/lib/cli.ts`에서 확인한다.
 
 | 수정할 처리 | 핵심 함수 |
 | --- | --- |
 | 추천 파일 로드와 후보풀 대조 | `validateRecommendationFiles(input, candidates)` |
 | 추천 화면 파일 생성 | `writeCandidatePreview(input, candidates, output, limitValue)` |
-| Markdown과 HTML 파일 생성 | `writeRecommendation(input, output, format, template)` |
+| 상세 추천 HTML 파일 생성 | `writeRecommendation(input, output, format, template)` |
 | 읽을거리 목록과 설정 예시 생성 | `listReadingSources(category, includeDisabled)`, `buildReadingSourceTemplate(args)` |
 | 면접 질문 소스 명령 | `runInterviewQuestionSources(command, args)` |
 | 산출물 내용과 공개 경계 검사 | `validateMorningReadingOutputs(root)` |
@@ -151,6 +151,68 @@ bunx tsc --noEmit
 
 실제 S3 연동 테스트는 전용 환경값이 모두 있을 때만 실행된다.
 로컬 리팩토링 검증에서는 해당 환경값을 제거하여 원격 저장소에 쓰지 않도록 한다.
+
+## 포지션 추천 렌더
+
+템플릿은 화면 구조를, CSS와 JavaScript는 스타일과 검색 동작을 담당한다.
+TypeScript는 검증된 데이터를 표시 값으로 바꾸고 템플릿 조각을 조립한다.
+최종 HTML은 CSS와 JavaScript를 포함하는 독립 파일이며 외부 자산을 읽지 않는다.
+
+| 수정할 내용 | 파일 |
+| --- | --- |
+| 상세 화면과 카드·필드·목록 | [report.html](../scripts/position-recommender/templates/report.html), [report-parts.html](../scripts/position-recommender/templates/report-parts.html) |
+| 추천 미리보기와 전체 후보 목록 | [preview.html](../scripts/position-recommender/templates/preview.html), [preview-parts.html](../scripts/position-recommender/templates/preview-parts.html) |
+| 색상, 여백, 모바일 배치 | [report.css](../scripts/position-recommender/templates/report.css), [preview.css](../scripts/position-recommender/templates/preview.css) |
+| 전체 후보 검색과 빠른 필터 | [preview.js](../scripts/position-recommender/templates/preview.js) |
+| 상세 화면의 데이터 변환 | [recommendation_html.ts](../scripts/position-recommender/recommendation_html.ts)의 `renderRecommendationHtml(run, assets, generatedAt)` |
+| 후보 정렬, 표시 제한과 카드 데이터 | [candidate_preview_html.ts](../scripts/position-recommender/candidate_preview_html.ts)의 `renderCandidatePreview(run, options, assets, collected)` |
+| 파일 읽기, 쓰기, 현재 시각과 CLI | [render_recommendation.ts](../scripts/position-recommender/render_recommendation.ts), [render_candidate_preview.ts](../scripts/position-recommender/render_candidate_preview.ts), [render_assets.ts](../scripts/position-recommender/render_assets.ts) |
+| 한국 시각과 날짜 표시 | [lib/date-format.ts](../scripts/lib/date-format.ts) |
+
+위 경로는 모두 `scripts/position-recommender/` 기준이다.
+`render_assets.ts`는 `import.meta.url` 기준으로 템플릿과 자산 문자열을 읽는다.
+화면별 `parts.html`에 `<template id="이름">…</template>` 요소로 조각을 모은다.
+이름에는 영문·숫자·밑줄·하이픈을 쓰고 중복 이름은 허용하지 않는다.
+요소 안팎의 줄바꿈과 HTML 주석은 사용할 수 있다.
+반복과 조건은 TypeScript에서 처리하며 템플릿에 별도 문법을 넣지 않는다.
+순수 렌더 함수에는 자산과 표시 시각을 명시적으로 전달하므로 같은 입력은 같은 HTML을 만든다.
+기존 `toHtml(run, templatePath)`, `toReportHtml(run)`, `renderCandidatePreviewHtml(run, options)`는 얇은 호환 함수로 유지한다.
+
+[template.ts](../scripts/position-recommender/template.ts)는 이름이 있는 슬롯만 한 번 치환한다.
+일반 값은 HTML 이스케이프하고, 신뢰할 수 있는 조립 HTML과 CSS·JS는 별도 `raw` 입력으로 전달한다.
+템플릿이 요구한 값이 없거나 등록되지 않은 슬롯이면 오류로 중단하며, 데이터 안의 `{{slot}}`은 다시 치환하지 않는다.
+기존 `--template`의 `title`, `generatedAt`, `reportHtml`, `sourceDiagnosticsHtml` 슬롯을 지원한다.
+`sourceDiagnosticsHtml`은 이전 기본 템플릿과의 호환을 위해 명시적으로 빈 문자열을 전달한다.
+
+상세 렌더 CLI는 `--format html`만 허용한다.
+`md` 등 다른 형식은 스키마 검사 이후 사용법 오류로 종료하며 파일을 만들거나 덮어쓰지 않는다.
+기존 옵션 중복 처리와 오류 출력 순서는 유지한다.
+Markdown 지원 제거를 제외한 화면, 필드, 링크, 정렬, 검색과 빈 상태는 기존 동작을 보존한다.
+
+저장소 루트에서 아래 검증을 실행한다.
+
+```bash
+bun test career-os/scripts/position-recommender/render*.test.ts career-os/scripts/lib/cli-contract.test.ts career-os/scripts/lib/date-format.test.ts
+bun run format:position-render
+bun run format:position-render:check
+bunx tsc --noEmit
+git diff --check
+```
+
+Prettier 개발 의존성은 정확한 버전으로 고정한다.
+위 포맷 명령은 추천 렌더 파일과 템플릿, 관련 CLI 테스트와 날짜 유틸·테스트만 대상으로 삼는다.
+전체 스크립트나 개인 산출물에는 적용하지 않는다.
+함수 사이에는 빈 줄 하나를 직접 유지한다.
+Prettier는 기존 빈 줄을 보존하지만 없는 빈 줄을 새로 만들지 않는다.
+동작 근거는 [Prettier의 빈 줄 처리](https://prettier.io/docs/rationale.html#empty-lines)를 따른다.
+
+`scripts/lib/date-format.ts`는 입력 날짜를 한국 시각으로 표시하며 현재 시각을 직접 얻지 않는다.
+`formatSeoulDateTime(Date)`는 상세 추천의 한국어 날짜·분 표시,
+`formatSeoulDisplayTime(string)`은 미리보기의 짧은 시각·전체 시각,
+`formatSeoulIsoDate(generatedAt)`는 `YYYY-MM-DD`를 반환한다.
+미리보기의 잘못된 날짜는 `확인 필요`로 표시하고, ISO 날짜 변환은 기존 `generatedAt` 오류를 유지한다.
+아침 읽을거리의 파일명과 API 보고서 ID도 동일한 ISO 날짜 함수를 재사용한다.
+공고 마감 판정과 이력의 오류 처리는 별도 정책이므로 이 유틸로 옮기지 않는다.
 
 ## Skill과 실행 코드
 
