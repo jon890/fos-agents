@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { firstOptionValue } from "../lib/cli.ts";
 import { morningReadingReportSchema } from "./reading_contracts.js";
 import { morningHtmlFilename } from "./render/html.js";
 import { resolveStudyRunRoot, StudyRunPathError } from "./runtime-paths.js";
@@ -20,13 +21,7 @@ function requireFile(path: string): void {
   }
 }
 
-function argumentValue(name: string): string | undefined {
-  const index = process.argv.indexOf(name);
-  return index >= 0 ? process.argv[index + 1] : undefined;
-}
-
-function main(): void {
-  const root = resolveStudyRunRoot(process.env, argumentValue("--run-dir"));
+export function validateMorningReadingOutputs(root: string): { status: "ok"; report: string; html: string } {
   const reportPath = join(root, "state", "morning-reading.json");
   requireFile(reportPath);
   const report = morningReadingReportSchema.parse(
@@ -43,20 +38,19 @@ function main(): void {
     if (pattern.test(html)) throw new Error(`HTML 공개 경계 위반: ${pattern}`);
   }
 
-  console.log(JSON.stringify({
+  return {
     status: "ok",
     report: reportPath,
     html: htmlPath,
-  }, null, 2));
+  };
 }
 
-try {
-  main();
-} catch (error) {
-  if (error instanceof StudyRunPathError) {
-    console.error(error.message);
-    process.exit(error.exitCode);
+if (import.meta.main) {
+  try {
+    const root = resolveStudyRunRoot(process.env, firstOptionValue(process.argv, "--run-dir"));
+    console.log(JSON.stringify(validateMorningReadingOutputs(root), null, 2));
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(error instanceof StudyRunPathError ? error.exitCode : 1);
   }
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exit(1);
 }

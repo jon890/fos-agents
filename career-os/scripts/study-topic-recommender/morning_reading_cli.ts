@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { firstOptionValue } from "../lib/cli.ts";
 import { externalReadingSources } from "../../config/external-reading-sources.js";
 import {
   DEFAULT_MAX_CANDIDATES_PER_SOURCE,
@@ -37,17 +38,12 @@ import { createImportPreview } from "./study-library/imports.js";
 const FEED_CACHE_TTL_HOURS = 6;
 const FEED_TIMEOUT_MS = 8_000;
 
-function argumentValue(name: string): string | undefined {
-  const index = process.argv.indexOf(name);
-  return index >= 0 ? process.argv[index + 1] : undefined;
-}
-
 function hasFlag(name: string): boolean {
   return process.argv.includes(name);
 }
 
 function parseMode(): LibraryCollectMode {
-  const mode = argumentValue("--mode") ?? "recent";
+  const mode = firstOptionValue(process.argv, "--mode") ?? "recent";
   if (mode !== "recent" && mode !== "archive") {
     throw new StudyRunPathError("--mode는 recent 또는 archive여야 한다.");
   }
@@ -55,7 +51,7 @@ function parseMode(): LibraryCollectMode {
 }
 
 function parseMaxItems(): number {
-  const raw = argumentValue("--max-items");
+  const raw = firstOptionValue(process.argv, "--max-items");
   if (!raw) return DEFAULT_MAX_CANDIDATES_PER_SOURCE;
   const value = Number(raw);
   if (!Number.isInteger(value) || value <= 0) {
@@ -65,13 +61,13 @@ function parseMaxItems(): number {
 }
 
 function requiredArgument(name: string): string {
-  const value = argumentValue(name);
+  const value = firstOptionValue(process.argv, name);
   if (!value?.trim()) throw new StudyRunPathError(`${name} 값이 필요하다.`);
   return value;
 }
 
 function parseCandidateLimit(): number | undefined {
-  const raw = argumentValue("--limit");
+  const raw = firstOptionValue(process.argv, "--limit");
   if (!raw) return undefined;
   const value = Number(raw);
   if (!Number.isInteger(value)) throw new StudyRunPathError("--limit은 정수여야 한다.");
@@ -91,7 +87,7 @@ function assertLibraryUsage(): void {
   const actionCount = [
     hasFlag("--collect-only"),
     hasFlag("--prepare-candidates"),
-    Boolean(argumentValue("--reading-selection")),
+    Boolean(firstOptionValue(process.argv, "--reading-selection")),
     hasFlag("--commit-recommendation"),
     hasFlag("--record-publication"),
     importPreview,
@@ -103,7 +99,7 @@ function assertLibraryUsage(): void {
 
 function assertLibraryCollectUsage(mode: LibraryCollectMode): void {
   if (hasFlag("--reset-cursor")) {
-    if (mode !== "archive" || !argumentValue("--source-key")) {
+    if (mode !== "archive" || !firstOptionValue(process.argv, "--source-key")) {
       throw new StudyRunPathError("--reset-cursor는 --library --collect-only --mode archive --source-key <key> 조합에서만 사용할 수 있다.");
     }
   }
@@ -113,7 +109,7 @@ async function runLibraryCollectOnly(readingSources: ReturnType<typeof normalize
   const mode = parseMode();
   assertLibraryCollectUsage(mode);
   const maxItems = parseMaxItems();
-  const sourceKey = argumentValue("--source-key");
+  const sourceKey = firstOptionValue(process.argv, "--source-key");
   if (sourceKey && !readingSources.sources.some((source) => source.key === sourceKey)) {
     throw new StudyRunPathError(`활성 소스에서 sourceKey를 찾을 수 없다: ${sourceKey}`);
   }
@@ -139,12 +135,12 @@ async function runLibraryPrepareCandidates(root: string): Promise<void> {
     client,
     outputPath: candidatePoolPath,
     filters: {
-      sourceKey: argumentValue("--source-key"),
-      category: argumentValue("--category") as StudyLibraryCandidateMeta["filters"]["category"],
-      publishedFrom: argumentValue("--published-from"),
-      publishedTo: argumentValue("--published-to"),
+      sourceKey: firstOptionValue(process.argv, "--source-key"),
+      category: firstOptionValue(process.argv, "--category") as StudyLibraryCandidateMeta["filters"]["category"],
+      publishedFrom: firstOptionValue(process.argv, "--published-from"),
+      publishedTo: firstOptionValue(process.argv, "--published-to"),
       limit: parseCandidateLimit(),
-      cursor: argumentValue("--cursor"),
+      cursor: firstOptionValue(process.argv, "--cursor"),
     },
   });
   console.log(JSON.stringify({
@@ -259,7 +255,7 @@ async function runLibrary(root: string, readingSources: ReturnType<typeof normal
     await runLibraryPrepareCandidates(root);
     return;
   }
-  if (argumentValue("--reading-selection")) {
+  if (firstOptionValue(process.argv, "--reading-selection")) {
     await runLibrarySelection(root);
     return;
   }
@@ -293,7 +289,7 @@ async function run(root: string, historyPath: string): Promise<void> {
     cacheDir,
     previousContentKeys,
     recentStudyTopicKeys: recentStudyTopicKeys(history),
-    candidatePoolPath: argumentValue("--candidate-pool"),
+    candidatePoolPath: firstOptionValue(process.argv, "--candidate-pool"),
     cacheTtlHours: FEED_CACHE_TTL_HOURS,
     timeoutMs: FEED_TIMEOUT_MS,
     maxCandidatesPerSource: DEFAULT_MAX_CANDIDATES_PER_SOURCE,
@@ -310,7 +306,7 @@ async function run(root: string, historyPath: string): Promise<void> {
     return;
   }
 
-  const selectionPath = argumentValue("--reading-selection");
+  const selectionPath = firstOptionValue(process.argv, "--reading-selection");
   if (!selectionPath) {
     throw new Error(
       "--reading-selection이 필요하다. 먼저 --collect-only로 외부 글을 수집한 뒤 모델 선택 파일을 제공해야 한다."
@@ -364,7 +360,7 @@ async function run(root: string, historyPath: string): Promise<void> {
 }
 
 export async function main(): Promise<void> {
-  const root = resolveStudyRunRoot(process.env, argumentValue("--run-dir"));
+  const root = resolveStudyRunRoot(process.env, firstOptionValue(process.argv, "--run-dir"));
   const readingSources = normalizeReadingSources(externalReadingSources);
   if (hasFlag("--library")) {
     await runLibrary(root, readingSources);
@@ -381,7 +377,7 @@ export async function main(): Promise<void> {
     }));
     return;
   }
-  const historyPath = resolveMorningStudyHistoryPath(argumentValue("--history-file"));
+  const historyPath = resolveMorningStudyHistoryPath(firstOptionValue(process.argv, "--history-file"));
   if (hasFlag("--commit-history")) {
     const reportPath = join(stateDir, "morning-reading.json");
     const history = appendReportToHistory(historyPath, loadReportForHistory(reportPath));

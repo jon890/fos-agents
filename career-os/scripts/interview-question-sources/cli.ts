@@ -2,38 +2,39 @@
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { firstOptionValue } from "../lib/cli.ts";
 import { interviewQuestionSources } from "../../config/interview-question-sources.ts";
 import { collectInterviewSourceCandidatePool } from "./candidate_pool.ts";
 import { activeInterviewQuestionSources, validateInterviewQuestionSources } from "./sources.ts";
 
-function option(name: string): string | undefined {
-  const index = process.argv.indexOf(name);
-  return index >= 0 ? process.argv[index + 1] : undefined;
-}
+export type InterviewSourcesResult =
+  | { status: "ok"; sources: number }
+  | ReturnType<typeof activeInterviewQuestionSources>
+  | { status: "ok"; output: string; candidates: number; sources: number };
 
-async function main(): Promise<void> {
-  const command = process.argv[2] ?? "validate";
+export async function runInterviewQuestionSources(
+  command: string,
+  args: readonly string[],
+): Promise<InterviewSourcesResult> {
   if (command === "validate") {
     const errors = validateInterviewQuestionSources(interviewQuestionSources);
     if (errors.length > 0) throw new Error(errors.join("\n"));
-    console.log(JSON.stringify({
+    return {
       status: "ok",
       sources: activeInterviewQuestionSources(interviewQuestionSources).length,
-    }, null, 2));
-    return;
+    };
   }
 
   if (command === "list") {
-    console.log(JSON.stringify(activeInterviewQuestionSources(interviewQuestionSources), null, 2));
-    return;
+    return activeInterviewQuestionSources(interviewQuestionSources);
   }
 
   if (command !== "collect") {
     throw new Error("사용법: cli.ts <validate|list|collect> [--output path] [--cache-dir path]");
   }
 
-  const output = option("--output");
-  const cacheDir = option("--cache-dir");
+  const output = firstOptionValue(args, "--output");
+  const cacheDir = firstOptionValue(args, "--cache-dir");
   if (!output || !cacheDir) {
     throw new Error("collect에는 --output과 --cache-dir가 필요하다.");
   }
@@ -47,16 +48,20 @@ async function main(): Promise<void> {
     cacheDir: cachePath,
   });
   writeFileSync(outputPath, `${JSON.stringify(pool, null, 2)}\n`, "utf8");
-  console.log(JSON.stringify({
+  return {
     status: "ok",
     output: outputPath,
     candidates: pool.candidates.length,
     sources: pool.collectionLog.length,
-  }, null, 2));
+  };
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exit(1);
-});
-
+if (import.meta.main) {
+  try {
+    const result = await runInterviewQuestionSources(process.argv[2] ?? "validate", process.argv);
+    console.log(JSON.stringify(result, null, 2));
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
+}

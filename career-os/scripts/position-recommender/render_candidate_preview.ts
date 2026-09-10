@@ -1,15 +1,14 @@
 #!/usr/bin/env bun
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { loadPostingCandidatePool } from "./live-postings/candidate_pool.ts";
+import { firstOptionValue } from "../lib/cli.ts";
 import type { PostingCandidatePool } from "./live-postings/contracts.ts";
 import {
-  RecommendationRun,
   type PositionItemType,
   type RecommendationRunType,
   type UpsideAxisJudgmentType,
 } from "./recommendation_schema.ts";
-import { validateRecommendationAgainstPool } from "./validate_recommendation.ts";
+import { validateRecommendationFiles } from "./validate_recommendation.ts";
 
 type PreviewTier = "강력 추천" | "도전 추천" | "보류·주의" | "전체 후보";
 
@@ -249,33 +248,34 @@ ${holdSection}
 ${archive}</main>${options.candidatePool ? candidateFilterScript() : ""}</body></html>`;
 }
 
+export function writeCandidatePreview(
+  input: string,
+  candidates: string,
+  output: string,
+  limitValue?: string,
+): { passed: true; outputPath: string } | { passed: false; errors: string[] } {
+  const result = validateRecommendationFiles(input, candidates);
+  if (!result.passed) return result;
+  const limit = limitValue === "all" ? null : limitValue ? Number(limitValue) : 10;
+  const outputPath = resolve(output);
+  mkdirSync(dirname(outputPath), { recursive: true });
+  writeFileSync(outputPath, renderCandidatePreviewHtml(result.run, { candidatePool: result.pool, limit }), "utf8");
+  return { passed: true, outputPath };
+}
+
 if (import.meta.main) {
   const args = process.argv.slice(2);
-  const value = (name: string): string | undefined => {
-    const index = args.indexOf(name);
-    return index >= 0 ? args[index + 1] : undefined;
-  };
-  const input = value("--input");
-  const output = value("--output");
-  const candidates = value("--candidates");
+  const input = firstOptionValue(args, "--input");
+  const output = firstOptionValue(args, "--output");
+  const candidates = firstOptionValue(args, "--candidates");
   if (!input || !output || !candidates) {
     console.error("사용법: render_candidate_preview.ts --input <recommendation.json> --candidates <posting-candidates.json> --output <report.html> [--limit all|N]");
     process.exit(2);
   }
-  const parsed = RecommendationRun.safeParse(JSON.parse(readFileSync(resolve(input), "utf8")) as unknown);
-  if (!parsed.success) {
-    parsed.error.issues.forEach((issue) => console.error(`${issue.path.join(".")}: ${issue.message}`));
+  const result = writeCandidatePreview(input, candidates, output, firstOptionValue(args, "--limit"));
+  if (!result.passed) {
+    result.errors.forEach((error) => console.error(error));
     process.exit(1);
   }
-  const pool = loadPostingCandidatePool(resolve(candidates));
-  const errors = validateRecommendationAgainstPool(parsed.data, pool);
-  if (errors.length > 0) {
-    errors.forEach((error) => console.error(error));
-    process.exit(1);
-  }
-  const limitValue = value("--limit");
-  const limit = limitValue === "all" ? null : limitValue ? Number(limitValue) : 10;
-  mkdirSync(dirname(resolve(output)), { recursive: true });
-  writeFileSync(resolve(output), renderCandidatePreviewHtml(parsed.data, { candidatePool: pool, limit }), "utf8");
-  console.log(`포지션 추천 HTML: ${resolve(output)}`);
+  console.log(`포지션 추천 HTML: ${result.outputPath}`);
 }

@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { firstOptionValue } from "../lib/cli.ts";
 import { loadPostingCandidatePool } from "./live-postings/candidate_pool.ts";
 import type { PostingCandidatePool } from "./live-postings/contracts.ts";
 import { RecommendationRun, type RecommendationRunType } from "./recommendation_schema.ts";
@@ -54,24 +55,32 @@ export function validateRecommendationAgainstPool(
   return errors;
 }
 
+export type RecommendationFileValidation =
+  | { passed: true; run: RecommendationRunType; pool: PostingCandidatePool }
+  | { passed: false; errors: string[] };
+
+/** 스키마를 먼저 검사하고, 통과한 추천만 후보풀과 대조한다. */
+export function validateRecommendationFiles(input: string, candidates: string): RecommendationFileValidation {
+  const parsed = RecommendationRun.safeParse(JSON.parse(readFileSync(resolve(input), "utf8")) as unknown);
+  if (!parsed.success) {
+    return { passed: false, errors: parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`) };
+  }
+  const pool = loadPostingCandidatePool(resolve(candidates));
+  const errors = validateRecommendationAgainstPool(parsed.data, pool);
+  return errors.length > 0 ? { passed: false, errors } : { passed: true, run: parsed.data, pool };
+}
+
 if (import.meta.main) {
   const args = process.argv.slice(2);
-  const inputIndex = args.indexOf("--input");
-  const poolIndex = args.indexOf("--candidates");
-  const input = inputIndex >= 0 ? args[inputIndex + 1] : undefined;
-  const candidates = poolIndex >= 0 ? args[poolIndex + 1] : undefined;
+  const input = firstOptionValue(args, "--input");
+  const candidates = firstOptionValue(args, "--candidates");
   if (!input || !candidates) {
     console.error("사용법: validate_recommendation.ts --input <recommendation.json> --candidates <posting-candidates.json>");
     process.exit(2);
   }
-  const parsed = RecommendationRun.safeParse(JSON.parse(readFileSync(resolve(input), "utf8")) as unknown);
-  if (!parsed.success) {
-    for (const issue of parsed.error.issues) console.error(`${issue.path.join(".")}: ${issue.message}`);
-    process.exit(1);
-  }
-  const errors = validateRecommendationAgainstPool(parsed.data, loadPostingCandidatePool(resolve(candidates)));
-  if (errors.length > 0) {
-    errors.forEach((error) => console.error(error));
+  const result = validateRecommendationFiles(input, candidates);
+  if (!result.passed) {
+    result.errors.forEach((error) => console.error(error));
     process.exit(1);
   }
   console.log("추천 결과와 공고 후보풀이 일치합니다.");

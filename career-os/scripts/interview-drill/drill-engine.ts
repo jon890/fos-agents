@@ -23,6 +23,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join, dirname } from "node:path";
+import { firstOptionValue } from "../lib/cli.ts";
 import {
   loadApplicationInterviewQuestions,
   type ApplicationInterviewQuestion,
@@ -469,11 +470,8 @@ export function updateDrillProgress(question: DrillQuestion, score: ScoreResult)
 
 if (import.meta.main) {
   const drillType: DrillType = (process.argv[2] as DrillType) ?? "tech";
-  const applicationDirectoryIndex = process.argv.indexOf("--application-dir");
-  const applicationDirectory =
-    applicationDirectoryIndex >= 0 ? process.argv[applicationDirectoryIndex + 1] : undefined;
-  const targetBarIndex = process.argv.indexOf("--target-bar");
-  const requestedTargetBar = targetBarIndex >= 0 ? process.argv[targetBarIndex + 1] : undefined;
+  const applicationDirectory = firstOptionValue(process.argv, "--application-dir");
+  const requestedTargetBar = firstOptionValue(process.argv, "--target-bar");
   const targetBar = INTERVIEW_BARS.includes(requestedTargetBar as InterviewBar)
     ? requestedTargetBar as InterviewBar
     : undefined;
