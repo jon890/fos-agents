@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 import { externalReadingSources } from "../../config/external-reading-sources.js";
+import { firstOptionValue } from "../lib/cli.ts";
 import {
   READING_CATEGORIES,
   type ReadingCategory,
@@ -9,19 +10,14 @@ import {
 
 const config = parseReadingSourcesConfig(externalReadingSources);
 
-function option(name: string): string | undefined {
-  const index = process.argv.indexOf(`--${name}`);
-  return index >= 0 ? process.argv[index + 1] : undefined;
-}
-
-function requiredOption(name: string): string {
-  const value = option(name);
+function requiredOption(args: readonly string[], name: string): string {
+  const value = firstOptionValue(args, `--${name}`);
   if (!value) throw new Error(`--${name} 값이 필요하다.`);
   return value;
 }
 
-function categoryOption(): ReadingCategory {
-  const value = requiredOption("category");
+function categoryOption(args: readonly string[]): ReadingCategory {
+  const value = requiredOption(args, "category");
   if (!READING_CATEGORIES.includes(value as ReadingCategory)) {
     throw new Error(`--category는 ${READING_CATEGORIES.join(", ")} 중 하나여야 한다.`);
   }
@@ -43,10 +39,13 @@ template 옵션:
 기준 설정: config/external-reading-sources.ts`);
 }
 
-function listSources(): void {
-  const category = option("category");
-  const includeDisabled = process.argv.includes("--include-disabled");
-  const items = config.sources
+export type ReadingSourceListItem = Pick<ReadingSource, "key" | "category" | "title" | "feedUrl"> & {
+  enabled: boolean;
+  registrationOrder: number;
+};
+
+export function listReadingSources(category?: string, includeDisabled = false): ReadingSourceListItem[] {
+  return config.sources
     .filter((item) => !category || item.category === category)
     .filter((item) => includeDisabled || item.enabled !== false)
     .map((item, index) => ({
@@ -57,25 +56,27 @@ function listSources(): void {
       title: item.title,
       feedUrl: item.feedUrl,
     }));
-  console.log(JSON.stringify(items, null, 2));
 }
 
-function printTemplate(): void {
+export function buildReadingSourceTemplate(args: readonly string[]): ReadingSource {
   const source: ReadingSource = {
-    key: requiredOption("key"),
-    category: categoryOption(),
-    title: requiredOption("title"),
+    key: requiredOption(args, "key"),
+    category: categoryOption(args),
+    title: requiredOption(args, "title"),
     enabled: true,
   };
-  if (option("url")) source.url = option("url");
-  if (option("feed-url")) source.feedUrl = option("feed-url");
-  if (option("adapter")) source.adapter = option("adapter") as ReadingSource["adapter"];
+  const url = firstOptionValue(args, "--url");
+  const feedUrl = firstOptionValue(args, "--feed-url");
+  const adapter = firstOptionValue(args, "--adapter");
+  if (url) source.url = url;
+  if (feedUrl) source.feedUrl = feedUrl;
+  if (adapter) source.adapter = adapter as ReadingSource["adapter"];
   parseReadingSourcesConfig({ ...config, sources: [...config.sources, source] });
-  console.log(JSON.stringify(source, null, 2));
+  return source;
 }
 
-function main(): void {
-  const command = process.argv[2] ?? "help";
+function main(args: readonly string[]): void {
+  const command = args[2] ?? "help";
   if (command === "help" || command === "--help" || command === "-h") return printHelp();
   if (command === "validate") {
     console.log(JSON.stringify({
@@ -85,14 +86,22 @@ function main(): void {
     }, null, 2));
     return;
   }
-  if (command === "list") return listSources();
-  if (command === "template") return printTemplate();
+  if (command === "list") {
+    console.log(JSON.stringify(listReadingSources(firstOptionValue(args, "--category"), args.includes("--include-disabled")), null, 2));
+    return;
+  }
+  if (command === "template") {
+    console.log(JSON.stringify(buildReadingSourceTemplate(args), null, 2));
+    return;
+  }
   throw new Error(`알 수 없는 명령: ${command}`);
 }
 
-try {
-  main();
-} catch (error) {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exit(1);
+if (import.meta.main) {
+  try {
+    main(process.argv);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
 }

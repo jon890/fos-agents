@@ -52,7 +52,7 @@ skill이 private brain에서 조회하고, 제출에 사용할 세부 성과는 
 
 ## 스킬 스크립트의 CLI 계약
 
-스킬 스크립트는 `scripts/lib/cli.ts` 의 `runCli` 로 감싼다.
+새 스킬 스크립트는 `scripts/lib/cli.ts` 의 `runCli` 를 기본으로 사용한다.
 인자 파싱, 사용법 오류 처리와 결과 출력이 스크립트마다 같은 모양으로 되풀이되면
 그 스크립트가 무엇을 검사하고 무엇을 만드는지가 가려진다.
 
@@ -84,6 +84,73 @@ if (import.meta.main) {
 - 파일을 만드는 스크립트는 아무것도 돌려주지 않고 `{ json: false }` 를 준다. 예외가 없으면 0으로 끝난다.
 - 인자 규격은 `pattern` 으로 적는다. 검사 코드를 본문에 두지 않는다.
 - `--help` 는 `runCli` 가 spec 으로 만든다. 도움말 문자열을 따로 쓰지 않는다.
+
+### 기존 CLI 리팩토링 범위
+
+기존 명령은 옵션 중복 처리, 도움말, 출력과 종료 코드가 서로 다르다.
+`runCli`로 바꿀 때 이 계약이 달라지는 명령은 기존 진입점을 유지한다.
+파일별 작업은 subprocess 회귀 테스트, 독립 계획 검토, 구현, 전체 관련 테스트 순으로 진행한다.
+
+| 파일 | 변경 범위 |
+| --- | --- |
+| `scripts/lib/cli.ts` | 기존 `parseArgs`와 `runCli`를 보존하고, 여러 명령이 사용하는 첫 옵션값 조회만 공유한다 |
+| `scripts/position-recommender/validate_recommendation.ts` | 파일을 읽고 후보풀과 대조하는 함수가 검사 결과를 반환하도록 분리한다 |
+| `scripts/position-recommender/render_candidate_preview.ts` | 같은 파일 검사 함수를 사용하고 HTML 파일 생성과 CLI 출력을 분리한다 |
+| `scripts/position-recommender/render_recommendation.ts` | 파일 생성 함수를 명시적인 입력으로 호출하고 기존 순차 옵션 파싱을 보존한다 |
+| `scripts/interview-question-sources/cli.ts`, `scripts/study-topic-recommender/manage_reading_sources.ts` | 명령 함수에 argv를 전달하고 반복 옵션 조회를 공유한다 |
+| `scripts/study-topic-recommender/validate_outputs.ts` | 검증 함수에 실행 경로를 전달하고 결과 JSON을 반환한다 |
+| `scripts/study-topic-recommender/morning_reading_cli.ts`, `scripts/interview-drill/drill-engine.ts` | 옵션 조회만 공유하고 실행·오류 계약을 보존한다 |
+| `scripts/lib/cli-contract.test.ts` | 실제 subprocess로 출력 채널, 종료 코드, 인자와 import 동작을 고정한다 |
+
+`firstOptionValue`는 첫 번째 같은 이름 바로 다음 토큰을 반환한다.
+다음 토큰이 옵션처럼 보여도 값으로 취급하고 모르는 옵션은 검사하지 않는다.
+이는 기존 명령의 호환 동작이며, 새 명령의 엄격한 옵션 검사는 `parseArgs`가 담당한다.
+
+공통화하지 않는 동작은 다음과 같다.
+
+| 대상 | 유지 이유 |
+| --- | --- |
+| 기존 `runCli` 사용처 6개 | 이미 옵션 스펙과 핵심 함수 호출로 분리되어 있다 |
+| `collect_live_postings.ts` | 옵션 별칭, 소스별 실패 허용 개수와 필수 개인 제외 설정 검증을 보존한다 |
+| `career-workspace/cli.ts`, `career-storage-s3.ts` | 원격 오류 JSON, 바이너리 출력과 비공개 동기화 계약이 다르다 |
+| `morning_reading_cli.ts` | API 오류의 비공개 정보 제거, 429 정보와 파일모드 자동 전환 금지를 보존한다 |
+| `application_question_schema.ts`, `question-bank-collector/validate.ts` | `passed` 없는 성공 JSON과 기존 오류·도움말 동작을 보존한다 |
+
+`interview-question-sources/cli.ts`, `manage_reading_sources.ts`, `validate_outputs.ts`는
+실행을 의존하는 importer가 없어 `import.meta.main`에서만 실행한다.
+직접 실행하는 명령은 기존 출력과 종료 코드를 유지하며, import는 명령을 실행하거나 출력·종료하지 않는다.
+
+기본값과 보조 경로는 이번 작업에서 변경하지 않는다.
+개인 제외 설정 오류, 학습자료 API 실패와 산출물 공개 경계 위반은 기존처럼 실행을 중단한다.
+
+수정할 때는 Java 서비스처럼 입력을 받아 결과를 돌려주는 핵심 함수부터 읽는다.
+파일 끝의 CLI 진입점은 컨트롤러처럼 인자를 전달하고 결과를 출력한다.
+추천 판정은 `validateRecommendationAgainstPool`, 화면 내용은 `toMarkdown`, `toHtml`,
+`renderCandidatePreviewHtml`에서 고친다.
+옵션 조회 규칙은 `scripts/lib/cli.ts`에서 확인한다.
+
+| 수정할 처리 | 핵심 함수 |
+| --- | --- |
+| 추천 파일 로드와 후보풀 대조 | `validateRecommendationFiles(input, candidates)` |
+| 추천 화면 파일 생성 | `writeCandidatePreview(input, candidates, output, limitValue)` |
+| Markdown과 HTML 파일 생성 | `writeRecommendation(input, output, format, template)` |
+| 읽을거리 목록과 설정 예시 생성 | `listReadingSources(category, includeDisabled)`, `buildReadingSourceTemplate(args)` |
+| 면접 질문 소스 명령 | `runInterviewQuestionSources(command, args)` |
+| 산출물 내용과 공개 경계 검사 | `validateMorningReadingOutputs(root)` |
+
+저장소 루트에서 이미 준비한 입력 파일을 다음처럼 검사한다.
+아래 명령은 네트워크 수집을 실행하지 않는다.
+
+```bash
+bun career-os/scripts/position-recommender/validate_recommendation.ts --input /tmp/recommendation.json --candidates /tmp/posting-candidates.json
+bun career-os/scripts/study-topic-recommender/manage_reading_sources.ts list --category techBlog
+bun test career-os/scripts/lib/cli-contract.test.ts career-os/scripts/lib/cli.test.ts
+bun test career-os/scripts
+bunx tsc --noEmit
+```
+
+실제 S3 연동 테스트는 전용 환경값이 모두 있을 때만 실행된다.
+로컬 리팩토링 검증에서는 해당 환경값을 제거하여 원격 저장소에 쓰지 않도록 한다.
 
 ## Skill과 실행 코드
 

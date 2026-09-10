@@ -49,6 +49,12 @@ export type ParsedArgs = {
 
 export class UsageError extends Error {}
 
+/** 기존 CLI의 첫 옵션값 조회. 중복, 모르는 옵션과 옵션 모양의 값도 기존대로 둔다. */
+export function firstOptionValue(argv: readonly string[], name: string): string | undefined {
+  const index = argv.indexOf(name);
+  return index >= 0 ? argv[index + 1] : undefined;
+}
+
 export function formatHelp(spec: CliSpec): string {
   const lines = [spec.name, '', spec.summary, '', 'Usage:'];
   // 이름에 이미 꺾쇠가 있으면 그대로 쓴다. 겹쳐 감싸면 <<이름>> 이 된다.

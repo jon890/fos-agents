@@ -259,6 +259,33 @@ function usage(): never {
   process.exit(2);
 }
 
+export type RecommendationRenderResult =
+  | { status: "written"; outputPath: string }
+  | { status: "invalid"; errors: string[] }
+  | { status: "unsupported-format" };
+
+export function writeRecommendation(
+  input: string,
+  output: string,
+  format: string,
+  template = DEFAULT_TEMPLATE,
+): RecommendationRenderResult {
+  const raw = JSON.parse(readFileSync(resolve(input), "utf-8"));
+  const parsed = RecommendationRun.safeParse(raw);
+  if (!parsed.success) {
+    return { status: "invalid", errors: parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`) };
+  }
+  let content: string;
+  if (format === "md") content = toMarkdown(parsed.data);
+  else if (format === "html") content = toHtml(parsed.data, resolve(template));
+  else return { status: "unsupported-format" };
+
+  const outputPath = resolve(output);
+  mkdirSync(dirname(outputPath), { recursive: true });
+  writeFileSync(outputPath, content, "utf-8");
+  return { status: "written", outputPath };
+}
+
 if (import.meta.main) {
   const args = process.argv.slice(2);
   let input = "";
@@ -273,23 +300,12 @@ if (import.meta.main) {
   }
   if (!input || !output || !format) usage();
 
-  const raw = JSON.parse(readFileSync(resolve(input), "utf-8"));
-  const parsed = RecommendationRun.safeParse(raw);
-  if (!parsed.success) {
+  const result = writeRecommendation(input, output, format, template);
+  if (result.status === "invalid") {
     console.error("recommendation.json schema 검증 실패:");
-    for (const issue of parsed.error.issues) {
-      console.error(`  - ${issue.path.join(".")}: ${issue.message}`);
-    }
+    result.errors.forEach((error) => console.error(`  - ${error}`));
     process.exit(1);
   }
-  const run = parsed.data;
-
-  let content: string;
-  if (format === "md") content = toMarkdown(run);
-  else if (format === "html") content = toHtml(run, resolve(template));
-  else usage();
-
-  mkdirSync(dirname(resolve(output)), { recursive: true });
-  writeFileSync(resolve(output), content, "utf-8");
-  console.log(`recommendation ${format}: ${resolve(output)}`);
+  if (result.status === "unsupported-format") usage();
+  console.log(`recommendation ${format}: ${result.outputPath}`);
 }
