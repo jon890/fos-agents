@@ -5,8 +5,10 @@
   "description": "fos-agents 모노레포 TypeScript 실행 환경",
   "type": "module",
   "scripts": {
-    "format:position-render": "prettier --write 'career-os/scripts/position-recommender/{render*,candidate_preview_html,recommendation_html,template}.ts' 'career-os/scripts/position-recommender/templates/*.{html,css,js}' career-os/scripts/lib/cli-contract.test.ts career-os/scripts/lib/date-format.ts career-os/scripts/lib/date-format.test.ts",
-    "format:position-render:check": "prettier --check 'career-os/scripts/position-recommender/{render*,candidate_preview_html,recommendation_html,template}.ts' 'career-os/scripts/position-recommender/templates/*.{html,css,js}' career-os/scripts/lib/cli-contract.test.ts career-os/scripts/lib/date-format.ts career-os/scripts/lib/date-format.test.ts"
+    "format:position-recommender": "prettier --write 'career-os/scripts/position-recommender/**/*.{ts,html,css,js}' 'career-os/scripts/position-recommender/*.ts' career-os/scripts/lib/text.ts career-os/scripts/lib/text.test.ts career-os/scripts/lib/date-format.ts career-os/scripts/lib/date-format.test.ts",
+    "format:position-recommender:check": "prettier --check 'career-os/scripts/position-recommender/**/*.{ts,html,css,js}' 'career-os/scripts/position-recommender/*.ts' career-os/scripts/lib/text.ts career-os/scripts/lib/text.test.ts career-os/scripts/lib/date-format.ts career-os/scripts/lib/date-format.test.ts",
+    "format:position-render": "bun run format:position-recommender",
+    "format:position-render:check": "bun run format:position-recommender:check"
   },
   "devDependencies": {
     "@types/bun": "latest",

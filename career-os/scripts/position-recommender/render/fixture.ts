@@ -1,7 +1,7 @@
-import { buildPostingCandidatePool } from "./live-postings/candidate_pool.ts";
-import type { PostingCandidate } from "./live-postings/contracts.ts";
-import type { CollectionDiagnostics, Posting } from "./live-postings/types.ts";
-import { RecommendationRun } from "./recommendation_schema.ts";
+import { buildPostingCandidatePool } from "../live-postings/candidate_pool.ts";
+import type { PostingCandidate } from "../live-postings/contracts.ts";
+import type { CollectionDiagnostics, Posting } from "../live-postings/types.ts";
+import { RecommendationRun } from "../recommendation/schema.ts";
 const posting: Posting = {
   source: "wanted",
   company: "예시 회사",

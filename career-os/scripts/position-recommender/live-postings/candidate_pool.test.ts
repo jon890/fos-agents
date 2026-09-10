@@ -31,16 +31,18 @@ const diagnostics: CollectionDiagnostics = {
   configuredSources: ["wanted"],
   wantedLimit: 120,
   includeTossArticles: false,
-  sourceDiagnostics: [{
-    source: "wanted",
-    status: "ok",
-    collectedCount: 1,
-    importedCount: 1,
-    skippedCount: 0,
-    failedCount: 0,
-    discoveryModes: ["broad"],
-    message: "ok",
-  }],
+  sourceDiagnostics: [
+    {
+      source: "wanted",
+      status: "ok",
+      collectedCount: 1,
+      importedCount: 1,
+      skippedCount: 0,
+      failedCount: 0,
+      discoveryModes: ["broad"],
+      message: "ok",
+    },
+  ],
   errors: [],
 };
 
@@ -54,7 +56,10 @@ describe("buildPostingCandidatePool", () => {
   });
 
   test("잘못된 외부 공고는 후보풀에서 제외하고 진단에 남긴다", () => {
-    const result = buildPostingCandidatePool([{ ...posting, url: "http://unsafe.example/jobs/1" }], diagnostics);
+    const result = buildPostingCandidatePool(
+      [{ ...posting, url: "http://unsafe.example/jobs/1" }],
+      diagnostics,
+    );
     expect(result.pool.candidates).toHaveLength(0);
     expect(result.validationErrors.join("\n")).toContain("HTTPS");
   });

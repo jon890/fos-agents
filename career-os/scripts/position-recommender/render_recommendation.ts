@@ -4,12 +4,15 @@ import { formatSeoulDateTime } from "../lib/date-format.ts";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { RecommendationRun, type RecommendationRunType } from "./recommendation_schema.ts";
+import { RecommendationRun, type RecommendationRunType } from "./recommendation/schema.ts";
 
-import { loadRenderAssets } from "./render_assets.ts";
-import { renderRecommendationHtml, renderReportContent } from "./recommendation_html.ts";
+import { loadRenderAssets } from "./render/assets.ts";
+import { renderRecommendationHtml, renderReportContent } from "./render/recommendation-html.ts";
 
-const DEFAULT_TEMPLATE = resolve(dirname(fileURLToPath(import.meta.url)), "templates/report.html");
+const DEFAULT_TEMPLATE = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "render/templates/report.html",
+);
 
 export function toReportHtml(run: RecommendationRunType): string {
   return renderReportContent(run, loadRenderAssets("report"));

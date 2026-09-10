@@ -1,7 +1,14 @@
 // 당근 채용 수집기.
 // 채용 사이트는 클라이언트 렌더라 HTML 파싱이 불안정하지만, Greenhouse job board API가 공개돼 있어 이걸 단일 출처로 쓴다.
 import type { AdapterCollectionResult, Posting, SourceAdapter } from "../types.ts";
-import { cleanDetail, classify, closeWindow, isContractRole, isNonTargetTitle, isTargetRole } from "../policy.ts";
+import {
+  cleanDetail,
+  classify,
+  closeWindow,
+  isContractRole,
+  isNonTargetTitle,
+  isTargetRole,
+} from "../policy.ts";
 
 const UA = "Mozilla/5.0 (fos-agents position recommender)";
 const BOARD_URL = "https://boards-api.greenhouse.io/v1/boards/daangn/jobs?content=true";
@@ -59,7 +66,27 @@ function section(text: string, start: RegExp, stop: RegExp, max = 650): string {
 }
 
 function skillsFromText(text: string): string[] {
-  const known = ["Java", "Kotlin", "Spring", "Spring Boot", "JPA", "MySQL", "Kafka", "Redis", "OpenSearch", "Elasticsearch", "AWS", "Kubernetes", "Go", "Python", "TypeScript", "gRPC", "AI", "LLM", "RAG"];
+  const known = [
+    "Java",
+    "Kotlin",
+    "Spring",
+    "Spring Boot",
+    "JPA",
+    "MySQL",
+    "Kafka",
+    "Redis",
+    "OpenSearch",
+    "Elasticsearch",
+    "AWS",
+    "Kubernetes",
+    "Go",
+    "Python",
+    "TypeScript",
+    "gRPC",
+    "AI",
+    "LLM",
+    "RAG",
+  ];
   const lower = text.toLowerCase();
   return known.filter((skill) => lower.includes(skill.toLowerCase())).slice(0, 12);
 }
@@ -76,7 +103,8 @@ export function parseDaangnJob(job: GreenhouseJob): Posting | null {
   // 본문 전체로 판정하면 정규직 공고가 전부 계약직으로 잘못 걸린다.
   if (isContractRole(title)) return null;
   if (isNonTargetTitle(title)) return null;
-  if (!isTargetRole(`${title} ${(job.departments ?? []).map((d) => d.name ?? "").join(" ")}`)) return null;
+  if (!isTargetRole(`${title} ${(job.departments ?? []).map((d) => d.name ?? "").join(" ")}`))
+    return null;
 
   const closesAt = (job.application_deadline ?? "").slice(0, 10);
   return {
@@ -96,9 +124,23 @@ export function parseDaangnJob(job: GreenhouseJob): Posting | null {
     tags: classify(fullText),
     skills: skillsFromText(fullText),
     dueTime: closesAt,
-    mainTasks: section(body, /이런\s*일을\s*해요|주요\s*업무|담당\s*업무|What you will do/i, /이런\s*분을\s*찾고\s*있어요|자격\s*요건|지원\s*자격|이런\s*경험/i) || cleanDetail(body, 650),
-    requirements: section(body, /이런\s*분을\s*찾고\s*있어요|자격\s*요건|지원\s*자격|Qualifications/i, /이런\s*경험|우대\s*사항|Preferred|이런\s*환경|합류\s*여정|전형/i),
-    preferred: section(body, /이런\s*경험이?\s*있으면\s*더\s*좋아요|우대\s*사항|Preferred/i, /이런\s*환경|합류\s*여정|전형|혜택/i, 500),
+    mainTasks:
+      section(
+        body,
+        /이런\s*일을\s*해요|주요\s*업무|담당\s*업무|What you will do/i,
+        /이런\s*분을\s*찾고\s*있어요|자격\s*요건|지원\s*자격|이런\s*경험/i,
+      ) || cleanDetail(body, 650),
+    requirements: section(
+      body,
+      /이런\s*분을\s*찾고\s*있어요|자격\s*요건|지원\s*자격|Qualifications/i,
+      /이런\s*경험|우대\s*사항|Preferred|이런\s*환경|합류\s*여정|전형/i,
+    ),
+    preferred: section(
+      body,
+      /이런\s*경험이?\s*있으면\s*더\s*좋아요|우대\s*사항|Preferred/i,
+      /이런\s*환경|합류\s*여정|전형|혜택/i,
+      500,
+    ),
   };
 }
 
@@ -125,7 +167,9 @@ export const daangnCareersAdapter: SourceAdapter = {
     }
 
     const jobs = board.data.jobs ?? [];
-    const postings = jobs.map(parseDaangnJob).filter((posting): posting is Posting => posting !== null);
+    const postings = jobs
+      .map(parseDaangnJob)
+      .filter((posting): posting is Posting => posting !== null);
 
     return {
       postings,

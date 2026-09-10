@@ -1,4 +1,4 @@
-import type { PositionItemType, RecommendationRunType } from "./recommendation_schema.ts";
+import type { PositionItemType, RecommendationRunType } from "../recommendation/schema.ts";
 import { escapeHtml, fragment, type RenderAssets } from "./template.ts";
 
 function link(assets: RenderAssets, value: string): string {

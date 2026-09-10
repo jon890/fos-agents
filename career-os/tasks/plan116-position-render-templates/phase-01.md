@@ -26,16 +26,16 @@
 
 ## 설계 단계 기록
 
-| 단계 | 결과 |
-| --- | --- |
-| 1. 구현 가능성 | 완료. 기존 escape와 Zod 검증을 재사용하며 네트워크 없이 구현 가능 |
-| 2. 기술 스택 | 완료. Bun·TypeScript와 단일 슬롯 치환 사용. 추가 승인으로 Prettier 개발 의존성만 고정 버전 도입 |
-| 3. 흐름 | 완료. 검증→조립→파일 생성 유지. 빈 추천, 실패 시 출력 보존과 동시 호출 독립성 유지 |
-| 4. 인터페이스 | 완료. 두 화면과 CLI 유지, `--format md`만 사용법 오류로 변경 |
-| 5. 함수 계약 | 완료. 기존 모듈 책임 문서에 순수 렌더와 호환 함수 시그니처 기록 |
-| 6. 데이터·구조 | 완료. JSON 스키마와 상태 변경 없음. 템플릿, 자산, 렌더, IO 분리 |
-| 7. 문서 영향 | 완료. code-architecture와 data-schema 갱신. flow·PRD는 이미 HTML 흐름이고 변화 없음. 기존 ADR-035 준수로 새 ADR 불필요 |
-| 8. task 생성 | 완료. 원격 두 브랜치와 로컬 마지막 번호 115 확인 후 116 사용. verify_task.py가 없어 스키마와 경로를 수동 검증 |
+| 단계           | 결과                                                                                                                   |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 1. 구현 가능성 | 완료. 기존 escape와 Zod 검증을 재사용하며 네트워크 없이 구현 가능                                                      |
+| 2. 기술 스택   | 완료. Bun·TypeScript와 단일 슬롯 치환 사용. 추가 승인으로 Prettier 개발 의존성만 고정 버전 도입                        |
+| 3. 흐름        | 완료. 검증→조립→파일 생성 유지. 빈 추천, 실패 시 출력 보존과 동시 호출 독립성 유지                                     |
+| 4. 인터페이스  | 완료. 두 화면과 CLI 유지, `--format md`만 사용법 오류로 변경                                                           |
+| 5. 함수 계약   | 완료. 기존 모듈 책임 문서에 순수 렌더와 호환 함수 시그니처 기록                                                        |
+| 6. 데이터·구조 | 완료. JSON 스키마와 상태 변경 없음. 템플릿, 자산, 렌더, IO 분리                                                        |
+| 7. 문서 영향   | 완료. code-architecture와 data-schema 갱신. flow·PRD는 이미 HTML 흐름이고 변화 없음. 기존 ADR-035 준수로 새 ADR 불필요 |
+| 8. task 생성   | 완료. 원격 두 브랜치와 로컬 마지막 번호 115 확인 후 116 사용. verify_task.py가 없어 스키마와 경로를 수동 검증          |
 
 ## 작업 항목
 
@@ -47,11 +47,11 @@
 
 ### 2. 템플릿과 실행 책임 분리
 
-`career-os/scripts/position-recommender/templates/`에 두 화면 골격과 화면별 `parts.html`, CSS와 검색 JS를 둔다.
+`career-os/scripts/position-recommender/render/templates/`에 두 화면 골격과 화면별 `parts.html`, CSS와 검색 JS를 둔다.
 조각은 표준 HTML `template` 요소에 모으고 설명 주석과 Prettier 줄바꿈을 허용한다.
 `template.ts`는 일반 텍스트와 신뢰된 raw 조각을 구분해 한 번 치환한다.
-`recommendation_html.ts`, `candidate_preview_html.ts`는 주입한 자산과 시각으로 조립한다.
-`render_assets.ts`와 기존 두 CLI 파일은 파일 IO와 날짜 표시·현재 시각을 맡는다.
+`render/recommendation-html.ts`, `render/candidate-preview-html.ts`는 주입한 자산과 시각으로 조립한다.
+`render/assets.ts`와 기존 두 CLI 파일은 파일 IO와 날짜 표시·현재 시각을 맡는다.
 기존 IO형 export는 얇은 호환 함수로 유지한다.
 
 ### 3. HTML 전용 계약 반영
@@ -103,36 +103,36 @@ git diff --check
 
 ## Critical Files
 
-| 파일 | 변경 |
-| --- | --- |
-| `career-os/scripts/position-recommender/render_recommendation.ts`, `render_candidate_preview.ts` | 실행 경계와 호환 함수 |
-| `career-os/scripts/position-recommender/template.ts`, `render_assets.ts`, `recommendation_html.ts`, `candidate_preview_html.ts` | 신규 렌더 지원 모듈 |
-| `career-os/scripts/position-recommender/templates/` | 두 화면 템플릿과 자산 |
-| `career-os/scripts/position-recommender/recommendation_schema.ts` | HTML 전용 설명 주석. 스키마 내용은 유지 |
-| `career-os/scripts/position-recommender/render*.test.ts` | 회귀 테스트 |
-| `career-os/scripts/lib/cli-contract.test.ts` | HTML 전용 CLI 계약 |
-| `career-os/.claude/skills/position-recommender/SKILL.md` | HTML 전용 계약 |
-| `career-os/docs/code-architecture.md`, `data-schema.md` | 구현 책임과 산출물 계약 |
-| `package.json`, `bun.lock`, `.prettierrc.json` | Prettier 개발 의존성과 범위 한정 포맷 명령 |
-| `career-os/scripts/lib/date-format.ts`, `date-format.test.ts` | 공용 한국 날짜·시각 표시와 회귀 테스트 |
-| `career-os/scripts/study-topic-recommender/render/html.ts`, `study-library/recommendations.ts` | 동일 날짜 함수 재사용 |
+| 파일                                                                                                                            | 변경                                       |
+| ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `career-os/scripts/position-recommender/render_recommendation.ts`, `render_candidate_preview.ts`                                | 실행 경계와 호환 함수                      |
+| `career-os/scripts/position-recommender/render/template.ts`, `assets.ts`, `recommendation-html.ts`, `candidate-preview-html.ts` | 신규 렌더 지원 모듈                        |
+| `career-os/scripts/position-recommender/render/templates/`                                                                      | 두 화면 템플릿과 자산                      |
+| `career-os/scripts/position-recommender/recommendation/schema.ts`                                                               | HTML 전용 설명 주석. 스키마 내용은 유지    |
+| `career-os/scripts/position-recommender/render/*.test.ts`                                                                       | 회귀 테스트                                |
+| `career-os/scripts/lib/cli-contract.test.ts`                                                                                    | HTML 전용 CLI 계약                         |
+| `career-os/.claude/skills/position-recommender/SKILL.md`                                                                        | HTML 전용 계약                             |
+| `career-os/docs/code-architecture.md`, `data-schema.md`                                                                         | 구현 책임과 산출물 계약                    |
+| `package.json`, `bun.lock`, `.prettierrc.json`                                                                                  | Prettier 개발 의존성과 범위 한정 포맷 명령 |
+| `career-os/scripts/lib/date-format.ts`, `date-format.test.ts`                                                                   | 공용 한국 날짜·시각 표시와 회귀 테스트     |
+| `career-os/scripts/study-topic-recommender/render/html.ts`, `study-library/recommendations.ts`                                  | 동일 날짜 함수 재사용                      |
 
 ## 실행 결과
 
-| 검사 | 결과 |
-| --- | --- |
-| 변경 전 렌더와 CLI 회귀 | 26개 통과 |
-| 날짜 공용화 전 기존 두 호출부 회귀 | 2개 통과 |
-| 변경 후 대상 렌더·날짜·CLI | 39개 통과 |
-| 스크립트 전체 | 343개 통과, 실제 S3 연동 1개 제외, 실패 0개 |
-| 숨김 스킬 테스트 | 126개 통과, 실패 0개 |
-| Prettier·TypeScript·diff 검사 | 모두 통과 |
-| 스킬·한국어·가독성 검사 | 모두 통과 |
-| 계획 독립 검토 | critic PASS |
-| 최종 독립 검증 | 코드 리뷰 PASS. verifier가 테스트·정적 검사를 재실행하고 브라우저 비교 결과와 검사 스크립트를 확인. 실제 키 입력 미검증으로 종합 판정 PARTIAL |
-| 브라우저 구조·스타일 비교 | 상세 500개, 미리보기 316개 요소의 구조·속성·텍스트·좌표가 1100px와 390px에서 변경 전후 동일 |
-| 브라우저 동작 | 검색 11건, 복합 필터 7건, 빈 검색 0건, 전체 11건 복원, 포커스와 링크 확인 |
-| 모바일 | 390px에서 카드 1열, 가로 넘침 없음, 공고 링크 높이 44px |
+| 검사                               | 결과                                                                                                                                          |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| 변경 전 렌더와 CLI 회귀            | 26개 통과                                                                                                                                     |
+| 날짜 공용화 전 기존 두 호출부 회귀 | 2개 통과                                                                                                                                      |
+| 변경 후 대상 렌더·날짜·CLI         | 39개 통과                                                                                                                                     |
+| 스크립트 전체                      | 343개 통과, 실제 S3 연동 1개 제외, 실패 0개                                                                                                   |
+| 숨김 스킬 테스트                   | 126개 통과, 실패 0개                                                                                                                          |
+| Prettier·TypeScript·diff 검사      | 모두 통과                                                                                                                                     |
+| 스킬·한국어·가독성 검사            | 모두 통과                                                                                                                                     |
+| 계획 독립 검토                     | critic PASS                                                                                                                                   |
+| 최종 독립 검증                     | 코드 리뷰 PASS. verifier가 테스트·정적 검사를 재실행하고 브라우저 비교 결과와 검사 스크립트를 확인. 실제 키 입력 미검증으로 종합 판정 PARTIAL |
+| 브라우저 구조·스타일 비교          | 상세 500개, 미리보기 316개 요소의 구조·속성·텍스트·좌표가 1100px와 390px에서 변경 전후 동일                                                   |
+| 브라우저 동작                      | 검색 11건, 복합 필터 7건, 빈 검색 0건, 전체 11건 복원, 포커스와 링크 확인                                                                     |
+| 모바일                             | 390px에서 카드 1열, 가로 넘침 없음, 공고 링크 높이 44px                                                                                       |
 
 키보드는 입력 포커스와 기본 `summary`·`input`·`button` 구조의 보존을 확인했다.
 드라이버에 키 입력 명령이 없어 실제 Tab·Enter 타건은 수행하지 않았다.
@@ -159,24 +159,24 @@ tracked 스킬·설정·검사기에는 포지션 추천 Markdown 생성이나 f
 - [career-os/scripts/lib/cli-contract.test.ts](../../../career-os/scripts/lib/cli-contract.test.ts)
 - [career-os/scripts/lib/date-format.test.ts](../../../career-os/scripts/lib/date-format.test.ts)
 - [career-os/scripts/lib/date-format.ts](../../../career-os/scripts/lib/date-format.ts)
-- [career-os/scripts/position-recommender/candidate_preview_html.ts](../../../career-os/scripts/position-recommender/candidate_preview_html.ts)
-- [career-os/scripts/position-recommender/recommendation_html.ts](../../../career-os/scripts/position-recommender/recommendation_html.ts)
-- [career-os/scripts/position-recommender/recommendation_schema.ts](../../../career-os/scripts/position-recommender/recommendation_schema.ts)
-- [career-os/scripts/position-recommender/render_assets.test.ts](../../../career-os/scripts/position-recommender/render_assets.test.ts)
-- [career-os/scripts/position-recommender/render_assets.ts](../../../career-os/scripts/position-recommender/render_assets.ts)
-- [career-os/scripts/position-recommender/render_candidate_preview.test.ts](../../../career-os/scripts/position-recommender/render_candidate_preview.test.ts)
+- [career-os/scripts/position-recommender/render/candidate-preview-html.ts](../../../career-os/scripts/position-recommender/render/candidate-preview-html.ts)
+- [career-os/scripts/position-recommender/render/recommendation-html.ts](../../../career-os/scripts/position-recommender/render/recommendation-html.ts)
+- [career-os/scripts/position-recommender/recommendation/schema.ts](../../../career-os/scripts/position-recommender/recommendation/schema.ts)
+- [career-os/scripts/position-recommender/render/assets.test.ts](../../../career-os/scripts/position-recommender/render/assets.test.ts)
+- [career-os/scripts/position-recommender/render/assets.ts](../../../career-os/scripts/position-recommender/render/assets.ts)
+- [career-os/scripts/position-recommender/render/render-candidate-preview.test.ts](../../../career-os/scripts/position-recommender/render/render-candidate-preview.test.ts)
 - [career-os/scripts/position-recommender/render_candidate_preview.ts](../../../career-os/scripts/position-recommender/render_candidate_preview.ts)
-- [career-os/scripts/position-recommender/render_fixture.ts](../../../career-os/scripts/position-recommender/render_fixture.ts)
-- [career-os/scripts/position-recommender/render_recommendation.test.ts](../../../career-os/scripts/position-recommender/render_recommendation.test.ts)
+- [career-os/scripts/position-recommender/render/fixture.ts](../../../career-os/scripts/position-recommender/render/fixture.ts)
+- [career-os/scripts/position-recommender/render/render-recommendation.test.ts](../../../career-os/scripts/position-recommender/render/render-recommendation.test.ts)
 - [career-os/scripts/position-recommender/render_recommendation.ts](../../../career-os/scripts/position-recommender/render_recommendation.ts)
-- [career-os/scripts/position-recommender/template.ts](../../../career-os/scripts/position-recommender/template.ts)
-- [career-os/scripts/position-recommender/templates/preview-parts.html](../../../career-os/scripts/position-recommender/templates/preview-parts.html)
-- [career-os/scripts/position-recommender/templates/preview.css](../../../career-os/scripts/position-recommender/templates/preview.css)
-- [career-os/scripts/position-recommender/templates/preview.html](../../../career-os/scripts/position-recommender/templates/preview.html)
-- [career-os/scripts/position-recommender/templates/preview.js](../../../career-os/scripts/position-recommender/templates/preview.js)
-- [career-os/scripts/position-recommender/templates/report-parts.html](../../../career-os/scripts/position-recommender/templates/report-parts.html)
-- [career-os/scripts/position-recommender/templates/report.css](../../../career-os/scripts/position-recommender/templates/report.css)
-- [career-os/scripts/position-recommender/templates/report.html](../../../career-os/scripts/position-recommender/templates/report.html)
+- [career-os/scripts/position-recommender/render/template.ts](../../../career-os/scripts/position-recommender/render/template.ts)
+- [career-os/scripts/position-recommender/render/templates/preview-parts.html](../../../career-os/scripts/position-recommender/render/templates/preview-parts.html)
+- [career-os/scripts/position-recommender/render/templates/preview.css](../../../career-os/scripts/position-recommender/render/templates/preview.css)
+- [career-os/scripts/position-recommender/render/templates/preview.html](../../../career-os/scripts/position-recommender/render/templates/preview.html)
+- [career-os/scripts/position-recommender/render/templates/preview.js](../../../career-os/scripts/position-recommender/render/templates/preview.js)
+- [career-os/scripts/position-recommender/render/templates/report-parts.html](../../../career-os/scripts/position-recommender/render/templates/report-parts.html)
+- [career-os/scripts/position-recommender/render/templates/report.css](../../../career-os/scripts/position-recommender/render/templates/report.css)
+- [career-os/scripts/position-recommender/render/templates/report.html](../../../career-os/scripts/position-recommender/render/templates/report.html)
 - [career-os/scripts/study-topic-recommender/render/html.ts](../../../career-os/scripts/study-topic-recommender/render/html.ts)
 - [career-os/scripts/study-topic-recommender/study-library/recommendations.ts](../../../career-os/scripts/study-topic-recommender/study-library/recommendations.ts)
 - [career-os/tasks/plan116-position-render-templates/index.json](../../../career-os/tasks/plan116-position-render-templates/index.json)

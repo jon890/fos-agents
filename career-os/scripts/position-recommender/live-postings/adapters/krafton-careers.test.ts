@@ -18,7 +18,12 @@ const baseJob = {
 
 test("크래프톤 AI/AX 공고를 direct posting으로 정규화한다", () => {
   const posting = parseKraftonJob(baseJob);
-  expect(posting).toMatchObject({ source: "krafton-careers", company: "크래프톤", postingStatus: "open", linkType: "direct_posting" });
+  expect(posting).toMatchObject({
+    source: "krafton-careers",
+    company: "크래프톤",
+    postingStatus: "open",
+    linkType: "direct_posting",
+  });
   expect(posting?.url).toBe("https://job-boards.greenhouse.io/krafton/jobs/8581491002");
   expect(posting?.closesAt).toBe("no_deadline");
   expect(posting?.skills).toEqual(expect.arrayContaining(["Kubernetes", "Terraform", "LLM"]));
@@ -29,18 +34,31 @@ test("전문계약직(Professional Contractor)은 수집한다", () => {
 });
 
 test("AI/AX 부서가 아닌 공고는 수집하지 않는다", () => {
-  expect(parseKraftonJob({ ...baseJob, title: "[Infra Div.] Database Engineer (8년 이상)" })).toBeNull();
+  expect(
+    parseKraftonJob({ ...baseJob, title: "[Infra Div.] Database Engineer (8년 이상)" }),
+  ).toBeNull();
 });
 
 test("title에 (계약직)/(인턴)이 명시된 단기 공고는 제외한다", () => {
-  expect(parseKraftonJob({ ...baseJob, title: "[AI Research Div.] Research Engineer (계약직)" })).toBeNull();
+  expect(
+    parseKraftonJob({ ...baseJob, title: "[AI Research Div.] Research Engineer (계약직)" }),
+  ).toBeNull();
 });
 
 test("Internship/Contractor 고용형태는 제외한다", () => {
-  expect(parseKraftonJob({ ...baseJob, metadata: [{ name: "Employment Type", value: "Internship" }] })).toBeNull();
+  expect(
+    parseKraftonJob({ ...baseJob, metadata: [{ name: "Employment Type", value: "Internship" }] }),
+  ).toBeNull();
 });
 
 test("연구·PM 등 비엔지니어링 title은 제외한다", () => {
-  expect(parseKraftonJob({ ...baseJob, title: "[AI Frontier Div.] Product Owner (7년 이상)" })).toBeNull();
-  expect(parseKraftonJob({ ...baseJob, title: "[AI Research Div.] Research Scientist - Foundation Models" })).toBeNull();
+  expect(
+    parseKraftonJob({ ...baseJob, title: "[AI Frontier Div.] Product Owner (7년 이상)" }),
+  ).toBeNull();
+  expect(
+    parseKraftonJob({
+      ...baseJob,
+      title: "[AI Research Div.] Research Scientist - Foundation Models",
+    }),
+  ).toBeNull();
 });

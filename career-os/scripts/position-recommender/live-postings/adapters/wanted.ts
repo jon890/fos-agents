@@ -42,7 +42,7 @@ function postingFromWantedDetail(
     title?: string;
     category?: string;
     summary?: string;
-  }
+  },
 ): Posting | null {
   if (!isWantedActive(detail)) return null;
 
@@ -87,7 +87,9 @@ function postingFromWantedDetail(
       .filter((t): t is Record<string, unknown> => typeof t === "object" && t !== null)
       .map((t) => norm(t.title))
       .filter(Boolean)
-      .join(", ") || fallback?.category || "";
+      .join(", ") ||
+    fallback?.category ||
+    "";
 
   return {
     source: "wanted",
@@ -123,7 +125,7 @@ async function fetchWanted(
   jobGroupId: number,
   limit = 120,
   targetRoleOnly = true,
-  includeDetail = true
+  includeDetail = true,
 ): Promise<WantedCollection> {
   const params = new URLSearchParams({
     job_group_id: String(jobGroupId),
@@ -132,10 +134,10 @@ async function fetchWanted(
     locations: "all",
     limit: String(limit),
   });
-  const r = await fetch(
-    `https://www.wanted.co.kr/api/chaos/navigation/v1/results?${params}`,
-    { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(20_000) }
-  );
+  const r = await fetch(`https://www.wanted.co.kr/api/chaos/navigation/v1/results?${params}`, {
+    headers: { "User-Agent": UA },
+    signal: AbortSignal.timeout(20_000),
+  });
   if (!r.ok) throw new Error(`wanted navigation: HTTP ${r.status}`);
   const data = (await r.json()) as { data?: unknown[] };
 

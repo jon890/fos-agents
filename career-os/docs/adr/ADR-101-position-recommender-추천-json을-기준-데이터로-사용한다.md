@@ -11,7 +11,7 @@
 ### 결정
 
 - 실행별 시스템 임시 경로의 `recommendation.json`을 해당 실행의 추천 기준 데이터로 사용한다.
-- `scripts/position-recommender/recommendation_schema.ts`가 형식을 검증한다.
+- `scripts/position-recommender/recommendation/schema.ts`가 형식을 검증한다.
 - Markdown과 HTML은 검증된 JSON에서 만든다.
 - 불완전한 중간 JSON과 별도 일일 실행기는 보존하지 않는다.
 

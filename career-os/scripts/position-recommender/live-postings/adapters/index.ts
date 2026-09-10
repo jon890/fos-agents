@@ -62,7 +62,7 @@ export function configuredSourceIds(source: SourceSelection): SourceId[] {
 
 export function selectAdapters(
   source: SourceSelection,
-  _includeTossArticles: boolean
+  _includeTossArticles: boolean,
 ): SourceAdapter[] {
   return configuredSourceIds(source).map((id) => ADAPTERS[id]);
 }

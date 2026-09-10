@@ -1,7 +1,14 @@
 // 우아한형제들 채용 수집기.
 // 채용 사이트는 SPA라 HTML에 공고가 없지만, 화면이 쓰는 /w1/recruits API가 공개돼 있어 이걸 단일 출처로 쓴다.
 import type { AdapterCollectionResult, Posting, SourceAdapter } from "../types.ts";
-import { cleanDetail, classify, closeWindow, isContractRole, isNonTargetTitle, isTargetRole } from "../policy.ts";
+import {
+  cleanDetail,
+  classify,
+  closeWindow,
+  isContractRole,
+  isNonTargetTitle,
+  isTargetRole,
+} from "../policy.ts";
 
 const UA = "Mozilla/5.0 (fos-agents position recommender)";
 const HOST = "https://career.woowahan.com";
@@ -50,7 +57,7 @@ function htmlToText(html: string): string {
       .replace(/&amp;/g, "&")
       .replace(/&lt;/g, "<")
       .replace(/&gt;/g, ">"),
-    8000
+    8000,
   );
 }
 
@@ -63,7 +70,24 @@ function section(text: string, start: RegExp, stop: RegExp, max = 650): string {
 }
 
 function skillsFromText(text: string): string[] {
-  const known = ["Java", "Kotlin", "Spring", "Spring Boot", "JPA", "MySQL", "Kafka", "Redis", "AWS", "Kubernetes", "Python", "MSA", "AI", "LLM", "ML", "Gradle"];
+  const known = [
+    "Java",
+    "Kotlin",
+    "Spring",
+    "Spring Boot",
+    "JPA",
+    "MySQL",
+    "Kafka",
+    "Redis",
+    "AWS",
+    "Kubernetes",
+    "Python",
+    "MSA",
+    "AI",
+    "LLM",
+    "ML",
+    "Gradle",
+  ];
   const lower = text.toLowerCase();
   return known.filter((skill) => lower.includes(skill.toLowerCase())).slice(0, 12);
 }
@@ -98,9 +122,23 @@ export function parseWoowahanRecruit(recruit: WoowaRecruit, contents: string): P
     tags: classify(fullText),
     skills: skillsFromText(fullText),
     dueTime: closesAt,
-    mainTasks: section(body, /\[업무내용\]|업무\s*내용|주요\s*업무|담당\s*업무/i, /\[지원자격\]|지원\s*자격|자격\s*요건|\[우대사항\]/i) || cleanDetail(body, 650),
-    requirements: section(body, /\[지원자격\]|지원\s*자격|자격\s*요건/i, /\[우대사항\]|우대\s*사항|\[개발환경\]|전형\s*절차/i),
-    preferred: section(body, /\[우대사항\]|우대\s*사항/i, /\[개발환경\]|개발\s*환경|전형\s*절차|꼭\s*읽어/i, 500),
+    mainTasks:
+      section(
+        body,
+        /\[업무내용\]|업무\s*내용|주요\s*업무|담당\s*업무/i,
+        /\[지원자격\]|지원\s*자격|자격\s*요건|\[우대사항\]/i,
+      ) || cleanDetail(body, 650),
+    requirements: section(
+      body,
+      /\[지원자격\]|지원\s*자격|자격\s*요건/i,
+      /\[우대사항\]|우대\s*사항|\[개발환경\]|전형\s*절차/i,
+    ),
+    preferred: section(
+      body,
+      /\[우대사항\]|우대\s*사항/i,
+      /\[개발환경\]|개발\s*환경|전형\s*절차|꼭\s*읽어/i,
+      500,
+    ),
   };
 }
 
@@ -140,13 +178,18 @@ export const woowahanCareersAdapter: SourceAdapter = {
     let failedCount = 0;
     let skippedCount = list.length - candidates.length;
     for (const recruit of candidates) {
-      const detail = await fetchJson<{ data?: WoowaRecruit }>(`${HOST}/w1/recruits/${recruit.recruitNumber}`);
+      const detail = await fetchJson<{ data?: WoowaRecruit }>(
+        `${HOST}/w1/recruits/${recruit.recruitNumber}`,
+      );
       if (!detail.ok || !detail.data?.data) {
         failedCount++;
         errors.push(`woowahan-careers detail ${recruit.recruitNumber}: HTTP ${detail.status}`);
         continue;
       }
-      const posting = parseWoowahanRecruit(detail.data.data, detail.data.data.recruitContents ?? "");
+      const posting = parseWoowahanRecruit(
+        detail.data.data,
+        detail.data.data.recruitContents ?? "",
+      );
       if (posting) postings.push(posting);
       else skippedCount++;
     }

@@ -2,13 +2,16 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { firstOptionValue } from "../lib/cli.ts";
-import type { RecommendationRunType } from "./recommendation_schema.ts";
+import type { RecommendationRunType } from "./recommendation/schema.ts";
 import { validateRecommendationFiles } from "./validate_recommendation.ts";
-import { renderCandidatePreview, type CandidatePreviewOptions } from "./candidate_preview_html.ts";
-import { loadRenderAssets } from "./render_assets.ts";
+import {
+  renderCandidatePreview,
+  type CandidatePreviewOptions,
+} from "./render/candidate-preview-html.ts";
+import { loadRenderAssets } from "./render/assets.ts";
 import { formatSeoulDisplayTime } from "../lib/date-format.ts";
 
-export type { CandidatePreviewOptions } from "./candidate_preview_html.ts";
+export type { CandidatePreviewOptions } from "./render/candidate-preview-html.ts";
 
 export function renderCandidatePreviewHtml(
   run: RecommendationRunType,

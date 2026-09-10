@@ -30,16 +30,20 @@ async function fetchJobListJson(): Promise<Array<{ id: string; title: string; em
   const r = await fetch(`${LIST_API}?firstIndex=0`, {
     headers: {
       "User-Agent": UA,
-      "Accept": "application/json, text/javascript, */*; q=0.01",
+      Accept: "application/json, text/javascript, */*; q=0.01",
       "X-Requested-With": "XMLHttpRequest",
-      "Referer": LISTING_PAGE,
+      Referer: LISTING_PAGE,
     },
     signal: AbortSignal.timeout(20_000),
   });
   if (!r.ok) throw new Error(`loadJobList.do HTTP ${r.status}`);
-  const data = await r.json() as { result: string; list: Array<{ annoId: number; annoSubject: string; empTypeCdNm: string }> };
-  if (data.result !== "Y" || !Array.isArray(data.list)) throw new Error(`loadJobList.do unexpected response: result=${data.result}`);
-  return data.list.map(item => ({
+  const data = (await r.json()) as {
+    result: string;
+    list: Array<{ annoId: number; annoSubject: string; empTypeCdNm: string }>;
+  };
+  if (data.result !== "Y" || !Array.isArray(data.list))
+    throw new Error(`loadJobList.do unexpected response: result=${data.result}`);
+  return data.list.map((item) => ({
     id: String(item.annoId),
     title: decodeHtml(item.annoSubject ?? ""),
     empType: item.empTypeCdNm ?? "",
@@ -53,16 +57,18 @@ function htmlText(html: string): string {
   const detailWrapIdx = html.indexOf('class="detail_wrap"');
   const siteWrapIdx = html.indexOf('class="site_wrap"');
   const bodyEndIdx = html.indexOf("</body>");
-  const contentEnd = siteWrapIdx !== -1 ? siteWrapIdx : bodyEndIdx !== -1 ? bodyEndIdx : html.length;
-  const content = detailWrapIdx !== -1 && contentEnd > detailWrapIdx
-    ? html.slice(detailWrapIdx, contentEnd)
-    : html;
+  const contentEnd =
+    siteWrapIdx !== -1 ? siteWrapIdx : bodyEndIdx !== -1 ? bodyEndIdx : html.length;
+  const content =
+    detailWrapIdx !== -1 && contentEnd > detailWrapIdx
+      ? html.slice(detailWrapIdx, contentEnd)
+      : html;
   return cleanDetail(
     content
       .replace(/<script[\s\S]*?<\/script>/gi, " ")
       .replace(/<style[\s\S]*?<\/style>/gi, " ")
       .replace(/<[^>]+>/g, " "),
-    6000
+    6000,
   );
 }
 
@@ -75,9 +81,23 @@ function decodeHtml(text: string): string {
     .replace(/&#39;/g, "'");
 }
 
-
 function skillsFromText(text: string): string[] {
-  const skills = ["Java", "Kotlin", "Spring", "Spring Boot", "JPA", "MySQL", "Kafka", "Redis", "Kubernetes", "Python", "LLM", "AI", "Search", "Platform"];
+  const skills = [
+    "Java",
+    "Kotlin",
+    "Spring",
+    "Spring Boot",
+    "JPA",
+    "MySQL",
+    "Kafka",
+    "Redis",
+    "Kubernetes",
+    "Python",
+    "LLM",
+    "AI",
+    "Search",
+    "Platform",
+  ];
   const low = text.toLowerCase();
   return skills.filter((skill) => low.includes(skill.toLowerCase())).slice(0, 12);
 }
@@ -113,9 +133,22 @@ function postingFromDetail(item: { id: string; title: string }, html: string): P
     tags: classify(fullText),
     skills: skillsFromText(fullText),
     dueTime: norm(dueRaw),
-    mainTasks: cleanDetail(text.match(/Responsibilities([\s\S]*?)(Qualifications|Required|Preferred|지원자격|필요역량)/i)?.[1] ?? text, 650),
-    requirements: cleanDetail(text.match(/(Qualifications|Required|지원자격|필요역량)([\s\S]*?)(Preferred|우대사항|전형절차|Application)/i)?.[2] ?? "", 650),
-    preferred: cleanDetail(text.match(/(Preferred|우대사항)([\s\S]*?)(전형절차|Application|기타)/i)?.[2] ?? "", 500),
+    mainTasks: cleanDetail(
+      text.match(
+        /Responsibilities([\s\S]*?)(Qualifications|Required|Preferred|지원자격|필요역량)/i,
+      )?.[1] ?? text,
+      650,
+    ),
+    requirements: cleanDetail(
+      text.match(
+        /(Qualifications|Required|지원자격|필요역량)([\s\S]*?)(Preferred|우대사항|전형절차|Application)/i,
+      )?.[2] ?? "",
+      650,
+    ),
+    preferred: cleanDetail(
+      text.match(/(Preferred|우대사항)([\s\S]*?)(전형절차|Application|기타)/i)?.[2] ?? "",
+      500,
+    ),
   };
 }
 
@@ -135,7 +168,7 @@ export const naverCareersAdapter: SourceAdapter = {
     }
 
     // Pre-filter obvious non-candidates from API metadata before fetching detail pages.
-    const filtered = rawItems.filter(item => {
+    const filtered = rawItems.filter((item) => {
       if (/인턴|intern/i.test(item.empType)) return false;
       if (/계약|contract/i.test(item.empType)) return false;
       return true;

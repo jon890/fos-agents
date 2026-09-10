@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
-import { renderCandidatePreviewHtml } from "./render_candidate_preview.ts";
-import { run, pool } from "./render_fixture.ts";
+import { renderCandidatePreviewHtml } from "../render_candidate_preview.ts";
+import { run, pool } from "./fixture.ts";
 
 test("추천 없는 화면과 후보 없음, hold와 stretch 표시를 보존한다", () => {
   const sample = structuredClone(run);

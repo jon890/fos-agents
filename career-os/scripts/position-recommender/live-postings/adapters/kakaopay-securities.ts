@@ -55,12 +55,15 @@ function htmlText(html: string): string {
       .replace(/<script[\s\S]*?<\/script>/gi, " ")
       .replace(/<style[\s\S]*?<\/style>/gi, " ")
       .replace(/<[^>]+>/g, " "),
-    6000
+    6000,
   );
 }
 
 function asTextList(values: unknown[]): string {
-  return values.map((value) => norm(value)).filter(Boolean).join(", ");
+  return values
+    .map((value) => norm(value))
+    .filter(Boolean)
+    .join(", ");
 }
 
 function careerText(career: unknown): string {
@@ -71,7 +74,22 @@ function careerText(career: unknown): string {
 }
 
 function skillsFromText(text: string): string[] {
-  const skills = ["Kubernetes", "AWS", "GCP", "LangChain", "LlamaIndex", "RAG", "Tool Calling", "Java", "Spring", "Kotlin", "Python", "API", "Agent", "LLM"];
+  const skills = [
+    "Kubernetes",
+    "AWS",
+    "GCP",
+    "LangChain",
+    "LlamaIndex",
+    "RAG",
+    "Tool Calling",
+    "Java",
+    "Spring",
+    "Kotlin",
+    "Python",
+    "API",
+    "Agent",
+    "LLM",
+  ];
   const low = text.toLowerCase();
   return skills.filter((skill) => low.includes(skill.toLowerCase())).slice(0, 12);
 }
@@ -119,9 +137,18 @@ function postingFromDetail(url: string, html: string): Posting | null {
     tags: classify(fullText),
     skills: skillsFromText(fullText),
     dueTime: deadlineType === "until_filled" ? "" : norm(recruitment.deadlineValue),
-    mainTasks: cleanDetail(text.match(/업무내용([\s\S]*?)(자격요건|지원자격|우대사항)/)?.[1] ?? text, 650),
-    requirements: cleanDetail(text.match(/(자격요건|지원자격)([\s\S]*?)(우대사항|채용 프로세스)/)?.[2] ?? "", 650),
-    preferred: cleanDetail(text.match(/우대사항([\s\S]*?)(채용 프로세스|입사 지원자 유의사항)/)?.[1] ?? "", 500),
+    mainTasks: cleanDetail(
+      text.match(/업무내용([\s\S]*?)(자격요건|지원자격|우대사항)/)?.[1] ?? text,
+      650,
+    ),
+    requirements: cleanDetail(
+      text.match(/(자격요건|지원자격)([\s\S]*?)(우대사항|채용 프로세스)/)?.[2] ?? "",
+      650,
+    ),
+    preferred: cleanDetail(
+      text.match(/우대사항([\s\S]*?)(채용 프로세스|입사 지원자 유의사항)/)?.[1] ?? "",
+      500,
+    ),
   };
 }
 
@@ -137,7 +164,9 @@ export const kakaopaySecuritiesAdapter: SourceAdapter = {
         const listing = await fetchHtml(listingUrl);
         if (!listing.ok) {
           failedCount++;
-          errors.push(`kakaopay-securities listing ${listingUrl.replace(HOST, "") || "/"}: HTTP ${listing.status}`);
+          errors.push(
+            `kakaopay-securities listing ${listingUrl.replace(HOST, "") || "/"}: HTTP ${listing.status}`,
+          );
           continue;
         }
         for (const url of extractDetailUrls(listing.text)) urls.add(url);

@@ -1,18 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, rmSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { parseArgs } from "./collect_live_postings.ts";
-import { SOURCE_ALIASES, SOURCE_IDS } from "./live-postings/contracts.ts";
-import { DEFAULT_MAX_FAILED_SOURCES } from "./live-postings/collection_health.ts";
+import { parseArgs } from "../collect_live_postings.ts";
+import { SOURCE_ALIASES, SOURCE_IDS } from "./contracts.ts";
+import { DEFAULT_MAX_FAILED_SOURCES } from "./collection_health.ts";
 
 describe("collect_live_postings 인자", () => {
   test("JSON 후보풀 출력 경로를 받는다", () => {
-    const args = parseArgs([
-      "--output",
-      "/tmp/posting-candidates.json",
-      "--source",
-      "wanted",
-    ]);
+    const args = parseArgs(["--output", "/tmp/posting-candidates.json", "--source", "wanted"]);
 
     expect(args.jsonOut).toBe("/tmp/posting-candidates.json");
     expect(args.source).toBe("wanted");
@@ -25,11 +20,7 @@ describe("collect_live_postings 인자", () => {
       "/tmp/posting-candidates.json",
       "--all-development-roles",
     ]);
-    const args = parseArgs([
-      "--output",
-      "/tmp/posting-candidates.json",
-      "--no-server-only",
-    ]);
+    const args = parseArgs(["--output", "/tmp/posting-candidates.json", "--no-server-only"]);
 
     expect(currentArgs.targetRoleOnly).toBe(false);
     expect(args.targetRoleOnly).toBe(false);
@@ -44,7 +35,7 @@ describe("collect_live_postings 인자", () => {
 
   test("모르는 소스 이름은 전체 수집으로 떨어지지 않고 중단한다", () => {
     expect(() =>
-      parseArgs(["--output", "/tmp/posting-candidates.json", "--source", "woowahaan"])
+      parseArgs(["--output", "/tmp/posting-candidates.json", "--source", "woowahaan"]),
     ).toThrow("is not a known source");
   });
 
@@ -91,36 +82,36 @@ describe("collect_live_postings 인자", () => {
   test("실패 소스 허용 개수가 음수, 소수, 공백, 16진수, 문자열이면 중단한다", () => {
     for (const raw of ["-1", "2.5", " ", "", "0x10", "1e2", "many"]) {
       expect(() =>
-        parseArgs(["--output", "/tmp/posting-candidates.json", "--max-failed-sources", raw])
+        parseArgs(["--output", "/tmp/posting-candidates.json", "--max-failed-sources", raw]),
       ).toThrow("must be a non-negative integer");
     }
   });
 
   test("실패 소스 허용 개수에 값을 주지 않으면 기본값으로 흐르지 않고 중단한다", () => {
     expect(() =>
-      parseArgs(["--output", "/tmp/posting-candidates.json", "--max-failed-sources"])
+      parseArgs(["--output", "/tmp/posting-candidates.json", "--max-failed-sources"]),
     ).toThrow("must be a non-negative integer");
   });
 
   test("모르는 옵션 이름은 기본 동작으로 흐르지 않고 중단한다", () => {
     expect(() =>
-      parseArgs(["--output", "/tmp/posting-candidates.json", "--max-failed-source", "5"])
+      parseArgs(["--output", "/tmp/posting-candidates.json", "--max-failed-source", "5"]),
     ).toThrow("--max-failed-source is not a known option");
   });
 
   test("값을 받는 옵션에 값이 없으면 중단한다", () => {
     expect(() => parseArgs(["--output"])).toThrow("--output requires a value");
     expect(() => parseArgs(["--output", "/tmp/o.json", "--source"])).toThrow(
-      "--source requires a value"
+      "--source requires a value",
     );
   });
 
   test("공고 수 상한도 같은 규칙으로 검증한다", () => {
     expect(() =>
-      parseArgs(["--output", "/tmp/posting-candidates.json", "--max-wanted", "many"])
+      parseArgs(["--output", "/tmp/posting-candidates.json", "--max-wanted", "many"]),
     ).toThrow("must be a non-negative integer");
     expect(
-      parseArgs(["--output", "/tmp/posting-candidates.json", "--max-wanted", "30"]).wantedLimit
+      parseArgs(["--output", "/tmp/posting-candidates.json", "--max-wanted", "30"]).wantedLimit,
     ).toBe(30);
   });
 
@@ -134,13 +125,19 @@ describe("collect_live_postings 인자", () => {
     // 닫힌 포트를 프록시로 지정해 네트워크 없이 연결 실패를 만든다.
     const blocked = { HTTPS_PROXY: "http://127.0.0.1:1", HTTP_PROXY: "http://127.0.0.1:1" };
     const child = Bun.spawn(
-      ["bun", `${import.meta.dir}/collect_live_postings.ts`, "--source", "woowahan", "--output", out, "--exclusions-config", exclusions],
+      [
+        "bun",
+        `${import.meta.dir}/../collect_live_postings.ts`,
+        "--source",
+        "woowahan",
+        "--output",
+        out,
+        "--exclusions-config",
+        exclusions,
+      ],
       { stdout: "pipe", stderr: "pipe", env: { ...process.env, ...blocked } },
     );
-    const [stderr, exitCode] = await Promise.all([
-      new Response(child.stderr).text(),
-      child.exited,
-    ]);
+    const [stderr, exitCode] = await Promise.all([new Response(child.stderr).text(), child.exited]);
 
     try {
       expect(exitCode).toBe(1);
@@ -153,7 +150,7 @@ describe("collect_live_postings 인자", () => {
   }, 60_000);
 
   test("출력 경로 누락 오류는 절대 경로나 stack trace를 노출하지 않는다", async () => {
-    const process = Bun.spawn(["bun", `${import.meta.dir}/collect_live_postings.ts`], {
+    const process = Bun.spawn(["bun", `${import.meta.dir}/../collect_live_postings.ts`], {
       stdout: "pipe",
       stderr: "pipe",
     });

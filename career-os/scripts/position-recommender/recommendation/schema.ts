@@ -3,16 +3,13 @@
 // 렌더러가 여기서 HTML 화면을 파생한다.
 // SKILL self-check는 이 스키마 검증으로 대체한다.
 import { z } from "zod";
-import { sourceIdSchema } from "./live-postings/contracts.ts";
+import { sourceIdSchema } from "../live-postings/contracts.ts";
 
 /** 회사/규모 업사이드 신호. HTML 배지와 요약 필드로 직접 매핑된다. */
 export const UpsideLevel = z.enum(["강함", "중간", "약함"]);
 
 /** 링크 근거 수준. 추천 티어에는 active/open 확인만 허용한다(SKILL self-check 9). */
-export const LinkEvidenceLevel = z.enum([
-  "개별 공고 active 확인",
-  "개별 공고 open 확인",
-]);
+export const LinkEvidenceLevel = z.enum(["개별 공고 active 확인", "개별 공고 open 확인"]);
 
 /**
  * 현재 직장 대비 업사이드를 재는 축. 사용자가 이직 동기로 확인한 넷이다.
@@ -121,10 +118,69 @@ export const CandidateRankingItem = z.object({
   rank: z.number().int().positive(),
   /** 네 축을 합친 종합 방향. 축별 근거는 추천 티어 항목이 갖는다. */
   upsideDirection: UpsideDirection,
-  oneLineReason: z.string().trim().min(1).max(160).refine((value) => !/[\r\n]/.test(value), {
-    message: "한 줄 판단에는 줄바꿈을 넣지 않는다",
-  }),
+  oneLineReason: z
+    .string()
+    .trim()
+    .min(1)
+    .max(160)
+    .refine((value) => !/[\r\n]/.test(value), {
+      message: "한 줄 판단에는 줄바꿈을 넣지 않는다",
+    }),
 });
+
+const AutoExclusionScope = z.enum(["posting", "company"]);
+
+export const AutoExclusionSuggestion = z
+  .object({
+    candidateId: z.string().min(1),
+    scope: AutoExclusionScope,
+    reason: z.string().trim().min(1),
+    axes: z.array(UpsideAxisJudgment).length(UPSIDE_AXES.length),
+    evidenceUrls: z.array(z.string().url().startsWith("https://")).min(1),
+  })
+  .superRefine((suggestion, ctx) => {
+    const seen = new Set<string>();
+    for (const [index, judgment] of suggestion.axes.entries()) {
+      if (seen.has(judgment.axis)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["axes", index, "axis"],
+          message: `자동 제외 축이 중복됐다: ${judgment.axis}`,
+        });
+      }
+      seen.add(judgment.axis);
+    }
+    for (const axis of UPSIDE_AXES) {
+      if (!seen.has(axis)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["axes"],
+          message: `자동 제외 축 판정이 빠졌다: ${axis}`,
+        });
+      }
+    }
+    if (suggestion.axes.some((axis) => axis.direction === "상향")) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["axes"],
+        message: "상향 축이 있는 공고는 자동 제외할 수 없다",
+      });
+    }
+    if (!suggestion.axes.some((axis) => axis.direction === "하향")) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["axes"],
+        message: "자동 제외에는 근거가 명확한 하향 축이 하나 이상 필요하다",
+      });
+    }
+    if (suggestion.scope === "company" && suggestion.evidenceUrls.length < 2) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["evidenceUrls"],
+        message: "회사 전체 자동 제외에는 서로 독립된 공개 근거 URL이 두 개 이상 필요하다",
+      });
+    }
+  });
 
 export const RecommendationRun = z
   .object({
@@ -139,6 +195,7 @@ export const RecommendationRun = z
       hold: z.array(HoldItem),
     }),
     candidateRanking: z.array(CandidateRankingItem).min(1),
+    autoExclusionSuggestions: z.array(AutoExclusionSuggestion).default([]),
     additionalTargets: z.array(AdditionalTarget).max(3),
     recentCheck: z.array(z.string().min(1)).min(1), // 최근 반복 점검
     weeklyActions: WeeklyActions,

@@ -14,12 +14,40 @@ const AI_AX_DIVISION = /^\[ai\b/i;
 // 채용 홈 본문에 다른 팀 기술스택(ios/frontend 등)이 섞여 있어 JD 본문 전체를
 // role 키워드로 매칭하면 오탐이 크다. role 판별은 title 기준으로만 한다.
 const NON_ENGINEERING_TITLE = [
-  "product manager", "product owner", "프로덕트 매니저", "planner", "기획",
-  "designer", "디자이너", "qa", "frontend", "프론트", "android", "ios",
-  "data scientist", "데이터 사이언티스트", "research scientist", "research engineer",
-  "researcher", "postdoctoral", "applied scientist", "model researcher", "모델 연구",
-  "cto", "tech lead", "server lead", "technical lead", "기술총괄",
-  "marketing", "마케터", "legal", "법무", "recruiting", "채용", "sap", "security engineer",
+  "product manager",
+  "product owner",
+  "프로덕트 매니저",
+  "planner",
+  "기획",
+  "designer",
+  "디자이너",
+  "qa",
+  "frontend",
+  "프론트",
+  "android",
+  "ios",
+  "data scientist",
+  "데이터 사이언티스트",
+  "research scientist",
+  "research engineer",
+  "researcher",
+  "postdoctoral",
+  "applied scientist",
+  "model researcher",
+  "모델 연구",
+  "cto",
+  "tech lead",
+  "server lead",
+  "technical lead",
+  "기술총괄",
+  "marketing",
+  "마케터",
+  "legal",
+  "법무",
+  "recruiting",
+  "채용",
+  "sap",
+  "security engineer",
 ];
 
 // 고용형태 metadata 중 단기·연구·인턴 계열만 제외한다.
@@ -27,9 +55,31 @@ const NON_ENGINEERING_TITLE = [
 const EXCLUDED_EMPLOYMENT_TYPES = new Set(["Internship", "Contractor", "Contract"]);
 
 const SKILL_VOCAB = [
-  "Java", "Kotlin", "Spring", "Spring Boot", "JPA", "MySQL", "Oracle", "PostgreSQL",
-  "Kafka", "Redis", "AWS", "GCP", "Kubernetes", "Terraform", "Python", "Go",
-  "DevOps", "SRE", "API", "AI", "LLM", "RAG", "MLOps", "LLMOps", "Airflow",
+  "Java",
+  "Kotlin",
+  "Spring",
+  "Spring Boot",
+  "JPA",
+  "MySQL",
+  "Oracle",
+  "PostgreSQL",
+  "Kafka",
+  "Redis",
+  "AWS",
+  "GCP",
+  "Kubernetes",
+  "Terraform",
+  "Python",
+  "Go",
+  "DevOps",
+  "SRE",
+  "API",
+  "AI",
+  "LLM",
+  "RAG",
+  "MLOps",
+  "LLMOps",
+  "Airflow",
 ];
 
 interface GreenhouseJob {
@@ -45,17 +95,30 @@ interface GreenhouseJob {
 
 async function fetchJson(url: string): Promise<{ ok: boolean; status: number; data: unknown }> {
   const response = await fetch(url, {
-    headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0 (fos-agents position recommender)" },
+    headers: {
+      Accept: "application/json",
+      "User-Agent": "Mozilla/5.0 (fos-agents position recommender)",
+    },
     signal: AbortSignal.timeout(20_000),
   });
-  return { ok: response.ok, status: response.status, data: response.ok ? await response.json() : null };
+  return {
+    ok: response.ok,
+    status: response.status,
+    data: response.ok ? await response.json() : null,
+  };
 }
 
 function htmlText(content: string, limit = 6000): string {
   // Greenhouse content는 엔티티로 인코딩된 HTML이라 cleanDetail이 &lt;→< 로 되돌린 뒤
   // 태그를 제거한다. script/style 잔재도 함께 정리한다.
   const decoded = cleanDetail(content, content.length);
-  return cleanDetail(decoded.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " "), limit);
+  return cleanDetail(
+    decoded
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " "),
+    limit,
+  );
 }
 
 function section(text: string, start: string, ends: string[], limit: number): string {
@@ -102,9 +165,24 @@ export function parseKraftonJob(job: GreenhouseJob): Posting | null {
     tags: classify(fullText),
     skills: skillsFromText(fullText),
     dueTime: deadline,
-    mainTasks: section(text, "(?:미션을\\s*소개|담당할?\\s*업무|주요\\s*업무|What\\s*you)", ["필수", "이런\\s*경험을\\s*가진", "자격\\s*요건"], 650),
-    requirements: section(text, "(?:필수\\s*요건|필수요건|이런\\s*경험을\\s*가진|자격\\s*요건)", ["우대", "이런\\s*경험들이\\s*있다면", "전형"], 650),
-    preferred: section(text, "(?:우대\\s*요건|우대요건|이런\\s*경험들이\\s*있다면)", ["전형", "필요\\s*서류", "근무지", "고용형태"], 500),
+    mainTasks: section(
+      text,
+      "(?:미션을\\s*소개|담당할?\\s*업무|주요\\s*업무|What\\s*you)",
+      ["필수", "이런\\s*경험을\\s*가진", "자격\\s*요건"],
+      650,
+    ),
+    requirements: section(
+      text,
+      "(?:필수\\s*요건|필수요건|이런\\s*경험을\\s*가진|자격\\s*요건)",
+      ["우대", "이런\\s*경험들이\\s*있다면", "전형"],
+      650,
+    ),
+    preferred: section(
+      text,
+      "(?:우대\\s*요건|우대요건|이런\\s*경험들이\\s*있다면)",
+      ["전형", "필요\\s*서류", "근무지", "고용형태"],
+      500,
+    ),
   };
 }
 
@@ -115,9 +193,10 @@ export const kraftonCareersAdapter: SourceAdapter = {
     const errors: string[] = [];
     const listing = await fetchJson(LISTING_URL);
     if (!listing.ok) errors.push(`krafton-careers listing: HTTP ${listing.status}`);
-    const jobs = listing.ok && listing.data && typeof listing.data === "object"
-      ? (listing.data as { jobs?: GreenhouseJob[] }).jobs ?? []
-      : [];
+    const jobs =
+      listing.ok && listing.data && typeof listing.data === "object"
+        ? ((listing.data as { jobs?: GreenhouseJob[] }).jobs ?? [])
+        : [];
     const postings: Posting[] = [];
     let skippedCount = 0;
     for (const job of jobs) {

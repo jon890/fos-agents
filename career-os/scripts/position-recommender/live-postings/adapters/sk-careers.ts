@@ -24,7 +24,13 @@ const TARGET_COMPANIES = [
   "SK플래닛",
 ];
 const EXCLUDED_WORKING_TYPES = ["Contract", "Intern", "Temporary", "계약", "촉탁", "인턴"];
-const PHYSICAL_INFRA_TITLE_KEYWORDS = ["기계/공조", "공조설비", "MEP", "전기/통신", "네트워크 구축 TA"];
+const PHYSICAL_INFRA_TITLE_KEYWORDS = [
+  "기계/공조",
+  "공조설비",
+  "MEP",
+  "전기/통신",
+  "네트워크 구축 TA",
+];
 
 interface SkListResponse {
   success?: boolean;
@@ -45,7 +51,10 @@ interface SkJob {
   end?: string;
 }
 
-async function fetchText(url: string, init?: RequestInit): Promise<{ ok: boolean; status: number; text: string }> {
+async function fetchText(
+  url: string,
+  init?: RequestInit,
+): Promise<{ ok: boolean; status: number; text: string }> {
   const r = await fetch(url, {
     ...init,
     headers: {
@@ -102,8 +111,18 @@ function normalizeSkDate(raw: string | undefined): string {
   const m = value.match(/([A-Za-z]+)\s+([0-9]{1,2}),\s+([0-9]{4})/);
   if (!m) return value;
   const months: Record<string, string> = {
-    january: "01", february: "02", march: "03", april: "04", may: "05", june: "06",
-    july: "07", august: "08", september: "09", october: "10", november: "11", december: "12",
+    january: "01",
+    february: "02",
+    march: "03",
+    april: "04",
+    may: "05",
+    june: "06",
+    july: "07",
+    august: "08",
+    september: "09",
+    october: "10",
+    november: "11",
+    december: "12",
   };
   return `${m[3]}-${months[m[1].toLowerCase()] ?? "01"}-${m[2].padStart(2, "0")}`;
 }
@@ -116,7 +135,21 @@ function normalizeDate(raw: string | undefined): string {
 }
 
 function skillsFromText(text: string): string[] {
-  const skills = ["Java", "Kotlin", "Spring", "Backend", "Server", "Cloud", "Kubernetes", "AI", "Data", "Platform", "Infra", "SRE", "LLM"];
+  const skills = [
+    "Java",
+    "Kotlin",
+    "Spring",
+    "Backend",
+    "Server",
+    "Cloud",
+    "Kubernetes",
+    "AI",
+    "Data",
+    "Platform",
+    "Infra",
+    "SRE",
+    "LLM",
+  ];
   const low = text.toLowerCase();
   return skills.filter((skill) => low.includes(skill.toLowerCase())).slice(0, 12);
 }
@@ -126,8 +159,14 @@ async function postingFromJob(job: SkJob): Promise<Posting | null> {
   const title = cleanDetail(job.title, 180);
   const company = cleanDetail(job.corpName, 120);
   if (!id || !title || !company) return null;
-  if (!TARGET_COMPANIES.some((target) => company.toLowerCase().includes(target.toLowerCase()))) return null;
-  if (EXCLUDED_WORKING_TYPES.some((type) => norm(job.workingType).toLowerCase().includes(type.toLowerCase()))) return null;
+  if (!TARGET_COMPANIES.some((target) => company.toLowerCase().includes(target.toLowerCase())))
+    return null;
+  if (
+    EXCLUDED_WORKING_TYPES.some((type) =>
+      norm(job.workingType).toLowerCase().includes(type.toLowerCase()),
+    )
+  )
+    return null;
   if (Number(job.remainDay ?? 0) < 0) return null;
   if (PHYSICAL_INFRA_TITLE_KEYWORDS.some((keyword) => title.includes(keyword))) return null;
 
@@ -136,7 +175,11 @@ async function postingFromJob(job: SkJob): Promise<Posting | null> {
   const roleText = `${company} ${title} ${job.jobRole ?? ""} ${job.recruitType ?? ""} ${job.workingType ?? ""}`;
   if (isContractRole(roleText)) return null;
   if (isNonTargetTitle(title)) return null;
-  if (!isTargetRole(roleText) && !hasKeyword(roleText, ["software engineering", "sre", "cloud-native", "platform"])) return null;
+  if (
+    !isTargetRole(roleText) &&
+    !hasKeyword(roleText, ["software engineering", "sre", "cloud-native", "platform"])
+  )
+    return null;
 
   const due = normalizeDate(job.end);
   return {

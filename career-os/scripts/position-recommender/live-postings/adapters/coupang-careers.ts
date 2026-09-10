@@ -132,9 +132,9 @@ function stripHtml(html: string): string {
       html
         .replace(/<script[\s\S]*?<\/script>/gi, " ")
         .replace(/<style[\s\S]*?<\/style>/gi, " ")
-        .replace(/<[^>]+>/g, " ")
+        .replace(/<[^>]+>/g, " "),
     ),
-    8000
+    8000,
   );
 }
 
@@ -214,8 +214,10 @@ function postingFromSitemapUrl(item: SitemapUrl): Posting | null {
     skills: skillsFromTitle(title),
     dueTime: "",
     mainTasks: summary,
-    requirements: "공식 상세 페이지 확인 필요. sitemap URL title 기반으로만 서버/플랫폼 후보를 선별했다.",
-    preferred: "결제, 커머스, 플랫폼, AI/ML/LLM, 대규모 트래픽 경험은 공고별 상세 확인 후 판단한다.",
+    requirements:
+      "공식 상세 페이지 확인 필요. sitemap URL title 기반으로만 서버/플랫폼 후보를 선별했다.",
+    preferred:
+      "결제, 커머스, 플랫폼, AI/ML/LLM, 대규모 트래픽 경험은 공고별 상세 확인 후 판단한다.",
   };
 }
 
@@ -224,18 +226,63 @@ function enrichWithDetail(posting: Posting, html: string): Posting {
   const h1 = firstMatch(html, [/<h1[^>]*>([\s\S]*?)<\/h1>/i]);
   const title = h1 || posting.title;
   const fullText = `${title} ${text}`;
-  const location = firstMatch(text, [/Location\s+(.+?)\s+Updated/i, /Location\s+(.+?)\s+Apply now/i]);
+  const location = firstMatch(text, [
+    /Location\s+(.+?)\s+Updated/i,
+    /Location\s+(.+?)\s+Apply now/i,
+  ]);
   const updated = firstMatch(text, [/Updated\s+([0-9/.-]+)/i]);
-  const description = section(text, "Description", ["Basic Qualifications", "Preferred Qualifications", "Qualifications", "Recruitment Process", "Location"]);
-  const responsibilities = section(text, "Key Responsibilities", ["Basic Qualifications", "Preferred Qualifications", "Qualifications", "Recruitment Process", "Location"]);
+  const description = section(text, "Description", [
+    "Basic Qualifications",
+    "Preferred Qualifications",
+    "Qualifications",
+    "Recruitment Process",
+    "Location",
+  ]);
+  const responsibilities = section(text, "Key Responsibilities", [
+    "Basic Qualifications",
+    "Preferred Qualifications",
+    "Qualifications",
+    "Recruitment Process",
+    "Location",
+  ]);
 
   // Try multiple heading variants: Coupang postings use English headings but may vary
   const requirements =
-    section(text, "Basic Qualifications", ["Preferred Qualifications", "Preferred Experiences", "Recruitment Process", "Why Coupang", "Location"]) ||
-    section(text, "Qualifications", ["Preferred Qualifications", "Preferred Experiences", "Recruitment Process", "Why Coupang", "Location"]) ||
-    section(text, "Requirements", ["Preferred Qualifications", "Preferred Experiences", "Recruitment Process", "Why Coupang", "Location"]) ||
-    section(text, "자격 요건", ["우대 사항", "우대사항", "전형 절차", "Preferred", "Recruitment Process"]) ||
-    section(text, "자격요건", ["우대 사항", "우대사항", "전형 절차", "Preferred", "Recruitment Process"]);
+    section(text, "Basic Qualifications", [
+      "Preferred Qualifications",
+      "Preferred Experiences",
+      "Recruitment Process",
+      "Why Coupang",
+      "Location",
+    ]) ||
+    section(text, "Qualifications", [
+      "Preferred Qualifications",
+      "Preferred Experiences",
+      "Recruitment Process",
+      "Why Coupang",
+      "Location",
+    ]) ||
+    section(text, "Requirements", [
+      "Preferred Qualifications",
+      "Preferred Experiences",
+      "Recruitment Process",
+      "Why Coupang",
+      "Location",
+    ]) ||
+    section(text, "자격 요건", [
+      "우대 사항",
+      "우대사항",
+      "전형 절차",
+      "Preferred",
+      "Recruitment Process",
+    ]) ||
+    section(text, "자격요건", [
+      "우대 사항",
+      "우대사항",
+      "전형 절차",
+      "Preferred",
+      "Recruitment Process",
+    ]);
 
   const preferred =
     section(text, "Preferred Qualifications", ["Recruitment Process", "Why Coupang", "Location"]) ||
@@ -248,15 +295,21 @@ function enrichWithDetail(posting: Posting, html: string): Posting {
   // enrichWithDetail is only called on HTTP 200 detail fetches.
   // When detail is available, clear the sitemap-only placeholder from postingFromSitemapUrl.
   const SITEMAP_PLACEHOLDER = /상세 페이지 확인 필요|sitemap title 기반/;
-  const finalRequirements = requirements || (SITEMAP_PLACEHOLDER.test(posting.requirements ?? "") ? "" : (posting.requirements ?? ""));
-  const finalPreferred = preferred || (SITEMAP_PLACEHOLDER.test(posting.preferred ?? "") ? "" : (posting.preferred ?? ""));
+  const finalRequirements =
+    requirements ||
+    (SITEMAP_PLACEHOLDER.test(posting.requirements ?? "") ? "" : (posting.requirements ?? ""));
+  const finalPreferred =
+    preferred ||
+    (SITEMAP_PLACEHOLDER.test(posting.preferred ?? "") ? "" : (posting.preferred ?? ""));
 
   return {
     ...posting,
     title,
     activeEvidence: `${posting.activeEvidence}; detail fetch HTTP 200${updated ? `, updated=${updated}` : ""}`,
     openedAt: updated || posting.openedAt,
-    summary: location ? `Location: ${location}. ${description || posting.summary}` : description || posting.summary,
+    summary: location
+      ? `Location: ${location}. ${description || posting.summary}`
+      : description || posting.summary,
     tags: classify(fullText),
     skills,
     dueTime: updated || posting.dueTime,
@@ -266,7 +319,9 @@ function enrichWithDetail(posting: Posting, html: string): Posting {
   };
 }
 
-async function enrichPostings(postings: Posting[]): Promise<{ postings: Posting[]; failedCount: number; errors: string[] }> {
+async function enrichPostings(
+  postings: Posting[],
+): Promise<{ postings: Posting[]; failedCount: number; errors: string[] }> {
   const enriched: Posting[] = [];
   let failedCount = 0;
   const errors: string[] = [];

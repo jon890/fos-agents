@@ -7,11 +7,7 @@ import type {
   PostingEligibilityPolicy,
   PostingRejectionCode,
 } from "./types.ts";
-import {
-  isContractRole,
-  isNonTargetTitle,
-  isTargetRole,
-} from "./policy.ts";
+import { isContractRole, isNonTargetTitle, isTargetRole } from "./policy.ts";
 
 const ACTIVE_POSTING_STATUSES: ReadonlySet<Posting["postingStatus"]> = new Set(["active", "open"]);
 
@@ -20,7 +16,7 @@ export function dedupe(posts: Posting[]): Posting[] {
   const officialRoleKeys = new Set(
     posts
       .filter((p) => p.source !== "wanted" && p.discoveryMode === "official-detail")
-      .map(roleKey)
+      .map(roleKey),
   );
 
   return posts.filter((p) => {

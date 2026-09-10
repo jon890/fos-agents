@@ -2,9 +2,17 @@
 // 사이트가 Gatsby 정적 빌드라 목록 HTML에는 공고 링크가 없다(클라이언트 렌더).
 // 대신 Gatsby가 함께 배포하는 page-data.json이 Strapi 원본 데이터를 그대로 담고 있어 이걸 단일 출처로 쓴다.
 import type { AdapterCollectionResult, Posting, SourceAdapter } from "../types.ts";
-import { cleanDetail, classify, closeWindow, isContractRole, isNonTargetTitle, isTargetRole } from "../policy.ts";
+import {
+  cleanDetail,
+  classify,
+  closeWindow,
+  isContractRole,
+  isNonTargetTitle,
+  isTargetRole,
+} from "../policy.ts";
 
-const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+const UA =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 const HOST = "https://careers.linecorp.com";
 const LIST_URL = `${HOST}/page-data/ko/jobs/page-data.json`;
 
@@ -94,7 +102,23 @@ function sectionFrom(body: string, headers: RegExp, stopHeaders: RegExp): string
 }
 
 function skillsFromText(text: string): string[] {
-  const known = ["Java", "Kotlin", "Spring", "Spring Boot", "JPA", "MySQL", "Kafka", "Redis", "AWS", "Kubernetes", "Python", "MSA", "AI", "LLM", "gRPC"];
+  const known = [
+    "Java",
+    "Kotlin",
+    "Spring",
+    "Spring Boot",
+    "JPA",
+    "MySQL",
+    "Kafka",
+    "Redis",
+    "AWS",
+    "Kubernetes",
+    "Python",
+    "MSA",
+    "AI",
+    "LLM",
+    "gRPC",
+  ];
   const lower = text.toLowerCase();
   return known.filter((skill) => lower.includes(skill.toLowerCase())).slice(0, 12);
 }
@@ -123,9 +147,22 @@ export function buildLinePosting(job: StrapiJob, detailBody: string): Posting {
     tags: classify(fullText),
     skills: skillsFromText(fullText),
     dueTime: closesAt,
-    mainTasks: sectionFrom(detailBody, /담당\s*업무|주요\s*업무|What you will do/i, /자격\s*요건|지원\s*자격|Qualifications|우대\s*사항/i) || cleanDetail(detailBody, 650),
-    requirements: sectionFrom(detailBody, /자격\s*요건|지원\s*자격|Qualifications/i, /우대\s*사항|Preferred|전형\s*절차|근무\s*조건/i),
-    preferred: sectionFrom(detailBody, /우대\s*사항|Preferred/i, /전형\s*절차|근무\s*조건|유의\s*사항/i),
+    mainTasks:
+      sectionFrom(
+        detailBody,
+        /담당\s*업무|주요\s*업무|What you will do/i,
+        /자격\s*요건|지원\s*자격|Qualifications|우대\s*사항/i,
+      ) || cleanDetail(detailBody, 650),
+    requirements: sectionFrom(
+      detailBody,
+      /자격\s*요건|지원\s*자격|Qualifications/i,
+      /우대\s*사항|Preferred|전형\s*절차|근무\s*조건/i,
+    ),
+    preferred: sectionFrom(
+      detailBody,
+      /우대\s*사항|Preferred/i,
+      /전형\s*절차|근무\s*조건|유의\s*사항/i,
+    ),
   };
 }
 
@@ -133,11 +170,17 @@ export function buildLinePosting(job: StrapiJob, detailBody: string): Posting {
 function longestString(value: unknown, depth = 0): string {
   if (depth > 6) return "";
   if (typeof value === "string") return value.length > 200 ? value : "";
-  if (Array.isArray(value)) return value.map((item) => longestString(item, depth + 1)).sort((a, b) => b.length - a.length)[0] ?? "";
+  if (Array.isArray(value))
+    return (
+      value.map((item) => longestString(item, depth + 1)).sort((a, b) => b.length - a.length)[0] ??
+      ""
+    );
   if (value && typeof value === "object") {
-    return Object.values(value as Record<string, unknown>)
-      .map((item) => longestString(item, depth + 1))
-      .sort((a, b) => b.length - a.length)[0] ?? "";
+    return (
+      Object.values(value as Record<string, unknown>)
+        .map((item) => longestString(item, depth + 1))
+        .sort((a, b) => b.length - a.length)[0] ?? ""
+    );
   }
   return "";
 }
@@ -147,7 +190,9 @@ export const lineCareersAdapter: SourceAdapter = {
   name: "line-careers",
   async collect(): Promise<AdapterCollectionResult> {
     const errors: string[] = [];
-    const listing = await fetchJson<{ result?: { data?: { allStrapiJobs?: { edges?: Array<{ node: StrapiJob }> } } } }>(LIST_URL);
+    const listing = await fetchJson<{
+      result?: { data?: { allStrapiJobs?: { edges?: Array<{ node: StrapiJob }> } } };
+    }>(LIST_URL);
     if (!listing.ok || !listing.data) {
       const message = `line-careers listing: HTTP ${listing.status}`;
       return {
@@ -165,7 +210,9 @@ export const lineCareersAdapter: SourceAdapter = {
       };
     }
 
-    const allJobs = (listing.data.result?.data?.allStrapiJobs?.edges ?? []).map((edge) => edge.node);
+    const allJobs = (listing.data.result?.data?.allStrapiJobs?.edges ?? []).map(
+      (edge) => edge.node,
+    );
     const candidates = allJobs.filter(isKoreaEngineeringServerJob);
 
     const postings: Posting[] = [];

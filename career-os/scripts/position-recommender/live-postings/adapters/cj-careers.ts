@@ -38,7 +38,10 @@ interface CjJob {
   dday?: number | string;
 }
 
-async function fetchText(url: string, init?: RequestInit): Promise<{ ok: boolean; status: number; text: string }> {
+async function fetchText(
+  url: string,
+  init?: RequestInit,
+): Promise<{ ok: boolean; status: number; text: string }> {
   const r = await fetch(url, {
     ...init,
     headers: {
@@ -92,14 +95,16 @@ function stripHtml(html: string): string {
       html
         .replace(/<script[\s\S]*?<\/script>/gi, " ")
         .replace(/<style[\s\S]*?<\/style>/gi, " ")
-        .replace(/<[^>]+>/g, " ")
+        .replace(/<[^>]+>/g, " "),
     ),
     5000,
   );
 }
 
 async function fetchDetailText(jobId: string): Promise<string> {
-  const res = await fetchText(`${HOST}/recruit/ko/recruit/recruit/detail.fo?zz_jo_num=${encodeURIComponent(jobId)}`);
+  const res = await fetchText(
+    `${HOST}/recruit/ko/recruit/recruit/detail.fo?zz_jo_num=${encodeURIComponent(jobId)}`,
+  );
   return res.ok ? stripHtml(res.text) : "";
 }
 
@@ -108,7 +113,20 @@ function normalizeTitle(job: CjJob): string {
 }
 
 function skillsFromText(text: string): string[] {
-  const skills = ["Java", "Kotlin", "Spring", "Backend", "Server", "Cloud", "AWS", "Kubernetes", "AI", "Data", "Platform", "MySQL"];
+  const skills = [
+    "Java",
+    "Kotlin",
+    "Spring",
+    "Backend",
+    "Server",
+    "Cloud",
+    "AWS",
+    "Kubernetes",
+    "AI",
+    "Data",
+    "Platform",
+    "MySQL",
+  ];
   const low = text.toLowerCase();
   return skills.filter((skill) => low.includes(skill.toLowerCase())).slice(0, 12);
 }
@@ -127,7 +145,8 @@ async function postingFromJob(job: CjJob): Promise<Posting | null> {
   const roleText = `${company} ${title} ${job.job_cd_nm ?? ""} ${job.location_cd_nm ?? ""}`;
   if (isContractRole(roleText)) return null;
   if (isNonTargetTitle(title)) return null;
-  if (!isTargetRole(roleText) && !hasKeyword(roleText, ["백엔드개발", "backend engineer"])) return null;
+  if (!isTargetRole(roleText) && !hasKeyword(roleText, ["백엔드개발", "backend engineer"]))
+    return null;
 
   const due = job.zz_till_hire === "Y" ? "" : norm(job.zz_end_dt_str);
   return {
@@ -148,7 +167,8 @@ async function postingFromJob(job: CjJob): Promise<Posting | null> {
     skills: skillsFromText(fullText),
     dueTime: due,
     mainTasks: cleanDetail(`${title} / ${job.job_cd_nm ?? ""} / ${job.location_cd_nm ?? ""}`, 650),
-    requirements: "CJ Recruit 공식 목록 API에서 백엔드개발 직무로 확인했다. 세부 자격요건은 개별 공고 상세에서 재확인한다.",
+    requirements:
+      "CJ Recruit 공식 목록 API에서 백엔드개발 직무로 확인했다. 세부 자격요건은 개별 공고 상세에서 재확인한다.",
     preferred: "CJ ONE/회원/커머스 서비스 경험과 Java/Spring 백엔드 운영 경험의 전이성을 확인한다.",
   };
 }
@@ -165,7 +185,8 @@ export const cjCareersAdapter: SourceAdapter = {
 
     try {
       const data = await fetchList();
-      if (data.ErrorCode && data.ErrorCode !== 0) throw new Error(`CJ Recruit ErrorCode=${data.ErrorCode}`);
+      if (data.ErrorCode && data.ErrorCode !== 0)
+        throw new Error(`CJ Recruit ErrorCode=${data.ErrorCode}`);
       const jobs = data.ds_newRecruitList ?? [];
       rawCount = jobs.length;
       for (const job of jobs) {

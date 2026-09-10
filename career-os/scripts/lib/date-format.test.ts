@@ -2,7 +2,13 @@ import { expect, test } from "bun:test";
 import { morningHtmlFilename } from "../study-topic-recommender/render/html.ts";
 import { reportIdForMorningReading } from "../study-topic-recommender/study-library/recommendations.ts";
 import type { MorningReadingReport } from "../study-topic-recommender/reading_contracts.ts";
-import { formatSeoulDateTime, formatSeoulDisplayTime, formatSeoulIsoDate } from "./date-format.ts";
+import {
+  ceilDaysUntil,
+  formatSeoulDateTime,
+  formatSeoulDisplayTime,
+  formatSeoulIsoDate,
+  parseDateOrNull,
+} from "./date-format.ts";
 
 test("날짜 유틸은 입력 offset을 한국 시각으로 바꾸며 현재 시각에 의존하지 않는다", () => {
   const value = new Date("2026-08-13T15:00:00Z");
@@ -49,4 +55,11 @@ test("두 날짜 호출부의 빈값과 잘못된 입력 오류를 보존한다"
       `유효하지 않은 generatedAt: ${generatedAt}`,
     );
   }
+});
+
+test("날짜 파싱과 남은 날짜 계산은 기준 시각을 주입받는다", () => {
+  expect(parseDateOrNull("2026-09-12T12:00:00Z")?.toISOString()).toBe("2026-09-12T12:00:00.000Z");
+  expect(parseDateOrNull("")).toBeNull();
+  expect(parseDateOrNull("invalid")).toBeNull();
+  expect(ceilDaysUntil(new Date("2026-09-12T12:00:00Z"), new Date("2026-09-10T13:00:00Z"))).toBe(2);
 });

@@ -24,7 +24,9 @@ export function buildPostingCandidatePool(
   rawPostings.forEach((raw, index) => {
     const parsed = postingSchema.safeParse(raw);
     if (!parsed.success) {
-      const issues = parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ");
+      const issues = parsed.error.issues
+        .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+        .join("; ");
       validationErrors.push(`공고 ${index + 1} 스키마 오류: ${issues}`);
       return;
     }
@@ -51,7 +53,9 @@ export function buildPostingCandidatePool(
 }
 
 export function loadPostingCandidatePool(path: string): PostingCandidatePool {
-  const parsed = postingCandidatePoolSchema.safeParse(JSON.parse(readFileSync(path, "utf8")) as unknown);
+  const parsed = postingCandidatePoolSchema.safeParse(
+    JSON.parse(readFileSync(path, "utf8")) as unknown,
+  );
   if (!parsed.success) {
     const issues = parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`);
     throw new Error(`공고 후보풀 검증 실패:\n- ${issues.join("\n- ")}`);

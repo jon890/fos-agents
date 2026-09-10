@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
 import { fillTemplate, fragment } from "./template.ts";
-import { loadRenderAssets, readTemplateParts } from "./render_assets.ts";
-import { formatSeoulDisplayTime } from "../lib/date-format.ts";
-import { renderRecommendationHtml } from "./recommendation_html.ts";
-import { renderCandidatePreview } from "./candidate_preview_html.ts";
-import { run, pool } from "./render_fixture.ts";
+import { loadRenderAssets, readTemplateParts } from "./assets.ts";
+import { formatSeoulDisplayTime } from "../../lib/date-format.ts";
+import { renderRecommendationHtml } from "./recommendation-html.ts";
+import { renderCandidatePreview } from "./candidate-preview-html.ts";
+import { run, pool } from "./fixture.ts";
 
 test("텍스트와 신뢰된 조각을 구분하고 데이터 속 슬롯은 한 번만 치환한다", () => {
   expect(

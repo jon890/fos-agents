@@ -1,9 +1,9 @@
-import type { PostingCandidatePool } from "./live-postings/contracts.ts";
+import type { PostingCandidatePool } from "../live-postings/contracts.ts";
 import type {
   PositionItemType,
   RecommendationRunType,
   UpsideAxisJudgmentType,
-} from "./recommendation_schema.ts";
+} from "../recommendation/schema.ts";
 import { fragment, type RenderAssets } from "./template.ts";
 
 type PreviewTier = "강력 추천" | "도전 추천" | "보류·주의" | "전체 후보";

@@ -19,19 +19,39 @@ career-os는 사람이 관리하는 설정, 실행 상태, 비공개 산출물, 
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "exclusions": [
-    { "source": "wanted", "identityHash": "wanted:example-id" }
+    {
+      "scope": "posting",
+      "source": "wanted",
+      "identityHash": "wanted:example-id",
+      "decisionKind": "career-downside",
+      "reason": "현재 직장보다 나아지는 축이 없고 문제의 난도가 낮다.",
+      "axes": [
+        { "axis": "문제의 난도", "direction": "하향", "reason": "공고 근거" },
+        { "axis": "오너십과 파는 깊이", "direction": "확인 필요", "reason": "정보 없음" },
+        { "axis": "도메인 확장 여지", "direction": "동일", "reason": "공고 근거" },
+        { "axis": "보상", "direction": "확인 필요", "reason": "정보 없음" }
+      ],
+      "evidenceUrls": ["https://example.com/jobs/example-id"],
+      "decidedAt": "2026-09-10"
+    }
   ]
 }
 ```
 
-각 규칙은 정식 `source`와 `identityHash`, HTTPS `url` 중 하나 이상을 가진다.
-같은 소스에서 식별자나 정규화 URL 중 하나가 일치하면 제외한다.
+공고 규칙은 정식 `source`와 `identityHash`, HTTPS `url` 중 하나 이상을 가진다.
+회사 규칙은 `scope: company`와 정확한 회사명, 회사 전체 판단에 사용하는 공개 근거 URL을 두 개 이상 가진다.
+같은 소스에서 식별자나 정규화 URL 중 하나가 일치하거나 회사명이 정확히 일치하면 제외한다.
 URL은 fragment, `utm_*`, `fbclid`, `gclid`를 제거하고 query 순서와 마지막 슬래시를 정규화한다.
 공고 ID를 담는 query는 보존한다.
-회사명, 직무명, 지원 결과, 기간과 와일드카드는 규칙 필드로 허용하지 않는다.
 새 ID로 등록된 공고는 명시된 식별자나 URL이 일치하지 않으면 유지한다.
+
+`career-downside` 규칙은 네 업사이드 축을 모두 기록한다.
+`상향`이 하나도 없고 `하향`이 하나 이상일 때만 저장한다.
+정보 부족, 단순 보류와 낮은 추천 순위는 자동 제외 근거가 아니다.
+지원 결과처럼 업사이드 비교와 다른 이유는 `manual`로 기록한다.
+버전 1의 기존 공고 규칙은 읽을 수 있지만 새 규칙은 이유와 결정 근거가 있는 버전 2로 저장한다.
 
 수집기는 설정을 외부 요청 전에 읽고, 누락이나 형식 오류가 있으면 종료 코드 1로 중단한다.
 규칙이 필요 없는 환경은 사람이 확인한 `exclusions: []`를 명시한다.
@@ -188,7 +208,7 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 ### 실행 중 생성되는 포지션 추천 데이터
 
 모델이 임시 후보풀에서 선별한 실행별 추천 결과다.
-형식은 `scripts/position-recommender/recommendation_schema.ts`가 검증한다.
+형식은 `scripts/position-recommender/recommendation/schema.ts`가 검증한다.
 
 핵심 필드:
 
@@ -196,6 +216,7 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 - 추천 공고 목록
 - 공고별 지원 판단과 근거
 - 요구사항 대비 확인된 강점과 위험
+- 다음 수집부터 적용할 자동 제외 제안
 - 후보풀 전체의 적합도 순위와 공개 가능한 한 줄 판단
 - 공고별 현재 직장 대비 업사이드 판정
 - 다음 행동
@@ -218,11 +239,11 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 공고별 `applications/<company>/<position>/`는 세 층으로 나뉜다.
 파일이 어느 층에 있는지가 누가 그 파일을 여는지를 정한다.
 
-| 층 | 여는 주체 | 담는 것 |
-| --- | --- | --- |
-| 디렉터리 최상위 | 사용자 | `application-package.html`과 현재 공고가 요구하는 제출 PDF |
-| `evidence/` | skill과 사람 | 기준 원본 Markdown과 구조화 입력 |
-| `review/` | 검증기 | 근거 장부, 점수표, manifest와 제출 문서 HTML |
+| 층              | 여는 주체    | 담는 것                                                    |
+| --------------- | ------------ | ---------------------------------------------------------- |
+| 디렉터리 최상위 | 사용자       | `application-package.html`과 현재 공고가 요구하는 제출 PDF |
+| `evidence/`     | skill과 사람 | 기준 원본 Markdown과 구조화 입력                           |
+| `review/`       | 검증기       | 근거 장부, 점수표, manifest와 제출 문서 HTML               |
 
 ### 최상위
 
@@ -273,19 +294,19 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 표의 열은 `공고 항목`, `공고 구분`, `근거`, `판정` 넷이다.
 `공고 구분`은 `주요 업무`, `기대 경험`, `우대 경험` 중 하나다.
 
-| 판정 | 점수 | 기준 |
-| --- | --- | --- |
-| `확인됨` | 100 | 제출 문장으로 쓸 직접 근거가 있다 |
-| `강한 인접` | 75 | 같은 문제 유형을 다뤘고 연결을 설명할 필요가 거의 없다 |
-| `인접 경험` | 50 | 전환할 수 있지만 왜 같은 문제인지 설명해야 한다 |
-| `공백` | 0 | 직접 근거가 없다 |
-| `사용자 확인` | 계산 제외 | 후보자만 확정할 수 있어 아직 판정할 수 없다 |
+| 판정          | 점수      | 기준                                                   |
+| ------------- | --------- | ------------------------------------------------------ |
+| `확인됨`      | 100       | 제출 문장으로 쓸 직접 근거가 있다                      |
+| `강한 인접`   | 75        | 같은 문제 유형을 다뤘고 연결을 설명할 필요가 거의 없다 |
+| `인접 경험`   | 50        | 전환할 수 있지만 왜 같은 문제인지 설명해야 한다        |
+| `공백`        | 0         | 직접 근거가 없다                                       |
+| `사용자 확인` | 계산 제외 | 후보자만 확정할 수 있어 아직 판정할 수 없다            |
 
 | 공고 구분 | 가중치 |
-| --- | --- |
-| 주요 업무 | 3 |
-| 기대 경험 | 2 |
-| 우대 경험 | 1 |
+| --------- | ------ |
+| 주요 업무 | 3      |
+| 기대 경험 | 2      |
+| 우대 경험 | 1      |
 
 총점은 `Σ(점수 × 가중치) ÷ Σ(100 × 가중치) × 100`이며 소수 첫째 자리까지 남긴다.
 구분별 소계는 같은 식을 그 구분의 행에만 적용한다.
@@ -296,13 +317,13 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 
 검토 화면은 총점과 구분별 소계를 색이 있는 원으로 표시한다.
 
-| 점수 구간 | 색 |
-| --- | --- |
-| 85 이상 | 진한 초록 |
-| 65 이상 85 미만 | 초록 |
-| 45 이상 65 미만 | 노랑 |
-| 25 이상 45 미만 | 주황 |
-| 25 미만 | 빨강 |
+| 점수 구간       | 색        |
+| --------------- | --------- |
+| 85 이상         | 진한 초록 |
+| 65 이상 85 미만 | 초록      |
+| 45 이상 65 미만 | 노랑      |
+| 25 이상 45 미만 | 주황      |
+| 25 미만         | 빨강      |
 
 `evidence/application-package.md`의 준비 상태는 `ready`, `needs_user_input`, `revise`, `do_not_apply` 중 하나다.
 이 상태는 합격 가능성 점수가 아니라 현재 근거와 사용자 확인을 기준으로 한 제출 준비 상태다.
@@ -441,13 +462,13 @@ HTML report의 counts는 `activeSources`를 `GET /sources`의 enabled 소스 수
 career-os가 해석하는 archive cursor의 내부 형태는 아래처럼 adapter별로 제한한다.
 이 값은 API에는 opaque JSON으로 저장되며, 서버는 내용을 해석하지 않는다.
 
-| adapter | mode | cursor 예시 | 의미 |
-| --- | --- | --- | --- |
-| `feed` | `recent` | `{"lastSeen":["url:..."],"fetchedAt":"2026-09-07T00:00:00.000Z"}` | 최근 피드 중 이미 본 정규 URL 키 |
-| `page` | `archive` | `{"sitemapIndexUrl":"https://.../sitemap-index.xml","indexDigest":"sha256:...","pendingSitemaps":["https://.../post-sitemap.xml"],"completedSitemaps":[],"currentSitemap":null,"lastUrl":null,"done":false}` | sitemap index 기반 과거 URL 탐색 위치 |
-| `page` | `archive` | `{"sitemapUrl":"https://tech.kakao.com/sitemap.xml","sitemapDigest":"sha256:...","onlyPathPrefix":"/posts/","lastUrl":"https://...","done":false}` | 단일 sitemap에서 posts URL만 읽은 위치 |
-| `youtube` | `archive` | `{"uploadsPlaylistId":"UU...","pageToken":"...","pendingVideoIds":[],"apiKeyRequired":true,"done":false}` | YouTube Data API uploads playlist 페이지 안의 남은 영상 |
-| `youtube` | `recent` | `{"rssOnly":true,"lastSeen":["youtube:..."]}` | API 키가 없어 RSS 최근 영상만 수집한 상태 |
+| adapter   | mode      | cursor 예시                                                                                                                                                                                                  | 의미                                                    |
+| --------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------- |
+| `feed`    | `recent`  | `{"lastSeen":["url:..."],"fetchedAt":"2026-09-07T00:00:00.000Z"}`                                                                                                                                            | 최근 피드 중 이미 본 정규 URL 키                        |
+| `page`    | `archive` | `{"sitemapIndexUrl":"https://.../sitemap-index.xml","indexDigest":"sha256:...","pendingSitemaps":["https://.../post-sitemap.xml"],"completedSitemaps":[],"currentSitemap":null,"lastUrl":null,"done":false}` | sitemap index 기반 과거 URL 탐색 위치                   |
+| `page`    | `archive` | `{"sitemapUrl":"https://tech.kakao.com/sitemap.xml","sitemapDigest":"sha256:...","onlyPathPrefix":"/posts/","lastUrl":"https://...","done":false}`                                                           | 단일 sitemap에서 posts URL만 읽은 위치                  |
+| `youtube` | `archive` | `{"uploadsPlaylistId":"UU...","pageToken":"...","pendingVideoIds":[],"apiKeyRequired":true,"done":false}`                                                                                                    | YouTube Data API uploads playlist 페이지 안의 남은 영상 |
+| `youtube` | `recent`  | `{"rssOnly":true,"lastSeen":["youtube:..."]}`                                                                                                                                                                | API 키가 없어 RSS 최근 영상만 수집한 상태               |
 
 sitemap index cursor의 `currentSitemapDigest`는 처리 중인 sitemap 본문 변경을 감지한다.
 큰 목록을 축약하면 `pendingSitemapsTrimmed:true`와 누적 `completedSitemapCount`로 같은 index에서 남은 목록을 다시 계산한다.

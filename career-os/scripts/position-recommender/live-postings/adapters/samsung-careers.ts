@@ -49,7 +49,10 @@ interface SamsungDetailResponse {
   };
 }
 
-async function fetchText(url: string, init?: RequestInit): Promise<{ ok: boolean; status: number; text: string }> {
+async function fetchText(
+  url: string,
+  init?: RequestInit,
+): Promise<{ ok: boolean; status: number; text: string }> {
   const r = await fetch(url, {
     ...init,
     headers: {
@@ -78,7 +81,7 @@ function stripHtml(html: string): string {
       html
         .replace(/<script[\s\S]*?<\/script>/gi, " ")
         .replace(/<style[\s\S]*?<\/style>/gi, " ")
-        .replace(/<[^>]+>/g, " ")
+        .replace(/<[^>]+>/g, " "),
     ),
     3000,
   );
@@ -93,7 +96,10 @@ function parseListItems(html: string): SamsungListItem[] {
     const dataValue = block.match(/data-value="([0-9,]+)"/)?.[1]?.replace(",", "");
     const company = cleanDetail(block.match(/<p class="company">([\s\S]*?)<\/p>/)?.[1] ?? "", 120);
     const title = cleanDetail(block.match(/<h3 class="title">([\s\S]*?)<\/h3>/)?.[1] ?? "", 180);
-    const period = cleanDetail(block.match(/<span class="period">([\s\S]*?)<\/span>/)?.[1] ?? "", 120);
+    const period = cleanDetail(
+      block.match(/<span class="period">([\s\S]*?)<\/span>/)?.[1] ?? "",
+      120,
+    );
     const tags = [...block.matchAll(/<span class="flag grey">([\s\S]*?)<\/span>/g)]
       .map((m) => cleanDetail(m[1], 80))
       .filter(Boolean);
@@ -102,7 +108,9 @@ function parseListItems(html: string): SamsungListItem[] {
   return items;
 }
 
-async function fetchList(companyCode: string): Promise<{ ok: boolean; status: number; items: SamsungListItem[] }> {
+async function fetchList(
+  companyCode: string,
+): Promise<{ ok: boolean; status: number; items: SamsungListItem[] }> {
   const body = new URLSearchParams({
     currentPageNo: "1",
     intNo: "0",
@@ -141,12 +149,27 @@ function normalizeDate(raw: string | undefined): string {
 }
 
 function skillsFromText(text: string): string[] {
-  const skills = ["Java", "Kotlin", "Spring", "Backend", "Server", "Cloud", "Kubernetes", "AI", "Data", "Platform", "Infra"];
+  const skills = [
+    "Java",
+    "Kotlin",
+    "Spring",
+    "Backend",
+    "Server",
+    "Cloud",
+    "Kubernetes",
+    "AI",
+    "Data",
+    "Platform",
+    "Infra",
+  ];
   const low = text.toLowerCase();
   return skills.filter((skill) => low.includes(skill.toLowerCase())).slice(0, 12);
 }
 
-function postingFromDetail(listItem: SamsungListItem, detail: SamsungDetailResponse | null): Posting | null {
+function postingFromDetail(
+  listItem: SamsungListItem,
+  detail: SamsungDetailResponse | null,
+): Posting | null {
   const result = detail?.data?.result;
   const items = detail?.data?.items ?? [];
   const title = norm(result?.title) || listItem.title;
@@ -155,16 +178,30 @@ function postingFromDetail(listItem: SamsungListItem, detail: SamsungDetailRespo
     result?.introKr,
     result?.qlfctKr,
     result?.processKr,
-    ...items.flatMap((item) => [item.titleKr, item.taskKr, item.qlfctKr, item.favorKr, item.memoKr, item.workPlaceKr]),
-  ].map((v) => cleanDetail(v, 1200)).filter(Boolean).join(" ");
+    ...items.flatMap((item) => [
+      item.titleKr,
+      item.taskKr,
+      item.qlfctKr,
+      item.favorKr,
+      item.memoKr,
+      item.workPlaceKr,
+    ]),
+  ]
+    .map((v) => cleanDetail(v, 1200))
+    .filter(Boolean)
+    .join(" ");
   const fullText = `${company} ${title} ${listItem.tags.join(" ")} ${detailText}`;
 
   if (isContractRole(fullText)) return null;
   if (isNonTargetTitle(title)) return null;
   if (!isTargetRole(fullText)) return null;
 
-  const mainItem = items.find((item) => isTargetRole(`${item.titleKr ?? ""} ${item.taskKr ?? ""}`)) ?? items[0];
-  const due = normalizeDate(result?.enddate) || listItem.period.match(/~\s*([0-9.]+)/)?.[1]?.replace(/\./g, "-") || "";
+  const mainItem =
+    items.find((item) => isTargetRole(`${item.titleKr ?? ""} ${item.taskKr ?? ""}`)) ?? items[0];
+  const due =
+    normalizeDate(result?.enddate) ||
+    listItem.period.match(/~\s*([0-9.]+)/)?.[1]?.replace(/\./g, "-") ||
+    "";
   return {
     source: "samsung-careers",
     discoveryMode: "official-listing",

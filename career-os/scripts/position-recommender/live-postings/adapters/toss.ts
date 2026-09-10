@@ -17,10 +17,7 @@ const TOSS_HOST = "https://toss.im";
 const TOSS_POSTS_API =
   "https://api-public.toss.im/api-public/v3/ipd-thor/api/v1/workspaces/13/posts";
 const TOSS_JOB_GROUPS_API = "https://api-public.toss.im/api/v3/ipd-eggnog/career/job-groups";
-const TOSS_FEED_URLS = [
-  "https://toss.im/career/jobs",
-  "https://toss.im/career",
-];
+const TOSS_FEED_URLS = ["https://toss.im/career/jobs", "https://toss.im/career"];
 const TOSS_MAX_POST_PAGES = 5;
 const TOSS_MAX_ARTICLES = 25;
 const TOSS_MAX_JOB_DETAILS = 80;
@@ -28,32 +25,91 @@ const TOSS_MAX_JOB_DETAILS = 80;
 // Employment types excluded for Toss (contract/intern/freelance). Kept separate from the
 // shared CONTRACT_KEYWORDS so the Wanted adapter's filtering is left unchanged.
 const TOSS_EXCLUDE_EMPLOYMENT = [
-  ...CONTRACT_KEYWORDS, "intern", "인턴", "internship", "체험형", "현장실습",
+  ...CONTRACT_KEYWORDS,
+  "intern",
+  "인턴",
+  "internship",
+  "체험형",
+  "현장실습",
 ];
 const TOSS_TARGET_TITLE_KEYWORDS = [
-  "backend", "백엔드", "server", "서버", "node.js", "nodejs", "java", "spring", "kotlin",
+  "backend",
+  "백엔드",
+  "server",
+  "서버",
+  "node.js",
+  "nodejs",
+  "java",
+  "spring",
+  "kotlin",
   // AI/Platform/Infra titles — downstream isTargetRole() still filters out pure research/DS roles
-  "ai", "agent", "llm", "platform", "플랫폼", "infra", "sre", "devops",
+  "ai",
+  "agent",
+  "llm",
+  "platform",
+  "플랫폼",
+  "infra",
+  "sre",
+  "devops",
 ];
 
 const TOSS_APPLY_EVIDENCE_KEYS = [
-  "applyType", "apply_type", "applyUrl", "apply_url", "applyLink", "apply_link",
-  "requisitionId", "requisition_id", "applicationForm", "application_form",
-  "greenhouseId", "ashbyId", "applyButton",
+  "applyType",
+  "apply_type",
+  "applyUrl",
+  "apply_url",
+  "applyLink",
+  "apply_link",
+  "requisitionId",
+  "requisition_id",
+  "applicationForm",
+  "application_form",
+  "greenhouseId",
+  "ashbyId",
+  "applyButton",
 ];
 const TOSS_TITLE_KEYS = ["title", "jobTitle", "positionName", "position", "name", "subject"];
 const TOSS_CONTENT_KEYS = [
-  "description", "jobDescription", "content", "body", "detail", "responsibilities",
-  "mainTasks", "main_tasks", "requirements", "qualifications", "preferred",
-  "preferredPoints", "preferred_points", "recommended",
+  "description",
+  "jobDescription",
+  "content",
+  "body",
+  "detail",
+  "responsibilities",
+  "mainTasks",
+  "main_tasks",
+  "requirements",
+  "qualifications",
+  "preferred",
+  "preferredPoints",
+  "preferred_points",
+  "recommended",
 ];
 const TOSS_EMPLOYMENT_KEYS = [
-  "employmentType", "employment_type", "jobType", "job_type", "contractType",
-  "contract_type", "employeeType", "employee_type", "workType", "hireType",
+  "employmentType",
+  "employment_type",
+  "jobType",
+  "job_type",
+  "contractType",
+  "contract_type",
+  "employeeType",
+  "employee_type",
+  "workType",
+  "hireType",
 ];
 const TOSS_DEADLINE_KEYS = [
-  "dueDate", "due_date", "deadline", "closingDate", "closing_date", "closesAt",
-  "closes_at", "endDate", "end_date", "applicationDeadline", "dueTime", "due_time",
+  "dueDate",
+  "due_date",
+  "deadline",
+  "closingDate",
+  "closing_date",
+  "closesAt",
+  "closes_at",
+  "endDate",
+  "end_date",
+  "applicationDeadline",
+  "dueTime",
+  "due_time",
 ];
 const TOSS_DEPARTMENT_KEYS = ["department", "team", "organization", "group", "jobCategory"];
 
@@ -136,7 +192,9 @@ async function collectTossPostApiJobIds(maxPages = TOSS_MAX_POST_PAGES): Promise
   for (let page = 1; page <= maxPages; page++) {
     const res = await tossFetch(`${TOSS_POSTS_API}?page=${page}`);
     if (!res.ok) break;
-    const data = JSON.parse(res.text) as { success?: { results?: unknown[]; next?: string | null } };
+    const data = JSON.parse(res.text) as {
+      success?: { results?: unknown[]; next?: string | null };
+    };
     const results = data.success?.results ?? [];
     articleCount += results.length;
     for (const raw of results) {
@@ -213,7 +271,8 @@ function deepHasKey(node: unknown, keys: string[]): boolean {
     } else if (cur && typeof cur === "object") {
       for (const [k, v] of Object.entries(cur as Record<string, unknown>)) {
         if (wanted.has(k.toLowerCase())) {
-          if (v !== null && v !== "" && v !== false && !(Array.isArray(v) && v.length === 0)) return true;
+          if (v !== null && v !== "" && v !== false && !(Array.isArray(v) && v.length === 0))
+            return true;
         }
         stack.push(v);
       }
@@ -231,7 +290,9 @@ function parseNestedJsonStrings(node: unknown, limit = 30): unknown[] {
       const value = cur.trim();
       if (
         value.startsWith("{") &&
-        (value.includes('"applyType"') || value.includes('"requisitionId"') || value.includes('"description"'))
+        (value.includes('"applyType"') ||
+          value.includes('"requisitionId"') ||
+          value.includes('"description"'))
       ) {
         try {
           out.push(JSON.parse(value));
@@ -274,7 +335,10 @@ function deepHasKeyAny(roots: unknown[], keys: string[]): boolean {
 }
 
 function htmlMeta(html: string, prop: string): string {
-  const re = new RegExp(`<meta[^>]+(?:property|name)=["']${prop}["'][^>]*content=["']([^"']+)["']`, "i");
+  const re = new RegExp(
+    `<meta[^>]+(?:property|name)=["']${prop}["'][^>]*content=["']([^"']+)["']`,
+    "i",
+  );
   const m = html.match(re);
   return m ? cleanDetail(m[1]) : "";
 }
@@ -283,7 +347,11 @@ function htmlTitle(html: string): string {
   const og = htmlMeta(html, "og:title");
   if (og) return og;
   const m = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-  return m ? cleanDetail(m[1]).replace(/\s*[|\-–]\s*토스.*$/, "").trim() : "";
+  return m
+    ? cleanDetail(m[1])
+        .replace(/\s*[|\-–]\s*토스.*$/, "")
+        .trim()
+    : "";
 }
 
 function tossMetadata(job: TossJob, needles: string[]): string {
@@ -323,7 +391,9 @@ function tossSearchText(job: TossJob): string {
   return [
     tossMetadata(job, ["외부 노출용 키워드", "Keywords"]),
     tossMetadata(job, ["검색에 쓰일 키워드", "SearchKeywords"]),
-  ].filter(Boolean).join(" ");
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 function tossHiddenForList(job: TossJob): boolean {
@@ -340,14 +410,15 @@ function tossRoleSpecificityReject(company: string, title: string, content: stri
   }
 
   const isTossRootCompany = normalizedCompany === "토스" || normalizedCompany === "toss";
-  const isGenericServerDeveloper = /^server developer(?:\s*\([^)]+\)|\s*\[[^\]]+\].*)?$/i.test(normalizedTitle);
+  const isGenericServerDeveloper = /^server developer(?:\s*\([^)]+\)|\s*\[[^\]]+\].*)?$/i.test(
+    normalizedTitle,
+  );
   if (isTossRootCompany && isGenericServerDeveloper) {
     return "generic_toss_server_chapter";
   }
 
   return null;
 }
-
 
 /**
  * Parse Korean/English section headings from a Toss JD content blob.
@@ -359,9 +430,12 @@ function parseTossJDSections(content: string): {
   requirements: string;
   preferred: string;
 } {
-  const TASK_RE = /(?:담당\s*업무|주요\s*업무|하게\s*될\s*일|합류하면\s*함께\s*할|합류하게\s*되면|Responsibilities?)/i;
-  const REQ_RE = /(?:지원\s*자격|지원자격|필수\s*요건|자격\s*요건|필요\s*역량|이런\s*분이\s*필요해요|이런\s*분을\s*찾습니다|이런\s*경험이\s*있다면|Requirements?|What\s+we\s+look\s+for|Qualifications?)/i;
-  const PREF_RE = /(?:우대\s*사항|우대사항|선호\s*역량|이런\s*경험이\s*있으면\s*더|있으면\s*더\s*좋은|Preferred)/i;
+  const TASK_RE =
+    /(?:담당\s*업무|주요\s*업무|하게\s*될\s*일|합류하면\s*함께\s*할|합류하게\s*되면|Responsibilities?)/i;
+  const REQ_RE =
+    /(?:지원\s*자격|지원자격|필수\s*요건|자격\s*요건|필요\s*역량|이런\s*분이\s*필요해요|이런\s*분을\s*찾습니다|이런\s*경험이\s*있다면|Requirements?|What\s+we\s+look\s+for|Qualifications?)/i;
+  const PREF_RE =
+    /(?:우대\s*사항|우대사항|선호\s*역량|이런\s*경험이\s*있으면\s*더|있으면\s*더\s*좋은|Preferred)/i;
 
   const taskM = TASK_RE.exec(content);
   const reqM = REQ_RE.exec(content);
@@ -380,15 +454,21 @@ function parseTossJDSections(content: string): {
     from < 0 || to <= from ? "" : cleanDetail(content.slice(from, to), limit);
 
   return {
-    mainTasks: taskContentStart >= 0
-      ? slice(taskContentStart, Math.min(reqHeadStart, prefHeadStart), 900)
-      : cleanDetail(content, 900),
-    requirements: reqContentStart >= 0 ? slice(reqContentStart, prefHeadStart, 900) : cleanDetail(content, 900),
+    mainTasks:
+      taskContentStart >= 0
+        ? slice(taskContentStart, Math.min(reqHeadStart, prefHeadStart), 900)
+        : cleanDetail(content, 900),
+    requirements:
+      reqContentStart >= 0 ? slice(reqContentStart, prefHeadStart, 900) : cleanDetail(content, 900),
     preferred: prefContentStart >= 0 ? slice(prefContentStart, content.length, 500) : "",
   };
 }
 
-function postingFromTossApiJob(group: TossJobGroup, job: TossJob, targetRoleOnly: boolean): TossParse {
+function postingFromTossApiJob(
+  group: TossJobGroup,
+  job: TossJob,
+  targetRoleOnly: boolean,
+): TossParse {
   const id = job.id ?? group.id;
   const title = norm(job.title ?? group.title);
   const content = tossJobDescription(job);
@@ -440,13 +520,18 @@ async function collectTossJobGroups(targetRoleOnly: boolean): Promise<{
   const reject = (reason: string) => {
     rejected[reason] = (rejected[reason] ?? 0) + 1;
   };
-  const data = await tossJson(TOSS_JOB_GROUPS_API) as { success?: TossJobGroup[] };
+  const data = (await tossJson(TOSS_JOB_GROUPS_API)) as { success?: TossJobGroup[] };
   const groups = data.success ?? [];
   const postings: Posting[] = [];
   let totalJobs = 0;
 
   for (const group of groups) {
-    const jobs = group.jobs && group.jobs.length > 0 ? group.jobs : group.primary_job ? [group.primary_job] : [];
+    const jobs =
+      group.jobs && group.jobs.length > 0
+        ? group.jobs
+        : group.primary_job
+          ? [group.primary_job]
+          : [];
     for (const job of jobs) {
       totalJobs++;
       const parsed = postingFromTossApiJob(group, job, targetRoleOnly);
@@ -463,11 +548,7 @@ interface TossParse {
   reject?: string;
 }
 
-function parseTossJobDetail(
-  url: string,
-  res: TossFetchResult,
-  targetRoleOnly: boolean
-): TossParse {
+function parseTossJobDetail(url: string, res: TossFetchResult, targetRoleOnly: boolean): TossParse {
   if (!res.ok) return { reject: "http" };
   const html = res.text;
   const data = extractNextData(html);
@@ -481,7 +562,7 @@ function parseTossJobDetail(
     // HTML fallback: strip scripts/styles/tags and keep the visible body text.
     content = cleanDetail(
       html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " "),
-      4000
+      4000,
     );
   }
 
@@ -500,7 +581,8 @@ function parseTossJobDetail(
   if (specificityReject) return { reject: specificityReject };
 
   if (targetRoleOnly && isNonTargetTitle(title)) return { reject: "not_target_role" };
-  if (targetRoleOnly && !hasKeyword(title, TOSS_TARGET_TITLE_KEYWORDS)) return { reject: "not_target_title" };
+  if (targetRoleOnly && !hasKeyword(title, TOSS_TARGET_TITLE_KEYWORDS))
+    return { reject: "not_target_title" };
   if (targetRoleOnly && !isTargetRole(fullText)) return { reject: "not_target_role" };
 
   const department = deepFindStringAny(roots, TOSS_DEPARTMENT_KEYS);
@@ -526,9 +608,15 @@ function parseTossJobDetail(
       tags: classify(fullText),
       skills: [],
       dueTime: due,
-      mainTasks: deepFindStringAny(roots, ["responsibilities", "mainTasks", "main_tasks", "role"]) || parseTossJDSections(content).mainTasks,
-      requirements: deepFindStringAny(roots, ["requirements", "qualifications"]) || parseTossJDSections(content).requirements,
-      preferred: deepFindStringAny(roots, ["preferred", "preferredPoints", "preferred_points"]) || parseTossJDSections(content).preferred,
+      mainTasks:
+        deepFindStringAny(roots, ["responsibilities", "mainTasks", "main_tasks", "role"]) ||
+        parseTossJDSections(content).mainTasks,
+      requirements:
+        deepFindStringAny(roots, ["requirements", "qualifications"]) ||
+        parseTossJDSections(content).requirements,
+      preferred:
+        deepFindStringAny(roots, ["preferred", "preferredPoints", "preferred_points"]) ||
+        parseTossJDSections(content).preferred,
     },
   };
 }
@@ -627,7 +715,13 @@ export const tossAdapter: SourceAdapter = {
       postings: out,
       diagnostics: {
         source: "toss-careers",
-        status: rejected.http || rejected.post_api_http || rejected.feed_http || rejected.job_groups_api_http ? "partial" : "ok",
+        status:
+          rejected.http ||
+          rejected.post_api_http ||
+          rejected.feed_http ||
+          rejected.job_groups_api_http
+            ? "partial"
+            : "ok",
         collectedCount: out.length,
         skippedCount,
         failedCount:

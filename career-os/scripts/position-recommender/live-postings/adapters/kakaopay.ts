@@ -41,11 +41,11 @@ async function fetchHtml(url: string): Promise<{ ok: boolean; status: number; te
 
 async function fetchJson<T>(url: string): Promise<T> {
   const r = await fetch(url, {
-    headers: { "User-Agent": UA, "Accept": "application/json", "Accept-Language": "ko-KR,ko;q=0.9" },
+    headers: { "User-Agent": UA, Accept: "application/json", "Accept-Language": "ko-KR,ko;q=0.9" },
     signal: AbortSignal.timeout(20_000),
   });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  return await r.json() as T;
+  return (await r.json()) as T;
 }
 
 function absoluteUrl(pathOrUrl: string): string {
@@ -73,34 +73,55 @@ function htmlText(html: string): string {
       .replace(/<script[\s\S]*?<\/script>/gi, " ")
       .replace(/<style[\s\S]*?<\/style>/gi, " ")
       .replace(/<[^>]+>/g, " "),
-    6000
+    6000,
   );
 }
 
 function skillsFromText(text: string): string[] {
-  const skills = ["Java", "Kotlin", "Spring", "Spring Boot", "JPA", "MySQL", "Kafka", "RabbitMQ", "AWS", "Kubernetes", "Python", "TypeScript", "LLM", "MLOps"];
+  const skills = [
+    "Java",
+    "Kotlin",
+    "Spring",
+    "Spring Boot",
+    "JPA",
+    "MySQL",
+    "Kafka",
+    "RabbitMQ",
+    "AWS",
+    "Kubernetes",
+    "Python",
+    "TypeScript",
+    "LLM",
+    "MLOps",
+  ];
   const low = text.toLowerCase();
   return skills.filter((skill) => low.includes(skill.toLowerCase())).slice(0, 12);
 }
 
 function externalApplyUrl(text: string): string {
-  const href = text.match(/href=["'](https:\/\/kakaopay\.career\.greetinghr\.com\/ko\/o\/[0-9]+)["']/i)?.[1];
+  const href = text.match(
+    /href=["'](https:\/\/kakaopay\.career\.greetinghr\.com\/ko\/o\/[0-9]+)["']/i,
+  )?.[1];
   if (href) return href;
   return text.match(/https:\/\/kakaopay\.career\.greetinghr\.com\/ko\/o\/[0-9]+/i)?.[0] ?? "";
 }
 
 function isActiveKakaoCareersJob(job: KakaoCareersJob): boolean {
-  return job.companyCodeId === "kpay" &&
+  return (
+    job.companyCodeId === "kpay" &&
     job.statusCode === "PROGRESS" &&
     job.closeFlag === false &&
     job.notApplyFlag === false &&
-    !isContractRole(job.employeeTypeName);
+    !isContractRole(job.employeeTypeName)
+  );
 }
 
 async function fetchKakaoPayJobs(): Promise<KakaoCareersJob[]> {
   const jobs: KakaoCareersJob[] = [];
   for (let page = 1; page <= MAX_KAKAO_CAREERS_PAGES; page++) {
-    const data = await fetchJson<{ jobList?: KakaoCareersJob[] }>(`${KAKAO_CAREERS_LIST_API}&page=${page}`);
+    const data = await fetchJson<{ jobList?: KakaoCareersJob[] }>(
+      `${KAKAO_CAREERS_LIST_API}&page=${page}`,
+    );
     const pageJobs = Array.isArray(data.jobList) ? data.jobList : [];
     jobs.push(...pageJobs.filter(isActiveKakaoCareersJob));
     if (pageJobs.length === 0) break;
@@ -125,7 +146,8 @@ function postingFromKakaoCareersDetail(job: KakaoCareersJob): Posting | null {
     identityHash: `kakaopay:${job.realId}`,
     linkType: "direct_posting",
     postingStatus: "open",
-    activeEvidence: "Kakao Careers API detail confirms PROGRESS, not closed, regular employment, and a direct apply URL",
+    activeEvidence:
+      "Kakao Careers API detail confirms PROGRESS, not closed, regular employment, and a direct apply URL",
     openedAt: job.regDate ?? "",
     ...closeWindow(job.endDate ?? ""),
     category: "기술",
@@ -133,9 +155,19 @@ function postingFromKakaoCareersDetail(job: KakaoCareersJob): Posting | null {
     tags: classify(fullText),
     skills: skillsFromText(fullText),
     dueTime: job.endDate ?? "",
-    mainTasks: cleanDetail(text.match(/업무내용([\s\S]*?)(지원자격|자격요건|필요 역량|우대사항)/)?.[1] ?? text, 650),
-    requirements: cleanDetail(text.match(/(지원자격|자격요건|필요 역량)([\s\S]*?)(우대사항|접수 방법|전형 절차)/)?.[2] ?? "", 650),
-    preferred: cleanDetail(text.match(/우대사항([\s\S]*?)(접수 방법|전형 절차|유의사항)/)?.[1] ?? "", 500),
+    mainTasks: cleanDetail(
+      text.match(/업무내용([\s\S]*?)(지원자격|자격요건|필요 역량|우대사항)/)?.[1] ?? text,
+      650,
+    ),
+    requirements: cleanDetail(
+      text.match(/(지원자격|자격요건|필요 역량)([\s\S]*?)(우대사항|접수 방법|전형 절차)/)?.[2] ??
+        "",
+      650,
+    ),
+    preferred: cleanDetail(
+      text.match(/우대사항([\s\S]*?)(접수 방법|전형 절차|유의사항)/)?.[1] ?? "",
+      500,
+    ),
   };
 }
 
@@ -170,9 +202,20 @@ function postingFromDetail(url: string, html: string): Posting | null {
     tags: classify(fullText),
     skills: skillsFromText(fullText),
     dueTime: isAlwaysOpen ? "" : "",
-    mainTasks: cleanDetail(text.match(/업무내용([\s\S]*?)(필요 역량|지원자격|자격요건|선호 역량|우대사항)/)?.[1] ?? text, 650),
-    requirements: cleanDetail(text.match(/(필요 역량\/경험|지원자격|자격요건)([\s\S]*?)(선호 역량|우대사항|지원 안내)/)?.[2] ?? "", 650),
-    preferred: cleanDetail(text.match(/(선호 역량\/경험|우대사항)([\s\S]*?)(지원 안내|전형 절차|유의사항)/)?.[2] ?? "", 500),
+    mainTasks: cleanDetail(
+      text.match(/업무내용([\s\S]*?)(필요 역량|지원자격|자격요건|선호 역량|우대사항)/)?.[1] ?? text,
+      650,
+    ),
+    requirements: cleanDetail(
+      text.match(
+        /(필요 역량\/경험|지원자격|자격요건)([\s\S]*?)(선호 역량|우대사항|지원 안내)/,
+      )?.[2] ?? "",
+      650,
+    ),
+    preferred: cleanDetail(
+      text.match(/(선호 역량\/경험|우대사항)([\s\S]*?)(지원 안내|전형 절차|유의사항)/)?.[2] ?? "",
+      500,
+    ),
   };
 }
 
@@ -196,7 +239,7 @@ export const kakaopayAdapter: SourceAdapter = {
     for (const listedJob of apiJobs) {
       try {
         const detail = await fetchJson<KakaoCareersJob>(
-          `${KAKAO_CAREERS_DETAIL_API}?id=${encodeURIComponent(listedJob.realId)}&isAvailable=true`
+          `${KAKAO_CAREERS_DETAIL_API}?id=${encodeURIComponent(listedJob.realId)}&isAvailable=true`,
         );
         if (!isActiveKakaoCareersJob(detail)) {
           skippedCount++;
@@ -222,7 +265,9 @@ export const kakaopayAdapter: SourceAdapter = {
         const detail = await fetchHtml(url);
         if (!detail.ok) {
           failedCount++;
-          errors.push(`kakaopay detail ${url.match(/\/o\/[0-9]+/)?.[0] ?? url}: HTTP ${detail.status}`);
+          errors.push(
+            `kakaopay detail ${url.match(/\/o\/[0-9]+/)?.[0] ?? url}: HTTP ${detail.status}`,
+          );
           continue;
         }
         const posting = postingFromDetail(url, detail.text);

@@ -4,7 +4,18 @@ import type { DiscoveryMode, Posting, SourceDiagnostic, SourceId } from "./contr
 
 export type { DiscoveryMode, Posting, SourceDiagnostic, SourceId } from "./contracts.ts";
 
-export type SourceAlias = "toss" | "coupang" | "kakaobank" | "kurly" | "samsung" | "sk" | "cj" | "krafton" | "line" | "daangn" | "woowahan";
+export type SourceAlias =
+  | "toss"
+  | "coupang"
+  | "kakaobank"
+  | "kurly"
+  | "samsung"
+  | "sk"
+  | "cj"
+  | "krafton"
+  | "line"
+  | "daangn"
+  | "woowahan";
 export type SourceSelection = SourceId | SourceAlias | "all";
 
 export interface AdapterOptions {

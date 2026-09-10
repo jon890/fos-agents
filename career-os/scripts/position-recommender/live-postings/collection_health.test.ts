@@ -67,7 +67,11 @@ describe("judgeCollectionHealth 실패 소스 판정", () => {
       importedCount: 0,
       failedCount: 3,
     };
-    const health = judgeCollectionHealth([diagnostic("wanted", "ok"), degraded], 0, SOME_CANDIDATES);
+    const health = judgeCollectionHealth(
+      [diagnostic("wanted", "ok"), degraded],
+      0,
+      SOME_CANDIDATES,
+    );
 
     expect(health.ok).toBe(false);
     expect(health.failedSources).toEqual(["samsung-careers"]);

@@ -11,7 +11,8 @@ import {
 const UA = "Mozilla/5.0 (fos-agents position recommender)";
 const HOST = "https://kurly.career.greetinghr.com";
 const LISTING_URL = `${HOST}/ko/recruiting`;
-const SERVER_TITLE_PATTERN = /\b(?:backend|server|software|devops|sre)\b|백엔드|서버|소프트웨어|플랫폼\s*엔지니어/i;
+const SERVER_TITLE_PATTERN =
+  /\b(?:backend|server|software|devops|sre)\b|백엔드|서버|소프트웨어|플랫폼\s*엔지니어/i;
 
 async function fetchHtml(url: string): Promise<{ ok: boolean; status: number; text: string }> {
   const response = await fetch(url, {
@@ -34,7 +35,9 @@ export function extractKurlyDetailUrls(html: string): string[] {
 }
 
 function htmlTitle(html: string): string {
-  const ogTitle = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i)?.[1];
+  const ogTitle = html.match(
+    /<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i,
+  )?.[1];
   if (ogTitle) return cleanDetail(ogTitle, 160).replace(/\s*[-|]\s*컬리.*$/, "");
   const title = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1];
   return title ? cleanDetail(title, 160).replace(/\s*[-|]\s*컬리.*$/, "") : "";
@@ -46,12 +49,29 @@ function htmlText(html: string): string {
       .replace(/<script[\s\S]*?<\/script>/gi, " ")
       .replace(/<style[\s\S]*?<\/style>/gi, " ")
       .replace(/<[^>]+>/g, " "),
-    6000
+    6000,
   );
 }
 
 function skillsFromText(text: string): string[] {
-  const skills = ["Java", "Kotlin", "Spring", "Spring Boot", "JPA", "MySQL", "Kafka", "Redis", "AWS", "Kubernetes", "Python", "AI", "Agent", "MCP", "SAP", "ERP"];
+  const skills = [
+    "Java",
+    "Kotlin",
+    "Spring",
+    "Spring Boot",
+    "JPA",
+    "MySQL",
+    "Kafka",
+    "Redis",
+    "AWS",
+    "Kubernetes",
+    "Python",
+    "AI",
+    "Agent",
+    "MCP",
+    "SAP",
+    "ERP",
+  ];
   const lower = text.toLowerCase();
   return skills.filter((skill) => lower.includes(skill.toLowerCase())).slice(0, 12);
 }
@@ -64,7 +84,8 @@ export function parseKurlyPosting(url: string, html: string): Posting | null {
   const title = htmlTitle(html);
   const fullText = `${title} ${text}`;
   if (!title || isContractRole(fullText)) return null;
-  if (isNonTargetTitle(title) || !SERVER_TITLE_PATTERN.test(title) || !isTargetRole(fullText)) return null;
+  if (isNonTargetTitle(title) || !SERVER_TITLE_PATTERN.test(title) || !isTargetRole(fullText))
+    return null;
 
   const id = url.match(/\/o\/([0-9]+)/)?.[1] ?? url;
   return {
@@ -85,16 +106,22 @@ export function parseKurlyPosting(url: string, html: string): Posting | null {
     skills: skillsFromText(fullText),
     dueTime: "",
     mainTasks: cleanDetail(
-      text.match(/(?:주요\s*업무|담당\s*업무|업무\s*내용)([\s\S]*?)(?:자격\s*요건|자격요건|지원\s*자격|지원자격|우대\s*사항|우대사항)/)?.[1] ?? text,
-      650
+      text.match(
+        /(?:주요\s*업무|담당\s*업무|업무\s*내용)([\s\S]*?)(?:자격\s*요건|자격요건|지원\s*자격|지원자격|우대\s*사항|우대사항)/,
+      )?.[1] ?? text,
+      650,
     ),
     requirements: cleanDetail(
-      text.match(/(?:자격\s*요건|자격요건|지원\s*자격|지원자격)([\s\S]*?)(?:우대\s*사항|우대사항|합류\s*여정|전형\s*절차|기타\s*사항)/)?.[1] ?? "",
-      650
+      text.match(
+        /(?:자격\s*요건|자격요건|지원\s*자격|지원자격)([\s\S]*?)(?:우대\s*사항|우대사항|합류\s*여정|전형\s*절차|기타\s*사항)/,
+      )?.[1] ?? "",
+      650,
     ),
     preferred: cleanDetail(
-      text.match(/(?:우대\s*사항|우대사항)([\s\S]*?)(?:합류\s*여정|전형\s*절차|기타\s*사항|지원\s*안내)/)?.[1] ?? "",
-      500
+      text.match(
+        /(?:우대\s*사항|우대사항)([\s\S]*?)(?:합류\s*여정|전형\s*절차|기타\s*사항|지원\s*안내)/,
+      )?.[1] ?? "",
+      500,
     ),
   };
 }
@@ -116,7 +143,9 @@ export const kurlyCareersAdapter: SourceAdapter = {
         const detail = await fetchHtml(url);
         if (!detail.ok) {
           failedCount++;
-          errors.push(`kurly-careers detail ${url.match(/\/o\/[0-9]+/)?.[0] ?? url}: HTTP ${detail.status}`);
+          errors.push(
+            `kurly-careers detail ${url.match(/\/o\/[0-9]+/)?.[0] ?? url}: HTTP ${detail.status}`,
+          );
           continue;
         }
         const posting = parseKurlyPosting(url, detail.text);

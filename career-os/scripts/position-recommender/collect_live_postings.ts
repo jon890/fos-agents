@@ -38,8 +38,11 @@ import {
 import { configuredSourceIds, selectAdapters } from "./live-postings/adapters/index.ts";
 import { SOURCE_ALIASES, SOURCE_IDS } from "./live-postings/contracts.ts";
 import { buildPostingCandidatePool } from "./live-postings/candidate_pool.ts";
-import { DEFAULT_MAX_FAILED_SOURCES, judgeCollectionHealth } from "./live-postings/collection_health.ts";
-import { filterExcludedPostings, loadPositionExclusions } from "./live-postings/exclusions.ts";
+import {
+  DEFAULT_MAX_FAILED_SOURCES,
+  judgeCollectionHealth,
+} from "./live-postings/collection_health.ts";
+import { filterExcludedPostings, loadPositionExclusions } from "./feedback/exclusions.ts";
 
 // ---- CLI ----------------------------------------------------------------
 
@@ -91,7 +94,7 @@ export function parseArgs(argv: string[]): CliArgs {
       // 어댑터 목록이 단일 소스다. 여기에 이름을 복제하면 새 소스가 조용히 무시된다.
       if (!KNOWN_SOURCES.has(s)) {
         throw new CliUsageError(
-          `--source ${s} is not a known source. known: ${[...KNOWN_SOURCES].sort().join(", ")}`
+          `--source ${s} is not a known source. known: ${[...KNOWN_SOURCES].sort().join(", ")}`,
         );
       }
       source = s as SourceSelection;
@@ -124,7 +127,9 @@ export function parseArgs(argv: string[]): CliArgs {
   };
 }
 
-function isAdapterCollectionResult(value: Posting[] | AdapterCollectionResult): value is AdapterCollectionResult {
+function isAdapterCollectionResult(
+  value: Posting[] | AdapterCollectionResult,
+): value is AdapterCollectionResult {
   return !Array.isArray(value);
 }
 
@@ -138,7 +143,8 @@ export async function collectLivePostings(
   args: CliArgs,
   adapters = selectAdapters(args.source, args.includeTossArticles),
 ): Promise<number> {
-  const { jsonOut, source, targetRoleOnly, wantedLimit, includeTossArticles, maxFailedSources } = args;
+  const { jsonOut, source, targetRoleOnly, wantedLimit, includeTossArticles, maxFailedSources } =
+    args;
   const exclusions = loadPositionExclusions(args.exclusionsConfig);
   const collected: Posting[] = [];
   const errors: string[] = [];
@@ -192,8 +198,10 @@ export async function collectLivePostings(
   const normalizedDiagnostics = sourceDiagnostics.map((diagnostic) => ({
     ...diagnostic,
     importedCount: importedCounts.get(diagnostic.source) ?? 0,
-    skippedCount: diagnostic.skippedCount + (eligibility.rejectedBySource.get(diagnostic.source) ?? 0)
-      + (personalFilter.rejectedBySource.get(diagnostic.source) ?? 0),
+    skippedCount:
+      diagnostic.skippedCount +
+      (eligibility.rejectedBySource.get(diagnostic.source) ?? 0) +
+      (personalFilter.rejectedBySource.get(diagnostic.source) ?? 0),
   }));
   const collectedAt = new Date().toISOString();
   const diagnostics = {
@@ -206,7 +214,9 @@ export async function collectLivePostings(
     sourceDiagnostics: normalizedDiagnostics,
     errors: [
       ...errors,
-      ...Object.entries(eligibility.rejectedCounts).map(([reason, count]) => `lifecycle:${reason}=${count}`),
+      ...Object.entries(eligibility.rejectedCounts).map(
+        ([reason, count]) => `lifecycle:${reason}=${count}`,
+      ),
     ],
   } satisfies CollectionDiagnostics;
   const { pool, validationErrors } = buildPostingCandidatePool(activePosts, diagnostics);
@@ -221,7 +231,11 @@ export async function collectLivePostings(
   }
   // 후보풀은 위에서 이미 썼다. 사람이 실패 실행의 내용을 열어 볼 수 있어야 하기 때문이다.
   // 종료 코드만 실패로 바꿔 크론과 후속 단계가 이 실행을 정상으로 읽지 않게 한다.
-  const health = judgeCollectionHealth(normalizedDiagnostics, maxFailedSources, pool.candidates.length);
+  const health = judgeCollectionHealth(
+    normalizedDiagnostics,
+    maxFailedSources,
+    pool.candidates.length,
+  );
   for (const warning of health.warnings) {
     console.error(`WARN collection health: ${warning}`);
   }
@@ -233,8 +247,11 @@ export async function collectLivePostings(
 }
 
 if (import.meta.main) {
-  Promise.resolve().then(() => collectLivePostings(parseArgs(process.argv.slice(2)))).then(process.exit).catch((e) => {
-    console.error(e instanceof Error ? e.message : String(e));
-    process.exit(e instanceof CliUsageError ? 2 : 1);
-  });
+  Promise.resolve()
+    .then(() => collectLivePostings(parseArgs(process.argv.slice(2))))
+    .then(process.exit)
+    .catch((e) => {
+      console.error(e instanceof Error ? e.message : String(e));
+      process.exit(e instanceof CliUsageError ? 2 : 1);
+    });
 }
