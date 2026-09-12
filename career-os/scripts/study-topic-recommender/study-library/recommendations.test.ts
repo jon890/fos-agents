@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import type { MorningReadingReport, ReadingCandidatePool } from "../reading_contracts.js";
 import { main } from "../morning_reading_cli.js";
@@ -221,14 +221,12 @@ describe("study-library recommendations CLI", () => {
     const reportPath = join(root, "state", "morning-reading.json");
     writeJson(reportPath, emptyReport());
     writeReportArtifacts({ report: emptyReport(), outputDir: root });
+    // 경로를 이 파일 기준으로 푼다. 저장소 루트에서만 맞는 상대 경로였다.
     const validation = spawnSync("bun", [
-      "career-os/scripts/study-topic-recommender/validate_outputs.ts",
+      resolve(import.meta.dir, "../validate_outputs.ts"),
       "--run-dir",
       root,
-    ], {
-      cwd: process.cwd(),
-      encoding: "utf8",
-    });
+    ], { encoding: "utf8" });
     expect(validation.status).toBe(0);
 
     const bodies: unknown[] = [];
