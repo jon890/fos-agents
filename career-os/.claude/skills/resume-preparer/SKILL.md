@@ -33,6 +33,16 @@ bun career-os/scripts/career-workspace/cli.ts skill begin resume-preparer --json
 준비가 성공하면 대상 지원 건의 `evidence/posting.md`와 `evidence/application-package.md`에서 지원 직무와 제출할 문서를 확인한다.
 동기화 오류가 발생하면 [career-os/docs/flow.md](../../../docs/flow.md)의 「비공개 작업 파일의 목표 흐름」에 따라 처리한다.
 
+이어서 이 CLI가 다루지 않는 근거 원본이 원격보다 뒤처졌는지 검사한다.
+단계 2가 private brain을, 단계 5가 `career-os/sources/fos-study/`를 읽으므로 두 원본이 최신이어야 주장 감사가 성립한다.
+
+```bash
+bun "$(git rev-parse --show-toplevel)/career-os/.claude/skills/application-package-writer/scripts/check_evidence_sources.ts"
+```
+
+판단 기준과 판정별 다음 행동은 [근거 원본 최신화 확인](../application-package-writer/references/evidence-source-freshness.md)을 따른다.
+`up_to_date`가 아닌 원본이 있으면 멈추고 사용자에게 알린다. 스킬이 자동으로 당기지 않는다.
+
 지원 디렉터리나 지원 판단, 후보자 인터뷰가 준비되지 않았으면 `application-package-writer`로 연결한다.
 
 ### 2. 대표 사례 사실 확인
