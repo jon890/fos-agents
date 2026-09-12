@@ -9,7 +9,7 @@ const fitSchema = schema.split("### 적합도 판정과 점수\n")[1]?.split("\n
 describe("적합도 판정과 점수의 문서 계약", () => {
   test("다섯 판정의 점수와 계산 제외 값이 데이터 스키마와 같다", () => {
     const documentedScores = Object.fromEntries(
-      Array.from(fitSchema.matchAll(/^\| `([^`]+)` \| (\d+|계산 제외) \|/gm),
+      Array.from(fitSchema.matchAll(/^\|\s*`([^`]+)`\s*\|\s*(\d+|계산 제외)\s*\|/gm),
         ([, judgment, score]) => [judgment, score === "계산 제외" ? null : Number(score)]),
     );
 
@@ -19,7 +19,7 @@ describe("적합도 판정과 점수의 문서 계약", () => {
 
   test("세 공고 구분의 가중치가 데이터 스키마와 같다", () => {
     const documentedWeights = Object.fromEntries(
-      Array.from(fitSchema.matchAll(/^\| ([^|`]+?) \| (\d+) \|$/gm),
+      Array.from(fitSchema.matchAll(/^\|\s*([^|`]+?)\s*\|\s*(\d+)\s*\|\s*$/gm),
         ([, section, weight]) => [section, Number(weight)]),
     );
 
