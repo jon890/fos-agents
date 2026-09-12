@@ -326,6 +326,9 @@ claim ledger를 다시 설명하는 evidence audit는 별도 파일로 만들지
 
 근거 장부는 대상 HTML의 내용 해시와 연결해 다른 버전의 증거를 잘못 재사용하지 않게 한다.
 `schemaVersion: 2`부터 기술 범위, 경력 기간, 운영과 숙련도 주장은 `experienceDepth`에 사용, 기능 개발, 운영 깊이 또는 사용자 확인 수준을 기록한다.
+`schemaVersion: 3`부터 `document`와 `user` 근거에 `locator`를 필수로 두고, 검증기가 그 자리를 근거 파일에서 직접 찾는다.
+locator 형식과 판정 기준은 `.claude/skills/resume-preparer/references/claim-model.md`가 소유한다.
+새로 만드는 원장은 `schemaVersion: 3`을 쓴다. 이미 제출한 `schemaVersion: 2` 원장은 locator 어긋남을 경고로만 보고하고 소급해 고치지 않는다.
 `safe`가 아닌 판정이 하나라도 남으면 제출 준비가 끝난 것으로 보지 않는다.
 `review/resume-scorecard.md`에는 독립된 인사담당자와 실무담당자 판정, 경쟁상 차단 항목, 근거 방어 결과와 통제할 수 없는 위험을 기록한다.
 정량 점수로 약한 필수 조건을 상쇄하지 않으며 두 블라인드 검토자가 모두 통과해야 한다.

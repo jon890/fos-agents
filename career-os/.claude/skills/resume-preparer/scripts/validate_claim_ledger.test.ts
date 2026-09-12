@@ -21,7 +21,7 @@ function fixture() {
   const ledger = join(directory, "claim-ledger.json");
 
   writeFileSync(artifact, "<html><body><p>검색 파이프라인을 구현했습니다.</p></body></html>");
-  writeFileSync(evidence, "# 근거\n검색 파이프라인 구현 기록");
+  writeFileSync(evidence, "# 근거\n\n## 검색 파이프라인\n\n검색 파이프라인 구현 기록");
 
   const data = {
     schemaVersion: 2,
@@ -36,7 +36,12 @@ function fixture() {
         type: "implementation",
         implementation: {
           status: "document_only",
-          evidence: [{ kind: "document", path: evidence, supports: "구현 기록" }],
+          evidence: [{ kind: "document", path: evidence, supports: "구현 기록" } as {
+            kind: string;
+            path: string;
+            supports: string;
+            locator?: string;
+          }],
         },
         ownership: { status: "document_only", evidence: [] },
         outcome: { status: "not_claimed", evidence: [] },
@@ -48,6 +53,76 @@ function fixture() {
   writeFileSync(ledger, JSON.stringify(data));
   return { artifact, data, directory, ledger };
 }
+
+describe("근거 locator", () => {
+  test("버전 2 원장은 locator가 없어도 통과하고 경고만 남긴다", () => {
+    const { artifact, ledger } = fixture();
+    const result = validateClaimLedger(ledger, artifact);
+    expect(result.passed).toBe(true);
+    expect(result.warnings.join("\n")).toContain("locator 가 없어");
+  });
+
+  test("버전 3 원장은 document 근거에 locator를 요구한다", () => {
+    const { artifact, data, ledger } = fixture();
+    data.schemaVersion = 3;
+    writeFileSync(ledger, JSON.stringify(data));
+    const result = validateClaimLedger(ledger, artifact);
+    expect(result.passed).toBe(false);
+    expect(result.errors.join("\n")).toContain("locator 가 필요합니다");
+  });
+
+  test("버전 3 원장은 근거 파일에 실재하는 제목만 통과시킨다", () => {
+    const { artifact, data, ledger } = fixture();
+    data.schemaVersion = 3;
+    data.claims[0].implementation.evidence[0].locator = "heading:검색 파이프라인";
+    writeFileSync(ledger, JSON.stringify(data));
+    expect(validateClaimLedger(ledger, artifact)).toMatchObject({ passed: true, schemaVersion: 3 });
+
+    data.claims[0].implementation.evidence[0].locator = "heading:없는 절 제목";
+    writeFileSync(ledger, JSON.stringify(data));
+    const missing = validateClaimLedger(ledger, artifact);
+    expect(missing.passed).toBe(false);
+    expect(missing.errors.join("\n")).toContain("그 제목이 없습니다");
+  });
+
+  test("버전 3 원장은 줄 번호와 인용 문구도 파일에서 확인한다", () => {
+    const { artifact, data, ledger } = fixture();
+    data.schemaVersion = 3;
+    data.claims[0].implementation.evidence[0].locator = "lines:1-5";
+    writeFileSync(ledger, JSON.stringify(data));
+    expect(validateClaimLedger(ledger, artifact).passed).toBe(true);
+
+    data.claims[0].implementation.evidence[0].locator = "lines:400-420";
+    writeFileSync(ledger, JSON.stringify(data));
+    expect(validateClaimLedger(ledger, artifact).errors.join("\n")).toContain("줄을 가리킵니다");
+
+    data.claims[0].implementation.evidence[0].locator = "quote:검색 파이프라인 구현 기록";
+    writeFileSync(ledger, JSON.stringify(data));
+    expect(validateClaimLedger(ledger, artifact).passed).toBe(true);
+
+    data.claims[0].implementation.evidence[0].locator = "quote:문서에 없는 문장";
+    writeFileSync(ledger, JSON.stringify(data));
+    expect(validateClaimLedger(ledger, artifact).errors.join("\n")).toContain("그 문구가 없습니다");
+  });
+
+  test("버전 3 원장은 형식에 없는 locator를 거부한다", () => {
+    const { artifact, data, ledger } = fixture();
+    data.schemaVersion = 3;
+    data.claims[0].implementation.evidence[0].locator = "이력서 전면 개편에서 확인한 사실";
+    writeFileSync(ledger, JSON.stringify(data));
+    const result = validateClaimLedger(ledger, artifact);
+    expect(result.passed).toBe(false);
+    expect(result.errors.join("\n")).toContain("heading:");
+  });
+
+  test("코드 근거에는 locator를 요구하지 않는다", () => {
+    const { artifact, data, ledger } = fixture();
+    data.schemaVersion = 3;
+    data.claims[0].implementation.evidence[0].kind = "code";
+    writeFileSync(ledger, JSON.stringify(data));
+    expect(validateClaimLedger(ledger, artifact).passed).toBe(true);
+  });
+});
 
 describe("validateClaimLedger", () => {
   test("원장과 감사 대상 문구가 같으면 통과한다", () => {
