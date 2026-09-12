@@ -98,7 +98,6 @@
 ```bash
 bun "$(git rev-parse --show-toplevel)/career-os/scripts/question-bank-collector/validate.ts"
 git diff --check
-git status --short sources/fos-study
 ```
 
 sensitive grep 결과는 사람이 확인한다.
