@@ -15,6 +15,7 @@ export type SubmissionBundleValidation = {
   passed: boolean;
   applicationDirectory: string;
   errors: string[];
+  warnings: string[];
   artifacts: string[];
 };
 
@@ -67,12 +68,14 @@ function validateAuditedArtifact(
   ledgerName: string,
   scorecardName: string,
   errors: string[],
+  warnings: string[],
 ): void {
   const artifactPath = join(directory, artifactName);
   const ledgerPath = join(directory, ledgerName);
   if (existsSync(artifactPath) && existsSync(ledgerPath)) {
     const ledger = validateClaimLedger(ledgerPath, artifactPath);
     errors.push(...ledger.errors.map((error) => `${ledgerName}: ${error}`));
+    warnings.push(...ledger.warnings.map((warning) => `${ledgerName}: ${warning}`));
   }
   validateScorecard(directory, artifactName, scorecardName, errors);
 }
@@ -123,6 +126,7 @@ function validateManifest(directory: string, hasCareerDescription: boolean, erro
 export function validateSubmissionBundle(applicationDirectory: string): SubmissionBundleValidation {
   const directory = resolve(applicationDirectory);
   const errors: string[] = [];
+  const warnings: string[] = [];
   const status = packageStatus(directory);
 
   if (status.readiness !== "ready") {
@@ -136,7 +140,7 @@ export function validateSubmissionBundle(applicationDirectory: string): Submissi
   }
 
   requireFiles(directory, REQUIRED_RESUME_SUBMISSION_FILES, errors);
-  validateAuditedArtifact(directory, "review/resume.html", "review/claim-ledger.json", "review/resume-scorecard.md", errors);
+  validateAuditedArtifact(directory, "review/resume.html", "review/claim-ledger.json", "review/resume-scorecard.md", errors, warnings);
 
   const hasCareerDescription = [
     "evidence/career-description-draft.md",
@@ -150,6 +154,7 @@ export function validateSubmissionBundle(applicationDirectory: string): Submissi
       "review/career-description-claim-ledger.json",
       "review/career-description-scorecard.md",
       errors,
+      warnings,
     );
   }
   validateManifest(directory, hasCareerDescription, errors);
@@ -159,7 +164,7 @@ export function validateSubmissionBundle(applicationDirectory: string): Submissi
     ...(hasCareerDescription ? REQUIRED_CAREER_DESCRIPTION_FILES : []),
   ].filter((file) => existsSync(join(directory, file)));
 
-  return { passed: errors.length === 0, applicationDirectory: directory, errors, artifacts };
+  return { passed: errors.length === 0, applicationDirectory: directory, errors, warnings, artifacts };
 }
 
 if (import.meta.main) {

@@ -123,6 +123,9 @@ publish tar의 최상위에는 `workspace-draft.json`과 같은 세 관리 root�
 성공 JSON만 stdout에 기록한다.
 실패는 nonzero 종료 코드와 stderr의 `schemaVersion`, `action`, `ok: false`, `code`를 가진 JSON으로 반환한다.
 공통 오류 코드는 `WORKSPACE_DIRTY`, `REMOTE_UNINITIALIZED`, `REVISION_CONFLICT`, `INVALID_MANIFEST`, `TRANSFER_FAILED`, `TRANSPORT_UNAVAILABLE`, `RESTORE_REQUIRED`다.
+같은 코드가 여러 원인에서 나오는 자리에는 선택 항목 `detail`로 무엇이 어긋났는지와 다음에 실행할 명령을 한국어로 함께 담는다.
+`TRANSPORT_UNAVAILABLE`은 `.env` 파일이 없거나 원격 연결 값이 비어 있는 경우를 연결 실패와 구분한다.
+`RESTORE_REQUIRED`는 세션 기록이 없는 경우, 기록의 skill이 다른 경우, 기록의 revision이 현재 작업본과 다른 경우를 구분한다.
 오류에는 파일 본문, 호스트, 계정, key 경로와 비밀값을 포함하지 않는다.
 
 Markdown, JSON, 검토용 HTML, PDF와 실제 제출 묶음은 해당 application 디렉터리 안에서 함께 동기화한다.
@@ -323,6 +326,9 @@ claim ledger를 다시 설명하는 evidence audit는 별도 파일로 만들지
 
 근거 장부는 대상 HTML의 내용 해시와 연결해 다른 버전의 증거를 잘못 재사용하지 않게 한다.
 `schemaVersion: 2`부터 기술 범위, 경력 기간, 운영과 숙련도 주장은 `experienceDepth`에 사용, 기능 개발, 운영 깊이 또는 사용자 확인 수준을 기록한다.
+`schemaVersion: 3`부터 `document`와 `user` 근거에 `locator`를 필수로 두고, 검증기가 그 자리를 근거 파일에서 직접 찾는다.
+locator 형식과 판정 기준은 `.claude/skills/resume-preparer/references/claim-model.md`가 소유한다.
+새로 만드는 원장은 `schemaVersion: 3`을 쓴다. 이미 제출한 `schemaVersion: 2` 원장은 locator 어긋남을 경고로만 보고하고 소급해 고치지 않는다.
 `safe`가 아닌 판정이 하나라도 남으면 제출 준비가 끝난 것으로 보지 않는다.
 `review/resume-scorecard.md`에는 독립된 인사담당자와 실무담당자 판정, 경쟁상 차단 항목, 근거 방어 결과와 통제할 수 없는 위험을 기록한다.
 정량 점수로 약한 필수 조건을 상쇄하지 않으며 두 블라인드 검토자가 모두 통과해야 한다.
