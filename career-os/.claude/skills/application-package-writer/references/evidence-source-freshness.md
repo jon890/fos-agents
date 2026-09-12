@@ -1,6 +1,6 @@
 # 근거 원본 최신화 확인
 
-지원 준비를 시작하기 전에 후보자의 경험을 담은 저장소가 원격보다 뒤처졌는지 확인한다.
+지원 준비를 시작하기 전에 로컬 사본으로 읽는 근거 원본이 원격보다 뒤처졌는지 확인한다.
 `application-package-writer` 와 `resume-preparer` 가 같은 원본을 읽으므로 두 스킬이 이 문서를 함께 따른다.
 
 ## 먼저 확인하는 이유
@@ -22,14 +22,16 @@
 
 ## 대상 셋
 
-| 원본 | 찾는 자리 | 받아 오는 주체 |
+| 원본 | 어떻게 읽는가 | 최신 여부를 누가 보는가 |
 | --- | --- | --- |
-| 홈서버 작업본 | `applications`, `library`, `state` | `skill begin <SKILL_NAME>` 이 처리한다. 이 문서의 대상이 아니다 |
-| 공개 학습·경력 자료 | `career-os/sources/fos-study` 다음 `${PERSONAL_ROOT}/fos-study` | 사용자가 직접 당긴다. 이 문서가 검사만 한다 |
-| private brain | `${PERSONAL_ROOT}/fos-brain` | 사용자가 직접 당긴다. 이 문서가 검사만 한다 |
+| 홈서버 작업본 | `applications`, `library`, `state` 로컬 작업본 | `skill begin <SKILL_NAME>` 이 받아 온다 |
+| 공개 학습·경력 자료 | `career-os/sources/fos-study` 다음 `${PERSONAL_ROOT}/fos-study` | 이 문서의 검사기가 본다 |
+| private brain | `brain-search` 로 조회한다 | 뒤처질 사본이 없다. 아래 절이 설명한다 |
 
-뒤의 둘은 별도 Git 저장소이며 career-os 에서는 읽기 전용이다.
+**검사기가 보는 것은 가운데 하나뿐이다.**
+로컬에 사본을 두는 원본에만 뒤처질 위험이 있다.
 
+fos-study 는 별도 Git 저장소이며 career-os 에서는 읽기 전용이다.
 `career-os/sources/fos-study` 는 추적하지 않는 clone 이거나 symlink 라서 연결된 워크트리에는 만들어지지 않는다.
 그래서 `${PERSONAL_ROOT}` 아래의 실제 저장소를 두 번째 자리로 본다.
 앞의 자리에서 저장소를 찾으면 뒤는 보지 않는다.
@@ -40,6 +42,22 @@
 
 `${PERSONAL_ROOT}` 는 같은 이름의 환경 변수로 바꿔 읽는다.
 셸에 없으면 `career-os/.env` 에서 읽으며, 양쪽에 없으면 경로를 추측하지 않는다.
+
+## private brain 을 경로로 확인하지 않는 이유
+
+brain 은 파일을 여는 곳이 아니라 `brain-search` 로 묻는 곳이다.
+[`code-architecture.md`의 「현재 지원 대상과 면접 답변 연습」](../../../../docs/code-architecture.md#현재-지원-대상과-면접-답변-연습)과
+[ADR-102](../../../../docs/adr/ADR-102-별도-웹-대시보드보다-파일-기반-피드백-루프를-사용한다.md)가
+실행 스크립트는 brain 을 직접 조회하지 않는다고 정한다.
+검사기가 brain 저장소의 경로를 요구하면 그 결정을 어기고, 조회 방식이 바뀔 때마다 검사기도 함께 고쳐야 한다.
+
+**뒤처질 사본이 없다는 것이 더 큰 이유다.**
+fos-study 는 로컬 clone 을 두고 읽으므로 원격이 앞서 나가면 조용히 낮게 판정된다.
+brain 은 물을 때마다 현재 상태를 조회하므로 그 상태가 생기지 않는다.
+
+brain 쪽의 실패는 다른 모양으로 온다. 조회했는데 결과가 없는 것이다.
+그때 무엇을 하는지는 [`career-os/CLAUDE.md`의 「후보자에게 묻기 전에 private brain을 조회한다」](../../../../CLAUDE.md)가 소유한다.
+조회해서 없으면 사용자에게 묻고, 확인한 사실은 승인을 받아 brain 에 환원한다.
 
 ## 확인 방법
 
@@ -66,13 +84,11 @@ git -C <원본 경로> rev-list --count HEAD..origin/main
 | --- | --- | --- |
 | `up_to_date` | 원격과 같은 커밋이다 | 다음 단계로 간다 |
 | `behind` | 원격에만 있는 커밋이 있다 | 멈추고 사용자에게 알린다 |
-| `not_configured` | 경로를 풀 환경 변수가 없어 볼 자리조차 정하지 못했다 | 멈추고 `career-os/.env` 에 그 변수를 설정하라고 알린다 |
-| `unavailable` | 볼 자리는 정했으나 그 자리에 저장소가 없다 | 멈추고 그 자리에 저장소를 연결하라고 알린다 |
+| `unavailable` | 어느 자리에서도 저장소를 찾지 못했다 | 멈추고 그 자리에 저장소를 연결하라고 알린다 |
 | `unreachable` | 저장소는 있으나 원격을 받지 못했다 | 사용자에게 알리고, 사용자가 이어가라고 하면 확인하지 못한 범위를 적고 진행한다 |
 
-`not_configured` 와 `unavailable` 을 가르는 이유는 사용자가 할 일이 다르기 때문이다.
-앞은 값을 설정하는 일이고 뒤는 저장소를 가져오는 일이다.
-한 판정으로 묶으면 어느 쪽인지 알려면 `detail` 을 읽어야 한다.
+`unavailable` 의 `detail` 은 자리마다 왜 아니었는지를 담는다.
+경로가 없는 것과 환경 변수가 없는 것을 거기서 가른다. 사용자가 할 일이 다르기 때문이다.
 
 ### 종료 코드
 
@@ -103,5 +119,5 @@ git -C <원본 경로> rev-list --count HEAD..origin/main
 
 ## 통과 조건
 
-두 원본의 판정이 모두 `up_to_date` 다.
+검사기가 보는 원본의 판정이 `up_to_date` 다.
 그렇지 않으면 사용자에게 알렸고, 사용자가 이어가라고 한 원본은 확인하지 못한 범위를 기록했다.

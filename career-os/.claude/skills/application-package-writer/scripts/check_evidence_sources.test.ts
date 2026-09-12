@@ -53,8 +53,8 @@ function specFor(...paths: string[]): EvidenceSourceSpec {
 }
 
 describe("근거 원본 목록의 문서 계약", () => {
-  test("원본 셋 중 스크립트가 검사하는 둘만 목록에 있다", () => {
-    expect(EVIDENCE_SOURCES.map((source) => source.name)).toEqual(["fos-study", "private brain"]);
+  test("원본 셋 중 로컬 사본을 두는 하나만 목록에 있다", () => {
+    expect(EVIDENCE_SOURCES.map((source) => source.name)).toEqual(["fos-study"]);
   });
 
   test("각 원본의 경로가 reference 의 대상 표에 있다", () => {
@@ -68,6 +68,18 @@ describe("근거 원본 목록의 문서 계약", () => {
     const paths = EVIDENCE_SOURCES.flatMap((source) => source.paths);
     expect(paths).not.toContain("career-os/applications");
     expect(paths).not.toContain("career-os/state");
+  });
+
+  /**
+   * `code-architecture.md` 의 「현재 지원 대상과 면접 답변 연습」과 ADR-102 가
+   * 실행 스크립트는 brain 을 직접 조회하지 않는다고 정한다.
+   * brain 은 `brain-search` 로 묻는 곳이라 경로를 요구하면 그 결정을 어긴다.
+   */
+  test("private brain 의 경로를 요구하지 않는다", () => {
+    const paths = EVIDENCE_SOURCES.flatMap((source) => source.paths);
+
+    expect(paths.some((path) => path.includes("brain"))).toBe(false);
+    expect(reference).toContain("private brain 을 경로로 확인하지 않는 이유");
   });
 });
 
@@ -231,22 +243,16 @@ describe("확인할 수 없는 원본", () => {
     expect(result.passed).toBe(true);
   });
 
-  // 값을 설정하는 일과 저장소를 가져오는 일은 사용자가 할 일이 다르므로 판정에서 가른다.
-  test("환경 변수가 없어 자리를 못 정하면 not_configured 로 가른다", () => {
-    const result = checkEvidenceSources({ sources: [specFor("${PERSONAL_ROOT}/fos-brain")], env: {} });
-
-    expect(result.passed).toBe(false);
-    expect(result.sources[0].status).toBe("not_configured");
-    expect(result.sources[0].detail).toContain("PERSONAL_ROOT");
-    expect(result.sources[0].path).toBe("${PERSONAL_ROOT}/fos-brain");
-  });
-
-  test("자리는 정했는데 저장소가 없으면 unavailable 로 가른다", () => {
+  // 사용자가 할 일이 다르므로 자리마다의 이유를 남긴다. 값을 설정하는 일과 저장소를 가져오는 일이다.
+  test("자리마다 왜 아니었는지를 detail 에 남긴다", () => {
     const missing = join(createWorkspace(), "missing");
 
-    const result = checkEvidenceSources({ sources: [specFor("${PERSONAL_ROOT}/fos-brain", missing)], env: {} });
+    const result = checkEvidenceSources({ sources: [specFor(missing, "${PERSONAL_ROOT}/fos-study")], env: {} });
 
+    expect(result.passed).toBe(false);
     expect(result.sources[0].status).toBe("unavailable");
+    expect(result.sources[0].detail).toContain("경로가 없습니다");
+    expect(result.sources[0].detail).toContain("PERSONAL_ROOT");
   });
 
   test("환경 변수를 `career-os/.env` 에서 읽는다", () => {

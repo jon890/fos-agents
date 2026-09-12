@@ -27,8 +27,9 @@ description: 공고가 찾는 사람과 후보자의 경험이 부합하는지 �
 
 ## 근거 원본 최신화 확인
 
-위 동기화가 다루지 않는 `fos-study`와 private brain이 원격보다 뒤처졌는지 단계 1로 들어가기 전에 검사한다.
+위 동기화가 다루지 않는 `fos-study` 로컬 사본이 원격보다 뒤처졌는지 단계 1로 들어가기 전에 검사한다.
 없는 문서는 없는 경험으로 판정되므로, 근거를 읽기 전에 확인한다.
+private brain은 `brain-search`로 조회하며 경로로 확인하지 않는다.
 
 ```bash
 bun "$(git rev-parse --show-toplevel)/career-os/.claude/skills/application-package-writer/scripts/check_evidence_sources.ts"

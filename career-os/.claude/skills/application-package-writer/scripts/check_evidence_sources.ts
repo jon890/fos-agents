@@ -1,11 +1,14 @@
 #!/usr/bin/env bun
 
 /**
- * 근거 원본 저장소가 원격보다 뒤처졌는지 검사한다.
+ * 경로로 여는 근거 원본이 원격보다 뒤처졌는지 검사한다.
  *
  * 뒤처진 사본은 오류를 내지 않는다. 없는 문서는 없는 경험으로 판정되고 적합도 점수만 낮아진다.
  * 실측에서 로컬 `fos-study` 가 388커밋, 넉 달 뒤처진 채 지원 한 건을 준비했고,
  * 그 사이 추가된 문서 넷이 적합도 판정과 이력서 문장을 바꿨다.
+ *
+ * 이 위험은 로컬 사본을 두는 원본에만 있다.
+ * `brain-search` 로 그때그때 조회하는 private brain 에는 뒤처질 사본이 없다.
  *
  * 검사만 하고 당기지 않는다. 읽기 전용 저장소이며 당기는 과정에 사람이 판단할 것이 있다.
  * 판정별 다음 행동은 `references/evidence-source-freshness.md` 가 소유한다.
@@ -32,8 +35,12 @@ export type EvidenceSourceSpec = {
 };
 
 /**
- * 홈서버 작업본은 여기 없다. `skill begin <SKILL_NAME>` 이 이미 받아 온다.
- * 이 목록은 그 CLI 가 다루지 않는 읽기 전용 원본만 담는다.
+ * 경로로 확인하는 원본만 담는다.
+ *
+ * 홈서버 작업본은 `skill begin <SKILL_NAME>` 이 이미 받아 온다.
+ * private brain 도 여기 없다. `brain-search` 로 조회하는 것이며 경로로 여는 것이 아니다.
+ * `docs/code-architecture.md` 의 「현재 지원 대상과 면접 답변 연습」과 ADR-102 가
+ * 실행 스크립트가 brain 을 직접 조회하지 않는다고 정한다.
  *
  * `career-os/sources/fos-study` 는 추적하지 않는 clone 이거나 symlink 라서 워크트리에는 없다.
  * 그래서 `${PERSONAL_ROOT}` 아래의 실제 저장소를 두 번째 자리로 둔다.
@@ -45,12 +52,6 @@ export const EVIDENCE_SOURCES: readonly EvidenceSourceSpec[] = [
     branch: "main",
     affects: "적합도 판정과 이력서의 대표 근거",
   },
-  {
-    name: "private brain",
-    paths: ["${PERSONAL_ROOT}/fos-brain"],
-    branch: "main",
-    affects: "현재 경력, 역할 선호와 경험 경계",
-  },
 ] as const;
 
 export type EvidenceSourceStatus =
@@ -59,11 +60,9 @@ export type EvidenceSourceStatus =
   /** 원격에만 있는 커밋이 있다. 멈추고 사용자에게 알린다. */
   | "behind"
   /**
-   * 경로를 풀 환경 변수가 없어 어디를 볼지조차 정하지 못했다.
-   * 저장소가 없는 것과 가른다. 사용자가 할 일이 다르다. 이쪽은 값을 설정하는 일이다.
+   * 계약에 적힌 어느 자리에서도 저장소를 찾지 못했다.
+   * `detail` 이 자리마다의 이유를 담는다. 환경 변수가 없는 것과 경로가 없는 것을 거기서 가른다.
    */
-  | "not_configured"
-  /** 볼 자리는 정했으나 그 자리에 저장소가 없다. 사용자가 clone 하거나 연결하는 일이다. */
   | "unavailable"
   /** 저장소는 있으나 원격을 받지 못했다. */
   | "unreachable";
@@ -162,25 +161,19 @@ function isRepositoryRoot(path: string): boolean {
   }
 }
 
-/**
- * 계약에 적힌 자리를 순서대로 보고 저장소를 찾는다.
- * 찾지 못하면 자리마다의 이유와 함께, 어느 자리도 풀지 못한 것인지를 함께 돌려준다.
- */
+/** 계약에 적힌 자리를 순서대로 보고 저장소를 찾는다. 찾지 못하면 자리마다의 이유를 모은다. */
 function locateSource(
   spec: EvidenceSourceSpec,
   repositoryRoot: string,
   env: Record<string, string | undefined>,
-): { path: string; spelling: string } | { reasons: string[]; everyPlaceUnresolved: boolean } {
+): { path: string; spelling: string } | { reasons: string[] } {
   const reasons: string[] = [];
-  let resolvedAnyPlace = false;
-
   for (const spelling of spec.paths) {
     const resolved = resolveSourcePath(spelling, repositoryRoot, env);
     if ("reason" in resolved) {
       reasons.push(`${spelling}: ${resolved.reason}`);
       continue;
     }
-    resolvedAnyPlace = true;
     if (!existsSync(resolved.path)) {
       reasons.push(`${spelling}: 경로가 없습니다.`);
       continue;
@@ -191,7 +184,7 @@ function locateSource(
     }
     return { path: resolved.path, spelling };
   }
-  return { reasons, everyPlaceUnresolved: !resolvedAnyPlace };
+  return { reasons };
 }
 
 function checkSource(
@@ -207,10 +200,8 @@ function checkSource(
     return {
       ...base,
       path: spec.paths.join(", "),
-      status: located.everyPlaceUnresolved ? "not_configured" : "unavailable",
-      detail: located.everyPlaceUnresolved
-        ? `볼 자리를 정하지 못했습니다. ${located.reasons.join(" ")}`
-        : `저장소를 찾지 못했습니다. ${located.reasons.join(" ")}`,
+      status: "unavailable",
+      detail: `저장소를 찾지 못했습니다. ${located.reasons.join(" ")}`,
     };
   }
   const { path, spelling } = located;
