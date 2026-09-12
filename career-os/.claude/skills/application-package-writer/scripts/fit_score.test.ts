@@ -6,10 +6,11 @@ import { FIT_TABLE_VERDICTS } from "./package_contract.ts";
 const schema = readFileSync(new URL("../../../../docs/data-schema.md", import.meta.url), "utf8");
 const fitSchema = schema.split("### 적합도 판정과 점수\n")[1]?.split("\n## ")[0] ?? "";
 
+// 문서의 표는 열 너비를 맞추려고 셀 양쪽에 여백을 둔다. 정규식이 그 여백을 허용해야 행을 읽는다.
 describe("적합도 판정과 점수의 문서 계약", () => {
   test("다섯 판정의 점수와 계산 제외 값이 데이터 스키마와 같다", () => {
     const documentedScores = Object.fromEntries(
-      Array.from(fitSchema.matchAll(/^\| `([^`]+)` \| (\d+|계산 제외) \|/gm),
+      Array.from(fitSchema.matchAll(/^\|\s*`([^`]+)`\s*\|\s*(\d+|계산 제외)\s*\|/gm),
         ([, judgment, score]) => [judgment, score === "계산 제외" ? null : Number(score)]),
     );
 
@@ -19,7 +20,7 @@ describe("적합도 판정과 점수의 문서 계약", () => {
 
   test("세 공고 구분의 가중치가 데이터 스키마와 같다", () => {
     const documentedWeights = Object.fromEntries(
-      Array.from(fitSchema.matchAll(/^\| ([^|`]+?) \| (\d+) \|$/gm),
+      Array.from(fitSchema.matchAll(/^\|\s*([^|`]+?)\s*\|\s*(\d+)\s*\|$/gm),
         ([, section, weight]) => [section, Number(weight)]),
     );
 
