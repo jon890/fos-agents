@@ -231,12 +231,33 @@ describe("확인할 수 없는 원본", () => {
     expect(result.passed).toBe(true);
   });
 
-  test("환경 변수 경로는 값이 없으면 경로를 추측하지 않는다", () => {
+  // 값을 설정하는 일과 저장소를 가져오는 일은 사용자가 할 일이 다르므로 판정에서 가른다.
+  test("환경 변수가 없어 자리를 못 정하면 not_configured 로 가른다", () => {
     const result = checkEvidenceSources({ sources: [specFor("${PERSONAL_ROOT}/fos-brain")], env: {} });
 
-    expect(result.sources[0].status).toBe("unavailable");
+    expect(result.passed).toBe(false);
+    expect(result.sources[0].status).toBe("not_configured");
     expect(result.sources[0].detail).toContain("PERSONAL_ROOT");
     expect(result.sources[0].path).toBe("${PERSONAL_ROOT}/fos-brain");
+  });
+
+  test("자리는 정했는데 저장소가 없으면 unavailable 로 가른다", () => {
+    const missing = join(createWorkspace(), "missing");
+
+    const result = checkEvidenceSources({ sources: [specFor("${PERSONAL_ROOT}/fos-brain", missing)], env: {} });
+
+    expect(result.sources[0].status).toBe("unavailable");
+  });
+
+  test("환경 변수를 `career-os/.env` 에서 읽는다", () => {
+    const { clone } = createOriginAndClone();
+    const root = join(createWorkspace(), "root");
+    mkdirSync(join(root, "career-os"), { recursive: true });
+    writeFileSync(join(root, "career-os", ".env"), `PERSONAL_ROOT=${join(clone, "..")}\n`);
+
+    const result = checkEvidenceSources({ repositoryRoot: root, sources: [specFor("${PERSONAL_ROOT}/clone")] });
+
+    expect(result.sources[0].status).toBe("up_to_date");
   });
 
   test("환경 변수 값이 있으면 그 아래 경로를 검사한다", () => {

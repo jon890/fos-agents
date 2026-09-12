@@ -58,7 +58,12 @@ export type EvidenceSourceStatus =
   | "up_to_date"
   /** 원격에만 있는 커밋이 있다. 멈추고 사용자에게 알린다. */
   | "behind"
-  /** 경로나 환경 변수가 없어 최신 여부를 판정할 수 없다. */
+  /**
+   * 경로를 풀 환경 변수가 없어 어디를 볼지조차 정하지 못했다.
+   * 저장소가 없는 것과 가른다. 사용자가 할 일이 다르다. 이쪽은 값을 설정하는 일이다.
+   */
+  | "not_configured"
+  /** 볼 자리는 정했으나 그 자리에 저장소가 없다. 사용자가 clone 하거나 연결하는 일이다. */
   | "unavailable"
   /** 저장소는 있으나 원격을 받지 못했다. */
   | "unreachable";
@@ -157,19 +162,25 @@ function isRepositoryRoot(path: string): boolean {
   }
 }
 
-/** 계약에 적힌 자리를 순서대로 보고 저장소를 찾는다. 찾지 못하면 자리마다의 이유를 모은다. */
+/**
+ * 계약에 적힌 자리를 순서대로 보고 저장소를 찾는다.
+ * 찾지 못하면 자리마다의 이유와 함께, 어느 자리도 풀지 못한 것인지를 함께 돌려준다.
+ */
 function locateSource(
   spec: EvidenceSourceSpec,
   repositoryRoot: string,
   env: Record<string, string | undefined>,
-): { path: string; spelling: string } | { reasons: string[] } {
+): { path: string; spelling: string } | { reasons: string[]; everyPlaceUnresolved: boolean } {
   const reasons: string[] = [];
+  let resolvedAnyPlace = false;
+
   for (const spelling of spec.paths) {
     const resolved = resolveSourcePath(spelling, repositoryRoot, env);
     if ("reason" in resolved) {
       reasons.push(`${spelling}: ${resolved.reason}`);
       continue;
     }
+    resolvedAnyPlace = true;
     if (!existsSync(resolved.path)) {
       reasons.push(`${spelling}: 경로가 없습니다.`);
       continue;
@@ -180,7 +191,7 @@ function locateSource(
     }
     return { path: resolved.path, spelling };
   }
-  return { reasons };
+  return { reasons, everyPlaceUnresolved: !resolvedAnyPlace };
 }
 
 function checkSource(
@@ -196,8 +207,10 @@ function checkSource(
     return {
       ...base,
       path: spec.paths.join(", "),
-      status: "unavailable",
-      detail: `저장소를 찾지 못했습니다. ${located.reasons.join(" ")}`,
+      status: located.everyPlaceUnresolved ? "not_configured" : "unavailable",
+      detail: located.everyPlaceUnresolved
+        ? `볼 자리를 정하지 못했습니다. ${located.reasons.join(" ")}`
+        : `저장소를 찾지 못했습니다. ${located.reasons.join(" ")}`,
     };
   }
   const { path, spelling } = located;
