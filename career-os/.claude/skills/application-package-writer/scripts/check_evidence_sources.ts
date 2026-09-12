@@ -187,6 +187,17 @@ function locateSource(
   return { reasons };
 }
 
+/**
+ * 찾지 못했을 때 무엇을 하면 되는지 명령으로 낸다.
+ * 작업본마다 다시 만들어야 하는 설정이라, 다음에 같은 자리에 걸린 사람이 바로 풀 수 있어야 한다.
+ */
+function remedy(spec: EvidenceSourceSpec): string {
+  const [tracked] = spec.paths;
+  return `저장소 루트에서 \`ln -s <${spec.name} 저장소의 절대 경로> ${tracked}\` 로 연결하거나, `
+    + `\`career-os/.env\` 에 \`PERSONAL_ROOT=<그 저장소의 상위 디렉터리>\` 를 더한다. `
+    + `두 자리 모두 git 이 추적하지 않으므로 작업본마다 따로 만든다.`;
+}
+
 function checkSource(
   spec: EvidenceSourceSpec,
   repositoryRoot: string,
@@ -201,7 +212,7 @@ function checkSource(
       ...base,
       path: spec.paths.join(", "),
       status: "unavailable",
-      detail: `저장소를 찾지 못했습니다. ${located.reasons.join(" ")}`,
+      detail: `저장소를 찾지 못했습니다. ${located.reasons.join(" ")} ${remedy(spec)}`,
     };
   }
   const { path, spelling } = located;
