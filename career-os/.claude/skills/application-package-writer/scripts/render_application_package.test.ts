@@ -12,16 +12,28 @@ import {
 } from "./render_application_package.ts";
 
 const FIT_TABLE_HEADING = "## 공고 항목별 적합도";
-const FIT_TABLE = `| 공고 항목 | 공고 구분 | 근거 | 판정 |
+const FIT_TABLE = `| 공고 항목 | 공고 구분 | 근거 | 점수 |
 | --- | --- | --- | --- |
-| 공통 기반 표준화 | 주요 업무 | 공통 모듈 분리 경험 | 확인됨 |
-| 자체 호스팅 모델 운영 | 우대 경험 | 직접 근거 없음 | 공백 |`;
+| 공통 기반 표준화 | 주요 업무 | 공통 모듈 분리 경험 | 90 |
+| 자체 호스팅 모델 운영 | 우대 경험 | 직접 근거 없음 | 0 |`;
 
-const FULL_FIT_TABLE = `| 공고 항목 | 공고 구분 | 근거 | 판정 |
+const FULL_FIT_TABLE = `| 공고 항목 | 공고 구분 | 근거 | 점수 |
 | --- | --- | --- | --- |
-| 공통 기반 표준화 | 주요 업무 | 공통 모듈 분리 경험 | 확인됨 |
-| AI 플랫폼 운영 | 기대 경험 | LLM 서비스 운영 경험 | 강한 인접 |
-| 자체 호스팅 모델 운영 | 우대 경험 | 직접 근거 없음 | 공백 |`;
+| 공통 기반 표준화 | 주요 업무 | 공통 모듈 분리 경험 | 100 |
+| AI 플랫폼 운영 | 기대 경험 | LLM 서비스 운영 경험 | 75 |
+| 자체 호스팅 모델 운영 | 우대 경험 | 직접 근거 없음 | 0 |`;
+
+/** 점수만 담은 표. 소계와 총점은 이 표와 가중치로 화면이 계산한다. */
+function fitTableOf(rows: [string, number][], weights: [string, number][] = []): string {
+  const table = ["| 공고 항목 | 공고 구분 | 근거 | 점수 |", "| --- | --- | --- | --- |"]
+    .concat(rows.map(([category, score], order) => `| 항목 ${order + 1} | ${category} | 근거 | ${score} |`))
+    .join("\n");
+  if (weights.length === 0) return table;
+  const weightTable = ["| 공고 구분 | 가중치 |", "| --- | --- |"]
+    .concat(weights.map(([category, weight]) => `| ${category} | ${weight} |`))
+    .join("\n");
+  return `${table}\n\n${weightTable}`;
+}
 
 /**
  * 화면이 받을 문서의 본보기다. 계약이 아니라 이 검사의 표본이므로 여기서 소유한다.
@@ -285,7 +297,7 @@ describe("renderApplicationPackage", () => {
 
   test("적합도 총점 원 하나와 구분별 소계 원 셋을 상단에 보여준다", () => {
     const html = renderApplicationPackageHtml(
-      `# 지원 준비\n\n- readiness: ready\n- evidence: safe\n- human-confirmation: complete\n- 적합도 총점: 75\n- 주요 업무 소계: 100\n- 기대 경험 소계: 75\n- 우대 경험 소계: 0\n\n${packageBodyWithFitTable(FULL_FIT_TABLE)}`,
+      `# 지원 준비\n\n- readiness: ready\n- evidence: safe\n- human-confirmation: complete\n\n${packageBodyWithFitTable(FULL_FIT_TABLE)}`,
       "# 인터뷰",
       "# 이력서",
     );
@@ -296,7 +308,7 @@ describe("renderApplicationPackage", () => {
       expect(html).toContain(`>${label}</strong>`);
     }
     expect(html.match(/class="fit-circle[^"]*" aria-label="/g)).toHaveLength(4);
-    expect(html).toContain("적합도 총점 75점, 색 초록");
+    expect(html).toContain("적합도 총점 58.3점, 색 노랑");
     expect(html).toContain("주요 업무 100점, 색 진한 초록");
     expect(html).toContain("기대 경험 75점, 색 초록");
     expect(html).toContain("우대 경험 0점, 색 빨강");
@@ -304,23 +316,23 @@ describe("renderApplicationPackage", () => {
 
   test("점수 구간에 맞는 CSS 변수 이름을 원에 적용한다", () => {
     const html = renderFitScore(
-      "- 적합도 총점: 90\n- 주요 업무 소계: 60\n- 기대 경험 소계: 25\n- 우대 경험 소계: 24.9",
+      fitTableOf([["주요 업무", 100], ["주요 업무", 80], ["기대 경험", 25], ["우대 경험", 24.9]]),
     );
 
     expect(html).toContain("fit-circle fit-excellent");
     expect(html).toContain("fit-circle fit-fair");
-    expect(html).toContain("주요 업무 60점, 색 노랑");
+    expect(html).toContain("주요 업무 90점, 색 진한 초록");
   });
 
   test("총점 원 옆에 합격 확률이 아니라는 경계 문구가 있다", () => {
-    const html = renderFitScore("- 적합도 총점: 90");
+    const html = renderFitScore(fitTableOf([["주요 업무", 90]]));
 
     expect(html).toContain("합격 확률이 아닙니다");
     expect(html).toContain("공고 요구와 현재 확보한 근거");
   });
 
   test("모델이 적은 소계 이름을 그대로 원으로 만든다", () => {
-    const html = renderFitScore("- 적합도 총점: 100\n- 주요 업무 소계: 100\n- 조직 적합 소계: 80");
+    const html = renderFitScore(fitTableOf([["주요 업무", 100], ["조직 적합", 80]]));
 
     expect(html).toContain(">주요 업무</strong>");
     expect(html).toContain(">조직 적합</strong>");
@@ -439,5 +451,32 @@ describe("renderApplicationPackage", () => {
 
     const html = readFileSync(renderApplicationPackage(directory), "utf8");
     expect(panelText(html, "posting")).toContain("전에 없던 Proactive한 매장 관리 경험");
+  });
+});
+
+describe("적합도 표의 화면 처리", () => {
+  test("점수에서 판정 이름을 붙여 열 하나를 더한다", () => {
+    const html = renderMarkdown(FULL_FIT_TABLE);
+
+    expect(html).toContain("<th>판정</th>");
+    expect(html).toContain("<td>확인됨</td>");
+    expect(html).toContain("<td>강한 인접</td>");
+    expect(html).toContain("<td>공백</td>");
+  });
+
+  test("점수 열에 숫자가 없는 표에는 판정 열을 붙이지 않는다", () => {
+    const html = renderMarkdown("| 구분 | 점수 |\n| --- | --- |\n| 주요 업무 | 70, 50 |");
+
+    expect(html).not.toContain("<th>판정</th>");
+  });
+
+  test("근거가 여럿인 칸은 목록으로 그린다", () => {
+    const html = renderMarkdown(
+      "| 항목 | 근거 |\n| --- | --- |\n| 데이터 정제 | - 색인 파이프라인을 설계<br>- Document Parser 로 변환 |",
+    );
+
+    expect(html).toContain("<ul class=\"cell-list\">");
+    expect(html).toContain("<li>색인 파이프라인을 설계</li>");
+    expect(html).toContain("<li>Document Parser 로 변환</li>");
   });
 });

@@ -259,7 +259,7 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 
 - `posting.md`: 공고 원문이며 공식 페이지의 절 구조를 그대로 둔다. 쪼갠 항목 목록은 `fit.md` 의 적합도 표가 담는다
 - `candidate-interview.md`: 후보자 원문 답변, 정리한 핵심과 제출 반영 여부
-- `fit.md`: 결론, 공고 항목별 적합도 표, 소계와 총점, 공개 자료로 확인한 팀과 인접 사례
+- `fit.md`: 결론, 공고 항목별 적합도 표, 구분별 가중치, 공개 자료로 확인한 팀과 인접 사례
 - `strategy.md`: 승부처, 지원동기, 기여 시나리오, 보완할 공백, 회사 문화와의 연결, 면접에서 검증받을 내용이며 시장과 규모로 판단하는 「이 자리에서 얻을 경험과 성장」을 선택 절로 둔다
 - `status.md`: 준비 상태 세 줄과 제출 준비 상태, 사용자 확인 필요, 다음 행동
 - `resume-draft.md`: HTML과 PDF로 변환할 제출용 이력서 원본
@@ -300,10 +300,10 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 
 ### 적합도 판정과 점수
 
-판정 값과 판단 기준, 점수를 정하는 방식은
+판단 기준은
 [`fit-judgment.md`](../.claude/skills/application-package-writer/references/fit-judgment.md)가 소유한다.
-점수와 가중치는 모델이 공고를 보고 정해 `evidence/fit.md` 에 계산식과 함께 남기고,
-화면이 원으로 보여줄 총점과 소계는 `evidence/status.md` 머리에 적는다.
+행별 점수와 구분별 가중치는 모델이 공고를 보고 정해 `evidence/fit.md` 에 남긴다.
+소계와 총점은 그 둘로 `fit_score.ts` 가 계산하고, 판정 이름의 구간은 `package_contract.ts` 가 소유한다.
 색 구간은 `render_application_package.ts` 가 소유한다.
 
 `evidence/status.md`의 준비 상태 값과 판단 기준은
