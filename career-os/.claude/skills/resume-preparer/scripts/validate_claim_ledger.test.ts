@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { artifactTextSha256 } from "./artifact_identity.ts";
+import type { ClaimLedger } from "./claim_ledger_schema.ts";
 import { validateClaimLedger } from "./validate_claim_ledger.ts";
 
 const tempDirectories: string[] = [];
@@ -23,7 +24,9 @@ function fixture() {
   writeFileSync(artifact, "<html><body><p>검색 파이프라인을 구현했습니다.</p></body></html>");
   writeFileSync(evidence, "# 근거\n검색 파이프라인 구현 기록");
 
-  const data = {
+  // 타입을 달지 않으면 `evidence: []` 가 `never[]` 로 추론돼 뒤에서 실제 근거를 넣을 수 없고,
+  // 리터럴에 없는 `experienceDepth` 도 접근하지 못한다.
+  const data: ClaimLedger = {
     schemaVersion: 2,
     artifact: "resume.html",
     artifactTextSha256: artifactTextSha256(artifact),
