@@ -14,6 +14,7 @@ import {
   finishSkillWorkspace,
   prepareWorkspace,
   publishWorkspace,
+  createCareerWorkspaceTransport,
   runCareerWorkspaceCli,
   type CliContext,
 } from "../cli.ts";
@@ -125,6 +126,71 @@ describe("career workspace cli", () => {
     await expect(finishSkillWorkspace(makeContext(fixture), "resume-preparer")).rejects.toMatchObject({
       result: { code: "RESTORE_REQUIRED" },
     });
+  }));
+
+  test("세션 기록이 없는 finish는 다음에 실행할 명령을 함께 낸다", async () => withFixture(async (fixture) => {
+    await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
+    await prepareWorkspace(makeContext(fixture));
+
+    await expect(finishSkillWorkspace(makeContext(fixture), "resume-preparer")).rejects.toMatchObject({
+      result: {
+        code: "RESTORE_REQUIRED",
+        detail: expect.stringContaining("skill begin resume-preparer"),
+      },
+    });
+  }));
+
+  test("다른 skill 세션이 열려 있으면 그 skill 이름을 오류에 담는다", async () => withFixture(async (fixture) => {
+    await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
+    await prepareWorkspace(makeContext(fixture));
+    await beginSkillWorkspace(makeContext(fixture), "application-package-writer");
+
+    await expect(finishSkillWorkspace(makeContext(fixture), "resume-preparer")).rejects.toMatchObject({
+      result: {
+        code: "RESTORE_REQUIRED",
+        detail: expect.stringContaining("skill finish application-package-writer"),
+      },
+    });
+    await expect(beginSkillWorkspace(makeContext(fixture), "resume-preparer")).rejects.toMatchObject({
+      result: {
+        code: "RESTORE_REQUIRED",
+        detail: expect.stringContaining("application-package-writer 세션이 열려 있습니다"),
+      },
+    });
+  }));
+
+  test("세션 시작 revision과 작업본 revision이 다르면 어긋난 두 revision을 낸다", async () => withFixture(async (fixture) => {
+    await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
+    await prepareWorkspace(makeContext(fixture));
+    await beginSkillWorkspace(makeContext(fixture), "resume-preparer");
+    await writeFile(path.join(fixture.workspaceRoot, "applications", "resume.md"), "after");
+    await publishWorkspace(makeContext(fixture));
+
+    await expect(finishSkillWorkspace(makeContext(fixture), "resume-preparer")).rejects.toMatchObject({
+      result: {
+        code: "RESTORE_REQUIRED",
+        detail: expect.stringContaining("rev-1"),
+      },
+    });
+  }));
+
+  test("원격 연결 설정이 없으면 어느 .env가 비었는지 알린다", async () => withFixture(async (fixture) => {
+    const missing = createCareerWorkspaceTransport({}, { path: "career-os/.env", present: false });
+    await expect(missing.status()).rejects.toMatchObject({
+      result: {
+        code: "TRANSPORT_UNAVAILABLE",
+        detail: expect.stringContaining("career-os/.env 파일이 없어"),
+      },
+    });
+
+    const empty = createCareerWorkspaceTransport({}, { path: "career-os/.env", present: true });
+    await expect(empty.status()).rejects.toMatchObject({
+      result: {
+        code: "TRANSPORT_UNAVAILABLE",
+        detail: expect.stringContaining("CAREER_WORKSPACE_SSH_TARGET"),
+      },
+    });
+    expect(fixture.workspaceRoot).toBeTruthy();
   }));
 
   test("prepare는 정상 release를 검증한 뒤 로컬 root와 sync-state를 갱신한다", async () => withFixture(async (fixture) => {

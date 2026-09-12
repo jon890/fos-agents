@@ -123,6 +123,9 @@ publish tar의 최상위에는 `workspace-draft.json`과 같은 세 관리 root�
 성공 JSON만 stdout에 기록한다.
 실패는 nonzero 종료 코드와 stderr의 `schemaVersion`, `action`, `ok: false`, `code`를 가진 JSON으로 반환한다.
 공통 오류 코드는 `WORKSPACE_DIRTY`, `REMOTE_UNINITIALIZED`, `REVISION_CONFLICT`, `INVALID_MANIFEST`, `TRANSFER_FAILED`, `TRANSPORT_UNAVAILABLE`, `RESTORE_REQUIRED`다.
+같은 코드가 여러 원인에서 나오는 자리에는 선택 항목 `detail`로 무엇이 어긋났는지와 다음에 실행할 명령을 한국어로 함께 담는다.
+`TRANSPORT_UNAVAILABLE`은 `.env` 파일이 없거나 원격 연결 값이 비어 있는 경우를 연결 실패와 구분한다.
+`RESTORE_REQUIRED`는 세션 기록이 없는 경우, 기록의 skill이 다른 경우, 기록의 revision이 현재 작업본과 다른 경우를 구분한다.
 오류에는 파일 본문, 호스트, 계정, key 경로와 비밀값을 포함하지 않는다.
 
 Markdown, JSON, 검토용 HTML, PDF와 실제 제출 묶음은 해당 application 디렉터리 안에서 함께 동기화한다.
