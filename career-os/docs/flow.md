@@ -71,7 +71,7 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 3. 스크립트가 종료 여부, 마감일, 고용 형태, 역할과 URL 중복을 검사한다.
 4. 유효한 공고만 이번 실행의 임시 후보풀에 저장한다.
 5. 모델이 private brain의 현재 커리어 정보와 원문 공고를 읽고 개수 제한 없이 기준을 통과한 추천 대상, 전체 후보 순위와 자동 제외 제안을 만든다.
-6. 추천 결과와 전체 후보 순위가 후보풀의 모든 공고와 정확히 일치하는지 검증한다. 자동 제외 제안은 상향 축이 없고 근거가 명확한 하향 축이 하나 이상인지 별도로 검증한다.
+6. 추천 결과와 전체 후보 순위가 후보풀의 모든 공고와 정확히 일치하는지 검증한다. 자동 제외 제안은 판정 기준 문서의 조건을 만족하는지 별도로 검증한다.
 7. 검증된 자동 제외 제안을 비공개 제외 설정에 반영한다. 이번 리포트에는 후보를 남기고 다음 수집부터 모델 입력에서 제거한다.
 8. 모델이 추천 데이터에서 그날 판단에 적합한 정보 구조를 골라 반응형 HTML 리포트를 만든다. 고정된 절이나 카드 개수는 요구하지 않는다.
 9. 스크립트가 추천 공고 링크, 공개 범위와 HTML 기본 계약을 검사한다. 고정 템플릿 렌더러는 모델이 HTML을 만들지 못한 경우의 대체 경로와 회귀 검사에만 사용한다.
@@ -201,15 +201,11 @@ sequenceDiagram
 
 연동모드는 브라우저 관리자 세션을 복제하지 않는다.
 career-os는 `STUDY_LIBRARY_URL`과 `STUDY_SERVICE_TOKEN`으로 서비스 인증을 사용하며, [fos-blog 학습자료 HTTP 계약](https://github.com/jon890/fos-blog/blob/study-library-planning/docs/api/study-library.md)을 단일 HTTP 계약으로 읽는다.
-API 장애, 인증 실패, 충돌이 발생하면 파일 이력으로 fallback하거나 dual-write하지 않고 오류를 알린다.
 수집 실패는 빈 페이지로 전송하지 않으며, cursor 저장은 서버가 자료 배치와 같은 트랜잭션으로 성공한 뒤에만 진행된 것으로 본다.
 
 최근 수집과 과거 수집은 같은 소스라도 `mode=recent`와 `mode=archive` cursor를 분리한다.
 각 실행의 20개 또는 48개 같은 수집 한도는 요청량 제한일 뿐 누적 보관 한도가 아니다.
-Kurly와 OliveYoung은 archive registry의 sitemap index에서 하위 sitemap을 따라가고, Kakao는 sitemap의 `/posts/` URL만 수집한다.
-YouTube는 API 키가 있으면 uploads playlist와 pageToken으로 과거 영상을 수집하고, API 키가 없으면 RSS 최근 수집만 가능하다고 출력한다.
-YouTube uploads playlist는 한 페이지 50개 단위라서 pageToken만으로 48개씩 저장하면 남은 2개가 유실될 수 있다.
-cursor는 pendingVideoIds로 현재 페이지에서 아직 저장하지 않은 video ID를 보존하고, 페이지의 모든 영상을 처리한 뒤에만 nextPageToken으로 이동한다.
+소스별 archive 수집 경로와 cursor 형식은 [`data-schema.md`](data-schema.md#학습자료-api-연동-상태)가 소유한다.
 추천 저장은 HTML과 report JSON 검증 후 별도 commit 명령으로 수행하며, `generatedAt`을 다시 만들지 않는다.
 
 실행 명령은 모두 저장소 루트에서 실행한다.
@@ -235,9 +231,7 @@ bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
 ```
 
 archive cursor를 처음부터 다시 만들 때는 `--reset-cursor`를 함께 지정한다.
-이 옵션은 `--library --collect-only --mode archive --source-key <key>` 조합에서만 허용한다.
-standalone reset API는 없고, 기존 cursor version을 읽은 뒤 초기 cursor에서 만든 자료 배치와 다음 cursor를 ingestion으로 원자 저장한다.
-이미 `done:true`인 archive를 다시 수집할 때도 같은 옵션을 사용한다.
+허용 조합과 저장 방식은 [`data-schema.md`](data-schema.md#학습자료-api-연동-상태)가 소유한다.
 
 외부 게시가 성공하면 아래 명령으로 publications 기록만 추가한다.
 

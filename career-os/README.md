@@ -38,7 +38,6 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 SSH client는 원격 transport 값을 넣고, 홈서버의 Hermes는 `CAREER_WORKSPACE_COMMAND`로 같은 `career-storage` 명령을 호출한다.
 설치, 상태 확인과 복구 순서는 [홈서버 객체 저장소 연결 계약](../docs/home-server-object-storage.md)을 따른다.
 진행 중인 지원 대상은 private brain에서 확인하고 공고별 실행 자료는 `applications/<company>/<role>/`에서 관리한다.
-외부 게시, 제출, 로그인, 업로드, 메시지 전송은 사용자 승인 후에만 수행한다.
 
 ## 작업 흐름
 
@@ -51,12 +50,8 @@ SSH client는 원격 transport 값을 넣고, 홈서버의 Hermes는 `CAREER_WOR
 
 ## 데이터 경계
 
-- `config/`에는 수집 정책과 사람이 고른 예외를 둔다.
-- `applications/`, `library/`와 `state/`는 홈서버 `career-os` S3 collection의 release와 동기화할 로컬 작업본이다.
-- 게시용 HTML과 실행별 중간 데이터는 시스템 임시 디렉터리에 두고 검증 뒤 삭제한다.
-- `cache/`에는 원본에서 다시 만들 수 있는 수집 결과를 둔다.
-- `public/question-bank/`, `sources/fos-study/`에는 공개 가능한 일반 지식만 둔다.
-- 실제 제출, 로그인, 업로드, 외부 메시지 전송, 공개 발행은 사용자 승인 후에만 수행한다.
+층별 저장 위치는 [`docs/data-schema.md`](docs/data-schema.md)의 「저장 원칙」이 소유한다.
+외부로 나가는 동작의 승인 경계는 [`AGENTS.md`](AGENTS.md)의 「작업 경계」가 소유한다.
 
 ## 검증
 

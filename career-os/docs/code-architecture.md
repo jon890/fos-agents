@@ -332,8 +332,7 @@ HTML은 검증된 추천 JSON에서 파생한다.
 최상위에는 사용자가 직접 여는 `application-package.html`과 제출 PDF만 두고, 기준 원본은 `evidence/`에, 내부 검증 자료는 `review/`에 둔다.
 기준 원본은 `evidence/`의 `posting.md`, `candidate-interview.md`, `fit.md`, `strategy.md`, `status.md`, `resume-draft.md`와 `interview-questions.json`이다.
 포지션별 질문은 공고 책임, 근거 방어와 경험 공백에서 파생한다.
-사용자는 `application-package.html` 상단에서 준비 상태, 지원 판단, 실제 제출 PDF와 지원서 입력값을 확인한다.
-본문은 `공고 원문`, `공고 적합도`, `지원 전략`, `상세 자료` 네 탭으로 나뉜다.
+화면 구성은 [`data-schema.md`](data-schema.md#검토-화면)의 「검토 화면」이 소유한다.
 생성기와 검증기는 이 세 층의 경로를 계약으로 사용한다.
 층별 파일 목록은 [`data-schema.md`](data-schema.md)의 「지원 패키지」가 소유한다.
 브라우저 자동 입력용 `application-form.json`과 경력기술서는 필요한 경우에만 추가한다.
@@ -394,9 +393,7 @@ YouTube 채널은 공식 Atom 피드를 우선 사용하고 피드를 읽을 수
 `scripts/study-topic-recommender/source/archive/`는 sitemap과 YouTube uploads playlist 같은 과거 수집 cursor를 해석한다.
 source 어댑터는 원문 발견과 메타 추출만 하고, 자료 저장과 cursor 진행은 study-library client가 API 응답으로 확인한다.
 archive 진입점은 `config/external-reading-sources.ts`에 복제하지 않고 sourceKey별 registry로 둔다.
-registry에는 Kurly와 OliveYoung sitemap index URL, Kakao sitemap URL과 `/posts/` prefix, YouTube uploads playlist ID 해석 규칙을 둔다.
-따라서 config schemaVersion은 이 변경에서 올리지 않는다.
-Kurly와 OliveYoung의 최근 수집 adapter는 계속 `feed`이고, archive registry에서만 sitemap index 수집기를 사용한다.
+registry가 담는 소스별 진입점과 cursor 형식은 [`data-schema.md`](data-schema.md#학습자료-api-연동-상태)가 소유한다.
 
 파일모드와 library 모드는 실행 진입점에서 분리한다.
 기본 파일모드는 기존 `skill begin`, `state/morning-study-history.json`, `--commit-history` 흐름을 유지한다.

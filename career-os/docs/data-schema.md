@@ -7,7 +7,7 @@ career-os는 사람이 관리하는 설정, 실행 상태, 비공개 산출물, 
 - `config/`에는 오래 유지할 수집 정책을 둔다.
 - `applications/`, `library/`와 `state/`는 홈서버 `career-os` S3 collection의 release와 동기화하는 로컬 작업본이다.
 - `cache/`에는 원본에서 다시 만들 수 있는 수집 결과를 둔다.
-- `public/`과 `sources/fos-study/`에는 공개 가능한 자료만 둔다.
+- `public/question-bank/`과 `sources/fos-study/`에는 공개 가능한 자료만 둔다.
 - 게시용 HTML과 실행별 중간 데이터는 시스템 임시 디렉터리에 두고 검증 뒤 삭제한다.
 
 ## 개인 공고 제외 설정
@@ -48,8 +48,7 @@ URL은 fragment, `utm_*`, `fbclid`, `gclid`를 제거하고 query 순서와 마�
 새 ID로 등록된 공고는 명시된 식별자나 URL이 일치하지 않으면 유지한다.
 
 `career-downside` 규칙은 네 업사이드 축을 모두 기록한다.
-`상향`이 하나도 없고 `하향`이 하나 이상일 때만 저장한다.
-정보 부족, 단순 보류와 낮은 추천 순위는 자동 제외 근거가 아니다.
+저장 조건은 `position-recommender`의 `references/position-decision-criteria.md`가 소유한다.
 지원 결과처럼 업사이드 비교와 다른 이유는 `manual`로 기록한다.
 버전 1의 기존 공고 규칙은 읽을 수 있지만 새 규칙은 이유와 결정 근거가 있는 버전 2로 저장한다.
 
@@ -226,10 +225,10 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 
 추천 항목의 URL과 공고 정보는 후보풀 원문과 일치해야 한다.
 
-업사이드는 `문제의 난도`, `오너십과 파는 깊이`, `도메인 확장 여지`, `보상` 네 축으로 나눠
-각 축을 `상향`, `동일`, `하향`, `확인 필요` 중 하나로 판정하고 근거를 함께 담는다.
-추천 티어 항목은 네 축을 빠짐없이 갖고, 후보풀 전체 순위는 네 축을 합친 종합 방향 하나를 갖는다.
-축 이름은 스키마의 `UPSIDE_AXES`가 소유하며, 비교 기준값은 private brain이 소유한다.
+추천 티어 항목은 업사이드 네 축을 빠짐없이 갖고, 후보풀 전체 순위는 네 축을 합친 종합 방향 하나를 갖는다.
+축 이름은 스키마의 `UPSIDE_AXES`가 소유하고, 축별 판정값과 판정 규칙은
+`position-recommender`의 `references/position-decision-criteria.md`가 소유한다.
+비교 기준값은 private brain이 소유한다.
 전체 후보 순위는 1부터 후보 수까지 이어지며 모든 후보 ID를 한 번씩 포함한다.
 강력 추천과 도전 추천의 순위는 전체 후보 순위와 일치한다.
 강력 추천, 도전 추천과 보류·주의 목록에는 고정 개수 제한을 두지 않는다.
