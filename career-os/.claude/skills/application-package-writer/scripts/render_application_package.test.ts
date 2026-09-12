@@ -206,7 +206,6 @@ describe("renderApplicationPackage", () => {
     const html = renderApplicationPackageHtml(
       `# 지원 준비\n\n- readiness: ready\n- evidence: safe\n- human-confirmation: complete\n\n${packageBody()}`,
       "# 인터뷰",
-      "# 이력서",
     );
 
     expect(html.match(/type="radio" name="tab"/g)).toHaveLength(3);
@@ -226,7 +225,7 @@ describe("renderApplicationPackage", () => {
     const strategy = panelText(html, "strategy");
 
     expect(strategy).toContain("임시 메모");
-    expect(strategy.indexOf("임시 메모")).toBeGreaterThan(strategy.indexOf("다음 행동"));
+    expect(strategy.indexOf("임시 메모")).toBeGreaterThan(strategy.indexOf("면접에서 검증받을 내용"));
   });
 
   test("선택 절은 입사 후 기여 시나리오와 보완할 공백 사이에 온다", () => {
@@ -234,7 +233,6 @@ describe("renderApplicationPackage", () => {
     const html = renderApplicationPackageHtml(
       `# 지원 준비\n\n- readiness: ready\n- evidence: safe\n- human-confirmation: complete\n\n${packageBody().replace("## 보완할 공백", `${growth}\n\n## 보완할 공백`)}`,
       "# 인터뷰",
-      "# 이력서",
     );
     const strategy = panelText(html, "strategy");
 
@@ -248,7 +246,6 @@ describe("renderApplicationPackage", () => {
     const html = renderApplicationPackageHtml(
       `# 지원 준비\n\n- readiness: ready\n- evidence: safe\n- human-confirmation: complete\n\n${packageBody()}`,
       "# 인터뷰",
-      "# 이력서",
     );
     const strategy = panelText(html, "strategy");
 
@@ -287,7 +284,7 @@ describe("renderApplicationPackage", () => {
     expect(html).toContain("내 답변 필요");
     expect(html).toContain("내 경험 확인 필요");
     expect(html).toContain("제출 준비 중");
-    expect(html).toContain("지금 할 일");
+    expect(html).toContain("NEXT ACTION");
     expect(html).toContain("제출 자료");
     expect(html).toContain("지원서 입력값");
     expect(html).toContain("필드 1개, 서술형 문항 1개");
@@ -299,7 +296,6 @@ describe("renderApplicationPackage", () => {
     const html = renderApplicationPackageHtml(
       `# 지원 준비\n\n- readiness: ready\n- evidence: safe\n- human-confirmation: complete\n\n${packageBodyWithFitTable(FULL_FIT_TABLE)}`,
       "# 인터뷰",
-      "# 이력서",
     );
 
     expect(html.match(/class="fit-circle\s/g)).toHaveLength(4);
@@ -353,7 +349,6 @@ describe("renderApplicationPackage", () => {
     const html = renderApplicationPackageHtml(
       "# 지원 준비\n\n- readiness: ready\n- evidence: safe\n- human-confirmation: complete\n\n## 결론\n\n내용",
       "# 인터뷰",
-      "# 이력서",
     );
 
     expect(html).not.toContain('<section class="fit-score"');
@@ -361,13 +356,12 @@ describe("renderApplicationPackage", () => {
   });
 
 
-  test("상세 자료 탭에 이력서 원문, 면접 질문과 인터뷰 기록을 담는다", () => {
+  test("상세 자료 탭에 면접 질문과 인터뷰 기록을 담고 이력서 본문은 담지 않는다", () => {
     const detail = panelText(readFileSync(renderApplicationPackage(fixture()), "utf8"), "detail");
 
-    expect(detail).toContain("이력서 원문");
     expect(detail).toContain("후보자 인터뷰 기록");
     expect(detail).toContain("포지션별 면접 질문");
-    expect(detail).toContain("여러 팀이 함께 사용하는 AI Platform");
+    expect(detail).not.toContain("이력서 원문");
     expect(detail).not.toContain('href="evidence/resume-draft.md"');
   });
 
@@ -408,7 +402,6 @@ describe("renderApplicationPackage", () => {
     const html = renderApplicationPackageHtml(
       `# 지원 준비\n\n- readiness: ready\n- evidence: safe\n- human-confirmation: complete\n\n${body}`,
       "# 인터뷰",
-      "# 이력서",
     );
 
     expect(html).toContain("직접 근거가 없다.<br>「보완할 공백」과 같다.");
@@ -435,7 +428,6 @@ describe("renderApplicationPackage", () => {
     const html = renderApplicationPackageHtml(
       `# 지원 준비\n\n- readiness: ready\n- evidence: safe\n- human-confirmation: complete\n\n${body}`,
       "# 인터뷰",
-      "# 이력서",
     );
 
     expect(html).toContain('<a href="https://example.com/career/job-detail?job_id=1234">');
