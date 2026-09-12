@@ -38,7 +38,6 @@ const TOP_SECTION_TITLES = new Set(["결론", "제출 준비 상태", "사용자
 const FIT_TAB_SECTION_TITLES = ["공고 항목별 적합도", "공개 자료로 확인한 팀과 인접 사례"] as const;
 
 const STRATEGY_TAB_SECTION_TITLES = [
-  "요구사항과 근거",
   "이 포지션에서의 승부처",
   "지원동기",
   "입사 후 기여 시나리오",

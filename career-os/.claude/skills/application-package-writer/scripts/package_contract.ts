@@ -28,7 +28,6 @@ export const REQUIRED_HEADINGS: Readonly<Record<string, readonly string[]>> = {
   "evidence/fit.md": [
     "## 결론",
     "## 공고 항목별 적합도",
-    "## 요구사항과 근거",
     "## 공개 자료로 확인한 팀과 인접 사례",
   ],
   "evidence/strategy.md": [
