@@ -1,17 +1,15 @@
 ---
 name: application-package-writer
-description: 공고가 찾는 사람과 후보자의 경험, 이력과 방향성이 부합하는지 판정한다. "이 공고 지원 준비", "지원서 준비", "지원 패키지", "지원동기 정리", "이 회사에 지원하고 싶어"처럼 개별 공고의 지원 전략이 필요할 때 사용한다. 이력서·경력기술서 작성과 검증은 resume-preparer로 연결한다. 실제 제출, 로그인과 외부 전송은 하지 않는다.
+description: 공고가 찾는 사람과 후보자의 경험이 부합하는지 판정하고, 부합할 때만 제출 문서와 면접 준비를 만든다. 공고 링크나 회사와 직무 이름을 인자로 받는다. "이 공고 지원 준비", "지원서 준비", "지원 패키지", "지원동기 정리", "이 회사에 지원하고 싶어"처럼 개별 공고의 지원 전략이 필요할 때 사용한다. 이력서와 경력기술서 작성은 resume-preparer가 맡는다. 실제 제출, 로그인과 외부 전송은 하지 않는다.
 ---
 
 # 지원 준비
 
-**목표: 공고가 찾는 사람과 후보자의 경험, 이력과 방향성이 부합하는지 판정한다.**
+**목표: 공고가 찾는 사람과 후보자의 경험이 부합하는지 채용 심사자 관점에서 판정하고,
+부합할 때만 그 근거로 제출 문서와 면접 준비를 만든다.**
 
-**역할: 채용 심사자로서 공고가 찾는 사람과 후보자가 부합하는지 먼저 판정하고, 부합할 때만 제출 문서를 만든다.**
-
-부합한다고 판정하면 그 근거로 제출 문서와 면접 준비를 만든다.
-부합하지 않는다는 판정도 결론이며 그때는 지원하지 않는 이유를 남긴다.
-총점은 합격 확률이 아니라 공고 요구와 현재 근거가 맞닿은 정도다.
+부합하지 않는다는 판정도 결론이다. 그때는 지원하지 않는 이유를 남기고 제출 문서로 넘어가지 않는다.
+총점은 합격 확률이 아니라 공고 요구와 현재 확보한 근거가 맞닿은 정도다.
 
 ## 비공개 작업본 동기화
 
@@ -19,17 +17,34 @@ description: 공고가 찾는 사람과 후보자의 경험, 이력과 방향성
 
 ## 지원 대상 확인
 
-`applications/<company>/<role>/evidence/posting.md`를 기준으로 지원 대상을 정한다.
+**공고 링크나 회사와 직무 이름을 인자로 받는다.**
 
-공고 경로가 없으면 `brain-search`로 private brain의 현재 지원 대상을 먼저 확인한다.
-brain에서 찾은 회사와 역할에 대응하는 `applications/<company>/<role>/` 디렉터리를 사용한다.
-brain에 현재 대상이 없거나 대응하는 지원 디렉터리가 없거나 둘 이상이면 임의로 선택하지 말고 정확히 한 가지 질문으로 대상을 확정한다.
-`state/current-target.json`을 현재 대상의 기준으로 만들지 않는다.
+```text
+/application-package-writer https://careers.daangn.com/jobs/role/5296522003/
+/application-package-writer 당근 부동산
+```
+
+`position-recommender` 리포트의 공고 링크를 그대로 붙여 넣는 것이 기본 경로다.
+
+| 받은 것 | 하는 일 |
+| --- | --- |
+| 공고 URL | 공식 페이지를 열어 회사와 직무를 읽고 대상 디렉터리를 정한다 |
+| 회사와 직무 이름 | 같은 이름의 디렉터리를 찾는다. 없으면 공고 URL 을 한 번 묻는다 |
+| 인자 없음 | `brain-search` 로 private brain 의 현재 지원 대상을 확인한다 |
+
+대상 디렉터리는 `applications/<company>/<role>/` 이며 영문 소문자와 하이픈만 쓴다.
+`daangn/backend-community-apartment` 가 그 예다.
+이미 있으면 그 자리를 이어 쓰고, 없으면 만들면서 `evidence/posting.md` 에 공고 원문과 확인 시각을 남긴다.
+
+대상을 하나로 좁히지 못하면 임의로 고르지 않고 정확히 한 가지 질문으로 확정한다.
+brain 에 현재 대상이 없거나, 대응하는 디렉터리가 둘 이상일 때가 그 경우다.
 
 ## 실행 흐름
 
 각 단계에 진입할 때 표의 reference를 읽고, 단계별 통과 조건을 확인한다.
 근거 자료는 해당 단계에서 필요한 범위만 찾아 읽는다.
+
+**아래 명령은 모두 `career-os` 디렉터리에서 실행한다.** 경로는 그 자리를 기준으로 적었다.
 
 | 단계 | 이름 | 정할 것 | reference |
 | --- | --- | --- | --- |
@@ -51,10 +66,10 @@ brain에 현재 대상이 없거나 대응하는 지원 디렉터리가 없거�
 
 ### 단계 1: 공고 해체
 
-대상 디렉터리의 `evidence/posting.md`를 읽는다.
-공고 URL이 있으면 공식 페이지에서 현재 열려 있는지 다시 확인한다.
-회사 인재상과 일하는 방식은 회사 공식 채용·회사 소개 자료만 사용한다.
-일반적인 좋은 개발자 특성을 회사 기준처럼 쓰지 않는다.
+대상 디렉터리의 `evidence/posting.md`를 읽고, 공식 페이지에서 공고가 지금도 열려 있는지 확인한다.
+
+회사 인재상과 일하는 방식은 그 회사의 공식 채용 자료와 회사 소개 자료에서만 가져온다.
+일반적인 좋은 개발자 특성을 그 회사의 기준으로 쓰면 승부처가 어느 회사에나 맞는 문장이 된다.
 
 공고에서 다음 내용을 분리한다.
 
@@ -92,8 +107,7 @@ private brain과 기존 경력기술서는 탐색을 위한 색인으로 사용�
 판정을 마친 뒤 저장소 루트에서 다음 검증 명령으로 총점과 구분별 소계를 확인하고, 계산한 값을 사용자에게 보여준다.
 
 ```bash
-bun career-os/.claude/skills/application-package-writer/scripts/validate_application_package.ts \
-  <application-directory>
+bun .claude/skills/application-package-writer/scripts/validate_application_package.ts <application-directory>
 ```
 
 총점은 합격 확률이 아니라 공고 요구와 현재 확보한 근거가 맞닿은 정도로 설명한다.
@@ -172,13 +186,7 @@ bun career-os/.claude/skills/application-package-writer/scripts/validate_applica
 지원 전략과 사람 확인이 준비되면 같은 사용자 요청 안에서 `resume-preparer`를 호출한다.
 사용자에게 별도 스킬 실행 순서를 맡기지 않는다.
 
-`resume-preparer`는 다음 책임을 한 흐름으로 수행한다.
-
-- 이력서와 필요한 경력기술서 작성
-- 사람만 확정할 수 있는 경험 판단과 설명 준비
-- 주장별 근거 감사
-- 인사담당자와 실무담당자 리뷰와 실제 렌더 검증
-- HTML, PDF와 제출 묶음 생성
+이력서와 경력기술서 작성, 근거 감사, 리뷰와 렌더 검증, 제출 묶음 생성은 `resume-preparer` 가 소유한다.
 
 사용자만 확정할 수 있는 지원동기나 사실이 남으면 `needs_user_input`에서 멈춘다.
 지원 전략만 요청한 경우에도 다음 행동에 이력서 준비 상태를 명시한다.
@@ -234,8 +242,7 @@ bun career-os/.claude/skills/application-package-writer/scripts/validate_applica
 질문은 `evidence/interview-questions.json` 하나에 저장하고 다음 명령으로 검증한다.
 
 ```bash
-bun "$(git rev-parse --show-toplevel)/career-os/scripts/interview-drill/application_question_schema.ts" \
-  <application-directory>
+bun scripts/interview-drill/application_question_schema.ts <application-directory>
 ```
 
 각 질문에는 답변에서 확인할 신호와 `evidenceBoundary`를 함께 기록한다.
@@ -278,10 +285,13 @@ HTML 골격과 CSS는 `templates/application-package.html`과 `templates/applica
 근거 장부, 점수표, manifest와 HTML 중간 파일은 검증에 사용하되 사용자용 링크로 나열하지 않는다.
 층별 파일 배치는 `career-os/docs/data-schema.md`의 「지원 패키지」가 소유한다.
 
-### 만들지 않는 자료
+### 만드는 자료의 범위
 
-claim ledger를 다시 풀어 쓴 evidence audit, 공통 디자인을 복제한 공고별 design 문서와 이전 제출 PDF는 만들지 않는다.
-중간 설명 문서가 기존 원본이나 구조화 데이터와 같은 내용을 반복하면 만들지 않는다.
+산출물은 위 계약이 정한 것으로 끝낸다. 검증기가 스키마 밖 파일을 거부하는 이유다.
+
+실측으로 세 가지가 반복해서 늘어났다. claim ledger 를 풀어 쓴 evidence audit,
+공통 디자인을 복제한 공고별 design 문서, 이전 제출 PDF 다.
+셋 다 기존 원본이나 구조화 데이터가 이미 담은 내용이었다.
 
 ## 안전 경계
 
