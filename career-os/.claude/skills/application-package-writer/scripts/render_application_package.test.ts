@@ -3,7 +3,6 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { TAB_KEYS } from "./render_application_package.ts";
-import { FIT_TABLE_HEADING, REQUIRED_HEADINGS, REQUIRED_PACKAGE_FILES } from "./package_contract.ts";
 import {
   fillTemplate,
   renderApplicationPackage,
@@ -12,6 +11,7 @@ import {
   renderMarkdown,
 } from "./render_application_package.ts";
 
+const FIT_TABLE_HEADING = "## 공고 항목별 적합도";
 const FIT_TABLE = `| 공고 항목 | 공고 구분 | 근거 | 판정 |
 | --- | --- | --- | --- |
 | 공통 기반 표준화 | 주요 업무 | 공통 모듈 분리 경험 | 확인됨 |
@@ -23,20 +23,56 @@ const FULL_FIT_TABLE = `| 공고 항목 | 공고 구분 | 근거 | 판정 |
 | AI 플랫폼 운영 | 기대 경험 | LLM 서비스 운영 경험 | 강한 인접 |
 | 자체 호스팅 모델 운영 | 우대 경험 | 직접 근거 없음 | 공백 |`;
 
+/**
+ * 화면이 받을 문서의 본보기다. 계약이 아니라 이 검사의 표본이므로 여기서 소유한다.
+ * 절을 늘리거나 줄여도 화면이 그려지는지는 아래 검사가 따로 확인한다.
+ */
+const SAMPLE_HEADINGS: Record<string, readonly string[]> = {
+  "evidence/candidate-interview.md": ["## 확보된 답변", "## 미확인 질문"],
+  "evidence/fit.md": ["## 결론", "## 공고 항목별 적합도", "## 공개 자료로 확인한 팀과 인접 사례"],
+  "evidence/strategy.md": [
+    "## 이 포지션에서의 승부처",
+    "## 지원동기",
+    "## 입사 후 기여 시나리오",
+    "## 보완할 공백",
+    "## 회사 문화와의 연결",
+    "## 면접에서 검증받을 내용",
+  ],
+  "evidence/status.md": ["## 제출 준비 상태", "## 사용자 확인 필요", "## 다음 행동"],
+  "evidence/resume-draft.md": ["## 프로필", "## 주요 프로젝트", "## 경력", "## 기술"],
+};
+
+const SAMPLE_FILES = [
+  "evidence/posting.md",
+  "evidence/candidate-interview.md",
+  "evidence/fit.md",
+  "evidence/strategy.md",
+  "evidence/status.md",
+  "evidence/resume-draft.md",
+  "evidence/interview-questions.json",
+] as const;
+
 const directories: string[] = [];
 
 afterEach(() => {
   for (const directory of directories.splice(0)) rmSync(directory, { force: true, recursive: true });
 });
 
+/** 화면은 세 파일을 이어 붙인 것을 받는다. 절 순서는 상태, 적합도, 전략이다. */
+const ALL_PACKAGE_HEADINGS = [
+  ...SAMPLE_HEADINGS["evidence/status.md"],
+  ...SAMPLE_HEADINGS["evidence/fit.md"],
+  ...SAMPLE_HEADINGS["evidence/strategy.md"],
+];
+
 function packageBody(): string {
-  return REQUIRED_HEADINGS["evidence/application-package.md"]
+  return ALL_PACKAGE_HEADINGS
     .map((heading) => (heading === FIT_TABLE_HEADING ? `${heading}\n\n${FIT_TABLE}` : `${heading}\n\n내용`))
     .join("\n\n");
 }
 
 function packageBodyWithFitTable(table: string): string {
-  return REQUIRED_HEADINGS["evidence/application-package.md"]
+  return ALL_PACKAGE_HEADINGS
     .map((heading) => (heading === FIT_TABLE_HEADING ? `${heading}\n\n${table}` : `${heading}\n\n내용`))
     .join("\n\n");
 }
@@ -50,27 +86,32 @@ function write(directory: string, relativePath: string, content: string): void {
 function fixture(): string {
   const directory = mkdtempSync(join(tmpdir(), "application-package-render-"));
   directories.push(directory);
-  for (const file of REQUIRED_PACKAGE_FILES) {
+  for (const file of SAMPLE_FILES) {
     if (file === "evidence/interview-questions.json") continue;
-    const headings = (REQUIRED_HEADINGS[file] ?? []).join("\n\n내용\n\n");
+    const headings = (SAMPLE_HEADINGS[file] ?? []).join("\n\n내용\n\n");
     write(directory, file, `# ${file}\n\n${headings}\n`);
   }
   write(
     directory,
-    "evidence/application-package.md",
-    `# 토스플레이스 AI Platform 지원 준비\n\n- readiness: needs_user_input\n- evidence: safe\n- human-confirmation: needs_input\n- 공식 공고: https://example.com/job\n- 근거: sources/fos-study/task/example.md\n\n${packageBody()}`,
+    "evidence/status.md",
+    `# 지원 준비 상태\n\n- readiness: needs_user_input\n- evidence: safe\n- human-confirmation: needs_input\n\n${SAMPLE_HEADINGS["evidence/status.md"].join("\n\n내용\n\n")}\n\n내용`,
+  );
+  write(
+    directory,
+    "evidence/fit.md",
+    `# 적합도\n\n- 공식 공고: https://example.com/job\n- 근거: sources/fos-study/task/example.md\n\n${SAMPLE_HEADINGS["evidence/fit.md"].map((h) => (h === FIT_TABLE_HEADING ? `${h}\n\n${FIT_TABLE}` : `${h}\n\n내용`)).join("\n\n")}`,
   );
   write(
     directory,
     "evidence/interview-questions.json",
     JSON.stringify({
       schemaVersion: 1,
-      company: "토스플레이스",
-      role: "AI Platform Server Developer",
-      sourceDocuments: ["evidence/application-package.md"],
+      company: "예시 회사",
+      role: "Backend Developer",
+      sourceDocuments: ["evidence/fit.md"],
       questions: [
         {
-          id: "tossplace-position-question",
+          id: "example-position-question",
           drillType: "tech",
           topic: "position-question",
           category: "ai-platform",
@@ -166,14 +207,41 @@ describe("renderApplicationPackage", () => {
 
   test("표에 없는 섹션은 지원 전략 패널 끝에 붙는다", () => {
     const directory = fixture();
-    const path = join(directory, "evidence", "application-package.md");
-    write(directory, "evidence/application-package.md", `${readFileSync(path, "utf8")}\n\n## 임시 메모\n\n남겨둘 내용\n`);
+    const path = join(directory, "evidence", "strategy.md");
+    write(directory, "evidence/strategy.md", `${readFileSync(path, "utf8")}\n\n## 임시 메모\n\n남겨둘 내용\n`);
 
     const html = readFileSync(renderApplicationPackage(directory), "utf8");
     const strategy = panelText(html, "strategy");
 
     expect(strategy).toContain("임시 메모");
     expect(strategy.indexOf("임시 메모")).toBeGreaterThan(strategy.indexOf("다음 행동"));
+  });
+
+  test("선택 절은 입사 후 기여 시나리오와 보완할 공백 사이에 온다", () => {
+    const growth = ["## 이 자리에서 얻을 경험과 성장", "### 서비스가 커질 여지\n\n내용"].join("\n\n");
+    const html = renderApplicationPackageHtml(
+      `# 지원 준비\n\n- readiness: ready\n- evidence: safe\n- human-confirmation: complete\n\n${packageBody().replace("## 보완할 공백", `${growth}\n\n## 보완할 공백`)}`,
+      "# 인터뷰",
+      "# 이력서",
+    );
+    const strategy = panelText(html, "strategy");
+
+    expect(strategy).toContain("이 자리에서 얻을 경험과 성장");
+    expect(strategy.indexOf("이 자리에서 얻을 경험과 성장")).toBeGreaterThan(strategy.indexOf("입사 후 기여 시나리오"));
+    expect(strategy.indexOf("이 자리에서 얻을 경험과 성장")).toBeLessThan(strategy.indexOf("보완할 공백"));
+    expect(panelText(html, "fit")).not.toContain("이 자리에서 얻을 경험과 성장");
+  });
+
+  test("선택 절이 없으면 나머지 지원 전략 절의 순서를 그대로 둔다", () => {
+    const html = renderApplicationPackageHtml(
+      `# 지원 준비\n\n- readiness: ready\n- evidence: safe\n- human-confirmation: complete\n\n${packageBody()}`,
+      "# 인터뷰",
+      "# 이력서",
+    );
+    const strategy = panelText(html, "strategy");
+
+    expect(strategy).not.toContain("이 자리에서 얻을 경험과 성장");
+    expect(strategy.indexOf("입사 후 기여 시나리오")).toBeLessThan(strategy.indexOf("보완할 공백"));
   });
 
   test("치환 값의 달러 기호를 치환 패턴으로 해석하지 않는다", () => {
@@ -217,7 +285,7 @@ describe("renderApplicationPackage", () => {
 
   test("적합도 총점 원 하나와 구분별 소계 원 셋을 상단에 보여준다", () => {
     const html = renderApplicationPackageHtml(
-      `# 지원 준비\n\n- readiness: ready\n- evidence: safe\n- human-confirmation: complete\n\n${packageBodyWithFitTable(FULL_FIT_TABLE)}`,
+      `# 지원 준비\n\n- readiness: ready\n- evidence: safe\n- human-confirmation: complete\n- 적합도 총점: 75\n- 주요 업무 소계: 100\n- 기대 경험 소계: 75\n- 우대 경험 소계: 0\n\n${packageBodyWithFitTable(FULL_FIT_TABLE)}`,
       "# 인터뷰",
       "# 이력서",
     );
@@ -235,12 +303,9 @@ describe("renderApplicationPackage", () => {
   });
 
   test("점수 구간에 맞는 CSS 변수 이름을 원에 적용한다", () => {
-    const html = renderFitScore({
-      total: 90,
-      sectionScores: { "주요 업무": 60, "기대 경험": 25, "우대 경험": 24.9 },
-      judgmentCounts: { 확인됨: 0, "강한 인접": 0, "인접 경험": 0, 공백: 0, "사용자 확인": 0 },
-      excludedCount: 0,
-    });
+    const html = renderFitScore(
+      "- 적합도 총점: 90\n- 주요 업무 소계: 60\n- 기대 경험 소계: 25\n- 우대 경험 소계: 24.9",
+    );
 
     expect(html).toContain("fit-circle fit-excellent");
     expect(html).toContain("fit-circle fit-fair");
@@ -248,63 +313,29 @@ describe("renderApplicationPackage", () => {
   });
 
   test("총점 원 옆에 합격 확률이 아니라는 경계 문구가 있다", () => {
-    const html = renderFitScore({
-      total: 90,
-      sectionScores: { "주요 업무": 90, "기대 경험": 90, "우대 경험": 90 },
-      judgmentCounts: { 확인됨: 3, "강한 인접": 0, "인접 경험": 0, 공백: 0, "사용자 확인": 0 },
-      excludedCount: 0,
-    });
+    const html = renderFitScore("- 적합도 총점: 90");
 
     expect(html).toContain("합격 확률이 아닙니다");
     expect(html).toContain("공고 요구와 현재 확보한 근거");
   });
 
-  test("구분 소계가 null이면 해당 없음 원을 보여준다", () => {
-    const html = renderFitScore({
-      total: 100,
-      sectionScores: { "주요 업무": 100, "기대 경험": null, "우대 경험": 100 },
-      judgmentCounts: { 확인됨: 2, "강한 인접": 0, "인접 경험": 0, 공백: 0, "사용자 확인": 1 },
-      excludedCount: 1,
-    });
+  test("모델이 적은 소계 이름을 그대로 원으로 만든다", () => {
+    const html = renderFitScore("- 적합도 총점: 100\n- 주요 업무 소계: 100\n- 조직 적합 소계: 80");
 
-    expect(html).toContain("해당 없음");
-    expect(html).toContain("기대 경험 해당 없음, 색 빨강");
-    expect(html).toContain("fit-circle fit-none is-empty");
+    expect(html).toContain(">주요 업무</strong>");
+    expect(html).toContain(">조직 적합</strong>");
+    expect(html.match(/class="fit-circle\s/g)).toHaveLength(3);
   });
 
-  test("총점이 null이면 판정 대기 문구를 보여주고 구분 소계 null은 해당 없음으로 둔다", () => {
-    const html = renderFitScore({
-      total: null,
-      sectionScores: { "주요 업무": null, "기대 경험": null, "우대 경험": null },
-      judgmentCounts: { 확인됨: 0, "강한 인접": 0, "인접 경험": 0, 공백: 0, "사용자 확인": 3 },
-      excludedCount: 3,
-    });
+  test("총점이 없으면 판정 대기 문구를 보여준다", () => {
+    const html = renderFitScore("- 적합도 총점 없음");
 
     expect(html).toContain("판정 대기");
-    expect(html).toContain("적합도 총점 판정이 아직 없습니다, 색 빨강");
-    expect(html).toContain("주요 업무 해당 없음, 색 빨강");
-    expect(html).toContain("기대 경험 해당 없음, 색 빨강");
-    expect(html).toContain("우대 경험 해당 없음, 색 빨강");
-    expect(html.match(/해당 없음/g)).toHaveLength(6);
+    expect(html).toContain("적합도 총점 판정이 아직 없습니다");
+    // 빈 원을 낮은 점수로 듣지 않도록 색은 읽어 주지 않는다.
+    expect(html).not.toContain("색 빨강");
   });
 
-  test("모든 적합도 행이 사용자 확인이어도 HTML로 렌더링하고 치환 이름을 남기지 않는다", () => {
-    const userConfirmationTable = `| 공고 항목 | 공고 구분 | 근거 | 판정 |
-| --- | --- | --- | --- |
-| 본인 역할 확인 | 주요 업무 | | 사용자 확인 |
-| LLM 운영 범위 확인 | 기대 경험 | | 사용자 확인 |
-| 자체 호스팅 경험 확인 | 우대 경험 | | 사용자 확인 |`;
-    const html = renderApplicationPackageHtml(
-      `# 지원 준비\n\n- readiness: needs_user_input\n- evidence: safe\n- human-confirmation: needs_input\n\n${packageBodyWithFitTable(userConfirmationTable)}`,
-      "# 인터뷰",
-      "# 이력서",
-    );
-
-    expect(html).toContain("판정 대기");
-    expect(html).toContain("적합도 총점 판정이 아직 없습니다, 색 빨강");
-    expect(html.match(/class="fit-circle\s/g)).toHaveLength(4);
-    expect(html).not.toContain("{{");
-  });
 
   test("적합도 절이 없는 문서도 HTML로 렌더링하고 치환 이름을 남기지 않는다", () => {
     const html = renderApplicationPackageHtml(
@@ -317,16 +348,6 @@ describe("renderApplicationPackage", () => {
     expect(html).not.toContain("{{");
   });
 
-  test("renderApplicationPackage는 적합도 절이 없는 패키지의 파일 생성을 거부한다", () => {
-    const directory = fixture();
-    write(
-      directory,
-      "evidence/application-package.md",
-      `# 토스플레이스 AI Platform 지원 준비\n\n- readiness: needs_user_input\n- evidence: safe\n- human-confirmation: needs_input\n- 공식 공고: https://example.com/job\n- 근거: sources/fos-study/task/example.md\n\n${packageBodyWithFitTable("내용")}`,
-    );
-
-    expect(() => renderApplicationPackage(directory)).toThrow("섹션에는 머리행, 구분행과 데이터 행을 가진 표가 필요합니다");
-  });
 
   test("상세 자료 탭에 이력서 원문, 면접 질문과 인터뷰 기록을 담는다", () => {
     const detail = panelText(readFileSync(renderApplicationPackage(fixture()), "utf8"), "detail");
@@ -368,7 +389,7 @@ describe("renderApplicationPackage", () => {
       "| Model Router 표준화 | 주요 업무 | 직접 근거가 없다.<br>「보완할 공백」과 같다. | 공백 |",
       "| <script>alert(1)</script> | 기대 경험 | 태그는 이스케이프된다 | 공백 |",
     ].join("\n");
-    const body = REQUIRED_HEADINGS["evidence/application-package.md"]
+    const body = ALL_PACKAGE_HEADINGS
       .map((heading) => (heading === FIT_TABLE_HEADING ? `${heading}\n\n${table}` : `${heading}\n\n내용`))
       .join("\n\n");
 
@@ -386,12 +407,12 @@ describe("renderApplicationPackage", () => {
 
   test("맨 주소는 링크가 되고 이미 링크나 코드인 것은 그대로 둔다", () => {
     const links = [
-      "- 공식 공고: https://toss.im/career/job-detail?job_id=7733044003",
-      "- 이미 링크: [토스 채용](https://toss.im/career)",
+      "- 공식 공고: https://example.com/career/job-detail?job_id=1234",
+      "- 이미 링크: [채용 페이지](https://example.com/career)",
       "- 코드 안: `https://example.com/not-a-link`",
-      "- 문장 끝: https://toss.im/company 를 확인한다.",
+      "- 문장 끝: https://example.com/company 를 확인한다.",
     ].join("\n");
-    const body = REQUIRED_HEADINGS["evidence/application-package.md"]
+    const body = ALL_PACKAGE_HEADINGS
       .map((heading) => {
         if (heading === "## 결론") return `${heading}\n\n${links}`;
         if (heading === FIT_TABLE_HEADING) return `${heading}\n\n${FIT_TABLE}`;
@@ -405,11 +426,11 @@ describe("renderApplicationPackage", () => {
       "# 이력서",
     );
 
-    expect(html).toContain('<a href="https://toss.im/career/job-detail?job_id=7733044003">');
-    expect(html).toContain('<a href="https://toss.im/career">토스 채용</a>');
+    expect(html).toContain('<a href="https://example.com/career/job-detail?job_id=1234">');
+    expect(html).toContain('<a href="https://example.com/career">채용 페이지</a>');
     expect(html).not.toContain("<code><a href=");
     expect(html).toContain("<code>https://example.com/not-a-link</code>");
-    expect(html).toContain('<a href="https://toss.im/company">https://toss.im/company</a> 를');
+    expect(html).toContain('<a href="https://example.com/company">https://example.com/company</a> 를');
   });
 
   test("공고 원문 탭은 evidence/posting.md 내용을 담는다", () => {

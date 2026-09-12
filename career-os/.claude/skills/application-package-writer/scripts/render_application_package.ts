@@ -7,19 +7,12 @@ import { validateApplicationPackage } from "./validate_application_package.ts";
 import { validateSubmissionBundle } from "../../resume-preparer/scripts/validate_submission_bundle.ts";
 import { loadApplicationInterviewQuestions } from "../../../../scripts/interview-drill/application_question_schema.ts";
 import { loadApplicationForm, type ApplicationForm } from "./application_form_schema.ts";
-import {
-  calculateFitScore,
-  fitScoreColor,
-  parseFitTable,
-  type FitColor,
-  type FitScore,
-  type FitSection,
-} from "./fit_score.ts";
 
+/** 모델이 적지 않았으면 그 자리는 `null` 이다. 화면은 그 배지를 그리지 않는다. */
 type PackageStatus = {
-  readiness: "ready" | "needs_user_input" | "revise" | "do_not_apply";
-  evidence: "safe" | "revise" | "blocked";
-  humanConfirmation: "complete" | "needs_input";
+  readiness: "ready" | "needs_user_input" | "revise" | "do_not_apply" | null;
+  evidence: "safe" | "revise" | "blocked" | null;
+  humanConfirmation: "complete" | "needs_input" | null;
 };
 
 type MarkdownSection = {
@@ -46,10 +39,11 @@ const TOP_SECTION_TITLES = new Set(["결론", "제출 준비 상태", "사용자
 const FIT_TAB_SECTION_TITLES = ["공고 항목별 적합도", "공개 자료로 확인한 팀과 인접 사례"] as const;
 
 const STRATEGY_TAB_SECTION_TITLES = [
-  "요구사항과 근거",
   "이 포지션에서의 승부처",
   "지원동기",
   "입사 후 기여 시나리오",
+  // 선택 절이다. 없으면 건너뛰고 나머지 순서는 그대로 둔다.
+  "이 자리에서 얻을 경험과 성장",
   "보완할 공백",
   "회사 문화와의 연결",
   "면접에서 검증받을 내용",
@@ -58,20 +52,20 @@ const STRATEGY_TAB_SECTION_TITLES = [
 
 const TEMPLATE_DIRECTORY = resolve(import.meta.dir, "../templates");
 
-const READINESS_LABELS: Record<PackageStatus["readiness"], string> = {
+const READINESS_LABELS: Record<NonNullable<PackageStatus["readiness"]>, string> = {
   ready: "제출 검토 가능",
   needs_user_input: "내 답변 필요",
   revise: "문장 보강 필요",
   do_not_apply: "지원 보류 권장",
 };
 
-const EVIDENCE_LABELS: Record<PackageStatus["evidence"], string> = {
+const EVIDENCE_LABELS: Record<NonNullable<PackageStatus["evidence"]>, string> = {
   safe: "근거 안전",
   revise: "근거 표현 조정",
   blocked: "근거 확인 전 사용 금지",
 };
 
-const HUMAN_CONFIRMATION_LABELS: Record<PackageStatus["humanConfirmation"], string> = {
+const HUMAN_CONFIRMATION_LABELS: Record<NonNullable<PackageStatus["humanConfirmation"]>, string> = {
   complete: "사람 확인 완료",
   needs_input: "내 경험 확인 필요",
 };
@@ -82,7 +76,6 @@ const QUESTION_ORIGIN_LABELS = {
   experience_gap: "경험 공백 확인",
 } as const;
 
-const FIT_SECTION_LABELS: readonly FitSection[] = ["주요 업무", "기대 경험", "우대 경험"];
 
 const FIT_COLOR_LABELS: Record<FitColor, string> = {
   excellent: "진한 초록",
@@ -94,6 +87,11 @@ const FIT_COLOR_LABELS: Record<FitColor, string> = {
 
 function read(path: string): string {
   return readFileSync(path, "utf8");
+}
+
+/** 아직 만들지 않은 원본은 빈 문자열로 읽는다. 화면이 만들어지는 것이 검사보다 먼저다. */
+function readIfPresent(path: string): string {
+  return existsSync(path) ? read(path) : "";
 }
 
 function escapeHtml(text: string): string {
@@ -242,13 +240,14 @@ export function renderMarkdown(markdown: string): string {
 }
 
 function statusFrom(markdown: string): PackageStatus {
-  const readiness = markdown.match(/^- readiness:\s*(ready|needs_user_input|revise|do_not_apply)\s*$/m)?.[1];
-  const evidence = markdown.match(/^- evidence:\s*(safe|revise|blocked)\s*$/m)?.[1];
-  const humanConfirmation = markdown.match(/^- human-confirmation:\s*(complete|needs_input)\s*$/m)?.[1];
-  if (!readiness || !evidence || !humanConfirmation) {
-    throw new Error("지원 준비 상태를 읽을 수 없습니다.");
-  }
-  return { readiness, evidence, humanConfirmation } as PackageStatus;
+  return {
+    readiness: (markdown.match(/^- readiness:\s*(ready|needs_user_input|revise|do_not_apply)\s*$/m)?.[1] ??
+      null) as PackageStatus["readiness"],
+    evidence: (markdown.match(/^- evidence:\s*(safe|revise|blocked)\s*$/m)?.[1] ??
+      null) as PackageStatus["evidence"],
+    humanConfirmation: (markdown.match(/^- human-confirmation:\s*(complete|needs_input)\s*$/m)?.[1] ??
+      null) as PackageStatus["humanConfirmation"],
+  };
 }
 
 function documentTitle(markdown: string): string {
@@ -300,6 +299,33 @@ function primaryFiles(applicationForm: ApplicationForm | undefined, assets: Rend
   </section>`;
 }
 
+type FitColor = "excellent" | "good" | "fair" | "weak" | "none";
+
+/** 화면 색만 정하는 구간이다. 판정 기준은 `docs/data-schema.md`가 소유한다. */
+const FIT_SCORE_COLOR_BANDS = [
+  { minimum: 85, color: "excellent" },
+  { minimum: 65, color: "good" },
+  { minimum: 45, color: "fair" },
+  { minimum: 25, color: "weak" },
+  { minimum: 0, color: "none" },
+] as const satisfies readonly { minimum: number; color: FitColor }[];
+
+function fitScoreColor(score: number): FitColor {
+  return FIT_SCORE_COLOR_BANDS.find((band) => score >= band.minimum)?.color ?? "none";
+}
+
+/**
+ * 점수는 모델이 계산해 문서에 적는다. 화면은 그것을 읽기만 한다.
+ * 「적합도 총점」이 없으면 원을 그리지 않고, 소계는 적힌 이름 그대로 원이 된다.
+ */
+function scoresFrom(markdown: string): { total: number | null; subtotals: [string, number][] } {
+  const total = markdown.match(/^- 적합도 총점:\s*([0-9]+(?:\.[0-9]+)?)\s*$/m)?.[1];
+  const subtotals = [...markdown.matchAll(/^- (.+?) 소계:\s*([0-9]+(?:\.[0-9]+)?)\s*$/gm)].map(
+    ([, label, value]) => [label, Number(value)] as [string, number],
+  );
+  return { total: total === undefined ? null : Number(total), subtotals };
+}
+
 function formatFitScore(score: number): string {
   return Number.isInteger(score) ? String(score) : score.toFixed(1);
 }
@@ -309,19 +335,22 @@ function fitCircle(label: string, score: number | null, total = false): string {
   const pendingTotal = total && score === null;
   const value = score === null ? (pendingTotal ? "판정 대기" : "해당 없음") : formatFitScore(score);
   const ariaScore = score === null ? (pendingTotal ? "판정이 아직 없습니다" : "해당 없음") : `${formatFitScore(score)}점`;
+  // 점수가 없으면 색을 읽어 주지 않는다. 빈 원을 낮은 점수로 듣게 된다.
+  const ariaLabel = score === null ? `${label} ${ariaScore}` : `${label} ${ariaScore}, 색 ${FIT_COLOR_LABELS[color]}`;
   return `<article class="fit-meter${total ? " fit-meter-total" : ""}">
-      <div class="fit-circle fit-${color}${score === null ? " is-empty" : ""}" aria-label="${escapeHtml(`${label} ${ariaScore}, 색 ${FIT_COLOR_LABELS[color]}`)}">
+      <div class="fit-circle fit-${color}${score === null ? " is-empty" : ""}" aria-label="${escapeHtml(ariaLabel)}">
         <span>${escapeHtml(value)}</span>
       </div>
       <strong class="fit-label">${escapeHtml(label)}</strong>
     </article>`;
 }
 
-export function renderFitScore(score: FitScore): string {
+export function renderFitScore(markdown: string): string {
+  const { total, subtotals } = scoresFrom(markdown);
   return `<section class="fit-score" aria-labelledby="fit-score-title">
     <div class="fit-meter-row">
-      ${fitCircle("적합도 총점", score.total, true)}
-      ${FIT_SECTION_LABELS.map((section) => fitCircle(section, score.sectionScores[section])).join("\n      ")}
+      ${fitCircle("적합도 총점", total, true)}
+      ${subtotals.map(([label, value]) => fitCircle(label, value)).join("\n      ")}
     </div>
     <p class="fit-boundary" id="fit-score-title">적합도 총점은 합격 확률이 아닙니다. 공고 요구와 현재 확보한 근거가 얼마나 맞닿아 있는지 보여주는 검토 점수입니다.</p>
   </section>`;
@@ -354,7 +383,7 @@ function actionItems(status: PackageStatus, assets: RenderAssets): ActionItem[] 
   if (status.humanConfirmation === "needs_input") {
     actions.push({ owner: "내 확인", body: "지원동기, 실제 역할 또는 결과 범위에 답해야 합니다." });
   }
-  if (status.evidence !== "safe") {
+  if (status.evidence && status.evidence !== "safe") {
     actions.push({ owner: "에이전트 작업", body: "근거보다 강한 제출 문장을 낮추거나 추가 근거를 확인해야 합니다." });
   }
   for (const blocker of new Set((assets.submissionBlockers ?? []).map(userFacingBlocker))) {
@@ -555,16 +584,19 @@ export function renderApplicationPackageHtml(
   const sections = splitSections(packageMarkdown);
   const conclusion = sections.find((section) => section.title === "결론");
   const fitScore = sections.some((section) => section.title === "공고 항목별 적합도")
-    ? renderFitScore(calculateFitScore(parseFitTable(packageMarkdown)))
+    ? renderFitScore(packageMarkdown)
     : "";
   const tabs = buildTabs(sections, interviewMarkdown, resumeMarkdown, assets, questionsMarkdown, postingMarkdown);
   const submissionLabel = assets.submissionReady ? "제출 검증 완료" : "제출 준비 중";
   const statusBadges = [
-    `<span class="status readiness-${status.readiness}">${READINESS_LABELS[status.readiness]}</span>`,
-    `<span class="status evidence-${status.evidence}">${EVIDENCE_LABELS[status.evidence]}</span>`,
-    `<span class="status human-${status.humanConfirmation}">${HUMAN_CONFIRMATION_LABELS[status.humanConfirmation]}</span>`,
+    status.readiness &&
+      `<span class="status readiness-${status.readiness}">${READINESS_LABELS[status.readiness]}</span>`,
+    status.evidence &&
+      `<span class="status evidence-${status.evidence}">${EVIDENCE_LABELS[status.evidence]}</span>`,
+    status.humanConfirmation &&
+      `<span class="status human-${status.humanConfirmation}">${HUMAN_CONFIRMATION_LABELS[status.humanConfirmation]}</span>`,
     `<span class="status ${assets.submissionReady ? "evidence-safe" : "evidence-revise"}">${submissionLabel}</span>`,
-  ].join("\n        ");
+  ].filter(Boolean).join("\n        ");
   const heroNotes = sections
     .filter((section) => section.title !== "결론" && TOP_SECTION_TITLES.has(section.title))
     .map((section) => supportingSection(section.title, section.body))
@@ -595,9 +627,13 @@ export function renderApplicationPackage(applicationDirectory: string, outputPat
   const validation = validateApplicationPackage(directory);
   if (!validation.passed) throw new Error(validation.errors.join("\n"));
 
-  const packageMarkdown = read(join(directory, "evidence", "application-package.md"));
-  const interviewMarkdown = read(join(directory, "evidence", "candidate-interview.md"));
-  const resumeMarkdown = read(join(directory, "evidence", "resume-draft.md"));
+  // 세 파일이 한 화면으로 합쳐진다. 절을 제목으로 골라 쓰므로 이어 붙이면 된다.
+  // 아직 만들지 않은 파일은 빈 문자열로 둔다. 화면은 그만큼 비어 보인다.
+  const packageMarkdown = ["status.md", "fit.md", "strategy.md"]
+    .map((file) => readIfPresent(join(directory, "evidence", file)))
+    .join("\n\n");
+  const interviewMarkdown = readIfPresent(join(directory, "evidence", "candidate-interview.md"));
+  const resumeMarkdown = readIfPresent(join(directory, "evidence", "resume-draft.md"));
   const applicationFormPath = join(directory, "evidence", "application-form.json");
   const postingPath = join(directory, "evidence", "posting.md");
   const submission = validateSubmissionBundle(directory);

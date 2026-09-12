@@ -67,12 +67,27 @@ class PublishReportTests(unittest.TestCase):
         fake_temp.mkdir()
 
         with mock.patch.object(
-            PUBLISH_REPORT.tempfile,
-            "gettempdir",
-            return_value=str(fake_temp),
+            PUBLISH_REPORT,
+            "temp_roots",
+            return_value=[fake_temp.resolve()],
         ):
-            with self.assertRaisesRegex(PUBLISH_REPORT.PublishError, "시스템 임시"):
+            with self.assertRaisesRegex(PUBLISH_REPORT.PublishError, "임시 디렉터리"):
                 self.prepare(source)
+
+    def test_harness_scratchpad_under_private_tmp_is_accepted(self) -> None:
+        """하네스 스크래치패드는 gettempdir 와 다른 임시 루트에 있어도 게시할 수 있다."""
+        scratch = self.root / "claude-scratchpad"
+        scratch.mkdir()
+        source = scratch / "report.html"
+        source.write_text("<title>스크래치패드</title>", encoding="utf-8")
+
+        with mock.patch.object(
+            PUBLISH_REPORT,
+            "temp_roots",
+            return_value=[self.root.resolve()],
+        ):
+            result = self.prepare(source)
+        self.assertEqual(result.source, "system-temp/report.html")
 
     def test_single_html_with_local_asset_is_rejected(self) -> None:
         source = self.repo / "report.html"
