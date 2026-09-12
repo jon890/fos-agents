@@ -254,7 +254,7 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 
 ### `evidence/`
 
-- `posting.md`: 공고 원문을 항목으로 나눈 기준본이며 원문 표현이 판단을 가르는 곳은 낱말을 그대로 남긴다
+- `posting.md`: 공고 원문이며 공고 자체의 절 구조를 그대로 둔다. 원문 표현이 판단을 가르는 곳은 낱말을 그대로 남긴다. 쪼갠 항목 목록은 `application-package.md` 의 적합도 표가 담는다
 - `candidate-interview.md`: 후보자 원문 답변, 정리한 핵심과 제출 반영 여부
 - `application-package.md`: 공고 항목별 적합도, 후보자 근거, 지원 판단, 승부처, 공백과 다음 행동을 담은 원본이며 시장과 규모로 판단하는 「이 자리에서 얻을 경험과 성장」을 선택 절로 둔다
 - `resume-draft.md`: HTML과 PDF로 변환할 제출용 이력서 원본
