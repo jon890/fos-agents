@@ -17,6 +17,7 @@ import {
 } from "./package_contract.ts";
 import { loadApplicationForm } from "./application_form_schema.ts";
 import { calculateFitScore, parseFitTable, type FitScore } from "./fit_score.ts";
+import { parseGrowthSection, type GrowthSection } from "./growth_section.ts";
 import { loadApplicationInterviewQuestions } from "../../../../scripts/interview-drill/application_question_schema.ts";
 
 export type PackageValidation = {
@@ -25,6 +26,7 @@ export type PackageValidation = {
   readiness?: "ready" | "needs_user_input" | "revise" | "do_not_apply";
   humanConfirmation?: "complete" | "needs_input";
   fitScore?: FitScore;
+  growthSection?: GrowthSection;
   errors: string[];
 };
 
@@ -133,6 +135,14 @@ export function validateApplicationPackage(applicationDirectory: string): Packag
     errors.push(error instanceof Error ? error.message : String(error));
   }
 
+  // 절이 없으면 `undefined`가 돌아온다. 이 절 없이 만든 지원 건도 통과한다.
+  let growthSection: GrowthSection | undefined;
+  try {
+    growthSection = parseGrowthSection(packageText);
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : String(error));
+  }
+
   if (!/https?:\/\//.test(packageText)) {
     errors.push("evidence/application-package.md에 공고 또는 회사 공식 URL이 필요합니다.");
   }
@@ -177,6 +187,7 @@ export function validateApplicationPackage(applicationDirectory: string): Packag
     readiness: readinessMatch?.[1] as PackageValidation["readiness"],
     humanConfirmation: humanConfirmationMatch?.[1] as PackageValidation["humanConfirmation"],
     fitScore,
+    growthSection,
     errors,
   };
 }

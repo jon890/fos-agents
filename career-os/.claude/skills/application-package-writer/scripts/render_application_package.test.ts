@@ -3,7 +3,13 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { TAB_KEYS } from "./render_application_package.ts";
-import { FIT_TABLE_HEADING, REQUIRED_HEADINGS, REQUIRED_PACKAGE_FILES } from "./package_contract.ts";
+import {
+  FIT_TABLE_HEADING,
+  GROWTH_HEADING,
+  GROWTH_SUBHEADINGS,
+  REQUIRED_HEADINGS,
+  REQUIRED_PACKAGE_FILES,
+} from "./package_contract.ts";
 import {
   fillTemplate,
   renderApplicationPackage,
@@ -174,6 +180,33 @@ describe("renderApplicationPackage", () => {
 
     expect(strategy).toContain("임시 메모");
     expect(strategy.indexOf("임시 메모")).toBeGreaterThan(strategy.indexOf("다음 행동"));
+  });
+
+  test("선택 절은 입사 후 기여 시나리오와 보완할 공백 사이에 온다", () => {
+    const growth = [GROWTH_HEADING, ...GROWTH_SUBHEADINGS.map((subheading) => `${subheading}\n\n내용`)].join("\n\n");
+    const html = renderApplicationPackageHtml(
+      `# 지원 준비\n\n- readiness: ready\n- evidence: safe\n- human-confirmation: complete\n\n${packageBody().replace("## 보완할 공백", `${growth}\n\n## 보완할 공백`)}`,
+      "# 인터뷰",
+      "# 이력서",
+    );
+    const strategy = panelText(html, "strategy");
+
+    expect(strategy).toContain("이 자리에서 얻을 경험과 성장");
+    expect(strategy.indexOf("이 자리에서 얻을 경험과 성장")).toBeGreaterThan(strategy.indexOf("입사 후 기여 시나리오"));
+    expect(strategy.indexOf("이 자리에서 얻을 경험과 성장")).toBeLessThan(strategy.indexOf("보완할 공백"));
+    expect(panelText(html, "fit")).not.toContain("이 자리에서 얻을 경험과 성장");
+  });
+
+  test("선택 절이 없으면 나머지 지원 전략 절의 순서를 그대로 둔다", () => {
+    const html = renderApplicationPackageHtml(
+      `# 지원 준비\n\n- readiness: ready\n- evidence: safe\n- human-confirmation: complete\n\n${packageBody()}`,
+      "# 인터뷰",
+      "# 이력서",
+    );
+    const strategy = panelText(html, "strategy");
+
+    expect(strategy).not.toContain("이 자리에서 얻을 경험과 성장");
+    expect(strategy.indexOf("입사 후 기여 시나리오")).toBeLessThan(strategy.indexOf("보완할 공백"));
   });
 
   test("치환 값의 달러 기호를 치환 패턴으로 해석하지 않는다", () => {

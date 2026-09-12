@@ -1,5 +1,6 @@
 import { FIT_JUDGMENT_SCORES, type FitJudgment } from "./fit_score.ts";
 export { FIT_TABLE_HEADING, FIT_TABLE_HEADERS } from "./fit_score.ts";
+export { GROWTH_HEADING, GROWTH_SUBHEADINGS } from "./growth_section.ts";
 
 export const REQUIRED_PACKAGE_FILES = [
   "evidence/posting.md",
@@ -8,6 +9,14 @@ export const REQUIRED_PACKAGE_FILES = [
   "evidence/resume-draft.md",
   "evidence/interview-questions.json",
 ] as const;
+
+/**
+ * 있으면 검사하고 없으면 통과하는 절.
+ * 이 절이 생기기 전에 만든 지원 건을 소급해 고치지 않으려고 `REQUIRED_HEADINGS`에 넣지 않는다.
+ */
+export const OPTIONAL_HEADINGS: Readonly<Record<string, readonly string[]>> = {
+  "evidence/application-package.md": ["## 이 자리에서 얻을 경험과 성장"],
+};
 
 export const REQUIRED_HEADINGS: Readonly<Record<string, readonly string[]>> = {
   "evidence/candidate-interview.md": ["## 확보된 답변", "## 미확인 질문"],

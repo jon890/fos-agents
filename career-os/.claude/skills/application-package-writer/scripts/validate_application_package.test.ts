@@ -2,7 +2,13 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { FIT_TABLE_HEADING, REQUIRED_HEADINGS, REQUIRED_PACKAGE_FILES } from "./package_contract.ts";
+import {
+  FIT_TABLE_HEADING,
+  GROWTH_HEADING,
+  GROWTH_SUBHEADINGS,
+  REQUIRED_HEADINGS,
+  REQUIRED_PACKAGE_FILES,
+} from "./package_contract.ts";
 import { validateApplicationPackage } from "./validate_application_package.ts";
 
 const FIT_TABLE = `| 공고 항목 | 공고 구분 | 근거 | 판정 |
@@ -20,6 +26,25 @@ function packageBody(): string {
   return REQUIRED_HEADINGS["evidence/application-package.md"]
     .map((heading) => (heading === FIT_TABLE_HEADING ? `${heading}\n\n${FIT_TABLE}` : `${heading}\n\n내용`))
     .join("\n\n");
+}
+
+/** 하위 절 다섯을 계약 순서대로 채운 선택 절. 트래픽 절은 쓰기와 읽기를 나눠 적는다. */
+function growthSection(): string {
+  const body = (subheading: string) =>
+    subheading === "### 경험할 수 있는 트래픽의 성격"
+      ? "쓰기는 일 12만 건이고 읽기는 초당 900건이다."
+      : "내용";
+  return [GROWTH_HEADING, ...GROWTH_SUBHEADINGS.map((subheading) => `${subheading}\n\n${body(subheading)}`)].join("\n\n");
+}
+
+/** 선택 절을 「입사 후 기여 시나리오」와 「보완할 공백」 사이에 끼운다. */
+function withGrowthSection(directory: string, section = growthSection()): void {
+  const path = join(directory, "evidence", "application-package.md");
+  write(
+    directory,
+    "evidence/application-package.md",
+    readFileSync(path, "utf8").replace("## 보완할 공백", `${section}\n\n## 보완할 공백`),
+  );
 }
 
 function write(directory: string, relativePath: string, content: string): void {
@@ -303,6 +328,70 @@ describe("validateApplicationPackage", () => {
     const result = validateApplicationPackage(directory);
     expect(result.passed).toBe(false);
     expect(result.errors.join("\n")).toContain("application-answers.md는 사용하지 않습니다");
+  });
+
+  test("이 자리에서 얻을 경험과 성장 절이 없어도 통과한다", () => {
+    const directory = fixture();
+
+    const result = validateApplicationPackage(directory);
+    expect(result.passed).toBe(true);
+    expect(result.growthSection).toBeUndefined();
+  });
+
+  test("하위 절 다섯을 계약 순서대로 갖춘 선택 절을 통과시킨다", () => {
+    const directory = fixture();
+    withGrowthSection(directory);
+
+    const result = validateApplicationPackage(directory);
+    expect(result.passed).toBe(true);
+    expect(result.growthSection?.subheadings).toEqual([...GROWTH_SUBHEADINGS]);
+  });
+
+  test("선택 절에 하위 절이 빠지면 빠진 이름을 담아 거부한다", () => {
+    const directory = fixture();
+    withGrowthSection(directory, growthSection().replace("### 여기서 얻기 어려운 것\n\n내용", ""));
+
+    const result = validateApplicationPackage(directory);
+    expect(result.passed).toBe(false);
+    expect(result.errors.join("\n")).toContain("하위 절이 빠졌습니다: ### 여기서 얻기 어려운 것");
+  });
+
+  test("선택 절의 하위 절 순서가 뒤바뀌면 거부한다", () => {
+    const directory = fixture();
+    const swapped = [
+      GROWTH_HEADING,
+      "### 경쟁 서비스와 이 서비스의 위치\n\n내용",
+      "### 서비스가 커질 여지\n\n내용",
+      "### 경험할 수 있는 트래픽의 성격\n\n쓰기와 읽기를 나눠 적는다.",
+      "### 여기서 얻기 쉬운 것\n\n내용",
+      "### 여기서 얻기 어려운 것\n\n내용",
+    ].join("\n\n");
+    withGrowthSection(directory, swapped);
+
+    const result = validateApplicationPackage(directory);
+    expect(result.passed).toBe(false);
+    expect(result.errors.join("\n")).toContain("순서여야 합니다");
+  });
+
+  test("트래픽 절이 쓰기와 읽기를 나누지 않으면 거부한다", () => {
+    const directory = fixture();
+    withGrowthSection(
+      directory,
+      growthSection().replace("쓰기는 일 12만 건이고 읽기는 초당 900건이다.", "초당 900건을 처리한다."),
+    );
+
+    const result = validateApplicationPackage(directory);
+    expect(result.passed).toBe(false);
+    expect(result.errors.join("\n")).toContain("쓰기와 읽기를 나눠 적어야 합니다");
+  });
+
+  test("선택 절의 하위 절이 비어 있으면 거부한다", () => {
+    const directory = fixture();
+    withGrowthSection(directory, growthSection().replace("### 여기서 얻기 쉬운 것\n\n내용", "### 여기서 얻기 쉬운 것"));
+
+    const result = validateApplicationPackage(directory);
+    expect(result.passed).toBe(false);
+    expect(result.errors.join("\n")).toContain("하위 절이 비어 있습니다: ### 여기서 얻기 쉬운 것");
   });
 
   test("계약에 없는 하위 디렉터리의 파일을 거부한다", () => {
