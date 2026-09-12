@@ -302,7 +302,7 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 판단 기준은
 [`fit-judgment.md`](../.claude/skills/application-package-writer/references/fit-judgment.md)가 소유한다.
 행별 점수와 구분별 가중치는 모델이 공고를 보고 정해 `evidence/fit.md` 에 남긴다.
-소계와 총점은 그 둘로 `fit_score.ts` 가 계산하고, 판정 이름의 구간은 `package_contract.ts` 가 소유한다.
+소계와 총점은 그 둘로 `fit_score.ts` 가 계산한다.
 색 구간은 `render_application_package.ts` 가 소유한다.
 
 `evidence/status.md`의 준비 상태 값과 판단 기준은

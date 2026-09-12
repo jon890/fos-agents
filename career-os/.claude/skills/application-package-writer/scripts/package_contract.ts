@@ -25,21 +25,5 @@ export const SUBMISSION_LEAK_PATTERNS = [
   /\b[0-9a-f]{40}\b/i,
 ] as const;
 
-/**
- * 점수가 판정 이름을 정한다. 문서에는 점수만 적고 이름은 화면이 붙인다.
- * 구간을 문서에서 관리하면 지원 건마다 달라져 총점을 비교할 수 없다.
- */
-export const FIT_VERDICT_BANDS = [
-  { minimum: 85, verdict: "확인됨" },
-  { minimum: 65, verdict: "강한 인접" },
-  { minimum: 35, verdict: "인접 경험" },
-  { minimum: 0, verdict: "공백" },
-] as const;
-
-/** 적합도 표의 점수 열 이름. 이 이름이 보이면 화면이 판정 열을 만든다. */
+/** 적합도 표의 점수 열 이름. 화면이 이 열을 읽어 원과 색을 그린다. */
 export const FIT_SCORE_COLUMN = "점수";
-export const FIT_VERDICT_COLUMN = "판정";
-
-export function fitVerdict(score: number): string {
-  return FIT_VERDICT_BANDS.find((band) => score >= band.minimum)?.verdict ?? "공백";
-}

@@ -13,7 +13,7 @@
 
 | 문서 | 바뀐 것 |
 | --- | --- |
-| `ocr-api-gateway-removal.md` | 이력서에 새 절로 들어갔고, 공고의 API 설계 항목 판정이 `강한 인접` 에서 `확인됨` 으로 올라 총점이 84.5 에서 86.5 로 바뀌었다 |
+| `ocr-api-gateway-removal.md` | 이력서에 새 절로 들어갔고, 공고의 API 설계 항목 점수가 올라 총점이 84.5 에서 86.5 로 바뀌었다 |
 | `ocr-scale-connection-resilience.md` | 기존 이력서 문장이 실제 진행 상태와 어긋난 것을 잡았다 |
 | `docparser-*.md` 와 `observability-to-error-triage-loop.md` | 주장별 근거 대조의 근거가 됐다 |
 

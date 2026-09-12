@@ -7,7 +7,7 @@ import { validateApplicationPackage } from "./validate_application_package.ts";
 import { validateSubmissionBundle } from "../../resume-preparer/scripts/validate_submission_bundle.ts";
 import { loadApplicationInterviewQuestions } from "../../../../scripts/interview-drill/application_question_schema.ts";
 import { loadApplicationForm, type ApplicationForm } from "./application_form_schema.ts";
-import { FIT_SCORE_COLUMN, FIT_VERDICT_COLUMN, fitVerdict } from "./package_contract.ts";
+import { FIT_SCORE_COLUMN } from "./package_contract.ts";
 import { computeFitScores, PENDING_SCORE } from "./fit_score.ts";
 
 /** 모델이 적지 않았으면 그 자리는 `null` 이다. 화면은 그 배지를 그리지 않는다. */
@@ -83,7 +83,6 @@ const FIT_COLOR_LABELS: Record<FitColor, string> = {
   excellent: "진한 초록",
   good: "초록",
   fair: "노랑",
-  weak: "주황",
   none: "빨강",
 };
 
@@ -206,25 +205,12 @@ export function renderMarkdown(markdown: string): string {
       }
       index -= 1;
 
-      // 점수 열이 한 행이라도 숫자면 판정 이름을 화면이 붙인다. 문서는 점수만 적는다.
-      // 소계표처럼 같은 이름의 열에 숫자가 아닌 값이 오는 표는 그대로 둔다.
-      const scoreColumn = headers.indexOf(FIT_SCORE_COLUMN);
-      const derivesVerdict =
-        scoreColumn !== -1 &&
-        !headers.includes(FIT_VERDICT_COLUMN) &&
-        rows.some((cells) => Number.isFinite(Number(cells[scoreColumn])));
-
       output.push("<div class=\"table-scroll\"><table><thead><tr>");
       for (const header of headers) output.push(`<th>${inlineMarkdown(header)}</th>`);
-      if (derivesVerdict) output.push(`<th>${FIT_VERDICT_COLUMN}</th>`);
       output.push("</tr></thead><tbody>");
       for (const cells of rows) {
         output.push("<tr>");
         for (const cell of cells) output.push(`<td>${tableCell(cell)}</td>`);
-        if (derivesVerdict) {
-          const score = Number(cells[scoreColumn]);
-          output.push(`<td>${Number.isFinite(score) ? escapeHtml(fitVerdict(score)) : ""}</td>`);
-        }
         output.push("</tr>");
       }
       output.push("</tbody></table></div>");
@@ -330,14 +316,13 @@ function primaryFiles(applicationForm: ApplicationForm | undefined, assets: Rend
   </section>`;
 }
 
-type FitColor = "excellent" | "good" | "fair" | "weak" | "none";
+type FitColor = "excellent" | "good" | "fair" | "none";
 
-/** 화면 색만 정하는 구간이다. 판정 기준은 `docs/data-schema.md`가 소유한다. */
+/** 점수를 색으로만 옮긴다. 이름은 붙이지 않는다. */
 const FIT_SCORE_COLOR_BANDS = [
   { minimum: 85, color: "excellent" },
   { minimum: 65, color: "good" },
-  { minimum: 45, color: "fair" },
-  { minimum: 25, color: "weak" },
+  { minimum: 35, color: "fair" },
   { minimum: 0, color: "none" },
 ] as const satisfies readonly { minimum: number; color: FitColor }[];
 

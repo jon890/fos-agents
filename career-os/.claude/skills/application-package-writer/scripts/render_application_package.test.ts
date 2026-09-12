@@ -455,18 +455,10 @@ describe("renderApplicationPackage", () => {
 });
 
 describe("적합도 표의 화면 처리", () => {
-  test("점수에서 판정 이름을 붙여 열 하나를 더한다", () => {
+  test("표에 없는 열을 화면이 만들지 않는다", () => {
     const html = renderMarkdown(FULL_FIT_TABLE);
 
-    expect(html).toContain("<th>판정</th>");
-    expect(html).toContain("<td>확인됨</td>");
-    expect(html).toContain("<td>강한 인접</td>");
-    expect(html).toContain("<td>공백</td>");
-  });
-
-  test("점수 열에 숫자가 없는 표에는 판정 열을 붙이지 않는다", () => {
-    const html = renderMarkdown("| 구분 | 점수 |\n| --- | --- |\n| 주요 업무 | 70, 50 |");
-
+    expect(html).toContain("<th>점수</th>");
     expect(html).not.toContain("<th>판정</th>");
   });
 

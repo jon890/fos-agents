@@ -2,7 +2,7 @@
 
 단계 1부터 3까지 공고 요구를 분리하고, 후보자 근거를 연결해 적합도를 판정한다.
 이 문서가 판단 기준을 소유한다.
-판정 이름의 구간은 `scripts/package_contract.ts` 가, 소계와 총점 계산은 `scripts/fit_score.ts` 가 소유한다.
+소계와 총점 계산은 `scripts/fit_score.ts` 가 소유한다.
 
 ## 공고 분석
 
