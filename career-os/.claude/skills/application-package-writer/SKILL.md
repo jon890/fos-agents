@@ -25,6 +25,18 @@ description: 공고가 찾는 사람과 후보자의 경험이 부합하는지 �
 
 [`flow.md`의 「비공개 작업 파일의 목표 흐름」](../../../docs/flow.md#비공개-작업-파일의-목표-흐름)을 `SKILL_NAME=application-package-writer`로 적용한다.
 
+## 근거 원본 최신화 확인
+
+위 동기화가 다루지 않는 `fos-study` 로컬 사본이 원격보다 뒤처졌는지 단계 1로 들어가기 전에 검사한다.
+없는 문서는 없는 경험으로 판정되므로, 근거를 읽기 전에 확인한다.
+private brain은 `brain-search`로 조회하며 경로로 확인하지 않는다.
+
+```bash
+bun "$(git rev-parse --show-toplevel)/career-os/.claude/skills/application-package-writer/scripts/check_evidence_sources.ts"
+```
+
+판정별 다음 행동과 당길 때 유의할 점은 [근거 원본 최신화 확인](references/evidence-source-freshness.md)이 소유한다.
+
 ## 지원 대상 확인
 
 **공고 링크나 회사와 직무 이름을 인자로 받는다.**

@@ -147,8 +147,16 @@ bun career-os/scripts/position-recommender/validate_recommendation.ts --input /t
 bun career-os/scripts/study-topic-recommender/manage_reading_sources.ts list --category techBlog
 bun test career-os/scripts/lib/cli-contract.test.ts career-os/scripts/lib/cli.test.ts
 bun test career-os/scripts
+bun test ./career-os/.claude/skills/
 bunx tsc --noEmit
 ```
+
+**스킬 스크립트는 경로를 직접 줘야 실행된다.**
+`bun test` 는 점으로 시작하는 디렉터리를 훑지 않아, 스킬이 `.claude/` 아래에 있는 한
+`bun test career-os/scripts` 나 파일 이름으로는 걸리지 않는다.
+실측으로 스킬 스크립트에 실패하는 테스트를 심고 `bun test career-os/scripts` 를 돌렸더니 0 fail 이 나왔다.
+
+`bunx tsc --noEmit` 은 `tsconfig.json` 의 `include` 가 스킬 스크립트를 담고 있어 경로를 주지 않아도 된다.
 
 실제 S3 연동 테스트는 전용 환경값이 모두 있을 때만 실행된다.
 로컬 리팩토링 검증에서는 해당 환경값을 제거하여 원격 저장소에 쓰지 않도록 한다.

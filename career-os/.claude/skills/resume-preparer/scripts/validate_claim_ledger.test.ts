@@ -3,7 +3,15 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { artifactTextSha256 } from "./artifact_identity.ts";
+import type { ClaimLedger } from "./claim_ledger_schema.ts";
 import { validateClaimLedger } from "./validate_claim_ledger.ts";
+
+// `ClaimLedger` 는 `schemaVersion` 으로 갈라지는 discriminated union 이라
+// 리터럴 `2` 로 만든 fixture 에는 `3` 을 다시 넣을 수 없다.
+// 버전을 바꿔 가며 검증하는 테스트가 있으므로 그 자리만 `2 | 3` 으로 둔다.
+type LedgerFixture = Omit<Extract<ClaimLedger, { schemaVersion: 3 }>, "schemaVersion"> & {
+  schemaVersion: 2 | 3;
+};
 
 const tempDirectories: string[] = [];
 
@@ -23,7 +31,9 @@ function fixture() {
   writeFileSync(artifact, "<html><body><p>검색 파이프라인을 구현했습니다.</p></body></html>");
   writeFileSync(evidence, "# 근거\n\n## 검색 파이프라인\n\n검색 파이프라인 구현 기록");
 
-  const data = {
+  // 타입을 달지 않으면 `evidence: []` 가 `never[]` 로 추론돼 뒤에서 실제 근거를 넣을 수 없고,
+  // 리터럴에 없는 `experienceDepth` 도 접근하지 못한다.
+  const data: LedgerFixture = {
     schemaVersion: 2,
     artifact: "resume.html",
     artifactTextSha256: artifactTextSha256(artifact),
@@ -36,12 +46,7 @@ function fixture() {
         type: "implementation",
         implementation: {
           status: "document_only",
-          evidence: [{ kind: "document", path: evidence, supports: "구현 기록" } as {
-            kind: string;
-            path: string;
-            supports: string;
-            locator?: string;
-          }],
+          evidence: [{ kind: "document", path: evidence, supports: "구현 기록" }],
         },
         ownership: { status: "document_only", evidence: [] },
         outcome: { status: "not_claimed", evidence: [] },
