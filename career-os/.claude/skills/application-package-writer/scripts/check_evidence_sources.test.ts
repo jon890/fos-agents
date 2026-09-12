@@ -222,7 +222,7 @@ describe("확인할 수 없는 원본", () => {
     expect(result.sources[0].path).toBe(clone);
   });
 
-  test("원격을 받지 못하면 unreachable 로 가른다", () => {
+  test("원격을 받지 못하면 unreachable 로 구분한다", () => {
     const { clone } = createOriginAndClone();
     git(clone, ["remote", "set-url", "origin", join(createWorkspace(), "gone")]);
 
