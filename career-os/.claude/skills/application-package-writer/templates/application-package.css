@@ -120,6 +120,12 @@ li { margin: 6px 0; }
 code { padding: 2px 5px; border-radius: 5px; color: #244079; background: #edf2fa; font: 650 .86em/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
 blockquote { margin: 14px 0; padding: 12px 14px; border-left: 4px solid var(--blue); color: #45516a; background: var(--blue-soft); }
 .table-scroll { width: 100%; max-width: 100%; overflow-x: auto; margin: 14px 0; border: 1px solid var(--line); border-radius: 10px; }
+.cell-list { margin: 0; padding-left: 18px; }
+.cell-list li { margin: 0 0 4px; }
+.cell-list li:last-child { margin-bottom: 0; }
+.fit-breakdown { margin: 10px 0 0; }
+.fit-breakdown summary { cursor: pointer; font-size: 13px; color: var(--muted); }
+.fit-formula { margin: 8px 0 0; font-size: 13px; color: var(--muted); }
 table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 14px; }
 th, td { padding: 11px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
 th { color: #34405a; background: #f4f7fb; font-size: 12px; }
