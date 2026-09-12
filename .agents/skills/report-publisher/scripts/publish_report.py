@@ -165,20 +165,37 @@ def validate_report_slug(slug: str) -> None:
         raise PublishError("production branch인 main은 리포트 slug로 사용할 수 없습니다.")
 
 
+def temp_roots() -> list[Path]:
+    """게시를 허용하는 임시 루트. 에이전트 하네스마다 쓰는 자리가 달라 표준 후보를 모두 받는다."""
+    candidates = [Path(tempfile.gettempdir()), Path("/tmp"), Path("/private/tmp")]
+    env_tmp = os.environ.get("TMPDIR")
+    if env_tmp:
+        candidates.append(Path(env_tmp))
+    roots: list[Path] = []
+    for candidate in candidates:
+        try:
+            resolved = candidate.resolve(strict=True)
+        except OSError:
+            continue
+        if resolved not in roots:
+            roots.append(resolved)
+    return roots
+
+
 def ensure_source_scope(source: Path, root: Path) -> Path:
     try:
         resolved = source.resolve(strict=True)
     except FileNotFoundError as exc:
         raise PublishError(f"게시 대상을 찾을 수 없습니다: {source}") from exc
-    temp_root = Path(tempfile.gettempdir()).resolve()
+    roots = temp_roots()
     in_repo = resolved.is_relative_to(root)
-    in_temp = resolved.is_relative_to(temp_root)
+    in_temp = any(resolved.is_relative_to(temp_root) for temp_root in roots)
     if not in_repo and not in_temp:
         raise PublishError(
-            "게시 대상은 현재 저장소 또는 시스템 임시 디렉터리 안에 있어야 합니다."
+            "게시 대상은 현재 저장소 또는 임시 디렉터리 안에 있어야 합니다."
         )
-    if resolved in {root, temp_root}:
-        raise PublishError("저장소나 시스템 임시 디렉터리의 루트는 게시할 수 없습니다.")
+    if resolved == root or resolved in roots:
+        raise PublishError("저장소나 임시 디렉터리의 루트는 게시할 수 없습니다.")
     if resolved.is_symlink() or source.is_symlink():
         raise PublishError("심볼릭 링크는 게시 대상으로 사용할 수 없습니다.")
     return resolved
