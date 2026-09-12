@@ -213,7 +213,8 @@ cursor는 pendingVideoIds로 현재 페이지에서 아직 저장하지 않은 v
 추천 저장은 HTML과 report JSON 검증 후 별도 commit 명령으로 수행하며, `generatedAt`을 다시 만들지 않는다.
 
 실행 명령은 모두 저장소 루트에서 실행한다.
-`<RUN_DIR>`는 시스템 임시 디렉터리 아래의 실행별 경로다.
+`<RUN_DIR>`는 시스템 임시 디렉터리 아래의 실행별 경로이며 이름이 `study-topic-recommender.` 로 시작해야 한다.
+library 모드는 `STUDY_LIBRARY_URL`과 `STUDY_SERVICE_TOKEN`이 있어야 돈다.
 
 ```bash
 # cwd: 저장소 루트

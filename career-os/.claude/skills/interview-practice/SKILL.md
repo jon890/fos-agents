@@ -55,6 +55,9 @@ description: 기술·인성·포지션별 면접 질문을 준비하고 한 번�
 현재 지원 대상이 있으면 brain에서 찾은 회사와 역할에 대응하는 지원 디렉터리를 확인한다.
 다음 명령처럼 `--application-dir`를 명시해 공고별 질문을 공통 질문보다 우선한다.
 
+**`--target-bar`를 공고별 질문의 난도보다 낮게 잡으면 그 질문이 난도 창 밖으로 빠진다.**
+공고별 질문을 반드시 보려면 `--target-bar`를 생략한다.
+
 ```bash
 bun "$(git rev-parse --show-toplevel)/career-os/scripts/interview-drill/drill-engine.ts" tech \
   --application-dir "$(git rev-parse --show-toplevel)/career-os/applications/<company>/<role>" \

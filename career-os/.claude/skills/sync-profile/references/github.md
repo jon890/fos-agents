@@ -55,7 +55,7 @@ curl -s -o /dev/null -w "%{http_code}" --max-time 12 "<url>"
 ## 직접 그리는 차트
 
 외부 서비스에 기대지 않고 SVG 를 만들어 저장소에 커밋하면 디자인을 통제할 수 있다.
-`scripts/agent_usage.py --json` 이 월별 수치를 내므로 그것으로 그린다.
+`career-os/.claude/skills/sync-profile/scripts/agent_usage.py --json` 이 월별 수치를 내므로 그것으로 그린다.
 
 - 배경은 `#0d1117` 로 두어 GitHub 다크 테마와 맞춘다
 - `<animate>` 로 막대가 올라오게 하면 정적 이미지보다 눈에 띈다

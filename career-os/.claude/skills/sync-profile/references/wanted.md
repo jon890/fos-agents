@@ -30,8 +30,9 @@ $B url "$H"
 ## 필드 인덱스 읽기
 
 ```bash
-scripts/wanted_list_fields.sh "$H"        # 제목과 본문만
-scripts/wanted_list_fields.sh "$H" all    # 직무와 직책까지
+S=career-os/.claude/skills/sync-profile/scripts
+$S/wanted_list_fields.sh "$H"        # 제목과 본문만
+$S/wanted_list_fields.sh "$H" all    # 직무와 직책까지
 ```
 
 **항목을 추가하면 그 아래 인덱스가 전부 밀린다.** 새 성과 항목은 회사 블록의 맨 위에 생기므로
@@ -43,7 +44,7 @@ scripts/wanted_list_fields.sh "$H" all    # 직무와 직책까지
 `value` 를 대입하고 `input` 이벤트를 보내면 화면은 바뀌지만 서버로 가지 않는다.
 저장 버튼이 없어 자동 저장으로 보이지만, 실제로는 이 핸들러가 저장을 맡는다.
 
-`scripts/wanted_set_field.sh` 가 이 순서를 담고 있다.
+`$S/wanted_set_field.sh` 가 이 순서를 담고 있다.
 
 1. `execCommand('insertText')` 로 실제 입력 경로를 탄다
 2. 요소의 `__reactProps` 키를 찾아 `onBlur` 를 부른다
@@ -53,7 +54,7 @@ scripts/wanted_list_fields.sh "$H" all    # 직무와 직책까지
 **`data-agent-field-key` 속성으로 식별한다.** 값은 `title`, `description`, `about` 이다.
 직무와 직책 입력에는 이 속성이 없어 인덱스로만 잡을 수 있다.
 
-인덱스 조회는 `scripts/wanted_list_fields.sh` 가 담당한다.
+인덱스 조회는 `$S/wanted_list_fields.sh` 가 담당한다.
 
 ## 기간 선택기
 
@@ -63,7 +64,7 @@ scripts/wanted_list_fields.sh "$H" all    # 직무와 직책까지
 컨테이너는 `div.wds-z4o2j` 다.
 
 **항목 경계를 넘어 옆 프로젝트의 기간을 건드리는 사고가 난다.**
-`scripts/wanted_set_period.sh` 는 컨테이너가 `title` 을 하나만 담는지 확인한 뒤에 클릭한다.
+`$S/wanted_set_period.sh` 는 컨테이너가 `title` 을 하나만 담는지 확인한 뒤에 클릭한다.
 
 **선택기가 겹쳐 열리면 둘 다 닫아야 한다.** 앞의 것이 닫히지 않은 채 다음을 열면
 `div.wds-z4o2j` 가 둘이 되어 어느 쪽을 조작하는지 알 수 없다. `Escape` 를 여러 번 보낸다.

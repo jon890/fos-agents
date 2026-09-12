@@ -6,6 +6,13 @@
 명령의 `<ROOT>`는 Git 저장소 루트, `<RUN_DIR>`는 실행별 시스템 임시 디렉터리다.
 `CAREER_OS_ROOT`는 임시 실행 경로이며 영구 이력 경로로 사용하지 않는다.
 
+**`<RUN_DIR>` 이름은 `study-topic-recommender.` 로 시작해야 한다.**
+런타임이 그 접두사를 확인하고, 아니면 종료 코드 2로 거절한다.
+
+```bash
+mktemp -d "${TMPDIR:-/tmp}/study-topic-recommender.XXXXXX"
+```
+
 ## 파일모드
 
 파일모드는 `state/morning-study-history.json`을 추천 이력으로 사용한다.
@@ -90,6 +97,9 @@ library 모드는 누적 학습자료 API를 사용한다.
 일반 수집과 추천 실행은 `skill begin`과 legacy `state/morning-study-history.json`에 의존하지 않는다.
 API 실패 때 파일모드로 대신 쓰거나 API와 파일 이력을 동시에 쓰지 않는다.
 추천 결과는 사용자용 HTML만 만들고 Markdown 리포트는 만들지 않는다.
+
+library 모드는 `STUDY_LIBRARY_URL`과 `STUDY_SERVICE_TOKEN`을 요구한다.
+둘 중 하나라도 없으면 종료 코드 1로 멈춘다. `career-os/.env`에 두고 `--env-file`로 넘긴다.
 
 `--library`에서는 `--render-only`, `--commit-history`, `--history-file`을 함께 쓰면 거절한다.
 다만 `--import-preview`는 legacy 파일을 읽어야 하므로 `--history-file`을 예외로 받는다.

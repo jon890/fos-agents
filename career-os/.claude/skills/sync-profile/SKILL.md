@@ -86,7 +86,7 @@ bun career-os/scripts/career-workspace/cli.ts skill finish sync-profile --json
 원티드와 LinkedIn 은 브라우저를 쓴다. `~/.claude/scripts/browser-driver` 로 조작한다.
 `open` 이 내는 한 줄이 `handle` 이고 아래 스크립트가 모두 첫 인자로 받는다.
 
-경로는 이 스킬 디렉터리 기준이다.
+경로는 저장소 루트 기준이다.
 
 ```bash
 S=career-os/.claude/skills/sync-profile/scripts
@@ -124,8 +124,9 @@ GitHub 프로필에 AI 도구 사용량을 수치로 넣을 수 있다.
 「AI 를 적극 활용한다」는 말보다 실측이 근거가 된다.
 
 ```bash
-python3 scripts/agent_usage.py --months 3
-python3 scripts/agent_usage.py --json
+A=career-os/.claude/skills/sync-profile/scripts/agent_usage.py
+python3 $A --months 3
+python3 $A --json
 ```
 
 Claude Code 와 Codex 세션 기록을 전수 읽어 월별 토큰과 API 환산 비용을 낸다.
