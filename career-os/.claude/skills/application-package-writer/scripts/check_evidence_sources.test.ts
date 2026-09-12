@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { checkEvidenceSources, EVIDENCE_SOURCES, type EvidenceSourceSpec } from "./check_evidence_sources.ts";
@@ -68,6 +68,58 @@ describe("근거 원본 목록의 문서 계약", () => {
     const paths = EVIDENCE_SOURCES.flatMap((source) => source.paths);
     expect(paths).not.toContain("career-os/applications");
     expect(paths).not.toContain("career-os/state");
+  });
+});
+
+describe("CLI 계약", () => {
+  const script = join(import.meta.dir, "check_evidence_sources.ts");
+  const invoke = (args: string[], cwd = import.meta.dir) => {
+    const result = Bun.spawnSync(["bun", script, ...args], { cwd, stdout: "pipe", stderr: "pipe" });
+    return { code: result.exitCode, out: result.stdout.toString(), err: result.stderr.toString() };
+  };
+
+  test("--help 는 0 으로 끝낸다", () => {
+    const result = invoke(["--help"]);
+
+    expect(result.code).toBe(0);
+    expect(result.out).toContain("--no-fetch");
+  });
+
+  test("모르는 옵션은 사용법 오류 2 로 끝낸다", () => {
+    expect(invoke(["--모르는옵션"]).code).toBe(2);
+  });
+
+  test("검사에 실패하면 1 로 끝낸다", () => {
+    const empty = createWorkspace();
+    git(empty, ["init", "--quiet", "--initial-branch", "main"]);
+    commit(empty, "first.md");
+
+    const result = invoke(["--no-fetch"], empty);
+
+    expect(result.code).toBe(1);
+    expect(JSON.parse(result.out).passed).toBe(false);
+  });
+
+  // `fetch: options["--no-fetch"] !== true` 는 옵션 이름이 바뀌면 뜻이 조용히 뒤집히는 자리다.
+  test("--no-fetch 가 원격을 받지 않는 경로로 이어진다", () => {
+    // 계약에 적힌 첫 자리인 `career-os/sources/fos-study` 에 실제 clone 을 둔다.
+    const { origin, clone } = createOriginAndClone();
+    const root = join(createWorkspace(), "root");
+    mkdirSync(join(root, "career-os", "sources"), { recursive: true });
+    renameSync(clone, join(root, "career-os", "sources", "fos-study"));
+    const source = join(root, "career-os", "sources", "fos-study");
+    commit(origin, "second.md");
+
+    const remoteRef = () =>
+      Bun.spawnSync(["git", "-C", source, "rev-parse", "origin/main"], { stdout: "pipe" }).stdout.toString();
+
+    const before = remoteRef();
+    invoke(["--no-fetch", root]);
+    expect(remoteRef()).toBe(before);
+
+    // 플래그를 빼면 같은 저장소에서 원격 ref 가 움직인다. 위 단언이 기본값 때문에 통과한 것이 아니다.
+    invoke([root]);
+    expect(remoteRef()).not.toBe(before);
   });
 });
 
