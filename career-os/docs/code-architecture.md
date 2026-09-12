@@ -38,6 +38,8 @@ career-os/
 | `scripts/position-recommender/`                                     | 활성 공고 수집, 추천 검증과 HTML 생성                     |
 | `scripts/study-topic-recommender/`                                  | 읽을거리 수집, 선별 결과 검증과 HTML 생성                 |
 | `scripts/interview-drill/`                                          | 질문 선택, 꼬리질문과 복습 상태 관리                      |
+| `scripts/interview-question-sources/`                               | 외부 면접 질문 후보 수집과 출처 검증                      |
+| `scripts/question-bank-collector/`                                  | 공개 질문 은행의 구조, 공개 범위와 출처 검사              |
 | `applications/<company>/<position>/`                                | 사용자가 여는 검토 화면과 제출 PDF                        |
 | `applications/<company>/<position>/evidence/`                       | 공고 원문, 후보자 인터뷰, 지원 전략과 제출 문서 원본      |
 | `applications/<company>/<position>/review/`                         | 근거 장부, 점수표, manifest와 제출 문서 HTML              |
@@ -331,7 +333,7 @@ HTML은 검증된 추천 JSON에서 파생한다.
 기준 원본은 `evidence/`의 `posting.md`, `candidate-interview.md`, `fit.md`, `strategy.md`, `status.md`, `resume-draft.md`와 `interview-questions.json`이다.
 포지션별 질문은 공고 책임, 근거 방어와 경험 공백에서 파생한다.
 사용자는 `application-package.html` 상단에서 준비 상태, 지원 판단, 실제 제출 PDF와 지원서 입력값을 확인한다.
-본문은 `공고 적합도`, `지원 전략`, `공고 원문`, `상세 자료` 네 탭으로 나뉜다.
+본문은 `공고 원문`, `공고 적합도`, `지원 전략`, `상세 자료` 네 탭으로 나뉜다.
 생성기와 검증기는 이 세 층의 경로를 계약으로 사용한다.
 층별 파일 목록은 [`data-schema.md`](data-schema.md)의 「지원 패키지」가 소유한다.
 브라우저 자동 입력용 `application-form.json`과 경력기술서는 필요한 경우에만 추가한다.

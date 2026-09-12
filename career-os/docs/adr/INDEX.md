@@ -9,7 +9,6 @@ ADR에는 현재 설계를 이해하는 데 필요한 기술적 선택과 기각
 | ADR-035 | [TypeScript 실행 코드를 책임별 모듈로 분리](ADR-035-typescript-실행-코드는-책임별-모듈로-분리한다.md) | Accepted |
 | ADR-039 | [현재 열린 개별 공고만 추천](ADR-039-position-recommender-추천-단위는-개별-active-open-공고.md) | Accepted |
 | ADR-047 | [공고 수집기를 소스 어댑터 경계로 분리](ADR-047-position-recommender-collector-adapter를-모듈-경계로-승격한다.md) | Accepted |
-| ADR-056 | [지원 패키지는 Markdown 계약을 먼저 고정](ADR-056-resume-package는-markdown-산출물-계약을-먼저-고정한다.md) | Accepted |
 | ADR-058 | [데이터 정리 전에 비공개 경계와 보존 기준을 결정](ADR-058-data-cleanup은-private-boundary와-retention을-먼저-고정한다.md) | Accepted |
 | ADR-059 | [지원용 HTML·PDF 이력서를 로컬에서 생성](ADR-059-지원용-html-pdf-이력서-export.md) | Accepted |
 | ADR-066 | [공개 질문과 개인 질문을 분리](ADR-066-공개-가능-일반-면접-질문-bank는-public-question-bank에-둔다.md) | Accepted |

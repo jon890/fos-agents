@@ -1,4 +1,4 @@
-## ADR-059 — 지원용 HTML/PDF 이력서를 로컬에서 생성한다
+## ADR-059 지원용 HTML/PDF 이력서를 로컬에서 생성한다
 
 - Status: Accepted
 - Date: 2026-06-07
@@ -11,7 +11,7 @@ Markdown 초안만으로는 채용 사이트에 첨부할 수 없으므로 사�
 ### 결정
 
 - `resume-draft.md`를 HTML로 렌더링한 뒤 PDF를 생성한다.
-- 공고별 디자인이 있으면 우선하고 없으면 `config/resume-design.md`를 사용한다.
+- 공고별 디자인이 있으면 우선하고 없으면 `.claude/skills/resume-preparer/references/resume-design.md`를 사용한다.
 - exporter는 career-os 내부 파일만 생성한다.
 - 업로드, 전송, 제출 버튼 조작은 사용자 승인 없이 수행하지 않는다.
 

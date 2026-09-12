@@ -1,4 +1,4 @@
-## ADR-047 — position-recommender collector를 source adapter 경계로 나눈다
+## ADR-047 position-recommender collector를 source adapter 경계로 나눈다
 
 - Status: Accepted
 - Date: 2026-06-06
