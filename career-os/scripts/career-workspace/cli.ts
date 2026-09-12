@@ -144,7 +144,7 @@ export async function finishSkillWorkspace(context: CliContext, skill: string | 
 export function describeSkillSessionMismatch(
   skill: string,
   session: { skill: string; revision: string } | null,
-  syncState: { kind: "missing" | "valid" | "invalid"; state: CareerWorkspaceSyncState | null },
+  syncState: SyncStateResult,
 ): string | undefined {
   if (!session) {
     return `\`skill begin ${skill}\` 로 시작한 세션 기록이 없습니다. 지금 변경을 그대로 올리려면 \`publish\` 를 실행하고, 세션으로 다시 시작하려면 변경이 없는 상태에서 \`skill begin ${skill}\` 을 실행하세요.`;
@@ -450,11 +450,12 @@ async function inspectLocal(context: CliContext, syncState: CareerWorkspaceSyncS
   };
 }
 
-async function readSyncState(root: string): Promise<
+type SyncStateResult =
   | { kind: "missing"; state: null }
   | { kind: "valid"; state: CareerWorkspaceSyncState }
-  | { kind: "invalid"; state: null }
-> {
+  | { kind: "invalid"; state: null };
+
+async function readSyncState(root: string): Promise<SyncStateResult> {
   if (!await exists(syncStatePath(root))) {
     return { kind: "missing", state: null };
   }
