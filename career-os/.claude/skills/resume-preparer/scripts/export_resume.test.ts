@@ -4,11 +4,14 @@ import {
   DEFAULT_DESIGN_PATH,
   PAGE_BREAK_MARKER,
   countHtmlPages,
+  describePageOverflow,
   extractCss,
+  pageTextLength,
   readPdfPageCount,
   documentTitle,
   renderHtml,
   renderMarkdownPages,
+  splitHtmlPages,
 } from "./export_resume.ts";
 import { checkResumeHtml } from "./check_resume_html.ts";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -72,6 +75,74 @@ describe("resume exporter", () => {
       rmSync(directory, { recursive: true, force: true });
     }
   });
+
+  test("쪽마다 단독 HTML로 나누고 스타일과 쪽 역할을 그대로 둔다", () => {
+    const html = renderHtml(resume, designMarkdown, "design.md");
+    const pages = splitHtmlPages(html);
+
+    expect(pages).toHaveLength(countHtmlPages(html));
+    for (const page of pages) {
+      expect(countHtmlPages(page)).toBe(1);
+      expect(page).toContain("<style>");
+      expect(page).toContain("</html>");
+    }
+    expect(pages[0]).toContain("resume-page--first");
+    expect(pages[0]).not.toContain('id="career"');
+    expect(pages[1]).toContain('id="career"');
+  });
+
+  test("쪽 본문 글자 수는 태그와 공백을 빼고 센다", () => {
+    expect(pageTextLength("<main><p>백엔드 개발</p></main>")).toBe(5);
+  });
+
+  test("넘친 쪽과 쪽별 글자 수를 오류 문구에 담는다", () => {
+    const lines = describePageOverflow([
+      { page: 1, pdfPages: 1, textLength: 1120 },
+      { page: 2, pdfPages: 2, textLength: 1840 },
+    ]);
+
+    expect(lines[0]).toBe("2쪽이 PDF 2쪽으로 넘쳤습니다. 이 쪽의 내용을 줄이거나 구분을 추가하세요.");
+    expect(lines.at(-1)).toBe("쪽별 본문 글자 수: 1쪽 1120자, 2쪽 1840자");
+  });
+
+  test("쪽마다 한 쪽에 들어가면 쪽 사이 규칙을 확인하라고 알린다", () => {
+    const lines = describePageOverflow([{ page: 1, pdfPages: 1, textLength: 900 }]);
+
+    expect(lines[0]).toContain("모두 한 쪽에 들어갑니다");
+  });
+
+  test("쪽 수를 확인하지 못한 쪽을 따로 알린다", () => {
+    const lines = describePageOverflow([{ page: 3, pdfPages: undefined, textLength: 900 }]);
+
+    expect(lines[0]).toContain("쪽 수를 확인하지 못한 쪽: 3쪽");
+  });
+
+  test("CLI는 쪽 수가 어긋나면 어느 쪽이 넘쳤는지 낸다", () => {
+    const directory = mkdtempSync(join(tmpdir(), "resume-overflow-"));
+    try {
+      const overflowing = resume.replace(
+        "- 제품 백엔드를 운영했습니다.",
+        Array.from({ length: 80 }, (_, index) => `- 제품 백엔드를 운영하며 처리한 ${index + 1}번째 과제입니다.`).join("\n"),
+      );
+      const resumePath = join(directory, "evidence", "resume-draft.md");
+      mkdirSync(join(directory, "evidence"), { recursive: true });
+      writeFileSync(resumePath, overflowing);
+
+      const result = Bun.spawnSync({
+        cmd: ["bun", join(import.meta.dir, "export_resume.ts"), "--application-dir", directory],
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+
+      expect(result.exitCode).toBe(1);
+      const stderr = result.stderr.toString();
+      expect(stderr).toContain("일치하지 않습니다");
+      expect(stderr).toMatch(/\d+쪽이 PDF \d+쪽으로 넘쳤습니다/);
+      expect(stderr).toContain("쪽별 본문 글자 수:");
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  }, 120000);
 
   test("기본값은 경력 섹션부터 두 번째 페이지에 배치한다", () => {
     const [firstPage, secondPage] = renderMarkdownPages(resume);
