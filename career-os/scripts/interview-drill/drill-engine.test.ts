@@ -52,7 +52,7 @@ describe("지원별 질문 선택", () => {
         schemaVersion: 1,
         company: "테스트 회사",
         role: "AI Platform Server Developer",
-        sourceDocuments: ["evidence/application-package.md"],
+        sourceDocuments: ["evidence/fit.md"],
         questions: [
           {
             id: "test-position-specific-question",

@@ -267,6 +267,10 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 - `career-description-draft.md`: 경력기술서를 받는 공고에만 둔다
 - `application-form.json`: 브라우저 자동 입력을 준비할 때만 둔다
 
+**`interview-questions.json` 은 `application-package-writer` 가 만들고 소유한다.**
+`resume-preparer` 와 `interview-practice` 는 질문을 더할 수 있으나 기존 질문을 지우거나 다시 쓰지 않는다.
+세 스킬이 같은 파일에 쓰므로 소유자를 하나로 둔다.
+
 앞의 다섯이 기본 원본이다.
 `application-package-writer`는 지원 판단과 후보자 인터뷰를 관리하고, `resume-preparer`는 `resume-draft.md`와 제출 문서를 관리한다.
 `application-form.json`은 private brain 공통 프로필의 현재 스냅샷, 회사별 선택값, 첨부 파일과 서술형 질문을 구조화한다.
@@ -291,7 +295,8 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 이 절은 선택 절이며, 없으면 나머지 순서를 그대로 두고 건너뛴다.
 `공고 원문` 탭은 `evidence/posting.md`를 읽어 보여주며 원문을 다른 파일에 복제하지 않는다.
 
-지원 패키지 검증기는 이 스키마에 없는 파일과 층이 어긋난 파일을 거부해 일회성 검토 문서가 쌓이지 않게 한다.
+지원 패키지 검증기는 제출 문서와 지원서 답변에 내부 정보가 남았는지만 본다.
+어떤 파일과 절을 만들지는 `application-package-writer` 의 지침이 정한다.
 
 ### 적합도 판정과 점수
 
@@ -301,8 +306,17 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 화면이 원으로 보여줄 총점과 소계는 `evidence/status.md` 머리에 적는다.
 색 구간은 `render_application_package.ts` 가 소유한다.
 
-`evidence/status.md`의 준비 상태는 `ready`, `needs_user_input`, `revise`, `do_not_apply` 중 하나다.
-이 상태는 합격 가능성 점수가 아니라 현재 근거와 사용자 확인을 기준으로 한 제출 준비 상태다.
+`evidence/status.md`의 준비 상태 값과 판단 기준은
+[`application-quality-rubric.md`](../.claude/skills/application-package-writer/references/application-quality-rubric.md)의 「판정」이 소유한다.
+
+첫 10줄의 `evidence`는 제출 문장이 현재 근거 범위 안에 있는지의 상태다.
+
+| 값 | 뜻 |
+| --- | --- |
+| `safe` | 제출 문장이 모두 확인한 근거 범위 안에 있다 |
+| `revise` | 근거보다 넓게 읽히는 문장이 있어 표현을 낮춰야 한다 |
+| `blocked` | 근거를 확인하기 전에는 그 문장을 제출에 쓸 수 없다 |
+
 첫 10줄의 `human-confirmation`은 본인 역할, 당시 제약, 기각한 대안, 결과의 확인 범위와 제출 문구 동의처럼 후보자만 확정할 수 있는 사실과 표현 확인 상태다.
 값은 `complete` 또는 `needs_input`이며, `needs_input`이면 준비 상태를 `ready`로 둘 수 없다.
 

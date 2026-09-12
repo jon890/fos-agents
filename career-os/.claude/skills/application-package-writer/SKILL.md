@@ -31,11 +31,7 @@ description: 공고가 찾는 사람과 후보자의 경험이 부합하는지 �
 없는 문서는 없는 경험으로 판정되므로, 근거를 읽기 전에 확인한다.
 private brain은 `brain-search`로 조회하며 경로로 확인하지 않는다.
 
-```bash
-bun "$(git rev-parse --show-toplevel)/career-os/.claude/skills/application-package-writer/scripts/check_evidence_sources.ts"
-```
-
-판정별 다음 행동과 당길 때 유의할 점은 [근거 원본 최신화 확인](references/evidence-source-freshness.md)이 소유한다.
+검사 명령과 판정별 다음 행동, 당길 때 유의할 점은 [근거 원본 최신화 확인](references/evidence-source-freshness.md)이 소유한다.
 
 ## 지원 대상 확인
 
@@ -58,9 +54,13 @@ bun "$(git rev-parse --show-toplevel)/career-os/.claude/skills/application-packa
 
 대상 디렉터리는 `applications/<company>/<role>/` 이다.
 
+**대상을 하나로 좁히지 못하면 임의로 고르지 않고 한 가지 질문으로 확정한다.**
+brain 에 현재 대상이 없거나 대응하는 디렉터리가 둘 이상일 때가 그 경우다.
+
 ## 실행 흐름
 
-**아래 명령은 모두 `career-os` 디렉터리에서 실행한다.** 경로는 그 자리를 기준으로 적었다.
+**아래 명령은 모두 저장소 루트에서 실행한다.** 경로는 그 자리를 기준으로 적었다.
+`resume-preparer` 와 같은 자리여야 8단계에서 이어 부를 때 근거 경로가 같게 풀린다.
 
 
 | 단계  | 이름        | 하는 일                                          | reference                                               |
@@ -198,6 +198,8 @@ bun "$(git rev-parse --show-toplevel)/career-os/.claude/skills/application-packa
 ### 단계 5: 경험과 성장 판정
 
 **이 자리에서 무엇을 다루게 되고 무엇을 다루지 못하는지 공개 자료로 판정한다.**
+**건너뛸 수 있는 단계다.** 후보자가 이 회사에서 무엇을 배울 수 있는지 물었거나
+같은 회사에 성격이 다른 공고가 둘 이상 열려 있을 때만 한다.
 적합도 판정이 공고 요구와 후보자 근거가 맞닿은 정도를 재는 것과 달리,
 이 판정은 지원 여부와 지원 순서를 정하는 근거를 만든다.
 판정 항목과 자료를 찾는 순서, 통과 조건은 [경험과 성장 판정](references/growth-judgment.md)을 따른다.
@@ -282,8 +284,8 @@ private brain 에서 확인한 공통 프로필의 현재 값, 회사별 입력 
 제출 문서가 준비되면 검사하고 화면을 만든다.
 
 ```bash
-bun .claude/skills/application-package-writer/scripts/validate_application_package.ts <application-directory>
-bun .claude/skills/application-package-writer/scripts/render_application_package.ts <application-directory>
+bun career-os/.claude/skills/application-package-writer/scripts/validate_application_package.ts <application-directory>
+bun career-os/.claude/skills/application-package-writer/scripts/render_application_package.ts <application-directory>
 ```
 
 검증기는 제출 문서와 지원서 답변에 내부 정보가 남았는지만 본다.
@@ -303,9 +305,9 @@ bun .claude/skills/application-package-writer/scripts/render_application_package
 
 | 파일                     | 절                                                                                    | 채우는 단계  |
 | ---------------------- | ------------------------------------------------------------------------------------ | ------- |
-| `evidence/fit.md`      | 결론, 공고 항목별 적합도, 소계와 총점, 공개 자료로 확인한 팀과 인접 사례                                          | 1, 2, 3 |
+| `evidence/fit.md`      | 결론, 공고 항목별 적합도, 소계와 총점, 공개 자료로 확인한 팀과 인접 사례                                          | 1, 2, 3, 5 |
 | `evidence/strategy.md` | 이 포지션에서의 승부처, 지원동기, 입사 후 기여 시나리오, 이 자리에서 얻을 경험과 성장, 보완할 공백, 회사 문화와의 연결, 면접에서 검증받을 내용 | 5, 6    |
-| `evidence/status.md`   | 준비 상태 세 줄, 제출 준비 상태, 사용자 확인 필요, 다음 행동                                                | 6, 8    |
+| `evidence/status.md`   | 준비 상태 세 줄, 제출 준비 상태, 사용자 확인 필요, 다음 행동                                                | 3, 6, 7, 8    |
 
 
 절 순서도 계약이다.
@@ -355,7 +357,7 @@ bun .claude/skills/application-package-writer/scripts/render_application_package
 질문은 `evidence/interview-questions.json` 하나에 저장하고 다음 명령으로 검증한다.
 
 ```bash
-bun scripts/interview-drill/application_question_schema.ts <application-directory>
+bun career-os/scripts/interview-drill/application_question_schema.ts <application-directory>
 ```
 
 각 질문에는 답변에서 확인할 신호와 `evidenceBoundary`를 함께 기록한다.
@@ -364,13 +366,13 @@ bun scripts/interview-drill/application_question_schema.ts <application-director
 첫 10줄 안에 아래 상태를 기록한다.
 
 ```markdown
-- readiness: ready|needs_user_input|revise|do_not_apply
-- evidence: safe|revise|blocked
-- human-confirmation: complete|needs_input
+- readiness: <값>
+- evidence: <값>
+- human-confirmation: <값>
 ```
 
-`human-confirmation`은 지원동기, 본인 역할, 실제 제약, 대안, 결과의 확인 범위처럼 후보자만 확정할 수 있는 항목의 상태다.
-하나라도 제출 문구를 바꿀 미확인 항목이 있으면 `needs_input`으로 두며, `readiness: ready`와 함께 사용할 수 없다.
+세 줄의 허용값과 뜻은 [`data-schema.md`의 「적합도 판정과 점수」](../../../docs/data-schema.md#적합도-판정과-점수)가 소유한다.
+`human-confirmation`이 `needs_input`이면 `readiness`를 `ready`로 둘 수 없다.
 
 ## 사용자에게 주는 결과
 

@@ -17,7 +17,7 @@ function validFile() {
     schemaVersion: 1,
     company: "테스트 회사",
     role: "AI Platform Server Developer",
-    sourceDocuments: ["application-package.md"],
+    sourceDocuments: ["fit.md"],
     questions: [
       {
         id: "test-position-tool-safety",

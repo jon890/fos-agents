@@ -21,7 +21,7 @@ function write(directory: string, relativePath: string, content: string): void {
 function fixture(): string {
   const directory = mkdtempSync(join(tmpdir(), "submission-bundle-"));
   directories.push(directory);
-  write(directory, "evidence/application-package.md", "# 지원\n\n- readiness: ready\n- evidence: safe\n- human-confirmation: complete\n");
+  write(directory, "evidence/status.md", "# 지원\n\n- readiness: ready\n- evidence: safe\n- human-confirmation: complete\n");
   write(directory, "review/resume.html", "<main>검증된 이력서</main>");
   write(directory, "resume.pdf", "pdf");
   const hash = artifactTextSha256(join(directory, "review", "resume.html"));
@@ -64,7 +64,7 @@ function fixture(): string {
 describe("validateSubmissionBundle", () => {
   test.each(["revise", "needs_user_input", "do_not_apply", ""])("준비 상태 %s는 최종 제출 묶음으로 통과하지 않는다", (readiness) => {
     const directory = fixture();
-    write(directory, "evidence/application-package.md", `# 지원\n\n- readiness: ${readiness}\n- evidence: safe\n- human-confirmation: complete\n`);
+    write(directory, "evidence/status.md", `# 지원\n\n- readiness: ${readiness}\n- evidence: safe\n- human-confirmation: complete\n`);
     const result = validateSubmissionBundle(directory);
     expect(result.passed).toBe(false);
     expect(result.errors.join("\n")).toContain("readiness가 ready");
@@ -110,7 +110,7 @@ describe("validateSubmissionBundle", () => {
     const directory = fixture();
     write(
       directory,
-      "evidence/application-package.md",
+      "evidence/status.md",
       "# 지원\n\n- readiness: needs_user_input\n- evidence: safe\n- human-confirmation: needs_input\n",
     );
     const result = validateSubmissionBundle(directory);

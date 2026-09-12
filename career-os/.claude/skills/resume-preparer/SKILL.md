@@ -37,11 +37,7 @@ bun career-os/scripts/career-workspace/cli.ts skill begin resume-preparer --json
 단계 5의 주장 감사가 그 파일을 근거로 삼으므로 최신이어야 감사가 성립한다.
 단계 2가 읽는 private brain은 `brain-search`로 조회하며 경로로 확인하지 않는다.
 
-```bash
-bun "$(git rev-parse --show-toplevel)/career-os/.claude/skills/application-package-writer/scripts/check_evidence_sources.ts"
-```
-
-판정별 다음 행동은 [근거 원본 최신화 확인](../application-package-writer/references/evidence-source-freshness.md)이 소유한다.
+검사 명령과 판정별 다음 행동은 [근거 원본 최신화 확인](../application-package-writer/references/evidence-source-freshness.md)이 소유한다.
 
 지원 디렉터리나 지원 판단, 후보자 인터뷰가 준비되지 않았으면 `application-package-writer`로 연결한다.
 

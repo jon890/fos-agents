@@ -17,7 +17,7 @@ description: 열려 있는 채용공고를 모아 후보자가 해온 일과 선
 
 ## 7단계 실행 절차
 
-**아래 명령은 모두** `career-os` **디렉터리에서 실행한다.**
+**아래 명령은 모두 저장소 루트에서 실행한다.**
 
 
 | 단계  | 이름                      | 만드는 것                               | 통과 조건                        |
@@ -47,7 +47,7 @@ description: 열려 있는 채용공고를 모아 후보자가 해온 일과 선
 실패하면 오래된 목록으로 진행하지 않는다. 이미 뺀 공고가 다시 후보풀에 들어온다.
 
 ```bash
-CAREER_WORKSPACE_ROOT="$PWD" bun scripts/career-workspace/cli.ts skill begin position-recommender --json
+bun career-os/scripts/career-workspace/cli.ts skill begin position-recommender --json
 ```
 
 ### 2. 공고 수집
@@ -75,7 +75,7 @@ CAREER_WORKSPACE_ROOT="$PWD" bun scripts/career-workspace/cli.ts skill begin pos
 목표 직무가 아닌 것이 섞여 있으면 추천에서 빼는 데 그치지 않고 수집 정책의 결함으로 보고한다.
 
 ```bash
-bun scripts/position-recommender/collect_live_postings.ts --output <RUN_DIR>/posting-candidates.json
+bun career-os/scripts/position-recommender/collect_live_postings.ts --output <RUN_DIR>/posting-candidates.json
 ```
 
 실패한 소스는 `--source <소스> --output <RUN_DIR>/probe.json` 을 붙여 단독으로 다시 돌린다.
@@ -129,7 +129,7 @@ brain 조회는 `brain-search` 를 쓴다.
 실패하면 JSON만 고친다. 수집부터 반복하지 않는다.
 
 ```bash
-bun scripts/position-recommender/validate_recommendation.ts \
+bun career-os/scripts/position-recommender/validate_recommendation.ts \
   --input <RUN_DIR>/recommendation.json --candidates <RUN_DIR>/posting-candidates.json
 ```
 
@@ -137,22 +137,18 @@ bun scripts/position-recommender/validate_recommendation.ts \
 
 **무엇을 뺄지는 4단계가 정했다.** 이 단계는 그 판정을 목록에 반영하기만 한다.
 
-4단계가 `autoExclusionSuggestions` 에 올린 공고는 아래를 모두 만족한 것이다.
-조건 전체는 판정 기준 문서의 「제외 공고 목록에 올릴 조건」이 소유한다.
-
-- 업사이드 네 축에 `상향` 이 하나도 없고, 근거가 명확한 `하향` 이 하나 이상이다.
-- 순위가 낮거나 정보가 부족하다는 이유로는 올리지 않는다.
-- 회사 전체를 뺄 때는 그 회사의 모든 직무에 해당하는 판단이어야 한다.
+4단계가 `autoExclusionSuggestions` 에 올린 공고가 무엇을 만족해야 하는지는
+판정 기준 문서의 「제외 공고 목록에 올릴 조건」이 소유한다.
 
 첫 명령이 목록을 갱신하고 둘째 명령이 그것을 원격 release 로 올린다.
 첫 명령의 종료 코드를 확인한 뒤 둘째로 간다. 갱신이 실패한 상태로 올리면 원격이 잘못된 상태가 된다.
 같은 공고가 이미 목록에 있으면 건너뛴다.
 
 ```bash
-bun scripts/position-recommender/apply_exclusion_suggestions.ts \
+bun career-os/scripts/position-recommender/apply_exclusion_suggestions.ts \
   --input <RUN_DIR>/recommendation.json --candidates <RUN_DIR>/posting-candidates.json
 
-CAREER_WORKSPACE_ROOT="$PWD" bun scripts/career-workspace/cli.ts skill finish position-recommender --json
+bun career-os/scripts/career-workspace/cli.ts skill finish position-recommender --json
 ```
 
 release 반영이 실패하면 로컬 설정을 지우지 않는다.
@@ -170,22 +166,28 @@ release 반영이 실패하면 로컬 설정을 지우지 않는다.
 지원 이력을 근거로 순위를 내렸다면 「같은 법인에 최근 지원 이력이 있어 재지원 시점을 확인해야 한다」처럼
 결과를 적지 않고 쓴다.
 
-검사기가 잡는 것은 `현재 연봉` 과 `서류 탈락` 문자열, 로컬 절대 경로, 로컬 호스트,
-HTTPS 가 아닌 링크다. 통과했다고 공개해도 된다는 뜻은 아니다.
+검사기가 잡는 것은 공개 범위와 HTML 기본 계약 둘이다.
+공개 범위는 `현재 연봉` 과 `서류 탈락` 문자열, 로컬 절대 경로, 로컬 호스트, HTTPS 가 아닌 링크다.
+기본 계약은 추천 JSON 스키마, `<!doctype html>`, 비어 있지 않은 `<title>`, `viewport` meta,
+그리고 강력 추천과 도전 추천의 공고 링크가 HTML 에 실제로 있는지다.
+
+통과했다고 공개해도 된다는 뜻은 아니다.
 외부 소스에서 가져온 연봉 수치와 다른 표현으로 적은 지원 결과는 검출되지 않는다.
 
 ```bash
-bun scripts/position-recommender/render/validate-report-html.ts \
+bun career-os/scripts/position-recommender/render/validate-report-html.ts \
   --html <RUN_DIR>/index.html --input <RUN_DIR>/recommendation.json
 ```
 
 검사를 통과하지 못할 때만 고정 템플릿으로 다시 렌더하고 검사한다.
 
 ```bash
-bun scripts/position-recommender/render_candidate_preview.ts \
-  --input <RUN_DIR>/recommendation.json --candidates <RUN_DIR>/posting-candidates.json \
-  --limit all --output <RUN_DIR>/index.html
+bun career-os/scripts/position-recommender/render_recommendation.ts \
+  --input <RUN_DIR>/recommendation.json --format html --output <RUN_DIR>/index.html
 ```
+
+`render_candidate_preview.ts` 는 후보풀 미리보기라 위험과 확인할 사항, 다음 행동을 렌더하지 않는다.
+이 단계의 대체 경로는 `render_recommendation.ts` 다.
 
 브라우저에서 데스크톱과 모바일 배치, 가로 넘침, 주요 링크를 확인한다.
 

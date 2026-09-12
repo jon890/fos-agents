@@ -45,16 +45,10 @@ description: 기술·인성·포지션별 면접 질문을 준비하고 한 번�
 ## 포지션 질문 준비
 
 현재 지원 대상이 있으면 공고, `evidence/fit.md`와 `evidence/strategy.md`, 최신 이력서와 경력기술서에서 질문을 만든다.
-질문은 다음 출처를 구분한다.
 
-- `posting_requirement`: 공고가 직접 요구하는 책임과 설계 판단
-- `evidence_defense`: 제출 문서의 대표 경험을 방어하는 질문
-- `experience_gap`: 직접 해보지 않은 영역과 모호한 근거를 확인하는 질문
-
-질문마다 답변에서 확인할 신호와 `evidenceBoundary`를 기록한다.
-공백 질문에는 경험을 꾸미는 모범 답안이 아니라 설계 원칙, 인접 근거와 학습 경계를 넣는다.
-
-저장하거나 수정한 질문은 `application-package-writer`가 지정한 공고별 질문 검사기로 검증한다.
+**`evidence/interview-questions.json`은 `application-package-writer`가 소유한다.**
+질문 출처 셋과 기록할 항목, 검사 명령은 그 스킬의 「산출물 계약」을 따른다.
+여기서는 질문을 더할 수 있으나 기존 질문을 지우거나 다시 쓰지 않는다.
 
 ## 질문 선택
 

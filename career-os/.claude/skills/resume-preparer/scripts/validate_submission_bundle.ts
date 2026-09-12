@@ -20,7 +20,7 @@ export type SubmissionBundleValidation = {
 };
 
 function packageStatus(directory: string): { readiness?: string; evidence?: string; humanConfirmation?: string } {
-  const path = join(directory, "evidence", "application-package.md");
+  const path = join(directory, "evidence", "status.md");
   if (!existsSync(path)) return {};
   const opening = readFileSync(path, "utf8").split(/\r?\n/).slice(0, 10).join("\n");
   return {
@@ -130,13 +130,13 @@ export function validateSubmissionBundle(applicationDirectory: string): Submissi
   const status = packageStatus(directory);
 
   if (status.readiness !== "ready") {
-    errors.push("evidence/application-package.md의 readiness가 ready가 아닙니다.");
+    errors.push("evidence/status.md의 readiness가 ready가 아닙니다.");
   }
   if (status.evidence !== "safe") {
-    errors.push("evidence/application-package.md의 evidence가 safe가 아닙니다.");
+    errors.push("evidence/status.md의 evidence가 safe가 아닙니다.");
   }
   if (status.humanConfirmation !== "complete") {
-    errors.push("evidence/application-package.md의 human-confirmation이 complete가 아닙니다.");
+    errors.push("evidence/status.md의 human-confirmation이 complete가 아닙니다.");
   }
 
   requireFiles(directory, REQUIRED_RESUME_SUBMISSION_FILES, errors);
