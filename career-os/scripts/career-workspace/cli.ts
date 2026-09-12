@@ -619,8 +619,13 @@ function hasCompletedJournalShape(journal: PrepareJournal): boolean {
   });
 }
 
+/**
+ * `.omc` 는 저장소가 재생성 가능한 운영 산출물로 선언한 디렉터리라
+ * 동기화에서만 제외하고 `prepare` 를 막지 않는다. 비밀 값을 담는 `.env` 와
+ * 그 밖의 숨김 파일은 그대로 막아 사용자가 직접 정리하게 한다.
+ */
 function isPrepareBlockingExclusion(code: ExcludedWorkspacePath["code"]): boolean {
-  return code === "excluded-env" || code === "excluded-hidden" || code === "excluded-omc";
+  return code === "excluded-env" || code === "excluded-hidden";
 }
 
 async function cleanupCompletedJournal(root: string): Promise<void> {

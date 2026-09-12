@@ -214,6 +214,28 @@ describe("career workspace cli", () => {
     expect(await readFile(path.join(fixture.workspaceRoot, "applications", "resume.md"), "utf8")).toBe("before");
   }));
 
+  test("prepare는 .omc를 작업 변경으로 보지 않고 새 release를 적용한다", async () => withFixture(async (fixture) => {
+    await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
+    await prepareWorkspace(makeContext(fixture));
+    await mkdir(path.join(fixture.workspaceRoot, "applications", ".omc", "state"), { recursive: true });
+    await writeFile(path.join(fixture.workspaceRoot, "applications", ".omc", "state", "session.json"), "{}");
+    await createRemoteRelease(fixture, "rev-2", { "applications/resume.md": "after" });
+
+    const result = await prepareWorkspace(makeContext(fixture));
+
+    expect(result.revision).toBe("rev-2");
+    expect(await readFile(path.join(fixture.workspaceRoot, "applications", "resume.md"), "utf8")).toBe("after");
+  }));
+
+  test("check는 .omc만 있는 작업본을 clean으로 본다", async () => withFixture(async (fixture) => {
+    await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
+    await prepareWorkspace(makeContext(fixture));
+    await mkdir(path.join(fixture.workspaceRoot, "library", ".omc"), { recursive: true });
+    await writeFile(path.join(fixture.workspaceRoot, "library", ".omc", "notepad.md"), "메모");
+
+    expect(await checkWorkspace(makeContext(fixture))).toMatchObject({ local: { status: "clean" } });
+  }));
+
   test("prepare는 시스템 메타데이터를 작업 변경으로 보지 않고 새 release를 적용한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
     await prepareWorkspace(makeContext(fixture));
