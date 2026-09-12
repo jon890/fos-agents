@@ -19,7 +19,8 @@ function createWorkspace(): string {
 }
 
 function git(directory: string, args: readonly string[]): void {
-  const result = Bun.spawnSync(["git", "-C", directory, ...args], {
+  // 실행하는 사람의 전역 git 설정에 결과가 달라지지 않게 서명과 신원을 고정한다.
+  const result = Bun.spawnSync(["git", "-c", "commit.gpgsign=false", "-C", directory, ...args], {
     stdout: "pipe",
     stderr: "pipe",
     env: { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t" },
@@ -42,12 +43,13 @@ function createOriginAndClone(): { origin: string; clone: string } {
   commit(origin, "first.md");
 
   const clone = join(workspace, "clone");
-  Bun.spawnSync(["git", "clone", "--quiet", origin, clone], { stdout: "pipe", stderr: "pipe" });
+  const cloned = Bun.spawnSync(["git", "clone", "--quiet", origin, clone], { stdout: "pipe", stderr: "pipe" });
+  if (cloned.exitCode !== 0) throw new Error(new TextDecoder().decode(cloned.stderr));
   return { origin, clone };
 }
 
-function specFor(path: string): EvidenceSourceSpec {
-  return { name: "테스트 원본", path, branch: "main", affects: "테스트 판정" };
+function specFor(...paths: string[]): EvidenceSourceSpec {
+  return { name: "테스트 원본", paths, branch: "main", affects: "테스트 판정" };
 }
 
 describe("근거 원본 목록의 문서 계약", () => {
@@ -56,14 +58,14 @@ describe("근거 원본 목록의 문서 계약", () => {
   });
 
   test("각 원본의 경로가 reference 의 대상 표에 있다", () => {
-    for (const source of EVIDENCE_SOURCES) {
-      expect(reference).toContain(source.path);
+    for (const path of EVIDENCE_SOURCES.flatMap((source) => source.paths)) {
+      expect(reference).toContain(path);
     }
   });
 
   // 홈서버 작업본은 `skill begin` 이 이미 받아 온다. 이 스크립트가 다시 검사하면 책임이 겹친다.
   test("홈서버 작업본은 이 스크립트의 대상이 아니다", () => {
-    const paths = EVIDENCE_SOURCES.map((source) => source.path);
+    const paths = EVIDENCE_SOURCES.flatMap((source) => source.paths);
     expect(paths).not.toContain("career-os/applications");
     expect(paths).not.toContain("career-os/state");
   });
@@ -123,14 +125,58 @@ describe("확인할 수 없는 원본", () => {
     expect(result.sources[0].detail).toContain("경로가 없습니다");
   });
 
-  test("Git 저장소가 아니면 통과시키지 않는다", () => {
-    const workspace = createWorkspace();
-    const plain = join(workspace, "plain");
+  test("어느 저장소에도 속하지 않은 디렉터리는 통과시키지 않는다", () => {
+    const plain = join(createWorkspace(), "plain");
     mkdirSync(plain);
 
     const result = checkEvidenceSources({ sources: [specFor(plain)] });
 
     expect(result.sources[0].status).toBe("unavailable");
+  });
+
+  /**
+   * 가장 위험한 경우다. 상위 저장소 안의 평범한 디렉터리는 `rev-parse --git-dir` 를 통과한다.
+   * 그대로 두면 fos-study 가 아니라 감싸고 있는 저장소를 재고 경고 없이 `up_to_date` 가 나온다.
+   */
+  test("상위 저장소 안의 평범한 디렉터리를 그 저장소로 착각하지 않는다", () => {
+    const { clone } = createOriginAndClone();
+    const inside = join(clone, "sources", "fos-study");
+    mkdirSync(inside, { recursive: true });
+
+    const result = checkEvidenceSources({ sources: [specFor(inside)] });
+
+    expect(result.sources[0].status).toBe("unavailable");
+    expect(result.sources[0].detail).toContain("루트가 아닙니다");
+  });
+
+  test("앞의 자리에 저장소가 없으면 다음 자리를 본다", () => {
+    const { clone } = createOriginAndClone();
+
+    const result = checkEvidenceSources({ sources: [specFor(join(createWorkspace(), "missing"), clone)] });
+
+    expect(result.sources[0].status).toBe("up_to_date");
+    expect(result.sources[0].path).toBe(clone);
+  });
+
+  test("원격을 받지 못하면 unreachable 로 가른다", () => {
+    const { clone } = createOriginAndClone();
+    git(clone, ["remote", "set-url", "origin", join(createWorkspace(), "gone")]);
+
+    const result = checkEvidenceSources({ sources: [specFor(clone)] });
+
+    expect(result.passed).toBe(false);
+    expect(result.sources[0].status).toBe("unreachable");
+    // git stderr 는 여러 줄이다. 사용자에게 한 줄만 보인다.
+    expect(result.sources[0].detail).not.toContain("\n");
+  });
+
+  test("모든 원본이 최신이면 통과한다", () => {
+    const first = createOriginAndClone();
+    const second = createOriginAndClone();
+
+    const result = checkEvidenceSources({ sources: [specFor(first.clone), specFor(second.clone)] });
+
+    expect(result.passed).toBe(true);
   });
 
   test("환경 변수 경로는 값이 없으면 경로를 추측하지 않는다", () => {
@@ -161,18 +207,21 @@ describe("확인할 수 없는 원본", () => {
     expect(result.sources[0].status).toBe("up_to_date");
   });
 
-  // 스킬마다 명령을 실행하는 디렉터리 관례가 달라도 같은 결과가 나와야 한다.
-  test("저장소 루트를 주지 않으면 현재 위치에서 찾는다", () => {
+  // 스킬마다 명령을 실행하는 디렉터리 관례가 달라 저장소 루트와 `career-os` 양쪽에서 실행된다.
+  test("저장소 루트를 주지 않으면 현재 위치에서 찾아 어느 디렉터리에서 실행해도 같은 경로를 본다", () => {
+    const repository = join(createWorkspace(), "repository");
+    const nested = join(repository, "career-os", "scripts");
+    mkdirSync(nested, { recursive: true });
+    git(repository, ["init", "--quiet", "--initial-branch", "main"]);
+    commit(repository, "first.md");
+
     const script = join(import.meta.dir, "check_evidence_sources.ts");
-    const run = (cwd: string) =>
-      JSON.parse(new TextDecoder().decode(Bun.spawnSync(["bun", script, "--no-fetch"], { cwd, stdout: "pipe", stderr: "pipe" }).stdout));
+    const resultFrom = (cwd: string): unknown => {
+      const output = Bun.spawnSync(["bun", script, "--no-fetch"], { cwd, stdout: "pipe", stderr: "pipe" });
+      return JSON.parse(new TextDecoder().decode(output.stdout));
+    };
 
-    const fromRoot = run(join(import.meta.dir, "../../../../.."));
-    const fromCareerOs = run(join(import.meta.dir, "../../../.."));
-
-    expect(fromCareerOs.sources.map((source: { path: string }) => source.path)).toEqual(
-      fromRoot.sources.map((source: { path: string }) => source.path),
-    );
+    expect(resultFrom(nested)).toEqual(resultFrom(repository));
   });
 
   test("한 원본이라도 최신이 아니면 전체가 통과하지 않는다", () => {

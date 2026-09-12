@@ -22,15 +22,24 @@
 
 ## 대상 셋
 
-| 원본 | 경로 | 받아 오는 주체 |
+| 원본 | 찾는 자리 | 받아 오는 주체 |
 | --- | --- | --- |
 | 홈서버 작업본 | `applications`, `library`, `state` | `skill begin <SKILL_NAME>` 이 처리한다. 이 문서의 대상이 아니다 |
-| 공개 학습·경력 자료 | `career-os/sources/fos-study` | 사용자가 직접 당긴다. 이 문서가 검사만 한다 |
+| 공개 학습·경력 자료 | `career-os/sources/fos-study` 다음 `${PERSONAL_ROOT}/fos-study` | 사용자가 직접 당긴다. 이 문서가 검사만 한다 |
 | private brain | `${PERSONAL_ROOT}/fos-brain` | 사용자가 직접 당긴다. 이 문서가 검사만 한다 |
 
 뒤의 둘은 별도 Git 저장소이며 career-os 에서는 읽기 전용이다.
+
+`career-os/sources/fos-study` 는 추적하지 않는 clone 이거나 symlink 라서 연결된 워크트리에는 만들어지지 않는다.
+그래서 `${PERSONAL_ROOT}` 아래의 실제 저장소를 두 번째 자리로 본다.
+앞의 자리에서 저장소를 찾으면 뒤는 보지 않는다.
+
+**그 자리가 Git 저장소의 루트일 때만 그 원본으로 인정한다.**
+저장소 안의 평범한 디렉터리는 상위 저장소의 `.git` 을 물려받아 저장소처럼 보인다.
+실측에서 빈 `career-os/sources/fos-study` 디렉터리가 fos-agents 모노레포의 상태를 fos-study 의 상태로 보고했다.
+
 `${PERSONAL_ROOT}` 는 같은 이름의 환경 변수로 바꿔 읽는다.
-환경 변수가 없으면 경로를 추측하지 않는다.
+셸에 없으면 `career-os/.env` 에서 읽으며, 양쪽에 없으면 경로를 추측하지 않는다.
 
 ## 확인 방법
 
