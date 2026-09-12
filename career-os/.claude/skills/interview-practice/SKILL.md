@@ -44,7 +44,7 @@ description: 기술·인성·포지션별 면접 질문을 준비하고 한 번�
 
 ## 포지션 질문 준비
 
-현재 지원 대상이 있으면 공고, `evidence/application-package.md`, 최신 이력서와 경력기술서에서 질문을 만든다.
+현재 지원 대상이 있으면 공고, `evidence/fit.md`와 `evidence/strategy.md`, 최신 이력서와 경력기술서에서 질문을 만든다.
 질문은 다음 출처를 구분한다.
 
 - `posting_requirement`: 공고가 직접 요구하는 책임과 설계 판단

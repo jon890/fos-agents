@@ -30,7 +30,7 @@ description: 공고가 찾는 역량과 후보자의 강한 경험을 연결하�
 bun career-os/scripts/career-workspace/cli.ts skill begin resume-preparer --json
 ```
 
-준비가 성공하면 대상 지원 건의 `evidence/posting.md`와 `evidence/application-package.md`에서 지원 직무와 제출할 문서를 확인한다.
+준비가 성공하면 대상 지원 건의 `evidence/posting.md`와 `evidence/fit.md`에서 지원 직무와 제출할 문서를 확인한다.
 동기화 오류가 발생하면 [career-os/docs/flow.md](../../../docs/flow.md)의 「비공개 작업 파일의 목표 흐름」에 따라 처리한다.
 
 이어서 이 CLI가 다루지 않는 `fos-study` 로컬 사본이 원격보다 뒤처졌는지 검사한다.
@@ -59,7 +59,7 @@ bun "$(git rev-parse --show-toplevel)/career-os/.claude/skills/application-packa
 - 질문에 함께 제시할 내용: 필요한 이유, 이미 확인한 사실과 답에 따라 달라질 제출 문장
 
 [references/claim-model.md](references/claim-model.md)를 기준으로 확인한다.
-사람 확인이 남으면 `evidence/application-package.md`의 `human-confirmation`을 `needs_input`으로 둔다.
+사람 확인이 남으면 `evidence/status.md`의 `human-confirmation`을 `needs_input`으로 둔다.
 **제출 문장의 사실과 표현 동의를 모두 확인했을 때 `complete`로 바꾼다.**
 
 ### 3. 원고 작성과 일관성 확인
@@ -137,7 +137,7 @@ HTML 정적 검사는 [scripts/check_resume_html.ts](scripts/check_resume_html.t
 
 ### 8. 제출 묶음 검증과 동기화
 
-문서 검증과 독립 리뷰가 끝나면 `evidence/application-package.md`를 `readiness: ready`로 바꾸고 다음 순서로 실행한다.
+문서 검증과 독립 리뷰가 끝나면 `evidence/status.md`를 `readiness: ready`로 바꾸고 다음 순서로 실행한다.
 각 명령에는 지원 디렉터리를 전달한다.
 
 1. [scripts/build_submission_bundle.ts](scripts/build_submission_bundle.ts)로 제출 묶음을 만든다.

@@ -328,7 +328,7 @@ HTML은 검증된 추천 JSON에서 파생한다.
 
 공고별 문서는 `applications/<company>/<position>/`에 세 층으로 둔다.
 최상위에는 사용자가 직접 여는 `application-package.html`과 제출 PDF만 두고, 기준 원본은 `evidence/`에, 내부 검증 자료는 `review/`에 둔다.
-기준 원본은 `evidence/`의 `posting.md`, `candidate-interview.md`, `application-package.md`, `resume-draft.md`와 `interview-questions.json`이다.
+기준 원본은 `evidence/`의 `posting.md`, `candidate-interview.md`, `fit.md`, `strategy.md`, `status.md`, `resume-draft.md`와 `interview-questions.json`이다.
 포지션별 질문은 공고 책임, 근거 방어와 경험 공백에서 파생한다.
 사용자는 `application-package.html` 상단에서 준비 상태, 지원 판단, 실제 제출 PDF와 지원서 입력값을 확인한다.
 본문은 `공고 적합도`, `지원 전략`, `공고 원문`, `상세 자료` 네 탭으로 나뉜다.
