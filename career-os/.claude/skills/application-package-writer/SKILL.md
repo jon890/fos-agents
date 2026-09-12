@@ -20,8 +20,8 @@ description: 공고가 찾는 사람과 후보자의 경험이 부합하는지 �
 **공고 링크나 회사와 직무 이름을 인자로 받는다.**
 
 ```text
-/application-package-writer https://careers.daangn.com/jobs/role/5296522003/
-/application-package-writer 당근 부동산
+/application-package-writer <공고 URL>
+/application-package-writer <회사> <직무>
 ```
 
 `position-recommender` 리포트의 공고 링크를 그대로 붙여 넣는 것이 기본 경로다.
@@ -33,7 +33,7 @@ description: 공고가 찾는 사람과 후보자의 경험이 부합하는지 �
 | 인자 없음 | `brain-search` 로 private brain 의 현재 지원 대상을 확인한다 |
 
 대상 디렉터리는 `applications/<company>/<role>/` 이며 영문 소문자와 하이픈만 쓴다.
-`daangn/backend-community-apartment` 가 그 예다.
+회사는 한 단어로, 직무는 공고 제목에서 팀과 역할이 드러나게 줄인다.
 이미 있으면 그 자리를 이어 쓰고, 없으면 만들면서 `evidence/posting.md` 에 공고 원문과 확인 시각을 남긴다.
 
 대상을 하나로 좁히지 못하면 임의로 고르지 않고 정확히 한 가지 질문으로 확정한다.
