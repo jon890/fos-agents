@@ -292,9 +292,9 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 
 ### 적합도 판정과 점수
 
-판정 값과 점수, 구분별 가중치와 총점 계산식은
+판정 값과 판단 기준, 점수를 정하는 방식은
 [`fit-judgment.md`](../.claude/skills/application-package-writer/references/fit-judgment.md)가 소유한다.
-점수는 모델이 계산해 `evidence/fit.md` 에 계산식과 함께 남기고,
+점수와 가중치는 모델이 공고를 보고 정해 `evidence/fit.md` 에 계산식과 함께 남기고,
 화면이 원으로 보여줄 총점과 소계는 `evidence/status.md` 머리에 적는다.
 색 구간은 `render_application_package.ts` 가 소유한다.
 
