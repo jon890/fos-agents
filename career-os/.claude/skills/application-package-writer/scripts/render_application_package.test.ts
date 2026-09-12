@@ -4,10 +4,6 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { TAB_KEYS } from "./render_application_package.ts";
 import {
-  REQUIRED_HEADINGS,
-  REQUIRED_PACKAGE_FILES,
-} from "./package_contract.ts";
-import {
   fillTemplate,
   renderApplicationPackage,
   renderApplicationPackageHtml,
@@ -27,6 +23,35 @@ const FULL_FIT_TABLE = `| 공고 항목 | 공고 구분 | 근거 | 판정 |
 | AI 플랫폼 운영 | 기대 경험 | LLM 서비스 운영 경험 | 강한 인접 |
 | 자체 호스팅 모델 운영 | 우대 경험 | 직접 근거 없음 | 공백 |`;
 
+/**
+ * 화면이 받을 문서의 본보기다. 계약이 아니라 이 검사의 표본이므로 여기서 소유한다.
+ * 절을 늘리거나 줄여도 화면이 그려지는지는 아래 검사가 따로 확인한다.
+ */
+const SAMPLE_HEADINGS: Record<string, readonly string[]> = {
+  "evidence/candidate-interview.md": ["## 확보된 답변", "## 미확인 질문"],
+  "evidence/fit.md": ["## 결론", "## 공고 항목별 적합도", "## 공개 자료로 확인한 팀과 인접 사례"],
+  "evidence/strategy.md": [
+    "## 이 포지션에서의 승부처",
+    "## 지원동기",
+    "## 입사 후 기여 시나리오",
+    "## 보완할 공백",
+    "## 회사 문화와의 연결",
+    "## 면접에서 검증받을 내용",
+  ],
+  "evidence/status.md": ["## 제출 준비 상태", "## 사용자 확인 필요", "## 다음 행동"],
+  "evidence/resume-draft.md": ["## 프로필", "## 주요 프로젝트", "## 경력", "## 기술"],
+};
+
+const SAMPLE_FILES = [
+  "evidence/posting.md",
+  "evidence/candidate-interview.md",
+  "evidence/fit.md",
+  "evidence/strategy.md",
+  "evidence/status.md",
+  "evidence/resume-draft.md",
+  "evidence/interview-questions.json",
+] as const;
+
 const directories: string[] = [];
 
 afterEach(() => {
@@ -35,9 +60,9 @@ afterEach(() => {
 
 /** 화면은 세 파일을 이어 붙인 것을 받는다. 절 순서는 상태, 적합도, 전략이다. */
 const ALL_PACKAGE_HEADINGS = [
-  ...REQUIRED_HEADINGS["evidence/status.md"],
-  ...REQUIRED_HEADINGS["evidence/fit.md"],
-  ...REQUIRED_HEADINGS["evidence/strategy.md"],
+  ...SAMPLE_HEADINGS["evidence/status.md"],
+  ...SAMPLE_HEADINGS["evidence/fit.md"],
+  ...SAMPLE_HEADINGS["evidence/strategy.md"],
 ];
 
 function packageBody(): string {
@@ -61,20 +86,20 @@ function write(directory: string, relativePath: string, content: string): void {
 function fixture(): string {
   const directory = mkdtempSync(join(tmpdir(), "application-package-render-"));
   directories.push(directory);
-  for (const file of REQUIRED_PACKAGE_FILES) {
+  for (const file of SAMPLE_FILES) {
     if (file === "evidence/interview-questions.json") continue;
-    const headings = (REQUIRED_HEADINGS[file] ?? []).join("\n\n내용\n\n");
+    const headings = (SAMPLE_HEADINGS[file] ?? []).join("\n\n내용\n\n");
     write(directory, file, `# ${file}\n\n${headings}\n`);
   }
   write(
     directory,
     "evidence/status.md",
-    `# 지원 준비 상태\n\n- readiness: needs_user_input\n- evidence: safe\n- human-confirmation: needs_input\n\n${REQUIRED_HEADINGS["evidence/status.md"].join("\n\n내용\n\n")}\n\n내용`,
+    `# 지원 준비 상태\n\n- readiness: needs_user_input\n- evidence: safe\n- human-confirmation: needs_input\n\n${SAMPLE_HEADINGS["evidence/status.md"].join("\n\n내용\n\n")}\n\n내용`,
   );
   write(
     directory,
     "evidence/fit.md",
-    `# 적합도\n\n- 공식 공고: https://example.com/job\n- 근거: sources/fos-study/task/example.md\n\n${REQUIRED_HEADINGS["evidence/fit.md"].map((h) => (h === FIT_TABLE_HEADING ? `${h}\n\n${FIT_TABLE}` : `${h}\n\n내용`)).join("\n\n")}`,
+    `# 적합도\n\n- 공식 공고: https://example.com/job\n- 근거: sources/fos-study/task/example.md\n\n${SAMPLE_HEADINGS["evidence/fit.md"].map((h) => (h === FIT_TABLE_HEADING ? `${h}\n\n${FIT_TABLE}` : `${h}\n\n내용`)).join("\n\n")}`,
   );
   write(
     directory,
@@ -306,7 +331,9 @@ describe("renderApplicationPackage", () => {
     const html = renderFitScore("- 적합도 총점 없음");
 
     expect(html).toContain("판정 대기");
-    expect(html).toContain("적합도 총점 판정이 아직 없습니다, 색 빨강");
+    expect(html).toContain("적합도 총점 판정이 아직 없습니다");
+    // 빈 원을 낮은 점수로 듣지 않도록 색은 읽어 주지 않는다.
+    expect(html).not.toContain("색 빨강");
   });
 
 

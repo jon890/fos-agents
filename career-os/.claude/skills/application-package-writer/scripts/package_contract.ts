@@ -1,102 +1,26 @@
 
-export const REQUIRED_PACKAGE_FILES = [
-  "evidence/posting.md",
-  "evidence/candidate-interview.md",
-  "evidence/fit.md",
-  "evidence/strategy.md",
-  "evidence/status.md",
-  "evidence/resume-draft.md",
-  "evidence/interview-questions.json",
-] as const;
+/**
+ * 반드시 참이어야 하는 것만 둔다.
+ * 어떤 파일과 절을 만드는지는 `SKILL.md` 의 지침과 `docs/data-schema.md` 가 소유하고 모델이 채운다.
+ */
 
-/** 상태 세 줄이 사는 파일. 검증기와 렌더러가 여기서 읽는다. */
+/** 준비 상태 세 줄이 사는 파일. 렌더러가 여기서 읽는다. */
 export const STATUS_FILE = "evidence/status.md";
 
 /** 적합도 표가 사는 파일. */
 export const FIT_FILE = "evidence/fit.md";
 
+export const EVIDENCE_DIRECTORY = "evidence";
+export const REVIEW_DIRECTORY = "review";
+
 /**
- * 있으면 검사하고 없으면 통과하는 절.
- * 이 절이 생기기 전에 만든 지원 건을 소급해 고치지 않으려고 `REQUIRED_HEADINGS`에 넣지 않는다.
+ * 제출 문서에 남으면 안 되는 것. 내부 경로, 저장소 안에서만 뜻이 통하는 표시,
+ * 작업 번호와 커밋 해시다. 외부로 나가는 문서에만 적용한다.
  */
-export const OPTIONAL_HEADINGS: Readonly<Record<string, readonly string[]>> = {
-  "evidence/strategy.md": ["## 이 자리에서 얻을 경험과 성장"],
-};
-
-export const REQUIRED_HEADINGS: Readonly<Record<string, readonly string[]>> = {
-  "evidence/candidate-interview.md": ["## 확보된 답변", "## 미확인 질문"],
-  "evidence/fit.md": [
-    "## 결론",
-    "## 공고 항목별 적합도",
-    "## 공개 자료로 확인한 팀과 인접 사례",
-  ],
-  "evidence/strategy.md": [
-    "## 이 포지션에서의 승부처",
-    "## 지원동기",
-    "## 입사 후 기여 시나리오",
-    "## 보완할 공백",
-    "## 회사 문화와의 연결",
-    "## 면접에서 검증받을 내용",
-  ],
-  "evidence/status.md": [
-    "## 제출 준비 상태",
-    "## 사용자 확인 필요",
-    "## 다음 행동",
-  ],
-  "evidence/resume-draft.md": ["## 프로필", "## 주요 프로젝트", "## 경력", "## 기술"],
-};
-
 export const SUBMISSION_LEAK_PATTERNS = [
   /\/Users\//,
   /sources\/fos-study/i,
   /needs_evidence/i,
   /\b(?:plan|task)[-_ ]?\d{2,}\b/i,
   /\b[0-9a-f]{40}\b/i,
-] as const;
-
-export const REDUNDANT_PACKAGE_FILES = [
-  "evidence-audit.md",
-  "career-description-evidence-audit.md",
-  "career-description-design.md",
-] as const;
-
-/** 디렉터리 최상위에 두는 파일. 사용자가 직접 연다. */
-export const TOP_LEVEL_FILES = [
-  "application-package.html",
-  "resume.pdf",
-  "career-description.pdf",
-  "submission.pdf",
-] as const;
-
-/** `evidence/`에 두는 파일. 기준 원본 Markdown과 구조화 입력이다. */
-export const EVIDENCE_FILES = [
-  "posting.md",
-  "candidate-interview.md",
-  "fit.md",
-  "strategy.md",
-  "status.md",
-  "resume-draft.md",
-  "interview-questions.json",
-  "career-description-draft.md",
-  "application-form.json",
-] as const;
-
-/** `review/`에 두는 파일. 검증기가 읽고 쓴다. */
-export const REVIEW_FILES = [
-  "resume.html",
-  "career-description.html",
-  "claim-ledger.json",
-  "career-description-claim-ledger.json",
-  "resume-scorecard.md",
-  "career-description-scorecard.md",
-  "submission-manifest.json",
-] as const;
-
-export const EVIDENCE_DIRECTORY = "evidence";
-export const REVIEW_DIRECTORY = "review";
-
-export const ALLOWED_PACKAGE_FILES = [
-  ...TOP_LEVEL_FILES,
-  ...EVIDENCE_FILES.map((file) => `${EVIDENCE_DIRECTORY}/${file}`),
-  ...REVIEW_FILES.map((file) => `${REVIEW_DIRECTORY}/${file}`),
 ] as const;

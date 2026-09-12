@@ -8,10 +8,11 @@ import { validateSubmissionBundle } from "../../resume-preparer/scripts/validate
 import { loadApplicationInterviewQuestions } from "../../../../scripts/interview-drill/application_question_schema.ts";
 import { loadApplicationForm, type ApplicationForm } from "./application_form_schema.ts";
 
+/** 모델이 적지 않았으면 그 자리는 `null` 이다. 화면은 그 배지를 그리지 않는다. */
 type PackageStatus = {
-  readiness: "ready" | "needs_user_input" | "revise" | "do_not_apply";
-  evidence: "safe" | "revise" | "blocked";
-  humanConfirmation: "complete" | "needs_input";
+  readiness: "ready" | "needs_user_input" | "revise" | "do_not_apply" | null;
+  evidence: "safe" | "revise" | "blocked" | null;
+  humanConfirmation: "complete" | "needs_input" | null;
 };
 
 type MarkdownSection = {
@@ -51,20 +52,20 @@ const STRATEGY_TAB_SECTION_TITLES = [
 
 const TEMPLATE_DIRECTORY = resolve(import.meta.dir, "../templates");
 
-const READINESS_LABELS: Record<PackageStatus["readiness"], string> = {
+const READINESS_LABELS: Record<NonNullable<PackageStatus["readiness"]>, string> = {
   ready: "제출 검토 가능",
   needs_user_input: "내 답변 필요",
   revise: "문장 보강 필요",
   do_not_apply: "지원 보류 권장",
 };
 
-const EVIDENCE_LABELS: Record<PackageStatus["evidence"], string> = {
+const EVIDENCE_LABELS: Record<NonNullable<PackageStatus["evidence"]>, string> = {
   safe: "근거 안전",
   revise: "근거 표현 조정",
   blocked: "근거 확인 전 사용 금지",
 };
 
-const HUMAN_CONFIRMATION_LABELS: Record<PackageStatus["humanConfirmation"], string> = {
+const HUMAN_CONFIRMATION_LABELS: Record<NonNullable<PackageStatus["humanConfirmation"]>, string> = {
   complete: "사람 확인 완료",
   needs_input: "내 경험 확인 필요",
 };
@@ -86,6 +87,11 @@ const FIT_COLOR_LABELS: Record<FitColor, string> = {
 
 function read(path: string): string {
   return readFileSync(path, "utf8");
+}
+
+/** 아직 만들지 않은 원본은 빈 문자열로 읽는다. 화면이 만들어지는 것이 검사보다 먼저다. */
+function readIfPresent(path: string): string {
+  return existsSync(path) ? read(path) : "";
 }
 
 function escapeHtml(text: string): string {
@@ -234,13 +240,14 @@ export function renderMarkdown(markdown: string): string {
 }
 
 function statusFrom(markdown: string): PackageStatus {
-  const readiness = markdown.match(/^- readiness:\s*(ready|needs_user_input|revise|do_not_apply)\s*$/m)?.[1];
-  const evidence = markdown.match(/^- evidence:\s*(safe|revise|blocked)\s*$/m)?.[1];
-  const humanConfirmation = markdown.match(/^- human-confirmation:\s*(complete|needs_input)\s*$/m)?.[1];
-  if (!readiness || !evidence || !humanConfirmation) {
-    throw new Error("지원 준비 상태를 읽을 수 없습니다.");
-  }
-  return { readiness, evidence, humanConfirmation } as PackageStatus;
+  return {
+    readiness: (markdown.match(/^- readiness:\s*(ready|needs_user_input|revise|do_not_apply)\s*$/m)?.[1] ??
+      null) as PackageStatus["readiness"],
+    evidence: (markdown.match(/^- evidence:\s*(safe|revise|blocked)\s*$/m)?.[1] ??
+      null) as PackageStatus["evidence"],
+    humanConfirmation: (markdown.match(/^- human-confirmation:\s*(complete|needs_input)\s*$/m)?.[1] ??
+      null) as PackageStatus["humanConfirmation"],
+  };
 }
 
 function documentTitle(markdown: string): string {
@@ -328,8 +335,10 @@ function fitCircle(label: string, score: number | null, total = false): string {
   const pendingTotal = total && score === null;
   const value = score === null ? (pendingTotal ? "판정 대기" : "해당 없음") : formatFitScore(score);
   const ariaScore = score === null ? (pendingTotal ? "판정이 아직 없습니다" : "해당 없음") : `${formatFitScore(score)}점`;
+  // 점수가 없으면 색을 읽어 주지 않는다. 빈 원을 낮은 점수로 듣게 된다.
+  const ariaLabel = score === null ? `${label} ${ariaScore}` : `${label} ${ariaScore}, 색 ${FIT_COLOR_LABELS[color]}`;
   return `<article class="fit-meter${total ? " fit-meter-total" : ""}">
-      <div class="fit-circle fit-${color}${score === null ? " is-empty" : ""}" aria-label="${escapeHtml(`${label} ${ariaScore}, 색 ${FIT_COLOR_LABELS[color]}`)}">
+      <div class="fit-circle fit-${color}${score === null ? " is-empty" : ""}" aria-label="${escapeHtml(ariaLabel)}">
         <span>${escapeHtml(value)}</span>
       </div>
       <strong class="fit-label">${escapeHtml(label)}</strong>
@@ -374,7 +383,7 @@ function actionItems(status: PackageStatus, assets: RenderAssets): ActionItem[] 
   if (status.humanConfirmation === "needs_input") {
     actions.push({ owner: "내 확인", body: "지원동기, 실제 역할 또는 결과 범위에 답해야 합니다." });
   }
-  if (status.evidence !== "safe") {
+  if (status.evidence && status.evidence !== "safe") {
     actions.push({ owner: "에이전트 작업", body: "근거보다 강한 제출 문장을 낮추거나 추가 근거를 확인해야 합니다." });
   }
   for (const blocker of new Set((assets.submissionBlockers ?? []).map(userFacingBlocker))) {
@@ -580,11 +589,14 @@ export function renderApplicationPackageHtml(
   const tabs = buildTabs(sections, interviewMarkdown, resumeMarkdown, assets, questionsMarkdown, postingMarkdown);
   const submissionLabel = assets.submissionReady ? "제출 검증 완료" : "제출 준비 중";
   const statusBadges = [
-    `<span class="status readiness-${status.readiness}">${READINESS_LABELS[status.readiness]}</span>`,
-    `<span class="status evidence-${status.evidence}">${EVIDENCE_LABELS[status.evidence]}</span>`,
-    `<span class="status human-${status.humanConfirmation}">${HUMAN_CONFIRMATION_LABELS[status.humanConfirmation]}</span>`,
+    status.readiness &&
+      `<span class="status readiness-${status.readiness}">${READINESS_LABELS[status.readiness]}</span>`,
+    status.evidence &&
+      `<span class="status evidence-${status.evidence}">${EVIDENCE_LABELS[status.evidence]}</span>`,
+    status.humanConfirmation &&
+      `<span class="status human-${status.humanConfirmation}">${HUMAN_CONFIRMATION_LABELS[status.humanConfirmation]}</span>`,
     `<span class="status ${assets.submissionReady ? "evidence-safe" : "evidence-revise"}">${submissionLabel}</span>`,
-  ].join("\n        ");
+  ].filter(Boolean).join("\n        ");
   const heroNotes = sections
     .filter((section) => section.title !== "결론" && TOP_SECTION_TITLES.has(section.title))
     .map((section) => supportingSection(section.title, section.body))
@@ -616,13 +628,12 @@ export function renderApplicationPackage(applicationDirectory: string, outputPat
   if (!validation.passed) throw new Error(validation.errors.join("\n"));
 
   // 세 파일이 한 화면으로 합쳐진다. 절을 제목으로 골라 쓰므로 이어 붙이면 된다.
-  const packageMarkdown = [
-    read(join(directory, "evidence", "status.md")),
-    read(join(directory, "evidence", "fit.md")),
-    read(join(directory, "evidence", "strategy.md")),
-  ].join("\n\n");
-  const interviewMarkdown = read(join(directory, "evidence", "candidate-interview.md"));
-  const resumeMarkdown = read(join(directory, "evidence", "resume-draft.md"));
+  // 아직 만들지 않은 파일은 빈 문자열로 둔다. 화면은 그만큼 비어 보인다.
+  const packageMarkdown = ["status.md", "fit.md", "strategy.md"]
+    .map((file) => readIfPresent(join(directory, "evidence", file)))
+    .join("\n\n");
+  const interviewMarkdown = readIfPresent(join(directory, "evidence", "candidate-interview.md"));
+  const resumeMarkdown = readIfPresent(join(directory, "evidence", "resume-draft.md"));
   const applicationFormPath = join(directory, "evidence", "application-form.json");
   const postingPath = join(directory, "evidence", "posting.md");
   const submission = validateSubmissionBundle(directory);
