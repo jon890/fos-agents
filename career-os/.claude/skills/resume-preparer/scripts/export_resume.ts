@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
 import { dirname, join, resolve } from 'path';
 import { spawnSync } from 'child_process';
 
@@ -388,12 +389,82 @@ export function countHtmlPages(html: string): number {
   return [...html.matchAll(/class=["'][^"']*\bresume-page\b[^"']*["']/g)].length;
 }
 
+const RESUME_PAGE_BLOCK = /[ \t]*<main class="resume-page[\s\S]*?<\/main>\n?/g;
+
+/**
+ * 문서를 쪽마다 단독 HTML 로 나눈다. 쪽 하나만 남기고 나머지 `<main>` 을 지우므로
+ * 스타일, 제목과 쪽 역할 class 는 원본 그대로다. 쪽마다 따로 인쇄해
+ * 어느 쪽이 넘쳤는지 판정할 때 쓴다.
+ */
+export function splitHtmlPages(html: string): string[] {
+  const blocks = [...html.matchAll(RESUME_PAGE_BLOCK)];
+  if (blocks.length === 0) return [];
+  const head = html.slice(0, blocks[0].index);
+  const tail = html.slice(blocks[blocks.length - 1].index + blocks[blocks.length - 1][0].length);
+  return blocks.map((block) => `${head}${block[0]}${tail}`);
+}
+
+/** 쪽의 본문 글자 수다. 태그와 공백을 뺀 값이라 어디를 줄일지 정하는 데 쓴다. */
+export function pageTextLength(pageHtml: string): number {
+  return pageHtml
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&[a-z]+;/g, ' ')
+    .replace(/\s+/g, '')
+    .length;
+}
+
+export type PageRendering = { page: number; pdfPages: number | undefined; textLength: number };
+
+/**
+ * 쪽마다 따로 인쇄해 몇 쪽으로 나왔는지 센다.
+ * HTML 쪽 수와 PDF 쪽 수가 어긋났을 때만 부르므로 정상 경로의 렌더 시간은 그대로다.
+ */
+export function measureHtmlPages(html: string, chromeBin: string): PageRendering[] {
+  const pages = splitHtmlPages(html);
+  const directory = mkdtempSync(join(tmpdir(), 'resume-page-'));
+  try {
+    return pages.map((pageHtml, index) => {
+      const pagePath = join(directory, `page-${index + 1}.html`);
+      const pdfPath = join(directory, `page-${index + 1}.pdf`);
+      writeFileSync(pagePath, pageHtml, 'utf-8');
+      const result = spawnSync(
+        chromeBin,
+        [...CHROME_PDF_FLAGS, `--print-to-pdf=${pdfPath}`, `file://${pagePath}`],
+        { encoding: 'utf-8' },
+      );
+      return {
+        page: index + 1,
+        pdfPages: result.status === 0 && existsSync(pdfPath) ? readPdfPageCount(pdfPath) : undefined,
+        textLength: pageTextLength(pageHtml),
+      };
+    });
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
+
+/** 넘친 쪽과 쪽별 본문 글자 수를 한 줄씩 만든다. 어느 쪽을 줄일지 바로 고르게 한다. */
+export function describePageOverflow(renderings: PageRendering[]): string[] {
+  const lines = renderings
+    .filter((rendering) => rendering.pdfPages !== undefined && rendering.pdfPages > 1)
+    .map((rendering) => `${rendering.page}쪽이 PDF ${rendering.pdfPages}쪽으로 넘쳤습니다. 이 쪽의 내용을 줄이거나 구분을 추가하세요.`);
+  const unknown = renderings.filter((rendering) => rendering.pdfPages === undefined);
+  if (unknown.length > 0) {
+    lines.push(`쪽 수를 확인하지 못한 쪽: ${unknown.map((rendering) => `${rendering.page}쪽`).join(', ')}`);
+  }
+  if (lines.length === 0) {
+    lines.push('쪽마다 따로 인쇄했을 때는 모두 한 쪽에 들어갑니다. 쪽 사이 여백이나 `break-after` 규칙을 확인하세요.');
+  }
+  lines.push(`쪽별 본문 글자 수: ${renderings.map((rendering) => `${rendering.page}쪽 ${rendering.textLength}자`).join(', ')}`);
+  return lines;
+}
+
 function writeHtml(path: string, html: string): void {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, html, 'utf-8');
 }
 
-function renderPdf(opts: Options, expectedPageCount: number): number {
+function renderPdf(opts: Options, html: string, expectedPageCount: number): number {
   mkdirSync(dirname(opts.pdfPath), { recursive: true });
   const htmlUrl = `file://${resolve(opts.htmlPath)}`;
   const result = spawnSync(
@@ -416,6 +487,9 @@ function renderPdf(opts: Options, expectedPageCount: number): number {
     console.error(
       `HTML에서 의도한 ${expectedPageCount}쪽과 PDF의 ${pageCount ?? '확인 불가'}쪽이 일치하지 않습니다.`,
     );
+    for (const line of describePageOverflow(measureHtmlPages(html, opts.chromeBin))) {
+      console.error(line);
+    }
     process.exit(1);
   }
   return pageCount;
@@ -447,7 +521,7 @@ function main(): void {
   const expectedPageCount = countHtmlPages(html);
 
   writeHtml(opts.htmlPath, html);
-  const renderedPageCount = renderPdf(opts, expectedPageCount);
+  const renderedPageCount = renderPdf(opts, html, expectedPageCount);
 
   console.log(`HTML 이력서: ${opts.htmlPath}`);
   console.log(`PDF 이력서: ${opts.pdfPath}`);

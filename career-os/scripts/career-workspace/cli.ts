@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { cp, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { config as loadEnv } from "dotenv";
@@ -79,7 +80,10 @@ const managedSkills = new Set([
 export async function beginSkillWorkspace(context: CliContext, skill: string | undefined) {
   validateManagedSkill(skill);
   if (await exists(skillSessionPath(context.root))) {
-    throw new TransportError(makeRemoteError("check", "RESTORE_REQUIRED"));
+    const open = await readSkillSession(context.root);
+    throw new TransportError(makeRemoteError("check", "RESTORE_REQUIRED", open
+      ? `이미 ${open.skill} 세션이 열려 있습니다. \`skill finish ${open.skill}\` 로 마무리한 뒤 새 세션을 시작하세요.`
+      : "읽을 수 없는 세션 기록이 남아 있습니다. `.career-sync/skill-session.json` 을 지운 뒤 다시 시작하세요."));
   }
   const checked = await checkWorkspace({ ...context, producer: { ...context.producer, skill } });
   if (
@@ -108,13 +112,9 @@ export async function finishSkillWorkspace(context: CliContext, skill: string | 
   const skillContext = { ...context, producer: { ...context.producer, skill } };
   const session = await readSkillSession(context.root);
   const syncState = await readSyncState(context.root);
-  if (
-    !session
-    || session.skill !== skill
-    || syncState.kind !== "valid"
-    || syncState.state.revision !== session.revision
-  ) {
-    throw new TransportError(makeRemoteError("check", "RESTORE_REQUIRED"));
+  const mismatch = describeSkillSessionMismatch(skill, session, syncState);
+  if (mismatch) {
+    throw new TransportError(makeRemoteError("check", "RESTORE_REQUIRED", mismatch));
   }
   const difference = await diffWorkspace(skillContext);
   if (difference.added.length === 0 && difference.modified.length === 0 && difference.deleted.length === 0) {
@@ -133,6 +133,32 @@ export async function finishSkillWorkspace(context: CliContext, skill: string | 
   const published = await publishWorkspace(skillContext);
   await rm(skillSessionPath(context.root), { force: true });
   return { ...published, action: "skill-finish", skill };
+}
+
+/**
+ * `skill finish` 가 거절되는 이유는 넷이고 되돌리는 방법이 각각 다르다.
+ * 세션 기록 없이 `prepare` 로 작업을 시작했거나, 세션 도중 다른 실행이
+ * 작업본을 바꿨을 때 어긋남이 한참 뒤에 드러나므로 다음 명령까지 같이 낸다.
+ * 어긋나지 않았으면 undefined 를 돌려준다.
+ */
+export function describeSkillSessionMismatch(
+  skill: string,
+  session: { skill: string; revision: string } | null,
+  syncState: SyncStateResult,
+): string | undefined {
+  if (!session) {
+    return `\`skill begin ${skill}\` 로 시작한 세션 기록이 없습니다. 지금 변경을 그대로 올리려면 \`publish\` 를 실행하고, 세션으로 다시 시작하려면 변경이 없는 상태에서 \`skill begin ${skill}\` 을 실행하세요.`;
+  }
+  if (session.skill !== skill) {
+    return `열려 있는 세션의 skill 은 ${session.skill} 입니다. \`skill finish ${session.skill}\` 로 마무리한 뒤 ${skill} 세션을 시작하세요.`;
+  }
+  if (syncState.kind !== "valid") {
+    return "작업본의 sync-state 를 읽을 수 없습니다. `prepare` 로 작업본을 다시 받은 뒤 세션을 시작하세요.";
+  }
+  if (syncState.state.revision !== session.revision) {
+    return `세션을 시작한 revision 은 ${session.revision} 이고 지금 작업본은 ${syncState.state.revision} 입니다. 세션 도중 다른 prepare 나 publish 가 있었습니다. \`diff\` 로 남은 변경을 확인하고 \`publish\` 로 올린 뒤 \`.career-sync/skill-session.json\` 을 지우세요.`;
+  }
+  return undefined;
 }
 
 function validateManagedSkill(skill: string | undefined): asserts skill is string {
@@ -424,11 +450,12 @@ async function inspectLocal(context: CliContext, syncState: CareerWorkspaceSyncS
   };
 }
 
-async function readSyncState(root: string): Promise<
+type SyncStateResult =
   | { kind: "missing"; state: null }
   | { kind: "valid"; state: CareerWorkspaceSyncState }
-  | { kind: "invalid"; state: null }
-> {
+  | { kind: "invalid"; state: null };
+
+async function readSyncState(root: string): Promise<SyncStateResult> {
   if (!await exists(syncStatePath(root))) {
     return { kind: "missing", state: null };
   }
@@ -470,12 +497,12 @@ async function writeJournal(root: string, journal: PrepareJournal): Promise<void
 }
 
 function createDefaultContext(): CliContext {
-  loadWorkspaceEnvironment();
+  const environmentFile = loadWorkspaceEnvironment();
   const env = process.env;
   const root = path.resolve(env.CAREER_WORKSPACE_ROOT || "career-os");
   return {
     root,
-    transport: createCareerWorkspaceTransport(env),
+    transport: createCareerWorkspaceTransport(env, environmentFile),
     producer: {
       skill: env.CAREER_WORKSPACE_PRODUCER_SKILL || "career-workspace",
       mode: env.CAREER_WORKSPACE_PRODUCER_MODE === "automation" ? "automation" : "interactive",
@@ -483,23 +510,69 @@ function createDefaultContext(): CliContext {
   };
 }
 
+export interface WorkspaceEnvironmentFile {
+  path: string;
+  present: boolean;
+}
+
 export function createCareerWorkspaceTransport(
   environment: Readonly<Record<string, string | undefined>>,
+  environmentFile?: WorkspaceEnvironmentFile,
 ): CareerWorkspaceTransport {
   if (environment.CAREER_WORKSPACE_COMMAND) {
     return new CommandCareerWorkspaceTransport({ command: environment.CAREER_WORKSPACE_COMMAND });
   }
+  if (!environment.CAREER_WORKSPACE_SSH_TARGET) {
+    return new UnconfiguredCareerWorkspaceTransport(describeMissingTransportSetting(environmentFile));
+  }
   return new SshCareerWorkspaceTransport({
-    sshTarget: environment.CAREER_WORKSPACE_SSH_TARGET || "",
+    sshTarget: environment.CAREER_WORKSPACE_SSH_TARGET,
     remoteCommand: environment.CAREER_WORKSPACE_REMOTE_COMMAND || "career-storage",
     sshArgs: environment.CAREER_WORKSPACE_SSH_ARGS?.split(" ").filter(Boolean),
   });
 }
 
-function loadWorkspaceEnvironment(): void {
+/**
+ * `.env` 는 git 추적 대상이 아니라 새 워크트리에 따라오지 않는다.
+ * 이때 원격 연결 설정이 비어 있어 첫 `check` 가 `TRANSPORT_UNAVAILABLE` 로 끝나는데,
+ * 코드만으로는 연결 실패와 설정 누락을 나눌 수 없어 원인을 찾는 데 확인이 여러 번 들었다.
+ * 어느 파일이 비었는지와 가져올 곳을 함께 낸다. 환경 변수 값 자체는 담지 않는다.
+ */
+export function describeMissingTransportSetting(environmentFile?: WorkspaceEnvironmentFile): string {
+  const file = environmentFile?.path ?? path.join("career-os", ".env");
+  if (environmentFile && !environmentFile.present) {
+    return `${file} 파일이 없어 원격 저장소 설정을 읽지 못했습니다. 원본 체크아웃의 같은 파일을 이 작업본으로 복사한 뒤 다시 실행하세요.`;
+  }
+  return `${file} 의 CAREER_WORKSPACE_COMMAND 와 CAREER_WORKSPACE_SSH_TARGET 이 모두 비어 있습니다. 원본 체크아웃의 같은 파일에서 두 값을 가져온 뒤 다시 실행하세요.`;
+}
+
+/** 원격 연결 설정이 없을 때 쓰는 transport 다. 호출하는 자리마다 같은 설명을 낸다. */
+class UnconfiguredCareerWorkspaceTransport implements CareerWorkspaceTransport {
+  constructor(private readonly detail: string) {}
+
+  async status(): Promise<never> {
+    throw this.unavailable("status");
+  }
+
+  async export(): Promise<never> {
+    throw this.unavailable("export");
+  }
+
+  async publish(): Promise<never> {
+    throw this.unavailable("publish");
+  }
+
+  private unavailable(action: "status" | "export" | "publish"): TransportError {
+    return new TransportError(makeRemoteError(action, "TRANSPORT_UNAVAILABLE", this.detail));
+  }
+}
+
+function loadWorkspaceEnvironment(): WorkspaceEnvironmentFile {
   const configured = process.env.CAREER_WORKSPACE_ENV_FILE;
   const defaultFile = path.basename(process.cwd()) === "career-os" ? ".env" : path.join("career-os", ".env");
-  loadEnv({ path: configured || defaultFile, quiet: true });
+  const file = configured || defaultFile;
+  loadEnv({ path: file, quiet: true });
+  return { path: file, present: existsSync(file) };
 }
 
 function syncDirectory(root: string): string {
@@ -619,8 +692,13 @@ function hasCompletedJournalShape(journal: PrepareJournal): boolean {
   });
 }
 
+/**
+ * `.omc` 는 저장소가 재생성 가능한 운영 산출물로 선언한 디렉터리라
+ * 동기화에서만 제외하고 `prepare` 를 막지 않는다. 비밀 값을 담는 `.env` 와
+ * 그 밖의 숨김 파일은 그대로 막아 사용자가 직접 정리하게 한다.
+ */
 function isPrepareBlockingExclusion(code: ExcludedWorkspacePath["code"]): boolean {
-  return code === "excluded-env" || code === "excluded-hidden" || code === "excluded-omc";
+  return code === "excluded-env" || code === "excluded-hidden";
 }
 
 async function cleanupCompletedJournal(root: string): Promise<void> {

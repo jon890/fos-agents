@@ -137,6 +137,7 @@ export const remoteErrorResultSchema = z.object({
     "TRANSPORT_UNAVAILABLE",
     "RESTORE_REQUIRED",
   ]),
+  detail: nonEmptyString.optional(),
 }).strict();
 
 export type CareerWorkspaceProducer = z.infer<typeof careerWorkspaceProducerSchema>;

@@ -4,12 +4,19 @@ import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { artifactTextSha256 } from "./artifact_identity.ts";
 import { runCli, UsageError } from "../../../../scripts/lib/cli.ts";
-import { ClaimLedgerSchema, type ClaimLedger } from "./claim_ledger_schema.ts";
+import {
+  ClaimLedgerSchema,
+  CURRENT_CLAIM_LEDGER_SCHEMA_VERSION,
+  requiresEvidenceLocator,
+  type ClaimLedger,
+} from "./claim_ledger_schema.ts";
+import { parseEvidenceLocator, resolveEvidenceLocator, EVIDENCE_LOCATOR_FORMAT_HINT } from "./evidence_locator.ts";
 
 export type ClaimLedgerValidation = {
   passed: boolean;
   file: string;
   artifact: string;
+  schemaVersion: number | null;
   summary: {
     totalClaims: number;
     safe: number;
@@ -17,12 +24,23 @@ export type ClaimLedgerValidation = {
     askUser: number;
     remove: number;
     errors: number;
+    warnings: number;
   };
   errors: string[];
+  warnings: string[];
 };
 
 function resolveLedgerArtifact(ledgerPath: string, artifact: string): string {
   return isAbsolute(artifact) ? artifact : resolve(dirname(resolve(ledgerPath)), artifact);
+}
+
+function resolveEvidenceFile(path: string): string | undefined {
+  if (existsSync(path)) return path;
+  if (!isAbsolute(path)) {
+    const fromCwd = resolve(process.cwd(), path);
+    if (existsSync(fromCwd)) return fromCwd;
+  }
+  return undefined;
 }
 
 function evidencePathExists(path: string, kind: string): boolean {
@@ -34,11 +52,43 @@ function evidencePathExists(path: string, kind: string): boolean {
       return false;
     }
   }
-  return existsSync(path) || (!isAbsolute(path) && existsSync(resolve(process.cwd(), path)));
+  return resolveEvidenceFile(path) !== undefined;
 }
 
-function contextualErrors(ledger: ClaimLedger): string[] {
+/**
+ * 경로만 검사하면 파일은 있고 인용한 내용은 없는 원장이 통과한다.
+ * 그래서 `document` 와 `user` 근거는 locator 가 그 파일에 실재하는지까지 본다.
+ * 버전 3 부터 어긋남을 오류로 올리고, 이미 제출한 버전 2 원장은 경고만 남긴다.
+ */
+function locatorFinding(
+  claimId: string,
+  evidence: { kind: string; path: string; locator?: string },
+): string | undefined {
+  if (!requiresEvidenceLocator(evidence.kind as never)) return undefined;
+  const file = resolveEvidenceFile(evidence.path);
+  if (!file) return undefined;
+
+  if (!evidence.locator) {
+    return `${claimId}: ${evidence.path} 근거에 locator 가 없어 인용한 자리를 대조하지 못했습니다. ${EVIDENCE_LOCATOR_FORMAT_HINT}`;
+  }
+  const locator = parseEvidenceLocator(evidence.locator);
+  if (!locator) {
+    return `${claimId}: locator 를 읽을 수 없습니다: ${evidence.locator}. ${EVIDENCE_LOCATOR_FORMAT_HINT}`;
+  }
+  let source: string;
+  try {
+    source = readFileSync(file, "utf8");
+  } catch {
+    return `${claimId}: 근거 파일을 읽을 수 없습니다: ${evidence.path}`;
+  }
+  const resolution = resolveEvidenceLocator(source, locator);
+  return resolution.resolved ? undefined : `${claimId}: ${evidence.path} 의 ${resolution.reason}`;
+}
+
+function contextualFindings(ledger: ClaimLedger): { errors: string[]; warnings: string[] } {
   const errors: string[] = [];
+  const warnings: string[] = [];
+  const enforcesLocator = ledger.schemaVersion >= CURRENT_CLAIM_LEDGER_SCHEMA_VERSION;
   const ids = new Set<string>();
 
   for (const claim of ledger.claims) {
@@ -112,10 +162,13 @@ function contextualErrors(ledger: ClaimLedger): string[] {
     for (const evidence of allEvidence) {
       if (!evidencePathExists(evidence.path, evidence.kind)) {
         errors.push(`${claim.id}: 근거 경로가 존재하지 않습니다: ${evidence.path}`);
+        continue;
       }
+      const finding = locatorFinding(claim.id, evidence);
+      if (finding) (enforcesLocator ? errors : warnings).push(finding);
     }
   }
-  return errors;
+  return { errors, warnings };
 }
 
 export function validateClaimLedger(
@@ -123,6 +176,7 @@ export function validateClaimLedger(
   expectedArtifactPath: string,
 ): ClaimLedgerValidation {
   const errors: string[] = [];
+  const warnings: string[] = [];
   let ledger: ClaimLedger | undefined;
 
   try {
@@ -151,7 +205,9 @@ export function validateClaimLedger(
         errors.push("감사 이후 제출 문구가 변경되었습니다. 현재 파일을 다시 감사해야 합니다.");
       }
     }
-    errors.push(...contextualErrors(ledger));
+    const findings = contextualFindings(ledger);
+    errors.push(...findings.errors);
+    warnings.push(...findings.warnings);
   }
 
   const claims = ledger?.claims ?? [];
@@ -159,6 +215,7 @@ export function validateClaimLedger(
     passed: errors.length === 0,
     file: ledgerPath,
     artifact: expectedArtifactPath,
+    schemaVersion: ledger?.schemaVersion ?? null,
     summary: {
       totalClaims: claims.length,
       safe: claims.filter((claim) => claim.verdict === "safe").length,
@@ -166,8 +223,10 @@ export function validateClaimLedger(
       askUser: claims.filter((claim) => claim.verdict === "ask_user").length,
       remove: claims.filter((claim) => claim.verdict === "remove").length,
       errors: errors.length,
+      warnings: warnings.length,
     },
     errors,
+    warnings,
   };
 }
 

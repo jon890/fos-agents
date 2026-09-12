@@ -111,6 +111,9 @@ HTML 정적 검사는 [scripts/check_resume_html.ts](scripts/check_resume_html.t
 주장에 필요한 근거를 `career-os/sources/fos-study/`, 실제 프로젝트의 코드, 테스트, Git 이력과 기술 결정 문서에서 확인한다.
 코드 존재는 구현 근거로, Git 이력은 소유권 근거로, 운영 기록은 경험 깊이 근거로 각각 분리한다.
 
+원장은 `schemaVersion: 3`으로 만들고, `document`와 `user` 근거마다 인용한 자리를 `locator`에 적는다.
+형식은 [references/claim-model.md](references/claim-model.md)의 「근거를 어디서 인용했는지 적는 방법」이 소유한다.
+
 [scripts/validate_claim_ledger.ts](scripts/validate_claim_ledger.ts) `<원장 경로> --artifact <HTML 경로>`를 실행한다.
 실패한 항목은 근거와 문구를 보완하거나 후보자에게 확인한 뒤 재검사한다.
 문구가 바뀌면 HTML과 PDF도 다시 만든다.
