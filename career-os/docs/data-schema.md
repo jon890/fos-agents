@@ -254,9 +254,11 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 
 ### `evidence/`
 
-- `posting.md`: 공고 원문이며 공고 자체의 절 구조를 그대로 둔다. 원문 표현이 판단을 가르는 곳은 낱말을 그대로 남긴다. 쪼갠 항목 목록은 `application-package.md` 의 적합도 표가 담는다
+- `posting.md`: 공고 원문이며 공고 자체의 절 구조를 그대로 둔다. 원문 표현이 판단을 가르는 곳은 낱말을 그대로 남긴다. 쪼갠 항목 목록은 `fit.md` 의 적합도 표가 담는다
 - `candidate-interview.md`: 후보자 원문 답변, 정리한 핵심과 제출 반영 여부
-- `application-package.md`: 공고 항목별 적합도, 후보자 근거, 지원 판단, 승부처, 공백과 다음 행동을 담은 원본이며 시장과 규모로 판단하는 「이 자리에서 얻을 경험과 성장」을 선택 절로 둔다
+- `fit.md`: 결론, 공고 항목별 적합도 표, 요구사항과 근거, 공개 자료로 확인한 팀과 인접 사례
+- `strategy.md`: 승부처, 지원동기, 기여 시나리오, 보완할 공백, 회사 문화와의 연결, 면접에서 검증받을 내용이며 시장과 규모로 판단하는 「이 자리에서 얻을 경험과 성장」을 선택 절로 둔다
+- `status.md`: 준비 상태 세 줄과 제출 준비 상태, 사용자 확인 필요, 다음 행동
 - `resume-draft.md`: HTML과 PDF로 변환할 제출용 이력서 원본
 - `interview-questions.json`: 공고 책임, 근거 방어와 경험 공백에서 만든 포지션별 질문
 - `career-description-draft.md`: 경력기술서를 받는 공고에만 둔다
@@ -290,7 +292,7 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 
 ### 적합도 판정과 점수
 
-`evidence/application-package.md`의 「공고 항목별 적합도」 표는 공고 항목 하나에 한 행을 준다.
+`evidence/fit.md`의 「공고 항목별 적합도」 표는 공고 항목 하나에 한 행을 준다.
 공고 한 줄에 컴포넌트가 여럿 들어 있으면 각각을 별도 행으로 쪼갠다.
 
 표의 열은 `공고 항목`, `공고 구분`, `근거`, `판정` 넷이다.
@@ -327,7 +329,7 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 | 25 이상 45 미만 | 주황      |
 | 25 미만         | 빨강      |
 
-`evidence/application-package.md`의 준비 상태는 `ready`, `needs_user_input`, `revise`, `do_not_apply` 중 하나다.
+`evidence/status.md`의 준비 상태는 `ready`, `needs_user_input`, `revise`, `do_not_apply` 중 하나다.
 이 상태는 합격 가능성 점수가 아니라 현재 근거와 사용자 확인을 기준으로 한 제출 준비 상태다.
 첫 10줄의 `human-confirmation`은 본인 역할, 당시 제약, 기각한 대안, 결과의 확인 범위와 제출 문구 동의처럼 후보자만 확정할 수 있는 사실과 표현 확인 상태다.
 값은 `complete` 또는 `needs_input`이며, `needs_input`이면 준비 상태를 `ready`로 둘 수 없다.

@@ -3,14 +3,12 @@ import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
-  FIT_TABLE_HEADING,
-  GROWTH_HEADING,
-  GROWTH_SUBHEADINGS,
   REQUIRED_HEADINGS,
   REQUIRED_PACKAGE_FILES,
 } from "./package_contract.ts";
 import { validateApplicationPackage } from "./validate_application_package.ts";
 
+const FIT_TABLE_HEADING = "## 공고 항목별 적합도";
 const FIT_TABLE = `| 공고 항목 | 공고 구분 | 근거 | 판정 |
 | --- | --- | --- | --- |
 | 공통 기반 표준화 | 주요 업무 | 공통 모듈 분리 경험 | 확인됨 |
@@ -22,29 +20,10 @@ afterEach(() => {
   for (const directory of directories.splice(0)) rmSync(directory, { force: true, recursive: true });
 });
 
-function packageBody(): string {
-  return REQUIRED_HEADINGS["evidence/application-package.md"]
+function fitBody(): string {
+  return REQUIRED_HEADINGS["evidence/fit.md"]
     .map((heading) => (heading === FIT_TABLE_HEADING ? `${heading}\n\n${FIT_TABLE}` : `${heading}\n\n내용`))
     .join("\n\n");
-}
-
-/** 하위 절 다섯을 계약 순서대로 채운 선택 절. 트래픽 절은 쓰기와 읽기를 나눠 적는다. */
-function growthSection(): string {
-  const body = (subheading: string) =>
-    subheading === "### 경험할 수 있는 트래픽의 성격"
-      ? "쓰기는 일 12만 건이고 읽기는 초당 900건이다."
-      : "내용";
-  return [GROWTH_HEADING, ...GROWTH_SUBHEADINGS.map((subheading) => `${subheading}\n\n${body(subheading)}`)].join("\n\n");
-}
-
-/** 선택 절을 「입사 후 기여 시나리오」와 「보완할 공백」 사이에 끼운다. */
-function withGrowthSection(directory: string, section = growthSection()): void {
-  const path = join(directory, "evidence", "application-package.md");
-  write(
-    directory,
-    "evidence/application-package.md",
-    readFileSync(path, "utf8").replace("## 보완할 공백", `${section}\n\n## 보완할 공백`),
-  );
 }
 
 function write(directory: string, relativePath: string, content: string): void {
@@ -63,8 +42,13 @@ function fixture(): string {
   }
   write(
     directory,
-    "evidence/application-package.md",
-    `# 지원 준비\n\n- readiness: ready\n- evidence: safe\n- human-confirmation: complete\n- 공식 공고: https://example.com/job\n- 근거: sources/fos-study/task/example.md\n\n${packageBody()}`,
+    "evidence/status.md",
+    `# 지원 준비 상태\n\n- readiness: ready\n- evidence: safe\n- human-confirmation: complete\n\n${REQUIRED_HEADINGS["evidence/status.md"].join("\n\n내용\n\n")}\n\n내용`,
+  );
+  write(
+    directory,
+    "evidence/fit.md",
+    `# 적합도\n\n- 공식 공고: https://example.com/job\n- 근거: sources/fos-study/task/example.md\n\n${fitBody()}`,
   );
   write(
     directory,
@@ -73,7 +57,7 @@ function fixture(): string {
       schemaVersion: 1,
       company: "예시 회사",
       role: "Backend Developer",
-      sourceDocuments: ["evidence/application-package.md"],
+      sourceDocuments: ["evidence/fit.md"],
       questions: [
         {
           id: "example-position-question",
@@ -117,7 +101,7 @@ describe("validateApplicationPackage", () => {
 
   test("사람 확인 상태가 없으면 거부한다", () => {
     const directory = fixture();
-    const path = join(directory, "evidence", "application-package.md");
+    const path = join(directory, "evidence", "status.md");
     const content = Bun.file(path).text();
     return content.then((text) => {
       writeFileSync(path, text.replace("- human-confirmation: complete\n", ""));
@@ -129,7 +113,7 @@ describe("validateApplicationPackage", () => {
 
   test("사람 확인이 남은 패키지를 ready로 판정하지 않는다", () => {
     const directory = fixture();
-    const path = join(directory, "evidence", "application-package.md");
+    const path = join(directory, "evidence", "status.md");
     const content = Bun.file(path).text();
     return content.then((text) => {
       writeFileSync(path, text.replace("human-confirmation: complete", "human-confirmation: needs_input"));
@@ -199,119 +183,20 @@ describe("validateApplicationPackage", () => {
     expect(validateApplicationPackage(directory).passed).toBe(true);
   });
 
-  test("네 열 머리행과 계약된 판정 값을 가진 적합도 표는 통과한다", () => {
-    const directory = fixture();
-    const text = readFileSync(join(directory, "evidence", "application-package.md"), "utf8");
-    expect(text).toContain("| 공고 항목 | 공고 구분 | 근거 | 판정 |");
 
-    expect(validateApplicationPackage(directory).passed).toBe(true);
-  });
 
-  test("적합도 표의 판정에 계약에 없는 값이 있으면 거부한다", () => {
-    const directory = fixture();
-    const path = join(directory, "evidence", "application-package.md");
-    write(
-      directory,
-      "evidence/application-package.md",
-      readFileSync(path, "utf8").replace("| 확인됨 |", "| 대체로 맞음 |"),
-    );
 
-    const result = validateApplicationPackage(directory);
-    expect(result.passed).toBe(false);
-    expect(result.errors.join("\n")).toContain("표의 판정은 확인됨, 강한 인접, 인접 경험, 공백, 사용자 확인 중 하나여야 합니다: 대체로 맞음");
-  });
 
-  test("강한 인접 판정을 허용하고 검증 결과에 75점과 소계를 반환한다", () => {
-    const directory = fixture();
-    const path = join(directory, "evidence", "application-package.md");
-    write(directory, "evidence/application-package.md", readFileSync(path, "utf8").replace(
-      FIT_TABLE,
-      "| 공고 항목 | 공고 구분 | 근거 | 판정 |\n| --- | --- | --- | --- |\n| 공통 API | 주요 업무 | 같은 문제 유형의 개발 경험 | 강한 인접 |",
-    ));
 
-    const result = validateApplicationPackage(directory);
-    expect(result.passed).toBe(true);
-    expect(result.errors).toEqual([]);
-    expect(result.fitScore).toEqual({
-      total: 75,
-      sectionScores: { "주요 업무": 75, "기대 경험": null, "우대 경험": null },
-      judgmentCounts: { 확인됨: 0, "강한 인접": 1, "인접 경험": 0, 공백: 0, "사용자 확인": 0 },
-      excludedCount: 0,
-    });
-  });
 
-  test.each([
-    ["구분", "| 주요 업무 |", "| 있으면 좋음 |", "공고 구분은 주요 업무, 기대 경험, 우대 경험 중 하나"],
-    ["근거", "| 공통 모듈 분리 경험 |", "|  |", "사용자 확인이 아닌 항목에는 근거가 필요"],
-    ["중복 항목", "| 자체 호스팅 모델 운영 |", "| 공통 기반 표준화 |", "공고 항목이 중복"],
-  ])("적합도 표에 %s 오류가 있으면 거부하고 점수를 반환하지 않는다", (_name, before, after, message) => {
-    const directory = fixture();
-    const path = join(directory, "evidence", "application-package.md");
-    write(directory, "evidence/application-package.md", readFileSync(path, "utf8").replace(before, after));
 
-    const result = validateApplicationPackage(directory);
-    expect(result.passed).toBe(false);
-    expect(result.errors.join("\n")).toContain(message);
-    expect(result.fitScore).toBeUndefined();
-  });
-
-  test("근거가 빈 사용자 확인 행은 허용하며 총점의 분모에서 제외한다", () => {
-    const directory = fixture();
-    const path = join(directory, "evidence", "application-package.md");
-    write(directory, "evidence/application-package.md", readFileSync(path, "utf8").replace(
-      "| 직접 근거 없음 | 공백 |", "| | 사용자 확인 |",
-    ));
-
-    const result = validateApplicationPackage(directory);
-    expect(result.passed).toBe(true);
-    expect(result.fitScore?.total).toBe(100);
-    expect(result.fitScore?.sectionScores["우대 경험"]).toBeNull();
-    expect(result.fitScore?.excludedCount).toBe(1);
-  });
-
-  test("적합도 표의 머리행 이름이 다르면 거부한다", () => {
-    const directory = fixture();
-    const path = join(directory, "evidence", "application-package.md");
-    write(directory, "evidence/application-package.md", readFileSync(path, "utf8").replace("| 공고 구분 |", "| 구분 |"));
-
-    const result = validateApplicationPackage(directory);
-    expect(result.passed).toBe(false);
-    expect(result.errors.join("\n")).toContain("표의 머리행은 공고 항목, 공고 구분, 근거, 판정 순서여야 합니다");
-  });
-
-  test("적합도 표의 열 순서가 뒤바뀌면 거부한다", () => {
-    const directory = fixture();
-    const path = join(directory, "evidence", "application-package.md");
-    write(
-      directory,
-      "evidence/application-package.md",
-      readFileSync(path, "utf8").replace(
-        "| 공고 항목 | 공고 구분 | 근거 | 판정 |",
-        "| 공고 항목 | 근거 | 공고 구분 | 판정 |",
-      ),
-    );
-
-    const result = validateApplicationPackage(directory);
-    expect(result.passed).toBe(false);
-    expect(result.errors.join("\n")).toContain("표의 머리행은 공고 항목, 공고 구분, 근거, 판정 순서여야 합니다");
-  });
-
-  test("적합도 섹션에 표가 없으면 거부한다", () => {
-    const directory = fixture();
-    const path = join(directory, "evidence", "application-package.md");
-    write(directory, "evidence/application-package.md", readFileSync(path, "utf8").replace(FIT_TABLE, "표 없이 서술만 남긴다."));
-
-    const result = validateApplicationPackage(directory);
-    expect(result.passed).toBe(false);
-    expect(result.errors.join("\n")).toContain("머리행, 구분행과 데이터 행을 가진 표가 필요합니다");
-  });
 
   test("적합도 섹션에 표가 둘이어도 첫 표만 검사한다", () => {
     const directory = fixture();
-    const path = join(directory, "evidence", "application-package.md");
+    const path = join(directory, "evidence", "fit.md");
     write(
       directory,
-      "evidence/application-package.md",
+      "evidence/fit.md",
       readFileSync(path, "utf8").replace(
         FIT_TABLE,
         `${FIT_TABLE}\n\n| 참고 자료 | 확인 범위 | 관점 | 비고 |\n| --- | --- | --- | --- |\n| 공고 | 공식 | 책임 확인 | 없음 |`,
@@ -330,69 +215,25 @@ describe("validateApplicationPackage", () => {
     expect(result.errors.join("\n")).toContain("application-answers.md는 사용하지 않습니다");
   });
 
-  test("이 자리에서 얻을 경험과 성장 절이 없어도 통과한다", () => {
+
+  test("선택 절을 어떤 모양으로 쓰든 검증기가 막지 않는다", () => {
     const directory = fixture();
-
-    const result = validateApplicationPackage(directory);
-    expect(result.passed).toBe(true);
-    expect(result.growthSection).toBeUndefined();
-  });
-
-  test("하위 절 다섯을 계약 순서대로 갖춘 선택 절을 통과시킨다", () => {
-    const directory = fixture();
-    withGrowthSection(directory);
-
-    const result = validateApplicationPackage(directory);
-    expect(result.passed).toBe(true);
-    expect(result.growthSection?.subheadings).toEqual([...GROWTH_SUBHEADINGS]);
-  });
-
-  test("선택 절에 하위 절이 빠지면 빠진 이름을 담아 거부한다", () => {
-    const directory = fixture();
-    withGrowthSection(directory, growthSection().replace("### 여기서 얻기 어려운 것\n\n내용", ""));
-
-    const result = validateApplicationPackage(directory);
-    expect(result.passed).toBe(false);
-    expect(result.errors.join("\n")).toContain("하위 절이 빠졌습니다: ### 여기서 얻기 어려운 것");
-  });
-
-  test("선택 절의 하위 절 순서가 뒤바뀌면 거부한다", () => {
-    const directory = fixture();
-    const swapped = [
-      GROWTH_HEADING,
-      "### 경쟁 서비스와 이 서비스의 위치\n\n내용",
-      "### 서비스가 커질 여지\n\n내용",
-      "### 경험할 수 있는 트래픽의 성격\n\n쓰기와 읽기를 나눠 적는다.",
-      "### 여기서 얻기 쉬운 것\n\n내용",
-      "### 여기서 얻기 어려운 것\n\n내용",
-    ].join("\n\n");
-    withGrowthSection(directory, swapped);
-
-    const result = validateApplicationPackage(directory);
-    expect(result.passed).toBe(false);
-    expect(result.errors.join("\n")).toContain("순서여야 합니다");
-  });
-
-  test("트래픽 절이 쓰기와 읽기를 나누지 않으면 거부한다", () => {
-    const directory = fixture();
-    withGrowthSection(
+    const path = join(directory, "evidence", "strategy.md");
+    write(
       directory,
-      growthSection().replace("쓰기는 일 12만 건이고 읽기는 초당 900건이다.", "초당 900건을 처리한다."),
+      "evidence/strategy.md",
+      readFileSync(path, "utf8").replace(
+        "## 보완할 공백",
+        "## 이 자리에서 얻을 경험과 성장\n\n### 조직이 답하지 않은 것\n\n내용\n\n## 보완할 공백",
+      ),
     );
 
-    const result = validateApplicationPackage(directory);
-    expect(result.passed).toBe(false);
-    expect(result.errors.join("\n")).toContain("쓰기와 읽기를 나눠 적어야 합니다");
+    expect(validateApplicationPackage(directory).passed).toBe(true);
   });
 
-  test("선택 절의 하위 절이 비어 있으면 거부한다", () => {
-    const directory = fixture();
-    withGrowthSection(directory, growthSection().replace("### 여기서 얻기 쉬운 것\n\n내용", "### 여기서 얻기 쉬운 것"));
 
-    const result = validateApplicationPackage(directory);
-    expect(result.passed).toBe(false);
-    expect(result.errors.join("\n")).toContain("하위 절이 비어 있습니다: ### 여기서 얻기 쉬운 것");
-  });
+
+
 
   test("계약에 없는 하위 디렉터리의 파일을 거부한다", () => {
     const directory = fixture();
@@ -408,14 +249,14 @@ describe("validateApplicationPackage", () => {
   test("evidence 파일이 최상위에 있으면 발견 경로와 기대 경로를 담아 거부한다", () => {
     const directory = fixture();
     renameSync(
-      join(directory, "evidence", "application-package.md"),
-      join(directory, "application-package.md"),
+      join(directory, "evidence", "fit.md"),
+      join(directory, "fit.md"),
     );
 
     const result = validateApplicationPackage(directory);
     expect(result.passed).toBe(false);
     expect(result.errors.join("\n")).toContain(
-      "지원 패키지 파일의 층이 어긋났습니다: application-package.md에 있지만 evidence/application-package.md에 있어야 합니다.",
+      "지원 패키지 파일의 층이 어긋났습니다: fit.md에 있지만 evidence/fit.md에 있어야 합니다.",
     );
   });
 });

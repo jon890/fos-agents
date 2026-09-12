@@ -5,7 +5,7 @@
 
 ## 검토 대상
 
-- `evidence/application-package.md`에서 사용자가 먼저 읽는 결론, 승부처, 지원동기, 공백과 다음 행동
+- `evidence/fit.md`의 결론과 `evidence/strategy.md`의 승부처, 지원동기, 공백, `evidence/status.md`의 다음 행동
 - `evidence/resume-draft.md`의 프로필, 프로젝트, 경력과 기술 목록
 - 경력기술서가 있으면 `evidence/career-description-draft.md` 전체
 - `evidence/application-form.json`의 서술형 답변

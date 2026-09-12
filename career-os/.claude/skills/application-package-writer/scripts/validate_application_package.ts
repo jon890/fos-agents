@@ -7,6 +7,8 @@ import {
   ALLOWED_PACKAGE_FILES,
   EVIDENCE_DIRECTORY,
   EVIDENCE_FILES,
+  FIT_FILE,
+  STATUS_FILE,
   REQUIRED_HEADINGS,
   REQUIRED_PACKAGE_FILES,
   REDUNDANT_PACKAGE_FILES,
@@ -16,8 +18,6 @@ import {
   TOP_LEVEL_FILES,
 } from "./package_contract.ts";
 import { loadApplicationForm } from "./application_form_schema.ts";
-import { calculateFitScore, parseFitTable, type FitScore } from "./fit_score.ts";
-import { parseGrowthSection, type GrowthSection } from "./growth_section.ts";
 import { loadApplicationInterviewQuestions } from "../../../../scripts/interview-drill/application_question_schema.ts";
 
 export type PackageValidation = {
@@ -25,8 +25,6 @@ export type PackageValidation = {
   applicationDirectory: string;
   readiness?: "ready" | "needs_user_input" | "revise" | "do_not_apply";
   humanConfirmation?: "complete" | "needs_input";
-  fitScore?: FitScore;
-  growthSection?: GrowthSection;
   errors: string[];
 };
 
@@ -109,45 +107,33 @@ export function validateApplicationPackage(applicationDirectory: string): Packag
     }
   }
 
-  const packageText = read(join(directory, EVIDENCE_DIRECTORY, "application-package.md"));
-  const opening = packageText.split(/\r?\n/).slice(0, 10).join("\n");
+  const statusText = read(join(directory, STATUS_FILE));
+  const fitText = read(join(directory, FIT_FILE));
+  const opening = statusText.split(/\r?\n/).slice(0, 10).join("\n");
   const readinessMatch = opening.match(
     /^- readiness:\s*(ready|needs_user_input|revise|do_not_apply)\s*$/m,
   );
-  if (!readinessMatch) errors.push("evidence/application-package.md 첫 10줄에 readiness 판정이 필요합니다.");
+  if (!readinessMatch) errors.push(`${STATUS_FILE} 첫 10줄에 readiness 판정이 필요합니다.`);
   if (!/^- evidence:\s*(safe|revise|blocked)\s*$/m.test(opening)) {
-    errors.push("evidence/application-package.md 첫 10줄에 evidence 판정이 필요합니다.");
+    errors.push(`${STATUS_FILE} 첫 10줄에 evidence 판정이 필요합니다.`);
   }
   const humanConfirmationMatch = opening.match(
     /^- human-confirmation:\s*(complete|needs_input)\s*$/m,
   );
   if (!humanConfirmationMatch) {
-    errors.push("evidence/application-package.md 첫 10줄에 human-confirmation 판정이 필요합니다.");
+    errors.push(`${STATUS_FILE} 첫 10줄에 human-confirmation 판정이 필요합니다.`);
   }
   if (readinessMatch?.[1] === "ready" && humanConfirmationMatch?.[1] !== "complete") {
     errors.push("readiness가 ready이면 human-confirmation은 complete여야 합니다.");
   }
 
-  let fitScore: FitScore | undefined;
-  try {
-    fitScore = calculateFitScore(parseFitTable(packageText));
-  } catch (error) {
-    errors.push(error instanceof Error ? error.message : String(error));
-  }
 
-  // 절이 없으면 `undefined`가 돌아온다. 이 절 없이 만든 지원 건도 통과한다.
-  let growthSection: GrowthSection | undefined;
-  try {
-    growthSection = parseGrowthSection(packageText);
-  } catch (error) {
-    errors.push(error instanceof Error ? error.message : String(error));
-  }
 
-  if (!/https?:\/\//.test(packageText)) {
-    errors.push("evidence/application-package.md에 공고 또는 회사 공식 URL이 필요합니다.");
+  if (!/https?:\/\//.test(fitText)) {
+    errors.push(`${FIT_FILE}에 공고 또는 회사 공식 URL이 필요합니다.`);
   }
-  if (!/sources\/fos-study\//.test(packageText)) {
-    errors.push("evidence/application-package.md에 후보자 근거 경로가 필요합니다.");
+  if (!/sources\/fos-study\//.test(fitText)) {
+    errors.push(`${FIT_FILE}에 후보자 근거 경로가 필요합니다.`);
   }
 
   for (const layer of ["", `${EVIDENCE_DIRECTORY}/`, `${REVIEW_DIRECTORY}/`]) {
@@ -186,8 +172,6 @@ export function validateApplicationPackage(applicationDirectory: string): Packag
     applicationDirectory: directory,
     readiness: readinessMatch?.[1] as PackageValidation["readiness"],
     humanConfirmation: humanConfirmationMatch?.[1] as PackageValidation["humanConfirmation"],
-    fitScore,
-    growthSection,
     errors,
   };
 }

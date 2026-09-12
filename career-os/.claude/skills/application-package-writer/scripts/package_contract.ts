@@ -1,44 +1,51 @@
-import { FIT_JUDGMENT_SCORES, type FitJudgment } from "./fit_score.ts";
-export { FIT_TABLE_HEADING, FIT_TABLE_HEADERS } from "./fit_score.ts";
-export { GROWTH_HEADING, GROWTH_SUBHEADINGS } from "./growth_section.ts";
 
 export const REQUIRED_PACKAGE_FILES = [
   "evidence/posting.md",
   "evidence/candidate-interview.md",
-  "evidence/application-package.md",
+  "evidence/fit.md",
+  "evidence/strategy.md",
+  "evidence/status.md",
   "evidence/resume-draft.md",
   "evidence/interview-questions.json",
 ] as const;
+
+/** 상태 세 줄이 사는 파일. 검증기와 렌더러가 여기서 읽는다. */
+export const STATUS_FILE = "evidence/status.md";
+
+/** 적합도 표가 사는 파일. */
+export const FIT_FILE = "evidence/fit.md";
 
 /**
  * 있으면 검사하고 없으면 통과하는 절.
  * 이 절이 생기기 전에 만든 지원 건을 소급해 고치지 않으려고 `REQUIRED_HEADINGS`에 넣지 않는다.
  */
 export const OPTIONAL_HEADINGS: Readonly<Record<string, readonly string[]>> = {
-  "evidence/application-package.md": ["## 이 자리에서 얻을 경험과 성장"],
+  "evidence/strategy.md": ["## 이 자리에서 얻을 경험과 성장"],
 };
 
 export const REQUIRED_HEADINGS: Readonly<Record<string, readonly string[]>> = {
   "evidence/candidate-interview.md": ["## 확보된 답변", "## 미확인 질문"],
-  "evidence/application-package.md": [
+  "evidence/fit.md": [
     "## 결론",
     "## 공고 항목별 적합도",
-    "## 공개 자료로 확인한 팀과 인접 사례",
     "## 요구사항과 근거",
+    "## 공개 자료로 확인한 팀과 인접 사례",
+  ],
+  "evidence/strategy.md": [
     "## 이 포지션에서의 승부처",
     "## 지원동기",
     "## 입사 후 기여 시나리오",
     "## 보완할 공백",
     "## 회사 문화와의 연결",
     "## 면접에서 검증받을 내용",
+  ],
+  "evidence/status.md": [
     "## 제출 준비 상태",
     "## 사용자 확인 필요",
     "## 다음 행동",
   ],
   "evidence/resume-draft.md": ["## 프로필", "## 주요 프로젝트", "## 경력", "## 기술"],
 };
-
-export const FIT_TABLE_VERDICTS: readonly FitJudgment[] = Object.keys(FIT_JUDGMENT_SCORES) as FitJudgment[];
 
 export const SUBMISSION_LEAK_PATTERNS = [
   /\/Users\//,
@@ -66,7 +73,9 @@ export const TOP_LEVEL_FILES = [
 export const EVIDENCE_FILES = [
   "posting.md",
   "candidate-interview.md",
-  "application-package.md",
+  "fit.md",
+  "strategy.md",
+  "status.md",
   "resume-draft.md",
   "interview-questions.json",
   "career-description-draft.md",

@@ -7,14 +7,6 @@ import { validateApplicationPackage } from "./validate_application_package.ts";
 import { validateSubmissionBundle } from "../../resume-preparer/scripts/validate_submission_bundle.ts";
 import { loadApplicationInterviewQuestions } from "../../../../scripts/interview-drill/application_question_schema.ts";
 import { loadApplicationForm, type ApplicationForm } from "./application_form_schema.ts";
-import {
-  calculateFitScore,
-  fitScoreColor,
-  parseFitTable,
-  type FitColor,
-  type FitScore,
-  type FitSection,
-} from "./fit_score.ts";
 
 type PackageStatus = {
   readiness: "ready" | "needs_user_input" | "revise" | "do_not_apply";
@@ -84,7 +76,6 @@ const QUESTION_ORIGIN_LABELS = {
   experience_gap: "경험 공백 확인",
 } as const;
 
-const FIT_SECTION_LABELS: readonly FitSection[] = ["주요 업무", "기대 경험", "우대 경험"];
 
 const FIT_COLOR_LABELS: Record<FitColor, string> = {
   excellent: "진한 초록",
@@ -302,6 +293,33 @@ function primaryFiles(applicationForm: ApplicationForm | undefined, assets: Rend
   </section>`;
 }
 
+type FitColor = "excellent" | "good" | "fair" | "weak" | "none";
+
+/** 화면 색만 정하는 구간이다. 판정 기준은 `docs/data-schema.md`가 소유한다. */
+const FIT_SCORE_COLOR_BANDS = [
+  { minimum: 85, color: "excellent" },
+  { minimum: 65, color: "good" },
+  { minimum: 45, color: "fair" },
+  { minimum: 25, color: "weak" },
+  { minimum: 0, color: "none" },
+] as const satisfies readonly { minimum: number; color: FitColor }[];
+
+function fitScoreColor(score: number): FitColor {
+  return FIT_SCORE_COLOR_BANDS.find((band) => score >= band.minimum)?.color ?? "none";
+}
+
+/**
+ * 점수는 모델이 계산해 문서에 적는다. 화면은 그것을 읽기만 한다.
+ * 「적합도 총점」이 없으면 원을 그리지 않고, 소계는 적힌 이름 그대로 원이 된다.
+ */
+function scoresFrom(markdown: string): { total: number | null; subtotals: [string, number][] } {
+  const total = markdown.match(/^- 적합도 총점:\s*([0-9]+(?:\.[0-9]+)?)\s*$/m)?.[1];
+  const subtotals = [...markdown.matchAll(/^- (.+?) 소계:\s*([0-9]+(?:\.[0-9]+)?)\s*$/gm)].map(
+    ([, label, value]) => [label, Number(value)] as [string, number],
+  );
+  return { total: total === undefined ? null : Number(total), subtotals };
+}
+
 function formatFitScore(score: number): string {
   return Number.isInteger(score) ? String(score) : score.toFixed(1);
 }
@@ -319,11 +337,12 @@ function fitCircle(label: string, score: number | null, total = false): string {
     </article>`;
 }
 
-export function renderFitScore(score: FitScore): string {
+export function renderFitScore(markdown: string): string {
+  const { total, subtotals } = scoresFrom(markdown);
   return `<section class="fit-score" aria-labelledby="fit-score-title">
     <div class="fit-meter-row">
-      ${fitCircle("적합도 총점", score.total, true)}
-      ${FIT_SECTION_LABELS.map((section) => fitCircle(section, score.sectionScores[section])).join("\n      ")}
+      ${fitCircle("적합도 총점", total, true)}
+      ${subtotals.map(([label, value]) => fitCircle(label, value)).join("\n      ")}
     </div>
     <p class="fit-boundary" id="fit-score-title">적합도 총점은 합격 확률이 아닙니다. 공고 요구와 현재 확보한 근거가 얼마나 맞닿아 있는지 보여주는 검토 점수입니다.</p>
   </section>`;
@@ -557,7 +576,7 @@ export function renderApplicationPackageHtml(
   const sections = splitSections(packageMarkdown);
   const conclusion = sections.find((section) => section.title === "결론");
   const fitScore = sections.some((section) => section.title === "공고 항목별 적합도")
-    ? renderFitScore(calculateFitScore(parseFitTable(packageMarkdown)))
+    ? renderFitScore(packageMarkdown)
     : "";
   const tabs = buildTabs(sections, interviewMarkdown, resumeMarkdown, assets, questionsMarkdown, postingMarkdown);
   const submissionLabel = assets.submissionReady ? "제출 검증 완료" : "제출 준비 중";
@@ -597,7 +616,12 @@ export function renderApplicationPackage(applicationDirectory: string, outputPat
   const validation = validateApplicationPackage(directory);
   if (!validation.passed) throw new Error(validation.errors.join("\n"));
 
-  const packageMarkdown = read(join(directory, "evidence", "application-package.md"));
+  // 세 파일이 한 화면으로 합쳐진다. 절을 제목으로 골라 쓰므로 이어 붙이면 된다.
+  const packageMarkdown = [
+    read(join(directory, "evidence", "status.md")),
+    read(join(directory, "evidence", "fit.md")),
+    read(join(directory, "evidence", "strategy.md")),
+  ].join("\n\n");
   const interviewMarkdown = read(join(directory, "evidence", "candidate-interview.md"));
   const resumeMarkdown = read(join(directory, "evidence", "resume-draft.md"));
   const applicationFormPath = join(directory, "evidence", "application-form.json");
