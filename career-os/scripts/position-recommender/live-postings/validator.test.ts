@@ -84,3 +84,13 @@ test("비대상 직무와 비정규 고용은 모든 소스의 공통 경계에�
     ineligible_employment: 1,
   });
 });
+
+test("직무 설명에 플랫폼이 있어도 제목이 비개발 직무면 제외한다", () => {
+  const result = filterEligiblePostings([
+    posting({ title: "상담팀 리드 (토스플랫폼 전담팀)", mainTasks: "플랫폼 운영 조직을 이끈다" }),
+    posting({ title: "Category MD (생활)", mainTasks: "커머스 플랫폼의 상품을 기획한다" }),
+  ]);
+
+  expect(result.eligible).toHaveLength(0);
+  expect(result.rejectedCounts.not_target_role).toBe(2);
+});

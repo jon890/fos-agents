@@ -7,7 +7,7 @@ import type {
   PostingEligibilityPolicy,
   PostingRejectionCode,
 } from "./types.ts";
-import { isContractRole, isNonTargetTitle, isTargetRole } from "./policy.ts";
+import { isContractRole, isTargetRole, isTargetRoleTitle } from "./policy.ts";
 
 const ACTIVE_POSTING_STATUSES: ReadonlySet<Posting["postingStatus"]> = new Set(["active", "open"]);
 
@@ -75,7 +75,7 @@ export function createPostingEligibilityPolicy(
       if (isContractRole(fullText)) {
         return { eligible: false, rejectionCode: "ineligible_employment" };
       }
-      if (targetRoleOnly && (isNonTargetTitle(posting.title) || !isTargetRole(fullText))) {
+      if (targetRoleOnly && (!isTargetRoleTitle(posting.title) || !isTargetRole(fullText))) {
         return { eligible: false, rejectionCode: "not_target_role" };
       }
       return { eligible: true };
