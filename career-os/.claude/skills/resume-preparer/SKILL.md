@@ -4,149 +4,108 @@ description: 공고가 찾는 역량과 후보자의 강한 경험을 연결하�
 ---
 # 이력서 제출 준비
 
-**공고가 찾는 역량과 후보자의 가장 강한 경험을 연결해, 서류 합격 가능성을 최대한 높이는 이력서와 경력기술서를 완성한다.**
+## 목표
 
-## 진행 단계
+공고가 찾는 역량과 후보자의 가장 강한 실제 경험을 연결해,
+서류 심사자가 다음 전형으로 넘길 이유를 빠르게 확인할 수 있는 제출 문서를 완성한다.
 
-스킬 내부 파일은 상대 링크로 연결하고, `career-os/`로 시작하는 경로는 저장소 루트를 기준으로 읽는다.
-`evidence/`와 `review/`는 작업 중인 지원 디렉터리 기준이다.
+## 경계
 
-| 번호 | 단계 | 핵심 결과 |
-| --- | --- | --- |
-| 1 | 지원 작업본 준비 | 작업할 지원 건과 최신 작업본을 확정한다. |
-| 2 | 대표 사례 사실 확인 | 후보자만 확정할 사실과 표현 동의를 확인한다. |
-| 3 | 원고 작성과 일관성 확인 | 이력서와 경력기술서 원고의 경험, 수치와 기간을 맞춘다. |
-| 4 | 디자인과 PDF 검증 | 독립 실행 가능한 A4 HTML과 PDF를 실제 화면에서 검증한다. |
-| 5 | 정확한 HTML의 주장 감사 | 현재 HTML의 각 주장을 근거와 대조한 원장을 만든다. |
-| 6 | 인사담당자와 실무담당자 리뷰 | 채용 관점의 설득력과 기술 경험을 각각 검토한다. |
-| 7 | 사용자가 고른 것을 원칙으로 남긴다 | 다음 지원에도 쓸 표현과 배치를 개인 작성 원칙에 반영한다. |
-| 8 | 제출 묶음 검증과 동기화 | 최종 제출 파일과 검토 화면을 완성하고 작업본을 반영한다. |
+- 공고 안내, 회사별 기준, [개인 작성 취향](references/resume-taste.md), [공통 작성 기준](references/resume-writing-style.md) 순으로 적용한다.
+- 구현, 소유권, 결과와 경험 깊이를 분리하고 확인된 근거보다 강하게 쓰지 않는다.
+- 비공개 근거와 사내 식별자를 제출 문서에 노출하지 않는다.
+- 사용자가 확인하지 않은 사실이 남아 있으면 제출 준비를 완료하지 않는다.
+- 실제 제출은 사용자의 최종 승인 뒤에만 수행한다.
 
-### 1. 지원 작업본 준비
+## 워크플로
 
-저장소 루트에서 다음 명령으로 최신 지원 작업본을 준비한다.
+### 1. 작업본과 근거 준비
+
+저장소 루트에서 최신 지원 작업본을 준비한다.
 
 ```bash
 bun career-os/scripts/career-workspace/cli.ts skill begin resume-preparer --json
 ```
 
-준비가 성공하면 대상 지원 건의 `evidence/posting.md`와 `evidence/fit.md`에서 지원 직무와 제출할 문서를 확인한다.
-동기화 오류가 발생하면 [career-os/docs/flow.md](../../../docs/flow.md)의 「비공개 작업 파일의 목표 흐름」에 따라 처리한다.
+`evidence/posting.md`, `evidence/fit.md`와 `evidence/status.md`에서 지원 직무, 지원 판단과 제출 문서를 확인한다.
+지원 판단이나 후보자 인터뷰가 준비되지 않았으면 `application-package-writer`로 연결한다.
+동기화 오류는 [비공개 작업 파일 흐름](../../../docs/flow.md)에 따라 처리한다.
 
-이어서 이 CLI가 다루지 않는 `fos-study` 로컬 사본이 원격보다 뒤처졌는지 검사한다.
-단계 5의 주장 감사가 그 파일을 근거로 삼으므로 최신이어야 감사가 성립한다.
-단계 2가 읽는 private brain은 `brain-search`로 조회하며 경로로 확인하지 않는다.
+주장 감사에 사용할 `fos-study`가 최신인지 [근거 원본 최신화 기준](../application-package-writer/references/evidence-source-freshness.md)에 따라 확인한다.
+개인 맥락은 파일 경로가 아니라 `brain-search`로 조회한다.
 
-검사 명령과 판정별 다음 행동은 [근거 원본 최신화 확인](../application-package-writer/references/evidence-source-freshness.md)이 소유한다.
+### 2. 사실과 대표 근거 확정
 
-지원 디렉터리나 지원 판단, 후보자 인터뷰가 준비되지 않았으면 `application-package-writer`로 연결한다.
+`evidence/candidate-interview.md`와 기존 근거를 먼저 읽는다.
+현재 경력, 역할 선호와 경험 경계는 [개인 맥락 조회 기준](references/brain-context.md)에 따라 확인한다.
+제출 문장을 바꾸는 사실만 사용자에게 확인하고,
+[주장 검증 모델](references/claim-model.md)에 따라 구현, 소유권, 결과와 경험 깊이를 판정한다.
 
-### 2. 대표 사례 사실 확인
+미확인 사실이 있으면 `human-confirmation: needs_input`으로 둔다.
+제출 문장의 사실과 표현 동의를 모두 확인했을 때만 `complete`로 바꾼다.
 
-`evidence/candidate-interview.md`에서 대표 사례에 대해 이미 확인한 내용을 읽는다.
-현재 경력, 역할 선호와 경험 경계는 [references/brain-context.md](references/brain-context.md)에 따라 `brain-search`로 조회한다.
-같은 편집 흐름에서 이미 확인한 정보는 재사용하고, 추가 사실이 필요하거나 사용자 정정이 생긴 부분만 다시 조회한다.
-조회 결과가 없거나 도구가 실패하면 그 차이를 밝히고 현재 확인된 근거로 편집을 계속한다.
+### 3. 원고 작성
 
-후보자만 확정할 수 있는 항목은 제출 문장을 바꾸는 사실과 표현 동의로 제한한다.
-서로 독립적인 질문은 최대 넷까지 묶고, 한 답이 다음 질문을 바꾸면 한 가지씩 확인한다.
+공고와 지원 전략에 맞는 대표 근거를 `evidence/resume-draft.md`에 선별한다.
+경력기술서가 필요하면 `evidence/career-description-draft.md`에 판단과 구현 맥락을 보완한다.
+같은 경험의 대상, 역할, 수치와 기간은 모든 지원 문서에서 일치시킨다.
 
-- 확인할 내용: 문제의 중요성, 당시 제약, 본인 역할과 판단, 기각한 대안과 결과의 검증 범위
-- 질문에 함께 제시할 내용: 필요한 이유, 이미 확인한 사실과 답에 따라 달라질 제출 문장
+현재 작업에 필요한 기준만 읽는다.
 
-[references/claim-model.md](references/claim-model.md)를 기준으로 확인한다.
-사람 확인이 남으면 `evidence/status.md`의 `human-confirmation`을 `needs_input`으로 둔다.
-**제출 문장의 사실과 표현 동의를 모두 확인했을 때 `complete`로 바꾼다.**
+- 표현과 구성: [개인 작성 취향](references/resume-taste.md), [공통 작성 기준](references/resume-writing-style.md)
+- 근거 범위: [주장 검증 모델](references/claim-model.md)
+- 채용 관점: [독립 채용 리뷰](references/hard-review.md), [판정 기준](references/scoring-rubric.md)
 
-### 3. 원고 작성과 일관성 확인
+면접에서 확인할 질문은 `evidence/interview-questions.json`에 남길 수 있다.
+답변 연습은 `interview-practice`로 이어간다.
 
-공고의 공식 작성 안내를 우선하고, 회사별 기준이 있으면 `career-os/library/company-notes/<회사>.md`에서 이력서 안내와 전형 구조를 확인한다.
-공식 안내가 없으면 문제, 중요성과 제약, 본인 역할과 판단, 결과와 검증 순서로 쓴다.
+### 4. HTML과 PDF 검증
 
-- 개인 작성 취향: [references/resume-taste.md](references/resume-taste.md)
-- 공통 작성 기준: [references/resume-writing-style.md](references/resume-writing-style.md)
-- 심사자 관점: [references/reviewer-lens.md](references/reviewer-lens.md)
+[디자인 계약](references/resume-design.md)에 따라 HTML과 PDF를 만들고 실제 화면을 확인한다.
 
-개인 작성 취향은 지금까지의 지원에서 사용자가 고른 문구, 표기와 배치를 모아 둔 문서다.
-새 지원을 시작할 때 이 문서를 먼저 읽고 그 기준으로 초안을 쓴다. 같은 지시를 다시 받지 않기 위해서다.
+```bash
+bun career-os/.claude/skills/resume-preparer/scripts/export_resume.ts --application-dir <지원 디렉터리>
+bun career-os/.claude/skills/resume-preparer/scripts/check_resume_html.ts <HTML 경로>
+```
 
-기준이 충돌하면 **공고 안내, 회사별 기준, 개인 작성 취향, 공통 작성 기준, 심사자 관점 순**으로 적용한다.
-첫 사례는 다음 단계로 넘길 이유를 가장 빨리 설명하는 사례로 고른다.
+공고의 분량 제한을 우선한다.
+제한이 없으면 근거의 양, 중복과 읽기 편의성으로 분량과 페이지 구분을 정한다.
 
-- `evidence/resume-draft.md`에는 공고에 맞는 대표 근거를 선별한다.
-- 경력기술서가 필요하면 `evidence/career-description-draft.md`에 프로젝트별 판단과 구현 맥락을 보완한다.
+### 5. 주장 감사와 채용 리뷰
 
-원고와 산출물 형식은 [career-os/docs/data-schema.md](../../../docs/data-schema.md)의 「지원 패키지」를 따른다.
-같은 경험의 대상, 역할, 수치와 기간을 지원 전략, 이력서, 경력기술서와 지원서 답변에서 맞춘다.
-참조는 [career-os/.claude/skills/application-package-writer/references/full-document-review.md](../application-package-writer/references/full-document-review.md)다.
-사용자 사실 정정과 작성 취향 합의의 분기는 [references/brain-context.md](references/brain-context.md)의 「환원 분기」를 따른다.
+현재 HTML의 주장 원장을 `schemaVersion: 3`으로 만들고,
+`document`와 `user` 근거의 인용 위치를 `locator`에 기록한다.
+세부 형식은 [주장 검증 모델](references/claim-model.md)을 따른다.
 
-문서 검토 중 면접에서 확인할 질문을 발견하면 `evidence/interview-questions.json`에 선택적으로 남긴다.
-답변 연습과 말하기 준비는 `interview-practice`로 이어간다.
+```bash
+bun career-os/.claude/skills/resume-preparer/scripts/validate_claim_ledger.ts <원장 경로> --artifact <HTML 경로>
+```
 
-### 4. 디자인과 PDF 검증
+이후 [독립 채용 리뷰](references/hard-review.md)와 [판정 기준](references/scoring-rubric.md)에 따라 인사담당자와 실무담당자 관점으로 검토한다.
+문구를 바꾸면 HTML, PDF, 주장 원장과 리뷰 결과를 같은 버전으로 다시 만든다.
 
-기본 렌더러는 경력 섹션 앞에서 페이지를 나눈다.
-제출처가 분량을 제한하면 그 기준을 우선한다.
-제한이 없으면 근거의 양, 중복과 읽기 편의성으로 분량을 정하고, 의미 단위 사이에 `<!-- resume-page-break -->`를 필요한 만큼 넣어 분할 위치를 조정한다.
-페이지 균형은 본문 글자 크기와 줄 간격보다 섹션 순서와 분할 위치로 먼저 조정한다.
+### 6. 제출 묶음 완성
 
-디자인 파일은 `--design`으로 지정한다. 지정하지 않으면 기본 CSS가 적용되어 지원 회사의 강조색과 로고가 빠진다.
-지원별 디자인은 `career-os/library/resume-baselines/<지원>-resume.css`에 두고 로고를 그 안에 포함한다.
+사실 확인, 주장 감사, 채용 리뷰와 화면 검증이 모두 통과했을 때만 `readiness: ready`로 바꾼다.
+다음 순서로 제출 묶음과 검토 화면을 만든다.
 
-[references/resume-design.md](references/resume-design.md) 기준으로 HTML과 PDF를 실제로 열어 글자 겹침, 잘림, 링크, 대비와 페이지 넘침을 확인한다.
-렌더링은 [scripts/export_resume.ts](scripts/export_resume.ts) `--application-dir <지원 디렉터리>`로 수행한다.
-지원별 브랜드 강조색은 같은 명령의 `--accent "#RRGGBB"`로 준다.
-HTML 골격과 CSS, 로고는 `templates/`가 소유하며 화면 구조를 바꿀 때는 렌더러가 아니라 그 파일들을 먼저 고친다.
-경력기술서는 같은 명령의 `--resume`, `--html`, `--pdf`에 해당 경로를 지정한다.
-HTML 정적 검사는 [scripts/check_resume_html.ts](scripts/check_resume_html.ts) `<HTML 경로>`로 수행한다.
+1. `scripts/build_submission_bundle.ts`
+2. `scripts/validate_submission_bundle.ts`
+3. `../application-package-writer/scripts/validate_application_package.ts`
+4. `../application-package-writer/scripts/render_application_package.ts`
 
-### 5. 정확한 HTML의 주장 감사
-
-[references/claim-model.md](references/claim-model.md)로 제출 문장의 구현, 소유권, 결과와 경험 깊이를 나눠 판정한다.
-주장에 필요한 근거를 `career-os/sources/fos-study/`, 실제 프로젝트의 코드, 테스트, Git 이력과 기술 결정 문서에서 확인한다.
-코드 존재는 구현 근거로, Git 이력은 소유권 근거로, 운영 기록은 경험 깊이 근거로 각각 분리한다.
-
-원장은 `schemaVersion: 3`으로 만들고, `document`와 `user` 근거마다 인용한 자리를 `locator`에 적는다.
-형식은 [references/claim-model.md](references/claim-model.md)의 「근거를 어디서 인용했는지 적는 방법」이 소유한다.
-
-[scripts/validate_claim_ledger.ts](scripts/validate_claim_ledger.ts) `<원장 경로> --artifact <HTML 경로>`를 실행한다.
-실패한 항목은 근거와 문구를 보완하거나 후보자에게 확인한 뒤 재검사한다.
-문구가 바뀌면 HTML과 PDF도 다시 만든다.
-
-### 6. 인사담당자와 실무담당자 리뷰
-
-작성 과정과 기존 평가를 보지 않은 검토자 두 명이 공고와 현재 제출 문서로 판단한다.
-
-- 인사담당자 관점: 지원 직무, 경력 흐름과 다음 전형으로 넘길 이유가 명확한지 검토한다.
-- 실무담당자 관점: 문제의 난도, 본인 판단, 구현과 운영 경험, 결과의 검증 범위를 검토한다.
-
-검토 절차는 [references/hard-review.md](references/hard-review.md), 판정과 기록 형식은 [references/scoring-rubric.md](references/scoring-rubric.md)를 따른다.
-두 관점의 수정 의견을 반영하고, 서류 통과를 권하기 어려운 문제가 해소될 때까지 다시 검토한다.
-
-### 7. 사용자가 고른 것을 원칙으로 남긴다
-
-이 지원에서 사용자가 고르거나 되돌린 표현, 표기와 배치 중 다음 지원에도 적용할 것을 개인 작성 원칙에 반영한다.
-회사 이름, 기간, 수치처럼 이 지원에만 해당하는 값은 후보자 확인 기록에 남긴다.
-
-한 번의 수정으로 끝내면 다음 지원에서 같은 지시를 다시 받는다.
-
-### 8. 제출 묶음 검증과 동기화
-
-문서 검증과 독립 리뷰가 끝나면 `evidence/status.md`를 `readiness: ready`로 바꾸고 다음 순서로 실행한다.
-각 명령에는 지원 디렉터리를 전달한다.
-
-1. [scripts/build_submission_bundle.ts](scripts/build_submission_bundle.ts)로 제출 묶음을 만든다.
-2. [scripts/validate_submission_bundle.ts](scripts/validate_submission_bundle.ts)로 제출 묶음을 검사한다.
-3. [career-os/.claude/skills/application-package-writer/scripts/validate_application_package.ts](../application-package-writer/scripts/validate_application_package.ts)로 지원 패키지를 검사한다.
-4. [career-os/.claude/skills/application-package-writer/scripts/render_application_package.ts](../application-package-writer/scripts/render_application_package.ts)로 최종 파일과 다음 행동을 검토 화면에 반영한다.
-
-검사가 실패하면 원인에 따라 `readiness`를 `revise` 또는 `needs_user_input`으로 갱신하고 해당 단계에서 보완한다.
-검토 화면까지 확인한 뒤 작업본을 반영한다.
+최종 파일을 확인한 뒤 작업본을 반영한다.
 
 ```bash
 bun career-os/scripts/career-workspace/cli.ts skill finish resume-preparer --json
 ```
 
-사용자에게 최종 검토 화면과 제출 PDF를 보여준다.
-실제 제출은 **사용자의 최종 승인 뒤** 수행한다.
+사용자에게 검토 화면과 제출 PDF를 보여주고 실제 제출 승인을 기다린다.
+
+## 완료 조건
+
+- `human-confirmation`이 `complete`다.
+- 모든 제출 문장이 근거 범위 안에 있다.
+- 인사담당자와 실무담당자 관점의 검토를 통과했다.
+- HTML과 PDF에 겹침, 잘림, 깨진 링크와 페이지 넘침이 없다.
+- 제출 묶음과 지원 패키지 검사가 통과했다.
