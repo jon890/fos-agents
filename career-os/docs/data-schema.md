@@ -42,9 +42,8 @@ URL은 fragment, `utm_*`, `fbclid`, `gclid`를 제거하고 query 순서와 마�
 공고 ID를 담는 query는 보존한다.
 새 ID로 등록된 공고는 명시된 식별자나 URL이 일치하지 않으면 유지한다.
 
-`career-downside` 규칙은 제외 사유, 공개 근거와 판단 신뢰도를 기록한다.
-고정된 판정 축은 요구하지 않는다. 저장 조건은
-`position-recommender`의 `references/position-decision-criteria.md`가 소유한다.
+`career-downside` 규칙은 사용자가 명시적으로 제외하기로 한 사유와 공개 근거를 기록한다.
+추천 실행이 제외 규칙을 자동으로 만들거나 갱신하지 않는다.
 지원 결과처럼 업사이드 비교와 다른 이유는 `manual`로 기록한다.
 버전 1의 기존 공고 규칙은 읽을 수 있지만 새 규칙은 이유와 결정 근거가 있는 버전 2로 저장한다.
 

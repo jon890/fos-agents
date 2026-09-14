@@ -41,8 +41,15 @@ bun career-os/scripts/position-recommender/collect_live_postings.ts \
 
 `state/company-research.json`의 유효한 회사 조사는 재사용한다.
 공고와 경력의 연결성이 높은 후보부터 좁힌 뒤, 추천 가능성이 있는 회사는 공개 자료를 깊게 조사한다.
-조사와 판단 방법은
-[`references/position-decision-criteria.md`](references/position-decision-criteria.md)를 따른다.
+
+- 현재 역할과 비교해 맡을 문제, 결정 권한, 운영 책임과 기술 방향이 커지는지 본다.
+- 사업과 도메인, 팀이 성장하며 중요한 모듈을 오래 소유할 여지가 있는지 조사한다.
+- 내부 플랫폼과 사내 도구라면 전담 인력, 로드맵과 사용자 지표를 통해 투자 의지를 판단한다.
+- 회사 성장과 성과가 연봉, 성과급, 지분이나 승진 기회로 이어질 여지와 복지의 실질 가치를 조사한다.
+- 회사 공식 자료, 공시·IR, 기술 발표, 신뢰할 수 있는 보도, 공개 보상 자료와 공고를 함께 본다.
+- 후보자의 경험은 기술 이름보다 실제 사용자, 운영 범위와 장애 영향을 공고의 책임에 연결한다.
+- 공개 자료에서 확인한 사실과 모델의 추론을 구분하고, 추론에 영향을 주는 가정을 밝힌다.
+- 공개 자료로 확인되지 않은 숫자나 제도는 만들지 않는다. 결론을 바꿀 정보만 추가 조사나 면접 질문으로 남긴다.
 
 새 사실, 추론과 재조사할 질문은 `<RUN_DIR>/company-research-updates.json`에 쓰고 합친다.
 이번 실행에서 다루지 않은 기존 항목은 병합기가 보존한다.
@@ -57,9 +64,10 @@ bun career-os/scripts/position-recommender/company_research.ts \
 후보풀 전체와 조사 결과를 읽고 `<RUN_DIR>/recommendation.json`을 만든다.
 형식은 [`recommendation/schema.ts`](../../../scripts/position-recommender/recommendation/schema.ts)를 따른다.
 
-- 중요한 모듈을 맡을 가능성, 성장 경험, 보상, 팀과 사람 경험을 종합해 추천할 후보와 순서를 정한다.
+- private brain의 우선순위와 조사 결과를 종합해 추천할 후보와 순서를 정한다.
 - 추천 이유와 라벨은 후보에 맞게 자유롭게 쓰고, 조사 근거와 다음 행동은 실제로 도움이 될 때만 넣는다.
 - 정해진 개수나 분류를 채우지 않는다.
+- 추천하지 않은 후보에는 보류 사유나 판정값을 만들지 않는다.
 
 다음 명령이 후보풀 대조와 출력 계약을 검사한다.
 
