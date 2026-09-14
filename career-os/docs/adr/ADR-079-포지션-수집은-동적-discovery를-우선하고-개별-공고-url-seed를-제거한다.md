@@ -29,5 +29,5 @@ AI 전환 직무를 더 넓게 보려면 Toss, Wanted, 카카오계열, NAVER �
 
 - 닫힌 과거 공고가 daily queue와 phase 검증을 막지 않는다.
 - source별 coverage는 코드에 박힌 공고 ID가 아니라 발견 가능한 active 공고로 결정된다.
-- AI/Backend 전환 직무 recall은 Wanted broad scan과 공식 API·listing coverage로 높이고, 추천 티어는 여전히 active/open 개별 공고만 허용한다.
+- AI/Backend 전환 직무 recall은 Wanted broad scan과 공식 API·listing coverage로 높이고, 추천 후보는 여전히 active/open 개별 공고만 허용한다.
 - 단점은 공식 listing/API 구조가 바뀔 때 source별 parser 유지보수가 필요하다는 점이다.

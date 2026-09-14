@@ -1,18 +1,14 @@
 import type { PostingCandidatePool } from "../live-postings/contracts.ts";
-import type { PositionItemType, RecommendationRunType } from "../recommendation/schema.ts";
+import type { RecommendationItemType, RecommendationRunType } from "../recommendation/schema.ts";
 import { fragment, type RenderAssets } from "./template.ts";
-
-type PreviewTier = "강력 추천" | "도전 추천" | "보류·주의" | "전체 후보";
 
 interface PreviewRow {
   rank: number;
-  tier: PreviewTier;
+  tier: string;
   company: string;
   title: string;
   url: string;
   why: string;
-  assessment?: string;
-  confidence?: "high" | "medium" | "low";
   keywords: string[];
 }
 
@@ -22,64 +18,36 @@ export interface CandidatePreviewOptions {
   candidatePool?: PostingCandidatePool;
 }
 
-function positionRow(tier: PreviewTier, item: PositionItemType): PreviewRow {
+function positionRow(item: RecommendationItemType, index: number): PreviewRow {
   return {
-    rank: item.rank,
-    tier,
+    rank: index + 1,
+    tier: item.label ?? "추천",
     company: item.company,
     title: item.title,
     url: item.postingUrl,
-    why: item.whyFit,
-    assessment: item.companyAssessment.summary,
-    confidence: item.companyAssessment.confidence,
-    keywords: item.jdKeywords,
+    why: item.reason,
+    keywords: item.details.flatMap((detail) => (detail.title ? [detail.title] : [])).slice(0, 8),
   };
 }
 
 function recommendationRows(run: RecommendationRunType): PreviewRow[] {
-  const selected = [
-    ...run.tiers.strong.map((item) => positionRow("강력 추천", item)),
-    ...run.tiers.stretch.map((item) => positionRow("도전 추천", item)),
-  ];
-  const nextRank = selected.reduce((highest, item) => Math.max(highest, item.rank), 0) + 1;
-  return [
-    ...selected,
-    ...run.tiers.hold
-      .filter((item) => item.link !== "-")
-      .map((item, index) => ({
-        rank: nextRank + index,
-        tier: "보류·주의" as const,
-        company: item.company,
-        title: item.title,
-        url: item.link,
-        why: item.reason,
-        keywords: ["보류"],
-      })),
-  ].sort((a, b) => a.rank - b.rank);
+  return run.recommendations.map(positionRow);
 }
 
 function candidateRows(pool: PostingCandidatePool, run: RecommendationRunType): PreviewRow[] {
-  const evaluated = new Set(run.evaluatedCandidateIds);
-  const selected = new Map(
-    [...run.tiers.strong, ...run.tiers.stretch].map((item) => [item.candidateId, item]),
-  );
-  return pool.candidates.flatMap((candidate, index) => {
-    if (!evaluated.has(candidate.id)) return [];
+  const selected = new Map(run.recommendations.map((item) => [item.candidateId, item]));
+  return pool.candidates.map((candidate, index) => {
     const item = selected.get(candidate.id);
-    return [
-      {
-        rank: item?.rank ?? index + 1,
-        tier: "전체 후보" as const,
-        company: candidate.company,
-        title: candidate.title,
-        url: candidate.url,
-        why: item?.whyFit ?? (candidate.summary || candidate.mainTasks || candidate.activeEvidence),
-        assessment: item?.companyAssessment.summary,
-        confidence: item?.companyAssessment.confidence,
-        keywords:
-          candidate.skills.length > 0 ? candidate.skills.slice(0, 8) : candidate.tags.slice(0, 8),
-      },
-    ];
+    return {
+      rank: index + 1,
+      tier: item?.label ?? (item ? "추천" : "전체 후보"),
+      company: candidate.company,
+      title: candidate.title,
+      url: candidate.url,
+      why: item?.reason ?? (candidate.summary || candidate.mainTasks || candidate.activeEvidence),
+      keywords:
+        candidate.skills.length > 0 ? candidate.skills.slice(0, 8) : candidate.tags.slice(0, 8),
+    };
   });
 }
 
@@ -87,20 +55,8 @@ function applyLimit(rows: PreviewRow[], limit: number | null | undefined): Previ
   return limit == null ? rows : rows.slice(0, Math.max(1, limit));
 }
 
-function tierClass(tier: PreviewTier): string {
-  if (tier === "강력 추천") return "tier-strong";
-  if (tier === "도전 추천") return "tier-stretch";
-  if (tier === "보류·주의") return "tier-hold";
-  return "tier-all";
-}
-
-function confidenceClass(confidence: string): string {
-  const map: Record<string, string> = {
-    high: "up",
-    medium: "flat",
-    low: "unknown",
-  };
-  return map[confidence] ?? "unknown";
+function tierClass(tier: string): string {
+  return tier === "전체 후보" ? "tier-all" : "tier-strong";
 }
 
 function chips(assets: RenderAssets, row: PreviewRow, limit = 5): string {
@@ -115,11 +71,6 @@ function chips(assets: RenderAssets, row: PreviewRow, limit = 5): string {
         .join(""),
     },
   );
-}
-
-function assessment(assets: RenderAssets, row: PreviewRow): string {
-  if (!row.assessment) return "";
-  return fragment(assets, "preview-assessment", { value: row.assessment });
 }
 
 function rowText(row: PreviewRow) {
@@ -163,17 +114,10 @@ function archive(assets: RenderAssets, rows: PreviewRow[]): string {
             "preview-candidate",
             {
               ...rowText(row),
-              search: [row.company, row.title, row.why, row.assessment ?? "", ...row.keywords]
-                .join(" ")
-                .toLowerCase(),
+              search: [row.company, row.title, row.why, ...row.keywords].join(" ").toLowerCase(),
             },
             {
-              badge: row.confidence
-                ? fragment(assets, "preview-badge", {
-                    confidence: row.confidence,
-                    className: confidenceClass(row.confidence),
-                  })
-                : "",
+              badge: "",
               chips: chips(assets, row, 4),
             },
           ),
@@ -194,13 +138,7 @@ export function renderCandidatePreview(
   const candidates = options.candidatePool
     ? applyLimit(candidateRows(options.candidatePool, run), limit)
     : [];
-  const strong = recommended.filter((row) => row.tier === "강력 추천");
-  const stretch = recommended.filter((row) => row.tier === "도전 추천");
-  const prioritized = recommended.filter(
-    (row) => row.tier === "강력 추천" || row.tier === "도전 추천",
-  );
-  const featured = prioritized.slice(0, 3);
-  const holds = recommended.filter((row) => row.tier === "보류·주의");
+  const featured = recommended.slice(0, 3);
   const collectionRunId =
     options.candidatePool?.collectionRunId ?? run.sourceSnapshot.collectionRunId;
   return fragment(
@@ -208,9 +146,7 @@ export function renderCandidatePreview(
     "preview",
     {
       title: options.title ?? `${run.reportDate} 포지션 추천`,
-      recommendationCount: prioritized.length,
-      strongCount: strong.length,
-      stretchCount: stretch.length,
+      recommendationCount: recommended.length,
       featuredCount: featured.length,
       reportDate: run.reportDate.replace(/-/g, "."),
       collectedShort: collected.short,
@@ -220,25 +156,24 @@ export function renderCandidatePreview(
     },
     {
       css: assets.css,
-      conclusions: run.conclusion.map((value) => fragment(assets, "list-item", { value })).join(""),
+      conclusions: run.summary.map((value) => fragment(assets, "list-item", { value })).join(""),
       heroCards:
         featured.length === 0
           ? fragment(assets, "preview-empty")
           : featured
               .map((row) =>
                 fragment(assets, "preview-hero", rowText(row), {
-                  axes: assessment(assets, row),
+                  axes: "",
                   chips: chips(assets, row),
                 }),
               )
               .join(""),
       additionalSection: board(
         assets,
-        prioritized.slice(3),
+        recommended.slice(3),
         "추가 추천",
         "additional-recommendations",
       ),
-      holdSection: board(assets, holds, "보류·주의", "hold-recommendations"),
       archive: options.candidatePool ? archive(assets, candidates) : "",
       filterScript: options.candidatePool
         ? fragment(assets, "preview-script", {}, { script: assets.script })

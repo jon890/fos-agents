@@ -78,17 +78,13 @@ beforeAll(() => {
   writeFileSync(
     input,
     JSON.stringify({
-      schemaVersion: 6,
+      schemaVersion: 8,
       reportDate: "2026-08-13",
       generatedAt: "2026-08-13T09:00:00+09:00",
-      conclusion: ["결론"],
-      background: ["배경"],
-      tiers: { strong: [], stretch: [], hold: [] },
-      evaluatedCandidateIds: [pool.candidates[0].id],
-      additionalTargets: [],
-      recentCheck: ["확인"],
-      weeklyActions: { apply: "지원", resume: "수정", study: "학습" },
-      sourceSnapshot: { collectionRunId: pool.collectionRunId, candidatePoolPath: "pool.json" },
+      summary: ["결론"],
+      recommendations: [],
+      nextActions: ["지원"],
+      sourceSnapshot: { collectionRunId: pool.collectionRunId },
     }),
   );
   writeFileSync(join(directory, "invalid.json"), "{}");

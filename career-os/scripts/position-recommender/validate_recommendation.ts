@@ -15,25 +15,8 @@ export function validateRecommendationAgainstPool(
     errors.push("추천 결과의 수집 실행 ID가 후보풀과 다르다.");
   }
   const byId = new Map(pool.candidates.map((candidate) => [candidate.id, candidate]));
-  const evaluatedIds = new Set(run.evaluatedCandidateIds);
-  const unknownEvaluatedIds = run.evaluatedCandidateIds.filter(
-    (candidateId) => !byId.has(candidateId),
-  );
-  if (unknownEvaluatedIds.length > 0) {
-    errors.push(
-      `검토한 후보 목록에 후보풀 밖의 공고가 있다: ${unknownEvaluatedIds.slice(0, 5).join(", ")}`,
-    );
-  }
-  const missingEvaluatedIds = pool.candidates
-    .map((candidate) => candidate.id)
-    .filter((candidateId) => !evaluatedIds.has(candidateId));
-  if (missingEvaluatedIds.length > 0) {
-    errors.push(
-      `검토한 후보 목록에서 ${missingEvaluatedIds.length}개 공고가 누락됐다: ${missingEvaluatedIds.slice(0, 5).join(", ")}`,
-    );
-  }
   const selectedIds = new Set<string>();
-  for (const item of [...run.tiers.strong, ...run.tiers.stretch]) {
+  for (const item of run.recommendations) {
     const candidate = byId.get(item.candidateId);
     if (!candidate) {
       errors.push(`후보풀에 없는 공고 ID: ${item.candidateId}`);
@@ -47,17 +30,6 @@ export function validateRecommendationAgainstPool(
       errors.push(`${item.candidateId}: 회사명이 후보풀과 다르다.`);
     if (item.title !== candidate.title)
       errors.push(`${item.candidateId}: 공고명이 후보풀과 다르다.`);
-    if (item.source !== candidate.source)
-      errors.push(`${item.candidateId}: 소스가 후보풀과 다르다.`);
-  }
-  const suggestedIds = new Set<string>();
-  for (const suggestion of run.autoExclusionSuggestions) {
-    if (!byId.has(suggestion.candidateId)) {
-      errors.push(`자동 제외 제안에 후보풀 밖의 공고가 있다: ${suggestion.candidateId}`);
-    }
-    const key = `${suggestion.scope}|${suggestion.candidateId}`;
-    if (suggestedIds.has(key)) errors.push(`자동 제외 제안이 중복됐다: ${key}`);
-    suggestedIds.add(key);
   }
   return errors;
 }

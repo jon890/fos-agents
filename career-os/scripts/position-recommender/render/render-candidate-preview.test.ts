@@ -2,23 +2,19 @@ import { expect, test } from "bun:test";
 import { renderCandidatePreviewHtml } from "../render_candidate_preview.ts";
 import { run, pool } from "./fixture.ts";
 
-test("추천 없는 화면과 후보 없음, hold와 stretch 표시를 보존한다", () => {
+test("추천 없는 화면과 후보 없음을 표시한다", () => {
   const sample = structuredClone(run);
-  sample.tiers.strong = [];
-  sample.tiers.stretch = [];
+  sample.recommendations = [];
   const html = renderCandidatePreviewHtml(sample);
   expect(html).toContain("오늘 기준을 통과한 추천 공고가 없습니다.");
   expect(html).not.toContain('<details class="archive">');
   expect(html).not.toContain("추가 추천</h2>");
-  expect(html).toContain("보류·주의</h2>");
   expect(html).not.toContain("<script>");
-  const stretch = renderCandidatePreviewHtml({ ...run, tiers: { ...run.tiers, strong: [] } });
-  expect(stretch.match(/class="hero-card tier-stretch"/g)).toHaveLength(3);
 });
 
 test("사용자 문자열과 script 종료 문자는 텍스트로 남고 검색 조건과 순서를 보존한다", () => {
   const sample = structuredClone(run);
-  sample.conclusion = ['</script><script>alert("x")</script> & {{title}}'];
+  sample.summary = ['</script><script>alert("x")</script> & {{title}}'];
   const html = renderCandidatePreviewHtml(sample, {
     candidatePool: pool,
     limit: 2,
@@ -47,14 +43,14 @@ test("추천 공고와 외부 후보풀을 같은 HTML에 표시한다", () => {
     .replace(/>\s+</g, "><");
   expect(html.match(/<article class="hero-card /g)).toHaveLength(3);
   expect(html).toContain(
-    '<strong>7</strong><span class="recommendation-label"><span>추천 공고</span><small>강력 4 · 도전 3</small>',
+    '<strong>7</strong><span class="recommendation-label"><span>추천 공고</span></span>',
   );
   expect(html).toContain('<h2>우선 검토</h2><span class="count">상위 3건</span>');
   expect(html).toContain('<h2>추가 추천</h2><span class="count">4건</span>');
-  expect(html.match(/<article class="board-row tier-/g)).toHaveLength(8);
-  expect(html).toContain('<h2>보류·주의</h2><span class="count">4건</span>');
-  expect(html).toContain("검토한 전체 후보");
-  expect(html).toContain("성장 중인 제품의 핵심 백엔드를 맡을 가능성이 있다.");
+  expect(html.match(/<article class="board-row tier-/g)).toHaveLength(4);
+  expect(html).not.toContain("보류·주의</h2>");
+  expect(html).toContain("수집된 전체 후보");
+  expect(html).toContain("우선 검토");
   expect(html).toContain("candidate-filter");
   expect(html).toMatch(/\.candidate-row\[hidden\]\s*\{\s*display:\s*none;?\s*\}/);
   expect(html).toMatch(/\.priority-grid\s*\{\s*grid-template-columns:\s*1fr;?\s*\}/);

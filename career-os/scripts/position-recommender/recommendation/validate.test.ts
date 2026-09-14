@@ -37,94 +37,81 @@ const diagnostics: CollectionDiagnostics = {
   errors: [],
 };
 
-function envelope(candidateIds: string[]) {
+function envelope(recommendations: Record<string, unknown>[] = []) {
   return {
-    schemaVersion: 6 as const,
+    schemaVersion: 8 as const,
     reportDate: "2026-08-13",
     generatedAt: "2026-08-13T09:00:00+09:00",
-    conclusion: ["결론"],
-    background: ["배경"],
-    tiers: { strong: [] as Record<string, unknown>[], stretch: [], hold: [] },
-    evaluatedCandidateIds: candidateIds,
-    autoExclusionSuggestions: [] as Record<string, unknown>[],
-    additionalTargets: [],
-    recentCheck: ["확인"],
-    weeklyActions: { apply: "지원", resume: "수정", study: "학습" },
-    sourceSnapshot: { collectionRunId: "run-1", candidatePoolPath: "pool.json" },
+    summary: [] as string[],
+    recommendations,
+    nextActions: [] as string[],
+    sourceSnapshot: { collectionRunId: "run-1" },
   };
 }
 
-test("모델이 후보풀에 없는 공고를 추천하지 못하게 막는다", () => {
+test("후보풀에 없는 공고는 추천하지 못하게 막는다", () => {
   const { pool } = buildPostingCandidatePool([posting], diagnostics);
-  const candidate = pool.candidates[0];
-  const raw = envelope([candidate.id]);
-  raw.tiers.strong = [
+  const raw = envelope([
     {
       candidateId: "wanted:missing",
-      rank: 1,
-      company: candidate.company,
-      title: candidate.title,
-      postingUrl: candidate.url,
-      exploreLink: "-",
-      linkEvidenceLevel: "개별 공고 active 확인",
-      postingPeriod: "상시",
-      source: candidate.source,
-      closeDate: null,
-      whyFit: "적합",
-      candidateEvidence: ["경험"],
-      jdKeywords: ["Java"],
-      companyAssessment: {
-        summary: "이 역할에서 중요한 모듈을 맡을 가능성이 있다.",
-        confidence: "medium",
-        findings: [
-          {
-            kind: "inference",
-            topic: "role-ownership",
-            statement: "공고의 담당 업무에서 설계 소유 가능성을 읽었다.",
-            evidenceUrls: [candidate.url],
-            assumptions: ["공고의 역할 범위가 실제 팀 운영과 같다."],
-            confidence: "medium",
-          },
-        ],
-      },
-      openQuestions: [],
-      prepAction: "준비",
+      company: pool.candidates[0].company,
+      title: pool.candidates[0].title,
+      postingUrl: pool.candidates[0].url,
+      reason: "적합하다.",
     },
-  ];
+  ]);
   const run = RecommendationRun.parse(raw);
   expect(validateRecommendationAgainstPool(run, pool)).toContain(
     "후보풀에 없는 공고 ID: wanted:missing",
   );
 });
 
-test("검토한 후보 목록에서 누락된 공고를 검출한다", () => {
-  const secondPosting = { ...posting, title: "플랫폼 개발자", url: "https://example.com/jobs/2" };
-  const { pool } = buildPostingCandidatePool([posting, secondPosting], diagnostics);
-  const run = RecommendationRun.parse(envelope([pool.candidates[0].id]));
-  expect(
-    validateRecommendationAgainstPool(run, pool).some((error) =>
-      error.includes("검토한 후보 목록에서 1개 공고가 누락됐다"),
-    ),
-  ).toBe(true);
+test("추천 공고의 회사명과 공고명과 URL을 후보풀 원문에 대조한다", () => {
+  const { pool } = buildPostingCandidatePool([posting], diagnostics);
+  const candidate = pool.candidates[0];
+  const run = RecommendationRun.parse(
+    envelope([
+      {
+        candidateId: candidate.id,
+        company: "다른 회사",
+        title: "다른 공고",
+        postingUrl: "https://example.com/jobs/other",
+        reason: "적합하다.",
+      },
+    ]),
+  );
+  expect(validateRecommendationAgainstPool(run, pool)).toEqual([
+    `${candidate.id}: 공고 URL이 후보풀과 다르다.`,
+    `${candidate.id}: 회사명이 후보풀과 다르다.`,
+    `${candidate.id}: 공고명이 후보풀과 다르다.`,
+  ]);
 });
 
-test("자동 제외는 고정 축 대신 판단 근거를 받고 회사 제외만 근거 둘을 요구한다", () => {
-  const base = envelope(["wanted:example"]);
-  base.autoExclusionSuggestions = [
+test("추천 분류와 상세 근거는 자유롭게 생략하거나 구성한다", () => {
+  const { pool } = buildPostingCandidatePool([posting], diagnostics);
+  const candidate = pool.candidates[0];
+  const minimal = envelope([
     {
-      candidateId: "wanted:example",
-      scope: "posting",
-      reason: "공고가 원하는 역할 소유권과 맞지 않는다.",
-      evidenceUrls: ["https://example.com/jobs/1"],
-      confidence: "medium",
+      candidateId: candidate.id,
+      company: candidate.company,
+      title: candidate.title,
+      postingUrl: candidate.url,
+      reason: "운영 안정성과 공통 구조 경험을 확장할 수 있다.",
     },
-  ];
-  expect(RecommendationRun.safeParse(base).success).toBe(true);
-  const company = structuredClone(base);
-  company.autoExclusionSuggestions[0].scope = "company";
-  expect(RecommendationRun.safeParse(company).success).toBe(false);
-  (company.autoExclusionSuggestions[0].evidenceUrls as string[]).push(
-    "https://example.com/company",
-  );
-  expect(RecommendationRun.safeParse(company).success).toBe(true);
+  ]);
+  expect(RecommendationRun.safeParse(minimal).success).toBe(true);
+  const detailed = structuredClone(minimal);
+  detailed.recommendations[0] = {
+    ...detailed.recommendations[0],
+    label: "지금 가장 검토할 포지션",
+    details: [
+      {
+        title: "회사 성장과 역할",
+        content: "공개 자료에서 확인한 사실을 토대로 중요한 모듈을 맡을 가능성을 판단했다.",
+        evidenceUrls: [candidate.url],
+        assumptions: ["공고의 역할 범위가 실제 팀에서도 유지된다."],
+      },
+    ],
+  };
+  expect(RecommendationRun.safeParse(detailed).success).toBe(true);
 });

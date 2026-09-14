@@ -76,9 +76,9 @@ test("script 종료와 속성 탈출 입력은 실행 코드나 inline JSON으�
   const candidatePool = structuredClone(pool);
   const attack =
     '</script><script>window.pwned=true</script>" onmouseover="window.pwned=true {{title}}';
-  sample.tiers.strong[0].company = attack;
-  sample.tiers.strong[0].postingUrl = `https://example.com/?q=${attack}`;
-  sample.tiers.strong[0].companyAssessment.summary = attack;
+  sample.recommendations[0].company = attack;
+  sample.recommendations[0].postingUrl = `https://example.com/?q=${attack}`;
+  sample.recommendations[0].details[0].content = attack;
   candidatePool.candidates[0].title = attack;
   const assets = loadRenderAssets("preview");
   const html = renderCandidatePreview(sample, { candidatePool }, assets, { short: "s", full: "f" });

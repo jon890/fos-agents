@@ -8,7 +8,7 @@ description: 열려 있는 채용공고를 모아 후보자가 해온 일과 선
 지원할 포지션의 순위와 근거, 다음 행동을 담은 리포트를 게시해 바로 지원을 이어갈 수 있게 한다.
 
 회사의 성장 여력, 사업 규모, 보상과 복지는 다음 실행에서도 재사용한다.
-확인한 사실과 모델의 추론을 구분하고, 추론에는 근거와 가정과 신뢰도를 남긴다.
+확인한 사실과 모델의 추론을 구분하고, 추론에 영향을 주는 근거와 가정을 함께 적는다.
 
 명령은 저장소 루트에서 실행한다.
 실행별 후보풀, 추천 JSON과 HTML은 시스템 임시 디렉터리인 `<RUN_DIR>`에 만들고 게시가 끝나면 정리한다.
@@ -54,14 +54,12 @@ bun career-os/scripts/position-recommender/company_research.ts \
 
 ## 추천 판단
 
-후보풀 전체와 조사 결과를 비교해 `<RUN_DIR>/recommendation.json`을 만든다.
+후보풀 전체와 조사 결과를 읽고 `<RUN_DIR>/recommendation.json`을 만든다.
 형식은 [`recommendation/schema.ts`](../../../scripts/position-recommender/recommendation/schema.ts)를 따른다.
 
-- 후보풀 전체를 검토하고 `evaluatedCandidateIds`에 후보 ID를 남긴다.
-- 추천 후보는 중요한 모듈을 맡을 가능성, 성장 경험, 보상, 팀과 사람 경험을 종합해 순위를 정한다.
-- `companyAssessment`에는 후보별 결정에 실제로 영향을 준 사실과 추론만 넣는다.
-- 강력 추천과 도전 추천은 정해진 개수를 채우지 않는다.
-- 다시 보지 않을 근거가 충분한 대상만 `autoExclusionSuggestions`에 둔다.
+- 중요한 모듈을 맡을 가능성, 성장 경험, 보상, 팀과 사람 경험을 종합해 추천할 후보와 순서를 정한다.
+- 추천 이유와 라벨은 후보에 맞게 자유롭게 쓰고, 조사 근거와 다음 행동은 실제로 도움이 될 때만 넣는다.
+- 정해진 개수나 분류를 채우지 않는다.
 
 다음 명령이 후보풀 대조와 출력 계약을 검사한다.
 
@@ -75,13 +73,9 @@ bun career-os/scripts/position-recommender/validate_recommendation.ts \
 
 ## 재사용 상태 반영
 
-검증된 자동 제외 제안을 반영하고 비공개 작업 release를 발행한다.
+회사 조사 갱신을 포함한 비공개 작업 release를 발행한다.
 
 ```bash
-bun career-os/scripts/position-recommender/apply_exclusion_suggestions.ts \
-  --input <RUN_DIR>/recommendation.json \
-  --candidates <RUN_DIR>/posting-candidates.json
-
 bun career-os/scripts/career-workspace/cli.ts skill finish position-recommender --json
 ```
 
@@ -97,28 +91,17 @@ release 충돌이나 전송 실패가 발생하면 로컬 변경과 실행 산�
 개인 정보가 판단에 영향을 줬다면 공개 가능한 결과와 다음 행동으로 표현한다.
 
 ```bash
-bun career-os/scripts/position-recommender/render/validate-report-html.ts \
-  --html <RUN_DIR>/index.html \
-  --input <RUN_DIR>/recommendation.json
-```
-
-모델이 만든 HTML이 검사에 실패하면 고정 렌더러로 다시 만들고 같은 검사를 실행한다.
-
-```bash
 bun career-os/scripts/position-recommender/render_recommendation.ts \
   --input <RUN_DIR>/recommendation.json \
   --format html \
   --output <RUN_DIR>/index.html
+
+bun career-os/scripts/position-recommender/render/validate-report-html.ts \
+  --html <RUN_DIR>/index.html \
+  --input <RUN_DIR>/recommendation.json
 ```
 
 브라우저에서 데스크톱과 모바일 배치, 가로 넘침과 주요 링크를 확인한다.
 `report-publisher`로 `index.html`을 `position-YYYY-MM-DD` slug에 게시한다.
 
 검증된 공개 링크와 이번 주 지원 행동을 전달한 뒤 `<RUN_DIR>`을 정리한다.
-
-## 소유 문서
-
-- 판정 방법: [`references/position-decision-criteria.md`](references/position-decision-criteria.md)
-- 추천 JSON: [`recommendation/schema.ts`](../../../scripts/position-recommender/recommendation/schema.ts)
-- 회사 조사 데이터: [`company-research/schema.ts`](../../../scripts/position-recommender/company-research/schema.ts)
-- 코드 구조: [`code-architecture.md`](../../../docs/code-architecture.md)

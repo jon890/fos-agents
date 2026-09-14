@@ -1,19 +1,6 @@
 import { z } from "zod";
 
-export const CompanyResearchTopic = z.enum([
-  "business-scale",
-  "growth",
-  "domain-growth",
-  "financial-stability",
-  "engineering-scale",
-  "team-growth",
-  "role-ownership",
-  "internal-platform-investment",
-  "compensation",
-  "benefits",
-  "work-policy",
-  "people-experience",
-]);
+export const CompanyResearchTopic = z.string().trim().min(1);
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const httpsUrl = z.string().url().startsWith("https://");
@@ -22,7 +9,7 @@ export const CompanyResearchFact = z
   .object({
     factId: z.string().regex(/^[a-z0-9][a-z0-9-]{2,79}$/),
     topic: CompanyResearchTopic,
-    scope: z.enum(["company", "engineering", "role"]),
+    scope: z.string().trim().min(1).optional(),
     statement: z.string().trim().min(1),
     source: z
       .object({
@@ -36,12 +23,13 @@ export const CompanyResearchFact = z
           "reputable-news",
           "public-compensation",
           "job-posting",
+          "other",
         ]),
-        publishedAt: isoDate.nullable(),
+        publishedAt: isoDate.nullable().optional(),
         observedAt: z.string().datetime({ offset: true }),
       })
       .strict(),
-    validUntil: isoDate,
+    validUntil: isoDate.optional(),
   })
   .strict();
 
@@ -50,7 +38,7 @@ export const CompanyResearchGap = z
     topic: CompanyResearchTopic,
     question: z.string().trim().min(1),
     lastAttemptedAt: z.string().datetime({ offset: true }),
-    retryAfter: isoDate,
+    retryAfter: isoDate.optional(),
   })
   .strict();
 
@@ -61,9 +49,9 @@ export const CompanyResearchInference = z
     statement: z.string().trim().min(1),
     basisFactIds: z.array(z.string().regex(/^[a-z0-9][a-z0-9-]{2,79}$/)).min(1),
     assumptions: z.array(z.string().trim().min(1)).default([]),
-    confidence: z.enum(["high", "medium", "low"]),
+    confidence: z.enum(["high", "medium", "low"]).optional(),
     inferredAt: z.string().datetime({ offset: true }),
-    validUntil: isoDate,
+    validUntil: isoDate.optional(),
   })
   .strict();
 
