@@ -169,8 +169,8 @@ export async function collectLivePostings(
           discoveryModes: [],
           message: adapter.note ?? `${adapter.name}: collected=${result.length}`,
         });
+        if (adapter.note) errors.push(adapter.note);
       }
-      if (adapter.note) errors.push(adapter.note);
     } catch (e) {
       const message = `${adapter.name}: ${e}`;
       errors.push(message);

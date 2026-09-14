@@ -62,3 +62,17 @@ test("추천 공고와 외부 후보풀을 같은 HTML에 표시한다", () => {
   expect(html).not.toContain("<table");
   expect(html).not.toContain("min-width:900px");
 });
+
+test("전체 후보는 모델 순위로 정렬하고 공고 본문까지 검색어에 포함한다", () => {
+  const sample = structuredClone(run);
+  sample.recommendations = [];
+  sample.ranking.reverse();
+  const html = renderCandidatePreviewHtml(sample, { candidatePool: pool, limit: null });
+  const first = sample.ranking[0];
+  const second = sample.ranking[1];
+  expect(html.indexOf(`href="${first.postingUrl}"`)).toBeLessThan(
+    html.indexOf(`href="${second.postingUrl}"`),
+  );
+  expect(html).toContain("서버 개발");
+  expect(html).toContain("java spring");
+});

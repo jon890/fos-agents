@@ -1,4 +1,8 @@
-import type { RecommendationItemType, RecommendationRunType } from "../recommendation/schema.ts";
+import type {
+  RankedCandidateType,
+  RecommendationItemType,
+  RecommendationRunType,
+} from "../recommendation/schema.ts";
 import { escapeHtml, fragment, type RenderAssets } from "./template.ts";
 
 function link(assets: RenderAssets, value: string): string {
@@ -27,7 +31,7 @@ function detail(assets: RenderAssets, item: RecommendationItemType["details"][nu
   );
 }
 
-function card(assets: RenderAssets, item: RecommendationItemType, index: number): string {
+function card(assets: RenderAssets, item: RecommendationItemType, rank: number): string {
   const fields: [string, string][] = [
     ["공고 링크", link(assets, item.postingUrl)],
     ["추천 이유", escapeHtml(item.reason)],
@@ -52,7 +56,7 @@ function card(assets: RenderAssets, item: RecommendationItemType, index: number)
   return fragment(
     assets,
     "report-card",
-    { rank: index + 1, company: item.company, title: item.title },
+    { rank, company: item.company, title: item.title },
     {
       fields: fields
         .map(([label, value]) => fragment(assets, "report-field", { label }, { value }))
@@ -61,7 +65,11 @@ function card(assets: RenderAssets, item: RecommendationItemType, index: number)
   );
 }
 
-function recommendationSection(assets: RenderAssets, items: RecommendationItemType[]): string {
+function recommendationSection(
+  assets: RenderAssets,
+  items: RecommendationItemType[],
+  rankByCandidate: Map<string, number>,
+): string {
   const content =
     items.length === 0
       ? fragment(assets, "report-empty")
@@ -69,7 +77,13 @@ function recommendationSection(assets: RenderAssets, items: RecommendationItemTy
           assets,
           "report-cards",
           {},
-          { cards: items.map((item, index) => card(assets, item, index)).join("\n") },
+          {
+            cards: items
+              .map((item, index) =>
+                card(assets, item, rankByCandidate.get(item.candidateId) ?? index + 1),
+              )
+              .join("\n"),
+          },
         );
   return fragment(
     assets,
@@ -81,7 +95,36 @@ function recommendationSection(assets: RenderAssets, items: RecommendationItemTy
   );
 }
 
+function rankingItem(assets: RenderAssets, item: RankedCandidateType, index: number): string {
+  return fragment(assets, "report-ranking-item", {
+    rank: index + 1,
+    company: item.company,
+    title: item.title,
+    url: item.postingUrl,
+    note: item.note ?? "",
+  });
+}
+
+function rankingSection(assets: RenderAssets, items: RankedCandidateType[]): string {
+  return fragment(
+    assets,
+    "report-section",
+    { title: `전체 후보 순위 · ${items.length}건` },
+    {
+      content: fragment(
+        assets,
+        "report-ranking",
+        {},
+        { items: items.map((item, index) => rankingItem(assets, item, index)).join("\n") },
+      ),
+    },
+  );
+}
+
 export function renderReportContent(run: RecommendationRunType, assets: RenderAssets): string {
+  const rankByCandidate = new Map(
+    run.ranking.map((item, index) => [item.candidateId, index + 1] as const),
+  );
   const sections = [
     run.summary.length > 0
       ? fragment(
@@ -93,7 +136,8 @@ export function renderReportContent(run: RecommendationRunType, assets: RenderAs
           },
         )
       : "",
-    recommendationSection(assets, run.recommendations),
+    recommendationSection(assets, run.recommendations, rankByCandidate),
+    rankingSection(assets, run.ranking),
     run.nextActions.length > 0
       ? fragment(
           assets,

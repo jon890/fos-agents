@@ -24,13 +24,24 @@ export const RecommendationItem = z
   })
   .strict();
 
+export const RankedCandidate = z
+  .object({
+    candidateId: z.string().trim().min(1),
+    company: z.string().trim().min(1),
+    title: z.string().trim().min(1),
+    postingUrl: z.string().url().startsWith("https://"),
+    note: z.string().trim().min(1).optional(),
+  })
+  .strict();
+
 export const RecommendationRun = z
   .object({
-    schemaVersion: z.literal(8),
+    schemaVersion: z.literal(9),
     reportDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     generatedAt: z.string().min(1),
     summary: z.array(z.string().trim().min(1)).default([]),
     recommendations: z.array(RecommendationItem),
+    ranking: z.array(RankedCandidate),
     nextActions: z.array(z.string().trim().min(1)).default([]),
     sourceSnapshot: z
       .object({
@@ -51,7 +62,19 @@ export const RecommendationRun = z
       }
       selectedIds.add(item.candidateId);
     });
+    const rankedIds = new Set<string>();
+    run.ranking.forEach((item, index) => {
+      if (rankedIds.has(item.candidateId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["ranking", index, "candidateId"],
+          message: `순위 공고 ID가 중복됐다: ${item.candidateId}`,
+        });
+      }
+      rankedIds.add(item.candidateId);
+    });
   });
 
 export type RecommendationRunType = z.infer<typeof RecommendationRun>;
 export type RecommendationItemType = z.infer<typeof RecommendationItem>;
+export type RankedCandidateType = z.infer<typeof RankedCandidate>;

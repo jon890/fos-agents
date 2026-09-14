@@ -40,9 +40,9 @@ export function validateReportHtml(html: string, recommendation: unknown): strin
       errors.push(`허용하지 않는 링크 형식이다: ${href.slice(0, 80)}`);
     }
   }
-  for (const item of parsed.data.recommendations) {
+  for (const item of parsed.data.ranking) {
     if (!hrefs.includes(item.postingUrl))
-      errors.push(`추천 공고 링크가 HTML에 없다: ${item.candidateId}`);
+      errors.push(`순위 공고 링크가 HTML에 없다: ${item.candidateId}`);
   }
   return [...new Set(errors)];
 }

@@ -183,4 +183,39 @@ describe("개인 공고 제외", () => {
       }),
     ).toThrow("공개 근거 URL이 두 개");
   });
+
+  test("회사 역할군 cooldown은 공고명에 맞는 역할만 만료일까지 제외한다", () => {
+    const rule: EnrichedPositionExclusion = {
+      scope: "company-role",
+      company: "테스트 회사",
+      titleKeywords: ["server developer", "백엔드"],
+      decisionKind: "manual",
+      reason: "최근 지원 결과에 따른 재지원 간격",
+      evidenceUrls: [posting.url],
+      decidedAt: "2026-09-14",
+      expiresAt: "2027-03-31",
+    };
+    const frontend = {
+      ...posting,
+      title: "Frontend Developer",
+      identityHash: "frontend",
+      url: "https://example.com/jobs/frontend",
+    };
+    const otherCompany = {
+      ...posting,
+      company: "다른 회사",
+      identityHash: "other",
+      url: "https://example.com/jobs/other",
+    };
+    const config = { schemaVersion: 2 as const, exclusions: [rule] };
+
+    expect(
+      filterExcludedPostings([posting, frontend, otherCompany], config, new Date("2027-03-31"))
+        .eligible,
+    ).toEqual([frontend, otherCompany]);
+    expect(
+      filterExcludedPostings([posting, frontend, otherCompany], config, new Date("2027-04-01"))
+        .eligible,
+    ).toEqual([posting, frontend, otherCompany]);
+  });
 });

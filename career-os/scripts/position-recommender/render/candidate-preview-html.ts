@@ -10,6 +10,7 @@ interface PreviewRow {
   url: string;
   why: string;
   keywords: string[];
+  searchTerms: string[];
 }
 
 export interface CandidatePreviewOptions {
@@ -27,6 +28,7 @@ function positionRow(item: RecommendationItemType, index: number): PreviewRow {
     url: item.postingUrl,
     why: item.reason,
     keywords: item.details.flatMap((detail) => (detail.title ? [detail.title] : [])).slice(0, 8),
+    searchTerms: item.details.flatMap((detail) => [detail.content, ...detail.assumptions]),
   };
 }
 
@@ -36,18 +38,35 @@ function recommendationRows(run: RecommendationRunType): PreviewRow[] {
 
 function candidateRows(pool: PostingCandidatePool, run: RecommendationRunType): PreviewRow[] {
   const selected = new Map(run.recommendations.map((item) => [item.candidateId, item]));
-  return pool.candidates.map((candidate, index) => {
+  const candidates = new Map(pool.candidates.map((candidate) => [candidate.id, candidate]));
+  return run.ranking.flatMap((ranked, index) => {
+    const candidate = candidates.get(ranked.candidateId);
+    if (!candidate) return [];
     const item = selected.get(candidate.id);
-    return {
-      rank: index + 1,
-      tier: item?.label ?? (item ? "추천" : "전체 후보"),
-      company: candidate.company,
-      title: candidate.title,
-      url: candidate.url,
-      why: item?.reason ?? (candidate.summary || candidate.mainTasks || candidate.activeEvidence),
-      keywords:
-        candidate.skills.length > 0 ? candidate.skills.slice(0, 8) : candidate.tags.slice(0, 8),
-    };
+    return [
+      {
+        rank: index + 1,
+        tier: item?.label ?? (item ? "추천" : "전체 후보"),
+        company: candidate.company,
+        title: candidate.title,
+        url: candidate.url,
+        why:
+          ranked.note ??
+          item?.reason ??
+          (candidate.summary || candidate.mainTasks || candidate.activeEvidence),
+        keywords:
+          candidate.skills.length > 0 ? candidate.skills.slice(0, 8) : candidate.tags.slice(0, 8),
+        searchTerms: [
+          candidate.category,
+          candidate.summary,
+          candidate.mainTasks,
+          candidate.requirements,
+          candidate.preferred,
+          ...candidate.skills,
+          ...candidate.tags,
+        ],
+      },
+    ];
   });
 }
 
@@ -114,7 +133,9 @@ function archive(assets: RenderAssets, rows: PreviewRow[]): string {
             "preview-candidate",
             {
               ...rowText(row),
-              search: [row.company, row.title, row.why, ...row.keywords].join(" ").toLowerCase(),
+              search: [row.company, row.title, row.why, ...row.keywords, ...row.searchTerms]
+                .join(" ")
+                .toLowerCase(),
             },
             {
               badge: "",

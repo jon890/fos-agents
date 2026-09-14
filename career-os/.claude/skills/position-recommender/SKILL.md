@@ -64,10 +64,11 @@ bun career-os/scripts/position-recommender/company_research.ts \
 후보풀 전체와 조사 결과를 읽고 `<RUN_DIR>/recommendation.json`을 만든다.
 형식은 [`recommendation/schema.ts`](../../../scripts/position-recommender/recommendation/schema.ts)를 따른다.
 
-- private brain의 우선순위와 조사 결과를 종합해 추천할 후보와 순서를 정한다.
+- private brain의 우선순위와 조사 결과를 종합해 후보풀 전체의 순서를 정한다.
+- 전체 순위는 모든 후보를 한 번씩 포함한다. 숫자는 배열 순서에서 정하고, 낮은 순위에 근거나 판정값을 억지로 만들지 않는다.
+- 상세 추천은 전체 순위 앞부분에서 실제로 검토할 가치가 있는 후보만 고른다.
 - 추천 이유와 라벨은 후보에 맞게 자유롭게 쓰고, 조사 근거와 다음 행동은 실제로 도움이 될 때만 넣는다.
 - 정해진 개수나 분류를 채우지 않는다.
-- 추천하지 않은 후보에는 보류 사유나 판정값을 만들지 않는다.
 
 다음 명령이 후보풀 대조와 출력 계약을 검사한다.
 
@@ -92,16 +93,17 @@ release 충돌이나 전송 실패가 발생하면 로컬 변경과 실행 산�
 ## 리포트 게시
 
 추천 JSON을 바탕으로 `<RUN_DIR>/index.html`을 만든다.
-지원 순위, 사실과 추론 근거, 위험, 확인할 질문, 다음 행동과 공개 공고 링크를 담는다.
+전체 후보 순위와 공개 공고 링크를 빠짐없이 담고, 상세 추천에는 사실과 추론 근거, 위험, 확인할 질문과 다음 행동을 담는다.
 결정에 영향을 주는 근거를 우선하고 추천 결론을 바꿀 질문만 남긴다.
 
 공개 리포트에는 현재 보상, 구체적인 지원 결과, 비공개 경력 자료와 로컬 환경 식별자를 넣지 않는다.
 개인 정보가 판단에 영향을 줬다면 공개 가능한 결과와 다음 행동으로 표현한다.
 
 ```bash
-bun career-os/scripts/position-recommender/render_recommendation.ts \
+bun career-os/scripts/position-recommender/render_candidate_preview.ts \
   --input <RUN_DIR>/recommendation.json \
-  --format html \
+  --candidates <RUN_DIR>/posting-candidates.json \
+  --limit all \
   --output <RUN_DIR>/index.html
 
 bun career-os/scripts/position-recommender/render/validate-report-html.ts \

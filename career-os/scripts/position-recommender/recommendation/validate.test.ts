@@ -37,13 +37,26 @@ const diagnostics: CollectionDiagnostics = {
   errors: [],
 };
 
-function envelope(recommendations: Record<string, unknown>[] = []) {
+function ranked(candidate: { id: string; company: string; title: string; url: string }) {
   return {
-    schemaVersion: 8 as const,
+    candidateId: candidate.id,
+    company: candidate.company,
+    title: candidate.title,
+    postingUrl: candidate.url,
+  };
+}
+
+function envelope(
+  recommendations: Record<string, unknown>[] = [],
+  ranking: Record<string, unknown>[] = [],
+) {
+  return {
+    schemaVersion: 9 as const,
     reportDate: "2026-08-13",
     generatedAt: "2026-08-13T09:00:00+09:00",
     summary: [] as string[],
     recommendations,
+    ranking,
     nextActions: [] as string[],
     sourceSnapshot: { collectionRunId: "run-1" },
   };
@@ -51,18 +64,21 @@ function envelope(recommendations: Record<string, unknown>[] = []) {
 
 test("후보풀에 없는 공고는 추천하지 못하게 막는다", () => {
   const { pool } = buildPostingCandidatePool([posting], diagnostics);
-  const raw = envelope([
-    {
-      candidateId: "wanted:missing",
-      company: pool.candidates[0].company,
-      title: pool.candidates[0].title,
-      postingUrl: pool.candidates[0].url,
-      reason: "적합하다.",
-    },
-  ]);
+  const raw = envelope(
+    [
+      {
+        candidateId: "wanted:missing",
+        company: pool.candidates[0].company,
+        title: pool.candidates[0].title,
+        postingUrl: pool.candidates[0].url,
+        reason: "적합하다.",
+      },
+    ],
+    [ranked(pool.candidates[0])],
+  );
   const run = RecommendationRun.parse(raw);
   expect(validateRecommendationAgainstPool(run, pool)).toContain(
-    "후보풀에 없는 공고 ID: wanted:missing",
+    "후보풀에 없는 추천 공고 ID: wanted:missing",
   );
 });
 
@@ -70,35 +86,41 @@ test("추천 공고의 회사명과 공고명과 URL을 후보풀 원문에 대�
   const { pool } = buildPostingCandidatePool([posting], diagnostics);
   const candidate = pool.candidates[0];
   const run = RecommendationRun.parse(
-    envelope([
-      {
-        candidateId: candidate.id,
-        company: "다른 회사",
-        title: "다른 공고",
-        postingUrl: "https://example.com/jobs/other",
-        reason: "적합하다.",
-      },
-    ]),
+    envelope(
+      [
+        {
+          candidateId: candidate.id,
+          company: "다른 회사",
+          title: "다른 공고",
+          postingUrl: "https://example.com/jobs/other",
+          reason: "적합하다.",
+        },
+      ],
+      [ranked(candidate)],
+    ),
   );
   expect(validateRecommendationAgainstPool(run, pool)).toEqual([
-    `${candidate.id}: 공고 URL이 후보풀과 다르다.`,
-    `${candidate.id}: 회사명이 후보풀과 다르다.`,
-    `${candidate.id}: 공고명이 후보풀과 다르다.`,
+    `${candidate.id}: 추천 공고 URL이 후보풀과 다르다.`,
+    `${candidate.id}: 추천 회사명이 후보풀과 다르다.`,
+    `${candidate.id}: 추천 공고명이 후보풀과 다르다.`,
   ]);
 });
 
 test("추천 분류와 상세 근거는 자유롭게 생략하거나 구성한다", () => {
   const { pool } = buildPostingCandidatePool([posting], diagnostics);
   const candidate = pool.candidates[0];
-  const minimal = envelope([
-    {
-      candidateId: candidate.id,
-      company: candidate.company,
-      title: candidate.title,
-      postingUrl: candidate.url,
-      reason: "운영 안정성과 공통 구조 경험을 확장할 수 있다.",
-    },
-  ]);
+  const minimal = envelope(
+    [
+      {
+        candidateId: candidate.id,
+        company: candidate.company,
+        title: candidate.title,
+        postingUrl: candidate.url,
+        reason: "운영 안정성과 공통 구조 경험을 확장할 수 있다.",
+      },
+    ],
+    [ranked(candidate)],
+  );
   expect(RecommendationRun.safeParse(minimal).success).toBe(true);
   const detailed = structuredClone(minimal);
   detailed.recommendations[0] = {
@@ -114,4 +136,41 @@ test("추천 분류와 상세 근거는 자유롭게 생략하거나 구성한�
     ],
   };
   expect(RecommendationRun.safeParse(detailed).success).toBe(true);
+});
+
+test("전체 순위는 후보풀의 모든 공고를 한 번씩 포함한다", () => {
+  const second = {
+    ...posting,
+    title: "플랫폼 백엔드 개발자",
+    url: "https://example.com/jobs/2",
+  };
+  const { pool } = buildPostingCandidatePool([posting, second], diagnostics);
+  const run = RecommendationRun.parse(envelope([], [ranked(pool.candidates[0])]));
+  expect(validateRecommendationAgainstPool(run, pool)).toContain(
+    `순위에서 빠진 공고 ID: ${pool.candidates[1].id}`,
+  );
+});
+
+test("상세 추천은 전체 순위의 앞부분과 같은 순서를 사용한다", () => {
+  const second = {
+    ...posting,
+    title: "플랫폼 백엔드 개발자",
+    url: "https://example.com/jobs/2",
+  };
+  const { pool } = buildPostingCandidatePool([posting, second], diagnostics);
+  const top = pool.candidates[0];
+  const run = RecommendationRun.parse(
+    envelope(
+      [
+        {
+          ...ranked(top),
+          reason: "상세 검토할 가치가 있다.",
+        },
+      ],
+      [ranked(pool.candidates[1]), ranked(top)],
+    ),
+  );
+  expect(validateRecommendationAgainstPool(run, pool)).toContain(
+    `상세 추천 1위가 전체 순위와 다르다: ${top.id}`,
+  );
 });

@@ -63,13 +63,20 @@ function positionItem(candidate: PostingCandidate, index: number) {
 }
 
 export const run = RecommendationRun.parse({
-  schemaVersion: 8,
+  schemaVersion: 9,
   reportDate: "2026-08-13",
   generatedAt: "2026-08-13T09:00:00+09:00",
   summary: ["지원 검토 가치가 있다."],
   recommendations: pool.candidates
     .slice(0, 7)
     .map((candidate, index) => positionItem(candidate, index)),
+  ranking: pool.candidates.map((candidate, index) => ({
+    candidateId: candidate.id,
+    company: candidate.company,
+    title: candidate.title,
+    postingUrl: candidate.url,
+    ...(index < 3 ? { note: "우선 검토 후보" } : {}),
+  })),
   nextActions: ["공고 확인", "관련 경험 정리"],
   sourceSnapshot: {
     collectionRunId: pool.collectionRunId,

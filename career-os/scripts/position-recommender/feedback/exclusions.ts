@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { z } from "zod";
 import { POSITION_EXCLUSIONS_PATH } from "../../../config/position-exclusions.ts";
+import { formatSeoulIsoDate } from "../../lib/date-format.ts";
 import { sourceIdSchema } from "../live-postings/contracts.ts";
 import type { Posting } from "../live-postings/types.ts";
 
@@ -47,6 +48,10 @@ const exclusionEvidenceSchema = z
     evidenceUrls: z.array(z.string().url().startsWith("https://")).min(1),
     confidence: z.enum(["high", "medium", "low"]).optional(),
     decidedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    expiresAt: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
   })
   .strict();
 
@@ -63,6 +68,15 @@ const companyExclusionSchema = z
   })
   .strict();
 
+const companyRoleExclusionSchema = z
+  .object({
+    scope: z.literal("company-role"),
+    company: z.string().trim().min(1),
+    titleKeywords: z.array(z.string().trim().min(1)).min(1),
+    ...exclusionEvidenceSchema.shape,
+  })
+  .strict();
+
 const versionOneSchema = z
   .object({
     schemaVersion: z.literal(1),
@@ -74,7 +88,12 @@ const versionTwoSchema = z
   .object({
     schemaVersion: z.literal(2),
     exclusions: z.array(
-      z.union([legacyPostingExclusionSchema, postingExclusionSchema, companyExclusionSchema]),
+      z.union([
+        legacyPostingExclusionSchema,
+        postingExclusionSchema,
+        companyExclusionSchema,
+        companyRoleExclusionSchema,
+      ]),
     ),
   })
   .strict();
@@ -82,13 +101,26 @@ const versionTwoSchema = z
 export const positionExclusionsSchema = z.union([versionOneSchema, versionTwoSchema]);
 export type PositionExclusions = z.infer<typeof positionExclusionsSchema>;
 export type EnrichedPositionExclusion =
-  z.infer<typeof postingExclusionSchema> | z.infer<typeof companyExclusionSchema>;
+  | z.infer<typeof postingExclusionSchema>
+  | z.infer<typeof companyExclusionSchema>
+  | z.infer<typeof companyRoleExclusionSchema>;
 type PositionExclusion = PositionExclusions["exclusions"][number];
 
 function isCompanyExclusion(
   rule: PositionExclusion,
 ): rule is z.infer<typeof companyExclusionSchema> {
   return "scope" in rule && rule.scope === "company";
+}
+
+function isCompanyRoleExclusion(
+  rule: PositionExclusion,
+): rule is z.infer<typeof companyRoleExclusionSchema> {
+  return "scope" in rule && rule.scope === "company-role";
+}
+
+function isExpired(rule: PositionExclusion, now: Date): boolean {
+  if (!("expiresAt" in rule) || !rule.expiresAt) return false;
+  return formatSeoulIsoDate(now.toISOString()) > rule.expiresAt;
 }
 
 export function validateCareerDownsideExclusion(rule: EnrichedPositionExclusion): void {
@@ -117,14 +149,28 @@ export function loadPositionExclusions(path = defaultExclusionsPath): PositionEx
   }
 }
 
-export function filterExcludedPostings(posts: Posting[], config: PositionExclusions) {
-  const rules = positionExclusionsSchema.parse(config).exclusions;
+export function filterExcludedPostings(
+  posts: Posting[],
+  config: PositionExclusions,
+  now = new Date(),
+) {
+  const rules = positionExclusionsSchema
+    .parse(config)
+    .exclusions.filter((rule) => !isExpired(rule, now));
   const identities = new Set<string>();
   const urls = new Set<string>();
   const companies = new Set<string>();
+  const companyRoles: Array<{ company: string; titleKeywords: string[] }> = [];
   for (const rule of rules) {
     if (isCompanyExclusion(rule)) {
       companies.add(rule.company);
+      continue;
+    }
+    if (isCompanyRoleExclusion(rule)) {
+      companyRoles.push({
+        company: rule.company,
+        titleKeywords: rule.titleKeywords.map((keyword) => keyword.toLowerCase()),
+      });
       continue;
     }
     if (rule.identityHash) identities.add(`${rule.source}|${rule.identityHash}`);
@@ -141,7 +187,12 @@ export function filterExcludedPostings(posts: Posting[], config: PositionExclusi
     if (
       !identities.has(`${post.source}|${post.identityHash ?? ""}`) &&
       !urlMatch &&
-      !companies.has(post.company)
+      !companies.has(post.company) &&
+      !companyRoles.some(
+        (rule) =>
+          rule.company === post.company &&
+          rule.titleKeywords.some((keyword) => post.title.toLowerCase().includes(keyword)),
+      )
     )
       return true;
     rejectedBySource.set(post.source, (rejectedBySource.get(post.source) ?? 0) + 1);

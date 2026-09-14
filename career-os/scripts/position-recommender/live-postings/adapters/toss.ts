@@ -123,6 +123,10 @@ interface TossFetchResult {
   text: string;
 }
 
+export function tossDetailRejectReason(status: number): "closed_or_removed" | "http" {
+  return status === 404 || status === 410 ? "closed_or_removed" : "http";
+}
+
 async function tossFetch(url: string): Promise<TossFetchResult> {
   const r = await fetch(url, {
     headers: {
@@ -528,7 +532,7 @@ interface TossParse {
 }
 
 function parseTossJobDetail(url: string, res: TossFetchResult, targetRoleOnly: boolean): TossParse {
-  if (!res.ok) return { reject: "http" };
+  if (!res.ok) return { reject: tossDetailRejectReason(res.status) };
   const html = res.text;
   const data = extractNextData(html);
   const roots = tossRoots(data);

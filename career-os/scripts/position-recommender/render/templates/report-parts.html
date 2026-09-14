@@ -32,6 +32,22 @@
   </ol></template
 >
 
+<template id="report-ranking"
+  ><ol class="ranking">
+    {{items}}
+  </ol></template
+>
+
+<template id="report-ranking-item"
+  ><li>
+    <span class="ranking-number">{{rank}}</span>
+    <span class="ranking-position"
+      ><strong>{{company}}</strong> — <a href="{{url}}">{{title}}</a></span
+    >
+    <span class="ranking-note">{{note}}</span>
+  </li></template
+>
+
 <template id="report-code"><code>{{value}}</code></template>
 
 <template id="report-content">{{sections}}</template>

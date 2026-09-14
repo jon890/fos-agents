@@ -7,11 +7,20 @@ import { run } from "./fixture.ts";
 test("상세 추천은 순서와 자유 라벨과 근거 묶음을 보존한다", () => {
   const html = toReportHtml(run);
   expect(html.match(/<li class="card">/g)).toHaveLength(7);
+  expect(html.match(/<span class="ranking-number">/g)).toHaveLength(11);
+  expect(html).toContain("전체 후보 순위 · 11건");
   expect(html).toContain("우선 검토");
   expect(html).toContain("회사와 역할");
   expect(html).toContain("성장 중인 제품의 핵심 백엔드를 맡을 가능성이 있다.");
   expect(html).toContain('<a href="https://example.com/jobs/1">https://example.com/jobs/1</a>');
-  for (const label of ["추천 요약", "추천 포지션", "추천 이유", "근거와 해석", "다음 행동"])
+  for (const label of [
+    "추천 요약",
+    "추천 포지션",
+    "추천 이유",
+    "근거와 해석",
+    "전체 후보 순위",
+    "다음 행동",
+  ])
     expect(html).toContain(label);
 });
 

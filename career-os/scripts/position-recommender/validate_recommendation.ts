@@ -15,21 +15,46 @@ export function validateRecommendationAgainstPool(
     errors.push("추천 결과의 수집 실행 ID가 후보풀과 다르다.");
   }
   const byId = new Map(pool.candidates.map((candidate) => [candidate.id, candidate]));
-  const selectedIds = new Set<string>();
-  for (const item of run.recommendations) {
+  const validateOriginalFields = (
+    item: { candidateId: string; postingUrl: string; company: string; title: string },
+    context: string,
+  ) => {
     const candidate = byId.get(item.candidateId);
     if (!candidate) {
-      errors.push(`후보풀에 없는 공고 ID: ${item.candidateId}`);
-      continue;
+      errors.push(`후보풀에 없는 ${context} 공고 ID: ${item.candidateId}`);
+      return;
     }
+    if (item.postingUrl !== candidate.url)
+      errors.push(`${item.candidateId}: ${context} 공고 URL이 후보풀과 다르다.`);
+    if (item.company !== candidate.company)
+      errors.push(`${item.candidateId}: ${context} 회사명이 후보풀과 다르다.`);
+    if (item.title !== candidate.title)
+      errors.push(`${item.candidateId}: ${context} 공고명이 후보풀과 다르다.`);
+  };
+
+  const rankedIds = new Set<string>();
+  for (const item of run.ranking) {
+    validateOriginalFields(item, "순위");
+    rankedIds.add(item.candidateId);
+  }
+  if (rankedIds.size !== pool.candidates.length) {
+    errors.push(
+      `순위 공고 수가 후보풀과 다르다: 순위 ${rankedIds.size}건, 후보풀 ${pool.candidates.length}건`,
+    );
+  }
+  for (const candidate of pool.candidates) {
+    if (!rankedIds.has(candidate.id)) errors.push(`순위에서 빠진 공고 ID: ${candidate.id}`);
+  }
+
+  const selectedIds = new Set<string>();
+  for (const [index, item] of run.recommendations.entries()) {
+    validateOriginalFields(item, "추천");
     if (selectedIds.has(item.candidateId)) errors.push(`중복 추천 공고 ID: ${item.candidateId}`);
     selectedIds.add(item.candidateId);
-    if (item.postingUrl !== candidate.url)
-      errors.push(`${item.candidateId}: 공고 URL이 후보풀과 다르다.`);
-    if (item.company !== candidate.company)
-      errors.push(`${item.candidateId}: 회사명이 후보풀과 다르다.`);
-    if (item.title !== candidate.title)
-      errors.push(`${item.candidateId}: 공고명이 후보풀과 다르다.`);
+    if (!rankedIds.has(item.candidateId))
+      errors.push(`추천 공고가 전체 순위에 없다: ${item.candidateId}`);
+    if (run.ranking[index]?.candidateId !== item.candidateId)
+      errors.push(`상세 추천 ${index + 1}위가 전체 순위와 다르다: ${item.candidateId}`);
   }
   return errors;
 }
