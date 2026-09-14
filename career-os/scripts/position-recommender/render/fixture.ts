@@ -42,79 +42,43 @@ const postings = Array.from({ length: 11 }, (_, index): Posting => ({
 }));
 export const { pool } = buildPostingCandidatePool(postings, diagnostics);
 
-function positionItem(candidate: PostingCandidate, rank: number, isStretch = false) {
+function positionItem(candidate: PostingCandidate, index: number) {
   return {
     candidateId: candidate.id,
-    rank,
     company: candidate.company,
     title: candidate.title,
     postingUrl: candidate.url,
-    exploreLink: "-",
-    linkEvidenceLevel: "개별 공고 active 확인",
-    postingPeriod: "마감 정보 없음",
-    source: candidate.source,
-    closeDate: null,
-    searchKeywords: isStretch ? ["RAG"] : ["Java"],
-    whyFit: isStretch ? "AI 서비스 운영 경험을 확장할 수 있다." : "백엔드 운영 경험과 맞는다.",
-    candidateEvidence: isStretch ? ["RAG 운영"] : ["Java 운영"],
-    jdKeywords: isStretch ? ["Java", "RAG"] : ["Java", "Spring"],
-    companyUpside: {
-      level: "중간",
-      reason: "추가 확인 필요",
-      axes: [
-        { axis: "문제의 난도", direction: "상향", reason: "공고가 대규모 트래픽 환경을 명시한다." },
-        {
-          axis: "오너십과 파는 깊이",
-          direction: "확인 필요",
-          reason: "팀의 문제 정의 범위가 공고에 없다.",
-        },
-        { axis: "도메인 확장 여지", direction: "상향", reason: "인접 제품군이 여러 개다." },
-        { axis: "보상", direction: "확인 필요", reason: "공고에 보상 구간이 없다." },
-      ],
-    },
-    welfareLearning: "정보 없음",
-    techBlogSignal: "정보 없음",
-    businessRisk: "정보 없음",
-    ambiguity: "팀 범위 확인 필요",
-    prepAction: "운영 사례 정리",
-    ...(isStretch ? { stretchGap: "대규모 플랫폼 운영 범위를 확인해야 한다." } : {}),
+    label: index < 4 ? "우선 검토" : "경험 확장 후보",
+    reason: index < 4 ? "백엔드 운영 경험과 맞는다." : "AI 서비스 운영 경험을 확장할 수 있다.",
+    details: [
+      {
+        title: "회사와 역할",
+        content: "성장 중인 제품의 핵심 백엔드를 맡을 가능성이 있다.",
+        evidenceUrls: [candidate.url],
+        assumptions: ["공고의 담당 범위가 입사 후에도 유지된다."],
+      },
+    ],
+    nextActions: ["운영 사례 정리"],
   };
 }
 
 export const run = RecommendationRun.parse({
-  schemaVersion: 5,
+  schemaVersion: 9,
   reportDate: "2026-08-13",
   generatedAt: "2026-08-13T09:00:00+09:00",
-  conclusion: ["지원 검토 가치가 있다."],
-  background: ["외부 공고 후보풀에서 선별했다."],
-  tiers: {
-    strong: pool.candidates
-      .slice(0, 4)
-      .map((candidate, index) => positionItem(candidate, index + 1)),
-    stretch: pool.candidates
-      .slice(4, 7)
-      .map((candidate, index) => positionItem(candidate, index + 5, true)),
-    hold: pool.candidates.slice(7).map((candidate) => ({
-      company: candidate.company,
-      title: candidate.title,
-      link: candidate.url,
-      reason: "역할 범위를 더 확인해야 한다.",
-    })),
-  },
-  candidateRanking: pool.candidates.map((candidate, index) => ({
+  summary: ["지원 검토 가치가 있다."],
+  recommendations: pool.candidates
+    .slice(0, 7)
+    .map((candidate, index) => positionItem(candidate, index)),
+  ranking: pool.candidates.map((candidate, index) => ({
     candidateId: candidate.id,
-    rank: index + 1,
-    upsideDirection: "상향",
-    oneLineReason:
-      index === 0
-        ? "Java·Spring 운영 경험이 역할과 직접 연결된다."
-        : `${candidate.title}의 역할 범위와 후보자 경험을 비교했다.`,
+    company: candidate.company,
+    title: candidate.title,
+    postingUrl: candidate.url,
+    ...(index < 3 ? { note: "우선 검토 후보" } : {}),
   })),
-  additionalTargets: [],
-  recentCheck: ["중복 없음"],
-  weeklyActions: { apply: "공고 확인", resume: "경험 정리", study: "기술 복기" },
+  nextActions: ["공고 확인", "관련 경험 정리"],
   sourceSnapshot: {
     collectionRunId: pool.collectionRunId,
-    candidatePoolPath: "state/posting-candidates.json",
   },
 });

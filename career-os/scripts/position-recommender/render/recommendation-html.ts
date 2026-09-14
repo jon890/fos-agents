@@ -1,10 +1,12 @@
-import type { PositionItemType, RecommendationRunType } from "../recommendation/schema.ts";
+import type {
+  RankedCandidateType,
+  RecommendationItemType,
+  RecommendationRunType,
+} from "../recommendation/schema.ts";
 import { escapeHtml, fragment, type RenderAssets } from "./template.ts";
 
 function link(assets: RenderAssets, value: string): string {
-  return /^https?:\/\//.test(value)
-    ? fragment(assets, "report-link", { url: value })
-    : escapeHtml(value);
+  return fragment(assets, "report-link", { url: value });
 }
 
 function list(assets: RenderAssets, values: string[], name = "report-list"): string {
@@ -12,60 +14,49 @@ function list(assets: RenderAssets, values: string[], name = "report-list"): str
     assets,
     name,
     {},
-    {
-      items: values.map((value) => fragment(assets, "list-item", { value })).join(""),
-    },
+    { items: values.map((value) => fragment(assets, "list-item", { value })).join("") },
   );
 }
 
-function card(assets: RenderAssets, item: PositionItemType, isStretch: boolean): string {
-  const codeList = (values: string[]) =>
-    values.map((value) => fragment(assets, "report-code", { value })).join(", ");
-  const levels: Record<string, string> = {
-    강함: "badge-strong",
-    중간: "badge-mid",
-    약함: "badge-weak",
-  };
-  const directions: Record<string, string> = {
-    상향: "badge-strong",
-    동일: "badge-mid",
-    하향: "badge-weak",
-    "확인 필요": "badge-mid",
-  };
-  const axes = item.companyUpside.axes
-    .map((axis) =>
-      fragment(assets, "report-axis", {
-        ...axis,
-        className: directions[axis.direction] ?? "badge-mid",
-      }),
-    )
-    .join("");
+function detail(assets: RenderAssets, item: RecommendationItemType["details"][number]): string {
+  const evidence = item.evidenceUrls.map((url) => link(assets, url)).join(" · ");
+  const assumptions = item.assumptions.length
+    ? list(assets, item.assumptions, "report-sub-list")
+    : "";
+  return fragment(
+    assets,
+    "report-finding",
+    { title: item.title ?? "근거와 해석", content: item.content },
+    { evidence, assumptions },
+  );
+}
+
+function card(assets: RenderAssets, item: RecommendationItemType, rank: number): string {
   const fields: [string, string][] = [
     ["공고 링크", link(assets, item.postingUrl)],
-    ["링크 근거 수준", escapeHtml(item.linkEvidenceLevel)],
-    ["공고 기간", escapeHtml(item.postingPeriod)],
-    ["수집 source", escapeHtml(item.source)],
-    ["마감일", escapeHtml(item.closeDate ?? "상시/미정")],
-    ["검색 키워드", codeList(item.searchKeywords)],
-    ["왜 맞는가", escapeHtml(item.whyFit)],
-    ["후보자 경험 근거", list(assets, item.candidateEvidence, "report-sub-list")],
-    ["JD에서 노려야 할 키워드", codeList(item.jdKeywords)],
-    [
-      "회사/규모 업사이드",
-      `${fragment(assets, "report-badge", { className: levels[item.companyUpside.level] ?? "badge-mid", value: item.companyUpside.level })} ${escapeHtml(item.companyUpside.reason)}`,
-    ],
-    ["현재 직장 대비 축별 판정", fragment(assets, "report-axes", {}, { items: axes })],
-    ["복지/학습 환경 판단", escapeHtml(item.welfareLearning)],
-    ["기술블로그/엔지니어링 시그널", escapeHtml(item.techBlogSignal)],
-    ["사업/조직/seniority 리스크", escapeHtml(item.businessRisk)],
-    ["확인해야 할 모호점", escapeHtml(item.ambiguity)],
-    ["준비 액션", escapeHtml(item.prepAction)],
+    ["추천 이유", escapeHtml(item.reason)],
   ];
-  if (isStretch && item.stretchGap) fields.push(["Stretch gap", escapeHtml(item.stretchGap)]);
+  if (item.label) fields.push(["추천 판단", escapeHtml(item.label)]);
+  if (item.details.length > 0) {
+    fields.push([
+      "근거와 해석",
+      fragment(
+        assets,
+        "report-findings",
+        {},
+        {
+          items: item.details.map((value) => detail(assets, value)).join(""),
+        },
+      ),
+    ]);
+  }
+  if (item.nextActions.length > 0) {
+    fields.push(["지원 준비", list(assets, item.nextActions, "report-sub-list")]);
+  }
   return fragment(
     assets,
     "report-card",
-    { rank: item.rank, company: item.company, title: item.title },
+    { rank, company: item.company, title: item.title },
     {
       fields: fields
         .map(([label, value]) => fragment(assets, "report-field", { label }, { value }))
@@ -74,12 +65,10 @@ function card(assets: RenderAssets, item: PositionItemType, isStretch: boolean):
   );
 }
 
-function tier(
+function recommendationSection(
   assets: RenderAssets,
-  title: string,
-  className: string,
-  items: PositionItemType[],
-  isStretch: boolean,
+  items: RecommendationItemType[],
+  rankByCandidate: Map<string, number>,
 ): string {
   const content =
     items.length === 0
@@ -89,53 +78,78 @@ function tier(
           "report-cards",
           {},
           {
-            cards: items.map((item) => card(assets, item, isStretch)).join("\n"),
+            cards: items
+              .map((item, index) =>
+                card(assets, item, rankByCandidate.get(item.candidateId) ?? index + 1),
+              )
+              .join("\n"),
           },
         );
-  return fragment(assets, "report-tier", { title, className }, { content });
+  return fragment(
+    assets,
+    "report-tier",
+    { title: "추천 포지션", className: "tier-strong" },
+    {
+      content,
+    },
+  );
+}
+
+function rankingItem(assets: RenderAssets, item: RankedCandidateType, index: number): string {
+  return fragment(assets, "report-ranking-item", {
+    rank: index + 1,
+    company: item.company,
+    title: item.title,
+    url: item.postingUrl,
+    note: item.note ?? "",
+  });
+}
+
+function rankingSection(assets: RenderAssets, items: RankedCandidateType[]): string {
+  return fragment(
+    assets,
+    "report-section",
+    { title: `전체 후보 순위 · ${items.length}건` },
+    {
+      content: fragment(
+        assets,
+        "report-ranking",
+        {},
+        { items: items.map((item, index) => rankingItem(assets, item, index)).join("\n") },
+      ),
+    },
+  );
 }
 
 export function renderReportContent(run: RecommendationRunType, assets: RenderAssets): string {
-  return fragment(
-    assets,
-    "report-content",
-    { ...run.weeklyActions },
-    {
-      conclusion: list(assets, run.conclusion),
-      background: list(assets, run.background),
-      strong: tier(assets, "강력 추천 포지션", "tier-strong", run.tiers.strong, false),
-      stretch: tier(assets, "도전 추천 포지션", "tier-stretch", run.tiers.stretch, true),
-      targets: run.additionalTargets
-        .map((target) =>
-          fragment(
-            assets,
-            "report-target",
-            {
-              company: target.company,
-              reason: target.reason,
-              nextCollectionPoint: target.nextCollectionPoint,
-            },
-            { link: link(assets, target.exploreLink) },
-          ),
-        )
-        .join("\n"),
-      holds: run.tiers.hold
-        .map((hold) =>
-          fragment(
-            assets,
-            "report-hold",
-            {
-              company: hold.company,
-              title: hold.title,
-              reason: hold.reason,
-            },
-            { link: link(assets, hold.link) },
-          ),
-        )
-        .join("\n"),
-      recentCheck: list(assets, run.recentCheck),
-    },
+  const rankByCandidate = new Map(
+    run.ranking.map((item, index) => [item.candidateId, index + 1] as const),
   );
+  const sections = [
+    run.summary.length > 0
+      ? fragment(
+          assets,
+          "report-section",
+          { title: "추천 요약" },
+          {
+            content: list(assets, run.summary),
+          },
+        )
+      : "",
+    recommendationSection(assets, run.recommendations, rankByCandidate),
+    rankingSection(assets, run.ranking),
+    run.nextActions.length > 0
+      ? fragment(
+          assets,
+          "report-section",
+          { title: "다음 행동" },
+          {
+            content: list(assets, run.nextActions),
+          },
+        )
+      : "",
+  ].join("\n");
+  return fragment(assets, "report-content", {}, { sections });
 }
 
 export function renderRecommendationHtml(
@@ -150,7 +164,6 @@ export function renderRecommendationHtml(
     {
       css: assets.css,
       reportHtml: renderReportContent(run, assets),
-      // 이전 기본 템플릿과 --template 소비자가 사용하는 명시적 호환 슬롯이다.
       sourceDiagnosticsHtml: "",
     },
   );

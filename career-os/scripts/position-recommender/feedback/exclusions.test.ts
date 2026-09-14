@@ -144,13 +144,7 @@ describe("개인 공고 제외", () => {
       scope: "company",
       company: "테스트 회사",
       decisionKind: "career-downside",
-      reason: "상향 축이 없고 문제의 난도가 현재보다 낮다.",
-      axes: [
-        { axis: "문제의 난도", direction: "하향", reason: "공개 자료 근거" },
-        { axis: "오너십과 파는 깊이", direction: "동일", reason: "공개 자료 근거" },
-        { axis: "도메인 확장 여지", direction: "확인 필요", reason: "정보 없음" },
-        { axis: "보상", direction: "확인 필요", reason: "정보 없음" },
-      ],
+      reason: "회사의 모든 백엔드 역할에 적용되는 제외 근거를 확인했다.",
       evidenceUrls: ["https://example.com/company", "https://example.com/engineering"],
       decidedAt: "2026-09-10",
     };
@@ -169,7 +163,7 @@ describe("개인 공고 제외", () => {
     expect(result.eligible.map((item) => item.company)).toEqual(["다른 회사"]);
   });
 
-  test("상향이 있거나 하향이 없는 자동 제외를 거부한다", () => {
+  test("고정 판정 축 없이 제외를 허용하고 회사 제외에는 근거 둘을 요구한다", () => {
     const base: EnrichedPositionExclusion = {
       scope: "posting",
       source: posting.source,
@@ -177,12 +171,6 @@ describe("개인 공고 제외", () => {
       url: posting.url,
       decisionKind: "career-downside",
       reason: "검증용",
-      axes: [
-        { axis: "문제의 난도", direction: "하향", reason: "근거" },
-        { axis: "오너십과 파는 깊이", direction: "동일", reason: "근거" },
-        { axis: "도메인 확장 여지", direction: "확인 필요", reason: "정보 없음" },
-        { axis: "보상", direction: "확인 필요", reason: "정보 없음" },
-      ],
       evidenceUrls: [posting.url],
       decidedAt: "2026-09-10",
     };
@@ -190,16 +178,44 @@ describe("개인 공고 제외", () => {
     expect(() =>
       validateCareerDownsideExclusion({
         ...base,
-        axes: base.axes!.map((axis, index) =>
-          index === 0 ? { ...axis, direction: "상향" as const } : axis,
-        ),
+        scope: "company",
+        company: "테스트 회사",
       }),
-    ).toThrow("상향 축");
-    expect(() =>
-      validateCareerDownsideExclusion({
-        ...base,
-        axes: base.axes!.map((axis) => ({ ...axis, direction: "동일" as const })),
-      }),
-    ).toThrow("하향 축");
+    ).toThrow("공개 근거 URL이 두 개");
+  });
+
+  test("회사 역할군 cooldown은 공고명에 맞는 역할만 만료일까지 제외한다", () => {
+    const rule: EnrichedPositionExclusion = {
+      scope: "company-role",
+      company: "테스트 회사",
+      titleKeywords: ["server developer", "백엔드"],
+      decisionKind: "manual",
+      reason: "최근 지원 결과에 따른 재지원 간격",
+      evidenceUrls: [posting.url],
+      decidedAt: "2026-09-14",
+      expiresAt: "2027-03-31",
+    };
+    const frontend = {
+      ...posting,
+      title: "Frontend Developer",
+      identityHash: "frontend",
+      url: "https://example.com/jobs/frontend",
+    };
+    const otherCompany = {
+      ...posting,
+      company: "다른 회사",
+      identityHash: "other",
+      url: "https://example.com/jobs/other",
+    };
+    const config = { schemaVersion: 2 as const, exclusions: [rule] };
+
+    expect(
+      filterExcludedPostings([posting, frontend, otherCompany], config, new Date("2027-03-31"))
+        .eligible,
+    ).toEqual([frontend, otherCompany]);
+    expect(
+      filterExcludedPostings([posting, frontend, otherCompany], config, new Date("2027-04-01"))
+        .eligible,
+    ).toEqual([posting, frontend, otherCompany]);
   });
 });

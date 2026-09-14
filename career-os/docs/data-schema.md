@@ -7,7 +7,7 @@ career-os는 사람이 관리하는 설정, 실행 상태, 비공개 산출물, 
 - `config/`에는 오래 유지할 수집 정책을 둔다.
 - `applications/`, `library/`와 `state/`는 홈서버 `career-os` S3 collection의 release와 동기화하는 로컬 작업본이다.
 - `cache/`에는 원본에서 다시 만들 수 있는 수집 결과를 둔다.
-- `public/`과 `sources/fos-study/`에는 공개 가능한 자료만 둔다.
+- `public/question-bank/`과 `sources/fos-study/`에는 공개 가능한 자료만 둔다.
 - 게시용 HTML과 실행별 중간 데이터는 시스템 임시 디렉터리에 두고 검증 뒤 삭제한다.
 
 ## 개인 공고 제외 설정
@@ -26,14 +26,9 @@ career-os는 사람이 관리하는 설정, 실행 상태, 비공개 산출물, 
       "source": "wanted",
       "identityHash": "wanted:example-id",
       "decisionKind": "career-downside",
-      "reason": "현재 직장보다 나아지는 축이 없고 문제의 난도가 낮다.",
-      "axes": [
-        { "axis": "문제의 난도", "direction": "하향", "reason": "공고 근거" },
-        { "axis": "오너십과 파는 깊이", "direction": "확인 필요", "reason": "정보 없음" },
-        { "axis": "도메인 확장 여지", "direction": "동일", "reason": "공고 근거" },
-        { "axis": "보상", "direction": "확인 필요", "reason": "정보 없음" }
-      ],
+      "reason": "공고의 역할 범위가 희망하는 모듈 소유권과 맞지 않는다.",
       "evidenceUrls": ["https://example.com/jobs/example-id"],
+      "confidence": "medium",
       "decidedAt": "2026-09-10"
     }
   ]
@@ -42,15 +37,17 @@ career-os는 사람이 관리하는 설정, 실행 상태, 비공개 산출물, 
 
 공고 규칙은 정식 `source`와 `identityHash`, HTTPS `url` 중 하나 이상을 가진다.
 회사 규칙은 `scope: company`와 정확한 회사명, 회사 전체 판단에 사용하는 공개 근거 URL을 두 개 이상 가진다.
+회사 내 역할군만 잠시 제외할 때는 `scope: company-role`, 정확한 회사명과
+공고명에서 찾을 `titleKeywords`를 사용한다.
 같은 소스에서 식별자나 정규화 URL 중 하나가 일치하거나 회사명이 정확히 일치하면 제외한다.
 URL은 fragment, `utm_*`, `fbclid`, `gclid`를 제거하고 query 순서와 마지막 슬래시를 정규화한다.
 공고 ID를 담는 query는 보존한다.
 새 ID로 등록된 공고는 명시된 식별자나 URL이 일치하지 않으면 유지한다.
 
-`career-downside` 규칙은 네 업사이드 축을 모두 기록한다.
-`상향`이 하나도 없고 `하향`이 하나 이상일 때만 저장한다.
-정보 부족, 단순 보류와 낮은 추천 순위는 자동 제외 근거가 아니다.
+`career-downside` 규칙은 사용자가 명시적으로 제외하기로 한 사유와 공개 근거를 기록한다.
+추천 실행이 제외 규칙을 자동으로 만들거나 갱신하지 않는다.
 지원 결과처럼 업사이드 비교와 다른 이유는 `manual`로 기록한다.
+재지원 간격처럼 종료일이 있는 규칙은 `expiresAt`까지 적용하고 다음 날부터 자동으로 후보풀에 되돌린다.
 버전 1의 기존 공고 규칙은 읽을 수 있지만 새 규칙은 이유와 결정 근거가 있는 버전 2로 저장한다.
 
 수집기는 설정을 외부 요청 전에 읽고, 누락이나 형식 오류가 있으면 종료 코드 1로 중단한다.
@@ -123,6 +120,9 @@ publish tar의 최상위에는 `workspace-draft.json`과 같은 세 관리 root�
 성공 JSON만 stdout에 기록한다.
 실패는 nonzero 종료 코드와 stderr의 `schemaVersion`, `action`, `ok: false`, `code`를 가진 JSON으로 반환한다.
 공통 오류 코드는 `WORKSPACE_DIRTY`, `REMOTE_UNINITIALIZED`, `REVISION_CONFLICT`, `INVALID_MANIFEST`, `TRANSFER_FAILED`, `TRANSPORT_UNAVAILABLE`, `RESTORE_REQUIRED`다.
+같은 코드가 여러 원인에서 나오는 자리에는 선택 항목 `detail`로 무엇이 어긋났는지와 다음에 실행할 명령을 한국어로 함께 담는다.
+`TRANSPORT_UNAVAILABLE`은 `.env` 파일이 없거나 원격 연결 값이 비어 있는 경우를 연결 실패와 구분한다.
+`RESTORE_REQUIRED`는 세션 기록이 없는 경우, 기록의 skill이 다른 경우, 기록의 revision이 현재 작업본과 다른 경우를 구분한다.
 오류에는 파일 본문, 호스트, 계정, key 경로와 비밀값을 포함하지 않는다.
 
 Markdown, JSON, 검토용 HTML, PDF와 실제 제출 묶음은 해당 application 디렉터리 안에서 함께 동기화한다.
@@ -185,6 +185,69 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 
 ## 공고 후보풀과 추천 결과
 
+### 재사용하는 회사 조사 데이터
+
+`state/company-research.json`은 포지션 추천이 다음 실행에서도 재사용할 공개 회사 사실과
+그 사실에서 도출한 추론을 담는다. 비공개 작업 release로 동기화하지만 현재 역할,
+개인 우선순위와 최종 추천 순위는 넣지 않는다.
+
+```json
+{
+  "schemaVersion": 1,
+  "companies": [
+    {
+      "companyKey": "example-company",
+      "company": "예시 회사",
+      "aliases": ["Example Company"],
+      "researchedAt": "2026-09-14T12:00:00+09:00",
+      "facts": [
+        {
+          "factId": "example-company-growth-2026-q3",
+          "topic": "growth",
+          "scope": "company",
+          "statement": "공식 실적 발표에서 유료 고객 수가 전년 동기보다 증가했다.",
+          "source": {
+            "url": "https://example.com/ir/2026-q3",
+            "title": "2026년 3분기 실적",
+            "publisher": "예시 회사",
+            "sourceType": "investor-relations",
+            "publishedAt": "2026-09-01",
+            "observedAt": "2026-09-14T12:00:00+09:00"
+          },
+          "validUntil": "2026-12-13"
+        }
+      ],
+      "inferences": [
+        {
+          "inferenceId": "example-company-domain-upside-2026-q3",
+          "topic": "domain-growth",
+          "statement": "고객 증가가 이어지면 공통 구조와 운영 안정성을 다룰 문제도 커질 가능성이 있다.",
+          "basisFactIds": ["example-company-growth-2026-q3"],
+          "assumptions": ["고객 증가가 해당 백엔드 팀의 처리 범위 확대로 이어진다."],
+          "confidence": "medium",
+          "inferredAt": "2026-09-14T12:00:00+09:00",
+          "validUntil": "2026-12-13"
+        }
+      ],
+      "researchGaps": [
+        {
+          "topic": "compensation",
+          "question": "백엔드 경력직 총보상 구간을 확인할 공개 자료가 있는가",
+          "lastAttemptedAt": "2026-09-14T12:00:00+09:00",
+          "retryAfter": "2026-10-14"
+        }
+      ]
+    }
+  ]
+}
+```
+
+`topic`과 `scope`는 조사한 회사와 공고에 맞는 이름을 자유롭게 쓴다.
+각 사실은 HTTPS 출처를 갖는다. 유효기간, 추론의 가정과 신뢰도는 재사용 판단에 도움이 될 때만 넣는다.
+`researchGaps`는 같은 조사를 매 실행마다 반복하지 않도록
+재조사할 질문과 날짜를 보존한다. 현재 형식은
+`scripts/position-recommender/company-research/schema.ts`가 검증한다.
+
 ### 공고 후보풀
 
 수집기는 각 외부 공고를 공통 형태로 변환한다.
@@ -213,26 +276,24 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 핵심 필드:
 
 - 실행 날짜와 후보풀 출처
-- 추천 공고 목록
-- 공고별 지원 판단과 근거
-- 요구사항 대비 확인된 강점과 위험
-- 다음 수집부터 적용할 자동 제외 제안
-- 후보풀 전체의 적합도 순위와 공개 가능한 한 줄 판단
-- 공고별 현재 직장 대비 업사이드 판정
-- 다음 행동
+- 모든 후보를 한 번씩 담은 전체 순위
+- 전체 순위 앞부분에서 고른 상세 추천 공고 목록
+- 공고별 지원 이유
+- 모델이 필요에 따라 붙인 자유 라벨, 상세 근거와 다음 행동
 
 추천 항목의 URL과 공고 정보는 후보풀 원문과 일치해야 한다.
 
-업사이드는 `문제의 난도`, `오너십과 파는 깊이`, `도메인 확장 여지`, `보상` 네 축으로 나눠
-각 축을 `상향`, `동일`, `하향`, `확인 필요` 중 하나로 판정하고 근거를 함께 담는다.
-추천 티어 항목은 네 축을 빠짐없이 갖고, 후보풀 전체 순위는 네 축을 합친 종합 방향 하나를 갖는다.
-축 이름은 스키마의 `UPSIDE_AXES`가 소유하며, 비교 기준값은 private brain이 소유한다.
-전체 후보 순위는 1부터 후보 수까지 이어지며 모든 후보 ID를 한 번씩 포함한다.
-강력 추천과 도전 추천의 순위는 전체 후보 순위와 일치한다.
-강력 추천, 도전 추천과 보류·주의 목록에는 고정 개수 제한을 두지 않는다.
-모델은 후보풀 전체를 분석하고 기준을 통과한 공고를 모두 분류하며, 정해진 개수를 채우려고 기준 미달 공고를 올리지 않는다.
+전체 순위 배열의 순서가 1위부터 마지막 순위까지의 우선순위다.
+상세 추천은 전체 순위의 앞부분과 같은 순서를 사용한다.
+라벨과 상세 근거의 제목은 후보마다 자유롭게 구성하고 필요 없으면 생략한다.
+사실과 추론에 공개 근거가 있으면 URL을 기록하며, 가정은 판단에 영향을 줄 때만 덧붙인다.
+개인 우선순위와 현재 역할은 private brain이 소유하며 스키마의 고정 판정값으로 저장하지 않는다.
+추천 개수와 분류는 스키마가 정하지 않는다.
+낮은 순위의 후보에는 보류 사유나 판정값을 강제로 만들지 않는다.
 게시용 HTML은 이 결과에서 만든다.
+HTML은 상세 추천과 함께 전체 순위를 펼쳐 보고 회사, 공고명, 기술과 공고 본문으로 검색할 수 있게 만든다.
 후보풀, 추천 JSON과 HTML은 게시 검증 뒤 삭제한다.
+회사 조사 데이터는 실행별 산출물이 아니므로 `state/company-research.json`에 유지한다.
 
 ## 지원 패키지
 
@@ -254,13 +315,19 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 
 ### `evidence/`
 
-- `posting.md`: 공고 원문을 항목으로 나눈 기준본이며 원문 표현이 판단을 가르는 곳은 낱말을 그대로 남긴다
+- `posting.md`: 공고 원문이며 공식 페이지의 절 구조를 그대로 둔다. 쪼갠 항목 목록은 `fit.md` 의 적합도 표가 담는다
 - `candidate-interview.md`: 후보자 원문 답변, 정리한 핵심과 제출 반영 여부
-- `application-package.md`: 공고 항목별 적합도, 후보자 근거, 지원 판단, 승부처, 공백과 다음 행동을 담은 원본
+- `fit.md`: 결론, 공고 항목별 적합도 표, 구분별 가중치, 공개 자료로 확인한 팀과 인접 사례
+- `strategy.md`: 승부처, 지원동기, 기여 시나리오, 보완할 공백, 회사 문화와의 연결, 면접에서 검증받을 내용이며 시장과 규모로 판단하는 「이 자리에서 얻을 경험과 성장」을 선택 절로 둔다
+- `status.md`: 준비 상태 세 줄과 제출 준비 상태, 사용자 확인 필요, 다음 행동
 - `resume-draft.md`: HTML과 PDF로 변환할 제출용 이력서 원본
 - `interview-questions.json`: 공고 책임, 근거 방어와 경험 공백에서 만든 포지션별 질문
 - `career-description-draft.md`: 경력기술서를 받는 공고에만 둔다
 - `application-form.json`: 브라우저 자동 입력을 준비할 때만 둔다
+
+**`interview-questions.json` 은 `application-package-writer` 가 만들고 소유한다.**
+`resume-preparer` 와 `interview-practice` 는 질문을 더할 수 있으나 기존 질문을 지우거나 다시 쓰지 않는다.
+세 스킬이 같은 파일에 쓰므로 소유자를 하나로 둔다.
 
 앞의 다섯이 기본 원본이다.
 `application-package-writer`는 지원 판단과 후보자 인터뷰를 관리하고, `resume-preparer`는 `resume-draft.md`와 제출 문서를 관리한다.
@@ -280,53 +347,34 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 ### 검토 화면
 
 `application-package.html`은 준비 상태, 결론, 제출 PDF와 조건부 지원서 입력값을 탭 밖 상단에 고정한다.
-본문은 `공고 적합도`, `지원 전략`, `공고 원문`, `상세 자료` 네 탭으로 나눈다.
+본문은 `공고 원문`, `공고 적합도`, `지원 전략`, `상세 자료` 네 탭으로 나누며 `공고 원문`이 기본 선택이다.
 `공고 적합도` 탭의 첫 내용은 공고 항목 하나에 한 행을 주는 적합도 표다.
+`지원 전략` 탭은 「이 자리에서 얻을 경험과 성장」을 「입사 후 기여 시나리오」와 「보완할 공백」 사이에 둔다.
+이 절은 선택 절이며, 없으면 나머지 순서를 그대로 두고 건너뛴다.
 `공고 원문` 탭은 `evidence/posting.md`를 읽어 보여주며 원문을 다른 파일에 복제하지 않는다.
 
-지원 패키지 검증기는 이 스키마에 없는 파일과 층이 어긋난 파일을 거부해 일회성 검토 문서가 쌓이지 않게 한다.
+지원 패키지 검증기는 제출 문서와 지원서 답변에 내부 정보가 남았는지만 본다.
+어떤 파일과 절을 만들지는 `application-package-writer` 의 지침이 정한다.
 
 ### 적합도 판정과 점수
 
-`evidence/application-package.md`의 「공고 항목별 적합도」 표는 공고 항목 하나에 한 행을 준다.
-공고 한 줄에 컴포넌트가 여럿 들어 있으면 각각을 별도 행으로 쪼갠다.
+판단 기준은
+[`fit-judgment.md`](../.claude/skills/application-package-writer/references/fit-judgment.md)가 소유한다.
+행별 점수와 구분별 가중치는 모델이 공고를 보고 정해 `evidence/fit.md` 에 남긴다.
+소계와 총점은 그 둘로 `fit_score.ts` 가 계산한다.
+색 구간은 `render/constants.ts` 가 소유한다.
 
-표의 열은 `공고 항목`, `공고 구분`, `근거`, `판정` 넷이다.
-`공고 구분`은 `주요 업무`, `기대 경험`, `우대 경험` 중 하나다.
+`evidence/status.md`의 준비 상태 값과 판단 기준은
+[`application-quality-rubric.md`](../.claude/skills/application-package-writer/references/application-quality-rubric.md)의 「판정」이 소유한다.
 
-| 판정          | 점수      | 기준                                                   |
-| ------------- | --------- | ------------------------------------------------------ |
-| `확인됨`      | 100       | 제출 문장으로 쓸 직접 근거가 있다                      |
-| `강한 인접`   | 75        | 같은 문제 유형을 다뤘고 연결을 설명할 필요가 거의 없다 |
-| `인접 경험`   | 50        | 전환할 수 있지만 왜 같은 문제인지 설명해야 한다        |
-| `공백`        | 0         | 직접 근거가 없다                                       |
-| `사용자 확인` | 계산 제외 | 후보자만 확정할 수 있어 아직 판정할 수 없다            |
+첫 10줄의 `evidence`는 제출 문장이 현재 근거 범위 안에 있는지의 상태다.
 
-| 공고 구분 | 가중치 |
-| --------- | ------ |
-| 주요 업무 | 3      |
-| 기대 경험 | 2      |
-| 우대 경험 | 1      |
+| 값 | 뜻 |
+| --- | --- |
+| `safe` | 제출 문장이 모두 확인한 근거 범위 안에 있다 |
+| `revise` | 근거보다 넓게 읽히는 문장이 있어 표현을 낮춰야 한다 |
+| `blocked` | 근거를 확인하기 전에는 그 문장을 제출에 쓸 수 없다 |
 
-총점은 `Σ(점수 × 가중치) ÷ Σ(100 × 가중치) × 100`이며 소수 첫째 자리까지 남긴다.
-구분별 소계는 같은 식을 그 구분의 행에만 적용한다.
-`사용자 확인` 행은 분자와 분모 양쪽에서 뺀다.
-
-총점은 합격 확률이 아니다.
-공고 요구와 현재 확보한 근거가 얼마나 맞닿아 있는지를 나타낸다.
-
-검토 화면은 총점과 구분별 소계를 색이 있는 원으로 표시한다.
-
-| 점수 구간       | 색        |
-| --------------- | --------- |
-| 85 이상         | 진한 초록 |
-| 65 이상 85 미만 | 초록      |
-| 45 이상 65 미만 | 노랑      |
-| 25 이상 45 미만 | 주황      |
-| 25 미만         | 빨강      |
-
-`evidence/application-package.md`의 준비 상태는 `ready`, `needs_user_input`, `revise`, `do_not_apply` 중 하나다.
-이 상태는 합격 가능성 점수가 아니라 현재 근거와 사용자 확인을 기준으로 한 제출 준비 상태다.
 첫 10줄의 `human-confirmation`은 본인 역할, 당시 제약, 기각한 대안, 결과의 확인 범위와 제출 문구 동의처럼 후보자만 확정할 수 있는 사실과 표현 확인 상태다.
 값은 `complete` 또는 `needs_input`이며, `needs_input`이면 준비 상태를 `ready`로 둘 수 없다.
 
@@ -350,6 +398,9 @@ claim ledger를 다시 설명하는 evidence audit는 별도 파일로 만들지
 
 근거 장부는 대상 HTML의 내용 해시와 연결해 다른 버전의 증거를 잘못 재사용하지 않게 한다.
 `schemaVersion: 2`부터 기술 범위, 경력 기간, 운영과 숙련도 주장은 `experienceDepth`에 사용, 기능 개발, 운영 깊이 또는 사용자 확인 수준을 기록한다.
+`schemaVersion: 3`부터 `document`와 `user` 근거에 `locator`를 필수로 두고, 검증기가 그 자리를 근거 파일에서 직접 찾는다.
+locator 형식과 판정 기준은 `.claude/skills/resume-preparer/references/claim-model.md`가 소유한다.
+새로 만드는 원장은 `schemaVersion: 3`을 쓴다. 이미 제출한 `schemaVersion: 2` 원장은 locator 어긋남을 경고로만 보고하고 소급해 고치지 않는다.
 `safe`가 아닌 판정이 하나라도 남으면 제출 준비가 끝난 것으로 보지 않는다.
 `review/resume-scorecard.md`에는 독립된 인사담당자와 실무담당자 판정, 경쟁상 차단 항목, 근거 방어 결과와 통제할 수 없는 위험을 기록한다.
 정량 점수로 약한 필수 조건을 상쇄하지 않으며 두 블라인드 검토자가 모두 통과해야 한다.
@@ -535,7 +586,8 @@ dry-run 응답은 `<output>.preview.json`, 변환 오류는 `<output>.errors.jso
 - `cache/`: 피드와 공고에서 다시 만들 수 있는 중간 결과
 
 HTML 게시 전에는 개인 정보, 비공개 업무 내용, 로컬 절대 경로를 검사한다.
-포지션 추천 HTML은 전체 추천 중 상위 3건의 우선 검토 카드, 나머지 추천의 압축 목록, 별도 보류·주의 목록과 전체 후보 순위의 접이식 검색 목록으로 표시한다.
+포지션 추천 HTML은 전체 추천 중 상위 3건의 우선 검토 카드, 나머지 추천의 압축 목록,
+별도 보류·주의 목록과 검토한 후보의 접이식 검색 목록으로 표시한다.
 포지션 추천은 HTML만 생성하며 Markdown 리포트는 만들지 않는다.
 `recommendation.json`과 후보풀 JSON은 검증 입력으로 유지하고 기존 개인 Markdown 파일은 삭제하지 않는다.
 외부 공유 URL은 `report-publisher` skill이 게시와 검증을 마친 뒤 제공한다.

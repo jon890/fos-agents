@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { isNonTargetTitle, isTargetRole } from "./policy.ts";
+import { isNonTargetTitle, isTargetRole, isTargetRoleTitle } from "./policy.ts";
 
 test("keeps a backend and AI productivity role when frontend is only a preferred adjacent skill", () => {
   const jd =
@@ -16,4 +16,14 @@ test("excludes a compliance title even when its JD mentions system construction"
 
 test("excludes Korean security roles before broad JD keywords are evaluated", () => {
   assert.equal(isNonTargetTitle("[인프라] 보안 엔지니어"), true);
+});
+
+test("requires an engineering role in ambiguous platform and infrastructure titles", () => {
+  assert.equal(isTargetRoleTitle("상담팀 리드 (토스플랫폼 전담팀)"), false);
+  assert.equal(isTargetRoleTitle("Category MD (생활 - 가구/홈데코/주방용품)"), false);
+  assert.equal(isTargetRoleTitle("FE Platform Engineer"), false);
+  assert.equal(isTargetRoleTitle("Data Analytics Engineer (Platform)"), false);
+  assert.equal(isTargetRoleTitle("AI Platform Engineer (Serving)"), true);
+  assert.equal(isTargetRoleTitle("Platform Engineer"), true);
+  assert.equal(isTargetRoleTitle("Node.js Developer"), true);
 });

@@ -1,8 +1,8 @@
-import { describe, expect, test } from "bun:test";
+import { expect, test } from "bun:test";
 import { buildPostingCandidatePool } from "../live-postings/candidate_pool.ts";
 import type { CollectionDiagnostics, Posting } from "../live-postings/types.ts";
-import { RecommendationRun } from "./schema.ts";
 import { validateRecommendationAgainstPool } from "../validate_recommendation.ts";
+import { RecommendationRun } from "./schema.ts";
 
 const posting: Posting = {
   source: "wanted",
@@ -17,7 +17,7 @@ const posting: Posting = {
   daysUntilClose: "",
   closeUrgency: "no_deadline",
   category: "개발",
-  summary: "",
+  summary: "서버 개발",
   tags: [],
   skills: ["Java"],
   dueTime: "",
@@ -25,6 +25,7 @@ const posting: Posting = {
   requirements: "Java",
   preferred: "",
 };
+
 const diagnostics: CollectionDiagnostics = {
   collectionRunId: "run-1",
   collectedAt: "2026-08-13T00:00:00.000Z",
@@ -36,155 +37,140 @@ const diagnostics: CollectionDiagnostics = {
   errors: [],
 };
 
-test("모델이 후보풀에 없는 공고를 추천하지 못하게 막는다", () => {
+function ranked(candidate: { id: string; company: string; title: string; url: string }) {
+  return {
+    candidateId: candidate.id,
+    company: candidate.company,
+    title: candidate.title,
+    postingUrl: candidate.url,
+  };
+}
+
+function envelope(
+  recommendations: Record<string, unknown>[] = [],
+  ranking: Record<string, unknown>[] = [],
+) {
+  return {
+    schemaVersion: 9 as const,
+    reportDate: "2026-08-13",
+    generatedAt: "2026-08-13T09:00:00+09:00",
+    summary: [] as string[],
+    recommendations,
+    ranking,
+    nextActions: [] as string[],
+    sourceSnapshot: { collectionRunId: "run-1" },
+  };
+}
+
+test("후보풀에 없는 공고는 추천하지 못하게 막는다", () => {
+  const { pool } = buildPostingCandidatePool([posting], diagnostics);
+  const raw = envelope(
+    [
+      {
+        candidateId: "wanted:missing",
+        company: pool.candidates[0].company,
+        title: pool.candidates[0].title,
+        postingUrl: pool.candidates[0].url,
+        reason: "적합하다.",
+      },
+    ],
+    [ranked(pool.candidates[0])],
+  );
+  const run = RecommendationRun.parse(raw);
+  expect(validateRecommendationAgainstPool(run, pool)).toContain(
+    "후보풀에 없는 추천 공고 ID: wanted:missing",
+  );
+});
+
+test("추천 공고의 회사명과 공고명과 URL을 후보풀 원문에 대조한다", () => {
   const { pool } = buildPostingCandidatePool([posting], diagnostics);
   const candidate = pool.candidates[0];
-  const run = RecommendationRun.parse({
-    schemaVersion: 5,
-    reportDate: "2026-08-13",
-    generatedAt: "2026-08-13T09:00:00+09:00",
-    conclusion: ["결론"],
-    background: ["배경"],
-    tiers: {
-      strong: [
+  const run = RecommendationRun.parse(
+    envelope(
+      [
         {
-          candidateId: "wanted:missing",
-          rank: 1,
-          company: candidate.company,
-          title: candidate.title,
-          postingUrl: candidate.url,
-          exploreLink: "-",
-          linkEvidenceLevel: "개별 공고 active 확인",
-          postingPeriod: "상시",
-          source: candidate.source,
-          closeDate: null,
-          searchKeywords: ["Java"],
-          whyFit: "적합",
-          candidateEvidence: ["경험"],
-          jdKeywords: ["Java"],
-          companyUpside: {
-            level: "중간",
-            reason: "추가 확인 필요",
-            axes: [
-              {
-                axis: "문제의 난도",
-                direction: "상향",
-                reason: "공고가 대규모 트래픽 환경을 명시한다.",
-              },
-              {
-                axis: "오너십과 파는 깊이",
-                direction: "확인 필요",
-                reason: "팀의 문제 정의 범위가 공고에 없다.",
-              },
-              { axis: "도메인 확장 여지", direction: "상향", reason: "인접 제품군이 여러 개다." },
-              { axis: "보상", direction: "확인 필요", reason: "공고에 보상 구간이 없다." },
-            ],
-          },
-          welfareLearning: "확인 필요",
-          techBlogSignal: "확인 필요",
-          businessRisk: "확인 필요",
-          ambiguity: "확인 필요",
-          prepAction: "준비",
+          candidateId: candidate.id,
+          company: "다른 회사",
+          title: "다른 공고",
+          postingUrl: "https://example.com/jobs/other",
+          reason: "적합하다.",
         },
       ],
-      stretch: [],
-      hold: [],
-    },
-    candidateRanking: [
+      [ranked(candidate)],
+    ),
+  );
+  expect(validateRecommendationAgainstPool(run, pool)).toEqual([
+    `${candidate.id}: 추천 공고 URL이 후보풀과 다르다.`,
+    `${candidate.id}: 추천 회사명이 후보풀과 다르다.`,
+    `${candidate.id}: 추천 공고명이 후보풀과 다르다.`,
+  ]);
+});
+
+test("추천 분류와 상세 근거는 자유롭게 생략하거나 구성한다", () => {
+  const { pool } = buildPostingCandidatePool([posting], diagnostics);
+  const candidate = pool.candidates[0];
+  const minimal = envelope(
+    [
       {
         candidateId: candidate.id,
-        rank: 1,
-        upsideDirection: "확인 필요",
-        oneLineReason: "Java 경험은 맞지만 추천 ID가 잘못됐다.",
+        company: candidate.company,
+        title: candidate.title,
+        postingUrl: candidate.url,
+        reason: "운영 안정성과 공통 구조 경험을 확장할 수 있다.",
       },
     ],
-    additionalTargets: [],
-    recentCheck: ["확인"],
-    weeklyActions: { apply: "지원", resume: "수정", study: "학습" },
-    sourceSnapshot: {
-      collectionRunId: pool.collectionRunId,
-      candidatePoolPath: "state/posting-candidates.json",
-    },
-  });
-  expect(validateRecommendationAgainstPool(run, pool)).toContain(
-    "후보풀에 없는 공고 ID: wanted:missing",
+    [ranked(candidate)],
   );
+  expect(RecommendationRun.safeParse(minimal).success).toBe(true);
+  const detailed = structuredClone(minimal);
+  detailed.recommendations[0] = {
+    ...detailed.recommendations[0],
+    label: "지금 가장 검토할 포지션",
+    details: [
+      {
+        title: "회사 성장과 역할",
+        content: "공개 자료에서 확인한 사실을 토대로 중요한 모듈을 맡을 가능성을 판단했다.",
+        evidenceUrls: [candidate.url],
+        assumptions: ["공고의 역할 범위가 실제 팀에서도 유지된다."],
+      },
+    ],
+  };
+  expect(RecommendationRun.safeParse(detailed).success).toBe(true);
 });
 
-test("전체 후보 순위에서 누락된 공고를 검출한다", () => {
-  const secondPosting: Posting = {
+test("전체 순위는 후보풀의 모든 공고를 한 번씩 포함한다", () => {
+  const second = {
     ...posting,
-    title: "플랫폼 개발자",
+    title: "플랫폼 백엔드 개발자",
     url: "https://example.com/jobs/2",
   };
-  const { pool } = buildPostingCandidatePool([posting, secondPosting], diagnostics);
-  const run = RecommendationRun.parse({
-    schemaVersion: 5,
-    reportDate: "2026-08-13",
-    generatedAt: "2026-08-13T09:00:00+09:00",
-    conclusion: ["결론"],
-    background: ["배경"],
-    tiers: { strong: [], stretch: [], hold: [] },
-    candidateRanking: [
-      {
-        candidateId: pool.candidates[0].id,
-        rank: 1,
-        upsideDirection: "상향",
-        oneLineReason: "Java 경험이 역할과 연결된다.",
-      },
-    ],
-    additionalTargets: [],
-    recentCheck: ["확인"],
-    weeklyActions: { apply: "지원", resume: "수정", study: "학습" },
-    sourceSnapshot: {
-      collectionRunId: pool.collectionRunId,
-      candidatePoolPath: "state/posting-candidates.json",
-    },
-  });
-
-  const errors = validateRecommendationAgainstPool(run, pool);
-  expect(errors.some((error) => error.includes("전체 후보 순위에서 1개 공고가 누락됐다"))).toBe(
-    true,
+  const { pool } = buildPostingCandidatePool([posting, second], diagnostics);
+  const run = RecommendationRun.parse(envelope([], [ranked(pool.candidates[0])]));
+  expect(validateRecommendationAgainstPool(run, pool)).toContain(
+    `순위에서 빠진 공고 ID: ${pool.candidates[1].id}`,
   );
-  expect(errors).toContain("전체 후보 순위는 1부터 2까지 중복 없이 이어져야 한다.");
 });
 
-test("자동 제외 제안은 상향 없이 하향 근거를 가져야 한다", () => {
-  const base = {
-    candidateId: "wanted:example",
-    scope: "posting",
-    reason: "현재보다 낮은 난도의 유지보수 역할이다.",
-    evidenceUrls: ["https://example.com/jobs/1"],
-    axes: [
-      { axis: "문제의 난도", direction: "하향", reason: "공고 근거" },
-      { axis: "오너십과 파는 깊이", direction: "동일", reason: "공고 근거" },
-      { axis: "도메인 확장 여지", direction: "확인 필요", reason: "정보 없음" },
-      { axis: "보상", direction: "확인 필요", reason: "정보 없음" },
-    ],
+test("상세 추천은 전체 순위의 앞부분과 같은 순서를 사용한다", () => {
+  const second = {
+    ...posting,
+    title: "플랫폼 백엔드 개발자",
+    url: "https://example.com/jobs/2",
   };
-  const envelope = {
-    schemaVersion: 5,
-    reportDate: "2026-08-13",
-    generatedAt: "2026-08-13T09:00:00+09:00",
-    conclusion: ["결론"],
-    background: ["배경"],
-    tiers: { strong: [], stretch: [], hold: [] },
-    candidateRanking: [
-      { candidateId: "wanted:example", rank: 1, upsideDirection: "하향", oneLineReason: "판단" },
-    ],
-    autoExclusionSuggestions: [base],
-    additionalTargets: [],
-    recentCheck: ["확인"],
-    weeklyActions: { apply: "지원", resume: "수정", study: "학습" },
-    sourceSnapshot: { collectionRunId: "run-1", candidatePoolPath: "pool.json" },
-  };
-  expect(RecommendationRun.safeParse(envelope).success).toBe(true);
-  const upward = structuredClone(envelope);
-  upward.autoExclusionSuggestions[0].axes[0].direction = "상향";
-  expect(RecommendationRun.safeParse(upward).success).toBe(false);
-  const noDownward = structuredClone(envelope);
-  noDownward.autoExclusionSuggestions[0].axes = noDownward.autoExclusionSuggestions[0].axes.map(
-    (axis) => ({ ...axis, direction: "동일" }),
+  const { pool } = buildPostingCandidatePool([posting, second], diagnostics);
+  const top = pool.candidates[0];
+  const run = RecommendationRun.parse(
+    envelope(
+      [
+        {
+          ...ranked(top),
+          reason: "상세 검토할 가치가 있다.",
+        },
+      ],
+      [ranked(pool.candidates[1]), ranked(top)],
+    ),
   );
-  expect(RecommendationRun.safeParse(noDownward).success).toBe(false);
+  expect(validateRecommendationAgainstPool(run, pool)).toContain(
+    `상세 추천 1위가 전체 순위와 다르다: ${top.id}`,
+  );
 });

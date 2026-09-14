@@ -1,46 +1,54 @@
 import { expect, test } from "bun:test";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { toHtml, toReportHtml } from "../render_recommendation.ts";
 import { run } from "./fixture.ts";
 
-test("상세 추천은 모든 티어와 필드, 축별 근거와 추가 대상을 보존한다", () => {
-  const sample = structuredClone(run);
-  sample.additionalTargets = [
-    {
-      company: "추가 회사",
-      exploreLink: "https://example.com/search",
-      reason: "탐색 필요",
-      nextCollectionPoint: "공식 공고",
-    },
-  ];
-  const html = toReportHtml(sample);
+test("상세 추천은 순서와 자유 라벨과 근거 묶음을 보존한다", () => {
+  const html = toReportHtml(run);
   expect(html.match(/<li class="card">/g)).toHaveLength(7);
-  expect(html.match(/<li class="card hold">/g)).toHaveLength(4);
-  expect(html).toContain("Stretch gap");
-  expect(html).toContain("공고가 대규모 트래픽 환경을 명시한다.");
-  expect(html).toContain('<a href="https://example.com/search">https://example.com/search</a>');
+  expect(html.match(/<span class="ranking-number">/g)).toHaveLength(11);
+  expect(html).toContain("전체 후보 순위 · 11건");
+  expect(html).toContain("우선 검토");
+  expect(html).toContain("회사와 역할");
+  expect(html).toContain("성장 중인 제품의 핵심 백엔드를 맡을 가능성이 있다.");
+  expect(html).toContain('<a href="https://example.com/jobs/1">https://example.com/jobs/1</a>');
   for (const label of [
-    "한 줄 결론",
-    "추천 배경 요약",
-    "마감일",
-    "상시/미정",
-    "후보자 경험 근거",
-    "최근 반복 점검",
-    "이번 주 액션 플랜",
-    "공식 공고",
+    "추천 요약",
+    "추천 포지션",
+    "추천 이유",
+    "근거와 해석",
+    "전체 후보 순위",
+    "다음 행동",
   ])
     expect(html).toContain(label);
 });
 
-test("빈 추천과 텍스트 링크는 기존 표시를 유지한다", () => {
+test("추천이 없으면 빈 추천 목록만 표시한다", () => {
   const sample = structuredClone(run);
-  sample.tiers.strong = [];
-  sample.tiers.stretch = [];
-  sample.tiers.hold[0].link = "확인 필요";
+  sample.recommendations = [];
   const html = toReportHtml(sample);
-  expect(html.match(/<p class="empty">해당 없음<\/p>/g)).toHaveLength(2);
-  expect(html).toMatch(/<dt>링크<\/dt>\s*<dd>확인 필요<\/dd>/);
+  expect(html.match(/<p class="empty">해당 없음<\/p>/g)).toHaveLength(1);
+});
+
+test("선택 자료가 없으면 빈 절을 만들지 않는다", () => {
+  const sample = structuredClone(run);
+  sample.summary = [];
+  sample.nextActions = [];
+  sample.recommendations = [
+    {
+      candidateId: run.recommendations[0].candidateId,
+      company: run.recommendations[0].company,
+      title: run.recommendations[0].title,
+      postingUrl: run.recommendations[0].postingUrl,
+      reason: run.recommendations[0].reason,
+      details: [],
+      nextActions: [],
+    },
+  ];
+  const html = toReportHtml(sample);
+  for (const text of ["추천 요약", "다음 행동", "추천 판단", "근거와 해석", "지원 준비"])
+    expect(html).not.toContain(text);
 });
 
 test("custom template과 빈 diagnostics 슬롯을 지원하고 사용자 슬롯 문자열은 재치환하지 않는다", () => {
@@ -49,7 +57,7 @@ test("custom template과 빈 diagnostics 슬롯을 지원하고 사용자 슬롯
     const path = join(directory, "custom.html");
     writeFileSync(path, "{{title}}|{{generatedAt}}|{{reportHtml}}|{{sourceDiagnosticsHtml}}");
     const sample = structuredClone(run);
-    sample.conclusion = ['<script>alert("x")</script> & {{title}}'];
+    sample.summary = ['<script>alert("x")</script> & {{title}}'];
     const html = toHtml(sample, path);
     expect(html).toStartWith("2026-08-13 포지션 추천 리포트|");
     expect(html).toContain("&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt; &amp; {{title}}");

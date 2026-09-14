@@ -1,15 +1,16 @@
 <template id="list-item"><li>{{value}}</li></template>
 
-<template id="report-axes"
+<template id="report-findings"
   ><ul class="sub upside-axes">
     {{items}}
   </ul></template
 >
 
-<template id="report-axis"
+<template id="report-finding"
   ><li>
-    <span class="axis-name">{{axis}}</span><span class="badge {{className}}">{{direction}}</span
-    ><span class="axis-reason">{{reason}}</span>
+    <span class="axis-name">{{title}}</span><span class="axis-reason">{{content}}</span>
+    <div>{{evidence}}</div>
+    {{assumptions}}
   </li></template
 >
 
@@ -31,33 +32,31 @@
   </ol></template
 >
 
+<template id="report-ranking"
+  ><ol class="ranking">
+    {{items}}
+  </ol></template
+>
+
+<template id="report-ranking-item"
+  ><li>
+    <span class="ranking-number">{{rank}}</span>
+    <span class="ranking-position"
+      ><strong>{{company}}</strong> — <a href="{{url}}">{{title}}</a></span
+    >
+    <span class="ranking-note">{{note}}</span>
+  </li></template
+>
+
 <template id="report-code"><code>{{value}}</code></template>
 
-<template id="report-content"
-  ><h2>한 줄 결론</h2>
-  {{conclusion}}
-  <h2>추천 배경 요약</h2>
-  {{background}} {{strong}} {{stretch}}
-  <h2>추가 수집 대상</h2>
-  <p class="note">개별 active 공고 URL 미확보 회사 — 다음 수집 범위 결정용.</p>
-  <ol class="cards">
-    {{targets}}
-  </ol>
-  <h2 class="tier-hold">보류·주의 포지션</h2>
-  <ol class="cards">
-    {{holds}}
-  </ol>
-  <h2>최근 반복 점검</h2>
-  {{recentCheck}}
-  <h2>이번 주 액션 플랜</h2>
-  <dl class="fields">
-    <dt>지원/검색</dt>
-    <dd>{{apply}}</dd>
-    <dt>이력서 보강</dt>
-    <dd>{{resume}}</dd>
-    <dt>학습 자료 / question-bank</dt>
-    <dd>{{study}}</dd>
-  </dl></template
+<template id="report-content">{{sections}}</template>
+
+<template id="report-section"
+  ><section>
+    <h2>{{title}}</h2>
+    {{content}}
+  </section></template
 >
 
 <template id="report-empty"><p class="empty">해당 없음</p></template>

@@ -6,8 +6,8 @@ import {
   closeWindow,
   hasKeyword,
   isContractRole,
-  isNonTargetTitle,
   isTargetRole,
+  isTargetRoleTitle,
   norm,
 } from "../policy.ts";
 
@@ -32,27 +32,6 @@ const TOSS_EXCLUDE_EMPLOYMENT = [
   "체험형",
   "현장실습",
 ];
-const TOSS_TARGET_TITLE_KEYWORDS = [
-  "backend",
-  "백엔드",
-  "server",
-  "서버",
-  "node.js",
-  "nodejs",
-  "java",
-  "spring",
-  "kotlin",
-  // AI/Platform/Infra titles — downstream isTargetRole() still filters out pure research/DS roles
-  "ai",
-  "agent",
-  "llm",
-  "platform",
-  "플랫폼",
-  "infra",
-  "sre",
-  "devops",
-];
-
 const TOSS_APPLY_EVIDENCE_KEYS = [
   "applyType",
   "apply_type",
@@ -142,6 +121,10 @@ interface TossFetchResult {
   ok: boolean;
   status: number;
   text: string;
+}
+
+export function tossDetailRejectReason(status: number): "closed_or_removed" | "http" {
+  return status === 404 || status === 410 ? "closed_or_removed" : "http";
 }
 
 async function tossFetch(url: string): Promise<TossFetchResult> {
@@ -484,7 +467,7 @@ function postingFromTossApiJob(
   if (hasKeyword(fullText, TOSS_EXCLUDE_EMPLOYMENT)) return { reject: "contract_intern_freelance" };
   const specificityReject = tossRoleSpecificityReject(company, title, content);
   if (specificityReject) return { reject: specificityReject };
-  if (targetRoleOnly && isNonTargetTitle(title)) return { reject: "not_target_title" };
+  if (targetRoleOnly && !isTargetRoleTitle(title)) return { reject: "not_target_title" };
   if (targetRoleOnly && !isTargetRole(fullText)) return { reject: "not_target_role" };
 
   const due = job.application_deadline || tossMetadata(job, ["클로징 일자", "ExpiryDate"]);
@@ -549,7 +532,7 @@ interface TossParse {
 }
 
 function parseTossJobDetail(url: string, res: TossFetchResult, targetRoleOnly: boolean): TossParse {
-  if (!res.ok) return { reject: "http" };
+  if (!res.ok) return { reject: tossDetailRejectReason(res.status) };
   const html = res.text;
   const data = extractNextData(html);
   const roots = tossRoots(data);
@@ -580,9 +563,7 @@ function parseTossJobDetail(url: string, res: TossFetchResult, targetRoleOnly: b
   const specificityReject = tossRoleSpecificityReject(company, title, content);
   if (specificityReject) return { reject: specificityReject };
 
-  if (targetRoleOnly && isNonTargetTitle(title)) return { reject: "not_target_role" };
-  if (targetRoleOnly && !hasKeyword(title, TOSS_TARGET_TITLE_KEYWORDS))
-    return { reject: "not_target_title" };
+  if (targetRoleOnly && !isTargetRoleTitle(title)) return { reject: "not_target_title" };
   if (targetRoleOnly && !isTargetRole(fullText)) return { reject: "not_target_role" };
 
   const department = deepFindStringAny(roots, TOSS_DEPARTMENT_KEYS);

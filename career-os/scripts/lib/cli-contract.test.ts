@@ -78,24 +78,19 @@ beforeAll(() => {
   writeFileSync(
     input,
     JSON.stringify({
-      schemaVersion: 5,
+      schemaVersion: 9,
       reportDate: "2026-08-13",
       generatedAt: "2026-08-13T09:00:00+09:00",
-      conclusion: ["결론"],
-      background: ["배경"],
-      tiers: { strong: [], stretch: [], hold: [] },
-      candidateRanking: [
-        {
-          candidateId: pool.candidates[0].id,
-          rank: 1,
-          upsideDirection: "확인 필요",
-          oneLineReason: "추가 확인이 필요하다.",
-        },
-      ],
-      additionalTargets: [],
-      recentCheck: ["확인"],
-      weeklyActions: { apply: "지원", resume: "수정", study: "학습" },
-      sourceSnapshot: { collectionRunId: pool.collectionRunId, candidatePoolPath: "pool.json" },
+      summary: ["결론"],
+      recommendations: [],
+      ranking: pool.candidates.map((candidate) => ({
+        candidateId: candidate.id,
+        company: candidate.company,
+        title: candidate.title,
+        postingUrl: candidate.url,
+      })),
+      nextActions: ["지원"],
+      sourceSnapshot: { collectionRunId: pool.collectionRunId },
     }),
   );
   writeFileSync(join(directory, "invalid.json"), "{}");

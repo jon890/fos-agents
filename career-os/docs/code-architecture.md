@@ -38,6 +38,8 @@ career-os/
 | `scripts/position-recommender/`                                     | 활성 공고 수집, 추천 검증과 HTML 생성                     |
 | `scripts/study-topic-recommender/`                                  | 읽을거리 수집, 선별 결과 검증과 HTML 생성                 |
 | `scripts/interview-drill/`                                          | 질문 선택, 꼬리질문과 복습 상태 관리                      |
+| `scripts/interview-question-sources/`                               | 외부 면접 질문 후보 수집과 출처 검증                      |
+| `scripts/question-bank-collector/`                                  | 공개 질문 은행의 구조, 공개 범위와 출처 검사              |
 | `applications/<company>/<position>/`                                | 사용자가 여는 검토 화면과 제출 PDF                        |
 | `applications/<company>/<position>/evidence/`                       | 공고 원문, 후보자 인터뷰, 지원 전략과 제출 문서 원본      |
 | `applications/<company>/<position>/review/`                         | 근거 장부, 점수표, manifest와 제출 문서 HTML              |
@@ -81,7 +83,7 @@ if (import.meta.main) {
 
 사용법 오류를 1과 나누는 이유는 호출하는 쪽이 재시도할지 인자를 고칠지 가리기 위해서다.
 
-- 검사 스크립트는 `{ passed: boolean }` 을 돌려준다. `runCli` 가 그 값으로 0과 1을 가른다.
+- 검사 스크립트는 `{ passed: boolean }` 을 돌려준다. `runCli` 가 그 값으로 0과 1을 정한다.
 - 파일을 만드는 스크립트는 아무것도 돌려주지 않고 `{ json: false }` 를 준다. 예외가 없으면 0으로 끝난다.
 - 인자 규격은 `pattern` 으로 적는다. 검사 코드를 본문에 두지 않는다.
 - `--help` 는 `runCli` 가 spec 으로 만든다. 도움말 문자열을 따로 쓰지 않는다.
@@ -147,8 +149,16 @@ bun career-os/scripts/position-recommender/validate_recommendation.ts --input /t
 bun career-os/scripts/study-topic-recommender/manage_reading_sources.ts list --category techBlog
 bun test career-os/scripts/lib/cli-contract.test.ts career-os/scripts/lib/cli.test.ts
 bun test career-os/scripts
+bun test ./career-os/.claude/skills/
 bunx tsc --noEmit
 ```
+
+**스킬 스크립트는 경로를 직접 줘야 실행된다.**
+`bun test` 는 점으로 시작하는 디렉터리를 훑지 않아, 스킬이 `.claude/` 아래에 있는 한
+`bun test career-os/scripts` 나 파일 이름으로는 걸리지 않는다.
+실측으로 스킬 스크립트에 실패하는 테스트를 심고 `bun test career-os/scripts` 를 돌렸더니 0 fail 이 나왔다.
+
+`bunx tsc --noEmit` 은 `tsconfig.json` 의 `include` 가 스킬 스크립트를 담고 있어 경로를 주지 않아도 된다.
 
 실제 S3 연동 테스트는 전용 환경값이 모두 있을 때만 실행된다.
 로컬 리팩토링 검증에서는 해당 환경값을 제거하여 원격 저장소에 쓰지 않도록 한다.
@@ -176,7 +186,8 @@ adapter의 사전 필터와 최종 경계는 역할이 다르므로 둘 다 유�
 
 모델이 추천 데이터에 맞는 정보 구조와 화면 구성을 선택해 독립 HTML 파일을 만든다.
 스크립트는 추천 링크, 기본 HTML 메타 정보와 공개 범위를 검사하며 절 이름이나 카드 수를 고정하지 않는다.
-고정 템플릿 렌더러는 모델이 HTML을 만들지 못했을 때의 대체 경로와 회귀 검사에 사용한다.
+고정 템플릿 렌더러는 모델의 추천 데이터를 일관된 반응형 HTML로 표시한다.
+선택 데이터가 없는 절은 만들지 않으며 추천 분류나 판단값을 보완하지 않는다.
 
 | 수정할 내용                        | 파일                                                                                                                                                                                                                                            |
 | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -281,13 +292,14 @@ SSH client는 `career-storage`를 원격 호출하고, 홈서버의 Hermes는 �
 Wanted adapter는 개발 전체 직군 `518`을 기술 상수로 사용하고, 백엔드와 AI Platform 역할 경계는 공통 수집 정책에서 적용한다.
 후보자 선호와 회사 평가는 수집 상수에 넣지 않고 추천 단계에서 판단한다.
 
-`scripts/position-recommender/` 루트에는 수집, 추천 검증, 제외 반영과 대체 렌더의 CLI 진입점만 둔다.
+`scripts/position-recommender/` 루트에는 수집, 추천 원문 대조, 회사 조사 병합과 렌더의 CLI 진입점만 둔다.
 `live-postings/`는 외부 소스 어댑터와 수집 정책, `recommendation/`은 추천 계약,
-`feedback/`은 제외 기준, `render/`는 HTML 생성과 검사를 구현한다.
+`company-research/`는 재사용할 회사 사실의 계약과 병합, `feedback/`은 제외 기준,
+`render/`는 HTML 생성과 검사를 구현한다.
 어댑터는 원문 응답을 공통 `LivePosting` 형태로 바꾼다.
 후보풀 정책은 개별 공고 URL, 활성 상태, 마감일, 고용 형태, 역할과 중복을 결정적으로 검사한다.
 `exclusions.ts`는 필수 개인 제외 설정을 검증하고 공통 수집 경로에서 후보풀 생성 전에 해당 공고를 제거한다.
-`apply_exclusion_suggestions.ts`는 추천 결과에서 검증된 자동 제외 제안만 비공개 설정에 합친다.
+`company_research.ts`는 실행 중 조사한 회사 프로필을 검증하고 `state/company-research.json`에 원자적으로 합친다.
 설정과 비공개 전송 계약은 [데이터 구조](data-schema.md#개인-공고-제외-설정)를 따른다.
 
 `collection_health.ts`는 실행 전체가 추천 입력으로 쓸 만한지 판정한다.
@@ -303,7 +315,7 @@ Wanted adapter는 개발 전체 직군 `518`을 기술 상수로 사용하고, �
 요청이나 파싱이 실패해 판단하지 못한 공고는 `failedCount`로 세고 `skippedCount`에 넣지 않는다.
 
 수집 결과는 실행별 임시 후보풀에 저장한다.
-모델은 후보풀에 존재하는 공고만 선별하고, `recommendation/schema.ts`와 `validate_recommendation.ts`가 결과 구조와 원문 일치 여부를 검사한다.
+모델은 후보풀에 존재하는 공고만 선별하고, `recommendation/schema.ts`와 `validate_recommendation.ts`는 HTML 전달 구조와 원문 일치 여부만 검사한다.
 HTML은 검증된 추천 JSON에서 파생한다.
 외부 게시를 요청하면 게시 검증 뒤 임시 데이터와 함께 삭제하고, 게시하지 않으면 사용자에게 로컬 검토 경로를 전달한 뒤 정리한다.
 
@@ -311,7 +323,7 @@ HTML은 검증된 추천 JSON에서 파생한다.
 
 `application-package-writer`는 사용자가 호출하는 지원 준비 진입점이다.
 공고와 회사 기준 확인, 후보자 인터뷰, 근거 매핑과 지원 전략을 한 흐름으로 연결한다.
-반복 가능한 지원 패키지 계약 검사와 로컬 검토 화면 생성은 이 스킬의 `scripts/`에 둔다.
+제출 문서의 내부 정보 유출 검사와 로컬 검토 화면 생성은 이 스킬의 `scripts/`에 둔다.
 
 `resume-preparer`는 지원 전략을 이력서와 경력기술서로 변환하는 제출 문서 진입점이다.
 문서 작성, 사람 확인, 주장 근거 감사, 인사담당자와 실무담당자 리뷰, HTML·PDF 변환과 제출 묶음 검증을 순서대로 수행한다.
@@ -320,10 +332,9 @@ HTML은 검증된 추천 JSON에서 파생한다.
 
 공고별 문서는 `applications/<company>/<position>/`에 세 층으로 둔다.
 최상위에는 사용자가 직접 여는 `application-package.html`과 제출 PDF만 두고, 기준 원본은 `evidence/`에, 내부 검증 자료는 `review/`에 둔다.
-기준 원본은 `evidence/`의 `posting.md`, `candidate-interview.md`, `application-package.md`, `resume-draft.md`와 `interview-questions.json`이다.
+기준 원본은 `evidence/`의 `posting.md`, `candidate-interview.md`, `fit.md`, `strategy.md`, `status.md`, `resume-draft.md`와 `interview-questions.json`이다.
 포지션별 질문은 공고 책임, 근거 방어와 경험 공백에서 파생한다.
-사용자는 `application-package.html` 상단에서 준비 상태, 지원 판단, 실제 제출 PDF와 지원서 입력값을 확인한다.
-본문은 `공고 적합도`, `지원 전략`, `공고 원문`, `상세 자료` 네 탭으로 나뉜다.
+화면 구성은 [`data-schema.md`](data-schema.md#검토-화면)의 「검토 화면」이 소유한다.
 생성기와 검증기는 이 세 층의 경로를 계약으로 사용한다.
 층별 파일 목록은 [`data-schema.md`](data-schema.md)의 「지원 패키지」가 소유한다.
 브라우저 자동 입력용 `application-form.json`과 경력기술서는 필요한 경우에만 추가한다.
@@ -384,9 +395,7 @@ YouTube 채널은 공식 Atom 피드를 우선 사용하고 피드를 읽을 수
 `scripts/study-topic-recommender/source/archive/`는 sitemap과 YouTube uploads playlist 같은 과거 수집 cursor를 해석한다.
 source 어댑터는 원문 발견과 메타 추출만 하고, 자료 저장과 cursor 진행은 study-library client가 API 응답으로 확인한다.
 archive 진입점은 `config/external-reading-sources.ts`에 복제하지 않고 sourceKey별 registry로 둔다.
-registry에는 Kurly와 OliveYoung sitemap index URL, Kakao sitemap URL과 `/posts/` prefix, YouTube uploads playlist ID 해석 규칙을 둔다.
-따라서 config schemaVersion은 이 변경에서 올리지 않는다.
-Kurly와 OliveYoung의 최근 수집 adapter는 계속 `feed`이고, archive registry에서만 sitemap index 수집기를 사용한다.
+registry가 담는 소스별 진입점과 cursor 형식은 [`data-schema.md`](data-schema.md#학습자료-api-연동-상태)가 소유한다.
 
 파일모드와 library 모드는 실행 진입점에서 분리한다.
 기본 파일모드는 기존 `skill begin`, `state/morning-study-history.json`, `--commit-history` 흐름을 유지한다.

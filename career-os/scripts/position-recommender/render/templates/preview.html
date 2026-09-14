@@ -18,10 +18,7 @@
               <h1>{{title}}</h1>
               <span class="recommendation-count"
                 ><strong>{{recommendationCount}}</strong
-                ><span class="recommendation-label"
-                  ><span>추천 공고</span
-                  ><small>강력 {{strongCount}} · 도전 {{stretchCount}}</small></span
-                ></span
+                ><span class="recommendation-label"><span>추천 공고</span></span></span
               >
             </div>
           </div>
@@ -46,7 +43,8 @@
         <span class="count">상위 {{featuredCount}}건</span>
       </div>
       <section class="priority-grid">{{heroCards}}</section>
-      {{additionalSection}} {{holdSection}} {{archive}}
+      {{additionalSection}} {{archive}}
+      {{recommendationDetails}} {{nextActions}}
     </main>
     {{filterScript}}
   </body>
