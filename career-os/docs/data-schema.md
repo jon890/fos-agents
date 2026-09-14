@@ -200,41 +200,41 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
     "aliases": ["Example Company"],
     "researchedAt": "2026-09-14T12:00:00+09:00",
     "facts": [
-        {
-          "factId": "example-company-growth-2026-q3",
-          "topic": "growth",
-          "scope": "company",
-          "statement": "공식 실적 발표에서 유료 고객 수가 전년 동기보다 증가했다.",
-          "source": {
-            "url": "https://example.com/ir/2026-q3",
-            "title": "2026년 3분기 실적",
-            "publisher": "예시 회사",
-            "sourceType": "investor-relations",
-            "publishedAt": "2026-09-01",
-            "observedAt": "2026-09-14T12:00:00+09:00"
-          },
-          "validUntil": "2026-12-13"
-        }
+      {
+        "factId": "example-company-growth-2026-q3",
+        "topic": "growth",
+        "scope": "company",
+        "statement": "공식 실적 발표에서 유료 고객 수가 전년 동기보다 증가했다.",
+        "source": {
+          "url": "https://example.com/ir/2026-q3",
+          "title": "2026년 3분기 실적",
+          "publisher": "예시 회사",
+          "sourceType": "investor-relations",
+          "publishedAt": "2026-09-01",
+          "observedAt": "2026-09-14T12:00:00+09:00"
+        },
+        "validUntil": "2026-12-13"
+      }
     ],
     "inferences": [
-        {
-          "inferenceId": "example-company-domain-upside-2026-q3",
-          "topic": "domain-growth",
-          "statement": "고객 증가가 이어지면 공통 구조와 운영 안정성을 다룰 문제도 커질 가능성이 있다.",
-          "basisFactIds": ["example-company-growth-2026-q3"],
-          "assumptions": ["고객 증가가 해당 백엔드 팀의 처리 범위 확대로 이어진다."],
-          "confidence": "medium",
-          "inferredAt": "2026-09-14T12:00:00+09:00",
-          "validUntil": "2026-12-13"
-        }
+      {
+        "inferenceId": "example-company-domain-upside-2026-q3",
+        "topic": "domain-growth",
+        "statement": "고객 증가가 이어지면 공통 구조와 운영 안정성을 다룰 문제도 커질 가능성이 있다.",
+        "basisFactIds": ["example-company-growth-2026-q3"],
+        "assumptions": ["고객 증가가 해당 백엔드 팀의 처리 범위 확대로 이어진다."],
+        "confidence": "medium",
+        "inferredAt": "2026-09-14T12:00:00+09:00",
+        "validUntil": "2026-12-13"
+      }
     ],
     "researchGaps": [
-        {
-          "topic": "compensation",
-          "question": "백엔드 경력직 총보상 구간을 확인할 공개 자료가 있는가",
-          "lastAttemptedAt": "2026-09-14T12:00:00+09:00",
-          "retryAfter": "2026-10-14"
-        }
+      {
+        "topic": "compensation",
+        "question": "백엔드 경력직 총보상 구간을 확인할 공개 자료가 있는가",
+        "lastAttemptedAt": "2026-09-14T12:00:00+09:00",
+        "retryAfter": "2026-10-14"
+      }
     ]
   }
 }
