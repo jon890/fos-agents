@@ -78,7 +78,7 @@ test("script 종료와 속성 탈출 입력은 실행 코드나 inline JSON으�
     '</script><script>window.pwned=true</script>" onmouseover="window.pwned=true {{title}}';
   sample.tiers.strong[0].company = attack;
   sample.tiers.strong[0].postingUrl = `https://example.com/?q=${attack}`;
-  sample.candidateRanking[0].oneLineReason = attack;
+  sample.tiers.strong[0].companyAssessment.summary = attack;
   candidatePool.candidates[0].title = attack;
   const assets = loadRenderAssets("preview");
   const html = renderCandidatePreview(sample, { candidatePool }, assets, { short: "s", full: "f" });

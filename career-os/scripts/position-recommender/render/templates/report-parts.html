@@ -1,15 +1,18 @@
 <template id="list-item"><li>{{value}}</li></template>
 
-<template id="report-axes"
+<template id="report-findings"
   ><ul class="sub upside-axes">
     {{items}}
   </ul></template
 >
 
-<template id="report-axis"
+<template id="report-finding"
   ><li>
-    <span class="axis-name">{{axis}}</span><span class="badge {{className}}">{{direction}}</span
-    ><span class="axis-reason">{{reason}}</span>
+    <span class="axis-name">{{topic}}</span
+    ><span class="badge {{className}}">{{kind}} · {{confidence}}</span
+    ><span class="axis-reason">{{statement}}</span>
+    <div>{{evidence}}</div>
+    {{assumptions}}
   </li></template
 >
 

@@ -78,20 +78,13 @@ beforeAll(() => {
   writeFileSync(
     input,
     JSON.stringify({
-      schemaVersion: 5,
+      schemaVersion: 6,
       reportDate: "2026-08-13",
       generatedAt: "2026-08-13T09:00:00+09:00",
       conclusion: ["결론"],
       background: ["배경"],
       tiers: { strong: [], stretch: [], hold: [] },
-      candidateRanking: [
-        {
-          candidateId: pool.candidates[0].id,
-          rank: 1,
-          upsideDirection: "확인 필요",
-          oneLineReason: "추가 확인이 필요하다.",
-        },
-      ],
+      evaluatedCandidateIds: [pool.candidates[0].id],
       additionalTargets: [],
       recentCheck: ["확인"],
       weeklyActions: { apply: "지원", resume: "수정", study: "학습" },

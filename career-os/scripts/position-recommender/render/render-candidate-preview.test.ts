@@ -53,8 +53,8 @@ test("추천 공고와 외부 후보풀을 같은 HTML에 표시한다", () => {
   expect(html).toContain('<h2>추가 추천</h2><span class="count">4건</span>');
   expect(html.match(/<article class="board-row tier-/g)).toHaveLength(8);
   expect(html).toContain('<h2>보류·주의</h2><span class="count">4건</span>');
-  expect(html).toContain("전체 후보 적합도 순위");
-  expect(html).toContain("Java·Spring 운영 경험이 역할과 직접 연결된다.");
+  expect(html).toContain("검토한 전체 후보");
+  expect(html).toContain("성장 중인 제품의 핵심 백엔드를 맡을 가능성이 있다.");
   expect(html).toContain("candidate-filter");
   expect(html).toMatch(/\.candidate-row\[hidden\]\s*\{\s*display:\s*none;?\s*\}/);
   expect(html).toMatch(/\.priority-grid\s*\{\s*grid-template-columns:\s*1fr;?\s*\}/);

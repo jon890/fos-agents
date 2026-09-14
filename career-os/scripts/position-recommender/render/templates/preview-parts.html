@@ -4,8 +4,10 @@
   ><details class="archive">
     <summary>
       <span
-        ><span class="archive-title">전체 후보 적합도 순위 {{count}}건</span
-        ><span class="archive-note">LLM의 한 줄 판단과 함께 필요할 때 펼쳐보세요.</span></span
+        ><span class="archive-title">검토한 전체 후보 {{count}}건</span
+        ><span class="archive-note"
+          >수집된 공고와 추천 후보의 판단을 필요할 때 펼쳐보세요.</span
+        ></span
       >
     </summary>
     <div class="candidate-search">
@@ -29,23 +31,11 @@
   </details></template
 >
 
-<template id="preview-axes"
-  ><ul class="upside-axes">
-    {{items}}
-  </ul></template
->
-
-<template id="preview-axis"
-  ><li>
-    <span class="axis-name">{{axis}}</span
-    ><span class="axis-dir dir-{{className}}">{{direction}}</span
-    ><span class="axis-reason">{{reason}}</span>
-  </li></template
->
+<template id="preview-assessment"><p class="axis-reason">{{value}}</p></template>
 
 <template id="preview-badge"
-  ><span class="upside upside-{{className}}" title="현재 직장 대비 업사이드"
-    >{{direction}}</span
+  ><span class="upside upside-{{className}}" title="회사 판단 신뢰도"
+    >{{confidence}}</span
   ></template
 >
 

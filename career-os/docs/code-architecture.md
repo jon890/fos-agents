@@ -293,11 +293,13 @@ Wanted adapter는 개발 전체 직군 `518`을 기술 상수로 사용하고, �
 
 `scripts/position-recommender/` 루트에는 수집, 추천 검증, 제외 반영과 대체 렌더의 CLI 진입점만 둔다.
 `live-postings/`는 외부 소스 어댑터와 수집 정책, `recommendation/`은 추천 계약,
-`feedback/`은 제외 기준, `render/`는 HTML 생성과 검사를 구현한다.
+`company-research/`는 재사용할 회사 사실의 계약과 병합, `feedback/`은 제외 기준,
+`render/`는 HTML 생성과 검사를 구현한다.
 어댑터는 원문 응답을 공통 `LivePosting` 형태로 바꾼다.
 후보풀 정책은 개별 공고 URL, 활성 상태, 마감일, 고용 형태, 역할과 중복을 결정적으로 검사한다.
 `exclusions.ts`는 필수 개인 제외 설정을 검증하고 공통 수집 경로에서 후보풀 생성 전에 해당 공고를 제거한다.
 `apply_exclusion_suggestions.ts`는 추천 결과에서 검증된 자동 제외 제안만 비공개 설정에 합친다.
+`company_research.ts`는 실행 중 조사한 회사 프로필을 검증하고 `state/company-research.json`에 원자적으로 합친다.
 설정과 비공개 전송 계약은 [데이터 구조](data-schema.md#개인-공고-제외-설정)를 따른다.
 
 `collection_health.ts`는 실행 전체가 추천 입력으로 쓸 만한지 판정한다.

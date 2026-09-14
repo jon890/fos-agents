@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { toHtml, toReportHtml } from "../render_recommendation.ts";
 import { run } from "./fixture.ts";
 
-test("상세 추천은 모든 티어와 필드, 축별 근거와 추가 대상을 보존한다", () => {
+test("상세 추천은 모든 티어와 사실·추론 근거와 추가 대상을 보존한다", () => {
   const sample = structuredClone(run);
   sample.additionalTargets = [
     {

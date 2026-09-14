@@ -39,8 +39,8 @@ export function applyExclusionSuggestions(
     const common = {
       decisionKind: "career-downside" as const,
       reason: suggestion.reason,
-      axes: suggestion.axes,
       evidenceUrls: suggestion.evidenceUrls,
+      confidence: suggestion.confidence,
       decidedAt: validation.run.reportDate,
     };
     const rule: EnrichedPositionExclusion =

@@ -1,9 +1,5 @@
 import type { PostingCandidatePool } from "../live-postings/contracts.ts";
-import type {
-  PositionItemType,
-  RecommendationRunType,
-  UpsideAxisJudgmentType,
-} from "../recommendation/schema.ts";
+import type { PositionItemType, RecommendationRunType } from "../recommendation/schema.ts";
 import { fragment, type RenderAssets } from "./template.ts";
 
 type PreviewTier = "강력 추천" | "도전 추천" | "보류·주의" | "전체 후보";
@@ -15,10 +11,8 @@ interface PreviewRow {
   title: string;
   url: string;
   why: string;
-  /** 현재 직장 대비 업사이드 종합 방향. 보류 항목은 판정하지 않아 비운다. */
-  upsideDirection?: string;
-  /** 축별 판정. 추천 티어만 갖는다. */
-  upsideAxes?: UpsideAxisJudgmentType[];
+  assessment?: string;
+  confidence?: "high" | "medium" | "low";
   keywords: string[];
 }
 
@@ -36,21 +30,10 @@ function positionRow(tier: PreviewTier, item: PositionItemType): PreviewRow {
     title: item.title,
     url: item.postingUrl,
     why: item.whyFit,
-    upsideDirection: summarizeDirection(item.companyUpside.axes.map((axis) => axis.direction)),
-    upsideAxes: item.companyUpside.axes,
+    assessment: item.companyAssessment.summary,
+    confidence: item.companyAssessment.confidence,
     keywords: item.jdKeywords,
   };
-}
-
-/**
- * 축별 방향을 한 값으로 줄인다.
- * 하향이 하나라도 있으면 하향으로 보여, 올라가는 축에 가려지지 않게 한다.
- */
-function summarizeDirection(directions: string[]): string {
-  if (directions.includes("하향")) return "하향";
-  if (directions.includes("상향")) return "상향";
-  if (directions.every((direction) => direction === "확인 필요")) return "확인 필요";
-  return "동일";
 }
 
 function recommendationRows(run: RecommendationRunType): PreviewRow[] {
@@ -76,26 +59,28 @@ function recommendationRows(run: RecommendationRunType): PreviewRow[] {
 }
 
 function candidateRows(pool: PostingCandidatePool, run: RecommendationRunType): PreviewRow[] {
-  const byId = new Map(pool.candidates.map((candidate) => [candidate.id, candidate]));
-  return run.candidateRanking
-    .slice()
-    .sort((a, b) => a.rank - b.rank)
-    .flatMap((ranking) => {
-      const candidate = byId.get(ranking.candidateId);
-      if (!candidate) return [];
-      return [
-        {
-          rank: ranking.rank,
-          tier: "전체 후보" as const,
-          company: candidate.company,
-          title: candidate.title,
-          url: candidate.url,
-          why: ranking.oneLineReason,
-          upsideDirection: ranking.upsideDirection,
-          keywords: candidate.skills.length > 0 ? candidate.skills.slice(0, 8) : ["기술 정보 없음"],
-        },
-      ];
-    });
+  const evaluated = new Set(run.evaluatedCandidateIds);
+  const selected = new Map(
+    [...run.tiers.strong, ...run.tiers.stretch].map((item) => [item.candidateId, item]),
+  );
+  return pool.candidates.flatMap((candidate, index) => {
+    if (!evaluated.has(candidate.id)) return [];
+    const item = selected.get(candidate.id);
+    return [
+      {
+        rank: item?.rank ?? index + 1,
+        tier: "전체 후보" as const,
+        company: candidate.company,
+        title: candidate.title,
+        url: candidate.url,
+        why: item?.whyFit ?? (candidate.summary || candidate.mainTasks || candidate.activeEvidence),
+        assessment: item?.companyAssessment.summary,
+        confidence: item?.companyAssessment.confidence,
+        keywords:
+          candidate.skills.length > 0 ? candidate.skills.slice(0, 8) : candidate.tags.slice(0, 8),
+      },
+    ];
+  });
 }
 
 function applyLimit(rows: PreviewRow[], limit: number | null | undefined): PreviewRow[] {
@@ -109,14 +94,13 @@ function tierClass(tier: PreviewTier): string {
   return "tier-all";
 }
 
-function directionClass(direction: string): string {
+function confidenceClass(confidence: string): string {
   const map: Record<string, string> = {
-    상향: "up",
-    동일: "flat",
-    하향: "down",
-    "확인 필요": "unknown",
+    high: "up",
+    medium: "flat",
+    low: "unknown",
   };
-  return map[direction] ?? "unknown";
+  return map[confidence] ?? "unknown";
 }
 
 function chips(assets: RenderAssets, row: PreviewRow, limit = 5): string {
@@ -133,23 +117,9 @@ function chips(assets: RenderAssets, row: PreviewRow, limit = 5): string {
   );
 }
 
-function axes(assets: RenderAssets, row: PreviewRow): string {
-  if (!row.upsideAxes || row.upsideAxes.length === 0) return "";
-  return fragment(
-    assets,
-    "preview-axes",
-    {},
-    {
-      items: row.upsideAxes
-        .map((axis) =>
-          fragment(assets, "preview-axis", {
-            ...axis,
-            className: directionClass(axis.direction),
-          }),
-        )
-        .join(""),
-    },
-  );
+function assessment(assets: RenderAssets, row: PreviewRow): string {
+  if (!row.assessment) return "";
+  return fragment(assets, "preview-assessment", { value: row.assessment });
 }
 
 function rowText(row: PreviewRow) {
@@ -193,15 +163,15 @@ function archive(assets: RenderAssets, rows: PreviewRow[]): string {
             "preview-candidate",
             {
               ...rowText(row),
-              search: [row.company, row.title, row.why, row.upsideDirection ?? "", ...row.keywords]
+              search: [row.company, row.title, row.why, row.assessment ?? "", ...row.keywords]
                 .join(" ")
                 .toLowerCase(),
             },
             {
-              badge: row.upsideDirection
+              badge: row.confidence
                 ? fragment(assets, "preview-badge", {
-                    direction: row.upsideDirection,
-                    className: directionClass(row.upsideDirection),
+                    confidence: row.confidence,
+                    className: confidenceClass(row.confidence),
                   })
                 : "",
               chips: chips(assets, row, 4),
@@ -257,7 +227,7 @@ export function renderCandidatePreview(
           : featured
               .map((row) =>
                 fragment(assets, "preview-hero", rowText(row), {
-                  axes: axes(assets, row),
+                  axes: assessment(assets, row),
                   chips: chips(assets, row),
                 }),
               )

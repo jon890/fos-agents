@@ -21,24 +21,32 @@ function list(assets: RenderAssets, values: string[], name = "report-list"): str
 function card(assets: RenderAssets, item: PositionItemType, isStretch: boolean): string {
   const codeList = (values: string[]) =>
     values.map((value) => fragment(assets, "report-code", { value })).join(", ");
-  const levels: Record<string, string> = {
-    강함: "badge-strong",
-    중간: "badge-mid",
-    약함: "badge-weak",
+  const confidenceClass: Record<string, string> = {
+    high: "badge-strong",
+    medium: "badge-mid",
+    low: "badge-weak",
   };
-  const directions: Record<string, string> = {
-    상향: "badge-strong",
-    동일: "badge-mid",
-    하향: "badge-weak",
-    "확인 필요": "badge-mid",
-  };
-  const axes = item.companyUpside.axes
-    .map((axis) =>
-      fragment(assets, "report-axis", {
-        ...axis,
-        className: directions[axis.direction] ?? "badge-mid",
-      }),
-    )
+  const findings = item.companyAssessment.findings
+    .map((finding) => {
+      const evidence = finding.evidenceUrls
+        .map((url) => fragment(assets, "report-link", { url }))
+        .join(" · ");
+      const assumptions = finding.assumptions.length
+        ? list(assets, finding.assumptions, "report-sub-list")
+        : "";
+      return fragment(
+        assets,
+        "report-finding",
+        {
+          kind: finding.kind === "fact" ? "확인한 사실" : "근거 기반 추론",
+          topic: finding.topic,
+          statement: finding.statement,
+          className: confidenceClass[finding.confidence] ?? "badge-mid",
+          confidence: finding.confidence,
+        },
+        { evidence, assumptions },
+      );
+    })
     .join("");
   const fields: [string, string][] = [
     ["공고 링크", link(assets, item.postingUrl)],
@@ -46,21 +54,22 @@ function card(assets: RenderAssets, item: PositionItemType, isStretch: boolean):
     ["공고 기간", escapeHtml(item.postingPeriod)],
     ["수집 source", escapeHtml(item.source)],
     ["마감일", escapeHtml(item.closeDate ?? "상시/미정")],
-    ["검색 키워드", codeList(item.searchKeywords)],
     ["왜 맞는가", escapeHtml(item.whyFit)],
     ["후보자 경험 근거", list(assets, item.candidateEvidence, "report-sub-list")],
     ["JD에서 노려야 할 키워드", codeList(item.jdKeywords)],
     [
-      "회사/규모 업사이드",
-      `${fragment(assets, "report-badge", { className: levels[item.companyUpside.level] ?? "badge-mid", value: item.companyUpside.level })} ${escapeHtml(item.companyUpside.reason)}`,
+      "회사와 역할 판단",
+      `${fragment(assets, "report-badge", { className: confidenceClass[item.companyAssessment.confidence] ?? "badge-mid", value: item.companyAssessment.confidence })} ${escapeHtml(item.companyAssessment.summary)}`,
     ],
-    ["현재 직장 대비 축별 판정", fragment(assets, "report-axes", {}, { items: axes })],
-    ["복지/학습 환경 판단", escapeHtml(item.welfareLearning)],
-    ["기술블로그/엔지니어링 시그널", escapeHtml(item.techBlogSignal)],
-    ["사업/조직/seniority 리스크", escapeHtml(item.businessRisk)],
-    ["확인해야 할 모호점", escapeHtml(item.ambiguity)],
+    ["판단 근거", fragment(assets, "report-findings", {}, { items: findings })],
     ["준비 액션", escapeHtml(item.prepAction)],
   ];
+  if (item.openQuestions.length > 0) {
+    fields.push([
+      "면접이나 추가 조사에서 확인할 것",
+      list(assets, item.openQuestions, "report-sub-list"),
+    ]);
+  }
   if (isStretch && item.stretchGap) fields.push(["Stretch gap", escapeHtml(item.stretchGap)]);
   return fragment(
     assets,

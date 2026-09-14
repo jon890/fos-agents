@@ -15,14 +15,9 @@ test("검증된 자동 제외 제안을 기존 규칙과 중복 없이 합친다
     const suggestion = {
       candidateId: candidate.id,
       scope: "posting" as const,
-      reason: "상향 근거가 없고 문제의 난도가 현재보다 낮다.",
-      axes: [
-        { axis: "문제의 난도" as const, direction: "하향" as const, reason: "공고 근거" },
-        { axis: "오너십과 파는 깊이" as const, direction: "동일" as const, reason: "공고 근거" },
-        { axis: "도메인 확장 여지" as const, direction: "확인 필요" as const, reason: "정보 없음" },
-        { axis: "보상" as const, direction: "확인 필요" as const, reason: "정보 없음" },
-      ],
+      reason: "공고의 역할 범위가 희망하는 소유권과 맞지 않는다.",
       evidenceUrls: [candidate.url],
+      confidence: "medium" as const,
     };
     writeFileSync(input, JSON.stringify({ ...run, autoExclusionSuggestions: [suggestion] }));
     writeFileSync(candidates, JSON.stringify(pool));

@@ -4,7 +4,6 @@ import { z } from "zod";
 import { POSITION_EXCLUSIONS_PATH } from "../../../config/position-exclusions.ts";
 import { sourceIdSchema } from "../live-postings/contracts.ts";
 import type { Posting } from "../live-postings/types.ts";
-import { UPSIDE_AXES, UpsideAxisJudgment } from "../recommendation/schema.ts";
 
 export const defaultExclusionsPath = resolve(import.meta.dir, "../../..", POSITION_EXCLUSIONS_PATH);
 
@@ -44,8 +43,9 @@ const exclusionEvidenceSchema = z
   .object({
     decisionKind: z.enum(["career-downside", "manual"]),
     reason: z.string().trim().min(1),
-    axes: z.array(UpsideAxisJudgment).length(UPSIDE_AXES.length).optional(),
+    axes: z.array(z.unknown()).optional(),
     evidenceUrls: z.array(z.string().url().startsWith("https://")).min(1),
+    confidence: z.enum(["high", "medium", "low"]).optional(),
     decidedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   })
   .strict();
@@ -93,21 +93,6 @@ function isCompanyExclusion(
 
 export function validateCareerDownsideExclusion(rule: EnrichedPositionExclusion): void {
   if (rule.decisionKind !== "career-downside") return;
-  if (!rule.axes || rule.axes.length !== UPSIDE_AXES.length) {
-    throw new Error(
-      "FAIL position exclusions: career-downside 규칙에는 네 축의 판단이 필요합니다.",
-    );
-  }
-  const names = new Set(rule.axes.map((axis) => axis.axis));
-  if (names.size !== UPSIDE_AXES.length || UPSIDE_AXES.some((axis) => !names.has(axis))) {
-    throw new Error("FAIL position exclusions: career-downside 규칙의 축이 빠졌거나 중복됐습니다.");
-  }
-  if (rule.axes.some((axis) => axis.direction === "상향")) {
-    throw new Error("FAIL position exclusions: 상향 축이 있는 대상은 자동 제외할 수 없습니다.");
-  }
-  if (!rule.axes.some((axis) => axis.direction === "하향")) {
-    throw new Error("FAIL position exclusions: 명확한 하향 축이 하나 이상 필요합니다.");
-  }
   if (rule.scope === "company" && rule.evidenceUrls.length < 2) {
     throw new Error(
       "FAIL position exclusions: 회사 전체 제외에는 공개 근거 URL이 두 개 이상 필요합니다.",

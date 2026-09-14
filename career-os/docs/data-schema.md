@@ -26,14 +26,9 @@ career-os는 사람이 관리하는 설정, 실행 상태, 비공개 산출물, 
       "source": "wanted",
       "identityHash": "wanted:example-id",
       "decisionKind": "career-downside",
-      "reason": "현재 직장보다 나아지는 축이 없고 문제의 난도가 낮다.",
-      "axes": [
-        { "axis": "문제의 난도", "direction": "하향", "reason": "공고 근거" },
-        { "axis": "오너십과 파는 깊이", "direction": "확인 필요", "reason": "정보 없음" },
-        { "axis": "도메인 확장 여지", "direction": "동일", "reason": "공고 근거" },
-        { "axis": "보상", "direction": "확인 필요", "reason": "정보 없음" }
-      ],
+      "reason": "공고의 역할 범위가 희망하는 모듈 소유권과 맞지 않는다.",
       "evidenceUrls": ["https://example.com/jobs/example-id"],
+      "confidence": "medium",
       "decidedAt": "2026-09-10"
     }
   ]
@@ -47,8 +42,9 @@ URL은 fragment, `utm_*`, `fbclid`, `gclid`를 제거하고 query 순서와 마�
 공고 ID를 담는 query는 보존한다.
 새 ID로 등록된 공고는 명시된 식별자나 URL이 일치하지 않으면 유지한다.
 
-`career-downside` 규칙은 네 업사이드 축을 모두 기록한다.
-저장 조건은 `position-recommender`의 `references/position-decision-criteria.md`가 소유한다.
+`career-downside` 규칙은 제외 사유, 공개 근거와 판단 신뢰도를 기록한다.
+고정된 판정 축은 요구하지 않는다. 저장 조건은
+`position-recommender`의 `references/position-decision-criteria.md`가 소유한다.
 지원 결과처럼 업사이드 비교와 다른 이유는 `manual`로 기록한다.
 버전 1의 기존 공고 규칙은 읽을 수 있지만 새 규칙은 이유와 결정 근거가 있는 버전 2로 저장한다.
 
@@ -187,6 +183,70 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 
 ## 공고 후보풀과 추천 결과
 
+### 재사용하는 회사 조사 데이터
+
+`state/company-research.json`은 포지션 추천이 다음 실행에서도 재사용할 공개 회사 사실과
+그 사실에서 도출한 추론을 담는다. 비공개 작업 release로 동기화하지만 현재 역할,
+개인 우선순위와 최종 추천 순위는 넣지 않는다.
+
+```json
+{
+  "schemaVersion": 1,
+  "companies": [
+    {
+      "companyKey": "example-company",
+      "company": "예시 회사",
+      "aliases": ["Example Company"],
+      "researchedAt": "2026-09-14T12:00:00+09:00",
+      "facts": [
+        {
+          "factId": "example-company-growth-2026-q3",
+          "topic": "growth",
+          "scope": "company",
+          "statement": "공식 실적 발표에서 유료 고객 수가 전년 동기보다 증가했다.",
+          "source": {
+            "url": "https://example.com/ir/2026-q3",
+            "title": "2026년 3분기 실적",
+            "publisher": "예시 회사",
+            "sourceType": "investor-relations",
+            "publishedAt": "2026-09-01",
+            "observedAt": "2026-09-14T12:00:00+09:00"
+          },
+          "validUntil": "2026-12-13"
+        }
+      ],
+      "inferences": [
+        {
+          "inferenceId": "example-company-domain-upside-2026-q3",
+          "topic": "domain-growth",
+          "statement": "고객 증가가 이어지면 공통 구조와 운영 안정성을 다룰 문제도 커질 가능성이 있다.",
+          "basisFactIds": ["example-company-growth-2026-q3"],
+          "assumptions": ["고객 증가가 해당 백엔드 팀의 처리 범위 확대로 이어진다."],
+          "confidence": "medium",
+          "inferredAt": "2026-09-14T12:00:00+09:00",
+          "validUntil": "2026-12-13"
+        }
+      ],
+      "researchGaps": [
+        {
+          "topic": "compensation",
+          "question": "백엔드 경력직 총보상 구간을 확인할 공개 자료가 있는가",
+          "lastAttemptedAt": "2026-09-14T12:00:00+09:00",
+          "retryAfter": "2026-10-14"
+        }
+      ]
+    }
+  ]
+}
+```
+
+`topic`은 사업·도메인·팀 성장, 역할 소유권, 내부 플랫폼 투자, 재무 안정성,
+엔지니어링 규모, 보상, 복지, 근무 제도와 사람 경험을 구분한다.
+각 사실은 HTTPS 출처와 유효기간을 갖는다. 추론은 근거 사실과 가정, 신뢰도를 갖는다.
+`researchGaps`는 같은 조사를 매 실행마다 반복하지 않도록
+재조사할 질문과 날짜를 보존한다. 현재 형식은
+`scripts/position-recommender/company-research/schema.ts`가 검증한다.
+
 ### 공고 후보풀
 
 수집기는 각 외부 공고를 공통 형태로 변환한다.
@@ -219,22 +279,22 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 - 공고별 지원 판단과 근거
 - 요구사항 대비 확인된 강점과 위험
 - 다음 수집부터 적용할 자동 제외 제안
-- 후보풀 전체의 적합도 순위와 공개 가능한 한 줄 판단
-- 공고별 현재 직장 대비 업사이드 판정
+- 검토한 전체 후보 ID
+- 공고별 회사와 역할의 사실·추론 기반 판단
 - 다음 행동
 
 추천 항목의 URL과 공고 정보는 후보풀 원문과 일치해야 한다.
 
-추천 티어 항목은 업사이드 네 축을 빠짐없이 갖고, 후보풀 전체 순위는 네 축을 합친 종합 방향 하나를 갖는다.
-축 이름은 스키마의 `UPSIDE_AXES`가 소유하고, 축별 판정값과 판정 규칙은
-`position-recommender`의 `references/position-decision-criteria.md`가 소유한다.
-비교 기준값은 private brain이 소유한다.
-전체 후보 순위는 1부터 후보 수까지 이어지며 모든 후보 ID를 한 번씩 포함한다.
-강력 추천과 도전 추천의 순위는 전체 후보 순위와 일치한다.
+추천 티어 항목은 후보마다 중요한 판단 근거를 자유롭게 구성한다.
+사실과 추론은 구분하고 각각 근거 URL, 가정과 신뢰도를 기록한다.
+개인 우선순위와 현재 역할은 private brain이 소유하며 스키마의 고정 판정값으로 저장하지 않는다.
+`evaluatedCandidateIds`는 모든 후보 ID를 한 번씩 포함한다.
+강력 추천과 도전 추천 안의 순위만 1부터 이어진다.
 강력 추천, 도전 추천과 보류·주의 목록에는 고정 개수 제한을 두지 않는다.
 모델은 후보풀 전체를 분석하고 기준을 통과한 공고를 모두 분류하며, 정해진 개수를 채우려고 기준 미달 공고를 올리지 않는다.
 게시용 HTML은 이 결과에서 만든다.
 후보풀, 추천 JSON과 HTML은 게시 검증 뒤 삭제한다.
+회사 조사 데이터는 실행별 산출물이 아니므로 `state/company-research.json`에 유지한다.
 
 ## 지원 패키지
 
@@ -527,7 +587,8 @@ dry-run 응답은 `<output>.preview.json`, 변환 오류는 `<output>.errors.jso
 - `cache/`: 피드와 공고에서 다시 만들 수 있는 중간 결과
 
 HTML 게시 전에는 개인 정보, 비공개 업무 내용, 로컬 절대 경로를 검사한다.
-포지션 추천 HTML은 전체 추천 중 상위 3건의 우선 검토 카드, 나머지 추천의 압축 목록, 별도 보류·주의 목록과 전체 후보 순위의 접이식 검색 목록으로 표시한다.
+포지션 추천 HTML은 전체 추천 중 상위 3건의 우선 검토 카드, 나머지 추천의 압축 목록,
+별도 보류·주의 목록과 검토한 후보의 접이식 검색 목록으로 표시한다.
 포지션 추천은 HTML만 생성하며 Markdown 리포트는 만들지 않는다.
 `recommendation.json`과 후보풀 JSON은 검증 입력으로 유지하고 기존 개인 Markdown 파일은 삭제하지 않는다.
 외부 공유 URL은 `report-publisher` skill이 게시와 검증을 마친 뒤 제공한다.
