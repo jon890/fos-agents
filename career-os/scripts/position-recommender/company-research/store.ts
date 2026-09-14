@@ -1,19 +1,51 @@
-import { mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
 import {
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
+import {
+  CompanyResearchFile,
   CompanyResearchStore,
   type CompanyResearchProfileType,
   type CompanyResearchStoreType,
 } from "./schema.ts";
 
-export const defaultCompanyResearchPath = resolve(
+export const defaultCompanyResearchDirectory = resolve(
   import.meta.dir,
-  "../../../state/company-research.json",
+  "../../../state/company-research",
 );
 
-export function loadCompanyResearch(path = defaultCompanyResearchPath): CompanyResearchStoreType {
+export function loadCompanyResearch(
+  directory = defaultCompanyResearchDirectory,
+): CompanyResearchStoreType {
   try {
-    return CompanyResearchStore.parse(JSON.parse(readFileSync(path, "utf8")));
+    const profiles = readdirSync(directory, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+      .toSorted((left, right) => left.name.localeCompare(right.name, "en"))
+      .map((entry) => {
+        const parsed = CompanyResearchFile.parse(
+          JSON.parse(readFileSync(join(directory, entry.name), "utf8")),
+        );
+        if (entry.name !== `${parsed.profile.companyKey}.json`) {
+          throw new Error(`회사 조사 파일명과 companyKey가 다릅니다: ${entry.name}`);
+        }
+        return parsed.profile;
+      });
+    return CompanyResearchStore.parse({ schemaVersion: 1, companies: profiles });
+  } catch (error) {
+    if (!isNotFound(error)) throw new Error("회사 조사 데이터를 읽거나 검증할 수 없습니다.");
+  }
+
+  try {
+    return CompanyResearchStore.parse(JSON.parse(readFileSync(legacyPath(directory), "utf8")));
   } catch (error) {
     if (isNotFound(error)) return { schemaVersion: 1, companies: [] };
     throw new Error("회사 조사 데이터를 읽거나 검증할 수 없습니다.");
@@ -59,24 +91,57 @@ export function mergeCompanyResearch(
 
 export function writeCompanyResearch(
   store: CompanyResearchStoreType,
-  path = defaultCompanyResearchPath,
+  directory = defaultCompanyResearchDirectory,
 ): void {
-  const output = resolve(path);
-  const temporary = `${output}.tmp-${process.pid}`;
-  mkdirSync(dirname(output), { recursive: true });
-  try {
-    writeFileSync(temporary, `${JSON.stringify(CompanyResearchStore.parse(store), null, 2)}\n`, {
-      encoding: "utf8",
-      mode: 0o600,
-    });
-    renameSync(temporary, output);
-  } finally {
+  const outputDirectory = resolve(directory);
+  const parsed = CompanyResearchStore.parse(store);
+  if (!existsSync(outputDirectory)) {
+    mkdirSync(dirname(outputDirectory), { recursive: true });
+    const temporaryDirectory = mkdtempSync(`${outputDirectory}.tmp-`);
     try {
-      unlinkSync(temporary);
-    } catch {
-      // rename 뒤에는 임시 파일이 없다.
+      writeProfiles(parsed, temporaryDirectory);
+      renameSync(temporaryDirectory, outputDirectory);
+    } catch (error) {
+      rmSync(temporaryDirectory, { recursive: true, force: true });
+      throw error;
+    }
+  } else {
+    if (!statSync(outputDirectory).isDirectory()) {
+      throw new Error("회사 조사 저장 경로가 디렉터리가 아닙니다.");
+    }
+    writeProfiles(parsed, outputDirectory);
+  }
+
+  try {
+    unlinkSync(legacyPath(outputDirectory));
+  } catch (error) {
+    if (!isNotFound(error)) throw error;
+  }
+}
+
+function writeProfiles(store: CompanyResearchStoreType, outputDirectory: string): void {
+  for (const profile of store.companies) {
+    const output = join(outputDirectory, `${profile.companyKey}.json`);
+    const temporary = `${output}.tmp-${process.pid}`;
+    try {
+      writeFileSync(temporary, `${JSON.stringify({ schemaVersion: 1, profile }, null, 2)}\n`, {
+        encoding: "utf8",
+        mode: 0o600,
+      });
+      renameSync(temporary, output);
+    } finally {
+      try {
+        unlinkSync(temporary);
+      } catch {
+        // rename 뒤에는 임시 파일이 없다.
+      }
     }
   }
+}
+
+function legacyPath(directory: string): string {
+  const output = resolve(directory);
+  return join(dirname(output), `${basename(output)}.json`);
 }
 
 function isNotFound(error: unknown): boolean {

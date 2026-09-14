@@ -39,7 +39,7 @@ bun career-os/scripts/position-recommender/collect_live_postings.ts \
 `brain-search`로 private brain에서 현재 경력, 역할 선호, 이직 우선순위와 지원 이력을 확인해
 추천 판단에 반영한다. 구체적인 프로젝트 근거는 읽기 전용인 `sources/fos-study/task/`와 함께 확인한다.
 
-`state/company-research.json`의 유효한 회사 조사는 재사용한다.
+`state/company-research/`의 회사별 파일에서 유효한 회사 조사를 재사용한다.
 공고와 경력의 연결성이 높은 후보부터 좁힌 뒤, 추천 가능성이 있는 회사는 공개 자료를 깊게 조사한다.
 
 - 현재 역할과 비교해 맡을 문제, 결정 권한, 운영 책임과 기술 방향이 커지는지 본다.
@@ -50,6 +50,10 @@ bun career-os/scripts/position-recommender/collect_live_postings.ts \
 - 후보자의 경험은 기술 이름보다 실제 사용자, 운영 범위와 장애 영향을 공고의 책임에 연결한다.
 - 공개 자료에서 확인한 사실과 모델의 추론을 구분하고, 추론에 영향을 주는 가정을 밝힌다.
 - 공개 자료로 확인되지 않은 숫자나 제도는 만들지 않는다. 결론을 바꿀 정보만 추가 조사나 면접 질문으로 남긴다.
+
+회사 판단이 상세 추천의 순위나 이유에 영향을 줬다면 재사용할 공개 사실과 그 근거를 저장한다.
+공고 내용만으로 판단했거나 재사용할 회사 사실이 없다면 빈 회사 프로필을 만들지 않는다.
+재조사할 시점과 질문이 구체적일 때만 `researchGaps`를 남긴다.
 
 새 사실, 추론과 재조사할 질문은 `<RUN_DIR>/company-research-updates.json`에 쓰고 합친다.
 이번 실행에서 다루지 않은 기존 항목은 병합기가 보존한다.

@@ -187,20 +187,19 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 
 ### 재사용하는 회사 조사 데이터
 
-`state/company-research.json`은 포지션 추천이 다음 실행에서도 재사용할 공개 회사 사실과
+`state/company-research/<companyKey>.json`은 포지션 추천이 다음 실행에서도 재사용할 공개 회사 사실과
 그 사실에서 도출한 추론을 담는다. 비공개 작업 release로 동기화하지만 현재 역할,
 개인 우선순위와 최종 추천 순위는 넣지 않는다.
 
 ```json
 {
   "schemaVersion": 1,
-  "companies": [
-    {
-      "companyKey": "example-company",
-      "company": "예시 회사",
-      "aliases": ["Example Company"],
-      "researchedAt": "2026-09-14T12:00:00+09:00",
-      "facts": [
+  "profile": {
+    "companyKey": "example-company",
+    "company": "예시 회사",
+    "aliases": ["Example Company"],
+    "researchedAt": "2026-09-14T12:00:00+09:00",
+    "facts": [
         {
           "factId": "example-company-growth-2026-q3",
           "topic": "growth",
@@ -216,8 +215,8 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
           },
           "validUntil": "2026-12-13"
         }
-      ],
-      "inferences": [
+    ],
+    "inferences": [
         {
           "inferenceId": "example-company-domain-upside-2026-q3",
           "topic": "domain-growth",
@@ -228,17 +227,16 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
           "inferredAt": "2026-09-14T12:00:00+09:00",
           "validUntil": "2026-12-13"
         }
-      ],
-      "researchGaps": [
+    ],
+    "researchGaps": [
         {
           "topic": "compensation",
           "question": "백엔드 경력직 총보상 구간을 확인할 공개 자료가 있는가",
           "lastAttemptedAt": "2026-09-14T12:00:00+09:00",
           "retryAfter": "2026-10-14"
         }
-      ]
-    }
-  ]
+    ]
+  }
 }
 ```
 
@@ -293,7 +291,7 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 게시용 HTML은 이 결과에서 만든다.
 HTML은 상세 추천과 함께 전체 순위를 펼쳐 보고 회사, 공고명, 기술과 공고 본문으로 검색할 수 있게 만든다.
 후보풀, 추천 JSON과 HTML은 게시 검증 뒤 삭제한다.
-회사 조사 데이터는 실행별 산출물이 아니므로 `state/company-research.json`에 유지한다.
+회사 조사 데이터는 실행별 산출물이 아니므로 `state/company-research/`의 회사별 파일에 유지한다.
 
 ## 지원 패키지
 

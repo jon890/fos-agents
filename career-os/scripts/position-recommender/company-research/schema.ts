@@ -120,5 +120,12 @@ export const CompanyResearchStore = z
     });
   });
 
+export const CompanyResearchFile = z
+  .object({
+    schemaVersion: z.literal(1),
+    profile: CompanyResearchProfile,
+  })
+  .strict();
+
 export type CompanyResearchStoreType = z.infer<typeof CompanyResearchStore>;
 export type CompanyResearchProfileType = z.infer<typeof CompanyResearchProfile>;

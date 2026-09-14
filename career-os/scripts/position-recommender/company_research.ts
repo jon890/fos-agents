@@ -3,26 +3,32 @@ import { readFileSync } from "node:fs";
 import { firstOptionValue } from "../lib/cli.ts";
 import { CompanyResearchStore } from "./company-research/schema.ts";
 import {
-  defaultCompanyResearchPath,
+  defaultCompanyResearchDirectory,
   loadCompanyResearch,
   mergeCompanyResearch,
   writeCompanyResearch,
 } from "./company-research/store.ts";
 
-export function applyCompanyResearchUpdates(input: string, storePath = defaultCompanyResearchPath) {
+export function applyCompanyResearchUpdates(
+  input: string,
+  storeDirectory = defaultCompanyResearchDirectory,
+) {
   const updates = CompanyResearchStore.parse(JSON.parse(readFileSync(input, "utf8")));
-  const next = mergeCompanyResearch(updates, loadCompanyResearch(storePath));
-  writeCompanyResearch(next, storePath);
+  const next = mergeCompanyResearch(updates, loadCompanyResearch(storeDirectory));
+  writeCompanyResearch(next, storeDirectory);
   return { updated: updates.companies.length, total: next.companies.length };
 }
 
 if (import.meta.main) {
   const args = process.argv.slice(2);
   const input = firstOptionValue(args, "--input");
-  const store = firstOptionValue(args, "--store") ?? defaultCompanyResearchPath;
+  const store =
+    firstOptionValue(args, "--store-dir") ??
+    firstOptionValue(args, "--store") ??
+    defaultCompanyResearchDirectory;
   if (!input) {
     console.error(
-      "사용법: company_research.ts --input <company-research-updates.json> [--store <company-research.json>]",
+      "사용법: company_research.ts --input <company-research-updates.json> [--store-dir <company-research-directory>]",
     );
     process.exit(2);
   }
