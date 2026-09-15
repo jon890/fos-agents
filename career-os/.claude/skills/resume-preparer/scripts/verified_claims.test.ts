@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { claimKey, normalizeClaimText } from "./verified-claims/identity.ts";
+import { claimFreshness } from "./verified-claims/evidence.ts";
 import { groupForPath, readStateFiles, writeGroup } from "./verified-claims/store.ts";
 import type { VerifiedClaim } from "./verified-claims/schema.ts";
 
@@ -49,5 +50,22 @@ describe("verified claims", () => {
     expect(writeGroup(state, group, [claim()]).changed).toBe(true);
     expect(writeGroup(state, group, [claim()]).changed).toBe(false);
     expect(readStateFiles(state)[0].file.claims).toHaveLength(1);
+  });
+  test("runtime-only 판정 축은 재확인이 필요하다", () => {
+    const runtimeOnly: VerifiedClaim = {
+      ...claim(),
+      evidenceSnapshots: [
+        {
+          path: "https://example.com/runtime",
+          kind: "runtime",
+          axis: "implementation",
+          freshness: "refresh_required",
+        },
+      ],
+    };
+    expect(claimFreshness(runtimeOnly)).toEqual({
+      fresh: false,
+      reasons: ["implementation: HTTPS runtime 근거 재확인 필요"],
+    });
   });
 });

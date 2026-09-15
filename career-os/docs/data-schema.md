@@ -203,7 +203,10 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 - `claims[].origins`: 이 판정을 만든 application 경로, 원장 경로, HTML 문구 해시와 원장의 `generatedAt`이다
 
 로컬 파일 근거의 `freshness`는 `tracked`이며 파일 내용의 SHA-256을 저장한다.
-HTTPS `runtime` 근거는 실행마다 달라질 수 있으므로 `refresh_required`로 저장하고 자동 재사용하지 않는다.
+HTTPS `runtime` 근거는 실행마다 달라질 수 있으므로 `refresh_required`로 저장한다.
+재사용 판정은 구현, 소유권, 결과와 경험 깊이 축을 각각 확인한다.
+어떤 축에 HTTPS `runtime` 근거만 있으면 해당 주장은 다시 감사한다.
+같은 축에 현재 SHA-256이 일치하는 로컬 근거가 있으면 HTTPS 근거는 보조 근거로 남기고 주장을 재사용할 수 있다.
 근거 파일을 읽을 수 없거나 해시가 달라지면 해당 근거를 참조하는 주장은 다시 감사한다.
 
 공고별 `review/claim-ledger.json`은 현재 제출 HTML 전체의 완결된 감사 결과다.
