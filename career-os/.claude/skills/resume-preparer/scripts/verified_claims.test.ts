@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { claimKey, normalizeClaimText } from "./verified-claims/identity.ts";
 import { claimFreshness } from "./verified-claims/evidence.ts";
 import { groupForPath, readStateFiles, writeGroup } from "./verified-claims/store.ts";
 import type { VerifiedClaim } from "./verified-claims/schema.ts";
+import { isSameRegisteredClaim, search } from "./verified-claims/service.ts";
 
 const directories: string[] = [];
 afterEach(() => {
@@ -65,7 +66,48 @@ describe("verified claims", () => {
     };
     expect(claimFreshness(runtimeOnly)).toEqual({
       fresh: false,
-      reasons: ["implementation: HTTPS runtime 근거 재확인 필요"],
+      reasons: ["https://example.com/runtime: implementation 축 HTTPS runtime 근거 재확인 필요"],
     });
+  });
+  test("claimKey가 같아도 판정 근거가 다르면 재사용하지 않는다", () => {
+    const registered = claim();
+    const current = {
+      ...registered.claim,
+      implementation: {
+        status: "document_only" as const,
+        evidence: [{ kind: "document" as const, path: "changed.md", supports: "다른 근거" }],
+      },
+    };
+    expect(isSameRegisteredClaim(current, registered)).toBe(false);
+  });
+  test("손상된 상태 파일은 경로를 포함해 중단한다", () => {
+    const state = mkdtempSync(join(tmpdir(), "verified-claims-"));
+    directories.push(state);
+    writeFileSync(join(state, "broken.json"), "{");
+    expect(() => readStateFiles(state)).toThrow("broken.json");
+  });
+  test("같은 키의 origin은 안정적으로 합치고 전체 축 supports를 검색한다", () => {
+    const state = mkdtempSync(join(tmpdir(), "verified-claims-"));
+    directories.push(state);
+    const first = claim();
+    const second: VerifiedClaim = {
+      ...first,
+      claim: {
+        ...first.claim,
+        outcome: {
+          status: "documented",
+          evidence: [{ kind: "document", path: "outcome.md", supports: "결과 검색어" }],
+        },
+      },
+      evidenceSnapshots: [
+        { path: "outcome.md", kind: "document", axis: "outcome", freshness: "missing" },
+      ],
+      origins: [{ ...first.origins[0], ledger: "other-ledger.json" }],
+    };
+    const group = groupForPath("career-os/library/profiles/wanted-profile.md");
+    writeGroup(state, group, [first]);
+    writeGroup(state, group, [second]);
+    expect(readStateFiles(state)[0].file.claims[0].origins).toHaveLength(2);
+    expect(search("결과 검색어", state)[0].evidence[0].axis).toBe("outcome");
   });
 });

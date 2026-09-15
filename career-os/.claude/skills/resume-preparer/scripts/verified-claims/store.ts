@@ -41,9 +41,20 @@ export function readStateFiles(
         : entry.name.endsWith(".json") && files.push(join(dir, entry.name));
   };
   walk(stateDir);
-  return files.sort().flatMap((path) => {
-    const parsed = VerifiedClaimsFileSchema.safeParse(JSON.parse(readFileSync(path, "utf8")));
-    return parsed.success ? [{ path, file: parsed.data }] : [];
+  return files.sort().map((path) => {
+    let raw: unknown;
+    try {
+      raw = JSON.parse(readFileSync(path, "utf8"));
+    } catch (error) {
+      throw new Error(`검증 완료 주장 상태 파일을 읽을 수 없습니다: ${path}: ${error}`);
+    }
+    const parsed = VerifiedClaimsFileSchema.safeParse(raw);
+    if (!parsed.success) {
+      throw new Error(
+        `검증 완료 주장 상태 파일 형식이 올바르지 않습니다: ${path}: ${parsed.error.message}`,
+      );
+    }
+    return { path, file: parsed.data };
   });
 }
 
@@ -60,8 +71,17 @@ export function writeGroup(
   for (const addition of additions) {
     const current = byKey.get(addition.claimKey);
     if (!current) byKey.set(addition.claimKey, addition);
-    else if (JSON.stringify(current) !== JSON.stringify(addition))
-      byKey.set(addition.claimKey, addition);
+    else {
+      const origins = [...current.origins, ...addition.origins]
+        .filter(
+          (origin, index, all) =>
+            index ===
+            all.findIndex((candidate) => JSON.stringify(candidate) === JSON.stringify(origin)),
+        )
+        .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+      const merged = { ...addition, origins };
+      if (JSON.stringify(current) !== JSON.stringify(merged)) byKey.set(addition.claimKey, merged);
+    }
   }
   const next = {
     ...old,

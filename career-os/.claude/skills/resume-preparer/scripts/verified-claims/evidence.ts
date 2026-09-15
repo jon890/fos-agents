@@ -72,8 +72,13 @@ export function claimFreshness(
       else if (snapshot.sha256 !== sha256(readFileSync(full)))
         reasons.push(`${snapshot.path}: 근거 파일 변경`);
     }
-    if (!hasTracked && snapshots.some((snapshot) => snapshot.freshness === "refresh_required"))
-      reasons.push(`${axis}: HTTPS runtime 근거 재확인 필요`);
+    if (!hasTracked) {
+      for (const snapshot of snapshots.filter(
+        (snapshot) => snapshot.freshness === "refresh_required",
+      )) {
+        reasons.push(`${snapshot.path}: ${axis} 축 HTTPS runtime 근거 재확인 필요`);
+      }
+    }
   }
   return { fresh: reasons.length === 0, reasons };
 }
