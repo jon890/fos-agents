@@ -14,8 +14,8 @@ career-os/
 ├── config/               사람이 관리하는 수집 정책
 ├── scripts/              검증, 수집과 변환 코드
 ├── applications/         동기화되는 로컬 지원 패키지
-├── library/              여러 지원에서 재사용하는 비공개 자료
-├── state/                동기화되는 도구 실행 상태
+├── library/              사람이 직접 관리하며 여러 지원에서 재사용하는 비공개 자료
+├── state/                검증기와 도구가 다음 실행에 재사용하는 상태
 ├── public/               공개 가능한 질문 은행
 ├── cache/                다시 만들 수 있는 수집 결과
 ├── sources/fos-study/    별도 저장소에서 관리하는 공개 학습·이력 자료
@@ -43,8 +43,8 @@ career-os/
 | `applications/<company>/<position>/`                                | 사용자가 여는 검토 화면과 제출 PDF                        |
 | `applications/<company>/<position>/evidence/`                       | 공고 원문, 후보자 인터뷰, 지원 전략과 제출 문서 원본      |
 | `applications/<company>/<position>/review/`                         | 근거 장부, 점수표, manifest와 제출 문서 HTML              |
-| `library/`                                                          | 여러 지원에서 재사용하는 비공개 질문과 이력서 기준본      |
-| `state/`                                                            | 답변 연습처럼 다음 실행에 필요한 상태                     |
+| `library/`                                                          | 여러 지원에서 재사용하는 비공개 질문과 프로필 원고        |
+| `state/`                                                            | 답변 연습과 검증 장부처럼 다음 실행에 필요한 상태          |
 | `public/question-bank/`                                             | 공개 가능한 일반 면접 질문과 출처                         |
 | `sources/fos-study/`                                                | 별도 저장소에서 관리하는 공개 학습·경력 근거              |
 | `docs/`                                                             | 제품 가치, 흐름, 데이터 계약, 코드 구조와 결정 이유       |
@@ -330,6 +330,19 @@ HTML은 검증된 추천 JSON에서 파생한다.
 사실 감사와 설득력 평가는 별도 참고 문서와 검사 스크립트로 분리하지만 별도 스킬로 노출하지 않는다.
 면접 말하기 준비와 꼬리질문 연습은 `interview-practice`가 담당한다.
 
+`.claude/skills/resume-preparer/scripts/verified-claims/`는 검증 완료 주장 스키마, 안정적인 주장 키, 근거 파일 해시, 저장과 검색을 책임별 모듈로 나눈다.
+CLI 진입점은 다음 셋만 스킬의 `scripts/` 바로 아래에 둔다.
+
+| CLI | 책임 |
+| --- | --- |
+| `search_verified_claims.ts <query>` | 문구와 근거 설명을 검색해 관련 주장, 근거 경로와 locator를 점수순으로 출력한다 |
+| `assess_claim_reuse.ts <application-directory>` | 현재 제출 문서에서 그대로 쓸 수 있는 판정과 다시 읽을 근거를 나눈다 |
+| `promote_verified_claims.ts <application-directory>` | 검증을 통과한 현재 공고별 원장을 검증 장부에 원자적으로 합친다 |
+
+검색과 판정 CLI는 상태 파일을 바꾸지 않는다.
+반영 CLI는 `schemaVersion: 3`, 모든 주장 `safe`, 현재 HTML 문구 해시 일치를 다시 검사한 뒤에만 쓴다.
+같은 원장을 다시 반영하면 파일 내용과 수정 시각을 바꾸지 않는다.
+
 공고별 문서는 `applications/<company>/<position>/`에 세 층으로 둔다.
 최상위에는 사용자가 직접 여는 `application-package.html`과 제출 PDF만 두고, 기준 원본은 `evidence/`에, 내부 검증 자료는 `review/`에 둔다.
 기준 원본은 `evidence/`의 `posting.md`, `candidate-interview.md`, `fit.md`, `strategy.md`, `status.md`, `resume-draft.md`와 `interview-questions.json`이다.
@@ -340,7 +353,10 @@ HTML은 검증된 추천 JSON에서 파생한다.
 브라우저 자동 입력용 `application-form.json`과 경력기술서는 필요한 경우에만 추가한다.
 공통 개인정보는 private brain에서 가져오고 후보자 인터뷰에는 복제하지 않는다.
 공고별 개인 근거와 면접 준비 자료도 같은 `applications/<company>/<position>/`에 둔다.
-여러 지원에서 재사용하는 개인 질문과 이력서 원고 기준본은 `library/`에 둔다.
+여러 지원에서 재사용하는 개인 질문과 대상별 프로필 원고는 `library/`에 둔다.
+프로필 원고는 `library/profiles/`에 두며 원티드, LinkedIn과 GitHub처럼 갱신 대상을 파일명으로 구분한다.
+지원서 검증 결과와 점수표는 `library/`에 보관하지 않는다.
+공고별 현재 검토 결과는 해당 `applications/`에 두고, 여러 지원에서 재사용할 검증 완료 주장만 `state/verified-claims/`에 둔다.
 작성 취향은 아래 「후보자 지식과 이력서」의 스킬 참조가 담당한다.
 실제 제출은 두 스킬의 책임이 아니다.
 

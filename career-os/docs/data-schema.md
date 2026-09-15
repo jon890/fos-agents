@@ -178,6 +178,38 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 학습 주제 생성 상태와 섞지 않는다.
 이 파일은 public 저장소에서 추적하지 않고 비공개 작업 release로 동기화한다.
 
+### `state/verified-claims/`
+
+`resume-preparer`가 다시 쓸 수 있다고 확인한 주장과 근거 파일 상태를 작은 JSON 파일로 나눠 저장한다.
+이 디렉터리는 검증 결과에서 만든 상태이며 사람이 직접 관리하는 원고를 두지 않는다.
+
+경로는 첫 번째 로컬 근거의 책임에 따라 정한다.
+
+| 근거 | 장부 경로 |
+| --- | --- |
+| `sources/fos-study/task/<group>/<file>` | `state/verified-claims/task/<group>/<file>.json` |
+| `library/profiles/<file>` | `state/verified-claims/profile/<file>.json` |
+| `applications/<company>/<position>/...` | `state/verified-claims/application/<company>/<position>.json` |
+| 그 밖의 로컬 파일 | `state/verified-claims/other/<file>.json` |
+
+각 파일은 다음 필드를 가진다.
+
+- `schemaVersion`: 검증 장부 스키마 버전이며 처음 구현은 `1`이다
+- `groupKey`: 위 경로에서 만든 안정적인 묶음 식별자다
+- `claims`: `claimKey` 순으로 정렬한 검증 완료 주장 목록이다
+- `claims[].claimKey`: 정규화한 `proposedText`의 SHA-256으로 만든 안정적인 키다
+- `claims[].claim`: 공고별 `schemaVersion: 3` 원장의 주장과 네 판정 축이다
+- `claims[].evidenceSnapshots`: 근거별 `path`, `kind`, `locator`, `sha256`과 `freshness`다
+- `claims[].origins`: 이 판정을 만든 application 경로, 원장 경로, HTML 문구 해시와 원장의 `generatedAt`이다
+
+로컬 파일 근거의 `freshness`는 `tracked`이며 파일 내용의 SHA-256을 저장한다.
+HTTPS `runtime` 근거는 실행마다 달라질 수 있으므로 `refresh_required`로 저장하고 자동 재사용하지 않는다.
+근거 파일을 읽을 수 없거나 해시가 달라지면 해당 근거를 참조하는 주장은 다시 감사한다.
+
+공고별 `review/claim-ledger.json`은 현재 제출 HTML 전체의 완결된 감사 결과다.
+`state/verified-claims/`는 다음 감사의 읽기 범위를 줄이는 파생 상태이며 공고별 원장을 대신하지 않는다.
+`sources/fos-study/task/`는 계속 읽기 전용 근거로 유지하고 검증 결과를 그 저장소에 쓰지 않는다.
+
 ### 실행 중 생성되는 읽을거리 데이터
 
 읽을거리 실행은 시스템 임시 경로에 후보풀, 선별 결과와 이력을 만든다.
@@ -378,7 +410,9 @@ HTML은 상세 추천과 함께 전체 순위를 펼쳐 보고 회사, 공고명
 
 공고별 개인 근거와 면접 질문은 해당 `applications/<company>/<position>/`에 둔다.
 여러 지원에서 재사용하는 개인 질문은 `library/question-bank/`에 둔다.
-특정 지원에 종속되지 않는 이력서 원고 기준본은 `library/resume-baselines/`에 둔다.
+특정 지원에 종속되지 않는 대상별 프로필 원고는 `library/profiles/`에 둔다.
+이력서 공통 작성 규칙과 디자인은 `resume-preparer` 스킬의 참조와 템플릿이 소유한다.
+과거 지원에서 만든 근거 원장, 감사 문서, 점수표와 사용하지 않는 CSS는 `library/`에 남기지 않는다.
 
 재사용할 작성 취향의 기준 원본은 `.claude/skills/resume-preparer/references/resume-taste.md`다.
 brain에는 경력, 역할 선호와 경험 경계 등 개인 지식을 두고, 지원별 사실과 표현 확인은 `evidence/candidate-interview.md`의 기존 계약을 따른다.

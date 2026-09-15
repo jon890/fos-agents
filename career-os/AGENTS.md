@@ -79,7 +79,8 @@ grep -rl "<확인할 기술>" career-os/sources/fos-study/task/
 | `sources/fos-study/task/`        | 프로젝트별로 실제 한 일, 기술 선택과 그 이유      |
 | private brain                    | 신원, 지원 프로필, 역할 선호, 경험 경계, 지원 이력 |
 | `applications/<company>/<role>/` | 공고별 적합도 판정과 지원 전략               |
-| `library/resume-baselines/`      | 대상별 프로필 원고                      |
+| `library/profiles/`              | 대상별 프로필 원고                      |
+| `state/verified-claims/`         | 다시 쓸 수 있는 검증 완료 주장과 근거 상태       |
 
 
 **같은 사실을 두 곳에 쓰지 않는다.**
