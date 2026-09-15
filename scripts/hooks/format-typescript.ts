@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { existsSync, realpathSync } from "node:fs";
-import { dirname, extname, isAbsolute, relative, resolve } from "node:path";
+import { extname, isAbsolute, relative, resolve } from "node:path";
 
 type HookInput = { cwd?: unknown; tool_input?: unknown };
 
@@ -31,14 +31,21 @@ export function patchTargets(patch: string): string[] {
   return [...new Set(targets)];
 }
 
-export function formatTargets(patch: string, cwd: string): string[] {
-  const root = resolve(cwd);
+export function repositoryRoot(): string {
+  return realpathSync(resolve(import.meta.dir, "../.."));
+}
+
+export function formatTargets(patch: string, cwd: string, root = repositoryRoot()): string[] {
+  const resolvedRoot = realpathSync(root);
+  const resolvedCwd = resolve(cwd);
   return patchTargets(patch).flatMap((path) => {
     if (!TYPESCRIPT_EXTENSIONS.has(extname(path))) return [];
-    const target = resolve(root, path);
-    if (relative(root, target).startsWith("..") || isAbsolute(relative(root, target))) return [];
+    const target = resolve(resolvedCwd, path);
     if (!existsSync(target)) return [];
-    return [target];
+    const realTarget = realpathSync(target);
+    const outside = relative(resolvedRoot, realTarget);
+    if (outside.startsWith("..") || isAbsolute(outside)) return [];
+    return [realTarget];
   });
 }
 
@@ -46,8 +53,7 @@ export async function runHook(input: HookInput): Promise<void> {
   const cwd = typeof input.cwd === "string" ? input.cwd : process.cwd();
   const targets = formatTargets(patchText(input), cwd);
   if (!targets.length) return;
-  const projectRoot = resolve(import.meta.dir, "../..");
-  const prettier = resolve(projectRoot, "node_modules/.bin/prettier");
+  const prettier = resolve(repositoryRoot(), "node_modules/.bin/prettier");
   const result = Bun.spawnSync([prettier, "--write", ...targets], {
     cwd,
     stdout: "ignore",
