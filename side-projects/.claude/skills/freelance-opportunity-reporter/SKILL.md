@@ -78,7 +78,7 @@ description: >-
    `wishket-cron`을 지정해 위시켓을 탐색한다.
 
    ```bash
-   uvx --from browser-use python \
+   /opt/data/.local/share/uv/tools/browser-use/bin/python \
      .claude/skills/freelance-opportunity-reporter/scripts/wishket_cloud_browser.py start
    ```
 
