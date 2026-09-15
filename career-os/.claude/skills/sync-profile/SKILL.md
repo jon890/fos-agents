@@ -47,7 +47,7 @@ bun career-os/scripts/career-workspace/cli.ts skill finish sync-profile --json
 
 **갱신할 내용의 출처를 먼저 정한다.**
 
-프로필은 특정 지원 건에 매이지 않으므로 대상별 원고를 `library/resume-baselines/` 에 둔다.
+프로필은 특정 지원 건에 매이지 않으므로 대상별 원고를 `library/profiles/` 에 둔다.
 원티드는 `wanted-profile.md`, GitHub 은 `github-profile.md`, LinkedIn 은 `linkedin-profile.md` 다.
 
 원고가 없으면 가장 최근 지원의 `applications/<company>/<role>/evidence/resume-draft.md` 를
