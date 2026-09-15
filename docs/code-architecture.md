@@ -30,6 +30,7 @@
 | `CLAUDE.md` | `AGENTS.md` 심볼릭 링크 |
 | `.agents/skills/` | Codex가 직접 탐색하는 저장소 전역 skill |
 | `.claude/skills/_shared/` | 여러 실행 역할이 함께 쓰는 실측 함정 참조 |
+| `.codex/hooks.json`, `scripts/hooks/` | `apply_patch` 뒤 수정한 TypeScript 파일만 Prettier로 정리하는 프로젝트 hook |
 | `docs/adr/` | 모노레포 레벨 ADR |
 | `docs/code-architecture.md` | 현재 구조와 책임 경계 |
 

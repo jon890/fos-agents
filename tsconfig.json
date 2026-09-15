@@ -17,5 +17,5 @@
       "@career-os/_lib/*": ["./career-os/scripts/_lib/*"]
     }
   },
-  "include": ["career-os/scripts/**/*.ts", "career-os/.claude/skills/**/scripts/**/*.ts"]
+  "include": ["scripts/**/*.ts", "career-os/scripts/**/*.ts", "career-os/.claude/skills/**/scripts/**/*.ts"]
 }
