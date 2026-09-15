@@ -47,7 +47,7 @@ description: >-
 
    | 플랫폼 | 목록 | 필터와 주의 |
    | --- | --- | --- |
-   | 위시켓 | `wishket.com/project/` | 기존 Orca 로그인 세션을 먼저 사용한다.<br>`외주(도급)`과 `모집 마감 제외` 필터를 적용한다.<br>목록 이동에 `?page=N`이 먹지 않아 페이지네이션을 눌러 순회한다.<br>로그인 상세에서 미팅·현장 작업·검수 조건을 확인한 공고만 후보로 넘긴다. |
+   | 위시켓 | `wishket.com/project/` | 대화형 실행은 기존 Orca 로그인 세션을 사용한다.<br>Hermes cron은 `wishket-home` Browser Use Cloud 프로필을 사용한다.<br>`외주(도급)`과 `모집 마감 제외` 필터를 적용한다.<br>목록 이동에 `?page=N`이 먹지 않아 페이지네이션을 눌러 순회한다.<br>로그인 상세에서 미팅·현장 작업·검수 조건을 확인한 공고만 후보로 넘긴다. |
    | 프리모아 | `freemoa.net/m4/s41?page=N` | `도급(원격)` 필터를 적용한다.<br>`모집중`과 `마감임박`만 남기고 `마감`은 제외한다.<br>기존 Orca 로그인 세션을 먼저 사용한다. |
    | 원티드 긱스 | `wanted.co.kr/gigs/api-v2/projects` | 공개 API를 쓴다.<br>최종 리포트에는 `work_place == remote`인 공고만 남긴다.<br>`office`와 `both`는 제외한다. |
 
@@ -70,11 +70,22 @@ description: >-
    블로그 요약보다 공식 목록, 고객센터, 가격 정책 페이지를 우선한다.
    수집 절차, 누락 검사, 불완전할 때의 보고 방식은 `references/collection.md`를 읽고 따른다.
 
-   위시켓은 보고서 작성 전에 Orca의 로그인 상태를 확인한다.
+   위시켓은 보고서 작성 전에 현재 실행 환경의 로그인 상태를 확인한다.
    대화형 실행에서 로그아웃 상태이거나 상세 본문을 볼 수 없으면 사용자에게 로그인을 요청하고
    위시켓 수집을 멈춘다.
-   사람이 없는 Hermes cron에서는 위시켓을 `인증 만료`로 기록하고 검증하지 못한 위시켓 공고를
-   후보에서 제외한 뒤 다른 플랫폼 수집을 계속한다.
+
+   Hermes cron에서는 Browser Use Cloud 세션을 시작하고 `browser_exec`의 `session`에
+   `wishket-cron`을 지정해 위시켓을 탐색한다.
+
+   ```bash
+   uvx --from browser-use python \
+     .claude/skills/freelance-opportunity-reporter/scripts/wishket_cloud_browser.py start
+   ```
+
+   위시켓 수집이 끝나거나 중단되면 같은 스크립트의 `stop`을 실행한다.
+   정상 종료가 로그인 상태를 `wishket-home` 프로필에 반영하고 cloud browser 사용을 끝낸다.
+   `start`가 실패하거나 로그인 상세를 볼 수 없을 때만 위시켓을 `인증 만료` 또는 `접근 제한`으로 기록하고,
+   검증하지 못한 위시켓 공고를 후보에서 제외한 뒤 다른 플랫폼 수집을 계속한다.
    다른 플랫폼에서 검증된 후보를 1건 이상 확보하면 부분 성공 리포트를 게시하고,
    후보가 없으면 리포트를 만들지 않고 접근 제한을 알린다.
    로그인 후에도 프라이빗 매칭 등으로 원격 조건을 확인할 수 없는 공고는 후보에서 제외한다.
