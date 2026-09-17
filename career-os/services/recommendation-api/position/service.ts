@@ -5,6 +5,7 @@ import type {
   PositionRepositoryState,
   StoredAnalysis,
   StoredAnalysisRun,
+  StoredAnalysisRunItem,
   StoredPosition,
 } from "./memory-repository.ts";
 import { selectAnalysisQueue, type PendingPosition } from "./queue.ts";
@@ -12,10 +13,12 @@ import {
   analysisPolicySchema,
   analysisQueueResponseSchema,
   analysisResultsRequestSchema,
+  analysisResultsResponseSchema,
   collectionRequestSchema,
   companyPreferenceSchema,
   companyPreferenceUpdateSchema,
   type AnalysisQueueResponse,
+  type AnalysisResultsResponse,
   type CompanyPreference,
   type RecommendationResponse,
   recommendationResponseSchema,
@@ -77,6 +80,20 @@ function tierFor(state: PositionRepositoryState, position: StoredPosition): numb
 
 function isExcluded(state: PositionRepositoryState, company: string): boolean {
   return state.preferences.get(companyKey(company))?.disposition === "exclude";
+}
+
+function positionById(state: PositionRepositoryState, positionId: string): StoredPosition {
+  return [...state.positions.values()].find((entry) => entry.positionId === positionId)!;
+}
+
+function currentVersionId(state: PositionRepositoryState, positionId: string): string {
+  const position = positionById(state, positionId);
+  return position.versions.find((entry) => entry.contentHash === position.contentHash)!
+    .positionVersionId;
+}
+
+function sortedItems(run: StoredAnalysisRun): StoredAnalysisRunItem[] {
+  return [...run.items.values()].sort((left, right) => left.selectionOrder - right.selectionOrder);
 }
 
 function requirePolicy(state: PositionRepositoryState) {
@@ -251,15 +268,24 @@ export class PositionService {
         analysisContractVersion: request.analysisContractVersion,
         createdAt: now,
         completedAt: selected.length === 0 ? now : null,
-        selectedPositionIds: selected.map((candidate) => candidate.positionId),
-        statusByPosition: new Map(
-          selected.map((candidate) => [candidate.positionId, candidate.status]),
-        ),
-        selectionReasonByPosition: new Map(
-          selected.map((candidate) => [candidate.positionId, candidate.selectionReason]),
-        ),
-        companyTierByPosition: new Map(
-          selected.map((candidate) => [candidate.positionId, candidate.companyTier]),
+        status: selected.length === 0 ? "completed" : "pending",
+        items: new Map(
+          selected.map((candidate, index) => [
+            candidate.positionId,
+            {
+              positionId: candidate.positionId,
+              positionVersionId: currentVersionId(state, candidate.positionId),
+              selectionOrder: index + 1,
+              analysisStatus: candidate.status,
+              selectionReason: candidate.selectionReason,
+              companyTier: candidate.companyTier,
+              resultStatus: "pending" as const,
+              analysisId: null,
+              failureCode: null,
+              attemptCount: 0,
+              completedAt: null,
+            },
+          ]),
         ),
         analyzedNowCount: 0,
       };
@@ -280,10 +306,7 @@ export class PositionService {
     generatedAt: string,
   ): AnalysisQueueResponse {
     const collection = state.collections.get(run.collectionRunId)!;
-    const positions = [...state.positions.values()];
-    const selected = run.selectedPositionIds.map((positionId) =>
-      positions.find((entry) => entry.positionId === positionId)!,
-    );
+    const items = sortedItems(run);
     const active = collection.candidateIds
       .map((identity) => state.positions.get(identity)!)
       .filter(Boolean);
@@ -296,27 +319,35 @@ export class PositionService {
       ),
     );
     return analysisQueueResponseSchema.parse({
-      schemaVersion: 1,
+      schemaVersion: 2,
       collectionRunId: run.collectionRunId,
       analysisRunId: run.analysisRunId,
       generatedAt,
-      candidates: selected.map((position) => ({
-        positionId: position.positionId,
-        candidateId: position.candidateId,
-        contentHash: position.contentHash,
-        analysisStatus: run.statusByPosition.get(position.positionId),
-        companyTier: tierFor(state, position),
-        posting: position.posting,
-      })),
+      candidates: items.map((item) => {
+        const position = positionById(state, item.positionId);
+        return {
+          positionId: position.positionId,
+          candidateId: position.candidateId,
+          contentHash: position.contentHash,
+          analysisStatus: item.analysisStatus,
+          companyTier: tierFor(state, position),
+          resultStatus: item.resultStatus,
+          posting: position.posting,
+        };
+      }),
       summary: {
         activeCount: active.length,
         reusedCount: statuses.filter((status) => status === "fresh").length,
-        queuedCount: selected.length,
+        queuedCount: items.length,
         pendingCount: statuses.filter((status) => status !== "fresh").length,
         personalExcludedCount,
         newCount: statuses.filter((status) => status === "new").length,
         changedCount: statuses.filter((status) => status === "changed").length,
         staleCount: statuses.filter((status) => status === "stale").length,
+        completedCount: items.filter(
+          (item) => item.resultStatus === "created" || item.resultStatus === "reused",
+        ).length,
+        failedCount: items.filter((item) => item.resultStatus === "failed").length,
         warningSourceCount: publicDiagnostics(collection.diagnostics).length,
       },
     });
@@ -330,42 +361,86 @@ export class PositionService {
       if (!run || run.collectionRunId !== request.collectionRunId) {
         throw new ApiError(409, "VERSION_CONFLICT", "분석 실행과 수집 실행이 일치하지 않습니다.");
       }
-      if (run.completedAt)
-        return { analysisRunId, analyzedNowCount: run.analyzedNowCount, reused: true };
-      const resultIds = request.results.map((result) => result.positionId);
+      if (run.status === "completed") return this.resultsResponse(run, false);
+      const openIds = sortedItems(run)
+        .filter((item) => item.resultStatus === "pending" || item.resultStatus === "failed")
+        .map((item) => item.positionId);
+      const submittedIds = [
+        ...request.results.map((result) => result.positionId),
+        ...request.failures.map((failure) => failure.positionId),
+      ];
       if (
-        new Set(resultIds).size !== resultIds.length ||
-        resultIds.length !== run.selectedPositionIds.length ||
-        run.selectedPositionIds.some((positionId) => !resultIds.includes(positionId))
+        new Set(submittedIds).size !== submittedIds.length ||
+        submittedIds.length !== openIds.length ||
+        openIds.some((positionId) => !submittedIds.includes(positionId))
       ) {
-        throw new ApiError(409, "VERSION_CONFLICT", "선택된 모든 공고 분석이 한 번씩 필요합니다.");
+        throw new ApiError(
+          409,
+          "VERSION_CONFLICT",
+          "아직 끝나지 않은 모든 공고의 결과가 한 번씩 필요합니다.",
+        );
       }
       for (const result of request.results) {
-        const position = [...state.positions.values()].find(
-          (entry) => entry.positionId === result.positionId,
-        )!;
+        const item = run.items.get(result.positionId)!;
+        const position = positionById(state, result.positionId);
         const duplicate = position.analyses.find(
           (analysis) =>
             analysis.contentHash === position.contentHash &&
             analysis.candidateContextVersion === run.candidateContextVersion &&
             analysis.analysisContractVersion === run.analysisContractVersion,
         );
-        if (duplicate) continue;
-        position.analyses.push({
-          ...structuredClone(result),
-          analysisId: crypto.randomUUID(),
-          contentHash: position.contentHash,
-          candidateContextVersion: run.candidateContextVersion,
-          analysisContractVersion: run.analysisContractVersion,
-          analyzedAt: now,
-          validUntil: dateOnlyAfterDays(now, requirePolicy(state).staleAfterDays),
-          companyTierAtAnalysis: tierFor(state, position),
-        });
+        const analysis =
+          duplicate ??
+          ({
+            ...structuredClone(result),
+            analysisId: crypto.randomUUID(),
+            contentHash: position.contentHash,
+            candidateContextVersion: run.candidateContextVersion,
+            analysisContractVersion: run.analysisContractVersion,
+            createdByAnalysisRunId: run.analysisRunId,
+            analyzedAt: now,
+            validUntil: dateOnlyAfterDays(now, requirePolicy(state).staleAfterDays),
+            companyTierAtAnalysis: tierFor(state, position),
+          } satisfies StoredAnalysis);
+        if (!duplicate) position.analyses.push(analysis);
         position.pendingSince = null;
-        run.analyzedNowCount += 1;
+        item.resultStatus = duplicate ? "reused" : "created";
+        item.analysisId = analysis.analysisId;
+        item.failureCode = null;
+        item.completedAt = now;
+        item.attemptCount += 1;
       }
+      for (const failure of request.failures) {
+        const item = run.items.get(failure.positionId)!;
+        item.resultStatus = "failed";
+        item.analysisId = null;
+        item.failureCode = failure.failureCode;
+        item.completedAt = now;
+        item.attemptCount += 1;
+      }
+      run.analyzedNowCount = sortedItems(run).filter(
+        (item) => item.resultStatus === "created",
+      ).length;
+      run.status = sortedItems(run).some((item) => item.resultStatus === "failed")
+        ? "partial"
+        : "completed";
       run.completedAt = now;
-      return { analysisRunId, analyzedNowCount: run.analyzedNowCount, reused: false };
+      return this.resultsResponse(run, true);
+    });
+  }
+
+  private resultsResponse(run: StoredAnalysisRun, applied: boolean): AnalysisResultsResponse {
+    const items = sortedItems(run);
+    const count = (status: StoredAnalysisRunItem["resultStatus"]) =>
+      items.filter((item) => item.resultStatus === status).length;
+    return analysisResultsResponseSchema.parse({
+      analysisRunId: run.analysisRunId,
+      status: run.status,
+      createdCount: count("created"),
+      reusedCount: count("reused"),
+      failedCount: count("failed"),
+      remainingCount: count("pending") + count("failed"),
+      applied,
     });
   }
 
@@ -379,7 +454,7 @@ export class PositionService {
       if (cached) return recommendationResponseSchema.parse(structuredClone(cached));
       const run = state.analysisRuns.get(analysisRunId);
       if (!run) throw new ApiError(404, "NOT_FOUND", "분석 실행을 찾을 수 없습니다.");
-      if (!run.completedAt)
+      if (run.status === "pending")
         throw new ApiError(409, "VERSION_CONFLICT", "분석 실행이 끝나지 않았습니다.");
       const collection = state.collections.get(run.collectionRunId)!;
       const active = collection.candidateIds
@@ -439,6 +514,9 @@ export class PositionService {
         details: analysis.details,
         nextActions: analysis.nextActions,
       }));
+      const analyzedNowCount = ranked.filter(
+        ({ analysis }) => analysis.createdByAnalysisRunId === run.analysisRunId,
+      ).length;
       const response = {
         schemaVersion: 1,
         recommendationRunId: stableUuid(`recommendation:${analysisRunId}`),
@@ -451,8 +529,8 @@ export class PositionService {
         pendingCandidates: pending,
         analysisSummary: {
           activeCount: active.length,
-          analyzedNowCount: run.analyzedNowCount,
-          reusedCount: ranked.length - run.analyzedNowCount,
+          analyzedNowCount,
+          reusedCount: ranked.length - analyzedNowCount,
           pendingCount: pending.length,
           personalExcludedCount: collection.personalExcludedCount,
         },

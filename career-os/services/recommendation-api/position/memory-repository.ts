@@ -9,6 +9,7 @@ export type StoredAnalysis = AnalysisUpdate & {
   contentHash: string;
   candidateContextVersion: string;
   analysisContractVersion: number;
+  createdByAnalysisRunId: string | null;
   analyzedAt: string;
   validUntil: string;
   companyTierAtAnalysis: number;
@@ -34,6 +35,20 @@ export type StoredPosition = {
   analyses: StoredAnalysis[];
 };
 
+export type StoredAnalysisRunItem = {
+  positionId: string;
+  positionVersionId: string;
+  selectionOrder: number;
+  analysisStatus: "new" | "changed" | "stale";
+  selectionReason: "priority" | "aging" | "overflow";
+  companyTier: number;
+  resultStatus: "pending" | "created" | "reused" | "failed";
+  analysisId: string | null;
+  failureCode: string | null;
+  attemptCount: number;
+  completedAt: string | null;
+};
+
 export type StoredAnalysisRun = {
   analysisRunId: string;
   collectionRunId: string;
@@ -41,10 +56,8 @@ export type StoredAnalysisRun = {
   analysisContractVersion: number;
   createdAt: string;
   completedAt: string | null;
-  selectedPositionIds: string[];
-  statusByPosition: Map<string, "new" | "changed" | "stale">;
-  selectionReasonByPosition: Map<string, "priority" | "aging" | "overflow">;
-  companyTierByPosition: Map<string, number>;
+  status: "pending" | "partial" | "completed";
+  items: Map<string, StoredAnalysisRunItem>;
   analyzedNowCount: number;
 };
 

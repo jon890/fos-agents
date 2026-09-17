@@ -25,6 +25,12 @@ function date(value: unknown): string {
   return value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
 }
 
+function datetime(value: string): string;
+function datetime(value: string | null): string | null;
+function datetime(value: string | null): string | null {
+  return value === null ? null : value.replace("T", " ").replace("Z", "");
+}
+
 function json<T>(value: unknown): T {
   return (typeof value === "string" ? JSON.parse(value) : value) as T;
 }
@@ -183,6 +189,7 @@ export class SqlPositionRepository extends MemoryPositionRepository {
         contentHash: versionsById.get(row.position_version_id)?.contentHash ?? "",
         candidateContextVersion: row.candidate_context_version,
         analysisContractVersion: Number(row.contract_version),
+        createdByAnalysisRunId: row.created_by_analysis_run_id ?? null,
         analyzedAt: iso(row.analyzed_at),
         validUntil: date(row.valid_until),
         companyTierAtAnalysis: Number(row.company_tier_at_analysis),
@@ -238,13 +245,24 @@ export class SqlPositionRepository extends MemoryPositionRepository {
         analysisContractVersion: Number(row.contract_version),
         createdAt: iso(row.created_at),
         completedAt: row.completed_at ? iso(row.completed_at) : null,
-        selectedPositionIds: items.map((item) => item.position_id),
-        statusByPosition: new Map(items.map((item) => [item.position_id, item.analysis_status])),
-        selectionReasonByPosition: new Map(
-          items.map((item) => [item.position_id, item.selection_reason]),
-        ),
-        companyTierByPosition: new Map(
-          items.map((item) => [item.position_id, Number(item.company_tier)]),
+        status: row.status,
+        items: new Map(
+          items.map((item) => [
+            item.position_id,
+            {
+              positionId: item.position_id,
+              positionVersionId: item.position_version_id,
+              selectionOrder: Number(item.selection_order),
+              analysisStatus: item.analysis_status,
+              selectionReason: item.selection_reason,
+              companyTier: Number(item.company_tier),
+              resultStatus: item.result_status,
+              analysisId: item.analysis_id ?? null,
+              failureCode: item.failure_code ?? null,
+              attemptCount: Number(item.attempt_count),
+              completedAt: item.completed_at ? iso(item.completed_at) : null,
+            },
+          ]),
         ),
         analyzedNowCount: Number(row.analyzed_now_count),
       });
@@ -377,7 +395,7 @@ export class SqlPositionRepository extends MemoryPositionRepository {
           INSERT INTO company_preferences
             (company_key, company_name, tier, disposition, updated_at)
           VALUES (${preference.companyKey}, ${preference.companyName}, ${preference.tier},
-                  ${preference.disposition}, ${preference.updatedAt})
+                  ${preference.disposition}, ${datetime(preference.updatedAt)})
           ON DUPLICATE KEY UPDATE company_name = VALUES(company_name), tier = VALUES(tier),
             disposition = VALUES(disposition), updated_at = VALUES(updated_at)
         `;
@@ -395,7 +413,8 @@ export class SqlPositionRepository extends MemoryPositionRepository {
           VALUES (${position.positionId}, ${position.source}, ${position.identity.slice(position.source.length + 1)},
                   ${position.posting.url}, ${position.posting.company.toLocaleLowerCase("ko-KR")},
                   ${position.posting.company}, ${position.posting.title}, ${position.lifecycle},
-                  ${position.firstSeenAt}, ${position.lastSeenAt}, ${position.pendingSince})
+                  ${datetime(position.firstSeenAt)}, ${datetime(position.lastSeenAt)},
+                  ${datetime(position.pendingSince)})
           ON DUPLICATE KEY UPDATE normalized_url = VALUES(normalized_url),
             company_key = VALUES(company_key), company_name = VALUES(company_name),
             title = VALUES(title), lifecycle = VALUES(lifecycle), last_seen_at = VALUES(last_seen_at),
@@ -406,26 +425,7 @@ export class SqlPositionRepository extends MemoryPositionRepository {
             INSERT IGNORE INTO position_versions
               (position_version_id, position_id, content_hash, snapshot_json, observed_at)
             VALUES (${version.positionVersionId}, ${position.positionId}, ${version.contentHash},
-                    ${JSON.stringify(version.posting)}, ${version.observedAt})
-          `;
-        }
-        for (const analysis of position.analyses) {
-          const version = position.versions.find(
-            (entry) => entry.contentHash === analysis.contentHash,
-          )!;
-          await sql`
-            INSERT IGNORE INTO position_analyses
-              (analysis_id, position_id, position_version_id, candidate_context_version,
-               contract_version, analyzed_at, valid_until, company_tier_at_analysis, decision,
-               fit_score, role_fit, scope_upside, company_opportunity, constraints_score,
-               reason, details_json, next_actions_json)
-            VALUES (${analysis.analysisId}, ${position.positionId}, ${version.positionVersionId},
-                    ${analysis.candidateContextVersion}, ${analysis.analysisContractVersion},
-                    ${analysis.analyzedAt}, ${analysis.validUntil}, ${analysis.companyTierAtAnalysis},
-                    ${analysis.decision}, ${analysis.fitScore}, ${analysis.scoreBreakdown.roleFit},
-                    ${analysis.scoreBreakdown.scopeUpside}, ${analysis.scoreBreakdown.companyOpportunity},
-                    ${analysis.scoreBreakdown.constraints}, ${analysis.reason},
-                    ${JSON.stringify(analysis.details)}, ${JSON.stringify(analysis.nextActions)})
+                    ${JSON.stringify(version.posting)}, ${datetime(version.observedAt)})
           `;
         }
       }
@@ -434,7 +434,7 @@ export class SqlPositionRepository extends MemoryPositionRepository {
           INSERT INTO position_collection_runs
             (run_id, idempotency_key, collected_at, status, active_count, personal_excluded_count)
           VALUES (${collection.collectionRunId}, ${`collection:${collection.collectionRunId}`},
-                  ${collection.collectedAt}, 'completed', ${collection.candidateIds.length},
+                  ${datetime(collection.collectedAt)}, 'completed', ${collection.candidateIds.length},
                   ${collection.personalExcludedCount})
           ON DUPLICATE KEY UPDATE status = VALUES(status), active_count = VALUES(active_count),
             personal_excluded_count = VALUES(personal_excluded_count)
@@ -476,26 +476,51 @@ export class SqlPositionRepository extends MemoryPositionRepository {
             (analysis_run_id, collection_run_id, candidate_context_version, contract_version,
              status, analyzed_now_count, created_at, completed_at)
           VALUES (${run.analysisRunId}, ${run.collectionRunId}, ${run.candidateContextVersion},
-                  ${run.analysisContractVersion}, ${run.completedAt ? "completed" : "pending"},
-                  ${run.analyzedNowCount}, ${run.createdAt}, ${run.completedAt})
+                  ${run.analysisContractVersion}, ${run.status},
+                  ${run.analyzedNowCount}, ${datetime(run.createdAt)}, ${datetime(run.completedAt)})
           ON DUPLICATE KEY UPDATE status = VALUES(status),
             analyzed_now_count = VALUES(analyzed_now_count), completed_at = VALUES(completed_at)
         `;
-        for (const [index, positionId] of run.selectedPositionIds.entries()) {
-          const position = [...state.positions.values()].find(
-            (entry) => entry.positionId === positionId,
-          )!;
+      }
+      for (const position of state.positions.values()) {
+        for (const analysis of position.analyses) {
           const version = position.versions.find(
-            (entry) => entry.contentHash === position.contentHash,
+            (entry) => entry.contentHash === analysis.contentHash,
           )!;
           await sql`
-            INSERT IGNORE INTO position_analysis_run_items
+            INSERT IGNORE INTO position_analyses
+              (analysis_id, position_id, position_version_id, candidate_context_version,
+               contract_version, created_by_analysis_run_id, analyzed_at, valid_until,
+               company_tier_at_analysis, decision,
+               fit_score, role_fit, scope_upside, company_opportunity, constraints_score,
+               reason, details_json, next_actions_json)
+            VALUES (${analysis.analysisId}, ${position.positionId}, ${version.positionVersionId},
+                    ${analysis.candidateContextVersion}, ${analysis.analysisContractVersion},
+                    ${analysis.createdByAnalysisRunId},
+                    ${datetime(analysis.analyzedAt)}, ${analysis.validUntil}, ${analysis.companyTierAtAnalysis},
+                    ${analysis.decision}, ${analysis.fitScore}, ${analysis.scoreBreakdown.roleFit},
+                    ${analysis.scoreBreakdown.scopeUpside}, ${analysis.scoreBreakdown.companyOpportunity},
+                    ${analysis.scoreBreakdown.constraints}, ${analysis.reason},
+                    ${JSON.stringify(analysis.details)}, ${JSON.stringify(analysis.nextActions)})
+          `;
+        }
+      }
+      for (const run of state.analysisRuns.values()) {
+        for (const item of [...run.items.values()].sort(
+          (left, right) => left.selectionOrder - right.selectionOrder,
+        )) {
+          await sql`
+            INSERT INTO position_analysis_run_items
               (analysis_run_id, position_id, position_version_id, selection_order,
-               analysis_status, selection_reason, company_tier)
-            VALUES (${run.analysisRunId}, ${positionId}, ${version.positionVersionId}, ${index + 1},
-                    ${run.statusByPosition.get(positionId)},
-                    ${run.selectionReasonByPosition.get(positionId)},
-                    ${run.companyTierByPosition.get(positionId)})
+               analysis_status, selection_reason, company_tier,
+               result_status, analysis_id, failure_code, attempt_count, completed_at)
+            VALUES (${run.analysisRunId}, ${item.positionId}, ${item.positionVersionId},
+                    ${item.selectionOrder}, ${item.analysisStatus}, ${item.selectionReason},
+                    ${item.companyTier}, ${item.resultStatus}, ${item.analysisId},
+                    ${item.failureCode}, ${item.attemptCount}, ${datetime(item.completedAt)})
+            ON DUPLICATE KEY UPDATE result_status = VALUES(result_status),
+              analysis_id = VALUES(analysis_id), failure_code = VALUES(failure_code),
+              attempt_count = VALUES(attempt_count), completed_at = VALUES(completed_at)
           `;
         }
       }
@@ -508,7 +533,7 @@ export class SqlPositionRepository extends MemoryPositionRepository {
              analyzed_now_count, reused_count, pending_count, pending_candidates_json,
              personal_excluded_count)
           VALUES (${response.recommendationRunId}, ${response.analysisRunId},
-                  ${response.sourceSnapshot.collectionRunId}, ${response.generatedAt},
+                  ${response.sourceSnapshot.collectionRunId}, ${datetime(response.generatedAt)},
                   ${response.analysisSummary.analyzedNowCount}, ${response.analysisSummary.reusedCount},
                   ${response.analysisSummary.pendingCount},
                   ${JSON.stringify(response.pendingCandidates)},

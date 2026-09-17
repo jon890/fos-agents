@@ -108,30 +108,12 @@ CREATE TABLE position_analysis_runs (
   collection_run_id VARCHAR(191) NOT NULL UNIQUE,
   candidate_context_version VARCHAR(191) NOT NULL,
   contract_version INT UNSIGNED NOT NULL,
-  status ENUM('pending', 'completed') NOT NULL,
+  status ENUM('pending', 'partial', 'completed') NOT NULL,
   analyzed_now_count INT UNSIGNED NOT NULL DEFAULT 0,
   created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   completed_at DATETIME(3) NULL,
   CONSTRAINT fk_position_analysis_runs_collection
     FOREIGN KEY (collection_run_id) REFERENCES position_collection_runs(run_id) ON DELETE RESTRICT
-) ENGINE=InnoDB;
-
-CREATE TABLE position_analysis_run_items (
-  analysis_run_id CHAR(36) NOT NULL,
-  position_id CHAR(36) NOT NULL,
-  position_version_id CHAR(36) NOT NULL,
-  selection_order SMALLINT UNSIGNED NOT NULL,
-  analysis_status ENUM('new', 'changed', 'stale') NOT NULL,
-  selection_reason ENUM('priority', 'aging', 'overflow') NOT NULL,
-  company_tier TINYINT UNSIGNED NOT NULL,
-  PRIMARY KEY (analysis_run_id, position_id),
-  UNIQUE KEY uq_position_analysis_order (analysis_run_id, selection_order),
-  CONSTRAINT fk_position_analysis_items_run
-    FOREIGN KEY (analysis_run_id) REFERENCES position_analysis_runs(analysis_run_id) ON DELETE CASCADE,
-  CONSTRAINT fk_position_analysis_items_position
-    FOREIGN KEY (position_id) REFERENCES positions(position_id) ON DELETE RESTRICT,
-  CONSTRAINT fk_position_analysis_items_version
-    FOREIGN KEY (position_version_id) REFERENCES position_versions(position_version_id) ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
 CREATE TABLE position_analyses (
@@ -140,6 +122,7 @@ CREATE TABLE position_analyses (
   position_version_id CHAR(36) NOT NULL,
   candidate_context_version VARCHAR(191) NOT NULL,
   contract_version INT UNSIGNED NOT NULL,
+  created_by_analysis_run_id CHAR(36) NULL,
   analyzed_at DATETIME(3) NOT NULL,
   valid_until DATE NOT NULL,
   company_tier_at_analysis TINYINT UNSIGNED NOT NULL,
@@ -158,9 +141,46 @@ CREATE TABLE position_analyses (
     FOREIGN KEY (position_id) REFERENCES positions(position_id) ON DELETE RESTRICT,
   CONSTRAINT fk_position_analyses_version
     FOREIGN KEY (position_version_id) REFERENCES position_versions(position_version_id) ON DELETE RESTRICT,
+  CONSTRAINT fk_position_analyses_created_run
+    FOREIGN KEY (created_by_analysis_run_id)
+    REFERENCES position_analysis_runs(analysis_run_id) ON DELETE RESTRICT,
   CONSTRAINT chk_position_analysis_fit CHECK (fit_score BETWEEN 0 AND 100),
   CONSTRAINT chk_position_analysis_sum CHECK (
     fit_score = role_fit + scope_upside + company_opportunity + constraints_score
+  )
+) ENGINE=InnoDB;
+
+CREATE TABLE position_analysis_run_items (
+  analysis_run_id CHAR(36) NOT NULL,
+  position_id CHAR(36) NOT NULL,
+  position_version_id CHAR(36) NOT NULL,
+  selection_order SMALLINT UNSIGNED NOT NULL,
+  analysis_status ENUM('new', 'changed', 'stale') NOT NULL,
+  selection_reason ENUM('priority', 'aging', 'overflow') NOT NULL,
+  company_tier TINYINT UNSIGNED NOT NULL,
+  result_status ENUM('pending', 'created', 'reused', 'failed') NOT NULL DEFAULT 'pending',
+  analysis_id CHAR(36) NULL,
+  failure_code VARCHAR(64) NULL,
+  attempt_count SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  completed_at DATETIME(3) NULL,
+  PRIMARY KEY (analysis_run_id, position_id),
+  UNIQUE KEY uq_position_analysis_order (analysis_run_id, selection_order),
+  KEY idx_position_analysis_items_analysis (analysis_id),
+  CONSTRAINT fk_position_analysis_items_run
+    FOREIGN KEY (analysis_run_id) REFERENCES position_analysis_runs(analysis_run_id) ON DELETE CASCADE,
+  CONSTRAINT fk_position_analysis_items_position
+    FOREIGN KEY (position_id) REFERENCES positions(position_id) ON DELETE RESTRICT,
+  CONSTRAINT fk_position_analysis_items_version
+    FOREIGN KEY (position_version_id) REFERENCES position_versions(position_version_id) ON DELETE RESTRICT,
+  CONSTRAINT fk_position_analysis_items_analysis
+    FOREIGN KEY (analysis_id) REFERENCES position_analyses(analysis_id) ON DELETE RESTRICT,
+  CONSTRAINT chk_position_analysis_item_result CHECK (
+    (result_status = 'pending'
+      AND analysis_id IS NULL AND completed_at IS NULL AND failure_code IS NULL)
+    OR (result_status IN ('created', 'reused')
+      AND analysis_id IS NOT NULL AND completed_at IS NOT NULL AND failure_code IS NULL)
+    OR (result_status = 'failed'
+      AND analysis_id IS NULL AND completed_at IS NOT NULL AND failure_code IS NOT NULL)
   )
 ) ENGINE=InnoDB;
 

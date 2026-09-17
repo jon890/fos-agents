@@ -2,6 +2,7 @@ import { ZodError } from "zod";
 import type { ReceiptStore } from "../http/idempotency.ts";
 import { idempotent } from "../http/idempotency.ts";
 import { ApiError } from "../http/errors.ts";
+import { analysisResultsResponseSchema } from "../position/schema.ts";
 import type { PositionService } from "../position/service.ts";
 
 type RouteResult = { status: number; body: unknown };
@@ -45,7 +46,11 @@ export async function routePositions(
     if (!idempotencyKey) throw new ApiError(400, "BAD_REQUEST", "Idempotency-Key가 필요합니다.");
     const body = await request.json();
     return idempotent(receipts, idempotencyKey, body, () =>
-      call(() => service.saveAnalysisResults(decodeURIComponent(analysisResults[1]), body)),
+      call(async () =>
+        analysisResultsResponseSchema.parse(
+          await service.saveAnalysisResults(decodeURIComponent(analysisResults[1]), body),
+        ),
+      ),
     );
   }
 

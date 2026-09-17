@@ -48,6 +48,24 @@ describe("recommendation-api migration", () => {
     expect(splitMigrationStatements(sql)).toHaveLength(15);
   });
 
+  test("실행 결과와 생성 출처 열을 선언하고 참조 순서를 지킨다", () => {
+    const sql = readFileSync(resolve(directory, "001_position_schema.sql"), "utf8");
+    expect(sql.indexOf("CREATE TABLE position_analyses")).toBeLessThan(
+      sql.indexOf("CREATE TABLE position_analysis_run_items"),
+    );
+    expect(sql.indexOf("CREATE TABLE position_analysis_runs")).toBeLessThan(
+      sql.indexOf("CREATE TABLE position_analyses"),
+    );
+    expect(sql).toContain("created_by_analysis_run_id CHAR(36) NULL");
+    expect(sql).toContain("fk_position_analyses_created_run");
+    expect(sql).toContain(
+      "result_status ENUM('pending', 'created', 'reused', 'failed') NOT NULL DEFAULT 'pending'",
+    );
+    expect(sql).toContain("attempt_count SMALLINT UNSIGNED NOT NULL DEFAULT 0");
+    expect(sql).toContain("chk_position_analysis_item_result");
+    expect(sql).toContain("status ENUM('pending', 'partial', 'completed') NOT NULL");
+  });
+
   test("runtime migration 상태 조회는 DDL 없이 checksum만 읽는다", async () => {
     const queries: string[] = [];
     const sql = ((strings: TemplateStringsArray | string) => {

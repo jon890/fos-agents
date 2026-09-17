@@ -18,6 +18,7 @@ const ids = {
   changedVersion: "10000000-0000-4000-8000-000000000010",
   analyses: ["20000000-0000-4000-8000-000000000001", "20000000-0000-4000-8000-000000000002"],
   analysisRun: "30000000-0000-4000-8000-000000000001",
+  earlierAnalysisRun: "30000000-0000-4000-8000-000000000002",
   recommendationRun: "40000000-0000-4000-8000-000000000001",
 } as const;
 
@@ -112,6 +113,7 @@ function databaseRows() {
       position_version_id: ids.versions[index],
       candidate_context_version: "context-1",
       contract_version: 1,
+      created_by_analysis_run_id: index === 0 ? ids.analysisRun : ids.earlierAnalysisRun,
       analyzed_at: `2026-09-17T0${index + 1}:00:00.000Z`,
       valid_until: "2026-10-17",
       company_tier_at_analysis: index + 1,
@@ -157,6 +159,7 @@ function databaseRows() {
         collection_run_id: "collection-1",
         candidate_context_version: "context-1",
         contract_version: 1,
+        status: "completed",
         created_at: "2026-09-17T00:10:00.000Z",
         completed_at: "2026-09-17T02:30:00.000Z",
         analyzed_now_count: 1,
@@ -165,9 +168,16 @@ function databaseRows() {
     position_analysis_run_items: [0, 1].map((index) => ({
       analysis_run_id: ids.analysisRun,
       position_id: ids.positions[index],
+      position_version_id: ids.versions[index],
+      selection_order: index + 1,
       analysis_status: "new",
       selection_reason: index === 0 ? "priority" : "aging",
       company_tier: index + 1,
+      result_status: index === 0 ? "created" : "reused",
+      analysis_id: ids.analyses[index],
+      failure_code: null,
+      attempt_count: 1,
+      completed_at: `2026-09-17T0${index + 1}:30:00.000Z`,
     })),
     position_recommendation_runs: [
       {
@@ -294,4 +304,56 @@ test("추천 뒤 공고 본문이 바뀌어도 MySQL 재시작 전후의 저장 
   expect(beforeRestart.response).toEqual(storedBeforeRestart);
   expect(afterRestart.response).toEqual(storedBeforeRestart);
   expect(afterRestart.analyzedNowCount).toBe(1);
+});
+
+test("실행 항목의 처리 결과와 분석의 최초 생성 실행을 복원한다", async () => {
+  const repository = new SqlPositionRepository(fakeSql(databaseRows()));
+  await repository.ensureReady();
+  const state = repository.snapshot();
+  const run = state.analysisRuns.get(ids.analysisRun)!;
+  const items = [...run.items.values()].sort(
+    (left, right) => left.selectionOrder - right.selectionOrder,
+  );
+  expect(run.status).toBe("completed");
+  expect(items.map((item) => item.positionId)).toEqual([ids.positions[0], ids.positions[1]]);
+  expect(items[0]).toMatchObject({
+    selectionOrder: 1,
+    resultStatus: "created",
+    analysisId: ids.analyses[0],
+    attemptCount: 1,
+    failureCode: null,
+  });
+  expect(items[1]).toMatchObject({ selectionOrder: 2, resultStatus: "reused" });
+  const analyses = [...state.positions.values()].flatMap((position) => position.analyses);
+  expect(analyses.find((entry) => entry.analysisId === ids.analyses[0])?.createdByAnalysisRunId).toBe(
+    ids.analysisRun,
+  );
+  expect(analyses.find((entry) => entry.analysisId === ids.analyses[1])?.createdByAnalysisRunId).toBe(
+    ids.earlierAnalysisRun,
+  );
+});
+
+test("기록 순서는 실행 헤더, 분석, 실행 항목 차례를 지킨다", async () => {
+  const executed: string[] = [];
+  const rows = databaseRows();
+  const recordingSql = ((strings: TemplateStringsArray | string) => {
+    const query = typeof strings === "string" ? strings : strings.join("?");
+    executed.push(query);
+    const table = Object.keys(rows).find((name) => query.includes(`FROM ${name}`));
+    return Promise.resolve(table ? rows[table as keyof typeof rows] : []);
+  }) as unknown as Bun.SQL;
+  (recordingSql as unknown as { begin: (callback: (sql: Bun.SQL) => unknown) => unknown }).begin = (
+    callback,
+  ) => callback(recordingSql);
+  const repository = new SqlPositionRepository(recordingSql);
+  await repository.transaction(() => undefined);
+  const indexOf = (fragment: string) =>
+    executed.findIndex((query) => query.includes(fragment));
+  expect(indexOf("INSERT INTO position_analysis_runs")).toBeGreaterThanOrEqual(0);
+  expect(indexOf("INSERT INTO position_analysis_runs")).toBeLessThan(
+    indexOf("INSERT IGNORE INTO position_analyses"),
+  );
+  expect(indexOf("INSERT IGNORE INTO position_analyses")).toBeLessThan(
+    indexOf("INSERT INTO position_analysis_run_items"),
+  );
 });

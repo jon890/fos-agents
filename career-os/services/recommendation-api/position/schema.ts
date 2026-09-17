@@ -80,17 +80,44 @@ export const analysisUpdateSchema = z
 
 export const collectionRequestSchema = z
   .object({
-    schemaVersion: z.literal(1),
+    schemaVersion: z.literal(2),
     analysisContractVersion: z.number().int().positive(),
     pool: postingCandidatePoolSchema,
   })
   .strict();
 
+export const analysisFailureCodeSchema = z.enum([
+  "posting_body_missing",
+  "model_unavailable",
+  "contract_rejected",
+  "internal_error",
+]);
+
+export const analysisFailureSchema = z
+  .object({
+    positionId: nonEmpty,
+    failureCode: analysisFailureCodeSchema,
+  })
+  .strict();
+
 export const analysisResultsRequestSchema = z
   .object({
-    schemaVersion: z.literal(1),
+    schemaVersion: z.literal(2),
     collectionRunId: nonEmpty,
-    results: z.array(analysisUpdateSchema),
+    results: z.array(analysisUpdateSchema).default([]),
+    failures: z.array(analysisFailureSchema).default([]),
+  })
+  .strict();
+
+export const analysisResultsResponseSchema = z
+  .object({
+    analysisRunId: nonEmpty,
+    status: z.enum(["pending", "partial", "completed"]),
+    createdCount: z.number().int().nonnegative(),
+    reusedCount: z.number().int().nonnegative(),
+    failedCount: z.number().int().nonnegative(),
+    remainingCount: z.number().int().nonnegative(),
+    applied: z.boolean(),
   })
   .strict();
 
@@ -112,13 +139,14 @@ export const analysisQueueCandidateSchema = z
     contentHash: nonEmpty,
     analysisStatus: z.enum(["new", "changed", "stale"]),
     companyTier: z.number().int().min(1).max(3),
+    resultStatus: z.enum(["pending", "created", "reused", "failed"]),
     posting: postingCandidateSchema,
   })
   .strict();
 
 export const analysisQueueResponseSchema = z
   .object({
-    schemaVersion: z.literal(1),
+    schemaVersion: z.literal(2),
     collectionRunId: nonEmpty,
     analysisRunId: nonEmpty,
     generatedAt: isoDateTime,
@@ -133,6 +161,8 @@ export const analysisQueueResponseSchema = z
         newCount: z.number().int().nonnegative(),
         changedCount: z.number().int().nonnegative(),
         staleCount: z.number().int().nonnegative(),
+        completedCount: z.number().int().nonnegative(),
+        failedCount: z.number().int().nonnegative(),
         warningSourceCount: z.number().int().nonnegative(),
       })
       .strict(),
@@ -209,5 +239,8 @@ export type CompanyPreference = z.infer<typeof companyPreferenceSchema>;
 export type AnalysisUpdate = z.infer<typeof analysisUpdateSchema>;
 export type CollectionRequest = z.infer<typeof collectionRequestSchema>;
 export type AnalysisResultsRequest = z.infer<typeof analysisResultsRequestSchema>;
+export type AnalysisResultsResponse = z.infer<typeof analysisResultsResponseSchema>;
+export type AnalysisFailure = z.infer<typeof analysisFailureSchema>;
+export type AnalysisFailureCode = z.infer<typeof analysisFailureCodeSchema>;
 export type AnalysisQueueResponse = z.infer<typeof analysisQueueResponseSchema>;
 export type RecommendationResponse = z.infer<typeof recommendationResponseSchema>;
