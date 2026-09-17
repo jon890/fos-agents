@@ -385,9 +385,9 @@ HTTPS `runtime` 근거는 실행마다 달라질 수 있으므로 `refresh_requi
 | `position_collection_items`       | `(run_id, position_id)` UNIQUE, 해당 실행이 본 version과 활성 상태                           |
 | `position_analysis_policy`        | singleton PK, 후보자 기준 버전, 일일 상한, 슬롯과 만료일 정책                                |
 | `company_preferences`             | `company_key` UNIQUE, 회사명, tier, `analyze` 또는 `exclude`, 변경 시각                      |
-| `position_analysis_runs`          | `analysis_run_id` PK, 수집 실행과 후보자 기준 버전, 분석 계약 버전, 상태                     |
-| `position_analysis_run_items`     | `(analysis_run_id, position_id)` UNIQUE, 선택 순서, 상태와 선택 이유                         |
-| `position_analyses`               | `(position_version_id, candidate_context_version, contract_version)` UNIQUE, 점수와 유효기간 |
+| `position_analysis_runs`          | `analysis_run_id` PK, 수집 실행과 후보자 기준 버전, 분석 계약 버전, `pending`·`partial`·`completed` 상태 |
+| `position_analysis_run_items`     | `(analysis_run_id, position_id)` UNIQUE, 선택 순서, 상태와 선택 이유, 처리 결과와 연결한 분석, 실패 사유와 제출 횟수 |
+| `position_analyses`               | `(position_version_id, candidate_context_version, contract_version)` UNIQUE, 점수와 유효기간, 최초 생성 실행 |
 | `position_recommendation_runs`    | `recommendation_run_id` PK, 분석 실행, 생성 시각과 집계                                      |
 | `position_recommendation_items`   | `(recommendation_run_id, position_id)` UNIQUE, 순위, 결론과 분석 참조                        |
 | `request_receipts`                | `idempotency_key` PK, 요청 hash, 응답 상태와 응답 본문                                       |
@@ -408,15 +408,73 @@ HTTPS `runtime` 근거는 실행마다 달라질 수 있으므로 `refresh_requi
 상세 근거와 다음 행동은 JSON column에 저장하지만 공고와 분석의 관계는 JSON 안 식별자가 아니라 foreign key로 유지한다.
 
 수집 실행을 삭제하면 해당 실행 항목과 진단은 함께 삭제하지만 공고와 공고 version은 보존한다.
-분석 실행을 삭제하면 선택 항목만 함께 삭제하며 이미 생성된 분석은 보존한다.
+분석을 만든 실행은 삭제할 수 없다.
+선택 항목만 지우는 삭제는 분석을 만들지 않은 실행에만 허용한다.
 공고를 삭제하는 운영 기능은 만들지 않고 lifecycle로 관리한다.
 명시된 마감일이 지났으면 `closed`, 성공한 동일 소스 수집에서 보이지 않으면 `not_seen`으로 바꾼다.
 소스가 `partial` 또는 `failed`면 누락만으로 lifecycle을 바꾸지 않는다.
 
+실행 항목의 `result_status`는 `pending`, `created`, `reused`, `failed` 중 하나다.
+`created`와 `reused`는 `analysis_id`와 `completed_at`을 함께 가지고,
+`failed`는 `failure_code`와 `completed_at`을 가지며 `analysis_id`는 비어 있다.
+`attempt_count`는 그 항목의 결과를 제출해 처리한 횟수다.
+실행 상태는 선택 항목이 모두 `created` 또는 `reused`면 `completed`,
+`failed`가 남아 있으면 `partial`이다.
+
+`position_analysis_runs.analyzed_now_count`는 그 실행이 새로 만든 분석 수다.
+추천 응답의 `analyzedNowCount`는 그중 순위에 든 수이므로,
+분석을 만든 뒤 공고 본문이 바뀌어 순위에서 빠지면 두 값이 달라진다.
+
+큐 응답의 `reusedCount`, `pendingCount`, `newCount`, `changedCount`, `staleCount`는
+활성 공고 전체를 기준으로 세고,
+`completedCount`와 `failedCount`는 그 실행이 선택한 항목만 기준으로 센다.
+
+감사 조회는 애플리케이션 코드를 거치지 않고 SQL 한 문장으로 답한다.
+
+실행이 선택한 공고를 확인한다.
+
+```sql
+SELECT i.selection_order, p.company_name, p.title, i.analysis_status, i.selection_reason
+FROM position_analysis_run_items i
+JOIN positions p ON p.position_id = i.position_id
+WHERE i.analysis_run_id = ?
+ORDER BY i.selection_order;
+```
+
+공고별 처리 결과를 확인한다.
+
+```sql
+SELECT p.title, i.result_status, i.failure_code, i.attempt_count, i.completed_at
+FROM position_analysis_run_items i
+JOIN positions p ON p.position_id = i.position_id
+WHERE i.analysis_run_id = ?
+ORDER BY i.selection_order;
+```
+
+추천 실행이 쓴 분석이 그 실행에서 생성됐는지 재사용됐는지 확인한다.
+
+```sql
+SELECT ri.rank_number, p.title, ri.analysis_id,
+       CASE WHEN a.created_by_analysis_run_id = rr.analysis_run_id
+            THEN 'created' ELSE 'reused' END AS origin
+FROM position_recommendation_items ri
+JOIN position_recommendation_runs rr
+  ON rr.recommendation_run_id = ri.recommendation_run_id
+JOIN position_analyses a ON a.analysis_id = ri.analysis_id
+JOIN positions p ON p.position_id = ri.position_id
+WHERE ri.recommendation_run_id = ?
+ORDER BY ri.rank_number;
+```
+
+실행 항목에 연결된 분석, 분석을 최초 생성한 실행과 실패 후 재시도는
+같은 두 table을 다른 조건으로 조회한다.
+
 임시 `analysis-queue.json`은 Backend 응답을 그대로 저장한 실행 파일이다.
-`schemaVersion`, `collectionRunId`, `analysisRunId`, 생성 시각, 정책 요약,
+`schemaVersion`은 2이고 `collectionRunId`, `analysisRunId`, 생성 시각, 정책 요약,
 상태별 집계와 선택된 `candidates` 배열을 가진다.
-모델의 `analysis-updates.json`은 같은 `analysisRunId`와 선택된 모든 `candidateId`의 갱신을 한 번씩 담는다.
+각 후보는 `resultStatus`를 함께 가진다.
+모델의 `analysis-updates.json`도 `schemaVersion`이 2이고 같은 `analysisRunId`를 담는다.
+아직 끝나지 않은 공고를 분석 결과는 `results`에, 분석하지 못한 사유는 `failures`에 한 번씩 나눠 담는다.
 
 ### 실행 중 생성되는 포지션 추천 데이터
 

@@ -1,0 +1,13 @@
+{
+  "name": "plan123-position-run-provenance",
+  "description": "분석 run이 고른 공고마다 처리 결과와 연결된 분석을 남기고 분석마다 최초 생성 run을 보존해 감사 질문에 답한다.",
+  "status": "completed",
+  "created_at": "2026-09-18",
+  "total_phases": 3,
+  "current_phase": 3,
+  "phases": [
+    { "number": 1, "file": "phase-01.md", "execution_profile": "deep" },
+    { "number": 2, "file": "phase-02.md", "execution_profile": "deep" },
+    { "number": 3, "file": "phase-03.md", "execution_profile": "standard" }
+  ]
+}
