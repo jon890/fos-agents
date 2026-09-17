@@ -66,7 +66,7 @@ export async function applyMigrations(sql: Bun.SQL, migrations: Migration[]): Pr
   for (const migration of status.filter((entry) => entry.state === "pending")) {
     await sql.begin(async (transaction) => {
       for (const statement of splitMigrationStatements(migration.sql)) {
-        await transaction(statement);
+        await transaction.unsafe(statement).simple();
       }
       await transaction`
         INSERT INTO schema_migrations (version, checksum)
