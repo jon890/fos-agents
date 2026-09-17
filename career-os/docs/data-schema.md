@@ -60,6 +60,43 @@ URL은 fragment, `utm_*`, `fbclid`, `gclid`를 제거하고 query 순서와 마�
 새 수집 코드와 스킬 배포 전에는 원격 규칙 저장만으로 자동 추천에 적용되지 않는다.
 선택 이유는 [개인 공고 제외 정책 ADR](adr/ADR-114-개인-공고-제외-정책을-비공개-release로-전송한다.md)을 따른다.
 
+## 포지션 분석 정책
+
+`config/position-analysis.ts`는 비공개 정책 파일의 상대 경로를 지정한다.
+정책 본문은 Git에서 제외되는 `state/private-config/position-analysis.json`에 두고 비공개 작업 release로 전송한다.
+이 파일은 사람이 정한 회사 우선순위와 비용 상한만 담으며 수집 결과나 모델 분석은 넣지 않는다.
+
+```json
+{
+  "schemaVersion": 1,
+  "candidateContextVersion": "career-priority-2026-09",
+  "dailyAnalysisLimit": 20,
+  "prioritySlots": 16,
+  "agingSlots": 4,
+  "staleAfterDays": 30,
+  "defaultCompanyTier": 3,
+  "companies": [
+    { "company": "예시 상위 회사", "tier": 1 },
+    { "company": "예시 관심 회사", "tier": 2 }
+  ]
+}
+```
+
+`tier`는 1, 2, 3만 허용하며 1이 가장 높다.
+회사명은 후보풀의 정규화 전시명과 정확히 일치해야 하고 같은 회사를 두 번 쓸 수 없다.
+등록되지 않은 회사는 `defaultCompanyTier`를 적용한다.
+보고 싶지 않은 회사는 이 파일의 낮은 티어로 두지 않고 기존 개인 공고 제외 설정에 `scope: company`로 기록한다.
+
+`prioritySlots`와 `agingSlots`의 합은 `dailyAnalysisLimit`과 같아야 한다.
+`dailyAnalysisLimit`은 1부터 20까지만 허용한다.
+우선 슬롯은 회사 티어, `new`, `changed`, `stale` 상태, 마감 긴급도, 대기 시작 시각과 공고 ID 순서로 정한다.
+보장 슬롯은 회사 티어와 무관하게 대기 시작 시각이 오래된 순서로 정한다.
+한쪽 슬롯을 채울 후보가 부족하면 다른 쪽 후보가 남은 자리를 사용하며 같은 공고를 두 번 고르지 않는다.
+
+`candidateContextVersion`은 현재 역할 기준과 이직 우선순위가 바뀌었을 때 사람이 새 값으로 변경한다.
+값이 달라지면 기존 공고 분석은 본문이 같아도 `stale`로 분류한다.
+정책이 없거나 형식이 잘못됐으면 전체 후보를 기본값으로 분석하지 않고 실행을 중단한다.
+
 ## 비공개 작업 release
 
 홈서버의 `career-os` bucket은 release별 archive, manifest와 descriptor를 가진다.
@@ -301,32 +338,121 @@ HTTPS `runtime` 근거는 실행마다 달라질 수 있으므로 `refresh_requi
 어댑터는 공고 원문만 보므로 현재 직장의 기준값과 비교할 수 없고,
 회사 단위로 쓴 문구가 같은 회사의 모든 공고에 같은 값으로 들어간다.
 
+### 공고별 분석 이력
+
+`state/position-analysis/<source>/<fileKey>.json`은 같은 공고의 관측, 분석 버전과 추천 이력을 보존한다.
+`candidateKey`는 공고의 `identityHash`가 있으면 `<source>:<identityHash>`, 없으면 `<source>:<정규화 URL>`이다.
+`fileKey`는 `candidateKey`의 SHA-256 앞 32자이며 영문 소문자와 숫자만 사용한다.
+
+```json
+{
+  "schemaVersion": 1,
+  "candidateKey": "wanted:0123456789abcdef",
+  "source": "wanted",
+  "identityHash": "wanted:example-id",
+  "firstSeenAt": "2026-09-17T08:00:00+09:00",
+  "lastSeenAt": "2026-09-17T08:00:00+09:00",
+  "pendingSince": null,
+  "lifecycle": "active",
+  "latestSnapshot": {
+    "company": "예시 회사",
+    "title": "Backend Engineer",
+    "url": "https://example.com/jobs/example-id",
+    "contentHash": "sha256:example"
+  },
+  "analyses": [
+    {
+      "analysisId": "sha256:example-analysis",
+      "contentHash": "sha256:example",
+      "candidateContextVersion": "career-priority-2026-09",
+      "analysisContractVersion": 1,
+      "analyzedAt": "2026-09-17T09:00:00+09:00",
+      "validUntil": "2026-10-17",
+      "companyTierAtAnalysis": 1,
+      "decision": "recommend",
+      "fitScore": 86,
+      "scoreBreakdown": {
+        "roleFit": 35,
+        "scopeUpside": 22,
+        "companyOpportunity": 17,
+        "constraints": 12
+      },
+      "reason": "현재 경험을 활용하면서 더 큰 트래픽과 모듈 소유권을 맡을 수 있다.",
+      "details": [],
+      "nextActions": []
+    }
+  ],
+  "recommendationHistory": [
+    {
+      "collectionRunId": "position-postings-example",
+      "recommendedAt": "2026-09-17T09:05:00+09:00",
+      "rank": 1,
+      "decision": "recommend"
+    }
+  ]
+}
+```
+
+`contentHash`는 회사명, 공고명, 직무 분류, 요약, 주요 업무, 요구 경력, 우대 사항, 기술과 태그를 정렬한 정규 JSON에서 계산한다.
+수집 시각, 남은 날짜와 현재 상태처럼 매일 달라지는 값은 hash에서 제외한다.
+`analysisId`는 `candidateKey`, `contentHash`, `candidateContextVersion`과 `analysisContractVersion`으로 만든다.
+같은 `analysisId`는 한 파일에 한 번만 나타나며 같은 갱신을 다시 반영해도 파일을 바꾸지 않는다.
+
+분석은 본문 hash와 후보자 기준 버전이 같고, 분석 계약 버전이 현재 값이며, `validUntil`이 지나지 않았을 때만 `fresh`다.
+분석이 없으면 `new`, 본문 hash가 다르면 `changed`, 나머지 무효화 사유는 `stale`다.
+새 분석은 이전 배열을 지우지 않고 추가하며 현재 추천은 조건에 맞는 가장 최근 분석 하나만 사용한다.
+`decision`은 `recommend`, `consider`, `hold` 중 하나이고 `fitScore`는 0부터 100까지의 정수다.
+`scoreBreakdown`은 역할 적합도 0부터 40, 역할 범위와 성장 여지 0부터 25,
+회사 기회 0부터 20, 제약이 적은 정도 0부터 15로 나누며 합계가 `fitScore`와 같아야 한다.
+`details`의 각 항목은 선택 제목, 본문, 공개 근거 URL 배열과 판단에 영향을 준 가정 배열을 가진다.
+`nextActions`는 비어 있지 않은 문자열 배열이다.
+모델 갱신은 `candidateId`, `decision`, `scoreBreakdown`, `reason`, `details`, `nextActions`만 만들며,
+저장 명령이 큐에서 hash와 정책 버전을 가져와 `analysisId`, `analyzedAt`과 `validUntil`을 채운다.
+
+임시 `analysis-queue.json`은 `schemaVersion`, `collectionRunId`, 생성 시각, 정책 요약,
+상태별 집계와 선택된 `candidates` 배열을 가진다.
+각 선택 항목은 `candidateId`, `candidateKey`, `contentHash`, `analysisStatus`, 현재 회사 티어와 공고 원문을 가진다.
+모델의 `analysis-updates.json`은 같은 `collectionRunId`와 선택된 모든 `candidateId`의 갱신을 한 번씩 담는다.
+
+현재 후보풀에 없는 공고도 이력 파일을 삭제하지 않는다.
+명시된 마감일이 지났으면 `closed`, 성공한 동일 소스 수집에서 보이지 않으면 `not_seen`으로 표시한다.
+소스가 `partial` 또는 `failed`면 누락만으로 상태를 바꾸지 않는다.
+공고 이력 파일을 사람이 삭제하면 관측, 분석과 추천 이력이 함께 삭제되며 자동 cascade 삭제는 두지 않는다.
+
 ### 실행 중 생성되는 포지션 추천 데이터
 
-모델이 임시 후보풀에서 선별한 실행별 추천 결과다.
+스크립트가 현재 후보풀과 유효한 공고 분석을 합쳐 만든 실행별 추천 결과다.
 형식은 `scripts/position-recommender/recommendation/schema.ts`가 검증한다.
 
 핵심 필드:
 
 - 실행 날짜와 후보풀 출처
-- 모든 후보를 한 번씩 담은 전체 순위
-- 전체 순위 앞부분에서 고른 상세 추천 공고 목록
+- 유효한 분석이 있는 활성 공고의 순위
+- 순위 앞부분에서 고른 상세 추천 공고 목록
 - 공고별 지원 이유
-- 모델이 필요에 따라 붙인 자유 라벨, 상세 근거와 다음 행동
+- 아직 분석하지 못한 활성 공고와 대기 사유
+- 새 분석, 재사용, 분석 대기 건수
+- 소스별 성공, 부분 실패, 실패 수와 확인하지 못한 공고 수
+- 모델이 필요에 따라 붙인 상세 근거와 다음 행동
+
+추천 JSON의 `schemaVersion`은 10이다.
+`pendingCandidates`의 각 항목은 후보 ID, 회사, 공고명, URL, 회사 티어와 `new`, `changed`, `stale` 중 하나를 가진다.
+`analysisSummary`는 `activeCount`, `analyzedNowCount`, `reusedCount`, `pendingCount`와 `personalExcludedCount`를 가진다.
+`collectionHealth.warningSources`는 소스, `partial` 또는 `failed` 상태, 실패 건수와 공개 가능한 이유만 담는다.
 
 추천 항목의 URL과 공고 정보는 후보풀 원문과 일치해야 한다.
 
-전체 순위 배열의 순서가 1위부터 마지막 순위까지의 우선순위다.
-상세 추천은 전체 순위의 앞부분과 같은 순서를 사용한다.
+분석 순위는 `decision`, `fitScore`, 회사 티어, 마감 긴급도와 공고 ID를 차례로 적용해 결정적으로 만든다.
+상세 추천은 `recommend` 또는 `consider`인 순위 앞부분과 같은 순서를 사용한다.
+`hold`와 분석 대기 공고는 상세 추천 수를 채우기 위해 올리지 않는다.
 라벨과 상세 근거의 제목은 후보마다 자유롭게 구성하고 필요 없으면 생략한다.
 사실과 추론에 공개 근거가 있으면 URL을 기록하며, 가정은 판단에 영향을 줄 때만 덧붙인다.
-개인 우선순위와 현재 역할은 private brain이 소유하며 스키마의 고정 판정값으로 저장하지 않는다.
+개인 우선순위와 현재 역할의 본문은 private brain이 소유하며 분석 이력에는 기준 버전만 저장한다.
 추천 개수와 분류는 스키마가 정하지 않는다.
-낮은 순위의 후보에는 보류 사유나 판정값을 강제로 만들지 않는다.
 게시용 HTML은 이 결과에서 만든다.
-HTML은 상세 추천과 함께 전체 순위를 펼쳐 보고 회사, 공고명, 기술과 공고 본문으로 검색할 수 있게 만든다.
+HTML은 상세 추천, 분석한 활성 공고 순위, 분석 대기 목록과 수집 경고를 구분해 표시한다.
 후보풀, 추천 JSON과 HTML은 게시 검증 뒤 삭제한다.
-회사 조사 데이터는 실행별 산출물이 아니므로 `state/company-research/`의 회사별 파일에 유지한다.
+공고 분석 이력과 회사 조사 데이터는 다음 실행에서 재사용하므로 `state/`에 유지한다.
 
 ## 지원 패키지
 

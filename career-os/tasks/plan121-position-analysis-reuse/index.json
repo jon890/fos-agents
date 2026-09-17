@@ -1,0 +1,13 @@
+{
+  "name": "plan121-position-analysis-reuse",
+  "description": "회사 우선순위와 분석 이력을 사용해 매일 필요한 공고만 분석하고 수집 실패와 분석 대기를 리포트에 표시한다.",
+  "status": "pending",
+  "created_at": "2026-09-17",
+  "total_phases": 3,
+  "current_phase": 1,
+  "phases": [
+    { "number": 1, "file": "phase-01.md", "execution_profile": "deep" },
+    { "number": 2, "file": "phase-02.md", "execution_profile": "deep" },
+    { "number": 3, "file": "phase-03.md", "execution_profile": "standard" }
+  ]
+}

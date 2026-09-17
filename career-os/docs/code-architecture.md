@@ -295,12 +295,17 @@ Wanted adapter는 개발 전체 직군 `518`을 기술 상수로 사용하고, �
 `scripts/position-recommender/` 루트에는 수집, 추천 원문 대조, 회사 조사 병합과 렌더의 CLI 진입점만 둔다.
 `live-postings/`는 외부 소스 어댑터와 수집 정책, `recommendation/`은 추천 계약,
 `company-research/`는 재사용할 회사 사실의 계약과 병합, `feedback/`은 제외 기준,
+`candidate-analysis/`는 분석 정책, 큐, hash, 공고별 분석 이력과 추천 조립,
 `render/`는 HTML 생성과 검사를 구현한다.
 어댑터는 원문 응답을 공통 `LivePosting` 형태로 바꾼다.
 후보풀 정책은 개별 공고 URL, 활성 상태, 마감일, 고용 형태, 역할과 중복을 결정적으로 검사한다.
 `exclusions.ts`는 필수 개인 제외 설정을 검증하고 공통 수집 경로에서 후보풀 생성 전에 해당 공고를 제거한다.
 `company_research.ts`는 실행 중 조사한 회사 프로필을 검증하고 `state/company-research/`의 회사별 파일에 원자적으로 합친다.
-설정과 비공개 전송 계약은 [데이터 구조](data-schema.md#개인-공고-제외-설정)를 따른다.
+`prepare_position_analysis.ts`는 후보풀과 분석 이력을 대조해 모델이 읽을 최대 20건의 큐를 만든다.
+`commit_position_analysis.ts`는 큐에 든 공고의 분석만 공고별 상태 파일에 합친다.
+`finalize_position_recommendation.ts`는 현재 활성 공고와 유효한 분석을 합쳐 추천 JSON과 HTML을 만들고 검증한다.
+설정과 비공개 전송 계약은 [데이터 구조](data-schema.md#개인-공고-제외-설정)와
+[포지션 분석 정책](data-schema.md#포지션-분석-정책)을 따른다.
 
 `collection_health.ts`는 실행 전체가 추천 입력으로 쓸 만한지 판정한다.
 소스 하나가 실패해도 남은 소스로 후보풀을 만드는 것은 의도한 동작이지만,
@@ -315,8 +320,11 @@ Wanted adapter는 개발 전체 직군 `518`을 기술 상수로 사용하고, �
 요청이나 파싱이 실패해 판단하지 못한 공고는 `failedCount`로 세고 `skippedCount`에 넣지 않는다.
 
 수집 결과는 실행별 임시 후보풀에 저장한다.
-모델은 후보풀에 존재하는 공고만 선별하고, `recommendation/schema.ts`와 `validate_recommendation.ts`는 HTML 전달 구조와 원문 일치 여부만 검사한다.
-HTML은 검증된 추천 JSON에서 파생한다.
+모델은 분석 큐에 존재하는 공고만 판단하고 전체 후보풀의 순위를 직접 만들지 않는다.
+`candidate-analysis/schema.ts`는 분석 갱신과 저장 상태를 검증하고,
+`recommendation/schema.ts`와 `validate_recommendation.ts`는 유효한 분석, 분석 대기 목록,
+수집 진단과 후보풀 원문이 일치하는지 검사한다.
+HTML은 검증된 추천 JSON에서 파생하며 렌더, 검사와 임시 파일 정리는 최종 명령 한 번으로 끝낸다.
 외부 게시를 요청하면 게시 검증 뒤 임시 데이터와 함께 삭제하고, 게시하지 않으면 사용자에게 로컬 검토 경로를 전달한 뒤 정리한다.
 
 ## 지원 패키지
