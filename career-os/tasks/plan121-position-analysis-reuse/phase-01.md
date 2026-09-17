@@ -32,13 +32,21 @@ Backend만 DB 자격증명을 받고 skill과 cron에는 API URL과 Bearer token
 ### 1. Backend 공통 실행 경계 추가
 
 `services/recommendation-api/server.ts`에 `Bun.serve` 진입점을 추가한다.
-`services/recommendation-api/config.ts`는 `CAREER_RECOMMENDATION_DATABASE_URL`,
-`CAREER_RECOMMENDATION_API_TOKEN`, host, port와 요청 본문 상한을 Zod로 검증한다.
+`services/recommendation-api/config.ts`는 개발용 `CAREER_RECOMMENDATION_DATABASE_URL` 또는
+운영용 `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD` 중 한 형식을 검증한다.
+두 DB 형식을 함께 주면 실패한다.
+API token은 `CAREER_RECOMMENDATION_API_TOKEN` 또는
+`CAREER_RECOMMENDATION_API_TOKEN_FILE` 중 하나만 허용하고 파일은 mode 600인지 검사한다.
+host, port와 요청 본문 상한도 Zod로 검증한다.
 운영 기본 host는 모든 interface가 아니라 loopback으로 둔다.
 
 `services/recommendation-api/http/`에 Bearer 인증, JSON 요청 검증, `Cache-Control: no-store`,
 공통 오류 응답과 request ID를 구현한다.
 계약 오류는 `400`, 인증 실패는 `401`, 멱등 충돌과 version 충돌은 `409`, DB 연결 실패는 `503`으로 반환한다.
+
+`GET /health/live`는 process가 요청을 처리할 수 있으면 `200`을 반환한다.
+`GET /health/ready`는 DB 연결과 migration version이 맞을 때만 `200`을 반환한다.
+`GET /api/v1/auth/check`는 유효한 Bearer token이면 `204`, 아니면 `401`을 반환한다.
 
 ### 2. Bun.SQL repository와 transaction helper 추가
 
@@ -73,8 +81,11 @@ foreign key, UNIQUE와 삭제 규칙은 문서와 일치시킨다.
 `position_versions`에는 주관적인 점수와 추천 이유를 넣지 않는다.
 JSON column은 상세 snapshot과 근거처럼 형태가 확장될 값에만 사용한다.
 
-`services/recommendation-api/migrate.ts`는 `status`와 `up`만 제공한다.
+`services/recommendation-api/migrate.ts`는 `status`와 `up`만 제공하고 container의 `migrate` 명령으로 실행할 수 있게 한다.
 자동 down migration과 database 생성은 제공하지 않는다.
+
+`services/recommendation-api/Dockerfile`은 digest로 배포할 Backend image를 만든다.
+runtime은 port `8080`, `serve`와 `migrate` 명령을 제공하고 root가 아닌 사용자로 실행한다.
 
 ### 4. 멱등 요청 저장 계약 추가
 
@@ -85,7 +96,8 @@ JSON column은 상세 snapshot과 근거처럼 형태가 확장될 값에만 사
 
 ### 5. Backend 공통 계약과 migration 테스트
 
-인증 누락, 잘못된 JSON, 본문 상한, 멱등 재시도와 충돌, transaction rollback을 테스트한다.
+인증 누락, token 파일 권한, 잘못된 JSON, 본문 상한, health와 인증 확인,
+멱등 재시도와 충돌, transaction rollback을 테스트한다.
 migration 파일 순서, checksum 변경 거부, 모든 table과 UNIQUE·foreign key·삭제 규칙을 정적 검사한다.
 환경값과 오류 응답에 token과 database URL이 노출되지 않는지 검사한다.
 
@@ -110,4 +122,5 @@ MySQL 통합 테스트 환경이 없을 때도 단위 테스트와 migration 정
 | `services/recommendation-api/db/*.ts` | 신규 |
 | `services/recommendation-api/migrations/*.sql` | 신규 |
 | `services/recommendation-api/migrate.ts` | 신규 |
+| `services/recommendation-api/Dockerfile` | 신규 |
 | `services/recommendation-api/**/*.test.ts` | 신규 |

@@ -338,7 +338,7 @@ HTML은 검증된 추천 JSON에서 파생하며 렌더, 검사와 임시 파일
 
 | 경로 | 책임 |
 | --- | --- |
-| `services/recommendation-api/server.ts` | `Bun.serve` 시작, 공통 timeout과 오류 응답 |
+| `services/recommendation-api/server.ts` | `Bun.serve` 시작, health·인증 확인, 공통 timeout과 오류 응답 |
 | `services/recommendation-api/routes/positions.ts` | 수집 실행, 분석 큐, 분석 반영과 추천 실행 endpoint |
 | `services/recommendation-api/routes/study.ts` | 기존 `/api/study/v1` 계약 endpoint |
 | `services/recommendation-api/position/` | 회사 정책, 공고 버전, 분석 상태와 추천 조립 |
@@ -346,14 +346,20 @@ HTML은 검증된 추천 JSON에서 파생하며 렌더, 검사와 임시 파일
 | `services/recommendation-api/db/` | `Bun.SQL` 연결, transaction helper와 repository |
 | `services/recommendation-api/migrations/` | 순서가 있는 SQL migration과 적용 기록 |
 
-Backend만 `CAREER_RECOMMENDATION_DATABASE_URL`을 읽는다.
-client는 `CAREER_RECOMMENDATION_API_URL`과 `CAREER_RECOMMENDATION_API_TOKEN`만 읽으며 DB 자격증명을 받지 않는다.
+Backend는 local 개발에서는 `CAREER_RECOMMENDATION_DATABASE_URL`을 읽을 수 있고,
+운영에서는 `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`과 `DB_PASSWORD`를 읽는다.
+두 형식을 함께 주면 시작 전에 실패한다.
+client는 `CAREER_RECOMMENDATION_API_URL`과 `CAREER_RECOMMENDATION_API_TOKEN` 또는
+`CAREER_RECOMMENDATION_API_TOKEN_FILE`만 읽으며 DB 자격증명을 받지 않는다.
 `STUDY_LIBRARY_URL`과 `STUDY_SERVICE_TOKEN`은 study client 전환 동안 같은 Backend를 가리키는 호환 환경값으로 유지한다.
 
 모든 쓰기 요청은 `Authorization: Bearer`와 `Idempotency-Key`를 요구한다.
 같은 key와 같은 본문은 기존 응답을 반환하고, 같은 key에 다른 본문을 보내면 `409`를 반환한다.
 DB 연결 실패는 `503`, 요청 계약 오류는 `400`, 인증 실패는 `401`, version 충돌은 `409`로 반환한다.
 응답은 `Cache-Control: no-store`를 사용하며 원본 token과 DB 오류 전문을 포함하지 않는다.
+`GET /health/live`는 process 상태만 확인하고,
+`GET /health/ready`는 migration version과 DB 연결을 확인한다.
+`GET /api/v1/auth/check`는 유효한 Bearer token에만 `204`를 반환한다.
 
 공고 수집 실행 저장, 분석 결과 반영, 학습자료와 cursor 저장, 추천 실행 저장은 각각 한 transaction에서 끝낸다.
 외부 queue와 worker는 두지 않으며 cron이 동기 HTTP 요청으로 단계를 진행한다.
