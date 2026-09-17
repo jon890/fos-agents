@@ -1,10 +1,10 @@
 {
   "name": "plan121-position-analysis-reuse",
   "description": "career-os HTTP Backend와 MySQL 계약으로 공고와 분석을 재사용하고 매일 필요한 공고만 모델에 전달한다.",
-  "status": "pending",
+  "status": "completed",
   "created_at": "2026-09-17",
   "total_phases": 3,
-  "current_phase": 1,
+  "current_phase": 3,
   "phases": [
     { "number": 1, "file": "phase-01.md", "execution_profile": "deep" },
     { "number": 2, "file": "phase-02.md", "execution_profile": "deep" },

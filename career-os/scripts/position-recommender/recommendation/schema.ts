@@ -1,80 +1,137 @@
-// 추천 판단을 HTML로 전달하기 위한 최소 데이터 계약이다.
-// 후보의 진위와 원문 일치 여부만 코드가 검사하고, 추천 분류와 근거 구성은 모델이 정한다.
 import { z } from "zod";
+
+const nonEmpty = z.string().trim().min(1);
+const postingUrl = z.string().url().startsWith("https://");
 
 export const RecommendationDetail = z
   .object({
-    title: z.string().trim().min(1).optional(),
-    content: z.string().trim().min(1),
-    evidenceUrls: z.array(z.string().url().startsWith("https://")).default([]),
-    assumptions: z.array(z.string().trim().min(1)).default([]),
+    title: nonEmpty.optional(),
+    content: nonEmpty,
+    evidenceUrls: z.array(postingUrl).default([]),
+    assumptions: z.array(nonEmpty).default([]),
   })
   .strict();
 
-export const RecommendationItem = z
+const CandidateIdentity = z
   .object({
-    candidateId: z.string().trim().min(1),
-    company: z.string().trim().min(1),
-    title: z.string().trim().min(1),
-    postingUrl: z.string().url().startsWith("https://"),
-    label: z.string().trim().min(1).optional(),
-    reason: z.string().trim().min(1),
-    details: z.array(RecommendationDetail).default([]),
-    nextActions: z.array(z.string().trim().min(1)).default([]),
+    candidateId: nonEmpty,
+    company: nonEmpty,
+    title: nonEmpty,
+    postingUrl,
+    companyTier: z.number().int().min(1).max(3),
   })
   .strict();
 
-export const RankedCandidate = z
+export const RankedCandidate = CandidateIdentity.extend({
+  decision: z.enum(["recommend", "consider", "hold"]),
+  fitScore: z.number().int().min(0).max(100),
+  reason: nonEmpty,
+  details: z.array(RecommendationDetail).default([]),
+  nextActions: z.array(nonEmpty).default([]),
+  note: nonEmpty.optional(),
+}).strict();
+
+export const RecommendationItem = RankedCandidate.extend({
+  label: nonEmpty.optional(),
+}).strict();
+
+export const PendingCandidate = CandidateIdentity.extend({
+  analysisStatus: z.enum(["new", "changed", "stale"]),
+}).strict();
+
+export const WarningSource = z
   .object({
-    candidateId: z.string().trim().min(1),
-    company: z.string().trim().min(1),
-    title: z.string().trim().min(1),
-    postingUrl: z.string().url().startsWith("https://"),
-    note: z.string().trim().min(1).optional(),
+    source: nonEmpty,
+    status: z.enum(["partial", "failed"]),
+    failedCount: z.number().int().nonnegative(),
+    reason: nonEmpty,
   })
   .strict();
 
 export const RecommendationRun = z
   .object({
-    schemaVersion: z.literal(9),
+    schemaVersion: z.literal(10),
     reportDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     generatedAt: z.string().min(1),
-    summary: z.array(z.string().trim().min(1)).default([]),
+    summary: z.array(nonEmpty).default([]),
     recommendations: z.array(RecommendationItem),
     ranking: z.array(RankedCandidate),
-    nextActions: z.array(z.string().trim().min(1)).default([]),
-    sourceSnapshot: z
+    pendingCandidates: z.array(PendingCandidate),
+    analysisSummary: z
       .object({
-        collectionRunId: z.string().min(1),
+        activeCount: z.number().int().nonnegative(),
+        analyzedNowCount: z.number().int().nonnegative(),
+        reusedCount: z.number().int().nonnegative(),
+        pendingCount: z.number().int().nonnegative(),
+        personalExcludedCount: z.number().int().nonnegative(),
       })
       .strict(),
+    collectionHealth: z
+      .object({
+        candidateCount: z.number().int().nonnegative(),
+        configuredSourceCount: z.number().int().nonnegative(),
+        warningSources: z.array(WarningSource),
+      })
+      .strict(),
+    nextActions: z.array(nonEmpty).default([]),
+    sourceSnapshot: z.object({ collectionRunId: nonEmpty }).strict(),
   })
   .strict()
-  .superRefine((run, ctx) => {
-    const selectedIds = new Set<string>();
-    run.recommendations.forEach((item, index) => {
-      if (selectedIds.has(item.candidateId)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["recommendations", index, "candidateId"],
-          message: `추천 공고 ID가 중복됐다: ${item.candidateId}`,
+  .superRefine((run, context) => {
+    const rankedIds = run.ranking.map((item) => item.candidateId);
+    const pendingIds = run.pendingCandidates.map((item) => item.candidateId);
+    const allIds = [...rankedIds, ...pendingIds];
+    if (new Set(allIds).size !== allIds.length) {
+      context.addIssue({
+        code: "custom",
+        path: ["ranking"],
+        message: "분석 순위와 대기 목록에 중복 공고가 있습니다.",
+      });
+    }
+    if (allIds.length !== run.analysisSummary.activeCount) {
+      context.addIssue({
+        code: "custom",
+        path: ["analysisSummary", "activeCount"],
+        message: "활성 공고 집계가 순위와 대기 목록 합계와 다릅니다.",
+      });
+    }
+    if (pendingIds.length !== run.analysisSummary.pendingCount) {
+      context.addIssue({
+        code: "custom",
+        path: ["analysisSummary", "pendingCount"],
+        message: "대기 공고 집계가 목록과 다릅니다.",
+      });
+    }
+    if (
+      rankedIds.length !==
+      run.analysisSummary.analyzedNowCount + run.analysisSummary.reusedCount
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["analysisSummary", "reusedCount"],
+        message: "분석 집계가 순위 공고 수와 다릅니다.",
+      });
+    }
+    const recommendationIds = run.recommendations.map((item) => item.candidateId);
+    if (new Set(recommendationIds).size !== recommendationIds.length) {
+      context.addIssue({
+        code: "custom",
+        path: ["recommendations"],
+        message: "추천 공고가 중복됐습니다.",
+      });
+    }
+    recommendationIds.forEach((id, index) => {
+      if (rankedIds[index] !== id) {
+        context.addIssue({
+          code: "custom",
+          path: ["recommendations", index],
+          message: "상세 추천이 분석 순위 앞부분과 다릅니다.",
         });
       }
-      selectedIds.add(item.candidateId);
-    });
-    const rankedIds = new Set<string>();
-    run.ranking.forEach((item, index) => {
-      if (rankedIds.has(item.candidateId)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["ranking", index, "candidateId"],
-          message: `순위 공고 ID가 중복됐다: ${item.candidateId}`,
-        });
-      }
-      rankedIds.add(item.candidateId);
     });
   });
 
 export type RecommendationRunType = z.infer<typeof RecommendationRun>;
 export type RecommendationItemType = z.infer<typeof RecommendationItem>;
 export type RankedCandidateType = z.infer<typeof RankedCandidate>;
+export type PendingCandidateType = z.infer<typeof PendingCandidate>;

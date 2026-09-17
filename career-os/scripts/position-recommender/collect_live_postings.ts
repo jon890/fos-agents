@@ -193,6 +193,10 @@ export async function collectLivePostings(
     createPostingEligibilityPolicy({ targetRoleOnly }),
   );
   const personalFilter = filterExcludedPostings(eligibility.eligible, exclusions);
+  const personalExcludedCount = [...personalFilter.rejectedBySource.values()].reduce(
+    (total, count) => total + count,
+    0,
+  );
   const activePosts = personalFilter.eligible;
   const importedCounts = importedCountsBySource(activePosts);
   const normalizedDiagnostics = sourceDiagnostics.map((diagnostic) => ({
@@ -219,7 +223,11 @@ export async function collectLivePostings(
       ),
     ],
   } satisfies CollectionDiagnostics;
-  const { pool, validationErrors } = buildPostingCandidatePool(activePosts, diagnostics);
+  const { pool, validationErrors } = buildPostingCandidatePool(
+    activePosts,
+    diagnostics,
+    personalExcludedCount,
+  );
   mkdirSync(dirname(resolve(jsonOut)), { recursive: true });
   writeFileSync(resolve(jsonOut), `${JSON.stringify(pool, null, 2)}\n`, "utf8");
   console.log(`posting candidate pool: ${resolve(jsonOut)} (${pool.candidates.length}건)`);

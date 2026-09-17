@@ -1,0 +1,209 @@
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  version VARCHAR(64) PRIMARY KEY,
+  checksum CHAR(64) NOT NULL,
+  applied_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+) ENGINE=InnoDB;
+
+CREATE TABLE position_sources (
+  source_key VARCHAR(100) PRIMARY KEY,
+  enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  last_successful_collection_at DATETIME(3) NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE position_collection_runs (
+  run_id VARCHAR(191) PRIMARY KEY,
+  idempotency_key VARCHAR(200) NOT NULL UNIQUE,
+  collected_at DATETIME(3) NOT NULL,
+  status ENUM('processing', 'completed', 'failed') NOT NULL,
+  active_count INT UNSIGNED NOT NULL DEFAULT 0,
+  personal_excluded_count INT UNSIGNED NOT NULL DEFAULT 0,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+) ENGINE=InnoDB;
+
+CREATE TABLE position_source_run_diagnostics (
+  run_id VARCHAR(191) NOT NULL,
+  source_key VARCHAR(100) NOT NULL,
+  status ENUM('ok', 'partial', 'failed') NOT NULL,
+  collected_count INT UNSIGNED NOT NULL,
+  imported_count INT UNSIGNED NOT NULL,
+  skipped_count INT UNSIGNED NOT NULL,
+  failed_count INT UNSIGNED NOT NULL,
+  public_message VARCHAR(500) NOT NULL DEFAULT '',
+  PRIMARY KEY (run_id, source_key),
+  CONSTRAINT fk_position_diagnostics_run
+    FOREIGN KEY (run_id) REFERENCES position_collection_runs(run_id) ON DELETE CASCADE,
+  CONSTRAINT fk_position_diagnostics_source
+    FOREIGN KEY (source_key) REFERENCES position_sources(source_key) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+CREATE TABLE positions (
+  position_id CHAR(36) PRIMARY KEY,
+  source_key VARCHAR(100) NOT NULL,
+  identity_hash VARCHAR(512) NOT NULL,
+  normalized_url VARCHAR(2048) NOT NULL,
+  company_key VARCHAR(191) NOT NULL,
+  company_name VARCHAR(255) NOT NULL,
+  title VARCHAR(500) NOT NULL,
+  lifecycle ENUM('active', 'closed', 'not_seen') NOT NULL,
+  first_seen_at DATETIME(3) NOT NULL,
+  last_seen_at DATETIME(3) NOT NULL,
+  pending_since DATETIME(3) NULL,
+  UNIQUE KEY uq_positions_source_identity (source_key, identity_hash),
+  CONSTRAINT fk_positions_source
+    FOREIGN KEY (source_key) REFERENCES position_sources(source_key) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+CREATE TABLE position_versions (
+  position_version_id CHAR(36) PRIMARY KEY,
+  position_id CHAR(36) NOT NULL,
+  content_hash CHAR(71) NOT NULL,
+  snapshot_json JSON NOT NULL,
+  observed_at DATETIME(3) NOT NULL,
+  UNIQUE KEY uq_position_versions_hash (position_id, content_hash),
+  CONSTRAINT fk_position_versions_position
+    FOREIGN KEY (position_id) REFERENCES positions(position_id) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+CREATE TABLE position_collection_items (
+  run_id VARCHAR(191) NOT NULL,
+  position_id CHAR(36) NOT NULL,
+  position_version_id CHAR(36) NOT NULL,
+  posting_status ENUM('active', 'open') NOT NULL,
+  close_urgency ENUM('urgent', 'soon', 'normal', 'no_deadline', 'unknown') NOT NULL,
+  PRIMARY KEY (run_id, position_id),
+  CONSTRAINT fk_position_collection_items_run
+    FOREIGN KEY (run_id) REFERENCES position_collection_runs(run_id) ON DELETE CASCADE,
+  CONSTRAINT fk_position_collection_items_position
+    FOREIGN KEY (position_id) REFERENCES positions(position_id) ON DELETE RESTRICT,
+  CONSTRAINT fk_position_collection_items_version
+    FOREIGN KEY (position_version_id) REFERENCES position_versions(position_version_id) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+CREATE TABLE position_analysis_policy (
+  singleton_id TINYINT PRIMARY KEY,
+  candidate_context_version VARCHAR(191) NOT NULL,
+  daily_analysis_limit TINYINT UNSIGNED NOT NULL,
+  priority_slots TINYINT UNSIGNED NOT NULL,
+  aging_slots TINYINT UNSIGNED NOT NULL,
+  stale_after_days SMALLINT UNSIGNED NOT NULL,
+  default_company_tier TINYINT UNSIGNED NOT NULL,
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  CONSTRAINT chk_position_policy_singleton CHECK (singleton_id = 1),
+  CONSTRAINT chk_position_policy_limit CHECK (daily_analysis_limit BETWEEN 1 AND 20),
+  CONSTRAINT chk_position_policy_slots CHECK (priority_slots + aging_slots = daily_analysis_limit),
+  CONSTRAINT chk_position_policy_tier CHECK (default_company_tier BETWEEN 1 AND 3)
+) ENGINE=InnoDB;
+
+CREATE TABLE company_preferences (
+  company_key VARCHAR(191) PRIMARY KEY,
+  company_name VARCHAR(255) NOT NULL,
+  tier TINYINT UNSIGNED NOT NULL,
+  disposition ENUM('analyze', 'exclude') NOT NULL,
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  CONSTRAINT chk_company_preference_tier CHECK (tier BETWEEN 1 AND 3)
+) ENGINE=InnoDB;
+
+CREATE TABLE position_analysis_runs (
+  analysis_run_id CHAR(36) PRIMARY KEY,
+  collection_run_id VARCHAR(191) NOT NULL UNIQUE,
+  candidate_context_version VARCHAR(191) NOT NULL,
+  contract_version INT UNSIGNED NOT NULL,
+  status ENUM('pending', 'completed') NOT NULL,
+  analyzed_now_count INT UNSIGNED NOT NULL DEFAULT 0,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  completed_at DATETIME(3) NULL,
+  CONSTRAINT fk_position_analysis_runs_collection
+    FOREIGN KEY (collection_run_id) REFERENCES position_collection_runs(run_id) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+CREATE TABLE position_analysis_run_items (
+  analysis_run_id CHAR(36) NOT NULL,
+  position_id CHAR(36) NOT NULL,
+  position_version_id CHAR(36) NOT NULL,
+  selection_order SMALLINT UNSIGNED NOT NULL,
+  analysis_status ENUM('new', 'changed', 'stale') NOT NULL,
+  selection_reason ENUM('priority', 'aging', 'overflow') NOT NULL,
+  company_tier TINYINT UNSIGNED NOT NULL,
+  PRIMARY KEY (analysis_run_id, position_id),
+  UNIQUE KEY uq_position_analysis_order (analysis_run_id, selection_order),
+  CONSTRAINT fk_position_analysis_items_run
+    FOREIGN KEY (analysis_run_id) REFERENCES position_analysis_runs(analysis_run_id) ON DELETE CASCADE,
+  CONSTRAINT fk_position_analysis_items_position
+    FOREIGN KEY (position_id) REFERENCES positions(position_id) ON DELETE RESTRICT,
+  CONSTRAINT fk_position_analysis_items_version
+    FOREIGN KEY (position_version_id) REFERENCES position_versions(position_version_id) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+CREATE TABLE position_analyses (
+  analysis_id CHAR(36) PRIMARY KEY,
+  position_id CHAR(36) NOT NULL,
+  position_version_id CHAR(36) NOT NULL,
+  candidate_context_version VARCHAR(191) NOT NULL,
+  contract_version INT UNSIGNED NOT NULL,
+  analyzed_at DATETIME(3) NOT NULL,
+  valid_until DATE NOT NULL,
+  company_tier_at_analysis TINYINT UNSIGNED NOT NULL,
+  decision ENUM('recommend', 'consider', 'hold') NOT NULL,
+  fit_score TINYINT UNSIGNED NOT NULL,
+  role_fit TINYINT UNSIGNED NOT NULL,
+  scope_upside TINYINT UNSIGNED NOT NULL,
+  company_opportunity TINYINT UNSIGNED NOT NULL,
+  constraints_score TINYINT UNSIGNED NOT NULL,
+  reason TEXT NOT NULL,
+  details_json JSON NOT NULL,
+  next_actions_json JSON NOT NULL,
+  UNIQUE KEY uq_position_analysis_version_context_contract
+    (position_version_id, candidate_context_version, contract_version),
+  CONSTRAINT fk_position_analyses_position
+    FOREIGN KEY (position_id) REFERENCES positions(position_id) ON DELETE RESTRICT,
+  CONSTRAINT fk_position_analyses_version
+    FOREIGN KEY (position_version_id) REFERENCES position_versions(position_version_id) ON DELETE RESTRICT,
+  CONSTRAINT chk_position_analysis_fit CHECK (fit_score BETWEEN 0 AND 100),
+  CONSTRAINT chk_position_analysis_sum CHECK (
+    fit_score = role_fit + scope_upside + company_opportunity + constraints_score
+  )
+) ENGINE=InnoDB;
+
+CREATE TABLE position_recommendation_runs (
+  recommendation_run_id CHAR(36) PRIMARY KEY,
+  analysis_run_id CHAR(36) NOT NULL UNIQUE,
+  collection_run_id VARCHAR(191) NOT NULL,
+  generated_at DATETIME(3) NOT NULL,
+  analyzed_now_count INT UNSIGNED NOT NULL,
+  reused_count INT UNSIGNED NOT NULL,
+  pending_count INT UNSIGNED NOT NULL,
+  pending_candidates_json JSON NOT NULL,
+  personal_excluded_count INT UNSIGNED NOT NULL,
+  CONSTRAINT fk_position_recommendation_analysis_run
+    FOREIGN KEY (analysis_run_id) REFERENCES position_analysis_runs(analysis_run_id) ON DELETE RESTRICT,
+  CONSTRAINT fk_position_recommendation_collection_run
+    FOREIGN KEY (collection_run_id) REFERENCES position_collection_runs(run_id) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+CREATE TABLE position_recommendation_items (
+  recommendation_run_id CHAR(36) NOT NULL,
+  position_id CHAR(36) NOT NULL,
+  analysis_id CHAR(36) NOT NULL,
+  rank_number INT UNSIGNED NOT NULL,
+  decision ENUM('recommend', 'consider', 'hold') NOT NULL,
+  company_tier TINYINT UNSIGNED NOT NULL,
+  PRIMARY KEY (recommendation_run_id, position_id),
+  UNIQUE KEY uq_position_recommendation_rank (recommendation_run_id, rank_number),
+  CONSTRAINT fk_position_recommendation_items_run
+    FOREIGN KEY (recommendation_run_id) REFERENCES position_recommendation_runs(recommendation_run_id) ON DELETE CASCADE,
+  CONSTRAINT fk_position_recommendation_items_position
+    FOREIGN KEY (position_id) REFERENCES positions(position_id) ON DELETE RESTRICT,
+  CONSTRAINT fk_position_recommendation_items_analysis
+    FOREIGN KEY (analysis_id) REFERENCES position_analyses(analysis_id) ON DELETE RESTRICT,
+  CONSTRAINT chk_position_recommendation_tier CHECK (company_tier BETWEEN 1 AND 3)
+) ENGINE=InnoDB;
+
+CREATE TABLE request_receipts (
+  idempotency_key VARCHAR(200) PRIMARY KEY,
+  request_hash CHAR(71) NOT NULL,
+  state ENUM('processing', 'completed') NOT NULL,
+  response_status SMALLINT UNSIGNED NULL,
+  response_body JSON NULL,
+  created_at DATETIME(3) NOT NULL,
+  updated_at DATETIME(3) NOT NULL
+) ENGINE=InnoDB;

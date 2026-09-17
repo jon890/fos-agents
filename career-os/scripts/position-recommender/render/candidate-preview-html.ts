@@ -1,5 +1,9 @@
 import type { PostingCandidatePool } from "../live-postings/contracts.ts";
-import type { RecommendationItemType, RecommendationRunType } from "../recommendation/schema.ts";
+import type {
+  PendingCandidateType,
+  RecommendationItemType,
+  RecommendationRunType,
+} from "../recommendation/schema.ts";
 import { fragment, type RenderAssets } from "./template.ts";
 
 interface PreviewRow {
@@ -36,10 +40,29 @@ function recommendationRows(run: RecommendationRunType): PreviewRow[] {
   return run.recommendations.map(positionRow);
 }
 
+const pendingLabels = {
+  new: "미분석",
+  changed: "공고 변경",
+  stale: "분석 만료",
+} as const;
+
+function pendingRow(item: PendingCandidateType, index: number): PreviewRow {
+  return {
+    rank: index + 1,
+    tier: "분석 대기",
+    company: item.company,
+    title: item.title,
+    url: item.postingUrl,
+    why: `${pendingLabels[item.analysisStatus]} · 회사 tier ${item.companyTier}`,
+    keywords: [pendingLabels[item.analysisStatus]],
+    searchTerms: [item.analysisStatus],
+  };
+}
+
 function candidateRows(pool: PostingCandidatePool, run: RecommendationRunType): PreviewRow[] {
   const selected = new Map(run.recommendations.map((item) => [item.candidateId, item]));
   const candidates = new Map(pool.candidates.map((candidate) => [candidate.id, candidate]));
-  return run.ranking.flatMap((ranked, index) => {
+  const rankedRows = run.ranking.flatMap((ranked, index) => {
     const candidate = candidates.get(ranked.candidateId);
     if (!candidate) return [];
     const item = selected.get(candidate.id);
@@ -52,6 +75,7 @@ function candidateRows(pool: PostingCandidatePool, run: RecommendationRunType): 
         url: candidate.url,
         why:
           ranked.note ??
+          ranked.reason ??
           item?.reason ??
           (candidate.summary || candidate.mainTasks || candidate.activeEvidence),
         keywords:
@@ -68,6 +92,10 @@ function candidateRows(pool: PostingCandidatePool, run: RecommendationRunType): 
       },
     ];
   });
+  const pendingRows = run.pendingCandidates.map((item, index) =>
+    pendingRow(item, rankedRows.length + index),
+  );
+  return [...rankedRows, ...pendingRows];
 }
 
 function applyLimit(rows: PreviewRow[], limit: number | null | undefined): PreviewRow[] {
@@ -75,7 +103,7 @@ function applyLimit(rows: PreviewRow[], limit: number | null | undefined): Previ
 }
 
 function tierClass(tier: string): string {
-  return tier === "전체 후보" ? "tier-all" : "tier-strong";
+  return tier === "전체 후보" || tier === "분석 대기" ? "tier-all" : "tier-strong";
 }
 
 function chips(assets: RenderAssets, row: PreviewRow, limit = 5): string {
@@ -160,6 +188,7 @@ export function renderCandidatePreview(
     ? applyLimit(candidateRows(options.candidatePool, run), limit)
     : [];
   const featured = recommended.slice(0, 3);
+  const pending = run.pendingCandidates.map(pendingRow);
   const collectionRunId =
     options.candidatePool?.collectionRunId ?? run.sourceSnapshot.collectionRunId;
   return fragment(
@@ -195,6 +224,7 @@ export function renderCandidatePreview(
         "추가 추천",
         "additional-recommendations",
       ),
+      pendingSection: board(assets, pending, "분석 대기", "pending-candidates"),
       archive: options.candidatePool ? archive(assets, candidates) : "",
       filterScript: options.candidatePool
         ? fragment(assets, "preview-script", {}, { script: assets.script })

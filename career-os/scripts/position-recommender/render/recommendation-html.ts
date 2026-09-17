@@ -109,13 +109,61 @@ function rankingSection(assets: RenderAssets, items: RankedCandidateType[]): str
   return fragment(
     assets,
     "report-section",
-    { title: `전체 후보 순위 · ${items.length}건` },
+    { title: `분석한 활성 공고 순위 · ${items.length}건` },
     {
       content: fragment(
         assets,
         "report-ranking",
         {},
         { items: items.map((item, index) => rankingItem(assets, item, index)).join("\n") },
+      ),
+    },
+  );
+}
+
+function pendingSection(assets: RenderAssets, run: RecommendationRunType): string {
+  if (run.pendingCandidates.length === 0) return "";
+  const label = { new: "미분석", changed: "공고 변경", stale: "분석 만료" } as const;
+  return fragment(
+    assets,
+    "report-section",
+    { title: `분석 대기 · ${run.pendingCandidates.length}건` },
+    {
+      content: fragment(
+        assets,
+        "report-ranking",
+        {},
+        {
+          items: run.pendingCandidates
+            .map((item, index) =>
+              fragment(assets, "report-ranking-item", {
+                rank: index + 1,
+                company: item.company,
+                title: item.title,
+                url: item.postingUrl,
+                note: `${label[item.analysisStatus]} · 회사 tier ${item.companyTier}`,
+              }),
+            )
+            .join("\n"),
+        },
+      ),
+    },
+  );
+}
+
+function collectionWarnings(assets: RenderAssets, run: RecommendationRunType): string {
+  if (run.collectionHealth.warningSources.length === 0) return "";
+  return fragment(
+    assets,
+    "report-section",
+    { title: "수집 경고" },
+    {
+      content: list(
+        assets,
+        run.collectionHealth.warningSources.map(
+          (warning) =>
+            `${warning.source} · ${warning.status} · 실패 ${warning.failedCount}건 · ${warning.reason}`,
+        ),
       ),
     },
   );
@@ -138,6 +186,7 @@ export function renderReportContent(run: RecommendationRunType, assets: RenderAs
       : "",
     recommendationSection(assets, run.recommendations, rankByCandidate),
     rankingSection(assets, run.ranking),
+    pendingSection(assets, run),
     run.nextActions.length > 0
       ? fragment(
           assets,
@@ -164,7 +213,7 @@ export function renderRecommendationHtml(
     {
       css: assets.css,
       reportHtml: renderReportContent(run, assets),
-      sourceDiagnosticsHtml: "",
+      sourceDiagnosticsHtml: collectionWarnings(assets, run),
     },
   );
 }

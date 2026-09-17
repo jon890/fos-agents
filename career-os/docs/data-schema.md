@@ -84,6 +84,31 @@ URL은 fragment, `utm_*`, `fbclid`, `gclid`를 제거하고 query 순서와 마�
 보고 싶지 않은 회사는 낮은 티어로 두지 않고 `disposition: exclude`로 저장한다.
 기존 개인 공고 제외 설정은 전환 명령이 멱등하게 import하고, 전환 뒤에는 API가 회사 정책의 기준 저장소다.
 
+현재 회사 정책 설정 명령은 기존 개인 제외 설정을 자동으로 import하지 않고 다음 명시 JSON만 받는다.
+각 회사는 입력 순서대로 인증된 `PUT /api/positions/v1/company-preferences/:companyKey` 요청으로 반영한다.
+`companyKey`는 입력 회사명을 Backend와 같은 규칙으로 정규화해 만들며 같은 입력의 멱등 키는 변하지 않는다.
+
+```json
+{
+  "schemaVersion": 1,
+  "preferences": [
+    {
+      "companyName": "예시 회사",
+      "tier": 1,
+      "disposition": "analyze"
+    }
+  ]
+}
+```
+
+```bash
+bun career-os/scripts/position-recommender/configure_position_company_preferences.ts \
+  --input <회사-정책.json>
+```
+
+명령은 회사명과 비공개 제외 사유를 출력하지 않고 전체 반영·제외·tier별 건수만 출력한다.
+기존 개인 제외 설정의 자동 import는 별도 전환 작업 범위다.
+
 `prioritySlots`와 `agingSlots`의 합은 `dailyAnalysisLimit`과 같아야 한다.
 `dailyAnalysisLimit`은 1부터 20까지만 허용한다.
 우선 슬롯은 회사 티어, `new`, `changed`, `stale` 상태, 마감 긴급도, 대기 시작 시각과 공고 ID 순서로 정한다.
@@ -93,6 +118,16 @@ URL은 fragment, `utm_*`, `fbclid`, `gclid`를 제거하고 query 순서와 마�
 `candidateContextVersion`은 현재 역할 기준과 이직 우선순위가 바뀌었을 때 사람이 새 값으로 변경한다.
 값이 달라지면 기존 공고 분석은 본문이 같아도 `stale`로 분류한다.
 정책이 없거나 형식이 잘못됐으면 전체 후보를 기본값으로 분석하지 않고 API가 `409`로 실행을 중단한다.
+
+새 DB에는 정책 기본값을 넣지 않는다.
+운영자는 첫 수집 전에 인증된 `PUT /api/positions/v1/analysis-policy` 요청으로 정책을 명시적으로 설정한다.
+모든 쓰기 요청과 마찬가지로 `Authorization: Bearer`와 `Idempotency-Key`가 필요하다.
+로컬 운영 명령은 같은 endpoint를 호출하며 DB에 직접 연결하지 않는다.
+
+```bash
+bun career-os/scripts/position-recommender/configure_position_analysis_policy.ts \
+  --input <분석-정책.json>
+```
 
 ## 비공개 작업 release
 
@@ -219,12 +254,12 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 
 경로는 첫 번째 로컬 근거의 책임에 따라 정한다.
 
-| 근거 | 장부 경로 |
-| --- | --- |
-| `sources/fos-study/task/<group>/<file>` | `state/verified-claims/task/<group>/<file>.json` |
-| `library/profiles/<file>` | `state/verified-claims/profile/<file>.json` |
+| 근거                                    | 장부 경로                                                     |
+| --------------------------------------- | ------------------------------------------------------------- |
+| `sources/fos-study/task/<group>/<file>` | `state/verified-claims/task/<group>/<file>.json`              |
+| `library/profiles/<file>`               | `state/verified-claims/profile/<file>.json`                   |
 | `applications/<company>/<position>/...` | `state/verified-claims/application/<company>/<position>.json` |
-| 그 밖의 로컬 파일 | `state/verified-claims/other/<file>.json` |
+| 그 밖의 로컬 파일                       | `state/verified-claims/other/<file>.json`                     |
 
 각 파일은 다음 필드를 가진다.
 
@@ -340,22 +375,22 @@ HTTPS `runtime` 근거는 실행마다 달라질 수 있으므로 `refresh_requi
 `fos_career`는 공고 원문, 공고 버전, 개인 분석과 추천 실행을 별도 table로 보존한다.
 공고 원문에 주관적인 점수와 판단을 섞지 않는다.
 
-| table | 주요 키와 책임 |
-| --- | --- |
-| `position_sources` | `source_key` UNIQUE, 활성 여부와 마지막 정상 수집 시각 |
-| `position_collection_runs` | `run_id` PK, `idempotency_key` UNIQUE, 실행 상태와 집계 |
-| `position_source_run_diagnostics` | `(run_id, source_key)` UNIQUE, 성공·부분 실패·실패와 건수 |
-| `positions` | `position_id` PK, `(source_key, identity_hash)` UNIQUE, 현재 lifecycle과 관측 시각 |
-| `position_versions` | `position_version_id` PK, `(position_id, content_hash)` UNIQUE, 정규화한 공고 snapshot |
-| `position_collection_items` | `(run_id, position_id)` UNIQUE, 해당 실행이 본 version과 활성 상태 |
-| `position_analysis_policy` | singleton PK, 후보자 기준 버전, 일일 상한, 슬롯과 만료일 정책 |
-| `company_preferences` | `company_key` UNIQUE, 회사명, tier, `analyze` 또는 `exclude`, 변경 시각 |
-| `position_analysis_runs` | `analysis_run_id` PK, 수집 실행과 후보자 기준 버전, 분석 계약 버전, 상태 |
-| `position_analysis_run_items` | `(analysis_run_id, position_id)` UNIQUE, 선택 순서, 상태와 선택 이유 |
-| `position_analyses` | `(position_version_id, candidate_context_version, contract_version)` UNIQUE, 점수와 유효기간 |
-| `position_recommendation_runs` | `recommendation_run_id` PK, 분석 실행, 생성 시각과 집계 |
-| `position_recommendation_items` | `(recommendation_run_id, position_id)` UNIQUE, 순위, 결론과 분석 참조 |
-| `request_receipts` | `idempotency_key` PK, 요청 hash, 응답 상태와 응답 본문 |
+| table                             | 주요 키와 책임                                                                               |
+| --------------------------------- | -------------------------------------------------------------------------------------------- |
+| `position_sources`                | `source_key` UNIQUE, 활성 여부와 마지막 정상 수집 시각                                       |
+| `position_collection_runs`        | `run_id` PK, `idempotency_key` UNIQUE, 실행 상태와 집계                                      |
+| `position_source_run_diagnostics` | `(run_id, source_key)` UNIQUE, 성공·부분 실패·실패와 건수                                    |
+| `positions`                       | `position_id` PK, `(source_key, identity_hash)` UNIQUE, 현재 lifecycle과 관측 시각           |
+| `position_versions`               | `position_version_id` PK, `(position_id, content_hash)` UNIQUE, 정규화한 공고 snapshot       |
+| `position_collection_items`       | `(run_id, position_id)` UNIQUE, 해당 실행이 본 version과 활성 상태                           |
+| `position_analysis_policy`        | singleton PK, 후보자 기준 버전, 일일 상한, 슬롯과 만료일 정책                                |
+| `company_preferences`             | `company_key` UNIQUE, 회사명, tier, `analyze` 또는 `exclude`, 변경 시각                      |
+| `position_analysis_runs`          | `analysis_run_id` PK, 수집 실행과 후보자 기준 버전, 분석 계약 버전, 상태                     |
+| `position_analysis_run_items`     | `(analysis_run_id, position_id)` UNIQUE, 선택 순서, 상태와 선택 이유                         |
+| `position_analyses`               | `(position_version_id, candidate_context_version, contract_version)` UNIQUE, 점수와 유효기간 |
+| `position_recommendation_runs`    | `recommendation_run_id` PK, 분석 실행, 생성 시각과 집계                                      |
+| `position_recommendation_items`   | `(recommendation_run_id, position_id)` UNIQUE, 순위, 결론과 분석 참조                        |
+| `request_receipts`                | `idempotency_key` PK, 요청 hash, 응답 상태와 응답 본문                                       |
 
 `positions`의 안정적인 식별자는 `source_key`와 `identity_hash`를 우선 사용하고,
 외부 식별자가 없을 때만 정규화 URL에서 identity hash를 만든다.
@@ -492,11 +527,11 @@ HTML은 상세 추천, 분석한 활성 공고 순위, 분석 대기 목록과 �
 
 첫 10줄의 `evidence`는 제출 문장이 현재 근거 범위 안에 있는지의 상태다.
 
-| 값 | 뜻 |
-| --- | --- |
-| `safe` | 제출 문장이 모두 확인한 근거 범위 안에 있다 |
-| `revise` | 근거보다 넓게 읽히는 문장이 있어 표현을 낮춰야 한다 |
-| `blocked` | 근거를 확인하기 전에는 그 문장을 제출에 쓸 수 없다 |
+| 값        | 뜻                                                  |
+| --------- | --------------------------------------------------- |
+| `safe`    | 제출 문장이 모두 확인한 근거 범위 안에 있다         |
+| `revise`  | 근거보다 넓게 읽히는 문장이 있어 표현을 낮춰야 한다 |
+| `blocked` | 근거를 확인하기 전에는 그 문장을 제출에 쓸 수 없다  |
 
 첫 10줄의 `human-confirmation`은 본인 역할, 당시 제약, 기각한 대안, 결과의 확인 범위와 제출 문구 동의처럼 후보자만 확정할 수 있는 사실과 표현 확인 상태다.
 값은 `complete` 또는 `needs_input`이며, `needs_input`이면 준비 상태를 `ready`로 둘 수 없다.
@@ -631,22 +666,22 @@ study table은 기존 `fos-blog` 설계의 관계를 유지한다.
 `admin-gateway` token은 `fos-blog`의 인증된 Server Action이 자료 조회와 개인 상태 변경에 사용한다.
 브라우저에는 두 token을 모두 전달하지 않는다.
 
-| endpoint | 허용 역할 | 계약 |
-| --- | --- | --- |
-| `PUT /sources/{sourceKey}` | producer | source 전체 교체와 version 검사 |
-| `GET /sources` | producer, admin-gateway | source 목록과 version 조회 |
-| `GET /sources/{sourceKey}/cursor?mode=` | producer | mode별 opaque cursor 조회 |
-| `POST /ingestions` | producer | 자료 묶음과 다음 cursor 원자 저장 |
-| `GET /materials` | admin-gateway | 필터, 정렬과 cursor pagination |
-| `GET /materials/{id}` | admin-gateway | 자료, source, tag와 개인 상태 조회 |
-| `PATCH /materials/{id}/state` | admin-gateway | 즐겨찾기, 읽음, 메모와 version 충돌 검사 |
-| `GET /candidates` | producer | 누적 추천을 제외한 후보와 history version 조회 |
-| `GET /recommendation-runs` | admin-gateway | 추천 실행 목록 pagination |
-| `POST /recommendation-runs` | producer | 추천 전체 원자 저장과 중복 검사 |
-| `GET /recommendation-runs/{reportId}` | admin-gateway | 추천 당시 snapshot과 현재 개인 상태 조회 |
-| `POST /publications` | producer | 외부 게시 성공 이력 저장 |
-| `POST /imports/dry-run` | producer, admin-gateway | legacy 이관 미리보기와 preview hash 생성 |
-| `POST /imports/commit` | admin-gateway | preview hash와 history version 검사 뒤 반영 |
+| endpoint                                | 허용 역할               | 계약                                           |
+| --------------------------------------- | ----------------------- | ---------------------------------------------- |
+| `PUT /sources/{sourceKey}`              | producer                | source 전체 교체와 version 검사                |
+| `GET /sources`                          | producer, admin-gateway | source 목록과 version 조회                     |
+| `GET /sources/{sourceKey}/cursor?mode=` | producer                | mode별 opaque cursor 조회                      |
+| `POST /ingestions`                      | producer                | 자료 묶음과 다음 cursor 원자 저장              |
+| `GET /materials`                        | admin-gateway           | 필터, 정렬과 cursor pagination                 |
+| `GET /materials/{id}`                   | admin-gateway           | 자료, source, tag와 개인 상태 조회             |
+| `PATCH /materials/{id}/state`           | admin-gateway           | 즐겨찾기, 읽음, 메모와 version 충돌 검사       |
+| `GET /candidates`                       | producer                | 누적 추천을 제외한 후보와 history version 조회 |
+| `GET /recommendation-runs`              | admin-gateway           | 추천 실행 목록 pagination                      |
+| `POST /recommendation-runs`             | producer                | 추천 전체 원자 저장과 중복 검사                |
+| `GET /recommendation-runs/{reportId}`   | admin-gateway           | 추천 당시 snapshot과 현재 개인 상태 조회       |
+| `POST /publications`                    | producer                | 외부 게시 성공 이력 저장                       |
+| `POST /imports/dry-run`                 | producer, admin-gateway | legacy 이관 미리보기와 preview hash 생성       |
+| `POST /imports/commit`                  | admin-gateway           | preview hash와 history version 검사 뒤 반영    |
 
 요청 본문은 1 MiB 이하이고 오류 응답은 `{error:{code,message,requestId}}`다.
 개인 응답은 `Cache-Control: private, no-store`와 `X-Robots-Tag: noindex, nofollow`를 사용한다.

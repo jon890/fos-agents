@@ -38,7 +38,7 @@ career-os/
 | `scripts/career-workspace/`                                         | 비공개 작업본의 준비, 차이 확인과 release 반영            |
 | `scripts/position-recommender/`                                     | 활성 공고 수집, 추천 검증과 HTML 생성                     |
 | `scripts/study-topic-recommender/`                                  | 읽을거리 수집, 선별 결과 검증과 HTML 생성                 |
-| `services/recommendation-api/`                                     | 포지션·학습자료 상태 API와 MySQL migration                |
+| `services/recommendation-api/`                                      | 포지션·학습자료 상태 API와 MySQL migration                |
 | `scripts/interview-drill/`                                          | 질문 선택, 꼬리질문과 복습 상태 관리                      |
 | `scripts/interview-question-sources/`                               | 외부 면접 질문 후보 수집과 출처 검증                      |
 | `scripts/question-bank-collector/`                                  | 공개 질문 은행의 구조, 공개 범위와 출처 검사              |
@@ -46,7 +46,7 @@ career-os/
 | `applications/<company>/<position>/evidence/`                       | 공고 원문, 후보자 인터뷰, 지원 전략과 제출 문서 원본      |
 | `applications/<company>/<position>/review/`                         | 근거 장부, 점수표, manifest와 제출 문서 HTML              |
 | `library/`                                                          | 여러 지원에서 재사용하는 비공개 질문과 프로필 원고        |
-| `state/`                                                            | 답변 연습과 검증 장부처럼 다음 실행에 필요한 상태          |
+| `state/`                                                            | 답변 연습과 검증 장부처럼 다음 실행에 필요한 상태         |
 | `public/question-bank/`                                             | 공개 가능한 일반 면접 질문과 출처                         |
 | `sources/fos-study/`                                                | 별도 저장소에서 관리하는 공개 학습·경력 근거              |
 | `docs/`                                                             | 제품 가치, 흐름, 데이터 계약, 코드 구조와 결정 이유       |
@@ -336,15 +336,15 @@ HTML은 검증된 추천 JSON에서 파생하며 렌더, 검사와 임시 파일
 서비스 코드, HTTP 계약과 SQL migration은 `career-os`가 소유한다.
 배포 설정, database와 계정 생성, network와 backup은 홈서버 인프라 저장소가 소유한다.
 
-| 경로 | 책임 |
-| --- | --- |
-| `services/recommendation-api/server.ts` | `Bun.serve` 시작, health·인증 확인, 공통 timeout과 오류 응답 |
-| `services/recommendation-api/routes/positions.ts` | 수집 실행, 분석 큐, 분석 반영과 추천 실행 endpoint |
-| `services/recommendation-api/routes/study.ts` | 기존 `/api/study/v1` 계약 endpoint |
-| `services/recommendation-api/position/` | 회사 정책, 공고 버전, 분석 상태와 추천 조립 |
-| `services/recommendation-api/study/` | source, cursor, material, 개인 상태와 추천 이력 |
-| `services/recommendation-api/db/` | `Bun.SQL` 연결, transaction helper와 repository |
-| `services/recommendation-api/migrations/` | 순서가 있는 SQL migration과 적용 기록 |
+| 경로                                              | 책임                                                         |
+| ------------------------------------------------- | ------------------------------------------------------------ |
+| `services/recommendation-api/server.ts`           | `Bun.serve` 시작, health·인증 확인, 공통 timeout과 오류 응답 |
+| `services/recommendation-api/routes/positions.ts` | 수집 실행, 분석 큐, 분석 반영과 추천 실행 endpoint           |
+| `services/recommendation-api/routes/study.ts`     | 기존 `/api/study/v1` 계약 endpoint                           |
+| `services/recommendation-api/position/`           | 회사 정책, 공고 버전, 분석 상태와 추천 조립                  |
+| `services/recommendation-api/study/`              | source, cursor, material, 개인 상태와 추천 이력              |
+| `services/recommendation-api/db/`                 | `Bun.SQL` 연결, transaction helper와 repository              |
+| `services/recommendation-api/migrations/`         | 순서가 있는 SQL migration과 적용 기록                        |
 
 Backend는 local 개발에서는 `CAREER_RECOMMENDATION_DATABASE_URL`을 읽을 수 있고,
 운영에서는 `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`과 `DB_PASSWORD`를 읽는다.
@@ -357,8 +357,11 @@ client는 `CAREER_RECOMMENDATION_API_URL`과 `CAREER_RECOMMENDATION_API_TOKEN` �
 같은 key와 같은 본문은 기존 응답을 반환하고, 같은 key에 다른 본문을 보내면 `409`를 반환한다.
 DB 연결 실패는 `503`, 요청 계약 오류는 `400`, 인증 실패는 `401`, version 충돌은 `409`로 반환한다.
 응답은 `Cache-Control: no-store`를 사용하며 원본 token과 DB 오류 전문을 포함하지 않는다.
+`PUT /api/positions/v1/analysis-policy`는 fresh DB의 포지션 분석 정책을 명시적으로 초기화하거나 갱신한다.
+정책을 설정하지 않은 상태의 수집 요청은 기본값을 추정하지 않고 `409 POLICY_NOT_CONFIGURED`를 반환한다.
+`configure_position_analysis_policy.ts`는 정책 JSON을 검증한 뒤 이 endpoint만 호출한다.
 `GET /health/live`는 process 상태만 확인하고,
-`GET /health/ready`는 migration version과 DB 연결을 확인한다.
+`GET /health/ready`는 DDL을 실행하지 않고 DB 연결, migration version과 checksum을 조회한다.
 `GET /api/v1/auth/check`는 유효한 Bearer token에만 `204`를 반환한다.
 
 공고 수집 실행 저장, 분석 결과 반영, 학습자료와 cursor 저장, 추천 실행 저장은 각각 한 transaction에서 끝낸다.
@@ -378,11 +381,11 @@ DB 연결 실패는 `503`, 요청 계약 오류는 `400`, 인증 실패는 `401`
 `.claude/skills/resume-preparer/scripts/verified-claims/`는 검증 완료 주장 스키마, 안정적인 주장 키, 근거 파일 해시, 저장과 검색을 책임별 모듈로 나눈다.
 CLI 진입점은 다음 셋만 스킬의 `scripts/` 바로 아래에 둔다.
 
-| CLI | 책임 |
-| --- | --- |
-| `search_verified_claims.ts <query>` | 문구와 근거 설명을 검색해 관련 주장, 근거 경로와 locator를 점수순으로 출력한다 |
-| `assess_claim_reuse.ts <application-directory>` | 현재 제출 문서에서 그대로 쓸 수 있는 판정과 다시 읽을 근거를 나눈다 |
-| `promote_verified_claims.ts <application-directory>` | 검증을 통과한 현재 공고별 원장을 검증 장부에 원자적으로 합친다 |
+| CLI                                                  | 책임                                                                           |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `search_verified_claims.ts <query>`                  | 문구와 근거 설명을 검색해 관련 주장, 근거 경로와 locator를 점수순으로 출력한다 |
+| `assess_claim_reuse.ts <application-directory>`      | 현재 제출 문서에서 그대로 쓸 수 있는 판정과 다시 읽을 근거를 나눈다            |
+| `promote_verified_claims.ts <application-directory>` | 검증을 통과한 현재 공고별 원장을 검증 장부에 원자적으로 합친다                 |
 
 검색과 판정 CLI는 상태 파일을 바꾸지 않는다.
 반영 CLI는 `schemaVersion: 3`, 모든 주장 `safe`, 현재 HTML 문구 해시 일치를 다시 검사한 뒤에만 쓴다.
@@ -471,11 +474,11 @@ library 모드는 legacy state를 읽거나 `skill begin`에 의존하지 않고
 
 연동모드는 다음 환경값을 사용한다.
 
-| 이름                   | 의미                                                                             |
-| ---------------------- | -------------------------------------------------------------------------------- |
+| 이름                   | 의미                                                                              |
+| ---------------------- | --------------------------------------------------------------------------------- |
 | `STUDY_LIBRARY_URL`    | career-os API origin. HTTPS URL이며 path, query, hash와 credentials가 없어야 한다 |
-| `STUDY_SERVICE_TOKEN`  | 서비스 인증 Bearer 토큰. 브라우저 세션과 별개다                                  |
-| `YOUTUBE_DATA_API_KEY` | 선택값. 있으면 YouTube uploads playlist 과거 수집을 사용한다                     |
+| `STUDY_SERVICE_TOKEN`  | 서비스 인증 Bearer 토큰. 브라우저 세션과 별개다                                   |
+| `YOUTUBE_DATA_API_KEY` | 선택값. 있으면 YouTube uploads playlist 과거 수집을 사용한다                      |
 
 서비스 요청은 `Authorization: Bearer <STUDY_SERVICE_TOKEN>`을 보낸다.
 브라우저 관리자 쿠키나 세션을 복제하지 않는다.

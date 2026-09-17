@@ -33,14 +33,15 @@
 
 다음 endpoint와 Zod 계약을 `services/recommendation-api/routes/positions.ts`에 추가한다.
 
-| endpoint | 책임 |
-| --- | --- |
-| `POST /api/positions/v1/collection-runs` | 후보풀과 소스 진단 저장, 분석 실행과 제한된 큐 반환 |
-| `POST /api/positions/v1/analysis-runs/:id/results` | 선택된 모든 항목의 분석 결과 원자 반영 |
-| `POST /api/positions/v1/recommendation-runs` | 유효 분석 순위, 분석 대기와 수집 진단 조립 |
-| `GET /api/positions/v1/runs/:id` | 재시도 때 실행 상태와 저장된 응답 조회 |
-| `GET /api/positions/v1/company-preferences` | 회사 tier와 제외 정책 조회 |
-| `PUT /api/positions/v1/company-preferences/:companyKey` | 사용자가 정한 회사 정책 멱등 갱신 |
+| endpoint                                                | 책임                                                  |
+| ------------------------------------------------------- | ----------------------------------------------------- |
+| `PUT /api/positions/v1/analysis-policy`                 | fresh DB의 분석 정책을 인증된 멱등 요청으로 명시 설정 |
+| `POST /api/positions/v1/collection-runs`                | 후보풀과 소스 진단 저장, 분석 실행과 제한된 큐 반환   |
+| `POST /api/positions/v1/analysis-runs/:id/results`      | 선택된 모든 항목의 분석 결과 원자 반영                |
+| `POST /api/positions/v1/recommendation-runs`            | 유효 분석 순위, 분석 대기와 수집 진단 조립            |
+| `GET /api/positions/v1/runs/:id`                        | 재시도 때 실행 상태와 저장된 응답 조회                |
+| `GET /api/positions/v1/company-preferences`             | 회사 tier와 제외 정책 조회                            |
+| `PUT /api/positions/v1/company-preferences/:companyKey` | 사용자가 정한 회사 정책 멱등 갱신                     |
 
 모든 쓰기 endpoint는 `Idempotency-Key`를 요구한다.
 응답에는 원본 token, DB 정보와 비공개 제외 사유 전문을 포함하지 않는다.
@@ -83,6 +84,9 @@
 
 `prepare_position_analysis.ts`, `commit_position_analysis.ts`와
 `finalize_position_recommendation.ts`는 DB에 직접 연결하지 않고 client만 사용한다.
+`configure_position_analysis_policy.ts`도 정책 JSON을 검증한 뒤 같은 client로 정책 endpoint만 호출한다.
+`configure_position_company_preferences.ts`는 명시 JSON의 회사명을 정규화해 회사 정책 endpoint를 순서대로 호출한다.
+같은 입력에는 같은 멱등 키를 사용하며 기존 개인 제외 설정을 자동으로 import하지 않는다.
 stdout에는 집계와 임시 파일 경로만 쓰고 후보 상세 본문을 출력하지 않는다.
 
 ### 6. 포지션 API와 client 회귀 테스트
@@ -106,13 +110,15 @@ git diff --check
 
 ## Critical Files
 
-| 파일 | 변경 |
-| --- | --- |
-| `services/recommendation-api/routes/positions.ts` | 신규 |
-| `services/recommendation-api/position/*.ts` | 신규 |
-| `services/recommendation-api/position/*.test.ts` | 신규 |
-| `scripts/position-recommender/recommendation-api/*.ts` | 신규 |
-| `scripts/position-recommender/prepare_position_analysis.ts` | 신규 |
-| `scripts/position-recommender/commit_position_analysis.ts` | 신규 |
-| `scripts/position-recommender/finalize_position_recommendation.ts` | 신규 |
-| `scripts/position-recommender/*position_analysis*.test.ts` | 신규 |
+| 파일                                                                     | 변경 |
+| ------------------------------------------------------------------------ | ---- |
+| `services/recommendation-api/routes/positions.ts`                        | 신규 |
+| `services/recommendation-api/position/*.ts`                              | 신규 |
+| `services/recommendation-api/position/*.test.ts`                         | 신규 |
+| `scripts/position-recommender/recommendation-api/*.ts`                   | 신규 |
+| `scripts/position-recommender/configure_position_analysis_policy.ts`     | 신규 |
+| `scripts/position-recommender/configure_position_company_preferences.ts` | 신규 |
+| `scripts/position-recommender/prepare_position_analysis.ts`              | 신규 |
+| `scripts/position-recommender/commit_position_analysis.ts`               | 신규 |
+| `scripts/position-recommender/finalize_position_recommendation.ts`       | 신규 |
+| `scripts/position-recommender/*position_analysis*.test.ts`               | 신규 |
