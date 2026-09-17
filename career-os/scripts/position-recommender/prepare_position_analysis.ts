@@ -34,7 +34,7 @@ if (import.meta.main) {
     const client = createRecommendationApiClient();
     const queue = await client.saveCollection(
       {
-        schemaVersion: 1,
+        schemaVersion: 2,
         analysisContractVersion: Number(options["--contract-version"]),
         pool,
       },

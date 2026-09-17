@@ -73,7 +73,9 @@ bun career-os/scripts/position-recommender/company_research.ts \
 각 큐 항목에 역할 적합도 40점, 역할 범위와 성장 여지 25점, 회사 기회 20점,
 제약이 적은 정도 15점을 평가한다.
 합계는 `fitScore`와 같아야 하며 결론은 `recommend`, `consider`, `hold` 중 하나다.
-큐의 모든 `positionId`를 한 번씩 담은 `<RUN_DIR>/analysis-updates.json`을 만들고 반영한다.
+큐에서 `resultStatus`가 `pending` 또는 `failed`인 모든 `positionId`를 한 번씩 담는다.
+분석한 공고는 `results`에, 판단할 내용이 없거나 모델 호출이 실패한 공고는 사유와 함께 `failures`에 넣는다.
+사유는 `posting_body_missing`, `model_unavailable`, `contract_rejected`, `internal_error` 중 하나다.
 
 ```bash
 bun career-os/scripts/position-recommender/commit_position_analysis.ts \
@@ -81,7 +83,8 @@ bun career-os/scripts/position-recommender/commit_position_analysis.ts \
   --input <RUN_DIR>/analysis-updates.json
 ```
 
-반영 충돌이나 누락 분석은 고쳐서 같은 멱등 요청으로 다시 시도한다.
+반영 결과의 `status`가 `partial`이면 남은 공고만 다시 담아 같은 명령을 다시 실행한다.
+멱등 키는 명령이 본문에서 만들므로 손으로 정하지 않는다.
 
 ## 추천 최종화
 
@@ -97,6 +100,8 @@ bun career-os/scripts/position-recommender/finalize_position_recommendation.ts \
 HTML은 추천, 분석한 활성 공고 순위, 분석 대기와 수집 경고를 구분한다.
 수집 경고에는 소스명, `partial` 또는 `failed` 상태와 실패 건수만 표시한다.
 원본 오류 메시지와 URL 목록, 비공개 회사 제외 사유, 현재 보상과 로컬 환경 식별자를 넣지 않는다.
+분석하지 못한 공고가 있으면 실행 결과에 그 건수를 포함한다.
+실패 사유 원문과 모델 응답 전문은 공개 HTML에 넣지 않는다.
 
 ## 비공개 작업 반영과 결과 전달
 
@@ -113,6 +118,7 @@ bun career-os/scripts/career-workspace/cli.ts skill finish position-recommender 
 최종 답변에는 로컬 HTML 또는 검증된 공개 링크와 함께 다음 집계를 전달한다.
 
 - 이번 실행 분석, 재사용과 분석 대기 건수
+- 분석하지 못한 공고 건수
 - 개인 제외 건수
 - 부분 실패 또는 실패 소스와 실패 건수
 - 바로 검토할 공고와 다음 지원 행동

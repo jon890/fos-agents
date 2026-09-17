@@ -18,7 +18,7 @@ describe("position recommendation API client", () => {
           );
         }
         return Response.json({
-          schemaVersion: 1,
+          schemaVersion: 2,
           collectionRunId: "run-1",
           analysisRunId: "analysis-1",
           generatedAt: "2026-09-17T00:00:00.000Z",
@@ -32,6 +32,8 @@ describe("position recommendation API client", () => {
             newCount: 0,
             changedCount: 0,
             staleCount: 0,
+            completedCount: 0,
+            failedCount: 0,
             warningSourceCount: 0,
           },
         });
@@ -49,6 +51,35 @@ describe("position recommendation API client", () => {
         (request) => new Headers(request.headers).get("Authorization") === `Bearer ${token}`,
       ),
     ).toBe(true);
+  });
+
+  test("분석 결과 반영 응답을 실행 상태 계약으로 파싱한다", async () => {
+    const response = {
+      analysisRunId: "analysis-1",
+      status: "partial" as const,
+      createdCount: 1,
+      reusedCount: 0,
+      failedCount: 1,
+      remainingCount: 1,
+      applied: true,
+    };
+    let capturedKey = "";
+    const client = new RecommendationApiClient({
+      baseUrl: "http://api.local",
+      token,
+      fetcher: async (_input, init) => {
+        capturedKey = new Headers(init?.headers).get("Idempotency-Key") ?? "";
+        return Response.json(response);
+      },
+    });
+    await expect(
+      client.saveAnalysisResults(
+        "analysis-1",
+        { schemaVersion: 2, collectionRunId: "run-1", results: [], failures: [] },
+        "analysis-results:analysis-1:0123456789abcdef",
+      ),
+    ).resolves.toEqual(response);
+    expect(capturedKey).toBe("analysis-results:analysis-1:0123456789abcdef");
   });
 
   test("4xx는 재시도하지 않는다", async () => {

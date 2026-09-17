@@ -3,9 +3,11 @@ import { z } from "zod";
 import {
   analysisPolicySchema,
   analysisQueueResponseSchema,
+  analysisResultsResponseSchema,
   companyPreferenceSchema,
   recommendationResponseSchema,
   type AnalysisQueueResponse,
+  type AnalysisResultsResponse,
   type CompanyPreference,
   type RecommendationResponse,
 } from "../../../services/recommendation-api/position/schema.ts";
@@ -123,13 +125,17 @@ export class RecommendationApiClient {
     );
   }
 
-  saveAnalysisResults(analysisRunId: string, body: unknown, idempotencyKey: string) {
+  saveAnalysisResults(
+    analysisRunId: string,
+    body: unknown,
+    idempotencyKey: string,
+  ): Promise<AnalysisResultsResponse> {
     return this.request(
       "POST",
       `/api/positions/v1/analysis-runs/${encodeURIComponent(analysisRunId)}/results`,
       body,
       idempotencyKey,
-      z.object({ analysisRunId: z.string(), analyzedNowCount: z.number(), reused: z.boolean() }),
+      analysisResultsResponseSchema,
     );
   }
 
