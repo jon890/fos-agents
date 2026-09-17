@@ -1,6 +1,6 @@
 {
-  "name": "plan121-position-analysis-reuse",
-  "description": "career-os HTTP Backend와 MySQL 계약으로 공고와 분석을 재사용하고 매일 필요한 공고만 모델에 전달한다.",
+  "name": "plan122-career-study-api",
+  "description": "fos-blog에 설계한 학습자료 저장 계약을 career-os Backend로 옮기고 기존 client와 호환되게 제공한다.",
   "status": "pending",
   "created_at": "2026-09-17",
   "total_phases": 3,

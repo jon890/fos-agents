@@ -62,9 +62,9 @@ URL은 fragment, `utm_*`, `fbclid`, `gclid`를 제거하고 query 순서와 마�
 
 ## 포지션 분석 정책
 
-`config/position-analysis.ts`는 비공개 정책 파일의 상대 경로를 지정한다.
-정책 본문은 Git에서 제외되는 `state/private-config/position-analysis.json`에 두고 비공개 작업 release로 전송한다.
-이 파일은 사람이 정한 회사 우선순위와 비용 상한만 담으며 수집 결과나 모델 분석은 넣지 않는다.
+`fos_career.position_analysis_policy`의 단일 행은 후보자 기준 버전과 일일 분석 상한을 저장한다.
+`fos_career.company_preferences`는 사람이 정한 회사 우선순위와 명시적 제외만 저장한다.
+수집 결과와 모델 분석은 정책 table에 넣지 않는다.
 
 ```json
 {
@@ -74,18 +74,15 @@ URL은 fragment, `utm_*`, `fbclid`, `gclid`를 제거하고 query 순서와 마�
   "prioritySlots": 16,
   "agingSlots": 4,
   "staleAfterDays": 30,
-  "defaultCompanyTier": 3,
-  "companies": [
-    { "company": "예시 상위 회사", "tier": 1 },
-    { "company": "예시 관심 회사", "tier": 2 }
-  ]
+  "defaultCompanyTier": 3
 }
 ```
 
 `tier`는 1, 2, 3만 허용하며 1이 가장 높다.
-회사명은 후보풀의 정규화 전시명과 정확히 일치해야 하고 같은 회사를 두 번 쓸 수 없다.
+회사명은 정규화한 `companyKey`로 유일해야 하고 표시 이름을 별도 column에 둔다.
 등록되지 않은 회사는 `defaultCompanyTier`를 적용한다.
-보고 싶지 않은 회사는 이 파일의 낮은 티어로 두지 않고 기존 개인 공고 제외 설정에 `scope: company`로 기록한다.
+보고 싶지 않은 회사는 낮은 티어로 두지 않고 `disposition: exclude`로 저장한다.
+기존 개인 공고 제외 설정은 전환 명령이 멱등하게 import하고, 전환 뒤에는 API가 회사 정책의 기준 저장소다.
 
 `prioritySlots`와 `agingSlots`의 합은 `dailyAnalysisLimit`과 같아야 한다.
 `dailyAnalysisLimit`은 1부터 20까지만 허용한다.
@@ -95,7 +92,7 @@ URL은 fragment, `utm_*`, `fbclid`, `gclid`를 제거하고 query 순서와 마�
 
 `candidateContextVersion`은 현재 역할 기준과 이직 우선순위가 바뀌었을 때 사람이 새 값으로 변경한다.
 값이 달라지면 기존 공고 분석은 본문이 같아도 `stale`로 분류한다.
-정책이 없거나 형식이 잘못됐으면 전체 후보를 기본값으로 분석하지 않고 실행을 중단한다.
+정책이 없거나 형식이 잘못됐으면 전체 후보를 기본값으로 분석하지 않고 API가 `409`로 실행을 중단한다.
 
 ## 비공개 작업 release
 
@@ -340,84 +337,51 @@ HTTPS `runtime` 근거는 실행마다 달라질 수 있으므로 `refresh_requi
 
 ### 공고별 분석 이력
 
-`state/position-analysis/<source>/<fileKey>.json`은 같은 공고의 관측, 분석 버전과 추천 이력을 보존한다.
-`candidateKey`는 공고의 `identityHash`가 있으면 `<source>:<identityHash>`, 없으면 `<source>:<정규화 URL>`이다.
-`fileKey`는 `candidateKey`의 SHA-256 앞 32자이며 영문 소문자와 숫자만 사용한다.
+`fos_career`는 공고 원문, 공고 버전, 개인 분석과 추천 실행을 별도 table로 보존한다.
+공고 원문에 주관적인 점수와 판단을 섞지 않는다.
 
-```json
-{
-  "schemaVersion": 1,
-  "candidateKey": "wanted:0123456789abcdef",
-  "source": "wanted",
-  "identityHash": "wanted:example-id",
-  "firstSeenAt": "2026-09-17T08:00:00+09:00",
-  "lastSeenAt": "2026-09-17T08:00:00+09:00",
-  "pendingSince": null,
-  "lifecycle": "active",
-  "latestSnapshot": {
-    "company": "예시 회사",
-    "title": "Backend Engineer",
-    "url": "https://example.com/jobs/example-id",
-    "contentHash": "sha256:example"
-  },
-  "analyses": [
-    {
-      "analysisId": "sha256:example-analysis",
-      "contentHash": "sha256:example",
-      "candidateContextVersion": "career-priority-2026-09",
-      "analysisContractVersion": 1,
-      "analyzedAt": "2026-09-17T09:00:00+09:00",
-      "validUntil": "2026-10-17",
-      "companyTierAtAnalysis": 1,
-      "decision": "recommend",
-      "fitScore": 86,
-      "scoreBreakdown": {
-        "roleFit": 35,
-        "scopeUpside": 22,
-        "companyOpportunity": 17,
-        "constraints": 12
-      },
-      "reason": "현재 경험을 활용하면서 더 큰 트래픽과 모듈 소유권을 맡을 수 있다.",
-      "details": [],
-      "nextActions": []
-    }
-  ],
-  "recommendationHistory": [
-    {
-      "collectionRunId": "position-postings-example",
-      "recommendedAt": "2026-09-17T09:05:00+09:00",
-      "rank": 1,
-      "decision": "recommend"
-    }
-  ]
-}
-```
+| table | 주요 키와 책임 |
+| --- | --- |
+| `position_sources` | `source_key` UNIQUE, 활성 여부와 마지막 정상 수집 시각 |
+| `position_collection_runs` | `run_id` PK, `idempotency_key` UNIQUE, 실행 상태와 집계 |
+| `position_source_run_diagnostics` | `(run_id, source_key)` UNIQUE, 성공·부분 실패·실패와 건수 |
+| `positions` | `position_id` PK, `(source_key, identity_hash)` UNIQUE, 현재 lifecycle과 관측 시각 |
+| `position_versions` | `position_version_id` PK, `(position_id, content_hash)` UNIQUE, 정규화한 공고 snapshot |
+| `position_collection_items` | `(run_id, position_id)` UNIQUE, 해당 실행이 본 version과 활성 상태 |
+| `position_analysis_policy` | singleton PK, 후보자 기준 버전, 일일 상한, 슬롯과 만료일 정책 |
+| `company_preferences` | `company_key` UNIQUE, 회사명, tier, `analyze` 또는 `exclude`, 변경 시각 |
+| `position_analysis_runs` | `analysis_run_id` PK, 수집 실행과 후보자 기준 버전, 분석 계약 버전, 상태 |
+| `position_analysis_run_items` | `(analysis_run_id, position_id)` UNIQUE, 선택 순서, 상태와 선택 이유 |
+| `position_analyses` | `(position_version_id, candidate_context_version, contract_version)` UNIQUE, 점수와 유효기간 |
+| `position_recommendation_runs` | `recommendation_run_id` PK, 분석 실행, 생성 시각과 집계 |
+| `position_recommendation_items` | `(recommendation_run_id, position_id)` UNIQUE, 순위, 결론과 분석 참조 |
+| `request_receipts` | `idempotency_key` PK, 요청 hash, 응답 상태와 응답 본문 |
 
-`contentHash`는 회사명, 공고명, 직무 분류, 요약, 주요 업무, 요구 경력, 우대 사항, 기술과 태그를 정렬한 정규 JSON에서 계산한다.
-수집 시각, 남은 날짜와 현재 상태처럼 매일 달라지는 값은 hash에서 제외한다.
-`analysisId`는 `candidateKey`, `contentHash`, `candidateContextVersion`과 `analysisContractVersion`으로 만든다.
-같은 `analysisId`는 한 파일에 한 번만 나타나며 같은 갱신을 다시 반영해도 파일을 바꾸지 않는다.
+`positions`의 안정적인 식별자는 `source_key`와 `identity_hash`를 우선 사용하고,
+외부 식별자가 없을 때만 정규화 URL에서 identity hash를 만든다.
+`position_versions.content_hash`는 회사명, 공고명, 직무 분류, 요약, 주요 업무,
+요구 경력, 우대 사항, 기술과 태그를 정렬한 정규 JSON의 SHA-256이다.
+수집 시각, 남은 날짜와 현재 상태처럼 매일 달라지는 값은 제외한다.
 
-분석은 본문 hash와 후보자 기준 버전이 같고, 분석 계약 버전이 현재 값이며, `validUntil`이 지나지 않았을 때만 `fresh`다.
-분석이 없으면 `new`, 본문 hash가 다르면 `changed`, 나머지 무효화 사유는 `stale`다.
-새 분석은 이전 배열을 지우지 않고 추가하며 현재 추천은 조건에 맞는 가장 최근 분석 하나만 사용한다.
-`decision`은 `recommend`, `consider`, `hold` 중 하나이고 `fitScore`는 0부터 100까지의 정수다.
-`scoreBreakdown`은 역할 적합도 0부터 40, 역할 범위와 성장 여지 0부터 25,
-회사 기회 0부터 20, 제약이 적은 정도 0부터 15로 나누며 합계가 `fitScore`와 같아야 한다.
-`details`의 각 항목은 선택 제목, 본문, 공개 근거 URL 배열과 판단에 영향을 준 가정 배열을 가진다.
-`nextActions`는 비어 있지 않은 문자열 배열이다.
-모델 갱신은 `candidateId`, `decision`, `scoreBreakdown`, `reason`, `details`, `nextActions`만 만들며,
-저장 명령이 큐에서 hash와 정책 버전을 가져와 `analysisId`, `analyzedAt`과 `validUntil`을 채운다.
+분석은 공고 version, 후보자 기준 버전과 분석 계약 버전이 같고 `valid_until`이 지나지 않았을 때만 `fresh`다.
+분석이 없으면 `new`, 최신 공고 version이 달라졌으면 `changed`, 나머지 무효화 사유는 `stale`다.
+새 분석은 과거 행을 갱신하지 않고 추가하며 현재 추천은 조건에 맞는 가장 최근 분석 하나만 사용한다.
 
-임시 `analysis-queue.json`은 `schemaVersion`, `collectionRunId`, 생성 시각, 정책 요약,
+`decision`은 `recommend`, `consider`, `hold` 중 하나이고 `fit_score`는 0부터 100까지의 정수다.
+점수는 역할 적합도 0부터 40, 역할 범위와 성장 여지 0부터 25,
+회사 기회 0부터 20, 제약이 적은 정도 0부터 15로 나누며 합계가 `fit_score`와 같아야 한다.
+상세 근거와 다음 행동은 JSON column에 저장하지만 공고와 분석의 관계는 JSON 안 식별자가 아니라 foreign key로 유지한다.
+
+수집 실행을 삭제하면 해당 실행 항목과 진단은 함께 삭제하지만 공고와 공고 version은 보존한다.
+분석 실행을 삭제하면 선택 항목만 함께 삭제하며 이미 생성된 분석은 보존한다.
+공고를 삭제하는 운영 기능은 만들지 않고 lifecycle로 관리한다.
+명시된 마감일이 지났으면 `closed`, 성공한 동일 소스 수집에서 보이지 않으면 `not_seen`으로 바꾼다.
+소스가 `partial` 또는 `failed`면 누락만으로 lifecycle을 바꾸지 않는다.
+
+임시 `analysis-queue.json`은 Backend 응답을 그대로 저장한 실행 파일이다.
+`schemaVersion`, `collectionRunId`, `analysisRunId`, 생성 시각, 정책 요약,
 상태별 집계와 선택된 `candidates` 배열을 가진다.
-각 선택 항목은 `candidateId`, `candidateKey`, `contentHash`, `analysisStatus`, 현재 회사 티어와 공고 원문을 가진다.
-모델의 `analysis-updates.json`은 같은 `collectionRunId`와 선택된 모든 `candidateId`의 갱신을 한 번씩 담는다.
-
-현재 후보풀에 없는 공고도 이력 파일을 삭제하지 않는다.
-명시된 마감일이 지났으면 `closed`, 성공한 동일 소스 수집에서 보이지 않으면 `not_seen`으로 표시한다.
-소스가 `partial` 또는 `failed`면 누락만으로 상태를 바꾸지 않는다.
-공고 이력 파일을 사람이 삭제하면 관측, 분석과 추천 이력이 함께 삭제되며 자동 cascade 삭제는 두지 않는다.
+모델의 `analysis-updates.json`은 같은 `analysisRunId`와 선택된 모든 `candidateId`의 갱신을 한 번씩 담는다.
 
 ### 실행 중 생성되는 포지션 추천 데이터
 
@@ -648,10 +612,46 @@ YouTube 영상은 video ID를 키에 포함하고 일반 글은 정규화한 URL
 운영 서버 적용과 웹 UI 구현은 별도 작업이다.
 현재 기본 실행의 누적 추천 이력은 위 `state/morning-study-history.json` 계약을 따른다.
 
-`--library` 실행에서 누적 자료, 즐겨찾기, 읽음, 메모와 추천 이력은 fos-blog의 기존 MySQL에 있는 별도 study 테이블이 소유한다.
-career-os는 이 테이블에 직접 접속하지 않고 HTTP API만 사용한다.
-HTTP endpoint, 오류 코드와 저장 제약은 [fos-blog 학습자료 HTTP 계약](https://github.com/jon890/fos-blog/blob/study-library-planning/docs/api/study-library.md)이 단일 출처다.
-이 저장소 문서는 클라이언트가 필요한 매핑과 로컬 설정만 설명한다.
+`--library` 실행에서 누적 자료, 즐겨찾기, 읽음, 메모와 추천 이력은
+`career-os` Backend가 `fos_career`의 별도 study table에 저장한다.
+수집기와 skill은 table에 직접 접속하지 않고 HTTP API만 사용한다.
+HTTP endpoint, 오류 코드와 저장 제약은 `services/recommendation-api/`의 계약과 migration이 단일 출처다.
+
+study table은 기존 `fos-blog` 설계의 관계를 유지한다.
+`study_sources`, `study_source_cursors`, `study_materials`, `study_material_sources`,
+`study_material_tags`, `study_material_states`, `study_recommendation_control`,
+`study_recommendation_runs`, `study_recommendation_topics`, `study_recommendation_items`,
+`study_recommended_materials`, `study_publications`와 `study_request_receipts`를 사용한다.
+현재 기존 table은 0행이므로 데이터 복사는 하지 않으며 API 계약 검증 뒤 제거한다.
+
+#### 학습자료 HTTP 계약
+
+기본 경로는 `/api/study/v1`을 유지한다.
+`producer` token은 수집, 추천과 게시 기록에 사용하고,
+`admin-gateway` token은 `fos-blog`의 인증된 Server Action이 자료 조회와 개인 상태 변경에 사용한다.
+브라우저에는 두 token을 모두 전달하지 않는다.
+
+| endpoint | 허용 역할 | 계약 |
+| --- | --- | --- |
+| `PUT /sources/{sourceKey}` | producer | source 전체 교체와 version 검사 |
+| `GET /sources` | producer, admin-gateway | source 목록과 version 조회 |
+| `GET /sources/{sourceKey}/cursor?mode=` | producer | mode별 opaque cursor 조회 |
+| `POST /ingestions` | producer | 자료 묶음과 다음 cursor 원자 저장 |
+| `GET /materials` | admin-gateway | 필터, 정렬과 cursor pagination |
+| `GET /materials/{id}` | admin-gateway | 자료, source, tag와 개인 상태 조회 |
+| `PATCH /materials/{id}/state` | admin-gateway | 즐겨찾기, 읽음, 메모와 version 충돌 검사 |
+| `GET /candidates` | producer | 누적 추천을 제외한 후보와 history version 조회 |
+| `GET /recommendation-runs` | admin-gateway | 추천 실행 목록 pagination |
+| `POST /recommendation-runs` | producer | 추천 전체 원자 저장과 중복 검사 |
+| `GET /recommendation-runs/{reportId}` | admin-gateway | 추천 당시 snapshot과 현재 개인 상태 조회 |
+| `POST /publications` | producer | 외부 게시 성공 이력 저장 |
+| `POST /imports/dry-run` | producer, admin-gateway | legacy 이관 미리보기와 preview hash 생성 |
+| `POST /imports/commit` | admin-gateway | preview hash와 history version 검사 뒤 반영 |
+
+요청 본문은 1 MiB 이하이고 오류 응답은 `{error:{code,message,requestId}}`다.
+개인 응답은 `Cache-Control: private, no-store`와 `X-Robots-Tag: noindex, nofollow`를 사용한다.
+모든 쓰기 요청은 멱등 키를 요구하며 같은 key와 다른 요청 hash는 `409`로 거부한다.
+version 충돌도 `409`, 본문 상한 초과는 `413`, rate limit은 `429`, 저장소 장애는 `503`을 사용한다.
 
 career-os의 기존 `ReadingSource`는 API 소스 등록 요청으로 변환한다.
 `key`는 `sourceKey`, `title`, `category`, `url`, `feedUrl`, `adapter`, `enabled`는 같은 의미로 보낸다.
