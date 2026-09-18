@@ -307,6 +307,8 @@ Wanted adapter는 개발 전체 직군 `518`을 기술 상수로 사용하고, �
 `prepare_position_analysis.ts`는 수집 실행을 Backend에 저장하고 모델이 읽을 최대 20건의 큐를 임시 파일로 만든다.
 `commit_position_analysis.ts`는 큐에 든 공고의 분석만 Backend에 반영한다.
 `finalize_position_recommendation.ts`는 Backend가 조립한 추천 입력으로 추천 JSON과 HTML을 만들고 검증한다.
+`recommendation/final-answer.ts`는 이 명령이 출력할 수집 경고 줄을 만든다.
+답변 문구를 job 지시문에 맡기면 지시문마다 형식이 갈라지므로 문구는 이 모듈이 소유한다.
 설정과 비공개 전송 계약은 [데이터 구조](data-schema.md#개인-공고-제외-설정)와
 [포지션 분석 정책](data-schema.md#포지션-분석-정책)을 따른다.
 

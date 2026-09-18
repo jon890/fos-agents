@@ -99,6 +99,7 @@ bun career-os/scripts/position-recommender/finalize_position_recommendation.ts \
 
 HTML은 추천, 분석한 활성 공고 순위, 분석 대기와 수집 경고를 구분한다.
 수집 경고에는 소스명, `partial` 또는 `failed` 상태와 실패 건수만 표시한다.
+같은 명령이 최종 답변에 넣을 수집 경고 줄을 `collectionWarnings`로 함께 출력한다.
 원본 오류 메시지와 URL 목록, 비공개 회사 제외 사유, 현재 보상과 로컬 환경 식별자를 넣지 않는다.
 분석하지 못한 공고가 있으면 실행 결과에 그 건수를 포함한다.
 실패 사유 원문과 모델 응답 전문은 공개 HTML에 넣지 않는다.
@@ -115,12 +116,23 @@ bun career-os/scripts/career-workspace/cli.ts skill finish position-recommender 
 브라우저에서 데스크톱과 모바일 배치, 가로 넘침과 주요 링크를 확인한다.
 사용자가 공유 링크를 요청했을 때만 `report-publisher`로 HTML을 게시한다.
 
+## 최종 답변
+
+이 절이 최종 답변 형식을 정한다.
+cron 실행과 수동 실행에 모두 이 형식을 적용한다.
+job 지시문이 더 짧은 형식을 정하고 있어도 아래 항목은 빼지 않는다.
+
 최종 답변에는 로컬 HTML 또는 검증된 공개 링크와 함께 다음 집계를 전달한다.
 
 - 이번 실행 분석, 재사용과 분석 대기 건수
 - 분석하지 못한 공고 건수
 - 개인 제외 건수
-- 부분 실패 또는 실패 소스와 실패 건수
+- 최종화 명령이 출력한 `collectionWarnings`의 각 줄
 - 바로 검토할 공고와 다음 지원 행동
+
+`collectionWarnings`는 최종화 명령이 만들므로 문구를 새로 쓰지 않고 그대로 옮긴다.
+소스명, `partial` 또는 `failed` 상태, 실패 건수와 후보 누락 가능성 한 줄만 들어 있다.
+원본 오류 문구, URL, 내부 경로와 token은 이 줄에 들어오지 않으며 최종 답변에도 넣지 않는다.
+배열이 비어 있으면 수집 경고 줄을 만들지 않는다.
 
 검증과 전달이 끝나면 `<RUN_DIR>`을 삭제한다.
