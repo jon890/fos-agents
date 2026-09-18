@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from "node:f
 import { dirname, resolve } from "node:path";
 import { runCli, type CliSpec } from "../lib/cli.ts";
 import type { RecommendationResponse } from "../../services/recommendation-api/position/schema.ts";
+import { collectionWarningLines } from "./recommendation/final-answer.ts";
 import { RecommendationRun, type RecommendationRunType } from "./recommendation/schema.ts";
 import {
   createRecommendationApiClient,
@@ -107,6 +108,7 @@ export async function finalizeRecommendation(
     rankingCount: run.ranking.length,
     ...run.analysisSummary,
     warningSourceCount: run.collectionHealth.warningSources.length,
+    collectionWarnings: collectionWarningLines(run),
     outputJson: jsonPath,
     outputHtml: htmlPath,
   };

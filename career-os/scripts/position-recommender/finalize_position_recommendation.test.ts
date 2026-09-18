@@ -3,6 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { join } from "node:path";
 import type { RecommendationResponse } from "../../services/recommendation-api/position/schema.ts";
 import { finalizeRecommendation } from "./finalize_position_recommendation.ts";
+import { COLLECTION_WARNING_NOTE } from "./recommendation/final-answer.ts";
 
 function response(): RecommendationResponse {
   const ranked = {
@@ -75,6 +76,43 @@ test("추천 JSON과 HTML을 만들고 대기와 부분 실패를 공개 범위 
     expect(html).toContain("실패 62건");
     expect(html).not.toContain("private-error");
     expect(existsSync(outputJson)).toBe(true);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("최종 답변에 넣을 수집 경고 줄을 실행 결과로 함께 돌려준다", async () => {
+  const directory = mkdtempSync("/tmp/finalize-position.");
+  try {
+    const result = await finalizeRecommendation(
+      { createRecommendation: async () => response() },
+      "analysis-1",
+      join(directory, "recommendation.json"),
+      join(directory, "index.html"),
+    );
+    expect(result.collectionWarnings).toEqual([
+      "coupang-careers · partial · 실패 62건",
+      COLLECTION_WARNING_NOTE,
+    ]);
+    expect(result.warningSourceCount).toBe(1);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("수집 경고가 없으면 최종 답변 줄도 만들지 않는다", async () => {
+  const directory = mkdtempSync("/tmp/finalize-position.");
+  try {
+    const healthy = response();
+    healthy.collectionHealth.warningSources = [];
+    const result = await finalizeRecommendation(
+      { createRecommendation: async () => healthy },
+      "analysis-1",
+      join(directory, "recommendation.json"),
+      join(directory, "index.html"),
+    );
+    expect(result.collectionWarnings).toEqual([]);
+    expect(readFileSync(join(directory, "index.html"), "utf8")).not.toContain("수집 경고");
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
