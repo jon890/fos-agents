@@ -26,3 +26,27 @@ test("문자열 JSON 반환도 호환한다", async () => {
   );
   expect(receipt?.response).toEqual({ status: 201, body });
 });
+
+// Bun 1.3.5의 MySQL driver가 DML에 돌려주는 모양이다.
+// 배열 자체는 비어 있고 `count`는 0으로 고정이며 바뀐 행 수는 `affectedRows`에만 들어온다.
+function sqlAffecting(affectedRows: number): Bun.SQL {
+  return (() => {
+    const result = Object.assign([] as unknown[], {
+      count: 0,
+      command: "INSERT",
+      lastInsertRowid: 0,
+      affectedRows,
+    });
+    return Promise.resolve(result);
+  }) as unknown as Bun.SQL;
+}
+
+test("새 멱등 키를 넣으면 실행 권한을 얻는다", async () => {
+  const store = new SqlReceiptStore(sqlAffecting(1));
+  expect(await store.startReceipt("request-1", "sha256:request")).toBe(true);
+});
+
+test("이미 있는 멱등 키는 실행 권한을 얻지 못한다", async () => {
+  const store = new SqlReceiptStore(sqlAffecting(0));
+  expect(await store.startReceipt("request-1", "sha256:request")).toBe(false);
+});
