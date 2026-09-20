@@ -60,6 +60,75 @@ URL은 fragment, `utm_*`, `fbclid`, `gclid`를 제거하고 query 순서와 마�
 새 수집 코드와 스킬 배포 전에는 원격 규칙 저장만으로 자동 추천에 적용되지 않는다.
 선택 이유는 [개인 공고 제외 정책 ADR](adr/ADR-114-개인-공고-제외-정책을-비공개-release로-전송한다.md)을 따른다.
 
+## 포지션 분석 정책
+
+`fos_career.position_analysis_policy`의 단일 행은 후보자 기준 버전과 일일 분석 상한을 저장한다.
+`fos_career.company_preferences`는 사람이 정한 회사 우선순위와 명시적 제외만 저장한다.
+수집 결과와 모델 분석은 정책 table에 넣지 않는다.
+
+```json
+{
+  "schemaVersion": 1,
+  "candidateContextVersion": "career-priority-2026-09",
+  "dailyAnalysisLimit": 20,
+  "prioritySlots": 16,
+  "agingSlots": 4,
+  "staleAfterDays": 30,
+  "defaultCompanyTier": 3
+}
+```
+
+`tier`는 1, 2, 3만 허용하며 1이 가장 높다.
+회사명은 정규화한 `companyKey`로 유일해야 하고 표시 이름을 별도 column에 둔다.
+등록되지 않은 회사는 `defaultCompanyTier`를 적용한다.
+보고 싶지 않은 회사는 낮은 티어로 두지 않고 `disposition: exclude`로 저장한다.
+기존 개인 공고 제외 설정은 전환 명령이 멱등하게 import하고, 전환 뒤에는 API가 회사 정책의 기준 저장소다.
+
+현재 회사 정책 설정 명령은 기존 개인 제외 설정을 자동으로 import하지 않고 다음 명시 JSON만 받는다.
+각 회사는 입력 순서대로 인증된 `PUT /api/positions/v1/company-preferences/:companyKey` 요청으로 반영한다.
+`companyKey`는 입력 회사명을 Backend와 같은 규칙으로 정규화해 만들며 같은 입력의 멱등 키는 변하지 않는다.
+
+```json
+{
+  "schemaVersion": 1,
+  "preferences": [
+    {
+      "companyName": "예시 회사",
+      "tier": 1,
+      "disposition": "analyze"
+    }
+  ]
+}
+```
+
+```bash
+bun career-os/scripts/position-recommender/configure_position_company_preferences.ts \
+  --input <회사-정책.json>
+```
+
+명령은 회사명과 비공개 제외 사유를 출력하지 않고 전체 반영·제외·tier별 건수만 출력한다.
+기존 개인 제외 설정의 자동 import는 별도 전환 작업 범위다.
+
+`prioritySlots`와 `agingSlots`의 합은 `dailyAnalysisLimit`과 같아야 한다.
+`dailyAnalysisLimit`은 1부터 20까지만 허용한다.
+우선 슬롯은 회사 티어, `new`, `changed`, `stale` 상태, 마감 긴급도, 대기 시작 시각과 공고 ID 순서로 정한다.
+보장 슬롯은 회사 티어와 무관하게 대기 시작 시각이 오래된 순서로 정한다.
+한쪽 슬롯을 채울 후보가 부족하면 다른 쪽 후보가 남은 자리를 사용하며 같은 공고를 두 번 고르지 않는다.
+
+`candidateContextVersion`은 현재 역할 기준과 이직 우선순위가 바뀌었을 때 사람이 새 값으로 변경한다.
+값이 달라지면 기존 공고 분석은 본문이 같아도 `stale`로 분류한다.
+정책이 없거나 형식이 잘못됐으면 전체 후보를 기본값으로 분석하지 않고 API가 `409`로 실행을 중단한다.
+
+새 DB에는 정책 기본값을 넣지 않는다.
+운영자는 첫 수집 전에 인증된 `PUT /api/positions/v1/analysis-policy` 요청으로 정책을 명시적으로 설정한다.
+모든 쓰기 요청과 마찬가지로 `Authorization: Bearer`와 `Idempotency-Key`가 필요하다.
+로컬 운영 명령은 같은 endpoint를 호출하며 DB에 직접 연결하지 않는다.
+
+```bash
+bun career-os/scripts/position-recommender/configure_position_analysis_policy.ts \
+  --input <분석-정책.json>
+```
+
 ## 비공개 작업 release
 
 홈서버의 `career-os` bucket은 release별 archive, manifest와 descriptor를 가진다.
@@ -185,12 +254,12 @@ S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 cli
 
 경로는 첫 번째 로컬 근거의 책임에 따라 정한다.
 
-| 근거 | 장부 경로 |
-| --- | --- |
-| `sources/fos-study/task/<group>/<file>` | `state/verified-claims/task/<group>/<file>.json` |
-| `library/profiles/<file>` | `state/verified-claims/profile/<file>.json` |
+| 근거                                    | 장부 경로                                                     |
+| --------------------------------------- | ------------------------------------------------------------- |
+| `sources/fos-study/task/<group>/<file>` | `state/verified-claims/task/<group>/<file>.json`              |
+| `library/profiles/<file>`               | `state/verified-claims/profile/<file>.json`                   |
 | `applications/<company>/<position>/...` | `state/verified-claims/application/<company>/<position>.json` |
-| 그 밖의 로컬 파일 | `state/verified-claims/other/<file>.json` |
+| 그 밖의 로컬 파일                       | `state/verified-claims/other/<file>.json`                     |
 
 각 파일은 다음 필드를 가진다.
 
@@ -301,32 +370,148 @@ HTTPS `runtime` 근거는 실행마다 달라질 수 있으므로 `refresh_requi
 어댑터는 공고 원문만 보므로 현재 직장의 기준값과 비교할 수 없고,
 회사 단위로 쓴 문구가 같은 회사의 모든 공고에 같은 값으로 들어간다.
 
+### 공고별 분석 이력
+
+`fos_career`는 공고 원문, 공고 버전, 개인 분석과 추천 실행을 별도 table로 보존한다.
+공고 원문에 주관적인 점수와 판단을 섞지 않는다.
+
+| table                             | 주요 키와 책임                                                                               |
+| --------------------------------- | -------------------------------------------------------------------------------------------- |
+| `position_sources`                | `source_key` UNIQUE, 활성 여부와 마지막 정상 수집 시각                                       |
+| `position_collection_runs`        | `run_id` PK, `idempotency_key` UNIQUE, 실행 상태와 집계                                      |
+| `position_source_run_diagnostics` | `(run_id, source_key)` UNIQUE, 성공·부분 실패·실패와 건수                                    |
+| `positions`                       | `position_id` PK, `(source_key, identity_hash)` UNIQUE, 현재 lifecycle과 관측 시각           |
+| `position_versions`               | `position_version_id` PK, `(position_id, content_hash)` UNIQUE, 정규화한 공고 snapshot       |
+| `position_collection_items`       | `(run_id, position_id)` UNIQUE, 해당 실행이 본 version과 활성 상태                           |
+| `position_analysis_policy`        | singleton PK, 후보자 기준 버전, 일일 상한, 슬롯과 만료일 정책                                |
+| `company_preferences`             | `company_key` UNIQUE, 회사명, tier, `analyze` 또는 `exclude`, 변경 시각                      |
+| `position_analysis_runs`          | `analysis_run_id` PK, 수집 실행과 후보자 기준 버전, 분석 계약 버전, `pending`·`partial`·`completed` 상태 |
+| `position_analysis_run_items`     | `(analysis_run_id, position_id)` UNIQUE, 선택 순서, 상태와 선택 이유, 처리 결과와 연결한 분석, 실패 사유와 제출 횟수 |
+| `position_analyses`               | `(position_version_id, candidate_context_version, contract_version)` UNIQUE, 점수와 유효기간, 최초 생성 실행 |
+| `position_recommendation_runs`    | `recommendation_run_id` PK, 분석 실행, 생성 시각과 집계                                      |
+| `position_recommendation_items`   | `(recommendation_run_id, position_id)` UNIQUE, 순위, 결론과 분석 참조                        |
+| `request_receipts`                | `idempotency_key` PK, 요청 hash, 응답 상태와 응답 본문                                       |
+
+`positions`의 안정적인 식별자는 `source_key`와 `identity_hash`를 우선 사용하고,
+외부 식별자가 없을 때만 정규화 URL에서 identity hash를 만든다.
+`position_versions.content_hash`는 회사명, 공고명, 직무 분류, 요약, 주요 업무,
+요구 경력, 우대 사항, 기술과 태그를 정렬한 정규 JSON의 SHA-256이다.
+수집 시각, 남은 날짜와 현재 상태처럼 매일 달라지는 값은 제외한다.
+
+분석은 공고 version, 후보자 기준 버전과 분석 계약 버전이 같고 `valid_until`이 지나지 않았을 때만 `fresh`다.
+분석이 없으면 `new`, 최신 공고 version이 달라졌으면 `changed`, 나머지 무효화 사유는 `stale`다.
+새 분석은 과거 행을 갱신하지 않고 추가하며 현재 추천은 조건에 맞는 가장 최근 분석 하나만 사용한다.
+
+`decision`은 `recommend`, `consider`, `hold` 중 하나이고 `fit_score`는 0부터 100까지의 정수다.
+점수는 역할 적합도 0부터 40, 역할 범위와 성장 여지 0부터 25,
+회사 기회 0부터 20, 제약이 적은 정도 0부터 15로 나누며 합계가 `fit_score`와 같아야 한다.
+상세 근거와 다음 행동은 JSON column에 저장하지만 공고와 분석의 관계는 JSON 안 식별자가 아니라 foreign key로 유지한다.
+
+수집 실행을 삭제하면 해당 실행 항목과 진단은 함께 삭제하지만 공고와 공고 version은 보존한다.
+분석을 만든 실행은 삭제할 수 없다.
+선택 항목만 지우는 삭제는 분석을 만들지 않은 실행에만 허용한다.
+공고를 삭제하는 운영 기능은 만들지 않고 lifecycle로 관리한다.
+명시된 마감일이 지났으면 `closed`, 성공한 동일 소스 수집에서 보이지 않으면 `not_seen`으로 바꾼다.
+소스가 `partial` 또는 `failed`면 누락만으로 lifecycle을 바꾸지 않는다.
+
+실행 항목의 `result_status`는 `pending`, `created`, `reused`, `failed` 중 하나다.
+`created`와 `reused`는 `analysis_id`와 `completed_at`을 함께 가지고,
+`failed`는 `failure_code`와 `completed_at`을 가지며 `analysis_id`는 비어 있다.
+`attempt_count`는 그 항목의 결과를 제출해 처리한 횟수다.
+실행 상태는 선택 항목이 모두 `created` 또는 `reused`면 `completed`,
+`failed`가 남아 있으면 `partial`이다.
+
+`position_analysis_runs.analyzed_now_count`는 그 실행이 새로 만든 분석 수다.
+추천 응답의 `analyzedNowCount`는 그중 순위에 든 수이므로,
+분석을 만든 뒤 공고 본문이 바뀌어 순위에서 빠지면 두 값이 달라진다.
+
+큐 응답의 `reusedCount`, `pendingCount`, `newCount`, `changedCount`, `staleCount`는
+활성 공고 전체를 기준으로 세고,
+`completedCount`와 `failedCount`는 그 실행이 선택한 항목만 기준으로 센다.
+
+감사 조회는 애플리케이션 코드를 거치지 않고 SQL 한 문장으로 답한다.
+
+실행이 선택한 공고를 확인한다.
+
+```sql
+SELECT i.selection_order, p.company_name, p.title, i.analysis_status, i.selection_reason
+FROM position_analysis_run_items i
+JOIN positions p ON p.position_id = i.position_id
+WHERE i.analysis_run_id = ?
+ORDER BY i.selection_order;
+```
+
+공고별 처리 결과를 확인한다.
+
+```sql
+SELECT p.title, i.result_status, i.failure_code, i.attempt_count, i.completed_at
+FROM position_analysis_run_items i
+JOIN positions p ON p.position_id = i.position_id
+WHERE i.analysis_run_id = ?
+ORDER BY i.selection_order;
+```
+
+추천 실행이 쓴 분석이 그 실행에서 생성됐는지 재사용됐는지 확인한다.
+
+```sql
+SELECT ri.rank_number, p.title, ri.analysis_id,
+       CASE WHEN a.created_by_analysis_run_id = rr.analysis_run_id
+            THEN 'created' ELSE 'reused' END AS origin
+FROM position_recommendation_items ri
+JOIN position_recommendation_runs rr
+  ON rr.recommendation_run_id = ri.recommendation_run_id
+JOIN position_analyses a ON a.analysis_id = ri.analysis_id
+JOIN positions p ON p.position_id = ri.position_id
+WHERE ri.recommendation_run_id = ?
+ORDER BY ri.rank_number;
+```
+
+실행 항목에 연결된 분석, 분석을 최초 생성한 실행과 실패 후 재시도는
+같은 두 table을 다른 조건으로 조회한다.
+
+임시 `analysis-queue.json`은 Backend 응답을 그대로 저장한 실행 파일이다.
+`schemaVersion`은 2이고 `collectionRunId`, `analysisRunId`, 생성 시각, 정책 요약,
+상태별 집계와 선택된 `candidates` 배열을 가진다.
+각 후보는 `resultStatus`를 함께 가진다.
+모델의 `analysis-updates.json`도 `schemaVersion`이 2이고 같은 `analysisRunId`를 담는다.
+아직 끝나지 않은 공고를 분석 결과는 `results`에, 분석하지 못한 사유는 `failures`에 한 번씩 나눠 담는다.
+
 ### 실행 중 생성되는 포지션 추천 데이터
 
-모델이 임시 후보풀에서 선별한 실행별 추천 결과다.
+스크립트가 현재 후보풀과 유효한 공고 분석을 합쳐 만든 실행별 추천 결과다.
 형식은 `scripts/position-recommender/recommendation/schema.ts`가 검증한다.
 
 핵심 필드:
 
 - 실행 날짜와 후보풀 출처
-- 모든 후보를 한 번씩 담은 전체 순위
-- 전체 순위 앞부분에서 고른 상세 추천 공고 목록
+- 유효한 분석이 있는 활성 공고의 순위
+- 순위 앞부분에서 고른 상세 추천 공고 목록
 - 공고별 지원 이유
-- 모델이 필요에 따라 붙인 자유 라벨, 상세 근거와 다음 행동
+- 아직 분석하지 못한 활성 공고와 대기 사유
+- 새 분석, 재사용, 분석 대기 건수
+- 소스별 성공, 부분 실패, 실패 수와 확인하지 못한 공고 수
+- 모델이 필요에 따라 붙인 상세 근거와 다음 행동
+
+추천 JSON의 `schemaVersion`은 10이다.
+`pendingCandidates`의 각 항목은 후보 ID, 회사, 공고명, URL, 회사 티어와 `new`, `changed`, `stale` 중 하나를 가진다.
+`analysisSummary`는 `activeCount`, `analyzedNowCount`, `reusedCount`, `pendingCount`와 `personalExcludedCount`를 가진다.
+`collectionHealth.warningSources`는 소스, `partial` 또는 `failed` 상태, 실패 건수와 공개 가능한 이유만 담는다.
+최종 답변에 넣는 수집 경고 줄은 `scripts/position-recommender/recommendation/final-answer.ts`가 만든다.
+그 줄은 소스, 상태, 실패 건수와 고정 문장 하나로만 구성하고 `reason`의 본문은 쓰지 않는다.
 
 추천 항목의 URL과 공고 정보는 후보풀 원문과 일치해야 한다.
 
-전체 순위 배열의 순서가 1위부터 마지막 순위까지의 우선순위다.
-상세 추천은 전체 순위의 앞부분과 같은 순서를 사용한다.
+분석 순위는 `decision`, `fitScore`, 회사 티어, 마감 긴급도와 공고 ID를 차례로 적용해 결정적으로 만든다.
+상세 추천은 `recommend` 또는 `consider`인 순위 앞부분과 같은 순서를 사용한다.
+`hold`와 분석 대기 공고는 상세 추천 수를 채우기 위해 올리지 않는다.
 라벨과 상세 근거의 제목은 후보마다 자유롭게 구성하고 필요 없으면 생략한다.
 사실과 추론에 공개 근거가 있으면 URL을 기록하며, 가정은 판단에 영향을 줄 때만 덧붙인다.
-개인 우선순위와 현재 역할은 private brain이 소유하며 스키마의 고정 판정값으로 저장하지 않는다.
+개인 우선순위와 현재 역할의 본문은 private brain이 소유하며 분석 이력에는 기준 버전만 저장한다.
 추천 개수와 분류는 스키마가 정하지 않는다.
-낮은 순위의 후보에는 보류 사유나 판정값을 강제로 만들지 않는다.
 게시용 HTML은 이 결과에서 만든다.
-HTML은 상세 추천과 함께 전체 순위를 펼쳐 보고 회사, 공고명, 기술과 공고 본문으로 검색할 수 있게 만든다.
+HTML은 상세 추천, 분석한 활성 공고 순위, 분석 대기 목록과 수집 경고를 구분해 표시한다.
 후보풀, 추천 JSON과 HTML은 게시 검증 뒤 삭제한다.
-회사 조사 데이터는 실행별 산출물이 아니므로 `state/company-research/`의 회사별 파일에 유지한다.
+공고 분석 이력과 회사 조사 데이터는 다음 실행에서 재사용하므로 `state/`에 유지한다.
 
 ## 지원 패키지
 
@@ -402,11 +587,11 @@ HTML은 상세 추천과 함께 전체 순위를 펼쳐 보고 회사, 공고명
 
 첫 10줄의 `evidence`는 제출 문장이 현재 근거 범위 안에 있는지의 상태다.
 
-| 값 | 뜻 |
-| --- | --- |
-| `safe` | 제출 문장이 모두 확인한 근거 범위 안에 있다 |
-| `revise` | 근거보다 넓게 읽히는 문장이 있어 표현을 낮춰야 한다 |
-| `blocked` | 근거를 확인하기 전에는 그 문장을 제출에 쓸 수 없다 |
+| 값        | 뜻                                                  |
+| --------- | --------------------------------------------------- |
+| `safe`    | 제출 문장이 모두 확인한 근거 범위 안에 있다         |
+| `revise`  | 근거보다 넓게 읽히는 문장이 있어 표현을 낮춰야 한다 |
+| `blocked` | 근거를 확인하기 전에는 그 문장을 제출에 쓸 수 없다  |
 
 첫 10줄의 `human-confirmation`은 본인 역할, 당시 제약, 기각한 대안, 결과의 확인 범위와 제출 문구 동의처럼 후보자만 확정할 수 있는 사실과 표현 확인 상태다.
 값은 `complete` 또는 `needs_input`이며, `needs_input`이면 준비 상태를 `ready`로 둘 수 없다.
@@ -522,10 +707,46 @@ YouTube 영상은 video ID를 키에 포함하고 일반 글은 정규화한 URL
 운영 서버 적용과 웹 UI 구현은 별도 작업이다.
 현재 기본 실행의 누적 추천 이력은 위 `state/morning-study-history.json` 계약을 따른다.
 
-`--library` 실행에서 누적 자료, 즐겨찾기, 읽음, 메모와 추천 이력은 fos-blog의 기존 MySQL에 있는 별도 study 테이블이 소유한다.
-career-os는 이 테이블에 직접 접속하지 않고 HTTP API만 사용한다.
-HTTP endpoint, 오류 코드와 저장 제약은 [fos-blog 학습자료 HTTP 계약](https://github.com/jon890/fos-blog/blob/study-library-planning/docs/api/study-library.md)이 단일 출처다.
-이 저장소 문서는 클라이언트가 필요한 매핑과 로컬 설정만 설명한다.
+`--library` 실행에서 누적 자료, 즐겨찾기, 읽음, 메모와 추천 이력은
+`career-os` Backend가 `fos_career`의 별도 study table에 저장한다.
+수집기와 skill은 table에 직접 접속하지 않고 HTTP API만 사용한다.
+HTTP endpoint, 오류 코드와 저장 제약은 `services/recommendation-api/`의 계약과 migration이 단일 출처다.
+
+study table은 기존 `fos-blog` 설계의 관계를 유지한다.
+`study_sources`, `study_source_cursors`, `study_materials`, `study_material_sources`,
+`study_material_tags`, `study_material_states`, `study_recommendation_control`,
+`study_recommendation_runs`, `study_recommendation_topics`, `study_recommendation_items`,
+`study_recommended_materials`, `study_publications`와 `study_request_receipts`를 사용한다.
+현재 기존 table은 0행이므로 데이터 복사는 하지 않으며 API 계약 검증 뒤 제거한다.
+
+#### 학습자료 HTTP 계약
+
+기본 경로는 `/api/study/v1`을 유지한다.
+`producer` token은 수집, 추천과 게시 기록에 사용하고,
+`admin-gateway` token은 `fos-blog`의 인증된 Server Action이 자료 조회와 개인 상태 변경에 사용한다.
+브라우저에는 두 token을 모두 전달하지 않는다.
+
+| endpoint                                | 허용 역할               | 계약                                           |
+| --------------------------------------- | ----------------------- | ---------------------------------------------- |
+| `PUT /sources/{sourceKey}`              | producer                | source 전체 교체와 version 검사                |
+| `GET /sources`                          | producer, admin-gateway | source 목록과 version 조회                     |
+| `GET /sources/{sourceKey}/cursor?mode=` | producer                | mode별 opaque cursor 조회                      |
+| `POST /ingestions`                      | producer                | 자료 묶음과 다음 cursor 원자 저장              |
+| `GET /materials`                        | admin-gateway           | 필터, 정렬과 cursor pagination                 |
+| `GET /materials/{id}`                   | admin-gateway           | 자료, source, tag와 개인 상태 조회             |
+| `PATCH /materials/{id}/state`           | admin-gateway           | 즐겨찾기, 읽음, 메모와 version 충돌 검사       |
+| `GET /candidates`                       | producer                | 누적 추천을 제외한 후보와 history version 조회 |
+| `GET /recommendation-runs`              | admin-gateway           | 추천 실행 목록 pagination                      |
+| `POST /recommendation-runs`             | producer                | 추천 전체 원자 저장과 중복 검사                |
+| `GET /recommendation-runs/{reportId}`   | admin-gateway           | 추천 당시 snapshot과 현재 개인 상태 조회       |
+| `POST /publications`                    | producer                | 외부 게시 성공 이력 저장                       |
+| `POST /imports/dry-run`                 | producer, admin-gateway | legacy 이관 미리보기와 preview hash 생성       |
+| `POST /imports/commit`                  | admin-gateway           | preview hash와 history version 검사 뒤 반영    |
+
+요청 본문은 1 MiB 이하이고 오류 응답은 `{error:{code,message,requestId}}`다.
+개인 응답은 `Cache-Control: private, no-store`와 `X-Robots-Tag: noindex, nofollow`를 사용한다.
+모든 쓰기 요청은 멱등 키를 요구하며 같은 key와 다른 요청 hash는 `409`로 거부한다.
+version 충돌도 `409`, 본문 상한 초과는 `413`, rate limit은 `429`, 저장소 장애는 `503`을 사용한다.
 
 career-os의 기존 `ReadingSource`는 API 소스 등록 요청으로 변환한다.
 `key`는 `sourceKey`, `title`, `category`, `url`, `feedUrl`, `adapter`, `enabled`는 같은 의미로 보낸다.

@@ -1,6 +1,6 @@
 # 코드 아키텍처
 
-career-os는 skill이 실행 계약을 설명하고 TypeScript 스크립트가 반복 가능한 처리를 담당하는 파일 기반 워크스페이스다.
+career-os는 skill이 실행 계약을 설명하고 TypeScript 스크립트와 작은 HTTP Backend가 반복 가능한 처리를 담당하는 워크스페이스다.
 
 public `fos-agents` 저장소는 skill과 실행 코드를 소유한다.
 비공개 작업 파일은 각 환경의 기존 경로에서 다루고 홈서버 `career-os` S3 collection의 immutable release를 기준으로 동기화한다.
@@ -13,6 +13,7 @@ career-os/
 ├── .codex/skills/        Codex에서 같은 skill을 노출하는 링크
 ├── config/               사람이 관리하는 수집 정책
 ├── scripts/              검증, 수집과 변환 코드
+├── services/             추천 상태 HTTP Backend와 migration
 ├── applications/         동기화되는 로컬 지원 패키지
 ├── library/              사람이 직접 관리하며 여러 지원에서 재사용하는 비공개 자료
 ├── state/                검증기와 도구가 다음 실행에 재사용하는 상태
@@ -37,6 +38,7 @@ career-os/
 | `scripts/career-workspace/`                                         | 비공개 작업본의 준비, 차이 확인과 release 반영            |
 | `scripts/position-recommender/`                                     | 활성 공고 수집, 추천 검증과 HTML 생성                     |
 | `scripts/study-topic-recommender/`                                  | 읽을거리 수집, 선별 결과 검증과 HTML 생성                 |
+| `services/recommendation-api/`                                      | 포지션·학습자료 상태 API와 MySQL migration                |
 | `scripts/interview-drill/`                                          | 질문 선택, 꼬리질문과 복습 상태 관리                      |
 | `scripts/interview-question-sources/`                               | 외부 면접 질문 후보 수집과 출처 검증                      |
 | `scripts/question-bank-collector/`                                  | 공개 질문 은행의 구조, 공개 범위와 출처 검사              |
@@ -44,7 +46,7 @@ career-os/
 | `applications/<company>/<position>/evidence/`                       | 공고 원문, 후보자 인터뷰, 지원 전략과 제출 문서 원본      |
 | `applications/<company>/<position>/review/`                         | 근거 장부, 점수표, manifest와 제출 문서 HTML              |
 | `library/`                                                          | 여러 지원에서 재사용하는 비공개 질문과 프로필 원고        |
-| `state/`                                                            | 답변 연습과 검증 장부처럼 다음 실행에 필요한 상태          |
+| `state/`                                                            | 답변 연습과 검증 장부처럼 다음 실행에 필요한 상태         |
 | `public/question-bank/`                                             | 공개 가능한 일반 면접 질문과 출처                         |
 | `sources/fos-study/`                                                | 별도 저장소에서 관리하는 공개 학습·경력 근거              |
 | `docs/`                                                             | 제품 가치, 흐름, 데이터 계약, 코드 구조와 결정 이유       |
@@ -295,12 +297,20 @@ Wanted adapter는 개발 전체 직군 `518`을 기술 상수로 사용하고, �
 `scripts/position-recommender/` 루트에는 수집, 추천 원문 대조, 회사 조사 병합과 렌더의 CLI 진입점만 둔다.
 `live-postings/`는 외부 소스 어댑터와 수집 정책, `recommendation/`은 추천 계약,
 `company-research/`는 재사용할 회사 사실의 계약과 병합, `feedback/`은 제외 기준,
+`candidate-analysis/`는 Backend가 반환한 큐와 모델 분석 갱신의 client 계약,
 `render/`는 HTML 생성과 검사를 구현한다.
 어댑터는 원문 응답을 공통 `LivePosting` 형태로 바꾼다.
 후보풀 정책은 개별 공고 URL, 활성 상태, 마감일, 고용 형태, 역할과 중복을 결정적으로 검사한다.
 `exclusions.ts`는 필수 개인 제외 설정을 검증하고 공통 수집 경로에서 후보풀 생성 전에 해당 공고를 제거한다.
 `company_research.ts`는 실행 중 조사한 회사 프로필을 검증하고 `state/company-research/`의 회사별 파일에 원자적으로 합친다.
-설정과 비공개 전송 계약은 [데이터 구조](data-schema.md#개인-공고-제외-설정)를 따른다.
+`recommendation-api/client.ts`는 후보풀 저장, 분석 큐 조회, 분석 반영과 추천 실행 요청을 담당한다.
+`prepare_position_analysis.ts`는 수집 실행을 Backend에 저장하고 모델이 읽을 최대 20건의 큐를 임시 파일로 만든다.
+`commit_position_analysis.ts`는 큐에 든 공고의 분석만 Backend에 반영한다.
+`finalize_position_recommendation.ts`는 Backend가 조립한 추천 입력으로 추천 JSON과 HTML을 만들고 검증한다.
+`recommendation/final-answer.ts`는 이 명령이 출력할 수집 경고 줄을 만든다.
+답변 문구를 job 지시문에 맡기면 지시문마다 형식이 갈라지므로 문구는 이 모듈이 소유한다.
+설정과 비공개 전송 계약은 [데이터 구조](data-schema.md#개인-공고-제외-설정)와
+[포지션 분석 정책](data-schema.md#포지션-분석-정책)을 따른다.
 
 `collection_health.ts`는 실행 전체가 추천 입력으로 쓸 만한지 판정한다.
 소스 하나가 실패해도 남은 소스로 후보풀을 만드는 것은 의도한 동작이지만,
@@ -315,9 +325,63 @@ Wanted adapter는 개발 전체 직군 `518`을 기술 상수로 사용하고, �
 요청이나 파싱이 실패해 판단하지 못한 공고는 `failedCount`로 세고 `skippedCount`에 넣지 않는다.
 
 수집 결과는 실행별 임시 후보풀에 저장한다.
-모델은 후보풀에 존재하는 공고만 선별하고, `recommendation/schema.ts`와 `validate_recommendation.ts`는 HTML 전달 구조와 원문 일치 여부만 검사한다.
-HTML은 검증된 추천 JSON에서 파생한다.
+모델은 분석 큐에 존재하는 공고만 판단하고 전체 후보풀의 순위를 직접 만들지 않는다.
+`candidate-analysis/schema.ts`는 분석 갱신과 저장 상태를 검증하고,
+`recommendation/schema.ts`와 `validate_recommendation.ts`는 유효한 분석, 분석 대기 목록,
+수집 진단과 후보풀 원문이 일치하는지 검사한다.
+HTML은 검증된 추천 JSON에서 파생하며 렌더, 검사와 임시 파일 정리는 최종 명령 한 번으로 끝낸다.
 외부 게시를 요청하면 게시 검증 뒤 임시 데이터와 함께 삭제하고, 게시하지 않으면 사용자에게 로컬 검토 경로를 전달한 뒤 정리한다.
+
+## 추천 상태 Backend
+
+`services/recommendation-api/`는 포지션과 학습자료의 장기 상태를 제공하는 작은 Bun HTTP Backend다.
+서비스 코드, HTTP 계약과 SQL migration은 `career-os`가 소유한다.
+배포 설정, database와 계정 생성, network와 backup은 홈서버 인프라 저장소가 소유한다.
+
+| 경로                                              | 책임                                                         |
+| ------------------------------------------------- | ------------------------------------------------------------ |
+| `services/recommendation-api/server.ts`           | `Bun.serve` 시작, health·인증 확인, 공통 timeout과 오류 응답 |
+| `services/recommendation-api/routes/positions.ts` | 수집 실행, 분석 큐, 분석 반영과 추천 실행 endpoint           |
+| `services/recommendation-api/routes/study.ts`     | 기존 `/api/study/v1` 계약 endpoint                           |
+| `services/recommendation-api/position/`           | 회사 정책, 공고 버전, 분석 상태와 추천 조립                  |
+| `services/recommendation-api/study/`              | source, cursor, material, 개인 상태와 추천 이력              |
+| `services/recommendation-api/db/`                 | `Bun.SQL` 연결, transaction helper와 repository              |
+| `services/recommendation-api/migrations/`         | 순서가 있는 SQL migration과 적용 기록                        |
+
+Backend는 local 개발에서는 `CAREER_RECOMMENDATION_DATABASE_URL`을 읽을 수 있고,
+운영에서는 `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`과 `DB_PASSWORD`를 읽는다.
+두 형식을 함께 주면 시작 전에 실패한다.
+client는 `CAREER_RECOMMENDATION_API_URL`과 `CAREER_RECOMMENDATION_API_TOKEN` 또는
+`CAREER_RECOMMENDATION_API_TOKEN_FILE`만 읽으며 DB 자격증명을 받지 않는다.
+`STUDY_LIBRARY_URL`과 `STUDY_SERVICE_TOKEN`은 study client 전환 동안 같은 Backend를 가리키는 호환 환경값으로 유지한다.
+
+모든 쓰기 요청은 `Authorization: Bearer`와 `Idempotency-Key`를 요구한다.
+같은 key와 같은 본문은 기존 응답을 반환하고, 같은 key에 다른 본문을 보내면 `409`를 반환한다.
+DB 연결 실패는 `503`, 요청 계약 오류는 `400`, 인증 실패는 `401`, version 충돌은 `409`로 반환한다.
+응답은 `Cache-Control: no-store`를 사용하며 원본 token과 DB 오류 전문을 포함하지 않는다.
+`PUT /api/positions/v1/analysis-policy`는 fresh DB의 포지션 분석 정책을 명시적으로 초기화하거나 갱신한다.
+정책을 설정하지 않은 상태의 수집 요청은 기본값을 추정하지 않고 `409 POLICY_NOT_CONFIGURED`를 반환한다.
+`configure_position_analysis_policy.ts`는 정책 JSON을 검증한 뒤 이 endpoint만 호출한다.
+`GET /health/live`는 process 상태만 확인하고,
+`GET /health/ready`는 DDL을 실행하지 않고 DB 연결, migration version과 checksum을 조회한다.
+`GET /api/v1/auth/check`는 유효한 Bearer token에만 `204`를 반환한다.
+
+공고 수집 실행 저장, 분석 결과 반영, 학습자료와 cursor 저장, 추천 실행 저장은 각각 한 transaction에서 끝낸다.
+외부 queue와 worker는 두지 않으며 cron이 동기 HTTP 요청으로 단계를 진행한다.
+분석 결과 반영은 분석한 공고와 분석하지 못한 공고를 함께 받고,
+실행 상태를 `pending`, `partial`, `completed` 중 하나로 돌려준다.
+`partial`이면 client가 남은 항목만 다시 보내며 Backend는 스스로 재시도하지 않는다.
+
+운영 배포는 아래 조건을 먼저 만족해야 한다.
+이 값은 홈서버 인프라 저장소가 읽으며 `career-os`에서 실행하지 않는다.
+
+| 조건 | 내용 |
+| --- | --- |
+| 초기 schema | 운영 database에는 `001_position_schema`를 한 번만 적용한다. 그 뒤에는 초기 파일을 고치지 않고 `002_*.sql`을 추가한다 |
+| 인스턴스 수 | Backend는 하나만 띄운다. 상태 전체를 메모리에 들고 기록하므로 둘 이상이면 서로의 기록을 덮는다 |
+| 적용 확인 | `migrate.ts up` 실행 뒤 `GET /health/ready`가 200인지 확인한다 |
+| 정책 초기화 | `PUT /api/positions/v1/analysis-policy`로 분석 정책을 한 번 넣는다. 넣기 전에는 수집 요청이 409를 반환한다 |
+| cron 연결 | 스킬 실행 cron 등록은 홈서버 인프라 저장소가 담당한다 |
 
 ## 지원 패키지
 
@@ -333,11 +397,11 @@ HTML은 검증된 추천 JSON에서 파생한다.
 `.claude/skills/resume-preparer/scripts/verified-claims/`는 검증 완료 주장 스키마, 안정적인 주장 키, 근거 파일 해시, 저장과 검색을 책임별 모듈로 나눈다.
 CLI 진입점은 다음 셋만 스킬의 `scripts/` 바로 아래에 둔다.
 
-| CLI | 책임 |
-| --- | --- |
-| `search_verified_claims.ts <query>` | 문구와 근거 설명을 검색해 관련 주장, 근거 경로와 locator를 점수순으로 출력한다 |
-| `assess_claim_reuse.ts <application-directory>` | 현재 제출 문서에서 그대로 쓸 수 있는 판정과 다시 읽을 근거를 나눈다 |
-| `promote_verified_claims.ts <application-directory>` | 검증을 통과한 현재 공고별 원장을 검증 장부에 원자적으로 합친다 |
+| CLI                                                  | 책임                                                                           |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `search_verified_claims.ts <query>`                  | 문구와 근거 설명을 검색해 관련 주장, 근거 경로와 locator를 점수순으로 출력한다 |
+| `assess_claim_reuse.ts <application-directory>`      | 현재 제출 문서에서 그대로 쓸 수 있는 판정과 다시 읽을 근거를 나눈다            |
+| `promote_verified_claims.ts <application-directory>` | 검증을 통과한 현재 공고별 원장을 검증 장부에 원자적으로 합친다                 |
 
 검색과 판정 CLI는 상태 파일을 바꾸지 않는다.
 반영 CLI는 `schemaVersion: 3`, 모든 주장 `safe`, 현재 HTML 문구 해시 일치를 다시 검사한 뒤에만 쓴다.
@@ -406,8 +470,8 @@ YouTube 채널은 공식 Atom 피드를 우선 사용하고 피드를 읽을 수
 클라이언트는 mock HTTP로 검증했으며 운영 서버 적용과 웹 UI 구현은 별도 작업이다.
 현재 기본 실행은 기존 파일모드 구조를 따른다.
 실행 CLI와 실패 복구는 [`flow.md`](flow.md#학습자료-api-연동모드)가 소유하고, 저장 모델과 payload 매핑은 [`data-schema.md`](data-schema.md#학습자료-api-연동-상태)가 소유한다.
-`scripts/study-topic-recommender/study-library/`는 fos-blog 학습자료 API 호출, 서비스 인증 헤더, 응답 Zod 검증과 기존 후보풀 타입 변환만 맡는다.
-이 디렉터리는 MySQL 드라이버나 서버 저장 로직을 갖지 않으며, DB 스키마와 HTTP endpoint 정의는 [fos-blog 학습자료 HTTP 계약](https://github.com/jon890/fos-blog/blob/study-library-planning/docs/api/study-library.md)을 단일 출처로 둔다.
+`scripts/study-topic-recommender/study-library/`는 `career-os` 학습자료 API 호출, 서비스 인증 헤더, 응답 Zod 검증과 기존 후보풀 타입 변환만 맡는다.
+이 디렉터리는 MySQL 드라이버나 서버 저장 로직을 갖지 않으며, DB 스키마와 HTTP endpoint 정의는 `services/recommendation-api/`가 소유한다.
 `scripts/study-topic-recommender/source/archive/`는 sitemap과 YouTube uploads playlist 같은 과거 수집 cursor를 해석한다.
 source 어댑터는 원문 발견과 메타 추출만 하고, 자료 저장과 cursor 진행은 study-library client가 API 응답으로 확인한다.
 archive 진입점은 `config/external-reading-sources.ts`에 복제하지 않고 sourceKey별 registry로 둔다.
@@ -426,11 +490,11 @@ library 모드는 legacy state를 읽거나 `skill begin`에 의존하지 않고
 
 연동모드는 다음 환경값을 사용한다.
 
-| 이름                   | 의미                                                                             |
-| ---------------------- | -------------------------------------------------------------------------------- |
-| `STUDY_LIBRARY_URL`    | fos-blog API origin. HTTPS URL이며 path, query, hash와 credentials가 없어야 한다 |
-| `STUDY_SERVICE_TOKEN`  | 서비스 인증 Bearer 토큰. 브라우저 세션과 별개다                                  |
-| `YOUTUBE_DATA_API_KEY` | 선택값. 있으면 YouTube uploads playlist 과거 수집을 사용한다                     |
+| 이름                   | 의미                                                                              |
+| ---------------------- | --------------------------------------------------------------------------------- |
+| `STUDY_LIBRARY_URL`    | career-os API origin. HTTPS URL이며 path, query, hash와 credentials가 없어야 한다 |
+| `STUDY_SERVICE_TOKEN`  | 서비스 인증 Bearer 토큰. 브라우저 세션과 별개다                                   |
+| `YOUTUBE_DATA_API_KEY` | 선택값. 있으면 YouTube uploads playlist 과거 수집을 사용한다                      |
 
 서비스 요청은 `Authorization: Bearer <STUDY_SERVICE_TOKEN>`을 보낸다.
 브라우저 관리자 쿠키나 세션을 복제하지 않는다.

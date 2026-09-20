@@ -1,7 +1,14 @@
 # ADR-111 학습자료와 추천 상태는 블로그 API로 관리한다
 
-- **status**: `accepted`
+- **status**: `superseded`
 - **결정**: 블로그 연동 모드의 자료, 추천 이력과 개인 상태는 `fos-blog`의 기존 MySQL을 기준으로 관리한다. career-os는 HTTP API로 수집 결과와 추천을 전달하며 DB에 직접 연결하지 않는다.
+
+## 대체된 부분
+
+이 결정은 [ADR-118](ADR-118-추천-상태는-career-os-api와-mysql이-관리한다.md)로 대체됐다.
+학습자료의 관계형 저장 모델은 유지하지만 Backend와 database의 소유자는 `career-os`다.
+
+아래 내용은 당시 결정을 설명하는 기록이다.
 
 ## 맥락
 

@@ -37,13 +37,21 @@ export function validateRecommendationAgainstPool(
     validateOriginalFields(item, "순위");
     rankedIds.add(item.candidateId);
   }
-  if (rankedIds.size !== pool.candidates.length) {
+  const pendingIds = new Set<string>();
+  for (const item of run.pendingCandidates) {
+    validateOriginalFields(item, "분석 대기");
+    pendingIds.add(item.candidateId);
+    if (rankedIds.has(item.candidateId))
+      errors.push(`순위와 분석 대기에 중복된 공고 ID: ${item.candidateId}`);
+  }
+  if (rankedIds.size + pendingIds.size !== pool.candidates.length) {
     errors.push(
-      `순위 공고 수가 후보풀과 다르다: 순위 ${rankedIds.size}건, 후보풀 ${pool.candidates.length}건`,
+      `순위와 분석 대기 합계가 후보풀과 다르다: 순위 ${rankedIds.size}건, 대기 ${pendingIds.size}건, 후보풀 ${pool.candidates.length}건`,
     );
   }
   for (const candidate of pool.candidates) {
-    if (!rankedIds.has(candidate.id)) errors.push(`순위에서 빠진 공고 ID: ${candidate.id}`);
+    if (!rankedIds.has(candidate.id) && !pendingIds.has(candidate.id))
+      errors.push(`순위와 분석 대기에서 빠진 공고 ID: ${candidate.id}`);
   }
 
   const selectedIds = new Set<string>();

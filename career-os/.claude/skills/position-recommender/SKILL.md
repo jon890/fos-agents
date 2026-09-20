@@ -1,121 +1,138 @@
 ---
 name: position-recommender
-description: 열려 있는 채용공고를 모아 후보자가 해온 일과 선호에 얼마나 맞는지 판단하고, 순위와 근거와 다음 행동을 담은 리포트를 게시해 링크를 돌려준다. "지원할 포지션 추천", "갈 만한 회사 찾아줘", "최신 백엔드 공고 분석", "이직 후보 추천"처럼 실제 공고 탐색과 지원 판단이 필요할 때 사용한다.
+description: 열려 있는 채용공고를 모아 후보자가 해온 일과 선호에 얼마나 맞는지 판단하고, 재사용 가능한 공고 분석과 대기·수집 경고를 담은 리포트를 만든다. "지원할 포지션 추천", "갈 만한 회사 찾아줘", "최신 백엔드 공고 분석", "이직 후보 추천"처럼 실제 공고 탐색과 지원 판단이 필요할 때 사용한다.
 ---
+
 # position-recommender
 
-열려 있는 공고, 후보자의 경력과 선호, 공개 회사 자료를 함께 조사한다.
-지원할 포지션의 순위와 근거, 다음 행동을 담은 리포트를 게시해 바로 지원을 이어갈 수 있게 한다.
-
-회사의 성장 여력, 사업 규모, 보상과 복지는 다음 실행에서도 재사용한다.
-확인한 사실과 모델의 추론을 구분하고, 추론에 영향을 주는 근거와 가정을 함께 적는다.
+열려 있는 공고를 수집하고 Backend가 고른 최대 20건만 분석한다.
+본문과 후보자 기준이 같은 과거 분석은 재사용하며, 아직 분석하지 못한 공고와 부분 실패한 소스를 결과에 표시한다.
 
 명령은 저장소 루트에서 실행한다.
-실행별 후보풀, 추천 JSON과 HTML은 시스템 임시 디렉터리인 `<RUN_DIR>`에 만들고 게시가 끝나면 정리한다.
+실행별 후보풀, 분석 큐, 추천 JSON과 HTML은 시스템 임시 디렉터리인 `<RUN_DIR>`에 만들고 검증이 끝나면 정리한다.
+Backend 장애가 발생하면 파일 이력으로 자동 전환하지 않고 실행을 중단한다.
+
+## 최초 설정과 회사 정책 변경
+
+다음 명령은 일일 추천 실행에 포함하지 않는다.
+최초 설정이나 사람이 회사 우선순위와 제외 여부를 바꿀 때만 명시적인 JSON 입력으로 실행한다.
+
+```bash
+bun career-os/scripts/position-recommender/configure_position_company_preferences.ts \
+  --input <회사-정책.json>
+```
+
+명령은 회사명을 Backend와 같은 방식으로 정규화하고 `tier` 1부터 3과
+`analyze` 또는 `exclude`만 반영한다.
+기존 개인 제외 설정을 자동으로 읽거나 바꾸지 않는다.
+stdout에는 반영·제외·tier별 건수만 출력한다.
 
 ## 실행 준비
 
-`<RUN_DIR>`을 만들고 비공개 작업 release를 준비한다.
+`mktemp -d`로 `<RUN_DIR>`을 만들고 회사 조사 파일이 있는 비공개 작업 release를 준비한다.
 
 ```bash
 bun career-os/scripts/career-workspace/cli.ts skill begin position-recommender --json
 ```
 
-준비 명령이 실패하면 추천 실행을 중단하고 반환된 복구 정보를 따른다.
+`CAREER_RECOMMENDATION_API_URL`과 `CAREER_RECOMMENDATION_API_TOKEN` 또는 mode 600인
+`CAREER_RECOMMENDATION_API_TOKEN_FILE` 중 하나가 필요하다.
+준비 명령이나 API 인증 확인이 실패하면 추천 실행을 중단하고 반환된 복구 정보를 따른다.
 
-## 공고 수집
+## 공고 수집과 분석 큐 준비
 
 ```bash
 bun career-os/scripts/position-recommender/collect_live_postings.ts \
   --output <RUN_DIR>/posting-candidates.json
+
+bun career-os/scripts/position-recommender/prepare_position_analysis.ts \
+  --candidates <RUN_DIR>/posting-candidates.json \
+  --output <RUN_DIR>/analysis-queue.json \
+  --contract-version 1
 ```
 
-종료 코드 0인 후보풀만 사용한다.
-활성 상태, 마감일, URL, 고용 형태와 대상 직무는 수집 코드가 검증한다.
-실패하면 표준 오류가 지목한 소스만 `--source <소스> --output <RUN_DIR>/probe.json`으로 재현한다.
+개인 제외 규칙은 외부 수집 결과가 Backend와 모델에 전달되기 전에 적용한다.
+준비 명령은 전체 후보풀을 Backend에 한 번 전달하지만 stdout에는 후보 본문을 출력하지 않는다.
+`analysis-queue.json`에는 Backend가 회사 tier, 분석 상태와 대기 시간으로 고른 공고만 상세 본문과 함께 들어 있다.
 
-## 후보자와 회사 조사
+## 선택된 공고 분석
 
-`brain-search`로 private brain에서 현재 경력, 역할 선호, 이직 우선순위와 지원 이력을 확인해
-추천 판단에 반영한다. 구체적인 프로젝트 근거는 읽기 전용인 `sources/fos-study/task/`와 함께 확인한다.
+큐가 비어 있으면 모델 분석과 회사 조사를 모두 생략한다.
+큐가 있으면 `brain-search`로 현재 역할 기준과 이직 우선순위를 확인하고 큐에 든 공고만 분석한다.
+구체적인 프로젝트 근거는 읽기 전용인 `sources/fos-study/task/`에서 확인한다.
 
-`state/company-research/`의 회사별 파일에서 유효한 회사 조사를 재사용한다.
-공고와 경력의 연결성이 높은 후보부터 좁힌 뒤, 추천 가능성이 있는 회사는 공개 자료를 깊게 조사한다.
-
-- 현재 역할과 비교해 맡을 문제, 결정 권한, 운영 책임과 기술 방향이 커지는지 본다.
-- 사업과 도메인, 팀이 성장하며 중요한 모듈을 오래 소유할 여지가 있는지 조사한다.
-- 내부 플랫폼과 사내 도구라면 전담 인력, 로드맵과 사용자 지표를 통해 투자 의지를 판단한다.
-- 회사 성장과 성과가 연봉, 성과급, 지분이나 승진 기회로 이어질 여지와 복지의 실질 가치를 조사한다.
-- 회사 공식 자료, 공시·IR, 기술 발표, 신뢰할 수 있는 보도, 공개 보상 자료와 공고를 함께 본다.
-- 후보자의 경험은 기술 이름보다 실제 사용자, 운영 범위와 장애 영향을 공고의 책임에 연결한다.
-- 공개 자료에서 확인한 사실과 모델의 추론을 구분하고, 추론에 영향을 주는 가정을 밝힌다.
-- 공개 자료로 확인되지 않은 숫자나 제도는 만들지 않는다. 결론을 바꿀 정보만 추가 조사나 면접 질문으로 남긴다.
-
-회사 판단이 상세 추천의 순위나 이유에 영향을 줬다면 재사용할 공개 사실과 그 근거를 저장한다.
-공고 내용만으로 판단했거나 재사용할 회사 사실이 없다면 빈 회사 프로필을 만들지 않는다.
-재조사할 시점과 질문이 구체적일 때만 `researchGaps`를 남긴다.
-
-새 사실, 추론과 재조사할 질문은 `<RUN_DIR>/company-research-updates.json`에 쓰고 합친다.
-이번 실행에서 다루지 않은 기존 항목은 병합기가 보존한다.
+`state/company-research/`에서는 선택된 공고 회사의 유효한 사실만 읽는다.
+추천 판단에 영향을 주지만 없거나 만료된 공개 사실만 조사한다.
+새 사실과 추론이 있으면 `<RUN_DIR>/company-research-updates.json`을 만든 뒤 다음 명령으로 합친다.
 
 ```bash
 bun career-os/scripts/position-recommender/company_research.ts \
   --input <RUN_DIR>/company-research-updates.json
 ```
 
-## 추천 판단
-
-후보풀 전체와 조사 결과를 읽고 `<RUN_DIR>/recommendation.json`을 만든다.
-형식은 [`recommendation/schema.ts`](../../../scripts/position-recommender/recommendation/schema.ts)를 따른다.
-
-- private brain의 우선순위와 조사 결과를 종합해 후보풀 전체의 순서를 정한다.
-- 전체 순위는 모든 후보를 한 번씩 포함한다. 숫자는 배열 순서에서 정하고, 낮은 순위에 근거나 판정값을 억지로 만들지 않는다.
-- 상세 추천은 전체 순위 앞부분에서 실제로 검토할 가치가 있는 후보만 고른다.
-- 추천 이유와 라벨은 후보에 맞게 자유롭게 쓰고, 조사 근거와 다음 행동은 실제로 도움이 될 때만 넣는다.
-- 정해진 개수나 분류를 채우지 않는다.
-
-다음 명령이 후보풀 대조와 출력 계약을 검사한다.
+각 큐 항목에 역할 적합도 40점, 역할 범위와 성장 여지 25점, 회사 기회 20점,
+제약이 적은 정도 15점을 평가한다.
+합계는 `fitScore`와 같아야 하며 결론은 `recommend`, `consider`, `hold` 중 하나다.
+큐에서 `resultStatus`가 `pending` 또는 `failed`인 모든 `positionId`를 한 번씩 담는다.
+분석한 공고는 `results`에, 판단할 내용이 없거나 모델 호출이 실패한 공고는 사유와 함께 `failures`에 넣는다.
+사유는 `posting_body_missing`, `model_unavailable`, `contract_rejected`, `internal_error` 중 하나다.
 
 ```bash
-bun career-os/scripts/position-recommender/validate_recommendation.ts \
-  --input <RUN_DIR>/recommendation.json \
-  --candidates <RUN_DIR>/posting-candidates.json
+bun career-os/scripts/position-recommender/commit_position_analysis.ts \
+  --queue <RUN_DIR>/analysis-queue.json \
+  --input <RUN_DIR>/analysis-updates.json
 ```
 
-검증이 실패하면 추천 JSON을 고쳐 다시 검사한다.
+반영 결과의 `status`가 `partial`이면 남은 공고만 다시 담아 같은 명령을 다시 실행한다.
+멱등 키는 명령이 본문에서 만들므로 손으로 정하지 않는다.
 
-## 재사용 상태 반영
+## 추천 최종화
 
-회사 조사 갱신을 포함한 비공개 작업 release를 발행한다.
+다음 명령 한 번으로 Backend 추천 응답, 추천 JSON, HTML과 공개 계약을 검증한다.
+
+```bash
+bun career-os/scripts/position-recommender/finalize_position_recommendation.ts \
+  --analysis-run-id <analysisRunId> \
+  --output-json <RUN_DIR>/recommendation.json \
+  --output-html <RUN_DIR>/index.html
+```
+
+HTML은 추천, 분석한 활성 공고 순위, 분석 대기와 수집 경고를 구분한다.
+수집 경고에는 소스명, `partial` 또는 `failed` 상태와 실패 건수만 표시한다.
+같은 명령이 최종 답변에 넣을 수집 경고 줄을 `collectionWarnings`로 함께 출력한다.
+원본 오류 메시지와 URL 목록, 비공개 회사 제외 사유, 현재 보상과 로컬 환경 식별자를 넣지 않는다.
+분석하지 못한 공고가 있으면 실행 결과에 그 건수를 포함한다.
+실패 사유 원문과 모델 응답 전문은 공개 HTML에 넣지 않는다.
+
+## 비공개 작업 반영과 결과 전달
+
+회사 조사 파일을 바꿨다면 검증 뒤 기존 release에 반영한다.
+포지션 분석 이력은 Backend와 MySQL만 관리하며 S3 release에 복제하지 않는다.
 
 ```bash
 bun career-os/scripts/career-workspace/cli.ts skill finish position-recommender --json
 ```
 
-release 충돌이나 전송 실패가 발생하면 로컬 변경과 실행 산출물을 보존하고 복구 정보를 전달한다.
-
-## 리포트 게시
-
-추천 JSON을 바탕으로 `<RUN_DIR>/index.html`을 만든다.
-전체 후보 순위와 공개 공고 링크를 빠짐없이 담고, 상세 추천에는 사실과 추론 근거, 위험, 확인할 질문과 다음 행동을 담는다.
-결정에 영향을 주는 근거를 우선하고 추천 결론을 바꿀 질문만 남긴다.
-
-공개 리포트에는 현재 보상, 구체적인 지원 결과, 비공개 경력 자료와 로컬 환경 식별자를 넣지 않는다.
-개인 정보가 판단에 영향을 줬다면 공개 가능한 결과와 다음 행동으로 표현한다.
-
-```bash
-bun career-os/scripts/position-recommender/render_candidate_preview.ts \
-  --input <RUN_DIR>/recommendation.json \
-  --candidates <RUN_DIR>/posting-candidates.json \
-  --limit all \
-  --output <RUN_DIR>/index.html
-
-bun career-os/scripts/position-recommender/render/validate-report-html.ts \
-  --html <RUN_DIR>/index.html \
-  --input <RUN_DIR>/recommendation.json
-```
-
 브라우저에서 데스크톱과 모바일 배치, 가로 넘침과 주요 링크를 확인한다.
-`report-publisher`로 `index.html`을 `position-YYYY-MM-DD` slug에 게시한다.
+사용자가 공유 링크를 요청했을 때만 `report-publisher`로 HTML을 게시한다.
 
-검증된 공개 링크와 이번 주 지원 행동을 전달한 뒤 `<RUN_DIR>`을 정리한다.
+## 최종 답변
+
+이 절이 최종 답변 형식을 정한다.
+cron 실행과 수동 실행에 모두 이 형식을 적용한다.
+job 지시문이 더 짧은 형식을 정하고 있어도 아래 항목은 빼지 않는다.
+
+최종 답변에는 로컬 HTML 또는 검증된 공개 링크와 함께 다음 집계를 전달한다.
+
+- 이번 실행 분석, 재사용과 분석 대기 건수
+- 분석하지 못한 공고 건수
+- 개인 제외 건수
+- 최종화 명령이 출력한 `collectionWarnings`의 각 줄
+- 바로 검토할 공고와 다음 지원 행동
+
+`collectionWarnings`는 최종화 명령이 만들므로 문구를 새로 쓰지 않고 그대로 옮긴다.
+소스명, `partial` 또는 `failed` 상태, 실패 건수와 후보 누락 가능성 한 줄만 들어 있다.
+원본 오류 문구, URL, 내부 경로와 token은 이 줄에 들어오지 않으며 최종 답변에도 넣지 않는다.
+배열이 비어 있으면 수집 경고 줄을 만들지 않는다.
+
+검증과 전달이 끝나면 `<RUN_DIR>`을 삭제한다.

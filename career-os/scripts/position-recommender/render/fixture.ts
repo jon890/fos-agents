@@ -48,6 +48,9 @@ function positionItem(candidate: PostingCandidate, index: number) {
     company: candidate.company,
     title: candidate.title,
     postingUrl: candidate.url,
+    companyTier: 1 + (index % 3),
+    decision: index < 7 ? ("recommend" as const) : ("hold" as const),
+    fitScore: 90 - index,
     label: index < 4 ? "우선 검토" : "경험 확장 후보",
     reason: index < 4 ? "백엔드 운영 경험과 맞는다." : "AI 서비스 운영 경험을 확장할 수 있다.",
     details: [
@@ -62,8 +65,13 @@ function positionItem(candidate: PostingCandidate, index: number) {
   };
 }
 
+function rankedItem(candidate: PostingCandidate, index: number) {
+  const { label: _label, ...item } = positionItem(candidate, index);
+  return item;
+}
+
 export const run = RecommendationRun.parse({
-  schemaVersion: 9,
+  schemaVersion: 10,
   reportDate: "2026-08-13",
   generatedAt: "2026-08-13T09:00:00+09:00",
   summary: ["지원 검토 가치가 있다."],
@@ -71,12 +79,22 @@ export const run = RecommendationRun.parse({
     .slice(0, 7)
     .map((candidate, index) => positionItem(candidate, index)),
   ranking: pool.candidates.map((candidate, index) => ({
-    candidateId: candidate.id,
-    company: candidate.company,
-    title: candidate.title,
-    postingUrl: candidate.url,
+    ...rankedItem(candidate, index),
     ...(index < 3 ? { note: "우선 검토 후보" } : {}),
   })),
+  pendingCandidates: [],
+  analysisSummary: {
+    activeCount: pool.candidates.length,
+    analyzedNowCount: 7,
+    reusedCount: 4,
+    pendingCount: 0,
+    personalExcludedCount: 0,
+  },
+  collectionHealth: {
+    candidateCount: pool.candidates.length,
+    configuredSourceCount: 1,
+    warningSources: [],
+  },
   nextActions: ["공고 확인", "관련 경험 정리"],
   sourceSnapshot: {
     collectionRunId: pool.collectionRunId,

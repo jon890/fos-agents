@@ -121,6 +121,12 @@ export const postingCandidatePoolSchema = z
       .strict(),
     candidates: z.array(postingCandidateSchema),
     sourceDiagnostics: z.array(sourceDiagnosticSchema),
+    filterSummary: z
+      .object({
+        personalExcludedCount: z.number().int().nonnegative(),
+      })
+      .strict()
+      .default({ personalExcludedCount: 0 }),
     errors: z.array(z.string()),
   })
   .strict()

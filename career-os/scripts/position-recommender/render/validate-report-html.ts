@@ -40,9 +40,14 @@ export function validateReportHtml(html: string, recommendation: unknown): strin
       errors.push(`허용하지 않는 링크 형식이다: ${href.slice(0, 80)}`);
     }
   }
-  for (const item of parsed.data.ranking) {
+  for (const item of [...parsed.data.ranking, ...parsed.data.pendingCandidates]) {
     if (!hrefs.includes(item.postingUrl))
       errors.push(`순위 공고 링크가 HTML에 없다: ${item.candidateId}`);
+  }
+  for (const warning of parsed.data.collectionHealth.warningSources) {
+    if (!html.includes(warning.source) || !html.includes(`실패 ${warning.failedCount}건`)) {
+      errors.push(`수집 경고가 HTML에 없다: ${warning.source}`);
+    }
   }
   return [...new Set(errors)];
 }

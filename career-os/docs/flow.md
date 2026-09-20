@@ -66,22 +66,60 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 
 외부 채용 소스의 열린 공고에서 실제 지원 후보를 고른다.
 
-1. 등록된 소스 어댑터에서 열린 공고를 찾는다.
-2. 소스 어댑터가 개별 공고를 공통 형태로 수집한다.
-3. 스크립트가 종료 여부, 마감일, 고용 형태, 역할과 URL 중복을 검사한다.
+1. 비공개 작업 release와 API client 설정을 준비한다.
+2. 등록된 소스 어댑터가 열린 공고를 공통 형태로 수집한다.
+3. 스크립트가 종료 여부, 마감일, 고용 형태, 역할, URL 중복과 개인 제외 규칙을 검사한다.
 4. 유효한 공고만 이번 실행의 임시 후보풀에 저장한다.
-5. 모델이 적합도 높은 후보 회사를 먼저 좁히고, 유효한 회사 조사 데이터는 재사용하며 부족하거나 만료된 주제만 공개 자료에서 조사한다.
-6. 새 회사 사실, 근거 기반 추론과 재조사 대기 항목을 `state/company-research/<companyKey>.json`에 합친다.
-7. 모델이 private brain의 현재 커리어 정보, 원문 공고와 회사 조사를 읽고 추천 대상과 순서를 자유롭게 정한다.
-8. 스크립트는 추천 항목이 열린 후보풀의 원문 공고와 일치하는지만 검증한다. 추천 분류나 판단 내용은 검사하지 않는다.
-9. 모델의 추천 데이터에 있는 내용만 반응형 HTML 템플릿으로 표시한다. 없는 판단 항목을 채우거나 빈 절을 만들지 않는다.
-10. 스크립트가 추천 공고 링크, 공개 범위와 HTML 기본 계약을 검사한다.
-11. 사용자가 공유 링크를 요청했으면 공개 범위와 게시 결과를 검증한다.
-12. 사용자는 로컬 검토 화면 또는 검증된 공개 URL에서 공고 원문을 확인하고 지원 또는 제외를 결정한다.
-13. 로컬 렌더 또는 게시 검증이 끝나면 후보풀, 추천 데이터와 HTML을 삭제한다. 회사 조사 데이터는 다음 실행을 위해 유지한다.
+5. client가 후보풀과 소스 진단을 멱등 키와 함께 `career-os` Backend에 보낸다.
+6. Backend가 공고 버전과 수집 실행을 한 트랜잭션으로 저장하고 `fresh`, `new`, `changed`, `stale`을 나눈다.
+7. Backend는 `fresh` 분석을 재사용하고 회사 우선 슬롯과 오래 기다린 공고 보장 슬롯으로 제한된 분석 큐를 반환한다.
+8. 모델은 분석 큐에 든 공고만 읽는다. 유효한 회사 조사는 재사용하고 부족하거나 만료된 사실만 공개 자료에서 조사한다.
+9. client가 분석 결과와 분석하지 못한 공고를 실행 ID와 함께 보낸다. Backend는 아직 끝나지 않은 항목 전체와 대조하고 한 트랜잭션으로 반영한다.
+10. 실패한 공고가 남으면 실행은 `partial`로 남고 client는 남은 항목만 다시 보낸다.
+11. client가 추천 실행을 요청하면 Backend가 현재 활성 공고, 유효한 분석, 분석 대기와 수집 진단을 조립해 반환한다.
+12. 스크립트가 추천 JSON을 검증하고 HTML을 만든 뒤 공개 범위와 링크를 검사한다.
+13. 사용자가 공유 링크를 요청했으면 게시 결과를 검증한다.
+14. 사용자는 추천, 분석 대기, 개인 제외 건수와 소스 실패를 확인하고 지원 또는 제외를 결정한다.
+15. 회사 조사만 새 비공개 release로 반영한다. 실행별 후보풀, 추천 JSON과 HTML은 검증 뒤 삭제한다.
+
+```mermaid
+flowchart TD
+    A[cron 또는 사용자 실행] --> B[API client와 비공개 작업본 준비]
+    B --> C[열린 공고 수집]
+    C --> D{사용 가능한 후보가 있는가}
+    D -- 아니요 --> E[빈 상태와 수집 진단을 담은 리포트]
+    D -- 예 --> F[수집 실행을 Backend에 멱등 저장]
+    F --> G[fresh 분석 재사용]
+    F --> H[new changed stale 큐 반환]
+    H --> I[상위 회사 우선 슬롯]
+    H --> J[오래 기다린 공고 보장 슬롯]
+    I --> K{분석 대상이 있는가}
+    J --> K
+    K -- 예 --> L[선택한 공고만 모델 분석]
+    K -- 아니요 --> M[모델 분석 생략]
+    L --> N[분석 결과와 실패 보고를 Backend에 원자 반영]
+    N --> R{실패한 공고가 남았는가}
+    R -- 예 --> S[실행은 partial로 남음]
+    S --> L
+    S --> O
+    R -- 아니요 --> O
+    G --> O[Backend가 추천 입력 조립]
+    M --> O
+    O --> P[추천 분석 대기 소스 경고 HTML]
+    P --> Q[비공개 release 반영]
+```
 
 모델은 닫힌 공고를 추측해 제거하지 않는다.
 마감일과 활성 상태처럼 명시적으로 확인할 수 있는 조건은 수집 코드가 처리한다.
+수집 소스가 부분 실패했으면 해당 소스에서 보이지 않는 공고를 닫힌 것으로 바꾸지 않는다.
+동시에 두 실행이 시작되면 같은 멱등 키는 기존 응답을 재사용하고,
+다른 실행은 각 실행 ID로 분리한다.
+분석 반영은 아직 끝나지 않은 항목 전체와 일치할 때만 성공한다.
+분석 대상이 없더라도 재사용 수, 분석 대기 수와 소스 진단을 담은 리포트를 만든다.
+
+최종화 명령은 최종 답변에 넣을 수집 경고 줄을 함께 출력한다.
+최종 답변 형식은 `position-recommender` 스킬 문서가 정하고 cron 실행과 수동 실행이 같은 형식을 쓴다.
+수집 경고가 있으면 그 줄을 최종 답변에 그대로 전달하고, 없으면 줄을 만들지 않는다.
 
 ## 지원 준비와 검증
 
@@ -156,7 +194,7 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 ## 아침 읽을거리 추천
 
 등록된 외부 소스에서 그날 읽거나 볼 가치가 높은 자료를 선별한다.
-기본 실행은 기존 파일모드이며, 사용자가 명시적으로 `--library`를 지정하면 블로그 학습자료 API를 단일 원격 저장소로 사용한다.
+기본 실행은 기존 파일모드이며, 사용자가 명시적으로 `--library`를 지정하면 `career-os` 학습자료 API를 단일 원격 저장소로 사용한다.
 
 ### 파일모드
 
@@ -188,28 +226,29 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 sequenceDiagram
     participant Skill as study-topic-recommender
     participant Client as career-os study-library client
-    participant Blog as fos-blog study API
+    participant API as career-os study API
     participant Model as 모델 선택
     Skill->>Client: --library 실행과 환경 검증
-    Client->>Blog: 소스 등록과 mode별 cursor 조회
+    Client->>API: 소스 등록과 mode별 cursor 조회
     Client->>Skill: sourceKey와 mode에 맞는 수집 실행
     Skill->>Client: 자료 묶음과 다음 cursor
-    Client->>Blog: 자료 묶음과 cursor 원자 저장
-    Blog-->>Client: 저장 영수증 또는 충돌
-    Client->>Blog: 후보 페이지와 historyVersion 조회
+    Client->>API: 자료 묶음과 cursor 원자 저장
+    API-->>Client: 저장 영수증 또는 충돌
+    Client->>API: 후보 페이지와 historyVersion 조회
     Client-->>Model: 기존 후보풀 스키마로 변환한 전체 후보
     Model-->>Client: topic과 candidateId 선택
     Client->>Skill: 기존 검증과 HTML 렌더링
-    Client->>Blog: recommendation-runs 저장
-    Blog-->>Client: historyVersion
+    Client->>API: recommendation-runs 저장
+    API-->>Client: historyVersion
     opt 외부 게시 요청
         Skill->>Skill: report-publisher로 게시
-        Client->>Blog: publications 기록
+        Client->>API: publications 기록
     end
 ```
 
 연동모드는 브라우저 관리자 세션을 복제하지 않는다.
-career-os는 `STUDY_LIBRARY_URL`과 `STUDY_SERVICE_TOKEN`으로 서비스 인증을 사용하며, [fos-blog 학습자료 HTTP 계약](https://github.com/jon890/fos-blog/blob/study-library-planning/docs/api/study-library.md)을 단일 HTTP 계약으로 읽는다.
+career-os client는 `STUDY_LIBRARY_URL`과 `STUDY_SERVICE_TOKEN`으로 서비스 인증을 사용한다.
+HTTP 계약과 저장 제약은 이 저장소의 `services/recommendation-api/`가 소유한다.
 수집 실패는 빈 페이지로 전송하지 않으며, cursor 저장은 서버가 자료 배치와 같은 트랜잭션으로 성공한 뒤에만 진행된 것으로 본다.
 
 최근 수집과 과거 수집은 같은 소스라도 `mode=recent`와 `mode=archive` cursor를 분리한다.
