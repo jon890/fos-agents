@@ -783,6 +783,46 @@ describe("회사 tier 평가 큐", () => {
     ).rejects.toMatchObject({ status: 409, code: "COMPANY_TIER_LEASE_EXPIRED" });
   });
 
+  test("끝난 실행에 고르지 않은 회사를 보내면 멱등 응답 대신 409로 거절한다", async () => {
+    const { service: target } = await service();
+    const preparation = await collect(
+      target,
+      "run-done",
+      ["가 회사"],
+      "2026-09-17T01:00:00.000Z",
+    );
+    const companyTierRunId = preparation.companyTierQueue.companyTierRunId;
+    await assess(
+      target,
+      companyTierRunId,
+      "run-done",
+      [{ companyKey: "가 회사", tier: 1 }],
+      "2026-09-17T02:00:00.000Z",
+    );
+
+    // 같은 회사만 다시 보내면 끝난 실행이라 멱등 응답을 돌려준다.
+    const repeated = await assess(
+      target,
+      companyTierRunId,
+      "run-done",
+      [{ companyKey: "가 회사", tier: 1 }],
+      "2026-09-17T03:00:00.000Z",
+    );
+    expect(repeated.applied).toBe(false);
+    expect(repeated.status).toBe("completed");
+
+    // 이 실행이 고르지 않은 회사가 섞이면 조용히 받아들이지 않는다.
+    await expect(
+      assess(
+        target,
+        companyTierRunId,
+        "run-done",
+        [{ companyKey: "없는 회사", tier: 1 }],
+        "2026-09-17T04:00:00.000Z",
+      ),
+    ).rejects.toThrow("이 회사 tier 실행이 고르지 않은 회사가 결과에 있습니다.");
+  });
+
   test("빈 회사 큐는 실행을 바로 완료하고 공고 분석 큐를 반환한다", async () => {
     const { repository, service: target } = await service();
     await target.updateCompanyPreference("가 회사", {

@@ -117,8 +117,9 @@ Backend는 수신 시각과 정책 만료 기한, 각 근거의 만료일 중 �
 
 현재 CLI는 `prepare_position_analysis.ts:53`에서 `queue.analysisRunId`를 그대로 돌려주고
 `queue.summary`를 펼쳐 담는다.
-회사 tier 큐가 있는 경로에서는 `analysisRunId`를 `null`로 두고 `summary`의 집계 필드를 펼치지 않는다.
-필드를 지우지 않고 `null`로 남기므로 결과 JSON의 열쇠 목록은 두 경로에서 같다.
+회사 tier 큐가 있는 경로에서는 `analysisRunId`를 `null`로 두고
+수집 응답이 가진 같은 이름의 집계 필드를 대신 펼친다.
+두 응답의 집계 필드 이름이 같으므로 결과 JSON의 열쇠 목록은 두 경로에서 같다.
 
 ### 7. 흐름 문서와 구조 문서를 이 변경에 맞춘다
 

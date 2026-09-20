@@ -236,6 +236,9 @@ export const companyTierQueueResponseSchema = z
   })
   .strict();
 
+/** 회사 tier 판정 이유의 길이 상한이다. 이 값이 공개 리포트에 그대로 실린다. */
+export const companyTierReasonMaxLength = 200;
+
 export const companyTierSignalAxisSchema = z.enum([
   "growth-scope",
   "compensation-upside",
@@ -264,7 +267,8 @@ export const companyTierResultSchema = z
     companyKey: nonEmpty,
     recommendedTier: z.number().int().min(1).max(3),
     confidence: z.enum(["low", "medium", "high"]),
-    reason: nonEmpty,
+    // 이 값이 공개 HTML 에 그대로 실리므로 들어오는 자리에서 길이를 막는다.
+    reason: nonEmpty.max(companyTierReasonMaxLength),
     signals: z.array(companyTierSignalSchema).length(3),
     evidence: z.array(companyTierEvidenceSchema).min(1),
     assumptions: z.array(nonEmpty).default([]),
@@ -326,7 +330,7 @@ export const companyTierProvenanceShape = {
   companyTierAssessedAt: isoDateTime.optional(),
   companyTierValidUntil: dateOnly.optional(),
   companyTierConfidence: z.enum(["low", "medium", "high"]).optional(),
-  companyTierReason: nonEmpty.optional(),
+  companyTierReason: nonEmpty.max(companyTierReasonMaxLength).optional(),
   companyTierEvidenceUrls: z.array(httpsUrl).max(3).default([]),
 };
 

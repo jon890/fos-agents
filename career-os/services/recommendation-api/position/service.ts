@@ -49,6 +49,8 @@ import {
 const decisionOrder = { recommend: 0, consider: 1, hold: 2 } as const;
 const urgencyOrder = { urgent: 0, soon: 1, normal: 2, no_deadline: 3, unknown: 4 } as const;
 const companyTierLeaseMs = 2 * 60 * 60 * 1000;
+/** 회사 tier 실행이 없는 옛 수집을 해석할 때 쓰는 계약 버전이다. 요청 schema 의 기본값과 같다. */
+const defaultCompanyTierContractVersion = 1;
 
 function dateOnlyAfterDays(iso: string, days: number): string {
   const date = new Date(iso);
@@ -786,7 +788,23 @@ export class PositionService {
           "회사 tier 실행과 수집 실행이 일치하지 않습니다.",
         );
       }
-      if (run.status === "completed") return this.companyTierResultsResponse(run, false);
+      if (run.status === "completed") {
+        // 끝난 실행에 같은 본문을 다시 보내면 멱등 응답을 돌려준다.
+        // 다만 이 실행이 고르지 않은 회사가 섞여 있으면 받아들이지 않는다.
+        // 멱등 키가 다르면 transport 계층의 수신 기록을 지나쳐 여기까지 오기 때문이다.
+        const unknownKeys = [
+          ...request.results.map((result) => result.companyKey),
+          ...request.failures.map((failure) => failure.companyKey),
+        ].filter((key) => !run.items.has(key));
+        if (unknownKeys.length > 0) {
+          throw new ApiError(
+            409,
+            "VERSION_CONFLICT",
+            "이 회사 tier 실행이 고르지 않은 회사가 결과에 있습니다.",
+          );
+        }
+        return this.companyTierResultsResponse(run, false);
+      }
       if (Date.parse(now) - Date.parse(run.createdAt) >= companyTierLeaseMs) {
         throw new ApiError(
           409,
@@ -999,8 +1017,11 @@ export class PositionService {
       if (run.status === "pending")
         throw new ApiError(409, "VERSION_CONFLICT", "분석 실행이 끝나지 않았습니다.");
       const collection = state.collections.get(run.collectionRunId)!;
+      // 회사 tier 실행이 없는 수집은 회사 tier 평가를 도입하기 전에 저장된 것이다.
+      // 그때의 계약 버전은 요청 schema 의 기본값과 같은 1 이므로 그 값으로 해석한다.
       const tierContractVersion =
-        companyTierRunFor(state, run.collectionRunId)?.contractVersion ?? 1;
+        companyTierRunFor(state, run.collectionRunId)?.contractVersion ??
+        defaultCompanyTierContractVersion;
       const resolveTier = (position: StoredPosition) =>
         tierFor(state, position, run.candidateContextVersion, tierContractVersion, now);
       const active = collection.candidateIds
