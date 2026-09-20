@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-06-06
-- Supersedes: ADR-043, ADR-051
+- Supersedes: ADR-043, ADR-051 (두 결정을 이 ADR로 병합하며 파일을 지웠다)
 
 ### 맥락
 

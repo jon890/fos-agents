@@ -62,9 +62,4 @@ TypeScript 스크립트 변경이 있으면 루트에서 `bunx tsc --noEmit`과 
 
 ## 문서
 
-- [AGENTS.md](AGENTS.md): 에이전트 운영 규칙과 문서·skill 라우팅
-- [docs/prd.md](docs/prd.md): 제품 가치와 성공 기준
-- [docs/flow.md](docs/flow.md): 입력부터 산출물까지의 실행 흐름
-- [docs/data-schema.md](docs/data-schema.md): config·state·산출물 스키마
-- [docs/code-architecture.md](docs/code-architecture.md): 디렉터리와 구현 책임
-- [docs/adr/INDEX.md](docs/adr/INDEX.md): 중요한 결정의 이유
+문서별 책임과 언제 보는지는 [AGENTS.md](AGENTS.md)의 「읽기 순서」 표를 따른다.
