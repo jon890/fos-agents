@@ -10,11 +10,14 @@
 
 | 경계 | 볼 수 있는 것 | 볼 수 없는 것 |
 | --- | --- | --- |
-| 홈서버 | S3 endpoint와 credential, 사진 원본 | 네이버 세션, 지융과의 대화 |
-| 맥북 | 내려받은 사진, 네이버 브라우저 프로필 | S3 credential |
+| 홈서버 | S3 endpoint와 credential, 사진 원본, 네이버 세션 | 지융과의 대화 |
+| 맥북 | 내려받은 사진, 초안 | S3 credential |
 
 홈서버에는 `~/fos-agents`가 클론돼 있다.
 `git pull`이 곧 배포이며 별도 설치 단계가 없다.
+
+네이버 세션은 2026-09-20 부터 홈서버의 상주 Chrome 프로필에 둔다.
+그 판단과 값은 [`../references/preview-automation.md`](../references/preview-automation.md)가 소유한다.
 
 ## 디렉터리
 
@@ -27,6 +30,9 @@
 | `scripts/seaweed_s3.py` | 홈서버 | S3 접근. 서명, 목록, 조회 |
 | `scripts/photo_store.py` | 홈서버 | 사진 폴더와 객체 조회, 전송 |
 | `scripts/verify_photo_store.py` | 홈서버 | 연결과 권한 경계 확인 |
+| `scripts/naver_session.py` | 홈서버 | 네이버 세션을 담은 Chrome 을 상주시키고 로그인을 판정한다 |
+| `scripts/cdp.py` | 맥북과 홈서버 | CDP 의 WebSocket 창구를 의존성 없이 부른다 |
+| `scripts/naver_editor.py` | 맥북 | 글쓰기 화면에 제목과 본문을 넣고 임시저장한다 |
 | `.claude/skills/naver-blog-draft/` | 맥북 | 사진에서 임시저장까지의 판단과 절차 |
 | `docs/` | 문서 | 흐름, 스키마, 구조 |
 | `drafts/` | 맥북 | 내려받은 사진과 초안. 추적하지 않는다 |
