@@ -20,8 +20,7 @@
   detail fetch 실패는 diagnostics와 risk flag에 남기고, JD 상세/근무지는 후속 browser/manual 확인 대상으로 둔다.
 - Wanted adapter는 개발 전체 직군을 broad scan하고, detail API `status=active`로 검증된 개별 공고만 snapshot에 넣는다.
 - 특정 회사 탐색은 Wanted 키워드 검색에 의존하지 않고 공식 adapter가 담당한다.
-- 새 source는 `--source all` shadow 검증을 먼저 거친다.
-- 2026-06-11 shadow 검증에서 active/direct guard가 통과했으므로 daily runner 기본값을 `POSITION_RECOMMENDER_SOURCE=all`로 전환한다.
+- 새 source는 `--source all` shadow 검증을 통과한 뒤에만 daily runner 기본 실행에 반영한다.
 
 ### 결과
 
