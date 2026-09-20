@@ -1,9 +1,19 @@
-"""맥북에서 SSH 로 홈서버의 사진 저장소 명령을 부른다.
+"""사진 저장소 명령을 부른다. 맥북과 홈서버 양쪽에서 돈다.
 
-홈서버로 가는 길은 SSH 하나뿐이다.
-S3 포트는 외부에 열려 있지 않으므로 맥북 코드는 S3 에 직접 붙지 않는다.
-사진 폴더를 만들고 목록을 보고 받아오는 일을 모두 홈서버의
-`ji-yoon-blog/scripts/photo_store.py` 가 맡고, 이 스크립트는 그것을 부른다.
+사진 폴더를 만들고 목록을 보고 받아오는 일은 모두
+`ji-yoon-blog/scripts/photo_store.py` 가 맡는다.
+이 스크립트는 그것을 부르는 쪽이며, 부르는 길을 환경을 보고 스스로 고른다.
+
+| 도는 자리 | 고르는 길 |
+| --- | --- |
+| 홈서버와 그 안의 Hermes 컨테이너 | `photo_store.py` 를 같은 자리에서 부른다 |
+| 맥북 | SSH 로 홈서버의 `photo_store.py` 를 부른다 |
+
+무엇으로 고르는지는 `run_remote()` 가 설명한다.
+플래그로 고르지 않으므로 부르는 쪽은 어느 자리에서 도는지 알 필요가 없다.
+
+S3 credential 이 홈서버 밖으로 나가지 않는다는 규칙은 그대로다.
+S3 설정을 읽을 수 있다는 것 자체가 S3 에 닿는 자리에 있다는 뜻이다.
 
 설정은 워크스페이스 `.env` 에서 읽는다.
 
@@ -12,9 +22,9 @@ S3 포트는 외부에 열려 있지 않으므로 맥북 코드는 S3 에 직접
     JI_YOON_BLOG_REMOTE_ROOT=~/fos-agents
     JI_YOON_BLOG_STORAGE_URL=https://storage.example.com/buckets/ji-yoon-blog
 
+앞의 셋은 SSH 로 가는 자리에서만 쓴다.
 `JI_YOON_BLOG_STORAGE_URL` 은 아이폰이 여는 Admin UI 주소의 앞부분이며
-bucket 경로까지 담는다.
-bucket 이름이 이 값에 들어 있으므로 맥북은 S3 설정을 따로 읽지 않는다.
+bucket 경로까지 담는다. 이 값은 양쪽 자리에서 모두 쓴다.
 
 사용법:
     python3 photos.py folders
@@ -45,9 +55,13 @@ REMOTE_SCRIPT = "ji-yoon-blog/scripts/photo_store.py"
 DEFAULT_REMOTE_ROOT = "~/fos-agents"
 ENV_PREFIX = "JI_YOON_BLOG_"
 
+# 이 스킬은 워크스페이스 안에 있으므로 같은 저장소의 `scripts/` 가 위로 네 단계다.
+WORKSPACE_ROOT = Path(__file__).resolve().parents[4]
+LOCAL_SCRIPT = WORKSPACE_ROOT / "scripts" / "photo_store.py"
 
-class SshConfigError(RuntimeError):
-    """맥북 SSH 설정이 없거나 비어 있다."""
+
+class StoreConfigError(RuntimeError):
+    """사진 저장소로 가는 두 길의 설정이 모두 없거나 비어 있다."""
 
 
 def load_env(env_path: Path | None = None) -> dict[str, str]:
@@ -65,11 +79,38 @@ def load_env(env_path: Path | None = None) -> dict[str, str]:
     return values
 
 
+def s3_missing_keys() -> list[str] | None:
+    """이 자리에서 `photo_store.py` 가 읽을 S3 설정 중 비어 있는 것을 돌려준다.
+
+    판정을 `seaweed_s3` 에 그대로 맡긴다.
+    `photo_store.py` 가 실제로 쓰는 것과 같은 함수로 물어야
+    "부르면 되는가" 와 "된다고 본 것" 이 어긋나지 않는다.
+
+    같은 저장소에 `scripts/photo_store.py` 가 없으면 그 자리에서 부를 길이 아예
+    없으므로 `None` 을 돌려준다. 빈 목록과 구분해야 하므로 목록으로 합치지 않는다.
+    """
+    if not LOCAL_SCRIPT.exists():
+        return None
+    scripts_dir = str(LOCAL_SCRIPT.parent)
+    if scripts_dir not in sys.path:
+        sys.path.insert(0, scripts_dir)
+    try:
+        import seaweed_s3  # noqa: PLC0415
+    except ImportError:
+        return None
+    return seaweed_s3.missing_keys(seaweed_s3.load_env())
+
+
+def local_command(remote_args: list[str]) -> list[str]:
+    """같은 자리의 `photo_store.py` 를 실행할 인자 목록을 만든다."""
+    return [sys.executable, str(LOCAL_SCRIPT)] + remote_args
+
+
 def ssh_command(env: dict[str, str], remote_args: list[str]) -> list[str]:
     """홈서버 명령을 실행할 `ssh` 인자 목록을 만든다."""
     target = env.get("JI_YOON_BLOG_SSH_TARGET", "")
     if not target:
-        raise SshConfigError(
+        raise StoreConfigError(
             "JI_YOON_BLOG_SSH_TARGET 이 비어 있다.\n"
             "워크스페이스 .env 에 홈서버 SSH 대상을 넣는다."
         )
@@ -88,15 +129,54 @@ def ssh_command(env: dict[str, str], remote_args: list[str]) -> list[str]:
 
 
 def run_remote(env: dict[str, str], remote_args: list[str]) -> bytes:
-    """홈서버 명령을 부르고 표준 출력을 돌려준다. 실패하면 멈춘다."""
-    command = ssh_command(env, remote_args)
+    """사진 저장소 명령을 부르고 표준 출력을 돌려준다. 실패하면 멈춘다.
+
+    두 길 중 하나를 환경만 보고 고른다. 부르는 쪽은 어느 길인지 알 필요가 없다.
+
+    | 본 것 | 고르는 길 |
+    | --- | --- |
+    | S3 설정이 모두 있다 | `photo_store.py` 를 같은 자리에서 부른다 |
+    | S3 설정이 없고 SSH 대상이 있다 | SSH 로 홈서버의 `photo_store.py` 를 부른다 |
+    | 둘 다 없다 | 어느 값을 채워야 하는지 알리고 멈춘다 |
+
+    S3 설정이 있는 자리는 S3 에 닿는 자리다.
+    홈서버와 그 안의 Hermes 컨테이너가 여기 해당하고, 거기서는 SSH 로 나갔다
+    들어올 이유가 없다. 맥북은 S3 설정을 갖지 않으므로 SSH 로 간다.
+    """
+    missing = s3_missing_keys()
+    if missing is not None and not missing:
+        command = local_command(remote_args)
+        where = "사진 저장소 명령"
+    elif env.get("JI_YOON_BLOG_SSH_TARGET"):
+        command = ssh_command(env, remote_args)
+        where = "홈서버 명령"
+    else:
+        raise StoreConfigError(store_config_message(missing))
+
     done = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if done.returncode != 0:
         message = done.stderr.decode("utf-8", errors="replace").strip()
         raise RuntimeError(
-            f"홈서버 명령이 실패했다 (종료 코드 {done.returncode}): {' '.join(remote_args)}\n{message}"
+            f"{where}이 실패했다 (종료 코드 {done.returncode}): {' '.join(remote_args)}\n{message}"
         )
     return done.stdout
+
+
+def store_config_message(missing: list[str] | None) -> str:
+    """두 길이 모두 막혔을 때 어느 값을 채워야 하는지 이름으로 적는다."""
+    lines = ["사진 저장소로 가는 두 길의 설정이 모두 없다.", ""]
+    if missing:
+        lines.append("같은 자리에서 부르려면 아래 값을 채운다.")
+        lines.extend(f"  {key}" for key in missing)
+    else:
+        lines.append(
+            f"같은 자리에서 부르려면 {LOCAL_SCRIPT} 가 있어야 하고 "
+            "S3 설정을 읽을 수 있어야 한다."
+        )
+    lines.append("")
+    lines.append("SSH 로 부르려면 워크스페이스 .env 에 아래 값을 채운다.")
+    lines.append("  JI_YOON_BLOG_SSH_TARGET")
+    return "\n".join(lines)
 
 
 def folder_url(env: dict[str, str], prefix: str) -> str:
@@ -113,7 +193,7 @@ def folder_url(env: dict[str, str], prefix: str) -> str:
     parts = urllib.parse.urlsplit(base)
     bucket_path = parts.path.rstrip("/")
     if not bucket_path:
-        raise SshConfigError(
+        raise StoreConfigError(
             "JI_YOON_BLOG_STORAGE_URL 에 bucket 경로가 없다.\n"
             f"지금 값: {base}\n"
             "Admin UI 파일 화면의 주소를 그대로 넣는다. `.env.example` 이 형태를 보여준다."
@@ -169,7 +249,7 @@ def cmd_new(env: dict[str, str], args: argparse.Namespace) -> int:
     # 폴더는 이미 만들어졌으므로 주소를 만들지 못해도 접두사는 남긴다.
     try:
         url = folder_url(env, prefix)
-    except SshConfigError as exc:
+    except StoreConfigError as exc:
         print(exc, file=sys.stderr)
         return 1
     if url:
@@ -222,7 +302,7 @@ def cmd_pull(env: dict[str, str], args: argparse.Namespace) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="SSH 로 홈서버의 사진 저장소를 부른다")
+    parser = argparse.ArgumentParser(description="사진 저장소 명령을 부른다. 맥북과 홈서버 양쪽에서 돈다")
     sub = parser.add_subparsers(dest="command", required=True)
 
     sub.add_parser("folders", help="폴더와 사진 장수를 보여준다")
@@ -240,7 +320,7 @@ def main() -> int:
 
     try:
         return handlers[args.command](load_env(), args)
-    except (SshConfigError, RuntimeError) as exc:
+    except (StoreConfigError, RuntimeError) as exc:
         print(exc, file=sys.stderr)
         return 2
 
