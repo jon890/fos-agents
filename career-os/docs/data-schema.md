@@ -610,11 +610,29 @@ WHERE i.analysis_run_id = ? AND i.company_tier_source = 'default';
 - 아직 분석하지 못한 활성 공고와 대기 사유
 - 새 분석, 재사용, 분석 대기 건수
 - 소스별 성공, 부분 실패, 실패 수와 확인하지 못한 공고 수
+- 공고마다 그때 쓴 회사 tier의 값과 출처
+- 출처별 공고 수와 tier 평가 실패 건수
 - 모델이 필요에 따라 붙인 상세 근거와 다음 행동
 
-추천 JSON의 `schemaVersion`은 10이다.
+추천 JSON의 `schemaVersion`은 11이다.
 `pendingCandidates`의 각 항목은 후보 ID, 회사, 공고명, URL, 회사 티어와 `new`, `changed`, `stale` 중 하나를 가진다.
 `analysisSummary`는 `activeCount`, `analyzedNowCount`, `reusedCount`, `pendingCount`와 `personalExcludedCount`를 가진다.
+
+추천과 순위와 대기 항목은 모두 회사 tier의 출처를 함께 담는다.
+
+| 필드 | 담는 것 |
+| --- | --- |
+| `companyTierSource` | `manual`, `model`, `default` 중 하나 |
+| `companyTierAssessmentId` | 모델 평가의 ID. 출처가 `model`일 때만 있다 |
+| `companyTierAssessedAt`, `companyTierValidUntil` | 그 평가의 시각과 만료일 |
+| `companyTierConfidence` | `low`, `medium`, `high` |
+| `companyTierReason` | 간결한 판정 이유 |
+| `companyTierEvidenceUrls` | HTTPS 근거 최대 3개 |
+
+`model` 이 아닌 출처는 평가 ID와 근거 필드를 갖지 않고 근거 목록이 비어 있다.
+
+`companyTierSummary`는 `manualCount`, `modelCount`, `defaultCount`와 `assessmentFailedCount`를 가진다.
+기본 tier로 남은 공고 수와 평가에 실패한 회사 수를 최종 답변이 숨기지 않게 하는 자리다.
 `collectionHealth.warningSources`는 소스, `partial` 또는 `failed` 상태, 실패 건수와 공개 가능한 이유만 담는다.
 최종 답변에 넣는 수집 경고 줄은 `scripts/position-recommender/recommendation/final-answer.ts`가 만든다.
 그 줄은 소스, 상태, 실패 건수와 고정 문장 하나로만 구성하고 `reason`의 본문은 쓰지 않는다.
