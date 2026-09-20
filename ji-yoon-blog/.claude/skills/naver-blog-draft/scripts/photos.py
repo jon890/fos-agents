@@ -33,6 +33,7 @@ import shlex
 import subprocess
 import sys
 import tarfile
+import unicodedata
 import urllib.parse
 from datetime import date
 from pathlib import Path
@@ -99,15 +100,42 @@ def run_remote(env: dict[str, str], remote_args: list[str]) -> bytes:
 
 
 def folder_url(env: dict[str, str], prefix: str) -> str:
-    """Admin UI 의 파일 화면이 그 폴더를 열도록 주소를 만든다."""
+    """Admin UI 의 파일 화면이 그 폴더를 열도록 주소를 만든다.
+
+    Admin UI 의 `path` 는 filer 경로이며 bucket 부터 시작한다.
+    bucket 부분이 빠진 주소도 Admin UI 가 200 으로 응답하고 빈 목록을 보여주므로,
+    잘못된 주소를 받은 지융은 사진을 올릴 자리를 찾지 못한 채 화면만 본다.
+    그래서 여기서 먼저 막는다.
+    """
     base = env.get("JI_YOON_BLOG_STORAGE_URL", "").rstrip("/")
     if not base:
         return ""
     parts = urllib.parse.urlsplit(base)
-    bucket_path = parts.path or ""
+    bucket_path = parts.path.rstrip("/")
+    if not bucket_path:
+        raise SshConfigError(
+            "JI_YOON_BLOG_STORAGE_URL 에 bucket 경로가 없다.\n"
+            f"지금 값: {base}\n"
+            "Admin UI 파일 화면의 주소를 그대로 넣는다. `.env.example` 이 형태를 보여준다."
+        )
     path = f"{bucket_path}/{prefix.strip('/')}"
     query = urllib.parse.urlencode({"path": path})
     return urllib.parse.urlunsplit((parts.scheme, parts.netloc, "/files", query, ""))
+
+
+def display_width(text: str) -> int:
+    """터미널에서 차지하는 칸 수를 센다. 한글과 이모지는 두 칸이다."""
+    return sum(2 if unicodedata.east_asian_width(ch) in "WF" else 1 for ch in text)
+
+
+def pad(text: str, width: int) -> str:
+    """표 한 칸을 화면 폭 기준으로 왼쪽에 맞춘다."""
+    return text + " " * max(0, width - display_width(text))
+
+
+def rpad(text: str, width: int) -> str:
+    """표 한 칸을 화면 폭 기준으로 오른쪽에 맞춘다."""
+    return " " * max(0, width - display_width(text)) + text
 
 
 def cmd_folders(env: dict[str, str], args: argparse.Namespace) -> int:
@@ -117,10 +145,14 @@ def cmd_folders(env: dict[str, str], args: argparse.Namespace) -> int:
         print("사진 묶음이 없다", file=sys.stderr)
         return 1
 
-    print(f"{'폴더':<32}{'사진':>6}{'크기':>12}")
+    print(f"{pad('폴더', 34)}{rpad('사진', 6)}{rpad('크기', 12)}")
     for f in folders:
         size_mb = f.get("bytes", 0) / (1024 * 1024)
-        print(f"{f.get('folder', ''):<32}{f.get('photos', 0):>6}{size_mb:>10.1f}MB")
+        print(
+            f"{pad(str(f.get('folder', '')), 34)}"
+            f"{rpad(str(f.get('photos', 0)), 6)}"
+            f"{rpad(f'{size_mb:.1f}MB', 12)}"
+        )
     return 0
 
 
@@ -134,7 +166,12 @@ def cmd_new(env: dict[str, str], args: argparse.Namespace) -> int:
         return 1
 
     print(prefix)
-    url = folder_url(env, prefix)
+    # 폴더는 이미 만들어졌으므로 주소를 만들지 못해도 접두사는 남긴다.
+    try:
+        url = folder_url(env, prefix)
+    except SshConfigError as exc:
+        print(exc, file=sys.stderr)
+        return 1
     if url:
         print(url)
     else:
