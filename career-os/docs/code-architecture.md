@@ -59,21 +59,7 @@ skill이 private brain에서 조회하고, 제출에 사용할 세부 성과는 
 새 스킬 스크립트는 `scripts/lib/cli.ts` 의 `runCli` 를 기본으로 사용한다.
 인자 파싱, 사용법 오류 처리와 결과 출력이 스크립트마다 같은 모양으로 되풀이되면
 그 스크립트가 무엇을 검사하고 무엇을 만드는지가 가려진다.
-
-```typescript
-if (import.meta.main) {
-  await runCli(
-    {
-      name: "validate_claim_ledger.ts",
-      summary: "제출 HTML 의 각 주장이 근거와 맞는지 원장으로 검사한다.",
-      positional: [{ name: "<claim-ledger.json>", description: "검사할 주장 원장" }],
-      options: { "--artifact": { value: true, description: "원장이 가리키는 제출 HTML" } },
-    },
-    ({ positional, options }) =>
-      validateClaimLedger(positional[0], options["--artifact"] as string),
-  );
-}
-```
+사용법은 `scripts/lib/cli.ts` 를 연 뒤 기존 스크립트 하나를 예시로 참고한다.
 
 종료 코드는 셋으로 고정한다.
 
@@ -104,14 +90,14 @@ if (import.meta.main) {
 추천 화면 변경 위치는 아래 「포지션 추천 렌더」를 따른다.
 옵션 조회 규칙은 `scripts/lib/cli.ts`에서 확인한다.
 
-| 수정할 처리                    | 핵심 함수                                                                           |
-| ------------------------------ | ----------------------------------------------------------------------------------- |
-| 추천 파일 로드와 후보풀 대조   | `validateRecommendationFiles(input, candidates)`                                    |
-| 추천 화면 파일 생성            | `writeCandidatePreview(input, candidates, output, limitValue)`                      |
-| 상세 추천 HTML 파일 생성       | `writeRecommendation(input, output, format, template)`                              |
-| 읽을거리 목록과 설정 예시 생성 | `listReadingSources(category, includeDisabled)`, `buildReadingSourceTemplate(args)` |
-| 면접 질문 소스 명령            | `runInterviewQuestionSources(command, args)`                                        |
-| 산출물 내용과 공개 경계 검사   | `validateMorningReadingOutputs(root)`                                               |
+| 수정할 처리                    | 핵심 함수                        |
+| ------------------------------ | --------------------------------- |
+| 추천 파일 로드와 후보풀 대조   | `validateRecommendationFiles`     |
+| 추천 화면 파일 생성            | `writeCandidatePreview`           |
+| 상세 추천 HTML 파일 생성       | `writeRecommendation`             |
+| 읽을거리 목록과 설정 예시 생성 | `listReadingSources`, `buildReadingSourceTemplate` |
+| 면접 질문 소스 명령            | `runInterviewQuestionSources`     |
+| 산출물 내용과 공개 경계 검사   | `validateMorningReadingOutputs`   |
 
 저장소 루트에서 이미 준비한 입력 파일을 다음처럼 검사한다.
 아래 명령은 네트워크 수집을 실행하지 않는다.
@@ -172,24 +158,11 @@ adapter의 사전 필터와 최종 경계는 역할이 다르므로 둘 다 유�
 | 파일 읽기, 쓰기, 현재 시각과 CLI   | [render_recommendation.ts](../scripts/position-recommender/render_recommendation.ts), [render_candidate_preview.ts](../scripts/position-recommender/render_candidate_preview.ts), [assets.ts](../scripts/position-recommender/render/assets.ts) |
 | 한국 시각과 날짜 표시              | [lib/date-format.ts](../scripts/lib/date-format.ts)                                                                                                                                                                                             |
 
-`render/assets.ts`는 `import.meta.url` 기준으로 대체 템플릿과 자산 문자열을 읽는다.
-화면별 `parts.html`에 `<template id="이름">…</template>` 요소로 조각을 모은다.
-이름에는 영문·숫자·밑줄·하이픈을 쓰고 중복 이름은 허용하지 않는다.
-요소 안팎의 줄바꿈과 HTML 주석은 사용할 수 있다.
-반복과 조건은 TypeScript에서 처리하며 템플릿에 별도 문법을 넣지 않는다.
-순수 렌더 함수에는 자산과 표시 시각을 명시적으로 전달하므로 같은 입력은 같은 HTML을 만든다.
-기존 `toHtml(run, templatePath)`, `toReportHtml(run)`, `renderCandidatePreviewHtml(run, options)`는 얇은 호환 함수로 유지한다.
-
-[template.ts](../scripts/position-recommender/render/template.ts)는 이름이 있는 슬롯만 한 번 치환한다.
-일반 값은 HTML 이스케이프하고, 신뢰할 수 있는 조립 HTML과 CSS·JS는 별도 `raw` 입력으로 전달한다.
-템플릿이 요구한 값이 없거나 등록되지 않은 슬롯이면 오류로 중단하며, 데이터 안의 `{{slot}}`은 다시 치환하지 않는다.
-기존 `--template`의 `title`, `generatedAt`, `reportHtml`, `sourceDiagnosticsHtml` 슬롯을 지원한다.
-`sourceDiagnosticsHtml`은 이전 기본 템플릿과의 호환을 위해 명시적으로 빈 문자열을 전달한다.
+대체 렌더러와 순수 렌더 함수의 조각 조립, 슬롯 치환 규칙은 각 파일을 열어 확인한다.
+이 문서는 어떤 파일이 무엇을 맡는지만 안내하고, 치환 순서나 이스케이프 규칙 같은 내부 동작은 코드 주석으로 옮긴다.
 
 상세 렌더 CLI는 `--format html`만 허용한다.
 `md` 등 다른 형식은 스키마 검사 이후 사용법 오류로 종료하며 파일을 만들거나 덮어쓰지 않는다.
-기존 옵션 중복 처리와 오류 출력 순서는 유지한다.
-Markdown 지원 제거를 제외한 화면, 필드, 링크, 정렬, 검색과 빈 상태는 기존 동작을 보존한다.
 
 저장소 루트에서 아래 검증을 실행한다.
 
@@ -201,20 +174,11 @@ bunx tsc --noEmit
 git diff --check
 ```
 
-Prettier 개발 의존성은 정확한 버전으로 고정한다.
 위 포맷 명령은 `position-recommender` 아래의 TypeScript, HTML, CSS와 JavaScript 전체를 대상으로 삼는다.
 개인 산출물과 다른 워크스페이스 스크립트에는 적용하지 않는다.
-함수 사이에는 빈 줄 하나를 직접 유지한다.
-Prettier는 기존 빈 줄을 보존하지만 없는 빈 줄을 새로 만들지 않는다.
-동작 근거는 [Prettier의 빈 줄 처리](https://prettier.io/docs/rationale.html#empty-lines)를 따른다.
 
-`scripts/lib/date-format.ts`는 입력 날짜를 한국 시각으로 표시하며 현재 시각을 직접 얻지 않는다.
-`formatSeoulDateTime(Date)`는 상세 추천의 한국어 날짜·분 표시,
-`formatSeoulDisplayTime(string)`은 미리보기의 짧은 시각·전체 시각,
-`formatSeoulIsoDate(generatedAt)`는 `YYYY-MM-DD`를 반환한다.
-미리보기의 잘못된 날짜는 `확인 필요`로 표시하고, ISO 날짜 변환은 기존 `generatedAt` 오류를 유지한다.
-아침 읽을거리의 파일명과 API 보고서 ID도 동일한 ISO 날짜 함수를 재사용한다.
-`parseDateOrNull`과 `ceilDaysUntil`은 공고 마감처럼 여러 처리에서 재사용할 순수 계산만 제공한다.
+`scripts/lib/date-format.ts`는 한국 시각 표시를 담당하며 현재 시각을 직접 얻지 않는다.
+아침 읽을거리의 파일명과 API 보고서 ID도 이 모듈의 ISO 날짜 함수를 재사용한다.
 마감 상태와 긴급도 값은 `live-postings/policy/lifecycle.ts`가 결정한다.
 
 ## Skill과 실행 코드
@@ -271,32 +235,22 @@ Wanted adapter는 개발 전체 직군 `518`을 기술 상수로 사용하고, �
 `render/`는 HTML 생성과 검사를 구현한다.
 어댑터는 원문 응답을 공통 `LivePosting` 형태로 바꾼다.
 후보풀 정책은 개별 공고 URL, 활성 상태, 마감일, 고용 형태, 역할과 중복을 결정적으로 검사한다.
-`exclusions.ts`는 필수 개인 제외 설정을 검증하고 공통 수집 경로에서 후보풀 생성 전에 해당 공고를 제거한다.
-`company_research.ts`는 실행 중 조사한 회사 프로필을 검증하고 `state/company-research/`의 회사별 파일에 원자적으로 합친다.
+`exclusions.ts`는 필수 개인 제외 설정을 검증해 후보풀 생성 전에 해당 공고를 제거한다.
+`company_research.ts`는 조사한 회사 프로필을 `state/company-research/`에 반영한다.
 `recommendation-api/client.ts`는 후보풀 저장, 분석 큐 조회, 분석 반영과 추천 실행 요청을 담당한다.
-`prepare_position_analysis.ts`는 수집 실행을 Backend에 저장하고 모델이 읽을 최대 20건의 큐를 임시 파일로 만든다.
+`prepare_position_analysis.ts`는 수집 실행을 Backend에 저장하고 모델이 읽을 분석 큐를 만든다.
 `commit_position_analysis.ts`는 큐에 든 공고의 분석만 Backend에 반영한다.
 `finalize_position_recommendation.ts`는 Backend가 조립한 추천 입력으로 추천 JSON과 HTML을 만들고 검증한다.
-`recommendation/final-answer.ts`는 이 명령이 출력할 수집 경고 줄을 만든다.
-답변 문구를 job 지시문에 맡기면 지시문마다 형식이 갈라지므로 문구는 이 모듈이 소유한다.
+`recommendation/final-answer.ts`는 수집 경고 문구를 소유한다.
 설정과 비공개 전송 계약은 [데이터 구조](data-schema.md#개인-공고-제외-설정)와
 [포지션 분석 정책](data-schema.md#포지션-분석-정책)을 따른다.
 
 `collection_health.ts`는 실행 전체가 추천 입력으로 쓸 만한지 판정한다.
-소스 하나가 실패해도 남은 소스로 후보풀을 만드는 것은 의도한 동작이지만,
-실패 개수를 판정하지 않으면 소스 대부분이 실패한 실행이 정상 실행과 같은 종료 코드로 끝난다.
 실패 소스가 허용 개수를 넘거나 후보가 0건이면 수집기는 후보풀을 남기고 종료 코드 1로 끝낸다.
-어댑터가 `partial`로 보고했더라도 하나도 수집하지 못한 채 오류만 냈으면 실패로 센다.
-
-이 판정은 어댑터가 보고한 개수에 의존한다.
-`collectedCount`, `importedCount`, `skippedCount`, `failedCount` 넷의 뜻은
-`contracts.ts`의 `sourceDiagnosticSchema`가 소유하며 어댑터가 임의로 정하지 않는다.
-원본 목록 건수처럼 소스마다 다른 값은 `message`에 적는다.
-요청이나 파싱이 실패해 판단하지 못한 공고는 `failedCount`로 세고 `skippedCount`에 넣지 않는다.
+판정 기준이 되는 소스별 수집 개수의 뜻은 `contracts.ts`의 `sourceDiagnosticSchema`가 소유한다.
 
 수집 결과는 실행별 임시 후보풀에 저장한다.
 모델은 분석 큐에 존재하는 공고만 판단하고 전체 후보풀의 순위를 직접 만들지 않는다.
-`recommendation-api/client.ts`는 `services/recommendation-api/position/schema.ts`로 분석 갱신과 저장 상태를 검증하고,
 `recommendation/schema.ts`와 `validate_recommendation.ts`는 유효한 분석, 분석 대기 목록,
 수집 진단과 후보풀 원문이 일치하는지 검사한다.
 HTML은 검증된 추천 JSON에서 파생하며 렌더, 검사와 임시 파일 정리는 최종 명령 한 번으로 끝낸다.
@@ -417,7 +371,7 @@ skill은 brain에서 찾은 회사와 역할을 대응하는 `applications/<comp
 TypeScript 스크립트가 brain을 직접 조회하지 않는다.
 
 `scripts/interview-drill/`은 `interview-practice`의 기술·인성 모드에서 공통 진행과 복습 상태를 처리한다.
-공고별 `evidence/interview-questions.json`을 명시하면 포지션 질문 세 개와 공통 기반 질문 두 개를 기본으로 섞는다.
+공고별 `evidence/interview-questions.json`을 명시하면 포지션 질문과 공통 기반 질문을 섞어 구성한다.
 `follow-up-policy.ts`는 답변 수준에 따른 꼬리질문 축과 최대 깊이를 제공한다.
 복습 상태는 `state/drill-progress.json` 하나에 저장한다.
 후보풀과 리포트 중간 파일처럼 다시 만들 수 있는 실행 자료는 `state/`에 두지 않는다.
