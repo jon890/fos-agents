@@ -40,6 +40,7 @@
 | `scripts/photos.py` | SSH로 홈서버 명령을 부른다 |
 | `scripts/photo_set.py` | 내려받은 사진의 촬영시각을 읽어 순서를 세운다 |
 | `scripts/build_preview.py` | 초안과 사진으로 미리보기를 만든다 |
+| `scripts/build_package.py` | 초안으로 사람이 붙여넣을 등록용 묶음을 만든다 |
 | `scripts/test_photo_set.py` | 촬영시각 파서를 합성한 이미지로 검증한다 |
 | `references/iphone-upload.md` | 아이폰에서 올리는 절차와 함정 |
 
