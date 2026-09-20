@@ -142,6 +142,17 @@ class Page:
     def __init__(self, ws_url: str, timeout: float = 30.0):
         self.ws = Socket(ws_url, timeout=timeout)
         self.next_id = 0
+        self.dialogs: list[str] = []
+        # `confirm` 이나 `alert` 가 뜨면 페이지 실행이 통째로 멈춘다.
+        # 그 상태에서는 어떤 명령도 응답하지 않아 전부 시간 초과로 끝난다.
+        # 실측으로 임시저장 글 삭제가 그런 confirm 을 띄웠다.
+        # 그래서 붙자마자 Page 도메인을 켜서 그 알림을 받을 수 있게 한다.
+        self._notify("Page.enable")
+
+    def _notify(self, method: str, **params) -> None:
+        """응답을 기다리지 않고 명령 하나를 보낸다."""
+        self.next_id += 1
+        self.ws.send(json.dumps({"id": self.next_id, "method": method, "params": params}))
 
     @classmethod
     def by_url(cls, url_part: str, timeout: float = 30.0) -> "Page":
@@ -154,6 +165,12 @@ class Page:
         self.ws.send(json.dumps({"id": sent, "method": method, "params": params}))
         while True:
             message = json.loads(self.ws.recv())
+            if message.get("method") == "Page.javascriptDialogOpening":
+                # 열린 채로 두면 페이지가 멈춘 채 아무 명령도 돌지 않는다.
+                # 받는 즉시 수락하고 무엇이 떴는지 남긴다.
+                self.dialogs.append(message["params"].get("message", ""))
+                self._notify("Page.handleJavaScriptDialog", accept=True)
+                continue
             if message.get("id") != sent:
                 continue
             if "error" in message:
