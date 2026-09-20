@@ -1,4 +1,5 @@
 import type { PostingCandidate } from "../../../scripts/position-recommender/live-postings/contracts.ts";
+import type { CompanyTierSource } from "./memory-repository.ts";
 import type { AnalysisPolicy } from "./schema.ts";
 
 export type PendingPosition = {
@@ -7,6 +8,7 @@ export type PendingPosition = {
   contentHash: string;
   status: "new" | "changed" | "stale";
   companyTier: number;
+  companyTierSource: CompanyTierSource;
   pendingSince: string;
   posting: PostingCandidate;
 };

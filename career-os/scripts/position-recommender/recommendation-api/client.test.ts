@@ -136,13 +136,15 @@ describe("position recommendation API client", () => {
   test("분석 정책 설정은 인증된 PUT 요청을 사용한다", async () => {
     let capturedMethod = "";
     const policy = {
-      schemaVersion: 1 as const,
+      schemaVersion: 2 as const,
       candidateContextVersion: "context-1",
       dailyAnalysisLimit: 20,
       prioritySlots: 16,
       agingSlots: 4,
       staleAfterDays: 30,
       defaultCompanyTier: 3,
+      dailyCompanyTierLimit: 5,
+      companyTierStaleAfterDays: 90,
     };
     const client = new RecommendationApiClient({
       baseUrl: "http://api.local",

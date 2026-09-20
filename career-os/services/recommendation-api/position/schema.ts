@@ -9,13 +9,15 @@ const isoDateTime = z.iso.datetime();
 
 export const analysisPolicySchema = z
   .object({
-    schemaVersion: z.literal(1),
+    schemaVersion: z.literal(2),
     candidateContextVersion: nonEmpty,
     dailyAnalysisLimit: z.number().int().min(1).max(20),
     prioritySlots: z.number().int().min(0).max(20),
     agingSlots: z.number().int().min(0).max(20),
     staleAfterDays: z.number().int().min(1).max(365),
     defaultCompanyTier: z.number().int().min(1).max(3),
+    dailyCompanyTierLimit: z.number().int().min(1).max(20),
+    companyTierStaleAfterDays: z.number().int().min(1).max(365),
   })
   .strict()
   .superRefine((policy, context) => {

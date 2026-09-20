@@ -100,13 +100,15 @@ function analysisResult(positionId: string) {
 async function backend() {
   const service = new PositionService(new MemoryPositionRepository());
   await service.configurePolicy({
-    schemaVersion: 1,
+    schemaVersion: 2,
     candidateContextVersion: "context-1",
     dailyAnalysisLimit: 20,
     prioritySlots: 16,
     agingSlots: 4,
     staleAfterDays: 30,
     defaultCompanyTier: 3,
+    dailyCompanyTierLimit: 5,
+    companyTierStaleAfterDays: 90,
   });
   const queue = await service.saveCollection(
     { schemaVersion: 2, analysisContractVersion: 1, pool: pool("collection-1") },

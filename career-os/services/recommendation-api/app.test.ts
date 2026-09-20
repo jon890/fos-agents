@@ -137,13 +137,15 @@ describe("recommendation-api HTTP 계약", () => {
       receipts: new MemoryReceiptStore(),
     });
     const policy = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       candidateContextVersion: "context-1",
       dailyAnalysisLimit: 20,
       prioritySlots: 16,
       agingSlots: 4,
       staleAfterDays: 30,
       defaultCompanyTier: 3,
+      dailyCompanyTierLimit: 5,
+      companyTierStaleAfterDays: 90,
     };
     const response = await handler(
       new Request("http://local/api/positions/v1/analysis-policy", {
@@ -221,13 +223,15 @@ describe("recommendation-api HTTP 계약", () => {
       "/api/positions/v1/analysis-policy",
       "policy-context-1",
       {
-        schemaVersion: 1,
+        schemaVersion: 2,
         candidateContextVersion: "context-1",
         dailyAnalysisLimit: 20,
         prioritySlots: 16,
         agingSlots: 4,
         staleAfterDays: 30,
         defaultCompanyTier: 3,
+        dailyCompanyTierLimit: 5,
+        companyTierStaleAfterDays: 90,
       },
       "PUT",
     );

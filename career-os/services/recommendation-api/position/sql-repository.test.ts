@@ -20,6 +20,11 @@ const ids = {
   analysisRun: "30000000-0000-4000-8000-000000000001",
   earlierAnalysisRun: "30000000-0000-4000-8000-000000000002",
   recommendationRun: "40000000-0000-4000-8000-000000000001",
+  companyTierRun: "50000000-0000-4000-8000-000000000001",
+  companyTierAssessments: [
+    "60000000-0000-4000-8000-000000000001",
+    "60000000-0000-4000-8000-000000000002",
+  ],
 } as const;
 
 function posting(index: number): PostingCandidate {
@@ -64,6 +69,8 @@ function databaseRows() {
         aging_slots: 4,
         stale_after_days: 30,
         default_company_tier: 3,
+        daily_company_tier_limit: 5,
+        company_tier_stale_after_days: 90,
       },
     ],
     company_preferences: [
@@ -173,6 +180,8 @@ function databaseRows() {
       analysis_status: "new",
       selection_reason: index === 0 ? "priority" : "aging",
       company_tier: index + 1,
+      company_tier_source: index === 0 ? "manual" : "model",
+      company_tier_assessment_id: index === 0 ? null : ids.companyTierAssessments[1],
       result_status: index === 0 ? "created" : "reused",
       analysis_id: ids.analyses[index],
       failure_code: null,
@@ -208,7 +217,71 @@ function databaseRows() {
       rank_number: index + 1,
       decision: index === 0 ? "recommend" : "consider",
       company_tier: index + 1,
+      company_tier_source: index === 0 ? "manual" : "model",
+      company_tier_assessment_id: index === 0 ? null : ids.companyTierAssessments[1],
     })),
+    company_tier_assessment_runs: [
+      {
+        company_tier_run_id: ids.companyTierRun,
+        collection_run_id: "collection-1",
+        candidate_context_version: "context-1",
+        contract_version: 1,
+        status: "partial",
+        assessed_now_count: 1,
+        created_at: "2026-09-17T00:05:00.000Z",
+        completed_at: "2026-09-17T00:40:00.000Z",
+      },
+    ],
+    company_tier_assessments: [
+      {
+        company_tier_assessment_id: ids.companyTierAssessments[1],
+        company_key: "회사 2",
+        company_name: "회사 2",
+        candidate_context_version: "context-1",
+        contract_version: 1,
+        created_by_company_tier_run_id: ids.companyTierRun,
+        recommended_tier: 2,
+        confidence: "medium",
+        reason: "성장 범위를 확인했다.",
+        signals_json: { "growth-scope": "medium", "compensation-upside": "unknown" },
+        evidence_json: [{ url: "https://example.com/company/2", validUntil: "2026-12-17" }],
+        assumptions_json: ["공개 자료만 확인했다."],
+        assessed_at: "2026-09-17T00:20:00.000Z",
+        valid_until: "2026-12-16",
+      },
+    ],
+    company_tier_assessment_run_items: [
+      {
+        company_tier_run_id: ids.companyTierRun,
+        company_key: "회사 2",
+        company_name: "회사 2",
+        selection_order: 1,
+        assessment_status: "new",
+        selection_reason: "discovery",
+        prior_tier: null,
+        active_position_count: 3,
+        result_status: "created",
+        company_tier_assessment_id: ids.companyTierAssessments[1],
+        failure_code: null,
+        attempt_count: 1,
+        completed_at: "2026-09-17T00:20:00.000Z",
+      },
+      {
+        company_tier_run_id: ids.companyTierRun,
+        company_key: "회사 3",
+        company_name: "회사 3",
+        selection_order: 2,
+        assessment_status: "stale",
+        selection_reason: "refresh",
+        prior_tier: 3,
+        active_position_count: 1,
+        result_status: "failed",
+        company_tier_assessment_id: null,
+        failure_code: "research_unavailable",
+        attempt_count: 2,
+        completed_at: "2026-09-17T00:40:00.000Z",
+      },
+    ],
   };
 }
 
@@ -333,6 +406,76 @@ test("실행 항목의 처리 결과와 분석의 최초 생성 실행을 복원
   );
 });
 
+test("회사 tier 평가 실행의 선택 순서와 결과, 출처와 유효기간을 복원한다", async () => {
+  const repository = new SqlPositionRepository(fakeSql(databaseRows()));
+  await repository.ensureReady();
+  const state = repository.snapshot();
+  const run = state.companyTierRuns.get(ids.companyTierRun)!;
+  expect(run).toMatchObject({
+    collectionRunId: "collection-1",
+    candidateContextVersion: "context-1",
+    contractVersion: 1,
+    status: "partial",
+    assessedNowCount: 1,
+  });
+  const items = [...run.items.values()].sort(
+    (left, right) => left.selectionOrder - right.selectionOrder,
+  );
+  expect(items.map((item) => item.companyKey)).toEqual(["회사 2", "회사 3"]);
+  expect(items[0]).toMatchObject({
+    assessmentStatus: "new",
+    selectionReason: "discovery",
+    priorTier: null,
+    activePositionCount: 3,
+    resultStatus: "created",
+    companyTierAssessmentId: ids.companyTierAssessments[1],
+    failureCode: null,
+    attemptCount: 1,
+  });
+  expect(items[1]).toMatchObject({
+    assessmentStatus: "stale",
+    selectionReason: "refresh",
+    priorTier: 3,
+    resultStatus: "failed",
+    companyTierAssessmentId: null,
+    failureCode: "research_unavailable",
+    attemptCount: 2,
+  });
+  const assessment = state.companyTierAssessments.get(ids.companyTierAssessments[1])!;
+  expect(assessment).toMatchObject({
+    companyKey: "회사 2",
+    recommendedTier: 2,
+    confidence: "medium",
+    createdByCompanyTierRunId: ids.companyTierRun,
+    validUntil: "2026-12-16",
+  });
+  expect(assessment.signals).toEqual({
+    "growth-scope": "medium",
+    "compensation-upside": "unknown",
+  });
+  expect(assessment.assumptions).toEqual(["공개 자료만 확인했다."]);
+});
+
+test("공고 분석과 추천 항목의 tier 출처와 평가 ID를 복원한다", async () => {
+  const repository = new SqlPositionRepository(fakeSql(databaseRows()));
+  await repository.ensureReady();
+  const state = repository.snapshot();
+  const items = [...state.analysisRuns.get(ids.analysisRun)!.items.values()].sort(
+    (left, right) => left.selectionOrder - right.selectionOrder,
+  );
+  expect(items.map((item) => item.companyTierSource)).toEqual(["manual", "model"]);
+  expect(items.map((item) => item.companyTierAssessmentId)).toEqual([
+    null,
+    ids.companyTierAssessments[1],
+  ]);
+  const sources = state.recommendationTierSources.get(ids.analysisRun)!;
+  expect(sources.get("wanted:candidate-1")).toEqual({ source: "manual", assessmentId: null });
+  expect(sources.get("wanted:candidate-2")).toEqual({
+    source: "model",
+    assessmentId: ids.companyTierAssessments[1],
+  });
+});
+
 test("기록 순서는 실행 헤더, 분석, 실행 항목 차례를 지킨다", async () => {
   const executed: string[] = [];
   const rows = databaseRows();
@@ -355,5 +498,12 @@ test("기록 순서는 실행 헤더, 분석, 실행 항목 차례를 지킨다"
   );
   expect(indexOf("INSERT IGNORE INTO position_analyses")).toBeLessThan(
     indexOf("INSERT INTO position_analysis_run_items"),
+  );
+  expect(indexOf("INSERT INTO company_tier_assessment_runs")).toBeGreaterThanOrEqual(0);
+  expect(indexOf("INSERT INTO company_tier_assessment_runs")).toBeLessThan(
+    indexOf("INSERT IGNORE INTO company_tier_assessments"),
+  );
+  expect(indexOf("INSERT IGNORE INTO company_tier_assessments")).toBeLessThan(
+    indexOf("INSERT INTO company_tier_assessment_run_items"),
   );
 });

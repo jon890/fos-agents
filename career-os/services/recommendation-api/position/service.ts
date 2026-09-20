@@ -1,6 +1,7 @@
 import { ApiError } from "../http/errors.ts";
 import { companyKey, positionContentHash, positionIdentity, stableUuid } from "./hash.ts";
 import type {
+  CompanyTierSource,
   MemoryPositionRepository,
   PositionRepositoryState,
   StoredAnalysis,
@@ -71,11 +72,14 @@ function analysisStatus(
   return "stale";
 }
 
-function tierFor(state: PositionRepositoryState, position: StoredPosition): number {
-  return (
-    state.preferences.get(companyKey(position.posting.company))?.tier ??
-    state.policy!.defaultCompanyTier
-  );
+function tierFor(
+  state: PositionRepositoryState,
+  position: StoredPosition,
+): { tier: number; source: CompanyTierSource } {
+  const preference = state.preferences.get(companyKey(position.posting.company));
+  return preference
+    ? { tier: preference.tier, source: "manual" }
+    : { tier: state.policy!.defaultCompanyTier, source: "default" };
 }
 
 function isExcluded(state: PositionRepositoryState, company: string): boolean {
@@ -250,12 +254,14 @@ export class PositionService {
           continue;
         }
         position.pendingSince ??= request.pool.collectedAt;
+        const resolvedTier = tierFor(state, position);
         pending.push({
           positionId: position.positionId,
           candidateId: position.candidateId,
           contentHash: position.contentHash,
           status,
-          companyTier: tierFor(state, position),
+          companyTier: resolvedTier.tier,
+          companyTierSource: resolvedTier.source,
           pendingSince: position.pendingSince,
           posting: structuredClone(position.posting),
         });
@@ -279,6 +285,8 @@ export class PositionService {
               analysisStatus: candidate.status,
               selectionReason: candidate.selectionReason,
               companyTier: candidate.companyTier,
+              companyTierSource: candidate.companyTierSource,
+              companyTierAssessmentId: null,
               resultStatus: "pending" as const,
               analysisId: null,
               failureCode: null,
@@ -330,7 +338,7 @@ export class PositionService {
           candidateId: position.candidateId,
           contentHash: position.contentHash,
           analysisStatus: item.analysisStatus,
-          companyTier: tierFor(state, position),
+          companyTier: tierFor(state, position).tier,
           resultStatus: item.resultStatus,
           posting: position.posting,
         };
@@ -400,7 +408,7 @@ export class PositionService {
             createdByAnalysisRunId: run.analysisRunId,
             analyzedAt: now,
             validUntil: dateOnlyAfterDays(now, requirePolicy(state).staleAfterDays),
-            companyTierAtAnalysis: tierFor(state, position),
+            companyTierAtAnalysis: tierFor(state, position).tier,
           } satisfies StoredAnalysis);
         if (!duplicate) position.analyses.push(analysis);
         position.pendingSince = null;
@@ -469,7 +477,7 @@ export class PositionService {
             run.analysisContractVersion,
             now,
           ),
-          tier: tierFor(state, position),
+          ...tierFor(state, position),
         }))
         .filter((entry): entry is typeof entry & { analysis: StoredAnalysis } =>
           Boolean(entry.analysis),
@@ -494,7 +502,7 @@ export class PositionService {
           company: position.posting.company,
           title: position.posting.title,
           postingUrl: position.posting.url,
-          companyTier: tierFor(state, position),
+          companyTier: tierFor(state, position).tier,
           analysisStatus: analysisStatus(
             position,
             run.candidateContextVersion,
@@ -546,6 +554,15 @@ export class PositionService {
         analysisRunId,
         new Map(
           ranked.map(({ position, analysis }) => [position.candidateId, analysis.analysisId]),
+        ),
+      );
+      state.recommendationTierSources.set(
+        analysisRunId,
+        new Map(
+          ranked.map(({ position, source }) => [
+            position.candidateId,
+            { source, assessmentId: null },
+          ]),
         ),
       );
       return parsed;

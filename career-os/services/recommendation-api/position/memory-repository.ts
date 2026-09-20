@@ -35,6 +35,64 @@ export type StoredPosition = {
   analyses: StoredAnalysis[];
 };
 
+export type CompanyTierSource = "manual" | "model" | "default";
+
+export type CompanyTierFailureCode =
+  | "research_unavailable"
+  | "model_unavailable"
+  | "contract_rejected"
+  | "internal_error"
+  | "lease_expired";
+
+export type StoredCompanyTierAssessment = {
+  companyTierAssessmentId: string;
+  companyKey: string;
+  companyName: string;
+  candidateContextVersion: string;
+  contractVersion: number;
+  createdByCompanyTierRunId: string | null;
+  recommendedTier: number;
+  confidence: "low" | "medium" | "high";
+  reason: string;
+  signals: Record<string, unknown>;
+  evidence: unknown[];
+  assumptions: string[];
+  assessedAt: string;
+  validUntil: string;
+};
+
+export type StoredCompanyTierRunItem = {
+  companyKey: string;
+  companyName: string;
+  selectionOrder: number;
+  assessmentStatus: "new" | "stale";
+  selectionReason: "discovery" | "refresh";
+  priorTier: number | null;
+  activePositionCount: number;
+  resultStatus: "pending" | "created" | "reused" | "failed";
+  companyTierAssessmentId: string | null;
+  failureCode: CompanyTierFailureCode | null;
+  attemptCount: number;
+  completedAt: string | null;
+};
+
+export type StoredCompanyTierRun = {
+  companyTierRunId: string;
+  collectionRunId: string;
+  candidateContextVersion: string;
+  contractVersion: number;
+  status: "pending" | "partial" | "completed";
+  assessedNowCount: number;
+  createdAt: string;
+  completedAt: string | null;
+  items: Map<string, StoredCompanyTierRunItem>;
+};
+
+export type StoredTierProvenance = {
+  source: CompanyTierSource;
+  assessmentId: string | null;
+};
+
 export type StoredAnalysisRunItem = {
   positionId: string;
   positionVersionId: string;
@@ -42,6 +100,8 @@ export type StoredAnalysisRunItem = {
   analysisStatus: "new" | "changed" | "stale";
   selectionReason: "priority" | "aging" | "overflow";
   companyTier: number;
+  companyTierSource: CompanyTierSource;
+  companyTierAssessmentId: string | null;
   resultStatus: "pending" | "created" | "reused" | "failed";
   analysisId: string | null;
   failureCode: string | null;
@@ -75,8 +135,11 @@ type RepositoryState = {
   positions: Map<string, StoredPosition>;
   collections: Map<string, StoredCollection>;
   analysisRuns: Map<string, StoredAnalysisRun>;
+  companyTierRuns: Map<string, StoredCompanyTierRun>;
+  companyTierAssessments: Map<string, StoredCompanyTierAssessment>;
   recommendationResponses: Map<string, unknown>;
   recommendationAnalysisIds: Map<string, Map<string, string>>;
+  recommendationTierSources: Map<string, Map<string, StoredTierProvenance>>;
 };
 
 function cloneState(state: RepositoryState): RepositoryState {
@@ -89,8 +152,11 @@ export class MemoryPositionRepository {
     positions: new Map(),
     collections: new Map(),
     analysisRuns: new Map(),
+    companyTierRuns: new Map(),
+    companyTierAssessments: new Map(),
     recommendationResponses: new Map(),
     recommendationAnalysisIds: new Map(),
+    recommendationTierSources: new Map(),
   };
 
   async ensureReady(): Promise<void> {}

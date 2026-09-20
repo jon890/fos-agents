@@ -8,7 +8,10 @@ import {
   type StoredAnalysis,
   type StoredAnalysisRun,
   type StoredCollection,
+  type StoredCompanyTierAssessment,
+  type StoredCompanyTierRun,
   type StoredPosition,
+  type StoredTierProvenance,
 } from "./memory-repository.ts";
 
 type Row = Record<string, any>;
@@ -111,6 +114,9 @@ export class SqlPositionRepository extends MemoryPositionRepository {
       analysisItemRows,
       recommendationRunRows,
       recommendationItemRows,
+      companyTierRunRows,
+      companyTierAssessmentRows,
+      companyTierItemRows,
     ] = await Promise.all([
       this.sql<Row[]>`SELECT * FROM position_analysis_policy WHERE singleton_id = 1`,
       this.sql<Row[]>`SELECT * FROM company_preferences`,
@@ -126,6 +132,9 @@ export class SqlPositionRepository extends MemoryPositionRepository {
       this.sql<Row[]>`SELECT * FROM position_analysis_run_items ORDER BY selection_order`,
       this.sql<Row[]>`SELECT * FROM position_recommendation_runs`,
       this.sql<Row[]>`SELECT * FROM position_recommendation_items ORDER BY rank_number`,
+      this.sql<Row[]>`SELECT * FROM company_tier_assessment_runs`,
+      this.sql<Row[]>`SELECT * FROM company_tier_assessments ORDER BY assessed_at`,
+      this.sql<Row[]>`SELECT * FROM company_tier_assessment_run_items ORDER BY selection_order`,
     ]);
 
     const positions = new Map<string, StoredPosition>();
@@ -256,6 +265,8 @@ export class SqlPositionRepository extends MemoryPositionRepository {
               analysisStatus: item.analysis_status,
               selectionReason: item.selection_reason,
               companyTier: Number(item.company_tier),
+              companyTierSource: item.company_tier_source,
+              companyTierAssessmentId: item.company_tier_assessment_id ?? null,
               resultStatus: item.result_status,
               analysisId: item.analysis_id ?? null,
               failureCode: item.failure_code ?? null,
@@ -267,15 +278,77 @@ export class SqlPositionRepository extends MemoryPositionRepository {
         analyzedNowCount: Number(row.analyzed_now_count),
       });
     }
+    const companyTierItemsByRun = new Map<string, Row[]>();
+    for (const row of companyTierItemRows) {
+      const values = companyTierItemsByRun.get(row.company_tier_run_id) ?? [];
+      values.push(row);
+      companyTierItemsByRun.set(row.company_tier_run_id, values);
+    }
+    const companyTierRuns = new Map<string, StoredCompanyTierRun>();
+    for (const row of companyTierRunRows) {
+      const items = companyTierItemsByRun.get(row.company_tier_run_id) ?? [];
+      companyTierRuns.set(row.company_tier_run_id, {
+        companyTierRunId: row.company_tier_run_id,
+        collectionRunId: row.collection_run_id,
+        candidateContextVersion: row.candidate_context_version,
+        contractVersion: Number(row.contract_version),
+        status: row.status,
+        assessedNowCount: Number(row.assessed_now_count),
+        createdAt: iso(row.created_at),
+        completedAt: row.completed_at ? iso(row.completed_at) : null,
+        items: new Map(
+          items.map((item) => [
+            item.company_key,
+            {
+              companyKey: item.company_key,
+              companyName: item.company_name,
+              selectionOrder: Number(item.selection_order),
+              assessmentStatus: item.assessment_status,
+              selectionReason: item.selection_reason,
+              priorTier: item.prior_tier === null ? null : Number(item.prior_tier),
+              activePositionCount: Number(item.active_position_count),
+              resultStatus: item.result_status,
+              companyTierAssessmentId: item.company_tier_assessment_id ?? null,
+              failureCode: item.failure_code ?? null,
+              attemptCount: Number(item.attempt_count),
+              completedAt: item.completed_at ? iso(item.completed_at) : null,
+            },
+          ]),
+        ),
+      });
+    }
+    const companyTierAssessments = new Map<string, StoredCompanyTierAssessment>(
+      companyTierAssessmentRows.map((row) => [
+        row.company_tier_assessment_id,
+        {
+          companyTierAssessmentId: row.company_tier_assessment_id,
+          companyKey: row.company_key,
+          companyName: row.company_name,
+          candidateContextVersion: row.candidate_context_version,
+          contractVersion: Number(row.contract_version),
+          createdByCompanyTierRunId: row.created_by_company_tier_run_id ?? null,
+          recommendedTier: Number(row.recommended_tier),
+          confidence: row.confidence,
+          reason: row.reason,
+          signals: json(row.signals_json),
+          evidence: json(row.evidence_json),
+          assumptions: json(row.assumptions_json),
+          assessedAt: iso(row.assessed_at),
+          validUntil: date(row.valid_until),
+        },
+      ]),
+    );
     const policy = policyRows[0]
       ? {
-          schemaVersion: 1 as const,
+          schemaVersion: 2 as const,
           candidateContextVersion: policyRows[0].candidate_context_version,
           dailyAnalysisLimit: Number(policyRows[0].daily_analysis_limit),
           prioritySlots: Number(policyRows[0].priority_slots),
           agingSlots: Number(policyRows[0].aging_slots),
           staleAfterDays: Number(policyRows[0].stale_after_days),
           defaultCompanyTier: Number(policyRows[0].default_company_tier),
+          dailyCompanyTierLimit: Number(policyRows[0].daily_company_tier_limit),
+          companyTierStaleAfterDays: Number(policyRows[0].company_tier_stale_after_days),
         }
       : undefined;
     const state: PositionRepositoryState = {
@@ -295,8 +368,11 @@ export class SqlPositionRepository extends MemoryPositionRepository {
       positions,
       collections,
       analysisRuns,
+      companyTierRuns,
+      companyTierAssessments,
       recommendationResponses: new Map(),
       recommendationAnalysisIds: new Map(),
+      recommendationTierSources: new Map(),
     };
     const recommendationItemsByRun = new Map<string, Row[]>();
     for (const row of recommendationItemRows) {
@@ -367,6 +443,25 @@ export class SqlPositionRepository extends MemoryPositionRepository {
           }),
         ),
       );
+      state.recommendationTierSources.set(
+        row.analysis_run_id,
+        new Map(
+          items.map((item) => {
+            const position = byPositionId.get(item.position_id)!;
+            const analysis = analysesById.get(item.analysis_id)!;
+            const version = position.versions.find(
+              (entry) => entry.contentHash === analysis.contentHash,
+            )!;
+            return [
+              version.posting.id,
+              {
+                source: item.company_tier_source,
+                assessmentId: item.company_tier_assessment_id ?? null,
+              } satisfies StoredTierProvenance,
+            ];
+          }),
+        ),
+      );
     }
     this.state = state;
   }
@@ -378,16 +473,21 @@ export class SqlPositionRepository extends MemoryPositionRepository {
         await sql`
           INSERT INTO position_analysis_policy
             (singleton_id, candidate_context_version, daily_analysis_limit, priority_slots,
-             aging_slots, stale_after_days, default_company_tier, updated_at)
+             aging_slots, stale_after_days, default_company_tier, daily_company_tier_limit,
+             company_tier_stale_after_days, updated_at)
           VALUES (1, ${policy.candidateContextVersion}, ${policy.dailyAnalysisLimit},
                   ${policy.prioritySlots}, ${policy.agingSlots}, ${policy.staleAfterDays},
-                  ${policy.defaultCompanyTier}, CURRENT_TIMESTAMP(3))
+                  ${policy.defaultCompanyTier}, ${policy.dailyCompanyTierLimit},
+                  ${policy.companyTierStaleAfterDays}, CURRENT_TIMESTAMP(3))
           ON DUPLICATE KEY UPDATE
             candidate_context_version = VALUES(candidate_context_version),
             daily_analysis_limit = VALUES(daily_analysis_limit),
             priority_slots = VALUES(priority_slots), aging_slots = VALUES(aging_slots),
             stale_after_days = VALUES(stale_after_days),
-            default_company_tier = VALUES(default_company_tier), updated_at = VALUES(updated_at)
+            default_company_tier = VALUES(default_company_tier),
+            daily_company_tier_limit = VALUES(daily_company_tier_limit),
+            company_tier_stale_after_days = VALUES(company_tier_stale_after_days),
+            updated_at = VALUES(updated_at)
         `;
       }
       for (const preference of state.preferences.values()) {
@@ -470,6 +570,54 @@ export class SqlPositionRepository extends MemoryPositionRepository {
           `;
         }
       }
+      for (const run of state.companyTierRuns.values()) {
+        await sql`
+          INSERT INTO company_tier_assessment_runs
+            (company_tier_run_id, collection_run_id, candidate_context_version, contract_version,
+             status, assessed_now_count, created_at, completed_at)
+          VALUES (${run.companyTierRunId}, ${run.collectionRunId}, ${run.candidateContextVersion},
+                  ${run.contractVersion}, ${run.status}, ${run.assessedNowCount},
+                  ${datetime(run.createdAt)}, ${datetime(run.completedAt)})
+          ON DUPLICATE KEY UPDATE status = VALUES(status),
+            assessed_now_count = VALUES(assessed_now_count), completed_at = VALUES(completed_at)
+        `;
+      }
+      for (const assessment of state.companyTierAssessments.values()) {
+        await sql`
+          INSERT IGNORE INTO company_tier_assessments
+            (company_tier_assessment_id, company_key, company_name, candidate_context_version,
+             contract_version, created_by_company_tier_run_id, recommended_tier, confidence,
+             reason, signals_json, evidence_json, assumptions_json, assessed_at, valid_until)
+          VALUES (${assessment.companyTierAssessmentId}, ${assessment.companyKey},
+                  ${assessment.companyName}, ${assessment.candidateContextVersion},
+                  ${assessment.contractVersion}, ${assessment.createdByCompanyTierRunId},
+                  ${assessment.recommendedTier}, ${assessment.confidence}, ${assessment.reason},
+                  ${JSON.stringify(assessment.signals)}, ${JSON.stringify(assessment.evidence)},
+                  ${JSON.stringify(assessment.assumptions)}, ${datetime(assessment.assessedAt)},
+                  ${assessment.validUntil})
+        `;
+      }
+      for (const run of state.companyTierRuns.values()) {
+        for (const item of [...run.items.values()].sort(
+          (left, right) => left.selectionOrder - right.selectionOrder,
+        )) {
+          await sql`
+            INSERT INTO company_tier_assessment_run_items
+              (company_tier_run_id, company_key, company_name, selection_order, assessment_status,
+               selection_reason, prior_tier, active_position_count, result_status,
+               company_tier_assessment_id, failure_code, attempt_count, completed_at)
+            VALUES (${run.companyTierRunId}, ${item.companyKey}, ${item.companyName},
+                    ${item.selectionOrder}, ${item.assessmentStatus}, ${item.selectionReason},
+                    ${item.priorTier}, ${item.activePositionCount}, ${item.resultStatus},
+                    ${item.companyTierAssessmentId}, ${item.failureCode}, ${item.attemptCount},
+                    ${datetime(item.completedAt)})
+            ON DUPLICATE KEY UPDATE result_status = VALUES(result_status),
+              company_tier_assessment_id = VALUES(company_tier_assessment_id),
+              failure_code = VALUES(failure_code), attempt_count = VALUES(attempt_count),
+              completed_at = VALUES(completed_at)
+          `;
+        }
+      }
       for (const run of state.analysisRuns.values()) {
         await sql`
           INSERT INTO position_analysis_runs
@@ -512,13 +660,17 @@ export class SqlPositionRepository extends MemoryPositionRepository {
           await sql`
             INSERT INTO position_analysis_run_items
               (analysis_run_id, position_id, position_version_id, selection_order,
-               analysis_status, selection_reason, company_tier,
+               analysis_status, selection_reason, company_tier, company_tier_source,
+               company_tier_assessment_id,
                result_status, analysis_id, failure_code, attempt_count, completed_at)
             VALUES (${run.analysisRunId}, ${item.positionId}, ${item.positionVersionId},
                     ${item.selectionOrder}, ${item.analysisStatus}, ${item.selectionReason},
-                    ${item.companyTier}, ${item.resultStatus}, ${item.analysisId},
+                    ${item.companyTier}, ${item.companyTierSource},
+                    ${item.companyTierAssessmentId}, ${item.resultStatus}, ${item.analysisId},
                     ${item.failureCode}, ${item.attemptCount}, ${datetime(item.completedAt)})
             ON DUPLICATE KEY UPDATE result_status = VALUES(result_status),
+              company_tier_source = VALUES(company_tier_source),
+              company_tier_assessment_id = VALUES(company_tier_assessment_id),
               analysis_id = VALUES(analysis_id), failure_code = VALUES(failure_code),
               attempt_count = VALUES(attempt_count), completed_at = VALUES(completed_at)
           `;
@@ -527,6 +679,7 @@ export class SqlPositionRepository extends MemoryPositionRepository {
       for (const raw of state.recommendationResponses.values()) {
         const response = recommendationResponseSchema.parse(raw);
         const analysisIds = state.recommendationAnalysisIds.get(response.analysisRunId)!;
+        const tierSources = state.recommendationTierSources.get(response.analysisRunId);
         await sql`
           INSERT IGNORE INTO position_recommendation_runs
             (recommendation_run_id, analysis_run_id, collection_run_id, generated_at,
@@ -544,11 +697,17 @@ export class SqlPositionRepository extends MemoryPositionRepository {
             (entry) => entry.candidateId === item.candidateId,
           )!;
           const analysisId = analysisIds.get(item.candidateId)!;
+          const tierSource = tierSources?.get(item.candidateId) ?? {
+            source: "default" as const,
+            assessmentId: null,
+          };
           await sql`
             INSERT IGNORE INTO position_recommendation_items
-              (recommendation_run_id, position_id, analysis_id, rank_number, decision, company_tier)
+              (recommendation_run_id, position_id, analysis_id, rank_number, decision,
+               company_tier, company_tier_source, company_tier_assessment_id)
             VALUES (${response.recommendationRunId}, ${position.positionId}, ${analysisId},
-                    ${index + 1}, ${item.decision}, ${item.companyTier})
+                    ${index + 1}, ${item.decision}, ${item.companyTier},
+                    ${tierSource.source}, ${tierSource.assessmentId})
           `;
         }
       }
