@@ -90,43 +90,13 @@ if (import.meta.main) {
 - 인자 규격은 `pattern` 으로 적는다. 검사 코드를 본문에 두지 않는다.
 - `--help` 는 `runCli` 가 spec 으로 만든다. 도움말 문자열을 따로 쓰지 않는다.
 
-### 기존 CLI 리팩토링 범위
+### CLI 계약
 
-기존 명령은 옵션 중복 처리, 도움말, 출력과 종료 코드가 서로 다르다.
-`runCli`로 바꿀 때 이 계약이 달라지는 명령은 기존 진입점을 유지한다.
-파일별 작업은 subprocess 회귀 테스트, 독립 계획 검토, 구현, 전체 관련 테스트 순으로 진행한다.
-
-| 파일                                                                                                     | 변경 범위                                                                              |
-| -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `scripts/lib/cli.ts`                                                                                     | 기존 `parseArgs`와 `runCli`를 보존하고, 여러 명령이 사용하는 첫 옵션값 조회만 공유한다 |
-| `scripts/position-recommender/validate_recommendation.ts`                                                | 파일을 읽고 후보풀과 대조하는 함수가 검사 결과를 반환하도록 분리한다                   |
-| `scripts/position-recommender/render_candidate_preview.ts`                                               | 같은 파일 검사 함수를 사용하고 HTML 파일 생성과 CLI 출력을 분리한다                    |
-| `scripts/position-recommender/render_recommendation.ts`                                                  | 파일 생성 함수를 명시적인 입력으로 호출하고 기존 순차 옵션 파싱을 보존한다             |
-| `scripts/interview-question-sources/cli.ts`, `scripts/study-topic-recommender/manage_reading_sources.ts` | 명령 함수에 argv를 전달하고 반복 옵션 조회를 공유한다                                  |
-| `scripts/study-topic-recommender/validate_outputs.ts`                                                    | 검증 함수에 실행 경로를 전달하고 결과 JSON을 반환한다                                  |
-| `scripts/study-topic-recommender/morning_reading_cli.ts`, `scripts/interview-drill/drill-engine.ts`      | 옵션 조회만 공유하고 실행·오류 계약을 보존한다                                         |
-| `scripts/lib/cli-contract.test.ts`                                                                       | 실제 subprocess로 출력 채널, 종료 코드, 인자와 import 동작을 고정한다                  |
-
-`firstOptionValue`는 첫 번째 같은 이름 바로 다음 토큰을 반환한다.
-다음 토큰이 옵션처럼 보여도 값으로 취급하고 모르는 옵션은 검사하지 않는다.
-이는 기존 명령의 호환 동작이며, 새 명령의 엄격한 옵션 검사는 `parseArgs`가 담당한다.
-
-공통화하지 않는 동작은 다음과 같다.
-
-| 대상                                                                    | 유지 이유                                                                  |
-| ----------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| 기존 `runCli` 사용처 6개                                                | 이미 옵션 스펙과 핵심 함수 호출로 분리되어 있다                            |
-| `collect_live_postings.ts`                                              | 옵션 별칭, 소스별 실패 허용 개수와 필수 개인 제외 설정 검증을 보존한다     |
-| `career-workspace/cli.ts`, `career-storage-s3.ts`                       | 원격 오류 JSON, 바이너리 출력과 비공개 동기화 계약이 다르다                |
-| `morning_reading_cli.ts`                                                | API 오류의 비공개 정보 제거, 429 정보와 파일모드 자동 전환 금지를 보존한다 |
-| `application_question_schema.ts`, `question-bank-collector/validate.ts` | `passed` 없는 성공 JSON과 기존 오류·도움말 동작을 보존한다                 |
-
-`interview-question-sources/cli.ts`, `manage_reading_sources.ts`, `validate_outputs.ts`는
-실행을 의존하는 importer가 없어 `import.meta.main`에서만 실행한다.
-직접 실행하는 명령은 기존 출력과 종료 코드를 유지하며, import는 명령을 실행하거나 출력·종료하지 않는다.
-
-기본값과 보조 경로는 이번 작업에서 변경하지 않는다.
-개인 제외 설정 오류, 학습자료 API 실패와 산출물 공개 경계 위반은 기존처럼 실행을 중단한다.
+새 스크립트는 `runCli`를 쓴다.
+옵션 중복 처리, 도움말, 출력과 종료 코드 계약이 다른 기존 명령은 호환을 위해 기존 진입점을 유지한다.
+`firstOptionValue`는 여러 기존 명령이 공유하는 첫 옵션값 조회이며,
+같은 이름 뒤 토큰을 옵션처럼 보여도 값으로 취급하는 기존 호환 동작을 그대로 옮긴 것이다.
+새 명령의 엄격한 옵션 검사는 `parseArgs`가 담당한다.
 
 수정할 때는 Java 서비스처럼 입력을 받아 결과를 돌려주는 핵심 함수부터 읽는다.
 파일 끝의 CLI 진입점은 컨트롤러처럼 인자를 전달하고 결과를 출력한다.
@@ -297,7 +267,7 @@ Wanted adapter는 개발 전체 직군 `518`을 기술 상수로 사용하고, �
 `scripts/position-recommender/` 루트에는 수집, 추천 원문 대조, 회사 조사 병합과 렌더의 CLI 진입점만 둔다.
 `live-postings/`는 외부 소스 어댑터와 수집 정책, `recommendation/`은 추천 계약,
 `company-research/`는 재사용할 회사 사실의 계약과 병합, `feedback/`은 제외 기준,
-`candidate-analysis/`는 Backend가 반환한 큐와 모델 분석 갱신의 client 계약,
+`recommendation-api/`는 Backend가 반환한 큐와 모델 분석 갱신의 client 계약,
 `render/`는 HTML 생성과 검사를 구현한다.
 어댑터는 원문 응답을 공통 `LivePosting` 형태로 바꾼다.
 후보풀 정책은 개별 공고 URL, 활성 상태, 마감일, 고용 형태, 역할과 중복을 결정적으로 검사한다.
@@ -326,7 +296,7 @@ Wanted adapter는 개발 전체 직군 `518`을 기술 상수로 사용하고, �
 
 수집 결과는 실행별 임시 후보풀에 저장한다.
 모델은 분석 큐에 존재하는 공고만 판단하고 전체 후보풀의 순위를 직접 만들지 않는다.
-`candidate-analysis/schema.ts`는 분석 갱신과 저장 상태를 검증하고,
+`recommendation-api/client.ts`는 `services/recommendation-api/position/schema.ts`로 분석 갱신과 저장 상태를 검증하고,
 `recommendation/schema.ts`와 `validate_recommendation.ts`는 유효한 분석, 분석 대기 목록,
 수집 진단과 후보풀 원문이 일치하는지 검사한다.
 HTML은 검증된 추천 JSON에서 파생하며 렌더, 검사와 임시 파일 정리는 최종 명령 한 번으로 끝낸다.
@@ -334,17 +304,16 @@ HTML은 검증된 추천 JSON에서 파생하며 렌더, 검사와 임시 파일
 
 ## 추천 상태 Backend
 
-`services/recommendation-api/`는 포지션과 학습자료의 장기 상태를 제공하는 작은 Bun HTTP Backend다.
+`services/recommendation-api/`는 포지션의 장기 상태를 제공하는 작은 Bun HTTP Backend다.
 서비스 코드, HTTP 계약과 SQL migration은 `career-os`가 소유한다.
 배포 설정, database와 계정 생성, network와 backup은 홈서버 인프라 저장소가 소유한다.
+학습자료 API는 아직 구현되지 않았다. Backend 스택 전환 뒤로 계획을 보류했다.
 
 | 경로                                              | 책임                                                         |
 | ------------------------------------------------- | ------------------------------------------------------------ |
 | `services/recommendation-api/server.ts`           | `Bun.serve` 시작, health·인증 확인, 공통 timeout과 오류 응답 |
 | `services/recommendation-api/routes/positions.ts` | 수집 실행, 회사 tier 반영, 공고 분석 실행, 분석 반영과 추천 실행 endpoint |
-| `services/recommendation-api/routes/study.ts`     | 기존 `/api/study/v1` 계약 endpoint                           |
 | `services/recommendation-api/position/`           | 회사 정책, 공고 버전, 분석 상태와 추천 조립                  |
-| `services/recommendation-api/study/`              | source, cursor, material, 개인 상태와 추천 이력              |
 | `services/recommendation-api/db/`                 | `Bun.SQL` 연결, transaction helper와 repository              |
 | `services/recommendation-api/migrations/`         | 순서가 있는 SQL migration과 적용 기록                        |
 
@@ -415,7 +384,6 @@ CLI 진입점은 다음 셋만 스킬의 `scripts/` 바로 아래에 둔다.
 
 공고별 문서는 `applications/<company>/<position>/`에 세 층으로 둔다.
 최상위에는 사용자가 직접 여는 `application-package.html`과 제출 PDF만 두고, 기준 원본은 `evidence/`에, 내부 검증 자료는 `review/`에 둔다.
-기준 원본은 `evidence/`의 `posting.md`, `candidate-interview.md`, `fit.md`, `strategy.md`, `status.md`, `resume-draft.md`와 `interview-questions.json`이다.
 포지션별 질문은 공고 책임, 근거 방어와 경험 공백에서 파생한다.
 화면 구성은 [`data-schema.md`](data-schema.md#검토-화면)의 「검토 화면」이 소유한다.
 생성기와 검증기는 이 세 층의 경로를 계약으로 사용한다.
