@@ -8,6 +8,13 @@
 새 평가를 반영한 회사 tier로 공고 분석 큐를 만든다.
 
 **범위 외**: `position-recommender` 스킬 지시, 임시 JSON 생성과 HTML 표시는 Phase 03이 담당한다.
+API client에서 회사 tier 결과를 보내는 `saveCompanyTierResults`도 Phase 03이 담당한다.
+다만 응답 계약이 깨지는 `saveCollection`과 새 endpoint를 부르는 `createPositionAnalysisRun`은 이 phase가 함께 고친다.
+그래야 이 phase의 커밋만으로도 저장소가 통과 상태로 남는다.
+
+**Phase 03을 마치기 전에는 cron을 돌리지 않는다.**
+이 phase까지만 배포하면 회사 tier 큐가 비지 않은 채로 남아 추천이 만들어지지 않는다.
+운영 DB에 `company_preferences`가 0행이고 회사가 36곳이라 첫 실행의 큐는 반드시 비지 않는다.
 
 ## 컨텍스트
 
@@ -87,7 +94,44 @@ Backend는 수신 시각과 정책 만료 기한, 각 근거의 만료일 중 �
 `position_recommendation_items`에 tier, 출처와 모델 평가 ID를 스냅샷한다.
 이전 공고 분석을 재사용해도 추천 run이 사용한 현재 tier 출처를 알 수 있어야 한다.
 
-### 6. 정상·실패·빈 큐·동시 실행을 테스트한다
+### 6. API client를 새 응답 계약에 맞춘다
+
+`scripts/position-recommender/recommendation-api/client.ts:118`의 `saveCollection`은
+지금 `analysisQueueResponseSchema`로 응답을 파싱한다.
+작업 항목 2가 그 endpoint의 응답을 바꾸므로 같은 phase에서 함께 고치지 않으면 런타임에서 깨진다.
+`bunx tsc --noEmit`은 `body`가 `unknown`이라 이 어긋남을 잡지 못한다.
+
+- `saveCollection`이 `positionPreparationResponseSchema`로 파싱하게 바꾼다.
+- `createPositionAnalysisRun(collectionRunId, idempotencyKey)`를 추가한다.
+- 기존 재시도 3회, timeout, 4xx·5xx 분기, Bearer token과 멱등 키 처리를 재사용한다.
+
+`prepare_position_analysis.ts`는 수집 응답의 회사 tier 큐를 보고 갈라진다.
+
+| 회사 tier 큐 | 이 phase의 동작 |
+| --- | --- |
+| 비어 있음 | 바로 `createPositionAnalysisRun`을 부르고 분석 큐를 `--output`에 쓴다 |
+| 비어 있지 않음 | 수집 응답을 그대로 `--output`에 쓰고 회사 tier 평가가 필요하다는 상태로 끝낸다 |
+
+`createPositionAnalysisRun`을 부르지 않고 끝내므로 작업 항목 4의 `409 COMPANY_TIER_RUN_PENDING`에 걸리지 않는다.
+출력 파일 이름을 `company-tier-queue.json`으로 나누는 것과 스킬 지시 변경은 Phase 03이 한다.
+
+현재 CLI는 `prepare_position_analysis.ts:53`에서 `queue.analysisRunId`를 그대로 돌려주고
+`queue.summary`를 펼쳐 담는다.
+회사 tier 큐가 있는 경로에서는 `analysisRunId`를 `null`로 두고 `summary`의 집계 필드를 펼치지 않는다.
+필드를 지우지 않고 `null`로 남기므로 결과 JSON의 열쇠 목록은 두 경로에서 같다.
+
+### 7. 흐름 문서와 구조 문서를 이 변경에 맞춘다
+
+두 문서가 아직 「수집 저장에서 분석 큐 반환까지 한 단계」로 적혀 있어 이 phase의 결과와 반대다.
+
+| 문서 | 고칠 곳 |
+| --- | --- |
+| `docs/flow.md` | 「포지션 추천」의 5단계부터 7단계. 수집 저장, 회사 tier 반영, 공고 분석 run 생성 세 단계로 다시 쓴다 |
+| `docs/code-architecture.md` | 「추천 상태 Backend」의 `routes/positions.ts` 책임과 transaction 경계 문단에 새 endpoint 둘을 반영한다 |
+
+`docs/data-schema.md`의 「회사 tier 평가 이력」과 ADR-120은 이미 이 계획에 맞게 적혀 있으므로 고치지 않는다.
+
+### 8. 정상·실패·빈 큐·동시 실행을 테스트한다
 
 `position/service.test.ts`, `position/sql-repository.test.ts`와 `app.test.ts`에서 다음을 검증한다.
 
@@ -105,8 +149,12 @@ Backend는 수신 시각과 정책 만료 기한, 각 근거의 만료일 중 �
 bun test career-os/services/recommendation-api/position \
   career-os/services/recommendation-api/routes \
   career-os/services/recommendation-api/app.test.ts
+bun test career-os/scripts/position-recommender
 bunx tsc --noEmit
 ```
+
+`bun test career-os/scripts/position-recommender`가 client의 응답 파싱 변경을 검증한다.
+이것이 없으면 Backend 쪽 테스트만 통과하고 client는 깨진 채로 남는다.
 
 ## Critical Files
 
@@ -116,6 +164,10 @@ bunx tsc --noEmit
 | `services/recommendation-api/position/service.ts` | 수정 |
 | `services/recommendation-api/position/queue.ts` | 수정 |
 | `services/recommendation-api/routes/positions.ts` | 수정 |
+| `scripts/position-recommender/recommendation-api/client.ts` | 수정 |
+| `scripts/position-recommender/prepare_position_analysis.ts` | 수정 |
+| `docs/flow.md` | 수정 |
+| `docs/code-architecture.md` | 수정 |
 | `services/recommendation-api/position/service.test.ts` | 수정 |
 | `services/recommendation-api/position/sql-repository.test.ts` | 수정 |
 | `services/recommendation-api/app.test.ts` | 수정 |

@@ -1,6 +1,6 @@
 # Phase 03. `position-recommender` 연동과 운영 검증
 
-**Execution profile**: standard
+**Execution profile**: deep
 
 ## 목표
 
@@ -24,21 +24,21 @@ NestJS와 Drizzle로의 이전은 실제 검증 후 별도 계획으로 다룬�
 ## 의도 메모
 
 - 회사 tier 평가는 한 회사에 한 번씩 수행하고 유효기간 안에는 다시 분석하지 않는다.
-- Tier 3는 제외이 아니다. 오래 기다린 공고 보장 슬롯은 유지한다.
+- Tier 3는 제외가 아니다. 오래 기다린 공고 보장 슬롯은 유지한다.
 - 사용자가 궁금해하지 않는 회사는 모델이 자동 숨기지 않고 기존 `company_preferences` 제외로만 처리한다.
 - 공개 회사 사실은 `state/company-research/`에 계속 재사용하고, 후보자 기준의 tier 판정만 MySQL에 저장한다.
 - 최종 답변은 평가 실패 건수와 기본 tier 적용 건수를 숨기지 않는다.
 
 ## 작업 항목
 
-### 1. API client에 2단계 호출을 추가한다
+### 1. API client에 회사 tier 결과 전송을 추가한다
 
 `scripts/position-recommender/recommendation-api/client.ts`에 다음 method를 추가한다.
 
 - `saveCompanyTierResults(companyTierRunId, body, idempotencyKey)`
-- `createPositionAnalysisRun(collectionRunId, idempotencyKey)`
 
-`saveCollection`은 `PositionPreparationResponse`를 반환하도록 바꾼다.
+`saveCollection`의 응답 계약 변경과 `createPositionAnalysisRun`은 Phase 02가 이미 했다.
+여기서는 그 둘을 다시 만들지 말고 회사 tier 결과 전송만 더한다.
 기존 재시도 3회, timeout, 4xx·5xx 분기, Bearer token과 멱등 키 처리를 재사용한다.
 
 ### 2. 회사 tier 임시 계약과 CLI를 추가한다
@@ -86,23 +86,29 @@ HTML의 공고 항목에 `Tier 1 · 모델 평가`, `Tier 2 · 사람 override`,
 - 평가 전체 실패는 `partial`로 남고 기본 tier로 공고 큐를 만든다.
 - 소스 HTTP 429와 회사 tier 평가 실패를 최종 HTML에서 서로 다른 경고로 표시한다.
 
-`quick_validate.py`, 관련 TypeScript 테스트, 포맷·타입 검사와 문서 검사를 모두 통과한 뒤
-`index.json`의 `status`를 `completed`, `current_phase`를 3으로 바꾼다.
-
 ## 검증
 
 ```bash
-python3 ~/.claude/skills/skill-creator/scripts/quick_validate.py \
-  career-os/.claude/skills/position-recommender
 bun test career-os/scripts/position-recommender \
   career-os/services/recommendation-api
 bun run format:position-recommender:check
 bunx tsc --noEmit
-~/.claude/scripts/korean-style-check.sh \
+python3 ~/.claude/scripts/korean-style-check.py \
   career-os/.claude/skills/position-recommender/SKILL.md
 python3 ~/.claude/scripts/check-readability.py \
   career-os/.claude/skills/position-recommender/SKILL.md
 ```
+
+스킬 구조 검증은 경로를 직접 부르지 않는다.
+`skill-creator`는 plugin으로 설치돼 있어 `quick_validate.py`의 실제 경로에 갱신마다 바뀌는 해시가 들어간다.
+`skill-creator` 스킬을 호출해 `career-os/.claude/skills/position-recommender`를 검증한다.
+
+`~/.claude/scripts/korean-style-check.sh`는 없다.
+위 두 `.py`가 실재하는 진입점이고, 둘을 함께 돌리려면 `korean-check` 스킬의 `scripts/check.sh`를 쓴다.
+
+## 계획 마감
+
+위 검증을 모두 통과한 뒤 `index.json`의 `status`를 `completed`, `current_phase`를 3으로 바꾼다.
 
 ## Critical Files
 
