@@ -5,11 +5,13 @@ import {
   analysisQueueResponseSchema,
   analysisResultsResponseSchema,
   companyPreferenceSchema,
+  companyTierResultsResponseSchema,
   positionPreparationResponseSchema,
   recommendationResponseSchema,
   type AnalysisQueueResponse,
   type AnalysisResultsResponse,
   type CompanyPreference,
+  type CompanyTierResultsResponse,
   type PositionPreparationResponse,
   type RecommendationResponse,
 } from "../../../services/recommendation-api/position/schema.ts";
@@ -137,6 +139,20 @@ export class RecommendationApiClient {
       { schemaVersion: 1 },
       idempotencyKey,
       analysisQueueResponseSchema,
+    );
+  }
+
+  saveCompanyTierResults(
+    companyTierRunId: string,
+    body: unknown,
+    idempotencyKey: string,
+  ): Promise<CompanyTierResultsResponse> {
+    return this.request(
+      "POST",
+      `/api/positions/v1/company-tier-runs/${encodeURIComponent(companyTierRunId)}/results`,
+      body,
+      idempotencyKey,
+      companyTierResultsResponseSchema,
     );
   }
 

@@ -39,7 +39,7 @@ bun career-os/scripts/career-workspace/cli.ts skill begin position-recommender -
 `CAREER_RECOMMENDATION_API_TOKEN_FILE` 중 하나가 필요하다.
 준비 명령이나 API 인증 확인이 실패하면 추천 실행을 중단하고 반환된 복구 정보를 따른다.
 
-## 공고 수집과 분석 큐 준비
+## 공고 수집과 1단계 큐 준비
 
 ```bash
 bun career-os/scripts/position-recommender/collect_live_postings.ts \
@@ -47,28 +47,55 @@ bun career-os/scripts/position-recommender/collect_live_postings.ts \
 
 bun career-os/scripts/position-recommender/prepare_position_analysis.ts \
   --candidates <RUN_DIR>/posting-candidates.json \
-  --output <RUN_DIR>/analysis-queue.json \
+  --company-tier-queue-output <RUN_DIR>/company-tier-queue.json \
+  --analysis-queue-output <RUN_DIR>/analysis-queue.json \
   --contract-version 1
 ```
 
 개인 제외 규칙은 외부 수집 결과가 Backend와 모델에 전달되기 전에 적용한다.
 준비 명령은 전체 후보풀을 Backend에 한 번 전달하지만 stdout에는 후보 본문을 출력하지 않는다.
-`analysis-queue.json`에는 Backend가 회사 tier, 분석 상태와 대기 시간으로 고른 공고만 상세 본문과 함께 들어 있다.
+이 명령은 평가할 회사가 있으면 `<RUN_DIR>/company-tier-queue.json`만 남기고 공고 분석 큐는 아직 만들지 않는다.
+평가할 회사가 없으면 회사 tier 평가를 생략하고 바로 공고 분석 run을 요청해 `<RUN_DIR>/analysis-queue.json`을 남긴다.
+어느 파일이 생겼는지로 다음 절을 회사 tier 평가부터 시작할지 공고 분석부터 시작할지 정한다.
 
-## 선택된 공고 분석
+## 회사 tier 평가
 
-큐가 비어 있으면 모델 분석과 회사 조사를 모두 생략한다.
-큐가 있으면 `brain-search`로 현재 역할 기준과 이직 우선순위를 확인하고 큐에 든 공고만 분석한다.
-구체적인 프로젝트 근거는 읽기 전용인 `sources/fos-study/task/`에서 확인한다.
+`<RUN_DIR>/company-tier-queue.json`이 없으면 이 절 전체를 생략하고 바로 「선택된 공고 분석」으로 넘어간다.
 
-`state/company-research/`에서는 선택된 공고 회사의 유효한 사실만 읽는다.
-추천 판단에 영향을 주지만 없거나 만료된 공개 사실만 조사한다.
+파일이 있으면 큐에 선택된 회사만 평가한다.
+`state/company-research/`에서 그 회사의 유효한 공개 사실만 읽고,
+추천 판단에 영향을 주지만 없거나 만료된 사실만 새로 조사한다.
 새 사실과 추론이 있으면 `<RUN_DIR>/company-research-updates.json`을 만든 뒤 다음 명령으로 합친다.
 
 ```bash
 bun career-os/scripts/position-recommender/company_research.ts \
   --input <RUN_DIR>/company-research-updates.json
 ```
+
+각 회사마다 성장 범위, 보상 상승, 팀 성장 세 기회 축을 평가한다.
+근거가 없는 축은 지어내지 않고 `unknown`으로 남기며, 그 위에서 종합 tier 1부터 3과 신뢰도를 정한다.
+근거 URL은 HTTPS만 쓰고 확인 시각을 함께 남긴다.
+평가하지 못한 회사는 `posting_body_missing` 대신 `research_unavailable`, `model_unavailable`,
+`contract_rejected`, `internal_error` 중 하나의 사유로 `failures`에 넣어 전체 run을 끝낼 수 있게 한다.
+`<RUN_DIR>/company-tier-updates.json`에 `results`와 `failures`를 한 번씩 나눠 담는다.
+
+```bash
+bun career-os/scripts/position-recommender/complete_company_tier_assessment.ts \
+  --queue <RUN_DIR>/company-tier-queue.json \
+  --input <RUN_DIR>/company-tier-updates.json \
+  --analysis-queue-output <RUN_DIR>/analysis-queue.json
+```
+
+이 명령 하나가 평가 결과를 Backend에 반영하고, run이 `completed` 또는 `partial`이면
+이어서 공고 분석 run을 요청해 `<RUN_DIR>/analysis-queue.json`을 남긴다.
+stdout에는 회사명, 후보자 기준, 평가 이유를 출력하지 않고 상태별 건수와 임시 파일 경로만 출력한다.
+회사 tier는 `company_preferences`에 쓰지 않으며, 반영 전에 사용자 승인을 기다리지 않는다.
+
+## 선택된 공고 분석
+
+`<RUN_DIR>/analysis-queue.json`의 큐가 비어 있으면 모델 분석을 생략한다.
+큐가 있으면 `brain-search`로 현재 역할 기준과 이직 우선순위를 확인하고 큐에 든 공고만 분석한다.
+구체적인 프로젝트 근거는 읽기 전용인 `sources/fos-study/task/`에서 확인한다.
 
 각 큐 항목에 역할 적합도 40점, 역할 범위와 성장 여지 25점, 회사 기회 20점,
 제약이 적은 정도 15점을 평가한다.
@@ -99,10 +126,15 @@ bun career-os/scripts/position-recommender/finalize_position_recommendation.ts \
 
 HTML은 추천, 분석한 활성 공고 순위, 분석 대기와 수집 경고를 구분한다.
 수집 경고에는 소스명, `partial` 또는 `failed` 상태와 실패 건수만 표시한다.
+공고 항목마다 `Tier 1 · 모델 평가`, `Tier 2 · 사람 override`, `Tier 3 · 기본값`처럼
+회사 tier 값과 출처를 함께 표시하고, 모델 평가에는 요약 이유와 신뢰도, HTTPS 근거를 연결한다.
+추천 요약에는 기본 tier로 남은 건수와 회사 tier 평가 실패 건수도 함께 보여준다.
+후보자 기준과 개인 판단 근거는 공개 HTML에 넣지 않는다.
 같은 명령이 최종 답변에 넣을 수집 경고 줄을 `collectionWarnings`로 함께 출력한다.
 원본 오류 메시지와 URL 목록, 비공개 회사 제외 사유, 현재 보상과 로컬 환경 식별자를 넣지 않는다.
 분석하지 못한 공고가 있으면 실행 결과에 그 건수를 포함한다.
 실패 사유 원문과 모델 응답 전문은 공개 HTML에 넣지 않는다.
+소스 수집 경고와 회사 tier 평가 실패는 서로 다른 항목으로 표시하며 하나로 합치지 않는다.
 
 ## 비공개 작업 반영과 결과 전달
 
@@ -127,6 +159,7 @@ job 지시문이 더 짧은 형식을 정하고 있어도 아래 항목은 빼�
 - 이번 실행 분석, 재사용과 분석 대기 건수
 - 분석하지 못한 공고 건수
 - 개인 제외 건수
+- 회사 tier 출처별 건수와 회사 tier 평가 실패 건수
 - 최종화 명령이 출력한 `collectionWarnings`의 각 줄
 - 바로 검토할 공고와 다음 지원 행동
 

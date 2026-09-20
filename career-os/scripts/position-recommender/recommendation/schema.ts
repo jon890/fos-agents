@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  companyTierProvenanceShape,
+  refineCompanyTierProvenance,
+} from "../../../services/recommendation-api/position/schema.ts";
 
 const nonEmpty = z.string().trim().min(1);
 const postingUrl = z.string().url().startsWith("https://");
@@ -19,10 +23,11 @@ const CandidateIdentity = z
     title: nonEmpty,
     postingUrl,
     companyTier: z.number().int().min(1).max(3),
+    ...companyTierProvenanceShape,
   })
   .strict();
 
-export const RankedCandidate = CandidateIdentity.extend({
+const RankedCandidateShape = CandidateIdentity.extend({
   decision: z.enum(["recommend", "consider", "hold"]),
   fitScore: z.number().int().min(0).max(100),
   reason: nonEmpty,
@@ -31,13 +36,19 @@ export const RankedCandidate = CandidateIdentity.extend({
   note: nonEmpty.optional(),
 }).strict();
 
-export const RecommendationItem = RankedCandidate.extend({
+export const RankedCandidate = RankedCandidateShape.superRefine(refineCompanyTierProvenance);
+
+const RecommendationItemShape = RankedCandidateShape.extend({
   label: nonEmpty.optional(),
 }).strict();
 
-export const PendingCandidate = CandidateIdentity.extend({
+export const RecommendationItem = RecommendationItemShape.superRefine(refineCompanyTierProvenance);
+
+const PendingCandidateShape = CandidateIdentity.extend({
   analysisStatus: z.enum(["new", "changed", "stale"]),
 }).strict();
+
+export const PendingCandidate = PendingCandidateShape.superRefine(refineCompanyTierProvenance);
 
 export const WarningSource = z
   .object({
@@ -48,9 +59,18 @@ export const WarningSource = z
   })
   .strict();
 
+export const CompanyTierSummary = z
+  .object({
+    manualCount: z.number().int().nonnegative(),
+    modelCount: z.number().int().nonnegative(),
+    defaultCount: z.number().int().nonnegative(),
+    assessmentFailedCount: z.number().int().nonnegative(),
+  })
+  .strict();
+
 export const RecommendationRun = z
   .object({
-    schemaVersion: z.literal(10),
+    schemaVersion: z.literal(11),
     reportDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     generatedAt: z.string().min(1),
     summary: z.array(nonEmpty).default([]),
@@ -66,6 +86,7 @@ export const RecommendationRun = z
         personalExcludedCount: z.number().int().nonnegative(),
       })
       .strict(),
+    companyTierSummary: CompanyTierSummary,
     collectionHealth: z
       .object({
         candidateCount: z.number().int().nonnegative(),

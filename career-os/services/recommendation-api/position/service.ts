@@ -41,6 +41,10 @@ import {
   type RecommendationResponse,
   recommendationResponseSchema,
 } from "./schema.ts";
+import {
+  companyTierProvenanceFields,
+  type CompanyTierProvenanceFields,
+} from "./tier-provenance.ts";
 
 const decisionOrder = { recommend: 0, consider: 1, hold: 2 } as const;
 const urgencyOrder = { urgent: 0, soon: 1, normal: 2, no_deadline: 3, unknown: 4 } as const;
@@ -142,6 +146,18 @@ function tierFor(
   return { tier: state.policy!.defaultCompanyTier, source: "default", assessmentId: null };
 }
 
+function tierProvenance(
+  state: PositionRepositoryState,
+  resolved: ResolvedTier,
+): CompanyTierProvenanceFields {
+  return companyTierProvenanceFields(
+    resolved.source,
+    resolved.assessmentId
+      ? state.companyTierAssessments.get(resolved.assessmentId)
+      : undefined,
+  );
+}
+
 function companyTierRunFor(
   state: PositionRepositoryState,
   collectionRunId: string,
@@ -151,6 +167,28 @@ function companyTierRunFor(
 
 function sortedTierItems(run: StoredCompanyTierRun): StoredCompanyTierRunItem[] {
   return [...run.items.values()].sort((left, right) => left.selectionOrder - right.selectionOrder);
+}
+
+function companyTierRecommendationSummary(
+  state: PositionRepositoryState,
+  positions: StoredPosition[],
+  resolveTier: (position: StoredPosition) => ResolvedTier,
+  collectionRunId: string,
+) {
+  const sourceByCompany = new Map<string, CompanyTierSource>();
+  for (const position of positions) {
+    sourceByCompany.set(companyKey(position.posting.company), resolveTier(position).source);
+  }
+  const sources = [...sourceByCompany.values()];
+  const tierRun = companyTierRunFor(state, collectionRunId);
+  return {
+    manualCount: sources.filter((source) => source === "manual").length,
+    modelCount: sources.filter((source) => source === "model").length,
+    defaultCount: sources.filter((source) => source === "default").length,
+    assessmentFailedCount: tierRun
+      ? sortedTierItems(tierRun).filter((item) => item.resultStatus === "failed").length
+      : 0,
+  };
 }
 
 function reclaimExpiredCompanyTierLeases(state: PositionRepositoryState, now: string): void {
@@ -1003,6 +1041,7 @@ export class PositionService {
           title: position.posting.title,
           postingUrl: position.posting.url,
           companyTier: resolveTier(position).tier,
+          ...tierProvenance(state, resolveTier(position)),
           analysisStatus: analysisStatus(
             position,
             run.candidateContextVersion,
@@ -1010,12 +1049,13 @@ export class PositionService {
             now,
           ),
         }));
-      const ranking = ranked.map(({ position, analysis, tier }) => ({
+      const ranking = ranked.map(({ position, analysis, tier, source, assessmentId }) => ({
         candidateId: position.candidateId,
         company: position.posting.company,
         title: position.posting.title,
         postingUrl: position.posting.url,
         companyTier: tier,
+        ...tierProvenance(state, { tier, source, assessmentId }),
         decision: analysis.decision,
         fitScore: analysis.fitScore,
         reason: analysis.reason,
@@ -1042,6 +1082,12 @@ export class PositionService {
           pendingCount: pending.length,
           personalExcludedCount: collection.personalExcludedCount,
         },
+        companyTierSummary: companyTierRecommendationSummary(
+          state,
+          active,
+          resolveTier,
+          run.collectionRunId,
+        ),
         collectionHealth: {
           candidateCount: active.length,
           configuredSourceCount: collection.diagnostics.length,

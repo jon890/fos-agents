@@ -6,7 +6,7 @@ type WarningInput = RecommendationRunType["collectionHealth"]["warningSources"];
 
 function run(warningSources: WarningInput): RecommendationRunType {
   return RecommendationRun.parse({
-    schemaVersion: 10,
+    schemaVersion: 11,
     reportDate: "2026-09-18",
     generatedAt: "2026-09-18T00:00:00.000Z",
     summary: [],
@@ -19,6 +19,12 @@ function run(warningSources: WarningInput): RecommendationRunType {
       reusedCount: 0,
       pendingCount: 0,
       personalExcludedCount: 0,
+    },
+    companyTierSummary: {
+      manualCount: 0,
+      modelCount: 0,
+      defaultCount: 0,
+      assessmentFailedCount: 0,
     },
     collectionHealth: {
       candidateCount: 0,

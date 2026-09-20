@@ -1,4 +1,5 @@
 import type {
+  PendingCandidateType,
   RankedCandidateType,
   RecommendationItemType,
   RecommendationRunType,
@@ -7,6 +8,40 @@ import { escapeHtml, fragment, type RenderAssets } from "./template.ts";
 
 function link(assets: RenderAssets, value: string): string {
   return fragment(assets, "report-link", { url: value });
+}
+
+const tierSourceLabel = {
+  manual: "사람 override",
+  model: "모델 평가",
+  default: "기본값",
+} as const;
+
+type TierProvenance = Pick<
+  RecommendationItemType,
+  | "companyTier"
+  | "companyTierSource"
+  | "companyTierConfidence"
+  | "companyTierReason"
+  | "companyTierEvidenceUrls"
+>;
+
+function tierLabel(item: TierProvenance): string {
+  return `Tier ${item.companyTier} · ${tierSourceLabel[item.companyTierSource]}`;
+}
+
+function tierValue(assets: RenderAssets, item: TierProvenance): string {
+  const label = tierLabel(item);
+  if (item.companyTierSource !== "model") {
+    return fragment(assets, "report-tier-value", { label }, { detail: "" });
+  }
+  const evidence = item.companyTierEvidenceUrls.map((url) => link(assets, url)).join(" · ");
+  const detail = fragment(
+    assets,
+    "report-tier-detail",
+    { reason: item.companyTierReason ?? "", confidence: item.companyTierConfidence ?? "" },
+    { evidence },
+  );
+  return fragment(assets, "report-tier-value", { label }, { detail });
 }
 
 function list(assets: RenderAssets, values: string[], name = "report-list"): string {
@@ -34,6 +69,7 @@ function detail(assets: RenderAssets, item: RecommendationItemType["details"][nu
 function card(assets: RenderAssets, item: RecommendationItemType, rank: number): string {
   const fields: [string, string][] = [
     ["공고 링크", link(assets, item.postingUrl)],
+    ["회사 tier", tierValue(assets, item)],
     ["추천 이유", escapeHtml(item.reason)],
   ];
   if (item.label) fields.push(["추천 판단", escapeHtml(item.label)]);
@@ -96,12 +132,13 @@ function recommendationSection(
 }
 
 function rankingItem(assets: RenderAssets, item: RankedCandidateType, index: number): string {
+  const note = [item.note, tierLabel(item)].filter(Boolean).join(" · ");
   return fragment(assets, "report-ranking-item", {
     rank: index + 1,
     company: item.company,
     title: item.title,
     url: item.postingUrl,
-    note: item.note ?? "",
+    note,
   });
 }
 
@@ -121,9 +158,13 @@ function rankingSection(assets: RenderAssets, items: RankedCandidateType[]): str
   );
 }
 
+function pendingNote(item: PendingCandidateType): string {
+  const label = { new: "미분석", changed: "공고 변경", stale: "분석 만료" } as const;
+  return `${label[item.analysisStatus]} · ${tierLabel(item)}`;
+}
+
 function pendingSection(assets: RenderAssets, run: RecommendationRunType): string {
   if (run.pendingCandidates.length === 0) return "";
-  const label = { new: "미분석", changed: "공고 변경", stale: "분석 만료" } as const;
   return fragment(
     assets,
     "report-section",
@@ -141,7 +182,7 @@ function pendingSection(assets: RenderAssets, run: RecommendationRunType): strin
                 company: item.company,
                 title: item.title,
                 url: item.postingUrl,
-                note: `${label[item.analysisStatus]} · 회사 tier ${item.companyTier}`,
+                note: pendingNote(item),
               }),
             )
             .join("\n"),

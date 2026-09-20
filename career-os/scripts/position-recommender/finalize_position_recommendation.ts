@@ -63,12 +63,13 @@ export function recommendationRunFromBackend(
   response: RecommendationResponse,
 ): RecommendationRunType {
   return RecommendationRun.parse({
-    schemaVersion: 10,
+    schemaVersion: 11,
     reportDate: response.reportDate,
     generatedAt: response.generatedAt,
     summary: [
       `활성 공고 ${response.analysisSummary.activeCount}건 중 이번 실행 분석 ${response.analysisSummary.analyzedNowCount}건, 재사용 ${response.analysisSummary.reusedCount}건, 대기 ${response.analysisSummary.pendingCount}건입니다.`,
       `개인 제외 ${response.analysisSummary.personalExcludedCount}건을 수집 전에 제거했습니다.`,
+      `회사 tier는 사람 지정 ${response.companyTierSummary.manualCount}건, 모델 평가 ${response.companyTierSummary.modelCount}건, 기본값 ${response.companyTierSummary.defaultCount}건이고 평가 실패 ${response.companyTierSummary.assessmentFailedCount}건입니다.`,
     ],
     ranking: response.ranking,
     recommendations: response.recommendations.map((item) => ({
@@ -77,6 +78,7 @@ export function recommendationRunFromBackend(
     })),
     pendingCandidates: response.pendingCandidates,
     analysisSummary: response.analysisSummary,
+    companyTierSummary: response.companyTierSummary,
     collectionHealth: response.collectionHealth,
     nextActions: unique(response.recommendations.flatMap((item) => item.nextActions)),
     sourceSnapshot: response.sourceSnapshot,

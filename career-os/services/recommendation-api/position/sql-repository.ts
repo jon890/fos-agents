@@ -2,6 +2,7 @@ import type { SourceDiagnostic } from "../../../scripts/position-recommender/liv
 import { withTransaction } from "../db/connection.ts";
 import { ApiError } from "../http/errors.ts";
 import { recommendationResponseSchema } from "./schema.ts";
+import { companyTierProvenanceFields } from "./tier-provenance.ts";
 import {
   MemoryPositionRepository,
   type PositionRepositoryState,
@@ -402,6 +403,10 @@ export class SqlPositionRepository extends MemoryPositionRepository {
           title: version.posting.title,
           postingUrl: version.posting.url,
           companyTier: Number(item.company_tier),
+          ...companyTierProvenanceFields(
+            item.company_tier_source,
+            companyTierAssessments.get(item.company_tier_assessment_id ?? ""),
+          ),
           decision: item.decision,
           fitScore: analysis.fitScore,
           reason: analysis.reason,
@@ -409,7 +414,20 @@ export class SqlPositionRepository extends MemoryPositionRepository {
           nextActions: analysis.nextActions,
         };
       });
-      const pendingCandidates = json(row.pending_candidates_json);
+      const pendingCandidates: Row[] = (json(row.pending_candidates_json) as Row[]).map(
+        (candidate) => ({
+          ...candidate,
+          companyTierSource: candidate.companyTierSource ?? "default",
+        }),
+      );
+      const tierSourceByCompany = new Map<string, string>();
+      for (const entry of [...ranking, ...pendingCandidates]) {
+        tierSourceByCompany.set(String(entry.company), String(entry.companyTierSource));
+      }
+      const tierSources = [...tierSourceByCompany.values()];
+      const tierRun = [...companyTierRuns.values()].find(
+        (entry) => entry.collectionRunId === row.collection_run_id,
+      );
       const response = recommendationResponseSchema.parse({
         schemaVersion: 1,
         recommendationRunId: row.recommendation_run_id,
@@ -426,6 +444,14 @@ export class SqlPositionRepository extends MemoryPositionRepository {
           reusedCount: Number(row.reused_count),
           pendingCount: Number(row.pending_count),
           personalExcludedCount: Number(row.personal_excluded_count),
+        },
+        companyTierSummary: {
+          manualCount: tierSources.filter((source) => source === "manual").length,
+          modelCount: tierSources.filter((source) => source === "model").length,
+          defaultCount: tierSources.filter((source) => source === "default").length,
+          assessmentFailedCount: tierRun
+            ? [...tierRun.items.values()].filter((item) => item.resultStatus === "failed").length
+            : 0,
         },
         collectionHealth: {
           candidateCount: collection.candidateIds.length,

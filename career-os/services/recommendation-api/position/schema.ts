@@ -317,6 +317,86 @@ export const companyTierResultsResponseSchema = z
   })
   .strict();
 
+export const companyTierSourceSchema = z.enum(["manual", "model", "default"]);
+
+/** 추천과 대기 항목이 함께 담는 회사 tier 출처 필드다. 모델 평가일 때만 근거가 붙는다. */
+export const companyTierProvenanceShape = {
+  companyTierSource: companyTierSourceSchema,
+  companyTierAssessmentId: nonEmpty.optional(),
+  companyTierAssessedAt: isoDateTime.optional(),
+  companyTierValidUntil: dateOnly.optional(),
+  companyTierConfidence: z.enum(["low", "medium", "high"]).optional(),
+  companyTierReason: nonEmpty.optional(),
+  companyTierEvidenceUrls: z.array(httpsUrl).max(3).default([]),
+};
+
+type CompanyTierProvenance = {
+  companyTierSource: "manual" | "model" | "default";
+  companyTierAssessmentId?: string;
+  companyTierAssessedAt?: string;
+  companyTierValidUntil?: string;
+  companyTierConfidence?: "low" | "medium" | "high";
+  companyTierReason?: string;
+  companyTierEvidenceUrls: string[];
+};
+
+export function refineCompanyTierProvenance(
+  value: CompanyTierProvenance,
+  context: z.RefinementCtx,
+): void {
+  const modelOnly = [
+    ["companyTierAssessmentId", value.companyTierAssessmentId],
+    ["companyTierAssessedAt", value.companyTierAssessedAt],
+    ["companyTierValidUntil", value.companyTierValidUntil],
+    ["companyTierConfidence", value.companyTierConfidence],
+    ["companyTierReason", value.companyTierReason],
+  ] as const;
+  if (value.companyTierSource === "model") {
+    for (const [path, field] of modelOnly) {
+      if (field === undefined) {
+        context.addIssue({
+          code: "custom",
+          path: [path],
+          message: "모델 평가 tier에는 평가 ID와 시각과 만료일과 신뢰도와 이유가 필요합니다.",
+        });
+      }
+    }
+    if (value.companyTierEvidenceUrls.length === 0) {
+      context.addIssue({
+        code: "custom",
+        path: ["companyTierEvidenceUrls"],
+        message: "모델 평가 tier에는 근거 URL이 하나 이상 필요합니다.",
+      });
+    }
+    return;
+  }
+  for (const [path, field] of modelOnly) {
+    if (field !== undefined) {
+      context.addIssue({
+        code: "custom",
+        path: [path],
+        message: "사람 override와 기본 tier에는 모델 평가 정보를 담지 않습니다.",
+      });
+    }
+  }
+  if (value.companyTierEvidenceUrls.length > 0) {
+    context.addIssue({
+      code: "custom",
+      path: ["companyTierEvidenceUrls"],
+      message: "사람 override와 기본 tier에는 모델 평가 정보를 담지 않습니다.",
+    });
+  }
+}
+
+export const companyTierRecommendationSummarySchema = z
+  .object({
+    manualCount: z.number().int().nonnegative(),
+    modelCount: z.number().int().nonnegative(),
+    defaultCount: z.number().int().nonnegative(),
+    assessmentFailedCount: z.number().int().nonnegative(),
+  })
+  .strict();
+
 export const positionPreparationResponseSchema = z
   .object({
     schemaVersion: z.literal(2),
@@ -334,13 +414,15 @@ const recommendationPositionSchema = z
     title: nonEmpty,
     postingUrl: z.string().url().startsWith("https://"),
     companyTier: z.number().int().min(1).max(3),
+    ...companyTierProvenanceShape,
     decision: z.enum(["recommend", "consider", "hold"]),
     fitScore: z.number().int().min(0).max(100),
     reason: nonEmpty,
     details: z.array(recommendationDetailSchema),
     nextActions: z.array(nonEmpty),
   })
-  .strict();
+  .strict()
+  .superRefine(refineCompanyTierProvenance);
 
 export const recommendationResponseSchema = z
   .object({
@@ -360,9 +442,11 @@ export const recommendationResponseSchema = z
           title: nonEmpty,
           postingUrl: z.string().url().startsWith("https://"),
           companyTier: z.number().int().min(1).max(3),
+          ...companyTierProvenanceShape,
           analysisStatus: z.enum(["new", "changed", "stale"]),
         })
-        .strict(),
+        .strict()
+        .superRefine(refineCompanyTierProvenance),
     ),
     analysisSummary: z
       .object({
@@ -373,6 +457,7 @@ export const recommendationResponseSchema = z
         personalExcludedCount: z.number().int().nonnegative(),
       })
       .strict(),
+    companyTierSummary: companyTierRecommendationSummarySchema,
     collectionHealth: z
       .object({
         candidateCount: z.number().int().nonnegative(),
@@ -408,4 +493,7 @@ export type CompanyTierReportedFailureCode = z.infer<typeof companyTierFailureCo
 export type CompanyTierResultsRequest = z.infer<typeof companyTierResultsRequestSchema>;
 export type CompanyTierResultsResponse = z.infer<typeof companyTierResultsResponseSchema>;
 export type PositionPreparationResponse = z.infer<typeof positionPreparationResponseSchema>;
+export type CompanyTierRecommendationSummary = z.infer<
+  typeof companyTierRecommendationSummarySchema
+>;
 export type RecommendationResponse = z.infer<typeof recommendationResponseSchema>;
