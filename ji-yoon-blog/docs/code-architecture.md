@@ -39,8 +39,11 @@
 | `SKILL.md` | 언제 무엇을 하는지, 멈출 조건 |
 | `scripts/photos.py` | SSH로 홈서버 명령을 부른다 |
 | `scripts/photo_set.py` | 내려받은 사진의 촬영시각을 읽어 순서를 세운다 |
+| `scripts/place_hints.py` | 내려받은 사진에서 장소를 짐작할 실마리를 모은다 |
 | `scripts/build_preview.py` | 초안과 사진으로 미리보기를 만든다 |
+| `scripts/build_package.py` | 초안으로 사람이 붙여넣을 등록용 묶음을 만든다 |
 | `scripts/test_photo_set.py` | 촬영시각 파서를 합성한 이미지로 검증한다 |
+| `scripts/test_place_hints.py` | 위치 파서와 이름 단서를 합성한 이미지로 검증한다 |
 | `references/iphone-upload.md` | 아이폰에서 올리는 절차와 함정 |
 
 ## 의존 방향
@@ -48,6 +51,7 @@
 ```text
 맥북:  photos.py ──SSH──> 홈서버: photo_store.py ──> seaweed_s3.py ──> S3
        photo_set.py ──> 내려받은 파일
+       place_hints.py ──> 내려받은 파일
        build_preview.py ──> draft.json + 내려받은 파일
 ```
 

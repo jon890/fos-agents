@@ -29,6 +29,8 @@
 **/applications/
 # 사람용 생성 리포트
 **/reports/
+# 내려받은 사진과 글 초안 (사진은 개인 자료다)
+**/drafts/
 # 재생성 가능한 캐시 (live-position-postings·feed-cache 등)
 **/cache/
 **/logs/
