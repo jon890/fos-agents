@@ -124,6 +124,7 @@ export type StoredAnalysisRun = {
 export type StoredCollection = {
   collectionRunId: string;
   collectedAt: string;
+  analysisContractVersion: number;
   candidateIds: string[];
   diagnostics: SourceDiagnostic[];
   personalExcludedCount: number;

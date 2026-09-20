@@ -2,7 +2,10 @@ import { ZodError } from "zod";
 import type { ReceiptStore } from "../http/idempotency.ts";
 import { idempotent } from "../http/idempotency.ts";
 import { ApiError } from "../http/errors.ts";
-import { analysisResultsResponseSchema } from "../position/schema.ts";
+import {
+  analysisResultsResponseSchema,
+  companyTierResultsResponseSchema,
+} from "../position/schema.ts";
 import type { PositionService } from "../position/service.ts";
 
 type RouteResult = { status: number; body: unknown };
@@ -38,6 +41,32 @@ export async function routePositions(
     const body = await request.json();
     return idempotent(receipts, idempotencyKey, body, () =>
       call(() => service.saveCollection(body), 201),
+    );
+  }
+
+  const analysisRuns = pathname.match(
+    /^\/api\/positions\/v1\/collection-runs\/([^/]+)\/analysis-runs$/,
+  );
+  if (request.method === "POST" && analysisRuns) {
+    if (!idempotencyKey) throw new ApiError(400, "BAD_REQUEST", "Idempotency-Key가 필요합니다.");
+    const body = await request.json();
+    return idempotent(receipts, idempotencyKey, body, () =>
+      call(() => service.createPositionAnalysisRun(decodeURIComponent(analysisRuns[1])), 201),
+    );
+  }
+
+  const companyTierResults = pathname.match(
+    /^\/api\/positions\/v1\/company-tier-runs\/([^/]+)\/results$/,
+  );
+  if (request.method === "POST" && companyTierResults) {
+    if (!idempotencyKey) throw new ApiError(400, "BAD_REQUEST", "Idempotency-Key가 필요합니다.");
+    const body = await request.json();
+    return idempotent(receipts, idempotencyKey, body, () =>
+      call(async () =>
+        companyTierResultsResponseSchema.parse(
+          await service.saveCompanyTierResults(decodeURIComponent(companyTierResults[1]), body),
+        ),
+      ),
     );
   }
 

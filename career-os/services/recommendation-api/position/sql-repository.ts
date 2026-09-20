@@ -228,11 +228,15 @@ export class SqlPositionRepository extends MemoryPositionRepository {
       values.push(`${row.source_key}:${row.identity_hash}`);
       collectionIds.set(row.run_id, values);
     }
+    const analysisContractByCollection = new Map<string, number>(
+      analysisRunRows.map((row) => [row.collection_run_id, Number(row.contract_version)]),
+    );
     const collections = new Map<string, StoredCollection>();
     for (const row of collectionRows) {
       collections.set(row.run_id, {
         collectionRunId: row.run_id,
         collectedAt: iso(row.collected_at),
+        analysisContractVersion: analysisContractByCollection.get(row.run_id) ?? 1,
         candidateIds: collectionIds.get(row.run_id) ?? [],
         diagnostics: diagnosticsByRun.get(row.run_id) ?? [],
         personalExcludedCount: Number(row.personal_excluded_count),

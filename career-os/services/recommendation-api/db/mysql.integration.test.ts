@@ -87,6 +87,22 @@ function pool(runId: string): PostingCandidatePool {
   };
 }
 
+function companyTierResult(companyKey: string, recommendedTier: number) {
+  return {
+    companyKey,
+    recommendedTier,
+    confidence: "medium" as const,
+    reason: "성장 범위를 공개 자료로 확인했다.",
+    signals: [
+      { axis: "growth-scope" as const, level: "high" as const },
+      { axis: "compensation-upside" as const, level: "medium" as const },
+      { axis: "team-growth" as const, level: "unknown" as const },
+    ],
+    evidence: [{ url: "https://example.com/company", checkedAt: "2026-09-17" }],
+    assumptions: ["공개 자료만 확인했다."],
+  };
+}
+
 function analysisResult(positionId: string) {
   return {
     positionId,
@@ -127,6 +143,17 @@ async function resetSchema(sql: Bun.SQL): Promise<void> {
   await applyMigrations(sql, loadMigrations(migrationDirectory));
 }
 
+async function preferMemoryCompanies(service: PositionService): Promise<void> {
+  for (const index of [1, 2]) {
+    await service.updateCompanyPreference(`회사 ${index}`, {
+      companyKey: `회사 ${index}`,
+      companyName: `회사 ${index}`,
+      tier: index,
+      disposition: "analyze",
+    });
+  }
+}
+
 async function completedState() {
   const repository = new MemoryPositionRepository();
   const service = new PositionService(repository);
@@ -141,8 +168,13 @@ async function completedState() {
     dailyCompanyTierLimit: 5,
     companyTierStaleAfterDays: 90,
   });
-  const queue = await service.saveCollection(
+  await preferMemoryCompanies(service);
+  await service.saveCollection(
     { schemaVersion: 2, analysisContractVersion: 1, pool: pool("collection-memory") },
+    "2026-09-17T01:00:00.000Z",
+  );
+  const queue = await service.createPositionAnalysisRun(
+    "collection-memory",
     "2026-09-17T01:00:00.000Z",
   );
   await service.saveAnalysisResults(
@@ -209,9 +241,30 @@ test.skipIf(!databaseUrl)(
         dailyCompanyTierLimit: 5,
         companyTierStaleAfterDays: 90,
       });
-      const queue = await service.saveCollection(
+      const preparation = await service.saveCollection(
         { schemaVersion: 2, analysisContractVersion: 1, pool: pool("collection-1") },
         "2026-09-17T01:00:00.000Z",
+      );
+      expect(preparation.companyTierQueue.companies.map((entry) => entry.companyKey)).toEqual([
+        "회사 1",
+        "회사 2",
+      ]);
+      await expect(
+        service.createPositionAnalysisRun("collection-1", "2026-09-17T01:10:00.000Z"),
+      ).rejects.toMatchObject({ status: 409, code: "COMPANY_TIER_RUN_PENDING" });
+      await service.saveCompanyTierResults(
+        preparation.companyTierQueue.companyTierRunId,
+        {
+          schemaVersion: 1,
+          collectionRunId: "collection-1",
+          results: [companyTierResult("회사 1", 1)],
+          failures: [{ companyKey: "회사 2", failureCode: "research_unavailable" }],
+        },
+        "2026-09-17T01:20:00.000Z",
+      );
+      const queue = await service.createPositionAnalysisRun(
+        "collection-1",
+        "2026-09-17T01:30:00.000Z",
       );
       expect(queue.candidates).toHaveLength(2);
       const [analyzed, failed] = queue.candidates;
@@ -326,6 +379,46 @@ test.skipIf(!databaseUrl)(
           AND a.created_by_analysis_run_id <> i.analysis_run_id
       `;
       expect(mismatched).toHaveLength(0);
+
+      const tierOrigins = await sql`
+        SELECT p.company_name, ri.company_tier, ri.company_tier_source,
+               ri.company_tier_assessment_id
+        FROM position_recommendation_items ri
+        JOIN positions p ON p.position_id = ri.position_id
+        WHERE ri.recommendation_run_id = ${recommendationRunId}
+        ORDER BY p.company_name
+      `;
+      expect(
+        tierOrigins.map((row: Record<string, unknown>) => [
+          row.company_name,
+          Number(row.company_tier),
+          row.company_tier_source,
+          row.company_tier_assessment_id === null,
+        ]),
+      ).toEqual([
+        ["회사 1", 1, "model", false],
+        ["회사 2", 3, "default", true],
+      ]);
+
+      const tierOutcomes = await sql`
+        SELECT i.selection_order, i.company_key, i.assessment_status, i.selection_reason,
+               i.result_status, i.failure_code, r.status
+        FROM company_tier_assessment_run_items i
+        JOIN company_tier_assessment_runs r ON r.company_tier_run_id = i.company_tier_run_id
+        WHERE r.collection_run_id = 'collection-1'
+        ORDER BY i.selection_order
+      `;
+      expect(
+        tierOutcomes.map((row: Record<string, unknown>) => [
+          row.company_key,
+          row.result_status,
+          row.failure_code,
+        ]),
+      ).toEqual([
+        ["회사 1", "created", null],
+        ["회사 2", "failed", "research_unavailable"],
+      ]);
+      expect(tierOutcomes[0].status).toBe("partial");
     } finally {
       await sql.close();
     }

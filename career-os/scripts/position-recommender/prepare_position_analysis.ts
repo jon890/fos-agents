@@ -17,6 +17,12 @@ const spec: CliSpec = {
       pattern: /^\d+$/,
       fallback: "1",
     },
+    "--company-tier-contract-version": {
+      value: true,
+      description: "회사 tier 평가 계약 버전",
+      pattern: /^\d+$/,
+      fallback: "1",
+    },
   },
 };
 
@@ -32,26 +38,37 @@ if (import.meta.main) {
       JSON.parse(readFileSync(resolvedCandidates, "utf8")) as unknown,
     );
     const client = createRecommendationApiClient();
-    const queue = await client.saveCollection(
+    const preparation = await client.saveCollection(
       {
         schemaVersion: 2,
         analysisContractVersion: Number(options["--contract-version"]),
+        companyTierContractVersion: Number(options["--company-tier-contract-version"]),
         pool,
       },
       `collection:${pool.collectionRunId}`,
     );
+    const companyTierQueue = preparation.companyTierQueue;
+    const analysisQueue =
+      companyTierQueue.companies.length === 0
+        ? await client.createPositionAnalysisRun(
+            pool.collectionRunId,
+            `analysis-run:${pool.collectionRunId}`,
+          )
+        : undefined;
     const resolvedOutput = resolve(outputPath);
     mkdirSync(dirname(resolvedOutput), { recursive: true });
-    const serialized = `${JSON.stringify(queue, null, 2)}\n`;
+    const serialized = `${JSON.stringify(analysisQueue ?? preparation, null, 2)}\n`;
     writeFileSync(resolvedOutput, serialized, "utf8");
     return {
       passed: true,
       collectionRunId: pool.collectionRunId,
-      analysisRunId: queue.analysisRunId,
+      companyTierRunId: companyTierQueue.companyTierRunId,
+      companyTierQueuedCount: companyTierQueue.companies.length,
+      analysisRunId: analysisQueue?.analysisRunId ?? null,
       candidatePoolBytes: statSync(resolvedCandidates).size,
       candidateCount: pool.candidates.length,
       queueBodyBytes: Buffer.byteLength(serialized),
-      ...queue.summary,
+      ...(analysisQueue?.summary ?? preparation.summary),
       output: resolvedOutput,
     };
   });

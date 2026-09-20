@@ -110,10 +110,19 @@ async function backend() {
     dailyCompanyTierLimit: 5,
     companyTierStaleAfterDays: 90,
   });
-  const queue = await service.saveCollection(
+  for (const index of [1, 2]) {
+    await service.updateCompanyPreference(`회사 ${index}`, {
+      companyKey: `회사 ${index}`,
+      companyName: `회사 ${index}`,
+      tier: index,
+      disposition: "analyze",
+    });
+  }
+  await service.saveCollection(
     { schemaVersion: 2, analysisContractVersion: 1, pool: pool("collection-1") },
     "2026-09-17T01:00:00.000Z",
   );
+  const queue = await service.createPositionAnalysisRun("collection-1", "2026-09-17T01:00:00.000Z");
   const idempotencyKeys: string[] = [];
   const createClient = () => ({
     async saveAnalysisResults(analysisRunId: string, body: unknown, idempotencyKey: string) {

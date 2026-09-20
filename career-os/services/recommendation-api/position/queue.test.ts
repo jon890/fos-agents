@@ -33,6 +33,7 @@ function pending(index: number, tier: number, pendingSince: string): PendingPosi
     status: "new",
     companyTier: tier,
     companyTierSource: tier === 3 ? ("default" as const) : ("manual" as const),
+    companyTierAssessmentId: null,
     pendingSince,
     posting,
   };

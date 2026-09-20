@@ -341,7 +341,7 @@ HTML은 검증된 추천 JSON에서 파생하며 렌더, 검사와 임시 파일
 | 경로                                              | 책임                                                         |
 | ------------------------------------------------- | ------------------------------------------------------------ |
 | `services/recommendation-api/server.ts`           | `Bun.serve` 시작, health·인증 확인, 공통 timeout과 오류 응답 |
-| `services/recommendation-api/routes/positions.ts` | 수집 실행, 분석 큐, 분석 반영과 추천 실행 endpoint           |
+| `services/recommendation-api/routes/positions.ts` | 수집 실행, 회사 tier 반영, 공고 분석 실행, 분석 반영과 추천 실행 endpoint |
 | `services/recommendation-api/routes/study.ts`     | 기존 `/api/study/v1` 계약 endpoint                           |
 | `services/recommendation-api/position/`           | 회사 정책, 공고 버전, 분석 상태와 추천 조립                  |
 | `services/recommendation-api/study/`              | source, cursor, material, 개인 상태와 추천 이력              |
@@ -366,7 +366,13 @@ DB 연결 실패는 `503`, 요청 계약 오류는 `400`, 인증 실패는 `401`
 `GET /health/ready`는 DDL을 실행하지 않고 DB 연결, migration version과 checksum을 조회한다.
 `GET /api/v1/auth/check`는 유효한 Bearer token에만 `204`를 반환한다.
 
-공고 수집 실행 저장, 분석 결과 반영, 학습자료와 cursor 저장, 추천 실행 저장은 각각 한 transaction에서 끝낸다.
+공고 수집 실행 저장, 회사 tier 결과 반영, 공고 분석 실행 생성, 분석 결과 반영,
+학습자료와 cursor 저장, 추천 실행 저장은 각각 한 transaction에서 끝낸다.
+`POST /api/positions/v1/collection-runs`는 공고 버전과 수집 실행, 회사 tier 평가 실행 생성까지만 한 transaction에서 처리하고 공고 분석 실행은 만들지 않는다.
+`POST /api/positions/v1/company-tier-runs/:id/results`가 모델 평가와 실패를 반영하고,
+`POST /api/positions/v1/collection-runs/:id/analysis-runs`가 회사마다 `manual`, `model`, `default` 순서로 tier를 해결한 뒤 공고 분석 실행을 만든다.
+회사 tier 실행이 `pending`이면 공고 분석 실행 생성은 `409 COMPANY_TIER_RUN_PENDING`을 반환하고,
+수집 실행 하나는 공고 분석 실행 하나만 가지므로 재시도는 저장한 응답을 그대로 돌려준다.
 외부 queue와 worker는 두지 않으며 cron이 동기 HTTP 요청으로 단계를 진행한다.
 분석 결과 반영은 분석한 공고와 분석하지 못한 공고를 함께 받고,
 실행 상태를 `pending`, `partial`, `completed` 중 하나로 돌려준다.

@@ -3,6 +3,51 @@ import { RecommendationApiClient, RecommendationApiClientError } from "./client.
 
 const token = "token-123456789012345678901234567890";
 
+function analysisSummary() {
+  return {
+    activeCount: 0,
+    reusedCount: 0,
+    queuedCount: 0,
+    pendingCount: 0,
+    personalExcludedCount: 0,
+    newCount: 0,
+    changedCount: 0,
+    staleCount: 0,
+    completedCount: 0,
+    failedCount: 0,
+    warningSourceCount: 0,
+  };
+}
+
+function preparationResponse() {
+  return {
+    schemaVersion: 2,
+    collectionRunId: "run-1",
+    generatedAt: "2026-09-17T00:00:00.000Z",
+    companyTierQueue: {
+      schemaVersion: 1,
+      collectionRunId: "run-1",
+      companyTierRunId: "company-tier-1",
+      generatedAt: "2026-09-17T00:00:00.000Z",
+      status: "completed",
+      companies: [],
+      summary: {
+        activeCompanyCount: 0,
+        manualCount: 0,
+        modelCount: 0,
+        defaultCount: 0,
+        queuedCount: 0,
+        newCount: 0,
+        staleCount: 0,
+        completedCount: 0,
+        failedCount: 0,
+        pendingCount: 0,
+      },
+    },
+    summary: analysisSummary(),
+  };
+}
+
 describe("position recommendation API client", () => {
   test("같은 본문과 멱등 키로 5xx를 최대 두 번 재시도한다", async () => {
     const requests: RequestInit[] = [];
@@ -17,26 +62,7 @@ describe("position recommendation API client", () => {
             { status: 503 },
           );
         }
-        return Response.json({
-          schemaVersion: 2,
-          collectionRunId: "run-1",
-          analysisRunId: "analysis-1",
-          generatedAt: "2026-09-17T00:00:00.000Z",
-          candidates: [],
-          summary: {
-            activeCount: 0,
-            reusedCount: 0,
-            queuedCount: 0,
-            pendingCount: 0,
-            personalExcludedCount: 0,
-            newCount: 0,
-            changedCount: 0,
-            staleCount: 0,
-            completedCount: 0,
-            failedCount: 0,
-            warningSourceCount: 0,
-          },
-        });
+        return Response.json(preparationResponse());
       },
     });
     await client.saveCollection({ schemaVersion: 1 }, "collection:run-1");
@@ -80,6 +106,30 @@ describe("position recommendation API client", () => {
       ),
     ).resolves.toEqual(response);
     expect(capturedKey).toBe("analysis-results:analysis-1:0123456789abcdef");
+  });
+
+  test("회사 tier 큐가 빈 수집 응답은 공고 분석 실행을 멱등 POST로 만든다", async () => {
+    const requests: Array<{ url: string; init: RequestInit }> = [];
+    const client = new RecommendationApiClient({
+      baseUrl: "http://api.local",
+      token,
+      fetcher: async (input, init) => {
+        requests.push({ url: String(input), init: init ?? {} });
+        return Response.json({
+          schemaVersion: 2,
+          collectionRunId: "run-1",
+          analysisRunId: "analysis-1",
+          generatedAt: "2026-09-17T00:00:00.000Z",
+          candidates: [],
+          summary: analysisSummary(),
+        });
+      },
+    });
+    await expect(
+      client.createPositionAnalysisRun("run-1", "analysis-run:run-1"),
+    ).resolves.toMatchObject({ analysisRunId: "analysis-1" });
+    expect(requests[0].url).toEndWith("/api/positions/v1/collection-runs/run-1/analysis-runs");
+    expect(new Headers(requests[0].init.headers).get("Idempotency-Key")).toBe("analysis-run:run-1");
   });
 
   test("4xx는 재시도하지 않는다", async () => {
