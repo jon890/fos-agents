@@ -13,6 +13,7 @@ import { formatSeoulDisplayTime } from "../lib/date-format.ts";
 
 export type { CandidatePreviewOptions } from "./render/candidate-preview-html.ts";
 
+// 기존 호출부와의 호환을 위해 유지하는 얇은 wrapper. 새 코드는 render/candidate-preview-html.ts를 직접 쓴다.
 export function renderCandidatePreviewHtml(
   run: RecommendationRunType,
   options: CandidatePreviewOptions = {},
