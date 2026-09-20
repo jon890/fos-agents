@@ -230,6 +230,99 @@ def cmd_fill(page: Page, args: argparse.Namespace) -> int:
     return 0
 
 
+PHOTO_BUTTON = "button.se-image-toolbar-button"
+
+
+def attach_photos(page: Page, files: list[str], seconds: float = 30.0) -> str:
+    """사진 버튼을 눌러 열리는 파일 선택 창을 가로채 파일을 넣는다.
+
+    네이버는 사진 버튼을 누를 때 숨긴 `input[type=file][multiple]` 을 그 자리에서 만든다.
+    자체 업로드 창을 띄우는 것이 아니라 그 input 을 누른다. 실측이다.
+
+    파일 선택 창이 닫히면 그 input 이 DOM 에서 사라진다.
+    그래서 누른 뒤에 새로 붙어 `#hidden-file` 을 찾으면 늦다.
+    `DOM.querySelector` 가 `nodeId: 0` 을 주고 파일 주입이
+    `Could not find node with given id` 로 끝난다. 이것도 실측이다.
+
+    누르는 것과 넣는 것이 한 연결 안에서 이어져야 한다.
+    그래서 파일 선택 창을 가로채 그 이벤트가 주는 `backendNodeId` 로 바로 넣는다.
+
+    files 는 브라우저가 도는 기계의 경로다. 홈서버 Chrome 이면 홈서버 경로다.
+    """
+    page.call("DOM.enable")
+    page.call("Runtime.enable")
+    page.call("Page.setInterceptFileChooserDialog", enabled=True)
+
+    pressed = page.js(
+        "(() => { const b = document.querySelector("
+        + json.dumps(PHOTO_BUTTON)
+        + "); if (!b) return false; b.click(); return true; })()"
+    )
+    if not pressed:
+        return "사진 버튼을 찾지 못했다"
+
+    chooser = page.wait_event("Page.fileChooserOpened", seconds=seconds)
+    if not chooser:
+        return "파일 선택 창을 가로채지 못했다"
+    node = chooser.get("backendNodeId")
+    if not node:
+        return f"파일 선택 창에 backendNodeId 가 없다: {chooser}"
+
+    page.call("DOM.setFileInputFiles", files=files, backendNodeId=node)
+    return ""
+
+
+def photo_paths(draft: dict, root: Path, base: str) -> list[str]:
+    """초안의 image 블록이 가리키는 파일을 브라우저 쪽 경로로 바꾼다."""
+    paths = []
+    for block in draft.get("blocks", []):
+        if block.get("type") != "image":
+            continue
+        name = block.get("path", "")
+        if not name:
+            continue
+        if base:
+            paths.append(base.rstrip("/") + "/" + Path(name).name)
+        else:
+            paths.append(str(root / name))
+    return paths
+
+
+def image_count(page: Page) -> int:
+    """본문에 들어간 이미지 블록 수를 읽는다."""
+    return page.js('document.querySelectorAll(".se-component.se-image").length') or 0
+
+
+def cmd_photos(page: Page, args: argparse.Namespace) -> int:
+    """초안의 사진을 편집기에 넣는다."""
+    draft_path = Path(args.draft)
+    draft = json.loads(draft_path.read_text(encoding="utf-8"))
+    files = photo_paths(draft, draft_path.parent, args.remote_base)
+    if not files:
+        print("초안에 image 블록이 없다", file=sys.stderr)
+        return 1
+
+    note = require_clear_screen(page)
+    if note:
+        print(f"화면을 덮은 알림이 있어 사진을 넣지 못한다: {note}", file=sys.stderr)
+        return 1
+
+    before = image_count(page)
+    problem = attach_photos(page, files)
+    if problem:
+        print(problem, file=sys.stderr)
+        return 1
+
+    for _ in range(60):
+        time.sleep(1)
+        after = image_count(page)
+        if after > before:
+            print(f"사진 {after - before}개가 본문에 들어갔다. 넣은 파일은 {len(files)}개다")
+            return 0
+    print("파일은 넣었지만 본문에 이미지 블록이 생기지 않았다", file=sys.stderr)
+    return 1
+
+
 def cmd_save(page: Page, args: argparse.Namespace) -> int:
     """임시저장한다. 발행 버튼은 누르지 않는다."""
     before = page.js(save_count_js())
@@ -299,11 +392,24 @@ def main() -> int:
     )
     fill = sub.add_parser("fill", help="초안의 제목과 본문을 넣는다")
     fill.add_argument("draft", help="draft.json 경로")
+    photos = sub.add_parser("photos", help="초안의 사진을 편집기에 넣는다")
+    photos.add_argument("draft", help="draft.json 경로")
+    photos.add_argument(
+        "--remote-base",
+        default="",
+        help="브라우저가 도는 기계에서 사진이 있는 디렉터리. 비우면 초안 옆 경로를 쓴다",
+    )
     sub.add_parser("save", help="임시저장한다")
     sub.add_parser("state", help="편집기에 들어간 것을 읽어 낸다")
 
     args = parser.parse_args()
-    handlers = {"open": cmd_open, "fill": cmd_fill, "save": cmd_save, "state": cmd_state}
+    handlers = {
+        "open": cmd_open,
+        "fill": cmd_fill,
+        "photos": cmd_photos,
+        "save": cmd_save,
+        "state": cmd_state,
+    }
 
     try:
         tabs = [t for t in http_json("/json/list") if t.get("type") == "page"]
