@@ -11,10 +11,12 @@
 | 경계 | 볼 수 있는 것 | 볼 수 없는 것 |
 | --- | --- | --- |
 | 홈서버 | S3 endpoint와 credential, 사진 원본, 네이버 세션 | 지융과의 대화 |
+| 홈서버의 Hermes 컨테이너 | 홈서버와 같다. S3 값을 환경 변수로 받는다 | SSH 키 |
 | 맥북 | 내려받은 사진, 초안 | S3 credential |
 
 홈서버에는 `~/fos-agents`가 클론돼 있다.
 `git pull`이 곧 배포이며 별도 설치 단계가 없다.
+Hermes 컨테이너는 그 클론을 그대로 본다.
 
 네이버 세션은 2026-09-20 부터 홈서버의 상주 Chrome 프로필에 둔다.
 그 판단과 값은 [`../references/preview-automation.md`](../references/preview-automation.md)가 소유한다.
@@ -33,7 +35,7 @@
 | `scripts/naver_session.py` | 홈서버 | 네이버 세션을 담은 Chrome 을 상주시키고 로그인을 판정한다 |
 | `scripts/cdp.py` | 맥북과 홈서버 | CDP 의 WebSocket 창구를 의존성 없이 부른다 |
 | `scripts/naver_editor.py` | 맥북 | 글쓰기 화면에 제목과 본문을 넣고 임시저장한다 |
-| `.claude/skills/naver-blog-draft/` | 맥북 | 사진에서 임시저장까지의 판단과 절차 |
+| `.claude/skills/naver-blog-draft/` | 맥북과 홈서버 | 사진에서 임시저장까지의 판단과 절차 |
 | `docs/` | 문서 | 흐름, 스키마, 구조 |
 | `drafts/` | 맥북 | 내려받은 사진과 초안. 추적하지 않는다 |
 | `data/` | 맥북 | 수집 원본과 집계 결과. 추적하지 않는다 |
@@ -43,7 +45,7 @@
 | 경로 | 책임 |
 | --- | --- |
 | `SKILL.md` | 언제 무엇을 하는지, 멈출 조건 |
-| `scripts/photos.py` | SSH로 홈서버 명령을 부른다 |
+| `scripts/photos.py` | 사진 저장소 명령을 부른다. 부르는 길을 환경을 보고 고른다 |
 | `scripts/photo_set.py` | 내려받은 사진의 촬영시각을 읽어 순서를 세운다 |
 | `scripts/place_hints.py` | 내려받은 사진에서 장소를 짐작할 실마리를 모은다 |
 | `scripts/build_preview.py` | 초안과 사진으로 미리보기를 만든다 |
@@ -55,14 +57,26 @@
 ## 의존 방향
 
 ```text
-맥북:  photos.py ──SSH──> 홈서버: photo_store.py ──> seaweed_s3.py ──> S3
-       photo_set.py ──> 내려받은 파일
-       place_hints.py ──> 내려받은 파일
-       build_preview.py ──> draft.json + 내려받은 파일
+맥북:    photos.py ──SSH──> 홈서버: photo_store.py ──> seaweed_s3.py ──> S3
+홈서버:  photos.py ────────────────> photo_store.py ──> seaweed_s3.py ──> S3
+
+어디서나: photo_set.py ──> 내려받은 파일
+         place_hints.py ──> 내려받은 파일
+         build_preview.py ──> draft.json + 내려받은 파일
 ```
 
-맥북 코드가 `seaweed_s3.py`를 직접 부르지 않는다.
-부를 수 있게 두면 credential이 맥북으로 내려와야 한다.
+`photos.py`는 같은 스킬이 두 자리에서 돌기 때문에 길을 스스로 고른다.
+S3 설정을 읽을 수 있으면 같은 자리에서 `photo_store.py`를 부르고,
+읽지 못하면 SSH로 홈서버의 같은 스크립트를 부른다.
+고르는 조건은 `photos.py`의 `run_remote()`가 소유한다.
+
+맥북에는 S3 설정이 없으므로 맥북에서 돌 때는 SSH 쪽만 남는다.
+credential이 맥북으로 내려오지 않는다는 경계는 이 방식으로도 그대로다.
+S3 설정을 읽을 수 있다는 것 자체가 S3에 닿는 자리에 있다는 뜻이기 때문이다.
+
+홈서버 안의 Hermes 컨테이너도 S3에 닿는 자리다.
+거기서는 SSH로 나갔다 들어오지 않으므로 컨테이너에 SSH 키를 넣지 않는다.
+대신 `~/apps/ji-yoon-blog/config/host.env`의 S3 값을 컨테이너 환경 변수로 넣는다.
 
 ## 의존성
 
