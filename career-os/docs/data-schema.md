@@ -383,60 +383,23 @@ bun career-os/scripts/position-recommender/configure_position_analysis_policy.ts
   --input <분석-정책.json>
 ```
 
+### 공고 후보풀과 추천 결과
+
 #### 재사용하는 회사 조사 데이터
 
 `state/company-research/<companyKey>.json`은 포지션 추천이 다음 실행에서도 재사용할 공개 회사 사실과
 그 사실에서 도출한 추론을 담는다. 비공개 작업 release로 동기화하지만 현재 역할,
 개인 우선순위와 최종 추천 순위는 넣지 않는다.
 
-```json
-{
-  "schemaVersion": 1,
-  "profile": {
-    "companyKey": "example-company",
-    "company": "예시 회사",
-    "aliases": ["Example Company"],
-    "researchedAt": "2026-09-14T12:00:00+09:00",
-    "facts": [
-      {
-        "factId": "example-company-growth-2026-q3",
-        "topic": "growth",
-        "scope": "company",
-        "statement": "공식 실적 발표에서 유료 고객 수가 전년 동기보다 증가했다.",
-        "source": {
-          "url": "https://example.com/ir/2026-q3",
-          "title": "2026년 3분기 실적",
-          "publisher": "예시 회사",
-          "sourceType": "investor-relations",
-          "publishedAt": "2026-09-01",
-          "observedAt": "2026-09-14T12:00:00+09:00"
-        },
-        "validUntil": "2026-12-13"
-      }
-    ],
-    "inferences": [
-      {
-        "inferenceId": "example-company-domain-upside-2026-q3",
-        "topic": "domain-growth",
-        "statement": "고객 증가가 이어지면 공통 구조와 운영 안정성을 다룰 문제도 커질 가능성이 있다.",
-        "basisFactIds": ["example-company-growth-2026-q3"],
-        "assumptions": ["고객 증가가 해당 백엔드 팀의 처리 범위 확대로 이어진다."],
-        "confidence": "medium",
-        "inferredAt": "2026-09-14T12:00:00+09:00",
-        "validUntil": "2026-12-13"
-      }
-    ],
-    "researchGaps": [
-      {
-        "topic": "compensation",
-        "question": "백엔드 경력직 총보상 구간을 확인할 공개 자료가 있는가",
-        "lastAttemptedAt": "2026-09-14T12:00:00+09:00",
-        "retryAfter": "2026-10-14"
-      }
-    ]
-  }
-}
-```
+| 자리 | 담는 것 |
+| --- | --- |
+| `profile.companyKey`, `company`, `aliases` | 회사 식별. `companyKey` 가 파일 이름이다 |
+| `profile.facts[]` | 공개 사실 하나. `factId`, `topic`, `scope`, `statement` |
+| `facts[].source` | HTTPS 출처. `url`, `title`, `publisher`, `sourceType`, `publishedAt`, `observedAt` |
+| `facts[].validUntil` | 이 사실을 다시 쓸 수 있는 마지막 날 |
+| `profile.inferences[]` | 사실에서 도출한 추론. `basisFactIds` 로 근거 사실을 가리킨다 |
+| `inferences[].assumptions`, `confidence` | 재사용 판단에 도움이 될 때만 넣는다 |
+| `researchGaps[]` | 재조사할 질문과 날짜. 같은 조사를 매 실행 반복하지 않으려고 둔다 |
 
 `topic`과 `scope`는 조사한 회사와 공고에 맞는 이름을 자유롭게 쓴다.
 각 사실은 HTTPS 출처를 갖는다. 유효기간, 추론의 가정과 신뢰도는 재사용 판단에 도움이 될 때만 넣는다.
@@ -596,19 +559,26 @@ ORDER BY ri.rank_number;
 `selection_reason`은 각각에 대응하는 `discovery`와 `refresh` 중 하나다.
 `prior_tier`는 `stale` 항목이 만료된 이전 평가의 tier를 담는 자리이므로 `new` 항목에서는 비어 있다.
 
-실행 항목의 `result_status`는 `pending`, `created`, `reused`, `failed` 중 하나이며
-`created`와 `reused`만 `company_tier_assessment_id`를 가지고 `failed`만 `failure_code`를 가진다.
-`created`는 그 결과가 새 평가 행을 만든 항목이다.
-`reused`는 선택한 시점에는 유효한 평가가 없었지만 결과를 받는 시점에 이미 생겼을 때 쓴다.
-큐는 유효한 평가가 없는 회사만 고르므로 이 상태는 앞선 실행과 겹쳐 돌았을 때만 나온다.
-Backend는 같은 회사, 같은 후보자 기준 버전과 계약 버전의 유효한 평가를 찾으면
-새 행을 만들지 않고 그것을 연결한 뒤 `reused`로 남긴다.
-`failure_code`는 client가 보내는 `research_unavailable`, `model_unavailable`, `contract_rejected`, `internal_error`와
-Backend가 2시간이 지난 처리 중 표시를 회수하며 남기는 `lease_expired`만 허용한다.
-실행 상태는 선택 항목이 모두 `created` 또는 `reused`면 `completed`, `failed`가 남아 있으면 `partial`이다.
-선택할 회사가 없으면 실행은 만들어지는 즉시 `completed`다.
-`assessed_now_count`는 그 실행이 새로 만든 평가 수이므로 `created` 항목만 센다.
-`reused`와 `failed`는 이 값에 들어가지 않는다.
+실행 항목의 `result_status` 다.
+
+| 값 | 뜻 | `company_tier_assessment_id` | `failure_code` |
+| --- | --- | --- | --- |
+| `pending` | 아직 결과가 오지 않았다 | 없음 | 없음 |
+| `created` | 새 평가 행을 만들었다 | 있음 | 없음 |
+| `reused` | 고를 때는 유효한 평가가 없었는데 결과를 받을 때 이미 있었다 | 있음 | 없음 |
+| `failed` | 평가하지 못했다 | 없음 | 있음 |
+
+`reused` 는 앞선 실행과 겹쳐 돌았을 때만 나온다. 큐가 유효한 평가가 없는 회사만 고르기 때문이다.
+Backend 는 같은 회사와 같은 후보자 기준 버전과 계약 버전의 유효한 평가를 찾으면
+새 행을 만들지 않고 그것을 연결한다.
+
+`failure_code` 는 다섯만 허용한다.
+client 가 보내는 `research_unavailable`, `model_unavailable`, `contract_rejected`, `internal_error` 와
+Backend 가 2시간이 지난 처리 중 표시를 회수하며 남기는 `lease_expired` 다.
+
+실행 상태는 선택 항목이 모두 `created` 또는 `reused` 면 `completed`, `failed` 가 남아 있으면 `partial` 이다.
+선택할 회사가 없으면 만들어지는 즉시 `completed` 다.
+`assessed_now_count` 는 `created` 항목만 센다. `reused` 와 `failed` 는 들어가지 않는다.
 
 `signals_json`은 성장 범위를 `growth-scope`, 보상 상승을 `compensation-upside`,
 팀 성장을 `team-growth` 키로 각각 한 번씩만 담고,
@@ -806,7 +776,7 @@ HTTPS `runtime` 근거는 실행마다 달라질 수 있으므로 `refresh_requi
 - `enabled`
 - 출처 분류
 
-#### 실행 중 생성되는 읽을거리 데이터
+### 실행 중 생성되는 읽을거리 데이터
 
 읽을거리 실행은 시스템 임시 경로에 후보풀, 선별 결과와 이력을 만든다.
 게시와 검증이 끝나면 실행별 데이터를 정리한다.
@@ -829,7 +799,7 @@ HTTPS `runtime` 근거는 실행마다 달라질 수 있으므로 `refresh_requi
 각 추천 자료는 카테고리, 제목과 원문 URL, 출처, 간단한 요약, 추천 이유와 커리어 연결 유형을 가진다.
 커리어 연결 유형은 `current-work`, `target-role`, `engineering-judgment`, `product-business` 중 하나다.
 
-#### `state/morning-study-history.json`
+### `state/morning-study-history.json`
 
 검증을 통과해 사용자에게 제공할 준비가 끝난 추천 자료의 누적 이력이다.
 이 파일은 홈서버 비공개 작업 release로 동기화하며 임시 리포트와 분리한다.
@@ -857,7 +827,7 @@ YouTube 영상은 video ID를 키에 포함하고 일반 글은 정규화한 URL
 원문에 없는 예상 학습 시간, 난이도, 분야를 임의 기본값으로 채우지 않는다.
 값이 필요하지만 확인할 수 없으면 명시적으로 정보가 없다고 표시한다.
 
-#### 학습자료 API 연동 상태
+### 학습자료 API 연동 상태
 
 이 절은 명시적으로 선택하는 library 모드의 현재 클라이언트 계약이다.
 운영 서버 적용과 웹 UI 구현은 별도 작업이다.
@@ -875,7 +845,7 @@ study table은 기존 `fos-blog` 설계의 관계를 유지한다.
 `study_recommended_materials`, `study_publications`와 `study_request_receipts`를 사용한다.
 현재 기존 table은 0행이므로 데이터 복사는 하지 않으며 API 계약 검증 뒤 제거한다.
 
-##### 학습자료 HTTP 계약
+#### 학습자료 HTTP 계약
 
 기본 경로는 `/api/study/v1`을 유지한다.
 `producer` token은 수집, 추천과 게시 기록에 사용하고,
@@ -939,24 +909,38 @@ YouTube archive cursor는 `pendingVideoIds`와 함께 `pendingVideos`에 아직 
 `nextPageToken`은 현재 페이지의 남은 영상을 모두 저장한 뒤 사용할 다음 페이지 위치다.
 마지막 페이지의 남은 영상까지 저장해야 `done:true`가 된다.
 
-자료 배치 저장 요청의 `items`는 100개 이하로 보낸다.
-recent의 `lastSeen`은 현재 정상 응답에서 확인한 기존 키와 이번 배치에 저장할 새 키를 보존한다.
-아직 저장하지 않은 자료는 실행 한도에 걸렸더라도 `lastSeen`에 넣지 않는다.
-다음 응답에 없는 키는 제거할 수 있으며, 다시 수집되면 서버가 contentKey로 같은 자료를 갱신한다.
-feed와 page recent는 `fetchedAt`을 기록하고 YouTube recent는 API 키 없이 RSS를 사용하며 `rssOnly:true`를 기록한다.
-library 수집은 정상 빈 문서와 HTTP·파싱 실패를 구분하며 stale cache로 실패를 대신하지 않는다.
-수집기 한도는 배치 크기와 외부 요청량을 제한하기 위한 값이며 누적 자료의 보관 한도로 쓰지 않는다.
-최근 feed 수집 자료는 `feed-article` 또는 `feed-video` kind를 사용한다.
-archive sitemap 자료는 `page-link`, YouTube uploads 자료는 `page-video` kind를 사용해 같은 sourceKey라도 수집 경로를 구분한다.
-수집 실패, 파싱 실패, API 키 부재처럼 다음 위치를 확정할 수 없는 경우에는 `POST /ingestions`를 보내지 않는다.
-정상적인 빈 페이지를 확인했을 때만 items 빈 배열과 다음 cursor를 보낼 수 있다.
-sitemap index나 sitemap 본문이 이전 digest와 달라지면 변경을 감지한 상태로 실패하고 cursor를 진행하지 않는다.
-다시 처음부터 수집해야 할 때는 `--reset-cursor`를 `--library --collect-only --mode archive --source-key <key>`와 함께 실행한다.
-reset도 cursor 단독 API를 쓰지 않고 기존 cursor version을 읽은 뒤 초기 cursor에서 만든 자료 배치와 다음 cursor를 ingestion으로 원자 저장한다.
-성공한 ingestion만 기존 cursor를 교체하며, 충돌하면 기존 cursor를 유지한다.
-`done:true`인 archive 재수집도 같은 옵션을 사용한다.
-cursor 직렬화 크기는 API 계약의 64 KiB 제한을 넘지 않아야 하며, 초과가 예상되면 pending 목록을 다음 실행에서 다시 계산할 수 있는 작은 상태로 줄인다.
-모든 archive cursor는 더 수집할 항목이 없을 때 `done:true`로 저장한다.
+자료 배치 저장의 규칙이다.
+
+- `items` 는 한 요청에 100개 이하다.
+- recent 의 `lastSeen` 은 이번 정상 응답에서 확인한 기존 키와 저장할 새 키만 담는다.
+  실행 한도에 걸려 아직 저장하지 않은 자료는 넣지 않는다.
+- 다음 응답에 없는 키는 지워도 된다. 다시 수집되면 서버가 `contentKey` 로 같은 자료를 갱신한다.
+- 수집기 한도는 배치 크기와 외부 요청량을 제한하는 값이다. 누적 자료의 보관 한도가 아니다.
+
+자료의 `kind` 로 같은 sourceKey 라도 수집 경로를 구분한다.
+
+| 수집 경로 | `kind` |
+| --- | --- |
+| feed recent | `feed-article`, `feed-video` |
+| archive sitemap | `page-link` |
+| YouTube uploads archive | `page-video` |
+
+feed 와 page recent 는 `fetchedAt` 을 기록한다.
+YouTube recent 는 API 키 없이 RSS 를 쓰고 `rssOnly:true` 를 기록한다.
+
+실패와 빈 상태를 구분한다.
+
+- 정상 빈 문서와 HTTP·파싱 실패를 구분한다. stale cache 로 실패를 대신하지 않는다.
+- 다음 위치를 확정할 수 없으면 `POST /ingestions` 를 보내지 않는다.
+  수집 실패, 파싱 실패, API 키 부재가 여기 해당한다.
+- 정상적인 빈 페이지를 확인했을 때만 빈 `items` 와 다음 cursor 를 보낼 수 있다.
+- sitemap index 나 본문이 이전 digest 와 달라지면 변경을 감지한 상태로 실패하고 cursor 를 진행하지 않는다.
+
+cursor 는 성공한 ingestion 만 교체한다. 충돌하면 기존 cursor 를 유지한다.
+직렬화 크기가 64 KiB 를 넘지 않아야 하며, 넘을 것 같으면 pending 목록을
+다음 실행에서 다시 계산할 수 있는 작은 상태로 줄인다.
+더 수집할 항목이 없으면 `done:true` 로 저장한다.
+처음부터 다시 수집할 때는 `--reset-cursor` 를 쓴다. 조합은 스킬의 `references/execution.md` 가 소유한다.
 
 추천 저장은 기존 `MorningReadingReport`를 API `recommendation-runs` payload로 변환해 보낸다.
 `reportId`는 서울 날짜의 `morning-YYYY-MM-DD`, `generatedAt`은 UTC ISO 문자열을 사용한다.
@@ -966,7 +950,7 @@ HTML과 report JSON 검증이 끝난 뒤 `--commit-recommendation --report <RUN_
 publication의 `idempotencyKey`는 `publication:` 뒤에 고정 순서 `{reportId,channel,publishedAt,externalId,url}` JSON의 UTF-8 SHA-256 hex를 붙인다.
 추천 저장이 실패하면 완료로 보지 않고, 파일 이력에 대신 쓰지 않는다.
 
-#### Pages manifest와 import payload
+### Pages manifest와 import payload
 
 이 절은 library 모드의 현재 import preview 입력과 출력 계약이다.
 기존 Pages 노출 이력은 API payload와 분리한 manifest envelope로 읽는다.
