@@ -1,4 +1,5 @@
 import type { PostingCandidate } from "../../../scripts/position-recommender/live-postings/contracts.ts";
+import type { CompanyTierSource } from "./memory-repository.ts";
 import type { AnalysisPolicy } from "./schema.ts";
 
 export type PendingPosition = {
@@ -7,12 +8,26 @@ export type PendingPosition = {
   contentHash: string;
   status: "new" | "changed" | "stale";
   companyTier: number;
+  companyTierSource: CompanyTierSource;
+  companyTierAssessmentId: string | null;
   pendingSince: string;
   posting: PostingCandidate;
 };
 
 export type SelectedPosition = PendingPosition & {
   selectionReason: "priority" | "aging" | "overflow";
+};
+
+export type PendingCompany = {
+  companyKey: string;
+  companyName: string;
+  assessmentStatus: "new" | "stale";
+  activePositionCount: number;
+  firstSeenAt: string;
+  representativePostingUrls: string[];
+  priorTier: number | null;
+  priorReason: string | null;
+  priorValidUntil: string | null;
 };
 
 const statusOrder = { new: 0, changed: 1, stale: 2 } as const;
@@ -69,4 +84,27 @@ export function selectAnalysisQueue(
     .slice(0, policy.dailyAnalysisLimit - selected.length)
     .forEach((candidate) => add(candidate, "overflow"));
   return selected;
+}
+
+export function selectCompanyTierQueue(
+  candidates: PendingCompany[],
+  policy: AnalysisPolicy,
+): PendingCompany[] {
+  const discovery = candidates
+    .filter((candidate) => candidate.assessmentStatus === "new")
+    .sort(
+      (left, right) =>
+        right.activePositionCount - left.activePositionCount ||
+        left.firstSeenAt.localeCompare(right.firstSeenAt) ||
+        left.companyKey.localeCompare(right.companyKey),
+    );
+  const refresh = candidates
+    .filter((candidate) => candidate.assessmentStatus === "stale")
+    .sort(
+      (left, right) =>
+        (left.priorTier ?? 3) - (right.priorTier ?? 3) ||
+        (left.priorValidUntil ?? "").localeCompare(right.priorValidUntil ?? "") ||
+        left.companyKey.localeCompare(right.companyKey),
+    );
+  return [...discovery, ...refresh].slice(0, policy.dailyCompanyTierLimit);
 }

@@ -2,6 +2,11 @@
 
 **Execution profile**: deep
 
+> **이 계획은 보류 상태다. 지금 구현하지 않는다.**
+> plan124로 회사 tier 평가를 마친 뒤 plan125가 Backend를 NestJS와 Prisma로 옮긴다.
+> 학습자료 schema는 그 전환이 끝난 뒤에 얹어야 하므로, 이 계획은 그때 다시 세운다.
+> 아래 내용은 그때 참고할 자료로 남긴다. 그대로 구현하면 옛 스택 기준으로 만들게 된다.
+
 ## 목표
 
 기존 학습자료 관계와 제약을 `fos_career` migration으로 옮기고,
@@ -13,7 +18,9 @@ producer와 admin-gateway의 권한을 Backend에서 분리한다.
 
 `fos-blog`에는 source, cursor, material, 개인 상태, 추천과 게시 이력을 다루는 13개 table 설계가 있다.
 초기 이전에서는 table과 column 의미를 유지해 기존 client와 관리자 화면의 계약을 바꾸지 않는다.
-포지션 API와 공통 HTTP·DB 경계는 먼저 `tasks/plan121-position-analysis-reuse/` 구현으로 존재해야 한다.
+포지션 API와 공통 HTTP·DB 경계는 `services/recommendation-api/`에 이미 구현돼 있다.
+`db/connection.ts`의 연결, `db/migrations.ts`의 migration runner,
+`db/receipt-store.ts`의 멱등 처리와 `routes/positions.ts`의 인증 경계를 그대로 쓴다.
 
 **근거 문서**: `docs/data-schema.md`의 「학습자료 API 연동 상태」와 「학습자료 HTTP 계약」,
 `docs/code-architecture.md`의 「추천 상태 Backend」와 「아침 읽을거리」,
@@ -21,7 +28,7 @@ producer와 admin-gateway의 권한을 Backend에서 분리한다.
 
 ## Blocked 조건
 
-- plan121의 Backend 공통 인증, DB 연결과 migration runner가 없으면 `PHASE_BLOCKED: Backend 기반 미구현`을 출력하고 종료한다.
+- `services/recommendation-api/`의 공통 인증, DB 연결과 migration runner가 없으면 `PHASE_BLOCKED: Backend 기반 미구현`을 출력하고 종료한다.
 
 ## 의도 메모
 

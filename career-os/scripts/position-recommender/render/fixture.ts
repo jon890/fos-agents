@@ -42,6 +42,24 @@ const postings = Array.from({ length: 11 }, (_, index): Posting => ({
 }));
 export const { pool } = buildPostingCandidatePool(postings, diagnostics);
 
+const tierSources = ["model", "manual", "default"] as const;
+
+function companyTierProvenance(index: number) {
+  const source = tierSources[index % tierSources.length];
+  if (source !== "model") {
+    return { companyTierSource: source, companyTierEvidenceUrls: [] as string[] };
+  }
+  return {
+    companyTierSource: "model" as const,
+    companyTierAssessmentId: `assessment-${index}`,
+    companyTierAssessedAt: "2026-08-01T00:00:00.000Z",
+    companyTierValidUntil: "2026-11-01",
+    companyTierConfidence: "medium" as const,
+    companyTierReason: "최근 투자 유치와 채용 확대 신호가 있다.",
+    companyTierEvidenceUrls: ["https://example.com/news/1"],
+  };
+}
+
 function positionItem(candidate: PostingCandidate, index: number) {
   return {
     candidateId: candidate.id,
@@ -49,6 +67,7 @@ function positionItem(candidate: PostingCandidate, index: number) {
     title: candidate.title,
     postingUrl: candidate.url,
     companyTier: 1 + (index % 3),
+    ...companyTierProvenance(index),
     decision: index < 7 ? ("recommend" as const) : ("hold" as const),
     fitScore: 90 - index,
     label: index < 4 ? "우선 검토" : "경험 확장 후보",
@@ -71,7 +90,7 @@ function rankedItem(candidate: PostingCandidate, index: number) {
 }
 
 export const run = RecommendationRun.parse({
-  schemaVersion: 10,
+  schemaVersion: 11,
   reportDate: "2026-08-13",
   generatedAt: "2026-08-13T09:00:00+09:00",
   summary: ["지원 검토 가치가 있다."],
@@ -89,6 +108,12 @@ export const run = RecommendationRun.parse({
     reusedCount: 4,
     pendingCount: 0,
     personalExcludedCount: 0,
+  },
+  companyTierSummary: {
+    manualCount: pool.candidates.filter((_, index) => index % 3 === 1).length,
+    modelCount: pool.candidates.filter((_, index) => index % 3 === 0).length,
+    defaultCount: pool.candidates.filter((_, index) => index % 3 === 2).length,
+    assessmentFailedCount: 0,
   },
   collectionHealth: {
     candidateCount: pool.candidates.length,

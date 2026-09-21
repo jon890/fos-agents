@@ -5,10 +5,14 @@ import {
   analysisQueueResponseSchema,
   analysisResultsResponseSchema,
   companyPreferenceSchema,
+  companyTierResultsResponseSchema,
+  positionPreparationResponseSchema,
   recommendationResponseSchema,
   type AnalysisQueueResponse,
   type AnalysisResultsResponse,
   type CompanyPreference,
+  type CompanyTierResultsResponse,
+  type PositionPreparationResponse,
   type RecommendationResponse,
 } from "../../../services/recommendation-api/position/schema.ts";
 
@@ -115,13 +119,40 @@ export class RecommendationApiClient {
       : new RecommendationApiClientError(null, "NETWORK_ERROR", "추천 API에 연결하지 못했습니다.");
   }
 
-  saveCollection(body: unknown, idempotencyKey: string): Promise<AnalysisQueueResponse> {
+  saveCollection(body: unknown, idempotencyKey: string): Promise<PositionPreparationResponse> {
     return this.request(
       "POST",
       "/api/positions/v1/collection-runs",
       body,
       idempotencyKey,
+      positionPreparationResponseSchema,
+    );
+  }
+
+  createPositionAnalysisRun(
+    collectionRunId: string,
+    idempotencyKey: string,
+  ): Promise<AnalysisQueueResponse> {
+    return this.request(
+      "POST",
+      `/api/positions/v1/collection-runs/${encodeURIComponent(collectionRunId)}/analysis-runs`,
+      { schemaVersion: 1 },
+      idempotencyKey,
       analysisQueueResponseSchema,
+    );
+  }
+
+  saveCompanyTierResults(
+    companyTierRunId: string,
+    body: unknown,
+    idempotencyKey: string,
+  ): Promise<CompanyTierResultsResponse> {
+    return this.request(
+      "POST",
+      `/api/positions/v1/company-tier-runs/${encodeURIComponent(companyTierRunId)}/results`,
+      body,
+      idempotencyKey,
+      companyTierResultsResponseSchema,
     );
   }
 

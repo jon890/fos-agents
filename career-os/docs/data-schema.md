@@ -68,15 +68,23 @@ URL은 fragment, `utm_*`, `fbclid`, `gclid`를 제거하고 query 순서와 마�
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "candidateContextVersion": "career-priority-2026-09",
   "dailyAnalysisLimit": 20,
   "prioritySlots": 16,
   "agingSlots": 4,
   "staleAfterDays": 30,
-  "defaultCompanyTier": 3
+  "defaultCompanyTier": 3,
+  "dailyCompanyTierLimit": 5,
+  "companyTierStaleAfterDays": 90
 }
 ```
+
+`dailyCompanyTierLimit`은 하루에 모델이 평가할 회사 수의 상한이고 1부터 20까지만 허용한다.
+`companyTierStaleAfterDays`는 모델 평가의 기본 유효기간이고 1부터 365까지만 허용한다.
+두 값은 `002_company_tier_assessments.sql`이 기존 단일 행에 5와 90을 채운 뒤 `NOT NULL`로 바꾼다.
+다른 정책 값과 마찬가지로 DB 기본값은 남기지 않으므로,
+새 DB에 행을 만들 때 두 값을 반드시 줘야 하고 이후 변경도 정책 설정 요청으로만 한다.
 
 `tier`는 1, 2, 3만 허용하며 1이 가장 높다.
 회사명은 정규화한 `companyKey`로 유일해야 하고 표시 이름을 별도 column에 둔다.
@@ -385,6 +393,9 @@ HTTPS `runtime` 근거는 실행마다 달라질 수 있으므로 `refresh_requi
 | `position_collection_items`       | `(run_id, position_id)` UNIQUE, 해당 실행이 본 version과 활성 상태                           |
 | `position_analysis_policy`        | singleton PK, 후보자 기준 버전, 일일 상한, 슬롯과 만료일 정책                                |
 | `company_preferences`             | `company_key` UNIQUE, 회사명, tier, `analyze` 또는 `exclude`, 변경 시각                      |
+| `company_tier_assessment_runs`      | `company_tier_run_id` PK, `collection_run_id` UNIQUE, 후보자 기준 버전과 계약 버전, `pending`·`partial`·`completed` 상태 |
+| `company_tier_assessments`          | `company_tier_assessment_id` PK, `company_key`와 후보자 기준·계약 버전, 추천 tier와 신뢰도, 근거 JSON, 유효기간, 최초 생성 실행 |
+| `company_tier_assessment_run_items` | `(company_tier_run_id, company_key)` PK, 선택 순서와 선택 이유, 처리 결과와 연결한 평가, 실패 사유와 제출 횟수     |
 | `position_analysis_runs`          | `analysis_run_id` PK, 수집 실행과 후보자 기준 버전, 분석 계약 버전, `pending`·`partial`·`completed` 상태 |
 | `position_analysis_run_items`     | `(analysis_run_id, position_id)` UNIQUE, 선택 순서, 상태와 선택 이유, 처리 결과와 연결한 분석, 실패 사유와 제출 횟수 |
 | `position_analyses`               | `(position_version_id, candidate_context_version, contract_version)` UNIQUE, 점수와 유효기간, 최초 생성 실행 |
@@ -476,6 +487,115 @@ ORDER BY ri.rank_number;
 모델의 `analysis-updates.json`도 `schemaVersion`이 2이고 같은 `analysisRunId`를 담는다.
 아직 끝나지 않은 공고를 분석 결과는 `results`에, 분석하지 못한 사유는 `failures`에 한 번씩 나눠 담는다.
 
+### 회사 tier 평가 이력
+
+사람이 정한 회사 우선순위는 `company_preferences`에만 남고,
+모델이 만든 tier 평가는 세 table에 실행 단위로 따로 쌓는다.
+판단 근거는 [회사 tier ADR](adr/ADR-120-회사-tier는-사람-override와-모델-평가를-분리해-저장한다.md)이 소유한다.
+
+| table                               | column                                                                                                                                                                                                                                                                                                  |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `company_tier_assessment_runs`      | `company_tier_run_id`, `collection_run_id`, `candidate_context_version`, `contract_version`, `status`, `assessed_now_count`, `created_at`, `completed_at`                                                                                                                                              |
+| `company_tier_assessments`          | `company_tier_assessment_id`, `company_key`, `company_name`, `candidate_context_version`, `contract_version`, `created_by_company_tier_run_id`, `recommended_tier`, `confidence`, `reason`, `signals_json`, `evidence_json`, `assumptions_json`, `assessed_at`, `valid_until`                          |
+| `company_tier_assessment_run_items` | `company_tier_run_id`, `company_key`, `company_name`, `selection_order`, `assessment_status`, `selection_reason`, `prior_tier`, `active_position_count`, `result_status`, `company_tier_assessment_id`, `failure_code`, `attempt_count`, `completed_at`                                                 |
+
+수집 실행 하나는 회사 tier 실행 하나만 가지므로 `collection_run_id`에 UNIQUE를 둔다.
+실행 항목은 `(company_tier_run_id, company_key)`가 PK이고 `(company_tier_run_id, selection_order)`가 UNIQUE다.
+평가를 만든 실행과 실행 항목이 연결한 평가는 모두 `ON DELETE RESTRICT` foreign key로 검증하므로,
+평가를 만든 실행은 삭제할 수 없다.
+`company_key`는 `company_preferences`와 같은 정규화 규칙을 쓰고 별도 `companies` table을 만들지 않는다.
+
+`recommended_tier`는 1, 2, 3만, `confidence`는 `low`, `medium`, `high`만 허용한다.
+`assessment_status`는 유효한 평가가 없는 회사의 `new`와 평가가 만료된 회사의 `stale` 중 하나이고,
+`selection_reason`은 각각에 대응하는 `discovery`와 `refresh` 중 하나다.
+`prior_tier`는 `stale` 항목이 만료된 이전 평가의 tier를 담는 자리이므로 `new` 항목에서는 비어 있다.
+
+실행 항목의 `result_status`는 `pending`, `created`, `reused`, `failed` 중 하나이며
+`created`와 `reused`만 `company_tier_assessment_id`를 가지고 `failed`만 `failure_code`를 가진다.
+`created`는 그 결과가 새 평가 행을 만든 항목이다.
+`reused`는 선택한 시점에는 유효한 평가가 없었지만 결과를 받는 시점에 이미 생겼을 때 쓴다.
+큐는 유효한 평가가 없는 회사만 고르므로 이 상태는 앞선 실행과 겹쳐 돌았을 때만 나온다.
+Backend는 같은 회사, 같은 후보자 기준 버전과 계약 버전의 유효한 평가를 찾으면
+새 행을 만들지 않고 그것을 연결한 뒤 `reused`로 남긴다.
+`failure_code`는 client가 보내는 `research_unavailable`, `model_unavailable`, `contract_rejected`, `internal_error`와
+Backend가 2시간이 지난 처리 중 표시를 회수하며 남기는 `lease_expired`만 허용한다.
+실행 상태는 선택 항목이 모두 `created` 또는 `reused`면 `completed`, `failed`가 남아 있으면 `partial`이다.
+선택할 회사가 없으면 실행은 만들어지는 즉시 `completed`다.
+`assessed_now_count`는 그 실행이 새로 만든 평가 수이므로 `created` 항목만 센다.
+`reused`와 `failed`는 이 값에 들어가지 않는다.
+
+`signals_json`은 성장 범위를 `growth-scope`, 보상 상승을 `compensation-upside`,
+팀 성장을 `team-growth` 키로 각각 한 번씩만 담고,
+확인하지 못한 축은 지어낸 사실 대신 `unknown`으로 남긴다.
+세 이름은 `state/company-research/`의 `topic`과 같은 kebab-case 표기를 따른다.
+`evidence_json`의 근거 URL은 HTTPS만 허용한다.
+`valid_until`은 Backend가 다음 셋 중 가장 빠른 날로 정한다.
+수신 시각에 `companyTierStaleAfterDays`를 더한 날, 각 근거의 만료일,
+client가 결과에 `validUntil`을 넣었으면 그 날이다.
+client가 보낸 값이 셋 중 가장 늦으면 쓰지 않으므로 그 값만으로 유효기간을 늘릴 수 없다.
+
+평가는 `(company_key, candidate_context_version, contract_version, valid_until, assessed_at)` 복합 index로 조회하며,
+과거 행을 갱신하지 않고 추가만 한다.
+후보자 기준 버전이나 계약 버전이 달라지면 기존 평가는 재사용하지 않고 다시 평가한다.
+
+회사 tier 큐는 수동 tier나 `exclude`가 있는 회사를 먼저 빼고 `dailyCompanyTierLimit`까지 고른다.
+유효한 평가가 없는 회사를 활성 공고 수 내림차순, 첫 관측 시각, `company_key` 순으로 먼저 채우고,
+남은 자리를 만료된 이전 Tier 1, 2, 3, 오래된 만료일, `company_key` 순으로 채운다.
+다른 실행이 처리 중인 회사는 건너뛰며, 2시간이 지난 항목은 `lease_expired`로 끝내고 다시 고른다.
+활성 공고 수는 tier 값 자체를 정하는 데 쓰지 않는다.
+
+공고를 고를 때는 `exclude`를 제거한 뒤 `manual`, `model`, `default` 순서로 tier를 해결한다.
+그때 사용한 값과 출처는 `position_analysis_run_items`와 `position_recommendation_items`에 스냅샷한다.
+
+```text
+company_tier_source ENUM('manual', 'model', 'default') NOT NULL
+company_tier_assessment_id CHAR(36) NULL
+```
+
+`company_tier_source`가 `model`일 때만 평가 ID가 있어야 하며 `CHECK`로 강제한다.
+`002` 적용 시점의 기존 행은 모두 `default`로 이관하고 평가 ID를 비운다.
+이전 공고 분석을 재사용한 추천도 그 추천 실행이 사용한 현재 tier와 출처를 따로 남기므로,
+분석 시점의 tier와 추천 시점의 tier가 달라도 둘 다 확인할 수 있다.
+
+추천이 어느 tier를 어디서 얻었는지 확인한다.
+
+```sql
+SELECT ri.rank_number, p.company_name, ri.company_tier,
+       ri.company_tier_source, ri.company_tier_assessment_id
+FROM position_recommendation_items ri
+JOIN positions p ON p.position_id = ri.position_id
+WHERE ri.recommendation_run_id = ?
+ORDER BY ri.rank_number;
+```
+
+실행이 평가하려던 회사와 그 결과를 확인한다.
+
+```sql
+SELECT i.selection_order, i.company_name, i.assessment_status, i.selection_reason,
+       i.result_status, i.failure_code, i.attempt_count
+FROM company_tier_assessment_run_items i
+WHERE i.company_tier_run_id = ?
+ORDER BY i.selection_order;
+```
+
+아직 기본 tier로 남아 있는 회사를 확인한다.
+
+```sql
+SELECT DISTINCT p.company_name
+FROM position_analysis_run_items i
+JOIN positions p ON p.position_id = i.position_id
+WHERE i.analysis_run_id = ? AND i.company_tier_source = 'default';
+```
+
+임시 `company-tier-queue.json`은 Backend 응답을 그대로 저장한 실행 파일이다.
+`schemaVersion`은 1이고 `collectionRunId`, `companyTierRunId`, 생성 시각,
+상태별 집계와 선택된 회사 배열을 가진다.
+각 회사는 `companyKey`, `companyName`, `assessmentStatus`, `activePositionCount`,
+대표 공고 URL 최대 3개와 만료된 이전 평가의 tier, 이유, 만료일만 가진다.
+공고 본문은 이 큐에 넣지 않는다. 직무 적합도는 기존 공고 분석이 판정한다.
+모델의 `company-tier-updates.json`도 `schemaVersion`이 1이고 같은 `companyTierRunId`를 담으며,
+아직 끝나지 않은 회사를 평가한 것은 `results`에, 평가하지 못한 사유는 `failures`에 한 번씩 나눠 담는다.
+
 ### 실행 중 생성되는 포지션 추천 데이터
 
 스크립트가 현재 후보풀과 유효한 공고 분석을 합쳐 만든 실행별 추천 결과다.
@@ -490,11 +610,29 @@ ORDER BY ri.rank_number;
 - 아직 분석하지 못한 활성 공고와 대기 사유
 - 새 분석, 재사용, 분석 대기 건수
 - 소스별 성공, 부분 실패, 실패 수와 확인하지 못한 공고 수
+- 공고마다 그때 쓴 회사 tier의 값과 출처
+- 출처별 공고 수와 tier 평가 실패 건수
 - 모델이 필요에 따라 붙인 상세 근거와 다음 행동
 
-추천 JSON의 `schemaVersion`은 10이다.
+추천 JSON의 `schemaVersion`은 11이다.
 `pendingCandidates`의 각 항목은 후보 ID, 회사, 공고명, URL, 회사 티어와 `new`, `changed`, `stale` 중 하나를 가진다.
 `analysisSummary`는 `activeCount`, `analyzedNowCount`, `reusedCount`, `pendingCount`와 `personalExcludedCount`를 가진다.
+
+추천과 순위와 대기 항목은 모두 회사 tier의 출처를 함께 담는다.
+
+| 필드 | 담는 것 |
+| --- | --- |
+| `companyTierSource` | `manual`, `model`, `default` 중 하나 |
+| `companyTierAssessmentId` | 모델 평가의 ID. 출처가 `model`일 때만 있다 |
+| `companyTierAssessedAt`, `companyTierValidUntil` | 그 평가의 시각과 만료일 |
+| `companyTierConfidence` | `low`, `medium`, `high` |
+| `companyTierReason` | 간결한 판정 이유 |
+| `companyTierEvidenceUrls` | HTTPS 근거 최대 3개 |
+
+`model` 이 아닌 출처는 평가 ID와 근거 필드를 갖지 않고 근거 목록이 비어 있다.
+
+`companyTierSummary`는 `manualCount`, `modelCount`, `defaultCount`와 `assessmentFailedCount`를 가진다.
+기본 tier로 남은 공고 수와 평가에 실패한 회사 수를 최종 답변이 숨기지 않게 하는 자리다.
 `collectionHealth.warningSources`는 소스, `partial` 또는 `failed` 상태, 실패 건수와 공개 가능한 이유만 담는다.
 최종 답변에 넣는 수집 경고 줄은 `scripts/position-recommender/recommendation/final-answer.ts`가 만든다.
 그 줄은 소스, 상태, 실패 건수와 고정 문장 하나로만 구성하고 `reason`의 본문은 쓰지 않는다.

@@ -6,6 +6,7 @@ import { MemoryPositionRepository } from "./position/memory-repository.ts";
 import {
   analysisQueueResponseSchema,
   analysisResultsResponseSchema,
+  positionPreparationResponseSchema,
 } from "./position/schema.ts";
 import { PositionService } from "./position/service.ts";
 
@@ -78,6 +79,22 @@ function candidatePool(runId: string) {
   };
 }
 
+function companyTierResult(companyKey: string, recommendedTier = 1) {
+  return {
+    companyKey,
+    recommendedTier,
+    confidence: "medium",
+    reason: "성장 범위를 공개 자료로 확인했다.",
+    signals: [
+      { axis: "growth-scope", level: "high" },
+      { axis: "compensation-upside", level: "medium" },
+      { axis: "team-growth", level: "unknown" },
+    ],
+    evidence: [{ url: "https://example.com/company", checkedAt: "2026-09-17" }],
+    assumptions: ["공개 자료만 확인했다."],
+  };
+}
+
 describe("recommendation-api HTTP 계약", () => {
   test("liveness, readiness와 인증 확인 경로를 분리한다", async () => {
     const handler = createApp({
@@ -137,13 +154,15 @@ describe("recommendation-api HTTP 계약", () => {
       receipts: new MemoryReceiptStore(),
     });
     const policy = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       candidateContextVersion: "context-1",
       dailyAnalysisLimit: 20,
       prioritySlots: 16,
       agingSlots: 4,
       staleAfterDays: 30,
       defaultCompanyTier: 3,
+      dailyCompanyTierLimit: 5,
+      companyTierStaleAfterDays: 90,
     };
     const response = await handler(
       new Request("http://local/api/positions/v1/analysis-policy", {
@@ -221,13 +240,15 @@ describe("recommendation-api HTTP 계약", () => {
       "/api/positions/v1/analysis-policy",
       "policy-context-1",
       {
-        schemaVersion: 1,
+        schemaVersion: 2,
         candidateContextVersion: "context-1",
         dailyAnalysisLimit: 20,
         prioritySlots: 16,
         agingSlots: 4,
         staleAfterDays: 30,
         defaultCompanyTier: 3,
+        dailyCompanyTierLimit: 5,
+        companyTierStaleAfterDays: 90,
       },
       "PUT",
     );
@@ -237,8 +258,44 @@ describe("recommendation-api HTTP 계약", () => {
       pool: candidatePool("run-http"),
     });
     expect(collection.status).toBe(201);
-    const queue = analysisQueueResponseSchema.parse(await collection.json());
+    const preparation = positionPreparationResponseSchema.parse(await collection.json());
+    expect(preparation.companyTierQueue.companies.map((entry) => entry.companyKey)).toEqual([
+      "테스트 회사",
+    ]);
+
+    const pendingAnalysisRun = await post(
+      "/api/positions/v1/collection-runs/run-http/analysis-runs",
+      "analysis-run:run-http:early",
+      { schemaVersion: 1 },
+    );
+    expect(pendingAnalysisRun.status).toBe(409);
+    expect(await pendingAnalysisRun.text()).toContain("COMPANY_TIER_RUN_PENDING");
+
+    const tierResults = await post(
+      `/api/positions/v1/company-tier-runs/${preparation.companyTierQueue.companyTierRunId}/results`,
+      "company-tier-results:run-http:1",
+      {
+        schemaVersion: 1,
+        collectionRunId: "run-http",
+        results: [companyTierResult("테스트 회사", 1)],
+      },
+    );
+    expect(tierResults.status).toBe(200);
+    expect(await tierResults.json()).toMatchObject({
+      status: "completed",
+      createdCount: 1,
+      applied: true,
+    });
+
+    const analysisRun = await post(
+      "/api/positions/v1/collection-runs/run-http/analysis-runs",
+      "analysis-run:run-http",
+      { schemaVersion: 1 },
+    );
+    expect(analysisRun.status).toBe(201);
+    const queue = analysisQueueResponseSchema.parse(await analysisRun.json());
     expect(queue.candidates).toHaveLength(2);
+    expect(queue.candidates.every((candidate) => candidate.companyTier === 1)).toBe(true);
 
     const results = await post(
       `/api/positions/v1/analysis-runs/${queue.analysisRunId}/results`,
@@ -280,5 +337,92 @@ describe("recommendation-api HTTP 계약", () => {
       remainingCount: 1,
       applied: true,
     });
+  });
+
+  test("신호 축 누락과 중복, HTTP 근거와 tier 범위 이탈을 400으로 거절한다", async () => {
+    const handler = createApp({
+      config: { ...config, maxBodyBytes: 64_000 },
+      positionService: new PositionService(new MemoryPositionRepository()),
+      receipts: new MemoryReceiptStore(),
+    });
+    const post = (path: string, key: string, body: unknown, method = "POST") =>
+      handler(
+        new Request(`http://local${path}`, {
+          method,
+          headers: {
+            Authorization: `Bearer ${config.apiToken}`,
+            "Idempotency-Key": key,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+        }),
+      );
+    await post(
+      "/api/positions/v1/analysis-policy",
+      "policy-context-1",
+      {
+        schemaVersion: 2,
+        candidateContextVersion: "context-1",
+        dailyAnalysisLimit: 20,
+        prioritySlots: 16,
+        agingSlots: 4,
+        staleAfterDays: 30,
+        defaultCompanyTier: 3,
+        dailyCompanyTierLimit: 5,
+        companyTierStaleAfterDays: 90,
+      },
+      "PUT",
+    );
+    const collection = await post("/api/positions/v1/collection-runs", "collection:run-reject", {
+      schemaVersion: 2,
+      analysisContractVersion: 1,
+      pool: candidatePool("run-reject"),
+    });
+    const preparation = positionPreparationResponseSchema.parse(await collection.json());
+    const path = `/api/positions/v1/company-tier-runs/${preparation.companyTierQueue.companyTierRunId}/results`;
+    const submit = (key: string, result: Record<string, unknown>) =>
+      post(path, key, {
+        schemaVersion: 1,
+        collectionRunId: "run-reject",
+        results: [result],
+      });
+
+    const missingAxis = await submit("company-tier-results:missing-axis", {
+      ...companyTierResult("테스트 회사"),
+      signals: [
+        { axis: "growth-scope", level: "high" },
+        { axis: "compensation-upside", level: "medium" },
+      ],
+    });
+    expect(missingAxis.status).toBe(400);
+
+    const duplicateAxis = await submit("company-tier-results:duplicate-axis", {
+      ...companyTierResult("테스트 회사"),
+      signals: [
+        { axis: "growth-scope", level: "high" },
+        { axis: "growth-scope", level: "low" },
+        { axis: "team-growth", level: "unknown" },
+      ],
+    });
+    expect(duplicateAxis.status).toBe(400);
+    expect(await duplicateAxis.text()).toContain("signals");
+
+    const insecureEvidence = await submit("company-tier-results:insecure-evidence", {
+      ...companyTierResult("테스트 회사"),
+      evidence: [{ url: "http://example.com/company", checkedAt: "2026-09-17" }],
+    });
+    expect(insecureEvidence.status).toBe(400);
+
+    const outOfRangeTier = await submit("company-tier-results:tier-range", {
+      ...companyTierResult("테스트 회사", 4),
+    });
+    expect(outOfRangeTier.status).toBe(400);
+
+    const stillPending = await post(
+      "/api/positions/v1/collection-runs/run-reject/analysis-runs",
+      "analysis-run:run-reject",
+      { schemaVersion: 1 },
+    );
+    expect(stillPending.status).toBe(409);
   });
 });

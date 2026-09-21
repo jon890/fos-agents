@@ -78,7 +78,7 @@ beforeAll(() => {
   writeFileSync(
     input,
     JSON.stringify({
-      schemaVersion: 10,
+      schemaVersion: 11,
       reportDate: "2026-08-13",
       generatedAt: "2026-08-13T09:00:00+09:00",
       summary: ["결론"],
@@ -89,6 +89,8 @@ beforeAll(() => {
         title: candidate.title,
         postingUrl: candidate.url,
         companyTier: 2,
+        companyTierSource: "default",
+        companyTierEvidenceUrls: [],
         decision: "recommend",
         fitScore: 80,
         reason: "적합하다.",
@@ -102,6 +104,12 @@ beforeAll(() => {
         reusedCount: 0,
         pendingCount: 0,
         personalExcludedCount: 0,
+      },
+      companyTierSummary: {
+        manualCount: 0,
+        modelCount: 0,
+        defaultCount: pool.candidates.length,
+        assessmentFailedCount: 0,
       },
       collectionHealth: {
         candidateCount: pool.candidates.length,
