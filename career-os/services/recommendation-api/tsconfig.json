@@ -15,6 +15,17 @@
     "outDir": "dist",
     "rootDir": "."
   },
-  "include": ["prisma.config.ts", "vitest.config.ts", "src/**/*.ts", "prisma/**/*.ts"],
-  "exclude": ["node_modules", "dist", "src/generated"]
+  "include": [
+    "prisma.config.ts",
+    "vitest.config.ts",
+    "src/**/*.ts",
+    "prisma/**/*.ts",
+    "test/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/generated",
+    "test/fixtures/legacy-contract/capture-legacy.bun.ts"
+  ]
 }
