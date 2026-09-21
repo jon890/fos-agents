@@ -85,6 +85,31 @@ tier를 해결한 시점의 출처를 보존하는 것이 목적이다. 나중�
 
 경로 변수는 `decodeURIComponent`를 거친다. 기존 라우터가 그렇게 한다.
 
+### 기대값은 옛 구현에서 뽑아 둔 포착 파일이 소유한다
+
+**새 구현을 보고 기대값을 지어내지 않는다.**
+전환 전의 Bun 구현을 test database에 붙여 요청과 응답과 그 뒤의 DB 행을 뽑아 둔 파일이 있다.
+
+| 자리 | 내용 |
+| --- | --- |
+| `services/recommendation-api/test/fixtures/legacy-contract/cases.json` | 요청 전문과 응답 전문과 쓰기 뒤의 DB 행 |
+| `services/recommendation-api/test/fixtures/legacy-contract/README.md` | 뽑은 방법, 비교에서 뺀 열, 만들지 못한 경우와 그 이유 |
+| `services/recommendation-api/test/fixtures/legacy-contract/capture-legacy.bun.ts` | 뽑는 데 쓴 스크립트 |
+
+비교하는 것이다.
+
+- 응답 status와 본문 전체
+- `Cache-Control`의 값과 `X-Request-Id`의 **유무**. `X-Request-Id`의 값은 실행마다 달라 비교하지 않는다
+- 쓰기 요청이면 그 뒤의 DB 행. 어느 table의 어느 열을 비교할지는 `cases.json`이 case마다 적는다.
+  `created_at`처럼 실행마다 달라지는 열은 비교에서 뺐고 `README.md`가 그 목록을 가진다
+
+**포착 파일을 고쳐서 테스트를 통과시키지 않는다.**
+값이 다르면 새 구현이 계약을 어긴 것이다. 포착 파일이 틀렸다고 판단되면 고치지 말고 보고한다.
+
+`capture-legacy.bun.ts`는 Phase 05가 옛 구현을 지운 뒤에는 돌지 않는다.
+값이 어디서 나왔는지 읽을 수 있도록 남기는 것이다.
+서비스 `tsconfig.json`의 `exclude`와 `vitest.config.ts`의 `exclude`에 이 파일을 넣는다.
+
 ### 4. 이 phase를 검증하는 `test/positions-analysis.e2e.test.ts`
 
 실제 MySQL을 쓴다. `CAREER_RECOMMENDATION_TEST_DATABASE_URL`이 없으면 실패한다.
@@ -109,14 +134,25 @@ tier를 해결한 시점의 출처를 보존하는 것이 목적이다. 나중�
 - **행 잠금 확인**: 멱등 키가 다른 두 요청을 같은 분석 실행에 동시에 보내면
   하나만 반영되고 항목이 뒤섞이지 않는다
 
+
+**`position_analysis_pipeline.test.ts`에서 둘을 가져온다.**
+`scripts/position-recommender/` 쪽에서 `MemoryPositionRepository` 위로 돌던 것이다.
+Phase 05가 그 메모리 저장소를 지우므로 여기서 DB 기반으로 다시 쓴다.
+
+- fresh 반복 실행은 빈 분석 큐와 재사용 집계를 허용한다
+- 실패 한 건을 함께 보내면 실행이 `partial`로 남고, 남은 건만 다시 보내면 `completed`가 된다
+
+가짜 저장소를 만들지 않는다. Phase 01의 container에 실제로 행을 넣고 확인한다.
+
 ## 검증
 
-Phase 01의 container를 쓴다.
+Phase 01의 container를 쓴다. **다시 만들지 않는다.**
 
 ```bash
 # cwd: 저장소 루트
 cd career-os/services/recommendation-api
 npm run typecheck
+DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_test" \
 CAREER_RECOMMENDATION_TEST_DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_test" \
 SHADOW_DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_shadow" \
   npm test

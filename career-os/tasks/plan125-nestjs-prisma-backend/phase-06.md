@@ -152,6 +152,20 @@ HTTP로 확인할 것이다.
 쓰기 경로의 멱등 4단계는 이 테스트에 넣지 않는다.
 운영 DB에 행을 남기므로 5번의 수동 확인으로 하고 확인 뒤 지운다.
 
+
+**이 파일을 기본 `npm test`에 넣지 않는다.**
+운영 endpoint와 token을 요구하므로 로컬에서는 환경이 없다.
+기본 `npm test`에 들어가면 이 파일이 생긴 뒤부터 로컬 검증이 항상 실패한다.
+
+`vitest.config.ts`의 기본 `include`에서 빼고 `package.json`에 script를 따로 둔다.
+
+```
+"test:deployed": "vitest run test/deployed-contract.e2e.test.ts"
+```
+
+**env가 없으면 건너뛰지 말고 실패한다.** 이 script를 부른 것은 운영을 확인하려는 것이므로,
+건너뛴 실행을 확인 근거로 쓰면 안 된다.
+
 ## 검증
 
 **보고의 문장이 아니라 명령의 출력으로 판정한다.**

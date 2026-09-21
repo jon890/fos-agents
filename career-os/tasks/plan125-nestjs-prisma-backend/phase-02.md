@@ -38,9 +38,18 @@ client인 `scripts/position-recommender/recommendation-api/client.ts`가 이 형
 모든 응답에 `Cache-Control: no-store`와 `X-Request-Id`가 붙는 것도 같다.
 
 **멱등 처리를 controller 안에 넣지 않는다.**
-쓰기 endpoint 여섯 개가 모두 같은 흐름을 쓴다.
-키 확인, 요청 본문 hash, 선점, 처리, 응답 저장이다.
+쓰기 endpoint **일곱 개**가 모두 같은 흐름을 쓴다.
+`routes/positions.ts`의 POST 다섯(`:39`, `:50`, `:61`, `:74`, `:86`)과 PUT 둘(`:103`, `:116`)이다.
+흐름은 키 확인, 요청 본문 hash, 선점, 처리, 응답 저장이다.
 interceptor 하나가 이 흐름을 소유해야 endpoint를 더할 때 빠뜨리지 않는다.
+
+**요청 본문 hash를 다시 만들지 않는다.**
+`http/idempotency.ts:30`의 `canonicalRequestHash`가 그 값을 소유한다.
+키를 정렬해 `JSON.stringify`한 뒤 sha256을 낸다.
+`position/hash.ts`에는 `positionContentHash`와 `companyKey`와 `stableUuid` 셋뿐이고
+그 셋은 공고 식별과 공고 내용의 hash라 쓰임이 다르다.
+다른 방식으로 만들면 운영 `request_receipts`에 이미 저장된 `request_hash`와 값이 어긋나
+배포 직후의 재시도가 전부 `409 IDEMPOTENCY_CONFLICT`가 된다.
 
 **`request_receipts`의 선점 판정을 바꾸지 않는다.**
 `INSERT IGNORE` 뒤 영향받은 행 수로 판정한다.
@@ -60,9 +69,11 @@ NestJS 관례를 따르려고 두 벌로 만들면 두 쪽이 어긋난다.
 - local은 `CAREER_RECOMMENDATION_DATABASE_URL`을 읽는다
 - 운영은 `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`를 읽는다
 - 두 형식을 함께 주면 기동 전에 실패한다
-- `API_HOST`, `API_PORT`, API token, 본문 크기 상한
+- `API_HOST`, `API_PORT`, 본문 크기 상한
+- API token은 `CAREER_RECOMMENDATION_API_TOKEN`과 `CAREER_RECOMMENDATION_API_TOKEN_FILE` 둘을 받는다.
+  파일로 줄 때 그 파일의 권한이 `0600`이 아니면 기동 전에 실패한다 (`config.ts:33-37`, `:58-72`)
 
-기존 `config.test.ts` 89줄을 Vitest로 옮긴다.
+기존 `config.test.ts` 89줄을 Vitest로 옮긴다. 권한 검사 항목이 그 안에 있다.
 
 ### 2. `src/prisma/prisma.service.ts` 신규
 
@@ -81,16 +92,26 @@ filter는 `APP_FILTER`로 전역 등록한다. 세 가지를 처리한다.
 
 - `ApiError`는 자기 status와 code로 낸다
 - NestJS의 `HttpException`은 status에 맞는 code로 바꾼다
+- **Prisma의 연결 실패는 `503 DATABASE_UNAVAILABLE`로 바꾼다**
 - 나머지는 `500 INTERNAL_ERROR`로 낸다. 원본 메시지를 응답에 담지 않는다
+
+**`DATABASE_UNAVAILABLE`을 던지던 자리가 없어진다.**
+지금은 `position/sql-repository.ts:72`와 `:97`의 연결 실패 경로가 이 코드를 낸다.
+Phase 05가 그 파일을 지우므로 이 filter가 그 책임을 받는다.
+Prisma는 연결 실패를 `PrismaClientInitializationError`와 `P1001`·`P1002`·`P1017` 계열로 낸다.
+그 셋을 이 코드로 매핑한다. 매핑하지 않으면 DB가 죽었을 때 client가 `500`을 받고 재시도 판단을 못 한다.
 
 ### 4. `src/common/request-id.middleware.ts` 신규
 
 `X-Request-Id` 헤더가 있으면 그것을 쓰고 없으면 만든다.
+**받은 값이 100자를 넘으면 쓰지 않고 새로 만든다** (`http/request.ts:43`).
 요청 객체에 실어 filter와 interceptor가 같은 값을 쓰게 한다.
 
 ### 5. `src/common/auth.guard.ts` 신규
 
 `Authorization: Bearer <token>`을 확인한다. 틀리면 `401 UNAUTHORIZED`.
+**비교는 `timingSafeEqual`로 한다** (`http/request.ts:7`). `===`로 바꾸지 않는다.
+길이가 다르면 비교 전에 거절한다. `timingSafeEqual`은 길이가 다르면 예외를 던진다.
 `/health/live`와 `/health/ready`는 통과시킨다.
 `APP_GUARD`로 전역 등록하고 health는 데코레이터로 제외한다.
 
@@ -107,12 +128,19 @@ zod의 오류 메시지를 응답 `message`에 그대로 담지 않는다. 기�
 
 `idempotency.interceptor.ts`가 흐름을 소유한다.
 
-1. 쓰기 method면 `Idempotency-Key` 헤더를 요구한다. 없으면 `400 BAD_REQUEST`
-2. 본문의 hash를 만든다. `position/hash.ts`의 방식을 그대로 쓴다
+1. 쓰기 method면 `Idempotency-Key` 헤더를 요구한다. 없으면 `400 BAD_REQUEST`.
+   **200자를 넘어도 `400 BAD_REQUEST`다** (`http/request.ts:19`)
+2. 본문의 hash를 만든다. `http/idempotency.ts:30`의 `canonicalRequestHash`를 그대로 옮긴다.
+   키를 정렬해 `JSON.stringify`한 뒤 sha256이다
 3. 같은 키가 있고 hash가 다르면 `409 IDEMPOTENCY_CONFLICT`
 4. 같은 키에 같은 hash이고 `completed`면 저장된 응답을 그대로 낸다
-5. 없으면 선점하고 처리한 뒤 응답을 저장한다
-6. 처리가 실패하면 선점을 지운다
+5. **같은 키에 같은 hash인데 아직 `processing`이면 `409 VERSION_CONFLICT`다**
+   (`http/idempotency.ts:49`, `:52`). 앞선 요청이 처리 중이므로 선점하지 않고 거절한다.
+   이 분기를 빠뜨리면 같은 요청이 둘 함께 처리된다
+6. 없으면 선점하고 처리한 뒤 응답을 저장한다
+7. 처리가 실패하면 선점을 지운다
+
+잘못된 JSON은 hash를 만들기 전에 `400 BAD_REQUEST`다 (`http/request.ts:37`).
 
 ### 8. `src/health/` 신규
 
@@ -128,6 +156,31 @@ zod의 오류 메시지를 응답 `message`에 그대로 담지 않는다. 기�
 NestJS의 기본 body parser 크기 상한을 설정값에 맞춘다.
 상한을 넘으면 `400 BODY_TOO_LARGE`로 낸다.
 
+### 기대값은 옛 구현에서 뽑아 둔 포착 파일이 소유한다
+
+**새 구현을 보고 기대값을 지어내지 않는다.**
+전환 전의 Bun 구현을 test database에 붙여 요청과 응답과 그 뒤의 DB 행을 뽑아 둔 파일이 있다.
+
+| 자리 | 내용 |
+| --- | --- |
+| `services/recommendation-api/test/fixtures/legacy-contract/cases.json` | 요청 전문과 응답 전문과 쓰기 뒤의 DB 행 |
+| `services/recommendation-api/test/fixtures/legacy-contract/README.md` | 뽑은 방법, 비교에서 뺀 열, 만들지 못한 경우와 그 이유 |
+| `services/recommendation-api/test/fixtures/legacy-contract/capture-legacy.bun.ts` | 뽑는 데 쓴 스크립트 |
+
+비교하는 것이다.
+
+- 응답 status와 본문 전체
+- `Cache-Control`의 값과 `X-Request-Id`의 **유무**. `X-Request-Id`의 값은 실행마다 달라 비교하지 않는다
+- 쓰기 요청이면 그 뒤의 DB 행. 어느 table의 어느 열을 비교할지는 `cases.json`이 case마다 적는다.
+  `created_at`처럼 실행마다 달라지는 열은 비교에서 뺐고 `README.md`가 그 목록을 가진다
+
+**포착 파일을 고쳐서 테스트를 통과시키지 않는다.**
+값이 다르면 새 구현이 계약을 어긴 것이다. 포착 파일이 틀렸다고 판단되면 고치지 말고 보고한다.
+
+`capture-legacy.bun.ts`는 Phase 05가 옛 구현을 지운 뒤에는 돌지 않는다.
+값이 어디서 나왔는지 읽을 수 있도록 남기는 것이다.
+서비스 `tsconfig.json`의 `exclude`와 `vitest.config.ts`의 `exclude`에 이 파일을 넣는다.
+
 ### 10. 이 phase를 검증하는 `test/common.e2e.test.ts`
 
 실제 MySQL을 쓴다. `CAREER_RECOMMENDATION_TEST_DATABASE_URL`이 없으면 실패한다.
@@ -142,9 +195,23 @@ NestJS의 기본 body parser 크기 상한을 설정값에 맞춘다.
 - 모든 응답에 `Cache-Control: no-store`와 `X-Request-Id`가 있다
 - 없는 경로가 `404 NOT_FOUND`이고 형식이 같다
 - 상한을 넘는 본문이 `400 BODY_TOO_LARGE`
-- 멱등 4단계: 새 키는 처리, 같은 키에 같은 본문은 저장된 응답, 같은 키에 다른 본문은 409,
+- 멱등 5단계: 새 키는 처리, 같은 키에 같은 본문은 저장된 응답,
+  같은 키에 다른 본문은 `409 IDEMPOTENCY_CONFLICT`,
+  같은 키에 같은 본문인데 앞선 요청이 `processing`이면 `409 VERSION_CONFLICT`,
   다른 키는 다시 처리
+- 쓰기 요청에 `Idempotency-Key`가 없으면 `400 BAD_REQUEST`
+- `Idempotency-Key`가 200자를 넘으면 `400 BAD_REQUEST`
+- 잘못된 JSON 본문이 `400 BAD_REQUEST`
+- 받은 `X-Request-Id`가 100자 이하면 응답이 그 값을 되돌려주고, 넘으면 새 값을 낸다
+- token을 아예 주지 않아도 `401 UNAUTHORIZED`
+- token 파일의 권한이 `0600`이 아니면 기동이 실패한다
+- filter에 연결 실패 예외를 직접 던지면 `503 DATABASE_UNAVAILABLE` 형식이 나온다
+- filter에 그 밖의 예외를 직접 던지면 `500 INTERNAL_ERROR` 형식이 나오고
+  원본 메시지가 응답에 담기지 않는다
 - 처리 중 예외가 나면 `request_receipts`에 `processing` 행이 남지 않는다
+
+`500 INTERNAL_ERROR`와 `503 DATABASE_UNAVAILABLE`은 정상 경로로 만들 수 없다.
+이 둘은 위처럼 filter에 예외를 직접 던져 응답 형식만 확인한다.
 
 멱등 검증에는 임시 쓰기 endpoint를 쓰지 않는다.
 테스트 전용 controller를 `test/` 안에 두고 테스트 module에서만 등록한다.
@@ -152,12 +219,13 @@ NestJS의 기본 body parser 크기 상한을 설정값에 맞춘다.
 
 ## 검증
 
-Phase 01의 container를 그대로 쓴다. 없으면 그 절차로 다시 띄운다.
+Phase 01의 container를 그대로 쓴다. **다시 만들지 않는다.** 없을 때만 Phase 01의 절차로 띄운다.
 
 ```bash
 # cwd: 저장소 루트
 cd career-os/services/recommendation-api
 npm run typecheck
+DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_test" \
 CAREER_RECOMMENDATION_TEST_DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_test" \
 SHADOW_DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_shadow" \
   npm test

@@ -25,7 +25,8 @@ Phase 05까지 기존 코드가 남아 있어야 아직 옮기지 않은 endpoin
 
 **지금 구조가 왜 문제인지 알고 시작한다.**
 `SqlPositionRepository`는 `MemoryPositionRepository`를 상속한다.
-기동할 때 `fos_career` 전체를 Map 열 개로 읽고, 쓰기마다 상태 전체를 다시 쓴다.
+기동할 때 `fos_career` 전체를 Map **아홉 개**로 읽고, 쓰기마다 상태 전체를 다시 쓴다.
+`position/memory-repository.ts:135-143`이 그 아홉이다.
 이 phase가 옮기는 것은 그 구조를 버리고 필요한 행만 읽고 바뀐 행만 쓰는 것이다.
 
 옮길 원본은 `position/service.ts`의 다음 줄이다.
@@ -84,14 +85,50 @@ Phase 05까지 기존 코드가 남아 있어야 아직 옮기지 않은 endpoin
 ### 1. 순수 모듈 넷을 옮긴다
 
 `position/schema.ts`, `position/hash.ts`, `position/queue.ts`, `position/tier-provenance.ts`를
-`src/positions/` 아래로 옮긴다. import 경로만 고친다.
+`src/positions/` 아래로 옮긴다. 안의 로직을 고치지 않는다. 고치는 것은 import 경로 둘이다.
 
-`schema.ts`가 읽는 `scripts/position-recommender/live-postings/contracts.ts`는
-모노레포의 Bun 쪽에 남아 있다. 상대 경로로 계속 가리킨다.
-이 파일은 두 실행 환경이 공유하는 유일한 계약 파일이다.
+**첫째, 패키지 밖을 가리키는 import를 없앤다.**
+`schema.ts:2-5`가 `../../../scripts/position-recommender/live-postings/contracts.ts`에서
+`postingCandidateSchema`와 `postingCandidatePoolSchema`를 값으로 가져온다.
+Phase 01이 그 파일을 `src/contracts/posting-candidate.ts`로 벤더링했으므로 그쪽을 가리킨다.
+패키지 밖을 계속 가리키면 `rootDir` 밖 입력 파일이라 `TS6059`로 emit이 깨진다.
+
+**둘째, 상대 import의 확장자를 `.ts`에서 `.js`로 바꾼다.**
+옮기는 네 파일과 그것을 읽는 모든 서비스 파일이 해당한다.
+지금 `.ts`로 쓰고 있는 것은 루트 `tsconfig.json`의
+`allowImportingTsExtensions: true`와 `noEmit: true` 조합이 허용해 왔기 때문이다.
+`module: nodenext`로 emit하는 서비스 tsconfig에서는 거절된다.
 
 기존 `position/hash.test.ts`와 `position/queue.test.ts`를 Vitest로 옮긴다.
 이 둘은 순수 함수 테스트라 DB가 필요 없다.
+
+### 1-1. `scripts/position-recommender/`의 import를 새 경로로 고친다
+
+옮긴 파일을 `career-os/scripts/position-recommender/` 아래 **12개 파일**이 import한다.
+고치지 않으면 루트 `npx tsc --noEmit`과 `bun test career-os/scripts`가 이 phase에서 깨진다.
+
+| 파일 | 가리키는 것 |
+| --- | --- |
+| `commit_position_analysis.ts` | `canonicalRequestHash` |
+| `complete_company_tier_assessment.ts` | `canonicalRequestHash` |
+| `recommendation-api/client.ts` | `position/schema.ts` |
+| `recommendation/schema.ts` | `position/schema.ts` |
+| `company-tier-analysis/schema.ts` | `position/schema.ts` |
+| `finalize_position_recommendation.ts` | `position/schema.ts` |
+| `finalize_position_recommendation.test.ts` | `position/schema.ts` |
+| `configure_position_analysis_policy.ts` | `position/schema.ts` |
+| `configure_position_company_preferences.ts` | `position/hash.ts` |
+| `configure_position_company_preferences.test.ts` | `position/schema.ts` |
+| `company_tier_analysis_pipeline.test.ts` | `position/memory-repository.ts`, `position/service.ts` |
+| `position_analysis_pipeline.test.ts` | `position/schema.ts`, `position/memory-repository.ts`, `position/service.ts` |
+
+앞의 열은 경로만 새 위치로 바꾼다. 아래 둘은 Phase 05가 나눈다. 여기서는 손대지 않는다.
+
+`canonicalRequestHash`는 `http/idempotency.ts`에 있다.
+이 phase가 `src/common/idempotency/`로 이미 옮겼으므로(Phase 02) 그쪽을 가리킨다.
+
+**`scripts/` 쪽 파일은 Bun으로 돌므로 `.ts` 확장자를 그대로 쓴다.**
+서비스 안의 `.js` 전환은 서비스 파일끼리의 import에만 적용한다.
 
 ### 2. `src/positions/repository/` 신규
 
@@ -132,6 +169,31 @@ Prisma 질의를 담는다. 메서드를 도메인이 실제로 요구하는 단
 응답 상태 코드를 정확히 맞춘다.
 `POST /collection-runs`는 201, 나머지 넷은 200이다.
 
+### 기대값은 옛 구현에서 뽑아 둔 포착 파일이 소유한다
+
+**새 구현을 보고 기대값을 지어내지 않는다.**
+전환 전의 Bun 구현을 test database에 붙여 요청과 응답과 그 뒤의 DB 행을 뽑아 둔 파일이 있다.
+
+| 자리 | 내용 |
+| --- | --- |
+| `services/recommendation-api/test/fixtures/legacy-contract/cases.json` | 요청 전문과 응답 전문과 쓰기 뒤의 DB 행 |
+| `services/recommendation-api/test/fixtures/legacy-contract/README.md` | 뽑은 방법, 비교에서 뺀 열, 만들지 못한 경우와 그 이유 |
+| `services/recommendation-api/test/fixtures/legacy-contract/capture-legacy.bun.ts` | 뽑는 데 쓴 스크립트 |
+
+비교하는 것이다.
+
+- 응답 status와 본문 전체
+- `Cache-Control`의 값과 `X-Request-Id`의 **유무**. `X-Request-Id`의 값은 실행마다 달라 비교하지 않는다
+- 쓰기 요청이면 그 뒤의 DB 행. 어느 table의 어느 열을 비교할지는 `cases.json`이 case마다 적는다.
+  `created_at`처럼 실행마다 달라지는 열은 비교에서 뺐고 `README.md`가 그 목록을 가진다
+
+**포착 파일을 고쳐서 테스트를 통과시키지 않는다.**
+값이 다르면 새 구현이 계약을 어긴 것이다. 포착 파일이 틀렸다고 판단되면 고치지 말고 보고한다.
+
+`capture-legacy.bun.ts`는 Phase 05가 옛 구현을 지운 뒤에는 돌지 않는다.
+값이 어디서 나왔는지 읽을 수 있도록 남기는 것이다.
+서비스 `tsconfig.json`의 `exclude`와 `vitest.config.ts`의 `exclude`에 이 파일을 넣는다.
+
 ### 5. 이 phase를 검증하는 `test/positions-collection.e2e.test.ts`
 
 실제 MySQL을 쓴다. `CAREER_RECOMMENDATION_TEST_DATABASE_URL`이 없으면 실패한다.
@@ -153,14 +215,26 @@ Prisma 질의를 담는다. 메서드를 도메인이 실제로 요구하는 단
 마지막 항목이 이 phase의 핵심 위험이다.
 **이 테스트가 잠금을 끄면 실패하는지 확인한다.** 실패하지 않으면 그 테스트는 아무것도 막지 않는다.
 
+**`company_tier_analysis_pipeline.test.ts`에서 셋을 가져온다.**
+`scripts/position-recommender/` 쪽에서 `MemoryPositionRepository` 위로 돌던 것이다.
+Phase 05가 그 메모리 저장소를 지우므로 여기서 DB 기반으로 다시 쓴다.
+**토큰을 아끼는 동작이 이 셋에 걸려 있다.** 빠뜨리면 모델 호출이 늘어도 아무도 모른다.
+
+- 첫 실행은 상한만큼만 평가한다
+- 둘째 실행은 전날 유효 평가를 다시 모델에 넘기지 않는다
+- 모든 회사 평가가 유효하면 회사 모델 분석을 전혀 실행하지 않는다
+
+가짜 저장소를 만들지 않는다. Phase 01의 container에 실제로 행을 넣고 확인한다.
+
 ## 검증
 
-Phase 01의 container를 쓴다.
+Phase 01의 container를 쓴다. **다시 만들지 않는다.**
 
 ```bash
 # cwd: 저장소 루트
 cd career-os/services/recommendation-api
 npm run typecheck
+DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_test" \
 CAREER_RECOMMENDATION_TEST_DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_test" \
 SHADOW_DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_shadow" \
   npm test
