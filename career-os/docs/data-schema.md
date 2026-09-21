@@ -18,38 +18,11 @@
 
 ### MySQL schema 적용
 
-홈서버 `fos_career` database의 schema는 `services/recommendation-api/`가 소유한다.
-`migrations/`의 번호가 붙은 SQL 파일이 단일 출처이고,
-아래의 table과 column 서술은 그 SQL을 읽기 쉽게 옮긴 것이다. 둘이 다르면 SQL이 맞다.
+홈서버 `fos_career` database 의 schema 는 `services/recommendation-api/migrations/` 의
+번호가 붙은 SQL 파일이 소유한다.
+아래의 table 과 column 서술은 그 SQL 을 읽기 쉽게 옮긴 것이다. 둘이 다르면 SQL 이 맞다.
 
-적용 기록은 `schema_migrations` table에 있다.
-Backend가 기동할 때 이 table을 만들고 적용하지 않은 파일을 실행한다.
-
-**Prisma로 옮기는 중이다.** 옮긴 뒤에는 `prisma/schema.prisma`와 `prisma/migrations/`가
-같은 자리를 차지하고, Backend는 적용 상태만 조회하며 DDL을 실행하지 않는다.
-결정과 근거는 [ADR-121](adr/ADR-121-추천-backend는-nestjs와-prisma로-운영한다.md)에 있다.
-옮길 때 지킬 것이 셋이다.
-
-**초기 migration은 `001_position_schema.sql`과 `002_company_tier_assessments.sql`의 원문이다.**
-`prisma migrate diff --from-empty --to-config-datasource --script`로 운영 schema를 뽑으면
-360줄이 나오는데 `CHECK` 제약 16개가 모두 빠진다. Prisma 7.10.0과 MySQL 8.4.8에서 확인했다.
-그 출력을 초기 migration으로 쓰면 제약이 사라진다.
-
-**`CHECK` 제약은 `schema.prisma`가 표현하지 못하므로 migration SQL이 소유한다.**
-Prisma가 이 제약을 지우지는 않는다. 같은 조합에서 초기 migration을 적용한 database를
-`prisma db pull` 한 뒤 `prisma migrate diff --from-migrations --to-schema` 로 비교하니
-빈 migration이 나왔다. 제약을 바꿀 때는 migration 파일에 직접 쓴다.
-
-**초기 migration은 운영 DB에 다시 실행하지 않는다.**
-두 파일은 이미 적용되어 있으므로 적용 완료로만 표시한다.
-
-```bash
-npx prisma migrate resolve --applied 20260921000000_baseline
-```
-
-`schema_migrations` table은 옮긴 뒤에도 그대로 둔다.
-이전 image로 되돌릴 때 그 image가 이 table을 읽어 적용 상태를 판정하기 때문이다.
-새 스택이 운영에서 검증되면 별도 migration으로 제거한다.
+적용 기록은 `schema_migrations` table 에 있다.
 
 ### 비공개 작업 release
 
@@ -158,7 +131,7 @@ HTML 게시 전에는 개인 정보, 비공개 업무 내용, 로컬 절대 경�
 | `evidence/`     | skill과 사람 | 기준 원본 Markdown과 구조화 입력                           |
 | `review/`       | 검증기       | 근거 장부, 점수표, manifest와 제출 문서 HTML               |
 
-#### 최상위
+### 최상위
 
 - `application-package.html`: 기준 원본과 현재 제출 파일을 묶은 로컬 검토 화면
 - `resume.pdf`: 이력서 제출본
@@ -268,7 +241,7 @@ brain에는 경력, 역할 선호와 경험 경계 등 개인 지식을 두고, 
 
 일별 답변 기록은 꼬리질문일 때 원 질문 식별자, 부모 질문, 깊이, 확인 축과 중단 이유를 선택 필드로 가진다.
 
-#### `state/drill-progress.json`
+### `state/drill-progress.json`
 
 기술·인성 면접 답변 연습의 진행과 복습 상태를 관리한다.
 
@@ -767,7 +740,7 @@ HTML은 상세 추천, 분석한 활성 공고 순위, 분석 대기 목록과 �
 ## resume-preparer
 
 근거 감사 자료는 대상 제출 문서와 같은 지원 디렉터리의 `review/`에 둔다.
-파일 목록은 위 「지원 패키지」의 `review/`가 소유한다.
+파일 목록은 위 「application-package-writer」의 `review/`가 소유한다.
 작성, 근거 감사와 평가는 `resume-preparer`의 순차 단계이며 별도 사용자 스킬로 나누지 않는다.
 
 claim ledger를 다시 설명하는 evidence audit는 별도 파일로 만들지 않는다.
@@ -783,7 +756,7 @@ locator 형식과 판정 기준은 `.claude/skills/resume-preparer/references/cl
 `review/resume-scorecard.md`에는 독립된 인사담당자와 실무담당자 판정, 경쟁상 차단 항목, 근거 방어 결과와 통제할 수 없는 위험을 기록한다.
 정량 점수로 약한 필수 조건을 상쇄하지 않으며 두 블라인드 검토자가 모두 통과해야 한다.
 
-#### `state/verified-claims/`
+### `state/verified-claims/`
 
 `resume-preparer`가 다시 쓸 수 있다고 확인한 주장과 근거 파일 상태를 작은 JSON 파일로 나눠 저장한다.
 이 디렉터리는 검증 결과에서 만든 상태이며 사람이 직접 관리하는 원고를 두지 않는다.
@@ -820,7 +793,7 @@ HTTPS `runtime` 근거는 실행마다 달라질 수 있으므로 `refresh_requi
 
 ## study-topic-recommender
 
-#### `config/external-reading-sources.ts`
+### `config/external-reading-sources.ts`
 
 아침 읽을거리의 외부 글·영상 소스와 수집 어댑터를 관리한다.
 소스 식별자는 회사나 매체를 나타내며 특정 주제를 포함하지 않는다.
@@ -1024,6 +997,7 @@ dry-run 응답은 `<output>.preview.json`, 변환 오류는 `<output>.errors.jso
 대상별 프로필 원고를 `library/profiles/` 에 둔다.
 원티드는 `wanted-profile.md`, GitHub 은 `github-profile.md`, LinkedIn 은 `linkedin-profile.md` 다.
 비공개 작업 release 로 동기화한다.
+생성 이미지도 같은 디렉터리에 둔다. `github-agent-usage.svg` 가 그것이다.
 
 원고는 **프로필에 실제로 올라간 내용**을 담는다. 이력서 초안의 사본이 아니다.
 다음 갱신 때 무엇이 올라가 있는지 알아야 어디를 고칠지 정할 수 있다.

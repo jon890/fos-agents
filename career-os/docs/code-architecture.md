@@ -58,6 +58,23 @@ career-os/
 | `docs/`                                                             | 제품 가치, 흐름, 데이터 계약, 코드 구조와 결정 이유  |
 
 
+#### 지원 자료의 세 층
+
+`application-package-writer`와 `resume-preparer`가 함께 쓰는 규약이다.
+
+공고별 문서는 `applications/<company>/<position>/`에 세 층으로 둔다.
+최상위에는 사용자가 직접 여는 `application-package.html`과 제출 PDF만 두고,
+기준 원본은 `evidence/`에, 내부 검증 자료는 `review/`에 둔다.
+생성기와 검증기는 이 세 층의 경로를 계약으로 사용한다.
+브라우저 자동 입력용 `application-form.json`과 경력기술서는 필요한 경우에만 추가한다.
+
+여러 지원에서 재사용하는 개인 질문과 대상별 프로필 원고는 `library/`에 둔다.
+지원서 검증 결과와 점수표는 `library/`에 보관하지 않는다.
+공고별 현재 검토 결과는 해당 `applications/`에 두고,
+여러 지원에서 재사용할 검증 완료 주장만 `state/verified-claims/`에 둔다.
+층별 파일 목록은 [`data-schema.md`](data-schema.md#application-package-writer)가 소유한다.
+공통 개인정보는 private brain에서 가져오고 후보자 인터뷰에는 복제하지 않는다.
+
 현재 경력, 역할 선호와 경험 경계는 이 저장소에 복제하지 않는다.
 skill이 private brain에서 조회하고, 제출에 사용할 세부 성과는 `sources/fos-study/`와 실제 프로젝트 근거로 다시 확인한다.
 
@@ -103,7 +120,7 @@ skill이 private brain에서 조회하고, 제출에 사용할 세부 성과는 
 수정할 때는 Java 서비스처럼 입력을 받아 결과를 돌려주는 핵심 함수부터 읽는다.
 파일 끝의 CLI 진입점은 컨트롤러처럼 인자를 전달하고 결과를 출력한다.
 추천 판정은 `validateRecommendationAgainstPool`에서 고친다.
-추천 화면 변경 위치는 아래 「포지션 추천 렌더」를 따른다.
+추천 화면 변경 위치는 아래 「렌더」를 따른다.
 옵션 조회 규칙은 `scripts/lib/cli.ts`에서 확인한다.
 
 
@@ -178,7 +195,7 @@ SSH client는 `career-storage`를 원격 호출하고, 홈서버의 Hermes는 �
 `services/recommendation-api/`는 포지션의 장기 상태를 제공하는 작은 Bun HTTP Backend다.
 서비스 코드, HTTP 계약과 SQL migration은 `career-os`가 소유한다.
 배포 설정, database와 계정 생성, network와 backup은 홈서버 인프라 저장소가 소유한다.
-학습자료 API는 아직 구현되지 않았다. Backend 스택 전환 뒤로 계획을 보류했다.
+학습자료 API는 client 만 구현했고 mock HTTP 로 검증했다. 서버는 구현하지 않았다.
 
 
 | 경로                                                | 책임                                                 |
@@ -235,6 +252,8 @@ DB 연결 실패는 `503`, 요청 계약 오류는 `400`, 인증 실패는 `401`
 ### 외부 경계
 
 - `sources/fos-study/`는 별도 Git 저장소다.
+- 채용 사이트와 기술 블로그는 읽기 전용 입력이다.
+- `.env`는 Git에 커밋하지 않는다.
 
 - 홈서버 주소, 계정과 저장 경로는 환경 설정에서만 주입하고 공개 문서나 결과 JSON에 기록하지 않는다.
 - 비공개 작업 파일의 이전 release와 복구 경계는 홈서버 private 인프라가 소유한다.
@@ -248,18 +267,8 @@ DB 연결 실패는 `503`, 요청 계약 오류는 `400`, 인증 실패는 `401`
 
 `resume-preparer`는 지원 전략을 이력서와 경력기술서로 변환하는 제출 문서 진입점이다.
 
-공고별 문서는 `applications/<company>/<position>/`에 세 층으로 둔다.
-최상위에는 사용자가 직접 여는 `application-package.html`과 제출 PDF만 두고,
-기준 원본은 `evidence/`에, 내부 검증 자료는 `review/`에 둔다.
-생성기와 검증기는 이 세 층의 경로를 계약으로 사용한다.
-
 `.claude/skills/application-package-writer/templates/`가 검토 화면의 HTML 골격과 CSS를 소유한다.
-층별 파일 목록과 화면 구성은 [`data-schema.md`](data-schema.md)가 소유한다.
-
-여러 지원에서 재사용하는 개인 질문과 대상별 프로필 원고는 `library/`에 둔다.
-지원서 검증 결과와 점수표는 `library/`에 보관하지 않는다.
-공고별 현재 검토 결과는 해당 `applications/`에 두고,
-여러 지원에서 재사용할 검증 완료 주장만 `state/verified-claims/`에 둔다.
+화면 구성은 [`data-schema.md`](data-schema.md#검토-화면)가 소유한다.
 
 ## interview-practice
 
@@ -284,7 +293,21 @@ TypeScript 스크립트가 brain을 직접 조회하지 않는다.
 ## position-recommender
 
 `scripts/position-recommender/` 루트에는 CLI 진입점만 둔다.
-수집, 추천 원문 대조, 회사 조사 병합과 렌더가 그것이다.
+어느 진입점이 [`flow.md`](flow.md#position-recommender)의 어느 단계인지는 다음과 같다.
+
+| 진입점 | 흐름의 단계 |
+| --- | --- |
+| `collect_live_postings.ts` | 공고 수집 |
+| `prepare_position_analysis.ts` | 수집 실행 저장과 분석 큐 생성 |
+| `complete_company_tier_assessment.ts` | 회사 tier 평가 결과 반영 |
+| `commit_position_analysis.ts` | 큐에 든 공고의 분석 반영 |
+| `finalize_position_recommendation.ts` | 추천 JSON과 HTML 생성과 검증 |
+| `validate_recommendation.ts` | 추천 원문 대조 |
+| `company_research.ts` | 회사 조사 병합 |
+| `render_recommendation.ts`, `render_candidate_preview.ts` | 렌더 |
+| `configure_position_analysis_policy.ts` | 분석 정책 설정 |
+| `configure_position_company_preferences.ts` | 사람이 정한 회사 tier와 제외 설정 |
+
 디렉터리별 책임은 다음과 같다.
 
 | 디렉터리 | 책임 |
@@ -294,9 +317,10 @@ TypeScript 스크립트가 brain을 직접 조회하지 않는다.
 | `company-research/` | 재사용할 회사 사실의 계약과 병합 |
 | `feedback/` | 개인 제외 기준 |
 | `recommendation-api/` | Backend client. 큐 조회와 분석 반영 |
+| `company-tier-analysis/` | 회사 tier 모델 평가의 요청과 응답 계약 |
 | `render/` | HTML 생성과 검사 |
 
-#### 수집 정책의 세 층
+### 수집 정책의 세 층
 
 수집 정책은 세 층으로 나눈다.
 
@@ -389,21 +413,7 @@ CLI 진입점은 다음 셋만 스킬의 `scripts/` 바로 아래에 둔다.
 반영 CLI는 `schemaVersion: 3`, 모든 주장 `safe`, 현재 HTML 문구 해시 일치를 다시 검사한 뒤에만 쓴다.
 같은 원장을 다시 반영하면 파일 내용과 수정 시각을 바꾸지 않는다.
 
-공고별 문서는 `applications/<company>/<position>/`에 세 층으로 둔다.
-최상위에는 사용자가 직접 여는 `application-package.html`과 제출 PDF만 두고, 기준 원본은 `evidence/`에, 내부 검증 자료는 `review/`에 둔다.
-포지션별 질문은 공고 책임, 근거 방어와 경험 공백에서 파생한다.
-화면 구성은 [`data-schema.md`](data-schema.md#검토-화면)의 「검토 화면」이 소유한다.
-생성기와 검증기는 이 세 층의 경로를 계약으로 사용한다.
-층별 파일 목록은 [`data-schema.md`](data-schema.md)의 「지원 패키지」가 소유한다.
-브라우저 자동 입력용 `application-form.json`과 경력기술서는 필요한 경우에만 추가한다.
-공통 개인정보는 private brain에서 가져오고 후보자 인터뷰에는 복제하지 않는다.
-공고별 개인 근거와 면접 준비 자료도 같은 `applications/<company>/<position>/`에 둔다.
-여러 지원에서 재사용하는 개인 질문과 대상별 프로필 원고는 `library/`에 둔다.
-프로필 원고는 `library/profiles/`에 두며 원티드, LinkedIn과 GitHub처럼 갱신 대상을 파일명으로 구분한다.
-지원서 검증 결과와 점수표는 `library/`에 보관하지 않는다.
-공고별 현재 검토 결과는 해당 `applications/`에 두고, 여러 지원에서 재사용할 검증 완료 주장만 `state/verified-claims/`에 둔다.
-작성 취향은 아래 「후보자 지식과 이력서」의 스킬 참조가 담당한다.
-실제 제출은 두 스킬의 책임이 아니다.
+실제 제출은 이 스킬의 책임이 아니다.
 
 이력서 작성 취향은 `.claude/skills/resume-preparer/references/resume-taste.md`가 소유한다.
 조회 시점과 환원 분기는 같은 스킬의 `references/brain-context.md`에 두고 필요한 단계에서 읽는다.
@@ -438,6 +448,8 @@ skill은 필요한 정보를 실행 시점에 조회하고 TypeScript 스크립�
 | `study-library/` | 학습자료 API client. fetch, 인증 헤더, 응답 검증과 후보풀 타입 변환 |
 | `render/` | 주제 중심 HTML 생성 |
 
+루트의 진입점은 `build_morning_reading.ts` 와 `validate_outputs.ts` 이고
+`morning_reading_cli.ts` 가 플래그 분기를 담당한다.
 후보풀, 선별, 누적 이력, 공부 주제 구성과 HTML 렌더링은 각각 분리된 모듈이 담당한다.
 실행기는 시스템 임시 디렉터리 아래의 명시적인 실행 경로만 사용하며 저장소에 리포트 디렉터리를 만들지 않는다.
 `runtime-paths.ts` 가 `CAREER_OS_ROOT` 와 `--run-dir` 를 함께 해석하고 `validate_outputs.ts` 도 같은 해석을 쓴다.
@@ -479,7 +491,7 @@ library 모드가 읽는 환경값이다.
 
 ## sync-profile
 
-**이 스킬만 실행 코드를 `scripts/` 가 아니라 스킬 번들 안에 둔다.**
+**실행 코드를 `scripts/` 가 아니라 스킬 번들 안에 둔다.**
 대상 사이트의 폼을 조작하는 코드라 다른 스킬이 재사용할 것이 없고,
 대상별 절차 문서 바로 옆에 두는 편이 읽기 쉽다.
 

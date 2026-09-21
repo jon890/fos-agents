@@ -298,7 +298,8 @@ brain 검색과 공개·비공개 분리, 저장 미리보기·승인·동시 �
 
 ### 학습자료 API 연동모드
 
-명시적으로 `--library`를 지정했을 때의 흐름이다. 서버는 아직 운영에 올라가 있지 않다.
+명시적으로 `--library`를 지정했을 때의 흐름이다.
+client 만 구현했고 mock HTTP 로 검증했다. 서버는 구현하지 않았다.
 
 ```mermaid
 sequenceDiagram
@@ -344,7 +345,7 @@ sequenceDiagram
 
 실행 명령과 플래그 조합은 스킬의
 [`references/execution.md`](../.claude/skills/study-topic-recommender/references/execution.md)가 소유한다.
-저장 모델과 cursor 형식은 [`data-schema.md`](data-schema.md)가 소유한다.
+저장 모델과 cursor 형식은 [`data-schema.md`](data-schema.md#study-topic-recommender)가 소유한다.
 
 ### 두 모드에 함께 적용하는 것
 
