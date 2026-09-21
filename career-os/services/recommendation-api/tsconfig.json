@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "declaration": false,
+    "sourceMap": true,
+    "outDir": "dist",
+    "rootDir": "."
+  },
+  "include": ["prisma.config.ts", "vitest.config.ts", "src/**/*.ts", "prisma/**/*.ts"],
+  "exclude": ["node_modules", "dist", "src/generated"]
+}

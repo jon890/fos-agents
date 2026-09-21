@@ -1,0 +1,435 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model company_preferences {
+  company_key  String                          @id
+  company_name String                          @db.VarChar(255)
+  tier         Int                             @db.UnsignedTinyInt
+  disposition  company_preferences_disposition
+  updated_at   DateTime                        @default(now())
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model company_tier_assessment_run_items {
+  company_tier_run_id          String                                              @db.Char(36)
+  company_key                  String
+  company_name                 String                                              @db.VarChar(255)
+  selection_order              Int                                                 @db.UnsignedSmallInt
+  assessment_status            company_tier_assessment_run_items_assessment_status
+  selection_reason             company_tier_assessment_run_items_selection_reason
+  prior_tier                   Int?                                                @db.UnsignedTinyInt
+  active_position_count        Int                                                 @default(0) @db.UnsignedInt
+  result_status                company_tier_assessment_run_items_result_status     @default(pending)
+  company_tier_assessment_id   String?                                             @db.Char(36)
+  failure_code                 company_tier_assessment_run_items_failure_code?
+  attempt_count                Int                                                 @default(0) @db.UnsignedSmallInt
+  completed_at                 DateTime?
+  company_tier_assessments     company_tier_assessments?                           @relation(fields: [company_tier_assessment_id], references: [company_tier_assessment_id], onDelete: Restrict, onUpdate: NoAction, map: "fk_company_tier_items_assessment")
+  company_tier_assessment_runs company_tier_assessment_runs                        @relation(fields: [company_tier_run_id], references: [company_tier_run_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_company_tier_items_run")
+
+  @@id([company_tier_run_id, company_key])
+  @@unique([company_tier_run_id, selection_order], map: "uq_company_tier_item_order")
+  @@index([company_tier_assessment_id], map: "idx_company_tier_items_assessment")
+}
+
+model company_tier_assessment_runs {
+  company_tier_run_id               String                              @id @db.Char(36)
+  collection_run_id                 String                              @unique(map: "collection_run_id")
+  candidate_context_version         String
+  contract_version                  Int                                 @db.UnsignedInt
+  status                            company_tier_assessment_runs_status
+  assessed_now_count                Int                                 @default(0) @db.UnsignedInt
+  created_at                        DateTime                            @default(now())
+  completed_at                      DateTime?
+  company_tier_assessment_run_items company_tier_assessment_run_items[]
+  position_collection_runs          position_collection_runs            @relation(fields: [collection_run_id], references: [run_id], onUpdate: NoAction, map: "fk_company_tier_runs_collection")
+  company_tier_assessments          company_tier_assessments[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model company_tier_assessments {
+  company_tier_assessment_id        String                              @id @db.Char(36)
+  company_key                       String
+  company_name                      String                              @db.VarChar(255)
+  candidate_context_version         String
+  contract_version                  Int                                 @db.UnsignedInt
+  created_by_company_tier_run_id    String?                             @db.Char(36)
+  recommended_tier                  Int                                 @db.UnsignedTinyInt
+  confidence                        company_tier_assessments_confidence
+  reason                            String                              @db.Text
+  signals_json                      Json
+  evidence_json                     Json
+  assumptions_json                  Json
+  assessed_at                       DateTime
+  valid_until                       DateTime                            @db.Date
+  company_tier_assessment_run_items company_tier_assessment_run_items[]
+  company_tier_assessment_runs      company_tier_assessment_runs?       @relation(fields: [created_by_company_tier_run_id], references: [company_tier_run_id], onDelete: Restrict, onUpdate: NoAction, map: "fk_company_tier_assessments_created_run")
+
+  @@index([created_by_company_tier_run_id], map: "fk_company_tier_assessments_created_run")
+  @@index([company_key, candidate_context_version, contract_version, valid_until, assessed_at], map: "idx_company_tier_assessment_lookup")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model position_analyses {
+  analysis_id                   String                          @id @db.Char(36)
+  position_id                   String                          @db.Char(36)
+  position_version_id           String                          @db.Char(36)
+  candidate_context_version     String
+  contract_version              Int                             @db.UnsignedInt
+  created_by_analysis_run_id    String?                         @db.Char(36)
+  analyzed_at                   DateTime
+  valid_until                   DateTime                        @db.Date
+  company_tier_at_analysis      Int                             @db.UnsignedTinyInt
+  decision                      position_analyses_decision
+  fit_score                     Int                             @db.UnsignedTinyInt
+  role_fit                      Int                             @db.UnsignedTinyInt
+  scope_upside                  Int                             @db.UnsignedTinyInt
+  company_opportunity           Int                             @db.UnsignedTinyInt
+  constraints_score             Int                             @db.UnsignedTinyInt
+  reason                        String                          @db.Text
+  details_json                  Json
+  next_actions_json             Json
+  position_analysis_runs        position_analysis_runs?         @relation(fields: [created_by_analysis_run_id], references: [analysis_run_id], onDelete: Restrict, onUpdate: NoAction, map: "fk_position_analyses_created_run")
+  positions                     positions                       @relation(fields: [position_id], references: [position_id], onUpdate: NoAction, map: "fk_position_analyses_position")
+  position_versions             position_versions               @relation(fields: [position_version_id], references: [position_version_id], onUpdate: NoAction, map: "fk_position_analyses_version")
+  position_analysis_run_items   position_analysis_run_items[]
+  position_recommendation_items position_recommendation_items[]
+
+  @@unique([position_version_id, candidate_context_version, contract_version], map: "uq_position_analysis_version_context_contract")
+  @@index([created_by_analysis_run_id], map: "fk_position_analyses_created_run")
+  @@index([position_id], map: "fk_position_analyses_position")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model position_analysis_policy {
+  singleton_id                  Int      @id @db.TinyInt
+  candidate_context_version     String
+  daily_analysis_limit          Int      @db.UnsignedTinyInt
+  priority_slots                Int      @db.UnsignedTinyInt
+  aging_slots                   Int      @db.UnsignedTinyInt
+  stale_after_days              Int      @db.UnsignedSmallInt
+  default_company_tier          Int      @db.UnsignedTinyInt
+  updated_at                    DateTime @default(now())
+  daily_company_tier_limit      Int      @db.UnsignedTinyInt
+  company_tier_stale_after_days Int      @db.UnsignedSmallInt
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model position_analysis_run_items {
+  analysis_run_id            String                                          @db.Char(36)
+  position_id                String                                          @db.Char(36)
+  position_version_id        String                                          @db.Char(36)
+  selection_order            Int                                             @db.UnsignedSmallInt
+  analysis_status            position_analysis_run_items_analysis_status
+  selection_reason           position_analysis_run_items_selection_reason
+  company_tier               Int                                             @db.UnsignedTinyInt
+  result_status              position_analysis_run_items_result_status       @default(pending)
+  analysis_id                String?                                         @db.Char(36)
+  failure_code               String?                                         @db.VarChar(64)
+  attempt_count              Int                                             @default(0) @db.UnsignedSmallInt
+  completed_at               DateTime?
+  company_tier_source        position_analysis_run_items_company_tier_source
+  company_tier_assessment_id String?                                         @db.Char(36)
+  position_analyses          position_analyses?                              @relation(fields: [analysis_id], references: [analysis_id], onDelete: Restrict, onUpdate: NoAction, map: "fk_position_analysis_items_analysis")
+  positions                  positions                                       @relation(fields: [position_id], references: [position_id], onUpdate: NoAction, map: "fk_position_analysis_items_position")
+  position_analysis_runs     position_analysis_runs                          @relation(fields: [analysis_run_id], references: [analysis_run_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_position_analysis_items_run")
+  position_versions          position_versions                               @relation(fields: [position_version_id], references: [position_version_id], onUpdate: NoAction, map: "fk_position_analysis_items_version")
+
+  @@id([analysis_run_id, position_id])
+  @@unique([analysis_run_id, selection_order], map: "uq_position_analysis_order")
+  @@index([position_id], map: "fk_position_analysis_items_position")
+  @@index([position_version_id], map: "fk_position_analysis_items_version")
+  @@index([analysis_id], map: "idx_position_analysis_items_analysis")
+}
+
+model position_analysis_runs {
+  analysis_run_id              String                        @id @db.Char(36)
+  collection_run_id            String                        @unique(map: "collection_run_id")
+  candidate_context_version    String
+  contract_version             Int                           @db.UnsignedInt
+  status                       position_analysis_runs_status
+  analyzed_now_count           Int                           @default(0) @db.UnsignedInt
+  created_at                   DateTime                      @default(now())
+  completed_at                 DateTime?
+  position_analyses            position_analyses[]
+  position_analysis_run_items  position_analysis_run_items[]
+  position_collection_runs     position_collection_runs      @relation(fields: [collection_run_id], references: [run_id], onUpdate: NoAction, map: "fk_position_analysis_runs_collection")
+  position_recommendation_runs position_recommendation_runs?
+}
+
+model position_collection_items {
+  run_id                   String
+  position_id              String                                   @db.Char(36)
+  position_version_id      String                                   @db.Char(36)
+  posting_status           position_collection_items_posting_status
+  close_urgency            position_collection_items_close_urgency
+  positions                positions                                @relation(fields: [position_id], references: [position_id], onUpdate: NoAction, map: "fk_position_collection_items_position")
+  position_collection_runs position_collection_runs                 @relation(fields: [run_id], references: [run_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_position_collection_items_run")
+  position_versions        position_versions                        @relation(fields: [position_version_id], references: [position_version_id], onUpdate: NoAction, map: "fk_position_collection_items_version")
+
+  @@id([run_id, position_id])
+  @@index([position_id], map: "fk_position_collection_items_position")
+  @@index([position_version_id], map: "fk_position_collection_items_version")
+}
+
+model position_collection_runs {
+  run_id                          String                            @id
+  idempotency_key                 String                            @unique(map: "idempotency_key") @db.VarChar(200)
+  collected_at                    DateTime
+  status                          position_collection_runs_status
+  active_count                    Int                               @default(0) @db.UnsignedInt
+  personal_excluded_count         Int                               @default(0) @db.UnsignedInt
+  created_at                      DateTime                          @default(now())
+  company_tier_assessment_runs    company_tier_assessment_runs?
+  position_analysis_runs          position_analysis_runs?
+  position_collection_items       position_collection_items[]
+  position_recommendation_runs    position_recommendation_runs[]
+  position_source_run_diagnostics position_source_run_diagnostics[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model position_recommendation_items {
+  recommendation_run_id        String                                            @db.Char(36)
+  position_id                  String                                            @db.Char(36)
+  analysis_id                  String                                            @db.Char(36)
+  rank_number                  Int                                               @db.UnsignedInt
+  decision                     position_recommendation_items_decision
+  company_tier                 Int                                               @db.UnsignedTinyInt
+  company_tier_source          position_recommendation_items_company_tier_source
+  company_tier_assessment_id   String?                                           @db.Char(36)
+  position_analyses            position_analyses                                 @relation(fields: [analysis_id], references: [analysis_id], onUpdate: NoAction, map: "fk_position_recommendation_items_analysis")
+  positions                    positions                                         @relation(fields: [position_id], references: [position_id], onUpdate: NoAction, map: "fk_position_recommendation_items_position")
+  position_recommendation_runs position_recommendation_runs                      @relation(fields: [recommendation_run_id], references: [recommendation_run_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_position_recommendation_items_run")
+
+  @@id([recommendation_run_id, position_id])
+  @@unique([recommendation_run_id, rank_number], map: "uq_position_recommendation_rank")
+  @@index([analysis_id], map: "fk_position_recommendation_items_analysis")
+  @@index([position_id], map: "fk_position_recommendation_items_position")
+}
+
+model position_recommendation_runs {
+  recommendation_run_id         String                          @id @db.Char(36)
+  analysis_run_id               String                          @unique(map: "analysis_run_id") @db.Char(36)
+  collection_run_id             String
+  generated_at                  DateTime
+  analyzed_now_count            Int                             @db.UnsignedInt
+  reused_count                  Int                             @db.UnsignedInt
+  pending_count                 Int                             @db.UnsignedInt
+  pending_candidates_json       Json
+  personal_excluded_count       Int                             @db.UnsignedInt
+  position_recommendation_items position_recommendation_items[]
+  position_analysis_runs        position_analysis_runs          @relation(fields: [analysis_run_id], references: [analysis_run_id], onUpdate: NoAction, map: "fk_position_recommendation_analysis_run")
+  position_collection_runs      position_collection_runs        @relation(fields: [collection_run_id], references: [run_id], onUpdate: NoAction, map: "fk_position_recommendation_collection_run")
+
+  @@index([collection_run_id], map: "fk_position_recommendation_collection_run")
+}
+
+model position_source_run_diagnostics {
+  run_id                   String
+  source_key               String                                 @db.VarChar(100)
+  status                   position_source_run_diagnostics_status
+  collected_count          Int                                    @db.UnsignedInt
+  imported_count           Int                                    @db.UnsignedInt
+  skipped_count            Int                                    @db.UnsignedInt
+  failed_count             Int                                    @db.UnsignedInt
+  public_message           String                                 @default("") @db.VarChar(500)
+  position_collection_runs position_collection_runs               @relation(fields: [run_id], references: [run_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_position_diagnostics_run")
+  position_sources         position_sources                       @relation(fields: [source_key], references: [source_key], onUpdate: NoAction, map: "fk_position_diagnostics_source")
+
+  @@id([run_id, source_key])
+  @@index([source_key], map: "fk_position_diagnostics_source")
+}
+
+model position_sources {
+  source_key                      String                            @id @db.VarChar(100)
+  enabled                         Boolean                           @default(true)
+  last_successful_collection_at   DateTime?
+  position_source_run_diagnostics position_source_run_diagnostics[]
+  positions                       positions[]
+}
+
+model position_versions {
+  position_version_id         String                        @id @db.Char(36)
+  position_id                 String                        @db.Char(36)
+  content_hash                String                        @db.Char(71)
+  snapshot_json               Json
+  observed_at                 DateTime
+  position_analyses           position_analyses[]
+  position_analysis_run_items position_analysis_run_items[]
+  position_collection_items   position_collection_items[]
+  positions                   positions                     @relation(fields: [position_id], references: [position_id], onUpdate: NoAction, map: "fk_position_versions_position")
+
+  @@unique([position_id, content_hash], map: "uq_position_versions_hash")
+}
+
+model positions {
+  position_id                   String                          @id @db.Char(36)
+  source_key                    String                          @db.VarChar(100)
+  identity_hash                 String                          @db.VarChar(512)
+  normalized_url                String                          @db.VarChar(2048)
+  company_key                   String
+  company_name                  String                          @db.VarChar(255)
+  title                         String                          @db.VarChar(500)
+  lifecycle                     positions_lifecycle
+  first_seen_at                 DateTime
+  last_seen_at                  DateTime
+  pending_since                 DateTime?
+  position_analyses             position_analyses[]
+  position_analysis_run_items   position_analysis_run_items[]
+  position_collection_items     position_collection_items[]
+  position_recommendation_items position_recommendation_items[]
+  position_versions             position_versions[]
+  position_sources              position_sources                @relation(fields: [source_key], references: [source_key], onUpdate: NoAction, map: "fk_positions_source")
+
+  @@unique([source_key, identity_hash], map: "uq_positions_source_identity")
+}
+
+model request_receipts {
+  idempotency_key String                 @id @db.VarChar(200)
+  request_hash    String                 @db.Char(71)
+  state           request_receipts_state
+  response_status Int?                   @db.UnsignedSmallInt
+  response_body   Json?
+  created_at      DateTime
+  updated_at      DateTime
+}
+
+model schema_migrations {
+  version    String   @id @db.VarChar(64)
+  checksum   String   @db.Char(64)
+  applied_at DateTime @default(now())
+}
+
+enum position_source_run_diagnostics_status {
+  ok
+  partial
+  failed
+}
+
+enum request_receipts_state {
+  processing
+  completed
+}
+
+enum company_preferences_disposition {
+  analyze
+  exclude
+}
+
+enum position_collection_items_posting_status {
+  active
+  open
+}
+
+enum position_collection_runs_status {
+  processing
+  completed
+  failed
+}
+
+enum company_tier_assessment_run_items_assessment_status {
+  new
+  stale
+}
+
+enum company_tier_assessment_runs_status {
+  pending
+  partial
+  completed
+}
+
+enum position_analysis_run_items_analysis_status {
+  new
+  changed
+  stale
+}
+
+enum position_analysis_runs_status {
+  pending
+  partial
+  completed
+}
+
+enum position_collection_items_close_urgency {
+  urgent
+  soon
+  normal
+  no_deadline
+  unknown
+}
+
+enum position_recommendation_items_decision {
+  recommend
+  consider
+  hold
+}
+
+enum company_tier_assessment_run_items_selection_reason {
+  discovery
+  refresh
+}
+
+enum position_analysis_run_items_selection_reason {
+  priority
+  aging
+  overflow
+}
+
+enum position_recommendation_items_company_tier_source {
+  manual
+  model
+  default
+}
+
+enum company_tier_assessments_confidence {
+  low
+  medium
+  high
+}
+
+enum position_analysis_run_items_result_status {
+  pending
+  created
+  reused
+  failed
+}
+
+enum positions_lifecycle {
+  active
+  closed
+  not_seen
+}
+
+enum company_tier_assessment_run_items_result_status {
+  pending
+  created
+  reused
+  failed
+}
+
+enum position_analyses_decision {
+  recommend
+  consider
+  hold
+}
+
+enum company_tier_assessment_run_items_failure_code {
+  research_unavailable
+  model_unavailable
+  contract_rejected
+  internal_error
+  lease_expired
+}
+
+enum position_analysis_run_items_company_tier_source {
+  manual
+  model
+  default
+}
