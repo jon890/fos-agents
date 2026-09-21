@@ -43,6 +43,24 @@ image digest는 `services/career-recommendation-backend/.env.example`의
 **cron 실행 시각을 피한다.** 매일 도는 포지션 추천 cron과 겹치면
 전환 중간 상태에서 실행이 걸린다.
 
+## 시작하기 전에 main을 머지한다
+
+**`docs/`의 네 문서가 main에서 다시 나뉘고 있다.**
+`prd.md`, `flow.md`, `data-schema.md`, `code-architecture.md`가 대상이다.
+절 제목이 기능 이름에서 스킬 이름으로 바뀌고 절 순서가 네 문서에서 같아진다.
+
+Phase 01에서 05까지는 문서를 건드리지 않으므로 영향이 없다. 이 phase만 해당한다.
+
+**작업 항목 6이 지울 문장을 그대로 인용하고 있다.**
+「전환 전의 배치다」와 「옮기는 중이다」가 그것이다.
+정리가 끝난 뒤에는 그 문장이 없거나 다른 절에 있다. **그 인용을 믿지 않는다.**
+
+이 phase에 들어가기 전에 둘을 한다.
+
+1. `origin/main`을 브랜치에 머지한다
+2. 머지한 뒤의 `code-architecture.md`와 `data-schema.md`를 실제로 읽고,
+   작업 항목 6을 그 구조에 맞춰 다시 쓴다
+
 ## Blocked 조건
 
 - Phase 05의 테스트가 하나라도 통과하지 않으면 `PHASE_BLOCKED: 전환 검증 미완료`를 출력하고 종료한다
