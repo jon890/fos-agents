@@ -1,8 +1,14 @@
 # 데이터 구조
 
-career-os는 사람이 관리하는 설정, 실행 상태, 비공개 산출물, 공개 자료, 재생성 가능한 결과를 경로별로 분리한다.
+이 문서는 각 스킬이 **무엇을 어디에 저장하고 어떤 제약을 두는지**를 담는다.
+필드와 타입, 키와 유니크 제약, 지울 때 함께 지워지는 것이 여기 속한다.
 
-## 저장 원칙
+무엇을 약속하는지는 [`prd.md`](prd.md), 어떤 순서로 도는지는 [`flow.md`](flow.md),
+코드가 어디 있는지는 [`code-architecture.md`](code-architecture.md)가 담는다.
+
+## 공통
+
+### 저장 원칙
 
 - `config/`에는 오래 유지할 수집 정책을 둔다.
 - `applications/`, `library/`와 `state/`는 홈서버 `career-os` S3 collection의 release와 동기화하는 로컬 작업본이다.
@@ -10,7 +16,274 @@ career-os는 사람이 관리하는 설정, 실행 상태, 비공개 산출물, 
 - `public/question-bank/`과 `sources/fos-study/`에는 공개 가능한 자료만 둔다.
 - 게시용 HTML과 실행별 중간 데이터는 시스템 임시 디렉터리에 두고 검증 뒤 삭제한다.
 
-## 개인 공고 제외 설정
+### MySQL schema 적용
+
+홈서버 `fos_career` database의 schema는 `services/recommendation-api/`가 소유한다.
+`migrations/`의 번호가 붙은 SQL 파일이 단일 출처이고,
+아래의 table과 column 서술은 그 SQL을 읽기 쉽게 옮긴 것이다. 둘이 다르면 SQL이 맞다.
+
+적용 기록은 `schema_migrations` table에 있다.
+Backend가 기동할 때 이 table을 만들고 적용하지 않은 파일을 실행한다.
+
+**Prisma로 옮기는 중이다.** 옮긴 뒤에는 `prisma/schema.prisma`와 `prisma/migrations/`가
+같은 자리를 차지하고, Backend는 적용 상태만 조회하며 DDL을 실행하지 않는다.
+결정과 근거는 [ADR-121](adr/ADR-121-추천-backend는-nestjs와-prisma로-운영한다.md)에 있다.
+옮길 때 지킬 것이 셋이다.
+
+**초기 migration은 `001_position_schema.sql`과 `002_company_tier_assessments.sql`의 원문이다.**
+`prisma migrate diff --from-empty --to-config-datasource --script`로 운영 schema를 뽑으면
+360줄이 나오는데 `CHECK` 제약 16개가 모두 빠진다. Prisma 7.10.0과 MySQL 8.4.8에서 확인했다.
+그 출력을 초기 migration으로 쓰면 제약이 사라진다.
+
+**`CHECK` 제약은 `schema.prisma`가 표현하지 못하므로 migration SQL이 소유한다.**
+Prisma가 이 제약을 지우지는 않는다. 같은 조합에서 초기 migration을 적용한 database를
+`prisma db pull` 한 뒤 `prisma migrate diff --from-migrations --to-schema` 로 비교하니
+빈 migration이 나왔다. 제약을 바꿀 때는 migration 파일에 직접 쓴다.
+
+**초기 migration은 운영 DB에 다시 실행하지 않는다.**
+두 파일은 이미 적용되어 있으므로 적용 완료로만 표시한다.
+
+```bash
+npx prisma migrate resolve --applied 20260921000000_baseline
+```
+
+`schema_migrations` table은 옮긴 뒤에도 그대로 둔다.
+이전 image로 되돌릴 때 그 image가 이 table을 읽어 적용 상태를 판정하기 때문이다.
+새 스택이 운영에서 검증되면 별도 migration으로 제거한다.
+
+### 비공개 작업 release
+
+홈서버의 `career-os` bucket은 release별 archive, manifest와 descriptor를 가진다.
+`releases/<revision>/workspace.tar`, `releases/<revision>/workspace-manifest.json`과 `releases/<revision>/release.json`은 생성 뒤 수정하지 않는다.
+검증을 통과한 release만 `pointers/current.json`이 가리킨다.
+
+manifest는 다음 필드를 가진다.
+
+- `schemaVersion`: 현재 값 `1`
+- `workspace`: 고정값 `career-os`
+- `revision`: 홈서버가 부여한 release 식별자
+- `parentRevision`: publish가 시작할 때 확인한 이전 revision
+- `createdAt`: 홈서버가 기록한 UTC 시각
+- `producer`: 결과를 만든 skill과 `interactive` 또는 `automation` 실행 방식
+- `contentDigest`: 정렬한 파일 경로, 크기와 SHA-256에서 만든 전체 digest
+- `files`: 상대 경로, byte 크기와 SHA-256 목록
+
+파일 경로는 `applications/`, `library/`, `state/` 중 하나로 시작해야 한다.
+일반 파일만 허용하고 symlink, `.env`, `.omc`, log, cache와 임시 파일은 거부한다.
+같은 `contentDigest`를 다시 publish하면 새 release를 만들지 않는다.
+
+`releases/<revision>/release.json`은 `schemaVersion`, `workspace`, `revision`, `contentDigest`, `createdAt`, `fileCount`, `archiveKey`, `archiveSha256`, `manifestKey`, `manifestSha256`를 가진다.
+과거 revision을 export할 때 이 descriptor를 기준으로 archive와 manifest의 hash를 검증한다.
+
+`pointers/current.json`은 같은 식별·요약 필드와 `descriptorKey`, `descriptorSha256`을 가진다.
+현재 pointer는 같은 revision의 `releases/<revision>/release.json`만 가리킬 수 있다.
+archive를 export할 때는 `archiveSha256`, release manifest와 내부 파일 hash를 모두 검증한다.
+
+로컬 `career-os/.career-sync/sync-state.json`은 마지막으로 준비한 `revision`, `contentDigest`와 파일 hash를 기록한다.
+`skill-session.json`은 성공한 작성 skill의 이름, 시작 revision과 시작 시각을 기록한다.
+같은 skill의 완료 단계만 이 기록을 소비할 수 있으며 성공한 발행이나 무변경 종료 뒤 삭제한다.
+prepare 중에는 같은 디렉터리의 임시 staging, backup과 `prepare-journal.json`으로 세 관리 root의 교체·복구 상태를 기록한다.
+이 디렉터리는 Git과 원격 release에 포함하지 않는다.
+prepare는 현재 로컬 hash가 마지막 동기화 상태와 다르면 파일을 교체하지 않으며, 중단된 journal이 있으면 새 작업 전에 기존 root를 복구한다.
+
+`prepare-journal.json`은 transaction 식별자, `started`, `staged`, `backed_up`, `applied`, `restoring`, `restored`, `completed` 상태와 root별 `hadOriginal`, `backupDone`, `applyDone`을 기록한다.
+`started`와 `staged`는 기존 root를 건드리지 않았으므로 staging만 정리한다.
+`backed_up`, `applied`와 `restoring`은 root별 상태와 실제 경로를 대조해 새 root를 제거하고 backup을 복구한다.
+원래 root가 없던 항목은 `hadOriginal: false`로 기록하고 복구 때 새 root만 제거한다.
+`completed`는 새 root와 `sync-state.json`의 hash가 일치할 때만 backup과 journal을 정리한다.
+기록과 실제 경로가 모순되면 자동 판단하지 않고 `RESTORE_REQUIRED`로 중단한다.
+
+### 비공개 작업 전송 계약
+
+원격 명령은 다음 세 동작만 제공한다.
+
+- `career-storage status`: 본문 없이 호출하고 `RemoteStatusResult` JSON을 stdout으로 반환한다.
+- `career-storage export --revision <revision>`: 해당 immutable release를 tar stdout으로 반환한다.
+- `career-storage publish`: `workspace-draft.json`과 세 관리 root가 든 tar를 stdin으로 받고 `RemotePublishResult` JSON을 stdout으로 반환한다.
+
+export tar의 최상위에는 `workspace-manifest.json`, `applications/`, `library/`, `state/`만 허용한다.
+publish tar의 최상위에는 `workspace-draft.json`과 같은 세 관리 root만 허용한다.
+
+`RemoteStatusResult`는 `schemaVersion`, `action: "status"`, `ok: true`, `workspace`와 nullable `current`를 가진다.
+`current`는 `revision`, `contentDigest`, `createdAt`, `fileCount`를 가진다.
+`RemotePublishResult`는 `schemaVersion`, `action: "publish"`, `ok: true`, `revision`, `contentDigest`, `createdAt`, `fileCount`, `noChange`를 가진다.
+
+성공 JSON만 stdout에 기록한다.
+실패는 nonzero 종료 코드와 stderr의 `schemaVersion`, `action`, `ok: false`, `code`를 가진 JSON으로 반환한다.
+공통 오류 코드는 `WORKSPACE_DIRTY`, `REMOTE_UNINITIALIZED`, `REVISION_CONFLICT`, `INVALID_MANIFEST`, `TRANSFER_FAILED`, `TRANSPORT_UNAVAILABLE`, `RESTORE_REQUIRED`다.
+같은 코드가 여러 원인에서 나오는 자리에는 선택 항목 `detail`로 무엇이 어긋났는지와 다음에 실행할 명령을 한국어로 함께 담는다.
+`TRANSPORT_UNAVAILABLE`은 `.env` 파일이 없거나 원격 연결 값이 비어 있는 경우를 연결 실패와 구분한다.
+`RESTORE_REQUIRED`는 세션 기록이 없는 경우, 기록의 skill이 다른 경우, 기록의 revision이 현재 작업본과 다른 경우를 구분한다.
+오류에는 파일 본문, 호스트, 계정, key 경로와 비밀값을 포함하지 않는다.
+
+Markdown, JSON, 검토용 HTML, PDF와 실제 제출 묶음은 해당 application 디렉터리 안에서 함께 동기화한다.
+게시 뒤 삭제하는 공개 리포트와 원본에서 다시 만들 수 있는 cache는 release에 포함하지 않는다.
+
+client의 `.env`는 작업 경로와 transport만 주입한다.
+SSH 환경은 `CAREER_WORKSPACE_SSH_TARGET`, `CAREER_WORKSPACE_SSH_ARGS`와 `CAREER_WORKSPACE_REMOTE_COMMAND`를 사용한다.
+홈서버의 Hermes는 command transport로 같은 `career-storage` 명령을 호출한다.
+S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 client에 전달하지 않는다.
+근거 원장의 `${PROJECTS_ROOT}`와 `${PERSONAL_ROOT}`는 환경마다 같은 이름의 변수로 해석하며 release에는 환경별 절대 경로를 저장하지 않는다.
+
+### 임시 산출물과 Cache
+
+- 시스템 임시 디렉터리: 게시 전 공개 가능 HTML과 실행별 중간 데이터. 추가 문서 형식은 해당 skill 계약을 따른다.
+- `cache/`: 피드와 공고에서 다시 만들 수 있는 중간 결과
+
+HTML 게시 전에는 개인 정보, 비공개 업무 내용, 로컬 절대 경로를 검사한다.
+포지션 추천 HTML은 전체 추천 중 상위 3건의 우선 검토 카드, 나머지 추천의 압축 목록,
+별도 보류·주의 목록과 검토한 후보의 접이식 검색 목록으로 표시한다.
+포지션 추천은 HTML만 생성하며 Markdown 리포트는 만들지 않는다.
+`recommendation.json`과 후보풀 JSON은 검증 입력으로 유지하고 기존 개인 Markdown 파일은 삭제하지 않는다.
+외부 공유 URL은 `report-publisher` skill이 게시와 검증을 마친 뒤 제공한다.
+게시용 임시 파일은 검증 뒤 삭제하며 사용자가 보존을 요청한 경우에만 지정 경로에 남긴다.
+
+### 보존과 공개 범위
+
+- `config/`와 공개 질문 은행은 검토 후 Git으로 관리한다.
+- 지원 원본, 개인 질문, 답변 연습 상태와 아침 공부 추천 이력은 홈서버의 비공개 작업 release로 동기화한다.
+- 현재 경력, 역할 선호, 경험 경계와 지원 대상은 private brain에서 관리한다.
+- cache와 다시 만들 수 있는 임시 산출물은 장기 이력으로 취급하지 않는다.
+- 개인 연락처, 회사별 지원 전략, 근거 감사 원문은 공개 리포트에 포함하지 않는다.
+- 경력 자료를 공개할 때도 비공개 회사 정보와 로컬 경로를 제거한다.
+
+## application-package-writer
+
+공고별 `applications/<company>/<position>/`는 세 층으로 나뉜다.
+파일이 어느 층에 있는지가 누가 그 파일을 여는지를 정한다.
+
+| 층              | 여는 주체    | 담는 것                                                    |
+| --------------- | ------------ | ---------------------------------------------------------- |
+| 디렉터리 최상위 | 사용자       | `application-package.html`과 현재 공고가 요구하는 제출 PDF |
+| `evidence/`     | skill과 사람 | 기준 원본 Markdown과 구조화 입력                           |
+| `review/`       | 검증기       | 근거 장부, 점수표, manifest와 제출 문서 HTML               |
+
+#### 최상위
+
+- `application-package.html`: 기준 원본과 현재 제출 파일을 묶은 로컬 검토 화면
+- `resume.pdf`: 이력서 제출본
+- `career-description.pdf`: 경력기술서를 받는 공고에만 둔다
+- `submission.pdf`: 한 파일 제출을 요구하는 공고에만 둔다
+
+#### `evidence/`
+
+- `posting.md`: 공고 원문이며 공식 페이지의 절 구조를 그대로 둔다. 쪼갠 항목 목록은 `fit.md` 의 적합도 표가 담는다
+- `candidate-interview.md`: 후보자 원문 답변, 정리한 핵심과 제출 반영 여부
+- `fit.md`: 결론, 공고 항목별 적합도 표, 구분별 가중치, 공개 자료로 확인한 팀과 인접 사례
+- `strategy.md`: 승부처, 지원동기, 기여 시나리오, 보완할 공백, 회사 문화와의 연결, 면접에서 검증받을 내용이며 시장과 규모로 판단하는 「이 자리에서 얻을 경험과 성장」을 선택 절로 둔다
+- `status.md`: 준비 상태 세 줄과 제출 준비 상태, 사용자 확인 필요, 다음 행동
+- `resume-draft.md`: HTML과 PDF로 변환할 제출용 이력서 원본
+- `interview-questions.json`: 공고 책임, 근거 방어와 경험 공백에서 만든 포지션별 질문
+- `career-description-draft.md`: 경력기술서를 받는 공고에만 둔다
+- `application-form.json`: 브라우저 자동 입력을 준비할 때만 둔다
+
+**`interview-questions.json` 은 `application-package-writer` 가 만들고 소유한다.**
+`resume-preparer` 와 `interview-practice` 는 질문을 더할 수 있으나 기존 질문을 지우거나 다시 쓰지 않는다.
+세 스킬이 같은 파일에 쓰므로 소유자를 하나로 둔다.
+
+앞의 다섯이 기본 원본이다.
+`application-package-writer`는 지원 판단과 후보자 인터뷰를 관리하고, `resume-preparer`는 `resume-draft.md`와 제출 문서를 관리한다.
+`application-form.json`은 private brain 공통 프로필의 현재 스냅샷, 회사별 선택값, 첨부 파일과 서술형 질문을 구조화한다.
+서술형 문항이 없는 지원 건은 `questions`를 빈 배열로 둔다.
+
+#### `review/`
+
+- `resume.html`과 `career-description.html`: PDF를 만든 원본
+- `claim-ledger.json`과 `career-description-claim-ledger.json`: 주장별 근거 장부
+- `resume-scorecard.md`와 `career-description-scorecard.md`: 인사담당자와 실무담당자 리뷰 결과
+- `submission-manifest.json`: 각 PDF의 파일 해시와 원본 HTML의 문구 해시를 연결한다
+
+이 층의 파일은 사용자용 링크로 노출하지 않는다.
+검증에는 사용하므로 현재 제출 문구와 PDF가 같은 버전인지 증명한다.
+
+#### 검토 화면
+
+`application-package.html`은 준비 상태, 결론, 제출 PDF와 조건부 지원서 입력값을 탭 밖 상단에 고정한다.
+본문은 `공고 원문`, `공고 적합도`, `지원 전략`, `상세 자료` 네 탭으로 나누며 `공고 원문`이 기본 선택이다.
+`공고 적합도` 탭의 첫 내용은 공고 항목 하나에 한 행을 주는 적합도 표다.
+`지원 전략` 탭은 「이 자리에서 얻을 경험과 성장」을 「입사 후 기여 시나리오」와 「보완할 공백」 사이에 둔다.
+이 절은 선택 절이며, 없으면 나머지 순서를 그대로 두고 건너뛴다.
+`공고 원문` 탭은 `evidence/posting.md`를 읽어 보여주며 원문을 다른 파일에 복제하지 않는다.
+
+지원 패키지 검증기는 제출 문서와 지원서 답변에 내부 정보가 남았는지만 본다.
+어떤 파일과 절을 만들지는 `application-package-writer` 의 지침이 정한다.
+
+#### 적합도 판정과 점수
+
+판단 기준은
+[`fit-judgment.md`](../.claude/skills/application-package-writer/references/fit-judgment.md)가 소유한다.
+행별 점수와 구분별 가중치는 모델이 공고를 보고 정해 `evidence/fit.md` 에 남긴다.
+소계와 총점은 그 둘로 `fit_score.ts` 가 계산한다.
+색 구간은 `render/constants.ts` 가 소유한다.
+
+`evidence/status.md`의 준비 상태 값과 판단 기준은
+[`application-quality-rubric.md`](../.claude/skills/application-package-writer/references/application-quality-rubric.md)의 「판정」이 소유한다.
+
+첫 10줄의 `evidence`는 제출 문장이 현재 근거 범위 안에 있는지의 상태다.
+
+| 값        | 뜻                                                  |
+| --------- | --------------------------------------------------- |
+| `safe`    | 제출 문장이 모두 확인한 근거 범위 안에 있다         |
+| `revise`  | 근거보다 넓게 읽히는 문장이 있어 표현을 낮춰야 한다 |
+| `blocked` | 근거를 확인하기 전에는 그 문장을 제출에 쓸 수 없다  |
+
+첫 10줄의 `human-confirmation`은 본인 역할, 당시 제약, 기각한 대안, 결과의 확인 범위와 제출 문구 동의처럼 후보자만 확정할 수 있는 사실과 표현 확인 상태다.
+값은 `complete` 또는 `needs_input`이며, `needs_input`이면 준비 상태를 `ready`로 둘 수 없다.
+
+공고별 개인 근거와 면접 질문은 해당 `applications/<company>/<position>/`에 둔다.
+여러 지원에서 재사용하는 개인 질문은 `library/question-bank/`에 둔다.
+특정 지원에 종속되지 않는 대상별 프로필 원고는 `library/profiles/`에 둔다.
+이력서 공통 작성 규칙과 디자인은 `resume-preparer` 스킬의 참조와 템플릿이 소유한다.
+과거 지원에서 만든 근거 원장, 감사 문서, 점수표와 사용하지 않는 CSS는 `library/`에 남기지 않는다.
+
+재사용할 작성 취향의 기준 원본은 `.claude/skills/resume-preparer/references/resume-taste.md`다.
+brain에는 경력, 역할 선호와 경험 경계 등 개인 지식을 두고, 지원별 사실과 표현 확인은 `evidence/candidate-interview.md`의 기존 계약을 따른다.
+작성 취향은 스킬에서 유지하고, brain 검색 결과는 해당 문장을 판단하는 데 필요한 출처와 범위만 지원 기록에 연결한다.
+
+## interview-practice
+
+현재 지원 대상은 private brain에서 찾고 대응하는 `applications/<company>/<position>/`을 실행 경로로 사용한다.
+포지션별 질문은 해당 지원 디렉터리의 `evidence/interview-questions.json`에 둔다.
+공개 가능한 일반 질문은 `public/question-bank/`에 둔다.
+질문 출처의 공식 URL, 게시자, 확인일과 적용 범위는 `public/question-bank/sources.json`에 둔다.
+각 질문의 `source`는 이 레지스트리의 식별자를 참조한다.
+개인 경험에서 파생한 질문은 `library/question-bank/`에 둔다.
+
+`config/interview-question-sources.ts`는 질문 후보를 찾을 외부 출처를 관리한다.
+각 출처는 고유 `key`, 출처 종류, 사용 역할, 주제, URL과 수집 어댑터를 가진다.
+기술 블로그, 공개 영상과 GitHub 가이드는 사례 발견이나 범위 확인 역할만 가지며 정답 근거 역할을 가질 수 없다.
+
+질문의 선택 `bar`는 다음 공개 능력 수준 중 하나다.
+
+- `production`: 한 서비스의 정확성, 장애 복구와 운영 지표를 책임지는 수준
+- `large-scale`: 대규모 제품과 여러 팀이 쓰는 계약, 용량과 변경 안전성을 판단하는 수준
+- `global-scale`: 다중 리전과 조직 공통 기반의 실패 격리, 보안과 장기 trade-off를 주도하는 수준
+
+현재 직장, 목표 회사와 개인 경험 경계는 private brain에서 실행할 때만 읽는다.
+이 정보는 `bar` 값이나 공개 질문 본문에 복제하지 않는다.
+
+실행별 `interview-source-candidates.json`은 시스템 임시 경로에 둔다.
+각 후보는 출처 식별자, 출처 종류와 역할, 주제, 제목, URL, 게시 시각, 공개 설명과 자료 종류를 가진다.
+후보풀은 질문 승격 뒤 삭제하며 장기 상태로 보존하지 않는다.
+
+일별 답변 기록은 꼬리질문일 때 원 질문 식별자, 부모 질문, 깊이, 확인 축과 중단 이유를 선택 필드로 가진다.
+
+#### `state/drill-progress.json`
+
+기술·인성 면접 답변 연습의 진행과 복습 상태를 관리한다.
+
+포함 내용:
+
+- 질문별 시도와 최근 결과
+- 다시 볼 질문과 복습 시점
+- 기술·인성 모드가 공유하는 진행 정보
+
+학습 주제 생성 상태와 섞지 않는다.
+이 파일은 public 저장소에서 추적하지 않고 비공개 작업 release로 동기화한다.
+
+## position-recommender
+
+### 개인 공고 제외 설정
 
 `config/position-exclusions.ts`는 필수 개인 정책 파일의 상대 경로를 지정한다.
 정책 본문은 Git에서 제외되는 `state/private-config/position-exclusions.json`에 둔다.
@@ -60,7 +333,7 @@ URL은 fragment, `utm_*`, `fbclid`, `gclid`를 제거하고 query 순서와 마�
 새 수집 코드와 스킬 배포 전에는 원격 규칙 저장만으로 자동 추천에 적용되지 않는다.
 선택 이유는 [개인 공고 제외 정책 ADR](adr/ADR-114-개인-공고-제외-정책을-비공개-release로-전송한다.md)을 따른다.
 
-## 포지션 분석 정책
+### 포지션 분석 정책
 
 `fos_career.position_analysis_policy`의 단일 행은 후보자 기준 버전과 일일 분석 상한을 저장한다.
 `fos_career.company_preferences`는 사람이 정한 회사 우선순위와 명시적 제외만 저장한다.
@@ -137,167 +410,7 @@ bun career-os/scripts/position-recommender/configure_position_analysis_policy.ts
   --input <분석-정책.json>
 ```
 
-## 비공개 작업 release
-
-홈서버의 `career-os` bucket은 release별 archive, manifest와 descriptor를 가진다.
-`releases/<revision>/workspace.tar`, `releases/<revision>/workspace-manifest.json`과 `releases/<revision>/release.json`은 생성 뒤 수정하지 않는다.
-검증을 통과한 release만 `pointers/current.json`이 가리킨다.
-
-manifest는 다음 필드를 가진다.
-
-- `schemaVersion`: 현재 값 `1`
-- `workspace`: 고정값 `career-os`
-- `revision`: 홈서버가 부여한 release 식별자
-- `parentRevision`: publish가 시작할 때 확인한 이전 revision
-- `createdAt`: 홈서버가 기록한 UTC 시각
-- `producer`: 결과를 만든 skill과 `interactive` 또는 `automation` 실행 방식
-- `contentDigest`: 정렬한 파일 경로, 크기와 SHA-256에서 만든 전체 digest
-- `files`: 상대 경로, byte 크기와 SHA-256 목록
-
-파일 경로는 `applications/`, `library/`, `state/` 중 하나로 시작해야 한다.
-일반 파일만 허용하고 symlink, `.env`, `.omc`, log, cache와 임시 파일은 거부한다.
-같은 `contentDigest`를 다시 publish하면 새 release를 만들지 않는다.
-
-`releases/<revision>/release.json`은 `schemaVersion`, `workspace`, `revision`, `contentDigest`, `createdAt`, `fileCount`, `archiveKey`, `archiveSha256`, `manifestKey`, `manifestSha256`를 가진다.
-과거 revision을 export할 때 이 descriptor를 기준으로 archive와 manifest의 hash를 검증한다.
-
-`pointers/current.json`은 같은 식별·요약 필드와 `descriptorKey`, `descriptorSha256`을 가진다.
-현재 pointer는 같은 revision의 `releases/<revision>/release.json`만 가리킬 수 있다.
-archive를 export할 때는 `archiveSha256`, release manifest와 내부 파일 hash를 모두 검증한다.
-
-로컬 `career-os/.career-sync/sync-state.json`은 마지막으로 준비한 `revision`, `contentDigest`와 파일 hash를 기록한다.
-`skill-session.json`은 성공한 작성 skill의 이름, 시작 revision과 시작 시각을 기록한다.
-같은 skill의 완료 단계만 이 기록을 소비할 수 있으며 성공한 발행이나 무변경 종료 뒤 삭제한다.
-prepare 중에는 같은 디렉터리의 임시 staging, backup과 `prepare-journal.json`으로 세 관리 root의 교체·복구 상태를 기록한다.
-이 디렉터리는 Git과 원격 release에 포함하지 않는다.
-prepare는 현재 로컬 hash가 마지막 동기화 상태와 다르면 파일을 교체하지 않으며, 중단된 journal이 있으면 새 작업 전에 기존 root를 복구한다.
-
-`prepare-journal.json`은 transaction 식별자, `started`, `staged`, `backed_up`, `applied`, `restoring`, `restored`, `completed` 상태와 root별 `hadOriginal`, `backupDone`, `applyDone`을 기록한다.
-`started`와 `staged`는 기존 root를 건드리지 않았으므로 staging만 정리한다.
-`backed_up`, `applied`와 `restoring`은 root별 상태와 실제 경로를 대조해 새 root를 제거하고 backup을 복구한다.
-원래 root가 없던 항목은 `hadOriginal: false`로 기록하고 복구 때 새 root만 제거한다.
-`completed`는 새 root와 `sync-state.json`의 hash가 일치할 때만 backup과 journal을 정리한다.
-기록과 실제 경로가 모순되면 자동 판단하지 않고 `RESTORE_REQUIRED`로 중단한다.
-
-## 비공개 작업 전송 계약
-
-원격 명령은 다음 세 동작만 제공한다.
-
-- `career-storage status`: 본문 없이 호출하고 `RemoteStatusResult` JSON을 stdout으로 반환한다.
-- `career-storage export --revision <revision>`: 해당 immutable release를 tar stdout으로 반환한다.
-- `career-storage publish`: `workspace-draft.json`과 세 관리 root가 든 tar를 stdin으로 받고 `RemotePublishResult` JSON을 stdout으로 반환한다.
-
-export tar의 최상위에는 `workspace-manifest.json`, `applications/`, `library/`, `state/`만 허용한다.
-publish tar의 최상위에는 `workspace-draft.json`과 같은 세 관리 root만 허용한다.
-
-`RemoteStatusResult`는 `schemaVersion`, `action: "status"`, `ok: true`, `workspace`와 nullable `current`를 가진다.
-`current`는 `revision`, `contentDigest`, `createdAt`, `fileCount`를 가진다.
-`RemotePublishResult`는 `schemaVersion`, `action: "publish"`, `ok: true`, `revision`, `contentDigest`, `createdAt`, `fileCount`, `noChange`를 가진다.
-
-성공 JSON만 stdout에 기록한다.
-실패는 nonzero 종료 코드와 stderr의 `schemaVersion`, `action`, `ok: false`, `code`를 가진 JSON으로 반환한다.
-공통 오류 코드는 `WORKSPACE_DIRTY`, `REMOTE_UNINITIALIZED`, `REVISION_CONFLICT`, `INVALID_MANIFEST`, `TRANSFER_FAILED`, `TRANSPORT_UNAVAILABLE`, `RESTORE_REQUIRED`다.
-같은 코드가 여러 원인에서 나오는 자리에는 선택 항목 `detail`로 무엇이 어긋났는지와 다음에 실행할 명령을 한국어로 함께 담는다.
-`TRANSPORT_UNAVAILABLE`은 `.env` 파일이 없거나 원격 연결 값이 비어 있는 경우를 연결 실패와 구분한다.
-`RESTORE_REQUIRED`는 세션 기록이 없는 경우, 기록의 skill이 다른 경우, 기록의 revision이 현재 작업본과 다른 경우를 구분한다.
-오류에는 파일 본문, 호스트, 계정, key 경로와 비밀값을 포함하지 않는다.
-
-Markdown, JSON, 검토용 HTML, PDF와 실제 제출 묶음은 해당 application 디렉터리 안에서 함께 동기화한다.
-게시 뒤 삭제하는 공개 리포트와 원본에서 다시 만들 수 있는 cache는 release에 포함하지 않는다.
-
-client의 `.env`는 작업 경로와 transport만 주입한다.
-SSH 환경은 `CAREER_WORKSPACE_SSH_TARGET`, `CAREER_WORKSPACE_SSH_ARGS`와 `CAREER_WORKSPACE_REMOTE_COMMAND`를 사용한다.
-홈서버의 Hermes는 command transport로 같은 `career-storage` 명령을 호출한다.
-S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 client에 전달하지 않는다.
-근거 원장의 `${PROJECTS_ROOT}`와 `${PERSONAL_ROOT}`는 환경마다 같은 이름의 변수로 해석하며 release에는 환경별 절대 경로를 저장하지 않는다.
-
-## 스킬 참조
-
-### `.claude/skills/resume-preparer/references/resume-writing-style.md`
-
-모든 공고의 이력서와 경력기술서에 공통으로 적용하는 작성 기준이다.
-구체적인 업무를 먼저 쓰는 방법, 지표를 설명하는 순서, 전후 비교 조건과 실제 담당 범위를 관리한다.
-`resume-preparer`는 제출 문서를 작성하거나 수정하기 전에 이 파일을 읽고 렌더링 전에 다시 점검한다.
-
-### `.claude/skills/resume-preparer/references/resume-design.md`
-
-모든 공고의 이력서와 경력기술서에 기본으로 적용하는 디자인 판단과 검증 기준이다.
-이력서 HTML 골격과 기본 CSS, 로고는 `.claude/skills/resume-preparer/templates/`에 둔다.
-공고별 스타일은 `export_resume.ts --design <path>`에 CSS 파일이나 `css` 코드 블록이 있는 Markdown 파일을 명시한다.
-
-## Config
-
-### `config/external-reading-sources.ts`
-
-아침 읽을거리의 외부 글·영상 소스와 수집 어댑터를 관리한다.
-소스 식별자는 회사나 매체를 나타내며 특정 주제를 포함하지 않는다.
-
-주요 필드:
-
-- `key`, `title`, `category`
-- `adapter`
-- `feedUrl` 또는 `url`
-- `enabled`
-- 출처 분류
-
-## State
-
-### `state/drill-progress.json`
-
-기술·인성 면접 답변 연습의 진행과 복습 상태를 관리한다.
-
-포함 내용:
-
-- 질문별 시도와 최근 결과
-- 다시 볼 질문과 복습 시점
-- 기술·인성 모드가 공유하는 진행 정보
-
-학습 주제 생성 상태와 섞지 않는다.
-이 파일은 public 저장소에서 추적하지 않고 비공개 작업 release로 동기화한다.
-
-### `state/verified-claims/`
-
-`resume-preparer`가 다시 쓸 수 있다고 확인한 주장과 근거 파일 상태를 작은 JSON 파일로 나눠 저장한다.
-이 디렉터리는 검증 결과에서 만든 상태이며 사람이 직접 관리하는 원고를 두지 않는다.
-
-경로는 첫 번째 로컬 근거의 책임에 따라 정한다.
-
-| 근거                                    | 장부 경로                                                     |
-| --------------------------------------- | ------------------------------------------------------------- |
-| `sources/fos-study/task/<group>/<file>` | `state/verified-claims/task/<group>/<file>.json`              |
-| `library/profiles/<file>`               | `state/verified-claims/profile/<file>.json`                   |
-| `applications/<company>/<position>/...` | `state/verified-claims/application/<company>/<position>.json` |
-| 그 밖의 로컬 파일                       | `state/verified-claims/other/<file>.json`                     |
-
-각 파일은 다음 필드를 가진다.
-
-- `schemaVersion`: 검증 장부 스키마 버전이며 처음 구현은 `1`이다
-- `groupKey`: 위 경로에서 만든 안정적인 묶음 식별자다
-- `claims`: `claimKey` 순으로 정렬한 검증 완료 주장 목록이다
-- `claims[].claimKey`: 정규화한 `proposedText`의 SHA-256으로 만든 안정적인 키다
-- `claims[].claim`: 공고별 `schemaVersion: 3` 원장의 주장과 네 판정 축이다
-- `claims[].evidenceSnapshots`: 근거별 `path`, `kind`, `locator`, `sha256`과 `freshness`다
-- `claims[].origins`: 이 판정을 만든 application 경로, 원장 경로, HTML 문구 해시와 원장의 `generatedAt`이다
-
-로컬 파일 근거의 `freshness`는 `tracked`이며 파일 내용의 SHA-256을 저장한다.
-HTTPS `runtime` 근거는 실행마다 달라질 수 있으므로 `refresh_required`로 저장한다.
-재사용 판정은 구현, 소유권, 결과와 경험 깊이 축을 각각 확인한다.
-어떤 축에 HTTPS `runtime` 근거만 있으면 해당 주장은 다시 감사한다.
-같은 축에 현재 SHA-256이 일치하는 로컬 근거가 있으면 HTTPS 근거는 보조 근거로 남기고 주장을 재사용할 수 있다.
-근거 파일을 읽을 수 없거나 해시가 달라지면 해당 근거를 참조하는 주장은 다시 감사한다.
-
-공고별 `review/claim-ledger.json`은 현재 제출 HTML 전체의 완결된 감사 결과다.
-`state/verified-claims/`는 다음 감사의 읽기 범위를 줄이는 파생 상태이며 공고별 원장을 대신하지 않는다.
-`sources/fos-study/task/`는 계속 읽기 전용 근거로 유지하고 검증 결과를 그 저장소에 쓰지 않는다.
-
-### 실행 중 생성되는 읽을거리 데이터
-
-읽을거리 실행은 시스템 임시 경로에 후보풀, 선별 결과와 이력을 만든다.
-게시와 검증이 끝나면 실행별 데이터를 정리한다.
-
-## 공고 후보풀과 추천 결과
-
-### 재사용하는 회사 조사 데이터
+#### 재사용하는 회사 조사 데이터
 
 `state/company-research/<companyKey>.json`은 포지션 추천이 다음 실행에서도 재사용할 공개 회사 사실과
 그 사실에서 도출한 추론을 담는다. 비공개 작업 release로 동기화하지만 현재 역할,
@@ -358,7 +471,7 @@ HTTPS `runtime` 근거는 실행마다 달라질 수 있으므로 `refresh_requi
 재조사할 질문과 날짜를 보존한다. 현재 형식은
 `scripts/position-recommender/company-research/schema.ts`가 검증한다.
 
-### 공고 후보풀
+#### 공고 후보풀
 
 수집기는 각 외부 공고를 공통 형태로 변환한다.
 
@@ -378,7 +491,7 @@ HTTPS `runtime` 근거는 실행마다 달라질 수 있으므로 `refresh_requi
 어댑터는 공고 원문만 보므로 현재 직장의 기준값과 비교할 수 없고,
 회사 단위로 쓴 문구가 같은 회사의 모든 공고에 같은 값으로 들어간다.
 
-### 공고별 분석 이력
+#### 공고별 분석 이력
 
 `fos_career`는 공고 원문, 공고 버전, 개인 분석과 추천 실행을 별도 table로 보존한다.
 공고 원문에 주관적인 점수와 판단을 섞지 않는다.
@@ -487,7 +600,7 @@ ORDER BY ri.rank_number;
 모델의 `analysis-updates.json`도 `schemaVersion`이 2이고 같은 `analysisRunId`를 담는다.
 아직 끝나지 않은 공고를 분석 결과는 `results`에, 분석하지 못한 사유는 `failures`에 한 번씩 나눠 담는다.
 
-### 회사 tier 평가 이력
+#### 회사 tier 평가 이력
 
 사람이 정한 회사 우선순위는 `company_preferences`에만 남고,
 모델이 만든 tier 평가는 세 table에 실행 단위로 따로 쌓는다.
@@ -596,7 +709,7 @@ WHERE i.analysis_run_id = ? AND i.company_tier_source = 'default';
 모델의 `company-tier-updates.json`도 `schemaVersion`이 1이고 같은 `companyTierRunId`를 담으며,
 아직 끝나지 않은 회사를 평가한 것은 `results`에, 평가하지 못한 사유는 `failures`에 한 번씩 나눠 담는다.
 
-### 실행 중 생성되는 포지션 추천 데이터
+#### 실행 중 생성되는 포지션 추천 데이터
 
 스크립트가 현재 후보풀과 유효한 공고 분석을 합쳐 만든 실행별 추천 결과다.
 형식은 `scripts/position-recommender/recommendation/schema.ts`가 검증한다.
@@ -651,100 +764,7 @@ HTML은 상세 추천, 분석한 활성 공고 순위, 분석 대기 목록과 �
 후보풀, 추천 JSON과 HTML은 게시 검증 뒤 삭제한다.
 공고 분석 이력과 회사 조사 데이터는 다음 실행에서 재사용하므로 `state/`에 유지한다.
 
-## 지원 패키지
-
-공고별 `applications/<company>/<position>/`는 세 층으로 나뉜다.
-파일이 어느 층에 있는지가 누가 그 파일을 여는지를 정한다.
-
-| 층              | 여는 주체    | 담는 것                                                    |
-| --------------- | ------------ | ---------------------------------------------------------- |
-| 디렉터리 최상위 | 사용자       | `application-package.html`과 현재 공고가 요구하는 제출 PDF |
-| `evidence/`     | skill과 사람 | 기준 원본 Markdown과 구조화 입력                           |
-| `review/`       | 검증기       | 근거 장부, 점수표, manifest와 제출 문서 HTML               |
-
-### 최상위
-
-- `application-package.html`: 기준 원본과 현재 제출 파일을 묶은 로컬 검토 화면
-- `resume.pdf`: 이력서 제출본
-- `career-description.pdf`: 경력기술서를 받는 공고에만 둔다
-- `submission.pdf`: 한 파일 제출을 요구하는 공고에만 둔다
-
-### `evidence/`
-
-- `posting.md`: 공고 원문이며 공식 페이지의 절 구조를 그대로 둔다. 쪼갠 항목 목록은 `fit.md` 의 적합도 표가 담는다
-- `candidate-interview.md`: 후보자 원문 답변, 정리한 핵심과 제출 반영 여부
-- `fit.md`: 결론, 공고 항목별 적합도 표, 구분별 가중치, 공개 자료로 확인한 팀과 인접 사례
-- `strategy.md`: 승부처, 지원동기, 기여 시나리오, 보완할 공백, 회사 문화와의 연결, 면접에서 검증받을 내용이며 시장과 규모로 판단하는 「이 자리에서 얻을 경험과 성장」을 선택 절로 둔다
-- `status.md`: 준비 상태 세 줄과 제출 준비 상태, 사용자 확인 필요, 다음 행동
-- `resume-draft.md`: HTML과 PDF로 변환할 제출용 이력서 원본
-- `interview-questions.json`: 공고 책임, 근거 방어와 경험 공백에서 만든 포지션별 질문
-- `career-description-draft.md`: 경력기술서를 받는 공고에만 둔다
-- `application-form.json`: 브라우저 자동 입력을 준비할 때만 둔다
-
-**`interview-questions.json` 은 `application-package-writer` 가 만들고 소유한다.**
-`resume-preparer` 와 `interview-practice` 는 질문을 더할 수 있으나 기존 질문을 지우거나 다시 쓰지 않는다.
-세 스킬이 같은 파일에 쓰므로 소유자를 하나로 둔다.
-
-앞의 다섯이 기본 원본이다.
-`application-package-writer`는 지원 판단과 후보자 인터뷰를 관리하고, `resume-preparer`는 `resume-draft.md`와 제출 문서를 관리한다.
-`application-form.json`은 private brain 공통 프로필의 현재 스냅샷, 회사별 선택값, 첨부 파일과 서술형 질문을 구조화한다.
-서술형 문항이 없는 지원 건은 `questions`를 빈 배열로 둔다.
-
-### `review/`
-
-- `resume.html`과 `career-description.html`: PDF를 만든 원본
-- `claim-ledger.json`과 `career-description-claim-ledger.json`: 주장별 근거 장부
-- `resume-scorecard.md`와 `career-description-scorecard.md`: 인사담당자와 실무담당자 리뷰 결과
-- `submission-manifest.json`: 각 PDF의 파일 해시와 원본 HTML의 문구 해시를 연결한다
-
-이 층의 파일은 사용자용 링크로 노출하지 않는다.
-검증에는 사용하므로 현재 제출 문구와 PDF가 같은 버전인지 증명한다.
-
-### 검토 화면
-
-`application-package.html`은 준비 상태, 결론, 제출 PDF와 조건부 지원서 입력값을 탭 밖 상단에 고정한다.
-본문은 `공고 원문`, `공고 적합도`, `지원 전략`, `상세 자료` 네 탭으로 나누며 `공고 원문`이 기본 선택이다.
-`공고 적합도` 탭의 첫 내용은 공고 항목 하나에 한 행을 주는 적합도 표다.
-`지원 전략` 탭은 「이 자리에서 얻을 경험과 성장」을 「입사 후 기여 시나리오」와 「보완할 공백」 사이에 둔다.
-이 절은 선택 절이며, 없으면 나머지 순서를 그대로 두고 건너뛴다.
-`공고 원문` 탭은 `evidence/posting.md`를 읽어 보여주며 원문을 다른 파일에 복제하지 않는다.
-
-지원 패키지 검증기는 제출 문서와 지원서 답변에 내부 정보가 남았는지만 본다.
-어떤 파일과 절을 만들지는 `application-package-writer` 의 지침이 정한다.
-
-### 적합도 판정과 점수
-
-판단 기준은
-[`fit-judgment.md`](../.claude/skills/application-package-writer/references/fit-judgment.md)가 소유한다.
-행별 점수와 구분별 가중치는 모델이 공고를 보고 정해 `evidence/fit.md` 에 남긴다.
-소계와 총점은 그 둘로 `fit_score.ts` 가 계산한다.
-색 구간은 `render/constants.ts` 가 소유한다.
-
-`evidence/status.md`의 준비 상태 값과 판단 기준은
-[`application-quality-rubric.md`](../.claude/skills/application-package-writer/references/application-quality-rubric.md)의 「판정」이 소유한다.
-
-첫 10줄의 `evidence`는 제출 문장이 현재 근거 범위 안에 있는지의 상태다.
-
-| 값        | 뜻                                                  |
-| --------- | --------------------------------------------------- |
-| `safe`    | 제출 문장이 모두 확인한 근거 범위 안에 있다         |
-| `revise`  | 근거보다 넓게 읽히는 문장이 있어 표현을 낮춰야 한다 |
-| `blocked` | 근거를 확인하기 전에는 그 문장을 제출에 쓸 수 없다  |
-
-첫 10줄의 `human-confirmation`은 본인 역할, 당시 제약, 기각한 대안, 결과의 확인 범위와 제출 문구 동의처럼 후보자만 확정할 수 있는 사실과 표현 확인 상태다.
-값은 `complete` 또는 `needs_input`이며, `needs_input`이면 준비 상태를 `ready`로 둘 수 없다.
-
-공고별 개인 근거와 면접 질문은 해당 `applications/<company>/<position>/`에 둔다.
-여러 지원에서 재사용하는 개인 질문은 `library/question-bank/`에 둔다.
-특정 지원에 종속되지 않는 대상별 프로필 원고는 `library/profiles/`에 둔다.
-이력서 공통 작성 규칙과 디자인은 `resume-preparer` 스킬의 참조와 템플릿이 소유한다.
-과거 지원에서 만든 근거 원장, 감사 문서, 점수표와 사용하지 않는 CSS는 `library/`에 남기지 않는다.
-
-재사용할 작성 취향의 기준 원본은 `.claude/skills/resume-preparer/references/resume-taste.md`다.
-brain에는 경력, 역할 선호와 경험 경계 등 개인 지식을 두고, 지원별 사실과 표현 확인은 `evidence/candidate-interview.md`의 기존 계약을 따른다.
-작성 취향은 스킬에서 유지하고, brain 검색 결과는 해당 문장을 판단하는 데 필요한 출처와 범위만 지원 기록에 연결한다.
-
-## 제출 문서 근거 감사
+## resume-preparer
 
 근거 감사 자료는 대상 제출 문서와 같은 지원 디렉터리의 `review/`에 둔다.
 파일 목록은 위 「지원 패키지」의 `review/`가 소유한다.
@@ -763,35 +783,60 @@ locator 형식과 판정 기준은 `.claude/skills/resume-preparer/references/cl
 `review/resume-scorecard.md`에는 독립된 인사담당자와 실무담당자 판정, 경쟁상 차단 항목, 근거 방어 결과와 통제할 수 없는 위험을 기록한다.
 정량 점수로 약한 필수 조건을 상쇄하지 않으며 두 블라인드 검토자가 모두 통과해야 한다.
 
-## 면접 자료
+#### `state/verified-claims/`
 
-현재 지원 대상은 private brain에서 찾고 대응하는 `applications/<company>/<position>/`을 실행 경로로 사용한다.
-포지션별 질문은 해당 지원 디렉터리의 `evidence/interview-questions.json`에 둔다.
-공개 가능한 일반 질문은 `public/question-bank/`에 둔다.
-질문 출처의 공식 URL, 게시자, 확인일과 적용 범위는 `public/question-bank/sources.json`에 둔다.
-각 질문의 `source`는 이 레지스트리의 식별자를 참조한다.
-개인 경험에서 파생한 질문은 `library/question-bank/`에 둔다.
+`resume-preparer`가 다시 쓸 수 있다고 확인한 주장과 근거 파일 상태를 작은 JSON 파일로 나눠 저장한다.
+이 디렉터리는 검증 결과에서 만든 상태이며 사람이 직접 관리하는 원고를 두지 않는다.
 
-`config/interview-question-sources.ts`는 질문 후보를 찾을 외부 출처를 관리한다.
-각 출처는 고유 `key`, 출처 종류, 사용 역할, 주제, URL과 수집 어댑터를 가진다.
-기술 블로그, 공개 영상과 GitHub 가이드는 사례 발견이나 범위 확인 역할만 가지며 정답 근거 역할을 가질 수 없다.
+경로는 첫 번째 로컬 근거의 책임에 따라 정한다.
 
-질문의 선택 `bar`는 다음 공개 능력 수준 중 하나다.
+| 근거                                    | 장부 경로                                                     |
+| --------------------------------------- | ------------------------------------------------------------- |
+| `sources/fos-study/task/<group>/<file>` | `state/verified-claims/task/<group>/<file>.json`              |
+| `library/profiles/<file>`               | `state/verified-claims/profile/<file>.json`                   |
+| `applications/<company>/<position>/...` | `state/verified-claims/application/<company>/<position>.json` |
+| 그 밖의 로컬 파일                       | `state/verified-claims/other/<file>.json`                     |
 
-- `production`: 한 서비스의 정확성, 장애 복구와 운영 지표를 책임지는 수준
-- `large-scale`: 대규모 제품과 여러 팀이 쓰는 계약, 용량과 변경 안전성을 판단하는 수준
-- `global-scale`: 다중 리전과 조직 공통 기반의 실패 격리, 보안과 장기 trade-off를 주도하는 수준
+각 파일은 다음 필드를 가진다.
 
-현재 직장, 목표 회사와 개인 경험 경계는 private brain에서 실행할 때만 읽는다.
-이 정보는 `bar` 값이나 공개 질문 본문에 복제하지 않는다.
+- `schemaVersion`: 검증 장부 스키마 버전이며 처음 구현은 `1`이다
+- `groupKey`: 위 경로에서 만든 안정적인 묶음 식별자다
+- `claims`: `claimKey` 순으로 정렬한 검증 완료 주장 목록이다
+- `claims[].claimKey`: 정규화한 `proposedText`의 SHA-256으로 만든 안정적인 키다
+- `claims[].claim`: 공고별 `schemaVersion: 3` 원장의 주장과 네 판정 축이다
+- `claims[].evidenceSnapshots`: 근거별 `path`, `kind`, `locator`, `sha256`과 `freshness`다
+- `claims[].origins`: 이 판정을 만든 application 경로, 원장 경로, HTML 문구 해시와 원장의 `generatedAt`이다
 
-실행별 `interview-source-candidates.json`은 시스템 임시 경로에 둔다.
-각 후보는 출처 식별자, 출처 종류와 역할, 주제, 제목, URL, 게시 시각, 공개 설명과 자료 종류를 가진다.
-후보풀은 질문 승격 뒤 삭제하며 장기 상태로 보존하지 않는다.
+로컬 파일 근거의 `freshness`는 `tracked`이며 파일 내용의 SHA-256을 저장한다.
+HTTPS `runtime` 근거는 실행마다 달라질 수 있으므로 `refresh_required`로 저장한다.
+재사용 판정은 구현, 소유권, 결과와 경험 깊이 축을 각각 확인한다.
+어떤 축에 HTTPS `runtime` 근거만 있으면 해당 주장은 다시 감사한다.
+같은 축에 현재 SHA-256이 일치하는 로컬 근거가 있으면 HTTPS 근거는 보조 근거로 남기고 주장을 재사용할 수 있다.
+근거 파일을 읽을 수 없거나 해시가 달라지면 해당 근거를 참조하는 주장은 다시 감사한다.
 
-일별 답변 기록은 꼬리질문일 때 원 질문 식별자, 부모 질문, 깊이, 확인 축과 중단 이유를 선택 필드로 가진다.
+공고별 `review/claim-ledger.json`은 현재 제출 HTML 전체의 완결된 감사 결과다.
+`state/verified-claims/`는 다음 감사의 읽기 범위를 줄이는 파생 상태이며 공고별 원장을 대신하지 않는다.
+`sources/fos-study/task/`는 계속 읽기 전용 근거로 유지하고 검증 결과를 그 저장소에 쓰지 않는다.
 
-## 아침 읽을거리
+## study-topic-recommender
+
+#### `config/external-reading-sources.ts`
+
+아침 읽을거리의 외부 글·영상 소스와 수집 어댑터를 관리한다.
+소스 식별자는 회사나 매체를 나타내며 특정 주제를 포함하지 않는다.
+
+주요 필드:
+
+- `key`, `title`, `category`
+- `adapter`
+- `feedUrl` 또는 `url`
+- `enabled`
+- 출처 분류
+
+#### 실행 중 생성되는 읽을거리 데이터
+
+읽을거리 실행은 시스템 임시 경로에 후보풀, 선별 결과와 이력을 만든다.
+게시와 검증이 끝나면 실행별 데이터를 정리한다.
 
 수집 후보는 외부 원문 URL, 정규화한 `contentKey`, 출처, 제목과 게시 시각을 포함한다.
 피드가 제공하는 경우 요약 판단에 사용할 공개 설명문을 `excerpt`에 담는다.
@@ -811,7 +856,7 @@ locator 형식과 판정 기준은 `.claude/skills/resume-preparer/references/cl
 각 추천 자료는 카테고리, 제목과 원문 URL, 출처, 간단한 요약, 추천 이유와 커리어 연결 유형을 가진다.
 커리어 연결 유형은 `current-work`, `target-role`, `engineering-judgment`, `product-business` 중 하나다.
 
-### `state/morning-study-history.json`
+#### `state/morning-study-history.json`
 
 검증을 통과해 사용자에게 제공할 준비가 끝난 추천 자료의 누적 이력이다.
 이 파일은 홈서버 비공개 작업 release로 동기화하며 임시 리포트와 분리한다.
@@ -839,7 +884,7 @@ YouTube 영상은 video ID를 키에 포함하고 일반 글은 정규화한 URL
 원문에 없는 예상 학습 시간, 난이도, 분야를 임의 기본값으로 채우지 않는다.
 값이 필요하지만 확인할 수 없으면 명시적으로 정보가 없다고 표시한다.
 
-### 학습자료 API 연동 상태
+#### 학습자료 API 연동 상태
 
 이 절은 명시적으로 선택하는 library 모드의 현재 클라이언트 계약이다.
 운영 서버 적용과 웹 UI 구현은 별도 작업이다.
@@ -857,7 +902,7 @@ study table은 기존 `fos-blog` 설계의 관계를 유지한다.
 `study_recommended_materials`, `study_publications`와 `study_request_receipts`를 사용한다.
 현재 기존 table은 0행이므로 데이터 복사는 하지 않으며 API 계약 검증 뒤 제거한다.
 
-#### 학습자료 HTTP 계약
+##### 학습자료 HTTP 계약
 
 기본 경로는 `/api/study/v1`을 유지한다.
 `producer` token은 수집, 추천과 게시 기록에 사용하고,
@@ -948,7 +993,7 @@ HTML과 report JSON 검증이 끝난 뒤 `--commit-recommendation --report <RUN_
 publication의 `idempotencyKey`는 `publication:` 뒤에 고정 순서 `{reportId,channel,publishedAt,externalId,url}` JSON의 UTF-8 SHA-256 hex를 붙인다.
 추천 저장이 실패하면 완료로 보지 않고, 파일 이력에 대신 쓰지 않는다.
 
-### Pages manifest와 import payload
+#### Pages manifest와 import payload
 
 이 절은 library 모드의 현재 import preview 입력과 출력 계약이다.
 기존 Pages 노출 이력은 API payload와 분리한 manifest envelope로 읽는다.
@@ -974,24 +1019,18 @@ canonical JSON은 객체 키를 재귀적으로 사전순 정렬하고 배열 �
 dry-run 응답은 `<output>.preview.json`, 변환 오류는 `<output>.errors.json`에 분리해 저장한다.
 변환 오류가 있으면 payload를 저장하거나 API 요청을 보내지 않는다.
 
-## 임시 산출물과 Cache
+## sync-profile
 
-- 시스템 임시 디렉터리: 게시 전 공개 가능 HTML과 실행별 중간 데이터. 추가 문서 형식은 해당 skill 계약을 따른다.
-- `cache/`: 피드와 공고에서 다시 만들 수 있는 중간 결과
+대상별 프로필 원고를 `library/profiles/` 에 둔다.
+원티드는 `wanted-profile.md`, GitHub 은 `github-profile.md`, LinkedIn 은 `linkedin-profile.md` 다.
+비공개 작업 release 로 동기화한다.
 
-HTML 게시 전에는 개인 정보, 비공개 업무 내용, 로컬 절대 경로를 검사한다.
-포지션 추천 HTML은 전체 추천 중 상위 3건의 우선 검토 카드, 나머지 추천의 압축 목록,
-별도 보류·주의 목록과 검토한 후보의 접이식 검색 목록으로 표시한다.
-포지션 추천은 HTML만 생성하며 Markdown 리포트는 만들지 않는다.
-`recommendation.json`과 후보풀 JSON은 검증 입력으로 유지하고 기존 개인 Markdown 파일은 삭제하지 않는다.
-외부 공유 URL은 `report-publisher` skill이 게시와 검증을 마친 뒤 제공한다.
-게시용 임시 파일은 검증 뒤 삭제하며 사용자가 보존을 요청한 경우에만 지정 경로에 남긴다.
+원고는 **프로필에 실제로 올라간 내용**을 담는다. 이력서 초안의 사본이 아니다.
+다음 갱신 때 무엇이 올라가 있는지 알아야 어디를 고칠지 정할 수 있다.
 
-## 보존과 공개 범위
+폼 제약 때문에 원고와 다르게 넣은 것이 있으면 그 사실과 이유를 원고에 함께 적는다.
+등록하지 못한 기술과 종료월을 넣은 진행 중 프로젝트가 여기 해당한다.
 
-- `config/`와 공개 질문 은행은 검토 후 Git으로 관리한다.
-- 지원 원본, 개인 질문, 답변 연습 상태와 아침 공부 추천 이력은 홈서버의 비공개 작업 release로 동기화한다.
-- 현재 경력, 역할 선호, 경험 경계와 지원 대상은 private brain에서 관리한다.
-- cache와 다시 만들 수 있는 임시 산출물은 장기 이력으로 취급하지 않는다.
-- 개인 연락처, 회사별 지원 전략, 근거 감사 원문은 공개 리포트에 포함하지 않는다.
-- 경력 자료를 공개할 때도 비공개 회사 정보와 로컬 경로를 제거한다.
+이 스킬은 별도 상태 파일을 두지 않는다.
+외부 프로필의 현재 값은 실행할 때마다 대상 서버에서 다시 읽는다.
+로컬에 사본을 두면 서버와 어긋난 것을 알 수 없기 때문이다.

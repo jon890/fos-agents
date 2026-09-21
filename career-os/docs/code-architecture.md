@@ -318,6 +318,10 @@ adapter의 사전 필터와 최종 경계는 역할이 다르므로 둘 다 유�
 회사나 특정 공고의 가치 판단은 공통 정책에 넣지 않고 `feedback/`의 검증된 개인 제외 규칙으로 반영한다.
 
 어댑터는 원문 응답을 공통 `LivePosting` 형태로 바꾼다.
+
+`collection_health.ts`는 실행 전체가 추천 입력으로 쓸 만한지 판정한다.
+실패 소스가 허용 개수를 넘거나 후보가 0건이면 수집기는 후보풀을 남기고 종료 코드 1로 끝낸다.
+판정 기준이 되는 소스별 수집 개수의 뜻은 `contracts.ts`의 `sourceDiagnosticSchema`가 소유한다.
 Wanted adapter의 직군 코드처럼 소스 고유의 상수는 그 adapter가 소유한다.
 후보자 선호와 회사 평가는 수집 상수에 넣지 않고 추천 단계에서 판단한다.
 
@@ -418,6 +422,9 @@ skill은 필요한 정보를 실행 시점에 조회하고 TypeScript 스크립�
 | `.claude/skills/resume-preparer/references/resume-taste.md` | 개인 작성 취향 |
 | `.claude/skills/resume-preparer/references/brain-context.md` | 개인 맥락 조회 시점과 환원 분기 |
 | `.claude/skills/resume-preparer/templates/` | 이력서 HTML 골격, 기본 CSS와 회사·학교 로고 |
+
+공고별 스타일은 `export_resume.ts --design <path>`에 CSS 파일이나
+`css` 코드 블록이 있는 Markdown 파일을 명시한다.
 
 ## study-topic-recommender
 
