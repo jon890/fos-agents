@@ -77,6 +77,35 @@ def click(page: Page, selector: str) -> bool:
     return True
 
 
+def click_button(page: Page, text: str) -> bool:
+    """글자가 정확히 그것인 버튼을 마우스로 누른다.
+
+    클래스 이름에 해시가 붙어 바뀌므로 글자로 찾는다.
+    """
+    box = page.js(
+        "(() => { const want = "
+        + json.dumps(text)
+        + "; const b = [...document.querySelectorAll('button')]"
+        + ".find(b => b.innerText.trim() === want); if (!b) return null;"
+        + " b.scrollIntoView({block: 'center'});"
+        + " const r = b.getBoundingClientRect(); if (!r.width || !r.height) return null;"
+        + " return JSON.stringify({x: r.left + r.width / 2, y: r.top + r.height / 2}); })()"
+    )
+    if not box:
+        return False
+    spot = json.loads(box)
+    for kind in ("mousePressed", "mouseReleased"):
+        page.call(
+            "Input.dispatchMouseEvent",
+            type=kind,
+            x=spot["x"],
+            y=spot["y"],
+            button="left",
+            clickCount=1,
+        )
+    return True
+
+
 def clear_field(page: Page) -> None:
     """지금 초점이 있는 곳의 글자를 지운다."""
     # 홈서버 Chrome 은 Linux 라 전체 선택이 Control 이다
@@ -326,24 +355,19 @@ def cmd_photos(page: Page, args: argparse.Namespace) -> int:
 def cmd_save(page: Page, args: argparse.Namespace) -> int:
     """임시저장한다. 발행 버튼은 누르지 않는다."""
     before = page.js(save_count_js())
-    pressed = page.js(
-        '''(() => {
-  const b = [...document.querySelectorAll("button")]
-    .find(b => b.innerText.trim() === "저장");
-  if (!b) return false;
-  b.click();
-  return true;
-})()'''
-    )
-    if not pressed:
+
+    # JS 의 `.click()` 으로는 저장되지 않는다.
+    # 그 호출이 `Uncaught` 로 끝나고 저장 수도 늘지 않는다. 실측이다.
+    # 편집기가 사람이 실제로 누른 것만 받으므로 마우스 이벤트로 누른다.
+    if not click_button(page, "저장"):
         print("저장 버튼을 찾지 못했다", file=sys.stderr)
         return 1
 
-    for _ in range(20):
+    for _ in range(25):
         time.sleep(1)
         after = page.js(save_count_js())
         if after is not None and before is not None and after > before:
-            print(f"임시저장했다. 저장된 글 {before} 에서 {after} 로 늘었다")
+            print(f"임시저장했다. 저장된 글이 {before} 에서 {after} 로 늘었다")
             return 0
     print("저장 버튼은 눌렀지만 저장된 글 수가 늘지 않았다. 확인이 필요하다.", file=sys.stderr)
     return 1
