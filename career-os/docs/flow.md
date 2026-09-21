@@ -46,6 +46,8 @@ career-os의 각 흐름은 외부 입력을 검증하고, 사용자 판단에 �
 전송이 중단되거나 검증이 실패해도 이전 release가 계속 현재 상태다.
 prepare가 중단되면 다음 실행은 journal과 실제 root를 대조해 기존 작업본으로 복구한 뒤에만 새 release를 받는다.
 journal과 실제 경로가 모순되면 자동 정리하지 않고 `RESTORE_REQUIRED`로 중단한다.
+prepare 는 현재 로컬 hash 가 마지막 동기화 상태와 다르면 파일을 교체하지 않는다.
+같은 `contentDigest` 를 다시 publish 하면 새 release 를 만들지 않는다.
 재생성 가능한 cache와 게시 뒤 삭제하는 임시 리포트는 동기화하지 않는다.
 관리 root 안의 `.env`와 숨김 파일은 원격으로 보내지 않으며, `prepare`가 발견하면 삭제하지 않고 `WORKSPACE_DIRTY`로 중단한다.
 `.omc`는 원격으로 보내지 않지만 `prepare`를 막지 않는다. 저장소가 재생성 가능한 운영 산출물로 선언한 디렉터리이므로 `prepare`가 관리 root를 교체할 때 함께 사라진다.
@@ -136,7 +138,7 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 5. 지원 판단과 근거를 `evidence/`의 `fit.md`, `strategy.md`, `status.md`에 관심사별로 나눠 적는다. 공고 항목별 적합도 표는 공고의 주요 업무, 기대 경험과 우대 경험을 항목 단위로 모두 담는다.
 6. 공고 책임, 제출 근거 방어와 경험 공백을 `evidence/interview-questions.json`에 구조화한다.
 7. 지원 전략이 준비되면 `resume-preparer`가 이력서와 필요한 경력기술서를 작성하고 검증한다.
-8. `application-package.html`을 만든다. 화면 구성은 [`data-schema.md`](data-schema.md#검토-화면)가 소유한다.
+8. `application-package.html`을 만든다. 화면 구성은 [`code-architecture.md`](code-architecture.md#application-package-writer)가 소유한다.
 9. 사용자는 이 화면에서 지원동기, 소유권, 가장 강한 사례, 공백과 입사 후 기여 시나리오를 검토한다.
 10. 외부에 보이는 문장을 전수 검사해 대상 범위, 본인 역할, 측정 대상과 포지션 연결이 독자에게 다르게 해석되지 않는지 확인한다.
 11. 같은 경험의 대상, 역할, 수치와 기간이 지원 전략, 이력서, 경력기술서와 지원서 답변에서 일치하는지 대조한다.
@@ -231,6 +233,10 @@ flowchart TD
     O --> P[추천 분석 대기 소스 경고 HTML]
     P --> Q[비공개 release 반영]
 ```
+
+수집기는 외부 요청 전에 개인 제외 설정을 읽는다.
+누락이나 형식 오류가 있으면 종료 코드 1로 중단한다.
+규칙이 필요 없는 환경은 사람이 확인한 `exclusions: []` 를 명시한다.
 
 실패 소스가 허용 개수를 넘거나 후보가 0건이면 수집기는 후보풀을 남기고 종료 코드 1로 끝낸다.
 그 뒤 단계를 진행하지 않는다.

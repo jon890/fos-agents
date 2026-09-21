@@ -85,6 +85,7 @@ career-os/
 | `state/` | 도구가 쓰고 도구가 읽는다 | 비공개 release |
 | `public/question-bank/` | 스킬이 만들고 공개한다 | Git |
 | `cache/` | 도구가 다시 만들 수 있다 | 안 함 |
+| 시스템 임시 디렉터리 | 게시용 HTML 과 실행별 중간 데이터. 검증 뒤 지운다 | 안 함 |
 
 현재 경력과 역할 선호와 경험 경계는 이 저장소에 두지 않는다. private brain 이 소유한다.
 

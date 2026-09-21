@@ -8,14 +8,6 @@
 
 ## 공통
 
-### 저장 원칙
-
-- `config/`에는 오래 유지할 수집 정책을 둔다.
-- `applications/`, `library/`와 `state/`는 홈서버 `career-os` S3 collection의 release와 동기화하는 로컬 작업본이다.
-- `cache/`에는 원본에서 다시 만들 수 있는 수집 결과를 둔다.
-- `public/question-bank/`과 `sources/fos-study/`에는 공개 가능한 자료만 둔다.
-- 게시용 HTML과 실행별 중간 데이터는 시스템 임시 디렉터리에 두고 검증 뒤 삭제한다.
-
 ### MySQL schema 적용
 
 홈서버 `fos_career` database 의 schema 는 `services/recommendation-api/migrations/` 의
@@ -27,115 +19,66 @@
 **적용한 migration 파일은 고치지 않는다.** checksum 이 달라져 다음 적용이 거절된다.
 schema 를 바꿀 때는 다음 번호의 파일을 더한다.
 
-### 비공개 작업 release
+### 홈서버 release
 
-홈서버의 `career-os` bucket은 release별 archive, manifest와 descriptor를 가진다.
-`releases/<revision>/workspace.tar`, `releases/<revision>/workspace-manifest.json`과 `releases/<revision>/release.json`은 생성 뒤 수정하지 않는다.
-검증을 통과한 release만 `pointers/current.json`이 가리킨다.
+홈서버 `career-os` bucket 과 로컬 `career-os/.career-sync/` 의 파일 다섯이다.
+`releases/` 아래 셋은 만든 뒤 고치지 않는다.
 
-manifest는 다음 필드를 가진다.
+| 파일 | 담는 것 |
+| --- | --- |
+| `releases/<revision>/workspace.tar` | 세 관리 root 의 archive |
+| `releases/<revision>/workspace-manifest.json` | 아래 manifest |
+| `releases/<revision>/release.json` | `schemaVersion`, `workspace`, `revision`, `contentDigest`, `createdAt`, `fileCount`, `archiveKey`, `archiveSha256`, `manifestKey`, `manifestSha256` |
+| `pointers/current.json` | release.json 과 같은 식별·요약 필드에 `descriptorKey`, `descriptorSha256` |
+| `.career-sync/sync-state.json` | 마지막으로 준비한 `revision`, `contentDigest`, 파일 hash |
+| `.career-sync/skill-session.json` | 진행 중인 skill 이름, 시작 revision, 시작 시각 |
+| `.career-sync/prepare-journal.json` | 아래 journal |
 
-- `schemaVersion`: 현재 값 `1`
-- `workspace`: 고정값 `career-os`
-- `revision`: 홈서버가 부여한 release 식별자
-- `parentRevision`: publish가 시작할 때 확인한 이전 revision
-- `createdAt`: 홈서버가 기록한 UTC 시각
-- `producer`: 결과를 만든 skill과 `interactive` 또는 `automation` 실행 방식
-- `contentDigest`: 정렬한 파일 경로, 크기와 SHA-256에서 만든 전체 digest
-- `files`: 상대 경로, byte 크기와 SHA-256 목록
+#### manifest
 
-파일 경로는 `applications/`, `library/`, `state/` 중 하나로 시작해야 한다.
-일반 파일만 허용하고 symlink, `.env`, `.omc`, log, cache와 임시 파일은 거부한다.
-같은 `contentDigest`를 다시 publish하면 새 release를 만들지 않는다.
+| 필드 | 값 |
+| --- | --- |
+| `schemaVersion` | `1` |
+| `workspace` | `career-os` 고정 |
+| `revision` | 홈서버가 부여한 release 식별자 |
+| `parentRevision` | publish 를 시작할 때 확인한 이전 revision |
+| `createdAt` | 홈서버가 기록한 UTC 시각 |
+| `producer` | 만든 skill 과 `interactive` 또는 `automation` |
+| `contentDigest` | 정렬한 파일 경로와 크기와 SHA-256 에서 만든 전체 digest |
+| `files` | 상대 경로, byte 크기, SHA-256 목록 |
 
-`releases/<revision>/release.json`은 `schemaVersion`, `workspace`, `revision`, `contentDigest`, `createdAt`, `fileCount`, `archiveKey`, `archiveSha256`, `manifestKey`, `manifestSha256`를 가진다.
-과거 revision을 export할 때 이 descriptor를 기준으로 archive와 manifest의 hash를 검증한다.
+`files` 의 경로는 `applications/`, `library/`, `state/` 중 하나로 시작해야 한다.
+일반 파일만 허용한다. symlink 와 `.env` 와 `.omc` 와 log 와 cache 와 임시 파일은 거절한다.
 
-`pointers/current.json`은 같은 식별·요약 필드와 `descriptorKey`, `descriptorSha256`을 가진다.
-현재 pointer는 같은 revision의 `releases/<revision>/release.json`만 가리킬 수 있다.
-archive를 export할 때는 `archiveSha256`, release manifest와 내부 파일 hash를 모두 검증한다.
+#### prepare-journal
 
-로컬 `career-os/.career-sync/sync-state.json`은 마지막으로 준비한 `revision`, `contentDigest`와 파일 hash를 기록한다.
-`skill-session.json`은 성공한 작성 skill의 이름, 시작 revision과 시작 시각을 기록한다.
-같은 skill의 완료 단계만 이 기록을 소비할 수 있으며 성공한 발행이나 무변경 종료 뒤 삭제한다.
-prepare 중에는 같은 디렉터리의 임시 staging, backup과 `prepare-journal.json`으로 세 관리 root의 교체·복구 상태를 기록한다.
-이 디렉터리는 Git과 원격 release에 포함하지 않는다.
-prepare는 현재 로컬 hash가 마지막 동기화 상태와 다르면 파일을 교체하지 않으며, 중단된 journal이 있으면 새 작업 전에 기존 root를 복구한다.
+transaction 식별자와 상태 하나, 그리고 root 별 `hadOriginal`, `backupDone`, `applyDone` 을 담는다.
 
-`prepare-journal.json`은 transaction 식별자, `started`, `staged`, `backed_up`, `applied`, `restoring`, `restored`, `completed` 상태와 root별 `hadOriginal`, `backupDone`, `applyDone`을 기록한다.
-`started`와 `staged`는 기존 root를 건드리지 않았으므로 staging만 정리한다.
-`backed_up`, `applied`와 `restoring`은 root별 상태와 실제 경로를 대조해 새 root를 제거하고 backup을 복구한다.
-원래 root가 없던 항목은 `hadOriginal: false`로 기록하고 복구 때 새 root만 제거한다.
-`completed`는 새 root와 `sync-state.json`의 hash가 일치할 때만 backup과 journal을 정리한다.
-기록과 실제 경로가 모순되면 자동 판단하지 않고 `RESTORE_REQUIRED`로 중단한다.
+| 상태 | 복구할 때 하는 일 |
+| --- | --- |
+| `started`, `staged` | 기존 root 를 건드리지 않았으므로 staging 만 지운다 |
+| `backed_up`, `applied`, `restoring` | root 별 상태와 실제 경로를 대조해 새 root 를 지우고 backup 을 되돌린다 |
+| `restored` | 되돌리기를 마쳤다 |
+| `completed` | 새 root 와 `sync-state.json` 의 hash 가 같을 때만 backup 과 journal 을 지운다 |
 
-### 비공개 작업 전송 계약
+`hadOriginal: false` 인 항목은 되돌릴 때 새 root 만 지운다.
+기록과 실제 경로가 어긋나면 자동으로 판단하지 않고 `RESTORE_REQUIRED` 로 멈춘다.
 
-원격 명령은 다음 세 동작만 제공한다.
+#### 원격 명령의 응답
 
-- `career-storage status`: 본문 없이 호출하고 `RemoteStatusResult` JSON을 stdout으로 반환한다.
-- `career-storage export --revision <revision>`: 해당 immutable release를 tar stdout으로 반환한다.
-- `career-storage publish`: `workspace-draft.json`과 세 관리 root가 든 tar를 stdin으로 받고 `RemotePublishResult` JSON을 stdout으로 반환한다.
+| 명령 | 응답 |
+| --- | --- |
+| `career-storage status` | `RemoteStatusResult`. `schemaVersion`, `action`, `ok`, `workspace`, nullable `current` |
+| `career-storage export --revision <revision>` | release 의 tar |
+| `career-storage publish` | `RemotePublishResult`. `schemaVersion`, `action`, `ok`, `revision`, `contentDigest`, `createdAt`, `fileCount`, `noChange` |
 
-export tar의 최상위에는 `workspace-manifest.json`, `applications/`, `library/`, `state/`만 허용한다.
-publish tar의 최상위에는 `workspace-draft.json`과 같은 세 관리 root만 허용한다.
+`current` 는 `revision`, `contentDigest`, `createdAt`, `fileCount` 를 가진다.
+export tar 의 최상위는 `workspace-manifest.json` 과 세 관리 root 만,
+publish tar 의 최상위는 `workspace-draft.json` 과 세 관리 root 만 허용한다.
 
-`RemoteStatusResult`는 `schemaVersion`, `action: "status"`, `ok: true`, `workspace`와 nullable `current`를 가진다.
-`current`는 `revision`, `contentDigest`, `createdAt`, `fileCount`를 가진다.
-`RemotePublishResult`는 `schemaVersion`, `action: "publish"`, `ok: true`, `revision`, `contentDigest`, `createdAt`, `fileCount`, `noChange`를 가진다.
-
-성공 JSON만 stdout에 기록한다.
-실패는 nonzero 종료 코드와 stderr의 `schemaVersion`, `action`, `ok: false`, `code`를 가진 JSON으로 반환한다.
-공통 오류 코드는 `WORKSPACE_DIRTY`, `REMOTE_UNINITIALIZED`, `REVISION_CONFLICT`, `INVALID_MANIFEST`, `TRANSFER_FAILED`, `TRANSPORT_UNAVAILABLE`, `RESTORE_REQUIRED`다.
-같은 코드가 여러 원인에서 나오는 자리에는 선택 항목 `detail`로 무엇이 어긋났는지와 다음에 실행할 명령을 한국어로 함께 담는다.
-`TRANSPORT_UNAVAILABLE`은 `.env` 파일이 없거나 원격 연결 값이 비어 있는 경우를 연결 실패와 구분한다.
-`RESTORE_REQUIRED`는 세션 기록이 없는 경우, 기록의 skill이 다른 경우, 기록의 revision이 현재 작업본과 다른 경우를 구분한다.
-오류에는 파일 본문, 호스트, 계정, key 경로와 비밀값을 포함하지 않는다.
-
-Markdown, JSON, 검토용 HTML, PDF와 실제 제출 묶음은 해당 application 디렉터리 안에서 함께 동기화한다.
-게시 뒤 삭제하는 공개 리포트와 원본에서 다시 만들 수 있는 cache는 release에 포함하지 않는다.
-
-client의 `.env`는 작업 경로와 transport만 주입한다.
-SSH 환경은 `CAREER_WORKSPACE_SSH_TARGET`, `CAREER_WORKSPACE_SSH_ARGS`와 `CAREER_WORKSPACE_REMOTE_COMMAND`를 사용한다.
-홈서버의 Hermes는 command transport로 같은 `career-storage` 명령을 호출한다.
-S3 endpoint, bucket과 credential은 홈서버 명령의 환경에만 두며 client에 전달하지 않는다.
-근거 원장의 `${PROJECTS_ROOT}`와 `${PERSONAL_ROOT}`는 환경마다 같은 이름의 변수로 해석하며 release에는 환경별 절대 경로를 저장하지 않는다.
-
-### 임시 산출물과 Cache
-
-- 시스템 임시 디렉터리: 게시 전 공개 가능 HTML과 실행별 중간 데이터. 추가 문서 형식은 해당 skill 계약을 따른다.
-- `cache/`: 피드와 공고에서 다시 만들 수 있는 중간 결과
-
-HTML 게시 전에는 개인 정보, 비공개 업무 내용, 로컬 절대 경로를 검사한다.
-포지션 추천 HTML은 전체 추천 중 상위 3건의 우선 검토 카드, 나머지 추천의 압축 목록,
-별도 보류·주의 목록과 검토한 후보의 접이식 검색 목록으로 표시한다.
-포지션 추천은 HTML만 생성하며 Markdown 리포트는 만들지 않는다.
-`recommendation.json`과 후보풀 JSON은 검증 입력으로 유지하고 기존 개인 Markdown 파일은 삭제하지 않는다.
-외부 공유 URL은 `report-publisher` skill이 게시와 검증을 마친 뒤 제공한다.
-게시용 임시 파일은 검증 뒤 삭제하며 사용자가 보존을 요청한 경우에만 지정 경로에 남긴다.
-
-### 보존과 공개 범위
-
-- `config/`와 공개 질문 은행은 검토 후 Git으로 관리한다.
-- 지원 원본, 개인 질문, 답변 연습 상태와 아침 공부 추천 이력은 홈서버의 비공개 작업 release로 동기화한다.
-- 현재 경력, 역할 선호, 경험 경계와 지원 대상은 private brain에서 관리한다.
-- cache와 다시 만들 수 있는 임시 산출물은 장기 이력으로 취급하지 않는다.
-- 개인 연락처, 회사별 지원 전략, 근거 감사 원문은 공개 리포트에 포함하지 않는다.
-- 경력 자료를 공개할 때도 비공개 회사 정보와 로컬 경로를 제거한다.
+절차와 실패 복구는 [`flow.md`](flow.md#비공개-작업본-동기화)가 소유한다.
 
 ## application-package-writer
-
-### 검토 화면
-
-`application-package.html`은 준비 상태, 결론, 제출 PDF와 조건부 지원서 입력값을 탭 밖 상단에 고정한다.
-본문은 `공고 원문`, `공고 적합도`, `지원 전략`, `상세 자료` 네 탭으로 나누며 `공고 원문`이 기본 선택이다.
-`공고 적합도` 탭의 첫 내용은 공고 항목 하나에 한 행을 주는 적합도 표다.
-`지원 전략` 탭은 「이 자리에서 얻을 경험과 성장」을 「입사 후 기여 시나리오」와 「보완할 공백」 사이에 둔다.
-이 절은 선택 절이며, 없으면 나머지 순서를 그대로 두고 건너뛴다.
-`공고 원문` 탭은 `evidence/posting.md`를 읽어 보여주며 원문을 다른 파일에 복제하지 않는다.
-
-지원 패키지 검증기는 제출 문서와 지원서 답변에 내부 정보가 남았는지만 본다.
-어떤 파일과 절을 만들지는 `application-package-writer` 의 지침이 정한다.
 
 ### 적합도 판정과 점수
 
@@ -164,50 +107,56 @@ brain에는 경력, 역할 선호와 경험 경계 등 개인 지식을 두고, 
 
 ## interview-practice
 
-질문은 공개 범위에 따라 세 자리로 나뉜다. 파일 배치는
-[`code-architecture.md`](code-architecture.md#interview-practice)가 소유한다.
-각 질문의 `source`는 `public/question-bank/sources.json`의 식별자를 참조한다.
+### `config/interview-question-sources.ts`
 
-`config/interview-question-sources.ts`는 질문 후보를 찾을 외부 출처를 관리한다.
-각 출처는 고유 `key`, 출처 종류, 사용 역할, 주제, URL과 수집 어댑터를 가진다.
-기술 블로그, 공개 영상과 GitHub 가이드는 사례 발견이나 범위 확인 역할만 가지며 정답 근거 역할을 가질 수 없다.
+| 필드 | 값 |
+| --- | --- |
+| `key` | 출처 식별자. 고유하다 |
+| 출처 종류 | 공식 문서, 기술 블로그, 공개 영상, GitHub 가이드 |
+| 사용 역할 | 정답 근거, 사례 발견, 범위 확인 |
+| 주제, URL, 수집 어댑터 | |
 
-질문의 선택 `bar`는 다음 공개 능력 수준 중 하나다.
+**정답 근거 역할은 공식 문서만 가진다.** 기술 블로그와 공개 영상과 GitHub 가이드는
+사례 발견이나 범위 확인만 할 수 있다.
 
-- `production`: 한 서비스의 정확성, 장애 복구와 운영 지표를 책임지는 수준
-- `large-scale`: 대규모 제품과 여러 팀이 쓰는 계약, 용량과 변경 안전성을 판단하는 수준
-- `global-scale`: 다중 리전과 조직 공통 기반의 실패 격리, 보안과 장기 trade-off를 주도하는 수준
+### 질문
 
-현재 직장, 목표 회사와 개인 경험 경계는 private brain에서 실행할 때만 읽는다.
-이 정보는 `bar` 값이나 공개 질문 본문에 복제하지 않는다.
+각 질문의 `source` 는 `public/question-bank/sources.json` 의 식별자를 참조한다.
+`bar` 는 공개 능력 수준 셋 중 하나다.
 
-실행별 `interview-source-candidates.json`은 시스템 임시 경로에 둔다.
-각 후보는 출처 식별자, 출처 종류와 역할, 주제, 제목, URL, 게시 시각, 공개 설명과 자료 종류를 가진다.
-후보풀은 질문 승격 뒤 삭제하며 장기 상태로 보존하지 않는다.
+| `bar` | 수준 |
+| --- | --- |
+| `production` | 한 서비스의 정확성과 장애 복구와 운영 지표를 책임진다 |
+| `large-scale` | 대규모 제품과 여러 팀이 쓰는 계약과 용량과 변경 안전성을 판단한다 |
+| `global-scale` | 다중 리전과 조직 공통 기반의 실패 격리와 보안과 장기 trade-off 를 주도한다 |
 
-일별 답변 기록은 꼬리질문일 때 원 질문 식별자, 부모 질문, 깊이, 확인 축과 중단 이유를 선택 필드로 가진다.
+현재 직장과 목표 회사와 개인 경험 경계를 `bar` 값이나 공개 질문 본문에 넣지 않는다.
+
+### `interview-source-candidates.json`
+
+실행별 후보풀이다. 시스템 임시 경로에 두고 질문 승격 뒤 지운다. 장기 상태로 두지 않는다.
+
+각 후보는 출처 식별자, 출처 종류와 역할, 주제, 제목, URL, 게시 시각, 공개 설명, 자료 종류를 가진다.
 
 ### `state/drill-progress.json`
 
-기술·인성 면접 답변 연습의 진행과 복습 상태를 관리한다.
+답변 연습의 진행과 복습 상태다. 학습 주제 생성 상태와 섞지 않는다.
 
-포함 내용:
+| 담는 것 |
+| --- |
+| 질문별 시도와 최근 결과 |
+| 다시 볼 질문과 복습 시점 |
+| 기술·인성 모드가 공유하는 진행 정보 |
 
-- 질문별 시도와 최근 결과
-- 다시 볼 질문과 복습 시점
-- 기술·인성 모드가 공유하는 진행 정보
-
-학습 주제 생성 상태와 섞지 않는다.
-이 파일은 public 저장소에서 추적하지 않고 비공개 작업 release로 동기화한다.
+일별 답변 기록은 꼬리질문일 때 원 질문 식별자, 부모 질문, 깊이, 확인 축, 중단 이유를
+선택 필드로 가진다.
 
 ## position-recommender
 
 ### 개인 공고 제외 설정
 
-`config/position-exclusions.ts`는 필수 개인 정책 파일의 상대 경로를 지정한다.
-정책 본문은 Git에서 제외되는 `state/private-config/position-exclusions.json`에 둔다.
-`state/private-config/`는 사람이 관리하는 비공개 설정을 기존 release로 전송하기 위한 예외이며, 실행 결과나 지원 이력 저장소가 아니다.
-지원 결과와 재지원 간격의 원본은 계속 private brain에 둔다.
+본문은 Git 에서 제외되는 `state/private-config/position-exclusions.json` 에 있다.
+`config/position-exclusions.ts` 는 그 경로만 담는다.
 
 ```json
 {
@@ -227,36 +176,48 @@ brain에는 경력, 역할 선호와 경험 경계 등 개인 지식을 두고, 
 }
 ```
 
-공고 규칙은 정식 `source`와 `identityHash`, HTTPS `url` 중 하나 이상을 가진다.
-회사 규칙은 `scope: company`와 정확한 회사명, 회사 전체 판단에 사용하는 공개 근거 URL을 두 개 이상 가진다.
-회사 내 역할군만 잠시 제외할 때는 `scope: company-role`, 정확한 회사명과
-공고명에서 찾을 `titleKeywords`를 사용한다.
-같은 소스에서 식별자나 정규화 URL 중 하나가 일치하거나 회사명이 정확히 일치하면 제외한다.
-URL은 fragment, `utm_*`, `fbclid`, `gclid`를 제거하고 query 순서와 마지막 슬래시를 정규화한다.
-공고 ID를 담는 query는 보존한다.
-새 ID로 등록된 공고는 명시된 식별자나 URL이 일치하지 않으면 유지한다.
+`scope` 마다 요구하는 필드가 다르다.
 
-`career-downside` 규칙은 사용자가 명시적으로 제외하기로 한 사유와 공개 근거를 기록한다.
-추천 실행이 제외 규칙을 자동으로 만들거나 갱신하지 않는다.
-지원 결과처럼 업사이드 비교와 다른 이유는 `manual`로 기록한다.
-재지원 간격처럼 종료일이 있는 규칙은 `expiresAt`까지 적용하고 다음 날부터 자동으로 후보풀에 되돌린다.
-버전 1의 기존 공고 규칙은 읽을 수 있지만 새 규칙은 이유와 결정 근거가 있는 버전 2로 저장한다.
+| `scope` | 요구하는 것 | 언제 맞다고 보나 |
+| --- | --- | --- |
+| `posting` | 정식 `source` 와 `identityHash` 와 HTTPS `url` 중 하나 이상 | 같은 소스에서 식별자나 정규화 URL 이 일치 |
+| `company` | 정확한 회사명과 공개 근거 URL 두 개 이상 | 회사명이 정확히 일치 |
+| `company-role` | 정확한 회사명과 공고명에서 찾을 `titleKeywords` | 회사명이 일치하고 제목에 keyword 가 있다 |
 
-수집기는 설정을 외부 요청 전에 읽고, 누락이나 형식 오류가 있으면 종료 코드 1로 중단한다.
-규칙이 필요 없는 환경은 사람이 확인한 `exclusions: []`를 명시한다.
-`--exclusions-config <파일>`은 검증이나 명시적인 별도 설정에 사용하며 같은 검증을 적용한다.
-일반 실행은 스크립트가 속한 워크스페이스의 기본 경로를 읽는다.
+`decisionKind` 다.
 
-규칙 갱신은 기존 `prepare`, `diff`, `publish` 절차로 현재 release를 준비하고 변경 파일을 확인한 뒤 반영한다.
-다른 환경은 추천 스킬의 `prepare` 단계에서 같은 release를 받는다.
-새 수집 코드와 스킬 배포 전에는 원격 규칙 저장만으로 자동 추천에 적용되지 않는다.
-선택 이유는 [개인 공고 제외 정책 ADR](adr/ADR-114-개인-공고-제외-정책을-비공개-release로-전송한다.md)을 따른다.
+| 값 | 뜻 |
+| --- | --- |
+| `career-downside` | 사용자가 업사이드 비교로 제외하기로 했다. 사유와 공개 근거를 함께 적는다 |
+| `manual` | 지원 결과처럼 업사이드 비교와 다른 이유다 |
+
+`expiresAt` 이 있으면 그날까지만 적용하고 다음 날부터 후보풀로 되돌린다. 재지원 간격이 여기 해당한다.
+
+URL 정규화는 fragment 와 `utm_*` 와 `fbclid` 와 `gclid` 를 지우고
+query 순서와 마지막 슬래시를 맞춘다. 공고 ID 를 담는 query 는 남긴다.
+
+버전 1의 공고 규칙은 읽을 수 있다. 새 규칙은 버전 2로 저장한다.
+**추천 실행이 이 규칙을 자동으로 만들거나 갱신하지 않는다.**
+지원 결과와 재지원 간격의 원본은 private brain 이 소유한다.
+
+선택 이유는 [ADR-114](adr/ADR-114-개인-공고-제외-정책을-비공개-release로-전송한다.md)를 따른다.
+읽는 시점과 실패 처리는 [`flow.md`](flow.md#position-recommender)가 소유한다.
 
 ### 포지션 분석 정책
 
-`fos_career.position_analysis_policy`의 단일 행은 후보자 기준 버전과 일일 분석 상한을 저장한다.
-`fos_career.company_preferences`는 사람이 정한 회사 우선순위와 명시적 제외만 저장한다.
-수집 결과와 모델 분석은 정책 table에 넣지 않는다.
+`fos_career.position_analysis_policy` 의 단일 행이다.
+수집 결과와 모델 분석은 이 table 에 넣지 않는다.
+
+| 필드 | 허용 범위 |
+| --- | --- |
+| `candidateContextVersion` | 후보자 기준 버전 문자열 |
+| `dailyAnalysisLimit` | 하루 분석 상한 |
+| `prioritySlots` | 회사 우선 슬롯 수 |
+| `agingSlots` | 오래 기다린 공고 보장 슬롯 수 |
+| `staleAfterDays` | 분석의 유효기간 |
+| `defaultCompanyTier` | 등록되지 않은 회사에 적용할 tier |
+| `dailyCompanyTierLimit` | 1 부터 20. 하루에 모델이 평가할 회사 수 |
+| `companyTierStaleAfterDays` | 1 부터 365. 모델 평가의 기본 유효기간 |
 
 ```json
 {
@@ -272,21 +233,22 @@ URL은 fragment, `utm_*`, `fbclid`, `gclid`를 제거하고 query 순서와 마�
 }
 ```
 
-`dailyCompanyTierLimit`은 하루에 모델이 평가할 회사 수의 상한이고 1부터 20까지만 허용한다.
-`companyTierStaleAfterDays`는 모델 평가의 기본 유효기간이고 1부터 365까지만 허용한다.
-두 값은 `002_company_tier_assessments.sql`이 기존 단일 행에 5와 90을 채운 뒤 `NOT NULL`로 바꾼다.
-다른 정책 값과 마찬가지로 DB 기본값은 남기지 않으므로,
-새 DB에 행을 만들 때 두 값을 반드시 줘야 하고 이후 변경도 정책 설정 요청으로만 한다.
+**DB 기본값을 두지 않는다.** 새 DB 에 행을 만들 때 모든 값을 줘야 하고
+이후 변경도 정책 설정 요청으로만 한다.
 
-`tier`는 1, 2, 3만 허용하며 1이 가장 높다.
-회사명은 정규화한 `companyKey`로 유일해야 하고 표시 이름을 별도 column에 둔다.
-등록되지 않은 회사는 `defaultCompanyTier`를 적용한다.
-보고 싶지 않은 회사는 낮은 티어로 두지 않고 `disposition: exclude`로 저장한다.
-기존 개인 공고 제외 설정은 전환 명령이 멱등하게 import하고, 전환 뒤에는 API가 회사 정책의 기준 저장소다.
+### `fos_career.company_preferences`
 
-현재 회사 정책 설정 명령은 기존 개인 제외 설정을 자동으로 import하지 않고 다음 명시 JSON만 받는다.
-각 회사는 입력 순서대로 인증된 `PUT /api/positions/v1/company-preferences/:companyKey` 요청으로 반영한다.
-`companyKey`는 입력 회사명을 Backend와 같은 규칙으로 정규화해 만들며 같은 입력의 멱등 키는 변하지 않는다.
+사람이 정한 회사 우선순위와 제외만 담는다. 모델 평가는 별도 table 이 담는다.
+
+| column | 값 |
+| --- | --- |
+| `company_key` | 정규화한 회사명. 유일하다 |
+| `company_name` | 표시 이름 |
+| `tier` | 1, 2, 3. 1이 가장 높다 |
+| `disposition` | `analyze` 또는 `exclude` |
+
+등록되지 않은 회사는 `defaultCompanyTier` 를 적용한다.
+**보고 싶지 않은 회사를 낮은 tier 로 두지 않는다.** `disposition: exclude` 로 저장한다.
 
 ```json
 {
@@ -355,19 +317,19 @@ bun career-os/scripts/position-recommender/configure_position_analysis_policy.ts
 
 #### 공고 후보풀
 
-수집기는 각 외부 공고를 공통 형태로 변환한다.
+수집기가 외부 공고를 공통 형태로 바꾼 것이다.
 
-핵심 필드:
+| 필드 |
+| --- |
+| 소스와 외부 식별자 |
+| 회사와 공고명 |
+| 개별 공고 URL |
+| 게시일과 마감일 |
+| 활성 상태 |
+| 역할 설명과 요구 경력 |
+| 수집 시각 |
 
-- 소스와 외부 식별자
-- 회사와 공고명
-- 개별 공고 URL
-- 게시일과 마감일
-- 활성 상태
-- 역할 설명과 요구 경력
-- 수집 시각
-
-활성 상태를 확인할 수 없거나 개별 공고 URL이 없는 항목은 추천 후보로 승격하지 않는다.
+활성 상태를 확인할 수 없거나 개별 공고 URL 이 없으면 추천 후보로 올리지 않는다.
 
 **후보풀은 공고 원문만 담는다.** 업사이드나 리스크 판정을 넣지 않는다.
 어댑터는 공고 원문만 보므로 현재 직장의 기준값과 비교할 수 없고,
@@ -655,22 +617,30 @@ HTML은 상세 추천, 분석한 활성 공고 순위, 분석 대기 목록과 �
 
 ## resume-preparer
 
-근거 감사 자료는 대상 제출 문서와 같은 지원 디렉터리의 `review/`에 둔다.
-파일 목록은 위 「application-package-writer」의 `review/`가 소유한다.
-작성, 근거 감사와 평가는 `resume-preparer`의 순차 단계이며 별도 사용자 스킬로 나누지 않는다.
+근거 장부는 대상 HTML 의 내용 해시와 연결해 다른 버전의 증거를 잘못 재사용하지 않게 한다.
 
-claim ledger를 다시 설명하는 evidence audit는 별도 파일로 만들지 않는다.
-면접에서 확인할 질문은 필요할 때 `evidence/interview-questions.json`에 선택적으로 남긴다.
-질문 생성 여부와 답변 여부는 제출 문서의 준비 상태를 결정하지 않는다.
+| `schemaVersion` | 더해진 것 |
+| --- | --- |
+| 2 | 기술 범위와 경력 기간과 운영과 숙련도 주장이 `experienceDepth` 에 사용·기능 개발·운영 깊이·사용자 확인 수준을 기록한다 |
+| 3 | `document` 와 `user` 근거에 `locator` 가 필수다. 검증기가 그 자리를 근거 파일에서 직접 찾는다 |
 
-근거 장부는 대상 HTML의 내용 해시와 연결해 다른 버전의 증거를 잘못 재사용하지 않게 한다.
-`schemaVersion: 2`부터 기술 범위, 경력 기간, 운영과 숙련도 주장은 `experienceDepth`에 사용, 기능 개발, 운영 깊이 또는 사용자 확인 수준을 기록한다.
-`schemaVersion: 3`부터 `document`와 `user` 근거에 `locator`를 필수로 두고, 검증기가 그 자리를 근거 파일에서 직접 찾는다.
-locator 형식과 판정 기준은 `.claude/skills/resume-preparer/references/claim-model.md`가 소유한다.
-새로 만드는 원장은 `schemaVersion: 3`을 쓴다. 이미 제출한 `schemaVersion: 2` 원장은 locator 어긋남을 경고로만 보고하고 소급해 고치지 않는다.
-`safe`가 아닌 판정이 하나라도 남으면 제출 준비가 끝난 것으로 보지 않는다.
-`review/resume-scorecard.md`에는 독립된 인사담당자와 실무담당자 판정, 경쟁상 차단 항목, 근거 방어 결과와 통제할 수 없는 위험을 기록한다.
-정량 점수로 약한 필수 조건을 상쇄하지 않으며 두 블라인드 검토자가 모두 통과해야 한다.
+새 원장은 3을 쓴다. 이미 제출한 2는 locator 어긋남을 경고로만 보고하고 소급해 고치지 않는다.
+locator 형식과 판정 기준은
+`.claude/skills/resume-preparer/references/claim-model.md` 가 소유한다.
+
+**`safe` 가 아닌 판정이 하나라도 남으면 제출 준비가 끝난 것이 아니다.**
+
+`review/resume-scorecard.md` 가 담는 것이다.
+
+| 담는 것 |
+| --- |
+| 독립된 인사담당자 판정 |
+| 독립된 실무담당자 판정 |
+| 경쟁상 차단 항목 |
+| 근거 방어 결과 |
+| 통제할 수 없는 위험 |
+
+정량 점수로 약한 필수 조건을 상쇄하지 않는다. 두 검토자가 모두 통과해야 한다.
 
 ### `state/verified-claims/`
 
@@ -711,67 +681,76 @@ HTTPS `runtime` 근거는 실행마다 달라질 수 있으므로 `refresh_requi
 
 ### `config/external-reading-sources.ts`
 
-아침 읽을거리의 외부 글·영상 소스와 수집 어댑터를 관리한다.
-소스 식별자는 회사나 매체를 나타내며 특정 주제를 포함하지 않는다.
-
-주요 필드:
-
-- `key`, `title`, `category`
-- `adapter`
-- `feedUrl` 또는 `url`
-- `enabled`
-- 출처 분류
+| 필드 | 값 |
+| --- | --- |
+| `key` | 소스 식별자. 회사나 매체를 나타내며 주제를 담지 않는다 |
+| `title`, `category` | 표시 이름과 분류 |
+| `adapter` | `feed`, `page`, `youtube` |
+| `feedUrl` 또는 `url` | 둘 중 하나 |
+| `enabled` | 이번 실행에서 수집할지 |
 
 ### 실행 중 생성되는 읽을거리 데이터
 
-읽을거리 실행은 시스템 임시 경로에 후보풀, 선별 결과와 이력을 만든다.
-게시와 검증이 끝나면 실행별 데이터를 정리한다.
+시스템 임시 경로에 만들고 게시와 검증이 끝나면 지운다.
 
-수집 후보는 외부 원문 URL, 정규화한 `contentKey`, 출처, 제목과 게시 시각을 포함한다.
-피드가 제공하는 경우 요약 판단에 사용할 공개 설명문을 `excerpt`에 담는다.
-`previouslyRecommended`는 누적 이력에 같은 `contentKey`가 있는지를 나타낸다.
-후보풀의 `recentStudyTopicKeys`는 직전 리포트에 포함된 공부 주제 키다.
-선별 결과는 같은 항목 식별자를 참조하며 `previouslyRecommended: true`인 후보를 선택할 수 없다.
-직전 리포트와 같은 `topicKey`도 선택할 수 없다.
+수집 후보다.
 
-선별 결과와 리포트는 공부 주제 배열을 기준으로 사용한다.
-각 공부 주제는 다음 정보를 담는다.
+| 필드 | 값 |
+| --- | --- |
+| `contentKey` | 정규화한 URL. 중복과 이전 추천 판정의 키다 |
+| 원문 URL, 출처, 제목, 게시 시각 | |
+| `excerpt` | 피드가 주면 담는 공개 설명문 |
+| `previouslyRecommended` | 누적 이력에 같은 `contentKey` 가 있는지 |
 
-- `topicKey`: 날짜가 달라도 같은 개념을 식별하는 kebab-case 키
-- `title`: 외부 자료에서 도출한 공부 주제
-- `careerQuestion`: 현재 업무나 다음 역할에 적용해 볼 질문
-- `items`: 주제에 연결한 한 개 이상의 추천 자료
+후보풀은 `recentStudyTopicKeys` 로 직전 리포트의 공부 주제 키를 함께 담는다.
 
-각 추천 자료는 카테고리, 제목과 원문 URL, 출처, 간단한 요약, 추천 이유와 커리어 연결 유형을 가진다.
-커리어 연결 유형은 `current-work`, `target-role`, `engineering-judgment`, `product-business` 중 하나다.
+선별 결과는 공부 주제 배열이다.
+
+| 필드 | 값 |
+| --- | --- |
+| `topicKey` | 날짜가 달라도 같은 개념을 식별하는 kebab-case 키 |
+| `title` | 외부 자료에서 도출한 공부 주제 |
+| `careerQuestion` | 현재 업무나 다음 역할에 적용해 볼 질문 |
+| `items` | 이 주제에 연결한 추천 자료 하나 이상 |
+
+각 추천 자료는 카테고리, 제목, 원문 URL, 출처, 요약, 추천 이유, 커리어 연결 유형을 가진다.
+연결 유형은 `current-work`, `target-role`, `engineering-judgment`, `product-business` 중 하나다.
+
+**고를 수 없는 것이 둘이다.** `previouslyRecommended: true` 인 후보와
+직전 리포트와 같은 `topicKey` 다.
 
 ### `state/morning-study-history.json`
 
-검증을 통과해 사용자에게 제공할 준비가 끝난 추천 자료의 누적 이력이다.
-이 파일은 홈서버 비공개 작업 release로 동기화하며 임시 리포트와 분리한다.
+검증을 통과해 사용자에게 낸 추천 자료의 누적 이력이다.
+비공개 작업 release 로 동기화하며 임시 리포트와 분리한다.
 
-- `schemaVersion`: 현재 값 `1`
-- `reports`: 반영을 마친 일별 리포트 식별자와 추천 시각 배열
-- `entries`: 과거 추천 자료 배열
-- `entries[].contentKey`: 정규화한 원문을 식별하는 유일 키
-- `entries[].canonicalUrl`: 추적 query와 fragment를 제거한 HTTPS 원문 URL
-- `entries[].sourceKey`: 등록된 출처 식별자
-- `entries[].category`: 수집 카테고리
-- `entries[].title`: 추천 당시 제목
-- `entries[].studyTopic`: 추천 당시 공부 주제
-- `entries[].studyTopicKey`: 추천 당시 공부 주제의 안정적인 식별자
-- `entries[].careerValue`: 추천 당시 커리어 연결 유형
-- `entries[].recommendedAt`: 이력에 반영한 UTC 시각
-- `entries[].reportId`: 추천이 포함된 일별 리포트 식별자
+| 필드 | 값 |
+| --- | --- |
+| `schemaVersion` | `1` |
+| `reports[]` | 반영을 마친 일별 리포트의 `reportId` 와 추천 시각 |
+| `entries[]` | 과거 추천 자료 |
 
-`contentKey`는 파일 안에서 유일해야 한다.
-`reports[].reportId`도 파일 안에서 유일해야 하며 같은 날짜의 리포트를 두 번 반영하지 않는다.
-다음 실행은 가장 최근 `reportId`의 `studyTopicKey`를 읽어 직전 리포트와 같은 주제 선택을 거부한다.
-YouTube 영상은 video ID를 키에 포함하고 일반 글은 정규화한 URL의 SHA-256으로 키를 만든다.
-이력 갱신은 임시 파일을 같은 디렉터리에 쓴 뒤 rename하며, 기존 이력을 읽거나 검증하지 못하면 빈 이력으로 대체하지 않는다.
+`entries[]` 의 필드다.
 
-원문에 없는 예상 학습 시간, 난이도, 분야를 임의 기본값으로 채우지 않는다.
-값이 필요하지만 확인할 수 없으면 명시적으로 정보가 없다고 표시한다.
+| 필드 | 값 |
+| --- | --- |
+| `contentKey` | 정규화한 원문의 유일 키. 파일 안에서 유일하다 |
+| `canonicalUrl` | 추적 query 와 fragment 를 지운 HTTPS 원문 URL |
+| `sourceKey` | 등록된 출처 식별자 |
+| `category` | 수집 카테고리 |
+| `title`, `studyTopic` | 추천 당시의 제목과 공부 주제 |
+| `studyTopicKey` | 추천 당시 공부 주제의 안정적인 식별자 |
+| `careerValue` | 추천 당시 커리어 연결 유형 |
+| `recommendedAt` | 이력에 반영한 UTC 시각 |
+| `reportId` | 이 추천이 든 일별 리포트 식별자 |
+
+`contentKey` 는 YouTube 영상이면 video ID 를 담고, 일반 글이면 정규화한 URL 의 SHA-256 이다.
+`reports[].reportId` 도 파일 안에서 유일하다. 같은 날짜의 리포트를 두 번 반영하지 않는다.
+
+다음 실행은 가장 최근 `reportId` 의 `studyTopicKey` 를 읽어 같은 주제 선택을 거절한다.
+
+**원문에 없는 값을 기본값으로 채우지 않는다.** 예상 학습 시간과 난이도와 분야가 여기 해당한다.
+필요하지만 확인할 수 없으면 정보가 없다고 표시한다.
 
 ### 학습자료 API 연동 상태
 
@@ -855,43 +834,41 @@ HTML과 report JSON 검증이 끝난 뒤 `--commit-recommendation --report <RUN_
 publication의 `idempotencyKey`는 `publication:` 뒤에 고정 순서 `{reportId,channel,publishedAt,externalId,url}` JSON의 UTF-8 SHA-256 hex를 붙인다.
 추천 저장이 실패하면 완료로 보지 않고, 파일 이력에 대신 쓰지 않는다.
 
-### Pages manifest와 import payload
+### Pages manifest 와 import payload
 
-이 절은 library 모드의 현재 import preview 입력과 출력 계약이다.
-기존 Pages 노출 이력은 API payload와 분리한 manifest envelope로 읽는다.
-서버 API에는 envelope를 보내지 않고, API `ImportReport` 규격의 `reports`만 보낸다.
+library 모드의 import preview 입출력이다. 일회성 이관에만 쓴다.
 
-Pages manifest는 다음 필드를 가진다.
+Pages manifest 다. **API 에 보내지 않는 envelope 다.**
 
-- `schemaVersion`: 현재 값 `1`
-- `reports`: API `ImportReport`와 같은 `reportId`, `generatedAt`, `topics` 구조
-- `reports[].provenance.sourcePageUrl`: 해당 리포트를 확인한 기존 Pages HTTPS URL
-- `reports[].provenance.localHtmlPath`: 선택값. 에이전트가 승인된 URL에서 받아 둔 HTML 파일 경로
+| 필드 | 값 |
+| --- | --- |
+| `schemaVersion` | `1` |
+| `reports[]` | API `ImportReport` 와 같은 `reportId`, `generatedAt`, `topics` |
+| `reports[].provenance.sourcePageUrl` | 이 리포트를 확인한 기존 Pages HTTPS URL |
+| `reports[].provenance.localHtmlPath` | 선택값. 승인된 URL 에서 받아 둔 HTML 경로 |
 
-`provenance`는 career-os가 기존 노출 위치를 추적하기 위한 envelope 필드다.
-API에 `POST /imports/dry-run`을 보내기 전에는 각 report에서 제거한다.
-`ImportTopic`과 `ImportItem` 필드는 fos-blog HTTP 계약을 따른다.
-기존 이력에 없는 `careerQuestion`, `summary`, `reason`, `careerValue`는 `null`로 보존한다.
-임의 문장, 분류와 URL을 추정하지 않는다.
+`provenance` 는 career-os 가 기존 노출 위치를 추적하려고 두는 것이다.
+API 로 보내기 전에 각 report 에서 지운다.
 
-import preview의 `importKey`는 `import:` 뒤에 canonical JSON reports의 UTF-8 SHA-256 hex를 붙인다.
-canonical JSON은 객체 키를 재귀적으로 사전순 정렬하고 배열 순서는 보존한 뒤 공백 없이 직렬화한다.
-같은 reports 입력은 같은 importKey를 만들고, null 보존값을 포함해 reports가 바뀌면 다른 importKey를 만든다.
-`--output`은 본인 관리자 UI가 바로 받을 raw `{importKey,reports}`만 저장한다.
-dry-run 응답은 `<output>.preview.json`, 변환 오류는 `<output>.errors.json`에 분리해 저장한다.
-변환 오류가 있으면 payload를 저장하거나 API 요청을 보내지 않는다.
+기존 이력에 없는 `careerQuestion`, `summary`, `reason`, `careerValue` 는 `null` 로 남긴다.
+임의 문장과 분류와 URL 을 추정하지 않는다.
+
+`importKey` 는 `import:` 뒤에 canonical JSON reports 의 UTF-8 SHA-256 hex 를 붙인 값이다.
+canonical JSON 은 객체 키를 재귀적으로 사전순 정렬하고 배열 순서는 두고 공백 없이 직렬화한다.
+같은 reports 는 같은 `importKey` 를 만든다. `null` 로 남긴 값이 달라져도 다른 키가 된다.
 
 ## sync-profile
 
-`library/profiles/` 의 원고가 담는 것이다. 파일 배치는
-[`code-architecture.md`](code-architecture.md#sync-profile)가 소유한다.
-
-원고는 **프로필에 실제로 올라간 내용**을 담는다. 이력서 초안의 사본이 아니다.
-다음 갱신 때 무엇이 올라가 있는지 알아야 어디를 고칠지 정할 수 있다.
-
-폼 제약 때문에 원고와 다르게 넣은 것이 있으면 그 사실과 이유를 원고에 함께 적는다.
-등록하지 못한 기술과 종료월을 넣은 진행 중 프로젝트가 여기 해당한다.
-
-이 스킬은 별도 상태 파일을 두지 않는다.
+이 스킬은 상태 파일을 두지 않는다.
 외부 프로필의 현재 값은 실행할 때마다 대상 서버에서 다시 읽는다.
-로컬에 사본을 두면 서버와 어긋난 것을 알 수 없기 때문이다.
+로컬에 사본을 두면 서버와 어긋난 것을 알 수 없다.
+
+`library/profiles/` 의 원고가 담는 것이다.
+
+| 담는 것 |
+| --- |
+| 프로필에 실제로 올라간 내용. 이력서 초안의 사본이 아니다 |
+| 폼 제약으로 원고와 다르게 넣은 것과 그 이유 |
+
+등록하지 못한 기술과 종료월을 넣은 진행 중 프로젝트가 두 번째에 해당한다.
+파일 배치는 [`code-architecture.md`](code-architecture.md#sync-profile)가 소유한다.
