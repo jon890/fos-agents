@@ -82,6 +82,10 @@ Node 22 기반으로 다시 쓴다. 두 단계로 나눈다.
 
 `@prisma/adapter-mariadb`는 순수 JavaScript라 별도 바이너리를 담지 않는다.
 
+**runtime 단계에 `ENV TZ=UTC`를 둔다.**
+운영 DB가 UTC이고 시각 컬럼이 시간대를 저장하지 않으므로, 프로세스가 다른 시간대면
+다시 읽은 시각이 어긋난다. Phase 02가 코드에서도 고정하지만 image에도 적어 둔다.
+
 ### 2. `services/recommendation-api/README.md`에 배포 절차를 적는다
 
 image build 명령, 적용 완료 표시 명령, 되돌리는 절차를 적는다.

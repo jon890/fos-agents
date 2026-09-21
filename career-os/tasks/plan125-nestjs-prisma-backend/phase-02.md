@@ -51,6 +51,14 @@ interceptor 하나가 이 흐름을 소유해야 endpoint를 더할 때 빠뜨�
 다른 방식으로 만들면 운영 `request_receipts`에 이미 저장된 `request_hash`와 값이 어긋나
 배포 직후의 재시도가 전부 `409 IDEMPOTENCY_CONFLICT`가 된다.
 
+**시각은 UTC 하나로 다룬다.**
+운영 DB는 UTC로 운영하고 이 전환이 그것을 바꾸지 않는다.
+시각 컬럼이 모두 `DATETIME(3)`이라 시간대를 저장하지 않으므로,
+드라이버가 그 값을 프로세스의 지역 시간으로 해석하면 어긋난다.
+개발 기기가 `Asia/Seoul`이면 다시 읽은 시각이 9시간 앞선 값이 되고,
+그 상태에서는 방금 만든 회사 tier 실행도 임차권 만료로 판정된다.
+전환 전 구현에서 실측한 것이다.
+
 **`request_receipts`의 선점 판정을 바꾸지 않는다.**
 `INSERT IGNORE` 뒤 영향받은 행 수로 판정한다.
 Bun 드라이버에서는 그 값이 `affectedRows`에만 들어와 별도 함수로 감쌌다.
@@ -74,6 +82,18 @@ NestJS 관례를 따르려고 두 벌로 만들면 두 쪽이 어긋난다.
   파일로 줄 때 그 파일의 권한이 `0600`이 아니면 기동 전에 실패한다 (`config.ts:33-37`, `:58-72`)
 
 기존 `config.test.ts` 89줄을 Vitest로 옮긴다. 권한 검사 항목이 그 안에 있다.
+
+### 1-1. 프로세스 시간대를 UTC로 고정한다
+
+`src/main.ts`가 다른 무엇보다 먼저 `process.env.TZ = "UTC"`를 정한다.
+`@prisma/adapter-mariadb`의 연결 옵션에도 UTC를 준다. 둘 다 한다.
+`main.ts`만 고정하면 테스트가 `main.ts`를 거치지 않고 module을 올릴 때 빠진다.
+
+**테스트 하네스도 같은 값으로 고정한다.** `vitest.config.ts`가 `TZ`를 `UTC`로 정한다.
+고정하지 않으면 같은 테스트가 기기의 시간대에 따라 통과와 실패로 갈린다.
+
+`test/fixtures/legacy-contract/cases.json`은 `TZ=UTC`로 뽑은 것이다.
+프로세스가 다른 시간대면 그 기대값과 맞지 않는다.
 
 ### 2. `src/prisma/prisma.service.ts` 신규
 
@@ -209,6 +229,9 @@ NestJS의 기본 body parser 크기 상한을 설정값에 맞춘다.
 - filter에 그 밖의 예외를 직접 던지면 `500 INTERNAL_ERROR` 형식이 나오고
   원본 메시지가 응답에 담기지 않는다
 - 처리 중 예외가 나면 `request_receipts`에 `processing` 행이 남지 않는다
+- **시간대 고정 확인**: `TZ`를 `Asia/Seoul`로 두고 module을 올려도
+  DB에 쓴 시각을 다시 읽은 값이 쓴 값과 같다.
+  고정이 풀리면 이 테스트가 9시간 차이로 실패한다
 
 `500 INTERNAL_ERROR`와 `503 DATABASE_UNAVAILABLE`은 정상 경로로 만들 수 없다.
 이 둘은 위처럼 filter에 예외를 직접 던져 응답 형식만 확인한다.
