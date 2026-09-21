@@ -1,4 +1,4 @@
-# YouTube Health Video Library — Public-Safe Index
+# 공개용 YouTube 건강 영상 목록
 
 이 파일은 아침 종합 건강 코칭에서 참고할 한국어 유튜브 영상 후보 목록이다.
 개인 의료정보를 넣지 않는다.
@@ -50,7 +50,7 @@
   title: "6 Ways to Lower LDL Cholesterol [Health by the Numbers]"
   channel: "분당서울대학교병원"
   url: "https://www.youtube.com/watch?v=_c3E1BhYxuo"
-  why: "LDL 230 mg/dL과 총콜레스테롤 307 mg/dL이 핵심 이슈라 식단·생활습관 방향을 잡는 데 적합하다."
+  why: "콜레스테롤 수치가 핵심 이슈라 식단·생활습관 방향을 잡는 데 적합하다."
   caution: "약물치료 필요성 판단은 내과 상담을 우선한다."
   good_when:
     - "콜레스테롤 관리 원칙을 다시 상기하고 싶을 때"
@@ -66,7 +66,7 @@
   channel: "닥터딩요"
   url: "https://www.youtube.com/watch?v=HQc7NRNLUIs"
   why: "LDL 관리 식단을 한 끼 선택으로 바꾸는 데 도움이 되는 후보다."
-  caution: "담낭 모래알 결석과 위염이 있으므로 극단적 절식이나 자극적 식단으로 해석하지 않는다."
+  caution: "담낭결석과 위염이 있으므로 극단적 절식이나 자극적 식단으로 해석하지 않는다."
   good_when:
     - "오늘 식단 선택을 단순하게 정하고 싶을 때"
     - "튀김·가공육·라면·과자류를 줄이는 리마인더가 필요할 때"
@@ -122,7 +122,7 @@
   title: "의사와 함께하는 일자목 거북목 교정 맥켄지운동 목신전운동"
   channel: "광화문참바른정형외과"
   url: "https://www.youtube.com/watch?v=Hb3x831rOCI"
-  why: "일자목과 경추 5-6번 디스크 소견이 있어 자세 리셋 후보로 적합하다."
+  why: "일자목과 경추 소견이 있어 자세 관리 후보로 적합하다."
   caution: "목 신전 중 팔저림, 손감각 저하, 힘빠짐, 통증 증가가 있으면 중단한다."
   good_when:
     - "현재 목 증상이 크지 않고 자세 관리가 필요한 날"
