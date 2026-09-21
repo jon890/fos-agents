@@ -782,7 +782,6 @@ YouTube 영상은 video ID를 키에 포함하고 일반 글은 정규화한 URL
 `--library` 실행에서 누적 자료, 즐겨찾기, 읽음, 메모와 추천 이력은
 `career-os` Backend가 `fos_career`의 별도 study table에 저장한다.
 수집기와 skill은 table에 직접 접속하지 않고 HTTP API만 사용한다.
-HTTP endpoint, 오류 코드와 저장 제약은 `services/recommendation-api/`의 계약과 migration이 단일 출처다.
 
 study table은 기존 `fos-blog` 설계의 관계를 유지한다.
 `study_sources`, `study_source_cursors`, `study_materials`, `study_material_sources`,
@@ -791,48 +790,8 @@ study table은 기존 `fos-blog` 설계의 관계를 유지한다.
 `study_recommended_materials`, `study_publications`와 `study_request_receipts`를 사용한다.
 현재 기존 table은 0행이므로 데이터 복사는 하지 않으며 API 계약 검증 뒤 제거한다.
 
-#### 학습자료 HTTP 계약
+HTTP 계약과 오류 코드는 [`flow.md`](flow.md#study-topic-recommender)가 소유한다.
 
-기본 경로는 `/api/study/v1`을 유지한다.
-`producer` token은 수집, 추천과 게시 기록에 사용하고,
-`admin-gateway` token은 `fos-blog`의 인증된 Server Action이 자료 조회와 개인 상태 변경에 사용한다.
-브라우저에는 두 token을 모두 전달하지 않는다.
-
-| endpoint                                | 허용 역할               | 계약                                           |
-| --------------------------------------- | ----------------------- | ---------------------------------------------- |
-| `PUT /sources/{sourceKey}`              | producer                | source 전체 교체와 version 검사                |
-| `GET /sources`                          | producer, admin-gateway | source 목록과 version 조회                     |
-| `GET /sources/{sourceKey}/cursor?mode=` | producer                | mode별 opaque cursor 조회                      |
-| `POST /ingestions`                      | producer                | 자료 묶음과 다음 cursor 원자 저장              |
-| `GET /materials`                        | admin-gateway           | 필터, 정렬과 cursor pagination                 |
-| `GET /materials/{id}`                   | admin-gateway           | 자료, source, tag와 개인 상태 조회             |
-| `PATCH /materials/{id}/state`           | admin-gateway           | 즐겨찾기, 읽음, 메모와 version 충돌 검사       |
-| `GET /candidates`                       | producer                | 누적 추천을 제외한 후보와 history version 조회 |
-| `GET /recommendation-runs`              | admin-gateway           | 추천 실행 목록 pagination                      |
-| `POST /recommendation-runs`             | producer                | 추천 전체 원자 저장과 중복 검사                |
-| `GET /recommendation-runs/{reportId}`   | admin-gateway           | 추천 당시 snapshot과 현재 개인 상태 조회       |
-| `POST /publications`                    | producer                | 외부 게시 성공 이력 저장                       |
-| `POST /imports/dry-run`                 | producer, admin-gateway | legacy 이관 미리보기와 preview hash 생성       |
-| `POST /imports/commit`                  | admin-gateway           | preview hash와 history version 검사 뒤 반영    |
-
-요청 본문은 1 MiB 이하이고 오류 응답은 `{error:{code,message,requestId}}`다.
-개인 응답은 `Cache-Control: private, no-store`와 `X-Robots-Tag: noindex, nofollow`를 사용한다.
-모든 쓰기 요청은 멱등 키를 요구하며 같은 key와 다른 요청 hash는 `409`로 거부한다.
-version 충돌도 `409`, 본문 상한 초과는 `413`, rate limit은 `429`, 저장소 장애는 `503`을 사용한다.
-
-career-os의 기존 `ReadingSource`는 API 소스 등록 요청으로 변환한다.
-`key`는 `sourceKey`, `title`, `category`, `url`, `feedUrl`, `adapter`, `enabled`는 같은 의미로 보낸다.
-API가 필수로 요구하는 `expectedVersion`은 `GET /sources` 결과의 version 또는 새 소스의 `0`에서 가져온다.
-필드가 비어 있으면 추정값을 만들지 않고, 없는 URL 필드는 명시적인 `null`로 보낸다.
-archive 수집 진입점은 config 필드가 아니라 sourceKey별 고정 registry가 소유하므로 `config/external-reading-sources.ts`의 schemaVersion은 바꾸지 않는다.
-Kurly와 OliveYoung은 최근 수집에서는 계속 `feed` adapter이고, archive mode에서만 registry의 sitemap index 수집기를 사용한다.
-
-API 후보 `Candidate`는 기존 후보풀의 `ReadingCandidate`로 변환한다.
-`Candidate.id`는 `contentKey`이며 기존 선택 파일의 `candidateId`로 사용한다.
-`recentStudyTopicKeys`는 후보풀의 같은 필드로 전달하고 `historyVersion`은 후보풀 옆 meta 파일에 보존한다.
-`historyVersion`은 recommendation-runs 요청 본문에 넣지 않는다.
-서버가 추천 저장 시점에 직전 주제와 누적 추천 집합을 다시 검증한다.
-`previouslyRecommended`는 서버 응답값을 사용하며 로컬 파일 이력으로 덮어쓰지 않는다.
 library 후보풀은 API 후보 조회 결과이므로 `collectionLog`를 빈 배열로 둔다.
 HTML report의 counts는 `activeSources`를 `GET /sources`의 enabled 소스 수, `sourcesWithCandidates`를 후보에 나타난 sourceKey 수, `collectedArticles`를 후보풀 길이로 계산한다.
 카테고리별 source count도 enabled 소스 목록에서 계산한다.
