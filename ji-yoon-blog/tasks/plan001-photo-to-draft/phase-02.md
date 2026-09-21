@@ -43,7 +43,7 @@ S3 에 직접 붙는 코드를 맥북에 두지 않는다.
 | `JI_YOON_BLOG_SSH_TARGET` | 홈서버 SSH 대상 |
 | `JI_YOON_BLOG_SSH_ARGS` | 포트와 키 파일 같은 추가 인자 |
 | `JI_YOON_BLOG_REMOTE_ROOT` | 홈서버의 저장소 경로. 생략하면 `~/fos-agents` |
-| `JI_YOON_BLOG_STORAGE_URL` | 아이폰이 여는 Admin UI 주소의 앞부분 |
+| `JI_YOON_BLOG_STORAGE_URL` | 아이폰이 여는 Admin UI 파일 화면 주소 |
 
 `.env.example` 에 이 넷을 넣는다.
 S3 값은 맥북 예시에 넣지 않는다.
@@ -63,8 +63,8 @@ SSH 로 `photo_store.py` 를 부르고 결과를 받는다.
 날짜를 인자로 받는 선택 항목을 두어 지난 날짜로도 만들 수 있게 한다.
 
 `new` 가 출력하는 주소는 Admin UI 의 파일 화면이 그 폴더를 열도록 만든다.
-`JI_YOON_BLOG_STORAGE_URL` 뒤에 파일 화면 경로와 `path` 조회 인자를 붙이며,
-`path` 값은 `/buckets/<bucket>/<접두사>/<폴더>` 를 URL 인코딩한 것이다.
+`JI_YOON_BLOG_STORAGE_URL`의 `path` 조회 인자에 폴더 경로를 이어 붙이며,
+완성된 `path` 값은 `/buckets/<bucket>/<접두사>/<폴더>` 다.
 
 `pull` 은 tar 를 표준 입력으로 받아 지정한 디렉터리에 푼다.
 사진을 파일로 먼저 저장하지 않고 스트림으로 처리한다.
