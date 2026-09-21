@@ -1,4 +1,4 @@
-# AGENTS.md — health-care 워크스페이스
+# health-care 워크스페이스
 
 `health-care`는 개인 건강 기록, 재활 경과, 진료 준비를 관리하는 독립 워크스페이스다.
 이 파일은 행동 규칙과 라우팅만 담는다.
@@ -33,7 +33,7 @@
 | 트랙 | 기준 경로 |
 |---|---|
 | 무릎 슬개골 불안정과 재활 | `private/conditions/knee-patellar-instability/` |
-| 건강검진 기반 생활 관리 | `private/conditions/health-screening-2026-06-10/` |
+| 건강검진 기반 생활 관리 | `private/conditions/` 아래 건강검진 기록 |
 | 공개 재활 기준 | `config/knee-running-recovery-plan.md`, `config/knee-rehab-exercise-sets.md` |
 
 ## 주요 skill
