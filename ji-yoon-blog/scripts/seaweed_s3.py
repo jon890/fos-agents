@@ -9,8 +9,9 @@ SeaweedFS 는 가상 호스트 방식 주소를 쓰지 않으므로 경로 방�
 이 모듈은 홈서버에서만 실행한다.
 S3 credential 을 홈서버 밖으로 내리지 않으려고 워크스페이스 `scripts/` 에 둔다.
 
-설정은 워크스페이스 `.env` 를 먼저 보고, 없으면
-`~/apps/ji-yoon-blog/config/host.env` 를 본다.
+설정은 워크스페이스 `.env` 를 먼저 보고, 없으면 저장소와 같은 상위
+디렉터리의 `apps/ji-yoon-blog/config/host.env` 를 본다.
+경로가 다르면 `JI_YOON_BLOG_HOST_ENV_PATH` 로 지정한다.
 
     JI_YOON_BLOG_S3_ENDPOINT=http://127.0.0.1:8333
     JI_YOON_BLOG_S3_BUCKET=ji-yoon-blog
@@ -49,7 +50,8 @@ REQUIRED_KEYS = (
 )
 
 WORKSPACE_ENV = Path(__file__).resolve().parents[1] / ".env"
-HOST_ENV = Path.home() / "apps" / "ji-yoon-blog" / "config" / "host.env"
+HOST_ENV_PATH_KEY = "JI_YOON_BLOG_HOST_ENV_PATH"
+DEFAULT_HOST_ENV = WORKSPACE_ENV.parents[2] / "apps" / "ji-yoon-blog" / "config" / "host.env"
 
 
 class S3ConfigError(RuntimeError):
@@ -84,11 +86,18 @@ def _read_env_file(path: Path) -> dict[str, str]:
 def load_env(env_path: Path | None = None) -> dict[str, str]:
     """설정 값을 읽는다.
 
-    워크스페이스 `.env` 를 먼저 보고, 그것이 없으면 홈서버 환경 파일을 본다.
+    워크스페이스 `.env` 를 먼저 보고, 그것이 없으면 기본 홈서버 환경 파일이나
+    환경 변수가 가리키는 파일을 본다.
     이미 환경에 있는 `JI_YOON_BLOG_` 값이 파일 값보다 우선한다.
     """
     values: dict[str, str] = {}
-    candidates = [env_path] if env_path is not None else [WORKSPACE_ENV, HOST_ENV]
+    host_env_path = os.environ.get(HOST_ENV_PATH_KEY)
+    host_env = Path(host_env_path) if host_env_path else DEFAULT_HOST_ENV
+    candidates = (
+        [env_path]
+        if env_path is not None
+        else [WORKSPACE_ENV, host_env]
+    )
     for candidate in candidates:
         if candidate is not None and candidate.exists():
             values = _read_env_file(candidate)
@@ -104,10 +113,12 @@ def missing_keys(env: dict[str, str]) -> list[str]:
 
 def config_error(missing: list[str]) -> S3ConfigError:
     """어느 항목이 비었는지와 어느 파일을 채우는지 함께 알린다."""
+    host_env_path = os.environ.get(HOST_ENV_PATH_KEY)
+    host_env_hint = host_env_path or f"{DEFAULT_HOST_ENV} ({HOST_ENV_PATH_KEY} 로 변경 가능)"
     return S3ConfigError(
         "설정이 없다: "
         + ", ".join(missing)
-        + f"\n다음 중 하나를 채운다: {WORKSPACE_ENV} 또는 {HOST_ENV}"
+        + f"\n다음 중 하나를 채운다: {WORKSPACE_ENV} 또는 {host_env_hint}"
     )
 
 

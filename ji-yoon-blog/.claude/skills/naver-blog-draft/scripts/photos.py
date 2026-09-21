@@ -20,11 +20,11 @@ S3 설정을 읽을 수 있다는 것 자체가 S3 에 닿는 자리에 있다�
     JI_YOON_BLOG_SSH_TARGET=user@homeserver
     JI_YOON_BLOG_SSH_ARGS=-p 22 -i ~/.ssh/id_ed25519
     JI_YOON_BLOG_REMOTE_ROOT=~/fos-agents
-    JI_YOON_BLOG_STORAGE_URL=https://storage.example.com/buckets/ji-yoon-blog
+    JI_YOON_BLOG_STORAGE_URL=https://storage.example.com/files?path=/buckets/ji-yoon-blog
 
 앞의 셋은 SSH 로 가는 자리에서만 쓴다.
-`JI_YOON_BLOG_STORAGE_URL` 은 아이폰이 여는 Admin UI 주소의 앞부분이며
-bucket 경로까지 담는다. 이 값은 양쪽 자리에서 모두 쓴다.
+`JI_YOON_BLOG_STORAGE_URL` 은 아이폰이 여는 Admin UI 파일 화면 주소이며
+`path` 조회 인자에 bucket 경로를 담는다. 이 값은 양쪽 자리에서 모두 쓴다.
 
 사용법:
     python3 photos.py folders
@@ -183,16 +183,18 @@ def folder_url(env: dict[str, str], prefix: str) -> str:
     """Admin UI 의 파일 화면이 그 폴더를 열도록 주소를 만든다.
 
     Admin UI 의 `path` 는 filer 경로이며 bucket 부터 시작한다.
-    bucket 부분이 빠진 주소도 Admin UI 가 200 으로 응답하고 빈 목록을 보여주므로,
-    잘못된 주소를 받은 지융은 사진을 올릴 자리를 찾지 못한 채 화면만 본다.
-    그래서 여기서 먼저 막는다.
+    예전 `/buckets/<bucket>` 설정값도 폴더 주소 생성에는 계속 쓸 수 있다.
+    bucket 부분이 빠진 주소는 빈 목록을 보여주므로 여기서 먼저 막는다.
     """
     base = env.get("JI_YOON_BLOG_STORAGE_URL", "").rstrip("/")
     if not base:
         return ""
     parts = urllib.parse.urlsplit(base)
-    bucket_path = parts.path.rstrip("/")
-    if not bucket_path:
+    if parts.path == "/files":
+        bucket_path = urllib.parse.parse_qs(parts.query).get("path", [""])[0].rstrip("/")
+    else:
+        bucket_path = parts.path.rstrip("/")
+    if not bucket_path.startswith("/buckets/") or len(bucket_path.split("/")) < 3:
         raise StoreConfigError(
             "JI_YOON_BLOG_STORAGE_URL 에 bucket 경로가 없다.\n"
             f"지금 값: {base}\n"
