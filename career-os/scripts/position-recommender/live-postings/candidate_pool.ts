@@ -17,6 +17,7 @@ function candidateId(posting: Posting): string {
 export function buildPostingCandidatePool(
   rawPostings: unknown[],
   diagnostics: CollectionDiagnostics,
+  personalExcludedCount = 0,
 ): { pool: PostingCandidatePool; validationErrors: string[] } {
   const validationErrors: string[] = [];
   const candidates: PostingCandidate[] = [];
@@ -47,6 +48,7 @@ export function buildPostingCandidatePool(
     },
     candidates,
     sourceDiagnostics: diagnostics.sourceDiagnostics,
+    filterSummary: { personalExcludedCount },
     errors: [...diagnostics.errors, ...validationErrors],
   });
   return { pool, validationErrors };

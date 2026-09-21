@@ -1,6 +1,6 @@
 # 코드 아키텍처
 
-career-os는 skill이 실행 계약을 설명하고 TypeScript 스크립트가 반복 가능한 처리를 담당하는 파일 기반 워크스페이스다.
+career-os는 skill이 실행 계약을 설명하고 TypeScript 스크립트와 작은 HTTP Backend가 반복 가능한 처리를 담당하는 워크스페이스다.
 
 public `fos-agents` 저장소는 skill과 실행 코드를 소유한다.
 비공개 작업 파일은 각 환경의 기존 경로에서 다루고 홈서버 `career-os` S3 collection의 immutable release를 기준으로 동기화한다.
@@ -13,6 +13,7 @@ career-os/
 ├── .codex/skills/        Codex에서 같은 skill을 노출하는 링크
 ├── config/               사람이 관리하는 수집 정책
 ├── scripts/              검증, 수집과 변환 코드
+├── services/             추천 상태 HTTP Backend와 migration
 ├── applications/         동기화되는 로컬 지원 패키지
 ├── library/              사람이 직접 관리하며 여러 지원에서 재사용하는 비공개 자료
 ├── state/                검증기와 도구가 다음 실행에 재사용하는 상태
@@ -37,6 +38,7 @@ career-os/
 | `scripts/career-workspace/`                                         | 비공개 작업본의 준비, 차이 확인과 release 반영            |
 | `scripts/position-recommender/`                                     | 활성 공고 수집, 추천 검증과 HTML 생성                     |
 | `scripts/study-topic-recommender/`                                  | 읽을거리 수집, 선별 결과 검증과 HTML 생성                 |
+| `services/recommendation-api/`                                      | 포지션·학습자료 상태 API와 MySQL migration                |
 | `scripts/interview-drill/`                                          | 질문 선택, 꼬리질문과 복습 상태 관리                      |
 | `scripts/interview-question-sources/`                               | 외부 면접 질문 후보 수집과 출처 검증                      |
 | `scripts/question-bank-collector/`                                  | 공개 질문 은행의 구조, 공개 범위와 출처 검사              |
@@ -44,7 +46,7 @@ career-os/
 | `applications/<company>/<position>/evidence/`                       | 공고 원문, 후보자 인터뷰, 지원 전략과 제출 문서 원본      |
 | `applications/<company>/<position>/review/`                         | 근거 장부, 점수표, manifest와 제출 문서 HTML              |
 | `library/`                                                          | 여러 지원에서 재사용하는 비공개 질문과 프로필 원고        |
-| `state/`                                                            | 답변 연습과 검증 장부처럼 다음 실행에 필요한 상태          |
+| `state/`                                                            | 답변 연습과 검증 장부처럼 다음 실행에 필요한 상태         |
 | `public/question-bank/`                                             | 공개 가능한 일반 면접 질문과 출처                         |
 | `sources/fos-study/`                                                | 별도 저장소에서 관리하는 공개 학습·경력 근거              |
 | `docs/`                                                             | 제품 가치, 흐름, 데이터 계약, 코드 구조와 결정 이유       |
@@ -57,21 +59,7 @@ skill이 private brain에서 조회하고, 제출에 사용할 세부 성과는 
 새 스킬 스크립트는 `scripts/lib/cli.ts` 의 `runCli` 를 기본으로 사용한다.
 인자 파싱, 사용법 오류 처리와 결과 출력이 스크립트마다 같은 모양으로 되풀이되면
 그 스크립트가 무엇을 검사하고 무엇을 만드는지가 가려진다.
-
-```typescript
-if (import.meta.main) {
-  await runCli(
-    {
-      name: "validate_claim_ledger.ts",
-      summary: "제출 HTML 의 각 주장이 근거와 맞는지 원장으로 검사한다.",
-      positional: [{ name: "<claim-ledger.json>", description: "검사할 주장 원장" }],
-      options: { "--artifact": { value: true, description: "원장이 가리키는 제출 HTML" } },
-    },
-    ({ positional, options }) =>
-      validateClaimLedger(positional[0], options["--artifact"] as string),
-  );
-}
-```
+사용법은 `scripts/lib/cli.ts` 를 연 뒤 기존 스크립트 하나를 예시로 참고한다.
 
 종료 코드는 셋으로 고정한다.
 
@@ -88,43 +76,13 @@ if (import.meta.main) {
 - 인자 규격은 `pattern` 으로 적는다. 검사 코드를 본문에 두지 않는다.
 - `--help` 는 `runCli` 가 spec 으로 만든다. 도움말 문자열을 따로 쓰지 않는다.
 
-### 기존 CLI 리팩토링 범위
+### CLI 계약
 
-기존 명령은 옵션 중복 처리, 도움말, 출력과 종료 코드가 서로 다르다.
-`runCli`로 바꿀 때 이 계약이 달라지는 명령은 기존 진입점을 유지한다.
-파일별 작업은 subprocess 회귀 테스트, 독립 계획 검토, 구현, 전체 관련 테스트 순으로 진행한다.
-
-| 파일                                                                                                     | 변경 범위                                                                              |
-| -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `scripts/lib/cli.ts`                                                                                     | 기존 `parseArgs`와 `runCli`를 보존하고, 여러 명령이 사용하는 첫 옵션값 조회만 공유한다 |
-| `scripts/position-recommender/validate_recommendation.ts`                                                | 파일을 읽고 후보풀과 대조하는 함수가 검사 결과를 반환하도록 분리한다                   |
-| `scripts/position-recommender/render_candidate_preview.ts`                                               | 같은 파일 검사 함수를 사용하고 HTML 파일 생성과 CLI 출력을 분리한다                    |
-| `scripts/position-recommender/render_recommendation.ts`                                                  | 파일 생성 함수를 명시적인 입력으로 호출하고 기존 순차 옵션 파싱을 보존한다             |
-| `scripts/interview-question-sources/cli.ts`, `scripts/study-topic-recommender/manage_reading_sources.ts` | 명령 함수에 argv를 전달하고 반복 옵션 조회를 공유한다                                  |
-| `scripts/study-topic-recommender/validate_outputs.ts`                                                    | 검증 함수에 실행 경로를 전달하고 결과 JSON을 반환한다                                  |
-| `scripts/study-topic-recommender/morning_reading_cli.ts`, `scripts/interview-drill/drill-engine.ts`      | 옵션 조회만 공유하고 실행·오류 계약을 보존한다                                         |
-| `scripts/lib/cli-contract.test.ts`                                                                       | 실제 subprocess로 출력 채널, 종료 코드, 인자와 import 동작을 고정한다                  |
-
-`firstOptionValue`는 첫 번째 같은 이름 바로 다음 토큰을 반환한다.
-다음 토큰이 옵션처럼 보여도 값으로 취급하고 모르는 옵션은 검사하지 않는다.
-이는 기존 명령의 호환 동작이며, 새 명령의 엄격한 옵션 검사는 `parseArgs`가 담당한다.
-
-공통화하지 않는 동작은 다음과 같다.
-
-| 대상                                                                    | 유지 이유                                                                  |
-| ----------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| 기존 `runCli` 사용처 6개                                                | 이미 옵션 스펙과 핵심 함수 호출로 분리되어 있다                            |
-| `collect_live_postings.ts`                                              | 옵션 별칭, 소스별 실패 허용 개수와 필수 개인 제외 설정 검증을 보존한다     |
-| `career-workspace/cli.ts`, `career-storage-s3.ts`                       | 원격 오류 JSON, 바이너리 출력과 비공개 동기화 계약이 다르다                |
-| `morning_reading_cli.ts`                                                | API 오류의 비공개 정보 제거, 429 정보와 파일모드 자동 전환 금지를 보존한다 |
-| `application_question_schema.ts`, `question-bank-collector/validate.ts` | `passed` 없는 성공 JSON과 기존 오류·도움말 동작을 보존한다                 |
-
-`interview-question-sources/cli.ts`, `manage_reading_sources.ts`, `validate_outputs.ts`는
-실행을 의존하는 importer가 없어 `import.meta.main`에서만 실행한다.
-직접 실행하는 명령은 기존 출력과 종료 코드를 유지하며, import는 명령을 실행하거나 출력·종료하지 않는다.
-
-기본값과 보조 경로는 이번 작업에서 변경하지 않는다.
-개인 제외 설정 오류, 학습자료 API 실패와 산출물 공개 경계 위반은 기존처럼 실행을 중단한다.
+새 스크립트는 `runCli`를 쓴다.
+옵션 중복 처리, 도움말, 출력과 종료 코드 계약이 다른 기존 명령은 호환을 위해 기존 진입점을 유지한다.
+`firstOptionValue`는 여러 기존 명령이 공유하는 첫 옵션값 조회이며,
+같은 이름 뒤 토큰을 옵션처럼 보여도 값으로 취급하는 기존 호환 동작을 그대로 옮긴 것이다.
+새 명령의 엄격한 옵션 검사는 `parseArgs`가 담당한다.
 
 수정할 때는 Java 서비스처럼 입력을 받아 결과를 돌려주는 핵심 함수부터 읽는다.
 파일 끝의 CLI 진입점은 컨트롤러처럼 인자를 전달하고 결과를 출력한다.
@@ -132,14 +90,14 @@ if (import.meta.main) {
 추천 화면 변경 위치는 아래 「포지션 추천 렌더」를 따른다.
 옵션 조회 규칙은 `scripts/lib/cli.ts`에서 확인한다.
 
-| 수정할 처리                    | 핵심 함수                                                                           |
-| ------------------------------ | ----------------------------------------------------------------------------------- |
-| 추천 파일 로드와 후보풀 대조   | `validateRecommendationFiles(input, candidates)`                                    |
-| 추천 화면 파일 생성            | `writeCandidatePreview(input, candidates, output, limitValue)`                      |
-| 상세 추천 HTML 파일 생성       | `writeRecommendation(input, output, format, template)`                              |
-| 읽을거리 목록과 설정 예시 생성 | `listReadingSources(category, includeDisabled)`, `buildReadingSourceTemplate(args)` |
-| 면접 질문 소스 명령            | `runInterviewQuestionSources(command, args)`                                        |
-| 산출물 내용과 공개 경계 검사   | `validateMorningReadingOutputs(root)`                                               |
+| 수정할 처리                    | 핵심 함수                        |
+| ------------------------------ | --------------------------------- |
+| 추천 파일 로드와 후보풀 대조   | `validateRecommendationFiles`     |
+| 추천 화면 파일 생성            | `writeCandidatePreview`           |
+| 상세 추천 HTML 파일 생성       | `writeRecommendation`             |
+| 읽을거리 목록과 설정 예시 생성 | `listReadingSources`, `buildReadingSourceTemplate` |
+| 면접 질문 소스 명령            | `runInterviewQuestionSources`     |
+| 산출물 내용과 공개 경계 검사   | `validateMorningReadingOutputs`   |
 
 저장소 루트에서 이미 준비한 입력 파일을 다음처럼 검사한다.
 아래 명령은 네트워크 수집을 실행하지 않는다.
@@ -200,24 +158,11 @@ adapter의 사전 필터와 최종 경계는 역할이 다르므로 둘 다 유�
 | 파일 읽기, 쓰기, 현재 시각과 CLI   | [render_recommendation.ts](../scripts/position-recommender/render_recommendation.ts), [render_candidate_preview.ts](../scripts/position-recommender/render_candidate_preview.ts), [assets.ts](../scripts/position-recommender/render/assets.ts) |
 | 한국 시각과 날짜 표시              | [lib/date-format.ts](../scripts/lib/date-format.ts)                                                                                                                                                                                             |
 
-`render/assets.ts`는 `import.meta.url` 기준으로 대체 템플릿과 자산 문자열을 읽는다.
-화면별 `parts.html`에 `<template id="이름">…</template>` 요소로 조각을 모은다.
-이름에는 영문·숫자·밑줄·하이픈을 쓰고 중복 이름은 허용하지 않는다.
-요소 안팎의 줄바꿈과 HTML 주석은 사용할 수 있다.
-반복과 조건은 TypeScript에서 처리하며 템플릿에 별도 문법을 넣지 않는다.
-순수 렌더 함수에는 자산과 표시 시각을 명시적으로 전달하므로 같은 입력은 같은 HTML을 만든다.
-기존 `toHtml(run, templatePath)`, `toReportHtml(run)`, `renderCandidatePreviewHtml(run, options)`는 얇은 호환 함수로 유지한다.
-
-[template.ts](../scripts/position-recommender/render/template.ts)는 이름이 있는 슬롯만 한 번 치환한다.
-일반 값은 HTML 이스케이프하고, 신뢰할 수 있는 조립 HTML과 CSS·JS는 별도 `raw` 입력으로 전달한다.
-템플릿이 요구한 값이 없거나 등록되지 않은 슬롯이면 오류로 중단하며, 데이터 안의 `{{slot}}`은 다시 치환하지 않는다.
-기존 `--template`의 `title`, `generatedAt`, `reportHtml`, `sourceDiagnosticsHtml` 슬롯을 지원한다.
-`sourceDiagnosticsHtml`은 이전 기본 템플릿과의 호환을 위해 명시적으로 빈 문자열을 전달한다.
+대체 렌더러와 순수 렌더 함수의 조각 조립, 슬롯 치환 규칙은 각 파일을 열어 확인한다.
+이 문서는 어떤 파일이 무엇을 맡는지만 안내하고, 치환 순서나 이스케이프 규칙 같은 내부 동작은 코드 주석으로 옮긴다.
 
 상세 렌더 CLI는 `--format html`만 허용한다.
 `md` 등 다른 형식은 스키마 검사 이후 사용법 오류로 종료하며 파일을 만들거나 덮어쓰지 않는다.
-기존 옵션 중복 처리와 오류 출력 순서는 유지한다.
-Markdown 지원 제거를 제외한 화면, 필드, 링크, 정렬, 검색과 빈 상태는 기존 동작을 보존한다.
 
 저장소 루트에서 아래 검증을 실행한다.
 
@@ -229,20 +174,11 @@ bunx tsc --noEmit
 git diff --check
 ```
 
-Prettier 개발 의존성은 정확한 버전으로 고정한다.
 위 포맷 명령은 `position-recommender` 아래의 TypeScript, HTML, CSS와 JavaScript 전체를 대상으로 삼는다.
 개인 산출물과 다른 워크스페이스 스크립트에는 적용하지 않는다.
-함수 사이에는 빈 줄 하나를 직접 유지한다.
-Prettier는 기존 빈 줄을 보존하지만 없는 빈 줄을 새로 만들지 않는다.
-동작 근거는 [Prettier의 빈 줄 처리](https://prettier.io/docs/rationale.html#empty-lines)를 따른다.
 
-`scripts/lib/date-format.ts`는 입력 날짜를 한국 시각으로 표시하며 현재 시각을 직접 얻지 않는다.
-`formatSeoulDateTime(Date)`는 상세 추천의 한국어 날짜·분 표시,
-`formatSeoulDisplayTime(string)`은 미리보기의 짧은 시각·전체 시각,
-`formatSeoulIsoDate(generatedAt)`는 `YYYY-MM-DD`를 반환한다.
-미리보기의 잘못된 날짜는 `확인 필요`로 표시하고, ISO 날짜 변환은 기존 `generatedAt` 오류를 유지한다.
-아침 읽을거리의 파일명과 API 보고서 ID도 동일한 ISO 날짜 함수를 재사용한다.
-`parseDateOrNull`과 `ceilDaysUntil`은 공고 마감처럼 여러 처리에서 재사용할 순수 계산만 제공한다.
+`scripts/lib/date-format.ts`는 한국 시각 표시를 담당하며 현재 시각을 직접 얻지 않는다.
+아침 읽을거리의 파일명과 API 보고서 ID도 이 모듈의 ISO 날짜 함수를 재사용한다.
 마감 상태와 긴급도 값은 `live-postings/policy/lifecycle.ts`가 결정한다.
 
 ## Skill과 실행 코드
@@ -295,29 +231,86 @@ Wanted adapter는 개발 전체 직군 `518`을 기술 상수로 사용하고, �
 `scripts/position-recommender/` 루트에는 수집, 추천 원문 대조, 회사 조사 병합과 렌더의 CLI 진입점만 둔다.
 `live-postings/`는 외부 소스 어댑터와 수집 정책, `recommendation/`은 추천 계약,
 `company-research/`는 재사용할 회사 사실의 계약과 병합, `feedback/`은 제외 기준,
+`recommendation-api/`는 Backend가 반환한 큐와 모델 분석 갱신의 client 계약,
 `render/`는 HTML 생성과 검사를 구현한다.
 어댑터는 원문 응답을 공통 `LivePosting` 형태로 바꾼다.
 후보풀 정책은 개별 공고 URL, 활성 상태, 마감일, 고용 형태, 역할과 중복을 결정적으로 검사한다.
-`exclusions.ts`는 필수 개인 제외 설정을 검증하고 공통 수집 경로에서 후보풀 생성 전에 해당 공고를 제거한다.
-`company_research.ts`는 실행 중 조사한 회사 프로필을 검증하고 `state/company-research/`의 회사별 파일에 원자적으로 합친다.
-설정과 비공개 전송 계약은 [데이터 구조](data-schema.md#개인-공고-제외-설정)를 따른다.
+`exclusions.ts`는 필수 개인 제외 설정을 검증해 후보풀 생성 전에 해당 공고를 제거한다.
+`company_research.ts`는 조사한 회사 프로필을 `state/company-research/`에 반영한다.
+`recommendation-api/client.ts`는 후보풀 저장, 분석 큐 조회, 분석 반영과 추천 실행 요청을 담당한다.
+`prepare_position_analysis.ts`는 수집 실행을 Backend에 저장하고 모델이 읽을 분석 큐를 만든다.
+`commit_position_analysis.ts`는 큐에 든 공고의 분석만 Backend에 반영한다.
+`finalize_position_recommendation.ts`는 Backend가 조립한 추천 입력으로 추천 JSON과 HTML을 만들고 검증한다.
+`recommendation/final-answer.ts`는 수집 경고 문구를 소유한다.
+설정과 비공개 전송 계약은 [데이터 구조](data-schema.md#개인-공고-제외-설정)와
+[포지션 분석 정책](data-schema.md#포지션-분석-정책)을 따른다.
 
 `collection_health.ts`는 실행 전체가 추천 입력으로 쓸 만한지 판정한다.
-소스 하나가 실패해도 남은 소스로 후보풀을 만드는 것은 의도한 동작이지만,
-실패 개수를 판정하지 않으면 소스 대부분이 실패한 실행이 정상 실행과 같은 종료 코드로 끝난다.
 실패 소스가 허용 개수를 넘거나 후보가 0건이면 수집기는 후보풀을 남기고 종료 코드 1로 끝낸다.
-어댑터가 `partial`로 보고했더라도 하나도 수집하지 못한 채 오류만 냈으면 실패로 센다.
-
-이 판정은 어댑터가 보고한 개수에 의존한다.
-`collectedCount`, `importedCount`, `skippedCount`, `failedCount` 넷의 뜻은
-`contracts.ts`의 `sourceDiagnosticSchema`가 소유하며 어댑터가 임의로 정하지 않는다.
-원본 목록 건수처럼 소스마다 다른 값은 `message`에 적는다.
-요청이나 파싱이 실패해 판단하지 못한 공고는 `failedCount`로 세고 `skippedCount`에 넣지 않는다.
+판정 기준이 되는 소스별 수집 개수의 뜻은 `contracts.ts`의 `sourceDiagnosticSchema`가 소유한다.
 
 수집 결과는 실행별 임시 후보풀에 저장한다.
-모델은 후보풀에 존재하는 공고만 선별하고, `recommendation/schema.ts`와 `validate_recommendation.ts`는 HTML 전달 구조와 원문 일치 여부만 검사한다.
-HTML은 검증된 추천 JSON에서 파생한다.
+모델은 분석 큐에 존재하는 공고만 판단하고 전체 후보풀의 순위를 직접 만들지 않는다.
+`recommendation/schema.ts`와 `validate_recommendation.ts`는 유효한 분석, 분석 대기 목록,
+수집 진단과 후보풀 원문이 일치하는지 검사한다.
+HTML은 검증된 추천 JSON에서 파생하며 렌더, 검사와 임시 파일 정리는 최종 명령 한 번으로 끝낸다.
 외부 게시를 요청하면 게시 검증 뒤 임시 데이터와 함께 삭제하고, 게시하지 않으면 사용자에게 로컬 검토 경로를 전달한 뒤 정리한다.
+
+## 추천 상태 Backend
+
+`services/recommendation-api/`는 포지션의 장기 상태를 제공하는 작은 Bun HTTP Backend다.
+서비스 코드, HTTP 계약과 SQL migration은 `career-os`가 소유한다.
+배포 설정, database와 계정 생성, network와 backup은 홈서버 인프라 저장소가 소유한다.
+학습자료 API는 아직 구현되지 않았다. Backend 스택 전환 뒤로 계획을 보류했다.
+
+| 경로                                              | 책임                                                         |
+| ------------------------------------------------- | ------------------------------------------------------------ |
+| `services/recommendation-api/server.ts`           | `Bun.serve` 시작, health·인증 확인, 공통 timeout과 오류 응답 |
+| `services/recommendation-api/routes/positions.ts` | 수집 실행, 회사 tier 반영, 공고 분석 실행, 분석 반영과 추천 실행 endpoint |
+| `services/recommendation-api/position/`           | 회사 정책, 공고 버전, 분석 상태와 추천 조립                  |
+| `services/recommendation-api/db/`                 | `Bun.SQL` 연결, transaction helper와 repository              |
+| `services/recommendation-api/migrations/`         | 순서가 있는 SQL migration과 적용 기록                        |
+
+Backend는 local 개발에서는 `CAREER_RECOMMENDATION_DATABASE_URL`을 읽을 수 있고,
+운영에서는 `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`과 `DB_PASSWORD`를 읽는다.
+두 형식을 함께 주면 시작 전에 실패한다.
+client는 `CAREER_RECOMMENDATION_API_URL`과 `CAREER_RECOMMENDATION_API_TOKEN` 또는
+`CAREER_RECOMMENDATION_API_TOKEN_FILE`만 읽으며 DB 자격증명을 받지 않는다.
+`STUDY_LIBRARY_URL`과 `STUDY_SERVICE_TOKEN`은 study client 전환 동안 같은 Backend를 가리키는 호환 환경값으로 유지한다.
+
+모든 쓰기 요청은 `Authorization: Bearer`와 `Idempotency-Key`를 요구한다.
+같은 key와 같은 본문은 기존 응답을 반환하고, 같은 key에 다른 본문을 보내면 `409`를 반환한다.
+DB 연결 실패는 `503`, 요청 계약 오류는 `400`, 인증 실패는 `401`, version 충돌은 `409`로 반환한다.
+응답은 `Cache-Control: no-store`를 사용하며 원본 token과 DB 오류 전문을 포함하지 않는다.
+`PUT /api/positions/v1/analysis-policy`는 fresh DB의 포지션 분석 정책을 명시적으로 초기화하거나 갱신한다.
+정책을 설정하지 않은 상태의 수집 요청은 기본값을 추정하지 않고 `409 POLICY_NOT_CONFIGURED`를 반환한다.
+`configure_position_analysis_policy.ts`는 정책 JSON을 검증한 뒤 이 endpoint만 호출한다.
+`GET /health/live`는 process 상태만 확인하고,
+`GET /health/ready`는 DDL을 실행하지 않고 DB 연결, migration version과 checksum을 조회한다.
+`GET /api/v1/auth/check`는 유효한 Bearer token에만 `204`를 반환한다.
+
+공고 수집 실행 저장, 회사 tier 결과 반영, 공고 분석 실행 생성, 분석 결과 반영,
+학습자료와 cursor 저장, 추천 실행 저장은 각각 한 transaction에서 끝낸다.
+`POST /api/positions/v1/collection-runs`는 공고 버전과 수집 실행, 회사 tier 평가 실행 생성까지만 한 transaction에서 처리하고 공고 분석 실행은 만들지 않는다.
+`POST /api/positions/v1/company-tier-runs/:id/results`가 모델 평가와 실패를 반영하고,
+`POST /api/positions/v1/collection-runs/:id/analysis-runs`가 회사마다 `manual`, `model`, `default` 순서로 tier를 해결한 뒤 공고 분석 실행을 만든다.
+회사 tier 실행이 `pending`이면 공고 분석 실행 생성은 `409 COMPANY_TIER_RUN_PENDING`을 반환하고,
+수집 실행 하나는 공고 분석 실행 하나만 가지므로 재시도는 저장한 응답을 그대로 돌려준다.
+외부 queue와 worker는 두지 않으며 cron이 동기 HTTP 요청으로 단계를 진행한다.
+분석 결과 반영은 분석한 공고와 분석하지 못한 공고를 함께 받고,
+실행 상태를 `pending`, `partial`, `completed` 중 하나로 돌려준다.
+`partial`이면 client가 남은 항목만 다시 보내며 Backend는 스스로 재시도하지 않는다.
+
+운영 배포는 아래 조건을 먼저 만족해야 한다.
+이 값은 홈서버 인프라 저장소가 읽으며 `career-os`에서 실행하지 않는다.
+
+| 조건 | 내용 |
+| --- | --- |
+| 초기 schema | 운영 database에는 `001_position_schema`를 한 번만 적용한다. 그 뒤에는 초기 파일을 고치지 않고 `002_*.sql`을 추가한다 |
+| 인스턴스 수 | Backend는 하나만 띄운다. 상태 전체를 메모리에 들고 기록하므로 둘 이상이면 서로의 기록을 덮는다 |
+| 적용 확인 | `migrate.ts up` 실행 뒤 `GET /health/ready`가 200인지 확인한다 |
+| 정책 초기화 | `PUT /api/positions/v1/analysis-policy`로 분석 정책을 한 번 넣는다. 넣기 전에는 수집 요청이 409를 반환한다 |
+| cron 연결 | 스킬 실행 cron 등록은 홈서버 인프라 저장소가 담당한다 |
 
 ## 지원 패키지
 
@@ -333,11 +326,11 @@ HTML은 검증된 추천 JSON에서 파생한다.
 `.claude/skills/resume-preparer/scripts/verified-claims/`는 검증 완료 주장 스키마, 안정적인 주장 키, 근거 파일 해시, 저장과 검색을 책임별 모듈로 나눈다.
 CLI 진입점은 다음 셋만 스킬의 `scripts/` 바로 아래에 둔다.
 
-| CLI | 책임 |
-| --- | --- |
-| `search_verified_claims.ts <query>` | 문구와 근거 설명을 검색해 관련 주장, 근거 경로와 locator를 점수순으로 출력한다 |
-| `assess_claim_reuse.ts <application-directory>` | 현재 제출 문서에서 그대로 쓸 수 있는 판정과 다시 읽을 근거를 나눈다 |
-| `promote_verified_claims.ts <application-directory>` | 검증을 통과한 현재 공고별 원장을 검증 장부에 원자적으로 합친다 |
+| CLI                                                  | 책임                                                                           |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `search_verified_claims.ts <query>`                  | 문구와 근거 설명을 검색해 관련 주장, 근거 경로와 locator를 점수순으로 출력한다 |
+| `assess_claim_reuse.ts <application-directory>`      | 현재 제출 문서에서 그대로 쓸 수 있는 판정과 다시 읽을 근거를 나눈다            |
+| `promote_verified_claims.ts <application-directory>` | 검증을 통과한 현재 공고별 원장을 검증 장부에 원자적으로 합친다                 |
 
 검색과 판정 CLI는 상태 파일을 바꾸지 않는다.
 반영 CLI는 `schemaVersion: 3`, 모든 주장 `safe`, 현재 HTML 문구 해시 일치를 다시 검사한 뒤에만 쓴다.
@@ -345,7 +338,6 @@ CLI 진입점은 다음 셋만 스킬의 `scripts/` 바로 아래에 둔다.
 
 공고별 문서는 `applications/<company>/<position>/`에 세 층으로 둔다.
 최상위에는 사용자가 직접 여는 `application-package.html`과 제출 PDF만 두고, 기준 원본은 `evidence/`에, 내부 검증 자료는 `review/`에 둔다.
-기준 원본은 `evidence/`의 `posting.md`, `candidate-interview.md`, `fit.md`, `strategy.md`, `status.md`, `resume-draft.md`와 `interview-questions.json`이다.
 포지션별 질문은 공고 책임, 근거 방어와 경험 공백에서 파생한다.
 화면 구성은 [`data-schema.md`](data-schema.md#검토-화면)의 「검토 화면」이 소유한다.
 생성기와 검증기는 이 세 층의 경로를 계약으로 사용한다.
@@ -379,7 +371,7 @@ skill은 brain에서 찾은 회사와 역할을 대응하는 `applications/<comp
 TypeScript 스크립트가 brain을 직접 조회하지 않는다.
 
 `scripts/interview-drill/`은 `interview-practice`의 기술·인성 모드에서 공통 진행과 복습 상태를 처리한다.
-공고별 `evidence/interview-questions.json`을 명시하면 포지션 질문 세 개와 공통 기반 질문 두 개를 기본으로 섞는다.
+공고별 `evidence/interview-questions.json`을 명시하면 포지션 질문과 공통 기반 질문을 섞어 구성한다.
 `follow-up-policy.ts`는 답변 수준에 따른 꼬리질문 축과 최대 깊이를 제공한다.
 복습 상태는 `state/drill-progress.json` 하나에 저장한다.
 후보풀과 리포트 중간 파일처럼 다시 만들 수 있는 실행 자료는 `state/`에 두지 않는다.
@@ -406,8 +398,8 @@ YouTube 채널은 공식 Atom 피드를 우선 사용하고 피드를 읽을 수
 클라이언트는 mock HTTP로 검증했으며 운영 서버 적용과 웹 UI 구현은 별도 작업이다.
 현재 기본 실행은 기존 파일모드 구조를 따른다.
 실행 CLI와 실패 복구는 [`flow.md`](flow.md#학습자료-api-연동모드)가 소유하고, 저장 모델과 payload 매핑은 [`data-schema.md`](data-schema.md#학습자료-api-연동-상태)가 소유한다.
-`scripts/study-topic-recommender/study-library/`는 fos-blog 학습자료 API 호출, 서비스 인증 헤더, 응답 Zod 검증과 기존 후보풀 타입 변환만 맡는다.
-이 디렉터리는 MySQL 드라이버나 서버 저장 로직을 갖지 않으며, DB 스키마와 HTTP endpoint 정의는 [fos-blog 학습자료 HTTP 계약](https://github.com/jon890/fos-blog/blob/study-library-planning/docs/api/study-library.md)을 단일 출처로 둔다.
+`scripts/study-topic-recommender/study-library/`는 `career-os` 학습자료 API 호출, 서비스 인증 헤더, 응답 Zod 검증과 기존 후보풀 타입 변환만 맡는다.
+이 디렉터리는 MySQL 드라이버나 서버 저장 로직을 갖지 않으며, DB 스키마와 HTTP endpoint 정의는 `services/recommendation-api/`가 소유한다.
 `scripts/study-topic-recommender/source/archive/`는 sitemap과 YouTube uploads playlist 같은 과거 수집 cursor를 해석한다.
 source 어댑터는 원문 발견과 메타 추출만 하고, 자료 저장과 cursor 진행은 study-library client가 API 응답으로 확인한다.
 archive 진입점은 `config/external-reading-sources.ts`에 복제하지 않고 sourceKey별 registry로 둔다.
@@ -426,11 +418,11 @@ library 모드는 legacy state를 읽거나 `skill begin`에 의존하지 않고
 
 연동모드는 다음 환경값을 사용한다.
 
-| 이름                   | 의미                                                                             |
-| ---------------------- | -------------------------------------------------------------------------------- |
-| `STUDY_LIBRARY_URL`    | fos-blog API origin. HTTPS URL이며 path, query, hash와 credentials가 없어야 한다 |
-| `STUDY_SERVICE_TOKEN`  | 서비스 인증 Bearer 토큰. 브라우저 세션과 별개다                                  |
-| `YOUTUBE_DATA_API_KEY` | 선택값. 있으면 YouTube uploads playlist 과거 수집을 사용한다                     |
+| 이름                   | 의미                                                                              |
+| ---------------------- | --------------------------------------------------------------------------------- |
+| `STUDY_LIBRARY_URL`    | career-os API origin. HTTPS URL이며 path, query, hash와 credentials가 없어야 한다 |
+| `STUDY_SERVICE_TOKEN`  | 서비스 인증 Bearer 토큰. 브라우저 세션과 별개다                                   |
+| `YOUTUBE_DATA_API_KEY` | 선택값. 있으면 YouTube uploads playlist 과거 수집을 사용한다                      |
 
 서비스 요청은 `Authorization: Bearer <STUDY_SERVICE_TOKEN>`을 보낸다.
 브라우저 관리자 쿠키나 세션을 복제하지 않는다.

@@ -218,6 +218,19 @@ dl.fields dd ul.sub li {
   color: #9a3b3b;
 }
 
+/* 회사 tier 출처 */
+.tier-value {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tier-reason,
+.tier-confidence,
+.tier-evidence {
+  font-size: 0.86em;
+  color: var(--muted, #666);
+}
+
 a {
   color: var(--accent);
   word-break: break-all;

@@ -14,6 +14,7 @@ const DEFAULT_TEMPLATE = resolve(
   "render/templates/report.html",
 );
 
+// 기존 호출부와의 호환을 위해 유지하는 얇은 wrapper. 새 코드는 render/recommendation-html.ts를 직접 쓴다.
 export function toReportHtml(run: RecommendationRunType): string {
   return renderReportContent(run, loadRenderAssets("report"));
 }
