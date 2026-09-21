@@ -295,6 +295,41 @@ HTTPS `runtime` 근거는 실행마다 달라질 수 있으므로 `refresh_requi
 읽을거리 실행은 시스템 임시 경로에 후보풀, 선별 결과와 이력을 만든다.
 게시와 검증이 끝나면 실행별 데이터를 정리한다.
 
+## MySQL schema 적용
+
+홈서버 `fos_career` database의 schema는 `services/recommendation-api/`가 소유한다.
+`migrations/`의 번호가 붙은 SQL 파일이 단일 출처이고,
+아래의 table과 column 서술은 그 SQL을 읽기 쉽게 옮긴 것이다. 둘이 다르면 SQL이 맞다.
+
+적용 기록은 `schema_migrations` table에 있다.
+Backend가 기동할 때 이 table을 만들고 적용하지 않은 파일을 실행한다.
+
+**Prisma로 옮기는 중이다.** 옮긴 뒤에는 `prisma/schema.prisma`와 `prisma/migrations/`가
+같은 자리를 차지하고, Backend는 적용 상태만 조회하며 DDL을 실행하지 않는다.
+결정과 근거는 [ADR-121](adr/ADR-121-추천-backend는-nestjs와-prisma로-운영한다.md)에 있다.
+옮길 때 지킬 것이 셋이다.
+
+**초기 migration은 `001_position_schema.sql`과 `002_company_tier_assessments.sql`의 원문이다.**
+`prisma migrate diff --from-empty --to-config-datasource --script`로 운영 schema를 뽑으면
+360줄이 나오는데 `CHECK` 제약 16개가 모두 빠진다. Prisma 7.10.0과 MySQL 8.4.8에서 확인했다.
+그 출력을 초기 migration으로 쓰면 제약이 사라진다.
+
+**`CHECK` 제약은 `schema.prisma`가 표현하지 못하므로 migration SQL이 소유한다.**
+Prisma가 이 제약을 지우지는 않는다. 같은 조합에서 초기 migration을 적용한 database를
+`prisma db pull` 한 뒤 `prisma migrate diff --from-migrations --to-schema` 로 비교하니
+빈 migration이 나왔다. 제약을 바꿀 때는 migration 파일에 직접 쓴다.
+
+**초기 migration은 운영 DB에 다시 실행하지 않는다.**
+두 파일은 이미 적용되어 있으므로 적용 완료로만 표시한다.
+
+```bash
+npx prisma migrate resolve --applied 20260921000000_baseline
+```
+
+`schema_migrations` table은 옮긴 뒤에도 그대로 둔다.
+이전 image로 되돌릴 때 그 image가 이 table을 읽어 적용 상태를 판정하기 때문이다.
+새 스택이 운영에서 검증되면 별도 migration으로 제거한다.
+
 ## 공고 후보풀과 추천 결과
 
 ### 재사용하는 회사 조사 데이터

@@ -258,10 +258,15 @@ HTML은 검증된 추천 JSON에서 파생하며 렌더, 검사와 임시 파일
 
 ## 추천 상태 Backend
 
-`services/recommendation-api/`는 포지션의 장기 상태를 제공하는 작은 Bun HTTP Backend다.
-서비스 코드, HTTP 계약과 SQL migration은 `career-os`가 소유한다.
+`services/recommendation-api/`는 포지션의 장기 상태를 제공하는 작은 Backend다.
+서비스 코드, HTTP 계약과 migration은 `career-os`가 소유한다.
 배포 설정, database와 계정 생성, network와 backup은 홈서버 인프라 저장소가 소유한다.
 학습자료 API는 아직 구현되지 않았다. Backend 스택 전환 뒤로 계획을 보류했다.
+
+**런타임을 Bun에서 Node 22의 NestJS와 Prisma로 옮기는 중이다.**
+결정과 근거는 [ADR-121](adr/ADR-121-추천-backend는-nestjs와-prisma로-운영한다.md)과
+[ADR-122](adr/ADR-122-추천-상태는-질의-단위로-읽고-쓴다.md)에 있다.
+아래 표는 전환 전의 배치다. 전환이 끝나면 이 절을 새 배치로 바꾼다.
 
 | 경로                                              | 책임                                                         |
 | ------------------------------------------------- | ------------------------------------------------------------ |
