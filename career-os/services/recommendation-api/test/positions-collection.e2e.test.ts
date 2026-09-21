@@ -58,6 +58,18 @@ describe("분석 정책과 회사 선호", () => {
     await harness.expectMatchesLegacyDatabase("ok-06-get-company-preferences");
   });
 
+  /**
+   * 정책 schema 의 교차 검증이 거절하는 본문이다.
+   * 슬롯 합계가 일일 상한과 달라 `prioritySlots` 자리에 오류가 붙는다.
+   */
+  it("본문 schema 를 위반하면 400 BAD_REQUEST 다", async () => {
+    harness.expectMatchesLegacyError(
+      "err-09-schema-violation",
+      await harness.sendLegacyRequest("err-09-schema-violation"),
+    );
+    await harness.expectMatchesLegacyDatabase("err-09-schema-violation");
+  });
+
   it("경로의 회사 식별자와 본문이 다르면 409 VERSION_CONFLICT 다", async () => {
     const reply = await send("PUT", "/api/positions/v1/company-preferences/other", {
       idempotencyKey: "mismatched-preference",
@@ -90,6 +102,19 @@ describe("수집 실행 저장", () => {
       await harness.sendLegacyRequest("err-10-policy-not-configured"),
     );
     await harness.expectMatchesLegacyDatabase("err-10-policy-not-configured");
+  });
+
+  /**
+   * 포착 파일의 `given` 이 같은 멱등 키로 같은 본문을 이미 한 번 보냈다.
+   * 본 요청은 그 재생이고, 저장된 응답이 그대로 와야 한다.
+   */
+  it("같은 멱등 키에 같은 본문을 다시 보내면 저장한 응답을 그대로 준다", async () => {
+    await harness.replayGiven("err-01-idempotent-replay");
+    harness.expectMatchesLegacy(
+      "err-01-idempotent-replay",
+      await harness.sendLegacyRequest("err-01-idempotent-replay"),
+    );
+    await harness.expectMatchesLegacyDatabase("err-01-idempotent-replay");
   });
 
   it("같은 수집 실행을 다른 멱등 키로 다시 저장하면 첫 응답과 같다", async () => {

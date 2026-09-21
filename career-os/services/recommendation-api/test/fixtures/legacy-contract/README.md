@@ -290,3 +290,14 @@ case 하나는 아래를 담는다.
 **이 case 를 뒤늦게 뽑아 여기 넣지 않았다.** 포착은 전환 전 구현이 돌던 시점의 기록이고,
 나중에 항목을 더하면 어느 값이 언제 뽑힌 것인지 알 수 없게 된다.
 대신 `test/common.e2e.test.ts` 가 이 조합을 직접 확인하고, 그 주석이 위 근거를 적는다.
+
+## 이 파일이 가리키는 경로가 옮겨진 것
+
+**포착 당시의 값과 절차는 고치지 않는다.** 아래는 그 뒤에 달라진 자리를 적어 둔 것이다.
+
+전환이 `services/recommendation-api/migrations/` 를 지웠다.
+그 안의 `001_position_schema.sql` 과 `002_company_tier_assessments.sql` 은
+`prisma/migrations/20260921000000_baseline/source/` 로 옮겼다.
+
+이 문서가 적은 적용 절차를 지금 다시 돌리려면 그 경로에서 읽어야 한다.
+`capture-legacy.bun.ts` 자체는 전환 전 구현이 없어 더 돌지 않는다.

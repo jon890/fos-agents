@@ -3,7 +3,7 @@ import { Injectable } from "@nestjs/common";
 import type { PostingCandidate, SourceDiagnostic } from "../../contracts/posting-candidate.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import { PrismaService } from "../../prisma/prisma.service.js";
-import { companyKey, positionContentHash, positionIdentity } from "../hash.js";
+import { companyKey, positionContentHash, positionIdentity, stableUuid } from "../hash.js";
 import type {
   AnalysisFailureCode,
   AnalysisPolicy,
@@ -166,6 +166,94 @@ export type NewAnalysisRow = AnalysisUpdate & {
   validUntil: string;
   companyTierAtAnalysis: number;
 };
+
+/** 추천 응답이 공고마다 담는 원본. 공고 본문은 이번 수집이 담은 version 의 것이다. */
+export type RecommendationPositionRow = {
+  positionId: string;
+  positionVersionId: string;
+  companyKey: string;
+  contentHash: string;
+  posting: PostingCandidate;
+};
+
+/** 추천 순위에 실을 분석 하나. 본문은 저장한 값을 그대로 담는다. */
+export type RecommendationAnalysisRow = {
+  analysisId: string;
+  positionId: string;
+  decision: "recommend" | "consider" | "hold";
+  fitScore: number;
+  reason: string;
+  details: unknown[];
+  nextActions: string[];
+  createdByAnalysisRunId: string | null;
+};
+
+/** 추천 하나를 조립하는 데 필요한 읽기 전부. 도메인 판단은 담지 않는다. */
+export type RecommendationInputs = {
+  run: AnalysisRunRow;
+  positions: RecommendationPositionRow[];
+  freshAnalyses: Map<string, RecommendationAnalysisRow>;
+  analyses: PositionAnalysisRow[];
+  preferences: Map<string, CompanyPreference>;
+  validAssessments: Map<string, StoredCompanyTierAssessment>;
+  diagnostics: Array<{ source: string; status: string; failedCount: number }>;
+  personalExcludedCount: number;
+  assessmentFailedCount: number;
+};
+
+export type RecommendationRunRow = {
+  recommendationRunId: string;
+  analysisRunId: string;
+  collectionRunId: string;
+  generatedAt: string;
+  analyzedNowCount: number;
+  reusedCount: number;
+  pendingCount: number;
+  personalExcludedCount: number;
+  pendingCandidates: unknown[];
+};
+
+export type RecommendationItemRow = {
+  positionId: string;
+  analysisId: string;
+  rankNumber: number;
+  decision: "recommend" | "consider" | "hold";
+  companyTier: number;
+  companyTierSource: CompanyTierSource;
+  companyTierAssessmentId: string | null;
+};
+
+/** 저장된 추천 하나를 다시 읽은 것. 순위 항목은 `rank_number` 순이다. */
+export type StoredRecommendation = RecommendationRunRow & {
+  items: StoredRecommendationItem[];
+  activeCount: number;
+};
+
+export type StoredRecommendationItem = {
+  candidateId: string;
+  company: string;
+  title: string;
+  postingUrl: string;
+  companyTier: number;
+  companyTierSource: CompanyTierSource;
+  companyTierAssessmentId: string | null;
+  decision: "recommend" | "consider" | "hold";
+  fitScore: number;
+  reason: string;
+  details: unknown[];
+  nextActions: string[];
+};
+
+/**
+ * `GET /runs/{id}` 가 받은 ID 가 어느 실행인지.
+ *
+ * 추천 실행 ID 는 분석 실행 ID 에서 만들어지므로 아직 만들어지지 않은 추천도 가리킬 수 있다.
+ * 그 경우를 `recommendation-missing` 으로 구분해 호출자가 만들도록 한다.
+ */
+export type RunLookup =
+  | { kind: "analysis"; analysisRunId: string }
+  | { kind: "recommendation"; recommendationRunId: string }
+  | { kind: "recommendation-missing"; analysisRunId: string };
 
 type RawRow = Record<string, unknown>;
 
@@ -1260,5 +1348,306 @@ export class PositionsRepository {
           completed_at = ${at(completedAt)}
       WHERE analysis_run_id = ${analysisRunId}
     `;
+  }
+
+  // ------------------------------------------------------------------ 추천 실행
+
+  /**
+   * 추천을 만들려는 두 요청의 순서를 세운다.
+   *
+   * 추천 실행 행은 아직 없으므로 그 근거인 분석 실행 행을 잠근다.
+   * 이 잠금이 없으면 둘이 「추천이 아직 없다」를 함께 읽고 각자 같은 추천을 만들려 한다.
+   * `lockAnalysisRun` 과 같은 행을 잠그지만 쓰기 경로가 달라 메서드를 나눈다.
+   */
+  async lockRecommendationRun(
+    analysisRunId: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<AnalysisRunRow | undefined> {
+    const rows = await tx.$queryRaw<RawRow[]>`
+      SELECT analysis_run_id, collection_run_id, candidate_context_version, contract_version,
+             status, analyzed_now_count, created_at
+      FROM position_analysis_runs WHERE analysis_run_id = ${analysisRunId}
+      FOR UPDATE
+    `;
+    return rows[0] ? this.toAnalysisRun(rows[0]) : undefined;
+  }
+
+  /** 이번 수집이 담은 공고를 추천 조립에 필요한 형태로 읽는다. */
+  async listRecommendationPositions(
+    collectionRunId: string,
+    client: DbClient = this.prisma,
+  ): Promise<RecommendationPositionRow[]> {
+    const rows = await client.$queryRaw<RawRow[]>`
+      SELECT p.position_id, pv.position_version_id, p.company_key, pv.content_hash,
+             pv.snapshot_json
+      FROM position_collection_items pci
+      JOIN positions p ON p.position_id = pci.position_id
+      JOIN position_versions pv ON pv.position_version_id = pci.position_version_id
+      WHERE pci.run_id = ${collectionRunId}
+      ORDER BY p.source_key, p.identity_hash
+    `;
+    return rows.map((row) => ({
+      positionId: String(row.position_id),
+      positionVersionId: String(row.position_version_id),
+      companyKey: String(row.company_key),
+      contentHash: String(row.content_hash),
+      posting: jsonValue<PostingCandidate>(row.snapshot_json),
+    }));
+  }
+
+  /**
+   * 이번 수집이 담은 version 에 붙은 유효한 분석을 공고마다 하나씩 읽는다.
+   *
+   * 같은 조건에 여러 분석이 있으면 가장 늦게 분석한 것을 쓴다.
+   */
+  async findFreshAnalyses(
+    collectionRunId: string,
+    candidateContextVersion: string,
+    contractVersion: number,
+    today: string,
+    client: DbClient = this.prisma,
+  ): Promise<Map<string, RecommendationAnalysisRow>> {
+    const rows = await client.$queryRaw<RawRow[]>`
+      SELECT pa.analysis_id, pa.position_id, pa.decision, pa.fit_score, pa.reason,
+             pa.details_json, pa.next_actions_json, pa.created_by_analysis_run_id
+      FROM position_collection_items pci
+      JOIN position_analyses pa ON pa.position_version_id = pci.position_version_id
+      WHERE pci.run_id = ${collectionRunId}
+        AND pa.candidate_context_version = ${candidateContextVersion}
+        AND pa.contract_version = ${contractVersion}
+        AND pa.valid_until >= ${today}
+      ORDER BY pa.analyzed_at ASC
+    `;
+    const latest = new Map<string, RecommendationAnalysisRow>();
+    for (const row of rows) {
+      latest.set(String(row.position_id), {
+        analysisId: String(row.analysis_id),
+        positionId: String(row.position_id),
+        decision: row.decision as "recommend" | "consider" | "hold",
+        fitScore: number(row.fit_score),
+        reason: String(row.reason),
+        details: jsonValue<unknown[]>(row.details_json),
+        nextActions: jsonValue<string[]>(row.next_actions_json),
+        createdByAnalysisRunId:
+          row.created_by_analysis_run_id === null
+            ? null
+            : String(row.created_by_analysis_run_id),
+      });
+    }
+    return latest;
+  }
+
+  /**
+   * 추천 하나를 조립하는 데 필요한 읽기를 모은다.
+   *
+   * 회사 tier 실행이 없는 수집은 회사 tier 평가를 도입하기 전에 저장된 것이라
+   * 그때의 계약 버전을 호출자가 준다.
+   */
+  async findRecommendationInputs(
+    analysisRunId: string,
+    today: string,
+    defaultCompanyTierContractVersion: number,
+    client: DbClient = this.prisma,
+  ): Promise<RecommendationInputs | undefined> {
+    const runRows = await client.$queryRaw<RawRow[]>`
+      SELECT analysis_run_id, collection_run_id, candidate_context_version, contract_version,
+             status, analyzed_now_count, created_at
+      FROM position_analysis_runs WHERE analysis_run_id = ${analysisRunId}
+    `;
+    if (!runRows[0]) return undefined;
+    const run = this.toAnalysisRun(runRows[0]);
+    const tierRun = await this.findCompanyTierRunByCollectionRun(run.collectionRunId, client);
+    const positions = await this.listRecommendationPositions(run.collectionRunId, client);
+    const companyKeys = [...new Set(positions.map((position) => position.companyKey))];
+    const collection = await this.findCollectionRun(run.collectionRunId, client);
+    return {
+      run,
+      positions,
+      freshAnalyses: await this.findFreshAnalyses(
+        run.collectionRunId,
+        run.candidateContextVersion,
+        run.contractVersion,
+        today,
+        client,
+      ),
+      analyses: await this.listAnalysesForCollection(run.collectionRunId, client),
+      preferences: await this.findPreferencesFor(companyKeys, client),
+      validAssessments: await this.findValidAssessments(
+        companyKeys,
+        run.candidateContextVersion,
+        tierRun?.contractVersion ?? defaultCompanyTierContractVersion,
+        today,
+        client,
+      ),
+      diagnostics: await this.listCollectionDiagnostics(run.collectionRunId, client),
+      personalExcludedCount: collection?.personalExcludedCount ?? 0,
+      assessmentFailedCount: tierRun
+        ? await this.countFailedCompanyTierItems(tierRun.companyTierRunId, client)
+        : 0,
+    };
+  }
+
+  async countFailedCompanyTierItems(
+    companyTierRunId: string,
+    client: DbClient = this.prisma,
+  ): Promise<number> {
+    const rows = await client.$queryRaw<RawRow[]>`
+      SELECT COUNT(*) AS failed_count FROM company_tier_assessment_run_items
+      WHERE company_tier_run_id = ${companyTierRunId} AND result_status = 'failed'
+    `;
+    return number(rows[0]?.failed_count ?? 0);
+  }
+
+  /** 평가 ID 로 회사 tier 평가를 읽는다. 저장된 추천의 출처를 다시 붙일 때 쓴다. */
+  async findAssessmentsByIds(
+    ids: string[],
+    client: DbClient = this.prisma,
+  ): Promise<Map<string, StoredCompanyTierAssessment>> {
+    if (ids.length === 0) return new Map();
+    const rows = await client.$queryRaw<RawRow[]>`
+      SELECT company_tier_assessment_id, company_key, company_name, candidate_context_version,
+             contract_version, created_by_company_tier_run_id, recommended_tier, confidence,
+             reason, signals_json, evidence_json, assumptions_json, assessed_at, valid_until
+      FROM company_tier_assessments
+      WHERE company_tier_assessment_id IN (${Prisma.join(ids)})
+    `;
+    return new Map(
+      rows.map((row) => [String(row.company_tier_assessment_id), this.toAssessment(row)]),
+    );
+  }
+
+  /** 추천은 더하기만 한다. 같은 분석 실행에 두 번째 추천을 만들지 않는다. */
+  async insertRecommendationRun(
+    run: RecommendationRunRow,
+    items: RecommendationItemRow[],
+    tx: Prisma.TransactionClient,
+  ): Promise<void> {
+    await tx.$executeRaw`
+      INSERT INTO position_recommendation_runs
+        (recommendation_run_id, analysis_run_id, collection_run_id, generated_at,
+         analyzed_now_count, reused_count, pending_count, pending_candidates_json,
+         personal_excluded_count)
+      VALUES (${run.recommendationRunId}, ${run.analysisRunId}, ${run.collectionRunId},
+              ${at(run.generatedAt)}, ${run.analyzedNowCount}, ${run.reusedCount},
+              ${run.pendingCount}, ${JSON.stringify(run.pendingCandidates)},
+              ${run.personalExcludedCount})
+    `;
+    for (const item of items) {
+      await tx.$executeRaw`
+        INSERT INTO position_recommendation_items
+          (recommendation_run_id, position_id, analysis_id, rank_number, decision,
+           company_tier, company_tier_source, company_tier_assessment_id)
+        VALUES (${run.recommendationRunId}, ${item.positionId}, ${item.analysisId},
+                ${item.rankNumber}, ${item.decision}, ${item.companyTier},
+                ${item.companyTierSource}, ${item.companyTierAssessmentId})
+      `;
+    }
+  }
+
+  /** 저장된 추천을 읽는다. 분석 실행 ID 로도 추천 실행 ID 로도 찾는다. */
+  async findStoredRecommendation(
+    key: { analysisRunId: string } | { recommendationRunId: string },
+    client: DbClient = this.prisma,
+  ): Promise<StoredRecommendation | undefined> {
+    const where =
+      "analysisRunId" in key
+        ? Prisma.sql`analysis_run_id = ${key.analysisRunId}`
+        : Prisma.sql`recommendation_run_id = ${key.recommendationRunId}`;
+    const runRows = await client.$queryRaw<RawRow[]>`
+      SELECT recommendation_run_id, analysis_run_id, collection_run_id, generated_at,
+             analyzed_now_count, reused_count, pending_count, pending_candidates_json,
+             personal_excluded_count
+      FROM position_recommendation_runs WHERE ${where}
+    `;
+    const row = runRows[0];
+    if (!row) return undefined;
+    const recommendationRunId = String(row.recommendation_run_id);
+    const collectionRunId = String(row.collection_run_id);
+    const itemRows = await client.$queryRaw<RawRow[]>`
+      SELECT ri.rank_number, ri.decision, ri.company_tier, ri.company_tier_source,
+             ri.company_tier_assessment_id, pa.fit_score, pa.reason, pa.details_json,
+             pa.next_actions_json, pv.snapshot_json
+      FROM position_recommendation_items ri
+      JOIN position_analyses pa ON pa.analysis_id = ri.analysis_id
+      JOIN position_versions pv ON pv.position_version_id = pa.position_version_id
+      WHERE ri.recommendation_run_id = ${recommendationRunId}
+      ORDER BY ri.rank_number
+    `;
+    const activeRows = await client.$queryRaw<RawRow[]>`
+      SELECT COUNT(*) AS active_count FROM position_collection_items
+      WHERE run_id = ${collectionRunId}
+    `;
+    return {
+      recommendationRunId,
+      analysisRunId: String(row.analysis_run_id),
+      collectionRunId,
+      generatedAt: iso(row.generated_at),
+      analyzedNowCount: number(row.analyzed_now_count),
+      reusedCount: number(row.reused_count),
+      pendingCount: number(row.pending_count),
+      personalExcludedCount: number(row.personal_excluded_count),
+      pendingCandidates: jsonValue<unknown[]>(row.pending_candidates_json),
+      activeCount: number(activeRows[0]?.active_count ?? 0),
+      items: itemRows.map((item) => {
+        const posting = jsonValue<PostingCandidate>(item.snapshot_json);
+        return {
+          candidateId: posting.id,
+          company: posting.company,
+          title: posting.title,
+          postingUrl: posting.url,
+          companyTier: number(item.company_tier),
+          companyTierSource: item.company_tier_source as CompanyTierSource,
+          companyTierAssessmentId:
+            item.company_tier_assessment_id === null
+              ? null
+              : String(item.company_tier_assessment_id),
+          decision: item.decision as "recommend" | "consider" | "hold",
+          fitScore: number(item.fit_score),
+          reason: String(item.reason),
+          details: jsonValue<unknown[]>(item.details_json),
+          nextActions: jsonValue<string[]>(item.next_actions_json),
+        };
+      }),
+    };
+  }
+
+  /**
+   * 실행 ID 하나가 어느 실행을 가리키는지 정한다.
+   *
+   * 분석 실행 ID, 그 수집 실행 ID, 저장된 추천 실행 ID 순으로 찾는다.
+   * 셋 다 아니면 아직 만들어지지 않은 추천 실행 ID 일 수 있으므로,
+   * 추천이 없는 분석 실행의 추천 ID 를 만들어 대조한다.
+   */
+  async findRunById(id: string, client: DbClient = this.prisma): Promise<RunLookup | undefined> {
+    const analysisRows = await client.$queryRaw<RawRow[]>`
+      SELECT analysis_run_id FROM position_analysis_runs
+      WHERE analysis_run_id = ${id} OR collection_run_id = ${id}
+      ORDER BY analysis_run_id = ${id} DESC
+      LIMIT 1
+    `;
+    if (analysisRows[0]) {
+      return { kind: "analysis", analysisRunId: String(analysisRows[0].analysis_run_id) };
+    }
+    const storedRows = await client.$queryRaw<RawRow[]>`
+      SELECT recommendation_run_id FROM position_recommendation_runs
+      WHERE recommendation_run_id = ${id}
+    `;
+    if (storedRows[0]) {
+      return { kind: "recommendation", recommendationRunId: String(storedRows[0].recommendation_run_id) };
+    }
+    const openRows = await client.$queryRaw<RawRow[]>`
+      SELECT r.analysis_run_id FROM position_analysis_runs r
+      WHERE NOT EXISTS (
+        SELECT 1 FROM position_recommendation_runs pr
+        WHERE pr.analysis_run_id = r.analysis_run_id
+      )
+    `;
+    for (const row of openRows) {
+      const analysisRunId = String(row.analysis_run_id);
+      if (stableUuid(`recommendation:${analysisRunId}`) === id) {
+        return { kind: "recommendation-missing", analysisRunId };
+      }
+    }
+    return undefined;
   }
 }

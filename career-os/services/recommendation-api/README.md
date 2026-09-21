@@ -28,8 +28,9 @@ npm run prisma:status
 ## Prisma migration
 
 `prisma/migrations/20260921000000_baseline/` 이 운영 schema 의 기준점이다.
-그 `migration.sql` 은 `migrations/001_position_schema.sql` 과
-`migrations/002_company_tier_assessments.sql` 을 순서대로 이어 붙인 것이고 내용을 고치지 않는다.
+그 `migration.sql` 은 같은 디렉터리의 `source/001_position_schema.sql` 과
+`source/002_company_tier_assessments.sql` 을 순서대로 이어 붙인 것이고 내용을 고치지 않는다.
+`source/` 의 둘은 전환 전 구현이 쓰던 원본이고 비교 대상으로만 남긴다.
 `prisma/baseline.test.ts` 가 그 동일성을 바이트 단위로 확인한다.
 
 ### 운영 DB 에 적용 완료로 표시한다

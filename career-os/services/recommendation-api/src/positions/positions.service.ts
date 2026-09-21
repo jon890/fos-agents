@@ -14,6 +14,11 @@ import {
   type CompanyTierRunRow,
   type NewAnalysisRow,
   type PositionAnalysisRow,
+  type RecommendationAnalysisRow,
+  type RecommendationInputs,
+  type RecommendationItemRow,
+  type RecommendationPositionRow,
+  type StoredRecommendation,
   type UpsertedPosition,
 } from "./repository/positions.repository.js";
 import {
@@ -33,9 +38,12 @@ import {
   type CompanyTierQueueResponse,
   type CompanyTierResultsRequest,
   type CompanyTierResultsResponse,
+  recommendationResponseSchema,
   type PositionPreparationResponse,
+  type RecommendationResponse,
 } from "./schema.js";
-import type { StoredCompanyTierAssessment } from "./stored.js";
+import type { CompanyTierSource, StoredCompanyTierAssessment } from "./stored.js";
+import { companyTierProvenanceFields } from "./tier-provenance.js";
 
 /** 회사 tier 평가 임차권의 길이. 이 시간이 지나면 처리 중 표시를 회수한다. */
 const COMPANY_TIER_LEASE_MS = 2 * 60 * 60 * 1000;
@@ -43,7 +51,28 @@ const COMPANY_TIER_LEASE_MS = 2 * 60 * 60 * 1000;
 /** 회사 tier 실행이 없는 옛 수집을 해석할 때 쓰는 계약 버전이다. 요청 schema 의 기본값과 같다. */
 const DEFAULT_ANALYSIS_CONTRACT_VERSION = 1;
 
+/** 회사 tier 실행이 없는 옛 수집의 회사 tier 계약 버전. 요청 schema 의 기본값과 같다. */
+const DEFAULT_COMPANY_TIER_CONTRACT_VERSION = 1;
+
 type AnalysisStatus = "fresh" | "new" | "changed" | "stale";
+
+/** 추천 순위의 1차 기준. 낮을수록 앞이다. */
+const DECISION_ORDER = { recommend: 0, consider: 1, hold: 2 } as const;
+
+/** 추천 순위의 4차 기준. 마감이 급한 공고가 앞이다. */
+const URGENCY_ORDER = { urgent: 0, soon: 1, normal: 2, no_deadline: 3, unknown: 4 } as const;
+
+/** 공고 하나의 회사 tier 와 그 출처. 모델 평가일 때만 평가 본문이 붙는다. */
+type ResolvedTier = {
+  tier: number;
+  source: CompanyTierSource;
+  assessment: StoredCompanyTierAssessment | undefined;
+};
+
+type RecommendationEntry = {
+  position: RecommendationPositionRow;
+  analysis: RecommendationAnalysisRow | undefined;
+} & ResolvedTier;
 
 function dateOnlyAfterDays(iso: string, days: number): string {
   const date = new Date(iso);
@@ -84,6 +113,16 @@ function analysisStatusOf(
   if (analyses.length === 0) return "new";
   if (!analyses.some((analysis) => analysis.contentHash === contentHash)) return "changed";
   return "stale";
+}
+
+/** 회사마다 하나씩 고른 tier 출처를 추천 응답의 집계로 바꾼다. */
+function tierSourceSummary(sources: CompanyTierSource[], assessmentFailedCount: number) {
+  return {
+    manualCount: sources.filter((source) => source === "manual").length,
+    modelCount: sources.filter((source) => source === "model").length,
+    defaultCount: sources.filter((source) => source === "default").length,
+    assessmentFailedCount,
+  };
 }
 
 function groupAnalyses(rows: PositionAnalysisRow[]): Map<string, PositionAnalysisRow[]> {
@@ -378,6 +417,62 @@ export class PositionsService {
         tx,
       );
       return this.resultsResponse(run.analysisRunId, status, applied, true);
+    });
+  }
+
+
+  /**
+   * 분석 실행 하나에 추천을 만든다.
+   *
+   * 같은 분석 실행에 추천은 하나뿐이다. 이미 만든 것이 있으면 그것을 그대로 돌려준다.
+   */
+  async createRecommendation(
+    analysisRunId: string,
+    now = new Date().toISOString(),
+  ): Promise<RecommendationResponse> {
+    return this.repository.transaction(async (tx) => {
+      const run = await this.repository.lockRecommendationRun(analysisRunId, tx);
+      if (!run) throw new ApiError(404, "NOT_FOUND", "분석 실행을 찾을 수 없습니다.");
+      const stored = await this.repository.findStoredRecommendation({ analysisRunId }, tx);
+      if (stored) return this.storedRecommendationResponse(stored, tx);
+      if (run.status === "pending") {
+        throw new ApiError(409, "VERSION_CONFLICT", "분석 실행이 끝나지 않았습니다.");
+      }
+      const policy = await this.requirePolicy(tx);
+      const inputs = await this.repository.findRecommendationInputs(
+        analysisRunId,
+        now.slice(0, 10),
+        DEFAULT_COMPANY_TIER_CONTRACT_VERSION,
+        tx,
+      );
+      return this.buildRecommendation(inputs!, policy, now, tx);
+    });
+  }
+
+  /**
+   * 실행 ID 하나로 수집 실행과 공고 분석 실행과 추천 실행을 조회한다.
+   *
+   * 셋은 응답 모양이 다르므로 하나로 합치지 않는다.
+   * 추천 실행 ID 는 분석 실행 ID 에서 만들어지므로 아직 만들지 않은 추천도 가리킬 수 있다.
+   * 그때는 그 자리에서 만든다.
+   */
+  async getRun(id: string): Promise<AnalysisQueueResponse | RecommendationResponse> {
+    const found = await this.repository.findRunById(id);
+    if (!found) throw new ApiError(404, "NOT_FOUND", "실행을 찾을 수 없습니다.");
+    if (found.kind === "recommendation-missing") {
+      return this.createRecommendation(found.analysisRunId);
+    }
+    return this.repository.transaction(async (tx) => {
+      if (found.kind === "recommendation") {
+        const stored = await this.repository.findStoredRecommendation(
+          { recommendationRunId: found.recommendationRunId },
+          tx,
+        );
+        return this.storedRecommendationResponse(stored!, tx);
+      }
+      const policy = await this.requirePolicy(tx);
+      const stored = await this.repository.findAnalysisRunWithItems(found.analysisRunId, tx);
+      return this.queueResponse(tx, policy, stored!.run, stored!.items, stored!.run.createdAt);
     });
   }
 
@@ -723,6 +818,229 @@ export class PositionsService {
       failedCount: count("failed"),
       remainingCount: count("pending") + count("failed"),
       applied,
+    });
+  }
+
+
+  // ------------------------------------------------------------------ 추천 조립
+
+  /** 사람 override, 유효한 모델 평가, 정책 기본값 순으로 회사 tier 를 정한다. */
+  private resolveTier(
+    inputs: RecommendationInputs,
+    policy: AnalysisPolicy,
+    key: string,
+  ): ResolvedTier {
+    const preference = inputs.preferences.get(key);
+    if (preference) return { tier: preference.tier, source: "manual", assessment: undefined };
+    const assessment = inputs.validAssessments.get(key);
+    if (assessment) {
+      return { tier: assessment.recommendedTier, source: "model", assessment };
+    }
+    return { tier: policy.defaultCompanyTier, source: "default", assessment: undefined };
+  }
+
+  /**
+   * 추천 응답을 조립하고 그 순위를 저장한다.
+   *
+   * 유효한 분석이 붙은 공고만 순위에 들어가고 나머지는 분석 대기로 남는다.
+   */
+  private async buildRecommendation(
+    inputs: RecommendationInputs,
+    policy: AnalysisPolicy,
+    now: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<RecommendationResponse> {
+    const run = inputs.run;
+    const entries: RecommendationEntry[] = inputs.positions.map((position) => ({
+      position,
+      analysis: inputs.freshAnalyses.get(position.positionId),
+      ...this.resolveTier(inputs, policy, position.companyKey),
+    }));
+    const ranked = entries
+      .filter(
+        (entry): entry is RecommendationEntry & { analysis: RecommendationAnalysisRow } =>
+          entry.analysis !== undefined,
+      )
+      .sort(
+        (left, right) =>
+          DECISION_ORDER[left.analysis.decision] - DECISION_ORDER[right.analysis.decision] ||
+          right.analysis.fitScore - left.analysis.fitScore ||
+          left.tier - right.tier ||
+          URGENCY_ORDER[left.position.posting.closeUrgency] -
+            URGENCY_ORDER[right.position.posting.closeUrgency] ||
+          left.position.positionId.localeCompare(right.position.positionId),
+      );
+    const analyses = groupAnalyses(inputs.analyses);
+    const pending = entries
+      .filter((entry) => entry.analysis === undefined)
+      .sort((left, right) => left.position.positionId.localeCompare(right.position.positionId))
+      .map((entry) => ({
+        candidateId: entry.position.posting.id,
+        company: entry.position.posting.company,
+        title: entry.position.posting.title,
+        postingUrl: entry.position.posting.url,
+        companyTier: entry.tier,
+        ...companyTierProvenanceFields(entry.source, entry.assessment),
+        analysisStatus: analysisStatusOf(
+          entry.position.contentHash,
+          analyses.get(entry.position.positionId) ?? [],
+          run.candidateContextVersion,
+          run.contractVersion,
+          now,
+        ),
+      }));
+    const ranking = ranked.map((entry) => ({
+      candidateId: entry.position.posting.id,
+      company: entry.position.posting.company,
+      title: entry.position.posting.title,
+      postingUrl: entry.position.posting.url,
+      companyTier: entry.tier,
+      ...companyTierProvenanceFields(entry.source, entry.assessment),
+      decision: entry.analysis.decision,
+      fitScore: entry.analysis.fitScore,
+      reason: entry.analysis.reason,
+      details: entry.analysis.details,
+      nextActions: entry.analysis.nextActions,
+    }));
+    const analyzedNowCount = ranked.filter(
+      (entry) => entry.analysis.createdByAnalysisRunId === run.analysisRunId,
+    ).length;
+    const reusedCount = ranked.length - analyzedNowCount;
+    const sourceByCompany = new Map<string, CompanyTierSource>();
+    for (const entry of entries) sourceByCompany.set(entry.position.companyKey, entry.source);
+    const parsed = recommendationResponseSchema.parse({
+      schemaVersion: 1,
+      recommendationRunId: stableUuid(`recommendation:${run.analysisRunId}`),
+      analysisRunId: run.analysisRunId,
+      reportDate: now.slice(0, 10),
+      generatedAt: now,
+      sourceSnapshot: { collectionRunId: run.collectionRunId },
+      ranking,
+      recommendations: ranking.filter((entry) => entry.decision !== "hold"),
+      pendingCandidates: pending,
+      analysisSummary: {
+        activeCount: entries.length,
+        analyzedNowCount,
+        reusedCount,
+        pendingCount: pending.length,
+        personalExcludedCount: inputs.personalExcludedCount,
+      },
+      companyTierSummary: tierSourceSummary(
+        [...sourceByCompany.values()],
+        inputs.assessmentFailedCount,
+      ),
+      collectionHealth: {
+        candidateCount: entries.length,
+        configuredSourceCount: inputs.diagnostics.length,
+        warningSources: publicDiagnostics(inputs.diagnostics),
+      },
+    });
+    await this.repository.insertRecommendationRun(
+      {
+        recommendationRunId: parsed.recommendationRunId,
+        analysisRunId: run.analysisRunId,
+        collectionRunId: run.collectionRunId,
+        generatedAt: now,
+        analyzedNowCount,
+        reusedCount,
+        pendingCount: pending.length,
+        personalExcludedCount: inputs.personalExcludedCount,
+        pendingCandidates: parsed.pendingCandidates,
+      },
+      ranked.map(
+        (entry, index): RecommendationItemRow => ({
+          positionId: entry.position.positionId,
+          analysisId: entry.analysis.analysisId,
+          rankNumber: index + 1,
+          decision: entry.analysis.decision,
+          companyTier: entry.tier,
+          companyTierSource: entry.source,
+          companyTierAssessmentId:
+            entry.source === "model" ? (entry.assessment?.companyTierAssessmentId ?? null) : null,
+        }),
+      ),
+      tx,
+    );
+    return parsed;
+  }
+
+  /**
+   * 저장된 추천을 응답 형태로 다시 만든다.
+   *
+   * 순위와 집계는 저장한 값을 쓰고, 회사 tier 출처와 수집 진단은 지금 값을 다시 읽는다.
+   */
+  private async storedRecommendationResponse(
+    stored: StoredRecommendation,
+    tx: Prisma.TransactionClient,
+  ): Promise<RecommendationResponse> {
+    const assessments = await this.repository.findAssessmentsByIds(
+      stored.items.flatMap((item) =>
+        item.companyTierAssessmentId ? [item.companyTierAssessmentId] : [],
+      ),
+      tx,
+    );
+    const ranking = stored.items.map((item) => ({
+      candidateId: item.candidateId,
+      company: item.company,
+      title: item.title,
+      postingUrl: item.postingUrl,
+      companyTier: item.companyTier,
+      ...companyTierProvenanceFields(
+        item.companyTierSource,
+        item.companyTierAssessmentId
+          ? assessments.get(item.companyTierAssessmentId)
+          : undefined,
+      ),
+      decision: item.decision,
+      fitScore: item.fitScore,
+      reason: item.reason,
+      details: item.details,
+      nextActions: item.nextActions,
+    }));
+    const pendingCandidates = stored.pendingCandidates as Array<{
+      company: string;
+      companyTierSource?: CompanyTierSource;
+    }>;
+    const sourceByCompany = new Map<string, CompanyTierSource>();
+    for (const entry of [...ranking, ...pendingCandidates]) {
+      sourceByCompany.set(entry.company, entry.companyTierSource ?? "default");
+    }
+    const diagnostics = await this.repository.listCollectionDiagnostics(
+      stored.collectionRunId,
+      tx,
+    );
+    const tierRun = await this.repository.findCompanyTierRunByCollectionRun(
+      stored.collectionRunId,
+      tx,
+    );
+    return recommendationResponseSchema.parse({
+      schemaVersion: 1,
+      recommendationRunId: stored.recommendationRunId,
+      analysisRunId: stored.analysisRunId,
+      reportDate: stored.generatedAt.slice(0, 10),
+      generatedAt: stored.generatedAt,
+      sourceSnapshot: { collectionRunId: stored.collectionRunId },
+      ranking,
+      recommendations: ranking.filter((entry) => entry.decision !== "hold"),
+      pendingCandidates,
+      analysisSummary: {
+        activeCount: stored.activeCount,
+        analyzedNowCount: stored.analyzedNowCount,
+        reusedCount: stored.reusedCount,
+        pendingCount: stored.pendingCount,
+        personalExcludedCount: stored.personalExcludedCount,
+      },
+      companyTierSummary: tierSourceSummary(
+        [...sourceByCompany.values()],
+        tierRun
+          ? await this.repository.countFailedCompanyTierItems(tierRun.companyTierRunId, tx)
+          : 0,
+      ),
+      collectionHealth: {
+        candidateCount: stored.activeCount,
+        configuredSourceCount: diagnostics.length,
+        warningSources: publicDiagnostics(diagnostics),
+      },
     });
   }
 

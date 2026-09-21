@@ -20,9 +20,22 @@ const baselineSqlPath = fileURLToPath(
   new URL("./migrations/20260921000000_baseline/migration.sql", import.meta.url),
 );
 const schemaPath = fileURLToPath(new URL("./schema.prisma", import.meta.url));
+/**
+ * 초기 migration 이 이어 붙인 원본 두 개.
+ *
+ * 전환 전 구현과 함께 있던 `migrations/` 를 지우면서 이 안으로 사본을 옮겼다.
+ * 비교를 없애면 초기 migration 이 운영 schema 와 어긋나도 드러나지 않는다.
+ */
 const legacyMigrationPaths = [
-  fileURLToPath(new URL("../migrations/001_position_schema.sql", import.meta.url)),
-  fileURLToPath(new URL("../migrations/002_company_tier_assessments.sql", import.meta.url)),
+  fileURLToPath(
+    new URL("./migrations/20260921000000_baseline/source/001_position_schema.sql", import.meta.url),
+  ),
+  fileURLToPath(
+    new URL(
+      "./migrations/20260921000000_baseline/source/002_company_tier_assessments.sql",
+      import.meta.url,
+    ),
+  ),
 ];
 
 /**

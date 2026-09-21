@@ -1,5 +1,6 @@
 import { Body, Controller, Get, HttpCode, Param, Post, Put } from "@nestjs/common";
 
+import { ApiError } from "../common/api-error.js";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { PositionsService } from "./positions.service.js";
 import {
@@ -17,10 +18,11 @@ import {
   type CompanyTierResultsRequest,
   type CompanyTierResultsResponse,
   type PositionPreparationResponse,
+  type RecommendationResponse,
 } from "./schema.js";
 
 /**
- * 분석 정책과 회사 선호와 수집 실행의 경로다.
+ * 포지션 도메인의 모든 경로다.
  *
  * 쓰기 넷에는 공통 멱등 interceptor 가 걸린다. 본문 검증은 계약 schema 를 그대로 쓴다.
  */
@@ -83,5 +85,26 @@ export class PositionsController {
     @Body(new ZodValidationPipe(companyTierResultsRequestSchema)) body: CompanyTierResultsRequest,
   ): Promise<CompanyTierResultsResponse> {
     return this.positions.saveCompanyTierResults(companyTierRunId, body);
+  }
+
+  /**
+   * 추천 실행을 만든다.
+   *
+   * 본문에서 읽는 것은 `analysisRunId` 하나다.
+   * 계약이 나머지 필드를 정하지 않으므로 schema 로 본문 전체를 막지 않는다.
+   */
+  @Post("recommendation-runs")
+  @HttpCode(201)
+  createRecommendation(@Body() body: { analysisRunId?: unknown }): Promise<RecommendationResponse> {
+    if (typeof body?.analysisRunId !== "string") {
+      throw new ApiError(400, "BAD_REQUEST", "analysisRunId가 필요합니다.");
+    }
+    return this.positions.createRecommendation(body.analysisRunId);
+  }
+
+  /** 수집 실행과 공고 분석 실행과 추천 실행을 같은 경로로 조회한다. */
+  @Get("runs/:runId")
+  getRun(@Param("runId") runId: string): Promise<AnalysisQueueResponse | RecommendationResponse> {
+    return this.positions.getRun(runId);
   }
 }
