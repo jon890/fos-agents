@@ -46,7 +46,7 @@ fos-study 는 별도 Git 저장소이며 career-os 에서는 읽기 전용이다
 ## private brain 을 경로로 확인하지 않는 이유
 
 brain 은 파일을 여는 곳이 아니라 `brain-search` 로 묻는 곳이다.
-[`code-architecture.md`의 「현재 지원 대상과 면접 답변 연습」](../../../../docs/code-architecture.md#현재-지원-대상과-면접-답변-연습)과
+[`code-architecture.md`의 「interview-practice」](../../../../docs/code-architecture.md#interview-practice)과
 [ADR-102](../../../../docs/adr/ADR-102-별도-웹-대시보드보다-파일-기반-피드백-루프를-사용한다.md)가
 실행 스크립트는 brain 을 직접 조회하지 않는다고 정한다.
 검사기가 brain 저장소의 경로를 요구하면 그 결정을 어기고, 조회 방식이 바뀔 때마다 검사기도 함께 고쳐야 한다.

@@ -52,3 +52,28 @@ npx prisma migrate resolve --applied 20260921000000_baseline
 소유자는 공고를 수집하는 `scripts/` 쪽이다.
 사본을 고치지 말고 원본을 고친 뒤 다시 복사한다.
 `src/contracts/posting-candidate.drift.test.ts` 가 두 파일이 어긋나지 않았는지 확인한다.
+
+## 전환 전 정답지
+
+`test/fixtures/legacy-contract/` 는 Bun 구현이 실제로 낸 응답을 뽑아 둔 기록이다.
+전환이 HTTP 계약 12개 endpoint 와 오류 코드 12개를 바꾸지 않았다는 것을 이 값으로 증명한다.
+
+| 파일 | 담는 것 |
+| --- | --- |
+| `cases.json` | case 34개. 요청 전문, 응답 전문, 쓰기 뒤의 DB 행과 비교할 열 |
+| `README.md` | 뽑은 방법, 매 case 사이의 상태 초기화, 비교에서 뺀 열과 그 이유 |
+| `capture-legacy.bun.ts` | 뽑는 데 쓴 스크립트 |
+
+e2e 검사가 `test/support/legacy-contract.ts` 를 거쳐 이 값과 대조한다.
+34개가 모두 어딘가에서 대조되는지는 `test/contract.e2e.test.ts` 가 단언한다.
+
+**대조가 깨지면 이 파일을 고쳐 통과시키지 않는다.**
+값이 다르면 새 구현이 계약을 어긴 것이다. 정답지가 틀렸다고 판단되면 먼저 사람에게 알린다.
+
+**`capture-legacy.bun.ts` 는 다시 돌지 않는다.** Bun 구현이 없어졌기 때문이다.
+값이 어디서 나왔는지 읽을 수 있도록 남긴 것이고, `tsconfig.json` 과 `vitest.config.ts` 의
+`exclude` 에 들어 있다.
+
+**언제 제거하나.** 새 스택이 운영에서 검증되고, 이 계약을 의도적으로 바꾸는 변경이 올 때다.
+그때까지는 남긴다. 다음에 계약을 건드리는 사람이 무엇이 기준이었는지 읽을 수 있어야 한다.
+
