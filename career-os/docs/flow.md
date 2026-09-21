@@ -1,8 +1,18 @@
 # 실행 흐름
 
-career-os의 각 흐름은 외부 입력을 검증하고, 사용자 판단에 필요한 산출물을 만든 뒤, 승인 없이는 외부 상태를 바꾸지 않는 데서 끝난다.
+career-os의 각 흐름은 외부 입력을 검증하고, 사용자 판단에 필요한 산출물을 만든 뒤,
+승인 없이는 외부 상태를 바꾸지 않는 데서 끝난다.
 
-## 비공개 작업 파일의 목표 흐름
+이 문서는 각 스킬이 **어떤 순서로 돌고 어디서 갈라지는지**를 담는다.
+정상 경로와 함께 실패, 빈 상태, 동시 충돌의 갈래를 적는다.
+무엇을 약속하는지는 [`prd.md`](prd.md), 무엇을 저장하는지는 [`data-schema.md`](data-schema.md),
+코드가 어디 있는지는 [`code-architecture.md`](code-architecture.md)가 담는다.
+
+명령의 인자와 플래그 조합은 각 스킬의 `references/`가 소유한다. 여기에 옮겨 적지 않는다.
+
+## 공통
+
+### 비공개 작업본 동기화
 
 `application-package-writer`, `resume-preparer`, `interview-practice`와 `study-topic-recommender`는 공통 CLI로 다음 준비와 반영 절차를 실행한다.
 
@@ -36,12 +46,14 @@ career-os의 각 흐름은 외부 입력을 검증하고, 사용자 판단에 �
 전송이 중단되거나 검증이 실패해도 이전 release가 계속 현재 상태다.
 prepare가 중단되면 다음 실행은 journal과 실제 root를 대조해 기존 작업본으로 복구한 뒤에만 새 release를 받는다.
 journal과 실제 경로가 모순되면 자동 정리하지 않고 `RESTORE_REQUIRED`로 중단한다.
+prepare 는 현재 로컬 hash 가 마지막 동기화 상태와 다르면 파일을 교체하지 않는다.
+같은 `contentDigest` 를 다시 publish 하면 새 release 를 만들지 않는다.
 재생성 가능한 cache와 게시 뒤 삭제하는 임시 리포트는 동기화하지 않는다.
 관리 root 안의 `.env`와 숨김 파일은 원격으로 보내지 않으며, `prepare`가 발견하면 삭제하지 않고 `WORKSPACE_DIRTY`로 중단한다.
 `.omc`는 원격으로 보내지 않지만 `prepare`를 막지 않는다. 저장소가 재생성 가능한 운영 산출물로 선언한 디렉터리이므로 `prepare`가 관리 root를 교체할 때 함께 사라진다.
 `.DS_Store`와 `Thumbs.db`는 운영체제 메타데이터로 분류해 작업 변경에서 제외한다.
 
-### skill이 실행하는 명령
+#### skill이 실행하는 명령
 
 `applications`, `library` 또는 `state`를 읽기 전에 저장소 루트 기준 CLI에 현재 skill 이름을 전달한다.
 
@@ -62,7 +74,114 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 
 완료 단계가 실패해도 로컬 결과를 지우지 않는다.
 
-## 포지션 추천
+### 추천 상태 Backend
+
+`position-recommender` 가 쓰는 HTTP Backend 의 계약이다.
+코드 배치는 [`code-architecture.md`](code-architecture.md#추천-상태-backend)가 소유한다.
+
+모든 쓰기 요청은 `Authorization: Bearer` 와 `Idempotency-Key` 를 요구한다.
+응답은 `Cache-Control: no-store` 를 쓰며 원본 token 과 DB 오류 전문을 담지 않는다.
+
+상태 코드다.
+
+| 상황 | 코드 |
+| --- | --- |
+| 같은 key 에 같은 본문 | 저장한 응답을 그대로 |
+| 같은 key 에 다른 본문 | `409` |
+| 요청 계약 오류 | `400` |
+| 인증 실패 | `401` |
+| version 충돌 | `409` |
+| 정책을 설정하지 않은 상태의 수집 요청 | `409 POLICY_NOT_CONFIGURED` |
+| 회사 tier 실행이 `pending` 인데 분석 실행 생성 | `409 COMPANY_TIER_RUN_PENDING` |
+| DB 연결 실패 | `503` |
+
+`GET /health/live` 는 process 상태만 확인한다.
+`GET /health/ready` 는 DDL 을 실행하지 않고 DB 연결과 migration version 과 checksum 을 조회한다.
+`GET /api/v1/auth/check` 는 유효한 Bearer token 에만 `204` 를 돌려준다.
+
+세 단계가 각각 한 transaction 에서 끝난다.
+
+1. `POST /collection-runs` 가 공고 버전과 수집 실행과 회사 tier 평가 실행 생성까지 한다.
+   공고 분석 실행은 만들지 않는다.
+2. `POST /company-tier-runs/:id/results` 가 모델 평가와 실패를 반영한다.
+3. `POST /collection-runs/:id/analysis-runs` 가 회사마다 `manual`, `model`, `default` 순서로
+   tier 를 해결한 뒤 공고 분석 실행을 만든다.
+
+수집 실행 하나는 공고 분석 실행 하나만 가지므로 재시도는 저장한 응답을 그대로 돌려준다.
+분석 결과 반영은 분석한 공고와 분석하지 못한 공고를 함께 받고
+실행 상태를 `pending`, `partial`, `completed` 중 하나로 돌려준다.
+`partial` 이면 client 가 남은 항목만 다시 보낸다. Backend 는 스스로 재시도하지 않는다.
+
+외부 queue 와 worker 를 두지 않는다. cron 이 동기 HTTP 요청으로 단계를 진행한다.
+
+### HTML 리포트 게시
+
+사용자가 공유 링크를 요청했을 때만 외부 게시까지 이어간다.
+
+1. 리포트 HTML을 시스템 임시 디렉터리에 만든다.
+2. 개인 정보, 비공개 회사 맥락, 로컬 절대 경로를 검사한다.
+3. `report-publisher` skill로 Cloudflare Pages에 게시한다.
+4. 게시된 페이지와 핵심 링크가 열리는지 확인한다.
+5. 임시 HTML과 중간 데이터를 삭제한다.
+6. 검증된 URL과 다음 행동을 사용자에게 전달한다.
+
+사용자가 로컬 사본을 명시적으로 요청한 경우에만 지정한 경로에 보존한다.
+
+## application-package-writer
+
+선택한 공고 하나에 맞춘 지원 자료를 만들고 제출 가능성을 검증한다.
+
+1. 공고 경로가 없으면 private brain에서 현재 지원 대상을 찾고 대응하는 지원 디렉터리를 확인한다.
+2. 공식 공고와 회사 문화 자료의 최신 상태를 확인한다.
+3. 공고 항목을 쪼개 후보자 근거를 수집하고 항목마다 판정한다. 판정 값과 점수, 가중치는 `application-package-writer` 의 `references/fit-judgment.md` 가 소유한다.
+4. 적합도 판정 뒤 후보자 인터뷰를 진행한다. 기존 답변을 읽고, 동기, 당시 제약, 본인 판단, 기각한 대안과 확인하지 못한 결과 중 비어 있는 독립 질문을 최대 넷까지 묶어 확인한다.
+5. 지원 판단과 근거를 `evidence/`의 `fit.md`, `strategy.md`, `status.md`에 관심사별로 나눠 적는다. 공고 항목별 적합도 표는 공고의 주요 업무, 기대 경험과 우대 경험을 항목 단위로 모두 담는다.
+6. 공고 책임, 제출 근거 방어와 경험 공백을 `evidence/interview-questions.json`에 구조화한다.
+7. 지원 전략이 준비되면 `resume-preparer`가 이력서와 필요한 경력기술서를 작성하고 검증한다.
+8. `application-package.html`을 만든다. 화면 구성은 [`code-architecture.md`](code-architecture.md#application-package-writer)가 소유한다.
+9. 사용자는 이 화면에서 지원동기, 소유권, 가장 강한 사례, 공백과 입사 후 기여 시나리오를 검토한다.
+10. 외부에 보이는 문장을 전수 검사해 대상 범위, 본인 역할, 측정 대상과 포지션 연결이 독자에게 다르게 해석되지 않는지 확인한다.
+11. 같은 경험의 대상, 역할, 수치와 기간이 지원 전략, 이력서, 경력기술서와 지원서 답변에서 일치하는지 대조한다.
+12. 문서 근거로 고칠 수 없는 사실만 질문으로 돌리고, 독립적인 질문은 최대 넷까지 묶는다.
+13. 공고 원문, 후보자 답변과 제출 문서를 다시 대조하고 제출 문장의 내부 정보 유출을 검사한다.
+14. 준비 상태와 함께 사람 확인 상태를 `complete` 또는 `needs_input`으로 남기며, 미확인 항목이 있으면 `ready`로 판정하지 않는다.
+15. 최종 제출 문서, 근거 원장과 검토표의 문구 해시가 모두 일치해야 `ready`로 끝낸다.
+16. `ready`여도 실제 제출은 사용자 승인 전까지 수행하지 않는다.
+
+## interview-practice
+
+### 답변 연습
+
+짧은 답변을 반복하고 약점을 다음 실행에 반영한다.
+
+1. 포지션별 연습이면 private brain에서 현재 지원 대상을 찾는다.
+2. 대응하는 지원 디렉터리의 포지션 질문, 공개 질문 은행과 개인 질문 자료에서 문제를 고른다.
+3. 사용자가 먼저 자신의 답변을 작성한다.
+4. 에이전트가 정확성, 구조, 근거, 전달력을 평가한다.
+5. 보완할 핵심과 다음 복습 시점을 정한다.
+6. `state/drill-progress.json`에 진행 상태를 갱신한다.
+7. 현재 지원 대상이 있으면 공고 책임, 근거 방어와 명시한 경험 공백을 후속 질문에 반영한다.
+8. 답변이 충분하면 판단, 반례, 운영과 근거 경계로 최대 네 단계까지 꼬리질문을 이어간다.
+9. 틀린 답변은 한 번 명확히 확인한 뒤 반복 압박하지 않고 학습 항목과 다음 복습 시점으로 전환한다.
+
+사용자의 생각을 바탕으로 실제 말할 수 있는 답변을 만든다.
+
+### 질문 은행 갱신
+
+`interview-practice`의 공개 질문 유지보수 절차에서 일반 질문과 개인 경험 질문을 분리한다.
+
+1. 등록된 공식 문서, 기술 블로그, 공개 영상과 GitHub 가이드에서 실행별 후보를 임시 경로에 수집한다.
+2. 질문 은행의 카테고리와 수준 분포, 현재 공고의 책임과 private brain의 경험 경계를 비교한다.
+3. 블로그, 영상과 GitHub 가이드에서 실무 사례와 빠진 범위만 찾고 기술 사실은 공식 원문에서 다시 검증한다.
+4. 출처 묶음을 `public/question-bank/sources.json`에 등록하거나 기존 항목을 재사용한다.
+5. 공개 질문 후보의 중복, 목표 수준, 답변 신호와 꼬리질문 깊이를 검증한다.
+6. 일반화할 수 있는 질문만 `public/question-bank/`에 추가한다.
+7. 개인 경력에서 반복해서 연습할 일반 질문은 `library/question-bank/`에 둔다.
+8. 공고와 지원 근거에서 나온 포지션별 질문은 해당 `applications/` 디렉터리의 `evidence/interview-questions.json`에 둔다.
+9. 답변 연습은 세 범위를 합쳐 사용할 수 있지만 공개 산출물에는 개인 질문과 포지션별 질문을 포함하지 않는다.
+10. 일반 연습에서는 질문 은행을 수정하지 않으며, 공개·개인·포지션 질문 묶음이 모두 비었을 때만 필요한 최소 질문을 보강하고 연습을 이어간다.
+
+## position-recommender
 
 외부 채용 소스의 열린 공고에서 실제 지원 후보를 고른다.
 
@@ -115,6 +234,13 @@ flowchart TD
     P --> Q[비공개 release 반영]
 ```
 
+수집기는 외부 요청 전에 개인 제외 설정을 읽는다.
+누락이나 형식 오류가 있으면 종료 코드 1로 중단한다.
+규칙이 필요 없는 환경은 사람이 확인한 `exclusions: []` 를 명시한다.
+
+실패 소스가 허용 개수를 넘거나 후보가 0건이면 수집기는 후보풀을 남기고 종료 코드 1로 끝낸다.
+그 뒤 단계를 진행하지 않는다.
+
 모델은 닫힌 공고를 추측해 제거하지 않는다.
 마감일과 활성 상태처럼 명시적으로 확인할 수 있는 조건은 수집 코드가 처리한다.
 수집 소스가 부분 실패했으면 해당 소스에서 보이지 않는 공고를 닫힌 것으로 바꾸지 않는다.
@@ -130,28 +256,9 @@ flowchart TD
 최종 답변 형식은 `position-recommender` 스킬 문서가 정하고 cron 실행과 수동 실행이 같은 형식을 쓴다.
 수집 경고가 있으면 그 줄을 최종 답변에 그대로 전달하고, 없으면 줄을 만들지 않는다.
 
-## 지원 준비와 검증
+## resume-preparer
 
-선택한 공고 하나에 맞춘 지원 자료를 만들고 제출 가능성을 검증한다.
-
-1. 공고 경로가 없으면 private brain에서 현재 지원 대상을 찾고 대응하는 지원 디렉터리를 확인한다.
-2. 공식 공고와 회사 문화 자료의 최신 상태를 확인한다.
-3. 공고 항목을 쪼개 후보자 근거를 수집하고 항목마다 판정한다. 판정 값과 점수, 가중치는 `application-package-writer` 의 `references/fit-judgment.md` 가 소유한다.
-4. 적합도 판정 뒤 후보자 인터뷰를 진행한다. 기존 답변을 읽고, 동기, 당시 제약, 본인 판단, 기각한 대안과 확인하지 못한 결과 중 비어 있는 독립 질문을 최대 넷까지 묶어 확인한다.
-5. 지원 판단과 근거를 `evidence/`의 `fit.md`, `strategy.md`, `status.md`에 관심사별로 나눠 적는다. 공고 항목별 적합도 표는 공고의 주요 업무, 기대 경험과 우대 경험을 항목 단위로 모두 담는다.
-6. 공고 책임, 제출 근거 방어와 경험 공백을 `evidence/interview-questions.json`에 구조화한다.
-7. 지원 전략이 준비되면 `resume-preparer`가 이력서와 필요한 경력기술서를 작성하고 검증한다.
-8. `application-package.html`을 만든다. 화면 구성은 [`data-schema.md`](data-schema.md#검토-화면)가 소유한다.
-9. 사용자는 이 화면에서 지원동기, 소유권, 가장 강한 사례, 공백과 입사 후 기여 시나리오를 검토한다.
-10. 외부에 보이는 문장을 전수 검사해 대상 범위, 본인 역할, 측정 대상과 포지션 연결이 독자에게 다르게 해석되지 않는지 확인한다.
-11. 같은 경험의 대상, 역할, 수치와 기간이 지원 전략, 이력서, 경력기술서와 지원서 답변에서 일치하는지 대조한다.
-12. 문서 근거로 고칠 수 없는 사실만 질문으로 돌리고, 독립적인 질문은 최대 넷까지 묶는다.
-13. 공고 원문, 후보자 답변과 제출 문서를 다시 대조하고 제출 문장의 내부 정보 유출을 검사한다.
-14. 준비 상태와 함께 사람 확인 상태를 `complete` 또는 `needs_input`으로 남기며, 미확인 항목이 있으면 `ready`로 판정하지 않는다.
-15. 최종 제출 문서, 근거 원장과 검토표의 문구 해시가 모두 일치해야 `ready`로 끝낸다.
-16. `ready`여도 실제 제출은 사용자 승인 전까지 수행하지 않는다.
-
-## 이력서 근거 감사와 개선
+### 근거 감사와 개선
 
 이력서와 경력기술서 문장을 실제 업무 근거에 연결하고 HTML 결과를 반복 개선한다.
 
@@ -184,154 +291,7 @@ flowchart TD
 
 개인 연락처가 포함된 이력서는 사용자의 명시적 요청 없이 공개 게시하지 않는다.
 
-## 기술·인성 면접 답변 연습
-
-짧은 답변을 반복하고 약점을 다음 실행에 반영한다.
-
-1. 포지션별 연습이면 private brain에서 현재 지원 대상을 찾는다.
-2. 대응하는 지원 디렉터리의 포지션 질문, 공개 질문 은행과 개인 질문 자료에서 문제를 고른다.
-3. 사용자가 먼저 자신의 답변을 작성한다.
-4. 에이전트가 정확성, 구조, 근거, 전달력을 평가한다.
-5. 보완할 핵심과 다음 복습 시점을 정한다.
-6. `state/drill-progress.json`에 진행 상태를 갱신한다.
-7. 현재 지원 대상이 있으면 공고 책임, 근거 방어와 명시한 경험 공백을 후속 질문에 반영한다.
-8. 답변이 충분하면 판단, 반례, 운영과 근거 경계로 최대 네 단계까지 꼬리질문을 이어간다.
-9. 틀린 답변은 한 번 명확히 확인한 뒤 반복 압박하지 않고 학습 항목과 다음 복습 시점으로 전환한다.
-
-사용자의 생각을 바탕으로 실제 말할 수 있는 답변을 만든다.
-
-## 아침 읽을거리 추천
-
-등록된 외부 소스에서 그날 읽거나 볼 가치가 높은 자료를 선별한다.
-기본 실행은 기존 파일모드이며, 사용자가 명시적으로 `--library`를 지정하면 `career-os` 학습자료 API를 단일 원격 저장소로 사용한다.
-
-### 파일모드
-
-1. 공통 CLI가 홈서버의 최신 `state/` release를 준비한다.
-2. `state/morning-study-history.json`에서 이전에 추천한 자료의 `contentKey`와 직전 리포트의 `studyTopicKey`를 읽는다.
-3. `config/external-reading-sources.ts`의 활성 소스를 모두 읽는다.
-4. 피드와 페이지 어댑터가 최신 글과 영상을 결정적으로 수집하고 URL을 정규화한다.
-5. 같은 실행의 URL 중복을 제거하고 이전 이력과 같은 `contentKey`를 가진 후보를 표시한다.
-6. 모델은 이전 추천을 제외한 후보 중 사용자의 현재 업무, 목표 역할, 엔지니어링 판단 또는 제품·사업 관점에 구체적으로 연결되는 자료만 선별한다.
-7. 모델은 선별한 자료를 외부 원문에서 도출한 공부 주제로 묶고 각 주제에 커리어 관점의 질문을 작성한다.
-8. 선택 검증은 후보풀에 없는 자료, 실행 내 중복, 이전 자료와 직전 리포트 주제의 재선택을 거부한다.
-9. 같은 선별 결과에서 주제 중심 HTML을 만들고 공개 범위와 링크를 검증한다. JSON은 검증과 이력 반영에 사용한다.
-10. 검증된 리포트의 자료만 누적 이력에 원자적으로 반영한다.
-11. 완료 단계가 누적 이력이 포함된 작업본을 새 홈서버 release로 반영한다.
-12. 사용자가 공유 링크를 요청했으면 `report-publisher`로 Cloudflare Pages에 게시하고 공개 URL을 검증한다.
-13. 로컬 검토 또는 게시 검증을 마치면 시스템 임시 경로의 실행 자료를 정리한다.
-
-홈서버 release 충돌이나 이력 반영 실패가 발생하면 임시 리포트와 로컬 이력을 보존하고 이전 원격 release를 바꾸지 않는다.
-
-### 학습자료 API 연동모드
-
-이 절은 명시적으로 선택하는 library 모드의 현재 CLI 계약이다.
-클라이언트는 mock HTTP로 검증했으며 운영 서버 적용과 웹 UI 구현은 별도 작업이다.
-현재 기본 실행은 위 파일모드 계약을 따른다.
-저장 모델, cursor, 후보와 이관 payload는 [`data-schema.md`](data-schema.md#학습자료-api-연동-상태)가 소유한다.
-환경값, HTTP 동작과 모듈 배치는 [`code-architecture.md`](code-architecture.md#아침-읽을거리)가 소유한다.
-
-```mermaid
-sequenceDiagram
-    participant Skill as study-topic-recommender
-    participant Client as career-os study-library client
-    participant API as career-os study API
-    participant Model as 모델 선택
-    Skill->>Client: --library 실행과 환경 검증
-    Client->>API: 소스 등록과 mode별 cursor 조회
-    Client->>Skill: sourceKey와 mode에 맞는 수집 실행
-    Skill->>Client: 자료 묶음과 다음 cursor
-    Client->>API: 자료 묶음과 cursor 원자 저장
-    API-->>Client: 저장 영수증 또는 충돌
-    Client->>API: 후보 페이지와 historyVersion 조회
-    Client-->>Model: 기존 후보풀 스키마로 변환한 전체 후보
-    Model-->>Client: topic과 candidateId 선택
-    Client->>Skill: 기존 검증과 HTML 렌더링
-    Client->>API: recommendation-runs 저장
-    API-->>Client: historyVersion
-    opt 외부 게시 요청
-        Skill->>Skill: report-publisher로 게시
-        Client->>API: publications 기록
-    end
-```
-
-연동모드는 브라우저 관리자 세션을 복제하지 않는다.
-career-os client는 `STUDY_LIBRARY_URL`과 `STUDY_SERVICE_TOKEN`으로 서비스 인증을 사용한다.
-HTTP 계약과 저장 제약은 이 저장소의 `services/recommendation-api/`가 소유한다.
-수집 실패는 빈 페이지로 전송하지 않으며, cursor 저장은 서버가 자료 배치와 같은 트랜잭션으로 성공한 뒤에만 진행된 것으로 본다.
-
-최근 수집과 과거 수집은 같은 소스라도 `mode=recent`와 `mode=archive` cursor를 분리한다.
-각 실행의 20개 또는 48개 같은 수집 한도는 요청량 제한일 뿐 누적 보관 한도가 아니다.
-소스별 archive 수집 경로와 cursor 형식은 [`data-schema.md`](data-schema.md#학습자료-api-연동-상태)가 소유한다.
-추천 저장은 HTML과 report JSON 검증 후 별도 commit 명령으로 수행하며, `generatedAt`을 다시 만들지 않는다.
-
-실행 명령은 모두 저장소 루트에서 실행한다.
-`<RUN_DIR>`는 시스템 임시 디렉터리 아래의 실행별 경로이며 이름이 `study-topic-recommender.` 로 시작해야 한다.
-library 모드는 `STUDY_LIBRARY_URL`과 `STUDY_SERVICE_TOKEN`이 있어야 돈다.
-
-```bash
-# cwd: 저장소 루트
-bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
-  --run-dir <RUN_DIR> --library --collect-only --mode recent
-bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
-  --run-dir <RUN_DIR> --library --collect-only --mode archive --source-key kurly-tech --max-items 48
-bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
-  --run-dir <RUN_DIR> --library --prepare-candidates --limit 100
-bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
-  --run-dir <RUN_DIR> --library \
-  --candidate-pool <RUN_DIR>/state/reading-candidates.json \
-  --reading-selection <RUN_DIR>/reading-selection.json
-bun career-os/scripts/study-topic-recommender/validate_outputs.ts --run-dir <RUN_DIR>
-bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
-  --run-dir <RUN_DIR> --library --commit-recommendation \
-  --report <RUN_DIR>/state/morning-reading.json
-```
-
-archive cursor를 처음부터 다시 만들 때는 `--reset-cursor`를 함께 지정한다.
-허용 조합과 저장 방식은 [`data-schema.md`](data-schema.md#학습자료-api-연동-상태)가 소유한다.
-
-외부 게시가 성공하면 아래 명령으로 publications 기록만 추가한다.
-
-```bash
-# cwd: 저장소 루트
-bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
-  --run-dir <RUN_DIR> --library --record-publication \
-  --report-id morning-YYYY-MM-DD --channel cloudflare-pages \
-  --external-id morning-YYYY-MM-DD --published-at 2026-09-07T00:00:00.000Z \
-  --url https://example.com/morning-YYYY-MM-DD
-```
-
-기존 이력 가져오기는 본인 관리자 UI에 올릴 raw import payload와 dry-run preview를 만든다.
-실제 legacy `state/morning-study-history.json`을 읽는 import preview는 기존 private 작업본 동기화가 필요하므로 `skill begin study-topic-recommender` 뒤에 실행하고, 산출물 보존이 끝나면 `skill finish study-topic-recommender`를 수행한다.
-테스트는 fixture history와 fixture pages manifest만 사용해 begin/finish를 요구하지 않는다.
-
-```bash
-# cwd: 저장소 루트
-bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
-  --run-dir <RUN_DIR> --library --import-preview \
-  --history-file career-os/state/morning-study-history.json \
-  --pages-manifest <PAGES_MANIFEST_JSON> \
-  --output <RUN_DIR>/study-library-import-preview.json
-```
-
-추천·수집 실행의 `--library`는 `--history-file`, `--commit-history`, `--render-only`와 함께 사용할 수 없다.
-`--import-preview`만 legacy 파일을 읽어야 하므로 `--history-file`을 예외적으로 받는다.
-연동모드는 파일모드의 `state/morning-study-history.json`을 갱신하지 않는다.
-`--render-only`는 원격 쓰기를 하지 않으며 파일모드 전용으로 유지한다.
-API 장애, 인증 실패, 충돌이 발생하면 파일 이력으로 fallback하거나 dual-write하지 않고 오류를 알린다.
-`401`, `403`, `409`, `413`, `429`, `503`은 오류 코드와 requestId를 포함해 출력하고, 토큰과 원문 payload는 출력하지 않는다.
-`429`는 응답의 `Retry-After` 초를 표시하되 자동 장시간 대기는 하지 않는다.
-멱등 요청은 같은 본문과 같은 idempotencyKey로만 재시도한다.
-같은 키에 다른 본문이 필요하면 새 cursor 조회부터 다시 시작한다.
-응답 유실이 의심될 때도 로컬에서 성공으로 간주하지 않고 서버 영수증 재응답이나 충돌 응답으로 판정한다.
-
-외부 자료가 없는 학습 주제를 모델이 새로 만들지 않는다.
-공식 문서, 모델 발표와 최신 소식이라는 이유만으로 추천하지 않는다.
-기능 사용법만 나열하거나 사용자의 역할에서 전이할 판단이 없는 자료는 제외한다.
-새로운 후보가 없으면 과거 자료를 다시 채우지 않고 빈 상태를 보여준다.
-`study-topic-recommender` 호출만으로 외부 게시를 승인한 것으로 보지 않는다.
-
-## 이력서 작성 중 개인 맥락 조회와 환원
+### 개인 맥락 조회와 환원
 
 지원 작업본 준비 후 대표 사례 사실 확인 단계에서 경력·역할 선호·경험 경계를 조회한다.
 원고 작성 단계에서는 스킬의 개인 작성 취향을 적용하고, 새 질문이나 정정으로 부족해진 정보만 추가 조회한다.
@@ -361,30 +321,166 @@ flowchart TD
 brain 검색과 공개·비공개 분리, 저장 미리보기·승인·동시 수정 처리는 설치된 brain 스킬 계약을 따른다.
 지원 작업본의 동시 수정은 기존 revision 비교 계약을 따른다.
 
-## 질문 은행 갱신
+## study-topic-recommender
 
-`interview-practice`의 공개 질문 유지보수 절차에서 일반 질문과 개인 경험 질문을 분리한다.
+등록된 외부 소스에서 그날 읽거나 볼 가치가 높은 자료를 선별한다.
+기본 실행은 기존 파일모드이며, 사용자가 명시적으로 `--library`를 지정하면 `career-os` 학습자료 API를 단일 원격 저장소로 사용한다.
 
-1. 등록된 공식 문서, 기술 블로그, 공개 영상과 GitHub 가이드에서 실행별 후보를 임시 경로에 수집한다.
-2. 질문 은행의 카테고리와 수준 분포, 현재 공고의 책임과 private brain의 경험 경계를 비교한다.
-3. 블로그, 영상과 GitHub 가이드에서 실무 사례와 빠진 범위만 찾고 기술 사실은 공식 원문에서 다시 검증한다.
-4. 출처 묶음을 `public/question-bank/sources.json`에 등록하거나 기존 항목을 재사용한다.
-5. 공개 질문 후보의 중복, 목표 수준, 답변 신호와 꼬리질문 깊이를 검증한다.
-6. 일반화할 수 있는 질문만 `public/question-bank/`에 추가한다.
-7. 개인 경력에서 반복해서 연습할 일반 질문은 `library/question-bank/`에 둔다.
-8. 공고와 지원 근거에서 나온 포지션별 질문은 해당 `applications/` 디렉터리의 `evidence/interview-questions.json`에 둔다.
-9. 답변 연습은 세 범위를 합쳐 사용할 수 있지만 공개 산출물에는 개인 질문과 포지션별 질문을 포함하지 않는다.
-10. 일반 연습에서는 질문 은행을 수정하지 않으며, 공개·개인·포지션 질문 묶음이 모두 비었을 때만 필요한 최소 질문을 보강하고 연습을 이어간다.
+### 파일모드
 
-## HTML 리포트 게시
+1. 공통 CLI가 홈서버의 최신 `state/` release를 준비한다.
+2. `state/morning-study-history.json`에서 이전에 추천한 자료의 `contentKey`와 직전 리포트의 `studyTopicKey`를 읽는다.
+3. `config/external-reading-sources.ts`의 활성 소스를 모두 읽는다.
+4. 피드와 페이지 어댑터가 최신 글과 영상을 결정적으로 수집하고 URL을 정규화한다.
+   YouTube 채널은 공식 Atom 피드를 먼저 쓰고, 피드를 읽을 수 없을 때만 공개 채널 페이지로 물러선다.
+5. 같은 실행의 URL 중복을 제거하고 이전 이력과 같은 `contentKey`를 가진 후보를 표시한다.
+6. 모델은 이전 추천을 제외한 후보 중 사용자의 현재 업무, 목표 역할, 엔지니어링 판단 또는 제품·사업 관점에 구체적으로 연결되는 자료만 선별한다.
+7. 모델은 선별한 자료를 외부 원문에서 도출한 공부 주제로 묶고 각 주제에 커리어 관점의 질문을 작성한다.
+8. 선택 검증은 후보풀에 없는 자료, 실행 내 중복, 이전 자료와 직전 리포트 주제의 재선택을 거부한다.
+9. 같은 선별 결과에서 주제 중심 HTML을 만들고 공개 범위와 링크를 검증한다. JSON은 검증과 이력 반영에 사용한다.
+10. 검증된 리포트의 자료만 누적 이력에 원자적으로 반영한다.
+11. 완료 단계가 누적 이력이 포함된 작업본을 새 홈서버 release로 반영한다.
+12. 사용자가 공유 링크를 요청했으면 `report-publisher`로 Cloudflare Pages에 게시하고 공개 URL을 검증한다.
+13. 로컬 검토 또는 게시 검증을 마치면 시스템 임시 경로의 실행 자료를 정리한다.
 
-사용자가 공유 링크를 요청했을 때만 외부 게시까지 이어간다.
+홈서버 release 충돌이나 이력 반영 실패가 발생하면 임시 리포트와 로컬 이력을 보존하고 이전 원격 release를 바꾸지 않는다.
 
-1. 리포트 HTML을 시스템 임시 디렉터리에 만든다.
-2. 개인 정보, 비공개 회사 맥락, 로컬 절대 경로를 검사한다.
-3. `report-publisher` skill로 Cloudflare Pages에 게시한다.
-4. 게시된 페이지와 핵심 링크가 열리는지 확인한다.
-5. 임시 HTML과 중간 데이터를 삭제한다.
-6. 검증된 URL과 다음 행동을 사용자에게 전달한다.
+### 학습자료 API 연동모드
 
-사용자가 로컬 사본을 명시적으로 요청한 경우에만 지정한 경로에 보존한다.
+명시적으로 `--library`를 지정했을 때의 흐름이다.
+client 만 구현했고 mock HTTP 로 검증했다. 서버는 구현하지 않았다.
+
+```mermaid
+sequenceDiagram
+    participant Skill as study-topic-recommender
+    participant Client as career-os study-library client
+    participant API as career-os study API
+    participant Model as 모델 선택
+    Skill->>Client: --library 실행과 환경 검증
+    Client->>API: 소스 등록과 mode별 cursor 조회
+    Client->>Skill: sourceKey와 mode에 맞는 수집 실행
+    Skill->>Client: 자료 묶음과 다음 cursor
+    Client->>API: 자료 묶음과 cursor 원자 저장
+    API-->>Client: 저장 영수증 또는 충돌
+    Client->>API: 후보 페이지와 historyVersion 조회
+    Client-->>Model: 기존 후보풀 스키마로 변환한 전체 후보
+    Model-->>Client: topic과 candidateId 선택
+    Client->>Skill: 기존 검증과 HTML 렌더링
+    Client->>API: recommendation-runs 저장
+    API-->>Client: historyVersion
+    opt 외부 게시 요청
+        Skill->>Skill: report-publisher로 게시
+        Client->>API: publications 기록
+    end
+```
+
+최근 수집과 과거 수집은 같은 소스라도 cursor를 분리한다.
+각 실행의 수집 한도는 요청량 제한일 뿐 누적 보관 한도가 아니다.
+추천 저장은 HTML과 report JSON 검증을 마친 뒤 별도 명령으로 수행하며 생성 시각을 다시 만들지 않는다.
+
+갈라지는 곳이다.
+
+- 수집이 실패하면 빈 페이지를 전송하지 않는다.
+- cursor 저장은 서버가 자료 배치와 같은 트랜잭션으로 성공한 뒤에만 진행된 것으로 본다.
+- API 장애, 인증 실패, 충돌이 나면 파일 이력으로 물러서거나 양쪽에 쓰지 않고 오류를 알린다.
+- 오류 코드와 requestId를 함께 출력하고 token과 원문 payload는 출력하지 않는다.
+- `429`는 응답의 `Retry-After` 초를 표시하되 자동으로 오래 기다리지 않는다.
+- 멱등 요청은 같은 본문과 같은 키로만 재시도한다.
+  같은 키에 다른 본문이 필요하면 cursor 조회부터 다시 시작한다.
+- 응답 유실이 의심될 때도 로컬에서 성공으로 보지 않는다.
+  서버의 영수증 재응답이나 충돌 응답으로 판정한다.
+
+두 모드가 읽고 쓰는 자리가 다르다.
+
+- 파일모드는 `skill begin` 으로 작업본을 받고 `state/morning-study-history.json` 을 읽은 뒤
+  `--commit-history` 로 이력을 갱신한다.
+- 연동모드는 그 파일을 읽지 않고 후보와 추천 이력을 API 에서 가져온다.
+  파일모드의 이력을 갱신하지 않는다.
+- legacy 이력을 읽는 import preview 만 `skill begin` 과 `skill finish` 예외를 둔다.
+
+연동모드는 브라우저 관리자 세션을 복제하지 않는다.
+
+실행 명령과 플래그 조합은 스킬의
+[`references/execution.md`](../.claude/skills/study-topic-recommender/references/execution.md)가 소유한다.
+저장 모델과 cursor 형식은 [`data-schema.md`](data-schema.md#study-topic-recommender)가 소유한다.
+
+### 학습자료 HTTP 계약
+
+아직 서버를 만들지 않았다. client 가 가정하는 계약이다.
+
+기본 경로는 `/api/study/v1`을 유지한다.
+`producer` token은 수집, 추천과 게시 기록에 사용하고,
+`admin-gateway` token은 `fos-blog`의 인증된 Server Action이 자료 조회와 개인 상태 변경에 사용한다.
+브라우저에는 두 token을 모두 전달하지 않는다.
+
+| endpoint                                | 허용 역할               | 계약                                           |
+| --------------------------------------- | ----------------------- | ---------------------------------------------- |
+| `PUT /sources/{sourceKey}`              | producer                | source 전체 교체와 version 검사                |
+| `GET /sources`                          | producer, admin-gateway | source 목록과 version 조회                     |
+| `GET /sources/{sourceKey}/cursor?mode=` | producer                | mode별 opaque cursor 조회                      |
+| `POST /ingestions`                      | producer                | 자료 묶음과 다음 cursor 원자 저장              |
+| `GET /materials`                        | admin-gateway           | 필터, 정렬과 cursor pagination                 |
+| `GET /materials/{id}`                   | admin-gateway           | 자료, source, tag와 개인 상태 조회             |
+| `PATCH /materials/{id}/state`           | admin-gateway           | 즐겨찾기, 읽음, 메모와 version 충돌 검사       |
+| `GET /candidates`                       | producer                | 누적 추천을 제외한 후보와 history version 조회 |
+| `GET /recommendation-runs`              | admin-gateway           | 추천 실행 목록 pagination                      |
+| `POST /recommendation-runs`             | producer                | 추천 전체 원자 저장과 중복 검사                |
+| `GET /recommendation-runs/{reportId}`   | admin-gateway           | 추천 당시 snapshot과 현재 개인 상태 조회       |
+| `POST /publications`                    | producer                | 외부 게시 성공 이력 저장                       |
+| `POST /imports/dry-run`                 | producer, admin-gateway | legacy 이관 미리보기와 preview hash 생성       |
+| `POST /imports/commit`                  | admin-gateway           | preview hash와 history version 검사 뒤 반영    |
+
+요청 본문은 1 MiB 이하이고 오류 응답은 `{error:{code,message,requestId}}`다.
+개인 응답은 `Cache-Control: private, no-store`와 `X-Robots-Tag: noindex, nofollow`를 사용한다.
+모든 쓰기 요청은 멱등 키를 요구하며 같은 key와 다른 요청 hash는 `409`로 거부한다.
+version 충돌도 `409`, 본문 상한 초과는 `413`, rate limit은 `429`, 저장소 장애는 `503`을 사용한다.
+
+career-os의 기존 `ReadingSource`는 API 소스 등록 요청으로 변환한다.
+`key`는 `sourceKey`, `title`, `category`, `url`, `feedUrl`, `adapter`, `enabled`는 같은 의미로 보낸다.
+API가 필수로 요구하는 `expectedVersion`은 `GET /sources` 결과의 version 또는 새 소스의 `0`에서 가져온다.
+필드가 비어 있으면 추정값을 만들지 않고, 없는 URL 필드는 명시적인 `null`로 보낸다.
+archive 수집 진입점은 config 필드가 아니라 sourceKey별 고정 registry가 소유하므로 `config/external-reading-sources.ts`의 schemaVersion은 바꾸지 않는다.
+Kurly와 OliveYoung은 최근 수집에서는 계속 `feed` adapter이고, archive mode에서만 registry의 sitemap index 수집기를 사용한다.
+
+API 후보 `Candidate`는 기존 후보풀의 `ReadingCandidate`로 변환한다.
+`Candidate.id`는 `contentKey`이며 기존 선택 파일의 `candidateId`로 사용한다.
+`recentStudyTopicKeys`는 후보풀의 같은 필드로 전달하고 `historyVersion`은 후보풀 옆 meta 파일에 보존한다.
+`historyVersion`은 recommendation-runs 요청 본문에 넣지 않는다.
+서버가 추천 저장 시점에 직전 주제와 누적 추천 집합을 다시 검증한다.
+`previouslyRecommended`는 서버 응답값을 사용하며 로컬 파일 이력으로 덮어쓰지 않는다.
+
+### 두 모드에 함께 적용하는 것
+
+외부 자료가 없는 학습 주제를 모델이 새로 만들지 않는다.
+공식 문서, 모델 발표와 최신 소식이라는 이유만으로 추천하지 않는다.
+기능 사용법만 나열하거나 사용자의 역할에서 전이할 판단이 없는 자료는 제외한다.
+새로운 후보가 없으면 과거 자료를 다시 채우지 않고 빈 상태를 보여준다.
+`study-topic-recommender` 호출만으로 외부 게시를 승인한 것으로 보지 않는다.
+
+## sync-profile
+
+원티드, LinkedIn, GitHub 프로필을 이력서 원고 기준으로 갱신한다.
+
+1. 공통 CLI로 작업본을 준비한다. `library/`와 `applications/`를 읽기 때문이다.
+2. 대상별 원고를 `library/profiles/`에서 읽는다.
+   원고가 없으면 가장 최근 지원의 이력서 초안을 출발점으로 삼아 공개 범위를 조정한 새 원고를 만든다.
+3. 사용자가 한 곳만 말해도 세 곳을 모두 읽고 원본과 어긋난 지점을 표로 보고한다.
+4. 공개 범위를 사용자에게 확인받는다. 사내 운영 수치, 사내 조직명과 도구 이름,
+   진행 중인 프로젝트의 종료월 표기가 여기 해당한다.
+5. 원고에 없던 문장을 새로 썼으면 `resume-preparer`의 판정 모델로 근거를 확인한다.
+6. 무엇을 어떻게 바꿀지 보여주고 승인을 받는다.
+7. 대상별 절차로 반영한다. **한 번에 한 항목씩 넣고 결과를 확인한다.**
+8. 반영한 값이 서버에 저장됐는지 대상별 방법으로 확인한다.
+9. 반영한 내용을 원고에 다시 적는다. 폼 제약으로 원고와 다르게 넣었으면 그 사실과 이유를 함께 남긴다.
+10. 완료 단계로 작업본을 발행한다.
+
+갈라지는 곳이다.
+
+- **화면에 값이 보이는 것은 저장의 증거가 아니다.** 원티드는 새로고침 뒤 서버에서 다시 조회하고,
+  LinkedIn은 프로필 화면으로 돌아가 확인하고, GitHub은 이미지 로드 상태를 확인한다.
+- 세 곳 중 하나라도 실패하면 그것을 먼저 알린다. 나머지가 성공했다고 넘어가지 않는다.
+- 로그인 화면이 나오면 멈추고 사용자에게 알린다. 자격 증명을 대신 입력하지 않는다.
+- 공개 범위 판단은 사용자만 한다. 지원본에 있던 문장이라도 그대로 옮기지 않는다.
+
+대상별 절차와 조작 스크립트는 스킬의
+[`references/`](../.claude/skills/sync-profile/)가 소유한다.

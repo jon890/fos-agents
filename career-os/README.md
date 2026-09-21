@@ -50,7 +50,7 @@ SSH client는 원격 transport 값을 넣고, 홈서버의 Hermes는 `CAREER_WOR
 
 ## 데이터 경계
 
-층별 저장 위치는 [`docs/data-schema.md`](docs/data-schema.md)의 「저장 원칙」이 소유한다.
+층별 저장 위치는 [`docs/code-architecture.md`](docs/code-architecture.md)의 「데이터 폴더」가 소유한다.
 외부로 나가는 동작의 승인 경계는 [`AGENTS.md`](AGENTS.md)의 「작업 경계」가 소유한다.
 
 ## 검증

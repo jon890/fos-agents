@@ -101,7 +101,53 @@ API 실패 때 파일모드로 대신 쓰거나 API와 파일 이력을 동시�
 library 모드는 `STUDY_LIBRARY_URL`과 `STUDY_SERVICE_TOKEN`을 요구한다.
 둘 중 하나라도 없으면 종료 코드 1로 멈춘다. `career-os/.env`에 두고 `--env-file`로 넘긴다.
 
-실행 명령과 플래그 제약은 [`flow.md`](../../../../docs/flow.md#학습자료-api-연동모드)가 소유한다.
+최근 수집과 과거 수집은 같은 소스라도 `mode=recent` 와 `mode=archive` cursor 를 분리한다.
+각 실행의 수집 한도는 요청량 제한일 뿐 누적 보관 한도가 아니다.
+추천 저장은 HTML 과 report JSON 검증 뒤 별도 commit 명령으로 수행하며 `generatedAt` 을 다시 만들지 않는다.
+
+실행 명령은 모두 저장소 루트에서 실행한다.
+`<RUN_DIR>` 는 시스템 임시 디렉터리 아래의 실행별 경로이며 이름이 `study-topic-recommender.` 로 시작해야 한다.
+
+```bash
+# cwd: 저장소 루트
+bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
+  --run-dir <RUN_DIR> --library --collect-only --mode recent
+bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
+  --run-dir <RUN_DIR> --library --collect-only --mode archive --source-key kurly-tech --max-items 48
+bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
+  --run-dir <RUN_DIR> --library --prepare-candidates --limit 100
+bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
+  --run-dir <RUN_DIR> --library \
+  --candidate-pool <RUN_DIR>/state/reading-candidates.json \
+  --reading-selection <RUN_DIR>/reading-selection.json
+bun career-os/scripts/study-topic-recommender/validate_outputs.ts --run-dir <RUN_DIR>
+bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
+  --run-dir <RUN_DIR> --library --commit-recommendation \
+  --report <RUN_DIR>/state/morning-reading.json
+```
+
+archive cursor 를 처음부터 다시 만들 때는 `--reset-cursor` 를 함께 지정한다.
+
+외부 게시가 성공하면 아래 명령으로 publications 기록만 추가한다.
+
+```bash
+# cwd: 저장소 루트
+bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
+  --run-dir <RUN_DIR> --library --record-publication \
+  --report-id morning-YYYY-MM-DD --channel cloudflare-pages \
+  --external-id morning-YYYY-MM-DD --published-at 2026-09-07T00:00:00.000Z \
+  --url https://example.com/morning-YYYY-MM-DD
+```
+
+플래그 제약이다.
+
+- `--library` 는 `--history-file`, `--commit-history`, `--render-only` 와 함께 쓸 수 없다.
+- `--import-preview` 만 legacy 파일을 읽어야 하므로 `--history-file` 을 예외로 받는다.
+- `--render-only` 는 원격 쓰기를 하지 않으며 파일모드 전용이다.
+- 연동모드는 파일모드의 `state/morning-study-history.json` 을 갱신하지 않는다.
+
+오류 응답은 `401`, `403`, `409`, `413`, `429`, `503` 을 오류 코드와 requestId 와 함께 출력하고
+token 과 원문 payload 는 출력하지 않는다.
 
 수집과 추천 저장은 서비스 Bearer 인증을 사용한다.
 관리자 브라우저 세션을 복제하지 않는다.
@@ -118,7 +164,14 @@ API payload에는 `provenance`를 보내지 않는다.
 아래 명령 전에는 `skill begin study-topic-recommender`를 실행하고, 산출물 보존이 끝나면 `skill finish study-topic-recommender`를 실행한다.
 fixture history와 fixture pages manifest를 쓰는 테스트는 begin과 finish를 요구하지 않는다.
 
-가져오기 명령도 [`flow.md`](../../../../docs/flow.md#학습자료-api-연동모드)가 소유한다.
+```bash
+# cwd: 저장소 루트
+bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
+  --run-dir <RUN_DIR> --library --import-preview \
+  --history-file career-os/state/morning-study-history.json \
+  --pages-manifest <PAGES_MANIFEST_JSON> \
+  --output <RUN_DIR>/study-library-import-preview.json
+```
 
 `--output`에는 본인 관리자 UI가 받을 raw `{importKey,reports}` JSON만 저장한다.
 dry-run 응답의 `previewHash`, `historyVersion`, `counts`, `warnings`는 `<output>.preview.json`에 저장한다.
