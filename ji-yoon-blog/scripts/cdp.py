@@ -24,6 +24,7 @@ import json
 import os
 import socket
 import struct
+import time
 import urllib.request
 
 PORT = int(os.environ.get("JI_YOON_BLOG_CDP_PORT", "9222"))
@@ -143,6 +144,7 @@ class Page:
         self.ws = Socket(ws_url, timeout=timeout)
         self.next_id = 0
         self.dialogs: list[str] = []
+        self.events: list[dict] = []
         # `confirm` 이나 `alert` 가 뜨면 페이지 실행이 통째로 멈춘다.
         # 그 상태에서는 어떤 명령도 응답하지 않아 전부 시간 초과로 끝난다.
         # 실측으로 임시저장 글 삭제가 그런 confirm 을 띄웠다.
@@ -172,10 +174,35 @@ class Page:
                 self._notify("Page.handleJavaScriptDialog", accept=True)
                 continue
             if message.get("id") != sent:
+                if message.get("method"):
+                    self.events.append(message)
                 continue
             if "error" in message:
                 raise CdpError(f"{method}: {message['error'].get('message')}")
             return message.get("result", {})
+
+    def wait_event(self, method: str, seconds: float = 20.0) -> dict | None:
+        """그 이름의 이벤트가 올 때까지 기다린다. 이미 받아 둔 것이 있으면 그것을 먼저 준다.
+
+        파일 선택 창처럼 명령의 응답이 아니라 이벤트로 오는 것을 받을 때 쓴다.
+        """
+        for i, kept in enumerate(self.events):
+            if kept.get("method") == method:
+                return self.events.pop(i).get("params", {})
+
+        deadline = time.monotonic() + seconds
+        while time.monotonic() < deadline:
+            try:
+                message = json.loads(self.ws.recv())
+            except CdpError:
+                return None
+            except OSError:
+                return None
+            if message.get("method") == method:
+                return message.get("params", {})
+            if message.get("method"):
+                self.events.append(message)
+        return None
 
     def js(self, expression: str):
         """페이지 안에서 JS 를 돌리고 값을 돌려준다."""
