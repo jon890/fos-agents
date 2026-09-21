@@ -5,20 +5,29 @@ import type { Prisma } from "../generated/prisma/client.js";
 import { companyKey, positionIdentity, stableUuid } from "./hash.js";
 import {
   PositionsRepository,
+  type AnalysisRunItemRow,
+  type AnalysisRunItemUpdate,
+  type AnalysisRunRow,
   type CollectionPositionRow,
   type CompanyTierRunItemRow,
   type CompanyTierRunItemUpdate,
   type CompanyTierRunRow,
+  type NewAnalysisRow,
   type PositionAnalysisRow,
   type UpsertedPosition,
 } from "./repository/positions.repository.js";
 import {
   analysisPolicySchema,
+  analysisQueueResponseSchema,
+  analysisResultsResponseSchema,
   companyPreferenceSchema,
   companyTierQueueResponseSchema,
   companyTierResultsResponseSchema,
   positionPreparationResponseSchema,
   type AnalysisPolicy,
+  type AnalysisQueueResponse,
+  type AnalysisResultsRequest,
+  type AnalysisResultsResponse,
   type CollectionRequest,
   type CompanyPreference,
   type CompanyTierQueueResponse,
@@ -243,6 +252,135 @@ export class PositionsService {
     });
   }
 
+  /**
+   * 수집 실행 하나에 공고 분석 실행을 연다.
+   *
+   * 회사 tier 평가가 끝나야 공고의 tier 를 확정할 수 있으므로 그 전에는 만들지 않는다.
+   * 이미 만든 실행이 있으면 그 대기열을 그대로 돌려준다.
+   */
+  async createPositionAnalysisRun(
+    collectionRunId: string,
+    now = new Date().toISOString(),
+  ): Promise<AnalysisQueueResponse> {
+    return this.repository.transaction(async (tx) => {
+      const policy = await this.requirePolicy(tx);
+      const collection = await this.repository.findCollectionRun(collectionRunId, tx);
+      if (!collection) throw new ApiError(404, "NOT_FOUND", "수집 실행을 찾을 수 없습니다.");
+      await this.repository.lockCollectionRun(collectionRunId, collection.collectedAt, tx);
+
+      const existing = await this.repository.findAnalysisRunByCollection(collectionRunId, tx);
+      if (existing) {
+        const stored = await this.repository.findAnalysisRunWithItems(existing.analysisRunId, tx);
+        return this.queueResponse(tx, policy, stored!.run, stored!.items, now);
+      }
+
+      await this.repository.reclaimExpiredCompanyTierLeases(
+        new Date(Date.parse(now) - COMPANY_TIER_LEASE_MS).toISOString(),
+        now,
+        tx,
+      );
+      const tierRun = await this.repository.findCompanyTierRunByCollectionRun(collectionRunId, tx);
+      if (!tierRun) {
+        throw new ApiError(409, "COMPANY_TIER_RUN_MISSING", "회사 tier 실행이 아직 없습니다.");
+      }
+      if (tierRun.status === "pending") {
+        throw new ApiError(
+          409,
+          "COMPANY_TIER_RUN_PENDING",
+          "회사 tier 평가가 끝나지 않아 공고 분석 실행을 만들 수 없습니다.",
+        );
+      }
+
+      const selected = await this.repository.selectAnalysisQueue(
+        {
+          collectionRunId,
+          collectedAt: collection.collectedAt,
+          candidateContextVersion: policy.candidateContextVersion,
+          analysisContractVersion: DEFAULT_ANALYSIS_CONTRACT_VERSION,
+          companyTierContractVersion: tierRun.contractVersion,
+          defaultCompanyTier: policy.defaultCompanyTier,
+          today: now.slice(0, 10),
+          prioritySlots: policy.prioritySlots,
+          agingSlots: policy.agingSlots,
+        },
+        tx,
+      );
+      const run: AnalysisRunRow = {
+        analysisRunId: stableUuid(`analysis:${collectionRunId}`),
+        collectionRunId,
+        candidateContextVersion: policy.candidateContextVersion,
+        contractVersion: DEFAULT_ANALYSIS_CONTRACT_VERSION,
+        status: selected.length === 0 ? "completed" : "pending",
+        analyzedNowCount: 0,
+        createdAt: now,
+      };
+      await this.repository.insertAnalysisRun(
+        run,
+        selected.length === 0 ? now : null,
+        selected,
+        tx,
+      );
+      const stored = await this.repository.findAnalysisRunWithItems(run.analysisRunId, tx);
+      return this.queueResponse(tx, policy, run, stored!.items, now);
+    });
+  }
+
+  /**
+   * 분석 결과와 실패를 실행에 반영한다.
+   *
+   * 아직 끝나지 않은 항목 전체가 한 번씩 와야 반영한다.
+   * 실패가 남으면 실행은 `partial` 로 두고 client 가 남은 항목만 다시 보낸다.
+   */
+  async saveAnalysisResults(
+    analysisRunId: string,
+    request: AnalysisResultsRequest,
+    now = new Date().toISOString(),
+  ): Promise<AnalysisResultsResponse> {
+    return this.repository.transaction(async (tx) => {
+      const run = await this.repository.lockAnalysisRun(analysisRunId, tx);
+      if (!run || run.collectionRunId !== request.collectionRunId) {
+        throw new ApiError(409, "VERSION_CONFLICT", "분석 실행과 수집 실행이 일치하지 않습니다.");
+      }
+      const items = (await this.repository.findAnalysisRunWithItems(analysisRunId, tx))!.items;
+      if (run.status === "completed") {
+        return this.resultsResponse(run.analysisRunId, run.status, items, false);
+      }
+
+      const openIds = items
+        .filter((item) => item.resultStatus === "pending" || item.resultStatus === "failed")
+        .map((item) => item.positionId);
+      const submittedIds = [
+        ...request.results.map((result) => result.positionId),
+        ...request.failures.map((failure) => failure.positionId),
+      ];
+      if (
+        new Set(submittedIds).size !== submittedIds.length ||
+        submittedIds.length !== openIds.length ||
+        openIds.some((positionId) => !submittedIds.includes(positionId))
+      ) {
+        throw new ApiError(
+          409,
+          "VERSION_CONFLICT",
+          "아직 끝나지 않은 모든 공고의 결과가 한 번씩 필요합니다.",
+        );
+      }
+
+      const applied = await this.applyAnalysisResults(run, items, request, now, tx);
+      const status = applied.some((item) => item.resultStatus === "failed")
+        ? ("partial" as const)
+        : ("completed" as const);
+      const analyzedNowCount = applied.filter((item) => item.resultStatus === "created").length;
+      await this.repository.updateAnalysisRunStatus(
+        run.analysisRunId,
+        status,
+        analyzedNowCount,
+        now,
+        tx,
+      );
+      return this.resultsResponse(run.analysisRunId, status, applied, true);
+    });
+  }
+
   // ------------------------------------------------------------------ 내부 흐름
 
   private async requirePolicy(tx: Prisma.TransactionClient): Promise<AnalysisPolicy> {
@@ -448,6 +586,144 @@ export class PositionsService {
     await this.repository.insertCompanyTierAssessments(created, tx);
     await this.repository.updateCompanyTierRunItems(updates, tx);
     return applied;
+  }
+
+  /**
+   * 결과와 실패를 실행 항목에 반영한다.
+   *
+   * 같은 공고 version 에 같은 두 버전 조합의 분석이 이미 있으면 새로 만들지 않고 그것을 잇는다.
+   * 새로 만든 분석에는 이 실행을 생성 출처로 남긴다.
+   * 항목의 `result_status` 와 분석의 `created_by_analysis_run_id` 가 같은 사실을 두 자리에 담으므로
+   * 둘을 한 transaction 안에서 함께 쓴다.
+   */
+  private async applyAnalysisResults(
+    run: AnalysisRunRow,
+    items: AnalysisRunItemRow[],
+    request: AnalysisResultsRequest,
+    now: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<AnalysisRunItemRow[]> {
+    const byId = new Map(items.map((item) => [item.positionId, item]));
+    const reusable = await this.repository.findAnalysesForVersions(
+      request.results.map((result) => byId.get(result.positionId)!.positionVersionId),
+      run.candidateContextVersion,
+      run.contractVersion,
+      tx,
+    );
+    const created: NewAnalysisRow[] = [];
+    const updates: AnalysisRunItemUpdate[] = [];
+    const analyzedPositionIds: string[] = [];
+    const applied = items.map((item) => ({ ...item }));
+    const appliedById = new Map(applied.map((item) => [item.positionId, item]));
+
+    const { staleAfterDays } = await this.requirePolicy(tx);
+    for (const result of request.results) {
+      const item = byId.get(result.positionId)!;
+      const existingId = reusable.get(item.positionVersionId);
+      const analysisId = existingId ?? crypto.randomUUID();
+      if (!existingId) {
+        created.push({
+          ...result,
+          analysisId,
+          positionVersionId: item.positionVersionId,
+          candidateContextVersion: run.candidateContextVersion,
+          contractVersion: run.contractVersion,
+          createdByAnalysisRunId: run.analysisRunId,
+          analyzedAt: now,
+          validUntil: dateOnlyAfterDays(now, staleAfterDays),
+          companyTierAtAnalysis: item.companyTier,
+        });
+      }
+      const resultStatus = existingId ? ("reused" as const) : ("created" as const);
+      updates.push({
+        analysisRunId: run.analysisRunId,
+        positionId: result.positionId,
+        resultStatus,
+        analysisId,
+        failureCode: null,
+        completedAt: now,
+      });
+      analyzedPositionIds.push(result.positionId);
+      const target = appliedById.get(result.positionId)!;
+      target.resultStatus = resultStatus;
+      target.analysisId = analysisId;
+      target.failureCode = null;
+      target.attemptCount += 1;
+    }
+
+    for (const failure of request.failures) {
+      updates.push({
+        analysisRunId: run.analysisRunId,
+        positionId: failure.positionId,
+        resultStatus: "failed",
+        analysisId: null,
+        failureCode: failure.failureCode,
+        completedAt: now,
+      });
+      const target = appliedById.get(failure.positionId)!;
+      target.resultStatus = "failed";
+      target.analysisId = null;
+      target.failureCode = failure.failureCode;
+      target.attemptCount += 1;
+    }
+
+    await this.repository.insertAnalyses(created, tx);
+    await this.repository.updateAnalysisRunItems(updates, tx);
+    // 분석이 붙은 공고는 더 기다리지 않는다. 대기 시작 시각을 비워 다음 우선순위에서 뺀다.
+    await this.repository.setPendingSince(analyzedPositionIds, null, now, tx);
+    return applied;
+  }
+
+  private async queueResponse(
+    tx: Prisma.TransactionClient,
+    policy: AnalysisPolicy,
+    run: AnalysisRunRow,
+    items: AnalysisRunItemRow[],
+    generatedAt: string,
+  ): Promise<AnalysisQueueResponse> {
+    const positions = await this.repository.listCollectionPositions(run.collectionRunId, tx);
+    return analysisQueueResponseSchema.parse({
+      schemaVersion: 2,
+      collectionRunId: run.collectionRunId,
+      analysisRunId: run.analysisRunId,
+      generatedAt,
+      candidates: items.map((item) => ({
+        positionId: item.positionId,
+        candidateId: item.candidateId,
+        contentHash: item.contentHash,
+        analysisStatus: item.analysisStatus,
+        companyTier: item.companyTier,
+        resultStatus: item.resultStatus,
+        posting: item.posting,
+      })),
+      summary: await this.analysisSummary(
+        tx,
+        policy,
+        run.collectionRunId,
+        positions,
+        run.contractVersion,
+        generatedAt,
+      ),
+    });
+  }
+
+  private resultsResponse(
+    analysisRunId: string,
+    status: "pending" | "partial" | "completed",
+    items: AnalysisRunItemRow[],
+    applied: boolean,
+  ): AnalysisResultsResponse {
+    const count = (value: AnalysisRunItemRow["resultStatus"]) =>
+      items.filter((item) => item.resultStatus === value).length;
+    return analysisResultsResponseSchema.parse({
+      analysisRunId,
+      status,
+      createdCount: count("created"),
+      reusedCount: count("reused"),
+      failedCount: count("failed"),
+      remainingCount: count("pending") + count("failed"),
+      applied,
+    });
   }
 
   // ------------------------------------------------------------------ 응답 조립

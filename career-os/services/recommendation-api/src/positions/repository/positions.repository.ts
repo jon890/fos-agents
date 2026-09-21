@@ -4,8 +4,17 @@ import type { PostingCandidate, SourceDiagnostic } from "../../contracts/posting
 import { Prisma } from "../../generated/prisma/client.js";
 import { PrismaService } from "../../prisma/prisma.service.js";
 import { companyKey, positionContentHash, positionIdentity } from "../hash.js";
-import type { AnalysisPolicy, CompanyPreference } from "../schema.js";
-import type { CompanyTierFailureCode, StoredCompanyTierAssessment } from "../stored.js";
+import type {
+  AnalysisFailureCode,
+  AnalysisPolicy,
+  AnalysisUpdate,
+  CompanyPreference,
+} from "../schema.js";
+import type {
+  CompanyTierFailureCode,
+  CompanyTierSource,
+  StoredCompanyTierAssessment,
+} from "../stored.js";
 
 /** transaction 안팎에서 같은 질의를 쓸 수 있게 두 client 를 함께 받는다. */
 export type DbClient = PrismaService | Prisma.TransactionClient;
@@ -81,6 +90,81 @@ export type AnalysisRunSummaryRow = {
   analysisRunId: string;
   contractVersion: number;
   resultStatuses: Array<"pending" | "created" | "reused" | "failed">;
+};
+
+export type AnalysisRunRow = {
+  analysisRunId: string;
+  collectionRunId: string;
+  candidateContextVersion: string;
+  contractVersion: number;
+  status: "pending" | "partial" | "completed";
+  analyzedNowCount: number;
+  createdAt: string;
+};
+
+export type AnalysisRunItemRow = {
+  positionId: string;
+  positionVersionId: string;
+  candidateId: string;
+  contentHash: string;
+  selectionOrder: number;
+  analysisStatus: "new" | "changed" | "stale";
+  selectionReason: "priority" | "aging" | "overflow";
+  companyTier: number;
+  companyTierSource: CompanyTierSource;
+  companyTierAssessmentId: string | null;
+  resultStatus: "pending" | "created" | "reused" | "failed";
+  analysisId: string | null;
+  failureCode: AnalysisFailureCode | null;
+  attemptCount: number;
+  posting: PostingCandidate;
+};
+
+export type AnalysisCandidateRow = {
+  positionId: string;
+  positionVersionId: string;
+  candidateId: string;
+  contentHash: string;
+  analysisStatus: "new" | "changed" | "stale";
+  selectionReason: "priority" | "aging";
+  companyTier: number;
+  companyTierSource: CompanyTierSource;
+  companyTierAssessmentId: string | null;
+  posting: PostingCandidate;
+};
+
+/** 분석 대기열을 고를 때 질의가 필요로 하는 값 전부. */
+export type AnalysisQueueSpec = {
+  collectionRunId: string;
+  collectedAt: string;
+  candidateContextVersion: string;
+  analysisContractVersion: number;
+  companyTierContractVersion: number;
+  defaultCompanyTier: number;
+  today: string;
+  prioritySlots: number;
+  agingSlots: number;
+};
+
+export type AnalysisRunItemUpdate = {
+  analysisRunId: string;
+  positionId: string;
+  resultStatus: "created" | "reused" | "failed";
+  analysisId: string | null;
+  failureCode: AnalysisFailureCode | null;
+  completedAt: string;
+};
+
+/** `position_analyses` 한 행. 분석 본문은 요청이 보낸 값을 그대로 담는다. */
+export type NewAnalysisRow = AnalysisUpdate & {
+  analysisId: string;
+  positionVersionId: string;
+  candidateContextVersion: string;
+  contractVersion: number;
+  createdByAnalysisRunId: string;
+  analyzedAt: string;
+  validUntil: string;
+  companyTierAtAnalysis: number;
 };
 
 type RawRow = Record<string, unknown>;
@@ -868,6 +952,313 @@ export class PositionsRepository {
       SET status = ${status}, assessed_now_count = ${assessedNowCount},
           completed_at = ${at(completedAt)}
       WHERE company_tier_run_id = ${companyTierRunId}
+    `;
+  }
+  // ------------------------------------------------------------ 공고 분석 실행
+
+  /**
+   * 분석 실행 행을 잠그고 읽는다.
+   *
+   * 멱등 키가 다른 두 요청이 같은 실행에 동시에 오면 뒤의 것이 여기서 기다린다.
+   * 이 잠금이 없으면 둘이 같은 대기 항목을 각자 읽고 서로의 결과를 덮어쓴다.
+   */
+  async lockAnalysisRun(
+    analysisRunId: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<AnalysisRunRow | undefined> {
+    const rows = await tx.$queryRaw<RawRow[]>`
+      SELECT analysis_run_id, collection_run_id, candidate_context_version, contract_version,
+             status, analyzed_now_count, created_at
+      FROM position_analysis_runs WHERE analysis_run_id = ${analysisRunId}
+      FOR UPDATE
+    `;
+    return rows[0] ? this.toAnalysisRun(rows[0]) : undefined;
+  }
+
+  private toAnalysisRun(row: RawRow): AnalysisRunRow {
+    return {
+      analysisRunId: String(row.analysis_run_id),
+      collectionRunId: String(row.collection_run_id),
+      candidateContextVersion: String(row.candidate_context_version),
+      contractVersion: number(row.contract_version),
+      status: row.status as "pending" | "partial" | "completed",
+      analyzedNowCount: number(row.analyzed_now_count),
+      createdAt: iso(row.created_at),
+    };
+  }
+
+  /** 실행과 그 항목을 함께 읽는다. 항목은 응답에 필요한 공고 본문까지 담는다. */
+  async findAnalysisRunWithItems(
+    analysisRunId: string,
+    client: DbClient = this.prisma,
+  ): Promise<{ run: AnalysisRunRow; items: AnalysisRunItemRow[] } | undefined> {
+    const runRows = await client.$queryRaw<RawRow[]>`
+      SELECT analysis_run_id, collection_run_id, candidate_context_version, contract_version,
+             status, analyzed_now_count, created_at
+      FROM position_analysis_runs WHERE analysis_run_id = ${analysisRunId}
+    `;
+    if (!runRows[0]) return undefined;
+    const itemRows = await client.$queryRaw<RawRow[]>`
+      SELECT i.position_id, i.position_version_id, i.selection_order, i.analysis_status,
+             i.selection_reason, i.company_tier, i.company_tier_source,
+             i.company_tier_assessment_id, i.result_status, i.analysis_id, i.failure_code,
+             i.attempt_count, pv.content_hash, pv.snapshot_json
+      FROM position_analysis_run_items i
+      JOIN position_versions pv ON pv.position_version_id = i.position_version_id
+      WHERE i.analysis_run_id = ${analysisRunId}
+      ORDER BY i.selection_order
+    `;
+    return {
+      run: this.toAnalysisRun(runRows[0]),
+      items: itemRows.map((row) => {
+        const posting = jsonValue<PostingCandidate>(row.snapshot_json);
+        return {
+          positionId: String(row.position_id),
+          positionVersionId: String(row.position_version_id),
+          candidateId: posting.id,
+          contentHash: String(row.content_hash),
+          selectionOrder: number(row.selection_order),
+          analysisStatus: row.analysis_status as "new" | "changed" | "stale",
+          selectionReason: row.selection_reason as "priority" | "aging" | "overflow",
+          companyTier: number(row.company_tier),
+          companyTierSource: row.company_tier_source as CompanyTierSource,
+          companyTierAssessmentId:
+            row.company_tier_assessment_id === null
+              ? null
+              : String(row.company_tier_assessment_id),
+          resultStatus: row.result_status as "pending" | "created" | "reused" | "failed",
+          analysisId: row.analysis_id === null ? null : String(row.analysis_id),
+          failureCode: (row.failure_code ?? null) as AnalysisFailureCode | null,
+          attemptCount: number(row.attempt_count),
+          posting,
+        };
+      }),
+    };
+  }
+
+  /**
+   * 아직 분석이 필요한 공고를 회사 tier 와 함께 읽는 조각이다.
+   *
+   * 회사 tier 는 사람 override, 유효한 모델 평가, 정책 기본값 순으로 해결한다.
+   * 그 순서를 `COALESCE` 와 `CASE` 로 표현해 애플리케이션이 다시 고르지 않게 한다.
+   * 유효한 분석이 이미 있는 공고는 `NOT EXISTS` 로 여기서 빠진다.
+   */
+  private analysisCandidatesSql(spec: AnalysisQueueSpec): Prisma.Sql {
+    return Prisma.sql`
+      SELECT p.position_id, pci.position_version_id, pv.content_hash, pv.snapshot_json,
+             COALESCE(p.pending_since, ${at(spec.collectedAt)}) AS pending_since,
+             CAST(pci.close_urgency AS CHAR) AS close_urgency,
+             CASE
+               WHEN NOT EXISTS (
+                 SELECT 1 FROM position_analyses a WHERE a.position_id = p.position_id
+               ) THEN 'new'
+               WHEN NOT EXISTS (
+                 SELECT 1 FROM position_analyses a
+                 WHERE a.position_version_id = pci.position_version_id
+               ) THEN 'changed'
+               ELSE 'stale'
+             END AS analysis_status,
+             COALESCE(pref.tier, valid.recommended_tier, ${spec.defaultCompanyTier})
+               AS company_tier,
+             CASE
+               WHEN pref.company_key IS NOT NULL THEN 'manual'
+               WHEN valid.company_tier_assessment_id IS NOT NULL THEN 'model'
+               ELSE 'default'
+             END AS company_tier_source,
+             CASE
+               WHEN pref.company_key IS NULL THEN valid.company_tier_assessment_id
+               ELSE NULL
+             END AS company_tier_assessment_id
+      FROM position_collection_items pci
+      JOIN positions p ON p.position_id = pci.position_id
+      JOIN position_versions pv ON pv.position_version_id = pci.position_version_id
+      LEFT JOIN company_preferences pref ON pref.company_key = p.company_key
+      LEFT JOIN LATERAL (
+        SELECT a.company_tier_assessment_id, a.recommended_tier
+        FROM company_tier_assessments a
+        WHERE a.company_key = p.company_key
+          AND a.candidate_context_version = ${spec.candidateContextVersion}
+          AND a.contract_version = ${spec.companyTierContractVersion}
+          AND a.valid_until >= ${spec.today}
+        ORDER BY a.assessed_at DESC
+        LIMIT 1
+      ) valid ON TRUE
+      WHERE pci.run_id = ${spec.collectionRunId}
+        AND NOT EXISTS (
+          SELECT 1 FROM position_analyses fresh
+          WHERE fresh.position_version_id = pci.position_version_id
+            AND fresh.candidate_context_version = ${spec.candidateContextVersion}
+            AND fresh.contract_version = ${spec.analysisContractVersion}
+            AND fresh.valid_until >= ${spec.today}
+        )
+    `;
+  }
+
+  /**
+   * 분석 대기열을 고른다.
+   *
+   * 우선 슬롯은 회사 tier, 분석 상태, 마감 긴급도, 대기 시작 시각 순으로 고르고
+   * 보장 슬롯은 남은 후보 가운데 가장 오래 기다린 것부터 고른다.
+   * 두 슬롯의 합이 일일 상한과 같도록 정책 schema 가 강제하므로,
+   * 두 조회로 고르지 못한 자리를 다시 채우는 단계는 필요하지 않다.
+   * 순서는 `ORDER BY` 가 정한다. 여기서 고른 차례가 곧 `selection_order` 다.
+   */
+  async selectAnalysisQueue(
+    spec: AnalysisQueueSpec,
+    tx: Prisma.TransactionClient,
+  ): Promise<AnalysisCandidateRow[]> {
+    const candidates = this.analysisCandidatesSql(spec);
+    const priority = await tx.$queryRaw<RawRow[]>`
+      SELECT * FROM (${candidates}) c
+      ORDER BY c.company_tier ASC,
+               FIELD(c.analysis_status, 'new', 'changed', 'stale') ASC,
+               FIELD(c.close_urgency, 'urgent', 'soon', 'normal', 'no_deadline', 'unknown') ASC,
+               c.pending_since ASC,
+               c.position_id ASC
+      LIMIT ${Prisma.raw(String(Math.trunc(spec.prioritySlots)))}
+    `;
+    const taken = priority.map((row) => String(row.position_id));
+    const agingSlots = Math.trunc(spec.agingSlots);
+    const aging =
+      agingSlots === 0
+        ? []
+        : await tx.$queryRaw<RawRow[]>`
+            SELECT * FROM (${candidates}) c
+            ${
+              taken.length === 0
+                ? Prisma.empty
+                : Prisma.sql`WHERE c.position_id NOT IN (${Prisma.join(taken)})`
+            }
+            ORDER BY c.pending_since ASC, c.position_id ASC
+            LIMIT ${Prisma.raw(String(agingSlots))}
+          `;
+    return [
+      ...priority.map((row) => this.toAnalysisCandidate(row, "priority")),
+      ...aging.map((row) => this.toAnalysisCandidate(row, "aging")),
+    ];
+  }
+
+  private toAnalysisCandidate(
+    row: RawRow,
+    selectionReason: "priority" | "aging",
+  ): AnalysisCandidateRow {
+    const posting = jsonValue<PostingCandidate>(row.snapshot_json);
+    return {
+      positionId: String(row.position_id),
+      positionVersionId: String(row.position_version_id),
+      candidateId: posting.id,
+      contentHash: String(row.content_hash),
+      analysisStatus: row.analysis_status as "new" | "changed" | "stale",
+      selectionReason,
+      companyTier: number(row.company_tier),
+      companyTierSource: row.company_tier_source as CompanyTierSource,
+      companyTierAssessmentId:
+        row.company_tier_assessment_id === null ? null : String(row.company_tier_assessment_id),
+      posting,
+    };
+  }
+
+  /**
+   * 이미 만들어진 분석을 공고 version 별로 찾는다.
+   *
+   * 같은 공고 version 과 같은 두 버전 조합에는 분석이 하나만 있을 수 있다.
+   * 결과를 반영할 때 이 조회가 비어 있지 않으면 새로 만들지 않고 그것을 다시 쓴다.
+   */
+  async findAnalysesForVersions(
+    positionVersionIds: string[],
+    candidateContextVersion: string,
+    contractVersion: number,
+    client: DbClient = this.prisma,
+  ): Promise<Map<string, string>> {
+    if (positionVersionIds.length === 0) return new Map();
+    const rows = await client.$queryRaw<RawRow[]>`
+      SELECT position_version_id, analysis_id FROM position_analyses
+      WHERE position_version_id IN (${Prisma.join(positionVersionIds)})
+        AND candidate_context_version = ${candidateContextVersion}
+        AND contract_version = ${contractVersion}
+    `;
+    return new Map(
+      rows.map((row) => [String(row.position_version_id), String(row.analysis_id)]),
+    );
+  }
+
+  async insertAnalysisRun(
+    run: AnalysisRunRow,
+    completedAt: string | null,
+    candidates: AnalysisCandidateRow[],
+    tx: Prisma.TransactionClient,
+  ): Promise<void> {
+    await tx.$executeRaw`
+      INSERT INTO position_analysis_runs
+        (analysis_run_id, collection_run_id, candidate_context_version, contract_version,
+         status, analyzed_now_count, created_at, completed_at)
+      VALUES (${run.analysisRunId}, ${run.collectionRunId}, ${run.candidateContextVersion},
+              ${run.contractVersion}, ${run.status}, ${run.analyzedNowCount},
+              ${at(run.createdAt)}, ${completedAt === null ? null : at(completedAt)})
+    `;
+    for (const [index, candidate] of candidates.entries()) {
+      await tx.$executeRaw`
+        INSERT INTO position_analysis_run_items
+          (analysis_run_id, position_id, position_version_id, selection_order, analysis_status,
+           selection_reason, company_tier, company_tier_source, company_tier_assessment_id,
+           result_status, analysis_id, failure_code, attempt_count, completed_at)
+        VALUES (${run.analysisRunId}, ${candidate.positionId}, ${candidate.positionVersionId},
+                ${index + 1}, ${candidate.analysisStatus}, ${candidate.selectionReason},
+                ${candidate.companyTier}, ${candidate.companyTierSource},
+                ${candidate.companyTierAssessmentId}, 'pending', NULL, NULL, 0, NULL)
+      `;
+    }
+  }
+
+  /** 분석은 더하기만 한다. 과거 행을 고치거나 지우지 않는다. */
+  async insertAnalyses(rows: NewAnalysisRow[], tx: Prisma.TransactionClient): Promise<void> {
+    for (const analysis of rows) {
+      await tx.$executeRaw`
+        INSERT INTO position_analyses
+          (analysis_id, position_id, position_version_id, candidate_context_version,
+           contract_version, created_by_analysis_run_id, analyzed_at, valid_until,
+           company_tier_at_analysis, decision, fit_score, role_fit, scope_upside,
+           company_opportunity, constraints_score, reason, details_json, next_actions_json)
+        VALUES (${analysis.analysisId}, ${analysis.positionId}, ${analysis.positionVersionId},
+                ${analysis.candidateContextVersion}, ${analysis.contractVersion},
+                ${analysis.createdByAnalysisRunId}, ${at(analysis.analyzedAt)},
+                ${analysis.validUntil}, ${analysis.companyTierAtAnalysis}, ${analysis.decision},
+                ${analysis.fitScore}, ${analysis.scoreBreakdown.roleFit},
+                ${analysis.scoreBreakdown.scopeUpside},
+                ${analysis.scoreBreakdown.companyOpportunity},
+                ${analysis.scoreBreakdown.constraints}, ${analysis.reason},
+                ${JSON.stringify(analysis.details)}, ${JSON.stringify(analysis.nextActions)})
+      `;
+    }
+  }
+
+  async updateAnalysisRunItems(
+    updates: AnalysisRunItemUpdate[],
+    tx: Prisma.TransactionClient,
+  ): Promise<void> {
+    for (const update of updates) {
+      await tx.$executeRaw`
+        UPDATE position_analysis_run_items
+        SET result_status = ${update.resultStatus}, analysis_id = ${update.analysisId},
+            failure_code = ${update.failureCode}, attempt_count = attempt_count + 1,
+            completed_at = ${at(update.completedAt)}
+        WHERE analysis_run_id = ${update.analysisRunId} AND position_id = ${update.positionId}
+      `;
+    }
+  }
+
+  async updateAnalysisRunStatus(
+    analysisRunId: string,
+    status: "partial" | "completed",
+    analyzedNowCount: number,
+    completedAt: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<void> {
+    await tx.$executeRaw`
+      UPDATE position_analysis_runs
+      SET status = ${status}, analyzed_now_count = ${analyzedNowCount},
+          completed_at = ${at(completedAt)}
+      WHERE analysis_run_id = ${analysisRunId}
     `;
   }
 }

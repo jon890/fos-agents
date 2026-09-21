@@ -4,10 +4,14 @@ import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { PositionsService } from "./positions.service.js";
 import {
   analysisPolicySchema,
+  analysisResultsRequestSchema,
   collectionRequestSchema,
   companyPreferenceUpdateSchema,
   companyTierResultsRequestSchema,
   type AnalysisPolicy,
+  type AnalysisQueueResponse,
+  type AnalysisResultsRequest,
+  type AnalysisResultsResponse,
   type CollectionRequest,
   type CompanyPreference,
   type CompanyTierResultsRequest,
@@ -53,6 +57,23 @@ export class PositionsController {
     @Body(new ZodValidationPipe(collectionRequestSchema)) body: CollectionRequest,
   ): Promise<PositionPreparationResponse> {
     return this.positions.saveCollection(body);
+  }
+
+  @Post("collection-runs/:collectionRunId/analysis-runs")
+  @HttpCode(201)
+  createAnalysisRun(
+    @Param("collectionRunId") collectionRunId: string,
+  ): Promise<AnalysisQueueResponse> {
+    return this.positions.createPositionAnalysisRun(collectionRunId);
+  }
+
+  @Post("analysis-runs/:analysisRunId/results")
+  @HttpCode(200)
+  saveAnalysisResults(
+    @Param("analysisRunId") analysisRunId: string,
+    @Body(new ZodValidationPipe(analysisResultsRequestSchema)) body: AnalysisResultsRequest,
+  ): Promise<AnalysisResultsResponse> {
+    return this.positions.saveAnalysisResults(analysisRunId, body);
   }
 
   @Post("company-tier-runs/:companyTierRunId/results")
