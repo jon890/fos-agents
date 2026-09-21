@@ -144,6 +144,35 @@ Phase 05가 그 메모리 저장소를 지우므로 여기서 DB 기반으로 �
 
 가짜 저장소를 만들지 않는다. Phase 01의 container에 실제로 행을 넣고 확인한다.
 
+### 구현하면서 계획과 달라진 것
+
+계획서가 적은 형태보다 코드가 요구하는 쪽을 택한 자리다. 되돌리지 않는다.
+
+- **`resolveCompanyTiers`와 `findCompanyTierRunStatus`를 따로 두지 않는다.**
+  tier 해결 순서는 `selectAnalysisQueue`의 후보 질의 안에 `COALESCE`와 `CASE`로 들어가고,
+  회사 tier 실행 상태는 Phase 03의 `findCompanyTierRunByCollectionRun`이 이미 함께 준다.
+  쓰는 자리가 하나뿐인 것을 메서드로 빼지 않는다
+- **`findFreshAnalyses`는 `findAnalysesForVersions`이고 `valid_until`을 보지 않는다.**
+  결과를 반영할 때의 중복 판정은 만료 여부와 무관하게 같은 공고 version과 같은 두 버전 조합을
+  다시 쓰는 것이고, `uq_position_analysis_version_context_contract`가 요구하는 조건이 그것이다
+- **경로 변수에 `decodeURIComponent`를 다시 적용하지 않는다.**
+  Express가 `req.params`를 이미 해독한다. 한 번 더 하면 두 번 해독한다
+- **대기열 선택을 두 조회로 쓴다.** 정책 schema가
+  `prioritySlots + agingSlots == dailyAnalysisLimit`를 강제하므로
+  남는 자리를 다시 채우는 세 번째 단계는 어떤 입력에서도 후보를 고르지 못한다
+
+### 고치지 않고 남기는 것
+
+**수집이 보낸 `analysisContractVersion`이 분석 실행에서 1로 떨어진다.**
+`position_collection_runs`에 그 값을 담는 열이 없기 때문이다.
+
+전환 전 구현도 같았다. `position/sql-repository.ts:240`이 DB에서 수집을 읽을 때 `?? 1`로 떨어뜨리고,
+그 Map은 분석 실행 행에서 만들어지므로 분석 실행이 아직 없으면 옛 구현도 1이었다.
+`scripts/position-recommender/prepare_position_analysis.ts:19`의 기본값이 1이고
+저장소 어디에서도 다른 값을 넘기지 않는다.
+
+열을 더하는 것은 schema 변경이라 이 plan의 범위 밖이다. ADR-122의 「감당할 것」이 이것을 가진다.
+
 ## 검증
 
 Phase 01의 container를 쓴다. **다시 만들지 않는다.**
