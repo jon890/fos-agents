@@ -127,13 +127,28 @@ Prisma는 연결 실패를 `PrismaClientInitializationError`와 `P1001`·`P1002`
 **받은 값이 100자를 넘으면 쓰지 않고 새로 만든다** (`http/request.ts:43`).
 요청 객체에 실어 filter와 interceptor가 같은 값을 쓰게 한다.
 
-### 5. `src/common/auth.guard.ts` 신규
+### 5. `src/common/auth.middleware.ts` 신규
 
 `Authorization: Bearer <token>`을 확인한다. 틀리면 `401 UNAUTHORIZED`.
 **비교는 `timingSafeEqual`로 한다** (`http/request.ts:7`). `===`로 바꾸지 않는다.
 길이가 다르면 비교 전에 거절한다. `timingSafeEqual`은 길이가 다르면 예외를 던진다.
-`/health/live`와 `/health/ready`는 통과시킨다.
-`APP_GUARD`로 전역 등록하고 health는 데코레이터로 제외한다.
+
+**라우팅보다 먼저 돌아야 한다. 그래서 guard가 아니라 middleware다.**
+`APP_GUARD`는 매칭된 route에서만 돌기 때문에, 없는 경로에 token 없이 보낸 요청이
+`401`이 아니라 `404`가 된다. 전환 전 `app.ts`는 `authorize`를 라우팅 앞에 두어
+token 없이는 모든 경로가 `401`이었다.
+차이를 두면 인증 없는 호출자가 응답 코드로 어느 경로가 실재하는지 알아낼 수 있다.
+
+통과시키는 것은 `/health/live`와 `/health/ready` 둘뿐이다.
+전환 전에도 이 둘만 `authorize` 앞에 있었다.
+`/api/v1/auth/check`는 인증 대상이다. `app.ts`가 `authorize` 뒤에 두었다.
+
+**면제 목록을 한 곳에만 둔다.** middleware가 경로로 판정하고, guard와 데코레이터를 따로 두지 않는다.
+둘을 함께 두면 같은 판정이 두 곳에 생기고 면제 목록이 흩어진다.
+
+**오류 응답 본문을 만드는 자리가 middleware와 exception filter 둘이 된다.**
+`src/common/error-response.ts`에 함수 하나를 두고 그것이 형식을 소유한다.
+두 자리에서 각각 조립하면 한쪽만 고쳐져 형식이 갈린다.
 
 ### 6. `src/common/zod-validation.pipe.ts` 신규
 
@@ -173,8 +188,16 @@ zod의 오류 메시지를 응답 `message`에 그대로 담지 않는다. 기�
 ### 9. `src/main.ts`와 `src/app.module.ts` 신규
 
 `main.ts`는 `API_HOST`와 `API_PORT`로 listen 한다.
-NestJS의 기본 body parser 크기 상한을 설정값에 맞춘다.
-상한을 넘으면 `400 BODY_TOO_LARGE`로 낸다.
+
+**NestJS의 기본 body parser를 쓰지 않는다.** `bodyParser: false`로 끄고
+원문만 모으는 middleware와 멱등 interceptor 안의 판정으로 크기와 파싱을 다룬다.
+
+기본 parser를 쓰면 둘이 깨진다.
+
+- 기본 parser는 guard보다 먼저 돌아 순서가 뒤집힌다.
+  전환 전 순서는 「멱등 키 확인 → 본문 크기 → JSON 파싱」이고 `err-03`과 `err-06`이 그 순서에 걸린다
+- `body-parser`가 내는 오류는 express의 오류 경로로 빠져 exception filter를 거치지 않는다.
+  공개 오류 형식이 깨지고, 상한 초과가 `400 BODY_TOO_LARGE`가 아니라 `413`이 된다
 
 ### 기대값은 옛 구현에서 뽑아 둔 포착 파일이 소유한다
 
@@ -213,7 +236,11 @@ NestJS의 기본 body parser 크기 상한을 설정값에 맞춘다.
 - `GET /api/v1/auth/check`가 유효한 token에 204, 틀린 token에 401
 - 401 응답의 본문이 `{ error: { code: "UNAUTHORIZED", ... } }` 형식이다
 - 모든 응답에 `Cache-Control: no-store`와 `X-Request-Id`가 있다
-- 없는 경로가 `404 NOT_FOUND`이고 형식이 같다
+- 없는 경로에 **올바른 token**으로 보내면 `404 NOT_FOUND`이고 형식이 같다
+- 없는 경로에 **token 없이** 보내면 `401 UNAUTHORIZED`다.
+  인증이 라우팅보다 먼저 돌기 때문이다. 이 둘이 함께 있어야 회귀를 잡는다
+- `/health/live`와 `/health/ready`는 token 없이도 통과한다
+- `/api/v1/auth/check`는 token 없으면 `401`이다
 - 상한을 넘는 본문이 `400 BODY_TOO_LARGE`
 - 멱등 5단계: 새 키는 처리, 같은 키에 같은 본문은 저장된 응답,
   같은 키에 다른 본문은 `409 IDEMPOTENCY_CONFLICT`,
@@ -282,7 +309,10 @@ client가 읽는 경로가 `body.error.code`인 것을 확인하고, 테스트�
 | `career-os/services/recommendation-api/src/common/api-error.ts` | 신규 |
 | `career-os/services/recommendation-api/src/common/api-exception.filter.ts` | 신규 |
 | `career-os/services/recommendation-api/src/common/request-id.middleware.ts` | 신규 |
-| `career-os/services/recommendation-api/src/common/auth.guard.ts` | 신규 |
+| `career-os/services/recommendation-api/src/common/auth.middleware.ts` | 신규 |
+| `career-os/services/recommendation-api/src/common/error-response.ts` | 신규 |
+| `career-os/services/recommendation-api/src/common/raw-body.middleware.ts` | 신규 |
+| `career-os/services/recommendation-api/src/health/migration-directory.ts` | 신규 |
 | `career-os/services/recommendation-api/src/common/zod-validation.pipe.ts` | 신규 |
 | `career-os/services/recommendation-api/src/common/idempotency/receipt.repository.ts` | 신규 |
 | `career-os/services/recommendation-api/src/common/idempotency/idempotency.interceptor.ts` | 신규 |
