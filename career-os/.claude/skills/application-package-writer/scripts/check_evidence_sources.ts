@@ -39,7 +39,7 @@ export type EvidenceSourceSpec = {
  *
  * 홈서버 작업본은 `skill begin <SKILL_NAME>` 이 이미 받아 온다.
  * private brain 도 여기 없다. `brain-search` 로 조회하는 것이며 경로로 여는 것이 아니다.
- * `docs/code-architecture.md` 의 「현재 지원 대상과 면접 답변 연습」과 ADR-102 가
+ * `docs/code-architecture.md` 의 「interview-practice」와 ADR-102 가
  * 실행 스크립트가 brain 을 직접 조회하지 않는다고 정한다.
  *
  * `career-os/sources/fos-study` 는 추적하지 않는 clone 이거나 symlink 라서 워크트리에는 없다.

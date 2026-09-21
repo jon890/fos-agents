@@ -23,7 +23,7 @@ description: 공고가 찾는 사람과 후보자의 경험이 부합하는지 �
 
 ## 비공개 작업본 동기화
 
-[`flow.md`의 「비공개 작업 파일의 목표 흐름」](../../../docs/flow.md#비공개-작업-파일의-목표-흐름)을 `SKILL_NAME=application-package-writer`로 적용한다.
+[`flow.md`의 「비공개 작업본 동기화」](../../../docs/flow.md#비공개-작업본-동기화)을 `SKILL_NAME=application-package-writer`로 적용한다.
 
 ## 근거 원본 최신화 확인
 
@@ -296,7 +296,7 @@ bun career-os/.claude/skills/application-package-writer/scripts/render_applicati
 
 ## 산출물 계약
 
-층별 파일 배치는 `career-os/docs/data-schema.md`의 「지원 패키지」가 소유한다.
+층별 파일 배치는 `career-os/docs/code-architecture.md`의 「application-package-writer」가 소유한다.
 
 세 파일이 아래 절을 나눠 담는다. 어느 파일에 어느 절이 가는지가 계약이다.
 
