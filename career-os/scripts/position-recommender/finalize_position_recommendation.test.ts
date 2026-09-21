@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { RecommendationResponse } from "../../services/recommendation-api/position/schema.ts";
+import type { RecommendationResponse } from "../../services/recommendation-api/src/positions/schema.ts";
 import { finalizeRecommendation } from "./finalize_position_recommendation.ts";
 import { COLLECTION_WARNING_NOTE } from "./recommendation/final-answer.ts";
 

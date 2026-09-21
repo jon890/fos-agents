@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { z } from "zod";
 import { runCli, type CliSpec } from "../lib/cli.ts";
-import { companyKey, stableUuid } from "../../services/recommendation-api/position/hash.ts";
+import { companyKey, stableUuid } from "../../services/recommendation-api/src/positions/hash.ts";
 import type { RecommendationApiClient } from "./recommendation-api/client.ts";
 import { createRecommendationApiClient } from "./recommendation-api/client.ts";
 

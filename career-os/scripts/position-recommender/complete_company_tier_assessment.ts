@@ -2,7 +2,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { runCli, type CliSpec } from "../lib/cli.ts";
-import { canonicalRequestHash } from "../../services/recommendation-api/http/idempotency.ts";
+import { canonicalRequestHash } from "../../services/recommendation-api/src/common/idempotency/request-hash.ts";
 import {
   companyTierQueueFileSchema,
   companyTierUpdatesInputSchema,

@@ -3,7 +3,7 @@ import {
   companyTierFailureSchema,
   companyTierQueueResponseSchema,
   companyTierResultSchema,
-} from "../../../services/recommendation-api/position/schema.ts";
+} from "../../../services/recommendation-api/src/positions/schema.ts";
 
 /** API가 돌려준 `company-tier-queue.json` 계약이다. Backend 응답을 그대로 저장한다. */
 export const companyTierQueueFileSchema = companyTierQueueResponseSchema;

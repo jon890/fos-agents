@@ -1,0 +1,602 @@
+import { Injectable } from "@nestjs/common";
+
+import { ApiError } from "../common/api-error.js";
+import type { Prisma } from "../generated/prisma/client.js";
+import { companyKey, positionIdentity, stableUuid } from "./hash.js";
+import {
+  PositionsRepository,
+  type CollectionPositionRow,
+  type CompanyTierRunItemRow,
+  type CompanyTierRunItemUpdate,
+  type CompanyTierRunRow,
+  type PositionAnalysisRow,
+  type UpsertedPosition,
+} from "./repository/positions.repository.js";
+import {
+  analysisPolicySchema,
+  companyPreferenceSchema,
+  companyTierQueueResponseSchema,
+  companyTierResultsResponseSchema,
+  positionPreparationResponseSchema,
+  type AnalysisPolicy,
+  type CollectionRequest,
+  type CompanyPreference,
+  type CompanyTierQueueResponse,
+  type CompanyTierResultsRequest,
+  type CompanyTierResultsResponse,
+  type PositionPreparationResponse,
+} from "./schema.js";
+import type { StoredCompanyTierAssessment } from "./stored.js";
+
+/** 회사 tier 평가 임차권의 길이. 이 시간이 지나면 처리 중 표시를 회수한다. */
+const COMPANY_TIER_LEASE_MS = 2 * 60 * 60 * 1000;
+
+/** 회사 tier 실행이 없는 옛 수집을 해석할 때 쓰는 계약 버전이다. 요청 schema 의 기본값과 같다. */
+const DEFAULT_ANALYSIS_CONTRACT_VERSION = 1;
+
+type AnalysisStatus = "fresh" | "new" | "changed" | "stale";
+
+function dateOnlyAfterDays(iso: string, days: number): string {
+  const date = new Date(iso);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function publicDiagnostics(
+  diagnostics: Array<{ source: string; status: string; failedCount: number }>,
+) {
+  return diagnostics
+    .filter((diagnostic) => diagnostic.status === "partial" || diagnostic.status === "failed")
+    .sort((left, right) => left.source.localeCompare(right.source))
+    .map((diagnostic) => ({
+      source: diagnostic.source,
+      status: diagnostic.status as "partial" | "failed",
+      failedCount: diagnostic.failedCount,
+      reason: "일부 공고를 확인하지 못해 후보가 누락됐을 수 있습니다.",
+    }));
+}
+
+function analysisStatusOf(
+  contentHash: string,
+  analyses: PositionAnalysisRow[],
+  contextVersion: string,
+  contractVersion: number,
+  now: string,
+): AnalysisStatus {
+  const today = now.slice(0, 10);
+  const fresh = analyses.some(
+    (analysis) =>
+      analysis.contentHash === contentHash &&
+      analysis.candidateContextVersion === contextVersion &&
+      analysis.contractVersion === contractVersion &&
+      analysis.validUntil >= today,
+  );
+  if (fresh) return "fresh";
+  if (analyses.length === 0) return "new";
+  if (!analyses.some((analysis) => analysis.contentHash === contentHash)) return "changed";
+  return "stale";
+}
+
+function groupAnalyses(rows: PositionAnalysisRow[]): Map<string, PositionAnalysisRow[]> {
+  const grouped = new Map<string, PositionAnalysisRow[]>();
+  for (const row of rows) {
+    const values = grouped.get(row.positionId) ?? [];
+    values.push(row);
+    grouped.set(row.positionId, values);
+  }
+  return grouped;
+}
+
+/**
+ * 포지션 도메인의 정책과 회사 선호와 수집 실행을 다룬다.
+ *
+ * 상태 전체를 메모리에 올리지 않고 필요한 행만 읽는다.
+ * 쓰기는 하나의 transaction 안에서 자기 실행 행을 먼저 잠근 뒤에 진행한다.
+ */
+@Injectable()
+export class PositionsService {
+  constructor(private readonly repository: PositionsRepository) {}
+
+  async configurePolicy(
+    policy: AnalysisPolicy,
+    now = new Date().toISOString(),
+  ): Promise<AnalysisPolicy> {
+    await this.repository.transaction(async (tx) => {
+      await this.repository.lockPolicy(tx);
+      await this.repository.upsertPolicy(policy, now, tx);
+    });
+    return policy;
+  }
+
+  async listCompanyPreferences(): Promise<CompanyPreference[]> {
+    const preferences = await this.repository.listPreferences();
+    return preferences.sort((left, right) => left.companyKey.localeCompare(right.companyKey));
+  }
+
+  async updateCompanyPreference(
+    companyKeyParam: string,
+    value: Omit<CompanyPreference, "updatedAt">,
+    now = new Date().toISOString(),
+  ): Promise<CompanyPreference> {
+    if (value.companyKey !== companyKeyParam) {
+      throw new ApiError(409, "VERSION_CONFLICT", "회사 식별자가 요청 경로와 다릅니다.");
+    }
+    const preference = companyPreferenceSchema.parse({ ...value, updatedAt: now });
+    await this.repository.transaction((tx) => this.repository.upsertPreference(preference, tx));
+    return preference;
+  }
+
+  async saveCollection(
+    request: CollectionRequest,
+    now = new Date().toISOString(),
+  ): Promise<PositionPreparationResponse> {
+    const collectionRunId = request.pool.collectionRunId;
+    const collectedAt = request.pool.collectedAt;
+    return this.repository.transaction(async (tx) => {
+      const policy = await this.requirePolicy(tx);
+      await this.repository.lockCollectionRun(collectionRunId, collectedAt, tx);
+
+      const existingRun = await this.repository.findCompanyTierRunByCollectionRun(
+        collectionRunId,
+        tx,
+      );
+      if (existingRun) {
+        const analysisRun = await this.repository.findAnalysisRunByCollection(collectionRunId, tx);
+        return this.preparationResponse(
+          tx,
+          policy,
+          existingRun,
+          analysisRun?.contractVersion ?? DEFAULT_ANALYSIS_CONTRACT_VERSION,
+          now,
+        );
+      }
+
+      const upserted = await this.storeCandidates(request, tx);
+      await this.repository.upsertDiagnostics(collectionRunId, request.pool.sourceDiagnostics, tx);
+      await this.repository.insertCollectionItems(collectionRunId, upserted, tx);
+      await this.repository.completeCollectionRun(
+        collectionRunId,
+        collectedAt,
+        upserted.length,
+        request.pool.filterSummary.personalExcludedCount,
+        tx,
+      );
+      await this.refreshPendingSince(request, policy, upserted, now, tx);
+
+      const run = await this.openCompanyTierRun(request, policy, now, tx);
+      return this.preparationResponse(tx, policy, run, request.analysisContractVersion, now);
+    });
+  }
+
+  async saveCompanyTierResults(
+    companyTierRunId: string,
+    request: CompanyTierResultsRequest,
+    now = new Date().toISOString(),
+  ): Promise<CompanyTierResultsResponse> {
+    return this.repository.transaction(async (tx) => {
+      const policy = await this.requirePolicy(tx);
+      const run = await this.repository.lockCompanyTierRun(companyTierRunId, tx);
+      if (!run || run.collectionRunId !== request.collectionRunId) {
+        throw new ApiError(
+          409,
+          "VERSION_CONFLICT",
+          "회사 tier 실행과 수집 실행이 일치하지 않습니다.",
+        );
+      }
+      const items = await this.repository.listCompanyTierRunItems(companyTierRunId, tx);
+      const submittedKeys = [
+        ...request.results.map((result) => result.companyKey),
+        ...request.failures.map((failure) => failure.companyKey),
+      ];
+
+      if (run.status === "completed") {
+        // 끝난 실행에 같은 본문을 다시 보내면 멱등 응답을 돌려준다.
+        // 다만 이 실행이 고르지 않은 회사가 섞여 있으면 받아들이지 않는다.
+        // 멱등 키가 다르면 수신 기록을 지나쳐 여기까지 오기 때문이다.
+        const known = new Set(items.map((item) => item.companyKey));
+        if (submittedKeys.some((key) => !known.has(key))) {
+          throw new ApiError(
+            409,
+            "VERSION_CONFLICT",
+            "이 회사 tier 실행이 고르지 않은 회사가 결과에 있습니다.",
+          );
+        }
+        return this.companyTierResultsResponse(run.companyTierRunId, run.status, items, false);
+      }
+
+      if (Date.parse(now) - Date.parse(run.createdAt) >= COMPANY_TIER_LEASE_MS) {
+        throw new ApiError(
+          409,
+          "COMPANY_TIER_LEASE_EXPIRED",
+          "회사 tier 평가 임차권이 끝나 결과를 반영할 수 없습니다.",
+        );
+      }
+
+      const openKeys = items
+        .filter((item) => item.resultStatus === "pending" || item.resultStatus === "failed")
+        .map((item) => item.companyKey);
+      if (
+        new Set(submittedKeys).size !== submittedKeys.length ||
+        submittedKeys.length !== openKeys.length ||
+        openKeys.some((key) => !submittedKeys.includes(key))
+      ) {
+        throw new ApiError(
+          409,
+          "VERSION_CONFLICT",
+          "아직 끝나지 않은 모든 회사의 결과가 한 번씩 필요합니다.",
+        );
+      }
+
+      const applied = await this.applyCompanyTierResults(run, policy, items, request, now, tx);
+      const status = applied.some((item) => item.resultStatus === "failed")
+        ? ("partial" as const)
+        : ("completed" as const);
+      const assessedNowCount = applied.filter((item) => item.resultStatus === "created").length;
+      await this.repository.closeCompanyTierRun(
+        run.companyTierRunId,
+        status,
+        assessedNowCount,
+        now,
+        tx,
+      );
+      return this.companyTierResultsResponse(run.companyTierRunId, status, applied, true);
+    });
+  }
+
+  // ------------------------------------------------------------------ 내부 흐름
+
+  private async requirePolicy(tx: Prisma.TransactionClient): Promise<AnalysisPolicy> {
+    const parsed = analysisPolicySchema.safeParse(await this.repository.findPolicy(tx));
+    if (!parsed.success) {
+      throw new ApiError(409, "POLICY_NOT_CONFIGURED", "포지션 분석 정책이 준비되지 않았습니다.");
+    }
+    return parsed.data;
+  }
+
+  /** 제외 회사를 뺀 공고를 저장하고, 이번 수집에서 보이지 않은 공고를 내린다. */
+  private async storeCandidates(
+    request: CollectionRequest,
+    tx: Prisma.TransactionClient,
+  ): Promise<UpsertedPosition[]> {
+    const candidates = request.pool.candidates;
+    const preferences = await this.repository.findPreferencesFor(
+      [...new Set(candidates.map((posting) => companyKey(posting.company)))],
+      tx,
+    );
+    const accepted = new Map<string, (typeof candidates)[number]>();
+    for (const posting of candidates) {
+      if (preferences.get(companyKey(posting.company))?.disposition === "exclude") continue;
+      accepted.set(positionIdentity(posting), posting);
+    }
+    const postings = [...accepted.values()];
+    await this.repository.ensureSources(
+      [
+        ...postings.map((posting) => posting.source),
+        ...request.pool.sourceDiagnostics.map((diagnostic) => diagnostic.source),
+      ],
+      tx,
+    );
+    const upserted = await this.repository.upsertPositions(
+      postings,
+      request.pool.collectedAt,
+      tx,
+    );
+    await this.repository.markMissingPositionsNotSeen(
+      request.pool.sourceDiagnostics
+        .filter((diagnostic) => diagnostic.status === "ok")
+        .map((diagnostic) => diagnostic.source),
+      upserted.map((entry) => entry.positionId),
+      tx,
+    );
+    return upserted;
+  }
+
+  /** 유효한 분석이 있는 공고는 대기에서 빼고, 나머지는 처음 기다리기 시작한 시각을 유지한다. */
+  private async refreshPendingSince(
+    request: CollectionRequest,
+    policy: AnalysisPolicy,
+    upserted: UpsertedPosition[],
+    now: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<void> {
+    const analyses = groupAnalyses(
+      await this.repository.listAnalysesForCollection(request.pool.collectionRunId, tx),
+    );
+    const fresh: string[] = [];
+    const waiting: string[] = [];
+    for (const entry of upserted) {
+      const status = analysisStatusOf(
+        entry.contentHash,
+        analyses.get(entry.positionId) ?? [],
+        policy.candidateContextVersion,
+        request.analysisContractVersion,
+        now,
+      );
+      (status === "fresh" ? fresh : waiting).push(entry.positionId);
+    }
+    await this.repository.setPendingSince(fresh, null, request.pool.collectedAt, tx);
+    await this.repository.setPendingSince(
+      waiting,
+      request.pool.collectedAt,
+      request.pool.collectedAt,
+      tx,
+    );
+  }
+
+  private async openCompanyTierRun(
+    request: CollectionRequest,
+    policy: AnalysisPolicy,
+    now: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<CompanyTierRunRow> {
+    await this.repository.reclaimExpiredCompanyTierLeases(
+      new Date(Date.parse(now) - COMPANY_TIER_LEASE_MS).toISOString(),
+      now,
+      tx,
+    );
+    const selected = await this.repository.selectCompanyTierQueue(
+      request.pool.collectionRunId,
+      policy.candidateContextVersion,
+      request.companyTierContractVersion,
+      now.slice(0, 10),
+      policy.dailyCompanyTierLimit,
+      tx,
+    );
+    const run: CompanyTierRunRow = {
+      companyTierRunId: stableUuid(`company-tier:${request.pool.collectionRunId}`),
+      collectionRunId: request.pool.collectionRunId,
+      candidateContextVersion: policy.candidateContextVersion,
+      contractVersion: request.companyTierContractVersion,
+      status: selected.length === 0 ? "completed" : "pending",
+      assessedNowCount: 0,
+      createdAt: now,
+    };
+    await this.repository.insertCompanyTierRun(
+      run,
+      selected.length === 0 ? now : null,
+      selected,
+      tx,
+    );
+    return run;
+  }
+
+  /**
+   * 결과와 실패를 실행 항목에 반영한다.
+   *
+   * 이미 유효한 평가가 있으면 새 평가를 만들지 않고 그것을 다시 쓴다.
+   * 그래야 같은 회사를 같은 날 두 번 평가해도 모델 호출 결과가 새 행으로 쌓이지 않는다.
+   */
+  private async applyCompanyTierResults(
+    run: CompanyTierRunRow,
+    policy: AnalysisPolicy,
+    items: CompanyTierRunItemRow[],
+    request: CompanyTierResultsRequest,
+    now: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<CompanyTierRunItemRow[]> {
+    const byKey = new Map(items.map((item) => [item.companyKey, item]));
+    const reusable = await this.repository.findValidAssessments(
+      request.results.map((result) => result.companyKey),
+      run.candidateContextVersion,
+      run.contractVersion,
+      now.slice(0, 10),
+      tx,
+    );
+    const created: StoredCompanyTierAssessment[] = [];
+    const updates: CompanyTierRunItemUpdate[] = [];
+    const applied = items.map((item) => ({ ...item }));
+    const appliedByKey = new Map(applied.map((item) => [item.companyKey, item]));
+
+    for (const result of request.results) {
+      const item = byKey.get(result.companyKey)!;
+      const existing = reusable.get(result.companyKey);
+      const assessment: StoredCompanyTierAssessment = existing ?? {
+        companyTierAssessmentId: crypto.randomUUID(),
+        companyKey: result.companyKey,
+        companyName: item.companyName,
+        candidateContextVersion: run.candidateContextVersion,
+        contractVersion: run.contractVersion,
+        createdByCompanyTierRunId: run.companyTierRunId,
+        recommendedTier: result.recommendedTier,
+        confidence: result.confidence,
+        reason: result.reason,
+        signals: Object.fromEntries(result.signals.map((signal) => [signal.axis, signal.level])),
+        evidence: structuredClone(result.evidence),
+        assumptions: [...result.assumptions],
+        assessedAt: now,
+        validUntil: [
+          dateOnlyAfterDays(now, policy.companyTierStaleAfterDays),
+          ...result.evidence
+            .map((entry) => entry.validUntil)
+            .filter((entry): entry is string => Boolean(entry)),
+          ...(result.validUntil ? [result.validUntil] : []),
+        ].sort()[0]!,
+      };
+      if (!existing) created.push(assessment);
+      const resultStatus = existing ? ("reused" as const) : ("created" as const);
+      updates.push({
+        companyTierRunId: run.companyTierRunId,
+        companyKey: result.companyKey,
+        resultStatus,
+        companyTierAssessmentId: assessment.companyTierAssessmentId,
+        failureCode: null,
+        completedAt: now,
+      });
+      const target = appliedByKey.get(result.companyKey)!;
+      target.resultStatus = resultStatus;
+      target.companyTierAssessmentId = assessment.companyTierAssessmentId;
+      target.failureCode = null;
+      target.attemptCount += 1;
+    }
+
+    for (const failure of request.failures) {
+      updates.push({
+        companyTierRunId: run.companyTierRunId,
+        companyKey: failure.companyKey,
+        resultStatus: "failed",
+        companyTierAssessmentId: null,
+        failureCode: failure.failureCode,
+        completedAt: now,
+      });
+      const target = appliedByKey.get(failure.companyKey)!;
+      target.resultStatus = "failed";
+      target.companyTierAssessmentId = null;
+      target.failureCode = failure.failureCode;
+      target.attemptCount += 1;
+    }
+
+    await this.repository.insertCompanyTierAssessments(created, tx);
+    await this.repository.updateCompanyTierRunItems(updates, tx);
+    return applied;
+  }
+
+  // ------------------------------------------------------------------ 응답 조립
+
+  private async preparationResponse(
+    tx: Prisma.TransactionClient,
+    policy: AnalysisPolicy,
+    run: CompanyTierRunRow,
+    analysisContractVersion: number,
+    generatedAt: string,
+  ): Promise<PositionPreparationResponse> {
+    const positions = await this.repository.listCollectionPositions(run.collectionRunId, tx);
+    return positionPreparationResponseSchema.parse({
+      schemaVersion: 2,
+      collectionRunId: run.collectionRunId,
+      generatedAt,
+      companyTierQueue: await this.companyTierQueueResponse(tx, run, positions, generatedAt),
+      summary: await this.analysisSummary(
+        tx,
+        policy,
+        run.collectionRunId,
+        positions,
+        analysisContractVersion,
+        generatedAt,
+      ),
+    });
+  }
+
+  private async analysisSummary(
+    tx: Prisma.TransactionClient,
+    policy: AnalysisPolicy,
+    collectionRunId: string,
+    positions: CollectionPositionRow[],
+    analysisContractVersion: number,
+    generatedAt: string,
+  ) {
+    const collection = await this.repository.findCollectionRun(collectionRunId, tx);
+    const diagnostics = await this.repository.listCollectionDiagnostics(collectionRunId, tx);
+    const analyses = groupAnalyses(
+      await this.repository.listAnalysesForCollection(collectionRunId, tx),
+    );
+    const statuses = positions.map((position) =>
+      analysisStatusOf(
+        position.contentHash,
+        analyses.get(position.positionId) ?? [],
+        policy.candidateContextVersion,
+        analysisContractVersion,
+        generatedAt,
+      ),
+    );
+    const analysisRun = await this.repository.findAnalysisRunByCollection(collectionRunId, tx);
+    const items = analysisRun?.resultStatuses ?? [];
+    return {
+      activeCount: positions.length,
+      reusedCount: statuses.filter((status) => status === "fresh").length,
+      queuedCount: items.length,
+      pendingCount: statuses.filter((status) => status !== "fresh").length,
+      personalExcludedCount: collection?.personalExcludedCount ?? 0,
+      newCount: statuses.filter((status) => status === "new").length,
+      changedCount: statuses.filter((status) => status === "changed").length,
+      staleCount: statuses.filter((status) => status === "stale").length,
+      completedCount: items.filter((status) => status === "created" || status === "reused").length,
+      failedCount: items.filter((status) => status === "failed").length,
+      warningSourceCount: publicDiagnostics(diagnostics).length,
+    };
+  }
+
+  private async companyTierQueueResponse(
+    tx: Prisma.TransactionClient,
+    run: CompanyTierRunRow,
+    positions: CollectionPositionRow[],
+    generatedAt: string,
+  ): Promise<CompanyTierQueueResponse> {
+    const items = await this.repository.listCompanyTierRunItems(run.companyTierRunId, tx);
+    const companyKeys = [...new Set(positions.map((position) => position.companyKey))];
+    const preferences = await this.repository.findPreferencesFor(companyKeys, tx);
+    const valid = await this.repository.findValidAssessments(
+      companyKeys,
+      run.candidateContextVersion,
+      run.contractVersion,
+      generatedAt.slice(0, 10),
+      tx,
+    );
+    const latest = await this.repository.findLatestAssessments(
+      items.map((item) => item.companyKey),
+      run.candidateContextVersion,
+      run.contractVersion,
+      tx,
+    );
+    const urlsByCompany = new Map<string, string[]>();
+    for (const position of positions) {
+      const urls = urlsByCompany.get(position.companyKey) ?? [];
+      if (urls.length < 3) urls.push(position.postingUrl);
+      urlsByCompany.set(position.companyKey, urls);
+    }
+    const manualCount = companyKeys.filter((key) => preferences.has(key)).length;
+    const modelCount = companyKeys.filter(
+      (key) => !preferences.has(key) && valid.has(key),
+    ).length;
+    return companyTierQueueResponseSchema.parse({
+      schemaVersion: 1,
+      collectionRunId: run.collectionRunId,
+      companyTierRunId: run.companyTierRunId,
+      generatedAt,
+      status: run.status,
+      companies: items.map((item) => ({
+        companyKey: item.companyKey,
+        companyName: item.companyName,
+        assessmentStatus: item.assessmentStatus,
+        activePositionCount: item.activePositionCount,
+        representativePostingUrls: urlsByCompany.get(item.companyKey) ?? [],
+        priorTier: item.priorTier,
+        priorReason: item.priorTier === null ? null : (latest.get(item.companyKey)?.reason ?? null),
+        priorValidUntil:
+          item.priorTier === null ? null : (latest.get(item.companyKey)?.validUntil ?? null),
+      })),
+      summary: {
+        activeCompanyCount: companyKeys.length,
+        manualCount,
+        modelCount,
+        defaultCount: companyKeys.length - manualCount - modelCount,
+        queuedCount: items.length,
+        newCount: items.filter((item) => item.assessmentStatus === "new").length,
+        staleCount: items.filter((item) => item.assessmentStatus === "stale").length,
+        completedCount: items.filter(
+          (item) => item.resultStatus === "created" || item.resultStatus === "reused",
+        ).length,
+        failedCount: items.filter((item) => item.resultStatus === "failed").length,
+        pendingCount: items.filter((item) => item.resultStatus === "pending").length,
+      },
+    });
+  }
+
+  private companyTierResultsResponse(
+    companyTierRunId: string,
+    status: "pending" | "partial" | "completed",
+    items: CompanyTierRunItemRow[],
+    applied: boolean,
+  ): CompanyTierResultsResponse {
+    const count = (value: CompanyTierRunItemRow["resultStatus"]) =>
+      items.filter((item) => item.resultStatus === value).length;
+    return companyTierResultsResponseSchema.parse({
+      companyTierRunId,
+      status,
+      createdCount: count("created"),
+      reusedCount: count("reused"),
+      failedCount: count("failed"),
+      remainingCount: count("pending") + count("failed"),
+      applied,
+    });
+  }
+}

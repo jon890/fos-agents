@@ -6,10 +6,11 @@ import { IdempotencyInterceptor } from "./common/idempotency/idempotency.interce
 import { ReceiptRepository } from "./common/idempotency/receipt.repository.js";
 import { ConfigModule } from "./config/config.module.js";
 import { HealthModule } from "./health/health.module.js";
+import { PositionsModule } from "./positions/positions.module.js";
 import { PrismaModule } from "./prisma/prisma.module.js";
 
 @Module({
-  imports: [ConfigModule, PrismaModule, HealthModule],
+  imports: [ConfigModule, PrismaModule, HealthModule, PositionsModule],
   providers: [
     ReceiptRepository,
     { provide: APP_FILTER, useClass: ApiExceptionFilter },

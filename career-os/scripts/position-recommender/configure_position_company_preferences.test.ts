@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { companyPreferenceUpdateSchema } from "../../services/recommendation-api/position/schema.ts";
+import { companyPreferenceUpdateSchema } from "../../services/recommendation-api/src/positions/schema.ts";
 import { configurePositionCompanyPreferences } from "./configure_position_company_preferences.ts";
 
 function temporaryInput(value: string): { directory: string; path: string } {
