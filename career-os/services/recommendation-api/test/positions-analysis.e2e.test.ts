@@ -662,3 +662,96 @@ describe("같은 분석 실행에 동시에 온 두 요청", () => {
     expect(await inconsistentCreatedOrigins(), "ADR-119 정합성 조회 결과 행 수").toBe(0);
   });
 });
+
+describe("동률인 평가 가운데 이기는 행", () => {
+  /**
+   * 한 배치의 모든 평가가 같은 `assessed_at` 을 쓴다.
+   * 시각만으로 「가장 늦은 것」 을 고르면 동률에서 승자가 정해지지 않고
+   * 같은 입력에 다른 회사 tier 가 나온다. 평가 ID 를 두 번째 기준으로 둬 순서를 정한다.
+   */
+  it("assessed_at 이 같으면 평가 ID 가 큰 행을 고르고 실행마다 같다", async () => {
+    await configure();
+    const first = await collect("collection-1", [{ company: "회사 1", key: "p-1" }]);
+    await assess("collection-1", first, { "회사 1": 1 });
+
+    const rows = await harness.prisma.$queryRaw<
+      { company_tier_assessment_id: string; assessed_at: Date; valid_until: Date }[]
+    >`
+      SELECT company_tier_assessment_id, assessed_at, valid_until FROM company_tier_assessments
+    `;
+    expect(rows, "API 가 만든 평가 수").toHaveLength(1);
+    const base = rows[0]!;
+    // 같은 시각에 평가 둘을 더 넣는다. 셋 가운데 ID 가 가장 큰 것이 이겨야 한다.
+    for (const [id, tier] of [
+      ["00000000-0000-4000-8000-000000000000", 2],
+      ["ffffffff-ffff-4fff-bfff-ffffffffffff", 3],
+    ] as const) {
+      await harness.prisma.$executeRawUnsafe(
+        `INSERT INTO company_tier_assessments
+           (company_tier_assessment_id, company_key, company_name, candidate_context_version,
+            contract_version, created_by_company_tier_run_id, recommended_tier, confidence,
+            reason, signals_json, evidence_json, assumptions_json, assessed_at, valid_until)
+         SELECT ?, company_key, company_name, candidate_context_version, contract_version,
+                NULL, ?, confidence, reason, signals_json, evidence_json, assumptions_json,
+                assessed_at, valid_until
+         FROM company_tier_assessments WHERE company_tier_assessment_id = ?`,
+        id,
+        tier,
+        base.company_tier_assessment_id,
+      );
+    }
+
+    const tiers: number[] = [];
+    const chosen: (string | null)[] = [];
+    for (const runId of ["collection-2", "collection-3"]) {
+      const queue = await collect(runId, [{ company: "회사 1", key: "p-1" }]);
+      expect(queue.companies, `${runId} 은 유효한 평가가 있어 다시 평가하지 않는다`).toEqual([]);
+      const analysis = await openQueue(runId);
+      tiers.push(analysis.candidates[0]!.companyTier);
+      const item = await harness.prisma.$queryRaw<
+        { company_tier_assessment_id: string | null }[]
+      >`
+        SELECT company_tier_assessment_id FROM position_analysis_run_items
+        WHERE analysis_run_id = ${analysis.analysisRunId}
+      `;
+      chosen.push(item[0]!.company_tier_assessment_id);
+    }
+    expect(tiers, "두 실행이 고른 회사 tier").toEqual([3, 3]);
+    expect(chosen, "두 실행이 고른 평가 ID").toEqual([
+      "ffffffff-ffff-4fff-bfff-ffffffffffff",
+      "ffffffff-ffff-4fff-bfff-ffffffffffff",
+    ]);
+  });
+});
+
+describe("정책이 없어도 되는 경로", () => {
+  /**
+   * 전환 전 구현은 새 분석을 만들 때만 정책의 보관 일수를 읽었다.
+   * 실패만 담은 요청에서도 읽으면 정책이 없는 상태의 반영이 `409` 로 끝나 계약이 달라진다.
+   */
+  it("실패만 담은 분석 결과는 정책이 없어도 반영된다", async () => {
+    await configure();
+    await collect("collection-1", [
+      { company: "회사 1", key: "p-1" },
+      { company: "회사 2", key: "p-2" },
+    ]).then((queue) => assess("collection-1", queue, { "회사 1": 1, "회사 2": 2 }));
+    const queue = await openQueue("collection-1");
+    await harness.prisma.$executeRawUnsafe("DELETE FROM position_analysis_policy");
+
+    const reply = await submitResults(
+      queue.analysisRunId,
+      {
+        schemaVersion: 2,
+        collectionRunId: "collection-1",
+        results: [],
+        failures: queue.candidates.map((candidate) => ({
+          positionId: candidate.positionId,
+          failureCode: "model_unavailable",
+        })),
+      },
+      "failures-without-policy",
+    );
+    expect(reply.status, "정책 없는 상태의 실패 반영 status").toBe(200);
+    expect(reply.json).toMatchObject({ status: "partial", failedCount: 2, applied: true });
+  });
+});

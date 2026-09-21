@@ -11,6 +11,7 @@ import {
   legacyApiToken,
   legacyCase,
   legacyComparedColumns,
+  materializeLegacyBody,
   type LegacyErrorBody,
   type LegacyGiven,
   type LegacyRequest,
@@ -157,7 +158,7 @@ export async function startE2eHarness(): Promise<E2eHarness> {
           continue;
         }
         const reply = await send(entry.request.method, entry.request.path, {
-          body: entry.request.body,
+          body: materializeLegacyBody(entry.request.body),
           idempotencyKey: entry.request.headers.idempotencyKey ?? undefined,
         });
         expect(reply.status, `${id} 의 선행 요청 ${entry.label}`).toBe(entry.responseStatus);
@@ -169,7 +170,7 @@ export async function startE2eHarness(): Promise<E2eHarness> {
     async sendLegacyRequest(id) {
       const request = legacyCase(id).request;
       return send(request.method, request.path, {
-        body: request.body,
+        body: materializeLegacyBody(request.body),
         idempotencyKey: request.headers.idempotencyKey ?? undefined,
       });
     },

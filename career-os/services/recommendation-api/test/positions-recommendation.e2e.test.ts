@@ -474,3 +474,92 @@ describe("같은 분석 실행에 동시에 온 두 추천 요청", () => {
     expect(await recommendationItemCount(), "저장된 추천 순위 항목 수").toBe(2);
   });
 });
+
+describe("만들 때와 다시 읽을 때가 같다", () => {
+  /**
+   * 회사 식별자는 공백을 줄이고 소문자로 바꾼 값이다.
+   * 표시 이름만 다른 두 공고는 같은 회사이므로 tier 출처 집계에서 한 번만 세어야 한다.
+   * 만드는 경로와 다시 읽는 경로가 다른 키로 모으면 같은 추천 실행의 집계가 달라진다.
+   */
+  it("표시 이름만 다른 두 공고의 회사 tier 집계가 두 경로에서 같다", async () => {
+    await configure();
+    const queue = await collect("collection-1", [
+      { company: "Acme Corp", key: "p-1" },
+      { company: "acme  corp", key: "p-2" },
+    ]);
+    expect(
+      queue.companies.map((company) => company.companyKey),
+      "평가 대상 회사",
+    ).toEqual(["acme corp"]);
+    await assess("collection-1", queue, { "acme corp": 1 });
+    const analysis = await openQueue("collection-1");
+    await submitResults(
+      analysis.analysisRunId,
+      "collection-1",
+      analysis.candidates.map((candidate) => candidate.positionId),
+    );
+
+    const created = await createRecommendation(analysis.analysisRunId);
+    expect(created.status).toBe(201);
+    const body = created.json as RecommendationResponse;
+    expect(body.companyTierSummary, "만들 때의 회사 tier 집계").toEqual({
+      manualCount: 0,
+      modelCount: 1,
+      defaultCount: 0,
+      assessmentFailedCount: 0,
+    });
+
+    const reread = await send("GET", `/api/positions/v1/runs/${body.recommendationRunId}`);
+    expect(reread.status).toBe(200);
+    expect(
+      (reread.json as RecommendationResponse).companyTierSummary,
+      "다시 읽을 때의 회사 tier 집계",
+    ).toEqual(body.companyTierSummary);
+  });
+
+  /**
+   * 대기열 집계는 실행 행의 후보 문맥 버전으로 낸다.
+   * 지금 정책의 값을 쓰면 정책을 바꾼 뒤 같은 실행을 조회할 때 집계가 달라진다.
+   */
+  it("정책을 바꾼 뒤에도 같은 분석 실행의 집계가 그대로다", async () => {
+    await configure();
+    const queue = await collect("collection-1", [
+      { company: "회사 1", key: "p-1" },
+      { company: "회사 2", key: "p-2" },
+    ]);
+    await assess("collection-1", queue, { "회사 1": 1, "회사 2": 2 });
+    const analysis = await openQueue("collection-1");
+    await submitResults(
+      analysis.analysisRunId,
+      "collection-1",
+      analysis.candidates.map((candidate) => candidate.positionId),
+    );
+
+    const before = await send("GET", `/api/positions/v1/runs/${analysis.analysisRunId}`);
+    expect(before.status).toBe(200);
+    const summary = (before.json as AnalysisQueueResponse).summary;
+    expect(summary.reusedCount, "분석을 마친 공고 수").toBe(2);
+
+    await configure({ candidateContextVersion: "candidate-context-2026-12" }, "policy-changed");
+
+    const after = await send("GET", `/api/positions/v1/runs/${analysis.analysisRunId}`);
+    expect(after.status).toBe(200);
+    expect((after.json as AnalysisQueueResponse).summary, "정책을 바꾼 뒤의 집계").toEqual(summary);
+  });
+
+  /**
+   * 전환 전 구현은 실행 조회에서 정책을 읽지 않았다.
+   * 정책을 읽으면 정책이 없는 상태의 조회가 `409 POLICY_NOT_CONFIGURED` 로 끝나 계약이 달라진다.
+   */
+  it("정책이 없어도 분석 실행을 조회할 수 있다", async () => {
+    await configure();
+    const queue = await collect("collection-1", [{ company: "회사 1", key: "p-1" }]);
+    await assess("collection-1", queue, { "회사 1": 1 });
+    const analysis = await openQueue("collection-1");
+    await harness.prisma.$executeRawUnsafe("DELETE FROM position_analysis_policy");
+
+    const reply = await send("GET", `/api/positions/v1/runs/${analysis.analysisRunId}`);
+    expect(reply.status, "정책 없는 상태의 실행 조회 status").toBe(200);
+    expect((reply.json as AnalysisQueueResponse).analysisRunId).toBe(analysis.analysisRunId);
+  });
+});

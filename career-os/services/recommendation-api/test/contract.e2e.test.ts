@@ -1,3 +1,7 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
@@ -21,6 +25,7 @@ import {
   positionPreparationResponseSchema,
   recommendationResponseSchema,
 } from "../src/positions/schema.js";
+import { legacyCaseIds } from "./support/legacy-contract.js";
 import { startE2eHarness, type E2eHarness, type Reply } from "./support/e2e-harness.js";
 
 let harness: E2eHarness;
@@ -306,5 +311,29 @@ describe("client 가 오류를 읽는 경로", () => {
     const parsed = clientErrorSchema.safeParse(reply.json);
     expect(parsed.success, "오류 본문이 client 의 schema 를 만족하는지").toBe(true);
     expect(parsed.success && parsed.data.error.code, "client 가 읽는 오류 코드").toBe("NOT_FOUND");
+  });
+});
+
+/**
+ * 포착 파일의 case 가 하나도 놀지 않게 한다.
+ *
+ * endpoint 아홉은 위에서 집합으로 대조한다. case 34개에는 그 장치가 없어
+ * 어느 case 를 검사에서 빼도 아무것도 실패하지 않았다.
+ * 검사 소스에서 case ID 를 모아 포착 파일의 목록과 같은지 본다.
+ */
+describe("포착 파일의 case 가 모두 쓰인다", () => {
+  it("검사 소스가 34개 case 를 하나도 빠뜨리지 않는다", () => {
+    const directory = fileURLToPath(new URL(".", import.meta.url));
+    const sources = readdirSync(directory)
+      .filter((name) => name.endsWith(".test.ts"))
+      .map((name) => readFileSync(join(directory, name), "utf8"))
+      .join("\n");
+    const used = new Set(
+      legacyCaseIds.filter((id) => sources.includes(`"${id}"`)),
+    );
+    expect(
+      legacyCaseIds.filter((id) => !used.has(id)),
+      "어느 검사도 대조하지 않는 case",
+    ).toEqual([]);
   });
 });

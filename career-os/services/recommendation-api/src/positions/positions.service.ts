@@ -157,7 +157,7 @@ export class PositionsService {
   }
 
   async listCompanyPreferences(): Promise<CompanyPreference[]> {
-    const preferences = await this.repository.listPreferences();
+    const preferences = await this.repository.listPreferences(this.repository.reader());
     return preferences.sort((left, right) => left.companyKey.localeCompare(right.companyKey));
   }
 
@@ -189,14 +189,7 @@ export class PositionsService {
         tx,
       );
       if (existingRun) {
-        const analysisRun = await this.repository.findAnalysisRunByCollection(collectionRunId, tx);
-        return this.preparationResponse(
-          tx,
-          policy,
-          existingRun,
-          analysisRun?.contractVersion ?? DEFAULT_ANALYSIS_CONTRACT_VERSION,
-          now,
-        );
+        return this.preparationResponse(tx, policy, existingRun, now);
       }
 
       const upserted = await this.storeCandidates(request, tx);
@@ -212,7 +205,7 @@ export class PositionsService {
       await this.refreshPendingSince(request, policy, upserted, now, tx);
 
       const run = await this.openCompanyTierRun(request, policy, now, tx);
-      return this.preparationResponse(tx, policy, run, request.analysisContractVersion, now);
+      return this.preparationResponse(tx, policy, run, now);
     });
   }
 
@@ -310,7 +303,7 @@ export class PositionsService {
       const existing = await this.repository.findAnalysisRunByCollection(collectionRunId, tx);
       if (existing) {
         const stored = await this.repository.findAnalysisRunWithItems(existing.analysisRunId, tx);
-        return this.queueResponse(tx, policy, stored!.run, stored!.items, now);
+        return this.queueResponse(tx, stored!.run, stored!.items, now);
       }
 
       await this.repository.reclaimExpiredCompanyTierLeases(
@@ -360,7 +353,7 @@ export class PositionsService {
         tx,
       );
       const stored = await this.repository.findAnalysisRunWithItems(run.analysisRunId, tx);
-      return this.queueResponse(tx, policy, run, stored!.items, now);
+      return this.queueResponse(tx, run, stored!.items, now);
     });
   }
 
@@ -457,7 +450,7 @@ export class PositionsService {
    * 그때는 그 자리에서 만든다.
    */
   async getRun(id: string): Promise<AnalysisQueueResponse | RecommendationResponse> {
-    const found = await this.repository.findRunById(id);
+    const found = await this.repository.findRunById(id, this.repository.reader());
     if (!found) throw new ApiError(404, "NOT_FOUND", "실행을 찾을 수 없습니다.");
     if (found.kind === "recommendation-missing") {
       return this.createRecommendation(found.analysisRunId);
@@ -470,9 +463,10 @@ export class PositionsService {
         );
         return this.storedRecommendationResponse(stored!, tx);
       }
-      const policy = await this.requirePolicy(tx);
+      // 실행 조회는 정책을 읽지 않는다. 집계에 필요한 두 버전이 실행 행에 있다.
+      // 정책을 읽으면 정책 미설정 상태의 조회가 409 로 끝나 전환 전과 달라진다.
       const stored = await this.repository.findAnalysisRunWithItems(found.analysisRunId, tx);
-      return this.queueResponse(tx, policy, stored!.run, stored!.items, stored!.run.createdAt);
+      return this.queueResponse(tx, stored!.run, stored!.items, stored!.run.createdAt);
     });
   }
 
@@ -711,7 +705,12 @@ export class PositionsService {
     const applied = items.map((item) => ({ ...item }));
     const appliedById = new Map(applied.map((item) => [item.positionId, item]));
 
-    const { staleAfterDays } = await this.requirePolicy(tx);
+    // 정책은 새 분석의 보관 기한을 정할 때만 필요하다.
+    // 실패만 온 요청에서도 읽으면 정책 미설정 상태의 반영이 409 로 끝나 전환 전과 달라진다.
+    // 정책은 새 분석의 보관 기한을 정할 때만 필요하다.
+    // 실패만 온 요청에서도 읽으면 정책 미설정 상태의 반영이 409 로 끝나 전환 전과 달라진다.
+    const staleAfterDays =
+      request.results.length === 0 ? 0 : (await this.requirePolicy(tx)).staleAfterDays;
     for (const result of request.results) {
       const item = byId.get(result.positionId)!;
       const existingId = reusable.get(item.positionVersionId);
@@ -771,7 +770,6 @@ export class PositionsService {
 
   private async queueResponse(
     tx: Prisma.TransactionClient,
-    policy: AnalysisPolicy,
     run: AnalysisRunRow,
     items: AnalysisRunItemRow[],
     generatedAt: string,
@@ -793,9 +791,9 @@ export class PositionsService {
       })),
       summary: await this.analysisSummary(
         tx,
-        policy,
         run.collectionRunId,
         positions,
+        run.candidateContextVersion,
         run.contractVersion,
         generatedAt,
       ),
@@ -1001,9 +999,12 @@ export class PositionsService {
       company: string;
       companyTierSource?: CompanyTierSource;
     }>;
+    // 만드는 경로가 `positions.company_key` 로 모으므로 여기서도 같은 정규화를 쓴다.
+    // 표시 이름으로 모으면 대소문자와 공백만 다른 두 표기가 따로 세어져
+    // 같은 추천 실행인데 만들 때와 다시 읽을 때의 집계가 달라진다.
     const sourceByCompany = new Map<string, CompanyTierSource>();
     for (const entry of [...ranking, ...pendingCandidates]) {
-      sourceByCompany.set(entry.company, entry.companyTierSource ?? "default");
+      sourceByCompany.set(companyKey(entry.company), entry.companyTierSource ?? "default");
     }
     const diagnostics = await this.repository.listCollectionDiagnostics(
       stored.collectionRunId,
@@ -1046,11 +1047,17 @@ export class PositionsService {
 
   // ------------------------------------------------------------------ 응답 조립
 
+  /**
+   * 수집 응답을 조립한다.
+   *
+   * 분석 계약 버전은 언제나 `DEFAULT_ANALYSIS_CONTRACT_VERSION` 이다.
+   * `position_collection_runs` 에 요청이 보낸 값을 담는 열이 없어 되읽을 수 없고,
+   * 첫 호출과 재호출이 다른 값을 쓰면 같은 본문이 다른 응답을 낸다. ADR-122 가 그렇게 정했다.
+   */
   private async preparationResponse(
     tx: Prisma.TransactionClient,
     policy: AnalysisPolicy,
     run: CompanyTierRunRow,
-    analysisContractVersion: number,
     generatedAt: string,
   ): Promise<PositionPreparationResponse> {
     const positions = await this.repository.listCollectionPositions(run.collectionRunId, tx);
@@ -1061,20 +1068,27 @@ export class PositionsService {
       companyTierQueue: await this.companyTierQueueResponse(tx, run, positions, generatedAt),
       summary: await this.analysisSummary(
         tx,
-        policy,
         run.collectionRunId,
         positions,
-        analysisContractVersion,
+        policy.candidateContextVersion,
+        DEFAULT_ANALYSIS_CONTRACT_VERSION,
         generatedAt,
       ),
     });
   }
 
+  /**
+   * 대기열 집계를 만든다.
+   *
+   * 후보 문맥 버전을 인자로 받는다. 실행이 이미 있으면 그 실행 행의 값을 써야 한다.
+   * 지금 정책의 값을 쓰면 정책을 바꾼 뒤 같은 실행을 조회할 때 모든 후보가
+   * 유효하지 않은 것으로 집계된다.
+   */
   private async analysisSummary(
     tx: Prisma.TransactionClient,
-    policy: AnalysisPolicy,
     collectionRunId: string,
     positions: CollectionPositionRow[],
+    candidateContextVersion: string,
     analysisContractVersion: number,
     generatedAt: string,
   ) {
@@ -1087,7 +1101,7 @@ export class PositionsService {
       analysisStatusOf(
         position.contentHash,
         analyses.get(position.positionId) ?? [],
-        policy.candidateContextVersion,
+        candidateContextVersion,
         analysisContractVersion,
         generatedAt,
       ),

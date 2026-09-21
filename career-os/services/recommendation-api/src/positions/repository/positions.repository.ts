@@ -265,8 +265,18 @@ function iso(value: unknown): string {
     : new Date(`${text}Z`).toISOString();
 }
 
+/**
+ * `DATE` 열을 `YYYY-MM-DD` 로 읽는다.
+ *
+ * `toISOString()` 은 UTC 로 바꾸므로 프로세스 시간대가 UTC 가 아니면 하루가 밀린다.
+ * 드라이버가 `DATE` 를 지역 시간 자정의 `Date` 로 주기 때문이다.
+ * 진입점이 시간대를 고정하는 순서에 기대지 않도록 지역 시간 필드를 그대로 읽는다.
+ */
 function dateOnly(value: unknown): string {
-  return value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
+  if (!(value instanceof Date)) return String(value).slice(0, 10);
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${value.getFullYear()}-${month}-${day}`;
 }
 
 function at(value: string): Date {
@@ -274,7 +284,7 @@ function at(value: string): Date {
 }
 
 function number(value: unknown): number {
-  return typeof value === "bigint" ? Number(value) : Number(value);
+  return Number(value);
 }
 
 function jsonValue<T>(value: unknown): T {
@@ -307,8 +317,22 @@ export class PositionsRepository {
    * 행 잠금을 잡고 나서 읽어도 잠금을 기다리는 동안 남이 commit 한 값이 보이지 않는다.
    * 그러면 잠금이 순서만 세우고 덮어쓰기는 막지 못한다.
    */
+  /**
+   * transaction 을 열지 않는 읽기가 쓸 client 다.
+   *
+   * 읽기 메서드의 `client` 에 기본값을 두지 않는다.
+   * 기본값이 있으면 `tx` 를 빠뜨려도 오류가 나지 않고 그 질의만 transaction 밖으로 나간다.
+   * transaction 이 필요 없는 자리는 이 메서드로 그 선택을 드러낸다.
+   */
+  reader(): DbClient {
+    return this.prisma;
+  }
+
   async transaction<T>(callback: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
     return this.prisma.$transaction(callback, {
+      // 기본 `maxWait` 는 2초다. 앞선 transaction 이 길면 뒤의 요청이 일을 시작하지도 못하고
+      // `P2028` 로 끝난다. 실제로 기다려도 되는 시간을 `timeout` 과 같은 규모로 준다.
+      maxWait: 30_000,
       timeout: 30_000,
       isolationLevel: "ReadCommitted",
     });
@@ -316,7 +340,7 @@ export class PositionsRepository {
 
   // ---------------------------------------------------------------- 분석 정책
 
-  async findPolicy(client: DbClient = this.prisma): Promise<AnalysisPolicy | undefined> {
+  async findPolicy(client: DbClient): Promise<AnalysisPolicy | undefined> {
     const rows = await client.$queryRaw<RawRow[]>`
       SELECT candidate_context_version, daily_analysis_limit, priority_slots, aging_slots,
              stale_after_days, default_company_tier, daily_company_tier_limit,
@@ -371,7 +395,7 @@ export class PositionsRepository {
 
   // ---------------------------------------------------------------- 회사 선호
 
-  async listPreferences(client: DbClient = this.prisma): Promise<CompanyPreference[]> {
+  async listPreferences(client: DbClient): Promise<CompanyPreference[]> {
     const rows = await client.$queryRaw<RawRow[]>`
       SELECT company_key, company_name, tier, disposition, updated_at FROM company_preferences
     `;
@@ -400,7 +424,7 @@ export class PositionsRepository {
   /** 이번 수집에 등장한 회사 가운데 사람 override 가 걸린 것만 고른다. */
   async findPreferencesFor(
     keys: string[],
-    client: DbClient = this.prisma,
+    client: DbClient,
   ): Promise<Map<string, CompanyPreference>> {
     if (keys.length === 0) return new Map();
     const rows = await client.$queryRaw<RawRow[]>`
@@ -426,20 +450,30 @@ export class PositionsRepository {
   /**
    * 수집 실행 행을 잠근다.
    *
-   * 아직 없는 실행이면 자리만 먼저 만들고 그 행을 잠근다.
-   * 멱등 키가 다른 두 요청이 같은 수집에 동시에 와도 뒤의 것이 앞의 것을 기다리게 하려면
-   * 잠글 행이 실제로 있어야 한다.
+   * 멱등 키가 다른 두 요청이 같은 수집 실행에 동시에 와도 뒤의 것이 앞의 것을 기다리게 한다.
+   *
+   * 행이 이미 있으면 `FOR UPDATE` 하나로 끝낸다. 자리를 먼저 만들지 않는다.
+   * 만들고 잠그는 순서로 두면, 행이 있을 때 두 transaction 이 그 자리를 만드는 문장에서
+   * 공유 잠금을 함께 쥐고 뒤이은 `FOR UPDATE` 에서 서로 상대가 놓기를 기다려 교착에 빠진다.
+   *
+   * 행이 없을 때만 자리를 만든다. 그 문장은 `ON DUPLICATE KEY UPDATE` 다.
+   * `INSERT IGNORE` 는 경합에서 진 쪽에 공유 잠금을 남겨 같은 교착을 만든다.
    */
   async lockCollectionRun(
     collectionRunId: string,
     collectedAt: string,
     tx: Prisma.TransactionClient,
   ): Promise<void> {
+    const locked = await tx.$queryRaw<RawRow[]>`
+      SELECT run_id FROM position_collection_runs WHERE run_id = ${collectionRunId} FOR UPDATE
+    `;
+    if (locked.length > 0) return;
     await tx.$executeRaw`
-      INSERT IGNORE INTO position_collection_runs
+      INSERT INTO position_collection_runs
         (run_id, idempotency_key, collected_at, status, active_count, personal_excluded_count)
       VALUES (${collectionRunId}, ${`collection:${collectionRunId}`}, ${at(collectedAt)},
               'processing', 0, 0)
+      ON DUPLICATE KEY UPDATE run_id = run_id
     `;
     await tx.$queryRaw`
       SELECT run_id FROM position_collection_runs WHERE run_id = ${collectionRunId} FOR UPDATE
@@ -448,7 +482,7 @@ export class PositionsRepository {
 
   async findCollectionRun(
     collectionRunId: string,
-    client: DbClient = this.prisma,
+    client: DbClient,
   ): Promise<CollectionRunRow | undefined> {
     const rows = await client.$queryRaw<RawRow[]>`
       SELECT run_id, collected_at, personal_excluded_count
@@ -625,7 +659,7 @@ export class PositionsRepository {
 
   async listCollectionDiagnostics(
     collectionRunId: string,
-    client: DbClient = this.prisma,
+    client: DbClient,
   ): Promise<Array<{ source: string; status: string; failedCount: number }>> {
     const rows = await client.$queryRaw<RawRow[]>`
       SELECT source_key, status, failed_count FROM position_source_run_diagnostics
@@ -641,7 +675,7 @@ export class PositionsRepository {
   /** 이번 수집이 담은 공고를 읽는다. 순서는 소스 안에서 안정된 `identity_hash` 순이다. */
   async listCollectionPositions(
     collectionRunId: string,
-    client: DbClient = this.prisma,
+    client: DbClient,
   ): Promise<CollectionPositionRow[]> {
     const rows = await client.$queryRaw<RawRow[]>`
       SELECT p.position_id, pv.position_version_id, p.company_key, p.company_name,
@@ -664,7 +698,7 @@ export class PositionsRepository {
 
   async listAnalysesForCollection(
     collectionRunId: string,
-    client: DbClient = this.prisma,
+    client: DbClient,
   ): Promise<PositionAnalysisRow[]> {
     const rows = await client.$queryRaw<RawRow[]>`
       SELECT pa.position_id, pv.content_hash, pa.candidate_context_version, pa.contract_version,
@@ -687,7 +721,7 @@ export class PositionsRepository {
 
   async findAnalysisRunByCollection(
     collectionRunId: string,
-    client: DbClient = this.prisma,
+    client: DbClient,
   ): Promise<AnalysisRunSummaryRow | undefined> {
     const rows = await client.$queryRaw<RawRow[]>`
       SELECT analysis_run_id, contract_version FROM position_analysis_runs
@@ -713,7 +747,7 @@ export class PositionsRepository {
 
   async findCompanyTierRunByCollectionRun(
     collectionRunId: string,
-    client: DbClient = this.prisma,
+    client: DbClient,
   ): Promise<CompanyTierRunRow | undefined> {
     const rows = await client.$queryRaw<RawRow[]>`
       SELECT company_tier_run_id, collection_run_id, candidate_context_version, contract_version,
@@ -756,7 +790,7 @@ export class PositionsRepository {
 
   async listCompanyTierRunItems(
     companyTierRunId: string,
-    client: DbClient = this.prisma,
+    client: DbClient,
   ): Promise<CompanyTierRunItemRow[]> {
     const rows = await client.$queryRaw<RawRow[]>`
       SELECT company_key, company_name, selection_order, assessment_status, selection_reason,
@@ -848,7 +882,7 @@ export class PositionsRepository {
         WHERE a.company_key = g.company_key
           AND a.candidate_context_version = ${candidateContextVersion}
           AND a.contract_version = ${contractVersion}
-        ORDER BY a.assessed_at DESC
+        ORDER BY a.assessed_at DESC, a.company_tier_assessment_id DESC
         LIMIT 1
       ) prior ON TRUE
       WHERE NOT EXISTS (
@@ -874,7 +908,7 @@ export class PositionsRepository {
         CASE WHEN prior.recommended_tier IS NULL THEN g.first_seen_at ELSE NULL END ASC,
         CASE WHEN prior.recommended_tier IS NULL THEN NULL ELSE prior.valid_until END ASC,
         g.company_key ASC
-      LIMIT ${Prisma.raw(String(Math.trunc(limit)))}
+      LIMIT ${Math.trunc(limit)}
     `;
     return rows.map((row) => ({
       companyKey: String(row.company_key),
@@ -924,7 +958,7 @@ export class PositionsRepository {
     candidateContextVersion: string,
     contractVersion: number,
     today: string,
-    client: DbClient = this.prisma,
+    client: DbClient,
   ): Promise<Map<string, StoredCompanyTierAssessment>> {
     if (companyKeys.length === 0) return new Map();
     const rows = await client.$queryRaw<RawRow[]>`
@@ -936,7 +970,7 @@ export class PositionsRepository {
         AND candidate_context_version = ${candidateContextVersion}
         AND contract_version = ${contractVersion}
         AND valid_until >= ${today}
-      ORDER BY assessed_at ASC
+      ORDER BY assessed_at ASC, company_tier_assessment_id ASC
     `;
     const latest = new Map<string, StoredCompanyTierAssessment>();
     for (const row of rows) latest.set(String(row.company_key), this.toAssessment(row));
@@ -948,7 +982,7 @@ export class PositionsRepository {
     companyKeys: string[],
     candidateContextVersion: string,
     contractVersion: number,
-    client: DbClient = this.prisma,
+    client: DbClient,
   ): Promise<Map<string, StoredCompanyTierAssessment>> {
     if (companyKeys.length === 0) return new Map();
     const rows = await client.$queryRaw<RawRow[]>`
@@ -959,7 +993,7 @@ export class PositionsRepository {
       WHERE company_key IN (${Prisma.join(companyKeys)})
         AND candidate_context_version = ${candidateContextVersion}
         AND contract_version = ${contractVersion}
-      ORDER BY assessed_at ASC
+      ORDER BY assessed_at ASC, company_tier_assessment_id ASC
     `;
     const latest = new Map<string, StoredCompanyTierAssessment>();
     for (const row of rows) latest.set(String(row.company_key), this.toAssessment(row));
@@ -1078,7 +1112,7 @@ export class PositionsRepository {
   /** 실행과 그 항목을 함께 읽는다. 항목은 응답에 필요한 공고 본문까지 담는다. */
   async findAnalysisRunWithItems(
     analysisRunId: string,
-    client: DbClient = this.prisma,
+    client: DbClient,
   ): Promise<{ run: AnalysisRunRow; items: AnalysisRunItemRow[] } | undefined> {
     const runRows = await client.$queryRaw<RawRow[]>`
       SELECT analysis_run_id, collection_run_id, candidate_context_version, contract_version,
@@ -1168,7 +1202,7 @@ export class PositionsRepository {
           AND a.candidate_context_version = ${spec.candidateContextVersion}
           AND a.contract_version = ${spec.companyTierContractVersion}
           AND a.valid_until >= ${spec.today}
-        ORDER BY a.assessed_at DESC
+        ORDER BY a.assessed_at DESC, a.company_tier_assessment_id DESC
         LIMIT 1
       ) valid ON TRUE
       WHERE pci.run_id = ${spec.collectionRunId}
@@ -1203,7 +1237,7 @@ export class PositionsRepository {
                FIELD(c.close_urgency, 'urgent', 'soon', 'normal', 'no_deadline', 'unknown') ASC,
                c.pending_since ASC,
                c.position_id ASC
-      LIMIT ${Prisma.raw(String(Math.trunc(spec.prioritySlots)))}
+      LIMIT ${Math.trunc(spec.prioritySlots)}
     `;
     const taken = priority.map((row) => String(row.position_id));
     const agingSlots = Math.trunc(spec.agingSlots);
@@ -1218,7 +1252,7 @@ export class PositionsRepository {
                 : Prisma.sql`WHERE c.position_id NOT IN (${Prisma.join(taken)})`
             }
             ORDER BY c.pending_since ASC, c.position_id ASC
-            LIMIT ${Prisma.raw(String(agingSlots))}
+            LIMIT ${agingSlots}
           `;
     return [
       ...priority.map((row) => this.toAnalysisCandidate(row, "priority")),
@@ -1256,7 +1290,7 @@ export class PositionsRepository {
     positionVersionIds: string[],
     candidateContextVersion: string,
     contractVersion: number,
-    client: DbClient = this.prisma,
+    client: DbClient,
   ): Promise<Map<string, string>> {
     if (positionVersionIds.length === 0) return new Map();
     const rows = await client.$queryRaw<RawRow[]>`
@@ -1375,7 +1409,7 @@ export class PositionsRepository {
   /** 이번 수집이 담은 공고를 추천 조립에 필요한 형태로 읽는다. */
   async listRecommendationPositions(
     collectionRunId: string,
-    client: DbClient = this.prisma,
+    client: DbClient,
   ): Promise<RecommendationPositionRow[]> {
     const rows = await client.$queryRaw<RawRow[]>`
       SELECT p.position_id, pv.position_version_id, p.company_key, pv.content_hash,
@@ -1405,7 +1439,7 @@ export class PositionsRepository {
     candidateContextVersion: string,
     contractVersion: number,
     today: string,
-    client: DbClient = this.prisma,
+    client: DbClient,
   ): Promise<Map<string, RecommendationAnalysisRow>> {
     const rows = await client.$queryRaw<RawRow[]>`
       SELECT pa.analysis_id, pa.position_id, pa.decision, pa.fit_score, pa.reason,
@@ -1416,7 +1450,7 @@ export class PositionsRepository {
         AND pa.candidate_context_version = ${candidateContextVersion}
         AND pa.contract_version = ${contractVersion}
         AND pa.valid_until >= ${today}
-      ORDER BY pa.analyzed_at ASC
+      ORDER BY pa.analyzed_at ASC, pa.analysis_id ASC
     `;
     const latest = new Map<string, RecommendationAnalysisRow>();
     for (const row of rows) {
@@ -1447,7 +1481,7 @@ export class PositionsRepository {
     analysisRunId: string,
     today: string,
     defaultCompanyTierContractVersion: number,
-    client: DbClient = this.prisma,
+    client: DbClient,
   ): Promise<RecommendationInputs | undefined> {
     const runRows = await client.$queryRaw<RawRow[]>`
       SELECT analysis_run_id, collection_run_id, candidate_context_version, contract_version,
@@ -1489,7 +1523,7 @@ export class PositionsRepository {
 
   async countFailedCompanyTierItems(
     companyTierRunId: string,
-    client: DbClient = this.prisma,
+    client: DbClient,
   ): Promise<number> {
     const rows = await client.$queryRaw<RawRow[]>`
       SELECT COUNT(*) AS failed_count FROM company_tier_assessment_run_items
@@ -1501,7 +1535,7 @@ export class PositionsRepository {
   /** 평가 ID 로 회사 tier 평가를 읽는다. 저장된 추천의 출처를 다시 붙일 때 쓴다. */
   async findAssessmentsByIds(
     ids: string[],
-    client: DbClient = this.prisma,
+    client: DbClient,
   ): Promise<Map<string, StoredCompanyTierAssessment>> {
     if (ids.length === 0) return new Map();
     const rows = await client.$queryRaw<RawRow[]>`
@@ -1547,7 +1581,7 @@ export class PositionsRepository {
   /** 저장된 추천을 읽는다. 분석 실행 ID 로도 추천 실행 ID 로도 찾는다. */
   async findStoredRecommendation(
     key: { analysisRunId: string } | { recommendationRunId: string },
-    client: DbClient = this.prisma,
+    client: DbClient,
   ): Promise<StoredRecommendation | undefined> {
     const where =
       "analysisRunId" in key
@@ -1618,7 +1652,7 @@ export class PositionsRepository {
    * 셋 다 아니면 아직 만들어지지 않은 추천 실행 ID 일 수 있으므로,
    * 추천이 없는 분석 실행의 추천 ID 를 만들어 대조한다.
    */
-  async findRunById(id: string, client: DbClient = this.prisma): Promise<RunLookup | undefined> {
+  async findRunById(id: string, client: DbClient): Promise<RunLookup | undefined> {
     const analysisRows = await client.$queryRaw<RawRow[]>`
       SELECT analysis_run_id FROM position_analysis_runs
       WHERE analysis_run_id = ${id} OR collection_run_id = ${id}

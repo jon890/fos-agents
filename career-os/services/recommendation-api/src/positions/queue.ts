@@ -1,3 +1,11 @@
+/**
+ * 대기열 선택 순서의 참조 구현이다.
+ *
+ * 서비스는 이 모듈을 부르지 않는다. 선택이 SQL 로 내려가
+ * `repository/positions.repository.ts` 의 `selectAnalysisQueue` 와 `selectCompanyTierQueue` 가
+ * 같은 순서를 `ORDER BY` 로 표현한다.
+ * 순서 규칙을 읽고 `queue.test.ts` 로 확인하는 자리로 남긴다. 지우지 않는다.
+ */
 import type { PostingCandidate } from "../contracts/posting-candidate.js";
 import type { CompanyTierSource } from "./stored.js";
 import type { AnalysisPolicy } from "./schema.js";
