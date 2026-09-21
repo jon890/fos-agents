@@ -1,0 +1,207 @@
+# Phase 04. 공고 분석 실행과 반영을 옮긴다
+
+**Execution profile**: deep
+
+## 목표
+
+포지션 도메인의 뒤쪽 절반 중 분석 부분을 옮긴다.
+
+| method | 경로 | 기존 메서드 |
+| --- | --- | --- |
+| POST | `/api/positions/v1/collection-runs/{id}/analysis-runs` | `createPositionAnalysisRun` |
+| POST | `/api/positions/v1/analysis-runs/{id}/results` | `saveAnalysisResults` |
+
+**범위 외**: 추천 실행과 실행 조회. Phase 05가 가진다.
+
+## 컨텍스트
+
+옮길 원본은 `position/service.ts`의 다음 줄이다.
+
+| 메서드 | 줄 |
+| --- | --- |
+| `createPositionAnalysisRun` | 914 |
+| `saveAnalysisResults` | 683 |
+| `analysisSummary` | 514 |
+| `queueResponse` | 629 |
+| `resultsResponse` | 759 |
+
+Phase 03이 만든 `src/positions/repository/`에 질의를 더한다. 새 디렉터리를 만들지 않는다.
+
+**근거 문서**: `docs/adr/ADR-117-포지션-분석은-우선순위-큐와-버전-이력으로-재사용한다.md`,
+`docs/adr/ADR-119-분석-실행의-처리-결과와-분석의-생성-출처를-분리해-저장한다.md`,
+`docs/data-schema.md`의 「공고별 분석 이력」 절
+
+## 의도 메모
+
+**분석 큐 선택의 순서를 SQL로 옮긴다.**
+지금은 `selectAnalysisQueue`가 메모리에서 정렬한다.
+회사 tier, 분석 상태, 마감 긴급도, 대기 시작 시각 순으로 고른다.
+우선 슬롯과 오래 기다린 공고 보장 슬롯이 따로 있고,
+한쪽의 후보가 부족하면 다른 쪽이 남은 자리를 쓴다.
+이 규칙을 `ORDER BY`와 두 번의 조회로 표현한다.
+`queue.ts`의 순수 함수는 남기고 단위 테스트로 계속 확인한다.
+
+**같은 사실이 두 자리에 있다. 둘 다 써야 한다.**
+`position_analysis_run_items.result_status`와
+`position_analyses.created_by_analysis_run_id`가 그것이다.
+ADR-119가 이 중복을 의도한 것으로 기록했고 정합성 조회로 확인하는 구조다.
+한쪽만 쓰면 감사 조회가 어긋난다.
+
+**회사 tier 실행이 끝나지 않았으면 분석 실행을 만들지 않는다.**
+`409 COMPANY_TIER_RUN_PENDING`으로 거절한다.
+회사 tier 실행 자체가 없으면 `409 COMPANY_TIER_RUN_MISSING`이다. 두 코드가 다르다.
+
+**분석 반영은 아직 끝나지 않은 항목 전체와 일치할 때만 성공한다.**
+일부만 보내면 `409 VERSION_CONFLICT`다.
+실패한 공고가 남으면 실행은 `partial`로 남고 client가 남은 항목만 다시 보낸다.
+
+**`company_tier_source`와 `company_tier_assessment_id`를 분석 항목에 남긴다.**
+tier를 해결한 시점의 출처를 보존하는 것이 목적이다. 나중에 다시 계산하지 않는다.
+
+## 작업 항목
+
+### 1. `src/positions/repository/`에 질의를 더한다
+
+- `lockAnalysisRun(id, tx)` — `SELECT ... FOR UPDATE`
+- `findAnalysisRunWithItems(id)`
+- `findCompanyTierRunStatus(collectionRunId)`
+- `resolveCompanyTiers(companyKeys, staleAfterDays)` — `manual`, `model`, `default` 순서를 질의로
+- `selectAnalysisQueue(prioritySlots, agingSlots, staleAfterDays, tx)`
+- `findFreshAnalyses(positionVersionIds, candidateContextVersion)`
+- `insertAnalysisRun(run, items, tx)`
+- `insertAnalyses(rows, tx)`
+- `updateAnalysisRunItems(rows, tx)`
+- `updateAnalysisRunStatus(id, status, tx)`
+
+### 2. `src/positions/positions.service.ts`에 두 메서드를 더한다
+
+`createPositionAnalysisRun`과 `saveAnalysisResults`를 옮긴다.
+응답 조립 함수 `analysisSummary`, `queueResponse`, `resultsResponse`의 형태를 그대로 유지한다.
+
+### 3. `src/positions/positions.controller.ts`에 endpoint 둘을 더한다
+
+`POST /collection-runs/{id}/analysis-runs`는 201.
+`POST /analysis-runs/{id}/results`는 200.
+
+경로 변수는 `decodeURIComponent`를 거친다. 기존 라우터가 그렇게 한다.
+
+### 기대값은 옛 구현에서 뽑아 둔 포착 파일이 소유한다
+
+**새 구현을 보고 기대값을 지어내지 않는다.**
+전환 전의 Bun 구현을 test database에 붙여 요청과 응답과 그 뒤의 DB 행을 뽑아 둔 파일이 있다.
+
+| 자리 | 내용 |
+| --- | --- |
+| `services/recommendation-api/test/fixtures/legacy-contract/cases.json` | 요청 전문과 응답 전문과 쓰기 뒤의 DB 행 |
+| `services/recommendation-api/test/fixtures/legacy-contract/README.md` | 뽑은 방법, 비교에서 뺀 열, 만들지 못한 경우와 그 이유 |
+| `services/recommendation-api/test/fixtures/legacy-contract/capture-legacy.bun.ts` | 뽑는 데 쓴 스크립트 |
+
+비교하는 것이다.
+
+- 응답 status와 본문 전체
+- `Cache-Control`의 값과 `X-Request-Id`의 **유무**. `X-Request-Id`의 값은 실행마다 달라 비교하지 않는다
+- 쓰기 요청이면 그 뒤의 DB 행. 어느 table의 어느 열을 비교할지는 `cases.json`이 case마다 적는다.
+  `created_at`처럼 실행마다 달라지는 열은 비교에서 뺐고 `README.md`가 그 목록을 가진다
+
+**포착 파일을 고쳐서 테스트를 통과시키지 않는다.**
+값이 다르면 새 구현이 계약을 어긴 것이다. 포착 파일이 틀렸다고 판단되면 고치지 말고 보고한다.
+
+`capture-legacy.bun.ts`는 Phase 05가 옛 구현을 지운 뒤에는 돌지 않는다.
+값이 어디서 나왔는지 읽을 수 있도록 남기는 것이다.
+서비스 `tsconfig.json`의 `exclude`와 `vitest.config.ts`의 `exclude`에 이 파일을 넣는다.
+
+### 4. 이 phase를 검증하는 `test/positions-analysis.e2e.test.ts`
+
+실제 MySQL을 쓴다. `CAREER_RECOMMENDATION_TEST_DATABASE_URL`이 없으면 실패한다.
+
+`position/service.test.ts`에서 이 phase가 옮긴 메서드를 다루는 것을 가져온다.
+
+확인할 것이다.
+
+- 회사 tier 실행이 `pending`이면 `409 COMPANY_TIER_RUN_PENDING`
+- 회사 tier 실행이 없으면 `409 COMPANY_TIER_RUN_MISSING`
+- tier 해결 순서가 `manual`, `model`, `default`다.
+  세 출처를 모두 가진 회사가 `manual`로 해결된다
+- `exclude`인 회사는 tier를 해결하기 전에 제거된다
+- `fresh` 분석이 재사용되어 큐에 들어가지 않는다
+- 우선 슬롯의 후보가 부족하면 보장 슬롯이 남은 자리를 쓴다
+- 아직 끝나지 않은 항목 일부만 보내면 `409 VERSION_CONFLICT`
+- 실패한 공고가 남으면 실행이 `partial`이고, 남은 항목만 다시 보내면 반영된다
+- `position_analysis_run_items.result_status`와
+  `position_analyses.created_by_analysis_run_id`가 서로 어긋나지 않는다.
+  ADR-119의 정합성 조회를 SQL로 직접 돌려 0행인 것을 확인한다
+- 분석 항목의 `company_tier_source`가 해결 시점의 값으로 남는다
+- **행 잠금 확인**: 멱등 키가 다른 두 요청을 같은 분석 실행에 동시에 보내면
+  하나만 반영되고 항목이 뒤섞이지 않는다
+
+
+**`position_analysis_pipeline.test.ts`에서 둘을 가져온다.**
+`scripts/position-recommender/` 쪽에서 `MemoryPositionRepository` 위로 돌던 것이다.
+Phase 05가 그 메모리 저장소를 지우므로 여기서 DB 기반으로 다시 쓴다.
+
+- fresh 반복 실행은 빈 분석 큐와 재사용 집계를 허용한다
+- 실패 한 건을 함께 보내면 실행이 `partial`로 남고, 남은 건만 다시 보내면 `completed`가 된다
+
+가짜 저장소를 만들지 않는다. Phase 01의 container에 실제로 행을 넣고 확인한다.
+
+### 구현하면서 계획과 달라진 것
+
+계획서가 적은 형태보다 코드가 요구하는 쪽을 택한 자리다. 되돌리지 않는다.
+
+- **`resolveCompanyTiers`와 `findCompanyTierRunStatus`를 따로 두지 않는다.**
+  tier 해결 순서는 `selectAnalysisQueue`의 후보 질의 안에 `COALESCE`와 `CASE`로 들어가고,
+  회사 tier 실행 상태는 Phase 03의 `findCompanyTierRunByCollectionRun`이 이미 함께 준다.
+  쓰는 자리가 하나뿐인 것을 메서드로 빼지 않는다
+- **`findFreshAnalyses`는 `findAnalysesForVersions`이고 `valid_until`을 보지 않는다.**
+  결과를 반영할 때의 중복 판정은 만료 여부와 무관하게 같은 공고 version과 같은 두 버전 조합을
+  다시 쓰는 것이고, `uq_position_analysis_version_context_contract`가 요구하는 조건이 그것이다
+- **경로 변수에 `decodeURIComponent`를 다시 적용하지 않는다.**
+  Express가 `req.params`를 이미 해독한다. 한 번 더 하면 두 번 해독한다
+- **대기열 선택을 두 조회로 쓴다.** 정책 schema가
+  `prioritySlots + agingSlots == dailyAnalysisLimit`를 강제하므로
+  남는 자리를 다시 채우는 세 번째 단계는 어떤 입력에서도 후보를 고르지 못한다
+
+### 고치지 않고 남기는 것
+
+**수집이 보낸 `analysisContractVersion`이 분석 실행에서 1로 떨어진다.**
+`position_collection_runs`에 그 값을 담는 열이 없기 때문이다.
+
+전환 전 구현도 같았다. `position/sql-repository.ts:240`이 DB에서 수집을 읽을 때 `?? 1`로 떨어뜨리고,
+그 Map은 분석 실행 행에서 만들어지므로 분석 실행이 아직 없으면 옛 구현도 1이었다.
+`scripts/position-recommender/prepare_position_analysis.ts:19`의 기본값이 1이고
+저장소 어디에서도 다른 값을 넘기지 않는다.
+
+열을 더하는 것은 schema 변경이라 이 plan의 범위 밖이다. ADR-122의 「감당할 것」이 이것을 가진다.
+
+## 검증
+
+Phase 01의 container를 쓴다. **다시 만들지 않는다.**
+
+```bash
+# cwd: 저장소 루트
+cd career-os/services/recommendation-api
+npm run typecheck
+DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_test" \
+CAREER_RECOMMENDATION_TEST_DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_test" \
+SHADOW_DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_shadow" \
+  npm test
+```
+
+기대값이다.
+
+- `typecheck`가 종료 코드 0
+- Phase 01에서 03까지의 테스트가 계속 통과
+- 이 phase의 테스트가 모두 통과
+- 출력에 `skipped`가 없다
+
+**잠금 테스트가 회귀를 잡는지 확인한다.**
+`lockAnalysisRun`의 `FOR UPDATE`를 잠시 없애고 그 테스트만 실패하는 것을 본 뒤 되돌린다.
+
+## Critical Files
+
+| 파일 | 변경 |
+|---|---|
+| `career-os/services/recommendation-api/src/positions/repository/` | 수정 |
+| `career-os/services/recommendation-api/src/positions/positions.service.ts` | 수정 |
+| `career-os/services/recommendation-api/src/positions/positions.controller.ts` | 수정 |
+| `career-os/services/recommendation-api/test/positions-analysis.e2e.test.ts` | 신규 |

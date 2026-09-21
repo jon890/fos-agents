@@ -10,14 +10,37 @@
 
 ### MySQL schema 적용
 
-홈서버 `fos_career` database 의 schema 는 `services/recommendation-api/migrations/` 의
-번호가 붙은 SQL 파일이 소유한다.
-아래의 table 과 column 서술은 그 SQL 을 읽기 쉽게 옮긴 것이다. 둘이 다르면 SQL 이 맞다.
+홈서버 `fos_career` database 의 schema 는
+`services/recommendation-api/prisma/schema.prisma` 와
+`services/recommendation-api/prisma/migrations/` 가 소유한다.
+아래의 table 과 column 서술은 그 migration SQL 을 읽기 쉽게 옮긴 것이다. 둘이 다르면 SQL 이 맞다.
 
-적용 기록은 `schema_migrations` table 에 있다.
+적용 기록은 `_prisma_migrations` table 에 있다.
+**Backend 는 기동할 때 DDL 을 실행하지 않는다.** 연결과 적용 기록 조회만 한다.
+migration 적용은 배포 스크립트가 `prisma migrate deploy` 로 따로 실행한다.
 
 **적용한 migration 파일은 고치지 않는다.** checksum 이 달라져 다음 적용이 거절된다.
-schema 를 바꿀 때는 다음 번호의 파일을 더한다.
+schema 를 바꿀 때는 `prisma migrate` 로 새 migration 을 만든다.
+
+**초기 migration `20260921000000_baseline` 은 손으로 만든 것이다.**
+`001_position_schema.sql` 과 `002_company_tier_assessments.sql` 의 원문을 이어 붙였고,
+그 둘은 같은 디렉터리의 `source/` 에 남아 있다. 바이트 단위로 같은지를 테스트가 확인한다.
+
+`prisma migrate diff --from-empty --to-config-datasource --script` 로 뽑지 않은 이유가 있다.
+그 출력은 `CHECK` 제약 16개를 모두 빠뜨린다. Prisma 7.10.0 과 MySQL 8.4.8 에서 확인했다.
+`CHECK` 제약은 `schema.prisma` 가 표현하지 못하므로 migration SQL 이 소유한다.
+Prisma 가 이 제약을 지우지는 않는다. 제약을 바꿀 때는 migration 파일에 직접 쓴다.
+
+**초기 migration 은 운영 DB 에 다시 실행하지 않는다.**
+두 파일이 이미 적용되어 있으므로 적용 완료로만 표시한다.
+
+```bash
+npx prisma migrate resolve --applied 20260921000000_baseline
+```
+
+`schema_migrations` table 은 그대로 둔다.
+이전 image 로 되돌릴 때 그 image 가 이 table 을 읽어 적용 상태를 판정하기 때문이다.
+새 스택이 운영에서 검증되면 별도 migration 으로 제거한다.
 
 ### 홈서버 release
 

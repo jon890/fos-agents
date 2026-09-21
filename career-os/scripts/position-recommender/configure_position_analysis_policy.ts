@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { runCli, type CliSpec } from "../lib/cli.ts";
-import { analysisPolicySchema } from "../../services/recommendation-api/position/schema.ts";
+import { analysisPolicySchema } from "../../services/recommendation-api/src/positions/schema.ts";
 import { createRecommendationApiClient } from "./recommendation-api/client.ts";
 
 const spec: CliSpec = {

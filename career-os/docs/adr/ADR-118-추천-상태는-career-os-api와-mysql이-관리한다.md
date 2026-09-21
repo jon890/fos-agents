@@ -27,7 +27,7 @@
 ## 서비스와 배포 경계
 
 - `career-os`는 Backend 코드, HTTP 계약, migration과 도메인 검증을 소유한다.
-- Backend는 Bun의 HTTP 서버와 `Bun.SQL`을 사용하며 새 ORM과 외부 queue를 도입하지 않는다.
+- Backend는 외부 queue를 도입하지 않는다. 런타임과 ORM은 [ADR-121](ADR-121-추천-backend는-nestjs와-prisma로-운영한다.md)이 대체했다.
 - Backend만 최소 권한 MySQL 계정을 가지며 skill과 cron에는 API URL과 token만 제공한다.
 - `fos-home-infra`는 MySQL database와 계정 생성, container 배포, 비밀 값 주입, healthcheck, backup과 rollback을 담당한다.
 - `fos-blog`는 기존 study 계약의 소비자 전환과 검증된 제거 migration만 담당한다.

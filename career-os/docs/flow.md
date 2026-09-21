@@ -96,7 +96,7 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 | DB 연결 실패 | `503` |
 
 `GET /health/live` 는 process 상태만 확인한다.
-`GET /health/ready` 는 DDL 을 실행하지 않고 DB 연결과 migration version 과 checksum 을 조회한다.
+`GET /health/ready` 는 DDL 을 실행하지 않고 DB 연결과 `_prisma_migrations` 의 적용된 migration 이름을 조회한다.
 `GET /api/v1/auth/check` 는 유효한 Bearer token 에만 `204` 를 돌려준다.
 
 세 단계가 각각 한 transaction 에서 끝난다.

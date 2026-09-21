@@ -14,7 +14,7 @@ import {
   type CompanyTierResultsResponse,
   type PositionPreparationResponse,
   type RecommendationResponse,
-} from "../../../services/recommendation-api/position/schema.ts";
+} from "../../../services/recommendation-api/src/positions/schema.ts";
 
 const responseErrorSchema = z.object({
   error: z.object({ code: z.string(), message: z.string() }),

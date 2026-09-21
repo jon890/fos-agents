@@ -2,7 +2,7 @@
 import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { runCli, type CliSpec } from "../lib/cli.ts";
-import type { RecommendationResponse } from "../../services/recommendation-api/position/schema.ts";
+import type { RecommendationResponse } from "../../services/recommendation-api/src/positions/schema.ts";
 import { collectionWarningLines } from "./recommendation/final-answer.ts";
 import { RecommendationRun, type RecommendationRunType } from "./recommendation/schema.ts";
 import {

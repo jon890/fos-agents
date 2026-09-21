@@ -20,7 +20,6 @@
   "include": [
     "scripts/**/*.ts",
     "career-os/scripts/**/*.ts",
-    "career-os/services/**/*.ts",
     "career-os/.claude/skills/**/scripts/**/*.ts"
   ]
 }

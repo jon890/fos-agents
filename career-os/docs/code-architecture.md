@@ -23,7 +23,7 @@ career-os/
 ├── .codex/skills/        Codex에서 같은 skill을 노출하는 링크
 ├── config/               사람이 관리하는 수집 정책
 ├── scripts/              검증, 수집과 변환 코드
-├── services/             추천 상태 HTTP Backend와 migration
+├── services/             추천 상태 HTTP Backend와 migration. 루트와 별도 package다
 ├── applications/         동기화되는 로컬 지원 패키지
 ├── library/              사람이 직접 관리하며 여러 지원에서 재사용하는 비공개 자료
 ├── state/                검증기와 도구가 다음 실행에 재사용하는 상태
@@ -134,20 +134,42 @@ SSH client는 `career-storage`를 원격 호출하고, 홈서버의 Hermes는 �
 
 ### 추천 상태 Backend
 
-`services/recommendation-api/`는 포지션의 장기 상태를 제공하는 작은 Bun HTTP Backend다.
-서비스 코드, HTTP 계약과 SQL migration은 `career-os`가 소유한다.
+`services/recommendation-api/`는 포지션의 장기 상태를 제공하는 Backend다.
+Node 22 위의 NestJS로 돌고 Prisma로 MySQL을 읽고 쓴다.
+모노레포 루트와 별도의 `package.json`과 `tsconfig.json`을 가진 독립 package다.
+결정과 근거는 [ADR-121](adr/ADR-121-추천-backend는-nestjs와-prisma로-운영한다.md)과
+[ADR-122](adr/ADR-122-추천-상태는-질의-단위로-읽고-쓴다.md)에 있다.
+
+서비스 코드, HTTP 계약과 migration은 `career-os`가 소유한다.
 배포 설정, database와 계정 생성, network와 backup은 홈서버 인프라 저장소가 소유한다.
 학습자료 API는 client 만 구현했고 mock HTTP 로 검증했다. 서버는 구현하지 않았다.
 
 
-| 경로                                                | 책임                                                 |
-| ------------------------------------------------- | -------------------------------------------------- |
-| `services/recommendation-api/server.ts`           | `Bun.serve` 시작, health·인증 확인, 공통 timeout과 오류 응답    |
-| `services/recommendation-api/routes/positions.ts` | 수집 실행, 회사 tier 반영, 공고 분석 실행, 분석 반영과 추천 실행 endpoint |
-| `services/recommendation-api/position/`           | 회사 정책, 공고 버전, 분석 상태와 추천 조립                         |
-| `services/recommendation-api/db/`                 | `Bun.SQL` 연결, transaction helper와 repository       |
-| `services/recommendation-api/migrations/`         | 순서가 있는 SQL migration과 적용 기록                        |
+| 경로                                                     | 책임                                                    |
+| ------------------------------------------------------ | ----------------------------------------------------- |
+| `services/recommendation-api/src/main.ts`              | 프로세스 시간대 고정, `API_HOST`와 `API_PORT`로 listen           |
+| `services/recommendation-api/src/app.module.ts`        | module 조립과 전역 filter·interceptor 등록                   |
+| `services/recommendation-api/src/config/`              | 환경값 읽기와 기동 전 검증                                       |
+| `services/recommendation-api/src/common/`              | 인증, 요청 ID, 본문 크기, zod 검증, 멱등 처리, 오류 응답 형식             |
+| `services/recommendation-api/src/positions/`           | 회사 정책, 공고 버전, 분석 상태와 추천 조립                            |
+| `services/recommendation-api/src/positions/repository/`| Prisma 질의. 도메인이 요구하는 단위로만 읽고 쓴다                       |
+| `services/recommendation-api/src/health/`              | 생존 확인과 준비 확인                                          |
+| `services/recommendation-api/src/prisma/`              | `PrismaClient` 수명과 연결 설정                              |
+| `services/recommendation-api/src/contracts/`           | `scripts/`가 소유한 공고 후보 계약의 사본                          |
+| `services/recommendation-api/prisma/schema.prisma`     | model 정의. `prisma db pull`이 만든다                       |
+| `services/recommendation-api/prisma/migrations/`       | 순서가 있는 migration과 적용 기록                               |
 
+
+**`src/contracts/posting-candidate.ts`는 사본이다.**
+원본은 `scripts/position-recommender/live-postings/contracts.ts`이고 소유자는 그쪽이다.
+서비스가 독립 package가 되어 자기 디렉터리 밖을 import할 수 없어 통째로 복사했다.
+원본과 어긋나지 않는지는 사본 옆의 대조 테스트가 기본 `npm test`에서 확인한다.
+원본을 고친 뒤 다시 복사한다. 사본을 직접 고치지 않는다.
+
+**`test/fixtures/legacy-contract/`는 전환 전 구현이 낸 응답을 뽑아 둔 기록이다.**
+case 34개가 요청 전문과 응답 전문과 쓰기 뒤의 DB 행을 담는다.
+e2e 검사가 이 값과 대조해 전환이 계약을 바꾸지 않았는지 판정한다.
+값이 다르면 새 구현이 계약을 어긴 것이므로 이 파일을 고쳐 통과시키지 않는다.
 
 Backend는 local 개발에서는 `CAREER_RECOMMENDATION_DATABASE_URL`을 읽을 수 있고,
 운영에서는 `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`과 `DB_PASSWORD`를 읽는다.
@@ -156,11 +178,33 @@ client는 `CAREER_RECOMMENDATION_API_URL`과 `CAREER_RECOMMENDATION_API_TOKEN` �
 `CAREER_RECOMMENDATION_API_TOKEN_FILE`만 읽으며 DB 자격증명을 받지 않는다.
 `STUDY_LIBRARY_URL`과 `STUDY_SERVICE_TOKEN`은 study client 전환 동안 같은 Backend를 가리키는 호환 환경값으로 유지한다.
 
+**프로세스 시간대를 UTC에 고정한다.** 시각 컬럼이 모두 `DATETIME(3)`이라 시간대를 저장하지 않으므로,
+프로세스가 다른 시간대면 다시 읽은 시각이 어긋나고 임차권 판정이 뒤집힌다.
+`src/main.ts`와 Prisma adapter 연결 옵션과 `vitest.config.ts` 셋이 함께 고정한다.
+
 endpoint 별 동작, 상태 코드와 transaction 경계는
 [`flow.md`](flow.md#추천-상태-backend)가 소유한다.
 
-**Backend 는 하나만 띄운다.** 상태 전체를 메모리에 들고 기록하므로
-둘 이상이면 서로의 기록을 지운다. 이 제약이 저장 계층 설계에서 나온다.
+**쓰기 안전은 DB 행 잠금이 맡는다.** 쓰기 transaction이 자기 실행 행을 먼저 잠그고
+격리 수준을 `READ COMMITTED`로 둔다. 상태 전체를 메모리에 들고 쓰던 구조가 아니므로
+인스턴스를 하나로 제한할 이유는 저장 계층에서 나오지 않는다.
+실제로 몇 개를 띄울지는 배포 결정이고 홈서버 인프라 저장소가 소유한다.
+
+**이 서비스는 루트 타입 검사에 들어가지 않는다.** 루트 `tsconfig.json`의 `include`에서 빠져 있다.
+남겨 두면 루트 검사가 `verbatimModuleSyntax: true`인 설정으로 NestJS 파일까지 검사해
+의존성 주입에 필요한 type import를 지운다.
+
+그래서 이 서비스는 자기 package 안에서 검증한다.
+
+```bash
+# cwd: career-os/services/recommendation-api
+npm run typecheck
+npm test
+```
+
+`npm test`는 실제 MySQL을 요구한다. 접속 문자열이 없으면 건너뛰지 않고 실패한다.
+건너뛴 실행을 통과 근거로 쓰지 않기 위해서다.
+루트 `bunx tsc --noEmit`은 `career-os/scripts/`가 import하는 서비스 파일만 끌어온다.
 
 배포 절차와 cron 등록은 홈서버 인프라 저장소가 소유한다. `career-os` 에서 실행하지 않는다.
 

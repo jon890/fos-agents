@@ -3,12 +3,12 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { z } from "zod";
 import { runCli, type CliSpec } from "../lib/cli.ts";
-import { canonicalRequestHash } from "../../services/recommendation-api/http/idempotency.ts";
+import { canonicalRequestHash } from "../../services/recommendation-api/src/common/idempotency/request-hash.ts";
 import {
   analysisFailureSchema,
   analysisQueueResponseSchema,
   analysisUpdateSchema,
-} from "../../services/recommendation-api/position/schema.ts";
+} from "../../services/recommendation-api/src/positions/schema.ts";
 import type { RecommendationApiClient } from "./recommendation-api/client.ts";
 import { createRecommendationApiClient } from "./recommendation-api/client.ts";
 

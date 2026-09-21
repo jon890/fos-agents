@@ -2,7 +2,7 @@ import { z } from "zod";
 import {
   companyTierProvenanceShape,
   refineCompanyTierProvenance,
-} from "../../../services/recommendation-api/position/schema.ts";
+} from "../../../services/recommendation-api/src/positions/schema.ts";
 
 const nonEmpty = z.string().trim().min(1);
 const postingUrl = z.string().url().startsWith("https://");

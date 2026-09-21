@@ -13,7 +13,7 @@
 - **결과**:
   - 얻는 것: 사람이 등록하지 않은 회사도 근거가 붙은 tier를 가진다. 사람 override는 모델 평가가 있어도 항상 즉시 이긴다. 어느 추천이 어느 평가를 썼는지, 어느 회사가 기본 tier로 남았는지 SQL 한 문장으로 답할 수 있다. 한 회사의 평가가 실패해도 그 회사만 기본 tier로 떨어지고 그날 추천은 계속 만들어진다.
   - 감당할 것: tier가 `candidate_context_version`과 계약 버전에 종속되므로 후보자 기준을 바꾸면 기존 평가를 재사용할 수 없고 전부 다시 평가해야 한다. 하루 평가 상한이 있어 운영 첫 며칠은 상당수 회사가 기본 tier로 남는다. 같은 회사 tier가 `company_preferences`와 `company_tier_assessments` 두 자리에 있을 수 있으므로 해결 순서를 코드 한 곳에서만 정해야 한다. 평가가 유효기간 안에 있어도 회사 사정이 바뀔 수 있어 유효기간은 정책 기한과 각 근거의 만료일 중 빠른 쪽을 따른다.
-- **적용 범위**: `services/recommendation-api/migrations/002_company_tier_assessments.sql`, `services/recommendation-api/position/`, `services/recommendation-api/routes/positions.ts`, `scripts/position-recommender/`, `.claude/skills/position-recommender/SKILL.md`와 `docs/data-schema.md`
+- **적용 범위**: `services/recommendation-api/migrations/002_company_tier_assessments.sql`, `services/recommendation-api/position/`, `services/recommendation-api/routes/positions.ts`, `scripts/position-recommender/`, `.claude/skills/position-recommender/SKILL.md`와 `docs/data-schema.md` 이 경로들은 ADR-121 의 스택 전환으로 옮겨졌다. 지금 자리는 `docs/code-architecture.md` 의 「추천 상태 Backend」 절이 가진다.
 
 ## 감사 조회
 

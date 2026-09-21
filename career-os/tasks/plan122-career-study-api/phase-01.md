@@ -3,7 +3,7 @@
 **Execution profile**: deep
 
 > **이 계획은 보류 상태다. 지금 구현하지 않는다.**
-> plan124로 회사 tier 평가를 마친 뒤 plan125가 Backend를 NestJS와 Prisma로 옮긴다.
+> plan125가 Backend를 Node 22의 NestJS와 Prisma로 옮기고 있다.
 > 학습자료 schema는 그 전환이 끝난 뒤에 얹어야 하므로, 이 계획은 그때 다시 세운다.
 > 아래 내용은 그때 참고할 자료로 남긴다. 그대로 구현하면 옛 스택 기준으로 만들게 된다.
 
