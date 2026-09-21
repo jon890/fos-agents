@@ -24,6 +24,9 @@
 
 적용 기록은 `schema_migrations` table 에 있다.
 
+**적용한 migration 파일은 고치지 않는다.** checksum 이 달라져 다음 적용이 거절된다.
+schema 를 바꿀 때는 다음 번호의 파일을 더한다.
+
 ### 비공개 작업 release
 
 홈서버의 `career-os` bucket은 release별 archive, manifest와 descriptor를 가진다.
@@ -122,54 +125,7 @@ HTML 게시 전에는 개인 정보, 비공개 업무 내용, 로컬 절대 경�
 
 ## application-package-writer
 
-공고별 `applications/<company>/<position>/`는 세 층으로 나뉜다.
-파일이 어느 층에 있는지가 누가 그 파일을 여는지를 정한다.
-
-| 층              | 여는 주체    | 담는 것                                                    |
-| --------------- | ------------ | ---------------------------------------------------------- |
-| 디렉터리 최상위 | 사용자       | `application-package.html`과 현재 공고가 요구하는 제출 PDF |
-| `evidence/`     | skill과 사람 | 기준 원본 Markdown과 구조화 입력                           |
-| `review/`       | 검증기       | 근거 장부, 점수표, manifest와 제출 문서 HTML               |
-
-### 최상위
-
-- `application-package.html`: 기준 원본과 현재 제출 파일을 묶은 로컬 검토 화면
-- `resume.pdf`: 이력서 제출본
-- `career-description.pdf`: 경력기술서를 받는 공고에만 둔다
-- `submission.pdf`: 한 파일 제출을 요구하는 공고에만 둔다
-
-#### `evidence/`
-
-- `posting.md`: 공고 원문이며 공식 페이지의 절 구조를 그대로 둔다. 쪼갠 항목 목록은 `fit.md` 의 적합도 표가 담는다
-- `candidate-interview.md`: 후보자 원문 답변, 정리한 핵심과 제출 반영 여부
-- `fit.md`: 결론, 공고 항목별 적합도 표, 구분별 가중치, 공개 자료로 확인한 팀과 인접 사례
-- `strategy.md`: 승부처, 지원동기, 기여 시나리오, 보완할 공백, 회사 문화와의 연결, 면접에서 검증받을 내용이며 시장과 규모로 판단하는 「이 자리에서 얻을 경험과 성장」을 선택 절로 둔다
-- `status.md`: 준비 상태 세 줄과 제출 준비 상태, 사용자 확인 필요, 다음 행동
-- `resume-draft.md`: HTML과 PDF로 변환할 제출용 이력서 원본
-- `interview-questions.json`: 공고 책임, 근거 방어와 경험 공백에서 만든 포지션별 질문
-- `career-description-draft.md`: 경력기술서를 받는 공고에만 둔다
-- `application-form.json`: 브라우저 자동 입력을 준비할 때만 둔다
-
-**`interview-questions.json` 은 `application-package-writer` 가 만들고 소유한다.**
-`resume-preparer` 와 `interview-practice` 는 질문을 더할 수 있으나 기존 질문을 지우거나 다시 쓰지 않는다.
-세 스킬이 같은 파일에 쓰므로 소유자를 하나로 둔다.
-
-앞의 다섯이 기본 원본이다.
-`application-package-writer`는 지원 판단과 후보자 인터뷰를 관리하고, `resume-preparer`는 `resume-draft.md`와 제출 문서를 관리한다.
-`application-form.json`은 private brain 공통 프로필의 현재 스냅샷, 회사별 선택값, 첨부 파일과 서술형 질문을 구조화한다.
-서술형 문항이 없는 지원 건은 `questions`를 빈 배열로 둔다.
-
-#### `review/`
-
-- `resume.html`과 `career-description.html`: PDF를 만든 원본
-- `claim-ledger.json`과 `career-description-claim-ledger.json`: 주장별 근거 장부
-- `resume-scorecard.md`와 `career-description-scorecard.md`: 인사담당자와 실무담당자 리뷰 결과
-- `submission-manifest.json`: 각 PDF의 파일 해시와 원본 HTML의 문구 해시를 연결한다
-
-이 층의 파일은 사용자용 링크로 노출하지 않는다.
-검증에는 사용하므로 현재 제출 문구와 PDF가 같은 버전인지 증명한다.
-
-#### 검토 화면
+### 검토 화면
 
 `application-package.html`은 준비 상태, 결론, 제출 PDF와 조건부 지원서 입력값을 탭 밖 상단에 고정한다.
 본문은 `공고 원문`, `공고 적합도`, `지원 전략`, `상세 자료` 네 탭으로 나누며 `공고 원문`이 기본 선택이다.
@@ -181,7 +137,7 @@ HTML 게시 전에는 개인 정보, 비공개 업무 내용, 로컬 절대 경�
 지원 패키지 검증기는 제출 문서와 지원서 답변에 내부 정보가 남았는지만 본다.
 어떤 파일과 절을 만들지는 `application-package-writer` 의 지침이 정한다.
 
-#### 적합도 판정과 점수
+### 적합도 판정과 점수
 
 판단 기준은
 [`fit-judgment.md`](../.claude/skills/application-package-writer/references/fit-judgment.md)가 소유한다.
@@ -203,24 +159,14 @@ HTML 게시 전에는 개인 정보, 비공개 업무 내용, 로컬 절대 경�
 첫 10줄의 `human-confirmation`은 본인 역할, 당시 제약, 기각한 대안, 결과의 확인 범위와 제출 문구 동의처럼 후보자만 확정할 수 있는 사실과 표현 확인 상태다.
 값은 `complete` 또는 `needs_input`이며, `needs_input`이면 준비 상태를 `ready`로 둘 수 없다.
 
-공고별 개인 근거와 면접 질문은 해당 `applications/<company>/<position>/`에 둔다.
-여러 지원에서 재사용하는 개인 질문은 `library/question-bank/`에 둔다.
-특정 지원에 종속되지 않는 대상별 프로필 원고는 `library/profiles/`에 둔다.
-이력서 공통 작성 규칙과 디자인은 `resume-preparer` 스킬의 참조와 템플릿이 소유한다.
-과거 지원에서 만든 근거 원장, 감사 문서, 점수표와 사용하지 않는 CSS는 `library/`에 남기지 않는다.
-
-재사용할 작성 취향의 기준 원본은 `.claude/skills/resume-preparer/references/resume-taste.md`다.
 brain에는 경력, 역할 선호와 경험 경계 등 개인 지식을 두고, 지원별 사실과 표현 확인은 `evidence/candidate-interview.md`의 기존 계약을 따른다.
 작성 취향은 스킬에서 유지하고, brain 검색 결과는 해당 문장을 판단하는 데 필요한 출처와 범위만 지원 기록에 연결한다.
 
 ## interview-practice
 
-현재 지원 대상은 private brain에서 찾고 대응하는 `applications/<company>/<position>/`을 실행 경로로 사용한다.
-포지션별 질문은 해당 지원 디렉터리의 `evidence/interview-questions.json`에 둔다.
-공개 가능한 일반 질문은 `public/question-bank/`에 둔다.
-질문 출처의 공식 URL, 게시자, 확인일과 적용 범위는 `public/question-bank/sources.json`에 둔다.
-각 질문의 `source`는 이 레지스트리의 식별자를 참조한다.
-개인 경험에서 파생한 질문은 `library/question-bank/`에 둔다.
+질문은 공개 범위에 따라 세 자리로 나뉜다. 파일 배치는
+[`code-architecture.md`](code-architecture.md#interview-practice)가 소유한다.
+각 질문의 `source`는 `public/question-bank/sources.json`의 식별자를 참조한다.
 
 `config/interview-question-sources.ts`는 질문 후보를 찾을 외부 출처를 관리한다.
 각 출처는 고유 `key`, 출처 종류, 사용 역할, 주제, URL과 수집 어댑터를 가진다.
@@ -978,10 +924,8 @@ dry-run 응답은 `<output>.preview.json`, 변환 오류는 `<output>.errors.jso
 
 ## sync-profile
 
-대상별 프로필 원고를 `library/profiles/` 에 둔다.
-원티드는 `wanted-profile.md`, GitHub 은 `github-profile.md`, LinkedIn 은 `linkedin-profile.md` 다.
-비공개 작업 release 로 동기화한다.
-생성 이미지도 같은 디렉터리에 둔다. `github-agent-usage.svg` 가 그것이다.
+`library/profiles/` 의 원고가 담는 것이다. 파일 배치는
+[`code-architecture.md`](code-architecture.md#sync-profile)가 소유한다.
 
 원고는 **프로필에 실제로 올라간 내용**을 담는다. 이력서 초안의 사본이 아니다.
 다음 갱신 때 무엇이 올라가 있는지 알아야 어디를 고칠지 정할 수 있다.

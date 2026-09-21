@@ -15,7 +15,7 @@ public `fos-agents` 저장소는 스킬과 실행 코드를 소유한다.
 
 ## 공통
 
-### 디렉터리 구조
+### 워크스페이스 디렉터리
 
 ```text
 career-os/
@@ -33,128 +33,69 @@ career-os/
 └── docs/                 제품, 흐름, 데이터, 기술 결정 문서
 ```
 
-### 파일 개요
+### 스킬 폴더
 
-| 경로                                                                  | 책임                               |
-| ------------------------------------------------------------------- | -------------------------------- |
-| `.claude/skills/<name>/SKILL.md`                                    | 사용자 요청별 실행 계약의 관리 원본             |
-| `.codex/skills/<name>`                                              | Codex가 같은 skill을 읽는 링크           |
-| `config/*.ts`                                                       | 공고, 읽을거리와 면접 자료의 수집 정책           |
-| `scripts/lib/`                                                      | CLI, 텍스트 정규화와 날짜 변환 같은 공통 순수 기능  |
-| `scripts/career-workspace/`                                         | 비공개 작업본의 준비, 차이 확인과 release 반영   |
-| `scripts/position-recommender/`                                     | 활성 공고 수집, 추천 검증과 HTML 생성         |
-| `scripts/study-topic-recommender/`                                  | 읽을거리 수집, 선별 결과 검증과 HTML 생성       |
-| `services/recommendation-api/`                                      | 포지션·학습자료 상태 API와 MySQL migration |
-| `scripts/interview-drill/`                                          | 질문 선택, 꼬리질문과 복습 상태 관리            |
-| `scripts/interview-question-sources/`                               | 외부 면접 질문 후보 수집과 출처 검증            |
-| `scripts/question-bank-collector/`                                  | 공개 질문 은행의 구조, 공개 범위와 출처 검사       |
-| `applications/<company>/<position>/`                                | 사용자가 여는 검토 화면과 제출 PDF            |
-| `applications/<company>/<position>/evidence/`                       | 공고 원문, 후보자 인터뷰, 지원 전략과 제출 문서 원본  |
-| `applications/<company>/<position>/review/`                         | 근거 장부, 점수표, manifest와 제출 문서 HTML |
-| `library/`                                                          | 여러 지원에서 재사용하는 비공개 질문과 프로필 원고     |
-| `state/`                                                            | 답변 연습과 검증 장부처럼 다음 실행에 필요한 상태     |
-| `public/question-bank/`                                             | 공개 가능한 일반 면접 질문과 출처              |
-| `sources/fos-study/`                                                | 별도 저장소에서 관리하는 공개 학습·경력 근거        |
-| `docs/`                                                             | 제품 가치, 흐름, 데이터 계약, 코드 구조와 결정 이유  |
+`.claude/skills/<name>/` 안의 자리가 정해져 있다.
 
+| 자리 | 담는 것 |
+| --- | --- |
+| `SKILL.md` | 목표와 워크플로. 에이전트가 언제나 읽는다 |
+| `references/` | 필요한 단계에서만 읽는 판정 기준과 대상별 절차 |
+| `scripts/` | 이 스킬만 쓰는 실행 코드 |
+| `templates/` | HTML 골격, CSS 와 이미지 |
 
-#### 지원 자료의 세 층
+**`SKILL.md` 에 모든 것을 적지 않는다.**
+언제나 읽어야 하는 것만 남기고, 특정 단계에서만 필요한 것은 `references/` 로 내린다.
+`SKILL.md` 가 그 파일을 언제 읽는지 적는다.
 
-`application-package-writer`와 `resume-preparer`가 함께 쓰는 규약이다.
+**판정 기준을 산문으로 반복하지 않는다.** 한 파일이 소유하고 나머지는 그것을 가리킨다.
 
-공고별 문서는 `applications/<company>/<position>/`에 세 층으로 둔다.
-최상위에는 사용자가 직접 여는 `application-package.html`과 제출 PDF만 두고,
-기준 원본은 `evidence/`에, 내부 검증 자료는 `review/`에 둔다.
-생성기와 검증기는 이 세 층의 경로를 계약으로 사용한다.
-브라우저 자동 입력용 `application-form.json`과 경력기술서는 필요한 경우에만 추가한다.
+현재 구성이다. 비어 있는 자리는 그 스킬에 필요가 없어서다.
 
-여러 지원에서 재사용하는 개인 질문과 대상별 프로필 원고는 `library/`에 둔다.
-지원서 검증 결과와 점수표는 `library/`에 보관하지 않는다.
-공고별 현재 검토 결과는 해당 `applications/`에 두고,
-여러 지원에서 재사용할 검증 완료 주장만 `state/verified-claims/`에 둔다.
-층별 파일 목록은 [`data-schema.md`](data-schema.md#application-package-writer)가 소유한다.
-공통 개인정보는 private brain에서 가져오고 후보자 인터뷰에는 복제하지 않는다.
+| 스킬 | `references/` | `scripts/` | `templates/` |
+| --- | --- | --- | --- |
+| `application-package-writer` | 6 | 11 | 2 |
+| `interview-practice` | 3 | | |
+| `position-recommender` | | | |
+| `resume-preparer` | 7 | 21 | 4 |
+| `study-topic-recommender` | 2 | | |
+| `sync-profile` | 3 | 4 | |
 
-현재 경력, 역할 선호와 경험 경계는 이 저장소에 복제하지 않는다.
-skill이 private brain에서 조회하고, 제출에 사용할 세부 성과는 `sources/fos-study/`와 실제 프로젝트 근거로 다시 확인한다.
+### 실행 코드를 두 자리 중 어디에 두나
+
+같은 TypeScript 인데 스킬 번들 안과 `scripts/` 둘로 나뉜다.
+
+| 자리 | 언제 | 예 |
+| --- | --- | --- |
+| `.claude/skills/<name>/scripts/` | 그 스킬 밖에서 쓰지 않는 코드 | 이력서 PDF 변환, 원티드 폼 조작 |
+| `scripts/<name>/` | 여러 진입점이 나뉘고 독립 테스트가 큰 코드 | 공고 수집, 읽을거리 수집 |
+| `scripts/lib/` | 두 워크스페이스 이상이 쓰는 순수 기능 | CLI, 텍스트 정규화, 날짜 변환 |
+
+테스트는 코드 옆에 둔다. `<이름>.test.ts` 로 같은 디렉터리에 둔다.
+
+### 데이터 폴더
+
+사람이 고치는 곳과 도구가 쓰는 곳을 나눈다.
+
+| 폴더 | 누가 쓰나 | 동기화 |
+| --- | --- | --- |
+| `config/` | 사람이 직접 고치고 커밋한다 | Git |
+| `applications/<company>/<position>/` | 스킬이 만들고 사람이 읽는다 | 비공개 release |
+| `library/` | 사람이 직접 관리한다 | 비공개 release |
+| `state/` | 도구가 쓰고 도구가 읽는다 | 비공개 release |
+| `public/question-bank/` | 스킬이 만들고 공개한다 | Git |
+| `cache/` | 도구가 다시 만들 수 있다 | 안 함 |
+
+현재 경력과 역할 선호와 경험 경계는 이 저장소에 두지 않는다. private brain 이 소유한다.
 
 ### 스킬과 실행 코드
 
-`SKILL.md`는 입력, 실행 순서, 산출물, 검증, 안전 경계를 설명한다.
-반복되는 수집, 파싱, 렌더링과 검증은 `scripts/`의 TypeScript로 구현한다.
+`SKILL.md` 는 입력, 실행 순서, 산출물, 검증, 안전 경계를 설명한다.
+반복되는 수집, 파싱, 렌더링과 검증은 TypeScript 로 구현한다.
 
-하나의 스크립트가 수집과 추천, 렌더링을 모두 책임지지 않는다.
-외부 응답은 경계에서 검증한 뒤 내부 타입으로 변환한다.
-구조화 데이터 검증에는 Zod를 사용하고, 표시 문자열은 렌더러에서만 만든다.
-
-새 스킬 스크립트는 `scripts/lib/cli.ts` 의 `runCli` 를 기본으로 사용한다.
-인자 파싱, 사용법 오류 처리와 결과 출력이 스크립트마다 같은 모양으로 되풀이되면
-그 스크립트가 무엇을 검사하고 무엇을 만드는지가 가려진다.
-사용법은 `scripts/lib/cli.ts` 를 연 뒤 기존 스크립트 하나를 예시로 참고한다.
-
-종료 코드는 셋으로 고정한다.
-
-
-| 코드  | 뜻                            |
-| --- | ---------------------------- |
-| 0   | 통과                           |
-| 1   | 검사나 실행 실패                    |
-| 2   | 사용법 오류. 인자가 없거나 값이 규격에 맞지 않다 |
-
-
-사용법 오류를 1과 나누는 이유는 호출하는 쪽이 재시도할지 인자를 고칠지 가리기 위해서다.
-
-- 검사 스크립트는 `{ passed: boolean }` 을 돌려준다. `runCli` 가 그 값으로 0과 1을 정한다.
-- 파일을 만드는 스크립트는 아무것도 돌려주지 않고 `{ json: false }` 를 준다. 예외가 없으면 0으로 끝난다.
-- 인자 규격은 `pattern` 으로 적는다. 검사 코드를 본문에 두지 않는다.
-- `--help` 는 `runCli` 가 spec 으로 만든다. 도움말 문자열을 따로 쓰지 않는다.
-
-#### CLI 계약
-
-새 스크립트는 `runCli`를 쓴다.
-옵션 중복 처리, 도움말, 출력과 종료 코드 계약이 다른 기존 명령은 호환을 위해 기존 진입점을 유지한다.
-`firstOptionValue`는 여러 기존 명령이 공유하는 첫 옵션값 조회이며,
-같은 이름 뒤 토큰을 옵션처럼 보여도 값으로 취급하는 기존 호환 동작을 그대로 옮긴 것이다.
-새 명령의 엄격한 옵션 검사는 `parseArgs`가 담당한다.
-
-수정할 때는 Java 서비스처럼 입력을 받아 결과를 돌려주는 핵심 함수부터 읽는다.
-파일 끝의 CLI 진입점은 컨트롤러처럼 인자를 전달하고 결과를 출력한다.
-추천 판정은 `validateRecommendationAgainstPool`에서 고친다.
-추천 화면 변경 위치는 아래 「렌더」를 따른다.
-옵션 조회 규칙은 `scripts/lib/cli.ts`에서 확인한다.
-
-
-| 수정할 처리            | 핵심 함수                                              |
-| ----------------- | -------------------------------------------------- |
-| 추천 파일 로드와 후보풀 대조  | `validateRecommendationFiles`                      |
-| 추천 화면 파일 생성       | `writeCandidatePreview`                            |
-| 상세 추천 HTML 파일 생성  | `writeRecommendation`                              |
-| 읽을거리 목록과 설정 예시 생성 | `listReadingSources`, `buildReadingSourceTemplate` |
-| 면접 질문 소스 명령       | `runInterviewQuestionSources`                      |
-| 산출물 내용과 공개 경계 검사  | `validateMorningReadingOutputs`                    |
-
-
-저장소 루트에서 이미 준비한 입력 파일을 다음처럼 검사한다.
-아래 명령은 네트워크 수집을 실행하지 않는다.
-
-```bash
-bun career-os/scripts/position-recommender/validate_recommendation.ts --input /tmp/recommendation.json --candidates /tmp/posting-candidates.json
-bun career-os/scripts/study-topic-recommender/manage_reading_sources.ts list --category techBlog
-bun test career-os/scripts/lib/cli-contract.test.ts career-os/scripts/lib/cli.test.ts
-bun test career-os/scripts
-bun test ./career-os/.claude/skills/
-bunx tsc --noEmit
-```
-
-**스킬 스크립트는 경로를 직접 줘야 실행된다.**
-`bun test` 는 점으로 시작하는 디렉터리를 훑지 않아, 스킬이 `.claude/` 아래에 있는 한
-`bun test career-os/scripts` 나 파일 이름으로는 걸리지 않는다.
-실측으로 스킬 스크립트에 실패하는 테스트를 심고 `bun test career-os/scripts` 를 돌렸더니 0 fail 이 나왔다.
-
-`bunx tsc --noEmit` 은 `tsconfig.json` 의 `include` 가 스킬 스크립트를 담고 있어 경로를 주지 않아도 된다.
-
-실제 S3 연동 테스트는 전용 환경값이 모두 있을 때만 실행된다.
-로컬 리팩토링 검증에서는 해당 환경값을 제거하여 원격 저장소에 쓰지 않도록 한다.
+하나의 스크립트가 수집과 추천과 렌더링을 모두 책임지지 않는다.
+외부 응답은 경계에서 검증한 뒤 내부 타입으로 바꾼다.
+구조화 데이터 검증에는 zod 를 쓰고, 표시 문자열은 렌더러에서만 만든다.
 
 ### 비공개 작업본 동기화
 
@@ -214,40 +155,13 @@ client는 `CAREER_RECOMMENDATION_API_URL`과 `CAREER_RECOMMENDATION_API_TOKEN` �
 `CAREER_RECOMMENDATION_API_TOKEN_FILE`만 읽으며 DB 자격증명을 받지 않는다.
 `STUDY_LIBRARY_URL`과 `STUDY_SERVICE_TOKEN`은 study client 전환 동안 같은 Backend를 가리키는 호환 환경값으로 유지한다.
 
-모든 쓰기 요청은 `Authorization: Bearer`와 `Idempotency-Key`를 요구한다.
-같은 key와 같은 본문은 기존 응답을 반환하고, 같은 key에 다른 본문을 보내면 `409`를 반환한다.
-DB 연결 실패는 `503`, 요청 계약 오류는 `400`, 인증 실패는 `401`, version 충돌은 `409`로 반환한다.
-응답은 `Cache-Control: no-store`를 사용하며 원본 token과 DB 오류 전문을 포함하지 않는다.
-`PUT /api/positions/v1/analysis-policy`는 fresh DB의 포지션 분석 정책을 명시적으로 초기화하거나 갱신한다.
-정책을 설정하지 않은 상태의 수집 요청은 기본값을 추정하지 않고 `409 POLICY_NOT_CONFIGURED`를 반환한다.
-`configure_position_analysis_policy.ts`는 정책 JSON을 검증한 뒤 이 endpoint만 호출한다.
-`GET /health/live`는 process 상태만 확인하고,
-`GET /health/ready`는 DDL을 실행하지 않고 DB 연결, migration version과 checksum을 조회한다.
-`GET /api/v1/auth/check`는 유효한 Bearer token에만 `204`를 반환한다.
+endpoint 별 동작, 상태 코드와 transaction 경계는
+[`flow.md`](flow.md#추천-상태-backend)가 소유한다.
 
-공고 수집 실행 저장, 회사 tier 결과 반영, 공고 분석 실행 생성, 분석 결과 반영,
-학습자료와 cursor 저장, 추천 실행 저장은 각각 한 transaction에서 끝낸다.
-`POST /api/positions/v1/collection-runs`는 공고 버전과 수집 실행, 회사 tier 평가 실행 생성까지만 한 transaction에서 처리하고 공고 분석 실행은 만들지 않는다.
-`POST /api/positions/v1/company-tier-runs/:id/results`가 모델 평가와 실패를 반영하고,
-`POST /api/positions/v1/collection-runs/:id/analysis-runs`가 회사마다 `manual`, `model`, `default` 순서로 tier를 해결한 뒤 공고 분석 실행을 만든다.
-회사 tier 실행이 `pending`이면 공고 분석 실행 생성은 `409 COMPANY_TIER_RUN_PENDING`을 반환하고,
-수집 실행 하나는 공고 분석 실행 하나만 가지므로 재시도는 저장한 응답을 그대로 돌려준다.
-외부 queue와 worker는 두지 않으며 cron이 동기 HTTP 요청으로 단계를 진행한다.
-분석 결과 반영은 분석한 공고와 분석하지 못한 공고를 함께 받고,
-실행 상태를 `pending`, `partial`, `completed` 중 하나로 돌려준다.
-`partial`이면 client가 남은 항목만 다시 보내며 Backend는 스스로 재시도하지 않는다.
+**Backend 는 하나만 띄운다.** 상태 전체를 메모리에 들고 기록하므로
+둘 이상이면 서로의 기록을 지운다. 이 제약이 저장 계층 설계에서 나온다.
 
-운영 배포는 아래 조건을 먼저 만족해야 한다.
-이 값은 홈서버 인프라 저장소가 읽으며 `career-os`에서 실행하지 않는다.
-
-
-| 조건        | 내용                                                                                    |
-| --------- | ------------------------------------------------------------------------------------- |
-| 초기 schema | 운영 database에는 `001_position_schema`를 한 번만 적용한다. 그 뒤에는 초기 파일을 고치지 않고 `002_*.sql`을 추가한다 |
-| 인스턴스 수    | Backend는 하나만 띄운다. 상태 전체를 메모리에 들고 기록하므로 둘 이상이면 서로의 기록을 덮는다                             |
-| 적용 확인     | `migrate.ts up` 실행 뒤 `GET /health/ready`가 200인지 확인한다                                  |
-| 정책 초기화    | `PUT /api/positions/v1/analysis-policy`로 분석 정책을 한 번 넣는다. 넣기 전에는 수집 요청이 409를 반환한다      |
-| cron 연결   | 스킬 실행 cron 등록은 홈서버 인프라 저장소가 담당한다                                                      |
+배포 절차와 cron 등록은 홈서버 인프라 저장소가 소유한다. `career-os` 에서 실행하지 않는다.
 
 ### 외부 경계
 
@@ -261,20 +175,72 @@ DB 연결 실패는 `503`, 요청 계약 오류는 `400`, 인증 실패는 `401`
 
 ## application-package-writer
 
-`application-package-writer`는 사용자가 호출하는 지원 준비 진입점이다.
-공고와 회사 기준 확인, 후보자 인터뷰, 근거 매핑과 지원 전략을 한 흐름으로 연결한다.
-제출 문서의 내부 정보 유출 검사와 로컬 검토 화면 생성은 이 스킬의 `scripts/`에 둔다.
+공고별 `applications/<company>/<position>/`는 세 층으로 나뉜다.
+파일이 어느 층에 있는지가 누가 그 파일을 여는지를 정한다.
 
-`resume-preparer`는 지원 전략을 이력서와 경력기술서로 변환하는 제출 문서 진입점이다.
+| 층              | 여는 주체    | 담는 것                                                    |
+| --------------- | ------------ | ---------------------------------------------------------- |
+| 디렉터리 최상위 | 사용자       | `application-package.html`과 현재 공고가 요구하는 제출 PDF |
+| `evidence/`     | skill과 사람 | 기준 원본 Markdown과 구조화 입력                           |
+| `review/`       | 검증기       | 근거 장부, 점수표, manifest와 제출 문서 HTML               |
 
-`.claude/skills/application-package-writer/templates/`가 검토 화면의 HTML 골격과 CSS를 소유한다.
-화면 구성은 [`data-schema.md`](data-schema.md#검토-화면)가 소유한다.
+### 최상위
+
+- `application-package.html`: 기준 원본과 현재 제출 파일을 묶은 로컬 검토 화면
+- `resume.pdf`: 이력서 제출본
+- `career-description.pdf`: 경력기술서를 받는 공고에만 둔다
+- `submission.pdf`: 한 파일 제출을 요구하는 공고에만 둔다
+
+#### `evidence/`
+
+- `posting.md`: 공고 원문이며 공식 페이지의 절 구조를 그대로 둔다. 쪼갠 항목 목록은 `fit.md` 의 적합도 표가 담는다
+- `candidate-interview.md`: 후보자 원문 답변, 정리한 핵심과 제출 반영 여부
+- `fit.md`: 결론, 공고 항목별 적합도 표, 구분별 가중치, 공개 자료로 확인한 팀과 인접 사례
+- `strategy.md`: 승부처, 지원동기, 기여 시나리오, 보완할 공백, 회사 문화와의 연결, 면접에서 검증받을 내용이며 시장과 규모로 판단하는 「이 자리에서 얻을 경험과 성장」을 선택 절로 둔다
+- `status.md`: 준비 상태 세 줄과 제출 준비 상태, 사용자 확인 필요, 다음 행동
+- `resume-draft.md`: HTML과 PDF로 변환할 제출용 이력서 원본
+- `interview-questions.json`: 공고 책임, 근거 방어와 경험 공백에서 만든 포지션별 질문
+- `career-description-draft.md`: 경력기술서를 받는 공고에만 둔다
+- `application-form.json`: 브라우저 자동 입력을 준비할 때만 둔다
+
+**`interview-questions.json` 은 `application-package-writer` 가 만들고 소유한다.**
+`resume-preparer` 와 `interview-practice` 는 질문을 더할 수 있으나 기존 질문을 지우거나 다시 쓰지 않는다.
+세 스킬이 같은 파일에 쓰므로 소유자를 하나로 둔다.
+
+앞의 다섯이 기본 원본이다.
+`application-package-writer`는 지원 판단과 후보자 인터뷰를 관리하고, `resume-preparer`는 `resume-draft.md`와 제출 문서를 관리한다.
+`application-form.json`은 private brain 공통 프로필의 현재 스냅샷, 회사별 선택값, 첨부 파일과 서술형 질문을 구조화한다.
+서술형 문항이 없는 지원 건은 `questions`를 빈 배열로 둔다.
+
+#### `review/`
+
+- `resume.html`과 `career-description.html`: PDF를 만든 원본
+- `claim-ledger.json`과 `career-description-claim-ledger.json`: 주장별 근거 장부
+- `resume-scorecard.md`와 `career-description-scorecard.md`: 인사담당자와 실무담당자 리뷰 결과
+- `submission-manifest.json`: 각 PDF의 파일 해시와 원본 HTML의 문구 해시를 연결한다
+
+이 층의 파일은 사용자용 링크로 노출하지 않는다.
+검증에는 사용하므로 현재 제출 문구와 PDF가 같은 버전인지 증명한다.
+
+`.claude/skills/application-package-writer/templates/` 가 검토 화면의 HTML 골격과 CSS 를 소유한다.
+화면 구성과 적합도 점수의 필드는 [`data-schema.md`](data-schema.md#application-package-writer)가 소유한다.
 
 ## interview-practice
 
-현재 지원 대상은 private brain에서 검색한다.
-skill은 brain에서 찾은 회사와 역할을 대응하는 `applications/<company>/<position>/` 경로로 해석해 실행 스크립트에 명시적으로 전달한다.
-TypeScript 스크립트가 brain을 직접 조회하지 않는다.
+질문은 공개 범위에 따라 세 자리로 나뉜다.
+
+| 자리 | 담는 것 |
+| --- | --- |
+| `applications/<company>/<position>/evidence/interview-questions.json` | 공고에서 파생한 포지션별 질문 |
+| `library/question-bank/` | 개인 경험에서 파생해 여러 지원에서 다시 쓰는 질문 |
+| `public/question-bank/` | 공개 가능한 일반 질문 |
+| `public/question-bank/sources.json` | 질문 출처의 공식 URL 과 확인일 |
+
+**공개 산출물에 개인 질문과 포지션별 질문을 넣지 않는다.** 이 분리가 자리를 나눈 이유다.
+
+현재 지원 대상은 private brain 에서 찾는다.
+스킬이 회사와 역할을 `applications/<company>/<position>/` 경로로 해석해 스크립트에 넘긴다.
+TypeScript 스크립트가 brain 을 직접 조회하지 않는다.
 
 `scripts/interview-drill/`은 `interview-practice`의 기술·인성 모드에서 공통 진행과 복습 상태를 처리한다.
 공고별 `evidence/interview-questions.json`을 명시하면 포지션 질문과 공통 기반 질문을 섞어 구성한다.
@@ -461,13 +427,10 @@ archive 진입점은 이 파일에 복제하지 않고 sourceKey 별 registry �
 ### 두 모드의 경계
 
 파일모드와 library 모드는 실행 진입점에서 나뉜다.
+`study-library/` 는 MySQL 드라이버나 서버 저장 로직을 갖지 않는다.
+schema 와 endpoint 정의는 `services/recommendation-api/` 가 소유한다.
 
-- 파일모드는 `skill begin`, `state/morning-study-history.json`, `--commit-history` 흐름을 쓴다.
-- library 모드는 그 파일을 읽지 않고 후보와 추천 이력을 API 에서 가져온다.
-- API 호출이 실패해도 파일모드로 자동 전환하지 않는다.
-- `study-library/` 는 MySQL 드라이버나 서버 저장 로직을 갖지 않는다.
-  schema 와 endpoint 정의는 `services/recommendation-api/` 가 소유한다.
-- legacy 이력을 읽는 import preview 만 `skill begin` 과 `skill finish` 예외를 둔다.
+두 모드가 무엇을 읽고 쓰는지는 [`flow.md`](flow.md#study-topic-recommender)가 소유한다.
 
 library 모드가 읽는 환경값이다.
 
@@ -502,7 +465,10 @@ library 모드가 읽는 환경값이다.
 | `.claude/skills/sync-profile/references/github.md` | GitHub 프로필 문서 규칙 |
 | `.claude/skills/sync-profile/scripts/wanted_*.sh` | 원티드 폼 필드 조회와 입력 |
 | `.claude/skills/sync-profile/scripts/agent_usage.py` | 에이전트 세션 기록에서 월별 토큰과 환산 비용 계산 |
-| `library/profiles/` | 대상별 프로필 원고 |
+| `library/profiles/wanted-profile.md` | 원티드 원고 |
+| `library/profiles/linkedin-profile.md` | LinkedIn 원고 |
+| `library/profiles/github-profile.md` | GitHub 원고 |
+| `library/profiles/github-agent-usage.svg` | `agent_usage.py` 가 만든 이미지 |
 
 브라우저 조작은 공용 `browser-driver`를 쓰고 이 스킬이 드라이버를 따로 만들지 않는다.
 `agent_usage.py`의 모델 단가표는 그 스크립트 안에 있다. 모델이 바뀌면 그곳을 고친다.

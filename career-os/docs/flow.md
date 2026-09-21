@@ -72,6 +72,46 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 
 완료 단계가 실패해도 로컬 결과를 지우지 않는다.
 
+### 추천 상태 Backend
+
+`position-recommender` 가 쓰는 HTTP Backend 의 계약이다.
+코드 배치는 [`code-architecture.md`](code-architecture.md#추천-상태-backend)가 소유한다.
+
+모든 쓰기 요청은 `Authorization: Bearer` 와 `Idempotency-Key` 를 요구한다.
+응답은 `Cache-Control: no-store` 를 쓰며 원본 token 과 DB 오류 전문을 담지 않는다.
+
+상태 코드다.
+
+| 상황 | 코드 |
+| --- | --- |
+| 같은 key 에 같은 본문 | 저장한 응답을 그대로 |
+| 같은 key 에 다른 본문 | `409` |
+| 요청 계약 오류 | `400` |
+| 인증 실패 | `401` |
+| version 충돌 | `409` |
+| 정책을 설정하지 않은 상태의 수집 요청 | `409 POLICY_NOT_CONFIGURED` |
+| 회사 tier 실행이 `pending` 인데 분석 실행 생성 | `409 COMPANY_TIER_RUN_PENDING` |
+| DB 연결 실패 | `503` |
+
+`GET /health/live` 는 process 상태만 확인한다.
+`GET /health/ready` 는 DDL 을 실행하지 않고 DB 연결과 migration version 과 checksum 을 조회한다.
+`GET /api/v1/auth/check` 는 유효한 Bearer token 에만 `204` 를 돌려준다.
+
+세 단계가 각각 한 transaction 에서 끝난다.
+
+1. `POST /collection-runs` 가 공고 버전과 수집 실행과 회사 tier 평가 실행 생성까지 한다.
+   공고 분석 실행은 만들지 않는다.
+2. `POST /company-tier-runs/:id/results` 가 모델 평가와 실패를 반영한다.
+3. `POST /collection-runs/:id/analysis-runs` 가 회사마다 `manual`, `model`, `default` 순서로
+   tier 를 해결한 뒤 공고 분석 실행을 만든다.
+
+수집 실행 하나는 공고 분석 실행 하나만 가지므로 재시도는 저장한 응답을 그대로 돌려준다.
+분석 결과 반영은 분석한 공고와 분석하지 못한 공고를 함께 받고
+실행 상태를 `pending`, `partial`, `completed` 중 하나로 돌려준다.
+`partial` 이면 client 가 남은 항목만 다시 보낸다. Backend 는 스스로 재시도하지 않는다.
+
+외부 queue 와 worker 를 두지 않는다. cron 이 동기 HTTP 요청으로 단계를 진행한다.
+
 ### HTML 리포트 게시
 
 사용자가 공유 링크를 요청했을 때만 외부 게시까지 이어간다.
@@ -341,7 +381,15 @@ sequenceDiagram
 - 응답 유실이 의심될 때도 로컬에서 성공으로 보지 않는다.
   서버의 영수증 재응답이나 충돌 응답으로 판정한다.
 
-연동모드는 파일모드의 이력을 갱신하지 않고, 브라우저 관리자 세션을 복제하지 않는다.
+두 모드가 읽고 쓰는 자리가 다르다.
+
+- 파일모드는 `skill begin` 으로 작업본을 받고 `state/morning-study-history.json` 을 읽은 뒤
+  `--commit-history` 로 이력을 갱신한다.
+- 연동모드는 그 파일을 읽지 않고 후보와 추천 이력을 API 에서 가져온다.
+  파일모드의 이력을 갱신하지 않는다.
+- legacy 이력을 읽는 import preview 만 `skill begin` 과 `skill finish` 예외를 둔다.
+
+연동모드는 브라우저 관리자 세션을 복제하지 않는다.
 
 실행 명령과 플래그 조합은 스킬의
 [`references/execution.md`](../.claude/skills/study-topic-recommender/references/execution.md)가 소유한다.
