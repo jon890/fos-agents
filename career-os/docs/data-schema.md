@@ -397,42 +397,8 @@ bun career-os/scripts/position-recommender/configure_position_analysis_policy.ts
 활성 공고 전체를 기준으로 세고,
 `completedCount`와 `failedCount`는 그 실행이 선택한 항목만 기준으로 센다.
 
-감사 조회는 애플리케이션 코드를 거치지 않고 SQL 한 문장으로 답한다.
-
-실행이 선택한 공고를 확인한다.
-
-```sql
-SELECT i.selection_order, p.company_name, p.title, i.analysis_status, i.selection_reason
-FROM position_analysis_run_items i
-JOIN positions p ON p.position_id = i.position_id
-WHERE i.analysis_run_id = ?
-ORDER BY i.selection_order;
-```
-
-공고별 처리 결과를 확인한다.
-
-```sql
-SELECT p.title, i.result_status, i.failure_code, i.attempt_count, i.completed_at
-FROM position_analysis_run_items i
-JOIN positions p ON p.position_id = i.position_id
-WHERE i.analysis_run_id = ?
-ORDER BY i.selection_order;
-```
-
-추천 실행이 쓴 분석이 그 실행에서 생성됐는지 재사용됐는지 확인한다.
-
-```sql
-SELECT ri.rank_number, p.title, ri.analysis_id,
-       CASE WHEN a.created_by_analysis_run_id = rr.analysis_run_id
-            THEN 'created' ELSE 'reused' END AS origin
-FROM position_recommendation_items ri
-JOIN position_recommendation_runs rr
-  ON rr.recommendation_run_id = ri.recommendation_run_id
-JOIN position_analyses a ON a.analysis_id = ri.analysis_id
-JOIN positions p ON p.position_id = ri.position_id
-WHERE ri.recommendation_run_id = ?
-ORDER BY ri.rank_number;
-```
+이 중복이 어긋나지 않았는지 확인하는 감사 조회는
+[ADR-119](adr/ADR-119-분석-실행의-처리-결과와-분석의-생성-출처를-분리해-저장한다.md)가 소유한다.
 
 실행 항목에 연결된 분석, 분석을 최초 생성한 실행과 실패 후 재시도는
 같은 두 table을 다른 조건으로 조회한다.
@@ -448,7 +414,8 @@ ORDER BY ri.rank_number;
 
 사람이 정한 회사 우선순위는 `company_preferences`에만 남고,
 모델이 만든 tier 평가는 세 table에 실행 단위로 따로 쌓는다.
-판단 근거는 [회사 tier ADR](adr/ADR-120-회사-tier는-사람-override와-모델-평가를-분리해-저장한다.md)이 소유한다.
+판단 근거와 감사 조회는
+[ADR-120](adr/ADR-120-회사-tier는-사람-override와-모델-평가를-분리해-저장한다.md)이 소유한다.
 
 | table                               | column                                                                                                                                                                                                                                                                                                  |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -520,36 +487,6 @@ company_tier_assessment_id CHAR(36) NULL
 `002` 적용 시점의 기존 행은 모두 `default`로 이관하고 평가 ID를 비운다.
 이전 공고 분석을 재사용한 추천도 그 추천 실행이 사용한 현재 tier와 출처를 따로 남기므로,
 분석 시점의 tier와 추천 시점의 tier가 달라도 둘 다 확인할 수 있다.
-
-추천이 어느 tier를 어디서 얻었는지 확인한다.
-
-```sql
-SELECT ri.rank_number, p.company_name, ri.company_tier,
-       ri.company_tier_source, ri.company_tier_assessment_id
-FROM position_recommendation_items ri
-JOIN positions p ON p.position_id = ri.position_id
-WHERE ri.recommendation_run_id = ?
-ORDER BY ri.rank_number;
-```
-
-실행이 평가하려던 회사와 그 결과를 확인한다.
-
-```sql
-SELECT i.selection_order, i.company_name, i.assessment_status, i.selection_reason,
-       i.result_status, i.failure_code, i.attempt_count
-FROM company_tier_assessment_run_items i
-WHERE i.company_tier_run_id = ?
-ORDER BY i.selection_order;
-```
-
-아직 기본 tier로 남아 있는 회사를 확인한다.
-
-```sql
-SELECT DISTINCT p.company_name
-FROM position_analysis_run_items i
-JOIN positions p ON p.position_id = i.position_id
-WHERE i.analysis_run_id = ? AND i.company_tier_source = 'default';
-```
 
 임시 `company-tier-queue.json`은 Backend 응답을 그대로 저장한 실행 파일이다.
 `schemaVersion`은 1이고 `collectionRunId`, `companyTierRunId`, 생성 시각,
