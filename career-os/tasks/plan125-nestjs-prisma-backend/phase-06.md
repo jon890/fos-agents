@@ -61,6 +61,19 @@ Phase 01에서 05까지는 문서를 건드리지 않으므로 영향이 없다.
 2. 머지한 뒤의 `code-architecture.md`와 `data-schema.md`를 실제로 읽고,
    작업 항목 6을 그 구조에 맞춰 다시 쓴다
 
+정리는 main에 머지됐다. 바뀐 것 중 이 phase에 관계있는 셋이다.
+
+- `code-architecture.md`의 「추천 상태 Backend」 절이 「공통」 아래 `###`로 내려갔다.
+  그 절에 있던 HTTP 계약 22줄은 `flow.md`로 옮겼다.
+  코드 배치 표와 환경값 서술과 「Backend는 하나만 띄운다」 제약만 남아 있다
+- `data-schema.md`의 「MySQL schema 적용」 절이 11줄로 줄었다.
+  Prisma 전환 지침은 빠졌다. main에 ADR-121이 없어 깨진 링크가 되기 때문이다.
+  **그 절과 ADR-121과 ADR-122는 이 브랜치가 가져오는 것이 맞다.**
+  머지할 때 `data-schema.md`에서 충돌이 나면 main 쪽 구조를 택하고,
+  이 브랜치의 MySQL 절 내용을 「공통」 아래에 다시 넣는다
+- 문서 전체가 스킬 이름을 절 제목으로 쓴다.
+  「포지션 추천 수집」 같은 옛 이름을 찾지 않는다
+
 ## Blocked 조건
 
 - Phase 05의 테스트가 하나라도 통과하지 않으면 `PHASE_BLOCKED: 전환 검증 미완료`를 출력하고 종료한다
