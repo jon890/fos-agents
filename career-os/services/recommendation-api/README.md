@@ -7,7 +7,12 @@
 - Node `>=22.18.0`
 - MySQL 8.4
 
-## 환경 변수
+## Prisma CLI 와 테스트가 읽는 환경 변수
+
+기동에 쓰는 환경값은 여기가 아니라
+[`../../docs/code-architecture.md`](../../docs/code-architecture.md) 의 「추천 상태 Backend」 절이 소유한다.
+`API_HOST` 와 `API_PORT`, database 접속 형식 두 가지, API token 이 그것이다.
+같은 목록을 두 곳에 두지 않는다.
 
 | 이름 | 쓰는 곳 |
 | --- | --- |
@@ -21,9 +26,13 @@
 npm install
 npm run typecheck
 npm test
+npm run build
 npm run prisma:generate
 npm run prisma:status
 ```
+
+`npm run test:deployed` 는 배포한 서비스를 상대로 도는 검사다.
+기본 `npm test` 에 들어가지 않는다. 「배포한 서비스 확인」 절이 실행 방법을 적는다.
 
 ## Prisma migration
 
@@ -41,9 +50,80 @@ npm run prisma:status
 ```bash
 # cwd: career-os/services/recommendation-api
 npx prisma migrate resolve --applied 20260921000000_baseline
+npx prisma migrate status
 ```
 
 이 명령은 배포 단계에서 한 번만 실행한다.
+`status` 가 적용하지 않은 migration 이 없다고 답해야 한다.
+
+## 배포
+
+### image 를 만든다
+
+build context 는 이 디렉터리다. 모노레포 루트가 아니다.
+
+```bash
+# cwd: career-os/services/recommendation-api
+docker build -t <registry>/career-recommendation-backend:<태그> .
+docker push <registry>/career-recommendation-backend:<태그>
+docker inspect --format '{{index .RepoDigests 0}}' <registry>/career-recommendation-backend:<태그>
+```
+
+마지막 명령이 내는 digest 를 인프라 저장소의
+`services/career-recommendation-backend/.env.example` 의 `CAREER_BACKEND_IMAGE` 에 적는다.
+그 저장소의 변경이므로 별도 검토 단위로 올린다.
+
+**바꾸기 전의 digest 를 먼저 적어 둔다.** 되돌릴 때 그 값이 필요하다.
+
+### image 가 담는 것
+
+`prisma/migrations/` 를 image 에 담아야 한다.
+`GET /health/ready` 가 그 디렉터리를 읽어 적용되어야 할 migration 이름을 만들기 때문에,
+담지 않으면 준비 확인이 통과하지 못한다. `migrate` 명령도 같은 디렉터리를 읽는다.
+
+### `migrate` 를 부르는 자리
+
+`prisma migrate deploy` 는 container 의 `migrate` 명령이 부른다.
+저장소의 다른 어디에서도 부르지 않는다.
+
+```bash
+docker run --rm --env-file <환경 파일> <image> migrate
+```
+
+`serve` 와 같은 환경값을 읽는다.
+`CAREER_RECOMMENDATION_DATABASE_URL` 또는 `DB_*` 로 접속 문자열을 만들어
+Prisma CLI 에 `DATABASE_URL` 로 넘긴다.
+적용할 migration 이 없으면 아무것도 하지 않고 종료 코드 0 으로 끝난다.
+
+인프라 저장소의 `scripts/deploy-career-recommendation-backend.sh` 가
+DB 를 백업한 뒤 이 명령을 부르고, 그 다음에 `serve` 로 서비스를 띄운다.
+
+### 배포 뒤 확인
+
+```bash
+# cwd: career-os/services/recommendation-api
+CAREER_RECOMMENDATION_API_URL=<배포한 주소> \
+CAREER_RECOMMENDATION_API_TOKEN=<운영 token> \
+  npm run test:deployed
+```
+
+`test/deployed-contract.e2e.test.ts` 가 읽기 경로만 확인한다.
+환경값이 없으면 건너뛰지 않고 실패한다.
+
+### 되돌린다
+
+```bash
+# 인프라 저장소
+# 1. `.env.example` 의 `CAREER_BACKEND_IMAGE` 를 바꾸기 전 digest 로 되돌린다
+# 2. 같은 배포 스크립트를 다시 돌린다
+./scripts/deploy-career-recommendation-backend.sh
+```
+
+**`schema_migrations` table 을 지우지 않는다.**
+되돌린 image 가 그 table 로 적용 상태를 판정한다.
+지우면 되돌린 image 가 `001_position_schema` 와 `002_company_tier_assessments` 를 다시 실행한다.
+
+`_prisma_migrations` table 은 남겨도 된다. 되돌린 image 는 그 table 을 읽지 않는다.
 
 ## 벤더링한 파일
 

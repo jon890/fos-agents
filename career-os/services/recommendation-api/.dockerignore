@@ -1,0 +1,8 @@
+node_modules
+dist
+src/generated
+test
+.omc
+README.md
+vitest.config.ts
+vitest.deployed.config.ts

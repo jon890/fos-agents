@@ -8,6 +8,9 @@ export default defineConfig({
       "dist/**",
       "src/generated/**",
       "test/fixtures/legacy-contract/capture-legacy.bun.ts",
+      // 운영 endpoint 와 token 을 요구한다. `npm run test:deployed` 가
+      // `vitest.deployed.config.ts` 로 따로 돌린다.
+      "test/deployed-contract.e2e.test.ts",
     ],
     // 시각 컬럼이 시간대를 저장하지 않으므로 테스트 하네스도 UTC 로 고정한다.
     // 고정하지 않으면 같은 테스트가 기기의 시간대에 따라 통과와 실패로 갈린다.
