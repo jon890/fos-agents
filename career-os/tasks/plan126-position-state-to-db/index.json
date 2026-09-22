@@ -1,0 +1,13 @@
+{
+  "name": "plan126-position-state-to-db",
+  "description": "포지션 추천이 파일로 들고 있던 회사 근거와 개인 제외 규칙을 fos_career로 옮기고, skill에서 비공개 작업본 동기화를 없앤다.",
+  "status": "pending",
+  "created_at": "2026-09-22",
+  "total_phases": 3,
+  "current_phase": 1,
+  "phases": [
+    { "number": 1, "file": "phase-01.md", "execution_profile": "deep" },
+    { "number": 2, "file": "phase-02.md", "execution_profile": "deep" },
+    { "number": 3, "file": "phase-03.md", "execution_profile": "deep" }
+  ]
+}

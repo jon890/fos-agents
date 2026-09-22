@@ -178,8 +178,28 @@ brain에는 경력, 역할 선호와 경험 경계 등 개인 지식을 두고, 
 
 ### 개인 공고 제외 설정
 
-본문은 Git 에서 제외되는 `state/private-config/position-exclusions.json` 에 있다.
-`config/position-exclusions.ts` 는 그 경로만 담는다.
+`fos_career.position_exclusions` 가 담는다.
+`GET api/positions/v1/exclusions` 로 읽고 `PUT` 으로 전체를 바꾼다.
+
+| 칸 | 타입 | 설명 |
+| --- | --- | --- |
+| `position_exclusion_id` | `CHAR(36)` PK | |
+| `scope` | `ENUM('posting','company','company-role')` | |
+| `company_key` | `VARCHAR(191)` NULL | `company` 와 `company-role` 에서 필수 |
+| `source_key` | `VARCHAR(100)` NULL | `posting` 에서 쓴다 |
+| `identity_hash` | `VARCHAR(512)` NULL | `posting` 에서 쓴다 |
+| `normalized_url` | `VARCHAR(2048)` NULL | `posting` 에서 쓴다 |
+| `title_keywords_json` | `JSON` NULL | `company-role` 에서 필수 |
+| `decision_kind` | `ENUM('career-downside','manual')` | |
+| `reason` | `TEXT` | |
+| `evidence_urls_json` | `JSON` | HTTPS 만 담는다 |
+| `confidence` | `ENUM('low','medium','high')` NULL | |
+| `decided_at` | `DATE` | |
+| `expires_at` | `DATE` NULL | |
+
+`scope` 마다 필요한 칸이 다른 것은 `CHECK` 로 강제한다.
+
+API 본문은 아래 모양이다.
 
 ```json
 {
@@ -223,8 +243,53 @@ query 순서와 마지막 슬래시를 맞춘다. 공고 ID 를 담는 query 는
 **추천 실행이 이 규칙을 자동으로 만들거나 갱신하지 않는다.**
 지원 결과와 재지원 간격의 원본은 private brain 이 소유한다.
 
-선택 이유는 [ADR-114](adr/ADR-114-개인-공고-제외-정책을-비공개-release로-전송한다.md)를 따른다.
+선택 이유는 [ADR-123](adr/ADR-123-회사-근거와-개인-제외-정책은-backend가-소유한다.md)을 따른다.
 읽는 시점과 실패 처리는 [`flow.md`](flow.md#position-recommender)가 소유한다.
+
+### 회사 근거
+
+`fos_career.company_evidence` 가 담는다.
+수집기가 모아 `PUT api/positions/v1/company-tier-runs/:companyTierRunId/evidence` 로 저장하고,
+모델은 이 근거만 읽고 세 축을 판정한다.
+
+| 칸 | 타입 | 설명 |
+| --- | --- | --- |
+| `company_evidence_id` | `CHAR(36)` PK | |
+| `company_key` | `VARCHAR(191)` | |
+| `source_type` | `ENUM` | 아래 표 |
+| `url` | `VARCHAR(2048)` | HTTPS 만 담는다 |
+| `title` | `VARCHAR(500)` NULL | |
+| `summary` | `TEXT` | 한 줄 요약 |
+| `payload_json` | `JSON` | 수집기가 받은 값. 급여와 근속과 인원이 여기 든다 |
+| `observed_at` | `DATETIME(3)` | 수집 시각 |
+| `valid_until` | `DATE` | 만료일 |
+
+`(company_key, source_type, url)` 이 UNIQUE 다. 같은 출처를 다시 모으면 갱신한다.
+
+`source_type` 과 그 출처가 채우는 축이다.
+
+| `source_type` | 출처 | 채우는 축 |
+| --- | --- | --- |
+| `dart-employment` | OpenDART 「직원 현황」 | `compensation-upside`, `team-growth` |
+| `dart-financial` | OpenDART 재무정보 | `team-growth` |
+| `tech-blog` | 회사 기술 블로그 RSS | `growth-scope` |
+| `github` | GitHub organization | `growth-scope` |
+| `conference` | 컨퍼런스 발표 | `growth-scope` |
+| `review` | Blind 항목별 평점 | `compensation-upside` |
+| `job-posting` | 우리가 모은 활성 공고 | `growth-scope`, `team-growth` |
+| `official` | 회사 공식 홈페이지와 채용 페이지 | 축을 정하지 않는다 |
+| `other` | 그 밖 | 축을 정하지 않는다 |
+
+`valid_until` 은 출처마다 다르다.
+
+| `source_type` | 유효기간 | 이유 |
+| --- | --- | --- |
+| `dart-employment`, `dart-financial` | 180일 | 사업보고서가 1년에 한 번 나온다 |
+| `tech-blog` | 14일 | 글이 계속 올라온다 |
+| `github` | 30일 | 마지막 push 시각만 본다 |
+| `review` | 60일 | 평점이 천천히 움직인다 |
+| `conference`, `official`, `other` | 90일 | |
+| `job-posting` | 수집 실행마다 다시 만든다 | 이미 매일 모은다 |
 
 ### 포지션 분석 정책
 
@@ -443,7 +508,7 @@ bun career-os/scripts/position-recommender/configure_position_analysis_policy.ts
 | table                               | column                                                                                                                                                                                                                                                                                                  |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `company_tier_assessment_runs`      | `company_tier_run_id`, `collection_run_id`, `candidate_context_version`, `contract_version`, `status`, `assessed_now_count`, `created_at`, `completed_at`                                                                                                                                              |
-| `company_tier_assessments`          | `company_tier_assessment_id`, `company_key`, `company_name`, `candidate_context_version`, `contract_version`, `created_by_company_tier_run_id`, `recommended_tier`, `confidence`, `reason`, `signals_json`, `evidence_json`, `assumptions_json`, `assessed_at`, `valid_until`                          |
+| `company_tier_assessments`          | `company_tier_assessment_id`, `company_key`, `company_name`, `candidate_context_version`, `contract_version`, `created_by_company_tier_run_id`, `recommended_tier`, `confidence`, `reason`, `assessment`, `signals_json`, `evidence_json`, `assumptions_json`, `assessed_at`, `valid_until`             |
 | `company_tier_assessment_run_items` | `company_tier_run_id`, `company_key`, `company_name`, `selection_order`, `assessment_status`, `selection_reason`, `prior_tier`, `active_position_count`, `result_status`, `company_tier_assessment_id`, `failure_code`, `attempt_count`, `completed_at`                                                 |
 
 수집 실행 하나는 회사 tier 실행 하나만 가지므로 `collection_run_id`에 UNIQUE를 둔다.
@@ -452,7 +517,10 @@ bun career-os/scripts/position-recommender/configure_position_analysis_policy.ts
 평가를 만든 실행은 삭제할 수 없다.
 `company_key`는 `company_preferences`와 같은 정규화 규칙을 쓰고 별도 `companies` table을 만들지 않는다.
 
-`recommended_tier`는 1, 2, 3만, `confidence`는 `low`, `medium`, `high`만 허용한다.
+`recommended_tier`는 1, 2, 3과 NULL을, `confidence`는 `low`, `medium`, `high`와 NULL을 허용한다.
+**NULL은 판정할 근거가 없었다는 뜻이고 지어낸 값보다 낫다.**
+`recommended_tier`가 NULL이면 그 회사의 tier는 `manual`이 없는 한 `default`로 푼다.
+이유는 [ADR-124](adr/ADR-124-판정-스키마는-모르는-상태를-표현한다.md)를 따른다.
 `assessment_status`는 유효한 평가가 없는 회사의 `new`와 평가가 만료된 회사의 `stale` 중 하나이고,
 `selection_reason`은 각각에 대응하는 `discovery`와 `refresh` 중 하나다.
 `prior_tier`는 `stale` 항목이 만료된 이전 평가의 tier를 담는 자리이므로 `new` 항목에서는 비어 있다.
@@ -478,11 +546,23 @@ Backend 가 2시간이 지난 처리 중 표시를 회수하며 남기는 `lease
 선택할 회사가 없으면 만들어지는 즉시 `completed` 다.
 `assessed_now_count` 는 `created` 항목만 센다. `reused` 와 `failed` 는 들어가지 않는다.
 
-`signals_json`은 성장 범위를 `growth-scope`, 보상 상승을 `compensation-upside`,
-팀 성장을 `team-growth` 키로 각각 한 번씩만 담고,
-확인하지 못한 축은 지어낸 사실 대신 `unknown`으로 남긴다.
-세 이름은 `state/company-research/`의 `topic`과 같은 kebab-case 표기를 따른다.
-`evidence_json`의 근거 URL은 HTTPS만 허용한다.
+`signals_json`은 축 셋을 각각 한 번씩만 담는다.
+
+| 축 | 답하는 것 | 채우는 근거 |
+| --- | --- | --- |
+| `growth-scope` | 기술적으로 성장할 수 있는가 | `tech-blog`, `github`, `conference`, `job-posting` |
+| `team-growth` | 팀이 커지고 있는가 | `dart-employment`, `dart-financial`, `job-posting` |
+| `compensation-upside` | 보상과 복지가 적절한가 | `dart-employment`, `review` |
+
+각 축은 `level`과 `evidenceIds`를 담는다.
+**`evidenceIds`가 비어 있으면 `level`은 `unknown`이어야 한다.**
+근거를 요구해서 등급을 받는 것이 아니라 근거가 있는 축만 등급을 받는다.
+
+`assessment`는 유보와 조건과 반대 근거를 적는 서술이고 2000자까지다.
+공개 HTML에 넣지 않는다. 공개에 실리는 것은 200자까지인 `reason`이다.
+
+`evidence_json`의 근거 URL은 HTTPS만 허용하고 최소 개수를 요구하지 않는다.
+빈 배열은 근거를 찾지 못했다는 정직한 값이다.
 `valid_until`은 Backend가 다음 셋 중 가장 빠른 날로 정한다.
 수신 시각에 `companyTierStaleAfterDays`를 더한 날, 각 근거의 만료일,
 client가 결과에 `validUntil`을 넣었으면 그 날이다.

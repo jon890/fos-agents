@@ -305,18 +305,25 @@ TypeScript 스크립트가 brain 을 직접 조회하지 않는다.
 `scripts/position-recommender/` 루트에는 CLI 진입점만 둔다.
 어느 진입점이 [`flow.md`](flow.md#position-recommender)의 어느 단계인지는 다음과 같다.
 
-| 진입점 | 흐름의 단계 |
+**일일 실행 경로는 `position_run.ts`의 하위 명령 넷이다.**
+skill이 중간 파일 이름과 플래그를 알지 못하도록 모든 하위 명령이 `--run <RUN_DIR>` 하나만 받는다.
+
+| 하위 명령 | 흐름의 단계 |
 | --- | --- |
-| `collect_live_postings.ts` | 공고 수집 |
-| `prepare_position_analysis.ts` | 수집 실행 저장과 분석 큐 생성 |
-| `complete_company_tier_assessment.ts` | 회사 tier 평가 결과 반영 |
-| `commit_position_analysis.ts` | 큐에 든 공고의 분석 반영 |
-| `finalize_position_recommendation.ts` | 추천 JSON과 HTML 생성과 검증 |
+| `collect` | 공고 수집, 수집 실행 저장, 회사 큐 수신, 근거 수집과 저장 |
+| `commit-company-tiers` | 축별 판정 반영과 분석 큐 생성 |
+| `commit-analyses` | 큐에 든 공고의 분석 반영 |
+| `finalize` | 추천 JSON과 HTML 생성과 검증 |
+
+나머지 진입점은 일일 실행에 들어가지 않는다.
+
+| 진입점 | 언제 쓰나 |
+| --- | --- |
 | `validate_recommendation.ts` | 추천 원문 대조 |
-| `company_research.ts` | 회사 조사 병합 |
 | `render_recommendation.ts`, `render_candidate_preview.ts` | 렌더 |
 | `configure_position_analysis_policy.ts` | 분석 정책 설정 |
 | `configure_position_company_preferences.ts` | 사람이 정한 회사 tier와 제외 설정 |
+| `import_position_state.ts` | 파일에 있던 회사 조사와 제외 규칙을 DB로 옮기는 일회성 명령 |
 
 디렉터리별 책임은 다음과 같다.
 
@@ -324,11 +331,32 @@ TypeScript 스크립트가 brain 을 직접 조회하지 않는다.
 | --- | --- |
 | `live-postings/` | 외부 소스 어댑터와 수집 정책 |
 | `recommendation/` | 추천 계약과 최종 답변 문구 |
-| `company-research/` | 재사용할 회사 사실의 계약과 병합 |
-| `feedback/` | 개인 제외 기준 |
+| `company-evidence/` | 근거 수집기와 그 계약 |
+| `feedback/` | 개인 제외 기준. 규칙은 Backend에서 읽는다 |
 | `recommendation-api/` | Backend client. 큐 조회와 분석 반영 |
 | `company-tier-analysis/` | 회사 tier 모델 평가의 요청과 응답 계약 |
 | `render/` | HTML 생성과 검사 |
+
+### 근거 수집기
+
+근거 수집기는 `company-evidence/collectors/`에 소스마다 하나씩 둔다.
+`live-postings/adapters/`와 같은 모양이다. 등록은 `collectors/index.ts`가 한다.
+
+| 수집기 | 받는 것 | 인증 |
+| --- | --- | --- |
+| `dart.ts` | OpenDART 「직원 현황」과 재무정보 | 인증키가 필요하다 |
+| `tech-blog.ts` | 회사 기술 블로그 RSS | 없다 |
+| `github.ts` | GitHub organization의 저장소 | 없다 |
+| `review.ts` | Blind 항목별 평점 | 없다 |
+| `job-posting.ts` | 우리가 이미 모은 활성 공고 | 없다 |
+
+**수집기 하나가 실패해도 다른 수집기는 계속한다.**
+실패한 수집기가 채우던 축만 비고, 그 사실이 판정에 남는다.
+`collectors/registry.ts`가 회사마다 어느 수집기를 돌릴지 정하고,
+유효기간이 남은 근거는 다시 모으지 않는다.
+
+회사별 기술 블로그 RSS 주소와 GitHub organization 이름은 `company_preferences`가 담는다.
+수집기 코드에 회사 목록을 넣지 않는다.
 
 ### 수집 정책의 세 층
 
