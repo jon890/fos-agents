@@ -282,12 +282,10 @@ def attach_photos(page: Page, files: list[str], seconds: float = 30.0) -> str:
     page.call("Runtime.enable")
     page.call("Page.setInterceptFileChooserDialog", enabled=True)
 
-    pressed = page.js(
-        "(() => { const b = document.querySelector("
-        + json.dumps(PHOTO_BUTTON)
-        + "); if (!b) return false; b.click(); return true; })()"
-    )
-    if not pressed:
+    # JS 의 `.click()` 으로 누르면 파일 선택 창이 열리지 않는다.
+    # Chrome 은 사용자 활성화가 있을 때만 그 창을 여는데, 그 시점에
+    # `navigator.userActivation.isActive` 가 거짓이었다. 마우스 이벤트로 누르면 바로 열린다. 실측이다.
+    if not click(page, PHOTO_BUTTON):
         return "사진 버튼을 찾지 못했다"
 
     chooser = page.wait_event("Page.fileChooserOpened", seconds=seconds)
