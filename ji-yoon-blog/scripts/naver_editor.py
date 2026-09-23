@@ -51,11 +51,16 @@ TITLE_SELECTOR = ".se-documentTitle .se-text-paragraph"
 BODY_SELECTOR = ".se-component.se-text .se-text-paragraph"
 
 
-def click(page: Page, selector: str) -> bool:
-    """선택자가 가리키는 자리를 눌러 초점을 준다."""
+def mouse_click(page: Page, finder: str) -> bool:
+    """JS 식이 찾은 요소의 가운데를 마우스로 누른다. 찾지 못하거나 보이지 않으면 거짓이다.
+
+    편집기와 Chrome 은 JS 의 `.click()` 을 사람이 누른 것으로 보지 않는다.
+    저장 버튼은 그 클릭을 받지 않았고, 사진 버튼은 파일 선택 창을 열지 않았다. 실측이다.
+    그래서 누르는 것은 모두 CDP 의 `Input.dispatchMouseEvent` 로 한다.
+    """
     box = page.js(
         f'''(() => {{
-  const el = document.querySelector({json.dumps(selector)});
+  const el = {finder};
   if (!el) return null;
   el.scrollIntoView({{block: "center"}});
   const r = el.getBoundingClientRect();
@@ -78,33 +83,25 @@ def click(page: Page, selector: str) -> bool:
     return True
 
 
+def click(page: Page, selector: str) -> bool:
+    """선택자가 가리키는 자리를 눌러 초점을 준다."""
+    return mouse_click(page, f"document.querySelector({json.dumps(selector)})")
+
+
+def button_finder(scope: str, text: str) -> str:
+    """`scope` 안에서 글자가 정확히 `text` 인 버튼을 찾는 JS 식을 돌려준다."""
+    return (
+        f"[...document.querySelectorAll({json.dumps(scope)})]"
+        f".find(b => b.innerText.trim() === {json.dumps(text)})"
+    )
+
+
 def click_button(page: Page, text: str) -> bool:
     """글자가 정확히 그것인 버튼을 마우스로 누른다.
 
     클래스 이름에 해시가 붙어 바뀌므로 글자로 찾는다.
     """
-    box = page.js(
-        "(() => { const want = "
-        + json.dumps(text)
-        + "; const b = [...document.querySelectorAll('button')]"
-        + ".find(b => b.innerText.trim() === want); if (!b) return null;"
-        + " b.scrollIntoView({block: 'center'});"
-        + " const r = b.getBoundingClientRect(); if (!r.width || !r.height) return null;"
-        + " return JSON.stringify({x: r.left + r.width / 2, y: r.top + r.height / 2}); })()"
-    )
-    if not box:
-        return False
-    spot = json.loads(box)
-    for kind in ("mousePressed", "mouseReleased"):
-        page.call(
-            "Input.dispatchMouseEvent",
-            type=kind,
-            x=spot["x"],
-            y=spot["y"],
-            button="left",
-            clickCount=1,
-        )
-    return True
+    return mouse_click(page, button_finder("button", text))
 
 
 def clear_field(page: Page) -> None:
@@ -160,19 +157,8 @@ def blocking_popup(page: Page) -> str:
 
 
 def dismiss_popup(page: Page, button: str) -> bool:
-    """알림의 버튼 하나를 누른다."""
-    return bool(
-        page.js(
-            f'''(() => {{
-  const want = {json.dumps(button)};
-  const b = [...document.querySelectorAll(".se-popup button, [role=dialog] button")]
-    .find(b => b.innerText.trim() === want);
-  if (!b) return false;
-  b.click();
-  return true;
-}})()'''
-        )
-    )
+    """알림의 버튼 하나를 마우스로 누른다."""
+    return mouse_click(page, button_finder(".se-popup button, [role=dialog] button", button))
 
 
 def require_clear_screen(page: Page) -> str:
