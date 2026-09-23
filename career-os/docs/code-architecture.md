@@ -56,7 +56,7 @@ career-os/
 | --- | --- | --- | --- |
 | `application-package-writer` | 6 | 11 | 2 |
 | `interview-practice` | 3 | | |
-| `position-recommender` | | | |
+| `position-recommender` | 2 | | |
 | `resume-preparer` | 7 | 21 | 4 |
 | `study-topic-recommender` | 2 | | |
 | `sync-profile` | 3 | 4 | |
