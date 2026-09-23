@@ -10,9 +10,18 @@ SmartEditor 가 자체 입력 버퍼로 글자를 받아서 `execCommand` 가 `f
 이 워크스페이스의 다른 스크립트가 모두 의존성 없는 파이썬이라 맞춘다.
 
 붙는 곳은 홈서버의 상주 Chrome 이다.
-맥북에서 부를 때는 SSH 포트 포워딩이 떠 있어야 한다.
+그 Chrome 은 홈서버의 `127.0.0.1` 에만 CDP 포트를 연다.
+붙을 주소는 `JI_YOON_BLOG_CDP_HOST` 와 `JI_YOON_BLOG_CDP_PORT` 로 받는다.
+주지 않으면 `127.0.0.1:9222` 로 붙는다.
+
+맥북에서 부를 때는 SSH 포트 포워딩이 떠 있어야 한다. 환경 변수는 주지 않는다.
 
     ssh -L 9222:127.0.0.1:9222 <홈서버>
+
+Hermes 컨테이너 안에서 `127.0.0.1` 은 컨테이너 자신이라 Chrome 에 닿지 않는다.
+그래서 호스트의 중계를 거친다.
+중계는 컨테이너 네트워크의 게이트웨이 주소에서 받아 Chrome 의 loopback 포트로 넘긴다.
+컨테이너에는 중계를 띄운 쪽이 두 환경 변수를 넣어 준다.
 
 상주 Chrome 을 띄우고 내리는 것은 `naver_session.py` 가 소유한다.
 """
@@ -27,8 +36,12 @@ import struct
 import time
 import urllib.request
 
-PORT = int(os.environ.get("JI_YOON_BLOG_CDP_PORT", "9222"))
-HOST = "127.0.0.1"
+# compose 는 값이 없는 변수를 빈 문자열로 넘긴다. 빈 값도 주지 않은 것으로 본다.
+PORT = int(os.environ.get("JI_YOON_BLOG_CDP_PORT") or "9222")
+HOST = os.environ.get("JI_YOON_BLOG_CDP_HOST") or "127.0.0.1"
+# Chrome 의 origin 허용 목록은 loopback 주소만 담는다. `naver_session.py` 가 정한다.
+# 중계를 거치면 `HOST` 가 게이트웨이 주소라 목록에 없다. 그래서 origin 은 loopback 으로 고정한다.
+ORIGIN = f"http://127.0.0.1:{PORT}"
 
 
 class CdpError(RuntimeError):
@@ -67,7 +80,7 @@ class Socket:
             f"Sec-WebSocket-Key: {key}\r\n"
             "Sec-WebSocket-Version: 13\r\n"
             # Chrome 은 origin 을 검사한다. 허용 목록은 상주 Chrome 의 실행 옵션이 정한다.
-            f"Origin: http://{HOST}:{PORT}\r\n\r\n"
+            f"Origin: {ORIGIN}\r\n\r\n"
         )
         self.sock.sendall(handshake.encode())
         head = self._read_until(b"\r\n\r\n")
