@@ -189,7 +189,7 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 2. 스크립트가 종료 여부, 마감일, 고용 형태, 역할, URL 중복과 개인 제외 규칙을 검사한다.
 3. client가 후보풀과 소스 진단을 멱등 키와 함께 Backend에 보낸다. Backend는 공고 버전과 수집 실행, 회사 tier 평가 실행을 한 트랜잭션으로 저장하고 평가할 회사 큐를 반환한다.
 4. 근거 수집기가 큐에 든 회사만 대상으로 OpenDART와 기술 블로그 RSS와 GitHub organization과 Blind를 조회한다. 유효기간이 남은 근거는 다시 모으지 않는다.
-5. client가 모은 근거를 `PUT company-tier-runs/:companyTierRunId/evidence`로 저장하고, 그 회사의 유효한 근거 전체를 받아 온다.
+5. client가 모은 근거를 `PUT company-tier-runs/:companyTierRunId/evidence`로 저장한다. 응답은 회사별 저장 건수다. 그 회사의 유효한 근거는 `GET companies/:companyKey/evidence`로 따로 읽는다.
 6. 모델이 그 근거만 읽고 축 셋을 각각 판정한다. 근거가 없는 축은 `unknown`으로 두고 `recommendedTier`도 내지 않는다.
 7. client가 결과와 평가하지 못한 회사를 실행 ID와 함께 보낸다. 큐가 비어 있으면 회사 tier 실행은 만들어지는 즉시 완료다.
 8. client가 공고 분석 실행 생성을 요청하면 Backend가 회사마다 `manual`, `model`, `default` 순서로 tier를 해결하고, `fresh` 분석을 재사용한 뒤 회사 우선 슬롯과 오래 기다린 공고 보장 슬롯으로 제한된 분석 큐를 반환한다.

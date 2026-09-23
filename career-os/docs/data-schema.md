@@ -249,7 +249,8 @@ query 순서와 마지막 슬래시를 맞춘다. 공고 ID 를 담는 query 는
 ### 회사 근거
 
 `fos_career.company_evidence` 가 담는다.
-수집기가 모아 `PUT api/positions/v1/company-tier-runs/:companyTierRunId/evidence` 로 저장하고,
+수집기가 모아 `PUT api/positions/v1/company-tier-runs/:companyTierRunId/evidence` 로 저장한다.
+한 회사의 유효한 근거는 `GET api/positions/v1/companies/:companyKey/evidence` 로 읽는다.
 모델은 이 근거만 읽고 세 축을 판정한다.
 
 | 칸 | 타입 | 설명 |
@@ -365,7 +366,10 @@ bun career-os/scripts/position-recommender/configure_position_company_preference
 ```
 
 명령은 회사명과 비공개 제외 사유를 출력하지 않고 전체 반영·제외·tier별 건수만 출력한다.
-기존 개인 제외 설정의 자동 import는 별도 전환 작업 범위다.
+이전 파일에 있던 회사 조사와 개인 제외 규칙은 `import_position_state.ts` 가 옮긴다.
+`--source-dir` 로 읽을 위치를 받고, 기본은 아무것도 보내지 않고 집계만 내는 실행이다.
+실제로 반영하려면 `--commit` 을 주고, 회사 근거까지 저장하려면 `--company-tier-run-id` 를 함께 준다.
+버전 1 형식의 제외 규칙이 있으면 `--decided-at` 도 필요하다. 원본에 그 날짜가 없기 때문이다.
 
 `prioritySlots`와 `agingSlots`의 합은 `dailyAnalysisLimit`과 같아야 한다.
 `dailyAnalysisLimit`은 1부터 20까지만 허용한다.
@@ -391,25 +395,11 @@ bun career-os/scripts/position-recommender/configure_position_analysis_policy.ts
 
 #### 재사용하는 회사 조사 데이터
 
-`state/company-research/<companyKey>.json`은 포지션 추천이 다음 실행에서도 재사용할 공개 회사 사실과
-그 사실에서 도출한 추론을 담는다. 비공개 작업 release로 동기화하지만 현재 역할,
-개인 우선순위와 최종 추천 순위는 넣지 않는다.
+회사별 공개 사실은 `fos_career.company_evidence` 가 담는다. 이 문서의 「회사 근거」 절이 소유한다.
+포지션 추천은 파일이 아니라 `GET api/positions/v1/companies/:companyKey/evidence` 로 읽는다.
 
-| 자리 | 담는 것 |
-| --- | --- |
-| `profile.companyKey`, `company`, `aliases` | 회사 식별. `companyKey` 가 파일 이름이다 |
-| `profile.facts[]` | 공개 사실 하나. `factId`, `topic`, `scope`, `statement` |
-| `facts[].source` | HTTPS 출처. `url`, `title`, `publisher`, `sourceType`, `publishedAt`, `observedAt` |
-| `facts[].validUntil` | 이 사실을 다시 쓸 수 있는 마지막 날 |
-| `profile.inferences[]` | 사실에서 도출한 추론. `basisFactIds` 로 근거 사실을 가리킨다 |
-| `inferences[].assumptions`, `confidence` | 재사용 판단에 도움이 될 때만 넣는다 |
-| `researchGaps[]` | 재조사할 질문과 날짜. 같은 조사를 매 실행 반복하지 않으려고 둔다 |
-
-`topic`과 `scope`는 조사한 회사와 공고에 맞는 이름을 자유롭게 쓴다.
-각 사실은 HTTPS 출처를 갖는다. 유효기간, 추론의 가정과 신뢰도는 재사용 판단에 도움이 될 때만 넣는다.
-`researchGaps`는 같은 조사를 매 실행마다 반복하지 않도록
-재조사할 질문과 날짜를 보존한다. 현재 형식은
-`scripts/position-recommender/company-research/schema.ts`가 검증한다.
+`scripts/position-recommender/company-research/schema.ts` 는 이전 파일 형식의 zod 계약이다.
+`import_position_state.ts` 가 그 파일을 읽을 때만 쓴다. 새 근거는 이 형식으로 저장하지 않는다.
 
 #### 공고 후보풀
 
@@ -661,7 +651,7 @@ company_tier_assessment_id CHAR(36) NULL
 게시용 HTML은 이 결과에서 만든다.
 HTML은 상세 추천, 분석한 활성 공고 순위, 분석 대기 목록과 수집 경고를 구분해 표시한다.
 후보풀, 추천 JSON과 HTML은 게시 검증 뒤 삭제한다.
-공고 분석 이력과 회사 조사 데이터는 다음 실행에서 재사용하므로 `state/`에 유지한다.
+공고 분석 이력과 회사 근거는 다음 실행에서 재사용하며 Backend 와 MySQL 이 보존한다.
 
 ## resume-preparer
 

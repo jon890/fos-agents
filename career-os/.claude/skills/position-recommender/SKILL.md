@@ -61,6 +61,12 @@ bun career-os/scripts/position-recommender/prepare_position_analysis.ts \
 파일이 있으면 큐에 선택된 회사만 평가한다.
 추천 판단에 영향을 주지만 없거나 만료된 사실만 새로 조사한다.
 
+회사별 공개 사실은 Backend 가 담는다.
+`GET api/positions/v1/companies/:companyKey/evidence` 가 유효기간이 남은 근거만 돌려주고,
+새로 모은 근거는 `PUT api/positions/v1/company-tier-runs/:companyTierRunId/evidence` 로 저장한다.
+`career-os/scripts/position-recommender/recommendation-api/client.ts` 의
+`getCompanyEvidence` 와 `putCompanyEvidence` 가 이 둘을 부른다.
+
 각 회사마다 성장 범위, 보상 상승, 팀 성장 세 기회 축을 평가한다.
 근거가 없는 축은 지어내지 않고 `unknown`으로 남기며, 그 위에서 종합 tier 1부터 3과 신뢰도를 정한다.
 근거 URL은 HTTPS만 쓰고 확인 시각을 함께 남긴다.

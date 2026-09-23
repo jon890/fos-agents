@@ -9,5 +9,6 @@
   - 개인 제외 규칙만 파일에 남기는 안은 기각했다. 규칙이 한 개 파일이라 옮기는 비용이 가장 작고, 남기면 `skill begin`과 `skill finish`가 그 하나 때문에 계속 필요하다.
 - **결과**:
   - 얻는 것: skill에서 파일 동기화 단계와 그 실패 처리가 사라진다. 회사 근거가 늘어도 전송량이 늘지 않는다. 유효기간 판정이 한 곳에서 일어난다. 여러 실행이 같은 근거를 공유한다.
+  - 제외 규칙 전체가 새 잠금 단위가 된다. `PUT exclusions` 가 받은 배열로 통째로 대체하므로 [ADR-122](ADR-122-추천-상태는-질의-단위로-읽고-쓴다.md)의 다섯 단위에 하나가 더해진다.
   - 감당할 것: 사람이 회사 조사와 제외 규칙을 고치던 경로가 사라진다. 지금은 파일을 직접 열어 고친다. `PUT exclusions`가 그 자리를 대신하지만 편집기로 여는 것만큼 편하지 않다. 기존 파일 9개를 옮기는 일회성 명령이 필요하고, 옮긴 뒤 원본을 지우기 전에 행 수를 대조해야 한다. Backend가 내려가면 수집 자체가 시작되지 않는다. 지금도 공고 저장이 Backend에 기대므로 새로 생기는 의존은 아니다.
 - **적용 범위**: `services/recommendation-api/`의 schema와 저장 계층과 controller, `scripts/position-recommender/company-research/`와 `feedback/exclusions.ts`, `.claude/skills/position-recommender/SKILL.md`, `config/position-exclusions.ts`, `docs/data-schema.md`, `docs/flow.md`, `docs/code-architecture.md`. [ADR-114](ADR-114-개인-공고-제외-정책을-비공개-release로-전송한다.md)와 [ADR-115](ADR-115-회사-조사-사실은-유효기간과-함께-재사용한다.md)를 대체한다. ADR-115의 유효기간 재사용이라는 결정 자체는 유지하고 저장 위치만 바뀐다. 다른 skill의 `state/` 사용은 손대지 않는다.

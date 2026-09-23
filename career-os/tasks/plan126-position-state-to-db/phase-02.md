@@ -44,7 +44,8 @@ Backend의 기존 패턴은 Phase 01과 같다.
 그것은 `observed_at`이 이미 담는다. 실행 단위는 경로와 잠금에만 쓴다.
 
 **같은 출처를 다시 모으면 행을 늘리지 않고 갱신한다.**
-`(company_key, source_type, url)`이 UNIQUE인 이유다.
+`(company_key, source_type, url_hash)`가 UNIQUE인 이유다.
+`url_hash`로 거는 이유는 `docs/data-schema.md`의 「회사 근거」가 정한다.
 회사 조사는 이력이 아니라 현재 상태다. 이력은 `company_tier_assessments`가 담는다.
 
 **추론을 근거와 같은 table에 넣지 않는다.**
@@ -64,7 +65,7 @@ Backend의 기존 패턴은 Phase 01과 같다.
 - `url`이 `https://`로 시작한다
 - `valid_until`이 `observed_at`의 날짜보다 이르지 않다
 
-`(company_key, source_type, url)`에 UNIQUE를 건다.
+`(company_key, source_type, url_hash)`에 UNIQUE를 건다.
 `(company_key, valid_until)`에 조회용 index를 건다.
 
 collation은 `utf8mb4_unicode_ci`다.
