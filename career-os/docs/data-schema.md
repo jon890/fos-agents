@@ -223,7 +223,7 @@ API 본문은 아래 모양이다.
 
 | `scope` | 요구하는 것 | 언제 맞다고 보나 |
 | --- | --- | --- |
-| `posting` | 정식 `source` 와 `identityHash` 와 HTTPS `url` 중 하나 이상 | 같은 소스에서 식별자나 정규화 URL 이 일치 |
+| `posting` | 정식 `source` 는 반드시, 그리고 `identityHash` 와 HTTPS `url` 중 하나 이상 | 같은 소스에서 식별자나 정규화 URL 이 일치 |
 | `company` | 정확한 회사명과 공개 근거 URL 두 개 이상 | 회사명이 정확히 일치 |
 | `company-role` | 정확한 회사명과 공고명에서 찾을 `titleKeywords` | 회사명이 일치하고 제목에 keyword 가 있다 |
 
@@ -259,21 +259,30 @@ query 순서와 마지막 슬래시를 맞춘다. 공고 ID 를 담는 query 는
 | `company_key` | `VARCHAR(191)` | |
 | `source_type` | `ENUM` | 아래 표 |
 | `url` | `VARCHAR(2048)` | HTTPS 만 담는다 |
-| `url_hash` | `CHAR(64)` | `url` 의 SHA-256. UNIQUE 를 걸기 위한 파생값이다 |
+| `url_hash` | `CHAR(64)` 생성 열 | `url` 에서 DB 가 만든다. 쓰기에서 값을 주지 않는다 |
 | `title` | `VARCHAR(500)` NULL | |
 | `summary` | `TEXT` | 한 줄 요약 |
 | `payload_json` | `JSON` | 수집기가 받은 값. 급여와 근속과 인원이 여기 든다 |
 | `observed_at` | `DATETIME(3)` | 수집 시각 |
 | `valid_until` | `DATE` | 만료일 |
 
-같은 출처를 다시 모으면 갱신한다. 유일성 기준은 `(company_key, source_type, url)` 이다.
+같은 출처를 다시 모으면 행을 늘리지 않는다. 유일성 기준은 `(company_key, source_type, url)` 이다.
+`observed_at` 이 저장된 값보다 최신일 때만 갱신한다.
+더 오래된 관측을 보내면 요청은 성공하고 행은 그대로 남는다.
+이전 파일을 옮기는 `import_position_state.ts` 가 보내는 것이 옛 관측이라 이 조건이 필요하다.
 
 UNIQUE 는 `url` 대신 `url_hash` 에 건다.
 `VARCHAR(2048)` 을 utf8mb4 로 담으면 index key 가 8192 바이트가 되어
 InnoDB 상한 3072 바이트를 넘고, MySQL 이 `Specified key was too long` 으로 거절한다.
 앞부분만 잘라 거는 prefix index 는 앞 570자가 같은 서로 다른 URL 을 한 행으로 묶어
 다른 출처의 근거를 덮어쓴다. 오류가 나지 않고 값만 틀린다.
-`positions.identity_hash` 와 `position_versions.content_hash` 가 쓰는 방식과 같다.
+고유 키를 전체 값의 해시에 거는 것은 `positions.identity_hash` 와 같고, 계산 주체만 다르다.
+`identity_hash` 는 애플리케이션이 계산해 넣고 `url_hash` 는 DB 가 만든다.
+
+`PUT` 의 응답은 `companyTierRunId` 와 회사별 `savedCount` 다.
+`savedCount` 는 중복을 없앤 뒤 그 회사의 출처 키 수다.
+같은 키가 한 요청에 두 번 오면 1 이고, 옛 관측이라 갱신되지 않은 키도 여기 든다.
+바뀐 행 수가 아니라 그 키로 지금 존재하는 행 수다. 이관 뒤 행 수 대조가 이 값을 쓴다.
 
 `source_type` 과 그 출처가 채우는 축이다.
 
