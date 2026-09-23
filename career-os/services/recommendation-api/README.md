@@ -42,6 +42,19 @@ npm run prisma:status
 `source/` 의 둘은 전환 전 구현이 쓰던 원본이고 비교 대상으로만 남긴다.
 `prisma/baseline.test.ts` 가 그 동일성을 바이트 단위로 확인한다.
 
+### migration 을 만들고 고치는 규칙
+
+**Backend 는 기동할 때 DDL 을 실행하지 않는다.** 연결과 적용 기록 조회만 한다.
+적용 기록은 `_prisma_migrations` table 에 있다.
+
+**적용한 migration 파일은 고치지 않는다.** checksum 이 달라져 다음 적용이 거절된다.
+schema 를 바꿀 때는 `prisma migrate` 로 새 migration 을 만든다.
+
+**`CHECK` 제약은 migration SQL 에 직접 쓴다.** `schema.prisma` 가 표현하지 못한다.
+`prisma migrate diff --from-empty --to-config-datasource --script` 의 출력은 `CHECK` 제약을 모두 빠뜨린다.
+Prisma 7.10.0 과 MySQL 8.4.8 에서 확인했다. 초기 migration 을 손으로 이어 붙인 이유다.
+Prisma 가 이 제약을 지우지는 않는다.
+
 ### 운영 DB 에 적용 완료로 표시한다
 
 운영 DB 에는 `001` 과 `002` 가 이미 적용되어 있다.

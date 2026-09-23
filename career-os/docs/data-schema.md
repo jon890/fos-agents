@@ -8,39 +8,49 @@
 
 ## 공통
 
-### MySQL schema 적용
+### `fos_career` 도메인 구조
 
-홈서버 `fos_career` database 의 schema 는
-`services/recommendation-api/prisma/schema.prisma` 와
-`services/recommendation-api/prisma/migrations/` 가 소유한다.
-아래의 table 과 column 서술은 그 migration SQL 을 읽기 쉽게 옮긴 것이다. 둘이 다르면 SQL 이 맞다.
+포지션 추천의 상태를 담는 database 다. table 은 다섯 묶음으로 나뉜다.
 
-적용 기록은 `_prisma_migrations` table 에 있다.
-**Backend 는 기동할 때 DDL 을 실행하지 않는다.** 연결과 적용 기록 조회만 한다.
-migration 적용은 배포 스크립트가 `prisma migrate deploy` 로 따로 실행한다.
+| 묶음 | table | 담는 것 |
+| --- | --- | --- |
+| 공고 원문 | `position_sources`, `positions`, `position_versions` | 외부 공고와 그 내용이 바뀐 이력. 판단을 섞지 않는다 |
+| 실행 | `position_collection_runs`, `position_analysis_runs`, `company_tier_assessment_runs`, `position_recommendation_runs` 와 각 `*_items` | 수집 실행 하나에 분석, 회사 tier 평가, 추천 실행이 하나씩 붙는다 |
+| 판단 | `position_analyses`, `company_tier_assessments` | 모델이 공고와 회사를 평가한 결과. 실행이 지워져도 남는다 |
+| 회사 근거 | `company_evidence` | 외부에서 관측한 회사 사실. 추론은 담지 않는다 |
+| 사람이 정한 것 | `company_preferences`, `position_exclusions`, `position_analysis_policy` | 회사 우선순위, 개인 제외 규칙, 분석 정책. 추천 실행이 바꾸지 않는다 |
 
-**적용한 migration 파일은 고치지 않는다.** checksum 이 달라져 다음 적용이 거절된다.
-schema 를 바꿀 때는 `prisma migrate` 로 새 migration 을 만든다.
+`request_receipts` 는 쓰기 요청의 멱등 키와 응답을 담는다. 도메인 데이터가 아니다.
 
-**초기 migration `20260921000000_baseline` 은 손으로 만든 것이다.**
-`001_position_schema.sql` 과 `002_company_tier_assessments.sql` 의 원문을 이어 붙였고,
-그 둘은 같은 디렉터리의 `source/` 에 남아 있다. 바이트 단위로 같은지를 테스트가 확인한다.
-
-`prisma migrate diff --from-empty --to-config-datasource --script` 로 뽑지 않은 이유가 있다.
-그 출력은 `CHECK` 제약 16개를 모두 빠뜨린다. Prisma 7.10.0 과 MySQL 8.4.8 에서 확인했다.
-`CHECK` 제약은 `schema.prisma` 가 표현하지 못하므로 migration SQL 이 소유한다.
-Prisma 가 이 제약을 지우지는 않는다. 제약을 바꿀 때는 migration 파일에 직접 쓴다.
-
-**초기 migration 은 운영 DB 에 다시 실행하지 않는다.**
-두 파일이 이미 적용되어 있으므로 적용 완료로만 표시한다.
-
-```bash
-npx prisma migrate resolve --applied 20260921000000_baseline
+```mermaid
+erDiagram
+  position_sources ||--o{ positions : ""
+  positions ||--o{ position_versions : ""
+  position_collection_runs ||--o{ position_collection_items : ""
+  position_collection_items }o--|| position_versions : ""
+  position_collection_runs ||--o| company_tier_assessment_runs : ""
+  position_collection_runs ||--o| position_analysis_runs : ""
+  position_analysis_runs ||--o{ position_analysis_run_items : ""
+  position_analysis_run_items }o--o| position_analyses : ""
+  position_analyses }o--|| position_versions : ""
+  company_tier_assessment_runs ||--o{ company_tier_assessment_run_items : ""
+  company_tier_assessment_run_items }o--o| company_tier_assessments : ""
+  position_analysis_runs ||--o| position_recommendation_runs : ""
+  position_recommendation_runs ||--o{ position_recommendation_items : ""
+  position_recommendation_items }o--|| position_analyses : ""
 ```
 
-`schema_migrations` table 은 그대로 둔다.
-이전 image 로 되돌릴 때 그 image 가 이 table 을 읽어 적용 상태를 판정하기 때문이다.
-새 스택이 운영에서 검증되면 별도 migration 으로 제거한다.
+묶음 사이에 지키는 규칙이다.
+
+- **분석은 공고 version 에 붙는다.** 공고 본문이 바뀌면 새 version 이 생기고 이전 분석은 그 version 에 남는다.
+- **판단은 덮어쓰지 않고 쌓는다.** 새 분석과 새 tier 평가는 행을 추가하고, 현재 값은 유효한 것 가운데 가장 최근 하나다.
+- **판단을 만든 실행은 지울 수 없다.** 실행을 지우면 그 실행의 항목과 진단만 함께 지워지고 공고와 판단은 남는다.
+- **회사는 `company_key` 로 잇고 `companies` table 을 두지 않는다.** `company_preferences`, `company_tier_assessments`, `company_evidence`, `position_exclusions` 가 같은 정규화 규칙의 `company_key` 를 쓴다. foreign key 는 없다.
+- **칸끼리의 조건은 DB 의 `CHECK` 가 강제한다.** `scope` 마다 필수 칸이 다른 제외 규칙이나 HTTPS 만 받는 URL 이 그렇다. 이 제약은 `schema.prisma` 에 없고 migration SQL 에만 있다.
+
+table 별 칸과 제약은 아래 `position-recommender` 절이 소유한다.
+schema 는 `services/recommendation-api/prisma/` 가 관리하고,
+migration 적용 절차는 [`services/recommendation-api/README.md`](../services/recommendation-api/README.md) 가 소유한다.
 
 ### 홈서버 release
 
