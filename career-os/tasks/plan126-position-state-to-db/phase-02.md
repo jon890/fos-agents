@@ -35,8 +35,13 @@ Backend의 기존 패턴은 Phase 01과 같다.
 
 **근거를 회사 tier 실행 단위로 저장한다.**
 `PUT company-tier-runs/:companyTierRunId/evidence`가 경로인 이유다.
-회사 하나씩 저장하면 회사가 스물이면 요청이 스물이 되고,
-어느 실행이 어느 근거를 모았는지가 남지 않는다.
+회사 하나씩 저장하면 회사가 스물이면 요청이 스물이 된다.
+실행 단위로 묶으면 한 요청으로 끝나고, 그 실행이 `completed`인지로 저장을 거절할 수 있다.
+
+**`company_evidence`에 `company_tier_run_id` 칸을 두지 않는다.**
+`docs/data-schema.md`의 「회사 근거」 표가 칸을 정하고 그 표에 없다.
+같은 출처를 다시 모으면 같은 행을 갱신하므로 어느 실행이 그 행을 마지막으로 건드렸는지만 남길 수 있고,
+그것은 `observed_at`이 이미 담는다. 실행 단위는 경로와 잠금에만 쓴다.
 
 **같은 출처를 다시 모으면 행을 늘리지 않고 갱신한다.**
 `(company_key, source_type, url)`이 UNIQUE인 이유다.
@@ -44,7 +49,8 @@ Backend의 기존 패턴은 Phase 01과 같다.
 
 **추론을 근거와 같은 table에 넣지 않는다.**
 `company_evidence`는 외부에서 관측한 것만 담는다.
-추론은 판정의 일부이므로 `company_tier_assessments.assessment`가 담는다.
+추론은 판정의 일부이므로 `company_tier_assessments`의 `reason`과 `signals_json`과
+`evidence_json`과 `assumptions_json`이 담는다.
 둘을 섞으면 어느 문장이 출처를 가졌는지 구분할 수 없다.
 
 ## 작업 항목
@@ -109,13 +115,22 @@ Backend가 내용을 해석하지 않는다.
 
 `CHECK` 확인은 repository를 우회해 SQL로 직접 넣는다.
 
+### 6. `test/support/e2e-harness.ts`의 `DATA_TABLES`에 새 table 등록
+
+Phase 01이 `position_exclusions`를 더한 그 배열에 `company_evidence`를 더한다.
+등록하지 않으면 앞 테스트가 넣은 근거가 남아 실행 순서에 따라 결과가 달라진다.
+
 ## 검증
 
 Phase 01의 container를 그대로 쓴다. 없을 때만 Phase 01의 절차로 띄운다.
+Phase 01과 같은 이유로 `prisma migrate deploy`를 테스트 앞에 먼저 돌린다.
 
 ```bash
 # cwd: career-os/services/recommendation-api
 npm run typecheck
+DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_test" \
+SHADOW_DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_shadow" \
+  npx prisma migrate deploy
 DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_test" \
 CAREER_RECOMMENDATION_TEST_DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_test" \
 SHADOW_DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_shadow" \
@@ -125,6 +140,7 @@ SHADOW_DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_shadow" \
 기대값이다.
 
 - `typecheck`가 종료 코드 0
+- `migrate deploy`가 종료 코드 0
 - `positions-company-evidence.e2e.test.ts`의 항목이 모두 통과
 - Phase 01의 테스트를 포함해 기존 e2e가 계속 통과
 - 출력에 `skipped`가 없다
@@ -147,4 +163,5 @@ docker exec plan125-mysql mysql -uroot -pplan125 -N -e \
 | `career-os/services/recommendation-api/src/positions/repository/positions.repository.ts` | 수정 |
 | `career-os/services/recommendation-api/src/positions/positions.service.ts` | 수정 |
 | `career-os/services/recommendation-api/src/positions/positions.controller.ts` | 수정 |
+| `career-os/services/recommendation-api/test/support/e2e-harness.ts` | 수정 |
 | `career-os/services/recommendation-api/test/positions-company-evidence.e2e.test.ts` | 신규 |

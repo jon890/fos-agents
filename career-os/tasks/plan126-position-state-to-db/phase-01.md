@@ -83,6 +83,16 @@ migration SQL에 직접 쓰고 `schema.prisma`에는 칸만 적는다.
 `expires_at`이 오늘보다 이전인 규칙은 `listExclusions`가 제외한다.
 판정 기준 날짜는 Seoul 기준이고 `scripts/lib/date-format.ts`의 `formatSeoulIsoDate`와 같은 규칙이다.
 
+**Backend에는 Seoul 기준 날짜를 내는 수단이 아직 없다.**
+`src/positions/positions.service.ts`는 UTC로 날짜를 만든다.
+`src/positions/seoul-date.ts`를 새로 만들어 `todaySeoulIsoDate(now: Date): string`을 둔다.
+`Intl.DateTimeFormat`에 `timeZone: "Asia/Seoul"`과 `sv-SE` locale을 주면 `YYYY-MM-DD`가 나온다.
+`scripts/lib/date-format.ts:16`의 `formatSeoulIsoDate`가 쓰는 locale과 같고, 같은 값을 내야 한다.
+경계값 단위 테스트를 `src/positions/seoul-date.test.ts`에 둔다.
+UTC로 전날인 `2026-09-22T15:00:00Z`가 Seoul에서 `2026-09-23`이 되는지 확인한다.
+
+기존 UTC 사용처는 이 phase에서 바꾸지 않는다. 새 경로만 이 함수를 쓴다.
+
 ### 4. controller에 경로 둘 추가
 
 `src/positions/positions.controller.ts`에 더한다.
@@ -107,6 +117,13 @@ migration SQL에 직접 쓰고 `schema.prisma`에는 칸만 적는다.
 `CHECK` 확인은 repository를 우회해 SQL로 직접 넣어야 한다.
 계약 검증만 통과하는 값이 DB에서도 막히는지가 이 항목의 목적이다.
 
+### 6. `test/support/e2e-harness.ts`의 `DATA_TABLES`에 새 table 등록
+
+이 배열이 테스트마다 비우는 table 목록이다. 지금 17개가 들어 있다.
+`position_exclusions`를 더한다. 자식 table이 앞에 오는 순서를 지킨다.
+
+등록하지 않으면 앞 테스트가 넣은 규칙이 다음 테스트에 남아 실행 순서에 따라 결과가 달라진다.
+
 ## 검증
 
 **테스트용 MySQL container를 확인한다. 떠 있으면 다시 만들지 않는다.**
@@ -127,9 +144,17 @@ docker run -d --name plan125-mysql \
   --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
 ```
 
+**새 migration을 먼저 적용한다.**
+`package.json`에 migrate script가 없고 테스트 harness도 migration을 돌리지 않는다.
+`docs/data-schema.md`가 정한 대로 `prisma migrate deploy`를 따로 실행한다.
+이 단계를 건너뛰면 새 table이 없어 테스트가 전부 실패한다.
+
 ```bash
 # cwd: career-os/services/recommendation-api
 npm run typecheck
+DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_test" \
+SHADOW_DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_shadow" \
+  npx prisma migrate deploy
 DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_test" \
 CAREER_RECOMMENDATION_TEST_DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_test" \
 SHADOW_DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_shadow" \
@@ -139,7 +164,9 @@ SHADOW_DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_shadow" \
 기대값이다.
 
 - `typecheck`가 종료 코드 0
+- `migrate deploy`가 종료 코드 0
 - `positions-exclusions.e2e.test.ts`의 항목이 모두 통과
+- `seoul-date.test.ts`가 통과
 - 기존 e2e 테스트가 계속 통과
 - 출력에 `skipped`가 없다
 
@@ -161,4 +188,7 @@ docker exec plan125-mysql mysql -uroot -pplan125 -N -e \
 | `career-os/services/recommendation-api/src/positions/repository/positions.repository.ts` | 수정 |
 | `career-os/services/recommendation-api/src/positions/positions.service.ts` | 수정 |
 | `career-os/services/recommendation-api/src/positions/positions.controller.ts` | 수정 |
+| `career-os/services/recommendation-api/src/positions/seoul-date.ts` | 신규 |
+| `career-os/services/recommendation-api/src/positions/seoul-date.test.ts` | 신규 |
+| `career-os/services/recommendation-api/test/support/e2e-harness.ts` | 수정 |
 | `career-os/services/recommendation-api/test/positions-exclusions.e2e.test.ts` | 신규 |
