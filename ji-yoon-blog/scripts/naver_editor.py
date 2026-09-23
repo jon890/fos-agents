@@ -379,10 +379,13 @@ def save_count_js() -> str:
     그 숫자는 `저장` 버튼 안이 아니라 옆에 붙은 별도 버튼에 있다.
     클래스 이름에 해시가 붙어 바뀌므로 aria-label 로 찾는다.
     """
-    return '''(() => {
-  const b = document.querySelector("[aria-label*=\"임시저장된 글 보기\"]");
+    # 일반 문자열에 `\\"` 를 쓰면 파이썬이 `"` 로 풀어 JS 가 문법 오류로 죽는다.
+    # 저장 버튼을 누르기 전 개수를 읽는 자리에서 죽어 저장이 한 번도 시도되지 않았다. 실측이다.
+    # 그래서 raw 문자열에 쓰고 선택자는 작은따옴표로 감싼다.
+    return r'''(() => {
+  const b = document.querySelector('[aria-label*="임시저장된 글 보기"]');
   if (!b) return null;
-  const m = (b.getAttribute("aria-label") || b.innerText).match(/(\\d+)/);
+  const m = (b.getAttribute("aria-label") || b.innerText).match(/(\d+)/);
   return m ? Number(m[1]) : null;
 })()'''
 
@@ -395,12 +398,7 @@ def cmd_state(page: Page, args: argparse.Namespace) -> int:
   title: (document.querySelector({json.dumps(TITLE_SELECTOR)}) || {{}}).innerText || "",
   bodyLines: [...document.querySelectorAll({json.dumps(BODY_SELECTOR)})]
     .map(e => e.innerText).filter(t => t.trim()).length,
-  savedCount: (() => {{
-    const b = document.querySelector("[aria-label*=\\"임시저장된 글 보기\\"]");
-    if (!b) return null;
-    const m = (b.getAttribute("aria-label") || b.innerText).match(/(\\d+)/);
-    return m ? Number(m[1]) : null;
-  }})()
+  savedCount: {save_count_js()}
 }})'''
     )
     print(state)
