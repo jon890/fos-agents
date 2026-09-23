@@ -12,7 +12,7 @@
 | --- | --- |
 | 제목 | 넣는다 |
 | 본문 글자 | 넣는다 |
-| 사진 | 넣지 못한다. 자리 표시만 남긴다 |
+| 사진 | 넣는다. 커서 자리에 한꺼번에 들어가고 자리 표시 글자는 그대로 남는다 |
 | 태그 | 넣지 못한다. 발행 설정 레이어에만 입력란이 있다 |
 
 발행하지 않는다. `저장` 만 누른다.
@@ -20,6 +20,7 @@
 사용법:
     python3 naver_editor.py open
     python3 naver_editor.py fill drafts/순돌이곱창/draft.json
+    python3 naver_editor.py photos drafts/순돌이곱창/draft.json --remote-base <사진 디렉터리>
     python3 naver_editor.py save
     python3 naver_editor.py state
 
@@ -260,6 +261,8 @@ def cmd_fill(page: Page, args: argparse.Namespace) -> int:
 
 
 PHOTO_BUTTON = "button.se-image-toolbar-button"
+# `사진 첨부 방식` 창의 `개별사진`. `button` 이 아니라 `input[type=button]` 이다.
+LAYOUT_EACH = "#image-type-list"
 
 
 def attach_photos(page: Page, files: list[str], seconds: float = 30.0) -> str:
@@ -340,13 +343,26 @@ def cmd_photos(page: Page, args: argparse.Namespace) -> int:
         print(problem, file=sys.stderr)
         return 1
 
-    for _ in range(60):
-        time.sleep(1)
+    # 사진이 둘 이상이면 `사진 첨부 방식` 창이 떠서 고르기를 기다린다.
+    # 고르지 않으면 본문에 아무것도 생기지 않는다. `개별사진` 을 마우스로 누른다.
+    picked = False
+    after = before
+    for _ in range(120):
+        time.sleep(0.5)
+        if not picked and click(page, LAYOUT_EACH):
+            picked = True
+            print("사진 첨부 방식에서 `개별사진` 을 골랐다")
         after = image_count(page)
-        if after > before:
+        if after - before >= len(files):
             print(f"사진 {after - before}개가 본문에 들어갔다. 넣은 파일은 {len(files)}개다")
             return 0
-    print("파일은 넣었지만 본문에 이미지 블록이 생기지 않았다", file=sys.stderr)
+    if after == before:
+        print("파일은 넣었지만 본문에 이미지 블록이 생기지 않았다", file=sys.stderr)
+    else:
+        print(
+            f"사진이 {len(files)}개 중 {after - before}개만 본문에 들어갔다",
+            file=sys.stderr,
+        )
     return 1
 
 
