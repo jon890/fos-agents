@@ -3,6 +3,7 @@ import { Injectable } from "@nestjs/common";
 import { ApiError } from "../common/api-error.js";
 import type { Prisma } from "../generated/prisma/client.js";
 import { companyKey, positionIdentity, stableUuid } from "./hash.js";
+import { todaySeoulIsoDate } from "./seoul-date.js";
 import {
   PositionsRepository,
   type AnalysisRunItemRow,
@@ -38,6 +39,8 @@ import {
   type CompanyTierQueueResponse,
   type CompanyTierResultsRequest,
   type CompanyTierResultsResponse,
+  type ExclusionsRequest,
+  type PositionExclusion,
   recommendationResponseSchema,
   type PositionPreparationResponse,
   type RecommendationResponse,
@@ -172,6 +175,33 @@ export class PositionsService {
     const preference = companyPreferenceSchema.parse({ ...value, updatedAt: now });
     await this.repository.transaction((tx) => this.repository.upsertPreference(preference, tx));
     return preference;
+  }
+
+  /**
+   * 아직 유효한 개인 공고 제외 규칙을 준다.
+   *
+   * 판정 기준 날짜는 Seoul 기준이다. `expiresAt` 이 오늘이면 아직 적용하고 다음 날부터 뺀다.
+   */
+  async listExclusions(now = new Date()): Promise<PositionExclusion[]> {
+    return this.repository.listExclusions(todaySeoulIsoDate(now), this.repository.reader());
+  }
+
+  /**
+   * 제외 규칙 전체를 받은 배열로 바꾼다.
+   *
+   * 규칙 하나를 고치는 경로를 두지 않는다. 사람이 한 번에 검토하는 단위가 목록 전체다.
+   * 대체와 되읽기를 한 transaction 에서 해, 돌려준 목록이 방금 쓴 것과 어긋나지 않게 한다.
+   */
+  async replaceExclusions(
+    request: ExclusionsRequest,
+    now = new Date(),
+  ): Promise<PositionExclusion[]> {
+    const today = todaySeoulIsoDate(now);
+    return this.repository.transaction(async (tx) => {
+      await this.repository.lockExclusions(tx);
+      await this.repository.replaceExclusions(request.exclusions, tx);
+      return this.repository.listExclusions(today, tx);
+    });
   }
 
   async saveCollection(

@@ -8,10 +8,10 @@ import { afterAll, describe, expect, it } from "vitest";
 
 const execFileAsync = promisify(execFile);
 
-/** 운영 schema 를 옮긴 초기 migration 이 만드는 `CHECK` 제약 수. */
-const EXPECTED_CHECK_CONSTRAINT_COUNT = 16;
-/** `001` 의 테이블 15개와 `002` 의 3개를 합한 수. `schema_migrations` 가 그 안에 있다. */
-const EXPECTED_MODEL_COUNT = 18;
+/** 적용한 migration 전부가 만드는 `CHECK` 제약 수. 초기 migration 의 16개에 `position_exclusions` 의 3개를 더한 수다. */
+const EXPECTED_CHECK_CONSTRAINT_COUNT = 19;
+/** 초기 migration 의 테이블 18개에 `position_exclusions` 를 더한 수. `schema_migrations` 가 그 안에 있다. */
+const EXPECTED_MODEL_COUNT = 19;
 /** 초기 migration 을 빈 database 에 적용해 보는 임시 database. 테스트가 만들고 지운다. */
 const SCRATCH_DATABASE = "fos_career_baseline_check";
 
@@ -96,7 +96,7 @@ describe("초기 migration 기준점", () => {
     }
   });
 
-  it("빈 database 에 적용하면 CHECK 제약이 16개 생긴다", async () => {
+  it("빈 database 에 적용하면 CHECK 제약이 19개 생긴다", async () => {
     const adminUrl = requireTestDatabaseUrl();
     await dropScratchDatabase(adminUrl);
     await runSql(adminUrl, [
@@ -133,7 +133,7 @@ describe("초기 migration 기준점", () => {
     expect(stdout).not.toMatch(/CREATE TABLE|ALTER TABLE|DROP TABLE/);
   });
 
-  it("schema.prisma 에 model 이 18개 있다", () => {
+  it("schema.prisma 에 model 이 19개 있다", () => {
     const schema = readFileSync(schemaPath, "utf8");
     const models = schema.split("\n").filter((line) => line.startsWith("model "));
     expect(models).toHaveLength(EXPECTED_MODEL_COUNT);

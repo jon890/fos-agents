@@ -9,6 +9,7 @@ import {
   collectionRequestSchema,
   companyPreferenceUpdateSchema,
   companyTierResultsRequestSchema,
+  exclusionsRequestSchema,
   type AnalysisPolicy,
   type AnalysisQueueResponse,
   type AnalysisResultsRequest,
@@ -17,6 +18,8 @@ import {
   type CompanyPreference,
   type CompanyTierResultsRequest,
   type CompanyTierResultsResponse,
+  type ExclusionsRequest,
+  type PositionExclusion,
   type PositionPreparationResponse,
   type RecommendationResponse,
 } from "./schema.js";
@@ -24,7 +27,7 @@ import {
 /**
  * 포지션 도메인의 모든 경로다.
  *
- * 쓰기 넷에는 공통 멱등 interceptor 가 걸린다. 본문 검증은 계약 schema 를 그대로 쓴다.
+ * 쓰기 경로에는 공통 멱등 interceptor 가 걸린다. 본문 검증은 계약 schema 를 그대로 쓴다.
  */
 @Controller("api/positions/v1")
 export class PositionsController {
@@ -51,6 +54,20 @@ export class PositionsController {
     body: Omit<CompanyPreference, "updatedAt">,
   ): Promise<CompanyPreference> {
     return this.positions.updateCompanyPreference(companyKey, body);
+  }
+
+  @Get("exclusions")
+  listExclusions(): Promise<PositionExclusion[]> {
+    return this.positions.listExclusions();
+  }
+
+  /** 제외 규칙 전체를 받은 배열로 바꾸고 바뀐 뒤의 목록을 돌려준다. */
+  @Put("exclusions")
+  @HttpCode(200)
+  replaceExclusions(
+    @Body(new ZodValidationPipe(exclusionsRequestSchema)) body: ExclusionsRequest,
+  ): Promise<PositionExclusion[]> {
+    return this.positions.replaceExclusions(body);
   }
 
   @Post("collection-runs")

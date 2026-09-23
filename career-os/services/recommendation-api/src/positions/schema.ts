@@ -481,6 +481,85 @@ export const recommendationResponseSchema = z
   })
   .strict();
 
+/**
+ * 개인 공고 제외 규칙의 계약이다.
+ *
+ * `scope` 마다 요구하는 칸이 다르다. `docs/data-schema.md` 의 「개인 공고 제외 설정」 이 정한다.
+ * 수집기 쪽 `scripts/position-recommender/feedback/exclusions.ts` 와 같은 판정이어야 한다.
+ */
+const exclusionEvidenceShape = {
+  decisionKind: z.enum(["career-downside", "manual"]),
+  reason: nonEmpty,
+  evidenceUrls: z.array(httpsUrl).min(1),
+  confidence: z.enum(["low", "medium", "high"]).optional(),
+  decidedAt: dateOnly,
+  expiresAt: dateOnly.optional(),
+};
+
+const postingExclusionSchema = z
+  .object({
+    scope: z.literal("posting"),
+    source: nonEmpty,
+    identityHash: nonEmpty.optional(),
+    url: httpsUrl.optional(),
+    ...exclusionEvidenceShape,
+  })
+  .strict();
+
+const companyExclusionSchema = z
+  .object({
+    scope: z.literal("company"),
+    company: nonEmpty,
+    ...exclusionEvidenceShape,
+  })
+  .strict();
+
+const companyRoleExclusionSchema = z
+  .object({
+    scope: z.literal("company-role"),
+    company: nonEmpty,
+    titleKeywords: z.array(nonEmpty).min(1),
+    ...exclusionEvidenceShape,
+  })
+  .strict();
+
+export const positionExclusionSchema = z
+  .discriminatedUnion("scope", [
+    postingExclusionSchema,
+    companyExclusionSchema,
+    companyRoleExclusionSchema,
+  ])
+  .superRefine((rule, context) => {
+    if (rule.scope === "posting" && !rule.identityHash && !rule.url) {
+      context.addIssue({
+        code: "custom",
+        path: ["identityHash"],
+        message: "공고 제외에는 identityHash나 url 중 하나가 필요합니다.",
+      });
+    }
+    if (
+      rule.decisionKind === "career-downside" &&
+      rule.scope === "company" &&
+      rule.evidenceUrls.length < 2
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["evidenceUrls"],
+        message: "회사 전체 제외에는 공개 근거 URL이 두 개 이상 필요합니다.",
+      });
+    }
+  });
+
+export const exclusionsRequestSchema = z
+  .object({
+    schemaVersion: z.literal(2),
+    exclusions: z.array(positionExclusionSchema),
+  })
+  .strict();
+
+export type PositionExclusion = z.infer<typeof positionExclusionSchema>;
+export type ExclusionsRequest = z.infer<typeof exclusionsRequestSchema>;
+
 export type AnalysisPolicy = z.infer<typeof analysisPolicySchema>;
 export type CompanyPreference = z.infer<typeof companyPreferenceSchema>;
 export type AnalysisUpdate = z.infer<typeof analysisUpdateSchema>;

@@ -35,6 +35,7 @@ const DATA_TABLES = [
   "position_sources",
   "company_preferences",
   "position_analysis_policy",
+  "position_exclusions",
   "request_receipts",
 ];
 

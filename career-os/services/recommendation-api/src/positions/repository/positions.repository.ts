@@ -9,6 +9,7 @@ import type {
   AnalysisPolicy,
   AnalysisUpdate,
   CompanyPreference,
+  PositionExclusion,
 } from "../schema.js";
 import type {
   CompanyTierFailureCode,
@@ -291,6 +292,40 @@ function jsonValue<T>(value: unknown): T {
   return (typeof value === "string" ? JSON.parse(value) : value) as T;
 }
 
+function optionalText(value: unknown): string | undefined {
+  return value === null || value === undefined ? undefined : String(value);
+}
+
+/** 제외 규칙 행을 계약 모양으로 되돌린다. `scope` 가 어느 칸을 읽을지 정한다. */
+function toExclusion(row: RawRow): PositionExclusion {
+  const evidence = {
+    decisionKind: row.decision_kind as "career-downside" | "manual",
+    reason: String(row.reason),
+    evidenceUrls: jsonValue<string[]>(row.evidence_urls_json),
+    confidence: optionalText(row.confidence) as "low" | "medium" | "high" | undefined,
+    decidedAt: dateOnly(row.decided_at),
+    expiresAt: row.expires_at === null ? undefined : dateOnly(row.expires_at),
+  };
+  if (row.scope === "company") {
+    return { scope: "company", company: String(row.company_key), ...evidence };
+  }
+  if (row.scope === "company-role") {
+    return {
+      scope: "company-role",
+      company: String(row.company_key),
+      titleKeywords: jsonValue<string[]>(row.title_keywords_json),
+      ...evidence,
+    };
+  }
+  return {
+    scope: "posting",
+    source: String(row.source_key),
+    identityHash: optionalText(row.identity_hash),
+    url: optionalText(row.normalized_url),
+    ...evidence,
+  };
+}
+
 /** 공고 하나가 이번 수집에서 차지한 자리. `saveCollection` 이 만들어 응답 조립에 넘긴다. */
 export type UpsertedPosition = {
   positionId: string;
@@ -443,6 +478,67 @@ export class PositionsRepository {
         },
       ]),
     );
+  }
+
+  // ------------------------------------------------------------ 개인 공고 제외
+
+  /**
+   * 제외 규칙 행 전부를 잠근다.
+   *
+   * `PUT` 이 규칙을 통째로 바꾸므로 잠글 단위가 실행 하나가 아니라 이 table 전체다.
+   * ADR-122 에 따라 transaction 을 열고 값을 바꾸기 전에 먼저 부른다.
+   * 멱등 키가 다른 두 `PUT` 이 동시에 와도 뒤의 것이 앞의 것을 기다린다.
+   */
+  async lockExclusions(tx: Prisma.TransactionClient): Promise<void> {
+    await tx.$queryRaw`SELECT position_exclusion_id FROM position_exclusions FOR UPDATE`;
+  }
+
+  /** `today` 기준으로 아직 유효한 규칙만 준다. `expires_at` 당일까지는 적용한다. */
+  async listExclusions(today: string, client: DbClient): Promise<PositionExclusion[]> {
+    const rows = await client.$queryRaw<RawRow[]>`
+      SELECT position_exclusion_id, scope, company_key, source_key, identity_hash,
+             normalized_url, title_keywords_json, decision_kind, reason, evidence_urls_json,
+             confidence, decided_at, expires_at
+      FROM position_exclusions
+      WHERE expires_at IS NULL OR expires_at >= ${today}
+      ORDER BY position_exclusion_id
+    `;
+    return rows.map(toExclusion);
+  }
+
+  /**
+   * 기존 규칙을 지우고 받은 규칙만 남긴다.
+   *
+   * `normalized_url` 은 받은 값을 그대로 넣는다. 저장 계층은 URL 을 정규화하지 않는다.
+   * 정규화는 수집기 쪽 `normalizePostingUrl` 이 소유한다.
+   *
+   * 식별자는 순번과 본문에서 만든다. 같은 본문을 다시 보내면 같은 행 식별자가 나오고,
+   * 한 요청에 같은 규칙이 두 번 들어와도 순번이 달라 기본 키가 부딪히지 않는다.
+   */
+  async replaceExclusions(
+    exclusions: PositionExclusion[],
+    tx: Prisma.TransactionClient,
+  ): Promise<void> {
+    await tx.$executeRaw`DELETE FROM position_exclusions`;
+    for (const [index, rule] of exclusions.entries()) {
+      const id = stableUuid(`position-exclusion:${index}:${JSON.stringify(rule)}`);
+      const company = rule.scope === "posting" ? null : rule.company;
+      const source = rule.scope === "posting" ? rule.source : null;
+      const identityHash = rule.scope === "posting" ? (rule.identityHash ?? null) : null;
+      const url = rule.scope === "posting" ? (rule.url ?? null) : null;
+      const titleKeywords =
+        rule.scope === "company-role" ? JSON.stringify(rule.titleKeywords) : null;
+      await tx.$executeRaw`
+        INSERT INTO position_exclusions
+          (position_exclusion_id, scope, company_key, source_key, identity_hash, normalized_url,
+           title_keywords_json, decision_kind, reason, evidence_urls_json, confidence,
+           decided_at, expires_at)
+        VALUES (${id}, ${rule.scope}, ${company}, ${source}, ${identityHash}, ${url},
+                ${titleKeywords}, ${rule.decisionKind}, ${rule.reason},
+                ${JSON.stringify(rule.evidenceUrls)}, ${rule.confidence ?? null},
+                ${rule.decidedAt}, ${rule.expiresAt ?? null})
+      `;
+    }
   }
 
   // ---------------------------------------------------------------- 수집 실행
