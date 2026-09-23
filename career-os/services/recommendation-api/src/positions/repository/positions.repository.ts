@@ -8,7 +8,9 @@ import type {
   AnalysisFailureCode,
   AnalysisPolicy,
   AnalysisUpdate,
+  CompanyEvidence,
   CompanyPreference,
+  PositionExclusion,
 } from "../schema.js";
 import type {
   CompanyTierFailureCode,
@@ -255,6 +257,9 @@ export type RunLookup =
   | { kind: "recommendation"; recommendationRunId: string }
   | { kind: "recommendation-missing"; analysisRunId: string };
 
+/** 저장할 회사 근거 한 건. 회사 식별자를 함께 담아 한 요청이 여러 회사를 다룬다. */
+export type CompanyEvidenceRow = CompanyEvidence & { companyKey: string };
+
 type RawRow = Record<string, unknown>;
 
 function iso(value: unknown): string {
@@ -289,6 +294,53 @@ function number(value: unknown): number {
 
 function jsonValue<T>(value: unknown): T {
   return (typeof value === "string" ? JSON.parse(value) : value) as T;
+}
+
+function optionalText(value: unknown): string | undefined {
+  return value === null || value === undefined ? undefined : String(value);
+}
+
+/** 제외 규칙 행을 계약 모양으로 되돌린다. `scope` 가 어느 칸을 읽을지 정한다. */
+function toExclusion(row: RawRow): PositionExclusion {
+  const evidence = {
+    decisionKind: row.decision_kind as "career-downside" | "manual",
+    reason: String(row.reason),
+    evidenceUrls: jsonValue<string[]>(row.evidence_urls_json),
+    confidence: optionalText(row.confidence) as "low" | "medium" | "high" | undefined,
+    decidedAt: dateOnly(row.decided_at),
+    expiresAt: row.expires_at === null ? undefined : dateOnly(row.expires_at),
+  };
+  if (row.scope === "company") {
+    return { scope: "company", company: String(row.company_key), ...evidence };
+  }
+  if (row.scope === "company-role") {
+    return {
+      scope: "company-role",
+      company: String(row.company_key),
+      titleKeywords: jsonValue<string[]>(row.title_keywords_json),
+      ...evidence,
+    };
+  }
+  return {
+    scope: "posting",
+    source: String(row.source_key),
+    identityHash: optionalText(row.identity_hash),
+    url: optionalText(row.normalized_url),
+    ...evidence,
+  };
+}
+
+/** 회사 근거 행을 계약 모양으로 되돌린다. */
+function toCompanyEvidence(row: RawRow): CompanyEvidence {
+  return {
+    sourceType: row.source_type as CompanyEvidence["sourceType"],
+    url: String(row.url),
+    title: optionalText(row.title),
+    summary: String(row.summary),
+    payloadJson: jsonValue<Record<string, unknown>>(row.payload_json),
+    observedAt: iso(row.observed_at),
+    validUntil: dateOnly(row.valid_until),
+  };
 }
 
 /** 공고 하나가 이번 수집에서 차지한 자리. `saveCollection` 이 만들어 응답 조립에 넘긴다. */
@@ -443,6 +495,150 @@ export class PositionsRepository {
         },
       ]),
     );
+  }
+
+  // ------------------------------------------------------------ 개인 공고 제외
+
+  /**
+   * 제외 규칙 행 전부를 잠근다.
+   *
+   * `PUT` 이 규칙을 통째로 바꾸므로 잠글 단위가 실행 하나가 아니라 이 table 전체다.
+   * ADR-122 에 따라 transaction 을 열고 값을 바꾸기 전에 먼저 부른다.
+   * 멱등 키가 다른 두 `PUT` 이 동시에 와도 뒤의 것이 앞의 것을 기다린다.
+   *
+   * **`WHERE` 를 붙이지 않는다.** 조건을 달면 그 조건에 맞는 구간의 행만 잠겨,
+   * 조건 밖의 규칙을 바꾸는 다른 transaction 이 기다리지 않고 함께 지나간다.
+   * `DELETE` 뒤 `INSERT` 로 목록 전체를 바꾸는 경로라 그 둘이 섞이면 규칙이 반씩 남는다.
+   *
+   * **table 이 비어 있으면 이 잠금이 직렬화하지 못한다.** `transaction` 이 고른 격리 수준이
+   * `READ COMMITTED` 이고, 그 수준에서 InnoDB 는 gap lock 을 잡지 않아 잠글 행이 없으면
+   * 잠글 것도 없다. 2026-09-23 에 같은 container 에서 실측했다.
+   * 빈 table 에 두 연결이 동시에 들어가면 뒤의 `INSERT` 가 기다리지 않고 바로 지나갔고,
+   * 같은 절차를 `REPEATABLE READ` 로 돌리면 앞 transaction 이 끝날 때까지 3초를 기다렸다.
+   * 규칙이 한 건이라도 있으면 그 행 잠금으로 직렬화된다.
+   */
+  async lockExclusions(tx: Prisma.TransactionClient): Promise<void> {
+    await tx.$queryRaw`SELECT position_exclusion_id FROM position_exclusions FOR UPDATE`;
+  }
+
+  /** `today` 기준으로 아직 유효한 규칙만 준다. `expires_at` 당일까지는 적용한다. */
+  async listExclusions(today: string, client: DbClient): Promise<PositionExclusion[]> {
+    const rows = await client.$queryRaw<RawRow[]>`
+      SELECT position_exclusion_id, scope, company_key, source_key, identity_hash,
+             normalized_url, title_keywords_json, decision_kind, reason, evidence_urls_json,
+             confidence, decided_at, expires_at
+      FROM position_exclusions
+      WHERE expires_at IS NULL OR expires_at >= ${today}
+      ORDER BY position_exclusion_id
+    `;
+    return rows.map(toExclusion);
+  }
+
+  /**
+   * 기존 규칙을 지우고 받은 규칙만 남긴다.
+   *
+   * `normalized_url` 은 받은 값을 그대로 넣는다. 저장 계층은 URL 을 정규화하지 않는다.
+   * 정규화는 수집기 쪽 `normalizePostingUrl` 이 소유한다.
+   *
+   * 식별자는 순번과 본문에서 만든다. 같은 본문을 다시 보내면 같은 행 식별자가 나오고,
+   * 한 요청에 같은 규칙이 두 번 들어와도 순번이 달라 기본 키가 부딪히지 않는다.
+   */
+  async replaceExclusions(
+    exclusions: PositionExclusion[],
+    tx: Prisma.TransactionClient,
+  ): Promise<void> {
+    await tx.$executeRaw`DELETE FROM position_exclusions`;
+    for (const [index, rule] of exclusions.entries()) {
+      const id = stableUuid(`position-exclusion:${index}:${JSON.stringify(rule)}`);
+      const company = rule.scope === "posting" ? null : rule.company;
+      const source = rule.scope === "posting" ? rule.source : null;
+      const identityHash = rule.scope === "posting" ? (rule.identityHash ?? null) : null;
+      const url = rule.scope === "posting" ? (rule.url ?? null) : null;
+      const titleKeywords =
+        rule.scope === "company-role" ? JSON.stringify(rule.titleKeywords) : null;
+      await tx.$executeRaw`
+        INSERT INTO position_exclusions
+          (position_exclusion_id, scope, company_key, source_key, identity_hash, normalized_url,
+           title_keywords_json, decision_kind, reason, evidence_urls_json, confidence,
+           decided_at, expires_at)
+        VALUES (${id}, ${rule.scope}, ${company}, ${source}, ${identityHash}, ${url},
+                ${titleKeywords}, ${rule.decisionKind}, ${rule.reason},
+                ${JSON.stringify(rule.evidenceUrls)}, ${rule.confidence ?? null},
+                ${rule.decidedAt}, ${rule.expiresAt ?? null})
+      `;
+    }
+  }
+
+  // ------------------------------------------------------------------ 회사 근거
+
+  /**
+   * 회사 근거를 넣거나 같은 출처의 행을 갱신한다.
+   *
+   * 회사 조사는 이력이 아니라 현재 상태다. 같은 `(company_key, source_type, url)` 이 다시 오면
+   * 행을 늘리지 않고 갱신한다. 이력은 `company_tier_assessments` 가 담는다.
+   *
+   * **더 오래된 관측으로는 덮지 않는다.** 이관 명령처럼 옛 파일을 보내는 호출자가 있고,
+   * 조건 없이 덮으면 방금 모은 근거가 옛 값으로 돌아간다.
+   * 같은 시각이면 나중에 온 것을 남긴다. `observed_at` 을 날짜 단위로 적는 수집기와
+   * 재시도가 같은 시각을 다시 보내는데, 그것까지 막으면 갱신이 드러나지 않게 사라진다.
+   * 요청 안의 중복을 걷는 비교와 SQL 의 비교가 같은 부등호여야 한다.
+   * 다르면 같은 근거를 한 요청에 담느냐 나눠 보내느냐에 따라 남는 값이 달라진다.
+   *
+   * `observed_at` 대입을 마지막에 두는 것은 MySQL 이 대입을 왼쪽부터 평가해,
+   * 먼저 바꾸면 뒤의 비교가 이미 바뀐 값을 보기 때문이다.
+   *
+   * 고유 키를 `url_hash` 에 거는 이유는 migration 주석이 적는다.
+   * 한 요청에 같은 키가 두 번 들어오면 행은 하나다. 저장한 키를 그대로 돌려줘
+   * 호출자가 이 요청이 다룬 서로 다른 출처가 몇인지 셀 수 있게 한다.
+   */
+  async saveCompanyEvidence(
+    rows: CompanyEvidenceRow[],
+    tx: Prisma.TransactionClient,
+  ): Promise<CompanyEvidenceRow[]> {
+    const byKey = new Map<string, CompanyEvidenceRow>();
+    for (const row of rows) {
+      const key = [row.companyKey, row.sourceType, row.url].join("\u0000");
+      const kept = byKey.get(key);
+      if (!kept || Date.parse(row.observedAt) >= Date.parse(kept.observedAt)) byKey.set(key, row);
+    }
+    const saved = [...byKey.values()];
+    for (const row of saved) {
+      const id = stableUuid(`company-evidence:${row.companyKey}:${row.sourceType}:${row.url}`);
+      await tx.$executeRaw`
+        INSERT INTO company_evidence
+          (company_evidence_id, company_key, source_type, url, title, summary,
+           payload_json, observed_at, valid_until)
+        VALUES (${id}, ${row.companyKey}, ${row.sourceType}, ${row.url},
+                ${row.title ?? null}, ${row.summary}, ${JSON.stringify(row.payloadJson)},
+                ${at(row.observedAt)}, ${row.validUntil})
+        ON DUPLICATE KEY UPDATE
+          title = IF(VALUES(observed_at) >= observed_at, VALUES(title), title),
+          summary = IF(VALUES(observed_at) >= observed_at, VALUES(summary), summary),
+          payload_json = IF(VALUES(observed_at) >= observed_at, VALUES(payload_json), payload_json),
+          valid_until = IF(VALUES(observed_at) >= observed_at, VALUES(valid_until), valid_until),
+          observed_at = IF(VALUES(observed_at) >= observed_at, VALUES(observed_at), observed_at)
+      `;
+    }
+    return saved;
+  }
+
+  /**
+   * `today` 기준으로 아직 유효한 근거만 준다. `valid_until` 당일까지는 유효하다.
+   *
+   * 만료된 행은 지우지 않는다. 다음 수집이 같은 키로 갱신한다.
+   */
+  async listValidCompanyEvidence(
+    company: string,
+    today: string,
+    client: DbClient,
+  ): Promise<CompanyEvidence[]> {
+    const rows = await client.$queryRaw<RawRow[]>`
+      SELECT source_type, url, title, summary, payload_json, observed_at, valid_until
+      FROM company_evidence
+      WHERE company_key = ${company} AND valid_until >= ${today}
+      ORDER BY source_type, url
+    `;
+    return rows.map(toCompanyEvidence);
   }
 
   // ---------------------------------------------------------------- 수집 실행

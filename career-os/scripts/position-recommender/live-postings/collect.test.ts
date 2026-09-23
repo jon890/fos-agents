@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, rmSync, mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, rmSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { parseArgs } from "../collect_live_postings.ts";
 import { SOURCE_ALIASES, SOURCE_IDS } from "./contracts.ts";
@@ -120,10 +120,17 @@ describe("collect_live_postings 인자", () => {
   test("소스가 실패하면 후보풀을 남기고 종료 코드 1로 끝낸다", async () => {
     const dir = mkdtempSync(`${tmpdir()}/posting-candidates-`);
     const out = `${dir}/pool.json`;
-    const exclusions = `${dir}/exclusions.json`;
-    writeFileSync(exclusions, JSON.stringify({ schemaVersion: 1, exclusions: [] }));
-    // 닫힌 포트를 프록시로 지정해 네트워크 없이 연결 실패를 만든다.
-    const blocked = { HTTPS_PROXY: "http://127.0.0.1:1", HTTP_PROXY: "http://127.0.0.1:1" };
+    // 제외 규칙은 Backend 가 소유한다. 수집 단계까지 가려면 이 응답이 있어야 한다.
+    const backend = Bun.serve({ port: 0, fetch: () => Response.json([]) });
+    // 닫힌 포트를 프록시로 지정해 네트워크 없이 공고 수집의 연결 실패를 만든다.
+    // `NO_PROXY` 로 대역 Backend 만 프록시를 거치지 않게 둔다.
+    const blocked = {
+      HTTPS_PROXY: "http://127.0.0.1:1",
+      HTTP_PROXY: "http://127.0.0.1:1",
+      NO_PROXY: "127.0.0.1,localhost",
+      CAREER_RECOMMENDATION_API_URL: `http://127.0.0.1:${backend.port}`,
+      CAREER_RECOMMENDATION_API_TOKEN: "token-123456789012345678901234567890",
+    };
     const child = Bun.spawn(
       [
         "bun",
@@ -132,10 +139,12 @@ describe("collect_live_postings 인자", () => {
         "woowahan",
         "--output",
         out,
-        "--exclusions-config",
-        exclusions,
       ],
-      { stdout: "pipe", stderr: "pipe", env: { ...process.env, ...blocked } },
+      {
+        stdout: "pipe",
+        stderr: "pipe",
+        env: { ...process.env, CAREER_RECOMMENDATION_API_TOKEN_FILE: undefined, ...blocked },
+      },
     );
     const [stderr, exitCode] = await Promise.all([new Response(child.stderr).text(), child.exited]);
 
@@ -145,6 +154,7 @@ describe("collect_live_postings 인자", () => {
       expect(stderr).toContain("woowahan-careers");
       expect(existsSync(out)).toBe(true);
     } finally {
+      backend.stop(true);
       rmSync(dir, { recursive: true, force: true });
     }
   }, 60_000);

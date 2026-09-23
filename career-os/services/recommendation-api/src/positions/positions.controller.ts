@@ -7,16 +7,23 @@ import {
   analysisPolicySchema,
   analysisResultsRequestSchema,
   collectionRequestSchema,
+  companyEvidenceRequestSchema,
   companyPreferenceUpdateSchema,
   companyTierResultsRequestSchema,
+  exclusionsRequestSchema,
   type AnalysisPolicy,
   type AnalysisQueueResponse,
   type AnalysisResultsRequest,
   type AnalysisResultsResponse,
   type CollectionRequest,
+  type CompanyEvidence,
+  type CompanyEvidenceRequest,
+  type CompanyEvidenceSaveResponse,
   type CompanyPreference,
   type CompanyTierResultsRequest,
   type CompanyTierResultsResponse,
+  type ExclusionsRequest,
+  type PositionExclusion,
   type PositionPreparationResponse,
   type RecommendationResponse,
 } from "./schema.js";
@@ -24,7 +31,7 @@ import {
 /**
  * 포지션 도메인의 모든 경로다.
  *
- * 쓰기 넷에는 공통 멱등 interceptor 가 걸린다. 본문 검증은 계약 schema 를 그대로 쓴다.
+ * 쓰기 경로에는 공통 멱등 interceptor 가 걸린다. 본문 검증은 계약 schema 를 그대로 쓴다.
  */
 @Controller("api/positions/v1")
 export class PositionsController {
@@ -51,6 +58,36 @@ export class PositionsController {
     body: Omit<CompanyPreference, "updatedAt">,
   ): Promise<CompanyPreference> {
     return this.positions.updateCompanyPreference(companyKey, body);
+  }
+
+  @Get("exclusions")
+  listExclusions(): Promise<PositionExclusion[]> {
+    return this.positions.listExclusions();
+  }
+
+  /** 제외 규칙 전체를 받은 배열로 바꾸고 바뀐 뒤의 목록을 돌려준다. */
+  @Put("exclusions")
+  @HttpCode(200)
+  replaceExclusions(
+    @Body(new ZodValidationPipe(exclusionsRequestSchema)) body: ExclusionsRequest,
+  ): Promise<PositionExclusion[]> {
+    return this.positions.replaceExclusions(body);
+  }
+
+  /** 수집한 회사 근거를 회사 tier 실행 단위로 저장하고 회사별 저장 건수를 돌려준다. */
+  @Put("company-tier-runs/:companyTierRunId/evidence")
+  @HttpCode(200)
+  saveCompanyEvidence(
+    @Param("companyTierRunId") companyTierRunId: string,
+    @Body(new ZodValidationPipe(companyEvidenceRequestSchema)) body: CompanyEvidenceRequest,
+  ): Promise<CompanyEvidenceSaveResponse> {
+    return this.positions.saveCompanyEvidence(companyTierRunId, body);
+  }
+
+  /** 한 회사의 아직 유효한 근거만 돌려준다. */
+  @Get("companies/:companyKey/evidence")
+  listCompanyEvidence(@Param("companyKey") companyKey: string): Promise<CompanyEvidence[]> {
+    return this.positions.listValidCompanyEvidence(companyKey);
   }
 
   @Post("collection-runs")

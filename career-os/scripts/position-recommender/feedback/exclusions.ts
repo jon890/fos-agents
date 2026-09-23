@@ -1,12 +1,21 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { z } from "zod";
-import { POSITION_EXCLUSIONS_PATH } from "../../../config/position-exclusions.ts";
+import type { PositionExclusion as BackendPositionExclusion } from "../../../services/recommendation-api/src/positions/schema.ts";
 import { formatSeoulIsoDate } from "../../lib/date-format.ts";
 import { sourceIdSchema } from "../live-postings/contracts.ts";
+import {
+  createRecommendationApiClient,
+  RecommendationApiClientError,
+} from "../recommendation-api/client.ts";
 import type { Posting } from "../live-postings/types.ts";
 
-export const defaultExclusionsPath = resolve(import.meta.dir, "../../..", POSITION_EXCLUSIONS_PATH);
+/**
+ * 제외 규칙을 돌려주는 자리다. 운영에서는 Backend client 가, 테스트에서는 대역이 채운다.
+ *
+ * 규칙은 `fos_career.position_exclusions` 가 소유한다. ADR-123 을 따른다.
+ */
+export type PositionExclusionsSource = {
+  getExclusions(): Promise<BackendPositionExclusion[]>;
+};
 
 export function normalizePostingUrl(value: string): string {
   const url = new URL(value);
@@ -132,20 +141,47 @@ export function validateCareerDownsideExclusion(rule: EnrichedPositionExclusion)
   }
 }
 
-export function loadPositionExclusions(path = defaultExclusionsPath): PositionExclusions {
+/**
+ * 제외 규칙을 읽지 못한 원인을 갈래로만 남긴다.
+ *
+ * 규칙 본문과 개인 식별자는 오류 문구에 담지 않는다.
+ * 원인까지 한 문구로 뭉치면 수집이 멈췄을 때 어디를 볼지 알 수 없어 갈래만 구분한다.
+ * zod 의 오류 문구는 어긋난 값을 그대로 담으므로 쓰지 않는다.
+ */
+function exclusionFailureReason(error: unknown): string {
+  if (error instanceof RecommendationApiClientError) {
+    if (error.status === null || error.status >= 500) {
+      return "추천 API 에 연결하지 못했습니다. 주소와 서버 상태를 확인하세요.";
+    }
+    if (error.status === 401 || error.status === 403) {
+      return "추천 API 인증이 거절됐습니다. token 을 확인하세요.";
+    }
+  }
+  return "추천 API 가 돌려준 제외 규칙이 계약을 만족하지 않습니다.";
+}
+
+/**
+ * 외부 요청을 보내기 전에 개인 제외 규칙을 Backend 에서 읽는다.
+ *
+ * Backend 가 응답하지 않으면 중단한다. 오래된 규칙으로 수집을 이어 가면
+ * 제외하기로 한 회사의 공고가 모델 입력에 들어간다.
+ */
+export async function loadPositionExclusions(
+  source: PositionExclusionsSource = createRecommendationApiClient(),
+): Promise<PositionExclusions> {
   try {
-    const parsed = positionExclusionsSchema.parse(JSON.parse(readFileSync(path, "utf8")));
+    const parsed = positionExclusionsSchema.parse({
+      schemaVersion: 2,
+      exclusions: await source.getExclusions(),
+    });
     if (parsed.schemaVersion === 2) {
       for (const rule of parsed.exclusions) {
         if ("scope" in rule) validateCareerDownsideExclusion(rule);
       }
     }
     return parsed;
-  } catch {
-    // 개인 식별자와 파일 본문을 오류나 후보풀에 남기지 않는다.
-    throw new Error(
-      "FAIL position exclusions: 설정을 읽거나 검증할 수 없습니다. 비공개 작업본과 설정을 확인하세요.",
-    );
+  } catch (error) {
+    throw new Error(`FAIL position exclusions: ${exclusionFailureReason(error)}`);
   }
 }
 

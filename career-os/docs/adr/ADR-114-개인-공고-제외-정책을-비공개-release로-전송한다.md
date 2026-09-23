@@ -1,6 +1,6 @@
 # ADR-114 개인 공고 제외 정책을 비공개 release로 전송한다
 
-- Status: Accepted
+- Status: Superseded by [ADR-123](ADR-123-회사-근거와-개인-제외-정책은-backend가-소유한다.md)
 - Date: 2026-09-10
 
 ## 결정

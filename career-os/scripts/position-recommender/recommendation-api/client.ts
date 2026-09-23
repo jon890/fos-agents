@@ -4,14 +4,20 @@ import {
   analysisPolicySchema,
   analysisQueueResponseSchema,
   analysisResultsResponseSchema,
+  companyEvidenceSaveResponseSchema,
+  companyEvidenceSchema,
   companyPreferenceSchema,
   companyTierResultsResponseSchema,
+  positionExclusionSchema,
   positionPreparationResponseSchema,
   recommendationResponseSchema,
   type AnalysisQueueResponse,
   type AnalysisResultsResponse,
+  type CompanyEvidence,
+  type CompanyEvidenceSaveResponse,
   type CompanyPreference,
   type CompanyTierResultsResponse,
+  type PositionExclusion,
   type PositionPreparationResponse,
   type RecommendationResponse,
 } from "../../../services/recommendation-api/src/positions/schema.ts";
@@ -200,6 +206,53 @@ export class RecommendationApiClient {
       undefined,
       undefined,
       z.array(companyPreferenceSchema),
+    );
+  }
+
+  getExclusions(): Promise<PositionExclusion[]> {
+    return this.request(
+      "GET",
+      "/api/positions/v1/exclusions",
+      undefined,
+      undefined,
+      z.array(positionExclusionSchema),
+    );
+  }
+
+  /** 제외 규칙 전체를 받은 목록으로 바꾸고 바뀐 뒤의 목록을 받는다. */
+  replaceExclusions(body: unknown, idempotencyKey: string): Promise<PositionExclusion[]> {
+    return this.request(
+      "PUT",
+      "/api/positions/v1/exclusions",
+      body,
+      idempotencyKey,
+      z.array(positionExclusionSchema),
+    );
+  }
+
+  /** 모은 회사 근거를 회사 tier 실행 단위로 저장한다. `url_hash` 는 Backend 가 만든다. */
+  putCompanyEvidence(
+    companyTierRunId: string,
+    body: unknown,
+    idempotencyKey: string,
+  ): Promise<CompanyEvidenceSaveResponse> {
+    return this.request(
+      "PUT",
+      `/api/positions/v1/company-tier-runs/${encodeURIComponent(companyTierRunId)}/evidence`,
+      body,
+      idempotencyKey,
+      companyEvidenceSaveResponseSchema,
+    );
+  }
+
+  /** 한 회사의 아직 유효한 근거만 받는다. */
+  getCompanyEvidence(companyKey: string): Promise<CompanyEvidence[]> {
+    return this.request(
+      "GET",
+      `/api/positions/v1/companies/${encodeURIComponent(companyKey)}/evidence`,
+      undefined,
+      undefined,
+      z.array(companyEvidenceSchema),
     );
   }
 

@@ -195,6 +195,23 @@ model position_collection_runs {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model position_exclusions {
+  position_exclusion_id String                            @id @db.Char(36)
+  scope                 position_exclusions_scope
+  company_key           String?
+  source_key            String?                           @db.VarChar(100)
+  identity_hash         String?                           @db.VarChar(512)
+  normalized_url        String?                           @db.VarChar(2048)
+  title_keywords_json   Json?
+  decision_kind         position_exclusions_decision_kind
+  reason                String                            @db.Text
+  evidence_urls_json    Json
+  confidence            position_exclusions_confidence?
+  decided_at            DateTime                          @db.Date
+  expires_at            DateTime?                         @db.Date
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model position_recommendation_items {
   recommendation_run_id        String                                            @db.Char(36)
   position_id                  String                                            @db.Char(36)
@@ -305,6 +322,23 @@ model schema_migrations {
   version    String   @id @db.VarChar(64)
   checksum   String   @db.Char(64)
   applied_at DateTime @default(now())
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model company_evidence {
+  company_evidence_id String                       @id @db.Char(36)
+  company_key         String
+  source_type         company_evidence_source_type
+  url                 String                       @db.VarChar(2048)
+  url_hash            String?                      @db.Char(64)
+  title               String?                      @db.VarChar(500)
+  summary             String                       @db.Text
+  payload_json        Json
+  observed_at         DateTime
+  valid_until         DateTime                     @db.Date
+
+  @@unique([company_key, source_type, url_hash], map: "uq_company_evidence_source")
+  @@index([company_key, valid_until], map: "idx_company_evidence_valid")
 }
 
 enum position_source_run_diagnostics_status {
@@ -432,4 +466,33 @@ enum position_analysis_run_items_company_tier_source {
   manual
   model
   default
+}
+
+enum position_exclusions_scope {
+  posting
+  company
+  company_role @map("company-role")
+}
+
+enum position_exclusions_decision_kind {
+  career_downside @map("career-downside")
+  manual
+}
+
+enum position_exclusions_confidence {
+  low
+  medium
+  high
+}
+
+enum company_evidence_source_type {
+  dart_employment @map("dart-employment")
+  dart_financial  @map("dart-financial")
+  tech_blog       @map("tech-blog")
+  github
+  conference
+  review
+  job_posting     @map("job-posting")
+  official
+  other
 }

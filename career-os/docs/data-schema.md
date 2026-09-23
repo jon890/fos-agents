@@ -8,54 +8,64 @@
 
 ## 공통
 
-### MySQL schema 적용
+### `fos_career` 도메인 구조
 
-홈서버 `fos_career` database 의 schema 는
-`services/recommendation-api/prisma/schema.prisma` 와
-`services/recommendation-api/prisma/migrations/` 가 소유한다.
-아래의 table 과 column 서술은 그 migration SQL 을 읽기 쉽게 옮긴 것이다. 둘이 다르면 SQL 이 맞다.
+포지션 추천의 상태를 담는 database 다. table 은 다섯 묶음으로 나뉜다.
 
-적용 기록은 `_prisma_migrations` table 에 있다.
-**Backend 는 기동할 때 DDL 을 실행하지 않는다.** 연결과 적용 기록 조회만 한다.
-migration 적용은 배포 스크립트가 `prisma migrate deploy` 로 따로 실행한다.
+| 묶음 | table | 담는 것 |
+| --- | --- | --- |
+| 공고 원문 | `position_sources`, `positions`, `position_versions` | 외부 공고와 그 내용이 바뀐 이력. 판단을 섞지 않는다 |
+| 실행 | `position_collection_runs`, `position_analysis_runs`, `company_tier_assessment_runs`, `position_recommendation_runs` 와 각 `*_items` | 수집 실행 하나에 분석, 회사 tier 평가, 추천 실행이 하나씩 붙는다 |
+| 판단 | `position_analyses`, `company_tier_assessments` | 모델이 공고와 회사를 평가한 결과. 실행이 지워져도 남는다 |
+| 회사 근거 | `company_evidence` | 외부에서 관측한 회사 사실. 추론은 담지 않는다 |
+| 사람이 정한 것 | `company_preferences`, `position_exclusions`, `position_analysis_policy` | 회사 우선순위, 개인 제외 규칙, 분석 정책. 추천 실행이 바꾸지 않는다 |
 
-**적용한 migration 파일은 고치지 않는다.** checksum 이 달라져 다음 적용이 거절된다.
-schema 를 바꿀 때는 `prisma migrate` 로 새 migration 을 만든다.
+`request_receipts` 는 쓰기 요청의 멱등 키와 응답을 담는다. 도메인 데이터가 아니다.
 
-**초기 migration `20260921000000_baseline` 은 손으로 만든 것이다.**
-`001_position_schema.sql` 과 `002_company_tier_assessments.sql` 의 원문을 이어 붙였고,
-그 둘은 같은 디렉터리의 `source/` 에 남아 있다. 바이트 단위로 같은지를 테스트가 확인한다.
-
-`prisma migrate diff --from-empty --to-config-datasource --script` 로 뽑지 않은 이유가 있다.
-그 출력은 `CHECK` 제약 16개를 모두 빠뜨린다. Prisma 7.10.0 과 MySQL 8.4.8 에서 확인했다.
-`CHECK` 제약은 `schema.prisma` 가 표현하지 못하므로 migration SQL 이 소유한다.
-Prisma 가 이 제약을 지우지는 않는다. 제약을 바꿀 때는 migration 파일에 직접 쓴다.
-
-**초기 migration 은 운영 DB 에 다시 실행하지 않는다.**
-두 파일이 이미 적용되어 있으므로 적용 완료로만 표시한다.
-
-```bash
-npx prisma migrate resolve --applied 20260921000000_baseline
+```mermaid
+erDiagram
+  position_sources ||--o{ positions : ""
+  positions ||--o{ position_versions : ""
+  position_collection_runs ||--o{ position_collection_items : ""
+  position_collection_items }o--|| position_versions : ""
+  position_collection_runs ||--o| company_tier_assessment_runs : ""
+  position_collection_runs ||--o| position_analysis_runs : ""
+  position_analysis_runs ||--o{ position_analysis_run_items : ""
+  position_analysis_run_items }o--o| position_analyses : ""
+  position_analyses }o--|| position_versions : ""
+  company_tier_assessment_runs ||--o{ company_tier_assessment_run_items : ""
+  company_tier_assessment_run_items }o--o| company_tier_assessments : ""
+  position_analysis_runs ||--o| position_recommendation_runs : ""
+  position_recommendation_runs ||--o{ position_recommendation_items : ""
+  position_recommendation_items }o--|| position_analyses : ""
 ```
 
-`schema_migrations` table 은 그대로 둔다.
-이전 image 로 되돌릴 때 그 image 가 이 table 을 읽어 적용 상태를 판정하기 때문이다.
-새 스택이 운영에서 검증되면 별도 migration 으로 제거한다.
+묶음 사이에 지키는 규칙이다.
+
+- **분석은 공고 version 에 붙는다.** 공고 본문이 바뀌면 새 version 이 생기고 이전 분석은 그 version 에 남는다.
+- **판단은 덮어쓰지 않고 쌓는다.** 새 분석과 새 tier 평가는 행을 추가하고, 현재 값은 유효한 것 가운데 가장 최근 하나다.
+- **판단을 만든 실행은 지울 수 없다.** 실행을 지우면 그 실행의 항목과 진단만 함께 지워지고 공고와 판단은 남는다.
+- **회사는 `company_key` 로 잇고 `companies` table 을 두지 않는다.** `company_preferences`, `company_tier_assessments`, `company_evidence`, `position_exclusions` 가 같은 정규화 규칙의 `company_key` 를 쓴다. foreign key 는 없다.
+- **칸끼리의 조건은 DB 의 `CHECK` 가 강제한다.** `scope` 마다 필수 칸이 다른 제외 규칙이나 HTTPS 만 받는 URL 이 그렇다. 이 제약은 `schema.prisma` 에 없고 migration SQL 에만 있다.
+
+table 별 칸과 제약은 아래 `position-recommender` 절이 소유한다.
+schema 는 `services/recommendation-api/prisma/` 가 관리하고,
+migration 적용 절차는 [`services/recommendation-api/README.md`](../services/recommendation-api/README.md) 가 소유한다.
 
 ### 홈서버 release
 
-홈서버 `career-os` bucket 과 로컬 `career-os/.career-sync/` 의 파일 다섯이다.
-`releases/` 아래 셋은 만든 뒤 고치지 않는다.
+파일이 어디에 놓이는지는
+[`code-architecture.md`](code-architecture.md#비공개-작업본-동기화)가 소유한다.
+여기에는 각 파일의 형식만 적는다. `releases/` 아래 파일은 만든 뒤 고치지 않는다.
 
 | 파일 | 담는 것 |
 | --- | --- |
-| `releases/<revision>/workspace.tar` | 세 관리 root 의 archive |
-| `releases/<revision>/workspace-manifest.json` | 아래 manifest |
-| `releases/<revision>/release.json` | `schemaVersion`, `workspace`, `revision`, `contentDigest`, `createdAt`, `fileCount`, `archiveKey`, `archiveSha256`, `manifestKey`, `manifestSha256` |
-| `pointers/current.json` | release.json 과 같은 식별·요약 필드에 `descriptorKey`, `descriptorSha256` |
-| `.career-sync/sync-state.json` | 마지막으로 준비한 `revision`, `contentDigest`, 파일 hash |
-| `.career-sync/skill-session.json` | 진행 중인 skill 이름, 시작 revision, 시작 시각 |
-| `.career-sync/prepare-journal.json` | 아래 journal |
+| `release.json` | `schemaVersion`, `workspace`, `revision`, `contentDigest`, `createdAt`, `fileCount`, `archiveKey`, `archiveSha256`, `manifestKey`, `manifestSha256` |
+| `current.json` | `release.json` 과 같은 식별·요약 필드에 `descriptorKey`, `descriptorSha256` |
+| `sync-state.json` | 마지막으로 준비한 `revision`, `contentDigest`, 파일 hash |
+| `skill-session.json` | 진행 중인 skill 이름, 시작 revision, 시작 시각 |
+| `workspace-manifest.json` | 아래 manifest |
+| `prepare-journal.json` | 아래 journal |
 
 #### manifest
 
@@ -178,8 +188,28 @@ brain에는 경력, 역할 선호와 경험 경계 등 개인 지식을 두고, 
 
 ### 개인 공고 제외 설정
 
-본문은 Git 에서 제외되는 `state/private-config/position-exclusions.json` 에 있다.
-`config/position-exclusions.ts` 는 그 경로만 담는다.
+`fos_career.position_exclusions` 가 담는다.
+`GET api/positions/v1/exclusions` 로 읽고 `PUT` 으로 전체를 바꾼다.
+
+| 칸 | 타입 | 설명 |
+| --- | --- | --- |
+| `position_exclusion_id` | `CHAR(36)` PK | |
+| `scope` | `ENUM('posting','company','company-role')` | |
+| `company_key` | `VARCHAR(191)` NULL | `company` 와 `company-role` 에서 필수 |
+| `source_key` | `VARCHAR(100)` NULL | `posting` 에서 쓴다 |
+| `identity_hash` | `VARCHAR(512)` NULL | `posting` 에서 쓴다 |
+| `normalized_url` | `VARCHAR(2048)` NULL | `posting` 에서 쓴다 |
+| `title_keywords_json` | `JSON` NULL | `company-role` 에서 필수 |
+| `decision_kind` | `ENUM('career-downside','manual')` | |
+| `reason` | `TEXT` | |
+| `evidence_urls_json` | `JSON` | HTTPS 만 담는다 |
+| `confidence` | `ENUM('low','medium','high')` NULL | |
+| `decided_at` | `DATE` | |
+| `expires_at` | `DATE` NULL | |
+
+`scope` 마다 필요한 칸이 다른 것은 `CHECK` 로 강제한다.
+
+API 본문은 아래 모양이다.
 
 ```json
 {
@@ -203,7 +233,7 @@ brain에는 경력, 역할 선호와 경험 경계 등 개인 지식을 두고, 
 
 | `scope` | 요구하는 것 | 언제 맞다고 보나 |
 | --- | --- | --- |
-| `posting` | 정식 `source` 와 `identityHash` 와 HTTPS `url` 중 하나 이상 | 같은 소스에서 식별자나 정규화 URL 이 일치 |
+| `posting` | 정식 `source` 는 반드시, 그리고 `identityHash` 와 HTTPS `url` 중 하나 이상 | 같은 소스에서 식별자나 정규화 URL 이 일치 |
 | `company` | 정확한 회사명과 공개 근거 URL 두 개 이상 | 회사명이 정확히 일치 |
 | `company-role` | 정확한 회사명과 공고명에서 찾을 `titleKeywords` | 회사명이 일치하고 제목에 keyword 가 있다 |
 
@@ -223,8 +253,74 @@ query 순서와 마지막 슬래시를 맞춘다. 공고 ID 를 담는 query 는
 **추천 실행이 이 규칙을 자동으로 만들거나 갱신하지 않는다.**
 지원 결과와 재지원 간격의 원본은 private brain 이 소유한다.
 
-선택 이유는 [ADR-114](adr/ADR-114-개인-공고-제외-정책을-비공개-release로-전송한다.md)를 따른다.
+선택 이유는 [ADR-123](adr/ADR-123-회사-근거와-개인-제외-정책은-backend가-소유한다.md)을 따른다.
 읽는 시점과 실패 처리는 [`flow.md`](flow.md#position-recommender)가 소유한다.
+
+### 회사 근거
+
+`fos_career.company_evidence` 가 담는다.
+수집기가 모아 `PUT api/positions/v1/company-tier-runs/:companyTierRunId/evidence` 로 저장한다.
+한 회사의 유효한 근거는 `GET api/positions/v1/companies/:companyKey/evidence` 로 읽는다.
+모델은 이 근거만 읽고 세 축을 판정한다.
+
+| 칸 | 타입 | 설명 |
+| --- | --- | --- |
+| `company_evidence_id` | `CHAR(36)` PK | |
+| `company_key` | `VARCHAR(191)` | |
+| `source_type` | `ENUM` | 아래 표 |
+| `url` | `VARCHAR(2048)` | HTTPS 만 담는다 |
+| `url_hash` | `CHAR(64)` 생성 열 | `url` 에서 DB 가 만든다. 쓰기에서 값을 주지 않는다 |
+| `title` | `VARCHAR(500)` NULL | |
+| `summary` | `TEXT` | 한 줄 요약 |
+| `payload_json` | `JSON` | 수집기가 받은 값. 급여와 근속과 인원이 여기 든다 |
+| `observed_at` | `DATETIME(3)` | 수집 시각 |
+| `valid_until` | `DATE` | 만료일 |
+
+같은 출처를 다시 모으면 행을 늘리지 않는다. 유일성 기준은 `(company_key, source_type, url)` 이다.
+더 오래된 관측으로는 덮지 않는다. `observed_at` 이 저장된 값과 같거나 더 최신일 때 갱신한다.
+같은 시각으로 다시 보내면 나중에 보낸 값이 남는다.
+수집기가 `observed_at` 을 날짜 단위로 적고 재시도가 같은 시각을 다시 보내는데,
+같은 시각까지 막으면 그 갱신이 반영되지 않는다.
+더 오래된 관측을 보내면 요청은 성공하고 행은 그대로 남는다.
+이전 파일을 옮기는 `import_position_state.ts` 가 보내는 것이 옛 관측이라 이 조건이 필요하다.
+
+UNIQUE 는 `url` 대신 `url_hash` 에 건다.
+`VARCHAR(2048)` 을 utf8mb4 로 담으면 index key 가 8192 바이트가 되어
+InnoDB 상한 3072 바이트를 넘고, MySQL 이 `Specified key was too long` 으로 거절한다.
+앞부분만 잘라 거는 prefix index 는 앞 570자가 같은 서로 다른 URL 을 한 행으로 묶어
+다른 출처의 근거를 덮어쓴다. 오류가 나지 않고 값만 틀린다.
+고유 키를 전체 값의 해시에 거는 것은 `positions.identity_hash` 와 같고, 계산 주체만 다르다.
+`identity_hash` 는 애플리케이션이 계산해 넣고 `url_hash` 는 DB 가 만든다.
+
+`PUT` 의 응답은 `companyTierRunId` 와 회사별 `savedCount` 다.
+`savedCount` 는 중복을 없앤 뒤 그 회사의 출처 키 수다.
+같은 키가 한 요청에 두 번 오면 1 이고, 옛 관측이라 갱신되지 않은 키도 여기 든다.
+바뀐 행 수가 아니라 그 키로 지금 존재하는 행 수다. 이관 뒤 행 수 대조가 이 값을 쓴다.
+
+`source_type` 과 그 출처가 채우는 축이다.
+
+| `source_type` | 출처 | 채우는 축 |
+| --- | --- | --- |
+| `dart-employment` | OpenDART 「직원 현황」 | `compensation-upside`, `team-growth` |
+| `dart-financial` | OpenDART 재무정보 | `team-growth` |
+| `tech-blog` | 회사 기술 블로그 RSS | `growth-scope` |
+| `github` | GitHub organization | `growth-scope` |
+| `conference` | 컨퍼런스 발표 | `growth-scope` |
+| `review` | Blind 항목별 평점 | `compensation-upside` |
+| `job-posting` | 우리가 모은 활성 공고 | `growth-scope`, `team-growth` |
+| `official` | 회사 공식 홈페이지와 채용 페이지 | 축을 정하지 않는다 |
+| `other` | 그 밖 | 축을 정하지 않는다 |
+
+`valid_until` 은 출처마다 다르다.
+
+| `source_type` | 유효기간 | 이유 |
+| --- | --- | --- |
+| `dart-employment`, `dart-financial` | 180일 | 사업보고서가 1년에 한 번 나온다 |
+| `tech-blog` | 14일 | 글이 계속 올라온다 |
+| `github` | 30일 | 마지막 push 시각만 본다 |
+| `review` | 60일 | 평점이 천천히 움직인다 |
+| `conference`, `official`, `other` | 90일 | |
+| `job-posting` | 수집 실행마다 다시 만든다 | 이미 매일 모은다 |
 
 ### 포지션 분석 정책
 
@@ -292,7 +388,10 @@ bun career-os/scripts/position-recommender/configure_position_company_preference
 ```
 
 명령은 회사명과 비공개 제외 사유를 출력하지 않고 전체 반영·제외·tier별 건수만 출력한다.
-기존 개인 제외 설정의 자동 import는 별도 전환 작업 범위다.
+이전 파일에 있던 회사 조사와 개인 제외 규칙은 `import_position_state.ts` 가 옮긴다.
+`--source-dir` 로 읽을 위치를 받고, 기본은 아무것도 보내지 않고 집계만 내는 실행이다.
+실제로 반영하려면 `--commit` 을 주고, 회사 근거까지 저장하려면 `--company-tier-run-id` 를 함께 준다.
+버전 1 형식의 제외 규칙이 있으면 `--decided-at` 도 필요하다. 원본에 그 날짜가 없기 때문이다.
 
 `prioritySlots`와 `agingSlots`의 합은 `dailyAnalysisLimit`과 같아야 한다.
 `dailyAnalysisLimit`은 1부터 20까지만 허용한다.
@@ -318,25 +417,11 @@ bun career-os/scripts/position-recommender/configure_position_analysis_policy.ts
 
 #### 재사용하는 회사 조사 데이터
 
-`state/company-research/<companyKey>.json`은 포지션 추천이 다음 실행에서도 재사용할 공개 회사 사실과
-그 사실에서 도출한 추론을 담는다. 비공개 작업 release로 동기화하지만 현재 역할,
-개인 우선순위와 최종 추천 순위는 넣지 않는다.
+회사별 공개 사실은 `fos_career.company_evidence` 가 담는다. 이 문서의 「회사 근거」 절이 소유한다.
+포지션 추천은 파일이 아니라 `GET api/positions/v1/companies/:companyKey/evidence` 로 읽는다.
 
-| 자리 | 담는 것 |
-| --- | --- |
-| `profile.companyKey`, `company`, `aliases` | 회사 식별. `companyKey` 가 파일 이름이다 |
-| `profile.facts[]` | 공개 사실 하나. `factId`, `topic`, `scope`, `statement` |
-| `facts[].source` | HTTPS 출처. `url`, `title`, `publisher`, `sourceType`, `publishedAt`, `observedAt` |
-| `facts[].validUntil` | 이 사실을 다시 쓸 수 있는 마지막 날 |
-| `profile.inferences[]` | 사실에서 도출한 추론. `basisFactIds` 로 근거 사실을 가리킨다 |
-| `inferences[].assumptions`, `confidence` | 재사용 판단에 도움이 될 때만 넣는다 |
-| `researchGaps[]` | 재조사할 질문과 날짜. 같은 조사를 매 실행 반복하지 않으려고 둔다 |
-
-`topic`과 `scope`는 조사한 회사와 공고에 맞는 이름을 자유롭게 쓴다.
-각 사실은 HTTPS 출처를 갖는다. 유효기간, 추론의 가정과 신뢰도는 재사용 판단에 도움이 될 때만 넣는다.
-`researchGaps`는 같은 조사를 매 실행마다 반복하지 않도록
-재조사할 질문과 날짜를 보존한다. 현재 형식은
-`scripts/position-recommender/company-research/schema.ts`가 검증한다.
+`scripts/position-recommender/company-research/schema.ts` 는 이전 파일 형식의 zod 계약이다.
+`import_position_state.ts` 가 그 파일을 읽을 때만 쓴다. 새 근거는 이 형식으로 저장하지 않는다.
 
 #### 공고 후보풀
 
@@ -443,7 +528,7 @@ bun career-os/scripts/position-recommender/configure_position_analysis_policy.ts
 | table                               | column                                                                                                                                                                                                                                                                                                  |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `company_tier_assessment_runs`      | `company_tier_run_id`, `collection_run_id`, `candidate_context_version`, `contract_version`, `status`, `assessed_now_count`, `created_at`, `completed_at`                                                                                                                                              |
-| `company_tier_assessments`          | `company_tier_assessment_id`, `company_key`, `company_name`, `candidate_context_version`, `contract_version`, `created_by_company_tier_run_id`, `recommended_tier`, `confidence`, `reason`, `signals_json`, `evidence_json`, `assumptions_json`, `assessed_at`, `valid_until`                          |
+| `company_tier_assessments`          | `company_tier_assessment_id`, `company_key`, `company_name`, `candidate_context_version`, `contract_version`, `created_by_company_tier_run_id`, `recommended_tier`, `confidence`, `reason`, `assessment`, `signals_json`, `evidence_json`, `assumptions_json`, `assessed_at`, `valid_until`             |
 | `company_tier_assessment_run_items` | `company_tier_run_id`, `company_key`, `company_name`, `selection_order`, `assessment_status`, `selection_reason`, `prior_tier`, `active_position_count`, `result_status`, `company_tier_assessment_id`, `failure_code`, `attempt_count`, `completed_at`                                                 |
 
 수집 실행 하나는 회사 tier 실행 하나만 가지므로 `collection_run_id`에 UNIQUE를 둔다.
@@ -452,7 +537,10 @@ bun career-os/scripts/position-recommender/configure_position_analysis_policy.ts
 평가를 만든 실행은 삭제할 수 없다.
 `company_key`는 `company_preferences`와 같은 정규화 규칙을 쓰고 별도 `companies` table을 만들지 않는다.
 
-`recommended_tier`는 1, 2, 3만, `confidence`는 `low`, `medium`, `high`만 허용한다.
+`recommended_tier`는 1, 2, 3과 NULL을, `confidence`는 `low`, `medium`, `high`와 NULL을 허용한다.
+**NULL은 판정할 근거가 없었다는 뜻이고 지어낸 값보다 낫다.**
+`recommended_tier`가 NULL이면 그 회사의 tier는 `manual`이 없는 한 `default`로 푼다.
+이유는 [ADR-124](adr/ADR-124-판정-스키마는-모르는-상태를-표현한다.md)를 따른다.
 `assessment_status`는 유효한 평가가 없는 회사의 `new`와 평가가 만료된 회사의 `stale` 중 하나이고,
 `selection_reason`은 각각에 대응하는 `discovery`와 `refresh` 중 하나다.
 `prior_tier`는 `stale` 항목이 만료된 이전 평가의 tier를 담는 자리이므로 `new` 항목에서는 비어 있다.
@@ -478,11 +566,23 @@ Backend 가 2시간이 지난 처리 중 표시를 회수하며 남기는 `lease
 선택할 회사가 없으면 만들어지는 즉시 `completed` 다.
 `assessed_now_count` 는 `created` 항목만 센다. `reused` 와 `failed` 는 들어가지 않는다.
 
-`signals_json`은 성장 범위를 `growth-scope`, 보상 상승을 `compensation-upside`,
-팀 성장을 `team-growth` 키로 각각 한 번씩만 담고,
-확인하지 못한 축은 지어낸 사실 대신 `unknown`으로 남긴다.
-세 이름은 `state/company-research/`의 `topic`과 같은 kebab-case 표기를 따른다.
-`evidence_json`의 근거 URL은 HTTPS만 허용한다.
+`signals_json`은 축 셋을 각각 한 번씩만 담는다.
+
+| 축 | 답하는 것 | 채우는 근거 |
+| --- | --- | --- |
+| `growth-scope` | 기술적으로 성장할 수 있는가 | `tech-blog`, `github`, `conference`, `job-posting` |
+| `team-growth` | 팀이 커지고 있는가 | `dart-employment`, `dart-financial`, `job-posting` |
+| `compensation-upside` | 보상과 복지가 적절한가 | `dart-employment`, `review` |
+
+각 축은 `level`과 `evidenceIds`를 담는다.
+**`evidenceIds`가 비어 있으면 `level`은 `unknown`이어야 한다.**
+근거를 요구해서 등급을 받는 것이 아니라 근거가 있는 축만 등급을 받는다.
+
+`assessment`는 유보와 조건과 반대 근거를 적는 서술이고 2000자까지다.
+공개 HTML에 넣지 않는다. 공개에 실리는 것은 200자까지인 `reason`이다.
+
+`evidence_json`의 근거 URL은 HTTPS만 허용하고 최소 개수를 요구하지 않는다.
+빈 배열은 근거를 찾지 못했다는 정직한 값이다.
 `valid_until`은 Backend가 다음 셋 중 가장 빠른 날로 정한다.
 수신 시각에 `companyTierStaleAfterDays`를 더한 날, 각 근거의 만료일,
 client가 결과에 `validUntil`을 넣었으면 그 날이다.
@@ -573,7 +673,7 @@ company_tier_assessment_id CHAR(36) NULL
 게시용 HTML은 이 결과에서 만든다.
 HTML은 상세 추천, 분석한 활성 공고 순위, 분석 대기 목록과 수집 경고를 구분해 표시한다.
 후보풀, 추천 JSON과 HTML은 게시 검증 뒤 삭제한다.
-공고 분석 이력과 회사 조사 데이터는 다음 실행에서 재사용하므로 `state/`에 유지한다.
+공고 분석 이력과 회사 근거는 다음 실행에서 재사용하며 Backend 와 MySQL 이 보존한다.
 
 ## resume-preparer
 

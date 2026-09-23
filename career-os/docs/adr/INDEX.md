@@ -28,8 +28,8 @@ ADR에는 현재 설계를 이해하는 데 필요한 기술적 선택과 기각
 | ADR-111 | [학습자료와 추천 상태는 블로그 API로 관리](ADR-111-학습자료와-추천-상태는-블로그-api로-관리한다.md) | Superseded by ADR-118 |
 | ADR-112 | [현재 직장 대비 업사이드를 축별로 판정](ADR-112-현재-직장-대비-업사이드를-축별로-판정한다.md) | Superseded by ADR-115 |
 | ADR-113 | [수집 실행은 실패 소스 개수로 성패를 판정](ADR-113-수집-실행은-실패-소스-개수로-성패를-판정한다.md) | Accepted |
-| ADR-114 | [개인 공고 제외 정책을 비공개 release로 전송](ADR-114-개인-공고-제외-정책을-비공개-release로-전송한다.md) | Accepted |
-| ADR-115 | [회사 조사 사실은 유효기간과 함께 재사용](ADR-115-회사-조사-사실은-유효기간과-함께-재사용한다.md) | Accepted |
+| ADR-114 | [개인 공고 제외 정책을 비공개 release로 전송](ADR-114-개인-공고-제외-정책을-비공개-release로-전송한다.md) | Superseded by ADR-123 |
+| ADR-115 | [회사 조사 사실은 유효기간과 함께 재사용](ADR-115-회사-조사-사실은-유효기간과-함께-재사용한다.md) | Superseded by ADR-123 |
 | ADR-116 | [검증한 주장은 근거 해시와 함께 state에서 재사용](ADR-116-검증한-주장은-근거-해시와-함께-state에서-재사용한다.md) | Accepted |
 | ADR-117 | [포지션 분석은 우선순위 큐와 버전 이력으로 재사용](ADR-117-포지션-분석은-우선순위-큐와-버전-이력으로-재사용한다.md) | Superseded by ADR-118 |
 | ADR-118 | [추천 상태는 career-os API와 MySQL로 관리](ADR-118-추천-상태는-career-os-api와-mysql이-관리한다.md) | Accepted. 스택 조항은 ADR-121이 대체 |
@@ -37,3 +37,6 @@ ADR에는 현재 설계를 이해하는 데 필요한 기술적 선택과 기각
 | ADR-120 | [회사 tier는 사람 override와 모델 평가를 분리해 저장](ADR-120-회사-tier는-사람-override와-모델-평가를-분리해-저장한다.md) | Accepted |
 | ADR-121 | [추천 Backend는 NestJS와 Prisma로 운영](ADR-121-추천-backend는-nestjs와-prisma로-운영한다.md) | Accepted |
 | ADR-122 | [추천 상태는 질의 단위로 읽고 씀](ADR-122-추천-상태는-질의-단위로-읽고-쓴다.md) | Accepted |
+| ADR-123 | [회사 근거와 개인 제외 정책은 Backend가 소유](ADR-123-회사-근거와-개인-제외-정책은-backend가-소유한다.md) | Accepted |
+| ADR-124 | [판정 스키마는 모르는 상태를 표현](ADR-124-판정-스키마는-모르는-상태를-표현한다.md) | Accepted |
+| ADR-125 | [회사 판정은 세 축을 각각 냄](ADR-125-회사-판정은-세-축을-각각-낸다.md) | Accepted |

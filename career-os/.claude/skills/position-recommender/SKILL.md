@@ -29,15 +29,11 @@ stdout에는 반영·제외·tier별 건수만 출력한다.
 
 ## 실행 준비
 
-`mktemp -d`로 `<RUN_DIR>`을 만들고 회사 조사 파일이 있는 비공개 작업 release를 준비한다.
-
-```bash
-bun career-os/scripts/career-workspace/cli.ts skill begin position-recommender --json
-```
+`mktemp -d`로 `<RUN_DIR>`을 만든다.
 
 `CAREER_RECOMMENDATION_API_URL`과 `CAREER_RECOMMENDATION_API_TOKEN` 또는 mode 600인
 `CAREER_RECOMMENDATION_API_TOKEN_FILE` 중 하나가 필요하다.
-준비 명령이나 API 인증 확인이 실패하면 추천 실행을 중단하고 반환된 복구 정보를 따른다.
+API 인증 확인이 실패하면 추천 실행을 중단하고 반환된 복구 정보를 따른다.
 
 ## 공고 수집과 1단계 큐 준비
 
@@ -63,14 +59,13 @@ bun career-os/scripts/position-recommender/prepare_position_analysis.ts \
 `<RUN_DIR>/company-tier-queue.json`이 없으면 이 절 전체를 생략하고 바로 「선택된 공고 분석」으로 넘어간다.
 
 파일이 있으면 큐에 선택된 회사만 평가한다.
-`state/company-research/`에서 그 회사의 유효한 공개 사실만 읽고,
 추천 판단에 영향을 주지만 없거나 만료된 사실만 새로 조사한다.
-새 사실과 추론이 있으면 `<RUN_DIR>/company-research-updates.json`을 만든 뒤 다음 명령으로 합친다.
 
-```bash
-bun career-os/scripts/position-recommender/company_research.ts \
-  --input <RUN_DIR>/company-research-updates.json
-```
+회사별 공개 사실은 Backend 가 담는다.
+`GET api/positions/v1/companies/:companyKey/evidence` 가 유효기간이 남은 근거만 돌려주고,
+새로 모은 근거는 `PUT api/positions/v1/company-tier-runs/:companyTierRunId/evidence` 로 저장한다.
+`career-os/scripts/position-recommender/recommendation-api/client.ts` 의
+`getCompanyEvidence` 와 `putCompanyEvidence` 가 이 둘을 부른다.
 
 각 회사마다 성장 범위, 보상 상승, 팀 성장 세 기회 축을 평가한다.
 근거가 없는 축은 지어내지 않고 `unknown`으로 남기며, 그 위에서 종합 tier 1부터 3과 신뢰도를 정한다.
@@ -136,14 +131,9 @@ HTML은 추천, 분석한 활성 공고 순위, 분석 대기와 수집 경고�
 실패 사유 원문과 모델 응답 전문은 공개 HTML에 넣지 않는다.
 소스 수집 경고와 회사 tier 평가 실패는 서로 다른 항목으로 표시하며 하나로 합치지 않는다.
 
-## 비공개 작업 반영과 결과 전달
+## 결과 전달
 
-회사 조사 파일을 바꿨다면 검증 뒤 기존 release에 반영한다.
-포지션 분석 이력은 Backend와 MySQL만 관리하며 S3 release에 복제하지 않는다.
-
-```bash
-bun career-os/scripts/career-workspace/cli.ts skill finish position-recommender --json
-```
+포지션 분석 이력과 회사 근거는 Backend와 MySQL만 관리하며 S3 release에 복제하지 않는다.
 
 브라우저에서 데스크톱과 모바일 배치, 가로 넘침과 주요 링크를 확인한다.
 사용자가 공유 링크를 요청했을 때만 `report-publisher`로 HTML을 게시한다.
