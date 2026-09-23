@@ -12,7 +12,7 @@
 | --- | --- |
 | 제목 | 넣는다 |
 | 본문 글자 | 넣는다 |
-| 사진 | 넣지 못한다. 자리 표시만 남긴다 |
+| 사진 | 넣는다. 커서 자리에 한꺼번에 들어가고 자리 표시 글자는 그대로 남는다 |
 | 태그 | 넣지 못한다. 발행 설정 레이어에만 입력란이 있다 |
 
 발행하지 않는다. `저장` 만 누른다.
@@ -20,6 +20,7 @@
 사용법:
     python3 naver_editor.py open
     python3 naver_editor.py fill drafts/순돌이곱창/draft.json
+    python3 naver_editor.py photos drafts/순돌이곱창/draft.json --remote-base <사진 디렉터리>
     python3 naver_editor.py save
     python3 naver_editor.py state
 
@@ -34,6 +35,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -50,11 +52,16 @@ TITLE_SELECTOR = ".se-documentTitle .se-text-paragraph"
 BODY_SELECTOR = ".se-component.se-text .se-text-paragraph"
 
 
-def click(page: Page, selector: str) -> bool:
-    """선택자가 가리키는 자리를 눌러 초점을 준다."""
+def mouse_click(page: Page, finder: str) -> bool:
+    """JS 식이 찾은 요소의 가운데를 마우스로 누른다. 찾지 못하거나 보이지 않으면 거짓이다.
+
+    편집기와 Chrome 은 JS 의 `.click()` 을 사람이 누른 것으로 보지 않는다.
+    저장 버튼은 그 클릭을 받지 않았고, 사진 버튼은 파일 선택 창을 열지 않았다. 실측이다.
+    그래서 누르는 것은 모두 CDP 의 `Input.dispatchMouseEvent` 로 한다.
+    """
     box = page.js(
         f'''(() => {{
-  const el = document.querySelector({json.dumps(selector)});
+  const el = {finder};
   if (!el) return null;
   el.scrollIntoView({{block: "center"}});
   const r = el.getBoundingClientRect();
@@ -77,33 +84,25 @@ def click(page: Page, selector: str) -> bool:
     return True
 
 
+def click(page: Page, selector: str) -> bool:
+    """선택자가 가리키는 자리를 눌러 초점을 준다."""
+    return mouse_click(page, f"document.querySelector({json.dumps(selector)})")
+
+
+def button_finder(scope: str, text: str) -> str:
+    """`scope` 안에서 글자가 정확히 `text` 인 버튼을 찾는 JS 식을 돌려준다."""
+    return (
+        f"[...document.querySelectorAll({json.dumps(scope)})]"
+        f".find(b => b.innerText.trim() === {json.dumps(text)})"
+    )
+
+
 def click_button(page: Page, text: str) -> bool:
     """글자가 정확히 그것인 버튼을 마우스로 누른다.
 
     클래스 이름에 해시가 붙어 바뀌므로 글자로 찾는다.
     """
-    box = page.js(
-        "(() => { const want = "
-        + json.dumps(text)
-        + "; const b = [...document.querySelectorAll('button')]"
-        + ".find(b => b.innerText.trim() === want); if (!b) return null;"
-        + " b.scrollIntoView({block: 'center'});"
-        + " const r = b.getBoundingClientRect(); if (!r.width || !r.height) return null;"
-        + " return JSON.stringify({x: r.left + r.width / 2, y: r.top + r.height / 2}); })()"
-    )
-    if not box:
-        return False
-    spot = json.loads(box)
-    for kind in ("mousePressed", "mouseReleased"):
-        page.call(
-            "Input.dispatchMouseEvent",
-            type=kind,
-            x=spot["x"],
-            y=spot["y"],
-            button="left",
-            clickCount=1,
-        )
-    return True
+    return mouse_click(page, button_finder("button", text))
 
 
 def clear_field(page: Page) -> None:
@@ -159,19 +158,8 @@ def blocking_popup(page: Page) -> str:
 
 
 def dismiss_popup(page: Page, button: str) -> bool:
-    """알림의 버튼 하나를 누른다."""
-    return bool(
-        page.js(
-            f'''(() => {{
-  const want = {json.dumps(button)};
-  const b = [...document.querySelectorAll(".se-popup button, [role=dialog] button")]
-    .find(b => b.innerText.trim() === want);
-  if (!b) return false;
-  b.click();
-  return true;
-}})()'''
-        )
-    )
+    """알림의 버튼 하나를 마우스로 누른다."""
+    return mouse_click(page, button_finder(".se-popup button, [role=dialog] button", button))
 
 
 def require_clear_screen(page: Page) -> str:
@@ -212,6 +200,82 @@ def cmd_open(page: Page, args: argparse.Namespace) -> int:
     return 1
 
 
+# 이모지와 그것을 잇는 변형 선택자, 피부색, ZWJ 를 한 덩어리로 잡는다.
+EMOJI_RUN = re.compile("([\U0001F000-\U0001FAFF\u2600-\u27BF\u2B00-\u2BFF\uFE0F\u200D]+)")
+STEP_SECONDS = 3.0
+# 글자가 화면에 보인 뒤에도 편집기가 받아들이기까지 시간이 걸린다.
+# 그 전에 Enter 를 누르면 새 문단이 생기지 않고 다음 줄이 앞 줄을 덮어쓴다.
+# 실측으로 0.05초에서는 한 번에 1~2줄이 빠졌고 0.1초부터 빠지지 않았다. 여유를 둔다.
+SETTLE_SECONDS = 0.15
+
+
+def emoji_split(text: str) -> list[str]:
+    """글자와 이모지를 나눠 넣을 조각 목록을 돌려준다."""
+    return [part for part in EMOJI_RUN.split(text) if part]
+
+
+def normalize(text: str) -> str:
+    """편집기가 바꿔 넣는 공백 문자를 되돌려 초안과 견줄 수 있게 한다."""
+    return text.replace("\u00a0", " ").replace("\u200b", "").replace("\ufeff", "").strip()
+
+
+def paragraphs(page: Page, selector: str) -> list[str]:
+    """선택자에 걸리는 문단의 글을 차례대로 읽는다."""
+    raw = page.js(
+        f"JSON.stringify([...document.querySelectorAll({json.dumps(selector)})]"
+        ".map(e => e.innerText))"
+    )
+    return json.loads(raw or "[]")
+
+
+def wait_until(check, seconds: float = STEP_SECONDS) -> bool:
+    """check 가 참이 될 때까지 짧게 거듭 본다.
+
+    시간이 지나도 참이 되지 않으면 그대로 넘어간다. 빠진 것은 `fill` 끝의 대조가 잡는다.
+    """
+    deadline = time.monotonic() + seconds
+    while True:
+        if check():
+            return True
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(0.05)
+
+
+def type_line(page: Page, selector: str, text: str) -> None:
+    """커서가 있는 마지막 문단에 한 줄을 넣고 편집기에 반영될 때까지 기다린다.
+
+    한꺼번에 몰아 넣으면 편집기가 여러 줄을 통째로 놓친다.
+    이모지가 든 줄을 한 번에 넣으면 이모지만 남고 앞의 글자가 사라진다.
+    그래서 글자와 이모지를 나눠 넣고, 조각마다 화면에 들어온 것을 보고 잠깐 더 기다린 뒤 다음으로 간다.
+    모두 실측이다.
+    """
+    typed = ""
+    for part in emoji_split(text):
+        page.type_text(part)
+        typed += part
+        want = normalize(typed)
+        wait_until(lambda: normalize((paragraphs(page, selector) or [""])[-1]) == want)
+        time.sleep(SETTLE_SECONDS)
+
+
+def new_paragraph(page: Page, selector: str) -> None:
+    """Enter 를 누르고 문단이 하나 늘어날 때까지 기다린다."""
+    count = len(paragraphs(page, selector))
+    page.enter()
+    wait_until(lambda: len(paragraphs(page, selector)) > count)
+
+
+def body_mismatch(want: list[str], got: list[str]) -> str:
+    """초안 줄과 화면 문단을 견줘 처음 어긋난 자리를 돌려준다. 같으면 빈 문자열이다."""
+    for index, (w, g) in enumerate(zip(want, got)):
+        if w != g:
+            return f"{index + 1}번째 줄이 다르다. 초안 {w!r}, 화면 {g!r}"
+    if len(want) != len(got):
+        return f"줄 수가 다르다. 초안 {len(want)}줄, 화면 {len(got)}줄"
+    return ""
+
+
 def cmd_fill(page: Page, args: argparse.Namespace) -> int:
     """초안의 제목과 본문을 넣는다."""
     draft = json.loads(Path(args.draft).read_text(encoding="utf-8"))
@@ -230,7 +294,7 @@ def cmd_fill(page: Page, args: argparse.Namespace) -> int:
         print("제목 자리를 찾지 못했다", file=sys.stderr)
         return 1
     clear_field(page)
-    page.type_text(title)
+    type_line(page, TITLE_SELECTOR, title)
 
     if not click(page, BODY_SELECTOR):
         print("본문 자리를 찾지 못했다", file=sys.stderr)
@@ -239,19 +303,30 @@ def cmd_fill(page: Page, args: argparse.Namespace) -> int:
     lines = body_lines(draft)
     for index, line in enumerate(lines):
         if line:
-            page.type_text(line)
+            type_line(page, BODY_SELECTOR, line)
         if index != len(lines) - 1:
-            page.enter()
+            new_paragraph(page, BODY_SELECTOR)
 
     # 넣었다고 말하기 전에 화면에서 읽어 확인한다.
-    landed = page.js(
-        f'(document.querySelector({json.dumps(TITLE_SELECTOR)}) || {{}}).innerText || ""'
-    )
-    if (landed or "").strip() != title.strip():
+    # 제목만 보면 본문이 절반 넘게 빠져도 0 으로 끝난다. 실측이다. 그래서 본문도 줄마다 견준다.
+    landed = normalize("".join(paragraphs(page, TITLE_SELECTOR)))
+    if landed != normalize(title):
         print(f"제목이 들어가지 않았다. 화면에 있는 것: {landed!r}", file=sys.stderr)
         return 1
 
-    print(f"제목과 본문 {len(lines)}줄을 넣었다")
+    want = [normalize(line) for line in lines if normalize(line)]
+    got = [text for text in map(normalize, paragraphs(page, BODY_SELECTOR)) if text]
+    wrong = body_mismatch(want, got)
+    if wrong:
+        print(
+            f"본문이 초안과 다르다. 초안 {len(want)}줄 {sum(map(len, want))}자,"
+            f" 화면 {len(got)}줄 {sum(map(len, got))}자",
+            file=sys.stderr,
+        )
+        print(wrong, file=sys.stderr)
+        return 1
+
+    print(f"제목과 본문 {len(want)}줄 {sum(map(len, want))}자를 넣었다. 초안과 같다")
     tags = draft.get("tags") or []
     if tags:
         print(f"태그 {len(tags)}개는 넣지 못했다. 발행 설정 레이어에만 입력란이 있다.")
@@ -260,6 +335,8 @@ def cmd_fill(page: Page, args: argparse.Namespace) -> int:
 
 
 PHOTO_BUTTON = "button.se-image-toolbar-button"
+# `사진 첨부 방식` 창의 `개별사진`. `button` 이 아니라 `input[type=button]` 이다.
+LAYOUT_EACH = "#image-type-list"
 
 
 def attach_photos(page: Page, files: list[str], seconds: float = 30.0) -> str:
@@ -282,12 +359,10 @@ def attach_photos(page: Page, files: list[str], seconds: float = 30.0) -> str:
     page.call("Runtime.enable")
     page.call("Page.setInterceptFileChooserDialog", enabled=True)
 
-    pressed = page.js(
-        "(() => { const b = document.querySelector("
-        + json.dumps(PHOTO_BUTTON)
-        + "); if (!b) return false; b.click(); return true; })()"
-    )
-    if not pressed:
+    # JS 의 `.click()` 으로 누르면 파일 선택 창이 열리지 않는다.
+    # Chrome 은 사용자 활성화가 있을 때만 그 창을 여는데, 그 시점에
+    # `navigator.userActivation.isActive` 가 거짓이었다. 마우스 이벤트로 누르면 바로 열린다. 실측이다.
+    if not click(page, PHOTO_BUTTON):
         return "사진 버튼을 찾지 못했다"
 
     chooser = page.wait_event("Page.fileChooserOpened", seconds=seconds)
@@ -342,13 +417,26 @@ def cmd_photos(page: Page, args: argparse.Namespace) -> int:
         print(problem, file=sys.stderr)
         return 1
 
-    for _ in range(60):
-        time.sleep(1)
+    # 사진이 둘 이상이면 `사진 첨부 방식` 창이 떠서 고르기를 기다린다.
+    # 고르지 않으면 본문에 아무것도 생기지 않는다. `개별사진` 을 마우스로 누른다.
+    picked = False
+    after = before
+    for _ in range(120):
+        time.sleep(0.5)
+        if not picked and click(page, LAYOUT_EACH):
+            picked = True
+            print("사진 첨부 방식에서 `개별사진` 을 골랐다")
         after = image_count(page)
-        if after > before:
+        if after - before >= len(files):
             print(f"사진 {after - before}개가 본문에 들어갔다. 넣은 파일은 {len(files)}개다")
             return 0
-    print("파일은 넣었지만 본문에 이미지 블록이 생기지 않았다", file=sys.stderr)
+    if after == before:
+        print("파일은 넣었지만 본문에 이미지 블록이 생기지 않았다", file=sys.stderr)
+    else:
+        print(
+            f"사진이 {len(files)}개 중 {after - before}개만 본문에 들어갔다",
+            file=sys.stderr,
+        )
     return 1
 
 
@@ -379,31 +467,30 @@ def save_count_js() -> str:
     그 숫자는 `저장` 버튼 안이 아니라 옆에 붙은 별도 버튼에 있다.
     클래스 이름에 해시가 붙어 바뀌므로 aria-label 로 찾는다.
     """
-    return '''(() => {
-  const b = document.querySelector("[aria-label*=\"임시저장된 글 보기\"]");
+    # 일반 문자열에 `\\"` 를 쓰면 파이썬이 `"` 로 풀어 JS 가 문법 오류로 죽는다.
+    # 저장 버튼을 누르기 전 개수를 읽는 자리에서 죽어 저장이 한 번도 시도되지 않았다. 실측이다.
+    # 그래서 raw 문자열에 쓰고 선택자는 작은따옴표로 감싼다.
+    return r'''(() => {
+  const b = document.querySelector('[aria-label*="임시저장된 글 보기"]');
   if (!b) return null;
-  const m = (b.getAttribute("aria-label") || b.innerText).match(/(\\d+)/);
+  const m = (b.getAttribute("aria-label") || b.innerText).match(/(\d+)/);
   return m ? Number(m[1]) : null;
 })()'''
 
 
 def cmd_state(page: Page, args: argparse.Namespace) -> int:
     """편집기에 실제로 들어간 것을 읽어 낸다."""
-    state = page.js(
-        f'''JSON.stringify({{
-  docTitle: document.title,
-  title: (document.querySelector({json.dumps(TITLE_SELECTOR)}) || {{}}).innerText || "",
-  bodyLines: [...document.querySelectorAll({json.dumps(BODY_SELECTOR)})]
-    .map(e => e.innerText).filter(t => t.trim()).length,
-  savedCount: (() => {{
-    const b = document.querySelector("[aria-label*=\\"임시저장된 글 보기\\"]");
-    if (!b) return null;
-    const m = (b.getAttribute("aria-label") || b.innerText).match(/(\\d+)/);
-    return m ? Number(m[1]) : null;
-  }})()
-}})'''
-    )
-    print(state)
+    body = [text for text in map(normalize, paragraphs(page, BODY_SELECTOR)) if text]
+    state = {
+        "docTitle": page.js("document.title"),
+        "title": normalize("".join(paragraphs(page, TITLE_SELECTOR))),
+        # 글자 수는 초안과 같은 셈법으로 파이썬에서 센다. JS 의 length 는 이모지를 둘로 센다.
+        "bodyLines": len(body),
+        "bodyChars": sum(map(len, body)),
+        "images": image_count(page),
+        "savedCount": page.js(save_count_js()),
+    }
+    print(json.dumps(state, ensure_ascii=False))
     return 0
 
 
