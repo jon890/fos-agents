@@ -54,18 +54,18 @@ migration 적용 절차는 [`services/recommendation-api/README.md`](../services
 
 ### 홈서버 release
 
-홈서버 `career-os` bucket 과 로컬 `career-os/.career-sync/` 의 파일 다섯이다.
-`releases/` 아래 셋은 만든 뒤 고치지 않는다.
+파일이 어디에 놓이는지는
+[`code-architecture.md`](code-architecture.md#비공개-작업본-동기화)가 소유한다.
+여기에는 각 파일의 형식만 적는다. `releases/` 아래 파일은 만든 뒤 고치지 않는다.
 
 | 파일 | 담는 것 |
 | --- | --- |
-| `releases/<revision>/workspace.tar` | 세 관리 root 의 archive |
-| `releases/<revision>/workspace-manifest.json` | 아래 manifest |
-| `releases/<revision>/release.json` | `schemaVersion`, `workspace`, `revision`, `contentDigest`, `createdAt`, `fileCount`, `archiveKey`, `archiveSha256`, `manifestKey`, `manifestSha256` |
-| `pointers/current.json` | release.json 과 같은 식별·요약 필드에 `descriptorKey`, `descriptorSha256` |
-| `.career-sync/sync-state.json` | 마지막으로 준비한 `revision`, `contentDigest`, 파일 hash |
-| `.career-sync/skill-session.json` | 진행 중인 skill 이름, 시작 revision, 시작 시각 |
-| `.career-sync/prepare-journal.json` | 아래 journal |
+| `release.json` | `schemaVersion`, `workspace`, `revision`, `contentDigest`, `createdAt`, `fileCount`, `archiveKey`, `archiveSha256`, `manifestKey`, `manifestSha256` |
+| `current.json` | `release.json` 과 같은 식별·요약 필드에 `descriptorKey`, `descriptorSha256` |
+| `sync-state.json` | 마지막으로 준비한 `revision`, `contentDigest`, 파일 hash |
+| `skill-session.json` | 진행 중인 skill 이름, 시작 revision, 시작 시각 |
+| `workspace-manifest.json` | 아래 manifest |
+| `prepare-journal.json` | 아래 journal |
 
 #### manifest
 

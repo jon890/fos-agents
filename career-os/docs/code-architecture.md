@@ -122,6 +122,24 @@ S3 storage adapter는 홈서버에서 표준 입력과 출력으로 release를 �
 `contracts.ts`, `manifest.ts`, `local-state.ts`, `tar-utils.ts`는 위 실행 경로가 공유하는 검증 코드다.
 동작을 수정하지 않는다면 `tests/`는 읽지 않아도 된다.
 
+release 파일은 홈서버 `career-os` bucket 과 각 환경의 `career-os/.career-sync/` 에 놓인다.
+각 파일의 형식은 [`data-schema.md`](data-schema.md#홈서버-release)가 소유한다.
+
+```text
+career-os bucket
+├── releases/<revision>/
+│   ├── workspace.tar             세 관리 root 의 archive
+│   ├── workspace-manifest.json   archive 에 든 파일 목록과 hash
+│   └── release.json              release 하나의 식별과 요약
+└── pointers/
+    └── current.json              지금 기준이 되는 release
+
+career-os/.career-sync/
+├── sync-state.json               마지막으로 준비한 release
+├── skill-session.json            진행 중인 skill 실행
+└── prepare-journal.json          준비 단계의 복구 기록
+```
+
 각 환경은 `applications`, `library`와 `state`를 일반 로컬 디렉터리로 사용한다.
 원격 파일을 network filesystem으로 직접 편집하지 않으며, 준비 단계는 검증한 release만 임시 경로에서 로컬로 교체한다.
 반영 단계는 실행 시작 revision이 홈서버 현재 값과 일치할 때만 새 release를 만든다.
