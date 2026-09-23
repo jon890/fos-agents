@@ -122,6 +122,22 @@ python3 scripts/naver_editor.py state
 `naver_session.py` 가 브라우저와 로그인 판정을, `naver_editor.py` 가 편집기 조작을 소유한다.
 두 스크립트 모두 `ji-yoon-blog/scripts/` 에 있다.
 
+### Hermes 컨테이너에서 붙는 방법
+
+컨테이너 안에서는 SSH 포트 포워딩을 띄우지 않는다.
+컨테이너의 `127.0.0.1` 은 컨테이너 자신이라 호스트 Chrome 에 닿지 않는다.
+호스트의 중계가 컨테이너 네트워크의 게이트웨이 주소에서 받아 Chrome 의 CDP 포트로 넘긴다.
+
+`scripts/cdp.py` 는 붙을 주소를 아래 두 환경 변수로 받는다.
+
+| 변수 | 주지 않거나 비었을 때 |
+| --- | --- |
+| `JI_YOON_BLOG_CDP_HOST` | `127.0.0.1` |
+| `JI_YOON_BLOG_CDP_PORT` | `9222` |
+
+컨테이너에는 중계를 띄운 쪽이 두 값을 넣어 준다.
+맥북에서는 주지 않고 포트 포워딩으로 붙는다.
+
 `state` 가 내는 것을 읽어 확인한 것만 완료라고 말한다.
 
 ### 편집기에 글자를 넣는 방법
