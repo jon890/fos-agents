@@ -258,13 +258,21 @@ query 순서와 마지막 슬래시를 맞춘다. 공고 ID 를 담는 query 는
 | `company_key` | `VARCHAR(191)` | |
 | `source_type` | `ENUM` | 아래 표 |
 | `url` | `VARCHAR(2048)` | HTTPS 만 담는다 |
+| `url_hash` | `CHAR(64)` | `url` 의 SHA-256. UNIQUE 를 걸기 위한 파생값이다 |
 | `title` | `VARCHAR(500)` NULL | |
 | `summary` | `TEXT` | 한 줄 요약 |
 | `payload_json` | `JSON` | 수집기가 받은 값. 급여와 근속과 인원이 여기 든다 |
 | `observed_at` | `DATETIME(3)` | 수집 시각 |
 | `valid_until` | `DATE` | 만료일 |
 
-`(company_key, source_type, url)` 이 UNIQUE 다. 같은 출처를 다시 모으면 갱신한다.
+같은 출처를 다시 모으면 갱신한다. 유일성 기준은 `(company_key, source_type, url)` 이다.
+
+UNIQUE 는 `url` 대신 `url_hash` 에 건다.
+`VARCHAR(2048)` 을 utf8mb4 로 담으면 index key 가 8192 바이트가 되어
+InnoDB 상한 3072 바이트를 넘고, MySQL 이 `Specified key was too long` 으로 거절한다.
+앞부분만 잘라 거는 prefix index 는 앞 570자가 같은 서로 다른 URL 을 한 행으로 묶어
+다른 출처의 근거를 덮어쓴다. 오류가 나지 않고 값만 틀린다.
+`positions.identity_hash` 와 `position_versions.content_hash` 가 쓰는 방식과 같다.
 
 `source_type` 과 그 출처가 채우는 축이다.
 
