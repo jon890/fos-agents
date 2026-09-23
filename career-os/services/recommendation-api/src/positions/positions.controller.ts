@@ -7,6 +7,7 @@ import {
   analysisPolicySchema,
   analysisResultsRequestSchema,
   collectionRequestSchema,
+  companyEvidenceRequestSchema,
   companyPreferenceUpdateSchema,
   companyTierResultsRequestSchema,
   exclusionsRequestSchema,
@@ -15,6 +16,9 @@ import {
   type AnalysisResultsRequest,
   type AnalysisResultsResponse,
   type CollectionRequest,
+  type CompanyEvidence,
+  type CompanyEvidenceRequest,
+  type CompanyEvidenceSaveResponse,
   type CompanyPreference,
   type CompanyTierResultsRequest,
   type CompanyTierResultsResponse,
@@ -68,6 +72,22 @@ export class PositionsController {
     @Body(new ZodValidationPipe(exclusionsRequestSchema)) body: ExclusionsRequest,
   ): Promise<PositionExclusion[]> {
     return this.positions.replaceExclusions(body);
+  }
+
+  /** 수집한 회사 근거를 회사 tier 실행 단위로 저장하고 회사별 저장 건수를 돌려준다. */
+  @Put("company-tier-runs/:companyTierRunId/evidence")
+  @HttpCode(200)
+  saveCompanyEvidence(
+    @Param("companyTierRunId") companyTierRunId: string,
+    @Body(new ZodValidationPipe(companyEvidenceRequestSchema)) body: CompanyEvidenceRequest,
+  ): Promise<CompanyEvidenceSaveResponse> {
+    return this.positions.saveCompanyEvidence(companyTierRunId, body);
+  }
+
+  /** 한 회사의 아직 유효한 근거만 돌려준다. */
+  @Get("companies/:companyKey/evidence")
+  listCompanyEvidence(@Param("companyKey") companyKey: string): Promise<CompanyEvidence[]> {
+    return this.positions.listValidCompanyEvidence(companyKey);
   }
 
   @Post("collection-runs")

@@ -3,11 +3,18 @@ import { Injectable } from "@nestjs/common";
 import type { PostingCandidate, SourceDiagnostic } from "../../contracts/posting-candidate.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import { PrismaService } from "../../prisma/prisma.service.js";
-import { companyKey, positionContentHash, positionIdentity, stableUuid } from "../hash.js";
+import {
+  companyKey,
+  positionContentHash,
+  positionIdentity,
+  stableUuid,
+  urlHash,
+} from "../hash.js";
 import type {
   AnalysisFailureCode,
   AnalysisPolicy,
   AnalysisUpdate,
+  CompanyEvidence,
   CompanyPreference,
   PositionExclusion,
 } from "../schema.js";
@@ -256,6 +263,9 @@ export type RunLookup =
   | { kind: "recommendation"; recommendationRunId: string }
   | { kind: "recommendation-missing"; analysisRunId: string };
 
+/** 저장할 회사 근거 한 건. 회사 식별자를 함께 담아 한 요청이 여러 회사를 다룬다. */
+export type CompanyEvidenceRow = CompanyEvidence & { companyKey: string };
+
 type RawRow = Record<string, unknown>;
 
 function iso(value: unknown): string {
@@ -323,6 +333,19 @@ function toExclusion(row: RawRow): PositionExclusion {
     identityHash: optionalText(row.identity_hash),
     url: optionalText(row.normalized_url),
     ...evidence,
+  };
+}
+
+/** 회사 근거 행을 계약 모양으로 되돌린다. */
+function toCompanyEvidence(row: RawRow): CompanyEvidence {
+  return {
+    sourceType: row.source_type as CompanyEvidence["sourceType"],
+    url: String(row.url),
+    title: optionalText(row.title),
+    summary: String(row.summary),
+    payloadJson: jsonValue<Record<string, unknown>>(row.payload_json),
+    observedAt: iso(row.observed_at),
+    validUntil: dateOnly(row.valid_until),
   };
 }
 
@@ -539,6 +562,60 @@ export class PositionsRepository {
                 ${rule.decidedAt}, ${rule.expiresAt ?? null})
       `;
     }
+  }
+
+  // ------------------------------------------------------------------ 회사 근거
+
+  /**
+   * 회사 근거를 넣거나 같은 출처의 행을 갱신한다.
+   *
+   * 회사 조사는 이력이 아니라 현재 상태다. 같은 `(company_key, source_type, url)` 이 다시 오면
+   * 행을 늘리지 않고 갱신한다. 이력은 `company_tier_assessments` 가 담는다.
+   *
+   * `url_hash` 를 고유 키에 쓰는 이유는 migration 주석이 적는다.
+   * 식별자는 그 세 값에서 만든다. 같은 출처를 다시 모아도 같은 행 식별자가 나온다.
+   */
+  async saveCompanyEvidence(
+    rows: CompanyEvidenceRow[],
+    tx: Prisma.TransactionClient,
+  ): Promise<void> {
+    for (const row of rows) {
+      const hash = urlHash(row.url);
+      const id = stableUuid(`company-evidence:${row.companyKey}:${row.sourceType}:${hash}`);
+      await tx.$executeRaw`
+        INSERT INTO company_evidence
+          (company_evidence_id, company_key, source_type, url, url_hash, title, summary,
+           payload_json, observed_at, valid_until)
+        VALUES (${id}, ${row.companyKey}, ${row.sourceType}, ${row.url}, ${hash},
+                ${row.title ?? null}, ${row.summary}, ${JSON.stringify(row.payloadJson)},
+                ${at(row.observedAt)}, ${row.validUntil})
+        ON DUPLICATE KEY UPDATE
+          title = VALUES(title),
+          summary = VALUES(summary),
+          payload_json = VALUES(payload_json),
+          observed_at = VALUES(observed_at),
+          valid_until = VALUES(valid_until)
+      `;
+    }
+  }
+
+  /**
+   * `today` 기준으로 아직 유효한 근거만 준다. `valid_until` 당일까지는 유효하다.
+   *
+   * 만료된 행은 지우지 않는다. 다음 수집이 같은 키로 갱신한다.
+   */
+  async listValidCompanyEvidence(
+    company: string,
+    today: string,
+    client: DbClient,
+  ): Promise<CompanyEvidence[]> {
+    const rows = await client.$queryRaw<RawRow[]>`
+      SELECT source_type, url, title, summary, payload_json, observed_at, valid_until
+      FROM company_evidence
+      WHERE company_key = ${company} AND valid_until >= ${today}
+      ORDER BY source_type, url
+    `;
+    return rows.map(toCompanyEvidence);
   }
 
   // ---------------------------------------------------------------- 수집 실행

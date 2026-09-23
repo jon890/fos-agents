@@ -324,6 +324,23 @@ model schema_migrations {
   applied_at DateTime @default(now())
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model company_evidence {
+  company_evidence_id String                       @id @db.Char(36)
+  company_key         String
+  source_type         company_evidence_source_type
+  url                 String                       @db.VarChar(2048)
+  url_hash            String                       @db.Char(64)
+  title               String?                      @db.VarChar(500)
+  summary             String                       @db.Text
+  payload_json        Json
+  observed_at         DateTime
+  valid_until         DateTime                     @db.Date
+
+  @@unique([company_key, source_type, url_hash], map: "uq_company_evidence_source")
+  @@index([company_key, valid_until], map: "idx_company_evidence_valid")
+}
+
 enum position_source_run_diagnostics_status {
   ok
   partial
@@ -466,4 +483,16 @@ enum position_exclusions_confidence {
   low
   medium
   high
+}
+
+enum company_evidence_source_type {
+  dart_employment @map("dart-employment")
+  dart_financial  @map("dart-financial")
+  tech_blog       @map("tech-blog")
+  github
+  conference
+  review
+  job_posting     @map("job-posting")
+  official
+  other
 }

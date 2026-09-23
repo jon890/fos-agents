@@ -557,6 +557,91 @@ export const exclusionsRequestSchema = z
   })
   .strict();
 
+/**
+ * 회사 근거 한 건의 계약이다.
+ *
+ * `docs/data-schema.md` 의 「회사 근거」 가 칸과 `sourceType` 의 값을 정한다.
+ * 수집기가 모아 보내고 모델은 이 근거만 읽고 세 축을 판정한다. ADR-123 을 따른다.
+ */
+export const companyEvidenceSourceTypeSchema = z.enum([
+  "dart-employment",
+  "dart-financial",
+  "tech-blog",
+  "github",
+  "conference",
+  "review",
+  "job-posting",
+  "official",
+  "other",
+]);
+
+/** 한 줄 요약의 길이 상한이다. 이보다 긴 것은 `payloadJson` 에 둔다. */
+export const companyEvidenceSummaryMaxLength = 500;
+
+export const companyEvidenceSchema = z
+  .object({
+    sourceType: companyEvidenceSourceTypeSchema,
+    url: httpsUrl,
+    title: nonEmpty.max(500).optional(),
+    summary: nonEmpty.max(companyEvidenceSummaryMaxLength),
+    // 수집기마다 모양이 다르다. Backend 는 내용을 해석하지 않고 그대로 담았다가 그대로 준다.
+    payloadJson: z.record(z.string(), z.unknown()),
+    observedAt: isoDateTime,
+    validUntil: dateOnly,
+  })
+  .strict()
+  .superRefine((evidence, context) => {
+    // DB 의 `CHECK` 가 같은 조건을 막는다. 여기서 먼저 걸러 500 대신 400 으로 돌려준다.
+    if (evidence.validUntil < evidence.observedAt.slice(0, 10)) {
+      context.addIssue({
+        code: "custom",
+        path: ["validUntil"],
+        message: "만료일이 수집 시각보다 이를 수 없습니다.",
+      });
+    }
+  });
+
+/**
+ * 한 요청이 여러 회사의 근거를 함께 담는다.
+ *
+ * 회사 하나씩 저장하면 회사가 스물이면 요청이 스물이 된다.
+ * 회사 tier 실행 하나를 경로로 삼아 한 요청으로 끝낸다.
+ */
+export const companyEvidenceRequestSchema = z
+  .object({
+    schemaVersion: z.literal(1),
+    companies: z
+      .array(
+        z
+          .object({
+            companyKey: nonEmpty,
+            evidence: z.array(companyEvidenceSchema).min(1),
+          })
+          .strict(),
+      )
+      .min(1),
+  })
+  .strict();
+
+export const companyEvidenceSaveResponseSchema = z
+  .object({
+    companyTierRunId: nonEmpty,
+    companies: z.array(
+      z
+        .object({
+          companyKey: nonEmpty,
+          savedCount: z.number().int().nonnegative(),
+        })
+        .strict(),
+    ),
+  })
+  .strict();
+
+export type CompanyEvidence = z.infer<typeof companyEvidenceSchema>;
+export type CompanyEvidenceSourceType = z.infer<typeof companyEvidenceSourceTypeSchema>;
+export type CompanyEvidenceRequest = z.infer<typeof companyEvidenceRequestSchema>;
+export type CompanyEvidenceSaveResponse = z.infer<typeof companyEvidenceSaveResponseSchema>;
+
 export type PositionExclusion = z.infer<typeof positionExclusionSchema>;
 export type ExclusionsRequest = z.infer<typeof exclusionsRequestSchema>;
 

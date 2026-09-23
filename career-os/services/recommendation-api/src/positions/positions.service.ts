@@ -10,6 +10,7 @@ import {
   type AnalysisRunItemUpdate,
   type AnalysisRunRow,
   type CollectionPositionRow,
+  type CompanyEvidenceRow,
   type CompanyTierRunItemRow,
   type CompanyTierRunItemUpdate,
   type CompanyTierRunRow,
@@ -35,6 +36,9 @@ import {
   type AnalysisResultsRequest,
   type AnalysisResultsResponse,
   type CollectionRequest,
+  type CompanyEvidence,
+  type CompanyEvidenceRequest,
+  type CompanyEvidenceSaveResponse,
   type CompanyPreference,
   type CompanyTierQueueResponse,
   type CompanyTierResultsRequest,
@@ -202,6 +206,58 @@ export class PositionsService {
       await this.repository.replaceExclusions(request.exclusions, tx);
       return this.repository.listExclusions(today, tx);
     });
+  }
+
+  /**
+   * 회사 근거를 회사 tier 실행 단위로 저장한다.
+   *
+   * 실행 행을 먼저 잠근다. ADR-122 를 따른다.
+   * 멱등 키가 다른 두 요청이 같은 실행에 동시에 와도 뒤의 것이 앞의 것을 기다린다.
+   *
+   * 이미 끝난 실행에는 저장하지 않는다. 그 실행의 판정이 이미 나왔으므로
+   * 근거를 더 넣어도 결과에 반영되지 않는다.
+   */
+  async saveCompanyEvidence(
+    companyTierRunId: string,
+    request: CompanyEvidenceRequest,
+  ): Promise<CompanyEvidenceSaveResponse> {
+    return this.repository.transaction(async (tx) => {
+      const run = await this.repository.lockCompanyTierRun(companyTierRunId, tx);
+      if (!run) {
+        throw new ApiError(404, "NOT_FOUND", "회사 tier 실행을 찾을 수 없습니다.");
+      }
+      if (run.status === "completed") {
+        throw new ApiError(
+          409,
+          "VERSION_CONFLICT",
+          "이미 끝난 회사 tier 실행에는 근거를 저장할 수 없습니다.",
+        );
+      }
+      const rows: CompanyEvidenceRow[] = request.companies.flatMap((company) =>
+        company.evidence.map((evidence) => ({ ...evidence, companyKey: company.companyKey })),
+      );
+      await this.repository.saveCompanyEvidence(rows, tx);
+      return {
+        companyTierRunId: run.companyTierRunId,
+        companies: request.companies.map((company) => ({
+          companyKey: company.companyKey,
+          savedCount: company.evidence.length,
+        })),
+      };
+    });
+  }
+
+  /**
+   * 한 회사의 아직 유효한 근거를 준다.
+   *
+   * 판정 기준 날짜는 Seoul 기준이다. `validUntil` 이 오늘이면 아직 유효하고 다음 날부터 뺀다.
+   */
+  async listValidCompanyEvidence(company: string, now = new Date()): Promise<CompanyEvidence[]> {
+    return this.repository.listValidCompanyEvidence(
+      company,
+      todaySeoulIsoDate(now),
+      this.repository.reader(),
+    );
   }
 
   async saveCollection(
