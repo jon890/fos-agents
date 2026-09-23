@@ -2,7 +2,10 @@ import { z } from "zod";
 import type { PositionExclusion as BackendPositionExclusion } from "../../../services/recommendation-api/src/positions/schema.ts";
 import { formatSeoulIsoDate } from "../../lib/date-format.ts";
 import { sourceIdSchema } from "../live-postings/contracts.ts";
-import { createRecommendationApiClient } from "../recommendation-api/client.ts";
+import {
+  createRecommendationApiClient,
+  RecommendationApiClientError,
+} from "../recommendation-api/client.ts";
 import type { Posting } from "../live-postings/types.ts";
 
 /**
@@ -139,6 +142,25 @@ export function validateCareerDownsideExclusion(rule: EnrichedPositionExclusion)
 }
 
 /**
+ * 제외 규칙을 읽지 못한 원인을 갈래로만 남긴다.
+ *
+ * 규칙 본문과 개인 식별자는 오류 문구에 담지 않는다.
+ * 원인까지 한 문구로 뭉치면 수집이 멈췄을 때 어디를 볼지 알 수 없어 갈래만 구분한다.
+ * zod 의 오류 문구는 어긋난 값을 그대로 담으므로 쓰지 않는다.
+ */
+function exclusionFailureReason(error: unknown): string {
+  if (error instanceof RecommendationApiClientError) {
+    if (error.status === null || error.status >= 500) {
+      return "추천 API 에 연결하지 못했습니다. 주소와 서버 상태를 확인하세요.";
+    }
+    if (error.status === 401 || error.status === 403) {
+      return "추천 API 인증이 거절됐습니다. token 을 확인하세요.";
+    }
+  }
+  return "추천 API 가 돌려준 제외 규칙이 계약을 만족하지 않습니다.";
+}
+
+/**
  * 외부 요청을 보내기 전에 개인 제외 규칙을 Backend 에서 읽는다.
  *
  * Backend 가 응답하지 않으면 중단한다. 오래된 규칙으로 수집을 이어 가면
@@ -158,11 +180,8 @@ export async function loadPositionExclusions(
       }
     }
     return parsed;
-  } catch {
-    // 개인 식별자와 규칙 본문을 오류나 후보풀에 남기지 않는다.
-    throw new Error(
-      "FAIL position exclusions: 제외 규칙을 읽거나 검증할 수 없습니다. 추천 API 연결과 인증을 확인하세요.",
-    );
+  } catch (error) {
+    throw new Error(`FAIL position exclusions: ${exclusionFailureReason(error)}`);
   }
 }
 

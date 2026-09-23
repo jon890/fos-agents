@@ -236,12 +236,19 @@ export class PositionsService {
       const rows: CompanyEvidenceRow[] = request.companies.flatMap((company) =>
         company.evidence.map((evidence) => ({ ...evidence, companyKey: company.companyKey })),
       );
-      await this.repository.saveCompanyEvidence(rows, tx);
+      const saved = await this.repository.saveCompanyEvidence(rows, tx);
+      // 요청 배열 길이가 아니라 실제로 남은 행 수를 센다.
+      // 같은 출처가 한 요청에 두 번 들어오면 행은 하나이고, 이관 뒤 행 수 대조가 이 값을 쓴다.
+      const savedByCompany = new Map<string, number>();
+      for (const row of saved) {
+        savedByCompany.set(row.companyKey, (savedByCompany.get(row.companyKey) ?? 0) + 1);
+      }
+      const companyKeys = [...new Set(request.companies.map((company) => company.companyKey))];
       return {
         companyTierRunId: run.companyTierRunId,
-        companies: request.companies.map((company) => ({
-          companyKey: company.companyKey,
-          savedCount: company.evidence.length,
+        companies: companyKeys.map((key) => ({
+          companyKey: key,
+          savedCount: savedByCompany.get(key) ?? 0,
         })),
       };
     });

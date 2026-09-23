@@ -3,13 +3,7 @@ import { Injectable } from "@nestjs/common";
 import type { PostingCandidate, SourceDiagnostic } from "../../contracts/posting-candidate.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import { PrismaService } from "../../prisma/prisma.service.js";
-import {
-  companyKey,
-  positionContentHash,
-  positionIdentity,
-  stableUuid,
-  urlHash,
-} from "../hash.js";
+import { companyKey, positionContentHash, positionIdentity, stableUuid } from "../hash.js";
 import type {
   AnalysisFailureCode,
   AnalysisPolicy,
@@ -511,6 +505,17 @@ export class PositionsRepository {
    * `PUT` 이 규칙을 통째로 바꾸므로 잠글 단위가 실행 하나가 아니라 이 table 전체다.
    * ADR-122 에 따라 transaction 을 열고 값을 바꾸기 전에 먼저 부른다.
    * 멱등 키가 다른 두 `PUT` 이 동시에 와도 뒤의 것이 앞의 것을 기다린다.
+   *
+   * **`WHERE` 를 붙이지 않는다.** 조건을 달면 그 조건에 맞는 구간의 행만 잠겨,
+   * 조건 밖의 규칙을 바꾸는 다른 transaction 이 기다리지 않고 함께 지나간다.
+   * `DELETE` 뒤 `INSERT` 로 목록 전체를 바꾸는 경로라 그 둘이 섞이면 규칙이 반씩 남는다.
+   *
+   * **table 이 비어 있으면 이 잠금이 직렬화하지 못한다.** `transaction` 이 고른 격리 수준이
+   * `READ COMMITTED` 이고, 그 수준에서 InnoDB 는 gap lock 을 잡지 않아 잠글 행이 없으면
+   * 잠글 것도 없다. 2026-09-23 에 같은 container 에서 실측했다.
+   * 빈 table 에 두 연결이 동시에 들어가면 뒤의 `INSERT` 가 기다리지 않고 바로 지나갔고,
+   * 같은 절차를 `REPEATABLE READ` 로 돌리면 앞 transaction 이 끝날 때까지 3초를 기다렸다.
+   * 규칙이 한 건이라도 있으면 그 행 잠금으로 직렬화된다.
    */
   async lockExclusions(tx: Prisma.TransactionClient): Promise<void> {
     await tx.$queryRaw`SELECT position_exclusion_id FROM position_exclusions FOR UPDATE`;
@@ -572,31 +577,44 @@ export class PositionsRepository {
    * 회사 조사는 이력이 아니라 현재 상태다. 같은 `(company_key, source_type, url)` 이 다시 오면
    * 행을 늘리지 않고 갱신한다. 이력은 `company_tier_assessments` 가 담는다.
    *
-   * `url_hash` 를 고유 키에 쓰는 이유는 migration 주석이 적는다.
-   * 식별자는 그 세 값에서 만든다. 같은 출처를 다시 모아도 같은 행 식별자가 나온다.
+   * **더 오래된 관측으로는 덮지 않는다.** 이관 명령처럼 옛 파일을 보내는 호출자가 있고,
+   * 조건 없이 덮으면 방금 모은 근거가 옛 값으로 돌아간다.
+   * `observed_at` 대입을 마지막에 두는 것은 MySQL 이 대입을 왼쪽부터 평가해,
+   * 먼저 바꾸면 뒤의 비교가 이미 바뀐 값을 보기 때문이다.
+   *
+   * 고유 키를 `url_hash` 에 거는 이유는 migration 주석이 적는다.
+   * 한 요청에 같은 키가 두 번 들어오면 행은 하나다. 저장한 키를 그대로 돌려줘
+   * 호출자가 요청 배열 길이 대신 실제 행 수를 셀 수 있게 한다.
    */
   async saveCompanyEvidence(
     rows: CompanyEvidenceRow[],
     tx: Prisma.TransactionClient,
-  ): Promise<void> {
+  ): Promise<CompanyEvidenceRow[]> {
+    const byKey = new Map<string, CompanyEvidenceRow>();
     for (const row of rows) {
-      const hash = urlHash(row.url);
-      const id = stableUuid(`company-evidence:${row.companyKey}:${row.sourceType}:${hash}`);
+      const key = [row.companyKey, row.sourceType, row.url].join("\u0000");
+      const kept = byKey.get(key);
+      if (!kept || Date.parse(row.observedAt) >= Date.parse(kept.observedAt)) byKey.set(key, row);
+    }
+    const saved = [...byKey.values()];
+    for (const row of saved) {
+      const id = stableUuid(`company-evidence:${row.companyKey}:${row.sourceType}:${row.url}`);
       await tx.$executeRaw`
         INSERT INTO company_evidence
-          (company_evidence_id, company_key, source_type, url, url_hash, title, summary,
+          (company_evidence_id, company_key, source_type, url, title, summary,
            payload_json, observed_at, valid_until)
-        VALUES (${id}, ${row.companyKey}, ${row.sourceType}, ${row.url}, ${hash},
+        VALUES (${id}, ${row.companyKey}, ${row.sourceType}, ${row.url},
                 ${row.title ?? null}, ${row.summary}, ${JSON.stringify(row.payloadJson)},
                 ${at(row.observedAt)}, ${row.validUntil})
         ON DUPLICATE KEY UPDATE
-          title = VALUES(title),
-          summary = VALUES(summary),
-          payload_json = VALUES(payload_json),
-          observed_at = VALUES(observed_at),
-          valid_until = VALUES(valid_until)
+          title = IF(VALUES(observed_at) > observed_at, VALUES(title), title),
+          summary = IF(VALUES(observed_at) > observed_at, VALUES(summary), summary),
+          payload_json = IF(VALUES(observed_at) > observed_at, VALUES(payload_json), payload_json),
+          valid_until = IF(VALUES(observed_at) > observed_at, VALUES(valid_until), valid_until),
+          observed_at = IF(VALUES(observed_at) > observed_at, VALUES(observed_at), observed_at)
       `;
     }
+    return saved;
   }
 
   /**

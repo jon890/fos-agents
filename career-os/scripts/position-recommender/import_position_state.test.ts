@@ -290,4 +290,25 @@ describe("파일에 있던 포지션 상태 이관", () => {
       rmSync(root, { recursive: true, force: true });
     }
   }, 30_000);
+
+  test("옮기는 표에 없는 sourceType 이 있으면 종료 코드 1로 중단한다", async () => {
+    // 이관 표와 파일 계약은 지금 같은 일곱 값을 담는다.
+    // 둘 중 하나가 늘어 어긋나면 이 명령이 조용히 지나가지 않고 멈춰야 한다.
+    const root = writeSource([fact("fact-unknown", "analyst-report")]);
+    try {
+      const child = Bun.spawn(
+        ["bun", `${import.meta.dir}/import_position_state.ts`, "--source-dir", root, "--dry-run"],
+        { stdout: "pipe", stderr: "pipe" },
+      );
+      const [stderr, exitCode] = await Promise.all([
+        new Response(child.stderr).text(),
+        child.exited,
+      ]);
+
+      expect(exitCode).toBe(1);
+      expect(stderr.length).toBeGreaterThan(0);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 30_000);
 });

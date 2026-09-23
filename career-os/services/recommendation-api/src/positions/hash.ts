@@ -36,13 +36,3 @@ export function positionIdentity(posting: PostingCandidate): string {
   const identity = posting.identityHash ?? new URL(posting.url).href;
   return `${posting.source}:${identity}`;
 }
-
-/**
- * 긴 URL 을 고유 키에 담기 위한 해시다.
- *
- * `company_evidence` 의 `url_hash` 가 이 값이다.
- * `VARCHAR(2048)` 을 그대로 index 에 넣으면 InnoDB 의 key 길이 상한을 넘는다.
- */
-export function urlHash(url: string): string {
-  return createHash("sha256").update(url).digest("hex");
-}

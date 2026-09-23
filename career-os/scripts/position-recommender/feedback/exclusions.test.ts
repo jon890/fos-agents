@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { PositionExclusion as BackendPositionExclusion } from "../../../services/recommendation-api/src/positions/schema.ts";
 import { collectLivePostings, parseArgs } from "../collect_live_postings.ts";
+import { RecommendationApiClientError } from "../recommendation-api/client.ts";
 import {
   filterExcludedPostings,
   loadPositionExclusions,
@@ -19,12 +20,12 @@ function exclusionsSource(rules: unknown[]): PositionExclusionsSource {
   return { getExclusions: async () => rules as BackendPositionExclusion[] };
 }
 
-function failingExclusionsSource(): PositionExclusionsSource {
+function failingExclusionsSource(error: unknown = new Error("추천 API에 연결하지 못했습니다.")) {
   return {
     getExclusions: async () => {
-      throw new Error("추천 API에 연결하지 못했습니다.");
+      throw error;
     },
-  };
+  } satisfies PositionExclusionsSource;
 }
 
 // 실제 개인 규칙과 지원 이력은 공개 테스트 fixture에 복제하지 않는다.
@@ -294,5 +295,52 @@ describe("개인 공고 제외", () => {
       filterExcludedPostings([posting, frontend, otherCompany], config, new Date("2027-04-01"))
         .eligible,
     ).toEqual([posting, frontend, otherCompany]);
+  });
+
+  test("규칙을 읽지 못한 원인을 연결과 인증과 계약으로 갈라 적는다", async () => {
+    const cases = [
+      {
+        error: new RecommendationApiClientError(null, "NETWORK", "연결 실패"),
+        expected: "추천 API 에 연결하지 못했습니다. 주소와 서버 상태를 확인하세요.",
+      },
+      {
+        error: new RecommendationApiClientError(503, "INTERNAL_ERROR", "서버 오류"),
+        expected: "추천 API 에 연결하지 못했습니다. 주소와 서버 상태를 확인하세요.",
+      },
+      {
+        error: new RecommendationApiClientError(401, "UNAUTHORIZED", "인증 실패"),
+        expected: "추천 API 인증이 거절됐습니다. token 을 확인하세요.",
+      },
+      {
+        error: new RecommendationApiClientError(400, "BAD_REQUEST", "잘못된 요청"),
+        expected: "추천 API 가 돌려준 제외 규칙이 계약을 만족하지 않습니다.",
+      },
+    ];
+    for (const { error, expected } of cases) {
+      await expect(loadPositionExclusions(failingExclusionsSource(error))).rejects.toThrow(
+        `FAIL position exclusions: ${expected}`,
+      );
+    }
+  });
+
+  test("계약을 어긴 규칙의 본문은 오류 문구에 담기지 않는다", async () => {
+    const secret = "비공개-회사-이름";
+    const source = exclusionsSource([
+      {
+        scope: "company",
+        company: secret,
+        decisionKind: "career-downside",
+        reason: "근거 URL 이 하나뿐이다.",
+        evidenceUrls: ["https://example.com/report/one"],
+        decidedAt: "2026-09-11",
+      },
+    ]);
+
+    await expect(loadPositionExclusions(source)).rejects.toThrow(
+      "FAIL position exclusions: 추천 API 가 돌려준 제외 규칙이 계약을 만족하지 않습니다.",
+    );
+    await loadPositionExclusions(source).catch((error: unknown) => {
+      expect(String((error as Error).message)).not.toContain(secret);
+    });
   });
 });

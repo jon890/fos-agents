@@ -330,7 +330,7 @@ model company_evidence {
   company_key         String
   source_type         company_evidence_source_type
   url                 String                       @db.VarChar(2048)
-  url_hash            String                       @db.Char(64)
+  url_hash            String?                      @db.Char(64)
   title               String?                      @db.VarChar(500)
   summary             String                       @db.Text
   payload_json        Json
