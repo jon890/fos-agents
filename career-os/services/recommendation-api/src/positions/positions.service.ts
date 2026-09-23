@@ -237,8 +237,10 @@ export class PositionsService {
         company.evidence.map((evidence) => ({ ...evidence, companyKey: company.companyKey })),
       );
       const saved = await this.repository.saveCompanyEvidence(rows, tx);
-      // 요청 배열 길이가 아니라 실제로 남은 행 수를 센다.
-      // 같은 출처가 한 요청에 두 번 들어오면 행은 하나이고, 이관 뒤 행 수 대조가 이 값을 쓴다.
+      // 요청 배열 길이가 아니라 이 요청이 다룬 서로 다른 출처 수를 센다.
+      // 같은 출처가 한 요청에 두 번 들어오면 하나로 센다.
+      // 실제로 바뀐 칸이 있는지는 세지 않는다. 더 오래된 관측을 보내 아무 칸도 바뀌지 않아도
+      // 그 키로 행은 남아 있고, 이관 뒤 행 수 대조가 보려는 것이 그 「지금 있는 행」 이다.
       const savedByCompany = new Map<string, number>();
       for (const row of saved) {
         savedByCompany.set(row.companyKey, (savedByCompany.get(row.companyKey) ?? 0) + 1);

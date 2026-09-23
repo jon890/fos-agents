@@ -2,7 +2,12 @@ import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { buildImportPayload, formatImportSummary } from "./import_position_state.ts";
+import { CompanyResearchFactSourceType } from "./company-research/schema.ts";
+import {
+  buildImportPayload,
+  formatImportSummary,
+  SOURCE_TYPE_BY_FILE_VALUE,
+} from "./import_position_state.ts";
 
 const observedAt = "2026-01-01T00:00:00.000Z";
 
@@ -306,9 +311,18 @@ describe("파일에 있던 포지션 상태 이관", () => {
       ]);
 
       expect(exitCode).toBe(1);
-      expect(stderr.length).toBeGreaterThan(0);
+      // 거절한 칸과 그 칸이 허용하는 값이 오류에 있어야 어디를 고칠지 알 수 있다.
+      expect(stderr).toContain("sourceType");
+      expect(stderr).toContain("regulatory-filing");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
   }, 30_000);
+
+  test("이관 표의 키와 파일 계약의 sourceType 값이 같다", () => {
+    // 한쪽만 늘면 이관 실행에 가서야 드러난다. 두 집합을 여기서 대조한다.
+    expect(Object.keys(SOURCE_TYPE_BY_FILE_VALUE).toSorted()).toEqual(
+      [...CompanyResearchFactSourceType.options].toSorted(),
+    );
+  });
 });

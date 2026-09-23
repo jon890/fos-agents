@@ -579,12 +579,17 @@ export class PositionsRepository {
    *
    * **더 오래된 관측으로는 덮지 않는다.** 이관 명령처럼 옛 파일을 보내는 호출자가 있고,
    * 조건 없이 덮으면 방금 모은 근거가 옛 값으로 돌아간다.
+   * 같은 시각이면 나중에 온 것을 남긴다. `observed_at` 을 날짜 단위로 적는 수집기와
+   * 재시도가 같은 시각을 다시 보내는데, 그것까지 막으면 갱신이 드러나지 않게 사라진다.
+   * 요청 안의 중복을 걷는 비교와 SQL 의 비교가 같은 부등호여야 한다.
+   * 다르면 같은 근거를 한 요청에 담느냐 나눠 보내느냐에 따라 남는 값이 달라진다.
+   *
    * `observed_at` 대입을 마지막에 두는 것은 MySQL 이 대입을 왼쪽부터 평가해,
    * 먼저 바꾸면 뒤의 비교가 이미 바뀐 값을 보기 때문이다.
    *
    * 고유 키를 `url_hash` 에 거는 이유는 migration 주석이 적는다.
    * 한 요청에 같은 키가 두 번 들어오면 행은 하나다. 저장한 키를 그대로 돌려줘
-   * 호출자가 요청 배열 길이 대신 실제 행 수를 셀 수 있게 한다.
+   * 호출자가 이 요청이 다룬 서로 다른 출처가 몇인지 셀 수 있게 한다.
    */
   async saveCompanyEvidence(
     rows: CompanyEvidenceRow[],
@@ -607,11 +612,11 @@ export class PositionsRepository {
                 ${row.title ?? null}, ${row.summary}, ${JSON.stringify(row.payloadJson)},
                 ${at(row.observedAt)}, ${row.validUntil})
         ON DUPLICATE KEY UPDATE
-          title = IF(VALUES(observed_at) > observed_at, VALUES(title), title),
-          summary = IF(VALUES(observed_at) > observed_at, VALUES(summary), summary),
-          payload_json = IF(VALUES(observed_at) > observed_at, VALUES(payload_json), payload_json),
-          valid_until = IF(VALUES(observed_at) > observed_at, VALUES(valid_until), valid_until),
-          observed_at = IF(VALUES(observed_at) > observed_at, VALUES(observed_at), observed_at)
+          title = IF(VALUES(observed_at) >= observed_at, VALUES(title), title),
+          summary = IF(VALUES(observed_at) >= observed_at, VALUES(summary), summary),
+          payload_json = IF(VALUES(observed_at) >= observed_at, VALUES(payload_json), payload_json),
+          valid_until = IF(VALUES(observed_at) >= observed_at, VALUES(valid_until), valid_until),
+          observed_at = IF(VALUES(observed_at) >= observed_at, VALUES(observed_at), observed_at)
       `;
     }
     return saved;

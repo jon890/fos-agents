@@ -5,6 +5,22 @@ export const CompanyResearchTopic = z.string().trim().min(1);
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const httpsUrl = z.string().url().startsWith("https://");
 
+/**
+ * 파일이 담을 수 있는 출처 갈래다.
+ *
+ * `import_position_state.ts` 의 이관 표가 이 값들을 `company_evidence.source_type` 으로 옮긴다.
+ * 그 표와 이 목록이 어긋나면 이관이 멈추므로 두 집합을 단위 테스트가 대조한다.
+ */
+export const CompanyResearchFactSourceType = z.enum([
+  "official",
+  "regulatory-filing",
+  "investor-relations",
+  "reputable-news",
+  "public-compensation",
+  "job-posting",
+  "other",
+]);
+
 export const CompanyResearchFact = z
   .object({
     factId: z.string().regex(/^[a-z0-9][a-z0-9-]{2,79}$/),
@@ -16,15 +32,7 @@ export const CompanyResearchFact = z
         url: httpsUrl,
         title: z.string().trim().min(1),
         publisher: z.string().trim().min(1),
-        sourceType: z.enum([
-          "official",
-          "regulatory-filing",
-          "investor-relations",
-          "reputable-news",
-          "public-compensation",
-          "job-posting",
-          "other",
-        ]),
+        sourceType: CompanyResearchFactSourceType,
         publishedAt: isoDate.nullable().optional(),
         observedAt: z.string().datetime({ offset: true }),
       })

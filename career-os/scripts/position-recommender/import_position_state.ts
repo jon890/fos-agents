@@ -26,8 +26,12 @@ import { createRecommendationApiClient } from "./recommendation-api/client.ts";
 
 export const defaultSourceDirectory = resolve(import.meta.dir, "../../state");
 
-/** 파일의 `source.sourceType` 을 `company_evidence.source_type` 으로 옮기는 표다. */
-const SOURCE_TYPE_BY_FILE_VALUE = {
+/**
+ * 파일의 `source.sourceType` 을 `company_evidence.source_type` 으로 옮기는 표다.
+ *
+ * 키 집합은 `CompanyResearchFactSourceType` 과 같아야 한다. 단위 테스트가 그것을 대조한다.
+ */
+export const SOURCE_TYPE_BY_FILE_VALUE = {
   "regulatory-filing": "dart-financial",
   "public-compensation": "review",
   "job-posting": "job-posting",

@@ -153,8 +153,28 @@ describe("회사 근거", () => {
     const second = await putOne([older], "evidence-older");
 
     expect(second.status).toBe(200);
+    // 바뀐 칸이 없어도 그 키로 행은 있다. savedCount 는 이 요청이 다룬 출처 수다.
+    expect(second.json).toEqual({
+      companyTierRunId,
+      companies: [{ companyKey, savedCount: 1 }],
+    });
     expect(await countRows()).toBe(1);
     expect((await get()).json).toEqual([blog]);
+  });
+
+  it("같은 시각으로 다시 저장하면 나중에 보낸 값이 남는다", async () => {
+    const { blog } = fixtures();
+    await seedCompanyTierRun("pending");
+    await putOne([blog], "evidence-same-instant-first");
+
+    // 수집기가 observedAt 을 날짜 단위로 적거나 재시도가 같은 시각을 다시 보낸다.
+    // 요청을 나눠 보냈을 때와 한 요청에 담았을 때의 결과가 같아야 한다.
+    const resent = { ...blog, summary: "같은 시각으로 다시 보낸 요약이다." };
+    const second = await putOne([resent], "evidence-same-instant-second");
+
+    expect(second.status).toBe(200);
+    expect(await countRows()).toBe(1);
+    expect((await get()).json).toEqual([resent]);
   });
 
   it("한 요청에 같은 출처가 두 번 들어오면 저장 건수가 1이다", async () => {
@@ -169,6 +189,32 @@ describe("회사 근거", () => {
     });
     expect(await countRows()).toBe(1);
     expect((await get()).json).toEqual([duplicated]);
+  });
+
+  it("한 요청에 회사가 둘이면 회사별로 나눠 세고 같은 회사는 합친다", async () => {
+    const { blog, dart } = fixtures();
+    const otherKey = "다른 주식회사";
+    await seedCompanyTierRun("pending");
+    const saved = await put(
+      [
+        { companyKey, evidence: [blog] },
+        { companyKey: otherKey, evidence: [dart] },
+        { companyKey, evidence: [dart] },
+      ],
+      "evidence-two-companies",
+    );
+
+    expect(saved.status).toBe(200);
+    expect(saved.json).toEqual({
+      companyTierRunId,
+      companies: [
+        { companyKey, savedCount: 2 },
+        { companyKey: otherKey, savedCount: 1 },
+      ],
+    });
+    expect(await countRows()).toBe(3);
+    expect((await get()).json).toEqual([dart, blog]);
+    expect((await get(otherKey)).json).toEqual([dart]);
   });
 
   it("유효기간이 어제인 근거는 조회에 나오지 않는다", async () => {
