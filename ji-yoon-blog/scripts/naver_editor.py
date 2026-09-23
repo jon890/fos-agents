@@ -220,12 +220,38 @@ def normalize(text: str) -> str:
 
 
 def paragraphs(page: Page, selector: str) -> list[str]:
-    """선택자에 걸리는 문단의 글을 차례대로 읽는다."""
+    """선택자에 걸리는 문단의 글을 차례대로 읽는다.
+
+    빈 칸은 `제목` 같은 안내 문구를 `.se-placeholder` 로 띄운다. 그것은 글이 아니므로 빼고 읽는다.
+    """
     raw = page.js(
         f"JSON.stringify([...document.querySelectorAll({json.dumps(selector)})]"
-        ".map(e => e.innerText))"
+        ".map(e => { const c = e.cloneNode(true);"
+        " c.querySelectorAll('.se-placeholder').forEach(x => x.remove());"
+        " return c.textContent; }))"
     )
     return json.loads(raw or "[]")
+
+
+def focus(page: Page, selector: str, scope: str, tries: int = 10) -> bool:
+    """선택자 자리를 눌러 커서가 scope 안에 들어간 것을 확인한다.
+
+    화면을 막 연 직후에는 편집기가 스스로 본문에 초점을 옮긴다.
+    그 전에 제목을 눌러 두면 초점을 빼앗겨 제목 글자가 본문에 들어가고, 이어서 본문을 지울 때 함께 사라진다. 실측이다.
+    그래서 누른 뒤 잠깐 두고 커서가 아직 그 자리에 있는지 본다. 없으면 다시 누른다.
+    """
+    inside = (
+        "(() => { const n = getSelection().anchorNode;"
+        " const e = n && (n.nodeType === 1 ? n : n.parentElement);"
+        f" return !!(e && e.closest({json.dumps(scope)})); }})()"
+    )
+    for _ in range(tries):
+        if not click(page, selector):
+            return False
+        time.sleep(0.3)
+        if page.js(inside):
+            return True
+    return False
 
 
 def wait_until(check, seconds: float = STEP_SECONDS) -> bool:
@@ -290,14 +316,14 @@ def cmd_fill(page: Page, args: argparse.Namespace) -> int:
         print("`open` 을 다시 불러 알림을 지난 뒤 다시 넣는다.", file=sys.stderr)
         return 1
 
-    if not click(page, TITLE_SELECTOR):
-        print("제목 자리를 찾지 못했다", file=sys.stderr)
+    if not focus(page, TITLE_SELECTOR, ".se-documentTitle"):
+        print("제목 자리에 커서를 두지 못했다", file=sys.stderr)
         return 1
     clear_field(page)
     type_line(page, TITLE_SELECTOR, title)
 
-    if not click(page, BODY_SELECTOR):
-        print("본문 자리를 찾지 못했다", file=sys.stderr)
+    if not focus(page, BODY_SELECTOR, ".se-component.se-text"):
+        print("본문 자리에 커서를 두지 못했다", file=sys.stderr)
         return 1
     clear_field(page)
     lines = body_lines(draft)
