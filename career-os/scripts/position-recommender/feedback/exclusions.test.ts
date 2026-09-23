@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { PositionExclusion as BackendPositionExclusion } from "../../../services/recommendation-api/src/positions/schema.ts";
 import { collectLivePostings, parseArgs } from "../collect_live_postings.ts";
 import {
   filterExcludedPostings,
@@ -9,8 +10,22 @@ import {
   validateCareerDownsideExclusion,
   type EnrichedPositionExclusion,
   type PositionExclusions,
+  type PositionExclusionsSource,
 } from "./exclusions.ts";
 import type { Posting } from "../live-postings/types.ts";
+
+/** 규칙은 Backend 가 소유한다. 테스트는 그 응답만 대역으로 세운다. */
+function exclusionsSource(rules: unknown[]): PositionExclusionsSource {
+  return { getExclusions: async () => rules as BackendPositionExclusion[] };
+}
+
+function failingExclusionsSource(): PositionExclusionsSource {
+  return {
+    getExclusions: async () => {
+      throw new Error("추천 API에 연결하지 못했습니다.");
+    },
+  };
+}
 
 // 실제 개인 규칙과 지원 이력은 공개 테스트 fixture에 복제하지 않는다.
 const posting: Posting = {
@@ -38,6 +53,16 @@ const posting: Posting = {
 const config: PositionExclusions = {
   schemaVersion: 1,
   exclusions: [{ source: posting.source, identityHash: posting.identityHash, url: posting.url }],
+};
+const backendPostingRule = {
+  scope: "posting",
+  source: posting.source,
+  identityHash: posting.identityHash,
+  url: posting.url,
+  decisionKind: "manual",
+  reason: "검증용 제외 규칙",
+  evidenceUrls: [posting.url],
+  decidedAt: "2026-09-10",
 };
 
 describe("개인 공고 제외", () => {
@@ -72,16 +97,14 @@ describe("개인 공고 제외", () => {
   test("최종 후보풀과 진단에 제외 공고 본문이나 식별자가 남지 않는다", async () => {
     const dir = mkdtempSync(join(tmpdir(), "position-exclusions-"));
     try {
-      const path = join(dir, "rules.json");
       const out = join(dir, "pool.json");
-      writeFileSync(path, JSON.stringify(config));
       const kept = {
         ...posting,
         identityHash: "toss-careers:new",
         url: "https://toss.im/career/job-detail?job_id=new",
       };
       const code = await collectLivePostings(
-        parseArgs(["--source", "toss", "--exclusions-config", path, "--output", out]),
+        parseArgs(["--source", "toss", "--output", out]),
         [
           {
             id: "toss-careers",
@@ -89,6 +112,7 @@ describe("개인 공고 제외", () => {
             collect: async () => [posting, kept],
           },
         ],
+        exclusionsSource([backendPostingRule]),
       );
       const raw = readFileSync(out, "utf8");
       const pool = JSON.parse(raw);
@@ -102,42 +126,95 @@ describe("개인 공고 제외", () => {
     }
   });
 
-  test("누락, JSON 오류, 스키마 오류는 수집과 출력 전에 중단한다", async () => {
+  test("Backend 오류와 계약을 벗어난 규칙은 수집과 출력 전에 중단한다", async () => {
     const dir = mkdtempSync(join(tmpdir(), "position-exclusions-"));
     try {
-      const path = join(dir, "rules.json");
       const out = join(dir, "pool.json");
       let calls = 0;
-      for (const raw of [
-        undefined,
-        "{",
-        "null",
-        '{"schemaVersion":1,"exclusions":[{"source":"toss-careers"}]}',
-        '{"schemaVersion":1,"exclusions":[{"source":"toss-careers","url":"http://invalid"}]}',
-        '{"schemaVersion":1,"exclusions":[{"source":"toss-careers","identityHash":"x","company":"all"}]}',
-      ]) {
-        if (raw !== undefined) writeFileSync(path, raw);
+      const sources: PositionExclusionsSource[] = [
+        failingExclusionsSource(),
+        // 모르는 소스 이름, 필수 칸 누락, 회사 제외의 근거 부족이다.
+        exclusionsSource([{ ...backendPostingRule, source: "unknown-board" }]),
+        exclusionsSource([{ scope: "posting", source: "toss-careers" }]),
+        exclusionsSource([
+          {
+            scope: "company",
+            company: "테스트 회사",
+            decisionKind: "career-downside",
+            reason: "근거가 하나뿐이다",
+            evidenceUrls: ["https://example.com/company"],
+            decidedAt: "2026-09-10",
+          },
+        ]),
+      ];
+      for (const source of sources) {
         await expect(
-          collectLivePostings(parseArgs(["--output", out, "--exclusions-config", path]), [
-            {
-              id: "toss-careers",
-              name: "fixture",
-              collect: async () => {
-                calls++;
-                return [posting];
+          collectLivePostings(
+            parseArgs(["--output", out]),
+            [
+              {
+                id: "toss-careers",
+                name: "fixture",
+                collect: async () => {
+                  calls++;
+                  return [posting];
+                },
               },
-            },
-          ]),
+            ],
+            source,
+          ),
         ).rejects.toThrow("FAIL position exclusions");
         expect(existsSync(out)).toBe(false);
       }
       expect(calls).toBe(0);
-      writeFileSync(path, '{"schemaVersion":1,"exclusions":[]}');
-      expect(loadPositionExclusions(path).exclusions).toEqual([]);
+      expect((await loadPositionExclusions(exclusionsSource([]))).exclusions).toEqual([]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  test("Backend가 오류를 내면 수집 명령이 종료 코드 1로 끝난다", async () => {
+    const server = Bun.serve({
+      port: 0,
+      fetch: () =>
+        Response.json({ error: { code: "INTERNAL_ERROR", message: "실패" } }, { status: 500 }),
+    });
+    const dir = mkdtempSync(join(tmpdir(), "position-exclusions-"));
+    try {
+      const child = Bun.spawn(
+        [
+          "bun",
+          `${import.meta.dir}/../collect_live_postings.ts`,
+          "--source",
+          "toss",
+          "--output",
+          join(dir, "pool.json"),
+        ],
+        {
+          stdout: "pipe",
+          stderr: "pipe",
+          env: {
+            ...process.env,
+            NO_PROXY: "127.0.0.1,localhost",
+            CAREER_RECOMMENDATION_API_URL: `http://127.0.0.1:${server.port}`,
+            CAREER_RECOMMENDATION_API_TOKEN: "token-123456789012345678901234567890",
+            CAREER_RECOMMENDATION_API_TOKEN_FILE: undefined,
+          },
+        },
+      );
+      const [stderr, exitCode] = await Promise.all([
+        new Response(child.stderr).text(),
+        child.exited,
+      ]);
+
+      expect(exitCode).toBe(1);
+      expect(stderr).toContain("FAIL position exclusions");
+      expect(existsSync(join(dir, "pool.json"))).toBe(false);
+    } finally {
+      server.stop(true);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 60_000);
 
   test("회사 규칙은 정확히 같은 회사의 공고만 제외한다", () => {
     const companyRule: EnrichedPositionExclusion = {

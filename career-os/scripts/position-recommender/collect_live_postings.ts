@@ -42,7 +42,11 @@ import {
   DEFAULT_MAX_FAILED_SOURCES,
   judgeCollectionHealth,
 } from "./live-postings/collection_health.ts";
-import { filterExcludedPostings, loadPositionExclusions } from "./feedback/exclusions.ts";
+import {
+  filterExcludedPostings,
+  loadPositionExclusions,
+  type PositionExclusionsSource,
+} from "./feedback/exclusions.ts";
 
 // ---- CLI ----------------------------------------------------------------
 
@@ -81,14 +85,11 @@ export function parseArgs(argv: string[]): CliArgs {
   let wantedLimit = 120;
   let includeTossArticles = false;
   let maxFailedSources: number | undefined;
-  let exclusionsConfig: string | undefined;
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--out" || arg === "--output" || arg === "--json-output") {
       jsonOut = requireValue(arg, argv[++i]);
-    } else if (arg === "--exclusions-config") {
-      exclusionsConfig = requireValue(arg, argv[++i]);
     } else if (arg === "--source") {
       const s = requireValue(arg, argv[++i]);
       // 어댑터 목록이 단일 소스다. 여기에 이름을 복제하면 새 소스가 조용히 무시된다.
@@ -118,7 +119,6 @@ export function parseArgs(argv: string[]): CliArgs {
   const defaultMaxFailed = source === "all" ? DEFAULT_MAX_FAILED_SOURCES : 0;
   return {
     jsonOut,
-    exclusionsConfig,
     source,
     targetRoleOnly,
     wantedLimit,
@@ -142,10 +142,12 @@ function importedCountsBySource(posts: Posting[]): Map<string, number> {
 export async function collectLivePostings(
   args: CliArgs,
   adapters = selectAdapters(args.source, args.includeTossArticles),
+  exclusionsSource?: PositionExclusionsSource,
 ): Promise<number> {
   const { jsonOut, source, targetRoleOnly, wantedLimit, includeTossArticles, maxFailedSources } =
     args;
-  const exclusions = loadPositionExclusions(args.exclusionsConfig);
+  // 외부 소스를 부르기 전에 읽는다. Backend 가 응답하지 않으면 수집을 시작하지 않는다.
+  const exclusions = await loadPositionExclusions(exclusionsSource);
   const collected: Posting[] = [];
   const errors: string[] = [];
   const sourceDiagnostics: SourceDiagnostic[] = [];

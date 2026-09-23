@@ -55,9 +55,20 @@ skill 문서에서 지울 절은 「실행 준비」의 `skill begin`과
 
 **버전 1 형식의 제외 규칙을 버전 2로 올린다.**
 `scope`가 없는 옛 규칙에 `scope: "posting"`을 붙인다.
-`decisionKind`와 `reason`과 `evidenceUrls`가 없으므로
-`decisionKind`는 `manual`, `reason`은 「이관 전 규칙」, `evidenceUrls`는 빈 배열로 둔다.
-`evidenceUrls`가 비어도 되는 것은 `career-downside`가 아닐 때뿐이다.
+`decisionKind`는 `manual`, `reason`은 「이관 전 규칙」로 둔다.
+
+`evidenceUrls`를 빈 배열로 두지 않는다.
+`scripts/position-recommender/feedback/exclusions.ts`의 `exclusionEvidenceSchema`가
+`scope`와 무관하게 `evidenceUrls`를 하나 이상 요구해 왔고 Backend가 그 계약을 그대로 옮겼다.
+빈 배열로 보내면 `400`으로 거절당한다.
+
+버전 1 규칙이 `url`을 가졌으면 그것을 `evidenceUrls`의 한 건으로 쓴다.
+`identityHash`만 있고 `url`이 없는 규칙은 근거로 쓸 URL이 원본에 없다.
+지어내지 않고 그 건을 세어 집계에 내고, `--commit`은 아무것도 보내지 않고 종료 코드 1로 끝낸다.
+
+`decidedAt`은 원본에 없고 날짜를 지어낼 수 없다.
+`--decided-at YYYY-MM-DD`로 받는다. 버전 1 규칙이 있는데 이 인자가 없으면 종료 코드 1로 끝낸다.
+버전 2 규칙만 있으면 이 인자는 필요 없다.
 
 **회사 조사의 `facts`를 `company_evidence`로, `inferences`는 버린다.**
 추론은 근거가 아니다. 버린 추론이 있었다는 사실을 이관 명령이 출력한다.
@@ -171,7 +182,10 @@ Backend가 응답하지 않으면 종료 코드 1로 중단한다.
 
 `scripts/position-recommender/import_position_state.test.ts`를 만든다.
 임시 디렉터리에 파일을 만들어 `--source-dir`로 가리키고 `--dry-run`의 집계가 맞는지 본다.
-버전 1 규칙이 버전 2로 올라가는지, `sourceType` 매핑이 표대로인지,
+`url`을 가진 버전 1 규칙이 그 `url`을 `evidenceUrls`에 담아 버전 2로 올라가는지,
+`url`이 없는 버전 1 규칙이 집계에 잡히고 `--commit`이 종료 코드 1로 끝나는지,
+버전 1 규칙이 있는데 `--decided-at`이 없으면 종료 코드 1인지,
+`sourceType` 매핑이 표대로인지,
 `validUntil`이 없는 fact에 `source_type`별 기간이 붙는지를 확인한다.
 `dart-financial`에 180일, `review`에 60일, `official`에 90일이 붙는 세 경우를 모두 둔다.
 `--source-dir`가 없는 경로를 가리키면 종료 코드 1인 것도 확인한다.

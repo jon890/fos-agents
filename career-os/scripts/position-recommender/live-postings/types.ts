@@ -71,7 +71,6 @@ export interface CollectionDiagnostics {
 }
 
 export interface CliArgs {
-  exclusionsConfig?: string;
   jsonOut: string;
   source: SourceSelection;
   targetRoleOnly: boolean;
