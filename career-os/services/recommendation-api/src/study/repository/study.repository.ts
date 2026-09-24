@@ -3,7 +3,14 @@ import { Injectable } from "@nestjs/common";
 import { Prisma } from "../../generated/prisma/client.js";
 import { ApiError } from "../../common/api-error.js";
 import { PrismaService } from "../../prisma/prisma.service.js";
-import type { StudyCandidatesQuery, StudyIngestion, StudySource, StudySourcePut } from "../schema.js";
+import type {
+  StudyCandidatesQuery,
+  StudyIngestion,
+  StudyPublication,
+  StudyRecommendationRun,
+  StudySource,
+  StudySourcePut,
+} from "../schema.js";
 
 type RawRow = Record<string, unknown>;
 type DbClient = PrismaService | Prisma.TransactionClient;
@@ -172,6 +179,114 @@ export class StudyRepository {
     return row
       ? { candidateContextVersion: String(row.candidate_context_version), historyVersion: number(row.history_version) }
       : undefined;
+  }
+
+  async lockRecommendationControl(tx: Prisma.TransactionClient): Promise<{ candidateContextVersion: string; historyVersion: number } | undefined> {
+    const rows = await tx.$queryRaw<RawRow[]>`
+      SELECT candidate_context_version, history_version
+      FROM study_recommendation_control WHERE singleton_id = 1 FOR UPDATE
+    `;
+    const row = rows[0];
+    return row
+      ? { candidateContextVersion: String(row.candidate_context_version), historyVersion: number(row.history_version) }
+      : undefined;
+  }
+
+  async recommendationRunExists(reportId: string, client: DbClient): Promise<boolean> {
+    const rows = await client.$queryRaw<RawRow[]>`
+      SELECT report_id FROM study_recommendation_runs WHERE report_id = ${reportId}
+    `;
+    return rows.length > 0;
+  }
+
+  async latestRecommendationTopicKeys(client: DbClient): Promise<string[]> {
+    return this.recentStudyTopicKeys(client);
+  }
+
+  async existingMaterialKeys(contentKeys: string[], client: DbClient): Promise<Set<string>> {
+    if (contentKeys.length === 0) return new Set();
+    const rows = await client.$queryRaw<RawRow[]>`
+      SELECT content_key FROM study_materials WHERE content_key IN (${Prisma.join(contentKeys)})
+    `;
+    return new Set(rows.map((row) => String(row.content_key)));
+  }
+
+  async hasRecommendedMaterial(contentKeys: string[], client: DbClient): Promise<boolean> {
+    if (contentKeys.length === 0) return false;
+    const rows = await client.$queryRaw<RawRow[]>`
+      SELECT content_key FROM study_recommended_materials WHERE content_key IN (${Prisma.join(contentKeys)}) LIMIT 1
+    `;
+    return rows.length > 0;
+  }
+
+  async insertRecommendationRun(value: StudyRecommendationRun, tx: Prisma.TransactionClient): Promise<void> {
+    await tx.$executeRaw`
+      INSERT INTO study_recommendation_runs (report_id, generated_at, candidate_context_version, created_at)
+      VALUES (${value.reportId}, ${new Date(value.generatedAt)}, ${value.candidateContextVersion}, NOW(3))
+    `;
+  }
+
+  async insertRecommendationTopics(value: StudyRecommendationRun, tx: Prisma.TransactionClient): Promise<void> {
+    for (const [index, topic] of value.topics.entries()) {
+      await tx.$executeRaw`
+        INSERT INTO study_recommendation_topics (report_id, topic_key, title, career_question, position)
+        VALUES (${value.reportId}, ${topic.topicKey}, ${topic.title}, ${topic.careerQuestion}, ${index + 1})
+      `;
+    }
+  }
+
+  async insertRecommendedMaterials(value: StudyRecommendationRun, tx: Prisma.TransactionClient): Promise<void> {
+    for (const topic of value.topics) {
+      for (const [index, item] of topic.items.entries()) {
+        await tx.$executeRaw`
+          INSERT INTO study_recommended_materials
+            (report_id, content_key, topic_key, summary, reason, career_value, position)
+          VALUES (${value.reportId}, ${item.contentKey}, ${topic.topicKey}, ${item.summary}, ${item.reason},
+                  ${item.careerValue}, ${index + 1})
+        `;
+      }
+    }
+  }
+
+  async upsertRejections(value: StudyRecommendationRun, today: string, tx: Prisma.TransactionClient): Promise<void> {
+    for (const rejection of value.rejections) {
+      await tx.$executeRaw`
+        INSERT INTO study_material_verdicts
+          (content_key, candidate_context_version, verdict, reason, report_id, judged_at, valid_until)
+        VALUES (${rejection.contentKey}, ${value.candidateContextVersion}, 'rejected', ${rejection.reason},
+                ${value.reportId}, NOW(3), DATE_ADD(${today}, INTERVAL 30 DAY))
+        ON DUPLICATE KEY UPDATE verdict = VALUES(verdict), reason = VALUES(reason), report_id = VALUES(report_id),
+                                judged_at = VALUES(judged_at), valid_until = VALUES(valid_until)
+      `;
+    }
+  }
+
+  async incrementHistoryVersion(tx: Prisma.TransactionClient): Promise<number> {
+    await tx.$executeRaw`
+      UPDATE study_recommendation_control
+      SET history_version = history_version + 1, updated_at = NOW(3)
+      WHERE singleton_id = 1
+    `;
+    const control = await this.lockRecommendationControl(tx);
+    if (!control) throw new Error("추천 이력 버전을 저장하지 못했습니다.");
+    return control.historyVersion;
+  }
+
+  async updateCandidateContextVersion(candidateContextVersion: string, tx: Prisma.TransactionClient): Promise<void> {
+    await tx.$executeRaw`
+      UPDATE study_recommendation_control
+      SET candidate_context_version = ${candidateContextVersion}, updated_at = NOW(3)
+      WHERE singleton_id = 1
+    `;
+  }
+
+  async insertPublication(value: StudyPublication, tx: Prisma.TransactionClient): Promise<string> {
+    const publicationId = crypto.randomUUID();
+    await tx.$executeRaw`
+      INSERT INTO study_publications (publication_id, report_id, channel, url, external_id, published_at)
+      VALUES (${publicationId}, ${value.reportId}, ${value.channel}, ${value.url}, ${value.externalId}, ${new Date(value.publishedAt)})
+    `;
+    return publicationId;
   }
 
   async recentStudyTopicKeys(client: DbClient): Promise<string[]> {

@@ -115,3 +115,72 @@ export type StudyCandidatePage = {
   historyVersion: number;
   candidateContextVersion: string;
 };
+
+const studyRecommendationItemSchema = z.object({
+  contentKey: nonEmpty.max(191),
+  summary: z.string().trim().min(1).max(300).nullable(),
+  reason: z.string().trim().min(1).max(300).nullable(),
+  careerValue: z.enum(["current-work", "target-role", "engineering-judgment", "product-business"]).nullable(),
+}).strict();
+
+const studyRecommendationTopicSchema = z.object({
+  topicKey: nonEmpty.max(191),
+  title: nonEmpty.max(500),
+  careerQuestion: z.string().trim().min(1).max(300).nullable(),
+  items: z.array(studyRecommendationItemSchema).min(1).max(100),
+}).strict();
+
+export const studyRecommendationRunSchema = z.object({
+  reportId: nonEmpty.max(40),
+  generatedAt: z.iso.datetime(),
+  candidateContextVersion: nonEmpty.max(191),
+  topics: z.array(studyRecommendationTopicSchema).max(20),
+  rejections: z.array(z.object({
+    contentKey: nonEmpty.max(191),
+    reason: nonEmpty.max(300),
+  }).strict()).max(2_000).default([]),
+}).strict().superRefine((value, context) => {
+  const topicKeys = new Set<string>();
+  const selectedContentKeys = new Set<string>();
+  for (const [topicIndex, topic] of value.topics.entries()) {
+    if (topicKeys.has(topic.topicKey)) {
+      context.addIssue({ code: "custom", path: ["topics", topicIndex, "topicKey"], message: "같은 topicKey가 있습니다." });
+    }
+    topicKeys.add(topic.topicKey);
+    for (const [itemIndex, item] of topic.items.entries()) {
+      if (selectedContentKeys.has(item.contentKey)) {
+        context.addIssue({ code: "custom", path: ["topics", topicIndex, "items", itemIndex, "contentKey"], message: "같은 추천 자료가 있습니다." });
+      }
+      selectedContentKeys.add(item.contentKey);
+    }
+  }
+  const rejectionKeys = new Set<string>();
+  for (const [index, rejection] of value.rejections.entries()) {
+    if (rejectionKeys.has(rejection.contentKey)) {
+      context.addIssue({ code: "custom", path: ["rejections", index, "contentKey"], message: "같은 제외 자료가 있습니다." });
+    }
+    if (selectedContentKeys.has(rejection.contentKey)) {
+      context.addIssue({ code: "custom", path: ["rejections", index, "contentKey"], message: "추천 자료와 제외 자료가 겹칩니다." });
+    }
+    rejectionKeys.add(rejection.contentKey);
+  }
+});
+
+export const studyPublicationSchema = z.object({
+  reportId: nonEmpty.max(40),
+  channel: nonEmpty.max(50),
+  url: nullableHttpsUrl,
+  externalId: nonEmpty.max(255),
+  publishedAt: z.iso.datetime(),
+  idempotencyKey: nonEmpty.max(200),
+}).strict();
+
+export const studyRecommendationControlSchema = z.object({
+  candidateContextVersion: nonEmpty.max(191),
+}).strict();
+
+export type StudyRecommendationRun = z.infer<typeof studyRecommendationRunSchema>;
+export type StudyPublication = z.infer<typeof studyPublicationSchema>;
+export type StudyRecommendationControl = z.infer<typeof studyRecommendationControlSchema>;
+export type StudyRecommendationRunResult = { reportId: string; historyVersion: number };
+export type StudyPublicationResult = { publicationId: string };

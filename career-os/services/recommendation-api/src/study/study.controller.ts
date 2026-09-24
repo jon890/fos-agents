@@ -7,12 +7,20 @@ import {
   sourceKeySchema,
   studyCandidatesQuerySchema,
   studyIngestionSchema,
+  studyPublicationSchema,
+  studyRecommendationControlSchema,
+  studyRecommendationRunSchema,
   studySourcePutSchema,
   type StudyCandidatePage,
   type StudyCandidatesQuery,
   type StudyCursorResult,
   type StudyIngestion,
   type StudyIngestionResult,
+  type StudyPublication,
+  type StudyPublicationResult,
+  type StudyRecommendationControl,
+  type StudyRecommendationRun,
+  type StudyRecommendationRunResult,
   type StudySourcePut,
   type StudySourceUpsertResponse,
 } from "./schema.js";
@@ -62,9 +70,46 @@ export class StudyController {
     return this.study.getCandidates(query);
   }
 
+  @Post("recommendation-runs")
+  @HttpCode(201)
+  createRecommendationRun(
+    @Body(new ZodValidationPipe(studyRecommendationRunSchema)) body: StudyRecommendationRun,
+  ): Promise<StudyRecommendationRunResult> {
+    return this.study.createRecommendationRun(body);
+  }
+
+  @Get("recommendation-runs/:reportId/status")
+  getRecommendationRunStatus(@Param("reportId") reportId: string): Promise<{ reportId: string; exists: boolean }> {
+    return this.study.getRecommendationRunStatus(this.reportId(reportId));
+  }
+
+  @Post("publications")
+  @HttpCode(201)
+  createPublication(
+    @Body(new ZodValidationPipe(studyPublicationSchema)) body: StudyPublication,
+  ): Promise<StudyPublicationResult> {
+    return this.study.createPublication(body);
+  }
+
+  @Put("recommendation-control")
+  @HttpCode(200)
+  updateRecommendationControl(
+    @Body(new ZodValidationPipe(studyRecommendationControlSchema)) body: StudyRecommendationControl,
+  ): Promise<StudyRecommendationControl> {
+    return this.study.updateRecommendationControl(body);
+  }
+
   private sourceKey(value: string): string {
     try {
       return sourceKeySchema.parse(value);
+    } catch (error) {
+      return toContractError(error);
+    }
+  }
+
+  private reportId(value: string): string {
+    try {
+      return sourceKeySchema.max(40).parse(value);
     } catch (error) {
       return toContractError(error);
     }

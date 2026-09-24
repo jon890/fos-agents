@@ -9,6 +9,11 @@ import type {
   StudyCursorResult,
   StudyIngestion,
   StudyIngestionResult,
+  StudyPublication,
+  StudyPublicationResult,
+  StudyRecommendationControl,
+  StudyRecommendationRun,
+  StudyRecommendationRunResult,
   StudySource,
   StudySourcePut,
   StudySourceUpsertResponse,
@@ -92,5 +97,59 @@ export class StudyService {
       historyVersion: control.historyVersion,
       candidateContextVersion: control.candidateContextVersion,
     };
+  }
+
+  async createRecommendationRun(value: StudyRecommendationRun): Promise<StudyRecommendationRunResult> {
+    return this.repository.transaction(async (tx) => {
+      const control = await this.repository.lockRecommendationControl(tx);
+      if (!control) throw new ApiError(500, "INTERNAL_ERROR", "추천 제어 행을 찾을 수 없습니다.");
+      if (control.candidateContextVersion !== value.candidateContextVersion) {
+        throw new ApiError(409, "VERSION_CONFLICT", "후보 기준 버전이 현재 값과 다릅니다.");
+      }
+      if (await this.repository.recommendationRunExists(value.reportId, tx)) {
+        throw new ApiError(409, "VERSION_CONFLICT", "같은 reportId의 추천 실행이 이미 있습니다.");
+      }
+      const previousTopicKeys = await this.repository.latestRecommendationTopicKeys(tx);
+      if (value.topics.some((topic) => previousTopicKeys.includes(topic.topicKey))) {
+        throw new ApiError(409, "VERSION_CONFLICT", "직전 추천 실행의 주제를 다시 고를 수 없습니다.");
+      }
+      const selectedContentKeys = value.topics.flatMap((topic) => topic.items.map((item) => item.contentKey));
+      const allContentKeys = [...selectedContentKeys, ...value.rejections.map((rejection) => rejection.contentKey)];
+      const existingMaterialKeys = await this.repository.existingMaterialKeys(allContentKeys, tx);
+      if (existingMaterialKeys.size !== allContentKeys.length) {
+        throw new ApiError(400, "BAD_REQUEST", "추천 또는 제외 자료가 후보 저장소에 없습니다.");
+      }
+      if (await this.repository.hasRecommendedMaterial(selectedContentKeys, tx)) {
+        throw new ApiError(409, "VERSION_CONFLICT", "이미 추천한 자료를 다시 고를 수 없습니다.");
+      }
+      await this.repository.insertRecommendationRun(value, tx);
+      await this.repository.insertRecommendationTopics(value, tx);
+      await this.repository.insertRecommendedMaterials(value, tx);
+      await this.repository.upsertRejections(value, todaySeoulIsoDate(new Date()), tx);
+      const historyVersion = await this.repository.incrementHistoryVersion(tx);
+      return { reportId: value.reportId, historyVersion };
+    });
+  }
+
+  async createPublication(value: StudyPublication): Promise<StudyPublicationResult> {
+    return this.repository.transaction(async (tx) => {
+      if (!(await this.repository.recommendationRunExists(value.reportId, tx))) {
+        throw new ApiError(404, "NOT_FOUND", "추천 실행을 찾을 수 없습니다.");
+      }
+      return { publicationId: await this.repository.insertPublication(value, tx) };
+    });
+  }
+
+  async updateRecommendationControl(value: StudyRecommendationControl): Promise<StudyRecommendationControl> {
+    return this.repository.transaction(async (tx) => {
+      const control = await this.repository.lockRecommendationControl(tx);
+      if (!control) throw new ApiError(500, "INTERNAL_ERROR", "추천 제어 행을 찾을 수 없습니다.");
+      await this.repository.updateCandidateContextVersion(value.candidateContextVersion, tx);
+      return value;
+    });
+  }
+
+  async getRecommendationRunStatus(reportId: string): Promise<{ reportId: string; exists: boolean }> {
+    return { reportId, exists: await this.repository.recommendationRunExists(reportId, this.repository.reader()) };
   }
 }
