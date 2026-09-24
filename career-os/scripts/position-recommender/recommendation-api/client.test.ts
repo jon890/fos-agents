@@ -108,6 +108,33 @@ describe("position recommendation API client", () => {
     expect(capturedKey).toBe("analysis-results:analysis-1:0123456789abcdef");
   });
 
+  test("분석 실행의 최신 큐를 인증된 GET으로 읽는다", async () => {
+    let capturedUrl = "";
+    let capturedMethod = "";
+    const client = new RecommendationApiClient({
+      baseUrl: "http://api.local",
+      token,
+      fetcher: async (input, init) => {
+        capturedUrl = String(input);
+        capturedMethod = init?.method ?? "";
+        return Response.json({
+          schemaVersion: 2,
+          collectionRunId: "run-1",
+          analysisRunId: "analysis-1",
+          generatedAt: "2026-09-17T00:00:00.000Z",
+          candidates: [],
+          summary: analysisSummary(),
+        });
+      },
+    });
+
+    await expect(client.getRun("analysis-1")).resolves.toMatchObject({
+      analysisRunId: "analysis-1",
+    });
+    expect(capturedUrl).toEndWith("/api/positions/v1/runs/analysis-1");
+    expect(capturedMethod).toBe("GET");
+  });
+
   test("회사 tier 큐가 빈 수집 응답은 공고 분석 실행을 멱등 POST로 만든다", async () => {
     const requests: Array<{ url: string; init: RequestInit }> = [];
     const client = new RecommendationApiClient({

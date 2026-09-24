@@ -189,6 +189,16 @@ export class RecommendationApiClient {
     );
   }
 
+  getRun(runId: string): Promise<AnalysisQueueResponse | RecommendationResponse> {
+    return this.request(
+      "GET",
+      `/api/positions/v1/runs/${encodeURIComponent(runId)}`,
+      undefined,
+      undefined,
+      z.union([analysisQueueResponseSchema, recommendationResponseSchema]),
+    );
+  }
+
   configureAnalysisPolicy(body: unknown, idempotencyKey: string) {
     return this.request(
       "PUT",

@@ -52,7 +52,7 @@ if (import.meta.main) {
   const candidates = firstOptionValue(args, "--candidates");
   if (!input || !output || !candidates) {
     console.error(
-      "사용법: render_candidate_preview.ts --input <recommendation.json> --candidates <posting-candidates.json> --output <report.html> [--limit all|N]",
+      "사용법: render_candidate_preview.ts --input <추천.json> --candidates <후보.json> --output <report.html> [--limit all|N]",
     );
     process.exit(2);
   }
