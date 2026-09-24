@@ -11,6 +11,7 @@ function run(warningSources: WarningInput): RecommendationRunType {
     generatedAt: "2026-09-18T00:00:00.000Z",
     summary: [],
     recommendations: [],
+    companyAssessments: [],
     ranking: [],
     pendingCandidates: [],
     analysisSummary: {

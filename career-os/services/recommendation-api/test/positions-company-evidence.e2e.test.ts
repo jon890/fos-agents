@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import { stableUuid } from "../src/positions/hash.js";
 import { startE2eHarness, type E2eHarness } from "./support/e2e-harness.js";
 
 let harness: E2eHarness;
@@ -94,6 +95,13 @@ function get(key = companyKey) {
   return harness.send("GET", `/api/positions/v1/companies/${encodeURIComponent(key)}/evidence`, {});
 }
 
+function withId<T extends { sourceType: string; url: string }>(evidence: T, key = companyKey) {
+  return {
+    id: stableUuid(`company-evidence:${key}:${evidence.sourceType}:${evidence.url}`),
+    ...evidence,
+  };
+}
+
 async function countRows(): Promise<number> {
   const rows = await harness.prisma.$queryRawUnsafe<Array<{ total: bigint | number }>>(
     "SELECT COUNT(*) AS total FROM company_evidence",
@@ -119,7 +127,7 @@ describe("회사 근거", () => {
 
     const read = await get();
     expect(read.status).toBe(200);
-    expect(read.json).toEqual([dart, blog]);
+    expect(read.json).toEqual([withId(dart), withId(blog)]);
   });
 
   it("같은 출처를 다시 저장하면 행이 늘지 않고 요약이 갱신된다", async () => {
@@ -136,7 +144,7 @@ describe("회사 근거", () => {
 
     expect(second.status).toBe(200);
     expect(await countRows()).toBe(1);
-    expect((await get()).json).toEqual([updated]);
+    expect((await get()).json).toEqual([withId(updated)]);
   });
 
   it("더 오래된 관측은 저장된 근거를 덮지 않는다", async () => {
@@ -159,7 +167,7 @@ describe("회사 근거", () => {
       companies: [{ companyKey, savedCount: 1 }],
     });
     expect(await countRows()).toBe(1);
-    expect((await get()).json).toEqual([blog]);
+    expect((await get()).json).toEqual([withId(blog)]);
   });
 
   it("같은 시각으로 다시 저장하면 나중에 보낸 값이 남는다", async () => {
@@ -174,7 +182,7 @@ describe("회사 근거", () => {
 
     expect(second.status).toBe(200);
     expect(await countRows()).toBe(1);
-    expect((await get()).json).toEqual([resent]);
+    expect((await get()).json).toEqual([withId(resent)]);
   });
 
   it("한 요청에 같은 출처가 두 번 들어오면 저장 건수가 1이다", async () => {
@@ -188,7 +196,7 @@ describe("회사 근거", () => {
       companies: [{ companyKey, savedCount: 1 }],
     });
     expect(await countRows()).toBe(1);
-    expect((await get()).json).toEqual([duplicated]);
+    expect((await get()).json).toEqual([withId(duplicated)]);
   });
 
   it("한 요청에 회사가 둘이면 회사별로 나눠 세고 같은 회사는 합친다", async () => {
@@ -213,8 +221,8 @@ describe("회사 근거", () => {
       ],
     });
     expect(await countRows()).toBe(3);
-    expect((await get()).json).toEqual([dart, blog]);
-    expect((await get(otherKey)).json).toEqual([dart]);
+    expect((await get()).json).toEqual([withId(dart), withId(blog)]);
+    expect((await get(otherKey)).json).toEqual([withId(dart, otherKey)]);
   });
 
   it("유효기간이 어제인 근거는 조회에 나오지 않는다", async () => {
@@ -229,7 +237,7 @@ describe("회사 근거", () => {
     const active = { ...dart, url: "https://example.com/dart/active", validUntil: today };
     await putOne([expired, active], "evidence-expiry");
 
-    expect((await get()).json).toEqual([active]);
+    expect((await get()).json).toEqual([withId(active)]);
     expect(await countRows()).toBe(2);
   });
 

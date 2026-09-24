@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { AnalysisQueueResponse, RecommendationResponse } from "../src/positions/schema.js";
-import { legacyCase } from "./support/legacy-contract.js";
+import { legacyCase, materializeLegacyBody } from "./support/legacy-contract.js";
 import { startE2eHarness, type E2eHarness, type Reply } from "./support/e2e-harness.js";
 
 let harness: E2eHarness;
@@ -105,11 +105,17 @@ function tierResult(companyKey: string, tier: number) {
     confidence: "medium" as const,
     reason: "공개 자료로 성장 범위를 확인했다.",
     signals: [
-      { axis: "growth-scope" as const, level: "medium" as const },
+      {
+        axis: "growth-scope" as const,
+        level: "medium" as const,
+        evidenceIds: ["fixture-evidence"],
+      },
       { axis: "compensation-upside" as const, level: "unknown" as const },
       { axis: "team-growth" as const, level: "unknown" as const },
     ],
-    evidence: [{ url: "https://example.com/company", checkedAt: "2026-09-17" }],
+    evidence: [
+      { id: "fixture-evidence", url: "https://example.com/company", checkedAt: "2026-09-17" },
+    ],
     assumptions: [],
   };
 }
@@ -207,6 +213,13 @@ function createRecommendation(analysisRunId: string, key = `recommend:${analysis
   });
 }
 
+function expectLegacyRecommendation(id: string, reply: Reply): void {
+  const { companyAssessments, ...legacyBody } = reply.json as RecommendationResponse;
+  harness.expectMatchesLegacy(id, { ...reply, json: legacyBody });
+  expect(companyAssessments.length, "회사별 축 판정").toBeGreaterThan(0);
+  expect(JSON.stringify(companyAssessments)).not.toContain('"assessment"');
+}
+
 /** 한 분석 실행의 항목을 선택 순서대로 읽는다. */
 async function itemPositionIds(analysisRunId: string): Promise<string[]> {
   const rows = await harness.prisma.$queryRaw<{ position_id: string }[]>`
@@ -255,7 +268,7 @@ async function replayGivenWithLiveIds(id: string): Promise<void> {
       for (const failure of body.failures ?? []) failure.positionId = positionIds[cursor++]!;
     }
     const reply = await send(request.method, request.path, {
-      body: request.body,
+      body: materializeLegacyBody(request.body),
       idempotencyKey: request.headers.idempotencyKey ?? undefined,
     });
     expect(reply.status, `${id} 의 선행 요청 ${entry.label}`).toBe(entry.responseStatus);
@@ -284,21 +297,62 @@ beforeEach(async () => {
 });
 
 describe("추천 실행 생성", () => {
+  it("비교 기준 회사와 후보 회사의 근거 연결을 공개하고 비공개 판정은 제외한다", async () => {
+    await configure();
+    const preference = await send("PUT", "/api/positions/v1/company-preferences/현재직장", {
+      idempotencyKey: "benchmark-recommendation",
+      body: {
+        companyKey: "현재직장",
+        companyName: "현재직장",
+        tier: null,
+        disposition: "benchmark",
+      },
+    });
+    expect(preference.status).toBe(200);
+    const queue = await collect("collection-benchmark", [
+      { company: "현재직장", key: "benchmark" },
+      { company: "후보회사", key: "candidate" },
+    ]);
+    await assess("collection-benchmark", queue, { 현재직장: 2, 후보회사: 1 });
+    const analysis = await openQueue("collection-benchmark");
+    await submitResults(
+      analysis.analysisRunId,
+      "collection-benchmark",
+      analysis.candidates.map((item) => item.positionId),
+    );
+    const reply = await createRecommendation(analysis.analysisRunId);
+    expect(reply.status).toBe(201);
+    const body = reply.json as RecommendationResponse;
+    expect(body.ranking.map((item) => item.company)).toEqual(["후보회사"]);
+    expect(body.companyAssessments.map((item) => [item.companyName, item.disposition])).toEqual([
+      ["현재직장", "benchmark"],
+      ["후보회사", "analyze"],
+    ]);
+    expect(
+      body.companyAssessments[1]?.signals.find((item) => item.axis === "growth-scope"),
+    ).toEqual({
+      axis: "growth-scope",
+      level: "medium",
+      evidenceIds: ["fixture-evidence"],
+    });
+    expect(body.companyAssessments[1]?.evidence[0]?.url).toBe("https://example.com/company");
+    expect(JSON.stringify(body.companyAssessments)).not.toContain('"assessment"');
+  });
+
   it("추천 실행을 만들면 201 과 순위와 집계를 준다", async () => {
     await replayGivenWithLiveIds("ok-11-post-recommendation-run");
     const reply = await sendLegacyRecommendation("ok-11-post-recommendation-run");
-    harness.expectMatchesLegacy("ok-11-post-recommendation-run", reply);
+    expectLegacyRecommendation("ok-11-post-recommendation-run", reply);
     await harness.expectMatchesLegacyDatabase("ok-11-post-recommendation-run");
-    expect(
-      (reply.json as RecommendationResponse).schemaVersion,
-      "추천 응답의 schemaVersion",
-    ).toBe(1);
+    expect((reply.json as RecommendationResponse).schemaVersion, "추천 응답의 schemaVersion").toBe(
+      1,
+    );
   });
 
   it("분석 대상이 없으면 재사용 수와 분석 대기 수와 수집 진단을 담는다", async () => {
     await replayGivenWithLiveIds("err-19-recommendation-without-new-analysis");
     const reply = await sendLegacyRecommendation("err-19-recommendation-without-new-analysis");
-    harness.expectMatchesLegacy("err-19-recommendation-without-new-analysis", reply);
+    expectLegacyRecommendation("err-19-recommendation-without-new-analysis", reply);
     await harness.expectMatchesLegacyDatabase("err-19-recommendation-without-new-analysis");
   });
 
@@ -309,13 +363,17 @@ describe("추천 실행 생성", () => {
   it("사람 override 와 모델 평가를 모두 가진 회사는 manual 로 해결된다", async () => {
     await replayGivenWithLiveIds("err-20-tier-resolution-prefers-manual");
     const reply = await sendLegacyRecommendation("err-20-tier-resolution-prefers-manual");
-    harness.expectMatchesLegacy("err-20-tier-resolution-prefers-manual", reply);
+    expectLegacyRecommendation("err-20-tier-resolution-prefers-manual", reply);
     await harness.expectMatchesLegacyDatabase("err-20-tier-resolution-prefers-manual");
 
     const ranking = (reply.json as RecommendationResponse).ranking;
     const byCompany = new Map(ranking.map((entry) => [entry.company, entry]));
     const model = byCompany.get("회사 2")!;
-    expect(Object.keys(model).filter((key) => key.startsWith("companyTier")).sort()).toEqual([
+    expect(
+      Object.keys(model)
+        .filter((key) => key.startsWith("companyTier"))
+        .sort(),
+    ).toEqual([
       "companyTier",
       "companyTierAssessedAt",
       "companyTierAssessmentId",
@@ -353,7 +411,10 @@ describe("추천 실행 생성", () => {
     const reply = await createRecommendation(analysis.analysisRunId);
     expect(reply.status).toBe(201);
     const body = reply.json as RecommendationResponse;
-    expect(body.ranking.map((entry) => entry.company), "순위에 오른 회사").toEqual(["회사 1"]);
+    expect(
+      body.ranking.map((entry) => entry.company),
+      "순위에 오른 회사",
+    ).toEqual(["회사 1"]);
     expect(body.pendingCandidates, "분석 대기 목록").toHaveLength(1);
     expect(body.pendingCandidates[0]).toMatchObject({
       company: "회사 2",
@@ -416,10 +477,7 @@ describe("실행 조회", () => {
     expect(created.status).toBe(201);
     const recommendation = created.json as RecommendationResponse;
 
-    const reply = await send(
-      "GET",
-      `/api/positions/v1/runs/${recommendation.recommendationRunId}`,
-    );
+    const reply = await send("GET", `/api/positions/v1/runs/${recommendation.recommendationRunId}`);
     expect(reply.status).toBe(200);
     expect(reply.json, "다시 읽은 추천 응답").toEqual(recommendation);
     expect(await recommendationRunCount(), "저장된 추천 실행 수").toBe(1);

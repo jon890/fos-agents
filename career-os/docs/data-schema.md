@@ -18,7 +18,7 @@
 | 실행 | `position_collection_runs`, `position_analysis_runs`, `company_tier_assessment_runs`, `position_recommendation_runs` 와 각 `*_items` | 수집 실행 하나에 분석, 회사 tier 평가, 추천 실행이 하나씩 붙는다 |
 | 판단 | `position_analyses`, `company_tier_assessments` | 모델이 공고와 회사를 평가한 결과. 실행이 지워져도 남는다 |
 | 회사 근거 | `company_evidence` | 외부에서 관측한 회사 사실. 추론은 담지 않는다 |
-| 사람이 정한 것 | `company_preferences`, `position_exclusions`, `position_analysis_policy` | 회사 우선순위, 개인 제외 규칙, 분석 정책. 추천 실행이 바꾸지 않는다 |
+| 회사 설정과 사람이 정한 것 | `company_preferences`, `position_exclusions`, `position_analysis_policy` | 회사별 수집 주소와 우선순위, 개인 제외 규칙, 분석 정책 |
 
 `request_receipts` 는 쓰기 요청의 멱등 키와 응답을 담는다. 도메인 데이터가 아니다.
 
@@ -261,6 +261,7 @@ query 순서와 마지막 슬래시를 맞춘다. 공고 ID 를 담는 query 는
 `fos_career.company_evidence` 가 담는다.
 수집기가 모아 `PUT api/positions/v1/company-tier-runs/:companyTierRunId/evidence` 로 저장한다.
 한 회사의 유효한 근거는 `GET api/positions/v1/companies/:companyKey/evidence` 로 읽는다.
+조회 응답에는 저장된 `company_evidence_id`를 `id`로 함께 준다.
 모델은 이 근거만 읽고 세 축을 판정한다.
 
 | 칸 | 타입 | 설명 |
@@ -298,6 +299,9 @@ InnoDB 상한 3072 바이트를 넘고, MySQL 이 `Specified key was too long` �
 바뀐 행 수가 아니라 그 키로 지금 존재하는 행 수다. 이관 뒤 행 수 대조가 이 값을 쓴다.
 
 `source_type` 과 그 출처가 채우는 축이다.
+
+공고 수집기는 `GET api/positions/v1/companies/:companyKey/active-postings`로
+Backend에 저장된 활성 공고의 제목, URL과 `first_seen_at`을 읽는다.
 
 | `source_type` | 출처 | 채우는 축 |
 | --- | --- | --- |
@@ -357,17 +361,23 @@ InnoDB 상한 3072 바이트를 넘고, MySQL 이 `Specified key was too long` �
 
 ### `fos_career.company_preferences`
 
-사람이 정한 회사 우선순위와 제외만 담는다. 모델 평가는 별도 table 이 담는다.
+회사별 수집 주소와 사람이 정한 회사 우선순위와 제외를 담는다.
+모델 평가는 별도 table이 담는다.
 
 | column | 값 |
 | --- | --- |
 | `company_key` | 정규화한 회사명. 유일하다 |
 | `company_name` | 표시 이름 |
-| `tier` | 1, 2, 3. 1이 가장 높다 |
-| `disposition` | `analyze` 또는 `exclude` |
+| `tier` | 1, 2, 3 또는 NULL. NULL이면 사람 override가 없다 |
+| `disposition` | `analyze`, `exclude`, `benchmark` |
+| `tech_blog_feed_url`, `github_org` | 기술 블로그 RSS 주소와 GitHub organization |
+| `dart_corp_code`, `blind_company_slug` | DART 고유번호와 Blind 회사 경로 |
 
 등록되지 않은 회사는 `defaultCompanyTier` 를 적용한다.
 **보고 싶지 않은 회사를 낮은 tier 로 두지 않는다.** `disposition: exclude` 로 저장한다.
+`benchmark`는 현재 직장을 비교할 때 쓴다.
+회사 판정 큐에는 들어가지만 공고 분석 큐에는 들어가지 않는다.
+수집 주소만 설정한 회사는 `tier: null`로 두어 모델 판정을 받는다.
 
 ```json
 {
@@ -457,7 +467,7 @@ bun career-os/scripts/position-recommender/configure_position_analysis_policy.ts
 | `position_versions`               | `position_version_id` PK, `(position_id, content_hash)` UNIQUE, 정규화한 공고 snapshot       |
 | `position_collection_items`       | `(run_id, position_id)` UNIQUE, 해당 실행이 본 version과 활성 상태                           |
 | `position_analysis_policy`        | singleton PK, 후보자 기준 버전, 일일 상한, 슬롯과 만료일 정책                                |
-| `company_preferences`             | `company_key` UNIQUE, 회사명, tier, `analyze` 또는 `exclude`, 변경 시각                      |
+| `company_preferences`             | `company_key` UNIQUE, 회사명, nullable tier, 수집 주소, `analyze`·`exclude`·`benchmark`, 변경 시각 |
 | `company_tier_assessment_runs`      | `company_tier_run_id` PK, `collection_run_id` UNIQUE, 후보자 기준 버전과 계약 버전, `pending`·`partial`·`completed` 상태 |
 | `company_tier_assessments`          | `company_tier_assessment_id` PK, `company_key`와 후보자 기준·계약 버전, 추천 tier와 신뢰도, 근거 JSON, 유효기간, 최초 생성 실행 |
 | `company_tier_assessment_run_items` | `(company_tier_run_id, company_key)` PK, 선택 순서와 선택 이유, 처리 결과와 연결한 평가, 실패 사유와 제출 횟수     |
@@ -635,6 +645,7 @@ company_tier_assessment_id CHAR(36) NULL
 - 새 분석, 재사용, 분석 대기 건수
 - 소스별 성공, 부분 실패, 실패 수와 확인하지 못한 공고 수
 - 공고마다 그때 쓴 회사 tier의 값과 출처
+- 후보 회사와 `benchmark` 회사의 축별 판정, 근거 ID와 공개 근거 링크
 - 출처별 공고 수와 tier 평가 실패 건수
 - 모델이 필요에 따라 붙인 상세 근거와 다음 행동
 
@@ -654,6 +665,12 @@ company_tier_assessment_id CHAR(36) NULL
 | `companyTierEvidenceUrls` | HTTPS 근거 최대 3개 |
 
 `model` 이 아닌 출처는 평가 ID와 근거 필드를 갖지 않고 근거 목록이 비어 있다.
+
+`companyAssessments`는 후보 회사와 `benchmark` 회사의 현재 유효한 판정을 회사별로 담는다.
+세 축의 등급과 `evidenceIds`에 연결된 공개 근거 URL과 제목, 200자 이하의 `reason`만 포함한다.
+판정이 없거나 근거 ID가 연결되지 않은 축은 `unknown`으로 표시한다.
+비공개 `assessment`는 API 추천 응답, 추천 JSON과 HTML에 넣지 않는다.
+HTML에는 내부 우선순위인 tier를 표시하지 않는다.
 
 `companyTierSummary`는 `manualCount`, `modelCount`, `defaultCount`와 `assessmentFailedCount`를 가진다.
 기본 tier로 남은 공고 수와 평가에 실패한 회사 수를 최종 답변이 숨기지 않게 하는 자리다.

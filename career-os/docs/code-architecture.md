@@ -373,7 +373,8 @@ skill이 중간 파일 이름과 플래그를 알지 못하도록 모든 하위 
 `collectors/registry.ts`가 회사마다 어느 수집기를 돌릴지 정하고,
 유효기간이 남은 근거는 다시 모으지 않는다.
 
-회사별 기술 블로그 RSS 주소와 GitHub organization 이름은 `company_preferences`가 담는다.
+회사별 기술 블로그 RSS 주소와 GitHub organization 이름,
+DART 고유번호와 Blind 경로는 `company_preferences`가 담는다.
 수집기 코드에 회사 목록을 넣지 않는다.
 
 ### 수집 정책의 세 층

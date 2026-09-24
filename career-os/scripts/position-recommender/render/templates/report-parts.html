@@ -90,6 +90,24 @@
 
 <template id="report-link"><a href="{{url}}">{{url}}</a></template>
 
+<template id="report-evidence-link"><a href="{{url}}">{{title}}</a></template>
+
+<template id="report-company"
+  ><section class="company-assessment">
+    <h3>{{company}}</h3>
+    <div class="company-axes">{{axes}}</div>
+    <p class="company-reason">{{reason}}</p>
+  </section></template
+>
+
+<template id="report-company-axis"
+  ><div class="company-axis">
+    <strong>{{name}}</strong>
+    <span class="axis-level {{className}}">{{level}}</span>
+    <div class="axis-evidence">{{evidence}}</div>
+  </div></template
+>
+
 <template id="report-list"
   ><ul>
     {{items}}

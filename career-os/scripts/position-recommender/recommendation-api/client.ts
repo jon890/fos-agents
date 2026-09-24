@@ -5,7 +5,8 @@ import {
   analysisQueueResponseSchema,
   analysisResultsResponseSchema,
   companyEvidenceSaveResponseSchema,
-  companyEvidenceSchema,
+  storedCompanyEvidenceSchema,
+  companyActivePostingSchema,
   companyPreferenceSchema,
   companyTierResultsResponseSchema,
   positionExclusionSchema,
@@ -13,7 +14,8 @@ import {
   recommendationResponseSchema,
   type AnalysisQueueResponse,
   type AnalysisResultsResponse,
-  type CompanyEvidence,
+  type StoredCompanyEvidence,
+  type CompanyActivePosting,
   type CompanyEvidenceSaveResponse,
   type CompanyPreference,
   type CompanyTierResultsResponse,
@@ -256,13 +258,23 @@ export class RecommendationApiClient {
   }
 
   /** 한 회사의 아직 유효한 근거만 받는다. */
-  getCompanyEvidence(companyKey: string): Promise<CompanyEvidence[]> {
+  getCompanyEvidence(companyKey: string): Promise<StoredCompanyEvidence[]> {
     return this.request(
       "GET",
       `/api/positions/v1/companies/${encodeURIComponent(companyKey)}/evidence`,
       undefined,
       undefined,
-      z.array(companyEvidenceSchema),
+      z.array(storedCompanyEvidenceSchema),
+    );
+  }
+
+  getActiveCompanyPostings(companyKey: string): Promise<CompanyActivePosting[]> {
+    return this.request(
+      "GET",
+      `/api/positions/v1/companies/${encodeURIComponent(companyKey)}/active-postings`,
+      undefined,
+      undefined,
+      z.array(companyActivePostingSchema),
     );
   }
 

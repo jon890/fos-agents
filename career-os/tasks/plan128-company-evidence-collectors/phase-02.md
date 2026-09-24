@@ -103,6 +103,8 @@ feed가 응답하지 않거나 항목이 0건이면 근거를 만들지 않고 �
 ### 5. `collectors/job-posting.ts`
 
 Backend의 활성 공고를 읽는다. 외부를 부르지 않는다.
+구현 전 확인 결과, 회사별 활성 공고의 제목과 `first_seen_at`을 돌려주는 API가 없었다.
+`GET api/positions/v1/companies/:companyKey/active-postings`를 더해 수집기가 Backend의 저장 값을 읽는다.
 `summary`는 그 회사의 활성 공고 수와 최근 30일에 새로 뜬 공고 수를 담는다.
 공고 이력이 짧으면 그 사실을 `summary`에 함께 적는다.
 

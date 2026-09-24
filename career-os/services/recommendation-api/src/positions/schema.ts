@@ -36,8 +36,16 @@ export const companyPreferenceSchema = z
   .object({
     companyKey: nonEmpty,
     companyName: nonEmpty,
-    tier: z.number().int().min(1).max(3),
-    disposition: z.enum(["analyze", "exclude"]),
+    tier: z.number().int().min(1).max(3).nullable(),
+    disposition: z.enum(["analyze", "exclude", "benchmark"]),
+    techBlogFeedUrl: httpsUrl.max(2048).nullable().optional(),
+    githubOrg: nonEmpty.max(191).nullable().optional(),
+    dartCorpCode: z
+      .string()
+      .regex(/^\d{8}$/)
+      .nullable()
+      .optional(),
+    blindCompanySlug: nonEmpty.max(191).nullable().optional(),
     updatedAt: isoDateTime,
   })
   .strict();
@@ -183,8 +191,9 @@ export const companyTierQueueCompanySchema = z
     companyKey: nonEmpty,
     companyName: nonEmpty,
     assessmentStatus: companyTierAssessmentStatusSchema,
-    activePositionCount: z.number().int().positive(),
-    representativePostingUrls: z.array(httpsUrl).min(1).max(3),
+    activePositionCount: z.number().int().nonnegative(),
+    representativePostingUrls: z.array(httpsUrl).max(3),
+    disposition: z.literal("benchmark").optional(),
     priorTier: z.number().int().min(1).max(3).nullable(),
     priorReason: nonEmpty.nullable(),
     priorValidUntil: dateOnly.nullable(),
@@ -202,11 +211,11 @@ export const companyTierQueueCompanySchema = z
         message: "첫 평가 회사에는 이전 평가를 담지 않습니다.",
       });
     }
-    if (company.assessmentStatus === "stale" && company.priorTier === null) {
+    if (company.assessmentStatus === "stale" && company.priorValidUntil === null) {
       context.addIssue({
         code: "custom",
-        path: ["priorTier"],
-        message: "재평가 회사에는 만료된 이전 tier가 필요합니다.",
+        path: ["priorValidUntil"],
+        message: "재평가 회사에는 만료된 이전 평가 시각이 필요합니다.",
       });
     }
   });
@@ -249,11 +258,13 @@ export const companyTierSignalSchema = z
   .object({
     axis: companyTierSignalAxisSchema,
     level: z.enum(["low", "medium", "high", "unknown"]),
+    evidenceIds: z.array(nonEmpty).default([]),
   })
   .strict();
 
 export const companyTierEvidenceSchema = z
   .object({
+    id: nonEmpty.optional(),
     url: httpsUrl,
     title: nonEmpty.optional(),
     publishedAt: dateOnly.optional(),
@@ -265,12 +276,13 @@ export const companyTierEvidenceSchema = z
 export const companyTierResultSchema = z
   .object({
     companyKey: nonEmpty,
-    recommendedTier: z.number().int().min(1).max(3),
-    confidence: z.enum(["low", "medium", "high"]),
+    recommendedTier: z.number().int().min(1).max(3).nullable(),
+    confidence: z.enum(["low", "medium", "high"]).nullable(),
     // 이 값이 공개 HTML 에 그대로 실리므로 들어오는 자리에서 길이를 막는다.
     reason: nonEmpty.max(companyTierReasonMaxLength),
+    assessment: z.string().trim().max(2000).optional(),
     signals: z.array(companyTierSignalSchema).length(3),
-    evidence: z.array(companyTierEvidenceSchema).min(1),
+    evidence: z.array(companyTierEvidenceSchema).default([]),
     assumptions: z.array(nonEmpty).default([]),
     validUntil: dateOnly.optional(),
   })
@@ -283,6 +295,25 @@ export const companyTierResultSchema = z
         path: ["signals"],
         message: "성장 범위와 보상 상승과 팀 성장 신호가 한 번씩 필요합니다.",
       });
+    }
+    const ids = new Set(result.evidence.map((entry) => entry.id).filter(Boolean));
+    for (const [index, signal] of result.signals.entries()) {
+      if (signal.level !== "unknown" && signal.evidenceIds.length === 0) {
+        context.addIssue({
+          code: "custom",
+          path: ["signals", index, "evidenceIds"],
+          message: "등급을 매긴 축에는 근거 ID가 필요합니다.",
+        });
+      }
+      for (const id of signal.evidenceIds) {
+        if (!ids.has(id)) {
+          context.addIssue({
+            code: "custom",
+            path: ["signals", index, "evidenceIds"],
+            message: "근거 ID가 evidence에 없습니다.",
+          });
+        }
+      }
     }
   });
 
@@ -352,7 +383,6 @@ export function refineCompanyTierProvenance(
     ["companyTierAssessmentId", value.companyTierAssessmentId],
     ["companyTierAssessedAt", value.companyTierAssessedAt],
     ["companyTierValidUntil", value.companyTierValidUntil],
-    ["companyTierConfidence", value.companyTierConfidence],
     ["companyTierReason", value.companyTierReason],
   ] as const;
   if (value.companyTierSource === "model") {
@@ -365,13 +395,6 @@ export function refineCompanyTierProvenance(
         });
       }
     }
-    if (value.companyTierEvidenceUrls.length === 0) {
-      context.addIssue({
-        code: "custom",
-        path: ["companyTierEvidenceUrls"],
-        message: "모델 평가 tier에는 근거 URL이 하나 이상 필요합니다.",
-      });
-    }
     return;
   }
   for (const [path, field] of modelOnly) {
@@ -382,6 +405,13 @@ export function refineCompanyTierProvenance(
         message: "사람 override와 기본 tier에는 모델 평가 정보를 담지 않습니다.",
       });
     }
+  }
+  if (value.companyTierConfidence !== undefined) {
+    context.addIssue({
+      code: "custom",
+      path: ["companyTierConfidence"],
+      message: "사람 override와 기본 tier에는 모델 평가 정보를 담지 않습니다.",
+    });
   }
   if (value.companyTierEvidenceUrls.length > 0) {
     context.addIssue({
@@ -428,6 +458,18 @@ const recommendationPositionSchema = z
   .strict()
   .superRefine(refineCompanyTierProvenance);
 
+export const publicCompanyAssessmentSchema = z
+  .object({
+    companyKey: nonEmpty,
+    companyName: nonEmpty,
+    disposition: z.enum(["analyze", "benchmark"]),
+    reason: z.string().max(companyTierReasonMaxLength).nullable(),
+    signals: z.array(companyTierSignalSchema).length(3),
+    evidence: z.array(companyTierEvidenceSchema),
+  })
+  .strict();
+export type PublicCompanyAssessment = z.infer<typeof publicCompanyAssessmentSchema>;
+
 export const recommendationResponseSchema = z
   .object({
     schemaVersion: z.literal(1),
@@ -438,6 +480,7 @@ export const recommendationResponseSchema = z
     sourceSnapshot: z.object({ collectionRunId: nonEmpty }).strict(),
     ranking: z.array(recommendationPositionSchema),
     recommendations: z.array(recommendationPositionSchema),
+    companyAssessments: z.array(publicCompanyAssessmentSchema),
     pendingCandidates: z.array(
       z
         .object({
@@ -638,6 +681,16 @@ export const companyEvidenceSaveResponseSchema = z
   .strict();
 
 export type CompanyEvidence = z.infer<typeof companyEvidenceSchema>;
+export const storedCompanyEvidenceSchema = companyEvidenceSchema.safeExtend({ id: nonEmpty });
+export type StoredCompanyEvidence = z.infer<typeof storedCompanyEvidenceSchema>;
+export const companyActivePostingSchema = z
+  .object({
+    title: nonEmpty,
+    url: httpsUrl,
+    firstSeenAt: isoDateTime,
+  })
+  .strict();
+export type CompanyActivePosting = z.infer<typeof companyActivePostingSchema>;
 export type CompanyEvidenceSourceType = z.infer<typeof companyEvidenceSourceTypeSchema>;
 export type CompanyEvidenceRequest = z.infer<typeof companyEvidenceRequestSchema>;
 export type CompanyEvidenceSaveResponse = z.infer<typeof companyEvidenceSaveResponseSchema>;

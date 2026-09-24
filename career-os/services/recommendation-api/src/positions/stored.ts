@@ -22,9 +22,10 @@ export type StoredCompanyTierAssessment = {
   candidateContextVersion: string;
   contractVersion: number;
   createdByCompanyTierRunId: string | null;
-  recommendedTier: number;
-  confidence: "low" | "medium" | "high";
+  recommendedTier: number | null;
+  confidence: "low" | "medium" | "high" | null;
   reason: string;
+  assessment?: string | null;
   signals: Record<string, unknown>;
   evidence: unknown[];
   assumptions: string[];

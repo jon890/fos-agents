@@ -85,6 +85,62 @@ article > ul > li {
   margin: 5px 0;
 }
 
+.company-assessment {
+  margin: 12px 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.company-assessment h3 {
+  margin: 0 0 10px;
+  font-size: 16px;
+}
+.company-axes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.company-axis {
+  min-width: 0;
+  padding: 10px;
+  background: #f8f9fb;
+  border-radius: 6px;
+}
+.company-axis strong {
+  display: block;
+}
+.axis-level {
+  font-weight: 700;
+}
+.axis-high {
+  color: #1a7f4b;
+}
+.axis-medium {
+  color: #8a4a00;
+}
+.axis-low {
+  color: #9a3b3b;
+}
+.axis-unknown {
+  color: var(--muted);
+  font-weight: 400;
+}
+.axis-evidence {
+  font-size: 0.85em;
+  overflow-wrap: anywhere;
+}
+.axis-evidence a {
+  display: block;
+}
+.company-reason:empty {
+  display: none;
+}
+@media (max-width: 680px) {
+  .company-axes {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* 카드 리스트 */
 ol.cards {
   list-style: none;

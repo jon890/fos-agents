@@ -30,13 +30,15 @@ import {
   companyPreferenceSchema,
   companyTierQueueResponseSchema,
   companyTierResultsResponseSchema,
+  companyTierEvidenceSchema,
+  companyTierSignalSchema,
   positionPreparationResponseSchema,
   type AnalysisPolicy,
   type AnalysisQueueResponse,
   type AnalysisResultsRequest,
   type AnalysisResultsResponse,
   type CollectionRequest,
-  type CompanyEvidence,
+  type StoredCompanyEvidence,
   type CompanyEvidenceRequest,
   type CompanyEvidenceSaveResponse,
   type CompanyPreference,
@@ -47,6 +49,7 @@ import {
   type PositionExclusion,
   recommendationResponseSchema,
   type PositionPreparationResponse,
+  type PublicCompanyAssessment,
   type RecommendationResponse,
 } from "./schema.js";
 import type { CompanyTierSource, StoredCompanyTierAssessment } from "./stored.js";
@@ -168,6 +171,10 @@ export class PositionsService {
     return preferences.sort((left, right) => left.companyKey.localeCompare(right.companyKey));
   }
 
+  async listActiveCompanyPostings(companyKey: string) {
+    return this.repository.listActiveCompanyPostings(companyKey, this.repository.reader());
+  }
+
   async updateCompanyPreference(
     companyKeyParam: string,
     value: Omit<CompanyPreference, "updatedAt">,
@@ -261,7 +268,10 @@ export class PositionsService {
    *
    * 판정 기준 날짜는 Seoul 기준이다. `validUntil` 이 오늘이면 아직 유효하고 다음 날부터 뺀다.
    */
-  async listValidCompanyEvidence(company: string, now = new Date()): Promise<CompanyEvidence[]> {
+  async listValidCompanyEvidence(
+    company: string,
+    now = new Date(),
+  ): Promise<StoredCompanyEvidence[]> {
     return this.repository.listValidCompanyEvidence(
       company,
       todaySeoulIsoDate(now),
@@ -508,7 +518,6 @@ export class PositionsService {
     });
   }
 
-
   /**
    * 분석 실행 하나에 추천을 만든다.
    *
@@ -587,7 +596,12 @@ export class PositionsService {
     );
     const accepted = new Map<string, (typeof candidates)[number]>();
     for (const posting of candidates) {
-      if (preferences.get(companyKey(posting.company))?.disposition === "exclude") continue;
+      if (
+        ["exclude", "benchmark"].includes(
+          preferences.get(companyKey(posting.company))?.disposition ?? "",
+        )
+      )
+        continue;
       accepted.set(positionIdentity(posting), posting);
     }
     const postings = [...accepted.values()];
@@ -598,11 +612,7 @@ export class PositionsService {
       ],
       tx,
     );
-    const upserted = await this.repository.upsertPositions(
-      postings,
-      request.pool.collectedAt,
-      tx,
-    );
+    const upserted = await this.repository.upsertPositions(postings, request.pool.collectedAt, tx);
     await this.repository.markMissingPositionsNotSeen(
       request.pool.sourceDiagnostics
         .filter((diagnostic) => diagnostic.status === "ok")
@@ -722,7 +732,16 @@ export class PositionsService {
         recommendedTier: result.recommendedTier,
         confidence: result.confidence,
         reason: result.reason,
-        signals: Object.fromEntries(result.signals.map((signal) => [signal.axis, signal.level])),
+        assessment: result.assessment ?? null,
+        signals: Object.fromEntries(
+          result.signals.map((signal) => [
+            signal.axis,
+            {
+              level: signal.level,
+              evidenceIds: signal.evidenceIds,
+            },
+          ]),
+        ),
         evidence: structuredClone(result.evidence),
         assumptions: [...result.assumptions],
         assessedAt: now,
@@ -914,7 +933,6 @@ export class PositionsService {
     });
   }
 
-
   // ------------------------------------------------------------------ 추천 조립
 
   /** 사람 override, 유효한 모델 평가, 정책 기본값 순으로 회사 tier 를 정한다. */
@@ -924,12 +942,76 @@ export class PositionsService {
     key: string,
   ): ResolvedTier {
     const preference = inputs.preferences.get(key);
-    if (preference) return { tier: preference.tier, source: "manual", assessment: undefined };
+    if (preference?.tier != null && preference.disposition !== "benchmark") {
+      return { tier: preference.tier, source: "manual", assessment: undefined };
+    }
     const assessment = inputs.validAssessments.get(key);
-    if (assessment) {
+    if (assessment && assessment.recommendedTier !== null) {
       return { tier: assessment.recommendedTier, source: "model", assessment };
     }
     return { tier: policy.defaultCompanyTier, source: "default", assessment: undefined };
+  }
+
+  /** 후보 회사와 비교 기준 회사의 공개 가능한 축만 추천 응답에 싣는다. */
+  private async companyAssessmentsForRun(
+    names: Map<string, string>,
+    contextVersion: string,
+    contractVersion: number,
+    today: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<PublicCompanyAssessment[]> {
+    const benchmarks = (await this.repository.listPreferences(tx)).filter(
+      (preference) => preference.disposition === "benchmark",
+    );
+    for (const benchmark of benchmarks) names.set(benchmark.companyKey, benchmark.companyName);
+    const assessments = await this.repository.findValidAssessments(
+      [...names.keys()],
+      contextVersion,
+      contractVersion,
+      today,
+      tx,
+    );
+    return [...names]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, companyName]) => {
+        const assessment = assessments.get(key);
+        const evidence = (assessment?.evidence ?? []).flatMap((value) => {
+          const parsed = companyTierEvidenceSchema.safeParse(value);
+          return parsed.success ? [parsed.data] : [];
+        });
+        const availableIds = new Set(evidence.map((item) => item.id).filter(Boolean));
+        const signals = (["growth-scope", "team-growth", "compensation-upside"] as const).map(
+          (axis) => {
+            const raw = assessment?.signals[axis];
+            const parsed = companyTierSignalSchema.safeParse(
+              raw && typeof raw === "object" ? { axis, ...raw } : null,
+            );
+            const signal = parsed.success ? parsed.data : null;
+            const evidenceIds =
+              signal?.level === "unknown"
+                ? []
+                : (signal?.evidenceIds.filter((id) => availableIds.has(id)) ?? []);
+            return {
+              axis,
+              level:
+                signal && signal.level !== "unknown" && evidenceIds.length > 0
+                  ? signal.level
+                  : ("unknown" as const),
+              evidenceIds,
+            };
+          },
+        );
+        return {
+          companyKey: key,
+          companyName,
+          disposition: benchmarks.some((item) => item.companyKey === key)
+            ? ("benchmark" as const)
+            : ("analyze" as const),
+          reason: assessment?.reason ?? null,
+          signals,
+          evidence,
+        };
+      });
   }
 
   /**
@@ -1010,6 +1092,16 @@ export class PositionsService {
       sourceSnapshot: { collectionRunId: run.collectionRunId },
       ranking,
       recommendations: ranking.filter((entry) => entry.decision !== "hold"),
+      companyAssessments: await this.companyAssessmentsForRun(
+        new Map(
+          entries.map((entry) => [entry.position.companyKey, entry.position.posting.company]),
+        ),
+        run.candidateContextVersion,
+        (await this.repository.findCompanyTierRunByCollectionRun(run.collectionRunId, tx))
+          ?.contractVersion ?? DEFAULT_COMPANY_TIER_CONTRACT_VERSION,
+        now.slice(0, 10),
+        tx,
+      ),
       pendingCandidates: pending,
       analysisSummary: {
         activeCount: entries.length,
@@ -1040,18 +1132,16 @@ export class PositionsService {
         personalExcludedCount: inputs.personalExcludedCount,
         pendingCandidates: parsed.pendingCandidates,
       },
-      ranked.map(
-        (entry, index): RecommendationItemRow => ({
-          positionId: entry.position.positionId,
-          analysisId: entry.analysis.analysisId,
-          rankNumber: index + 1,
-          decision: entry.analysis.decision,
-          companyTier: entry.tier,
-          companyTierSource: entry.source,
-          companyTierAssessmentId:
-            entry.source === "model" ? (entry.assessment?.companyTierAssessmentId ?? null) : null,
-        }),
-      ),
+      ranked.map((entry, index): RecommendationItemRow => ({
+        positionId: entry.position.positionId,
+        analysisId: entry.analysis.analysisId,
+        rankNumber: index + 1,
+        decision: entry.analysis.decision,
+        companyTier: entry.tier,
+        companyTierSource: entry.source,
+        companyTierAssessmentId:
+          entry.source === "model" ? (entry.assessment?.companyTierAssessmentId ?? null) : null,
+      })),
       tx,
     );
     return parsed;
@@ -1080,9 +1170,7 @@ export class PositionsService {
       companyTier: item.companyTier,
       ...companyTierProvenanceFields(
         item.companyTierSource,
-        item.companyTierAssessmentId
-          ? assessments.get(item.companyTierAssessmentId)
-          : undefined,
+        item.companyTierAssessmentId ? assessments.get(item.companyTierAssessmentId) : undefined,
       ),
       decision: item.decision,
       fitScore: item.fitScore,
@@ -1101,14 +1189,12 @@ export class PositionsService {
     for (const entry of [...ranking, ...pendingCandidates]) {
       sourceByCompany.set(companyKey(entry.company), entry.companyTierSource ?? "default");
     }
-    const diagnostics = await this.repository.listCollectionDiagnostics(
-      stored.collectionRunId,
-      tx,
-    );
+    const diagnostics = await this.repository.listCollectionDiagnostics(stored.collectionRunId, tx);
     const tierRun = await this.repository.findCompanyTierRunByCollectionRun(
       stored.collectionRunId,
       tx,
     );
+    const analysisRun = await this.repository.findAnalysisRunWithItems(stored.analysisRunId, tx);
     return recommendationResponseSchema.parse({
       schemaVersion: 1,
       recommendationRunId: stored.recommendationRunId,
@@ -1118,6 +1204,18 @@ export class PositionsService {
       sourceSnapshot: { collectionRunId: stored.collectionRunId },
       ranking,
       recommendations: ranking.filter((entry) => entry.decision !== "hold"),
+      companyAssessments: await this.companyAssessmentsForRun(
+        new Map(
+          [...ranking, ...pendingCandidates].map((entry) => [
+            companyKey(entry.company),
+            entry.company,
+          ]),
+        ),
+        analysisRun!.run.candidateContextVersion,
+        tierRun?.contractVersion ?? DEFAULT_COMPANY_TIER_CONTRACT_VERSION,
+        stored.generatedAt.slice(0, 10),
+        tx,
+      ),
       pendingCandidates,
       analysisSummary: {
         activeCount: stored.activeCount,
@@ -1226,7 +1324,10 @@ export class PositionsService {
   ): Promise<CompanyTierQueueResponse> {
     const items = await this.repository.listCompanyTierRunItems(run.companyTierRunId, tx);
     const companyKeys = [...new Set(positions.map((position) => position.companyKey))];
-    const preferences = await this.repository.findPreferencesFor(companyKeys, tx);
+    const preferences = await this.repository.findPreferencesFor(
+      [...new Set([...companyKeys, ...items.map((item) => item.companyKey)])],
+      tx,
+    );
     const valid = await this.repository.findValidAssessments(
       companyKeys,
       run.candidateContextVersion,
@@ -1246,9 +1347,9 @@ export class PositionsService {
       if (urls.length < 3) urls.push(position.postingUrl);
       urlsByCompany.set(position.companyKey, urls);
     }
-    const manualCount = companyKeys.filter((key) => preferences.has(key)).length;
+    const manualCount = companyKeys.filter((key) => preferences.get(key)?.tier != null).length;
     const modelCount = companyKeys.filter(
-      (key) => !preferences.has(key) && valid.has(key),
+      (key) => preferences.get(key)?.tier == null && valid.get(key)?.recommendedTier != null,
     ).length;
     return companyTierQueueResponseSchema.parse({
       schemaVersion: 1,
@@ -1262,10 +1363,16 @@ export class PositionsService {
         assessmentStatus: item.assessmentStatus,
         activePositionCount: item.activePositionCount,
         representativePostingUrls: urlsByCompany.get(item.companyKey) ?? [],
+        ...(preferences.get(item.companyKey)?.disposition === "benchmark"
+          ? { disposition: "benchmark" }
+          : {}),
         priorTier: item.priorTier,
-        priorReason: item.priorTier === null ? null : (latest.get(item.companyKey)?.reason ?? null),
+        priorReason:
+          item.assessmentStatus === "new" ? null : (latest.get(item.companyKey)?.reason ?? null),
         priorValidUntil:
-          item.priorTier === null ? null : (latest.get(item.companyKey)?.validUntil ?? null),
+          item.assessmentStatus === "new"
+            ? null
+            : (latest.get(item.companyKey)?.validUntil ?? null),
       })),
       summary: {
         activeCompanyCount: companyKeys.length,

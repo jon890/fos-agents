@@ -4,44 +4,84 @@ import type {
   RecommendationItemType,
   RecommendationRunType,
 } from "../recommendation/schema.ts";
+import type { PublicCompanyAssessment } from "../../../services/recommendation-api/src/positions/schema.ts";
 import { escapeHtml, fragment, type RenderAssets } from "./template.ts";
 
 function link(assets: RenderAssets, value: string): string {
   return fragment(assets, "report-link", { url: value });
 }
 
-const tierSourceLabel = {
-  manual: "사람 override",
-  model: "모델 평가",
-  default: "기본값",
+const axisLabels = {
+  "growth-scope": "기술 성장",
+  "team-growth": "팀 성장",
+  "compensation-upside": "보상과 복지",
 } as const;
+const levelLabels = { low: "낮음", medium: "보통", high: "높음" } as const;
 
-type TierProvenance = Pick<
-  RecommendationItemType,
-  | "companyTier"
-  | "companyTierSource"
-  | "companyTierConfidence"
-  | "companyTierReason"
-  | "companyTierEvidenceUrls"
->;
-
-function tierLabel(item: TierProvenance): string {
-  return `Tier ${item.companyTier} · ${tierSourceLabel[item.companyTierSource]}`;
+function companyAssessment(assets: RenderAssets, company: PublicCompanyAssessment): string {
+  const evidenceById = new Map(
+    company.evidence.filter((item) => item.id).map((item) => [item.id, item]),
+  );
+  const axes = company.signals
+    .map((signal) => {
+      const evidence = signal.evidenceIds
+        .flatMap((id) => {
+          const item = evidenceById.get(id);
+          return item
+            ? [
+                fragment(assets, "report-evidence-link", {
+                  url: item.url,
+                  title: item.title ?? item.url,
+                }),
+              ]
+            : [];
+        })
+        .join(" · ");
+      return fragment(
+        assets,
+        "report-company-axis",
+        {
+          name: axisLabels[signal.axis],
+          level: signal.level === "unknown" ? "근거 없음" : levelLabels[signal.level],
+          className: signal.level === "unknown" ? "axis-unknown" : `axis-${signal.level}`,
+        },
+        { evidence },
+      );
+    })
+    .join("");
+  return fragment(
+    assets,
+    "report-company",
+    { company: company.companyName, reason: company.reason ?? "" },
+    { axes },
+  );
 }
 
-function tierValue(assets: RenderAssets, item: TierProvenance): string {
-  const label = tierLabel(item);
-  if (item.companyTierSource !== "model") {
-    return fragment(assets, "report-tier-value", { label }, { detail: "" });
-  }
-  const evidence = item.companyTierEvidenceUrls.map((url) => link(assets, url)).join(" · ");
-  const detail = fragment(
-    assets,
-    "report-tier-detail",
-    { reason: item.companyTierReason ?? "", confidence: item.companyTierConfidence ?? "" },
-    { evidence },
-  );
-  return fragment(assets, "report-tier-value", { label }, { detail });
+function companySections(assets: RenderAssets, run: RecommendationRunType): string {
+  const benchmarks = run.companyAssessments.filter((item) => item.disposition === "benchmark");
+  const candidates = run.companyAssessments.filter((item) => item.disposition === "analyze");
+  return [
+    benchmarks.length
+      ? fragment(
+          assets,
+          "report-section",
+          { title: "현재 직장 비교 기준" },
+          {
+            content: benchmarks.map((item) => companyAssessment(assets, item)).join(""),
+          },
+        )
+      : "",
+    candidates.length
+      ? fragment(
+          assets,
+          "report-section",
+          { title: "회사별 판정" },
+          {
+            content: candidates.map((item) => companyAssessment(assets, item)).join(""),
+          },
+        )
+      : "",
+  ].join("\n");
 }
 
 function list(assets: RenderAssets, values: string[], name = "report-list"): string {
@@ -69,7 +109,6 @@ function detail(assets: RenderAssets, item: RecommendationItemType["details"][nu
 function card(assets: RenderAssets, item: RecommendationItemType, rank: number): string {
   const fields: [string, string][] = [
     ["공고 링크", link(assets, item.postingUrl)],
-    ["회사 tier", tierValue(assets, item)],
     ["추천 이유", escapeHtml(item.reason)],
   ];
   if (item.label) fields.push(["추천 판단", escapeHtml(item.label)]);
@@ -132,13 +171,12 @@ function recommendationSection(
 }
 
 function rankingItem(assets: RenderAssets, item: RankedCandidateType, index: number): string {
-  const note = [item.note, tierLabel(item)].filter(Boolean).join(" · ");
   return fragment(assets, "report-ranking-item", {
     rank: index + 1,
     company: item.company,
     title: item.title,
     url: item.postingUrl,
-    note,
+    note: item.note ?? "",
   });
 }
 
@@ -160,7 +198,7 @@ function rankingSection(assets: RenderAssets, items: RankedCandidateType[]): str
 
 function pendingNote(item: PendingCandidateType): string {
   const label = { new: "미분석", changed: "공고 변경", stale: "분석 만료" } as const;
-  return `${label[item.analysisStatus]} · ${tierLabel(item)}`;
+  return label[item.analysisStatus];
 }
 
 function pendingSection(assets: RenderAssets, run: RecommendationRunType): string {
@@ -215,6 +253,7 @@ export function renderReportContent(run: RecommendationRunType, assets: RenderAs
     run.ranking.map((item, index) => [item.candidateId, index + 1] as const),
   );
   const sections = [
+    companySections(assets, run),
     run.summary.length > 0
       ? fragment(
           assets,

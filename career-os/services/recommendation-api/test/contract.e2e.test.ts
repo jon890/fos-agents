@@ -214,11 +214,17 @@ describe("client 가 쓰는 schema 로 검증하는 endpoint 아홉", () => {
               confidence: "medium" as const,
               reason: "공개 자료로 성장 범위를 확인했다.",
               signals: [
-                { axis: "growth-scope", level: "medium" },
+                { axis: "growth-scope", level: "medium", evidenceIds: ["fixture-evidence"] },
                 { axis: "compensation-upside", level: "unknown" },
                 { axis: "team-growth", level: "unknown" },
               ],
-              evidence: [{ url: "https://example.com/company", checkedAt: "2026-09-17" }],
+              evidence: [
+                {
+                  id: "fixture-evidence",
+                  url: "https://example.com/company",
+                  checkedAt: "2026-09-17",
+                },
+              ],
               assumptions: [],
             })),
             failures: [],
@@ -328,9 +334,7 @@ describe("포착 파일의 case 가 모두 쓰인다", () => {
       .filter((name) => name.endsWith(".test.ts"))
       .map((name) => readFileSync(join(directory, name), "utf8"))
       .join("\n");
-    const used = new Set(
-      legacyCaseIds.filter((id) => sources.includes(`"${id}"`)),
-    );
+    const used = new Set(legacyCaseIds.filter((id) => sources.includes(`"${id}"`)));
     expect(
       legacyCaseIds.filter((id) => !used.has(id)),
       "어느 검사도 대조하지 않는 case",

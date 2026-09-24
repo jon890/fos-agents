@@ -59,9 +59,23 @@ function replaceOutputPair(
   removeIfPresent(backupHtml);
 }
 
+function countUnknownCompanies(companies: RecommendationResponse["companyAssessments"]) {
+  return Object.fromEntries(
+    ["growth-scope", "team-growth", "compensation-upside"].map((axis) => [
+      axis,
+      companies.filter(
+        (company) =>
+          company.disposition === "analyze" &&
+          company.signals.find((signal) => signal.axis === axis)?.level === "unknown",
+      ).length,
+    ]),
+  ) as Record<"growth-scope" | "team-growth" | "compensation-upside", number>;
+}
+
 export function recommendationRunFromBackend(
   response: RecommendationResponse,
 ): RecommendationRunType {
+  const unknownCompanyCounts = countUnknownCompanies(response.companyAssessments);
   return RecommendationRun.parse({
     schemaVersion: 11,
     reportDate: response.reportDate,
@@ -69,13 +83,15 @@ export function recommendationRunFromBackend(
     summary: [
       `활성 공고 ${response.analysisSummary.activeCount}건 중 이번 실행 분석 ${response.analysisSummary.analyzedNowCount}건, 재사용 ${response.analysisSummary.reusedCount}건, 대기 ${response.analysisSummary.pendingCount}건입니다.`,
       `개인 제외 ${response.analysisSummary.personalExcludedCount}건을 수집 전에 제거했습니다.`,
-      `회사 tier는 사람 지정 ${response.companyTierSummary.manualCount}건, 모델 평가 ${response.companyTierSummary.modelCount}건, 기본값 ${response.companyTierSummary.defaultCount}건이고 평가 실패 ${response.companyTierSummary.assessmentFailedCount}건입니다.`,
+      `회사 평가 실패 ${response.companyTierSummary.assessmentFailedCount}건입니다.`,
+      `근거 없음 회사는 기술 성장 ${unknownCompanyCounts["growth-scope"]}곳, 팀 성장 ${unknownCompanyCounts["team-growth"]}곳, 보상과 복지 ${unknownCompanyCounts["compensation-upside"]}곳입니다.`,
     ],
     ranking: response.ranking,
     recommendations: response.recommendations.map((item) => ({
       ...item,
       label: item.decision === "recommend" ? "추천" : "검토",
     })),
+    companyAssessments: response.companyAssessments,
     pendingCandidates: response.pendingCandidates,
     analysisSummary: response.analysisSummary,
     companyTierSummary: response.companyTierSummary,
@@ -110,6 +126,7 @@ export async function finalizeRecommendation(
     rankingCount: run.ranking.length,
     ...run.analysisSummary,
     warningSourceCount: run.collectionHealth.warningSources.length,
+    unknownCompanyCounts: countUnknownCompanies(run.companyAssessments),
     collectionWarnings: collectionWarningLines(run),
     outputJson: jsonPath,
     outputHtml: htmlPath,

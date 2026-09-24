@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   companyTierProvenanceShape,
+  publicCompanyAssessmentSchema,
   refineCompanyTierProvenance,
 } from "../../../services/recommendation-api/src/positions/schema.ts";
 
@@ -75,6 +76,7 @@ export const RecommendationRun = z
     generatedAt: z.string().min(1),
     summary: z.array(nonEmpty).default([]),
     recommendations: z.array(RecommendationItem),
+    companyAssessments: z.array(publicCompanyAssessmentSchema),
     ranking: z.array(RankedCandidate),
     pendingCandidates: z.array(PendingCandidate),
     analysisSummary: z
