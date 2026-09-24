@@ -19,12 +19,12 @@
 발행하지 않는다. `저장` 만 누른다.
 
 사용법:
-    python3 naver_editor.py open
+    python3 naver_editor.py open drafts/순돌이곱창/draft.json
     python3 naver_editor.py --target-id <탭 식별자> fill drafts/순돌이곱창/draft.json
     python3 naver_editor.py --target-id <탭 식별자> photos drafts/순돌이곱창/draft.json --remote-base <사진 디렉터리>
     python3 naver_editor.py --target-id <탭 식별자> components drafts/순돌이곱창/draft.json
     python3 naver_editor.py --target-id <탭 식별자> settings drafts/순돌이곱창/draft.json
-    python3 naver_editor.py --target-id <탭 식별자> save
+    python3 naver_editor.py --target-id <탭 식별자> save drafts/순돌이곱창/draft.json
     python3 naver_editor.py --target-id <탭 식별자> state
     python3 naver_editor.py --target-id <탭 식별자> close
 
@@ -37,6 +37,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -49,6 +50,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from cdp import HOST, PORT, CdpError, Page, http_json  # noqa: E402
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / ".claude/skills/naver-blog-draft/scripts"))
+from build_preview import validate as validate_draft  # noqa: E402
 
 BLOG_ID = os.environ.get("JI_YOON_BLOG_BLOG_ID", "mywldbs")
 WRITE_URL = f"https://blog.naver.com/PostWriteForm.naver?blogId={BLOG_ID}"
@@ -66,6 +70,53 @@ STICKER_CODES = {
     "price": "ogq_5db4314bac2f0-6",
     "self_paid": "ogq_5db4314bac2f0-23",
 }
+PROGRESS_KEY = "ji-yoon-blog/editor-progress"
+STAGES = ("fill", "photos", "components", "settings")
+
+
+def load_draft(args: argparse.Namespace) -> bool:
+    """브라우저를 열기 전에 초안 계약을 검사한다."""
+    try:
+        raw = Path(args.draft).read_bytes()
+        draft = json.loads(raw)
+    except (OSError, ValueError) as exc:
+        print(f"초안을 읽지 못했다: {exc}", file=sys.stderr)
+        return False
+    if not isinstance(draft, dict):
+        print("초안은 JSON 객체여야 한다", file=sys.stderr)
+        return False
+    problems = validate_draft(draft)
+    if problems:
+        print("초안 계약이 맞지 않아 에디터를 열거나 고치지 않는다:", file=sys.stderr)
+        for problem in problems:
+            print(f"  - {problem}", file=sys.stderr)
+        print("지융에게 협찬 여부와 장소를 확인하고 새 형식으로 초안을 다시 만든다.", file=sys.stderr)
+        return False
+    args.draft_data = draft
+    args.draft_hash = hashlib.sha256(raw).hexdigest()
+    return True
+
+
+def progress(page: Page) -> dict:
+    raw = page.js(f"sessionStorage.getItem({json.dumps(PROGRESS_KEY)})")
+    try:
+        return json.loads(raw) if raw else {}
+    except ValueError:
+        return {}
+
+
+def set_stage(page: Page, args: argparse.Namespace, stage: str, passed: bool) -> None:
+    """같은 탭과 같은 초안의 단계 결과만 다음 명령에 넘긴다."""
+    current = progress(page)
+    if current.get("draftHash") != args.draft_hash:
+        current = {"draftHash": args.draft_hash, "passed": []}
+    passed_stages = set(current.get("passed", []))
+    if not passed:
+        passed_stages.difference_update(STAGES[STAGES.index(stage):])
+    else:
+        passed_stages.add(stage)
+    current["passed"] = [item for item in STAGES if item in passed_stages]
+    page.js(f"sessionStorage.setItem({json.dumps(PROGRESS_KEY)}, {json.dumps(json.dumps(current))})")
 
 
 def close_tab(target_id: str) -> None:
@@ -228,6 +279,7 @@ def cmd_open(page: Page, args: argparse.Namespace) -> int:
             if note:
                 print(f"알림이 떠 있어 멈춘다. 아무 버튼도 누르지 않았다: {note}", file=sys.stderr)
                 return 1
+            page.js(f"sessionStorage.removeItem({json.dumps(PROGRESS_KEY)})")
             print(f"글쓰기 화면을 새 탭에 열었다: {title}")
             print(f"target-id: {args.target_id}")
             return 0
@@ -409,7 +461,8 @@ def focus_placeholder(page: Page, text: str) -> bool:
 
 def cmd_fill(page: Page, args: argparse.Namespace) -> int:
     """초안의 제목과 본문을 넣는다."""
-    draft = json.loads(Path(args.draft).read_text(encoding="utf-8"))
+    draft = args.draft_data
+    set_stage(page, args, "fill", False)
     title = draft.get("title")
     if not title:
         print("초안에 `title` 이 없다. 제목을 먼저 고른다.", file=sys.stderr)
@@ -458,6 +511,7 @@ def cmd_fill(page: Page, args: argparse.Namespace) -> int:
         return 1
 
     print(f"제목과 본문 {len(want)}줄 {sum(map(len, want))}자를 넣었다. 초안과 같다")
+    set_stage(page, args, "fill", True)
     return 0
 
 
@@ -556,7 +610,8 @@ def fit_image(page: Page, index: int) -> bool:
 def cmd_photos(page: Page, args: argparse.Namespace) -> int:
     """초안의 사진을 편집기에 넣는다."""
     draft_path = Path(args.draft)
-    draft = json.loads(draft_path.read_text(encoding="utf-8"))
+    draft = args.draft_data
+    set_stage(page, args, "photos", False)
     blocks = [block for block in draft.get("blocks", []) if block.get("type") == "image"]
     files = photo_paths(draft, draft_path.parent, args.remote_base)
     if not blocks or not files:
@@ -592,6 +647,7 @@ def cmd_photos(page: Page, args: argparse.Namespace) -> int:
         inserted += 1
 
     print(f"사진 {inserted}개를 자리마다 넣고 모두 `문서 너비`로 맞췄다")
+    set_stage(page, args, "photos", True)
     return 0
 
 
@@ -696,7 +752,8 @@ def insert_map(page: Page, block: dict) -> str:
 
 def cmd_components(page: Page, args: argparse.Namespace) -> int:
     """초안의 스티커와 지도를 실제 편집기 구성요소로 바꾼다."""
-    draft = json.loads(Path(args.draft).read_text(encoding="utf-8"))
+    draft = args.draft_data
+    set_stage(page, args, "components", False)
     note = require_clear_screen(page)
     if note:
         print(f"화면을 덮은 알림이 있어 구성요소를 넣지 못한다: {note}", file=sys.stderr)
@@ -715,6 +772,7 @@ def cmd_components(page: Page, args: argparse.Namespace) -> int:
             return 1
         counts[kind] += 1
     print(f"실제 스티커 {counts['sticker']}개와 지도 {counts['map']}개를 넣었다")
+    set_stage(page, args, "components", True)
     return 0
 
 
@@ -755,9 +813,20 @@ def settings_state(page: Page) -> dict:
     return state
 
 
+def category_option_finder(category: str) -> str:
+    """목록의 카테고리 이름만 대조해 보이는 label 을 찾는다."""
+    return (
+        "[...document.querySelectorAll('label[for]')]"
+        ".find(e => e.getBoundingClientRect().width > 0"
+        " && [...e.querySelectorAll('[data-testid^=categoryItemText_]')]"
+        f".some(name => name.textContent.replace(/\\s+/g, ' ').trim() === {json.dumps(category)}))"
+    )
+
+
 def cmd_settings(page: Page, args: argparse.Namespace) -> int:
     """카테고리와 태그를 발행 설정에 넣고 설정만 닫는다."""
-    draft = json.loads(Path(args.draft).read_text(encoding="utf-8"))
+    draft = args.draft_data
+    set_stage(page, args, "settings", False)
     category = draft.get("category", "").strip()
     tags = [tag.lstrip("#").strip() for tag in draft.get("tags", []) if tag.strip()]
     if category not in ("맛집로그", "카페로그") or not tags:
@@ -773,12 +842,15 @@ def cmd_settings(page: Page, args: argparse.Namespace) -> int:
     if not click(page, 'button[data-click-area="tpb*i.category"]'):
         print("카테고리 선택기를 열지 못했다", file=sys.stderr)
         return 1
-    label = (
-        "[...document.querySelectorAll('label')]"
-        f".find(e => e.innerText.trim() === {json.dumps(category)})"
-    )
+    label = category_option_finder(category)
+    if not wait_until(lambda: bool(page.js(f"!!({label})")), seconds=10.0):
+        print(f"카테고리 목록에 보이는 항목이 없다: {category}", file=sys.stderr)
+        return 1
     if not mouse_click(page, label):
-        print(f"카테고리를 찾지 못했다: {category}", file=sys.stderr)
+        print(f"카테고리 항목을 누르지 못했다: {category}", file=sys.stderr)
+        return 1
+    if not wait_until(lambda: settings_state(page).get("category") == category):
+        print(f"카테고리 선택이 반영되지 않았다: {category}", file=sys.stderr)
         return 1
     for tag in tags:
         if not click(page, "#tag-input"):
@@ -802,15 +874,82 @@ def cmd_settings(page: Page, args: argparse.Namespace) -> int:
         print("발행 설정을 닫지 못했다", file=sys.stderr)
         return 1
     print(f"카테고리 `{category}`와 태그 {len(tags)}개를 넣고 발행 설정을 닫았다")
+    set_stage(page, args, "settings", True)
     return 0
 
 
+def save_readiness(page: Page, args: argparse.Namespace) -> list[str]:
+    """앞 단계의 성공과 실제 화면이 같은 초안을 가리키는지 확인한다."""
+    current = progress(page)
+    if current.get("draftHash") != args.draft_hash:
+        return ["이 탭에서 검사한 초안과 저장할 초안이 다르다"]
+    missing = [stage for stage in STAGES if stage not in current.get("passed", [])]
+    if missing:
+        return [f"끝나지 않은 단계: {', '.join(missing)}"]
+
+    draft = args.draft_data
+    blocks = draft["blocks"]
+    problems = []
+    title = normalize("".join(paragraphs(page, TITLE_SELECTOR)))
+    if title != normalize(draft["title"]):
+        problems.append("제목이 초안과 다르다")
+    body = [normalize(line) for line in paragraphs(page, BODY_SELECTOR)]
+    body = [line for line in body if line]
+    wanted_text = [normalize(line) for block in blocks if block["type"] == "text" for line in block["lines"] if normalize(line)]
+    cursor = 0
+    for line in body:
+        if cursor < len(wanted_text) and line == wanted_text[cursor]:
+            cursor += 1
+    if cursor != len(wanted_text):
+        problems.append(f"본문 글이 빠졌다: {cursor}/{len(wanted_text)}줄 확인")
+    if any(line.startswith(("[사진 자리:", "[스티커 자리:", "[장소 자리:")) for line in body):
+        problems.append("사진·스티커·장소 자리표시 글이 남았다")
+
+    expected = {
+        "사진": sum(block["type"] == "image" for block in blocks),
+        "스티커": sum(block["type"] == "sticker" for block in blocks),
+        "지도": sum(block["type"] == "map" for block in blocks),
+    }
+    actual = {
+        "사진": image_count(page),
+        "스티커": component_count(page, "sticker"),
+        "지도": component_count(page, "placesMap"),
+    }
+    for name, count in expected.items():
+        if actual[name] != count:
+            problems.append(f"{name} 수가 다르다: 초안 {count}, 화면 {actual[name]}")
+    fit = page.js("document.querySelectorAll('.se-component.se-image .se-component-content-fit').length") or 0
+    if fit != expected["사진"]:
+        problems.append(f"문서 너비 사진 수가 다르다: 초안 {expected['사진']}, 화면 {fit}")
+
+    if not open_settings(page):
+        problems.append("카테고리와 태그를 읽을 수 없다")
+    else:
+        state = settings_state(page)
+        if state.get("category") != draft["category"]:
+            problems.append(f"카테고리가 다르다: {state.get('category')!r}")
+        if set(state.get("tags", [])) != set(draft["tags"]):
+            problems.append(f"태그가 다르다: {state.get('tags', [])!r}")
+        if not close_settings(page):
+            problems.append("발행 설정을 닫지 못했다")
+    return problems
+
+
 def cmd_save(page: Page, args: argparse.Namespace) -> int:
-    """임시저장한다. 발행 버튼은 누르지 않는다."""
+    """초안과 화면을 대조한 뒤 임시저장한다. 발행 버튼은 누르지 않는다."""
     if settings_open(page):
         print("발행 설정을 먼저 닫아야 임시저장할 수 있다", file=sys.stderr)
         return 1
+    problems = save_readiness(page, args)
+    if problems:
+        print("임시저장을 거절했다:", file=sys.stderr)
+        for problem in problems:
+            print(f"  - {problem}", file=sys.stderr)
+        return 1
     before = page.js(save_count_js())
+    if before is None:
+        print("임시저장 개수를 읽지 못해 저장하지 않는다", file=sys.stderr)
+        return 1
 
     # JS 의 `.click()` 으로는 저장되지 않는다.
     # 그 호출이 `Uncaught` 로 끝나고 저장 수도 늘지 않는다. 실측이다.
@@ -886,7 +1025,8 @@ def main() -> int:
         help="open 이 출력한 정확한 탭 식별자. 기존 글쓰기 탭을 잘못 고르지 않기 위해 필요하다",
     )
     sub = parser.add_subparsers(dest="command", required=True)
-    opener = sub.add_parser("open", help="글쓰기 화면을 연다")
+    opener = sub.add_parser("open", help="초안을 검사한 뒤 글쓰기 화면을 연다")
+    opener.add_argument("draft", help="draft.json 경로")
     fill = sub.add_parser("fill", help="초안의 제목과 본문을 넣는다")
     fill.add_argument("draft", help="draft.json 경로")
     photos = sub.add_parser("photos", help="초안의 사진을 편집기에 넣는다")
@@ -900,11 +1040,14 @@ def main() -> int:
     components.add_argument("draft", help="draft.json 경로")
     settings = sub.add_parser("settings", help="카테고리와 태그를 발행 설정에 넣는다")
     settings.add_argument("draft", help="draft.json 경로")
-    sub.add_parser("save", help="임시저장한다")
+    save = sub.add_parser("save", help="앞 단계와 화면을 검사한 뒤 임시저장한다")
+    save.add_argument("draft", help="draft.json 경로")
     sub.add_parser("state", help="편집기에 들어간 것을 읽어 낸다")
     sub.add_parser("close", help="open 으로 만든 탭을 닫는다")
 
     args = parser.parse_args()
+    if hasattr(args, "draft") and not load_draft(args):
+        return 1
     handlers = {
         "open": cmd_open,
         "fill": cmd_fill,
