@@ -58,9 +58,8 @@ TITLE_SELECTOR = ".se-documentTitle .se-text-paragraph"
 BODY_SELECTOR = ".se-component.se-text .se-text-paragraph"
 
 STICKER_BUTTON = "button.se-sticker-toolbar-button"
-PLACE_BUTTON = "button.se-place-toolbar-button"
+PLACE_BUTTON = "button.se-map-toolbar-button"
 PUBLISH_SETTINGS_BUTTON = 'button[data-click-area="tpb.publish"]'
-PUBLISH_SETTINGS_CLOSE_BUTTON = 'button[data-click-area="tpb*i.down"]'
 STICKER_CODES = {
     "hello": "ogq_5db4314bac2f0-1",
     "location": "ogq_5db4314bac2f0-4",
@@ -89,7 +88,7 @@ def mouse_click(page: Page, finder: str) -> bool:
         f'''(() => {{
   const el = {finder};
   if (!el) return null;
-  el.scrollIntoView({{block: "center"}});
+  el.scrollIntoView({{behavior: "instant", block: "center"}});
   const r = el.getBoundingClientRect();
   if (!r.width || !r.height) return null;
   return JSON.stringify({{x: r.left + r.width / 2, y: r.top + r.height / 2}});
@@ -347,26 +346,65 @@ def focus_placeholder(page: Page, text: str) -> bool:
         f"[...document.querySelectorAll({json.dumps(BODY_SELECTOR)})]"
         f".find(e => e.textContent.trim() === {json.dumps(text)})"
     )
-    if not mouse_click(page, finder):
+    element_id = page.js(f"({finder})?.id")
+    if not element_id:
         return False
-    time.sleep(0.2)
-    # Ctrl+A 는 본문 전체를 고를 수 있다. 해당 문단만 선택하고 키 입력으로 지운다.
-    selected = page.js(
-        f"(() => {{ const el = {finder}; if (!el) return false;"
-        " const range = document.createRange(); range.selectNodeContents(el);"
-        " const selection = getSelection(); selection.removeAllRanges();"
-        " selection.addRange(range); return selection.toString().trim() === "
-        f"{json.dumps(text)}; }})()"
-    )
-    if not selected:
-        return False
-    page.press("Delete", "Delete", 46)
-    return wait_until(
-        lambda: not page.js(
-            f"[...document.querySelectorAll({json.dumps(BODY_SELECTOR)})]"
-            f".some(e => e.textContent.trim() === {json.dumps(text)})"
+    element = f"document.getElementById({json.dumps(element_id)})"
+
+    def click_end() -> bool:
+        spot = page.js(
+            f'''(() => {{
+  const el = {element};
+  if (!el) return null;
+  el.scrollIntoView({{behavior: "instant", block: "center"}});
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  const rects = range.getClientRects();
+  const rect = rects[rects.length - 1];
+  if (!rect) return null;
+  return JSON.stringify({{x: rect.right + 4, y: rect.top + rect.height / 2}});
+}})()'''
         )
-    )
+        if not spot:
+            return False
+        point = json.loads(spot)
+        for kind in ("mousePressed", "mouseReleased"):
+            page.call(
+                "Input.dispatchMouseEvent",
+                type=kind,
+                x=point["x"],
+                y=point["y"],
+                button="left",
+                clickCount=1,
+            )
+        return bool(page.js(
+            "(() => { const s = getSelection(); const n = s.anchorNode;"
+            f" return n?.nodeType === 3 && n.parentElement.closest({json.dumps(BODY_SELECTOR)})?.id === {json.dumps(element_id)}"
+            " && s.anchorOffset === n.textContent.length; })()"
+        ))
+
+    if not click_end():
+        return False
+    # JS Range 로 선택해 Delete 하면 편집기 내부 커서와 어긋나 일부 글자만 지워진다.
+    # 실제 키 입력으로 끝에서 지우고, 커서가 튀어 멈추면 끝을 다시 누른다.
+    previous = None
+    stalls = 0
+    for _ in range(len(text) * 4):
+        current = page.js(f"{element}?.textContent") or ""
+        if not current:
+            return True
+        if len(current) > len(text) or not text.startswith(current):
+            return False
+        if current == previous:
+            stalls += 1
+            if stalls > 3 or not click_end():
+                return False
+        else:
+            stalls = 0
+        previous = current
+        page.press("Backspace", "Backspace", 8)
+        time.sleep(SETTLE_SECONDS)
+    return False
 
 
 def cmd_fill(page: Page, args: argparse.Namespace) -> int:
@@ -492,18 +530,27 @@ def fit_image(page: Page, index: int) -> bool:
         f"[...document.querySelectorAll('.se-component.se-image')][{index}]"
         ".querySelector('.se-module-image')"
     )
-    if not mouse_click(page, image):
+    if not wait_until(lambda: mouse_click(page, image), seconds=10.0):
         return False
-    if not click(page, "button.se-object-arrangement-fit-toolbar-button"):
-        return False
-    return wait_until(
-        lambda: bool(
-            page.js(
-                f"[...document.querySelectorAll('.se-component.se-image')][{index}]"
-                "?.classList.contains('se-component-content-fit')"
-            )
-        )
+    fitted = (
+        f"[...document.querySelectorAll('.se-component.se-image')][{index}]"
+        "?.querySelector('.se-component-content-fit') !== null"
     )
+    if page.js(fitted):
+        return True
+    toolbar = "button.se-object-arrangement-fit-toolbar-button"
+    if not wait_until(
+        lambda: bool(page.js(
+            f"(() => {{ const e = document.querySelector({json.dumps(toolbar)});"
+            " if (!e) return false; const r = e.getBoundingClientRect();"
+            " return r.width > 0 && r.height > 0; })()"
+        )),
+        seconds=10.0,
+    ):
+        return False
+    if not click(page, toolbar):
+        return False
+    return wait_until(lambda: bool(page.js(fitted)), seconds=10.0)
 
 
 def cmd_photos(page: Page, args: argparse.Namespace) -> int:
@@ -562,12 +609,16 @@ def insert_sticker(page: Page, block: dict) -> str:
     if not focus_placeholder(page, marker):
         return f"스티커 자리를 찾지 못했다: {marker}"
     before = component_count(page, "sticker")
-    if not click(page, STICKER_BUTTON):
+    panel_open = page.js(
+        "(() => { const e = document.querySelector('.se-sidebar-container-sticker');"
+        " if (!e) return false; const r = e.getBoundingClientRect();"
+        " return r.width > 0 && r.height > 0; })()"
+    )
+    if not panel_open and not click(page, STICKER_BUTTON):
         return "스티커 버튼을 찾지 못했다"
     finder = (
-        "[...document.querySelectorAll('button')]"
-        f".find(e => e.querySelector('img[src*={json.dumps(code)}]')"
-        f" || e.getAttribute('data-sticker-id') === {json.dumps(code)})"
+        "[...document.querySelectorAll('button.se-sidebar-element-sticker')]"
+        f".find(e => e.innerText.trim() === {json.dumps(code)})"
     )
     if not wait_until(lambda: bool(page.js(f"!!({finder})"))):
         return f"스티커를 찾지 못했다: {code}"
@@ -604,7 +655,7 @@ def insert_map(page: Page, block: dict) -> str:
     if not click(page, PLACE_BUTTON):
         return "장소 버튼을 찾지 못했다"
     search = 'input[placeholder="장소명을 입력하세요."]'
-    if not wait_until(lambda: bool(page.js(f'document.querySelector({json.dumps(search)})'))):
+    if not wait_until(lambda: page.js(f'!!document.querySelector({json.dumps(search)})')):
         return "장소 검색 입력칸을 찾지 못했다"
     if not click(page, search):
         return "장소 검색 입력칸을 누르지 못했다"
@@ -624,11 +675,17 @@ def insert_map(page: Page, block: dict) -> str:
     finder = f"document.querySelectorAll('.se-place-map-search-result-link')[{index}]"
     if not mouse_click(page, finder):
         return f"장소 검색 결과를 누르지 못했다: {name}"
-    if not wait_until(lambda: bool(page.js("document.querySelector('.se-place-add-button')"))):
+    add_finder = (
+        "[...document.querySelectorAll('.se-place-add-button')]"
+        ".find(e => e.getBoundingClientRect().width > 0 && !e.disabled)"
+    )
+    if not wait_until(lambda: page.js(f"!!({add_finder})")):
         return "장소 추가 버튼이 나타나지 않았다"
-    if not click(page, ".se-place-add-button"):
+    if not mouse_click(page, add_finder):
         return "장소 추가 버튼을 누르지 못했다"
-    if not wait_until(lambda: bool(page.js("document.querySelector('.se-popup-button-confirm')"))):
+    if not wait_until(lambda: page.js(
+        "!!document.querySelector('.se-popup-button-confirm:not([disabled])')"
+    )):
         return "장소 확인 버튼이 나타나지 않았다"
     if not click(page, ".se-popup-button-confirm"):
         return "장소 확인 버튼을 누르지 못했다"
@@ -661,22 +718,27 @@ def cmd_components(page: Page, args: argparse.Namespace) -> int:
     return 0
 
 
+def settings_open(page: Page) -> bool:
+    """접힌 설정도 화면을 가리므로 발행 설정 레이어의 존재를 읽는다."""
+    return bool(page.js("!!document.querySelector('[class^=layer_publish]')"))
+
+
 def open_settings(page: Page) -> bool:
     """발행 설정 레이어만 연다. 발행 확인 버튼은 누르지 않는다."""
-    if page.js("document.querySelector('#tag-input')"):
+    if settings_open(page):
         return True
     if not click(page, PUBLISH_SETTINGS_BUTTON):
         return False
-    return wait_until(lambda: bool(page.js("document.querySelector('#tag-input')")))
+    return wait_until(lambda: settings_open(page))
 
 
 def close_settings(page: Page) -> bool:
-    """발행 설정을 아래 화살표로 닫는다."""
-    if not page.js("document.querySelector('#tag-input')"):
+    """상단 발행 버튼으로 설정 레이어만 닫는다. 발행 확인은 누르지 않는다."""
+    if not settings_open(page):
         return True
-    if not click(page, PUBLISH_SETTINGS_CLOSE_BUTTON):
+    if not click(page, PUBLISH_SETTINGS_BUTTON):
         return False
-    return wait_until(lambda: not bool(page.js("document.querySelector('#tag-input')")))
+    return wait_until(lambda: not settings_open(page))
 
 
 def settings_state(page: Page) -> dict:
@@ -684,8 +746,8 @@ def settings_state(page: Page) -> dict:
     raw = page.js(
         "JSON.stringify({"
         " category: document.querySelector('button[data-click-area=\"tpb*i.category\"]')?.innerText.trim() || '',"
-        " tags: [...document.querySelectorAll('[class*=tag]')].map(e => e.innerText.trim())"
-        "   .filter(v => v.startsWith('#')).map(v => v.replace(/^#/, ''))"
+        " tags: [...document.querySelectorAll('span[id^=\"tag-item-\"][aria-label]')]"
+        "   .map(e => e.getAttribute('aria-label'))"
         "})"
     )
     state = json.loads(raw or "{}")
@@ -745,7 +807,7 @@ def cmd_settings(page: Page, args: argparse.Namespace) -> int:
 
 def cmd_save(page: Page, args: argparse.Namespace) -> int:
     """임시저장한다. 발행 버튼은 누르지 않는다."""
-    if page.js("document.querySelector('#tag-input')"):
+    if settings_open(page):
         print("발행 설정을 먼저 닫아야 임시저장할 수 있다", file=sys.stderr)
         return 1
     before = page.js(save_count_js())
@@ -803,7 +865,7 @@ def cmd_state(page: Page, args: argparse.Namespace) -> int:
         "bodyChars": sum(map(len, body)),
         "images": image_count(page),
         "fitImages": page.js(
-            "document.querySelectorAll('.se-component.se-image.se-component-content-fit').length"
+            "document.querySelectorAll('.se-component.se-image .se-component-content-fit').length"
         )
         or 0,
         "stickers": component_count(page, "sticker"),
@@ -876,6 +938,15 @@ def main() -> int:
             print(f"그 탭은 글쓰기 화면이 아니다: {target.get('url', '')}", file=sys.stderr)
             return 1
         page = Page(target["webSocketDebuggerUrl"])
+        # 홈서버의 큰 가상 창에서는 아래쪽 문단에 보낸 마우스 이벤트가
+        # 편집기에 닿지 않는다. 탭마다 화면 높이를 고정해 스크롤하며 누른다.
+        page.call(
+            "Emulation.setDeviceMetricsOverride",
+            width=1280,
+            height=720,
+            deviceScaleFactor=1,
+            mobile=False,
+        )
     except (CdpError, OSError) as exc:
         print(f"브라우저에 붙지 못했다: {exc}", file=sys.stderr)
         return 2
