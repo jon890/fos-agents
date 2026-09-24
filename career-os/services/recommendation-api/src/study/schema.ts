@@ -10,7 +10,7 @@ export const cursorModeSchema = z.enum(["recent", "archive"]);
 
 export const studySourcePutSchema = z.object({
   title: nonEmpty.max(255),
-  category: nonEmpty.max(50),
+  category: z.enum(["techBlog", "geek", "ai", "video"]),
   url: nullableHttpsUrl,
   feedUrl: nullableHttpsUrl,
   adapter: z.enum(["feed", "page", "youtube"]),

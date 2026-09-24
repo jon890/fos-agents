@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { StudyLibraryApiError, StudyLibraryClient, type StudyLibraryFetch } from "./client.js";
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
@@ -52,6 +53,7 @@ describe("StudyLibraryClient", () => {
           adapter: "page",
           enabled: true,
           version: 1,
+          note: null,
         },
         version: 1,
       });
@@ -69,6 +71,48 @@ describe("StudyLibraryClient", () => {
 
     const headers = calls[0].headers as Headers;
     expect(headers.get("Content-Type")).toBe("application/json");
+  });
+
+  test("모든 쓰기 요청은 계약별 Idempotency-Key를 보내고 재시도는 같은 키를 쓴다", async () => {
+    const calls: Array<{ url: URL; init: RequestInit }> = [];
+    let controlAttempts = 0;
+    const fetchImpl: StudyLibraryFetch = async (url, init) => {
+      calls.push({ url, init: init ?? {} });
+      if (url.pathname.endsWith("/sources/source-a")) return jsonResponse({ source: { sourceKey: "source-a", title: "Source A", category: "techBlog", url: "https://example.com", feedUrl: null, adapter: "page", enabled: true, version: 1, note: null }, version: 1 });
+      if (url.pathname.endsWith("/ingestions")) return jsonResponse({ idempotencyKey: "ingestion-key", acceptedCount: 0, cursorVersion: 1 });
+      if (url.pathname.endsWith("/recommendation-runs")) return jsonResponse({ reportId: "report-a", historyVersion: 1 });
+      if (url.pathname.endsWith("/publications")) return jsonResponse({ publicationId: "publication-a" });
+      if (url.pathname.endsWith("/recommendation-control")) {
+        controlAttempts += 1;
+        if (controlAttempts === 1) return jsonResponse({ error: { code: "UNAVAILABLE", message: "retry", requestId: "control-1" } }, { status: 503 });
+        return jsonResponse({ candidateContextVersion: "context-a" });
+      }
+      throw new Error(`unexpected ${url.pathname}`);
+    };
+    const library = new StudyLibraryClient({ origin: "http://study.example.com", token: "x".repeat(32), fetchImpl, maxRetries: 1 });
+    const source = { title: "Source A", category: "techBlog" as const, url: "https://example.com", feedUrl: null, adapter: "page" as const, enabled: true, expectedVersion: 0 };
+    const recommendation = { reportId: "report-a", generatedAt: "2026-09-01T09:00:00.000Z" };
+
+    await library.putSource("source-a", source);
+    await library.createIngestion({ idempotencyKey: "ingestion-key", items: [] });
+    await library.createRecommendationRun(recommendation);
+    await library.createPublication({ idempotencyKey: "publication-key" });
+    await library.updateRecommendationControl("context-a");
+    await library.updateRecommendationControl("context-a");
+
+    const keys = calls.map(({ init }) => (init.headers as Headers).get("Idempotency-Key"));
+    const sourcePayload = JSON.stringify({ adapter: "page", category: "techBlog", enabled: true, expectedVersion: 0, feedUrl: null, title: "Source A", url: "https://example.com" });
+    const sourceHash = createHash("sha256").update(`{"payload":${sourcePayload},"sourceKey":"source-a"}`, "utf8").digest("hex");
+    const recommendationHash = createHash("sha256").update('{"generatedAt":"2026-09-01T09:00:00.000Z","reportId":"report-a"}', "utf8").digest("hex");
+    expect(keys.slice(0, 4)).toEqual([`source:${sourceHash}`, "ingestion-key", `recommendation:${recommendationHash}`, "publication-key"]);
+    expect(keys[4]).toBe(keys[5]);
+    expect(keys[6]).not.toBe(keys[4]);
+  });
+
+  test("소스 응답에서 nullable note가 빠지면 계약 오류로 거부한다", async () => {
+    const fetchImpl: StudyLibraryFetch = async () => jsonResponse({ sources: [{ sourceKey: "source-a", title: "Source A", category: "techBlog", url: "https://example.com", feedUrl: null, adapter: "page", enabled: true, version: 1 }] });
+
+    await expect(client(fetchImpl).getSources()).rejects.toThrow("응답 검증 실패");
   });
 
   test("명시적 연결값과 HTTP/HTTPS origin 규칙을 API 호출 전에 검증한다", () => {

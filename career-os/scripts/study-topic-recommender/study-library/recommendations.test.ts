@@ -200,6 +200,55 @@ describe("study-library recommendations CLI", () => {
     expect(existsSync(join(root, "state", "morning-study-history.json"))).toBe(false);
   });
 
+  test("선택의 제외 판정은 sidecar를 거쳐 recommendation-runs 요청에 저장한다", async () => {
+    const root = runDir();
+    const poolPath = join(root, "state", "reading-candidates.json");
+    const selectionPath = join(root, "selection.json");
+    const pool = candidatePool();
+    pool.candidates.push({
+      ...pool.candidates[0],
+      id: "content-b",
+      contentKey: "content-b",
+      canonicalUrl: "https://example.com/content-b",
+      url: "https://example.com/content-b",
+      title: "Title B",
+    });
+    writeJson(poolPath, pool);
+    writeJson(join(root, "state", "study-library-meta.json"), meta());
+    writeJson(selectionPath, {
+      ...selection(),
+      rejections: [{ candidateId: "content-b", reason: "이번 주제와 겹친다." }],
+    });
+
+    await runCli([
+      "--run-dir", root,
+      "--candidate-pool", poolPath,
+      "--reading-selection", selectionPath,
+    ]);
+
+    const reportPath = join(root, "state", "morning-reading.json");
+    const sidecar = JSON.parse(readFileSync(join(root, "state", "recommendation-request.json"), "utf8"));
+    expect(sidecar).toMatchObject({
+      candidateContextVersion: "context-19",
+      rejections: [{ candidateId: "content-b", reason: "이번 주제와 겹친다." }],
+    });
+
+    const bodies: unknown[] = [];
+    await runCli([
+      "--run-dir", root,
+      "--commit-recommendation",
+      "--report", reportPath,
+    ], async (_url, init) => {
+      bodies.push(JSON.parse(String(init?.body)));
+      return jsonResponse({ reportId: "morning-2026-09-08", historyVersion: 20 });
+    });
+
+    expect(bodies).toEqual([expect.objectContaining({
+      candidateContextVersion: "context-19",
+      rejections: [{ contentKey: "content-b", reason: "이번 주제와 겹친다." }],
+    })]);
+  });
+
   test("previouslyRecommended true 후보를 선택하면 기존 선택 검증이 실패한다", async () => {
     const root = runDir();
     const poolPath = join(root, "state", "reading-candidates.json");
@@ -322,19 +371,57 @@ describe("study-library recommendations CLI", () => {
       expect(logs).toEqual([]);
     }
   });
+
+  test("sidecar가 없거나 리포트와 다르면 추천 저장 요청 전 중단한다", async () => {
+    const root = runDir();
+    const reportPath = join(root, "state", "morning-reading.json");
+    writeJson(reportPath, emptyReport());
+    let requestCount = 0;
+    const fetchImpl: StudyLibraryFetch = async () => {
+      requestCount += 1;
+      return jsonResponse({ reportId: "morning-2026-09-08", historyVersion: 20 });
+    };
+    const args = ["--run-dir", root, "--commit-recommendation", "--report", reportPath];
+
+    await expect(runCli(args, fetchImpl)).rejects.toThrow("추천 저장 요청 파일을 찾을 수 없다");
+    expect(requestCount).toBe(0);
+
+    writeJson(join(root, "state", "recommendation-request.json"), {
+      reportId: "morning-2026-09-08",
+      generatedAt: "2026-09-07T15:31:00.000Z",
+      candidateContextVersion: "context-0",
+      rejections: [],
+    });
+    await expect(runCli(args, fetchImpl)).rejects.toThrow("추천 저장 요청 파일이 리포트와 다르다");
+    expect(requestCount).toBe(0);
+  });
 });
 
 describe("study-library recommendation payload", () => {
-  test("기존 MorningReadingReport를 recommendation-runs payload로 변환한다", () => {
+  test("유효한 candidateContextVersion과 함께 MorningReadingReport를 recommendation-runs payload로 변환한다", () => {
     const report = emptyReport();
-    const payload = toRecommendationRunPayload(report);
+    const payload = toRecommendationRunPayload(report, {
+      reportId: "morning-2026-09-08",
+      generatedAt: report.generatedAt,
+      candidateContextVersion: "context-0",
+      rejections: [],
+    });
 
     expect(payload).toEqual({
       reportId: "morning-2026-09-08",
       generatedAt: report.generatedAt,
-      candidateContextVersion: "",
+      candidateContextVersion: "context-0",
       rejections: [],
       topics: [],
     });
+  });
+
+  test("빈 candidateContextVersion은 payload로 변환하지 않는다", () => {
+    expect(() => toRecommendationRunPayload(emptyReport(), {
+      reportId: "morning-2026-09-08",
+      generatedAt: "2026-09-07T15:30:00.000Z",
+      candidateContextVersion: " ",
+      rejections: [],
+    })).toThrow("candidateContextVersion이 필요하다");
   });
 });

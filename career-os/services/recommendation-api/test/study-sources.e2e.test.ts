@@ -78,6 +78,22 @@ describe("학습 소스", () => {
     expect(conflict.json).toMatchObject({ error: { code: "VERSION_CONFLICT" } });
   });
 
+  it("같은 새 소스를 동시에 만들면 한 요청만 저장하고 나머지는 version 충돌로 돌려준다", async () => {
+    const replies = await Promise.all([
+      put("concurrent", source({ title: "첫 요청" }), "study-source-concurrent-first"),
+      put("concurrent", source({ title: "둘째 요청" }), "study-source-concurrent-second"),
+    ]);
+
+    expect(replies.map((reply) => reply.status).sort()).toEqual([200, 409]);
+    expect(replies.find((reply) => reply.status === 409)?.json).toMatchObject({
+      error: { code: "VERSION_CONFLICT" },
+    });
+    const saved = await harness.send("GET", "/api/study/v1/sources");
+    expect((saved.json as { sources: Array<{ sourceKey: string; version: number }> }).sources).toEqual([
+      expect.objectContaining({ sourceKey: "concurrent", version: 1 }),
+    ]);
+  });
+
   it("수집할 수 없는 adapter별 주소 조합을 거부한다", async () => {
     const cases = [
       source({ url: null, feedUrl: null }),
@@ -95,6 +111,16 @@ describe("학습 소스", () => {
       const reply = await put(`invalid-${index}`, body, `study-source-invalid-${index}`);
       expect(reply.status, `invalid-${index}`).toBe(400);
     }
+  });
+
+  it("허용하지 않은 category는 400으로 거부하고 source 목록 계약은 유지한다", async () => {
+    const reply = await put("invalid-category", source({ category: "other" }), "study-source-invalid-category");
+
+    expect(reply.status).toBe(400);
+    expect(reply.json).toMatchObject({ error: { code: "BAD_REQUEST" } });
+    const listed = await harness.send("GET", "/api/study/v1/sources");
+    expect(listed.status).toBe(200);
+    expect(clientContracts.studyLibrarySourcesResponseSchema.parse(listed.json)).toEqual({ sources: [] });
   });
 
   it("SQL 제약도 HTTP가 우회된 비HTTPS 주소를 막는다", async () => {

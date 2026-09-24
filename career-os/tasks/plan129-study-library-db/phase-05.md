@@ -90,9 +90,9 @@ python3 "$HOME/.codex/skills/.system/skill-creator/scripts/quick_validate.py" \
 - migration 이 운영 `fos_career` 에 들어가는지 확인한다. 다른 브랜치의 migration 과 순서가 맞아야 한다
 - 운영에서 `import_study_state.ts --dry-run` 을 먼저 돌려 소스 건수와 리포트 3건과 자료 15건을 확인한 뒤 `--commit` 한다
 - 이관 뒤 `GET /candidates` 에 이력의 15건이 나오지 않는지 확인한다
-- 홈서버 hermes 의 `morning` 작업이 `--library` 나 `--commit-history` 를 넘기고 있지 않은지 확인한다.
+- 홈서버의 `morning` 작업이 `--library` 나 `--commit-history` 를 넘기고 있지 않은지 확인한다.
   넘기면 사용법 오류로 멈춘다. 그 설정은 `fos-home-infra` 에 있다
-- hermes container 의 환경에서 `STUDY_LIBRARY_URL` 과 `STUDY_SERVICE_TOKEN` 을 빼고
+- 해당 container 의 환경에서 `STUDY_LIBRARY_URL` 과 `STUDY_SERVICE_TOKEN` 을 빼고
   `CAREER_RECOMMENDATION_API_URL` 과 token 이 있는지 확인한다
 - 이관을 확인한 뒤 `config/external-reading-sources.ts` 와 `state/morning-study-history.json` 을 지운다.
   별도 커밋으로 한다

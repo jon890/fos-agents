@@ -63,6 +63,16 @@ bun --env-file=career-os/.env \
   --run-dir <RUN_DIR> \
   --candidate-pool <RUN_DIR>/state/reading-candidates.json \
   --reading-selection <RUN_DIR>/reading-selection.json
+```
+
+선택 단계는 `<RUN_DIR>/state/morning-reading.json` 과
+`<RUN_DIR>/state/recommendation-request.json` 을 함께 만든다.
+두 파일을 같은 `state/` 디렉터리에 보존한 뒤 아래 검증과 추천 저장 명령을 실행한다.
+저장 요청 파일은 리포트의 `reportId`, `generatedAt`, 후보 조회의
+`candidateContextVersion`, 고르지 않은 후보의 `rejections` 를 담는다.
+파일이 없거나 리포트와 값이 다르면 API 에 요청하지 않고 멈춘다.
+
+```bash
 bun career-os/scripts/study-topic-recommender/validate_outputs.ts --run-dir <RUN_DIR>
 bun --env-file=career-os/.env \
   career-os/scripts/study-topic-recommender/build_morning_reading.ts \

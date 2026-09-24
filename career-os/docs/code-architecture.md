@@ -152,7 +152,7 @@ SSH client는 `career-storage`를 원격 호출하고, 홈서버의 Hermes는 �
 
 ### 추천 상태 Backend
 
-`services/recommendation-api/`는 포지션의 장기 상태를 제공하는 Backend다.
+`services/recommendation-api/`는 포지션과 공부 추천의 장기 상태를 제공하는 Backend다.
 Node 22 위의 NestJS로 돌고 Prisma로 MySQL을 읽고 쓴다.
 모노레포 루트와 별도의 `package.json`과 `tsconfig.json`을 가진 독립 package다.
 결정과 근거는 [ADR-121](adr/ADR-121-추천-backend는-nestjs와-prisma로-운영한다.md)과
@@ -160,7 +160,7 @@ Node 22 위의 NestJS로 돌고 Prisma로 MySQL을 읽고 쓴다.
 
 서비스 코드, HTTP 계약과 migration은 `career-os`가 소유한다.
 배포 설정, database와 계정 생성, network와 backup은 홈서버 인프라 저장소가 소유한다.
-학습자료 API는 client 만 구현했고 mock HTTP 로 검증했다. 서버는 구현하지 않았다.
+공부 소스, 수집 자료, 후보, 추천과 제외 판정은 `/api/study/v1` 에서 읽고 쓴다.
 
 
 | 경로                                                     | 책임                                                    |
@@ -171,6 +171,7 @@ Node 22 위의 NestJS로 돌고 Prisma로 MySQL을 읽고 쓴다.
 | `services/recommendation-api/src/common/`              | 인증, 요청 ID, 본문 크기, zod 검증, 멱등 처리, 오류 응답 형식             |
 | `services/recommendation-api/src/positions/`           | 회사 정책, 공고 버전, 분석 상태와 추천 조립                            |
 | `services/recommendation-api/src/positions/repository/`| Prisma 질의. 도메인이 요구하는 단위로만 읽고 쓴다                       |
+| `services/recommendation-api/src/study/`               | 공부 소스, 수집 자료, cursor, 후보와 추천 판정                         |
 | `services/recommendation-api/src/health/`              | 생존 확인과 준비 확인                                          |
 | `services/recommendation-api/src/prisma/`              | `PrismaClient` 수명과 연결 설정                              |
 | `services/recommendation-api/src/contracts/`           | `scripts/`가 소유한 공고 후보 계약의 사본                          |
@@ -194,7 +195,7 @@ Backend는 local 개발에서는 `CAREER_RECOMMENDATION_DATABASE_URL`을 읽을 
 두 형식을 함께 주면 시작 전에 실패한다.
 client는 `CAREER_RECOMMENDATION_API_URL`과 `CAREER_RECOMMENDATION_API_TOKEN` 또는
 `CAREER_RECOMMENDATION_API_TOKEN_FILE`만 읽으며 DB 자격증명을 받지 않는다.
-`STUDY_LIBRARY_URL`과 `STUDY_SERVICE_TOKEN`은 study client 전환 동안 같은 Backend를 가리키는 호환 환경값으로 유지한다.
+공부 추천과 포지션 client 는 `scripts/lib/recommendation-api-config.ts` 로 같은 연결값을 검증한다.
 
 **프로세스 시간대를 UTC에 고정한다.** 시각 컬럼이 모두 `DATETIME(3)`이라 시간대를 저장하지 않으므로,
 프로세스가 다른 시간대면 다시 읽은 시각이 어긋나고 임차권 판정이 뒤집힌다.

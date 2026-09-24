@@ -19,10 +19,24 @@ describe("morning_reading_cli", () => {
     });
   });
 
-  test("--commit-history는 제거한 사용법 오류를 낸다", async () => {
+  test("제거한 파일모드 옵션은 지원하지 않는 옵션 오류를 낸다", async () => {
     await expect(withArgs(["--commit-history"], main)).rejects.toMatchObject({
       exitCode: 2,
-      message: expect.stringContaining("--commit-history는 더 이상 지원하지 않는다"),
+      message: expect.stringContaining("지원하지 않는 옵션"),
+    });
+  });
+
+  test("render-only 분기 전에 동작 플래그 수를 검증한다", async () => {
+    await expect(withArgs(["--render-only", "--collect-only"], main)).rejects.toMatchObject({
+      exitCode: 2,
+      message: expect.stringContaining("하위 동작 플래그 하나가 필요하다"),
+    });
+  });
+
+  test("render-only 분기 전에 지원하지 않는 옵션을 검증한다", async () => {
+    await expect(withArgs(["--render-only", "--commit-history"], main)).rejects.toMatchObject({
+      exitCode: 2,
+      message: expect.stringContaining("지원하지 않는 옵션"),
     });
   });
 });

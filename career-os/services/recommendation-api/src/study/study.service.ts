@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { Prisma } from "../generated/prisma/client.js";
 
 import { ApiError } from "../common/api-error.js";
 import { todaySeoulIsoDate } from "../positions/seoul-date.js";
@@ -19,6 +20,14 @@ import type {
   StudySourceUpsertResponse,
 } from "./schema.js";
 
+function isDuplicateSourceKey(error: unknown): boolean {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === "P2002") return true;
+    if (error.code === "P2010" && error.meta?.code === "1062") return true;
+  }
+  return error instanceof Error && /Duplicate entry|Unique constraint failed/.test(error.message);
+}
+
 @Injectable()
 export class StudyService {
   constructor(private readonly repository: StudyRepository) {}
@@ -28,20 +37,29 @@ export class StudyService {
   }
 
   async upsertSource(sourceKey: string, value: StudySourcePut): Promise<StudySourceUpsertResponse> {
-    return this.repository.transaction(async (tx) => {
-      const existing = await this.repository.lockSource(sourceKey, tx);
-      if (existing && existing.version !== value.expectedVersion) {
+    try {
+      return await this.repository.transaction(async (tx) => {
+        const existing = await this.repository.lockSource(sourceKey, tx);
+        if (existing && existing.version !== value.expectedVersion) {
+          throw new ApiError(409, "VERSION_CONFLICT", "소스 버전이 현재 값과 다릅니다.");
+        }
+        if (!existing && value.expectedVersion !== 0) {
+          throw new ApiError(409, "VERSION_CONFLICT", "새 소스는 expectedVersion이 0이어야 합니다.");
+        }
+        if (existing) await this.repository.updateSource(sourceKey, value, tx);
+        else await this.repository.insertSource(sourceKey, value, tx);
+        const source = await this.repository.lockSource(sourceKey, tx);
+        if (!source) throw new ApiError(500, "INTERNAL_ERROR", "소스를 저장하지 못했습니다.");
+        return { source, version: source.version };
+      });
+    } catch (error) {
+      // 존재하지 않는 행은 `FOR UPDATE`로 잠글 수 없다. 같은 sourceKey를 동시에
+      // 생성한 요청 중 하나가 PK 충돌로 끝나면 낙관적 잠금 충돌로 공개한다.
+      if (isDuplicateSourceKey(error)) {
         throw new ApiError(409, "VERSION_CONFLICT", "소스 버전이 현재 값과 다릅니다.");
       }
-      if (!existing && value.expectedVersion !== 0) {
-        throw new ApiError(409, "VERSION_CONFLICT", "새 소스는 expectedVersion이 0이어야 합니다.");
-      }
-      if (existing) await this.repository.updateSource(sourceKey, value, tx);
-      else await this.repository.insertSource(sourceKey, value, tx);
-      const source = await this.repository.lockSource(sourceKey, tx);
-      if (!source) throw new ApiError(500, "INTERNAL_ERROR", "소스를 저장하지 못했습니다.");
-      return { source, version: source.version };
-    });
+      throw error;
+    }
   }
 
   async getCursor(sourceKey: string, mode: StudyCursorResult["mode"]): Promise<StudyCursorResult> {

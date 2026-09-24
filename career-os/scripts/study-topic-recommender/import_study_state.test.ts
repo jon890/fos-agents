@@ -53,14 +53,15 @@ class StubClient {
   candidateCalls = 0;
   cursorCalls = 0;
   rejectCursorLookup = false;
+  failRecommendationOnce = false;
 
   async getSources() { return { sources: [] }; }
-  async putSource(sourceKey: string, body: Parameters<StudyLibraryClient["putSource"]>[1]) { return { source: { sourceKey, ...body, version: 1 }, version: 1 }; }
+  async putSource(sourceKey: string, body: Parameters<StudyLibraryClient["putSource"]>[1]) { const { expectedVersion: _expectedVersion, ...source } = body; return { source: { sourceKey, ...source, version: 1, note: source.note ?? null }, version: 1 }; }
   async getRecommendationRunStatus(reportId: string) { this.statusCalls += 1; return { reportId, exists: this.statuses.get(reportId) ?? false }; }
   async getCandidates() { this.candidateCalls += 1; return { candidates: [], recentStudyTopicKeys: [], nextCursor: null, historyVersion: 0, candidateContextVersion: "context-17" }; }
-  async getSourceCursor(sourceKey: string) { this.cursorCalls += 1; if (this.rejectCursorLookup) throw new Error("dry-run에서는 cursor를 읽으면 안 된다."); return { sourceKey, mode: "recent" as const, cursor: { lastSeen: [] }, version: 4 }; }
+  async getSourceCursor(sourceKey: string) { this.cursorCalls += 1; if (this.rejectCursorLookup) throw new Error("dry-run에서는 cursor를 읽으면 안 된다."); return { sourceKey, mode: "recent" as const, cursor: { lastSeen: [] }, version: this.cursorCalls }; }
   async createIngestion(body: unknown) { this.ingestions.push(body as Record<string, unknown>); return { idempotencyKey: "ingestion", acceptedCount: 1, cursorVersion: 5 }; }
-  async createRecommendationRun(body: unknown) { this.recommendations.push(body as Record<string, unknown>); return { reportId: (body as { reportId: string }).reportId, historyVersion: 1 }; }
+  async createRecommendationRun(body: unknown) { this.recommendations.push(body as Record<string, unknown>); if (this.failRecommendationOnce) { this.failRecommendationOnce = false; throw new Error("추천 저장 실패"); } return { reportId: (body as { reportId: string }).reportId, historyVersion: 1 }; }
 }
 
 afterEach(() => {
@@ -106,6 +107,23 @@ describe("공부 이력 이관", () => {
       { reportId: "report-2", generatedAt: "2026-09-02T09:00:00.000Z", candidateContextVersion: "context-17" },
       { reportId: "report-3", generatedAt: "2026-09-03T09:00:00.000Z", candidateContextVersion: "context-17" },
     ]);
+  });
+
+  test("추천 저장이 실패한 뒤 cursor 버전이 바뀐 이관 재실행은 새 ingestion key를 쓴다", async () => {
+    const fixture = writeFixture(fixtureDirectory());
+    const client = new StubClient();
+    client.failRecommendationOnce = true;
+
+    await expect(importStudyState(["--commit", "--history-file", fixture.historyFile, "--sources-file", fixture.sourcesFile], { client })).rejects.toThrow("추천 저장 실패");
+    const beforeRetry = client.ingestions.slice();
+
+    await importStudyState(["--commit", "--history-file", fixture.historyFile, "--sources-file", fixture.sourcesFile], { client });
+    const retriedFirstReport = client.ingestions.slice(beforeRetry.length, beforeRetry.length + 3);
+
+    expect(beforeRetry).toHaveLength(3);
+    expect(retriedFirstReport.map((body) => body.idempotencyKey)).not.toEqual(beforeRetry.map((body) => body.idempotencyKey));
+    expect(retriedFirstReport.map((body) => body.expectedCursorVersion)).not.toEqual(beforeRetry.map((body) => body.expectedCursorVersion));
+    expect(retriedFirstReport.every((body) => String(body.idempotencyKey).startsWith("import:"))).toBe(true);
   });
 
   test("CLI dry-run은 fixture에서 리포트 3건과 자료 15건을 출력한다", async () => {

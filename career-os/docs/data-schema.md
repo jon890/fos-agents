@@ -920,7 +920,7 @@ HTTP 계약과 오류 코드는 [`flow.md`](flow.md#study-topic-recommender)가 
 
 후보풀은 `recentStudyTopicKeys` 로 직전 리포트의 공부 주제 키를 함께 담는다.
 
-선별 결과는 공부 주제 배열이다.
+선별 결과는 공부 주제 배열과 고르지 않은 후보의 `rejections` 다.
 
 | 필드 | 값 |
 | --- | --- |
@@ -931,6 +931,18 @@ HTTP 계약과 오류 코드는 [`flow.md`](flow.md#study-topic-recommender)가 
 
 각 추천 자료는 카테고리, 제목, 원문 URL, 출처, 요약, 추천 이유, 커리어 연결 유형을 가진다.
 연결 유형은 `current-work`, `target-role`, `engineering-judgment`, `product-business` 중 하나다.
+
+선택 단계는 리포트와 같은 `state/` 디렉터리에 `recommendation-request.json` 을 만든다.
+추천을 저장할 때 이 파일과 리포트를 함께 읽는다.
+
+| 필드 | 값 |
+| --- | --- |
+| `reportId` | 리포트의 `generatedAt` 에서 계산한 서울 날짜의 `morning-YYYY-MM-DD` |
+| `generatedAt` | 리포트와 같은 UTC ISO 시각 |
+| `candidateContextVersion` | 후보 조회에서 받은 비어 있지 않은 기준 버전 |
+| `rejections` | 고르지 않은 후보의 `candidateId` 와 한 줄 이유 |
+
+`reportId` 나 `generatedAt` 이 리포트와 다르거나 파일이 없으면 API 에 추천 저장 요청을 보내지 않는다.
 
 **고를 수 없는 것이 둘이다.** `previouslyRecommended: true` 인 후보와
 직전 리포트와 같은 `topicKey` 다.
@@ -995,7 +1007,8 @@ cursor 는 성공한 ingestion 만 교체한다. 충돌하면 기존 cursor 를 
 더 수집할 항목이 없으면 `done:true` 로 저장한다.
 처음부터 다시 수집할 때는 `--reset-cursor` 를 쓴다. 조합은 스킬의 `references/execution.md` 가 소유한다.
 
-추천 저장은 기존 `MorningReadingReport`를 API `recommendation-runs` payload로 변환해 보낸다.
+추천 저장은 `MorningReadingReport` 와 같은 디렉터리의 `recommendation-request.json` 을
+API `recommendation-runs` payload 로 변환해 보낸다.
 `reportId`는 서울 날짜의 `morning-YYYY-MM-DD`, `generatedAt`은 UTC ISO 문자열을 사용한다.
 HTML은 기존 렌더러가 만들며, Markdown 리포트는 만들지 않는다.
 HTML과 report JSON 검증이 끝난 뒤 `--commit-recommendation --report <RUN_DIR>/state/morning-reading.json` 명령이 같은 `generatedAt`을 재사용해 저장한다.

@@ -15,16 +15,34 @@ import { commitRecommendationRun, recordPublication, reportIdForMorningReading }
 
 const FEED_TIMEOUT_MS = 8_000;
 const actionFlags = ["--collect-only", "--prepare-candidates", "--reading-selection", "--commit-recommendation", "--record-publication"];
-const removedFlags = [`--commit-${"history"}`, `--history-${"file"}`, `--import-${"preview"}`, `--pages-${"manifest"}`];
 const hasFlag = (name: string) => process.argv.includes(name);
 const argument = (name: string) => { const value = firstOptionValue(process.argv, name); if (!value?.trim()) throw new StudyRunPathError(`${name} 값이 필요하다.`); return value; };
 
+const booleanOptions = new Set(["--collect-only", "--prepare-candidates", "--commit-recommendation", "--reset-cursor", "--record-publication", "--render-only"]);
+const valueOptions = new Set([
+  "--reading-selection", "--run-dir", "--source-key", "--mode", "--max-items",
+  "--category", "--published-from", "--published-to", "--limit", "--cursor", "--candidate-pool", "--report",
+  "--report-id", "--channel", "--external-id", "--published-at", "--url",
+]);
+
 function action(): string {
-  if (hasFlag("--library")) throw new StudyRunPathError("--library는 이제 기본이다, 빼고 다시 실행한다.");
-  const removed = removedFlags.find(hasFlag);
-  if (removed) throw new StudyRunPathError(`${removed}는 더 이상 지원하지 않는다.`);
-  const enabled = actionFlags.filter((flag) => flag === "--reading-selection" ? Boolean(firstOptionValue(process.argv, flag)) : hasFlag(flag));
-  if (enabled.length !== 1) throw new StudyRunPathError(`하위 동작 플래그 하나가 필요하다: ${actionFlags.join(", ")}`);
+  const args = process.argv.slice(2);
+  for (let index = 0; index < args.length; index += 1) {
+    const value = args[index];
+    if (value === "--library") throw new StudyRunPathError("--library는 이제 기본이다, 빼고 다시 실행한다.");
+    if (booleanOptions.has(value)) continue;
+    if (valueOptions.has(value)) {
+      const optionValue = args[index + 1];
+      if (!optionValue?.trim() || optionValue.startsWith("--")) throw new StudyRunPathError(`${value} 값이 필요하다.`);
+      index += 1;
+      continue;
+    }
+    if (value.startsWith("--")) throw new StudyRunPathError(`지원하지 않는 옵션: ${value}`);
+    throw new StudyRunPathError(`지원하지 않는 인자: ${value}`);
+  }
+
+  const enabled = args.filter((value) => actionFlags.includes(value) || value === "--render-only");
+  if (enabled.length !== 1) throw new StudyRunPathError(`하위 동작 플래그 하나가 필요하다: ${[...actionFlags, "--render-only"].join(", ")}`);
   return enabled[0];
 }
 function mode(): LibraryCollectMode { const value = firstOptionValue(process.argv, "--mode") ?? "recent"; if (value !== "recent" && value !== "archive") throw new StudyRunPathError("--mode는 recent 또는 archive여야 한다."); return value; }
@@ -52,12 +70,12 @@ async function select(root: string): Promise<void> {
   const artifacts = writeReportArtifacts({ report, outputDir: root }); console.log(JSON.stringify({ mode: "reading-selection", report: reportPath, ...artifacts }));
 }
 async function run(): Promise<void> {
-  if (hasFlag("--render-only")) {
+  const selectedAction = action();
+  if (selectedAction === "--render-only") {
     const root = resolveStudyRunRoot(process.env, firstOptionValue(process.argv, "--run-dir"));
     console.log(JSON.stringify({ mode: "render-only", ...renderExistingReport({ stateDir: join(root, "state"), outputDir: root }) }));
     return;
   }
-  const selectedAction = action();
   const root = resolveStudyRunRoot(process.env, firstOptionValue(process.argv, "--run-dir"));
   switch (selectedAction) {
     case "--collect-only": await collect(); return;

@@ -408,7 +408,7 @@ sequenceDiagram
 | 정상적인 빈 페이지를 확인했다 | 빈 `items` 와 다음 cursor 를 보낼 수 있다. 실패와 빈 상태를 구분한다 |
 | cursor version 이 달라졌다 | `409` 다. 기존 cursor 를 유지하고 그 소스는 다음 실행에서 다시 모은다 |
 | 후보가 0건이다 | 과거 자료로 채우지 않고 빈 상태의 리포트를 만든다. 추천 실행은 저장한다 |
-| 후보를 여러 페이지로 받는 중에 `historyVersion` 이 바뀌었다 | 다른 실행이 끼어든 것이다. 후보 조회를 처음부터 다시 한다 |
+| 후보를 여러 페이지로 받는 중에 `historyVersion` 이나 `candidateContextVersion` 이 바뀌었다 | 후보풀을 남기지 않고 중단한다. 다음 실행에서 처음부터 조회한다 |
 | 같은 날 두 번 저장한다 | `reportId` 가 서울 날짜의 `morning-YYYY-MM-DD` 라 두 번째는 `409` 다. 같은 멱등 키와 같은 본문이면 저장된 응답을 다시 준다 |
 | 이미 추천한 자료를 다시 저장하려 한다 | 서버가 `409` 로 거부한다. `study_recommended_materials.content_key` 가 UNIQUE 다 |
 | Backend 장애, 인증 실패 | 파일로 물러서지 않고 오류 코드와 `requestId` 를 알린 뒤 중단한다 |

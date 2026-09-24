@@ -23,7 +23,7 @@ export interface StudyLibraryCandidateFilters {
 
 export interface StudyLibraryCandidateMeta {
   historyVersion: number;
-  candidateContextVersion?: string;
+  candidateContextVersion: string;
   filters: {
     sourceKey?: string;
     category?: ReadingCategory;
@@ -161,9 +161,13 @@ export async function fetchStudyLibraryCandidatePool(input: {
     cursor = nextCursor;
   }
 
+  if (historyVersion === undefined || candidateContextVersion === undefined) {
+    throw new Error("후보 조회 결과에 기준 버전이 없다.");
+  }
+
   const meta: StudyLibraryCandidateMeta = {
-    historyVersion: historyVersion ?? 0,
-    candidateContextVersion: candidateContextVersion ?? "",
+    historyVersion,
+    candidateContextVersion,
     filters: {
       sourceKey: filters.sourceKey,
       category: filters.category,
@@ -202,7 +206,7 @@ export async function prepareStudyLibraryCandidates(input: {
     metaPath,
     candidateCount: pool.candidates.length,
     historyVersion: meta.historyVersion,
-    candidateContextVersion: meta.candidateContextVersion ?? "",
+    candidateContextVersion: meta.candidateContextVersion,
     nextCursor: meta.nextCursor,
   };
 }

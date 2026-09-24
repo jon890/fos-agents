@@ -48,7 +48,7 @@ test("CLI 경로 오류는 stack trace와 절대 경로를 출력하지 않는�
   const environment = { ...process.env };
   delete environment.CAREER_OS_ROOT;
   const expectedErrors = {
-    "build_morning_reading.ts": "하위 동작 플래그 하나가 필요하다: --collect-only, --prepare-candidates, --reading-selection, --commit-recommendation, --record-publication",
+    "build_morning_reading.ts": "하위 동작 플래그 하나가 필요하다: --collect-only, --prepare-candidates, --reading-selection, --commit-recommendation, --record-publication, --render-only",
     "validate_outputs.ts": "CAREER_OS_ROOT 또는 --run-dir에 시스템 임시 실행 경로를 지정해야 한다.",
   } as const;
   for (const [script, expectedError] of Object.entries(expectedErrors)) {

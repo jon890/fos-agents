@@ -33,4 +33,11 @@ describe("읽을거리 선택의 제외 판정", () => {
     expect(validateReadingSelection({ ...selected("candidate-1"), rejections: [{ candidateId: "candidate-1", reason: "겹침" }] }, pool))
       .toContain("추천 자료와 제외 자료가 겹친다: candidate-1");
   });
+
+  test("같은 제외 candidateId를 두 번 쓰면 거부한다", () => {
+    expect(validateReadingSelection({ ...selected("candidate-1"), rejections: [
+      { candidateId: "candidate-1", reason: "첫 판정" },
+      { candidateId: "candidate-1", reason: "두 번째 판정" },
+    ] }, pool)).toContain("중복 제외 candidateId: candidate-1");
+  });
 });

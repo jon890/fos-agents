@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -22,6 +23,17 @@ async function loadSourcesFromFile(path: string): Promise<ReadingSource[]> {
   return readingSourcesConfigSchema.parse(module.externalReadingSources).sources;
 }
 
+function canonicalJson(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  const record = value as Record<string, unknown>;
+  return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`).join(",")}}`;
+}
+
+function importIngestionKey(body: Omit<Record<string, unknown>, "idempotencyKey">): string {
+  return `import:${createHash("sha256").update(canonicalJson(body), "utf8").digest("hex")}`;
+}
+
 export async function importStudyState(args = process.argv.slice(2), options: ImportStudyStateOptions = {}) {
   const historyFile = firstOptionValue(args, "--history-file"); if (!historyFile) throw new Error("--history-file 값이 필요하다.");
   const sourcesFile = firstOptionValue(args, "--sources-file") ?? DEFAULT_SOURCES_FILE;
@@ -33,7 +45,7 @@ export async function importStudyState(args = process.argv.slice(2), options: Im
     const status = await client.getRecommendationRunStatus(report.reportId); if (status.exists) { skippedCount += 1; continue; }
     const entries = history.entries.filter((entry) => entry.reportId === report.reportId); const candidates = await client.getCandidates({ limit: 1 });
     const grouped = Map.groupBy(entries, (entry) => entry.sourceKey);
-    for (const [sourceKey, items] of grouped) { materialCount += items!.length; if (commit) { const cursor = await client.getSourceCursor(sourceKey!, "recent"); await client.createIngestion({ sourceKey, mode: "recent", cursor: cursor.cursor, expectedCursorVersion: cursor.version, idempotencyKey: `import:${report.reportId}:${sourceKey}`, items: items!.map((entry) => ({ contentKey: entry.contentKey, canonicalUrl: entry.canonicalUrl, url: entry.canonicalUrl, title: entry.title, published: "", publishedAt: null, excerpt: null, kind: configured.find((source) => source.key === sourceKey)?.adapter === "youtube" ? "feed-video" : "feed-article", tags: [], collectedAt: entry.recommendedAt })) }); } }
+    for (const [sourceKey, items] of grouped) { materialCount += items!.length; if (commit) { const cursor = await client.getSourceCursor(sourceKey!, "recent"); const ingestion = { sourceKey, mode: "recent" as const, cursor: cursor.cursor, expectedCursorVersion: cursor.version, items: items!.map((entry) => ({ contentKey: entry.contentKey, canonicalUrl: entry.canonicalUrl, url: entry.canonicalUrl, title: entry.title, published: "", publishedAt: null, excerpt: null, kind: configured.find((source) => source.key === sourceKey)?.adapter === "youtube" ? "feed-video" : "feed-article", tags: [], collectedAt: entry.recommendedAt })) }; await client.createIngestion({ ...ingestion, idempotencyKey: importIngestionKey(ingestion) }); } }
     if (commit) await client.createRecommendationRun({ reportId: report.reportId, generatedAt: report.recommendedAt, candidateContextVersion: candidates.candidateContextVersion, rejections: [], topics: Object.values(Object.groupBy(entries, (entry) => entry.studyTopicKey)).map((items) => ({ topicKey: items![0].studyTopicKey, title: items![0].studyTopic, careerQuestion: null, items: items!.map((entry) => ({ contentKey: entry.contentKey, summary: null, reason: null, careerValue: entry.careerValue })) })) });
   }
   return { sources: sourceCount, reports: history.reports.length, materials: materialCount, skipped: skippedCount };

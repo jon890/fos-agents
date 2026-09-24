@@ -414,7 +414,7 @@ describe("library collect-only CLI", () => {
     process.env.CAREER_OS_ROOT = directory;
     globalThis.fetch = (async (url: string | URL | Request) => {
       if (new URL(String(url)).pathname.endsWith("/sources")) return response({
-        sources: [{ sourceKey: "source-a", title: "Source", category: "techBlog", url: "https://example.com", feedUrl: null, adapter: "page", enabled: true, version: 0 }],
+        sources: [{ sourceKey: "source-a", title: "Source", category: "techBlog", url: "https://example.com", feedUrl: null, adapter: "page", enabled: true, version: 0, note: null }],
       }, { headers: { "Content-Type": "application/json" } });
       return response({ sourceKey: "source-a", mode: "recent", cursor: null, version: 0 }, { headers: { "Content-Type": "application/json" } });
     }) as unknown as typeof fetch;
@@ -435,7 +435,7 @@ describe("library collect-only CLI", () => {
     process.env.CAREER_RECOMMENDATION_API_URL = "https://study.example.com";
     process.env.CAREER_RECOMMENDATION_API_TOKEN = "test-token-123456789012345678901234567890";
     globalThis.fetch = (async () => response({
-      sources: [{ sourceKey: "kurly-tech", title: "Kurly", category: "techBlog", url: "https://helloworld.kurly.com", feedUrl: "https://helloworld.kurly.com/rss.xml", adapter: "feed", enabled: true, version: 0 }],
+      sources: [{ sourceKey: "kurly-tech", title: "Kurly", category: "techBlog", url: "https://helloworld.kurly.com", feedUrl: "https://helloworld.kurly.com/rss.xml", adapter: "feed", enabled: true, version: 0, note: null }],
     }, { headers: { "Content-Type": "application/json" } })) as unknown as typeof fetch;
     try {
       process.argv = [
@@ -490,7 +490,7 @@ describe("library collect-only CLI", () => {
       if (String(url) === "https://helloworld.kurly.com/rss.xml") {
         return response("<?xml version=\"1.0\"?><rss><channel></channel></rss>");
       }
-      if (init?.method === "GET" && parsedUrl.pathname.endsWith("/sources")) return response({ sources: [{ sourceKey: "kurly-tech", title: "Kurly", category: "techBlog", url: "https://helloworld.kurly.com", feedUrl: "https://helloworld.kurly.com/rss.xml", adapter: "feed", enabled: true, version: 0 }] }, { headers: { "Content-Type": "application/json" } });
+      if (init?.method === "GET" && parsedUrl.pathname.endsWith("/sources")) return response({ sources: [{ sourceKey: "kurly-tech", title: "Kurly", category: "techBlog", url: "https://helloworld.kurly.com", feedUrl: "https://helloworld.kurly.com/rss.xml", adapter: "feed", enabled: true, version: 0, note: null }] }, { headers: { "Content-Type": "application/json" } });
       if (init?.method === "PUT") {
         return response({
           source: {
@@ -502,6 +502,7 @@ describe("library collect-only CLI", () => {
             adapter: "page",
             enabled: true,
             version: 1,
+            note: null,
           },
           version: 1,
         }, { headers: { "Content-Type": "application/json" } });

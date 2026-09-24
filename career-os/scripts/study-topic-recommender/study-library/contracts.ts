@@ -22,7 +22,7 @@ export const studyLibrarySourceSchema = z.object({
   adapter: readingSourceAdapterIdSchema,
   enabled: z.boolean(),
   version: z.number().int().nonnegative(),
-  note: z.string().max(500).nullable().optional(),
+  note: z.string().max(500).nullable(),
 });
 
 export const studyLibrarySourcesResponseSchema = z.object({
@@ -93,47 +93,6 @@ export const studyLibraryPublicationResultSchema = z.object({
   publicationId: nonEmptyString,
 });
 
-export const studyLibraryImportItemSchema = z.object({
-  contentKey: nonEmptyString,
-  canonicalUrl: z.url().refine((value) => value.startsWith("https://"), {
-    message: "HTTPS URL이어야 한다.",
-  }),
-  sourceKey: nonEmptyString,
-  title: nonEmptyString,
-  category: readingCategorySchema,
-  summary: z.string().trim().min(1).max(300).nullable(),
-  reason: z.string().trim().min(1).max(300).nullable(),
-  careerValue: readingCareerValueSchema.nullable(),
-});
-
-export const studyLibraryImportTopicSchema = z.object({
-  topicKey: nonEmptyString,
-  title: nonEmptyString,
-  careerQuestion: z.string().trim().min(1).max(300).nullable(),
-  items: z.array(studyLibraryImportItemSchema).min(1),
-});
-
-export const studyLibraryImportReportSchema = z.object({
-  reportId: nonEmptyString,
-  generatedAt: z.iso.datetime(),
-  topics: z.array(studyLibraryImportTopicSchema).max(20),
-});
-
-export const studyLibraryImportPayloadSchema = z.object({
-  importKey: nonEmptyString,
-  reports: z.array(studyLibraryImportReportSchema).min(1).max(100),
-});
-
-export const studyLibraryImportDryRunResultSchema = z.object({
-  previewHash: nonEmptyString,
-  historyVersion: z.number().int().nonnegative(),
-  counts: z.record(z.string(), z.number().int().nonnegative()),
-  warnings: z.array(z.object({
-    code: nonEmptyString,
-    message: z.string(),
-  })),
-});
-
 export const studyLibraryApiErrorSchema = z.object({
   error: z.object({
     code: nonEmptyString,
@@ -192,10 +151,5 @@ export type StudyLibraryCandidate = z.infer<typeof studyLibraryCandidateSchema>;
 export type StudyLibraryCandidatePage = z.infer<typeof studyLibraryCandidatePageSchema>;
 export type StudyLibraryRecommendationRunResult = z.infer<typeof studyLibraryRecommendationRunResultSchema>;
 export type StudyLibraryPublicationResult = z.infer<typeof studyLibraryPublicationResultSchema>;
-export type StudyLibraryImportItem = z.infer<typeof studyLibraryImportItemSchema>;
-export type StudyLibraryImportTopic = z.infer<typeof studyLibraryImportTopicSchema>;
-export type StudyLibraryImportReport = z.infer<typeof studyLibraryImportReportSchema>;
-export type StudyLibraryImportPayload = z.infer<typeof studyLibraryImportPayloadSchema>;
-export type StudyLibraryImportDryRunResult = z.infer<typeof studyLibraryImportDryRunResultSchema>;
 export type StudyLibraryApiError = z.infer<typeof studyLibraryApiErrorSchema>;
 export type StudyLibrarySourcePutPayload = z.infer<typeof studyLibrarySourcePutPayloadSchema>;

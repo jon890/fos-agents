@@ -49,7 +49,7 @@ function source(row: RawRow): StudySource {
   return {
     sourceKey: String(row.source_key),
     title: String(row.title),
-    category: String(row.category),
+    category: row.category as StudySource["category"],
     url: row.url === null ? null : String(row.url),
     feedUrl: row.feed_url === null ? null : String(row.feed_url),
     adapter: row.adapter as StudySource["adapter"],
