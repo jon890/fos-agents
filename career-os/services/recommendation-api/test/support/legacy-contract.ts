@@ -2,7 +2,9 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 /** 전환 전 구현이 실제로 낸 값을 담은 포착 파일. 이 파일을 고쳐 테스트를 통과시키지 않는다. */
-const capturePath = fileURLToPath(new URL("../fixtures/legacy-contract/cases.json", import.meta.url));
+const capturePath = fileURLToPath(
+  new URL("../fixtures/legacy-contract/cases.json", import.meta.url),
+);
 
 export type LegacyRequest = {
   method: string;
@@ -74,8 +76,39 @@ function isGeneratedBody(body: unknown): body is GeneratedBody {
  * 그것을 알아보지 못하면 설명 객체를 그대로 보내 상한에 걸리지 않는다.
  */
 export function materializeLegacyBody(body: unknown): unknown {
-  if (!isGeneratedBody(body)) return body;
+  if (!isGeneratedBody(body)) {
+    const copy = structuredClone(body) as { results?: Array<Record<string, unknown>> } | undefined;
+    for (const result of copy?.results ?? []) {
+      if (!Array.isArray(result.signals) || !Array.isArray(result.evidence)) continue;
+      const evidence = result.evidence as Array<Record<string, unknown>>;
+      evidence.forEach((item, index) => {
+        item.id ??= `legacy-evidence-${index + 1}`;
+      });
+      for (const signal of result.signals as Array<Record<string, unknown>>) {
+        signal.evidenceIds ??= signal.level === "unknown" ? [] : evidence.map((item) => item.id);
+      }
+    }
+    return copy;
+  }
   const { totalBytes, padField } = body.generated;
   const overhead = JSON.stringify({ [padField]: "" }).length;
   return { [padField]: "a".repeat(totalBytes - overhead) };
+}
+
+/** 과거 포착값은 그대로 두고, 달라진 저장 계약만 비교 시점에 반영한다. */
+export function expectedLegacyAssessment(row: Record<string, unknown>): Record<string, unknown> {
+  const copy = structuredClone(row);
+  const evidence = copy.evidence_json as Array<Record<string, unknown>> | undefined;
+  const signals = copy.signals_json as Record<string, string> | undefined;
+  if (!evidence || !signals) return copy;
+  evidence.forEach((item, index) => {
+    item.id ??= `legacy-evidence-${index + 1}`;
+  });
+  copy.signals_json = Object.fromEntries(
+    Object.entries(signals).map(([axis, level]) => [
+      axis,
+      { level, evidenceIds: level === "unknown" ? [] : evidence.map((item) => item.id) },
+    ]),
+  );
+  return copy;
 }

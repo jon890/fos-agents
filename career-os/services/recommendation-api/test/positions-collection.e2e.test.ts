@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { stableUuid } from "../src/positions/hash.js";
 import { companyTierProvenanceFields } from "../src/positions/tier-provenance.js";
-import { legacyCase } from "./support/legacy-contract.js";
+import { legacyCase, materializeLegacyBody } from "./support/legacy-contract.js";
 import {
   maskVolatile,
   startE2eHarness,
@@ -269,14 +269,21 @@ describe("같은 실행에 동시에 온 두 요청", () => {
     const request = harness.legacyRequest("ok-08-post-company-tier-results");
     const path = `/api/positions/v1/company-tier-runs/${queue.companyTierRunId}/results`;
     const [first, second] = await Promise.all([
-      send("POST", path, { body: request.body, idempotencyKey: "concurrent-a" }),
-      send("POST", path, { body: request.body, idempotencyKey: "concurrent-b" }),
+      send("POST", path, {
+        body: materializeLegacyBody(request.body),
+        idempotencyKey: "concurrent-a",
+      }),
+      send("POST", path, {
+        body: materializeLegacyBody(request.body),
+        idempotencyKey: "concurrent-b",
+      }),
     ]);
 
     const replies = [first, second];
     expect(
-      replies.filter((reply) => reply.status === 200 && (reply.json as { applied: boolean }).applied)
-        .length,
+      replies.filter(
+        (reply) => reply.status === 200 && (reply.json as { applied: boolean }).applied,
+      ).length,
       "실제로 반영한 요청 수",
     ).toBe(1);
     for (const reply of replies) {
@@ -289,12 +296,20 @@ describe("같은 실행에 동시에 온 두 요청", () => {
     const assessments = await harness.prisma.$queryRaw<{ company_key: string }[]>`
       SELECT company_key FROM company_tier_assessments ORDER BY company_key
     `;
-    expect(assessments.map((row) => row.company_key), "저장된 평가").toEqual(["회사 1", "회사 2"]);
-    const items = await harness.prisma.$queryRaw<{ attempt_count: number; result_status: string }[]>`
+    expect(
+      assessments.map((row) => row.company_key),
+      "저장된 평가",
+    ).toEqual(["회사 1", "회사 2"]);
+    const items = await harness.prisma.$queryRaw<
+      { attempt_count: number; result_status: string }[]
+    >`
       SELECT attempt_count, result_status FROM company_tier_assessment_run_items
       ORDER BY selection_order
     `;
-    expect(items.map((row) => Number(row.attempt_count)), "시도 횟수").toEqual([1, 1]);
+    expect(
+      items.map((row) => Number(row.attempt_count)),
+      "시도 횟수",
+    ).toEqual([1, 1]);
     expect(items.map((row) => row.result_status)).toEqual(["created", "created"]);
   });
 });
@@ -386,11 +401,17 @@ describe("회사 tier 평가를 다시 부르지 않는다", () => {
       confidence: "medium" as const,
       reason: "공개 자료로 성장 범위를 확인했다.",
       signals: [
-        { axis: "growth-scope" as const, level: "medium" as const },
+        {
+          axis: "growth-scope" as const,
+          level: "medium" as const,
+          evidenceIds: ["fixture-evidence"],
+        },
         { axis: "compensation-upside" as const, level: "unknown" as const },
         { axis: "team-growth" as const, level: "unknown" as const },
       ],
-      evidence: [{ url: "https://example.com/company", checkedAt: "2026-09-17" }],
+      evidence: [
+        { id: "fixture-evidence", url: "https://example.com/company", checkedAt: "2026-09-17" },
+      ],
       assumptions: [],
     };
   }
@@ -401,8 +422,11 @@ describe("회사 tier 평가를 다시 부르지 않는다", () => {
       body: pool(runId, companies),
     });
     expect(reply.status, `${runId} 수집 status`).toBe(201);
-    return (reply.json as { companyTierQueue: { companyTierRunId: string; companies: { companyKey: string }[] } })
-      .companyTierQueue;
+    return (
+      reply.json as {
+        companyTierQueue: { companyTierRunId: string; companies: { companyKey: string }[] };
+      }
+    ).companyTierQueue;
   }
 
   async function assess(runId: string, companyTierRunId: string, keys: string[], key: string) {
@@ -469,7 +493,9 @@ async function companyTierQueue(): Promise<{
   collectionRunId: string;
   companies: { companyKey: string }[];
 }> {
-  const rows = await harness.prisma.$queryRaw<{ company_tier_run_id: string; collection_run_id: string }[]>`
+  const rows = await harness.prisma.$queryRaw<
+    { company_tier_run_id: string; collection_run_id: string }[]
+  >`
     SELECT company_tier_run_id, collection_run_id FROM company_tier_assessment_runs
   `;
   const run = rows[0]!;
@@ -722,10 +748,9 @@ describe("수집 실행과 정책의 행 잠금과 저장된 출처", () => {
     for (const reply of [firstRun, secondRun]) {
       expect(reply.status, "동시 분석 실행 생성 요청의 status").toBe(201);
     }
-    expect(
-      maskVolatile(secondRun.json, ["generatedAt"]),
-      "두 분석 실행 응답의 본문",
-    ).toEqual(maskVolatile(firstRun.json, ["generatedAt"]));
+    expect(maskVolatile(secondRun.json, ["generatedAt"]), "두 분석 실행 응답의 본문").toEqual(
+      maskVolatile(firstRun.json, ["generatedAt"]),
+    );
     await expectRowCount("position_analysis_runs", 1, "분석 실행 수");
     await expectRowCount("position_analysis_run_items", 2, "분석 실행 항목 수");
   });
@@ -850,10 +875,7 @@ describe("수집 실행과 정책의 행 잠금과 저장된 출처", () => {
       { company: "회사 1", key: "p-3" },
     ]);
     expect(queue.companies, "평가 대상 회사 수").toHaveLength(1);
-    expect(
-      queue.companies[0]!.representativePostingUrls,
-      "대표 공고 URL 셋",
-    ).toEqual([
+    expect(queue.companies[0]!.representativePostingUrls, "대표 공고 URL 셋").toEqual([
       "https://example.com/jobs/p-1",
       "https://example.com/jobs/p-2",
       "https://example.com/jobs/p-3",

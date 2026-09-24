@@ -105,11 +105,17 @@ function tierResult(companyKey: string, tier: number) {
     confidence: "medium" as const,
     reason: "공개 자료로 성장 범위를 확인했다.",
     signals: [
-      { axis: "growth-scope" as const, level: "medium" as const },
+      {
+        axis: "growth-scope" as const,
+        level: "medium" as const,
+        evidenceIds: ["fixture-evidence"],
+      },
       { axis: "compensation-upside" as const, level: "unknown" as const },
       { axis: "team-growth" as const, level: "unknown" as const },
     ],
-    evidence: [{ url: "https://example.com/company", checkedAt: "2026-09-17" }],
+    evidence: [
+      { id: "fixture-evidence", url: "https://example.com/company", checkedAt: "2026-09-17" },
+    ],
     assumptions: [],
   };
 }
@@ -289,11 +295,7 @@ function resultsBody(
   return { schemaVersion: 2, collectionRunId, results, failures } as AnalysisResultsRequest;
 }
 
-async function submitResults(
-  runId: string,
-  body: unknown,
-  key: string,
-): Promise<Reply> {
+async function submitResults(runId: string, body: unknown, key: string): Promise<Reply> {
   return send("POST", `/api/positions/v1/analysis-runs/${runId}/results`, {
     idempotencyKey: key,
     body,
@@ -396,7 +398,10 @@ describe("회사 tier 해결", () => {
       companyTier: 3,
       companyTierSource: "model",
     });
-    expect(byCompany.get("회사 오")!.companyTierAssessmentId, "model 출처의 평가 ID").not.toBeNull();
+    expect(
+      byCompany.get("회사 오")!.companyTierAssessmentId,
+      "model 출처의 평가 ID",
+    ).not.toBeNull();
     expect(byCompany.get("회사 디"), "기본값으로 해결한 회사").toMatchObject({
       companyTier: 2,
       companyTierSource: "default",
@@ -534,11 +539,7 @@ describe("분석 결과 반영", () => {
     const body = structuredClone(request.body) as { results: { positionId: string }[] };
     body.results[0]!.positionId = positionIds[0]!;
     body.results[1]!.positionId = positionIds[1]!;
-    const reply = await submitResults(
-      await analysisRunId(),
-      body,
-      request.headers.idempotencyKey!,
-    );
+    const reply = await submitResults(await analysisRunId(), body, request.headers.idempotencyKey!);
     harness.expectMatchesLegacy("ok-10-post-analysis-results", reply);
     await harness.expectMatchesLegacyDatabase("ok-10-post-analysis-results");
     expect(await inconsistentCreatedOrigins(), "ADR-119 정합성 조회 결과 행 수").toBe(0);
@@ -552,11 +553,7 @@ describe("분석 결과 반영", () => {
     const request = harness.legacyRequest("err-14-analysis-results-partial-submission");
     const body = structuredClone(request.body) as { results: { positionId: string }[] };
     body.results[0]!.positionId = positionIds[0]!;
-    const reply = await submitResults(
-      await analysisRunId(),
-      body,
-      request.headers.idempotencyKey!,
-    );
+    const reply = await submitResults(await analysisRunId(), body, request.headers.idempotencyKey!);
     harness.expectMatchesLegacyError("err-14-analysis-results-partial-submission", reply);
     await harness.expectMatchesLegacyDatabase("err-14-analysis-results-partial-submission");
   });
@@ -570,11 +567,7 @@ describe("분석 결과 반영", () => {
     };
     body.results[0]!.positionId = positionIds[0]!;
     body.failures[0]!.positionId = positionIds[1]!;
-    const reply = await submitResults(
-      await analysisRunId(),
-      body,
-      request.headers.idempotencyKey!,
-    );
+    const reply = await submitResults(await analysisRunId(), body, request.headers.idempotencyKey!);
     harness.expectMatchesLegacy("err-16-analysis-run-partial", reply);
     await harness.expectMatchesLegacyDatabase("err-16-analysis-run-partial");
   });
@@ -638,8 +631,9 @@ describe("같은 분석 실행에 동시에 온 두 요청", () => {
 
     const replies = [first, second];
     expect(
-      replies.filter((reply) => reply.status === 200 && (reply.json as { applied: boolean }).applied)
-        .length,
+      replies.filter(
+        (reply) => reply.status === 200 && (reply.json as { applied: boolean }).applied,
+      ).length,
       "실제로 반영한 요청 수",
     ).toBe(1);
     for (const reply of replies) {
@@ -708,9 +702,7 @@ describe("동률인 평가 가운데 이기는 행", () => {
       expect(queue.companies, `${runId} 은 유효한 평가가 있어 다시 평가하지 않는다`).toEqual([]);
       const analysis = await openQueue(runId);
       tiers.push(analysis.candidates[0]!.companyTier);
-      const item = await harness.prisma.$queryRaw<
-        { company_tier_assessment_id: string | null }[]
-      >`
+      const item = await harness.prisma.$queryRaw<{ company_tier_assessment_id: string | null }[]>`
         SELECT company_tier_assessment_id FROM position_analysis_run_items
         WHERE analysis_run_id = ${analysis.analysisRunId}
       `;

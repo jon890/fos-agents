@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { AnalysisQueueResponse, RecommendationResponse } from "../src/positions/schema.js";
-import { legacyCase } from "./support/legacy-contract.js";
+import { legacyCase, materializeLegacyBody } from "./support/legacy-contract.js";
 import { startE2eHarness, type E2eHarness, type Reply } from "./support/e2e-harness.js";
 
 let harness: E2eHarness;
@@ -105,11 +105,17 @@ function tierResult(companyKey: string, tier: number) {
     confidence: "medium" as const,
     reason: "공개 자료로 성장 범위를 확인했다.",
     signals: [
-      { axis: "growth-scope" as const, level: "medium" as const },
+      {
+        axis: "growth-scope" as const,
+        level: "medium" as const,
+        evidenceIds: ["fixture-evidence"],
+      },
       { axis: "compensation-upside" as const, level: "unknown" as const },
       { axis: "team-growth" as const, level: "unknown" as const },
     ],
-    evidence: [{ url: "https://example.com/company", checkedAt: "2026-09-17" }],
+    evidence: [
+      { id: "fixture-evidence", url: "https://example.com/company", checkedAt: "2026-09-17" },
+    ],
     assumptions: [],
   };
 }
@@ -255,7 +261,7 @@ async function replayGivenWithLiveIds(id: string): Promise<void> {
       for (const failure of body.failures ?? []) failure.positionId = positionIds[cursor++]!;
     }
     const reply = await send(request.method, request.path, {
-      body: request.body,
+      body: materializeLegacyBody(request.body),
       idempotencyKey: request.headers.idempotencyKey ?? undefined,
     });
     expect(reply.status, `${id} 의 선행 요청 ${entry.label}`).toBe(entry.responseStatus);
@@ -289,10 +295,9 @@ describe("추천 실행 생성", () => {
     const reply = await sendLegacyRecommendation("ok-11-post-recommendation-run");
     harness.expectMatchesLegacy("ok-11-post-recommendation-run", reply);
     await harness.expectMatchesLegacyDatabase("ok-11-post-recommendation-run");
-    expect(
-      (reply.json as RecommendationResponse).schemaVersion,
-      "추천 응답의 schemaVersion",
-    ).toBe(1);
+    expect((reply.json as RecommendationResponse).schemaVersion, "추천 응답의 schemaVersion").toBe(
+      1,
+    );
   });
 
   it("분석 대상이 없으면 재사용 수와 분석 대기 수와 수집 진단을 담는다", async () => {
@@ -315,7 +320,11 @@ describe("추천 실행 생성", () => {
     const ranking = (reply.json as RecommendationResponse).ranking;
     const byCompany = new Map(ranking.map((entry) => [entry.company, entry]));
     const model = byCompany.get("회사 2")!;
-    expect(Object.keys(model).filter((key) => key.startsWith("companyTier")).sort()).toEqual([
+    expect(
+      Object.keys(model)
+        .filter((key) => key.startsWith("companyTier"))
+        .sort(),
+    ).toEqual([
       "companyTier",
       "companyTierAssessedAt",
       "companyTierAssessmentId",
@@ -353,7 +362,10 @@ describe("추천 실행 생성", () => {
     const reply = await createRecommendation(analysis.analysisRunId);
     expect(reply.status).toBe(201);
     const body = reply.json as RecommendationResponse;
-    expect(body.ranking.map((entry) => entry.company), "순위에 오른 회사").toEqual(["회사 1"]);
+    expect(
+      body.ranking.map((entry) => entry.company),
+      "순위에 오른 회사",
+    ).toEqual(["회사 1"]);
     expect(body.pendingCandidates, "분석 대기 목록").toHaveLength(1);
     expect(body.pendingCandidates[0]).toMatchObject({
       company: "회사 2",
@@ -416,10 +428,7 @@ describe("실행 조회", () => {
     expect(created.status).toBe(201);
     const recommendation = created.json as RecommendationResponse;
 
-    const reply = await send(
-      "GET",
-      `/api/positions/v1/runs/${recommendation.recommendationRunId}`,
-    );
+    const reply = await send("GET", `/api/positions/v1/runs/${recommendation.recommendationRunId}`);
     expect(reply.status).toBe(200);
     expect(reply.json, "다시 읽은 추천 응답").toEqual(recommendation);
     expect(await recommendationRunCount(), "저장된 추천 실행 수").toBe(1);

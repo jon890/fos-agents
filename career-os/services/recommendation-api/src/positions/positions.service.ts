@@ -508,7 +508,6 @@ export class PositionsService {
     });
   }
 
-
   /**
    * 분석 실행 하나에 추천을 만든다.
    *
@@ -598,11 +597,7 @@ export class PositionsService {
       ],
       tx,
     );
-    const upserted = await this.repository.upsertPositions(
-      postings,
-      request.pool.collectedAt,
-      tx,
-    );
+    const upserted = await this.repository.upsertPositions(postings, request.pool.collectedAt, tx);
     await this.repository.markMissingPositionsNotSeen(
       request.pool.sourceDiagnostics
         .filter((diagnostic) => diagnostic.status === "ok")
@@ -722,7 +717,16 @@ export class PositionsService {
         recommendedTier: result.recommendedTier,
         confidence: result.confidence,
         reason: result.reason,
-        signals: Object.fromEntries(result.signals.map((signal) => [signal.axis, signal.level])),
+        assessment: result.assessment ?? null,
+        signals: Object.fromEntries(
+          result.signals.map((signal) => [
+            signal.axis,
+            {
+              level: signal.level,
+              evidenceIds: signal.evidenceIds,
+            },
+          ]),
+        ),
         evidence: structuredClone(result.evidence),
         assumptions: [...result.assumptions],
         assessedAt: now,
@@ -914,7 +918,6 @@ export class PositionsService {
     });
   }
 
-
   // ------------------------------------------------------------------ 추천 조립
 
   /** 사람 override, 유효한 모델 평가, 정책 기본값 순으로 회사 tier 를 정한다. */
@@ -926,7 +929,7 @@ export class PositionsService {
     const preference = inputs.preferences.get(key);
     if (preference) return { tier: preference.tier, source: "manual", assessment: undefined };
     const assessment = inputs.validAssessments.get(key);
-    if (assessment) {
+    if (assessment && assessment.recommendedTier !== null) {
       return { tier: assessment.recommendedTier, source: "model", assessment };
     }
     return { tier: policy.defaultCompanyTier, source: "default", assessment: undefined };
@@ -1040,18 +1043,16 @@ export class PositionsService {
         personalExcludedCount: inputs.personalExcludedCount,
         pendingCandidates: parsed.pendingCandidates,
       },
-      ranked.map(
-        (entry, index): RecommendationItemRow => ({
-          positionId: entry.position.positionId,
-          analysisId: entry.analysis.analysisId,
-          rankNumber: index + 1,
-          decision: entry.analysis.decision,
-          companyTier: entry.tier,
-          companyTierSource: entry.source,
-          companyTierAssessmentId:
-            entry.source === "model" ? (entry.assessment?.companyTierAssessmentId ?? null) : null,
-        }),
-      ),
+      ranked.map((entry, index): RecommendationItemRow => ({
+        positionId: entry.position.positionId,
+        analysisId: entry.analysis.analysisId,
+        rankNumber: index + 1,
+        decision: entry.analysis.decision,
+        companyTier: entry.tier,
+        companyTierSource: entry.source,
+        companyTierAssessmentId:
+          entry.source === "model" ? (entry.assessment?.companyTierAssessmentId ?? null) : null,
+      })),
       tx,
     );
     return parsed;
@@ -1080,9 +1081,7 @@ export class PositionsService {
       companyTier: item.companyTier,
       ...companyTierProvenanceFields(
         item.companyTierSource,
-        item.companyTierAssessmentId
-          ? assessments.get(item.companyTierAssessmentId)
-          : undefined,
+        item.companyTierAssessmentId ? assessments.get(item.companyTierAssessmentId) : undefined,
       ),
       decision: item.decision,
       fitScore: item.fitScore,
@@ -1101,10 +1100,7 @@ export class PositionsService {
     for (const entry of [...ranking, ...pendingCandidates]) {
       sourceByCompany.set(companyKey(entry.company), entry.companyTierSource ?? "default");
     }
-    const diagnostics = await this.repository.listCollectionDiagnostics(
-      stored.collectionRunId,
-      tx,
-    );
+    const diagnostics = await this.repository.listCollectionDiagnostics(stored.collectionRunId, tx);
     const tierRun = await this.repository.findCompanyTierRunByCollectionRun(
       stored.collectionRunId,
       tx,
@@ -1248,7 +1244,7 @@ export class PositionsService {
     }
     const manualCount = companyKeys.filter((key) => preferences.has(key)).length;
     const modelCount = companyKeys.filter(
-      (key) => !preferences.has(key) && valid.has(key),
+      (key) => !preferences.has(key) && valid.get(key)?.recommendedTier != null,
     ).length;
     return companyTierQueueResponseSchema.parse({
       schemaVersion: 1,

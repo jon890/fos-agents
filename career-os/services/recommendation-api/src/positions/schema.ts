@@ -249,11 +249,13 @@ export const companyTierSignalSchema = z
   .object({
     axis: companyTierSignalAxisSchema,
     level: z.enum(["low", "medium", "high", "unknown"]),
+    evidenceIds: z.array(nonEmpty).default([]),
   })
   .strict();
 
 export const companyTierEvidenceSchema = z
   .object({
+    id: nonEmpty.optional(),
     url: httpsUrl,
     title: nonEmpty.optional(),
     publishedAt: dateOnly.optional(),
@@ -265,12 +267,13 @@ export const companyTierEvidenceSchema = z
 export const companyTierResultSchema = z
   .object({
     companyKey: nonEmpty,
-    recommendedTier: z.number().int().min(1).max(3),
-    confidence: z.enum(["low", "medium", "high"]),
+    recommendedTier: z.number().int().min(1).max(3).nullable(),
+    confidence: z.enum(["low", "medium", "high"]).nullable(),
     // 이 값이 공개 HTML 에 그대로 실리므로 들어오는 자리에서 길이를 막는다.
     reason: nonEmpty.max(companyTierReasonMaxLength),
+    assessment: z.string().trim().max(2000).optional(),
     signals: z.array(companyTierSignalSchema).length(3),
-    evidence: z.array(companyTierEvidenceSchema).min(1),
+    evidence: z.array(companyTierEvidenceSchema).default([]),
     assumptions: z.array(nonEmpty).default([]),
     validUntil: dateOnly.optional(),
   })
@@ -283,6 +286,25 @@ export const companyTierResultSchema = z
         path: ["signals"],
         message: "성장 범위와 보상 상승과 팀 성장 신호가 한 번씩 필요합니다.",
       });
+    }
+    const ids = new Set(result.evidence.map((entry) => entry.id).filter(Boolean));
+    for (const [index, signal] of result.signals.entries()) {
+      if (signal.level !== "unknown" && signal.evidenceIds.length === 0) {
+        context.addIssue({
+          code: "custom",
+          path: ["signals", index, "evidenceIds"],
+          message: "등급을 매긴 축에는 근거 ID가 필요합니다.",
+        });
+      }
+      for (const id of signal.evidenceIds) {
+        if (!ids.has(id)) {
+          context.addIssue({
+            code: "custom",
+            path: ["signals", index, "evidenceIds"],
+            message: "근거 ID가 evidence에 없습니다.",
+          });
+        }
+      }
     }
   });
 
@@ -352,7 +374,6 @@ export function refineCompanyTierProvenance(
     ["companyTierAssessmentId", value.companyTierAssessmentId],
     ["companyTierAssessedAt", value.companyTierAssessedAt],
     ["companyTierValidUntil", value.companyTierValidUntil],
-    ["companyTierConfidence", value.companyTierConfidence],
     ["companyTierReason", value.companyTierReason],
   ] as const;
   if (value.companyTierSource === "model") {
@@ -365,13 +386,6 @@ export function refineCompanyTierProvenance(
         });
       }
     }
-    if (value.companyTierEvidenceUrls.length === 0) {
-      context.addIssue({
-        code: "custom",
-        path: ["companyTierEvidenceUrls"],
-        message: "모델 평가 tier에는 근거 URL이 하나 이상 필요합니다.",
-      });
-    }
     return;
   }
   for (const [path, field] of modelOnly) {
@@ -382,6 +396,13 @@ export function refineCompanyTierProvenance(
         message: "사람 override와 기본 tier에는 모델 평가 정보를 담지 않습니다.",
       });
     }
+  }
+  if (value.companyTierConfidence !== undefined) {
+    context.addIssue({
+      code: "custom",
+      path: ["companyTierConfidence"],
+      message: "사람 override와 기본 tier에는 모델 평가 정보를 담지 않습니다.",
+    });
   }
   if (value.companyTierEvidenceUrls.length > 0) {
     context.addIssue({

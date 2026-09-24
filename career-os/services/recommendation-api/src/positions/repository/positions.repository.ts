@@ -1160,7 +1160,7 @@ export class PositionsRepository {
     const rows = await client.$queryRaw<RawRow[]>`
       SELECT company_tier_assessment_id, company_key, company_name, candidate_context_version,
              contract_version, created_by_company_tier_run_id, recommended_tier, confidence,
-             reason, signals_json, evidence_json, assumptions_json, assessed_at, valid_until
+             reason, assessment, signals_json, evidence_json, assumptions_json, assessed_at, valid_until
       FROM company_tier_assessments
       WHERE company_key IN (${Prisma.join(companyKeys)})
         AND candidate_context_version = ${candidateContextVersion}
@@ -1184,7 +1184,7 @@ export class PositionsRepository {
     const rows = await client.$queryRaw<RawRow[]>`
       SELECT company_tier_assessment_id, company_key, company_name, candidate_context_version,
              contract_version, created_by_company_tier_run_id, recommended_tier, confidence,
-             reason, signals_json, evidence_json, assumptions_json, assessed_at, valid_until
+             reason, assessment, signals_json, evidence_json, assumptions_json, assessed_at, valid_until
       FROM company_tier_assessments
       WHERE company_key IN (${Prisma.join(companyKeys)})
         AND candidate_context_version = ${candidateContextVersion}
@@ -1207,9 +1207,10 @@ export class PositionsRepository {
         row.created_by_company_tier_run_id === null
           ? null
           : String(row.created_by_company_tier_run_id),
-      recommendedTier: number(row.recommended_tier),
-      confidence: row.confidence as "low" | "medium" | "high",
+      recommendedTier: row.recommended_tier === null ? null : number(row.recommended_tier),
+      confidence: row.confidence as "low" | "medium" | "high" | null,
       reason: String(row.reason),
+      assessment: row.assessment === null ? null : String(row.assessment),
       signals: jsonValue<Record<string, unknown>>(row.signals_json),
       evidence: jsonValue<unknown[]>(row.evidence_json),
       assumptions: jsonValue<string[]>(row.assumptions_json),
@@ -1228,11 +1229,11 @@ export class PositionsRepository {
         INSERT INTO company_tier_assessments
           (company_tier_assessment_id, company_key, company_name, candidate_context_version,
            contract_version, created_by_company_tier_run_id, recommended_tier, confidence,
-           reason, signals_json, evidence_json, assumptions_json, assessed_at, valid_until)
+           reason, assessment, signals_json, evidence_json, assumptions_json, assessed_at, valid_until)
         VALUES (${assessment.companyTierAssessmentId}, ${assessment.companyKey},
                 ${assessment.companyName}, ${assessment.candidateContextVersion},
                 ${assessment.contractVersion}, ${assessment.createdByCompanyTierRunId},
-                ${assessment.recommendedTier}, ${assessment.confidence}, ${assessment.reason},
+                ${assessment.recommendedTier}, ${assessment.confidence}, ${assessment.reason}, ${assessment.assessment ?? null},
                 ${JSON.stringify(assessment.signals)}, ${JSON.stringify(assessment.evidence)},
                 ${JSON.stringify(assessment.assumptions)}, ${at(assessment.assessedAt)},
                 ${assessment.validUntil})
@@ -1341,9 +1342,7 @@ export class PositionsRepository {
           companyTier: number(row.company_tier),
           companyTierSource: row.company_tier_source as CompanyTierSource,
           companyTierAssessmentId:
-            row.company_tier_assessment_id === null
-              ? null
-              : String(row.company_tier_assessment_id),
+            row.company_tier_assessment_id === null ? null : String(row.company_tier_assessment_id),
           resultStatus: row.result_status as "pending" | "created" | "reused" | "failed",
           analysisId: row.analysis_id === null ? null : String(row.analysis_id),
           failureCode: (row.failure_code ?? null) as AnalysisFailureCode | null,
@@ -1380,11 +1379,11 @@ export class PositionsRepository {
                AS company_tier,
              CASE
                WHEN pref.company_key IS NOT NULL THEN 'manual'
-               WHEN valid.company_tier_assessment_id IS NOT NULL THEN 'model'
+               WHEN valid.recommended_tier IS NOT NULL THEN 'model'
                ELSE 'default'
              END AS company_tier_source,
              CASE
-               WHEN pref.company_key IS NULL THEN valid.company_tier_assessment_id
+               WHEN pref.company_key IS NULL AND valid.recommended_tier IS NOT NULL THEN valid.company_tier_assessment_id
                ELSE NULL
              END AS company_tier_assessment_id
       FROM position_collection_items pci
@@ -1495,9 +1494,7 @@ export class PositionsRepository {
         AND candidate_context_version = ${candidateContextVersion}
         AND contract_version = ${contractVersion}
     `;
-    return new Map(
-      rows.map((row) => [String(row.position_version_id), String(row.analysis_id)]),
-    );
+    return new Map(rows.map((row) => [String(row.position_version_id), String(row.analysis_id)]));
   }
 
   async insertAnalysisRun(
@@ -1659,9 +1656,7 @@ export class PositionsRepository {
         details: jsonValue<unknown[]>(row.details_json),
         nextActions: jsonValue<string[]>(row.next_actions_json),
         createdByAnalysisRunId:
-          row.created_by_analysis_run_id === null
-            ? null
-            : String(row.created_by_analysis_run_id),
+          row.created_by_analysis_run_id === null ? null : String(row.created_by_analysis_run_id),
       });
     }
     return latest;
@@ -1717,10 +1712,7 @@ export class PositionsRepository {
     };
   }
 
-  async countFailedCompanyTierItems(
-    companyTierRunId: string,
-    client: DbClient,
-  ): Promise<number> {
+  async countFailedCompanyTierItems(companyTierRunId: string, client: DbClient): Promise<number> {
     const rows = await client.$queryRaw<RawRow[]>`
       SELECT COUNT(*) AS failed_count FROM company_tier_assessment_run_items
       WHERE company_tier_run_id = ${companyTierRunId} AND result_status = 'failed'
@@ -1737,7 +1729,7 @@ export class PositionsRepository {
     const rows = await client.$queryRaw<RawRow[]>`
       SELECT company_tier_assessment_id, company_key, company_name, candidate_context_version,
              contract_version, created_by_company_tier_run_id, recommended_tier, confidence,
-             reason, signals_json, evidence_json, assumptions_json, assessed_at, valid_until
+             reason, assessment, signals_json, evidence_json, assumptions_json, assessed_at, valid_until
       FROM company_tier_assessments
       WHERE company_tier_assessment_id IN (${Prisma.join(ids)})
     `;
@@ -1863,7 +1855,10 @@ export class PositionsRepository {
       WHERE recommendation_run_id = ${id}
     `;
     if (storedRows[0]) {
-      return { kind: "recommendation", recommendationRunId: String(storedRows[0].recommendation_run_id) };
+      return {
+        kind: "recommendation",
+        recommendationRunId: String(storedRows[0].recommendation_run_id),
+      };
     }
     const openRows = await client.$queryRaw<RawRow[]>`
       SELECT r.analysis_run_id FROM position_analysis_runs r

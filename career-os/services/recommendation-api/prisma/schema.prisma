@@ -61,9 +61,10 @@ model company_tier_assessments {
   candidate_context_version         String
   contract_version                  Int                                 @db.UnsignedInt
   created_by_company_tier_run_id    String?                             @db.Char(36)
-  recommended_tier                  Int                                 @db.UnsignedTinyInt
-  confidence                        company_tier_assessments_confidence
+  recommended_tier                  Int?                                @db.UnsignedTinyInt
+  confidence                        company_tier_assessments_confidence?
   reason                            String                              @db.Text
+  assessment                        String?                             @db.Text
   signals_json                      Json
   evidence_json                     Json
   assumptions_json                  Json

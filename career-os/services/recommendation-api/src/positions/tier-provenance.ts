@@ -31,7 +31,7 @@ export function companyTierProvenanceFields(
     companyTierAssessmentId: assessment.companyTierAssessmentId,
     companyTierAssessedAt: assessment.assessedAt,
     companyTierValidUntil: assessment.validUntil,
-    companyTierConfidence: assessment.confidence,
+    ...(assessment.confidence === null ? {} : { companyTierConfidence: assessment.confidence }),
     companyTierReason: assessment.reason,
     companyTierEvidenceUrls: evidenceUrls(assessment),
   };

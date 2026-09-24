@@ -11,6 +11,7 @@ import {
   legacyApiToken,
   legacyCase,
   legacyComparedColumns,
+  expectedLegacyAssessment,
   materializeLegacyBody,
   type LegacyErrorBody,
   type LegacyGiven,
@@ -214,7 +215,11 @@ export async function startE2eHarness(): Promise<E2eHarness> {
             ]),
           ),
         );
-        expect(actual, `${id} 뒤의 ${table} 행`).toEqual(expectedRows);
+        expect(actual, `${id} 뒤의 ${table} 행`).toEqual(
+          table === "company_tier_assessments"
+            ? expectedRows.map(expectedLegacyAssessment)
+            : expectedRows,
+        );
       }
     },
     /**
