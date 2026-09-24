@@ -20,6 +20,15 @@ import {
 
 /** `schema_migrations` 와 `_prisma_migrations` 를 뺀 운영 table 전부. 자식 table 이 앞이다. */
 const DATA_TABLES = [
+  "study_material_verdicts",
+  "study_recommended_materials",
+  "study_recommendation_topics",
+  "study_publications",
+  "study_recommendation_runs",
+  "study_material_sources",
+  "study_source_cursors",
+  "study_materials",
+  "study_sources",
   "position_recommendation_items",
   "position_recommendation_runs",
   "position_analysis_run_items",
@@ -232,6 +241,9 @@ export async function startE2eHarness(): Promise<E2eHarness> {
       for (const table of DATA_TABLES) {
         await prisma.$executeRawUnsafe(`DELETE FROM ${table}`);
       }
+      await prisma.$executeRawUnsafe(
+        "UPDATE study_recommendation_control SET candidate_context_version = 'initial', history_version = 0, updated_at = NOW(3) WHERE singleton_id = 1",
+      );
     },
     async close() {
       await app.close();

@@ -169,6 +169,11 @@ export const readingSelectionItemSchema = z.object({
   careerValue: readingCareerValueSchema,
 });
 
+export const readingRejectionSchema = z.object({
+  candidateId: nonEmptyString,
+  reason: z.string().trim().min(1).max(READING_SELECTION_TEXT_MAX_LENGTH),
+});
+
 export const readingSelectionSchema = z.object({
   topics: z.array(z.object({
     topicKey,
@@ -176,6 +181,7 @@ export const readingSelectionSchema = z.object({
     careerQuestion: z.string().trim().min(1).max(READING_SELECTION_TEXT_MAX_LENGTH),
     items: z.array(readingSelectionItemSchema).min(1),
   })),
+  rejections: z.array(readingRejectionSchema).optional(),
 });
 
 export const readingRecommendationSchema = z.object({
@@ -202,7 +208,7 @@ export const readingStudyTopicSchema = z.object({
 export const morningReadingReportSchema = z.object({
   generatedAt: z.iso.datetime(),
   sourceOfTruth: z.object({
-    config: z.literal("config/external-reading-sources.ts"),
+    sources: z.literal("backend:study_sources"),
     collectedArticles: z.literal("state/reading-candidates.json"),
   }),
   counts: z.object({
@@ -303,4 +309,5 @@ export interface NormalizedReadingSources {
 
 export interface ReadingSelectionResult {
   topics: ReadingStudyTopic[];
+  selection: ReadingSelection;
 }

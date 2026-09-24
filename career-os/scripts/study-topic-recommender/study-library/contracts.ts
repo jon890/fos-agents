@@ -22,6 +22,7 @@ export const studyLibrarySourceSchema = z.object({
   adapter: readingSourceAdapterIdSchema,
   enabled: z.boolean(),
   version: z.number().int().nonnegative(),
+  note: z.string().max(500).nullable(),
 });
 
 export const studyLibrarySourcesResponseSchema = z.object({
@@ -78,56 +79,18 @@ export const studyLibraryCandidatePageSchema = z.object({
   recentStudyTopicKeys: z.array(nonEmptyString),
   nextCursor: z.string().nullable(),
   historyVersion: z.number().int().nonnegative(),
+  candidateContextVersion: nonEmptyString,
 });
 
 export const studyLibraryRecommendationRunResultSchema = z.object({
   reportId: nonEmptyString,
   historyVersion: z.number().int().nonnegative(),
 });
+export const studyLibraryRecommendationStatusSchema = z.object({ reportId: nonEmptyString, exists: z.boolean() });
+export const studyLibraryRecommendationControlSchema = z.object({ candidateContextVersion: nonEmptyString });
 
 export const studyLibraryPublicationResultSchema = z.object({
   publicationId: nonEmptyString,
-});
-
-export const studyLibraryImportItemSchema = z.object({
-  contentKey: nonEmptyString,
-  canonicalUrl: z.url().refine((value) => value.startsWith("https://"), {
-    message: "HTTPS URL이어야 한다.",
-  }),
-  sourceKey: nonEmptyString,
-  title: nonEmptyString,
-  category: readingCategorySchema,
-  summary: z.string().trim().min(1).max(300).nullable(),
-  reason: z.string().trim().min(1).max(300).nullable(),
-  careerValue: readingCareerValueSchema.nullable(),
-});
-
-export const studyLibraryImportTopicSchema = z.object({
-  topicKey: nonEmptyString,
-  title: nonEmptyString,
-  careerQuestion: z.string().trim().min(1).max(300).nullable(),
-  items: z.array(studyLibraryImportItemSchema).min(1),
-});
-
-export const studyLibraryImportReportSchema = z.object({
-  reportId: nonEmptyString,
-  generatedAt: z.iso.datetime(),
-  topics: z.array(studyLibraryImportTopicSchema).max(20),
-});
-
-export const studyLibraryImportPayloadSchema = z.object({
-  importKey: nonEmptyString,
-  reports: z.array(studyLibraryImportReportSchema).min(1).max(100),
-});
-
-export const studyLibraryImportDryRunResultSchema = z.object({
-  previewHash: nonEmptyString,
-  historyVersion: z.number().int().nonnegative(),
-  counts: z.record(z.string(), z.number().int().nonnegative()),
-  warnings: z.array(z.object({
-    code: nonEmptyString,
-    message: z.string(),
-  })),
 });
 
 export const studyLibraryApiErrorSchema = z.object({
@@ -145,7 +108,21 @@ export const studyLibrarySourcePutPayloadSchema = z.object({
   feedUrl: nullableHttpsUrl,
   adapter: readingSourceAdapterIdSchema,
   enabled: z.boolean(),
+  note: z.string().max(500).nullable().optional(),
   expectedVersion: z.number().int().nonnegative(),
+}).superRefine((source, context) => {
+  if (!source.url && !source.feedUrl) {
+    context.addIssue({ code: "custom", path: ["url"], message: "url 또는 feedUrl 중 하나가 필요하다." });
+  }
+  if (source.adapter === "feed" && !source.feedUrl) {
+    context.addIssue({ code: "custom", path: ["feedUrl"], message: "feed 어댑터에는 feedUrl이 필요하다." });
+  }
+  if (source.adapter === "page" && !source.url) {
+    context.addIssue({ code: "custom", path: ["url"], message: "page 어댑터에는 url이 필요하다." });
+  }
+  if (source.adapter === "youtube" && (!source.url || !source.feedUrl)) {
+    context.addIssue({ code: "custom", path: ["feedUrl"], message: "youtube 어댑터에는 채널 url과 feedUrl이 필요하다." });
+  }
 });
 
 export function toReadingCandidate(candidate: StudyLibraryCandidate): ReadingCandidate {
@@ -174,10 +151,5 @@ export type StudyLibraryCandidate = z.infer<typeof studyLibraryCandidateSchema>;
 export type StudyLibraryCandidatePage = z.infer<typeof studyLibraryCandidatePageSchema>;
 export type StudyLibraryRecommendationRunResult = z.infer<typeof studyLibraryRecommendationRunResultSchema>;
 export type StudyLibraryPublicationResult = z.infer<typeof studyLibraryPublicationResultSchema>;
-export type StudyLibraryImportItem = z.infer<typeof studyLibraryImportItemSchema>;
-export type StudyLibraryImportTopic = z.infer<typeof studyLibraryImportTopicSchema>;
-export type StudyLibraryImportReport = z.infer<typeof studyLibraryImportReportSchema>;
-export type StudyLibraryImportPayload = z.infer<typeof studyLibraryImportPayloadSchema>;
-export type StudyLibraryImportDryRunResult = z.infer<typeof studyLibraryImportDryRunResultSchema>;
 export type StudyLibraryApiError = z.infer<typeof studyLibraryApiErrorSchema>;
 export type StudyLibrarySourcePutPayload = z.infer<typeof studyLibrarySourcePutPayloadSchema>;

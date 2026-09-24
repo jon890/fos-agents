@@ -1,12 +1,15 @@
 import { formatSeoulIsoDate } from "../../lib/date-format.ts";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { morningReadingReportSchema, type MorningReadingReport } from "../reading_contracts.js";
 import type { StudyLibraryClient } from "./client.js";
 
 export interface StudyLibraryRecommendationRunPayload {
   reportId: string;
   generatedAt: string;
+  candidateContextVersion: string;
+  rejections: Array<{ contentKey: string; reason: string }>;
   topics: Array<{
     topicKey: string;
     title: string;
@@ -68,10 +71,26 @@ export function loadMorningReadingReport(path: string): MorningReadingReport {
   return morningReadingReportSchema.parse(JSON.parse(readFileSync(path, "utf8")) as unknown);
 }
 
-export function toRecommendationRunPayload(report: MorningReadingReport): StudyLibraryRecommendationRunPayload {
+export interface RecommendationRequestSidecar {
+  reportId: string;
+  generatedAt: string;
+  candidateContextVersion: string;
+  rejections: Array<{ candidateId: string; reason: string }>;
+}
+
+function validateRecommendationRequestSidecar(sidecar: RecommendationRequestSidecar): void {
+  if (!sidecar.candidateContextVersion.trim()) {
+    throw new Error("추천 저장 요청 파일에 candidateContextVersion이 필요하다.");
+  }
+}
+
+export function toRecommendationRunPayload(report: MorningReadingReport, sidecar: RecommendationRequestSidecar): StudyLibraryRecommendationRunPayload {
+  validateRecommendationRequestSidecar(sidecar);
   return {
     reportId: reportIdForMorningReading(report),
     generatedAt: report.generatedAt,
+    candidateContextVersion: sidecar.candidateContextVersion,
+    rejections: sidecar.rejections.map((rejection) => ({ contentKey: rejection.candidateId, reason: rejection.reason })),
     topics: report.topics.map((topic) => ({
       topicKey: topic.topicKey,
       title: topic.title,
@@ -90,7 +109,12 @@ export async function commitRecommendationRun(input: {
   client: StudyLibraryClient;
   reportPath: string;
 }): Promise<{ reportId: string; historyVersion: number }> {
-  const payload = toRecommendationRunPayload(loadMorningReadingReport(input.reportPath));
+  const report = loadMorningReadingReport(input.reportPath);
+  const sidecarPath = join(dirname(input.reportPath), "recommendation-request.json");
+  let sidecar: RecommendationRequestSidecar;
+  try { sidecar = JSON.parse(readFileSync(sidecarPath, "utf8")) as typeof sidecar; } catch { throw new Error("추천 저장 요청 파일을 찾을 수 없다."); }
+  if (sidecar.reportId !== reportIdForMorningReading(report) || sidecar.generatedAt !== report.generatedAt) throw new Error("추천 저장 요청 파일이 리포트와 다르다.");
+  const payload = toRecommendationRunPayload(report, sidecar);
   return await input.client.createRecommendationRun(payload);
 }
 

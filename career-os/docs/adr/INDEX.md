@@ -5,7 +5,7 @@ ADR에는 현재 설계를 이해하는 데 필요한 기술적 선택과 기각
 
 | ADR | 결정 | 상태 |
 | --- | --- | --- |
-| ADR-013 | [외부 읽을거리는 전체 수집 후 모델이 선별](ADR-013-외부-읽을거리는-전체-수집-후-모델이-선별한다.md) | Accepted |
+| ADR-013 | [외부 읽을거리는 전체 수집 후 모델이 선별](ADR-013-외부-읽을거리는-전체-수집-후-모델이-선별한다.md) | Accepted. 전체 후보 조항은 ADR-127이 대체 |
 | ADR-035 | [TypeScript 실행 코드를 책임별 모듈로 분리](ADR-035-typescript-실행-코드는-책임별-모듈로-분리한다.md) | Accepted |
 | ADR-039 | [현재 열린 개별 공고만 추천](ADR-039-position-recommender-추천-단위는-개별-active-open-공고.md) | Accepted |
 | ADR-047 | [공고 수집기를 소스 어댑터 경계로 분리](ADR-047-position-recommender-collector-adapter를-모듈-경계로-승격한다.md) | Accepted |
@@ -40,3 +40,5 @@ ADR에는 현재 설계를 이해하는 데 필요한 기술적 선택과 기각
 | ADR-123 | [회사 근거와 개인 제외 정책은 Backend가 소유](ADR-123-회사-근거와-개인-제외-정책은-backend가-소유한다.md) | Accepted |
 | ADR-124 | [판정 스키마는 모르는 상태를 표현](ADR-124-판정-스키마는-모르는-상태를-표현한다.md) | Accepted |
 | ADR-125 | [회사 판정은 세 축을 각각 냄](ADR-125-회사-판정은-세-축을-각각-낸다.md) | Accepted |
+| ADR-126 | [읽을거리 소스 목록은 Backend가 원본을 가짐](ADR-126-읽을거리-소스-목록은-backend가-원본을-가진다.md) | Accepted |
+| ADR-127 | [공부 추천은 고르지 않은 후보의 판정을 재사용](ADR-127-공부-추천은-고르지-않은-후보의-판정을-재사용한다.md) | Accepted |

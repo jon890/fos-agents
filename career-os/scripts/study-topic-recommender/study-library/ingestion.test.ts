@@ -72,8 +72,8 @@ function rss(items: Array<{ title: string; url: string }>): string {
 }
 
 afterEach(() => {
-  delete process.env.STUDY_LIBRARY_URL;
-  delete process.env.STUDY_SERVICE_TOKEN;
+  delete process.env.CAREER_RECOMMENDATION_API_URL;
+  delete process.env.CAREER_RECOMMENDATION_API_TOKEN;
   delete process.env.CAREER_OS_ROOT;
   delete process.env.YOUTUBE_DATA_API_KEY;
 });
@@ -406,30 +406,41 @@ describe("study-library ingestion", () => {
 describe("library collect-only CLI", () => {
   test("--reset-cursor는 archive 단일 source에서만 허용된다", async () => {
     const originalArgv = process.argv;
-    process.argv = ["bun", "morning_reading_cli.ts", "--library", "--collect-only", "--reset-cursor"];
-    process.env.STUDY_LIBRARY_URL = "https://study.example.com";
-    process.env.STUDY_SERVICE_TOKEN = "test-token-123456789012345678901234567890";
+    const originalFetch = globalThis.fetch;
+    process.argv = ["bun", "morning_reading_cli.ts", "--collect-only", "--reset-cursor"];
+    process.env.CAREER_RECOMMENDATION_API_URL = "https://study.example.com";
+    process.env.CAREER_RECOMMENDATION_API_TOKEN = "test-token-123456789012345678901234567890";
     const directory = mkdtempSync(join(tmpdir(), "study-topic-recommender."));
     process.env.CAREER_OS_ROOT = directory;
+    globalThis.fetch = (async (url: string | URL | Request) => {
+      if (new URL(String(url)).pathname.endsWith("/sources")) return response({
+        sources: [{ sourceKey: "source-a", title: "Source", category: "techBlog", url: "https://example.com", feedUrl: null, adapter: "page", enabled: true, version: 0, note: null }],
+      }, { headers: { "Content-Type": "application/json" } });
+      return response({ sourceKey: "source-a", mode: "recent", cursor: null, version: 0 }, { headers: { "Content-Type": "application/json" } });
+    }) as unknown as typeof fetch;
     try {
       await expect(main()).rejects.toThrow("--reset-cursor");
     } finally {
       process.argv = originalArgv;
+      globalThis.fetch = originalFetch;
       rmSync(directory, { recursive: true, force: true });
     }
   });
 
   test("CLI는 source-key 오타와 max-items 0을 usage error로 처리한다", async () => {
     const originalArgv = process.argv;
+    const originalFetch = globalThis.fetch;
     const directory = mkdtempSync(join(tmpdir(), "study-topic-recommender."));
     process.env.CAREER_OS_ROOT = directory;
-    process.env.STUDY_LIBRARY_URL = "https://study.example.com";
-    process.env.STUDY_SERVICE_TOKEN = "test-token-123456789012345678901234567890";
+    process.env.CAREER_RECOMMENDATION_API_URL = "https://study.example.com";
+    process.env.CAREER_RECOMMENDATION_API_TOKEN = "test-token-123456789012345678901234567890";
+    globalThis.fetch = (async () => response({
+      sources: [{ sourceKey: "kurly-tech", title: "Kurly", category: "techBlog", url: "https://helloworld.kurly.com", feedUrl: "https://helloworld.kurly.com/rss.xml", adapter: "feed", enabled: true, version: 0, note: null }],
+    }, { headers: { "Content-Type": "application/json" } })) as unknown as typeof fetch;
     try {
       process.argv = [
         "bun",
         "morning_reading_cli.ts",
-        "--library",
         "--collect-only",
         "--source-key",
         "missing-source",
@@ -439,7 +450,6 @@ describe("library collect-only CLI", () => {
       process.argv = [
         "bun",
         "morning_reading_cli.ts",
-        "--library",
         "--collect-only",
         "--source-key",
         "kurly-tech",
@@ -449,11 +459,12 @@ describe("library collect-only CLI", () => {
       await expect(main()).rejects.toThrow("--max-items");
     } finally {
       process.argv = originalArgv;
+      globalThis.fetch = originalFetch;
       rmSync(directory, { recursive: true, force: true });
     }
   });
 
-  test("--library --collect-only --mode recent --run-dir는 파일모드 history를 읽지 않는다", async () => {
+  test("--collect-only --mode recent --run-dir는 파일 이력을 읽지 않는다", async () => {
     const originalArgv = process.argv;
     const originalFetch = globalThis.fetch;
     const directory = mkdtempSync(join(tmpdir(), "study-topic-recommender."));
@@ -463,7 +474,6 @@ describe("library collect-only CLI", () => {
       "morning_reading_cli.ts",
       "--run-dir",
       directory,
-      "--library",
       "--collect-only",
       "--mode",
       "recent",
@@ -472,15 +482,15 @@ describe("library collect-only CLI", () => {
       "--max-items",
       "1",
     ];
-    process.env.STUDY_LIBRARY_URL = "https://study.example.com";
-    process.env.STUDY_SERVICE_TOKEN = "test-token-123456789012345678901234567890";
+    process.env.CAREER_RECOMMENDATION_API_URL = "https://study.example.com";
+    process.env.CAREER_RECOMMENDATION_API_TOKEN = "test-token-123456789012345678901234567890";
     globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
       const parsedUrl = new URL(String(url));
       requests.push(`${init?.method ?? "GET"} ${parsedUrl.pathname}${parsedUrl.search}`);
       if (String(url) === "https://helloworld.kurly.com/rss.xml") {
         return response("<?xml version=\"1.0\"?><rss><channel></channel></rss>");
       }
-      if (init?.method === "GET" && parsedUrl.pathname.endsWith("/sources")) return response({ sources: [] }, { headers: { "Content-Type": "application/json" } });
+      if (init?.method === "GET" && parsedUrl.pathname.endsWith("/sources")) return response({ sources: [{ sourceKey: "kurly-tech", title: "Kurly", category: "techBlog", url: "https://helloworld.kurly.com", feedUrl: "https://helloworld.kurly.com/rss.xml", adapter: "feed", enabled: true, version: 0, note: null }] }, { headers: { "Content-Type": "application/json" } });
       if (init?.method === "PUT") {
         return response({
           source: {
@@ -492,6 +502,7 @@ describe("library collect-only CLI", () => {
             adapter: "page",
             enabled: true,
             version: 1,
+            note: null,
           },
           version: 1,
         }, { headers: { "Content-Type": "application/json" } });
@@ -556,14 +567,13 @@ describe("library collect-only CLI", () => {
     process.argv = [
       "bun",
       "morning_reading_cli.ts",
-      "--library",
       "--collect-only",
       "--source-key",
       "kurly-tech",
     ];
     process.env.CAREER_OS_ROOT = directory;
-    process.env.STUDY_LIBRARY_URL = "https://study.example.com";
-    process.env.STUDY_SERVICE_TOKEN = "test-token-123456789012345678901234567890";
+    process.env.CAREER_RECOMMENDATION_API_URL = "https://study.example.com";
+    process.env.CAREER_RECOMMENDATION_API_TOKEN = "test-token-123456789012345678901234567890";
     globalThis.fetch = (async () => new Response(JSON.stringify({
       error: {
         code: "RATE_LIMITED",

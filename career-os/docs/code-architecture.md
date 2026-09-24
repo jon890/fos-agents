@@ -152,7 +152,7 @@ SSH client는 `career-storage`를 원격 호출하고, 홈서버의 Hermes는 �
 
 ### 추천 상태 Backend
 
-`services/recommendation-api/`는 포지션의 장기 상태를 제공하는 Backend다.
+`services/recommendation-api/`는 포지션과 공부 추천의 장기 상태를 제공하는 Backend다.
 Node 22 위의 NestJS로 돌고 Prisma로 MySQL을 읽고 쓴다.
 모노레포 루트와 별도의 `package.json`과 `tsconfig.json`을 가진 독립 package다.
 결정과 근거는 [ADR-121](adr/ADR-121-추천-backend는-nestjs와-prisma로-운영한다.md)과
@@ -160,7 +160,7 @@ Node 22 위의 NestJS로 돌고 Prisma로 MySQL을 읽고 쓴다.
 
 서비스 코드, HTTP 계약과 migration은 `career-os`가 소유한다.
 배포 설정, database와 계정 생성, network와 backup은 홈서버 인프라 저장소가 소유한다.
-학습자료 API는 client 만 구현했고 mock HTTP 로 검증했다. 서버는 구현하지 않았다.
+공부 소스, 수집 자료, 후보, 추천과 제외 판정은 `/api/study/v1` 에서 읽고 쓴다.
 
 
 | 경로                                                     | 책임                                                    |
@@ -171,6 +171,7 @@ Node 22 위의 NestJS로 돌고 Prisma로 MySQL을 읽고 쓴다.
 | `services/recommendation-api/src/common/`              | 인증, 요청 ID, 본문 크기, zod 검증, 멱등 처리, 오류 응답 형식             |
 | `services/recommendation-api/src/positions/`           | 회사 정책, 공고 버전, 분석 상태와 추천 조립                            |
 | `services/recommendation-api/src/positions/repository/`| Prisma 질의. 도메인이 요구하는 단위로만 읽고 쓴다                       |
+| `services/recommendation-api/src/study/`               | 공부 소스, 수집 자료, cursor, 후보와 추천 판정                         |
 | `services/recommendation-api/src/health/`              | 생존 확인과 준비 확인                                          |
 | `services/recommendation-api/src/prisma/`              | `PrismaClient` 수명과 연결 설정                              |
 | `services/recommendation-api/src/contracts/`           | `scripts/`가 소유한 공고 후보 계약의 사본                          |
@@ -194,7 +195,7 @@ Backend는 local 개발에서는 `CAREER_RECOMMENDATION_DATABASE_URL`을 읽을 
 두 형식을 함께 주면 시작 전에 실패한다.
 client는 `CAREER_RECOMMENDATION_API_URL`과 `CAREER_RECOMMENDATION_API_TOKEN` 또는
 `CAREER_RECOMMENDATION_API_TOKEN_FILE`만 읽으며 DB 자격증명을 받지 않는다.
-`STUDY_LIBRARY_URL`과 `STUDY_SERVICE_TOKEN`은 study client 전환 동안 같은 Backend를 가리키는 호환 환경값으로 유지한다.
+공부 추천과 포지션 client 는 `scripts/lib/recommendation-api-config.ts` 로 같은 연결값을 검증한다.
 
 **프로세스 시간대를 UTC에 고정한다.** 시각 컬럼이 모두 `DATETIME(3)`이라 시간대를 저장하지 않으므로,
 프로세스가 다른 시간대면 다시 읽은 시각이 어긋나고 임차권 판정이 뒤집힌다.
@@ -498,38 +499,48 @@ skill은 필요한 정보를 실행 시점에 조회하고 TypeScript 스크립�
 | --- | --- |
 | `source/` | 글과 영상 피드 수집 경계. 원문 발견과 메타 추출만 한다 |
 | `source/archive/` | sitemap 과 YouTube uploads playlist 같은 과거 수집 cursor 해석 |
-| `persistence/` | 파일모드의 누적 이력 |
 | `study-library/` | 학습자료 API client. fetch, 인증 헤더, 응답 검증과 후보풀 타입 변환 |
 | `render/` | 주제 중심 HTML 생성 |
 
-루트의 진입점은 `build_morning_reading.ts` 와 `validate_outputs.ts` 이고
-`morning_reading_cli.ts` 가 플래그 분기를 담당한다.
-후보풀, 선별, 누적 이력, 공부 주제 구성과 HTML 렌더링은 각각 분리된 모듈이 담당한다.
+루트의 진입점이다.
+
+| 진입점 | 언제 쓰나 |
+| --- | --- |
+| `morning_reading_cli.ts` | 일일 실행. 수집, 후보 조회, 선택 검증, 추천 저장 |
+| `build_morning_reading.ts`, `validate_outputs.ts` | HTML 생성과 산출물 검증 |
+| `manage_reading_sources.ts` | 사람이 소스를 조회하고 더하고 고치고 끈다 |
+| `configure_study_recommendation.ts` | 사람이 후보자 기준 버전을 올린다 |
+| `import_study_state.ts` | 파일에 있던 소스와 추천 이력을 Backend 로 옮기는 일회성 명령 |
+
+후보풀, 선별, 공부 주제 구성과 HTML 렌더링은 각각 분리된 모듈이 담당한다.
 실행기는 시스템 임시 디렉터리 아래의 명시적인 실행 경로만 사용하며 저장소에 리포트 디렉터리를 만들지 않는다.
 `runtime-paths.ts` 가 `CAREER_OS_ROOT` 와 `--run-dir` 를 함께 해석하고 `validate_outputs.ts` 도 같은 해석을 쓴다.
 둘 다 주어졌는데 경로가 다르면 사용법 오류로 중단한다.
 
-`config/external-reading-sources.ts` 가 소스 목록과 어댑터 종류를 소유한다.
-archive 진입점은 이 파일에 복제하지 않고 sourceKey 별 registry 로 둔다.
+archive 진입점은 소스 필드에 복제하지 않고 `sourceKey` 별 registry 인 `source/archive/registry.ts` 로 둔다.
 
-### 두 모드의 경계
+### Backend 경계
 
-파일모드와 library 모드는 실행 진입점에서 나뉜다.
 `study-library/` 는 MySQL 드라이버나 서버 저장 로직을 갖지 않는다.
-schema 와 endpoint 정의는 `services/recommendation-api/` 가 소유한다.
+schema 와 endpoint 는 `services/recommendation-api/src/study/` 가 소유한다.
+포지션 쪽 `src/positions/` 와 같은 배치다.
 
-두 모드가 무엇을 읽고 쓰는지는 [`flow.md`](flow.md#study-topic-recommender)가 소유한다.
+| 경로 | 책임 |
+| --- | --- |
+| `src/study/study.controller.ts` | `/api/study/v1` 경로 |
+| `src/study/schema.ts` | 요청과 응답의 zod 계약 |
+| `src/study/study.service.ts` | 후보 거르기, 추천 저장 검증 |
+| `src/study/repository/study.repository.ts` | table 읽기와 쓰기 |
 
-library 모드가 읽는 환경값이다.
+client 가 읽는 환경값은 포지션 추천과 같다. 같은 Backend 이고 같은 token 이다.
 
 | 이름 | 의미 |
 | --- | --- |
-| `STUDY_LIBRARY_URL` | career-os API origin. HTTPS 이며 path, query, hash 와 credentials 가 없어야 한다 |
-| `STUDY_SERVICE_TOKEN` | 서비스 인증 Bearer token. 브라우저 세션과 별개다 |
+| `CAREER_RECOMMENDATION_API_URL` | 추천 Backend origin |
+| `CAREER_RECOMMENDATION_API_TOKEN` 또는 `CAREER_RECOMMENDATION_API_TOKEN_FILE` | Bearer token. 파일은 mode 600 |
 | `YOUTUBE_DATA_API_KEY` | 선택값. 있으면 YouTube uploads playlist 과거 수집을 쓴다 |
 
-값이 없거나 origin 형식이 맞지 않으면 `--library` 실행은 시작 전에 실패한다.
-브라우저 관리자 쿠키나 세션을 복제하지 않는다.
+값이 없으면 실행은 시작 전에 실패한다. 브라우저 관리자 쿠키나 세션을 복제하지 않는다.
 
 ## sync-profile
 

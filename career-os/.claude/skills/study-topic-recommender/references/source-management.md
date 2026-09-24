@@ -1,6 +1,6 @@
 # 외부 읽을거리 소스 관리
 
-읽을거리 소스는 `config/external-reading-sources.ts`에서 관리한다.
+읽을거리 소스의 원본은 추천 Backend다.
 소스 키는 주제가 아니라 발행처를 식별한다.
 
 좋은 키:
@@ -26,54 +26,63 @@
   - 프론티어 모델 기업이 직접 발행하는 문서, 연구, 기술 발표 채널이다.
   - 모델, 에이전트, 하네스, 평가, 안전성, 추론과 개발 도구를 함께 수집한다.
 
-## 조회와 검증
+## 조회
 
 ```bash
-bun "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender/manage_reading_sources.ts" validate
-bun "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender/manage_reading_sources.ts" list
-bun "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender/manage_reading_sources.ts" list --category techBlog
-bun "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender/manage_reading_sources.ts" list --category ai
-bun "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender/manage_reading_sources.ts" list --category video
-bun "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender/manage_reading_sources.ts" list --include-disabled
+bun --env-file=career-os/.env \
+  career-os/scripts/study-topic-recommender/manage_reading_sources.ts list
 ```
+
+필요하면 응답에서 카테고리와 활성 상태를 확인한다.
+소스 목록을 수정하기 전에 현재 version을 다시 읽는다.
 
 ## 소스 추가
 
-다음 명령으로 타입 검증을 통과하는 객체 초안을 만든다.
+다음 명령은 새 소스를 Backend에 추가한다.
+`--note`에는 추가 이유를 남긴다.
 
 ```bash
-bun "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender/manage_reading_sources.ts" template \
-  --category techBlog \
+bun --env-file=career-os/.env \
+  career-os/scripts/study-topic-recommender/manage_reading_sources.ts add \
   --key example-engineering \
   --title "Example Engineering" \
+  --category techBlog \
   --url "https://example.com/engineering" \
   --feed-url "https://example.com/engineering/feed.xml" \
-  --adapter feed
+  --adapter feed \
+  --note "새 기술 블로그를 수집한다"
 ```
 
-출력한 객체를 `externalReadingSources.sources`에 추가한다.
 URL과 피드 URL은 HTTPS만 허용한다.
 YouTube 채널은 채널 ID 기반 공식 Atom 피드를 `feedUrl`로 등록한다.
 채널 검색 결과의 표시 이름만 믿지 않고 채널 URL, channel ID와 Atom feed의 `<title>`이 같은 채널인지 확인한다.
 `youtube` 어댑터는 Atom feed를 먼저 사용하고 feed가 없거나 비었을 때만 공개 채널 페이지를 보조 경로로 사용한다.
 
-`adapter`를 생략하면 실행기가 `feedUrl`, `url` 순으로 어댑터를 고른다.
-명시한 `feed` 어댑터에는 `feedUrl`이 필요하다.
-명시한 `page` 어댑터에는 `url`이 필요하다.
-명시한 `youtube` 어댑터에는 채널 `url`이 필요하다.
+`feed` 어댑터에는 `feedUrl`이 필요하다.
+`page` 어댑터에는 `url`이 필요하다.
+`youtube` 어댑터에는 채널 `url`이 필요하다.
 
-수정 후 다음 검증을 실행한다.
+## 소스 변경과 중지
 
-```bash
-bun "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender/manage_reading_sources.ts" validate
-bun test "$(git rev-parse --show-toplevel)/career-os/scripts/study-topic-recommender"
-```
-
-실제 feed도 확인한다.
+소스의 제목, 카테고리, 어댑터와 URL은 `update`로 바꾼다.
+기존 값을 지울 때는 `--clear-url` 또는 `--clear-feed-url`을 사용한다.
 
 ```bash
-curl -L --fail --silent --show-error \
-  "https://www.youtube.com/feeds/videos.xml?channel_id=<CHANNEL_ID>"
+bun --env-file=career-os/.env \
+  career-os/scripts/study-topic-recommender/manage_reading_sources.ts update \
+  --key example-engineering \
+  --title "Example Engineering Blog" \
+  --note "발행처 이름을 실제 이름으로 고친다"
 ```
 
-응답의 feed title이 등록할 채널과 다르면 설정을 추가하지 않는다.
+수집에 실패한 소스를 끌 때는 실패 원인을 `--note`에 남긴다.
+
+```bash
+bun --env-file=career-os/.env \
+  career-os/scripts/study-topic-recommender/manage_reading_sources.ts disable \
+  --key example-engineering \
+  --note "RSS 응답이 계속 실패해 수집을 중지한다"
+```
+
+복구를 확인한 소스는 같은 방식으로 `enable` 한다.
+소스가 다른 사람에 의해 바뀌어 `409`가 나면 목록을 다시 읽고 변경 내용을 검토한 뒤 명령을 다시 실행한다.

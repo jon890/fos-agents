@@ -25,6 +25,7 @@ const sources: StudyLibrarySourcesResponse = {
       adapter: "page",
       enabled: true,
       version: 1,
+      note: null,
     },
     {
       sourceKey: "video-a",
@@ -35,6 +36,7 @@ const sources: StudyLibrarySourcesResponse = {
       adapter: "youtube",
       enabled: true,
       version: 2,
+      note: null,
     },
     {
       sourceKey: "off",
@@ -45,6 +47,7 @@ const sources: StudyLibrarySourcesResponse = {
       adapter: "page",
       enabled: false,
       version: 3,
+      note: null,
     },
   ],
 };
@@ -71,6 +74,7 @@ function page(input: Partial<StudyLibraryCandidatePage>): StudyLibraryCandidateP
     recentStudyTopicKeys: [],
     nextCursor: null,
     historyVersion: 7,
+    candidateContextVersion: "context-7",
     ...input,
   };
 }
@@ -100,7 +104,7 @@ afterEach(() => {
 });
 
 describe("study-library candidates", () => {
-  test("pagination 후보를 기존 후보풀 schema로 저장하고 historyVersion을 meta에 남긴다", async () => {
+  test("pagination 후보를 기존 후보풀 schema로 저장하고 두 기준 버전을 meta에 남긴다", async () => {
     const runDir = mkdtempSync(join(tmpdir(), "study-topic-recommender."));
     temporaryDirectories.push(runDir);
     const outputPath = join(runDir, "state", "reading-candidates.json");
@@ -132,6 +136,7 @@ describe("study-library candidates", () => {
     expect(validateReadingCandidatePool(pool)).toEqual([]);
     expect(result.candidateCount).toBe(2);
     expect(meta.historyVersion).toBe(12);
+    expect(meta.candidateContextVersion).toBe("context-7");
     expect(meta.enabledSources.map((source) => source.sourceKey)).toEqual(["blog-a", "video-a"]);
     expect((pool as { collectionLog: unknown[] }).collectionLog).toEqual([]);
   });
@@ -183,6 +188,28 @@ describe("study-library candidates", () => {
     expect(existsSync(studyLibraryMetaPath(outputPath))).toBe(false);
   });
 
+  test.each([
+    ["historyVersion", page({ candidates: [candidate("content-b")], nextCursor: null, historyVersion: 8 })],
+    ["candidateContextVersion", page({ candidates: [candidate("content-b")], nextCursor: null, candidateContextVersion: "context-8" })],
+  ])("두 정상 페이지의 %s가 다르면 후보풀과 meta를 쓰지 않는다", async (_field, secondPage) => {
+    const runDir = mkdtempSync(join(tmpdir(), "study-topic-recommender."));
+    temporaryDirectories.push(runDir);
+    const outputPath = join(runDir, "state", "reading-candidates.json");
+    const mock = new MockClient();
+    mock.pages = [
+      page({ candidates: [candidate("content-a")], nextCursor: "cursor-2", historyVersion: 7, candidateContextVersion: "context-7" }),
+      secondPage,
+    ];
+
+    await expect(prepareStudyLibraryCandidates({
+      client: mock as unknown as StudyLibraryClient,
+      outputPath,
+    })).rejects.toMatchObject({ status: 409, code: "VERSION_CONFLICT" });
+
+    expect(existsSync(outputPath)).toBe(false);
+    expect(existsSync(studyLibraryMetaPath(outputPath))).toBe(false);
+  });
+
   test("report counts는 meta의 enabled 소스와 후보풀에서 계산한다", async () => {
     const candidatePool = {
       generatedAt: "2026-09-07T00:00:00.000Z",
@@ -200,6 +227,7 @@ describe("study-library candidates", () => {
       candidatePool,
       meta: {
         historyVersion: 1,
+        candidateContextVersion: "context-1",
         filters: { limit: 100 },
         nextCursor: null,
         enabledSources: [

@@ -1,18 +1,20 @@
 import type { z } from "zod";
+import { createHash, randomUUID } from "node:crypto";
+import { parseRecommendationApiOrigin, resolveRecommendationApiConnection } from "../../lib/recommendation-api-config.ts";
 import {
   studyLibraryApiErrorSchema,
   studyLibraryCandidatePageSchema,
   studyLibraryCursorResultSchema,
   studyLibraryIngestionResultSchema,
-  studyLibraryImportDryRunResultSchema,
   studyLibraryPublicationResultSchema,
   studyLibraryRecommendationRunResultSchema,
+  studyLibraryRecommendationControlSchema,
+  studyLibraryRecommendationStatusSchema,
   studyLibrarySourcesResponseSchema,
   studyLibrarySourceUpsertResponseSchema,
   type StudyLibraryCandidatePage,
   type StudyLibraryCursorResult,
   type StudyLibraryIngestionResult,
-  type StudyLibraryImportDryRunResult,
   type StudyLibraryPublicationResult,
   type StudyLibraryRecommendationRunResult,
   type StudyLibrarySourcePutPayload,
@@ -64,39 +66,18 @@ export interface StudyLibraryClientOptions {
 export interface StudyLibraryRequestOptions {
   searchParams?: Record<string, string | number | boolean | null | undefined>;
   body?: unknown;
+  idempotencyKey?: string;
 }
 
-function readRequiredValue(value: string | undefined, name: string): string {
-  if (!value?.trim()) {
-    throw new StudyLibraryConfigError(`${name} 환경값이 필요하다.`);
-  }
-  return value;
+function canonicalJson(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  const record = value as Record<string, unknown>;
+  return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`).join(",")}}`;
 }
 
-function validateStudyLibraryOrigin(rawOrigin: string): URL {
-  let url: URL;
-  try {
-    url = new URL(rawOrigin);
-  } catch {
-    throw new StudyLibraryConfigError("STUDY_LIBRARY_URL은 유효한 HTTPS origin이어야 한다.");
-  }
-
-  if (url.protocol !== "https:") {
-    throw new StudyLibraryConfigError("STUDY_LIBRARY_URL은 HTTPS origin이어야 한다.");
-  }
-  if (url.username || url.password) {
-    throw new StudyLibraryConfigError("STUDY_LIBRARY_URL에는 credentials를 넣을 수 없다.");
-  }
-  if (url.search) {
-    throw new StudyLibraryConfigError("STUDY_LIBRARY_URL에는 query를 넣을 수 없다.");
-  }
-  if (url.hash) {
-    throw new StudyLibraryConfigError("STUDY_LIBRARY_URL에는 hash를 넣을 수 없다.");
-  }
-  if (url.pathname !== "/") {
-    throw new StudyLibraryConfigError("STUDY_LIBRARY_URL에는 path를 넣을 수 없다.");
-  }
-  return url;
+function hashKey(prefix: string, value: unknown): string {
+  return `${prefix}:${createHash("sha256").update(canonicalJson(value), "utf8").digest("hex")}`;
 }
 
 function formatIssues(issues: { path: PropertyKey[]; message: string }[]): string {
@@ -191,11 +172,20 @@ export class StudyLibraryClient {
   private readonly maxRetries: number;
 
   constructor(options: StudyLibraryClientOptions = {}) {
-    this.origin = validateStudyLibraryOrigin(readRequiredValue(
-      options.origin ?? process.env.STUDY_LIBRARY_URL,
-      "STUDY_LIBRARY_URL"
-    ));
-    this.token = readRequiredValue(options.token ?? process.env.STUDY_SERVICE_TOKEN, "STUDY_SERVICE_TOKEN");
+    try {
+      if (options.origin !== undefined || options.token !== undefined) {
+        if (!options.origin?.trim() || !options.token?.trim()) throw new Error("명시적 origin과 token이 모두 필요하다.");
+        this.origin = parseRecommendationApiOrigin(options.origin);
+        this.token = options.token.trim();
+        if (this.token.length < 32) throw new Error("추천 API token은 trim 뒤 32자 이상이어야 한다.");
+      } else {
+        const connection = resolveRecommendationApiConnection(process.env);
+        this.origin = parseRecommendationApiOrigin(connection.baseUrl);
+        this.token = connection.token;
+      }
+    } catch (error) {
+      throw new StudyLibraryConfigError(error instanceof Error ? error.message : String(error));
+    }
     this.fetchImpl = options.fetchImpl ?? fetch;
     this.timeoutMs = options.timeoutMs ?? DEFAULT_STUDY_LIBRARY_TIMEOUT_MS;
     this.maxRetries = options.maxRetries ?? DEFAULT_STUDY_LIBRARY_MAX_RETRIES;
@@ -220,6 +210,7 @@ export class StudyLibraryClient {
     if (serializedBody !== undefined) {
       headers.set("Content-Type", "application/json");
     }
+    if (options.idempotencyKey) headers.set("Idempotency-Key", options.idempotencyKey);
 
     for (let attempt = 0; attempt <= this.maxRetries; attempt += 1) {
       const controller = new AbortController();
@@ -281,7 +272,7 @@ export class StudyLibraryClient {
       "PUT",
       `/sources/${encodeURIComponent(sourceKey)}`,
       studyLibrarySourceUpsertResponseSchema,
-      { body }
+      { body, idempotencyKey: hashKey("source", { sourceKey, payload: body }) }
     );
   }
 
@@ -295,7 +286,7 @@ export class StudyLibraryClient {
   }
 
   async createIngestion(body: unknown): Promise<StudyLibraryIngestionResult> {
-    return this.request("POST", "/ingestions", studyLibraryIngestionResultSchema, { body });
+    return this.request("POST", "/ingestions", studyLibraryIngestionResultSchema, { body, idempotencyKey: (body as { idempotencyKey?: string }).idempotencyKey });
   }
 
   async getCandidates(searchParams: StudyLibraryRequestOptions["searchParams"] = {}): Promise<StudyLibraryCandidatePage> {
@@ -303,15 +294,22 @@ export class StudyLibraryClient {
   }
 
   async createRecommendationRun(body: unknown): Promise<StudyLibraryRecommendationRunResult> {
-    return this.request("POST", "/recommendation-runs", studyLibraryRecommendationRunResultSchema, { body });
+    const value = body as { reportId: string; generatedAt: string };
+    return this.request("POST", "/recommendation-runs", studyLibraryRecommendationRunResultSchema, { body, idempotencyKey: hashKey("recommendation", { reportId: value.reportId, generatedAt: value.generatedAt }) });
   }
 
   async createPublication(body: unknown): Promise<StudyLibraryPublicationResult> {
-    return this.request("POST", "/publications", studyLibraryPublicationResultSchema, { body });
+    return this.request("POST", "/publications", studyLibraryPublicationResultSchema, { body, idempotencyKey: (body as { idempotencyKey?: string }).idempotencyKey });
   }
 
-  async createImportDryRun(body: unknown): Promise<StudyLibraryImportDryRunResult> {
-    return this.request("POST", "/imports/dry-run", studyLibraryImportDryRunResultSchema, { body });
+  async getRecommendationRunStatus(reportId: string): Promise<{ reportId: string; exists: boolean }> {
+    return this.request("GET", `/recommendation-runs/${encodeURIComponent(reportId)}/status`, studyLibraryRecommendationStatusSchema);
+  }
+
+  async updateRecommendationControl(candidateContextVersion: string, idempotencyKey = `control:${randomUUID()}`): Promise<{ candidateContextVersion: string }> {
+    return this.request("PUT", "/recommendation-control", studyLibraryRecommendationControlSchema, {
+      body: { candidateContextVersion }, idempotencyKey,
+    });
   }
 }
 

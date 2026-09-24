@@ -1,46 +1,39 @@
 # 추천 실행 계약
 
-이 문서는 현재 CLI의 인자와 파일 형식을 설명한다.
+이 문서는 현재 CLI의 인자와 실행 순서를 설명한다.
 추천 기준은 [스킬 본문](../SKILL.md)을 따른다.
 
 명령의 `<ROOT>`는 Git 저장소 루트, `<RUN_DIR>`는 실행별 시스템 임시 디렉터리다.
 `CAREER_OS_ROOT`는 임시 실행 경로이며 영구 이력 경로로 사용하지 않는다.
 
-**`<RUN_DIR>` 이름은 `study-topic-recommender.` 로 시작해야 한다.**
+**`<RUN_DIR>` 이름은 `study-topic-recommender.`로 시작해야 한다.**
 런타임이 그 접두사를 확인하고, 아니면 종료 코드 2로 거절한다.
 
 ```bash
 mktemp -d "${TMPDIR:-/tmp}/study-topic-recommender.XXXXXX"
 ```
 
-## 파일모드
+## 실행
 
-파일모드는 `state/morning-study-history.json`을 추천 이력으로 사용한다.
-추천 생성 전에는 기존 파일 작업본을 준비하고, 검증된 결과를 이 파일에 반영한 뒤 작업본을 정리한다.
+소스, 수집 자료, 추천 이력과 제외 판정은 추천 Backend가 관리한다.
+`CAREER_RECOMMENDATION_API_URL`과 token을 `career-os/.env`에 두고 `--env-file`로 넘긴다.
+둘 중 하나라도 없으면 명령은 종료 코드 1로 멈춘다.
 
-최신 비공개 작업본을 준비한다. 실패하면 새 추천 생성을 중단한다.
-
-```bash
-bun <ROOT>/career-os/scripts/career-workspace/cli.ts skill begin study-topic-recommender --json
-```
-
-임시 실행 경로에서 모든 활성 소스의 후보를 수집한다.
+실행 명령은 모두 저장소 루트에서 실행한다.
+`<RUN_DIR>`는 시스템 임시 디렉터리 아래의 실행별 경로이며 이름이 `study-topic-recommender.`로 시작해야 한다.
 
 ```bash
-CAREER_OS_ROOT=<RUN_DIR> bun --env-file=<ROOT>/career-os/.env \
-  <ROOT>/career-os/scripts/study-topic-recommender/build_morning_reading.ts \
-  --history-file <ROOT>/career-os/state/morning-study-history.json --collect-only
+# cwd: 저장소 루트
+bun --env-file=career-os/.env \
+  career-os/scripts/study-topic-recommender/build_morning_reading.ts \
+  --run-dir <RUN_DIR> --collect-only --mode recent
+bun --env-file=career-os/.env \
+  career-os/scripts/study-topic-recommender/build_morning_reading.ts \
+  --run-dir <RUN_DIR> --prepare-candidates --limit 100
 ```
 
-후보풀은 `<RUN_DIR>/state/reading-candidates.json`이다.
-`collectionLog`는 소스별 수집 상태와 수, `previouslyRecommended`는 이전 추천 여부,
-`recentStudyTopicKeys`는 직전 리포트의 주제다.
-
-## 모델 선택과 출력
-
-선택 파일은 후보풀의 ID를 참조한다.
-`careerValue`는 `current-work`, `target-role`, `engineering-judgment`, `product-business` 중 하나다.
-`topicKey`는 같은 개념에 계속 사용하는 kebab-case 식별자다.
+`--prepare-candidates`는 후보 API의 `recentStudyTopicKeys`와 `candidateContextVersion`을 후보풀 옆 메타데이터에 함께 저장한다.
+모델은 후보풀에서 선택한 자료와 선택하지 않은 모든 후보의 `rejections`를 `<RUN_DIR>/reading-selection.json`에 적는다.
 
 ```json
 {
@@ -54,126 +47,80 @@ CAREER_OS_ROOT=<RUN_DIR> bun --env-file=<ROOT>/career-os/.env \
       "reason": "현재 업무나 다음 역할에서 이 자료를 볼 이유",
       "careerValue": "engineering-judgment"
     }]
+  }],
+  "rejections": [{
+    "candidateId": "선택하지 않은 후보 ID",
+    "reason": "한 줄 제외 이유"
   }]
 }
 ```
 
-추천할 자료가 없으면 `{"topics": []}`를 사용한다.
+추천할 자료가 없으면 `topics`에 빈 배열을 쓰고, 후보가 있었다면 `rejections`에는 각 후보의 이유를 남긴다.
 
 ```bash
-CAREER_OS_ROOT=<RUN_DIR> bun --env-file=<ROOT>/career-os/.env \
-  <ROOT>/career-os/scripts/study-topic-recommender/build_morning_reading.ts \
-  --history-file <ROOT>/career-os/state/morning-study-history.json \
+bun --env-file=career-os/.env \
+  career-os/scripts/study-topic-recommender/build_morning_reading.ts \
+  --run-dir <RUN_DIR> \
   --candidate-pool <RUN_DIR>/state/reading-candidates.json \
   --reading-selection <RUN_DIR>/reading-selection.json
 ```
 
-출력은 `<RUN_DIR>/state/morning-reading.json`과 `<RUN_DIR>/morning-reading-YYYY-MM-DD.html`이다.
+선택 단계는 `<RUN_DIR>/state/morning-reading.json` 과
+`<RUN_DIR>/state/recommendation-request.json` 을 함께 만든다.
+두 파일을 같은 `state/` 디렉터리에 보존한 뒤 아래 검증과 추천 저장 명령을 실행한다.
+저장 요청 파일은 리포트의 `reportId`, `generatedAt`, 후보 조회의
+`candidateContextVersion`, 고르지 않은 후보의 `rejections` 를 담는다.
+파일이 없거나 리포트와 값이 다르면 API 에 요청하지 않고 멈춘다.
 
 ```bash
-CAREER_OS_ROOT=<RUN_DIR> bun <ROOT>/career-os/scripts/study-topic-recommender/validate_outputs.ts
-bun <ROOT>/career-os/scripts/study-topic-recommender/manage_reading_sources.ts validate
-```
-
-## 이력 반영과 전달
-
-출력 검증과 내용·렌더링 검토를 마친 뒤 다음 두 명령을 순서대로 실행한다.
-
-```bash
-CAREER_OS_ROOT=<RUN_DIR> bun <ROOT>/career-os/scripts/study-topic-recommender/build_morning_reading.ts \
-  --history-file <ROOT>/career-os/state/morning-study-history.json --commit-history
-bun <ROOT>/career-os/scripts/career-workspace/cli.ts skill finish study-topic-recommender --json
-```
-
-같은 날짜의 리포트, 같은 `contentKey`와 직전 리포트의 같은 `topicKey`는 재반영할 수 없다.
-실패하면 로컬 이력과 복구에 필요한 임시 리포트를 보존한다.
-
-외부 공유를 요청받으면 `report-publisher`에 HTML을 전달한다.
-Pages 프로젝트는 `fos-reports`, 공개 이름은 `morning-YYYY-MM-DD`다.
-
-## Library 모드
-
-library 모드는 누적 학습자료 API를 사용한다.
-일반 수집과 추천 실행은 `skill begin`과 legacy `state/morning-study-history.json`에 의존하지 않는다.
-API 실패 때 파일모드로 대신 쓰거나 API와 파일 이력을 동시에 쓰지 않는다.
-추천 결과는 사용자용 HTML만 만들고 Markdown 리포트는 만들지 않는다.
-
-library 모드는 `STUDY_LIBRARY_URL`과 `STUDY_SERVICE_TOKEN`을 요구한다.
-둘 중 하나라도 없으면 종료 코드 1로 멈춘다. `career-os/.env`에 두고 `--env-file`로 넘긴다.
-
-최근 수집과 과거 수집은 같은 소스라도 `mode=recent` 와 `mode=archive` cursor 를 분리한다.
-각 실행의 수집 한도는 요청량 제한일 뿐 누적 보관 한도가 아니다.
-추천 저장은 HTML 과 report JSON 검증 뒤 별도 commit 명령으로 수행하며 `generatedAt` 을 다시 만들지 않는다.
-
-실행 명령은 모두 저장소 루트에서 실행한다.
-`<RUN_DIR>` 는 시스템 임시 디렉터리 아래의 실행별 경로이며 이름이 `study-topic-recommender.` 로 시작해야 한다.
-
-```bash
-# cwd: 저장소 루트
-bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
-  --run-dir <RUN_DIR> --library --collect-only --mode recent
-bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
-  --run-dir <RUN_DIR> --library --collect-only --mode archive --source-key kurly-tech --max-items 48
-bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
-  --run-dir <RUN_DIR> --library --prepare-candidates --limit 100
-bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
-  --run-dir <RUN_DIR> --library \
-  --candidate-pool <RUN_DIR>/state/reading-candidates.json \
-  --reading-selection <RUN_DIR>/reading-selection.json
 bun career-os/scripts/study-topic-recommender/validate_outputs.ts --run-dir <RUN_DIR>
-bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
-  --run-dir <RUN_DIR> --library --commit-recommendation \
+bun --env-file=career-os/.env \
+  career-os/scripts/study-topic-recommender/build_morning_reading.ts \
+  --run-dir <RUN_DIR> --commit-recommendation \
   --report <RUN_DIR>/state/morning-reading.json
 ```
 
-archive cursor 를 처음부터 다시 만들 때는 `--reset-cursor` 를 함께 지정한다.
+같은 날짜의 리포트, 같은 `contentKey`와 직전 리포트의 같은 `topicKey`는 다시 저장할 수 없다.
+추천 저장은 후보를 읽을 때 받은 `candidateContextVersion`을 함께 보낸다.
+그 사이 사람이 기준 버전을 올렸으면 서버가 `409`로 거부한다.
+
+오류 응답은 `401`, `403`, `409`, `413`, `429`, `503`을 오류 코드와 requestId와 함께 출력한다.
+token과 원문 payload는 출력하지 않는다.
+
+수집과 추천 저장은 서비스 Bearer 인증을 사용한다.
+관리자 브라우저 세션을 복제하지 않는다.
 
 외부 게시가 성공하면 아래 명령으로 publications 기록만 추가한다.
 
 ```bash
 # cwd: 저장소 루트
-bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
-  --run-dir <RUN_DIR> --library --record-publication \
+bun --env-file=career-os/.env \
+  career-os/scripts/study-topic-recommender/build_morning_reading.ts \
+  --run-dir <RUN_DIR> --record-publication \
   --report-id morning-YYYY-MM-DD --channel cloudflare-pages \
   --external-id morning-YYYY-MM-DD --published-at 2026-09-07T00:00:00.000Z \
   --url https://example.com/morning-YYYY-MM-DD
 ```
 
-플래그 제약이다.
+## 후보자 기준 변경
 
-- `--library` 는 `--history-file`, `--commit-history`, `--render-only` 와 함께 쓸 수 없다.
-- `--import-preview` 만 legacy 파일을 읽어야 하므로 `--history-file` 을 예외로 받는다.
-- `--render-only` 는 원격 쓰기를 하지 않으며 파일모드 전용이다.
-- 연동모드는 파일모드의 `state/morning-study-history.json` 을 갱신하지 않는다.
+관심사가 바뀌면 새 `candidateContextVersion`을 정하고 다음 명령을 실행한다.
+이전 기준의 제외 판정은 무효가 되어 후보가 다시 나온다.
 
-오류 응답은 `401`, `403`, `409`, `413`, `429`, `503` 을 오류 코드와 requestId 와 함께 출력하고
-token 과 원문 payload 는 출력하지 않는다.
+```bash
+bun --env-file=career-os/.env \
+  career-os/scripts/study-topic-recommender/configure_study_recommendation.ts \
+  --candidate-context-version <NEW_VERSION>
+```
 
-수집과 추천 저장은 서비스 Bearer 인증을 사용한다.
-관리자 브라우저 세션을 복제하지 않는다.
-가져오기 commit은 본인 관리자 UI에서 수행한다.
+## 운영 이관
 
-## 기존 이력 가져오기
-
-기존 파일 이력과 Pages 노출 이력은 API `imports/dry-run`으로만 검증한다.
-Pages 이력은 에이전트가 승인된 Pages URL에서 준비한 manifest 파일을 `--pages-manifest`로 전달한다.
-manifest는 `schemaVersion: 1`과 `reports` 배열을 가지며, 각 report의 `provenance.sourcePageUrl`에는 확인한 Pages HTTPS URL을 넣는다.
-API payload에는 `provenance`를 보내지 않는다.
-
-실제 legacy `state/morning-study-history.json`을 읽어 import preview를 만들 때만 기존 파일 동기화 계약을 따른다.
-아래 명령 전에는 `skill begin study-topic-recommender`를 실행하고, 산출물 보존이 끝나면 `skill finish study-topic-recommender`를 실행한다.
-fixture history와 fixture pages manifest를 쓰는 테스트는 begin과 finish를 요구하지 않는다.
+운영 이관은 운영 담당자가 dry-run으로 소스 건수, 리포트 3건, 자료 15건을 먼저 확인한 뒤 별도 승인된 작업에서 `--commit`으로 한 번 수행한다.
+이관이 끝나면 후보 API에서 이력의 자료가 추천 후보로 다시 나오지 않는지 확인한다.
 
 ```bash
 # cwd: 저장소 루트
-bun career-os/scripts/study-topic-recommender/build_morning_reading.ts \
-  --run-dir <RUN_DIR> --library --import-preview \
-  --history-file career-os/state/morning-study-history.json \
-  --pages-manifest <PAGES_MANIFEST_JSON> \
-  --output <RUN_DIR>/study-library-import-preview.json
+bun --env-file=career-os/.env \
+  career-os/scripts/study-topic-recommender/import_study_state.ts \
+  --dry-run --history-file <LEGACY_HISTORY_JSON> --sources-file <SOURCES_CONFIG_TS>
 ```
-
-`--output`에는 본인 관리자 UI가 받을 raw `{importKey,reports}` JSON만 저장한다.
-dry-run 응답의 `previewHash`, `historyVersion`, `counts`, `warnings`는 `<output>.preview.json`에 저장한다.
-변환 오류는 `<output>.errors.json`에 저장한다.
-변환 오류가 있으면 raw payload를 만들지 않고 API도 호출하지 않는다.

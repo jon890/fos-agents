@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { StudyLibraryApiError, StudyLibraryClient, type StudyLibraryFetch } from "./client.js";
-import { buildSourceSyncRequests } from "./source-sync.js";
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -53,6 +53,7 @@ describe("StudyLibraryClient", () => {
           adapter: "page",
           enabled: true,
           version: 1,
+          note: null,
         },
         version: 1,
       });
@@ -72,22 +73,64 @@ describe("StudyLibraryClient", () => {
     expect(headers.get("Content-Type")).toBe("application/json");
   });
 
-  test("환경값 누락과 HTTPS origin이 아닌 URL을 API 호출 전에 거부한다", () => {
+  test("모든 쓰기 요청은 계약별 Idempotency-Key를 보내고 재시도는 같은 키를 쓴다", async () => {
+    const calls: Array<{ url: URL; init: RequestInit }> = [];
+    let controlAttempts = 0;
+    const fetchImpl: StudyLibraryFetch = async (url, init) => {
+      calls.push({ url, init: init ?? {} });
+      if (url.pathname.endsWith("/sources/source-a")) return jsonResponse({ source: { sourceKey: "source-a", title: "Source A", category: "techBlog", url: "https://example.com", feedUrl: null, adapter: "page", enabled: true, version: 1, note: null }, version: 1 });
+      if (url.pathname.endsWith("/ingestions")) return jsonResponse({ idempotencyKey: "ingestion-key", acceptedCount: 0, cursorVersion: 1 });
+      if (url.pathname.endsWith("/recommendation-runs")) return jsonResponse({ reportId: "report-a", historyVersion: 1 });
+      if (url.pathname.endsWith("/publications")) return jsonResponse({ publicationId: "publication-a" });
+      if (url.pathname.endsWith("/recommendation-control")) {
+        controlAttempts += 1;
+        if (controlAttempts === 1) return jsonResponse({ error: { code: "UNAVAILABLE", message: "retry", requestId: "control-1" } }, { status: 503 });
+        return jsonResponse({ candidateContextVersion: "context-a" });
+      }
+      throw new Error(`unexpected ${url.pathname}`);
+    };
+    const library = new StudyLibraryClient({ origin: "http://study.example.com", token: "x".repeat(32), fetchImpl, maxRetries: 1 });
+    const source = { title: "Source A", category: "techBlog" as const, url: "https://example.com", feedUrl: null, adapter: "page" as const, enabled: true, expectedVersion: 0 };
+    const recommendation = { reportId: "report-a", generatedAt: "2026-09-01T09:00:00.000Z" };
+
+    await library.putSource("source-a", source);
+    await library.createIngestion({ idempotencyKey: "ingestion-key", items: [] });
+    await library.createRecommendationRun(recommendation);
+    await library.createPublication({ idempotencyKey: "publication-key" });
+    await library.updateRecommendationControl("context-a");
+    await library.updateRecommendationControl("context-a");
+
+    const keys = calls.map(({ init }) => (init.headers as Headers).get("Idempotency-Key"));
+    const sourcePayload = JSON.stringify({ adapter: "page", category: "techBlog", enabled: true, expectedVersion: 0, feedUrl: null, title: "Source A", url: "https://example.com" });
+    const sourceHash = createHash("sha256").update(`{"payload":${sourcePayload},"sourceKey":"source-a"}`, "utf8").digest("hex");
+    const recommendationHash = createHash("sha256").update('{"generatedAt":"2026-09-01T09:00:00.000Z","reportId":"report-a"}', "utf8").digest("hex");
+    expect(keys.slice(0, 4)).toEqual([`source:${sourceHash}`, "ingestion-key", `recommendation:${recommendationHash}`, "publication-key"]);
+    expect(keys[4]).toBe(keys[5]);
+    expect(keys[6]).not.toBe(keys[4]);
+  });
+
+  test("소스 응답에서 nullable note가 빠지면 계약 오류로 거부한다", async () => {
+    const fetchImpl: StudyLibraryFetch = async () => jsonResponse({ sources: [{ sourceKey: "source-a", title: "Source A", category: "techBlog", url: "https://example.com", feedUrl: null, adapter: "page", enabled: true, version: 1 }] });
+
+    await expect(client(fetchImpl).getSources()).rejects.toThrow("응답 검증 실패");
+  });
+
+  test("명시적 연결값과 HTTP/HTTPS origin 규칙을 API 호출 전에 검증한다", () => {
     const fetchImpl: StudyLibraryFetch = async () => jsonResponse({ sources: [] });
 
     expect(() => new StudyLibraryClient({ origin: "", token: "token", fetchImpl }))
-      .toThrow("STUDY_LIBRARY_URL 환경값이 필요하다");
+      .toThrow("명시적 origin과 token이 모두 필요하다");
     expect(() => new StudyLibraryClient({ origin: "https://study.example.com", token: "", fetchImpl }))
-      .toThrow("STUDY_SERVICE_TOKEN 환경값이 필요하다");
-    expect(() => new StudyLibraryClient({ origin: "http://study.example.com", token: "token", fetchImpl }))
-      .toThrow("HTTPS origin");
-    expect(() => new StudyLibraryClient({ origin: "https://user:pass@study.example.com", token: "token", fetchImpl }))
+      .toThrow("명시적 origin과 token이 모두 필요하다");
+    expect(() => new StudyLibraryClient({ origin: "http://study.example.com", token: "x".repeat(32), fetchImpl }))
+      .not.toThrow();
+    expect(() => new StudyLibraryClient({ origin: "https://user:pass@study.example.com", token: "x".repeat(32), fetchImpl }))
       .toThrow("credentials");
-    expect(() => new StudyLibraryClient({ origin: "https://study.example.com?x=1", token: "token", fetchImpl }))
+    expect(() => new StudyLibraryClient({ origin: "https://study.example.com?x=1", token: "x".repeat(32), fetchImpl }))
       .toThrow("query");
-    expect(() => new StudyLibraryClient({ origin: "https://study.example.com#x", token: "token", fetchImpl }))
+    expect(() => new StudyLibraryClient({ origin: "https://study.example.com#x", token: "x".repeat(32), fetchImpl }))
       .toThrow("hash");
-    expect(() => new StudyLibraryClient({ origin: "https://study.example.com/admin", token: "token", fetchImpl }))
+    expect(() => new StudyLibraryClient({ origin: "https://study.example.com/admin", token: "x".repeat(32), fetchImpl }))
       .toThrow("path");
   });
 
@@ -299,6 +342,7 @@ describe("StudyLibraryClient", () => {
       recentStudyTopicKeys: [],
       nextCursor: null,
       historyVersion: 0,
+      candidateContextVersion: "context-0",
     });
 
     const page = await client(fetchImpl).getCandidates();
@@ -376,88 +420,5 @@ describe("StudyLibraryClient", () => {
     expect(String((thrown as Error).message)).not.toContain("server message");
     expect(String((thrown as Error).message)).toContain("VERSION_CONFLICT");
     expect(String((thrown as Error).message)).toContain("req-409");
-  });
-});
-
-describe("source-sync", () => {
-  test("누락 URL을 null로 보내고 새 소스 expectedVersion을 0으로 둔다", () => {
-    const requests = buildSourceSyncRequests({
-      config: {
-        _meta: {
-          purpose: "테스트",
-          schemaVersion: 6,
-        },
-        sources: [{
-          key: "page-only",
-          title: "Page Only",
-          category: "geek",
-          url: "https://example.com",
-          enabled: false,
-          adapter: "page",
-        }],
-      },
-      serverSources: [],
-    });
-
-    expect(requests).toEqual([{
-      sourceKey: "page-only",
-      body: {
-        title: "Page Only",
-        category: "geek",
-        url: "https://example.com",
-        feedUrl: null,
-        adapter: "page",
-        enabled: false,
-        expectedVersion: 0,
-      },
-    }]);
-  });
-
-  test("기존 소스는 서버 version을 expectedVersion으로 사용한다", () => {
-    const requests = buildSourceSyncRequests({
-      config: {
-        _meta: {
-          purpose: "테스트",
-          schemaVersion: 6,
-        },
-        sources: [{
-          key: "feed-source",
-          title: "Feed Source",
-          category: "ai",
-          feedUrl: "https://example.com/feed.xml",
-          adapter: "feed",
-        }],
-      },
-      serverSources: [{
-        sourceKey: "feed-source",
-        title: "Old",
-        category: "ai",
-        url: null,
-        feedUrl: "https://example.com/feed.xml",
-        adapter: "feed",
-        enabled: true,
-        version: 7,
-      }],
-    });
-
-    expect(requests[0].body.expectedVersion).toBe(7);
-    expect(requests[0].body.url).toBeNull();
-    expect(requests[0].body.enabled).toBe(true);
-  });
-
-  test("알 수 없는 category, adapter, 중복 key는 기존 설정 검증 실패로 처리한다", () => {
-    expect(() => buildSourceSyncRequests({
-      config: {
-        _meta: {
-          purpose: "테스트",
-          schemaVersion: 6,
-        },
-        sources: [
-          { key: "dup", title: "A", category: "wrong", url: "https://example.com", adapter: "page" },
-          { key: "dup", title: "B", category: "geek", url: "https://example.com", adapter: "unknown" },
-        ],
-      },
-      serverSources: [],
-    })).toThrow("외부 읽을거리 설정 오류");
   });
 });

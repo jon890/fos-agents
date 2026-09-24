@@ -7,10 +7,6 @@ import { validateRecommendationFiles } from "../position-recommender/validate_re
 import { writeCandidatePreview } from "../position-recommender/render_candidate_preview.ts";
 import { writeRecommendation } from "../position-recommender/render_recommendation.ts";
 import { runInterviewQuestionSources } from "../interview-question-sources/cli.ts";
-import {
-  buildReadingSourceTemplate,
-  listReadingSources,
-} from "../study-topic-recommender/manage_reading_sources.ts";
 import { validateMorningReadingOutputs } from "../study-topic-recommender/validate_outputs.ts";
 import { firstOptionValue } from "./cli.ts";
 
@@ -164,32 +160,6 @@ describe("CLI 밖에서 호출하는 핵심 함수", () => {
     );
   });
 
-  test("읽을거리 목록과 템플릿은 명시한 입력으로 생성한다", () => {
-    const sources = listReadingSources("techBlog", true);
-    expect(sources.length).toBeGreaterThan(0);
-    expect(
-      sources.every(
-        (source, index) => source.category === "techBlog" && source.registrationOrder === index + 1,
-      ),
-    ).toBe(true);
-    const template = buildReadingSourceTemplate([
-      "--key",
-      "core-example",
-      "--category",
-      "techBlog",
-      "--title",
-      "예시",
-      "--feed-url",
-      "https://example.com/feed.xml",
-    ]);
-    expect(template).toEqual({
-      key: "core-example",
-      category: "techBlog",
-      title: "예시",
-      enabled: true,
-      feedUrl: "https://example.com/feed.xml",
-    });
-  });
 
   test("산출물 검사 실패는 호출자에게 예외로 전달한다", () => {
     expect(() => validateMorningReadingOutputs(directory)).toThrow("산출물이 없거나 비어 있다");

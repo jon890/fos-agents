@@ -39,8 +39,8 @@ async function runCli(args: string[], fetchImpl?: StudyLibraryFetch): Promise<st
   };
   if (fetchImpl) {
     globalThis.fetch = fetchImpl as unknown as typeof fetch;
-    process.env.STUDY_LIBRARY_URL = "https://study.example.com";
-    process.env.STUDY_SERVICE_TOKEN = "test-token-123456789012345678901234567890";
+    process.env.CAREER_RECOMMENDATION_API_URL = "https://study.example.com";
+    process.env.CAREER_RECOMMENDATION_API_TOKEN = "test-token-123456789012345678901234567890";
   }
   await main();
   return logs;
@@ -81,6 +81,7 @@ function candidatePool(previouslyRecommended = false): ReadingCandidatePool {
 function meta(): StudyLibraryCandidateMeta {
   return {
     historyVersion: 19,
+    candidateContextVersion: "context-19",
     filters: { limit: 100 },
     nextCursor: null,
     enabledSources: [
@@ -110,7 +111,7 @@ function emptyReport(): MorningReadingReport {
   return {
     generatedAt: "2026-09-07T15:30:00.000Z",
     sourceOfTruth: {
-      config: "config/external-reading-sources.ts",
+      sources: "backend:study_sources",
       collectedArticles: "state/reading-candidates.json",
     },
     counts: {
@@ -131,8 +132,8 @@ afterEach(() => {
   process.argv = originalArgv;
   globalThis.fetch = originalFetch;
   console.log = originalLog;
-  delete process.env.STUDY_LIBRARY_URL;
-  delete process.env.STUDY_SERVICE_TOKEN;
+  delete process.env.CAREER_RECOMMENDATION_API_URL;
+  delete process.env.CAREER_RECOMMENDATION_API_TOKEN;
   delete process.env.CAREER_OS_ROOT;
   for (const directory of temporaryDirectories.splice(0)) rmSync(directory, { recursive: true, force: true });
 });
@@ -142,7 +143,6 @@ describe("study-library recommendations CLI", () => {
     const root = runDir();
     const logs = await runCli([
       "--run-dir", root,
-      "--library",
       "--prepare-candidates",
     ], async (url) => {
       const pathname = url.pathname;
@@ -155,6 +155,7 @@ describe("study-library recommendations CLI", () => {
           recentStudyTopicKeys: [],
           nextCursor: null,
           historyVersion: 0,
+          candidateContextVersion: "context-0",
         });
       }
       throw new Error(`unexpected request: ${url.href}`);
@@ -179,16 +180,14 @@ describe("study-library recommendations CLI", () => {
 
     const logs = await runCli([
       "--run-dir", root,
-      "--library",
       "--candidate-pool", poolPath,
       "--reading-selection", selectionPath,
     ]);
 
-    const output = JSON.parse(logs[0]) as { report: string; html: string; topicCount: number; library: boolean };
+    const output = JSON.parse(logs[0]) as { report: string; htmlPath: string; topicCount: number; mode: string };
     const report = JSON.parse(readFileSync(output.report, "utf8")) as MorningReadingReport;
-    expect(output.library).toBe(true);
-    expect(output.topicCount).toBe(1);
-    expect(existsSync(output.html)).toBe(true);
+    expect(output.mode).toBe("reading-selection");
+    expect(existsSync(output.htmlPath)).toBe(true);
     expect(report.counts).toMatchObject({
       activeSources: 2,
       sourcesWithCandidates: 1,
@@ -196,8 +195,58 @@ describe("study-library recommendations CLI", () => {
       techBlogSources: 1,
       videoSources: 1,
     });
+    expect(report.topics).toHaveLength(1);
     expect(report.collectionLog).toEqual([]);
     expect(existsSync(join(root, "state", "morning-study-history.json"))).toBe(false);
+  });
+
+  test("선택의 제외 판정은 sidecar를 거쳐 recommendation-runs 요청에 저장한다", async () => {
+    const root = runDir();
+    const poolPath = join(root, "state", "reading-candidates.json");
+    const selectionPath = join(root, "selection.json");
+    const pool = candidatePool();
+    pool.candidates.push({
+      ...pool.candidates[0],
+      id: "content-b",
+      contentKey: "content-b",
+      canonicalUrl: "https://example.com/content-b",
+      url: "https://example.com/content-b",
+      title: "Title B",
+    });
+    writeJson(poolPath, pool);
+    writeJson(join(root, "state", "study-library-meta.json"), meta());
+    writeJson(selectionPath, {
+      ...selection(),
+      rejections: [{ candidateId: "content-b", reason: "이번 주제와 겹친다." }],
+    });
+
+    await runCli([
+      "--run-dir", root,
+      "--candidate-pool", poolPath,
+      "--reading-selection", selectionPath,
+    ]);
+
+    const reportPath = join(root, "state", "morning-reading.json");
+    const sidecar = JSON.parse(readFileSync(join(root, "state", "recommendation-request.json"), "utf8"));
+    expect(sidecar).toMatchObject({
+      candidateContextVersion: "context-19",
+      rejections: [{ candidateId: "content-b", reason: "이번 주제와 겹친다." }],
+    });
+
+    const bodies: unknown[] = [];
+    await runCli([
+      "--run-dir", root,
+      "--commit-recommendation",
+      "--report", reportPath,
+    ], async (_url, init) => {
+      bodies.push(JSON.parse(String(init?.body)));
+      return jsonResponse({ reportId: "morning-2026-09-08", historyVersion: 20 });
+    });
+
+    expect(bodies).toEqual([expect.objectContaining({
+      candidateContextVersion: "context-19",
+      rejections: [{ contentKey: "content-b", reason: "이번 주제와 겹친다." }],
+    })]);
   });
 
   test("previouslyRecommended true 후보를 선택하면 기존 선택 검증이 실패한다", async () => {
@@ -210,7 +259,6 @@ describe("study-library recommendations CLI", () => {
 
     await expect(runCli([
       "--run-dir", root,
-      "--library",
       "--candidate-pool", poolPath,
       "--reading-selection", selectionPath,
     ])).rejects.toThrow("이미 추천한 candidateId: content-a");
@@ -220,6 +268,12 @@ describe("study-library recommendations CLI", () => {
     const root = runDir();
     const reportPath = join(root, "state", "morning-reading.json");
     writeJson(reportPath, emptyReport());
+    writeJson(join(root, "state", "recommendation-request.json"), {
+      reportId: "morning-2026-09-08",
+      generatedAt: "2026-09-07T15:30:00.000Z",
+      candidateContextVersion: "context-0",
+      rejections: [],
+    });
     writeReportArtifacts({ report: emptyReport(), outputDir: root });
     // 경로를 이 파일 기준으로 푼다. 저장소 루트에서만 맞는 상대 경로였다.
     const validation = spawnSync("bun", [
@@ -232,7 +286,6 @@ describe("study-library recommendations CLI", () => {
     const bodies: unknown[] = [];
     const logs = await runCli([
       "--run-dir", root,
-      "--library",
       "--commit-recommendation",
       "--report", reportPath,
     ], async (url, init) => {
@@ -245,12 +298,12 @@ describe("study-library recommendations CLI", () => {
     expect(bodies[0]).toEqual({
       reportId: "morning-2026-09-08",
       generatedAt: "2026-09-07T15:30:00.000Z",
+      candidateContextVersion: "context-0",
+      rejections: [],
       topics: [],
     });
     expect(bodies[0]).not.toHaveProperty("historyVersion");
     expect(JSON.parse(logs[0])).toMatchObject({
-      mode: "commit-recommendation",
-      library: true,
       reportId: "morning-2026-09-08",
       historyVersion: 20,
     });
@@ -270,7 +323,6 @@ describe("study-library recommendations CLI", () => {
     const bodies: Array<{ idempotencyKey: string }> = [];
     const args = [
       "--run-dir", root,
-      "--library",
       "--record-publication",
       "--report-id", "morning-2026-09-08",
       "--channel", "cloudflare-pages",
@@ -294,18 +346,23 @@ describe("study-library recommendations CLI", () => {
       const root = runDir();
       const reportPath = join(root, "state", "morning-reading.json");
       writeJson(reportPath, emptyReport());
+      writeJson(join(root, "state", "recommendation-request.json"), {
+        reportId: "morning-2026-09-08",
+        generatedAt: "2026-09-07T15:30:00.000Z",
+        candidateContextVersion: "context-0",
+        rejections: [],
+      });
       const logs: string[] = [];
       process.argv = [
         "bun",
         "morning_reading_cli.ts",
         "--run-dir", root,
-        "--library",
         "--commit-recommendation",
         "--report", reportPath,
       ];
       console.log = (message?: unknown) => logs.push(String(message));
-      process.env.STUDY_LIBRARY_URL = "https://study.example.com";
-      process.env.STUDY_SERVICE_TOKEN = "test-token-123456789012345678901234567890";
+      process.env.CAREER_RECOMMENDATION_API_URL = "https://study.example.com";
+      process.env.CAREER_RECOMMENDATION_API_TOKEN = "test-token-123456789012345678901234567890";
       globalThis.fetch = (async () => jsonResponse({
         error: { code, message: "conflict", requestId: `req-${code}` },
       }, { status: 409 })) as unknown as typeof fetch;
@@ -314,17 +371,57 @@ describe("study-library recommendations CLI", () => {
       expect(logs).toEqual([]);
     }
   });
+
+  test("sidecar가 없거나 리포트와 다르면 추천 저장 요청 전 중단한다", async () => {
+    const root = runDir();
+    const reportPath = join(root, "state", "morning-reading.json");
+    writeJson(reportPath, emptyReport());
+    let requestCount = 0;
+    const fetchImpl: StudyLibraryFetch = async () => {
+      requestCount += 1;
+      return jsonResponse({ reportId: "morning-2026-09-08", historyVersion: 20 });
+    };
+    const args = ["--run-dir", root, "--commit-recommendation", "--report", reportPath];
+
+    await expect(runCli(args, fetchImpl)).rejects.toThrow("추천 저장 요청 파일을 찾을 수 없다");
+    expect(requestCount).toBe(0);
+
+    writeJson(join(root, "state", "recommendation-request.json"), {
+      reportId: "morning-2026-09-08",
+      generatedAt: "2026-09-07T15:31:00.000Z",
+      candidateContextVersion: "context-0",
+      rejections: [],
+    });
+    await expect(runCli(args, fetchImpl)).rejects.toThrow("추천 저장 요청 파일이 리포트와 다르다");
+    expect(requestCount).toBe(0);
+  });
 });
 
 describe("study-library recommendation payload", () => {
-  test("기존 MorningReadingReport를 recommendation-runs payload로 변환한다", () => {
+  test("유효한 candidateContextVersion과 함께 MorningReadingReport를 recommendation-runs payload로 변환한다", () => {
     const report = emptyReport();
-    const payload = toRecommendationRunPayload(report);
+    const payload = toRecommendationRunPayload(report, {
+      reportId: "morning-2026-09-08",
+      generatedAt: report.generatedAt,
+      candidateContextVersion: "context-0",
+      rejections: [],
+    });
 
     expect(payload).toEqual({
       reportId: "morning-2026-09-08",
       generatedAt: report.generatedAt,
+      candidateContextVersion: "context-0",
+      rejections: [],
       topics: [],
     });
+  });
+
+  test("빈 candidateContextVersion은 payload로 변환하지 않는다", () => {
+    expect(() => toRecommendationRunPayload(emptyReport(), {
+      reportId: "morning-2026-09-08",
+      generatedAt: "2026-09-07T15:30:00.000Z",
+      candidateContextVersion: " ",
+      rejections: [],
+    })).toThrow("candidateContextVersion이 필요하다");
   });
 });
