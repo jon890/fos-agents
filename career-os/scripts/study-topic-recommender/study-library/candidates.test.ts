@@ -71,6 +71,7 @@ function page(input: Partial<StudyLibraryCandidatePage>): StudyLibraryCandidateP
     recentStudyTopicKeys: [],
     nextCursor: null,
     historyVersion: 7,
+    candidateContextVersion: "context-7",
     ...input,
   };
 }

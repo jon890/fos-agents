@@ -47,12 +47,16 @@ describe("아침 읽을거리 실행 경로", () => {
 test("CLI 경로 오류는 stack trace와 절대 경로를 출력하지 않는다", () => {
   const environment = { ...process.env };
   delete environment.CAREER_OS_ROOT;
-  for (const script of ["build_morning_reading.ts", "validate_outputs.ts"]) {
+  const expectedErrors = {
+    "build_morning_reading.ts": "하위 동작 플래그 하나가 필요하다: --collect-only, --prepare-candidates, --reading-selection, --commit-recommendation, --record-publication",
+    "validate_outputs.ts": "CAREER_OS_ROOT 또는 --run-dir에 시스템 임시 실행 경로를 지정해야 한다.",
+  } as const;
+  for (const [script, expectedError] of Object.entries(expectedErrors)) {
     const result = Bun.spawnSync(["bun", resolve(import.meta.dir, script)], { env: environment });
     const stderr = result.stderr.toString();
 
     expect(result.exitCode).toBe(2);
-    expect(stderr).toBe("CAREER_OS_ROOT 또는 --run-dir에 시스템 임시 실행 경로를 지정해야 한다.\n");
+    expect(stderr).toBe(`${expectedError}\n`);
     expect(stderr).not.toContain("StudyRunPathError");
     expect(stderr).not.toContain(import.meta.dir);
   }

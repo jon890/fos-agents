@@ -23,6 +23,7 @@ export interface StudyLibraryCandidateFilters {
 
 export interface StudyLibraryCandidateMeta {
   historyVersion: number;
+  candidateContextVersion?: string;
   filters: {
     sourceKey?: string;
     category?: ReadingCategory;
@@ -44,6 +45,7 @@ export interface PrepareStudyLibraryCandidatesResult {
   metaPath: string;
   candidateCount: number;
   historyVersion: number;
+  candidateContextVersion: string;
   nextCursor: string | null;
 }
 
@@ -136,6 +138,7 @@ export async function fetchStudyLibraryCandidatePool(input: {
   const seenCursors = new Set<string>();
   let cursor = filters.cursor;
   let historyVersion: number | undefined;
+  let candidateContextVersion: string | undefined;
   let recentStudyTopicKeys: string[] = [];
   let nextCursor: string | null = null;
 
@@ -143,8 +146,9 @@ export async function fetchStudyLibraryCandidatePool(input: {
     const page = await input.client.getCandidates(searchParams({ ...filters, limit, cursor }));
     if (historyVersion === undefined) {
       historyVersion = page.historyVersion;
+      candidateContextVersion = page.candidateContextVersion;
       recentStudyTopicKeys = page.recentStudyTopicKeys;
-    } else if (page.historyVersion !== historyVersion) {
+    } else if (page.historyVersion !== historyVersion || page.candidateContextVersion !== candidateContextVersion) {
       throw new StudyLibraryApiError({ status: 409, code: "VERSION_CONFLICT" });
     }
     candidates.push(...page.candidates.map(toReadingCandidate));
@@ -159,6 +163,7 @@ export async function fetchStudyLibraryCandidatePool(input: {
 
   const meta: StudyLibraryCandidateMeta = {
     historyVersion: historyVersion ?? 0,
+    candidateContextVersion: candidateContextVersion ?? "",
     filters: {
       sourceKey: filters.sourceKey,
       category: filters.category,
@@ -197,6 +202,7 @@ export async function prepareStudyLibraryCandidates(input: {
     metaPath,
     candidateCount: pool.candidates.length,
     historyVersion: meta.historyVersion,
+    candidateContextVersion: meta.candidateContextVersion ?? "",
     nextCursor: meta.nextCursor,
   };
 }

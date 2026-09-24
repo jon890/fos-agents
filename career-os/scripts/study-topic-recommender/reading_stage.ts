@@ -64,5 +64,6 @@ export function selectReadings(input: {
 
   return {
     topics: topicsFromSelection(selection, input.pool),
+    selection,
   };
 }

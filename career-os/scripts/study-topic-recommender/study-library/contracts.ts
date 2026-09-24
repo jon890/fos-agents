@@ -22,7 +22,7 @@ export const studyLibrarySourceSchema = z.object({
   adapter: readingSourceAdapterIdSchema,
   enabled: z.boolean(),
   version: z.number().int().nonnegative(),
-  note: z.string().max(500).nullable(),
+  note: z.string().max(500).nullable().optional(),
 });
 
 export const studyLibrarySourcesResponseSchema = z.object({
@@ -79,12 +79,15 @@ export const studyLibraryCandidatePageSchema = z.object({
   recentStudyTopicKeys: z.array(nonEmptyString),
   nextCursor: z.string().nullable(),
   historyVersion: z.number().int().nonnegative(),
+  candidateContextVersion: nonEmptyString,
 });
 
 export const studyLibraryRecommendationRunResultSchema = z.object({
   reportId: nonEmptyString,
   historyVersion: z.number().int().nonnegative(),
 });
+export const studyLibraryRecommendationStatusSchema = z.object({ reportId: nonEmptyString, exists: z.boolean() });
+export const studyLibraryRecommendationControlSchema = z.object({ candidateContextVersion: nonEmptyString });
 
 export const studyLibraryPublicationResultSchema = z.object({
   publicationId: nonEmptyString,

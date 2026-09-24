@@ -50,6 +50,10 @@ export function validateReadingSelection(selection: unknown, pool: ReadingCandid
       seenContentKeys.add(candidate.contentKey);
     }
   }
+  for (const rejection of parsed.data.rejections ?? []) {
+    if (!candidatesById.has(rejection.candidateId)) errors.push(`수집 결과에 없는 제외 candidateId: ${rejection.candidateId}`);
+    if (seenCandidates.has(rejection.candidateId)) errors.push(`추천 자료와 제외 자료가 겹친다: ${rejection.candidateId}`);
+  }
   return errors;
 }
 

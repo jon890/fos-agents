@@ -1,5 +1,5 @@
-import { readFileSync, statSync } from "node:fs";
 import { z } from "zod";
+import { resolveRecommendationApiConnection } from "../../lib/recommendation-api-config.ts";
 import {
   analysisPolicySchema,
   analysisQueueResponseSchema,
@@ -289,23 +289,8 @@ export class RecommendationApiClient {
   }
 }
 
-function tokenFromFile(path: string): string {
-  if ((statSync(path).mode & 0o777) !== 0o600) {
-    throw new Error("추천 API token 파일 권한은 600이어야 합니다.");
-  }
-  return readFileSync(path, "utf8").trim();
-}
-
 export function createRecommendationApiClient(
   environment: Record<string, string | undefined> = process.env,
 ): RecommendationApiClient {
-  const baseUrl = environment.CAREER_RECOMMENDATION_API_URL;
-  const directToken = environment.CAREER_RECOMMENDATION_API_TOKEN;
-  const tokenFile = environment.CAREER_RECOMMENDATION_API_TOKEN_FILE;
-  if (!baseUrl || Boolean(directToken) === Boolean(tokenFile)) {
-    throw new Error("추천 API URL과 token 설정을 확인하세요.");
-  }
-  const token = directToken ?? tokenFromFile(tokenFile!);
-  if (token.length < 32) throw new Error("추천 API token 설정을 확인하세요.");
-  return new RecommendationApiClient({ baseUrl, token });
+  return new RecommendationApiClient(resolveRecommendationApiConnection(environment));
 }

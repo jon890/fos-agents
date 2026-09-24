@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { RecommendationApiClient, RecommendationApiClientError } from "./client.ts";
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { resolveRecommendationApiConnection } from "../../lib/recommendation-api-config.ts";
+import { createRecommendationApiClient, RecommendationApiClient, RecommendationApiClientError } from "./client.ts";
 
 const token = "token-123456789012345678901234567890";
 
@@ -49,6 +53,46 @@ function preparationResponse() {
 }
 
 describe("position recommendation API client", () => {
+  test("공용 환경 해석은 직접 token과 0600 파일 token을 받고 URL의 origin 범위를 지킨다", () => {
+    const direct = {
+      CAREER_RECOMMENDATION_API_URL: "http://api.local",
+      CAREER_RECOMMENDATION_API_TOKEN: "x".repeat(32),
+    };
+    expect(resolveRecommendationApiConnection(direct)).toEqual({
+      baseUrl: "http://api.local/",
+      token: "x".repeat(32),
+    });
+    expect(createRecommendationApiClient(direct)).toBeInstanceOf(RecommendationApiClient);
+    expect(resolveRecommendationApiConnection({ ...direct, CAREER_RECOMMENDATION_API_URL: "https://api.local" }).baseUrl)
+      .toBe("https://api.local/");
+
+    const directory = mkdtempSync(join(tmpdir(), "recommendation-api-token."));
+    const tokenPath = join(directory, "token");
+    writeFileSync(tokenPath, ` ${"f".repeat(32)}\n`, "utf8");
+    chmodSync(tokenPath, 0o600);
+    try {
+      expect(resolveRecommendationApiConnection({
+        CAREER_RECOMMENDATION_API_URL: "https://api.local",
+        CAREER_RECOMMENDATION_API_TOKEN_FILE: tokenPath,
+      })).toEqual({ baseUrl: "https://api.local/", token: "f".repeat(32) });
+      expect(() => resolveRecommendationApiConnection({ ...direct, CAREER_RECOMMENDATION_API_TOKEN_FILE: tokenPath }))
+        .toThrow("정확히 하나");
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+
+    for (const invalid of [
+      "ftp://api.local",
+      "https://user:pass@api.local",
+      "https://api.local?query=1",
+      "https://api.local#fragment",
+      "https://api.local/path",
+    ]) {
+      expect(() => resolveRecommendationApiConnection({ ...direct, CAREER_RECOMMENDATION_API_URL: invalid }))
+        .toThrow();
+    }
+  });
+
   test("같은 본문과 멱등 키로 5xx를 최대 두 번 재시도한다", async () => {
     const requests: RequestInit[] = [];
     const client = new RecommendationApiClient({

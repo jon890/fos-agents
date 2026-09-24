@@ -357,6 +357,9 @@ export async function collectAndIngestStudyLibrary(input: CollectAndIngestOption
     throw new Error("maxItems는 양의 정수여야 한다.");
   }
   const sources = selectedSources(input.sources, input.sourceKey);
+  if (input.resetCursor && (input.mode !== "archive" || sources.length !== 1)) {
+    throw new Error("--reset-cursor는 archive 단일 source에서만 허용된다.");
+  }
   const statuses: LibraryCollectStatus[] = [];
   let acceptedCount = 0;
   let cursorUpdates = 0;
