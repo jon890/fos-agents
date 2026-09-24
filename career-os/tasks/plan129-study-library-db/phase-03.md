@@ -13,10 +13,13 @@
 ## 컨텍스트
 
 client 가 보내는 추천 본문은 `career-os/scripts/study-topic-recommender/study-library/recommendations.ts` 가 만든다.
-`idempotencyKey`, `reportId`, `generatedAt`, `topics` 를 담고,
+`reportId`, `generatedAt`, `topics` 를 담고,
 `topics[]` 는 `topicKey`, `title`, `careerQuestion`, `items` 를,
 `items[]` 는 `contentKey`, `summary`, `reason`, `careerValue` 를 담는다.
 `reportId` 는 같은 파일의 `reportIdForMorningReading` 이 만드는 서울 날짜의 `morning-YYYY-MM-DD` 다.
+추천 본문에는 `idempotencyKey` 가 없다. 공용 멱등 처리는 `Idempotency-Key` 헤더를 쓴다.
+client 는 Phase 04 에서 `{reportId,generatedAt}` 의 canonical JSON SHA-256 hex 앞에
+`recommendation:` 을 붙여 헤더를 만든다.
 
 이 phase 가 본문에 칸 둘을 더한다. `candidateContextVersion` 과 `rejections` 다.
 client 는 Phase 04 에서 이 둘을 보낸다.
@@ -73,9 +76,16 @@ client 가 후보를 받은 뒤 사람이 기준 버전을 올렸다는 뜻이�
 ### 3. 기준 버전을 올리는 경로
 
 `PUT recommendation-control` 이 `{ candidateContextVersion }` 을 받아 바꾼다.
-사람이 관심사가 바뀌었을 때 부른다. 반환은 바뀐 값이다.
+사람이 관심사가 바뀌었을 때 부른다. 반환은 `{ candidateContextVersion }` 이다.
+client 는 Phase 04 에 이 응답을 파싱하는 zod 계약을 추가한다.
 
-### 4. 이 phase 를 검증하는 `test/study-recommendations.e2e.test.ts`
+### 4. 이관을 위한 추천 실행 존재 조회
+
+`GET recommendation-runs/:reportId/status` 는 `{ reportId, exists }` 를 반환한다.
+존재하지 않아도 `200` 과 `exists: false` 다. 이 경로는 리포트 내용이나 비공개 자료를 반환하지 않는다.
+이관 명령은 각 리포트의 ingestion 전에 이 경로를 조회해 이미 있는 실행을 건너뛴다.
+
+### 5. 이 phase 를 검증하는 `test/study-recommendations.e2e.test.ts`
 
 확인할 것이다.
 
@@ -89,6 +99,9 @@ client 가 후보를 받은 뒤 사람이 기준 버전을 올렸다는 뜻이�
 - `summary` 와 `reason` 이 `null` 인 추천도 저장된다
 - 기준 버전을 올린 뒤 후보를 조회하면 예전에 제외한 자료가 다시 나온다
 - 게시 기록이 저장되고, 없는 `reportId` 면 `404` 다
+- 추천 실행 존재 조회는 저장 전 `exists: false`, 저장 뒤 `exists: true` 다
+- 기준 버전 변경 응답은 `{ candidateContextVersion }` 으로 파싱된다
+- 서로 다른 멱등 키로 A → B → A 를 변경하면 최종 기준 버전은 A 다
 
 ## 검증
 

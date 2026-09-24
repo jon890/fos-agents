@@ -53,15 +53,37 @@ utf8mb4 에서 index key 가 8192 바이트가 되어 InnoDB 상한 3072 를 넘
 
 **`PUT /sources/{sourceKey}` 는 소스 한 행의 모든 칸을 받은 값으로 바꾼다.** `expectedVersion` 이 저장된 값과 다르면 `409` 다.
 새 소스는 `expectedVersion: 0` 으로 만든다.
-`note` 는 선택값이고 500자 이하다. client 의 `studyLibrarySourcePutPayloadSchema` 에 `note` 가 아직 없으므로
-서버는 `note` 가 없어도 받는다.
+`note` 는 선택값이고 500자 이하다. 이 phase 에서 client 의
+`studyLibrarySourcePutPayloadSchema` 에도 `note` 를 추가한다. 서버는 빠진 `note` 도 받는다.
+수집 가능한 소스만 저장한다. `feed` 는 `feedUrl`, `page` 는 `url`, `youtube` 는
+채널 `url` 과 최근 수집용 `feedUrl` 이 모두 필요하다. 이 조건은 서버 요청과
+client PUT 계약에서 함께 검증한다. 기존 `readingSourceSchema` 의 조건보다
+YouTube feed 요구가 엄격한 이유는 실제 recent 수집기가 `feedUrl` 을 사용하기 때문이다.
 
 ## 작업 항목
 
 ### 1. `prisma/migrations/` 에 study table migration 추가
 
-`docs/data-schema.md` 의 「study-topic-recommender」 절이 칸과 타입과 키를 정한다.
-열 개를 모두 만든다.
+`docs/data-schema.md` 의 「study-topic-recommender」 절이 의미와 공개 계약을 정한다.
+아래 표가 SQL에서 빠짐없이 만들 칸과 타입을 정한다. 열 개를 모두 만든다.
+모든 문자열은 `utf8mb4_unicode_ci`, 모든 시각은 `DATETIME(3)`이다.
+`created_at`과 `updated_at`은 각각 삽입 시각과 마지막 변경 시각을 담는다.
+
+| table | 칸과 타입 | 키와 조회용 index |
+| --- | --- | --- |
+| `study_sources` | `source_key VARCHAR(100)`, `title VARCHAR(255)`, `category VARCHAR(50)`, `adapter ENUM('feed','page','youtube')`, `url VARCHAR(2048) NULL`, `feed_url VARCHAR(2048) NULL`, `enabled BOOLEAN`, `note VARCHAR(500) NULL`, `version INT UNSIGNED`, `created_at`, `updated_at` | PK `source_key` |
+| `study_source_cursors` | `source_key VARCHAR(100)`, `mode VARCHAR(20)`, `cursor_json JSON NULL`, `version INT UNSIGNED`, `updated_at` | PK `(source_key,mode)` |
+| `study_materials` | `content_key VARCHAR(191)`, `canonical_url VARCHAR(2048)`, `url VARCHAR(2048)`, `title VARCHAR(500)`, `published VARCHAR(100)`, `published_at DATETIME(3) NULL`, `excerpt TEXT NULL`, `kind ENUM('feed-article','feed-video','page-link','page-video')`, `first_collected_at`, `last_collected_at` | PK `content_key`; index `(published_at,content_key)` |
+| `study_material_sources` | `content_key VARCHAR(191)`, `source_key VARCHAR(100)`, `first_collected_at` | PK `(content_key,source_key)`; index `(source_key,first_collected_at,content_key)` |
+| `study_recommendation_control` | `singleton_id TINYINT UNSIGNED`, `candidate_context_version VARCHAR(191)`, `history_version INT UNSIGNED`, `updated_at` | PK `singleton_id`, `CHECK (singleton_id = 1)` |
+| `study_recommendation_runs` | `report_id VARCHAR(40)`, `generated_at`, `candidate_context_version VARCHAR(191)`, `created_at` | PK `report_id`; index `(generated_at,report_id)` |
+| `study_recommendation_topics` | `report_id VARCHAR(40)`, `topic_key VARCHAR(191)`, `title VARCHAR(500)`, `career_question VARCHAR(300) NULL`, `position SMALLINT UNSIGNED` | PK `(report_id,topic_key)`; unique `(report_id,position)` |
+| `study_recommended_materials` | `report_id VARCHAR(40)`, `content_key VARCHAR(191)`, `topic_key VARCHAR(191)`, `summary VARCHAR(300) NULL`, `reason VARCHAR(300) NULL`, `career_value VARCHAR(40) NULL`, `position SMALLINT UNSIGNED` | PK `(report_id,content_key)`; unique `content_key`; unique `(report_id,topic_key,position)` |
+| `study_material_verdicts` | `content_key VARCHAR(191)`, `candidate_context_version VARCHAR(191)`, `verdict ENUM('rejected')`, `reason VARCHAR(300)`, `report_id VARCHAR(40)`, `judged_at`, `valid_until DATE` | PK `(content_key,candidate_context_version)`; index `(candidate_context_version,valid_until)`; index `report_id` |
+| `study_publications` | `publication_id CHAR(36)`, `report_id VARCHAR(40)`, `channel VARCHAR(50)`, `url VARCHAR(2048) NULL`, `external_id VARCHAR(255)`, `published_at` | PK `publication_id`; index `report_id` |
+
+표의 시각 칸은 모두 NOT NULL 이며, `NULL`이라고 적힌 칸만 nullable이다.
+foreign key는 부모 변경과 삭제를 거부한다. 실행과 연결한 자식도 자동 삭제하지 않는다.
 
 `CHECK` 제약이다.
 
@@ -77,6 +99,8 @@ foreign key 다.
 - `study_recommendation_topics.report_id` 와 `study_recommended_materials.report_id` 와
   `study_publications.report_id` 가 `study_recommendation_runs`
 - `study_recommended_materials.content_key` 가 `study_materials`
+- `study_recommended_materials.(report_id,topic_key)` 가 `study_recommendation_topics`
+- `study_material_verdicts.content_key` 가 `study_materials`, `report_id` 가 `study_recommendation_runs`
 
 `study_recommendation_control` 의 한 행은 migration 이 넣는다.
 `candidate_context_version` 은 `initial`, `history_version` 은 `0` 이다.
@@ -104,6 +128,8 @@ collation 은 기존 table 과 같은 `utf8mb4_unicode_ci` 다.
 
 `PUT` 은 한 트랜잭션에서 소스 행을 잠그고 `expectedVersion` 을 비교한 뒤 쓴다.
 성공하면 `version` 을 1 올린다.
+`contracts.ts` 의 source 응답에 `note: string | null` 을 더하고 PUT payload 에는
+`note?: string | null` 을 더한다. 응답 계약이 `note` 를 제거하지 않아야 한다.
 
 ### 4. cursor 조회 경로
 
@@ -120,11 +146,13 @@ collation 은 기존 table 과 같은 `utf8mb4_unicode_ci` 다.
 - 새 소스를 `expectedVersion: 0` 으로 `PUT` 하면 `version: 1` 이 되고 `GET sources` 에 나온다
 - 같은 소스를 `expectedVersion: 0` 으로 다시 `PUT` 하면 `409` 다
 - `url` 과 `feedUrl` 이 둘 다 `null` 이면 `400` 이다
+- `feed` 의 `feedUrl`, `page` 의 `url`, `youtube` 의 `url` 또는 `feedUrl` 이 빠지면 `400` 이다
 - `http://` URL 은 `400` 이고, SQL 로 직접 넣어도 `CHECK` 가 막는다
 - cursor 가 없는 소스의 cursor 조회가 `cursor: null`, `version: 0` 이다
 - 없는 소스의 cursor 조회가 `404` 다
 - `Idempotency-Key` 없이 `PUT` 하면 거절된다
 - 응답이 `studyLibrarySourcesResponseSchema` 와 `studyLibraryCursorResultSchema` 로 파싱된다
+- source 응답을 파싱한 결과에도 저장된 `note` 가 남는다
 
 마지막 항목은 client 의 zod 계약을 테스트에서 import 해 확인한다.
 
@@ -173,3 +201,4 @@ docker exec plan125-mysql mysql -uroot -pplan125 -N -e \
 | `career-os/services/recommendation-api/src/study/` | 신규 |
 | `career-os/services/recommendation-api/test/support/e2e-harness.ts` | 수정 |
 | `career-os/services/recommendation-api/test/study-sources.e2e.test.ts` | 신규 |
+| `career-os/scripts/study-topic-recommender/study-library/contracts.ts` | source note 계약 수정 |

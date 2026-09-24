@@ -62,8 +62,12 @@ config 파일을 고치던 절차를 `manage_reading_sources.ts` 의 하위 명�
 ```bash
 # cwd: 저장소 루트
 export PATH="$HOME/.bun/bin:$PATH"
+bun install --frozen-lockfile
 bun test career-os/scripts/study-topic-recommender
 bunx tsc --noEmit
+bun test ./career-os/.claude/skills/
+python3 "$HOME/.codex/skills/.system/skill-creator/scripts/quick_validate.py" \
+  career-os/.claude/skills/study-topic-recommender
 ```
 
 ```bash
@@ -76,7 +80,7 @@ bunx tsc --noEmit
 
 기대값이다.
 
-- 셋 모두 종료 코드 0
+- 다섯 명령 모두 종료 코드 0
 - `skill_doc.test.ts` 의 항목이 모두 통과
 
 ## 배포 전에 확인할 것

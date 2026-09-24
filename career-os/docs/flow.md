@@ -456,6 +456,7 @@ Kurly 와 OliveYoung 은 최근 수집에서는 `feed` adapter 이고, archive m
 | `POST /ingestions` | 자료 묶음과 다음 cursor 원자 저장 |
 | `GET /candidates` | 추천하지 않았고 유효한 제외 판정이 없는 후보, `historyVersion`, 지금의 `candidateContextVersion` |
 | `POST /recommendation-runs` | 추천 주제와 자료, 제외 판정의 원자 저장 |
+| `GET /recommendation-runs/{reportId}/status` | 기존 추천 실행의 존재 여부. 이관 명령이 ingestion 전에 확인한다 |
 | `POST /publications` | 외부 게시 성공 이력 |
 | `PUT /recommendation-control` | 후보자 기준 버전을 바꾼다. 사람이 관심사가 바뀌었을 때 부른다 |
 
