@@ -28,6 +28,7 @@
 | `docs/code-architecture.md` | 디렉터리 책임과 실행 경계 |
 | `scripts/` | 블로그 전수 수집과 페르소나 집계 |
 | `.claude/skills/naver-blog-draft/` | 사진에서 네이버 임시저장까지 가는 글쓰기 절차 |
+| `.claude/skills/ji-yoon-persona-refresh/` | 공개 글을 다시 모아 페르소나 차이를 보고하는 절차 |
 | `README.md` | 사람이 읽는 워크스페이스 소개 |
 
 ## 보안

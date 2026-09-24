@@ -178,13 +178,14 @@ def main() -> int:
     parser.add_argument("--out", default="data/posts")
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--limit", type=int, default=0, help="0 이면 전량")
+    parser.add_argument("--refresh-index", action="store_true", help="새 글을 찾도록 공개 글 목록을 다시 받는다")
     args = parser.parse_args()
 
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     index_path = out_dir.parent / "post-index.json"
-    if index_path.exists():
+    if index_path.exists() and not args.refresh_index:
         entries = json.loads(index_path.read_text(encoding="utf-8"))
         print(f"기존 목록 재사용: {len(entries)}건", file=sys.stderr)
     else:

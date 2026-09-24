@@ -44,6 +44,7 @@
 | `scripts/collect_naver_posts.py` | 맥북 | 블로그 글 목록과 본문 수집 |
 | `scripts/enrich_naver_posts.py` | 맥북 | 카테고리 이름과 태그 보강 |
 | `scripts/analyze_persona.py` | 맥북 | 페르소나 문서가 인용하는 수치 집계 |
+| `scripts/build_persona_report.py` | 맥북 | 최근 30개와 전체 글의 통계를 비교한 HTML 보고서 생성 |
 | `scripts/seaweed_s3.py` | 홈서버 | S3 접근. 서명, 목록, 조회 |
 | `scripts/photo_store.py` | 홈서버 | 사진 폴더와 객체 조회, 전송 |
 | `scripts/verify_photo_store.py` | 홈서버 | 연결과 권한 경계 확인 |

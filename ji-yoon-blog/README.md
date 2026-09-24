@@ -8,17 +8,19 @@
 
 ## 페르소나 갱신
 
-페르소나는 블로그 전체 글을 수집해 통계로 만든다.
-글이 쌓이면 다시 돌려 `references/ji-yung-persona.md`를 갱신한다.
+한 달에 한 번 공개 글을 수집한다.
+이전 보고서 뒤에 새 글이 10개 이상이면 최근 30개와 전체 글을 비교한 HTML 보고서를 만든다.
+실행 순서와 문서 수정 조건은 [지융로그 페르소나 갱신 스킬](.claude/skills/ji-yoon-persona-refresh/SKILL.md)을 따른다.
 
 ```bash
-python3 scripts/collect_naver_posts.py --out data/posts
+python3 scripts/collect_naver_posts.py --out data/posts --refresh-index
 python3 scripts/enrich_naver_posts.py --out data/posts
 python3 scripts/analyze_persona.py --posts data/posts --out data/persona-stats.json
+python3 scripts/build_persona_report.py --posts data/posts --stats data/persona-stats.json
 ```
 
-`collect_naver_posts.py`는 이미 받은 글을 건너뛰므로 새 글만 추가로 받는다.
-전체를 다시 받으려면 `data/posts`와 `data/post-index.json`을 지운다.
+`collect_naver_posts.py`는 글 목록을 다시 받고 이미 받은 본문은 재사용한다.
+사람이 보고서를 읽고 확인한 뒤에만 페르소나와 카테고리 스타일 문서를 고친다.
 
 수집은 로그인이 필요 없다.
 요청이 빠르면 네이버가 429로 거절하므로 스크립트가 간격을 늘려가며 다시 요청한다.

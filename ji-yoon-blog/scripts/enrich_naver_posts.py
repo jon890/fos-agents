@@ -70,16 +70,16 @@ def main() -> int:
     names = category_names(list(records.values()))
     print(f"카테고리 {len(names)}개: {sorted(names.values())}", file=sys.stderr)
 
-    log_nos = list(records)
+    log_nos = [log_no for log_no, record in records.items() if not record.get("tagsFetched")]
     with ThreadPoolExecutor(max_workers=4) as pool:
         tag_map = dict(zip(log_nos, pool.map(tags_for, log_nos)))
     fetched = sum(1 for _, ok in tag_map.values() if ok)
-    print(f"태그 응답 {fetched}건, 실패 {len(log_nos) - fetched}건", file=sys.stderr)
+    print(f"새 태그 응답 {fetched}건, 실패 {len(log_nos) - fetched}건", file=sys.stderr)
 
     for log_no, record in records.items():
         record["categoryName"] = names.get(record.get("categoryNo", ""), record.get("categoryName", ""))
-        tags, ok = tag_map.get(log_no, ([], False))
-        if ok or not record.get("tagsFetched"):
+        if log_no in tag_map:
+            tags, ok = tag_map[log_no]
             record["tags"] = tags
             record["tagsFetched"] = ok
         (out_dir / f"{log_no}.json").write_text(
