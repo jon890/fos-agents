@@ -70,7 +70,8 @@ ji-yoon-blog/drafts/<YYYY-MM-DD>-<장소>/
 | `title` | 확정한 제목 |
 | `titleCandidates` | 지융에게 보여준 제목 후보 배열. 고르고 나면 `title`이 그중 하나다 |
 | `category` | `category-style-map.md`에 있는 카테고리 이름 |
-| `tags` | 태그 배열 |
+| `sponsored` | 지융에게 확인한 협찬 여부. 참이면 협찬, 거짓이면 비협찬 |
+| `tags` | 검색어를 반영한 태그 배열. `#` 없이 적는다 |
 | `blocks` | 본문 블록 배열. 순서가 곧 글의 순서다 |
 
 `titleCandidates`를 빼도 미리보기는 만들어진다.
@@ -80,10 +81,22 @@ ji-yoon-blog/drafts/<YYYY-MM-DD>-<장소>/
 
 | `type` | 필드 | 뜻 |
 | --- | --- | --- |
-| `sticker` | `emoji` | 글을 열고 닫는 스티커 자리 |
+| `sticker` | `stickerCode` | 네이버 스티커 코드. 아래 네 코드 중 하나 |
 | `text` | `lines` | 문단 배열. 한 원소가 한 줄이다 |
-| `image` | `path`, `caption` | `draft.json`이 있는 자리에서 본 상대 경로 |
-| `map` | `address` | 마무리 뒤에 붙는 주소 |
+| `image` | `path`, `caption`, `role` | `draft.json`이 있는 자리에서 본 상대 경로. 메뉴판 사진은 `role: "menu"` |
+| `map` | `name`, `address` | 확인한 상호명과 주소. 둘 다 일치하는 장소 하나만 첨부한다 |
+
+| 스티커 | `stickerCode` | 배치 |
+| --- | --- | --- |
+| 안녕하세요 | `ogq_5db4314bac2f0-1` | 첫 블록 |
+| 가격표 | `ogq_5db4314bac2f0-6` | 메뉴판 사진 바로 앞 |
+| 내돈내산 | `ogq_5db4314bac2f0-23` | `sponsored`가 거짓일 때만 한 개 |
+| 위치정보 | `ogq_5db4314bac2f0-4` | 마지막 블록 |
+
+맛집로그와 카페로그는 메뉴판 사진 한 장을 `role: "menu"`로 표시한다.
+지도 블록에는 지융이 확인한 상호명과 주소를 적는다.
+네이버 검색 결과에서 둘 다 맞는 항목이 하나가 아니면 첨부를 멈추고 지융에게 묻는다.
+협찬 여부를 확인하지 않았다면 `sponsored`를 추정해 채우지 않는다.
 
 `lines`를 한 문자열로 합치지 않는다.
 지융의 글은 문단의 절반이 문장 중간에서 끊기므로, 줄을 나눈 그대로가 정보다.

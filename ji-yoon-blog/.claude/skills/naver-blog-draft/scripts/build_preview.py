@@ -8,12 +8,13 @@
     {
       "title": "불향 가득한 군산 곱창 맛집 순돌이곱창 메뉴, 웨이팅 후기",
       "category": "맛집로그",
+      "sponsored": false,
       "tags": ["군산맛집", "내돈내산"],
       "blocks": [
-        {"type": "sticker"},
+        {"type": "sticker", "stickerCode": "ogq_5db4314bac2f0-1"},
         {"type": "text", "lines": ["안녕하세요 지융입니다 😋", "오늘은 ..."]},
         {"type": "image", "path": "tmp/001-IMG_0001.jpg", "caption": ""},
-        {"type": "map", "address": "전북특별자치도 군산시 ..."}
+        {"type": "map", "name": "순돌이곱창", "address": "전북특별자치도 군산시 ..."}
       ]
     }
 
@@ -83,10 +84,16 @@ def render_block(block: dict, base: Path) -> str:
         return f'<div class="photo">{body}{caption}</div>'
 
     if kind == "sticker":
-        return f'<div class="sticker">{html.escape(block.get("emoji", "🌿"))}</div>'
+        labels = {
+            "ogq_5db4314bac2f0-1": "안녕하세요 스티커",
+            "ogq_5db4314bac2f0-4": "위치정보 스티커",
+            "ogq_5db4314bac2f0-6": "가격표 스티커",
+            "ogq_5db4314bac2f0-23": "내돈내산 스티커",
+        }
+        return f'<div class="sticker">{html.escape(labels.get(block.get("stickerCode"), "스티커"))}</div>'
 
     if kind == "map":
-        return f'<div class="map">📍 {html.escape(block.get("address", ""))}</div>'
+        return f'<div class="map">📍 {html.escape(block.get("name", ""))} · {html.escape(block.get("address", ""))}</div>'
 
     return f'<div class="missing">모르는 블록: {html.escape(str(kind))}</div>'
 
@@ -119,10 +126,16 @@ def build(draft: dict, base: Path) -> str:
 
 
 BLOCK_FIELDS = {
-    "sticker": "emoji",
+    "sticker": "stickerCode",
     "text": "lines",
     "image": "path",
-    "map": "address",
+    "map": "name",
+}
+STICKER_CODES = {
+    "hello": "ogq_5db4314bac2f0-1",
+    "location": "ogq_5db4314bac2f0-4",
+    "price": "ogq_5db4314bac2f0-6",
+    "self_paid": "ogq_5db4314bac2f0-23",
 }
 
 
@@ -141,8 +154,10 @@ def validate(draft: dict) -> list[str]:
         problems.append("category 가 비어 있다")
 
     tags = draft.get("tags")
-    if not isinstance(tags, list) or not all(isinstance(t, str) for t in tags):
-        problems.append("tags 는 문자열 배열이어야 한다")
+    if not isinstance(tags, list) or not tags or not all(isinstance(t, str) and t.strip() and not t.startswith("#") for t in tags):
+        problems.append("tags 는 # 없는 비어 있지 않은 문자열 배열이어야 한다")
+    if not isinstance(draft.get("sponsored"), bool):
+        problems.append("sponsored 는 지융에게 확인한 참 또는 거짓이어야 한다")
 
     blocks = draft.get("blocks")
     if not isinstance(blocks, list) or not blocks:
@@ -172,6 +187,24 @@ def validate(draft: dict) -> list[str]:
                 problems.append(f"{where}(text) 의 lines 가 비어 있다")
         elif not isinstance(value, str) or not value.strip():
             problems.append(f"{where}({kind}) 의 {field} 가 비어 있다")
+        if kind == "sticker" and value not in STICKER_CODES.values():
+            problems.append(f"{where}(sticker) 의 stickerCode 를 모른다: {value!r}")
+        if kind == "map" and (not isinstance(block.get("address"), str) or not block["address"].strip()):
+            problems.append(f"{where}(map) 의 address 가 없다")
+
+    if draft.get("category") in ("맛집로그", "카페로그"):
+        codes = [b.get("stickerCode") for b in blocks if isinstance(b, dict) and b.get("type") == "sticker"]
+        if not isinstance(blocks[0], dict) or blocks[0].get("stickerCode") != STICKER_CODES["hello"]:
+            problems.append("첫 블록은 안녕하세요 스티커여야 한다")
+        if not isinstance(blocks[-1], dict) or blocks[-1].get("stickerCode") != STICKER_CODES["location"]:
+            problems.append("마지막 블록은 위치정보 스티커여야 한다")
+        menu_images = [i for i, b in enumerate(blocks) if isinstance(b, dict) and b.get("type") == "image" and b.get("role") == "menu"]
+        if len(menu_images) != 1 or menu_images[0] == 0 or not isinstance(blocks[menu_images[0] - 1], dict) or blocks[menu_images[0] - 1].get("stickerCode") != STICKER_CODES["price"]:
+            problems.append("메뉴판 사진 하나 바로 앞에 가격표 스티커를 둔다")
+        if codes.count(STICKER_CODES["self_paid"]) != (0 if draft.get("sponsored") else 1):
+            problems.append("비협찬 글에만 내돈내산 스티커를 하나 둔다")
+        if not any(isinstance(b, dict) and b.get("type") == "map" and b.get("name") and b.get("address") for b in blocks):
+            problems.append("상호명과 주소가 있는 지도 블록을 둔다")
 
     return problems
 

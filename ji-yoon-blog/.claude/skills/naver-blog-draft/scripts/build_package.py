@@ -53,10 +53,10 @@ def build(draft: dict) -> str:
             out.append(f"<< 사진 {step}: {block.get('path', '')} >>")
             out.append("")
         elif kind == "sticker":
-            out.append(f"<< 스티커: {block.get('emoji', '')} >>")
+            out.append(f"<< 스티커: {block.get('stickerCode', '')} >>")
             out.append("")
         elif kind == "map":
-            out.append(f"<< 장소 지도: {block.get('address', '')} >>")
+            out.append(f"<< 장소 지도: {block.get('name', '')} · {block.get('address', '')} >>")
             out.append("")
 
     out.append("## 태그")
@@ -71,6 +71,7 @@ def build(draft: dict) -> str:
     out.append("## 확인")
     out.append("")
     out.append(f"- 카테고리: {draft.get('category', '')}")
+    out.append(f"- 협찬 여부: {'협찬' if draft.get('sponsored') else '비협찬'}")
     out.append(f"- 사진 {photos}장, 본문 {letters}자, 태그 {len(draft.get('tags') or [])}개")
     out.append("- 임시저장까지만 한다. 발행은 지융이 따로 누른다.")
     out.append("")
