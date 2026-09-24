@@ -25,10 +25,10 @@ description: >
 | 2 | 장소 확인 | 지융이 상호명을 확정했다 | |
 | 3 | 사진 올릴 자리 만들기 | 주소를 주었고 지융이 올렸다고 알렸다 | 스킬 `references/iphone-upload.md` |
 | 4 | 사진 읽기 | `photos.py pull` 이 사진을 내려놓았고 그 사진을 모두 봤다 | |
-| 5 | 부족한 사실 묻기 | 카테고리 모듈의 `반드시 담을 사실` 에 빈 칸이 없다 | 워크스페이스 `references/category-style-map.md` |
+| 5 | 부족한 사실 묻기 | 카테고리 모듈의 필수 사실과 협찬 여부를 지융에게 확인했다 | 워크스페이스 `references/category-style-map.md` |
 | 6 | 초안 만들기 | `draft.json` 이 있고 미리보기 생성이 종료 코드 0 이다 | 워크스페이스 `references/ji-yung-persona.md`, `docs/data-schema.md` |
 | 7 | 미리보기 확인 | 지융이 확인했다고 답했다 | |
-| 8 | 네이버 임시저장 | `state` 가 낸 제목과 본문 줄 수가 초안과 같고 임시저장 개수가 늘었다 | 워크스페이스 `references/preview-automation.md` |
+| 8 | 네이버 임시저장 | `state` 의 사진·스티커·지도·카테고리·태그가 초안과 맞고 임시저장 개수가 늘었다 | 워크스페이스 `references/preview-automation.md` |
 
 스킬 문서는 이 스킬의 `references/` 에, 워크스페이스 문서는 `ji-yoon-blog/references/` 에 있다.
 
@@ -46,7 +46,7 @@ description: >
 | 3 | 지융 | 아이폰을 스킬이 조작하지 못한다 |
 | 5 | 지융 | 사진에 없는 것은 지어내지 않는다 |
 | 7 | 지융 | 확인 없이 네이버에 넣지 않는다 |
-| 8 | 지융 | 태그를 넣는 것과 발행은 지융이 한다 |
+| 8 | 지융 | 장소 검색 결과가 하나로 정해지지 않으면 지융이 고른다. 발행은 지융이 한다 |
 
 ## 1. 사진 저장소 닿는지 보기
 
@@ -239,12 +239,16 @@ python3 .claude/skills/naver-blog-draft/scripts/photos.py pull 2026-09-04-순돌
 {
   "title": "불향 가득한 군산 곱창 맛집 순돌이곱창 메뉴, 웨이팅 후기",
   "category": "맛집로그",
+  "sponsored": false,
   "tags": ["군산맛집", "군산곱창", "순돌이곱창웨이팅", "내돈내산"],
   "blocks": [
-    {"type": "sticker", "emoji": "🍖"},
+    {"type": "sticker", "stickerCode": "ogq_5db4314bac2f0-1"},
     {"type": "text", "lines": ["안녕하세요 지융입니다 😋", "오늘은 ..."]},
-    {"type": "image", "path": "photos/001-001.jpg"},
-    {"type": "map", "address": "전북특별자치도 군산시 우체통거리2길 43-9"}
+    {"type": "sticker", "stickerCode": "ogq_5db4314bac2f0-6"},
+    {"type": "image", "path": "photos/001-001.jpg", "role": "menu"},
+    {"type": "map", "name": "순돌이곱창", "address": "전북특별자치도 군산시 우체통거리2길 43-9"},
+    {"type": "sticker", "stickerCode": "ogq_5db4314bac2f0-23"},
+    {"type": "sticker", "stickerCode": "ogq_5db4314bac2f0-4"}
   ]
 }
 ```
@@ -257,6 +261,12 @@ python3 .claude/skills/naver-blog-draft/scripts/photos.py pull 2026-09-04-순돌
 제목은 후보를 셋 만들어 `titleCandidates` 에 담고 지융에게 고르게 한다.
 고른 것을 `title` 에 넣는다.
 검색어를 담되 지융이 실제로 쓰는 형태를 벗어나지 않는다.
+
+맛집과 카페 초안은 안녕하세요 스티커를 첫 블록에, 가격표 스티커를 메뉴판 사진 바로 앞에,
+위치정보 스티커를 마지막 블록에 둔다.
+협찬 여부는 지융에게 물어 `sponsored`에 적는다. 비협찬일 때만 내돈내산 스티커를 넣는다.
+태그는 지역과 메뉴처럼 실제 검색에 쓰일 말을 고르고 `#` 없이 적는다.
+지도는 확인한 상호명과 주소를 모두 적는다.
 
 초안을 저장한 뒤 미리보기를 만들어 계약을 검사받는다.
 계약을 어기면 종료 코드 2 로 끝나고 어느 블록이 문제인지 알려준다.
@@ -278,19 +288,30 @@ python3 .claude/skills/naver-blog-draft/scripts/build_preview.py \
 ## 8. 네이버 임시저장
 
 홈서버에 상주하는 Chrome 에 붙어 제목과 본문을 넣고 임시저장한다.
-2026-09-20 에 끝까지 한 번 돌려 확인한 경로다.
+`open`은 새 탭을 만든다. 출력된 `target-id`를 `TARGET_ID`에 넣고 그 탭에서만 작업한다.
+기존 글쓰기 탭은 열거나 저장하지 않는다.
 
 ```bash
-ssh <홈서버> 'cd ~/fos-agents/ji-yoon-blog && python3 scripts/naver_session.py start'
-ssh -N -L 9222:127.0.0.1:9222 <홈서버> &
-python3 scripts/naver_editor.py open
-python3 scripts/naver_editor.py fill drafts/순돌이곱창/draft.json
-python3 scripts/naver_editor.py save
-python3 scripts/naver_editor.py state
+OPEN_OUTPUT=$(python3 scripts/naver_editor.py open) || exit 1
+printf '%s\n' "$OPEN_OUTPUT"
+TARGET_ID=$(printf '%s\n' "$OPEN_OUTPUT" | sed -n 's/^target-id: //p')
+test -n "$TARGET_ID" || exit 1
+DRAFT='drafts/순돌이곱창/draft.json'
+REMOTE_PHOTOS='브라우저 쪽 사진 디렉터리'
+python3 scripts/naver_editor.py --target-id "$TARGET_ID" fill "$DRAFT"
+python3 scripts/naver_editor.py --target-id "$TARGET_ID" photos "$DRAFT" --remote-base "$REMOTE_PHOTOS"
+python3 scripts/naver_editor.py --target-id "$TARGET_ID" components "$DRAFT"
+python3 scripts/naver_editor.py --target-id "$TARGET_ID" settings "$DRAFT"
+python3 scripts/naver_editor.py --target-id "$TARGET_ID" save
+python3 scripts/naver_editor.py --target-id "$TARGET_ID" state
+python3 scripts/naver_editor.py --target-id "$TARGET_ID" close
 ```
 
-`naver_session.py` 의 종료 코드가 1 이면 로그인이 없는 것이다.
-그때는 멈추고 지융에게 로그인을 요청한다. 붙는 방법은 reference 가 소유한다.
+`REMOTE_PHOTOS`는 브라우저가 실행되는 기계의 사진 디렉터리로 정한다.
+연결과 로그인 확인은 reference의 절차를 따른다.
+로그인이나 보안 확인에 막히면 멈추고 지융에게 브라우저 조작을 요청한다.
+장소 검색 결과가 둘 이상이거나 상호명과 주소가 함께 맞지 않으면 멈추고 지융에게 묻는다.
+실패하거나 완료해도 `open`으로 만든 탭은 닫는다.
 
 넣는 것과 넣지 못하는 것이 갈린다.
 
@@ -298,21 +319,14 @@ python3 scripts/naver_editor.py state
 | --- | --- | --- |
 | 제목 | 들어간다 | 스킬 |
 | 본문 글자 | 들어간다 | 스킬 |
-| 사진 | 들어간다 | 스킬 |
-| 태그 | 들어가지 않는다 | 지융이 발행할 때 넣는다 |
+| 사진 | 자리마다 들어가고 `문서 너비`가 적용된다 | 스킬 |
+| 스티커와 지도 | 실제 편집기 구성요소로 들어간다 | 스킬 |
+| 카테고리와 태그 | 발행 설정에서 입력한 뒤 설정을 닫고 임시저장한다 | 스킬 |
 
-사진은 `photos` 로 넣는다.
-경로는 브라우저가 도는 기계 기준이므로 사진이 그 기계에 있어야 한다.
+태그 입력란은 발행 설정에 있다. 설정을 열어 태그를 칩으로 확정하고 닫은 뒤 `저장`만 누른다.
+발행 확인 버튼은 누르지 않는다.
 
-```bash
-python3 scripts/naver_editor.py photos drafts/순돌이곱창/draft.json \
-  --remote-base <브라우저가 도는 기계의 사진 디렉터리>
-```
-
-태그 입력란은 임시저장 화면에 없다. 발행 설정 레이어에만 있다.
-
-그래서 붙여넣을 묶음을 함께 만든다.
-지융이 태그를 넣을 때 그 순서를 본다.
+자동화가 막혔을 때 지융이 참고할 붙여넣기 묶음도 만든다.
 
 ```bash
 python3 .claude/skills/naver-blog-draft/scripts/build_package.py \
@@ -321,7 +335,7 @@ python3 .claude/skills/naver-blog-draft/scripts/build_package.py \
 
 자동화가 막히면 그 파일로 되돌아간다. 지융이 직접 편집기에 넣는다.
 
-마지막에 `state` 가 내는 것을 읽어 제목과 본문 줄 수와 임시저장 개수를 확인한다.
+마지막에 `state`가 내는 제목, 사진 수와 너비, 스티커와 지도 수, 카테고리, 태그, 임시저장 개수를 확인한다.
 읽어 확인한 것만 완료라고 말한다.
 
 발행하지 않는다. `저장` 만 누른다.

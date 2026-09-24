@@ -12,17 +12,21 @@
 | --- | --- |
 | 제목 | 넣는다 |
 | 본문 글자 | 넣는다 |
-| 사진 | 넣는다. 커서 자리에 한꺼번에 들어가고 자리 표시 글자는 그대로 남는다 |
-| 태그 | 넣지 못한다. 발행 설정 레이어에만 입력란이 있다 |
+| 사진 | 초안의 자리마다 넣고 `문서 너비`를 적용한다 |
+| 스티커와 지도 | 초안의 자리마다 실제 편집기 구성요소로 넣는다 |
+| 카테고리와 태그 | 발행 설정에서 넣고 설정을 닫는다. 발행하지 않는다 |
 
 발행하지 않는다. `저장` 만 누른다.
 
 사용법:
     python3 naver_editor.py open
-    python3 naver_editor.py fill drafts/순돌이곱창/draft.json
-    python3 naver_editor.py photos drafts/순돌이곱창/draft.json --remote-base <사진 디렉터리>
-    python3 naver_editor.py save
-    python3 naver_editor.py state
+    python3 naver_editor.py --target-id <탭 식별자> fill drafts/순돌이곱창/draft.json
+    python3 naver_editor.py --target-id <탭 식별자> photos drafts/순돌이곱창/draft.json --remote-base <사진 디렉터리>
+    python3 naver_editor.py --target-id <탭 식별자> components drafts/순돌이곱창/draft.json
+    python3 naver_editor.py --target-id <탭 식별자> settings drafts/순돌이곱창/draft.json
+    python3 naver_editor.py --target-id <탭 식별자> save
+    python3 naver_editor.py --target-id <탭 식별자> state
+    python3 naver_editor.py --target-id <탭 식별자> close
 
 종료 코드:
     0  요청한 것이 끝났다
@@ -38,11 +42,13 @@ import os
 import re
 import sys
 import time
+import urllib.parse
+import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from cdp import CdpError, Page, http_json  # noqa: E402
+from cdp import HOST, PORT, CdpError, Page, http_json  # noqa: E402
 
 BLOG_ID = os.environ.get("JI_YOON_BLOG_BLOG_ID", "mywldbs")
 WRITE_URL = f"https://blog.naver.com/PostWriteForm.naver?blogId={BLOG_ID}"
@@ -50,6 +56,25 @@ WRITE_MARK = "PostWriteForm.naver"
 
 TITLE_SELECTOR = ".se-documentTitle .se-text-paragraph"
 BODY_SELECTOR = ".se-component.se-text .se-text-paragraph"
+
+STICKER_BUTTON = "button.se-sticker-toolbar-button"
+PLACE_BUTTON = "button.se-map-toolbar-button"
+PUBLISH_SETTINGS_BUTTON = 'button[data-click-area="tpb.publish"]'
+STICKER_CODES = {
+    "hello": "ogq_5db4314bac2f0-1",
+    "location": "ogq_5db4314bac2f0-4",
+    "price": "ogq_5db4314bac2f0-6",
+    "self_paid": "ogq_5db4314bac2f0-23",
+}
+
+
+def close_tab(target_id: str) -> None:
+    """정확한 탭 하나를 닫는다. CDP의 응답은 JSON이 아닌 일반 문자열이다."""
+    with urllib.request.urlopen(
+        f"http://{HOST}:{PORT}/json/close/{urllib.parse.quote(target_id)}",
+        timeout=10,
+    ):
+        pass
 
 
 def mouse_click(page: Page, finder: str) -> bool:
@@ -63,7 +88,7 @@ def mouse_click(page: Page, finder: str) -> bool:
         f'''(() => {{
   const el = {finder};
   if (!el) return null;
-  el.scrollIntoView({{block: "center"}});
+  el.scrollIntoView({{behavior: "instant", block: "center"}});
   const r = el.getBoundingClientRect();
   if (!r.width || !r.height) return null;
   return JSON.stringify({{x: r.left + r.width / 2, y: r.top + r.height / 2}});
@@ -133,12 +158,31 @@ def body_lines(draft: dict) -> list[str]:
             name = Path(block.get("path", "")).name or "이름 없는 사진"
             lines.append(f"[사진 자리: {name}]")
         elif kind == "map":
-            lines.append(f"[장소 자리: {block.get('address', '')}]")
+            lines.append(map_placeholder(block))
         elif kind == "sticker":
-            lines.append(f"[스티커 자리: {block.get('emoji', '')}]")
+            lines.append(sticker_placeholder(block))
     while lines and not lines[-1]:
         lines.pop()
     return lines
+
+
+def image_placeholder(block: dict) -> str:
+    """사진 블록의 자리표시 글을 만든다."""
+    name = Path(block.get("path", "")).name or "이름 없는 사진"
+    return f"[사진 자리: {name}]"
+
+
+def sticker_placeholder(block: dict) -> str:
+    """실제 스티커로 바꿀 자리표시 글을 만든다."""
+    label = block.get("label") or block.get("purpose") or block.get("stickerCode", "")
+    return f"[스티커 자리: {label}]"
+
+
+def map_placeholder(block: dict) -> str:
+    """실제 지도 카드로 바꿀 자리표시 글을 만든다."""
+    name = block.get("name", "")
+    address = block.get("address", "")
+    return f"[장소 자리: {name} | {address}]"
 
 
 def blocking_popup(page: Page) -> str:
@@ -174,24 +218,18 @@ def require_clear_screen(page: Page) -> str:
 
 def cmd_open(page: Page, args: argparse.Namespace) -> int:
     """글쓰기 화면을 연다."""
-    page.call("Page.navigate", url=WRITE_URL)
     for _ in range(40):
         time.sleep(1)
         title = page.js("document.title") or ""
         if "네이버 블로그" in title and page.js(
             f'!!document.querySelector({json.dumps(TITLE_SELECTOR)})'
         ):
-            # 앞서 쓰던 글이 있으면 `이어서 작성하시겠습니까?` 알림이 화면을 덮는다.
-            # 그 알림을 치우지 않으면 클릭이 닿지 않는데 화면은 멀쩡해 보인다. 실측이다.
             note = blocking_popup(page)
             if note:
-                choice = "확인" if args.resume else "취소"
-                if not dismiss_popup(page, choice):
-                    print(f"알림을 치우지 못했다: {note}", file=sys.stderr)
-                    return 1
-                time.sleep(1)
-                print(f"이전 글 알림을 `{choice}` 로 지났다")
-            print(f"글쓰기 화면을 열었다: {title}")
+                print(f"알림이 떠 있어 멈춘다. 아무 버튼도 누르지 않았다: {note}", file=sys.stderr)
+                return 1
+            print(f"글쓰기 화면을 새 탭에 열었다: {title}")
+            print(f"target-id: {args.target_id}")
             return 0
         if "NAVER 로그인" in title:
             print("로그인 화면으로 넘어갔다. naver_session.py 로 로그인 상태를 본다.", file=sys.stderr)
@@ -302,6 +340,73 @@ def body_mismatch(want: list[str], got: list[str]) -> str:
     return ""
 
 
+def focus_placeholder(page: Page, text: str) -> bool:
+    """본문에서 자리표시 문단을 찾아 초점을 두고 글자를 지운다."""
+    finder = (
+        f"[...document.querySelectorAll({json.dumps(BODY_SELECTOR)})]"
+        f".find(e => e.textContent.trim() === {json.dumps(text)})"
+    )
+    element_id = page.js(f"({finder})?.id")
+    if not element_id:
+        return False
+    element = f"document.getElementById({json.dumps(element_id)})"
+
+    def click_end() -> bool:
+        spot = page.js(
+            f'''(() => {{
+  const el = {element};
+  if (!el) return null;
+  el.scrollIntoView({{behavior: "instant", block: "center"}});
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  const rects = range.getClientRects();
+  const rect = rects[rects.length - 1];
+  if (!rect) return null;
+  return JSON.stringify({{x: rect.right + 4, y: rect.top + rect.height / 2}});
+}})()'''
+        )
+        if not spot:
+            return False
+        point = json.loads(spot)
+        for kind in ("mousePressed", "mouseReleased"):
+            page.call(
+                "Input.dispatchMouseEvent",
+                type=kind,
+                x=point["x"],
+                y=point["y"],
+                button="left",
+                clickCount=1,
+            )
+        return bool(page.js(
+            "(() => { const s = getSelection(); const n = s.anchorNode;"
+            f" return n?.nodeType === 3 && n.parentElement.closest({json.dumps(BODY_SELECTOR)})?.id === {json.dumps(element_id)}"
+            " && s.anchorOffset === n.textContent.length; })()"
+        ))
+
+    if not click_end():
+        return False
+    # JS Range 로 선택해 Delete 하면 편집기 내부 커서와 어긋나 일부 글자만 지워진다.
+    # 실제 키 입력으로 끝에서 지우고, 커서가 튀어 멈추면 끝을 다시 누른다.
+    previous = None
+    stalls = 0
+    for _ in range(len(text) * 4):
+        current = page.js(f"{element}?.textContent") or ""
+        if not current:
+            return True
+        if len(current) > len(text) or not text.startswith(current):
+            return False
+        if current == previous:
+            stalls += 1
+            if stalls > 3 or not click_end():
+                return False
+        else:
+            stalls = 0
+        previous = current
+        page.press("Backspace", "Backspace", 8)
+        time.sleep(SETTLE_SECONDS)
+    return False
+
+
 def cmd_fill(page: Page, args: argparse.Namespace) -> int:
     """초안의 제목과 본문을 넣는다."""
     draft = json.loads(Path(args.draft).read_text(encoding="utf-8"))
@@ -353,10 +458,6 @@ def cmd_fill(page: Page, args: argparse.Namespace) -> int:
         return 1
 
     print(f"제목과 본문 {len(want)}줄 {sum(map(len, want))}자를 넣었다. 초안과 같다")
-    tags = draft.get("tags") or []
-    if tags:
-        print(f"태그 {len(tags)}개는 넣지 못했다. 발행 설정 레이어에만 입력란이 있다.")
-        print("  " + ", ".join(tags))
     return 0
 
 
@@ -423,12 +524,42 @@ def image_count(page: Page) -> int:
     return page.js('document.querySelectorAll(".se-component.se-image").length') or 0
 
 
+def fit_image(page: Page, index: int) -> bool:
+    """index 번째 사진을 골라 `문서 너비`를 적용하고 결과 클래스를 확인한다."""
+    image = (
+        f"[...document.querySelectorAll('.se-component.se-image')][{index}]"
+        ".querySelector('.se-module-image')"
+    )
+    if not wait_until(lambda: mouse_click(page, image), seconds=10.0):
+        return False
+    fitted = (
+        f"[...document.querySelectorAll('.se-component.se-image')][{index}]"
+        "?.querySelector('.se-component-content-fit') !== null"
+    )
+    if page.js(fitted):
+        return True
+    toolbar = "button.se-object-arrangement-fit-toolbar-button"
+    if not wait_until(
+        lambda: bool(page.js(
+            f"(() => {{ const e = document.querySelector({json.dumps(toolbar)});"
+            " if (!e) return false; const r = e.getBoundingClientRect();"
+            " return r.width > 0 && r.height > 0; })()"
+        )),
+        seconds=10.0,
+    ):
+        return False
+    if not click(page, toolbar):
+        return False
+    return wait_until(lambda: bool(page.js(fitted)), seconds=10.0)
+
+
 def cmd_photos(page: Page, args: argparse.Namespace) -> int:
     """초안의 사진을 편집기에 넣는다."""
     draft_path = Path(args.draft)
     draft = json.loads(draft_path.read_text(encoding="utf-8"))
+    blocks = [block for block in draft.get("blocks", []) if block.get("type") == "image"]
     files = photo_paths(draft, draft_path.parent, args.remote_base)
-    if not files:
+    if not blocks or not files:
         print("초안에 image 블록이 없다", file=sys.stderr)
         return 1
 
@@ -437,37 +568,248 @@ def cmd_photos(page: Page, args: argparse.Namespace) -> int:
         print(f"화면을 덮은 알림이 있어 사진을 넣지 못한다: {note}", file=sys.stderr)
         return 1
 
-    before = image_count(page)
-    problem = attach_photos(page, files)
-    if problem:
-        print(problem, file=sys.stderr)
+    if len(blocks) != len(files):
+        print("경로가 빈 image 블록이 있다", file=sys.stderr)
         return 1
 
-    # 사진이 둘 이상이면 `사진 첨부 방식` 창이 떠서 고르기를 기다린다.
-    # 고르지 않으면 본문에 아무것도 생기지 않는다. `개별사진` 을 마우스로 누른다.
-    picked = False
-    after = before
-    for _ in range(120):
-        time.sleep(0.5)
-        if not picked and click(page, LAYOUT_EACH):
-            picked = True
-            print("사진 첨부 방식에서 `개별사진` 을 골랐다")
-        after = image_count(page)
-        if after - before >= len(files):
-            print(f"사진 {after - before}개가 본문에 들어갔다. 넣은 파일은 {len(files)}개다")
-            return 0
-    if after == before:
-        print("파일은 넣었지만 본문에 이미지 블록이 생기지 않았다", file=sys.stderr)
-    else:
-        print(
-            f"사진이 {len(files)}개 중 {after - before}개만 본문에 들어갔다",
-            file=sys.stderr,
-        )
-    return 1
+    inserted = 0
+    for block, path in zip(blocks, files):
+        marker = image_placeholder(block)
+        if not focus_placeholder(page, marker):
+            print(f"사진 자리를 찾지 못했다: {marker}", file=sys.stderr)
+            return 1
+        before = image_count(page)
+        problem = attach_photos(page, [path])
+        if problem:
+            print(problem, file=sys.stderr)
+            return 1
+        if not wait_until(lambda: image_count(page) > before, seconds=30.0):
+            print(f"사진이 본문에 들어가지 않았다: {path}", file=sys.stderr)
+            return 1
+        if not fit_image(page, before):
+            print(f"사진에 `문서 너비`를 적용하지 못했다: {path}", file=sys.stderr)
+            return 1
+        inserted += 1
+
+    print(f"사진 {inserted}개를 자리마다 넣고 모두 `문서 너비`로 맞췄다")
+    return 0
+
+
+def component_count(page: Page, kind: str) -> int:
+    """본문의 SmartEditor 구성요소 수를 읽는다."""
+    return page.js(f'document.querySelectorAll(".se-component.se-{kind}").length') or 0
+
+
+def insert_sticker(page: Page, block: dict) -> str:
+    """자리표시 문단에 코드로 지정한 실제 스티커를 넣는다."""
+    code = block.get("stickerCode", "")
+    if code not in STICKER_CODES.values():
+        return f"지원하지 않는 stickerCode: {code}"
+    marker = sticker_placeholder(block)
+    if not focus_placeholder(page, marker):
+        return f"스티커 자리를 찾지 못했다: {marker}"
+    before = component_count(page, "sticker")
+    panel_open = page.js(
+        "(() => { const e = document.querySelector('.se-sidebar-container-sticker');"
+        " if (!e) return false; const r = e.getBoundingClientRect();"
+        " return r.width > 0 && r.height > 0; })()"
+    )
+    if not panel_open and not click(page, STICKER_BUTTON):
+        return "스티커 버튼을 찾지 못했다"
+    finder = (
+        "[...document.querySelectorAll('button.se-sidebar-element-sticker')]"
+        f".find(e => e.innerText.trim() === {json.dumps(code)})"
+    )
+    if not wait_until(lambda: bool(page.js(f"!!({finder})"))):
+        return f"스티커를 찾지 못했다: {code}"
+    if not mouse_click(page, finder):
+        return f"스티커를 누르지 못했다: {code}"
+    if not wait_until(lambda: component_count(page, "sticker") > before):
+        return f"스티커가 본문에 들어가지 않았다: {code}"
+    return ""
+
+
+def place_candidates(page: Page) -> list[dict]:
+    """장소 검색 결과의 이름과 주소를 화면 순서대로 읽는다."""
+    raw = page.js(
+        "JSON.stringify([...document.querySelectorAll('.se-place-map-search-result-link')]"
+        ".map((link, index) => {"
+        " const row = link.closest('li') || link.parentElement;"
+        " const lines = (row?.innerText || '').split('\\n').map(v => v.trim()).filter(Boolean);"
+        " return {index, name: lines[0] || '', address: lines.slice(1).join(' ')};"
+        "}))"
+    )
+    return json.loads(raw or "[]")
+
+
+def insert_map(page: Page, block: dict) -> str:
+    """상호명과 주소가 모두 같은 검색 결과 하나만 골라 지도 카드를 넣는다."""
+    name = normalize(block.get("name", ""))
+    address = normalize(block.get("address", ""))
+    if not name or not address:
+        return "지도 블록의 name 과 address 를 모두 채운다"
+    marker = map_placeholder(block)
+    if not focus_placeholder(page, marker):
+        return f"장소 자리를 찾지 못했다: {marker}"
+    before = component_count(page, "placesMap")
+    if not click(page, PLACE_BUTTON):
+        return "장소 버튼을 찾지 못했다"
+    search = 'input[placeholder="장소명을 입력하세요."]'
+    if not wait_until(lambda: page.js(f'!!document.querySelector({json.dumps(search)})')):
+        return "장소 검색 입력칸을 찾지 못했다"
+    if not click(page, search):
+        return "장소 검색 입력칸을 누르지 못했다"
+    clear_field(page)
+    page.type_text(name)
+    page.enter()
+    if not wait_until(lambda: bool(place_candidates(page)), seconds=10.0):
+        return f"장소 검색 결과가 없다: {name}"
+    matches = [
+        item
+        for item in place_candidates(page)
+        if normalize(item["name"]) == name and normalize(item["address"]) == address
+    ]
+    if len(matches) != 1:
+        return f"이름과 주소가 같은 장소가 하나가 아니다: {name} / {address} / {matches}"
+    index = matches[0]["index"]
+    finder = f"document.querySelectorAll('.se-place-map-search-result-link')[{index}]"
+    if not mouse_click(page, finder):
+        return f"장소 검색 결과를 누르지 못했다: {name}"
+    add_finder = (
+        "[...document.querySelectorAll('.se-place-add-button')]"
+        ".find(e => e.getBoundingClientRect().width > 0 && !e.disabled)"
+    )
+    if not wait_until(lambda: page.js(f"!!({add_finder})")):
+        return "장소 추가 버튼이 나타나지 않았다"
+    if not mouse_click(page, add_finder):
+        return "장소 추가 버튼을 누르지 못했다"
+    if not wait_until(lambda: page.js(
+        "!!document.querySelector('.se-popup-button-confirm:not([disabled])')"
+    )):
+        return "장소 확인 버튼이 나타나지 않았다"
+    if not click(page, ".se-popup-button-confirm"):
+        return "장소 확인 버튼을 누르지 못했다"
+    if not wait_until(lambda: component_count(page, "placesMap") > before, seconds=10.0):
+        return "지도 카드가 본문에 들어가지 않았다"
+    return ""
+
+
+def cmd_components(page: Page, args: argparse.Namespace) -> int:
+    """초안의 스티커와 지도를 실제 편집기 구성요소로 바꾼다."""
+    draft = json.loads(Path(args.draft).read_text(encoding="utf-8"))
+    note = require_clear_screen(page)
+    if note:
+        print(f"화면을 덮은 알림이 있어 구성요소를 넣지 못한다: {note}", file=sys.stderr)
+        return 1
+    counts = {"sticker": 0, "map": 0}
+    for block in draft.get("blocks", []):
+        kind = block.get("type")
+        if kind == "sticker":
+            problem = insert_sticker(page, block)
+        elif kind == "map":
+            problem = insert_map(page, block)
+        else:
+            continue
+        if problem:
+            print(problem, file=sys.stderr)
+            return 1
+        counts[kind] += 1
+    print(f"실제 스티커 {counts['sticker']}개와 지도 {counts['map']}개를 넣었다")
+    return 0
+
+
+def settings_open(page: Page) -> bool:
+    """접힌 설정도 화면을 가리므로 발행 설정 레이어의 존재를 읽는다."""
+    return bool(page.js("!!document.querySelector('[class^=layer_publish]')"))
+
+
+def open_settings(page: Page) -> bool:
+    """발행 설정 레이어만 연다. 발행 확인 버튼은 누르지 않는다."""
+    if settings_open(page):
+        return True
+    if not click(page, PUBLISH_SETTINGS_BUTTON):
+        return False
+    return wait_until(lambda: settings_open(page))
+
+
+def close_settings(page: Page) -> bool:
+    """상단 발행 버튼으로 설정 레이어만 닫는다. 발행 확인은 누르지 않는다."""
+    if not settings_open(page):
+        return True
+    if not click(page, PUBLISH_SETTINGS_BUTTON):
+        return False
+    return wait_until(lambda: not settings_open(page))
+
+
+def settings_state(page: Page) -> dict:
+    """열린 발행 설정의 카테고리와 태그를 읽는다."""
+    raw = page.js(
+        "JSON.stringify({"
+        " category: document.querySelector('button[data-click-area=\"tpb*i.category\"]')?.innerText.trim() || '',"
+        " tags: [...document.querySelectorAll('span[id^=\"tag-item-\"][aria-label]')]"
+        "   .map(e => e.getAttribute('aria-label'))"
+        "})"
+    )
+    state = json.loads(raw or "{}")
+    state["tags"] = list(dict.fromkeys(state.get("tags", [])))
+    return state
+
+
+def cmd_settings(page: Page, args: argparse.Namespace) -> int:
+    """카테고리와 태그를 발행 설정에 넣고 설정만 닫는다."""
+    draft = json.loads(Path(args.draft).read_text(encoding="utf-8"))
+    category = draft.get("category", "").strip()
+    tags = [tag.lstrip("#").strip() for tag in draft.get("tags", []) if tag.strip()]
+    if category not in ("맛집로그", "카페로그") or not tags:
+        print("category 는 맛집로그 또는 카페로그이고 tags 는 비어 있지 않아야 한다", file=sys.stderr)
+        return 1
+    note = require_clear_screen(page)
+    if note:
+        print(f"화면을 덮은 알림이 있어 설정하지 못한다: {note}", file=sys.stderr)
+        return 1
+    if not open_settings(page):
+        print("발행 설정을 열지 못했다", file=sys.stderr)
+        return 1
+    if not click(page, 'button[data-click-area="tpb*i.category"]'):
+        print("카테고리 선택기를 열지 못했다", file=sys.stderr)
+        return 1
+    label = (
+        "[...document.querySelectorAll('label')]"
+        f".find(e => e.innerText.trim() === {json.dumps(category)})"
+    )
+    if not mouse_click(page, label):
+        print(f"카테고리를 찾지 못했다: {category}", file=sys.stderr)
+        return 1
+    for tag in tags:
+        if not click(page, "#tag-input"):
+            print("태그 입력칸을 누르지 못했다", file=sys.stderr)
+            return 1
+        page.type_text(tag)
+        if not wait_until(lambda: page.js("document.querySelector('#tag-input')?.value") == tag):
+            print(f"태그 글자가 입력되지 않았다: {tag}", file=sys.stderr)
+            return 1
+        time.sleep(SETTLE_SECONDS)
+        page.enter()
+        if not wait_until(lambda: tag in settings_state(page).get("tags", [])):
+            print(f"태그 칩이 생기지 않았다: {tag}", file=sys.stderr)
+            return 1
+    got = settings_state(page)
+    missing = [tag for tag in tags if tag not in got.get("tags", [])]
+    if category != got.get("category", "") or missing:
+        print(f"카테고리나 태그가 화면과 다르다: {got}", file=sys.stderr)
+        return 1
+    if not close_settings(page):
+        print("발행 설정을 닫지 못했다", file=sys.stderr)
+        return 1
+    print(f"카테고리 `{category}`와 태그 {len(tags)}개를 넣고 발행 설정을 닫았다")
+    return 0
 
 
 def cmd_save(page: Page, args: argparse.Namespace) -> int:
     """임시저장한다. 발행 버튼은 누르지 않는다."""
+    if settings_open(page):
+        print("발행 설정을 먼저 닫아야 임시저장할 수 있다", file=sys.stderr)
+        return 1
     before = page.js(save_count_js())
 
     # JS 의 `.click()` 으로는 저장되지 않는다.
@@ -507,13 +849,29 @@ def save_count_js() -> str:
 def cmd_state(page: Page, args: argparse.Namespace) -> int:
     """편집기에 실제로 들어간 것을 읽어 낸다."""
     body = [text for text in map(normalize, paragraphs(page, BODY_SELECTOR)) if text]
+    if not open_settings(page):
+        print("카테고리와 태그 상태를 읽을 수 없다", file=sys.stderr)
+        return 1
+    settings = settings_state(page)
+    if not close_settings(page):
+        print("상태를 읽은 뒤 발행 설정을 닫지 못했다", file=sys.stderr)
+        return 1
     state = {
+        "targetId": args.target_id,
         "docTitle": page.js("document.title"),
         "title": normalize("".join(paragraphs(page, TITLE_SELECTOR))),
         # 글자 수는 초안과 같은 셈법으로 파이썬에서 센다. JS 의 length 는 이모지를 둘로 센다.
         "bodyLines": len(body),
         "bodyChars": sum(map(len, body)),
         "images": image_count(page),
+        "fitImages": page.js(
+            "document.querySelectorAll('.se-component.se-image .se-component-content-fit').length"
+        )
+        or 0,
+        "stickers": component_count(page, "sticker"),
+        "maps": component_count(page, "placesMap"),
+        "category": settings.get("category", ""),
+        "tags": settings.get("tags", []),
         "savedCount": page.js(save_count_js()),
     }
     print(json.dumps(state, ensure_ascii=False))
@@ -522,11 +880,13 @@ def cmd_state(page: Page, args: argparse.Namespace) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="네이버 글쓰기 화면에 초안을 넣는다")
+    parser.add_argument(
+        "--target-id",
+        default="",
+        help="open 이 출력한 정확한 탭 식별자. 기존 글쓰기 탭을 잘못 고르지 않기 위해 필요하다",
+    )
     sub = parser.add_subparsers(dest="command", required=True)
     opener = sub.add_parser("open", help="글쓰기 화면을 연다")
-    opener.add_argument(
-        "--resume", action="store_true", help="앞서 쓰던 글이 있으면 이어서 쓴다"
-    )
     fill = sub.add_parser("fill", help="초안의 제목과 본문을 넣는다")
     fill.add_argument("draft", help="draft.json 경로")
     photos = sub.add_parser("photos", help="초안의 사진을 편집기에 넣는다")
@@ -536,36 +896,66 @@ def main() -> int:
         default="",
         help="브라우저가 도는 기계에서 사진이 있는 디렉터리. 비우면 초안 옆 경로를 쓴다",
     )
+    components = sub.add_parser("components", help="초안의 스티커와 지도를 실제로 넣는다")
+    components.add_argument("draft", help="draft.json 경로")
+    settings = sub.add_parser("settings", help="카테고리와 태그를 발행 설정에 넣는다")
+    settings.add_argument("draft", help="draft.json 경로")
     sub.add_parser("save", help="임시저장한다")
     sub.add_parser("state", help="편집기에 들어간 것을 읽어 낸다")
+    sub.add_parser("close", help="open 으로 만든 탭을 닫는다")
 
     args = parser.parse_args()
     handlers = {
         "open": cmd_open,
         "fill": cmd_fill,
         "photos": cmd_photos,
+        "components": cmd_components,
+        "settings": cmd_settings,
         "save": cmd_save,
         "state": cmd_state,
     }
 
     try:
         tabs = [t for t in http_json("/json/list") if t.get("type") == "page"]
-        target = next((t for t in tabs if WRITE_MARK in t.get("url", "")), None)
-        if target is None:
-            if args.command != "open":
-                print(f"글쓰기 화면을 연 탭이 없다. 먼저 `open` 을 부른다.", file=sys.stderr)
+        if args.command == "open":
+            target = http_json(
+                "/json/new?" + urllib.parse.quote(WRITE_URL, safe=""), method="PUT"
+            )
+            args.target_id = target.get("id", "")
+        else:
+            if not args.target_id:
+                print("기존 탭을 잘못 고르지 않도록 --target-id 를 반드시 준다", file=sys.stderr)
                 return 1
-            target = tabs[0] if tabs else None
+            target = next((t for t in tabs if t.get("id") == args.target_id), None)
             if target is None:
-                print("열린 탭이 없다. naver_session.py 로 브라우저를 먼저 띄운다.", file=sys.stderr)
-                return 2
+                print(f"그 target-id 탭이 없다: {args.target_id}", file=sys.stderr)
+                return 1
+        if args.command == "close":
+            close_tab(args.target_id)
+            print(f"테스트 탭을 닫았다: {args.target_id}")
+            return 0
+        if args.command != "open" and WRITE_MARK not in target.get("url", ""):
+            print(f"그 탭은 글쓰기 화면이 아니다: {target.get('url', '')}", file=sys.stderr)
+            return 1
         page = Page(target["webSocketDebuggerUrl"])
+        # 홈서버의 큰 가상 창에서는 아래쪽 문단에 보낸 마우스 이벤트가
+        # 편집기에 닿지 않는다. 탭마다 화면 높이를 고정해 스크롤하며 누른다.
+        page.call(
+            "Emulation.setDeviceMetricsOverride",
+            width=1280,
+            height=720,
+            deviceScaleFactor=1,
+            mobile=False,
+        )
     except (CdpError, OSError) as exc:
         print(f"브라우저에 붙지 못했다: {exc}", file=sys.stderr)
         return 2
 
     try:
-        return handlers[args.command](page, args)
+        result = handlers[args.command](page, args)
+        if args.command == "open" and result != 0:
+            close_tab(args.target_id)
+        return result
     except CdpError as exc:
         print(exc, file=sys.stderr)
         return 2

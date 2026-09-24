@@ -44,12 +44,13 @@
 | `scripts/collect_naver_posts.py` | 맥북 | 블로그 글 목록과 본문 수집 |
 | `scripts/enrich_naver_posts.py` | 맥북 | 카테고리 이름과 태그 보강 |
 | `scripts/analyze_persona.py` | 맥북 | 페르소나 문서가 인용하는 수치 집계 |
+| `scripts/build_persona_report.py` | 맥북 | 최근 30개와 전체 글의 통계를 비교한 HTML 보고서 생성 |
 | `scripts/seaweed_s3.py` | 홈서버 | S3 접근. 서명, 목록, 조회 |
 | `scripts/photo_store.py` | 홈서버 | 사진 폴더와 객체 조회, 전송 |
 | `scripts/verify_photo_store.py` | 홈서버 | 연결과 권한 경계 확인 |
 | `scripts/naver_session.py` | 홈서버 | 네이버 세션을 담은 Chrome 을 상주시키고 로그인을 판정한다 |
 | `scripts/cdp.py` | 맥북, 홈서버, Hermes 컨테이너 | CDP 의 WebSocket 창구를 의존성 없이 부른다 |
-| `scripts/naver_editor.py` | 맥북, Hermes 컨테이너 | 글쓰기 화면에 제목과 본문을 넣고 임시저장한다 |
+| `scripts/naver_editor.py` | 맥북, Hermes 컨테이너 | 새 글쓰기 탭에 글, 사진, 스티커, 장소, 카테고리, 태그를 넣고 임시저장한다 |
 | `.claude/skills/naver-blog-draft/` | 맥북과 홈서버 | 사진에서 임시저장까지의 판단과 절차 |
 | `docs/` | 문서 | 흐름, 스키마, 구조 |
 | `drafts/` | 맥북 | 내려받은 사진과 초안. 추적하지 않는다 |

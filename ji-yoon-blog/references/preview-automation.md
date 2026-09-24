@@ -44,11 +44,13 @@
 | 제목 입력란에 글자가 들어가는가 | 들어간다 |
 | 본문의 줄 나눔이 그대로 남는가 | 남는다. 문단 6개로 들어갔다 |
 | 임시저장이 실제로 되는가 | 된다. 임시저장 글이 9개에서 10개로 늘었고 목록에서 제목을 확인했다 |
-| 태그가 들어가는가 | 들어가지 않는다. 임시저장 화면에 태그 입력란이 없다 |
-| 사진이 올라가는가 | 올라간다. 2026-09-21 에 두 장으로 확인했다 |
+| 태그가 들어가는가 | 발행 설정에서 칩으로 만든 뒤 닫고 저장하면 남는다. 2026-09-24에 다시 열어 확인했다 |
+| 사진이 올라가는가 | 올라간다. 2026-09-21에 두 장으로 확인했다. 사진마다 `문서 너비`를 적용한다 |
+| 카테고리가 남는가 | `맛집로그`와 태그 두 개를 넣고 임시저장했다. 다시 열어 셋 다 확인했다 |
+| 스티커와 장소가 들어가는가 | 구매 팩의 스티커 네 개와 `se-placesMap` 장소 카드를 새 탭에서 확인했다 |
 
-태그는 여전히 지융이 넣는다.
-`build_package.py` 가 만드는 묶음이 그 목록과 순서를 준다.
+태그는 검색어를 골라 `#` 없이 초안에 적고, 발행 설정에서 Enter로 칩을 만든다.
+설정 창만 닫고 `저장`한다. 발행 확인 버튼은 누르지 않는다.
 자동화가 막히면 그 묶음으로 되돌아간다.
 
 ## 지켜야 할 안전 규칙
@@ -111,16 +113,26 @@ ssh <홈서버> 'cd ~/fos-agents/ji-yoon-blog && python3 scripts/naver_session.p
 홈서버에서 상주 Chrome 을 띄우고, 맥북에서 포트를 이어 붙여 조작한다.
 
 ```bash
-ssh <홈서버> 'cd ~/fos-agents/ji-yoon-blog && python3 scripts/naver_session.py start'
-ssh -N -L 9222:127.0.0.1:9222 <홈서버> &
-python3 scripts/naver_editor.py open
-python3 scripts/naver_editor.py fill drafts/순돌이곱창/draft.json
-python3 scripts/naver_editor.py save
-python3 scripts/naver_editor.py state
+OPEN_OUTPUT=$(python3 scripts/naver_editor.py open) || exit 1
+printf '%s\n' "$OPEN_OUTPUT"
+TARGET_ID=$(printf '%s\n' "$OPEN_OUTPUT" | sed -n 's/^target-id: //p')
+test -n "$TARGET_ID" || exit 1
+DRAFT='drafts/순돌이곱창/draft.json'
+REMOTE_PHOTOS='브라우저 쪽 사진 디렉터리'
+python3 scripts/naver_editor.py --target-id "$TARGET_ID" fill "$DRAFT"
+python3 scripts/naver_editor.py --target-id "$TARGET_ID" photos "$DRAFT" --remote-base "$REMOTE_PHOTOS"
+python3 scripts/naver_editor.py --target-id "$TARGET_ID" components "$DRAFT"
+python3 scripts/naver_editor.py --target-id "$TARGET_ID" settings "$DRAFT"
+python3 scripts/naver_editor.py --target-id "$TARGET_ID" save
+python3 scripts/naver_editor.py --target-id "$TARGET_ID" state
+python3 scripts/naver_editor.py --target-id "$TARGET_ID" close
 ```
 
 `naver_session.py` 가 브라우저와 로그인 판정을, `naver_editor.py` 가 편집기 조작을 소유한다.
 두 스크립트 모두 `ji-yoon-blog/scripts/` 에 있다.
+`open`은 새 탭을 만들고, 뒤의 명령은 정확한 `target-id`가 있어야 실행된다.
+기존 글쓰기 탭은 고르지 않는다. 작업이 끝나거나 멈추면 새 탭을 닫는다.
+홈서버 연결과 로그인 방법은 위 「로그인 방법」을 따른다.
 
 ### Hermes 컨테이너에서 붙는 방법
 
@@ -138,7 +150,7 @@ python3 scripts/naver_editor.py state
 컨테이너에는 중계를 띄운 쪽이 두 값을 넣어 준다.
 맥북에서는 주지 않고 포트 포워딩으로 붙는다.
 
-`state` 가 내는 것을 읽어 확인한 것만 완료라고 말한다.
+`state`의 제목, 사진 수와 너비, 스티커와 지도 수, 카테고리, 태그, 임시저장 개수를 읽어 확인한 것만 완료라고 말한다.
 
 ### 편집기에 글자를 넣는 방법
 
@@ -171,10 +183,7 @@ SmartEditor 가 자체 입력 버퍼로 글자를 받아서 `document.execComman
 
 `DOM.setFileInputFiles` 가 파일 선택 자동화의 표준 경로이고 이 경우에도 통한다.
 
-```bash
-python3 scripts/naver_editor.py photos drafts/순돌이곱창/draft.json \
-  --remote-base <브라우저가 도는 기계의 사진 디렉터리>
-```
+사진 명령은 위 「자동화 절차」에 있다.
 
 파일 경로는 **브라우저가 도는 기계 기준**이다. 홈서버 Chrome 이면 홈서버 경로다.
 맥북에서 명령을 부르더라도 사진은 홈서버에 있어야 한다.
@@ -194,10 +203,22 @@ python3 scripts/naver_editor.py photos drafts/순돌이곱창/draft.json \
 레이아웃 선택지는 `button` 이 아니라 `input[type=button].se-image-type-radio` 다.
 `개별사진` 은 `#image-type-list` 이고, 콜라주와 슬라이드가 나머지 둘이다.
 
-### 그래도 사람이 하는 것
+### 스티커와 지도
 
-태그는 여전히 넣지 못한다. 임시저장 화면에 입력란이 없고 발행 설정 레이어에만 있다.
-발행도 하지 않는다.
+구매 팩 `ogq_5db4314bac2f0`에서 안녕하세요는 `-1`, 위치정보는 `-4`,
+가격표는 `-6`, 내돈내산은 `-23`이다.
+내돈내산은 지융이 비협찬이라고 확인한 글에만 넣는다.
+
+지도는 상호명으로 검색한다. 상호명과 주소가 모두 맞는 결과가 하나일 때만 고른다.
+결과를 고른 뒤 추가와 확인을 누르면 `se-placesMap` 카드가 들어간다.
+일치 항목이 없거나 여럿이면 지융에게 묻고 멈춘다.
+검색 결과마다 추가 버튼이 있고 숨은 버튼도 남아 있으므로, 선택한 결과의 보이는 추가 버튼만 누른다.
+
+사진을 고른 뒤 `문서 너비`를 적용하면 이미지 구성요소 안쪽에 `se-component-content-fit` 클래스가 붙는다.
+
+발행 설정은 상단의 `button[data-click-area="tpb.publish"]`를 다시 눌러 닫는다.
+`tpb*i.down`은 설정을 접어도 화면 위의 레이어를 남긴다.
+설정 안쪽의 발행 확인 버튼 `tpb*i.publish`는 누르지 않는다.
 
 ## 알려진 제약
 
