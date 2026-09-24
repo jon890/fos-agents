@@ -159,6 +159,7 @@ function operations(overrides: Partial<PositionRunOperations> = {}): PositionRun
         personalExcludedCount: 0,
         failedCount: 0,
         warningSourceCount: 0,
+        unknownCompanyCounts: { "growth-scope": 0, "team-growth": 0, "compensation-upside": 0 },
         collectionWarnings: [],
         outputJson: "recommendation",
         outputHtml: "report",

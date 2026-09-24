@@ -97,6 +97,46 @@ export const run = RecommendationRun.parse({
   recommendations: pool.candidates
     .slice(0, 7)
     .map((candidate, index) => positionItem(candidate, index)),
+  companyAssessments: [
+    {
+      companyKey: "현재-직장",
+      companyName: "현재 직장",
+      disposition: "benchmark",
+      reason: "공개된 회사 자료로 비교한다.",
+      signals: ["growth-scope", "team-growth", "compensation-upside"].map((axis) => ({
+        axis,
+        level: "unknown",
+        evidenceIds: [],
+      })),
+      evidence: [],
+    },
+    ...pool.candidates.map((candidate, index) => ({
+      companyKey: `company-${index + 1}`,
+      companyName: candidate.company,
+      disposition: "analyze" as const,
+      reason: index === 0 ? "기술 자료를 확인했다." : null,
+      signals: [
+        {
+          axis: "growth-scope",
+          level: index === 0 ? "high" : "unknown",
+          evidenceIds: index === 0 ? ["blog-1"] : [],
+        },
+        { axis: "team-growth", level: "unknown", evidenceIds: [] },
+        { axis: "compensation-upside", level: "unknown", evidenceIds: [] },
+      ],
+      evidence:
+        index === 0
+          ? [
+              {
+                id: "blog-1",
+                title: "기술 블로그",
+                url: "https://example.com/blog/1",
+                checkedAt: "2026-08-13",
+              },
+            ]
+          : [],
+    })),
+  ],
   ranking: pool.candidates.map((candidate, index) => ({
     ...rankedItem(candidate, index),
     ...(index < 3 ? { note: "우선 검토 후보" } : {}),

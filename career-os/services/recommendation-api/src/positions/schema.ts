@@ -458,6 +458,18 @@ const recommendationPositionSchema = z
   .strict()
   .superRefine(refineCompanyTierProvenance);
 
+export const publicCompanyAssessmentSchema = z
+  .object({
+    companyKey: nonEmpty,
+    companyName: nonEmpty,
+    disposition: z.enum(["analyze", "benchmark"]),
+    reason: z.string().max(companyTierReasonMaxLength).nullable(),
+    signals: z.array(companyTierSignalSchema).length(3),
+    evidence: z.array(companyTierEvidenceSchema),
+  })
+  .strict();
+export type PublicCompanyAssessment = z.infer<typeof publicCompanyAssessmentSchema>;
+
 export const recommendationResponseSchema = z
   .object({
     schemaVersion: z.literal(1),
@@ -468,6 +480,7 @@ export const recommendationResponseSchema = z
     sourceSnapshot: z.object({ collectionRunId: nonEmpty }).strict(),
     ranking: z.array(recommendationPositionSchema),
     recommendations: z.array(recommendationPositionSchema),
+    companyAssessments: z.array(publicCompanyAssessmentSchema),
     pendingCandidates: z.array(
       z
         .object({

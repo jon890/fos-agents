@@ -34,6 +34,39 @@ function response(): RecommendationResponse {
     sourceSnapshot: { collectionRunId: "collection-1" },
     ranking: [ranked],
     recommendations: [ranked],
+    companyAssessments: [
+      {
+        companyKey: "테스트-회사",
+        companyName: "테스트 회사",
+        disposition: "analyze",
+        reason: "기술 자료를 확인했다.",
+        signals: [
+          { axis: "growth-scope", level: "high", evidenceIds: ["blog-1"] },
+          { axis: "team-growth", level: "unknown", evidenceIds: [] },
+          { axis: "compensation-upside", level: "unknown", evidenceIds: [] },
+        ],
+        evidence: [
+          {
+            id: "blog-1",
+            url: "https://example.com/blog/1",
+            title: "기술 블로그",
+            checkedAt: "2026-09-17",
+          },
+        ],
+      },
+      {
+        companyKey: "대기-회사",
+        companyName: "대기 회사",
+        disposition: "analyze",
+        reason: null,
+        signals: ["growth-scope", "team-growth", "compensation-upside"].map((axis) => ({
+          axis: axis as "growth-scope" | "team-growth" | "compensation-upside",
+          level: "unknown" as const,
+          evidenceIds: [],
+        })),
+        evidence: [],
+      },
+    ],
     pendingCandidates: [
       {
         candidateId: "wanted:2",
@@ -89,9 +122,9 @@ test("추천 JSON과 HTML을 만들고 대기와 부분 실패를 공개 범위 
     expect(html).toContain("분석 대기 · 1건");
     expect(html).toContain("coupang-careers");
     expect(html).toContain("실패 62건");
-    expect(html).toContain("Tier 1 · 모델 평가");
-    expect(html).toContain("https://example.com/news/funding");
-    expect(html).toContain("Tier 3 · 기본값");
+    expect(html).toContain("기술 블로그");
+    expect(html).toContain("근거 없음");
+    expect(html).not.toContain("Tier ");
     expect(html).not.toContain("private-error");
     expect(existsSync(outputJson)).toBe(true);
   } finally {
@@ -113,6 +146,11 @@ test("최종 답변에 넣을 수집 경고 줄을 실행 결과로 함께 돌�
       COLLECTION_WARNING_NOTE,
     ]);
     expect(result.warningSourceCount).toBe(1);
+    expect(result.unknownCompanyCounts).toEqual({
+      "growth-scope": 1,
+      "team-growth": 2,
+      "compensation-upside": 2,
+    });
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

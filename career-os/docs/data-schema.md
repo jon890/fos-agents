@@ -645,6 +645,7 @@ company_tier_assessment_id CHAR(36) NULL
 - 새 분석, 재사용, 분석 대기 건수
 - 소스별 성공, 부분 실패, 실패 수와 확인하지 못한 공고 수
 - 공고마다 그때 쓴 회사 tier의 값과 출처
+- 후보 회사와 `benchmark` 회사의 축별 판정, 근거 ID와 공개 근거 링크
 - 출처별 공고 수와 tier 평가 실패 건수
 - 모델이 필요에 따라 붙인 상세 근거와 다음 행동
 
@@ -664,6 +665,12 @@ company_tier_assessment_id CHAR(36) NULL
 | `companyTierEvidenceUrls` | HTTPS 근거 최대 3개 |
 
 `model` 이 아닌 출처는 평가 ID와 근거 필드를 갖지 않고 근거 목록이 비어 있다.
+
+`companyAssessments`는 후보 회사와 `benchmark` 회사의 현재 유효한 판정을 회사별로 담는다.
+세 축의 등급과 `evidenceIds`에 연결된 공개 근거 URL과 제목, 200자 이하의 `reason`만 포함한다.
+판정이 없거나 근거 ID가 연결되지 않은 축은 `unknown`으로 표시한다.
+비공개 `assessment`는 API 추천 응답, 추천 JSON과 HTML에 넣지 않는다.
+HTML에는 내부 우선순위인 tier를 표시하지 않는다.
 
 `companyTierSummary`는 `manualCount`, `modelCount`, `defaultCount`와 `assessmentFailedCount`를 가진다.
 기본 tier로 남은 공고 수와 평가에 실패한 회사 수를 최종 답변이 숨기지 않게 하는 자리다.

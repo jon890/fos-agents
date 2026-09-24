@@ -51,6 +51,14 @@ bun career-os/scripts/position-recommender/position_run.ts finalize --run <RUN_D
 각 명령의 stdout이 다음에 읽을 큐, 모델이 결과를 쓸 경로와 다음 명령을 알린다.
 반영 결과가 `partial`이면 stdout에 나온 남은 항목만 다시 판단해 같은 명령을 실행한다.
 
+회사 판정 큐가 있으면 `<RUN_DIR>/company-evidence.json`에 저장된 근거만 읽고 판정한다.
+큐의 회사마다 `<RUN_DIR>/company-tier-updates.json`에 결과를 한 건씩 쓴다.
+각 결과의 `signals`에는 세 축을 한 번씩 넣고, 등급을 매긴 축에는 해당 근거의 `id`를 `evidenceIds`로 연결한다.
+`evidence`에는 실제 사용한 근거의 `id`, URL, 제목과 확인 날짜를 원본 그대로 옮긴다.
+근거가 없는 축은 `level: "unknown"`, `evidenceIds: []`로 남긴다.
+판단을 유보한 이유와 반대 근거는 `assessment`에 적고, 공개 `reason`은 확인된 사실만 200자 안에 쓴다.
+입력 파일의 실행 ID는 회사 판정 큐와 같아야 한다.
+
 ## 결과와 공개 경계
 
 HTML은 추천, 분석한 활성 공고 순위, 회사별 세 축, 분석 대기와 수집 경고를 구분한다.
@@ -76,6 +84,7 @@ cron 실행과 수동 실행에 같은 형식을 적용한다.
 - 이번 실행 분석, 재사용, 분석 대기와 분석하지 못한 공고 건수
 - 개인 제외 건수
 - 회사 tier 출처별 건수와 회사 tier 평가 실패 건수
+- 축별 「근거 없음」 회사 수(`unknownCompanyCounts`)
 - 회사별 성장 범위, 팀 성장, 보상과 복지 판정과 각 근거
 - 최종화 명령이 출력한 `collectionWarnings`의 각 줄
 - 바로 검토할 공고와 다음 지원 행동

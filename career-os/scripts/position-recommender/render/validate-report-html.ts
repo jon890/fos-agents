@@ -8,6 +8,7 @@ const unsafeText = [
   { pattern: /(?:\/Users\/|\/home\/)[^\s"'<>]*/i, message: "로컬 절대 경로가 포함됐다" },
   { pattern: /(?:localhost|127\.0\.0\.1|0\.0\.0\.0)/i, message: "로컬 호스트가 포함됐다" },
   { pattern: /현재 연봉|서류 탈락/, message: "비공개 커리어 정보가 포함됐다" },
+  { pattern: /\bassessment\s*[:：=]/i, message: "비공개 회사 판정이 포함됐다" },
 ];
 
 function htmlAttributeValue(value: string): string {

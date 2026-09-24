@@ -142,7 +142,7 @@ SHADOW_DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_shadow" \
 기대값이다.
 
 - 다섯이 모두 종료 코드 0
-- 고친 `recommendation-html.test.ts`와 `validate-report-html.test.ts`가 통과
+- 고친 `render-recommendation.test.ts`와 `validate-report-html.test.ts`가 통과
 - 출력에 `skipped`가 없다
 
 **고정 입력으로 HTML을 만들어 축이 그려지는지 본다.**

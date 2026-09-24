@@ -30,6 +30,8 @@ import {
   companyPreferenceSchema,
   companyTierQueueResponseSchema,
   companyTierResultsResponseSchema,
+  companyTierEvidenceSchema,
+  companyTierSignalSchema,
   positionPreparationResponseSchema,
   type AnalysisPolicy,
   type AnalysisQueueResponse,
@@ -47,6 +49,7 @@ import {
   type PositionExclusion,
   recommendationResponseSchema,
   type PositionPreparationResponse,
+  type PublicCompanyAssessment,
   type RecommendationResponse,
 } from "./schema.js";
 import type { CompanyTierSource, StoredCompanyTierAssessment } from "./stored.js";
@@ -949,6 +952,68 @@ export class PositionsService {
     return { tier: policy.defaultCompanyTier, source: "default", assessment: undefined };
   }
 
+  /** 후보 회사와 비교 기준 회사의 공개 가능한 축만 추천 응답에 싣는다. */
+  private async companyAssessmentsForRun(
+    names: Map<string, string>,
+    contextVersion: string,
+    contractVersion: number,
+    today: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<PublicCompanyAssessment[]> {
+    const benchmarks = (await this.repository.listPreferences(tx)).filter(
+      (preference) => preference.disposition === "benchmark",
+    );
+    for (const benchmark of benchmarks) names.set(benchmark.companyKey, benchmark.companyName);
+    const assessments = await this.repository.findValidAssessments(
+      [...names.keys()],
+      contextVersion,
+      contractVersion,
+      today,
+      tx,
+    );
+    return [...names]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, companyName]) => {
+        const assessment = assessments.get(key);
+        const evidence = (assessment?.evidence ?? []).flatMap((value) => {
+          const parsed = companyTierEvidenceSchema.safeParse(value);
+          return parsed.success ? [parsed.data] : [];
+        });
+        const availableIds = new Set(evidence.map((item) => item.id).filter(Boolean));
+        const signals = (["growth-scope", "team-growth", "compensation-upside"] as const).map(
+          (axis) => {
+            const raw = assessment?.signals[axis];
+            const parsed = companyTierSignalSchema.safeParse(
+              raw && typeof raw === "object" ? { axis, ...raw } : null,
+            );
+            const signal = parsed.success ? parsed.data : null;
+            const evidenceIds =
+              signal?.level === "unknown"
+                ? []
+                : (signal?.evidenceIds.filter((id) => availableIds.has(id)) ?? []);
+            return {
+              axis,
+              level:
+                signal && signal.level !== "unknown" && evidenceIds.length > 0
+                  ? signal.level
+                  : ("unknown" as const),
+              evidenceIds,
+            };
+          },
+        );
+        return {
+          companyKey: key,
+          companyName,
+          disposition: benchmarks.some((item) => item.companyKey === key)
+            ? ("benchmark" as const)
+            : ("analyze" as const),
+          reason: assessment?.reason ?? null,
+          signals,
+          evidence,
+        };
+      });
+  }
+
   /**
    * 추천 응답을 조립하고 그 순위를 저장한다.
    *
@@ -1027,6 +1092,16 @@ export class PositionsService {
       sourceSnapshot: { collectionRunId: run.collectionRunId },
       ranking,
       recommendations: ranking.filter((entry) => entry.decision !== "hold"),
+      companyAssessments: await this.companyAssessmentsForRun(
+        new Map(
+          entries.map((entry) => [entry.position.companyKey, entry.position.posting.company]),
+        ),
+        run.candidateContextVersion,
+        (await this.repository.findCompanyTierRunByCollectionRun(run.collectionRunId, tx))
+          ?.contractVersion ?? DEFAULT_COMPANY_TIER_CONTRACT_VERSION,
+        now.slice(0, 10),
+        tx,
+      ),
       pendingCandidates: pending,
       analysisSummary: {
         activeCount: entries.length,
@@ -1119,6 +1194,7 @@ export class PositionsService {
       stored.collectionRunId,
       tx,
     );
+    const analysisRun = await this.repository.findAnalysisRunWithItems(stored.analysisRunId, tx);
     return recommendationResponseSchema.parse({
       schemaVersion: 1,
       recommendationRunId: stored.recommendationRunId,
@@ -1128,6 +1204,18 @@ export class PositionsService {
       sourceSnapshot: { collectionRunId: stored.collectionRunId },
       ranking,
       recommendations: ranking.filter((entry) => entry.decision !== "hold"),
+      companyAssessments: await this.companyAssessmentsForRun(
+        new Map(
+          [...ranking, ...pendingCandidates].map((entry) => [
+            companyKey(entry.company),
+            entry.company,
+          ]),
+        ),
+        analysisRun!.run.candidateContextVersion,
+        tierRun?.contractVersion ?? DEFAULT_COMPANY_TIER_CONTRACT_VERSION,
+        stored.generatedAt.slice(0, 10),
+        tx,
+      ),
       pendingCandidates,
       analysisSummary: {
         activeCount: stored.activeCount,

@@ -21,3 +21,8 @@ test("추천 링크 누락과 공개 경계 위반을 거부한다", () => {
   expect(errors).toContain("비공개 커리어 정보가 포함됐다");
   expect(errors.some((error) => error.includes("허용하지 않는 링크"))).toBe(true);
 });
+
+test("assessment 내용이 섞인 HTML을 거부한다", () => {
+  const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width"><title>추천</title></head><body>${links}<p>assessment: 비공개 판정 메모</p></body></html>`;
+  expect(validateReportHtml(html, run)).toContain("비공개 회사 판정이 포함됐다");
+});

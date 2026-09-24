@@ -64,6 +64,7 @@ function envelope(
     generatedAt: "2026-08-13T09:00:00+09:00",
     summary: [] as string[],
     recommendations,
+    companyAssessments: [],
     ranking,
     pendingCandidates: [] as Record<string, unknown>[],
     analysisSummary: {
