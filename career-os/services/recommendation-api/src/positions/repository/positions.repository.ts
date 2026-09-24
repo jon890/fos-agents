@@ -9,6 +9,7 @@ import type {
   AnalysisPolicy,
   AnalysisUpdate,
   CompanyEvidence,
+  CompanyActivePosting,
   CompanyPreference,
   PositionExclusion,
 } from "../schema.js";
@@ -449,13 +450,18 @@ export class PositionsRepository {
 
   async listPreferences(client: DbClient): Promise<CompanyPreference[]> {
     const rows = await client.$queryRaw<RawRow[]>`
-      SELECT company_key, company_name, tier, disposition, updated_at FROM company_preferences
+      SELECT company_key, company_name, tier, disposition, tech_blog_feed_url, github_org,
+             updated_at FROM company_preferences
     `;
     return rows.map((row) => ({
       companyKey: String(row.company_key),
       companyName: String(row.company_name),
       tier: number(row.tier),
       disposition: row.disposition as "analyze" | "exclude",
+      ...(row.tech_blog_feed_url === null
+        ? {}
+        : { techBlogFeedUrl: String(row.tech_blog_feed_url) }),
+      ...(row.github_org === null ? {} : { githubOrg: String(row.github_org) }),
       updatedAt: iso(row.updated_at),
     }));
   }
@@ -465,11 +471,16 @@ export class PositionsRepository {
     tx: Prisma.TransactionClient,
   ): Promise<void> {
     await tx.$executeRaw`
-      INSERT INTO company_preferences (company_key, company_name, tier, disposition, updated_at)
+      INSERT INTO company_preferences
+        (company_key, company_name, tier, disposition, tech_blog_feed_url, github_org, updated_at)
       VALUES (${preference.companyKey}, ${preference.companyName}, ${preference.tier},
-              ${preference.disposition}, ${at(preference.updatedAt)})
+              ${preference.disposition}, ${preference.techBlogFeedUrl ?? null},
+              ${preference.githubOrg ?? null}, ${at(preference.updatedAt)})
       ON DUPLICATE KEY UPDATE company_name = VALUES(company_name), tier = VALUES(tier),
-        disposition = VALUES(disposition), updated_at = VALUES(updated_at)
+        disposition = VALUES(disposition),
+        tech_blog_feed_url = IF(${Object.hasOwn(preference, "techBlogFeedUrl")}, VALUES(tech_blog_feed_url), tech_blog_feed_url),
+        github_org = IF(${Object.hasOwn(preference, "githubOrg")}, VALUES(github_org), github_org),
+        updated_at = VALUES(updated_at)
     `;
   }
 
@@ -480,7 +491,7 @@ export class PositionsRepository {
   ): Promise<Map<string, CompanyPreference>> {
     if (keys.length === 0) return new Map();
     const rows = await client.$queryRaw<RawRow[]>`
-      SELECT company_key, company_name, tier, disposition, updated_at
+      SELECT company_key, company_name, tier, disposition, tech_blog_feed_url, github_org, updated_at
       FROM company_preferences WHERE company_key IN (${Prisma.join(keys)})
     `;
     return new Map(
@@ -491,6 +502,10 @@ export class PositionsRepository {
           companyName: String(row.company_name),
           tier: number(row.tier),
           disposition: row.disposition as "analyze" | "exclude",
+          ...(row.tech_blog_feed_url === null
+            ? {}
+            : { techBlogFeedUrl: String(row.tech_blog_feed_url) }),
+          ...(row.github_org === null ? {} : { githubOrg: String(row.github_org) }),
           updatedAt: iso(row.updated_at),
         },
       ]),
@@ -639,6 +654,22 @@ export class PositionsRepository {
       ORDER BY source_type, url
     `;
     return rows.map(toCompanyEvidence);
+  }
+
+  async listActiveCompanyPostings(
+    company: string,
+    client: DbClient,
+  ): Promise<CompanyActivePosting[]> {
+    const rows = await client.$queryRaw<RawRow[]>`
+      SELECT title, normalized_url, first_seen_at FROM positions
+      WHERE company_key = ${company} AND lifecycle = 'active'
+      ORDER BY first_seen_at DESC, position_id
+    `;
+    return rows.map((row) => ({
+      title: String(row.title),
+      url: String(row.normalized_url),
+      firstSeenAt: iso(row.first_seen_at),
+    }));
   }
 
   // ---------------------------------------------------------------- 수집 실행

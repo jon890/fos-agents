@@ -38,6 +38,8 @@ export const companyPreferenceSchema = z
     companyName: nonEmpty,
     tier: z.number().int().min(1).max(3),
     disposition: z.enum(["analyze", "exclude"]),
+    techBlogFeedUrl: httpsUrl.max(2048).nullable().optional(),
+    githubOrg: nonEmpty.max(191).nullable().optional(),
     updatedAt: isoDateTime,
   })
   .strict();
@@ -659,6 +661,14 @@ export const companyEvidenceSaveResponseSchema = z
   .strict();
 
 export type CompanyEvidence = z.infer<typeof companyEvidenceSchema>;
+export const companyActivePostingSchema = z
+  .object({
+    title: nonEmpty,
+    url: httpsUrl,
+    firstSeenAt: isoDateTime,
+  })
+  .strict();
+export type CompanyActivePosting = z.infer<typeof companyActivePostingSchema>;
 export type CompanyEvidenceSourceType = z.infer<typeof companyEvidenceSourceTypeSchema>;
 export type CompanyEvidenceRequest = z.infer<typeof companyEvidenceRequestSchema>;
 export type CompanyEvidenceSaveResponse = z.infer<typeof companyEvidenceSaveResponseSchema>;

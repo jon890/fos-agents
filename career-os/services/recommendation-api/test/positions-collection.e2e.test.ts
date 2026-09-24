@@ -33,6 +33,32 @@ beforeEach(async () => {
 });
 
 describe("분석 정책과 회사 선호", () => {
+  it("수집 주소를 저장하고 기본 선호 갱신 때 유지한다", async () => {
+    const path = `/api/positions/v1/company-preferences/${encodeURIComponent("예시")}`;
+    const base = { companyKey: "예시", companyName: "예시", tier: 2, disposition: "analyze" };
+    const first = await send("PUT", path, {
+      idempotencyKey: "collector-preference-first",
+      body: { ...base, techBlogFeedUrl: "https://example.com/feed.xml", githubOrg: "example" },
+    });
+    expect(first.status).toBe(200);
+    const second = await send("PUT", path, {
+      idempotencyKey: "collector-preference-second",
+      body: base,
+    });
+    expect(second.status).toBe(200);
+    const listed = await send("GET", "/api/positions/v1/company-preferences");
+    expect(listed.json).toMatchObject([
+      { techBlogFeedUrl: "https://example.com/feed.xml", githubOrg: "example" },
+    ]);
+    expect(
+      (
+        await send("PUT", path, {
+          idempotencyKey: "collector-preference-http",
+          body: { ...base, techBlogFeedUrl: "http://example.com/feed.xml" },
+        })
+      ).status,
+    ).toBe(400);
+  });
   it("정책을 설정하면 저장한 정책을 그대로 돌려준다", async () => {
     harness.expectMatchesLegacy(
       "ok-04-put-analysis-policy",
@@ -87,6 +113,25 @@ describe("분석 정책과 회사 선호", () => {
 });
 
 describe("수집 실행 저장", () => {
+  it("Backend가 회사의 활성 공고 제목과 첫 수집 시각을 준다", async () => {
+    await harness.replayGiven("ok-08-post-company-tier-results");
+    const rows = await harness.prisma.$queryRaw<Array<{ company_key: string; title: string }>>`
+      SELECT company_key, title FROM positions ORDER BY position_id LIMIT 1
+    `;
+    const reply = await send(
+      "GET",
+      `/api/positions/v1/companies/${encodeURIComponent(rows[0]!.company_key)}/active-postings`,
+    );
+    expect(reply.status).toBe(200);
+    expect(reply.json).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          title: rows[0]!.title,
+          firstSeenAt: expect.any(String),
+        }),
+      ]),
+    );
+  });
   it("수집 실행을 저장하면 201 과 회사 tier 대기열을 준다", async () => {
     await harness.replayGiven("ok-07-post-collection-run");
     harness.expectMatchesLegacy(

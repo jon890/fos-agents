@@ -299,6 +299,9 @@ InnoDB 상한 3072 바이트를 넘고, MySQL 이 `Specified key was too long` �
 
 `source_type` 과 그 출처가 채우는 축이다.
 
+공고 수집기는 `GET api/positions/v1/companies/:companyKey/active-postings`로
+Backend에 저장된 활성 공고의 제목, URL과 `first_seen_at`을 읽는다.
+
 | `source_type` | 출처 | 채우는 축 |
 | --- | --- | --- |
 | `dart-employment` | OpenDART 「직원 현황」 | `compensation-upside`, `team-growth` |

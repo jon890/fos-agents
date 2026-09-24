@@ -17,6 +17,7 @@ import {
   type AnalysisResultsResponse,
   type CollectionRequest,
   type CompanyEvidence,
+  type CompanyActivePosting,
   type CompanyEvidenceRequest,
   type CompanyEvidenceSaveResponse,
   type CompanyPreference,
@@ -88,6 +89,13 @@ export class PositionsController {
   @Get("companies/:companyKey/evidence")
   listCompanyEvidence(@Param("companyKey") companyKey: string): Promise<CompanyEvidence[]> {
     return this.positions.listValidCompanyEvidence(companyKey);
+  }
+
+  @Get("companies/:companyKey/active-postings")
+  listActiveCompanyPostings(
+    @Param("companyKey") companyKey: string,
+  ): Promise<CompanyActivePosting[]> {
+    return this.positions.listActiveCompanyPostings(companyKey);
   }
 
   @Post("collection-runs")

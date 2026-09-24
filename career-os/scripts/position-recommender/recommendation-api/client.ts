@@ -6,6 +6,7 @@ import {
   analysisResultsResponseSchema,
   companyEvidenceSaveResponseSchema,
   companyEvidenceSchema,
+  companyActivePostingSchema,
   companyPreferenceSchema,
   companyTierResultsResponseSchema,
   positionExclusionSchema,
@@ -14,6 +15,7 @@ import {
   type AnalysisQueueResponse,
   type AnalysisResultsResponse,
   type CompanyEvidence,
+  type CompanyActivePosting,
   type CompanyEvidenceSaveResponse,
   type CompanyPreference,
   type CompanyTierResultsResponse,
@@ -263,6 +265,16 @@ export class RecommendationApiClient {
       undefined,
       undefined,
       z.array(companyEvidenceSchema),
+    );
+  }
+
+  getActiveCompanyPostings(companyKey: string): Promise<CompanyActivePosting[]> {
+    return this.request(
+      "GET",
+      `/api/positions/v1/companies/${encodeURIComponent(companyKey)}/active-postings`,
+      undefined,
+      undefined,
+      z.array(companyActivePostingSchema),
     );
   }
 

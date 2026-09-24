@@ -168,6 +168,10 @@ export class PositionsService {
     return preferences.sort((left, right) => left.companyKey.localeCompare(right.companyKey));
   }
 
+  async listActiveCompanyPostings(companyKey: string) {
+    return this.repository.listActiveCompanyPostings(companyKey, this.repository.reader());
+  }
+
   async updateCompanyPreference(
     companyKeyParam: string,
     value: Omit<CompanyPreference, "updatedAt">,
