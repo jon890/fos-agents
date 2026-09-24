@@ -498,38 +498,48 @@ skill은 필요한 정보를 실행 시점에 조회하고 TypeScript 스크립�
 | --- | --- |
 | `source/` | 글과 영상 피드 수집 경계. 원문 발견과 메타 추출만 한다 |
 | `source/archive/` | sitemap 과 YouTube uploads playlist 같은 과거 수집 cursor 해석 |
-| `persistence/` | 파일모드의 누적 이력 |
 | `study-library/` | 학습자료 API client. fetch, 인증 헤더, 응답 검증과 후보풀 타입 변환 |
 | `render/` | 주제 중심 HTML 생성 |
 
-루트의 진입점은 `build_morning_reading.ts` 와 `validate_outputs.ts` 이고
-`morning_reading_cli.ts` 가 플래그 분기를 담당한다.
-후보풀, 선별, 누적 이력, 공부 주제 구성과 HTML 렌더링은 각각 분리된 모듈이 담당한다.
+루트의 진입점이다.
+
+| 진입점 | 언제 쓰나 |
+| --- | --- |
+| `morning_reading_cli.ts` | 일일 실행. 수집, 후보 조회, 선택 검증, 추천 저장 |
+| `build_morning_reading.ts`, `validate_outputs.ts` | HTML 생성과 산출물 검증 |
+| `manage_reading_sources.ts` | 사람이 소스를 조회하고 더하고 고치고 끈다 |
+| `configure_study_recommendation.ts` | 사람이 후보자 기준 버전을 올린다 |
+| `import_study_state.ts` | 파일에 있던 소스와 추천 이력을 Backend 로 옮기는 일회성 명령 |
+
+후보풀, 선별, 공부 주제 구성과 HTML 렌더링은 각각 분리된 모듈이 담당한다.
 실행기는 시스템 임시 디렉터리 아래의 명시적인 실행 경로만 사용하며 저장소에 리포트 디렉터리를 만들지 않는다.
 `runtime-paths.ts` 가 `CAREER_OS_ROOT` 와 `--run-dir` 를 함께 해석하고 `validate_outputs.ts` 도 같은 해석을 쓴다.
 둘 다 주어졌는데 경로가 다르면 사용법 오류로 중단한다.
 
-`config/external-reading-sources.ts` 가 소스 목록과 어댑터 종류를 소유한다.
-archive 진입점은 이 파일에 복제하지 않고 sourceKey 별 registry 로 둔다.
+archive 진입점은 소스 필드에 복제하지 않고 `sourceKey` 별 registry 인 `source/archive/registry.ts` 로 둔다.
 
-### 두 모드의 경계
+### Backend 경계
 
-파일모드와 library 모드는 실행 진입점에서 나뉜다.
 `study-library/` 는 MySQL 드라이버나 서버 저장 로직을 갖지 않는다.
-schema 와 endpoint 정의는 `services/recommendation-api/` 가 소유한다.
+schema 와 endpoint 는 `services/recommendation-api/src/study/` 가 소유한다.
+포지션 쪽 `src/positions/` 와 같은 배치다.
 
-두 모드가 무엇을 읽고 쓰는지는 [`flow.md`](flow.md#study-topic-recommender)가 소유한다.
+| 경로 | 책임 |
+| --- | --- |
+| `src/study/study.controller.ts` | `/api/study/v1` 경로 |
+| `src/study/schema.ts` | 요청과 응답의 zod 계약 |
+| `src/study/study.service.ts` | 후보 거르기, 추천 저장 검증 |
+| `src/study/repository/study.repository.ts` | table 읽기와 쓰기 |
 
-library 모드가 읽는 환경값이다.
+client 가 읽는 환경값은 포지션 추천과 같다. 같은 Backend 이고 같은 token 이다.
 
 | 이름 | 의미 |
 | --- | --- |
-| `STUDY_LIBRARY_URL` | career-os API origin. HTTPS 이며 path, query, hash 와 credentials 가 없어야 한다 |
-| `STUDY_SERVICE_TOKEN` | 서비스 인증 Bearer token. 브라우저 세션과 별개다 |
+| `CAREER_RECOMMENDATION_API_URL` | 추천 Backend origin |
+| `CAREER_RECOMMENDATION_API_TOKEN` 또는 `CAREER_RECOMMENDATION_API_TOKEN_FILE` | Bearer token. 파일은 mode 600 |
 | `YOUTUBE_DATA_API_KEY` | 선택값. 있으면 YouTube uploads playlist 과거 수집을 쓴다 |
 
-값이 없거나 origin 형식이 맞지 않으면 `--library` 실행은 시작 전에 실패한다.
-브라우저 관리자 쿠키나 세션을 복제하지 않는다.
+값이 없으면 실행은 시작 전에 실패한다. 브라우저 관리자 쿠키나 세션을 복제하지 않는다.
 
 ## sync-profile
 

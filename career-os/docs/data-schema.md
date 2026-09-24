@@ -756,15 +756,154 @@ HTTPS `runtime` 근거는 실행마다 달라질 수 있으므로 `refresh_requi
 
 ## study-topic-recommender
 
-### `config/external-reading-sources.ts`
+공부 주제 추천의 소스, 자료, 추천 이력과 제외 판정은 `fos_career` 의 `study_` table 이 담는다.
+skill 과 수집기는 table 에 직접 접속하지 않고 `/api/study/v1` 만 호출한다.
+HTTP 계약과 오류 코드는 [`flow.md`](flow.md#study-topic-recommender)가 소유한다.
 
-| 필드 | 값 |
+### study table
+
+| table | 담는 것 |
 | --- | --- |
-| `key` | 소스 식별자. 회사나 매체를 나타내며 주제를 담지 않는다 |
-| `title`, `category` | 표시 이름과 분류 |
-| `adapter` | `feed`, `page`, `youtube` |
-| `feedUrl` 또는 `url` | 둘 중 하나 |
-| `enabled` | 이번 실행에서 수집할지 |
+| `study_sources` | 수집할 외부 소스. 원본이다 |
+| `study_source_cursors` | 소스와 mode 마다 이어서 모을 위치 |
+| `study_materials` | 수집한 자료. `content_key` 로 한 번만 저장한다 |
+| `study_material_sources` | 자료가 어느 소스에서 나왔는지. 한 자료가 여러 소스에서 나올 수 있다 |
+| `study_recommendation_control` | 후보자 기준 버전과 `history_version`. 한 행이다 |
+| `study_recommendation_runs` | 일별 추천 실행 |
+| `study_recommendation_topics` | 실행이 고른 공부 주제 |
+| `study_recommended_materials` | 주제에 연결한 추천 자료 |
+| `study_material_verdicts` | 고르지 않은 후보의 판정 |
+| `study_publications` | 외부 게시 성공 이력 |
+
+멱등 영수증은 추천 Backend 가 함께 쓰는 `request_receipts` 에 둔다.
+
+옛 `fos-blog` 설계의 열세 table 에서 넷을 뺐다.
+`study_material_states` 와 `study_material_tags` 는 쓰는 화면과 값이 없다. client 가 보내는 `tags` 는 늘 빈 배열이다.
+`study_recommendation_items` 는 `study_recommended_materials` 와 합쳤다.
+`study_request_receipts` 는 공용 `request_receipts` 로 대신한다.
+그리고 제외 판정을 담는 `study_material_verdicts` 를 더했다.
+
+### `study_sources`
+
+| 칸 | 타입 | 설명 |
+| --- | --- | --- |
+| `source_key` | `VARCHAR(100)` PK | 회사나 매체를 나타내며 주제를 담지 않는다 |
+| `title` | `VARCHAR(255)` | 표시 이름 |
+| `category` | `VARCHAR(50)` | 수집 카테고리 |
+| `adapter` | `ENUM('feed','page','youtube')` | |
+| `url` | `VARCHAR(2048)` NULL | HTTPS |
+| `feed_url` | `VARCHAR(2048)` NULL | HTTPS |
+| `enabled` | `BOOLEAN` | 이번 실행에서 수집할지 |
+| `note` | `VARCHAR(500)` NULL | 사람이 무엇을 왜 바꿨는지 |
+| `version` | `INT UNSIGNED` | 낙관적 잠금 |
+| `created_at`, `updated_at` | `DATETIME(3)` | |
+
+`url` 과 `feed_url` 중 하나 이상은 NOT NULL 이다. `CHECK` 로 강제한다.
+
+### `study_source_cursors`
+
+`(source_key, mode)` 가 PK 이고 `mode` 는 `recent` 와 `archive` 다.
+`cursor_json` 은 서버가 해석하지 않는 JSON 이고 직렬화 64 KiB 이하다.
+`version` 은 성공한 ingestion 만 올린다.
+
+### `study_materials`
+
+| 칸 | 타입 | 설명 |
+| --- | --- | --- |
+| `content_key` | `VARCHAR(191)` PK | YouTube 영상이면 video ID, 일반 글이면 정규화한 URL 의 SHA-256 |
+| `canonical_url` | `VARCHAR(2048)` | 추적 query 와 fragment 를 지운 HTTPS URL |
+| `url` | `VARCHAR(2048)` | 수집한 원문 URL |
+| `title` | `VARCHAR(500)` | |
+| `published` | `VARCHAR(100)` | 피드가 준 게시 시각 원문 |
+| `published_at` | `DATETIME(3)` NULL | 해석할 수 있을 때만 |
+| `excerpt` | `TEXT` NULL | 2,000자 이하 |
+| `kind` | `ENUM('feed-article','feed-video','page-link','page-video')` | 수집 경로 |
+| `first_collected_at`, `last_collected_at` | `DATETIME(3)` | |
+
+같은 `content_key` 를 다시 받으면 행을 늘리지 않고 제목과 발췌와 `last_collected_at` 을 갱신한다.
+
+### `study_recommendation_control`
+
+한 행이다.
+
+| 칸 | 설명 |
+| --- | --- |
+| `candidate_context_version` | 후보자 기준 버전. 관심사가 바뀌면 사람이 올린다 |
+| `history_version` | 추천 실행을 저장할 때마다 1 씩 오른다 |
+
+### 추천 실행
+
+`study_recommendation_runs` 는 `report_id` 가 PK 이고 서울 날짜의 `morning-YYYY-MM-DD` 다.
+`generated_at` 과 그 실행이 쓴 `candidate_context_version` 을 담는다.
+
+`study_recommendation_topics` 는 `(report_id, topic_key)` 가 PK 이다.
+
+| 칸 | 설명 |
+| --- | --- |
+| `topic_key` | 날짜가 달라도 같은 개념을 식별하는 kebab-case 키 |
+| `title` | 외부 자료에서 도출한 공부 주제 |
+| `career_question` | 현재 업무나 다음 역할에 적용해 볼 질문. NULL 허용 |
+| `position` | 리포트 안의 순서 |
+
+`study_recommended_materials` 는 `(report_id, content_key)` 가 PK 이다.
+
+| 칸 | 설명 |
+| --- | --- |
+| `content_key` | **UNIQUE 다.** 한 번 추천한 자료는 다시 추천하지 않는다 |
+| `topic_key` | 연결한 주제 |
+| `summary`, `reason` | NULL 허용 |
+| `career_value` | `current-work`, `target-role`, `engineering-judgment`, `product-business` 중 하나. NULL 허용 |
+| `position` | 주제 안의 순서 |
+
+`career_question`, `summary`, `reason`, `career_value` 를 NULL 로 두는 이유는 이관이다.
+파일에 있던 이력은 이 값이 없거나 일부만 있다. 지어낸 문장으로 채우지 않는다.
+정상 실행은 모델이 모두 채우고, client 의 선택 검증이 빈 값을 거부한다.
+
+직전 실행과 같은 `topic_key` 는 고를 수 없다. 서버가 저장 시점에 다시 검증한다.
+
+### `study_material_verdicts`
+
+고르지 않은 후보의 판정이다.
+
+| 칸 | 타입 | 설명 |
+| --- | --- | --- |
+| `content_key` | `VARCHAR(191)` | |
+| `candidate_context_version` | `VARCHAR(191)` | 판정할 때의 후보자 기준 버전 |
+| `verdict` | `ENUM('rejected')` | 지금은 제외 하나다 |
+| `reason` | `VARCHAR(300)` | 한 줄 이유 |
+| `report_id` | `VARCHAR(40)` | 판정한 실행 |
+| `judged_at` | `DATETIME(3)` | |
+| `valid_until` | `DATE` | 판정한 날부터 30일 |
+
+`(content_key, candidate_context_version)` 이 PK 다.
+같은 기준 버전에서 다시 판정하면 갱신한다.
+
+후보 조회는 아래 둘 중 하나라도 맞으면 그 자료를 뺀다.
+
+- `study_recommended_materials` 에 있다
+- 지금의 `candidate_context_version` 으로 된 판정이 있고 `valid_until` 이 오늘 이후다
+
+기준 버전을 올리면 예전 판정은 지우지 않아도 조회에서 저절로 빠진다.
+이유는 [ADR-127](adr/ADR-127-공부-추천은-고르지-않은-후보의-판정을-재사용한다.md)을 따른다.
+
+### `study_publications`
+
+`publication_id` 가 PK 이고 `report_id` 가 `study_recommendation_runs` 를 가리킨다.
+`channel`, `url`, `external_id`, `published_at` 을 담는다.
+멱등 키는 `publication:` 뒤에 고정 순서 `{reportId,channel,publishedAt,externalId,url}` JSON 의 UTF-8 SHA-256 hex 를 붙인다.
+
+### 파일에서 옮기는 것
+
+일회성 이관 명령 `import_study_state.ts` 가 옮긴다.
+
+| 원본 | 옮길 곳 |
+| --- | --- |
+| `config/external-reading-sources.ts` 의 `sources` | `study_sources`. `note` 는 「config 에서 이관」 |
+| `state/morning-study-history.json` 의 `reports` 와 `entries` | 리포트마다 `POST /recommendation-runs` 한 번 |
+
+이력의 `entries` 는 `studyTopic` 과 `studyTopicKey` 와 `careerValue` 를 가지지만
+`summary` 와 `reason` 과 `careerQuestion` 은 없다. 그 셋은 NULL 로 보낸다.
+원본 파일은 운영에서 옮기고 행 수를 대조하기 전에는 지우지 않는다.
 
 ### 실행 중 생성되는 읽을거리 데이터
 
@@ -777,7 +916,7 @@ HTTPS `runtime` 근거는 실행마다 달라질 수 있으므로 `refresh_requi
 | `contentKey` | 정규화한 URL. 중복과 이전 추천 판정의 키다 |
 | 원문 URL, 출처, 제목, 게시 시각 | |
 | `excerpt` | 피드가 주면 담는 공개 설명문 |
-| `previouslyRecommended` | 누적 이력에 같은 `contentKey` 가 있는지 |
+| `previouslyRecommended` | 서버가 준 값. 이미 추천한 자료는 후보로 오지 않으므로 늘 `false` 다 |
 
 후보풀은 `recentStudyTopicKeys` 로 직전 리포트의 공부 주제 키를 함께 담는다.
 
@@ -796,63 +935,16 @@ HTTPS `runtime` 근거는 실행마다 달라질 수 있으므로 `refresh_requi
 **고를 수 없는 것이 둘이다.** `previouslyRecommended: true` 인 후보와
 직전 리포트와 같은 `topicKey` 다.
 
-### `state/morning-study-history.json`
-
-검증을 통과해 사용자에게 낸 추천 자료의 누적 이력이다.
-비공개 작업 release 로 동기화하며 임시 리포트와 분리한다.
-
-| 필드 | 값 |
-| --- | --- |
-| `schemaVersion` | `1` |
-| `reports[]` | 반영을 마친 일별 리포트의 `reportId` 와 추천 시각 |
-| `entries[]` | 과거 추천 자료 |
-
-`entries[]` 의 필드다.
-
-| 필드 | 값 |
-| --- | --- |
-| `contentKey` | 정규화한 원문의 유일 키. 파일 안에서 유일하다 |
-| `canonicalUrl` | 추적 query 와 fragment 를 지운 HTTPS 원문 URL |
-| `sourceKey` | 등록된 출처 식별자 |
-| `category` | 수집 카테고리 |
-| `title`, `studyTopic` | 추천 당시의 제목과 공부 주제 |
-| `studyTopicKey` | 추천 당시 공부 주제의 안정적인 식별자 |
-| `careerValue` | 추천 당시 커리어 연결 유형 |
-| `recommendedAt` | 이력에 반영한 UTC 시각 |
-| `reportId` | 이 추천이 든 일별 리포트 식별자 |
-
-`contentKey` 는 YouTube 영상이면 video ID 를 담고, 일반 글이면 정규화한 URL 의 SHA-256 이다.
-`reports[].reportId` 도 파일 안에서 유일하다. 같은 날짜의 리포트를 두 번 반영하지 않는다.
-
-다음 실행은 가장 최근 `reportId` 의 `studyTopicKey` 를 읽어 같은 주제 선택을 거절한다.
-
 **원문에 없는 값을 기본값으로 채우지 않는다.** 예상 학습 시간과 난이도와 분야가 여기 해당한다.
 필요하지만 확인할 수 없으면 정보가 없다고 표시한다.
 
-### 학습자료 API 연동 상태
+### cursor 와 자료 배치
 
-이 절은 명시적으로 선택하는 library 모드의 현재 클라이언트 계약이다.
-운영 서버 적용과 웹 UI 구현은 별도 작업이다.
-현재 기본 실행의 누적 추천 이력은 위 `state/morning-study-history.json` 계약을 따른다.
-
-`--library` 실행에서 누적 자료, 즐겨찾기, 읽음, 메모와 추천 이력은
-`career-os` Backend가 `fos_career`의 별도 study table에 저장한다.
-수집기와 skill은 table에 직접 접속하지 않고 HTTP API만 사용한다.
-
-study table은 기존 `fos-blog` 설계의 관계를 유지한다.
-`study_sources`, `study_source_cursors`, `study_materials`, `study_material_sources`,
-`study_material_tags`, `study_material_states`, `study_recommendation_control`,
-`study_recommendation_runs`, `study_recommendation_topics`, `study_recommendation_items`,
-`study_recommended_materials`, `study_publications`와 `study_request_receipts`를 사용한다.
-현재 기존 table은 0행이므로 데이터 복사는 하지 않으며 API 계약 검증 뒤 제거한다.
-
-HTTP 계약과 오류 코드는 [`flow.md`](flow.md#study-topic-recommender)가 소유한다.
-
-library 후보풀은 API 후보 조회 결과이므로 `collectionLog`를 빈 배열로 둔다.
+후보풀은 API 후보 조회 결과이므로 `collectionLog`를 빈 배열로 둔다.
 HTML report의 counts는 `activeSources`를 `GET /sources`의 enabled 소스 수, `sourcesWithCandidates`를 후보에 나타난 sourceKey 수, `collectedArticles`를 후보풀 길이로 계산한다.
 카테고리별 source count도 enabled 소스 목록에서 계산한다.
 
-연동모드에서 cursor는 sourceKey와 mode별로 서버가 관리한다.
+cursor는 sourceKey와 mode별로 서버가 관리한다.
 career-os가 해석하는 archive cursor의 내부 형태는 아래처럼 adapter별로 제한한다.
 이 값은 API에는 opaque JSON으로 저장되며, 서버는 내용을 해석하지 않는다.
 
@@ -910,29 +1002,6 @@ HTML과 report JSON 검증이 끝난 뒤 `--commit-recommendation --report <RUN_
 게시가 별도로 성공한 뒤에만 publications 기록을 보낸다.
 publication의 `idempotencyKey`는 `publication:` 뒤에 고정 순서 `{reportId,channel,publishedAt,externalId,url}` JSON의 UTF-8 SHA-256 hex를 붙인다.
 추천 저장이 실패하면 완료로 보지 않고, 파일 이력에 대신 쓰지 않는다.
-
-### Pages manifest 와 import payload
-
-library 모드의 import preview 입출력이다. 일회성 이관에만 쓴다.
-
-Pages manifest 다. **API 에 보내지 않는 envelope 다.**
-
-| 필드 | 값 |
-| --- | --- |
-| `schemaVersion` | `1` |
-| `reports[]` | API `ImportReport` 와 같은 `reportId`, `generatedAt`, `topics` |
-| `reports[].provenance.sourcePageUrl` | 이 리포트를 확인한 기존 Pages HTTPS URL |
-| `reports[].provenance.localHtmlPath` | 선택값. 승인된 URL 에서 받아 둔 HTML 경로 |
-
-`provenance` 는 career-os 가 기존 노출 위치를 추적하려고 두는 것이다.
-API 로 보내기 전에 각 report 에서 지운다.
-
-기존 이력에 없는 `careerQuestion`, `summary`, `reason`, `careerValue` 는 `null` 로 남긴다.
-임의 문장과 분류와 URL 을 추정하지 않는다.
-
-`importKey` 는 `import:` 뒤에 canonical JSON reports 의 UTF-8 SHA-256 hex 를 붙인 값이다.
-canonical JSON 은 객체 키를 재귀적으로 사전순 정렬하고 배열 순서는 두고 공백 없이 직렬화한다.
-같은 reports 는 같은 `importKey` 를 만든다. `null` 로 남긴 값이 달라져도 다른 키가 된다.
 
 ## sync-profile
 

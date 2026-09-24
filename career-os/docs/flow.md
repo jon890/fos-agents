@@ -347,132 +347,139 @@ brain 검색과 공개·비공개 분리, 저장 미리보기·승인·동시 �
 ## study-topic-recommender
 
 등록된 외부 소스에서 그날 읽거나 볼 가치가 높은 자료를 선별한다.
-기본 실행은 기존 파일모드이며, 사용자가 명시적으로 `--library`를 지정하면 `career-os` 학습자료 API를 단일 원격 저장소로 사용한다.
+소스와 수집한 자료, 추천 이력과 제외 판정은 `career-os` Backend 가 `fos_career` 에 저장한다.
+skill 과 수집기는 `/api/study/v1` 만 호출하고 파일에 이력을 두지 않는다.
+이유는 [ADR-118](adr/ADR-118-추천-상태는-career-os-api와-mysql이-관리한다.md)을 따른다.
 
-### 파일모드
+### 실행 흐름
 
-1. 공통 CLI가 홈서버의 최신 `state/` release를 준비한다.
-2. `state/morning-study-history.json`에서 이전에 추천한 자료의 `contentKey`와 직전 리포트의 `studyTopicKey`를 읽는다.
-3. `config/external-reading-sources.ts`의 활성 소스를 모두 읽는다.
-4. 피드와 페이지 어댑터가 최신 글과 영상을 결정적으로 수집하고 URL을 정규화한다.
+1. client 가 `GET /sources` 로 켜진 소스를 받는다.
+2. 소스마다 `GET /sources/{sourceKey}/cursor?mode=` 로 이어서 모을 위치를 받는다.
+3. 피드와 페이지 어댑터가 최신 글과 영상을 결정적으로 수집하고 URL 을 정규화한다.
    YouTube 채널은 공식 Atom 피드를 먼저 쓰고, 피드를 읽을 수 없을 때만 공개 채널 페이지로 물러선다.
-5. 같은 실행의 URL 중복을 제거하고 이전 이력과 같은 `contentKey`를 가진 후보를 표시한다.
-6. 모델은 이전 추천을 제외한 후보 중 사용자의 현재 업무, 목표 역할, 엔지니어링 판단 또는 제품·사업 관점에 구체적으로 연결되는 자료만 선별한다.
+4. client 가 모은 자료와 다음 cursor 를 `POST /ingestions` 로 한 번에 보낸다.
+   서버는 자료 저장과 cursor 교체를 한 트랜잭션으로 한다.
+5. client 가 `GET /candidates` 로 후보를 받는다.
+   서버는 이미 추천한 자료와, 지금 기준 버전에서 유효기간이 남은 제외 판정이 있는 자료를 뺀다.
+6. 모델은 받은 후보 중 사용자의 현재 업무, 목표 역할, 엔지니어링 판단 또는
+   제품·사업 관점에 구체적으로 연결되는 자료만 선별한다.
 7. 모델은 선별한 자료를 외부 원문에서 도출한 공부 주제로 묶고 각 주제에 커리어 관점의 질문을 작성한다.
-8. 선택 검증은 후보풀에 없는 자료, 실행 내 중복, 이전 자료와 직전 리포트 주제의 재선택을 거부한다.
-9. 같은 선별 결과에서 주제 중심 HTML을 만들고 공개 범위와 링크를 검증한다. JSON은 검증과 이력 반영에 사용한다.
-10. 검증된 리포트의 자료만 누적 이력에 원자적으로 반영한다.
-11. 완료 단계가 누적 이력이 포함된 작업본을 새 홈서버 release로 반영한다.
-12. 사용자가 공유 링크를 요청했으면 `report-publisher`로 Cloudflare Pages에 게시하고 공개 URL을 검증한다.
-13. 로컬 검토 또는 게시 검증을 마치면 시스템 임시 경로의 실행 자료를 정리한다.
-
-홈서버 release 충돌이나 이력 반영 실패가 발생하면 임시 리포트와 로컬 이력을 보존하고 이전 원격 release를 바꾸지 않는다.
-
-### 학습자료 API 연동모드
-
-명시적으로 `--library`를 지정했을 때의 흐름이다.
-client 만 구현했고 mock HTTP 로 검증했다. 서버는 구현하지 않았다.
+   고르지 않은 후보마다 한 줄 이유를 남긴다.
+8. 선택 검증은 후보풀에 없는 자료, 실행 내 중복, 직전 리포트 주제의 재선택을 거부한다.
+9. 같은 선별 결과에서 주제 중심 HTML 을 만들고 공개 범위와 링크를 검증한다.
+10. 검증이 끝나면 client 가 추천과 제외 판정을 `POST /recommendation-runs` 로 한 번에 저장한다.
+11. 사용자가 공유 링크를 요청했으면 `report-publisher` 로 게시하고, 성공한 뒤에만 `POST /publications` 로 기록한다.
+12. 시스템 임시 경로의 실행 자료를 정리한다.
 
 ```mermaid
 sequenceDiagram
     participant Skill as study-topic-recommender
-    participant Client as career-os study-library client
+    participant Client as study-library client
     participant API as career-os study API
     participant Model as 모델 선택
-    Skill->>Client: --library 실행과 환경 검증
-    Client->>API: 소스 등록과 mode별 cursor 조회
-    Client->>Skill: sourceKey와 mode에 맞는 수집 실행
-    Skill->>Client: 자료 묶음과 다음 cursor
-    Client->>API: 자료 묶음과 cursor 원자 저장
-    API-->>Client: 저장 영수증 또는 충돌
-    Client->>API: 후보 페이지와 historyVersion 조회
-    Client-->>Model: 기존 후보풀 스키마로 변환한 전체 후보
-    Model-->>Client: topic과 candidateId 선택
-    Client->>Skill: 기존 검증과 HTML 렌더링
-    Client->>API: recommendation-runs 저장
-    API-->>Client: historyVersion
+    Skill->>Client: 실행과 환경 검증
+    Client->>API: GET /sources
+    loop 켜진 소스마다
+        Client->>API: GET /sources/{key}/cursor
+        Client->>Client: 어댑터 수집
+        alt 수집 성공
+            Client->>API: POST /ingestions 자료와 다음 cursor
+        else 수집 실패
+            Client->>Client: 그 소스만 건너뛰고 cursor 를 진행하지 않음
+        end
+    end
+    Client->>API: GET /candidates
+    API-->>Client: 추천하지 않았고 유효한 제외 판정이 없는 후보
+    Client-->>Model: 후보풀
+    Model-->>Client: 주제와 선택, 고르지 않은 후보의 이유
+    Client->>Skill: 검증과 HTML 렌더링
+    Client->>API: POST /recommendation-runs 추천과 제외 판정
     opt 외부 게시 요청
-        Skill->>Skill: report-publisher로 게시
-        Client->>API: publications 기록
+        Skill->>Skill: report-publisher 로 게시
+        Client->>API: POST /publications
     end
 ```
 
-최근 수집과 과거 수집은 같은 소스라도 cursor를 분리한다.
-각 실행의 수집 한도는 요청량 제한일 뿐 누적 보관 한도가 아니다.
-추천 저장은 HTML과 report JSON 검증을 마친 뒤 별도 명령으로 수행하며 생성 시각을 다시 만들지 않는다.
+### 갈라지는 곳
 
-갈라지는 곳이다.
+| 상황 | 동작 |
+| --- | --- |
+| 소스 하나의 수집이 실패한다 | 그 소스의 `POST /ingestions` 를 보내지 않고 cursor 를 진행하지 않는다. 나머지 소스는 계속 모은다 |
+| 정상적인 빈 페이지를 확인했다 | 빈 `items` 와 다음 cursor 를 보낼 수 있다. 실패와 빈 상태를 구분한다 |
+| cursor version 이 달라졌다 | `409` 다. 기존 cursor 를 유지하고 그 소스는 다음 실행에서 다시 모은다 |
+| 후보가 0건이다 | 과거 자료로 채우지 않고 빈 상태의 리포트를 만든다. 추천 실행은 저장한다 |
+| 후보를 여러 페이지로 받는 중에 `historyVersion` 이 바뀌었다 | 다른 실행이 끼어든 것이다. 후보 조회를 처음부터 다시 한다 |
+| 같은 날 두 번 저장한다 | `reportId` 가 서울 날짜의 `morning-YYYY-MM-DD` 라 두 번째는 `409` 다. 같은 멱등 키와 같은 본문이면 저장된 응답을 다시 준다 |
+| 이미 추천한 자료를 다시 저장하려 한다 | 서버가 `409` 로 거부한다. `study_recommended_materials.content_key` 가 UNIQUE 다 |
+| Backend 장애, 인증 실패 | 파일로 물러서지 않고 오류 코드와 `requestId` 를 알린 뒤 중단한다 |
+| `429` | `Retry-After` 초를 표시하되 자동으로 오래 기다리지 않는다 |
 
-- 수집이 실패하면 빈 페이지를 전송하지 않는다.
-- cursor 저장은 서버가 자료 배치와 같은 트랜잭션으로 성공한 뒤에만 진행된 것으로 본다.
-- API 장애, 인증 실패, 충돌이 나면 파일 이력으로 물러서거나 양쪽에 쓰지 않고 오류를 알린다.
-- 오류 코드와 requestId를 함께 출력하고 token과 원문 payload는 출력하지 않는다.
-- `429`는 응답의 `Retry-After` 초를 표시하되 자동으로 오래 기다리지 않는다.
-- 멱등 요청은 같은 본문과 같은 키로만 재시도한다.
-  같은 키에 다른 본문이 필요하면 cursor 조회부터 다시 시작한다.
-- 응답 유실이 의심될 때도 로컬에서 성공으로 보지 않는다.
-  서버의 영수증 재응답이나 충돌 응답으로 판정한다.
+멱등 요청은 같은 본문과 같은 키로만 재시도한다.
+같은 키에 다른 본문이 필요하면 cursor 조회부터 다시 시작한다.
+응답 유실이 의심될 때도 로컬에서 성공으로 보지 않고, 서버의 영수증 재응답이나 충돌 응답으로 판정한다.
+token 과 원문 payload 는 출력하지 않는다.
 
-두 모드가 읽고 쓰는 자리가 다르다.
+### 제외 판정의 재사용
 
-- 파일모드는 `skill begin` 으로 작업본을 받고 `state/morning-study-history.json` 을 읽은 뒤
-  `--commit-history` 로 이력을 갱신한다.
-- 연동모드는 그 파일을 읽지 않고 후보와 추천 이력을 API 에서 가져온다.
-  파일모드의 이력을 갱신하지 않는다.
-- legacy 이력을 읽는 import preview 만 `skill begin` 과 `skill finish` 예외를 둔다.
+고르지 않은 후보는 매일 다시 판단하지 않는다.
+판정은 후보자 기준 버전과 유효기간을 함께 저장하고, 둘 중 하나가 어긋나면 다시 후보로 나온다.
 
-연동모드는 브라우저 관리자 세션을 복제하지 않는다.
+| 바뀐 것 | 결과 |
+| --- | --- |
+| 유효기간이 지났다 | 다시 후보로 나온다 |
+| 사람이 후보자 기준 버전을 올렸다 | 모든 제외 판정이 무효가 되어 다시 후보로 나온다 |
+| 같은 자료가 다른 소스에서 다시 수집됐다 | `contentKey` 가 같으므로 판정을 그대로 쓴다 |
+
+관심사가 바뀌면 사람이 기준 버전을 올린다. 그래야 예전 기준으로 제외한 자료가 다시 보인다.
+이유는 [ADR-127](adr/ADR-127-공부-추천은-고르지-않은-후보의-판정을-재사용한다.md)을 따른다.
+
+### 소스 관리
+
+소스의 원본은 `study_sources` 다. 사람은 `manage_reading_sources.ts` 로 더하고 고치고 끈다.
+이 명령이 `PUT /sources/{sourceKey}` 를 부르고, 무엇을 왜 바꿨는지 `note` 에 남긴다.
+cron 이 실패한 소스를 끄는 데 커밋과 배포가 필요 없다.
+
+archive 수집 진입점은 소스 필드가 아니라 `sourceKey` 별 고정 registry 가 소유한다.
+Kurly 와 OliveYoung 은 최근 수집에서는 `feed` adapter 이고, archive mode 에서만 registry 의 sitemap index 수집기를 쓴다.
+필드가 비어 있으면 추정값을 만들지 않고, 없는 URL 필드는 명시적인 `null` 로 보낸다.
+이유는 [ADR-126](adr/ADR-126-읽을거리-소스-목록은-backend가-원본을-가진다.md)을 따른다.
+
+### 학습자료 HTTP 계약
+
+기본 경로는 `/api/study/v1` 이다. 인증은 추천 Backend 의 Bearer token 하나를 쓴다.
+
+| endpoint | 계약 |
+| --- | --- |
+| `GET /sources` | 소스 목록과 version |
+| `PUT /sources/{sourceKey}` | 소스 전체 교체. `expectedVersion` 검사와 `note` |
+| `GET /sources/{sourceKey}/cursor?mode=` | mode 별 opaque cursor 와 version |
+| `POST /ingestions` | 자료 묶음과 다음 cursor 원자 저장 |
+| `GET /candidates` | 추천하지 않았고 유효한 제외 판정이 없는 후보, `historyVersion`, 지금의 `candidateContextVersion` |
+| `POST /recommendation-runs` | 추천 주제와 자료, 제외 판정의 원자 저장 |
+| `POST /publications` | 외부 게시 성공 이력 |
+| `PUT /recommendation-control` | 후보자 기준 버전을 바꾼다. 사람이 관심사가 바뀌었을 때 부른다 |
+
+요청 본문은 1 MiB 이하이고 오류 응답은 `{error:{code,message,requestId}}` 다.
+응답은 `Cache-Control: private, no-store` 와 `X-Robots-Tag: noindex, nofollow` 를 쓴다.
+모든 쓰기 요청은 멱등 키를 요구하며 같은 key 와 다른 요청 hash 는 `409` 로 거부한다.
+version 충돌도 `409`, 본문 상한 초과는 `413`, rate limit 은 `429`, 저장소 장애는 `503` 을 쓴다.
+
+API 후보 `Candidate` 는 후보풀의 `ReadingCandidate` 로 변환한다.
+`Candidate.id` 는 `contentKey` 이며 선택 파일의 `candidateId` 로 쓴다.
+`recentStudyTopicKeys` 는 후보풀의 같은 필드로 전달한다.
+`historyVersion` 은 여러 페이지를 받는 동안 이력이 바뀌지 않았는지 확인하는 데만 쓰고 추천 저장 본문에 넣지 않는다.
+`candidateContextVersion` 은 추천 저장 본문에 그대로 돌려보낸다. 그 사이 사람이 기준을 올렸으면 서버가 `409` 로 거부한다.
+서버가 추천 저장 시점에 직전 주제와 누적 추천 집합을 다시 검증한다.
+
+만들지 않는 경로가 있다.
+`fos-blog` 관리 화면을 위해 설계했던 자료 조회와 읽음 상태 변경, 추천 조회, legacy import 경로다.
+그 화면이 없어 쓰는 쪽이 없다.
 
 실행 명령과 플래그 조합은 스킬의
 [`references/execution.md`](../.claude/skills/study-topic-recommender/references/execution.md)가 소유한다.
 저장 모델과 cursor 형식은 [`data-schema.md`](data-schema.md#study-topic-recommender)가 소유한다.
 
-### 학습자료 HTTP 계약
-
-아직 서버를 만들지 않았다. client 가 가정하는 계약이다.
-
-기본 경로는 `/api/study/v1`을 유지한다.
-`producer` token은 수집, 추천과 게시 기록에 사용하고,
-`admin-gateway` token은 `fos-blog`의 인증된 Server Action이 자료 조회와 개인 상태 변경에 사용한다.
-브라우저에는 두 token을 모두 전달하지 않는다.
-
-| endpoint                                | 허용 역할               | 계약                                           |
-| --------------------------------------- | ----------------------- | ---------------------------------------------- |
-| `PUT /sources/{sourceKey}`              | producer                | source 전체 교체와 version 검사                |
-| `GET /sources`                          | producer, admin-gateway | source 목록과 version 조회                     |
-| `GET /sources/{sourceKey}/cursor?mode=` | producer                | mode별 opaque cursor 조회                      |
-| `POST /ingestions`                      | producer                | 자료 묶음과 다음 cursor 원자 저장              |
-| `GET /materials`                        | admin-gateway           | 필터, 정렬과 cursor pagination                 |
-| `GET /materials/{id}`                   | admin-gateway           | 자료, source, tag와 개인 상태 조회             |
-| `PATCH /materials/{id}/state`           | admin-gateway           | 즐겨찾기, 읽음, 메모와 version 충돌 검사       |
-| `GET /candidates`                       | producer                | 누적 추천을 제외한 후보와 history version 조회 |
-| `GET /recommendation-runs`              | admin-gateway           | 추천 실행 목록 pagination                      |
-| `POST /recommendation-runs`             | producer                | 추천 전체 원자 저장과 중복 검사                |
-| `GET /recommendation-runs/{reportId}`   | admin-gateway           | 추천 당시 snapshot과 현재 개인 상태 조회       |
-| `POST /publications`                    | producer                | 외부 게시 성공 이력 저장                       |
-| `POST /imports/dry-run`                 | producer, admin-gateway | legacy 이관 미리보기와 preview hash 생성       |
-| `POST /imports/commit`                  | admin-gateway           | preview hash와 history version 검사 뒤 반영    |
-
-요청 본문은 1 MiB 이하이고 오류 응답은 `{error:{code,message,requestId}}`다.
-개인 응답은 `Cache-Control: private, no-store`와 `X-Robots-Tag: noindex, nofollow`를 사용한다.
-모든 쓰기 요청은 멱등 키를 요구하며 같은 key와 다른 요청 hash는 `409`로 거부한다.
-version 충돌도 `409`, 본문 상한 초과는 `413`, rate limit은 `429`, 저장소 장애는 `503`을 사용한다.
-
-career-os의 기존 `ReadingSource`는 API 소스 등록 요청으로 변환한다.
-`key`는 `sourceKey`, `title`, `category`, `url`, `feedUrl`, `adapter`, `enabled`는 같은 의미로 보낸다.
-API가 필수로 요구하는 `expectedVersion`은 `GET /sources` 결과의 version 또는 새 소스의 `0`에서 가져온다.
-필드가 비어 있으면 추정값을 만들지 않고, 없는 URL 필드는 명시적인 `null`로 보낸다.
-archive 수집 진입점은 config 필드가 아니라 sourceKey별 고정 registry가 소유하므로 `config/external-reading-sources.ts`의 schemaVersion은 바꾸지 않는다.
-Kurly와 OliveYoung은 최근 수집에서는 계속 `feed` adapter이고, archive mode에서만 registry의 sitemap index 수집기를 사용한다.
-
-API 후보 `Candidate`는 기존 후보풀의 `ReadingCandidate`로 변환한다.
-`Candidate.id`는 `contentKey`이며 기존 선택 파일의 `candidateId`로 사용한다.
-`recentStudyTopicKeys`는 후보풀의 같은 필드로 전달하고 `historyVersion`은 후보풀 옆 meta 파일에 보존한다.
-`historyVersion`은 recommendation-runs 요청 본문에 넣지 않는다.
-서버가 추천 저장 시점에 직전 주제와 누적 추천 집합을 다시 검증한다.
-`previouslyRecommended`는 서버 응답값을 사용하며 로컬 파일 이력으로 덮어쓰지 않는다.
-
-### 두 모드에 함께 적용하는 것
+### 판정에 공통으로 적용하는 것
 
 외부 자료가 없는 학습 주제를 모델이 새로 만들지 않는다.
 공식 문서, 모델 발표와 최신 소식이라는 이유만으로 추천하지 않는다.
