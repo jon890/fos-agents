@@ -1,8 +1,21 @@
-import { Body, Controller, Get, HttpCode, Param, Put, Query } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, Param, Post, Put, Query } from "@nestjs/common";
 
 import { toContractError, ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { StudyService } from "./study.service.js";
-import { cursorModeSchema, sourceKeySchema, studySourcePutSchema, type StudyCursorResult, type StudySourcePut, type StudySourceUpsertResponse } from "./schema.js";
+import {
+  cursorModeSchema,
+  sourceKeySchema,
+  studyCandidatesQuerySchema,
+  studyIngestionSchema,
+  studySourcePutSchema,
+  type StudyCandidatePage,
+  type StudyCandidatesQuery,
+  type StudyCursorResult,
+  type StudyIngestion,
+  type StudyIngestionResult,
+  type StudySourcePut,
+  type StudySourceUpsertResponse,
+} from "./schema.js";
 
 @Controller("api/study/v1")
 export class StudyController {
@@ -32,6 +45,21 @@ export class StudyController {
     } catch (error) {
       return toContractError(error);
     }
+  }
+
+  @Post("ingestions")
+  @HttpCode(201)
+  createIngestion(
+    @Body(new ZodValidationPipe(studyIngestionSchema)) body: StudyIngestion,
+  ): Promise<StudyIngestionResult> {
+    return this.study.createIngestion(body);
+  }
+
+  @Get("candidates")
+  getCandidates(
+    @Query(new ZodValidationPipe(studyCandidatesQuerySchema)) query: StudyCandidatesQuery,
+  ): Promise<StudyCandidatePage> {
+    return this.study.getCandidates(query);
   }
 
   private sourceKey(value: string): string {
