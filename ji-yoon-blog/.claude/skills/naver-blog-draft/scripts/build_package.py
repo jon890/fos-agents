@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from build_preview import validate  # noqa: E402
+from draft_contract import validate  # noqa: E402
 
 
 def build(draft: dict) -> str:
