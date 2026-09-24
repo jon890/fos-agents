@@ -67,6 +67,13 @@ zip이 수 MB이고 회사 목록은 거의 바뀌지 않는다.
 `company_preferences`에 현재 직장을 넣되 공고는 분석하지 않는 구분이 필요하다.
 그 구분을 `disposition`에 값 하나로 더한다.
 
+구현 전 확인 결과 `company_preferences.tier`가 NOT NULL이고,
+기존 큐는 선호 행이 있으면 모두 사람 override로 처리했다.
+수집 주소만 설정한 회사도 모델 판정을 받아야 하므로 `tier`를 NULL 허용으로 바꾸고,
+값이 있을 때만 사람 override로 다룬다.
+`benchmark`는 공고를 저장하지 않아도 회사 판정 큐에 별도로 넣는다.
+또한 이전 평가의 tier가 NULL이면 만료 뒤에도 `stale`로 구분한다.
+
 **Blind 평점만 저장하고 리뷰 본문은 저장하지 않는다.**
 본문은 개인이 쓴 글이고 판정에 필요한 것은 항목별 평점이다.
 
@@ -127,6 +134,8 @@ zip이 수 MB이고 회사 목록은 거의 바뀌지 않는다.
 저장한 뒤 그 회사들의 유효한 근거를 받아
 `<RUN_DIR>/company-evidence.json`에 남긴다. 모델이 이 파일을 읽는다.
 파일 이름은 `run-dir.ts`가 소유한다.
+기존 조회 응답에는 `company_evidence_id`가 없었다.
+축의 `evidenceIds`가 실제 저장 행을 가리키도록 조회 응답에 `id`를 더한다.
 
 stdout에는 회사 수와 근거 건수와 실패한 수집기 수만 낸다.
 회사명과 급여 수치는 내지 않는다.
@@ -172,7 +181,7 @@ SHADOW_DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_shadow" \
 
 ```bash
 # cwd: 저장소 루트
-grep -rn "crtfc_key=[0-9a-f]\{40\}\|32ecfdde" career-os/ --include=*.ts --include=*.md \
+grep -Ern "crtfc_key=[0-9a-f]{40}" career-os/ --include=*.ts --include=*.md \
   || echo "키 문자열 없음"
 ```
 

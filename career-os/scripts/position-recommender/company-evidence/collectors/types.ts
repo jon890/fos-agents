@@ -23,6 +23,8 @@ export type CollectorInput = {
   activePostings: ActiveCompanyPosting[];
   now: Date;
   fetcher: EvidenceFetcher;
+  dartApiKey?: string;
+  persistDartCorpCode?: (companyKey: string, corpCode: string) => Promise<void>;
 };
 
 export type CollectorResult = { evidence: CompanyEvidence[]; diagnostics: string[] };

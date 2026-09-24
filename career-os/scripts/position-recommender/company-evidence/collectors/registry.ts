@@ -21,10 +21,9 @@ export async function collectCompanyEvidence(
       const collected = await collector.collect(input);
       result.evidence.push(...collected.evidence);
       result.diagnostics.push(...collected.diagnostics);
-    } catch (error) {
-      result.diagnostics.push(
-        `${collector.name}: ${error instanceof Error ? error.message : String(error)}`,
-      );
+    } catch {
+      // 외부 요청 오류에는 인증키가 들어간 URL이 포함될 수 있다.
+      result.diagnostics.push(`${collector.name}: 수집 실패`);
     }
   }
   return result;

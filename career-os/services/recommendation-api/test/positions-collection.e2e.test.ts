@@ -113,6 +113,75 @@ describe("분석 정책과 회사 선호", () => {
 });
 
 describe("수집 실행 저장", () => {
+  it("benchmark 회사는 판정 큐에 넣고 공고 분석 대상에서는 뺀다", async () => {
+    await harness.replayGiven("ok-07-post-collection-run");
+    const key = "회사 1";
+    const configured = await send(
+      "PUT",
+      `/api/positions/v1/company-preferences/${encodeURIComponent(key)}`,
+      {
+        idempotencyKey: "benchmark-preference",
+        body: {
+          companyKey: key,
+          companyName: key,
+          tier: null,
+          disposition: "benchmark",
+        },
+      },
+    );
+    expect(configured.status).toBe(200);
+    const reply = await harness.sendLegacyRequest("ok-07-post-collection-run");
+    expect(reply.status).toBe(201);
+    const queue = (
+      reply.json as {
+        companyTierQueue: {
+          companies: Array<{
+            companyKey: string;
+            disposition?: string;
+            activePositionCount: number;
+          }>;
+        };
+      }
+    ).companyTierQueue;
+    expect(queue.companies).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          companyKey: key,
+          disposition: "benchmark",
+          activePositionCount: 0,
+        }),
+      ]),
+    );
+    const positions = await harness.prisma.$queryRaw<Array<{ total: bigint }>>`
+      SELECT COUNT(*) AS total FROM positions WHERE company_key = ${key}
+    `;
+    expect(Number(positions[0]!.total)).toBe(0);
+  });
+
+  it("수집 주소만 설정한 회사도 tier 판정 큐에 남는다", async () => {
+    await harness.replayGiven("ok-07-post-collection-run");
+    const key = "회사 1";
+    expect(
+      (
+        await send("PUT", `/api/positions/v1/company-preferences/${encodeURIComponent(key)}`, {
+          idempotencyKey: "collector-only-preference",
+          body: {
+            companyKey: key,
+            companyName: key,
+            tier: null,
+            disposition: "analyze",
+            techBlogFeedUrl: "https://example.com/blog/rss",
+          },
+        })
+      ).status,
+    ).toBe(200);
+    const reply = await harness.sendLegacyRequest("ok-07-post-collection-run");
+    expect(reply.status).toBe(201);
+    const companies = (
+      reply.json as { companyTierQueue: { companies: Array<{ companyKey: string }> } }
+    ).companyTierQueue.companies;
+    expect(companies.some((company) => company.companyKey === key)).toBe(true);
+  });
   it("Backend가 회사의 활성 공고 제목과 첫 수집 시각을 준다", async () => {
     await harness.replayGiven("ok-08-post-company-tier-results");
     const rows = await harness.prisma.$queryRaw<Array<{ company_key: string; title: string }>>`

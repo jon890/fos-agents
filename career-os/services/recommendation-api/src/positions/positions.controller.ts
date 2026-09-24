@@ -16,7 +16,7 @@ import {
   type AnalysisResultsRequest,
   type AnalysisResultsResponse,
   type CollectionRequest,
-  type CompanyEvidence,
+  type StoredCompanyEvidence,
   type CompanyActivePosting,
   type CompanyEvidenceRequest,
   type CompanyEvidenceSaveResponse,
@@ -87,7 +87,7 @@ export class PositionsController {
 
   /** 한 회사의 아직 유효한 근거만 돌려준다. */
   @Get("companies/:companyKey/evidence")
-  listCompanyEvidence(@Param("companyKey") companyKey: string): Promise<CompanyEvidence[]> {
+  listCompanyEvidence(@Param("companyKey") companyKey: string): Promise<StoredCompanyEvidence[]> {
     return this.positions.listValidCompanyEvidence(companyKey);
   }
 

@@ -36,7 +36,7 @@ import {
   type AnalysisResultsRequest,
   type AnalysisResultsResponse,
   type CollectionRequest,
-  type CompanyEvidence,
+  type StoredCompanyEvidence,
   type CompanyEvidenceRequest,
   type CompanyEvidenceSaveResponse,
   type CompanyPreference,
@@ -265,7 +265,10 @@ export class PositionsService {
    *
    * 판정 기준 날짜는 Seoul 기준이다. `validUntil` 이 오늘이면 아직 유효하고 다음 날부터 뺀다.
    */
-  async listValidCompanyEvidence(company: string, now = new Date()): Promise<CompanyEvidence[]> {
+  async listValidCompanyEvidence(
+    company: string,
+    now = new Date(),
+  ): Promise<StoredCompanyEvidence[]> {
     return this.repository.listValidCompanyEvidence(
       company,
       todaySeoulIsoDate(now),
@@ -590,7 +593,12 @@ export class PositionsService {
     );
     const accepted = new Map<string, (typeof candidates)[number]>();
     for (const posting of candidates) {
-      if (preferences.get(companyKey(posting.company))?.disposition === "exclude") continue;
+      if (
+        ["exclude", "benchmark"].includes(
+          preferences.get(companyKey(posting.company))?.disposition ?? "",
+        )
+      )
+        continue;
       accepted.set(positionIdentity(posting), posting);
     }
     const postings = [...accepted.values()];
@@ -931,7 +939,9 @@ export class PositionsService {
     key: string,
   ): ResolvedTier {
     const preference = inputs.preferences.get(key);
-    if (preference) return { tier: preference.tier, source: "manual", assessment: undefined };
+    if (preference?.tier != null && preference.disposition !== "benchmark") {
+      return { tier: preference.tier, source: "manual", assessment: undefined };
+    }
     const assessment = inputs.validAssessments.get(key);
     if (assessment && assessment.recommendedTier !== null) {
       return { tier: assessment.recommendedTier, source: "model", assessment };
@@ -1226,7 +1236,10 @@ export class PositionsService {
   ): Promise<CompanyTierQueueResponse> {
     const items = await this.repository.listCompanyTierRunItems(run.companyTierRunId, tx);
     const companyKeys = [...new Set(positions.map((position) => position.companyKey))];
-    const preferences = await this.repository.findPreferencesFor(companyKeys, tx);
+    const preferences = await this.repository.findPreferencesFor(
+      [...new Set([...companyKeys, ...items.map((item) => item.companyKey)])],
+      tx,
+    );
     const valid = await this.repository.findValidAssessments(
       companyKeys,
       run.candidateContextVersion,
@@ -1246,9 +1259,9 @@ export class PositionsService {
       if (urls.length < 3) urls.push(position.postingUrl);
       urlsByCompany.set(position.companyKey, urls);
     }
-    const manualCount = companyKeys.filter((key) => preferences.has(key)).length;
+    const manualCount = companyKeys.filter((key) => preferences.get(key)?.tier != null).length;
     const modelCount = companyKeys.filter(
-      (key) => !preferences.has(key) && valid.get(key)?.recommendedTier != null,
+      (key) => preferences.get(key)?.tier == null && valid.get(key)?.recommendedTier != null,
     ).length;
     return companyTierQueueResponseSchema.parse({
       schemaVersion: 1,
@@ -1262,10 +1275,16 @@ export class PositionsService {
         assessmentStatus: item.assessmentStatus,
         activePositionCount: item.activePositionCount,
         representativePostingUrls: urlsByCompany.get(item.companyKey) ?? [],
+        ...(preferences.get(item.companyKey)?.disposition === "benchmark"
+          ? { disposition: "benchmark" }
+          : {}),
         priorTier: item.priorTier,
-        priorReason: item.priorTier === null ? null : (latest.get(item.companyKey)?.reason ?? null),
+        priorReason:
+          item.assessmentStatus === "new" ? null : (latest.get(item.companyKey)?.reason ?? null),
         priorValidUntil:
-          item.priorTier === null ? null : (latest.get(item.companyKey)?.validUntil ?? null),
+          item.assessmentStatus === "new"
+            ? null
+            : (latest.get(item.companyKey)?.validUntil ?? null),
       })),
       summary: {
         activeCompanyCount: companyKeys.length,

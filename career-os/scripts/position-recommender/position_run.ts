@@ -7,6 +7,7 @@ import { DEFAULT_MAX_FAILED_SOURCES } from "./live-postings/collection_health.ts
 import { collectLivePostings } from "./collect_live_postings.ts";
 import { preparePositionAnalysis } from "./prepare_position_analysis.ts";
 import { completeCompanyTierAssessment } from "./complete_company_tier_assessment.ts";
+import { collectEvidenceForRun } from "./collect_company_evidence.ts";
 import { commitPositionAnalysis } from "./commit_position_analysis.ts";
 import { finalizeRecommendation } from "./finalize_position_recommendation.ts";
 import { createRecommendationApiClient } from "./recommendation-api/client.ts";
@@ -27,6 +28,9 @@ type AnalysisCommitClient = Pick<
 export type PositionRunOperations = {
   collect(paths: RunDirectoryPaths): Promise<number>;
   prepare(paths: RunDirectoryPaths): Promise<PreparationResult>;
+  collectEvidence?(
+    paths: RunDirectoryPaths,
+  ): Promise<{ companyCount: number; evidenceCount: number; failedCollectorCount: number }>;
   commitCompanyTiers(paths: RunDirectoryPaths): Promise<CompanyTierResult>;
   commitAnalyses(paths: RunDirectoryPaths): Promise<AnalysisResult>;
   finalize(paths: RunDirectoryPaths, analysisRunId: string): Promise<FinalizationResult>;
@@ -116,6 +120,7 @@ const defaultOperations: PositionRunOperations = {
       paths.analysisQueue,
     );
   },
+  collectEvidence: collectEvidenceForRun,
   async commitCompanyTiers(paths) {
     return completeCompanyTierAssessment(
       paths.companyTierQueue,
@@ -186,12 +191,19 @@ export async function runPositionCommand(
   if (parsed.command === "collect") {
     mkdirSync(paths.directory, { recursive: true });
     rmSync(paths.companyTierQueue, { force: true });
+    rmSync(paths.companyEvidence, { force: true });
     rmSync(paths.analysisQueue, { force: true });
     writeLine(paths.directory);
     const exitCode = await operations.collect(paths);
     if (exitCode !== 0) return exitCode;
     const result = await operations.prepare(paths);
     if (result.companyTierQueuedCount > 0) {
+      if (operations.collectEvidence) {
+        const evidence = await operations.collectEvidence(paths);
+        writeLine(
+          `회사 근거 수집: 회사 ${evidence.companyCount}곳, 근거 ${evidence.evidenceCount}건, 실패 수집기 ${evidence.failedCollectorCount}건`,
+        );
+      }
       writeLine(
         `수집 완료: 후보 ${result.candidateCount}건, ${basename(paths.companyTierQueue)} 준비`,
       );

@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 export const RUN_DIR_FILE_NAMES = {
   postingCandidates: "posting-candidates.json",
   companyTierQueue: "company-tier-queue.json",
+  companyEvidence: "company-evidence.json",
   analysisQueue: "analysis-queue.json",
   companyTierUpdates: "company-tier-updates.json",
   analysisUpdates: "analysis-updates.json",
@@ -20,6 +21,7 @@ export function runDirectoryPaths(runDirectory: string) {
     directory,
     postingCandidates: resolve(directory, RUN_DIR_FILE_NAMES.postingCandidates),
     companyTierQueue: resolve(directory, RUN_DIR_FILE_NAMES.companyTierQueue),
+    companyEvidence: resolve(directory, RUN_DIR_FILE_NAMES.companyEvidence),
     analysisQueue: resolve(directory, RUN_DIR_FILE_NAMES.analysisQueue),
     companyTierUpdates: resolve(directory, RUN_DIR_FILE_NAMES.companyTierUpdates),
     analysisUpdates: resolve(directory, RUN_DIR_FILE_NAMES.analysisUpdates),

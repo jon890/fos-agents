@@ -36,10 +36,16 @@ export const companyPreferenceSchema = z
   .object({
     companyKey: nonEmpty,
     companyName: nonEmpty,
-    tier: z.number().int().min(1).max(3),
-    disposition: z.enum(["analyze", "exclude"]),
+    tier: z.number().int().min(1).max(3).nullable(),
+    disposition: z.enum(["analyze", "exclude", "benchmark"]),
     techBlogFeedUrl: httpsUrl.max(2048).nullable().optional(),
     githubOrg: nonEmpty.max(191).nullable().optional(),
+    dartCorpCode: z
+      .string()
+      .regex(/^\d{8}$/)
+      .nullable()
+      .optional(),
+    blindCompanySlug: nonEmpty.max(191).nullable().optional(),
     updatedAt: isoDateTime,
   })
   .strict();
@@ -185,8 +191,9 @@ export const companyTierQueueCompanySchema = z
     companyKey: nonEmpty,
     companyName: nonEmpty,
     assessmentStatus: companyTierAssessmentStatusSchema,
-    activePositionCount: z.number().int().positive(),
-    representativePostingUrls: z.array(httpsUrl).min(1).max(3),
+    activePositionCount: z.number().int().nonnegative(),
+    representativePostingUrls: z.array(httpsUrl).max(3),
+    disposition: z.literal("benchmark").optional(),
     priorTier: z.number().int().min(1).max(3).nullable(),
     priorReason: nonEmpty.nullable(),
     priorValidUntil: dateOnly.nullable(),
@@ -204,11 +211,11 @@ export const companyTierQueueCompanySchema = z
         message: "첫 평가 회사에는 이전 평가를 담지 않습니다.",
       });
     }
-    if (company.assessmentStatus === "stale" && company.priorTier === null) {
+    if (company.assessmentStatus === "stale" && company.priorValidUntil === null) {
       context.addIssue({
         code: "custom",
-        path: ["priorTier"],
-        message: "재평가 회사에는 만료된 이전 tier가 필요합니다.",
+        path: ["priorValidUntil"],
+        message: "재평가 회사에는 만료된 이전 평가 시각이 필요합니다.",
       });
     }
   });
@@ -661,6 +668,8 @@ export const companyEvidenceSaveResponseSchema = z
   .strict();
 
 export type CompanyEvidence = z.infer<typeof companyEvidenceSchema>;
+export const storedCompanyEvidenceSchema = companyEvidenceSchema.safeExtend({ id: nonEmpty });
+export type StoredCompanyEvidence = z.infer<typeof storedCompanyEvidenceSchema>;
 export const companyActivePostingSchema = z
   .object({
     title: nonEmpty,

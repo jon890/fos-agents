@@ -114,7 +114,7 @@ describe("인증키가 필요 없는 회사 근거 수집기", () => {
       },
     };
     const result = await collectCompanyEvidence(input(reply("")), [broken, jobPostingCollector]);
-    expect(result.diagnostics).toEqual(["broken: 고정된 실패"]);
+    expect(result.diagnostics).toEqual(["broken: 수집 실패"]);
     expect(result.evidence.map((entry) => entry.sourceType)).toEqual(["job-posting"]);
     expect(result.evidence[0]?.summary).toContain("수집 이력이 30일보다 짧아");
   });

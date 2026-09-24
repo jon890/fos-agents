@@ -9,6 +9,7 @@ import type {
   AnalysisPolicy,
   AnalysisUpdate,
   CompanyEvidence,
+  StoredCompanyEvidence,
   CompanyActivePosting,
   CompanyPreference,
   PositionExclusion,
@@ -332,8 +333,9 @@ function toExclusion(row: RawRow): PositionExclusion {
 }
 
 /** 회사 근거 행을 계약 모양으로 되돌린다. */
-function toCompanyEvidence(row: RawRow): CompanyEvidence {
+function toCompanyEvidence(row: RawRow): StoredCompanyEvidence {
   return {
+    id: String(row.company_evidence_id),
     sourceType: row.source_type as CompanyEvidence["sourceType"],
     url: String(row.url),
     title: optionalText(row.title),
@@ -451,17 +453,22 @@ export class PositionsRepository {
   async listPreferences(client: DbClient): Promise<CompanyPreference[]> {
     const rows = await client.$queryRaw<RawRow[]>`
       SELECT company_key, company_name, tier, disposition, tech_blog_feed_url, github_org,
+             dart_corp_code, blind_company_slug,
              updated_at FROM company_preferences
     `;
     return rows.map((row) => ({
       companyKey: String(row.company_key),
       companyName: String(row.company_name),
-      tier: number(row.tier),
-      disposition: row.disposition as "analyze" | "exclude",
+      tier: row.tier === null ? null : number(row.tier),
+      disposition: row.disposition as CompanyPreference["disposition"],
       ...(row.tech_blog_feed_url === null
         ? {}
         : { techBlogFeedUrl: String(row.tech_blog_feed_url) }),
       ...(row.github_org === null ? {} : { githubOrg: String(row.github_org) }),
+      ...(row.dart_corp_code === null ? {} : { dartCorpCode: String(row.dart_corp_code) }),
+      ...(row.blind_company_slug === null
+        ? {}
+        : { blindCompanySlug: String(row.blind_company_slug) }),
       updatedAt: iso(row.updated_at),
     }));
   }
@@ -472,14 +479,18 @@ export class PositionsRepository {
   ): Promise<void> {
     await tx.$executeRaw`
       INSERT INTO company_preferences
-        (company_key, company_name, tier, disposition, tech_blog_feed_url, github_org, updated_at)
+        (company_key, company_name, tier, disposition, tech_blog_feed_url, github_org,
+         dart_corp_code, blind_company_slug, updated_at)
       VALUES (${preference.companyKey}, ${preference.companyName}, ${preference.tier},
               ${preference.disposition}, ${preference.techBlogFeedUrl ?? null},
-              ${preference.githubOrg ?? null}, ${at(preference.updatedAt)})
+              ${preference.githubOrg ?? null}, ${preference.dartCorpCode ?? null},
+              ${preference.blindCompanySlug ?? null}, ${at(preference.updatedAt)})
       ON DUPLICATE KEY UPDATE company_name = VALUES(company_name), tier = VALUES(tier),
         disposition = VALUES(disposition),
         tech_blog_feed_url = IF(${Object.hasOwn(preference, "techBlogFeedUrl")}, VALUES(tech_blog_feed_url), tech_blog_feed_url),
         github_org = IF(${Object.hasOwn(preference, "githubOrg")}, VALUES(github_org), github_org),
+        dart_corp_code = IF(${Object.hasOwn(preference, "dartCorpCode")}, VALUES(dart_corp_code), dart_corp_code),
+        blind_company_slug = IF(${Object.hasOwn(preference, "blindCompanySlug")}, VALUES(blind_company_slug), blind_company_slug),
         updated_at = VALUES(updated_at)
     `;
   }
@@ -491,7 +502,8 @@ export class PositionsRepository {
   ): Promise<Map<string, CompanyPreference>> {
     if (keys.length === 0) return new Map();
     const rows = await client.$queryRaw<RawRow[]>`
-      SELECT company_key, company_name, tier, disposition, tech_blog_feed_url, github_org, updated_at
+      SELECT company_key, company_name, tier, disposition, tech_blog_feed_url, github_org,
+             dart_corp_code, blind_company_slug, updated_at
       FROM company_preferences WHERE company_key IN (${Prisma.join(keys)})
     `;
     return new Map(
@@ -500,12 +512,16 @@ export class PositionsRepository {
         {
           companyKey: String(row.company_key),
           companyName: String(row.company_name),
-          tier: number(row.tier),
-          disposition: row.disposition as "analyze" | "exclude",
+          tier: row.tier === null ? null : number(row.tier),
+          disposition: row.disposition as CompanyPreference["disposition"],
           ...(row.tech_blog_feed_url === null
             ? {}
             : { techBlogFeedUrl: String(row.tech_blog_feed_url) }),
           ...(row.github_org === null ? {} : { githubOrg: String(row.github_org) }),
+          ...(row.dart_corp_code === null ? {} : { dartCorpCode: String(row.dart_corp_code) }),
+          ...(row.blind_company_slug === null
+            ? {}
+            : { blindCompanySlug: String(row.blind_company_slug) }),
           updatedAt: iso(row.updated_at),
         },
       ]),
@@ -646,9 +662,9 @@ export class PositionsRepository {
     company: string,
     today: string,
     client: DbClient,
-  ): Promise<CompanyEvidence[]> {
+  ): Promise<StoredCompanyEvidence[]> {
     const rows = await client.$queryRaw<RawRow[]>`
-      SELECT source_type, url, title, summary, payload_json, observed_at, valid_until
+      SELECT company_evidence_id, source_type, url, title, summary, payload_json, observed_at, valid_until
       FROM company_evidence
       WHERE company_key = ${company} AND valid_until >= ${today}
       ORDER BY source_type, url
@@ -1091,20 +1107,26 @@ export class PositionsRepository {
   ): Promise<QueuedCompanyRow[]> {
     const rows = await tx.$queryRaw<RawRow[]>`
       SELECT g.company_key, g.company_name, g.active_position_count, g.first_seen_at,
+             g.disposition, prior.company_tier_assessment_id AS prior_assessment_id,
              prior.recommended_tier AS prior_tier, prior.reason AS prior_reason,
              prior.valid_until AS prior_valid_until
       FROM (
         SELECT p.company_key,
                MIN(p.company_name) AS company_name,
                COUNT(*) AS active_position_count,
-               MIN(p.first_seen_at) AS first_seen_at
+               MIN(p.first_seen_at) AS first_seen_at,
+               'analyze' AS disposition
         FROM position_collection_items pci
         JOIN positions p ON p.position_id = pci.position_id
         WHERE pci.run_id = ${collectionRunId}
         GROUP BY p.company_key
+        UNION ALL
+        SELECT pref.company_key, pref.company_name, 0,
+               CAST(${today} AS DATETIME), 'benchmark'
+        FROM company_preferences pref WHERE pref.disposition = 'benchmark'
       ) g
       LEFT JOIN LATERAL (
-        SELECT a.recommended_tier, a.reason, a.valid_until
+        SELECT a.company_tier_assessment_id, a.recommended_tier, a.reason, a.valid_until
         FROM company_tier_assessments a
         WHERE a.company_key = g.company_key
           AND a.candidate_context_version = ${candidateContextVersion}
@@ -1114,6 +1136,7 @@ export class PositionsRepository {
       ) prior ON TRUE
       WHERE NOT EXISTS (
           SELECT 1 FROM company_preferences pref WHERE pref.company_key = g.company_key
+            AND pref.tier IS NOT NULL AND pref.disposition <> 'benchmark'
         )
         AND NOT EXISTS (
           SELECT 1 FROM company_tier_assessment_run_items li
@@ -1129,11 +1152,12 @@ export class PositionsRepository {
             AND va.valid_until >= ${today}
         )
       ORDER BY
-        (prior.recommended_tier IS NOT NULL) ASC,
-        CASE WHEN prior.recommended_tier IS NULL
+        (g.disposition = 'benchmark') DESC,
+        (prior.company_tier_assessment_id IS NOT NULL) ASC,
+        CASE WHEN prior.company_tier_assessment_id IS NULL
              THEN -g.active_position_count ELSE prior.recommended_tier END ASC,
-        CASE WHEN prior.recommended_tier IS NULL THEN g.first_seen_at ELSE NULL END ASC,
-        CASE WHEN prior.recommended_tier IS NULL THEN NULL ELSE prior.valid_until END ASC,
+        CASE WHEN prior.company_tier_assessment_id IS NULL THEN g.first_seen_at ELSE NULL END ASC,
+        CASE WHEN prior.company_tier_assessment_id IS NULL THEN NULL ELSE prior.valid_until END ASC,
         g.company_key ASC
       LIMIT ${Math.trunc(limit)}
     `;
@@ -1141,7 +1165,7 @@ export class PositionsRepository {
       companyKey: String(row.company_key),
       companyName: String(row.company_name),
       activePositionCount: number(row.active_position_count),
-      assessmentStatus: row.prior_tier === null ? "new" : "stale",
+      assessmentStatus: row.prior_assessment_id === null ? "new" : "stale",
       priorTier: row.prior_tier === null ? null : number(row.prior_tier),
       priorReason: row.prior_reason === null ? null : String(row.prior_reason),
       priorValidUntil: row.prior_valid_until === null ? null : dateOnly(row.prior_valid_until),
@@ -1409,12 +1433,12 @@ export class PositionsRepository {
              COALESCE(pref.tier, valid.recommended_tier, ${spec.defaultCompanyTier})
                AS company_tier,
              CASE
-               WHEN pref.company_key IS NOT NULL THEN 'manual'
+               WHEN pref.tier IS NOT NULL AND pref.disposition <> 'benchmark' THEN 'manual'
                WHEN valid.recommended_tier IS NOT NULL THEN 'model'
                ELSE 'default'
              END AS company_tier_source,
              CASE
-               WHEN pref.company_key IS NULL AND valid.recommended_tier IS NOT NULL THEN valid.company_tier_assessment_id
+               WHEN pref.tier IS NULL AND valid.recommended_tier IS NOT NULL THEN valid.company_tier_assessment_id
                ELSE NULL
              END AS company_tier_assessment_id
       FROM position_collection_items pci

@@ -11,10 +11,12 @@ datasource db {
 model company_preferences {
   company_key  String                          @id
   company_name String                          @db.VarChar(255)
-  tier         Int                             @db.UnsignedTinyInt
+  tier         Int?                            @db.UnsignedTinyInt
   disposition  company_preferences_disposition
   tech_blog_feed_url String? @db.VarChar(2048)
   github_org String? @db.VarChar(191)
+  dart_corp_code String? @db.Char(8)
+  blind_company_slug String? @db.VarChar(191)
   updated_at   DateTime                        @default(now())
 }
 
@@ -358,6 +360,7 @@ enum request_receipts_state {
 enum company_preferences_disposition {
   analyze
   exclude
+  benchmark
 }
 
 enum position_collection_items_posting_status {
