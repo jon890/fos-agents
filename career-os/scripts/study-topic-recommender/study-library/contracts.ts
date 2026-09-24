@@ -22,6 +22,7 @@ export const studyLibrarySourceSchema = z.object({
   adapter: readingSourceAdapterIdSchema,
   enabled: z.boolean(),
   version: z.number().int().nonnegative(),
+  note: z.string().max(500).nullable(),
 });
 
 export const studyLibrarySourcesResponseSchema = z.object({
@@ -145,7 +146,21 @@ export const studyLibrarySourcePutPayloadSchema = z.object({
   feedUrl: nullableHttpsUrl,
   adapter: readingSourceAdapterIdSchema,
   enabled: z.boolean(),
+  note: z.string().max(500).nullable().optional(),
   expectedVersion: z.number().int().nonnegative(),
+}).superRefine((source, context) => {
+  if (!source.url && !source.feedUrl) {
+    context.addIssue({ code: "custom", path: ["url"], message: "url 또는 feedUrl 중 하나가 필요하다." });
+  }
+  if (source.adapter === "feed" && !source.feedUrl) {
+    context.addIssue({ code: "custom", path: ["feedUrl"], message: "feed 어댑터에는 feedUrl이 필요하다." });
+  }
+  if (source.adapter === "page" && !source.url) {
+    context.addIssue({ code: "custom", path: ["url"], message: "page 어댑터에는 url이 필요하다." });
+  }
+  if (source.adapter === "youtube" && (!source.url || !source.feedUrl)) {
+    context.addIssue({ code: "custom", path: ["feedUrl"], message: "youtube 어댑터에는 채널 url과 feedUrl이 필요하다." });
+  }
 });
 
 export function toReadingCandidate(candidate: StudyLibraryCandidate): ReadingCandidate {

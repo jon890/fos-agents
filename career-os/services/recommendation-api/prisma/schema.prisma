@@ -7,6 +7,140 @@ datasource db {
   provider = "mysql"
 }
 
+model study_sources {
+  source_key String @id @db.VarChar(100)
+  title String @db.VarChar(255)
+  category String @db.VarChar(50)
+  adapter study_sources_adapter
+  url String? @db.VarChar(2048)
+  feed_url String? @db.VarChar(2048)
+  enabled Boolean
+  note String? @db.VarChar(500)
+  version Int @db.UnsignedInt
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
+  study_source_cursors study_source_cursors[]
+  study_material_sources study_material_sources[]
+}
+
+model study_source_cursors {
+  source_key String @db.VarChar(100)
+  mode String @db.VarChar(20)
+  cursor_json Json?
+  version Int @db.UnsignedInt
+  updated_at DateTime @default(now())
+  study_sources study_sources @relation(fields: [source_key], references: [source_key], onDelete: Restrict, onUpdate: Restrict, map: "fk_study_source_cursors_source")
+
+  @@id([source_key, mode])
+}
+
+model study_materials {
+  content_key String @id @db.VarChar(191)
+  canonical_url String @db.VarChar(2048)
+  url String @db.VarChar(2048)
+  title String @db.VarChar(500)
+  published String @db.VarChar(100)
+  published_at DateTime?
+  excerpt String? @db.Text
+  kind study_materials_kind
+  first_collected_at DateTime
+  last_collected_at DateTime
+  study_material_sources study_material_sources[]
+  study_recommended_materials study_recommended_materials[]
+  study_material_verdicts study_material_verdicts[]
+
+  @@index([published_at, content_key], map: "idx_study_materials_published")
+}
+
+model study_material_sources {
+  content_key String @db.VarChar(191)
+  source_key String @db.VarChar(100)
+  first_collected_at DateTime
+  study_materials study_materials @relation(fields: [content_key], references: [content_key], onDelete: Restrict, onUpdate: Restrict, map: "fk_study_material_sources_material")
+  study_sources study_sources @relation(fields: [source_key], references: [source_key], onDelete: Restrict, onUpdate: Restrict, map: "fk_study_material_sources_source")
+
+  @@id([content_key, source_key])
+  @@index([source_key, first_collected_at, content_key], map: "idx_study_material_sources_source")
+}
+
+model study_recommendation_control {
+  singleton_id Int @id @db.UnsignedTinyInt
+  candidate_context_version String @db.VarChar(191)
+  history_version Int @db.UnsignedInt
+  updated_at DateTime @default(now())
+}
+
+model study_recommendation_runs {
+  report_id String @id @db.VarChar(40)
+  generated_at DateTime
+  candidate_context_version String @db.VarChar(191)
+  created_at DateTime @default(now())
+  study_recommendation_topics study_recommendation_topics[]
+  study_recommended_materials study_recommended_materials[]
+  study_material_verdicts study_material_verdicts[]
+  study_publications study_publications[]
+
+  @@index([generated_at, report_id], map: "idx_study_recommendation_runs_generated")
+}
+
+model study_recommendation_topics {
+  report_id String @db.VarChar(40)
+  topic_key String @db.VarChar(191)
+  title String @db.VarChar(500)
+  career_question String? @db.VarChar(300)
+  position Int @db.UnsignedSmallInt
+  study_recommendation_runs study_recommendation_runs @relation(fields: [report_id], references: [report_id], onDelete: Restrict, onUpdate: Restrict, map: "fk_study_recommendation_topics_run")
+  study_recommended_materials study_recommended_materials[]
+
+  @@id([report_id, topic_key])
+  @@unique([report_id, position], map: "uq_study_recommendation_topics_position")
+}
+
+model study_recommended_materials {
+  report_id String @db.VarChar(40)
+  content_key String @db.VarChar(191)
+  topic_key String @db.VarChar(191)
+  summary String? @db.VarChar(300)
+  reason String? @db.VarChar(300)
+  career_value String? @db.VarChar(40)
+  position Int @db.UnsignedSmallInt
+  study_recommendation_runs study_recommendation_runs @relation(fields: [report_id], references: [report_id], onDelete: Restrict, onUpdate: Restrict, map: "fk_study_recommended_materials_run")
+  study_materials study_materials @relation(fields: [content_key], references: [content_key], onDelete: Restrict, onUpdate: Restrict, map: "fk_study_recommended_materials_material")
+  study_recommendation_topics study_recommendation_topics @relation(fields: [report_id, topic_key], references: [report_id, topic_key], onDelete: Restrict, onUpdate: Restrict, map: "fk_study_recommended_materials_topic")
+
+  @@id([report_id, content_key])
+  @@unique([content_key], map: "uq_study_recommended_materials_content")
+  @@unique([report_id, topic_key, position], map: "uq_study_recommended_materials_topic_position")
+}
+
+model study_material_verdicts {
+  content_key String @db.VarChar(191)
+  candidate_context_version String @db.VarChar(191)
+  verdict study_material_verdicts_verdict
+  reason String @db.VarChar(300)
+  report_id String @db.VarChar(40)
+  judged_at DateTime
+  valid_until DateTime @db.Date
+  study_materials study_materials @relation(fields: [content_key], references: [content_key], onDelete: Restrict, onUpdate: Restrict, map: "fk_study_material_verdicts_material")
+  study_recommendation_runs study_recommendation_runs @relation(fields: [report_id], references: [report_id], onDelete: Restrict, onUpdate: Restrict, map: "fk_study_material_verdicts_run")
+
+  @@id([content_key, candidate_context_version])
+  @@index([candidate_context_version, valid_until], map: "idx_study_material_verdicts_context")
+  @@index([report_id], map: "idx_study_material_verdicts_report")
+}
+
+model study_publications {
+  publication_id String @id @db.Char(36)
+  report_id String @db.VarChar(40)
+  channel String @db.VarChar(50)
+  url String? @db.VarChar(2048)
+  external_id String @db.VarChar(255)
+  published_at DateTime
+  study_recommendation_runs study_recommendation_runs @relation(fields: [report_id], references: [report_id], onDelete: Restrict, onUpdate: Restrict, map: "fk_study_publications_run")
+
+  @@index([report_id], map: "idx_study_publications_report")
+}
+
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model company_preferences {
   company_key  String                          @id
@@ -501,4 +635,21 @@ enum company_evidence_source_type {
   job_posting     @map("job-posting")
   official
   other
+}
+
+enum study_sources_adapter {
+  feed
+  page
+  youtube
+}
+
+enum study_materials_kind {
+  feed_article @map("feed-article")
+  feed_video @map("feed-video")
+  page_link @map("page-link")
+  page_video @map("page-video")
+}
+
+enum study_material_verdicts_verdict {
+  rejected
 }
