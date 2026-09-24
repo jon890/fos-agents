@@ -96,7 +96,7 @@ if (import.meta.main) {
   const candidates = firstOptionValue(args, "--candidates");
   if (!input || !candidates) {
     console.error(
-      "사용법: validate_recommendation.ts --input <recommendation.json> --candidates <posting-candidates.json>",
+      "사용법: validate_recommendation.ts --input <추천.json> --candidates <후보.json>",
     );
     process.exit(2);
   }

@@ -89,8 +89,9 @@ stdout에 어느 파일이 생겼는지와 다음 하위 명령 이름을 낸다
 `finalize_position_recommendation.ts`를 부른다.
 큐와 입력과 출력 경로는 `run-dir.ts`가 정한 이름으로 스스로 만든다.
 
-`commit-analyses`는 반영 결과가 `partial`이면 남은 건수와
-같은 명령을 다시 부르라는 한 줄을 낸다.
+`commit-analyses`는 반영 결과가 `partial`이면 Backend에서 최신 큐를 다시 받아 저장한다.
+첫 제출 전 큐를 그대로 두면 이미 반영된 항목까지 다시 요구해 남은 항목만 제출할 수 없기 때문이다.
+최신 큐를 저장한 뒤 남은 건수와 같은 명령을 다시 부르라는 한 줄을 낸다.
 
 `finalize`는 지금처럼 `collectionWarnings`를 함께 낸다.
 
@@ -112,7 +113,7 @@ CLI 진입 부분은 함수를 부르는 얇은 껍질만 남는다.
 - 평가할 회사가 있으면 `company-tier-queue.json`만, 없으면 `analysis-queue.json`만 생긴다
 - `commit-company-tiers`를 `company-tier-updates.json` 없이 부르면
   어느 경로에 무엇을 써야 하는지 적고 종료 코드 1로 끝난다
-- `commit-analyses`가 `partial` 응답을 받으면 다시 부르라는 줄을 낸다
+- `commit-analyses`가 `partial` 응답을 받으면 최신 큐를 저장하고 다시 부르라는 줄을 낸다
 - 네 하위 명령의 stdout에 회사명과 공고 본문이 없다
 
 Backend 호출은 기존 테스트가 쓰는 stub을 그대로 쓴다.
