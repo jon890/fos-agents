@@ -107,10 +107,10 @@ ls career-os/.claude/skills/study-topic-recommender/references/execution.md \
 
 둘 다 있어야 한다.
 
-## 이 plan 을 마감한다
+## 이 phase 를 마감한다
 
-위 검증이 모두 통과하면 `career-os/tasks/plan130-hermes-skill-paths/index.json` 의
-`status` 를 `completed` 로 바꾸고 `current_phase` 를 1 로 둔다.
+위 검증이 모두 통과하면 리더가 phase 01을 커밋한다.
+후속 phase를 추가했으므로 전체 완료 표시는 마지막 phase 검증 뒤에 한다.
 
 ## Critical Files
 
@@ -121,4 +121,3 @@ ls career-os/.claude/skills/study-topic-recommender/references/execution.md \
 | `career-os/docs/flow.md` | 수정 |
 | `career-os/scripts/position-recommender/skill_doc.test.ts` | 수정 |
 | `career-os/scripts/study-topic-recommender/skill_doc.test.ts` | 수정 |
-| `career-os/tasks/plan130-hermes-skill-paths/index.json` | 수정 |
