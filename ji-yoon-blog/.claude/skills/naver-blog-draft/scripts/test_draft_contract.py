@@ -1,9 +1,12 @@
 """실제 편집기에 넣을 초안의 스티커와 장소 계약을 검증한다."""
 
 import copy
+import tempfile
 import unittest
+from pathlib import Path
 
-from build_preview import validate
+from build_preview import render_block
+from draft_contract import validate
 
 
 class DraftContractTest(unittest.TestCase):
@@ -49,6 +52,29 @@ class DraftContractTest(unittest.TestCase):
         problems = validate(draft)
         self.assertTrue(any("tags" in problem for problem in problems))
         self.assertTrue(any("address" in problem for problem in problems))
+
+    def test_sticker_preview_uses_existing_image_and_falls_back_to_label(self):
+        block = {"type": "sticker", "stickerCode": "ogq_5db4314bac2f0-1"}
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            self.assertIn("안녕하세요 스티커", render_block(block, base))
+            stickers = base / "stickers"
+            stickers.mkdir()
+            (stickers / "ogq_5db4314bac2f0-1.png").write_bytes(b"png")
+            markup = render_block(block, base)
+            self.assertIn("<img", markup)
+            self.assertIn("ogq_5db4314bac2f0-1.png", markup)
+
+    def test_map_preview_links_to_naver(self):
+        block = {
+            "type": "map", "name": "어랑추", "address": "경기 구리시 동구릉로 145",
+            "mapUrl": "https://map.naver.com/p/entry/place/19882103",
+        }
+        with tempfile.TemporaryDirectory() as temp:
+            markup = render_block(block, Path(temp))
+            self.assertIn("네이버 지도에서 보기", markup)
+            self.assertIn("map.naver.com/p/entry/place/19882103", markup)
+            self.assertNotIn("<img", markup)
 
 
 if __name__ == "__main__":

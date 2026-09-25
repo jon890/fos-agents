@@ -19,12 +19,12 @@
 발행하지 않는다. `저장` 만 누른다.
 
 사용법:
-    python3 naver_editor.py open
+    python3 naver_editor.py open drafts/순돌이곱창/draft.json
     python3 naver_editor.py --target-id <탭 식별자> fill drafts/순돌이곱창/draft.json
     python3 naver_editor.py --target-id <탭 식별자> photos drafts/순돌이곱창/draft.json --remote-base <사진 디렉터리>
     python3 naver_editor.py --target-id <탭 식별자> components drafts/순돌이곱창/draft.json
     python3 naver_editor.py --target-id <탭 식별자> settings drafts/순돌이곱창/draft.json
-    python3 naver_editor.py --target-id <탭 식별자> save
+    python3 naver_editor.py --target-id <탭 식별자> save drafts/순돌이곱창/draft.json
     python3 naver_editor.py --target-id <탭 식별자> state
     python3 naver_editor.py --target-id <탭 식별자> close
 
@@ -37,6 +37,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -50,6 +51,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from cdp import HOST, PORT, CdpError, Page, http_json  # noqa: E402
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / ".claude/skills/naver-blog-draft/scripts"))
+from draft_contract import STICKER_CODES, validate as validate_draft  # noqa: E402
+
 BLOG_ID = os.environ.get("JI_YOON_BLOG_BLOG_ID", "mywldbs")
 WRITE_URL = f"https://blog.naver.com/PostWriteForm.naver?blogId={BLOG_ID}"
 WRITE_MARK = "PostWriteForm.naver"
@@ -60,12 +64,53 @@ BODY_SELECTOR = ".se-component.se-text .se-text-paragraph"
 STICKER_BUTTON = "button.se-sticker-toolbar-button"
 PLACE_BUTTON = "button.se-map-toolbar-button"
 PUBLISH_SETTINGS_BUTTON = 'button[data-click-area="tpb.publish"]'
-STICKER_CODES = {
-    "hello": "ogq_5db4314bac2f0-1",
-    "location": "ogq_5db4314bac2f0-4",
-    "price": "ogq_5db4314bac2f0-6",
-    "self_paid": "ogq_5db4314bac2f0-23",
-}
+PROGRESS_KEY = "ji-yoon-blog/editor-progress"
+STAGES = ("fill", "photos", "components", "settings")
+
+
+def load_draft(args: argparse.Namespace) -> bool:
+    """브라우저를 열기 전에 초안 계약을 검사한다."""
+    try:
+        raw = Path(args.draft).read_bytes()
+        draft = json.loads(raw)
+    except (OSError, ValueError) as exc:
+        print(f"초안을 읽지 못했다: {exc}", file=sys.stderr)
+        return False
+    if not isinstance(draft, dict):
+        print("초안은 JSON 객체여야 한다", file=sys.stderr)
+        return False
+    problems = validate_draft(draft)
+    if problems:
+        print("초안 계약이 맞지 않아 에디터를 열거나 고치지 않는다:", file=sys.stderr)
+        for problem in problems:
+            print(f"  - {problem}", file=sys.stderr)
+        print("지융에게 협찬 여부와 장소를 확인하고 새 형식으로 초안을 다시 만든다.", file=sys.stderr)
+        return False
+    args.draft_data = draft
+    args.draft_hash = hashlib.sha256(raw).hexdigest()
+    return True
+
+
+def progress(page: Page) -> dict:
+    raw = page.js(f"sessionStorage.getItem({json.dumps(PROGRESS_KEY)})")
+    try:
+        return json.loads(raw) if raw else {}
+    except ValueError:
+        return {}
+
+
+def set_stage(page: Page, args: argparse.Namespace, stage: str, passed: bool) -> None:
+    """같은 탭과 같은 초안의 단계 결과만 다음 명령에 넘긴다."""
+    current = progress(page)
+    if current.get("draftHash") != args.draft_hash:
+        current = {"draftHash": args.draft_hash, "passed": []}
+    passed_stages = set(current.get("passed", []))
+    if not passed:
+        passed_stages.difference_update(STAGES[STAGES.index(stage):])
+    else:
+        passed_stages.add(stage)
+    current["passed"] = [item for item in STAGES if item in passed_stages]
+    page.js(f"sessionStorage.setItem({json.dumps(PROGRESS_KEY)}, {json.dumps(json.dumps(current))})")
 
 
 def close_tab(target_id: str) -> None:
@@ -225,9 +270,15 @@ def cmd_open(page: Page, args: argparse.Namespace) -> int:
             f'!!document.querySelector({json.dumps(TITLE_SELECTOR)})'
         ):
             note = blocking_popup(page)
+            if "작성 중인 글이 있습니다" in note and "이어서 작성하시겠습니까" in note:
+                if not dismiss_popup(page, "취소"):
+                    print(f"작성 중인 글 알림을 닫지 못했다: {note}", file=sys.stderr)
+                    return 1
+                note = require_clear_screen(page)
             if note:
-                print(f"알림이 떠 있어 멈춘다. 아무 버튼도 누르지 않았다: {note}", file=sys.stderr)
+                print(f"알림이 떠 있어 멈춘다: {note}", file=sys.stderr)
                 return 1
+            page.js(f"sessionStorage.removeItem({json.dumps(PROGRESS_KEY)})")
             print(f"글쓰기 화면을 새 탭에 열었다: {title}")
             print(f"target-id: {args.target_id}")
             return 0
@@ -255,6 +306,14 @@ def emoji_split(text: str) -> list[str]:
 def normalize(text: str) -> str:
     """편집기가 바꿔 넣는 공백 문자를 되돌려 초안과 견줄 수 있게 한다."""
     return text.replace("\u00a0", " ").replace("\u200b", "").replace("\ufeff", "").strip()
+
+
+def normalize_place_address(text: str) -> str:
+    """네이버가 덧붙이는 국가명과 경기도의 약칭 차이를 맞춘다."""
+    address = " ".join(normalize(text).split()).removeprefix("대한민국 ")
+    if address.startswith("경기 "):
+        address = "경기도 " + address[len("경기 "):]
+    return address
 
 
 def paragraphs(page: Page, selector: str) -> list[str]:
@@ -344,11 +403,15 @@ def focus_placeholder(page: Page, text: str) -> bool:
     """본문에서 자리표시 문단을 찾아 초점을 두고 글자를 지운다."""
     finder = (
         f"[...document.querySelectorAll({json.dumps(BODY_SELECTOR)})]"
-        f".find(e => e.textContent.trim() === {json.dumps(text)})"
+        f".filter(e => {{ const value = e.textContent.trim();"
+        f" return value === {json.dumps(text)} ||"
+        f" ({json.dumps(text)}.startsWith(value) && value.length >= {len(text) - 10}); }})"
     )
-    element_id = page.js(f"({finder})?.id")
-    if not element_id:
+    matches = json.loads(page.js(f"JSON.stringify({finder}.map(e => ({{id:e.id, text:e.textContent.trim()}})))") or "[]")
+    if len(matches) != 1 or not matches[0]["id"]:
         return False
+    element_id = matches[0]["id"]
+    remaining = matches[0]["text"]
     element = f"document.getElementById({json.dumps(element_id)})"
 
     def click_end() -> bool:
@@ -387,29 +450,25 @@ def focus_placeholder(page: Page, text: str) -> bool:
         return False
     # JS Range 로 선택해 Delete 하면 편집기 내부 커서와 어긋나 일부 글자만 지워진다.
     # 실제 키 입력으로 끝에서 지우고, 커서가 튀어 멈추면 끝을 다시 누른다.
-    previous = None
-    stalls = 0
-    for _ in range(len(text) * 4):
+    for _ in range(len(remaining) * 2):
         current = page.js(f"{element}?.textContent") or ""
         if not current:
             return True
-        if len(current) > len(text) or not text.startswith(current):
+        if len(current) > len(remaining) or not remaining.startswith(current):
             return False
-        if current == previous:
-            stalls += 1
-            if stalls > 3 or not click_end():
-                return False
-        else:
-            stalls = 0
-        previous = current
+        if not click_end():
+            return False
         page.press("Backspace", "Backspace", 8)
+        if not wait_until(lambda: len(page.js(f"{element}?.textContent") or "") < len(current)):
+            return False
         time.sleep(SETTLE_SECONDS)
     return False
 
 
 def cmd_fill(page: Page, args: argparse.Namespace) -> int:
     """초안의 제목과 본문을 넣는다."""
-    draft = json.loads(Path(args.draft).read_text(encoding="utf-8"))
+    draft = args.draft_data
+    set_stage(page, args, "fill", False)
     title = draft.get("title")
     if not title:
         print("초안에 `title` 이 없다. 제목을 먼저 고른다.", file=sys.stderr)
@@ -458,6 +517,7 @@ def cmd_fill(page: Page, args: argparse.Namespace) -> int:
         return 1
 
     print(f"제목과 본문 {len(want)}줄 {sum(map(len, want))}자를 넣었다. 초안과 같다")
+    set_stage(page, args, "fill", True)
     return 0
 
 
@@ -524,6 +584,14 @@ def image_count(page: Page) -> int:
     return page.js('document.querySelectorAll(".se-component.se-image").length') or 0
 
 
+def image_uploaded(page: Page, index: int) -> bool:
+    """자리만 생긴 상태가 아니라 네이버 사진 주소로 전송됐는지 읽는다."""
+    return bool(page.js(
+        f"[...document.querySelectorAll('.se-component.se-image')][{index}]"
+        "?.querySelector('img')?.src.includes('blogfiles.pstatic.net')"
+    ))
+
+
 def fit_image(page: Page, index: int) -> bool:
     """index 번째 사진을 골라 `문서 너비`를 적용하고 결과 클래스를 확인한다."""
     image = (
@@ -556,7 +624,8 @@ def fit_image(page: Page, index: int) -> bool:
 def cmd_photos(page: Page, args: argparse.Namespace) -> int:
     """초안의 사진을 편집기에 넣는다."""
     draft_path = Path(args.draft)
-    draft = json.loads(draft_path.read_text(encoding="utf-8"))
+    draft = args.draft_data
+    set_stage(page, args, "photos", False)
     blocks = [block for block in draft.get("blocks", []) if block.get("type") == "image"]
     files = photo_paths(draft, draft_path.parent, args.remote_base)
     if not blocks or not files:
@@ -572,8 +641,26 @@ def cmd_photos(page: Page, args: argparse.Namespace) -> int:
         print("경로가 빈 image 블록이 있다", file=sys.stderr)
         return 1
 
-    inserted = 0
-    for block, path in zip(blocks, files):
+    inserted = image_count(page)
+    if inserted > len(blocks):
+        print(f"사진이 초안보다 많다: 화면 {inserted}개, 초안 {len(blocks)}개", file=sys.stderr)
+        return 1
+    fitted = page.js('document.querySelectorAll(".se-component.se-image .se-component-content-fit").length') or 0
+    if fitted != inserted:
+        print(f"기존 사진 중 문서 너비가 아닌 것이 있다: 사진 {inserted}개, 적용 {fitted}개", file=sys.stderr)
+        return 1
+    if any(not image_uploaded(page, index) for index in range(inserted)):
+        print("기존 사진 중 전송이 끝나지 않은 것이 있다. 새 탭에서 다시 시작한다", file=sys.stderr)
+        return 1
+    visible_lines = paragraphs(page, BODY_SELECTOR)
+    for block in blocks[:inserted]:
+        marker = image_placeholder(block)
+        if any(marker == line or (marker.startswith(line) and len(line) >= len(marker) - 10)
+               for line in visible_lines):
+            print(f"사진과 자리표시가 함께 남아 있다: {marker}", file=sys.stderr)
+            return 1
+
+    for block, path in zip(blocks[inserted:], files[inserted:]):
         marker = image_placeholder(block)
         if not focus_placeholder(page, marker):
             print(f"사진 자리를 찾지 못했다: {marker}", file=sys.stderr)
@@ -586,12 +673,22 @@ def cmd_photos(page: Page, args: argparse.Namespace) -> int:
         if not wait_until(lambda: image_count(page) > before, seconds=30.0):
             print(f"사진이 본문에 들어가지 않았다: {path}", file=sys.stderr)
             return 1
+        if not wait_until(lambda: image_uploaded(page, before) or bool(blocking_popup(page)), seconds=90.0):
+            print(f"사진 전송이 끝나지 않았다: {path}", file=sys.stderr)
+            return 1
+        if not image_uploaded(page, before):
+            print(f"사진 전송 중 알림이 떴다: {blocking_popup(page)}", file=sys.stderr)
+            return 1
         if not fit_image(page, before):
             print(f"사진에 `문서 너비`를 적용하지 못했다: {path}", file=sys.stderr)
             return 1
         inserted += 1
 
+    if image_count(page) != len(blocks):
+        print("사진 개수가 초안과 다르다", file=sys.stderr)
+        return 1
     print(f"사진 {inserted}개를 자리마다 넣고 모두 `문서 너비`로 맞췄다")
+    set_stage(page, args, "photos", True)
     return 0
 
 
@@ -642,10 +739,33 @@ def place_candidates(page: Page) -> list[dict]:
     return json.loads(raw or "[]")
 
 
+def ensure_domestic_map(page: Page) -> str:
+    """장소 검색 범위를 국내로 고른다. 편집기가 이전 선택을 기억할 수 있다."""
+    mode_button = ".se-popup-label-select-button"
+    mode = lambda: page.js(f'document.querySelector({json.dumps(mode_button)})?.innerText.trim()')
+    if not wait_until(lambda: bool(mode())):
+        return "지도 검색 범위를 찾지 못했다"
+    if mode() == "국내":
+        return ""
+    if not click(page, mode_button) or not click(page, "label[for=popup-select-option-domestic]"):
+        return "지도 검색을 국내로 바꾸지 못했다"
+    if not wait_until(lambda: mode() == "국내"):
+        return "지도 검색이 국내로 바뀌지 않았다"
+    return ""
+
+
+def domestic_place_candidates(page: Page) -> list[dict]:
+    """검색 범위를 바꾼 직후 잠깐 남는 해외 결과를 제외한다."""
+    if page.js("document.querySelector('.se-popup-label-select-button')?.innerText.trim()") != "국내":
+        return []
+    return [item for item in place_candidates(page)
+            if not item["address"].startswith("대한민국 ")]
+
+
 def insert_map(page: Page, block: dict) -> str:
     """상호명과 주소가 모두 같은 검색 결과 하나만 골라 지도 카드를 넣는다."""
     name = normalize(block.get("name", ""))
-    address = normalize(block.get("address", ""))
+    address = normalize_place_address(block.get("address", ""))
     if not name or not address:
         return "지도 블록의 name 과 address 를 모두 채운다"
     marker = map_placeholder(block)
@@ -655,19 +775,27 @@ def insert_map(page: Page, block: dict) -> str:
     if not click(page, PLACE_BUTTON):
         return "장소 버튼을 찾지 못했다"
     search = 'input[placeholder="장소명을 입력하세요."]'
-    if not wait_until(lambda: page.js(f'!!document.querySelector({json.dumps(search)})')):
-        return "장소 검색 입력칸을 찾지 못했다"
-    if not click(page, search):
-        return "장소 검색 입력칸을 누르지 못했다"
-    clear_field(page)
-    page.type_text(name)
-    page.enter()
-    if not wait_until(lambda: bool(place_candidates(page)), seconds=10.0):
+    candidates = []
+    for _ in range(3):
+        problem = ensure_domestic_map(page)
+        if problem:
+            return problem
+        if not wait_until(lambda: page.js(f'!!document.querySelector({json.dumps(search)})')):
+            return "장소 검색 입력칸을 찾지 못했다"
+        if not click(page, search):
+            return "장소 검색 입력칸을 누르지 못했다"
+        clear_field(page)
+        page.type_text(name)
+        page.enter()
+        if wait_until(lambda: bool(domestic_place_candidates(page)), seconds=5.0):
+            candidates = domestic_place_candidates(page)
+            break
+    if not candidates:
         return f"장소 검색 결과가 없다: {name}"
     matches = [
         item
-        for item in place_candidates(page)
-        if normalize(item["name"]) == name and normalize(item["address"]) == address
+        for item in candidates
+        if normalize(item["name"]) == name and normalize_place_address(item["address"]) == address
     ]
     if len(matches) != 1:
         return f"이름과 주소가 같은 장소가 하나가 아니다: {name} / {address} / {matches}"
@@ -683,24 +811,63 @@ def insert_map(page: Page, block: dict) -> str:
         return "장소 추가 버튼이 나타나지 않았다"
     if not mouse_click(page, add_finder):
         return "장소 추가 버튼을 누르지 못했다"
-    if not wait_until(lambda: page.js(
-        "!!document.querySelector('.se-popup-button-confirm:not([disabled])')"
-    )):
+    confirm_finder = (
+        "[...document.querySelectorAll('.se-popup-button-confirm')]"
+        ".find(e => !e.disabled && e.getBoundingClientRect().width > 0)"
+    )
+    if not wait_until(lambda: page.js(f"!!({confirm_finder})")):
         return "장소 확인 버튼이 나타나지 않았다"
-    if not click(page, ".se-popup-button-confirm"):
+    if not mouse_click(page, confirm_finder):
         return "장소 확인 버튼을 누르지 못했다"
     if not wait_until(lambda: component_count(page, "placesMap") > before, seconds=10.0):
         return "지도 카드가 본문에 들어가지 않았다"
     return ""
 
 
+def component_state(page: Page) -> dict:
+    raw = page.js(
+        "JSON.stringify({"
+        "stickers:[...document.querySelectorAll('.se-component.se-sticker img')].map(e=>e.alt),"
+        "maps:[...document.querySelectorAll('.se-component.se-placesMap')].map(e=>e.innerText)"
+        "})"
+    )
+    return json.loads(raw or "{}")
+
+
+def component_problems(draft: dict, state: dict, lines: list[str]) -> list[str]:
+    """스티커 코드 순서와 지도 상호·주소가 초안과 같은지 대조한다."""
+    blocks = draft["blocks"]
+    wanted_stickers = [b["stickerCode"] for b in blocks if b["type"] == "sticker"]
+    problems = []
+    if state.get("stickers") != wanted_stickers:
+        problems.append("스티커 코드나 순서가 초안과 다르다")
+    wanted_maps = [
+        (normalize(b["name"]), normalize_place_address(b["address"]))
+        for b in blocks if b["type"] == "map"
+    ]
+    maps = [list(filter(None, map(normalize, text.splitlines())))
+            for text in state.get("maps", [])]
+    actual_maps = [(parts[0], normalize_place_address(parts[1]))
+                   for parts in maps if len(parts) >= 2]
+    if actual_maps != wanted_maps:
+        problems.append("지도 상호명이나 주소가 초안과 다르다")
+    if any(line.startswith(("[스티커 자리:", "[장소 자리:")) for line in lines):
+        problems.append("스티커나 지도 자리표시가 남았다")
+    return problems
+
+
 def cmd_components(page: Page, args: argparse.Namespace) -> int:
     """초안의 스티커와 지도를 실제 편집기 구성요소로 바꾼다."""
-    draft = json.loads(Path(args.draft).read_text(encoding="utf-8"))
+    draft = args.draft_data
+    set_stage(page, args, "components", False)
     note = require_clear_screen(page)
     if note:
         print(f"화면을 덮은 알림이 있어 구성요소를 넣지 못한다: {note}", file=sys.stderr)
         return 1
+    if not component_problems(draft, component_state(page), paragraphs(page, BODY_SELECTOR)):
+        print("스티커와 지도가 이미 초안과 일치한다")
+        set_stage(page, args, "components", True)
+        return 0
     counts = {"sticker": 0, "map": 0}
     for block in draft.get("blocks", []):
         kind = block.get("type")
@@ -714,7 +881,12 @@ def cmd_components(page: Page, args: argparse.Namespace) -> int:
             print(problem, file=sys.stderr)
             return 1
         counts[kind] += 1
+    problems = component_problems(draft, component_state(page), paragraphs(page, BODY_SELECTOR))
+    if problems:
+        print("구성요소가 초안과 다르다: " + ", ".join(problems), file=sys.stderr)
+        return 1
     print(f"실제 스티커 {counts['sticker']}개와 지도 {counts['map']}개를 넣었다")
+    set_stage(page, args, "components", True)
     return 0
 
 
@@ -755,9 +927,20 @@ def settings_state(page: Page) -> dict:
     return state
 
 
+def category_option_finder(category: str) -> str:
+    """목록의 카테고리 이름만 대조해 보이는 label 을 찾는다."""
+    return (
+        "[...document.querySelectorAll('label[for]')]"
+        ".find(e => e.getBoundingClientRect().width > 0"
+        " && [...e.querySelectorAll('[data-testid^=categoryItemText_]')]"
+        f".some(name => name.textContent.replace(/\\s+/g, ' ').trim() === {json.dumps(category)}))"
+    )
+
+
 def cmd_settings(page: Page, args: argparse.Namespace) -> int:
     """카테고리와 태그를 발행 설정에 넣고 설정만 닫는다."""
-    draft = json.loads(Path(args.draft).read_text(encoding="utf-8"))
+    draft = args.draft_data
+    set_stage(page, args, "settings", False)
     category = draft.get("category", "").strip()
     tags = [tag.lstrip("#").strip() for tag in draft.get("tags", []) if tag.strip()]
     if category not in ("맛집로그", "카페로그") or not tags:
@@ -773,12 +956,15 @@ def cmd_settings(page: Page, args: argparse.Namespace) -> int:
     if not click(page, 'button[data-click-area="tpb*i.category"]'):
         print("카테고리 선택기를 열지 못했다", file=sys.stderr)
         return 1
-    label = (
-        "[...document.querySelectorAll('label')]"
-        f".find(e => e.innerText.trim() === {json.dumps(category)})"
-    )
+    label = category_option_finder(category)
+    if not wait_until(lambda: bool(page.js(f"!!({label})")), seconds=10.0):
+        print(f"카테고리 목록에 보이는 항목이 없다: {category}", file=sys.stderr)
+        return 1
     if not mouse_click(page, label):
-        print(f"카테고리를 찾지 못했다: {category}", file=sys.stderr)
+        print(f"카테고리 항목을 누르지 못했다: {category}", file=sys.stderr)
+        return 1
+    if not wait_until(lambda: settings_state(page).get("category") == category):
+        print(f"카테고리 선택이 반영되지 않았다: {category}", file=sys.stderr)
         return 1
     for tag in tags:
         if not click(page, "#tag-input"):
@@ -802,15 +988,83 @@ def cmd_settings(page: Page, args: argparse.Namespace) -> int:
         print("발행 설정을 닫지 못했다", file=sys.stderr)
         return 1
     print(f"카테고리 `{category}`와 태그 {len(tags)}개를 넣고 발행 설정을 닫았다")
+    set_stage(page, args, "settings", True)
     return 0
 
 
+def save_readiness(page: Page, args: argparse.Namespace) -> list[str]:
+    """앞 단계의 성공과 실제 화면이 같은 초안을 가리키는지 확인한다."""
+    current = progress(page)
+    if current.get("draftHash") != args.draft_hash:
+        return ["이 탭에서 검사한 초안과 저장할 초안이 다르다"]
+    missing = [stage for stage in STAGES if stage not in current.get("passed", [])]
+    if missing:
+        return [f"끝나지 않은 단계: {', '.join(missing)}"]
+
+    draft = args.draft_data
+    blocks = draft["blocks"]
+    problems = []
+    title = normalize("".join(paragraphs(page, TITLE_SELECTOR)))
+    if title != normalize(draft["title"]):
+        problems.append("제목이 초안과 다르다")
+    body = [normalize(line) for line in paragraphs(page, BODY_SELECTOR)]
+    body = [line for line in body if line]
+    wanted_text = [normalize(line) for block in blocks if block["type"] == "text" for line in block["lines"] if normalize(line)]
+    cursor = 0
+    for line in body:
+        if cursor < len(wanted_text) and line == wanted_text[cursor]:
+            cursor += 1
+    if cursor != len(wanted_text):
+        problems.append(f"본문 글이 빠졌다: {cursor}/{len(wanted_text)}줄 확인")
+    if any(line.startswith(("[사진 자리:", "[스티커 자리:", "[장소 자리:")) for line in body):
+        problems.append("사진·스티커·장소 자리표시 글이 남았다")
+
+    expected = {
+        "사진": sum(block["type"] == "image" for block in blocks),
+        "스티커": sum(block["type"] == "sticker" for block in blocks),
+        "지도": sum(block["type"] == "map" for block in blocks),
+    }
+    actual = {
+        "사진": image_count(page),
+        "스티커": component_count(page, "sticker"),
+        "지도": component_count(page, "placesMap"),
+    }
+    for name, count in expected.items():
+        if actual[name] != count:
+            problems.append(f"{name} 수가 다르다: 초안 {count}, 화면 {actual[name]}")
+    problems.extend(component_problems(draft, component_state(page), body))
+    fit = page.js("document.querySelectorAll('.se-component.se-image .se-component-content-fit').length") or 0
+    if fit != expected["사진"]:
+        problems.append(f"문서 너비 사진 수가 다르다: 초안 {expected['사진']}, 화면 {fit}")
+
+    if not open_settings(page):
+        problems.append("카테고리와 태그를 읽을 수 없다")
+    else:
+        state = settings_state(page)
+        if state.get("category") != draft["category"]:
+            problems.append(f"카테고리가 다르다: {state.get('category')!r}")
+        if set(state.get("tags", [])) != set(draft["tags"]):
+            problems.append(f"태그가 다르다: {state.get('tags', [])!r}")
+        if not close_settings(page):
+            problems.append("발행 설정을 닫지 못했다")
+    return problems
+
+
 def cmd_save(page: Page, args: argparse.Namespace) -> int:
-    """임시저장한다. 발행 버튼은 누르지 않는다."""
+    """초안과 화면을 대조한 뒤 임시저장한다. 발행 버튼은 누르지 않는다."""
     if settings_open(page):
         print("발행 설정을 먼저 닫아야 임시저장할 수 있다", file=sys.stderr)
         return 1
+    problems = save_readiness(page, args)
+    if problems:
+        print("임시저장을 거절했다:", file=sys.stderr)
+        for problem in problems:
+            print(f"  - {problem}", file=sys.stderr)
+        return 1
     before = page.js(save_count_js())
+    if before is None:
+        print("임시저장 개수를 읽지 못해 저장하지 않는다", file=sys.stderr)
+        return 1
 
     # JS 의 `.click()` 으로는 저장되지 않는다.
     # 그 호출이 `Uncaught` 로 끝나고 저장 수도 늘지 않는다. 실측이다.
@@ -886,7 +1140,8 @@ def main() -> int:
         help="open 이 출력한 정확한 탭 식별자. 기존 글쓰기 탭을 잘못 고르지 않기 위해 필요하다",
     )
     sub = parser.add_subparsers(dest="command", required=True)
-    opener = sub.add_parser("open", help="글쓰기 화면을 연다")
+    opener = sub.add_parser("open", help="초안을 검사한 뒤 글쓰기 화면을 연다")
+    opener.add_argument("draft", help="draft.json 경로")
     fill = sub.add_parser("fill", help="초안의 제목과 본문을 넣는다")
     fill.add_argument("draft", help="draft.json 경로")
     photos = sub.add_parser("photos", help="초안의 사진을 편집기에 넣는다")
@@ -900,11 +1155,14 @@ def main() -> int:
     components.add_argument("draft", help="draft.json 경로")
     settings = sub.add_parser("settings", help="카테고리와 태그를 발행 설정에 넣는다")
     settings.add_argument("draft", help="draft.json 경로")
-    sub.add_parser("save", help="임시저장한다")
+    save = sub.add_parser("save", help="앞 단계와 화면을 검사한 뒤 임시저장한다")
+    save.add_argument("draft", help="draft.json 경로")
     sub.add_parser("state", help="편집기에 들어간 것을 읽어 낸다")
     sub.add_parser("close", help="open 으로 만든 탭을 닫는다")
 
     args = parser.parse_args()
+    if hasattr(args, "draft") and not load_draft(args):
+        return 1
     handlers = {
         "open": cmd_open,
         "fill": cmd_fill,

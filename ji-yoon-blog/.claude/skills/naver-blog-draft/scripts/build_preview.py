@@ -29,6 +29,8 @@ import html
 import json
 from pathlib import Path
 
+from draft_contract import validate
+
 STYLE = """
 :root { color-scheme: light dark; --bg:#f2f3f5; --card:#fff; --ink:#1a1a1a; --muted:#767676;
         --line:#e5e5e5; --tag:#eef3fb; --tagink:#2f6ecb; }
@@ -54,8 +56,11 @@ h1 { font-size:19px; line-height:1.45; margin:0; padding:24px 20px 16px;
 .missing { padding:40px 12px; text-align:center; background:var(--tag); border-radius:8px;
            color:var(--muted); font-size:13px; }
 .sticker { text-align:center; font-size:26px; margin:0 0 18px; }
+.sticker img { display:block; width:min(100%, 370px); height:auto; margin:0 auto;
+               background:#fff; border-radius:8px; }
 .map { border:1px solid var(--line); border-radius:8px; padding:14px;
        font-size:13px; color:var(--muted); margin:0 0 18px; }
+.map a { color:var(--tagink); text-decoration:none; }
 .tags { padding:16px 20px 24px; border-top:1px solid var(--line); }
 .tags span { display:inline-block; background:var(--tag); color:var(--tagink);
              border-radius:12px; padding:4px 10px; font-size:12px; margin:0 6px 6px 0; }
@@ -90,10 +95,22 @@ def render_block(block: dict, base: Path) -> str:
             "ogq_5db4314bac2f0-6": "가격표 스티커",
             "ogq_5db4314bac2f0-23": "내돈내산 스티커",
         }
-        return f'<div class="sticker">{html.escape(labels.get(block.get("stickerCode"), "스티커"))}</div>'
+        code = block.get("stickerCode", "")
+        label = labels.get(code, "스티커")
+        image = base / "stickers" / f"{code}.png"
+        if code in labels and image.is_file():
+            src = html.escape(image.resolve().as_uri(), quote=True)
+            return f'<div class="sticker"><img src="{src}" alt="{html.escape(label, quote=True)}"></div>'
+        return f'<div class="sticker">{html.escape(label)}</div>'
 
     if kind == "map":
-        return f'<div class="map">📍 {html.escape(block.get("name", ""))} · {html.escape(block.get("address", ""))}</div>'
+        name = html.escape(block.get("name", ""))
+        address = html.escape(block.get("address", ""))
+        url = block.get("mapUrl", "")
+        if isinstance(url, str) and url.startswith("https://map.naver.com/"):
+            href = html.escape(url, quote=True)
+            return f'<div class="map"><a href="{href}" target="_blank" rel="noopener noreferrer">📍 {name} · {address}<br>네이버 지도에서 보기 ↗</a></div>'
+        return f'<div class="map">📍 {name} · {address}</div>'
 
     return f'<div class="missing">모르는 블록: {html.escape(str(kind))}</div>'
 
@@ -114,7 +131,7 @@ def build(draft: dict, base: Path) -> str:
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{title}</title><style>{STYLE}</style></head>
 <body><div class="wrap">
-<div class="meta">{category} · 미리보기. 아직 네이버에 올라가지 않았다.</div>
+<div class="meta">{category} · 글 미리보기</div>
 <div class="post">
 <h1>{title}</h1>
 <div class="body">{body}</div>
@@ -123,90 +140,6 @@ def build(draft: dict, base: Path) -> str:
 <div class="count">사진 {photos}장 · 본문 {letters}자 · 태그 {len(draft.get("tags") or [])}개</div>
 </div></body></html>
 """
-
-
-BLOCK_FIELDS = {
-    "sticker": "stickerCode",
-    "text": "lines",
-    "image": "path",
-    "map": "name",
-}
-STICKER_CODES = {
-    "hello": "ogq_5db4314bac2f0-1",
-    "location": "ogq_5db4314bac2f0-4",
-    "price": "ogq_5db4314bac2f0-6",
-    "self_paid": "ogq_5db4314bac2f0-23",
-}
-
-
-def validate(draft: dict) -> list[str]:
-    """초안이 `data-schema.md` 의 계약을 지키는지 본다. 어긋난 것을 문장으로 돌려준다.
-
-    `lines` 에 문자열 하나를 넣는 실수가 가장 잦다.
-    그대로 두면 미리보기가 글자 하나를 한 문단으로 그리고 종료 코드는 0 이라
-    줄 나눔이 무너진 것을 사람이 알아채지 못한다.
-    """
-    problems: list[str] = []
-
-    if not isinstance(draft.get("title"), str) or not draft["title"].strip():
-        problems.append("title 이 비어 있다")
-    if not isinstance(draft.get("category"), str) or not draft["category"].strip():
-        problems.append("category 가 비어 있다")
-
-    tags = draft.get("tags")
-    if not isinstance(tags, list) or not tags or not all(isinstance(t, str) and t.strip() and not t.startswith("#") for t in tags):
-        problems.append("tags 는 # 없는 비어 있지 않은 문자열 배열이어야 한다")
-    if not isinstance(draft.get("sponsored"), bool):
-        problems.append("sponsored 는 지융에게 확인한 참 또는 거짓이어야 한다")
-
-    blocks = draft.get("blocks")
-    if not isinstance(blocks, list) or not blocks:
-        problems.append("blocks 는 비어 있지 않은 배열이어야 한다")
-        return problems
-
-    for i, block in enumerate(blocks):
-        where = f"blocks[{i}]"
-        if not isinstance(block, dict):
-            problems.append(f"{where} 가 객체가 아니다")
-            continue
-        kind = block.get("type")
-        if kind not in BLOCK_FIELDS:
-            problems.append(f"{where} 의 type 이 모르는 값이다: {kind!r}")
-            continue
-        field = BLOCK_FIELDS[kind]
-        if field not in block:
-            problems.append(f"{where}({kind}) 에 {field} 가 없다")
-            continue
-        value = block[field]
-        if kind == "text":
-            if not isinstance(value, list):
-                problems.append(f"{where}(text) 의 lines 가 배열이 아니다. 한 줄도 배열로 넣는다")
-            elif not all(isinstance(line, str) for line in value):
-                problems.append(f"{where}(text) 의 lines 에 문자열이 아닌 원소가 있다")
-            elif not value:
-                problems.append(f"{where}(text) 의 lines 가 비어 있다")
-        elif not isinstance(value, str) or not value.strip():
-            problems.append(f"{where}({kind}) 의 {field} 가 비어 있다")
-        if kind == "sticker" and value not in STICKER_CODES.values():
-            problems.append(f"{where}(sticker) 의 stickerCode 를 모른다: {value!r}")
-        if kind == "map" and (not isinstance(block.get("address"), str) or not block["address"].strip()):
-            problems.append(f"{where}(map) 의 address 가 없다")
-
-    if draft.get("category") in ("맛집로그", "카페로그"):
-        codes = [b.get("stickerCode") for b in blocks if isinstance(b, dict) and b.get("type") == "sticker"]
-        if not isinstance(blocks[0], dict) or blocks[0].get("stickerCode") != STICKER_CODES["hello"]:
-            problems.append("첫 블록은 안녕하세요 스티커여야 한다")
-        if not isinstance(blocks[-1], dict) or blocks[-1].get("stickerCode") != STICKER_CODES["location"]:
-            problems.append("마지막 블록은 위치정보 스티커여야 한다")
-        menu_images = [i for i, b in enumerate(blocks) if isinstance(b, dict) and b.get("type") == "image" and b.get("role") == "menu"]
-        if len(menu_images) != 1 or menu_images[0] == 0 or not isinstance(blocks[menu_images[0] - 1], dict) or blocks[menu_images[0] - 1].get("stickerCode") != STICKER_CODES["price"]:
-            problems.append("메뉴판 사진 하나 바로 앞에 가격표 스티커를 둔다")
-        if codes.count(STICKER_CODES["self_paid"]) != (0 if draft.get("sponsored") else 1):
-            problems.append("비협찬 글에만 내돈내산 스티커를 하나 둔다")
-        if not any(isinstance(b, dict) and b.get("type") == "map" and b.get("name") and b.get("address") for b in blocks):
-            problems.append("상호명과 주소가 있는 지도 블록을 둔다")
-
-    return problems
 
 
 def main() -> int:
