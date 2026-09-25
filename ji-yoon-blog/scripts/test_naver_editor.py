@@ -167,6 +167,40 @@ class EditorGateTest(unittest.TestCase):
         attach.assert_not_called()
         self.assertIn("전송이 끝나지 않은 것", stderr.getvalue())
 
+    def test_photos_wait_for_remote_image_after_layout_change(self):
+        draft = {"blocks": [{"type": "image", "path": "photos/001.jpg"}]}
+        args = argparse.Namespace(
+            draft="/tmp/draft/draft.json", draft_data=draft,
+            draft_hash="same", remote_base="",
+        )
+
+        class Page:
+            count = 0
+
+            def js(self, _expression):
+                return 0
+
+        page = Page()
+
+        def attach(_page, _files):
+            page.count = 1
+            return ""
+
+        with patch.object(naver_editor_photos, "set_stage"), \
+                patch.object(naver_editor_photos, "require_clear_screen", return_value=""), \
+                patch.object(naver_editor_photos, "blocking_popup", return_value=""), \
+                patch.object(naver_editor_photos, "image_count", side_effect=lambda _page: page.count), \
+                patch.object(naver_editor_photos, "paragraphs", return_value=[]), \
+                patch.object(naver_editor_photos, "focus_placeholder", return_value=True), \
+                patch.object(naver_editor_photos, "attach_photos", side_effect=attach), \
+                patch.object(naver_editor_photos, "fit_image", return_value=True), \
+                patch.object(naver_editor_photos, "image_uploaded", side_effect=[
+                    False, True, True, False, True, True
+                ]), \
+                patch.object(naver_editor_photos, "wait_until", side_effect=
+                             lambda check, seconds: check() or check()):
+            self.assertEqual(naver_editor_photos.cmd_photos(page, args), 0)
+
     @unittest.skipUnless(shutil.which("node"), "JavaScript 런타임이 없다")
     def test_photo_is_uploaded_only_when_remote_image_has_loaded(self):
         class Page:

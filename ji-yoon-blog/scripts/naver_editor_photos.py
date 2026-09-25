@@ -188,7 +188,10 @@ def cmd_photos(page: Page, args: argparse.Namespace) -> int:
             print(f"사진에 `문서 너비`를 적용하지 못했다: {path}", file=sys.stderr)
             return 1
         inserted += 1
-        if any(not image_uploaded(page, index) for index in range(inserted)):
+        if not wait_until(
+            lambda: all(image_uploaded(page, index) for index in range(inserted)),
+            seconds=90.0,
+        ):
             print("사진 배치 뒤 전송이 끝나지 않은 사진이 있다. 새 탭에서 다시 시작한다", file=sys.stderr)
             return 1
 
