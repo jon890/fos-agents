@@ -514,6 +514,8 @@ describe("시간대 고정", () => {
   });
 
   it("연결 옵션이 UTC 로 고정돼 있다", () => {
-    expect(mariaDbPoolConfig("mysql://user:secret@db:3306/fos_career").timezone).toBe("Z");
+    const config = mariaDbPoolConfig("mysql://user:secret@db:3306/fos_career");
+    expect(config.timezone).toBe("Z");
+    expect(config.ssl).toEqual({ rejectUnauthorized: false });
   });
 });

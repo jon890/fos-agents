@@ -1,6 +1,6 @@
 # Phase 01. DB 연결을 TLS 로 바꾼다
 
-**Execution profile**: standard
+**Execution profile**: deep
 
 ## 목표
 
@@ -58,6 +58,8 @@ DB 연결은 TLS 를 쓰고 그 이유가 MySQL 인증 캐시라는 것이다.
 이번 장애를 재현한다.
 
 - root 연결로 `FLUSH PRIVILEGES` 를 실행한다
+- `FLUSH PRIVILEGES` 전에 root 연결의 `CURRENT_USER()` 에 해당하는
+  `mysql.user.plugin` 이 `caching_sha2_password` 인지 단언한다
 - 곧바로 `mariaDbPoolConfig` 로 새 pool 을 만들어 `SELECT 1` 을 보낸다
 - 2초 안에 성공해야 한다
 
@@ -68,15 +70,39 @@ TLS 를 빼면 이 테스트가 실패하는지도 한 번 확인하고, 그 결
 
 ## 검증
 
-테스트용 MySQL container 를 확인한다. 떠 있으면 다시 만들지 않는다.
+테스트용 MySQL container 의 존재와 실행 상태를 확인한다.
+없으면 만들고 중지돼 있으면 시작한다. 이미 실행 중이면 그대로 쓴다.
+어느 경우든 응답할 때까지 기다린 뒤 `fos_career_shadow` 를 만들고 migration 을 적용한다.
 
 ```bash
 # cwd: 아무 곳
-docker ps --filter name=plan125-mysql --format '{{.Names}} {{.Status}}'
+docker ps -a --filter name=plan125-mysql --format '{{.Names}} {{.Status}}'
+```
+
+```bash
+# container 가 없을 때만 실행한다
+docker run -d --name plan125-mysql \
+  -e MYSQL_ROOT_PASSWORD=plan125 -e MYSQL_DATABASE=fos_career_test \
+  -p 13400:3306 mysql:8.4.8 \
+  --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+# container 가 중지돼 있을 때만 실행한다
+docker start plan125-mysql
+```
+
+```bash
+# container 상태와 관계없이 실행한다
+until docker exec plan125-mysql mysqladmin ping -uroot -pplan125 --silent; do sleep 1; done
+docker exec plan125-mysql mysql -uroot -pplan125 \
+  -e 'CREATE DATABASE IF NOT EXISTS fos_career_shadow'
+
+# cwd: career-os/services/recommendation-api
+DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_test" \
+  npx prisma migrate deploy
 ```
 
 ```bash
 # cwd: career-os/services/recommendation-api
+npx prisma generate
 npm run typecheck
 DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_test" \
 CAREER_RECOMMENDATION_TEST_DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_test" \
