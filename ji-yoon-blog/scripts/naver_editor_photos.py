@@ -83,16 +83,21 @@ def image_uploaded(page: Page, index: int) -> bool:
     )
 
 
+def image_uploaded_visible(page: Page, index: int) -> bool:
+    """검사할 사진을 편집 화면에 보이게 한 뒤 네이버 주소를 확인한다."""
+    shown = page.js(
+        f"(() => {{ const image = [...document.querySelectorAll('.se-component.se-image')][{index}];"
+        " if (!image) return false;"
+        " image.scrollIntoView({behavior: 'instant', block: 'center'}); return true; })()"
+    )
+    return bool(shown and image_uploaded(page, index))
+
+
 def incomplete_images(page: Page, count: int, seconds: float = 15.0) -> list[int]:
     """화면 밖 미리보기를 다시 보이게 한 뒤 실제 전송 상태를 확인한다."""
     missing = []
     for index in range(count):
-        shown = page.js(
-            f"(() => {{ const image = [...document.querySelectorAll('.se-component.se-image')][{index}];"
-            " if (!image) return false;"
-            " image.scrollIntoView({behavior: 'instant', block: 'center'}); return true; })()"
-        )
-        if not shown or not wait_until(lambda: image_uploaded(page, index), seconds=seconds):
+        if not wait_until(lambda: image_uploaded_visible(page, index), seconds=seconds):
             missing.append(index)
     # 뒤쪽 사진으로 스크롤하는 동안 앞쪽 사진이 다시 바뀌었는지도 확인한다.
     return sorted(set(missing) | {index for index in range(count) if not image_uploaded(page, index)})
@@ -192,7 +197,8 @@ def cmd_photos(page: Page, args: argparse.Namespace) -> int:
             print(f"사진이 본문에 들어가지 않았다: {path}", file=sys.stderr)
             return 1
         if not wait_until(
-            lambda: image_uploaded(page, before) or bool(blocking_popup(page)), seconds=90.0
+            lambda: image_uploaded_visible(page, before) or bool(blocking_popup(page)),
+            seconds=90.0,
         ):
             print(f"사진 전송이 끝나지 않았다: {path}", file=sys.stderr)
             return 1

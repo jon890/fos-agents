@@ -235,8 +235,12 @@ class EditorGateTest(unittest.TestCase):
 
         class Page:
             count = 0
+            scrolled = 0
 
-            def js(self, _expression):
+            def js(self, expression):
+                if "scrollIntoView" in expression:
+                    self.scrolled += 1
+                    return True
                 return 0
 
         page = Page()
@@ -258,6 +262,7 @@ class EditorGateTest(unittest.TestCase):
                 patch.object(naver_editor_photos, "wait_until", side_effect=
                              lambda check, seconds: check() or check()):
             self.assertEqual(naver_editor_photos.cmd_photos(page, args), 0)
+        self.assertGreater(page.scrolled, 0)
 
     def test_offscreen_preview_recovers_after_image_is_scrolled_into_view(self):
         class Page:
