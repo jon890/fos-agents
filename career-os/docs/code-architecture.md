@@ -508,7 +508,7 @@ skill은 필요한 정보를 실행 시점에 조회하고 TypeScript 스크립�
 | --- | --- |
 | `morning_reading_cli.ts` | 일일 실행. 수집, 후보 조회, 선택 검증, 추천 저장 |
 | `build_morning_reading.ts`, `validate_outputs.ts` | HTML 생성과 산출물 검증 |
-| `manage_reading_sources.ts` | 사람이 소스를 조회하고 더하고 고치고 끈다 |
+| `manage_reading_sources.ts` | 사람이 소스를 조회하고 더하고 고치고 끈다. `help`와 `template`는 API 연결 없이 사용법과 요청 초안을 보여준다 |
 | `configure_study_recommendation.ts` | 사람이 후보자 기준 버전을 올린다 |
 | `import_study_state.ts` | 파일에 있던 소스와 추천 이력을 Backend 로 옮기는 일회성 명령 |
 
@@ -540,7 +540,8 @@ client 가 읽는 환경값은 포지션 추천과 같다. 같은 Backend 이고
 | `CAREER_RECOMMENDATION_API_TOKEN` 또는 `CAREER_RECOMMENDATION_API_TOKEN_FILE` | Bearer token. 파일은 mode 600 |
 | `YOUTUBE_DATA_API_KEY` | 선택값. 있으면 YouTube uploads playlist 과거 수집을 쓴다 |
 
-값이 없으면 실행은 시작 전에 실패한다. 브라우저 관리자 쿠키나 세션을 복제하지 않는다.
+`manage_reading_sources.ts`의 `list`, `add`, `update`, `disable`, `enable`과 다른 API 사용 명령은 연결 값이 없으면 요청 전에 실패한다.
+`help`와 `template`는 연결 값을 읽지 않는다. 브라우저 관리자 쿠키나 세션을 복제하지 않는다.
 
 ## sync-profile
 
