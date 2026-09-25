@@ -79,6 +79,20 @@ beforeAll(() => {
       generatedAt: "2026-08-13T09:00:00+09:00",
       summary: ["결론"],
       recommendations: [],
+      companyAssessments: [
+        {
+          companyKey: "예시",
+          companyName: "예시",
+          disposition: "analyze",
+          reason: null,
+          signals: [
+            { axis: "growth-scope", level: "unknown", evidenceIds: [] },
+            { axis: "team-growth", level: "unknown", evidenceIds: [] },
+            { axis: "compensation-upside", level: "unknown", evidenceIds: [] },
+          ],
+          evidence: [],
+        },
+      ],
       ranking: pool.candidates.map((candidate) => ({
         candidateId: candidate.id,
         company: candidate.company,
@@ -127,6 +141,20 @@ describe("CLI 밖에서 호출하는 핵심 함수", () => {
     expect(result.passed).toBe(true);
     if (!result.passed) throw new Error("fixture 검증 실패");
     expect(result.run.sourceSnapshot.collectionRunId).toBe(result.pool.collectionRunId);
+    expect(result.run.companyAssessments).toEqual([
+      {
+        companyKey: "예시",
+        companyName: "예시",
+        disposition: "analyze",
+        reason: null,
+        signals: [
+          { axis: "growth-scope", level: "unknown", evidenceIds: [] },
+          { axis: "team-growth", level: "unknown", evidenceIds: [] },
+          { axis: "compensation-upside", level: "unknown", evidenceIds: [] },
+        ],
+        evidence: [],
+      },
+    ]);
     const invalid = validateRecommendationFiles(join(directory, "invalid.json"), "missing-pool");
     expect(invalid.passed).toBe(false);
     if (invalid.passed) throw new Error("잘못된 입력을 허용함");
