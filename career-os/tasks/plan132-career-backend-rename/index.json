@@ -1,0 +1,13 @@
+{
+  "name": "plan132-career-backend-rename",
+  "description": "추천 Backend 를 커리어 전체를 담는 커리어 Backend 로 이름을 넓힌다. 환경값, 디렉터리, 모듈, 타입, 문서 설명을 바꾸고 전환 기간 뒤 옛 환경값을 뺀다.",
+  "status": "pending",
+  "created_at": "2026-09-25",
+  "total_phases": 3,
+  "current_phase": 1,
+  "phases": [
+    { "number": 1, "file": "phase-01.md", "execution_profile": "standard" },
+    { "number": 2, "file": "phase-02.md", "execution_profile": "standard" },
+    { "number": 3, "file": "phase-03.md", "execution_profile": "fast" }
+  ]
+}
