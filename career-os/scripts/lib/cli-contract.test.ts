@@ -468,7 +468,7 @@ describe("기존 명령 및 공용 runCli", () => {
       "study-topic-recommender/morning_reading_cli.ts",
       "study-topic-recommender/build_morning_reading.ts",
     ]) {
-      expect(invoke(script, ["--library", "--collect-only"])).toEqual({
+      expect(invoke(script, ["--collect-only"])).toEqual({
         code: 2,
         out: "",
         err: "CAREER_OS_ROOT 또는 --run-dir에 시스템 임시 실행 경로를 지정해야 한다.\n",
