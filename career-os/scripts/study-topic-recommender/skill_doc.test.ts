@@ -37,13 +37,15 @@ describe("study-topic-recommender skill 문서", () => {
     expect(skill).toContain("명령은 저장소 루트에서 실행한다.");
     expect(skill).toContain("`docs/…`는 `career-os/docs/…`를 뜻한다.");
 
-    for (const path of [
-      "career-os/.claude/skills/study-topic-recommender/references/execution.md",
-      "career-os/.claude/skills/study-topic-recommender/references/source-management.md",
-      "career-os/docs/flow.md",
+    for (const [link, path] of [
+      ["[실행 계약](references/execution.md)", "career-os/.claude/skills/study-topic-recommender/references/execution.md"],
+      ["[소스 관리](references/source-management.md)", "career-os/.claude/skills/study-topic-recommender/references/source-management.md"],
     ]) {
+      expect(skill).toContain(link);
       expect(existsSync(resolve(repositoryRoot, path))).toBe(true);
     }
+
+    expect(existsSync(resolve(repositoryRoot, "career-os/docs/flow.md"))).toBe(true);
   });
 
   test("파일 동기화 명령을 실행하지 않고 Backend 추천 상태를 사용하도록 안내한다", () => {
