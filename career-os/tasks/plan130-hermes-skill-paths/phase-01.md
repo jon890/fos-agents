@@ -26,7 +26,7 @@ career-os 스킬 여섯의 `SKILL.md` 에 이런 링크가 42곳 있다.
 `career-os/docs/flow.md` 의 「비공개 작업본 동기화」 절 첫 문장이
 `application-package-writer`, `resume-preparer`, `interview-practice` 와 `study-topic-recommender` 가
 공통 CLI 로 준비와 반영 절차를 실행한다고 적는다.
-공부 추천은 이제 Backend 만 쓴다.
+공부 추천의 장기 추천 상태는 이제 Backend 에서 읽고 쓴다.
 
 **근거 문서**: `docs/flow.md` 의 「비공개 작업본 동기화」 절과 「study-topic-recommender」 절,
 `docs/adr/ADR-118-추천-상태는-career-os-api와-mysql이-관리한다.md`
@@ -53,12 +53,12 @@ hermes 의 cron 목록에 career-os 스킬은 `position-recommender` 와 `study-
 - `docs/…` 는 `career-os/docs/…` 다
 
 `study-topic-recommender` 에는 한 줄을 더한다.
-「파일 동기화 명령(`career-workspace`)을 실행하지 않는다. 이 스킬은 Backend 만 쓴다.」
+「`career-workspace` 파일 동기화 명령을 실행하지 않는다. 추천 상태는 Backend 에서 읽고 쓴다.」
 
 ### 2. `docs/flow.md` 의 「비공개 작업본 동기화」 절에서 공부 추천을 뺀다
 
 첫 문장의 스킬 목록에서 `study-topic-recommender` 를 지운다.
-포지션 추천과 공부 추천은 Backend 만 쓴다는 문장을 절 끝에 한 줄 더한다.
+포지션 추천과 공부 추천의 장기 추천 상태는 Backend 에서 읽고 쓴다는 문장을 절 끝에 한 줄 더한다.
 
 ### 3. 이 phase 를 검증하는 검사
 
@@ -66,7 +66,9 @@ hermes 의 cron 목록에 career-os 스킬은 `position-recommender` 와 `study-
 `career-os/scripts/study-topic-recommender/skill_doc.test.ts` 에 항목을 더한다.
 
 - `SKILL.md` 에 `career-os/.claude/skills/<스킬 이름>/` 문자열이 있다
-- 공부 추천 `SKILL.md` 에 `career-workspace` 를 실행하지 않는다는 문장이 있다
+- 두 `SKILL.md` 가 저장소 루트에서 명령을 실행하고 `docs/…` 는 `career-os/docs/…` 로 읽도록 안내한다
+- 두 스킬의 `references/…` 링크 네 개와 `docs/flow.md` 경로가 저장소 루트에서 실제 파일로 풀린다
+- 공부 추천 `SKILL.md` 에 `career-workspace` 를 실행하지 않는다는 문장이 있다. 이 안내를 제거하면 검사가 실패한다
 - `career-os/docs/flow.md` 의 「비공개 작업본 동기화」 절 첫 문장에 `study-topic-recommender` 가 없다
 
 ## 검증
@@ -77,6 +79,8 @@ export PATH="$HOME/.bun/bin:$PATH"
 bun test career-os/scripts/position-recommender career-os/scripts/study-topic-recommender
 bun test ./career-os/.claude/skills/
 bunx tsc --noEmit
+python3 "$HOME/.codex/skills/.system/skill-creator/scripts/quick_validate.py" career-os/.claude/skills/position-recommender
+python3 "$HOME/.codex/skills/.system/skill-creator/scripts/quick_validate.py" career-os/.claude/skills/study-topic-recommender
 ```
 
 ```bash
@@ -105,7 +109,7 @@ ls career-os/.claude/skills/study-topic-recommender/references/execution.md \
 
 ## 이 plan 을 마감한다
 
-위 검증이 모두 통과하면 `tasks/plan130-hermes-skill-paths/index.json` 의
+위 검증이 모두 통과하면 `career-os/tasks/plan130-hermes-skill-paths/index.json` 의
 `status` 를 `completed` 로 바꾸고 `current_phase` 를 1 로 둔다.
 
 ## Critical Files
@@ -117,3 +121,4 @@ ls career-os/.claude/skills/study-topic-recommender/references/execution.md \
 | `career-os/docs/flow.md` | 수정 |
 | `career-os/scripts/position-recommender/skill_doc.test.ts` | 수정 |
 | `career-os/scripts/study-topic-recommender/skill_doc.test.ts` | 수정 |
+| `career-os/tasks/plan130-hermes-skill-paths/index.json` | 수정 |
