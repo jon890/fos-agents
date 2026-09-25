@@ -44,6 +44,7 @@ client 와 서버가 `CAREER_BACKEND_*` 환경값을 먼저 읽고, 없으면 �
   옛 이름을 오류에 함께 적지 않는다. 전환 기간이 끝나면 옛 이름은 사라진다.
 - 옛 이름을 읽었다고 경고를 출력하지 않는다. CLI 계약 테스트가 stderr 를 비교하고, phase 03 에서 어차피 뺀다.
 - 서버 테스트의 `CAREER_RECOMMENDATION_TEST_DATABASE_URL` 은 운영 값이 아니므로 대체 없이 새 이름으로만 바꾼다.
+- **문서는 코드와 같은 phase 에서 고친다.** 결정은 ADR-128 이 이 계획보다 먼저 커밋됐다. 환경값 이름과 경로를 적은 문서는 코드가 바뀌기 전에 고치면 없는 이름을 가리키므로, 코드 변경과 같은 phase 의 별도 커밋으로 둔다.
 - **`services/recommendation-api/test/fixtures/legacy-contract/` 는 고치지 않는다.** 옛 서버를 실행해 계약을 찍어 둔 기록이라 그 서버가 읽던 옛 이름이 맞다.
 
 ## 작업 항목
@@ -82,6 +83,10 @@ client 묶음과 서버 묶음을 모두 바꾼다.
 `docs/code-architecture.md` 에서 환경값을 적은 곳(「추천 상태 Backend」 절의 client·Backend 환경값 문단, 공부 추천 client 환경값 표)을 새 이름으로 바꾸고,
 「전환 기간에는 옛 `CAREER_RECOMMENDATION_*` 이름도 읽는다」 한 줄을 그 절에 둔다.
 `services/recommendation-api/README.md` 의 환경값 표와 예시 명령도 새 이름으로 바꾼다.
+스킬 문서 두 곳도 바꾼다.
+
+- `career-os/.claude/skills/position-recommender/SKILL.md` 37행의 `CAREER_RECOMMENDATION_API_URL` → `CAREER_BACKEND_URL`
+- `career-os/.claude/skills/study-topic-recommender/references/execution.md` 19행의 `CAREER_RECOMMENDATION_API_URL` → `CAREER_BACKEND_URL`
 
 ### 6. 테스트
 
@@ -112,21 +117,23 @@ npm run typecheck && npm run build
 CAREER_BACKEND_TEST_DATABASE_URL=<테스트 DB> SHADOW_DATABASE_URL=<빈 shadow DB> npm test
 ```
 
-기대값: 모두 실패 0. 아래 명령의 출력 파일 목록이 허용 목록과 같다.
+기대값: 모두 실패 0. 아래 명령이 종료 코드 0 이다. 허용 목록 밖의 파일이 있거나 목록의 파일이 빠지면 `diff` 가 1 로 끝난다.
 
 ```bash
 # cwd: 저장소 루트
-git grep -l "CAREER_RECOMMENDATION_" -- career-os ':!career-os/docs/adr' ':!career-os/tasks' | sort
+diff <(git grep -l "CAREER_RECOMMENDATION_" -- career-os ':!career-os/docs/adr' ':!career-os/tasks' | sort) <(sort <<'LIST'
+career-os/docs/code-architecture.md
+career-os/scripts/lib/recommendation-api-config.ts
+career-os/scripts/position-recommender/recommendation-api/client.test.ts
+career-os/services/recommendation-api/src/config/config.test.ts
+career-os/services/recommendation-api/src/config/config.ts
+career-os/services/recommendation-api/test/fixtures/legacy-contract/README.md
+career-os/services/recommendation-api/test/fixtures/legacy-contract/capture-legacy.bun.ts
+LIST
+)
 ```
 
-허용 목록이다. 이 밖의 파일이 나오면 실패다.
-
-- `career-os/scripts/lib/recommendation-api-config.ts` (옛 이름 읽기)
-- `career-os/services/recommendation-api/src/config/config.ts` (옛 이름 읽기)
-- `career-os/scripts/position-recommender/recommendation-api/client.test.ts` (옛 이름 경로 검사)
-- `career-os/services/recommendation-api/src/config/config.test.ts` (옛 이름 경로 검사)
-- `career-os/docs/code-architecture.md` (전환 기간 한 줄)
-- `career-os/services/recommendation-api/test/fixtures/legacy-contract/README.md`, `capture-legacy.bun.ts` (과거 계약 기록)
+`config.ts` 와 `recommendation-api-config.ts` 는 옛 이름 읽기, 두 테스트는 옛 이름 경로 검사, `code-architecture.md` 는 전환 기간 한 줄, legacy-contract 두 파일은 과거 계약 기록이다.
 
 ## 마무리
 

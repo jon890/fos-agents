@@ -14,7 +14,7 @@ phase 01 과 02 가 머지됐고 홈서버가 새 이름으로 전환된 뒤에 
 
 ## Blocked 조건
 
-아래 셋이 모두 확인되지 않았으면 `PHASE_BLOCKED: 운영 전환 확인 전` 을 출력하고 끝낸다. 확인은 코디네이터가 하고 phase 를 넘길 때 알려 준다.
+아래 셋이 모두 확인되지 않았으면 `PHASE_BLOCKED: 운영 전환 확인 전` 을 출력하고 종료 코드 2 로 끝낸다. 파일은 고치지 않는다. 확인은 코디네이터가 하고 phase 를 넘길 때 알려 준다.
 
 - hermes 의 환경값이 `CAREER_BACKEND_URL`, `CAREER_BACKEND_TOKEN_FILE` 이고 옛 이름이 없다
 - Backend container 의 환경값이 새 이름이다
@@ -43,15 +43,31 @@ phase 01 과 02 가 머지됐고 홈서버가 새 이름으로 전환된 뒤에 
 
 ## 검증
 
-phase 02 의 검증 명령을 모두 다시 돌린다. 기대값은 모두 실패 0 이다.
+저장소 루트에서 실행한다. 모두 종료 코드 0 이어야 한다.
 
 ```bash
 # cwd: 저장소 루트
-git grep -l "CAREER_RECOMMENDATION_" -- career-os ':!career-os/docs/adr' ':!career-os/tasks' \
-  ':!career-os/services/career-backend/test/fixtures/legacy-contract' | sort
+PATH="$HOME/.bun/bin:$PATH" bun test career-os/scripts
+PATH="$HOME/.bun/bin:$PATH" bun test ./career-os/.claude/skills/
+PATH="$HOME/.bun/bin:$PATH" bunx tsc --noEmit
 ```
 
-결과가 `career-os/scripts/lib/career-backend-naming.test.ts` 와 두 설정 테스트 파일뿐이다.
+```bash
+# cwd: career-os/services/career-backend
+npm run typecheck && npm run build
+CAREER_BACKEND_TEST_DATABASE_URL=<테스트 DB> SHADOW_DATABASE_URL=<빈 shadow DB> npm test
+```
+
+```bash
+# cwd: 저장소 루트
+diff <(git grep -l "CAREER_RECOMMENDATION_" -- career-os ':!career-os/docs/adr' ':!career-os/tasks' \
+  ':!career-os/services/career-backend/test/fixtures/legacy-contract' | sort) <(sort <<'LIST'
+career-os/scripts/lib/career-backend-naming.test.ts
+career-os/scripts/position-recommender/career-backend/client.test.ts
+career-os/services/career-backend/src/config/config.test.ts
+LIST
+)
+```
 
 ## 마무리
 

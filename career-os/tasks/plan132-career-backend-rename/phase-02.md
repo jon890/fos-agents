@@ -106,12 +106,13 @@ CAREER_BACKEND_TEST_DATABASE_URL=<테스트 DB> SHADOW_DATABASE_URL=<빈 shadow 
 
 ```bash
 # cwd: 저장소 루트
-git grep -nE "recommendation-api|RecommendationApi|추천 (상태 )?Backend|추천 API" -- career-os \
+! git grep -nE "recommendation-api|RecommendationApi|추천 (상태 )?Backend|추천 API" -- career-os \
   ':!career-os/docs/adr' ':!career-os/tasks' ':!career-os/services/career-backend/test/fixtures/legacy-contract' \
   ':!career-os/scripts/lib/career-backend-naming.test.ts'
 ```
 
-결과 0건. `CAREER_RECOMMENDATION_` 파일 목록은 naming 테스트가 검사한다.
+앞의 명령은 옛 이름이 한 건도 없을 때만 종료 코드 0 이다. `CAREER_RECOMMENDATION_` 파일 목록은 naming 테스트가 검사하고, 위 `bun test career-os/scripts` 에 포함된다.
+문서는 이동과 같은 phase 에서 고친다. 이동 전에 고치면 없는 경로를 가리키기 때문이다.
 
 ## 마무리
 
