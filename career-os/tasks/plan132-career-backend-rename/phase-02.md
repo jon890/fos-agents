@@ -46,6 +46,7 @@ phase 01 이 끝난 상태에서 시작한다. 이름 대응이다.
 - `services/career-backend/node_modules` 는 추적되지 않으므로 이동 뒤 `npm ci` 로 다시 만든다
 - 「추천」 이 도메인 뜻으로 쓰인 곳은 바꾸지 않는다. 예: `position-recommender`, `study_recommendation_*` 테이블, `recommendations` 경로, `RecommendationRun` 같은 추천 결과 타입
   - 판정 기준: 그 낱말이 Backend 나 API 전체를 가리키면 바꾸고, 추천이라는 기능이나 결과를 가리키면 둔다
+- `services/career-backend/test/fixtures/legacy-contract/` 는 디렉터리와 함께 이동만 하고 내용은 고치지 않는다. 옛 서버의 계약을 찍은 기록이다. 그 README 의 cwd 경로처럼 이동 때문에 틀려지는 경로만 새 경로로 고친다
 - 이름만 바꾸고 동작과 오류 코드는 바꾸지 않는다. 오류 문구의 「추천 API」 는 phase 01 에서 이미 바꿨다
 
 ## 작업 항목
@@ -72,12 +73,17 @@ phase 01 이 끝난 상태에서 시작한다. 이름 대응이다.
 
 ### 4. 테스트
 
-이름 변경만이므로 새 테스트는 두지 않는다. 옛 이름이 남지 않았다는 검사를 하나 둔다.
-`career-os/scripts/lib/` 에 `career-backend-naming.test.ts` 를 두고 아래 grep 과 같은 검사를 코드로 한다.
-대상은 `career-os/` 아래 추적 파일 중 `docs/adr/`, `tasks/`, `node_modules/` 를 뺀 것이다.
+이름 변경만이므로 새 동작 테스트는 두지 않는다. 옛 이름이 남지 않았다는 검사를 하나 둔다.
+`career-os/scripts/lib/career-backend-naming.test.ts` 를 두고 `git ls-files career-os` 로 추적 파일을 읽어 검사한다.
+검사 대상에서 빼는 경로는 `career-os/docs/adr/`, `career-os/tasks/`, `career-os/services/career-backend/test/fixtures/legacy-contract/`, 이 테스트 파일 자신이다.
 
 - `recommendation-api`, `RecommendationApi`, `추천 Backend`, `추천 상태 Backend`, `추천 API` 가 0건
-- `CAREER_RECOMMENDATION_` 는 phase 01 이 남긴 두 설정 파일, 그 테스트, 이 검사 파일, `code-architecture.md` 의 전환 기간 한 줄에만 있다
+- `CAREER_RECOMMENDATION_` 가 든 파일이 정확히 아래 다섯 개다
+  - `career-os/scripts/lib/career-backend-config.ts`
+  - `career-os/services/career-backend/src/config/config.ts`
+  - `career-os/scripts/position-recommender/career-backend/client.test.ts`
+  - `career-os/services/career-backend/src/config/config.test.ts`
+  - `career-os/docs/code-architecture.md`
 
 ## 검증
 
@@ -100,11 +106,12 @@ CAREER_BACKEND_TEST_DATABASE_URL=<테스트 DB> SHADOW_DATABASE_URL=<빈 shadow 
 
 ```bash
 # cwd: 저장소 루트
-grep -rnE "recommendation-api|RecommendationApi|추천 (상태 )?Backend|추천 API" career-os \
-  | grep -v "docs/adr/\|tasks/\|node_modules/"
+git grep -nE "recommendation-api|RecommendationApi|추천 (상태 )?Backend|추천 API" -- career-os \
+  ':!career-os/docs/adr' ':!career-os/tasks' ':!career-os/services/career-backend/test/fixtures/legacy-contract' \
+  ':!career-os/scripts/lib/career-backend-naming.test.ts'
 ```
 
-결과 0건.
+결과 0건. `CAREER_RECOMMENDATION_` 파일 목록은 naming 테스트가 검사한다.
 
 ## 마무리
 

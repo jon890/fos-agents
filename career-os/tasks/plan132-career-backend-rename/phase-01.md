@@ -44,6 +44,7 @@ client 와 서버가 `CAREER_BACKEND_*` 환경값을 먼저 읽고, 없으면 �
   옛 이름을 오류에 함께 적지 않는다. 전환 기간이 끝나면 옛 이름은 사라진다.
 - 옛 이름을 읽었다고 경고를 출력하지 않는다. CLI 계약 테스트가 stderr 를 비교하고, phase 03 에서 어차피 뺀다.
 - 서버 테스트의 `CAREER_RECOMMENDATION_TEST_DATABASE_URL` 은 운영 값이 아니므로 대체 없이 새 이름으로만 바꾼다.
+- **`services/recommendation-api/test/fixtures/legacy-contract/` 는 고치지 않는다.** 옛 서버를 실행해 계약을 찍어 둔 기록이라 그 서버가 읽던 옛 이름이 맞다.
 
 ## 작업 항목
 
@@ -61,12 +62,20 @@ client 와 서버가 `CAREER_BACKEND_*` 환경값을 먼저 읽고, 없으면 �
 
 ### 3. 서버 테스트의 테스트 DB 환경값
 
-`career-os/services/recommendation-api/test/` 와 `README.md` 에서 `CAREER_RECOMMENDATION_TEST_DATABASE_URL` 을 `CAREER_BACKEND_TEST_DATABASE_URL` 로 바꾼다.
+`CAREER_RECOMMENDATION_TEST_DATABASE_URL` 을 `CAREER_BACKEND_TEST_DATABASE_URL` 로 바꾼다. 대상은 셋이다.
+
+- `career-os/services/recommendation-api/test/` 아래 파일 (`test/fixtures/legacy-contract/` 는 제외)
+- `career-os/services/recommendation-api/prisma/baseline.test.ts` (54행과 101행 부근, 오류 문구 포함)
+- `career-os/services/recommendation-api/README.md`
 
 ### 4. `career-os/.env.example`
 
-`# 포지션 추천 client` 주석을 `# 커리어 Backend client. 포지션 추천, 공부 추천, 회사 근거가 함께 쓴다` 로 바꾸고,
-변수 셋을 `CAREER_BACKEND_URL`, `CAREER_BACKEND_TOKEN`, `CAREER_BACKEND_TOKEN_FILE` 로 바꾼다.
+client 묶음과 서버 묶음을 모두 바꾼다.
+
+- `# 포지션 추천 client` 주석을 `# 커리어 Backend client. 포지션 추천, 공부 추천, 회사 근거가 함께 쓴다` 로 바꾼다
+- 그 아래 변수 셋을 `CAREER_BACKEND_URL`, `CAREER_BACKEND_TOKEN`, `CAREER_BACKEND_TOKEN_FILE` 로 바꾼다
+- `# recommendation-api Backend: 개발은 URL, 운영은 DB_* 묶음 중 하나만 사용한다.` 주석을 `# 커리어 Backend 서버: 개발은 URL, 운영은 DB_* 묶음 중 하나만 사용한다.` 로 바꾼다
+- 그 아래 `CAREER_RECOMMENDATION_DATABASE_URL` 과 `CAREER_RECOMMENDATION_MAX_BODY_BYTES` 를 `CAREER_BACKEND_DATABASE_URL`, `CAREER_BACKEND_MAX_BODY_BYTES` 로 바꾼다
 
 ### 5. 문서의 환경값 이름
 
@@ -103,15 +112,21 @@ npm run typecheck && npm run build
 CAREER_BACKEND_TEST_DATABASE_URL=<테스트 DB> SHADOW_DATABASE_URL=<빈 shadow DB> npm test
 ```
 
-기대값: 모두 실패 0. 아래 grep 결과가 fallback 코드와 그 테스트, ADR 밖에서 0건이다.
+기대값: 모두 실패 0. 아래 명령의 출력 파일 목록이 허용 목록과 같다.
 
 ```bash
 # cwd: 저장소 루트
-grep -rn "CAREER_RECOMMENDATION_" career-os --include=*.ts --include=*.md --include=.env.example \
-  | grep -v "docs/adr/\|tasks/"
+git grep -l "CAREER_RECOMMENDATION_" -- career-os ':!career-os/docs/adr' ':!career-os/tasks' | sort
 ```
 
-남는 것은 두 설정 파일의 옛 이름 읽기, 그 테스트, `code-architecture.md` 의 전환 기간 한 줄뿐이어야 한다.
+허용 목록이다. 이 밖의 파일이 나오면 실패다.
+
+- `career-os/scripts/lib/recommendation-api-config.ts` (옛 이름 읽기)
+- `career-os/services/recommendation-api/src/config/config.ts` (옛 이름 읽기)
+- `career-os/scripts/position-recommender/recommendation-api/client.test.ts` (옛 이름 경로 검사)
+- `career-os/services/recommendation-api/src/config/config.test.ts` (옛 이름 경로 검사)
+- `career-os/docs/code-architecture.md` (전환 기간 한 줄)
+- `career-os/services/recommendation-api/test/fixtures/legacy-contract/README.md`, `capture-legacy.bun.ts` (과거 계약 기록)
 
 ## 마무리
 
@@ -125,7 +140,8 @@ grep -rn "CAREER_RECOMMENDATION_" career-os --include=*.ts --include=*.md --incl
 | `career-os/services/recommendation-api/src/config/config.ts` | 수정 |
 | `career-os/services/recommendation-api/src/config/config.test.ts` | 수정 |
 | `career-os/scripts/position-recommender/recommendation-api/client.test.ts` | 수정 |
-| `career-os/services/recommendation-api/test/` | 수정 |
+| `career-os/services/recommendation-api/test/` (legacy-contract 제외) | 수정 |
+| `career-os/services/recommendation-api/prisma/baseline.test.ts` | 수정 |
 | `career-os/services/recommendation-api/README.md` | 수정 |
 | `career-os/.env.example` | 수정 |
 | `career-os/docs/code-architecture.md` | 수정 |

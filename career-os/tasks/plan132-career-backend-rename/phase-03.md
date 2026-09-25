@@ -39,7 +39,7 @@ phase 01 과 02 가 머지됐고 홈서버가 새 이름으로 전환된 뒤에 
 ### 4. 테스트
 
 - phase 01 이 넣은 옛 이름 테스트를 「옛 이름만 있으면 새 이름이 필요하다는 오류가 난다」 로 바꾼다
-- `career-os/scripts/lib/career-backend-naming.test.ts` 의 허용 목록에서 두 설정 파일과 문서 줄을 빼고, 이 테스트 파일과 옛 이름 오류 테스트만 남긴다
+- `career-os/scripts/lib/career-backend-naming.test.ts` 의 `CAREER_RECOMMENDATION_` 허용 목록을 두 설정 테스트 파일만 남긴다. 두 설정 파일과 `code-architecture.md` 를 뺀다
 
 ## 검증
 
@@ -47,10 +47,11 @@ phase 02 의 검증 명령을 모두 다시 돌린다. 기대값은 모두 실�
 
 ```bash
 # cwd: 저장소 루트
-grep -rn "CAREER_RECOMMENDATION_" career-os | grep -v "docs/adr/\|tasks/\|node_modules/"
+git grep -l "CAREER_RECOMMENDATION_" -- career-os ':!career-os/docs/adr' ':!career-os/tasks' \
+  ':!career-os/services/career-backend/test/fixtures/legacy-contract' | sort
 ```
 
-결과가 naming 테스트와 옛 이름 오류 테스트뿐이다.
+결과가 `career-os/scripts/lib/career-backend-naming.test.ts` 와 두 설정 테스트 파일뿐이다.
 
 ## 마무리
 
