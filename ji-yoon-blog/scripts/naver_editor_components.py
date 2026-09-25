@@ -41,7 +41,7 @@ def insert_sticker(page: Page, block: dict) -> str:
     if code not in STICKER_CODES.values():
         return f"지원하지 않는 stickerCode: {code}"
     marker = sticker_placeholder(block)
-    if not focus_placeholder(page, marker):
+    if not wait_until(lambda: focus_placeholder(page, marker), seconds=5.0):
         return f"스티커 자리를 찾지 못했다: {marker}"
     before = component_count(page, "sticker")
     panel_open = page.js(
@@ -120,7 +120,7 @@ def insert_map(page: Page, block: dict) -> str:
     if not name or not address:
         return "지도 블록의 name 과 address 를 모두 채운다"
     marker = map_placeholder(block)
-    if not focus_placeholder(page, marker):
+    if not wait_until(lambda: focus_placeholder(page, marker), seconds=5.0):
         return f"장소 자리를 찾지 못했다: {marker}"
     before = component_count(page, "placesMap")
     if not click(page, PLACE_BUTTON):
@@ -237,7 +237,11 @@ def cmd_components(page: Page, args: argparse.Namespace) -> int:
             print(problem, file=sys.stderr)
             return 1
         counts[kind] += 1
-    problems = component_problems(draft, component_state(page), paragraphs(page, BODY_SELECTOR))
+    def current_problems() -> list[str]:
+        return component_problems(draft, component_state(page), paragraphs(page, BODY_SELECTOR))
+
+    wait_until(lambda: not current_problems(), seconds=10.0)
+    problems = current_problems()
     if problems:
         print("구성요소가 초안과 다르다: " + ", ".join(problems), file=sys.stderr)
         return 1

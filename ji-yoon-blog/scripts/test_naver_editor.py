@@ -57,6 +57,36 @@ class EditorGateTest(unittest.TestCase):
         ]}
         self.assertEqual(naver_editor.component_problems(draft, state, []), [])
 
+    def test_sticker_waits_for_placeholder_after_editor_rerender(self):
+        class Page:
+            def js(self, _expression):
+                return True
+
+        page = Page()
+        block = {"type": "sticker", "stickerCode": next(iter(naver_editor.STICKER_CODES.values()))}
+        counts = iter([0, 1])
+        with patch.object(naver_editor_components, "focus_placeholder", side_effect=[False, True]) as focus, \
+                patch.object(naver_editor_components, "component_count", side_effect=lambda *_: next(counts)), \
+                patch.object(naver_editor_components, "mouse_click", return_value=True), \
+                patch.object(naver_editor_components, "wait_until", side_effect=
+                             lambda check, seconds=3.0: check() or check()):
+            self.assertEqual(naver_editor_components.insert_sticker(page, block), "")
+        self.assertEqual(focus.call_count, 2)
+
+    def test_components_wait_for_final_editor_state(self):
+        class Page:
+            pass
+
+        args = argparse.Namespace(draft_data={"blocks": []}, draft_hash="same")
+        with patch.object(naver_editor_components, "set_stage"), \
+                patch.object(naver_editor_components, "require_clear_screen", return_value=""), \
+                patch.object(naver_editor_components, "component_state", return_value={}), \
+                patch.object(naver_editor_components, "paragraphs", return_value=[]), \
+                patch.object(naver_editor_components, "component_problems", side_effect=[
+                    ["처음 대조에서 미완료"], ["편집기 반영 중"], [], []
+                ]):
+            self.assertEqual(naver_editor_components.cmd_components(Page(), args), 0)
+
     def test_map_search_switches_from_overseas_to_domestic(self):
         class Page:
             mode = "해외"
