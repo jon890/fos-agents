@@ -3,6 +3,22 @@
 읽을거리 소스의 원본은 추천 Backend다.
 소스 키는 주제가 아니라 발행처를 식별한다.
 
+`manage_reading_sources.ts`는 API 연결 값 없이 `help`, `--help`, `-h`와 `template`를 실행할 수 있다.
+`template`는 Backend에 보내는 요청 본문의 초안을 출력하고 저장하지 않는다.
+
+```bash
+bun career-os/scripts/study-topic-recommender/manage_reading_sources.ts template \
+  --key example-engineering \
+  --title "Example Engineering" \
+  --category techBlog \
+  --url "https://example.com/engineering" \
+  --adapter page \
+  --note "새 기술 블로그를 수집한다"
+```
+
+출력 JSON은 API 경로에 쓰는 `sourceKey`와 요청 본문 `payload`를 나눈다.
+`payload`에는 `title`, `category`, `adapter`, `url`, `feedUrl`, `enabled`, `note`, `expectedVersion`이 들어간다.
+
 좋은 키:
 
 - `daangn-tech`

@@ -79,6 +79,20 @@ beforeAll(() => {
       generatedAt: "2026-08-13T09:00:00+09:00",
       summary: ["결론"],
       recommendations: [],
+      companyAssessments: [
+        {
+          companyKey: "예시",
+          companyName: "예시",
+          disposition: "analyze",
+          reason: null,
+          signals: [
+            { axis: "growth-scope", level: "unknown", evidenceIds: [] },
+            { axis: "team-growth", level: "unknown", evidenceIds: [] },
+            { axis: "compensation-upside", level: "unknown", evidenceIds: [] },
+          ],
+          evidence: [],
+        },
+      ],
       ranking: pool.candidates.map((candidate) => ({
         candidateId: candidate.id,
         company: candidate.company,
@@ -127,6 +141,20 @@ describe("CLI 밖에서 호출하는 핵심 함수", () => {
     expect(result.passed).toBe(true);
     if (!result.passed) throw new Error("fixture 검증 실패");
     expect(result.run.sourceSnapshot.collectionRunId).toBe(result.pool.collectionRunId);
+    expect(result.run.companyAssessments).toEqual([
+      {
+        companyKey: "예시",
+        companyName: "예시",
+        disposition: "analyze",
+        reason: null,
+        signals: [
+          { axis: "growth-scope", level: "unknown", evidenceIds: [] },
+          { axis: "team-growth", level: "unknown", evidenceIds: [] },
+          { axis: "compensation-upside", level: "unknown", evidenceIds: [] },
+        ],
+        evidence: [],
+      },
+    ]);
     const invalid = validateRecommendationFiles(join(directory, "invalid.json"), "missing-pool");
     expect(invalid.passed).toBe(false);
     if (invalid.passed) throw new Error("잘못된 입력을 허용함");
@@ -385,30 +413,24 @@ describe("기존 명령 및 공용 runCli", () => {
     });
   });
 
-  test("읽을거리 관리의 help, JSON 템플릿과 첫 옵션값을 보존한다", () => {
+  test("읽을거리 관리의 help와 JSON 템플릿을 보존한다", () => {
     const script = "study-topic-recommender/manage_reading_sources.ts";
     const help = invoke(script);
     expect(help.code).toBe(0);
     expect(help.err).toBe("");
+    expect(help.out).toStartWith("사용법:");
+    expect(help.out).toContain("\n로컬 명령:\n");
+    expect(help.out).not.toContain('"');
+    expect(help.out).not.toContain("\\n");
+    expect(invoke(script, ["help"])).toEqual(help);
     expect(invoke(script, ["--help"])).toEqual(help);
+    expect(invoke(script, ["-h"])).toEqual(help);
     expect(invoke(script, [], true)).toEqual({ code: 0, out: "", err: "" });
     expect(invoke(script, ["template"])).toEqual({
       code: 1,
       out: "",
       err: "--key 값이 필요하다.\n",
     });
-    const list = invoke(script, [
-      "list",
-      "--category",
-      "techBlog",
-      "--category",
-      "video",
-      "--include-disabled",
-    ]);
-    expect(list.code).toBe(0);
-    expect(
-      JSON.parse(list.out).every((item: { category: string }) => item.category === "techBlog"),
-    ).toBe(true);
     const template = invoke(script, [
       "template",
       "--key",
@@ -421,16 +443,23 @@ describe("기존 명령 및 공용 runCli", () => {
       "https://example.com/feed.xml",
       "--adapter",
       "feed",
+      "--note",
+      "템플릿을 확인한다",
     ]);
     expect(template.code).toBe(0);
     expect(template.err).toBe("");
     expect(JSON.parse(template.out)).toEqual({
-      key: "example-test-feed",
-      category: "techBlog",
-      title: "예시",
-      enabled: true,
-      feedUrl: "https://example.com/feed.xml",
-      adapter: "feed",
+      sourceKey: "example-test-feed",
+      payload: {
+        title: "예시",
+        category: "techBlog",
+        adapter: "feed",
+        url: null,
+        feedUrl: "https://example.com/feed.xml",
+        enabled: true,
+        note: "템플릿을 확인한다",
+        expectedVersion: 0,
+      },
     });
   });
 
@@ -439,7 +468,7 @@ describe("기존 명령 및 공용 runCli", () => {
       "study-topic-recommender/morning_reading_cli.ts",
       "study-topic-recommender/build_morning_reading.ts",
     ]) {
-      expect(invoke(script, ["--library", "--collect-only"])).toEqual({
+      expect(invoke(script, ["--collect-only"])).toEqual({
         code: 2,
         out: "",
         err: "CAREER_OS_ROOT 또는 --run-dir에 시스템 임시 실행 경로를 지정해야 한다.\n",
