@@ -17,12 +17,12 @@
 2. `morning_reading_cli.ts`와 `build_morning_reading.ts`를 현재 인자로 각각 실행해 경로 오류가 네트워크보다 먼저 발생하는지 확인하고, 실제 메시지를 정확히 단언한다.
 3. 저장소 루트에서 `PATH="$HOME/.bun/bin:$PATH" bun test career-os/scripts`를 실행해 실패 0건, 기존 skip 1건을 확인한다. `PATH="$HOME/.bun/bin:$PATH" bunx tsc --noEmit`도 실행한다.
 
-## 전체 완료 표시
+## phase 완료 표시
 
-전체 검증이 통과하면 `career-os/tasks/plan130-hermes-skill-paths/index.json`의 `status`를 `completed`, `current_phase`를 `4`로 바꾼다.
-수정 뒤 JSON 형식을 읽고 두 필드의 값을 확인한다.
+전체 검증이 통과하면 리더가 phase 04를 커밋한다.
+후속 phase 05를 추가했으므로 전체 완료 표시는 그 검증 뒤에 한다.
 
 ## 범위와 검증
 
-수정 파일은 `career-os/scripts/lib/cli-contract.test.ts`와 `career-os/tasks/plan130-hermes-skill-paths/index.json`이다.
+수정 파일은 `career-os/scripts/lib/cli-contract.test.ts`다.
 프로덕션 CLI와 Backend, 운영 상태는 바꾸지 않는다.
