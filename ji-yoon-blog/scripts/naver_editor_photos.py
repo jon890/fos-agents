@@ -76,8 +76,9 @@ def image_uploaded(page: Page, index: int) -> bool:
     """자리만 생긴 상태가 아니라 네이버 사진 주소로 전송됐는지 읽는다."""
     return bool(
         page.js(
-            f"[...document.querySelectorAll('.se-component.se-image')][{index}]"
-            "?.querySelector('img')?.src.includes('blogfiles.pstatic.net')"
+            f"(() => {{ const img = [...document.querySelectorAll('.se-component.se-image')][{index}]"
+            "?.querySelector('img'); return !!(img && img.src.includes('blogfiles.pstatic.net')"
+            " && img.complete && img.naturalWidth > 0); })()"
         )
     )
 
@@ -187,9 +188,15 @@ def cmd_photos(page: Page, args: argparse.Namespace) -> int:
             print(f"사진에 `문서 너비`를 적용하지 못했다: {path}", file=sys.stderr)
             return 1
         inserted += 1
+        if any(not image_uploaded(page, index) for index in range(inserted)):
+            print("사진 배치 뒤 전송이 끝나지 않은 사진이 있다. 새 탭에서 다시 시작한다", file=sys.stderr)
+            return 1
 
     if image_count(page) != len(blocks):
         print("사진 개수가 초안과 다르다", file=sys.stderr)
+        return 1
+    if any(not image_uploaded(page, index) for index in range(len(blocks))):
+        print("사진 전송이 끝나지 않은 것이 있다", file=sys.stderr)
         return 1
     print(f"사진 {inserted}개를 자리마다 넣고 모두 `문서 너비`로 맞췄다")
     set_stage(page, args, "photos", True)

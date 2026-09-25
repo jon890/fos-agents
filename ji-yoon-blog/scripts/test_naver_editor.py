@@ -4,6 +4,8 @@ import argparse
 import contextlib
 import io
 import json
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -165,6 +167,38 @@ class EditorGateTest(unittest.TestCase):
         attach.assert_not_called()
         self.assertIn("전송이 끝나지 않은 것", stderr.getvalue())
 
+    @unittest.skipUnless(shutil.which("node"), "JavaScript 런타임이 없다")
+    def test_photo_is_uploaded_only_when_remote_image_has_loaded(self):
+        class Page:
+            def __init__(self, src, complete, natural_width):
+                self.image = {
+                    "src": src, "complete": complete, "naturalWidth": natural_width
+                }
+
+            def js(self, expression):
+                setup = (
+                    f"const img = {json.dumps(self.image)};"
+                    "globalThis.document = {querySelectorAll: () => "
+                    "[{querySelector: () => img}]};"
+                )
+                output = subprocess.check_output(
+                    ["node", "-e", setup + f"console.log(JSON.stringify({expression}));"],
+                    text=True,
+                )
+                return json.loads(output)
+
+        remote = "https://blogfiles.pstatic.net/photo.jpg"
+        cases = [
+            ("data:image/jpeg;base64,a", True, 100, False),
+            (remote, False, 0, False),
+            (remote, True, 0, False),
+            (remote, True, 100, True),
+        ]
+        for src, complete, natural_width, expected in cases:
+            with self.subTest(src=src, complete=complete, natural_width=natural_width):
+                page = Page(src, complete, natural_width)
+                self.assertEqual(naver_editor_photos.image_uploaded(page, 0), expected)
+
     def test_open_cancels_only_resume_prompt(self):
         class Page:
             def js(self, expression):
@@ -244,6 +278,53 @@ class EditorGateTest(unittest.TestCase):
             self.assertEqual(naver_editor.cmd_save(page, args), 1)
         click.assert_not_called()
         self.assertIn("components, settings", stderr.getvalue())
+
+    def test_save_refuses_image_that_is_still_local(self):
+        draft = {
+            "title": "[자동화 테스트] 사진 전송",
+            "category": "맛집로그",
+            "tags": ["식빵"],
+            "blocks": [{"type": "image", "path": "photos/001.jpg"}],
+        }
+        args = argparse.Namespace(draft_data=draft, draft_hash="same")
+
+        class Page:
+            def js(self, _expression):
+                return 1
+
+        with patch.object(naver_editor_settings, "progress", return_value={
+            "draftHash": "same", "passed": ["fill", "photos", "components", "settings"]
+        }), patch.object(naver_editor_settings, "paragraphs", side_effect=[
+            [draft["title"]], []
+        ]), patch.object(naver_editor_settings, "image_count", return_value=1), \
+                patch.object(naver_editor_settings, "image_uploaded", return_value=False), \
+                patch.object(naver_editor_settings, "component_count", return_value=0), \
+                patch.object(naver_editor_settings, "component_state", return_value={}), \
+                patch.object(naver_editor_settings, "component_problems", return_value=[]), \
+                patch.object(naver_editor_settings, "open_settings", return_value=True), \
+                patch.object(naver_editor_settings, "settings_state", return_value={
+                    "category": "맛집로그", "tags": ["식빵"]
+                }), patch.object(naver_editor_settings, "close_settings", return_value=True):
+            problems = naver_editor_settings.save_readiness(Page(), args)
+        self.assertTrue(any("전송" in problem for problem in problems), problems)
+
+    def test_save_rechecks_photo_immediately_before_click(self):
+        draft = {"title": "사진 재확인", "blocks": [{"type": "image", "path": "photos/001.jpg"}]}
+        args = argparse.Namespace(draft_data=draft, draft_hash="same")
+
+        class Page:
+            def js(self, _expression):
+                return 5
+
+        with patch.object(naver_editor_settings, "settings_open", return_value=False), \
+                patch.object(naver_editor_settings, "save_readiness", return_value=[]), \
+                patch.object(naver_editor_settings, "image_count", return_value=1), \
+                patch.object(naver_editor_settings, "image_uploaded", return_value=False), \
+                patch.object(naver_editor_settings, "click_button") as click, \
+                contextlib.redirect_stderr(io.StringIO()) as stderr:
+            self.assertEqual(naver_editor_settings.cmd_save(Page(), args), 1)
+        click.assert_not_called()
+        self.assertIn("저장 직전에", stderr.getvalue())
 
 
 if __name__ == "__main__":

@@ -25,7 +25,7 @@ from naver_editor_core import (
     set_stage,
     wait_until,
 )
-from naver_editor_photos import image_count
+from naver_editor_photos import image_count, image_uploaded
 
 PUBLISH_SETTINGS_BUTTON = 'button[data-click-area="tpb.publish"]'
 
@@ -200,6 +200,14 @@ def save_readiness(page: Page, args: argparse.Namespace) -> list[str]:
             problems.append(f"태그가 다르다: {state.get('tags', [])!r}")
         if not close_settings(page):
             problems.append("발행 설정을 닫지 못했다")
+    if actual["사진"] == expected["사진"]:
+        incomplete = [
+            str(index + 1)
+            for index in range(actual["사진"])
+            if not image_uploaded(page, index)
+        ]
+        if incomplete:
+            problems.append(f"사진 전송이 끝나지 않았다: {', '.join(incomplete)}번째")
     return problems
 
 
@@ -217,6 +225,12 @@ def cmd_save(page: Page, args: argparse.Namespace) -> int:
     before = page.js(save_count_js())
     if before is None:
         print("임시저장 개수를 읽지 못해 저장하지 않는다", file=sys.stderr)
+        return 1
+    photo_count = sum(block["type"] == "image" for block in args.draft_data["blocks"])
+    if image_count(page) != photo_count or any(
+        not image_uploaded(page, index) for index in range(photo_count)
+    ):
+        print("저장 직전에 사진 수나 전송 상태가 달라져 저장하지 않는다", file=sys.stderr)
         return 1
     # JS의 `.click()`은 저장되지 않는다. 사람이 누른 것으로 인정되는 마우스 이벤트를 쓴다.
     if not click_button(page, "저장"):
@@ -262,6 +276,9 @@ def cmd_state(page: Page, args: argparse.Namespace) -> int:
         "bodyLines": len(body),
         "bodyChars": sum(map(len, body)),
         "images": image_count(page),
+        "uploadedImages": sum(
+            image_uploaded(page, index) for index in range(image_count(page))
+        ),
         "fitImages": page.js(
             "document.querySelectorAll('.se-component.se-image .se-component-content-fit').length"
         )
