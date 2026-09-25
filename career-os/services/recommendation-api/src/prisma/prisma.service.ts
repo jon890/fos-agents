@@ -22,6 +22,9 @@ export function mariaDbPoolConfig(databaseUrl: string): PoolConfig {
     password: decodeURIComponent(url.password),
     database: decodeURIComponent(url.pathname.replace(/^\//, "")),
     timezone: "Z",
+    // MySQL 인증 캐시가 비어도 전체 인증을 할 수 있게 TLS 를 쓴다.
+    // 같은 docker network 의 MySQL container 가 자체 서명 인증서를 쓰므로 CA 검증은 하지 않는다.
+    ssl: { rejectUnauthorized: false },
     // 드라이버 기본값은 10 이다. 쓰기 transaction 이 길어지면 열한 번째 요청이
     // 일이 느려서가 아니라 연결을 얻지 못해 끝난다. 값을 코드에 명시해 눈에 보이게 둔다.
     connectionLimit: 20,
