@@ -35,6 +35,13 @@ STICKER_BUTTON = "button.se-sticker-toolbar-button"
 PLACE_BUTTON = "button.se-map-toolbar-button"
 
 
+def place_address_without_repeated_name(name: str, address: str) -> str:
+    """지도 검색 결과와 카드 주소 끝에 반복된 상호명을 제거한다."""
+    address = normalize(address)
+    suffix = " " + normalize(name)
+    return address[: -len(suffix)] if suffix.strip() and address.endswith(suffix) else address
+
+
 def insert_sticker(page: Page, block: dict) -> str:
     """자리표시 문단에 코드로 지정한 실제 스티커를 넣는다."""
     code = block.get("stickerCode", "")
@@ -76,12 +83,7 @@ def place_candidates(page: Page) -> list[dict]:
     )
     candidates = json.loads(raw or "[]")
     for item in candidates:
-        # 검색 결과의 행에는 주소 다음에 상호명이 한 번 더 표시될 수 있다.
-        suffix = " " + normalize(item["name"])
-        address = normalize(item["address"])
-        if suffix.strip() and address.endswith(suffix):
-            address = address[: -len(suffix)]
-        item["address"] = address
+        item["address"] = place_address_without_repeated_name(item["name"], item["address"])
     return candidates
 
 
@@ -177,13 +179,23 @@ def insert_map(page: Page, block: dict) -> str:
 
 
 def component_state(page: Page) -> dict:
-    raw = page.js(
-        "JSON.stringify({"
-        "stickers:[...document.querySelectorAll('.se-component.se-sticker img')].map(e=>e.alt),"
-        "maps:[...document.querySelectorAll('.se-component.se-placesMap')].map(e=>e.innerText)"
-        "})"
+    stickers = []
+    for index in range(component_count(page, "sticker")):
+        def visible_sticker_code() -> str:
+            return page.js(
+                f"(() => {{ const sticker = [...document.querySelectorAll('.se-component.se-sticker')][{index}];"
+                " if (!sticker) return '';"
+                " sticker.scrollIntoView({behavior: 'instant', block: 'center'});"
+                " return sticker.querySelector('img')?.alt || ''; })()"
+            ) or ""
+
+        wait_until(lambda: bool(visible_sticker_code()), seconds=15.0)
+        stickers.append(visible_sticker_code())
+    raw_maps = page.js(
+        "JSON.stringify([...document.querySelectorAll('.se-component.se-placesMap')]"
+        ".map(e=>e.innerText))"
     )
-    return json.loads(raw or "{}")
+    return {"stickers": stickers, "maps": json.loads(raw_maps or "[]")}
 
 
 def component_problems(draft: dict, state: dict, lines: list[str]) -> list[str]:
@@ -203,7 +215,12 @@ def component_problems(draft: dict, state: dict, lines: list[str]) -> list[str]:
         for text in state.get("maps", [])
     ]
     actual_maps = [
-        (parts[0], normalize_place_address(parts[1])) for parts in maps if len(parts) >= 2
+        (
+            parts[0],
+            normalize_place_address(place_address_without_repeated_name(parts[0], parts[1])),
+        )
+        for parts in maps
+        if len(parts) >= 2
     ]
     if actual_maps != wanted_maps:
         problems.append("지도 상호명이나 주소가 초안과 다르다")

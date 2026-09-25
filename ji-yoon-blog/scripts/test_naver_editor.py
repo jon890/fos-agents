@@ -57,6 +57,36 @@ class EditorGateTest(unittest.TestCase):
         ]}
         self.assertEqual(naver_editor.component_problems(draft, state, []), [])
 
+    def test_component_check_ignores_name_repeated_after_map_address(self):
+        draft = {"blocks": [{
+            "type": "map", "name": "또아식빵", "address": "광주 광산구 송정로8번길 11"
+        }]}
+        state = {"stickers": [], "maps": [
+            "또아식빵\n\n전남광주통합특별시 광산구 송정로8번길 11 또아식빵\n\n\t"
+        ]}
+        self.assertEqual(naver_editor.component_problems(draft, state, []), [])
+
+    def test_component_state_reveals_sticker_before_reading_code(self):
+        class Page:
+            calls = [0, 0]
+
+            def js(self, expression):
+                if "se-sticker\").length" in expression:
+                    return 2
+                if "scrollIntoView" in expression:
+                    index = 1 if "[1]" in expression else 0
+                    self.calls[index] += 1
+                    if index == 1 and self.calls[index] == 1:
+                        return ""
+                    return f"ogq-test-{index}"
+                return "[]"
+
+        page = Page()
+        self.assertEqual(naver_editor_components.component_state(page), {
+            "stickers": ["ogq-test-0", "ogq-test-1"], "maps": []
+        })
+        self.assertGreaterEqual(page.calls[1], 2)
+
     def test_sticker_waits_for_placeholder_after_editor_rerender(self):
         class Page:
             def js(self, _expression):
