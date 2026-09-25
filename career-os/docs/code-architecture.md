@@ -155,6 +155,8 @@ SSH client는 `career-storage`를 원격 호출하고, 홈서버의 Hermes는 �
 `services/recommendation-api/`는 포지션과 공부 추천의 장기 상태를 제공하는 Backend다.
 Node 22 위의 NestJS로 돌고 Prisma로 MySQL을 읽고 쓴다.
 DB 연결은 MySQL 인증 캐시가 비어도 전체 인증을 할 수 있도록 TLS를 쓴다.
+Backend와 MySQL이 속한 같은 Docker network를 신뢰 경계로 본다.
+MySQL container가 자체 서명 인증서를 사용하므로 서버 인증서의 CA 검증은 하지 않는다.
 모노레포 루트와 별도의 `package.json`과 `tsconfig.json`을 가진 독립 package다.
 결정과 근거는 [ADR-121](adr/ADR-121-추천-backend는-nestjs와-prisma로-운영한다.md)과
 [ADR-122](adr/ADR-122-추천-상태는-질의-단위로-읽고-쓴다.md)에 있다.
