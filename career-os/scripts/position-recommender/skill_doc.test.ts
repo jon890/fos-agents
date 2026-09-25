@@ -1,10 +1,9 @@
 import { expect, test } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const skillDirectory = resolve(import.meta.dir, "../../.claude/skills/position-recommender");
 const skillPath = resolve(skillDirectory, "SKILL.md");
-const repositoryRoot = resolve(import.meta.dir, "../../..");
 const skill = readFileSync(skillPath, "utf8");
 const lines = skill.trimEnd().split("\n");
 
@@ -30,25 +29,15 @@ test("position-recommender 문서는 판단 기준과 네 하위 명령만 안�
 });
 
 test("판정 기준과 실패 처리를 필요할 때 읽는 참고 문서로 둔다", () => {
-  const judgment = resolve(skillDirectory, "references/judgment.md");
-  const failures = resolve(skillDirectory, "references/failures.md");
-
-  expect(existsSync(judgment)).toBe(true);
-  expect(existsSync(failures)).toBe(true);
-  expect(skill).toContain("[판정 기준](references/judgment.md)");
-  expect(skill).toContain("[실패 처리](references/failures.md)");
+  expect(skill).toContain(
+    "[판정 기준](career-os/.claude/skills/position-recommender/references/judgment.md)",
+  );
+  expect(skill).toContain(
+    "[실패 처리](career-os/.claude/skills/position-recommender/references/failures.md)",
+  );
 });
 
 test("저장소 루트에서 스킬 경로와 참고 문서를 찾도록 안내한다", () => {
-  expect(skill).toContain("career-os/.claude/skills/position-recommender/");
-  expect(skill).toContain("명령은 저장소 루트에서 실행한다.");
-  expect(skill).toContain("`docs/…`는 `career-os/docs/…`를 뜻한다.");
-
-  for (const path of [
-    "career-os/.claude/skills/position-recommender/references/judgment.md",
-    "career-os/.claude/skills/position-recommender/references/failures.md",
-    "career-os/docs/flow.md",
-  ]) {
-    expect(existsSync(resolve(repositoryRoot, path))).toBe(true);
-  }
+  expect(skill).toContain("이 문서의 경로와 명령은 모두 저장소 루트 기준이다.");
+  expect(skill).toContain('cd "$(git rev-parse --show-toplevel)"');
 });

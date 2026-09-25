@@ -1,7 +1,7 @@
 # 추천 실행 계약
 
 이 문서는 현재 CLI의 인자와 실행 순서를 설명한다.
-추천 기준은 [스킬 본문](../SKILL.md)을 따른다.
+추천 기준은 [스킬 본문](career-os/.claude/skills/study-topic-recommender/SKILL.md)을 따른다.
 
 명령의 `<ROOT>`는 Git 저장소 루트, `<RUN_DIR>`는 실행별 시스템 임시 디렉터리다.
 `CAREER_OS_ROOT`는 임시 실행 경로이며 영구 이력 경로로 사용하지 않는다.

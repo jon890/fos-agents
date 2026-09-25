@@ -7,10 +7,8 @@ description: 국내외 기술 블로그, 개발 동향과 영상에서 이전 �
 
 ## 경로
 
-이 스킬의 파일은 저장소 루트 기준 `career-os/.claude/skills/study-topic-recommender/` 아래에 있다.
-이 문서에서 `references/…`는 그 아래 경로를 뜻한다.
-명령은 저장소 루트에서 실행한다.
-`docs/…`는 `career-os/docs/…`를 뜻한다.
+이 문서의 경로와 명령은 모두 저장소 루트 기준이다.
+현재 디렉터리가 저장소 루트가 아니면 `cd "$(git rev-parse --show-toplevel)"`로 이동한다.
 `career-workspace` 파일 동기화 명령을 실행하지 않는다. 추천 상태는 Backend에서 읽고 쓴다.
 
 ## 목표
@@ -42,9 +40,9 @@ flowchart TD
 ### 학습 목적과 최근 추천 확인
 
 현재 요청을 우선하고, 필요한 개인 맥락은 `brain-search`로 private 커리어 현황과 학습 관심사를 확인한다.
-실제 학습 경험은 읽기 전용 `sources/fos-study/`에서 필요한 만큼 확인한다.
+실제 학습 경험은 읽기 전용 `career-os/sources/fos-study/`에서 필요한 만큼 확인한다.
 
-새 추천을 생성할 때는 [실행 계약](references/execution.md)에 따라 후보를 준비한다.
+새 추천을 생성할 때는 [실행 계약](career-os/.claude/skills/study-topic-recommender/references/execution.md)에 따라 후보를 준비한다.
 **후보 API 호출이 실패하면 오래된 후보로 새 추천을 계속하지 않는다.**
 
 후보 API가 돌려준 `recentStudyTopicKeys`로 최근 주제 분포를 비교해 AI, 백엔드와 그 밖의 관심사 분포를 판단한다.
@@ -58,7 +56,7 @@ flowchart TD
 ### 등록된 소스 수집과 누락 점검
 
 Backend에 등록된 활성 소스를 모두 수집하고 소스별 결과를 확인한다.
-소스를 추가하거나 점검할 때는 [소스 관리](references/source-management.md)를 따른다.
+소스를 추가하거나 점검할 때는 [소스 관리](career-os/.claude/skills/study-topic-recommender/references/source-management.md)를 따른다.
 피드는 최신 항목을 제한된 개수만큼 제공하므로 블로그의 과거 글 전체를 수집했다고 표현하지 않는다.
 백엔드 후보가 부족하면 수집 누락이나 실패부터 확인한다.
 
@@ -107,7 +105,7 @@ YouTube도 글과 함께 검토한다.
 
 ### HTML 생성과 검증
 
-[실행 계약](references/execution.md)의 선택 형식으로 리포트를 만든다.
+[실행 계약](career-os/.claude/skills/study-topic-recommender/references/execution.md)의 선택 형식으로 리포트를 만든다.
 사용자용 결과는 HTML로 제공하고, JSON은 검증과 추천 저장에 사용한다.
 
 추천 근거와 원문 일치 여부를 검토하고 출력 검증을 실행한다.
