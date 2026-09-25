@@ -154,6 +154,9 @@ SSH client는 `career-storage`를 원격 호출하고, 홈서버의 Hermes는 �
 
 `services/recommendation-api/`는 포지션과 공부 추천의 장기 상태를 제공하는 Backend다.
 Node 22 위의 NestJS로 돌고 Prisma로 MySQL을 읽고 쓴다.
+DB 연결은 MySQL 인증 캐시가 비어도 전체 인증을 할 수 있도록 TLS를 쓴다.
+Backend와 MySQL이 속한 같은 Docker network를 신뢰 경계로 본다.
+MySQL container가 자체 서명 인증서를 사용하므로 서버 인증서의 CA 검증은 하지 않는다.
 모노레포 루트와 별도의 `package.json`과 `tsconfig.json`을 가진 독립 package다.
 결정과 근거는 [ADR-121](adr/ADR-121-추천-backend는-nestjs와-prisma로-운영한다.md)과
 [ADR-122](adr/ADR-122-추천-상태는-질의-단위로-읽고-쓴다.md)에 있다.
@@ -508,7 +511,7 @@ skill은 필요한 정보를 실행 시점에 조회하고 TypeScript 스크립�
 | --- | --- |
 | `morning_reading_cli.ts` | 일일 실행. 수집, 후보 조회, 선택 검증, 추천 저장 |
 | `build_morning_reading.ts`, `validate_outputs.ts` | HTML 생성과 산출물 검증 |
-| `manage_reading_sources.ts` | 사람이 소스를 조회하고 더하고 고치고 끈다 |
+| `manage_reading_sources.ts` | 사람이 소스를 조회하고 더하고 고치고 끈다. `help`와 `template`는 API 연결 없이 사용법과 요청 초안을 보여준다 |
 | `configure_study_recommendation.ts` | 사람이 후보자 기준 버전을 올린다 |
 | `import_study_state.ts` | 파일에 있던 소스와 추천 이력을 Backend 로 옮기는 일회성 명령 |
 
@@ -540,7 +543,8 @@ client 가 읽는 환경값은 포지션 추천과 같다. 같은 Backend 이고
 | `CAREER_RECOMMENDATION_API_TOKEN` 또는 `CAREER_RECOMMENDATION_API_TOKEN_FILE` | Bearer token. 파일은 mode 600 |
 | `YOUTUBE_DATA_API_KEY` | 선택값. 있으면 YouTube uploads playlist 과거 수집을 쓴다 |
 
-값이 없으면 실행은 시작 전에 실패한다. 브라우저 관리자 쿠키나 세션을 복제하지 않는다.
+`manage_reading_sources.ts`의 `list`, `add`, `update`, `disable`, `enable`과 다른 API 사용 명령은 연결 값이 없으면 요청 전에 실패한다.
+`help`와 `template`는 연결 값을 읽지 않는다. 브라우저 관리자 쿠키나 세션을 복제하지 않는다.
 
 ## sync-profile
 

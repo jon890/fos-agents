@@ -5,6 +5,11 @@ description: 열려 있는 채용공고를 모아 후보자가 해온 일과 선
 
 # position-recommender
 
+## 경로
+
+이 문서의 경로와 명령은 모두 저장소 루트 기준이다.
+현재 디렉터리가 저장소 루트가 아니면 `cd "$(git rev-parse --show-toplevel)"`로 이동한다.
+
 ## 목표
 
 **지금 열린 공고 가운데 지원할 가치가 있는 것을 고르고, 그 회사가 어떤 곳인지 세 축으로 판정한다.**
@@ -20,16 +25,15 @@ description: 열려 있는 채용공고를 모아 후보자가 해온 일과 선
 
 ## 판단 근거
 
-회사 판정과 공고 점수는 [판정 기준](references/judgment.md)을 따른다.
-처리할 수 없는 항목은 [실패 처리](references/failures.md)의 코드와 행동을 따른다.
+회사 판정과 공고 점수는 [판정 기준](career-os/.claude/skills/position-recommender/references/judgment.md)을 따른다.
+처리할 수 없는 항목은 [실패 처리](career-os/.claude/skills/position-recommender/references/failures.md)의 코드와 행동을 따른다.
 
 공고를 분석할 때는 `brain-search`로 현재 역할 기준과 이직 우선순위를 확인한다.
-구체적인 프로젝트 근거는 읽기 전용인 `sources/fos-study/task/`에서 확인한다.
+구체적인 프로젝트 근거는 읽기 전용인 `career-os/sources/fos-study/task/`에서 확인한다.
 큐에 든 공고만 분석하며, 닫힘 여부와 개인 제외 조건은 모델이 추측하지 않는다.
 
 ## 실행
 
-명령은 저장소 루트에서 실행한다.
 `CAREER_RECOMMENDATION_API_URL`과 token 설정이 필요하며, Backend 장애가 발생하면 파일 이력으로 전환하지 않고 중단한다.
 
 | 명령 | 하는 일 | 다음 판단 |
