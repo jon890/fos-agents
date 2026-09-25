@@ -35,7 +35,7 @@ function codePathReferences(document: string): string[] {
   ];
 
   return codeSections.flatMap((section) =>
-    [...section.matchAll(/(?:career-os|\.agents)\/[A-Za-z0-9_./<>-]+|(?:\.\.\/|\.\/|references\/|docs\/|sources\/)[A-Za-z0-9_./<>-]+/g)].map(
+    [...section.matchAll(/(?:career-os|\.agents)\/[A-Za-z0-9_./<>-]+|(?:\.\.\/|\.\/|references\/|docs\/|sources\/)[A-Za-z0-9_./<>-]+|<[^>]+>\/[A-Za-z0-9_./-]+/g)].map(
       ([path]) => path,
     ),
   );
@@ -59,14 +59,14 @@ function validatePathReference(reference: string, documentPath: string, requireR
     /^(?:\.\.\/|\.\/|references\/|docs\/|sources\/)/,
   );
 
-  if (/<[^>]+>/.test(path)) {
-    return;
-  }
-
   if (requireRootPrefix) {
     expect(path, `${documentPath}의 로컬 Markdown 링크는 저장소 루트 경로여야 합니다.`).toMatch(
       /^(?:career-os|\.agents)\//,
     );
+  }
+
+  if (/<[^>]+>/.test(path)) {
+    return;
   }
 
   if (
@@ -159,10 +159,16 @@ test("코드 경로도 현재 디렉터리 상대 경로를 허용하지 않는�
   expect(() => validatePathReferences("`./README.md`", "fixture.md")).toThrow("상대 경로가 남아 있습니다.");
 });
 
-test("일반 자리표시자가 든 경로는 존재 검사에서 제외한다", () => {
+test("루트 접두사가 없는 자리표시자 Markdown 링크는 실패한다", () => {
+  expect(() => validatePathReferences("[실행 파일](<RUN_DIR>/output.json)", "fixture.md")).toThrow(
+    "로컬 Markdown 링크는 저장소 루트 경로여야 합니다.",
+  );
+});
+
+test("루트 경로의 자리표시자와 코드 실행 경로는 존재 검사에서 제외한다", () => {
   expect(() =>
     validatePathReferences(
-      "[실행 파일](<RUN_DIR>/output.json) `career-os/<WORKSPACE>/result.json` ```bash\ncareer-os/<RUN_DIR>/result.json\n```",
+      "[실행 파일](career-os/<WORKSPACE>/result.json) `<RUN_DIR>/output.json` `career-os/<WORKSPACE>/result.json` ```bash\ncareer-os/<RUN_DIR>/result.json\n```",
       "fixture.md",
     ),
   ).not.toThrow();
