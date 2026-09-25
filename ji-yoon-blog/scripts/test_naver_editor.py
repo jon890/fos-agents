@@ -160,7 +160,7 @@ class EditorGateTest(unittest.TestCase):
         with patch.object(naver_editor_photos, "set_stage"), \
                 patch.object(naver_editor_photos, "require_clear_screen", return_value=""), \
                 patch.object(naver_editor_photos, "image_count", return_value=1), \
-                patch.object(naver_editor_photos, "image_uploaded", return_value=False), \
+                patch.object(naver_editor_photos, "incomplete_images", return_value=[0]), \
                 patch.object(naver_editor_photos, "attach_photos") as attach, \
                 contextlib.redirect_stderr(io.StringIO()) as stderr:
             self.assertEqual(naver_editor.cmd_photos(Page(), args), 1)
@@ -194,12 +194,37 @@ class EditorGateTest(unittest.TestCase):
                 patch.object(naver_editor_photos, "focus_placeholder", return_value=True), \
                 patch.object(naver_editor_photos, "attach_photos", side_effect=attach), \
                 patch.object(naver_editor_photos, "fit_image", return_value=True), \
-                patch.object(naver_editor_photos, "image_uploaded", side_effect=[
-                    False, True, True, False, True, True
-                ]), \
+                patch.object(naver_editor_photos, "image_uploaded", side_effect=[False, True, True]), \
+                patch.object(naver_editor_photos, "incomplete_images", return_value=[]), \
                 patch.object(naver_editor_photos, "wait_until", side_effect=
                              lambda check, seconds: check() or check()):
             self.assertEqual(naver_editor_photos.cmd_photos(page, args), 0)
+
+    def test_offscreen_preview_recovers_after_image_is_scrolled_into_view(self):
+        class Page:
+            def __init__(self):
+                self.visible = [True, False]
+                self.scrolled = []
+
+            def js(self, expression):
+                index = 1 if "[1]" in expression else 0
+                if "scrollIntoView" in expression:
+                    self.visible[index] = True
+                    self.scrolled.append(index)
+                    return True
+                return self.visible[index]
+
+        page = Page()
+        self.assertEqual(naver_editor_photos.incomplete_images(page, 2), [])
+        self.assertEqual(page.scrolled, [0, 1])
+
+    def test_offscreen_preview_that_does_not_recover_blocks_save(self):
+        class Page:
+            def js(self, expression):
+                return "scrollIntoView" in expression
+
+        with patch.object(naver_editor_photos, "wait_until", side_effect=lambda check, seconds: check()):
+            self.assertEqual(naver_editor_photos.incomplete_images(Page(), 1), [0])
 
     @unittest.skipUnless(shutil.which("node"), "JavaScript 런타임이 없다")
     def test_photo_is_uploaded_only_when_remote_image_has_loaded(self):
@@ -331,7 +356,7 @@ class EditorGateTest(unittest.TestCase):
         }), patch.object(naver_editor_settings, "paragraphs", side_effect=[
             [draft["title"]], []
         ]), patch.object(naver_editor_settings, "image_count", return_value=1), \
-                patch.object(naver_editor_settings, "image_uploaded", return_value=False), \
+                patch.object(naver_editor_settings, "incomplete_images", return_value=[0]), \
                 patch.object(naver_editor_settings, "component_count", return_value=0), \
                 patch.object(naver_editor_settings, "component_state", return_value={}), \
                 patch.object(naver_editor_settings, "component_problems", return_value=[]), \
@@ -353,7 +378,7 @@ class EditorGateTest(unittest.TestCase):
         with patch.object(naver_editor_settings, "settings_open", return_value=False), \
                 patch.object(naver_editor_settings, "save_readiness", return_value=[]), \
                 patch.object(naver_editor_settings, "image_count", return_value=1), \
-                patch.object(naver_editor_settings, "image_uploaded", return_value=False), \
+                patch.object(naver_editor_settings, "incomplete_images", return_value=[0]), \
                 patch.object(naver_editor_settings, "click_button") as click, \
                 contextlib.redirect_stderr(io.StringIO()) as stderr:
             self.assertEqual(naver_editor_settings.cmd_save(Page(), args), 1)
