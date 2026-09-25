@@ -1,0 +1,11 @@
+{
+  "name": "plan131-db-auth-tls",
+  "description": "MySQL 인증 캐시가 비어도 추천 Backend 가 DB 에 붙도록 연결을 TLS 로 바꾼다.",
+  "status": "pending",
+  "created_at": "2026-09-25",
+  "total_phases": 1,
+  "current_phase": 1,
+  "phases": [
+    { "number": 1, "file": "phase-01.md", "execution_profile": "standard" }
+  ]
+}
