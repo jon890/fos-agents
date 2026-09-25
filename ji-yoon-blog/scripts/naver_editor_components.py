@@ -74,7 +74,15 @@ def place_candidates(page: Page) -> list[dict]:
         " return {index, name: lines[0] || '', address: lines.slice(1).join(' ')};"
         "}))"
     )
-    return json.loads(raw or "[]")
+    candidates = json.loads(raw or "[]")
+    for item in candidates:
+        # 검색 결과의 행에는 주소 다음에 상호명이 한 번 더 표시될 수 있다.
+        suffix = " " + normalize(item["name"])
+        address = normalize(item["address"])
+        if suffix.strip() and address.endswith(suffix):
+            address = address[: -len(suffix)]
+        item["address"] = address
+    return candidates
 
 
 def ensure_domestic_map(page: Page) -> str:

@@ -230,10 +230,15 @@ def normalize(text: str) -> str:
 
 
 def normalize_place_address(text: str) -> str:
-    """네이버가 덧붙이는 국가명과 경기도의 약칭 차이를 맞춘다."""
+    """네이버 지도와 초안이 다르게 쓰는 지역 표기를 맞춘다."""
     address = " ".join(normalize(text).split()).removeprefix("대한민국 ")
     if address.startswith("경기 "):
         address = "경기도 " + address[len("경기 ") :]
+    # 지도 검색 결과가 같은 도로명 주소에 이 표기들을 번갈아 사용한다.
+    for prefix in ("광주광역시 ", "전남광주통합특별시 "):
+        if address.startswith(prefix):
+            address = "광주 " + address[len(prefix) :]
+            break
     return address
 
 

@@ -28,6 +28,35 @@ class EditorGateTest(unittest.TestCase):
             naver_editor.normalize_place_address(result),
         )
 
+    def test_place_address_matches_observed_gwangju_map_label(self):
+        entered = "광주 광산구 송정로8번길 11"
+        result = "전남광주통합특별시 광산구 송정로8번길 11"
+        self.assertEqual(
+            naver_editor.normalize_place_address(entered),
+            naver_editor.normalize_place_address(result),
+        )
+
+    def test_place_candidates_remove_repeated_name_after_address(self):
+        class Page:
+            def js(self, _expression):
+                return json.dumps([{
+                    "index": 0,
+                    "name": "또아식빵",
+                    "address": "전남광주통합특별시 광산구 송정로8번길 11 또아식빵",
+                }], ensure_ascii=False)
+
+        self.assertEqual(naver_editor_components.place_candidates(Page())[0]["address"],
+                         "전남광주통합특별시 광산구 송정로8번길 11")
+
+    def test_component_check_accepts_observed_gwangju_map_label(self):
+        draft = {"blocks": [{
+            "type": "map", "name": "또아식빵", "address": "광주 광산구 송정로8번길 11"
+        }]}
+        state = {"stickers": [], "maps": [
+            "또아식빵\n전남광주통합특별시 광산구 송정로8번길 11"
+        ]}
+        self.assertEqual(naver_editor.component_problems(draft, state, []), [])
+
     def test_map_search_switches_from_overseas_to_domestic(self):
         class Page:
             mode = "해외"
