@@ -50,7 +50,13 @@
 | `scripts/verify_photo_store.py` | 홈서버 | 연결과 권한 경계 확인 |
 | `scripts/naver_session.py` | 홈서버 | 네이버 세션을 담은 Chrome 을 상주시키고 로그인을 판정한다 |
 | `scripts/cdp.py` | 맥북, 홈서버, Hermes 컨테이너 | CDP 의 WebSocket 창구를 의존성 없이 부른다 |
-| `scripts/naver_editor.py` | 맥북, Hermes 컨테이너 | 새 글쓰기 탭에 글, 사진, 스티커, 장소, 카테고리, 태그를 넣고 임시저장한다 |
+| `scripts/naver_editor.py` | 맥북, Hermes 컨테이너 | CLI 인자를 읽고 정확한 글쓰기 탭과 CDP 연결을 고른다 |
+| `scripts/naver_editor_core.py` | 맥북, Hermes 컨테이너 | 초안 검사, 단계 진행 상태와 SmartEditor 공통 조작을 제공한다 |
+| `scripts/naver_editor_text.py` | 맥북, Hermes 컨테이너 | 제목과 본문을 넣고 초안의 줄과 대조한다 |
+| `scripts/naver_editor_photos.py` | 맥북, Hermes 컨테이너 | 사진 파일 선택 창, 전송 완료와 문서 너비 적용을 확인한다 |
+| `scripts/naver_editor_components.py` | 맥북, Hermes 컨테이너 | 스티커와 국내 지도 검색 결과를 넣고 초안과 대조한다 |
+| `scripts/naver_editor_settings.py` | 맥북, Hermes 컨테이너 | 카테고리와 태그를 넣고 모든 단계가 끝난 뒤에만 임시저장한다 |
+| `scripts/test_naver_editor.py` | 맥북, 홈서버 | 옛 초안 차단, 카테고리 선택, 사진·스티커·지도 대조와 저장 차단을 검증한다 |
 | `.claude/skills/naver-blog-draft/` | 맥북과 홈서버 | 사진에서 임시저장까지의 판단과 절차 |
 | `docs/` | 문서 | 흐름, 스키마, 구조 |
 | `drafts/` | 맥북 | 내려받은 사진과 초안. 추적하지 않는다 |
@@ -79,6 +85,8 @@
 어디서나: photo_set.py ──> 내려받은 파일
          place_hints.py ──> 내려받은 파일
          build_preview.py ──> draft.json + 내려받은 파일
+
+편집기:   naver_editor.py ──> naver_editor_{core,text,photos,components,settings}.py ──> cdp.py
 ```
 
 `photos.py`는 같은 스킬이 두 자리에서 돌기 때문에 길을 스스로 고른다.

@@ -272,6 +272,12 @@ python3 .claude/skills/naver-blog-draft/scripts/photos.py pull 2026-09-04-순돌
 계약을 어기면 종료 코드 2 로 끝나고 어느 블록이 문제인지 알려준다.
 `lines` 에 문자열 하나를 넣는 실수가 가장 잦다. 한 줄짜리 문단도 배열로 넣는다.
 
+예전 초안에 `emoji`만 있는 스티커나 주소가 빠진 장소 블록이 있으면 네이버 글쓰기를 열지 않는다.
+옛 이모지로 `stickerCode`를 짐작하지 않는다.
+사진과 지융이 확인한 사실을 근거로 새 형식의 초안을 다시 만든다.
+그때 협찬 여부를 지융에게 묻고, 지도에 넣을 상호명과 주소를 확인한다.
+`build_preview.py`가 계약 위반을 알리지 않을 때까지 고친 뒤 미리보기를 다시 확인받는다.
+
 ## 7. 미리보기 확인
 
 ```bash
@@ -288,23 +294,27 @@ python3 .claude/skills/naver-blog-draft/scripts/build_preview.py \
 ## 8. 네이버 임시저장
 
 홈서버에 상주하는 Chrome 에 붙어 제목과 본문을 넣고 임시저장한다.
-`open`은 새 탭을 만든다. 출력된 `target-id`를 `TARGET_ID`에 넣고 그 탭에서만 작업한다.
+먼저 초안 검사를 통과시킨다. 실패하면 새 형식으로 다시 만들고 6단계와 7단계부터 반복한다.
+`open`도 초안을 검사한 뒤 새 탭을 만든다. 출력된 `target-id`를 `TARGET_ID`에 넣고 그 탭에서만 작업한다.
 기존 글쓰기 탭은 열거나 저장하지 않는다.
 
 ```bash
-OPEN_OUTPUT=$(python3 scripts/naver_editor.py open) || exit 1
+set -e
+DRAFT='drafts/순돌이곱창/draft.json'
+python3 .claude/skills/naver-blog-draft/scripts/build_preview.py "$DRAFT" \
+  --out drafts/순돌이곱창/preview.html
+OPEN_OUTPUT=$(python3 scripts/naver_editor.py open "$DRAFT")
 printf '%s\n' "$OPEN_OUTPUT"
 TARGET_ID=$(printf '%s\n' "$OPEN_OUTPUT" | sed -n 's/^target-id: //p')
-test -n "$TARGET_ID" || exit 1
-DRAFT='drafts/순돌이곱창/draft.json'
+test -n "$TARGET_ID"
+trap 'python3 scripts/naver_editor.py --target-id "$TARGET_ID" close' EXIT
 REMOTE_PHOTOS='브라우저 쪽 사진 디렉터리'
 python3 scripts/naver_editor.py --target-id "$TARGET_ID" fill "$DRAFT"
 python3 scripts/naver_editor.py --target-id "$TARGET_ID" photos "$DRAFT" --remote-base "$REMOTE_PHOTOS"
 python3 scripts/naver_editor.py --target-id "$TARGET_ID" components "$DRAFT"
 python3 scripts/naver_editor.py --target-id "$TARGET_ID" settings "$DRAFT"
-python3 scripts/naver_editor.py --target-id "$TARGET_ID" save
+python3 scripts/naver_editor.py --target-id "$TARGET_ID" save "$DRAFT"
 python3 scripts/naver_editor.py --target-id "$TARGET_ID" state
-python3 scripts/naver_editor.py --target-id "$TARGET_ID" close
 ```
 
 `REMOTE_PHOTOS`는 브라우저가 실행되는 기계의 사진 디렉터리로 정한다.
@@ -312,6 +322,8 @@ python3 scripts/naver_editor.py --target-id "$TARGET_ID" close
 로그인이나 보안 확인에 막히면 멈추고 지융에게 브라우저 조작을 요청한다.
 장소 검색 결과가 둘 이상이거나 상호명과 주소가 함께 맞지 않으면 멈추고 지융에게 묻는다.
 실패하거나 완료해도 `open`으로 만든 탭은 닫는다.
+한 명령이라도 실패하면 다음 명령과 `save`를 실행하지 않는다.
+`save`도 같은 탭에서 네 단계가 성공했는지와 초안의 사진, 스티커, 지도, 카테고리, 태그가 화면에 있는지 다시 확인한다.
 
 넣는 것과 넣지 못하는 것이 갈린다.
 

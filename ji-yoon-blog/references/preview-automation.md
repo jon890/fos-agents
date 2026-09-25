@@ -111,26 +111,12 @@ ssh <홈서버> 'cd ~/fos-agents/ji-yoon-blog && python3 scripts/naver_session.p
 ## 자동화 절차
 
 홈서버에서 상주 Chrome 을 띄우고, 맥북에서 포트를 이어 붙여 조작한다.
-
-```bash
-OPEN_OUTPUT=$(python3 scripts/naver_editor.py open) || exit 1
-printf '%s\n' "$OPEN_OUTPUT"
-TARGET_ID=$(printf '%s\n' "$OPEN_OUTPUT" | sed -n 's/^target-id: //p')
-test -n "$TARGET_ID" || exit 1
-DRAFT='drafts/순돌이곱창/draft.json'
-REMOTE_PHOTOS='브라우저 쪽 사진 디렉터리'
-python3 scripts/naver_editor.py --target-id "$TARGET_ID" fill "$DRAFT"
-python3 scripts/naver_editor.py --target-id "$TARGET_ID" photos "$DRAFT" --remote-base "$REMOTE_PHOTOS"
-python3 scripts/naver_editor.py --target-id "$TARGET_ID" components "$DRAFT"
-python3 scripts/naver_editor.py --target-id "$TARGET_ID" settings "$DRAFT"
-python3 scripts/naver_editor.py --target-id "$TARGET_ID" save
-python3 scripts/naver_editor.py --target-id "$TARGET_ID" state
-python3 scripts/naver_editor.py --target-id "$TARGET_ID" close
-```
+명령 순서와 실패할 때 탭을 닫는 절차는
+[네이버 임시저장 단계](../.claude/skills/naver-blog-draft/SKILL.md#8-네이버-임시저장)를 따른다.
 
 `naver_session.py` 가 브라우저와 로그인 판정을, `naver_editor.py` 가 편집기 조작을 소유한다.
 두 스크립트 모두 `ji-yoon-blog/scripts/` 에 있다.
-`open`은 새 탭을 만들고, 뒤의 명령은 정확한 `target-id`가 있어야 실행된다.
+`open`은 초안을 검사한 뒤 새 탭을 만들고, 뒤의 명령은 정확한 `target-id`가 있어야 실행된다.
 기존 글쓰기 탭은 고르지 않는다. 작업이 끝나거나 멈추면 새 탭을 닫는다.
 홈서버 연결과 로그인 방법은 위 「로그인 방법」을 따른다.
 
