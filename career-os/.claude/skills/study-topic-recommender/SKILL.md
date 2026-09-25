@@ -5,6 +5,14 @@ description: 국내외 기술 블로그, 개발 동향과 영상에서 이전 �
 
 # 아침 공부 주제 추천
 
+## 경로
+
+이 스킬의 파일은 저장소 루트 기준 `career-os/.claude/skills/study-topic-recommender/` 아래에 있다.
+이 문서에서 `references/…`는 그 아래 경로를 뜻한다.
+명령은 저장소 루트에서 실행한다.
+`docs/…`는 `career-os/docs/…`를 뜻한다.
+`career-workspace` 파일 동기화 명령을 실행하지 않는다. 추천 상태는 Backend에서 읽고 쓴다.
+
 ## 목표
 
 **백엔드를 잘 만드는 데 도움이 되는 글을 중심으로, 자신의 설계와 구현에 적용할 판단을 얻도록 추천한다.**

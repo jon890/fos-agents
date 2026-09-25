@@ -14,7 +14,7 @@ career-os의 각 흐름은 외부 입력을 검증하고, 사용자 판단에 �
 
 ### 비공개 작업본 동기화
 
-`application-package-writer`, `resume-preparer`, `interview-practice`와 `study-topic-recommender`는 공통 CLI로 다음 준비와 반영 절차를 실행한다.
+`application-package-writer`, `resume-preparer`, `interview-practice`는 공통 CLI로 다음 준비와 반영 절차를 실행한다.
 
 ```text
 작성 skill
@@ -73,6 +73,8 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 ```
 
 완료 단계가 실패해도 로컬 결과를 지우지 않는다.
+
+`position-recommender`와 `study-topic-recommender`의 장기 추천 상태는 Backend에서 읽고 쓴다.
 
 ### 추천 상태 Backend
 

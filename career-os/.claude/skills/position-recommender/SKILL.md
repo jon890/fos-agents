@@ -5,6 +5,13 @@ description: 열려 있는 채용공고를 모아 후보자가 해온 일과 선
 
 # position-recommender
 
+## 경로
+
+이 스킬의 파일은 저장소 루트 기준 `career-os/.claude/skills/position-recommender/` 아래에 있다.
+이 문서에서 `references/…`는 그 아래 경로를 뜻한다.
+명령은 저장소 루트에서 실행한다.
+`docs/…`는 `career-os/docs/…`를 뜻한다.
+
 ## 목표
 
 **지금 열린 공고 가운데 지원할 가치가 있는 것을 고르고, 그 회사가 어떤 곳인지 세 축으로 판정한다.**
@@ -29,7 +36,6 @@ description: 열려 있는 채용공고를 모아 후보자가 해온 일과 선
 
 ## 실행
 
-명령은 저장소 루트에서 실행한다.
 `CAREER_RECOMMENDATION_API_URL`과 token 설정이 필요하며, Backend 장애가 발생하면 파일 이력으로 전환하지 않고 중단한다.
 
 | 명령 | 하는 일 | 다음 판단 |
