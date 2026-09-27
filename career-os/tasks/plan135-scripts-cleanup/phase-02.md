@@ -20,12 +20,14 @@
 `reading_contracts.ts` 의 `readingSourcesConfigSchema` 는 옛 config 파일 형식(`_meta.schemaVersion: 6`)이다.
 `reading_sources.ts` 의 `normalizeReadingSources(raw)` 와 검증 함수들이 이것으로 파싱한다.
 Backend 가 원본을 가진 뒤(ADR-126)에는 운영 경로가 Backend 응답을 이 형식으로 감싸서 다시 푸는 데만 쓴다.
+`interview-question-sources/candidate_pool.ts` 도 면접 질문 소스 배열을 같은 옛 config 형식으로 감싸 호출한다.
+이 호출처는 Backend 소스가 아니라 `key` 필드를 가진 면접 질문 소스를 사용한다.
 
 **근거 문서**: `docs/adr/ADR-126-읽을거리-소스-목록은-backend가-원본을-가진다.md`, `docs/code-architecture.md` 의 「study-topic-recommender」 절
 
 ## 의도 메모
 
-- 정규화 규칙(소스 정렬, 활성 소스만 고르기 같은 것)은 남긴다. 바꾸는 것은 입력 모양뿐이다
+- 등록 순서 유지와 비활성 소스 제외 규칙은 남긴다. 바꾸는 것은 입력 모양뿐이다
 - 테스트만 부르는 검증 함수(`validateReadingSources` 등)가 옛 config 형식만을 위해 있으면 함께 지운다. 운영 경로가 쓰는 함수는 남긴다
 - 삭제 전에 `git grep` 으로 호출처를 다시 확인한다. 이 계획을 쓴 뒤 cron 안정화 작업이 이 디렉터리를 고쳤다
 
@@ -44,15 +46,17 @@ Backend 가 원본을 가진 뒤(ADR-126)에는 운영 경로가 Backend 응답�
 `readingHistoryEntrySchema`, `morningStudyHistorySchema` 와 그 타입 export 를 지운다.
 `readingSourcesConfigSchema` 는 작업 항목 3 뒤에 호출처가 없으면 지운다.
 
-### 3. `reading_sources.ts` 와 `morning_reading_cli.ts` 수정
+### 3. `reading_sources.ts`, `morning_reading_cli.ts`, `interview-question-sources/candidate_pool.ts` 수정
 
-- `normalizeReadingSources` 가 Backend 소스 배열을 직접 받게 바꾼다. 시그니처는 `normalizeReadingSources(sources: readonly StudyLibrarySource[]): NormalizedReadingSources` 다. `StudyLibrarySource` 는 `study-library/contracts.ts` 의 타입이다
-- `morning_reading_cli.ts` 의 `_meta` 로 감싸는 코드를 지우고 배열을 그대로 넘긴다
+- `normalizeReadingSources` 가 `reading_contracts.ts` 의 `ReadingSource` 배열을 직접 받게 바꾼다. 시그니처는 `normalizeReadingSources(sources: readonly ReadingSource[]): NormalizedReadingSources` 다
+- `morning_reading_cli.ts` 는 Backend 의 `StudyLibrarySource` 배열을 `ReadingSource` 배열로 옮길 때 `sourceKey` 를 `key` 로, nullable URL 을 선택 필드로 바꾼다. `_meta` 로 감싸는 코드는 지운다
+- `interview-question-sources/candidate_pool.ts` 는 면접 질문 소스에서 만든 `ReadingSource` 배열을 옛 config 포장 없이 넘긴다
 - 옛 config 형식만을 위한 검증 함수와 그 테스트를 지운다
 
 ### 4. 이 phase 를 검증하는 테스트
 
-`career-os/scripts/study-topic-recommender/reading_sources.test.ts` 를 새 시그니처로 옮긴다. 기존 정규화 단언(정렬, 비활성 제외)은 그대로 통과해야 한다.
+`career-os/scripts/study-topic-recommender/reading_sources.test.ts` 를 새 시그니처로 옮긴다. 기존 정규화 단언(등록 순서 유지, 비활성 제외)은 그대로 통과해야 한다.
+면접 질문 후보 수집 호출처가 새 입력 형식으로 빌드되고 기존 수집 테스트가 통과하는지도 확인한다.
 
 ## 검증
 
@@ -75,3 +79,4 @@ PATH="$HOME/.bun/bin:$PATH" bunx tsc --noEmit
 | `career-os/scripts/study-topic-recommender/reading_sources.ts` | 수정 |
 | `career-os/scripts/study-topic-recommender/reading_sources.test.ts` | 수정 |
 | `career-os/scripts/study-topic-recommender/morning_reading_cli.ts` | 수정 |
+| `career-os/scripts/interview-question-sources/candidate_pool.ts` | 수정 |

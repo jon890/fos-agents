@@ -39,12 +39,12 @@
 
 ### 2. `career-workspace/cli.ts` 수정
 
-`managedSkills` 에서 `position-recommender` 와 `study-topic-recommender` 를 뺀다. 이 두 이름을 쓰는 career-workspace 테스트가 있으면 남는 스킬 이름으로 바꾼다.
+`managedSkills` 에서 `position-recommender` 와 `study-topic-recommender` 를 뺀다. 두 스킬의 동기화 성공을 검증하던 career-workspace 테스트는 지운다.
 
 ### 3. 이 phase 를 검증하는 테스트
 
 - `feedback/exclusions.test.ts` 에서 v1 형식 테스트를 지운다. scope 별 필터 테스트와, 알려지지 않은 `source` 를 가진 posting 규칙을 거절하는 테스트는 남기거나 더한다
-- career-workspace 테스트에 `skill begin position-recommender` 가 알 수 없는 스킬로 거절되는 경우를 하나 더한다
+- career-workspace 테스트에 `skill begin position-recommender` 와 `skill begin study-topic-recommender` 가 각각 `INVALID_MANIFEST` 로 거절되는 경우를 표 기반 테스트로 더한다
 
 ## 검증
 

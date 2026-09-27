@@ -53,7 +53,7 @@ preview 종류를 지우고 report 만 남긴다. `render/assets.test.ts` 에서
 
 지운 세 진입점을 부르는 테스트와 「import는 실행하거나 출력하지 않는다」 목록의 해당 항목을 지운다. 남는 스크립트의 단언은 바꾸지 않는다.
 
-### 5. `career-os/package.json` 의 `format:position-recommender` 확인
+### 5. 저장소 루트 `package.json` 의 `format:position-recommender` 확인
 
 지운 파일을 가리키면 그 경로를 뺀다.
 
@@ -88,4 +88,4 @@ PATH="$HOME/.bun/bin:$PATH" bunx tsc --noEmit
 | `career-os/scripts/position-recommender/render/fixture.ts` | 필요하면 수정 |
 | `career-os/scripts/position-recommender/live-postings/candidate_pool.ts` | 수정 |
 | `career-os/scripts/lib/cli-contract.test.ts` | 수정 |
-| `career-os/package.json` | 필요하면 수정 |
+| `package.json` | 필요하면 수정 |
