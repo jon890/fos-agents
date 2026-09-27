@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import {
   attemptResponseSchema,
   personalQuestionUpsertResponseSchema,
@@ -58,13 +58,16 @@ export class InterviewBackendClient {
     questionId: string,
     body: PersonalQuestionBody,
   ): Promise<PersonalQuestionUpsertResponse> {
-    const hash = createHash("sha256").update(JSON.stringify(body), "utf8").digest("hex");
+    // Backend 는 완료된 멱등 기록을 지우지 않는다. 본문으로 키를 만들면 끈 뒤 같은 본문으로
+    // 다시 켜는 요청이 첫 응답의 재생으로 끝나 DB 가 바뀌지 않는다. 그래서 호출마다 새 키를 쓰고,
+    // 네트워크 재시도는 careerBackendRequest 가 같은 키로 한다.
+    const idempotencyKey = `personal-question:${randomUUID()}`;
     return careerBackendRequest(
       this.options,
       "PUT",
       `/api/interview/v1/personal-questions/${encodeURIComponent(questionId)}`,
       body,
-      `personal-question:${hash}`,
+      idempotencyKey,
       personalQuestionUpsertResponseSchema,
     );
   }

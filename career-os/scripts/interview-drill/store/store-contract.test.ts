@@ -66,6 +66,15 @@ function describeStoreContract(name: string, makeStore: () => InterviewPracticeS
       });
       expect(await store.listPersonalQuestions("tech")).toEqual([]);
     });
+
+    test("끈 개인 질문을 같은 내용으로 다시 켜면 목록에 돌아온다", async () => {
+      const store = makeStore();
+      const on = { enabled: true, drillType: "tech" as const, question };
+      await store.upsertPersonalQuestion(question.id, on);
+      await store.upsertPersonalQuestion(question.id, { ...on, enabled: false });
+      await store.upsertPersonalQuestion(question.id, on);
+      expect(await store.listPersonalQuestions("tech")).toHaveLength(1);
+    });
     test("형식이 틀린 기록은 저장하지 않는다", async () => {
       const store = makeStore();
       await expect(store.recordAttempt({ ...body, attemptId: "bad" })).rejects.toThrow();
