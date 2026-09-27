@@ -3,7 +3,8 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { validateReadingCandidatePool } from "../reading_candidate_pool.js";
-import { StudyLibraryApiError, type StudyLibraryClient } from "./client.js";
+import { CareerBackendHttpError } from "../../lib/career-backend-http.ts";
+import type { StudyLibraryClient } from "./client.js";
 import {
   buildReportCountsFromLibrary,
   prepareStudyLibraryCandidates,
@@ -91,7 +92,7 @@ class MockClient {
   async getCandidates(searchParams: Record<string, unknown>) {
     this.params.push(searchParams);
     if (this.failOnCall === this.params.length) {
-      throw new StudyLibraryApiError({ status: 409, code: "VERSION_CONFLICT" });
+      throw new CareerBackendHttpError(409, "VERSION_CONFLICT", "커리어 Backend 요청이 실패했습니다.");
     }
     const next = this.pages.shift();
     if (!next) throw new Error("unexpected candidate page request");

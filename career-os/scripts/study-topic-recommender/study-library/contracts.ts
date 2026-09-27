@@ -93,14 +93,6 @@ export const studyLibraryPublicationResultSchema = z.object({
   publicationId: nonEmptyString,
 });
 
-export const studyLibraryApiErrorSchema = z.object({
-  error: z.object({
-    code: nonEmptyString,
-    message: z.string(),
-    requestId: nonEmptyString,
-  }),
-});
-
 export const studyLibrarySourcePutPayloadSchema = z.object({
   title: nonEmptyString,
   category: readingCategorySchema,
@@ -151,5 +143,4 @@ export type StudyLibraryCandidate = z.infer<typeof studyLibraryCandidateSchema>;
 export type StudyLibraryCandidatePage = z.infer<typeof studyLibraryCandidatePageSchema>;
 export type StudyLibraryRecommendationRunResult = z.infer<typeof studyLibraryRecommendationRunResultSchema>;
 export type StudyLibraryPublicationResult = z.infer<typeof studyLibraryPublicationResultSchema>;
-export type StudyLibraryApiError = z.infer<typeof studyLibraryApiErrorSchema>;
 export type StudyLibrarySourcePutPayload = z.infer<typeof studyLibrarySourcePutPayloadSchema>;

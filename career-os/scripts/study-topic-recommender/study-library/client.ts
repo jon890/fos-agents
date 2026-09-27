@@ -1,8 +1,8 @@
 import type { z } from "zod";
 import { createHash, randomUUID } from "node:crypto";
-import { parseCareerBackendOrigin, resolveCareerBackendConnection } from "../../lib/career-backend-config.ts";
+import { resolveCareerBackendConnection } from "../../lib/career-backend-config.ts";
+import { careerBackendRequest } from "../../lib/career-backend-http.ts";
 import {
-  studyLibraryApiErrorSchema,
   studyLibraryCandidatePageSchema,
   studyLibraryCursorResultSchema,
   studyLibraryIngestionResultSchema,
@@ -27,28 +27,6 @@ export const DEFAULT_STUDY_LIBRARY_TIMEOUT_MS = 10_000;
 export const DEFAULT_STUDY_LIBRARY_MAX_RETRIES = 2;
 
 export type StudyLibraryFetch = (input: URL, init: RequestInit) => Promise<Response>;
-
-export class StudyLibraryClientError extends Error {}
-
-export class StudyLibraryApiError extends StudyLibraryClientError {
-  readonly status: number;
-  readonly code?: string;
-  readonly requestId?: string;
-  readonly retryAfter?: number;
-
-  constructor(input: { status: number; code?: string; requestId?: string; retryAfter?: number }) {
-    const parts = [`HTTP ${input.status}`];
-    if (input.code) parts.push(input.code);
-    if (input.requestId) parts.push(`requestId=${input.requestId}`);
-    if (input.retryAfter !== undefined) parts.push(`retryAfter=${input.retryAfter}`);
-    super(`학습자료 API 요청 실패: ${parts.join(" ")}`);
-    this.name = "StudyLibraryApiError";
-    this.status = input.status;
-    this.code = input.code;
-    this.requestId = input.requestId;
-    this.retryAfter = input.retryAfter;
-  }
-}
 
 export class StudyLibraryConfigError extends Error {
   constructor(message: string) {
@@ -82,13 +60,6 @@ function hashKey(prefix: string, value: unknown): string {
   return `${prefix}:${createHash("sha256").update(canonicalJson(value), "utf8").digest("hex")}`;
 }
 
-function formatIssues(issues: { path: PropertyKey[]; message: string }[]): string {
-  return issues.map((issue) => {
-    const path = issue.path.length > 0 ? `${issue.path.join(".")}: ` : "";
-    return `${path}${issue.message}`;
-  }).join("; ");
-}
-
 function appendSearchParams(url: URL, params?: StudyLibraryRequestOptions["searchParams"]): void {
   if (!params) return;
   for (const [key, value] of Object.entries(params)) {
@@ -97,84 +68,8 @@ function appendSearchParams(url: URL, params?: StudyLibraryRequestOptions["searc
   }
 }
 
-function isRetryableStatus(status: number): boolean {
-  return status >= 500 && status <= 599;
-}
-
-function parseRetryAfter(response: Response): number | undefined {
-  if (response.status !== 429) return undefined;
-  const raw = response.headers.get("Retry-After")?.trim();
-  if (!raw || !/^\d+$/.test(raw)) return undefined;
-  const seconds = Number(raw);
-  return Number.isSafeInteger(seconds) ? seconds : undefined;
-}
-
-export class StudyLibraryBodyReadError extends StudyLibraryClientError {
-  constructor() {
-    super("학습자료 API 응답 본문 읽기 실패");
-    this.name = "StudyLibraryBodyReadError";
-  }
-}
-
-export class StudyLibraryMalformedJsonError extends StudyLibraryClientError {
-  constructor() {
-    super("학습자료 API JSON 응답 파싱 실패");
-    this.name = "StudyLibraryMalformedJsonError";
-  }
-}
-
-export class StudyLibraryResponseValidationError extends StudyLibraryClientError {
-  constructor(issues: { path: PropertyKey[]; message: string }[]) {
-    super(`학습자료 API 응답 검증 실패: ${formatIssues(issues)}`);
-    this.name = "StudyLibraryResponseValidationError";
-  }
-}
-
-export class StudyLibraryNetworkError extends StudyLibraryClientError {
-  constructor() {
-    super("학습자료 API 네트워크 요청 실패");
-    this.name = "StudyLibraryNetworkError";
-  }
-}
-
-async function readJsonBody(response: Response): Promise<unknown> {
-  try {
-    return await response.json();
-  } catch (error) {
-    if (error instanceof SyntaxError) {
-      throw new StudyLibraryMalformedJsonError();
-    }
-    throw new StudyLibraryBodyReadError();
-  }
-}
-
-async function cancelResponseBody(response: Response): Promise<void> {
-  try {
-    await response.body?.cancel();
-  } catch {
-    throw new StudyLibraryBodyReadError();
-  }
-}
-
-async function parseApiError(response: Response): Promise<{ code?: string; requestId?: string; retryAfter?: number }> {
-  let raw: unknown;
-  try {
-    raw = await readJsonBody(response);
-  } catch (error) {
-    if (error instanceof StudyLibraryMalformedJsonError) return { retryAfter: parseRetryAfter(response) };
-    throw error;
-  }
-  const parsed = studyLibraryApiErrorSchema.safeParse(raw);
-  if (!parsed.success) return { retryAfter: parseRetryAfter(response) };
-  return {
-    code: parsed.data.error.code,
-    requestId: parsed.data.error.requestId,
-    retryAfter: parseRetryAfter(response),
-  };
-}
-
 export class StudyLibraryClient {
-  private readonly origin: URL;
+  private readonly baseUrl: string;
   private readonly token: string;
   private readonly fetchImpl: StudyLibraryFetch;
   private readonly timeoutMs: number;
@@ -184,12 +79,15 @@ export class StudyLibraryClient {
     try {
       if (options.origin !== undefined || options.token !== undefined) {
         if (!options.origin?.trim() || !options.token?.trim()) throw new Error("명시적 origin과 token이 모두 필요하다.");
-        this.origin = parseCareerBackendOrigin(options.origin);
-        this.token = options.token.trim();
-        if (this.token.length < 32) throw new Error("커리어 Backend token은 trim 뒤 32자 이상이어야 한다.");
+        const connection = resolveCareerBackendConnection({
+          CAREER_BACKEND_URL: options.origin,
+          CAREER_BACKEND_TOKEN: options.token,
+        });
+        this.baseUrl = connection.baseUrl;
+        this.token = connection.token;
       } else {
         const connection = resolveCareerBackendConnection(process.env);
-        this.origin = parseCareerBackendOrigin(connection.baseUrl);
+        this.baseUrl = connection.baseUrl;
         this.token = connection.token;
       }
     } catch (error) {
@@ -201,7 +99,7 @@ export class StudyLibraryClient {
   }
 
   async request<T>(
-    method: string,
+    method: "GET" | "POST" | "PUT",
     path: string,
     schema: z.ZodType<T>,
     options: StudyLibraryRequestOptions = {}
@@ -209,67 +107,22 @@ export class StudyLibraryClient {
     if (!path.startsWith("/")) {
       throw new Error("API path는 /로 시작해야 한다.");
     }
-    const url = new URL(`${STUDY_LIBRARY_API_BASE_PATH}${path}`, this.origin);
+    const url = new URL(`${STUDY_LIBRARY_API_BASE_PATH}${path}`, this.baseUrl);
     appendSearchParams(url, options.searchParams);
-    const serializedBody = options.body === undefined ? undefined : JSON.stringify(options.body);
-    const headers = new Headers({
-      Accept: "application/json",
-      Authorization: `Bearer ${this.token}`,
-    });
-    if (serializedBody !== undefined) {
-      headers.set("Content-Type", "application/json");
-    }
-    if (options.idempotencyKey) headers.set("Idempotency-Key", options.idempotencyKey);
-
-    for (let attempt = 0; attempt <= this.maxRetries; attempt += 1) {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), this.timeoutMs);
-      let response: Response;
-      try {
-        response = await this.fetchImpl(url, {
-          method,
-          headers,
-          body: serializedBody,
-          redirect: "error",
-          signal: controller.signal,
-        });
-        if (!response.ok) {
-          if (isRetryableStatus(response.status) && attempt < this.maxRetries) {
-            await cancelResponseBody(response);
-            continue;
-          }
-          const apiError = await parseApiError(response);
-          throw new StudyLibraryApiError({
-            status: response.status,
-            code: apiError.code,
-            requestId: apiError.requestId,
-            retryAfter: apiError.retryAfter,
-          });
-        }
-
-        const parsedBody = await readJsonBody(response);
-        const parsed = schema.safeParse(parsedBody);
-        if (!parsed.success) {
-          throw new StudyLibraryResponseValidationError(parsed.error.issues);
-        }
-        return parsed.data;
-      } catch (error) {
-        if (
-          error instanceof StudyLibraryApiError
-          || error instanceof StudyLibraryMalformedJsonError
-          || error instanceof StudyLibraryResponseValidationError
-        ) {
-          throw error;
-        }
-        if (attempt >= this.maxRetries) {
-          throw new StudyLibraryNetworkError();
-        }
-        continue;
-      } finally {
-        clearTimeout(timer);
-      }
-    }
-    throw new StudyLibraryNetworkError();
+    return careerBackendRequest(
+      {
+        baseUrl: this.baseUrl,
+        token: this.token,
+        fetcher: this.fetchImpl,
+        timeoutMs: this.timeoutMs,
+        maxRetries: this.maxRetries,
+      },
+      method,
+      `${url.pathname}${url.search}`,
+      options.body,
+      options.idempotencyKey,
+      schema,
+    );
   }
 
   async getSources(): Promise<StudyLibrarySourcesResponse> {

@@ -1,9 +1,9 @@
 import type { PositionExclusion as BackendPositionExclusion } from "../../../services/career-backend/src/positions/schema.ts";
 import { formatSeoulIsoDate } from "../../lib/date-format.ts";
+import { CareerBackendHttpError } from "../../lib/career-backend-http.ts";
 import { sourceIdSchema } from "../live-postings/contracts.ts";
 import {
   createCareerBackendClient,
-  CareerBackendClientError,
 } from "../career-backend/client.ts";
 import type { Posting } from "../live-postings/types.ts";
 
@@ -67,7 +67,7 @@ function validatePositionExclusions(rules: BackendPositionExclusion[]): Position
  * zod 의 오류 문구는 어긋난 값을 그대로 담으므로 쓰지 않는다.
  */
 function exclusionFailureReason(error: unknown): string {
-  if (error instanceof CareerBackendClientError) {
+    if (error instanceof CareerBackendHttpError) {
     if (error.status === null || error.status >= 500) {
       return "커리어 Backend 에 연결하지 못했습니다. 주소와 서버 상태를 확인하세요.";
     }

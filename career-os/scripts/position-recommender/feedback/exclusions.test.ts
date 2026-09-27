@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { PositionExclusion as BackendPositionExclusion } from "../../../services/career-backend/src/positions/schema.ts";
 import { collectLivePostings, parseArgs } from "../collect_live_postings.ts";
-import { CareerBackendClientError } from "../career-backend/client.ts";
+import { CareerBackendHttpError } from "../../lib/career-backend-http.ts";
 import {
   filterExcludedPostings,
   loadPositionExclusions,
@@ -265,19 +265,19 @@ describe("개인 공고 제외", () => {
   test("규칙을 읽지 못한 원인을 연결과 인증과 계약으로 갈라 적는다", async () => {
     const cases = [
       {
-        error: new CareerBackendClientError(null, "NETWORK", "연결 실패"),
+        error: new CareerBackendHttpError(null, "NETWORK", "연결 실패"),
         expected: "커리어 Backend 에 연결하지 못했습니다. 주소와 서버 상태를 확인하세요.",
       },
       {
-        error: new CareerBackendClientError(503, "INTERNAL_ERROR", "서버 오류"),
+        error: new CareerBackendHttpError(503, "INTERNAL_ERROR", "서버 오류"),
         expected: "커리어 Backend 에 연결하지 못했습니다. 주소와 서버 상태를 확인하세요.",
       },
       {
-        error: new CareerBackendClientError(401, "UNAUTHORIZED", "인증 실패"),
+        error: new CareerBackendHttpError(401, "UNAUTHORIZED", "인증 실패"),
         expected: "커리어 Backend 인증이 거절됐습니다. token 을 확인하세요.",
       },
       {
-        error: new CareerBackendClientError(400, "BAD_REQUEST", "잘못된 요청"),
+        error: new CareerBackendHttpError(400, "BAD_REQUEST", "잘못된 요청"),
         expected: "커리어 Backend 가 돌려준 제외 규칙이 계약을 만족하지 않습니다.",
       },
     ];

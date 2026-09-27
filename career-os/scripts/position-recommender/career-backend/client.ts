@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { resolveCareerBackendConnection } from "../../lib/career-backend-config.ts";
 import {
+  careerBackendRequest,
+  type CareerBackendHttpOptions,
+} from "../../lib/career-backend-http.ts";
+import {
   analysisPolicySchema,
   analysisQueueResponseSchema,
   analysisResultsResponseSchema,
@@ -24,111 +28,17 @@ import {
   type RecommendationResponse,
 } from "../../../services/career-backend/src/positions/schema.ts";
 
-const responseErrorSchema = z.object({
-  error: z.object({ code: z.string(), message: z.string() }),
-});
-
-export type CareerBackendClientOptions = {
-  baseUrl: string;
-  token: string;
-  timeoutMs?: number;
-  fetcher?: (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
-};
-
-export class CareerBackendClientError extends Error {
-  constructor(
-    readonly status: number | null,
-    readonly code: string,
-    message: string,
-  ) {
-    super(message);
-    this.name = "CareerBackendClientError";
-  }
-}
+export type CareerBackendClientOptions = CareerBackendHttpOptions;
 
 export class CareerBackendClient {
-  private readonly fetcher: (
-    input: string | URL | Request,
-    init?: RequestInit,
-  ) => Promise<Response>;
-  private readonly timeoutMs: number;
+  private readonly httpOptions: CareerBackendHttpOptions;
 
-  constructor(private readonly options: CareerBackendClientOptions) {
-    this.fetcher = options.fetcher ?? fetch;
-    this.timeoutMs = options.timeoutMs ?? 15_000;
-  }
-
-  private async request<T>(
-    method: "GET" | "POST" | "PUT",
-    path: string,
-    body: unknown,
-    idempotencyKey: string | undefined,
-    schema: z.ZodType<T>,
-  ): Promise<T> {
-    const serialized = body === undefined ? undefined : JSON.stringify(body);
-    let lastError: unknown;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        const headers = new Headers({ Authorization: `Bearer ${this.options.token}` });
-        if (serialized !== undefined) headers.set("Content-Type", "application/json");
-        if (idempotencyKey) headers.set("Idempotency-Key", idempotencyKey);
-        const response = await this.fetcher(new URL(path, this.options.baseUrl), {
-          method,
-          headers,
-          body: serialized,
-          signal: AbortSignal.timeout(this.timeoutMs),
-        });
-        let json: unknown;
-        try {
-          json = (await response.json()) as unknown;
-        } catch {
-          const error = new CareerBackendClientError(
-            response.status,
-            "INVALID_RESPONSE",
-            "커리어 Backend 응답을 읽을 수 없습니다.",
-          );
-          if (response.status < 500 || attempt === 2) throw error;
-          lastError = error;
-          continue;
-        }
-        if (response.ok) {
-          const parsed = schema.safeParse(json);
-          if (!parsed.success) {
-            throw new CareerBackendClientError(
-              response.status,
-              "INVALID_RESPONSE",
-              "커리어 Backend 응답 계약이 올바르지 않습니다.",
-            );
-          }
-          return parsed.data;
-        }
-        const parsed = responseErrorSchema.safeParse(json);
-        const error = new CareerBackendClientError(
-          response.status,
-          parsed.success ? parsed.data.error.code : "HTTP_ERROR",
-          parsed.success ? parsed.data.error.message : "커리어 Backend 요청이 실패했습니다.",
-        );
-        if (response.status < 500 || attempt === 2) throw error;
-        lastError = error;
-      } catch (error) {
-        if (
-          error instanceof CareerBackendClientError &&
-          error.status !== null &&
-          error.status < 500
-        ) {
-          throw error;
-        }
-        lastError = error;
-        if (attempt === 2) break;
-      }
-    }
-    throw lastError instanceof CareerBackendClientError
-      ? lastError
-      : new CareerBackendClientError(null, "NETWORK_ERROR", "커리어 Backend에 연결하지 못했습니다.");
+  constructor(options: CareerBackendClientOptions) {
+    this.httpOptions = { ...options, timeoutMs: options.timeoutMs ?? 15_000 };
   }
 
   saveCollection(body: unknown, idempotencyKey: string): Promise<PositionPreparationResponse> {
-    return this.request(
+    return careerBackendRequest(this.httpOptions,
       "POST",
       "/api/positions/v1/collection-runs",
       body,
@@ -141,7 +51,7 @@ export class CareerBackendClient {
     collectionRunId: string,
     idempotencyKey: string,
   ): Promise<AnalysisQueueResponse> {
-    return this.request(
+    return careerBackendRequest(this.httpOptions,
       "POST",
       `/api/positions/v1/collection-runs/${encodeURIComponent(collectionRunId)}/analysis-runs`,
       { schemaVersion: 1 },
@@ -155,7 +65,7 @@ export class CareerBackendClient {
     body: unknown,
     idempotencyKey: string,
   ): Promise<CompanyTierResultsResponse> {
-    return this.request(
+    return careerBackendRequest(this.httpOptions,
       "POST",
       `/api/positions/v1/company-tier-runs/${encodeURIComponent(companyTierRunId)}/results`,
       body,
@@ -169,7 +79,7 @@ export class CareerBackendClient {
     body: unknown,
     idempotencyKey: string,
   ): Promise<AnalysisResultsResponse> {
-    return this.request(
+    return careerBackendRequest(this.httpOptions,
       "POST",
       `/api/positions/v1/analysis-runs/${encodeURIComponent(analysisRunId)}/results`,
       body,
@@ -182,7 +92,7 @@ export class CareerBackendClient {
     analysisRunId: string,
     idempotencyKey: string,
   ): Promise<RecommendationResponse> {
-    return this.request(
+    return careerBackendRequest(this.httpOptions,
       "POST",
       "/api/positions/v1/recommendation-runs",
       { schemaVersion: 1, analysisRunId },
@@ -192,7 +102,7 @@ export class CareerBackendClient {
   }
 
   getRun(runId: string): Promise<AnalysisQueueResponse | RecommendationResponse> {
-    return this.request(
+    return careerBackendRequest(this.httpOptions,
       "GET",
       `/api/positions/v1/runs/${encodeURIComponent(runId)}`,
       undefined,
@@ -202,7 +112,7 @@ export class CareerBackendClient {
   }
 
   configureAnalysisPolicy(body: unknown, idempotencyKey: string) {
-    return this.request(
+    return careerBackendRequest(this.httpOptions,
       "PUT",
       "/api/positions/v1/analysis-policy",
       body,
@@ -212,7 +122,7 @@ export class CareerBackendClient {
   }
 
   listCompanyPreferences(): Promise<CompanyPreference[]> {
-    return this.request(
+    return careerBackendRequest(this.httpOptions,
       "GET",
       "/api/positions/v1/company-preferences",
       undefined,
@@ -222,7 +132,7 @@ export class CareerBackendClient {
   }
 
   getExclusions(): Promise<PositionExclusion[]> {
-    return this.request(
+    return careerBackendRequest(this.httpOptions,
       "GET",
       "/api/positions/v1/exclusions",
       undefined,
@@ -233,7 +143,7 @@ export class CareerBackendClient {
 
   /** 제외 규칙 전체를 받은 목록으로 바꾸고 바뀐 뒤의 목록을 받는다. */
   replaceExclusions(body: unknown, idempotencyKey: string): Promise<PositionExclusion[]> {
-    return this.request(
+    return careerBackendRequest(this.httpOptions,
       "PUT",
       "/api/positions/v1/exclusions",
       body,
@@ -248,7 +158,7 @@ export class CareerBackendClient {
     body: unknown,
     idempotencyKey: string,
   ): Promise<CompanyEvidenceSaveResponse> {
-    return this.request(
+    return careerBackendRequest(this.httpOptions,
       "PUT",
       `/api/positions/v1/company-tier-runs/${encodeURIComponent(companyTierRunId)}/evidence`,
       body,
@@ -259,7 +169,7 @@ export class CareerBackendClient {
 
   /** 한 회사의 아직 유효한 근거만 받는다. */
   getCompanyEvidence(companyKey: string): Promise<StoredCompanyEvidence[]> {
-    return this.request(
+    return careerBackendRequest(this.httpOptions,
       "GET",
       `/api/positions/v1/companies/${encodeURIComponent(companyKey)}/evidence`,
       undefined,
@@ -269,7 +179,7 @@ export class CareerBackendClient {
   }
 
   getActiveCompanyPostings(companyKey: string): Promise<CompanyActivePosting[]> {
-    return this.request(
+    return careerBackendRequest(this.httpOptions,
       "GET",
       `/api/positions/v1/companies/${encodeURIComponent(companyKey)}/active-postings`,
       undefined,
@@ -279,7 +189,7 @@ export class CareerBackendClient {
   }
 
   updateCompanyPreference(companyKey: string, body: unknown, idempotencyKey: string) {
-    return this.request(
+    return careerBackendRequest(this.httpOptions,
       "PUT",
       `/api/positions/v1/company-preferences/${encodeURIComponent(companyKey)}`,
       body,

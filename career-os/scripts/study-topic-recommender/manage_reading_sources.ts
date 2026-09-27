@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { firstOptionValue } from "../lib/cli.ts";
-import { createStudyLibraryClient, StudyLibraryApiError } from "./study-library/client.js";
+import { CareerBackendHttpError } from "../lib/career-backend-http.ts";
+import { createStudyLibraryClient } from "./study-library/client.js";
 import { studyLibrarySourcePutPayloadSchema, type StudyLibrarySourcePutPayload } from "./study-library/contracts.js";
 
 const value = (args: readonly string[], name: string) => firstOptionValue(args, `--${name}`);
@@ -26,6 +27,6 @@ export async function manageReadingSources(args = process.argv.slice(2)): Promis
   const key = required(args, "key"); required(args, "note"); const found = (await client.getSources()).sources.find((source) => source.sourceKey === key); if (!found) throw new Error(`소스를 찾을 수 없다: ${key}`);
   if (command === "update" && !["title", "category", "adapter", "url", "feed-url", "clear-url", "clear-feed-url"].some((name) => changed(args, name))) throw new Error("update할 필드가 하나 이상 필요하다.");
   const body = sourcePayload(args, found); if (command === "disable") body.enabled = false; if (command === "enable") body.enabled = true;
-  try { return await client.putSource(key, body); } catch (error) { if (error instanceof StudyLibraryApiError && error.status === 409) throw new Error("소스가 바뀌었다. 다시 조회한 뒤 명령을 다시 실행한다."); throw error; }
+  try { return await client.putSource(key, body); } catch (error) { if (error instanceof CareerBackendHttpError && error.status === 409) throw new Error("소스가 바뀌었다. 다시 조회한 뒤 명령을 다시 실행한다."); throw error; }
 }
 if (import.meta.main) manageReadingSources().then((result) => console.log(typeof result === "string" ? result : JSON.stringify(result, null, 2))).catch((error) => { console.error(error instanceof Error ? error.message : String(error)); process.exit(1); });

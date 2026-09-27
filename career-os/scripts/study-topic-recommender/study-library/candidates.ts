@@ -7,7 +7,8 @@ import {
   type ReadingCategory,
 } from "../reading_contracts.js";
 import { toReadingCandidate, type StudyLibrarySource } from "./contracts.js";
-import { StudyLibraryApiError, type StudyLibraryClient } from "./client.js";
+import { CareerBackendHttpError } from "../../lib/career-backend-http.ts";
+import type { StudyLibraryClient } from "./client.js";
 
 export const STUDY_LIBRARY_CANDIDATE_LIMIT = 100;
 export const STUDY_LIBRARY_META_FILENAME = "study-library-meta.json";
@@ -149,7 +150,7 @@ export async function fetchStudyLibraryCandidatePool(input: {
       candidateContextVersion = page.candidateContextVersion;
       recentStudyTopicKeys = page.recentStudyTopicKeys;
     } else if (page.historyVersion !== historyVersion || page.candidateContextVersion !== candidateContextVersion) {
-      throw new StudyLibraryApiError({ status: 409, code: "VERSION_CONFLICT" });
+      throw new CareerBackendHttpError(409, "VERSION_CONFLICT", "커리어 Backend 요청이 실패했습니다.");
     }
     candidates.push(...page.candidates.map(toReadingCandidate));
     nextCursor = page.nextCursor;

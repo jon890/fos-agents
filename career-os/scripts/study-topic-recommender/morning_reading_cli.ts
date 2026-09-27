@@ -8,7 +8,8 @@ import { normalizeReadingSources } from "./reading_sources.js";
 import { selectReadings } from "./reading_stage.js";
 import { renderExistingReport, writeReportArtifacts } from "./render/report.js";
 import { resolveStudyRunRoot, StudyRunPathError, validateStudyCleanupDirectory } from "./runtime-paths.js";
-import { StudyLibraryApiError, createStudyLibraryClient } from "./study-library/client.js";
+import { CareerBackendHttpError } from "../lib/career-backend-http.ts";
+import { createStudyLibraryClient } from "./study-library/client.js";
 import { buildReportCountsFromLibrary, prepareStudyLibraryCandidates, studyLibraryMetaPath, type StudyLibraryCandidateMeta } from "./study-library/candidates.js";
 import { collectAndIngestStudyLibrary, type LibraryCollectMode } from "./study-library/ingestion.js";
 import { commitRecommendationRun, recordPublication, reportIdForMorningReading } from "./study-library/recommendations.js";
@@ -120,5 +121,5 @@ async function run(): Promise<void> {
   }
 }
 export async function main(): Promise<void> { await run(); }
-export function reportMorningReadingError(error: unknown): never { if (error instanceof StudyRunPathError) { console.error(error.message); process.exit(error.exitCode); } if (error instanceof StudyLibraryApiError) { console.error(JSON.stringify({ error: { code: error.code ?? `HTTP_${error.status}`, requestId: error.requestId ?? null, ...(error.retryAfter === undefined ? {} : { retryAfter: error.retryAfter }) } })); process.exit(1); } console.error("study-topic-recommender error:", error); process.exit(1); }
+export function reportMorningReadingError(error: unknown): never { if (error instanceof StudyRunPathError) { console.error(error.message); process.exit(error.exitCode); } if (error instanceof CareerBackendHttpError) { console.error(JSON.stringify({ error: { code: error.code ?? `HTTP_${error.status}`, requestId: error.requestId ?? null, ...(error.retryAfter === undefined ? {} : { retryAfter: error.retryAfter }) } })); process.exit(1); } console.error("study-topic-recommender error:", error); process.exit(1); }
 if (import.meta.main) main().catch(reportMorningReadingError);

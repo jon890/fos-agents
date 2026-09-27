@@ -3,10 +3,10 @@ import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveCareerBackendConnection } from "../../lib/career-backend-config.ts";
+import { CareerBackendHttpError } from "../../lib/career-backend-http.ts";
 import {
   createCareerBackendClient,
   CareerBackendClient,
-  CareerBackendClientError,
 } from "./client.ts";
 
 const token = "token-123456789012345678901234567890";
@@ -266,7 +266,7 @@ describe("position recommendation API client", () => {
       },
     });
     await expect(client.saveCollection({}, "key")).rejects.toBeInstanceOf(
-      CareerBackendClientError,
+      CareerBackendHttpError,
     );
     expect(calls).toBe(1);
   });
