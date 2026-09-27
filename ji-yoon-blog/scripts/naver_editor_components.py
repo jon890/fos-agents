@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 from cdp import Page
@@ -129,28 +130,36 @@ def insert_map(page: Page, block: dict) -> str:
         return "장소 버튼을 찾지 못했다"
     search = 'input[placeholder="장소명을 입력하세요."]'
     candidates = []
-    for _ in range(3):
-        problem = ensure_domestic_map(page)
-        if problem:
-            return problem
-        if not wait_until(lambda: page.js(f"!!document.querySelector({json.dumps(search)})")):
-            return "장소 검색 입력칸을 찾지 못했다"
-        if not click(page, search):
-            return "장소 검색 입력칸을 누르지 못했다"
-        clear_field(page)
-        page.type_text(name)
-        page.enter()
-        if wait_until(lambda: bool(domestic_place_candidates(page)), seconds=5.0):
-            candidates = domestic_place_candidates(page)
+    matches = []
+    # 상호명 검색 결과가 비거나 주소가 다르면 주소로 다시 검색한다.
+    # 검색어만 넓히고 선택 기준은 상호·주소 완전 일치를 유지한다.
+    for query in (name, address):
+        for _ in range(3):
+            problem = ensure_domestic_map(page)
+            if problem:
+                return problem
+            if not wait_until(lambda: page.js(f"!!document.querySelector({json.dumps(search)})")):
+                return "장소 검색 입력칸을 찾지 못했다"
+            if not click(page, search):
+                return "장소 검색 입력칸을 누르지 못했다"
+            clear_field(page)
+            page.type_text(query)
+            page.enter()
+            # 이전 검색 결과가 잠깐 남아 있어 새 요청을 기다린다.
+            time.sleep(1.5)
+            if wait_until(lambda: bool(domestic_place_candidates(page)), seconds=5.0):
+                candidates = domestic_place_candidates(page)
+                matches = [
+                    item
+                    for item in candidates
+                    if normalize(item["name"]) == name
+                    and normalize_place_address(item["address"]) == address
+                ]
+                break
+        if matches:
             break
     if not candidates:
         return f"장소 검색 결과가 없다: {name}"
-    matches = [
-        item
-        for item in candidates
-        if normalize(item["name"]) == name
-        and normalize_place_address(item["address"]) == address
-    ]
     if len(matches) != 1:
         return f"이름과 주소가 같은 장소가 하나가 아니다: {name} / {address} / {matches}"
     index = matches[0]["index"]
