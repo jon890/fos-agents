@@ -56,7 +56,8 @@ Backend 가 원본을 가진 뒤(ADR-126)에는 운영 경로가 Backend 응답�
 ### 4. 이 phase 를 검증하는 테스트
 
 `career-os/scripts/study-topic-recommender/reading_sources.test.ts` 를 새 시그니처로 옮긴다. 기존 정규화 단언(등록 순서 유지, 비활성 제외)은 그대로 통과해야 한다.
-면접 질문 후보 수집 호출처가 새 입력 형식으로 빌드되고 기존 수집 테스트가 통과하는지도 확인한다.
+`career-os/scripts/interview-question-sources/sources.test.ts` 에 동적 `feed` 소스의 수집 테스트를 더한다.
+네트워크 응답을 고정하고 새 배열 입력으로 후보와 `collectionLog` 가 만들어지는지 확인한다.
 
 ## 검증
 
@@ -80,3 +81,4 @@ PATH="$HOME/.bun/bin:$PATH" bunx tsc --noEmit
 | `career-os/scripts/study-topic-recommender/reading_sources.test.ts` | 수정 |
 | `career-os/scripts/study-topic-recommender/morning_reading_cli.ts` | 수정 |
 | `career-os/scripts/interview-question-sources/candidate_pool.ts` | 수정 |
+| `career-os/scripts/interview-question-sources/sources.test.ts` | 수정 |
