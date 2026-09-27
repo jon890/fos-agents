@@ -2,7 +2,7 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
-import { analysisQueueResponseSchema } from "../../services/recommendation-api/src/positions/schema.ts";
+import { analysisQueueResponseSchema } from "../../services/career-backend/src/positions/schema.ts";
 import { DEFAULT_MAX_FAILED_SOURCES } from "./live-postings/collection_health.ts";
 import { collectLivePostings } from "./collect_live_postings.ts";
 import { preparePositionAnalysis } from "./prepare_position_analysis.ts";
@@ -10,7 +10,7 @@ import { completeCompanyTierAssessment } from "./complete_company_tier_assessmen
 import { collectEvidenceForRun } from "./collect_company_evidence.ts";
 import { commitPositionAnalysis } from "./commit_position_analysis.ts";
 import { finalizeRecommendation } from "./finalize_position_recommendation.ts";
-import { createRecommendationApiClient } from "./recommendation-api/client.ts";
+import { createCareerBackendClient } from "./career-backend/client.ts";
 import { runDirectoryPaths, type RunDirectoryPaths } from "./run-dir.ts";
 
 const COMMANDS = ["collect", "commit-company-tiers", "commit-analyses", "finalize"] as const;
@@ -21,7 +21,7 @@ type CompanyTierResult = Awaited<ReturnType<typeof completeCompanyTierAssessment
 type AnalysisResult = Awaited<ReturnType<typeof commitPositionAnalysis>>;
 type FinalizationResult = Awaited<ReturnType<typeof finalizeRecommendation>>;
 type AnalysisCommitClient = Pick<
-  ReturnType<typeof createRecommendationApiClient>,
+  ReturnType<typeof createCareerBackendClient>,
   "saveAnalysisResults" | "getRun"
 >;
 
@@ -133,7 +133,7 @@ const defaultOperations: PositionRunOperations = {
   },
   async finalize(paths, analysisRunId) {
     return finalizeRecommendation(
-      createRecommendationApiClient(),
+      createCareerBackendClient(),
       analysisRunId,
       paths.recommendation,
       paths.report,
@@ -159,7 +159,7 @@ function queueAnalysisRunId(path: string): string {
 
 export async function commitAnalysesForRun(
   paths: RunDirectoryPaths,
-  client: AnalysisCommitClient = createRecommendationApiClient(),
+  client: AnalysisCommitClient = createCareerBackendClient(),
 ): Promise<AnalysisResult> {
   const result = await commitPositionAnalysis(
     paths.analysisQueue,

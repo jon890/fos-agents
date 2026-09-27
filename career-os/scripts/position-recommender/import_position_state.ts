@@ -12,17 +12,17 @@
  */
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { canonicalRequestHash } from "../../services/recommendation-api/src/common/idempotency/request-hash.ts";
+import { canonicalRequestHash } from "../../services/career-backend/src/common/idempotency/request-hash.ts";
 import {
   companyEvidenceRequestSchema,
   exclusionsRequestSchema,
   type CompanyEvidence,
   type CompanyEvidenceSourceType,
-} from "../../services/recommendation-api/src/positions/schema.ts";
+} from "../../services/career-backend/src/positions/schema.ts";
 import { runCli, UsageError } from "../lib/cli.ts";
 import { CompanyResearchFile } from "./company-research/schema.ts";
 import { positionExclusionsSchema } from "./feedback/exclusions.ts";
-import { createRecommendationApiClient } from "./recommendation-api/client.ts";
+import { createCareerBackendClient } from "./career-backend/client.ts";
 
 export const defaultSourceDirectory = resolve(import.meta.dir, "../../state");
 
@@ -233,7 +233,7 @@ async function commitImport(payload: ImportPayload, companyTierRunId: string | u
       `Backend 계약을 만족하지 못하는 제외 규칙 ${payload.rejectedExclusionCount}건이 있어 아무것도 보내지 않았습니다.`,
     );
   }
-  const client = createRecommendationApiClient();
+  const client = createCareerBackendClient();
   if (payload.evidenceCount > 0) {
     if (!companyTierRunId) {
       throw new UsageError("회사 근거를 보내려면 --company-tier-run-id 가 필요합니다.");

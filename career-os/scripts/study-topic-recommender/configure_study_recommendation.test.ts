@@ -2,21 +2,21 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { configureStudyRecommendation } from "./configure_study_recommendation.ts";
 
 const originalFetch = globalThis.fetch;
-const originalUrl = process.env.CAREER_RECOMMENDATION_API_URL;
-const originalToken = process.env.CAREER_RECOMMENDATION_API_TOKEN;
+const originalUrl = process.env.CAREER_BACKEND_URL;
+const originalToken = process.env.CAREER_BACKEND_TOKEN;
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
-  if (originalUrl === undefined) delete process.env.CAREER_RECOMMENDATION_API_URL;
-  else process.env.CAREER_RECOMMENDATION_API_URL = originalUrl;
-  if (originalToken === undefined) delete process.env.CAREER_RECOMMENDATION_API_TOKEN;
-  else process.env.CAREER_RECOMMENDATION_API_TOKEN = originalToken;
+  if (originalUrl === undefined) delete process.env.CAREER_BACKEND_URL;
+  else process.env.CAREER_BACKEND_URL = originalUrl;
+  if (originalToken === undefined) delete process.env.CAREER_BACKEND_TOKEN;
+  else process.env.CAREER_BACKEND_TOKEN = originalToken;
 });
 
 describe("configure_study_recommendation", () => {
   test("A → B → A 요청은 마지막 A를 실제로 저장한다", async () => {
-    process.env.CAREER_RECOMMENDATION_API_URL = "http://study.local";
-    process.env.CAREER_RECOMMENDATION_API_TOKEN = "t".repeat(32);
+    process.env.CAREER_BACKEND_URL = "http://study.local";
+    process.env.CAREER_BACKEND_TOKEN = "t".repeat(32);
     let stored = "";
     const keys: string[] = [];
     globalThis.fetch = (async (_input, init) => {

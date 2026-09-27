@@ -1,0 +1,296 @@
+import { z } from "zod";
+import { resolveCareerBackendConnection } from "../../lib/career-backend-config.ts";
+import {
+  analysisPolicySchema,
+  analysisQueueResponseSchema,
+  analysisResultsResponseSchema,
+  companyEvidenceSaveResponseSchema,
+  storedCompanyEvidenceSchema,
+  companyActivePostingSchema,
+  companyPreferenceSchema,
+  companyTierResultsResponseSchema,
+  positionExclusionSchema,
+  positionPreparationResponseSchema,
+  recommendationResponseSchema,
+  type AnalysisQueueResponse,
+  type AnalysisResultsResponse,
+  type StoredCompanyEvidence,
+  type CompanyActivePosting,
+  type CompanyEvidenceSaveResponse,
+  type CompanyPreference,
+  type CompanyTierResultsResponse,
+  type PositionExclusion,
+  type PositionPreparationResponse,
+  type RecommendationResponse,
+} from "../../../services/career-backend/src/positions/schema.ts";
+
+const responseErrorSchema = z.object({
+  error: z.object({ code: z.string(), message: z.string() }),
+});
+
+export type CareerBackendClientOptions = {
+  baseUrl: string;
+  token: string;
+  timeoutMs?: number;
+  fetcher?: (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+};
+
+export class CareerBackendClientError extends Error {
+  constructor(
+    readonly status: number | null,
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "CareerBackendClientError";
+  }
+}
+
+export class CareerBackendClient {
+  private readonly fetcher: (
+    input: string | URL | Request,
+    init?: RequestInit,
+  ) => Promise<Response>;
+  private readonly timeoutMs: number;
+
+  constructor(private readonly options: CareerBackendClientOptions) {
+    this.fetcher = options.fetcher ?? fetch;
+    this.timeoutMs = options.timeoutMs ?? 15_000;
+  }
+
+  private async request<T>(
+    method: "GET" | "POST" | "PUT",
+    path: string,
+    body: unknown,
+    idempotencyKey: string | undefined,
+    schema: z.ZodType<T>,
+  ): Promise<T> {
+    const serialized = body === undefined ? undefined : JSON.stringify(body);
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const headers = new Headers({ Authorization: `Bearer ${this.options.token}` });
+        if (serialized !== undefined) headers.set("Content-Type", "application/json");
+        if (idempotencyKey) headers.set("Idempotency-Key", idempotencyKey);
+        const response = await this.fetcher(new URL(path, this.options.baseUrl), {
+          method,
+          headers,
+          body: serialized,
+          signal: AbortSignal.timeout(this.timeoutMs),
+        });
+        let json: unknown;
+        try {
+          json = (await response.json()) as unknown;
+        } catch {
+          const error = new CareerBackendClientError(
+            response.status,
+            "INVALID_RESPONSE",
+            "커리어 Backend 응답을 읽을 수 없습니다.",
+          );
+          if (response.status < 500 || attempt === 2) throw error;
+          lastError = error;
+          continue;
+        }
+        if (response.ok) {
+          const parsed = schema.safeParse(json);
+          if (!parsed.success) {
+            throw new CareerBackendClientError(
+              response.status,
+              "INVALID_RESPONSE",
+              "커리어 Backend 응답 계약이 올바르지 않습니다.",
+            );
+          }
+          return parsed.data;
+        }
+        const parsed = responseErrorSchema.safeParse(json);
+        const error = new CareerBackendClientError(
+          response.status,
+          parsed.success ? parsed.data.error.code : "HTTP_ERROR",
+          parsed.success ? parsed.data.error.message : "커리어 Backend 요청이 실패했습니다.",
+        );
+        if (response.status < 500 || attempt === 2) throw error;
+        lastError = error;
+      } catch (error) {
+        if (
+          error instanceof CareerBackendClientError &&
+          error.status !== null &&
+          error.status < 500
+        ) {
+          throw error;
+        }
+        lastError = error;
+        if (attempt === 2) break;
+      }
+    }
+    throw lastError instanceof CareerBackendClientError
+      ? lastError
+      : new CareerBackendClientError(null, "NETWORK_ERROR", "커리어 Backend에 연결하지 못했습니다.");
+  }
+
+  saveCollection(body: unknown, idempotencyKey: string): Promise<PositionPreparationResponse> {
+    return this.request(
+      "POST",
+      "/api/positions/v1/collection-runs",
+      body,
+      idempotencyKey,
+      positionPreparationResponseSchema,
+    );
+  }
+
+  createPositionAnalysisRun(
+    collectionRunId: string,
+    idempotencyKey: string,
+  ): Promise<AnalysisQueueResponse> {
+    return this.request(
+      "POST",
+      `/api/positions/v1/collection-runs/${encodeURIComponent(collectionRunId)}/analysis-runs`,
+      { schemaVersion: 1 },
+      idempotencyKey,
+      analysisQueueResponseSchema,
+    );
+  }
+
+  saveCompanyTierResults(
+    companyTierRunId: string,
+    body: unknown,
+    idempotencyKey: string,
+  ): Promise<CompanyTierResultsResponse> {
+    return this.request(
+      "POST",
+      `/api/positions/v1/company-tier-runs/${encodeURIComponent(companyTierRunId)}/results`,
+      body,
+      idempotencyKey,
+      companyTierResultsResponseSchema,
+    );
+  }
+
+  saveAnalysisResults(
+    analysisRunId: string,
+    body: unknown,
+    idempotencyKey: string,
+  ): Promise<AnalysisResultsResponse> {
+    return this.request(
+      "POST",
+      `/api/positions/v1/analysis-runs/${encodeURIComponent(analysisRunId)}/results`,
+      body,
+      idempotencyKey,
+      analysisResultsResponseSchema,
+    );
+  }
+
+  createRecommendation(
+    analysisRunId: string,
+    idempotencyKey: string,
+  ): Promise<RecommendationResponse> {
+    return this.request(
+      "POST",
+      "/api/positions/v1/recommendation-runs",
+      { schemaVersion: 1, analysisRunId },
+      idempotencyKey,
+      recommendationResponseSchema,
+    );
+  }
+
+  getRun(runId: string): Promise<AnalysisQueueResponse | RecommendationResponse> {
+    return this.request(
+      "GET",
+      `/api/positions/v1/runs/${encodeURIComponent(runId)}`,
+      undefined,
+      undefined,
+      z.union([analysisQueueResponseSchema, recommendationResponseSchema]),
+    );
+  }
+
+  configureAnalysisPolicy(body: unknown, idempotencyKey: string) {
+    return this.request(
+      "PUT",
+      "/api/positions/v1/analysis-policy",
+      body,
+      idempotencyKey,
+      analysisPolicySchema,
+    );
+  }
+
+  listCompanyPreferences(): Promise<CompanyPreference[]> {
+    return this.request(
+      "GET",
+      "/api/positions/v1/company-preferences",
+      undefined,
+      undefined,
+      z.array(companyPreferenceSchema),
+    );
+  }
+
+  getExclusions(): Promise<PositionExclusion[]> {
+    return this.request(
+      "GET",
+      "/api/positions/v1/exclusions",
+      undefined,
+      undefined,
+      z.array(positionExclusionSchema),
+    );
+  }
+
+  /** 제외 규칙 전체를 받은 목록으로 바꾸고 바뀐 뒤의 목록을 받는다. */
+  replaceExclusions(body: unknown, idempotencyKey: string): Promise<PositionExclusion[]> {
+    return this.request(
+      "PUT",
+      "/api/positions/v1/exclusions",
+      body,
+      idempotencyKey,
+      z.array(positionExclusionSchema),
+    );
+  }
+
+  /** 모은 회사 근거를 회사 tier 실행 단위로 저장한다. `url_hash` 는 Backend 가 만든다. */
+  putCompanyEvidence(
+    companyTierRunId: string,
+    body: unknown,
+    idempotencyKey: string,
+  ): Promise<CompanyEvidenceSaveResponse> {
+    return this.request(
+      "PUT",
+      `/api/positions/v1/company-tier-runs/${encodeURIComponent(companyTierRunId)}/evidence`,
+      body,
+      idempotencyKey,
+      companyEvidenceSaveResponseSchema,
+    );
+  }
+
+  /** 한 회사의 아직 유효한 근거만 받는다. */
+  getCompanyEvidence(companyKey: string): Promise<StoredCompanyEvidence[]> {
+    return this.request(
+      "GET",
+      `/api/positions/v1/companies/${encodeURIComponent(companyKey)}/evidence`,
+      undefined,
+      undefined,
+      z.array(storedCompanyEvidenceSchema),
+    );
+  }
+
+  getActiveCompanyPostings(companyKey: string): Promise<CompanyActivePosting[]> {
+    return this.request(
+      "GET",
+      `/api/positions/v1/companies/${encodeURIComponent(companyKey)}/active-postings`,
+      undefined,
+      undefined,
+      z.array(companyActivePostingSchema),
+    );
+  }
+
+  updateCompanyPreference(companyKey: string, body: unknown, idempotencyKey: string) {
+    return this.request(
+      "PUT",
+      `/api/positions/v1/company-preferences/${encodeURIComponent(companyKey)}`,
+      body,
+      idempotencyKey,
+      companyPreferenceSchema,
+    );
+  }
+}
+
+export function createCareerBackendClient(
+  environment: Record<string, string | undefined> = process.env,
+): CareerBackendClient {
+  return new CareerBackendClient(resolveCareerBackendConnection(environment));
+}

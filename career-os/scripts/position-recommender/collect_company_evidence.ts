@@ -4,8 +4,8 @@ import {
   companyTierQueueResponseSchema,
   type CompanyEvidence,
   type CompanyPreference,
-} from "../../services/recommendation-api/src/positions/schema.ts";
-import { stableUuid } from "../../services/recommendation-api/src/positions/hash.ts";
+} from "../../services/career-backend/src/positions/schema.ts";
+import { stableUuid } from "../../services/career-backend/src/positions/hash.ts";
 import {
   companyEvidenceCollectors,
   collectCompanyEvidence,
@@ -13,13 +13,13 @@ import {
 import { loadDartApiKey } from "./company-evidence/collectors/dart.ts";
 import type { EvidenceFetcher } from "./company-evidence/collectors/types.ts";
 import {
-  createRecommendationApiClient,
-  type RecommendationApiClient,
-} from "./recommendation-api/client.ts";
+  createCareerBackendClient,
+  type CareerBackendClient,
+} from "./career-backend/client.ts";
 import type { RunDirectoryPaths } from "./run-dir.ts";
 
 export type EvidenceClient = Pick<
-  RecommendationApiClient,
+  CareerBackendClient,
   | "listCompanyPreferences"
   | "getCompanyEvidence"
   | "getActiveCompanyPostings"
@@ -29,7 +29,7 @@ export type EvidenceClient = Pick<
 
 export async function collectEvidenceForRun(
   paths: RunDirectoryPaths,
-  client: EvidenceClient = createRecommendationApiClient(),
+  client: EvidenceClient = createCareerBackendClient(),
   now = new Date(),
   fetcher: EvidenceFetcher = fetch,
   dartKeyResolver: () => string | null = loadDartApiKey,

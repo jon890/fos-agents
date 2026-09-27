@@ -2,7 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { AnalysisQueueResponse } from "../../services/recommendation-api/src/positions/schema.ts";
+import type { AnalysisQueueResponse } from "../../services/career-backend/src/positions/schema.ts";
 import {
   commitAnalysesForRun,
   runPositionCommand,

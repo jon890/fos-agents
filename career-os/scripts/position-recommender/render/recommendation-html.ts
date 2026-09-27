@@ -4,7 +4,7 @@ import type {
   RecommendationItemType,
   RecommendationRunType,
 } from "../recommendation/schema.ts";
-import type { PublicCompanyAssessment } from "../../../services/recommendation-api/src/positions/schema.ts";
+import type { PublicCompanyAssessment } from "../../../services/career-backend/src/positions/schema.ts";
 import { escapeHtml, fragment, type RenderAssets } from "./template.ts";
 
 function link(assets: RenderAssets, value: string): string {

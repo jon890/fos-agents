@@ -2,24 +2,24 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { manageReadingSources } from "./manage_reading_sources.ts";
 
 const originalFetch = globalThis.fetch;
-const originalUrl = process.env.CAREER_RECOMMENDATION_API_URL;
-const originalToken = process.env.CAREER_RECOMMENDATION_API_TOKEN;
-const originalTokenFile = process.env.CAREER_RECOMMENDATION_API_TOKEN_FILE;
+const originalUrl = process.env.CAREER_BACKEND_URL;
+const originalToken = process.env.CAREER_BACKEND_TOKEN;
+const originalTokenFile = process.env.CAREER_BACKEND_TOKEN_FILE;
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
-  if (originalUrl === undefined) delete process.env.CAREER_RECOMMENDATION_API_URL;
-  else process.env.CAREER_RECOMMENDATION_API_URL = originalUrl;
-  if (originalToken === undefined) delete process.env.CAREER_RECOMMENDATION_API_TOKEN;
-  else process.env.CAREER_RECOMMENDATION_API_TOKEN = originalToken;
-  if (originalTokenFile === undefined) delete process.env.CAREER_RECOMMENDATION_API_TOKEN_FILE;
-  else process.env.CAREER_RECOMMENDATION_API_TOKEN_FILE = originalTokenFile;
+  if (originalUrl === undefined) delete process.env.CAREER_BACKEND_URL;
+  else process.env.CAREER_BACKEND_URL = originalUrl;
+  if (originalToken === undefined) delete process.env.CAREER_BACKEND_TOKEN;
+  else process.env.CAREER_BACKEND_TOKEN = originalToken;
+  if (originalTokenFile === undefined) delete process.env.CAREER_BACKEND_TOKEN_FILE;
+  else process.env.CAREER_BACKEND_TOKEN_FILE = originalTokenFile;
 });
 
 function clearApiEnvironment(): void {
-  delete process.env.CAREER_RECOMMENDATION_API_URL;
-  delete process.env.CAREER_RECOMMENDATION_API_TOKEN;
-  delete process.env.CAREER_RECOMMENDATION_API_TOKEN_FILE;
+  delete process.env.CAREER_BACKEND_URL;
+  delete process.env.CAREER_BACKEND_TOKEN;
+  delete process.env.CAREER_BACKEND_TOKEN_FILE;
 }
 
 describe("manage_reading_sources", () => {
@@ -87,13 +87,13 @@ describe("manage_reading_sources", () => {
       ["disable", "--key", "source-1", "--note", "중지"],
       ["enable", "--key", "source-1", "--note", "복구"],
     ]) {
-      await expect(manageReadingSources(args)).rejects.toThrow("CAREER_RECOMMENDATION_API_URL 환경값이 필요하다.");
+      await expect(manageReadingSources(args)).rejects.toThrow("CAREER_BACKEND_URL 환경값이 필요하다.");
     }
   });
 
   test("disable에 --note가 없으면 API를 부르기 전에 거부한다", async () => {
-    process.env.CAREER_RECOMMENDATION_API_URL = "http://study.local";
-    process.env.CAREER_RECOMMENDATION_API_TOKEN = "t".repeat(32);
+    process.env.CAREER_BACKEND_URL = "http://study.local";
+    process.env.CAREER_BACKEND_TOKEN = "t".repeat(32);
     globalThis.fetch = (() => { throw new Error("API를 호출하면 안 된다."); }) as unknown as typeof fetch;
 
     await expect(manageReadingSources(["disable", "--key", "source-1"]))

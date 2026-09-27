@@ -39,8 +39,8 @@ async function runCli(args: string[], fetchImpl?: StudyLibraryFetch): Promise<st
   };
   if (fetchImpl) {
     globalThis.fetch = fetchImpl as unknown as typeof fetch;
-    process.env.CAREER_RECOMMENDATION_API_URL = "https://study.example.com";
-    process.env.CAREER_RECOMMENDATION_API_TOKEN = "test-token-123456789012345678901234567890";
+    process.env.CAREER_BACKEND_URL = "https://study.example.com";
+    process.env.CAREER_BACKEND_TOKEN = "test-token-123456789012345678901234567890";
   }
   await main();
   return logs;
@@ -132,8 +132,8 @@ afterEach(() => {
   process.argv = originalArgv;
   globalThis.fetch = originalFetch;
   console.log = originalLog;
-  delete process.env.CAREER_RECOMMENDATION_API_URL;
-  delete process.env.CAREER_RECOMMENDATION_API_TOKEN;
+  delete process.env.CAREER_BACKEND_URL;
+  delete process.env.CAREER_BACKEND_TOKEN;
   delete process.env.CAREER_OS_ROOT;
   for (const directory of temporaryDirectories.splice(0)) rmSync(directory, { recursive: true, force: true });
 });
@@ -361,8 +361,8 @@ describe("study-library recommendations CLI", () => {
         "--report", reportPath,
       ];
       console.log = (message?: unknown) => logs.push(String(message));
-      process.env.CAREER_RECOMMENDATION_API_URL = "https://study.example.com";
-      process.env.CAREER_RECOMMENDATION_API_TOKEN = "test-token-123456789012345678901234567890";
+      process.env.CAREER_BACKEND_URL = "https://study.example.com";
+      process.env.CAREER_BACKEND_TOKEN = "test-token-123456789012345678901234567890";
       globalThis.fetch = (async () => jsonResponse({
         error: { code, message: "conflict", requestId: `req-${code}` },
       }, { status: 409 })) as unknown as typeof fetch;

@@ -53,7 +53,7 @@ describe("study-topic-recommender skill 문서", () => {
     const repositoryRoot = resolve(import.meta.dir, "../../..");
     const flow = readFileSync(resolve(repositoryRoot, "career-os/docs/flow.md"), "utf8");
     const sectionStart = flow.indexOf("### 비공개 작업본 동기화");
-    const sectionEnd = flow.indexOf("### 추천 상태 Backend");
+    const sectionEnd = flow.indexOf("### 커리어 Backend");
     const section = flow.slice(sectionStart, sectionEnd);
     const firstSentence = section.split("\n").find((line) => line.startsWith("`application-package-writer`"));
 

@@ -1,11 +1,11 @@
 import { z } from "zod";
-import type { PositionExclusion as BackendPositionExclusion } from "../../../services/recommendation-api/src/positions/schema.ts";
+import type { PositionExclusion as BackendPositionExclusion } from "../../../services/career-backend/src/positions/schema.ts";
 import { formatSeoulIsoDate } from "../../lib/date-format.ts";
 import { sourceIdSchema } from "../live-postings/contracts.ts";
 import {
-  createRecommendationApiClient,
-  RecommendationApiClientError,
-} from "../recommendation-api/client.ts";
+  createCareerBackendClient,
+  CareerBackendClientError,
+} from "../career-backend/client.ts";
 import type { Posting } from "../live-postings/types.ts";
 
 /**
@@ -149,15 +149,15 @@ export function validateCareerDownsideExclusion(rule: EnrichedPositionExclusion)
  * zod 의 오류 문구는 어긋난 값을 그대로 담으므로 쓰지 않는다.
  */
 function exclusionFailureReason(error: unknown): string {
-  if (error instanceof RecommendationApiClientError) {
+  if (error instanceof CareerBackendClientError) {
     if (error.status === null || error.status >= 500) {
-      return "추천 API 에 연결하지 못했습니다. 주소와 서버 상태를 확인하세요.";
+      return "커리어 Backend 에 연결하지 못했습니다. 주소와 서버 상태를 확인하세요.";
     }
     if (error.status === 401 || error.status === 403) {
-      return "추천 API 인증이 거절됐습니다. token 을 확인하세요.";
+      return "커리어 Backend 인증이 거절됐습니다. token 을 확인하세요.";
     }
   }
-  return "추천 API 가 돌려준 제외 규칙이 계약을 만족하지 않습니다.";
+  return "커리어 Backend 가 돌려준 제외 규칙이 계약을 만족하지 않습니다.";
 }
 
 /**
@@ -167,7 +167,7 @@ function exclusionFailureReason(error: unknown): string {
  * 제외하기로 한 회사의 공고가 모델 입력에 들어간다.
  */
 export async function loadPositionExclusions(
-  source: PositionExclusionsSource = createRecommendationApiClient(),
+  source: PositionExclusionsSource = createCareerBackendClient(),
 ): Promise<PositionExclusions> {
   try {
     const parsed = positionExclusionsSchema.parse({

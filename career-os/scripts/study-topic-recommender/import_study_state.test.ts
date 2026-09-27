@@ -142,7 +142,7 @@ describe("공부 이력 이관", () => {
     });
     try {
       const child = Bun.spawn(["bun", `${import.meta.dir}/import_study_state.ts`, "--dry-run", "--history-file", fixture.historyFile, "--sources-file", fixture.sourcesFile], {
-        env: { ...process.env, CAREER_RECOMMENDATION_API_URL: `http://127.0.0.1:${server.port}`, CAREER_RECOMMENDATION_API_TOKEN: "a".repeat(32) },
+        env: { ...process.env, CAREER_BACKEND_URL: `http://127.0.0.1:${server.port}`, CAREER_BACKEND_TOKEN: "a".repeat(32) },
         stdout: "pipe", stderr: "pipe",
       });
       const [stdout, stderr, exitCode] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
