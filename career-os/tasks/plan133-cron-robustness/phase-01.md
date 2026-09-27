@@ -28,7 +28,7 @@
 - **같은 키는 같은 글로 보고 앞의 것만 남긴다.** 정규화 규칙이 같은 글이라고 판정한 것이다. 뒤의 것을 버려도 잃는 정보가 없다
 - `assertNoDuplicateContentKeys` 는 지우지 않는다. 걸러 낸 뒤에도 중복이 있으면 코드 결함이므로 계속 예외로 둔다
 - **출처 하나의 실패는 그 출처의 `failed` 로 남기고 다음 출처를 계속 수집한다.**
-  - 단, `StudyLibraryApiError` 는 격리하지 않고 그대로 던진다. Backend 가 응답하지 않으면 모든 출처가 같은 이유로 실패하고, 스킬은 Backend 장애 때 중단하도록 되어 있다
+  - Backend client 가 낸 오류는 종류와 관계없이 격리하지 않고 그대로 던진다. HTTP, 네트워크, 본문 읽기, JSON 파싱, 응답 검증 오류는 모두 전체 수집을 중단한다. client 오류의 공통 기반 타입으로 구분한다
   - 격리한 실패의 `reason` 에는 오류 문구의 첫 줄만 200자 안으로 남긴다
 - 격리된 실패가 있어도 명령의 종료 코드는 지금처럼 0 이다. 출처별 상태는 이미 stdout JSON 의 `statuses` 에 나온다
 
@@ -41,10 +41,12 @@
 ### 2. archive 수집의 중복 제거
 
 290행 부근의 `items` 에서 `contentKey` 가 같은 항목은 앞의 것만 남긴다. 걸러 낸 뒤 `buildIngestionPayload` 에 넘긴다.
+archive 는 중복 제거로 반영 수가 `batchLimit` 보다 작아져도 cursor 의 `done` 이 `true` 가 아니면 다음 배치를 계속 읽는다. `remaining` 이 0 이면 멈춘다. 최근 글 모드의 종료 조건은 유지한다.
 
 ### 3. 출처별 실패 격리
 
-`collectAndIngestStudyLibrary` 의 출처 반복에서 `StudyLibraryApiError` 가 아닌 예외를 잡는다.
+`study-library/client.ts` 의 HTTP, 네트워크, 본문 읽기, JSON 파싱, 응답 검증 오류가 공통 기반 타입을 상속하게 한다. 기존 `StudyLibraryApiError` 의 필드와 오류 보고 형식은 유지한다.
+`collectAndIngestStudyLibrary` 의 출처 반복에서 이 Backend client 오류가 아닌 예외를 잡는다.
 그 출처의 상태를 `{ sourceKey, status: "failed", reason, acceptedCount: sourceAccepted, cursorUpdated: sourceUpdates > 0 }` 로 남기고 다음 출처로 간다.
 
 ### 4. 문서
@@ -55,8 +57,10 @@
 
 - 최근 글 모드에서 같은 글이 query 만 다른 URL 로 두 번 오면 한 건만 저장 요청에 담긴다
 - archive 모드에서도 같다
+- archive 첫 배치에 중복이 있어 반영 수가 배치 크기보다 작고 cursor 가 끝나지 않았으면 다음 배치의 고유 글도 반영한다
 - 출처 둘 중 첫 출처의 수집기가 예외를 던지면 첫 출처는 `failed`, 둘째 출처는 `ingested` 다
-- `StudyLibraryApiError` 가 나면 반복을 멈추고 예외가 그대로 나온다
+- 격리한 오류의 `reason` 은 첫 줄만 남기고 200자 이하다
+- `StudyLibraryApiError` 와 Backend client 의 JSON 파싱 또는 응답 검증 오류가 나면 반복을 멈추고 예외가 그대로 나온다
 
 ## 검증
 
@@ -78,5 +82,6 @@ PATH="$HOME/.bun/bin:$PATH" bunx tsc --noEmit
 | 파일 | 변경 |
 |---|---|
 | `career-os/scripts/study-topic-recommender/study-library/ingestion.ts` | 수정 |
+| `career-os/scripts/study-topic-recommender/study-library/client.ts` | 수정 |
 | `career-os/scripts/study-topic-recommender/study-library/ingestion.test.ts` | 수정 |
 | `career-os/docs/flow.md` | 수정 |

@@ -44,10 +44,10 @@
 
 ### 1. 틀 생성 함수
 
-`career-os/scripts/position-recommender/run-dir.ts` 나 새 파일 `career-os/scripts/position-recommender/update-templates.ts` 에 두 함수를 둔다.
+기존 실행 경로 helper 인 `career-os/scripts/position-recommender/run-dir.ts` 에 두 함수를 둔다. 새 루트 helper 파일은 만들지 않는다.
 
 - `writeCompanyTierUpdatesTemplate(paths)`: `company-tier-queue.json` 에서 `collectionRunId` 와 `companyTierRunId` 를 읽어 틀을 쓰고, 큐의 회사 수를 돌려준다
-- `writeAnalysisUpdatesTemplate(paths)`: `analysis-queue.json` 에서 `collectionRunId` 와 `analysisRunId` 를 읽어 틀을 쓰고, 큐의 공고 수를 돌려준다
+- `writeAnalysisUpdatesTemplate(paths)`: `analysis-queue.json` 에서 `collectionRunId` 와 `analysisRunId` 를 읽어 틀을 쓰고, 큐의 `resultStatus` 가 `pending` 또는 `failed` 인 공고 수를 돌려준다. `created` 와 `reused` 는 세지 않는다
 
 큐 파일의 칸 이름은 `companyTierQueueFileSchema` 와 `queueAnalysisRunId` 가 읽는 방식을 따른다.
 
@@ -66,9 +66,11 @@
 ### 4. `career-os/scripts/position-recommender/position_run.test.ts`
 
 - `collect` 가 회사 판정 분기로 가면 `company-tier-updates.json` 틀이 생기고, 최상위 칸이 큐와 같다
+- `collect` 가 바로 공고 분석 분기로 가면 `analysis-updates.json` 틀이 생기고, 최상위 칸이 큐와 같다
+- `commit-company-tiers` 가 공고 분석 큐를 만들면 `analysis-updates.json` 틀이 생기고, 채울 항목 수가 열린 공고 수와 같다
 - `commit-analyses` 가 `partial` 이면 `analysis-updates.json` 이 새 틀로 바뀐다
 - 틀을 그대로 넘기면 `commit-analyses` 가 `큐와 제출 목록이 다릅니다` 로 실패한다. 빈 틀이 통과하지 않는다는 확인이다
-- stdout 에 채울 항목 수 줄이 나온다
+- 네 경로 모두 stdout 에 각 큐의 실제 채울 항목 수가 나온다. `partial` 큐에 `created` 또는 `reused` 가 있어도 이 항목은 세지 않는다
 
 ## 검증
 
@@ -90,7 +92,7 @@ PATH="$HOME/.bun/bin:$PATH" bunx tsc --noEmit
 
 | 파일 | 변경 |
 |---|---|
-| `career-os/scripts/position-recommender/update-templates.ts` | 신규 |
+| `career-os/scripts/position-recommender/run-dir.ts` | 수정 |
 | `career-os/scripts/position-recommender/position_run.ts` | 수정 |
 | `career-os/scripts/position-recommender/position_run.test.ts` | 수정 |
 | `career-os/.claude/skills/position-recommender/SKILL.md` | 수정 |

@@ -1,6 +1,6 @@
 # Phase 03. 정리와 도움말을 CLI 가 맡고, cron 이 막는 명령을 스킬에서 없앤다
 
-**Execution profile**: standard
+**Execution profile**: deep
 
 ## 목표
 
@@ -30,7 +30,7 @@ cron 실행에서 hermes 가 막는 명령을 모델이 쓰지 않아도 되게 
 
 ## 의도 메모
 
-- **정리 명령은 지울 경로를 스스로 검증한다.** 시스템 임시 디렉터리 바로 아래이고 접두사가 맞을 때만 지운다. 그 밖의 경로는 지우지 않고 종료 코드 2 로 끝낸다
+- **정리 명령은 지울 경로를 스스로 검증한다.** `realpath` 로 확인한 시스템 임시 디렉터리의 직접 자식이고 접두사가 맞으며, 실행 디렉터리 자체가 symlink 가 아닐 때만 지운다. 중첩 경로와 symlink 를 포함한 그 밖의 경로는 지우지 않고 종료 코드 2 로 끝낸다
 - `finalize` 안에서 지우는 안은 기각했다. 모델은 `finalize` 뒤에 HTML 을 게시하고 결과를 전달하므로, 그 전에 지우면 안 된다
 - 스킬 문서에는 「즉석 스크립트를 쓰지 않는다」를 한 줄로 적고, 대신 읽을 것(CLI stdout, 큐 파일)을 적는다. 금지만 적으면 모델이 다른 우회를 찾는다
 - 게시 확인은 report-publisher 가 돌려준 결과로 판단한다고 두 스킬에 적는다
@@ -40,11 +40,12 @@ cron 실행에서 hermes 가 막는 명령을 모델이 쓰지 않아도 되게 
 ### 1. 포지션 `cleanup` 하위 명령
 
 `position_run.ts` 의 `COMMANDS` 에 `cleanup` 을 더한다. `--run <RUN_DIR>` 이 필요하다.
-경로 검증을 통과하면 디렉터리를 지우고 `정리 완료: <디렉터리 이름>` 을 낸다. 도움말 `HELP` 에 한 줄을 더한다.
+`realpath` 기준 시스템 임시 디렉터리의 직접 자식, `position-recommendation-` 접두사, symlink 아님을 검증한다. 경로 검증을 통과하면 디렉터리를 지우고 `정리 완료: <디렉터리 이름>` 을 낸다. 도움말 `HELP` 에 한 줄을 더한다.
 
 ### 2. 공부 `--cleanup` 동작과 `--help`
 
 `morning_reading_cli.ts` 의 `actionFlags` 와 `booleanOptions` 에 `--cleanup` 을 더한다. `resolveStudyRunRoot` 로 실행 경로를 검증하고 그 디렉터리를 지운다.
+삭제 직전에 `realpath` 기준 시스템 임시 디렉터리의 직접 자식, `study-topic-recommender.` 접두사, symlink 아님을 추가로 검증한다. 일반 실행 경로를 받는 `resolveStudyRunRoot` 의 계약은 바꾸지 않는다.
 `--help` 와 `-h` 가 있으면 다른 인자 검사 전에 사용법을 stdout 에 내고 종료 코드 0 으로 끝낸다. 사용법에는 하위 동작 플래그와 값 옵션을 적는다.
 
 ### 3. 스킬 문서
@@ -56,16 +57,19 @@ cron 실행에서 hermes 가 막는 명령을 모델이 쓰지 않아도 되게 
   - 「불필요한 임시 파일을 정리한다」를 `--cleanup --run-dir <RUN_DIR>` 로 정리한다는 문장으로 바꾼다. 「사용자가 결과를 확인하기 전에 유일한 HTML 파일을 삭제하지 않는다」는 그대로 둔다
   - 같은 두 줄을 더한다
 - `career-os/.claude/skills/study-topic-recommender/references/execution.md` 의 명령 목록에 `--cleanup` 과 `--help` 를 더한다
+- `career-os/docs/code-architecture.md` 의 일일 실행 하위 명령 수와 표에 `cleanup` 을 반영한다
 
 ### 4. 테스트
 
 - `career-os/scripts/position-recommender/position_run.test.ts`
   - 임시 디렉터리 아래 `position-recommendation-` 디렉터리는 `cleanup` 이 지운다
-  - 다른 경로(예: 임시 디렉터리 밖, 접두사가 다른 디렉터리)는 지우지 않고 종료 코드 2 다
+- 다른 경로(예: 임시 디렉터리 밖, 접두사가 다른 디렉터리)는 지우지 않고 종료 코드 2 다
+- 임시 디렉터리 안의 중첩 경로와 실행 디렉터리 symlink 도 지우지 않고 종료 코드 2 다
 - `career-os/scripts/lib/cli-contract.test.ts` 의 아침 읽을거리 절
-  - `--help` 는 종료 코드 0 이고 stdout 이 사용법으로 시작한다
-  - `--cleanup` 에 임시 디렉터리 밖 경로를 주면 종료 코드 2 이고 아무것도 지우지 않는다
-- 스킬 문서 테스트 `career-os/scripts/position-recommender/skill_doc.test.ts`, `career-os/scripts/study-topic-recommender/skill_doc.test.ts` 에 정리 명령 문장이 있는지 확인을 더한다
+  - `--help` 와 `-h` 는 다른 잘못된 인자보다 우선해 종료 코드 0 이고 stdout 이 사용법으로 시작한다
+  - `--cleanup` 은 임시 디렉터리 바로 아래의 정상 실행 디렉터리를 지운다
+  - `--cleanup` 에 임시 디렉터리 밖, 중첩 경로, symlink 를 주면 종료 코드 2 이고 아무것도 지우지 않는다
+- 스킬 문서 테스트 `career-os/scripts/position-recommender/skill_doc.test.ts`, `career-os/scripts/study-topic-recommender/skill_doc.test.ts` 에 정리 명령, 즉석 스크립트 금지와 CLI stdout·큐 파일 사용, report-publisher 결과로 게시 확인하는 문장이 있는지 확인을 더한다
 
 ## 검증
 
@@ -92,4 +96,5 @@ PATH="$HOME/.bun/bin:$PATH" bunx tsc --noEmit
 | `career-os/.claude/skills/position-recommender/SKILL.md` | 수정 |
 | `career-os/.claude/skills/study-topic-recommender/SKILL.md` | 수정 |
 | `career-os/.claude/skills/study-topic-recommender/references/execution.md` | 수정 |
+| `career-os/docs/code-architecture.md` | 수정 |
 | 위 테스트 파일 넷 | 수정 |
