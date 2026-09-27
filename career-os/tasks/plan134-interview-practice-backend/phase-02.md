@@ -105,18 +105,19 @@ export type PersonalQuestionRecord = { questionId: string; drillType: DrillType;
 
 - 생성자는 디렉터리 경로와 시각 공급 함수를 받는다
 - 파일이 없으면 빈 상태로 본다. 첫 쓰기에서 디렉터리를 만든다
-- `recordAttempt`: 같은 `attemptId` 가 `attempts.jsonl` 에 있으면 그 줄로 응답을 다시 만들어 돌려주고 아무것도 쓰지 않는다. 없으면 `seoulDate(now())` 로 평가일을 정하고, `nextTopicProgress` 로 주제를 갱신해 `topic-progress.json` 을 교체한 뒤 `attempts.jsonl` 에 한 줄을 더한다
+- `recordAttempt`: 같은 `attemptId` 가 `attempts.jsonl` 에 있으면 해당 줄까지 같은 `drillType`·`topic` 의 기록을 순서대로 `nextTopicProgress` 에 다시 적용해 **그 기록 당시의 응답**을 만들어 돌려주고 아무것도 쓰지 않는다. 나중에 같은 주제의 기록이 더 쌓여도 현재 `topic-progress.json` 값을 재시도 응답으로 쓰지 않는다. 없으면 `seoulDate(now())` 로 평가일을 정하고, `nextTopicProgress` 로 주제를 갱신해 `topic-progress.json` 을 교체한 뒤 `attempts.jsonl` 에 한 줄을 더한다
 - 입력은 Phase 01 의 zod 스키마(`attemptBodySchema`, `personalQuestionBodySchema`)로 먼저 검사한다. Backend 와 같은 입력을 거절해야 한다
 - JSON 파일은 같은 디렉터리의 임시 파일에 쓰고 `renameSync` 로 교체한다
 
 ### 6. `career-os/scripts/interview-drill/store/index.ts` 신규
 
 ```ts
-export function createInterviewPracticeStore(environment?: Record<string, string | undefined>): InterviewPracticeStore;
+export function createInterviewPracticeStore(environment?: Record<string, string | undefined>, careerOsDirectory?: string): InterviewPracticeStore;
 ```
 
 - `CAREER_STORE=backend`: `resolveCareerBackendConnection(environment)` 로 연결값을 얻어 Backend 구현을 만든다
-- `CAREER_STORE=file`: `CAREER_STORE_DIR` 이 있으면 그 경로, 없으면 `career-os/state/interview-practice/` 로 파일 구현을 만든다. 경로는 저장소 루트를 기준으로 이 파일 위치에서 계산한다(`drill-engine.ts` 의 `careerOsRoot()` 와 같은 방식)
+- `CAREER_STORE=file`: `CAREER_STORE_DIR` 이 비어 있지 않으면 그 경로, 없거나 빈 문자열 또는 공백이면 `career-os/state/interview-practice/` 로 파일 구현을 만든다. 경로는 저장소 루트를 기준으로 이 파일 위치에서 계산한다(`drill-engine.ts` 의 `careerOsRoot()` 와 같은 방식)
+- `careerOsDirectory` 는 기본 경로를 임시 디렉터리로 격리하는 테스트에만 넘긴다. 운영 호출은 생략하며 `index.ts` 위치에서 계산한 `career-os/` 경로를 쓴다
 - 값이 없거나 둘 중 하나가 아니면 「CAREER_STORE 는 backend 나 file 이어야 한다. drill-engine.ts doctor 로 설정을 점검한다.」 로 실패한다
 
 ### 7. `career-os/scripts/interview-drill/drill-engine.ts` 수정
@@ -136,7 +137,7 @@ export function createInterviewPracticeStore(environment?: Record<string, string
 | `personal disable` | `--question-id` | 두 `drillType` 의 개인 질문에서 찾아 `enabled: false` 로 저장한다. 없으면 오류 | `{ disabled: questionId }` |
 
 - 하위 명령이 없거나 모르는 값이면 사용법을 stderr 에 쓰고 종료 코드 2 다
-- `import.meta.main` 블록은 `runDrillCli(process.argv.slice(2), { createStore: () => createInterviewPracticeStore(), readFile })` 결과를 JSON 으로 stdout 에 쓴다. 인자 오류는 종료 코드 2, 그 밖의 오류는 메시지를 stderr 에 쓰고 종료 코드 1 이다. Backend 연결 오류 메시지는 「커리어 Backend에 연결하지 못했습니다. 연습 결과는 기록되지 않았습니다.」 로 시작한다
+- `import.meta.main` 블록은 `runDrillCli(process.argv.slice(2), { createStore: () => createInterviewPracticeStore(), readFile })` 결과를 JSON 으로 stdout 에 쓴다. 인자 오류는 종료 코드 2, 그 밖의 오류는 메시지를 stderr 에 쓰고 종료 코드 1 이다. `CareerBackendHttpError` 중 `NETWORK_ERROR` 처럼 요청이 전송되지 못한 연결 오류만 「커리어 Backend에 연결하지 못했습니다. 연습 결과는 기록되지 않았습니다.」 로 시작한다. 응답 JSON 또는 계약 검사 실패는 기록 여부를 단정하지 않는 오류를 낸다
 - import 만 했을 때는 아무것도 출력하지 않는다. 저장소 생성도 `import.meta.main` 안에서만 한다
 
 ### 8. 이 phase 를 검증하는 테스트
@@ -147,6 +148,7 @@ export function createInterviewPracticeStore(environment?: Record<string, string
 - Backend 구현에 같은 묶음을 돌리는 일은 Phase 01 의 `test/interview.e2e.test.ts` 가 실제 Backend 로 같은 경우를 검사하므로 여기서 하지 않는다. Backend 구현의 경로와 헤더는 아래 `client.test.ts` 가 검사한다
 - `pass` 기록 뒤 `listProgress` 의 `passCount` 가 1, `nextReviewDate` 가 평가일 다음 날이다
 - 같은 `attemptId` 로 두 번 기록하면 `passCount` 가 1 그대로다
+- A 기록 뒤 같은 주제에 B를 기록하고 A를 다시 보내면, 재시도 응답 전체가 첫 A 응답과 같다
 - 켠 개인 질문이 목록에 나오고 끄면 빠진다
 - 형식이 틀린 기록은 저장하지 않고 거절한다
 
@@ -154,12 +156,14 @@ export function createInterviewPracticeStore(environment?: Record<string, string
 
 - `CAREER_STORE` 가 없으면 `doctor` 를 안내하는 메시지로 실패한다
 - `CAREER_STORE=file` 이고 `CAREER_STORE_DIR` 을 주면 그 경로의 파일 구현이다
+- `CAREER_STORE_DIR` 이 빈 문자열이나 공백이면 기본 디렉터리의 파일 구현이다. 테스트는 `careerOsDirectory` 에 임시 디렉터리를 넘겨 기록 파일이 그 아래 `state/interview-practice/` 에 생기는지 검사하고 실제 비공개 작업본에는 쓰지 않는다
 
 `career-os/scripts/interview-drill/drill-engine.test.ts` 수정.
 
 - 「답변 연습 복습 상태」 describe 를 지운다. 복습일 규칙은 Backend 의 `review-schedule.test.ts` 가 검사한다
 - 임시 디렉터리의 파일 구현으로 `runDrillCli(["select", "behavioral"], ...)` 를 부르면 개인 질문이 결과에 들어가고 `sourceScope` 가 `"personal"` 이다
 - 과거 날짜로 복습일이 잡힌 주제의 질문은 `dueForReview` 가 참이다
+- 진행 상태가 없는 신규 질문은 `dueForReview` 가 거짓이다
 - `--attempt-id` 없는 `record` 는 사용법 오류다
 - 한 줄이 형식에 맞지 않는 jsonl 로 `personal add` 를 부르면 아무것도 저장되지 않는다
 - 기존 「지원별 질문 선택」 테스트는 새 시그니처로 옮겨 그대로 통과시킨다
@@ -168,12 +172,14 @@ export function createInterviewPracticeStore(environment?: Record<string, string
 
 - 가짜 `fetcher` 로 `recordAttempt` 가 `POST api/interview/v1/attempts` 에 `Idempotency-Key: <attemptId>` 와 Bearer 헤더를 보낸다
 - `fetcher` 가 계속 예외를 던지면 `CareerBackendHttpError` 의 code 가 `NETWORK_ERROR` 다
+- `store/port.ts` 의 응답 타입은 Phase 01 의 `attemptResponseSchema`, `personalQuestionUpsertResponseSchema` 에서 추론한다. 응답 구조를 별도 타입으로 다시 쓰지 않는다
 
 `career-os/scripts/interview-drill/drill-engine.cli.test.ts` 신규. 실제 `bun drill-engine.ts` 자식 프로세스를 실행한다.
 
 - `CAREER_STORE=file` 과 임시 저장 디렉터리에서 `select behavioral` 은 종료 코드 0 이고 stdout 이 JSON 이며 `store: "file"` 이다
 - `--attempt-id` 가 없는 `record` 는 종료 코드 2 이고 stderr 에 사용법이 나온다
 - `CAREER_STORE=backend` 와 닿지 않는 로컬 URL 에서 유효한 `record` 는 종료 코드 1 이고 stderr 에 기록되지 않았다는 문구가 나온다. 파일 저장 디렉터리에는 기록이 생기지 않는다
+- Backend 가 잘못된 JSON 이나 응답 계약 위반을 돌려주면 종료 코드 1 이되 기록 여부를 단정하는 문구는 나오지 않는다
 
 ## 검증
 
