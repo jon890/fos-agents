@@ -21,12 +21,12 @@ class PersonaReportTest(unittest.TestCase):
 
             def add_post(number):
                 record = {
-                    "logNo": str(number), "title": f"구리 카페 {number}",
+                    "logNo": str(number), "title": f"예시시 카페 {number}",
                     "resolvedDate": "2026-09-24", "categoryName": "카페로그",
                     "paragraphs": ["안녕하세요 지융입니다", "오늘은 카페에 다녀왔어요"],
                     "block_sequence": ["sticker", "text", "placesMap", "sticker"],
                     "image_count": 1, "sticker_count": 2, "tagsFetched": True,
-                    "tags": ["구리카페"], "char_count": 28,
+                    "tags": ["예시시카페"], "char_count": 28,
                 }
                 (posts / f"{number}.json").write_text(json.dumps(record, ensure_ascii=False), encoding="utf-8")
 

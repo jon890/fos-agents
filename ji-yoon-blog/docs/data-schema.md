@@ -72,6 +72,7 @@ ji-yoon-blog/drafts/<YYYY-MM-DD>-<장소>/
 | `titleCandidates` | 지융에게 보여준 제목 후보 배열. 고르고 나면 `title`이 그중 하나다 |
 | `category` | `category-style-map.md`에 있는 카테고리 이름 |
 | `sponsored` | 지융에게 확인한 협찬 여부. 참이면 협찬, 거짓이면 비협찬 |
+| `menuPhotoUnavailable` | 맛집·카페 사진 묶음에 메뉴판이 실제로 없을 때만 참. 메뉴 사진과 가격표 스티커를 생략한다 |
 | `tags` | 검색어를 반영한 태그 배열. `#` 없이 적는다 |
 | `blocks` | 본문 블록 배열. 순서가 곧 글의 순서다 |
 
@@ -94,7 +95,8 @@ ji-yoon-blog/drafts/<YYYY-MM-DD>-<장소>/
 | 내돈내산 | `ogq_5db4314bac2f0-23` | `sponsored`가 거짓일 때만 한 개 |
 | 위치정보 | `ogq_5db4314bac2f0-4` | 마지막 블록 |
 
-맛집로그와 카페로그는 메뉴판 사진 한 장을 `role: "menu"`로 표시한다.
+맛집로그와 카페로그는 메뉴판 사진이 있으면 한 장을 `role: "menu"`로 표시한다.
+메뉴판 사진이 실제로 없다면 `menuPhotoUnavailable: true`를 적고 가격표 스티커도 넣지 않는다. 다른 사진을 메뉴판으로 속이지 않는다.
 지도 블록에는 지융이 확인한 상호명과 주소를 적는다.
 네이버 검색 결과에서 둘 다 맞는 항목이 하나가 아니면 첨부를 멈추고 지융에게 묻는다.
 협찬 여부를 확인하지 않았다면 `sponsored`를 추정해 채우지 않는다.
