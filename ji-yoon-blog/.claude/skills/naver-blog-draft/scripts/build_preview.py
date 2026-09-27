@@ -1,7 +1,11 @@
 """초안 JSON 과 내려받은 사진으로 미리보기 HTML 을 만든다.
 
 네이버 블로그 모바일 화면 폭으로 그려서 실제로 올라갔을 때의 흐름을 본다.
-사진은 파일을 그대로 참조하므로 내려받은 디렉터리를 지우면 안 보인다.
+HTML 은 자기 폴더 안의 파일만 상대 경로로 부른다.
+사진과 스티커가 그 폴더 밖에 있으면 폴더 안으로 복사한다. 원본은 옮기지 않는다.
+초안 폴더 밖의 사진(절대 경로나 `../`)은 `external/` 아래에 두고, 이름이 겹치면 번호를 붙인다.
+fos-assistant 의 결과물 화면은 스크립트와 외부 이미지, 외부 CSS 를 막으므로
+인라인 스타일과 같은 폴더의 이미지만 쓴다.
 
 초안 JSON 형식:
 
@@ -20,16 +24,23 @@
 
 사용법:
     python3 build_preview.py draft.json --out preview.html
+    python3 build_preview.py draft.json --out <결과물 폴더>/초안/index.html
 """
 
 from __future__ import annotations
 
 import argparse
+import filecmp
 import html
 import json
+import shutil
 from pathlib import Path
+from urllib.parse import quote
 
 from draft_contract import validate
+
+# fos-assistant 결과물 화면이 내어 주는 이미지 형식이다. HEIC 와 SVG 는 여기에 없다.
+IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
 
 STYLE = """
 :root { color-scheme: light dark; --bg:#f2f3f5; --card:#fff; --ink:#1a1a1a; --muted:#767676;
@@ -68,7 +79,39 @@ h1 { font-size:19px; line-height:1.45; margin:0; padding:24px 20px 16px;
 """
 
 
-def render_block(block: dict, base: Path) -> str:
+def place_asset(source: Path, base: Path, out_dir: Path, fallback: str) -> str:
+    """source 를 out_dir 안에서 부를 상대 경로를 돌려준다.
+
+    out_dir 밖에 있으면 초안 폴더 안의 상대 위치를 유지해 복사한다.
+    초안 폴더 밖의 파일은 fallback 자리에 두고, 그 자리에 내용이 다른 파일이 있으면
+    `이름-2.jpg` 처럼 번호를 붙여 덮어쓰지 않는다.
+    """
+    source = source.resolve()
+    out_dir = out_dir.resolve()
+    if source.is_relative_to(out_dir):
+        return quote(source.relative_to(out_dir).as_posix())
+    base = base.resolve()
+    if source.is_relative_to(base):
+        rel = source.relative_to(base)
+    else:
+        rel = free_slot(source, out_dir, Path(fallback))
+    target = out_dir / rel
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source, target)
+    return quote(rel.as_posix())
+
+
+def free_slot(source: Path, out_dir: Path, rel: Path) -> Path:
+    """rel 이 비었거나 같은 내용이면 그대로, 아니면 번호를 붙인 빈 자리를 돌려준다."""
+    candidate, number = rel, 1
+    while (out_dir / candidate).exists() and not filecmp.cmp(source, out_dir / candidate, shallow=False):
+        number += 1
+        candidate = rel.with_name(f"{rel.stem}-{number}{rel.suffix}")
+    return candidate
+
+
+def render_block(block: dict, base: Path, out_dir: Path | None = None) -> str:
+    out_dir = base if out_dir is None else out_dir
     kind = block.get("type")
 
     if kind == "text":
@@ -80,9 +123,11 @@ def render_block(block: dict, base: Path) -> str:
         path = block.get("path", "")
         cap = block.get("caption", "")
         target = (base / path) if path and not Path(path).is_absolute() else Path(path)
-        if path and target.exists():
-            src = html.escape(target.resolve().as_uri())
-            body = f'<img src="{src}" alt="">'
+        if path and target.is_file() and target.suffix.lower() not in IMAGE_SUFFIXES:
+            body = f'<div class="missing">미리보기에 넣을 수 없는 형식<br>{html.escape(path)}</div>'
+        elif path and target.is_file():
+            src = place_asset(target, base, out_dir, f"external/{target.name}")
+            body = f'<img src="{html.escape(src, quote=True)}" alt="">'
         else:
             body = f'<div class="missing">사진 없음<br>{html.escape(path or "경로 없음")}</div>'
         caption = f'<div class="cap">{html.escape(cap)}</div>' if cap else ""
@@ -99,7 +144,7 @@ def render_block(block: dict, base: Path) -> str:
         label = labels.get(code, "스티커")
         image = base / "stickers" / f"{code}.png"
         if code in labels and image.is_file():
-            src = html.escape(image.resolve().as_uri(), quote=True)
+            src = html.escape(place_asset(image, base, out_dir, f"stickers/{code}.png"), quote=True)
             return f'<div class="sticker"><img src="{src}" alt="{html.escape(label, quote=True)}"></div>'
         return f'<div class="sticker">{html.escape(label)}</div>'
 
@@ -115,9 +160,9 @@ def render_block(block: dict, base: Path) -> str:
     return f'<div class="missing">모르는 블록: {html.escape(str(kind))}</div>'
 
 
-def build(draft: dict, base: Path) -> str:
+def build(draft: dict, base: Path, out_dir: Path | None = None) -> str:
     blocks = draft.get("blocks") or []
-    body = "".join(render_block(b, base) for b in blocks)
+    body = "".join(render_block(b, base, out_dir) for b in blocks)
     tags = "".join(f"<span>#{html.escape(t)}</span>" for t in draft.get("tags") or [])
     photos = sum(1 for b in blocks if b.get("type") == "image")
     letters = sum(
@@ -165,7 +210,8 @@ def main() -> int:
         return 2
 
     out = Path(args.out)
-    out.write_text(build(draft, draft_path.parent), encoding="utf-8")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(build(draft, draft_path.parent, out.parent), encoding="utf-8")
 
     blocks = draft.get("blocks") or []
     missing = [
@@ -173,7 +219,17 @@ def main() -> int:
         for b in blocks
         if b.get("type") == "image" and not (draft_path.parent / b.get("path", "")).exists()
     ]
+    unsupported = [
+        b.get("path", "")
+        for b in blocks
+        if b.get("type") == "image"
+        and (draft_path.parent / b.get("path", "")).is_file()
+        and Path(b.get("path", "")).suffix.lower() not in IMAGE_SUFFIXES
+    ]
     print(f"{out} 생성")
+    if unsupported:
+        # 네이버 편집기는 원본 파일을 올리므로 미리보기에서만 빠진다. 실패로 두지 않는다.
+        print(f"미리보기에 넣지 못한 형식 {len(unsupported)}장: {unsupported[:3]}")
     if missing:
         print(f"사진 {len(missing)}장을 찾지 못했다: {missing[:3]}")
         if not args.allow_missing_photos:
