@@ -32,11 +32,15 @@ phase 01 과 02 가 머지됐고 홈서버가 새 이름으로 전환된 뒤에 
 
 `environmentSchema` 와 `loadConfig` 에서 옛 이름을 지운다.
 
-### 3. 문서
+### 3. 주입 token 상수
+
+`career-os/services/career-backend/src/config/config.module.ts` 의 `RECOMMENDATION_CONFIG` 를 `CAREER_BACKEND_CONFIG` 로 바꾸고, 이 상수를 쓰는 곳을 모두 고친다. `Symbol.for` 키 `career-backend.config` 는 그대로 둔다.
+
+### 4. 문서
 
 `docs/code-architecture.md` 의 「전환 기간에는 옛 `CAREER_RECOMMENDATION_*` 이름도 읽는다」 줄을 지운다.
 
-### 4. 테스트
+### 5. 테스트
 
 - phase 01 이 넣은 옛 이름 테스트를 「옛 이름만 있으면 새 이름이 필요하다는 오류가 난다」 로 바꾼다
 - `career-os/scripts/lib/career-backend-naming.test.ts` 의 `CAREER_RECOMMENDATION_` 허용 목록을 두 설정 테스트 파일만 남긴다. 두 설정 파일과 `code-architecture.md` 를 뺀다
