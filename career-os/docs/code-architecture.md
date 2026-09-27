@@ -201,6 +201,8 @@ Backend는 local 개발에서는 `CAREER_BACKEND_DATABASE_URL`을 읽을 수 있
 client는 `CAREER_BACKEND_URL`과 `CAREER_BACKEND_TOKEN` 또는
 `CAREER_BACKEND_TOKEN_FILE`만 읽으며 DB 자격증명을 받지 않는다.
 공부 추천과 포지션 client 는 `scripts/lib/career-backend-config.ts` 로 같은 연결값을 검증한다.
+HTTP 요청, 인증 헤더, 재시도, timeout 과 오류 응답 해석은 `scripts/lib/career-backend-http.ts` 의 `careerBackendRequest` 가 맡고, 스킬별 client 는 경로와 응답 계약만 가진다.
+멱등 키를 만드는 방법은 이미 저장된 키와 맞아야 하므로 각 client 가 지금 방식을 유지한다.
 전환 기간에는 옛 `CAREER_RECOMMENDATION_*` 이름도 읽는다.
 
 **프로세스 시간대를 UTC에 고정한다.** 시각 컬럼이 모두 `DATETIME(3)`이라 시간대를 저장하지 않으므로,
@@ -371,8 +373,6 @@ skill이 중간 파일 이름과 플래그를 알지 못하도록 모든 하위 
 
 | 진입점 | 언제 쓰나 |
 | --- | --- |
-| `validate_recommendation.ts` | 추천 원문 대조 |
-| `render_recommendation.ts`, `render_candidate_preview.ts` | 렌더 |
 | `configure_position_analysis_policy.ts` | 분석 정책 설정 |
 | `configure_position_company_preferences.ts` | 사람이 정한 회사 tier와 제외 설정 |
 
@@ -451,11 +451,9 @@ Wanted adapter의 직군 코드처럼 소스 고유의 상수는 그 adapter가 
 | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 자유형 HTML 공개 계약        | [validate-report-html.ts](../scripts/position-recommender/render/validate-report-html.ts)                                                                                                                                                          |
 | 대체 상세 화면              | [report.html](../scripts/position-recommender/render/templates/report.html), [report-parts.html](../scripts/position-recommender/render/templates/report-parts.html)                                                                               |
-| 대체 추천 화면과 전체 후보 목록    | [preview.html](../scripts/position-recommender/render/templates/preview.html), [preview-parts.html](../scripts/position-recommender/render/templates/preview-parts.html)                                                                           |
-| 대체 렌더의 색상과 동작         | [report.css](../scripts/position-recommender/render/templates/report.css), [preview.css](../scripts/position-recommender/render/templates/preview.css), [preview.js](../scripts/position-recommender/render/templates/preview.js)                  |
+| 대체 렌더의 색상                | [report.css](../scripts/position-recommender/render/templates/report.css) |
 | 상세 화면의 데이터 변환         | [recommendation-html.ts](../scripts/position-recommender/render/recommendation-html.ts)의 `renderRecommendationHtml(run, assets, generatedAt)`                                                                                                      |
-| 후보 정렬, 표시 제한과 카드 데이터  | [candidate-preview-html.ts](../scripts/position-recommender/render/candidate-preview-html.ts)의 `renderCandidatePreview(run, options, assets, collected)`                                                                                           |
-| 파일 읽기, 쓰기, 현재 시각과 CLI | [render\_recommendation.ts](../scripts/position-recommender/render_recommendation.ts), [render\_candidate\_preview.ts](../scripts/position-recommender/render_candidate_preview.ts), [assets.ts](../scripts/position-recommender/render/assets.ts) |
+| 템플릿 읽기                   | [assets.ts](../scripts/position-recommender/render/assets.ts) |
 | 한국 시각과 날짜 표시          | [lib/date-format.ts](../scripts/lib/date-format.ts)                                                                                                                                                                                                |
 
 
