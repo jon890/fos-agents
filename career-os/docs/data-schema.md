@@ -284,7 +284,6 @@ query 순서와 마지막 슬래시를 맞춘다. 공고 ID 를 담는 query 는
 수집기가 `observed_at` 을 날짜 단위로 적고 재시도가 같은 시각을 다시 보내는데,
 같은 시각까지 막으면 그 갱신이 반영되지 않는다.
 더 오래된 관측을 보내면 요청은 성공하고 행은 그대로 남는다.
-이전 파일을 옮기는 `import_position_state.ts` 가 보내는 것이 옛 관측이라 이 조건이 필요하다.
 
 UNIQUE 는 `url` 대신 `url_hash` 에 건다.
 `VARCHAR(2048)` 을 utf8mb4 로 담으면 index key 가 8192 바이트가 되어
@@ -297,7 +296,7 @@ InnoDB 상한 3072 바이트를 넘고, MySQL 이 `Specified key was too long` �
 `PUT` 의 응답은 `companyTierRunId` 와 회사별 `savedCount` 다.
 `savedCount` 는 중복을 없앤 뒤 그 회사의 출처 키 수다.
 같은 키가 한 요청에 두 번 오면 1 이고, 옛 관측이라 갱신되지 않은 키도 여기 든다.
-바뀐 행 수가 아니라 그 키로 지금 존재하는 행 수다. 이관 뒤 행 수 대조가 이 값을 쓴다.
+바뀐 행 수가 아니라 그 키로 지금 존재하는 행 수다.
 
 `source_type` 과 그 출처가 채우는 축이다.
 
@@ -399,10 +398,6 @@ bun career-os/scripts/position-recommender/configure_position_company_preference
 ```
 
 명령은 회사명과 비공개 제외 사유를 출력하지 않고 전체 반영·제외·tier별 건수만 출력한다.
-이전 파일에 있던 회사 조사와 개인 제외 규칙은 `import_position_state.ts` 가 옮긴다.
-`--source-dir` 로 읽을 위치를 받고, 기본은 아무것도 보내지 않고 집계만 내는 실행이다.
-실제로 반영하려면 `--commit` 을 주고, 회사 근거까지 저장하려면 `--company-tier-run-id` 를 함께 준다.
-버전 1 형식의 제외 규칙이 있으면 `--decided-at` 도 필요하다. 원본에 그 날짜가 없기 때문이다.
 
 `prioritySlots`와 `agingSlots`의 합은 `dailyAnalysisLimit`과 같아야 한다.
 `dailyAnalysisLimit`은 1부터 20까지만 허용한다.
@@ -430,9 +425,6 @@ bun career-os/scripts/position-recommender/configure_position_analysis_policy.ts
 
 회사별 공개 사실은 `fos_career.company_evidence` 가 담는다. 이 문서의 「회사 근거」 절이 소유한다.
 포지션 추천은 파일이 아니라 `GET api/positions/v1/companies/:companyKey/evidence` 로 읽는다.
-
-`scripts/position-recommender/company-research/schema.ts` 는 이전 파일 형식의 zod 계약이다.
-`import_position_state.ts` 가 그 파일을 읽을 때만 쓴다. 새 근거는 이 형식으로 저장하지 않는다.
 
 #### 공고 후보풀
 
@@ -893,18 +885,7 @@ HTTP 계약과 오류 코드는 [`flow.md`](flow.md#study-topic-recommender)가 
 `channel`, `url`, `external_id`, `published_at` 을 담는다.
 멱등 키는 `publication:` 뒤에 고정 순서 `{reportId,channel,publishedAt,externalId,url}` JSON 의 UTF-8 SHA-256 hex 를 붙인다.
 
-### 파일에서 옮기는 것
-
-일회성 이관 명령 `import_study_state.ts` 가 옮긴다.
-
-| 원본 | 옮길 곳 |
-| --- | --- |
-| `config/external-reading-sources.ts` 의 `sources` | `study_sources`. `note` 는 「config 에서 이관」 |
-| `state/morning-study-history.json` 의 `reports` 와 `entries` | 리포트마다 `POST /recommendation-runs` 한 번 |
-
-이력의 `entries` 는 `studyTopic` 과 `studyTopicKey` 와 `careerValue` 를 가지지만
-`summary` 와 `reason` 과 `careerQuestion` 은 없다. 그 셋은 NULL 로 보낸다.
-원본 파일은 운영에서 옮기고 행 수를 대조하기 전에는 지우지 않는다.
+파일 원본은 2026-09-25에 Backend로 이관했고 이관 명령은 삭제했다.
 
 ### 실행 중 생성되는 읽을거리 데이터
 

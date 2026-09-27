@@ -346,7 +346,6 @@ skill이 중간 파일 이름과 플래그를 알지 못하도록 모든 하위 
 | `render_recommendation.ts`, `render_candidate_preview.ts` | 렌더 |
 | `configure_position_analysis_policy.ts` | 분석 정책 설정 |
 | `configure_position_company_preferences.ts` | 사람이 정한 회사 tier와 제외 설정 |
-| `import_position_state.ts` | 파일에 있던 회사 조사와 제외 규칙을 DB로 옮기는 일회성 명령 |
 
 디렉터리별 책임은 다음과 같다.
 
@@ -514,7 +513,6 @@ skill은 필요한 정보를 실행 시점에 조회하고 TypeScript 스크립�
 | `build_morning_reading.ts`, `validate_outputs.ts` | HTML 생성과 산출물 검증 |
 | `manage_reading_sources.ts` | 사람이 소스를 조회하고 더하고 고치고 끈다. `help`와 `template`는 API 연결 없이 사용법과 요청 초안을 보여준다 |
 | `configure_study_recommendation.ts` | 사람이 후보자 기준 버전을 올린다 |
-| `import_study_state.ts` | 파일에 있던 소스와 추천 이력을 Backend 로 옮기는 일회성 명령 |
 
 후보풀, 선별, 공부 주제 구성과 HTML 렌더링은 각각 분리된 모듈이 담당한다.
 실행기는 시스템 임시 디렉터리 아래의 명시적인 실행 경로만 사용하며 저장소에 리포트 디렉터리를 만들지 않는다.
