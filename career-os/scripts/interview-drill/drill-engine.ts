@@ -1,29 +1,17 @@
 #!/usr/bin/env bun
 
-/**
- * interview-practice의 기술·인성 모드가 공유하는 답변 연습 엔진
- *
- * 간격 반복 기반 질문 선정, 답변 채점, 답변 연습 로그 기록, 복습 상태 갱신,
- * 질문 선정, 채점, 기록, 약점 환류를 담당한다.
- *
- * 의존 파일:
- *   - career-os/public/question-bank/{기술 카테고리}/questions.json  (tech)
- *   - career-os/public/question-bank/behavioral/questions.json  (behavioral)
- *   - career-os/library/question-bank/{tech|behavioral}-personal.jsonl  (있으면 merge)
- *   - applications/<company>/<position>/evidence/interview-questions.json  (--application-dir로 지정)
- *   - career-os/state/drill-progress.json  (드릴 간격 반복 상태)
- *   - career-os/state/drill-log-YYYY-MM-DD.jsonl  (자동 생성)
- */
-
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  appendFileSync,
-  writeFileSync,
-} from "node:fs";
-import { join, dirname } from "node:path";
-import { firstOptionValue } from "../lib/cli.ts";
+  attemptBodySchema,
+  interviewQuestionSchema,
+  type AttemptBody,
+  type InterviewQuestion,
+  type TopicProgress,
+} from "../../services/career-backend/src/interview/schema.ts";
+import { seoulDate } from "../../services/career-backend/src/interview/review-schedule.ts";
+import { UsageError } from "../lib/cli.ts";
+import { CareerBackendHttpError } from "../lib/career-backend-http.ts";
 import {
   loadApplicationInterviewQuestions,
   type ApplicationInterviewQuestion,
@@ -34,69 +22,30 @@ import {
   type FollowUpAxis,
   type InterviewBar,
 } from "./follow-up-policy.ts";
-
-// ─── 타입 정의 ────────────────────────────────────────────────────────────────
+import { createInterviewPracticeStore } from "./store/index.ts";
+import type { InterviewPracticeStore } from "./store/port.ts";
 
 export type DrillType = "tech" | "behavioral";
 export type ScoreResult = "pass" | "shallow" | "fail" | "unknown";
-
-export interface DrillQuestion {
-  id: string;
-  topic: string;
-  category: string;
-  difficulty: "basic" | "intermediate" | "advanced";
-  bar?: InterviewBar;
-  question: string;
-  intent: string;
-  answerSignals: string[];
-  followUps?: string[];
-  positionFitHint?: string;
-  tags?: string[];
-  sequenceHint?: "opening" | "early" | "middle" | "late" | "closing";
+export type DrillQuestion = InterviewQuestion & {
   origin?: ApplicationInterviewQuestion["origin"];
   evidenceBoundary?: string;
   sourceScope?: "public" | "personal" | "application";
-}
-
-/** 드릴 간격 반복 상태 */
-export interface DrillProgressEntry {
+};
+export type DrillProgressEntry = {
   pass_count?: number;
   fail_count?: number;
   next_review_date?: string | null;
   last_passed?: string | null;
-}
-
+};
 export type DrillProgress = Record<string, DrillProgressEntry>;
 
-export interface DrillLogEntry {
-  ts: string;
-  drillType: DrillType;
-  questionId: string;
-  topic: string;
-  question: string;
-  score: ScoreResult;
-  studyPackDispatched?: boolean;
-  targetCompany?: string;
-  targetRole?: string;
-  targetValueAxis?: string;
-  rootQuestionId?: string;
-  parentQuestion?: string;
-  followUpDepth?: number;
-  followUpAxis?: FollowUpAxis;
-  stopReason?: "depth-limit" | "needs-study" | "answer-complete" | "session-ended";
-}
-
-// ─── 경로 헬퍼 ───────────────────────────────────────────────────────────────
-
 function repoRoot(): string {
-  // 스크립트가 career-os/scripts/interview-drill/ 안에 있다고 가정
   return join(dirname(import.meta.path), "..", "..", "..");
 }
-
 function careerOsRoot(): string {
   return join(repoRoot(), "career-os");
 }
-
 const TECH_CATEGORIES = [
   "java-spring",
   "database",
@@ -105,393 +54,363 @@ const TECH_CATEGORIES = [
   "system-design",
   "ai-platform",
 ] as const;
-
-function drillProgressPath(): string {
-  return join(careerOsRoot(), "state", "drill-progress.json");
-}
-
-function loadDrillProgress(): DrillProgress {
-  const path = drillProgressPath();
-  if (!existsSync(path)) return {};
-  return JSON.parse(readFileSync(path, "utf-8")) as DrillProgress;
-}
-
-function drillLogPath(date?: string): string {
-  const d = date ?? new Date().toISOString().slice(0, 10);
-  const dir = join(careerOsRoot(), "state");
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  return join(dir, `drill-log-${d}.jsonl`);
-}
-
-// ─── 질문 풀 로드 ─────────────────────────────────────────────────────────────
-
 function loadPublicTechQuestions(): DrillQuestion[] {
-  const questions: DrillQuestion[] = [];
-  for (const cat of TECH_CATEGORIES) {
-    const path = join(careerOsRoot(), "public", "question-bank", cat, "questions.json");
-    if (!existsSync(path)) continue;
-    const parsed = JSON.parse(readFileSync(path, "utf-8")) as DrillQuestion[];
-    questions.push(...parsed);
+  const result: DrillQuestion[] = [];
+  for (const category of TECH_CATEGORIES) {
+    const path = join(careerOsRoot(), "public", "question-bank", category, "questions.json");
+    if (existsSync(path))
+      result.push(...(JSON.parse(readFileSync(path, "utf8")) as DrillQuestion[]));
   }
-  return questions;
+  return result;
 }
-
 function loadPublicBehavioralQuestions(): DrillQuestion[] {
   const path = join(careerOsRoot(), "public", "question-bank", "behavioral", "questions.json");
-  if (!existsSync(path)) return [];
-  return JSON.parse(readFileSync(path, "utf-8")) as DrillQuestion[];
+  return existsSync(path) ? (JSON.parse(readFileSync(path, "utf8")) as DrillQuestion[]) : [];
 }
-
-function mergePersonalQuestions(
-  base: DrillQuestion[],
-  drillType: DrillType
-): DrillQuestion[] {
-  const personalPath = join(
-    careerOsRoot(),
-    "library",
-    "question-bank",
-    `${drillType}-personal.jsonl`
-  );
-  if (!existsSync(personalPath)) return base;
-
-  const requiredFields: (keyof DrillQuestion)[] = [
-    "id",
-    "topic",
-    "category",
-    "difficulty",
-    "question",
-    "intent",
-    "answerSignals",
-  ];
-  const lines = readFileSync(personalPath, "utf-8")
-    .split("\n")
-    .filter((l) => l.trim());
-  const personalQuestions: DrillQuestion[] = [];
-  for (const line of lines) {
-    try {
-      const q = JSON.parse(line) as Partial<DrillQuestion>;
-      const missing = requiredFields.filter((f) => !q[f]);
-      if (missing.length > 0) {
-        console.warn(
-          `[drill-engine] personal 항목 건너뜀 (누락 필드: ${missing.join(", ")}): ${line.slice(0, 80)}`
-        );
-        continue;
-      }
-      personalQuestions.push({ ...(q as DrillQuestion), sourceScope: "personal" });
-    } catch {
-      console.warn(`[drill-engine] personal JSONL 파싱 실패, 건너뜀: ${line.slice(0, 80)}`);
-    }
-  }
-  return [...base, ...personalQuestions];
-}
-
 function loadApplicationQuestions(
-  applicationDirectory: string | undefined,
+  directory: string | undefined,
   drillType: DrillType,
 ): DrillQuestion[] {
-  if (!applicationDirectory) return [];
-
-  return loadApplicationInterviewQuestions(applicationDirectory).questions
-    .filter((item) => item.drillType === drillType)
-    .map((item) => ({ ...item, sourceScope: "application" }));
+  return directory
+    ? loadApplicationInterviewQuestions(directory)
+        .questions.filter((item) => item.drillType === drillType)
+        .map((item) => ({ ...item, sourceScope: "application" }))
+    : [];
 }
-
 export function loadQuestionBank(
   drillType: DrillType,
-  applicationDirectory?: string,
+  directory?: string,
+  personal: DrillQuestion[] = [],
 ): DrillQuestion[] {
-  const publicQuestions =
-    drillType === "tech"
-      ? loadPublicTechQuestions()
-      : loadPublicBehavioralQuestions();
-
-  const withPersonalQuestions = mergePersonalQuestions(publicQuestions, drillType);
-  const merged = [
-    ...withPersonalQuestions,
-    ...loadApplicationQuestions(applicationDirectory, drillType),
+  return [
+    ...(drillType === "tech" ? loadPublicTechQuestions() : loadPublicBehavioralQuestions()),
+    ...personal.map((question) => ({ ...question, sourceScope: "personal" as const })),
+    ...loadApplicationQuestions(directory, drillType),
   ];
-
-  if (merged.length === 0) {
-    console.error(
-      `[drill-engine] 질문 풀 없음 (${drillType})\n` +
-        `  → /interview-practice ${drillType} 질문 은행 보강으로 준비하세요.`
-    );
-  }
-  return merged;
 }
-
-// ─── 간격 반복 날짜 계산 ──────────────────────────────────────────────────────
-
-const REVIEW_INTERVALS_DAYS = [1, 3, 7, 14, 30, 60];
-
-function nextReviewDays(passCount: number): number {
-  const idx = Math.min(Math.max(passCount - 1, 0), REVIEW_INTERVALS_DAYS.length - 1);
-  return REVIEW_INTERVALS_DAYS[idx];
-}
-
-function addDays(dateStr: string, days: number): string {
-  const d = new Date(dateStr);
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
-}
-
 function today(): string {
-  return new Date().toISOString().slice(0, 10);
+  return seoulDate(new Date());
 }
-
-function applicationPriorityBoost(question: DrillQuestion): number {
-  return question.sourceScope === "application" ? 10 : 0;
+function previousDate(date: string): string {
+  const value = new Date(`${date}T00:00:00.000Z`);
+  value.setUTCDate(value.getUTCDate() - 1);
+  return value.toISOString().slice(0, 10);
 }
-
 function interviewBar(question: DrillQuestion): InterviewBar {
   return question.bar ?? inferredInterviewBar(question.difficulty);
 }
-
-function barPriorityBoost(question: DrillQuestion, targetBar?: InterviewBar): number {
-  if (!targetBar) return 0;
-  const targetIndex = INTERVIEW_BARS.indexOf(targetBar);
-  const questionIndex = INTERVIEW_BARS.indexOf(interviewBar(question));
-  const distance = Math.abs(targetIndex - questionIndex);
-  if (distance === 0) return 2;
-  if (distance === 1) return 1;
-  return 0;
+function barPriorityBoost(question: DrillQuestion, target?: InterviewBar): number {
+  if (!target) return 0;
+  const distance = Math.abs(
+    INTERVIEW_BARS.indexOf(target) - INTERVIEW_BARS.indexOf(interviewBar(question)),
+  );
+  return distance === 0 ? 2 : distance === 1 ? 1 : 0;
 }
-
-function isWithinTargetBarWindow(
-  question: DrillQuestion,
-  targetBar?: InterviewBar,
-): boolean {
-  if (!targetBar) return true;
-
-  const questionIndex = INTERVIEW_BARS.indexOf(interviewBar(question));
-  const targetIndex = INTERVIEW_BARS.indexOf(targetBar);
-  if (targetBar === "global-scale") {
-    return questionIndex >= targetIndex - 1;
-  }
-  return questionIndex >= targetIndex && questionIndex <= targetIndex + 1;
+function inWindow(question: DrillQuestion, target?: InterviewBar): boolean {
+  if (!target) return true;
+  const index = INTERVIEW_BARS.indexOf(interviewBar(question));
+  const targetIndex = INTERVIEW_BARS.indexOf(target);
+  return target === "global-scale"
+    ? index >= targetIndex - 1
+    : index >= targetIndex && index <= targetIndex + 1;
 }
-
 function selectWithStretch(
   pool: Array<{ q: DrillQuestion; priority: number }>,
   count: number,
-  targetBar?: InterviewBar,
+  target?: InterviewBar,
 ): Array<{ q: DrillQuestion; priority: number }> {
   const selected = pool.slice(0, count);
-  if (!targetBar || count === 0 || targetBar === "global-scale") return selected;
-
-  const targetIndex = INTERVIEW_BARS.indexOf(targetBar);
-  const stretchBar = INTERVIEW_BARS[targetIndex + 1];
-  if (!stretchBar || selected.some((item) => interviewBar(item.q) === stretchBar)) {
-    return selected;
-  }
-
-  const stretchQuestion = pool.find((item) => interviewBar(item.q) === stretchBar);
-  if (!stretchQuestion) return selected;
-
-  return [...selected.slice(0, -1), stretchQuestion];
+  if (!target || count === 0 || target === "global-scale") return selected;
+  const stretchBar = INTERVIEW_BARS[INTERVIEW_BARS.indexOf(target) + 1];
+  if (!stretchBar || selected.some((item) => interviewBar(item.q) === stretchBar)) return selected;
+  const stretch = pool.find((item) => interviewBar(item.q) === stretchBar);
+  return stretch ? [...selected.slice(0, -1), stretch] : selected;
 }
-
-function difficultyOrder(difficulty: DrillQuestion["difficulty"]): number {
-  if (difficulty === "basic") return 0;
-  if (difficulty === "intermediate") return 1;
-  return 2;
-}
-
 function sequenceOrder(question: DrillQuestion): number {
   if (question.sequenceHint === "opening") return 0;
   if (question.sequenceHint === "early") return 1;
   if (question.sequenceHint === "middle") return 2;
   if (question.sequenceHint === "late") return 3;
   if (question.sequenceHint === "closing") return 4;
-
   if (question.difficulty === "basic") return 1;
-  if (question.tags?.some((tag) => ["incident", "customer-impact"].includes(tag))) {
+  if (
+    question.tags?.some((tag) => ["incident", "customer-impact"].includes(tag)) ||
+    question.topic.includes("failure") ||
+    question.topic.includes("retry")
+  )
     return 3;
-  }
-  if (question.topic.includes("failure") || question.topic.includes("retry")) return 3;
-  if (question.topic.includes("result")) return 4;
-  return 2;
+  return question.topic.includes("result") ? 4 : 2;
+}
+function difficultyOrder(difficulty: DrillQuestion["difficulty"]): number {
+  return difficulty === "basic" ? 0 : difficulty === "intermediate" ? 1 : 2;
 }
 
-// ─── 질문 선정 (간격 반복) ────────────────────────────────────────────────────
-
-/**
- * 오늘 복습 대상 우선, 이후 신규·약점 순으로 최대 maxCount 개 반환.
- * next_review_date <= today 인 질문 우선, pass된 지 얼마 안 된 질문은 제외.
- */
 export function selectQuestions(
   drillType: DrillType,
-  drillProgress: DrillProgress,
-  maxCount = 5,
-  applicationDirectory?: string,
-  targetBar?: InterviewBar,
-): DrillQuestion[] {
-  const bank = loadQuestionBank(drillType, applicationDirectory);
-  if (bank.length === 0) return [];
-
-  const todayStr = today();
-
-  // 각 질문의 우선순위 점수 계산
-  const scored = bank.map((q) => {
-    const ws = drillProgress[q.topic];
-    const nextReview = ws?.next_review_date ?? null;
-    const passCount = ws?.pass_count ?? 0;
-
-    // 오늘 복습 대상 여부
-    const isDue = !nextReview || nextReview <= todayStr;
-    // 최근 통과 여부 (하루 이내)
-    const recentlyPassed =
-      ws?.last_passed != null && ws.last_passed >= addDays(todayStr, -1);
-
-    // 우선순위: 복습 대상 > 미시도 약점 > 신규
-    let priority = 0;
-    if (recentlyPassed) priority = -1; // 제외
-    else if (isDue && (ws?.fail_count ?? 0) > 0) priority = 3; // 약점 복습
-    else if (isDue && passCount === 0) priority = 2; // 미시도
-    else if (isDue) priority = 1; // 일반 복습
-
-    if (priority >= 0) {
-      priority += applicationPriorityBoost(q);
-      priority += barPriorityBoost(q, targetBar);
-    }
-
-    return { q, priority };
-  });
-
-  const eligible = scored
-    .filter((s) => s.priority >= 0 && isWithinTargetBarWindow(s.q, targetBar))
-    .sort((a, b) => b.priority - a.priority);
-
-  let selected = selectWithStretch(eligible, maxCount, targetBar);
-  if (applicationDirectory && maxCount > 1) {
-    const applicationQuota = Math.max(1, Math.ceil(maxCount * 0.6));
-    const applicationQuestions = selectWithStretch(
-      eligible.filter((item) => item.q.sourceScope === "application"),
-      applicationQuota,
-      targetBar,
-    );
-    const sharedQuestions = eligible
-      .filter((item) => item.q.sourceScope !== "application")
-      .slice(0, maxCount - applicationQuestions.length);
-    const selectedIds = new Set(
-      [...applicationQuestions, ...sharedQuestions].map((item) => item.q.id),
-    );
-    const fill = eligible
-      .filter((item) => !selectedIds.has(item.q.id))
-      .slice(0, maxCount - applicationQuestions.length - sharedQuestions.length);
-    selected = [...applicationQuestions, ...sharedQuestions, ...fill];
-  }
-
-  return selected
-    .sort((a, b) => {
-      const sequenceDiff = sequenceOrder(a.q) - sequenceOrder(b.q);
-      if (sequenceDiff !== 0) return sequenceDiff;
-
-      const difficultyDiff = difficultyOrder(a.q.difficulty) - difficultyOrder(b.q.difficulty);
-      if (difficultyDiff !== 0) return difficultyDiff;
-
-      return a.q.id.localeCompare(b.q.id);
-    })
-    .map((s) => s.q);
-}
-
-// ─── 답변 채점 ────────────────────────────────────────────────────────────────
-
-/**
- * 답변 텍스트와 질문의 answerSignals를 비교해 점수를 반환한다.
- * 실제 LLM 채점은 스킬(SKILL.md)이 담당하고, 이 함수는 기계적 점검용.
- */
-export function scoreAnswer(
-  answer: string,
-  question: DrillQuestion
-): ScoreResult {
-  if (!answer || answer.trim().length === 0) return "unknown";
-
-  const lower = answer.toLowerCase();
-  const matchedSignals = question.answerSignals.filter((sig) =>
-    lower.includes(sig.toLowerCase())
-  );
-
-  const ratio = matchedSignals.length / question.answerSignals.length;
-  if (ratio >= 0.7) return "pass";
-  if (ratio >= 0.3) return "shallow";
-  return "fail";
-}
-
-// ─── 답변 연습 로그 기록 ──────────────────────────────────────────────────────
-
-export function recordDrillLog(entry: DrillLogEntry): void {
-  const path = drillLogPath();
-  appendFileSync(path, JSON.stringify(entry) + "\n", "utf-8");
-}
-
-// ─── 복습 상태 갱신 ──────────────────────────────────────────────────────────
-
-/**
- * 질문 주제별 통과·실패 횟수와 다음 복습일을 갱신한다.
- */
-export function updateDrillProgressState(
   progress: DrillProgress,
-  question: DrillQuestion,
-  score: ScoreResult,
-  evaluatedAt = today(),
-): DrillProgress {
-  const nextProgress = structuredClone(progress);
-  const drillEntry: DrillProgressEntry = nextProgress[question.topic] ?? {
-    pass_count: 0,
-    fail_count: 0,
-    next_review_date: null,
-    last_passed: null,
-  };
-
-  if (score === "pass") {
-    drillEntry.pass_count = (drillEntry.pass_count ?? 0) + 1;
-    drillEntry.fail_count = drillEntry.fail_count ?? 0;
-    drillEntry.last_passed = evaluatedAt;
-    drillEntry.next_review_date = addDays(evaluatedAt, nextReviewDays(drillEntry.pass_count));
-  } else if (score === "shallow") {
-    drillEntry.fail_count = (drillEntry.fail_count ?? 0) + 1;
-    drillEntry.next_review_date = addDays(evaluatedAt, 1);
-  } else if (score === "fail" || score === "unknown") {
-    drillEntry.fail_count = (drillEntry.fail_count ?? 0) + 1;
-    drillEntry.next_review_date = addDays(evaluatedAt, 1);
-  }
-
-  nextProgress[question.topic] = drillEntry;
-  return nextProgress;
-}
-
-export function updateDrillProgress(question: DrillQuestion, score: ScoreResult): void {
-  const nextProgress = updateDrillProgressState(loadDrillProgress(), question, score);
-  writeFileSync(drillProgressPath(), JSON.stringify(nextProgress, null, 2) + "\n", "utf-8");
-}
-
-// ─── CLI 직접 실행 (진단용) ───────────────────────────────────────────────────
-
-if (import.meta.main) {
-  const drillType: DrillType = (process.argv[2] as DrillType) ?? "tech";
-  const applicationDirectory = firstOptionValue(process.argv, "--application-dir");
-  const requestedTargetBar = firstOptionValue(process.argv, "--target-bar");
-  const targetBar = INTERVIEW_BARS.includes(requestedTargetBar as InterviewBar)
-    ? requestedTargetBar as InterviewBar
-    : undefined;
-  const drillProgress = loadDrillProgress();
-
-  let questions: DrillQuestion[];
-  try {
-    questions = selectQuestions(drillType, drillProgress, 5, applicationDirectory, targetBar);
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exit(1);
-  }
-  if (questions.length === 0) {
-    console.log(
-      "오늘 연습할 질문이 없습니다. /interview-practice 질문 은행 보강으로 준비하세요."
+  maxCount = 5,
+  directory?: string,
+  target?: InterviewBar,
+  personal: DrillQuestion[] = [],
+): DrillQuestion[] {
+  const currentDay = today();
+  const eligible = loadQuestionBank(drillType, directory, personal)
+    .map((q) => {
+      const entry = progress[q.topic];
+      const due = !entry?.next_review_date || entry.next_review_date <= currentDay;
+      const recent = entry?.last_passed != null && entry.last_passed >= previousDate(currentDay);
+      let priority = recent
+        ? -1
+        : due && (entry?.fail_count ?? 0) > 0
+          ? 3
+          : due && (entry?.pass_count ?? 0) === 0
+            ? 2
+            : due
+              ? 1
+              : 0;
+      if (priority >= 0)
+        priority += (q.sourceScope === "application" ? 10 : 0) + barPriorityBoost(q, target);
+      return { q, priority };
+    })
+    .filter((item) => item.priority >= 0 && inWindow(item.q, target))
+    .sort((a, b) => b.priority - a.priority);
+  let selected = selectWithStretch(eligible, maxCount, target);
+  if (directory && maxCount > 1) {
+    const applications = selectWithStretch(
+      eligible.filter((item) => item.q.sourceScope === "application"),
+      Math.max(1, Math.ceil(maxCount * 0.6)),
+      target,
     );
-  } else {
-    console.log(`[${drillType}] 오늘 연습 질문 ${questions.length}개:`);
-    questions.forEach((q, i) => {
-      console.log(`  ${i + 1}. [${q.topic}] ${q.question}`);
+    const shared = eligible
+      .filter((item) => item.q.sourceScope !== "application")
+      .slice(0, maxCount - applications.length);
+    const ids = new Set([...applications, ...shared].map((item) => item.q.id));
+    selected = [
+      ...applications,
+      ...shared,
+      ...eligible
+        .filter((item) => !ids.has(item.q.id))
+        .slice(0, maxCount - applications.length - shared.length),
+    ];
+  }
+  return selected
+    .sort(
+      (a, b) =>
+        sequenceOrder(a.q) - sequenceOrder(b.q) ||
+        difficultyOrder(a.q.difficulty) - difficultyOrder(b.q.difficulty) ||
+        a.q.id.localeCompare(b.q.id),
+    )
+    .map((item) => item.q);
+}
+export function scoreAnswer(answer: string, question: DrillQuestion): ScoreResult {
+  if (!answer.trim()) return "unknown";
+  const ratio =
+    question.answerSignals.filter((signal) => answer.toLowerCase().includes(signal.toLowerCase()))
+      .length / question.answerSignals.length;
+  return ratio >= 0.7 ? "pass" : ratio >= 0.3 ? "shallow" : "fail";
+}
+export function toDrillProgress(items: TopicProgress[]): DrillProgress {
+  return Object.fromEntries(
+    items.map((item) => [
+      item.topic,
+      {
+        pass_count: item.passCount,
+        fail_count: item.failCount,
+        next_review_date: item.nextReviewDate,
+        last_passed: item.lastPassedDate,
+      },
+    ]),
+  );
+}
+
+function option(argv: string[], name: string, required = false): string | undefined {
+  const index = argv.indexOf(name);
+  const value = index < 0 ? undefined : argv[index + 1];
+  if ((index >= 0 && (!value || value.startsWith("--"))) || (required && !value))
+    throw new UsageError(`${name} 에 값이 필요합니다.`);
+  return value;
+}
+function checkOptions(argv: string[], start: number, allowed: readonly string[]): void {
+  for (let index = start; index < argv.length; index += 1) {
+    const token = argv[index];
+    if (!token.startsWith("--")) throw new UsageError(`예상하지 않은 인자입니다: ${token}`);
+    if (!allowed.includes(token)) throw new UsageError(`모르는 옵션입니다: ${token}`);
+    index += 1;
+  }
+}
+function type(value: string | undefined): DrillType {
+  if (value !== "tech" && value !== "behavioral")
+    throw new UsageError("drillType은 tech 또는 behavioral 이어야 합니다.");
+  return value;
+}
+function usage(): string {
+  return "Usage: drill-engine.ts select <tech|behavioral> | record --attempt-id ... | personal add --file <path> | personal disable --question-id <id>";
+}
+function parsePersonal(
+  content: string,
+  path: string,
+): Array<{ drillType: DrillType; question: DrillQuestion }> {
+  const entries = path.endsWith(".jsonl")
+    ? content
+        .split("\n")
+        .filter(Boolean)
+        .map((line) => JSON.parse(line))
+    : (() => {
+        const parsed = JSON.parse(content);
+        return Array.isArray(parsed) ? parsed : [parsed];
+      })();
+  return entries.map((entry) => {
+    const { drillType, ...question } = entry as Record<string, unknown>;
+    const parsed = interviewQuestionSchema.safeParse(question);
+    if (!parsed.success) throw new UsageError(parsed.error.message);
+    return { drillType: type(drillType as string), question: parsed.data };
+  });
+}
+
+export async function runDrillCli(
+  argv: string[],
+  deps: { createStore: () => InterviewPracticeStore; readFile: (path: string) => string },
+): Promise<unknown> {
+  if (argv[0] === "select") {
+    checkOptions(argv, 2, ["--application-dir", "--target-bar", "--count"]);
+    const drillType = type(argv[1]);
+    const directory = option(argv, "--application-dir");
+    const targetValue = option(argv, "--target-bar");
+    const target =
+      targetValue === undefined
+        ? undefined
+        : INTERVIEW_BARS.includes(targetValue as InterviewBar)
+          ? (targetValue as InterviewBar)
+          : (() => {
+              throw new UsageError("--target-bar 값이 올바르지 않습니다.");
+            })();
+    const count = Number(option(argv, "--count") ?? "5");
+    if (!Number.isInteger(count) || count < 1 || count > 10)
+      throw new UsageError("--count 는 1 이상 10 이하여야 합니다.");
+    const store = deps.createStore();
+    const progress = toDrillProgress(await store.listProgress(drillType));
+    const personal = (await store.listPersonalQuestions(drillType)).map((item) => item.question);
+    const currentDay = today();
+    return {
+      store: store.kind,
+      drillType,
+      today: currentDay,
+      questions: selectQuestions(drillType, progress, count, directory, target, personal).map(
+        (question) => ({
+          ...question,
+          dueForReview:
+            progress[question.topic]?.next_review_date != null &&
+            progress[question.topic].next_review_date! <= currentDay,
+        }),
+      ),
+    };
+  }
+  if (argv[0] === "record") {
+    checkOptions(argv, 1, [
+      "--attempt-id",
+      "--drill-type",
+      "--question-id",
+      "--topic",
+      "--question",
+      "--score",
+      "--feedback",
+      "--target-company",
+      "--target-role",
+      "--target-value-axis",
+      "--root-question-id",
+      "--parent-question",
+      "--follow-up-depth",
+      "--follow-up-axis",
+      "--stop-reason",
+    ]);
+    const body = attemptBodySchema.safeParse({
+      attemptId: option(argv, "--attempt-id", true),
+      drillType: type(option(argv, "--drill-type", true)),
+      questionId: option(argv, "--question-id", true),
+      topic: option(argv, "--topic", true),
+      question: option(argv, "--question", true),
+      score: option(argv, "--score", true),
+      feedback: option(argv, "--feedback"),
+      targetCompany: option(argv, "--target-company"),
+      targetRole: option(argv, "--target-role"),
+      targetValueAxis: option(argv, "--target-value-axis"),
+      rootQuestionId: option(argv, "--root-question-id"),
+      parentQuestion: option(argv, "--parent-question"),
+      followUpDepth:
+        option(argv, "--follow-up-depth") === undefined
+          ? undefined
+          : Number(option(argv, "--follow-up-depth")),
+      followUpAxis: option(argv, "--follow-up-axis") as FollowUpAxis | undefined,
+      stopReason: option(argv, "--stop-reason") as AttemptBody["stopReason"],
     });
+    if (!body.success) throw new UsageError(body.error.message);
+    return deps.createStore().recordAttempt(body.data);
+  }
+  if (argv[0] === "personal" && argv[1] === "add") {
+    checkOptions(argv, 2, ["--file"]);
+    const path = option(argv, "--file", true)!;
+    if (!path.endsWith(".json") && !path.endsWith(".jsonl"))
+      throw new UsageError("--file 은 .json 또는 .jsonl 이어야 합니다.");
+    let entries;
+    try {
+      entries = parsePersonal(deps.readFile(path), path);
+    } catch (error) {
+      throw error instanceof UsageError
+        ? error
+        : new UsageError(error instanceof Error ? error.message : String(error));
+    }
+    const store = deps.createStore();
+    const saved = await Promise.all(
+      entries.map(({ drillType, question }) =>
+        store.upsertPersonalQuestion(question.id, { enabled: true, drillType, question }),
+      ),
+    );
+    return { saved: saved.length, questionIds: saved.map((item) => item.questionId) };
+  }
+  if (argv[0] === "personal" && argv[1] === "disable") {
+    checkOptions(argv, 2, ["--question-id"]);
+    const questionId = option(argv, "--question-id", true)!;
+    const store = deps.createStore();
+    for (const drillType of ["tech", "behavioral"] as const) {
+      const found = (await store.listPersonalQuestions(drillType)).find(
+        (item) => item.questionId === questionId,
+      );
+      if (found) {
+        await store.upsertPersonalQuestion(questionId, {
+          enabled: false,
+          drillType,
+          question: found.question,
+        });
+        return { disabled: questionId };
+      }
+    }
+    throw new UsageError(`개인 질문을 찾을 수 없습니다: ${questionId}`);
+  }
+  throw new UsageError(usage());
+}
+if (import.meta.main) {
+  try {
+    console.log(
+      JSON.stringify(
+        await runDrillCli(process.argv.slice(2), {
+          createStore: () => createInterviewPracticeStore(),
+          readFile: (path) => readFileSync(path, "utf8"),
+        }),
+      ),
+    );
+  } catch (error) {
+    if (error instanceof UsageError) {
+      console.error(usage());
+      console.error(error.message);
+      process.exitCode = 2;
+    } else {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(
+        error instanceof CareerBackendHttpError && error.code === "NETWORK_ERROR"
+          ? `커리어 Backend에 연결하지 못했습니다. 연습 결과는 기록되지 않았습니다. ${message}`
+          : message,
+      );
+      process.exitCode = 1;
+    }
   }
 }
