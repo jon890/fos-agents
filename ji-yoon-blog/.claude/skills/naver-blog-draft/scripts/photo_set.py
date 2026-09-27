@@ -24,7 +24,7 @@ import struct
 import sys
 from pathlib import Path
 
-IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".heic", ".heif", ".webp"}
+IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".gif", ".heic", ".heif", ".webp"}
 EXIF_SUFFIXES = {".jpg", ".jpeg"}
 DATETIME_ORIGINAL = 0x9003
 DATETIME_DIGITIZED = 0x9004

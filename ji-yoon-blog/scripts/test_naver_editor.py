@@ -21,16 +21,16 @@ import naver_editor_settings
 
 class EditorGateTest(unittest.TestCase):
     def test_place_address_matches_naver_country_prefix_and_short_province(self):
-        entered = "경기 구리시 동구릉로 145"
-        result = "대한민국 경기도 구리시 동구릉로 145"
+        entered = "경기 예시시 샘플로 145"
+        result = "대한민국 경기도 예시시 샘플로 145"
         self.assertEqual(
             naver_editor.normalize_place_address(entered),
             naver_editor.normalize_place_address(result),
         )
 
     def test_place_address_matches_observed_gwangju_map_label(self):
-        entered = "광주 광산구 송정로8번길 11"
-        result = "전남광주통합특별시 광산구 송정로8번길 11"
+        entered = "광주 샘플구 테스트로 11"
+        result = "전남광주통합특별시 샘플구 테스트로 11"
         self.assertEqual(
             naver_editor.normalize_place_address(entered),
             naver_editor.normalize_place_address(result),
@@ -41,28 +41,28 @@ class EditorGateTest(unittest.TestCase):
             def js(self, _expression):
                 return json.dumps([{
                     "index": 0,
-                    "name": "또아식빵",
-                    "address": "전남광주통합특별시 광산구 송정로8번길 11 또아식빵",
+                    "name": "가상빵집",
+                    "address": "전남광주통합특별시 샘플구 테스트로 11 가상빵집",
                 }], ensure_ascii=False)
 
         self.assertEqual(naver_editor_components.place_candidates(Page())[0]["address"],
-                         "전남광주통합특별시 광산구 송정로8번길 11")
+                         "전남광주통합특별시 샘플구 테스트로 11")
 
     def test_component_check_accepts_observed_gwangju_map_label(self):
         draft = {"blocks": [{
-            "type": "map", "name": "또아식빵", "address": "광주 광산구 송정로8번길 11"
+            "type": "map", "name": "가상빵집", "address": "광주 샘플구 테스트로 11"
         }]}
         state = {"stickers": [], "maps": [
-            "또아식빵\n전남광주통합특별시 광산구 송정로8번길 11"
+            "가상빵집\n전남광주통합특별시 샘플구 테스트로 11"
         ]}
         self.assertEqual(naver_editor.component_problems(draft, state, []), [])
 
     def test_component_check_ignores_name_repeated_after_map_address(self):
         draft = {"blocks": [{
-            "type": "map", "name": "또아식빵", "address": "광주 광산구 송정로8번길 11"
+            "type": "map", "name": "가상빵집", "address": "광주 샘플구 테스트로 11"
         }]}
         state = {"stickers": [], "maps": [
-            "또아식빵\n\n전남광주통합특별시 광산구 송정로8번길 11 또아식빵\n\n\t"
+            "가상빵집\n\n전남광주통합특별시 샘플구 테스트로 11 가상빵집\n\n\t"
         ]}
         self.assertEqual(naver_editor.component_problems(draft, state, []), [])
 
@@ -144,8 +144,8 @@ class EditorGateTest(unittest.TestCase):
                 return "국내"
 
         results = [
-            {"index": 0, "name": "어랑추", "address": "대한민국 경기도 구리시 동구릉로 145"},
-            {"index": 1, "name": "어랑추", "address": "경기도 구리시 동구릉로 145"},
+            {"index": 0, "name": "샘플가게", "address": "대한민국 경기도 예시시 샘플로 145"},
+            {"index": 1, "name": "샘플가게", "address": "경기도 예시시 샘플로 145"},
         ]
         with patch.object(naver_editor_components, "place_candidates", return_value=results):
             self.assertEqual(naver_editor.domestic_place_candidates(Page()), results[1:])
@@ -153,12 +153,12 @@ class EditorGateTest(unittest.TestCase):
     def test_component_check_requires_exact_stickers_and_map(self):
         draft = {"blocks": [
             {"type": "sticker", "stickerCode": "ogq_5db4314bac2f0-1"},
-            {"type": "map", "name": "어랑추", "address": "경기 구리시 동구릉로 145"},
+            {"type": "map", "name": "샘플가게", "address": "경기 예시시 샘플로 145"},
         ]}
         state = {"stickers": ["ogq_5db4314bac2f0-1"],
-                 "maps": ["어랑추\n\n경기도 구리시 동구릉로 145"]}
+                 "maps": ["샘플가게\n\n경기도 예시시 샘플로 145"]}
         self.assertEqual(naver_editor.component_problems(draft, state, []), [])
-        self.assertTrue(naver_editor.component_problems(draft, state, ["[장소 자리: 어랑추]"]))
+        self.assertTrue(naver_editor.component_problems(draft, state, ["[장소 자리: 샘플가게]"]))
         state["stickers"] = ["ogq_5db4314bac2f0-4"]
         self.assertTrue(naver_editor.component_problems(draft, state, []))
 
@@ -186,14 +186,14 @@ class EditorGateTest(unittest.TestCase):
             {"type": "text", "lines": ["첫 문단"]},
             {"type": "image", "path": "photos/001-menu.jpg"},
             {"type": "sticker", "label": "맛있음", "stickerCode": "ogq_5db4314bac2f0-1"},
-            {"type": "map", "name": "어랑추", "address": "경기 구리시 동구릉로 145"},
+            {"type": "map", "name": "샘플가게", "address": "경기 예시시 샘플로 145"},
         ]}
         self.assertEqual(naver_editor.body_lines(draft), [
             "첫 문단",
             "",
             "[사진 자리: 001-menu.jpg]",
             "[스티커 자리: 맛있음]",
-            "[장소 자리: 어랑추 | 경기 구리시 동구릉로 145]",
+            "[장소 자리: 샘플가게 | 경기 예시시 샘플로 145]",
         ])
 
     def test_photo_paths_preserve_draft_order_for_local_and_remote_browser(self):

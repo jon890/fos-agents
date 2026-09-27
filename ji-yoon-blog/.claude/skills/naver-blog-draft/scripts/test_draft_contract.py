@@ -21,7 +21,7 @@ class DraftContractTest(unittest.TestCase):
                 {"type": "text", "lines": ["테스트 글입니다."]},
                 {"type": "sticker", "stickerCode": "ogq_5db4314bac2f0-6"},
                 {"type": "image", "path": "photos/menu.jpg", "role": "menu"},
-                {"type": "map", "name": "어랑추", "address": "동구릉로 145"},
+                {"type": "map", "name": "샘플가게", "address": "샘플로 145"},
                 {"type": "sticker", "stickerCode": "ogq_5db4314bac2f0-23"},
                 {"type": "sticker", "stickerCode": "ogq_5db4314bac2f0-4"},
             ],
@@ -67,7 +67,7 @@ class DraftContractTest(unittest.TestCase):
 
     def test_map_preview_links_to_naver(self):
         block = {
-            "type": "map", "name": "어랑추", "address": "경기 구리시 동구릉로 145",
+            "type": "map", "name": "샘플가게", "address": "경기 예시시 샘플로 145",
             "mapUrl": "https://map.naver.com/p/entry/place/19882103",
         }
         with tempfile.TemporaryDirectory() as temp:
