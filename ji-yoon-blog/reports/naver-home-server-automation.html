@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>홈서버 네이버 임시저장 자동화 | 지융로그</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #142d3c;
+      --muted: #4c6875;
+      --line: #c8dce3;
+      --paper: #f4f9fa;
+      --white: #fff;
+      --blue: #145fd1;
+      --teal: #087e82;
+      --amber: #8b5700;
+      --amber-bg: #fff2d9;
+      --red: #a33b3b;
+      --red-bg: #fff0ee;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; line-height: 1.6; }
+    a { color: var(--blue); text-underline-offset: .18em; }
+    button { font: inherit; }
+    .wrap { width: min(1180px, calc(100% - 44px)); margin: 0 auto; }
+    .hero { background: #0e344b; color: white; overflow: hidden; }
+    .hero .wrap { padding: 72px 0 68px; position: relative; }
+    .hero .wrap::after { content: "CDP"; position: absolute; right: -35px; top: -85px; font: 800 clamp(180px, 27vw, 360px)/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: -.11em; color: rgba(110, 199, 220, .09); pointer-events: none; }
+    .hero h1 { position: relative; max-width: 830px; margin: 0 0 18px; font-size: clamp(38px, 6vw, 73px); line-height: 1.15; letter-spacing: -.055em; }
+    .hero p { position: relative; max-width: 710px; margin: 0; font-size: clamp(17px, 2vw, 21px); color: #c9e5ed; }
+    .hero .summary { position: relative; display: inline-flex; gap: 10px; align-items: center; margin-top: 34px; padding: 10px 16px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.17); border-radius: 8px; font-size: 14px; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: #7de2ca; flex: none; }
+    main { padding: 48px 0 90px; }
+    h2 { margin: 0 0 12px; font-size: clamp(27px, 3vw, 37px); letter-spacing: -.04em; line-height: 1.25; }
+    h3 { margin: 0 0 9px; font-size: 20px; line-height: 1.35; letter-spacing: -.025em; }
+    p { margin: 0 0 16px; }
+    .lead { max-width: 760px; color: var(--muted); font-size: 17px; }
+    section { margin-bottom: 66px; }
+    .architecture { background: var(--white); border: 1px solid var(--line); border-radius: 18px; padding: 28px; box-shadow: 0 10px 30px rgba(31, 69, 85, .05); }
+    .rail { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 11px; align-items: stretch; margin: 12px 0 22px; }
+    .node { position: relative; min-height: 138px; padding: 17px 15px; border: 1px solid #b4d3df; border-radius: 11px; background: #f5fbfe; }
+    .node + .node::before { content: "→"; position: absolute; left: -15px; top: 47px; z-index: 2; color: var(--teal); background: var(--white); font-weight: 800; font-size: 22px; line-height: 1; }
+    .node b { display: block; font-size: 18px; line-height: 1.3; }
+    .node span { display: block; margin-top: 8px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .node:nth-child(3) { border-color: var(--blue); background: #eaf2ff; }
+    .node:nth-child(3) b { color: var(--blue); }
+    .architecture .caption { display: flex; align-items: flex-start; gap: 14px; margin: 0; padding: 15px 16px; border-left: 4px solid var(--teal); background: #ecf7f6; font-size: 15px; }
+    .caption strong { white-space: nowrap; }
+    .split { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(260px, .88fr); gap: 26px; }
+    .plain-panel { padding: 25px 26px; background: var(--white); border: 1px solid var(--line); border-radius: 14px; }
+    .plain-panel p:last-child { margin-bottom: 0; }
+    .protocol { border-top: 1px solid var(--line); padding-top: 14px; margin-top: 17px; }
+    code { padding: .12em .3em; border-radius: 4px; background: #eaf1f4; color: #12344a; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .89em; overflow-wrap: anywhere; }
+    .sequence { display: grid; grid-template-columns: minmax(260px, 390px) minmax(0, 1fr); gap: 26px; align-items: start; }
+    .steps { display: grid; gap: 7px; }
+    .step { width: 100%; text-align: left; padding: 13px 16px; border: 1px solid var(--line); background: var(--white); border-radius: 8px; color: var(--ink); cursor: pointer; display: grid; grid-template-columns: 34px 1fr; column-gap: 10px; align-items: baseline; }
+    .step:hover { border-color: #6596ba; }
+    .step[aria-selected="true"] { border-color: var(--blue); background: #eaf2ff; box-shadow: inset 4px 0 var(--blue); }
+    .step .num { color: var(--teal); font: 700 13px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .step strong { font-size: 16px; }
+    .step small { grid-column: 2; color: var(--muted); font-size: 13px; }
+    .details { min-height: 470px; position: sticky; top: 20px; padding: 32px; border: 1px solid #94b6c6; border-radius: 14px; background: #fff; }
+    .details .stage-label { display: inline-block; margin-bottom: 16px; padding: 4px 9px; border-radius: 5px; background: #e6f4f2; color: #086b6f; font-size: 13px; font-weight: 700; }
+    .details h3 { font-size: 29px; margin-bottom: 17px; }
+    .details dl { margin: 26px 0 0; }
+    .details dt { font-weight: 700; margin-top: 16px; }
+    .details dd { margin: 4px 0 0; color: var(--muted); }
+    .details .source { margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 14px; }
+    .guards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+    .guard { border-top: 4px solid var(--teal); background: var(--white); padding: 22px; border-radius: 0 0 11px 11px; }
+    .guard:nth-child(2) { border-color: var(--blue); }
+    .guard:nth-child(3) { border-color: var(--amber); }
+    .guard p { color: var(--muted); margin: 0; font-size: 15px; }
+    .issue-table { width: 100%; border-collapse: collapse; background: var(--white); border-top: 3px solid var(--ink); }
+    .issue-table th, .issue-table td { text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); padding: 17px 14px; }
+    .issue-table th { width: 23%; color: var(--ink); }
+    .issue-table td:nth-child(2) { width: 33%; color: var(--muted); }
+    .issue-table td:last-child { color: #065d61; }
+    .status { display: flex; gap: 14px; align-items: flex-start; padding: 20px 22px; border: 1px solid #edc77f; border-radius: 11px; background: var(--amber-bg); }
+    .status strong { color: var(--amber); }
+    .status p { margin: 4px 0 0; }
+    .files { display: flex; flex-wrap: wrap; gap: 9px; }
+    .files a { display: inline-block; padding: 8px 12px; border: 1px solid var(--line); border-radius: 7px; background: var(--white); text-decoration: none; font-size: 14px; }
+    .files a:hover { border-color: var(--blue); background: #eaf2ff; }
+    footer { color: var(--muted); font-size: 13px; padding: 20px 0 35px; border-top: 1px solid var(--line); }
+    :focus-visible { outline: 3px solid #eeac2c; outline-offset: 3px; }
+    @media (max-width: 850px) { .rail { grid-template-columns: repeat(2, 1fr); } .node + .node::before { display: none; } .split, .sequence { grid-template-columns: 1fr; } .details { position: static; min-height: 0; } .guards { grid-template-columns: 1fr; } }
+    @media (max-width: 530px) { .wrap { width: min(100% - 28px, 1180px); } .hero .wrap { padding: 52px 0; } main { padding-top: 32px; } .architecture { padding: 17px; } .rail { grid-template-columns: 1fr; } .node { min-height: 0; } .architecture .caption { display: block; } .caption strong { display: block; margin-bottom: 5px; } .details { padding: 23px; } .issue-table, .issue-table tbody, .issue-table tr, .issue-table th, .issue-table td { display: block; width: 100% !important; } .issue-table tr { border-bottom: 1px solid var(--line); padding: 11px 0; } .issue-table th, .issue-table td { border: 0; padding: 3px 13px; } }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <h1>초안이 네이버 임시저장까지 가는 길</h1>
+      <p>홈서버의 로그인된 Chrome을 그대로 쓰면서, 사진과 지도까지 편집기에서 확인하는 자동화 구조입니다.</p>
+      <div class="summary"><span class="dot" aria-hidden="true"></span> Python 표준 라이브러리 · Chrome CDP · 발행 없이 임시저장</div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section aria-labelledby="architecture-title">
+      <h2 id="architecture-title">연결 구조</h2>
+      <p class="lead">현재 구현은 Puppeteer를 사용하지 않습니다. 홈서버에 로그인 상태로 실행 중인 Chrome에 Python 코드가 CDP로 연결합니다.</p>
+      <div class="architecture">
+        <div class="rail" aria-label="초안에서 네이버 임시저장까지의 연결">
+          <div class="node"><b>초안 파일</b><span><code>draft.json</code><br>제목, 본문, 사진 순서, 스티커 코드, 지도, 태그</span></div>
+          <div class="node"><b>편집기 실행기</b><span><code>naver_editor.py</code><br>단계별 명령과 대상 탭 선택</span></div>
+          <div class="node"><b>CDP 연결</b><span><code>cdp.py</code><br>HTTP로 탭을 찾고 WebSocket으로 명령 전달</span></div>
+          <div class="node"><b>홈서버 Chrome</b><span>기존 로그인 프로필<br>새 글쓰기 탭 하나만 사용</span></div>
+          <div class="node"><b>네이버 편집기</b><span>제목, 본문, 사진, 스티커, 지도, 카테고리, 태그를 입력하고 임시저장</span></div>
+        </div>
+        <p class="caption"><strong>사진은 별도 경로</strong><span>사진 원본은 홈서버의 S3 API에서 가져옵니다. 편집기 입력 단계에서는 CDP 파일 선택 이벤트에 실제 파일 경로를 전달하고, 네이버가 올린 결과를 화면에서 확인합니다.</span></p>
+      </div>
+    </section>
+
+    <section aria-labelledby="protocol-title">
+      <h2 id="protocol-title">Puppeteer와 다른 점</h2>
+      <div class="split">
+        <div class="plain-panel">
+          <h3>같은 Chrome 프로토콜을 직접 사용합니다</h3>
+          <p>Puppeteer와 마찬가지로 CDP 명령으로 브라우저를 조작합니다. 이 저장소는 Node 패키지 대신 Python 표준 라이브러리로 필요한 HTTP와 WebSocket 통신만 구현했습니다.</p>
+          <p class="protocol"><code>Runtime.evaluate</code>로 화면을 읽고, <code>Input.insertText</code>와 <code>Input.dispatchMouseEvent</code>로 실제 입력 경로에 글자와 클릭을 보냅니다. SmartEditor는 단순한 페이지 JavaScript 입력을 정상 편집으로 받아들이지 않아 이 경로가 필요합니다.</p>
+        </div>
+        <div class="plain-panel">
+          <h3>Chrome 세션은 따로 관리합니다</h3>
+          <p><code>naver_session.py</code>가 상주 Chrome과 로그인 상태를 맡습니다. 초안 입력기는 실행 중인 Chrome에 붙어서 새 글쓰기 탭을 열고, 작업 후 그 탭만 닫습니다.</p>
+          <p>로그인 만료, 캡차, 기기 인증은 자동화가 통과시키지 않습니다. 사람이 네이버 전용 브라우저에서 처리해야 합니다.</p>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="choice-title">
+      <h2 id="choice-title">라이브러리로 바꾼다면</h2>
+      <p class="lead">현재 CDP 통신 구현은 256줄입니다. 라이브러리는 이 연결 코드를 줄일 수 있지만, 네이버 편집기의 전송 완료와 저장 전 대조는 여전히 필요합니다.</p>
+      <table class="issue-table">
+        <thead><tr><th>방식</th><th>줄어드는 부분</th><th>이 저장소에서의 판단</th></tr></thead>
+        <tbody>
+          <tr><th>현재 Python CDP</th><td>추가 패키지 없이 로그인된 Chrome에 직접 연결합니다.</td><td>실제 임시저장까지 검증됐으므로 현재 운영 경로로 유지합니다.</td></tr>
+          <tr><th><a href="https://playwright.dev/python/docs/api/class-browsertype#browser-type-connect-over-cdp" target="_blank" rel="noopener noreferrer">Playwright Python</a></th><td>CDP 연결, 클릭과 파일 선택 코드를 라이브러리 API로 바꿀 수 있습니다.</td><td>Python을 유지할 수 있어 첫 비교 대상입니다. 기존 Chrome에 CDP로 붙는 기능은 공식 문서가 일부 동작 제약을 안내합니다.</td></tr>
+          <tr><th><a href="https://pptr.dev/api/puppeteer.connect" target="_blank" rel="noopener noreferrer">Puppeteer</a></th><td>기존 Chrome에 연결해 브라우저 조작 코드를 줄일 수 있습니다.</td><td>편집기 실행 코드 전체를 JS로 옮겨야 하므로 지금은 변경 범위가 큽니다.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section aria-labelledby="steps-title">
+      <h2 id="steps-title">실행 순서</h2>
+      <p class="lead">왼쪽 단계를 누르면 코드가 실제로 확인하는 조건을 볼 수 있습니다. 각 명령이 성공해야 다음 단계로 이동합니다.</p>
+      <div class="sequence">
+        <div class="steps" role="tablist" aria-label="편집기 실행 단계">
+          <button class="step" type="button" role="tab" id="step-0" aria-controls="step-detail" aria-selected="true" data-step="0"><span class="num">01</span><strong>초안 검사와 새 탭</strong><small>open</small></button>
+          <button class="step" type="button" role="tab" id="step-1" aria-controls="step-detail" aria-selected="false" tabindex="-1" data-step="1"><span class="num">02</span><strong>제목과 본문</strong><small>fill</small></button>
+          <button class="step" type="button" role="tab" id="step-2" aria-controls="step-detail" aria-selected="false" tabindex="-1" data-step="2"><span class="num">03</span><strong>사진 업로드</strong><small>photos</small></button>
+          <button class="step" type="button" role="tab" id="step-3" aria-controls="step-detail" aria-selected="false" tabindex="-1" data-step="3"><span class="num">04</span><strong>스티커와 실제 지도</strong><small>components</small></button>
+          <button class="step" type="button" role="tab" id="step-4" aria-controls="step-detail" aria-selected="false" tabindex="-1" data-step="4"><span class="num">05</span><strong>카테고리와 태그</strong><small>settings</small></button>
+          <button class="step" type="button" role="tab" id="step-5" aria-controls="step-detail" aria-selected="false" tabindex="-1" data-step="5"><span class="num">06</span><strong>최종 대조와 임시저장</strong><small>save</small></button>
+          <button class="step" type="button" role="tab" id="step-6" aria-controls="step-detail" aria-selected="false" tabindex="-1" data-step="6"><span class="num">07</span><strong>저장 확인과 탭 정리</strong><small>state · close</small></button>
+        </div>
+        <article class="details" id="step-detail" role="tabpanel" aria-labelledby="step-0" aria-live="polite">
+          <span class="stage-label" id="detail-label">open</span>
+          <h3 id="detail-title">초안 검사와 새 탭</h3>
+          <p id="detail-body">필수 필드와 블록 형식을 검사합니다. 옛 스티커 형식처럼 필요한 stickerCode가 없으면 Chrome 탭을 열기 전에 멈춥니다.</p>
+          <dl>
+            <dt>성공 조건</dt><dd id="detail-success">검사된 초안으로 새 글쓰기 탭이 열리고 편집기 화면이 준비됩니다.</dd>
+            <dt>실패 시 동작</dt><dd id="detail-failure">검사 오류나 로그인 화면이면 입력을 시작하지 않습니다. 열었던 탭은 닫습니다.</dd>
+          </dl>
+          <div class="source">담당 파일: <a id="detail-link" href="../scripts/naver_editor_core.py">naver_editor_core.py</a></div>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="safety-title">
+      <h2 id="safety-title">저장 버튼 앞의 안전장치</h2>
+      <div class="guards">
+        <div class="guard"><h3>단계 기록</h3><p>같은 탭에서 같은 초안으로 <code>fill</code>, <code>photos</code>, <code>components</code>, <code>settings</code>가 성공했는지 기록합니다. 한 단계라도 실패하면 저장하지 않습니다.</p></div>
+        <div class="guard"><h3>화면 재검사</h3><p>저장 직전에 제목과 본문, 사진 수와 전송 상태, 스티커, 네이버 지도 카드, 카테고리, 태그를 초안과 다시 비교합니다.</p></div>
+        <div class="guard"><h3>발행 차단</h3><p><code>save</code>는 임시저장 버튼만 누릅니다. 발행 확인 버튼은 실행 경로에 없습니다. 저장 개수가 증가했는지도 확인합니다.</p></div>
+      </div>
+    </section>
+
+    <section aria-labelledby="issues-title">
+      <h2 id="issues-title">자동화에서 까다로운 세 곳</h2>
+      <table class="issue-table">
+        <thead><tr><th>화면</th><th>발생했던 현상</th><th>현재 확인 방식</th></tr></thead>
+        <tbody>
+          <tr><th>사진</th><td>올리는 동안 <code>data:</code> 미리보기와 원격 URL이 바뀌고, 화면 밖 사진은 늦게 로드됩니다.</td><td>해당 사진을 화면으로 가져온 뒤 원격 URL, 로드 완료, 문서 너비 적용을 확인합니다.</td></tr>
+          <tr><th>스티커와 지도</th><td>자리표시 글이 없어져도 실제 구성요소가 아직 없을 수 있습니다.</td><td>스티커 코드와 네이버 지도 카드의 이름·주소를 편집기 구성요소에서 읽어 대조합니다.</td></tr>
+          <tr><th>설정 창</th><td>열리는 동안 카테고리 버튼이 움직이고, 화면 표시용 <code>innerText</code>가 잠시 비었습니다.</td><td>위치가 멈추고 클릭 지점이 드러난 뒤 누릅니다. 카테고리는 먼저 채워지는 <code>textContent</code>로 읽습니다.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section aria-labelledby="mac-title">
+      <h2 id="mac-title">맥북에서 빠르게 확인할 때</h2>
+      <div class="plain-panel">
+        <h3>ego-lite 개인 용도 프로필의 글쓰기 화면을 엽니다</h3>
+        <p>네이버 로그인 화면으로 이동하지 않고 제목 입력 영역이 보이면 세션과 편집기 접근은 정상입니다. 확인용 탭만 닫습니다. 이 점검은 사진 업로드나 임시저장을 실행하지 않습니다.</p>
+        <p>실제 임시저장 성공 여부는 홈서버의 단계 실행 결과와 네이버 임시저장 목록의 제목으로 확인합니다. 로컬 HTML 미리보기에서는 사진과 스티커 로드 여부를 함께 확인할 수 있습니다.</p>
+      </div>
+    </section>
+
+    <section aria-labelledby="maintain-title">
+      <h2 id="maintain-title">문제별로 열어볼 파일</h2>
+      <p class="lead">이름이 같은 명령이 파일별 책임으로 분리되어 있습니다. 실패한 단계부터 해당 파일을 열면 됩니다.</p>
+      <div class="files">
+        <a href="../scripts/naver_editor.py">명령과 탭: naver_editor.py</a>
+        <a href="../scripts/cdp.py">CDP 통신: cdp.py</a>
+        <a href="../scripts/naver_editor_core.py">초안 검사: naver_editor_core.py</a>
+        <a href="../scripts/naver_editor_text.py">제목·본문: naver_editor_text.py</a>
+        <a href="../scripts/naver_editor_photos.py">사진: naver_editor_photos.py</a>
+        <a href="../scripts/naver_editor_components.py">스티커·지도: naver_editor_components.py</a>
+        <a href="../scripts/naver_editor_settings.py">설정·저장: naver_editor_settings.py</a>
+        <a href="../scripts/test_naver_editor.py">회귀 테스트: test_naver_editor.py</a>
+      </div>
+    </section>
+  </main>
+  <footer class="wrap">지융로그 자동화 코드와 실제 실패 사례를 기준으로 작성했습니다. 이 문서는 구조 설명이며 특정 글의 임시저장 완료 증명은 별도로 확인합니다.</footer>
+  <script>
+    const details = [
+      {label: "open", title: "초안 검사와 새 탭", body: "필수 필드와 블록 형식을 검사합니다. 옛 스티커 형식처럼 필요한 stickerCode가 없으면 Chrome 탭을 열기 전에 멈춥니다.", success: "검사된 초안으로 새 글쓰기 탭이 열리고 편집기 화면이 준비됩니다.", failure: "검사 오류나 로그인 화면이면 입력을 시작하지 않습니다. 열었던 탭은 닫습니다.", file: "naver_editor_core.py"},
+      {label: "fill", title: "제목과 본문", body: "초안의 글을 SmartEditor에 실제 키 입력으로 넣습니다. 사진·스티커·지도 자리는 뒤 단계가 정확한 위치를 찾도록 잠시 자리표시 글로 둡니다.", success: "편집기에서 읽은 제목과 본문 순서가 초안과 일치합니다.", failure: "입력한 글이 화면에서 다르게 읽히면 다음 단계로 넘어가지 않습니다.", file: "naver_editor_text.py"},
+      {label: "photos", title: "사진 업로드", body: "각 사진 자리에서 파일 선택 창을 CDP 이벤트로 받아 실제 파일 경로를 전달합니다. 네이버에 전송된 뒤 사진마다 ‘문서 너비’를 적용합니다.", success: "사진 수, 원격 URL, 이미지 로드, 문서 너비 적용을 확인합니다.", failure: "전송 중인 data: 미리보기나 로드되지 않은 사진은 완료로 세지 않습니다.", file: "naver_editor_photos.py"},
+      {label: "components", title: "스티커와 실제 지도", body: "스티커 코드로 네이버 스티커를 넣고, 장소 검색 결과에서 해당 가게를 선택해 네이버 지도 카드를 삽입합니다. 지도 스크린샷은 쓰지 않습니다.", success: "스티커 코드와 지도 카드의 이름·주소가 초안과 일치합니다.", failure: "구성요소가 아직 로드 중이거나 장소가 다르면 멈춥니다.", file: "naver_editor_components.py"},
+      {label: "settings", title: "카테고리와 태그", body: "발행 설정 창을 열되 발행하지 않습니다. 창의 움직임이 멈춘 뒤 카테고리를 고르고 태그를 입력합니다.", success: "카테고리 이름과 모든 태그 칩을 화면에서 다시 읽어 확인합니다.", failure: "버튼이 가려졌거나 카테고리·태그가 반영되지 않으면 저장 단계로 가지 않습니다.", file: "naver_editor_settings.py"},
+      {label: "save", title: "최종 대조와 임시저장", body: "앞 단계의 성공 기록과 현재 화면을 초안과 다시 대조한 후, 임시저장 버튼만 실제 마우스 이벤트로 누릅니다.", success: "저장 전후 임시저장 개수가 증가하고 저장 안내가 확인됩니다.", failure: "본문, 사진 전송, 지도, 태그 중 하나라도 어긋나면 버튼을 누르지 않습니다.", file: "naver_editor_settings.py"},
+      {label: "state · close", title: "저장 확인과 탭 정리", body: "편집기 상태와 임시저장 목록에서 제목을 확인합니다. 자동화가 새로 연 탭만 닫고 기존 탭과 임시저장 글은 유지합니다.", success: "대상 글이 임시저장 목록에 있고 작업 탭이 닫힙니다.", failure: "목록에서 글을 확인하지 못하면 완료로 보고하지 않고 원인을 조사합니다.", file: "naver_editor.py"}
+    ];
+    const tabs = [...document.querySelectorAll(".step")];
+    function activate(index, focus = false) {
+      tabs.forEach((tab, i) => { tab.setAttribute("aria-selected", String(i === index)); tab.tabIndex = i === index ? 0 : -1; });
+      const item = details[index];
+      document.getElementById("detail-label").textContent = item.label;
+      document.getElementById("detail-title").textContent = item.title;
+      document.getElementById("detail-body").textContent = item.body;
+      document.getElementById("detail-success").textContent = item.success;
+      document.getElementById("detail-failure").textContent = item.failure;
+      const link = document.getElementById("detail-link");
+      link.textContent = item.file;
+      link.href = "../scripts/" + item.file;
+      document.getElementById("step-detail").setAttribute("aria-labelledby", tabs[index].id);
+      if (focus) tabs[index].focus();
+    }
+    tabs.forEach((tab, i) => {
+      tab.addEventListener("click", () => activate(i));
+      tab.addEventListener("keydown", (event) => {
+        if (!["ArrowDown", "ArrowRight", "ArrowUp", "ArrowLeft", "Home", "End"].includes(event.key)) return;
+        event.preventDefault();
+        const next = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : (i + (["ArrowDown", "ArrowRight"].includes(event.key) ? 1 : -1) + tabs.length) % tabs.length;
+        activate(next, true);
+      });
+    });
+  </script>
+</body>
+</html>
