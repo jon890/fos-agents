@@ -51,11 +51,9 @@ const legacyMigrationPaths = [
  * 건너뛴 실행을 이 phase 의 완료 근거로 쓰지 않기 위해서다.
  */
 function requireTestDatabaseUrl(): string {
-  const url = process.env.CAREER_RECOMMENDATION_TEST_DATABASE_URL;
+  const url = process.env.CAREER_BACKEND_TEST_DATABASE_URL;
   if (!url) {
-    throw new Error(
-      "CAREER_RECOMMENDATION_TEST_DATABASE_URL 이 없다. 테스트용 MySQL 연결 문자열을 준다.",
-    );
+    throw new Error("CAREER_BACKEND_TEST_DATABASE_URL 이 없다. 테스트용 MySQL 연결 문자열을 준다.");
   }
   return url;
 }
@@ -98,7 +96,7 @@ async function dropScratchDatabase(adminUrl: string): Promise<void> {
 
 describe("초기 migration 기준점", () => {
   afterAll(async () => {
-    const adminUrl = process.env.CAREER_RECOMMENDATION_TEST_DATABASE_URL;
+    const adminUrl = process.env.CAREER_BACKEND_TEST_DATABASE_URL;
     if (adminUrl) {
       await dropScratchDatabase(adminUrl);
     }

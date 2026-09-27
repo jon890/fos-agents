@@ -26,8 +26,8 @@ function requireEnvironment(name: string): string {
   return value;
 }
 
-const baseUrl = requireEnvironment("CAREER_RECOMMENDATION_API_URL").replace(/\/+$/, "");
-const apiToken = requireEnvironment("CAREER_RECOMMENDATION_API_TOKEN");
+const baseUrl = requireEnvironment("CAREER_BACKEND_URL").replace(/\/+$/, "");
+const apiToken = requireEnvironment("CAREER_BACKEND_TOKEN");
 
 const errorBodySchema = z
   .object({

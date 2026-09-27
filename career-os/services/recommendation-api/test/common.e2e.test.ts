@@ -36,11 +36,9 @@ const SCRATCH_DATABASE = "fos_career_ready_check";
  * 건너뛴 실행을 완료 근거로 쓰지 않기 위해서다.
  */
 function requireTestDatabaseUrl(): string {
-  const url = process.env.CAREER_RECOMMENDATION_TEST_DATABASE_URL;
+  const url = process.env.CAREER_BACKEND_TEST_DATABASE_URL;
   if (!url) {
-    throw new Error(
-      "CAREER_RECOMMENDATION_TEST_DATABASE_URL 이 없다. 테스트용 MySQL 연결 문자열을 준다.",
-    );
+    throw new Error("CAREER_BACKEND_TEST_DATABASE_URL 이 없다. 테스트용 MySQL 연결 문자열을 준다.");
   }
   return url;
 }
@@ -68,10 +66,10 @@ async function startApp(databaseUrl: string): Promise<RunningApp> {
   for (const key of ["DB_HOST", "DB_PORT", "DB_NAME", "DB_USERNAME", "DB_PASSWORD"]) {
     delete process.env[key];
   }
-  delete process.env.CAREER_RECOMMENDATION_API_TOKEN_FILE;
-  delete process.env.CAREER_RECOMMENDATION_MAX_BODY_BYTES;
-  process.env.CAREER_RECOMMENDATION_DATABASE_URL = databaseUrl;
-  process.env.CAREER_RECOMMENDATION_API_TOKEN = legacyApiToken;
+  delete process.env.CAREER_BACKEND_TOKEN_FILE;
+  delete process.env.CAREER_BACKEND_MAX_BODY_BYTES;
+  process.env.CAREER_BACKEND_DATABASE_URL = databaseUrl;
+  process.env.CAREER_BACKEND_TOKEN = legacyApiToken;
   const app = await NestFactory.create(ProbeAppModule, { bodyParser: false, logger: false });
   const config = app.get<RecommendationApiConfig>(RECOMMENDATION_CONFIG);
   applyHttpLayers(app, config);
@@ -232,8 +230,8 @@ describe("인증", () => {
       chmodSync(path, 0o644);
       expect(() =>
         loadConfig({
-          CAREER_RECOMMENDATION_DATABASE_URL: databaseUrl,
-          CAREER_RECOMMENDATION_API_TOKEN_FILE: path,
+          CAREER_BACKEND_DATABASE_URL: databaseUrl,
+          CAREER_BACKEND_TOKEN_FILE: path,
         }),
       ).toThrow("token 파일을 읽거나 검증할 수 없습니다");
     } finally {
@@ -348,18 +346,18 @@ describe("본문 크기", () => {
 });
 
 async function receiptKeys(): Promise<string[]> {
-  const rows = await running.app
-    .get(PrismaService)
-    .$queryRaw<{ idempotency_key: string }[]>`
+  const rows = await running.app.get(PrismaService).$queryRaw<{ idempotency_key: string }[]>`
       SELECT idempotency_key FROM request_receipts ORDER BY idempotency_key
     `;
   return rows.map((row) => row.idempotency_key);
 }
 
-async function receiptState(key: string): Promise<{ state: string; response_status: number | null } | undefined> {
-  const rows = await running.app
-    .get(PrismaService)
-    .$queryRaw<{ state: string; response_status: number | null }[]>`
+async function receiptState(
+  key: string,
+): Promise<{ state: string; response_status: number | null } | undefined> {
+  const rows = await running.app.get(PrismaService).$queryRaw<
+    { state: string; response_status: number | null }[]
+  >`
       SELECT state, response_status FROM request_receipts WHERE idempotency_key = ${key}
     `;
   return rows[0];
@@ -504,7 +502,9 @@ describe("시간대 고정", () => {
       const after = Date.now();
       const stored = new Date(rows[0]!.created_at).getTime();
       // 고정이 풀리면 이 값이 9시간 어긋난다.
-      expect(stored, "DB 가 기록한 시각과 프로세스 시각의 차이").toBeGreaterThanOrEqual(before - 1_000);
+      expect(stored, "DB 가 기록한 시각과 프로세스 시각의 차이").toBeGreaterThanOrEqual(
+        before - 1_000,
+      );
       expect(stored, "DB 가 기록한 시각과 프로세스 시각의 차이").toBeLessThanOrEqual(after + 1_000);
     } finally {
       await prisma.$disconnect();

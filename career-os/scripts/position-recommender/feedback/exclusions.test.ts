@@ -197,9 +197,9 @@ describe("개인 공고 제외", () => {
           env: {
             ...process.env,
             NO_PROXY: "127.0.0.1,localhost",
-            CAREER_RECOMMENDATION_API_URL: `http://127.0.0.1:${server.port}`,
-            CAREER_RECOMMENDATION_API_TOKEN: "token-123456789012345678901234567890",
-            CAREER_RECOMMENDATION_API_TOKEN_FILE: undefined,
+            CAREER_BACKEND_URL: `http://127.0.0.1:${server.port}`,
+            CAREER_BACKEND_TOKEN: "token-123456789012345678901234567890",
+            CAREER_BACKEND_TOKEN_FILE: undefined,
           },
         },
       );

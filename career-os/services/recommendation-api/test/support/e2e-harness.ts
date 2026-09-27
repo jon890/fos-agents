@@ -60,11 +60,9 @@ export type Reply = {
 export type SendOptions = { body?: unknown; idempotencyKey?: string };
 
 function requireTestDatabaseUrl(): string {
-  const url = process.env.CAREER_RECOMMENDATION_TEST_DATABASE_URL;
+  const url = process.env.CAREER_BACKEND_TEST_DATABASE_URL;
   if (!url) {
-    throw new Error(
-      "CAREER_RECOMMENDATION_TEST_DATABASE_URL 이 없다. 테스트용 MySQL 연결 문자열을 준다.",
-    );
+    throw new Error("CAREER_BACKEND_TEST_DATABASE_URL 이 없다. 테스트용 MySQL 연결 문자열을 준다.");
   }
   return url;
 }
@@ -130,10 +128,10 @@ export async function startE2eHarness(): Promise<E2eHarness> {
   for (const key of ["DB_HOST", "DB_PORT", "DB_NAME", "DB_USERNAME", "DB_PASSWORD"]) {
     delete process.env[key];
   }
-  delete process.env.CAREER_RECOMMENDATION_API_TOKEN_FILE;
-  delete process.env.CAREER_RECOMMENDATION_MAX_BODY_BYTES;
-  process.env.CAREER_RECOMMENDATION_DATABASE_URL = databaseUrl;
-  process.env.CAREER_RECOMMENDATION_API_TOKEN = legacyApiToken;
+  delete process.env.CAREER_BACKEND_TOKEN_FILE;
+  delete process.env.CAREER_BACKEND_MAX_BODY_BYTES;
+  process.env.CAREER_BACKEND_DATABASE_URL = databaseUrl;
+  process.env.CAREER_BACKEND_TOKEN = legacyApiToken;
   const app = await NestFactory.create(AppModule, { bodyParser: false, logger: false });
   applyHttpLayers(app, app.get<RecommendationApiConfig>(RECOMMENDATION_CONFIG));
   await app.listen(0, "127.0.0.1");

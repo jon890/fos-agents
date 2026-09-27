@@ -128,8 +128,8 @@ describe("collect_live_postings 인자", () => {
       HTTPS_PROXY: "http://127.0.0.1:1",
       HTTP_PROXY: "http://127.0.0.1:1",
       NO_PROXY: "127.0.0.1,localhost",
-      CAREER_RECOMMENDATION_API_URL: `http://127.0.0.1:${backend.port}`,
-      CAREER_RECOMMENDATION_API_TOKEN: "token-123456789012345678901234567890",
+      CAREER_BACKEND_URL: `http://127.0.0.1:${backend.port}`,
+      CAREER_BACKEND_TOKEN: "token-123456789012345678901234567890",
     };
     const child = Bun.spawn(
       [
@@ -143,7 +143,7 @@ describe("collect_live_postings 인자", () => {
       {
         stdout: "pipe",
         stderr: "pipe",
-        env: { ...process.env, CAREER_RECOMMENDATION_API_TOKEN_FILE: undefined, ...blocked },
+        env: { ...process.env, CAREER_BACKEND_TOKEN_FILE: undefined, ...blocked },
       },
     );
     const [stderr, exitCode] = await Promise.all([new Response(child.stderr).text(), child.exited]);

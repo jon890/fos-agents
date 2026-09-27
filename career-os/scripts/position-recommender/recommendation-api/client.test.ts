@@ -3,7 +3,11 @@ import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveRecommendationApiConnection } from "../../lib/recommendation-api-config.ts";
-import { createRecommendationApiClient, RecommendationApiClient, RecommendationApiClientError } from "./client.ts";
+import {
+  createRecommendationApiClient,
+  RecommendationApiClient,
+  RecommendationApiClientError,
+} from "./client.ts";
 
 const token = "token-123456789012345678901234567890";
 
@@ -53,30 +57,35 @@ function preparationResponse() {
 }
 
 describe("position recommendation API client", () => {
-  test("공용 환경 해석은 직접 token과 0600 파일 token을 받고 URL의 origin 범위를 지킨다", () => {
+  test("공용 환경 해석은 새 이름을 읽고 URL의 origin 범위를 지킨다", () => {
     const direct = {
-      CAREER_RECOMMENDATION_API_URL: "http://api.local",
-      CAREER_RECOMMENDATION_API_TOKEN: "x".repeat(32),
+      CAREER_BACKEND_URL: "http://api.local",
+      CAREER_BACKEND_TOKEN: "x".repeat(32),
     };
     expect(resolveRecommendationApiConnection(direct)).toEqual({
       baseUrl: "http://api.local/",
       token: "x".repeat(32),
     });
     expect(createRecommendationApiClient(direct)).toBeInstanceOf(RecommendationApiClient);
-    expect(resolveRecommendationApiConnection({ ...direct, CAREER_RECOMMENDATION_API_URL: "https://api.local" }).baseUrl)
-      .toBe("https://api.local/");
+    expect(
+      resolveRecommendationApiConnection({ ...direct, CAREER_BACKEND_URL: "https://api.local" })
+        .baseUrl,
+    ).toBe("https://api.local/");
 
     const directory = mkdtempSync(join(tmpdir(), "recommendation-api-token."));
     const tokenPath = join(directory, "token");
     writeFileSync(tokenPath, ` ${"f".repeat(32)}\n`, "utf8");
     chmodSync(tokenPath, 0o600);
     try {
-      expect(resolveRecommendationApiConnection({
-        CAREER_RECOMMENDATION_API_URL: "https://api.local",
-        CAREER_RECOMMENDATION_API_TOKEN_FILE: tokenPath,
-      })).toEqual({ baseUrl: "https://api.local/", token: "f".repeat(32) });
-      expect(() => resolveRecommendationApiConnection({ ...direct, CAREER_RECOMMENDATION_API_TOKEN_FILE: tokenPath }))
-        .toThrow("정확히 하나");
+      expect(
+        resolveRecommendationApiConnection({
+          CAREER_BACKEND_URL: "https://api.local",
+          CAREER_BACKEND_TOKEN_FILE: tokenPath,
+        }),
+      ).toEqual({ baseUrl: "https://api.local/", token: "f".repeat(32) });
+      expect(() =>
+        resolveRecommendationApiConnection({ ...direct, CAREER_BACKEND_TOKEN_FILE: tokenPath }),
+      ).toThrow("정확히 하나");
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
@@ -88,8 +97,48 @@ describe("position recommendation API client", () => {
       "https://api.local#fragment",
       "https://api.local/path",
     ]) {
-      expect(() => resolveRecommendationApiConnection({ ...direct, CAREER_RECOMMENDATION_API_URL: invalid }))
-        .toThrow();
+      expect(() =>
+        resolveRecommendationApiConnection({ ...direct, CAREER_BACKEND_URL: invalid }),
+      ).toThrow();
+    }
+  });
+
+  test("공용 환경 해석은 옛 이름을 받고 새 이름을 우선한다", () => {
+    const legacy = {
+      CAREER_RECOMMENDATION_API_URL: "http://legacy-api.local",
+      CAREER_RECOMMENDATION_API_TOKEN: "l".repeat(32),
+    };
+    expect(resolveRecommendationApiConnection(legacy)).toEqual({
+      baseUrl: "http://legacy-api.local/",
+      token: "l".repeat(32),
+    });
+    expect(
+      resolveRecommendationApiConnection({
+        ...legacy,
+        CAREER_BACKEND_URL: "https://new-api.local",
+        CAREER_BACKEND_TOKEN: "n".repeat(32),
+      }),
+    ).toEqual({
+      baseUrl: "https://new-api.local/",
+      token: "n".repeat(32),
+    });
+  });
+
+  test("새 token과 옛 token 파일을 함께 주면 설정 오류가 난다", () => {
+    const directory = mkdtempSync(join(tmpdir(), "recommendation-api-token."));
+    const tokenPath = join(directory, "token");
+    try {
+      writeFileSync(tokenPath, "f".repeat(32), "utf8");
+      chmodSync(tokenPath, 0o600);
+      expect(() =>
+        resolveRecommendationApiConnection({
+          CAREER_BACKEND_URL: "https://api.local",
+          CAREER_BACKEND_TOKEN: "x".repeat(32),
+          CAREER_RECOMMENDATION_API_TOKEN_FILE: tokenPath,
+        }),
+      ).toThrow("정확히 하나");
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
     }
   });
 

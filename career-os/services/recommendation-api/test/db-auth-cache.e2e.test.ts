@@ -9,11 +9,9 @@ type AuthenticationPluginRow = {
 };
 
 function requireTestDatabaseUrl(): string {
-  const url = process.env.CAREER_RECOMMENDATION_TEST_DATABASE_URL;
+  const url = process.env.CAREER_BACKEND_TEST_DATABASE_URL;
   if (!url) {
-    throw new Error(
-      "CAREER_RECOMMENDATION_TEST_DATABASE_URL 이 없다. 테스트용 MySQL 연결 문자열을 준다.",
-    );
+    throw new Error("CAREER_BACKEND_TEST_DATABASE_URL 이 없다. 테스트용 MySQL 연결 문자열을 준다.");
   }
   return url;
 }
