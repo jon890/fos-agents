@@ -20,7 +20,7 @@
 | timeout | 15초 | 10초 |
 | redirect | 기본값 | `redirect: "error"` |
 | 5xx 응답의 깨진 JSON | 재시도 | 재시도하지 않음 |
-| 오류 타입 | `CareerBackendClientError` | `StudyLibraryApiError` 외 내부 오류 3종. `requestId`, `retryAfter` 를 담는다 |
+| 오류 타입 | `CareerBackendClientError` | 공통 부모 `StudyLibraryClientError` 아래 `StudyLibraryApiError`, `StudyLibraryNetworkError` 와 응답 오류 3종. `requestId`, `retryAfter` 를 담는다. `study-library/ingestion.ts` 가 공통 부모로 출처별 실패를 가른다 |
 | `Accept` 헤더 | 없음 | `application/json` |
 
 - 오류 타입을 client 밖에서 쓰는 곳은 넷이다. `position-recommender/feedback/exclusions.ts` 가 `CareerBackendClientError.status` 로 원인을 나누고, `study-topic-recommender/manage_reading_sources.ts` 가 `StudyLibraryApiError.status === 409` 를 보고, `study-library/candidates.ts` 가 `new StudyLibraryApiError({ status: 409, code: "VERSION_CONFLICT" })` 를 던지고, `morning_reading_cli.ts` 의 `reportMorningReadingError` 가 `code`, `requestId`, `retryAfter` 를 JSON 으로 출력한다
@@ -51,7 +51,7 @@
 
 ### 3. `career-os/scripts/study-topic-recommender/study-library/client.ts` 수정
 
-요청과 오류 해석 코드를 지우고 `careerBackendRequest` 를 부른다. timeout 10초를 넘긴다. `StudyLibraryApiError` 와 내부 오류 클래스 셋을 지운다. 멱등 키를 만드는 `canonicalJson`, `hashKey` 는 그대로 둔다.
+요청과 오류 해석 코드를 지우고 `careerBackendRequest` 를 부른다. timeout 10초를 넘긴다. `StudyLibraryClientError` 와 그 하위 오류 클래스를 모두 지우고, `ingestion.ts` 의 출처별 실패 판정은 `CareerBackendHttpError` 로 바꾼다. 멱등 키를 만드는 `canonicalJson`, `hashKey` 는 그대로 둔다.
 생성자의 origin, token 직접 지정 분기가 32자 token 검사를 다시 구현하고 있으면 `resolveCareerBackendConnection` 을 쓰도록 바꾼다.
 
 ### 4. 오류 타입을 쓰는 네 곳 수정
@@ -70,7 +70,7 @@
 PATH="$HOME/.bun/bin:$PATH" bun test career-os/scripts
 PATH="$HOME/.bun/bin:$PATH" bun test ./career-os/.claude/skills/
 PATH="$HOME/.bun/bin:$PATH" bunx tsc --noEmit
-! git grep -nE "CareerBackendClientError|StudyLibraryApiError|StudyLibraryBodyReadError|StudyLibraryMalformedJsonError|StudyLibraryResponseValidationError" -- career-os/scripts
+! git grep -nE "CareerBackendClientError|StudyLibraryClientError|StudyLibraryApiError|StudyLibraryNetworkError|StudyLibraryBodyReadError|StudyLibraryMalformedJsonError|StudyLibraryResponseValidationError" -- career-os/scripts
 ```
 
 모두 종료 코드 0 이어야 한다.
