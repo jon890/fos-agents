@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { manageReadingSources } from "./manage_reading_sources.ts";
+import { CareerBackendHttpError } from "../lib/career-backend-http.ts";
+import { formatManageReadingSourcesError, manageReadingSources } from "./manage_reading_sources.ts";
 
 const originalFetch = globalThis.fetch;
 const originalUrl = process.env.CAREER_BACKEND_URL;
@@ -98,5 +99,18 @@ describe("manage_reading_sources", () => {
 
     await expect(manageReadingSources(["disable", "--key", "source-1"]))
       .rejects.toThrow("--note 값이 필요하다.");
+  });
+});
+
+describe("오류 출력", () => {
+  test("공용 HTTP 오류는 상태, code, requestId 를 함께 낸다", () => {
+    const error = new CareerBackendHttpError(401, "UNAUTHORIZED", "커리어 Backend 요청이 실패했습니다.", "req-1");
+    expect(formatManageReadingSourcesError(error)).toBe(
+      "커리어 Backend 요청이 실패했습니다. (status=401, code=UNAUTHORIZED, requestId=req-1)",
+    );
+  });
+
+  test("다른 오류는 message 만 낸다", () => {
+    expect(formatManageReadingSourcesError(new Error("--key 값이 필요하다."))).toBe("--key 값이 필요하다.");
   });
 });
