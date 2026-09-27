@@ -150,6 +150,73 @@ class EditorGateTest(unittest.TestCase):
         with patch.object(naver_editor_components, "place_candidates", return_value=results):
             self.assertEqual(naver_editor.domestic_place_candidates(Page()), results[1:])
 
+    def test_place_search_retries_with_address_when_name_has_no_match(self):
+        other = {"index": 0, "name": "다른가게", "address": "경기도 예시시 샘플로 1"}
+        target = {"index": 3, "name": "샘플가게", "address": "경기도 예시시 샘플로 145"}
+        queries = []
+
+        def search(_page, query):
+            queries.append(query)
+            return "", [other] if query == "샘플가게" else [other, target]
+
+        with patch.object(naver_editor_components, "search_places", side_effect=search):
+            problem, candidates, matches = naver_editor_components.find_place_matches(
+                object(), "샘플가게", "경기도 예시시 샘플로 145"
+            )
+        self.assertEqual(problem, "")
+        self.assertEqual(queries, ["샘플가게", "경기도 예시시 샘플로 145"])
+        self.assertEqual(matches, [target])
+        self.assertEqual(candidates, [other, target])
+
+    def test_place_search_stops_without_match_after_both_queries(self):
+        other = {"index": 0, "name": "다른가게", "address": "경기도 예시시 샘플로 1"}
+        with patch.object(naver_editor_components, "search_places", return_value=("", [other])):
+            problem, candidates, matches = naver_editor_components.find_place_matches(
+                object(), "샘플가게", "경기도 예시시 샘플로 145"
+            )
+        self.assertEqual((problem, candidates, matches), ("", [other], []))
+
+    def test_place_search_waits_for_new_results_instead_of_reading_previous(self):
+        class Page:
+            def type_text(self, _text):
+                pass
+
+            def enter(self):
+                pass
+
+            def js(self, _expression):
+                return True
+
+        previous = [{"index": 0, "name": "이전가게", "address": "경기도 예시시 이전로 1"}]
+        fresh = [{"index": 0, "name": "샘플가게", "address": "경기도 예시시 샘플로 145"}]
+        reads = iter([previous, previous, previous, fresh, fresh])
+        with patch.object(naver_editor_components, "ensure_domestic_map", return_value=""), \
+                patch.object(naver_editor_components, "click", return_value=True), \
+                patch.object(naver_editor_components, "clear_field"), \
+                patch.object(naver_editor_components, "domestic_place_candidates",
+                             side_effect=lambda _page: next(reads, fresh)):
+            self.assertEqual(naver_editor_components.search_places(Page(), "샘플가게"), ("", fresh))
+
+    def test_place_search_accepts_same_results_after_waiting(self):
+        class Page:
+            def type_text(self, _text):
+                pass
+
+            def enter(self):
+                pass
+
+            def js(self, _expression):
+                return True
+
+        same = [{"index": 0, "name": "샘플가게", "address": "경기도 예시시 샘플로 145"}]
+        with patch.object(naver_editor_components, "ensure_domestic_map", return_value=""), \
+                patch.object(naver_editor_components, "click", return_value=True), \
+                patch.object(naver_editor_components, "clear_field"), \
+                patch.object(naver_editor_components, "wait_until", return_value=True) as waited, \
+                patch.object(naver_editor_components, "domestic_place_candidates", return_value=same):
+            self.assertEqual(naver_editor_components.search_places(Page(), "샘플가게"), ("", same))
+        self.assertEqual(waited.call_count, 2)
+
     def test_component_check_requires_exact_stickers_and_map(self):
         draft = {"blocks": [
             {"type": "sticker", "stickerCode": "ogq_5db4314bac2f0-1"},

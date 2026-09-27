@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-import time
 from pathlib import Path
 
 from cdp import Page
@@ -116,6 +115,62 @@ def domestic_place_candidates(page: Page) -> list[dict]:
     ]
 
 
+PLACE_SEARCH_INPUT = 'input[placeholder="장소명을 입력하세요."]'
+
+
+def search_places(page: Page, query: str) -> tuple[str, list[dict]]:
+    """검색어 하나로 장소를 찾고 이번 검색의 국내 결과를 돌려준다.
+
+    이전 검색 결과가 잠깐 남아 있으므로 목록이 바뀔 때까지 기다린다.
+    새 결과가 이전 결과와 같으면 목록이 바뀌지 않으므로, 기다린 뒤에도 결과가 있으면 그대로 쓴다.
+    """
+    problem = ensure_domestic_map(page)
+    if problem:
+        return problem, []
+    if not wait_until(lambda: page.js(f"!!document.querySelector({json.dumps(PLACE_SEARCH_INPUT)})")):
+        return "장소 검색 입력칸을 찾지 못했다", []
+    if not click(page, PLACE_SEARCH_INPUT):
+        return "장소 검색 입력칸을 누르지 못했다", []
+    previous = domestic_place_candidates(page)
+    clear_field(page)
+    page.type_text(query)
+    page.enter()
+
+    def changed() -> bool:
+        current = domestic_place_candidates(page)
+        return bool(current) and current != previous
+
+    wait_until(changed, seconds=5.0)
+    return "", domestic_place_candidates(page)
+
+
+def find_place_matches(page: Page, name: str, address: str) -> tuple[str, list[dict], list[dict]]:
+    """상호명, 주소 순서로 검색해 이름과 주소가 모두 같은 결과를 찾는다.
+
+    네이버 장소 검색은 상호명으로는 안 나오고 주소로는 나오는 경우가 있다.
+    검색어만 넓히고 선택 기준은 상호와 주소의 완전 일치를 유지한다.
+    """
+    candidates: list[dict] = []
+    matches: list[dict] = []
+    for query in (name, address):
+        for _ in range(3):
+            problem, found = search_places(page, query)
+            if problem:
+                return problem, [], []
+            if found:
+                candidates = found
+                matches = [
+                    item
+                    for item in found
+                    if normalize(item["name"]) == name
+                    and normalize_place_address(item["address"]) == address
+                ]
+                break
+        if matches:
+            break
+    return "", candidates, matches
+
+
 def insert_map(page: Page, block: dict) -> str:
     """상호명과 주소가 모두 같은 검색 결과 하나만 골라 지도 카드를 넣는다."""
     name = normalize(block.get("name", ""))
@@ -128,36 +183,9 @@ def insert_map(page: Page, block: dict) -> str:
     before = component_count(page, "placesMap")
     if not click(page, PLACE_BUTTON):
         return "장소 버튼을 찾지 못했다"
-    search = 'input[placeholder="장소명을 입력하세요."]'
-    candidates = []
-    matches = []
-    # 상호명 검색 결과가 비거나 주소가 다르면 주소로 다시 검색한다.
-    # 검색어만 넓히고 선택 기준은 상호·주소 완전 일치를 유지한다.
-    for query in (name, address):
-        for _ in range(3):
-            problem = ensure_domestic_map(page)
-            if problem:
-                return problem
-            if not wait_until(lambda: page.js(f"!!document.querySelector({json.dumps(search)})")):
-                return "장소 검색 입력칸을 찾지 못했다"
-            if not click(page, search):
-                return "장소 검색 입력칸을 누르지 못했다"
-            clear_field(page)
-            page.type_text(query)
-            page.enter()
-            # 이전 검색 결과가 잠깐 남아 있어 새 요청을 기다린다.
-            time.sleep(1.5)
-            if wait_until(lambda: bool(domestic_place_candidates(page)), seconds=5.0):
-                candidates = domestic_place_candidates(page)
-                matches = [
-                    item
-                    for item in candidates
-                    if normalize(item["name"]) == name
-                    and normalize_place_address(item["address"]) == address
-                ]
-                break
-        if matches:
-            break
+    problem, candidates, matches = find_place_matches(page, name, address)
+    if problem:
+        return problem
     if not candidates:
         return f"장소 검색 결과가 없다: {name}"
     if len(matches) != 1:
