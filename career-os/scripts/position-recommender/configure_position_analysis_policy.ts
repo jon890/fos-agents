@@ -2,12 +2,12 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { runCli, type CliSpec } from "../lib/cli.ts";
-import { analysisPolicySchema } from "../../services/recommendation-api/src/positions/schema.ts";
-import { createRecommendationApiClient } from "./recommendation-api/client.ts";
+import { analysisPolicySchema } from "../../services/career-backend/src/positions/schema.ts";
+import { createCareerBackendClient } from "./career-backend/client.ts";
 
 const spec: CliSpec = {
   name: "configure_position_analysis_policy.ts",
-  summary: "fresh recommendation-api에 명시적인 포지션 분석 정책을 설정한다.",
+  summary: "fresh career-backend에 명시적인 포지션 분석 정책을 설정한다.",
   options: {
     "--input": { value: true, description: "분석 정책 JSON" },
   },
@@ -20,7 +20,7 @@ if (import.meta.main) {
     const policy = analysisPolicySchema.parse(
       JSON.parse(readFileSync(resolve(input), "utf8")) as unknown,
     );
-    const configured = await createRecommendationApiClient().configureAnalysisPolicy(
+    const configured = await createCareerBackendClient().configureAnalysisPolicy(
       policy,
       `analysis-policy:${policy.candidateContextVersion}`,
     );

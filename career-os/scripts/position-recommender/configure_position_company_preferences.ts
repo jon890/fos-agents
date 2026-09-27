@@ -3,9 +3,9 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { z } from "zod";
 import { runCli, type CliSpec } from "../lib/cli.ts";
-import { companyKey, stableUuid } from "../../services/recommendation-api/src/positions/hash.ts";
-import type { RecommendationApiClient } from "./recommendation-api/client.ts";
-import { createRecommendationApiClient } from "./recommendation-api/client.ts";
+import { companyKey, stableUuid } from "../../services/career-backend/src/positions/hash.ts";
+import type { CareerBackendClient } from "./career-backend/client.ts";
+import { createCareerBackendClient } from "./career-backend/client.ts";
 
 const inputPreferenceSchema = z
   .object({
@@ -36,12 +36,12 @@ export const companyPreferencesInputSchema = z
     }
   });
 
-type CompanyPreferenceClient = Pick<RecommendationApiClient, "updateCompanyPreference">;
+type CompanyPreferenceClient = Pick<CareerBackendClient, "updateCompanyPreference">;
 type ClientFactory = () => CompanyPreferenceClient;
 
 export async function configurePositionCompanyPreferences(
   inputPath: string,
-  createClient: ClientFactory = createRecommendationApiClient,
+  createClient: ClientFactory = createCareerBackendClient,
 ) {
   const input = companyPreferencesInputSchema.parse(
     JSON.parse(readFileSync(resolve(inputPath), "utf8")) as unknown,
@@ -70,7 +70,7 @@ export async function configurePositionCompanyPreferences(
 
 const spec: CliSpec = {
   name: "configure_position_company_preferences.ts",
-  summary: "명시한 회사별 분석 tier와 제외 정책을 recommendation-api에 설정한다.",
+  summary: "명시한 회사별 분석 tier와 제외 정책을 career-backend에 설정한다.",
   options: {
     "--input": { value: true, description: "회사 정책 JSON" },
   },

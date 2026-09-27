@@ -1,6 +1,6 @@
 import type { z } from "zod";
 import { createHash, randomUUID } from "node:crypto";
-import { parseRecommendationApiOrigin, resolveRecommendationApiConnection } from "../../lib/recommendation-api-config.ts";
+import { parseCareerBackendOrigin, resolveCareerBackendConnection } from "../../lib/career-backend-config.ts";
 import {
   studyLibraryApiErrorSchema,
   studyLibraryCandidatePageSchema,
@@ -175,12 +175,12 @@ export class StudyLibraryClient {
     try {
       if (options.origin !== undefined || options.token !== undefined) {
         if (!options.origin?.trim() || !options.token?.trim()) throw new Error("명시적 origin과 token이 모두 필요하다.");
-        this.origin = parseRecommendationApiOrigin(options.origin);
+        this.origin = parseCareerBackendOrigin(options.origin);
         this.token = options.token.trim();
-        if (this.token.length < 32) throw new Error("추천 API token은 trim 뒤 32자 이상이어야 한다.");
+        if (this.token.length < 32) throw new Error("커리어 Backend token은 trim 뒤 32자 이상이어야 한다.");
       } else {
-        const connection = resolveRecommendationApiConnection(process.env);
-        this.origin = parseRecommendationApiOrigin(connection.baseUrl);
+        const connection = resolveCareerBackendConnection(process.env);
+        this.origin = parseCareerBackendOrigin(connection.baseUrl);
         this.token = connection.token;
       }
     } catch (error) {

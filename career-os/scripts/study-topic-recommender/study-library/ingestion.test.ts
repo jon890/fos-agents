@@ -72,8 +72,8 @@ function rss(items: Array<{ title: string; url: string }>): string {
 }
 
 afterEach(() => {
-  delete process.env.CAREER_RECOMMENDATION_API_URL;
-  delete process.env.CAREER_RECOMMENDATION_API_TOKEN;
+  delete process.env.CAREER_BACKEND_URL;
+  delete process.env.CAREER_BACKEND_TOKEN;
   delete process.env.CAREER_OS_ROOT;
   delete process.env.YOUTUBE_DATA_API_KEY;
 });
@@ -408,8 +408,8 @@ describe("library collect-only CLI", () => {
     const originalArgv = process.argv;
     const originalFetch = globalThis.fetch;
     process.argv = ["bun", "morning_reading_cli.ts", "--collect-only", "--reset-cursor"];
-    process.env.CAREER_RECOMMENDATION_API_URL = "https://study.example.com";
-    process.env.CAREER_RECOMMENDATION_API_TOKEN = "test-token-123456789012345678901234567890";
+    process.env.CAREER_BACKEND_URL = "https://study.example.com";
+    process.env.CAREER_BACKEND_TOKEN = "test-token-123456789012345678901234567890";
     const directory = mkdtempSync(join(tmpdir(), "study-topic-recommender."));
     process.env.CAREER_OS_ROOT = directory;
     globalThis.fetch = (async (url: string | URL | Request) => {
@@ -432,8 +432,8 @@ describe("library collect-only CLI", () => {
     const originalFetch = globalThis.fetch;
     const directory = mkdtempSync(join(tmpdir(), "study-topic-recommender."));
     process.env.CAREER_OS_ROOT = directory;
-    process.env.CAREER_RECOMMENDATION_API_URL = "https://study.example.com";
-    process.env.CAREER_RECOMMENDATION_API_TOKEN = "test-token-123456789012345678901234567890";
+    process.env.CAREER_BACKEND_URL = "https://study.example.com";
+    process.env.CAREER_BACKEND_TOKEN = "test-token-123456789012345678901234567890";
     globalThis.fetch = (async () => response({
       sources: [{ sourceKey: "kurly-tech", title: "Kurly", category: "techBlog", url: "https://helloworld.kurly.com", feedUrl: "https://helloworld.kurly.com/rss.xml", adapter: "feed", enabled: true, version: 0, note: null }],
     }, { headers: { "Content-Type": "application/json" } })) as unknown as typeof fetch;
@@ -482,8 +482,8 @@ describe("library collect-only CLI", () => {
       "--max-items",
       "1",
     ];
-    process.env.CAREER_RECOMMENDATION_API_URL = "https://study.example.com";
-    process.env.CAREER_RECOMMENDATION_API_TOKEN = "test-token-123456789012345678901234567890";
+    process.env.CAREER_BACKEND_URL = "https://study.example.com";
+    process.env.CAREER_BACKEND_TOKEN = "test-token-123456789012345678901234567890";
     globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
       const parsedUrl = new URL(String(url));
       requests.push(`${init?.method ?? "GET"} ${parsedUrl.pathname}${parsedUrl.search}`);
@@ -572,8 +572,8 @@ describe("library collect-only CLI", () => {
       "kurly-tech",
     ];
     process.env.CAREER_OS_ROOT = directory;
-    process.env.CAREER_RECOMMENDATION_API_URL = "https://study.example.com";
-    process.env.CAREER_RECOMMENDATION_API_TOKEN = "test-token-123456789012345678901234567890";
+    process.env.CAREER_BACKEND_URL = "https://study.example.com";
+    process.env.CAREER_BACKEND_TOKEN = "test-token-123456789012345678901234567890";
     globalThis.fetch = (async () => new Response(JSON.stringify({
       error: {
         code: "RATE_LIMITED",

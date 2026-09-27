@@ -76,10 +76,10 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 
 `position-recommender`와 `study-topic-recommender`의 장기 추천 상태는 Backend에서 읽고 쓴다.
 
-### 추천 상태 Backend
+### 커리어 Backend
 
 `position-recommender` 가 쓰는 HTTP Backend 의 계약이다.
-코드 배치는 [`code-architecture.md`](code-architecture.md#추천-상태-backend)가 소유한다.
+코드 배치는 [`code-architecture.md`](code-architecture.md#커리어-backend)가 소유한다.
 
 모든 쓰기 요청은 `Authorization: Bearer` 와 `Idempotency-Key` 를 요구한다.
 응답은 `Cache-Control: no-store` 를 쓰며 원본 token 과 DB 오류 전문을 담지 않는다.
@@ -448,7 +448,7 @@ Kurly 와 OliveYoung 은 최근 수집에서는 `feed` adapter 이고, archive m
 
 ### 학습자료 HTTP 계약
 
-기본 경로는 `/api/study/v1` 이다. 인증은 추천 Backend 의 Bearer token 하나를 쓴다.
+기본 경로는 `/api/study/v1` 이다. 인증은 커리어 Backend 의 Bearer token 하나를 쓴다.
 
 | endpoint | 계약 |
 | --- | --- |
