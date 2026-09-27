@@ -388,7 +388,7 @@ class EditorGateTest(unittest.TestCase):
                 patch.object(naver_editor_settings, "require_clear_screen", return_value=""), \
                 patch.object(naver_editor_settings, "open_settings", return_value=True), \
                 patch.object(naver_editor_settings, "close_settings", return_value=True), \
-                patch.object(naver_editor_settings, "click", return_value=True), \
+                patch.object(naver_editor_settings, "click_stable_settings_control", return_value=True) as click_control, \
                 patch.object(naver_editor_settings, "category_option_finder", return_value="exact-category"), \
                 patch.object(naver_editor_settings, "mouse_click", return_value=True) as choose, \
                 patch.object(naver_editor_settings, "wait_until", return_value=True), \
@@ -396,6 +396,48 @@ class EditorGateTest(unittest.TestCase):
                 patch.object(naver_editor_settings.time, "sleep"):
             self.assertEqual(naver_editor.cmd_settings(page, args), 0)
         choose.assert_called_once_with(page, "exact-category")
+        self.assertEqual(
+            [call.args[1] for call in click_control.call_args_list],
+            ['button[data-click-area="tpb*i.category"]', "#tag-input"],
+        )
+
+    def test_settings_control_waits_until_motion_stops_and_is_uncovered(self):
+        states = [
+            {"top": 28, "x": 300, "y": 40, "uncovered": False},
+            {"top": 48, "x": 300, "y": 60, "uncovered": False},
+            {"top": 68, "x": 300, "y": 80, "uncovered": True},
+            {"top": 68, "x": 300, "y": 80, "uncovered": True},
+        ]
+
+        class Page:
+            def __init__(self):
+                self.events = []
+
+            def js(self, _expression):
+                return json.dumps(states.pop(0))
+
+            def call(self, method, **params):
+                self.events.append((method, params))
+
+        page = Page()
+
+        def poll(predicate, **_kwargs):
+            for _ in range(4):
+                if predicate():
+                    return True
+                self.assertEqual(page.events, [])
+            return False
+
+        with patch.object(naver_editor_settings, "wait_until", side_effect=poll), \
+                patch.object(naver_editor_settings.time, "monotonic", side_effect=[1.0, 1.3]):
+            self.assertTrue(naver_editor_settings.click_stable_settings_control(page, "#category"))
+        self.assertEqual(
+            [(method, params["type"], params["x"], params["y"]) for method, params in page.events],
+            [
+                ("Input.dispatchMouseEvent", "mousePressed", 300, 80),
+                ("Input.dispatchMouseEvent", "mouseReleased", 300, 80),
+            ],
+        )
 
     def test_old_draft_is_rejected_before_new_tab(self):
         old_draft = {

@@ -77,6 +77,49 @@ def category_option_finder(category: str) -> str:
     )
 
 
+def click_stable_settings_control(page: Page, selector: str) -> bool:
+    """움직이는 발행 설정 창이 멈추고 버튼이 드러난 뒤 누른다."""
+    last_top = None
+    stable_since = 0.0
+    point = None
+
+    def ready() -> bool:
+        nonlocal last_top, stable_since, point
+        raw = page.js(
+            f"(() => {{ const el = document.querySelector({json.dumps(selector)});"
+            " if (!el) return null; const r = el.getBoundingClientRect();"
+            " if (!r.width || !r.height) return null;"
+            " const x = r.left + r.width / 2, y = r.top + r.height / 2;"
+            " const hit = document.elementFromPoint(x, y);"
+            " return JSON.stringify({top:r.top, x, y, uncovered:!!(hit && (el === hit || el.contains(hit)))}); })()"
+        )
+        if not raw:
+            last_top = None
+            return False
+        current = json.loads(raw)
+        if not current["uncovered"]:
+            last_top = None
+            return False
+        now = time.monotonic()
+        if last_top is not None and abs(current["top"] - last_top) < 0.5:
+            if now - stable_since >= 0.2:
+                point = current
+                return True
+        else:
+            last_top = current["top"]
+            stable_since = now
+        return False
+
+    if not wait_until(ready, seconds=5.0):
+        return False
+    for kind in ("mousePressed", "mouseReleased"):
+        page.call(
+            "Input.dispatchMouseEvent", type=kind, x=point["x"], y=point["y"],
+            button="left", clickCount=1,
+        )
+    return True
+
+
 def cmd_settings(page: Page, args: argparse.Namespace) -> int:
     """카테고리와 태그를 발행 설정에 넣고 설정만 닫는다."""
     draft = args.draft_data
@@ -93,7 +136,7 @@ def cmd_settings(page: Page, args: argparse.Namespace) -> int:
     if not open_settings(page):
         print("발행 설정을 열지 못했다", file=sys.stderr)
         return 1
-    if not click(page, 'button[data-click-area="tpb*i.category"]'):
+    if not click_stable_settings_control(page, 'button[data-click-area="tpb*i.category"]'):
         print("카테고리 선택기를 열지 못했다", file=sys.stderr)
         return 1
     label = category_option_finder(category)
@@ -107,7 +150,7 @@ def cmd_settings(page: Page, args: argparse.Namespace) -> int:
         print(f"카테고리 선택이 반영되지 않았다: {category}", file=sys.stderr)
         return 1
     for tag in tags:
-        if not click(page, "#tag-input"):
+        if not click_stable_settings_control(page, "#tag-input"):
             print("태그 입력칸을 누르지 못했다", file=sys.stderr)
             return 1
         page.type_text(tag)
