@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "currentRole": {
+    "title": "예: Backend Engineer",
+    "yearsOfExperience": 3,
+    "bar": "production"
+  },
+  "experience": {
+    "direct": ["예: 주문 API 설계와 운영"],
+    "adjacent": ["예: 데이터 파이프라인 협업"],
+    "studyOnly": ["예: 다중 리전 장애 격리 학습"]
+  },
+  "targets": []
+}

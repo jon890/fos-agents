@@ -78,7 +78,7 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 
 ### 커리어 Backend
 
-`position-recommender` 가 쓰는 HTTP Backend 의 계약이다.
+커리어 Backend 의 공통 HTTP 계약이다. 스킬별 경로는 각 스킬 절이 소유한다.
 코드 배치는 [`code-architecture.md`](code-architecture.md#커리어-backend)가 소유한다.
 
 모든 쓰기 요청은 `Authorization: Bearer` 와 `Idempotency-Key` 를 요구한다.
@@ -156,15 +156,42 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 
 짧은 답변을 반복하고 약점을 다음 실행에 반영한다.
 
-1. 포지션별 연습이면 private brain에서 현재 지원 대상을 찾는다.
-2. 대응하는 지원 디렉터리의 포지션 질문, 공개 질문 은행과 개인 질문 자료에서 문제를 고른다.
+1. `drill-engine.ts memory` 로 후보자 맥락을 얻는다. `CAREER_MEMORY=brain` 이면 출력이 알려 준 칸을 `brain-search` 로 채우고, `file` 이면 출력이 그대로 맥락이다. 포지션별 연습이면 맥락의 `targets` 에서 지원 디렉터리를 고른다.
+2. `drill-engine.ts select` 가 `CAREER_STORE` 로 고른 저장소에서 주제별 복습 상태와 켜진 개인 질문을 읽고, 공개 질문 은행과 지원 디렉터리의 포지션 질문을 합쳐 문제를 고른다.
 3. 사용자가 먼저 자신의 답변을 작성한다.
 4. 에이전트가 정확성, 구조, 근거, 전달력을 평가한다.
-5. 보완할 핵심과 다음 복습 시점을 정한다.
-6. `state/drill-progress.json`에 진행 상태를 갱신한다.
+5. 보완할 핵심을 짧은 피드백으로 정한다.
+6. `drill-engine.ts record` 가 점수와 피드백을 저장소에 기록한다. 저장소가 기록과 함께 그 주제의 다음 복습일을 정한다. Backend 는 같은 transaction 에서 정한다.
 7. 현재 지원 대상이 있으면 공고 책임, 근거 방어와 명시한 경험 공백을 후속 질문에 반영한다.
 8. 답변이 충분하면 판단, 반례, 운영과 근거 경계로 최대 네 단계까지 꼬리질문을 이어간다.
-9. 틀린 답변은 한 번 명확히 확인한 뒤 반복 압박하지 않고 학습 항목과 다음 복습 시점으로 전환한다.
+9. 틀린 답변은 한 번 명확히 확인한 뒤 반복 압박하지 않고 학습 항목으로 전환한다.
+
+```mermaid
+sequenceDiagram
+  participant M as 에이전트
+  participant C as drill-engine.ts
+  participant B as 커리어 Backend
+  M->>C: select tech|behavioral
+  C->>B: GET progress, GET personal-questions
+  B-->>C: 주제별 복습 상태, 켜진 개인 질문
+  C-->>M: 오늘 질문 JSON
+  loop 질문과 꼬리질문마다
+    M->>M: 답변 평가
+    M->>C: record --attempt-id ...
+    C->>B: POST attempts (Idempotency-Key)
+    B-->>C: 갱신된 주제 복습 상태
+  end
+```
+
+| 상황 | 동작 |
+| --- | --- |
+| 복습 상태가 없음 | 모든 질문을 신규로 본다 |
+| 개인 질문이 없음 | 공개 질문과 포지션 질문만 쓴다 |
+| 고를 질문이 없음 | `select` 가 빈 목록을 돌려주고 에이전트가 질문 은행 보강을 안내한다 |
+| `CAREER_STORE` 나 `CAREER_MEMORY` 가 없음 | 명령이 종료 코드 1 로 끝나고 `drill-engine.ts doctor` 를 안내한다 |
+| `backend` 인데 Backend 에 닿지 못함 | `select` 와 `record` 가 종료 코드 1 로 끝난다. 에이전트는 기록되지 않았다고 알리고 파일에 따로 쓰지 않는다 |
+| 같은 기록을 다시 보냄 | 같은 `attemptId` 는 저장한 응답을 그대로 돌려준다. 횟수가 두 번 오르지 않는다 |
+| 두 대화가 같은 주제를 동시에 기록 | 주제 행을 잠가 순서대로 반영한다 |
 
 사용자의 생각을 바탕으로 실제 말할 수 있는 답변을 만든다.
 
@@ -178,10 +205,27 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 4. 출처 묶음을 `public/question-bank/sources.json`에 등록하거나 기존 항목을 재사용한다.
 5. 공개 질문 후보의 중복, 목표 수준, 답변 신호와 꼬리질문 깊이를 검증한다.
 6. 일반화할 수 있는 질문만 `public/question-bank/`에 추가한다.
-7. 개인 경력에서 반복해서 연습할 일반 질문은 `library/question-bank/`에 둔다.
+7. 개인 경력에서 반복해서 연습할 일반 질문은 `drill-engine.ts personal add` 로 저장소에 둔다.
 8. 공고와 지원 근거에서 나온 포지션별 질문은 해당 `applications/` 디렉터리의 `evidence/interview-questions.json`에 둔다.
 9. 답변 연습은 세 범위를 합쳐 사용할 수 있지만 공개 산출물에는 개인 질문과 포지션별 질문을 포함하지 않는다.
 10. 일반 연습에서는 질문 은행을 수정하지 않으며, 공개·개인·포지션 질문 묶음이 모두 비었을 때만 필요한 최소 질문을 보강하고 연습을 이어간다.
+
+### 면접 연습 HTTP 계약
+
+`/api/interview/v1` 이다. 인증, 멱등 키와 공통 상태 코드는 「커리어 Backend」 절을 따른다.
+칸의 타입과 제약은 [`data-schema.md`](data-schema.md#면접-연습-table)가 소유한다.
+
+| 경로 | 요청 | 응답 |
+| --- | --- | --- |
+| `GET progress?drillType=` | `drillType` 은 `tech` 나 `behavioral` | `{ items: [{ drillType, topic, passCount, failCount, nextReviewDate, lastPassedDate }] }` |
+| `POST attempts` | `attemptId`, `drillType`, `questionId`, `topic`, `question`, `score`, 선택 칸 `feedback`, `targetCompany`, `targetRole`, `targetValueAxis`, `rootQuestionId`, `parentQuestion`, `followUpDepth`, `followUpAxis`, `stopReason` | `{ attemptId, evaluatedOn, progress: { drillType, topic, passCount, failCount, nextReviewDate, lastPassedDate } }` |
+| `GET personal-questions?drillType=` | | `{ items: [질문] }`. 켜진 질문만 |
+| `PUT personal-questions/:questionId` | `{ enabled, drillType, question }`. `drillType` 은 `tech` 나 `behavioral` 이고, `question` 은 공개 질문 은행의 질문 항목 형식 | `{ questionId, drillType, topic, enabled, updatedAt }` |
+
+- `POST attempts` 는 `Idempotency-Key` 가 본문의 `attemptId` 와 다르면 `400` 이다.
+- `POST attempts` 는 주제 행이 없으면 만들고, 있으면 잠근 뒤 갱신한다. 기록 추가와 주제 갱신이 한 transaction 이다.
+- `evaluatedOn` 은 Backend 가 요청을 받은 시각의 Asia/Seoul 날짜다. client 가 보내지 않는다.
+- `PUT personal-questions` 는 같은 `questionId` 를 덮어쓴다. 경로의 `questionId` 와 `question.id` 가 다르면 `400` 이다.
 
 ## position-recommender
 

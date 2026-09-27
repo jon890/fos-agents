@@ -50,6 +50,7 @@ erDiagram
 - **칸끼리의 조건은 DB 의 `CHECK` 가 강제한다.** `scope` 마다 필수 칸이 다른 제외 규칙이나 HTTPS 만 받는 URL 이 그렇다. 이 제약은 `schema.prisma` 에 없고 migration SQL 에만 있다.
 
 table 별 칸과 제약은 아래 `position-recommender` 절이 소유한다.
+면접 연습 table 은 `interview-practice` 절이, 공부 추천 table 은 `study-topic-recommender` 절이 소유한다.
 schema 는 `services/career-backend/prisma/` 가 관리하고,
 migration 적용 절차는 [`services/career-backend/README.md`](../services/career-backend/README.md) 가 소유한다.
 
@@ -172,18 +173,131 @@ brain에는 경력, 역할 선호와 경험 경계 등 개인 지식을 두고, 
 
 각 후보는 출처 식별자, 출처 종류와 역할, 주제, 제목, URL, 게시 시각, 공개 설명, 자료 종류를 가진다.
 
-### `state/drill-progress.json`
+### 면접 연습 저장소
 
-답변 연습의 진행과 복습 상태다. 학습 주제 생성 상태와 섞지 않는다.
+주제별 복습 상태, 연습 기록과 개인 질문은 `CAREER_STORE` 로 고른 저장소 하나에 둔다.
+결정과 근거는 [ADR-129](adr/ADR-129-면접-연습-기록과-개인-질문은-backend가-소유한다.md)에 있다.
 
-| 담는 것 |
-| --- |
-| 질문별 시도와 최근 결과 |
-| 다시 볼 질문과 복습 시점 |
-| 기술·인성 모드가 공유하는 진행 정보 |
+| `CAREER_STORE` | 저장 위치 | 쓰는 곳 |
+| --- | --- | --- |
+| `backend` | `fos_career` 의 table 셋. 아래 「면접 연습 table」 | 운영(hermes) |
+| `file` | `CAREER_STORE_DIR` 아래 파일 셋. 기본은 `career-os/state/interview-practice/`. 아래 「면접 연습 파일」 | Backend 를 쓰지 않는 사용자 |
+| 없음 | 명령이 실패한다 | |
 
-일별 답변 기록은 꼬리질문일 때 원 질문 식별자, 부모 질문, 깊이, 확인 축, 중단 이유를
-선택 필드로 가진다.
+두 저장소는 같은 계약을 따른다. 복습일 규칙, 칸 이름과 검사 규칙이 같고, 한쪽에서 쌓은 기록을 다른 쪽이 읽지는 않는다.
+
+### 면접 연습 table
+
+```mermaid
+erDiagram
+  interview_topic_progress ||--o{ interview_attempts : ""
+```
+
+셋 모두 행을 지우지 않는다. 개인 질문은 `enabled` 로 끈다.
+
+#### `interview_topic_progress`
+
+복습 단위는 질문이 아니라 주제다. 같은 주제의 질문 하나를 통과하면 그 주제 전체의 복습일이 뒤로 밀린다.
+
+| 칸 | 타입 | 뜻 |
+| --- | --- | --- |
+| `drill_type` | `ENUM('tech','behavioral')` | 기본 키 앞부분 |
+| `topic` | `VARCHAR(100)` | 기본 키 뒷부분. 질문의 `topic` |
+| `pass_count` | `INT UNSIGNED` | `pass` 를 받은 횟수 |
+| `fail_count` | `INT UNSIGNED` | `shallow`, `fail`, `unknown` 을 받은 횟수 |
+| `next_review_date` | `DATE NULL` | 다음 복습일. 없으면 복습 대상이 아니다 |
+| `last_passed_date` | `DATE NULL` | 마지막으로 `pass` 를 받은 날 |
+| `updated_at` | `DATETIME(3)` | |
+
+복습일은 연습 기록을 추가하는 transaction 안에서 Backend 가 정한다.
+날짜는 Asia/Seoul 기준의 평가일(`evaluated_on`)에서 센다.
+
+| 점수 | 바뀌는 칸 | 다음 복습일 |
+| --- | --- | --- |
+| `pass` | `pass_count` 1 증가, `last_passed_date` 를 평가일로 | 평가일에 간격을 더한 날. 간격은 `pass_count` 가 1, 2, 3 … 일 때 1, 3, 7, 14, 30, 60일이고 그 뒤로는 60일 |
+| `shallow`, `fail`, `unknown` | `fail_count` 1 증가 | 평가일 다음 날 |
+
+#### `interview_attempts`
+
+연습 한 번이 한 행이다. 답변 원문은 담지 않는다.
+
+| 칸 | 타입 | 뜻 |
+| --- | --- | --- |
+| `attempt_id` | `CHAR(36)` | 기본 키. client 가 만든 UUID. `Idempotency-Key` 와 같은 값 |
+| `drill_type`, `topic` | | `interview_topic_progress` 를 가리키는 foreign key |
+| `question_id` | `VARCHAR(100)` | 공개, 개인, 공고별 질문의 `id` |
+| `question` | `VARCHAR(2000)` | 그때 물은 질문 원문. 질문 파일이 바뀌어도 기록이 읽히게 남긴다 |
+| `score` | `ENUM('pass','shallow','fail','unknown')` | |
+| `feedback` | `VARCHAR(500) NULL` | 가장 큰 공백 같은 짧은 피드백 |
+| `evaluated_on` | `DATE` | Asia/Seoul 기준 평가일 |
+| `target_company`, `target_role`, `target_value_axis` | `VARCHAR(100) NULL` | 포지션별 연습일 때만 |
+| `root_question_id` | `VARCHAR(100) NULL` | 꼬리질문일 때 원 질문 |
+| `parent_question` | `VARCHAR(2000) NULL` | 꼬리질문일 때 바로 앞 질문 |
+| `follow_up_depth` | `TINYINT UNSIGNED NULL` | 1부터 4까지 |
+| `follow_up_axis` | `ENUM('clarification','decision','counterexample','operations','evidence-boundary') NULL` | |
+| `stop_reason` | `ENUM('depth-limit','needs-study','answer-complete','session-ended') NULL` | |
+| `created_at` | `DATETIME(3)` | |
+
+`(drill_type, topic, created_at)` 에 index 를 둔다.
+
+#### `interview_personal_questions`
+
+개인 경험에서 나온 질문이다. 공개 질문 은행에 넣지 않는다.
+
+| 칸 | 타입 | 뜻 |
+| --- | --- | --- |
+| `question_id` | `VARCHAR(100)` | 기본 키. 질문의 `id` |
+| `drill_type` | `ENUM('tech','behavioral')` | |
+| `topic` | `VARCHAR(100)` | |
+| `enabled` | `BOOLEAN` | 끈 질문은 연습에 나오지 않는다 |
+| `payload` | `JSON` | 질문 전체. 공개 질문 은행의 질문 항목과 같은 형식이다 |
+| `created_at`, `updated_at` | `DATETIME(3)` | |
+
+`payload` 의 형식은 DB 제약이 아니라 Backend 의 zod 검사가 지킨다.
+`payload` 안의 `id`, `topic` 은 행의 `question_id`, `topic` 과 같아야 하고, 다르면 `400` 이다.
+`answerSignals` 와 `followUps` 는 따로 조회하지 않고 질문 전체가 한 번에 모델에게 전달되므로 자식 table 로 나누지 않는다.
+
+### 면접 연습 파일
+
+`CAREER_STORE=file` 일 때 쓴다. 칸 이름은 HTTP 계약의 camelCase 와 같다.
+
+| 파일 | 모양 | table 대응 |
+| --- | --- | --- |
+| `topic-progress.json` | `{ schemaVersion: 1, items: [{ drillType, topic, passCount, failCount, nextReviewDate, lastPassedDate }] }` | `interview_topic_progress` |
+| `attempts.jsonl` | 한 줄에 연습 기록 하나. `POST attempts` 본문에 `evaluatedOn`, `createdAt` 을 더한 것 | `interview_attempts` |
+| `personal-questions.json` | `{ schemaVersion: 1, items: [{ questionId, drillType, topic, enabled, question, updatedAt }] }` | `interview_personal_questions` |
+
+- 같은 `attemptId` 가 `attempts.jsonl` 에 있으면 새로 쓰지 않고 그때의 결과를 돌려준다.
+- JSON 파일은 같은 디렉터리의 임시 파일에 쓴 뒤 이름을 바꿔 교체한다. 쓰다 멈춰도 반쯤 쓴 파일이 남지 않는다.
+- 한 사람이 한 곳에서 쓰는 것을 전제로 하고 동시 기록을 막지 않는다.
+- `state/` 아래에 두므로 비공개 작업본 release 로 동기화할 수 있다.
+
+### 후보자 맥락
+
+`interview-practice` 가 질문 난도와 꼬리질문 경계를 정할 때 읽는 값이다.
+결정과 근거는 [ADR-130](adr/ADR-130-면접-연습의-후보자-맥락은-memory-공급자-경계로-읽는다.md)에 있다.
+
+| `CAREER_MEMORY` | 채우는 쪽 |
+| --- | --- |
+| `brain` | 스킬이 `brain-search` 로 아래 칸을 채운다. 스크립트는 채울 칸 목록만 낸다 |
+| `file` | `CAREER_MEMORY_FILE` 의 JSON. 기본은 `career-os/library/candidate-memory.json`. 템플릿은 `.claude/skills/interview-practice/templates/candidate-memory.example.json` |
+| 없음 | 명령이 실패한다 |
+
+| 칸 | 타입 | 뜻 |
+| --- | --- | --- |
+| `schemaVersion` | `1` | |
+| `currentRole.title` | 문자열 | 현재 역할 |
+| `currentRole.yearsOfExperience` | 0 이상 숫자 | 경력 연차 |
+| `currentRole.bar` | `production`, `large-scale`, `global-scale` | 지금 책임지는 문제 규모 |
+| `experience.direct` | 문자열 배열 | 직접 설계하거나 운영한 기술과 영역 |
+| `experience.adjacent` | 문자열 배열 | 옆에서 함께 다룬 영역 |
+| `experience.studyOnly` | 문자열 배열 | 학습만 한 영역 |
+| `targets` | 배열. 비어도 된다 | 현재 지원 대상 |
+| `targets[].company`, `targets[].role` | 문자열 | |
+| `targets[].applicationDir` | 문자열 | `career-os/` 기준 지원 디렉터리. 예: `applications/<company>/<role>` |
+
+현재 직장 이름은 계약에 두지 않는다. 질문 난도는 회사 이름이 아니라 `bar` 로 정한다.
+파일은 개인 정보라 `library/` 처럼 Git 이 추적하지 않는 곳에 둔다.
 
 ## position-recommender
 
