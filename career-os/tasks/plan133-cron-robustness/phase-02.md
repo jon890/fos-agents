@@ -45,6 +45,7 @@
 ### 1. 틀 생성 함수
 
 기존 실행 경로 helper 인 `career-os/scripts/position-recommender/run-dir.ts` 에 두 함수를 둔다. 새 루트 helper 파일은 만들지 않는다.
+`docs/code-architecture.md` 에 `run-dir.ts` 가 일일 실행 파일 이름과 결과 틀을 관리하는 루트 helper 라는 예외를 명시한다.
 
 - `writeCompanyTierUpdatesTemplate(paths)`: `company-tier-queue.json` 에서 `collectionRunId` 와 `companyTierRunId` 를 읽어 틀을 쓰고, 큐의 회사 수를 돌려준다
 - `writeAnalysisUpdatesTemplate(paths)`: `analysis-queue.json` 에서 `collectionRunId` 와 `analysisRunId` 를 읽어 틀을 쓰고, 큐의 `resultStatus` 가 `pending` 또는 `failed` 인 공고 수를 돌려준다. `created` 와 `reused` 는 세지 않는다
@@ -93,6 +94,7 @@ PATH="$HOME/.bun/bin:$PATH" bunx tsc --noEmit
 | 파일 | 변경 |
 |---|---|
 | `career-os/scripts/position-recommender/run-dir.ts` | 수정 |
+| `career-os/docs/code-architecture.md` | 수정 |
 | `career-os/scripts/position-recommender/position_run.ts` | 수정 |
 | `career-os/scripts/position-recommender/position_run.test.ts` | 수정 |
 | `career-os/.claude/skills/position-recommender/SKILL.md` | 수정 |

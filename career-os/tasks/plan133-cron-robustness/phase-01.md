@@ -58,9 +58,9 @@ archive 는 중복 제거로 반영 수가 `batchLimit` 보다 작아져도 curs
 - 최근 글 모드에서 같은 글이 query 만 다른 URL 로 두 번 오면 한 건만 저장 요청에 담긴다
 - archive 모드에서도 같다
 - archive 첫 배치에 중복이 있어 반영 수가 배치 크기보다 작고 cursor 가 끝나지 않았으면 다음 배치의 고유 글도 반영한다
-- 출처 둘 중 첫 출처의 수집기가 예외를 던지면 첫 출처는 `failed`, 둘째 출처는 `ingested` 다
+- 출처 둘 중 첫 출처의 `getSourceCursor` 또는 `createIngestion` 대역이 공통 Backend client 오류가 아닌 `Error` 를 던지면 첫 출처는 `failed`, 둘째 출처는 `ingested` 다. 이 테스트는 출처 반복의 바깥쪽 예외 처리를 확인한다
 - 격리한 오류의 `reason` 은 첫 줄만 남기고 200자 이하다
-- `StudyLibraryApiError` 와 Backend client 의 JSON 파싱 또는 응답 검증 오류가 나면 반복을 멈추고 예외가 그대로 나온다
+- `StudyLibraryApiError`, JSON 파싱 또는 응답 검증 오류, 네트워크 또는 본문 읽기 오류가 나면 모두 공통 Backend client 오류 타입이고 출처 반복을 멈추며 예외가 그대로 나온다
 
 ## 검증
 
