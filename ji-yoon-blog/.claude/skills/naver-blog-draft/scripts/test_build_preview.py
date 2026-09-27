@@ -12,7 +12,7 @@ SCRIPT = Path(__file__).with_name("build_preview.py")
 STICKER = "ogq_5db4314bac2f0-1"
 
 
-def draft(photo: str) -> dict:
+def draft(photo: str, *more: str) -> dict:
     return {
         "title": "[자동화 테스트] 미리보기",
         "category": "맛집로그",
@@ -23,6 +23,7 @@ def draft(photo: str) -> dict:
             {"type": "text", "lines": ["테스트 글입니다."]},
             {"type": "sticker", "stickerCode": "ogq_5db4314bac2f0-6"},
             {"type": "image", "path": photo, "role": "menu"},
+            *({"type": "image", "path": extra} for extra in more),
             {"type": "map", "name": "샘플가게", "address": "샘플로 145"},
             {"type": "sticker", "stickerCode": "ogq_5db4314bac2f0-23"},
             {"type": "sticker", "stickerCode": "ogq_5db4314bac2f0-4"},
@@ -44,9 +45,9 @@ class BuildPreviewTest(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def run_preview(self, photo: str, out: Path) -> subprocess.CompletedProcess:
+    def run_preview(self, photo: str, out: Path, *more: str) -> subprocess.CompletedProcess:
         path = self.draft_dir / "draft.json"
-        path.write_text(json.dumps(draft(photo), ensure_ascii=False), encoding="utf-8")
+        path.write_text(json.dumps(draft(photo, *more), ensure_ascii=False), encoding="utf-8")
         return subprocess.run(
             [sys.executable, str(SCRIPT), str(path), "--out", str(out)],
             capture_output=True, text=True, check=False,
@@ -79,6 +80,29 @@ class BuildPreviewTest(unittest.TestCase):
         self.assertNotIn("<script", markup)
         self.assertNotIn("<link", markup)
         self.assertIn("photos/001-%EB%A9%94%EB%89%B4%20%ED%8C%90.jpg", self.sources(out))
+
+    def test_outside_photos_with_same_name_do_not_overwrite_each_other(self):
+        root = Path(self.temp.name)
+        (root / "chat").mkdir()
+        (root / "chat" / "001-메뉴 판.jpg").write_bytes(b"chat")
+        other = root / "other" / "001-메뉴 판.jpg"
+        other.parent.mkdir()
+        other.write_bytes(b"other")
+        out = self.artifacts / "초안" / "index.html"
+        for _ in range(2):
+            result = self.run_preview(
+                "photos/001-메뉴 판.jpg", out, "../../chat/001-메뉴 판.jpg", str(other),
+            )
+            self.assertEqual(result.returncode, 0, result.stdout)
+        name = "001-%EB%A9%94%EB%89%B4%20%ED%8C%90"
+        self.assertEqual(
+            [s for s in self.sources(out) if not s.startswith("stickers/")],
+            [f"photos/{name}.jpg", f"external/{name}.jpg", f"external/{name}-2.jpg"],
+        )
+        self.assertEqual((out.parent / "photos" / "001-메뉴 판.jpg").read_bytes(), b"jpg")
+        self.assertEqual((out.parent / "external" / "001-메뉴 판.jpg").read_bytes(), b"chat")
+        self.assertEqual((out.parent / "external" / "001-메뉴 판-2.jpg").read_bytes(), b"other")
+        self.assertEqual(len(list((out.parent / "external").iterdir())), 2)
 
     def test_unsupported_format_is_left_out_without_failing(self):
         (self.draft_dir / "photos" / "002-IMG.HEIC").write_bytes(b"heic")

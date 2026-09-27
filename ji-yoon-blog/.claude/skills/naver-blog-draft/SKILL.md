@@ -44,6 +44,7 @@ python3 .claude/skills/naver-blog-draft/scripts/build_preview.py \
 단락이 없으면 아래 단계의 명령대로 초안 폴더의 `preview.html` 에 만든다.
 
 `build_preview.py` 는 HTML 폴더 밖에 있는 사진과 스티커를 그 폴더 안으로 복사하고 상대 경로로 부른다.
+초안 폴더 밖의 사진(절대 경로나 `../`)은 `external/` 아래에 복사하고, 이름이 겹치면 `이름-2.jpg` 처럼 번호를 붙인다.
 `draft.json` 과 `photos/` 원본은 초안 폴더에 그대로 남는다.
 네이버 편집기는 초안 폴더의 사진을 올리므로, 사진을 결과물 폴더로 옮기거나 지우지 않는다.
 

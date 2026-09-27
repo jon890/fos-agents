@@ -64,6 +64,7 @@ ji-yoon-blog/drafts/<YYYY-MM-DD>-<장소>/
 
 Hermes 입력에 `[결과물 폴더]` 단락이 있으면 지융에게 보일 미리보기는 `<결과물 폴더>/<장소>/index.html` 에 만든다.
 `build_preview.py` 가 그 HTML 이 부르는 사진과 스티커를 같은 폴더의 `photos/` 와 `stickers/` 로 복사한다.
+초안 폴더 밖의 사진은 `external/` 로 복사하고, 이름이 겹치면 번호를 붙여 초안 폴더의 사진을 덮어쓰지 않는다.
 초안 폴더의 `draft.json` 과 `photos/` 는 그대로 남고, 네이버 편집기는 초안 폴더의 사진을 올린다.
 
 ## 초안

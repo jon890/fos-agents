@@ -3,6 +3,7 @@
 네이버 블로그 모바일 화면 폭으로 그려서 실제로 올라갔을 때의 흐름을 본다.
 HTML 은 자기 폴더 안의 파일만 상대 경로로 부른다.
 사진과 스티커가 그 폴더 밖에 있으면 폴더 안으로 복사한다. 원본은 옮기지 않는다.
+초안 폴더 밖의 사진(절대 경로나 `../`)은 `external/` 아래에 두고, 이름이 겹치면 번호를 붙인다.
 fos-assistant 의 결과물 화면은 스크립트와 외부 이미지, 외부 CSS 를 막으므로
 인라인 스타일과 같은 폴더의 이미지만 쓴다.
 
@@ -29,6 +30,7 @@ fos-assistant 의 결과물 화면은 스크립트와 외부 이미지, 외부 C
 from __future__ import annotations
 
 import argparse
+import filecmp
 import html
 import json
 import shutil
@@ -81,19 +83,31 @@ def place_asset(source: Path, base: Path, out_dir: Path, fallback: str) -> str:
     """source 를 out_dir 안에서 부를 상대 경로를 돌려준다.
 
     out_dir 밖에 있으면 초안 폴더 안의 상대 위치를 유지해 복사한다.
-    초안 폴더 밖의 파일은 fallback 자리에 둔다.
+    초안 폴더 밖의 파일은 fallback 자리에 두고, 그 자리에 내용이 다른 파일이 있으면
+    `이름-2.jpg` 처럼 번호를 붙여 덮어쓰지 않는다.
     """
     source = source.resolve()
     out_dir = out_dir.resolve()
     if source.is_relative_to(out_dir):
-        rel = source.relative_to(out_dir)
+        return quote(source.relative_to(out_dir).as_posix())
+    base = base.resolve()
+    if source.is_relative_to(base):
+        rel = source.relative_to(base)
     else:
-        base = base.resolve()
-        rel = source.relative_to(base) if source.is_relative_to(base) else Path(fallback)
-        target = out_dir / rel
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, target)
+        rel = free_slot(source, out_dir, Path(fallback))
+    target = out_dir / rel
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source, target)
     return quote(rel.as_posix())
+
+
+def free_slot(source: Path, out_dir: Path, rel: Path) -> Path:
+    """rel 이 비었거나 같은 내용이면 그대로, 아니면 번호를 붙인 빈 자리를 돌려준다."""
+    candidate, number = rel, 1
+    while (out_dir / candidate).exists() and not filecmp.cmp(source, out_dir / candidate, shallow=False):
+        number += 1
+        candidate = rel.with_name(f"{rel.stem}-{number}{rel.suffix}")
+    return candidate
 
 
 def render_block(block: dict, base: Path, out_dir: Path | None = None) -> str:
@@ -112,7 +126,7 @@ def render_block(block: dict, base: Path, out_dir: Path | None = None) -> str:
         if path and target.is_file() and target.suffix.lower() not in IMAGE_SUFFIXES:
             body = f'<div class="missing">미리보기에 넣을 수 없는 형식<br>{html.escape(path)}</div>'
         elif path and target.is_file():
-            src = place_asset(target, base, out_dir, f"photos/{target.name}")
+            src = place_asset(target, base, out_dir, f"external/{target.name}")
             body = f'<img src="{html.escape(src, quote=True)}" alt="">'
         else:
             body = f'<div class="missing">사진 없음<br>{html.escape(path or "경로 없음")}</div>'
