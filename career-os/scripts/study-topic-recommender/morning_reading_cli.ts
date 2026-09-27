@@ -2,7 +2,7 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { firstOptionValue } from "../lib/cli.ts";
-import { DEFAULT_MAX_CANDIDATES_PER_SOURCE, type MorningReadingReport } from "./reading_contracts.js";
+import { DEFAULT_MAX_CANDIDATES_PER_SOURCE, type MorningReadingReport, type ReadingSource } from "./reading_contracts.js";
 import { loadReadingCandidatePool } from "./reading_candidate_pool.js";
 import { normalizeReadingSources } from "./reading_sources.js";
 import { selectReadings } from "./reading_stage.js";
@@ -71,10 +71,12 @@ function meta(poolPath: string): StudyLibraryCandidateMeta { return JSON.parse(r
 
 async function collect(): Promise<void> {
   const client = createStudyLibraryClient();
-  const sources = (await client.getSources()).sources.filter((source) => source.enabled).map((source) => ({ key: source.sourceKey, title: source.title, category: source.category, url: source.url ?? undefined, feedUrl: source.feedUrl ?? undefined, enabled: source.enabled, adapter: source.adapter }));
+  const sources: ReadingSource[] = (await client.getSources()).sources
+    .filter((source) => source.enabled)
+    .map((source) => ({ key: source.sourceKey, title: source.title, category: source.category, url: source.url ?? undefined, feedUrl: source.feedUrl ?? undefined, enabled: source.enabled, adapter: source.adapter }));
   const sourceKey = firstOptionValue(process.argv, "--source-key");
   if (sourceKey && !sources.some((source) => source.key === sourceKey)) throw new StudyRunPathError(`활성 소스에서 sourceKey를 찾을 수 없다: ${sourceKey}`);
-  const result = await collectAndIngestStudyLibrary({ client, sources: normalizeReadingSources({ _meta: { purpose: "backend", schemaVersion: 6 }, sources }).sources, mode: mode(), sourceKey, maxItems: maxItems(), resetCursor: hasFlag("--reset-cursor"), timeoutMs: FEED_TIMEOUT_MS, youtubeApiKey: process.env.YOUTUBE_DATA_API_KEY });
+  const result = await collectAndIngestStudyLibrary({ client, sources: normalizeReadingSources(sources).sources, mode: mode(), sourceKey, maxItems: maxItems(), resetCursor: hasFlag("--reset-cursor"), timeoutMs: FEED_TIMEOUT_MS, youtubeApiKey: process.env.YOUTUBE_DATA_API_KEY });
   console.log(JSON.stringify(result));
 }
 async function prepare(root: string): Promise<void> {
