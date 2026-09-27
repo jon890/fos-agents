@@ -1,5 +1,6 @@
-import { readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { lstatSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { basename, dirname, resolve } from "node:path";
 import { analysisQueueResponseSchema } from "../../services/career-backend/src/positions/schema.ts";
 import {
   companyTierQueueFileSchema,
@@ -20,6 +21,25 @@ export const RUN_DIR_FILE_NAMES = {
 
 export function resolveRunDirectory(runDirectory: string): string {
   return resolve(runDirectory);
+}
+
+export function validatePositionCleanupDirectory(directory: string): string {
+  const prefix = "position-recommendation-";
+  const message = `정리 경로는 시스템 임시 디렉터리의 직접 자식인 ${prefix}* 디렉터리여야 하며 symlink는 허용하지 않습니다.`;
+  try {
+    if (!directory.trim()) throw new Error(message);
+    const path = resolve(directory);
+    const stat = lstatSync(path);
+    const realPath = realpathSync(path);
+    if (stat.isSymbolicLink() || !stat.isDirectory()
+      || dirname(realPath) !== realpathSync(tmpdir())
+      || !basename(realPath).startsWith(prefix)) {
+      throw new Error(message);
+    }
+    return realPath;
+  } catch {
+    throw new Error(message);
+  }
 }
 
 export function runDirectoryPaths(runDirectory: string) {

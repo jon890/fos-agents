@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { buildPostingCandidatePool } from "../position-recommender/live-postings/candidate_pool.ts";
 import { validateRecommendationFiles } from "../position-recommender/validate_recommendation.ts";
 import { writeCandidatePreview } from "../position-recommender/render_candidate_preview.ts";
@@ -16,14 +16,14 @@ let input: string;
 let candidates: string;
 let output: string;
 
-function invoke(script: string, args: string[] = [], imported = false) {
+function invoke(script: string, args: string[] = [], imported = false, environment: NodeJS.ProcessEnv = {}) {
   const path = resolve(scripts, script);
   const command = imported
     ? ["-e", `await import(${JSON.stringify(path)})`, ...args]
     : [path, ...args];
   const result = Bun.spawnSync([process.execPath, ...command], {
     cwd: directory,
-    env: { ...process.env, CAREER_OS_ROOT: "", TMPDIR: tmpdir() },
+    env: { ...process.env, CAREER_OS_ROOT: "", TMPDIR: tmpdir(), ...environment },
     stdout: "pipe",
     stderr: "pipe",
   });
@@ -475,6 +475,66 @@ describe("기존 명령 및 공용 runCli", () => {
       });
     }
   });
+
+  test.each(["--help", "-h"])("아침 읽을거리의 %s는 잘못된 인자보다 우선한다", (flag) => {
+    for (const script of ["morning_reading_cli.ts", "build_morning_reading.ts"]) {
+      const result = invoke(`study-topic-recommender/${script}`, ["--unknown", "--run-dir", flag]);
+      expect(result.code).toBe(0);
+      expect(result.err).toBe("");
+      expect(result.out).toStartWith("사용법:");
+      expect(result.out).toContain("--cleanup");
+      expect(result.out).toContain("--reading-selection <파일>");
+      expect(result.out).toContain("--candidate-pool <값>");
+    }
+  });
+
+  test.each(["--run-dir", "CAREER_OS_ROOT"])("아침 읽을거리 cleanup은 정상 임시 실행 디렉터리를 지운다: %s", (source) => {
+    const root = mkdtempSync(join(tmpdir(), "study-topic-recommender."));
+    try {
+      writeFileSync(join(root, "report.html"), "보고서");
+      const args = source === "--run-dir" ? ["--cleanup", "--run-dir", root] : ["--cleanup"];
+      const result = invoke("study-topic-recommender/morning_reading_cli.ts", args, false,
+        source === "CAREER_OS_ROOT" ? { CAREER_OS_ROOT: root } : {});
+      expect(result).toEqual({ code: 0, out: `정리 완료: ${basename(root)}\n`, err: "" });
+      expect(existsSync(root)).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test.each(["outside", "wrong-prefix", "nested", "symlink", "env-symlink", "file", "missing", "empty"])(
+    "아침 읽을거리 cleanup은 안전하지 않은 경로를 보존하고 코드 2로 거절한다: %s", (kind) => {
+      const fixture = mkdtempSync(join(directory, "cleanup."));
+      const tempRoot = join(fixture, "temp");
+      mkdirSync(tempRoot);
+      const preserved = join(tempRoot, "study-topic-recommender.preserved");
+      mkdirSync(preserved);
+      writeFileSync(join(preserved, "keep.txt"), "보존");
+      let target = join(tempRoot, "study-topic-recommender.target");
+      if (kind === "outside") target = join(fixture, "study-topic-recommender.outside");
+      if (kind === "wrong-prefix") target = join(tempRoot, "unrelated");
+      if (kind === "nested") target = join(preserved, "study-topic-recommender.nested");
+      if (kind === "empty") target = "";
+      if (kind === "symlink" || kind === "env-symlink") symlinkSync(preserved, target);
+      else if (kind === "file") writeFileSync(target, "보존");
+      else if (kind !== "missing" && kind !== "empty") {
+        mkdirSync(target);
+        writeFileSync(join(target, "keep.txt"), "보존");
+      }
+      const result = invoke("study-topic-recommender/morning_reading_cli.ts", [
+        "--cleanup", "--run-dir", kind === "env-symlink" ? preserved : target,
+      ], false, { TMPDIR: tempRoot, CAREER_OS_ROOT: kind === "env-symlink" ? target : "" });
+
+      expect(result.code).toBe(2);
+      expect(result.out).toBe("");
+      expect(readFileSync(join(preserved, "keep.txt"), "utf8")).toBe("보존");
+      if (kind === "symlink" || kind === "env-symlink") expect(lstatSync(target).isSymbolicLink()).toBe(true);
+      else if (kind === "file") expect(readFileSync(target, "utf8")).toBe("보존");
+      else if (kind !== "missing" && kind !== "empty") {
+        expect(readFileSync(join(target, "keep.txt"), "utf8")).toBe("보존");
+      }
+    },
+  );
 
   test("산출물 검증기의 경로 실패 코드 2를 보존하고 import는 실행하지 않는다", () => {
     const script = "study-topic-recommender/validate_outputs.ts";

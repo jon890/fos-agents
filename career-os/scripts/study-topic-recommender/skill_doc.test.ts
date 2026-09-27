@@ -14,6 +14,17 @@ function readSkillDocuments(): string {
 }
 
 describe("study-topic-recommender skill 문서", () => {
+  test("정리 명령과 도움말, cron에서 읽을 결과를 안내한다", () => {
+    const skill = readFileSync(join(skillRoot, "SKILL.md"), "utf8");
+    const execution = readFileSync(join(skillRoot, "references/execution.md"), "utf8");
+    expect(skill).toContain("morning_reading_cli.ts --cleanup --run-dir <RUN_DIR>");
+    expect(skill).toContain("사용자가 결과를 확인하기 전에 유일한 HTML 파일을 삭제하지 않는다.");
+    expect(skill).toContain("`bun -e`, `python -c`, heredoc 같은 즉석 스크립트를 쓰지 않고 CLI stdout과 큐 파일을 읽는다.");
+    expect(skill).toContain("게시 확인은 `report-publisher`가 반환한 결과로 판단한다.");
+    expect(execution).toContain("morning_reading_cli.ts --cleanup --run-dir <RUN_DIR>");
+    expect(execution).toContain("morning_reading_cli.ts --help");
+  });
+
   test("제거한 파일 기반 실행 용어를 적지 않는다", () => {
     const documents = readSkillDocuments();
 

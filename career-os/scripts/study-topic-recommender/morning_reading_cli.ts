@@ -1,29 +1,49 @@
 #!/usr/bin/env bun
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { basename, join, resolve } from "node:path";
 import { firstOptionValue } from "../lib/cli.ts";
 import { DEFAULT_MAX_CANDIDATES_PER_SOURCE, type MorningReadingReport } from "./reading_contracts.js";
 import { loadReadingCandidatePool } from "./reading_candidate_pool.js";
 import { normalizeReadingSources } from "./reading_sources.js";
 import { selectReadings } from "./reading_stage.js";
 import { renderExistingReport, writeReportArtifacts } from "./render/report.js";
-import { resolveStudyRunRoot, StudyRunPathError } from "./runtime-paths.js";
+import { resolveStudyRunRoot, StudyRunPathError, validateStudyCleanupDirectory } from "./runtime-paths.js";
 import { StudyLibraryApiError, createStudyLibraryClient } from "./study-library/client.js";
 import { buildReportCountsFromLibrary, prepareStudyLibraryCandidates, studyLibraryMetaPath, type StudyLibraryCandidateMeta } from "./study-library/candidates.js";
 import { collectAndIngestStudyLibrary, type LibraryCollectMode } from "./study-library/ingestion.js";
 import { commitRecommendationRun, recordPublication, reportIdForMorningReading } from "./study-library/recommendations.js";
 
 const FEED_TIMEOUT_MS = 8_000;
-const actionFlags = ["--collect-only", "--prepare-candidates", "--reading-selection", "--commit-recommendation", "--record-publication"];
+const actionFlags = ["--collect-only", "--prepare-candidates", "--reading-selection", "--commit-recommendation", "--record-publication", "--cleanup"];
 const hasFlag = (name: string) => process.argv.includes(name);
 const argument = (name: string) => { const value = firstOptionValue(process.argv, name); if (!value?.trim()) throw new StudyRunPathError(`${name} 값이 필요하다.`); return value; };
 
-const booleanOptions = new Set(["--collect-only", "--prepare-candidates", "--commit-recommendation", "--reset-cursor", "--record-publication", "--render-only"]);
+const booleanOptions = new Set(["--collect-only", "--prepare-candidates", "--commit-recommendation", "--reset-cursor", "--record-publication", "--render-only", "--cleanup"]);
 const valueOptions = new Set([
   "--reading-selection", "--run-dir", "--source-key", "--mode", "--max-items",
   "--category", "--published-from", "--published-to", "--limit", "--cursor", "--candidate-pool", "--report",
   "--report-id", "--channel", "--external-id", "--published-at", "--url",
 ]);
+
+const HELP = `사용법: morning_reading_cli.ts <하위 동작> [옵션]
+
+하위 동작:
+  --collect-only                 등록된 소스를 수집한다
+  --prepare-candidates           추천 후보를 조회한다
+  --reading-selection <파일>     선택 결과로 리포트를 만든다
+  --commit-recommendation        추천 결과를 저장한다
+  --record-publication           외부 게시 결과를 기록한다
+  --render-only                  기존 결과로 HTML을 만든다
+  --cleanup                      전달이 끝난 임시 실행 디렉터리를 정리한다
+
+값 옵션:
+${[...valueOptions].map((option) => `  ${option} <값>`).join("\n")}
+
+기타 옵션:
+  --reset-cursor                 수집 cursor를 초기화한다
+  --help, -h                     이 도움말을 보여준다
+
+실행 경로는 --run-dir 또는 CAREER_OS_ROOT로 지정한다.`;
 
 function action(): string {
   const args = process.argv.slice(2);
@@ -70,6 +90,10 @@ async function select(root: string): Promise<void> {
   const artifacts = writeReportArtifacts({ report, outputDir: root }); console.log(JSON.stringify({ mode: "reading-selection", report: reportPath, ...artifacts }));
 }
 async function run(): Promise<void> {
+  if (hasFlag("--help") || hasFlag("-h")) {
+    console.log(HELP);
+    return;
+  }
   const selectedAction = action();
   if (selectedAction === "--render-only") {
     const root = resolveStudyRunRoot(process.env, firstOptionValue(process.argv, "--run-dir"));
@@ -78,6 +102,14 @@ async function run(): Promise<void> {
   }
   const root = resolveStudyRunRoot(process.env, firstOptionValue(process.argv, "--run-dir"));
   switch (selectedAction) {
+    case "--cleanup": {
+      for (const directory of [process.env.CAREER_OS_ROOT, firstOptionValue(process.argv, "--run-dir")]) {
+        if (directory) validateStudyCleanupDirectory(directory);
+      }
+      rmSync(root, { recursive: true });
+      console.log(`정리 완료: ${basename(root)}`);
+      return;
+    }
     case "--collect-only": await collect(); return;
     case "--prepare-candidates": await prepare(root); return;
     case "--reading-selection": await select(root); return;

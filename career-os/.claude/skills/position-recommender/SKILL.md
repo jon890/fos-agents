@@ -35,6 +35,8 @@ description: 열려 있는 채용공고를 모아 후보자가 해온 일과 선
 ## 실행
 
 `CAREER_BACKEND_URL`과 token 설정이 필요하며, Backend 장애가 발생하면 파일 이력으로 전환하지 않고 중단한다.
+JSON을 다루려고 `bun -e`, `python -c`, heredoc 같은 즉석 스크립트를 쓰지 않고 CLI stdout과 큐 파일을 읽는다.
+게시 확인은 `report-publisher`가 반환한 결과로 판단한다.
 
 | 명령 | 하는 일 | 다음 판단 |
 | --- | --- | --- |
@@ -79,7 +81,7 @@ HTML은 추천, 분석한 활성 공고 순위, 회사별 세 축, 분석 대기
 - 내부 경로, 환경 식별자와 token
 
 브라우저에서 데스크톱과 모바일 배치, 가로 넘침과 주요 링크를 확인한다.
-검증과 전달이 끝나면 `<RUN_DIR>`을 삭제한다.
+검증과 전달이 끝나면 `bun career-os/scripts/position-recommender/position_run.ts cleanup --run <RUN_DIR>`로 정리한다.
 
 ## 최종 답변
 

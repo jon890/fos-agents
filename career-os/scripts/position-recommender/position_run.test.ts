@@ -1,7 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import type { AnalysisQueueResponse } from "../../services/career-backend/src/positions/schema.ts";
 import {
   commitAnalysesForRun,
@@ -27,6 +27,65 @@ function workspace(): string {
 function writeJson(path: string, value: unknown): void {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, "utf8");
 }
+
+test("cleanup은 임시 실행 디렉터리를 지우고 내부 symlink 대상은 보존한다", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "position-recommendation-"));
+  directories.push(directory);
+  const preserved = workspace();
+  writeFileSync(join(preserved, "keep.txt"), "보존");
+  writeFileSync(join(directory, "report.html"), "보고서");
+  symlinkSync(preserved, join(directory, "linked-directory"));
+  const lines: string[] = [];
+
+  expect(await runPositionCommand(["cleanup", "--run", directory], {
+    writeLine: (line) => lines.push(line),
+  })).toBe(0);
+  expect(existsSync(directory)).toBe(false);
+  expect(readFileSync(join(preserved, "keep.txt"), "utf8")).toBe("보존");
+  expect(lines).toEqual([`정리 완료: ${basename(directory)}`]);
+});
+
+test.each(["outside", "wrong-prefix", "nested", "symlink", "file", "missing", "empty"])(
+  "cleanup은 안전하지 않은 경로를 보존하고 코드 2로 거절한다: %s", (kind) => {
+    const fixture = workspace();
+    const tempRoot = join(fixture, "temp");
+    mkdirSync(tempRoot);
+    const preserved = join(tempRoot, "position-recommendation-preserved");
+    mkdirSync(preserved);
+    writeFileSync(join(preserved, "keep.txt"), "보존");
+    let target = join(tempRoot, "position-recommendation-target");
+    if (kind === "outside") target = join(fixture, "position-recommendation-outside");
+    if (kind === "wrong-prefix") target = join(tempRoot, "unrelated");
+    if (kind === "nested") target = join(preserved, "position-recommendation-nested");
+    if (kind === "empty") target = "";
+    if (kind === "symlink") symlinkSync(preserved, target);
+    else if (kind === "file") writeFileSync(target, "보존");
+    else if (kind !== "missing" && kind !== "empty") {
+      mkdirSync(target);
+      writeFileSync(join(target, "keep.txt"), "보존");
+    }
+
+    const result = Bun.spawnSync([
+      process.execPath, join(import.meta.dir, "position_run.ts"), "cleanup", "--run", target,
+    ], { env: { ...process.env, TMPDIR: tempRoot }, stdout: "pipe", stderr: "pipe" });
+
+    expect(result.exitCode).toBe(2);
+    expect(result.stdout.toString()).toBe("");
+    expect(result.stderr.toString()).toContain("정리 경로");
+    expect(readFileSync(join(preserved, "keep.txt"), "utf8")).toBe("보존");
+    if (kind === "symlink") expect(lstatSync(target).isSymbolicLink()).toBe(true);
+    else if (kind === "file") expect(readFileSync(target, "utf8")).toBe("보존");
+    else if (kind !== "missing" && kind !== "empty") {
+      expect(readFileSync(join(target, "keep.txt"), "utf8")).toBe("보존");
+    }
+  },
+);
+
+test("cleanup은 --run 생략을 코드 2로 거절한다", () => {
+  const result = Bun.spawnSync([process.execPath, join(import.meta.dir, "position_run.ts"), "cleanup"]);
+  expect(result.exitCode).toBe(2);
+  expect(result.stderr.toString()).toContain("cleanup에는 --run <RUN_DIR>이 필요합니다.");
+});
 
 function analysisQueue(secret = "공개하지 않을 회사명과 공고 본문"): AnalysisQueueResponse {
   return {

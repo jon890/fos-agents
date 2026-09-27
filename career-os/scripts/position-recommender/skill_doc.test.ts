@@ -7,13 +7,13 @@ const skillPath = resolve(skillDirectory, "SKILL.md");
 const skill = readFileSync(skillPath, "utf8");
 const lines = skill.trimEnd().split("\n");
 
-test("position-recommender 문서는 판단 기준과 네 하위 명령만 안내한다", () => {
+test("position-recommender 문서는 판단 기준과 다섯 하위 명령을 안내한다", () => {
   expect(skill).toContain("## 목표");
   expect(skill).toContain("## 최종 답변");
   expect(lines.length).toBeLessThanOrEqual(110);
   expect(skill.match(/^```bash$/gm) ?? []).toHaveLength(1);
 
-  for (const command of ["collect", "commit-company-tiers", "commit-analyses", "finalize"]) {
+  for (const command of ["collect", "commit-company-tiers", "commit-analyses", "finalize", "cleanup"]) {
     expect(skill).toContain(`position_run.ts ${command}`);
   }
 
@@ -26,6 +26,12 @@ test("position-recommender 문서는 판단 기준과 네 하위 명령만 안�
   ]) {
     expect(skill).not.toContain(removed);
   }
+});
+
+test("정리 명령과 cron에서 읽을 결과를 안내한다", () => {
+  expect(skill).toContain("position_run.ts cleanup --run <RUN_DIR>");
+  expect(skill).toContain("`bun -e`, `python -c`, heredoc 같은 즉석 스크립트를 쓰지 않고 CLI stdout과 큐 파일을 읽는다.");
+  expect(skill).toContain("게시 확인은 `report-publisher`가 반환한 결과로 판단한다.");
 });
 
 test("판정 기준과 실패 처리를 필요할 때 읽는 참고 문서로 둔다", () => {

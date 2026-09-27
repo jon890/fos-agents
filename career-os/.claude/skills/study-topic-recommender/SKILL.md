@@ -43,6 +43,8 @@ flowchart TD
 실제 학습 경험은 읽기 전용 `career-os/sources/fos-study/`에서 필요한 만큼 확인한다.
 
 새 추천을 생성할 때는 [실행 계약](career-os/.claude/skills/study-topic-recommender/references/execution.md)에 따라 후보를 준비한다.
+JSON을 다루려고 `bun -e`, `python -c`, heredoc 같은 즉석 스크립트를 쓰지 않고 CLI stdout과 큐 파일을 읽는다.
+공부 추천의 후보 큐는 `<RUN_DIR>/state/reading-candidates.json`이다.
 **후보 API 호출이 실패하면 오래된 후보로 새 추천을 계속하지 않는다.**
 
 후보 API가 돌려준 `recentStudyTopicKeys`로 최근 주제 분포를 비교해 AI, 백엔드와 그 밖의 관심사 분포를 판단한다.
@@ -118,6 +120,7 @@ YouTube도 글과 함께 검토한다.
 
 비공개 경력 정보는 선별에만 사용한다.
 외부 공유를 요청받은 경우에만 `report-publisher`로 게시한다.
+게시 확인은 `report-publisher`가 반환한 결과로 판단한다.
 
-결과와 수집·검증의 한계를 전달하고 불필요한 임시 파일을 정리한다.
+결과와 수집·검증의 한계를 전달한 뒤 `bun career-os/scripts/study-topic-recommender/morning_reading_cli.ts --cleanup --run-dir <RUN_DIR>`로 정리한다.
 사용자가 결과를 확인하기 전에 유일한 HTML 파일을 삭제하지 않는다.

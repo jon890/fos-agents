@@ -13,12 +13,13 @@ import { finalizeRecommendation } from "./finalize_position_recommendation.ts";
 import { createCareerBackendClient } from "./career-backend/client.ts";
 import {
   runDirectoryPaths,
+  validatePositionCleanupDirectory,
   writeAnalysisUpdatesTemplate,
   writeCompanyTierUpdatesTemplate,
   type RunDirectoryPaths,
 } from "./run-dir.ts";
 
-const COMMANDS = ["collect", "commit-company-tiers", "commit-analyses", "finalize"] as const;
+const COMMANDS = ["collect", "commit-company-tiers", "commit-analyses", "finalize", "cleanup"] as const;
 type PositionRunCommand = (typeof COMMANDS)[number];
 
 type PreparationResult = Awaited<ReturnType<typeof preparePositionAnalysis>>;
@@ -58,12 +59,14 @@ Usage:
   position_run.ts commit-company-tiers --run <RUN_DIR>
   position_run.ts commit-analyses --run <RUN_DIR>
   position_run.ts finalize --run <RUN_DIR>
+  position_run.ts cleanup --run <RUN_DIR>
 
 Commands:
   collect                 공고를 수집하고 다음 큐를 만든다
   commit-company-tiers    회사 판정을 반영하고 공고 분석 큐를 만든다
   commit-analyses         공고 분석을 반영한다
   finalize                추천 JSON과 HTML을 만든다
+  cleanup                 검증과 전달이 끝난 임시 실행 디렉터리를 정리한다
 
 Options:
   --run <RUN_DIR>  실행별 파일을 둘 디렉터리
@@ -191,6 +194,17 @@ export async function runPositionCommand(
 
   const operations = options.operations ?? defaultOperations;
   const directory = parsed.runDirectory ?? (options.createRunDirectory ?? createRunDirectory)();
+  if (parsed.command === "cleanup") {
+    let cleanupDirectory: string;
+    try {
+      cleanupDirectory = validatePositionCleanupDirectory(directory);
+    } catch (error) {
+      throw new PositionRunUsageError((error as Error).message);
+    }
+    rmSync(cleanupDirectory, { recursive: true });
+    writeLine(`정리 완료: ${basename(cleanupDirectory)}`);
+    return 0;
+  }
   const paths = runDirectoryPaths(directory);
 
   if (parsed.command === "collect") {
