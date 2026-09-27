@@ -6,14 +6,8 @@ import type { ReadingSource } from "../reading_contracts.js";
 import { main, reportMorningReadingError } from "../morning_reading_cli.js";
 import { canonicalizeReadingUrl, readingContentKey } from "../url_identity.js";
 import { collectAndIngestStudyLibrary, type StudyLibraryIngestionPayload } from "./ingestion.js";
-import {
-  StudyLibraryApiError,
-  StudyLibraryBodyReadError,
-  StudyLibraryMalformedJsonError,
-  StudyLibraryNetworkError,
-  StudyLibraryResponseValidationError,
-  type StudyLibraryClient,
-} from "./client.js";
+import { CareerBackendHttpError } from "../../lib/career-backend-http.ts";
+import type { StudyLibraryClient } from "./client.js";
 
 function response(body: unknown, init: ResponseInit = {}): Response {
   return new Response(typeof body === "string" ? body : JSON.stringify(body), {
@@ -378,11 +372,9 @@ describe("study-library ingestion", () => {
 
   test("Backend client 오류는 종류와 관계없이 출처 반복을 멈추고 그대로 전파한다", async () => {
     const errors = [
-      new StudyLibraryApiError({ status: 503, code: "UNAVAILABLE" }),
-      new StudyLibraryMalformedJsonError(),
-      new StudyLibraryResponseValidationError([{ path: ["sources"], message: "required" }]),
-      new StudyLibraryNetworkError(),
-      new StudyLibraryBodyReadError(),
+      new CareerBackendHttpError(503, "UNAVAILABLE", "커리어 Backend 요청이 실패했습니다."),
+      new CareerBackendHttpError(200, "INVALID_RESPONSE", "커리어 Backend 응답을 읽을 수 없습니다."),
+      new CareerBackendHttpError(null, "NETWORK_ERROR", "커리어 Backend에 연결하지 못했습니다."),
     ];
 
     for (const error of errors) {
@@ -650,12 +642,13 @@ describe("library collect-only CLI", () => {
     process.exit = ((code?: string | number | null) => {
       throw new Error(`exit:${code}`);
     }) as typeof process.exit;
-    const error = new StudyLibraryApiError({
-      status: 429,
-      code: "RATE_LIMITED",
-      requestId: "req-429",
-    }) as StudyLibraryApiError & { retryAfter?: number };
-    error.retryAfter = 7;
+    const error = new CareerBackendHttpError(
+      429,
+      "RATE_LIMITED",
+      "커리어 Backend 요청이 실패했습니다.",
+      "req-429",
+      7,
+    );
 
     try {
       expect(() => reportMorningReadingError(error)).toThrow("exit:1");

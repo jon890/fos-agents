@@ -5,10 +5,7 @@ import { runCli, type CliSpec } from "../lib/cli.ts";
 import type { RecommendationResponse } from "../../services/career-backend/src/positions/schema.ts";
 import { collectionWarningLines } from "./recommendation/final-answer.ts";
 import { RecommendationRun, type RecommendationRunType } from "./recommendation/schema.ts";
-import {
-  createCareerBackendClient,
-  type CareerBackendClient,
-} from "./career-backend/client.ts";
+import { createCareerBackendClient, type CareerBackendClient } from "./career-backend/client.ts";
 import { loadRenderAssets } from "./render/assets.ts";
 import { renderRecommendationHtml } from "./render/recommendation-html.ts";
 import { validateReportHtml } from "./render/validate-report-html.ts";
@@ -112,7 +109,7 @@ export async function finalizeRecommendation(
     `recommendation:${analysisRunId}`,
   );
   const run = recommendationRunFromBackend(response);
-  const html = renderRecommendationHtml(run, loadRenderAssets("report"), run.generatedAt);
+  const html = renderRecommendationHtml(run, loadRenderAssets(), run.generatedAt);
   const errors = validateReportHtml(html, run);
   if (errors.length > 0) throw new Error(`추천 HTML 검증 실패: ${errors.join("; ")}`);
 

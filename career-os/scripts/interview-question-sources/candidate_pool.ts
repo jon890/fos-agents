@@ -54,21 +54,17 @@ export async function collectInterviewSourceCandidatePool(input: {
   const sourceByKey = new Map(sources.map((source) => [source.key, source]));
   const maxCandidatesPerSource = input.maxCandidatesPerSource ?? 24;
 
-  const readingSources = normalizeReadingSources({
-    _meta: {
-      purpose: "면접 질문 후보 수집을 위해 재사용하는 읽을거리 어댑터 입력",
-      schemaVersion: 6,
-    },
-    sources: dynamicSources.map((source) => ({
+  const readingSources = normalizeReadingSources(
+    dynamicSources.map((source) => ({
       key: source.key,
       title: source.title,
       category: toReadingCategory(source),
       url: source.url,
       feedUrl: source.feedUrl,
-      adapter: source.adapter,
+      adapter: source.adapter === "static" ? undefined : source.adapter,
       enabled: true,
-    })),
-  });
+    }))
+  );
 
   const dynamicPool = await collectReadingCandidatePool({
     readingSources,
@@ -121,4 +117,3 @@ export async function collectInterviewSourceCandidatePool(input: {
 
   return interviewSourceCandidatePoolSchema.parse(pool);
 }
-

@@ -1,10 +1,9 @@
-import { z } from "zod";
 import type { PositionExclusion as BackendPositionExclusion } from "../../../services/career-backend/src/positions/schema.ts";
 import { formatSeoulIsoDate } from "../../lib/date-format.ts";
+import { CareerBackendHttpError } from "../../lib/career-backend-http.ts";
 import { sourceIdSchema } from "../live-postings/contracts.ts";
 import {
   createCareerBackendClient,
-  CareerBackendClientError,
 } from "../career-backend/client.ts";
 import type { Posting } from "../live-postings/types.ts";
 
@@ -30,115 +29,34 @@ export function normalizePostingUrl(value: string): string {
   return url.href;
 }
 
-const legacyPostingExclusionSchema = z
-  .object({
-    source: sourceIdSchema,
-    identityHash: z.string().trim().min(1).optional(),
-    url: z
-      .string()
-      .refine((value) => {
-        try {
-          normalizePostingUrl(value);
-          return true;
-        } catch {
-          return false;
-        }
-      })
-      .optional(),
-  })
-  .strict()
-  .refine((rule) => Boolean(rule.identityHash || rule.url));
-
-const exclusionEvidenceSchema = z
-  .object({
-    decisionKind: z.enum(["career-downside", "manual"]),
-    reason: z.string().trim().min(1),
-    axes: z.array(z.unknown()).optional(),
-    evidenceUrls: z.array(z.string().url().startsWith("https://")).min(1),
-    confidence: z.enum(["high", "medium", "low"]).optional(),
-    decidedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    expiresAt: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .optional(),
-  })
-  .strict();
-
-const postingExclusionSchema = legacyPostingExclusionSchema.extend({
-  scope: z.literal("posting"),
-  ...exclusionEvidenceSchema.shape,
-});
-
-const companyExclusionSchema = z
-  .object({
-    scope: z.literal("company"),
-    company: z.string().trim().min(1),
-    ...exclusionEvidenceSchema.shape,
-  })
-  .strict();
-
-const companyRoleExclusionSchema = z
-  .object({
-    scope: z.literal("company-role"),
-    company: z.string().trim().min(1),
-    titleKeywords: z.array(z.string().trim().min(1)).min(1),
-    ...exclusionEvidenceSchema.shape,
-  })
-  .strict();
-
-const versionOneSchema = z
-  .object({
-    schemaVersion: z.literal(1),
-    exclusions: z.array(legacyPostingExclusionSchema),
-  })
-  .strict();
-
-const versionTwoSchema = z
-  .object({
-    schemaVersion: z.literal(2),
-    exclusions: z.array(
-      z.union([
-        legacyPostingExclusionSchema,
-        postingExclusionSchema,
-        companyExclusionSchema,
-        companyRoleExclusionSchema,
-      ]),
-    ),
-  })
-  .strict();
-
-export const positionExclusionsSchema = z.union([versionOneSchema, versionTwoSchema]);
-export type PositionExclusions = z.infer<typeof positionExclusionsSchema>;
-export type EnrichedPositionExclusion =
-  | z.infer<typeof postingExclusionSchema>
-  | z.infer<typeof companyExclusionSchema>
-  | z.infer<typeof companyRoleExclusionSchema>;
-type PositionExclusion = PositionExclusions["exclusions"][number];
+export type PositionExclusions = BackendPositionExclusion[];
+export type EnrichedPositionExclusion = BackendPositionExclusion;
+type PositionExclusion = BackendPositionExclusion;
 
 function isCompanyExclusion(
   rule: PositionExclusion,
-): rule is z.infer<typeof companyExclusionSchema> {
-  return "scope" in rule && rule.scope === "company";
+): rule is Extract<PositionExclusion, { scope: "company" }> {
+  return rule.scope === "company";
 }
 
 function isCompanyRoleExclusion(
   rule: PositionExclusion,
-): rule is z.infer<typeof companyRoleExclusionSchema> {
-  return "scope" in rule && rule.scope === "company-role";
+): rule is Extract<PositionExclusion, { scope: "company-role" }> {
+  return rule.scope === "company-role";
 }
 
 function isExpired(rule: PositionExclusion, now: Date): boolean {
-  if (!("expiresAt" in rule) || !rule.expiresAt) return false;
+  if (!rule.expiresAt) return false;
   return formatSeoulIsoDate(now.toISOString()) > rule.expiresAt;
 }
 
-export function validateCareerDownsideExclusion(rule: EnrichedPositionExclusion): void {
-  if (rule.decisionKind !== "career-downside") return;
-  if (rule.scope === "company" && rule.evidenceUrls.length < 2) {
-    throw new Error(
-      "FAIL position exclusions: 회사 전체 제외에는 공개 근거 URL이 두 개 이상 필요합니다.",
-    );
+function validatePositionExclusions(rules: BackendPositionExclusion[]): PositionExclusions {
+  for (const rule of rules) {
+    if (rule.scope === "posting") {
+      sourceIdSchema.parse(rule.source);
+    }
   }
+  return rules;
 }
 
 /**
@@ -149,7 +67,7 @@ export function validateCareerDownsideExclusion(rule: EnrichedPositionExclusion)
  * zod 의 오류 문구는 어긋난 값을 그대로 담으므로 쓰지 않는다.
  */
 function exclusionFailureReason(error: unknown): string {
-  if (error instanceof CareerBackendClientError) {
+    if (error instanceof CareerBackendHttpError) {
     if (error.status === null || error.status >= 500) {
       return "커리어 Backend 에 연결하지 못했습니다. 주소와 서버 상태를 확인하세요.";
     }
@@ -170,16 +88,7 @@ export async function loadPositionExclusions(
   source: PositionExclusionsSource = createCareerBackendClient(),
 ): Promise<PositionExclusions> {
   try {
-    const parsed = positionExclusionsSchema.parse({
-      schemaVersion: 2,
-      exclusions: await source.getExclusions(),
-    });
-    if (parsed.schemaVersion === 2) {
-      for (const rule of parsed.exclusions) {
-        if ("scope" in rule) validateCareerDownsideExclusion(rule);
-      }
-    }
-    return parsed;
+    return validatePositionExclusions(await source.getExclusions());
   } catch (error) {
     throw new Error(`FAIL position exclusions: ${exclusionFailureReason(error)}`);
   }
@@ -190,9 +99,7 @@ export function filterExcludedPostings(
   config: PositionExclusions,
   now = new Date(),
 ) {
-  const rules = positionExclusionsSchema
-    .parse(config)
-    .exclusions.filter((rule) => !isExpired(rule, now));
+  const rules = validatePositionExclusions(config).filter((rule) => !isExpired(rule, now));
   const identities = new Set<string>();
   const urls = new Set<string>();
   const companies = new Set<string>();

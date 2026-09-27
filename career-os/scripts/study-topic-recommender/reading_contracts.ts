@@ -76,26 +76,6 @@ export const readingSourceSchema = z.object({
   }
 });
 
-export const readingSourcesConfigSchema = z.object({
-  _meta: z.object({
-    purpose: nonEmptyString,
-    schemaVersion: z.literal(6),
-  }),
-  sources: z.array(readingSourceSchema),
-}).superRefine((config, context) => {
-  const seen = new Set<string>();
-  config.sources.forEach((source, index) => {
-    if (seen.has(source.key)) {
-      context.addIssue({
-        code: "custom",
-        path: ["sources", index, "key"],
-        message: `중복 key: ${source.key}`,
-      });
-    }
-    seen.add(source.key);
-  });
-});
-
 export const readingCandidateSchema = z.object({
   id: nonEmptyString,
   contentKey: nonEmptyString,
@@ -247,50 +227,12 @@ export const morningReadingReportSchema = z.object({
   });
 });
 
-export const readingHistoryEntrySchema = z.object({
-  contentKey: nonEmptyString,
-  canonicalUrl: httpsUrl,
-  sourceKey: nonEmptyString,
-  category: readingCategorySchema,
-  title: nonEmptyString,
-  studyTopic: nonEmptyString,
-  studyTopicKey: topicKey,
-  careerValue: readingCareerValueSchema,
-  recommendedAt: z.iso.datetime(),
-  reportId: nonEmptyString,
-});
-
-export const morningStudyHistorySchema = z.object({
-  schemaVersion: z.literal(1),
-  reports: z.array(z.object({
-    reportId: nonEmptyString,
-    recommendedAt: z.iso.datetime(),
-  })),
-  entries: z.array(readingHistoryEntrySchema),
-}).superRefine((history, context) => {
-  const keys = new Set<string>();
-  history.entries.forEach((entry, index) => {
-    if (keys.has(entry.contentKey)) {
-      context.addIssue({ code: "custom", path: ["entries", index, "contentKey"], message: `중복 contentKey: ${entry.contentKey}` });
-    }
-    keys.add(entry.contentKey);
-  });
-  const reportIds = new Set<string>();
-  history.reports.forEach((report, index) => {
-    if (reportIds.has(report.reportId)) {
-      context.addIssue({ code: "custom", path: ["reports", index, "reportId"], message: `중복 reportId: ${report.reportId}` });
-    }
-    reportIds.add(report.reportId);
-  });
-});
-
 export type ReadingCategory = z.infer<typeof readingCategorySchema>;
 export type ReadingCareerValue = z.infer<typeof readingCareerValueSchema>;
 export type ReadingSourceAdapterId = z.infer<typeof readingSourceAdapterIdSchema>;
 export type ReadingCandidateKind = z.infer<typeof readingCandidateKindSchema>;
 export type ReadingCollectionStatus = z.infer<typeof readingCollectionStatusSchema>;
 export type ReadingSource = z.infer<typeof readingSourceSchema>;
-export type ReadingSourcesConfig = z.infer<typeof readingSourcesConfigSchema>;
 export type ReadingCandidate = z.infer<typeof readingCandidateSchema>;
 export type ReadingCollectionLog = z.infer<typeof readingCollectionLogSchema>;
 export type ReadingCandidatePool = z.infer<typeof readingCandidatePoolSchema>;
@@ -299,8 +241,6 @@ export type ReadingSelection = z.infer<typeof readingSelectionSchema>;
 export type ReadingRecommendation = z.infer<typeof readingRecommendationSchema>;
 export type ReadingStudyTopic = z.infer<typeof readingStudyTopicSchema>;
 export type MorningReadingReport = z.infer<typeof morningReadingReportSchema>;
-export type ReadingHistoryEntry = z.infer<typeof readingHistoryEntrySchema>;
-export type MorningStudyHistory = z.infer<typeof morningStudyHistorySchema>;
 
 export interface NormalizedReadingSources {
   sources: ReadingSource[];

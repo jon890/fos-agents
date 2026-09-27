@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
 import {
   postingCandidatePoolSchema,
   postingSchema,
@@ -52,15 +51,4 @@ export function buildPostingCandidatePool(
     errors: [...diagnostics.errors, ...validationErrors],
   });
   return { pool, validationErrors };
-}
-
-export function loadPostingCandidatePool(path: string): PostingCandidatePool {
-  const parsed = postingCandidatePoolSchema.safeParse(
-    JSON.parse(readFileSync(path, "utf8")) as unknown,
-  );
-  if (!parsed.success) {
-    const issues = parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`);
-    throw new Error(`공고 후보풀 검증 실패:\n- ${issues.join("\n- ")}`);
-  }
-  return parsed.data;
 }

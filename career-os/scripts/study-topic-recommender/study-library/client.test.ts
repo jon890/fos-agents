@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { StudyLibraryApiError, StudyLibraryClient, StudyLibraryClientError, type StudyLibraryFetch } from "./client.js";
+import { CareerBackendHttpError } from "../../lib/career-backend-http.ts";
+import { StudyLibraryClient, type StudyLibraryFetch } from "./client.js";
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -112,7 +113,7 @@ describe("StudyLibraryClient", () => {
   test("소스 응답에서 nullable note가 빠지면 계약 오류로 거부한다", async () => {
     const fetchImpl: StudyLibraryFetch = async () => jsonResponse({ sources: [{ sourceKey: "source-a", title: "Source A", category: "techBlog", url: "https://example.com", feedUrl: null, adapter: "page", enabled: true, version: 1 }] });
 
-    await expect(client(fetchImpl).getSources()).rejects.toThrow("응답 검증 실패");
+    await expect(client(fetchImpl).getSources()).rejects.toThrow("응답 계약이 올바르지 않습니다");
   });
 
   test("명시적 연결값과 HTTP/HTTPS origin 규칙을 API 호출 전에 검증한다", () => {
@@ -192,7 +193,7 @@ describe("StudyLibraryClient", () => {
 
     expect(result).not.toBe("pending");
     expect(result).toBeInstanceOf(Error);
-    expect(String((result as Error).message)).toBe("학습자료 API 네트워크 요청 실패");
+    expect(String((result as Error).message)).toBe("커리어 Backend에 연결하지 못했습니다.");
     expect(String((result as Error).message)).not.toContain("stream secret");
   });
 
@@ -319,8 +320,8 @@ describe("StudyLibraryClient", () => {
       invalidError = error;
     }
 
-    expect(invalidError).toBeInstanceOf(StudyLibraryApiError);
-    expect((invalidError as StudyLibraryApiError).retryAfter).toBeUndefined();
+    expect(invalidError).toBeInstanceOf(CareerBackendHttpError);
+    expect((invalidError as CareerBackendHttpError).retryAfter).toBeUndefined();
     expect(String((invalidError as Error).message)).not.toContain("soon-private");
   });
 
@@ -371,7 +372,7 @@ describe("StudyLibraryClient", () => {
       historyVersion: 0,
     });
 
-    await expect(client(fetchImpl).getCandidates()).rejects.toThrow("응답 검증 실패");
+    await expect(client(fetchImpl).getCandidates()).rejects.toThrow("응답 계약이 올바르지 않습니다");
   });
 
   test("malformed JSON은 원문을 노출하지 않는 고정 오류로 실패한다", async () => {
@@ -393,7 +394,7 @@ describe("StudyLibraryClient", () => {
 
     expect(count).toBe(1);
     expect(thrown).toBeInstanceOf(Error);
-    expect(String((thrown as Error).message)).toBe("학습자료 API JSON 응답 파싱 실패");
+    expect(String((thrown as Error).message)).toBe("커리어 Backend 응답을 읽을 수 없습니다.");
     expect(String((thrown as Error).message)).not.toContain("not-json-private-token");
   });
 
@@ -414,12 +415,12 @@ describe("StudyLibraryClient", () => {
       thrown = error;
     }
 
-    expect(thrown).toBeInstanceOf(StudyLibraryApiError);
+    expect(thrown).toBeInstanceOf(CareerBackendHttpError);
     expect(String((thrown as Error).message)).not.toContain("test-token");
     expect(String((thrown as Error).message)).not.toContain("private-note");
     expect(String((thrown as Error).message)).not.toContain("server message");
-    expect(String((thrown as Error).message)).toContain("VERSION_CONFLICT");
-    expect(String((thrown as Error).message)).toContain("req-409");
+    expect((thrown as CareerBackendHttpError).code).toBe("VERSION_CONFLICT");
+    expect((thrown as CareerBackendHttpError).requestId).toBe("req-409");
   });
 
   test("HTTP, 응답 본문, JSON, 응답 검증과 네트워크 오류는 공통 Backend client 오류다", async () => {
@@ -443,7 +444,7 @@ describe("StudyLibraryClient", () => {
         token: "test-token-123456789012345678901234567890",
         fetchImpl,
         maxRetries: 0,
-      }).getSources()).rejects.toBeInstanceOf(StudyLibraryClientError);
+      }).getSources()).rejects.toBeInstanceOf(CareerBackendHttpError);
     }
   });
 });

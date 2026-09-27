@@ -3,15 +3,15 @@ import type { RenderAssets } from "./template.ts";
 
 const directory = new URL("./templates/", import.meta.url);
 
-export function loadRenderAssets(kind: "report" | "preview"): RenderAssets {
+export function loadRenderAssets(): RenderAssets {
   const templates = readTemplateParts(
-    readFileSync(new URL(`${kind}-parts.html`, directory), "utf8"),
+    readFileSync(new URL("report-parts.html", directory), "utf8"),
   );
-  templates[kind] = readFileSync(new URL(`${kind}.html`, directory), "utf8");
+  templates.report = readFileSync(new URL("report.html", directory), "utf8");
   return {
     templates,
-    css: readFileSync(new URL(`${kind}.css`, directory), "utf8"),
-    script: kind === "preview" ? readFileSync(new URL("preview.js", directory), "utf8") : "",
+    css: readFileSync(new URL("report.css", directory), "utf8"),
+    script: "",
   };
 }
 
