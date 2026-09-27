@@ -77,9 +77,9 @@ build context 는 이 디렉터리다. 모노레포 루트가 아니다.
 
 ```bash
 # cwd: career-os/services/career-backend
-docker build -t <registry>/career-recommendation-backend:<태그> .
-docker push <registry>/career-recommendation-backend:<태그>
-docker inspect --format '{{index .RepoDigests 0}}' <registry>/career-recommendation-backend:<태그>
+docker build -t <registry>/career-backend:<태그> .
+docker push <registry>/career-backend:<태그>
+docker inspect --format '{{index .RepoDigests 0}}' <registry>/career-backend:<태그>
 ```
 
 마지막 명령이 내는 digest 를 인프라 저장소의
