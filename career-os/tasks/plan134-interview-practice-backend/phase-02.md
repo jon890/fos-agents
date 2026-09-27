@@ -30,7 +30,7 @@
 
 - 저장소는 `CAREER_STORE` 로만 고른다. `CAREER_BACKEND_URL` 유무로 추측하지 않는다. ADR-129 가 기각했다
 - `backend` 를 고른 실행이 Backend 에 닿지 못하면 종료 코드 1 이다. 파일 구현으로 바꾸거나 복습 상태 없이 질문을 고르는 대체 동작을 만들지 않는다
-- 두 구현은 같은 계약 테스트를 통과해야 한다. 한 테스트 묶음을 구현 둘에 돌린다
+- 두 구현은 같은 저장소 계약을 통과해야 한다. 파일 구현은 `store-contract.test.ts`, Backend 는 Phase 01 의 실제 HTTP e2e 로 같은 정상 기록·멱등 재시도·개인 질문 켜기와 끄기를 검증한다. Backend client 의 경로와 헤더는 `client.test.ts` 가 검증한다
 - 파일 구현도 복습일을 스스로 계산하지 않고 `review-schedule.ts` 를 import 한다. 규칙이 두 벌이 되면 두 구현의 결과가 어긋난다
 - `attemptId` 는 에이전트가 만들어 넘긴다. 같은 연습을 다시 기록할 때 같은 값을 써야 한 번만 반영되기 때문이다. CLI 가 몰래 만들면 재시도가 두 번 반영된다. `--attempt-id` 가 없으면 사용법 오류다
 - HTTP 요청 코드를 세 번째로 복사하지 않는다. 포지션 client 의 `request` 와 같은 동작을 `career-os/scripts/lib/career-backend-http.ts` 로 새로 두고 면접 client 만 이것을 쓴다. 포지션과 공부 client 를 옮기는 일은 이 plan 의 범위가 아니다
@@ -126,7 +126,7 @@ export function createInterviewPracticeStore(environment?: Record<string, string
 - `loadQuestionBank(drillType, applicationDirectory, personalQuestions: DrillQuestion[] = [])` 로 바꾼다. 개인 질문은 인자로 받아 `sourceScope: "personal"` 을 붙여 합친다
 - `selectQuestions(drillType, drillProgress, maxCount, applicationDirectory, targetBar, personalQuestions = [])` 로 마지막 인자를 더한다. 선별 규칙은 그대로다
 - `toDrillProgress(items: TopicProgress[]): DrillProgress` 를 더한다. `passCount` → `pass_count`, `failCount` → `fail_count`, `nextReviewDate` → `next_review_date`, `lastPassedDate` → `last_passed`
-- `export async function runDrillCli(argv: string[], deps: { store: InterviewPracticeStore; readFile: (path: string) => string }): Promise<unknown>` 를 더한다
+- `export async function runDrillCli(argv: string[], deps: { createStore: () => InterviewPracticeStore; readFile: (path: string) => string }): Promise<unknown>` 를 더한다. 명령과 인자를 검사한 뒤 필요한 명령에서만 `createStore()` 를 호출한다. Phase 03 의 `doctor` 와 `memory` 는 저장소를 만들지 않는다
 
 | 하위 명령 | 인자 | 하는 일 | 돌려주는 값 |
 | --- | --- | --- | --- |
@@ -136,7 +136,7 @@ export function createInterviewPracticeStore(environment?: Record<string, string
 | `personal disable` | `--question-id` | 두 `drillType` 의 개인 질문에서 찾아 `enabled: false` 로 저장한다. 없으면 오류 | `{ disabled: questionId }` |
 
 - 하위 명령이 없거나 모르는 값이면 사용법을 stderr 에 쓰고 종료 코드 2 다
-- `import.meta.main` 블록은 `runDrillCli(process.argv.slice(2), { store: createInterviewPracticeStore(), readFile })` 결과를 JSON 으로 stdout 에 쓴다. 인자 오류는 종료 코드 2, 그 밖의 오류는 메시지를 stderr 에 쓰고 종료 코드 1 이다. Backend 연결 오류 메시지는 「커리어 Backend에 연결하지 못했습니다. 연습 결과는 기록되지 않았습니다.」 로 시작한다
+- `import.meta.main` 블록은 `runDrillCli(process.argv.slice(2), { createStore: () => createInterviewPracticeStore(), readFile })` 결과를 JSON 으로 stdout 에 쓴다. 인자 오류는 종료 코드 2, 그 밖의 오류는 메시지를 stderr 에 쓰고 종료 코드 1 이다. Backend 연결 오류 메시지는 「커리어 Backend에 연결하지 못했습니다. 연습 결과는 기록되지 않았습니다.」 로 시작한다
 - import 만 했을 때는 아무것도 출력하지 않는다. 저장소 생성도 `import.meta.main` 안에서만 한다
 
 ### 8. 이 phase 를 검증하는 테스트
@@ -169,6 +169,12 @@ export function createInterviewPracticeStore(environment?: Record<string, string
 - 가짜 `fetcher` 로 `recordAttempt` 가 `POST api/interview/v1/attempts` 에 `Idempotency-Key: <attemptId>` 와 Bearer 헤더를 보낸다
 - `fetcher` 가 계속 예외를 던지면 `CareerBackendHttpError` 의 code 가 `NETWORK_ERROR` 다
 
+`career-os/scripts/interview-drill/drill-engine.cli.test.ts` 신규. 실제 `bun drill-engine.ts` 자식 프로세스를 실행한다.
+
+- `CAREER_STORE=file` 과 임시 저장 디렉터리에서 `select behavioral` 은 종료 코드 0 이고 stdout 이 JSON 이며 `store: "file"` 이다
+- `--attempt-id` 가 없는 `record` 는 종료 코드 2 이고 stderr 에 사용법이 나온다
+- `CAREER_STORE=backend` 와 닿지 않는 로컬 URL 에서 유효한 `record` 는 종료 코드 1 이고 stderr 에 기록되지 않았다는 문구가 나온다. 파일 저장 디렉터리에는 기록이 생기지 않는다
+
 ## 검증
 
 ```bash
@@ -197,3 +203,4 @@ PATH="$HOME/.bun/bin:$PATH" bunx tsc --noEmit
 | `career-os/scripts/interview-drill/store/index.test.ts` | 신규 |
 | `career-os/scripts/interview-drill/drill-engine.ts` | 수정 |
 | `career-os/scripts/interview-drill/drill-engine.test.ts` | 수정 |
+| `career-os/scripts/interview-drill/drill-engine.cli.test.ts` | 신규 |

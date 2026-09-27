@@ -37,6 +37,7 @@ hermes 와 노트북의 `.env` 에 `CAREER_STORE`, `CAREER_MEMORY` 를 넣는 �
 
 ```ts
 export const candidateMemorySchema: z.ZodType<CandidateMemory>;   // data-schema 「후보자 맥락」 칸 그대로, .strict()
+export type CandidateMemoryField = { path: string; description: string };
 export type CandidateMemoryResult =
   | { provider: "file"; path: string; memory: CandidateMemory }
   | { provider: "brain"; fields: CandidateMemoryField[]; instruction: string };
@@ -45,12 +46,13 @@ export function loadCandidateMemory(environment: Record<string, string | undefin
 
 - `CAREER_MEMORY=file`: `CAREER_MEMORY_FILE` 이 있으면 그 경로, 없으면 `career-os/library/candidate-memory.json` 을 읽어 검사한다. 파일이 없거나 형식이 틀리면 어느 칸이 틀렸는지 담아 실패한다
 - `CAREER_MEMORY=brain`: 파일을 읽지 않는다. `fields` 는 계약의 칸 이름과 한 줄 설명 목록이고, `instruction` 은 「brain-search 로 아래 칸을 채운다. 찾지 못한 칸은 비워 두고 사용자에게 묻는다.」 다
+- `fields[].path` 는 `schemaVersion`, `currentRole.title`, `currentRole.yearsOfExperience`, `currentRole.bar`, `experience.direct`, `experience.adjacent`, `experience.studyOnly`, `targets`, `targets[].company`, `targets[].role`, `targets[].applicationDir` 을 이 순서대로 한 번씩 담는다. `schemaVersion` 의 설명은 고정값 `1` 이고, `targets` 는 대상이 없을 때 빈 배열이다. 나머지 `description` 은 각 칸에 채울 값을 한 줄로 설명한다
 - 값이 없거나 둘 중 하나가 아니면 「CAREER_MEMORY 는 brain 이나 file 이어야 한다. drill-engine.ts doctor 로 설정을 점검한다.」 로 실패한다
 - `targets[].applicationDir` 은 `career-os/` 기준 상대 경로만 받는다. 절대 경로와 `..` 는 거절한다
 
 ### 2. `career-os/scripts/interview-drill/drill-engine.ts` 수정
 
-`runDrillCli` 에 하위 명령 둘을 더한다. `deps` 에 `environment` 를 더한다.
+`runDrillCli` 에 하위 명령 둘을 더한다. Phase 02 의 지연 생성 계약을 유지하고 `deps` 에 `environment` 를 더한다. `memory` 는 `createStore()` 를 호출하지 않는다. `doctor` 는 `CAREER_STORE` 값이 유효한지 검사한 뒤에만 `createStore()` 를 호출하고, 실패해도 다른 점검을 계속한다. main 에서는 `environment: process.env` 와 `createStore: () => createInterviewPracticeStore(process.env)` 를 넘긴다.
 
 | 하위 명령 | 하는 일 | 돌려주는 값 |
 | --- | --- | --- |
@@ -87,6 +89,7 @@ CAREER_MEMORY_FILE=
 ### 5. `career-os/.claude/skills/interview-practice/SKILL.md` 수정
 
 스킬 문서를 고치기 전에 `~/.claude/references/skill-structure.md` 를 읽고 따른다.
+`skill-creator` 를 적용하고 실제 관리 원본이 이 저장소의 `SKILL.md` 인지 확인한다. 제목 다음에 완료 조건으로 쓴 목표 한 줄과 워크플로우 개요 표를 놓고, 상세 절은 표의 실행 순서에 맞춘다.
 
 - 앞부분에 「준비」 절을 둔다. `CAREER_STORE`, `CAREER_MEMORY` 를 고르는 표, 템플릿을 복사해 채우는 방법, `drill-engine.ts doctor` 로 점검하는 방법이다. 연습을 시작하기 전에 `doctor` 가 통과해야 한다
 - 「후보자 맥락」 절을 둔다. `drill-engine.ts memory` 를 먼저 부른다. `provider` 가 `file` 이면 출력을 그대로 쓴다. `brain` 이면 이 절 아래 「`brain` 공급자」 소절의 방법으로 칸을 채운다. `brain-search` 와 entity 이름은 이 소절에만 둔다
@@ -121,6 +124,14 @@ CAREER_MEMORY_FILE=
 
 - `CAREER_STORE`, `CAREER_MEMORY` 가 모두 없을 때 `doctor` 가 `passed: false` 이고 두 항목 모두 실패로 나온다
 - `CAREER_STORE=file`, `CAREER_MEMORY=file` 과 임시 디렉터리, 유효한 맥락 파일이면 `doctor` 가 `passed: true` 다
+- `memory` 와 `doctor` 를 호출할 때 `createStore` 가 예외를 던지게 해도, `memory` 와 `CAREER_STORE` 설정 오류가 있는 `doctor` 는 다른 점검 결과까지 돌려준다
+- `CAREER_STORE=file` 과 유효한 `CAREER_MEMORY=brain` 을 주고 `createStore` 가 예외를 던지면, `doctor` 결과에는 저장소 실패와 맥락 성공이 모두 남는다
+
+`career-os/scripts/interview-drill/drill-engine.cli.test.ts` 수정.
+
+- `CAREER_STORE` 가 없어도 `CAREER_MEMORY=brain` 이면 실제 `memory` 명령은 종료 코드 0 이고 stdout 의 `provider` 가 `brain` 이다
+- 두 환경값이 없을 때 실제 `doctor` 명령은 종료 코드 1 이고 stdout 의 `passed` 가 거짓이며 두 설정의 실패 항목이 있다
+- 두 환경값과 유효한 후보자 맥락 파일을 주면 실제 `doctor` 명령은 종료 코드 0 이고 stdout 의 `passed` 가 참이다
 
 ## 검증
 
@@ -129,14 +140,19 @@ CAREER_MEMORY_FILE=
 PATH="$HOME/.bun/bin:$PATH" bun test career-os/scripts
 PATH="$HOME/.bun/bin:$PATH" bun test ./career-os/.claude/skills/
 PATH="$HOME/.bun/bin:$PATH" bunx tsc --noEmit
+python3 "$CODEX_HOME/skills/.system/skill-creator/scripts/quick_validate.py" career-os/.claude/skills/interview-practice
 ! git grep -nE "drill-progress|drill-log|personal\.jsonl|library/question-bank" -- career-os/scripts/interview-drill career-os/.claude/skills/interview-practice
-test "$(git grep -c 'brain-search' -- career-os/.claude/skills/interview-practice/SKILL.md)" -ge 1
+git grep -q 'brain-search' -- career-os/.claude/skills/interview-practice/SKILL.md
 ! git grep -n "private brain" -- career-os/.claude/skills/interview-practice
+~/.claude/skills/korean-check/scripts/check.sh career-os/.claude/skills/interview-practice/SKILL.md
+~/.claude/skills/korean-check/scripts/check.sh career-os/.claude/skills/interview-practice/references/source-discovery.md
+~/.claude/skills/korean-check/scripts/check.sh career-os/.claude/skills/interview-practice/references/question-bank-maintenance.md
 ```
 
 모두 종료 코드 0 이어야 한다.
 마지막 두 명령은 `brain-search` 가 「`brain` 공급자」 소절에 남아 있고, 다른 곳에서 private brain 을 직접 가리키지 않는지 본다.
 `brain-search` 가 나오는 줄이 「`brain` 공급자」 소절 안에만 있는지는 사람이 SKILL.md 를 열어 확인한다.
+`SKILL.md` 는 `skill-structure.md` 의 순서대로 목표 한 줄, 워크플로우 개요 표, 단계별 상세 절이 있는지 사람이 확인한다. `drill-engine.cli.test.ts` 는 실제 명령의 stdout 과 종료 코드를 검사한다.
 
 검증이 통과하면 `career-os/tasks/plan134-interview-practice-backend/index.json` 의 `current_phase` 를 3 으로 두고, 마지막 phase 이므로 `status` 를 `completed` 로 바꾼다.
 
@@ -148,6 +164,7 @@ test "$(git grep -c 'brain-search' -- career-os/.claude/skills/interview-practic
 | `career-os/scripts/interview-drill/memory.test.ts` | 신규 |
 | `career-os/scripts/interview-drill/drill-engine.ts` | 수정 |
 | `career-os/scripts/interview-drill/drill-engine.test.ts` | 수정 |
+| `career-os/scripts/interview-drill/drill-engine.cli.test.ts` | 수정 |
 | `career-os/.claude/skills/interview-practice/templates/candidate-memory.example.json` | 신규 |
 | `career-os/.env.example` | 수정 |
 | `career-os/.claude/skills/interview-practice/SKILL.md` | 수정 |

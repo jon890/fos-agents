@@ -220,7 +220,7 @@ sequenceDiagram
 | `GET progress?drillType=` | `drillType` 은 `tech` 나 `behavioral` | `{ items: [{ drillType, topic, passCount, failCount, nextReviewDate, lastPassedDate }] }` |
 | `POST attempts` | `attemptId`, `drillType`, `questionId`, `topic`, `question`, `score`, 선택 칸 `feedback`, `targetCompany`, `targetRole`, `targetValueAxis`, `rootQuestionId`, `parentQuestion`, `followUpDepth`, `followUpAxis`, `stopReason` | `{ attemptId, evaluatedOn, progress: { drillType, topic, passCount, failCount, nextReviewDate, lastPassedDate } }` |
 | `GET personal-questions?drillType=` | | `{ items: [질문] }`. 켜진 질문만 |
-| `PUT personal-questions/:questionId` | `{ enabled, question }`. `question` 은 공개 질문 은행의 질문 항목 형식 | `{ questionId, drillType, topic, enabled, updatedAt }` |
+| `PUT personal-questions/:questionId` | `{ enabled, drillType, question }`. `drillType` 은 `tech` 나 `behavioral` 이고, `question` 은 공개 질문 은행의 질문 항목 형식 | `{ questionId, drillType, topic, enabled, updatedAt }` |
 
 - `POST attempts` 는 `Idempotency-Key` 가 본문의 `attemptId` 와 다르면 `400` 이다.
 - `POST attempts` 는 주제 행이 없으면 만들고, 있으면 잠근 뒤 갱신한다. 기록 추가와 주제 갱신이 한 transaction 이다.

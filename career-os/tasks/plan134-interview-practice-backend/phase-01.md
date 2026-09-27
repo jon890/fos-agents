@@ -40,6 +40,7 @@
 - 복습 단위는 주제다. 질문별 복습으로 바꾸지 않는다. 선별 규칙을 바꾸는 일은 이 plan 의 범위가 아니다.
 - 복습일 계산을 서버에 두는 이유는 기록 추가와 주제 갱신을 한 transaction 으로 묶어 동시 기록이 어긋나지 않게 하기 위해서다. client 가 계산한 값을 받지 않는다.
 - 평가일은 서버가 Asia/Seoul 기준으로 정한다. 프로세스 시간대는 UTC 로 고정돼 있으므로(`src/main.ts`, `src/utc.ts`) `Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" })` 처럼 시간대를 명시해 날짜를 만든다. 테스트가 시각을 고정할 수 있게 시각 공급 함수를 주입받는다.
+- `interview.service.ts` 에 `@Injectable()` 인 `InterviewClock` 클래스를 두고 `now(): Date` 가 `new Date()` 를 돌려주게 한다. `InterviewModule` 의 providers 에 등록하고 service 생성자로 주입한다. e2e 는 `harness.app.get(InterviewClock).now = () => new Date("2026-09-27T15:30:00Z")` 로 요청 시각을 고정한다. 별도 config token 은 만들지 않는다.
 - 개인 질문의 `answerSignals`, `followUps` 를 자식 table 로 나누지 않는다. ADR-129 가 기각했다.
 - `src/config/config.module.ts` 의 `RECOMMENDATION_CONFIG` 는 다른 작업이 이름을 바꾸는 중이다. 이 모듈에서 import 하지 않는다. 설정값이 필요 없게 설계한다.
 - 행을 지우는 경로는 만들지 않는다. 개인 질문은 `enabled` 로 끈다.
@@ -116,6 +117,7 @@ zod 계약과 응답 타입을 둔다. `scripts/` 가 이 파일을 import 하�
 
 - `POST attempts`: `@Headers("idempotency-key")` 가 본문 `attemptId` 와 다르면 `ApiError(400, "BAD_REQUEST", ...)`. 평가일은 주입받은 시각 공급 함수와 `seoulDate` 로 정한다
 - `PUT personal-questions/:questionId`: 경로의 `questionId` 와 `question.id` 가 다르면 `400`. `payload` 에는 `question` 을 그대로 저장하고 행의 `topic` 은 `question.topic` 에서 가져온다
+- 요청 본문에는 `docs/flow.md` 의 HTTP 계약대로 `enabled`, `drillType`, `question` 을 받는다. `question` 항목에는 `drillType` 을 중복해 넣지 않는다
 - 목록 응답은 `Cache-Control: no-store` 등 공통 동작을 따로 구현하지 않는다. 전역 설정이 한다
 
 ### 7. `services/career-backend/src/app.module.ts` 수정
@@ -149,6 +151,9 @@ zod 계약과 응답 타입을 둔다. `scripts/` 가 이 파일을 import 하�
 ```bash
 # cwd: career-os/services/career-backend
 npm run typecheck
+# 로컬 fos_career_test 에만 신규 migration 을 적용한다. 운영 DB 에는 적용하지 않는다.
+DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_test" \
+  npx prisma migrate deploy
 DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_test" \
 CAREER_BACKEND_TEST_DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_test" \
 SHADOW_DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_shadow" \
