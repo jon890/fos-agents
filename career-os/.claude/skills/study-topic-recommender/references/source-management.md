@@ -1,6 +1,6 @@
 # 외부 읽을거리 소스 관리
 
-읽을거리 소스의 원본은 추천 Backend다.
+읽을거리 소스의 원본은 커리어 Backend다.
 소스 키는 주제가 아니라 발행처를 식별한다.
 
 `manage_reading_sources.ts`는 API 연결 값 없이 `help`, `--help`, `-h`와 `template`를 실행할 수 있다.

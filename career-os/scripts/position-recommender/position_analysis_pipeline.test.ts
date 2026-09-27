@@ -5,14 +5,14 @@ import { join } from "node:path";
 import {
   analysisQueueResponseSchema,
   type AnalysisQueueResponse,
-} from "../../services/recommendation-api/src/positions/schema.ts";
+} from "../../services/career-backend/src/positions/schema.ts";
 import { commitPositionAnalysis } from "./commit_position_analysis.ts";
 
 /**
  * script 쪽 방어만 확인한다.
  *
  * 아래 둘은 Backend 를 부르기 전에 판정하므로 서비스 인스턴스가 필요 없다.
- * 서비스 동작은 `services/recommendation-api/test/` 의 e2e 검사가 실제 MySQL 위에서 확인한다.
+ * 서비스 동작은 `services/career-backend/test/` 의 e2e 검사가 실제 MySQL 위에서 확인한다.
  * client 와 응답 사이의 계약은 그쪽 `test/contract.e2e.test.ts` 가 확인한다.
  */
 

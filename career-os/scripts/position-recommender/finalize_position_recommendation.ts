@@ -2,13 +2,13 @@
 import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { runCli, type CliSpec } from "../lib/cli.ts";
-import type { RecommendationResponse } from "../../services/recommendation-api/src/positions/schema.ts";
+import type { RecommendationResponse } from "../../services/career-backend/src/positions/schema.ts";
 import { collectionWarningLines } from "./recommendation/final-answer.ts";
 import { RecommendationRun, type RecommendationRunType } from "./recommendation/schema.ts";
 import {
-  createRecommendationApiClient,
-  type RecommendationApiClient,
-} from "./recommendation-api/client.ts";
+  createCareerBackendClient,
+  type CareerBackendClient,
+} from "./career-backend/client.ts";
 import { loadRenderAssets } from "./render/assets.ts";
 import { renderRecommendationHtml } from "./render/recommendation-html.ts";
 import { validateReportHtml } from "./render/validate-report-html.ts";
@@ -102,7 +102,7 @@ export function recommendationRunFromBackend(
 }
 
 export async function finalizeRecommendation(
-  client: Pick<RecommendationApiClient, "createRecommendation">,
+  client: Pick<CareerBackendClient, "createRecommendation">,
   analysisRunId: string,
   outputJson: string,
   outputHtml: string,
@@ -156,7 +156,7 @@ if (import.meta.main) {
       throw new Error("--analysis-run-id, --output-json과 --output-html이 필요합니다.");
     }
     const result = await finalizeRecommendation(
-      createRecommendationApiClient(),
+      createCareerBackendClient(),
       analysisRunId,
       outputJson,
       outputHtml,

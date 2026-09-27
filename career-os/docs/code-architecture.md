@@ -150,9 +150,9 @@ career-os/.career-sync/
 SSH client는 `career-storage`를 원격 호출하고, 홈서버의 Hermes는 같은 명령을 command transport로 호출한다.
 두 경로는 같은 홈서버 잠금과 S3 pointer 갱신 계약을 사용한다.
 
-### 추천 상태 Backend
+### 커리어 Backend
 
-`services/recommendation-api/`는 포지션과 공부 추천의 장기 상태를 제공하는 Backend다.
+`services/career-backend/`는 포지션 추천, 공부 추천, 회사 근거처럼 커리어 데이터의 장기 상태를 제공하는 Backend다.
 Node 22 위의 NestJS로 돌고 Prisma로 MySQL을 읽고 쓴다.
 DB 연결은 MySQL 인증 캐시가 비어도 전체 인증을 할 수 있도록 TLS를 쓴다.
 Backend와 MySQL이 속한 같은 Docker network를 신뢰 경계로 본다.
@@ -168,18 +168,18 @@ MySQL container가 자체 서명 인증서를 사용하므로 서버 인증서�
 
 | 경로                                                     | 책임                                                    |
 | ------------------------------------------------------ | ----------------------------------------------------- |
-| `services/recommendation-api/src/main.ts`              | 프로세스 시간대 고정, `API_HOST`와 `API_PORT`로 listen           |
-| `services/recommendation-api/src/app.module.ts`        | module 조립과 전역 filter·interceptor 등록                   |
-| `services/recommendation-api/src/config/`              | 환경값 읽기와 기동 전 검증                                       |
-| `services/recommendation-api/src/common/`              | 인증, 요청 ID, 본문 크기, zod 검증, 멱등 처리, 오류 응답 형식             |
-| `services/recommendation-api/src/positions/`           | 회사 정책, 공고 버전, 분석 상태와 추천 조립                            |
-| `services/recommendation-api/src/positions/repository/`| Prisma 질의. 도메인이 요구하는 단위로만 읽고 쓴다                       |
-| `services/recommendation-api/src/study/`               | 공부 소스, 수집 자료, cursor, 후보와 추천 판정                         |
-| `services/recommendation-api/src/health/`              | 생존 확인과 준비 확인                                          |
-| `services/recommendation-api/src/prisma/`              | `PrismaClient` 수명과 연결 설정                              |
-| `services/recommendation-api/src/contracts/`           | `scripts/`가 소유한 공고 후보 계약의 사본                          |
-| `services/recommendation-api/prisma/schema.prisma`     | model 정의. `prisma db pull`이 만든다                       |
-| `services/recommendation-api/prisma/migrations/`       | 순서가 있는 migration과 적용 기록                               |
+| `services/career-backend/src/main.ts`              | 프로세스 시간대 고정, `API_HOST`와 `API_PORT`로 listen           |
+| `services/career-backend/src/app.module.ts`        | module 조립과 전역 filter·interceptor 등록                   |
+| `services/career-backend/src/config/`              | 환경값 읽기와 기동 전 검증                                       |
+| `services/career-backend/src/common/`              | 인증, 요청 ID, 본문 크기, zod 검증, 멱등 처리, 오류 응답 형식             |
+| `services/career-backend/src/positions/`           | 회사 정책, 공고 버전, 분석 상태와 추천 조립                            |
+| `services/career-backend/src/positions/repository/`| Prisma 질의. 도메인이 요구하는 단위로만 읽고 쓴다                       |
+| `services/career-backend/src/study/`               | 공부 소스, 수집 자료, cursor, 후보와 추천 판정                         |
+| `services/career-backend/src/health/`              | 생존 확인과 준비 확인                                          |
+| `services/career-backend/src/prisma/`              | `PrismaClient` 수명과 연결 설정                              |
+| `services/career-backend/src/contracts/`           | `scripts/`가 소유한 공고 후보 계약의 사본                          |
+| `services/career-backend/prisma/schema.prisma`     | model 정의. `prisma db pull`이 만든다                       |
+| `services/career-backend/prisma/migrations/`       | 순서가 있는 migration과 적용 기록                               |
 
 
 **`src/contracts/posting-candidate.ts`는 사본이다.**
@@ -198,7 +198,7 @@ Backend는 local 개발에서는 `CAREER_BACKEND_DATABASE_URL`을 읽을 수 있
 두 형식을 함께 주면 시작 전에 실패한다.
 client는 `CAREER_BACKEND_URL`과 `CAREER_BACKEND_TOKEN` 또는
 `CAREER_BACKEND_TOKEN_FILE`만 읽으며 DB 자격증명을 받지 않는다.
-공부 추천과 포지션 client 는 `scripts/lib/recommendation-api-config.ts` 로 같은 연결값을 검증한다.
+공부 추천과 포지션 client 는 `scripts/lib/career-backend-config.ts` 로 같은 연결값을 검증한다.
 전환 기간에는 옛 `CAREER_RECOMMENDATION_*` 이름도 읽는다.
 
 **프로세스 시간대를 UTC에 고정한다.** 시각 컬럼이 모두 `DATETIME(3)`이라 시간대를 저장하지 않으므로,
@@ -206,7 +206,7 @@ client는 `CAREER_BACKEND_URL`과 `CAREER_BACKEND_TOKEN` 또는
 `src/main.ts`와 Prisma adapter 연결 옵션과 `vitest.config.ts` 셋이 함께 고정한다.
 
 endpoint 별 동작, 상태 코드와 transaction 경계는
-[`flow.md`](flow.md#추천-상태-backend)가 소유한다.
+[`flow.md`](flow.md#커리어-backend)가 소유한다.
 
 **쓰기 안전은 DB 행 잠금이 맡는다.** 쓰기 transaction이 자기 실행 행을 먼저 잠그고
 격리 수준을 `READ COMMITTED`로 둔다. 상태 전체를 메모리에 들고 쓰던 구조가 아니므로
@@ -220,7 +220,7 @@ endpoint 별 동작, 상태 코드와 transaction 경계는
 그래서 이 서비스는 자기 package 안에서 검증한다.
 
 ```bash
-# cwd: career-os/services/recommendation-api
+# cwd: career-os/services/career-backend
 npm run typecheck
 npm test
 ```
@@ -356,7 +356,7 @@ skill이 중간 파일 이름과 플래그를 알지 못하도록 모든 하위 
 | `recommendation/` | 추천 계약과 최종 답변 문구 |
 | `company-evidence/` | 근거 수집기와 그 계약 |
 | `feedback/` | 개인 제외 기준. 규칙은 Backend에서 읽는다 |
-| `recommendation-api/` | Backend client. 큐 조회와 분석 반영 |
+| `career-backend/` | Backend client. 큐 조회와 분석 반영 |
 | `company-tier-analysis/` | 회사 tier 모델 평가의 요청과 응답 계약 |
 | `render/` | HTML 생성과 검사 |
 
@@ -526,7 +526,7 @@ archive 진입점은 소스 필드에 복제하지 않고 `sourceKey` 별 regist
 ### Backend 경계
 
 `study-library/` 는 MySQL 드라이버나 서버 저장 로직을 갖지 않는다.
-schema 와 endpoint 는 `services/recommendation-api/src/study/` 가 소유한다.
+schema 와 endpoint 는 `services/career-backend/src/study/` 가 소유한다.
 포지션 쪽 `src/positions/` 와 같은 배치다.
 
 | 경로 | 책임 |

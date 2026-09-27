@@ -2,7 +2,7 @@ import type {
   CompanyEvidence,
   CompanyEvidenceSourceType,
   CompanyPreference,
-} from "../../../../services/recommendation-api/src/positions/schema.ts";
+} from "../../../../services/career-backend/src/positions/schema.ts";
 
 export type ActiveCompanyPosting = {
   title: string;

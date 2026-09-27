@@ -49,8 +49,8 @@ erDiagram
 - **칸끼리의 조건은 DB 의 `CHECK` 가 강제한다.** `scope` 마다 필수 칸이 다른 제외 규칙이나 HTTPS 만 받는 URL 이 그렇다. 이 제약은 `schema.prisma` 에 없고 migration SQL 에만 있다.
 
 table 별 칸과 제약은 아래 `position-recommender` 절이 소유한다.
-schema 는 `services/recommendation-api/prisma/` 가 관리하고,
-migration 적용 절차는 [`services/recommendation-api/README.md`](../services/recommendation-api/README.md) 가 소유한다.
+schema 는 `services/career-backend/prisma/` 가 관리하고,
+migration 적용 절차는 [`services/career-backend/README.md`](../services/career-backend/README.md) 가 소유한다.
 
 ### 홈서버 release
 
@@ -775,7 +775,7 @@ HTTP 계약과 오류 코드는 [`flow.md`](flow.md#study-topic-recommender)가 
 | `study_material_verdicts` | 고르지 않은 후보의 판정 |
 | `study_publications` | 외부 게시 성공 이력 |
 
-멱등 영수증은 추천 Backend 가 함께 쓰는 `request_receipts` 에 둔다.
+멱등 영수증은 커리어 Backend 가 함께 쓰는 `request_receipts` 에 둔다.
 
 옛 `fos-blog` 설계의 열세 table 에서 넷을 뺐다.
 `study_material_states` 와 `study_material_tags` 는 쓰는 화면과 값이 없다. client 가 보내는 `tags` 는 늘 빈 배열이다.

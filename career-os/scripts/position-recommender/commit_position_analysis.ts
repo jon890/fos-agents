@@ -3,14 +3,14 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { z } from "zod";
 import { runCli, type CliSpec } from "../lib/cli.ts";
-import { canonicalRequestHash } from "../../services/recommendation-api/src/common/idempotency/request-hash.ts";
+import { canonicalRequestHash } from "../../services/career-backend/src/common/idempotency/request-hash.ts";
 import {
   analysisFailureSchema,
   analysisQueueResponseSchema,
   analysisUpdateSchema,
-} from "../../services/recommendation-api/src/positions/schema.ts";
-import type { RecommendationApiClient } from "./recommendation-api/client.ts";
-import { createRecommendationApiClient } from "./recommendation-api/client.ts";
+} from "../../services/career-backend/src/positions/schema.ts";
+import type { CareerBackendClient } from "./career-backend/client.ts";
+import { createCareerBackendClient } from "./career-backend/client.ts";
 
 export const analysisUpdatesInputSchema = z
   .object({
@@ -22,7 +22,7 @@ export const analysisUpdatesInputSchema = z
   })
   .strict();
 
-type AnalysisResultsClient = Pick<RecommendationApiClient, "saveAnalysisResults">;
+type AnalysisResultsClient = Pick<CareerBackendClient, "saveAnalysisResults">;
 type ClientFactory = () => AnalysisResultsClient;
 
 function joinIds(ids: string[]): string {
@@ -32,7 +32,7 @@ function joinIds(ids: string[]): string {
 export async function commitPositionAnalysis(
   queuePath: string,
   inputPath: string,
-  createClient: ClientFactory = createRecommendationApiClient,
+  createClient: ClientFactory = createCareerBackendClient,
 ) {
   const queue = analysisQueueResponseSchema.parse(
     JSON.parse(readFileSync(resolve(queuePath), "utf8")) as unknown,
