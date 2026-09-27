@@ -50,6 +50,7 @@ erDiagram
 - **칸끼리의 조건은 DB 의 `CHECK` 가 강제한다.** `scope` 마다 필수 칸이 다른 제외 규칙이나 HTTPS 만 받는 URL 이 그렇다. 이 제약은 `schema.prisma` 에 없고 migration SQL 에만 있다.
 
 table 별 칸과 제약은 아래 `position-recommender` 절이 소유한다.
+면접 연습 table 은 `interview-practice` 절이, 공부 추천 table 은 `study-topic-recommender` 절이 소유한다.
 schema 는 `services/career-backend/prisma/` 가 관리하고,
 migration 적용 절차는 [`services/career-backend/README.md`](../services/career-backend/README.md) 가 소유한다.
 
@@ -172,18 +173,80 @@ brain에는 경력, 역할 선호와 경험 경계 등 개인 지식을 두고, 
 
 각 후보는 출처 식별자, 출처 종류와 역할, 주제, 제목, URL, 게시 시각, 공개 설명, 자료 종류를 가진다.
 
-### `state/drill-progress.json`
+### 면접 연습 table
 
-답변 연습의 진행과 복습 상태다. 학습 주제 생성 상태와 섞지 않는다.
+주제별 복습 상태, 연습 기록과 개인 질문은 `fos_career` 에 둔다.
+결정과 근거는 [ADR-129](adr/ADR-129-면접-연습-기록과-개인-질문은-backend가-소유한다.md)에 있다.
+`state/` 에 연습 기록 파일을 만들지 않는다.
 
-| 담는 것 |
-| --- |
-| 질문별 시도와 최근 결과 |
-| 다시 볼 질문과 복습 시점 |
-| 기술·인성 모드가 공유하는 진행 정보 |
+```mermaid
+erDiagram
+  interview_topic_progress ||--o{ interview_attempts : ""
+```
 
-일별 답변 기록은 꼬리질문일 때 원 질문 식별자, 부모 질문, 깊이, 확인 축, 중단 이유를
-선택 필드로 가진다.
+셋 모두 행을 지우지 않는다. 개인 질문은 `enabled` 로 끈다.
+
+#### `interview_topic_progress`
+
+복습 단위는 질문이 아니라 주제다. 같은 주제의 질문 하나를 통과하면 그 주제 전체의 복습일이 뒤로 밀린다.
+
+| 칸 | 타입 | 뜻 |
+| --- | --- | --- |
+| `drill_type` | `ENUM('tech','behavioral')` | 기본 키 앞부분 |
+| `topic` | `VARCHAR(100)` | 기본 키 뒷부분. 질문의 `topic` |
+| `pass_count` | `INT UNSIGNED` | `pass` 를 받은 횟수 |
+| `fail_count` | `INT UNSIGNED` | `shallow`, `fail`, `unknown` 을 받은 횟수 |
+| `next_review_date` | `DATE NULL` | 다음 복습일. 없으면 복습 대상이 아니다 |
+| `last_passed_date` | `DATE NULL` | 마지막으로 `pass` 를 받은 날 |
+| `updated_at` | `DATETIME(3)` | |
+
+복습일은 연습 기록을 추가하는 transaction 안에서 Backend 가 정한다.
+날짜는 Asia/Seoul 기준의 평가일(`evaluated_on`)에서 센다.
+
+| 점수 | 바뀌는 칸 | 다음 복습일 |
+| --- | --- | --- |
+| `pass` | `pass_count` 1 증가, `last_passed_date` 를 평가일로 | 평가일에 간격을 더한 날. 간격은 `pass_count` 가 1, 2, 3 … 일 때 1, 3, 7, 14, 30, 60일이고 그 뒤로는 60일 |
+| `shallow`, `fail`, `unknown` | `fail_count` 1 증가 | 평가일 다음 날 |
+
+#### `interview_attempts`
+
+연습 한 번이 한 행이다. 답변 원문은 담지 않는다.
+
+| 칸 | 타입 | 뜻 |
+| --- | --- | --- |
+| `attempt_id` | `CHAR(36)` | 기본 키. client 가 만든 UUID. `Idempotency-Key` 와 같은 값 |
+| `drill_type`, `topic` | | `interview_topic_progress` 를 가리키는 foreign key |
+| `question_id` | `VARCHAR(100)` | 공개, 개인, 공고별 질문의 `id` |
+| `question` | `VARCHAR(2000)` | 그때 물은 질문 원문. 질문 파일이 바뀌어도 기록이 읽히게 남긴다 |
+| `score` | `ENUM('pass','shallow','fail','unknown')` | |
+| `feedback` | `VARCHAR(500) NULL` | 가장 큰 공백 같은 짧은 피드백 |
+| `evaluated_on` | `DATE` | Asia/Seoul 기준 평가일 |
+| `target_company`, `target_role`, `target_value_axis` | `VARCHAR(100) NULL` | 포지션별 연습일 때만 |
+| `root_question_id` | `VARCHAR(100) NULL` | 꼬리질문일 때 원 질문 |
+| `parent_question` | `VARCHAR(2000) NULL` | 꼬리질문일 때 바로 앞 질문 |
+| `follow_up_depth` | `TINYINT UNSIGNED NULL` | 1부터 4까지 |
+| `follow_up_axis` | `ENUM('clarification','decision','counterexample','operations','evidence-boundary') NULL` | |
+| `stop_reason` | `ENUM('depth-limit','needs-study','answer-complete','session-ended') NULL` | |
+| `created_at` | `DATETIME(3)` | |
+
+`(drill_type, topic, created_at)` 에 index 를 둔다.
+
+#### `interview_personal_questions`
+
+개인 경험에서 나온 질문이다. 공개 질문 은행에 넣지 않는다.
+
+| 칸 | 타입 | 뜻 |
+| --- | --- | --- |
+| `question_id` | `VARCHAR(100)` | 기본 키. 질문의 `id` |
+| `drill_type` | `ENUM('tech','behavioral')` | |
+| `topic` | `VARCHAR(100)` | |
+| `enabled` | `BOOLEAN` | 끈 질문은 연습에 나오지 않는다 |
+| `payload` | `JSON` | 질문 전체. 공개 질문 은행의 질문 항목과 같은 형식이다 |
+| `created_at`, `updated_at` | `DATETIME(3)` | |
+
+`payload` 의 형식은 DB 제약이 아니라 Backend 의 zod 검사가 지킨다.
+`payload` 안의 `id`, `topic` 은 행의 `question_id`, `topic` 과 같아야 하고, 다르면 `400` 이다.
+`answerSignals` 와 `followUps` 는 따로 조회하지 않고 질문 전체가 한 번에 모델에게 전달되므로 자식 table 로 나누지 않는다.
 
 ## position-recommender
 

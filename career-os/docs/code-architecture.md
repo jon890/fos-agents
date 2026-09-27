@@ -164,6 +164,7 @@ MySQL container가 자체 서명 인증서를 사용하므로 서버 인증서�
 서비스 코드, HTTP 계약과 migration은 `career-os`가 소유한다.
 배포 설정, database와 계정 생성, network와 backup은 홈서버 인프라 저장소가 소유한다.
 공부 소스, 수집 자료, 후보, 추천과 제외 판정은 `/api/study/v1` 에서 읽고 쓴다.
+면접 연습의 주제별 복습 상태, 연습 기록과 개인 질문은 `/api/interview/v1` 에서 읽고 쓴다.
 
 
 | 경로                                                     | 책임                                                    |
@@ -175,6 +176,7 @@ MySQL container가 자체 서명 인증서를 사용하므로 서버 인증서�
 | `services/career-backend/src/positions/`           | 회사 정책, 공고 버전, 분석 상태와 추천 조립                            |
 | `services/career-backend/src/positions/repository/`| Prisma 질의. 도메인이 요구하는 단위로만 읽고 쓴다                       |
 | `services/career-backend/src/study/`               | 공부 소스, 수집 자료, cursor, 후보와 추천 판정                         |
+| `services/career-backend/src/interview/`           | 주제별 복습 상태, 연습 기록, 개인 질문과 복습일 규칙                        |
 | `services/career-backend/src/health/`              | 생존 확인과 준비 확인                                          |
 | `services/career-backend/src/prisma/`              | `PrismaClient` 수명과 연결 설정                              |
 | `services/career-backend/src/contracts/`           | `scripts/`가 소유한 공고 후보 계약의 사본                          |
@@ -300,7 +302,7 @@ npm test
 | 자리 | 담는 것 |
 | --- | --- |
 | `applications/<company>/<position>/evidence/interview-questions.json` | 공고에서 파생한 포지션별 질문 |
-| `library/question-bank/` | 개인 경험에서 파생해 여러 지원에서 다시 쓰는 질문 |
+| 커리어 Backend `interview_personal_questions` | 개인 경험에서 파생해 여러 지원에서 다시 쓰는 질문 |
 | `public/question-bank/` | 공개 가능한 일반 질문 |
 | `public/question-bank/sources.json` | 질문 출처의 공식 URL 과 확인일 |
 
@@ -310,10 +312,25 @@ npm test
 스킬이 회사와 역할을 `applications/<company>/<position>/` 경로로 해석해 스크립트에 넘긴다.
 TypeScript 스크립트가 brain 을 직접 조회하지 않는다.
 
-`scripts/interview-drill/`은 `interview-practice`의 기술·인성 모드에서 공통 진행과 복습 상태를 처리한다.
+`scripts/interview-drill/`은 `interview-practice`의 기술·인성 모드에서 질문 선별과 연습 기록을 처리한다.
 공고별 `evidence/interview-questions.json`을 명시하면 포지션 질문과 공통 기반 질문을 섞어 구성한다.
 `follow-up-policy.ts`는 답변 수준에 따른 꼬리질문 축과 최대 깊이를 제공한다.
-복습 상태는 `state/drill-progress.json` 하나에 저장한다.
+
+주제별 복습 상태, 연습 기록과 개인 질문은 커리어 Backend 가 소유한다.
+결정과 근거는 [ADR-129](adr/ADR-129-면접-연습-기록과-개인-질문은-backend가-소유한다.md)에 있다.
+`drill-engine.ts` 는 이 셋을 파일에 쓰지 않는다.
+
+| 명령 | 책임 |
+| --- | --- |
+| `drill-engine.ts select <tech\|behavioral> [--application-dir] [--target-bar] [--count]` | 복습 상태와 개인 질문을 읽어 오늘 질문을 JSON 으로 낸다 |
+| `drill-engine.ts record --attempt-id ...` | 연습 한 번을 기록하고 갱신된 주제 복습 상태를 JSON 으로 낸다 |
+| `drill-engine.ts personal add --file <json\|jsonl>` | 개인 질문을 더하거나 같은 `id` 를 덮어쓴다 |
+| `drill-engine.ts personal disable --question-id <id>` | 개인 질문을 끈다 |
+
+HTTP 호출은 `scripts/interview-drill/career-backend/client.ts` 가 맡는다.
+연결값은 공부 추천, 포지션 client 와 같이 `scripts/lib/career-backend-config.ts` 로 검증한다.
+Backend 에 닿지 못하면 명령은 종료 코드 1 로 끝나고 로컬 파일로 대신하지 않는다.
+
 후보풀과 리포트 중간 파일처럼 다시 만들 수 있는 실행 자료는 `state/`에 두지 않는다.
 
 `config/interview-question-sources.ts`는 공식 문서, 기술 블로그, 공개 영상과 GitHub 가이드의 역할을 구분한다.
