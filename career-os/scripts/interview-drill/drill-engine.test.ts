@@ -30,6 +30,69 @@ function store(): FileInterviewPracticeStore {
 }
 
 describe("면접 연습 CLI", () => {
+  test("설정이 없으면 doctor가 저장소와 후보자 맥락을 모두 실패로 낸다", async () => {
+    const result = (await runDrillCli(["doctor"], {
+      environment: {},
+      createStore: () => {
+        throw new Error("만들면 안 됩니다.");
+      },
+      readFile: () => "",
+    })) as { passed: boolean; checks: Array<{ name: string; ok: boolean }> };
+    expect(result.passed).toBeFalse();
+    expect(result.checks.map(({ name, ok }) => ({ name, ok }))).toEqual([
+      { name: "CAREER_STORE", ok: false },
+      { name: "CAREER_MEMORY", ok: false },
+    ]);
+  });
+  test("file 저장소와 유효한 파일 후보자 맥락이면 doctor가 통과한다", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "drill-doctor-"));
+    directories.push(directory);
+    const result = (await runDrillCli(["doctor"], {
+      environment: { CAREER_STORE: "file", CAREER_STORE_DIR: directory, CAREER_MEMORY: "file", CAREER_MEMORY_FILE: "memory.json" },
+      createStore: store,
+      readFile: () => JSON.stringify({
+        schemaVersion: 1,
+        currentRole: { title: "Backend Engineer", yearsOfExperience: 3, bar: "production" },
+        experience: { direct: [], adjacent: [], studyOnly: [] },
+        targets: [],
+      }),
+    })) as { passed: boolean };
+    expect(result.passed).toBeTrue();
+  });
+  test("memory와 잘못된 저장소 doctor는 저장소를 만들지 않고 모든 점검을 낸다", async () => {
+    const createStore = () => {
+      throw new Error("저장소 생성 실패");
+    };
+    const memory = await runDrillCli(["memory"], {
+      environment: { CAREER_MEMORY: "brain" },
+      createStore,
+      readFile: () => "",
+    });
+    expect((memory as { provider: string }).provider).toBe("brain");
+    const doctor = (await runDrillCli(["doctor"], {
+      environment: { CAREER_MEMORY: "brain" },
+      createStore,
+      readFile: () => "",
+    })) as { checks: Array<{ name: string; ok: boolean }> };
+    expect(doctor.checks.map(({ name, ok }) => ({ name, ok }))).toEqual([
+      { name: "CAREER_STORE", ok: false },
+      { name: "CAREER_MEMORY", ok: true },
+    ]);
+  });
+  test("저장소 생성이 실패해도 brain 후보자 맥락 doctor 점검은 계속한다", async () => {
+    const result = (await runDrillCli(["doctor"], {
+      environment: { CAREER_STORE: "file", CAREER_MEMORY: "brain" },
+      createStore: () => {
+        throw new Error("저장소 생성 실패");
+      },
+      readFile: () => "",
+    })) as { passed: boolean; checks: Array<{ name: string; ok: boolean }> };
+    expect(result.passed).toBeFalse();
+    expect(result.checks.map(({ name, ok }) => ({ name, ok }))).toEqual([
+      { name: "CAREER_STORE", ok: false },
+      { name: "CAREER_MEMORY", ok: true },
+    ]);
+  });
   test("개인 질문을 select 결과에 넣는다", async () => {
     const value = store();
     await value.recordAttempt({

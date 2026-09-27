@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -117,4 +117,44 @@ test("잘못된 Backend 응답은 기록 여부를 단정하지 않는다", asyn
   } finally {
     server.stop(true);
   }
+});
+
+test("저장소 설정이 없어도 brain 후보자 맥락 memory 명령은 성공한다", () => {
+  const result = invoke(["memory"], { CAREER_STORE: "", CAREER_MEMORY: "brain" });
+  expect(result.code).toBe(0);
+  expect(JSON.parse(result.stdout).provider).toBe("brain");
+});
+
+test("두 설정이 없으면 doctor 명령은 실패 항목을 JSON으로 낸다", () => {
+  const result = invoke(["doctor"], { CAREER_STORE: "", CAREER_MEMORY: "" });
+  expect(result.code).toBe(1);
+  const parsed = JSON.parse(result.stdout) as { passed: boolean; checks: Array<{ name: string; ok: boolean }> };
+  expect(parsed.passed).toBeFalse();
+  expect(parsed.checks.map(({ name, ok }) => ({ name, ok }))).toEqual([
+    { name: "CAREER_STORE", ok: false },
+    { name: "CAREER_MEMORY", ok: false },
+  ]);
+});
+
+test("유효한 file 설정의 doctor 명령은 성공한다", () => {
+  const directory = mkdtempSync(join(tmpdir(), "drill-cli-doctor-"));
+  directories.push(directory);
+  const memoryPath = join(directory, "candidate-memory.json");
+  writeFileSync(
+    memoryPath,
+    JSON.stringify({
+      schemaVersion: 1,
+      currentRole: { title: "Backend Engineer", yearsOfExperience: 3, bar: "production" },
+      experience: { direct: [], adjacent: [], studyOnly: [] },
+      targets: [],
+    }),
+  );
+  const result = invoke(["doctor"], {
+    CAREER_STORE: "file",
+    CAREER_STORE_DIR: join(directory, "store"),
+    CAREER_MEMORY: "file",
+    CAREER_MEMORY_FILE: memoryPath,
+  });
+  expect(result.code).toBe(0);
+  expect(JSON.parse(result.stdout).passed).toBeTrue();
 });

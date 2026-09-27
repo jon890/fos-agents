@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import {
   attemptBodySchema,
@@ -24,6 +24,7 @@ import {
 } from "./follow-up-policy.ts";
 import { createInterviewPracticeStore } from "./store/index.ts";
 import type { InterviewPracticeStore } from "./store/port.ts";
+import { loadCandidateMemory } from "./memory.ts";
 
 export type DrillType = "tech" | "behavioral";
 export type ScoreResult = "pass" | "shallow" | "fail" | "unknown";
@@ -244,7 +245,7 @@ function type(value: string | undefined): DrillType {
   return value;
 }
 function usage(): string {
-  return "Usage: drill-engine.ts select <tech|behavioral> | record --attempt-id ... | personal add --file <path> | personal disable --question-id <id>";
+  return "Usage: drill-engine.ts memory | doctor | select <tech|behavioral> | record --attempt-id ... | personal add --file <path> | personal disable --question-id <id>";
 }
 function parsePersonal(
   content: string,
@@ -269,8 +270,55 @@ function parsePersonal(
 
 export async function runDrillCli(
   argv: string[],
-  deps: { createStore: () => InterviewPracticeStore; readFile: (path: string) => string },
+  deps: {
+    createStore: () => InterviewPracticeStore;
+    readFile: (path: string) => string;
+    environment?: Record<string, string | undefined>;
+  },
 ): Promise<unknown> {
+  const environment = deps.environment ?? process.env;
+  if (argv[0] === "memory") {
+    checkOptions(argv, 1, []);
+    return loadCandidateMemory(environment, deps.readFile);
+  }
+  if (argv[0] === "doctor") {
+    checkOptions(argv, 1, []);
+    const checks: Array<{ name: string; ok: boolean; message: string }> = [];
+    const store = environment.CAREER_STORE?.trim();
+    if (store !== "backend" && store !== "file") {
+      checks.push({
+        name: "CAREER_STORE",
+        ok: false,
+        message: "CAREER_STORE 에 backend 또는 file 을 설정한다.",
+      });
+    } else {
+      try {
+        if (store === "file") {
+          const directory = environment.CAREER_STORE_DIR?.trim() || join(careerOsRoot(), "state", "interview-practice");
+          mkdirSync(directory, { recursive: true });
+        }
+        await deps.createStore().listProgress("tech");
+        checks.push({ name: "CAREER_STORE", ok: true, message: `${store} 저장소를 사용할 수 있습니다.` });
+      } catch (error) {
+        checks.push({
+          name: "CAREER_STORE",
+          ok: false,
+          message: `저장소를 확인하지 못했습니다: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
+    }
+    try {
+      loadCandidateMemory(environment, deps.readFile);
+      checks.push({ name: "CAREER_MEMORY", ok: true, message: "후보자 맥락을 사용할 수 있습니다." });
+    } catch (error) {
+      checks.push({
+        name: "CAREER_MEMORY",
+        ok: false,
+        message: `후보자 맥락을 확인하지 못했습니다. 템플릿을 career-os/library/candidate-memory.json 으로 복사해 값을 채웁니다: ${error instanceof Error ? error.message : String(error)}`,
+      });
+    }
+    return { passed: checks.every((check) => check.ok), checks };
+  }
   if (argv[0] === "select") {
     checkOptions(argv, 2, ["--application-dir", "--target-bar", "--count"]);
     const drillType = type(argv[1]);
@@ -390,14 +438,20 @@ export async function runDrillCli(
 }
 if (import.meta.main) {
   try {
-    console.log(
-      JSON.stringify(
-        await runDrillCli(process.argv.slice(2), {
-          createStore: () => createInterviewPracticeStore(),
-          readFile: (path) => readFileSync(path, "utf8"),
-        }),
-      ),
-    );
+    const result = await runDrillCli(process.argv.slice(2), {
+      environment: process.env,
+      createStore: () => createInterviewPracticeStore(process.env),
+      readFile: (path) => readFileSync(path, "utf8"),
+    });
+    console.log(JSON.stringify(result));
+    if (
+      process.argv[2] === "doctor" &&
+      typeof result === "object" &&
+      result !== null &&
+      "passed" in result &&
+      result.passed === false
+    )
+      process.exitCode = 1;
   } catch (error) {
     if (error instanceof UsageError) {
       console.error(usage());
