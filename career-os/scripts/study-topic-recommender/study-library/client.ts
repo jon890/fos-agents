@@ -28,7 +28,9 @@ export const DEFAULT_STUDY_LIBRARY_MAX_RETRIES = 2;
 
 export type StudyLibraryFetch = (input: URL, init: RequestInit) => Promise<Response>;
 
-export class StudyLibraryApiError extends Error {
+export class StudyLibraryClientError extends Error {}
+
+export class StudyLibraryApiError extends StudyLibraryClientError {
   readonly status: number;
   readonly code?: string;
   readonly requestId?: string;
@@ -107,24 +109,31 @@ function parseRetryAfter(response: Response): number | undefined {
   return Number.isSafeInteger(seconds) ? seconds : undefined;
 }
 
-class StudyLibraryBodyReadError extends Error {
+export class StudyLibraryBodyReadError extends StudyLibraryClientError {
   constructor() {
     super("학습자료 API 응답 본문 읽기 실패");
     this.name = "StudyLibraryBodyReadError";
   }
 }
 
-class StudyLibraryMalformedJsonError extends Error {
+export class StudyLibraryMalformedJsonError extends StudyLibraryClientError {
   constructor() {
     super("학습자료 API JSON 응답 파싱 실패");
     this.name = "StudyLibraryMalformedJsonError";
   }
 }
 
-class StudyLibraryResponseValidationError extends Error {
+export class StudyLibraryResponseValidationError extends StudyLibraryClientError {
   constructor(issues: { path: PropertyKey[]; message: string }[]) {
     super(`학습자료 API 응답 검증 실패: ${formatIssues(issues)}`);
     this.name = "StudyLibraryResponseValidationError";
+  }
+}
+
+export class StudyLibraryNetworkError extends StudyLibraryClientError {
+  constructor() {
+    super("학습자료 API 네트워크 요청 실패");
+    this.name = "StudyLibraryNetworkError";
   }
 }
 
@@ -246,21 +255,21 @@ export class StudyLibraryClient {
         return parsed.data;
       } catch (error) {
         if (
-          error instanceof StudyLibraryApiError ||
-          error instanceof StudyLibraryMalformedJsonError ||
-          error instanceof StudyLibraryResponseValidationError
+          error instanceof StudyLibraryApiError
+          || error instanceof StudyLibraryMalformedJsonError
+          || error instanceof StudyLibraryResponseValidationError
         ) {
           throw error;
         }
         if (attempt >= this.maxRetries) {
-          throw new Error("학습자료 API 네트워크 요청 실패");
+          throw new StudyLibraryNetworkError();
         }
         continue;
       } finally {
         clearTimeout(timer);
       }
     }
-    throw new Error("학습자료 API 네트워크 요청 실패");
+    throw new StudyLibraryNetworkError();
   }
 
   async getSources(): Promise<StudyLibrarySourcesResponse> {
