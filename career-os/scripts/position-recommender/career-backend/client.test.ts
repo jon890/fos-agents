@@ -283,7 +283,7 @@ describe("position recommendation API client", () => {
     });
     await expect(invalidError.saveCollection({}, "key-400")).rejects.toMatchObject({
       status: 400,
-      code: "INVALID_RESPONSE",
+      code: "HTTP_ERROR",
     });
     expect(invalidErrorCalls).toBe(1);
 

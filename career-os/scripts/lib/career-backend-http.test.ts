@@ -86,6 +86,16 @@ describe("careerBackendRequest", () => {
     }
   });
 
+  test("본문이 JSON 이 아닌 실패 응답은 HTTP 오류로 두고 Retry-After를 남긴다", async () => {
+    await expect(request(async () => new Response("<html>too many requests</html>", {
+      status: 429,
+      headers: { "Content-Type": "text/html", "Retry-After": "30" },
+    }))).rejects.toMatchObject({ status: 429, code: "HTTP_ERROR", retryAfter: 30 });
+
+    await expect(request(async () => new Response("not json", { status: 200 })))
+      .rejects.toMatchObject({ status: 200, code: "INVALID_RESPONSE" });
+  });
+
   test("오류 메시지에 token, 요청 본문, 서버 message를 넣지 않는다", async () => {
     let thrown: unknown;
     try {

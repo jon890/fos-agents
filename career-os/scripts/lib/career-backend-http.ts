@@ -82,13 +82,24 @@ export async function careerBackendRequest<T>(
           lastError = error;
           continue;
         }
-        const responseError = new CareerBackendHttpError(
-          response.status,
-          error instanceof SyntaxError ? "INVALID_RESPONSE" : "NETWORK_ERROR",
-          error instanceof SyntaxError
-            ? "커리어 Backend 응답을 읽을 수 없습니다."
-            : "커리어 Backend에 연결하지 못했습니다.",
-        );
+        // 실패 응답의 본문이 JSON 이 아니면(예: 프록시가 HTML 로 돌려준 429) 응답 계약 오류가 아니라
+        // HTTP 실패로 두고 Retry-After 를 남긴다. 성공 응답의 깨진 본문만 계약 오류다.
+        const responseError =
+          error instanceof SyntaxError && !response.ok
+            ? new CareerBackendHttpError(
+                response.status,
+                "HTTP_ERROR",
+                "커리어 Backend 요청이 실패했습니다.",
+                undefined,
+                retryAfterOf(response),
+              )
+            : new CareerBackendHttpError(
+                response.status,
+                error instanceof SyntaxError ? "INVALID_RESPONSE" : "NETWORK_ERROR",
+                error instanceof SyntaxError
+                  ? "커리어 Backend 응답을 읽을 수 없습니다."
+                  : "커리어 Backend에 연결하지 못했습니다.",
+              );
         if (response.status < 500 || attempt === maxRetries) throw responseError;
         lastError = responseError;
         continue;
