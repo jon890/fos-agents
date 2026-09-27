@@ -25,7 +25,7 @@ from naver_editor_core import (
     set_stage,
     wait_until,
 )
-from naver_editor_photos import image_count
+from naver_editor_photos import image_count, incomplete_images
 
 PUBLISH_SETTINGS_BUTTON = 'button[data-click-area="tpb.publish"]'
 
@@ -57,7 +57,7 @@ def settings_state(page: Page) -> dict:
     """열린 발행 설정의 카테고리와 태그를 읽는다."""
     raw = page.js(
         "JSON.stringify({"
-        ' category: document.querySelector(\'button[data-click-area="tpb*i.category"]\')?.innerText.trim() || \'\','
+        ' category: document.querySelector(\'button[data-click-area="tpb*i.category"]\')?.textContent.trim() || \'\','
         ' tags: [...document.querySelectorAll(\'span[id^="tag-item-"][aria-label]\')]'
         "   .map(e => e.getAttribute('aria-label'))"
         "})"
@@ -77,6 +77,50 @@ def category_option_finder(category: str) -> str:
     )
 
 
+def click_stable_settings_control(page: Page, selector: str) -> bool:
+    """움직이는 발행 설정 창이 멈추고 버튼이 드러난 뒤 누른다."""
+    last_top = None
+    stable_since = 0.0
+    point = None
+
+    def ready() -> bool:
+        nonlocal last_top, stable_since, point
+        raw = page.js(
+            f"(() => {{ const el = document.querySelector({json.dumps(selector)});"
+            " if (!el) return null; el.scrollIntoView({block:'nearest'});"
+            " const r = el.getBoundingClientRect();"
+            " if (!r.width || !r.height) return null;"
+            " const x = r.left + r.width / 2, y = r.top + r.height / 2;"
+            " const hit = document.elementFromPoint(x, y);"
+            " return JSON.stringify({top:r.top, x, y, uncovered:!!(hit && (el === hit || el.contains(hit)))}); })()"
+        )
+        if not raw:
+            last_top = None
+            return False
+        current = json.loads(raw)
+        if not current["uncovered"]:
+            last_top = None
+            return False
+        now = time.monotonic()
+        if last_top is not None and abs(current["top"] - last_top) < 0.5:
+            if now - stable_since >= 0.2:
+                point = current
+                return True
+        else:
+            last_top = current["top"]
+            stable_since = now
+        return False
+
+    if not wait_until(ready, seconds=5.0):
+        return False
+    for kind in ("mousePressed", "mouseReleased"):
+        page.call(
+            "Input.dispatchMouseEvent", type=kind, x=point["x"], y=point["y"],
+            button="left", clickCount=1,
+        )
+    return True
+
+
 def cmd_settings(page: Page, args: argparse.Namespace) -> int:
     """카테고리와 태그를 발행 설정에 넣고 설정만 닫는다."""
     draft = args.draft_data
@@ -93,7 +137,7 @@ def cmd_settings(page: Page, args: argparse.Namespace) -> int:
     if not open_settings(page):
         print("발행 설정을 열지 못했다", file=sys.stderr)
         return 1
-    if not click(page, 'button[data-click-area="tpb*i.category"]'):
+    if not click_stable_settings_control(page, 'button[data-click-area="tpb*i.category"]'):
         print("카테고리 선택기를 열지 못했다", file=sys.stderr)
         return 1
     label = category_option_finder(category)
@@ -107,7 +151,7 @@ def cmd_settings(page: Page, args: argparse.Namespace) -> int:
         print(f"카테고리 선택이 반영되지 않았다: {category}", file=sys.stderr)
         return 1
     for tag in tags:
-        if not click(page, "#tag-input"):
+        if not click_stable_settings_control(page, "#tag-input"):
             print("태그 입력칸을 누르지 못했다", file=sys.stderr)
             return 1
         page.type_text(tag)
@@ -200,6 +244,13 @@ def save_readiness(page: Page, args: argparse.Namespace) -> list[str]:
             problems.append(f"태그가 다르다: {state.get('tags', [])!r}")
         if not close_settings(page):
             problems.append("발행 설정을 닫지 못했다")
+    if actual["사진"] == expected["사진"]:
+        incomplete = [
+            str(index + 1)
+            for index in incomplete_images(page, actual["사진"])
+        ]
+        if incomplete:
+            problems.append(f"사진 전송이 끝나지 않았다: {', '.join(incomplete)}번째")
     return problems
 
 
@@ -217,6 +268,10 @@ def cmd_save(page: Page, args: argparse.Namespace) -> int:
     before = page.js(save_count_js())
     if before is None:
         print("임시저장 개수를 읽지 못해 저장하지 않는다", file=sys.stderr)
+        return 1
+    photo_count = sum(block["type"] == "image" for block in args.draft_data["blocks"])
+    if image_count(page) != photo_count or incomplete_images(page, photo_count):
+        print("저장 직전에 사진 수나 전송 상태가 달라져 저장하지 않는다", file=sys.stderr)
         return 1
     # JS의 `.click()`은 저장되지 않는다. 사람이 누른 것으로 인정되는 마우스 이벤트를 쓴다.
     if not click_button(page, "저장"):
@@ -254,6 +309,8 @@ def cmd_state(page: Page, args: argparse.Namespace) -> int:
     if not close_settings(page):
         print("상태를 읽은 뒤 발행 설정을 닫지 못했다", file=sys.stderr)
         return 1
+    photo_count = image_count(page)
+    incomplete = incomplete_images(page, photo_count)
     state = {
         "targetId": args.target_id,
         "docTitle": page.js("document.title"),
@@ -261,7 +318,8 @@ def cmd_state(page: Page, args: argparse.Namespace) -> int:
         # JS의 length는 이모지를 둘로 세므로 초안과 같은 셈법으로 Python에서 센다.
         "bodyLines": len(body),
         "bodyChars": sum(map(len, body)),
-        "images": image_count(page),
+        "images": photo_count,
+        "uploadedImages": photo_count - len(incomplete),
         "fitImages": page.js(
             "document.querySelectorAll('.se-component.se-image .se-component-content-fit').length"
         )

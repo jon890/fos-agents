@@ -35,13 +35,20 @@ STICKER_BUTTON = "button.se-sticker-toolbar-button"
 PLACE_BUTTON = "button.se-map-toolbar-button"
 
 
+def place_address_without_repeated_name(name: str, address: str) -> str:
+    """지도 검색 결과와 카드 주소 끝에 반복된 상호명을 제거한다."""
+    address = normalize(address)
+    suffix = " " + normalize(name)
+    return address[: -len(suffix)] if suffix.strip() and address.endswith(suffix) else address
+
+
 def insert_sticker(page: Page, block: dict) -> str:
     """자리표시 문단에 코드로 지정한 실제 스티커를 넣는다."""
     code = block.get("stickerCode", "")
     if code not in STICKER_CODES.values():
         return f"지원하지 않는 stickerCode: {code}"
     marker = sticker_placeholder(block)
-    if not focus_placeholder(page, marker):
+    if not wait_until(lambda: focus_placeholder(page, marker), seconds=5.0):
         return f"스티커 자리를 찾지 못했다: {marker}"
     before = component_count(page, "sticker")
     panel_open = page.js(
@@ -74,7 +81,10 @@ def place_candidates(page: Page) -> list[dict]:
         " return {index, name: lines[0] || '', address: lines.slice(1).join(' ')};"
         "}))"
     )
-    return json.loads(raw or "[]")
+    candidates = json.loads(raw or "[]")
+    for item in candidates:
+        item["address"] = place_address_without_repeated_name(item["name"], item["address"])
+    return candidates
 
 
 def ensure_domestic_map(page: Page) -> str:
@@ -112,7 +122,7 @@ def insert_map(page: Page, block: dict) -> str:
     if not name or not address:
         return "지도 블록의 name 과 address 를 모두 채운다"
     marker = map_placeholder(block)
-    if not focus_placeholder(page, marker):
+    if not wait_until(lambda: focus_placeholder(page, marker), seconds=5.0):
         return f"장소 자리를 찾지 못했다: {marker}"
     before = component_count(page, "placesMap")
     if not click(page, PLACE_BUTTON):
@@ -169,13 +179,23 @@ def insert_map(page: Page, block: dict) -> str:
 
 
 def component_state(page: Page) -> dict:
-    raw = page.js(
-        "JSON.stringify({"
-        "stickers:[...document.querySelectorAll('.se-component.se-sticker img')].map(e=>e.alt),"
-        "maps:[...document.querySelectorAll('.se-component.se-placesMap')].map(e=>e.innerText)"
-        "})"
+    stickers = []
+    for index in range(component_count(page, "sticker")):
+        def visible_sticker_code() -> str:
+            return page.js(
+                f"(() => {{ const sticker = [...document.querySelectorAll('.se-component.se-sticker')][{index}];"
+                " if (!sticker) return '';"
+                " sticker.scrollIntoView({behavior: 'instant', block: 'center'});"
+                " return sticker.querySelector('img')?.alt || ''; })()"
+            ) or ""
+
+        wait_until(lambda: bool(visible_sticker_code()), seconds=15.0)
+        stickers.append(visible_sticker_code())
+    raw_maps = page.js(
+        "JSON.stringify([...document.querySelectorAll('.se-component.se-placesMap')]"
+        ".map(e=>e.innerText))"
     )
-    return json.loads(raw or "{}")
+    return {"stickers": stickers, "maps": json.loads(raw_maps or "[]")}
 
 
 def component_problems(draft: dict, state: dict, lines: list[str]) -> list[str]:
@@ -195,7 +215,12 @@ def component_problems(draft: dict, state: dict, lines: list[str]) -> list[str]:
         for text in state.get("maps", [])
     ]
     actual_maps = [
-        (parts[0], normalize_place_address(parts[1])) for parts in maps if len(parts) >= 2
+        (
+            parts[0],
+            normalize_place_address(place_address_without_repeated_name(parts[0], parts[1])),
+        )
+        for parts in maps
+        if len(parts) >= 2
     ]
     if actual_maps != wanted_maps:
         problems.append("지도 상호명이나 주소가 초안과 다르다")
@@ -229,7 +254,11 @@ def cmd_components(page: Page, args: argparse.Namespace) -> int:
             print(problem, file=sys.stderr)
             return 1
         counts[kind] += 1
-    problems = component_problems(draft, component_state(page), paragraphs(page, BODY_SELECTOR))
+    def current_problems() -> list[str]:
+        return component_problems(draft, component_state(page), paragraphs(page, BODY_SELECTOR))
+
+    wait_until(lambda: not current_problems(), seconds=10.0)
+    problems = current_problems()
     if problems:
         print("구성요소가 초안과 다르다: " + ", ".join(problems), file=sys.stderr)
         return 1

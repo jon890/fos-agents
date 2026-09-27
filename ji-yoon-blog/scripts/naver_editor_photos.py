@@ -76,10 +76,31 @@ def image_uploaded(page: Page, index: int) -> bool:
     """자리만 생긴 상태가 아니라 네이버 사진 주소로 전송됐는지 읽는다."""
     return bool(
         page.js(
-            f"[...document.querySelectorAll('.se-component.se-image')][{index}]"
-            "?.querySelector('img')?.src.includes('blogfiles.pstatic.net')"
+            f"(() => {{ const img = [...document.querySelectorAll('.se-component.se-image')][{index}]"
+            "?.querySelector('img'); return !!(img && img.src.includes('blogfiles.pstatic.net')"
+            " && img.complete && img.naturalWidth > 0); })()"
         )
     )
+
+
+def image_uploaded_visible(page: Page, index: int) -> bool:
+    """검사할 사진을 편집 화면에 보이게 한 뒤 네이버 주소를 확인한다."""
+    shown = page.js(
+        f"(() => {{ const image = [...document.querySelectorAll('.se-component.se-image')][{index}];"
+        " if (!image) return false;"
+        " image.scrollIntoView({behavior: 'instant', block: 'center'}); return true; })()"
+    )
+    return bool(shown and image_uploaded(page, index))
+
+
+def incomplete_images(page: Page, count: int, seconds: float = 15.0) -> list[int]:
+    """화면 밖 미리보기를 다시 보이게 한 뒤 실제 전송 상태를 확인한다."""
+    missing = []
+    for index in range(count):
+        if not wait_until(lambda: image_uploaded_visible(page, index), seconds=seconds):
+            missing.append(index)
+    # 뒤쪽 사진으로 스크롤하는 동안 앞쪽 사진이 다시 바뀌었는지도 확인한다.
+    return sorted(set(missing) | {index for index in range(count) if not image_uploaded(page, index)})
 
 
 def fit_image(page: Page, index: int) -> bool:
@@ -149,7 +170,7 @@ def cmd_photos(page: Page, args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return 1
-    if any(not image_uploaded(page, index) for index in range(inserted)):
+    if incomplete_images(page, inserted):
         print("기존 사진 중 전송이 끝나지 않은 것이 있다. 새 탭에서 다시 시작한다", file=sys.stderr)
         return 1
     visible_lines = paragraphs(page, BODY_SELECTOR)
@@ -176,7 +197,8 @@ def cmd_photos(page: Page, args: argparse.Namespace) -> int:
             print(f"사진이 본문에 들어가지 않았다: {path}", file=sys.stderr)
             return 1
         if not wait_until(
-            lambda: image_uploaded(page, before) or bool(blocking_popup(page)), seconds=90.0
+            lambda: image_uploaded_visible(page, before) or bool(blocking_popup(page)),
+            seconds=90.0,
         ):
             print(f"사진 전송이 끝나지 않았다: {path}", file=sys.stderr)
             return 1
@@ -187,9 +209,19 @@ def cmd_photos(page: Page, args: argparse.Namespace) -> int:
             print(f"사진에 `문서 너비`를 적용하지 못했다: {path}", file=sys.stderr)
             return 1
         inserted += 1
+        incomplete = incomplete_images(page, inserted)
+        if incomplete:
+            print(
+                f"사진 배치 뒤 {', '.join(str(index + 1) for index in incomplete)}번째 사진을 네이버 주소로 읽지 못했다",
+                file=sys.stderr,
+            )
+            return 1
 
     if image_count(page) != len(blocks):
         print("사진 개수가 초안과 다르다", file=sys.stderr)
+        return 1
+    if incomplete_images(page, len(blocks)):
+        print("사진 전송이 끝나지 않은 것이 있다", file=sys.stderr)
         return 1
     print(f"사진 {inserted}개를 자리마다 넣고 모두 `문서 너비`로 맞췄다")
     set_stage(page, args, "photos", True)
