@@ -71,10 +71,14 @@
 | `scripts/photo_set.py` | 내려받은 사진의 촬영시각을 읽어 순서를 세운다 |
 | `scripts/stage_chat_photos.py` | 대화 입력에 명시된 사진만 장소별 초안 폴더로 복사한다 |
 | `scripts/place_hints.py` | 내려받은 사진에서 장소를 짐작할 실마리를 모은다 |
+| `scripts/draft_contract.py` | 초안의 필수 필드와 블록 순서를 검사한다. 미리보기, 등록용 묶음, 편집기 조작이 함께 쓴다 |
 | `scripts/build_preview.py` | 초안과 사진으로 미리보기를 만든다 |
 | `scripts/build_package.py` | 초안으로 사람이 붙여넣을 등록용 묶음을 만든다 |
 | `scripts/test_photo_set.py` | 촬영시각 파서를 합성한 이미지로 검증한다 |
 | `scripts/test_place_hints.py` | 위치 파서와 이름 단서를 합성한 이미지로 검증한다 |
+| `scripts/test_photos_url.py` | Admin UI 파일 화면의 폴더 주소 생성을 검증한다 |
+| `scripts/test_stage_chat_photos.py` | 대화 첨부 사진을 장소별 초안 폴더에 복사할 때의 경계를 검증한다 |
+| `scripts/test_draft_contract.py` | 초안의 스티커와 장소 계약을 검증한다 |
 | `references/iphone-upload.md` | 아이폰에서 올리는 절차와 함정 |
 | `references/assistant-chat-photos.md` | 대화 첨부 사진을 장소별로 나눠 초안을 만드는 절차 |
 
@@ -116,10 +120,10 @@ Hermes가 profile마다 `HOME`을 바꿔도 같은 파일을 찾는다.
 | --- | --- |
 | 맥북 | `python3`, `beautifulsoup4`(수집기만) |
 | 홈서버 | `python3` 표준 라이브러리 |
-| 브라우저 | `browser-driver` |
+| 브라우저 | 홈서버의 상주 Chrome. `scripts/cdp.py`가 표준 라이브러리만으로 CDP의 WebSocket에 붙는다 |
 
 사진의 촬영시각은 이미지 라이브러리 없이 JPEG의 EXIF를 직접 읽는다.
-홈서버에 Pillow가 있지만 맥북에는 없고, 순서를 세우는 일은 맥북에서 하기 때문이다.
+순서를 세우는 `photo_set.py`는 맥북과 홈서버, Hermes 컨테이너에서 모두 돌고, 그중 맥북에는 Pillow가 없기 때문이다.
 
 ## 워크스페이스 경계
 
