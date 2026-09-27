@@ -73,18 +73,18 @@ def main() -> int:
 
     check("기기가 붙인 이름은 단서가 아니다", name_hint("001-IMG_9331.jpg"), "")
     check("촬영 앱 이름도 단서가 아니다", name_hint("PXL_20240101_120000.jpg"), "")
-    check("사람이 붙인 이름은 단서다", name_hint("002-순돌이곱창-간판.jpg"), "순돌이곱창-간판")
+    check("사람이 붙인 이름은 단서다", name_hint("002-가상식당-간판.jpg"), "가상식당-간판")
 
     with tempfile.TemporaryDirectory() as temp:
         root = Path(temp)
         (root / "001-IMG_9331.jpg").write_bytes(build_jpeg(None))
-        (root / "002-순돌이곱창.jpg").write_bytes(build_jpeg((35, 58, 48)))
+        (root / "002-가상식당.jpg").write_bytes(build_jpeg((35, 58, 48)))
         (root / "note.txt").write_text("사진이 아니다", encoding="utf-8")
 
         hints = collect(root)
-        check("사진만 센다", [h["name"] for h in hints], ["001-IMG_9331.jpg", "002-순돌이곱창.jpg"])
+        check("사진만 센다", [h["name"] for h in hints], ["001-IMG_9331.jpg", "002-가상식당.jpg"])
         check("실마리 없는 사진", (hints[0]["gps"], hints[0]["nameHint"]), (None, ""))
-        check("실마리 있는 사진의 이름", hints[1]["nameHint"], "순돌이곱창")
+        check("실마리 있는 사진의 이름", hints[1]["nameHint"], "가상식당")
         check("실마리 있는 사진의 위치", hints[1]["gps"]["latitude"], 35.98)
 
     if failures:

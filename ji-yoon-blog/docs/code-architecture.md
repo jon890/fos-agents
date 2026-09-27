@@ -59,7 +59,7 @@
 | `scripts/test_naver_editor.py` | 맥북, 홈서버 | 옛 초안 차단, 카테고리 선택, 사진·스티커·지도 대조와 저장 차단을 검증한다 |
 | `.claude/skills/naver-blog-draft/` | 맥북과 홈서버 | 사진에서 임시저장까지의 판단과 절차 |
 | `docs/` | 문서 | 흐름, 스키마, 구조 |
-| `drafts/` | 맥북 | 내려받은 사진과 초안. 추적하지 않는다 |
+| `drafts/` | 맥북, Hermes 컨테이너 | 내려받거나 대화에 첨부한 사진과 초안. 추적하지 않는다 |
 | `data/` | 맥북 | 수집 원본과 집계 결과. 추적하지 않는다 |
 
 ## 스킬 안의 배치
@@ -69,18 +69,21 @@
 | `SKILL.md` | 언제 무엇을 하는지, 멈출 조건 |
 | `scripts/photos.py` | 사진 저장소 명령을 부른다. 부르는 길을 환경을 보고 고른다 |
 | `scripts/photo_set.py` | 내려받은 사진의 촬영시각을 읽어 순서를 세운다 |
+| `scripts/stage_chat_photos.py` | 대화 입력에 명시된 사진만 장소별 초안 폴더로 복사한다 |
 | `scripts/place_hints.py` | 내려받은 사진에서 장소를 짐작할 실마리를 모은다 |
 | `scripts/build_preview.py` | 초안과 사진으로 미리보기를 만든다 |
 | `scripts/build_package.py` | 초안으로 사람이 붙여넣을 등록용 묶음을 만든다 |
 | `scripts/test_photo_set.py` | 촬영시각 파서를 합성한 이미지로 검증한다 |
 | `scripts/test_place_hints.py` | 위치 파서와 이름 단서를 합성한 이미지로 검증한다 |
 | `references/iphone-upload.md` | 아이폰에서 올리는 절차와 함정 |
+| `references/assistant-chat-photos.md` | 대화 첨부 사진을 장소별로 나눠 초안을 만드는 절차 |
 
 ## 의존 방향
 
 ```text
 맥북:    photos.py ──SSH──> 홈서버: photo_store.py ──> seaweed_s3.py ──> S3
 홈서버:  photos.py ────────────────> photo_store.py ──> seaweed_s3.py ──> S3
+대화:    Hermes 입력의 사진 경로 ──> stage_chat_photos.py ──> drafts/<장소>/photos
 
 어디서나: photo_set.py ──> 내려받은 파일
          place_hints.py ──> 내려받은 파일

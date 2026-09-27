@@ -13,9 +13,9 @@ class FolderUrlTest(unittest.TestCase):
             )
         }
         self.assertEqual(
-            folder_url(env, "photos/순돌이곱창/"),
+            folder_url(env, "photos/가상식당/"),
             "https://storage.example.com/files?path=%2Fbuckets%2Fji-yoon-blog%2Fphotos%2F"
-            "%EC%88%9C%EB%8F%8C%EC%9D%B4%EA%B3%B1%EC%B0%BD",
+            "%EA%B0%80%EC%83%81%EC%8B%9D%EB%8B%B9",
         )
 
     def test_legacy_bucket_url_still_builds_files_url(self):
