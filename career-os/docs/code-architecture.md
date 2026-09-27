@@ -325,11 +325,12 @@ TypeScript 스크립트가 brain 을 직접 조회하지 않는다.
 
 ## position-recommender
 
-`scripts/position-recommender/` 루트에는 CLI 진입점만 둔다.
+`scripts/position-recommender/` 루트에는 CLI 진입점과 일일 실행 파일 계약 helper인 `run-dir.ts`를 둔다.
 어느 진입점이 [`flow.md`](flow.md#position-recommender)의 어느 단계인지는 다음과 같다.
 
 **일일 실행 경로는 `position_run.ts`의 하위 명령 넷이다.**
 skill이 중간 파일 이름과 플래그를 알지 못하도록 모든 하위 명령이 `--run <RUN_DIR>` 하나만 받는다.
+`run-dir.ts`는 일일 실행 파일 이름과 모델이 채울 결과 파일의 틀을 관리한다.
 
 | 하위 명령 | 흐름의 단계 |
 | --- | --- |

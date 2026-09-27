@@ -28,7 +28,7 @@ function writeJson(path: string, value: unknown): void {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, "utf8");
 }
 
-function analysisQueue(secret = "공개하지 않을 회사명과 공고 본문") {
+function analysisQueue(secret = "공개하지 않을 회사명과 공고 본문"): AnalysisQueueResponse {
   return {
     schemaVersion: 2 as const,
     collectionRunId: "collection-1",
@@ -79,6 +79,40 @@ function analysisQueue(secret = "공개하지 않을 회사명과 공고 본문"
       completedCount: 0,
       failedCount: 0,
       warningSourceCount: 0,
+    },
+  };
+}
+
+function companyTierQueue() {
+  return {
+    schemaVersion: 1 as const,
+    collectionRunId: "collection-1",
+    companyTierRunId: "company-tier-1",
+    generatedAt: "2026-09-23T00:00:00.000Z",
+    status: "pending" as const,
+    companies: [
+      {
+        companyKey: "example",
+        companyName: "예시 회사",
+        assessmentStatus: "new" as const,
+        activePositionCount: 1,
+        representativePostingUrls: ["https://example.com/jobs/1"],
+        priorTier: null,
+        priorReason: null,
+        priorValidUntil: null,
+      },
+    ],
+    summary: {
+      activeCompanyCount: 1,
+      manualCount: 0,
+      modelCount: 0,
+      defaultCount: 1,
+      queuedCount: 1,
+      newCount: 1,
+      staleCount: 0,
+      completedCount: 0,
+      failedCount: 0,
+      pendingCount: 1,
     },
   };
 }
@@ -194,7 +228,10 @@ test.each([
   await runPositionCommand(["collect", "--run", directory], {
     operations: operations({
       async prepare(runPaths) {
-        writeJson(runPaths[current.expected], { prepared: true });
+        writeJson(
+          runPaths[current.expected],
+          current.expected === "companyTierQueue" ? companyTierQueue() : analysisQueue(),
+        );
         return {
           passed: true,
           collectionRunId: "collection-1",
@@ -226,6 +263,105 @@ test.each([
   expect(existsSync(paths[current.absent])).toBe(false);
 });
 
+test("collect는 회사 판정 큐의 실행 ID로 결과 틀을 만들고 대상 수를 알린다", async () => {
+  const directory = workspace();
+  const paths = runDirectoryPaths(directory);
+  const lines: string[] = [];
+
+  await runPositionCommand(["collect", "--run", directory], {
+    operations: operations({
+      async prepare(runPaths) {
+        writeJson(runPaths.companyTierQueue, companyTierQueue());
+        return {
+          passed: true,
+          collectionRunId: "collection-1",
+          companyTierRunId: "company-tier-1",
+          companyTierQueuedCount: 1,
+          analysisRunId: null,
+          candidatePoolBytes: 1,
+          candidateCount: 1,
+          queueBodyBytes: 1,
+          ...analysisQueue().summary,
+          output: runPaths.companyTierQueue,
+        };
+      },
+    }),
+    writeLine: (line) => lines.push(line),
+  });
+
+  expect(JSON.parse(readFileSync(paths.companyTierUpdates, "utf8"))).toEqual({
+    schemaVersion: 1,
+    collectionRunId: "collection-1",
+    companyTierRunId: "company-tier-1",
+    results: [],
+    failures: [],
+  });
+  expect(lines).toContain("채울 항목: 회사 1곳. results 나 failures에 한 번씩 넣는다.");
+});
+
+test("collect는 공고 분석 큐의 실행 ID로 결과 틀을 만들고 대상 수를 알린다", async () => {
+  const directory = workspace();
+  const paths = runDirectoryPaths(directory);
+  const lines: string[] = [];
+
+  await runPositionCommand(["collect", "--run", directory], {
+    operations: operations(),
+    writeLine: (line) => lines.push(line),
+  });
+
+  expect(JSON.parse(readFileSync(paths.analysisUpdates, "utf8"))).toEqual({
+    schemaVersion: 2,
+    collectionRunId: "collection-1",
+    analysisRunId: "analysis-1",
+    results: [],
+    failures: [],
+  });
+  expect(lines).toContain("채울 항목: 공고 1건. results 나 failures에 한 번씩 넣는다.");
+});
+
+test("commit-company-tiers는 분석 큐를 만든 뒤 공고 분석 결과 틀을 만든다", async () => {
+  const directory = workspace();
+  const paths = runDirectoryPaths(directory);
+  const lines: string[] = [];
+  writeJson(paths.companyTierQueue, companyTierQueue());
+  writeJson(paths.companyTierUpdates, {
+    schemaVersion: 1,
+    collectionRunId: "collection-1",
+    companyTierRunId: "company-tier-1",
+    results: [],
+    failures: [],
+  });
+
+  await runPositionCommand(["commit-company-tiers", "--run", directory], {
+    operations: operations({
+      async commitCompanyTiers(runPaths) {
+        writeJson(runPaths.analysisQueue, analysisQueue());
+        return {
+          passed: true,
+          companyTierRunId: "company-tier-1",
+          status: "completed",
+          createdCount: 1,
+          reusedCount: 0,
+          failedCount: 0,
+          remainingCount: 0,
+          applied: true,
+          analysisRunId: "analysis-1",
+          analysisQueueOutput: runPaths.analysisQueue,
+        };
+      },
+    }),
+    writeLine: (line) => lines.push(line),
+  });
+
+  expect(JSON.parse(readFileSync(paths.analysisUpdates, "utf8"))).toMatchObject({
+    collectionRunId: "collection-1",
+    analysisRunId: "analysis-1",
+    results: [],
+    failures: [],
+  });
+  expect(lines).toContain("채울 항목: 공고 1건. results 나 failures에 한 번씩 넣는다.");
+});
+
 test("commit-company-tiers는 갱신 파일이 없으면 경로와 작성할 내용을 알리고 1로 끝난다", async () => {
   const directory = workspace();
   const child = Bun.spawn(
@@ -248,7 +384,7 @@ test("commit-company-tiers는 갱신 파일이 없으면 경로와 작성할 내
 test("commit-analyses가 partial이면 남은 건수와 같은 명령 재실행을 알린다", async () => {
   const directory = workspace();
   const paths = runDirectoryPaths(directory);
-  writeJson(paths.analysisUpdates, {});
+  writeJson(paths.analysisUpdates, { stale: true });
   writeJson(paths.analysisQueue, analysisQueue());
   const lines: string[] = [];
 
@@ -274,6 +410,83 @@ test("commit-analyses가 partial이면 남은 건수와 같은 명령 재실행�
   expect(lines.join("\n")).toContain("남은 2건");
   expect(lines.join("\n")).toContain("같은 명령을 다시 실행");
   expect(lines.join("\n")).toContain(paths.analysisUpdates);
+  expect(JSON.parse(readFileSync(paths.analysisUpdates, "utf8"))).toMatchObject({
+    collectionRunId: "collection-1",
+    analysisRunId: "analysis-1",
+    results: [],
+    failures: [],
+  });
+  expect(lines).toContain("채울 항목: 공고 1건. results 나 failures에 한 번씩 넣는다.");
+});
+
+test("partial 분석 큐는 이미 처리한 공고를 채울 항목 수에서 뺀다", async () => {
+  const directory = workspace();
+  const paths = runDirectoryPaths(directory);
+  const queue = analysisQueue();
+  queue.candidates.push({
+    ...structuredClone(queue.candidates[0]),
+    positionId: "position-2",
+    candidateId: "wanted:2",
+    contentHash: "sha256:content-2",
+    resultStatus: "created",
+    posting: { ...structuredClone(queue.candidates[0].posting), id: "wanted:2" },
+  });
+  queue.candidates.push({
+    ...structuredClone(queue.candidates[0]),
+    positionId: "position-3",
+    candidateId: "wanted:3",
+    contentHash: "sha256:content-3",
+    resultStatus: "reused",
+    posting: { ...structuredClone(queue.candidates[0].posting), id: "wanted:3" },
+  });
+  writeJson(paths.analysisQueue, queue);
+  writeJson(paths.analysisUpdates, { stale: true });
+  const lines: string[] = [];
+
+  await runPositionCommand(["commit-analyses", "--run", directory], {
+    operations: operations({
+      async commitAnalyses() {
+        return {
+          passed: true,
+          idempotencyKey: "analysis-results:key",
+          analysisRunId: "analysis-1",
+          status: "partial",
+          createdCount: 1,
+          reusedCount: 1,
+          failedCount: 1,
+          remainingCount: 1,
+          applied: true,
+        };
+      },
+    }),
+    writeLine: (line) => lines.push(line),
+  });
+
+  expect(lines).toContain("채울 항목: 공고 1건. results 나 failures에 한 번씩 넣는다.");
+});
+
+test("빈 분석 결과 틀은 큐와 제출 목록이 달라 반영할 수 없다", async () => {
+  const directory = workspace();
+  const paths = runDirectoryPaths(directory);
+  writeJson(paths.analysisQueue, analysisQueue());
+  writeJson(paths.analysisUpdates, {
+    schemaVersion: 2,
+    collectionRunId: "collection-1",
+    analysisRunId: "analysis-1",
+    results: [],
+    failures: [],
+  });
+
+  await expect(
+    commitAnalysesForRun(paths, {
+      async saveAnalysisResults() {
+        throw new Error("호출하면 안 됩니다.");
+      },
+      async getRun() {
+        return analysisQueue();
+      },
+    }),
+  ).rejects.toThrow("큐와 제출 목록이 다릅니다");
 });
 
 test("commit-analyses는 partial 뒤 최신 큐를 저장해 남은 항목만 다시 받는다", async () => {

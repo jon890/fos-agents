@@ -53,6 +53,8 @@ bun career-os/scripts/position-recommender/position_run.ts finalize --run <RUN_D
 `collect`를 `--run` 없이 실행하면 stdout 첫 줄이 `<RUN_DIR>`이다.
 이 값을 이후 명령에 그대로 넘긴다.
 각 명령의 stdout이 다음에 읽을 큐, 모델이 결과를 쓸 경로와 다음 명령을 알린다.
+CLI가 결과 파일의 최상위 칸과 빈 `results`, `failures` 배열을 먼저 만든다.
+모델은 `results`와 `failures`에만 쓰며, 큐의 각 항목을 둘 중 하나에 한 번씩 넣는다.
 반영 결과가 `partial`이면 stdout에 나온 남은 항목만 다시 판단해 같은 명령을 실행한다.
 
 회사 판정 큐가 있으면 `<RUN_DIR>/company-evidence.json`에 저장된 근거만 읽고 판정한다.
@@ -61,7 +63,6 @@ bun career-os/scripts/position-recommender/position_run.ts finalize --run <RUN_D
 `evidence`에는 실제 사용한 근거의 `id`, URL, 제목과 확인 날짜를 원본 그대로 옮긴다.
 근거가 없는 축은 `level: "unknown"`, `evidenceIds: []`로 남긴다.
 판단을 유보한 이유와 반대 근거는 `assessment`에 적고, 공개 `reason`은 확인된 사실만 200자 안에 쓴다.
-입력 파일의 실행 ID는 회사 판정 큐와 같아야 한다.
 
 ## 결과와 공개 경계
 

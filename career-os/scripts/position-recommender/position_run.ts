@@ -11,7 +11,12 @@ import { collectEvidenceForRun } from "./collect_company_evidence.ts";
 import { commitPositionAnalysis } from "./commit_position_analysis.ts";
 import { finalizeRecommendation } from "./finalize_position_recommendation.ts";
 import { createCareerBackendClient } from "./career-backend/client.ts";
-import { runDirectoryPaths, type RunDirectoryPaths } from "./run-dir.ts";
+import {
+  runDirectoryPaths,
+  writeAnalysisUpdatesTemplate,
+  writeCompanyTierUpdatesTemplate,
+  type RunDirectoryPaths,
+} from "./run-dir.ts";
 
 const COMMANDS = ["collect", "commit-company-tiers", "commit-analyses", "finalize"] as const;
 type PositionRunCommand = (typeof COMMANDS)[number];
@@ -207,13 +212,17 @@ export async function runPositionCommand(
       writeLine(
         `수집 완료: 후보 ${result.candidateCount}건, ${basename(paths.companyTierQueue)} 준비`,
       );
+      const companyCount = writeCompanyTierUpdatesTemplate(paths);
       writeLine(`회사 판정 결과 작성: ${paths.companyTierUpdates}`);
+      writeLine(`채울 항목: 회사 ${companyCount}곳. results 나 failures에 한 번씩 넣는다.`);
       writeLine("다음 명령: commit-company-tiers");
     } else {
       writeLine(
         `수집 완료: 후보 ${result.candidateCount}건, ${basename(paths.analysisQueue)} 준비`,
       );
+      const postingCount = writeAnalysisUpdatesTemplate(paths);
       writeLine(`공고 분석 결과 작성: ${paths.analysisUpdates}`);
+      writeLine(`채울 항목: 공고 ${postingCount}건. results 나 failures에 한 번씩 넣는다.`);
       writeLine("다음 명령: commit-analyses");
     }
     return 0;
@@ -227,7 +236,9 @@ export async function runPositionCommand(
       `회사 판정 반영: 생성 ${result.createdCount}건, 재사용 ${result.reusedCount}건, 실패 ${result.failedCount}건, 남음 ${result.remainingCount}건`,
     );
     if (result.analysisQueueOutput) {
+      const postingCount = writeAnalysisUpdatesTemplate(paths);
       writeLine(`공고 분석 결과 작성: ${paths.analysisUpdates}`);
+      writeLine(`채울 항목: 공고 ${postingCount}건. results 나 failures에 한 번씩 넣는다.`);
       writeLine("다음 명령: commit-analyses");
     } else {
       writeLine("다음 명령: commit-company-tiers");
@@ -243,6 +254,9 @@ export async function runPositionCommand(
       `공고 분석 반영: 생성 ${result.createdCount}건, 재사용 ${result.reusedCount}건, 실패 ${result.failedCount}건, 남음 ${result.remainingCount}건`,
     );
     if (result.status === "partial") {
+      const postingCount = writeAnalysisUpdatesTemplate(paths);
+      writeLine(`공고 분석 결과 작성: ${paths.analysisUpdates}`);
+      writeLine(`채울 항목: 공고 ${postingCount}건. results 나 failures에 한 번씩 넣는다.`);
       writeLine(
         `남은 ${result.remainingCount}건의 분석 결과를 ${paths.analysisUpdates}에 작성하고 같은 명령을 다시 실행하세요.`,
       );
