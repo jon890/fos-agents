@@ -120,10 +120,10 @@ Hermes가 profile마다 `HOME`을 바꿔도 같은 파일을 찾는다.
 | --- | --- |
 | 맥북 | `python3`, `beautifulsoup4`(수집기만) |
 | 홈서버 | `python3` 표준 라이브러리 |
-| 브라우저 | `browser-driver` |
+| 브라우저 | 홈서버의 상주 Chrome. `scripts/cdp.py`가 표준 라이브러리만으로 CDP의 WebSocket에 붙는다 |
 
 사진의 촬영시각은 이미지 라이브러리 없이 JPEG의 EXIF를 직접 읽는다.
-홈서버에 Pillow가 있지만 맥북에는 없고, 순서를 세우는 일은 맥북에서 하기 때문이다.
+순서를 세우는 `photo_set.py`는 맥북과 홈서버, Hermes 컨테이너에서 모두 돌고, 그중 맥북에는 Pillow가 없기 때문이다.
 
 ## 워크스페이스 경계
 
