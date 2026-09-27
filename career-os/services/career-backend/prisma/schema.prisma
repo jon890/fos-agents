@@ -141,6 +141,54 @@ model study_publications {
   @@index([report_id], map: "idx_study_publications_report")
 }
 
+model interview_topic_progress {
+  drill_type       interview_drill_type
+  topic            String @db.VarChar(100)
+  pass_count       Int @default(0) @db.UnsignedInt
+  fail_count       Int @default(0) @db.UnsignedInt
+  next_review_date DateTime? @db.Date
+  last_passed_date DateTime? @db.Date
+  updated_at       DateTime @default(now())
+  interview_attempts interview_attempts[]
+
+  @@id([drill_type, topic])
+}
+
+model interview_attempts {
+  attempt_id       String @id @db.Char(36)
+  drill_type       interview_drill_type
+  topic            String @db.VarChar(100)
+  question_id      String @db.VarChar(100)
+  question         String @db.VarChar(2000)
+  score            interview_score
+  feedback         String? @db.VarChar(500)
+  evaluated_on     DateTime @db.Date
+  target_company   String? @db.VarChar(100)
+  target_role      String? @db.VarChar(100)
+  target_value_axis String? @db.VarChar(100)
+  root_question_id String? @db.VarChar(100)
+  parent_question  String? @db.VarChar(2000)
+  follow_up_depth  Int? @db.UnsignedTinyInt
+  follow_up_axis   interview_follow_up_axis?
+  stop_reason      interview_stop_reason?
+  created_at       DateTime @default(now())
+  interview_topic_progress interview_topic_progress @relation(fields: [drill_type, topic], references: [drill_type, topic], onDelete: Restrict, onUpdate: Restrict, map: "fk_interview_attempts_progress")
+
+  @@index([drill_type, topic, created_at], map: "idx_interview_attempts_topic")
+}
+
+model interview_personal_questions {
+  question_id String @id @db.VarChar(100)
+  drill_type  interview_drill_type
+  topic       String @db.VarChar(100)
+  enabled     Boolean
+  payload     Json
+  created_at  DateTime @default(now())
+  updated_at  DateTime @default(now())
+
+  @@index([drill_type, enabled], map: "idx_interview_personal_questions_type")
+}
+
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model company_preferences {
   company_key  String                          @id
@@ -652,4 +700,31 @@ enum study_materials_kind {
 
 enum study_material_verdicts_verdict {
   rejected
+}
+
+enum interview_drill_type {
+  tech
+  behavioral
+}
+
+enum interview_score {
+  pass
+  shallow
+  fail
+  unknown
+}
+
+enum interview_follow_up_axis {
+  clarification
+  decision
+  counterexample
+  operations
+  evidence_boundary @map("evidence-boundary")
+}
+
+enum interview_stop_reason {
+  depth_limit @map("depth-limit")
+  needs_study @map("needs-study")
+  answer_complete @map("answer-complete")
+  session_ended @map("session-ended")
 }
