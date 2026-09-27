@@ -18,7 +18,7 @@
 | --- | --- |
 | `DATABASE_URL` | `prisma.config.ts` 의 datasource |
 | `SHADOW_DATABASE_URL` | `prisma migrate diff --from-migrations` 가 쓰는 임시 database |
-| `CAREER_RECOMMENDATION_TEST_DATABASE_URL` | 테스트가 붙는 MySQL |
+| `CAREER_BACKEND_TEST_DATABASE_URL` | 테스트가 붙는 MySQL |
 
 ## 명령
 
@@ -104,7 +104,7 @@ docker run --rm --env-file <환경 파일> <image> migrate
 ```
 
 `serve` 와 같은 환경값을 읽는다.
-`CAREER_RECOMMENDATION_DATABASE_URL` 또는 `DB_*` 로 접속 문자열을 만들어
+`CAREER_BACKEND_DATABASE_URL` 또는 `DB_*` 로 접속 문자열을 만들어
 Prisma CLI 에 `DATABASE_URL` 로 넘긴다.
 적용할 migration 이 없으면 아무것도 하지 않고 종료 코드 0 으로 끝난다.
 
@@ -115,8 +115,8 @@ DB 를 백업한 뒤 이 명령을 부르고, 그 다음에 `serve` 로 서비�
 
 ```bash
 # cwd: career-os/services/recommendation-api
-CAREER_RECOMMENDATION_API_URL=<배포한 주소> \
-CAREER_RECOMMENDATION_API_TOKEN=<운영 token> \
+CAREER_BACKEND_URL=<배포한 주소> \
+CAREER_BACKEND_TOKEN=<운영 token> \
   npm run test:deployed
 ```
 
@@ -169,4 +169,3 @@ e2e 검사가 `test/support/legacy-contract.ts` 를 거쳐 이 값과 대조한�
 
 **언제 제거하나.** 새 스택이 운영에서 검증되고, 이 계약을 의도적으로 바꾸는 변경이 올 때다.
 그때까지는 남긴다. 다음에 계약을 건드리는 사람이 무엇이 기준이었는지 읽을 수 있어야 한다.
-

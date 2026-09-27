@@ -34,7 +34,7 @@ description: 열려 있는 채용공고를 모아 후보자가 해온 일과 선
 
 ## 실행
 
-`CAREER_RECOMMENDATION_API_URL`과 token 설정이 필요하며, Backend 장애가 발생하면 파일 이력으로 전환하지 않고 중단한다.
+`CAREER_BACKEND_URL`과 token 설정이 필요하며, Backend 장애가 발생하면 파일 이력으로 전환하지 않고 중단한다.
 
 | 명령 | 하는 일 | 다음 판단 |
 | --- | --- | --- |

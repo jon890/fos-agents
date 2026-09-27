@@ -16,7 +16,7 @@ mktemp -d "${TMPDIR:-/tmp}/study-topic-recommender.XXXXXX"
 ## 실행
 
 소스, 수집 자료, 추천 이력과 제외 판정은 추천 Backend가 관리한다.
-`CAREER_RECOMMENDATION_API_URL`과 token을 `career-os/.env`에 두고 `--env-file`로 넘긴다.
+`CAREER_BACKEND_URL`과 token을 `career-os/.env`에 두고 `--env-file`로 넘긴다.
 둘 중 하나라도 없으면 명령은 종료 코드 1로 멈춘다.
 
 실행 명령은 모두 저장소 루트에서 실행한다.

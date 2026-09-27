@@ -193,12 +193,13 @@ case 34개가 요청 전문과 응답 전문과 쓰기 뒤의 DB 행을 담는�
 e2e 검사가 이 값과 대조해 전환이 계약을 바꾸지 않았는지 판정한다.
 값이 다르면 새 구현이 계약을 어긴 것이므로 이 파일을 고쳐 통과시키지 않는다.
 
-Backend는 local 개발에서는 `CAREER_RECOMMENDATION_DATABASE_URL`을 읽을 수 있고,
+Backend는 local 개발에서는 `CAREER_BACKEND_DATABASE_URL`을 읽을 수 있고,
 운영에서는 `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`과 `DB_PASSWORD`를 읽는다.
 두 형식을 함께 주면 시작 전에 실패한다.
-client는 `CAREER_RECOMMENDATION_API_URL`과 `CAREER_RECOMMENDATION_API_TOKEN` 또는
-`CAREER_RECOMMENDATION_API_TOKEN_FILE`만 읽으며 DB 자격증명을 받지 않는다.
+client는 `CAREER_BACKEND_URL`과 `CAREER_BACKEND_TOKEN` 또는
+`CAREER_BACKEND_TOKEN_FILE`만 읽으며 DB 자격증명을 받지 않는다.
 공부 추천과 포지션 client 는 `scripts/lib/recommendation-api-config.ts` 로 같은 연결값을 검증한다.
+전환 기간에는 옛 `CAREER_RECOMMENDATION_*` 이름도 읽는다.
 
 **프로세스 시간대를 UTC에 고정한다.** 시각 컬럼이 모두 `DATETIME(3)`이라 시간대를 저장하지 않으므로,
 프로세스가 다른 시간대면 다시 읽은 시각이 어긋나고 임차권 판정이 뒤집힌다.
@@ -539,8 +540,8 @@ client 가 읽는 환경값은 포지션 추천과 같다. 같은 Backend 이고
 
 | 이름 | 의미 |
 | --- | --- |
-| `CAREER_RECOMMENDATION_API_URL` | 추천 Backend origin |
-| `CAREER_RECOMMENDATION_API_TOKEN` 또는 `CAREER_RECOMMENDATION_API_TOKEN_FILE` | Bearer token. 파일은 mode 600 |
+| `CAREER_BACKEND_URL` | 커리어 Backend origin |
+| `CAREER_BACKEND_TOKEN` 또는 `CAREER_BACKEND_TOKEN_FILE` | Bearer token. 파일은 mode 600 |
 | `YOUTUBE_DATA_API_KEY` | 선택값. 있으면 YouTube uploads playlist 과거 수집을 쓴다 |
 
 `manage_reading_sources.ts`의 `list`, `add`, `update`, `disable`, `enable`과 다른 API 사용 명령은 연결 값이 없으면 요청 전에 실패한다.
