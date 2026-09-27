@@ -76,7 +76,10 @@ def validate(draft: dict) -> list[str]:
         if not isinstance(blocks[-1], dict) or blocks[-1].get("stickerCode") != STICKER_CODES["location"]:
             problems.append("마지막 블록은 위치정보 스티커여야 한다")
         menu_images = [i for i, b in enumerate(blocks) if isinstance(b, dict) and b.get("type") == "image" and b.get("role") == "menu"]
-        if len(menu_images) != 1 or menu_images[0] == 0 or not isinstance(blocks[menu_images[0] - 1], dict) or blocks[menu_images[0] - 1].get("stickerCode") != STICKER_CODES["price"]:
+        if draft.get("menuPhotoUnavailable") is True:
+            if menu_images or STICKER_CODES["price"] in codes:
+                problems.append("메뉴판 사진이 없으면 메뉴 사진과 가격표 스티커를 넣지 않는다")
+        elif len(menu_images) != 1 or menu_images[0] == 0 or not isinstance(blocks[menu_images[0] - 1], dict) or blocks[menu_images[0] - 1].get("stickerCode") != STICKER_CODES["price"]:
             problems.append("메뉴판 사진 하나 바로 앞에 가격표 스티커를 둔다")
         if codes.count(STICKER_CODES["self_paid"]) != (0 if draft.get("sponsored") else 1):
             problems.append("내돈내산 글에만 내돈내산 스티커를 하나 둔다")

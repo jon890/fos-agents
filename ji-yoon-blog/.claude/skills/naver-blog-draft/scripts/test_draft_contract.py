@@ -15,7 +15,7 @@ class DraftContractTest(unittest.TestCase):
             "title": "[자동화 테스트] 메뉴판",
             "category": "맛집로그",
             "sponsored": False,
-            "tags": ["구리맛집", "고등어김치찜맛집"],
+            "tags": ["예시시맛집", "고등어김치찜맛집"],
             "blocks": [
                 {"type": "sticker", "stickerCode": "ogq_5db4314bac2f0-1"},
                 {"type": "text", "lines": ["테스트 글입니다."]},
@@ -29,6 +29,21 @@ class DraftContractTest(unittest.TestCase):
 
     def test_confirmed_non_sponsored_draft(self):
         self.assertEqual(validate(self.draft()), [])
+
+    def test_missing_menu_photo_does_not_require_fake_menu(self):
+        draft = self.draft()
+        draft["menuPhotoUnavailable"] = True
+        del draft["blocks"][2:4]
+        draft["blocks"].insert(2, {"type": "image", "path": "photos/dish.jpg", "role": "dish"})
+        self.assertEqual(validate(draft), [])
+        with_price = copy.deepcopy(draft)
+        with_price["blocks"].insert(2, {"type": "sticker", "stickerCode": "ogq_5db4314bac2f0-6"})
+        self.assertTrue(any("메뉴판 사진이 없으면" in p for p in validate(with_price)))
+        with_menu = copy.deepcopy(draft)
+        with_menu["blocks"].insert(2, {"type": "image", "path": "photos/menu.jpg", "role": "menu"})
+        self.assertTrue(any("메뉴판 사진이 없으면" in p for p in validate(with_menu)))
+        del draft["menuPhotoUnavailable"]
+        self.assertTrue(any("가격표" in p for p in validate(draft)))
 
     def test_sponsored_draft_rejects_self_paid_sticker(self):
         draft = self.draft()
@@ -47,7 +62,7 @@ class DraftContractTest(unittest.TestCase):
 
     def test_map_and_tags_require_searchable_values(self):
         draft = copy.deepcopy(self.draft())
-        draft["tags"] = ["#구리맛집"]
+        draft["tags"] = ["#예시시맛집"]
         draft["blocks"][4]["address"] = ""
         problems = validate(draft)
         self.assertTrue(any("tags" in problem for problem in problems))
@@ -68,12 +83,12 @@ class DraftContractTest(unittest.TestCase):
     def test_map_preview_links_to_naver(self):
         block = {
             "type": "map", "name": "샘플가게", "address": "경기 예시시 샘플로 145",
-            "mapUrl": "https://map.naver.com/p/entry/place/19882103",
+            "mapUrl": "https://map.naver.com/p/entry/place/1234567890",
         }
         with tempfile.TemporaryDirectory() as temp:
             markup = render_block(block, Path(temp))
             self.assertIn("네이버 지도에서 보기", markup)
-            self.assertIn("map.naver.com/p/entry/place/19882103", markup)
+            self.assertIn("map.naver.com/p/entry/place/1234567890", markup)
             self.assertNotIn("<img", markup)
 
 

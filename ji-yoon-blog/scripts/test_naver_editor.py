@@ -369,12 +369,12 @@ class EditorGateTest(unittest.TestCase):
         dismiss.assert_called_once_with(unittest.mock.ANY, "취소")
 
     def test_settings_select_exact_category_before_adding_tags(self):
-        draft = {"category": "맛집로그", "tags": ["구리맛집"]}
+        draft = {"category": "맛집로그", "tags": ["예시시맛집"]}
         args = argparse.Namespace(draft_data=draft, draft_hash="same")
 
         class Page:
             def js(self, _expression):
-                return "구리맛집"
+                return "예시시맛집"
 
             def type_text(self, _text):
                 pass
@@ -383,7 +383,7 @@ class EditorGateTest(unittest.TestCase):
                 pass
 
         page = Page()
-        state = {"category": "맛집로그", "tags": ["구리맛집"]}
+        state = {"category": "맛집로그", "tags": ["예시시맛집"]}
         with patch.object(naver_editor_settings, "set_stage"), \
                 patch.object(naver_editor_settings, "require_clear_screen", return_value=""), \
                 patch.object(naver_editor_settings, "open_settings", return_value=True), \
@@ -466,7 +466,7 @@ class EditorGateTest(unittest.TestCase):
         old_draft = {
             "title": "[자동화 테스트] 옛 초안",
             "category": "맛집로그",
-            "tags": ["구리맛집"],
+            "tags": ["예시시맛집"],
             "blocks": [
                 {"type": "sticker", "emoji": "😋"},
                 {"type": "text", "lines": ["테스트"]},
