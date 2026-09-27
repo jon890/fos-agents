@@ -103,13 +103,13 @@ zod 계약과 응답 타입을 둔다. `scripts/` 가 이 파일을 import 하�
 
 - `listProgress(drillType)`: 주제 순으로 모두 읽는다
 - `recordAttempt(input, evaluatedOn)`: `ReadCommitted` transaction 안에서
-  1. `INSERT IGNORE` 로 주제 행을 0 값으로 보장한다
-  2. `SELECT ... FROM interview_topic_progress WHERE drill_type = ? AND topic = ? FOR UPDATE`
+  1. `SELECT ... FROM interview_topic_progress WHERE drill_type = ? AND topic = ? FOR UPDATE` 로 기존 주제 행부터 잠근다
+  2. 행이 없을 때만 `INSERT ... ON DUPLICATE KEY UPDATE` 로 0 값 행을 보장하고 다시 `SELECT ... FOR UPDATE` 한다. 기존 행에도 `INSERT IGNORE` 를 먼저 하면 공유 잠금에서 배타 잠금으로 올리는 두 transaction 이 교착될 수 있다(`positions.repository.ts` 의 `lockCollectionRun` 과 같은 경계)
   3. `nextTopicProgress` 로 새 값을 계산해 `UPDATE`
   4. `interview_attempts` 에 `INSERT`
   5. 갱신한 주제 상태를 돌려준다
 - `listEnabledPersonalQuestions(drillType)`: `enabled = true` 만, `question_id` 순
-- `upsertPersonalQuestion(questionId, drillType, enabled, payload)`: 있으면 `drill_type`, `topic`, `enabled`, `payload`, `updated_at` 을 덮어쓴다
+- `upsertPersonalQuestion(questionId, drillType, enabled, payload)`: 있으면 `drill_type`, `topic`, `enabled`, `payload`, `updated_at` 을 덮어쓴다. 쓰기와 응답용 행 조회를 한 transaction 에서 실행해 동시 PUT 이 상대 요청의 값을 자신의 응답으로 돌려주지 않게 한다
 
 ### 6. `services/career-backend/src/interview/interview.service.ts`, `interview.controller.ts`, `interview.module.ts` 신규
 
@@ -143,7 +143,9 @@ zod 계약과 응답 타입을 둔다. `scripts/` 가 이 파일을 import 하�
 - 같은 `Idempotency-Key` 와 같은 본문으로 다시 보내면 같은 응답이고 `passCount` 가 1 그대로다
 - `Idempotency-Key` 와 본문 `attemptId` 가 다르면 `400`
 - 같은 주제에 서로 다른 `attemptId` 로 `pass` 두 건을 `Promise.all` 로 동시에 보내면 `passCount` 가 2 다
+- 주제 행에 `pass` 한 건이 이미 있을 때 다른 `attemptId` 두 건을 `Promise.all` 로 동시에 보내도 둘 다 성공하고 `passCount` 가 3 이다
 - `PUT personal-questions/q1` 로 켠 질문이 `GET personal-questions?drillType=behavioral` 에 나오고, `enabled: false` 로 다시 보내면 목록에서 빠진다
+- 같은 `questionId` 에 서로 다른 `drillType`, `topic`, `enabled` 값을 가진 PUT 두 건을 서로 다른 멱등 키로 동시에 보내면, 각 응답의 `drillType`, `topic`, `enabled` 가 그 요청 본문과 같다
 - 경로 `questionId` 와 `question.id` 가 다르면 `400`, 질문 항목에 모르는 칸이 있으면 `400`
 
 `services/career-backend/prisma/baseline.test.ts` 수정. 새 migration 이 추가되므로 전체 migration 기준의 `CHECK` 제약 기대값을 28개, Prisma model 기대값을 33개로 갱신한다. 기존 초기 migration SQL 바이트 비교는 유지한다.
