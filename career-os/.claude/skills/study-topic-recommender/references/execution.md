@@ -112,15 +112,3 @@ bun --env-file=career-os/.env \
   career-os/scripts/study-topic-recommender/configure_study_recommendation.ts \
   --candidate-context-version <NEW_VERSION>
 ```
-
-## 운영 이관
-
-운영 이관은 운영 담당자가 dry-run으로 소스 건수, 리포트 3건, 자료 15건을 먼저 확인한 뒤 별도 승인된 작업에서 `--commit`으로 한 번 수행한다.
-이관이 끝나면 후보 API에서 이력의 자료가 추천 후보로 다시 나오지 않는지 확인한다.
-
-```bash
-# cwd: 저장소 루트
-bun --env-file=career-os/.env \
-  career-os/scripts/study-topic-recommender/import_study_state.ts \
-  --dry-run --history-file <LEGACY_HISTORY_JSON> --sources-file <SOURCES_CONFIG_TS>
-```
