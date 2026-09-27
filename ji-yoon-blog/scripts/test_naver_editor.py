@@ -442,6 +442,26 @@ class EditorGateTest(unittest.TestCase):
             ],
         )
 
+    def test_settings_state_reads_category_before_inner_text_is_painted(self):
+        if not shutil.which("node"):
+            self.skipTest("node 없음")
+
+        class Page:
+            def js(self, expression):
+                setup = (
+                    "globalThis.document = {"
+                    "querySelector: () => ({innerText:'', textContent:'맛집로그'}),"
+                    "querySelectorAll: () => []};"
+                )
+                return subprocess.check_output(
+                    ["node", "-e", setup + f"console.log({expression});"], text=True,
+                ).strip()
+
+        self.assertEqual(
+            naver_editor_settings.settings_state(Page()),
+            {"category": "맛집로그", "tags": []},
+        )
+
     def test_old_draft_is_rejected_before_new_tab(self):
         old_draft = {
             "title": "[자동화 테스트] 옛 초안",

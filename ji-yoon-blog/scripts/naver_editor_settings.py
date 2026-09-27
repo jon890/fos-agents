@@ -57,7 +57,7 @@ def settings_state(page: Page) -> dict:
     """열린 발행 설정의 카테고리와 태그를 읽는다."""
     raw = page.js(
         "JSON.stringify({"
-        ' category: document.querySelector(\'button[data-click-area="tpb*i.category"]\')?.innerText.trim() || \'\','
+        ' category: document.querySelector(\'button[data-click-area="tpb*i.category"]\')?.textContent.trim() || \'\','
         ' tags: [...document.querySelectorAll(\'span[id^="tag-item-"][aria-label]\')]'
         "   .map(e => e.getAttribute('aria-label'))"
         "})"
