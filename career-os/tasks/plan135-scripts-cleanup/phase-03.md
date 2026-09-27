@@ -26,7 +26,7 @@
 
 ## Blocked 조건
 
-- `career-os/scripts/position-recommender/update-templates.ts` 가 main 에 없으면 `PHASE_BLOCKED: cron 안정화 작업 머지 전` 을 출력하고 종료한다
+- `career-os/scripts/position-recommender/run-dir.ts` 에 `writeCompanyTierUpdatesTemplate` 가 없으면 `PHASE_BLOCKED: cron 안정화 작업 머지 전` 을 출력하고 종료한다
 
 ## 작업 항목
 

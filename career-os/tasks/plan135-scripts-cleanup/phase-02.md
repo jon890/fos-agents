@@ -31,7 +31,7 @@ Backend 가 원본을 가진 뒤(ADR-126)에는 운영 경로가 Backend 응답�
 
 ## Blocked 조건
 
-- `career-os/scripts/position-recommender/update-templates.ts` 가 main 에 없으면 `PHASE_BLOCKED: cron 안정화 작업 머지 전` 을 출력하고 종료한다. 그 작업이 `morning_reading_cli.ts` 를 고친다
+- `career-os/scripts/position-recommender/run-dir.ts` 에 `writeCompanyTierUpdatesTemplate` 가 없으면 `PHASE_BLOCKED: cron 안정화 작업 머지 전` 을 출력하고 종료한다. 그 작업이 `morning_reading_cli.ts` 를 고친다
 
 ## 작업 항목
 
