@@ -146,10 +146,14 @@ zod 계약과 응답 타입을 둔다. `scripts/` 가 이 파일을 import 하�
 - `PUT personal-questions/q1` 로 켠 질문이 `GET personal-questions?drillType=behavioral` 에 나오고, `enabled: false` 로 다시 보내면 목록에서 빠진다
 - 경로 `questionId` 와 `question.id` 가 다르면 `400`, 질문 항목에 모르는 칸이 있으면 `400`
 
+`services/career-backend/prisma/baseline.test.ts` 수정. 새 migration 이 추가되므로 전체 migration 기준의 `CHECK` 제약 기대값을 28개, Prisma model 기대값을 33개로 갱신한다. 기존 초기 migration SQL 바이트 비교는 유지한다.
+
 ## 검증
 
 ```bash
 # cwd: career-os/services/career-backend
+docker exec plan125-mysql mysql -uroot -pplan125 -e 'CREATE DATABASE IF NOT EXISTS fos_career_shadow'
+npx prisma generate
 npm run typecheck
 # 로컬 fos_career_test 에만 신규 migration 을 적용한다. 운영 DB 에는 적용하지 않는다.
 DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_test" \
@@ -184,3 +188,4 @@ SHADOW_DATABASE_URL="mysql://root:plan125@127.0.0.1:13400/fos_career_shadow" \
 | `career-os/services/career-backend/test/support/e2e-harness.ts` | 수정 |
 | `career-os/services/career-backend/src/interview/review-schedule.test.ts` | 신규 |
 | `career-os/services/career-backend/test/interview.e2e.test.ts` | 신규 |
+| `career-os/services/career-backend/prisma/baseline.test.ts` | 수정 |
