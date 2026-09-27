@@ -6,7 +6,14 @@ import type { ReadingSource } from "../reading_contracts.js";
 import { main, reportMorningReadingError } from "../morning_reading_cli.js";
 import { canonicalizeReadingUrl, readingContentKey } from "../url_identity.js";
 import { collectAndIngestStudyLibrary, type StudyLibraryIngestionPayload } from "./ingestion.js";
-import { StudyLibraryApiError, type StudyLibraryClient } from "./client.js";
+import {
+  StudyLibraryApiError,
+  StudyLibraryBodyReadError,
+  StudyLibraryMalformedJsonError,
+  StudyLibraryNetworkError,
+  StudyLibraryResponseValidationError,
+  type StudyLibraryClient,
+} from "./client.js";
 
 function response(body: unknown, init: ResponseInit = {}): Response {
   return new Response(typeof body === "string" ? body : JSON.stringify(body), {
@@ -122,6 +129,25 @@ describe("study-library ingestion", () => {
 
     expect(mock.payloads[0].items.map((item) => item.title)).toEqual(["One"]);
     expect(mock.payloads[0].cursor?.lastSeen).toHaveLength(1);
+  });
+
+  test("recent 응답에서 query만 다른 같은 글은 한 번만 저장한다", async () => {
+    const mock = new MockClient();
+
+    await collectAndIngestStudyLibrary({
+      client: mock as unknown as StudyLibraryClient,
+      sources: [feedSource],
+      mode: "recent",
+      maxItems: 2,
+      timeoutMs: 1000,
+      fetchImpl: async () => response(rss([
+        { title: "First", url: "https://example.com/post?utm_source=feed" },
+        { title: "Duplicate", url: "https://example.com/post?utm_source=mail" },
+        { title: "Second", url: "https://example.com/second" },
+      ])),
+    });
+
+    expect(mock.payloads[0].items.map((item) => item.title)).toEqual(["First", "Second"]);
   });
 
   test("정상 빈 feed와 빈 page는 빈 ingestion을 보내고 실패한 수집은 보내지 않는다", async () => {
@@ -295,6 +321,89 @@ describe("study-library ingestion", () => {
     expect(mock.payloads[0].cursor).toMatchObject({ done: true });
   });
 
+  test("archive 응답의 같은 글은 한 번만 저장하고 끝나지 않은 cursor는 계속 수집한다", async () => {
+    const mock = new MockClient();
+
+    await collectAndIngestStudyLibrary({
+      client: mock as unknown as StudyLibraryClient,
+      sources: [{ ...feedSource, key: "kakao-tech" }],
+      mode: "archive",
+      maxItems: 4,
+      timeoutMs: 1000,
+      fetchImpl: async () => response(`<urlset>
+        <url><loc>https://tech.kakao.com/posts/one?utm_source=feed</loc></url>
+        <url><loc>https://tech.kakao.com/posts/one?utm_source=mail</loc></url>
+        <url><loc>https://tech.kakao.com/posts/two</loc></url>
+        <url><loc>https://tech.kakao.com/posts/three</loc></url>
+        <url><loc>https://tech.kakao.com/posts/four</loc></url>
+      </urlset>`),
+    });
+
+    expect(mock.payloads).toHaveLength(2);
+    expect(mock.payloads.flatMap((payload) => payload.items.map((item) => item.canonicalUrl))).toEqual([
+      "https://tech.kakao.com/posts/one",
+      "https://tech.kakao.com/posts/two",
+      "https://tech.kakao.com/posts/three",
+      "https://tech.kakao.com/posts/four",
+    ]);
+  });
+
+  test("일반 수집 오류는 실패 상태로 남기고 다음 소스를 수집한다", async () => {
+    const mock = new MockClient();
+    mock.getSourceCursor = async (sourceKey, mode) => {
+      if (sourceKey === feedSource.key) throw new Error(`${"a".repeat(250)}\nsecond line`);
+      return { ...mock.cursor, sourceKey, mode };
+    };
+
+    const result = await collectAndIngestStudyLibrary({
+      client: mock as unknown as StudyLibraryClient,
+      sources: [feedSource, pageSource],
+      mode: "recent",
+      maxItems: 10,
+      timeoutMs: 1000,
+      fetchImpl: async () => response("<html><body><a href='/post'>Post</a></body></html>"),
+    });
+
+    expect(result.statuses).toEqual([
+      expect.objectContaining({
+        sourceKey: feedSource.key,
+        status: "failed",
+        acceptedCount: 0,
+        cursorUpdated: false,
+        reason: "a".repeat(200),
+      }),
+      expect.objectContaining({ sourceKey: pageSource.key, status: "ingested" }),
+    ]);
+  });
+
+  test("Backend client 오류는 종류와 관계없이 출처 반복을 멈추고 그대로 전파한다", async () => {
+    const errors = [
+      new StudyLibraryApiError({ status: 503, code: "UNAVAILABLE" }),
+      new StudyLibraryMalformedJsonError(),
+      new StudyLibraryResponseValidationError([{ path: ["sources"], message: "required" }]),
+      new StudyLibraryNetworkError(),
+      new StudyLibraryBodyReadError(),
+    ];
+
+    for (const error of errors) {
+      const mock = new MockClient();
+      const requestedSources: string[] = [];
+      mock.getSourceCursor = async (sourceKey) => {
+        requestedSources.push(sourceKey);
+        throw error;
+      };
+
+      await expect(collectAndIngestStudyLibrary({
+        client: mock as unknown as StudyLibraryClient,
+        sources: [feedSource, pageSource],
+        mode: "recent",
+        maxItems: 10,
+        timeoutMs: 1000,
+      })).rejects.toBe(error);
+      expect(requestedSources).toEqual([feedSource.key]);
+    }
+  });
+
   test("--reset-cursor는 기존 cursor version을 expectedCursorVersion으로 보내고 standalone reset API를 호출하지 않는다", async () => {
     const mock = new MockClient();
     mock.cursor = {
@@ -343,18 +452,25 @@ describe("study-library ingestion", () => {
     expect(Buffer.byteLength(JSON.stringify(mock.payloads[0].cursor), "utf8")).toBeLessThanOrEqual(64 * 1024);
   });
 
-  test("자료 저장 API가 실패하면 다음 cursor가 진행된 것으로 기록되지 않는다", async () => {
+  test("일반 자료 저장 오류는 실패 상태로 남기고 cursor가 진행된 것으로 기록하지 않는다", async () => {
     const mock = new MockClient();
     mock.failIngestion = true;
 
-    await expect(collectAndIngestStudyLibrary({
+    const result = await collectAndIngestStudyLibrary({
       client: mock as unknown as StudyLibraryClient,
       sources: [feedSource],
       mode: "recent",
       maxItems: 10,
       timeoutMs: 1000,
       fetchImpl: async () => response(rss([{ title: "One", url: "https://example.com/one" }])),
-    })).rejects.toThrow("API down");
+    });
+
+    expect(result.statuses[0]).toMatchObject({
+      status: "failed",
+      acceptedCount: 0,
+      cursorUpdated: false,
+      reason: "API down",
+    });
     expect(mock.payloads).toHaveLength(0);
   });
 

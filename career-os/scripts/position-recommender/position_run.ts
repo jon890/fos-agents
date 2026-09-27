@@ -11,9 +11,15 @@ import { collectEvidenceForRun } from "./collect_company_evidence.ts";
 import { commitPositionAnalysis } from "./commit_position_analysis.ts";
 import { finalizeRecommendation } from "./finalize_position_recommendation.ts";
 import { createCareerBackendClient } from "./career-backend/client.ts";
-import { runDirectoryPaths, type RunDirectoryPaths } from "./run-dir.ts";
+import {
+  runDirectoryPaths,
+  validatePositionCleanupDirectory,
+  writeAnalysisUpdatesTemplate,
+  writeCompanyTierUpdatesTemplate,
+  type RunDirectoryPaths,
+} from "./run-dir.ts";
 
-const COMMANDS = ["collect", "commit-company-tiers", "commit-analyses", "finalize"] as const;
+const COMMANDS = ["collect", "commit-company-tiers", "commit-analyses", "finalize", "cleanup"] as const;
 type PositionRunCommand = (typeof COMMANDS)[number];
 
 type PreparationResult = Awaited<ReturnType<typeof preparePositionAnalysis>>;
@@ -53,12 +59,14 @@ Usage:
   position_run.ts commit-company-tiers --run <RUN_DIR>
   position_run.ts commit-analyses --run <RUN_DIR>
   position_run.ts finalize --run <RUN_DIR>
+  position_run.ts cleanup --run <RUN_DIR>
 
 Commands:
   collect                 공고를 수집하고 다음 큐를 만든다
   commit-company-tiers    회사 판정을 반영하고 공고 분석 큐를 만든다
   commit-analyses         공고 분석을 반영한다
   finalize                추천 JSON과 HTML을 만든다
+  cleanup                 검증과 전달이 끝난 임시 실행 디렉터리를 정리한다
 
 Options:
   --run <RUN_DIR>  실행별 파일을 둘 디렉터리
@@ -186,6 +194,17 @@ export async function runPositionCommand(
 
   const operations = options.operations ?? defaultOperations;
   const directory = parsed.runDirectory ?? (options.createRunDirectory ?? createRunDirectory)();
+  if (parsed.command === "cleanup") {
+    let cleanupDirectory: string;
+    try {
+      cleanupDirectory = validatePositionCleanupDirectory(directory);
+    } catch (error) {
+      throw new PositionRunUsageError((error as Error).message);
+    }
+    rmSync(cleanupDirectory, { recursive: true });
+    writeLine(`정리 완료: ${basename(cleanupDirectory)}`);
+    return 0;
+  }
   const paths = runDirectoryPaths(directory);
 
   if (parsed.command === "collect") {
@@ -207,13 +226,17 @@ export async function runPositionCommand(
       writeLine(
         `수집 완료: 후보 ${result.candidateCount}건, ${basename(paths.companyTierQueue)} 준비`,
       );
+      const companyCount = writeCompanyTierUpdatesTemplate(paths);
       writeLine(`회사 판정 결과 작성: ${paths.companyTierUpdates}`);
+      writeLine(`채울 항목: 회사 ${companyCount}곳. results 나 failures에 한 번씩 넣는다.`);
       writeLine("다음 명령: commit-company-tiers");
     } else {
       writeLine(
         `수집 완료: 후보 ${result.candidateCount}건, ${basename(paths.analysisQueue)} 준비`,
       );
+      const postingCount = writeAnalysisUpdatesTemplate(paths);
       writeLine(`공고 분석 결과 작성: ${paths.analysisUpdates}`);
+      writeLine(`채울 항목: 공고 ${postingCount}건. results 나 failures에 한 번씩 넣는다.`);
       writeLine("다음 명령: commit-analyses");
     }
     return 0;
@@ -227,7 +250,9 @@ export async function runPositionCommand(
       `회사 판정 반영: 생성 ${result.createdCount}건, 재사용 ${result.reusedCount}건, 실패 ${result.failedCount}건, 남음 ${result.remainingCount}건`,
     );
     if (result.analysisQueueOutput) {
+      const postingCount = writeAnalysisUpdatesTemplate(paths);
       writeLine(`공고 분석 결과 작성: ${paths.analysisUpdates}`);
+      writeLine(`채울 항목: 공고 ${postingCount}건. results 나 failures에 한 번씩 넣는다.`);
       writeLine("다음 명령: commit-analyses");
     } else {
       writeLine("다음 명령: commit-company-tiers");
@@ -243,6 +268,9 @@ export async function runPositionCommand(
       `공고 분석 반영: 생성 ${result.createdCount}건, 재사용 ${result.reusedCount}건, 실패 ${result.failedCount}건, 남음 ${result.remainingCount}건`,
     );
     if (result.status === "partial") {
+      const postingCount = writeAnalysisUpdatesTemplate(paths);
+      writeLine(`공고 분석 결과 작성: ${paths.analysisUpdates}`);
+      writeLine(`채울 항목: 공고 ${postingCount}건. results 나 failures에 한 번씩 넣는다.`);
       writeLine(
         `남은 ${result.remainingCount}건의 분석 결과를 ${paths.analysisUpdates}에 작성하고 같은 명령을 다시 실행하세요.`,
       );

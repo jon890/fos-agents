@@ -21,6 +21,11 @@ mktemp -d "${TMPDIR:-/tmp}/study-topic-recommender.XXXXXX"
 
 실행 명령은 모두 저장소 루트에서 실행한다.
 `<RUN_DIR>`는 시스템 임시 디렉터리 아래의 실행별 경로이며 이름이 `study-topic-recommender.`로 시작해야 한다.
+전체 하위 동작과 값 옵션은 `--help` 또는 `-h`로 확인한다.
+
+```bash
+bun career-os/scripts/study-topic-recommender/morning_reading_cli.ts --help
+```
 
 ```bash
 # cwd: 저장소 루트
@@ -100,6 +105,14 @@ bun --env-file=career-os/.env \
   --report-id morning-YYYY-MM-DD --channel cloudflare-pages \
   --external-id morning-YYYY-MM-DD --published-at 2026-09-07T00:00:00.000Z \
   --url https://example.com/morning-YYYY-MM-DD
+```
+
+검증과 결과 전달이 끝나고 보존할 파일을 확인한 뒤 실행 디렉터리를 정리한다.
+`--cleanup`은 시스템 임시 디렉터리의 직접 자식만 지우며 중첩 경로와 symlink를 거절한다.
+도움말과 정리 명령에는 Backend 설정이 필요하지 않다.
+
+```bash
+bun career-os/scripts/study-topic-recommender/morning_reading_cli.ts --cleanup --run-dir <RUN_DIR>
 ```
 
 ## 후보자 기준 변경

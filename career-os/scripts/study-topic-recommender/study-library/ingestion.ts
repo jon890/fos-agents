@@ -6,7 +6,7 @@ import { extractPageLinks } from "../source/adapters/page.js";
 import type { CollectedReading } from "../source/adapters/types.js";
 import { collectArchiveSource, type ArchiveCursor } from "../source/archive/index.js";
 import { canonicalizeReadingUrl, readingContentKey } from "../url_identity.js";
-import type { StudyLibraryClient } from "./client.js";
+import { StudyLibraryClientError, type StudyLibraryClient } from "./client.js";
 
 export const INGESTION_BATCH_LIMIT = 100;
 export const CURSOR_MAX_BYTES = 64 * 1024;
@@ -225,7 +225,7 @@ async function collectRecentSource(input: {
     const savedKeys = new Set<string>();
     for (let index = 0; index < collected.length && newItems.length < input.maxItems; index += 1) {
       const key = responseKeys[index];
-      if (previousSeen.has(key)) continue;
+      if (previousSeen.has(key) || savedKeys.has(key)) continue;
       const apiItem = toIngestionItem(collected[index], input.collectedAt);
       newItems.push(apiItem);
       savedKeys.add(apiItem.contentKey);
@@ -287,7 +287,14 @@ async function collectOneBatch(input: {
         accepted: 0,
       };
     }
-    const items = result.items.map((item) => toIngestionItem(item, input.collectedAt));
+    const seenContentKeys = new Set<string>();
+    const items = result.items
+      .map((item) => toIngestionItem(item, input.collectedAt))
+      .filter((item) => {
+        if (seenContentKeys.has(item.contentKey)) return false;
+        seenContentKeys.add(item.contentKey);
+        return true;
+      });
     const payload = buildIngestionPayload({
       sourceKey: input.source.key,
       mode: "archive",
@@ -352,6 +359,11 @@ function selectedSources(sources: ReadingSource[], sourceKey?: string): ReadingS
   return selected;
 }
 
+function failureReason(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.split(/\r?\n/, 1)[0].slice(0, 200);
+}
+
 export async function collectAndIngestStudyLibrary(input: CollectAndIngestOptions): Promise<CollectAndIngestResult> {
   if (!Number.isInteger(input.maxItems) || input.maxItems <= 0) {
     throw new Error("maxItems는 양의 정수여야 한다.");
@@ -367,45 +379,58 @@ export async function collectAndIngestStudyLibrary(input: CollectAndIngestOption
   const collectedAt = (input.now ?? (() => new Date()))().toISOString();
 
   for (const source of sources) {
-    const cursorResult = await input.client.getSourceCursor(source.key, input.mode);
-    let cursor = input.resetCursor && input.mode === "archive" ? null : cursorResult.cursor;
-    let cursorVersion = cursorResult.version;
-    let remaining = maxItems;
     let sourceAccepted = 0;
     let sourceUpdates = 0;
-    let terminalStatus: LibraryCollectStatus | null = null;
+    try {
+      const cursorResult = await input.client.getSourceCursor(source.key, input.mode);
+      let cursor = input.resetCursor && input.mode === "archive" ? null : cursorResult.cursor;
+      let cursorVersion = cursorResult.version;
+      let remaining = maxItems;
+      let terminalStatus: LibraryCollectStatus | null = null;
 
-    do {
-      const batchLimit = Math.min(INGESTION_BATCH_LIMIT, remaining || INGESTION_BATCH_LIMIT);
-      const batch = await collectOneBatch({
-        options: input,
-        source,
-        cursor,
-        cursorVersion,
-        batchLimit,
-        collectedAt,
+      do {
+        const batchLimit = Math.min(INGESTION_BATCH_LIMIT, remaining || INGESTION_BATCH_LIMIT);
+        const batch = await collectOneBatch({
+          options: input,
+          source,
+          cursor,
+          cursorVersion,
+          batchLimit,
+          collectedAt,
+        });
+        if (batch.status !== "ingested") {
+          terminalStatus = batch;
+          break;
+        }
+        sourceAccepted += batch.acceptedCount;
+        acceptedCount += batch.acceptedCount;
+        sourceUpdates += 1;
+        cursorUpdates += 1;
+        cursor = batch.nextCursor;
+        cursorVersion += 1;
+        remaining -= batch.accepted;
+        const done = cursor?.done === true
+          || (input.mode === "recent" && batch.accepted < batchLimit)
+          || remaining <= 0;
+        if (done) break;
+      } while (remaining > 0);
+
+      statuses.push(terminalStatus ?? {
+        sourceKey: source.key,
+        status: "ingested",
+        acceptedCount: sourceAccepted,
+        cursorUpdated: sourceUpdates > 0,
       });
-      if (batch.status !== "ingested") {
-        terminalStatus = batch;
-        break;
-      }
-      sourceAccepted += batch.acceptedCount;
-      acceptedCount += batch.acceptedCount;
-      sourceUpdates += 1;
-      cursorUpdates += 1;
-      cursor = batch.nextCursor;
-      cursorVersion += 1;
-      remaining -= batch.accepted;
-      const done = cursor?.done === true || batch.accepted < batchLimit || remaining <= 0;
-      if (done) break;
-    } while (remaining > 0);
-
-    statuses.push(terminalStatus ?? {
-      sourceKey: source.key,
-      status: "ingested",
-      acceptedCount: sourceAccepted,
-      cursorUpdated: sourceUpdates > 0,
-    });
+    } catch (error) {
+      if (error instanceof StudyLibraryClientError) throw error;
+      statuses.push({
+        sourceKey: source.key,
+        status: "failed",
+        reason: failureReason(error),
+        acceptedCount: sourceAccepted,
+        cursorUpdated: sourceUpdates > 0,
+      });
+    }
   }
 
   return {

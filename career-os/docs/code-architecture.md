@@ -325,11 +325,12 @@ TypeScript 스크립트가 brain 을 직접 조회하지 않는다.
 
 ## position-recommender
 
-`scripts/position-recommender/` 루트에는 CLI 진입점만 둔다.
+`scripts/position-recommender/` 루트에는 CLI 진입점과 일일 실행 파일 계약 helper인 `run-dir.ts`를 둔다.
 어느 진입점이 [`flow.md`](flow.md#position-recommender)의 어느 단계인지는 다음과 같다.
 
-**일일 실행 경로는 `position_run.ts`의 하위 명령 넷이다.**
+**일일 실행 경로는 `position_run.ts`의 하위 명령 다섯 개다.**
 skill이 중간 파일 이름과 플래그를 알지 못하도록 모든 하위 명령이 `--run <RUN_DIR>` 하나만 받는다.
+`run-dir.ts`는 일일 실행 파일 이름과 모델이 채울 결과 파일의 틀을 관리하고, 정리할 임시 실행 경로를 검증한다.
 
 | 하위 명령 | 흐름의 단계 |
 | --- | --- |
@@ -337,6 +338,7 @@ skill이 중간 파일 이름과 플래그를 알지 못하도록 모든 하위 
 | `commit-company-tiers` | 축별 판정 반영과 분석 큐 생성 |
 | `commit-analyses` | 큐에 든 공고의 분석 반영 |
 | `finalize` | 추천 JSON과 HTML 생성과 검증 |
+| `cleanup` | 검증과 전달이 끝난 임시 실행 디렉터리 정리 |
 
 나머지 진입점은 일일 실행에 들어가지 않는다.
 
@@ -509,7 +511,7 @@ skill은 필요한 정보를 실행 시점에 조회하고 TypeScript 스크립�
 
 | 진입점 | 언제 쓰나 |
 | --- | --- |
-| `morning_reading_cli.ts` | 일일 실행. 수집, 후보 조회, 선택 검증, 추천 저장 |
+| `morning_reading_cli.ts` | 일일 실행. 수집, 후보 조회, 선택 검증, 추천 저장, `--cleanup`으로 임시 실행 디렉터리 정리, `--help`와 `-h`로 사용법 출력 |
 | `build_morning_reading.ts`, `validate_outputs.ts` | HTML 생성과 산출물 검증 |
 | `manage_reading_sources.ts` | 사람이 소스를 조회하고 더하고 고치고 끈다. `help`와 `template`는 API 연결 없이 사용법과 요청 초안을 보여준다 |
 | `configure_study_recommendation.ts` | 사람이 후보자 기준 버전을 올린다 |
@@ -517,6 +519,7 @@ skill은 필요한 정보를 실행 시점에 조회하고 TypeScript 스크립�
 후보풀, 선별, 공부 주제 구성과 HTML 렌더링은 각각 분리된 모듈이 담당한다.
 실행기는 시스템 임시 디렉터리 아래의 명시적인 실행 경로만 사용하며 저장소에 리포트 디렉터리를 만들지 않는다.
 `runtime-paths.ts` 가 `CAREER_OS_ROOT` 와 `--run-dir` 를 함께 해석하고 `validate_outputs.ts` 도 같은 해석을 쓴다.
+정리 명령에 필요한 직접 자식 경로, 접두사와 symlink 검증도 `runtime-paths.ts`에서 수행한다.
 둘 다 주어졌는데 경로가 다르면 사용법 오류로 중단한다.
 
 archive 진입점은 소스 필드에 복제하지 않고 `sourceKey` 별 registry 인 `source/archive/registry.ts` 로 둔다.

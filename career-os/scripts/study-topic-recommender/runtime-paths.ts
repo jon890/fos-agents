@@ -1,6 +1,6 @@
-import { realpathSync } from "node:fs";
+import { lstatSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, isAbsolute, relative, resolve } from "node:path";
+import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
 
 const RUN_DIRECTORY_PREFIX = "study-topic-recommender.";
 
@@ -10,6 +10,24 @@ export class StudyRunPathError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "StudyRunPathError";
+  }
+}
+
+export function validateStudyCleanupDirectory(directory: string): string {
+  const message = `정리 경로는 시스템 임시 디렉터리의 직접 자식인 ${RUN_DIRECTORY_PREFIX}* 디렉터리여야 하며 symlink는 허용하지 않습니다.`;
+  try {
+    if (!directory.trim()) throw new StudyRunPathError(message);
+    const path = resolve(directory);
+    const stat = lstatSync(path);
+    const realPath = realpathSync(path);
+    if (stat.isSymbolicLink() || !stat.isDirectory()
+      || dirname(realPath) !== realpathSync(tmpdir())
+      || !basename(realPath).startsWith(RUN_DIRECTORY_PREFIX)) {
+      throw new StudyRunPathError(message);
+    }
+    return realPath;
+  } catch {
+    throw new StudyRunPathError(message);
   }
 }
 

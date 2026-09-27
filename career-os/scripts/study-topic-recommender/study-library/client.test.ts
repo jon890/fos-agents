@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { StudyLibraryApiError, StudyLibraryClient, type StudyLibraryFetch } from "./client.js";
+import { StudyLibraryApiError, StudyLibraryClient, StudyLibraryClientError, type StudyLibraryFetch } from "./client.js";
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -420,5 +420,30 @@ describe("StudyLibraryClient", () => {
     expect(String((thrown as Error).message)).not.toContain("server message");
     expect(String((thrown as Error).message)).toContain("VERSION_CONFLICT");
     expect(String((thrown as Error).message)).toContain("req-409");
+  });
+
+  test("HTTP, 응답 본문, JSON, 응답 검증과 네트워크 오류는 공통 Backend client 오류다", async () => {
+    const fetches: StudyLibraryFetch[] = [
+      async () => jsonResponse({ error: { code: "UNAVAILABLE", requestId: "request-1" } }, { status: 503 }),
+      async () => new Response("not-json", { headers: { "Content-Type": "application/json" } }),
+      async () => jsonResponse({ sources: [{ sourceKey: "source-a" }] }),
+      async () => {
+        throw new TypeError("network down");
+      },
+      async () => new Response(new ReadableStream({
+        start(controller) {
+          controller.error(new Error("body read failed"));
+        },
+      }), { headers: { "Content-Type": "application/json" } }),
+    ];
+
+    for (const fetchImpl of fetches) {
+      await expect(new StudyLibraryClient({
+        origin: "https://study.example.com",
+        token: "test-token-123456789012345678901234567890",
+        fetchImpl,
+        maxRetries: 0,
+      }).getSources()).rejects.toBeInstanceOf(StudyLibraryClientError);
+    }
   });
 });
