@@ -87,7 +87,8 @@ def click_stable_settings_control(page: Page, selector: str) -> bool:
         nonlocal last_top, stable_since, point
         raw = page.js(
             f"(() => {{ const el = document.querySelector({json.dumps(selector)});"
-            " if (!el) return null; const r = el.getBoundingClientRect();"
+            " if (!el) return null; el.scrollIntoView({block:'nearest'});"
+            " const r = el.getBoundingClientRect();"
             " if (!r.width || !r.height) return null;"
             " const x = r.left + r.width / 2, y = r.top + r.height / 2;"
             " const hit = document.elementFromPoint(x, y);"

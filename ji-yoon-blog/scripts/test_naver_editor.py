@@ -412,8 +412,10 @@ class EditorGateTest(unittest.TestCase):
         class Page:
             def __init__(self):
                 self.events = []
+                self.expressions = []
 
-            def js(self, _expression):
+            def js(self, expression):
+                self.expressions.append(expression)
                 return json.dumps(states.pop(0))
 
             def call(self, method, **params):
@@ -431,6 +433,7 @@ class EditorGateTest(unittest.TestCase):
         with patch.object(naver_editor_settings, "wait_until", side_effect=poll), \
                 patch.object(naver_editor_settings.time, "monotonic", side_effect=[1.0, 1.3]):
             self.assertTrue(naver_editor_settings.click_stable_settings_control(page, "#category"))
+        self.assertTrue(all("scrollIntoView({block:'nearest'})" in expr for expr in page.expressions))
         self.assertEqual(
             [(method, params["type"], params["x"], params["y"]) for method, params in page.events],
             [
