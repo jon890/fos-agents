@@ -8,7 +8,6 @@ import { CareerBackendClientError } from "../career-backend/client.ts";
 import {
   filterExcludedPostings,
   loadPositionExclusions,
-  validateCareerDownsideExclusion,
   type EnrichedPositionExclusion,
   type PositionExclusions,
   type PositionExclusionsSource,
@@ -51,10 +50,6 @@ const posting: Posting = {
   requirements: "백엔드 경험",
   preferred: "",
 };
-const config: PositionExclusions = {
-  schemaVersion: 1,
-  exclusions: [{ source: posting.source, identityHash: posting.identityHash, url: posting.url }],
-};
 const backendPostingRule = {
   scope: "posting",
   source: posting.source,
@@ -64,7 +59,8 @@ const backendPostingRule = {
   reason: "검증용 제외 규칙",
   evidenceUrls: [posting.url],
   decidedAt: "2026-09-10",
-};
+} satisfies BackendPositionExclusion;
+const config: PositionExclusions = [backendPostingRule];
 
 describe("개인 공고 제외", () => {
   test("같은 소스의 ID 또는 정규화 URL만 제외한다", () => {
@@ -134,19 +130,9 @@ describe("개인 공고 제외", () => {
       let calls = 0;
       const sources: PositionExclusionsSource[] = [
         failingExclusionsSource(),
-        // 모르는 소스 이름, 필수 칸 누락, 회사 제외의 근거 부족이다.
+        // 모르는 소스 이름과 posting 규칙의 누락된 소스다.
         exclusionsSource([{ ...backendPostingRule, source: "unknown-board" }]),
-        exclusionsSource([{ scope: "posting", source: "toss-careers" }]),
-        exclusionsSource([
-          {
-            scope: "company",
-            company: "테스트 회사",
-            decisionKind: "career-downside",
-            reason: "근거가 하나뿐이다",
-            evidenceUrls: ["https://example.com/company"],
-            decidedAt: "2026-09-10",
-          },
-        ]),
+        exclusionsSource([{ ...backendPostingRule, source: "" }]),
       ];
       for (const source of sources) {
         await expect(
@@ -168,7 +154,7 @@ describe("개인 공고 제외", () => {
         expect(existsSync(out)).toBe(false);
       }
       expect(calls).toBe(0);
-      expect((await loadPositionExclusions(exclusionsSource([]))).exclusions).toEqual([]);
+      expect(await loadPositionExclusions(exclusionsSource([]))).toEqual([]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -236,30 +222,9 @@ describe("개인 공고 제외", () => {
           url: "https://example.com/jobs/2",
         },
       ],
-      { schemaVersion: 2, exclusions: [companyRule] },
+      [companyRule],
     );
     expect(result.eligible.map((item) => item.company)).toEqual(["다른 회사"]);
-  });
-
-  test("고정 판정 축 없이 제외를 허용하고 회사 제외에는 근거 둘을 요구한다", () => {
-    const base: EnrichedPositionExclusion = {
-      scope: "posting",
-      source: posting.source,
-      identityHash: posting.identityHash,
-      url: posting.url,
-      decisionKind: "career-downside",
-      reason: "검증용",
-      evidenceUrls: [posting.url],
-      decidedAt: "2026-09-10",
-    };
-    expect(() => validateCareerDownsideExclusion(base)).not.toThrow();
-    expect(() =>
-      validateCareerDownsideExclusion({
-        ...base,
-        scope: "company",
-        company: "테스트 회사",
-      }),
-    ).toThrow("공개 근거 URL이 두 개");
   });
 
   test("회사 역할군 cooldown은 공고명에 맞는 역할만 만료일까지 제외한다", () => {
@@ -285,7 +250,7 @@ describe("개인 공고 제외", () => {
       identityHash: "other",
       url: "https://example.com/jobs/other",
     };
-    const config = { schemaVersion: 2 as const, exclusions: [rule] };
+    const config = [rule];
 
     expect(
       filterExcludedPostings([posting, frontend, otherCompany], config, new Date("2027-03-31"))
@@ -325,16 +290,7 @@ describe("개인 공고 제외", () => {
 
   test("계약을 어긴 규칙의 본문은 오류 문구에 담기지 않는다", async () => {
     const secret = "비공개-회사-이름";
-    const source = exclusionsSource([
-      {
-        scope: "company",
-        company: secret,
-        decisionKind: "career-downside",
-        reason: "근거 URL 이 하나뿐이다.",
-        evidenceUrls: ["https://example.com/report/one"],
-        decidedAt: "2026-09-11",
-      },
-    ]);
+    const source = exclusionsSource([{ ...backendPostingRule, source: "unknown-board", reason: secret }]);
 
     await expect(loadPositionExclusions(source)).rejects.toThrow(
       "FAIL position exclusions: 커리어 Backend 가 돌려준 제외 규칙이 계약을 만족하지 않습니다.",

@@ -83,37 +83,15 @@ describe("career workspace cli", () => {
     expect((await checkWorkspace(makeContext(fixture))).local.status).toBe("clean");
   }));
 
-  test("skill session은 허용한 작성 skill만 받는다", async () => withFixture(async (fixture) => {
-    await expect(beginSkillWorkspace(makeContext(fixture), "interview-practice-notes")).rejects.toMatchObject({
+  test.each([
+    "interview-practice-notes",
+    "position-recommender",
+    "study-topic-recommender",
+    undefined,
+  ])("skill begin은 관리하지 않는 %s skill을 거절한다", async (skill) => withFixture(async (fixture) => {
+    await expect(beginSkillWorkspace(makeContext(fixture), skill)).rejects.toMatchObject({
       result: { code: "INVALID_MANIFEST" },
     });
-    await expect(beginSkillWorkspace(makeContext(fixture), undefined)).rejects.toMatchObject({
-      result: { code: "INVALID_MANIFEST" },
-    });
-  }));
-
-  test("position-recommender는 개인 제외 설정을 새 release로 반영한다", async () => withFixture(async (fixture) => {
-    await createRemoteRelease(fixture, "rev-1", {
-      "state/private-config/position-exclusions.json": "{\"schemaVersion\":1,\"exclusions\":[]}",
-    });
-    await prepareWorkspace(makeContext(fixture));
-    await beginSkillWorkspace(makeContext(fixture), "position-recommender");
-    await writeFile(
-      path.join(fixture.workspaceRoot, "state", "private-config", "position-exclusions.json"),
-      "{\"schemaVersion\":1,\"exclusions\":[{\"scope\":\"company\"}]}\n",
-    );
-    const result = await finishSkillWorkspace(makeContext(fixture), "position-recommender");
-    expect(result).toMatchObject({ action: "skill-finish", skill: "position-recommender", noChange: false });
-    expect((await checkWorkspace(makeContext(fixture))).local.status).toBe("clean");
-  }));
-
-  test("study-topic-recommender는 추천 이력을 새 release로 반영한다", async () => withFixture(async (fixture) => {
-    await createRemoteRelease(fixture, "rev-1", { "state/morning-study-history.json": "{}" });
-    await prepareWorkspace(makeContext(fixture));
-    await beginSkillWorkspace(makeContext(fixture), "study-topic-recommender");
-    await writeFile(path.join(fixture.workspaceRoot, "state", "morning-study-history.json"), "{\"schemaVersion\":1}\n");
-    const result = await finishSkillWorkspace(makeContext(fixture), "study-topic-recommender");
-    expect(result).toMatchObject({ action: "skill-finish", skill: "study-topic-recommender", noChange: false });
   }));
 
   test("성공한 begin이 없거나 다른 skill 세션이면 finish를 거절한다", async () => withFixture(async (fixture) => {
