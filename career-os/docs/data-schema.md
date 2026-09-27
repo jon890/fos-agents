@@ -173,11 +173,20 @@ brain에는 경력, 역할 선호와 경험 경계 등 개인 지식을 두고, 
 
 각 후보는 출처 식별자, 출처 종류와 역할, 주제, 제목, URL, 게시 시각, 공개 설명, 자료 종류를 가진다.
 
-### 면접 연습 table
+### 면접 연습 저장소
 
-주제별 복습 상태, 연습 기록과 개인 질문은 `fos_career` 에 둔다.
+주제별 복습 상태, 연습 기록과 개인 질문은 `CAREER_STORE` 로 고른 저장소 하나에 둔다.
 결정과 근거는 [ADR-129](adr/ADR-129-면접-연습-기록과-개인-질문은-backend가-소유한다.md)에 있다.
-`state/` 에 연습 기록 파일을 만들지 않는다.
+
+| `CAREER_STORE` | 저장 위치 | 쓰는 곳 |
+| --- | --- | --- |
+| `backend` | `fos_career` 의 table 셋. 아래 「면접 연습 table」 | 운영(hermes) |
+| `file` | `CAREER_STORE_DIR` 아래 파일 셋. 기본은 `career-os/state/interview-practice/`. 아래 「면접 연습 파일」 | Backend 를 쓰지 않는 사용자 |
+| 없음 | 명령이 실패한다 | |
+
+두 저장소는 같은 계약을 따른다. 복습일 규칙, 칸 이름과 검사 규칙이 같고, 한쪽에서 쌓은 기록을 다른 쪽이 읽지는 않는다.
+
+### 면접 연습 table
 
 ```mermaid
 erDiagram
@@ -247,6 +256,48 @@ erDiagram
 `payload` 의 형식은 DB 제약이 아니라 Backend 의 zod 검사가 지킨다.
 `payload` 안의 `id`, `topic` 은 행의 `question_id`, `topic` 과 같아야 하고, 다르면 `400` 이다.
 `answerSignals` 와 `followUps` 는 따로 조회하지 않고 질문 전체가 한 번에 모델에게 전달되므로 자식 table 로 나누지 않는다.
+
+### 면접 연습 파일
+
+`CAREER_STORE=file` 일 때 쓴다. 칸 이름은 HTTP 계약의 camelCase 와 같다.
+
+| 파일 | 모양 | table 대응 |
+| --- | --- | --- |
+| `topic-progress.json` | `{ schemaVersion: 1, items: [{ drillType, topic, passCount, failCount, nextReviewDate, lastPassedDate }] }` | `interview_topic_progress` |
+| `attempts.jsonl` | 한 줄에 연습 기록 하나. `POST attempts` 본문에 `evaluatedOn`, `createdAt` 을 더한 것 | `interview_attempts` |
+| `personal-questions.json` | `{ schemaVersion: 1, items: [{ questionId, drillType, topic, enabled, question, updatedAt }] }` | `interview_personal_questions` |
+
+- 같은 `attemptId` 가 `attempts.jsonl` 에 있으면 새로 쓰지 않고 그때의 결과를 돌려준다.
+- JSON 파일은 같은 디렉터리의 임시 파일에 쓴 뒤 이름을 바꿔 교체한다. 쓰다 멈춰도 반쯤 쓴 파일이 남지 않는다.
+- 한 사람이 한 곳에서 쓰는 것을 전제로 하고 동시 기록을 막지 않는다.
+- `state/` 아래에 두므로 비공개 작업본 release 로 동기화할 수 있다.
+
+### 후보자 맥락
+
+`interview-practice` 가 질문 난도와 꼬리질문 경계를 정할 때 읽는 값이다.
+결정과 근거는 [ADR-130](adr/ADR-130-면접-연습의-후보자-맥락은-memory-공급자-경계로-읽는다.md)에 있다.
+
+| `CAREER_MEMORY` | 채우는 쪽 |
+| --- | --- |
+| `brain` | 스킬이 `brain-search` 로 아래 칸을 채운다. 스크립트는 채울 칸 목록만 낸다 |
+| `file` | `CAREER_MEMORY_FILE` 의 JSON. 기본은 `career-os/library/candidate-memory.json`. 템플릿은 `.claude/skills/interview-practice/templates/candidate-memory.example.json` |
+| 없음 | 명령이 실패한다 |
+
+| 칸 | 타입 | 뜻 |
+| --- | --- | --- |
+| `schemaVersion` | `1` | |
+| `currentRole.title` | 문자열 | 현재 역할 |
+| `currentRole.yearsOfExperience` | 0 이상 숫자 | 경력 연차 |
+| `currentRole.bar` | `production`, `large-scale`, `global-scale` | 지금 책임지는 문제 규모 |
+| `experience.direct` | 문자열 배열 | 직접 설계하거나 운영한 기술과 영역 |
+| `experience.adjacent` | 문자열 배열 | 옆에서 함께 다룬 영역 |
+| `experience.studyOnly` | 문자열 배열 | 학습만 한 영역 |
+| `targets` | 배열. 비어도 된다 | 현재 지원 대상 |
+| `targets[].company`, `targets[].role` | 문자열 | |
+| `targets[].applicationDir` | 문자열 | `career-os/` 기준 지원 디렉터리. 예: `applications/<company>/<role>` |
+
+현재 직장 이름은 계약에 두지 않는다. 질문 난도는 회사 이름이 아니라 `bar` 로 정한다.
+파일은 개인 정보라 `library/` 처럼 Git 이 추적하지 않는 곳에 둔다.
 
 ## position-recommender
 

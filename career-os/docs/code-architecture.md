@@ -302,23 +302,31 @@ npm test
 | 자리 | 담는 것 |
 | --- | --- |
 | `applications/<company>/<position>/evidence/interview-questions.json` | 공고에서 파생한 포지션별 질문 |
-| 커리어 Backend `interview_personal_questions` | 개인 경험에서 파생해 여러 지원에서 다시 쓰는 질문 |
+| `CAREER_STORE` 로 고른 저장소 | 개인 경험에서 파생해 여러 지원에서 다시 쓰는 질문 |
 | `public/question-bank/` | 공개 가능한 일반 질문 |
 | `public/question-bank/sources.json` | 질문 출처의 공식 URL 과 확인일 |
 
 **공개 산출물에 개인 질문과 포지션별 질문을 넣지 않는다.** 이 분리가 자리를 나눈 이유다.
 
-현재 지원 대상은 private brain 에서 찾는다.
-스킬이 회사와 역할을 `applications/<company>/<position>/` 경로로 해석해 스크립트에 넘긴다.
-TypeScript 스크립트가 brain 을 직접 조회하지 않는다.
+현재 지원 대상과 경력 수준, 경험 경계는 `CAREER_MEMORY` 로 고른 memory 공급자에서 읽는다.
+계약과 공급자는 [ADR-130](adr/ADR-130-면접-연습의-후보자-맥락은-memory-공급자-경계로-읽는다.md)과 `data-schema.md` 의 「후보자 맥락」 절이 정한다.
+TypeScript 스크립트가 brain 을 직접 조회하지 않는다. `brain` 공급자일 때 스크립트는 채울 칸 목록만 낸다.
 
 `scripts/interview-drill/`은 `interview-practice`의 기술·인성 모드에서 질문 선별과 연습 기록을 처리한다.
 공고별 `evidence/interview-questions.json`을 명시하면 포지션 질문과 공통 기반 질문을 섞어 구성한다.
 `follow-up-policy.ts`는 답변 수준에 따른 꼬리질문 축과 최대 깊이를 제공한다.
 
-주제별 복습 상태, 연습 기록과 개인 질문은 커리어 Backend 가 소유한다.
+주제별 복습 상태, 연습 기록과 개인 질문은 `scripts/interview-drill/store/` 의 저장소 interface 뒤에 있다.
 결정과 근거는 [ADR-129](adr/ADR-129-면접-연습-기록과-개인-질문은-backend가-소유한다.md)에 있다.
-`drill-engine.ts` 는 이 셋을 파일에 쓰지 않는다.
+
+| 경로 | 책임 |
+| --- | --- |
+| `scripts/interview-drill/store/port.ts` | `InterviewPracticeStore` interface. 복습 상태 조회, 연습 기록, 개인 질문 조회와 저장 |
+| `scripts/interview-drill/store/backend-store.ts` | `/api/interview/v1` 를 부르는 구현 |
+| `scripts/interview-drill/store/file-store.ts` | `CAREER_STORE_DIR` 의 파일을 읽고 쓰는 구현 |
+| `scripts/interview-drill/store/index.ts` | `CAREER_STORE` 로 구현 하나를 고른다. 값이 없으면 실패한다 |
+| `scripts/interview-drill/memory.ts` | `CAREER_MEMORY` 에 따라 후보자 맥락을 검사해 내거나 채울 칸 목록을 낸다 |
+| `services/career-backend/src/interview/review-schedule.ts` | 복습일 규칙. Backend 와 파일 구현이 함께 import 한다 |
 
 | 명령 | 책임 |
 | --- | --- |
@@ -326,10 +334,12 @@ TypeScript 스크립트가 brain 을 직접 조회하지 않는다.
 | `drill-engine.ts record --attempt-id ...` | 연습 한 번을 기록하고 갱신된 주제 복습 상태를 JSON 으로 낸다 |
 | `drill-engine.ts personal add --file <json\|jsonl>` | 개인 질문을 더하거나 같은 `id` 를 덮어쓴다 |
 | `drill-engine.ts personal disable --question-id <id>` | 개인 질문을 끈다 |
+| `drill-engine.ts memory` | 후보자 맥락을 JSON 으로 낸다. `brain` 이면 채울 칸 목록을 낸다 |
+| `drill-engine.ts doctor` | `CAREER_STORE`, `CAREER_MEMORY` 와 그에 필요한 연결값, 파일 경로를 점검하고 빠진 것을 알려 준다 |
 
-HTTP 호출은 `scripts/interview-drill/career-backend/client.ts` 가 맡는다.
+Backend 구현의 HTTP 호출은 `scripts/interview-drill/career-backend/client.ts` 가 맡는다.
 연결값은 공부 추천, 포지션 client 와 같이 `scripts/lib/career-backend-config.ts` 로 검증한다.
-Backend 에 닿지 못하면 명령은 종료 코드 1 로 끝나고 로컬 파일로 대신하지 않는다.
+`backend` 를 고른 실행이 Backend 에 닿지 못하면 명령은 종료 코드 1 로 끝나고 파일 구현으로 바꾸지 않는다.
 
 후보풀과 리포트 중간 파일처럼 다시 만들 수 있는 실행 자료는 `state/`에 두지 않는다.
 
