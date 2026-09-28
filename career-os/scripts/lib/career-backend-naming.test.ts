@@ -38,17 +38,14 @@ describe("커리어 Backend 이름", () => {
     }
   });
 
-  test("옛 환경값 호환은 다섯 파일에만 둔다", () => {
+  test("옛 환경값 이름은 거부를 확인하는 설정 테스트에만 남긴다", () => {
     const legacyEnvironmentFiles = trackedCareerFiles().filter((file) =>
       readFileSync(resolve(repositoryRoot, file), "utf8").includes("CAREER_RECOMMENDATION_"),
     );
 
     expect(legacyEnvironmentFiles).toEqual([
-      "career-os/docs/code-architecture.md",
-      "career-os/scripts/lib/career-backend-config.ts",
       "career-os/scripts/position-recommender/career-backend/client.test.ts",
       "career-os/services/career-backend/src/config/config.test.ts",
-      "career-os/services/career-backend/src/config/config.ts",
     ]);
   });
 });

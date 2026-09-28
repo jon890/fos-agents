@@ -203,7 +203,6 @@ client는 `CAREER_BACKEND_URL`과 `CAREER_BACKEND_TOKEN` 또는
 공부 추천과 포지션 client 는 `scripts/lib/career-backend-config.ts` 로 같은 연결값을 검증한다.
 포지션과 공부 추천 client 는 `scripts/lib/career-backend-http.ts` 에 HTTP 요청, 인증 헤더, 재시도, timeout 과 오류 응답 해석을 맡긴다.
 멱등 키를 만드는 방법은 이미 저장된 키와 맞아야 하므로 각 client 가 지금 방식을 유지한다.
-전환 기간에는 옛 `CAREER_RECOMMENDATION_*` 이름도 읽는다.
 
 **프로세스 시간대를 UTC에 고정한다.** 시각 컬럼이 모두 `DATETIME(3)`이라 시간대를 저장하지 않으므로,
 프로세스가 다른 시간대면 다시 읽은 시각이 어긋나고 임차권 판정이 뒤집힌다.
