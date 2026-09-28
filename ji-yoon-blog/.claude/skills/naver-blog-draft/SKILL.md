@@ -397,6 +397,7 @@ python3 .claude/skills/naver-blog-draft/scripts/build_package.py \
   drafts/순돌이곱창/draft.json --out drafts/순돌이곱창/package.md
 ```
 
+여기서 편집기 자동화 실패는 로그인, 보안 확인, 장소 선택처럼 따로 정한 멈춤을 제외한 명령 실패다.
 편집기 자동화가 실패하면 `package.md`가 없을 때 위 명령으로 만들고,
 실패한 단계와 이유, 묶음 경로를 지융에게 알린 뒤 멈춘다.
 지융이 직접 편집기에 넣는다.
