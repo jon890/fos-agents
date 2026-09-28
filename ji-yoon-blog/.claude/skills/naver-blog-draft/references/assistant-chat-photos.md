@@ -26,7 +26,8 @@ python3 .claude/skills/naver-blog-draft/scripts/stage_chat_photos.py \
 스크립트는 원본을 그대로 두고 촬영시각 순으로 사진 번호를 붙인다.
 초안 폴더가 이미 있으면 덮어쓰지 않고 실패하므로 기존 초안과 사진을 먼저 확인한다.
 
-4. 명령이 출력한 `photos[].path`를 해당 장소 `draft.json`의 `image` 블록에 넣는다.
+4. 초안을 쓰기 전에 [SKILL.md의 5단계 「부족한 사실 묻기」](../SKILL.md#5-부족한-사실-묻기)를 장소별로 통과한다.
+   명령이 출력한 `photos[].path`를 해당 장소 `draft.json`의 `image` 블록에 넣는다.
    스티커, 지도, 카테고리, 태그와 협찬 여부는 기존 초안 계약을 따른다.
 5. 장소별로 `build_preview.py`를 실행하고 확인할 제목, 본문, 사진 순서, 스티커, 지도, 카테고리와 태그를 대화에서 보여준다.
    입력에 `[결과물 폴더]` 단락이 있으면 `--out`을 `<결과물 폴더>/<장소>/index.html`로 준다.
