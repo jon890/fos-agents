@@ -33,15 +33,10 @@ function validateToken(value: string): string {
 export function resolveCareerBackendConnection(
   environment: Record<string, string | undefined> = process.env,
 ): CareerBackendConnection {
-  const rawUrl =
-    environment.CAREER_BACKEND_URL?.trim() || environment.CAREER_RECOMMENDATION_API_URL?.trim();
+  const rawUrl = environment.CAREER_BACKEND_URL?.trim();
   if (!rawUrl) throw new Error("CAREER_BACKEND_URL 환경값이 필요하다.");
-  const directToken = environment.CAREER_BACKEND_TOKEN?.trim()
-    ? environment.CAREER_BACKEND_TOKEN
-    : environment.CAREER_RECOMMENDATION_API_TOKEN;
-  const tokenFile = environment.CAREER_BACKEND_TOKEN_FILE?.trim()
-    ? environment.CAREER_BACKEND_TOKEN_FILE
-    : environment.CAREER_RECOMMENDATION_API_TOKEN_FILE;
+  const directToken = environment.CAREER_BACKEND_TOKEN;
+  const tokenFile = environment.CAREER_BACKEND_TOKEN_FILE;
   if (Boolean(directToken?.trim()) === Boolean(tokenFile?.trim()))
     throw new Error("커리어 Backend token 또는 token 파일 중 정확히 하나가 필요하다.");
   const token = directToken?.trim()

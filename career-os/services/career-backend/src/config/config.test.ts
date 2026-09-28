@@ -101,66 +101,28 @@ describe("career-backend config", () => {
     });
   });
 
-  test("옛 이름만 있으면 설정을 읽는다", () => {
-    expect(
+  test("옛 이름만 있으면 새 이름이 필요하다는 오류가 난다", () => {
+    expect(() =>
       loadConfig({
         CAREER_RECOMMENDATION_DATABASE_URL: "mysql://legacy-user:legacy-secret@db/fos_career",
         CAREER_RECOMMENDATION_API_TOKEN: token,
       }),
-    ).toMatchObject({
-      databaseUrl: "mysql://legacy-user:legacy-secret@db/fos_career",
-      apiToken: token,
-    });
-  });
-
-  test("새 이름과 옛 이름을 함께 주면 새 이름 값을 쓴다", () => {
-    const newToken = "n".repeat(32);
-    expect(
+    ).toThrow("database 설정 형식을 하나만");
+    expect(() =>
       loadConfig({
-        CAREER_BACKEND_DATABASE_URL: "mysql://new-user:new-secret@db/fos_career",
-        CAREER_RECOMMENDATION_DATABASE_URL: "mysql://legacy-user:legacy-secret@db/fos_career",
-        CAREER_BACKEND_TOKEN: newToken,
+        CAREER_BACKEND_DATABASE_URL: "mysql://user:secret@db/fos_career",
         CAREER_RECOMMENDATION_API_TOKEN: token,
       }),
-    ).toMatchObject({
-      databaseUrl: "mysql://new-user:new-secret@db/fos_career",
-      apiToken: newToken,
-    });
+    ).toThrow("token 설정 형식을 하나만");
   });
 
-  test("새 token과 옛 token 파일을 함께 주면 설정 형식 오류가 난다", () => {
-    const directory = mkdtempSync(join(tmpdir(), "recommendation-config-"));
-    const path = join(directory, "token");
-    try {
-      writeFileSync(path, token);
-      chmodSync(path, 0o600);
-      expect(() =>
-        loadConfig({
-          CAREER_BACKEND_DATABASE_URL: "mysql://user:secret@db/fos_career",
-          CAREER_BACKEND_TOKEN: token,
-          CAREER_RECOMMENDATION_API_TOKEN_FILE: path,
-        }),
-      ).toThrow("token 설정 형식을 하나만");
-    } finally {
-      rmSync(directory, { recursive: true, force: true });
-    }
-  });
-
-  test("본문 상한은 옛 이름을 읽고 새 이름을 우선한다", () => {
+  test("옛 본문 상한 이름은 읽지 않는다", () => {
     expect(
       loadConfig({
         CAREER_BACKEND_DATABASE_URL: "mysql://user:secret@db/fos_career",
         CAREER_BACKEND_TOKEN: token,
         CAREER_RECOMMENDATION_MAX_BODY_BYTES: "2048",
       }).maxBodyBytes,
-    ).toBe(2048);
-    expect(
-      loadConfig({
-        CAREER_BACKEND_DATABASE_URL: "mysql://user:secret@db/fos_career",
-        CAREER_BACKEND_TOKEN: token,
-        CAREER_BACKEND_MAX_BODY_BYTES: "4096",
-        CAREER_RECOMMENDATION_MAX_BODY_BYTES: "2048",
-      }).maxBodyBytes,
-    ).toBe(4096);
+    ).toBe(2 * 1_024 * 1_024);
   });
 });

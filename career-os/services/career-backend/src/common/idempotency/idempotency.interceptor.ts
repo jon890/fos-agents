@@ -10,7 +10,7 @@ import { from, of, throwError, type Observable } from "rxjs";
 import { catchError, switchMap } from "rxjs/operators";
 
 import type { CareerBackendConfig } from "../../config/config.js";
-import { RECOMMENDATION_CONFIG } from "../../config/config.module.js";
+import { CAREER_BACKEND_CONFIG } from "../../config/config.module.js";
 import { ApiError } from "../api-error.js";
 import { BODY_METHODS, rawBodyOf } from "../raw-body.middleware.js";
 import { canonicalRequestHash } from "./request-hash.js";
@@ -32,7 +32,7 @@ type Proceed = { kind: "proceed"; key: string; requestHash: string };
 export class IdempotencyInterceptor implements NestInterceptor {
   constructor(
     private readonly receipts: ReceiptRepository,
-    @Inject(RECOMMENDATION_CONFIG) private readonly config: CareerBackendConfig,
+    @Inject(CAREER_BACKEND_CONFIG) private readonly config: CareerBackendConfig,
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {

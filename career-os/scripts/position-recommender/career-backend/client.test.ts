@@ -103,43 +103,19 @@ describe("position recommendation API client", () => {
     }
   });
 
-  test("공용 환경 해석은 옛 이름을 받고 새 이름을 우선한다", () => {
-    const legacy = {
-      CAREER_RECOMMENDATION_API_URL: "http://legacy-api.local",
-      CAREER_RECOMMENDATION_API_TOKEN: "l".repeat(32),
-    };
-    expect(resolveCareerBackendConnection(legacy)).toEqual({
-      baseUrl: "http://legacy-api.local/",
-      token: "l".repeat(32),
-    });
-    expect(
+  test("공용 환경 해석은 옛 이름만 있으면 새 이름이 필요하다는 오류가 난다", () => {
+    expect(() =>
       resolveCareerBackendConnection({
-        ...legacy,
-        CAREER_BACKEND_URL: "https://new-api.local",
-        CAREER_BACKEND_TOKEN: "n".repeat(32),
+        CAREER_RECOMMENDATION_API_URL: "http://legacy-api.local",
+        CAREER_RECOMMENDATION_API_TOKEN: "l".repeat(32),
       }),
-    ).toEqual({
-      baseUrl: "https://new-api.local/",
-      token: "n".repeat(32),
-    });
-  });
-
-  test("새 token과 옛 token 파일을 함께 주면 설정 오류가 난다", () => {
-    const directory = mkdtempSync(join(tmpdir(), "career-backend-token."));
-    const tokenPath = join(directory, "token");
-    try {
-      writeFileSync(tokenPath, "f".repeat(32), "utf8");
-      chmodSync(tokenPath, 0o600);
-      expect(() =>
-        resolveCareerBackendConnection({
-          CAREER_BACKEND_URL: "https://api.local",
-          CAREER_BACKEND_TOKEN: "x".repeat(32),
-          CAREER_RECOMMENDATION_API_TOKEN_FILE: tokenPath,
-        }),
-      ).toThrow("정확히 하나");
-    } finally {
-      rmSync(directory, { recursive: true, force: true });
-    }
+    ).toThrow("CAREER_BACKEND_URL 환경값이 필요하다");
+    expect(() =>
+      resolveCareerBackendConnection({
+        CAREER_BACKEND_URL: "https://api.local",
+        CAREER_RECOMMENDATION_API_TOKEN: "l".repeat(32),
+      }),
+    ).toThrow("정확히 하나");
   });
 
   test("같은 본문과 멱등 키로 5xx를 최대 두 번 재시도한다", async () => {

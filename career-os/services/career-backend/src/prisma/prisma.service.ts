@@ -2,7 +2,7 @@ import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@ne
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import type { PoolConfig } from "mariadb";
 
-import { RECOMMENDATION_CONFIG } from "../config/config.module.js";
+import { CAREER_BACKEND_CONFIG } from "../config/config.module.js";
 import type { CareerBackendConfig } from "../config/config.js";
 import { PrismaClient } from "../generated/prisma/client.js";
 
@@ -33,7 +33,7 @@ export function mariaDbPoolConfig(databaseUrl: string): PoolConfig {
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
-  constructor(@Inject(RECOMMENDATION_CONFIG) config: CareerBackendConfig) {
+  constructor(@Inject(CAREER_BACKEND_CONFIG) config: CareerBackendConfig) {
     super({ adapter: new PrismaMariaDb(mariaDbPoolConfig(config.databaseUrl)) });
   }
 
