@@ -397,8 +397,9 @@ python3 .claude/skills/naver-blog-draft/scripts/build_package.py \
   drafts/순돌이곱창/draft.json --out drafts/순돌이곱창/package.md
 ```
 
-편집기 자동화가 실패하면 `package.md`로 돌아가 실패한 단계와 이유, 붙여넣기 묶음의 위치를 지융에게 알리고 멈춘다.
-필요하면 위 명령으로 묶음을 만든다. 지융이 직접 편집기에 넣는다.
+편집기 자동화가 실패하면 `package.md`가 없을 때 위 명령으로 만들고,
+실패한 단계와 이유, 묶음 경로를 지융에게 알린 뒤 멈춘다.
+지융이 직접 편집기에 넣는다.
 실패를 넘기려고 `scripts/`나 스킬 파일을 고치지 않는다.
 실행 도중 `skill_manage`로 스킬을 바꾸지 않는다.
 실제로 초안 실행 중 편집기 스크립트와 스킬 파일을 함께 고친 적이 있다.
