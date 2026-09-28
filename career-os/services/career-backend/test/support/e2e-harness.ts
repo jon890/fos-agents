@@ -5,7 +5,7 @@ import { expect } from "vitest";
 import { AppModule } from "../../src/app.module.js";
 import { applyHttpLayers } from "../../src/bootstrap.js";
 import type { CareerBackendConfig } from "../../src/config/config.js";
-import { RECOMMENDATION_CONFIG } from "../../src/config/config.module.js";
+import { CAREER_BACKEND_CONFIG } from "../../src/config/config.module.js";
 import { PrismaService } from "../../src/prisma/prisma.service.js";
 import {
   legacyApiToken,
@@ -136,7 +136,7 @@ export async function startE2eHarness(): Promise<E2eHarness> {
   process.env.CAREER_BACKEND_DATABASE_URL = databaseUrl;
   process.env.CAREER_BACKEND_TOKEN = legacyApiToken;
   const app = await NestFactory.create(AppModule, { bodyParser: false, logger: false });
-  applyHttpLayers(app, app.get<CareerBackendConfig>(RECOMMENDATION_CONFIG));
+  applyHttpLayers(app, app.get<CareerBackendConfig>(CAREER_BACKEND_CONFIG));
   await app.listen(0, "127.0.0.1");
   const baseUrl = await app.getUrl();
   const prisma = app.get(PrismaService);

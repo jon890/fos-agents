@@ -13,7 +13,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { applyHttpLayers } from "../src/bootstrap.js";
 import { canonicalRequestHash } from "../src/common/idempotency/request-hash.js";
 import { loadConfig, type CareerBackendConfig } from "../src/config/config.js";
-import { RECOMMENDATION_CONFIG } from "../src/config/config.module.js";
+import { CAREER_BACKEND_CONFIG } from "../src/config/config.module.js";
 import { mariaDbPoolConfig, PrismaService } from "../src/prisma/prisma.service.js";
 import {
   legacyApiToken,
@@ -71,7 +71,7 @@ async function startApp(databaseUrl: string): Promise<RunningApp> {
   process.env.CAREER_BACKEND_DATABASE_URL = databaseUrl;
   process.env.CAREER_BACKEND_TOKEN = legacyApiToken;
   const app = await NestFactory.create(ProbeAppModule, { bodyParser: false, logger: false });
-  const config = app.get<CareerBackendConfig>(RECOMMENDATION_CONFIG);
+  const config = app.get<CareerBackendConfig>(CAREER_BACKEND_CONFIG);
   applyHttpLayers(app, config);
   await app.listen(0, "127.0.0.1");
   return { app, baseUrl: await app.getUrl(), config };
