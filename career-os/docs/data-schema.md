@@ -54,6 +54,46 @@ table 별 칸과 제약은 아래 `position-recommender` 절이 소유한다.
 schema 는 `services/career-backend/prisma/` 가 관리하고,
 migration 적용 절차는 [`services/career-backend/README.md`](../services/career-backend/README.md) 가 소유한다.
 
+### 후보자 맥락 문서
+
+스킬이 판단에 쓰는 개인 맥락을 문서 키마다 Markdown 본문 하나로 담는다.
+값을 읽는 쪽은 스크립트가 아니라 모델이라 본문의 형식을 칸으로 나누지 않는다.
+HTTP 계약은 [`flow.md`](flow.md#후보자-맥락-문서)가 소유한다.
+
+| 문서 키 | 담는 것 | 읽는 스킬 |
+| --- | --- | --- |
+| `learning-interests` | 공부 추천이 따를 학습 관심사와 우선순위 | `study-topic-recommender` |
+| `position-preferences` | 이직 우선순위와 역할 선호 | 전환 전이다 |
+| `application-state` | 회사별 지원 결과. 재지원 간격의 날짜는 `position_exclusions` 가 담는다 | 전환 전이다 |
+| `career-status` | 현재 경력, 강점, 경험 경계와 지원 전략 | 전환 전이다 |
+
+연락처, 생년월일, 병역과 정확한 재직 기간 같은 지원서 공통 프로필은 문서 키에 넣지 않는다.
+
+`candidate_context_documents` 는 문서 키마다 한 행이다.
+
+| 칸 | 타입 | 설명 |
+| --- | --- | --- |
+| `document_key` | `VARCHAR(50)` PK | 위 네 값 중 하나. `CHECK` 로 강제한다 |
+| `body` | `MEDIUMTEXT` | Markdown 본문. 서버가 UTF-8 64 KiB 이하만 받는다 |
+| `version` | `INT UNSIGNED` | 저장할 때마다 1 씩 오른다. 첫 저장이 1 이다 |
+| `note` | `VARCHAR(500)` | 마지막 변경 이유 |
+| `updated_at` | `DATETIME(3)` | |
+
+`candidate_context_document_revisions` 는 저장할 때마다 한 행을 더한다. 지우거나 고치지 않는다.
+
+| 칸 | 타입 | 설명 |
+| --- | --- | --- |
+| `document_key` | `VARCHAR(50)` | |
+| `version` | `INT UNSIGNED` | 이 저장으로 생긴 version |
+| `body` | `MEDIUMTEXT` | 그때의 본문 |
+| `note` | `VARCHAR(500)` | 변경 이유 |
+| `created_at` | `DATETIME(3)` | |
+
+`(document_key, version)` 이 PK 다. 문서 행을 지우는 경로는 없다.
+
+공부 추천의 기준 버전은 `learning-interests` 의 `version` 에서 `learning-interests:v{version}` 으로 계산한다.
+이유는 [ADR-131](adr/ADR-131-후보자-맥락은-backend-문서로-두고-공부-추천-기준-버전을-문서-버전에서-계산한다.md)을 따른다.
+
 ### 홈서버 release
 
 파일이 어디에 놓이는지는
@@ -875,7 +915,7 @@ HTTP 계약과 오류 코드는 [`flow.md`](flow.md#study-topic-recommender)가 
 | `study_source_cursors` | 소스와 mode 마다 이어서 모을 위치 |
 | `study_materials` | 수집한 자료. `content_key` 로 한 번만 저장한다 |
 | `study_material_sources` | 자료가 어느 소스에서 나왔는지. 한 자료가 여러 소스에서 나올 수 있다 |
-| `study_recommendation_control` | 후보자 기준 버전과 `history_version`. 한 행이다 |
+| `study_recommendation_control` | `history_version`. 한 행이다 |
 | `study_recommendation_runs` | 일별 추천 실행 |
 | `study_recommendation_topics` | 실행이 고른 공부 주제 |
 | `study_recommended_materials` | 주제에 연결한 추천 자료 |
@@ -935,8 +975,9 @@ HTTP 계약과 오류 코드는 [`flow.md`](flow.md#study-topic-recommender)가 
 
 | 칸 | 설명 |
 | --- | --- |
-| `candidate_context_version` | 후보자 기준 버전. 관심사가 바뀌면 사람이 올린다 |
 | `history_version` | 추천 실행을 저장할 때마다 1 씩 오른다 |
+
+후보자 기준 버전은 이 행에 두지 않는다. `learning-interests` 문서의 `version` 에서 계산한다.
 
 ### 추천 실행
 
@@ -988,10 +1029,11 @@ HTTP 계약과 오류 코드는 [`flow.md`](flow.md#study-topic-recommender)가 
 후보 조회는 아래 둘 중 하나라도 맞으면 그 자료를 뺀다.
 
 - `study_recommended_materials` 에 있다
-- 지금의 `candidate_context_version` 으로 된 판정이 있고 `valid_until` 이 오늘 이후다
+- 지금의 기준 버전 `learning-interests:v{version}` 으로 된 판정이 있고 `valid_until` 이 오늘 이후다
 
-기준 버전을 올리면 예전 판정은 지우지 않아도 조회에서 저절로 빠진다.
-이유는 [ADR-127](adr/ADR-127-공부-추천은-고르지-않은-후보의-판정을-재사용한다.md)을 따른다.
+관심사 문서를 새로 저장하면 기준 버전이 바뀌어 예전 판정은 지우지 않아도 조회에서 저절로 빠진다.
+이유는 [ADR-127](adr/ADR-127-공부-추천은-고르지-않은-후보의-판정을-재사용한다.md)과
+[ADR-131](adr/ADR-131-후보자-맥락은-backend-문서로-두고-공부-추천-기준-버전을-문서-버전에서-계산한다.md)을 따른다.
 
 ### `study_publications`
 
@@ -1015,6 +1057,7 @@ HTTP 계약과 오류 코드는 [`flow.md`](flow.md#study-topic-recommender)가 
 | `previouslyRecommended` | 서버가 준 값. 이미 추천한 자료는 후보로 오지 않으므로 늘 `false` 다 |
 
 후보풀은 `recentStudyTopicKeys` 로 직전 리포트의 공부 주제 키를 함께 담는다.
+후보풀 옆 메타데이터는 `historyVersion`, `candidateContextVersion` 과 함께 `learningInterests` 의 `version` 과 `body` 를 담는다.
 
 선별 결과는 공부 주제 배열과 고르지 않은 후보의 `rejections` 다.
 

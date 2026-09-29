@@ -95,6 +95,7 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 | version 충돌 | `409` |
 | 정책을 설정하지 않은 상태의 수집 요청 | `409 POLICY_NOT_CONFIGURED` |
 | 회사 tier 실행이 `pending` 인데 분석 실행 생성 | `409 COMPANY_TIER_RUN_PENDING` |
+| `learning-interests` 문서가 없는 상태의 공부 후보 조회 | `409 CANDIDATE_CONTEXT_MISSING` |
 | DB 연결 실패 | `503` |
 
 `GET /health/live` 는 process 상태만 확인한다.
@@ -115,6 +116,46 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 `partial` 이면 client 가 남은 항목만 다시 보낸다. Backend 는 스스로 재시도하지 않는다.
 
 외부 queue 와 worker 를 두지 않는다. cron 이 동기 HTTP 요청으로 단계를 진행한다.
+
+### 후보자 맥락 문서
+
+스킬이 판단에 쓰는 개인 맥락이다. 기본 경로는 `/api/candidate-context/v1` 이다.
+문서 키와 칸은 [`data-schema.md`](data-schema.md#후보자-맥락-문서)가 소유한다.
+
+| endpoint | 계약 |
+| --- | --- |
+| `GET /documents` | 저장된 문서의 키, `version`, `updatedAt`. 본문은 담지 않는다 |
+| `GET /documents/{documentKey}` | 본문, `version`, `note`, `updatedAt`. 없으면 `404` |
+| `PUT /documents/{documentKey}` | 본문 전체 교체. `expectedVersion` 과 `note` 를 받는다. 새 문서는 `expectedVersion: 0` 이다 |
+
+사람이 `scripts/candidate-context/manage_candidate_context.ts` 로 고친다. 스킬이 스스로 저장하지 않는다.
+
+```mermaid
+sequenceDiagram
+    participant Human as 사람
+    participant CLI as manage_candidate_context.ts
+    participant API as candidate-context API
+    Human->>CLI: get 으로 현재 본문과 version 확인
+    CLI->>API: GET /documents/{key}
+    Human->>CLI: put --file --note --expected-version
+    CLI->>API: PUT /documents/{key}
+    alt expectedVersion 이 현재와 같다
+        API->>API: 문서 행 갱신과 이력 행 추가를 한 transaction 으로
+        API-->>CLI: 새 version
+    else 다르다
+        API-->>CLI: 409 VERSION_CONFLICT
+        CLI-->>Human: 다시 조회하고 변경을 검토한 뒤 재실행
+    end
+```
+
+| 상황 | 동작 |
+| --- | --- |
+| 없는 문서 키 | `400`. 문서 키는 넷으로 고정한다 |
+| 본문이 비었거나 64 KiB 를 넘는다 | `400` |
+| 같은 문서를 두 사람이 동시에 저장한다 | 문서 행을 잠그고 `expectedVersion` 을 비교한다. 늦은 쪽이 `409` 다 |
+| 조회한 문서가 없다 | `404`. CLI 는 새 문서를 `put --expected-version 0` 으로 만들라고 안내한다 |
+
+이유는 [ADR-131](adr/ADR-131-후보자-맥락은-backend-문서로-두고-공부-추천-기준-버전을-문서-버전에서-계산한다.md)을 따른다.
 
 ### HTML 리포트 게시
 
@@ -407,10 +448,10 @@ skill 과 수집기는 `/api/study/v1` 만 호출하고 파일에 이력을 두�
 4. client 가 모은 자료와 다음 cursor 를 `POST /ingestions` 로 한 번에 보낸다.
    서버는 자료 저장과 cursor 교체를 한 트랜잭션으로 한다.
    소스 하나가 수집에 실패해도 나머지 소스는 계속 수집하고, 실패한 소스는 `failed` 상태로 남긴다.
-5. client 가 `GET /candidates` 로 후보를 받는다.
+5. client 가 `GET /candidates` 로 후보와 `learning-interests` 문서를 함께 받는다.
    서버는 이미 추천한 자료와, 지금 기준 버전에서 유효기간이 남은 제외 판정이 있는 자료를 뺀다.
-6. 모델은 받은 후보 중 사용자의 현재 업무, 목표 역할, 엔지니어링 판단 또는
-   제품·사업 관점에 구체적으로 연결되는 자료만 선별한다.
+6. 모델은 받은 후보 중 `learning-interests` 문서에 적힌 관심사에 구체적으로 연결되는 자료만 선별한다.
+   관심사의 내용은 그 문서가, 원문을 비교하는 기준은 스킬 본문이 소유한다.
 7. 모델은 선별한 자료를 외부 원문에서 도출한 공부 주제로 묶고 각 주제에 커리어 관점의 질문을 작성한다.
    고르지 않은 후보마다 한 줄 이유를 남긴다.
 8. 선택 검증은 후보풀에 없는 자료, 실행 내 중복, 직전 리포트 주제의 재선택을 거부한다.
@@ -455,6 +496,7 @@ sequenceDiagram
 | 소스 하나의 수집이 실패한다 | 그 소스의 `POST /ingestions` 를 보내지 않고 cursor 를 진행하지 않는다. 나머지 소스는 계속 모은다 |
 | 정상적인 빈 페이지를 확인했다 | 빈 `items` 와 다음 cursor 를 보낼 수 있다. 실패와 빈 상태를 구분한다 |
 | cursor version 이 달라졌다 | `409` 다. 기존 cursor 를 유지하고 그 소스는 다음 실행에서 다시 모은다 |
+| `learning-interests` 문서가 없다 | `409 CANDIDATE_CONTEXT_MISSING` 이다. 후보풀을 만들지 않고 중단하며 문서를 저장하라고 알린다 |
 | 후보가 0건이다 | 과거 자료로 채우지 않고 빈 상태의 리포트를 만든다. 추천 실행은 저장한다 |
 | 후보를 여러 페이지로 받는 중에 `historyVersion` 이나 `candidateContextVersion` 이 바뀌었다 | 후보풀을 남기지 않고 중단한다. 다음 실행에서 처음부터 조회한다 |
 | 같은 날 두 번 저장한다 | `reportId` 가 서울 날짜의 `morning-YYYY-MM-DD` 라 두 번째는 `409` 다. 같은 멱등 키와 같은 본문이면 저장된 응답을 다시 준다 |
@@ -475,11 +517,13 @@ token 과 원문 payload 는 출력하지 않는다.
 | 바뀐 것 | 결과 |
 | --- | --- |
 | 유효기간이 지났다 | 다시 후보로 나온다 |
-| 사람이 후보자 기준 버전을 올렸다 | 모든 제외 판정이 무효가 되어 다시 후보로 나온다 |
+| `learning-interests` 문서를 새로 저장했다 | 기준 버전이 바뀌어 모든 제외 판정이 무효가 되고 다시 후보로 나온다 |
 | 같은 자료가 다른 소스에서 다시 수집됐다 | `contentKey` 가 같으므로 판정을 그대로 쓴다 |
 
-관심사가 바뀌면 사람이 기준 버전을 올린다. 그래야 예전 기준으로 제외한 자료가 다시 보인다.
-이유는 [ADR-127](adr/ADR-127-공부-추천은-고르지-않은-후보의-판정을-재사용한다.md)을 따른다.
+기준 버전은 `learning-interests:v{version}` 이고 서버가 문서 버전에서 계산한다. 사람이 따로 올리지 않는다.
+관심사를 고쳐 저장하면 예전 기준으로 제외한 자료가 다음 후보 조회부터 다시 보인다.
+이유는 [ADR-127](adr/ADR-127-공부-추천은-고르지-않은-후보의-판정을-재사용한다.md)과
+[ADR-131](adr/ADR-131-후보자-맥락은-backend-문서로-두고-공부-추천-기준-버전을-문서-버전에서-계산한다.md)을 따른다.
 
 ### 소스 관리
 
@@ -502,11 +546,10 @@ Kurly 와 OliveYoung 은 최근 수집에서는 `feed` adapter 이고, archive m
 | `PUT /sources/{sourceKey}` | 소스 전체 교체. `expectedVersion` 검사와 `note` |
 | `GET /sources/{sourceKey}/cursor?mode=` | mode 별 opaque cursor 와 version |
 | `POST /ingestions` | 자료 묶음과 다음 cursor 원자 저장 |
-| `GET /candidates` | 추천하지 않았고 유효한 제외 판정이 없는 후보, `historyVersion`, 지금의 `candidateContextVersion` |
+| `GET /candidates` | 추천하지 않았고 유효한 제외 판정이 없는 후보, `historyVersion`, 지금의 `candidateContextVersion`, `learningInterests` 의 `version` 과 `body` |
 | `POST /recommendation-runs` | 추천 주제와 자료, 제외 판정의 원자 저장 |
 | `GET /recommendation-runs/{reportId}/status` | 기존 추천 실행의 존재 여부. 이관 명령이 ingestion 전에 확인한다 |
 | `POST /publications` | 외부 게시 성공 이력 |
-| `PUT /recommendation-control` | 후보자 기준 버전을 바꾼다. 사람이 관심사가 바뀌었을 때 부른다 |
 
 요청 본문은 1 MiB 이하이고 오류 응답은 `{error:{code,message,requestId}}` 다.
 응답은 `Cache-Control: private, no-store` 와 `X-Robots-Tag: noindex, nofollow` 를 쓴다.
@@ -517,7 +560,8 @@ API 후보 `Candidate` 는 후보풀의 `ReadingCandidate` 로 변환한다.
 `Candidate.id` 는 `contentKey` 이며 선택 파일의 `candidateId` 로 쓴다.
 `recentStudyTopicKeys` 는 후보풀의 같은 필드로 전달한다.
 `historyVersion` 은 여러 페이지를 받는 동안 이력이 바뀌지 않았는지 확인하는 데만 쓰고 추천 저장 본문에 넣지 않는다.
-`candidateContextVersion` 은 추천 저장 본문에 그대로 돌려보낸다. 그 사이 사람이 기준을 올렸으면 서버가 `409` 로 거부한다.
+`candidateContextVersion` 은 추천 저장 본문에 그대로 돌려보낸다. 그 사이 `learning-interests` 문서가 새로 저장됐으면 서버가 `409` 로 거부한다.
+`learningInterests` 는 후보풀 옆 메타데이터에 담아 모델이 선별할 때 읽는다. 여러 페이지를 받는 동안 모든 페이지가 같은 값을 준다.
 서버가 추천 저장 시점에 직전 주제와 누적 추천 집합을 다시 검증한다.
 
 만들지 않는 경로가 있다.
