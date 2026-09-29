@@ -1,0 +1,14 @@
+{
+  "name": "plan136-candidate-context-learning-interests",
+  "description": "스킬이 판단에 쓰는 개인 맥락을 커리어 Backend 의 후보자 맥락 문서로 두고, 공부 추천이 learning-interests 문서를 후보 응답으로 받아 기준 버전을 문서 버전에서 계산하게 한다. 학습 관심사가 private brain, 스킬 본문, 제품 문서에 서로 다르게 적혀 있던 것을 한 곳으로 모은다.",
+  "status": "pending",
+  "created_at": "2026-09-30",
+  "total_phases": 4,
+  "current_phase": 1,
+  "phases": [
+    { "number": 1, "file": "phase-01.md", "execution_profile": "deep" },
+    { "number": 2, "file": "phase-02.md", "execution_profile": "deep" },
+    { "number": 3, "file": "phase-03.md", "execution_profile": "standard" },
+    { "number": 4, "file": "phase-04.md", "execution_profile": "fast" }
+  ]
+}
