@@ -35,6 +35,10 @@ Hermes 입력에 `[이번 메시지에 올린 사진]`과 첨부 디렉터리, �
 fos-assistant 는 turn 이 끝난 뒤 그 폴더에서 바뀐 `.html` 을 찾아 답 아래에 보여준다.
 답에 적은 경로는 읽지 않으므로, 다른 자리에 만든 HTML 은 지융에게 보이지 않는다.
 
+**답에 파일 경로를 쓰지 않는다.**
+결과물 폴더, 초안 폴더, `build_preview.py` 가 출력한 경로 모두 지융이 열 수 없는 내부 경로다.
+미리보기는 답 아래에 자동으로 붙으므로 `아래 미리보기를 열어 확인해 주세요` 처럼 안내한다.
+
 ```bash
 python3 .claude/skills/naver-blog-draft/scripts/build_preview.py \
   drafts/순돌이곱창/draft.json --out "$ARTIFACT_DIR/순돌이곱창/index.html"
@@ -44,6 +48,9 @@ python3 .claude/skills/naver-blog-draft/scripts/build_preview.py \
 단락이 없으면 아래 단계의 명령대로 초안 폴더의 `preview.html` 에 만든다.
 
 `build_preview.py` 는 HTML 폴더 밖에 있는 사진과 스티커를 그 폴더 안으로 복사하고 상대 경로로 부른다.
+복사하는 JPEG 사진은 긴 변 1600px 로 줄이고 촬영 위치가 든 EXIF 를 뺀다.
+원본 12장이 약 28MB 라 폰에서 미리보기를 처음 열 때 사진이 늦게 보였기 때문이다.
+`ffmpeg` 가 없으면 원본 크기로 넣고 EXIF 만 뺀다. 출력에 `줄이지 못한 사진` 으로 알린다.
 초안 폴더 밖의 사진(절대 경로나 `../`)은 `external/` 아래에 복사하고, 이름이 겹치면 `이름-2.jpg` 처럼 번호를 붙인다.
 `draft.json` 과 `photos/` 원본은 초안 폴더에 그대로 남는다.
 네이버 편집기는 초안 폴더의 사진을 올리므로, 사진을 결과물 폴더로 옮기거나 지우지 않는다.
@@ -83,7 +90,7 @@ HEIC 사진은 미리보기에서 `미리보기에 넣을 수 없는 형식` 으
 | 3 | 지융 | 홈서버 경로에서는 아이폰을 스킬이 조작하지 못한다 |
 | 5 | 지융 | 필수 사실이나 협찬 여부가 빠지면 묻고 답을 기다린다. 필수 사실을 모른다고 하면 무엇이 없어 쓰지 않는지 알리고 멈춘다 |
 | 7 | 지융 | 확인 없이 네이버에 넣지 않는다 |
-| 8 | 지융 | 장소 검색 결과가 하나로 정해지지 않으면 지융이 고른다. 편집기 자동화가 실패하면 실패한 단계와 `package.md` 위치를 알리고 멈추며 코드와 스킬은 고치지 않는다. 발행은 지융이 한다 |
+| 8 | 지융 | 장소 검색 결과가 하나로 정해지지 않으면 지융이 고른다. 편집기 자동화가 실패하면 실패한 단계와 이유를 알리고 수동 등록용 묶음을 보여 준 뒤 멈추며 코드와 스킬은 고치지 않는다. 발행은 지융이 한다 |
 
 ## 1. 사진 저장소 닿는지 보기
 
@@ -356,16 +363,30 @@ printf '%s\n' "$OPEN_OUTPUT"
 TARGET_ID=$(printf '%s\n' "$OPEN_OUTPUT" | sed -n 's/^target-id: //p')
 test -n "$TARGET_ID"
 trap 'python3 scripts/naver_editor.py --target-id "$TARGET_ID" close' EXIT
-REMOTE_PHOTOS='브라우저 쪽 사진 디렉터리'
 python3 scripts/naver_editor.py --target-id "$TARGET_ID" fill "$DRAFT"
-python3 scripts/naver_editor.py --target-id "$TARGET_ID" photos "$DRAFT" --remote-base "$REMOTE_PHOTOS"
+python3 scripts/naver_editor.py --target-id "$TARGET_ID" photos "$DRAFT"
 python3 scripts/naver_editor.py --target-id "$TARGET_ID" components "$DRAFT"
 python3 scripts/naver_editor.py --target-id "$TARGET_ID" settings "$DRAFT"
 python3 scripts/naver_editor.py --target-id "$TARGET_ID" save "$DRAFT"
 python3 scripts/naver_editor.py --target-id "$TARGET_ID" state
 ```
 
-`REMOTE_PHOTOS`는 브라우저가 실행되는 기계의 사진 디렉터리로 정한다.
+`photos` 는 Chrome 에 사진 파일의 경로를 넘긴다.
+Chrome 은 홈서버에서 돌므로 그 경로는 **홈서버에서 읽히는 절대 경로**여야 한다.
+상대 경로는 Chrome 의 작업 디렉터리를 기준으로 풀려 없는 파일을 가리키고,
+네이버는 `파일 전송 오류 … 알 수 없는 오류` 만 띄운다.
+
+| 어디서 부르나 | `--remote-base` |
+| --- | --- |
+| Hermes 컨테이너 | 주지 않는다. 컨테이너가 호스트와 같은 절대 경로로 워크스페이스를 붙이므로, 스크립트가 초안 폴더를 절대 경로로 바꿔 넘긴다 |
+| 맥북에서 포트 포워딩으로 붙을 때 | `--remote-base "$REMOTE_PHOTOS"` 를 붙인다. `REMOTE_PHOTOS` 는 홈서버의 사진 디렉터리 절대 경로다. 예: `<홈서버의 fos-agents 체크아웃>/ji-yoon-blog/drafts/<초안 폴더>/photos` |
+
+`--remote-base` 에 상대 경로를 주면 `photos` 가 Chrome 에 넘기지 않고 종료 코드 1로 끝난다.
+전송 오류로 끝나면 출력에 `Chrome 에 넘긴 경로` 가 함께 나온다.
+명령을 돌린 자리에서 그 파일이 보여도 Chrome 쪽에서 보인다는 뜻은 아니다. 그 경로가 홈서버 경로인지부터 본다.
+
+로그인 확인은 컨테이너 안에서도 `python3 scripts/naver_session.py login-check` 로 한다.
+컨테이너에 들어 있는 `JI_YOON_BLOG_CDP_HOST` 로 호스트의 Chrome 에 묻는다.
 연결과 로그인 확인은 reference의 절차를 따른다.
 로그인이나 보안 확인에 막히면 멈추고 지융에게 브라우저 조작을 요청한다.
 장소는 상호명으로 먼저 검색하고, 상호명과 주소가 함께 맞는 결과가 없으면 주소로 다시 검색한다.
@@ -390,15 +411,26 @@ python3 scripts/naver_editor.py --target-id "$TARGET_ID" state
 발행 확인 버튼은 누르지 않는다.
 
 자동화가 막혔을 때 지융이 참고할 붙여넣기 묶음도 만든다.
+`[결과물 폴더]` 단락이 있으면 결과물 폴더에 HTML 로 만든다. 답 아래에 붙어 지융이 폰에서 열고 글을 복사할 수 있다.
+
+```bash
+python3 .claude/skills/naver-blog-draft/scripts/build_package.py \
+  drafts/순돌이곱창/draft.json --out "$ARTIFACT_DIR/순돌이곱창-수동등록/index.html"
+```
+
+단락이 없으면 초안 폴더의 `package.md` 로 만들고, 그 내용을 답에 보여 준다.
 
 ```bash
 python3 .claude/skills/naver-blog-draft/scripts/build_package.py \
   drafts/순돌이곱창/draft.json --out drafts/순돌이곱창/package.md
 ```
 
+어느 쪽이든 묶음의 파일 경로는 답에 쓰지 않는다.
+
 여기서 편집기 자동화 실패는 로그인, 보안 확인, 장소 선택처럼 따로 정한 멈춤을 제외한 명령 실패다.
-편집기 자동화가 실패하면 `package.md`가 없을 때 위 명령으로 만들고,
-실패한 단계와 이유, 묶음 경로를 지융에게 알린 뒤 멈춘다.
+편집기 자동화가 실패하면 묶음이 없을 때 위 명령으로 만들고,
+실패한 단계와 이유를 지융에게 알린 뒤 멈춘다.
+묶음은 `아래 수동 등록용 묶음을 열어 붙여넣어 주세요` 처럼 안내하거나, 단락이 없으면 본문을 답에 보여 준다.
 지융이 직접 편집기에 넣는다.
 실패를 넘기려고 `scripts/`나 스킬 파일을 고치지 않는다.
 실행 도중 `skill_manage`로 스킬을 바꾸지 않는다.
