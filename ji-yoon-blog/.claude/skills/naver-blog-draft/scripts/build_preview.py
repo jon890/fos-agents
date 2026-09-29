@@ -258,7 +258,9 @@ def main() -> int:
         and (draft_path.parent / b.get("path", "")).is_file()
         and Path(b.get("path", "")).suffix.lower() not in IMAGE_SUFFIXES
     ]
-    print(f"{out} 생성")
+    # 지융은 이 경로를 열 수 없다. 결과물 폴더의 HTML 은 fos-assistant 가 답 아래에 붙인다.
+    print(f"미리보기를 만들었다: {out.parent.name}/{out.name}")
+    print("이 경로는 답에 옮기지 않는다. 결과물 폴더에 만들었으면 답 아래에 미리보기가 자동으로 붙는다.")
     shrunk = sum(1 for _name, done in copied if done)
     kept = [name for name, done in copied if not done]
     if shrunk:

@@ -200,6 +200,14 @@ class BuildPreviewTest(unittest.TestCase):
         self.assertIn('width="480" height="640"', out.read_text(encoding="utf-8"))
         self.assertIn("줄이지 못한 사진 1장", result.stdout)
 
+    def test_output_does_not_print_absolute_paths(self):
+        out = self.artifacts / "초안" / "index.html"
+        result = self.run_preview("photos/001-메뉴 판.jpg", out)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertNotIn(self.temp.name, result.stdout)
+        self.assertIn("초안/index.html", result.stdout)
+        self.assertIn("답에 옮기지 않는다", result.stdout)
+
     def test_strip_keeps_image_data_and_drops_trailing_image(self):
         scan = b"\xff\xda\x00\x02" + b"\x12\xff\x00\x34" + b"\xff\xd9"
         app0 = b"\xff\xe0\x00\x06JFIF"
