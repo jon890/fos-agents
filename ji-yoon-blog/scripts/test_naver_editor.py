@@ -271,13 +271,76 @@ class EditorGateTest(unittest.TestCase):
         ]}
         root = Path("/tmp/draft")
         self.assertEqual(naver_editor.photo_paths(draft, root, ""), [
-            "/tmp/draft/photos/002.jpg",
-            "/tmp/draft/photos/001.jpg",
+            str(root.resolve() / "photos/002.jpg"),
+            str(root.resolve() / "photos/001.jpg"),
         ])
         self.assertEqual(naver_editor.photo_paths(draft, root, "/srv/photos/"), [
             "/srv/photos/002.jpg",
             "/srv/photos/001.jpg",
         ])
+
+    def test_photo_paths_turn_relative_draft_folder_into_absolute_path(self):
+        draft = {"blocks": [{"type": "image", "path": "photos/001.jpg"}]}
+        with tempfile.TemporaryDirectory() as temp, contextlib.chdir(temp):
+            files = naver_editor.photo_paths(draft, Path("drafts/2026-09-29-샘플가게"), "")
+            expected = Path(temp).resolve() / "drafts/2026-09-29-샘플가게/photos/001.jpg"
+        self.assertEqual(files, [str(expected)])
+        self.assertEqual(naver_editor_photos.relative_paths(files), [])
+
+    def test_photos_refuse_relative_remote_base_before_upload(self):
+        draft = {"blocks": [{"type": "image", "path": "photos/001.jpg"}]}
+        args = argparse.Namespace(
+            draft="drafts/샘플가게/draft.json", draft_data=draft,
+            draft_hash="same", remote_base="drafts/샘플가게/photos",
+        )
+
+        class Page:
+            def js(self, _expression):
+                return 0
+
+        with patch.object(naver_editor_photos, "set_stage"), \
+                patch.object(naver_editor_photos, "require_clear_screen", return_value=""), \
+                patch.object(naver_editor_photos, "attach_photos") as attach, \
+                contextlib.redirect_stderr(io.StringIO()) as stderr:
+            self.assertEqual(naver_editor_photos.cmd_photos(Page(), args), 1)
+        attach.assert_not_called()
+        self.assertIn("상대 경로다: drafts/샘플가게/photos/001.jpg", stderr.getvalue())
+
+    def test_photo_transfer_error_prints_path_given_to_chrome(self):
+        draft = {"blocks": [{"type": "image", "path": "photos/001.jpg"}]}
+        args = argparse.Namespace(
+            draft="/srv/drafts/샘플가게/draft.json", draft_data=draft,
+            draft_hash="same", remote_base="/srv/photos",
+        )
+
+        class Page:
+            count = 0
+
+            def js(self, _expression):
+                return 0
+
+        page = Page()
+
+        def attach(_page, _files):
+            page.count = 1
+            return ""
+
+        with patch.object(naver_editor_photos, "set_stage"), \
+                patch.object(naver_editor_photos, "require_clear_screen", return_value=""), \
+                patch.object(naver_editor_photos, "blocking_popup", return_value="파일 전송 오류"), \
+                patch.object(naver_editor_photos, "image_count", side_effect=lambda _page: page.count), \
+                patch.object(naver_editor_photos, "paragraphs", return_value=[]), \
+                patch.object(naver_editor_photos, "focus_placeholder", return_value=True), \
+                patch.object(naver_editor_photos, "attach_photos", side_effect=attach), \
+                patch.object(naver_editor_photos, "image_uploaded", return_value=False), \
+                patch.object(naver_editor_photos, "image_uploaded_visible", return_value=False), \
+                patch.object(naver_editor_photos, "incomplete_images", return_value=[]), \
+                patch.object(naver_editor_photos, "wait_until", side_effect=
+                             lambda check, seconds: check()), \
+                contextlib.redirect_stderr(io.StringIO()) as stderr:
+            self.assertEqual(naver_editor_photos.cmd_photos(page, args), 1)
+        self.assertIn("파일 전송 오류", stderr.getvalue())
+        self.assertIn("Chrome 에 넘긴 경로: /srv/photos/001.jpg", stderr.getvalue())
 
     def test_attach_photos_passes_files_to_intercepted_chooser(self):
         class Page:
