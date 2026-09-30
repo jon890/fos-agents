@@ -170,26 +170,22 @@ export class StudyRepository {
     return saved.version;
   }
 
-  async getRecommendationControl(client: DbClient): Promise<{ candidateContextVersion: string; historyVersion: number } | undefined> {
+  async getRecommendationControl(client: DbClient): Promise<{ historyVersion: number } | undefined> {
     const rows = await client.$queryRaw<RawRow[]>`
-      SELECT candidate_context_version, history_version
+      SELECT history_version
       FROM study_recommendation_control WHERE singleton_id = 1
     `;
     const row = rows[0];
-    return row
-      ? { candidateContextVersion: String(row.candidate_context_version), historyVersion: number(row.history_version) }
-      : undefined;
+    return row ? { historyVersion: number(row.history_version) } : undefined;
   }
 
-  async lockRecommendationControl(tx: Prisma.TransactionClient): Promise<{ candidateContextVersion: string; historyVersion: number } | undefined> {
+  async lockRecommendationControl(tx: Prisma.TransactionClient): Promise<{ historyVersion: number } | undefined> {
     const rows = await tx.$queryRaw<RawRow[]>`
-      SELECT candidate_context_version, history_version
+      SELECT history_version
       FROM study_recommendation_control WHERE singleton_id = 1 FOR UPDATE
     `;
     const row = rows[0];
-    return row
-      ? { candidateContextVersion: String(row.candidate_context_version), historyVersion: number(row.history_version) }
-      : undefined;
+    return row ? { historyVersion: number(row.history_version) } : undefined;
   }
 
   async recommendationRunExists(reportId: string, client: DbClient): Promise<boolean> {
@@ -272,14 +268,6 @@ export class StudyRepository {
     return control.historyVersion;
   }
 
-  async updateCandidateContextVersion(candidateContextVersion: string, tx: Prisma.TransactionClient): Promise<void> {
-    await tx.$executeRaw`
-      UPDATE study_recommendation_control
-      SET candidate_context_version = ${candidateContextVersion}, updated_at = NOW(3)
-      WHERE singleton_id = 1
-    `;
-  }
-
   async insertPublication(value: StudyPublication, tx: Prisma.TransactionClient): Promise<string> {
     const publicationId = crypto.randomUUID();
     await tx.$executeRaw`
@@ -321,16 +309,16 @@ export class StudyRepository {
   }
 
   async listCandidates(
-    query: StudyCandidatesQuery & { today: string },
+    query: StudyCandidatesQuery & { candidateContextVersion: string; today: string },
     client: DbClient,
   ): Promise<CandidateRow[]> {
     const cursor = this.decodePageCursor(query.cursor);
     const conditions = [
       "EXISTS (SELECT 1 FROM study_material_sources active_sms JOIN study_sources active_ss ON active_ss.source_key = active_sms.source_key WHERE active_sms.content_key = m.content_key AND active_ss.enabled = TRUE)",
       "NOT EXISTS (SELECT 1 FROM study_recommended_materials recommended WHERE recommended.content_key = m.content_key)",
-      "NOT EXISTS (SELECT 1 FROM study_material_verdicts verdict JOIN study_recommendation_control control ON control.singleton_id = 1 WHERE verdict.content_key = m.content_key AND verdict.candidate_context_version = control.candidate_context_version AND verdict.valid_until > ?)",
+      "NOT EXISTS (SELECT 1 FROM study_material_verdicts verdict WHERE verdict.content_key = m.content_key AND verdict.candidate_context_version = ? AND verdict.valid_until > ?)",
     ];
-    const params: unknown[] = [query.today];
+    const params: unknown[] = [query.candidateContextVersion, query.today];
     if (query.sourceKey) {
       conditions.push("ss.source_key = ?");
       params.push(query.sourceKey);

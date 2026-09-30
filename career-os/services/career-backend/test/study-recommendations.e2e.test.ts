@@ -23,6 +23,7 @@ afterAll(async () => {
 beforeEach(async () => {
   await harness.clearAll();
   requestNumber = 0;
+  expect(await harness.putLearningInterests("이벤트 소싱과 메시지 큐를 공부하고 싶다.")).toBe(1);
   expect((await harness.send("PUT", "/api/study/v1/sources/example", {
     idempotencyKey: nextKey("source"),
     body: {
@@ -76,7 +77,7 @@ function run(reportId: string, topicKey: string, contentKeys: string[], override
   return {
     reportId,
     generatedAt: "2026-09-24T13:00:00.000Z",
-    candidateContextVersion: "initial",
+    candidateContextVersion: "learning-interests:v1",
     topics: [{
       topicKey,
       title: `주제 ${topicKey}`,
@@ -145,7 +146,7 @@ describe("학습 추천 실행", () => {
   it("현재 후보 기준이 아니거나 자료가 없거나 추천과 제외가 겹치면 저장하지 않는다", async () => {
     await ingest(["selected", "rejected"]);
     const stale = await saveRun(run("morning-2026-09-24", "stale", ["selected"], {
-      candidateContextVersion: "old",
+      candidateContextVersion: "learning-interests:v2",
     }));
     const overlapping = await saveRun(run("morning-2026-09-24", "overlapping", ["selected"], {
       rejections: [{ contentKey: "selected", reason: "겹칩니다." }],
@@ -177,12 +178,9 @@ describe("학습 추천 실행", () => {
     expect(stored).toEqual([{ summary: null, reason: null }]);
     expect((await harness.send("GET", "/api/study/v1/candidates")).json).toMatchObject({ candidates: [] });
 
-    const changed = await harness.send("PUT", "/api/study/v1/recommendation-control", {
-      idempotencyKey: nextKey("context-a"),
-      body: { candidateContextVersion: "A" },
-    });
-    expect(changed).toMatchObject({ status: 200, json: { candidateContextVersion: "A" } });
+    expect(await harness.putLearningInterests("검색 엔진 색인 구조를 공부하고 싶다.")).toBe(2);
     expect((await harness.send("GET", "/api/study/v1/candidates")).json).toMatchObject({
+      candidateContextVersion: "learning-interests:v2",
       candidates: [{ contentKey: "rejected" }],
     });
   });
@@ -214,15 +212,47 @@ describe("학습 추천 실행", () => {
     expect(clientContracts.studyLibraryPublicationResultSchema.parse(publication.json).publicationId).toMatch(/^[0-9a-f-]{36}$/);
   });
 
-  it("서로 다른 멱등 키로 기준 버전을 A, B, A로 바꾼다", async () => {
-    for (const version of ["A", "B", "A"]) {
-      const reply = await harness.send("PUT", "/api/study/v1/recommendation-control", {
-        idempotencyKey: nextKey(`context-${version}`),
-        body: { candidateContextVersion: version },
-      });
-      expect(reply).toMatchObject({ status: 200, json: { candidateContextVersion: version } });
-    }
-    expect(await harness.prisma.$queryRawUnsafe("SELECT candidate_context_version FROM study_recommendation_control"))
-      .toEqual([{ candidate_context_version: "A" }]);
+  it("문서 본문을 A, B, A로 되돌려 저장해도 기준 버전은 계속 올라 이전 제외 판정이 되살아나지 않는다", async () => {
+    await ingest(["kept", "rejected"]);
+    expect((await saveRun(run("morning-2026-09-24", "kept", ["kept"], {
+      rejections: [{ contentKey: "rejected", reason: "지금은 필요 없습니다." }],
+    }))).status).toBe(201);
+    expect(await harness.putLearningInterests("분산 락과 재시도 전략을 공부하고 싶다.")).toBe(2);
+    expect(await harness.putLearningInterests("이벤트 소싱과 메시지 큐를 공부하고 싶다.")).toBe(3);
+
+    expect((await harness.send("GET", "/api/study/v1/candidates")).json).toMatchObject({
+      candidateContextVersion: "learning-interests:v3",
+      learningInterests: { version: 3, body: "이벤트 소싱과 메시지 큐를 공부하고 싶다." },
+      candidates: [{ contentKey: "rejected" }],
+    });
+  });
+
+  it("후보를 받은 뒤 문서를 다시 저장하면 받은 기준 버전의 추천 저장을 409 VERSION_CONFLICT 로 거부한다", async () => {
+    await ingest(["selected"]);
+    const candidates = await harness.send("GET", "/api/study/v1/candidates");
+    const received = (candidates.json as { candidateContextVersion: string }).candidateContextVersion;
+    expect(received).toBe("learning-interests:v1");
+    expect(await harness.putLearningInterests("관계형 DB 인덱스 설계를 공부하고 싶다.")).toBe(2);
+
+    const stale = await saveRun(run("morning-2026-09-24", "stale", ["selected"], { candidateContextVersion: received }));
+    expect(stale.status).toBe(409);
+    expect(stale.json).toMatchObject({ error: { code: "VERSION_CONFLICT" } });
+    expect(await harness.prisma.$queryRawUnsafe("SELECT report_id FROM study_recommendation_runs")).toEqual([]);
+  });
+
+  it("learning-interests 문서가 없으면 추천 저장을 409 CANDIDATE_CONTEXT_MISSING 으로 거부한다", async () => {
+    await harness.clearAll();
+    const reply = await saveRun(run("morning-2026-09-24", "missing-context", ["selected"]));
+    expect(reply.status).toBe(409);
+    expect(reply.json).toMatchObject({ error: { code: "CANDIDATE_CONTEXT_MISSING" } });
+    expect(await harness.prisma.$queryRawUnsafe("SELECT report_id FROM study_recommendation_runs")).toEqual([]);
+  });
+
+  it("사람이 기준 버전을 따로 올리던 경로는 없다", async () => {
+    const reply = await harness.send("PUT", "/api/study/v1/recommendation-control", {
+      idempotencyKey: nextKey("removed-control"),
+      body: { candidateContextVersion: "learning-interests:v1" },
+    });
+    expect(reply.status).toBe(404);
   });
 });

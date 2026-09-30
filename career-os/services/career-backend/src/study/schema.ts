@@ -113,7 +113,10 @@ export type StudyCandidatePage = {
   recentStudyTopicKeys: string[];
   nextCursor: string | null;
   historyVersion: number;
+  /** `learning-interests:v{version}`. 추천 저장 요청이 이 값을 그대로 돌려보낸다. ADR-131 을 따른다. */
   candidateContextVersion: string;
+  /** 추천 판단에 쓰는 학습 관심사 문서. `candidateContextVersion` 과 같은 시점의 본문이다. */
+  learningInterests: { version: number; body: string };
 };
 
 const studyRecommendationItemSchema = z.object({
@@ -175,12 +178,7 @@ export const studyPublicationSchema = z.object({
   idempotencyKey: nonEmpty.max(200),
 }).strict();
 
-export const studyRecommendationControlSchema = z.object({
-  candidateContextVersion: nonEmpty.max(191),
-}).strict();
-
 export type StudyRecommendationRun = z.infer<typeof studyRecommendationRunSchema>;
 export type StudyPublication = z.infer<typeof studyPublicationSchema>;
-export type StudyRecommendationControl = z.infer<typeof studyRecommendationControlSchema>;
 export type StudyRecommendationRunResult = { reportId: string; historyVersion: number };
 export type StudyPublicationResult = { publicationId: string };

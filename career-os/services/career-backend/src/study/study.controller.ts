@@ -8,7 +8,6 @@ import {
   studyCandidatesQuerySchema,
   studyIngestionSchema,
   studyPublicationSchema,
-  studyRecommendationControlSchema,
   studyRecommendationRunSchema,
   studySourcePutSchema,
   type StudyCandidatePage,
@@ -18,7 +17,6 @@ import {
   type StudyIngestionResult,
   type StudyPublication,
   type StudyPublicationResult,
-  type StudyRecommendationControl,
   type StudyRecommendationRun,
   type StudyRecommendationRunResult,
   type StudySourcePut,
@@ -89,14 +87,6 @@ export class StudyController {
     @Body(new ZodValidationPipe(studyPublicationSchema)) body: StudyPublication,
   ): Promise<StudyPublicationResult> {
     return this.study.createPublication(body);
-  }
-
-  @Put("recommendation-control")
-  @HttpCode(200)
-  updateRecommendationControl(
-    @Body(new ZodValidationPipe(studyRecommendationControlSchema)) body: StudyRecommendationControl,
-  ): Promise<StudyRecommendationControl> {
-    return this.study.updateRecommendationControl(body);
   }
 
   private sourceKey(value: string): string {

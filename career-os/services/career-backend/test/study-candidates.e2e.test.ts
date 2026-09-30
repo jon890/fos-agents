@@ -12,6 +12,8 @@ const clientContracts = await import(
 let harness: E2eHarness;
 let requestNumber = 0;
 
+const learningInterestsBody = "분산 트랜잭션과 캐시 일관성을 공부하고 싶다.";
+
 beforeAll(async () => {
   harness = await startE2eHarness();
 });
@@ -23,6 +25,7 @@ afterAll(async () => {
 beforeEach(async () => {
   await harness.clearAll();
   requestNumber = 0;
+  expect(await harness.putLearningInterests(learningInterestsBody)).toBe(1);
   const source = await harness.send("PUT", "/api/study/v1/sources/example", {
     idempotencyKey: nextKey("source"),
     body: {
@@ -77,13 +80,20 @@ async function ingest(items: unknown[], overrides: Record<string, unknown> = {})
 async function insertRecommendationRun(reportId: string): Promise<void> {
   await harness.prisma.$executeRawUnsafe(
     `INSERT INTO study_recommendation_runs (report_id, generated_at, candidate_context_version, created_at)
-     VALUES (?, NOW(3), 'initial', NOW(3))`,
+     VALUES (?, NOW(3), 'learning-interests:v1', NOW(3))`,
     reportId,
   );
 }
 
 describe("학습 후보", () => {
-  it("ingestion으로 저장한 자료를 후보 계약과 제어 버전으로 돌려준다", async () => {
+  it("learning-interests 문서가 없으면 후보 조회를 409 CANDIDATE_CONTEXT_MISSING 으로 멈춘다", async () => {
+    await harness.clearAll();
+    const reply = await harness.send("GET", "/api/study/v1/candidates");
+    expect(reply.status).toBe(409);
+    expect(reply.json).toMatchObject({ error: { code: "CANDIDATE_CONTEXT_MISSING" } });
+  });
+
+  it("ingestion으로 저장한 자료를 후보 계약과 learning-interests 문서의 기준 버전으로 돌려준다", async () => {
     const saved = await ingest([item("alpha"), item("beta")]);
     expect(saved.status).toBe(201);
     expect(saved.json).toEqual({ idempotencyKey: "study-candidates-payload-3", acceptedCount: 2, cursorVersion: 1 });
@@ -94,7 +104,10 @@ describe("학습 후보", () => {
       candidates: [{ contentKey: "alpha" }, { contentKey: "beta" }],
       historyVersion: 0,
     });
-    expect(candidates.json).toMatchObject({ candidateContextVersion: "initial" });
+    expect(candidates.json).toMatchObject({
+      candidateContextVersion: "learning-interests:v1",
+      learningInterests: { version: 1, body: learningInterestsBody },
+    });
   });
 
   it("같은 contentKey를 다시 받으면 자료 수는 유지하고 제목을 갱신한다", async () => {
@@ -153,7 +166,7 @@ describe("학습 후보", () => {
       "INSERT INTO study_recommended_materials (report_id, content_key, topic_key, summary, reason, career_value, position) VALUES ('morning-2026-09-24', 'recommended', 'topic', NULL, NULL, NULL, 1)",
     );
     await harness.prisma.$executeRawUnsafe(
-      "INSERT INTO study_material_verdicts (content_key, candidate_context_version, verdict, reason, report_id, judged_at, valid_until) VALUES ('rejected', 'initial', 'rejected', '이미 검토함', 'morning-2026-09-24', NOW(3), DATE_ADD(CURDATE(), INTERVAL 1 DAY))",
+      "INSERT INTO study_material_verdicts (content_key, candidate_context_version, verdict, reason, report_id, judged_at, valid_until) VALUES ('rejected', 'learning-interests:v1', 'rejected', '이미 검토함', 'morning-2026-09-24', NOW(3), DATE_ADD(CURDATE(), INTERVAL 1 DAY))",
     );
     const reply = await harness.send("GET", "/api/study/v1/candidates");
     expect(reply.status).toBe(200);
@@ -161,16 +174,15 @@ describe("학습 후보", () => {
       .toEqual(["visible"]);
   });
 
-  it("어제 만료된 판정과 기준 버전을 바꾸기 전의 판정은 후보를 막지 않는다", async () => {
+  it("어제 만료된 판정과 문서를 다시 저장하기 전의 판정은 후보를 막지 않는다", async () => {
     expect((await ingest([item("expired"), item("old-context")])).status).toBe(201);
     await insertRecommendationRun("morning-2026-09-24");
     await harness.prisma.$executeRawUnsafe(
-      "INSERT INTO study_material_verdicts (content_key, candidate_context_version, verdict, reason, report_id, judged_at, valid_until) VALUES ('expired', 'initial', 'rejected', '만료', 'morning-2026-09-24', NOW(3), DATE_SUB(CURDATE(), INTERVAL 1 DAY)), ('old-context', 'old', 'rejected', '이전 기준', 'morning-2026-09-24', NOW(3), DATE_ADD(CURDATE(), INTERVAL 1 DAY))",
+      "INSERT INTO study_material_verdicts (content_key, candidate_context_version, verdict, reason, report_id, judged_at, valid_until) VALUES ('expired', 'learning-interests:v2', 'rejected', '만료', 'morning-2026-09-24', NOW(3), DATE_SUB(CURDATE(), INTERVAL 1 DAY)), ('old-context', 'learning-interests:v1', 'rejected', '이전 기준', 'morning-2026-09-24', NOW(3), DATE_ADD(CURDATE(), INTERVAL 1 DAY))",
     );
-    await harness.prisma.$executeRawUnsafe(
-      "UPDATE study_recommendation_control SET candidate_context_version = 'new', updated_at = NOW(3) WHERE singleton_id = 1",
-    );
+    expect(await harness.putLearningInterests("관측 가능성과 장애 대응을 공부하고 싶다.")).toBe(2);
     const reply = await harness.send("GET", "/api/study/v1/candidates");
+    expect(reply.json).toMatchObject({ candidateContextVersion: "learning-interests:v2" });
     expect((reply.json as { candidates: Array<{ contentKey: string }> }).candidates.map((candidate) => candidate.contentKey))
       .toEqual(["expired", "old-context"]);
   });

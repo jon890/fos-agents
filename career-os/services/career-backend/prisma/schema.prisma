@@ -65,7 +65,6 @@ model study_material_sources {
 
 model study_recommendation_control {
   singleton_id Int @id @db.UnsignedTinyInt
-  candidate_context_version String @db.VarChar(191)
   history_version Int @db.UnsignedInt
   updated_at DateTime @default(now())
 }
