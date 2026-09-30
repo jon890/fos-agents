@@ -94,6 +94,7 @@ Hermes profile에 MCP 서버 이름 `accountbook`을 설치하고 `${CLAUDE_PLUG
 기존 이미지 스킬을 호출하는 profile과 MCP 전용 profile의 실행 권한은 별개이며, 가계부 전용 에이전트에는 셸·파일 도구를 추가하지 않는다.
 서버는 profile의 환경 변수만 읽으며 `.env` 파일을 탐색하지 않는다.
 필수 환경 변수와 선택 변수의 의미는 [데이터 계약](data-schema.md#환경-변수)을 따른다.
+`.mcp.json`은 Claude Code 형식에 따라 `mcpServers` 객체 아래에 `accountbook` 서버를 둔다.
 `.mcp.json`에는 변수 참조만 두고 토큰과 공인 주소의 실제 값을 넣지 않는다.
 설치기는 선택 변수 `ACCOUNTBOOK_FAMILY_UUID`가 없으면 빈 값으로 넘긴다.
 실행 파일에 의존성이 포함돼 있으므로 Hermes에서 `bun install`을 실행하지 않는다.
