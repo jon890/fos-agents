@@ -1,10 +1,10 @@
-import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { approveImport } from "./approve_import.ts";
 import type { ExtractedImport } from "./contracts.ts";
-import { safeSubmissionErrorCode, submitImport, type SubmitConfig } from "./submit_import.ts";
+import { main, safeSubmissionErrorCode, submitImport, type SubmitConfig } from "./submit_import.ts";
 import { validateImport } from "./validate_candidates.ts";
 import { evaluateWeeklySafePolicy } from "../accountbook-weekly-import/evaluate_policy.ts";
 import { AccountbookError } from "../../plugin/src/client.ts";
@@ -133,6 +133,44 @@ function commonResponse(url: string, init?: RequestInit): Response | null {
 }
 
 describe("submitImport", () => {
+  test("환경 파일 없이 환경 변수만 전달받아 등록한다", async () => {
+    const root = stateDir();
+    const batch = approvedFixture();
+    const input = join(root, "approved.json");
+    writeFileSync(input, JSON.stringify(batch), { mode: 0o600 });
+    const env = {
+      ACCOUNTBOOK_API_BASE_URL: CONFIG.apiBaseUrl,
+      ACCOUNTBOOK_FAMILY_UUID: CONFIG.familyUuid,
+      ACCOUNTBOOK_API_TOKEN: CONFIG.apiToken,
+      ACCOUNTBOOK_DEFAULT_CATEGORY_NAME: CONFIG.defaultCategoryName,
+      ACCOUNTBOOK_EXCLUDE_FROM_BUDGET: "false",
+    };
+    const previous = Object.fromEntries(Object.keys(env).map((key) => [key, process.env[key]]));
+    Object.assign(process.env, env);
+    let posts = 0;
+    const fetchMock = spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const common = commonResponse(String(input), init);
+      if (common) return common;
+      if ((init?.method ?? "GET") === "GET") return jsonResponse({ data: { items: [] } });
+      posts += 1;
+      return jsonResponse({ data: { uuid: `remote-${posts}` } }, 201);
+    });
+    const output = spyOn(process.stdout, "write").mockReturnValue(true);
+    try {
+      await main(["--input", input, "--state-dir", root, "--confirm", batch.batchId]);
+      expect(posts).toBe(2);
+      expect(output).toHaveBeenCalledTimes(1);
+      const summary = JSON.parse(String(output.mock.calls[0][0]));
+      expect(summary.submitted).toBe(2);
+    } finally {
+      fetchMock.mockRestore();
+      output.mockRestore();
+      for (const [key, value] of Object.entries(previous)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
+  });
   test("기존 거래 조회 응답이 잘못되면 빈 목록으로 간주하지 않고 POST 전에 멈춘다", async () => {
     let posts = 0;
     await expect(submitImport(approvedFixture(), {

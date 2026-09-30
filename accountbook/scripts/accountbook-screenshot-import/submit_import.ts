@@ -420,14 +420,13 @@ function parseArgs(args: string[]): { input: string; stateDir: string; env: stri
   }
   if (!input) throw new Error("MISSING_ARGUMENT:--input");
   if (!stateDir) throw new Error("MISSING_ARGUMENT:--state-dir");
-  if (!env) throw new Error("MISSING_ARGUMENT:--env");
   if (!confirm) throw new Error("MISSING_ARGUMENT:--confirm");
   return { input, stateDir, env, confirm };
 }
 
 export async function main(args = process.argv.slice(2)): Promise<void> {
   const options = parseArgs(args);
-  loadEnv({ path: options.env, quiet: true });
+  if (options.env) loadEnv({ path: options.env, quiet: true });
   const raw = JSON.parse(readFileSync(options.input, "utf8"));
   const parsed = validatedImportSchema.parse(raw);
   if (parsed.batchId !== options.confirm) throw new Error("BATCH_CONFIRMATION_MISMATCH");

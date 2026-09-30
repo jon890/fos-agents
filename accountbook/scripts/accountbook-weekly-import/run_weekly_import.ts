@@ -347,7 +347,6 @@ function parseArgs(args: string[]): { privateRoot: string; planPath: string; env
   }
   if (!privateRoot) throw new Error("MISSING_ARGUMENT:--private-root");
   if (!planPath) throw new Error("MISSING_ARGUMENT:--plan");
-  if (!env) throw new Error("MISSING_ARGUMENT:--env");
   return { privateRoot, planPath, env };
 }
 
@@ -358,7 +357,7 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
   const plan = readJson(planPath);
   const knownRunId = z.object({ runId: z.string().trim().min(1) }).safeParse(plan).data?.runId;
   try {
-    loadEnv({ path: options.env, quiet: true });
+    if (options.env) loadEnv({ path: options.env, quiet: true });
     const summary = await runWeeklyImport({
       privateRoot: options.privateRoot,
       plan,

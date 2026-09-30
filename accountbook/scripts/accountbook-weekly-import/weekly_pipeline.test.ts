@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, setSystemTime, spyOn, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -13,7 +13,7 @@ import {
   releaseWeeklyRunLock,
 } from "./scan_inbox.ts";
 import type { WeeklyWorkItem } from "./contracts.ts";
-import { runWeeklyImport } from "./run_weekly_import.ts";
+import { main, runWeeklyImport } from "./run_weekly_import.ts";
 import { finalizeInboxItem } from "./finalize_inbox.ts";
 
 const tempDirs: string[] = [];
@@ -181,6 +181,48 @@ async function runWeeklyDryPipeline(options: {
 }
 
 describe("weekly dry pipeline", () => {
+  test("환경 파일 없이 환경 변수만 전달받아 주간 등록하고 잠금을 해제한다", async () => {
+    const root = privateRoot();
+    writeInboxPair(root, "source");
+    const plan = prepareRunPlan({ root, runId: "run-env-only" });
+    const planPath = join(root, "state", "plan.json");
+    writeFileSync(planPath, JSON.stringify(plan), { mode: 0o600 });
+    const env = {
+      ACCOUNTBOOK_API_BASE_URL: CONFIG.apiBaseUrl,
+      ACCOUNTBOOK_FAMILY_UUID: CONFIG.familyUuid,
+      ACCOUNTBOOK_API_TOKEN: CONFIG.apiToken,
+      ACCOUNTBOOK_DEFAULT_CATEGORY_NAME: CONFIG.defaultCategoryName,
+      ACCOUNTBOOK_EXCLUDE_FROM_BUDGET: "false",
+    };
+    const previous = Object.fromEntries(Object.keys(env).map((key) => [key, process.env[key]]));
+    Object.assign(process.env, env);
+    let posts = 0;
+    const fetchMock = spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      expect(new Headers(init?.headers).get("Authorization")).toBe(`Bearer ${CONFIG.apiToken}`);
+      const common = commonResponse(String(input), init);
+      if (common) return common;
+      if ((init?.method ?? "GET") === "GET") return jsonResponse({ data: { items: [] } });
+      posts += 1;
+      return jsonResponse({ data: { uuid: "remote-expense" } }, 201);
+    });
+    const output = spyOn(process.stdout, "write").mockReturnValue(true);
+    try {
+      setSystemTime(new Date("2026-08-20T02:10:00Z"));
+      await main(["--private-root", root, "--plan", planPath]);
+      expect(posts).toBe(1);
+      expect(Object.values(loadWeeklyState(root).items)[0].status).toBe("submitted");
+      expect(existsSync(join(root, "state", "locks", "weekly-import.lock"))).toBe(false);
+      expect(output).toHaveBeenCalledTimes(1);
+    } finally {
+      setSystemTime();
+      fetchMock.mockRestore();
+      output.mockRestore();
+      for (const [key, value] of Object.entries(previous)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
+  });
   test("정상 승인 후보를 submit payload로 등록하고 submitted로 finalize한다", async () => {
     const root = privateRoot();
     writeInboxPair(root, "source");
