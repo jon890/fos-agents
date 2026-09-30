@@ -38,9 +38,25 @@ export const candidateMemorySchema = z
 
 export type CandidateMemory = z.infer<typeof candidateMemorySchema>;
 export type CandidateMemoryField = { path: string; description: string };
+export const candidateMemoryDocumentKeys = ["career-status", "application-state"] as const;
+export type CandidateMemoryDocumentKey = (typeof candidateMemoryDocumentKeys)[number];
+export type CandidateMemoryDocument = {
+  documentKey: CandidateMemoryDocumentKey;
+  version: number;
+  body: string;
+};
+/** 문서가 없는 키는 `undefined` 로 돌려준다. */
+export type ReadCandidateMemoryDocuments = (
+  keys: readonly CandidateMemoryDocumentKey[],
+) => Promise<Partial<Record<CandidateMemoryDocumentKey, CandidateMemoryDocument | undefined>>>;
 export type CandidateMemoryResult =
   | { provider: "file"; path: string; memory: CandidateMemory }
-  | { provider: "brain"; fields: CandidateMemoryField[]; instruction: string };
+  | {
+      provider: "backend";
+      fields: CandidateMemoryField[];
+      instruction: string;
+      documents: CandidateMemoryDocument[];
+    };
 
 const fields: CandidateMemoryField[] = [
   { path: "schemaVersion", description: "고정값 1" },
@@ -74,6 +90,33 @@ function validateApplicationDirectories(memory: CandidateMemory): CandidateMemor
   return memory;
 }
 
+// 본문은 모델이 읽는다. 스크립트는 개인 맥락을 해석하지 않는다(ADR-130).
+async function loadBackendMemory(
+  readDocuments: ReadCandidateMemoryDocuments,
+): Promise<CandidateMemoryResult> {
+  let found: Awaited<ReturnType<ReadCandidateMemoryDocuments>>;
+  try {
+    found = await readDocuments(candidateMemoryDocumentKeys);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `커리어 Backend 에서 후보자 맥락 문서를 읽지 못했다. drill-engine.ts doctor 로 연결값을 점검한다: ${message}`,
+    );
+  }
+  const missing = candidateMemoryDocumentKeys.filter((key) => !found[key]);
+  if (missing.length > 0)
+    throw new Error(`커리어 Backend 에 후보자 맥락 문서가 없다: ${missing.join(", ")}`);
+  return {
+    provider: "backend",
+    fields,
+    instruction: "documents 본문으로 아래 칸을 채운다. 본문에 없는 칸은 비워 두고 사용자에게 묻는다.",
+    documents: candidateMemoryDocumentKeys.map((key) => {
+      const { documentKey, version, body } = found[key]!;
+      return { documentKey, version, body };
+    }),
+  };
+}
+
 function memoryIssues(error: z.ZodError): string {
   return error.issues
     .flatMap((issue) => {
@@ -85,20 +128,16 @@ function memoryIssues(error: z.ZodError): string {
     .join(", ");
 }
 
-export function loadCandidateMemory(
+export async function loadCandidateMemory(
   environment: Record<string, string | undefined>,
   readFile: (path: string) => string,
-): CandidateMemoryResult {
+  readDocuments: ReadCandidateMemoryDocuments,
+): Promise<CandidateMemoryResult> {
   const provider = environment.CAREER_MEMORY?.trim();
-  if (provider === "brain")
-    return {
-      provider,
-      fields,
-      instruction: "brain-search 로 아래 칸을 채운다. 찾지 못한 칸은 비워 두고 사용자에게 묻는다.",
-    };
+  if (provider === "backend") return loadBackendMemory(readDocuments);
   if (provider !== "file")
     throw new Error(
-      "CAREER_MEMORY 는 brain 이나 file 이어야 한다. drill-engine.ts doctor 로 설정을 점검한다.",
+      `CAREER_MEMORY 는 backend 나 file 이어야 한다 (현재 값: ${provider || "없음"}). drill-engine.ts doctor 로 설정을 점검한다.`,
     );
   const path = environment.CAREER_MEMORY_FILE?.trim() || defaultPath();
   try {

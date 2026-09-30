@@ -23,6 +23,13 @@ const question: DrillQuestion = {
   intent: "기본 이해 확인",
   answerSignals: ["원자성"],
 };
+const contextDocuments = {
+  "career-status": { documentKey: "career-status" as const, version: 2, body: "# 합성 경력 상태" },
+  "application-state": { documentKey: "application-state" as const, version: 5, body: "# 합성 지원 상태" },
+};
+async function readContextDocuments() {
+  return contextDocuments;
+}
 function store(): FileInterviewPracticeStore {
   const directory = mkdtempSync(join(tmpdir(), "drill-engine-"));
   directories.push(directory);
@@ -63,35 +70,55 @@ describe("면접 연습 CLI", () => {
     const createStore = () => {
       throw new Error("저장소 생성 실패");
     };
-    const memory = await runDrillCli(["memory"], {
-      environment: { CAREER_MEMORY: "brain" },
+    const memory = (await runDrillCli(["memory"], {
+      environment: { CAREER_MEMORY: "backend" },
       createStore,
       readFile: () => "",
-    });
-    expect((memory as { provider: string }).provider).toBe("brain");
+      readContextDocuments,
+    })) as { provider: string; documents: Array<{ documentKey: string; version: number; body: string }> };
+    expect(memory.provider).toBe("backend");
+    expect(memory.documents).toEqual([contextDocuments["career-status"], contextDocuments["application-state"]]);
     const doctor = (await runDrillCli(["doctor"], {
-      environment: { CAREER_MEMORY: "brain" },
+      environment: { CAREER_MEMORY: "backend" },
       createStore,
       readFile: () => "",
+      readContextDocuments,
     })) as { checks: Array<{ name: string; ok: boolean }> };
     expect(doctor.checks.map(({ name, ok }) => ({ name, ok }))).toEqual([
       { name: "CAREER_STORE", ok: false },
       { name: "CAREER_MEMORY", ok: true },
     ]);
   });
-  test("저장소 생성이 실패해도 brain 후보자 맥락 doctor 점검은 계속한다", async () => {
+  test("저장소 생성이 실패해도 backend 후보자 맥락 doctor 점검은 계속한다", async () => {
     const result = (await runDrillCli(["doctor"], {
-      environment: { CAREER_STORE: "file", CAREER_MEMORY: "brain" },
+      environment: { CAREER_STORE: "file", CAREER_MEMORY: "backend" },
       createStore: () => {
         throw new Error("저장소 생성 실패");
       },
       readFile: () => "",
+      readContextDocuments,
     })) as { passed: boolean; checks: Array<{ name: string; ok: boolean }> };
     expect(result.passed).toBeFalse();
     expect(result.checks.map(({ name, ok }) => ({ name, ok }))).toEqual([
       { name: "CAREER_STORE", ok: false },
       { name: "CAREER_MEMORY", ok: true },
     ]);
+  });
+  test("backend 문서가 빠지면 doctor가 연결값과 빠진 문서 키를 알린다", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "drill-doctor-"));
+    directories.push(directory);
+    const result = (await runDrillCli(["doctor"], {
+      environment: { CAREER_STORE: "file", CAREER_STORE_DIR: directory, CAREER_MEMORY: "backend" },
+      createStore: store,
+      readFile: () => "",
+      readContextDocuments: async () => ({ "career-status": contextDocuments["career-status"] }),
+    })) as { passed: boolean; checks: Array<{ name: string; ok: boolean; message: string }> };
+    expect(result.passed).toBeFalse();
+    const memoryCheck = result.checks.find((check) => check.name === "CAREER_MEMORY");
+    expect(memoryCheck?.ok).toBeFalse();
+    expect(memoryCheck?.message).toContain("CAREER_BACKEND_URL");
+    expect(memoryCheck?.message).toContain("application-state");
+    expect(memoryCheck?.message).not.toContain("candidate-memory.json");
   });
   test("개인 질문을 select 결과에 넣는다", async () => {
     const value = store();

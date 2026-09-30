@@ -24,7 +24,12 @@ import {
 } from "./follow-up-policy.ts";
 import { createInterviewPracticeStore } from "./store/index.ts";
 import type { InterviewPracticeStore } from "./store/port.ts";
-import { loadCandidateMemory } from "./memory.ts";
+import {
+  loadCandidateMemory,
+  type CandidateMemoryDocument,
+  type ReadCandidateMemoryDocuments,
+} from "./memory.ts";
+import { createCandidateContextClient } from "../candidate-context/client.ts";
 
 export type DrillType = "tech" | "behavioral";
 export type ScoreResult = "pass" | "shallow" | "fail" | "unknown";
@@ -224,6 +229,25 @@ export function toDrillProgress(items: TopicProgress[]): DrillProgress {
   );
 }
 
+async function readContextDocuments(
+  keys: Parameters<ReadCandidateMemoryDocuments>[0],
+): ReturnType<ReadCandidateMemoryDocuments> {
+  const client = createCandidateContextClient();
+  const entries = await Promise.all(
+    keys.map(async (key) => {
+      try {
+        const { version, body } = await client.getDocument(key);
+        const document: CandidateMemoryDocument = { documentKey: key, version, body };
+        return [key, document] as const;
+      } catch (error) {
+        if (error instanceof CareerBackendHttpError && error.status === 404) return [key, undefined] as const;
+        throw error;
+      }
+    }),
+  );
+  return Object.fromEntries(entries);
+}
+
 function option(argv: string[], name: string, required = false): string | undefined {
   const index = argv.indexOf(name);
   const value = index < 0 ? undefined : argv[index + 1];
@@ -273,13 +297,15 @@ export async function runDrillCli(
   deps: {
     createStore: () => InterviewPracticeStore;
     readFile: (path: string) => string;
+    readContextDocuments?: ReadCandidateMemoryDocuments;
     environment?: Record<string, string | undefined>;
   },
 ): Promise<unknown> {
   const environment = deps.environment ?? process.env;
+  const readDocuments = deps.readContextDocuments ?? readContextDocuments;
   if (argv[0] === "memory") {
     checkOptions(argv, 1, []);
-    return loadCandidateMemory(environment, deps.readFile);
+    return loadCandidateMemory(environment, deps.readFile, readDocuments);
   }
   if (argv[0] === "doctor") {
     checkOptions(argv, 1, []);
@@ -308,13 +334,21 @@ export async function runDrillCli(
       }
     }
     try {
-      loadCandidateMemory(environment, deps.readFile);
+      await loadCandidateMemory(environment, deps.readFile, readDocuments);
       checks.push({ name: "CAREER_MEMORY", ok: true, message: "후보자 맥락을 사용할 수 있습니다." });
     } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      const provider = environment.CAREER_MEMORY?.trim();
+      const guide =
+        provider === "file"
+          ? "템플릿을 career-os/library/candidate-memory.json 으로 복사해 값을 채웁니다"
+          : provider === "backend"
+            ? "CAREER_BACKEND_URL 과 token 연결값, career-status 와 application-state 문서가 있는지 확인합니다"
+            : "CAREER_MEMORY 에 backend 또는 file 을 설정합니다";
       checks.push({
         name: "CAREER_MEMORY",
         ok: false,
-        message: `후보자 맥락을 확인하지 못했습니다. 템플릿을 career-os/library/candidate-memory.json 으로 복사해 값을 채웁니다: ${error instanceof Error ? error.message : String(error)}`,
+        message: `후보자 맥락을 확인하지 못했습니다. ${guide}: ${reason}`,
       });
     }
     return { passed: checks.every((check) => check.ok), checks };
