@@ -120,6 +120,8 @@ bun career-os/scripts/study-topic-recommender/morning_reading_cli.ts --cleanup -
 관심사가 바뀌면 `learning-interests` 문서를 고쳐 저장한다.
 본문 파일은 시스템 임시 디렉터리에 두고, 저장한 뒤 지운다.
 저장하면 기준 버전이 바뀌어 이전 제외 판정이 다시 후보로 나온다.
+`get --out` 이 출력하는 요약의 `version` 을 `--expected-version` 에 넣는다.
+문서가 아직 없어 `get` 이 404 로 끝나면 `0` 으로 새로 만든다.
 
 ```bash
 # cwd: 저장소 루트

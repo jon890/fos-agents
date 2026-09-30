@@ -126,7 +126,7 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 | --- | --- |
 | `GET /documents` | 저장된 문서의 키, `version`, `updatedAt`. 본문은 담지 않는다 |
 | `GET /documents/{documentKey}` | 본문, `version`, `note`, `updatedAt`. 없으면 `404` |
-| `PUT /documents/{documentKey}` | 본문 전체 교체. `expectedVersion` 과 `note` 를 받는다. 새 문서는 `expectedVersion: 0` 이다 |
+| `PUT /documents/{documentKey}` | 본문 전체 교체. `expectedVersion` 과 `note` 를 받는다. 새 문서는 `expectedVersion: 0` 이다. 응답은 `documentKey`, `version`, `updatedAt` 만 담는다. 멱등 영수증(`request_receipts`)에 본문 사본이 남지 않도록 본문과 `note` 를 돌려주지 않고, 본문은 `GET` 으로만 읽는다 |
 
 사람이 `scripts/candidate-context/manage_candidate_context.ts` 로 고친다. 스킬이 스스로 저장하지 않는다.
 
@@ -141,7 +141,7 @@ sequenceDiagram
     CLI->>API: PUT /documents/{key}
     alt expectedVersion 이 현재와 같다
         API->>API: 문서 행 갱신과 이력 행 추가를 한 transaction 으로
-        API-->>CLI: 새 version
+        API-->>CLI: 새 version (본문 없음)
     else 다르다
         API-->>CLI: 409 VERSION_CONFLICT
         CLI-->>Human: 다시 조회하고 변경을 검토한 뒤 재실행

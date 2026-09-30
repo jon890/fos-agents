@@ -1,13 +1,15 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { CareerBackendHttpError } from "../lib/career-backend-http.ts";
 import { formatManageCandidateContextError, manageCandidateContext } from "./manage_candidate_context.ts";
 
 const originalFetch = globalThis.fetch;
 const originalEnv = { url: process.env.CAREER_BACKEND_URL, token: process.env.CAREER_BACKEND_TOKEN, tokenFile: process.env.CAREER_BACKEND_TOKEN_FILE };
 const directories: string[] = [];
+const cliPath = join(import.meta.dir, "manage_candidate_context.ts");
+const repositoryRoot = dirname(dirname(dirname(import.meta.dir)));
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
@@ -33,6 +35,16 @@ function tempDir(): string {
   return directory;
 }
 
+/** 서브프로세스로 CLI 를 실행한다. 같은 프로세스의 fake server 가 응답해야 하므로 비동기로 기다린다. */
+async function runCli(args: string[], port: number | undefined, cwd: string) {
+  const env: Record<string, string | undefined> = { ...process.env, CAREER_BACKEND_URL: `http://127.0.0.1:${port}`, CAREER_BACKEND_TOKEN: "x".repeat(32) };
+  // 연결값은 token 과 token 파일 중 하나만 받는다. 실행한 셸의 token 파일 설정이 섞이지 않게 뺀다.
+  delete env.CAREER_BACKEND_TOKEN_FILE;
+  const child = Bun.spawn([process.execPath, cliPath, ...args], { cwd, stdout: "pipe", stderr: "pipe", env });
+  const [stdout, stderr, exitCode] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
+  return { stdout, stderr, exitCode };
+}
+
 describe("manage_candidate_context", () => {
   test("help 는 연결값 없이 사용법을 낸다", async () => {
     delete process.env.CAREER_BACKEND_URL;
@@ -54,9 +66,63 @@ describe("manage_candidate_context", () => {
 
   test("저장소 안 --out 은 요청 전에 거절한다", async () => {
     const urls = useApi(() => new Response("{}"));
+    const inside = join(repositoryRoot, "career-os", "tmp-context.md");
 
-    await expect(manageCandidateContext(["get", "--key", "learning-interests", "--out", "career-os/tmp-context.md"])).rejects.toThrow("저장소 밖");
+    await expect(manageCandidateContext(["get", "--key", "learning-interests", "--out", inside])).rejects.toThrow("저장소 밖");
     expect(urls).toHaveLength(0);
+  });
+
+  test("이미 있는 symlink --out 은 가리키는 곳과 관계없이 거절한다", async () => {
+    const urls = useApi(() => new Response("{}"));
+    const directory = tempDir();
+    const insideLink = join(directory, "inside-link.md");
+    const outsideLink = join(directory, "outside-link.md");
+    symlinkSync(join(repositoryRoot, "career-os", "tmp-context.md"), insideLink);
+    symlinkSync(join(directory, "target.md"), outsideLink);
+
+    await expect(manageCandidateContext(["get", "--key", "learning-interests", "--out", insideLink])).rejects.toThrow("저장소 밖");
+    await expect(manageCandidateContext(["get", "--key", "learning-interests", "--out", outsideLink])).rejects.toThrow("저장소 밖");
+    expect(urls).toHaveLength(0);
+  });
+
+  test("저장소의 .git 디렉터리 안 --out 은 거절한다", async () => {
+    const urls = useApi(() => new Response("{}"));
+    const repository = tempDir();
+    Bun.spawnSync(["git", "init", "-q", repository]);
+
+    await expect(manageCandidateContext(["get", "--key", "learning-interests", "--out", join(repository, ".git", "context.md")])).rejects.toThrow("저장소 밖");
+    expect(urls).toHaveLength(0);
+  });
+
+  test("cwd 가 저장소 밖이어도 저장소 안 --out 은 거절하고 밖 --out 은 허용한다", async () => {
+    const cwd = tempDir();
+    const outside = join(tempDir(), "interests.md");
+    const inside = join(repositoryRoot, "career-os", "tmp-context.md");
+    const server = Bun.serve({ port: 0, fetch: () => Response.json({ document: { documentKey: "learning-interests", body: "본문\n", version: 2, note: "n", updatedAt: "2026-09-01T00:00:00.000Z" } }) });
+    try {
+      const run = (out: string) => runCli(["get", "--key", "learning-interests", "--out", out], server.port, cwd);
+
+      const rejected = await run(inside);
+      expect(rejected.exitCode).toBe(1);
+      expect(rejected.stderr).toContain("저장소 밖");
+      const allowed = await run(outside);
+      expect(allowed.exitCode).toBe(0);
+      expect(await Bun.file(outside).text()).toBe("본문\n");
+    } finally {
+      await server.stop(true);
+    }
+  });
+
+  test("get 을 --out 없이 실행하면 본문 끝 줄바꿈을 늘리지 않고 그대로 출력한다", async () => {
+    const server = Bun.serve({ port: 0, fetch: () => Response.json({ document: { documentKey: "learning-interests", body: "본문\n", version: 2, note: "n", updatedAt: "2026-09-01T00:00:00.000Z" } }) });
+    try {
+      const result = await runCli(["get", "--key", "learning-interests"], server.port, tempDir());
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toBe("본문\n");
+    } finally {
+      await server.stop(true);
+    }
   });
 
   test("get 은 본문을 출력하고 저장소 밖 --out 에 쓴다", async () => {

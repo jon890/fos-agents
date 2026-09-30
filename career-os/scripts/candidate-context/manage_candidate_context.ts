@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { execFileSync } from "node:child_process";
-import { readFileSync, realpathSync, writeFileSync } from "node:fs";
-import { basename, dirname, join, relative, resolve, isAbsolute } from "node:path";
+import { lstatSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
 import { firstOptionValue } from "../lib/cli.ts";
 import { CareerBackendHttpError } from "../lib/career-backend-http.ts";
 import { createCandidateContextClient } from "./client.ts";
@@ -13,7 +13,7 @@ const required = (args: readonly string[], name: string) => {
   if (!found?.trim()) throw new Error(`--${name} 값이 필요하다.`);
   return found;
 };
-const usage = `사용법: manage_candidate_context.ts <list | get | put>\n\n로컬 명령:\n  help, --help, -h\n\nAPI 명령:\n  list\n  get --key <documentKey> [--out <path>]\n  put --key <documentKey> --file <markdownPath> --expected-version <n> --note <note>`;
+const usage = `사용법: manage_candidate_context.ts <list | get | put>\n\n로컬 명령:\n  help, --help, -h\n\nAPI 명령:\n  list\n  get --key <documentKey> [--out <path>]\n  put --key <documentKey> --file <markdownPath> --expected-version <n> --note <note>\n`;
 
 function documentKey(args: readonly string[]) {
   const parsed = candidateContextDocumentKeySchema.safeParse(required(args, "key"));
@@ -21,16 +21,30 @@ function documentKey(args: readonly string[]) {
   return parsed.data;
 }
 
-/** 개인 맥락이 저장소에 남지 않도록 `--out` 의 부모 디렉터리가 저장소 안이면 거절한다. */
+/** 개인 맥락이 저장소에 남지 않도록 `--out` 이 어떤 git 저장소 안이든 거절한다. cwd 와 무관하게 대상 경로 기준으로 판정한다. */
 function assertOutsideRepository(out: string): string {
+  const rejection = new Error("--out 은 저장소 밖 경로여야 한다. 개인 맥락을 저장소에 두지 않는다.");
   const target = resolve(out);
   const parent = realpathSync(dirname(target));
-  const root = realpathSync(execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim());
-  const rel = relative(root, parent);
-  if (rel === "" || (!rel.startsWith("..") && !isAbsolute(rel))) {
-    throw new Error("--out 은 저장소 밖 경로여야 한다. 개인 맥락을 저장소에 두지 않는다.");
+  // 이미 있는 symlink 는 저장소 안을 가리킬 수 있어 부모 검사만으로는 알 수 없다.
+  const stat = lstatSync(target, { throwIfNoEntry: false });
+  if (stat?.isSymbolicLink()) throw rejection;
+  try {
+    // `--git-dir` 은 작업 트리 안과 `.git` 디렉터리 안에서 모두 성공한다.
+    execFileSync("git", ["-C", parent, "rev-parse", "--git-dir"], { encoding: "utf8", stdio: "pipe", env: { ...process.env, LC_ALL: "C" } });
+  } catch (error) {
+    // 저장소가 아니라서 실패한 경우만 허용한다. 메시지로 판정하므로 위에서 locale 을 C 로 고정했다.
+    // git 이 없거나 다른 이유로 실패하면 판정할 수 없어 거절한다.
+    if (isNotGitRepositoryError(error)) return join(parent, basename(target));
+    throw new Error("--out 이 저장소 밖인지 git 으로 확인하지 못했다.", { cause: error });
   }
-  return join(parent, basename(target));
+  throw rejection;
+}
+
+function isNotGitRepositoryError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const { status, stderr } = error as { status?: unknown; stderr?: unknown };
+  return status === 128 && String(stderr ?? "").includes("not a git repository");
 }
 
 export async function manageCandidateContext(args = process.argv.slice(2)): Promise<unknown> {
@@ -85,7 +99,11 @@ export function formatManageCandidateContextError(error: unknown): string {
 
 if (import.meta.main) {
   manageCandidateContext()
-    .then((result) => console.log(typeof result === "string" ? result : JSON.stringify(result, null, 2)))
+    .then((result) => {
+      // 문자열 본문은 줄바꿈을 더하지 않고 그대로 낸다. get > file 후 put 하면 저장할 때마다 끝 줄바꿈이 늘기 때문이다.
+      if (typeof result === "string") process.stdout.write(result);
+      else console.log(JSON.stringify(result, null, 2));
+    })
     .catch((error) => {
       console.error(formatManageCandidateContextError(error));
       process.exit(1);
