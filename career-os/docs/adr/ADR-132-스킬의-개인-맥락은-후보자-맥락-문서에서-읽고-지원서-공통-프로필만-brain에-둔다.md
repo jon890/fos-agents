@@ -8,7 +8,12 @@
   - 면접 연습의 `CAREER_MEMORY` 에서 `brain` 공급자를 없애고 `backend` 공급자를 둔다. 스크립트가 `career-status` 와 `application-state` 본문을 채울 칸 목록과 함께 내고, 모델이 ADR-130 의 JSON 계약 칸을 채운다.
   - 재지원 간격의 날짜는 `position_exclusions.expires_at` 에만 둔다. `application-state` 문서는 지원 결과, 현재 집중 대상과 사용 원칙을 담고 날짜를 적지 않는다.
   - 포지션 분석 정책의 `candidateContextVersion` 은 `position-preferences:v{version}` 이다. `manage_candidate_context.ts put --key position-preferences` 가 저장에 성공하면 같은 명령이 분석 정책을 그 값으로 갱신한다. 수집 명령은 시작할 때 두 값이 다르면 멈춘다.
-- **대체된 부분**: [ADR-130](ADR-130-면접-연습의-후보자-맥락은-memory-공급자-경계로-읽는다.md)의 `brain` 공급자를 `backend` 공급자로 대체한다. 필드가 정해진 JSON 계약, `file` 공급자와 자동 선택을 기각한 결정은 그대로다.
+- **대체된 부분**:
+  - [ADR-130](ADR-130-면접-연습의-후보자-맥락은-memory-공급자-경계로-읽는다.md)의 `brain` 공급자를 `backend` 공급자로 대체한다. 필드가 정해진 JSON 계약, `file` 공급자와 자동 선택을 기각한 결정은 그대로다.
+  - [ADR-102](ADR-102-별도-웹-대시보드보다-파일-기반-피드백-루프를-사용한다.md)의 현재 지원 대상과 회사별 지원 판단을 private brain 에 두는 결정을 `application-state`, `position-preferences` 문서로 대체한다.
+  - [ADR-106](ADR-106-면접-질문은-다양한-출처에서-발견하고-공식-원문으로-검증한다.md)의 현재 직장과 경력 수준을 private brain 에서 읽는 결정을 `career-status` 문서로 대체한다.
+  - [ADR-112](ADR-112-현재-직장-대비-업사이드를-축별로-판정한다.md)의 비교 기준값과 이직 동기를 private brain 이 소유한다는 조항을 `position-preferences` 문서로 대체한다.
+  - [ADR-114](ADR-114-개인-공고-제외-정책을-비공개-release로-전송한다.md)의 지원 이력 원본을 private brain 에 두는 조항을 `application-state` 문서로 대체한다.
 - **맥락**:
   - [ADR-131](ADR-131-후보자-맥락은-backend-문서로-두고-공부-추천-기준-버전을-문서-버전에서-계산한다.md) 이 후보자 맥락 문서 저장소를 만들고 학습 관심사만 옮겼다. 나머지 개인 맥락은 여전히 private brain 에 있어, 같은 개인 맥락을 스킬마다 다른 곳에서 읽었다.
   - 재지원 간격은 brain 의 지원 상태 페이지와 `position_exclusions.expires_at` 두 곳에 같은 날짜로 있었다. 문서가 「원본은 brain」 이라고 적었지만 수집기가 읽는 것은 `expires_at` 이었다.

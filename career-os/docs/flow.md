@@ -287,7 +287,7 @@ sequenceDiagram
 
 외부 채용 소스의 열린 공고에서 실제 지원 후보를 고르고, 회사를 세 축으로 판정한다.
 
-1. 수집 명령이 `position-preferences` 문서와 분석 정책을 읽어 정책의 `candidateContextVersion` 이 `position-preferences:v{version}` 인지 확인한다. 다르거나 문서가 없으면 수집을 시작하지 않는다. 두 문서와 `application-state` 본문을 실행 디렉터리의 `candidate-context.json` 에 둔다.
+1. 수집 명령이 `position-preferences` 문서와 분석 정책을 읽어 정책의 `candidateContextVersion` 이 `position-preferences:v{version}` 인지 확인한다. 다르거나 문서가 없으면 수집을 시작하지 않는다. 같으면 `position-preferences` 와 `application-state` 의 version 과 본문을 실행 디렉터리의 `candidate-context.json` 에 둔다.
 2. 수집기가 `GET exclusions`로 개인 제외 규칙을 읽고, 등록된 소스 어댑터가 열린 공고를 공통 형태로 모은다.
 3. 스크립트가 종료 여부, 마감일, 고용 형태, 역할, URL 중복과 개인 제외 규칙을 검사한다.
 4. client가 후보풀과 소스 진단을 멱등 키와 함께 Backend에 보낸다. Backend는 공고 버전과 수집 실행, 회사 tier 평가 실행을 한 트랜잭션으로 저장하고 평가할 회사 큐를 반환한다.

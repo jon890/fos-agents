@@ -76,7 +76,7 @@ bun "$REPO_ROOT/career-os/scripts/interview-drill/drill-engine.ts" select tech \
 
 질문을 한 번에 하나씩 보여주고 사용자의 답을 기다린다.
 답변 직후 `pass`, `shallow`, `fail`, `unknown` 중 하나로 판정하고, 잘된 점·가장 큰 공백·후속 질문을 각각 하나씩 준다.
-충분한 답변은 선택 근거, 반례, 운영 상황과 근거 경계 순으로 최대 네 단계까지 묻고, 틀렸거나 답하지 못한 경우에는 한 번 좁혀 묻고 학습 항목으로 전환한다.
+충분한 답변은 선택 근거, 반례, 운영 상황과 근거 경계 순으로 최대 네 단계까지 묻고, 틀렸거나 답하지 못한 경우에는 한 번 범위를 줄여 묻고 학습 항목으로 전환한다.
 
 ```bash
 REPO_ROOT="$(git rev-parse --show-toplevel)"

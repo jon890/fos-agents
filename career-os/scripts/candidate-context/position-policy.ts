@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import type { CareerBackendClient } from "../position-recommender/career-backend/client.ts";
 import { CareerBackendHttpError } from "../lib/career-backend-http.ts";
@@ -40,20 +41,28 @@ async function readPolicy(positions: PolicyReader) {
  * 멱등 키는 읽은 정책 전체와 목표 version 의 hash 다. version 만으로 키를 만들면 정책의 다른 칸이
  * 바뀐 뒤 같은 키로 보냈을 때 충돌하거나 저장된 응답이 재생된다.
  * 재생된 응답은 DB 를 바꾸지 않았을 수 있어, 보낸 뒤 다시 읽어 목표 값인지 확인한다.
+ * 정책이 목표로 바뀐 뒤 누가 정확히 이전 값으로 되돌리면 같은 키가 다시 만들어져 저장된 응답이 재생된다.
+ * 그래서 다시 읽은 값이 목표와 다르면 키 끝에 무작위 값을 붙여 한 번만 다시 보낸다.
  */
 export async function syncPositionPolicy(input: {
   positions: PolicyClient;
   version: number;
+  /** 재시도 멱등 키에 붙일 무작위 값. 테스트에서 고정할 때만 넘긴다. */
+  retryNonce?: () => string;
 }): Promise<{ candidateContextVersion: string; changed: boolean }> {
   const target = positionContextVersion(input.version);
   const current = await readPolicy(input.positions);
   if (current.candidateContextVersion === target) return { candidateContextVersion: target, changed: false };
 
-  await input.positions.configureAnalysisPolicy(
-    { ...current, candidateContextVersion: target },
-    hashKey("analysis-policy-sync", { policy: current, candidateContextVersion: target }),
-  );
-  const confirmed = await readPolicy(input.positions);
+  const body = { ...current, candidateContextVersion: target };
+  const key = hashKey("analysis-policy-sync", { policy: current, candidateContextVersion: target });
+  await input.positions.configureAnalysisPolicy(body, key);
+  let confirmed = await readPolicy(input.positions);
+  if (confirmed.candidateContextVersion !== target) {
+    const nonce = (input.retryNonce ?? randomUUID)();
+    await input.positions.configureAnalysisPolicy(body, `${key}:${nonce}`);
+    confirmed = await readPolicy(input.positions);
+  }
   if (confirmed.candidateContextVersion !== target) {
     throw new Error(
       `정책 갱신 뒤 다시 읽은 candidateContextVersion 이 ${confirmed.candidateContextVersion} 이다. 목표는 ${target} 이다. 정책을 확인한 뒤 ${SYNC_POSITION_POLICY_COMMAND} 를 다시 실행한다.`,
@@ -71,7 +80,7 @@ export async function prepareCandidateContext(
   paths: { candidateContext: string },
   clients: { positions: PolicyReader; context: DocumentReader },
 ): Promise<{ candidateContextVersion: string }> {
-  const output = assertOutsideRepository(paths.candidateContext, "candidate-context.json 경로");
+  const output = assertOutsideRepository(paths.candidateContext, "candidate-context.json");
 
   const keys = ["position-preferences", "application-state"] as const satisfies readonly CandidateContextDocumentKey[];
   const documents: Partial<Record<(typeof keys)[number], { version: number; body: string }>> = {};

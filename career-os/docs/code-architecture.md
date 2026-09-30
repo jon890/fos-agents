@@ -366,7 +366,7 @@ skill이 중간 파일 이름과 플래그를 알지 못하도록 모든 하위 
 
 | 하위 명령 | 흐름의 단계 |
 | --- | --- |
-| `collect` | 공고 수집, 수집 실행 저장, 회사 큐 수신, 근거 수집과 저장 |
+| `collect` | 수집 전 기준 버전 확인과 `candidate-context.json` 기록, 공고 수집, 수집 실행 저장, 회사 큐 수신, 근거 수집과 저장 |
 | `commit-company-tiers` | 축별 판정 반영과 분석 큐 생성 |
 | `commit-analyses` | 큐에 든 공고의 분석 반영 |
 | `finalize` | 추천 JSON과 HTML 생성과 검증 |
@@ -588,7 +588,9 @@ client 가 읽는 환경값은 포지션 추천과 같다. 같은 Backend 이고
 | --- | --- |
 | `client.ts` | `/api/candidate-context/v1` client. 연결값과 HTTP 는 `scripts/lib/career-backend-config.ts` 와 `scripts/lib/career-backend-http.ts` 를 쓴다 |
 | `contracts.ts` | 문서 키 넷과 요청, 응답의 zod 계약 |
-| `manage_candidate_context.ts` | `list`, `get`, `put` 과 `help`. `help` 만 연결값 없이 실행한다. `put --key position-preferences` 는 포지션 분석 정책의 기준 버전도 맞춘다 |
+| `manage_candidate_context.ts` | `list`, `get`, `put`, `sync-position-policy` 와 `help`. `help` 만 연결값 없이 실행한다. `put --key position-preferences` 는 포지션 분석 정책의 기준 버전도 맞춘다. `sync-position-policy` 는 정책의 기준 버전만 다시 맞춘다 |
+| `position-policy.ts` | `syncPositionPolicy` 는 정책을 읽어 `candidateContextVersion` 만 `position-preferences:v{version}` 으로 바꿔 보내고, 이미 같으면 보내지 않는다. `prepareCandidateContext` 는 수집 전에 기준 버전을 비교하고 같으면 `candidate-context.json` 을 쓴다 |
+| `repository-guard.ts` | 개인 맥락을 쓸 경로가 git 저장소 안이면 거절한다. `manage_candidate_context.ts` 와 `prepareCandidateContext` 가 함께 쓴다 |
 
 `put` 은 `--file` 로 받은 Markdown 파일을 본문으로 보내고 `--note` 와 `--expected-version` 을 요구한다.
 본문을 저장소 파일로 두지 않는다. 개인 맥락이라 시스템 임시 디렉터리에서 편집하고 저장한 뒤 지운다.

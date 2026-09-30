@@ -320,7 +320,7 @@ erDiagram
 
 | `CAREER_MEMORY` | 채우는 쪽 |
 | --- | --- |
-| `backend` | 스크립트가 후보자 맥락 문서 `career-status` 와 `application-state` 본문을 채울 칸 목록과 함께 낸다. 스킬이 그 본문으로 칸을 채운다 |
+| `backend` | 스크립트가 후보자 맥락 문서 `career-status` 와 `application-state` 본문을 채울 칸 목록과 함께 낸다. 출력은 `provider`, `fields`, `instruction`, `documents` 이고 `documents` 의 원소는 `{ documentKey, version, body }` 다. 스킬이 그 본문으로 칸을 채운다 |
 | `file` | `CAREER_MEMORY_FILE` 의 JSON. 기본은 `career-os/library/candidate-memory.json`. 템플릿은 `.claude/skills/interview-practice/templates/candidate-memory.example.json` |
 | 없음 | 명령이 실패한다 |
 
@@ -561,8 +561,11 @@ bun career-os/scripts/position-recommender/configure_position_company_preference
 한쪽 슬롯을 채울 후보가 부족하면 다른 쪽 후보가 남은 자리를 사용하며 같은 공고를 두 번 고르지 않는다.
 
 `candidateContextVersion`은 `position-preferences:v{version}` 이다. `manage_candidate_context.ts put --key position-preferences` 가 문서를 저장할 때 함께 바꾼다.
+정책을 바꿀 때의 멱등 키는 읽은 정책 전체와 목표 version 의 hash 다. 보낸 뒤 정책을 다시 읽어 값이 바뀌었는지 확인하고, 바뀌지 않았으면 키 끝에 무작위 값을 붙여 한 번만 다시 보낸다.
 수집 명령은 이 값과 문서 version 이 다르면 시작하지 않는다. 이유는 [ADR-132](adr/ADR-132-스킬의-개인-맥락은-후보자-맥락-문서에서-읽고-지원서-공통-프로필만-brain에-둔다.md)를 따른다.
 값이 달라지면 기존 공고 분석은 본문이 같아도 `stale`로 분류한다.
+값이 같으면 수집 명령은 실행 디렉터리에 `candidate-context.json` 을 쓴다. 형태는 `{ candidateContextVersion, documents: { "position-preferences": { version, body }, "application-state": { version, body } } }` 이다.
+개인 맥락이라 저장소 안 경로에는 쓰지 않고 파일 권한은 `0600` 이다.
 정책이 없거나 형식이 잘못됐으면 전체 후보를 기본값으로 분석하지 않고 API가 `409`로 실행을 중단한다.
 
 새 DB에는 정책 기본값을 넣지 않는다.

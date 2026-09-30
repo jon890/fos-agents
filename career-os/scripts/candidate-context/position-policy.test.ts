@@ -43,8 +43,11 @@ function policy(candidateContextVersion: string, overrides: Partial<AnalysisPoli
   };
 }
 
-/** 정책 저장소를 흉내 낸다. `apply: false` 면 멱등 응답이 재생된 것처럼 저장하지 않고 성공만 돌려준다. */
-function fakePositions(initial: AnalysisPolicy | undefined, options: { apply?: boolean } = {}) {
+/**
+ * 정책 저장소를 흉내 낸다. `apply` 가 false 를 돌려주는 호출은 멱등 응답이 재생된 것처럼 저장하지 않고 성공만 돌려준다.
+ * `apply` 는 몇 번째 PUT 인지(0부터)를 받는다.
+ */
+function fakePositions(initial: AnalysisPolicy | undefined, options: { apply?: (call: number) => boolean } = {}) {
   let stored = initial;
   const sent: { body: unknown; idempotencyKey: string }[] = [];
   return {
@@ -55,8 +58,9 @@ function fakePositions(initial: AnalysisPolicy | undefined, options: { apply?: b
       return stored;
     },
     async configureAnalysisPolicy(body: unknown, idempotencyKey: string) {
+      const call = sent.length;
       sent.push({ body, idempotencyKey });
-      if (options.apply !== false) stored = body as AnalysisPolicy;
+      if (options.apply?.(call) ?? true) stored = body as AnalysisPolicy;
       return body as AnalysisPolicy;
     },
   };
@@ -105,14 +109,41 @@ describe("syncPositionPolicy", () => {
     expect(firstKey).not.toBe("analysis-policy:position-preferences:v3");
   });
 
-  test("보낸 뒤 다시 읽은 값이 목표와 다르면 성공으로 보고하지 않는다", async () => {
-    const positions = fakePositions(policy("position-preferences:v2"), { apply: false });
+  test("첫 PUT 이 재생돼 값이 그대로면 무작위 값을 붙인 다른 키로 한 번 더 보내 적용한다", async () => {
+    const positions = fakePositions(policy("position-preferences:v2"), { apply: (call) => call > 0 });
 
-    const error = await rejection(syncPositionPolicy({ positions, version: 3 }));
+    const result = await syncPositionPolicy({ positions, version: 3, retryNonce: () => "fixed-nonce" });
+
+    expect(result).toEqual({ candidateContextVersion: "position-preferences:v3", changed: true });
+    expect(positions.sent.map((call) => call.body)).toEqual([policy("position-preferences:v3"), policy("position-preferences:v3")]);
+    const [firstKey, secondKey] = positions.sent.map((call) => call.idempotencyKey);
+    expect(secondKey).not.toBe(firstKey);
+    expect(secondKey).toBe(`${firstKey}:fixed-nonce`);
+    expect(secondKey!.length).toBeLessThanOrEqual(200);
+    expect(positions.stored()).toEqual(policy("position-preferences:v3"));
+  });
+
+  test("재시도까지 적용되지 않으면 PUT 을 두 번만 보내고 성공으로 보고하지 않는다", async () => {
+    const positions = fakePositions(policy("position-preferences:v2"), { apply: () => false });
+
+    const error = await rejection(syncPositionPolicy({ positions, version: 3, retryNonce: () => "fixed-nonce" }));
 
     expect(error.message).toContain("position-preferences:v2");
     expect(error.message).toContain("position-preferences:v3");
     expect(error.message).toContain("manage_candidate_context.ts sync-position-policy");
+    expect(positions.sent).toHaveLength(2);
+    expect(positions.sent[1]!.idempotencyKey).not.toBe(positions.sent[0]!.idempotencyKey);
+    expect(positions.stored()).toEqual(policy("position-preferences:v2"));
+  });
+
+  test("무작위 값을 넘기지 않아도 재시도 키는 첫 키와 다르다", async () => {
+    const positions = fakePositions(policy("position-preferences:v2"), { apply: (call) => call > 0 });
+
+    await syncPositionPolicy({ positions, version: 3 });
+
+    const [firstKey, secondKey] = positions.sent.map((call) => call.idempotencyKey);
+    expect(secondKey!.startsWith(`${firstKey}:`)).toBe(true);
+    expect(secondKey!.length).toBeLessThanOrEqual(200);
   });
 
   test("정책이 없으면 configure 명령으로 먼저 만들라고 안내한다", async () => {
@@ -193,7 +224,7 @@ describe("prepareCandidateContext", () => {
     await expect(prepareCandidateContext({ candidateContext: path }, {
       positions: fakePositions(policy("position-preferences:v4")),
       context,
-    })).rejects.toThrow("저장소 밖");
+    })).rejects.toThrow("candidate-context.json 은 저장소 밖");
     expect(context.requested).toEqual([]);
     expect(existsSync(path)).toBe(false);
   });
