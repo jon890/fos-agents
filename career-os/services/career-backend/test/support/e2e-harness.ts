@@ -20,6 +20,8 @@ import {
 
 /** `schema_migrations` 와 `_prisma_migrations` 를 뺀 운영 table 전부. 자식 table 이 앞이다. */
 const DATA_TABLES = [
+  "candidate_context_document_revisions",
+  "candidate_context_documents",
   "interview_attempts",
   "interview_topic_progress",
   "interview_personal_questions",
