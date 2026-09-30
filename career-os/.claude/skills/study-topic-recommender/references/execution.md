@@ -37,7 +37,7 @@ bun --env-file=career-os/.env \
   --run-dir <RUN_DIR> --prepare-candidates --limit 100
 ```
 
-`--prepare-candidates`는 후보 API의 `recentStudyTopicKeys`와 `candidateContextVersion`을 후보풀 옆 메타데이터에 함께 저장한다.
+`--prepare-candidates`는 후보 API의 `recentStudyTopicKeys`, `candidateContextVersion`, `learningInterests`를 후보풀 옆 메타데이터에 함께 저장한다.
 모델은 후보풀에서 선택한 자료와 선택하지 않은 모든 후보의 `rejections`를 `<RUN_DIR>/reading-selection.json`에 적는다.
 
 ```json
@@ -115,13 +115,15 @@ bun --env-file=career-os/.env \
 bun career-os/scripts/study-topic-recommender/morning_reading_cli.ts --cleanup --run-dir <RUN_DIR>
 ```
 
-## 후보자 기준 변경
+## 관심사 변경
 
-관심사가 바뀌면 새 `candidateContextVersion`을 정하고 다음 명령을 실행한다.
-이전 기준의 제외 판정은 무효가 되어 후보가 다시 나온다.
+관심사가 바뀌면 `learning-interests` 문서를 고쳐 저장한다.
+본문 파일은 시스템 임시 디렉터리에 두고, 저장한 뒤 지운다.
+저장하면 기준 버전이 바뀌어 이전 제외 판정이 다시 후보로 나온다.
 
 ```bash
-bun --env-file=career-os/.env \
-  career-os/scripts/study-topic-recommender/configure_study_recommendation.ts \
-  --candidate-context-version <NEW_VERSION>
+# cwd: 저장소 루트
+bun --env-file=career-os/.env career-os/scripts/candidate-context/manage_candidate_context.ts get --key learning-interests --out "${TMPDIR:-/tmp}/learning-interests.md"
+bun --env-file=career-os/.env career-os/scripts/candidate-context/manage_candidate_context.ts put --key learning-interests --file "${TMPDIR:-/tmp}/learning-interests.md" --expected-version "$VERSION" --note "$NOTE"
+rm "${TMPDIR:-/tmp}/learning-interests.md"
 ```

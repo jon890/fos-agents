@@ -36,8 +36,17 @@ describe("study-topic-recommender skill 문서", () => {
   test("관심사 변경과 제외 판정 저장을 안내한다", () => {
     const documents = readSkillDocuments();
 
-    expect(documents).toContain("configure_study_recommendation.ts");
+    expect(documents).toContain("manage_candidate_context.ts");
     expect(documents).toContain("rejections");
+  });
+
+  test("관심사를 Backend 문서에서 읽고 분야를 직접 적지 않는다", () => {
+    const documents = readSkillDocuments();
+
+    expect(documents).toContain("learningInterests");
+    for (const forbidden of ["brain-search", "configure_study_recommendation", "백엔드를 잘 만드는 데"]) {
+      expect(documents).not.toContain(forbidden);
+    }
   });
 
   test("저장소 루트에서 스킬 경로와 참고 문서를 찾도록 안내한다", () => {
