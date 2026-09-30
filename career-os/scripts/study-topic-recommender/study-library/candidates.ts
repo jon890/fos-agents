@@ -25,6 +25,8 @@ export interface StudyLibraryCandidateFilters {
 export interface StudyLibraryCandidateMeta {
   historyVersion: number;
   candidateContextVersion: string;
+  /** 공부 추천 기준이 되는 관심사 문서. `candidateContextVersion` 은 이 문서의 버전에서 계산된다. ADR-131 을 따른다. */
+  learningInterests: { version: number; body: string };
   filters: {
     sourceKey?: string;
     category?: ReadingCategory;
@@ -140,6 +142,7 @@ export async function fetchStudyLibraryCandidatePool(input: {
   let cursor = filters.cursor;
   let historyVersion: number | undefined;
   let candidateContextVersion: string | undefined;
+  let learningInterests: StudyLibraryCandidateMeta["learningInterests"] | undefined;
   let recentStudyTopicKeys: string[] = [];
   let nextCursor: string | null = null;
 
@@ -148,8 +151,9 @@ export async function fetchStudyLibraryCandidatePool(input: {
     if (historyVersion === undefined) {
       historyVersion = page.historyVersion;
       candidateContextVersion = page.candidateContextVersion;
+      learningInterests = page.learningInterests;
       recentStudyTopicKeys = page.recentStudyTopicKeys;
-    } else if (page.historyVersion !== historyVersion || page.candidateContextVersion !== candidateContextVersion) {
+    } else if (page.historyVersion !== historyVersion || page.candidateContextVersion !== candidateContextVersion || page.learningInterests.version !== learningInterests?.version) {
       throw new CareerBackendHttpError(409, "VERSION_CONFLICT", "커리어 Backend 요청이 실패했습니다.");
     }
     candidates.push(...page.candidates.map(toReadingCandidate));
@@ -162,13 +166,14 @@ export async function fetchStudyLibraryCandidatePool(input: {
     cursor = nextCursor;
   }
 
-  if (historyVersion === undefined || candidateContextVersion === undefined) {
+  if (historyVersion === undefined || candidateContextVersion === undefined || learningInterests === undefined) {
     throw new Error("후보 조회 결과에 기준 버전이 없다.");
   }
 
   const meta: StudyLibraryCandidateMeta = {
     historyVersion,
     candidateContextVersion,
+    learningInterests,
     filters: {
       sourceKey: filters.sourceKey,
       category: filters.category,

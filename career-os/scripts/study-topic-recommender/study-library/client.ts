@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import { resolveCareerBackendConnection } from "../../lib/career-backend-config.ts";
 import { careerBackendRequest } from "../../lib/career-backend-http.ts";
 import {
@@ -8,7 +8,6 @@ import {
   studyLibraryIngestionResultSchema,
   studyLibraryPublicationResultSchema,
   studyLibraryRecommendationRunResultSchema,
-  studyLibraryRecommendationControlSchema,
   studyLibraryRecommendationStatusSchema,
   studyLibrarySourcesResponseSchema,
   studyLibrarySourceUpsertResponseSchema,
@@ -166,12 +165,6 @@ export class StudyLibraryClient {
 
   async getRecommendationRunStatus(reportId: string): Promise<{ reportId: string; exists: boolean }> {
     return this.request("GET", `/recommendation-runs/${encodeURIComponent(reportId)}/status`, studyLibraryRecommendationStatusSchema);
-  }
-
-  async updateRecommendationControl(candidateContextVersion: string, idempotencyKey = `control:${randomUUID()}`): Promise<{ candidateContextVersion: string }> {
-    return this.request("PUT", "/recommendation-control", studyLibraryRecommendationControlSchema, {
-      body: { candidateContextVersion }, idempotencyKey,
-    });
   }
 }
 

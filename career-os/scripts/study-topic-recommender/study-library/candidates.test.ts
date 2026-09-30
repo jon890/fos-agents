@@ -76,6 +76,7 @@ function page(input: Partial<StudyLibraryCandidatePage>): StudyLibraryCandidateP
     nextCursor: null,
     historyVersion: 7,
     candidateContextVersion: "context-7",
+    learningInterests: { version: 3, body: "예시 관심사 문장" },
     ...input,
   };
 }
@@ -138,6 +139,7 @@ describe("study-library candidates", () => {
     expect(result.candidateCount).toBe(2);
     expect(meta.historyVersion).toBe(12);
     expect(meta.candidateContextVersion).toBe("context-7");
+    expect(meta.learningInterests).toEqual({ version: 3, body: "예시 관심사 문장" });
     expect(meta.enabledSources.map((source) => source.sourceKey)).toEqual(["blog-a", "video-a"]);
     expect((pool as { collectionLog: unknown[] }).collectionLog).toEqual([]);
   });
@@ -192,6 +194,7 @@ describe("study-library candidates", () => {
   test.each([
     ["historyVersion", page({ candidates: [candidate("content-b")], nextCursor: null, historyVersion: 8 })],
     ["candidateContextVersion", page({ candidates: [candidate("content-b")], nextCursor: null, candidateContextVersion: "context-8" })],
+    ["learningInterests.version", page({ candidates: [candidate("content-b")], nextCursor: null, learningInterests: { version: 4, body: "예시 관심사 문장" } })],
   ])("두 정상 페이지의 %s가 다르면 후보풀과 meta를 쓰지 않는다", async (_field, secondPage) => {
     const runDir = mkdtempSync(join(tmpdir(), "study-topic-recommender."));
     temporaryDirectories.push(runDir);
@@ -229,6 +232,7 @@ describe("study-library candidates", () => {
       meta: {
         historyVersion: 1,
         candidateContextVersion: "context-1",
+        learningInterests: { version: 1, body: "예시 관심사 문장" },
         filters: { limit: 100 },
         nextCursor: null,
         enabledSources: [

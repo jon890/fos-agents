@@ -82,6 +82,7 @@ function meta(): StudyLibraryCandidateMeta {
   return {
     historyVersion: 19,
     candidateContextVersion: "context-19",
+    learningInterests: { version: 1, body: "예시 관심사 문장" },
     filters: { limit: 100 },
     nextCursor: null,
     enabledSources: [
@@ -156,6 +157,7 @@ describe("study-library recommendations CLI", () => {
           nextCursor: null,
           historyVersion: 0,
           candidateContextVersion: "context-0",
+          learningInterests: { version: 1, body: "예시 관심사 문장" },
         });
       }
       throw new Error(`unexpected request: ${url.href}`);
