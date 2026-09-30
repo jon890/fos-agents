@@ -1,0 +1,26 @@
+## ADR-132: 스킬의 개인 맥락은 후보자 맥락 문서에서 읽고 지원서 공통 프로필만 brain 에 둔다
+
+- **status**: `accepted`
+- **결정**:
+  - career-os 스킬은 현재 경력, 경험 경계, 이직 우선순위와 지원 상태를 후보자 맥락 문서 `career-status`, `position-preferences`, `application-state` 에서 읽는다. `brain-search` 로 조회하지 않는다.
+  - private brain 에는 연락처, 신원과 정확한 재직 기간을 담은 지원서 공통 프로필만 남긴다. `application-package-writer` 가 지원서를 채울 때만 조회한다.
+  - 스킬이 새로 확인한 개인 사실은 바꿀 문서의 변경 전후를 보여주고 승인을 받은 뒤 `manage_candidate_context.ts put` 으로 저장한다. `note` 에 확인한 날짜와 내용을 남긴다.
+  - 면접 연습의 `CAREER_MEMORY` 에서 `brain` 공급자를 없애고 `backend` 공급자를 둔다. 스크립트가 `career-status` 와 `application-state` 본문을 채울 칸 목록과 함께 내고, 모델이 ADR-130 의 JSON 계약 칸을 채운다.
+  - 재지원 간격의 날짜는 `position_exclusions.expires_at` 에만 둔다. `application-state` 문서는 지원 결과, 현재 집중 대상과 사용 원칙을 담고 날짜를 적지 않는다.
+  - 포지션 분석 정책의 `candidateContextVersion` 은 `position-preferences:v{version}` 이다. `manage_candidate_context.ts put --key position-preferences` 가 저장에 성공하면 같은 명령이 분석 정책을 그 값으로 갱신한다. 수집 명령은 시작할 때 두 값이 다르면 멈춘다.
+- **대체된 부분**: [ADR-130](ADR-130-면접-연습의-후보자-맥락은-memory-공급자-경계로-읽는다.md)의 `brain` 공급자를 `backend` 공급자로 대체한다. 필드가 정해진 JSON 계약, `file` 공급자와 자동 선택을 기각한 결정은 그대로다.
+- **맥락**:
+  - [ADR-131](ADR-131-후보자-맥락은-backend-문서로-두고-공부-추천-기준-버전을-문서-버전에서-계산한다.md) 이 후보자 맥락 문서 저장소를 만들고 학습 관심사만 옮겼다. 나머지 개인 맥락은 여전히 private brain 에 있어, 같은 개인 맥락을 스킬마다 다른 곳에서 읽었다.
+  - 재지원 간격은 brain 의 지원 상태 페이지와 `position_exclusions.expires_at` 두 곳에 같은 날짜로 있었다. 문서가 「원본은 brain」 이라고 적었지만 수집기가 읽는 것은 `expires_at` 이었다.
+  - 포지션 분석의 기준 버전은 사람이 올리는 값이다. 이직 우선순위를 고치고 버전을 올리지 않으면 예전 기준의 분석이 재사용된다.
+  - 전환 전 계약 기록(`services/career-backend/test/fixtures/legacy-contract/`)의 case 34개 중 23개가 분석 정책의 `candidateContextVersion` 을 담는다.
+- **대안 기각**:
+  - 지원서 공통 프로필까지 옮기는 안은 ADR-131 과 같은 이유로 기각했다. 연락처와 신원을 홈서버 DB 와 backup 에 복제하는 위험이 크다.
+  - 면접 연습의 JSON 계약을 문서 키 하나로 따로 저장하는 안은 기각했다. 현재 역할과 경험 경계가 `career-status` 와 그 JSON 두 곳에 생긴다.
+  - 분석 정책에서 `candidateContextVersion` 을 빼고 서버가 계산하는 안은 기각했다. 정책 schema 가 바뀌고 전환 기록 case 23개를 대조에서 빼야 한다. 계약을 바꾸지 않고 저장 명령이 두 값을 함께 바꾸는 것으로 같은 효과를 얻는다.
+  - 포지션 기준 버전에 `career-status` 버전을 함께 넣는 안은 기각했다. 이력서 문구를 다듬을 때도 바뀌는 문서라, 바뀔 때마다 모든 공고를 다시 분석하는 비용이 든다.
+  - 스킬이 반영할 사실을 알리기만 하고 저장은 사람이 하는 안은 기각했다. 지금 `brain-add` 흐름이 이미 미리보기와 승인으로 저장까지 한다. 저장 경로만 바뀐다.
+- **결과**:
+  - 얻는 것: 개인 맥락을 한 곳에서 읽고 고친다. 이직 우선순위를 저장하면 분석 기준도 함께 바뀐다. 재지원 간격 날짜가 한 곳에만 있다.
+  - 감당할 것: 분석 정책 갱신이 실패하면 문서와 정책의 버전이 다르다. 수집이 멈추므로 사람이 정책 갱신만 다시 실행한다. 스킬은 Backend 에 닿지 못하면 개인 맥락 없이 진행하지 않고 멈춘다. brain 의 링크와 출처 관리는 이 문서에 없고 `note` 와 이력 행이 그 자리를 대신한다.
+- **적용 범위**: `scripts/candidate-context/`, `scripts/position-recommender/`, `scripts/interview-drill/`, `services/career-backend/src/positions/`, `.claude/skills/` 아래 `position-recommender`, `interview-practice`, `resume-preparer`, `application-package-writer`, `sync-profile`, `AGENTS.md`, `README.md`, `docs/`.

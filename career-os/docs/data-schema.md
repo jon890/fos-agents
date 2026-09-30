@@ -63,9 +63,9 @@ HTTP 계약은 [`flow.md`](flow.md#후보자-맥락-문서)가 소유한다.
 | 문서 키 | 담는 것 | 읽는 스킬 |
 | --- | --- | --- |
 | `learning-interests` | 공부 추천이 따를 학습 관심사와 우선순위 | `study-topic-recommender` |
-| `position-preferences` | 이직 우선순위와 역할 선호 | 전환 전이다 |
-| `application-state` | 회사별 지원 결과. 재지원 간격의 날짜는 `position_exclusions` 가 담는다 | 전환 전이다 |
-| `career-status` | 현재 경력, 강점, 경험 경계와 지원 전략 | 전환 전이다 |
+| `position-preferences` | 이직 우선순위와 역할 선호 | `position-recommender` |
+| `application-state` | 지원 결과, 현재 집중 대상과 사용 원칙. 재지원 간격의 날짜는 `position_exclusions` 가 담는다 | `position-recommender`, `application-package-writer`, `interview-practice` |
+| `career-status` | 현재 경력, 강점, 경험 경계와 지원 전략 | `resume-preparer`, `application-package-writer`, `interview-practice`, `sync-profile` |
 
 연락처, 생년월일, 병역과 정확한 재직 기간 같은 지원서 공통 프로필은 문서 키에 넣지 않는다.
 
@@ -177,8 +177,9 @@ publish tar 의 최상위는 `workspace-draft.json` 과 세 관리 root 만 허�
 첫 10줄의 `human-confirmation`은 본인 역할, 당시 제약, 기각한 대안, 결과의 확인 범위와 제출 문구 동의처럼 후보자만 확정할 수 있는 사실과 표현 확인 상태다.
 값은 `complete` 또는 `needs_input`이며, `needs_input`이면 준비 상태를 `ready`로 둘 수 없다.
 
-brain에는 경력, 역할 선호와 경험 경계 등 개인 지식을 두고, 지원별 사실과 표현 확인은 `evidence/candidate-interview.md`의 기존 계약을 따른다.
-작성 취향은 스킬에서 유지하고, brain 검색 결과는 해당 문장을 판단하는 데 필요한 출처와 범위만 지원 기록에 연결한다.
+경력, 역할 선호와 경험 경계는 후보자 맥락 문서에 두고, 지원별 사실과 표현 확인은 `evidence/candidate-interview.md`의 기존 계약을 따른다.
+작성 취향은 스킬에서 유지하고, 문서에서 읽은 내용은 해당 문장을 판단하는 데 필요한 문서 키와 version 만 지원 기록에 연결한다.
+연락처, 신원과 정확한 재직 기간은 private brain 의 지원서 공통 프로필에만 있다.
 
 ## interview-practice
 
@@ -315,11 +316,11 @@ erDiagram
 ### 후보자 맥락
 
 `interview-practice` 가 질문 난도와 꼬리질문 경계를 정할 때 읽는 값이다.
-결정과 근거는 [ADR-130](adr/ADR-130-면접-연습의-후보자-맥락은-memory-공급자-경계로-읽는다.md)에 있다.
+결정과 근거는 [ADR-130](adr/ADR-130-면접-연습의-후보자-맥락은-memory-공급자-경계로-읽는다.md)과 [ADR-132](adr/ADR-132-스킬의-개인-맥락은-후보자-맥락-문서에서-읽고-지원서-공통-프로필만-brain에-둔다.md)에 있다.
 
 | `CAREER_MEMORY` | 채우는 쪽 |
 | --- | --- |
-| `brain` | 스킬이 `brain-search` 로 아래 칸을 채운다. 스크립트는 채울 칸 목록만 낸다 |
+| `backend` | 스크립트가 후보자 맥락 문서 `career-status` 와 `application-state` 본문을 채울 칸 목록과 함께 낸다. 스킬이 그 본문으로 칸을 채운다 |
 | `file` | `CAREER_MEMORY_FILE` 의 JSON. 기본은 `career-os/library/candidate-memory.json`. 템플릿은 `.claude/skills/interview-practice/templates/candidate-memory.example.json` |
 | 없음 | 명령이 실패한다 |
 
@@ -406,7 +407,7 @@ query 순서와 마지막 슬래시를 맞춘다. 공고 ID 를 담는 query 는
 
 읽기와 쓰기에는 `scope` 가 있는 버전 2 규칙만 사용한다.
 **추천 실행이 이 규칙을 자동으로 만들거나 갱신하지 않는다.**
-지원 결과와 재지원 간격의 원본은 private brain 이 소유한다.
+재지원 간격의 날짜는 이 규칙의 `expiresAt` 만 소유한다. 지원 결과의 설명은 후보자 맥락 문서 `application-state` 가 담고 날짜를 적지 않는다.
 
 선택 이유는 [ADR-123](adr/ADR-123-회사-근거와-개인-제외-정책은-backend가-소유한다.md)을 따른다.
 읽는 시점과 실패 처리는 [`flow.md`](flow.md#position-recommender)가 소유한다.
@@ -559,12 +560,14 @@ bun career-os/scripts/position-recommender/configure_position_company_preference
 보장 슬롯은 회사 티어와 무관하게 대기 시작 시각이 오래된 순서로 정한다.
 한쪽 슬롯을 채울 후보가 부족하면 다른 쪽 후보가 남은 자리를 사용하며 같은 공고를 두 번 고르지 않는다.
 
-`candidateContextVersion`은 현재 역할 기준과 이직 우선순위가 바뀌었을 때 사람이 새 값으로 변경한다.
+`candidateContextVersion`은 `position-preferences:v{version}` 이다. `manage_candidate_context.ts put --key position-preferences` 가 문서를 저장할 때 함께 바꾼다.
+수집 명령은 이 값과 문서 version 이 다르면 시작하지 않는다. 이유는 [ADR-132](adr/ADR-132-스킬의-개인-맥락은-후보자-맥락-문서에서-읽고-지원서-공통-프로필만-brain에-둔다.md)를 따른다.
 값이 달라지면 기존 공고 분석은 본문이 같아도 `stale`로 분류한다.
 정책이 없거나 형식이 잘못됐으면 전체 후보를 기본값으로 분석하지 않고 API가 `409`로 실행을 중단한다.
 
 새 DB에는 정책 기본값을 넣지 않는다.
 운영자는 첫 수집 전에 인증된 `PUT /api/positions/v1/analysis-policy` 요청으로 정책을 명시적으로 설정한다.
+`GET /api/positions/v1/analysis-policy` 는 저장된 정책을 같은 형식으로 돌려주고, 없으면 `409 POLICY_NOT_CONFIGURED` 다.
 모든 쓰기 요청과 마찬가지로 `Authorization: Bearer`와 `Idempotency-Key`가 필요하다.
 로컬 운영 명령은 같은 endpoint를 호출하며 DB에 직접 연결하지 않는다.
 
@@ -832,7 +835,7 @@ HTML에는 내부 우선순위인 tier를 표시하지 않는다.
 `hold`와 분석 대기 공고는 상세 추천 수를 채우기 위해 올리지 않는다.
 라벨과 상세 근거의 제목은 후보마다 자유롭게 구성하고 필요 없으면 생략한다.
 사실과 추론에 공개 근거가 있으면 URL을 기록하며, 가정은 판단에 영향을 줄 때만 덧붙인다.
-개인 우선순위와 현재 역할의 본문은 private brain이 소유하며 분석 이력에는 기준 버전만 저장한다.
+개인 우선순위와 현재 역할의 본문은 후보자 맥락 문서가 소유하며 분석 이력에는 기준 버전만 저장한다.
 추천 개수와 분류는 스키마가 정하지 않는다.
 게시용 HTML은 이 결과에서 만든다.
 HTML은 상세 추천, 분석한 활성 공고 순위, 분석 대기 목록과 수집 경고를 구분해 표시한다.

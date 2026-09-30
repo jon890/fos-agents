@@ -88,7 +88,8 @@ career-os/
 | 시스템 임시 디렉터리 | 게시용 HTML 과 실행별 중간 데이터. 검증 뒤 지운다 | 안 함 |
 
 개인 맥락은 이 저장소에 두지 않는다.
-학습 관심사는 커리어 Backend 의 후보자 맥락 문서가, 현재 경력과 역할 선호와 경험 경계는 private brain 이 소유한다.
+현재 경력, 역할 선호, 경험 경계, 지원 상태와 학습 관심사는 커리어 Backend 의 후보자 맥락 문서가 소유한다.
+연락처와 신원을 담은 지원서 공통 프로필만 private brain 에 있다.
 
 ### 스킬과 실행 코드
 
@@ -314,7 +315,7 @@ npm test
 
 현재 지원 대상과 경력 수준, 경험 경계는 `CAREER_MEMORY` 로 고른 memory 공급자에서 읽는다.
 계약과 공급자는 [ADR-130](adr/ADR-130-면접-연습의-후보자-맥락은-memory-공급자-경계로-읽는다.md)과 `data-schema.md` 의 「후보자 맥락」 절이 정한다.
-TypeScript 스크립트가 brain 을 직접 조회하지 않는다. `brain` 공급자일 때 스크립트는 채울 칸 목록만 낸다.
+`backend` 공급자일 때 스크립트는 `scripts/candidate-context/client.ts` 로 문서 본문을 읽어 채울 칸 목록과 함께 낸다. 칸은 모델이 채운다.
 
 `scripts/interview-drill/`은 `interview-practice`의 기술·인성 모드에서 질문 선별과 연습 기록을 처리한다.
 공고별 `evidence/interview-questions.json`을 명시하면 포지션 질문과 공통 기반 질문을 섞어 구성한다.
@@ -338,7 +339,7 @@ TypeScript 스크립트가 brain 을 직접 조회하지 않는다. `brain` 공�
 | `drill-engine.ts record --attempt-id ...` | 연습 한 번을 기록하고 갱신된 주제 복습 상태를 JSON 으로 낸다 |
 | `drill-engine.ts personal add --file <json\|jsonl>` | 개인 질문을 더하거나 같은 `id` 를 덮어쓴다 |
 | `drill-engine.ts personal disable --question-id <id>` | 개인 질문을 끈다 |
-| `drill-engine.ts memory` | 후보자 맥락을 JSON 으로 낸다. `brain` 이면 채울 칸 목록을 낸다 |
+| `drill-engine.ts memory` | 후보자 맥락을 JSON 으로 낸다. `backend` 면 문서 본문과 채울 칸 목록을 낸다 |
 | `drill-engine.ts doctor` | `CAREER_STORE`, `CAREER_MEMORY` 와 그에 필요한 연결값, 파일 경로를 점검하고 빠진 것을 알려 준다 |
 
 Backend 구현의 HTTP 호출은 `scripts/interview-drill/career-backend/client.ts` 가 맡는다.
@@ -503,10 +504,10 @@ CLI 진입점은 다음 셋만 스킬의 `scripts/` 바로 아래에 둔다.
 실제 제출은 이 스킬의 책임이 아니다.
 
 이력서 작성 취향은 `.claude/skills/resume-preparer/references/resume-taste.md`가 소유한다.
-조회 시점과 환원 분기는 같은 스킬의 `references/brain-context.md`에 두고 필요한 단계에서 읽는다.
-스킬은 개인 맥락 조회를 `brain-search`, 새 개인 지식의 저장 제안을 `brain-add`로 연결한다.
+조회 시점과 저장 분기는 같은 스킬의 `references/candidate-context.md`에 두고 필요한 단계에서 읽는다.
+스킬은 개인 맥락을 `manage_candidate_context.ts get` 으로 읽고, 승인받은 새 개인 사실을 같은 명령의 `put` 으로 저장한다.
 
-현재 경력, 역할 선호와 경험 경계의 기준 원본은 private brain이다.
+현재 경력, 역할 선호와 경험 경계의 기준 원본은 후보자 맥락 문서 `career-status` 와 `position-preferences` 다.
 skill은 필요한 정보를 실행 시점에 조회하고 TypeScript 스크립트에 명시적인 입력으로 전달한다.
 세부 성과는 공개 가능한 `sources/fos-study/`와 실제 작업 저장소에서 다시 확인한다.
 
@@ -517,7 +518,7 @@ skill은 필요한 정보를 실행 시점에 조회하고 TypeScript 스크립�
 | `.claude/skills/resume-preparer/references/resume-writing-style.md` | 모든 이력서와 경력기술서에 적용하는 표현과 근거 범위 기준 |
 | `.claude/skills/resume-preparer/references/resume-design.md` | 이력서와 경력기술서의 기본 시각 기준 |
 | `.claude/skills/resume-preparer/references/resume-taste.md` | 개인 작성 취향 |
-| `.claude/skills/resume-preparer/references/brain-context.md` | 개인 맥락 조회 시점과 환원 분기 |
+| `.claude/skills/resume-preparer/references/candidate-context.md` | 개인 맥락 조회 시점과 저장 분기 |
 | `.claude/skills/resume-preparer/templates/` | 이력서 HTML 골격, 기본 CSS와 회사·학교 로고 |
 
 공고별 스타일은 `export_resume.ts --design <path>`에 CSS 파일이나
@@ -587,7 +588,7 @@ client 가 읽는 환경값은 포지션 추천과 같다. 같은 Backend 이고
 | --- | --- |
 | `client.ts` | `/api/candidate-context/v1` client. 연결값과 HTTP 는 `scripts/lib/career-backend-config.ts` 와 `scripts/lib/career-backend-http.ts` 를 쓴다 |
 | `contracts.ts` | 문서 키 넷과 요청, 응답의 zod 계약 |
-| `manage_candidate_context.ts` | `list`, `get`, `put` 과 `help`. `help` 만 연결값 없이 실행한다 |
+| `manage_candidate_context.ts` | `list`, `get`, `put` 과 `help`. `help` 만 연결값 없이 실행한다. `put --key position-preferences` 는 포지션 분석 정책의 기준 버전도 맞춘다 |
 
 `put` 은 `--file` 로 받은 Markdown 파일을 본문으로 보내고 `--note` 와 `--expected-version` 을 요구한다.
 본문을 저장소 파일로 두지 않는다. 개인 맥락이라 시스템 임시 디렉터리에서 편집하고 저장한 뒤 지운다.
