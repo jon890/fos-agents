@@ -133,6 +133,15 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 `put --key position-preferences` 는 저장에 성공하면 같은 명령 안에서 `PUT /api/positions/v1/analysis-policy` 로 정책의 `candidateContextVersion` 을 `position-preferences:v{version}` 으로 바꾼다.
 정책의 나머지 칸은 `GET /api/positions/v1/analysis-policy` 로 읽은 값을 그대로 보낸다.
 정책 갱신이 실패하면 문서는 저장된 채로 두고 종료 코드 1 과 함께 정책만 다시 맞추는 명령을 알려 준다.
+정책만 다시 맞추는 명령은 `manage_candidate_context.ts sync-position-policy` 다.
+
+배포 뒤 한 번은 아래 순서로 맞춘다.
+
+1. `position-preferences` 와 `application-state` 문서를 `put --expected-version 0` 으로 만든다.
+2. `sync-position-policy` 를 실행한다.
+
+분석 정책이 아직 없으면 `409 POLICY_NOT_CONFIGURED` 가 난다.
+이때는 `scripts/position-recommender/configure_position_analysis_policy.ts` 로 정책을 먼저 만든 뒤 2단계를 다시 실행한다.
 이유는 [ADR-132](adr/ADR-132-스킬의-개인-맥락은-후보자-맥락-문서에서-읽고-지원서-공통-프로필만-brain에-둔다.md)를 따른다.
 
 ```mermaid

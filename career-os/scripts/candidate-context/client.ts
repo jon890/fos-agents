@@ -35,7 +35,7 @@ function canonicalJson(value: unknown): string {
   return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`).join(",")}}`;
 }
 
-function hashKey(prefix: string, value: unknown): string {
+export function hashKey(prefix: string, value: unknown): string {
   return `${prefix}:${createHash("sha256").update(canonicalJson(value), "utf8").digest("hex")}`;
 }
 

@@ -195,6 +195,9 @@ function analysisResult(positionId: string) {
 
 function operations(overrides: Partial<PositionRunOperations> = {}): PositionRunOperations {
   return {
+    async prepareCandidateContext() {
+      return { candidateContextVersion: "position-preferences:v1" };
+    },
     async collect() {
       return 0;
     },
@@ -261,6 +264,56 @@ function operations(overrides: Partial<PositionRunOperations> = {}): PositionRun
     ...overrides,
   };
 }
+
+test("collect는 후보자 맥락 확인이 실패하면 이유를 알리고 수집하지 않은 채 1로 끝난다", async () => {
+  const directory = workspace();
+  const lines: string[] = [];
+  let collected = false;
+
+  const exitCode = await runPositionCommand(["collect", "--run", directory], {
+    operations: operations({
+      async prepareCandidateContext() {
+        throw new Error("기준 버전 position-preferences:v3 과 position-preferences:v4 가 다르다.");
+      },
+      async collect() {
+        collected = true;
+        return 0;
+      },
+    }),
+    writeLine: (line) => lines.push(line),
+  });
+
+  expect(exitCode).toBe(1);
+  expect(collected).toBe(false);
+  expect(lines.join("\n")).toContain("position-preferences:v3 과 position-preferences:v4");
+  expect(existsSync(runDirectoryPaths(directory).analysisUpdates)).toBe(false);
+});
+
+test("collect는 후보자 맥락 확인이 통과하면 수집한다", async () => {
+  const directory = workspace();
+  const lines: string[] = [];
+  let preparedPath: string | undefined;
+  let collected = false;
+
+  const exitCode = await runPositionCommand(["collect", "--run", directory], {
+    operations: operations({
+      async prepareCandidateContext(paths) {
+        preparedPath = paths.candidateContext;
+        return { candidateContextVersion: "position-preferences:v4" };
+      },
+      async collect() {
+        collected = true;
+        return 0;
+      },
+    }),
+    writeLine: (line) => lines.push(line),
+  });
+
+  expect(exitCode).toBe(0);
+  expect(collected).toBe(true);
+  expect(preparedPath).toBe(join(runDirectoryPaths(directory).directory, "candidate-context.json"));
+  expect(lines).toContain("후보자 맥락 기준 버전: position-preferences:v4");
+});
 
 test("collect는 --run이 없으면 임시 디렉터리를 만들고 첫 줄에 경로를 낸다", async () => {
   const lines: string[] = [];

@@ -17,6 +17,7 @@ export const RUN_DIR_FILE_NAMES = {
   analysisUpdates: "analysis-updates.json",
   recommendation: "recommendation.json",
   report: "index.html",
+  candidateContext: "candidate-context.json",
 } as const;
 
 export function resolveRunDirectory(runDirectory: string): string {
@@ -54,6 +55,7 @@ export function runDirectoryPaths(runDirectory: string) {
     analysisUpdates: resolve(directory, RUN_DIR_FILE_NAMES.analysisUpdates),
     recommendation: resolve(directory, RUN_DIR_FILE_NAMES.recommendation),
     report: resolve(directory, RUN_DIR_FILE_NAMES.report),
+    candidateContext: resolve(directory, RUN_DIR_FILE_NAMES.candidateContext),
   };
 }
 
