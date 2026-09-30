@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "accountbook": {
+      "command": "bun",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/dist/accountbook-mcp.js"],
+      "env": {
+        "ACCOUNTBOOK_API_BASE_URL": "${ACCOUNTBOOK_API_BASE_URL}",
+        "ACCOUNTBOOK_API_TOKEN": "${ACCOUNTBOOK_API_TOKEN}",
+        "ACCOUNTBOOK_FAMILY_UUID": "${ACCOUNTBOOK_FAMILY_UUID:-}"
+      }
+    }
+  }
+}

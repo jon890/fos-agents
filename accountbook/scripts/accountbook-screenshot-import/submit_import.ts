@@ -13,12 +13,58 @@ import { pathToFileURL } from "node:url";
 import { config as loadEnv } from "dotenv";
 import { validatedImportSchema, type ValidatedImport, type ValidatedTransaction } from "./contracts.ts";
 
+import { AccountbookClient, AccountbookError, namedItemsSchema, recordIdentitySchema, responseData, transactionPageSchema } from "../../plugin/src/client.ts";
+
 type FetchLike = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+
+const SAFE_ERROR_CODES = new Set([
+  "ACCOUNTBOOK_BAD_REQUEST",
+  "ACCOUNTBOOK_CONFIG",
+  "ACCOUNTBOOK_FORBIDDEN",
+  "ACCOUNTBOOK_INVALID_RESPONSE",
+  "ACCOUNTBOOK_NETWORK",
+  "ACCOUNTBOOK_NOT_FOUND",
+  "ACCOUNTBOOK_UNAVAILABLE",
+  "ACCOUNTBOOK_UNAUTHORIZED",
+  "BATCH_CONFIRMATION_MISMATCH",
+  "CATEGORY_NOT_FOUND",
+  "DESCRIPTION_TOO_LONG",
+  "EXISTING_TRANSACTION_REQUIRES_REVIEW",
+  "IMPORT_LOCKED",
+  "IMPORT_NOT_APPROVED",
+  "IMPORT_NOT_SUBMITTABLE",
+  "INVALID_APPROVAL_SOURCE_POLICY_COMBINATION",
+  "INVALID_BOOLEAN",
+  "INVALID_SUBMISSION_STATE",
+  "MISSING_ARGUMENT",
+  "MISSING_ENV",
+  "UNKNOWN_ARGUMENT",
+  "RUN_PLAN_ITEM_NOT_PROCESSING",
+  "RUN_PLAN_DUPLICATE_HASH",
+  "RUN_PLAN_NOT_FOUND",
+  "RUN_PLAN_PATH_OUTSIDE_PRIVATE_ROOT",
+  "RUN_PLAN_QUEUE_HASH_MISMATCH",
+  "RUN_PLAN_QUEUE_RUN_ID_MISMATCH",
+  "RUN_PLAN_VALIDATED_SHA_MISMATCH",
+  "RUN_QUEUE_ITEM_NOT_PROCESSING",
+  "RUN_QUEUE_DUPLICATE_HASH",
+  "RUN_QUEUE_STATE_HASH_MISMATCH",
+  "WEEKLY_IMPORT_LOCK_MISSING",
+  "WEEKLY_IMPORT_LOCK_OWNER_MISMATCH",
+  "WEEKLY_POLICY_APPROVAL_REQUIRED",
+]);
+
+export function safeSubmissionErrorCode(error: unknown): string {
+  if (error instanceof AccountbookError) return error.code;
+  if (!(error instanceof Error)) return "SUBMISSION_ERROR";
+  const code = error.message.split(":", 1)[0];
+  return SAFE_ERROR_CODES.has(code) ? code : "SUBMISSION_ERROR";
+}
 
 export type SubmitConfig = {
   apiBaseUrl: string;
   familyUuid: string;
-  refreshToken?: string;
+  apiToken: string;
   defaultCategoryName: string;
   excludeFromBudget: boolean;
 };
@@ -69,12 +115,6 @@ export type SubmitSummary = {
   skipped: number;
 };
 
-class ApiError extends Error {
-  constructor(public readonly status: number, message: string) {
-    super(message);
-  }
-}
-
 function nowIso(now?: () => Date): string {
   return (now?.() ?? new Date()).toISOString();
 }
@@ -105,68 +145,15 @@ function loadSubmissionState(path: string): SubmissionState {
   return state;
 }
 
-async function apiJson<T>(
-  fetchImpl: FetchLike,
-  url: string,
-  init: RequestInit,
-): Promise<T> {
-  const response = await fetchImpl(url, {
-    ...init,
-    signal: init.signal ?? AbortSignal.timeout(15_000),
-  });
-  if (!response.ok) throw new ApiError(response.status, `ACCOUNTBOOK_API_${response.status}`);
-  return await response.json() as T;
-}
-
-async function refreshAccessToken(
-  config: SubmitConfig,
-  stateDir: string,
-  fetchImpl: FetchLike,
-): Promise<string> {
-  const authPath = join(stateDir, "auth.json");
-  const saved = readJsonIfExists(authPath) as { refreshToken?: string } | null;
-  const refreshToken = saved?.refreshToken ?? config.refreshToken;
-  if (!refreshToken) throw new Error("MISSING_REFRESH_TOKEN");
-
-  const response = await apiJson<{
-    data?: { accessToken?: string; refreshToken?: string; expiredAt?: string };
-  }>(fetchImpl, `${config.apiBaseUrl}/auth/refresh`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refreshToken }),
-  });
-  const accessToken = response.data?.accessToken;
-  const nextRefreshToken = response.data?.refreshToken;
-  if (!accessToken || !nextRefreshToken) throw new Error("INVALID_REFRESH_RESPONSE");
-
-  atomicPrivateJsonWrite(authPath, {
-    schemaVersion: 1,
-    refreshToken: nextRefreshToken,
-    accessTokenExpiresAt: response.data?.expiredAt ?? null,
-    updatedAt: new Date().toISOString(),
-  });
-  return accessToken;
-}
-
-function authHeaders(accessToken: string): Record<string, string> {
-  return {
-    Authorization: `Bearer ${accessToken}`,
-    "Content-Type": "application/json",
-  };
-}
-
 async function fetchCategories(
   config: SubmitConfig,
-  accessToken: string,
-  fetchImpl: FetchLike,
+  client: AccountbookClient,
 ): Promise<Map<string, string>> {
-  const response = await apiJson<{ data?: Array<{ uuid?: string; name?: string }> }>(
-    fetchImpl,
-    `${config.apiBaseUrl}/families/${config.familyUuid}/categories`,
-    { method: "GET", headers: authHeaders(accessToken) },
-  );
+  const categoriesResponse = responseData(await client.request(
+    `/families/${config.familyUuid}/categories`,
+  ), namedItemsSchema);
   const categories = new Map<string, string>();
-  for (const category of response.data ?? []) {
+  for (const category of categoriesResponse) {
     if (category.name && category.uuid) categories.set(category.name, category.uuid);
   }
   return categories;
@@ -176,8 +163,7 @@ async function fetchExistingTransactions(
   type: "expense" | "income",
   date: string,
   config: SubmitConfig,
-  accessToken: string,
-  fetchImpl: FetchLike,
+  client: AccountbookClient,
 ): Promise<ApiTransaction[]> {
   const collection = type === "expense" ? "expenses" : "incomes";
   const items: ApiTransaction[] = [];
@@ -190,15 +176,11 @@ async function fetchExistingTransactions(
       startDate: date,
       endDate: date,
     });
-    const response = await apiJson<{
-      data?: { items?: ApiTransaction[]; totalPages?: number };
-    }>(
-      fetchImpl,
-      `${config.apiBaseUrl}/families/${config.familyUuid}/${collection}?${params}`,
-      { method: "GET", headers: authHeaders(accessToken) },
-    );
-    items.push(...(response.data?.items ?? []));
-    totalPages = Math.max(response.data?.totalPages ?? 1, 1);
+    const response = responseData(await client.request(
+      `/families/${config.familyUuid}/${collection}?${params}`,
+    ), transactionPageSchema);
+    items.push(...response.items);
+    totalPages = Math.max(response.totalPages, 1);
     page += 1;
   } while (page < totalPages);
   return items;
@@ -241,8 +223,7 @@ function prepareItems(batch: ValidatedImport, categories: Map<string, string>, c
 async function createRemoteTransaction(
   item: SubmissionItem,
   config: SubmitConfig,
-  accessToken: string,
-  fetchImpl: FetchLike,
+  client: AccountbookClient,
 ): Promise<string> {
   const collection = item.transaction.type === "expense" ? "expenses" : "incomes";
   const payload: Record<string, unknown> = {
@@ -254,13 +235,11 @@ async function createRemoteTransaction(
   if (item.transaction.type === "expense") {
     payload.excludeFromBudget = config.excludeFromBudget;
   }
-  const response = await apiJson<{ data?: { uuid?: string } }>(
-    fetchImpl,
-    `${config.apiBaseUrl}/families/${config.familyUuid}/${collection}`,
-    { method: "POST", headers: authHeaders(accessToken), body: JSON.stringify(payload) },
-  );
-  if (!response.data?.uuid) throw new Error("INVALID_CREATE_RESPONSE");
-  return response.data.uuid;
+  const response = responseData(await client.request(
+    `/families/${config.familyUuid}/${collection}`,
+    "POST", payload,
+  ), recordIdentitySchema);
+  return response.uuid;
 }
 
 function batchState(state: SubmissionState, batchId: string, timestamp: string): BatchSubmission {
@@ -301,11 +280,11 @@ export async function submitImport(raw: unknown, options: SubmitOptions): Promis
   assertValidApprovalCombination(batch);
   if (options.requireWeeklyPolicyApproval) assertWeeklyPolicyApproval(batch);
 
-  const fetchImpl = options.fetchImpl ?? fetch;
   const config: SubmitConfig = {
     ...options.config,
     apiBaseUrl: options.config.apiBaseUrl.replace(/\/+$/, ""),
   };
+  const client = new AccountbookClient(config, options.fetchImpl ?? fetch);
   mkdirSync(options.stateDir, { recursive: true, mode: 0o700 });
   const lockRoot = join(options.stateDir, "locks");
   mkdirSync(lockRoot, { recursive: true, mode: 0o700 });
@@ -329,8 +308,7 @@ export async function submitImport(raw: unknown, options: SubmitOptions): Promis
     currentBatch.updatedAt = timestamp;
     atomicPrivateJsonWrite(statePath, state);
 
-    const accessToken = await refreshAccessToken(config, options.stateDir, fetchImpl);
-    const categories = await fetchCategories(config, accessToken, fetchImpl);
+    const categories = await fetchCategories(config, client);
     const items = prepareItems(batch, categories, config);
     const existingByKey = new Map<string, ApiTransaction[]>();
 
@@ -339,7 +317,7 @@ export async function submitImport(raw: unknown, options: SubmitOptions): Promis
       if (!existingByKey.has(key)) {
         existingByKey.set(
           key,
-          await fetchExistingTransactions(item.transaction.type, item.day, config, accessToken, fetchImpl),
+          await fetchExistingTransactions(item.transaction.type, item.day, config, client),
         );
       }
     }
@@ -387,7 +365,7 @@ export async function submitImport(raw: unknown, options: SubmitOptions): Promis
       currentBatch.candidates[id] = { status: "submitting", updatedAt: nowIso(options.now) };
       atomicPrivateJsonWrite(statePath, state);
       try {
-        const remoteUuid = await createRemoteTransaction(item, config, accessToken, fetchImpl);
+        const remoteUuid = await createRemoteTransaction(item, config, client);
         currentBatch.candidates[id] = {
           status: "submitted",
           remoteUuid,
@@ -395,7 +373,7 @@ export async function submitImport(raw: unknown, options: SubmitOptions): Promis
         };
         atomicPrivateJsonWrite(statePath, state);
       } catch (error) {
-        if (error instanceof ApiError && error.status >= 400 && error.status < 500) {
+        if (error instanceof AccountbookError && typeof error.status === "number" && error.status >= 400 && error.status < 500) {
           currentBatch.candidates[id] = { status: "failed", updatedAt: nowIso(options.now) };
         }
         currentBatch.status = "partial";
@@ -442,14 +420,13 @@ function parseArgs(args: string[]): { input: string; stateDir: string; env: stri
   }
   if (!input) throw new Error("MISSING_ARGUMENT:--input");
   if (!stateDir) throw new Error("MISSING_ARGUMENT:--state-dir");
-  if (!env) throw new Error("MISSING_ARGUMENT:--env");
   if (!confirm) throw new Error("MISSING_ARGUMENT:--confirm");
   return { input, stateDir, env, confirm };
 }
 
 export async function main(args = process.argv.slice(2)): Promise<void> {
   const options = parseArgs(args);
-  loadEnv({ path: options.env, quiet: true });
+  if (options.env) loadEnv({ path: options.env, quiet: true });
   const raw = JSON.parse(readFileSync(options.input, "utf8"));
   const parsed = validatedImportSchema.parse(raw);
   if (parsed.batchId !== options.confirm) throw new Error("BATCH_CONFIRMATION_MISMATCH");
@@ -459,7 +436,7 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
     config: {
       apiBaseUrl: requiredEnv("ACCOUNTBOOK_API_BASE_URL"),
       familyUuid: requiredEnv("ACCOUNTBOOK_FAMILY_UUID"),
-      refreshToken: process.env.ACCOUNTBOOK_REFRESH_TOKEN?.trim(),
+      apiToken: requiredEnv("ACCOUNTBOOK_API_TOKEN"),
       defaultCategoryName: process.env.ACCOUNTBOOK_DEFAULT_CATEGORY_NAME?.trim() || "미분류",
       excludeFromBudget: parseBoolean(process.env.ACCOUNTBOOK_EXCLUDE_FROM_BUDGET),
     },
@@ -470,8 +447,7 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
 const entrypoint = process.argv[1] ? pathToFileURL(process.argv[1]).href : "";
 if (entrypoint === import.meta.url) {
   main().catch((error) => {
-    const message = error instanceof Error ? error.message : String(error);
-    process.stderr.write(`SUBMISSION_FAILED:${message.replace(/[\r\n]+/g, " ")}\n`);
+    process.stderr.write(`SUBMISSION_FAILED:${safeSubmissionErrorCode(error)}\n`);
     process.exitCode = 2;
   });
 }

@@ -1,15 +1,18 @@
 # Data Schema: accountbook
 
 이 문서는 비공개 OCR 후보와 등록 상태의 단일 소스다.
-실제 값은 `accountbook/private/`에만 저장하고 git에 커밋하지 않는다.
+실제 값은 사용자별 비공개 루트에만 저장하고 git에 커밋하지 않는다.
+경로 표의 `private/`는 `ACCOUNTBOOK_PRIVATE_DIR`가 지정한 루트를 뜻한다.
+비우면 기존 `accountbook/private/`를 사용한다.
 
 ## 환경 변수
 
 | 이름 | 필수 | 내용 |
 |---|:---:|---|
-| `ACCOUNTBOOK_API_BASE_URL` | 예 | `/api/v1`까지 포함한 accountbook 내부 주소 |
-| `ACCOUNTBOOK_FAMILY_UUID` | 예 | 거래를 등록할 가족 UUID |
-| `ACCOUNTBOOK_REFRESH_TOKEN` | 최초 | 비공개 인증 상태가 없을 때 사용할 토큰 |
+| `ACCOUNTBOOK_API_BASE_URL` | 예 | `/api/v1`까지 포함한 공인 HTTPS 주소 |
+| `ACCOUNTBOOK_API_TOKEN` | 예 | 사용자별 `fab_` 연동 토큰. 환경 변수로만 전달 |
+| `ACCOUNTBOOK_FAMILY_UUID` | 이미지 등록만 | 거래를 등록할 가족 UUID. MCP에서 비우면 가족 목록으로 선택 |
+| `ACCOUNTBOOK_PRIVATE_DIR` | 아니오 | 이미지 스킬의 사용자별 비공개 루트. 비우면 `accountbook/private/` |
 | `ACCOUNTBOOK_DEFAULT_CATEGORY_NAME` | 아니오 | 후보에 분류가 없을 때 사용할 이름, 기본값 `미분류` |
 | `ACCOUNTBOOK_EXCLUDE_FROM_BUDGET` | 아니오 | OCR 지출의 예산 제외 기본값, 기본값 `false` |
 
@@ -27,7 +30,6 @@
 | `private/imports/<batch-id>/validated.json` | 정규화와 합계 검증 결과 | 등록 이력 확인 기간 |
 | `private/imports/<batch-id>/approved.json` | 사용자 또는 주간 정책이 승인한 등록 입력 | 등록 이력 확인 기간 |
 | `private/imports/<batch-id>/weekly-policy.json` | 주간 자동 승인 판정과 사유 | 등록 이력 확인 기간 |
-| `private/state/auth.json` | 갱신된 refresh token | 토큰 교체 또는 폐기 시 |
 | `private/state/submissions.json` | 후보별 API 전송 상태 | 등록 이력 확인 기간 |
 | `private/state/weekly-import.json` | 이미지별 주간 처리 상태 | 등록 이력 확인 기간 |
 | `private/state/<run-id>-<attempt-id>-plan.json` | 검증된 주간 입력과 실행 순서 | 주간 실행 확인 기간 |
@@ -188,3 +190,47 @@ OCR 원문, 거래 설명, API 응답 본문과 예외 메시지를 그대로 �
 
 모든 JSON 파일은 마지막 줄바꿈을 포함한다.
 `private/` 하위 디렉터리는 `0700`, 파일은 `0600` 권한을 사용한다.
+
+## 사용자 격리와 인증 이관
+
+fos-assistant는 profile마다 다른 `ACCOUNTBOOK_API_TOKEN`과 `ACCOUNTBOOK_PRIVATE_DIR`를 전달한다.
+공용 fos-agents 마운트의 `accountbook/private`를 여러 profile이 공유하지 않는다.
+이미지 스킬은 `resolve_private_root.ts`로 선택된 루트를 확인하고, 모든 입력함·작업 경로·상태 경로를 그 아래에 둔다.
+이 분리는 실행 환경이 맡으며, 루트만 바꾸면 기존 상태가 자동 이관되지는 않는다.
+기존 이미지와 전송 상태를 옮길 때는 해당 사용자의 비공개 루트로 함께 옮긴다.
+과거 인증 상태 파일은 읽거나 갱신하지 않는다. 기존 파일은 사용자 확인 뒤 삭제한다.
+MCP 서버는 파일 상태를 저장하지 않으며 profile마다 별도 프로세스와 환경 변수로 실행한다.
+Hermes가 치환하지 못해 값이 `${`로 시작하면 설정되지 않은 변수로 다룬다.
+선택 변수는 기본값을 사용하고 필수 변수는 `ACCOUNTBOOK_CONFIG`로 중단한다.
+연동 토큰은 가계부에서 발급하고 폐기하며, 자동 갱신하거나 파일에 저장하지 않는다.
+
+## MCP 계약
+
+입력 스키마 정본은 [tools.ts](../plugin/src/tools.ts)에 있다.
+도구 이름은 `list_families`, `list_categories`, `list_expenses`, `list_incomes`,
+`get_expense`, `get_income`, `create_expense`, `create_income`, `update_expense`, `update_income`, `delete_expense`, `delete_income`이다.
+Hermes에서는 서버 이름 `accountbook`을 사용해 `mcp__accountbook__<도구>`로 노출한다.
+
+- 가족은 선택 입력 `familyUuid`, 거래 대상은 `transactionUuid`로 지정한다. UUID는 조회 결과에서 고른다.
+- 목록은 `startDate`, `endDate`(유효한 `YYYY-MM-DD`), `limit`(1~100, 기본 20), `page`(0부터)를 받는다.
+- 등록은 양수 `amount`(정수 최대 10자리, 소수 최대 2자리), `date`(timezone 없는 `LocalDateTime`), `categoryUuid` 또는 `categoryName` 중 하나를 받는다.
+- `description`은 최대 1000자이며, 지출만 `excludeFromBudget`을 받는다.
+- 수정은 바꿀 필드만 받으며 카테고리 UUID와 이름을 동시에 받지 않는다. 수정과 삭제의 `confirmed: true`는 스킬이 사용자의 확인을 받은 뒤에만 전달한다.
+- 가족 목록은 `{ families, defaultFamilyUuid }`, 카테고리는 `{ uuid, name }[]`를 반환한다.
+- 거래 응답은 REST API의 `data`를 MCP text JSON으로 전달한다. 목록은 `items`, `totalElements`, `totalPages`, `currentPage`를 가진다.
+- 오류는 MCP `isError: true`와 `{ error: { code, message } }`로 반환한다. 입력 단계의 프로토콜 스키마 오류는 SDK가 MCP 오류로 반환한다.
+
+| 오류 코드 | 조건 |
+|---|---|
+| `ACCOUNTBOOK_UNAUTHORIZED` | 401. 가계부 설정에서 토큰 재발급과 fos-assistant 재등록 안내 |
+| `ACCOUNTBOOK_FORBIDDEN` | 403 또는 접근할 수 없는 기본 가족 |
+| `ACCOUNTBOOK_NOT_FOUND` | 404 |
+| `ACCOUNTBOOK_BAD_REQUEST` | 나머지 HTTP 4xx |
+| `ACCOUNTBOOK_UNAVAILABLE` | HTTP 5xx |
+| `ACCOUNTBOOK_NETWORK` | 연결, redirect, timeout 실패. 변경 결과 재조회 필요 |
+| `ACCOUNTBOOK_INVALID_RESPONSE` | JSON 또는 필수 응답 구조를 확인할 수 없음 |
+| `ACCOUNTBOOK_CONFIG` | 주소, 토큰, 기본 가족 설정 오류 |
+| `ACCOUNTBOOK_INVALID_INPUT` | 도구 입력 검증 실패 |
+| `ACCOUNTBOOK_FAMILY_SELECTION`, `ACCOUNTBOOK_NO_FAMILY` | 가족 선택 필요 또는 가족 없음 |
+| `ACCOUNTBOOK_CATEGORY_SELECTION` | 카테고리가 없거나 이름이 중복됨 |
+| `ACCOUNTBOOK_UNKNOWN_TOOL`, `ACCOUNTBOOK_INTERNAL` | 지원하지 않는 도구 또는 내부 처리 실패 |

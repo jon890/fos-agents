@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, setSystemTime, spyOn, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -13,14 +13,14 @@ import {
   releaseWeeklyRunLock,
 } from "./scan_inbox.ts";
 import type { WeeklyWorkItem } from "./contracts.ts";
-import { runWeeklyImport } from "./run_weekly_import.ts";
+import { main, runWeeklyImport } from "./run_weekly_import.ts";
 import { finalizeInboxItem } from "./finalize_inbox.ts";
 
 const tempDirs: string[] = [];
 const CONFIG: SubmitConfig = {
   apiBaseUrl: "https://accountbook.test/api/v1",
   familyUuid: "family-uuid",
-  refreshToken: "seed-refresh-token",
+  apiToken: `fab_${"x".repeat(43)}`,
   defaultCategoryName: "미분류",
   excludeFromBudget: false,
 };
@@ -99,6 +99,12 @@ function extracted(item: WeeklyWorkItem, overrides: Partial<ExtractedImport["day
 type FetchRecord = { url: string; method: string; body: unknown };
 
 function jsonResponse(body: unknown, status = 200): Response {
+  const envelope = body as { data?: { items?: unknown[]; totalPages?: number; totalElements?: number; currentPage?: number } };
+  if (Array.isArray(envelope.data?.items)) {
+    envelope.data.totalPages ??= 1;
+    envelope.data.totalElements ??= envelope.data.items.length;
+    envelope.data.currentPage ??= 0;
+  }
   return new Response(JSON.stringify(body), {
     status,
     headers: { "Content-Type": "application/json" },
@@ -107,15 +113,6 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 function commonResponse(url: string, init?: RequestInit): Response | null {
   const method = init?.method ?? "GET";
-  if (url.endsWith("/auth/refresh") && method === "POST") {
-    return jsonResponse({
-      data: {
-        accessToken: "access-token",
-        refreshToken: "rotated-refresh-token",
-        expiredAt: "2026-08-20T02:00:00",
-      },
-    });
-  }
   if (url.endsWith("/families/family-uuid/categories") && method === "GET") {
     return jsonResponse({ data: [{ uuid: "category-uuid", name: "미분류" }] });
   }
@@ -184,6 +181,48 @@ async function runWeeklyDryPipeline(options: {
 }
 
 describe("weekly dry pipeline", () => {
+  test("환경 파일 없이 환경 변수만 전달받아 주간 등록하고 잠금을 해제한다", async () => {
+    const root = privateRoot();
+    writeInboxPair(root, "source");
+    const plan = prepareRunPlan({ root, runId: "run-env-only" });
+    const planPath = join(root, "state", "plan.json");
+    writeFileSync(planPath, JSON.stringify(plan), { mode: 0o600 });
+    const env = {
+      ACCOUNTBOOK_API_BASE_URL: CONFIG.apiBaseUrl,
+      ACCOUNTBOOK_FAMILY_UUID: CONFIG.familyUuid,
+      ACCOUNTBOOK_API_TOKEN: CONFIG.apiToken,
+      ACCOUNTBOOK_DEFAULT_CATEGORY_NAME: CONFIG.defaultCategoryName,
+      ACCOUNTBOOK_EXCLUDE_FROM_BUDGET: "false",
+    };
+    const previous = Object.fromEntries(Object.keys(env).map((key) => [key, process.env[key]]));
+    Object.assign(process.env, env);
+    let posts = 0;
+    const fetchMock = spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      expect(new Headers(init?.headers).get("Authorization")).toBe(`Bearer ${CONFIG.apiToken}`);
+      const common = commonResponse(String(input), init);
+      if (common) return common;
+      if ((init?.method ?? "GET") === "GET") return jsonResponse({ data: { items: [] } });
+      posts += 1;
+      return jsonResponse({ data: { uuid: "remote-expense" } }, 201);
+    });
+    const output = spyOn(process.stdout, "write").mockReturnValue(true);
+    try {
+      setSystemTime(new Date("2026-08-20T02:10:00Z"));
+      await main(["--private-root", root, "--plan", planPath]);
+      expect(posts).toBe(1);
+      expect(Object.values(loadWeeklyState(root).items)[0].status).toBe("submitted");
+      expect(existsSync(join(root, "state", "locks", "weekly-import.lock"))).toBe(false);
+      expect(output).toHaveBeenCalledTimes(1);
+    } finally {
+      setSystemTime();
+      fetchMock.mockRestore();
+      output.mockRestore();
+      for (const [key, value] of Object.entries(previous)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
+  });
   test("정상 승인 후보를 submit payload로 등록하고 submitted로 finalize한다", async () => {
     const root = privateRoot();
     writeInboxPair(root, "source");
@@ -349,7 +388,7 @@ describe("weekly dry pipeline", () => {
     ]);
 
     expect(result.exitCode).not.toBe(0);
-    expect(new TextDecoder().decode(result.stderr)).toContain("MISSING_ENV:ACCOUNTBOOK_API_BASE_URL");
+    expect(new TextDecoder().decode(result.stderr)).toBe("WEEKLY_IMPORT_RUN_FAILED:MISSING_ENV\n");
     expect(existsSync(join(root, "state", "locks", "weekly-import.lock"))).toBe(false);
   });
 

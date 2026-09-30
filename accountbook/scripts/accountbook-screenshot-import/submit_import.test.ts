@@ -1,24 +1,46 @@
-import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { approveImport } from "./approve_import.ts";
 import type { ExtractedImport } from "./contracts.ts";
-import { submitImport, type SubmitConfig } from "./submit_import.ts";
+import { main, safeSubmissionErrorCode, submitImport, type SubmitConfig } from "./submit_import.ts";
 import { validateImport } from "./validate_candidates.ts";
 import { evaluateWeeklySafePolicy } from "../accountbook-weekly-import/evaluate_policy.ts";
+import { AccountbookError } from "../../plugin/src/client.ts";
 
 const tempDirs: string[] = [];
 const CONFIG: SubmitConfig = {
   apiBaseUrl: "https://accountbook.test/api/v1",
   familyUuid: "family-uuid",
-  refreshToken: "seed-refresh-token",
+  apiToken: `fab_${"x".repeat(43)}`,
   defaultCategoryName: "미분류",
   excludeFromBudget: false,
 };
 
 afterEach(() => {
   for (const path of tempDirs.splice(0)) rmSync(path, { recursive: true, force: true });
+});
+
+describe("safe submission error codes", () => {
+  test("AccountbookError retains its typed code", () => {
+    expect(safeSubmissionErrorCode(new AccountbookError("ACCOUNTBOOK_UNAUTHORIZED", 401)))
+      .toBe("ACCOUNTBOOK_UNAUTHORIZED");
+  });
+  test("known stable error codes are preserved without their details", () => {
+    expect(safeSubmissionErrorCode(new Error("MISSING_ENV:ACCOUNTBOOK_API_TOKEN"))).toBe("MISSING_ENV");
+    expect(safeSubmissionErrorCode(new Error("EXISTING_TRANSACTION_REQUIRES_REVIEW:private-hash")))
+      .toBe("EXISTING_TRANSACTION_REQUIRES_REVIEW");
+    expect(safeSubmissionErrorCode(new Error("IMPORT_LOCKED"))).toBe("IMPORT_LOCKED");
+    expect(safeSubmissionErrorCode(new Error("BATCH_CONFIRMATION_MISMATCH")))
+      .toBe("BATCH_CONFIRMATION_MISMATCH");
+  });
+
+  test("unknown errors do not expose their message", () => {
+    expect(safeSubmissionErrorCode(new Error("private transaction description"))).toBe("SUBMISSION_ERROR");
+    expect(safeSubmissionErrorCode(new Error("PRIVATE_VALUE:merchant details"))).toBe("SUBMISSION_ERROR");
+    expect(safeSubmissionErrorCode("private response body")).toBe("SUBMISSION_ERROR");
+  });
 });
 
 function stateDir(): string {
@@ -89,6 +111,12 @@ function approvedFixture() {
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
+  const envelope = body as { data?: { items?: unknown[]; totalPages?: number; totalElements?: number; currentPage?: number } };
+  if (Array.isArray(envelope.data?.items)) {
+    envelope.data.totalPages ??= 1;
+    envelope.data.totalElements ??= envelope.data.items.length;
+    envelope.data.currentPage ??= 0;
+  }
   return new Response(JSON.stringify(body), {
     status,
     headers: { "Content-Type": "application/json" },
@@ -96,16 +124,8 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 function commonResponse(url: string, init?: RequestInit): Response | null {
+  expect(new Headers(init?.headers).get("Authorization")).toBe(`Bearer ${CONFIG.apiToken}`);
   const method = init?.method ?? "GET";
-  if (url.endsWith("/auth/refresh") && method === "POST") {
-    return jsonResponse({
-      data: {
-        accessToken: "access-token",
-        refreshToken: "rotated-refresh-token",
-        expiredAt: "2026-08-20T02:00:00",
-      },
-    });
-  }
   if (url.endsWith("/families/family-uuid/categories") && method === "GET") {
     return jsonResponse({ data: [{ uuid: "category-uuid", name: "미분류" }] });
   }
@@ -113,6 +133,56 @@ function commonResponse(url: string, init?: RequestInit): Response | null {
 }
 
 describe("submitImport", () => {
+  test("환경 파일 없이 환경 변수만 전달받아 등록한다", async () => {
+    const root = stateDir();
+    const batch = approvedFixture();
+    const input = join(root, "approved.json");
+    writeFileSync(input, JSON.stringify(batch), { mode: 0o600 });
+    const env = {
+      ACCOUNTBOOK_API_BASE_URL: CONFIG.apiBaseUrl,
+      ACCOUNTBOOK_FAMILY_UUID: CONFIG.familyUuid,
+      ACCOUNTBOOK_API_TOKEN: CONFIG.apiToken,
+      ACCOUNTBOOK_DEFAULT_CATEGORY_NAME: CONFIG.defaultCategoryName,
+      ACCOUNTBOOK_EXCLUDE_FROM_BUDGET: "false",
+    };
+    const previous = Object.fromEntries(Object.keys(env).map((key) => [key, process.env[key]]));
+    Object.assign(process.env, env);
+    let posts = 0;
+    const fetchMock = spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const common = commonResponse(String(input), init);
+      if (common) return common;
+      if ((init?.method ?? "GET") === "GET") return jsonResponse({ data: { items: [] } });
+      posts += 1;
+      return jsonResponse({ data: { uuid: `remote-${posts}` } }, 201);
+    });
+    const output = spyOn(process.stdout, "write").mockReturnValue(true);
+    try {
+      await main(["--input", input, "--state-dir", root, "--confirm", batch.batchId]);
+      expect(posts).toBe(2);
+      expect(output).toHaveBeenCalledTimes(1);
+      const summary = JSON.parse(String(output.mock.calls[0][0]));
+      expect(summary.submitted).toBe(2);
+    } finally {
+      fetchMock.mockRestore();
+      output.mockRestore();
+      for (const [key, value] of Object.entries(previous)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
+  });
+  test("기존 거래 조회 응답이 잘못되면 빈 목록으로 간주하지 않고 POST 전에 멈춘다", async () => {
+    let posts = 0;
+    await expect(submitImport(approvedFixture(), {
+      stateDir: stateDir(), config: CONFIG,
+      fetchImpl: async (input, init) => {
+        if (init?.method === "POST") posts += 1;
+        const common = commonResponse(String(input), init);
+        return common ?? new Response(JSON.stringify({ data: { items: [] } }));
+      },
+    })).rejects.toThrow("가계부 응답 형식");
+    expect(posts).toBe(0);
+  });
   test("미승인 후보는 API를 호출하기 전에 차단한다", async () => {
     const validated = validateImport(extractedFixture());
     let called = false;
@@ -245,8 +315,8 @@ describe("submitImport", () => {
       excludeFromBudget: false,
     });
     expect(posts[1].url).toEndWith("/families/family-uuid/incomes");
-    expect(JSON.parse(readFileSync(join(privateState, "auth.json"), "utf8")).refreshToken)
-      .toBe("rotated-refresh-token");
+    expect(existsSync(join(privateState, "auth.json"))).toBe(false);
+    expect(readFileSync(join(privateState, "submissions.json"), "utf8")).not.toContain(CONFIG.apiToken);
   });
 
   test("기존 동일 거래가 있으면 새 POST를 보내지 않고 검토 상태로 멈춘다", async () => {
@@ -309,7 +379,7 @@ describe("submitImport", () => {
       stateDir: privateState,
       config: CONFIG,
       fetchImpl: firstFetch,
-    })).rejects.toThrow("connection closed after request");
+    })).rejects.toThrow("가계부 연결 결과");
 
     let retryPostCount = 0;
     const retryFetch = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
@@ -360,7 +430,7 @@ describe("submitImport", () => {
       stateDir: privateState,
       config: CONFIG,
       fetchImpl: firstFetch,
-    })).rejects.toThrow("connection closed after request");
+    })).rejects.toThrow("가계부 연결 결과");
 
     let retryPostCount = 0;
     const retryFetch = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
@@ -399,7 +469,7 @@ describe("submitImport", () => {
         if ((init?.method ?? "GET") === "GET") return jsonResponse({ data: { items: [] } });
         return jsonResponse({ error: "server error" }, 500);
       },
-    })).rejects.toThrow("ACCOUNTBOOK_API_500");
+    })).rejects.toThrow("가계부 서버");
 
     const state = JSON.parse(readFileSync(join(privateState, "submissions.json"), "utf8"));
     const candidate = state.batches[batch.batchId].candidates[batch.days[0].transactions[0].candidateId];

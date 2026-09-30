@@ -22,7 +22,7 @@ const now = () => new Date("2026-08-20T10:10:00+09:00");
 const config: SubmitConfig = {
   apiBaseUrl: "https://accountbook.test/api/v1",
   familyUuid: "family-uuid",
-  refreshToken: "test-refresh-token",
+  apiToken: `fab_${"x".repeat(43)}`,
   defaultCategoryName: "미분류",
   excludeFromBudget: false,
 };

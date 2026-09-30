@@ -2,6 +2,8 @@ import { existsSync, mkdirSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { config as loadEnv } from "dotenv";
+import { AccountbookError } from "../../plugin/src/client.ts";
+import { safeSubmissionErrorCode } from "../accountbook-screenshot-import/submit_import.ts";
 import { z } from "zod";
 import {
   validatedImportSchema,
@@ -95,7 +97,7 @@ function findConflictingDates(items: ReadyItem[]): Set<string> {
 
 function submitClassification(error: unknown): { status: "failed" | "needs_review" | "processing"; code: WeeklyLastErrorCode | null } {
   const message = error instanceof Error ? error.message : String(error);
-  if (/^ACCOUNTBOOK_API_4\d\d$/.test(message)) return { status: "failed", code: "ACCOUNTBOOK_API_4XX" };
+  if ((error instanceof AccountbookError && error.status && error.status >= 400 && error.status < 500) || /^ACCOUNTBOOK_API_4\d\d$/.test(message)) return { status: "failed", code: "ACCOUNTBOOK_API_4XX" };
   if (message.startsWith("EXISTING_TRANSACTION_REQUIRES_REVIEW")) {
     return { status: "needs_review", code: "EXISTING_TRANSACTION_REQUIRES_REVIEW" };
   }
@@ -345,7 +347,6 @@ function parseArgs(args: string[]): { privateRoot: string; planPath: string; env
   }
   if (!privateRoot) throw new Error("MISSING_ARGUMENT:--private-root");
   if (!planPath) throw new Error("MISSING_ARGUMENT:--plan");
-  if (!env) throw new Error("MISSING_ARGUMENT:--env");
   return { privateRoot, planPath, env };
 }
 
@@ -356,14 +357,14 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
   const plan = readJson(planPath);
   const knownRunId = z.object({ runId: z.string().trim().min(1) }).safeParse(plan).data?.runId;
   try {
-    loadEnv({ path: options.env, quiet: true });
+    if (options.env) loadEnv({ path: options.env, quiet: true });
     const summary = await runWeeklyImport({
       privateRoot: options.privateRoot,
       plan,
       config: {
         apiBaseUrl: requiredEnv("ACCOUNTBOOK_API_BASE_URL"),
         familyUuid: requiredEnv("ACCOUNTBOOK_FAMILY_UUID"),
-        refreshToken: process.env.ACCOUNTBOOK_REFRESH_TOKEN?.trim(),
+        apiToken: requiredEnv("ACCOUNTBOOK_API_TOKEN"),
         defaultCategoryName: process.env.ACCOUNTBOOK_DEFAULT_CATEGORY_NAME?.trim() || "미분류",
         excludeFromBudget: parseBoolean(process.env.ACCOUNTBOOK_EXCLUDE_FROM_BUDGET),
       },
@@ -379,8 +380,10 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
 const entrypoint = process.argv[1] ? pathToFileURL(process.argv[1]).href : "";
 if (entrypoint === import.meta.url) {
   main().catch((error) => {
-    const message = error instanceof Error ? error.message : String(error);
-    process.stderr.write(`WEEKLY_IMPORT_RUN_FAILED:${message.replace(/[\r\n]+/g, " ")}\n`);
+    const code = error instanceof AccountbookError
+      ? error.code
+      : safeSubmissionErrorCode(error);
+    process.stderr.write(`WEEKLY_IMPORT_RUN_FAILED:${code}\n`);
     process.exitCode = 2;
   });
 }

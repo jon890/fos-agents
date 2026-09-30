@@ -8,6 +8,21 @@ description: Hermes가 Discord에서 받은 토스 소비 내역 PNG 한 장을 
 Hermes가 받은 Discord PNG 한 장을 비공개 입력함에 옮긴 뒤 기존 안전 등록 흐름을 즉시 실행한다.
 이 스킬은 Discord 첨부 접수만 담당하며 화면 추출, 안전 판정과 accountbook API 등록 로직을 복제하지 않는다.
 
+## 사용자별 비공개 경로
+
+먼저 다음 명령으로 현재 profile의 비공개 루트를 확인한다.
+반환한 절대 경로를 모든 `<PRIVATE_ROOT>`에 넣는다.
+현재 profile이 지정한 환경 파일을 `<PROFILE_ENV>`에 넣으며 다른 사용자의 환경 파일은 읽지 않는다.
+환경 파일 없이 환경 변수를 전달받은 실행에서는 `--env`를 생략한다.
+
+```bash
+<TS_RUNTIME> accountbook/scripts/accountbook-screenshot-import/resolve_private_root.ts \
+  --env <PROFILE_ENV>
+```
+
+`ACCOUNTBOOK_PRIVATE_DIR`가 비어 있으면 기존 `accountbook/private`를 사용한다.
+공용 마운트에서는 실행 환경이 profile마다 다른 경로를 지정해야 한다.
+
 ## 입력 확인
 
 1. `accountbook/AGENTS.md`와 `accountbook/docs/data-schema.md`를 읽는다.
@@ -27,7 +42,7 @@ Hermes가 현재 메시지의 첨부 파일에 부여한 로컬 경로를 `<ATTA
 ```bash
 <TS_RUNTIME> accountbook/scripts/accountbook-discord-import/stage_attachment.ts \
   --input <ATTACHMENT_PATH> \
-  --private-root accountbook/private
+  --private-root <PRIVATE_ROOT>
 ```
 
 `<TS_RUNTIME>`은 `bun`이 있으면 `bun`, 없으면 TypeScript를 직접 실행할 수 있는 Node.js 22.18 이상을 사용한다.
@@ -43,7 +58,7 @@ Hermes가 현재 메시지의 첨부 파일에 부여한 로컬 경로를 `<ATTA
 
 적재 결과가 `staged` 또는 `already_staged`이면 `accountbook-weekly-import` 스킬에 다음 의도로 즉시 위임한다.
 
-`/accountbook-weekly-import --inbox accountbook/private/inbox/new --mode auto-safe` 의도로 위임한다.
+`/accountbook-weekly-import --inbox <PRIVATE_ROOT>/inbox/new --mode auto-safe` 의도로 위임한다.
 이 문자열을 별도 명령줄 도구 호출로 조립하지 않는다.
 현재 에이전트가 제공하는 스킬 호출 방식으로 `accountbook-weekly-import`를 실행한다.
 이미지 인식이나 accountbook API 호출을 이 스킬에서 직접 구현하지 않는다.
