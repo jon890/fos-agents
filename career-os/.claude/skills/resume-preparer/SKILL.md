@@ -32,12 +32,12 @@ bun career-os/scripts/career-workspace/cli.ts skill begin resume-preparer --json
 동기화 오류는 [비공개 작업 파일 흐름](../../../docs/flow.md)에 따라 처리한다.
 
 주장 감사에 사용할 `fos-study`가 최신인지 [근거 원본 최신화 기준](../application-package-writer/references/evidence-source-freshness.md)에 따라 확인한다.
-개인 맥락은 파일 경로가 아니라 `brain-search`로 조회한다.
+개인 맥락은 파일 경로가 아니라 후보자 맥락 문서에서 조회한다.
 
 ### 2. 사실과 대표 근거 확정
 
 `evidence/candidate-interview.md`와 기존 근거를 먼저 읽는다.
-현재 경력, 역할 선호와 경험 경계는 [개인 맥락 조회 기준](references/brain-context.md)에 따라 확인한다.
+현재 경력, 역할 선호와 경험 경계는 [개인 맥락 조회 기준](references/candidate-context.md)에 따라 확인한다.
 제출 문장을 바꾸는 사실만 사용자에게 확인하고,
 [주장 검증 모델](references/claim-model.md)에 따라 구현, 소유권, 결과와 경험 깊이를 판정한다.
 

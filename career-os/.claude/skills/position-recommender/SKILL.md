@@ -28,7 +28,7 @@ description: 열려 있는 채용공고를 모아 후보자가 해온 일과 선
 회사 판정과 공고 점수는 [판정 기준](career-os/.claude/skills/position-recommender/references/judgment.md)을 따른다.
 처리할 수 없는 항목은 [실패 처리](career-os/.claude/skills/position-recommender/references/failures.md)의 코드와 행동을 따른다.
 
-공고를 분석할 때는 `brain-search`로 현재 역할 기준과 이직 우선순위를 확인한다.
+공고를 분석할 때는 실행 디렉터리의 `candidate-context.json` 에 담긴 `position-preferences` 와 `application-state` 본문으로 현재 역할 기준과 이직 우선순위를 확인한다.
 구체적인 프로젝트 근거는 읽기 전용인 `career-os/sources/fos-study/task/`에서 확인한다.
 큐에 든 공고만 분석하며, 닫힘 여부와 개인 제외 조건은 모델이 추측하지 않는다.
 
@@ -58,6 +58,7 @@ bun career-os/scripts/position-recommender/position_run.ts finalize --run <RUN_D
 CLI가 결과 파일의 최상위 칸과 빈 `results`, `failures` 배열을 먼저 만든다.
 모델은 `results`와 `failures`에만 쓰며, 큐의 각 항목을 둘 중 하나에 한 번씩 넣는다.
 반영 결과가 `partial`이면 stdout에 나온 남은 항목만 다시 판단해 같은 명령을 실행한다.
+`collect`가 분석 정책의 기준 버전이 다르다며 멈추면 `career-os/scripts/candidate-context/manage_candidate_context.ts sync-position-policy`를 안내하고, 실행한 뒤 `collect`를 다시 실행한다.
 
 회사 판정 큐가 있으면 `<RUN_DIR>/company-evidence.json`에 저장된 근거만 읽고 판정한다.
 큐의 회사마다 `<RUN_DIR>/company-tier-updates.json`에 결과를 한 건씩 쓴다.
