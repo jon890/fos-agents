@@ -22,7 +22,7 @@ description: 기술·인성·포지션별 면접 질문을 준비하고 한 번�
 | 값 | 선택 | 기본값 |
 | --- | --- | --- |
 | `CAREER_STORE` | `backend` 또는 `file` | `file` |
-| `CAREER_MEMORY` | `brain` 또는 `file` | `file` |
+| `CAREER_MEMORY` | `backend` 또는 `file` | `file` |
 
 파일 공급자를 쓸 때는 템플릿을 `career-os/library/candidate-memory.json`으로 복사해 자리표시 값을 채운다.
 `CAREER_MEMORY_FILE`과 `CAREER_STORE_DIR`로 다른 경로를 지정할 수 있다.
@@ -49,10 +49,12 @@ bun "$REPO_ROOT/career-os/scripts/interview-drill/drill-engine.ts" memory
 현재 직장 이름으로 난도를 정하지 않고 `currentRole.bar`와 공고의 문제 규모, 소유권, 여러 팀에 미치는 영향과 운영 책임으로 `production`, `large-scale`, `global-scale` 중 목표 수준을 정한다.
 직접 운영하지 않은 기술은 `experience.studyOnly`와 인접 경험으로 구분한다.
 
-### `brain` 공급자
+### `backend` 공급자
 
-`provider`가 `brain`이면 `brain-search`로 `fields`에 나온 후보자 맥락의 entity를 조회해 칸을 채운다.
-찾지 못한 칸은 비워 두고 사용자에게 묻는다.
+`provider`가 `backend`이면 출력의 `documents`에 커리어 Backend의 `career-status`와 `application-state` 문서 본문이 담긴다.
+그 본문으로 `fields`에 나온 칸을 채운다.
+본문에 없는 칸은 비워 두고 사용자에게 묻는다.
+문서가 하나라도 없거나 연결값이 없으면 `memory`가 실패하므로 `doctor`로 점검한다.
 
 ## 3. 질문 선택
 
@@ -74,7 +76,7 @@ bun "$REPO_ROOT/career-os/scripts/interview-drill/drill-engine.ts" select tech \
 
 질문을 한 번에 하나씩 보여주고 사용자의 답을 기다린다.
 답변 직후 `pass`, `shallow`, `fail`, `unknown` 중 하나로 판정하고, 잘된 점·가장 큰 공백·후속 질문을 각각 하나씩 준다.
-충분한 답변은 선택 근거, 반례, 운영 상황과 근거 경계 순으로 최대 네 단계까지 묻고, 틀렸거나 답하지 못한 경우에는 한 번 좁혀 묻고 학습 항목으로 전환한다.
+충분한 답변은 선택 근거, 반례, 운영 상황과 근거 경계 순으로 최대 네 단계까지 묻고, 틀렸거나 답하지 못한 경우에는 한 번 범위를 줄여 묻고 학습 항목으로 전환한다.
 
 ```bash
 REPO_ROOT="$(git rev-parse --show-toplevel)"

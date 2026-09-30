@@ -119,10 +119,49 @@ test("잘못된 Backend 응답은 기록 여부를 단정하지 않는다", asyn
   }
 });
 
-test("저장소 설정이 없어도 brain 후보자 맥락 memory 명령은 성공한다", () => {
-  const result = invoke(["memory"], { CAREER_STORE: "", CAREER_MEMORY: "brain" });
-  expect(result.code).toBe(0);
-  expect(JSON.parse(result.stdout).provider).toBe("brain");
+test("CAREER_MEMORY=backend 인데 CAREER_BACKEND_URL 이 없으면 memory 명령은 doctor 안내로 실패한다", () => {
+  const result = invoke(["memory"], {
+    CAREER_STORE: "",
+    CAREER_MEMORY: "backend",
+    CAREER_BACKEND_URL: "",
+    CAREER_BACKEND_TOKEN: "",
+    CAREER_BACKEND_TOKEN_FILE: "",
+  });
+  expect(result.code).toBe(1);
+  expect(result.stdout).toBe("");
+  expect(result.stderr).toContain("CAREER_BACKEND_URL");
+  expect(result.stderr).toContain("drill-engine.ts doctor");
+});
+
+test("Backend 에 없는 후보자 맥락 문서는 memory 명령이 빠진 키를 담아 실패한다", async () => {
+  const server = Bun.serve({
+    port: 0,
+    fetch: (request) =>
+      new URL(request.url).pathname.endsWith("/documents/career-status")
+        ? Response.json({
+            document: {
+              documentKey: "career-status",
+              version: 1,
+              updatedAt: "2026-08-13T01:00:00.000Z",
+              body: "# 합성 경력 상태",
+              note: "합성",
+            },
+          })
+        : Response.json({ error: { code: "NOT_FOUND", message: "없음" } }, { status: 404 }),
+  });
+  try {
+    const result = await invokeAsync(["memory"], {
+      CAREER_MEMORY: "backend",
+      CAREER_BACKEND_URL: `http://127.0.0.1:${server.port}`,
+      CAREER_BACKEND_TOKEN: "a".repeat(32),
+      CAREER_BACKEND_TOKEN_FILE: "",
+    });
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("application-state");
+    expect(result.stderr).not.toContain("career-status");
+  } finally {
+    server.stop(true);
+  }
 });
 
 test("두 설정이 없으면 doctor 명령은 실패 항목을 JSON으로 낸다", () => {

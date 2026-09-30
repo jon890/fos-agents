@@ -29,7 +29,8 @@ description: 공고가 찾는 사람과 후보자의 경험이 부합하는지 �
 
 위 동기화가 다루지 않는 `fos-study` 로컬 사본이 원격보다 뒤처졌는지 단계 1로 들어가기 전에 검사한다.
 없는 문서는 없는 경험으로 판정되므로, 근거를 읽기 전에 확인한다.
-private brain은 `brain-search`로 조회하며 경로로 확인하지 않는다.
+private brain 은 지원서 공통 프로필에만 쓰며 `brain-search` 로 조회한다.
+경력과 경험 경계는 `manage_candidate_context.ts get --key career-status` 로 읽는다.
 
 검사 명령과 판정별 다음 행동, 당길 때 유의할 점은 [근거 원본 최신화 확인](references/evidence-source-freshness.md)이 소유한다.
 
@@ -49,13 +50,13 @@ private brain은 `brain-search`로 조회하며 경로로 확인하지 않는다
 | --------- | ----------------------------------------------- |
 | 공고 URL    | 공식 페이지를 열어 회사와 직무를 읽고 대상 디렉터리를 정한다              |
 | 회사와 직무 이름 | 같은 이름의 디렉터리를 찾는다. 없으면 공고 URL 을 한 번 묻는다          |
-| 인자 없음     | `brain-search` 로 private brain 의 현재 지원 대상을 확인한다 |
+| 인자 없음     | `application-state` 문서에서 현재 지원 대상을 확인한다 |
 
 
 대상 디렉터리는 `applications/<company>/<role>/` 이다.
 
-**대상을 하나로 좁히지 못하면 임의로 고르지 않고 한 가지 질문으로 확정한다.**
-brain 에 현재 대상이 없거나 대응하는 디렉터리가 둘 이상일 때가 그 경우다.
+**대상을 하나로 정하지 못하면 임의로 고르지 않고 한 가지 질문으로 확정한다.**
+`application-state` 문서에 현재 대상이 없거나 대응하는 디렉터리가 둘 이상일 때가 그 경우다.
 
 ## 실행 흐름
 

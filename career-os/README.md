@@ -21,7 +21,8 @@
 ## 설정
 
 clone 뒤에는 `.env.example`에서 필요한 secret 키 이름을 확인한다.
-현재 경력, 역할 선호와 경험 경계는 private brain이 기준 원본이다.
+현재 경력, 역할 선호, 경험 경계와 지원 상태는 커리어 Backend 의 후보자 맥락 문서가 기준 원본이다.
+연락처와 신원을 담은 지원서 공통 프로필만 private brain 에 있다.
 
 `scripts/career-workspace/`에는 비공개 작업 파일의 manifest, 준비, 차이 확인과 발행을 담당하는 공통 CLI가 있다.
 홈서버의 `career-storage`는 `career-os` S3 bucket에 검증된 불변 release를 보관하고 검증이 끝난 뒤 current pointer를 바꾼다.
@@ -37,7 +38,7 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 홈서버에서는 S3 실행 파일을 빌드하고 `CAREER_STORAGE_S3_EXECUTABLE`, 공용 publish 잠금과 네 `CAREER_STORAGE_S3_*` 값을 서비스 환경에 둔다.
 SSH client는 원격 transport 값을 넣고, 홈서버의 Hermes는 `CAREER_WORKSPACE_COMMAND`로 같은 `career-storage` 명령을 호출한다.
 설치, 상태 확인과 복구 순서는 [홈서버 객체 저장소 연결 계약](../docs/home-server-object-storage.md)을 따른다.
-진행 중인 지원 대상은 private brain에서 확인하고 공고별 실행 자료는 `applications/<company>/<role>/`에서 관리한다.
+진행 중인 지원 대상은 후보자 맥락 문서 `application-state` 에서 확인하고 공고별 실행 자료는 `applications/<company>/<role>/`에서 관리한다.
 
 ## 작업 흐름
 

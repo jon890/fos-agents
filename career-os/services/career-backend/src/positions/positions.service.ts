@@ -14,6 +14,7 @@ import {
   type CompanyTierRunItemRow,
   type CompanyTierRunItemUpdate,
   type CompanyTierRunRow,
+  type DbClient,
   type NewAnalysisRow,
   type PositionAnalysisRow,
   type RecommendationAnalysisRow,
@@ -164,6 +165,11 @@ export class PositionsService {
       await this.repository.upsertPolicy(policy, now, tx);
     });
     return policy;
+  }
+
+  /** 저장된 정책을 그대로 돌려준다. 없으면 409 다. */
+  getPolicy(): Promise<AnalysisPolicy> {
+    return this.requirePolicy(this.repository.reader());
   }
 
   async listCompanyPreferences(): Promise<CompanyPreference[]> {
@@ -576,7 +582,7 @@ export class PositionsService {
 
   // ------------------------------------------------------------------ 내부 흐름
 
-  private async requirePolicy(tx: Prisma.TransactionClient): Promise<AnalysisPolicy> {
+  private async requirePolicy(tx: DbClient): Promise<AnalysisPolicy> {
     const parsed = analysisPolicySchema.safeParse(await this.repository.findPolicy(tx));
     if (!parsed.success) {
       throw new ApiError(409, "POLICY_NOT_CONFIGURED", "포지션 분석 정책이 준비되지 않았습니다.");

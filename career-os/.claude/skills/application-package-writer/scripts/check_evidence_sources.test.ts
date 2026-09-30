@@ -73,7 +73,7 @@ describe("근거 원본 목록의 문서 계약", () => {
   /**
    * `code-architecture.md` 의 「interview-practice」와 ADR-102 가
    * 실행 스크립트는 brain 을 직접 조회하지 않는다고 정한다.
-   * brain 은 `brain-search` 로 묻는 곳이라 경로를 요구하면 그 결정을 어긴다.
+   * 공통 프로필은 `brain-search` 로 묻는 곳이라 경로를 요구하면 그 결정을 어긴다.
    */
   test("private brain 의 경로를 요구하지 않는다", () => {
     const paths = EVIDENCE_SOURCES.flatMap((source) => source.paths);

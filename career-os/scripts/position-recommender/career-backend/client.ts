@@ -16,6 +16,7 @@ import {
   positionExclusionSchema,
   positionPreparationResponseSchema,
   recommendationResponseSchema,
+  type AnalysisPolicy,
   type AnalysisQueueResponse,
   type AnalysisResultsResponse,
   type StoredCompanyEvidence,
@@ -117,6 +118,16 @@ export class CareerBackendClient {
       "/api/positions/v1/analysis-policy",
       body,
       idempotencyKey,
+      analysisPolicySchema,
+    );
+  }
+
+  getAnalysisPolicy(): Promise<AnalysisPolicy> {
+    return careerBackendRequest(this.httpOptions,
+      "GET",
+      "/api/positions/v1/analysis-policy",
+      undefined,
+      undefined,
       analysisPolicySchema,
     );
   }

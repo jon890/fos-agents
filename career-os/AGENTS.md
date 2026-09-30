@@ -23,33 +23,35 @@
 
 ## 작업 경계
 
-현재 지원 대상과 회사별 지원 판단은 private brain에서 관리한다.
+현재 지원 대상과 회사별 지원 판단은 후보자 맥락 문서 `application-state`, `position-preferences` 에서 관리한다.
 공고별 지원 문서와 면접 질문은 `applications/`에 두고, 검증 완료 주장처럼 저장소 실행에 필요한 파일 상태만 `state/`에 둔다.
 면접 연습 기록과 개인 질문은 `CAREER_STORE` 로 고른 저장소가 소유하고, 운영에서는 커리어 Backend 다.
 회사명, 공고, 면접 일정과 학습 우선순위처럼 자주 바뀌는 상태를 `AGENTS.md`에 쓰지 않는다.
 
-- 현재 경력, 역할 선호와 경험 경계는 private brain에서 확인한다.
+- 현재 경력과 경험 경계는 후보자 맥락 문서 `career-status`, 역할 선호와 이직 우선순위는 `position-preferences` 에서 확인한다.
 - 공개 학습 자료는 `sources/fos-study/`에서 파생한다.
 - 공개 질문 목록은 `public/question-bank/`에서 파생한다.
 - `config/`에는 사람이 고른 정책, pin, override, 제외 조건만 둔다.
 - 과거 이력과 결정 이유는 `docs/adr/`에만 남긴다.
 
-### 후보자에게 묻기 전에 private brain을 조회한다
+### 후보자에게 묻기 전에 기록을 조회한다
 
-**본인에 관한 사실을 사용자에게 물으려는 순간, 문장을 내보내기 전에 `brain-search`를 돌린다.**
+**본인에 관한 사실을 사용자에게 물으려는 순간, 문장을 내보내기 전에 아래 표의 자리를 조회한다.**
 이미 기록해 둔 것을 다시 묻는 일이 반복돼 이 규칙을 둔다.
 
-brain이 소유하는 것이다. 지원 문서와 인터뷰 기록이 아니다.
+아래 표의 자리가 소유하는 것이다. 지원 문서와 인터뷰 기록이 아니다.
 
 
-| 조회할 것                     | 어디에 있나                       |
-| ------------------------- | ---------------------------- |
-| 이름, 생년월일, 연락처, 주소         | `career-application-profile` |
-| 병역, 보훈, 장애 여부             | `career-application-profile` |
-| 학력, 자격증, 어학               | `career-application-profile` |
-| 회사별 부서명과 고용 형태, 정확한 재직 기간 | `career-application-profile` |
-| 역할 선호와 경험 경계              | 해당 entity                    |
-| 지원 이력과 회사별 재지원 간격         | 해당 entity                    |
+| 조회할 것                     | 어디에 있나                                                   |
+| ------------------------- | -------------------------------------------------------- |
+| 이름, 생년월일, 연락처, 주소         | `brain-search` 의 `career-application-profile`            |
+| 병역, 보훈, 장애 여부             | `brain-search` 의 `career-application-profile`            |
+| 학력, 자격증, 어학               | `brain-search` 의 `career-application-profile`            |
+| 회사별 부서명과 고용 형태, 정확한 재직 기간 | `brain-search` 의 `career-application-profile`            |
+| 현재 경력과 경험 경계              | `manage_candidate_context.ts get --key career-status`    |
+| 역할 선호와 이직 우선순위           | `manage_candidate_context.ts get --key position-preferences` |
+| 지원 이력과 현재 대상              | 후보자 맥락 문서 `application-state`                            |
+| 회사별 재지원 간격                | `position_exclusions`                                    |
 
 
 **후보자 인터뷰는 판단과 동기만 다룬다.**
@@ -57,7 +59,8 @@ brain이 소유하는 것이다. 지원 문서와 인터뷰 기록이 아니다.
 지원서 기본 항목은 인터뷰 대상이 아니다.
 
 **조회해서 없으면 묻는다.** 조회하지 않고 묻는 것만 금지한다.
-새로 확인한 사실은 사용자 승인을 받아 brain에 환원한다.
+새로 확인한 공통 프로필 사실은 사용자 승인을 받아 brain에 환원한다.
+후보자 맥락 문서의 사실은 변경 전후를 보여 주고 승인받은 뒤 `manage_candidate_context.ts put` 으로 저장한다.
 
 ### 프로젝트 근거는 `sources/fos-study/task/`가 소유한다
 
@@ -78,7 +81,8 @@ grep -rl "<확인할 기술>" career-os/sources/fos-study/task/
 | 자리                               | 담는 것                            |
 | -------------------------------- | ------------------------------- |
 | `sources/fos-study/task/`        | 프로젝트별로 실제 한 일, 기술 선택과 그 이유      |
-| private brain                    | 신원, 지원 프로필, 역할 선호, 경험 경계, 지원 이력 |
+| 후보자 맥락 문서                        | 역할 선호, 경험 경계, 지원 이력과 현재 대상    |
+| private brain                    | 지원서 공통 프로필(신원, 연락처, 정확한 재직 기간) |
 | `applications/<company>/<role>/` | 공고별 적합도 판정과 지원 전략               |
 | `library/profiles/`              | 대상별 프로필 원고                      |
 | `state/verified-claims/`         | 다시 쓸 수 있는 검증 완료 주장과 근거 상태       |

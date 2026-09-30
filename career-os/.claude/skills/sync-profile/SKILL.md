@@ -52,7 +52,7 @@ bun career-os/scripts/career-workspace/cli.ts skill finish sync-profile --json
 
 원고가 없으면 가장 최근 지원의 `applications/<company>/<role>/evidence/resume-draft.md` 를
 출발점으로 삼고, 공개 범위를 조정해 새 원고를 만든다.
-현재 경력과 경험 경계는 `brain-search` 로 확인한다.
+현재 경력과 경험 경계는 `manage_candidate_context.ts get --key career-status` 로 확인한다.
 
 **사용자가 한 곳만 말해도 나머지를 함께 본다.**
 현재 각 프로필에 무엇이 들어 있는지 읽고, 원본과 어긋나는 곳을 표로 보고한다.

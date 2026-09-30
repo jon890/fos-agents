@@ -45,6 +45,39 @@ async function runCli(args: string[], port: number | undefined, cwd: string) {
   return { stdout, stderr, exitCode };
 }
 
+const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { "Content-Type": "application/json" } });
+
+function policy(candidateContextVersion: string) {
+  return { schemaVersion: 2, candidateContextVersion, dailyAnalysisLimit: 7, prioritySlots: 4, agingSlots: 3, staleAfterDays: 30, defaultCompanyTier: 2, dailyCompanyTierLimit: 5, companyTierStaleAfterDays: 90 };
+}
+
+/** 문서 저장과 분석 정책을 함께 흉내 낸다. 정책이 없으면 409 POLICY_NOT_CONFIGURED 를 낸다. */
+function fakeBackend(options: { policy?: ReturnType<typeof policy>; savedVersion: number; documentKey?: string }) {
+  let stored = options.policy;
+  const calls: string[] = [];
+  const policyBodies: unknown[] = [];
+  const handle = async (url: URL, method: string, body: string | null): Promise<Response> => {
+    calls.push(`${method} ${url.pathname}`);
+    if (url.pathname === "/api/positions/v1/analysis-policy") {
+      if (!stored) return json({ error: { code: "POLICY_NOT_CONFIGURED", message: "x" } }, 409);
+      if (method === "PUT") {
+        stored = JSON.parse(String(body));
+        policyBodies.push(stored);
+      }
+      return json(stored);
+    }
+    const documentKey = options.documentKey ?? url.pathname.split("/").at(-1);
+    if (method === "PUT") return json({ document: { documentKey, version: options.savedVersion, updatedAt: "2026-09-01T00:00:00.000Z" } });
+    return json({ document: { documentKey, version: options.savedVersion, body: "예시 선호 문장", note: "n", updatedAt: "2026-09-01T00:00:00.000Z" } });
+  };
+  return { calls, policyBodies, handle };
+}
+
+function useBackend(backend: ReturnType<typeof fakeBackend>): void {
+  useApi(() => new Response("{}"));
+  globalThis.fetch = (async (input: URL, init: RequestInit) => backend.handle(input, String(init.method), init.body as string | null)) as unknown as typeof fetch;
+}
+
 describe("manage_candidate_context", () => {
   test("help 는 연결값 없이 사용법을 낸다", async () => {
     delete process.env.CAREER_BACKEND_URL;
@@ -165,5 +198,64 @@ describe("manage_candidate_context", () => {
     expect(formatManageCandidateContextError(error)).toContain("get");
     expect(formatManageCandidateContextError(error)).not.toContain("비공개 예시 문장");
     expect(formatManageCandidateContextError(new CareerBackendHttpError(503, "UNAVAILABLE", "실패", "req-1"))).toBe("실패 (status=503, code=UNAVAILABLE, requestId=req-1)");
+  });
+  test("help 는 sync-position-policy 명령을 안내한다", async () => {
+    expect(await manageCandidateContext(["help"])).toContain("sync-position-policy");
+  });
+
+  test("put --key position-preferences 는 저장한 version 으로 분석 정책 기준 버전을 맞춘다", async () => {
+    const backend = fakeBackend({ policy: policy("position-preferences:v1"), savedVersion: 2 });
+    useBackend(backend);
+    const file = join(tempDir(), "preferences.md");
+    writeFileSync(file, "예시 선호 문장", "utf8");
+
+    const result = await manageCandidateContext(["put", "--key", "position-preferences", "--file", file, "--expected-version", "1", "--note", "메모"]);
+
+    expect(result).toEqual({
+      documentKey: "position-preferences",
+      version: 2,
+      updatedAt: "2026-09-01T00:00:00.000Z",
+      positionPolicy: { candidateContextVersion: "position-preferences:v2", changed: true },
+    });
+    expect(backend.policyBodies).toEqual([policy("position-preferences:v2")]);
+  });
+
+  test("다른 키의 put 은 분석 정책을 건드리지 않는다", async () => {
+    const backend = fakeBackend({ policy: policy("position-preferences:v1"), savedVersion: 3 });
+    useBackend(backend);
+    const file = join(tempDir(), "state.md");
+    writeFileSync(file, "예시 지원 상태 문장", "utf8");
+
+    await manageCandidateContext(["put", "--key", "application-state", "--file", file, "--expected-version", "2", "--note", "메모"]);
+
+    expect(backend.calls).toEqual(["PUT /api/candidate-context/v1/documents/application-state"]);
+  });
+
+  test("put --key position-preferences 뒤 정책 갱신이 실패하면 저장 요약과 sync-position-policy 안내를 내고 종료 코드 1 이다", async () => {
+    const backend = fakeBackend({ savedVersion: 2 });
+    const server = Bun.serve({ port: 0, fetch: async (request) => backend.handle(new URL(request.url), request.method, await request.text()) });
+    const file = join(tempDir(), "preferences.md");
+    writeFileSync(file, "비공개 예시 선호 문장", "utf8");
+    try {
+      const result = await runCli(["put", "--key", "position-preferences", "--file", file, "--expected-version", "1", "--note", "메모"], server.port, tempDir());
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain("documentKey=position-preferences, version=2");
+      expect(result.stderr).toContain("career-os/scripts/candidate-context/manage_candidate_context.ts sync-position-policy");
+      expect(result.stderr).toContain("career-os/scripts/position-recommender/configure_position_analysis_policy.ts");
+      expect(result.stderr).not.toContain("비공개 예시 선호 문장");
+      // 문서 저장은 되돌리지 않는다. 저장 요청은 한 번뿐이다.
+      expect(backend.calls.filter((call) => call.startsWith("PUT /api/candidate-context"))).toHaveLength(1);
+    } finally {
+      await server.stop(true);
+    }
+  });
+
+  test("sync-position-policy 는 문서 version 으로 분석 정책 기준 버전을 맞춘다", async () => {
+    const backend = fakeBackend({ policy: policy("position-preferences:v4"), savedVersion: 5, documentKey: "position-preferences" });
+    useBackend(backend);
+
+    expect(await manageCandidateContext(["sync-position-policy"])).toEqual({ candidateContextVersion: "position-preferences:v5", changed: true });
+    expect(backend.policyBodies).toEqual([policy("position-preferences:v5")]);
   });
 });

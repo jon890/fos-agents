@@ -128,7 +128,21 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 | `GET /documents/{documentKey}` | 본문, `version`, `note`, `updatedAt`. 없으면 `404` |
 | `PUT /documents/{documentKey}` | 본문 전체 교체. `expectedVersion` 과 `note` 를 받는다. 새 문서는 `expectedVersion: 0` 이다. 응답은 `documentKey`, `version`, `updatedAt` 만 담는다. 멱등 영수증(`request_receipts`)에 본문 사본이 남지 않도록 본문과 `note` 를 돌려주지 않고, 본문은 `GET` 으로만 읽는다 |
 
-사람이 `scripts/candidate-context/manage_candidate_context.ts` 로 고친다. 스킬이 스스로 저장하지 않는다.
+사람이 `scripts/candidate-context/manage_candidate_context.ts` 로 고친다. 스킬은 변경 전후를 보여 주고 승인을 받은 뒤에만 같은 명령으로 저장한다.
+
+`put --key position-preferences` 는 저장에 성공하면 같은 명령 안에서 `PUT /api/positions/v1/analysis-policy` 로 정책의 `candidateContextVersion` 을 `position-preferences:v{version}` 으로 바꾼다.
+정책의 나머지 칸은 `GET /api/positions/v1/analysis-policy` 로 읽은 값을 그대로 보낸다.
+정책 갱신이 실패하면 문서는 저장된 채로 두고 종료 코드 1 과 함께 정책만 다시 맞추는 명령을 알려 준다.
+정책만 다시 맞추는 명령은 `manage_candidate_context.ts sync-position-policy` 다.
+
+배포 뒤 한 번은 아래 순서로 맞춘다.
+
+1. `position-preferences` 와 `application-state` 문서를 `put --expected-version 0` 으로 만든다.
+2. `sync-position-policy` 를 실행한다.
+
+분석 정책이 아직 없으면 `409 POLICY_NOT_CONFIGURED` 가 난다.
+이때는 `scripts/position-recommender/configure_position_analysis_policy.ts` 로 정책을 먼저 만든 뒤 2단계를 다시 실행한다.
+이유는 [ADR-132](adr/ADR-132-스킬의-개인-맥락은-후보자-맥락-문서에서-읽고-지원서-공통-프로필만-brain에-둔다.md)를 따른다.
 
 ```mermaid
 sequenceDiagram
@@ -174,7 +188,7 @@ sequenceDiagram
 
 선택한 공고 하나에 맞춘 지원 자료를 만들고 제출 가능성을 검증한다.
 
-1. 공고 경로가 없으면 private brain에서 현재 지원 대상을 찾고 대응하는 지원 디렉터리를 확인한다.
+1. 공고 경로가 없으면 `application-state` 문서에서 현재 지원 대상을 찾고 대응하는 지원 디렉터리를 확인한다.
 2. 공식 공고와 회사 문화 자료의 최신 상태를 확인한다.
 3. 공고 항목을 쪼개 후보자 근거를 수집하고 항목마다 판정한다. 판정 값과 점수, 가중치는 `application-package-writer` 의 `references/fit-judgment.md` 가 소유한다.
 4. 적합도 판정 뒤 후보자 인터뷰를 진행한다. 기존 답변을 읽고, 동기, 당시 제약, 본인 판단, 기각한 대안과 확인하지 못한 결과 중 비어 있는 독립 질문을 최대 넷까지 묶어 확인한다.
@@ -197,7 +211,7 @@ sequenceDiagram
 
 짧은 답변을 반복하고 약점을 다음 실행에 반영한다.
 
-1. `drill-engine.ts memory` 로 후보자 맥락을 얻는다. `CAREER_MEMORY=brain` 이면 출력이 알려 준 칸을 `brain-search` 로 채우고, `file` 이면 출력이 그대로 맥락이다. 포지션별 연습이면 맥락의 `targets` 에서 지원 디렉터리를 고른다.
+1. `drill-engine.ts memory` 로 후보자 맥락을 얻는다. `CAREER_MEMORY=backend` 면 출력에 담긴 `career-status` 와 `application-state` 본문으로 출력이 알려 준 칸을 채우고, `file` 이면 출력이 그대로 맥락이다. 포지션별 연습이면 맥락의 `targets` 에서 지원 디렉터리를 고른다.
 2. `drill-engine.ts select` 가 `CAREER_STORE` 로 고른 저장소에서 주제별 복습 상태와 켜진 개인 질문을 읽고, 공개 질문 은행과 지원 디렉터리의 포지션 질문을 합쳐 문제를 고른다.
 3. 사용자가 먼저 자신의 답변을 작성한다.
 4. 에이전트가 정확성, 구조, 근거, 전달력을 평가한다.
@@ -230,6 +244,7 @@ sequenceDiagram
 | 개인 질문이 없음 | 공개 질문과 포지션 질문만 쓴다 |
 | 고를 질문이 없음 | `select` 가 빈 목록을 돌려주고 에이전트가 질문 은행 보강을 안내한다 |
 | `CAREER_STORE` 나 `CAREER_MEMORY` 가 없음 | 명령이 종료 코드 1 로 끝나고 `drill-engine.ts doctor` 를 안내한다 |
+| `CAREER_MEMORY=backend` 인데 문서를 읽지 못함 | `memory` 가 종료 코드 1 로 끝난다. 없는 문서는 키를 알려 주고, 에이전트는 맥락 없이 연습하지 않는다 |
 | `backend` 인데 Backend 에 닿지 못함 | `select` 와 `record` 가 종료 코드 1 로 끝난다. 에이전트는 기록되지 않았다고 알리고 파일에 따로 쓰지 않는다 |
 | 같은 기록을 다시 보냄 | 같은 `attemptId` 는 저장한 응답을 그대로 돌려준다. 횟수가 두 번 오르지 않는다 |
 | 두 대화가 같은 주제를 동시에 기록 | 주제 행을 잠가 순서대로 반영한다 |
@@ -241,7 +256,7 @@ sequenceDiagram
 `interview-practice`의 공개 질문 유지보수 절차에서 일반 질문과 개인 경험 질문을 분리한다.
 
 1. 등록된 공식 문서, 기술 블로그, 공개 영상과 GitHub 가이드에서 실행별 후보를 임시 경로에 수집한다.
-2. 질문 은행의 카테고리와 수준 분포, 현재 공고의 책임과 private brain의 경험 경계를 비교한다.
+2. 질문 은행의 카테고리와 수준 분포, 현재 공고의 책임과 `career-status` 문서의 경험 경계를 비교한다.
 3. 블로그, 영상과 GitHub 가이드에서 실무 사례와 빠진 범위만 찾고 기술 사실은 공식 원문에서 다시 검증한다.
 4. 출처 묶음을 `public/question-bank/sources.json`에 등록하거나 기존 항목을 재사용한다.
 5. 공개 질문 후보의 중복, 목표 수준, 답변 신호와 꼬리질문 깊이를 검증한다.
@@ -272,25 +287,28 @@ sequenceDiagram
 
 외부 채용 소스의 열린 공고에서 실제 지원 후보를 고르고, 회사를 세 축으로 판정한다.
 
-1. 수집기가 `GET exclusions`로 개인 제외 규칙을 읽고, 등록된 소스 어댑터가 열린 공고를 공통 형태로 모은다.
-2. 스크립트가 종료 여부, 마감일, 고용 형태, 역할, URL 중복과 개인 제외 규칙을 검사한다.
-3. client가 후보풀과 소스 진단을 멱등 키와 함께 Backend에 보낸다. Backend는 공고 버전과 수집 실행, 회사 tier 평가 실행을 한 트랜잭션으로 저장하고 평가할 회사 큐를 반환한다.
-4. 근거 수집기가 큐에 든 회사만 대상으로 OpenDART와 기술 블로그 RSS와 GitHub organization과 Blind를 조회한다. 유효기간이 남은 근거는 다시 모으지 않는다.
-5. client가 모은 근거를 `PUT company-tier-runs/:companyTierRunId/evidence`로 저장한다. 응답은 회사별 저장 건수다. 그 회사의 유효한 근거는 `GET companies/:companyKey/evidence`로 따로 읽는다.
-6. 모델이 그 근거만 읽고 축 셋을 각각 판정한다. 근거가 없는 축은 `unknown`으로 두고 `recommendedTier`도 내지 않는다.
-7. client가 결과와 평가하지 못한 회사를 실행 ID와 함께 보낸다. 큐가 비어 있으면 회사 tier 실행은 만들어지는 즉시 완료다.
-8. client가 공고 분석 실행 생성을 요청하면 Backend가 회사마다 `manual`, `model`, `default` 순서로 tier를 해결하고, `fresh` 분석을 재사용한 뒤 회사 우선 슬롯과 오래 기다린 공고 보장 슬롯으로 제한된 분석 큐를 반환한다.
-9. 모델은 분석 큐에 든 공고만 읽고 그 회사의 저장된 근거를 함께 본다.
-10. client가 분석 결과와 분석하지 못한 공고를 실행 ID와 함께 보낸다. Backend는 아직 끝나지 않은 항목 전체와 대조하고 한 트랜잭션으로 반영한다.
-11. 실패한 공고가 남으면 실행은 `partial`로 남고 client는 남은 항목만 다시 보낸다.
-12. client가 추천 실행을 요청하면 Backend가 현재 활성 공고, 유효한 분석, 축별 판정, 분석 대기와 수집 진단을 조립해 반환한다.
-13. 스크립트가 추천 JSON을 검증하고 HTML을 만든 뒤 공개 범위와 링크를 검사한다.
-14. 사용자가 공유 링크를 요청했으면 게시 결과를 검증한다.
-15. 사용자는 추천과 회사별 축 셋, 분석 대기, 개인 제외 건수와 소스 실패를 확인하고 지원 또는 제외를 결정한다.
+1. 수집 명령이 `position-preferences` 문서와 분석 정책을 읽어 정책의 `candidateContextVersion` 이 `position-preferences:v{version}` 인지 확인한다. 다르거나 문서가 없으면 수집을 시작하지 않는다. 같으면 `position-preferences` 와 `application-state` 의 version 과 본문을 실행 디렉터리의 `candidate-context.json` 에 둔다.
+2. 수집기가 `GET exclusions`로 개인 제외 규칙을 읽고, 등록된 소스 어댑터가 열린 공고를 공통 형태로 모은다.
+3. 스크립트가 종료 여부, 마감일, 고용 형태, 역할, URL 중복과 개인 제외 규칙을 검사한다.
+4. client가 후보풀과 소스 진단을 멱등 키와 함께 Backend에 보낸다. Backend는 공고 버전과 수집 실행, 회사 tier 평가 실행을 한 트랜잭션으로 저장하고 평가할 회사 큐를 반환한다.
+5. 근거 수집기가 큐에 든 회사만 대상으로 OpenDART와 기술 블로그 RSS와 GitHub organization과 Blind를 조회한다. 유효기간이 남은 근거는 다시 모으지 않는다.
+6. client가 모은 근거를 `PUT company-tier-runs/:companyTierRunId/evidence`로 저장한다. 응답은 회사별 저장 건수다. 그 회사의 유효한 근거는 `GET companies/:companyKey/evidence`로 따로 읽는다.
+7. 모델이 그 근거만 읽고 축 셋을 각각 판정한다. 근거가 없는 축은 `unknown`으로 두고 `recommendedTier`도 내지 않는다.
+8. client가 결과와 평가하지 못한 회사를 실행 ID와 함께 보낸다. 큐가 비어 있으면 회사 tier 실행은 만들어지는 즉시 완료다.
+9. client가 공고 분석 실행 생성을 요청하면 Backend가 회사마다 `manual`, `model`, `default` 순서로 tier를 해결하고, `fresh` 분석을 재사용한 뒤 회사 우선 슬롯과 오래 기다린 공고 보장 슬롯으로 제한된 분석 큐를 반환한다.
+10. 모델은 분석 큐에 든 공고만 읽고 그 회사의 저장된 근거와 실행 디렉터리의 `candidate-context.json` 을 함께 본다.
+11. client가 분석 결과와 분석하지 못한 공고를 실행 ID와 함께 보낸다. Backend는 아직 끝나지 않은 항목 전체와 대조하고 한 트랜잭션으로 반영한다.
+12. 실패한 공고가 남으면 실행은 `partial`로 남고 client는 남은 항목만 다시 보낸다.
+13. client가 추천 실행을 요청하면 Backend가 현재 활성 공고, 유효한 분석, 축별 판정, 분석 대기와 수집 진단을 조립해 반환한다.
+14. 스크립트가 추천 JSON을 검증하고 HTML을 만든 뒤 공개 범위와 링크를 검사한다.
+15. 사용자가 공유 링크를 요청했으면 게시 결과를 검증한다.
+16. 사용자는 추천과 회사별 축 셋, 분석 대기, 개인 제외 건수와 소스 실패를 확인하고 지원 또는 제외를 결정한다.
 
 ```mermaid
 flowchart TD
-    A[cron 또는 사용자 실행] --> B[개인 제외 규칙 조회]
+    A[cron 또는 사용자 실행] --> P{정책 기준 버전이 position-preferences 문서 version 과 같은가}
+    P -- 아니요 또는 문서 없음 --> P2[수집하지 않고 종료 코드 1]
+    P -- 예 --> B[개인 제외 규칙 조회]
     B --> C[열린 공고 수집]
     C --> D{사용 가능한 후보가 있는가}
     D -- 아니요 --> E[빈 상태와 수집 진단을 담은 리포트]
@@ -408,7 +426,7 @@ Backend가 응답하지 않으면 종료 코드 1로 중단한다.
 
 ```mermaid
 flowchart TD
-    A[지원 작업본 준비] --> B[필요한 개인 맥락을 brain-search로 조회]
+    A[지원 작업본 준비] --> B[career-status 문서를 조회]
     B --> C{조회 결과}
     C -->|관련 근거 있음| D[출처와 시점을 확인해 현재 문구에 적용]
     C -->|관련 근거 없음| E[현재 대화와 후보자 확인으로 보완]
@@ -419,16 +437,17 @@ flowchart TD
     G --> H{새 정보의 성격}
     H -->|추가 맥락 필요| B
     H -->|합의한 작성 취향| I[스킬의 resume-taste.md 갱신]
-    H -->|재사용할 개인 사실이나 결정| J[brain-add로 저장 후보와 미리보기 준비]
+    H -->|재사용할 개인 사실이나 결정| J[바꿀 문서의 변경 전후 준비]
     H -->|지원별 표현과 수치| K[지원 건의 기존 근거 기록에 반영]
     J --> L{사용자 검토}
-    L -->|승인| M[brain-add가 저장과 검색 검증]
+    L -->|승인| M[manage_candidate_context.ts put 으로 저장]
     L -->|보류| G
 ```
 
 조회한 출처의 시점보다 새로운 사용자 정정이 있으면 정정을 현재 문구에 반영하고 충돌 사실을 표시한다.
 연속 편집에서는 이미 확인한 맥락을 재사용하고, 제출 문장을 바꾸는 불확실성이 생겼을 때 다시 조회한다.
-brain 검색과 공개·비공개 분리, 저장 미리보기·승인·동시 수정 처리는 설치된 brain 스킬 계약을 따른다.
+저장할 때 `note` 에 확인한 날짜와 내용을 남긴다. 다른 저장과 겹치면 `409` 이고, 다시 조회해 변경 전후를 새로 보여 준다.
+계약은 [「후보자 맥락 문서」](#후보자-맥락-문서) 절이 소유한다.
 지원 작업본의 동시 수정은 기존 revision 비교 계약을 따른다.
 
 ## study-topic-recommender

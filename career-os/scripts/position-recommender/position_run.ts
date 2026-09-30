@@ -11,6 +11,8 @@ import { collectEvidenceForRun } from "./collect_company_evidence.ts";
 import { commitPositionAnalysis } from "./commit_position_analysis.ts";
 import { finalizeRecommendation } from "./finalize_position_recommendation.ts";
 import { createCareerBackendClient } from "./career-backend/client.ts";
+import { createCandidateContextClient } from "../candidate-context/client.ts";
+import { prepareCandidateContext } from "../candidate-context/position-policy.ts";
 import {
   runDirectoryPaths,
   validatePositionCleanupDirectory,
@@ -32,6 +34,8 @@ type AnalysisCommitClient = Pick<
 >;
 
 export type PositionRunOperations = {
+  /** 수집 전에 분석 기준 버전을 확인하고 후보자 맥락을 실행 디렉터리에 둔다. 맞지 않으면 던진다. */
+  prepareCandidateContext(paths: RunDirectoryPaths): Promise<{ candidateContextVersion: string }>;
   collect(paths: RunDirectoryPaths): Promise<number>;
   prepare(paths: RunDirectoryPaths): Promise<PreparationResult>;
   collectEvidence?(
@@ -111,6 +115,12 @@ function parsePositionRunArgs(argv: string[]): {
 }
 
 const defaultOperations: PositionRunOperations = {
+  async prepareCandidateContext(paths) {
+    return prepareCandidateContext(paths, {
+      positions: createCareerBackendClient(),
+      context: createCandidateContextClient(),
+    });
+  },
   async collect(paths) {
     return collectLivePostings({
       jsonOut: paths.postingCandidates,
@@ -212,7 +222,16 @@ export async function runPositionCommand(
     rmSync(paths.companyTierQueue, { force: true });
     rmSync(paths.companyEvidence, { force: true });
     rmSync(paths.analysisQueue, { force: true });
+    rmSync(paths.candidateContext, { force: true });
     writeLine(paths.directory);
+    // 기준 버전이 틀린 채 수집하면 틀린 기준의 분석이 저장되므로, 확인에 실패하면 수집하지 않는다.
+    try {
+      const context = await operations.prepareCandidateContext(paths);
+      writeLine(`후보자 맥락 기준 버전: ${context.candidateContextVersion}`);
+    } catch (error) {
+      writeLine(`수집 전 확인 실패: ${error instanceof Error ? error.message : String(error)}`);
+      return 1;
+    }
     const exitCode = await operations.collect(paths);
     if (exitCode !== 0) return exitCode;
     const result = await operations.prepare(paths);
