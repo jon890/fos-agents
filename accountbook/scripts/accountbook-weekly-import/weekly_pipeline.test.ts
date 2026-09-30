@@ -20,7 +20,7 @@ const tempDirs: string[] = [];
 const CONFIG: SubmitConfig = {
   apiBaseUrl: "https://accountbook.test/api/v1",
   familyUuid: "family-uuid",
-  refreshToken: "seed-refresh-token",
+  apiToken: `fab_${"x".repeat(43)}`,
   defaultCategoryName: "미분류",
   excludeFromBudget: false,
 };
@@ -99,6 +99,12 @@ function extracted(item: WeeklyWorkItem, overrides: Partial<ExtractedImport["day
 type FetchRecord = { url: string; method: string; body: unknown };
 
 function jsonResponse(body: unknown, status = 200): Response {
+  const envelope = body as { data?: { items?: unknown[]; totalPages?: number; totalElements?: number; currentPage?: number } };
+  if (Array.isArray(envelope.data?.items)) {
+    envelope.data.totalPages ??= 1;
+    envelope.data.totalElements ??= envelope.data.items.length;
+    envelope.data.currentPage ??= 0;
+  }
   return new Response(JSON.stringify(body), {
     status,
     headers: { "Content-Type": "application/json" },
@@ -107,15 +113,6 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 function commonResponse(url: string, init?: RequestInit): Response | null {
   const method = init?.method ?? "GET";
-  if (url.endsWith("/auth/refresh") && method === "POST") {
-    return jsonResponse({
-      data: {
-        accessToken: "access-token",
-        refreshToken: "rotated-refresh-token",
-        expiredAt: "2026-08-20T02:00:00",
-      },
-    });
-  }
   if (url.endsWith("/families/family-uuid/categories") && method === "GET") {
     return jsonResponse({ data: [{ uuid: "category-uuid", name: "미분류" }] });
   }

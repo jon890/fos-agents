@@ -63,7 +63,7 @@ validated JSON
 ```text
 approved JSON
   -> 묶음 잠금 획득
-  -> refresh token으로 access token 발급
+  -> 환경 변수의 연동 토큰을 Bearer 인증으로 사용
   -> 카테고리 조회와 UUID 해석
   -> 해당 날짜 기존 수입·지출 조회
   -> 동일 거래 후보가 있으면 needs_review
@@ -81,6 +81,39 @@ API 결과를 확정할 수 없으면 자동 재전송하지 않는다.
 화면에 거래 시각이 없으므로 API의 `LocalDateTime`에는 해당 날짜 정오를 넣는다.
 정오는 실제 거래 시각이 아니라 날짜가 timezone 변환으로 바뀌지 않게 하는 저장용 값이다.
 
+## 대화형 MCP 기록 관리
+
+```mermaid
+flowchart TD
+  A[대화 요청] --> B[가족 목록 조회]
+  B --> C{기본 가족 또는 가족 하나}
+  C -->|있음| D[가족 선택과 카테고리 조회]
+  C -->|여럿| E[사용자가 가족 선택]
+  E --> D
+  C -->|없음| F[가계부에서 가족 생성 안내 후 종료]
+  D --> G{요청 종류}
+  G -->|조회| H[기간과 개수로 수입·지출 조회]
+  H --> I[내역 또는 0건 표시]
+  G -->|등록| J[후보 표시와 등록 확인]
+  J --> K[등록 도구 한 번 호출]
+  G -->|수정·삭제| L[목록에서 대상 선택 후 상세 재조회]
+  L --> M[현재 기록과 변경 내용 표시]
+  M --> N{사용자 명시 확인}
+  N -->|확인| O[confirmed true로 변경 도구 호출]
+  N -->|미확인| P[요청 대기]
+  K --> Q{결과}
+  O --> Q
+  Q -->|성공| R[변경 결과 안내]
+  Q -->|401| S[토큰 재발급과 재등록 안내]
+  Q -->|403·404·4xx| T[권한·대상·입력 확인 후 종료]
+  Q -->|네트워크·5xx| U[자동 재전송 없이 내역 재조회]
+```
+
+동시 요청은 profile별 MCP 프로세스가 처리하며 토큰과 기본 가족을 공유하지 않는다.
+MCP 변경 요청에는 자동 재시도가 없다. 별도 요청이 같은 기록을 바꾸면 상세 조회와 변경 사이에 달라질 수 있다.
+스킬은 사용자 확인 직전에 현재 기록을 다시 조회하며, 서버는 별도 동시 수정 잠금이나 멱등 키를 만들지 않는다.
+이미지 처리 잠금과 상태도 profile별 비공개 루트 아래에서만 사용한다.
+
 ## 빈 상태와 충돌
 
 - 선택된 완전한 날짜가 없으면 `no_complete_day_selected`로 종료한다.
@@ -92,9 +125,10 @@ API 결과를 확정할 수 없으면 자동 재전송하지 않는다.
 ## 주간 자동 실행
 
 외부 예약 실행기는 매주 한 번 다음 의도로 에이전트 스킬을 호출한다.
+`<PRIVATE_ROOT>`는 `resolve_private_root.ts`가 현재 profile 설정에서 반환한 절대 경로다.
 
 ```text
-/accountbook-weekly-import --inbox accountbook/private/inbox/new --mode auto-safe
+/accountbook-weekly-import --inbox <PRIVATE_ROOT>/inbox/new --mode auto-safe
 ```
 
 저장소는 특정 scheduler에 의존하지 않는다.

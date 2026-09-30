@@ -9,12 +9,27 @@ description: 주간 입력함의 토스 소비 화면 PNG와 보조 정보 파�
 이 스킬은 이미지 추출과 검증 결과 목록 생성까지만 조정한다.
 날짜 충돌, 정책 평가, 등록, 처리 완료와 잠금 해제는 `run_weekly_import.ts`가 맡는다.
 
+## 사용자별 비공개 경로
+
+먼저 다음 명령으로 현재 profile의 비공개 루트를 확인한다.
+반환한 절대 경로를 모든 `<PRIVATE_ROOT>`에 넣는다.
+현재 profile이 지정한 환경 파일을 `<PROFILE_ENV>`에 넣으며 다른 사용자의 환경 파일은 읽지 않는다.
+환경 파일 없이 환경 변수를 전달받은 실행에서는 `--env`를 생략한다.
+
+```bash
+<TS_RUNTIME> accountbook/scripts/accountbook-screenshot-import/resolve_private_root.ts \
+  --env <PROFILE_ENV>
+```
+
+`ACCOUNTBOOK_PRIVATE_DIR`가 비어 있으면 기존 `accountbook/private`를 사용한다.
+공용 마운트에서는 실행 환경이 profile마다 다른 경로를 지정해야 한다.
+
 ## 입력과 실행 경계
 
 기본 호출은 다음 형태다.
 
 ```text
-/accountbook-weekly-import --inbox accountbook/private/inbox/new --mode auto-safe
+/accountbook-weekly-import --inbox <PRIVATE_ROOT>/inbox/new --mode auto-safe
 ```
 
 작업 전에 `accountbook/AGENTS.md`와 `accountbook/docs/data-schema.md`를 읽는다.
@@ -27,14 +42,14 @@ description: 주간 입력함의 토스 소비 화면 PNG와 보조 정보 파�
    재시작 처리라면 기존 실행이 남긴 같은 `runId`만 재사용한다.
    같은 `runId`로 재개할 때도 `attemptId`는 새로 만든다.
 2. `scan_inbox.ts`로 작업 목록을 만든다.
-   작업 목록 파일은 탐색 스크립트가 보장하는 `accountbook/private/state/` 아래에 시도별 고유 이름으로 둔다.
+   작업 목록 파일은 탐색 스크립트가 보장하는 `<PRIVATE_ROOT>/state/` 아래에 시도별 고유 이름으로 둔다.
    기존 작업 목록을 덮어쓰지 않는다.
 
 ```bash
 <TS_RUNTIME> accountbook/scripts/accountbook-weekly-import/scan_inbox.ts \
-  --private-root accountbook/private \
+  --private-root <PRIVATE_ROOT> \
   --run-id <RUN_ID> \
-  --output accountbook/private/state/<RUN_ID>-<ATTEMPT_ID>-queue.json
+  --output <PRIVATE_ROOT>/state/<RUN_ID>-<ATTEMPT_ID>-queue.json
 ```
 
 작업 목록이 비어 있으면 성공으로 종료하고 `finally`에서 잠금 해제를 시도한다.
@@ -46,8 +61,8 @@ description: 주간 입력함의 토스 소비 화면 PNG와 보조 정보 파�
 5. 각 항목의 `<RUN_DIR>/validated.json`이 만들어지고 비공개 경로 권한이 적용됐는지 확인한다.
 
 6. 모든 작업 항목의 검증 결과를 모아 실행 계획을 만든다.
-   실행 계획은 `accountbook/private/state/<RUN_ID>-<ATTEMPT_ID>-plan.json`에 파일 권한 `0600`으로 저장한다.
-   `queuePath`와 각 `validatedPath`는 `accountbook/private` 아래의 절대 경로여야 한다.
+   실행 계획은 `<PRIVATE_ROOT>/state/<RUN_ID>-<ATTEMPT_ID>-plan.json`에 파일 권한 `0600`으로 저장한다.
+   `queuePath`와 각 `validatedPath`는 `<PRIVATE_ROOT>` 아래의 절대 경로여야 한다.
    보조 정보 파일 경로는 실행 계획에 복제하지 말고 작업 목록에서 가져온다.
    이미지 인식 또는 검증 단계에서 확정 실패한 항목은 안정 코드로 `failed` 처리한 뒤 실행 계획에서 제외할 수 있다.
    아직 `processing`인 항목은 실행 계획에서 누락하지 않는다.
@@ -83,9 +98,9 @@ description: 주간 입력함의 토스 소비 화면 PNG와 보조 정보 파�
 
 ```bash
 <TS_RUNTIME> accountbook/scripts/accountbook-weekly-import/run_weekly_import.ts \
-  --private-root accountbook/private \
-  --plan accountbook/private/state/<RUN_ID>-<ATTEMPT_ID>-plan.json \
-  --env accountbook/.env
+  --private-root <PRIVATE_ROOT> \
+  --plan <PRIVATE_ROOT>/state/<RUN_ID>-<ATTEMPT_ID>-plan.json \
+  --env <PROFILE_ENV>
 ```
 
 - 등록 성공: `submitted`

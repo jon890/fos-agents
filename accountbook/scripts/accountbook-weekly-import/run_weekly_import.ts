@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { config as loadEnv } from "dotenv";
+import { AccountbookError } from "../../plugin/src/client.ts";
 import { z } from "zod";
 import {
   validatedImportSchema,
@@ -95,7 +96,7 @@ function findConflictingDates(items: ReadyItem[]): Set<string> {
 
 function submitClassification(error: unknown): { status: "failed" | "needs_review" | "processing"; code: WeeklyLastErrorCode | null } {
   const message = error instanceof Error ? error.message : String(error);
-  if (/^ACCOUNTBOOK_API_4\d\d$/.test(message)) return { status: "failed", code: "ACCOUNTBOOK_API_4XX" };
+  if ((error instanceof AccountbookError && error.status && error.status >= 400 && error.status < 500) || /^ACCOUNTBOOK_API_4\d\d$/.test(message)) return { status: "failed", code: "ACCOUNTBOOK_API_4XX" };
   if (message.startsWith("EXISTING_TRANSACTION_REQUIRES_REVIEW")) {
     return { status: "needs_review", code: "EXISTING_TRANSACTION_REQUIRES_REVIEW" };
   }
@@ -363,7 +364,7 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
       config: {
         apiBaseUrl: requiredEnv("ACCOUNTBOOK_API_BASE_URL"),
         familyUuid: requiredEnv("ACCOUNTBOOK_FAMILY_UUID"),
-        refreshToken: process.env.ACCOUNTBOOK_REFRESH_TOKEN?.trim(),
+        apiToken: requiredEnv("ACCOUNTBOOK_API_TOKEN"),
         defaultCategoryName: process.env.ACCOUNTBOOK_DEFAULT_CATEGORY_NAME?.trim() || "미분류",
         excludeFromBudget: parseBoolean(process.env.ACCOUNTBOOK_EXCLUDE_FROM_BUDGET),
       },

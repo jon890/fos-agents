@@ -7,6 +7,21 @@ description: 토스 소비 내역 스크린샷을 읽어 날짜별 수입·지�
 
 토스 화면에서 거래 후보를 추출하고 검증한 뒤, 승인된 후보만 accountbook에 등록한다.
 
+## 사용자별 비공개 경로
+
+먼저 다음 명령으로 현재 profile의 비공개 루트를 확인한다.
+반환한 절대 경로를 모든 `<PRIVATE_ROOT>`에 넣는다.
+현재 profile이 지정한 환경 파일을 `<PROFILE_ENV>`에 넣으며 다른 사용자의 환경 파일은 읽지 않는다.
+환경 파일 없이 환경 변수를 전달받은 실행에서는 `--env`를 생략한다.
+
+```bash
+<TS_RUNTIME> accountbook/scripts/accountbook-screenshot-import/resolve_private_root.ts \
+  --env <PROFILE_ENV>
+```
+
+`ACCOUNTBOOK_PRIVATE_DIR`가 비어 있으면 기존 `accountbook/private`를 사용한다.
+공용 마운트에서는 실행 환경이 profile마다 다른 경로를 지정해야 한다.
+
 ## 입력과 사전 확인
 
 1. `accountbook/AGENTS.md`와 `accountbook/docs/data-schema.md`를 읽는다.
@@ -28,7 +43,7 @@ description: 토스 소비 내역 스크린샷을 읽어 날짜별 수입·지�
 [토스 화면 추출 계약](references/extraction-contract.md)을 읽고 이미지를 검사한다.
 화면 전체에서 날짜와 일별 합계를 먼저 읽고, 거래 영역을 다시 확인해 각 행을 추출한다.
 
-`source-image.json`의 SHA-256 앞 16자를 사용해 `accountbook/private/imports/toss-<hash>/`를 실행 경로로 삼는다.
+`source-image.json`의 SHA-256 앞 16자를 사용해 `<PRIVATE_ROOT>/imports/toss-<hash>/`를 실행 경로로 삼는다.
 절대 이미지 경로를 JSON에 저장하지 않는다.
 
 실행 경로를 만들기 전과 비공개 JSON을 쓴 직후 다음 스크립트를 실행한다.
@@ -36,7 +51,7 @@ description: 토스 소비 내역 스크린샷을 읽어 날짜별 수입·지�
 
 ```bash
 <TS_RUNTIME> accountbook/scripts/accountbook-screenshot-import/secure_private_run.ts \
-  --private-root accountbook/private \
+  --private-root <PRIVATE_ROOT> \
   --batch-id <BATCH_ID>
 ```
 
@@ -80,8 +95,8 @@ description: 토스 소비 내역 스크린샷을 읽어 날짜별 수입·지�
 
 <TS_RUNTIME> accountbook/scripts/accountbook-screenshot-import/submit_import.ts \
   --input <RUN_DIR>/approved.json \
-  --state-dir accountbook/private/state \
-  --env accountbook/.env \
+  --state-dir <PRIVATE_ROOT>/state \
+  --env <PROFILE_ENV> \
   --confirm <BATCH_ID>
 ```
 
@@ -93,5 +108,5 @@ description: 토스 소비 내역 스크린샷을 읽어 날짜별 수입·지�
 - 선택한 날짜의 상세 합계와 화면 일별 합계가 일치한다.
 - 사용자가 확인한 묶음 ID와 승인 파일의 `batchId`가 같다.
 - API가 반환한 원격 UUID가 비공개 전송 상태에 기록됐다.
-- 스킬이 새로 만든 이미지 사본과 거래 후보는 `accountbook/private/` 밖에 남지 않는다.
-- `accountbook/private/` 하위 디렉터리는 `0700`, 파일은 `0600`이다.
+- 스킬이 새로 만든 이미지 사본과 거래 후보는 `<PRIVATE_ROOT>/` 밖에 남지 않는다.
+- `<PRIVATE_ROOT>/` 하위 디렉터리는 `0700`, 파일은 `0600`이다.
