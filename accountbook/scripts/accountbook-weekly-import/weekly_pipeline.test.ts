@@ -346,7 +346,7 @@ describe("weekly dry pipeline", () => {
     ]);
 
     expect(result.exitCode).not.toBe(0);
-    expect(new TextDecoder().decode(result.stderr)).toContain("MISSING_ENV:ACCOUNTBOOK_API_BASE_URL");
+    expect(new TextDecoder().decode(result.stderr)).toBe("WEEKLY_IMPORT_RUN_FAILED:MISSING_ENV\n");
     expect(existsSync(join(root, "state", "locks", "weekly-import.lock"))).toBe(false);
   });
 

@@ -3,6 +3,7 @@ import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { config as loadEnv } from "dotenv";
 import { AccountbookError } from "../../plugin/src/client.ts";
+import { safeSubmissionErrorCode } from "../accountbook-screenshot-import/submit_import.ts";
 import { z } from "zod";
 import {
   validatedImportSchema,
@@ -380,8 +381,10 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
 const entrypoint = process.argv[1] ? pathToFileURL(process.argv[1]).href : "";
 if (entrypoint === import.meta.url) {
   main().catch((error) => {
-    const message = error instanceof Error ? error.message : String(error);
-    process.stderr.write(`WEEKLY_IMPORT_RUN_FAILED:${message.replace(/[\r\n]+/g, " ")}\n`);
+    const code = error instanceof AccountbookError
+      ? error.code
+      : safeSubmissionErrorCode(error);
+    process.stderr.write(`WEEKLY_IMPORT_RUN_FAILED:${code}\n`);
     process.exitCode = 2;
   });
 }

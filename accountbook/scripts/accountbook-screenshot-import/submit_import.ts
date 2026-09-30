@@ -17,6 +17,50 @@ import { AccountbookClient, AccountbookError, namedItemsSchema, recordIdentitySc
 
 type FetchLike = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
+const SAFE_ERROR_CODES = new Set([
+  "ACCOUNTBOOK_BAD_REQUEST",
+  "ACCOUNTBOOK_CONFIG",
+  "ACCOUNTBOOK_FORBIDDEN",
+  "ACCOUNTBOOK_INVALID_RESPONSE",
+  "ACCOUNTBOOK_NETWORK",
+  "ACCOUNTBOOK_NOT_FOUND",
+  "ACCOUNTBOOK_UNAVAILABLE",
+  "ACCOUNTBOOK_UNAUTHORIZED",
+  "BATCH_CONFIRMATION_MISMATCH",
+  "CATEGORY_NOT_FOUND",
+  "DESCRIPTION_TOO_LONG",
+  "EXISTING_TRANSACTION_REQUIRES_REVIEW",
+  "IMPORT_LOCKED",
+  "IMPORT_NOT_APPROVED",
+  "IMPORT_NOT_SUBMITTABLE",
+  "INVALID_APPROVAL_SOURCE_POLICY_COMBINATION",
+  "INVALID_BOOLEAN",
+  "INVALID_SUBMISSION_STATE",
+  "MISSING_ARGUMENT",
+  "MISSING_ENV",
+  "UNKNOWN_ARGUMENT",
+  "RUN_PLAN_ITEM_NOT_PROCESSING",
+  "RUN_PLAN_DUPLICATE_HASH",
+  "RUN_PLAN_NOT_FOUND",
+  "RUN_PLAN_PATH_OUTSIDE_PRIVATE_ROOT",
+  "RUN_PLAN_QUEUE_HASH_MISMATCH",
+  "RUN_PLAN_QUEUE_RUN_ID_MISMATCH",
+  "RUN_PLAN_VALIDATED_SHA_MISMATCH",
+  "RUN_QUEUE_ITEM_NOT_PROCESSING",
+  "RUN_QUEUE_DUPLICATE_HASH",
+  "RUN_QUEUE_STATE_HASH_MISMATCH",
+  "WEEKLY_IMPORT_LOCK_MISSING",
+  "WEEKLY_IMPORT_LOCK_OWNER_MISMATCH",
+  "WEEKLY_POLICY_APPROVAL_REQUIRED",
+]);
+
+export function safeSubmissionErrorCode(error: unknown): string {
+  if (error instanceof AccountbookError) return error.code;
+  if (!(error instanceof Error)) return "SUBMISSION_ERROR";
+  const code = error.message.split(":", 1)[0];
+  return SAFE_ERROR_CODES.has(code) ? code : "SUBMISSION_ERROR";
+}
+
 export type SubmitConfig = {
   apiBaseUrl: string;
   familyUuid: string;
@@ -404,8 +448,7 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
 const entrypoint = process.argv[1] ? pathToFileURL(process.argv[1]).href : "";
 if (entrypoint === import.meta.url) {
   main().catch((error) => {
-    const message = error instanceof AccountbookError ? error.code : "SUBMISSION_ERROR";
-    process.stderr.write(`SUBMISSION_FAILED:${message.replace(/[\r\n]+/g, " ")}\n`);
+    process.stderr.write(`SUBMISSION_FAILED:${safeSubmissionErrorCode(error)}\n`);
     process.exitCode = 2;
   });
 }

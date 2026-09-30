@@ -4,9 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { approveImport } from "./approve_import.ts";
 import type { ExtractedImport } from "./contracts.ts";
-import { submitImport, type SubmitConfig } from "./submit_import.ts";
+import { safeSubmissionErrorCode, submitImport, type SubmitConfig } from "./submit_import.ts";
 import { validateImport } from "./validate_candidates.ts";
 import { evaluateWeeklySafePolicy } from "../accountbook-weekly-import/evaluate_policy.ts";
+import { AccountbookError } from "../../plugin/src/client.ts";
 
 const tempDirs: string[] = [];
 const CONFIG: SubmitConfig = {
@@ -19,6 +20,27 @@ const CONFIG: SubmitConfig = {
 
 afterEach(() => {
   for (const path of tempDirs.splice(0)) rmSync(path, { recursive: true, force: true });
+});
+
+describe("safe submission error codes", () => {
+  test("AccountbookError retains its typed code", () => {
+    expect(safeSubmissionErrorCode(new AccountbookError("ACCOUNTBOOK_UNAUTHORIZED", 401)))
+      .toBe("ACCOUNTBOOK_UNAUTHORIZED");
+  });
+  test("known stable error codes are preserved without their details", () => {
+    expect(safeSubmissionErrorCode(new Error("MISSING_ENV:ACCOUNTBOOK_API_TOKEN"))).toBe("MISSING_ENV");
+    expect(safeSubmissionErrorCode(new Error("EXISTING_TRANSACTION_REQUIRES_REVIEW:private-hash")))
+      .toBe("EXISTING_TRANSACTION_REQUIRES_REVIEW");
+    expect(safeSubmissionErrorCode(new Error("IMPORT_LOCKED"))).toBe("IMPORT_LOCKED");
+    expect(safeSubmissionErrorCode(new Error("BATCH_CONFIRMATION_MISMATCH")))
+      .toBe("BATCH_CONFIRMATION_MISMATCH");
+  });
+
+  test("unknown errors do not expose their message", () => {
+    expect(safeSubmissionErrorCode(new Error("private transaction description"))).toBe("SUBMISSION_ERROR");
+    expect(safeSubmissionErrorCode(new Error("PRIVATE_VALUE:merchant details"))).toBe("SUBMISSION_ERROR");
+    expect(safeSubmissionErrorCode("private response body")).toBe("SUBMISSION_ERROR");
+  });
 });
 
 function stateDir(): string {
