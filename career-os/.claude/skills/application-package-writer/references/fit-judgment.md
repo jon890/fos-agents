@@ -50,7 +50,7 @@
 | 순서  | 자료                                | 확인할 것                                           |
 | --- | --------------------------------- | ----------------------------------------------- |
 | 1   | `sources/fos-study/task/`         | 회사와 프로젝트 단위로 실제 한 일과 그때의 기술 판단                  |
-| 2   | `manage_candidate_context.ts get` | `career-status` 와 `application-state` 문서의 현재 경력, 역할 선호와 경험 경계, 지원 이력 |
+| 2   | `manage_candidate_context.ts get` | `career-status` 의 현재 경력과 경험 경계, `position-preferences` 의 역할 선호, `application-state` 의 지원 이력 |
 | 3   | `evidence/candidate-interview.md` | 파일이 있으면 기존 답변과 정정. 정정 전 문구를 근거로 재사용하지 않는다       |
 | 4   | 로컬 프로젝트                           | 앞의 셋으로 판정이 갈리지 않을 때만. 코드, 테스트, Git 이력과 기술 결정 문서 |
 

@@ -9,7 +9,10 @@
 
 ```bash
 bun career-os/scripts/candidate-context/manage_candidate_context.ts get --key career-status
+bun career-os/scripts/candidate-context/manage_candidate_context.ts get --key position-preferences
 ```
+
+현재 경력과 경험 경계는 `career-status`, 역할 선호는 `position-preferences` 에 있다.
 
 조회 대상은 현재 경력, 역할 선호, 경험 경계와 제출 문장의 사실 범위를 판단하는 데 필요한 개인 맥락이다.
 회사 지식, 사내 시스템 지식과 Dooray 업무 지식은 후보자 맥락 문서가 아니라 `nbrain` 대상이므로 이 흐름에서 조회하지 않는다.

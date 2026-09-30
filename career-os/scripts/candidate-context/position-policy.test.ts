@@ -123,6 +123,22 @@ describe("syncPositionPolicy", () => {
     expect(positions.stored()).toEqual(policy("position-preferences:v3"));
   });
 
+  test("첫 PUT 과 확인 사이에 다른 칸이 바뀌면 재시도는 바뀐 값을 유지한다", async () => {
+    const positions = fakePositions(policy("position-preferences:v2"), { apply: (call) => call > 0 });
+    const read = positions.getAnalysisPolicy.bind(positions);
+    let reads = 0;
+    positions.getAnalysisPolicy = async () => {
+      reads += 1;
+      // 첫 PUT 뒤 확인 읽기 직전에 다른 명령이 staleAfterDays 를 바꾼 상황이다.
+      return reads === 2 ? policy("position-preferences:v2", { staleAfterDays: 14 }) : read();
+    };
+
+    await syncPositionPolicy({ positions, version: 3, retryNonce: () => "fixed-nonce" });
+
+    expect(positions.sent[1]!.body).toEqual(policy("position-preferences:v3", { staleAfterDays: 14 }));
+    expect(positions.sent[1]!.idempotencyKey).not.toBe(`${positions.sent[0]!.idempotencyKey}:fixed-nonce`);
+  });
+
   test("재시도까지 적용되지 않으면 PUT 을 두 번만 보내고 성공으로 보고하지 않는다", async () => {
     const positions = fakePositions(policy("position-preferences:v2"), { apply: () => false });
 

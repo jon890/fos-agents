@@ -43,6 +43,7 @@ async function readPolicy(positions: PolicyReader) {
  * 재생된 응답은 DB 를 바꾸지 않았을 수 있어, 보낸 뒤 다시 읽어 목표 값인지 확인한다.
  * 정책이 목표로 바뀐 뒤 누가 정확히 이전 값으로 되돌리면 같은 키가 다시 만들어져 저장된 응답이 재생된다.
  * 그래서 다시 읽은 값이 목표와 다르면 키 끝에 무작위 값을 붙여 한 번만 다시 보낸다.
+ * 재시도 본문과 키는 다시 읽은 정책으로 만든다. 처음 읽은 정책을 보내면 그 사이 바뀐 다른 칸이 옛 값으로 돌아간다.
  */
 export async function syncPositionPolicy(input: {
   positions: PolicyClient;
@@ -60,7 +61,9 @@ export async function syncPositionPolicy(input: {
   let confirmed = await readPolicy(input.positions);
   if (confirmed.candidateContextVersion !== target) {
     const nonce = (input.retryNonce ?? randomUUID)();
-    await input.positions.configureAnalysisPolicy(body, `${key}:${nonce}`);
+    const retryBody = { ...confirmed, candidateContextVersion: target };
+    const retryKey = hashKey("analysis-policy-sync", { policy: confirmed, candidateContextVersion: target });
+    await input.positions.configureAnalysisPolicy(retryBody, `${retryKey}:${nonce}`);
     confirmed = await readPolicy(input.positions);
   }
   if (confirmed.candidateContextVersion !== target) {

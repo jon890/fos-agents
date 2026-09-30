@@ -28,7 +28,7 @@
 면접 연습 기록과 개인 질문은 `CAREER_STORE` 로 고른 저장소가 소유하고, 운영에서는 커리어 Backend 다.
 회사명, 공고, 면접 일정과 학습 우선순위처럼 자주 바뀌는 상태를 `AGENTS.md`에 쓰지 않는다.
 
-- 현재 경력, 역할 선호와 경험 경계는 후보자 맥락 문서 `career-status` 에서 확인한다.
+- 현재 경력과 경험 경계는 후보자 맥락 문서 `career-status`, 역할 선호와 이직 우선순위는 `position-preferences` 에서 확인한다.
 - 공개 학습 자료는 `sources/fos-study/`에서 파생한다.
 - 공개 질문 목록은 `public/question-bank/`에서 파생한다.
 - `config/`에는 사람이 고른 정책, pin, override, 제외 조건만 둔다.
@@ -48,7 +48,8 @@
 | 병역, 보훈, 장애 여부             | `brain-search` 의 `career-application-profile`            |
 | 학력, 자격증, 어학               | `brain-search` 의 `career-application-profile`            |
 | 회사별 부서명과 고용 형태, 정확한 재직 기간 | `brain-search` 의 `career-application-profile`            |
-| 역할 선호와 경험 경계              | `manage_candidate_context.ts get --key career-status`    |
+| 현재 경력과 경험 경계              | `manage_candidate_context.ts get --key career-status`    |
+| 역할 선호와 이직 우선순위           | `manage_candidate_context.ts get --key position-preferences` |
 | 지원 이력과 현재 대상              | 후보자 맥락 문서 `application-state`                            |
 | 회사별 재지원 간격                | `position_exclusions`                                    |
 
