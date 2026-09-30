@@ -65,7 +65,6 @@ model study_material_sources {
 
 model study_recommendation_control {
   singleton_id Int @id @db.UnsignedTinyInt
-  candidate_context_version String @db.VarChar(191)
   history_version Int @db.UnsignedInt
   updated_at DateTime @default(now())
 }
@@ -187,6 +186,27 @@ model interview_personal_questions {
   updated_at  DateTime @default(now())
 
   @@index([drill_type, enabled], map: "idx_interview_personal_questions_type")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model candidate_context_documents {
+  document_key String @id @db.VarChar(50)
+  body         String @db.MediumText
+  version      Int    @db.UnsignedInt
+  note         String @db.VarChar(500)
+  updated_at   DateTime
+  candidate_context_document_revisions candidate_context_document_revisions[]
+}
+
+model candidate_context_document_revisions {
+  document_key String @db.VarChar(50)
+  version      Int    @db.UnsignedInt
+  body         String @db.MediumText
+  note         String @db.VarChar(500)
+  created_at   DateTime
+  candidate_context_documents candidate_context_documents @relation(fields: [document_key], references: [document_key], onDelete: Restrict, onUpdate: Restrict, map: "fk_candidate_context_revision_document")
+
+  @@id([document_key, version])
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.

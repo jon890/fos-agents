@@ -1,7 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import { Prisma } from "../generated/prisma/client.js";
 
+import { CandidateContextRepository } from "../candidate-context/repository/candidate-context.repository.js";
+import { CandidateContextService } from "../candidate-context/candidate-context.service.js";
+import type { CandidateContextDocument } from "../candidate-context/schema.js";
 import { ApiError } from "../common/api-error.js";
+import type { PrismaService } from "../prisma/prisma.service.js";
 import { todaySeoulIsoDate } from "../positions/seoul-date.js";
 import { StudyRepository } from "./repository/study.repository.js";
 import type {
@@ -12,13 +16,28 @@ import type {
   StudyIngestionResult,
   StudyPublication,
   StudyPublicationResult,
-  StudyRecommendationControl,
   StudyRecommendationRun,
   StudyRecommendationRunResult,
   StudySource,
   StudySourcePut,
   StudySourceUpsertResponse,
 } from "./schema.js";
+
+/** 공부 추천의 기준 버전은 learning-interests 문서의 version 에서 계산한다. ADR-131 을 따른다. */
+const learningInterestsKey = "learning-interests";
+
+function learningInterestsContext(
+  document: CandidateContextDocument | undefined,
+): Pick<StudyCandidatePage, "candidateContextVersion" | "learningInterests"> {
+  // 문서가 없을 때 빈 관심사로 계속하면 과거 기준의 판정이 조용히 이어진다. 저장할 때까지 멈춘다.
+  if (!document) {
+    throw new ApiError(409, "CANDIDATE_CONTEXT_MISSING", "learning-interests 후보자 맥락 문서가 없습니다.");
+  }
+  return {
+    candidateContextVersion: `learning-interests:v${document.version}`,
+    learningInterests: { version: document.version, body: document.body },
+  };
+}
 
 function isDuplicateSourceKey(error: unknown): boolean {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -30,7 +49,15 @@ function isDuplicateSourceKey(error: unknown): boolean {
 
 @Injectable()
 export class StudyService {
-  constructor(private readonly repository: StudyRepository) {}
+  constructor(
+    private readonly repository: StudyRepository,
+    private readonly candidateContext: CandidateContextService,
+    private readonly candidateContextRepository: CandidateContextRepository,
+  ) {}
+
+  private async learningInterestsContext(client: PrismaService | Prisma.TransactionClient) {
+    return learningInterestsContext(await this.candidateContext.readDocument(learningInterestsKey, client));
+  }
 
   async listSources(): Promise<{ sources: StudySource[] }> {
     return { sources: await this.repository.listSources(this.repository.reader()) };
@@ -88,8 +115,10 @@ export class StudyService {
   async getCandidates(query: StudyCandidatesQuery): Promise<StudyCandidatePage> {
     const control = await this.repository.getRecommendationControl(this.repository.reader());
     if (!control) throw new ApiError(500, "INTERNAL_ERROR", "추천 제어 행을 찾을 수 없습니다.");
+    const context = await this.learningInterestsContext(this.repository.reader());
     const rows = await this.repository.listCandidates({
       ...query,
+      candidateContextVersion: context.candidateContextVersion,
       today: todaySeoulIsoDate(new Date()),
     }, this.repository.reader());
     const candidates = rows.slice(0, query.limit);
@@ -113,7 +142,8 @@ export class StudyService {
         ? this.repository.encodePageCursor(candidates.at(-1)!)
         : null,
       historyVersion: control.historyVersion,
-      candidateContextVersion: control.candidateContextVersion,
+      candidateContextVersion: context.candidateContextVersion,
+      learningInterests: context.learningInterests,
     };
   }
 
@@ -121,7 +151,12 @@ export class StudyService {
     return this.repository.transaction(async (tx) => {
       const control = await this.repository.lockRecommendationControl(tx);
       if (!control) throw new ApiError(500, "INTERNAL_ERROR", "추천 제어 행을 찾을 수 없습니다.");
-      if (control.candidateContextVersion !== value.candidateContextVersion) {
+      // control 행 다음에 문서를 공유 잠금으로 읽는다. 저장이 끝날 때까지 문서 PUT 의 `FOR UPDATE` 가 기다리므로
+      // 비교한 기준 버전이 commit 전에 바뀌지 않는다.
+      const context = learningInterestsContext(
+        await this.candidateContextRepository.lockDocumentForShare(learningInterestsKey, tx),
+      );
+      if (context.candidateContextVersion !== value.candidateContextVersion) {
         throw new ApiError(409, "VERSION_CONFLICT", "후보 기준 버전이 현재 값과 다릅니다.");
       }
       if (await this.repository.recommendationRunExists(value.reportId, tx)) {
@@ -155,15 +190,6 @@ export class StudyService {
         throw new ApiError(404, "NOT_FOUND", "추천 실행을 찾을 수 없습니다.");
       }
       return { publicationId: await this.repository.insertPublication(value, tx) };
-    });
-  }
-
-  async updateRecommendationControl(value: StudyRecommendationControl): Promise<StudyRecommendationControl> {
-    return this.repository.transaction(async (tx) => {
-      const control = await this.repository.lockRecommendationControl(tx);
-      if (!control) throw new ApiError(500, "INTERNAL_ERROR", "추천 제어 행을 찾을 수 없습니다.");
-      await this.repository.updateCandidateContextVersion(value.candidateContextVersion, tx);
-      return value;
     });
   }
 

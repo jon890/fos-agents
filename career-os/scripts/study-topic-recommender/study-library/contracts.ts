@@ -80,6 +80,7 @@ export const studyLibraryCandidatePageSchema = z.object({
   nextCursor: z.string().nullable(),
   historyVersion: z.number().int().nonnegative(),
   candidateContextVersion: nonEmptyString,
+  learningInterests: z.object({ version: z.number().int().positive(), body: nonEmptyString }),
 });
 
 export const studyLibraryRecommendationRunResultSchema = z.object({
@@ -87,7 +88,6 @@ export const studyLibraryRecommendationRunResultSchema = z.object({
   historyVersion: z.number().int().nonnegative(),
 });
 export const studyLibraryRecommendationStatusSchema = z.object({ reportId: nonEmptyString, exists: z.boolean() });
-export const studyLibraryRecommendationControlSchema = z.object({ candidateContextVersion: nonEmptyString });
 
 export const studyLibraryPublicationResultSchema = z.object({
   publicationId: nonEmptyString,

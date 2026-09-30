@@ -20,6 +20,8 @@ import {
 
 /** `schema_migrations` 와 `_prisma_migrations` 를 뺀 운영 table 전부. 자식 table 이 앞이다. */
 const DATA_TABLES = [
+  "candidate_context_document_revisions",
+  "candidate_context_documents",
   "interview_attempts",
   "interview_topic_progress",
   "interview_personal_questions",
@@ -123,6 +125,11 @@ export type E2eHarness = {
   expectMatchesLegacyError(id: string, reply: Reply): void;
   expectMatchesLegacyDatabase(id: string): Promise<void>;
   clearAll(): Promise<void>;
+  /**
+   * `learning-interests` 후보자 맥락 문서를 현재 version 위에 저장하고 새 version 을 돌려준다.
+   * 공부 추천의 기준 버전이 이 문서의 version 에서 나오므로(ADR-131) 추천 검사가 선행 상태로 쓴다.
+   */
+  putLearningInterests(body: string): Promise<number>;
   close(): Promise<void>;
 };
 
@@ -243,8 +250,27 @@ export async function startE2eHarness(): Promise<E2eHarness> {
         await prisma.$executeRawUnsafe(`DELETE FROM ${table}`);
       }
       await prisma.$executeRawUnsafe(
-        "UPDATE study_recommendation_control SET candidate_context_version = 'initial', history_version = 0, updated_at = NOW(3) WHERE singleton_id = 1",
+        "UPDATE study_recommendation_control SET history_version = 0, updated_at = NOW(3) WHERE singleton_id = 1",
       );
+    },
+    async putLearningInterests(body) {
+      const path = "/api/candidate-context/v1/documents/learning-interests";
+      const current = await send("GET", path);
+      if (current.status !== 200 && current.status !== 404) {
+        throw new Error(`learning-interests 문서를 읽지 못했다: ${current.status} ${JSON.stringify(current.json)}`);
+      }
+      const expectedVersion = current.status === 404
+        ? 0
+        : (current.json as { document: { version: number } }).document.version;
+      // 같은 Idempotency-Key 에 다른 본문을 보내면 IDEMPOTENCY_CONFLICT 이므로 호출마다 새 키를 쓴다.
+      const saved = await send("PUT", path, {
+        body: { body, note: "e2e 선행 상태", expectedVersion },
+        idempotencyKey: `e2e-learning-interests-${crypto.randomUUID()}`,
+      });
+      if (saved.status !== 200) {
+        throw new Error(`learning-interests 문서를 저장하지 못했다: ${saved.status} ${JSON.stringify(saved.json)}`);
+      }
+      return (saved.json as { document: { version: number } }).document.version;
     },
     async close() {
       await app.close();

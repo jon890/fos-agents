@@ -87,7 +87,8 @@ career-os/
 | `cache/` | 도구가 다시 만들 수 있다 | 안 함 |
 | 시스템 임시 디렉터리 | 게시용 HTML 과 실행별 중간 데이터. 검증 뒤 지운다 | 안 함 |
 
-현재 경력과 역할 선호와 경험 경계는 이 저장소에 두지 않는다. private brain 이 소유한다.
+개인 맥락은 이 저장소에 두지 않는다.
+학습 관심사는 커리어 Backend 의 후보자 맥락 문서가, 현재 경력과 역할 선호와 경험 경계는 private brain 이 소유한다.
 
 ### 스킬과 실행 코드
 
@@ -165,6 +166,7 @@ MySQL container가 자체 서명 인증서를 사용하므로 서버 인증서�
 배포 설정, database와 계정 생성, network와 backup은 홈서버 인프라 저장소가 소유한다.
 공부 소스, 수집 자료, 후보, 추천과 제외 판정은 `/api/study/v1` 에서 읽고 쓴다.
 면접 연습의 주제별 복습 상태, 연습 기록과 개인 질문은 `/api/interview/v1` 에서 읽고 쓴다.
+스킬이 판단에 쓰는 개인 맥락 문서는 `/api/candidate-context/v1` 에서 읽고 쓴다.
 
 
 | 경로                                                     | 책임                                                    |
@@ -177,6 +179,7 @@ MySQL container가 자체 서명 인증서를 사용하므로 서버 인증서�
 | `services/career-backend/src/positions/repository/`| Prisma 질의. 도메인이 요구하는 단위로만 읽고 쓴다                       |
 | `services/career-backend/src/study/`               | 공부 소스, 수집 자료, cursor, 후보와 추천 판정                         |
 | `services/career-backend/src/interview/`           | 주제별 복습 상태, 연습 기록, 개인 질문과 복습일 규칙                        |
+| `services/career-backend/src/candidate-context/`   | 후보자 맥락 문서와 그 이력. 다른 module 에 문서 조회를 내보낸다               |
 | `services/career-backend/src/health/`              | 생존 확인과 준비 확인                                          |
 | `services/career-backend/src/prisma/`              | `PrismaClient` 수명과 연결 설정                              |
 | `services/career-backend/src/contracts/`           | `scripts/`가 소유한 공고 후보 계약의 사본                          |
@@ -535,10 +538,9 @@ skill은 필요한 정보를 실행 시점에 조회하고 TypeScript 스크립�
 
 | 진입점 | 언제 쓰나 |
 | --- | --- |
-| `morning_reading_cli.ts` | 일일 실행. 수집, 후보 조회, 선택 검증, 추천 저장, `--cleanup`으로 임시 실행 디렉터리 정리, `--help`와 `-h`로 사용법 출력 |
+| `morning_reading_cli.ts` | 일일 실행. `--doctor` 로 연결값, 인증과 `learning-interests` 문서를 먼저 확인한다. 수집, 후보 조회, 선택 검증, 추천 저장, `--cleanup`으로 임시 실행 디렉터리 정리, `--help`와 `-h`로 사용법 출력 |
 | `build_morning_reading.ts`, `validate_outputs.ts` | HTML 생성과 산출물 검증 |
 | `manage_reading_sources.ts` | 사람이 소스를 조회하고 더하고 고치고 끈다. `help`와 `template`는 API 연결 없이 사용법과 요청 초안을 보여준다 |
-| `configure_study_recommendation.ts` | 사람이 후보자 기준 버전을 올린다 |
 
 후보풀, 선별, 공부 주제 구성과 HTML 렌더링은 각각 분리된 모듈이 담당한다.
 실행기는 시스템 임시 디렉터리 아래의 명시적인 실행 경로만 사용하며 저장소에 리포트 디렉터리를 만들지 않는다.
@@ -558,7 +560,7 @@ schema 와 endpoint 는 `services/career-backend/src/study/` 가 소유한다.
 | --- | --- |
 | `src/study/study.controller.ts` | `/api/study/v1` 경로 |
 | `src/study/schema.ts` | 요청과 응답의 zod 계약 |
-| `src/study/study.service.ts` | 후보 거르기, 추천 저장 검증 |
+| `src/study/study.service.ts` | 후보 거르기, 추천 저장 검증. 기준 버전을 `learning-interests` 문서 버전에서 계산한다 |
 | `src/study/repository/study.repository.ts` | table 읽기와 쓰기 |
 
 client 가 읽는 환경값은 포지션 추천과 같다. 같은 Backend 이고 같은 token 이다.
@@ -571,6 +573,24 @@ client 가 읽는 환경값은 포지션 추천과 같다. 같은 Backend 이고
 
 `manage_reading_sources.ts`의 `list`, `add`, `update`, `disable`, `enable`과 다른 API 사용 명령은 연결 값이 없으면 요청 전에 실패한다.
 `help`와 `template`는 연결 값을 읽지 않는다. 브라우저 관리자 쿠키나 세션을 복제하지 않는다.
+
+`study.service.ts` 는 `learning-interests` 문서를 `src/candidate-context/` 가 내보낸 조회로 읽는다.
+후보자 맥락 table 을 직접 질의하지 않는다.
+학습 관심사를 고치는 명령은 공부 추천 디렉터리가 아니라 `scripts/candidate-context/` 에 있다. 아래 절이 소유한다.
+
+## 후보자 맥락 문서
+
+`scripts/candidate-context/` 는 사람이 후보자 맥락 문서를 조회하고 저장하는 CLI 다.
+여러 스킬이 같은 문서를 읽으므로 한 스킬의 디렉터리에 두지 않는다.
+
+| 경로 | 책임 |
+| --- | --- |
+| `client.ts` | `/api/candidate-context/v1` client. 연결값과 HTTP 는 `scripts/lib/career-backend-config.ts` 와 `scripts/lib/career-backend-http.ts` 를 쓴다 |
+| `contracts.ts` | 문서 키 넷과 요청, 응답의 zod 계약 |
+| `manage_candidate_context.ts` | `list`, `get`, `put` 과 `help`. `help` 만 연결값 없이 실행한다 |
+
+`put` 은 `--file` 로 받은 Markdown 파일을 본문으로 보내고 `--note` 와 `--expected-version` 을 요구한다.
+본문을 저장소 파일로 두지 않는다. 개인 맥락이라 시스템 임시 디렉터리에서 편집하고 저장한 뒤 지운다.
 
 ## sync-profile
 
