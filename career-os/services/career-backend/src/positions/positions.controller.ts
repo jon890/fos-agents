@@ -46,6 +46,11 @@ export class PositionsController {
     return this.positions.configurePolicy(body);
   }
 
+  @Get("analysis-policy")
+  getPolicy(): Promise<AnalysisPolicy> {
+    return this.positions.getPolicy();
+  }
+
   @Get("company-preferences")
   listCompanyPreferences(): Promise<CompanyPreference[]> {
     return this.positions.listCompanyPreferences();

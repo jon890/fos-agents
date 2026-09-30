@@ -306,6 +306,38 @@ describe("position recommendation API client", () => {
     expect(capturedMethod).toBe("PUT");
   });
 
+  test("분석 정책 조회는 멱등 키 없는 GET 을 보내고 응답을 검사한다", async () => {
+    const requests: Array<{ url: string; init: RequestInit }> = [];
+    const policy = {
+      schemaVersion: 2 as const,
+      candidateContextVersion: "context-1",
+      dailyAnalysisLimit: 20,
+      prioritySlots: 16,
+      agingSlots: 4,
+      staleAfterDays: 30,
+      defaultCompanyTier: 3,
+      dailyCompanyTierLimit: 5,
+      companyTierStaleAfterDays: 90,
+    };
+    let body: unknown = policy;
+    const client = new CareerBackendClient({
+      baseUrl: "http://api.local",
+      token,
+      fetcher: async (input, init) => {
+        requests.push({ url: String(input), init: init ?? {} });
+        return Response.json(body);
+      },
+    });
+
+    await expect(client.getAnalysisPolicy()).resolves.toEqual(policy);
+    expect(requests[0].init.method).toBe("GET");
+    expect(requests[0].url).toEndWith("/api/positions/v1/analysis-policy");
+    expect(new Headers(requests[0].init.headers).get("Idempotency-Key")).toBeNull();
+
+    body = { unexpected: true };
+    await expect(client.getAnalysisPolicy()).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
+  });
+
   test("회사 정책을 인증된 GET으로 조회하고 멱등 PUT으로 갱신한다", async () => {
     const requests: Array<{ url: string; init: RequestInit }> = [];
     const preference = {
