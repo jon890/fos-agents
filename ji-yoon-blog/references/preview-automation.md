@@ -135,6 +135,12 @@ ssh <홈서버> 'cd ~/fos-agents/ji-yoon-blog && python3 scripts/naver_session.p
 
 컨테이너에는 중계를 띄운 쪽이 두 값을 넣어 준다.
 맥북에서는 주지 않고 포트 포워딩으로 붙는다.
+`naver_session.py` 의 `status` 와 `login-check` 도 같은 두 값을 읽는다.
+컨테이너 안에서 불러도 호스트 Chrome 의 로그인 상태를 답한다.
+`start` 는 두 값이 loopback 이 아니면 Chrome 을 새로 띄우지 않고 종료 코드 2로 끝난다.
+
+편집기에 넘기는 사진 경로는 Chrome 이 도는 홈서버의 절대 경로여야 한다.
+컨테이너는 호스트와 같은 절대 경로로 워크스페이스를 붙이므로 `photos` 가 초안 폴더를 절대 경로로 바꿔 넘긴다.
 
 `state`의 제목, 사진 수와 너비, 스티커와 지도 수, 카테고리, 태그, 임시저장 개수를 읽어 확인한 것만 완료라고 말한다.
 

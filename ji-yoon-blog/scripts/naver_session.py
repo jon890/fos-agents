@@ -1,7 +1,11 @@
 """홈서버에서 네이버 세션을 담은 Chrome 을 상주시키고 상태를 판정한다.
 
-이 스크립트는 홈서버에서만 실행한다.
+Chrome 을 띄우고 내리는 `start` 와 `stop` 은 홈서버에서만 실행한다.
 홈서버에 화면이 없으므로 Chrome 을 headless 로 띄우고 CDP 포트로만 조작한다.
+
+`status` 와 `login-check` 는 Hermes 컨테이너 안에서도 부른다.
+컨테이너의 `127.0.0.1` 은 컨테이너 자신이라, 그때는 `cdp.py` 와 같은
+`JI_YOON_BLOG_CDP_HOST` 와 `JI_YOON_BLOG_CDP_PORT` 로 호스트의 중계에 붙는다.
 맥북은 SSH 포트 포워딩으로 그 포트에 닿는다.
 
     ssh -L 9222:127.0.0.1:9222 <홈서버>
@@ -40,7 +44,10 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-PORT = int(os.environ.get("JI_YOON_BLOG_CDP_PORT", "9222"))
+# compose 는 값이 없는 변수를 빈 문자열로 넘긴다. 빈 값도 주지 않은 것으로 본다. `cdp.py` 와 같다.
+PORT = int(os.environ.get("JI_YOON_BLOG_CDP_PORT") or "9222")
+# Chrome 은 늘 loopback 에만 포트를 연다. HOST 는 상태를 물어볼 주소일 뿐이다.
+HOST = os.environ.get("JI_YOON_BLOG_CDP_HOST") or "127.0.0.1"
 PROFILE = Path(
     os.environ.get("JI_YOON_BLOG_CHROME_PROFILE", "~/.config/ji-yoon-blog-chrome")
 ).expanduser()
@@ -85,7 +92,7 @@ def chrome_binary() -> str:
 
 def cdp(path: str, method: str = "GET", timeout: float = 5.0) -> object:
     """CDP 의 HTTP 창구를 부른다."""
-    url = f"http://127.0.0.1:{PORT}{path}"
+    url = f"http://{HOST}:{PORT}{path}"
     request = urllib.request.Request(url, method=method)
     with urllib.request.urlopen(request, timeout=timeout) as response:
         body = response.read().decode("utf-8", errors="replace")
@@ -239,8 +246,11 @@ def read_pid() -> int | None:
 def cmd_start(args: argparse.Namespace) -> int:
     """Chrome 을 띄운다. 이미 떠 있으면 그대로 둔다."""
     if is_up():
-        print(f"이미 떠 있다: 127.0.0.1:{PORT}")
+        print(f"이미 떠 있다: {HOST}:{PORT}")
         return report_login()
+    if HOST != "127.0.0.1":
+        # 중계 너머의 Chrome 을 여기서 띄우지 못한다. 컨테이너 안에 Chrome 을 새로 띄우지 않는다.
+        raise SessionError(f"{HOST}:{PORT} 의 CDP 가 응답하지 않는다. Chrome 은 홈서버에서 띄운다")
 
     # Ubuntu 24.04 는 권한 없는 user namespace 를 막아 Chrome 의 sandbox 가 서지 않을 수 있다.
     # 먼저 sandbox 를 둔 채로 띄워 보고, 서지 않을 때만 끄고 다시 띄운다.
@@ -286,7 +296,7 @@ def cmd_status(args: argparse.Namespace) -> int:
     version = cdp("/json/version")
     tabs = cdp("/json/list") or []
     print(f"브라우저: {version.get('Browser', '?')}")
-    print(f"포트: 127.0.0.1:{PORT}")
+    print(f"포트: {HOST}:{PORT}")
     print(f"프로필: {PROFILE}")
     print(f"pid: {read_pid() or '알 수 없음'}")
     print(f"열린 탭: {len(tabs)}")
@@ -296,7 +306,7 @@ def cmd_status(args: argparse.Namespace) -> int:
 def cmd_login_check(args: argparse.Namespace) -> int:
     """로그인 여부만 판정한다."""
     if not is_up():
-        print("떠 있지 않다", file=sys.stderr)
+        print(f"떠 있지 않다: {HOST}:{PORT} 의 CDP 가 응답하지 않는다", file=sys.stderr)
         return 2
     return report_login()
 

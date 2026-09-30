@@ -51,8 +51,20 @@ def attach_photos(page: Page, files: list[str], seconds: float = 30.0) -> str:
     return ""
 
 
+BROWSER_PATH_NOTE = (
+    "Chrome 은 브라우저가 도는 기계의 절대 경로로만 파일을 읽는다. "
+    "이 경로가 그 기계에 없으면 네이버는 `알 수 없는 오류` 만 띄운다. "
+    "명령을 돌린 자리에서 파일이 보인다고 브라우저 쪽에서도 보이는 것은 아니다"
+)
+
+
 def photo_paths(draft: dict, root: Path, base: str) -> list[str]:
-    """초안의 image 블록이 가리키는 파일을 브라우저 쪽 경로로 바꾼다."""
+    """초안의 image 블록이 가리키는 파일을 브라우저 쪽 절대 경로로 바꾼다.
+
+    base 가 없으면 초안 폴더를 절대 경로로 만든다.
+    Hermes 컨테이너는 호스트와 같은 절대 경로로 워크스페이스를 붙이므로 그 경로가 호스트에서도 맞다.
+    상대 경로는 Chrome 의 작업 디렉터리를 기준으로 풀려 엉뚱한 파일을 가리킨다.
+    """
     paths = []
     for block in draft.get("blocks", []):
         if block.get("type") != "image":
@@ -63,8 +75,13 @@ def photo_paths(draft: dict, root: Path, base: str) -> list[str]:
         if base:
             paths.append(base.rstrip("/") + "/" + Path(name).name)
         else:
-            paths.append(str(root / name))
+            paths.append(str(root.resolve() / name))
     return paths
+
+
+def relative_paths(paths: list[str]) -> list[str]:
+    """브라우저에 넘기면 안 되는 상대 경로를 골라낸다."""
+    return [path for path in paths if not path.startswith("/")]
 
 
 def image_count(page: Page) -> int:
@@ -153,6 +170,14 @@ def cmd_photos(page: Page, args: argparse.Namespace) -> int:
     if len(blocks) != len(files):
         print("경로가 빈 image 블록이 있다", file=sys.stderr)
         return 1
+    relative = relative_paths(files)
+    if relative:
+        print(
+            f"Chrome 에 넘길 사진 경로가 상대 경로다: {relative[0]}. "
+            "--remote-base 에는 브라우저가 도는 기계의 절대 경로를 준다",
+            file=sys.stderr,
+        )
+        return 1
 
     inserted = image_count(page)
     if inserted > len(blocks):
@@ -191,7 +216,7 @@ def cmd_photos(page: Page, args: argparse.Namespace) -> int:
         before = image_count(page)
         problem = attach_photos(page, [path])
         if problem:
-            print(problem, file=sys.stderr)
+            print(f"{problem}. Chrome 에 넘길 경로: {path}", file=sys.stderr)
             return 1
         if not wait_until(lambda: image_count(page) > before, seconds=30.0):
             print(f"사진이 본문에 들어가지 않았다: {path}", file=sys.stderr)
@@ -204,6 +229,8 @@ def cmd_photos(page: Page, args: argparse.Namespace) -> int:
             return 1
         if not image_uploaded(page, before):
             print(f"사진 전송 중 알림이 떴다: {blocking_popup(page)}", file=sys.stderr)
+            print(f"Chrome 에 넘긴 경로: {path}", file=sys.stderr)
+            print(BROWSER_PATH_NOTE, file=sys.stderr)
             return 1
         if not fit_image(page, before):
             print(f"사진에 `문서 너비`를 적용하지 못했다: {path}", file=sys.stderr)

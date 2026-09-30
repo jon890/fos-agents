@@ -13,7 +13,7 @@
 사용법:
     python3 naver_editor.py open drafts/순돌이곱창/draft.json
     python3 naver_editor.py --target-id <탭 식별자> fill drafts/순돌이곱창/draft.json
-    python3 naver_editor.py --target-id <탭 식별자> photos drafts/순돌이곱창/draft.json --remote-base <사진 디렉터리>
+    python3 naver_editor.py --target-id <탭 식별자> photos drafts/순돌이곱창/draft.json [--remote-base <브라우저 쪽 사진 디렉터리의 절대 경로>]
     python3 naver_editor.py --target-id <탭 식별자> components drafts/순돌이곱창/draft.json
     python3 naver_editor.py --target-id <탭 식별자> settings drafts/순돌이곱창/draft.json
     python3 naver_editor.py --target-id <탭 식별자> save drafts/순돌이곱창/draft.json
@@ -171,7 +171,7 @@ def build_parser() -> argparse.ArgumentParser:
     photos.add_argument(
         "--remote-base",
         default="",
-        help="브라우저가 도는 기계에서 사진이 있는 디렉터리. 비우면 초안 옆 경로를 쓴다",
+        help="브라우저가 도는 기계에서 사진이 있는 디렉터리의 절대 경로. 비우면 초안 폴더의 절대 경로를 쓴다",
     )
     components = sub.add_parser("components", help="초안의 스티커와 지도를 실제로 넣는다")
     components.add_argument("draft", help="draft.json 경로")

@@ -48,7 +48,7 @@
 | `scripts/seaweed_s3.py` | 홈서버 | S3 접근. 서명, 목록, 조회 |
 | `scripts/photo_store.py` | 홈서버 | 사진 폴더와 객체 조회, 전송 |
 | `scripts/verify_photo_store.py` | 홈서버 | 연결과 권한 경계 확인 |
-| `scripts/naver_session.py` | 홈서버 | 네이버 세션을 담은 Chrome 을 상주시키고 로그인을 판정한다 |
+| `scripts/naver_session.py` | 홈서버, Hermes 컨테이너(`status`, `login-check`) | 네이버 세션을 담은 Chrome 을 상주시키고 로그인을 판정한다 |
 | `scripts/cdp.py` | 맥북, 홈서버, Hermes 컨테이너 | CDP 의 WebSocket 창구를 의존성 없이 부른다 |
 | `scripts/naver_editor.py` | 맥북, Hermes 컨테이너 | CLI 인자를 읽고 정확한 글쓰기 탭과 CDP 연결을 고른다 |
 | `scripts/naver_editor_core.py` | 맥북, Hermes 컨테이너 | 초안 검사, 단계 진행 상태와 SmartEditor 공통 조작을 제공한다 |
@@ -56,7 +56,7 @@
 | `scripts/naver_editor_photos.py` | 맥북, Hermes 컨테이너 | 사진 파일 선택 창, 전송 완료와 문서 너비 적용을 확인한다 |
 | `scripts/naver_editor_components.py` | 맥북, Hermes 컨테이너 | 스티커와 국내 지도 검색 결과를 넣고 초안과 대조한다 |
 | `scripts/naver_editor_settings.py` | 맥북, Hermes 컨테이너 | 카테고리와 태그를 넣고 모든 단계가 끝난 뒤에만 임시저장한다 |
-| `scripts/test_naver_editor.py` | 맥북, 홈서버 | 옛 초안 차단, 카테고리 선택, 사진·스티커·지도 대조와 저장 차단을 검증한다 |
+| `scripts/test_naver_editor.py` | 맥북, 홈서버 | 옛 초안 차단, 카테고리 선택, 사진·스티커·지도 대조, 사진 경로 절대화, 저장 차단, 세션 확인 주소를 검증한다 |
 | `.claude/skills/naver-blog-draft/` | 맥북과 홈서버 | 사진에서 임시저장까지의 판단과 절차 |
 | `docs/` | 문서 | 흐름, 스키마, 구조 |
 | `drafts/` | 맥북, Hermes 컨테이너 | 내려받거나 대화에 첨부한 사진과 초안. 추적하지 않는다 |
@@ -73,13 +73,15 @@
 | `scripts/place_hints.py` | 내려받은 사진에서 장소를 짐작할 실마리를 모은다 |
 | `scripts/draft_contract.py` | 초안의 필수 필드와 블록 순서를 검사한다. 미리보기, 등록용 묶음, 편집기 조작이 함께 쓴다 |
 | `scripts/build_preview.py` | 초안과 사진으로 미리보기를 만든다. HTML 폴더 밖의 사진과 스티커는 그 폴더로 복사해 상대 경로로 부른다 |
-| `scripts/build_package.py` | 초안으로 사람이 붙여넣을 등록용 묶음을 만든다 |
+| `scripts/preview_photos.py` | 결과물 폴더에 넣을 사진을 줄이고 EXIF 를 뺀다 |
+| `scripts/build_package.py` | 초안으로 사람이 붙여넣을 등록용 묶음을 Markdown 이나 HTML 로 만든다 |
 | `scripts/test_photo_set.py` | 촬영시각 파서를 합성한 이미지로 검증한다 |
 | `scripts/test_place_hints.py` | 위치 파서와 이름 단서를 합성한 이미지로 검증한다 |
 | `scripts/test_photos_url.py` | Admin UI 파일 화면의 폴더 주소 생성을 검증한다 |
 | `scripts/test_stage_chat_photos.py` | 대화 첨부 사진을 장소별 초안 폴더에 복사할 때의 경계를 검증한다 |
 | `scripts/test_draft_contract.py` | 초안의 스티커와 장소 계약을 검증한다 |
-| `scripts/test_build_preview.py` | 미리보기가 자기 폴더 안의 파일만 상대 경로로 부르는지 검증한다 |
+| `scripts/test_build_preview.py` | 미리보기가 자기 폴더 안의 파일만 상대 경로로 부르고, 넣는 사진을 줄이고 EXIF 를 빼는지 검증한다 |
+| `scripts/test_build_package.py` | 수동 등록용 묶음의 HTML 과 출력에 내부 경로가 없는지 검증한다 |
 | `references/iphone-upload.md` | 아이폰에서 올리는 절차와 함정 |
 | `references/assistant-chat-photos.md` | 대화 첨부 사진을 장소별로 나눠 초안을 만드는 절차 |
 
@@ -121,6 +123,7 @@ Hermes가 profile마다 `HOME`을 바꿔도 같은 파일을 찾는다.
 | --- | --- |
 | 맥북 | `python3`, `beautifulsoup4`(수집기만) |
 | 홈서버 | `python3` 표준 라이브러리 |
+| 미리보기 사진 축소 | `ffmpeg`. Hermes 컨테이너 image 에 들어 있다. 없으면 줄이지 않고 EXIF 만 뺀다 |
 | 브라우저 | 홈서버의 상주 Chrome. `scripts/cdp.py`가 표준 라이브러리만으로 CDP의 WebSocket에 붙는다 |
 
 사진의 촬영시각은 이미지 라이브러리 없이 JPEG의 EXIF를 직접 읽는다.

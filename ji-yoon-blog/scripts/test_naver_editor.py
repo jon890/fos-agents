@@ -2,8 +2,10 @@
 
 import argparse
 import contextlib
+import importlib
 import io
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -17,6 +19,7 @@ import naver_editor_components
 import naver_editor_core
 import naver_editor_photos
 import naver_editor_settings
+import naver_session
 
 
 class EditorGateTest(unittest.TestCase):
@@ -271,13 +274,76 @@ class EditorGateTest(unittest.TestCase):
         ]}
         root = Path("/tmp/draft")
         self.assertEqual(naver_editor.photo_paths(draft, root, ""), [
-            "/tmp/draft/photos/002.jpg",
-            "/tmp/draft/photos/001.jpg",
+            str(root.resolve() / "photos/002.jpg"),
+            str(root.resolve() / "photos/001.jpg"),
         ])
         self.assertEqual(naver_editor.photo_paths(draft, root, "/srv/photos/"), [
             "/srv/photos/002.jpg",
             "/srv/photos/001.jpg",
         ])
+
+    def test_photo_paths_turn_relative_draft_folder_into_absolute_path(self):
+        draft = {"blocks": [{"type": "image", "path": "photos/001.jpg"}]}
+        with tempfile.TemporaryDirectory() as temp, contextlib.chdir(temp):
+            files = naver_editor.photo_paths(draft, Path("drafts/2026-09-29-샘플가게"), "")
+            expected = Path(temp).resolve() / "drafts/2026-09-29-샘플가게/photos/001.jpg"
+        self.assertEqual(files, [str(expected)])
+        self.assertEqual(naver_editor_photos.relative_paths(files), [])
+
+    def test_photos_refuse_relative_remote_base_before_upload(self):
+        draft = {"blocks": [{"type": "image", "path": "photos/001.jpg"}]}
+        args = argparse.Namespace(
+            draft="drafts/샘플가게/draft.json", draft_data=draft,
+            draft_hash="same", remote_base="drafts/샘플가게/photos",
+        )
+
+        class Page:
+            def js(self, _expression):
+                return 0
+
+        with patch.object(naver_editor_photos, "set_stage"), \
+                patch.object(naver_editor_photos, "require_clear_screen", return_value=""), \
+                patch.object(naver_editor_photos, "attach_photos") as attach, \
+                contextlib.redirect_stderr(io.StringIO()) as stderr:
+            self.assertEqual(naver_editor_photos.cmd_photos(Page(), args), 1)
+        attach.assert_not_called()
+        self.assertIn("상대 경로다: drafts/샘플가게/photos/001.jpg", stderr.getvalue())
+
+    def test_photo_transfer_error_prints_path_given_to_chrome(self):
+        draft = {"blocks": [{"type": "image", "path": "photos/001.jpg"}]}
+        args = argparse.Namespace(
+            draft="/srv/drafts/샘플가게/draft.json", draft_data=draft,
+            draft_hash="same", remote_base="/srv/photos",
+        )
+
+        class Page:
+            count = 0
+
+            def js(self, _expression):
+                return 0
+
+        page = Page()
+
+        def attach(_page, _files):
+            page.count = 1
+            return ""
+
+        with patch.object(naver_editor_photos, "set_stage"), \
+                patch.object(naver_editor_photos, "require_clear_screen", return_value=""), \
+                patch.object(naver_editor_photos, "blocking_popup", return_value="파일 전송 오류"), \
+                patch.object(naver_editor_photos, "image_count", side_effect=lambda _page: page.count), \
+                patch.object(naver_editor_photos, "paragraphs", return_value=[]), \
+                patch.object(naver_editor_photos, "focus_placeholder", return_value=True), \
+                patch.object(naver_editor_photos, "attach_photos", side_effect=attach), \
+                patch.object(naver_editor_photos, "image_uploaded", return_value=False), \
+                patch.object(naver_editor_photos, "image_uploaded_visible", return_value=False), \
+                patch.object(naver_editor_photos, "incomplete_images", return_value=[]), \
+                patch.object(naver_editor_photos, "wait_until", side_effect=
+                             lambda check, seconds: check()), \
+                contextlib.redirect_stderr(io.StringIO()) as stderr:
+            self.assertEqual(naver_editor_photos.cmd_photos(page, args), 1)
+        self.assertIn("파일 전송 오류", stderr.getvalue())
+        self.assertIn("Chrome 에 넘긴 경로: /srv/photos/001.jpg", stderr.getvalue())
 
     def test_attach_photos_passes_files_to_intercepted_chooser(self):
         class Page:
@@ -610,6 +676,46 @@ class EditorGateTest(unittest.TestCase):
             self.assertEqual(naver_editor_settings.cmd_save(Page(), args), 1)
         click.assert_not_called()
         self.assertIn("저장 직전에", stderr.getvalue())
+
+
+class SessionHostTest(unittest.TestCase):
+    """컨테이너 안에서 부른 `login-check` 가 중계 주소로 상태를 묻는지 확인한다."""
+
+    def tearDown(self):
+        importlib.reload(naver_session)
+
+    def asked_urls(self, env: dict) -> list[str]:
+        urls = []
+
+        def urlopen(request, timeout):
+            urls.append(request.full_url)
+            raise OSError("닿지 않는다")
+
+        with patch.dict(os.environ, env):
+            importlib.reload(naver_session)
+            with patch.object(naver_session.urllib.request, "urlopen", side_effect=urlopen), \
+                    contextlib.redirect_stderr(io.StringIO()) as stderr:
+                self.assertEqual(naver_session.cmd_login_check(argparse.Namespace()), 2)
+        self.stderr = stderr.getvalue()
+        return urls
+
+    def test_login_check_asks_relay_host_from_environment(self):
+        urls = self.asked_urls({"JI_YOON_BLOG_CDP_HOST": "172.30.0.1", "JI_YOON_BLOG_CDP_PORT": "9333"})
+        self.assertEqual(urls, ["http://172.30.0.1:9333/json/version"])
+        self.assertIn("172.30.0.1:9333", self.stderr)
+
+    def test_login_check_uses_loopback_when_host_is_empty(self):
+        urls = self.asked_urls({"JI_YOON_BLOG_CDP_HOST": "", "JI_YOON_BLOG_CDP_PORT": ""})
+        self.assertEqual(urls, ["http://127.0.0.1:9222/json/version"])
+
+    def test_start_does_not_launch_chrome_behind_relay(self):
+        with patch.dict(os.environ, {"JI_YOON_BLOG_CDP_HOST": "172.30.0.1"}):
+            importlib.reload(naver_session)
+            with patch.object(naver_session, "is_up", return_value=False), \
+                    patch.object(naver_session, "launch") as launch:
+                with self.assertRaises(naver_session.SessionError):
+                    naver_session.cmd_start(argparse.Namespace())
+        launch.assert_not_called()
 
 
 if __name__ == "__main__":
