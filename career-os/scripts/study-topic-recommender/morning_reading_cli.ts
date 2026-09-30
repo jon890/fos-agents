@@ -13,13 +13,14 @@ import { createStudyLibraryClient } from "./study-library/client.js";
 import { buildReportCountsFromLibrary, prepareStudyLibraryCandidates, studyLibraryMetaPath, type StudyLibraryCandidateMeta } from "./study-library/candidates.js";
 import { collectAndIngestStudyLibrary, type LibraryCollectMode } from "./study-library/ingestion.js";
 import { commitRecommendationRun, recordPublication, reportIdForMorningReading } from "./study-library/recommendations.js";
+import { checkStudyBackend } from "./study-library/doctor.js";
 
 const FEED_TIMEOUT_MS = 8_000;
-const actionFlags = ["--collect-only", "--prepare-candidates", "--reading-selection", "--commit-recommendation", "--record-publication", "--cleanup"];
+const actionFlags = ["--doctor", "--collect-only", "--prepare-candidates", "--reading-selection", "--commit-recommendation", "--record-publication", "--cleanup"];
 const hasFlag = (name: string) => process.argv.includes(name);
 const argument = (name: string) => { const value = firstOptionValue(process.argv, name); if (!value?.trim()) throw new StudyRunPathError(`${name} 값이 필요하다.`); return value; };
 
-const booleanOptions = new Set(["--collect-only", "--prepare-candidates", "--commit-recommendation", "--reset-cursor", "--record-publication", "--render-only", "--cleanup"]);
+const booleanOptions = new Set(["--doctor", "--collect-only", "--prepare-candidates", "--commit-recommendation", "--reset-cursor", "--record-publication", "--render-only", "--cleanup"]);
 const valueOptions = new Set([
   "--reading-selection", "--run-dir", "--source-key", "--mode", "--max-items",
   "--category", "--published-from", "--published-to", "--limit", "--cursor", "--candidate-pool", "--report",
@@ -29,6 +30,7 @@ const valueOptions = new Set([
 const HELP = `사용법: morning_reading_cli.ts <하위 동작> [옵션]
 
 하위 동작:
+  --doctor                       Backend 연결값, 인증과 learning-interests 문서를 확인한다
   --collect-only                 등록된 소스를 수집한다
   --prepare-candidates           추천 후보를 조회한다
   --reading-selection <파일>     선택 결과로 리포트를 만든다
@@ -98,6 +100,12 @@ async function run(): Promise<void> {
     return;
   }
   const selectedAction = action();
+  if (selectedAction === "--doctor") {
+    const result = await checkStudyBackend();
+    console.log(JSON.stringify(result, null, 2));
+    if (!result.passed) process.exitCode = 1;
+    return;
+  }
   if (selectedAction === "--render-only") {
     const root = resolveStudyRunRoot(process.env, firstOptionValue(process.argv, "--run-dir"));
     console.log(JSON.stringify({ mode: "render-only", ...renderExistingReport({ stateDir: join(root, "state"), outputDir: root }) }));

@@ -39,6 +39,10 @@ flowchart TD
 
 ### 학습 목적과 최근 추천 확인
 
+**먼저 `morning_reading_cli.ts --doctor` 를 실행한다.** 소스 점검만 요청받았을 때도 같다.
+종료 코드가 0 이 아니면 추천과 소스 점검을 멈추고, 출력의 `checks` 에서 실패한 항목과 조치를 사용자에게 알린다.
+**git 이력의 옛 설정 파일이나 이전 리포트를 Backend 대신 원본으로 쓰지 않는다.** 그 사본은 Backend 에서 바뀐 소스와 관심사를 모른다.
+
 현재 요청을 우선하고, 후보풀 옆 `study-library-meta.json` 의 `learningInterests.body` 를 먼저 읽어 관심사를 확인한다.
 문서가 없어 후보 조회가 `409 CANDIDATE_CONTEXT_MISSING` 이면 추천을 멈추고, 사용자에게 `manage_candidate_context.ts put` 으로 `learning-interests` 를 저장하라고 알린다.
 실제 학습 경험은 읽기 전용 `career-os/sources/fos-study/`에서 필요한 만큼 확인한다.

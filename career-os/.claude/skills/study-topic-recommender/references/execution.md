@@ -18,6 +18,20 @@ mktemp -d "${TMPDIR:-/tmp}/study-topic-recommender.XXXXXX"
 소스, 수집 자료, 추천 이력과 제외 판정은 커리어 Backend가 관리한다.
 `CAREER_BACKEND_URL`과 token을 `career-os/.env`에 두고 `--env-file`로 넘긴다.
 둘 중 하나라도 없으면 명령은 종료 코드 1로 멈춘다.
+운영 값은 홈서버 인프라 저장소가 소유한다. 이 저장소에는 두지 않는다.
+
+실행 전에 연결을 확인한다. 연결값, 인증, `learning-interests` 문서를 차례로 보고 무엇이 빠졌는지 알린다.
+토큰과 주소 값은 출력하지 않는다.
+
+```bash
+bun --env-file=career-os/.env career-os/scripts/study-topic-recommender/morning_reading_cli.ts --doctor
+```
+
+| 실패한 `checks[].name` | 조치 |
+| --- | --- |
+| `connection` | `career-os/.env` 에 연결값을 채워 달라고 사용자에게 요청한다 |
+| `auth` | 토큰이 거절됐거나 Backend 에 닿지 않는다. 값과 네트워크 경로를 사용자에게 확인한다 |
+| `learning-interests` | 문서를 저장해야 추천할 수 있다. 「관심사 변경」 절의 `put` 을 안내한다 |
 
 실행 명령은 모두 저장소 루트에서 실행한다.
 `<RUN_DIR>`는 시스템 임시 디렉터리 아래의 실행별 경로이며 이름이 `study-topic-recommender.`로 시작해야 한다.

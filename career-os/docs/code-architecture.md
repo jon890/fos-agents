@@ -538,7 +538,7 @@ skill은 필요한 정보를 실행 시점에 조회하고 TypeScript 스크립�
 
 | 진입점 | 언제 쓰나 |
 | --- | --- |
-| `morning_reading_cli.ts` | 일일 실행. 수집, 후보 조회, 선택 검증, 추천 저장, `--cleanup`으로 임시 실행 디렉터리 정리, `--help`와 `-h`로 사용법 출력 |
+| `morning_reading_cli.ts` | 일일 실행. `--doctor` 로 연결값, 인증과 `learning-interests` 문서를 먼저 확인한다. 수집, 후보 조회, 선택 검증, 추천 저장, `--cleanup`으로 임시 실행 디렉터리 정리, `--help`와 `-h`로 사용법 출력 |
 | `build_morning_reading.ts`, `validate_outputs.ts` | HTML 생성과 산출물 검증 |
 | `manage_reading_sources.ts` | 사람이 소스를 조회하고 더하고 고치고 끈다. `help`와 `template`는 API 연결 없이 사용법과 요청 초안을 보여준다 |
 
