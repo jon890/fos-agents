@@ -58,7 +58,7 @@ test("로컬 MCP 합계는 모든 페이지와 카테고리를 한 번씩 읽고
       const url = new URL(String(input));
       requests.push(url.pathname);
       if (url.pathname.endsWith("/categories"))
-        return json([{ uuid: CATEGORY, name: "예시 분류" }]);
+        return json([{ uuid: CATEGORY, name: "예시 분류", type: "EXPENSE" }]);
       expect(url.pathname).toEndWith(`/families/${FAMILY}/${type}`);
       expect(url.searchParams.get("size")).toBe("100");
       expect(url.searchParams.get("startDate")).toBe(dates.startDate);
@@ -101,7 +101,7 @@ test("기본 가족이 없으면 단일 가족을 선택하고 수입을 카테�
   const server = createServer({ ...env, ACCOUNTBOOK_FAMILY_UUID: "" }, async (input) => {
     const url = String(input);
     if (url.endsWith("/families")) return json([{ uuid: FAMILY, name: "예시 가족" }]);
-    if (url.endsWith("/categories")) return json([{ uuid: CATEGORY, name: "예시 분류" }]);
+    if (url.endsWith("/categories")) return json([{ uuid: CATEGORY, name: "예시 분류", type: "INCOME" }]);
     expect(url).toContain(`/families/${FAMILY}/incomes?`);
     const { excludeFromBudget: _ignored, ...income } = item("first", "1.01");
     return json({

@@ -4,6 +4,7 @@ import { AccountbookTools } from "./tools.ts";
 
 const FAMILY = "11111111-1111-4111-8111-111111111111";
 const CATEGORY = "22222222-2222-4222-8222-222222222222";
+const INCOME_CATEGORY = "44444444-4444-4444-8444-444444444444";
 const RECORD = "33333333-3333-4333-8333-333333333333";
 const TOKEN = `fab_${"x".repeat(43)}`;
 const BASE = "https://accountbook.example.com/api/v1";
@@ -25,7 +26,12 @@ function setup(families = [{ uuid: FAMILY, name: "예시 가족" }], defaultFami
       const body = init?.body ? JSON.parse(String(init.body)) : undefined;
       requests.push({ url, method, body });
       if (url.endsWith("/families")) return json(families);
-      if (url.endsWith("/categories")) return json([{ uuid: CATEGORY, name: "예시 분류" }]);
+      if (url.endsWith("/categories")) return json([
+        { uuid: CATEGORY, name: "예시 분류", type: "EXPENSE" },
+        { uuid: INCOME_CATEGORY, name: "예시 분류", type: "INCOME" },
+        { uuid: RECORD, name: "수입 전용", type: "INCOME" },
+        { uuid: FAMILY, name: "지출 전용", type: "EXPENSE" },
+      ]);
       if (method === "DELETE") return json(null);
       if (url.includes("?"))
         return json({ items: [], totalPages: 0, currentPage: 0, totalElements: 0 });
@@ -96,8 +102,68 @@ describe("MCP 가계부 도구", () => {
       expect(requests.at(-1)?.body).toEqual({
         amount: 100,
         date: "2026-09-30T12:00:00",
-        categoryUuid: CATEGORY,
+        categoryUuid: type === "expense" ? CATEGORY : INCOME_CATEGORY,
       });
+    }
+  });
+
+  test("카테고리 목록은 종류를 보존한다", async () => {
+    const { tools } = setup(undefined, FAMILY);
+    expect(result(await tools.call("list_categories", {}))).toEqual([
+      { uuid: CATEGORY, name: "예시 분류", type: "EXPENSE" },
+      { uuid: INCOME_CATEGORY, name: "예시 분류", type: "INCOME" },
+      { uuid: RECORD, name: "수입 전용", type: "INCOME" },
+      { uuid: FAMILY, name: "지출 전용", type: "EXPENSE" },
+    ]);
+  });
+
+  test("종류가 없거나 잘못된 카테고리 응답은 사용하지 않는다", async () => {
+    for (const type of [undefined, "OTHER"]) {
+      const tools = new AccountbookTools(
+        new AccountbookClient({ apiBaseUrl: BASE, apiToken: TOKEN }, async () =>
+          json([{ uuid: CATEGORY, name: "예시 분류", type }]),
+        ),
+        FAMILY,
+      );
+      const response = result(await tools.call("list_categories", {}));
+      expect(response.error.code).toBe("ACCOUNTBOOK_INVALID_RESPONSE");
+    }
+  });
+
+  test("등록과 수정은 같은 종류의 이름과 UUID만 선택한다", async () => {
+    for (const type of ["expense", "income"]) {
+      const expectedUuid = type === "expense" ? CATEGORY : INCOME_CATEGORY;
+      const wrongUuid = type === "expense" ? INCOME_CATEGORY : CATEGORY;
+      for (const action of ["create", "update"]) {
+        for (const selector of [{ categoryName: "예시 분류" }, { categoryUuid: expectedUuid }]) {
+          const { tools, requests } = setup(undefined, FAMILY);
+          const response = await tools.call(`${action}_${type}`, {
+            amount: 100,
+            date: "2026-09-30T12:00:00",
+            ...(action === "update" ? { transactionUuid: RECORD, confirmed: true } : {}),
+            ...selector,
+          });
+          expect(response).not.toHaveProperty("isError");
+          expect(requests.at(-1)?.body?.categoryUuid).toBe(expectedUuid);
+        }
+        for (const selector of [
+          { categoryUuid: wrongUuid },
+          { categoryName: type === "expense" ? "수입 전용" : "지출 전용" },
+        ]) {
+          const { tools, requests } = setup(undefined, FAMILY);
+          const response = await tools.call(`${action}_${type}`, {
+            amount: 100,
+            date: "2026-09-30T12:00:00",
+            ...(action === "update" ? { transactionUuid: RECORD, confirmed: true } : {}),
+            ...selector,
+          });
+          expect(response).toHaveProperty("isError", true);
+          expect(result(response).error.code).toBe("ACCOUNTBOOK_CATEGORY_SELECTION");
+          expect(result(response).error.message).toContain("예시 분류");
+          if (type === "expense") expect(result(response).error.message).not.toContain("수입 전용");
+          expect(requests.every((request) => request.method === "GET")).toBe(true);
+        }
+      }
     }
   });
 

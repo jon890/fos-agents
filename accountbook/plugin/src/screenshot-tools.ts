@@ -22,7 +22,7 @@ const importShape = {
 export const screenshotToolDefinitions = {
   preview_screenshot_import: {
     description:
-      "토스 소비 화면에서 추출한 날짜별 거래를 검증하고 등록 전 미리보기와 묶음 ID를 반환. 등록하지 않음",
+      "토스 소비 화면의 날짜별 거래와 수입·지출별 카테고리를 검증하고 등록 전 미리보기와 묶음 ID를 반환. 등록하지 않음",
     schema: z.strictObject(importShape),
   },
   submit_screenshot_import: {
@@ -39,7 +39,7 @@ export const screenshotToolDefinitions = {
 type ImportArgs = z.infer<typeof screenshotToolDefinitions.preview_screenshot_import.schema> & {
   confirmBatchId?: string;
 };
-type NamedItem = { uuid: string; name: string };
+type NamedItem = { uuid: string; name: string; type: "EXPENSE" | "INCOME" };
 type Candidate = {
   candidateId: string;
   date: string;
@@ -212,7 +212,10 @@ async function runImport(
   for (const day of validation.days.filter((item) => item.selectedForImport)) {
     for (const item of day.transactions) {
       const categoryName = item.categoryName ?? defaultCategory;
-      const matched = categories.filter((category) => category.name === categoryName);
+      const categoryType = item.type === "expense" ? "EXPENSE" : "INCOME";
+      const matched = categories.filter(
+        (category) => category.type === categoryType && category.name === categoryName,
+      );
       if (!categoryName) categoryIssues.set(item.candidateId, "category_required");
       else if (matched.length !== 1) categoryIssues.set(item.candidateId, "category_not_found");
       const description = item.paymentMethod
