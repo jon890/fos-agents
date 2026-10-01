@@ -7,6 +7,11 @@ import {
   transactionPageSchema,
   safeError,
 } from "./client.ts";
+import {
+  ScreenshotImportError,
+  screenshotImport,
+  screenshotToolDefinitions,
+} from "./screenshot-tools.ts";
 
 const uuid = z.string().uuid();
 const day = z.iso.date();
@@ -79,6 +84,7 @@ export const toolDefinitions = {
     description: "사용자가 대상 기록을 확인한 뒤 수입 삭제",
     schema: z.strictObject({ ...recordShape, confirmed: z.literal(true) }),
   },
+  ...screenshotToolDefinitions,
 };
 
 function summarySchema() {
@@ -151,6 +157,7 @@ export class AccountbookTools {
   constructor(
     private readonly client: AccountbookClient,
     private readonly defaultFamilyUuid?: string,
+    private readonly now: () => Date = () => new Date(),
   ) {
     if (defaultFamilyUuid && !uuid.safeParse(defaultFamilyUuid).success)
       throw new SelectionError("ACCOUNTBOOK_CONFIG", "기본 가족 UUID 설정을 확인해 주세요.");
@@ -185,6 +192,16 @@ export class AccountbookTools {
       const familyUuid = await this.family(args.familyUuid as string | undefined);
       const root = `/families/${familyUuid}`;
       if (name === "list_categories") return this.success(await this.categories(root));
+      if (name.endsWith("_screenshot_import"))
+        return this.success(
+          await screenshotImport(
+            this.client,
+            familyUuid,
+            await this.categories(root),
+            args as Parameters<typeof screenshotImport>[3],
+            this.now(),
+          ),
+        );
       const expense = name.endsWith("expense") || name.endsWith("expenses");
       const collection = `${root}/${expense ? "expenses" : "incomes"}`;
       if (name.startsWith("summarize_"))
@@ -228,12 +245,13 @@ export class AccountbookTools {
       );
     } catch (error) {
       const details =
-        error instanceof SelectionError
+        error instanceof SelectionError || error instanceof ScreenshotImportError
           ? { code: error.code, message: error.message }
           : safeError(error);
+      const extra = error instanceof ScreenshotImportError ? error.details : {};
       return {
         isError: true,
-        content: [{ type: "text" as const, text: JSON.stringify({ error: details }) }],
+        content: [{ type: "text" as const, text: JSON.stringify({ error: details, ...extra }) }],
       };
     }
   }

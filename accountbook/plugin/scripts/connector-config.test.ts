@@ -39,3 +39,8 @@ test("errors 표의 값은 공통 어휘만 쓴다", () => {
   const vocabulary = ["credential_rejected", "forbidden", "invalid_input", "unavailable"];
   for (const value of (Object.values(connector.errors) as string[])) expect(vocabulary).toContain(value);
 });
+
+test("사진을 받는 커넥터는 이미지를 보는 도구 묶음만 요청한다", () => {
+  expect(connector.toolsets).toEqual(["vision"]);
+  expect(connector.attachments).toBe(true);
+});
