@@ -39,5 +39,8 @@ bun run --cwd accountbook/plugin build
 claude plugin validate accountbook/plugin
 ```
 
+위 명령은 `bun`이 PATH에 있어야 한다. 기본 설치 위치는 `~/.bun/bin`이다.
+첫 줄의 의존성 설치를 건너뛰면 `@modelcontextprotocol/sdk`를 찾지 못해 서버 테스트와 번들 일치 검사가 실패한다.
+
 plugin 테스트에는 원본과 배포 번들의 일치 검사와 설치 없는 stdio 초기화 검사가 포함된다.
 실제 운영 API를 호출하지 않으며 모든 HTTP 호출은 fetch 대역으로 검증한다.
