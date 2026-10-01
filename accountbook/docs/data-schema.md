@@ -70,7 +70,7 @@ MCP 서버는 profile마다 별도 프로세스와 환경 변수로 실행하며
 | `blockers` | 등록을 막는 사유 |
 | `warnings` | 확인이 필요한 사유 |
 | `days` | 날짜별 `status`, 화면 합계, 계산 합계와 수입·지출 건수 |
-| `candidates` | 선택된 거래의 `candidateId`, 날짜, 종류, 금액, 설명, 카테고리, `reviewReasons`, `existingMatch`, `existingUuid` |
+| `candidates` | 선택된 거래의 `candidateId`, 날짜, 종류, 금액, 설명, 카테고리, `reviewReasons`, `existingMatch`, `existingUuid`, `existingMatchKind` |
 
 날짜의 `status`는 다음과 같다.
 
@@ -99,7 +99,8 @@ MCP 서버는 profile마다 별도 프로세스와 환경 변수로 실행하며
 `warnings`는 `partial_day_excluded`, `year_inferred_from_received_date`, `field_confidence_requires_review`다.
 
 `existingMatch`가 `true`인 거래는 같은 날짜와 금액의 기존 기록 가운데 설명이 같은 것과 짝이 지어진 거래다.
-결제수단을 뺀 설명이 같은 기록도 짝으로 본다. 기록 하나는 거래 한 건과만 짝이 된다.
+결제수단까지 합친 설명이 같은 기록을 먼저 짝짓고(`existingMatchKind: exact`), 남은 거래를 결제수단을 뺀 설명이 같은 기록과 짝짓는다(`description-only`).
+기록 하나는 거래 한 건과만 짝이 된다.
 짝이 지어진 거래는 등록하지 않으며 카테고리 사유로 막지 않는다.
 `blockers`가 없고 `pendingCount`가 0이면 화면의 거래가 모두 이미 등록된 상태다.
 

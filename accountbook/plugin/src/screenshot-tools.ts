@@ -51,6 +51,7 @@ type Candidate = {
   reviewReasons: string[];
   existingMatch: boolean;
   existingUuid: string | null;
+  existingMatchKind: "exact" | "description-only" | null;
 };
 type Created = Pick<Candidate, "candidateId" | "date" | "type" | "amount"> & { uuid: string };
 
@@ -205,6 +206,7 @@ export async function screenshotImport(
         reviewReasons: item.reviewReasons,
         existingMatch: false,
         existingUuid: null,
+        existingMatchKind: null,
       });
     }
   }
@@ -214,26 +216,33 @@ export async function screenshotImport(
   // accounts for one row and only the rows left over are written. Records entered by hand
   // carry no payment method, so the bare description counts as well.
   const existing = new Map<string, Awaited<ReturnType<typeof existingTransactions>>>();
-  const claimed = new Set<string>();
   for (const candidate of candidates) {
     const key = `${candidate.type}:${candidate.date}`;
     if (!existing.has(key))
       existing.set(key, await existingTransactions(client, root, candidate.type, candidate.date));
-    const match = existing
-      .get(key)!
-      .find(
-        (remote) =>
-          !claimed.has(remote.uuid) &&
-          Number(remote.amount) === candidate.amount &&
-          [candidate.description, bareDescriptions.get(candidate.candidateId)].includes(
-            normalizeText(remote.description ?? ""),
-          ) &&
-          remote.date.startsWith(candidate.date),
-      );
-    if (match) {
+  }
+  // Exact descriptions are paired first. Otherwise a row with a payment method could take
+  // the record that only a row without one can match, and that row would be written again.
+  const claimed = new Set<string>();
+  for (const kind of ["exact", "description-only"] as const) {
+    for (const candidate of candidates) {
+      if (candidate.existingMatch) continue;
+      const wanted =
+        kind === "exact" ? candidate.description : bareDescriptions.get(candidate.candidateId);
+      const match = existing
+        .get(`${candidate.type}:${candidate.date}`)!
+        .find(
+          (remote) =>
+            !claimed.has(remote.uuid) &&
+            Number(remote.amount) === candidate.amount &&
+            normalizeText(remote.description ?? "") === wanted &&
+            remote.date.startsWith(candidate.date),
+        );
+      if (!match) continue;
       claimed.add(match.uuid);
       candidate.existingMatch = true;
       candidate.existingUuid = match.uuid;
+      candidate.existingMatchKind = kind;
     }
   }
   const pending = candidates.filter((candidate) => !candidate.existingMatch);

@@ -322,6 +322,26 @@ describe("토스 화면 가져오기 도구", () => {
     expect(posted()).toHaveLength(1);
   });
 
+  test("결제수단 있는 행과 없는 행이 같은 설명이어도 다시 보내면 0건이다", async () => {
+    const stored = [
+      { uuid: "44444444-4444-4444-8444-444444444441", description: "예시 상점" },
+      { uuid: "44444444-4444-4444-8444-444444444442", description: "예시 상점 | 예시 카드" },
+    ].map((item) => ({ ...item, amount: 12000, date: "2026-08-19T12:00:00" }));
+    const rows = [row(1), row(2, { paymentMethod: null })];
+    for (const transactions of [rows, [...rows].reverse()]) {
+      for (const existing of [stored, [...stored].reverse()]) {
+        const { tools } = setup({ existing });
+        const days = [day({ expectedTotals: { expense: 24000, income: 0 }, transactions })];
+        const preview = result(await tools.call("preview_screenshot_import", { days }));
+        expect(preview).toMatchObject({ pendingCount: 0, alreadyRegisteredCount: 2 });
+        expect(preview.candidates.map((item: Row) => item.existingMatchKind).sort()).toEqual([
+          "exact",
+          "exact",
+        ]);
+      }
+    }
+  });
+
   test("이미 등록된 거래는 카테고리가 없어도 막지 않는다", async () => {
     const stored = {
       uuid: "44444444-4444-4444-8444-444444444444",
