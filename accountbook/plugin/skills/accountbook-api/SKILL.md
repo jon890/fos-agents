@@ -1,12 +1,12 @@
 ---
 name: accountbook-api
-description: 대화로 가족 가계부의 수입과 지출을 등록하거나 최근 내역과 기간 합계를 조회하고, 사용자가 고른 기록을 확인 뒤 수정하거나 삭제한다. "가계부에 기록", "최근 지출", "이번 달 지출 합계", "수입 수정", "내역 삭제" 같은 요청에 사용한다.
+description: 토스 소비 내역 스크린샷을 읽어 검증한 뒤 사용자 확인을 받아 가족 가계부에 등록하고, 대화로 수입과 지출을 등록·조회·수정·삭제한다. "토스 캡처 가계부 등록", "이 스크린샷 가계부에 넣어 줘", "가계부에 기록", "최근 지출", "이번 달 지출 합계", "수입 수정", "내역 삭제" 같은 요청에 사용한다. 영수증 사진에는 사용하지 않는다.
 ---
 
 # 가계부 기록 관리
 
 `accountbook` MCP 도구만 호출해 요청을 처리한다.
-셸, 파일 도구와 HTTP 직접 호출을 사용하지 않는다.
+셸, 파일 쓰기와 HTTP 직접 호출을 사용하지 않는다.
 토큰을 사용자에게 묻거나 대화에 붙여 넣도록 요청하지 않는다.
 
 ## 가족과 카테고리
@@ -18,6 +18,92 @@ description: 대화로 가족 가계부의 수입과 지출을 등록하거나 �
 2. `list_categories`로 선택한 가족의 카테고리를 조회한다.
    사용자가 입력한 이름을 정확히 일치시키며 없는 이름이나 같은 이름이 여럿이면 선택을 요청한다.
    UUID는 조회 결과에 있는 값만 사용한다.
+
+## 토스 화면 가져오기
+
+사용자가 토스 소비 내역 스크린샷을 주면 이 절차를 따른다.
+이미지를 직접 볼 수 없는 실행 환경이면 `OCR_UNAVAILABLE`이라고 알리고 끝낸다.
+이미지를 외부 OCR 서비스에 보내지 않는다.
+
+### 화면 읽기
+
+월 선택 영역, `전체`·`카드`·`입·출금` 같은 소비 탭, 일자별 수입·지출 요약,
+`N일 요일` 제목 아래의 거래 행이 함께 보여야 지원 화면이다.
+아니면 `UNSUPPORTED_SCREEN`이라고 알리고 끝낸다.
+
+한 번 읽은 결과만 쓰지 않는다.
+
+1. 화면 전체에서 월, 일자별 요약, 날짜 제목과 다음 날짜 제목의 위치를 읽는다.
+2. 거래 행의 금액과 설명을 다시 읽는다.
+3. 두 결과가 다른 행은 그 행만 다시 본다.
+
+두 번 읽은 값이 같으면 `high`, 한 번만 읽었으면 `medium`, 끝내 엇갈리면 `low`로 적는다.
+색상만으로 수입과 지출을 정하지 않는다.
+
+- 날짜는 화면의 `N월`과 `N일 요일`을 조합한다.
+  화면에서 읽은 월과 일을 `dateEvidence.screenMonth`, `screenDay`에 적는다.
+- 화면에 연도가 있으면 `dateSource`와 `yearSource`는 `screen`이다.
+  없으면 오늘의 한국 날짜보다 미래가 되지 않는 가장 가까운 연도를 넣고 둘 다 `received-date`,
+  날짜 신뢰도는 `medium`으로 적는다. 사용자가 연도를 알려 주면 `user-confirmed`다.
+- 날짜 제목부터 다음 날짜 제목 직전까지가 한 날짜의 거래다.
+  다음 날짜 제목이 보이지 않고 화면이 거래 행에서 끝나면 마지막 날짜는 `partial`이다.
+  제목만 보이고 거래가 잘린 날짜도 `partial`이다.
+- 거래 행은 금액 한 줄과 바로 아래 설명 한 줄이다.
+  `-N원`은 `expense`, 양수와 수입 문맥은 `income`이며 `amount`에는 양의 원 단위 정수를 넣는다.
+- `가맹점 | 결제수단`이면 왼쪽을 `description`, 오른쪽을 `paymentMethod`에 넣는다.
+  `출발지 → 도착지`는 전체를 `description`에 두고 `paymentMethod`는 `null`이다.
+- 같은 날짜에서 화면 위부터 `rowIndex`를 1부터 매긴다.
+  읽은 원문을 `evidence.amountText`, `evidence.detailText`에 적는다.
+- 달력 영역에서 그 날짜 아래의 수입·지출 요약을 `expectedTotals`에 넣는다.
+  읽지 못하면 `null`이다. 합계를 맞추려고 거래를 만들거나 금액을 고치지 않는다.
+- 아이콘 모양으로 카테고리를 정하지 않는다. 근거가 없으면 `categoryName`은 `null`이다.
+- 화면에 없는 거래 시각과 거래를 지어내지 않는다.
+
+### 미리보기
+
+읽은 날짜들을 `days`에 담아 `preview_screenshot_import`를 호출한다.
+이 도구는 일별 합계, 날짜, 카테고리와 기존 기록을 검사할 뿐 등록하지 않는다.
+
+사용자에게 다음을 보여 준다.
+
+- 날짜별 지출 건수·합계와 수입 건수·합계
+- 연도를 추정한 날짜와 신뢰도가 `medium`인 필드
+- `blockers`의 차단 사유와 화면에서 잘려 제외한 날짜
+
+계좌 식별자와 불필요한 상대방 실명은 가린다.
+`submissionReady`가 `false`이면 등록할 수 없다. 사유별로 이렇게 한다.
+
+| 사유 | 할 일 |
+|---|---|
+| `daily_totals_mismatch`, `low_confidence_required_field` | 해당 날짜를 다시 읽는다. 그래도 같으면 사용자에게 값을 확인받는다 |
+| `expected_totals_unavailable` | 일별 요약이 보이는 화면을 다시 요청한다 |
+| `category_required` | 카테고리 목록을 보여 주고 거래별 카테고리나 모두에 쓸 `defaultCategoryName`을 고르게 한다 |
+| `category_not_found` | 카테고리 목록에서 다시 고르게 한다 |
+| `existing_transaction` | 같은 날짜·금액·설명의 기록이 이미 있다. 해당 기록을 보여 주고 중복인지 사용자가 판단하게 한다. 설명이나 행 번호를 바꿔 통과시키지 않는다 |
+| `date_in_future`, `date_evidence_mismatch`, `date_source_mismatch`, `inferred_year_too_old` | 날짜를 다시 읽고 연도를 사용자에게 확인받는다 |
+| `duplicate_row_index`, `duplicate_date`, `no_transactions`, `no_complete_day_selected` | 날짜 경계와 행 순서를 다시 읽는다. 완전한 날짜가 없으면 화면을 다시 요청한다 |
+| `too_many_transactions`, `description_too_long` | 날짜를 나눠 다시 요청하거나 설명을 화면 그대로 다시 읽는다 |
+
+`existing_transaction`이 나온 날짜는 묶음으로 등록할 수 없다.
+그 날짜를 `selectedForImport: false`로 빼고 미리보기를 다시 만든다.
+그 날짜에서 중복이 아닌 거래는 사용자 확인 뒤 `create_expense`나 `create_income`으로 하나씩 등록한다.
+
+값을 고치면 `preview_screenshot_import`를 다시 호출해 새 미리보기를 보여 준다.
+
+### 등록
+
+사용자가 미리보기를 보고 등록을 명시한 다음 턴에만
+미리보기와 같은 `days`, `defaultCategoryName`에 `confirmBatchId`와 `confirmed: true`를 더해
+`submit_screenshot_import`를 한 번 호출한다.
+내용이 미리보기와 다르면 도구가 거절하므로 미리보기부터 다시 한다.
+
+등록된 지출·수입 건수를 알린다.
+`ACCOUNTBOOK_IMPORT_PARTIAL`이면 같은 요청을 다시 보내지 않는다.
+`created`는 등록된 것, `uncertain`은 결과를 모르는 한 건, `notSubmitted`는 등록되지 않은 것이다.
+`uncertain`이 있으면 해당 날짜의 내역을 조회해 들어갔는지 확인한다.
+같은 금액과 설명의 거래가 여럿이면 `created`의 `uuid`와 대조해 구분한다.
+남은 거래는 사용자 확인 뒤 `create_expense`나 `create_income`으로 하나씩 등록한다.
+`ACCOUNTBOOK_IMPORT_IN_PROGRESS`이면 기다렸다가 내역을 조회한다.
 
 ## 등록과 조회
 
