@@ -1,6 +1,6 @@
 {
   "name": "fos-accountbook",
-  "version": "0.1.0",
-  "description": "MCP 도구로 가족 가계부의 수입과 지출을 조회하고 관리한다.",
+  "version": "0.2.0",
+  "description": "토스 소비 화면을 검증해 가족 가계부에 등록하고 MCP 도구로 수입과 지출을 조회하고 관리한다.",
   "author": { "name": "fos-agents" }
 }

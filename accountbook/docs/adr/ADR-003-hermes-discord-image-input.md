@@ -1,6 +1,6 @@
 ## ADR-003: Discord 첨부 이미지는 Hermes 입력 어댑터로 받는다
 
-- Status: Accepted
+- Status: Superseded by [ADR-005](ADR-005-screenshot-import-as-mcp-tools.md)
 - Date: 2026-08-25
 
 ### 맥락

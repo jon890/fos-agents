@@ -1,6 +1,6 @@
 ## ADR-002: 검증된 주간 후보는 안전 정책으로 자동 등록한다
 
-- Status: Accepted
+- Status: Superseded by [ADR-005](ADR-005-screenshot-import-as-mcp-tools.md)
 - Date: 2026-08-25
 
 ### 맥락

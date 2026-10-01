@@ -17,7 +17,7 @@ export function createServer(
     ),
     configuredValue(env.ACCOUNTBOOK_FAMILY_UUID),
   );
-  const server = new McpServer({ name: "fos-accountbook", version: "0.1.0" });
+  const server = new McpServer({ name: "fos-accountbook", version: "0.2.0" });
   for (const [name, definition] of Object.entries(toolDefinitions)) {
     server.registerTool(
       name,
@@ -25,9 +25,9 @@ export function createServer(
         description: definition.description,
         inputSchema: definition.schema,
         annotations: {
-          readOnlyHint: /^(list|get|summarize)_/.test(name),
+          readOnlyHint: /^(list|get|summarize|preview)_/.test(name),
           destructiveHint: /^(update|delete)_/.test(name),
-          idempotentHint: /^(list|get|delete|summarize)_/.test(name),
+          idempotentHint: /^(list|get|delete|summarize|preview)_/.test(name),
           openWorldHint: true,
         },
       },
