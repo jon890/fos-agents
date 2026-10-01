@@ -2,10 +2,64 @@ import { expect, test } from "bun:test";
 import { lstatSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createServer } from "../src/server.ts";
+import { toolDefinitions } from "../src/tools.ts";
 
 const read = (name: string) => JSON.parse(readFileSync(join(import.meta.dir, "..", name), "utf8"));
 const connector = read("connector.json");
 const mcp = read(".mcp.json");
+
+test("schema 2 정책은 실제 MCP 도구를 빠짐없이 선언하고 미선언 도구를 거절한다", () => {
+  expect(connector.schema).toBe(2);
+  expect(connector.default_tool_policy).toBe("deny");
+  expect(Object.keys(connector.tools).sort()).toEqual(Object.keys(toolDefinitions).sort());
+});
+
+test("확인 도구와 선택지 도구는 승인 없는 READ 정책이다", () => {
+  const tools = [
+    connector.verify.tool,
+    ...connector.fields.flatMap((field: { options?: { tool: string } }) =>
+      field.options ? [field.options.tool] : [],
+    ),
+  ];
+  for (const name of tools) {
+    expect(connector.tools[name]).toMatchObject({ risk: "READ", approval: "none" });
+  }
+});
+
+test("조회와 미리보기는 READ, 등록과 수정은 승인이 필요한 WRITE다", () => {
+  const readTools = [
+    "list_families",
+    "list_categories",
+    "list_expenses",
+    "list_incomes",
+    "summarize_expenses",
+    "summarize_incomes",
+    "get_expense",
+    "get_income",
+    "preview_screenshot_import",
+  ];
+  const writeTools = [
+    "create_expense",
+    "create_income",
+    "update_expense",
+    "update_income",
+    "submit_screenshot_import",
+  ];
+
+  for (const name of readTools) {
+    expect(connector.tools[name]).toMatchObject({ risk: "READ", approval: "none" });
+  }
+
+  for (const name of writeTools) {
+    expect(connector.tools[name]).toMatchObject({ risk: "WRITE", approval: "required" });
+  }
+});
+
+test("삭제는 호출을 닫는 DESTRUCTIVE 정책이며 상시 허락을 받지 않는다", () => {
+  for (const name of ["delete_expense", "delete_income"]) {
+    expect(connector.tools[name]).toMatchObject({ risk: "DESTRUCTIVE", approval: "always" });
+  }
+});
 
 test("connector.json 의 .mcp.json 서버 env 는 fields[].env 와 operator_env 의 합과 같다", () => {
   const expected = [

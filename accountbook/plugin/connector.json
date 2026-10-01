@@ -1,5 +1,5 @@
 {
-  "schema": 1,
+  "schema": 2,
   "id": "fos-accountbook",
   "title": "가계부",
   "description": "토스 소비 화면 스크린샷을 가계부에 등록하고 수입과 지출을 조회하고 기록합니다.",
@@ -28,6 +28,25 @@
     }
   ],
   "verify": { "tool": "list_families" },
+  "tools": {
+    "list_families": { "risk": "READ", "approval": "none" },
+    "list_categories": { "risk": "READ", "approval": "none" },
+    "list_expenses": { "risk": "READ", "approval": "none" },
+    "list_incomes": { "risk": "READ", "approval": "none" },
+    "summarize_expenses": { "risk": "READ", "approval": "none" },
+    "summarize_incomes": { "risk": "READ", "approval": "none" },
+    "get_expense": { "risk": "READ", "approval": "none" },
+    "get_income": { "risk": "READ", "approval": "none" },
+    "create_expense": { "risk": "WRITE", "approval": "required" },
+    "create_income": { "risk": "WRITE", "approval": "required" },
+    "update_expense": { "risk": "WRITE", "approval": "required" },
+    "update_income": { "risk": "WRITE", "approval": "required" },
+    "delete_expense": { "risk": "DESTRUCTIVE", "approval": "always" },
+    "delete_income": { "risk": "DESTRUCTIVE", "approval": "always" },
+    "preview_screenshot_import": { "risk": "READ", "approval": "none" },
+    "submit_screenshot_import": { "risk": "WRITE", "approval": "required" }
+  },
+  "default_tool_policy": "deny",
   "toolsets": ["vision"],
   "attachments": true,
   "operator_env": ["ACCOUNTBOOK_API_BASE_URL"],
