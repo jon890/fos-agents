@@ -269,38 +269,118 @@ describe("토스 화면 가져오기 도구", () => {
     expect(preview.candidates[0].categoryName).toBe("예시 분류");
   });
 
-  test("같은 날짜와 금액, 설명의 기존 기록이 있으면 중복으로 단정하지 않고 멈춘다", async () => {
-    const existing = [
-      {
-        uuid: "44444444-4444-4444-8444-444444444444",
-        amount: "12000.00",
-        description: "예시 상점 | 예시 카드",
-        date: "2026-08-19T12:00:00",
-      },
-    ];
-    const found = await blockers({}, { existing });
-    expect(found).toHaveLength(1);
-    expect(found[0]).toEndWith(":existing_transaction");
-    // A record typed by hand has no payment method and a real time; it still stops the import.
-    const byHand = [
-      { ...existing[0], amount: 1, description: "다른 기록" },
-      { ...existing[0], description: "예시 상점", date: "2026-08-19T09:30:00" },
-    ];
-    expect(await blockers({}, { existing: byHand })).toHaveLength(1);
-    const income = [{ ...existing[0], amount: 500, description: "예시 입금" }];
-    expect(await blockers({}, { existingIncomes: income })).toHaveLength(1);
+  test("이미 등록된 거래는 건너뛰고 남은 것만 등록한다", async () => {
+    const stored = {
+      uuid: "44444444-4444-4444-8444-444444444444",
+      amount: "12000.00",
+      description: "예시 상점 | 예시 카드",
+      date: "2026-08-19T12:00:00",
+    };
+    // A record typed by hand has no payment method and a real time; it is the same purchase.
+    const byHand = { ...stored, description: "예시 상점", date: "2026-08-19T09:30:00" };
+    for (const existing of [[stored], [{ ...stored, amount: 1 }, byHand]]) {
+      const { tools, posted } = setup({ existing });
+      const preview = result(await tools.call("preview_screenshot_import", { days: [day()] }));
+      expect(preview).toMatchObject({
+        submissionReady: true,
+        pendingCount: 1,
+        alreadyRegisteredCount: 1,
+        blockers: [],
+      });
+      expect(preview.candidates.map((item: Row) => item.existingMatch)).toEqual([true, false]);
+      const done = result(
+        await tools.call("submit_screenshot_import", {
+          days: [day()],
+          confirmBatchId: preview.batchId,
+          confirmed: true,
+        }),
+      );
+      expect(done.submitted).toBe(1);
+      expect(posted().map((request) => request.url.split("/").at(-1))).toEqual(["incomes"]);
+    }
   });
 
-  test("등록을 마친 묶음을 다시 보내면 기존 기록 대조에서 멈춘다", async () => {
+  test("같은 금액과 설명이 하루에 여러 건이면 이미 있는 건수만큼만 건너뛴다", async () => {
+    const twice = day({
+      expectedTotals: { expense: 24000, income: 0 },
+      transactions: [row(1), row(2)],
+    });
+    const stored = {
+      uuid: "44444444-4444-4444-8444-444444444444",
+      amount: 12000,
+      description: "예시 상점 | 예시 카드",
+      date: "2026-08-19T12:00:00",
+    };
+    const { tools, posted } = setup({ existing: [stored] });
+    const preview = result(await tools.call("preview_screenshot_import", { days: [twice] }));
+    expect(preview).toMatchObject({ pendingCount: 1, alreadyRegisteredCount: 1 });
+    await tools.call("submit_screenshot_import", {
+      days: [twice],
+      confirmBatchId: preview.batchId,
+      confirmed: true,
+    });
+    expect(posted()).toHaveLength(1);
+  });
+
+  test("이미 등록된 거래는 카테고리가 없어도 막지 않는다", async () => {
+    const stored = {
+      uuid: "44444444-4444-4444-8444-444444444444",
+      amount: 12000,
+      description: "예시 상점 | 예시 카드",
+      date: "2026-08-19T12:00:00",
+    };
+    const { tools } = setup({ existing: [stored] });
+    const days = [day({ transactions: [row(1, { categoryName: null }), day().transactions[1]] })];
+    const preview = result(await tools.call("preview_screenshot_import", { days }));
+    expect(preview).toMatchObject({ submissionReady: true, blockers: [], pendingCount: 1 });
+  });
+
+  test("등록을 마친 화면을 다시 보내면 아무것도 등록하지 않는다", async () => {
     const stored: Row[] = [];
-    const { tools, posted } = setup({ existing: stored });
-    const { batchId } = result(await tools.call("preview_screenshot_import", { days: [day()] }));
-    const args = { days: [day()], confirmBatchId: batchId, confirmed: true };
-    expect(result(await tools.call("submit_screenshot_import", args)).status).toBe("completed");
+    const incomes: Row[] = [];
+    const { tools, posted } = setup({ existing: stored, existingIncomes: incomes });
+    const first = result(await tools.call("preview_screenshot_import", { days: [day()] }));
+    const args = { days: [day()], confirmBatchId: first.batchId, confirmed: true };
+    expect(result(await tools.call("submit_screenshot_import", args)).submitted).toBe(2);
     stored.push({ uuid: "44444444-4444-4444-8444-444444444444", ...posted()[0]!.body });
-    const again = result(await tools.call("submit_screenshot_import", args));
-    expect(again.error.code).toBe("ACCOUNTBOOK_IMPORT_NOT_SUBMITTABLE");
+    incomes.push({ uuid: "44444444-4444-4444-8444-444444444445", ...posted()[1]!.body });
+
+    // The ledger changed, so the ID confirmed before no longer authorizes a write.
+    const stale = result(await tools.call("submit_screenshot_import", args));
+    expect(stale.error.code).toBe("ACCOUNTBOOK_IMPORT_CONFIRMATION_MISMATCH");
+    const again = result(await tools.call("preview_screenshot_import", { days: [day()] }));
+    expect(again).toMatchObject({
+      submissionReady: false,
+      pendingCount: 0,
+      alreadyRegisteredCount: 2,
+      blockers: [],
+    });
+    const done = result(
+      await tools.call("submit_screenshot_import", { ...args, confirmBatchId: again.batchId }),
+    );
+    expect(done).toMatchObject({ status: "completed", submitted: 0 });
     expect(posted()).toHaveLength(2);
+  });
+
+  test("등록 도중 실패한 뒤 다시 미리보기하면 남은 거래만 등록한다", async () => {
+    const stored: Row[] = [];
+    const { tools, posted } = setup({ existing: stored, failPostAt: 2 });
+    const first = result(await tools.call("preview_screenshot_import", { days: [day()] }));
+    const args = { days: [day()], confirmBatchId: first.batchId, confirmed: true };
+    const partial = result(await tools.call("submit_screenshot_import", args));
+    expect(partial.error.code).toBe("ACCOUNTBOOK_IMPORT_PARTIAL");
+    stored.push({ uuid: partial.created[0].uuid, ...posted()[0]!.body });
+    const again = result(await tools.call("preview_screenshot_import", { days: [day()] }));
+    expect(again).toMatchObject({ pendingCount: 1, alreadyRegisteredCount: 1 });
+    const done = result(
+      await tools.call("submit_screenshot_import", { ...args, confirmBatchId: again.batchId }),
+    );
+    expect(done.submitted).toBe(1);
+    expect(posted().map((request) => request.url.split("/").at(-1))).toEqual([
+      "expenses",
+      "incomes",
+      "incomes",
+    ]);
   });
 
   test("같은 묶음의 등록이 겹치면 하나만 진행한다", async () => {

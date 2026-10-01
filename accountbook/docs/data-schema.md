@@ -63,12 +63,14 @@ MCP 서버는 profile마다 별도 프로세스와 환경 변수로 실행하며
 
 | 필드 | 내용 |
 |---|---|
-| `batchId` | 가족, 기본 카테고리와 날짜별 거래 내용의 SHA-256 앞 16자리에 `toss-`를 붙인 값 |
-| `submissionReady` | `blockers`가 없고 선택된 거래가 하나 이상일 때만 `true` |
+| `batchId` | 가족, 기본 카테고리, 날짜별 거래 내용과 새로 등록할 후보 목록의 SHA-256 앞 16자리에 `toss-`를 붙인 값 |
+| `submissionReady` | `blockers`가 없고 새로 등록할 거래가 하나 이상일 때만 `true` |
+| `pendingCount` | 새로 등록할 거래 수 |
+| `alreadyRegisteredCount` | 기존 기록과 짝이 지어져 건너뛸 거래 수 |
 | `blockers` | 등록을 막는 사유 |
 | `warnings` | 확인이 필요한 사유 |
 | `days` | 날짜별 `status`, 화면 합계, 계산 합계와 수입·지출 건수 |
-| `candidates` | 선택된 거래의 `candidateId`, 날짜, 종류, 금액, 설명, 카테고리, `reviewReasons`, `existingMatch` |
+| `candidates` | 선택된 거래의 `candidateId`, 날짜, 종류, 금액, 설명, 카테고리, `reviewReasons`, `existingMatch`, `existingUuid` |
 
 날짜의 `status`는 다음과 같다.
 
@@ -92,14 +94,19 @@ MCP 서버는 profile마다 별도 프로세스와 환경 변수로 실행하며
 | `inferred_year_too_old` | 연도를 추정했는데 날짜가 오늘보다 1년 이상 앞섬 |
 | `category_required`, `category_not_found` | 카테고리가 없거나 목록에서 하나로 정해지지 않음 |
 | `description_too_long` | 결제수단을 합친 설명이 1000자를 넘음 |
-| `existing_transaction` | 같은 날짜와 금액의 기존 기록 가운데 설명이 같은 것이 있음. 결제수단을 뺀 설명도 같은 것으로 본다 |
 | `too_many_transactions` | 선택된 거래가 100건을 넘음 |
 
 `warnings`는 `partial_day_excluded`, `year_inferred_from_received_date`, `field_confidence_requires_review`다.
 
+`existingMatch`가 `true`인 거래는 같은 날짜와 금액의 기존 기록 가운데 설명이 같은 것과 짝이 지어진 거래다.
+결제수단을 뺀 설명이 같은 기록도 짝으로 본다. 기록 하나는 거래 한 건과만 짝이 된다.
+짝이 지어진 거래는 등록하지 않으며 카테고리 사유로 막지 않는다.
+`blockers`가 없고 `pendingCount`가 0이면 화면의 거래가 모두 이미 등록된 상태다.
+
 ## 등록 결과
 
 성공하면 `{ batchId, status: "completed", submitted, created }`를 반환한다.
+새로 등록할 거래가 없으면 등록 요청 없이 `submitted: 0`으로 성공한다.
 `created`의 각 항목은 `candidateId`, `date`, `type`, `amount`와 원격 `uuid`다.
 
 | 오류 코드 | 조건 | 추가 필드 |
@@ -115,6 +122,8 @@ MCP 서버는 profile마다 별도 프로세스와 환경 변수로 실행하며
 4xx로 거절된 건은 저장되지 않았으므로 `uncertain`은 `null`이고 그 건이 `notSubmitted`의 첫 항목이다.
 첫 요청이 4xx로 거절되면 등록된 것이 없으므로 `ACCOUNTBOOK_UNAUTHORIZED` 같은 원래 오류 코드를 반환한다.
 서버는 실패 뒤 남은 거래를 보내지 않고 자동으로 다시 시도하지 않는다.
+미리보기를 다시 만들면 등록된 거래가 `existingMatch`로 나오므로 남은 거래만 새 묶음 ID로 등록한다.
+기존 기록이 달라지면 묶음 ID도 달라지므로, 앞서 확인한 ID로 다시 보내면 불일치 오류다.
 기존 기록 조회가 날짜당 100페이지를 넘으면 `ACCOUNTBOOK_SUMMARY_LIMIT`로 중단한다.
 
 ## MCP 계약

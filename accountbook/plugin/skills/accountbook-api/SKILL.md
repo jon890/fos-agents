@@ -62,11 +62,12 @@ description: 토스 소비 내역 스크린샷을 읽어 검증한 뒤 사용자
 ### 미리보기
 
 읽은 날짜들을 `days`에 담아 `preview_screenshot_import`를 호출한다.
-이 도구는 일별 합계, 날짜, 카테고리와 기존 기록을 검사할 뿐 등록하지 않는다.
+이 도구는 일별 합계, 날짜와 카테고리를 검사하고 이미 등록된 거래를 가려낼 뿐 등록하지 않는다.
 
 사용자에게 다음을 보여 준다.
 
 - 날짜별 지출 건수·합계와 수입 건수·합계
+- 새로 등록할 건수(`pendingCount`)와 이미 등록돼 건너뛸 건수(`alreadyRegisteredCount`)
 - 연도를 추정한 날짜와 신뢰도가 `medium`인 필드
 - `blockers`의 차단 사유와 화면에서 잘려 제외한 날짜
 
@@ -79,14 +80,14 @@ description: 토스 소비 내역 스크린샷을 읽어 검증한 뒤 사용자
 | `expected_totals_unavailable` | 일별 요약이 보이는 화면을 다시 요청한다 |
 | `category_required` | 카테고리 목록을 보여 주고 거래별 카테고리나 모두에 쓸 `defaultCategoryName`을 고르게 한다 |
 | `category_not_found` | 카테고리 목록에서 다시 고르게 한다 |
-| `existing_transaction` | 같은 날짜·금액·설명의 기록이 이미 있다. 해당 기록을 보여 주고 중복인지 사용자가 판단하게 한다. 설명이나 행 번호를 바꿔 통과시키지 않는다 |
 | `date_in_future`, `date_evidence_mismatch`, `date_source_mismatch`, `inferred_year_too_old` | 날짜를 다시 읽고 연도를 사용자에게 확인받는다 |
 | `duplicate_row_index`, `duplicate_date`, `no_transactions`, `no_complete_day_selected` | 날짜 경계와 행 순서를 다시 읽는다. 완전한 날짜가 없으면 화면을 다시 요청한다 |
 | `too_many_transactions`, `description_too_long` | 날짜를 나눠 다시 요청하거나 설명을 화면 그대로 다시 읽는다 |
 
-`existing_transaction`이 나온 날짜는 묶음으로 등록할 수 없다.
-그 날짜를 `selectedForImport: false`로 빼고 미리보기를 다시 만든다.
-그 날짜에서 중복이 아닌 거래는 사용자 확인 뒤 `create_expense`나 `create_income`으로 하나씩 등록한다.
+`existingMatch`가 `true`인 거래는 가계부에 같은 날짜·금액·설명의 기록이 이미 있어 등록하지 않는다.
+같은 화면을 다시 받았거나 일부만 등록된 경우에도 그대로 진행하면 남은 거래만 등록된다.
+`blockers`가 없고 `pendingCount`가 0이면 모두 등록된 상태이므로 그렇게 알리고 끝낸다.
+이미 있는 기록을 다시 등록하려고 설명이나 행 번호를 바꾸지 않는다.
 
 값을 고치면 `preview_screenshot_import`를 다시 호출해 새 미리보기를 보여 준다.
 
@@ -98,12 +99,10 @@ description: 토스 소비 내역 스크린샷을 읽어 검증한 뒤 사용자
 내용이 미리보기와 다르면 도구가 거절하므로 미리보기부터 다시 한다.
 
 등록된 지출·수입 건수를 알린다.
-`ACCOUNTBOOK_IMPORT_PARTIAL`이면 같은 요청을 다시 보내지 않는다.
-`created`는 등록된 것, `uncertain`은 결과를 모르는 한 건, `notSubmitted`는 등록되지 않은 것이다.
-`uncertain`이 있으면 해당 날짜의 내역을 조회해 들어갔는지 확인한다.
-같은 금액과 설명의 거래가 여럿이면 `created`의 `uuid`와 대조해 구분한다.
-남은 거래는 사용자 확인 뒤 `create_expense`나 `create_income`으로 하나씩 등록한다.
-`ACCOUNTBOOK_IMPORT_IN_PROGRESS`이면 기다렸다가 내역을 조회한다.
+`ACCOUNTBOOK_IMPORT_PARTIAL`이나 `ACCOUNTBOOK_IMPORT_CONFIRMATION_MISMATCH`이면 같은 요청을 다시 보내지 않는다.
+`preview_screenshot_import`를 다시 호출해 남은 거래를 보여 주고, 사용자 확인 뒤 새 묶음 ID로 등록한다.
+등록된 거래는 새 미리보기에서 건너뛰므로 두 번 등록되지 않는다.
+`ACCOUNTBOOK_IMPORT_IN_PROGRESS`이면 기다렸다가 미리보기를 다시 만든다.
 
 ## 등록과 조회
 

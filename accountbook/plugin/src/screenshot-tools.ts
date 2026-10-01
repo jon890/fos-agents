@@ -50,6 +50,7 @@ type Candidate = {
   categoryUuid: string | null;
   reviewReasons: string[];
   existingMatch: boolean;
+  existingUuid: string | null;
 };
 type Created = Pick<Candidate, "candidateId" | "date" | "type" | "amount"> & { uuid: string };
 
@@ -59,7 +60,7 @@ const messages = {
   ACCOUNTBOOK_IMPORT_NOT_SUBMITTABLE:
     "검증을 통과하지 못해 등록하지 않았습니다. 차단 사유를 확인해 주세요.",
   ACCOUNTBOOK_IMPORT_PARTIAL:
-    "일부만 등록됐습니다. 다시 보내지 말고 등록된 내역을 조회해 남은 거래를 확인해 주세요.",
+    "일부만 등록됐습니다. 미리보기를 다시 만들어 남은 거래를 확인한 뒤 등록해 주세요.",
   ACCOUNTBOOK_IMPORT_IN_PROGRESS: "같은 묶음을 등록하는 중입니다. 끝난 뒤 내역을 조회해 주세요.",
 } as const;
 
@@ -74,6 +75,10 @@ export class ScreenshotImportError extends Error {
   ) {
     super(message);
   }
+}
+
+function visible({ categoryUuid: _categoryUuid, ...candidate }: Candidate) {
+  return candidate;
 }
 
 function koreaToday(now: Date): string {
@@ -171,19 +176,19 @@ export async function screenshotImport(
 ) {
   const root = `/families/${familyUuid}`;
   const hash = contentHash(args, familyUuid);
-  const batchId = `toss-${hash.slice(0, 16)}`;
   const validation = validateDays(hash, args.days);
   const blockers = [...validation.errors, ...dateBlockers(args.days, koreaToday(now))];
   const defaultCategory = normalize(args.defaultCategoryName);
 
   const candidates: Candidate[] = [];
   const bareDescriptions = new Map<string, string>();
+  const categoryIssues = new Map<string, string>();
   for (const day of validation.days.filter((item) => item.selectedForImport)) {
     for (const item of day.transactions) {
       const categoryName = item.categoryName ?? defaultCategory;
       const matched = categories.filter((category) => category.name === categoryName);
-      if (!categoryName) blockers.push(`${item.candidateId}:category_required`);
-      else if (matched.length !== 1) blockers.push(`${item.candidateId}:category_not_found`);
+      if (!categoryName) categoryIssues.set(item.candidateId, "category_required");
+      else if (matched.length !== 1) categoryIssues.set(item.candidateId, "category_not_found");
       const description = item.paymentMethod
         ? `${item.description} | ${item.paymentMethod}`
         : item.description;
@@ -199,36 +204,56 @@ export async function screenshotImport(
         categoryUuid: matched.length === 1 ? matched[0]!.uuid : null,
         reviewReasons: item.reviewReasons,
         existingMatch: false,
+        existingUuid: null,
       });
     }
   }
   if (candidates.length > MAX_SELECTED_TRANSACTIONS) blockers.push("too_many_transactions");
 
-  // An identical record is never assumed to be a duplicate; it stops the import for review.
-  // Records entered by hand carry no payment method, so the bare description counts as well.
+  // The daily totals fix how many identical rows a day holds, so each existing record
+  // accounts for one row and only the rows left over are written. Records entered by hand
+  // carry no payment method, so the bare description counts as well.
   const existing = new Map<string, Awaited<ReturnType<typeof existingTransactions>>>();
+  const claimed = new Set<string>();
   for (const candidate of candidates) {
     const key = `${candidate.type}:${candidate.date}`;
     if (!existing.has(key))
       existing.set(key, await existingTransactions(client, root, candidate.type, candidate.date));
-    candidate.existingMatch = existing
+    const match = existing
       .get(key)!
-      .some(
+      .find(
         (remote) =>
+          !claimed.has(remote.uuid) &&
           Number(remote.amount) === candidate.amount &&
           [candidate.description, bareDescriptions.get(candidate.candidateId)].includes(
             normalizeText(remote.description ?? ""),
           ) &&
           remote.date.startsWith(candidate.date),
       );
-    if (candidate.existingMatch) blockers.push(`${candidate.candidateId}:existing_transaction`);
+    if (match) {
+      claimed.add(match.uuid);
+      candidate.existingMatch = true;
+      candidate.existingUuid = match.uuid;
+    }
+  }
+  const pending = candidates.filter((candidate) => !candidate.existingMatch);
+  for (const candidate of pending) {
+    const issue = categoryIssues.get(candidate.candidateId);
+    if (issue) blockers.push(`${candidate.candidateId}:${issue}`);
   }
 
-  const submissionReady = blockers.length === 0 && candidates.length > 0;
+  // The ID also covers which rows will be written, so a ledger that changed after the
+  // preview cannot be written to under the confirmed ID.
+  const batchId = `toss-${sha256(
+    [hash, ...pending.map((candidate) => candidate.candidateId)].join("|"),
+  ).slice(0, 16)}`;
+  const submissionReady = blockers.length === 0 && pending.length > 0;
   const preview = {
     batchId,
     familyUuid,
     submissionReady,
+    pendingCount: pending.length,
+    alreadyRegisteredCount: candidates.length - pending.length,
     blockers,
     warnings: validation.warnings,
     days: validation.days.map((day) => ({
@@ -241,7 +266,7 @@ export async function screenshotImport(
       expenseCount: day.transactions.filter((item) => item.type === "expense").length,
       incomeCount: day.transactions.filter((item) => item.type === "income").length,
     })),
-    candidates: candidates.map(({ categoryUuid: _categoryUuid, ...candidate }) => candidate),
+    candidates: candidates.map(visible),
   };
   if (args.confirmBatchId === undefined) return preview;
 
@@ -251,6 +276,8 @@ export async function screenshotImport(
       "ACCOUNTBOOK_IMPORT_CONFIRMATION_MISMATCH",
       messages.ACCOUNTBOOK_IMPORT_CONFIRMATION_MISMATCH,
     );
+  if (blockers.length === 0 && pending.length === 0)
+    return { batchId, status: "completed", submitted: 0, created: [] };
   if (!submissionReady)
     throw new ScreenshotImportError(
       "ACCOUNTBOOK_IMPORT_NOT_SUBMITTABLE",
@@ -266,7 +293,7 @@ export async function screenshotImport(
   inProgress.add(batchId);
   const created: Created[] = [];
   try {
-    for (const [index, candidate] of candidates.entries()) {
+    for (const [index, candidate] of pending.entries()) {
       try {
         // The screen has no transaction time; noon keeps the calendar date stable.
         const response = responseData(
@@ -300,8 +327,8 @@ export async function screenshotImport(
             batchId,
             cause: safeError(error).code,
             created,
-            uncertain: rejected ? null : preview.candidates[index],
-            notSubmitted: preview.candidates.slice(rejected ? index : index + 1),
+            uncertain: rejected ? null : visible(candidate),
+            notSubmitted: pending.slice(rejected ? index : index + 1).map(visible),
           },
         );
       }
