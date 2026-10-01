@@ -175,6 +175,31 @@ export async function screenshotImport(
   args: ImportArgs,
   now: Date,
 ) {
+  if (args.confirmBatchId === undefined)
+    return runImport(client, familyUuid, categories, args, now);
+  // Taken before the ledger is read: a second submit that read the ledger while the first
+  // was still writing would compute the same pending rows and write them again.
+  const key = contentHash(args, familyUuid);
+  if (inProgress.has(key))
+    throw new ScreenshotImportError(
+      "ACCOUNTBOOK_IMPORT_IN_PROGRESS",
+      messages.ACCOUNTBOOK_IMPORT_IN_PROGRESS,
+    );
+  inProgress.add(key);
+  try {
+    return await runImport(client, familyUuid, categories, args, now);
+  } finally {
+    inProgress.delete(key);
+  }
+}
+
+async function runImport(
+  client: AccountbookClient,
+  familyUuid: string,
+  categories: NamedItem[],
+  args: ImportArgs,
+  now: Date,
+) {
   const root = `/families/${familyUuid}`;
   const hash = contentHash(args, familyUuid);
   const validation = validateDays(hash, args.days);
@@ -294,56 +319,46 @@ export async function screenshotImport(
       { batchId, blockers },
     );
 
-  if (inProgress.has(batchId))
-    throw new ScreenshotImportError(
-      "ACCOUNTBOOK_IMPORT_IN_PROGRESS",
-      messages.ACCOUNTBOOK_IMPORT_IN_PROGRESS,
-    );
-  inProgress.add(batchId);
   const created: Created[] = [];
-  try {
-    for (const [index, candidate] of pending.entries()) {
-      try {
-        // The screen has no transaction time; noon keeps the calendar date stable.
-        const response = responseData(
-          await client.request(`${root}/${candidate.type}s`, "POST", {
-            categoryUuid: candidate.categoryUuid,
-            amount: candidate.amount,
-            description: candidate.description,
-            date: `${candidate.date}T12:00:00`,
-          }),
-          recordIdentitySchema,
-        );
-        created.push({
-          candidateId: candidate.candidateId,
-          date: candidate.date,
-          type: candidate.type,
+  for (const [index, candidate] of pending.entries()) {
+    try {
+      // The screen has no transaction time; noon keeps the calendar date stable.
+      const response = responseData(
+        await client.request(`${root}/${candidate.type}s`, "POST", {
+          categoryUuid: candidate.categoryUuid,
           amount: candidate.amount,
-          uuid: response.uuid,
-        });
-      } catch (error) {
-        // A 4xx answer was rejected for certain; anything else may still have been stored.
-        const rejected =
-          error instanceof AccountbookError &&
-          error.status !== undefined &&
-          error.status >= 400 &&
-          error.status < 500;
-        if (rejected && created.length === 0) throw error;
-        throw new ScreenshotImportError(
-          "ACCOUNTBOOK_IMPORT_PARTIAL",
-          messages.ACCOUNTBOOK_IMPORT_PARTIAL,
-          {
-            batchId,
-            cause: safeError(error).code,
-            created,
-            uncertain: rejected ? null : visible(candidate),
-            notSubmitted: pending.slice(rejected ? index : index + 1).map(visible),
-          },
-        );
-      }
+          description: candidate.description,
+          date: `${candidate.date}T12:00:00`,
+        }),
+        recordIdentitySchema,
+      );
+      created.push({
+        candidateId: candidate.candidateId,
+        date: candidate.date,
+        type: candidate.type,
+        amount: candidate.amount,
+        uuid: response.uuid,
+      });
+    } catch (error) {
+      // A 4xx answer was rejected for certain; anything else may still have been stored.
+      const rejected =
+        error instanceof AccountbookError &&
+        error.status !== undefined &&
+        error.status >= 400 &&
+        error.status < 500;
+      if (rejected && created.length === 0) throw error;
+      throw new ScreenshotImportError(
+        "ACCOUNTBOOK_IMPORT_PARTIAL",
+        messages.ACCOUNTBOOK_IMPORT_PARTIAL,
+        {
+          batchId,
+          cause: safeError(error).code,
+          created,
+          uncertain: rejected ? null : visible(candidate),
+          notSubmitted: pending.slice(rejected ? index : index + 1).map(visible),
+        },
+      );
     }
-  } finally {
-    inProgress.delete(batchId);
   }
   return { batchId, status: "completed", submitted: created.length, created };
 }
