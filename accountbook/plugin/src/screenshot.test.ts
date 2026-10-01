@@ -4,6 +4,7 @@ import { AccountbookTools } from "./tools.ts";
 
 const FAMILY = "11111111-1111-4111-8111-111111111111";
 const CATEGORY = "22222222-2222-4222-8222-222222222222";
+const INCOME_CATEGORY = "44444444-4444-4444-8444-444444444444";
 const TOKEN = `fab_${"x".repeat(43)}`;
 const BASE = "https://accountbook.example.com/api/v1";
 const NOW = new Date("2026-08-20T03:00:00Z");
@@ -52,7 +53,12 @@ function setup(
       const method = init?.method ?? "GET";
       const body = init?.body ? JSON.parse(String(init.body)) : undefined;
       requests.push({ url, method, body });
-      if (url.endsWith("/categories")) return json([{ uuid: CATEGORY, name: "예시 분류" }]);
+      if (url.endsWith("/categories")) return json([
+        { uuid: CATEGORY, name: "예시 분류", type: "EXPENSE" },
+        { uuid: INCOME_CATEGORY, name: "예시 분류", type: "INCOME" },
+        { uuid: FAMILY, name: "지출 전용", type: "EXPENSE" },
+        { uuid: FAMILY, name: "수입 전용", type: "INCOME" },
+      ]);
       if (method === "POST") {
         posts++;
         if (posts === options.failPostAt) {
@@ -137,6 +143,35 @@ describe("토스 화면 가져오기 도구", () => {
       description: "예시 상점 | 예시 카드",
       date: "2026-08-19T12:00:00",
     });
+    expect(posted()[1]!.body?.categoryUuid).toBe(INCOME_CATEGORY);
+  });
+
+  test("다른 종류의 카테고리와 기본 카테고리는 등록을 막는다", async () => {
+    for (const [type, categoryName] of [["expense", "수입 전용"], ["income", "지출 전용"]]) {
+      for (const useDefault of [false, true]) {
+        const { tools, posted } = setup();
+        const days = [
+          day({
+            expectedTotals: {
+              expense: type === "expense" ? 12000 : 0,
+              income: type === "income" ? 12000 : 0,
+            },
+            transactions: [row(1, { type, categoryName: useDefault ? null : categoryName })],
+          }),
+        ];
+        const args = { days, ...(useDefault ? { defaultCategoryName: categoryName } : {}) };
+        const preview = result(await tools.call("preview_screenshot_import", args));
+        expect(preview.submissionReady).toBe(false);
+        expect(preview.blockers[0]).toEndWith(":category_not_found");
+        const submitted = result(await tools.call("submit_screenshot_import", {
+          ...args,
+          confirmBatchId: preview.batchId,
+          confirmed: true,
+        }));
+        expect(submitted.error.code).toBe("ACCOUNTBOOK_IMPORT_NOT_SUBMITTABLE");
+        expect(posted()).toHaveLength(0);
+      }
+    }
   });
 
   test("미리보기와 다른 내용이나 확인 없는 요청은 등록하지 않는다", async () => {

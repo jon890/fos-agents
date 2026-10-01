@@ -47,7 +47,10 @@ export const toolDefinitions = {
     description: "접근할 수 있는 가족과 기본 가족 조회",
     schema: z.strictObject({}),
   },
-  list_categories: { description: "가족 카테고리 목록", schema: z.strictObject(familyShape) },
+  list_categories: {
+    description: "가족 카테고리 목록과 종류(EXPENSE: 지출, INCOME: 수입)",
+    schema: z.strictObject(familyShape),
+  },
   list_expenses: { description: "기간별 최근 지출 목록", schema: listSchema() },
   list_incomes: { description: "기간별 최근 수입 목록", schema: listSchema() },
   summarize_expenses: {
@@ -66,14 +69,14 @@ export const toolDefinitions = {
     description: "수정·삭제 전에 수입 기록 재조회",
     schema: z.strictObject(recordShape),
   },
-  create_expense: { description: "확인한 지출 등록", schema: createSchema(true) },
-  create_income: { description: "확인한 수입 등록", schema: createSchema(false) },
+  create_expense: { description: "EXPENSE 카테고리로 확인한 지출 등록", schema: createSchema(true) },
+  create_income: { description: "INCOME 카테고리로 확인한 수입 등록", schema: createSchema(false) },
   update_expense: {
-    description: "사용자가 현재 기록과 변경 내용을 확인한 뒤 지출 수정",
+    description: "사용자가 현재 기록과 변경 내용을 확인한 뒤 EXPENSE 카테고리로 지출 수정",
     schema: updateSchema(true),
   },
   update_income: {
-    description: "사용자가 현재 기록과 변경 내용을 확인한 뒤 수입 수정",
+    description: "사용자가 현재 기록과 변경 내용을 확인한 뒤 INCOME 카테고리로 수입 수정",
     schema: updateSchema(false),
   },
   delete_expense: {
@@ -226,14 +229,17 @@ export class AccountbookTools {
       for (const key of ["familyUuid", "transactionUuid", "confirmed", "categoryName"])
         delete body[key];
       if (args.categoryName || args.categoryUuid) {
-        const categories = await this.categories(root);
+        const categoryType = expense ? "EXPENSE" : "INCOME";
+        const categories = (await this.categories(root)).filter(
+          (item) => item.type === categoryType,
+        );
         const matched = categories.filter((item) =>
           args.categoryUuid ? item.uuid === args.categoryUuid : item.name === args.categoryName,
         );
         if (matched.length !== 1)
           throw new SelectionError(
             "ACCOUNTBOOK_CATEGORY_SELECTION",
-            "카테고리 목록에서 하나를 골라 주세요.",
+            `${categoryType} 카테고리 목록에서 하나를 골라 주세요. 선택 가능한 이름: ${categories.map((item) => item.name).join(", ") || "없음"}`,
           );
         body.categoryUuid = matched[0].uuid;
       }
@@ -347,8 +353,10 @@ export class AccountbookTools {
     const schema = z.array(z.object({ uuid, name: z.string() }));
     return responseData(await this.client.request("/families"), schema);
   }
-  private async categories(root: string): Promise<NamedItem[]> {
-    const schema = z.array(z.object({ uuid, name: z.string() }));
+  private async categories(root: string) {
+    const schema = z.array(
+      z.object({ uuid, name: z.string(), type: z.enum(["EXPENSE", "INCOME"]) }),
+    );
     return responseData(await this.client.request(`${root}/categories`), schema);
   }
   private async family(explicit?: string): Promise<string> {
