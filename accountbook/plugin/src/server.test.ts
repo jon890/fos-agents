@@ -14,6 +14,37 @@ const env = {
   ACCOUNTBOOK_FAMILY_UUID: "11111111-1111-4111-8111-111111111111",
 };
 
+test("MCP 삭제는 data 생략과 null, 204를 모두 성공으로 반환한다", async () => {
+  for (const name of ["delete_expense", "delete_income"]) {
+    for (const body of [{ success: true, message: "삭제되었습니다" }, { data: null }, null]) {
+      const server = createServer(env, async (_input, init) => {
+        expect(init?.method).toBe("DELETE");
+        return body === null
+          ? new Response(null, { status: 204 })
+          : new Response(JSON.stringify(body));
+      });
+      const client = new Client({ name: "delete-test", version: "1.0.0" });
+      const [ct, st] = InMemoryTransport.createLinkedPair();
+      try {
+        await server.connect(st);
+        await client.connect(ct);
+        const result = await client.callTool({
+          name,
+          arguments: {
+            transactionUuid: "33333333-3333-4333-8333-333333333333",
+            confirmed: true,
+          },
+        });
+        expect(result.isError).not.toBe(true);
+        expect(JSON.parse((result.content as Array<{ text: string }>)[0]!.text).deleted).toBe(true);
+      } finally {
+        await client.close();
+        await server.close();
+      }
+    }
+  }
+});
+
 test("Hermes가 남긴 변수 참조를 선택 설정으로 쓰지 않는다", async () => {
   const server = createServer(
     { ...env, ACCOUNTBOOK_FAMILY_UUID: "${ACCOUNTBOOK_FAMILY_UUID}" },
@@ -61,7 +92,7 @@ test("MCP 프로토콜로 도구를 탐색하고 조회하며 미확인 삭제�
     await server.connect(serverTransport);
     await client.connect(clientTransport);
     const listed = await client.listTools();
-    expect(listed.tools).toHaveLength(12);
+    expect(listed.tools).toHaveLength(14);
     const response = await client.callTool({ name: "list_expenses", arguments: { limit: 3 } });
     expect(response.isError).not.toBe(true);
     expect(calls).toBe(1);
@@ -95,7 +126,7 @@ test("plugin 실행 파일만 복사해도 의존성 설치 없이 stdio로 시�
   });
   try {
     await client.connect(transport);
-    expect((await client.listTools()).tools).toHaveLength(12);
+    expect((await client.listTools()).tools).toHaveLength(14);
     expect(stderr).toBe("");
   } finally {
     await client.close();

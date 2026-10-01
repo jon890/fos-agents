@@ -25,9 +25,9 @@ export function createServer(
         description: definition.description,
         inputSchema: definition.schema,
         annotations: {
-          readOnlyHint: /^(list|get)_/.test(name),
+          readOnlyHint: /^(list|get|summarize)_/.test(name),
           destructiveHint: /^(update|delete)_/.test(name),
-          idempotentHint: /^(list|get|delete)_/.test(name),
+          idempotentHint: /^(list|get|delete|summarize)_/.test(name),
           openWorldHint: true,
         },
       },

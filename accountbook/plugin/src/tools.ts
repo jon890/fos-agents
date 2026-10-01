@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   AccountbookClient,
+  AccountbookError,
   responseData,
   transactionSchema,
   transactionPageSchema,
@@ -44,6 +45,14 @@ export const toolDefinitions = {
   list_categories: { description: "가족 카테고리 목록", schema: z.strictObject(familyShape) },
   list_expenses: { description: "기간별 최근 지출 목록", schema: listSchema() },
   list_incomes: { description: "기간별 최근 수입 목록", schema: listSchema() },
+  summarize_expenses: {
+    description: "기간 전체 지출의 건수, 정확한 합계와 카테고리별 합계",
+    schema: summarySchema(),
+  },
+  summarize_incomes: {
+    description: "기간 전체 수입의 건수, 정확한 합계와 카테고리별 합계",
+    schema: summarySchema(),
+  },
   get_expense: {
     description: "수정·삭제 전에 지출 기록 재조회",
     schema: z.strictObject(recordShape),
@@ -71,6 +80,24 @@ export const toolDefinitions = {
     schema: z.strictObject({ ...recordShape, confirmed: z.literal(true) }),
   },
 };
+
+function summarySchema() {
+  return z
+    .strictObject({ ...familyShape, startDate: day, endDate: day })
+    .refine((v) => v.startDate <= v.endDate);
+}
+
+// Convert each decimal to integer hundredths before addition; never add floats.
+function hundredths(value: number | string): bigint {
+  const text = String(value);
+  if (!/^\d+(?:\.\d{1,2})?$/.test(text)) throw new AccountbookError("ACCOUNTBOOK_INVALID_RESPONSE");
+  const [whole, fraction = ""] = text.split(".");
+  return BigInt(whole!) * 100n + BigInt(fraction.padEnd(2, "0"));
+}
+
+function decimal(value: bigint): string {
+  return `${value / 100n}.${String(value % 100n).padStart(2, "0")}`;
+}
 
 function listSchema() {
   return z
@@ -159,6 +186,8 @@ export class AccountbookTools {
       if (name === "list_categories") return this.success(await this.categories(root));
       const expense = name.endsWith("expense") || name.endsWith("expenses");
       const collection = `${root}/${expense ? "expenses" : "incomes"}`;
+      if (name.startsWith("summarize_"))
+        return this.success(await this.summarize(root, collection, familyUuid, args, expense));
       if (name.startsWith("list_")) {
         const params = new URLSearchParams({ size: String(args.limit), page: String(args.page) });
         for (const key of ["startDate", "endDate"])
@@ -172,7 +201,7 @@ export class AccountbookTools {
         return this.success(responseData(await this.client.request(target), transactionSchema));
       if (name.startsWith("delete_")) {
         const response = await this.client.request(target, "DELETE");
-        if (response !== undefined) responseData(response, z.null());
+        if (response !== undefined) responseData(response, z.null().optional());
         return this.success({ deleted: true, familyUuid, transactionUuid: args.transactionUuid });
       }
       const body = { ...args };
@@ -210,6 +239,90 @@ export class AccountbookTools {
 
   private success(value: unknown) {
     return { content: [{ type: "text" as const, text: JSON.stringify(value) }] };
+  }
+  private async summarize(
+    root: string,
+    collection: string,
+    familyUuid: string,
+    args: Record<string, unknown>,
+    expense: boolean,
+  ) {
+    const categories = await this.categories(root);
+    const groups = new Map<string | null, { count: number; amount: bigint }>();
+    const seen = new Set<string>();
+    let total = 0n;
+    let excluded = 0n;
+    let expectedCount: number | undefined;
+    let expectedPages: number | undefined;
+    const summaryItem = transactionSchema.extend({
+      categoryUuid: z.string().min(1).nullable(),
+      ...(expense ? { excludeFromBudget: z.boolean() } : {}),
+    });
+    for (let page = 0; page < 100; page++) {
+      const params = new URLSearchParams({
+        size: "100",
+        page: String(page),
+        startDate: String(args.startDate),
+        endDate: String(args.endDate),
+      });
+      const data = responseData(
+        await this.client.request(`${collection}?${params}`),
+        transactionPageSchema,
+      );
+      if (data.totalPages > 100)
+        throw new SelectionError(
+          "ACCOUNTBOOK_SUMMARY_LIMIT",
+          "조회 범위가 100페이지를 넘습니다. 기간을 줄여 다시 요청해 주세요.",
+        );
+      expectedCount ??= data.totalElements;
+      expectedPages ??= data.totalPages;
+      if (
+        data.currentPage !== page ||
+        data.totalElements !== expectedCount ||
+        data.totalPages !== expectedPages ||
+        data.items.length > 100 ||
+        (data.totalPages === 0 && data.items.length > 0)
+      )
+        throw new AccountbookError("ACCOUNTBOOK_INVALID_RESPONSE");
+      for (const raw of data.items) {
+        const parsed = summaryItem.safeParse(raw);
+        if (!parsed.success) throw new AccountbookError("ACCOUNTBOOK_INVALID_RESPONSE");
+        const item = parsed.data;
+        if (
+          seen.has(item.uuid) ||
+          item.date.slice(0, 10) < String(args.startDate) ||
+          item.date.slice(0, 10) > String(args.endDate)
+        )
+          throw new AccountbookError("ACCOUNTBOOK_INVALID_RESPONSE");
+        seen.add(item.uuid);
+        const value = hundredths(item.amount);
+        total += value;
+        if (expense && item.excludeFromBudget === true) excluded += value;
+        const group = groups.get(item.categoryUuid) ?? { count: 0, amount: 0n };
+        group.count++;
+        group.amount += value;
+        groups.set(item.categoryUuid, group);
+      }
+      if (page + 1 >= data.totalPages) {
+        if (seen.size !== expectedCount) throw new AccountbookError("ACCOUNTBOOK_INVALID_RESPONSE");
+        return {
+          familyUuid,
+          startDate: args.startDate,
+          endDate: args.endDate,
+          count: seen.size,
+          totalAmount: decimal(total),
+          excludedFromBudgetAmount: decimal(excluded),
+          categories: Array.from(groups, ([categoryUuid, group]) => ({
+            categoryUuid,
+            categoryName: categories.find((item) => item.uuid === categoryUuid)?.name ?? null,
+            count: group.count,
+            totalAmount: decimal(group.amount),
+          })),
+        };
+      }
+      if (data.items.length === 0) throw new AccountbookError("ACCOUNTBOOK_INVALID_RESPONSE");
+    }
+    throw new SelectionError("ACCOUNTBOOK_SUMMARY_LIMIT", "기간을 줄여 다시 요청해 주세요.");
   }
   private async families(): Promise<NamedItem[]> {
     const schema = z.array(z.object({ uuid, name: z.string() }));

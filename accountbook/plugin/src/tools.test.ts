@@ -58,7 +58,7 @@ describe("MCP 가계부 도구", () => {
         { data: { items: [] } },
         { data: null },
       ]) {
-        if (name === "delete_expense" && data?.data === null) continue;
+        if (name === "delete_expense" && (data === undefined || data.data === null)) continue;
         const tools = new AccountbookTools(
           new AccountbookClient(
             { apiBaseUrl: BASE, apiToken: TOKEN },
