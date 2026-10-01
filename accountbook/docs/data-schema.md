@@ -49,15 +49,17 @@ MCP 서버는 profile마다 별도 프로세스와 환경 변수로 실행하며
 |---|---|---|
 | `rowIndex` | 양의 정수 | 같은 날짜에서 유일 |
 | `type` | `expense`, `income` | 필수 |
-| `amount` | 양의 정수 | 원 단위 |
-| `description` | 문자열 | 화면의 거래 설명 |
-| `paymentMethod` | 문자열 또는 `null` | 화면에 있을 때만. 등록할 때 `설명 \| 결제수단`으로 합친다 |
-| `categoryName` | 문자열 또는 `null` | 없으면 `defaultCategoryName` 사용 |
+| `amount` | 양의 정수 | 원 단위. 9,999,999,999 이하 |
+| `description` | 문자열 | 화면의 거래 설명. 1~1000자 |
+| `paymentMethod` | 문자열 또는 `null` | 화면에 있을 때만. 200자 이하. 등록할 때 `설명 \| 결제수단`으로 합친다 |
+| `categoryName` | 문자열 또는 `null` | 50자 이하. 없으면 `defaultCategoryName` 사용 |
 | `confidence` | 객체 | `amount`, `description`, `date`별 `high`, `medium`, `low` |
 | `evidence` | 객체 | 화면에서 읽은 금액과 설명 원문. 묶음 ID에 들어가지 않는다 |
 
 화면에 거래 시각이 없으므로 accountbook API의 `date`에는 해당 날짜 `12:00:00`을 사용한다.
 이 값은 실제 거래 시각이 아니라 날짜 보존을 위한 기술 값이다.
+화면 가져오기는 지출의 `excludeFromBudget`을 보내지 않으므로 API 기본값을 따른다.
+설명과 카테고리 이름은 앞뒤 공백을 떼고 연속 공백을 하나로 줄여 비교하고 등록한다.
 
 ## 미리보기 결과
 
@@ -82,6 +84,7 @@ MCP 서버는 profile마다 별도 프로세스와 환경 변수로 실행하며
 | `unavailable` | 화면 요약을 추출하지 못함 |
 
 `blockers`의 사유는 다음과 같다. 날짜 단위 사유는 `<날짜>:`, 거래 단위 사유는 `<candidateId>:`가 앞에 붙는다.
+`no_complete_day_selected`와 `too_many_transactions`는 묶음 전체의 사유라 접두어가 없다.
 
 | 사유 | 조건 |
 |---|---|
@@ -113,7 +116,7 @@ MCP 서버는 profile마다 별도 프로세스와 환경 변수로 실행하며
 | 오류 코드 | 조건 | 추가 필드 |
 |---|---|---|
 | `ACCOUNTBOOK_IMPORT_CONFIRMATION_MISMATCH` | 다시 계산한 묶음 ID가 `confirmBatchId`와 다름 | 없음 |
-| `ACCOUNTBOOK_IMPORT_IN_PROGRESS` | 같은 묶음의 등록이 진행 중임 | 없음 |
+| `ACCOUNTBOOK_IMPORT_IN_PROGRESS` | 같은 가족과 같은 내용의 등록 요청이 같은 프로세스에서 진행 중임 | 없음 |
 | `ACCOUNTBOOK_IMPORT_NOT_SUBMITTABLE` | `blockers`가 있음 | `batchId`, `blockers` |
 | `ACCOUNTBOOK_IMPORT_PARTIAL` | 등록 도중 요청이 실패함 | `batchId`, `cause`, `created`, `uncertain`, `notSubmitted` |
 
@@ -135,6 +138,7 @@ MCP 서버는 profile마다 별도 프로세스와 환경 변수로 실행하며
 `get_expense`, `get_income`, `create_expense`, `create_income`, `update_expense`, `update_income`, `delete_expense`, `delete_income`,
 `preview_screenshot_import`, `submit_screenshot_import`다.
 Hermes에서는 서버 이름 `accountbook`을 사용해 `mcp__accountbook__<도구>`로 노출한다.
+`list_`, `get_`, `summarize_`, `preview_`로 시작하는 도구는 읽기 전용으로 표시한다. 기록을 바꾸는 도구는 `create_`, `update_`, `delete_`, `submit_`이다.
 
 - 가족은 선택 입력 `familyUuid`, 거래 대상은 `transactionUuid`로 지정한다. UUID는 조회 결과에서 고른다.
 - 목록은 `startDate`, `endDate`(유효한 `YYYY-MM-DD`), `limit`(1~100, 기본 20), `page`(0부터)를 받는다.

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { lstatSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createServer } from "../src/server.ts";
 
@@ -19,13 +19,12 @@ test("connector.json 의 .mcp.json 서버 env 는 fields[].env 와 operator_env 
 });
 
 test("options.tool 과 verify.tool 은 readOnlyHint 가 true 인 도구다", () => {
-  const registered = (createServer({
+  const registered = (
+    createServer({
       ACCOUNTBOOK_API_BASE_URL: "https://example.invalid/api/v1",
       ACCOUNTBOOK_API_TOKEN: `fab_${"A".repeat(43)}`,
-    }) as any)._registeredTools as Record<
-    string,
-    { annotations?: { readOnlyHint?: boolean } }
-  >;
+    }) as any
+  )._registeredTools as Record<string, { annotations?: { readOnlyHint?: boolean } }>;
   const tools = [
     connector.verify.tool,
     ...connector.fields.flatMap((f: { options?: { tool: string } }) =>
@@ -37,10 +36,26 @@ test("options.tool 과 verify.tool 은 readOnlyHint 가 true 인 도구다", () 
 
 test("errors 표의 값은 공통 어휘만 쓴다", () => {
   const vocabulary = ["credential_rejected", "forbidden", "invalid_input", "unavailable"];
-  for (const value of (Object.values(connector.errors) as string[])) expect(vocabulary).toContain(value);
+  for (const value of Object.values(connector.errors) as string[])
+    expect(vocabulary).toContain(value);
 });
 
 test("사진을 받는 커넥터는 이미지를 보는 도구 묶음만 요청한다", () => {
   expect(connector.toolsets).toEqual(["vision"]);
   expect(connector.attachments).toBe(true);
+});
+
+test("스킬 본문은 설치하는 쪽의 지침 상한 안에 있고 링크가 없다", () => {
+  const skills = join(import.meta.dir, "..", "skills");
+  for (const entry of readdirSync(skills, { recursive: true }))
+    expect(lstatSync(join(skills, String(entry))).isSymbolicLink()).toBe(false);
+  let body = "";
+  for (const name of readdirSync(skills)) {
+    const text = readFileSync(join(skills, name, "SKILL.md"), "utf8");
+    expect(text.startsWith("---\n")).toBe(true);
+    const end = text.indexOf("\n---\n", 4);
+    expect(end).toBeGreaterThan(0);
+    body += text.slice(end + 5).trim() + "\n\n";
+  }
+  expect(body.length).toBeLessThanOrEqual(8000);
 });
