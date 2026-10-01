@@ -155,7 +155,10 @@ Hermes에서는 서버 이름 `accountbook`을 사용해 `mcp__accountbook__<도
   화면 가져오기도 거래의 `expense`와 `income`에 따라 같은 종류에서 이름을 찾는다.
   수입과 지출이 섞인 화면에서는 거래별 `categoryName`을 지정한다.
 - `description`은 최대 1000자이며, 지출만 `excludeFromBudget`을 받는다.
-- 수정은 바꿀 필드만 받으며 카테고리 UUID와 이름을 동시에 받지 않는다. 수정과 삭제의 `confirmed: true`는 스킬이 사용자의 확인을 받은 뒤에만 전달한다.
+- 수정은 바꿀 필드만 받으며 카테고리 UUID와 이름을 동시에 받지 않는다.
+  MCP 입력 스키마에서 수정과 삭제는 `confirmed: true`가 필수다.
+  스킬은 승인 기능이 제공된 환경에서만 사용자 확인 뒤 수정 도구에 이 값을 전달하며 사용자 승인 절차를 따른다.
+  삭제 도구는 호출하지 않고 가계부 앱에서 직접 지우도록 안내한다.
 - 가족 목록은 `{ families, defaultFamilyUuid }`, 카테고리는 `{ uuid, name, type }[]`를 반환한다.
   카테고리의 `type`은 `EXPENSE` 또는 `INCOME`이며 API 응답에 반드시 있어야 한다.
   가족별 기본 카테고리는 지출 「미분류」와 수입 「기타 수입」이다.

@@ -23,7 +23,7 @@ accountbook/
 | 경로 | 책임 |
 |---|---|
 | `plugin/` | `fos-accountbook` Claude Code plugin 배포 단위. 버전 0.2.0 |
-| `plugin/connector.json` | fos-assistant 연결 화면이 읽는 입력 칸, 확인 도구와 오류 대응 |
+| `plugin/connector.json` | fos-assistant 연결 화면이 읽는 입력 칸, 확인 도구, 오류 대응과 도구별 호출 정책 |
 | `plugin/src/client.ts` | Bearer HTTP client와 응답 스키마 |
 | `plugin/src/tools.ts` | MCP 도구 16개의 스키마, 가족 선택, 카테고리 이름 해석과 기간 전체 합계 |
 | `plugin/src/screenshot-contracts.ts` | 화면 추출 입력 스키마 |
@@ -68,6 +68,21 @@ MCP 도구는 특정 에이전트 명령줄 도구와 메시지 채널에 의존
 ## plugin 설치 계약
 
 fos-assistant는 `accountbook/plugin/`을 복사하거나 마운트해 manifest, `connector.json`, `skills/`와 `.mcp.json`을 읽는다.
+`connector.json`은 `schema: 2`로 MCP 도구별 호출 정책을 선언한다.
+`tools`는 원래 MCP 도구 이름별 `risk`와 `approval`을 정한다.
+조회·합계·미리보기는 `READ/none`, 등록·수정은 `WRITE/required`, 삭제는 `DESTRUCTIVE/always`다.
+등록과 수정은 승인 기능이 나오기 전까지 실행되지 않으며, 삭제는 승인 기능 도입 뒤에도 차단된다.
+`default_tool_policy: deny`는 선언되지 않은 도구의 호출을 거절한다.
+새 MCP 도구를 추가할 때는 같은 변경에서 `tools`에 위험도와 승인 방식을 선언해야 한다.
+확인 도구와 선택지 도구는 `READ/none`으로 선언해야 한다.
+
+schema 1만 받는 기존 대시보드는 schema 2 manifest를 거절하므로 배포 순서를 지킨다.
+
+1. schema 1과 2를 모두 받는 대시보드를 먼저 배포한다.
+2. schema 2 manifest를 반영한다.
+3. 연결 확인으로 정책 hook과 도구 이름 대응 파일을 갱신하고 gateway를 재시작한다.
+4. 관리자 반영 완료 후 연결 상태와 조회 동작을 확인한다.
+
 사용자별 profile에 MCP 서버 이름 `accountbook`을 설치하고 `${CLAUDE_PLUGIN_ROOT}`를 배포한 plugin의 절대 경로로 치환한다.
 실행 명령은 `bun <plugin-root>/dist/accountbook-mcp.js`다.
 가계부 전용 에이전트에는 셸과 파일 쓰기 도구를 추가하지 않는다.
