@@ -31,7 +31,7 @@ accountbook/
 |---|---|
 | `plugin/` | `fos-accountbook` Claude Code plugin 배포 단위. 버전 0.1.0 |
 | `plugin/src/client.ts` | MCP와 이미지 스크립트가 공유하는 Bearer HTTP client |
-| `plugin/src/tools.ts` | MCP 도구 스키마, 가족 선택과 카테고리 이름 해석 |
+| `plugin/src/tools.ts` | MCP 도구 14개의 스키마, 가족 선택, 카테고리 이름 해석과 기간 전체 합계 |
 | `plugin/src/server.ts` | `accountbook` 서버의 stdio MCP 실행 |
 | `plugin/scripts/build.ts`, `plugin/dist/accountbook-mcp.js` | 의존성을 포함한 단일 실행 파일 빌드와 배포 |
 | `plugin/skills/accountbook-api/` | MCP 호출 순서와 사용자 확인을 담은 단일 스킬 정본 |

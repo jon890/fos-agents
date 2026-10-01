@@ -208,11 +208,19 @@ Hermes가 치환하지 못해 값이 `${`로 시작하면 설정되지 않은 �
 
 입력 스키마 정본은 [tools.ts](../plugin/src/tools.ts)에 있다.
 도구 이름은 `list_families`, `list_categories`, `list_expenses`, `list_incomes`,
+`summarize_expenses`, `summarize_incomes`,
 `get_expense`, `get_income`, `create_expense`, `create_income`, `update_expense`, `update_income`, `delete_expense`, `delete_income`이다.
 Hermes에서는 서버 이름 `accountbook`을 사용해 `mcp__accountbook__<도구>`로 노출한다.
 
 - 가족은 선택 입력 `familyUuid`, 거래 대상은 `transactionUuid`로 지정한다. UUID는 조회 결과에서 고른다.
 - 목록은 `startDate`, `endDate`(유효한 `YYYY-MM-DD`), `limit`(1~100, 기본 20), `page`(0부터)를 받는다.
+- 기간 합계는 `startDate`, `endDate`가 필수이며 시작일은 종료일보다 늦을 수 없다.
+  기존 목록 API를 페이지당 100건으로 최대 100페이지까지 읽고 카테고리 목록은 한 번 읽는다.
+  응답은 `familyUuid`, `startDate`, `endDate`, `count`, `totalAmount`, `excludedFromBudgetAmount`, `categories`를 가진다.
+  `categories`의 각 항목은 `categoryUuid`, `categoryName`, `count`, `totalAmount`를 가진다. 이름을 찾지 못하면 `categoryName`은 `null`이다.
+  금액은 소수 둘째 자리까지 있는 문자열이다. 각 금액을 정수로 변환해 더하므로 소수 오차가 없다.
+  전체 합계에는 예산 제외 지출도 포함되며 `excludedFromBudgetAmount`는 그 지출만 합산한다. 수입에서는 `0.00`이다.
+  상한 초과, 페이지 오류, 중복 기록이나 조회 중 건수 변경이 발견되면 부분 합계를 반환하지 않는다.
 - 등록은 양수 `amount`(정수 최대 10자리, 소수 최대 2자리), `date`(timezone 없는 `LocalDateTime`), `categoryUuid` 또는 `categoryName` 중 하나를 받는다.
 - `description`은 최대 1000자이며, 지출만 `excludeFromBudget`을 받는다.
 - 수정은 바꿀 필드만 받으며 카테고리 UUID와 이름을 동시에 받지 않는다. 수정과 삭제의 `confirmed: true`는 스킬이 사용자의 확인을 받은 뒤에만 전달한다.
@@ -234,4 +242,5 @@ Hermes에서는 서버 이름 `accountbook`을 사용해 `mcp__accountbook__<도
 | `ACCOUNTBOOK_INVALID_INPUT` | 도구 입력 검증 실패 |
 | `ACCOUNTBOOK_FAMILY_SELECTION`, `ACCOUNTBOOK_NO_FAMILY` | 가족 선택 필요 또는 가족 없음 |
 | `ACCOUNTBOOK_CATEGORY_SELECTION` | 카테고리가 없거나 이름이 중복됨 |
+| `ACCOUNTBOOK_SUMMARY_LIMIT` | 합계 조회가 100페이지를 초과함. 기간을 줄여 다시 요청하도록 안내 |
 | `ACCOUNTBOOK_UNKNOWN_TOOL`, `ACCOUNTBOOK_INTERNAL` | 지원하지 않는 도구 또는 내부 처리 실패 |
