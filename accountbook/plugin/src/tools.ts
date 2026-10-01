@@ -175,11 +175,12 @@ export class AccountbookTools {
           !families.some((item) => item.uuid === this.defaultFamilyUuid)
         )
           throw new SelectionError("ACCOUNTBOOK_FORBIDDEN", "설정된 가족에 접근할 수 없습니다.");
-        return this.success({
+        const result = {
           families,
           defaultFamilyUuid:
             this.defaultFamilyUuid ?? (families.length === 1 ? families[0].uuid : null),
-        });
+        };
+        return { ...this.success(result), structuredContent: result };
       }
       const familyUuid = await this.family(args.familyUuid as string | undefined);
       const root = `/families/${familyUuid}`;
