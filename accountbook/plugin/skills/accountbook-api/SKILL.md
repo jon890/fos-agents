@@ -16,8 +16,11 @@ description: 토스 소비 내역 스크린샷을 읽어 검증한 뒤 사용자
    여럿이면 이름을 보여 주고 사용자에게 하나를 고르게 한다.
    가족이 없으면 가계부에서 가족을 만든 뒤 다시 요청하도록 안내하고 끝낸다.
 2. `list_categories`로 선택한 가족의 카테고리를 조회한다.
-   사용자가 입력한 이름을 정확히 일치시키며 없는 이름이나 같은 이름이 여럿이면 선택을 요청한다.
+   결과의 `type`이 `EXPENSE`이면 지출용, `INCOME`이면 수입용이다.
+   해당 거래 종류 안에서 사용자가 입력한 이름을 정확히 일치시킨다.
+   없는 이름이나 같은 종류 안에서 같은 이름이 여럿이면 그 종류의 목록을 보여 주고 선택을 요청한다.
    UUID는 조회 결과에 있는 값만 사용한다.
+   지출 「미분류」와 수입 「기타 수입」도 목록에서 확인한 뒤 선택한다.
 
 ## 토스 화면 가져오기
 
@@ -90,8 +93,8 @@ description: 토스 소비 내역 스크린샷을 읽어 검증한 뒤 사용자
 |---|---|
 | `daily_totals_mismatch`, `low_confidence_required_field` | 해당 날짜를 다시 읽는다. 그래도 같으면 사용자에게 값을 확인받는다 |
 | `expected_totals_unavailable` | 일별 요약이 보이는 화면을 다시 요청한다 |
-| `category_required` | 카테고리 목록을 보여 주고 거래별 카테고리나 모두에 쓸 `defaultCategoryName`을 고르게 한다. 사용자가 판단을 맡기면 거래 설명으로 정하고, 정한 카테고리를 보여 준 뒤 등록 확인을 받는다 |
-| `category_not_found` | 카테고리 목록에서 다시 고르게 한다 |
+| `category_required` | 거래 종류에 맞는 목록을 보여 주고 거래별 `categoryName`을 고르게 한다. 같은 종류의 거래에는 `defaultCategoryName`을 쓸 수 있다. 사용자가 판단을 맡기면 거래 설명으로 정하고, 정한 카테고리를 보여 준 뒤 등록 확인을 받는다 |
+| `category_not_found` | 해당 거래 종류의 카테고리 목록에서 다시 고르게 한다 |
 | `date_in_future`, `date_evidence_mismatch`, `date_source_mismatch`, `inferred_year_too_old` | 날짜를 다시 읽고 연도를 사용자에게 확인받는다 |
 | `duplicate_row_index`, `duplicate_date`, `no_transactions`, `no_complete_day_selected` | 날짜 경계와 행 순서를 다시 읽는다. 완전한 날짜가 없으면 화면을 다시 요청한다 |
 | `too_many_transactions`, `description_too_long` | 날짜를 나눠 다시 요청하거나 설명을 화면 그대로 다시 읽는다 |

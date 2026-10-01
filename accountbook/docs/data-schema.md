@@ -25,7 +25,7 @@ MCP 서버는 profile마다 별도 프로세스와 환경 변수로 실행하며
 |---|---|---|
 | `familyUuid` | UUID | 선택. 없으면 기본 가족 |
 | `days` | 배열 | 1~31개의 날짜별 추출 결과 |
-| `defaultCategoryName` | 문자열 | 선택. `categoryName`이 없는 거래에 쓸 카테고리 |
+| `defaultCategoryName` | 문자열 | 선택. `categoryName`이 없는 거래에 쓰며 거래 종류와 같은 카테고리만 허용 |
 | `confirmBatchId` | `toss-` 뒤 16자리 hex | 등록 도구만. 사용자가 확인한 미리보기의 묶음 ID |
 | `confirmed` | `true` | 등록 도구만. 사용자 확인을 받은 때에만 전달 |
 
@@ -95,7 +95,7 @@ MCP 서버는 profile마다 별도 프로세스와 환경 변수로 실행하며
 | `date_in_future`, `date_evidence_mismatch` | 미래 날짜 또는 화면 월·일과 다른 날짜 |
 | `date_source_mismatch` | `dateSource`와 `dateEvidence.yearSource`가 다름 |
 | `inferred_year_too_old` | 연도를 추정했는데 날짜가 오늘보다 1년 이상 앞섬 |
-| `category_required`, `category_not_found` | 카테고리가 없거나 목록에서 하나로 정해지지 않음 |
+| `category_required`, `category_not_found` | 카테고리가 없거나 해당 거래 종류의 목록에서 하나로 정해지지 않음 |
 | `description_too_long` | 결제수단을 합친 설명이 1000자를 넘음 |
 | `too_many_transactions` | 선택된 거래가 100건을 넘음 |
 
@@ -150,9 +150,16 @@ Hermes에서는 서버 이름 `accountbook`을 사용해 `mcp__accountbook__<도
   전체 합계에는 예산 제외 지출도 포함되며 `excludedFromBudgetAmount`는 그 지출만 합산한다. 수입에서는 `0.00`이다.
   상한 초과, 페이지 오류, 중복 기록이나 조회 중 건수 변경이 발견되면 부분 합계를 반환하지 않는다.
 - 등록은 양수 `amount`(정수 최대 10자리, 소수 최대 2자리), `date`(timezone 없는 `LocalDateTime`), `categoryUuid` 또는 `categoryName` 중 하나를 받는다.
+- 지출 등록·수정은 `EXPENSE`, 수입 등록·수정은 `INCOME` 카테고리에서만 이름이나 UUID를 찾는다.
+  다른 종류를 선택하면 변경 요청 없이 `ACCOUNTBOOK_CATEGORY_SELECTION`과 해당 종류의 이름 목록을 반환한다.
+  화면 가져오기도 거래의 `expense`와 `income`에 따라 같은 종류에서 이름을 찾는다.
+  수입과 지출이 섞인 화면에서는 거래별 `categoryName`을 지정한다.
 - `description`은 최대 1000자이며, 지출만 `excludeFromBudget`을 받는다.
 - 수정은 바꿀 필드만 받으며 카테고리 UUID와 이름을 동시에 받지 않는다. 수정과 삭제의 `confirmed: true`는 스킬이 사용자의 확인을 받은 뒤에만 전달한다.
-- 가족 목록은 `{ families, defaultFamilyUuid }`, 카테고리는 `{ uuid, name }[]`를 반환한다.
+- 가족 목록은 `{ families, defaultFamilyUuid }`, 카테고리는 `{ uuid, name, type }[]`를 반환한다.
+  카테고리의 `type`은 `EXPENSE` 또는 `INCOME`이며 API 응답에 반드시 있어야 한다.
+  가족별 기본 카테고리는 지출 「미분류」와 수입 「기타 수입」이다.
+  이름이나 UUID를 생략하면 기본 카테고리를 자동 선택하지 않는다.
 - 거래 응답은 REST API의 `data`를 MCP text JSON으로 전달한다. 목록은 `items`, `totalElements`, `totalPages`, `currentPage`를 가진다.
 - 삭제는 HTTP 2xx 응답의 `data`가 없거나 `null`이면 성공으로 처리한다. HTTP 204도 성공으로 처리한다.
 - 화면 가져오기 도구의 입력과 결과는 위 「화면 추출 입력」, 「미리보기 결과」, 「등록 결과」를 따른다.
@@ -170,6 +177,6 @@ Hermes에서는 서버 이름 `accountbook`을 사용해 `mcp__accountbook__<도
 | `ACCOUNTBOOK_CONFIG` | 주소, 토큰, 기본 가족 설정 오류 |
 | `ACCOUNTBOOK_INVALID_INPUT` | 도구 입력 검증 실패 |
 | `ACCOUNTBOOK_FAMILY_SELECTION`, `ACCOUNTBOOK_NO_FAMILY` | 가족 선택 필요 또는 가족 없음 |
-| `ACCOUNTBOOK_CATEGORY_SELECTION` | 카테고리가 없거나 이름이 중복됨 |
+| `ACCOUNTBOOK_CATEGORY_SELECTION` | 거래 종류에 맞는 카테고리가 없거나 같은 종류 안에서 이름이 중복됨 |
 | `ACCOUNTBOOK_SUMMARY_LIMIT` | 합계 조회나 화면 가져오기의 기존 기록 조회가 100페이지를 초과함 |
 | `ACCOUNTBOOK_UNKNOWN_TOOL`, `ACCOUNTBOOK_INTERNAL` | 지원하지 않는 도구 또는 내부 처리 실패 |
