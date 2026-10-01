@@ -63,6 +63,7 @@ test("Hermes가 남긴 변수 참조를 선택 설정으로 쓰지 않는다", a
     expect(result.content).toEqual([
       { type: "text", text: JSON.stringify({ families: [], defaultFamilyUuid: null }) },
     ]);
+    expect(result.structuredContent).toEqual({ families: [], defaultFamilyUuid: null });
   } finally {
     await client.close();
     await server.close();

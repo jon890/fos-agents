@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "id": "fos-accountbook",
+  "title": "가계부",
+  "description": "가족 가계부의 수입과 지출을 조회하고 기록합니다.",
+  "fields": [
+    {
+      "key": "token",
+      "env": "ACCOUNTBOOK_API_TOKEN",
+      "label": "연동 토큰",
+      "description": "가계부 설정 화면에서 발급합니다.",
+      "secret": true,
+      "required": true,
+      "pattern": "^fab_[A-Za-z0-9_-]{43}$"
+    },
+    {
+      "key": "family",
+      "env": "ACCOUNTBOOK_FAMILY_UUID",
+      "label": "가족",
+      "required": false,
+      "options": {
+        "tool": "list_families",
+        "items": "families",
+        "value": "uuid",
+        "label": "name",
+        "auto_select_single": true
+      }
+    }
+  ],
+  "verify": { "tool": "list_families" },
+  "operator_env": ["ACCOUNTBOOK_API_BASE_URL"],
+  "errors": {
+    "ACCOUNTBOOK_UNAUTHORIZED": "credential_rejected",
+    "ACCOUNTBOOK_FORBIDDEN": "forbidden",
+    "ACCOUNTBOOK_NETWORK": "unavailable",
+    "ACCOUNTBOOK_UNAVAILABLE": "unavailable",
+    "ACCOUNTBOOK_INVALID_INPUT": "invalid_input",
+    "ACCOUNTBOOK_BAD_REQUEST": "invalid_input"
+  }
+}
