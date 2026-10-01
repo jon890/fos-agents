@@ -47,13 +47,11 @@ test("사진을 받는 커넥터는 이미지를 보는 도구 묶음만 요청�
 
 test("스킬 본문은 설치하는 쪽의 지침 상한 안에 있고 링크가 없다", () => {
   const skills = join(import.meta.dir, "..", "skills");
+  for (const entry of readdirSync(skills, { recursive: true }))
+    expect(lstatSync(join(skills, String(entry))).isSymbolicLink()).toBe(false);
   let body = "";
   for (const name of readdirSync(skills)) {
-    const skill = join(skills, name);
-    expect(lstatSync(skill).isSymbolicLink()).toBe(false);
-    const file = join(skill, "SKILL.md");
-    expect(lstatSync(file).isSymbolicLink()).toBe(false);
-    const text = readFileSync(file, "utf8");
+    const text = readFileSync(join(skills, name, "SKILL.md"), "utf8");
     expect(text.startsWith("---\n")).toBe(true);
     const end = text.indexOf("\n---\n", 4);
     expect(end).toBeGreaterThan(0);
