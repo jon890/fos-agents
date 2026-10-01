@@ -218,6 +218,7 @@ Hermes에서는 서버 이름 `accountbook`을 사용해 `mcp__accountbook__<도
 - 수정은 바꿀 필드만 받으며 카테고리 UUID와 이름을 동시에 받지 않는다. 수정과 삭제의 `confirmed: true`는 스킬이 사용자의 확인을 받은 뒤에만 전달한다.
 - 가족 목록은 `{ families, defaultFamilyUuid }`, 카테고리는 `{ uuid, name }[]`를 반환한다.
 - 거래 응답은 REST API의 `data`를 MCP text JSON으로 전달한다. 목록은 `items`, `totalElements`, `totalPages`, `currentPage`를 가진다.
+- 삭제는 HTTP 2xx 응답의 `data`가 없거나 `null`이면 성공으로 처리한다. HTTP 204도 성공으로 처리한다.
 - 오류는 MCP `isError: true`와 `{ error: { code, message } }`로 반환한다. 입력 단계의 프로토콜 스키마 오류는 SDK가 MCP 오류로 반환한다.
 
 | 오류 코드 | 조건 |

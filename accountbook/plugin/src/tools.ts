@@ -172,7 +172,7 @@ export class AccountbookTools {
         return this.success(responseData(await this.client.request(target), transactionSchema));
       if (name.startsWith("delete_")) {
         const response = await this.client.request(target, "DELETE");
-        if (response !== undefined) responseData(response, z.null());
+        if (response !== undefined) responseData(response, z.null().optional());
         return this.success({ deleted: true, familyUuid, transactionUuid: args.transactionUuid });
       }
       const body = { ...args };
