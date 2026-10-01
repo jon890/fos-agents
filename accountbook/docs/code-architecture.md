@@ -7,6 +7,7 @@ accountbook/
 ├── AGENTS.md
 ├── README.md
 ├── .env.example
+├── .gitignore
 ├── plugin/
 │   ├── .claude-plugin/plugin.json
 │   ├── .mcp.json
@@ -28,7 +29,8 @@ accountbook/
 | `plugin/src/screenshot-contracts.ts` | 화면 추출 입력 스키마 |
 | `plugin/src/screenshot-validation.ts` | 일별 합계 계산과 후보 식별자 생성 |
 | `plugin/src/screenshot-tools.ts` | 화면 가져오기 미리보기, 기존 기록 대조와 순차 등록 |
-| `plugin/src/server.ts` | `accountbook` 서버의 stdio MCP 실행 |
+| `plugin/src/server.ts` | `accountbook` 서버의 stdio MCP 실행과 도구별 읽기 전용 표시 |
+| `plugin/src/*.test.ts`, `plugin/scripts/*.test.ts` | fetch 대역으로 도는 도구 테스트, 번들 일치와 manifest 일치 검사 |
 | `plugin/scripts/build.ts`, `plugin/dist/accountbook-mcp.js` | 의존성을 포함한 단일 실행 파일 빌드와 배포 |
 | `plugin/skills/accountbook-api/` | 화면 읽기 규칙, MCP 호출 순서와 사용자 확인을 담은 단일 스킬 정본 |
 | `.claude/skills/accountbook-api` | plugin 안의 정본을 찾는 링크 |
@@ -47,9 +49,11 @@ MCP 도구는 다음 책임을 가진다.
 - 해당 날짜의 기존 수입·지출을 조회해 이미 등록된 거래를 가려내고 남은 거래만 등록 대상으로 삼는다.
 - 추출 내용과 등록 대상의 해시로 묶음 ID와 후보 식별자를 만든다.
 - 사용자가 확인한 묶음 ID와 등록 요청의 내용이 같은지 확인한 뒤 순서대로 등록한다.
+- 같은 내용의 등록 요청이 겹치면 프로세스 안의 진행 중 표시로 하나만 진행한다.
 
 에이전트의 추출 결과가 상태 변경에 쓰이기 전에 결정적 검증을 거치므로 루트 [ADR-021](../../docs/adr/ADR-021-deterministic-agent-boundary.md)을 따른다.
 MCP 서버는 파일을 읽거나 쓰지 않는다([ADR-005](adr/ADR-005-screenshot-import-as-mcp-tools.md)).
+진행 중 표시는 메모리에만 있고 프로세스가 끝나면 사라진다.
 
 ## 외부 의존
 
@@ -74,9 +78,14 @@ fos-assistant는 `accountbook/plugin/`을 복사하거나 마운트해 manifest,
 `.mcp.json`은 Claude Code 형식에 따라 `mcpServers` 객체 아래에 `accountbook` 서버를 둔다.
 `.mcp.json`에는 변수 참조만 두고 토큰과 공인 주소의 실제 값을 넣지 않는다.
 `.mcp.json`의 서버 env는 `connector.json`의 `fields[].env`와 `operator_env`의 합과 같아야 한다.
+fos-assistant는 설치할 때 `skills/` 아래 `SKILL.md`의 본문을 가계부 전용 에이전트의 지침으로 쓴다.
+스킬 도구는 열지 않으므로 `SKILL.md` 밖의 참조 파일은 에이전트에 전달되지 않는다. 에이전트가 따라야 할 규칙은 본문에 둔다.
+앞머리를 뺀 본문은 8,000자를 넘지 않아야 하고 `skills/` 아래에 심볼릭 링크를 두지 않는다. 어기면 커넥터가 카탈로그에서 빠진다.
+MCP 도구 목록이 바뀐 판을 배포하면 실행 환경이 MCP 서버를 다시 띄워야 새 도구가 보인다. 스킬 본문만 바뀐 판은 연결 확인으로 반영한다.
 실행 파일에 의존성이 포함돼 있으므로 설치한 환경에서 `bun install`을 실행하지 않는다.
 소스를 수정한 개발자는 plugin 디렉터리에서 `bun install --frozen-lockfile`, `bun run build`를 수행하고 실행 파일도 함께 커밋한다.
 번들 일치 검사와 설치 없는 stdio 초기화 테스트가 이를 검증한다.
+스킬 본문의 길이와 링크 조건은 `plugin/scripts/connector-config.test.ts`가 검사한다.
 
 plugin 형식은 [Claude Code 공식 plugin 참조](https://code.claude.com/docs/en/plugins-reference)를,
 stdio 구현은 [MCP 공식 TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk/tree/v1.x)를 따른다.

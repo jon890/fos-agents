@@ -90,7 +90,7 @@ description: 토스 소비 내역 스크린샷을 읽어 검증한 뒤 사용자
 |---|---|
 | `daily_totals_mismatch`, `low_confidence_required_field` | 해당 날짜를 다시 읽는다. 그래도 같으면 사용자에게 값을 확인받는다 |
 | `expected_totals_unavailable` | 일별 요약이 보이는 화면을 다시 요청한다 |
-| `category_required` | 카테고리 목록을 보여 주고 거래별 카테고리나 모두에 쓸 `defaultCategoryName`을 고르게 한다 |
+| `category_required` | 카테고리 목록을 보여 주고 거래별 카테고리나 모두에 쓸 `defaultCategoryName`을 고르게 한다. 사용자가 판단을 맡기면 거래 설명으로 정하고, 정한 카테고리를 보여 준 뒤 등록 확인을 받는다 |
 | `category_not_found` | 카테고리 목록에서 다시 고르게 한다 |
 | `date_in_future`, `date_evidence_mismatch`, `date_source_mismatch`, `inferred_year_too_old` | 날짜를 다시 읽고 연도를 사용자에게 확인받는다 |
 | `duplicate_row_index`, `duplicate_date`, `no_transactions`, `no_complete_day_selected` | 날짜 경계와 행 순서를 다시 읽는다. 완전한 날짜가 없으면 화면을 다시 요청한다 |
