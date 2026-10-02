@@ -59,7 +59,7 @@ career-os/
 | `position-recommender` | 2 | | |
 | `resume-preparer` | 7 | 21 | 4 |
 | `study-topic-recommender` | 2 | | |
-| `sync-profile` | 3 | 4 | |
+| `sync-profile` | 3 | 7 | |
 
 ### 실행 코드를 두 자리 중 어디에 두나
 
@@ -607,10 +607,13 @@ client 가 읽는 환경값은 포지션 추천과 같다. 같은 Backend 이고
 | `.claude/skills/sync-profile/references/linkedin.md` | LinkedIn 편집 진입과 저장 확인 절차 |
 | `.claude/skills/sync-profile/references/github.md` | GitHub 프로필 문서 규칙 |
 | `.claude/skills/sync-profile/scripts/wanted_*.sh` | 원티드 폼 필드 조회와 입력 |
+| `.claude/skills/sync-profile/scripts/linkedin_*.sh` | LinkedIn 소개의 문단 입력과 프로젝트 폼 채우기 |
 | `.claude/skills/sync-profile/scripts/agent_usage.py` | 에이전트 세션 기록에서 월별 토큰과 환산 비용 계산 |
+| `.claude/skills/sync-profile/scripts/agent_usage_chart.py` | 측정 기록의 값으로 GitHub 프로필의 차트 그리기 |
 | `library/profiles/wanted-profile.md` | 원티드 원고 |
 | `library/profiles/linkedin-profile.md` | LinkedIn 원고 |
 | `library/profiles/github-profile.md` | GitHub 원고 |
-| `library/profiles/github-agent-usage.svg` | `agent_usage.py` 가 만든 이미지 |
+| `library/profiles/github-agent-usage-snapshots.md` | 달이 끝난 직후 측정한 월별 사용량 기록 |
+| `library/profiles/github-agent-usage.svg` | `agent_usage_chart.py` 가 측정 기록으로 그린 이미지 |
 
 브라우저 조작은 공용 `browser-driver`를 쓰고 이 스킬이 드라이버를 따로 만들지 않는다.
