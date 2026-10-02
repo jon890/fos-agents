@@ -157,7 +157,7 @@ Hermes에서는 서버 이름 `accountbook`을 사용해 `mcp__accountbook__<도
 - `description`은 최대 1000자이며, 지출만 `excludeFromBudget`을 받는다.
 - 수정은 바꿀 필드만 받으며 카테고리 UUID와 이름을 동시에 받지 않는다.
   MCP 입력 스키마에서 수정과 삭제는 `confirmed: true`가 필수다.
-  스킬은 승인 기능이 제공된 환경에서만 사용자 확인 뒤 수정 도구에 이 값을 전달하며 사용자 승인 절차를 따른다.
+  스킬은 사용자 확인 뒤 수정 도구에 이 값을 전달하며, 사용자가 승인 카드에서 승인해야 실행된다.
   삭제 도구는 호출하지 않고 가계부 앱에서 직접 지우도록 안내한다.
 - 가족 목록은 `{ families, defaultFamilyUuid }`, 카테고리는 `{ uuid, name, type }[]`를 반환한다.
   카테고리의 `type`은 `EXPENSE` 또는 `INCOME`이며 API 응답에 반드시 있어야 한다.

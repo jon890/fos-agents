@@ -71,7 +71,7 @@ fos-assistant는 `accountbook/plugin/`을 복사하거나 마운트해 manifest,
 `connector.json`은 `schema: 2`로 MCP 도구별 호출 정책을 선언한다.
 `tools`는 원래 MCP 도구 이름별 `risk`와 `approval`을 정한다.
 조회·합계·미리보기는 `READ/none`, 등록·수정은 `WRITE/required`, 삭제는 `DESTRUCTIVE/always`다.
-등록과 수정은 승인 기능이 나오기 전까지 실행되지 않으며, 삭제는 승인 기능 도입 뒤에도 차단된다.
+등록과 수정은 호출하면 승인 요청이 만들어지고 사용자가 승인 카드에서 승인한 것만 실행되며, 삭제는 계속 차단된다.
 `default_tool_policy: deny`는 선언되지 않은 도구의 호출을 거절한다.
 새 MCP 도구를 추가할 때는 같은 변경에서 `tools`에 위험도와 승인 방식을 선언해야 한다.
 확인 도구와 선택지 도구는 `READ/none`으로 선언해야 한다.
