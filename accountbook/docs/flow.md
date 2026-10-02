@@ -23,8 +23,7 @@ flowchart TD
   O --> W{사용자가 승인 카드에서 승인}
   W -->|거절·만료| X[실행 없이 종료, 다시 원하면 새로 호출]
   W -->|승인| Y[승인한 인자 그대로 한 번 실행]
-  Y --> P
-  O --> P{다시 검증한 묶음 ID가 같은가}
+  Y --> P{다시 검증한 묶음 ID가 같은가}
   P -->|아니오| Q[ACCOUNTBOOK_IMPORT_CONFIRMATION_MISMATCH]
   P -->|예| R[아직 등록되지 않은 거래만 화면 순서대로 POST]
   R --> S{모두 성공}
