@@ -46,4 +46,7 @@ ADR에는 현재 설계를 이해하는 데 필요한 기술적 선택과 기각
 | ADR-129 | [면접 연습 기록과 개인 질문은 저장소 경계 뒤에 두고 운영은 Backend가 소유](ADR-129-면접-연습-기록과-개인-질문은-backend가-소유한다.md) | Accepted |
 | ADR-130 | [면접 연습의 후보자 맥락은 memory 공급자 경계로 읽음](ADR-130-면접-연습의-후보자-맥락은-memory-공급자-경계로-읽는다.md) | Accepted |
 | ADR-131 | [후보자 맥락은 Backend 문서로 두고 공부 추천 기준 버전을 문서 버전에서 계산](ADR-131-후보자-맥락은-backend-문서로-두고-공부-추천-기준-버전을-문서-버전에서-계산한다.md) | Accepted |
-| ADR-132 | [스킬의 개인 맥락은 후보자 맥락 문서에서 읽고 지원서 공통 프로필만 brain에 둠](ADR-132-스킬의-개인-맥락은-후보자-맥락-문서에서-읽고-지원서-공통-프로필만-brain에-둔다.md) | Accepted |
+| ADR-132 | [스킬의 개인 맥락은 후보자 맥락 문서에서 읽고 지원서 공통 프로필만 brain에 둠](ADR-132-스킬의-개인-맥락은-후보자-맥락-문서에서-읽고-지원서-공통-프로필만-brain에-둔다.md) | Accepted. 분석 정책 맞추기 조항은 ADR-134가 대체 |
+| ADR-133 | [프로필 원고와 에이전트 사용량 기록은 Backend 의 profile 모듈이 가짐](ADR-133-프로필-원고와-에이전트-사용량-기록은-backend의-profile-모듈이-갖는다.md) | Accepted |
+| ADR-134 | [공고 분석의 기준 버전은 position-preferences 문서 버전에서 계산](ADR-134-공고-분석의-기준-버전은-position-preferences-문서-버전에서-계산한다.md) | Accepted |
+| ADR-135 | [fos-assistant 커넥터는 Backend 를 감싸고 숫자는 기록에서 직접 읽음](ADR-135-fos-assistant-커넥터는-backend를-감싸고-숫자는-기록에서-직접-읽는다.md) | Accepted |
