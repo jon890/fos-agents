@@ -1280,3 +1280,98 @@ HTTP 계약은 [`flow.md`](flow.md#프로필-http-계약)가 소유한다. 이�
 | `note` | 표의 「비고」 다 |
 
 환산 비용이나 세션 수가 빈 달이 섞이면 프로필의 그 배지는 합계를 낼 수 없어 뺀다.
+
+## fos-career 커넥터
+
+커넥터는 아무것도 저장하지 않는다. 문서와 사용량 기록은 커리어 Backend 가, README 와 차트는 GitHub 의 프로필 저장소가 갖는다.
+이 절은 커넥터의 환경 변수와 MCP 계약의 단일 소스다. 입력 스키마의 정본은 `plugin/src/tools.ts` 다.
+
+### 커넥터 환경 변수
+
+| 이름 | 누가 주나 | 필수 | 내용 |
+| --- | --- | :---: | --- |
+| `CAREER_BACKEND_TOKEN` | 사용자. 연결 칸 `token` | 예 | 커리어 Backend 의 Bearer token. 앞뒤 공백을 뗀 뒤 32자 이상 |
+| `CAREER_GITHUB_TOKEN` | 사용자. 연결 칸 `github_token` | 아니오 | 프로필 저장소 하나의 내용 읽기와 쓰기 권한만 가진 token |
+| `CAREER_BACKEND_URL` | 운영자 | 예 | credentials, query, hash, path 가 없는 HTTP 또는 HTTPS origin |
+| `CAREER_GITHUB_PROFILE_REPO` | 운영자 | 예 | `<owner>/<repo>` 모양의 프로필 저장소 이름 |
+
+값이 `${` 로 시작하면 치환되지 않은 변수 참조이므로 없는 값으로 다룬다.
+필수 값이 없거나 모양이 틀리면 서버가 `CAREER_CONFIG` 로 시작하지 않는다.
+`CAREER_GITHUB_TOKEN` 만 없으면 서버는 시작하고 GitHub 도구가 `CAREER_GITHUB_NOT_CONFIGURED` 로 답한다.
+token 을 파일에 저장하지 않고 로그와 오류 응답에 싣지 않는다.
+
+### 도구
+
+Hermes 에서는 서버 이름 `career` 로 `mcp__career__<도구>` 가 된다.
+`check_`, `list_`, `get_` 으로 시작하는 도구는 읽기 전용으로 표시한다.
+
+| 도구 | 위험도, 승인 | 입력 | 결과 |
+| --- | --- | --- | --- |
+| `check_connection` | `READ`, `none` | 없음 | `{ backend: "ok", github: "ok" \| "not_configured" }`. 확인 도구다 |
+| `list_context_documents` | `READ`, `none` | 없음 | `{ documents: [{ documentKey, version, updatedAt }] }` |
+| `get_context_document` | `READ`, `none` | `documentKey` | `{ document: { documentKey, body, version, note, updatedAt } }` |
+| `list_profile_documents` | `READ`, `none` | 없음 | `{ documents: [{ documentKey, version, updatedAt }] }` |
+| `get_profile_document` | `READ`, `none` | `documentKey` | `{ document: { documentKey, body, version, note, updatedAt } }` |
+| `list_usage_snapshots` | `READ`, `none` | 없음 | `{ snapshots: [...] }`. Backend 의 응답을 달 오름차순 그대로 낸다 |
+| `get_github_profile` | `READ`, `none` | 없음 | `{ repo, branch, readme, chartExists }`. `readme` 는 README 가 없으면 `null` 이다 |
+| `save_context_document` | `WRITE`, `required` | `documentKey`, `body`, `note`, `expectedVersion` | `{ document: { documentKey, version, updatedAt } }` |
+| `save_profile_document` | `WRITE`, `required` | `documentKey`, `body`, `note`, `expectedVersion` | `{ document: { documentKey, version, updatedAt } }` |
+| `update_github_profile` | `WRITE`, `required` | `readme`, `months` | `{ changed, commitSha, branch, months, total }` |
+
+- 후보자 맥락의 `documentKey` 는 [후보자 맥락 문서](#후보자-맥락-문서)의 네 키, 프로필 원고의 `documentKey` 는 `wanted`, `linkedin`, `github` 다
+- 저장 도구의 `body`, `note`, `expectedVersion` 은 Backend 의 문서 저장 계약과 같다. 본문 전체를 바꾸고 새 문서는 `expectedVersion: 0` 이다
+- 저장 요청의 `Idempotency-Key` 는 노트북의 CLI 가 같은 내용으로 만드는 값과 같다. 같은 저장을 두 길로 보내도 한 번만 반영된다
+- `update_github_profile` 의 `readme` 는 README 전체의 Markdown 이고, `months` 는 차트에 넣을 달(`YYYY-MM`)의 목록이다. 1개에서 6개까지 받고 겹치는 달을 받지 않는다. 차트에는 달 오름차순으로 넣는다
+- `update_github_profile` 은 숫자를 인자로 받지 않는다. 입력 스키마가 `readme` 와 `months` 밖의 키를 거절한다
+- `total` 은 `97.9B` 같은 글이고 `commitSha` 는 올라간 커밋이다. `changed: false` 이면 저장소가 이미 같은 내용이라 커밋을 만들지 않은 것이고 `commitSha` 는 그때의 branch 끝이다
+- 결과는 MCP 응답의 첫 텍스트 칸에 JSON 으로 싣는다. `check_connection` 은 같은 값을 `structuredContent` 에도 싣는다
+- 오류는 `isError: true` 와 `{ error: { code, message } }` 다. `CAREER_BADGE_MISMATCH` 는 같은 객체에 `expected`(기록의 합계)와 `found`(README 의 값)를, `CAREER_USAGE_MONTH_MISSING` 은 `missing`(없는 달의 목록)을 더한다
+
+**승인이 필요한 도구의 인자는 fos-assistant 가 UTF-8 16KB 까지만 받는다.**
+키와 따옴표를 포함해 직렬화한 인자 전체의 크기다. 한글은 한 글자가 3바이트라 본문이 5천 자 안팎이면 닿는다.
+넘는 호출은 커넥터에 닿기 전에 거절된다. Backend 의 본문 상한 64 KiB 보다 작으므로 큰 문서는 노트북의 CLI 로 저장한다.
+
+### 차트와 Tokens 배지
+
+숫자는 모두 사용량 기록의 토큰 수에서 계산한다.
+
+| 값 | 계산 |
+| --- | --- |
+| 막대 하나의 값 | 그 달의 Claude Code 토큰과 Codex 토큰을 각각 1억으로 나눠 반올림한 정수. 단위는 0.1B 다. 5천만 이상을 올린다 |
+| 달의 합계 | 그 달의 두 정수를 더한 값 |
+| 전체 합계 | 고른 달의 정수를 모두 더한 값 |
+| 표기 | 정수를 10 으로 나눠 소수 한 자리와 `B` 를 붙인다. `979` 는 `97.9B` 다 |
+
+합계를 토큰 수에서 다시 반올림하지 않는다. 차트의 달별 값을 더한 수와 배지의 수가 늘 같아야 하기 때문이다.
+
+README 에는 `img.shields.io/badge/Tokens-<값>B-` 모양의 배지 주소가 정확히 하나 있어야 한다.
+`<값>` 은 숫자, 점, 숫자 한 자리(`\d+\.\d`)다. 이 글이 전체 합계의 표기와 같지 않으면 `CAREER_BADGE_MISMATCH` 다.
+배지가 없거나 둘 이상이거나 `98B` 처럼 소수 자리가 없어도 같은 오류다.
+
+차트의 달 표기는 `2026-07` 을 `2026.07` 로 바꾼 글이다. 저장소의 파일 이름은 `README.md` 와 `agent-usage.svg` 로 고정한다.
+
+### 커넥터 오류 코드
+
+`connector.json` 의 `errors` 가 오른쪽 칸의 공통 어휘로 잇는다. 비어 있는 코드는 표에 넣지 않으며 fos-assistant 가 `unavailable` 로 읽는다.
+
+| 오류 코드 | 조건 | 공통 어휘 |
+| --- | --- | --- |
+| `CAREER_CONFIG` | 필수 환경 변수가 없거나 모양이 틀림 | |
+| `CAREER_UNAUTHORIZED` | Backend 가 401 이나 403 으로 답함 | `credential_rejected` |
+| `CAREER_NOT_FOUND` | Backend 가 404 로 답함. 아직 만들지 않은 문서다 | `invalid_input` |
+| `CAREER_VERSION_CONFLICT` | Backend 가 409 로 답함. `expectedVersion` 이 현재 값과 다르다 | `invalid_input` |
+| `CAREER_BAD_REQUEST` | Backend 의 나머지 4xx | `invalid_input` |
+| `CAREER_UNAVAILABLE` | Backend 의 5xx | `unavailable` |
+| `CAREER_NETWORK` | Backend 연결, redirect, 시간 초과 실패. 저장됐는지 알 수 없으므로 다시 읽어 확인한다 | `unavailable` |
+| `CAREER_INVALID_RESPONSE` | Backend 나 GitHub 의 응답에서 필요한 구조를 읽지 못함 | `unavailable` |
+| `CAREER_INVALID_INPUT` | 도구 입력 검증 실패 | `invalid_input` |
+| `CAREER_USAGE_MONTH_MISSING` | 고른 달 가운데 사용량 기록이 없는 달이 있음 | `invalid_input` |
+| `CAREER_BADGE_MISMATCH` | README 의 Tokens 배지가 없거나 여럿이거나 값이 기록의 합계와 다름 | `invalid_input` |
+| `CAREER_GITHUB_NOT_CONFIGURED` | GitHub token 을 넣지 않음 | `credential_rejected` |
+| `CAREER_GITHUB_UNAUTHORIZED` | GitHub 가 401 로 답함 | `credential_rejected` |
+| `CAREER_GITHUB_FORBIDDEN` | GitHub 가 403 이나 404 로 답함. token 에 그 저장소의 권한이 없거나 저장소 이름이 틀리다 | `forbidden` |
+| `CAREER_GITHUB_CONFLICT` | branch 를 옮길 때 GitHub 가 409 나 422 로 답함. 그 사이 다른 커밋이 올라왔다 | `unavailable` |
+| `CAREER_GITHUB_UNAVAILABLE` | GitHub 의 5xx, 연결과 시간 초과 실패 | `unavailable` |
+| `CAREER_UNKNOWN_TOOL`, `CAREER_INTERNAL` | 지원하지 않는 도구 또는 내부 처리 실패 | |
+
+`message` 는 사람에게 보일 고정 문구다. Backend 와 GitHub 의 응답 본문, token, 문서 본문을 담지 않는다.

@@ -23,6 +23,7 @@ career-os/
 ├── .codex/skills/        Codex에서 같은 skill을 노출하는 링크
 ├── config/               사람이 관리하는 수집 정책
 ├── scripts/              검증, 수집과 변환 코드
+├── plugin/               fos-assistant 에 연결하는 `fos-career` 커넥터. 루트와 별도 package다
 ├── services/             추천 상태 HTTP Backend와 migration. 루트와 별도 package다
 ├── applications/         동기화되는 로컬 지원 패키지
 ├── library/              사람이 직접 관리하며 여러 지원에서 재사용하는 비공개 자료
@@ -649,3 +650,78 @@ plist 는 `~/Library/LaunchAgents/` 에, 로그는 `~/Library/Logs/fos-career-os
 `documents put` 은 `--file` 로 받은 Markdown 파일을 본문으로 보내고 `--note` 와 `--expected-version` 을 요구한다.
 원고는 시스템 임시 디렉터리에서 편집하고 저장한 뒤 지운다.
 `usage put` 은 측정값을 옵션으로 받는다. `--replace` 는 `--note` 와 함께 줄 때만 받는다.
+
+## fos-career 커넥터
+
+`plugin/` 은 fos-assistant 가 사용자별 profile 에 설치하는 커넥터의 배포 단위다.
+plugin 이름과 커넥터 id 는 `fos-career`, MCP 서버 이름은 `career` 다.
+가계부 커넥터(`accountbook/plugin/`)와 같은 구성이고, 결정은 [ADR-135](adr/ADR-135-fos-assistant-커넥터는-backend를-감싸고-숫자는-기록에서-직접-읽는다.md)에 있다.
+
+```text
+career-os/plugin/
+├── .claude-plugin/plugin.json
+├── .mcp.json
+├── connector.json
+├── package.json, tsconfig.json, bun.lock
+├── src/
+├── scripts/
+├── dist/career-mcp.js
+└── skills/career-connector/SKILL.md
+```
+
+| 경로 | 책임 |
+| --- | --- |
+| `plugin/connector.json` | 연결 화면의 입력 칸, 확인 도구, 도구별 위험도와 승인 방식, 오류 코드 대응 |
+| `plugin/.mcp.json` | `career` 서버의 실행 명령과 env 변수 참조. 실제 값을 담지 않는다 |
+| `plugin/src/server.ts` | stdio MCP 서버 조립과 도구별 읽기 전용 표시 |
+| `plugin/src/tools.ts` | 도구 열 개의 입력 스키마와 분기, 오류를 `{ error: { code, message } }` 로 바꾸는 일 |
+| `plugin/src/backend.ts` | 커리어 Backend 의 Bearer HTTP client 와 응답 스키마 |
+| `plugin/src/github.ts` | GitHub REST client. 프로필 저장소 조회와 Git Data API 로 커밋 하나를 만드는 일 |
+| `plugin/src/*.test.ts`, `plugin/scripts/*.test.ts` | fetch 대역으로 도는 도구 테스트, 번들 일치와 manifest 일치 검사 |
+| `plugin/scripts/build.ts`, `plugin/dist/career-mcp.js` | 의존성을 포함한 단일 실행 파일의 빌드와 배포 |
+| `plugin/skills/career-connector/SKILL.md` | 연결용 에이전트의 지침. 프로필 갱신 순서와 승인 규칙 |
+| `scripts/agent-usage/chart.ts` | 사용량 기록을 차트 입력으로 바꾸고 SVG 를 그리며 README 의 Tokens 배지 값을 읽는 순수 함수. import 가 없다 |
+| `scripts/agent-usage/render_chart.ts` | 노트북에서 같은 차트를 파일로 그리는 CLI. Backend 의 사용량 기록을 읽는다 |
+
+**커넥터는 `scripts/` 의 Backend client 를 번들하지 않고 `plugin/src/backend.ts` 를 따로 둔다.**
+
+- `scripts/lib/career-backend-config.ts` 는 token 파일을 읽는다. 번들에 넣으면 MCP 서버가 파일을 읽는 코드를 갖게 된다. 커넥터는 profile 의 환경 변수만 읽고 `.env` 를 탐색하지 않는다
+- `scripts/` 의 코드는 루트 package 의 `zod` 를, plugin 은 자기 package 의 `zod` 를 쓴다. 함께 번들하면 `zod` 가 두 벌 들어가고 커밋한 번들이 루트의 설치 상태에 따라 달라진다
+- `scripts/lib/career-backend-http.ts` 는 실패한 요청을 다시 보낸다. 확인 도구는 10초 안에 답해야 해서 커넥터는 다시 보내지 않고 시간 제한을 짧게 둔다
+
+두 client 가 어긋나지 않는지는 번들에 들어가지 않는 plugin 의 테스트가 확인한다. 문서 키 목록과 저장 요청의 `Idempotency-Key` 가 `scripts/candidate-context/` 와 `scripts/profile/` 의 것과 같은지 대조한다.
+
+**차트 코드는 `scripts/agent-usage/chart.ts` 하나다.** plugin 이 이 파일만 번들한다.
+다른 파일을 import 하지 않는 순수 함수라 위의 `zod` 문제가 없다. 노트북의 CLI 와 커넥터가 같은 함수로 같은 SVG 를 그린다.
+
+**MCP 서버는 프로세스 안의 상태에 기대지 않는다.** fos-assistant 는 승인된 쓰기를 새 프로세스에서 실행한다.
+파일을 읽거나 쓰지 않고, 호출 사이에 값을 기억하지 않는다.
+
+### 커넥터 설치 계약
+
+fos-assistant 는 `plugin/` 을 복사하거나 마운트해 `connector.json`, `.mcp.json`, `skills/` 를 읽는다.
+
+- `connector.json` 은 `schema: 2` 다. 도구 열 개를 `tools` 에 빠짐없이 선언하고 `default_tool_policy` 는 `deny` 다. 새 도구를 더할 때는 같은 변경에서 `tools` 에 위험도와 승인 방식과 `title` 을 선언한다
+- 확인 도구 `check_connection` 은 `READ` 와 `none` 이고 서버가 `readOnlyHint: true` 로 표시한다
+- `.mcp.json` 의 서버 env 는 `connector.json` 의 `fields[].env` 와 `operator_env` 의 합과 같다. 다르면 커넥터가 카탈로그에서 빠진다
+- `operator_secrets` 를 선언하지 않는다. 선언하면 카탈로그에서 빠진다. 그래서 Backend 의 token 은 사용자가 연결 화면에 넣는다
+- `skills/` 아래 `SKILL.md` 의 본문이 연결용 에이전트의 지침이 된다. 앞머리를 뺀 본문은 8,000자를 넘지 않고 `skills/` 아래에 심볼릭 링크를 두지 않는다. 어기면 카탈로그에서 빠진다
+- 이 스킬을 `.claude/skills/` 에 링크하지 않는다. 노트북의 에이전트에는 이 MCP 도구가 없고 프로필 갱신은 `sync-profile` 이 맡는다
+- 도구 목록이 바뀐 판을 배포하면 실행 환경이 MCP 서버를 다시 띄워야 새 도구가 보인다. 스킬 본문만 바뀐 판은 연결 확인으로 반영한다
+- 실행 파일에 의존성이 포함돼 있어 설치한 환경에서 `bun install` 을 하지 않는다. 소스를 고친 사람이 빌드해 `dist/career-mcp.js` 를 함께 커밋한다
+
+환경 변수의 뜻은 [`data-schema.md`](data-schema.md#fos-career-커넥터)가 소유한다.
+
+검증 명령이다. 실제 Backend 와 GitHub 를 부르지 않고 모든 HTTP 호출을 fetch 대역으로 확인한다.
+
+```bash
+# cwd: 저장소 루트
+bun install --frozen-lockfile
+bun install --frozen-lockfile --cwd career-os/plugin
+bun test ./career-os/plugin ./career-os/scripts/agent-usage
+bun run --cwd career-os/plugin typecheck
+bun run --cwd career-os/plugin build
+claude plugin validate career-os/plugin
+```
+
+첫 줄의 루트 설치는 plugin 의 대조 테스트가 `scripts/` 의 계약 파일을 import 하기 때문에 필요하다.
