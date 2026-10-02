@@ -51,6 +51,7 @@ erDiagram
 
 table 별 칸과 제약은 아래 `position-recommender` 절이 소유한다.
 면접 연습 table 은 `interview-practice` 절이, 공부 추천 table 은 `study-topic-recommender` 절이 소유한다.
+프로필 원고와 에이전트 사용량 기록 table 은 `sync-profile` 절이 소유한다.
 schema 는 `services/career-backend/prisma/` 가 관리하고,
 migration 적용 절차는 [`services/career-backend/README.md`](../services/career-backend/README.md) 가 소유한다.
 
@@ -1176,3 +1177,64 @@ publication의 `idempotencyKey`는 `publication:` 뒤에 고정 순서 `{reportI
 
 등록하지 못한 기술과 종료월을 넣은 진행 중 프로젝트가 두 번째에 해당한다.
 파일 배치는 [`code-architecture.md`](code-architecture.md#sync-profile)가 소유한다.
+
+### 프로필 원고 table
+
+커리어 Backend 의 `profile` 모듈이 대상별 프로필 원고의 원본을 갖는다.
+문서 키마다 Markdown 본문 하나이고, 저장 규칙은 [「후보자 맥락 문서」](#후보자-맥락-문서)와 같다.
+후보자 맥락 문서는 스킬이 판단에 쓰는 입력이고 프로필 원고는 밖에 올린 결과라 table 을 따로 둔다.
+HTTP 계약은 [`flow.md`](flow.md#프로필-http-계약)가 소유한다. 이유는 [ADR-133](adr/ADR-133-프로필-원고와-에이전트-사용량-기록은-backend의-profile-모듈이-갖는다.md)을 따른다.
+
+| 문서 키 | 담는 것 |
+| --- | --- |
+| `wanted` | 원티드 프로필 원고 |
+| `linkedin` | LinkedIn 프로필 원고 |
+| `github` | GitHub 프로필 README 원고 |
+
+`profile_documents` 는 문서 키마다 한 행이다.
+
+| 칸 | 타입 | 설명 |
+| --- | --- | --- |
+| `document_key` | `VARCHAR(50)` PK | 위 세 값 중 하나. `CHECK` 로 강제한다 |
+| `body` | `MEDIUMTEXT` | Markdown 본문. 서버가 UTF-8 64 KiB 이하만 받는다 |
+| `version` | `INT UNSIGNED` | 저장할 때마다 1 씩 오른다. 첫 저장이 1 이다. `CHECK` 로 1 이상을 강제한다 |
+| `note` | `VARCHAR(500)` | 마지막 변경 이유 |
+| `updated_at` | `DATETIME(3)` | |
+
+`profile_document_revisions` 는 저장할 때마다 한 행을 더한다. 지우거나 고치지 않는다.
+
+| 칸 | 타입 | 설명 |
+| --- | --- | --- |
+| `document_key` | `VARCHAR(50)` | `profile_documents` 를 가리키는 외래 키. `RESTRICT` 다 |
+| `version` | `INT UNSIGNED` | 이 저장으로 생긴 version |
+| `body` | `MEDIUMTEXT` | 그때의 본문 |
+| `note` | `VARCHAR(500)` | 변경 이유 |
+| `created_at` | `DATETIME(3)` | |
+
+`(document_key, version)` 이 PK 다. 문서 행을 지우는 경로는 없다.
+
+### 에이전트 사용량 기록 table
+
+`agent_usage_snapshots` 는 달마다 한 행이다. 세션 기록이 기기에서 지워진 뒤에는 그 달을 다시 셀 수 없어,
+측정한 값을 그때 적어 두고 이후에는 바꾸지 않는다.
+
+| 칸 | 타입 | 설명 |
+| --- | --- | --- |
+| `month` | `CHAR(7)` PK | `YYYY-MM`. `CHECK` 로 형식을 강제한다 |
+| `claude_tokens` | `BIGINT UNSIGNED` | 그 달의 Claude Code 토큰 |
+| `codex_tokens` | `BIGINT UNSIGNED` | 그 달의 Codex 토큰 |
+| `claude_cost_usd` | `DECIMAL(12,2)` NULL | 공개 API 단가로 환산한 비용. 측정하지 못했으면 비운다 |
+| `codex_cost_usd` | `DECIMAL(12,2)` NULL | 위와 같다 |
+| `sessions` | `INT UNSIGNED` NULL | 세션 수. 측정하지 못했으면 비운다 |
+| `unpriced_tokens` | `BIGINT UNSIGNED` | 단가를 몰라 비용에서 뺀 토큰 |
+| `measured_on` | `DATE` | 측정한 날 |
+| `source` | `VARCHAR(20)` | `MEASURED` 나 `BACKFILLED`. `CHECK` 로 강제한다 |
+| `note` | `VARCHAR(500)` NULL | 기록을 바꾼 이유나 되읽은 출처 |
+| `created_at` | `DATETIME(3)` | |
+| `updated_at` | `DATETIME(3)` | |
+
+- `MEASURED` 는 세션 기록에서 직접 센 값이다. `BACKFILLED` 는 세션 기록이 지워진 뒤 옛 산출물에서 되읽은 값이고 환산 비용과 세션 수가 없을 수 있다.
+- 토큰 칸이 `BIGINT` 인 이유는 한 달 값이 `INT UNSIGNED` 의 상한인 약 43억을 넘기 때문이다. HTTP 응답에서는 JSON 숫자로 낸다.
+- **그 달의 행이 이미 있으면 저장 요청이 와도 값을 바꾸지 않는다.** 바꾸는 경로는 요청이 `replace` 와 사유를 함께 보낼 때뿐이다. 이력 table 은 두지 않고 바꾼 사유를 `note` 에 남긴다.
+- 끝나지 않은 달은 행을 만들 수 없다. 달 중간의 값이 그 달의 기록으로 굳는 것을 막는다.
+- 행을 지우는 경로는 없다.
