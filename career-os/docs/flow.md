@@ -94,6 +94,7 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 | 인증 실패 | `401` |
 | version 충돌 | `409` |
 | 정책을 설정하지 않은 상태의 수집 요청 | `409 POLICY_NOT_CONFIGURED` |
+| `position-preferences` 문서가 없는 상태의 수집 요청과 공고 분석 실행 생성 | `409 CANDIDATE_CONTEXT_MISSING` |
 | 회사 tier 실행이 `pending` 인데 분석 실행 생성 | `409 COMPANY_TIER_RUN_PENDING` |
 | `learning-interests` 문서가 없는 상태의 공부 후보 조회 | `409 CANDIDATE_CONTEXT_MISSING` |
 | DB 연결 실패 | `503` |
@@ -130,19 +131,19 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 
 사람이 `scripts/candidate-context/manage_candidate_context.ts` 로 고친다. 스킬은 변경 전후를 보여 주고 승인을 받은 뒤에만 같은 명령으로 저장한다.
 
-`put --key position-preferences` 는 저장에 성공하면 같은 명령 안에서 `PUT /api/positions/v1/analysis-policy` 로 정책의 `candidateContextVersion` 을 `position-preferences:v{version}` 으로 바꾼다.
-정책의 나머지 칸은 `GET /api/positions/v1/analysis-policy` 로 읽은 값을 그대로 보낸다.
-정책 갱신이 실패하면 문서는 저장된 채로 두고 종료 코드 1 과 함께 정책만 다시 맞추는 명령을 알려 준다.
-정책만 다시 맞추는 명령은 `manage_candidate_context.ts sync-position-policy` 다.
+문서 저장은 다른 저장 값을 함께 바꾸지 않는다.
+`position-preferences` 를 저장한 뒤 포지션 분석 정책을 맞추는 단계가 없다.
+Backend 가 수집 실행을 저장할 때와 공고 분석 실행을 만들 때 이 문서의 `version` 에서 기준 버전 `position-preferences:v{version}` 을 계산한다.
+CLI 로 저장하든 다른 client 로 저장하든 다음 수집부터 새 기준 버전이 쓰인다.
+이유는 [ADR-134](adr/ADR-134-공고-분석의-기준-버전은-position-preferences-문서-버전에서-계산한다.md)를 따른다.
 
-배포 뒤 한 번은 아래 순서로 맞춘다.
+새 DB 에서 첫 수집 전에 준비할 것은 둘이고 순서는 상관없다.
 
-1. `position-preferences` 와 `application-state` 문서를 `put --expected-version 0` 으로 만든다.
-2. `sync-position-policy` 를 실행한다.
+- `position-preferences` 와 `application-state` 문서를 `put --expected-version 0` 으로 만든다.
+- `scripts/position-recommender/configure_position_analysis_policy.ts` 로 분석 정책을 만든다.
 
-분석 정책이 아직 없으면 `409 POLICY_NOT_CONFIGURED` 가 난다.
-이때는 `scripts/position-recommender/configure_position_analysis_policy.ts` 로 정책을 먼저 만든 뒤 2단계를 다시 실행한다.
-이유는 [ADR-132](adr/ADR-132-스킬의-개인-맥락은-후보자-맥락-문서에서-읽고-지원서-공통-프로필만-brain에-둔다.md)를 따른다.
+정책이 없으면 수집 요청이 `409 POLICY_NOT_CONFIGURED` 로 끝난다.
+정책은 있고 `position-preferences` 문서가 없으면 `409 CANDIDATE_CONTEXT_MISSING` 으로 끝난다.
 
 ```mermaid
 sequenceDiagram
@@ -287,10 +288,10 @@ sequenceDiagram
 
 외부 채용 소스의 열린 공고에서 실제 지원 후보를 고르고, 회사를 세 축으로 판정한다.
 
-1. 수집 명령이 `position-preferences` 문서와 분석 정책을 읽어 정책의 `candidateContextVersion` 이 `position-preferences:v{version}` 인지 확인한다. 다르거나 문서가 없으면 수집을 시작하지 않는다. 같으면 `position-preferences` 와 `application-state` 의 version 과 본문을 실행 디렉터리의 `candidate-context.json` 에 둔다.
+1. 수집 명령이 `position-preferences` 와 `application-state` 문서를 읽는다. 하나라도 없으면 수집을 시작하지 않는다. 둘 다 있으면 version 과 본문을 실행 디렉터리의 `candidate-context.json` 에 둔다. 분석 정책과 대조하지 않는다.
 2. 수집기가 `GET exclusions`로 개인 제외 규칙을 읽고, 등록된 소스 어댑터가 열린 공고를 공통 형태로 모은다.
 3. 스크립트가 종료 여부, 마감일, 고용 형태, 역할, URL 중복과 개인 제외 규칙을 검사한다.
-4. client가 후보풀과 소스 진단을 멱등 키와 함께 Backend에 보낸다. Backend는 공고 버전과 수집 실행, 회사 tier 평가 실행을 한 트랜잭션으로 저장하고 평가할 회사 큐를 반환한다.
+4. client가 후보풀과 소스 진단을 멱등 키와 함께 Backend에 보낸다. Backend는 `position-preferences` 문서의 version 에서 기준 버전을 계산하고, 공고 버전과 수집 실행, 회사 tier 평가 실행을 한 트랜잭션으로 저장한 뒤 평가할 회사 큐를 반환한다.
 5. 근거 수집기가 큐에 든 회사만 대상으로 OpenDART와 기술 블로그 RSS와 GitHub organization과 Blind를 조회한다. 유효기간이 남은 근거는 다시 모으지 않는다.
 6. client가 모은 근거를 `PUT company-tier-runs/:companyTierRunId/evidence`로 저장한다. 응답은 회사별 저장 건수다. 그 회사의 유효한 근거는 `GET companies/:companyKey/evidence`로 따로 읽는다.
 7. 모델이 그 근거만 읽고 축 셋을 각각 판정한다. 근거가 없는 축은 `unknown`으로 두고 `recommendedTier`도 내지 않는다.
@@ -306,8 +307,8 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    A[cron 또는 사용자 실행] --> P{정책 기준 버전이 position-preferences 문서 version 과 같은가}
-    P -- 아니요 또는 문서 없음 --> P2[수집하지 않고 종료 코드 1]
+    A[cron 또는 사용자 실행] --> P{position-preferences 와 application-state 문서가 있는가}
+    P -- 아니요 --> P2[수집하지 않고 종료 코드 1]
     P -- 예 --> B[개인 제외 규칙 조회]
     B --> C[열린 공고 수집]
     C --> D{사용 가능한 후보가 있는가}

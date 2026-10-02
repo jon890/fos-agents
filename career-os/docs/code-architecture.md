@@ -176,7 +176,7 @@ MySQL container가 자체 서명 인증서를 사용하므로 서버 인증서�
 | `services/career-backend/src/app.module.ts`        | module 조립과 전역 filter·interceptor 등록                   |
 | `services/career-backend/src/config/`              | 환경값 읽기와 기동 전 검증                                       |
 | `services/career-backend/src/common/`              | 인증, 요청 ID, 본문 크기, zod 검증, 멱등 처리, 오류 응답 형식             |
-| `services/career-backend/src/positions/`           | 회사 정책, 공고 버전, 분석 상태와 추천 조립                            |
+| `services/career-backend/src/positions/`           | 회사 정책, 공고 버전, 분석 상태와 추천 조립. 분석 기준 버전은 `src/candidate-context/` 가 내보낸 조회로 `position-preferences` 문서를 읽어 계산한다 |
 | `services/career-backend/src/positions/repository/`| Prisma 질의. 도메인이 요구하는 단위로만 읽고 쓴다                       |
 | `services/career-backend/src/study/`               | 공부 소스, 수집 자료, cursor, 후보와 추천 판정                         |
 | `services/career-backend/src/interview/`           | 주제별 복습 상태, 연습 기록, 개인 질문과 복습일 규칙                        |
@@ -366,7 +366,7 @@ skill이 중간 파일 이름과 플래그를 알지 못하도록 모든 하위 
 
 | 하위 명령 | 흐름의 단계 |
 | --- | --- |
-| `collect` | 수집 전 기준 버전 확인과 `candidate-context.json` 기록, 공고 수집, 수집 실행 저장, 회사 큐 수신, 근거 수집과 저장 |
+| `collect` | 수집 전 후보자 맥락 문서 확인과 `candidate-context.json` 기록, 공고 수집, 수집 실행 저장, 회사 큐 수신, 근거 수집과 저장 |
 | `commit-company-tiers` | 축별 판정 반영과 분석 큐 생성 |
 | `commit-analyses` | 큐에 든 공고의 분석 반영 |
 | `finalize` | 추천 JSON과 HTML 생성과 검증 |
@@ -588,8 +588,8 @@ client 가 읽는 환경값은 포지션 추천과 같다. 같은 Backend 이고
 | --- | --- |
 | `client.ts` | `/api/candidate-context/v1` client. 연결값과 HTTP 는 `scripts/lib/career-backend-config.ts` 와 `scripts/lib/career-backend-http.ts` 를 쓴다 |
 | `contracts.ts` | 문서 키 넷과 요청, 응답의 zod 계약 |
-| `manage_candidate_context.ts` | `list`, `get`, `put`, `sync-position-policy` 와 `help`. `help` 만 연결값 없이 실행한다. `put --key position-preferences` 는 포지션 분석 정책의 기준 버전도 맞춘다. `sync-position-policy` 는 정책의 기준 버전만 다시 맞춘다 |
-| `position-policy.ts` | `syncPositionPolicy` 는 정책을 읽어 `candidateContextVersion` 만 `position-preferences:v{version}` 으로 바꿔 보내고, 이미 같으면 보내지 않는다. `prepareCandidateContext` 는 수집 전에 기준 버전을 비교하고 같으면 `candidate-context.json` 을 쓴다 |
+| `manage_candidate_context.ts` | `list`, `get`, `put` 과 `help`. `help` 만 연결값 없이 실행한다. `put` 은 문서만 저장하고 포지션 분석 정책을 건드리지 않는다 |
+| `position-context.ts` | `prepareCandidateContext` 는 수집 전에 `position-preferences` 와 `application-state` 문서를 읽어 `candidate-context.json` 을 쓴다. 문서가 없으면 쓰지 않고 멈춘다. 분석 정책을 읽지 않는다 |
 | `repository-guard.ts` | 개인 맥락을 쓸 경로가 git 저장소 안이면 거절한다. `manage_candidate_context.ts` 와 `prepareCandidateContext` 가 함께 쓴다 |
 
 `put` 은 `--file` 로 받은 Markdown 파일을 본문으로 보내고 `--note` 와 `--expected-version` 을 요구한다.
