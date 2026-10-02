@@ -16,3 +16,13 @@
 | `launchd` 에 등록한 뒤 | 세션 기록이 있는 노트북 | `launchctl kickstart gui/$(id -u)/com.fos-agents.career-os.agent-usage` 뒤에 `bun career-os/scripts/agent-usage/manage_launchd.ts status` | 로그의 마지막 줄이 `- UP_TO_DATE` 다. `launchd` 가 준 환경에서 `bun`, `.env`, `python3` 을 찾는다는 뜻이다 |
 | 등록한 다음 달 1일 10시가 지나고 노트북이 한 번 깨어난 뒤 | 세션 기록이 있는 노트북 | `bun --env-file=career-os/.env career-os/scripts/profile/manage_profile.ts usage list` 와 `bun career-os/scripts/agent-usage/manage_launchd.ts status` | 지난달이 한 줄로 있고 토큰, 환산 비용, 세션 수, 측정한 날이 차 있으며 `source` 가 `MEASURED` 다. 로그에 `<지난달> CREATED` 가 있다 |
 | 이전을 확인한 뒤 | 세션 기록이 있는 노트북 | `sync-profile` 스킬을 실행해 1단계까지 진행한다 | 홈서버 SSH 없이 원고 셋의 본문과 `version` 을 받는다. `skill begin` 을 부르지 않는다 |
+| 위 확인이 모두 끝난 뒤 | 세션 기록이 있는 노트북 | 비공개 작업본의 `library/profiles/` 에서 원고 셋, `github-agent-usage-snapshots.md`, `github-agent-usage.svg` 를 지우고 작업본을 발행한다 | `library/profiles/` 에 원고와 사용량 표가 없다. 원고의 원본은 Backend 하나다(ADR-133) |
+| 파일을 지운 뒤 | 저장소 | `career-os/scripts/profile/migrate_library_profiles.ts` 와 그 테스트를 지우고, 이 명령을 적은 `docs/code-architecture.md` 의 행을 지우는 PR 을 올린다 | 다시 돌 일이 없는 일회성 명령이 저장소에 남지 않는다. `git grep migrate_library_profiles` 의 결과가 없다 |
+
+## 지난달을 수집기로 측정하지 못했을 때
+
+세션 기록이 지워진 뒤에는 수집기가 그 달을 정확히 셀 수 없다.
+그 달의 측정 출력을 따로 보관해 두었으면(`agent_usage.py --json` 의 출력 파일) 그 값을 `manage_profile.ts usage put` 으로 올린다.
+보관한 값은 달 전체를 측정한 것이므로 `source` 는 `MEASURED` 이고, 측정한 날은 그 출력을 만든 날이다.
+이전 명령이 표에서 옮긴 `BACKFILLED` 행이 먼저 들어가 있으면 `--replace` 와 사유를 함께 준다.
+
