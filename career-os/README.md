@@ -18,6 +18,9 @@
 `interview-practice`는 공개 질문 보강도 내부 유지보수 절차로 처리한다.
 각 스킬의 입력, 산출물, 검증, 안전 경계는 해당 `SKILL.md`에서 확인한다.
 
+fos-assistant 의 대화에서 문서를 고치고 GitHub 프로필을 갱신할 때는 `plugin/` 의 커리어 커넥터를 쓴다.
+자세한 것은 [`docs/code-architecture.md`](docs/code-architecture.md)의 「fos-career 커넥터」를 따른다.
+
 ## 설정
 
 clone 뒤에는 `.env.example`에서 필요한 secret 키 이름을 확인한다.
@@ -60,6 +63,8 @@ SSH client는 원격 transport 값을 넣고, 홈서버의 Hermes는 `CAREER_WOR
 구조 변경이면 `scripts/`, `config/`, `applications/`, `library/`, `state/`, `cache/`와 시스템 임시 산출물의 설명을 대조한다.
 
 TypeScript 스크립트 변경이 있으면 루트에서 `bunx tsc --noEmit`과 해당 스크립트의 검증 명령을 실행한다.
+
+`plugin/` 을 고쳤을 때의 검증 명령은 `docs/code-architecture.md` 의 「fos-career 커넥터」에 있다.
 
 ## 문서
 

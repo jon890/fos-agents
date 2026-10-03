@@ -738,3 +738,68 @@ flowchart TD
 
 `launchd` 등록은 `scripts/agent-usage/manage_launchd.ts` 가 한다. plist 에는 token 과 주소를 적지 않는다.
 실행 명령이 `bun --env-file=<저장소>/career-os/.env` 라 연결값은 `.env` 에서만 읽는다.
+
+## fos-career 커넥터
+
+fos-assistant 의 연결용 에이전트가 커넥터의 MCP 도구로 커리어 Backend 와 GitHub 를 부른다.
+도구의 입력과 결과, 오류 코드는 [`data-schema.md`](data-schema.md#fos-career-커넥터)가 소유한다.
+plugin 의 배치와 설치 계약은 [`code-architecture.md`](code-architecture.md#fos-career-커넥터)가 소유한다.
+
+### 연결
+
+1. 사용자가 fos-assistant 의 연결 화면에 커리어 Backend 의 token 을 넣는다. GitHub token 은 비워 둘 수 있다.
+2. fos-assistant 가 후보 값으로 `check_connection` 을 부른다. 이 도구는 Backend 에 인증된 조회를 한 번 하고, GitHub token 이 있으면 프로필 저장소를 한 번 읽는다.
+3. 둘 다 통과해야 연결이 저장된다. Backend 의 주소와 프로필 저장소 이름은 사용자가 넣지 않고 운영자가 준다.
+
+### 대화에서 프로필 갱신
+
+```mermaid
+sequenceDiagram
+    participant U as 사용자
+    participant M as 연결용 에이전트
+    participant C as 커넥터 MCP 서버
+    participant B as 커리어 Backend
+    participant G as GitHub
+    U->>M: 지난달 사용량으로 GitHub 프로필을 갱신해 줘
+    M->>C: list_usage_snapshots, get_profile_document(github), get_github_profile
+    C->>B: 사용량 기록과 원고 조회
+    C->>G: README 와 차트 파일 유무 조회
+    M-->>U: 기록, 원고, 현재 README 의 차이와 변경안
+    U->>M: 변경안 확정
+    M->>C: update_github_profile(readme, months)
+    Note over M,C: 승인 요청이 만들어지고 호출은 실행되지 않는다
+    U->>C: 승인 카드에서 승인
+    C->>B: 고른 달의 사용량 기록 조회
+    C->>C: 차트를 그리고 배지 값을 합계와 대조
+    C->>G: blob 둘, tree, commit 을 만들고 branch 를 옮긴다
+    C-->>M: 커밋 번호와 합계
+    M->>C: save_profile_document(github)
+    U->>C: 승인 카드에서 승인
+    C->>B: 원고 저장
+```
+
+1. 에이전트가 사용량 기록, GitHub 원고와 현재 README 를 읽는다. 셋은 승인 없이 읽는다.
+2. 기록에 지난달이 없으면 멈추고 알린다. 측정은 세션 기록이 있는 기기의 수집기가 한다.
+3. 현재 README 와 변경안의 차이, 차트에 넣을 달, 그 달들의 합계를 보여 주고 확인받는다.
+4. `update_github_profile` 을 한 번 부른다. 승인 카드에서 승인하면 실행된다.
+5. 결과로 받은 커밋 번호와 합계를 알린다.
+6. 올라간 README 를 `save_profile_document` 로 GitHub 원고에 저장한다. 이것도 승인 카드에서 승인한다.
+
+문서를 고칠 때도 순서가 같다. 현재 본문과 `version` 을 읽고, 변경 전후를 보여 주고, 확인받은 뒤 저장 도구를 한 번 부른다.
+
+### 커넥터에서 갈라지는 곳
+
+| 상황 | 동작 |
+| --- | --- |
+| README 의 Tokens 배지 값이 고른 달의 합계와 다르다 | `CAREER_BADGE_MISMATCH`. GitHub 에 아무것도 쓰지 않는다. 결과가 기록의 합계를 알려 주므로 에이전트가 README 를 고쳐 다시 승인받는다 |
+| 고른 달 가운데 기록이 없는 달이 있다 | `CAREER_USAGE_MONTH_MISSING`. 없는 달을 알려 준다. 숫자를 인자로 받아 채우지 않는다 |
+| GitHub token 을 넣지 않았다 | GitHub 도구 둘만 `CAREER_GITHUB_NOT_CONFIGURED` 로 답한다. 나머지 도구는 돈다 |
+| 승인을 기다리는 사이에 다른 곳에서 문서를 저장했다 | `CAREER_VERSION_CONFLICT`. 다시 읽고 변경을 검토한 뒤 새로 승인받는다 |
+| branch 를 옮기는 마지막 요청에서 프로필 저장소에 다른 커밋이 올라왔음을 알게 된다 | `CAREER_GITHUB_CONFLICT`. branch 를 강제로 옮기지 않는다. 그 앞 단계의 409 와 422 는 `CAREER_GITHUB_UNAVAILABLE` 이다 |
+| 올릴 README 와 차트가 저장소의 것과 같다 | 커밋을 만들지 않고 `changed: false` 로 성공한다. 같은 요청을 다시 승인해도 빈 커밋이 쌓이지 않는다 |
+| 실행 결과가 「실행했는지 알 수 없음」 으로 온다 | 같은 도구를 다시 부르지 않는다. `get_github_profile` 이나 문서 조회로 반영됐는지 확인한다 |
+| 저장할 본문이 승인 인자 상한을 넘는다 | fos-assistant 가 호출을 거절한다. 노트북의 CLI 로 저장하라고 안내한다 |
+| 원티드나 LinkedIn 을 고쳐 달라고 한다 | 원고만 고치고, 사이트 반영은 노트북의 `sync-profile` 에서 하라고 안내한다 |
+
+README 갱신과 GitHub 원고 저장은 따로 승인받는 두 호출이다.
+GitHub 갱신만 승인하고 원고 저장을 거절하면 원고가 프로필보다 낡은 채로 남는다. 다음 갱신 때 1단계의 차이 보고에서 드러난다.

@@ -128,6 +128,8 @@ bun career-os/scripts/career-workspace/cli.ts skill begin sync-profile --json
 | 저장 | React `onBlur` 를 직접 호출 | 「저장」 버튼 클릭 | `git push` |
 | 함정 | 화면에 보여도 저장 안 됨 | 소개의 문단 구분이 저장할 때 사라짐 | 외부 서비스가 응답하지 않음 |
 
+대화에서 하려면 fos-assistant 의 커리어 커넥터로도 GitHub 의 README 와 차트를 올릴 수 있다.
+
 원티드와 LinkedIn 은 브라우저를 쓴다. `~/.claude/scripts/browser-driver` 로 조작한다.
 `open` 이 내는 마지막 줄이 `handle` 이고 이 스킬의 스크립트가 모두 첫 인자로 받는다.
 
@@ -143,7 +145,6 @@ bun career-os/scripts/career-workspace/cli.ts skill begin sync-profile --json
 | `wanted_set_period.sh` | 원티드 프로젝트의 시작월이나 종료월을 바꾼다 |
 | `linkedin_set_paragraphs.sh` | LinkedIn 소개처럼 여러 문단인 글을 문단이 남게 넣는다 |
 | `linkedin_fill_project.sh` | LinkedIn 프로젝트 추가 폼을 채우고 되읽는다 |
-| `agent_usage_chart.py` | 측정 기록의 값으로 GitHub 프로필의 차트를 그린다 |
 
 **한 번에 하나씩 넣고 결과를 확인한다.** 여러 필드를 연달아 넣으면
 어느 단계에서 실패했는지 알 수 없다. 인덱스가 밀리는 폼에서는 특히 그렇다.

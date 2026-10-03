@@ -17,11 +17,9 @@ function markdownFiles(directory: string): string[] {
 const docs = markdownFiles(skillDirectory);
 const skill = readFileSync(join(skillDirectory, "SKILL.md"), "utf8");
 const github = readFileSync(join(skillDirectory, "references/github.md"), "utf8");
-const chart = readFileSync(join(skillDirectory, "scripts/agent_usage_chart.py"), "utf8");
 
-test("스킬 문서와 차트 스크립트가 library/profiles 를 가리키지 않는다", () => {
+test("스킬 문서가 library/profiles 를 가리키지 않는다", () => {
   for (const file of docs) expect(readFileSync(file, "utf8"), file).not.toContain("library/profiles");
-  expect(chart).not.toContain("library/profiles");
 });
 
 test("개요 표에 reference 칸이 있다", () => {
@@ -45,6 +43,12 @@ test("작업본 받기가 첫 동작이 아니다", () => {
 test("사용량은 기록을 읽고 수집기로 채운다", () => {
   expect(github).toContain("usage list");
   expect(github).toContain("career-os/scripts/agent-usage/collect_usage.ts");
+});
+
+test("차트는 TypeScript CLI 로 그리고 파이썬 스크립트를 가리키지 않는다", () => {
+  expect(github).toContain("render_chart.ts");
+  expect(github).not.toContain("agent_usage_chart");
+  expect(existsSync(join(skillDirectory, "scripts/agent_usage_chart.py"))).toBe(false);
 });
 
 test("코드 영역의 career-os 경로가 실제로 있다", () => {

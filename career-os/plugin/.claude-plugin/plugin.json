@@ -1,0 +1,6 @@
+{
+  "name": "fos-career",
+  "version": "0.1.0",
+  "description": "후보자 맥락 문서와 프로필 원고를 조회하고 승인받아 저장하며 GitHub 프로필을 기록의 숫자로 갱신한다.",
+  "author": { "name": "fos-agents" }
+}

@@ -94,7 +94,6 @@ bun --env-file=career-os/.env career-os/scripts/agent-usage/collect_usage.ts
 기록을 고쳐야 하면 사용자에게 사유를 받아 `usage put` 에 `--replace` 와 `--note` 를 준다. 나머지 옵션은 `manage_profile.ts` 의 사용법을 따른다.
 
 ```bash
-A=career-os/.claude/skills/sync-profile/scripts
 python3 career-os/scripts/agent-usage/agent_usage.py --months 2
 ```
 
@@ -104,11 +103,14 @@ python3 career-os/scripts/agent-usage/agent_usage.py --months 2
 차트는 `usage list` 의 값으로 그린다. 외부 서비스에 기대지 않고 SVG 를 저장소에 커밋한다.
 
 ```bash
-python3 "$A/agent_usage_chart.py" --month 2025.01=0.4,2.1 --month 2025.02=3.0,1.0 --out "$OUT"
+export PATH="$HOME/.bun/bin:$PATH"
+bun --env-file=career-os/.env career-os/scripts/agent-usage/render_chart.ts --months 2031-01,2031-02 --out "$OUT"
 ```
 
-`--month` 의 두 수는 `usage list` 가 준 그 달의 Claude Code 와 Codex 토큰을 십억으로 나눠 소수 한 자리로 적은 값이다. `$OUT` 은 프로필 저장소의 `agent-usage.svg` 다.
-스크립트가 내는 합계를 Tokens 배지에 쓴다. 마크다운에서는 `./agent-usage.svg` 처럼 상대 경로로 참조한다.
+`--months` 는 차트에 넣을 달이고 숫자는 Backend 의 사용량 기록에서 읽는다. 기록에 없는 달을 넣으면 명령이 실패한다.
+`$OUT` 은 프로필 저장소의 `agent-usage.svg` 다.
+명령이 내는 `total=` 값을 Tokens 배지에 쓴다. 값의 모양은 `career-os/docs/data-schema.md` 의 「차트와 Tokens 배지」 를 따른다. 마크다운에서는 `./agent-usage.svg` 처럼 상대 경로로 참조한다.
+fos-assistant 의 커리어 커넥터로 올릴 때는 커넥터가 차트를 그리고 배지를 검사하므로 이 명령을 돌리지 않는다.
 
 **환산 비용을 쓰면 환산값이라고 밝힌다.** 구독제로 결제한 것이라 지출액과 구분해야 한다.
 「공개 API 단가로 환산하면」이라고 적는다.
