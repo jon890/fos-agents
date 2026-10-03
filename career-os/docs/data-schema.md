@@ -1168,7 +1168,9 @@ publication의 `idempotencyKey`는 `publication:` 뒤에 고정 순서 `{reportI
 외부 프로필의 현재 값은 실행할 때마다 대상 서버에서 다시 읽는다.
 로컬에 사본을 두면 서버와 어긋난 것을 알 수 없다.
 
-원고가 담는 것이다. 원본은 `profile_documents` 가 갖고, 스킬을 옮기기 전까지는 `library/profiles/` 의 파일을 읽는다.
+원고의 원본은 `profile_documents` 가 갖고, 스킬을 옮기기 전까지는 `library/profiles/` 의 파일을 읽는다.
+
+아래 표는 원고가 담는 것이다.
 
 | 담는 것 |
 | --- |
