@@ -1,0 +1,53 @@
+{
+  "schema": 2,
+  "id": "fos-career",
+  "title": "커리어",
+  "description": "후보자 맥락 문서와 프로필 원고를 읽고 고치며 GitHub 프로필을 갱신합니다.",
+  "fields": [
+    {
+      "key": "token",
+      "env": "CAREER_BACKEND_TOKEN",
+      "label": "Backend token",
+      "description": "커리어 Backend 의 token 입니다.",
+      "secret": true,
+      "required": true,
+      "pattern": "^\\S{32,}$"
+    },
+    {
+      "key": "github_token",
+      "env": "CAREER_GITHUB_TOKEN",
+      "label": "GitHub token",
+      "description": "프로필 저장소 하나의 내용 읽기와 쓰기 권한만 가진 token 입니다. 비워 두면 GitHub 도구를 쓰지 않습니다.",
+      "secret": true,
+      "required": false
+    }
+  ],
+  "verify": { "tool": "check_connection" },
+  "tools": {
+    "check_connection": { "risk": "READ", "approval": "none", "title": "연결 확인" },
+    "list_context_documents": { "risk": "READ", "approval": "none", "title": "후보자 맥락 문서 목록" },
+    "get_context_document": { "risk": "READ", "approval": "none", "title": "후보자 맥락 문서 읽기" },
+    "list_profile_documents": { "risk": "READ", "approval": "none", "title": "프로필 원고 목록" },
+    "get_profile_document": { "risk": "READ", "approval": "none", "title": "프로필 원고 읽기" },
+    "list_usage_snapshots": { "risk": "READ", "approval": "none", "title": "사용량 기록 읽기" }
+  },
+  "default_tool_policy": "deny",
+  "operator_env": ["CAREER_BACKEND_URL", "CAREER_GITHUB_PROFILE_REPO"],
+  "errors": {
+    "CAREER_UNAUTHORIZED": "credential_rejected",
+    "CAREER_NOT_FOUND": "invalid_input",
+    "CAREER_VERSION_CONFLICT": "invalid_input",
+    "CAREER_BAD_REQUEST": "invalid_input",
+    "CAREER_UNAVAILABLE": "unavailable",
+    "CAREER_NETWORK": "unavailable",
+    "CAREER_INVALID_RESPONSE": "unavailable",
+    "CAREER_INVALID_INPUT": "invalid_input",
+    "CAREER_USAGE_MONTH_MISSING": "invalid_input",
+    "CAREER_BADGE_MISMATCH": "invalid_input",
+    "CAREER_GITHUB_NOT_CONFIGURED": "credential_rejected",
+    "CAREER_GITHUB_UNAUTHORIZED": "credential_rejected",
+    "CAREER_GITHUB_FORBIDDEN": "forbidden",
+    "CAREER_GITHUB_CONFLICT": "unavailable",
+    "CAREER_GITHUB_UNAVAILABLE": "unavailable"
+  }
+}
