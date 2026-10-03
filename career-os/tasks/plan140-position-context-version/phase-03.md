@@ -54,11 +54,11 @@ phase 01 뒤로 이 값은 저장만 되고 읽히지 않는다. 남겨 두면 �
 ## Blocked 조건
 
 - 테스트용 MySQL 에 접속할 수 없으면 `PHASE_BLOCKED: 테스트 DB 없음` 을 출력하고 종료한다. 테스트를 건너뛰어 통과로 만들지 않는다.
-- `prisma/migrations/` 에 `20261002000100` 보다 늦은 이름의 migration 이 이미 있으면 그보다 늦은 timestamp 로 이름을 바꿔 만든다. 이름만 바뀌고 내용은 같다. 변경 파일 표의 경로와 달라지므로 커밋 메시지에 적는다.
+- `prisma/migrations/` 에 `20261003000000` 보다 늦은 이름의 migration 이 이미 있으면 그보다 늦은 timestamp 로 이름을 바꿔 만든다. 이름만 바뀌고 내용은 같다. 변경 파일 표의 경로와 달라지므로 커밋 메시지에 적는다.
 
 ## 작업 항목
 
-### 1. `prisma/migrations/20261002000100_position_policy_drop_context_version/migration.sql` 신규
+### 1. `prisma/migrations/20261003000000_position_policy_drop_context_version/migration.sql` 신규
 
 ```sql
 -- 포지션 분석의 기준 버전은 position-preferences 후보자 맥락 문서의 version 에서 계산한다. ADR-134 를 따른다.
@@ -169,7 +169,7 @@ git grep -c "candidate_context_version" -- career-os/services/career-backend/pri
 
 | 파일 | 변경 |
 |---|---|
-| `career-os/services/career-backend/prisma/migrations/20261002000100_position_policy_drop_context_version/migration.sql` | 신규 |
+| `career-os/services/career-backend/prisma/migrations/20261003000000_position_policy_drop_context_version/migration.sql` | 신규 |
 | `career-os/services/career-backend/prisma/schema.prisma` | 수정 |
 | `career-os/services/career-backend/src/positions/schema.ts` | 수정 |
 | `career-os/services/career-backend/src/positions/repository/positions.repository.ts` | 수정 |
