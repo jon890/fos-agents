@@ -2,6 +2,7 @@
 
 실제 Backend, 실제 세션 기록, 실제 `launchd` 가 있어야 끝나는 검증이다. 위에서 아래 순서로 한다.
 명령은 모두 저장소 루트에서 실행한다. `<profiles>` 는 비공개 작업본의 `library/profiles` 경로다.
+`manage_launchd.ts install` 은 worktree 가 아니라 메인 checkout 의 루트에서 실행한다. plist 가 실행할 때의 저장소 경로를 적으므로, worktree 에서 설치하면 worktree 를 지운 뒤 수집기가 돌지 못한다.
 
 | 선행 조건 | 실행 위치 | 명령 | 기대값 |
 |---|---|---|---|
@@ -10,9 +11,10 @@
 | 위 측정을 했거나 건너뛴 뒤 | 세션 기록이 있는 노트북 | `bun career-os/scripts/profile/migrate_library_profiles.ts --profiles-dir <profiles> --dry-run` | 원고 셋과 표의 달이 모두 `WOULD_CREATE` 다. `MISSING_FILE` 이 없다 |
 | dry-run 을 확인한 뒤 | 세션 기록이 있는 노트북 | `bun --env-file=career-os/.env career-os/scripts/profile/migrate_library_profiles.ts --profiles-dir <profiles>` 에, 수집기로 측정하지 못했고 표의 값이 한 달 전체를 측정한 달이면 `--measured <그 달>` 을 더한다 | 원고 셋이 `CREATED`. 수집기가 이미 올린 달은 `EXISTS`, 나머지 달은 `CREATED BACKFILLED`. 종료 코드 0 |
 | 이전을 실행한 뒤 | 세션 기록이 있는 노트북 | `bun --env-file=career-os/.env career-os/scripts/profile/manage_profile.ts usage list` | 표의 달이 오름차순으로 모두 있다. `BACKFILLED` 인 달은 환산 비용과 세션 수가 비어 있다 |
-| 이전을 실행한 뒤 | 세션 기록이 있는 노트북 | `manage_profile.ts documents get --key github --out "${TMPDIR:-/tmp}/github-profile.md"` 뒤에 `diff "${TMPDIR:-/tmp}/github-profile.md" <profiles>/github-profile.md`. `wanted`, `linkedin` 도 같다 | 세 원고 모두 차이가 없다 |
-| 이전을 실행한 뒤 | 세션 기록이 있는 노트북 | 이전 명령과 수집기를 한 번씩 다시 실행하고 `usage list` 를 다시 읽는다 | 이전 명령은 모두 `EXISTS`, 수집기는 `- UP_TO_DATE`. `usage list` 의 값이 앞의 결과와 같다. 이미 기록된 달이 바뀌지 않는다 |
-| 이전을 확인한 뒤 | 세션 기록이 있는 노트북 | `bun career-os/scripts/agent-usage/manage_launchd.ts install` 뒤에 `bun career-os/scripts/agent-usage/manage_launchd.ts status` | `LOADED` 와 `PLIST_PRESENT`. `grep -c "CAREER_BACKEND\|TOKEN" ~/Library/LaunchAgents/com.fos-agents.career-os.agent-usage.plist` 가 0 |
+| 이전을 실행한 뒤, 수집기를 다시 실행하거나 `launchd` 에 등록하기 전 | 세션 기록이 있는 노트북 | `bun --env-file=career-os/.env career-os/scripts/profile/manage_profile.ts usage list` 에서 가장 이른 달부터 지난달까지 빠진 달이 있는지 본다 | 빠진 달이 없다. 수집기는 가장 이른 기록 뒤의 빈 달을 모두 측정 대상으로 삼으므로, 세션 기록이 지워진 옛 달이 비어 있으면 작은 값이 `MEASURED` 로 올라간다. **빠진 달이 있으면 아래 항목으로 넘어가지 않고 사람이 먼저 처리한다.** 처리 방법은 아래 「지난달을 수집기로 측정하지 못했을 때」 를 따른다 |
+| 이전을 실행한 뒤 | 세션 기록이 있는 노트북 | `bun --env-file=career-os/.env career-os/scripts/profile/manage_profile.ts documents get --key github --out "${TMPDIR:-/tmp}/github-profile.md"` 뒤에 `diff "${TMPDIR:-/tmp}/github-profile.md" <profiles>/github-profile.md`. `wanted`, `linkedin` 도 같다 | 세 원고 모두 차이가 없다 |
+| 이전을 실행한 뒤 | 세션 기록이 있는 노트북 | 이전 명령과 수집기를 한 번씩 다시 실행하고 `usage list` 를 다시 읽는다 | 이전 명령은 모두 `EXISTS`(이미 기록된 달은 목록에서 걸러 `PUT` 을 보내지 않는다), 수집기는 `- UP_TO_DATE`. `usage list` 의 값이 앞의 결과와 같다. 이미 기록된 달이 바뀌지 않는다 |
+| 이전을 확인하고 빠진 달이 없음을 확인한 뒤 | 세션 기록이 있는 노트북의 메인 checkout | `bun career-os/scripts/agent-usage/manage_launchd.ts install` 뒤에 `bun career-os/scripts/agent-usage/manage_launchd.ts status` | `LOADED` 와 `PLIST_PRESENT`. `grep -c "CAREER_BACKEND\|TOKEN" ~/Library/LaunchAgents/com.fos-agents.career-os.agent-usage.plist` 가 0 |
 | `launchd` 에 등록한 뒤 | 세션 기록이 있는 노트북 | `launchctl kickstart gui/$(id -u)/com.fos-agents.career-os.agent-usage` 뒤에 `bun career-os/scripts/agent-usage/manage_launchd.ts status` | 로그의 마지막 줄이 `- UP_TO_DATE` 다. `launchd` 가 준 환경에서 `bun`, `.env`, `python3` 을 찾는다는 뜻이다 |
 | 등록한 다음 달 1일 10시가 지나고 노트북이 한 번 깨어난 뒤 | 세션 기록이 있는 노트북 | `bun --env-file=career-os/.env career-os/scripts/profile/manage_profile.ts usage list` 와 `bun career-os/scripts/agent-usage/manage_launchd.ts status` | 지난달이 한 줄로 있고 토큰, 환산 비용, 세션 수, 측정한 날이 차 있으며 `source` 가 `MEASURED` 다. 로그에 `<지난달> CREATED` 가 있다 |
 | 이전을 확인한 뒤 | 세션 기록이 있는 노트북 | `sync-profile` 스킬을 실행해 1단계까지 진행한다 | 홈서버 SSH 없이 원고 셋의 본문과 `version` 을 받는다. `skill begin` 을 부르지 않는다 |

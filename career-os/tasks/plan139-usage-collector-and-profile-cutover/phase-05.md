@@ -1,17 +1,17 @@
 # Phase 05. sync-profile 스킬이 원고를 Backend 에서 읽고 쓰게 바꾼다
 
-**Execution profile**: fast
+**Execution profile**: standard
 
 ## 목표
 
 `sync-profile` 스킬 문서를 고쳐, 원고를 `library/profiles/` 가 아니라 `manage_profile.ts` 로 읽고 쓰게 한다.
 홈서버 SSH 가 닿지 않아도 프로필을 갱신하고, 노트북의 스킬과 커넥터가 같은 원고를 보게 하려는 것이다.
 
-**범위 외**: 실행 코드는 바꾸지 않는다. `agent_usage_chart.py` 를 지우거나 TypeScript 로 옮기지 않는다. 비공개 작업본의 `library/profiles/` 파일을 지우지 않는다. `resume-preparer` 의 검증 장부가 `library/profiles/` 경로를 묶는 규칙(`career-os/.claude/skills/resume-preparer/scripts/verified-claims/store.ts`)은 건드리지 않는다.
+**범위 외**: 실행 코드는 바꾸지 않는다. `agent_usage_chart.py` 는 머리 주석만 고치고, 지우거나 TypeScript 로 옮기지 않는다. 비공개 작업본의 `library/profiles/` 파일을 지우지 않는다. `resume-preparer` 의 검증 장부가 `library/profiles/` 경로를 묶는 규칙(`career-os/.claude/skills/resume-preparer/scripts/verified-claims/store.ts`)은 건드리지 않는다.
 
 ## 컨텍스트
 
-- 스킬 문서는 `career-os/.claude/skills/sync-profile/SKILL.md` 와 `references/` 의 셋이다. `library/profiles/` 를 적은 곳은 `SKILL.md` 의 1, 2, 7단계와 개요 표, `references/github.md` 의 「에이전트 사용량」 절이다. `references/wanted.md` 와 `references/linkedin.md` 에는 없다
+- 스킬 문서는 `career-os/.claude/skills/sync-profile/SKILL.md` 와 `references/` 의 셋이다. `library/profiles/` 를 적은 곳은 `SKILL.md` 의 1, 2, 7단계와 개요 표, `references/github.md` 의 「에이전트 사용량」 절, `scripts/agent_usage_chart.py` 의 머리 주석이다. `references/wanted.md` 와 `references/linkedin.md` 에는 없다
 - 지금 1단계 「작업본 받기」 는 `bun career-os/scripts/career-workspace/cli.ts skill begin sync-profile --json` 으로 비공개 작업본을 받고, 7단계가 `skill finish sync-profile` 로 발행한다. 홈서버에 닿지 못하면 로컬 원고로 진행할지 묻는다
 - 프로필 CLI 는 `career-os/scripts/profile/manage_profile.ts` 다. 명령은 `documents list|get|put` 과 `usage list|put` 이다. **옵션 이름은 그 파일의 사용법 문자열을 읽고 적는다.** 본보기인 `career-os/scripts/candidate-context/manage_candidate_context.ts` 는 `get --key <k> [--out <path>]`, `put --key <k> --file <path> --expected-version <n> --note <note>` 다. `--out` 은 git 저장소 안 경로를 거절한다(`career-os/scripts/candidate-context/repository-guard.ts`)
 - 연결값을 넘기는 방법은 `bun --env-file=career-os/.env <스크립트>` 다. 선례는 `career-os/.claude/skills/study-topic-recommender/references/execution.md` 다
@@ -37,24 +37,24 @@
 
 ### 1. `career-os/.claude/skills/sync-profile/SKILL.md` 수정
 
-워크플로우 개요 표를 아래로 바꾼다. 단계 수는 일곱 그대로다.
+워크플로우 개요 표를 아래로 바꾼다. 단계 수는 일곱 그대로다. 지금 표는 `단계`, `이름`, `통과 조건`, `reference` 의 네 칸이다. **`reference` 칸을 유지한다.** 1단계와 7단계의 `reference` 는 지금처럼 비워 두고, 2 ~ 6단계는 지금 값을 그대로 둔다.
 
-| 단계 | 이름 | 통과 조건 |
-| --- | --- | --- |
-| 1 | 원고 받기 | `documents list` 의 응답을 받았고, 있는 원고마다 `documents get` 으로 받은 본문과 `version` 이 있다 |
-| 2 | 원본과 대상 확인 | 그대로다 |
-| 3 | 공개 범위 결정 | 그대로다 |
-| 4 | 근거 확인 | 그대로다 |
-| 5 | 반영 | 그대로다 |
-| 6 | 저장 검증 | 그대로다 |
-| 7 | 원고 저장 | 고친 원고마다 `documents put` 의 응답에 올라간 `version` 이 있다 |
+| 단계 | 이름 | 통과 조건 | reference |
+| --- | --- | --- | --- |
+| 1 | 원고 받기 | `documents list` 의 응답을 받았고, 있는 원고마다 `documents get` 으로 받은 본문과 `version` 이 있다 | |
+| 2 | 원본과 대상 확인 | 그대로다 | 그대로다 |
+| 3 | 공개 범위 결정 | 그대로다 | 그대로다 |
+| 4 | 근거 확인 | 그대로다 | 그대로다 |
+| 5 | 반영 | 그대로다 | 그대로다 |
+| 6 | 저장 검증 | 그대로다 | 그대로다 |
+| 7 | 원고 저장 | 고친 원고마다 `documents put` 의 응답에 올라간 `version` 이 있다 | |
 
 1단계 「원고 받기」 의 본문이다.
 
 - `bun --env-file=career-os/.env career-os/scripts/profile/manage_profile.ts documents list` 로 있는 원고와 `version` 을 본다
 - 원고마다 `documents get --key <wanted|linkedin|github> --out "${TMPDIR:-/tmp}/<key>-profile.md"` 로 저장소 밖 임시 경로에 받는다. 받은 `version` 을 7단계의 `--expected-version` 으로 쓴다
 - **Backend 에 닿지 못하면 멈추고 사용자에게 알린다.** 로컬 파일로 대신하지 않는다
-- 원고가 없는 대상이 있으면 가장 최근 지원의 `evidence/resume-draft.md` 를 출발점으로 삼는다. **이때만** `skill begin sync-profile` 로 작업본을 받는다. `applications/` 를 읽기 때문이다. 지금의 `TRANSPORT_UNAVAILABLE` 안내는 이 경우의 설명으로 남기되, 「로컬 원고로 진행할지 묻는다」 는 「새 원고를 만들지 못한다고 알린다」 로 바꾼다
+- 원고가 없는 대상이 있으면 가장 최근 지원의 `evidence/resume-draft.md` 를 출발점으로 삼는다. **이때만** `skill begin sync-profile` 로 작업본을 받는다. `applications/` 를 읽기 때문이다. 지금의 `TRANSPORT_UNAVAILABLE` 안내는 이 경우의 설명으로 남기되, 「로컬 원고로 진행할지 묻는다」 는 「새 원고를 만들지 못한다고 알린다」 로 바꾼다. 그 아래 「진행하면 보고에 적는 두 가지」 목록(로컬 원고를 받은 날짜를 `ls -la career-os/library/profiles/` 로 보는 줄과 원고가 이 기기에만 남는다는 줄)은 지운다. 로컬 원고로 진행하는 경로가 없어진다
 - `export PATH="$HOME/.bun/bin:$PATH"` 안내는 남긴다
 
 2단계에서 고치는 것이다.
@@ -83,7 +83,15 @@
 - 「기록이 없는 달이 섞이면 그 수치는 배지에서 뺀다」 는 「환산 비용이나 세션 수가 빈 달이 섞이면」 으로 고친다. 2026-10 실측 문장은 남긴다
 - `python3 career-os/scripts/agent-usage/agent_usage.py --months 2` 블록은 단가표를 확인하는 방법으로만 남긴다
 
-### 3. `career-os/AGENTS.md` 수정
+### 3. `career-os/.claude/skills/sync-profile/scripts/agent_usage_chart.py` 의 머리 주석 수정
+
+코드는 바꾸지 않는다. 이 스크립트는 파일을 읽지 않고 `--month <월>=<Claude Code>,<Codex>` 인자로만 값을 받는다.
+
+- 「값은 `library/profiles/github-agent-usage-snapshots.md` 의 측정 기록에서 가져온다.」 를 「값은 `manage_profile.ts usage list` 의 기록에서 가져온다. 그 달의 Claude Code 와 Codex 토큰을 십억으로 나눠 적는다.」 로 바꾼다
+- 사용법 예시의 `--month 2026.07=1.3,11.6 --month 2026.08=19.0,5.7` 은 지어낸 달과 값(`--month 2025.01=0.4,2.1 --month 2025.02=3.0,1.0`)으로 바꾼다. `references/github.md` 의 예시와 같게 둔다
+- 「지난 달을 `agent_usage.py` 로 다시 세어 넣지 않는다」 문장은 남긴다
+
+### 4. `career-os/AGENTS.md` 수정
 
 자리 표의 `library/profiles/` 줄을 아래로 바꾼다. `career-os/CLAUDE.md` 는 이 파일을 가리키는 심볼릭 링크라 따로 고치지 않는다.
 
@@ -93,11 +101,12 @@
 
 표의 열 너비는 다른 줄에 맞춘다. 같은 파일의 「조회할 것」 표는 고치지 않는다.
 
-### 4. 이 phase 를 검증하는 테스트
+### 5. 이 phase 를 검증하는 테스트
 
 `career-os/scripts/profile/sync_profile_skill_doc.test.ts` 신규. 스킬 문서를 읽어 단언한다. 본보기는 `career-os/scripts/candidate-context/skill_boundary.test.ts`(스킬 디렉터리의 파일을 모두 읽는 방법)와 `career-os/scripts/position-recommender/skill_doc.test.ts` 다.
 
-- `career-os/.claude/skills/sync-profile/` 아래 `.md` 파일 어디에도 `library/profiles` 가 없다
+- `career-os/.claude/skills/sync-profile/` 아래 `.md` 파일과 `scripts/agent_usage_chart.py` 어디에도 `library/profiles` 가 없다
+- `SKILL.md` 의 워크플로우 개요 표 머리 줄에 `reference` 칸이 있다
 - `SKILL.md` 에 `career-os/scripts/profile/manage_profile.ts`, `documents get`, `documents put`, `--expected-version` 이 있다
 - `SKILL.md` 에서 `skill begin sync-profile` 이 나오는 자리가 `documents list` 가 나오는 자리보다 뒤다. 작업본 받기가 첫 동작이 아니라는 것을 확인한다
 - `references/github.md` 에 `usage list` 와 `career-os/scripts/agent-usage/collect_usage.ts` 가 있다
@@ -115,6 +124,7 @@ PATH="$HOME/.bun/bin:$PATH" bunx tsc --noEmit
 ! git grep -n "library/profiles" -- career-os/.claude/skills/sync-profile career-os/AGENTS.md
 test "$(ls career-os/.claude/skills/sync-profile/scripts | wc -l | tr -d ' ')" = "6"
 python3 ~/personal/fos-skills/korean-check/scripts/korean-style-check.py career-os/.claude/skills/sync-profile/SKILL.md career-os/.claude/skills/sync-profile/references/github.md
+python3 career-os/.claude/skills/sync-profile/scripts/agent_usage_chart.py --month 2025.01=0.4,2.1 --month 2025.02=3.0,1.0 --out "${TMPDIR:-/tmp}/agent-usage-check.svg"
 ```
 
 모두 종료 코드 0 이어야 한다. 환경값은 필요 없다. 마지막 명령의 검사기가 그 경로에 없으면 사용자 지침이 가리키는 한국어 점검 스킬의 검사기를 쓴다.
@@ -125,5 +135,6 @@ python3 ~/personal/fos-skills/korean-check/scripts/korean-style-check.py career-
 |---|---|
 | `career-os/.claude/skills/sync-profile/SKILL.md` | 수정 |
 | `career-os/.claude/skills/sync-profile/references/github.md` | 수정 |
+| `career-os/.claude/skills/sync-profile/scripts/agent_usage_chart.py` | 수정 |
 | `career-os/AGENTS.md` | 수정 |
 | `career-os/scripts/profile/sync_profile_skill_doc.test.ts` | 신규 |

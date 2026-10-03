@@ -68,12 +68,12 @@ export function manageLaunchd(args: string[], deps: LaunchdDeps): number;   // �
 
 | 명령 | 동작 |
 | --- | --- |
-| `install` | `<repoRoot>/career-os/.env` 가 없으면 「`career-os/.env` 가 없다」 를 내고 1 로 끝낸다. 있으면 로그 디렉터리를 만들고 plist 를 쓴 뒤 `launchctl bootout gui/<uid>/<label>` 을 실행하고(실패를 무시한다. 등록돼 있지 않으면 실패한다) `launchctl bootstrap gui/<uid> <plist 경로>` 를 실행한다. `bootstrap` 의 status 가 0 이 아니면 1 로 끝낸다 |
+| `install` | `--dry-run` 이 아니고 `<repoRoot>/career-os/.env` 가 없으면 「`career-os/.env` 가 없다」 를 내고 1 로 끝낸다. 있으면 로그 디렉터리를 만들고 plist 를 쓴 뒤 `launchctl bootout gui/<uid>/<label>` 을 실행하고(실패를 무시한다. 등록돼 있지 않으면 실패한다) `launchctl bootstrap gui/<uid> <plist 경로>` 를 실행한다. `bootstrap` 의 status 가 0 이 아니면 1 로 끝낸다 |
 | `uninstall` | `launchctl bootout gui/<uid>/<label>` 을 실행하고(실패를 무시한다) plist 파일을 지운다. 파일이 없어도 0 이다. 로그는 지우지 않는다 |
 | `status` | `launchctl print gui/<uid>/<label>` 의 status 가 0 이면 `LOADED`, 아니면 `NOT_LOADED` 를 낸다. plist 파일이 있는지를 `PLIST_PRESENT` 나 `PLIST_MISSING` 으로 한 줄 더 낸다. 로그 파일이 있으면 마지막 다섯 줄을 낸다. 언제나 0 이다 |
 | `help`, `--help`, `-h` | 사용법을 내고 0 이다 |
 
-- `install --dry-run` 과 `uninstall --dry-run` 은 **파일을 쓰거나 지우지 않고 `run` 을 부르지 않는다.** 쓸(지울) 파일 경로와 실행할 명령을 한 줄씩 내고, `install` 은 렌더한 plist 본문도 낸다
+- `install --dry-run` 과 `uninstall --dry-run` 은 **파일을 쓰거나 지우지 않고 `run` 을 부르지 않는다.** `install --dry-run` 은 `career-os/.env` 가 있는지 보지 않는다. 저장소를 막 받은 기기에서도 렌더 결과를 볼 수 있게 하려는 것이다. 쓸(지울) 파일 경로와 실행할 명령을 한 줄씩 내고, `install` 은 렌더한 plist 본문도 낸다
 - 모르는 명령은 사용법을 표준 오류에 내고 2 로 끝낸다. 종료 코드 규칙은 `career-os/scripts/lib/cli.ts` 의 머리 주석과 같다
 - `import.meta.main` 일 때 기본 `deps` 로 `manageLaunchd(process.argv.slice(2), ...)` 를 부르고 그 값으로 끝낸다. 기본 `run` 은 `Bun.spawnSync` 다
 
@@ -95,7 +95,7 @@ export function manageLaunchd(args: string[], deps: LaunchdDeps): number;   // �
 
 설치 스크립트의 dry-run 검사다.
 
-- `install --dry-run`: 종료 코드 0, `run` 대역이 0 번 불리고, 임시 `home` 아래에 `Library` 디렉터리가 생기지 않는다. 출력에 plist 경로와 `launchctl bootstrap gui/<uid>` 가 있다
+- `install --dry-run`: 임시 `repoRoot` 에 `career-os/.env` 를 만들지 않고 실행한다. 종료 코드 0, `run` 대역이 0 번 불리고, 임시 `home` 아래에 `Library` 디렉터리가 생기지 않는다. 출력에 plist 경로와 `launchctl bootstrap gui/<uid>` 가 있다
 - `uninstall --dry-run`: 미리 써 둔 plist 파일이 그대로 남고 `run` 대역이 0 번 불린다
 
 실제 동작 검사다. 임시 디렉터리 안에서만 쓴다.
@@ -116,7 +116,7 @@ PATH="$HOME/.bun/bin:$PATH" bun career-os/scripts/agent-usage/manage_launchd.ts 
 ! git grep -nE "CAREER_BACKEND|/Users/" -- career-os/scripts/agent-usage/launchd
 ```
 
-모두 종료 코드 0 이어야 한다. 환경값은 필요 없다. `install --dry-run` 은 `career-os/.env` 가 없어도 돌고, 실행 뒤 `~/Library/LaunchAgents/com.fos-agents.career-os.agent-usage.plist` 가 생기지 않아야 한다. `python3` 이 PATH 에 있어야 한다(같은 디렉터리의 Phase 01 테스트가 쓴다).
+모두 종료 코드 0 이어야 한다. 환경값은 필요 없다. `install --dry-run` 은 `.env` 검사를 건너뛰므로 `career-os/.env` 가 없어도 0 으로 끝나고, 실행 뒤 `~/Library/LaunchAgents/com.fos-agents.career-os.agent-usage.plist` 가 생기지 않아야 한다. `python3` 이 PATH 에 있어야 한다(같은 디렉터리의 Phase 01 테스트가 쓴다).
 
 ## 변경 파일
 

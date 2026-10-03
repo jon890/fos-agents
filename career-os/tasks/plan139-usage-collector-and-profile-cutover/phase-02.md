@@ -1,6 +1,6 @@
 # Phase 02. 기록이 없는 끝난 달만 측정해 올리는 수집기를 만든다
 
-**Execution profile**: standard
+**Execution profile**: deep
 
 ## 목표
 
@@ -15,9 +15,13 @@
   - `GET /api/profile/v1/usage-snapshots` 는 `{ snapshots: [...] }` 를 달 오름차순으로 준다
   - `PUT /api/profile/v1/usage-snapshots/:month` 는 `{ snapshot, created }` 를 준다. 기록이 없으면 만들고 `created: true` 다. 기록이 있고 요청에 `replace` 가 없으면 **값을 바꾸지 않고** `created: false` 로 기존 값을 준다. 오류가 아니다
   - 아직 끝나지 않은 달과 미래의 달은 400 이다. 기준 시각대는 `Asia/Seoul` 이다
-- client 와 zod 계약은 `career-os/scripts/profile/` 에 있다. **요청 칸의 실제 이름과 client 의 메서드 이름은 그 디렉터리의 계약 파일과 client 파일을 열어 읽고 쓴다.** 이 문서는 칸을 저장 표의 이름(`claude_tokens`, `measured_on` 처럼)으로 부른다. 코드의 이름이 이 문서와 다르면 코드가 맞다
+- client 와 zod 계약은 `career-os/scripts/profile/client.ts` 와 `career-os/scripts/profile/contracts.ts` 에 있다. 이 phase 가 쓰는 client 의 표면은 아래와 같다
+  - `createProfileClient()` 가 `ProfileClient` 를 만든다. 연결값은 환경값에서 읽는다
+  - `ProfileClient.listUsageSnapshots()` 는 `UsageSnapshot[]` 를 돌려준다. 원소의 `month` 가 `YYYY-MM` 이다
+  - `ProfileClient.putUsageSnapshot(month, payload)` 는 `{ snapshot, created }` 를 돌려준다. `payload` 의 타입은 `UsageSnapshotPutPayload` 이고 칸은 `claudeTokens`, `codexTokens`, `claudeCostUsd`, `codexCostUsd`, `sessions`, `unpricedTokens`, `measuredOn`, `source`, `note`, `replace` 다
+  - 이 문서는 칸을 저장 표의 이름(`claude_tokens`, `measured_on` 처럼)으로 부르기도 한다. 코드의 이름이 이 문서와 다르면 코드가 맞다
 - 연결값은 `career-os/scripts/lib/career-backend-config.ts` 의 `resolveCareerBackendConnection(process.env)` 가 `CAREER_BACKEND_URL` 과 `CAREER_BACKEND_TOKEN`(또는 `CAREER_BACKEND_TOKEN_FILE`)에서 읽는다. 수집기가 `.env` 를 직접 읽지 않는다. 실행하는 쪽이 `bun --env-file=career-os/.env` 로 넘긴다
-- HTTP 오류는 `career-os/scripts/lib/career-backend-http.ts` 의 `CareerBackendHttpError` 다. `status` 가 `null` 이면 닿지 못한 것이다. 오류를 한 줄로 만드는 본보기는 `career-os/scripts/candidate-context/manage_candidate_context.ts` 의 `formatManageCandidateContextError` 다. 상태, code, requestId 만 담는다
+- HTTP 오류는 `career-os/scripts/lib/career-backend-http.ts` 의 `CareerBackendHttpError` 다. `status` 가 `null` 이면 닿지 못한 것이다. 오류를 한 줄로 만들 때는 `career-os/scripts/profile/manage_profile.ts` 의 `formatManageProfileError` 를 가져와 쓴다. 상태, code, requestId 만 담는다
 - 측정은 Phase 01 의 `career-os/scripts/agent-usage/measure.ts` 가 한다. `measureUsage()` 가 `MonthlyMeasurement[]`(`month` 는 `YYYY-MM`)를 준다
 
 **근거 문서**: `career-os/docs/flow.md` 의 「사용량 수집」 절, `career-os/docs/data-schema.md` 의 「수집기가 올리는 사용량 기록」 절, `career-os/docs/adr/ADR-133-프로필-원고와-에이전트-사용량-기록은-backend의-profile-모듈이-갖는다.md`
@@ -81,8 +85,8 @@ export async function collectUsage(deps: {
 
 `main` 이다. `import.meta.main` 일 때만 돈다.
 
-- `career-os/scripts/profile/` 의 client 를 만들어 `UsageSnapshotStore` 로 잇는다. `listMonths` 는 기록 목록에서 달만 뽑는다. `putMeasured` 는 `data-schema.md` 의 대응 표대로 요청을 만들고 `source` 를 `MEASURED` 로 둔다. **`replace` 와 `note` 를 넣지 않는다**
-- `collectUsage` 가 던지면 표준 오류에 오류 한 줄(상태, code, requestId)을 쓰고 종료 코드 1 로 끝낸다. 연결값이 없어 `resolveCareerBackendConnection` 이 던지는 경우도 같다
+- `createProfileClient()` 로 client 를 만들어 `createUsageSnapshotStore(client)` 로 `UsageSnapshotStore` 에 잇는다. `listMonths` 는 `listUsageSnapshots()` 의 결과에서 `month` 만 뽑는다. `putMeasured` 는 `data-schema.md` 의 대응 표대로 `payload` 를 만들어 `putUsageSnapshot(measurement.month, payload)` 를 부르고 응답의 `created` 를 돌려준다. `source` 는 `MEASURED` 다. **`replace` 와 `note` 를 넣지 않는다**
+- `collectUsage` 가 던지면 표준 오류에 `formatManageProfileError(error)` 한 줄을 쓰고 종료 코드 1 로 끝낸다. 연결값이 없어 `resolveCareerBackendConnection` 이 던지는 경우도 같다
 - 던지지 않으면 `exitCode` 로 끝낸다
 - 인자는 받지 않는다. `help`, `--help`, `-h` 만 사용법을 내고 연결값 없이 종료 코드 0 으로 끝낸다
 
@@ -114,7 +118,7 @@ export async function collectUsage(deps: {
 - 한 달만 실패: 대상이 두 달이고 첫 달의 `putMeasured` 가 던지면 출력이 `FAILED` 와 `CREATED` 두 줄이고 `exitCode` 가 1 이다
 - 출력 검사: 모든 경우에 `write` 로 나간 줄이 `/^(\d{4}-\d{2}|-) [A-Z_]+$/` 에 맞는다. 측정 대역에 넣은 토큰 수가 출력에 없다
 
-요청 본문에 `replace` 가 없다는 것은 HTTP 대역으로 확인한다. `career-os/scripts/profile/` 의 client 에 fetch 대역을 넣어 `main` 이 쓰는 것과 같은 연결 함수를 부르고, 대역이 받은 `PUT` 요청의 `JSON.parse(init.body)` 에 `replace` 키가 없고 `source` 가 `MEASURED` 인지 확인한다. fetch 대역을 넣는 방법은 `career-os/scripts/candidate-context/client.test.ts` 가 본보기다. 이를 위해 client 를 `UsageSnapshotStore` 로 잇는 함수를 `main` 안에 두지 말고 `export function createUsageSnapshotStore(client)` 로 내보낸다.
+요청 본문에 `replace` 가 없다는 것은 HTTP 대역으로 확인한다. `new ProfileClient({ origin: "https://career.example.com", token: "x".repeat(32), fetchImpl, maxRetries: 0 })` 로 fetch 대역을 넣은 client 를 만들어 `main` 이 쓰는 것과 같은 연결 함수를 부르고, 대역이 받은 `PUT` 요청의 `JSON.parse(init.body)` 에 `replace` 키가 없고 `source` 가 `MEASURED` 인지 확인한다. client 를 이렇게 만드는 본보기는 `career-os/scripts/profile/client.test.ts` 다. 이를 위해 client 를 `UsageSnapshotStore` 로 잇는 함수를 `main` 안에 두지 말고 `export function createUsageSnapshotStore(client)` 로 내보낸다.
 
 ## 검증
 
@@ -123,10 +127,10 @@ export async function collectUsage(deps: {
 PATH="$HOME/.bun/bin:$PATH" bun test career-os/scripts/agent-usage/measure.test.ts career-os/scripts/agent-usage/agent_usage_script.test.ts career-os/scripts/agent-usage/collect_usage.test.ts
 PATH="$HOME/.bun/bin:$PATH" bunx tsc --noEmit
 PATH="$HOME/.bun/bin:$PATH" bun career-os/scripts/agent-usage/collect_usage.ts --help
-! git grep -n "replace" -- career-os/scripts/agent-usage/collect_usage.ts
+! git grep -nE "\breplace\s*:" -- career-os/scripts/agent-usage/collect_usage.ts
 ```
 
-모두 종료 코드 0 이어야 한다. 환경값은 필요 없다. `--help` 는 연결값 없이 돈다. `python3` 이 PATH 에 있어야 한다.
+모두 종료 코드 0 이어야 한다. 환경값은 필요 없다. `--help` 는 연결값 없이 돈다. 마지막 grep 은 객체의 `replace:` 칸만 잡는다. 문자열 메서드 `.replace(` 와 주석의 낱말은 걸리지 않는다. `python3` 이 PATH 에 있어야 한다.
 
 ## 변경 파일
 

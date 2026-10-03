@@ -90,10 +90,14 @@ export async function measureUsage(run: MeasurementRunner = runAgentUsageScript)
 `career-os/scripts/agent-usage/agent_usage_script.test.ts` 신규. 파이썬 스크립트를 임시 `HOME` 으로 실제 실행한다.
 
 - `mkdtempSync` 로 만든 디렉터리에 아래 두 파일을 쓴다
-  - `.claude/projects/sample/session.jsonl`: 두 줄이다. 첫 줄은 `{"timestamp":"2026-03-10T01:00:00Z","message":{"model":"claude-opus-4-7","usage":{"input_tokens":1000,"output_tokens":200,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}` 이고, 둘째 줄은 `model` 이 `unknown-model` 이고 `input_tokens` 가 300 인 같은 모양이다
+  - `.claude/projects/sample/session.jsonl`: 아래 두 줄이다. 둘째 줄은 `output_tokens` 를 0 으로 두어 그 줄의 토큰 합이 300 이 되게 한다. 스크립트는 한 줄의 `input_tokens`, `output_tokens`, 캐시 두 칸을 모두 더해 토큰으로 센다
+    - `{"timestamp":"2026-03-10T01:00:00Z","message":{"model":"claude-opus-4-7","usage":{"input_tokens":1000,"output_tokens":200,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}`
+    - `{"timestamp":"2026-03-10T02:00:00Z","message":{"model":"unknown-model","usage":{"input_tokens":300,"output_tokens":0,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}`
   - `.codex/sessions/2026/03/session.jsonl`: `{"timestamp":"2026-03-11T01:00:00Z","model":"gpt-5.5","payload":{"info":{"total_token_usage":{"total_tokens":500,"input_tokens":400,"cached_input_tokens":100,"output_tokens":100}}}}` 한 줄이다
-- `Bun.spawnSync(["python3", <agent_usage.py 경로>, "--json"], { env: { ...process.env, HOME: <임시 디렉터리> } })` 로 실행한다
-- 기대값: 종료 코드 0, `months` 길이 1, `month` 가 `2026.03`, `claude_tokens` 1500, `codex_tokens` 500, `sessions` 2, 그 줄의 `unpriced_tokens` 300, `claude_cost` 0.01
+- 인터프리터의 절대 경로를 먼저 얻는다. 이 기기의 `python3` 은 mise shim 이라, 임시 `HOME` 에서 shim 을 부르면 설정을 찾지 못해 인터프리터를 새로 내려받으려 한다
+  - 실제 `HOME` 그대로 `Bun.spawnSync(["python3", "-c", "import sys; print(sys.executable)"])` 를 실행하고, 표준 출력을 `trim()` 한 값을 인터프리터 경로로 쓴다. 종료 코드가 0 이 아니거나 값이 절대 경로가 아니면 테스트가 실패한다
+- `Bun.spawnSync([<인터프리터 경로>, <agent_usage.py 경로>, "--json"], { env: { ...process.env, HOME: <임시 디렉터리> } })` 로 실행한다
+- 기대값: 종료 코드 0, `months` 길이 1, `month` 가 `2026.03`, `claude_tokens` 1500(1000, 200, 300 을 더한 값), `codex_tokens` 500, `sessions` 2(Claude 파일 하나와 Codex 파일 하나), 그 줄의 `unpriced_tokens` 300, `claude_cost` 0.01(`claude-opus-4-7` 의 단가로 입력 1000 에 5 를, 출력 200 에 25 를 곱해 더한 뒤 100만으로 나눈 값)
 - 같은 출력을 `parseMeasurement` 에 넣어 던지지 않는 것을 확인한다. 파이썬 출력과 TypeScript 계약이 어긋나면 이 단언이 잡는다
 - `python3` 이 없으면 테스트가 실패한다. 건너뛰지 않는다
 
@@ -109,7 +113,7 @@ test ! -e career-os/.claude/skills/sync-profile/scripts/agent_usage.py
 ! git grep -n "sync-profile/scripts/agent_usage.py" -- career-os/.claude career-os/docs career-os/AGENTS.md career-os/README.md
 ```
 
-모두 종료 코드 0 이어야 한다. 환경값은 필요 없다. `python3` 이 PATH 에 있어야 한다.
+모두 종료 코드 0 이어야 한다. 환경값은 필요 없다. `python3` 이 PATH 에 있어야 한다. `agent_usage_script.test.ts` 는 실제 `HOME` 에서 인터프리터의 절대 경로를 얻은 뒤 임시 `HOME` 으로 실행한다.
 
 ## 변경 파일
 
