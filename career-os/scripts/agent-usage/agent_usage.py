@@ -135,6 +135,7 @@ def main():
             claude_tokens=a.get("tok", 0), codex_tokens=b.get("tok", 0),
             claude_cost=round(a.get("cost", 0.0), 2), codex_cost=round(b.get("cost", 0.0), 2),
             sessions=len(a.get("sessions", set())) + len(b.get("sessions", set())),
+            unpriced_tokens=a.get("unknown", 0) + b.get("unknown", 0),
         )
         rows.append(row)
         tt["tok"] += row["claude_tokens"] + row["codex_tokens"]

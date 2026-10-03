@@ -127,7 +127,6 @@ bun career-os/scripts/career-workspace/cli.ts skill begin sync-profile --json
 | `wanted_set_period.sh` | 원티드 프로젝트의 시작월이나 종료월을 바꾼다 |
 | `linkedin_set_paragraphs.sh` | LinkedIn 소개처럼 여러 문단인 글을 문단이 남게 넣는다 |
 | `linkedin_fill_project.sh` | LinkedIn 프로젝트 추가 폼을 채우고 되읽는다 |
-| `agent_usage.py` | 세션 기록에서 월별 토큰과 환산 비용을 센다 |
 | `agent_usage_chart.py` | 측정 기록의 값으로 GitHub 프로필의 차트를 그린다 |
 
 **한 번에 하나씩 넣고 결과를 확인한다.** 여러 필드를 연달아 넣으면

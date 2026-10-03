@@ -77,7 +77,7 @@ gh api user -X PATCH -f bio="$BIO"
 
 ```bash
 A=career-os/.claude/skills/sync-profile/scripts
-python3 "$A/agent_usage.py" --months 2
+python3 career-os/scripts/agent-usage/agent_usage.py --months 2
 ```
 
 Claude Code 와 Codex 세션 기록을 전수 읽어 월별 토큰과 API 환산 비용을 낸다.
