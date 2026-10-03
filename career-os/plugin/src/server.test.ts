@@ -35,7 +35,7 @@ test("MCP 로 도구 여섯을 탐색하고 확인 도구가 structuredContent �
   try {
     await server.connect(serverTransport);
     await client.connect(clientTransport);
-    expect((await client.listTools()).tools).toHaveLength(6);
+    expect((await client.listTools()).tools).toHaveLength(8);
     const result = await client.callTool({ name: "check_connection", arguments: {} });
     expect(result.isError).not.toBe(true);
     expect(result.structuredContent).toEqual({ backend: "ok" });
@@ -82,7 +82,7 @@ test("plugin 실행 파일만 복사해도 의존성 설치 없이 stdio 로 시
   });
   try {
     await client.connect(transport);
-    expect((await client.listTools()).tools).toHaveLength(6);
+    expect((await client.listTools()).tools).toHaveLength(8);
     expect(stderr).toBe("");
   } finally {
     await client.close();

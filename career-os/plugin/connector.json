@@ -29,7 +29,9 @@
     "get_context_document": { "risk": "READ", "approval": "none", "title": "후보자 맥락 문서 읽기" },
     "list_profile_documents": { "risk": "READ", "approval": "none", "title": "프로필 원고 목록" },
     "get_profile_document": { "risk": "READ", "approval": "none", "title": "프로필 원고 읽기" },
-    "list_usage_snapshots": { "risk": "READ", "approval": "none", "title": "사용량 기록 읽기" }
+    "list_usage_snapshots": { "risk": "READ", "approval": "none", "title": "사용량 기록 읽기" },
+    "save_context_document": { "risk": "WRITE", "approval": "required", "title": "후보자 맥락 문서 저장" },
+    "save_profile_document": { "risk": "WRITE", "approval": "required", "title": "프로필 원고 저장" }
   },
   "default_tool_policy": "deny",
   "operator_env": ["CAREER_BACKEND_URL", "CAREER_GITHUB_PROFILE_REPO"],

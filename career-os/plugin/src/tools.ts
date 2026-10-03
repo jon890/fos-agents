@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CareerBackend, CareerError, safeError } from "./backend.ts";
+import { idempotencyKey } from "./idempotency.ts";
 
 // Same keys as the Backend schemas; contract-parity.test.ts compares them with the CLI contracts.
 export const contextDocumentKeys = [
@@ -19,8 +20,25 @@ function documentSchemas<K extends readonly [string, ...string[]]>(keys: K) {
   return {
     list: z.object({ documents: z.array(summary) }),
     get: z.object({ document: summary.extend({ body: z.string(), note: z.string() }) }),
+    // The Backend answers a save with the summary only, never the body.
+    put: z.object({ document: summary }),
   };
 }
+
+// Same rules as the Backend's document PUT schema, so a rejected value never reaches fetch.
+const maxBodyBytes = 65_536;
+function saveSchema<K extends readonly [string, ...string[]]>(keys: K) {
+  return z.strictObject({
+    documentKey: z.enum(keys),
+    body: z
+      .string()
+      .refine((value) => value.trim().length > 0)
+      .refine((value) => new TextEncoder().encode(value).length <= maxBodyBytes),
+    note: z.string().trim().min(1).max(500),
+    expectedVersion: z.number().int().nonnegative(),
+  });
+}
+type SaveArgs = { documentKey: string; body: string; note: string; expectedVersion: number };
 
 const contextSchemas = documentSchemas(contextDocumentKeys);
 const profileSchemas = documentSchemas(profileDocumentKeys);
@@ -65,6 +83,16 @@ export const toolDefinitions: Record<string, { description: string; schema: z.Zo
   list_usage_snapshots: {
     description: "달별 에이전트 사용량 기록을 달 오름차순으로 조회",
     schema: z.strictObject({}),
+  },
+  save_context_document: {
+    description:
+      "후보자 맥락 문서 하나를 저장. expectedVersion 은 읽은 판이고 새 문서는 0. 결과에 본문을 싣지 않는다",
+    schema: saveSchema(contextDocumentKeys),
+  },
+  save_profile_document: {
+    description:
+      "프로필 원고 하나를 저장. expectedVersion 은 읽은 판이고 새 문서는 0. 결과에 본문을 싣지 않는다",
+    schema: saveSchema(profileDocumentKeys),
   },
 };
 
@@ -117,6 +145,14 @@ export class CareerTools {
           return this.success(
             await this.backend.request("GET", "/api/profile/v1/usage-snapshots", usageSnapshotListSchema),
           );
+        case "save_context_document":
+          return this.success(
+            await this.save("/api/candidate-context/v1", "candidate-context", contextSchemas.put, args as SaveArgs),
+          );
+        case "save_profile_document":
+          return this.success(
+            await this.save("/api/profile/v1", "profile-document", profileSchemas.put, args as SaveArgs),
+          );
       }
       throw new CareerError("CAREER_UNKNOWN_TOOL");
     } catch (error) {
@@ -126,6 +162,18 @@ export class CareerTools {
         content: [{ type: "text", text: JSON.stringify({ error: safeError(error), ...extra }) }],
       };
     }
+  }
+
+  // Sent once. When the outcome is unknown the caller gets CAREER_NETWORK and rereads the document.
+  private save<T>(basePath: string, keyPrefix: string, schema: z.ZodType<T>, args: SaveArgs): Promise<T> {
+    const { documentKey, body, note, expectedVersion } = args;
+    return this.backend.request(
+      "PUT",
+      `${basePath}/documents/${documentKey}`,
+      schema,
+      { body, note, expectedVersion },
+      idempotencyKey(keyPrefix, { documentKey, body, note, expectedVersion }),
+    );
   }
 
   private success(value: unknown): ToolResult {
