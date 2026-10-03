@@ -356,7 +356,7 @@ describe("study-library recommendations CLI", () => {
       });
       const logs: string[] = [];
       process.argv = [
-        process.execPath,
+        "bun",
         "morning_reading_cli.ts",
         "--run-dir", root,
         "--commit-recommendation",

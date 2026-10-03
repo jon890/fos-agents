@@ -547,7 +547,7 @@ describe("library collect-only CLI", () => {
     }, { headers: { "Content-Type": "application/json" } })) as unknown as typeof fetch;
     try {
       process.argv = [
-        process.execPath,
+        "bun",
         "morning_reading_cli.ts",
         "--collect-only",
         "--source-key",
@@ -556,7 +556,7 @@ describe("library collect-only CLI", () => {
       await expect(main()).rejects.toThrow("sourceKey");
 
       process.argv = [
-        process.execPath,
+        "bun",
         "morning_reading_cli.ts",
         "--collect-only",
         "--source-key",
@@ -578,7 +578,7 @@ describe("library collect-only CLI", () => {
     const directory = mkdtempSync(join(tmpdir(), "study-topic-recommender."));
     const requests: string[] = [];
     process.argv = [
-      process.execPath,
+      "bun",
       "morning_reading_cli.ts",
       "--run-dir",
       directory,
@@ -674,7 +674,7 @@ describe("library collect-only CLI", () => {
     const directory = mkdtempSync(join(tmpdir(), "study-topic-recommender."));
     const messages: string[] = [];
     process.argv = [
-      process.execPath,
+      "bun",
       "morning_reading_cli.ts",
       "--collect-only",
       "--source-key",
