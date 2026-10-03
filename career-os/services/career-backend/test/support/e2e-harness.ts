@@ -12,6 +12,7 @@ import {
   legacyCase,
   legacyComparedColumns,
   expectedLegacyAssessment,
+  expectedLegacyResponseBody,
   expectedLegacyRow,
   materializeLegacyBody,
   type LegacyErrorBody,
@@ -232,7 +233,7 @@ export async function startE2eHarness(): Promise<E2eHarness> {
       );
       const volatilePaths = expected.volatileResponsePaths;
       expect(maskVolatile(reply.json, volatilePaths), `${id} 의 응답 본문`).toEqual(
-        maskVolatile(expected.body, volatilePaths),
+        maskVolatile(expectedLegacyResponseBody(expected.body), volatilePaths),
       );
     },
     expectMatchesLegacyError(id, reply) {

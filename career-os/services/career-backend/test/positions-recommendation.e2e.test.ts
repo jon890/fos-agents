@@ -12,7 +12,6 @@ function send(method: string, path: string, options?: { body?: unknown; idempote
 
 type AnalysisPolicyBody = {
   schemaVersion: 2;
-  candidateContextVersion: string;
   dailyAnalysisLimit: number;
   prioritySlots: number;
   agingSlots: number;
@@ -25,7 +24,6 @@ type AnalysisPolicyBody = {
 function policy(overrides: Partial<AnalysisPolicyBody> = {}): AnalysisPolicyBody {
   return {
     schemaVersion: 2,
-    candidateContextVersion: "candidate-context-2026-09",
     dailyAnalysisLimit: 5,
     prioritySlots: 3,
     agingSlots: 2,

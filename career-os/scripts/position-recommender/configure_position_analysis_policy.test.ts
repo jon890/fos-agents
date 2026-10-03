@@ -5,7 +5,6 @@ import { analysisPolicyIdempotencyKey } from "./configure_position_analysis_poli
 const policy = (overrides: Record<string, unknown> = {}) =>
   analysisPolicySchema.parse({
     schemaVersion: 2,
-    candidateContextVersion: "position-preferences:v1",
     dailyAnalysisLimit: 7,
     prioritySlots: 4,
     agingSlots: 3,

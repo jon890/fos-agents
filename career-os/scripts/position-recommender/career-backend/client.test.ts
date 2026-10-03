@@ -283,7 +283,6 @@ describe("position recommendation API client", () => {
     let capturedMethod = "";
     const policy = {
       schemaVersion: 2 as const,
-      candidateContextVersion: "context-1",
       dailyAnalysisLimit: 20,
       prioritySlots: 16,
       agingSlots: 4,
@@ -310,7 +309,6 @@ describe("position recommendation API client", () => {
     const requests: Array<{ url: string; init: RequestInit }> = [];
     const policy = {
       schemaVersion: 2 as const,
-      candidateContextVersion: "context-1",
       dailyAnalysisLimit: 20,
       prioritySlots: 16,
       agingSlots: 4,

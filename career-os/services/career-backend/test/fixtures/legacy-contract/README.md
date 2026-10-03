@@ -308,10 +308,18 @@ case 하나는 아래를 담는다.
 
 실행과 분석과 평가의 `candidate_context_version` 은 포착값 `candidate-context-2026-09` 대신 `position-preferences:v1` 과 비교한다.
 대상 table 은 `company_tier_assessment_runs`, `company_tier_assessments`, `position_analysis_runs`, `position_analyses` 다.
-`position_analysis_policy` 는 받은 값을 그대로 저장하므로 포착값과 비교한다.
+`position_analysis_policy` 는 그 칸을 지웠다. 아래 항목을 따른다.
 
 이유는 ADR-134 다.
 서버가 공고 분석의 기준 버전을 정책 행이 아니라 `position-preferences` 후보자 맥락 문서의 version 에서 계산한다.
 e2e 는 그 문서를 version 1 로 만든 위에서 포착 case 를 재생하므로 기준 버전이 `position-preferences:v1` 이 된다.
 
 값을 바꾸는 코드는 `test/support/legacy-contract.ts` 의 `expectedLegacyRow` 다.
+
+분석 정책의 요청과 응답과 정책 행에서는 기준 버전을 빼고 보내고 비교한다.
+요청 본문과 응답 본문의 `candidateContextVersion`, `position_analysis_policy` 행과 비교 열 목록의 `candidate_context_version` 이 대상이다.
+
+이유는 같은 ADR-134 다.
+정책이 기준 버전을 정하지 않으므로 스키마가 그 칸을 받지 않고(`.strict()` 라 보내면 `400` 이다), DB 에서도 그 칸을 지웠다.
+
+바꾸는 코드는 `test/support/legacy-contract.ts` 의 `materializeLegacyBody`, `expectedLegacyResponseBody`, `expectedLegacyRow` 와 `legacyComparedColumns` 다.

@@ -12,7 +12,6 @@ function send(method: string, path: string, options?: { body?: unknown; idempote
 
 type AnalysisPolicyBody = {
   schemaVersion: 2;
-  candidateContextVersion: string;
   dailyAnalysisLimit: number;
   prioritySlots: number;
   agingSlots: number;
@@ -25,7 +24,6 @@ type AnalysisPolicyBody = {
 function policy(overrides: Partial<AnalysisPolicyBody> = {}): AnalysisPolicyBody {
   return {
     schemaVersion: 2,
-    candidateContextVersion: "candidate-context-2026-09",
     dailyAnalysisLimit: 5,
     prioritySlots: 3,
     agingSlots: 2,
@@ -780,7 +778,7 @@ describe("기준 버전은 position-preferences 문서에서 계산한다", () =
   }
 
   it("수집과 분석 실행이 문서 version 을 기록한다", async () => {
-    await configure({ candidateContextVersion: "ignored-by-backend" });
+    await configure();
     const queue = await collect("collection-1", postings);
     await assess("collection-1", queue, { "회사 1": 1, "회사 2": 2 });
     await openQueue("collection-1");

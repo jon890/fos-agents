@@ -158,7 +158,6 @@ describe("client 가 쓰는 schema 로 검증하는 endpoint 아홉", () => {
         idempotencyKey: "contract-policy",
         body: {
           schemaVersion: 2,
-          candidateContextVersion: "candidate-context-2026-09",
           dailyAnalysisLimit: 5,
           prioritySlots: 3,
           agingSlots: 2,
