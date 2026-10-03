@@ -266,7 +266,7 @@ async function replayGivenWithLiveIds(id: string): Promise<void> {
       for (const failure of body.failures ?? []) failure.positionId = positionIds[cursor++]!;
     }
     const reply = await send(request.method, request.path, {
-      body: materializeLegacyBody(request.body),
+      body: materializeLegacyBody(request.path, request.body),
       idempotencyKey: request.headers.idempotencyKey ?? undefined,
     });
     expect(reply.status, `${id} 의 선행 요청 ${entry.label}`).toBe(entry.responseStatus);

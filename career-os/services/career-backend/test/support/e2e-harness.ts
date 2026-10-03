@@ -208,7 +208,7 @@ export async function startE2eHarness(): Promise<E2eHarness> {
           continue;
         }
         const reply = await send(entry.request.method, entry.request.path, {
-          body: materializeLegacyBody(entry.request.body),
+          body: materializeLegacyBody(entry.request.path, entry.request.body),
           idempotencyKey: entry.request.headers.idempotencyKey ?? undefined,
         });
         expect(reply.status, `${id} 의 선행 요청 ${entry.label}`).toBe(entry.responseStatus);
@@ -220,12 +220,12 @@ export async function startE2eHarness(): Promise<E2eHarness> {
     async sendLegacyRequest(id) {
       const request = legacyCase(id).request;
       return send(request.method, request.path, {
-        body: materializeLegacyBody(request.body),
+        body: materializeLegacyBody(request.path, request.body),
         idempotencyKey: request.headers.idempotencyKey ?? undefined,
       });
     },
     expectMatchesLegacy(id, reply) {
-      const expected = legacyCase(id).response;
+      const { request, response: expected } = legacyCase(id);
       expect(reply.status, `${id} 의 status`).toBe(expected.status);
       expect(reply.cacheControl, `${id} 의 Cache-Control`).toBe(expected.cacheControl);
       expect(typeof reply.requestId === "string", `${id} 의 X-Request-Id 유무`).toBe(
@@ -233,7 +233,7 @@ export async function startE2eHarness(): Promise<E2eHarness> {
       );
       const volatilePaths = expected.volatileResponsePaths;
       expect(maskVolatile(reply.json, volatilePaths), `${id} 의 응답 본문`).toEqual(
-        maskVolatile(expectedLegacyResponseBody(expected.body), volatilePaths),
+        maskVolatile(expectedLegacyResponseBody(request.path, expected.body), volatilePaths),
       );
     },
     expectMatchesLegacyError(id, reply) {

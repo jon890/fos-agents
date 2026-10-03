@@ -176,7 +176,7 @@ MySQL container가 자체 서명 인증서를 사용하므로 서버 인증서�
 | `services/career-backend/src/app.module.ts`        | module 조립과 전역 filter·interceptor 등록                   |
 | `services/career-backend/src/config/`              | 환경값 읽기와 기동 전 검증                                       |
 | `services/career-backend/src/common/`              | 인증, 요청 ID, 본문 크기, zod 검증, 멱등 처리, 오류 응답 형식             |
-| `services/career-backend/src/positions/`           | 회사 정책, 공고 버전, 분석 상태와 추천 조립. 분석 기준 버전은 `src/candidate-context/` 가 내보낸 조회로 `position-preferences` 문서를 읽어 계산한다 |
+| `services/career-backend/src/positions/`           | 회사 정책, 공고 버전, 분석 상태와 추천 조립. 분석 기준 버전은 수집 저장 때 `src/candidate-context/` 가 내보낸 조회로 `position-preferences` 문서를 읽어 계산하고, 공고 분석 실행은 회사 tier 실행에 적힌 값을 이어 쓴다 |
 | `services/career-backend/src/positions/repository/`| Prisma 질의. 도메인이 요구하는 단위로만 읽고 쓴다                       |
 | `services/career-backend/src/study/`               | 공부 소스, 수집 자료, cursor, 후보와 추천 판정                         |
 | `services/career-backend/src/interview/`           | 주제별 복습 상태, 연습 기록, 개인 질문과 복습일 규칙                        |

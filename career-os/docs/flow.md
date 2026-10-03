@@ -94,7 +94,7 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 | 인증 실패 | `401` |
 | version 충돌 | `409` |
 | 정책을 설정하지 않은 상태의 수집 요청 | `409 POLICY_NOT_CONFIGURED` |
-| `position-preferences` 문서가 없는 상태의 수집 요청과 공고 분석 실행 생성 | `409 CANDIDATE_CONTEXT_MISSING` |
+| `position-preferences` 문서가 없는 상태의 수집 요청 | `409 CANDIDATE_CONTEXT_MISSING` |
 | 회사 tier 실행이 `pending` 인데 분석 실행 생성 | `409 COMPANY_TIER_RUN_PENDING` |
 | `learning-interests` 문서가 없는 상태의 공부 후보 조회 | `409 CANDIDATE_CONTEXT_MISSING` |
 | DB 연결 실패 | `503` |
@@ -133,7 +133,9 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 
 문서 저장은 다른 저장 값을 함께 바꾸지 않는다.
 `position-preferences` 를 저장한 뒤 포지션 분석 정책을 맞추는 단계가 없다.
-Backend 가 수집 실행을 저장할 때와 공고 분석 실행을 만들 때 이 문서의 `version` 에서 기준 버전 `position-preferences:v{version}` 을 계산한다.
+Backend 가 수집 실행을 저장할 때 이 문서의 `version` 에서 기준 버전 `position-preferences:v{version}` 을 계산해 회사 tier 실행에 적는다.
+공고 분석 실행은 문서를 다시 읽지 않고 같은 수집의 회사 tier 실행에 적힌 기준 버전을 이어 쓴다.
+수집 뒤에 문서를 새로 저장해도 한 수집 안의 회사 tier 평가와 공고 분석은 같은 기준 버전을 쓴다.
 CLI 로 저장하든 다른 client 로 저장하든 다음 수집부터 새 기준 버전이 쓰인다.
 이유는 [ADR-134](adr/ADR-134-공고-분석의-기준-버전은-position-preferences-문서-버전에서-계산한다.md)를 따른다.
 
@@ -297,6 +299,7 @@ sequenceDiagram
 7. 모델이 그 근거만 읽고 축 셋을 각각 판정한다. 근거가 없는 축은 `unknown`으로 두고 `recommendedTier`도 내지 않는다.
 8. client가 결과와 평가하지 못한 회사를 실행 ID와 함께 보낸다. 큐가 비어 있으면 회사 tier 실행은 만들어지는 즉시 완료다.
 9. client가 공고 분석 실행 생성을 요청하면 Backend가 회사마다 `manual`, `model`, `default` 순서로 tier를 해결하고, `fresh` 분석을 재사용한 뒤 회사 우선 슬롯과 오래 기다린 공고 보장 슬롯으로 제한된 분석 큐를 반환한다.
+   기준 버전은 문서에서 다시 계산하지 않고 같은 수집의 회사 tier 실행 값을 이어 쓴다.
 10. 모델은 분석 큐에 든 공고만 읽고 그 회사의 저장된 근거와 실행 디렉터리의 `candidate-context.json` 을 함께 본다.
 11. client가 분석 결과와 분석하지 못한 공고를 실행 ID와 함께 보낸다. Backend는 아직 끝나지 않은 항목 전체와 대조하고 한 트랜잭션으로 반영한다.
 12. 실패한 공고가 남으면 실행은 `partial`로 남고 client는 남은 항목만 다시 보낸다.

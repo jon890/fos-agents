@@ -855,7 +855,34 @@ describe("기준 버전은 position-preferences 문서에서 계산한다", () =
     expect(errorCode(reply), "정책과 문서 없는 수집 오류 코드").toBe("POLICY_NOT_CONFIGURED");
   });
 
-  it("문서가 없으면 분석 실행 생성을 409 CANDIDATE_CONTEXT_MISSING 으로 거절한다", async () => {
+  it("수집 뒤 문서를 새로 저장해도 분석 실행은 tier 실행의 기준 버전과 회사 평가를 쓴다", async () => {
+    await configure();
+    const queue = await collect("collection-1", postings);
+    await assess("collection-1", queue, { "회사 1": 1, "회사 2": 3 });
+
+    const version = await harness.putPositionPreferences("바뀐 예시 선호 문장");
+    expect(version, "수집 뒤 새로 저장한 문서 version").toBe(2);
+
+    await openQueue("collection-1");
+
+    expect(
+      await contextVersions("company_tier_assessment_runs"),
+      "회사 tier 실행의 기준 버전",
+    ).toEqual(["position-preferences:v1"]);
+    expect(await contextVersions("position_analysis_runs"), "분석 실행의 기준 버전").toEqual([
+      "position-preferences:v1",
+    ]);
+    const items = await storedItems();
+    expect(
+      items.map((item) => [item.companyKey, item.companyTier, item.companyTierSource]).sort(),
+      "회사 평가로 해결한 tier 와 출처",
+    ).toEqual([
+      ["회사 1", 1, "model"],
+      ["회사 2", 3, "model"],
+    ]);
+  });
+
+  it("수집 뒤 문서가 없어져도 분석 실행은 tier 실행의 기준 버전으로 만든다", async () => {
     await configure();
     const queue = await collect("collection-1", postings);
     await assess("collection-1", queue, { "회사 1": 1, "회사 2": 2 });
@@ -863,10 +890,9 @@ describe("기준 버전은 position-preferences 문서에서 계산한다", () =
 
     const reply = await openAnalysisRun("collection-1");
 
-    expect(reply.status, "문서 없는 분석 실행 생성 status").toBe(409);
-    expect(errorCode(reply), "문서 없는 분석 실행 생성 오류 코드").toBe(
-      "CANDIDATE_CONTEXT_MISSING",
-    );
-    expect(await rowCount("position_analysis_runs"), "남은 분석 실행 행 수").toBe(0);
+    expect(reply.status, "문서 없는 분석 실행 생성 status").toBe(201);
+    expect(await contextVersions("position_analysis_runs"), "분석 실행의 기준 버전").toEqual([
+      "position-preferences:v1",
+    ]);
   });
 });

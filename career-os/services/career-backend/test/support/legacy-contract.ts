@@ -83,9 +83,9 @@ function isGeneratedBody(body: unknown): body is GeneratedBody {
  * 대부분은 적힌 값이 곧 본문이다. 본문 상한 case 하나만 `generated` 로 만드는 방법을 적었고,
  * 그것을 알아보지 못하면 설명 객체를 그대로 보내 상한에 걸리지 않는다.
  */
-export function materializeLegacyBody(body: unknown): unknown {
+export function materializeLegacyBody(path: string, body: unknown): unknown {
   if (!isGeneratedBody(body)) {
-    const copy = withoutPolicyContextVersion(structuredClone(body)) as
+    const copy = withoutPolicyContextVersion(path, structuredClone(body)) as
       | { results?: Array<Record<string, unknown>> }
       | undefined;
     for (const result of copy?.results ?? []) {
@@ -105,14 +105,17 @@ export function materializeLegacyBody(body: unknown): unknown {
   return { [padField]: "a".repeat(totalBytes - overhead) };
 }
 
+const analysisPolicyPath = "/api/positions/v1/analysis-policy";
+
 /**
- * 최상위의 `candidateContextVersion` 을 지운 사본을 돌려준다.
+ * 분석 정책 요청이면 본문 최상위의 `candidateContextVersion` 을 지운 사본을 돌려준다.
  *
  * 포착 뒤 분석 정책은 기준 버전을 받지도 돌려주지도 않는다(ADR-134).
- * 포착 파일에서 최상위에 이 키를 가진 본문은 분석 정책의 요청과 응답뿐이다.
  * 정책 스키마가 `.strict()` 라 지우지 않고 보내면 `400` 이 된다.
+ * 다른 경로의 본문은 그 키가 계약의 일부일 수 있어 그대로 둔다.
  */
-function withoutPolicyContextVersion(body: unknown): unknown {
+function withoutPolicyContextVersion(path: string, body: unknown): unknown {
+  if (path !== analysisPolicyPath) return body;
   if (typeof body !== "object" || body === null || Array.isArray(body)) return body;
   if (!("candidateContextVersion" in body)) return body;
   const { candidateContextVersion: _removed, ...rest } = body as Record<string, unknown>;
@@ -120,8 +123,8 @@ function withoutPolicyContextVersion(body: unknown): unknown {
 }
 
 /** 포착한 응답 본문을 지금 계약이 돌려줄 본문으로 바꾼다. 분석 정책 응답의 기준 버전을 뺀다. */
-export function expectedLegacyResponseBody(body: unknown): unknown {
-  return withoutPolicyContextVersion(structuredClone(body));
+export function expectedLegacyResponseBody(path: string, body: unknown): unknown {
+  return withoutPolicyContextVersion(path, structuredClone(body));
 }
 
 /** 과거 포착값은 그대로 두고, 달라진 저장 계약만 비교 시점에 반영한다. */

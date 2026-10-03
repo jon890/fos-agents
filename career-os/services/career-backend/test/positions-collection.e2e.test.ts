@@ -385,11 +385,11 @@ describe("같은 실행에 동시에 온 두 요청", () => {
     const path = `/api/positions/v1/company-tier-runs/${queue.companyTierRunId}/results`;
     const [first, second] = await Promise.all([
       send("POST", path, {
-        body: materializeLegacyBody(request.body),
+        body: materializeLegacyBody(path, request.body),
         idempotencyKey: "concurrent-a",
       }),
       send("POST", path, {
-        body: materializeLegacyBody(request.body),
+        body: materializeLegacyBody(path, request.body),
         idempotencyKey: "concurrent-b",
       }),
     ]);

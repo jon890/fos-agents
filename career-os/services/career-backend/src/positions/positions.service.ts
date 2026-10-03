@@ -442,7 +442,9 @@ export class PositionsService {
         );
       }
 
-      const contextVersion = await this.requireContextVersion(tx);
+      // 문서를 다시 읽지 않고 같은 수집의 tier 실행 기준 버전을 이어 쓴다.
+      // 사이에 position-preferences 가 바뀌어도 회사 평가를 같은 버전으로 찾는다.
+      const contextVersion = tierRun.candidateContextVersion;
       const selected = await this.repository.selectAnalysisQueue(
         {
           collectionRunId,
