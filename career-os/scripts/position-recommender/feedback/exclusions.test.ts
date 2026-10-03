@@ -170,7 +170,7 @@ describe("개인 공고 제외", () => {
     try {
       const child = Bun.spawn(
         [
-          "bun",
+          process.execPath,
           `${import.meta.dir}/../collect_live_postings.ts`,
           "--source",
           "toss",

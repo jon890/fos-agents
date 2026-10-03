@@ -129,7 +129,7 @@ describe("resume exporter", () => {
       writeFileSync(resumePath, overflowing);
 
       const result = Bun.spawnSync({
-        cmd: ["bun", join(import.meta.dir, "export_resume.ts"), "--application-dir", directory],
+        cmd: [process.execPath, join(import.meta.dir, "export_resume.ts"), "--application-dir", directory],
         stdout: "pipe",
         stderr: "pipe",
       });
@@ -197,7 +197,7 @@ describe("resume exporter", () => {
 
       const result = Bun.spawnSync({
         cmd: [
-          "bun",
+          process.execPath,
           join(import.meta.dir, "export_resume.ts"),
           "--application-dir",
           directory,

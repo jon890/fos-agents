@@ -86,7 +86,7 @@ describe("근거 원본 목록의 문서 계약", () => {
 describe("CLI 계약", () => {
   const script = join(import.meta.dir, "check_evidence_sources.ts");
   const invoke = (args: string[], cwd = import.meta.dir) => {
-    const result = Bun.spawnSync(["bun", script, ...args], { cwd, stdout: "pipe", stderr: "pipe" });
+    const result = Bun.spawnSync([process.execPath, script, ...args], { cwd, stdout: "pipe", stderr: "pipe" });
     return { code: result.exitCode, out: result.stdout.toString(), err: result.stderr.toString() };
   };
 
@@ -296,7 +296,7 @@ describe("확인할 수 없는 원본", () => {
 
     const script = join(import.meta.dir, "check_evidence_sources.ts");
     const resultFrom = (cwd: string): unknown => {
-      const output = Bun.spawnSync(["bun", script, "--no-fetch"], { cwd, stdout: "pipe", stderr: "pipe" });
+      const output = Bun.spawnSync([process.execPath, script, "--no-fetch"], { cwd, stdout: "pipe", stderr: "pipe" });
       return JSON.parse(new TextDecoder().decode(output.stdout));
     };
 
