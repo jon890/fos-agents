@@ -1370,8 +1370,8 @@ README 에는 `img.shields.io/badge/Tokens-<값>B-` 모양의 배지 주소가 �
 | `CAREER_GITHUB_NOT_CONFIGURED` | GitHub token 을 넣지 않음 | `credential_rejected` |
 | `CAREER_GITHUB_UNAUTHORIZED` | GitHub 가 401 로 답함 | `credential_rejected` |
 | `CAREER_GITHUB_FORBIDDEN` | GitHub 가 403 이나 404 로 답함. token 에 그 저장소의 권한이 없거나 저장소 이름이 틀리다 | `forbidden` |
-| `CAREER_GITHUB_CONFLICT` | branch 를 옮길 때 GitHub 가 409 나 422 로 답함. 그 사이 다른 커밋이 올라왔다 | `unavailable` |
-| `CAREER_GITHUB_UNAVAILABLE` | GitHub 의 5xx, 연결과 시간 초과 실패 | `unavailable` |
+| `CAREER_GITHUB_CONFLICT` | branch 를 옮기는 마지막 요청에서만 GitHub 가 409 나 422 로 답함. 그 사이 다른 커밋이 올라왔다 | `unavailable` |
+| `CAREER_GITHUB_UNAVAILABLE` | GitHub 의 5xx 와 429, branch 를 옮기기 전 단계의 409 와 422, 연결과 시간 초과 실패 | `unavailable` |
 | `CAREER_UNKNOWN_TOOL`, `CAREER_INTERNAL` | 지원하지 않는 도구 또는 내부 처리 실패 | |
 
 `message` 는 사람에게 보일 고정 문구다. Backend 와 GitHub 의 응답 본문, token, 문서 본문을 담지 않는다.

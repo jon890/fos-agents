@@ -795,7 +795,7 @@ sequenceDiagram
 | 고른 달 가운데 기록이 없는 달이 있다 | `CAREER_USAGE_MONTH_MISSING`. 없는 달을 알려 준다. 숫자를 인자로 받아 채우지 않는다 |
 | GitHub token 을 넣지 않았다 | GitHub 도구 둘만 `CAREER_GITHUB_NOT_CONFIGURED` 로 답한다. 나머지 도구는 돈다 |
 | 승인을 기다리는 사이에 다른 곳에서 문서를 저장했다 | `CAREER_VERSION_CONFLICT`. 다시 읽고 변경을 검토한 뒤 새로 승인받는다 |
-| tree 를 만드는 사이에 프로필 저장소에 다른 커밋이 올라왔다 | `CAREER_GITHUB_CONFLICT`. branch 를 강제로 옮기지 않는다 |
+| branch 를 옮기는 마지막 요청에서 프로필 저장소에 다른 커밋이 올라왔음을 알게 된다 | `CAREER_GITHUB_CONFLICT`. branch 를 강제로 옮기지 않는다. 그 앞 단계의 409 와 422 는 `CAREER_GITHUB_UNAVAILABLE` 이다 |
 | 올릴 README 와 차트가 저장소의 것과 같다 | 커밋을 만들지 않고 `changed: false` 로 성공한다. 같은 요청을 다시 승인해도 빈 커밋이 쌓이지 않는다 |
 | 실행 결과가 「실행했는지 알 수 없음」 으로 온다 | 같은 도구를 다시 부르지 않는다. `get_github_profile` 이나 문서 조회로 반영됐는지 확인한다 |
 | 저장할 본문이 승인 인자 상한을 넘는다 | fos-assistant 가 호출을 거절한다. 노트북의 CLI 로 저장하라고 안내한다 |
