@@ -1,6 +1,6 @@
 {
   "name": "plan141-career-connector",
-  "description": "fos-assistant 에 연결하는 커리어 커넥터 fos-career 를 career-os/plugin 에 만든다. 대화에서 후보자 맥락 문서와 프로필 원고를 읽고 승인받아 저장하며, GitHub 프로필의 README 와 사용량 차트를 기록의 숫자로 검사해 커밋 하나로 올린다.",
+  "description": "Phase 02 부터의 선행 조건: plan139 를 main 에 머지하고 이 브랜치를 rebase 한다. 문서 충돌은 plan139 의 `###` 절을 `## sync-profile` 아래, `## fos-career 커넥터` 앞에 두는 쪽으로 푼다. fos-assistant 에 연결하는 커리어 커넥터 fos-career 를 career-os/plugin 에 만든다. 대화에서 후보자 맥락 문서와 프로필 원고를 읽고 승인받아 저장하며, GitHub 프로필의 README 와 사용량 차트를 기록의 숫자로 검사해 커밋 하나로 올린다.",
   "status": "pending",
   "created_at": "2026-10-02",
   "total_phases": 5,

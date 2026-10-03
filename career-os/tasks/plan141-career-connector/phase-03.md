@@ -13,18 +13,18 @@
 
 Phase 01 이 만든 `career-os/plugin/` 위에서 일한다. `src/backend.ts` 의 `CareerBackend.request` 와 `src/tools.ts` 의 `toolDefinitions`, `CareerTools.call` 을 먼저 읽는다.
 
-Backend 의 저장 계약이다. 정의를 열어 확인한다.
+Backend 의 저장 계약이다. 아래 요약과 코드가 다르면 코드가 맞다.
 
 - 후보자 맥락: `career-os/services/career-backend/src/candidate-context/schema.ts` 의 `candidateContextDocumentPutSchema`. `body` 는 공백만이 아니고 UTF-8 65,536바이트 이하, `note` 는 앞뒤 공백을 뗀 1자에서 500자, `expectedVersion` 은 0 이상의 정수다. 모르는 키를 거절한다(`.strict()`)
 - 경로는 `PUT /api/candidate-context/v1/documents/:documentKey` 이고 응답은 `{ document: { documentKey, version, updatedAt } }` 다. 본문을 돌려주지 않는다
 - `expectedVersion` 이 현재 값과 다르면 409 `VERSION_CONFLICT` 다. 새 문서는 `expectedVersion: 0` 이다
-- 프로필 원고: `career-os/services/career-backend/src/profile/` 의 schema 와 controller. `PUT /api/profile/v1/documents/:documentKey` 이고 요청과 응답의 규칙이 후보자 맥락과 같다. 그 파일을 열어 같은지 확인하고, 다르면 코드를 따른다
+- 프로필 원고: `career-os/services/career-backend/src/profile/` 의 schema 와 controller. `PUT /api/profile/v1/documents/:documentKey` 이고 요청과 응답의 규칙이 후보자 맥락과 같다
 - 모든 쓰기 요청은 `Idempotency-Key` 헤더가 필요하다(`career-os/docs/flow.md` 의 「커리어 Backend」)
 
 노트북의 client 가 `Idempotency-Key` 를 만드는 방법이다.
 
 - 후보자 맥락: `career-os/scripts/candidate-context/client.ts` 의 `hashKey("candidate-context", { documentKey, body, note, expectedVersion })`. `canonicalJson` 으로 키를 정렬해 직렬화한 글의 SHA-256 16진수에 `candidate-context:` 를 붙인다. `note` 는 `candidateContextPutPayloadSchema` 가 앞뒤 공백을 뗀 값이다
-- 프로필 원고: `career-os/scripts/profile/client.ts` 를 열어 접두사와 해시에 넣는 값을 읽는다
+- 프로필 원고: `career-os/scripts/profile/client.ts` 의 `putDocument` 가 `hashKey("profile-document", { documentKey, body, note, expectedVersion })` 로 만든다. `note` 는 후보자 맥락과 같은 방식으로 앞뒤 공백을 뗀 값이다
 
 fos-assistant 의 승인 규칙이다.
 
@@ -38,14 +38,14 @@ fos-assistant 의 승인 규칙이다.
 
 - **`Idempotency-Key` 를 노트북의 CLI 와 같은 값으로 만든다.** 같은 내용의 저장이 두 길로 가도 Backend 가 저장한 응답을 그대로 돌려준다. 값이 달라지지 않게 테스트가 `scripts/` 의 client 가 보낸 헤더와 대조한다
 - `scripts/` 의 `hashKey` 를 import 하지 않고 같은 계산을 `plugin/src/` 에 다시 쓴다. 그 파일이 token 파일을 읽는 설정 코드를 import 하기 때문이다(Phase 01 의 의도 메모)
-- `position-preferences` 를 이 도구로 저장해도 안전한 것은 Backend 가 공고 분석의 기준 버전을 문서 버전에서 계산하기 때문이다(ADR-134). 그 변경이 머지되기 전에는 문서만 저장되고 분석 정책이 낡은 채로 남아 수집이 멈춘다. 그래서 아래 Blocked 조건을 둔다
+- `position-preferences` 를 이 도구로 저장해도 안전한 것은 Backend 가 공고 분석의 기준 버전을 문서 버전에서 계산하기 때문이다(ADR-134). 그 변경이 없으면 문서만 저장되고 분석 정책이 낡은 채로 남아 수집이 멈춘다. 그래서 아래 Blocked 조건을 둔다
 - 저장을 다시 보내지 않는다. 연결이 끊겨 결과를 모르면 `CAREER_NETWORK` 로 답하고, 에이전트가 문서를 다시 읽어 확인한다
 - 저장 도구의 결과에 본문을 싣지 않는다. Backend 가 준 요약만 낸다
 
 ## Blocked 조건
 
 - `career-os/plugin/src/tools.ts` 가 없으면 `PHASE_BLOCKED: plugin 뼈대가 없다` 를 출력하고 종료한다
-- 아래 명령이 종료 코드 0 이면 공고 분석 정책이 아직 기준 버전을 저장하는 것이다. `PHASE_BLOCKED: 공고 분석의 기준 버전을 문서 버전에서 계산하는 변경이 아직 머지되지 않았다` 를 출력하고 종료한다
+- 아래 명령이 종료 코드 0 이면 공고 분석 정책이 아직 기준 버전을 저장하는 것이다(ADR-134 의 변경은 main 에 머지됐으므로 통과하는 것이 정상이다). `PHASE_BLOCKED: 공고 분석의 기준 버전을 문서 버전에서 계산하는 변경이 이 브랜치에 없다` 를 출력하고 종료한다
 
 ```bash
 # cwd: 저장소 루트
@@ -77,7 +77,7 @@ export function idempotencyKey(prefix: string, value: unknown): string;
 | 도구 | Backend 요청 | `Idempotency-Key` |
 | --- | --- | --- |
 | `save_context_document` | `PUT /api/candidate-context/v1/documents/<documentKey>`, 본문 `{ body, note, expectedVersion }` | `idempotencyKey("candidate-context", { documentKey, body, note, expectedVersion })` |
-| `save_profile_document` | `PUT /api/profile/v1/documents/<documentKey>`, 본문 `{ body, note, expectedVersion }` | `career-os/scripts/profile/client.ts` 가 만드는 값과 같게 |
+| `save_profile_document` | `PUT /api/profile/v1/documents/<documentKey>`, 본문 `{ body, note, expectedVersion }` | `idempotencyKey("profile-document", { documentKey, body, note, expectedVersion })` |
 
 - `note` 는 스키마가 공백을 뗀 값을 본문과 해시에 쓴다
 - 결과는 `{ document: { documentKey, version, updatedAt } }` 다
@@ -107,7 +107,7 @@ export function idempotencyKey(prefix: string, value: unknown): string;
 `career-os/plugin/src/contract-parity.test.ts` 에 더한다.
 
 - `career-os/scripts/candidate-context/client.ts` 의 `createCandidateContextClient({ origin, token, fetchImpl })` 로 `putDocument("career-status", payload)` 를 부를 때 fetch 대역이 받은 `Idempotency-Key` 가, 커넥터의 `save_context_document` 를 같은 값으로 부를 때 받은 헤더와 같다
-- `career-os/scripts/profile/client.ts` 의 문서 저장을 fetch 대역으로 부를 때 받은 `Idempotency-Key` 가 `save_profile_document` 의 것과 같다. 그 client 를 만드는 함수와 저장 메서드의 이름은 그 파일에서 읽는다
+- `career-os/scripts/profile/client.ts` 의 `createProfileClient` 로 만든 client 의 `putDocument` 를 fetch 대역으로 부를 때 받은 `Idempotency-Key` 가 `save_profile_document` 의 것과 같다
 - 두 대조 모두 요청 경로와 본문도 같다
 
 `career-os/plugin/src/server.test.ts` 를 고친다.

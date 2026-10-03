@@ -13,5 +13,5 @@ fos-assistant 에 설치하는 일은 이 저장소 밖이다. 운영 목록에 
 | 위 항목 통과 뒤 | 같은 대화 | 기록의 합계와 같은 배지 값으로 갱신을 요청하고 승인 카드에서 승인한다 | 프로필 저장소에 커밋이 하나 늘고 그 커밋이 `README.md` 와 `agent-usage.svg` 둘을 함께 바꾼다. 프로필 화면에서 차트 이미지가 로드되고 차트의 달별 값의 합이 배지 값과 같다 |
 | 위 항목 통과 뒤 | 같은 대화 | 같은 README 와 같은 달로 한 번 더 요청하고 승인한다 | 결과가 `changed: false` 이고 커밋이 늘지 않는다 |
 | 위 항목 통과 뒤 | 같은 대화 | GitHub 원고 저장을 승인한다 | 저장 결과의 `version` 이 1 올랐다 |
-| 위 항목 통과 뒤 | 노트북의 저장소 루트 | `career-os/scripts/profile/manage_profile.ts` 의 `documents get` 으로 `github` 원고를 읽는다 | `version` 이 커넥터가 저장한 값과 같고 본문이 올린 README 와 같다. 노트북의 `sync-profile` 과 커넥터가 같은 원고를 읽는다 |
+| 위 항목 통과 뒤 | 노트북의 저장소 루트 | `bun --env-file=career-os/.env career-os/scripts/profile/manage_profile.ts documents get --key github --out "${TMPDIR:-/tmp}/github-profile.md"` 로 `github` 원고를 읽는다 | `version` 이 커넥터가 저장한 값과 같고 본문이 올린 README 와 같다. 노트북의 `sync-profile` 과 커넥터가 같은 원고를 읽는다 |
 | 연결이 `READY` 인 뒤 | 같은 대화 | `position-preferences` 문서에 한 줄을 더해 저장을 요청하고 승인한다 | 저장이 성공한다. 그 뒤 포지션 수집 명령이 기준 버전 불일치로 멈추지 않는다 |

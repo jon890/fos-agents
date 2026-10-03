@@ -45,11 +45,11 @@ fos-assistant 는 승인된 쓰기를 새 프로세스에서 60초 안에 실행
 ## 의도 메모
 
 - **Contents API 로 파일을 하나씩 올리지 않는다.** 파일마다 커밋이 생겨 README 와 차트 가운데 하나만 바뀐 상태가 프로필에 보인다. Git Data API 로 tree 하나에 두 파일을 넣어 커밋 하나를 만든다
-- **검사를 모두 통과한 뒤에 GitHub 에 쓴다.** 입력 검사, token 유무, 기록에 없는 달, 배지 값의 순서로 본다. 이 가운데 하나라도 실패하면 `POST` 와 `PATCH` 를 하나도 보내지 않는다
+- **검사를 모두 통과한 뒤에 GitHub 에 쓴다.** 입력 검사, token 유무, 기록에 없는 달, 막대가 모두 0 인지, 배지 값의 순서로 본다. 이 가운데 하나라도 실패하면 `POST` 와 `PATCH` 를 하나도 보내지 않는다
 - 새 tree 가 지금 tree 와 같으면 커밋을 만들지 않는다. fos-assistant 의 실행이 「실행했는지 알 수 없음」 으로 끝난 뒤 사용자가 같은 요청을 다시 승인해도 빈 커밋이 쌓이지 않는다
 - `force: false` 로 branch 를 옮긴다. 그 사이 다른 커밋이 올라왔으면 실패하게 두고 강제로 옮기지 않는다
 - 커밋 문구를 인자로 받지 않는다. 승인 카드에서 볼 것을 README 와 달로 한정한다
-- 요청마다 시간 제한을 6초로 둔다. 쓰기 한 번이 Backend 한 번과 GitHub 여덟 번을 부르므로, 모두 느려도 60초 안에 실패로 끝나야 한다
+- 요청마다 시간 제한을 5초로 둔다. 쓰기 한 번이 Backend 한 번(8초, Phase 01)과 GitHub 여덟 번을 부르므로 최악은 Backend 8초에 GitHub 요청 여덟 번의 40초를 더한 48초다. 60초 한도까지 12초가 남아 프로세스 시작과 MCP 연결을 감당한다
 - blob 을 tree 의 `content` 로 한 번에 넣는 방법도 있다. blob 을 따로 만드는 쪽을 골랐다. 실패한 자리가 어느 파일인지 오류에서 구분된다
 - GitHub token 과 Backend token 을 서로 다른 host 로 보내지 않는다. 테스트가 이것을 단언한다
 - 테스트는 실제 GitHub 를 부르지 않는다. fetch 대역이 요청을 기록하고 정해 둔 응답을 준다. 저장소 이름과 token 은 지어낸 값(`octo-example/octo-example`, `"g".repeat(40)`)을 쓴다
@@ -57,6 +57,7 @@ fos-assistant 는 승인된 쓰기를 새 프로세스에서 60초 안에 실행
 ## Blocked 조건
 
 - `career-os/scripts/agent-usage/chart.ts` 가 없으면 `PHASE_BLOCKED: 차트 함수가 없다` 를 출력하고 종료한다
+- `python3` 이 PATH 에 없으면 `PHASE_BLOCKED: python3 이 없어 agent-usage 테스트를 돌릴 수 없다` 를 출력하고 종료한다(검증의 `bun test career-os/scripts/agent-usage` 가 파이썬 대조와 plan139 의 수집기 테스트를 함께 돌린다)
 - `career-os/plugin/src/idempotency.ts` 가 없으면 `PHASE_BLOCKED: 문서 저장 도구가 아직 없다` 를 출력하고 종료한다
 
 ## 작업 항목
@@ -75,9 +76,9 @@ export class GithubProfileRepo {
 ```
 
 - `repo` 는 `<owner>/<repo>` 다. 모양 검사는 `server.ts` 가 이미 했다
-- 요청마다 `redirect: "error"`, `signal: AbortSignal.timeout(6_000)` 이다. 다시 보내지 않는다
+- 요청마다 `redirect: "error"`, `signal: AbortSignal.timeout(5_000)` 이다. 다시 보내지 않는다
 - 응답은 쓰는 칸만 `zod` 로 읽는다. 읽지 못하면 `CAREER_INVALID_RESPONSE` 다
-- 상태별 오류 코드다. 401 은 `CAREER_GITHUB_UNAUTHORIZED`, 403 과 404 는 `CAREER_GITHUB_FORBIDDEN`, 409 와 422 는 `CAREER_GITHUB_CONFLICT`, 5xx 와 fetch 가 던진 경우는 `CAREER_GITHUB_UNAVAILABLE`, 나머지 4xx 는 `CAREER_GITHUB_FORBIDDEN` 이다
+- 상태별 오류 코드다. 401 은 `CAREER_GITHUB_UNAUTHORIZED`, 403 과 404 는 `CAREER_GITHUB_FORBIDDEN` 이다. 409 와 422 는 8번(branch 이동)에서만 `CAREER_GITHUB_CONFLICT` 다. 1번부터 7번의 409 와 422(빈 저장소의 409, blob 과 tree 검증 실패의 422), 429, 5xx, fetch 가 던진 경우는 `CAREER_GITHUB_UNAVAILABLE` 이다. 나머지 4xx 는 `CAREER_GITHUB_FORBIDDEN` 이다.
 - `check()` 는 컨텍스트 표의 1번만 부른다
 - `read()` 는 1번으로 branch 를 알고, `contents/README.md` 와 `contents/agent-usage.svg` 를 읽는다. **이 두 요청의 404 는 오류가 아니다.** README 가 없으면 `readme: null`, 차트가 없으면 `chartExists: false` 다. README 의 `content` 에서 줄바꿈을 빼고 base64 를 UTF-8 글로 푼다
 - `commitProfile` 은 컨텍스트 표의 1번부터 8번까지를 차례로 부른다. 6번의 `sha` 가 3번의 `tree.sha` 와 같으면 7번과 8번을 부르지 않고 `{ changed: false, commitSha: <2의 커밋>, branch }` 를 돌려준다. 다르면 8번까지 부르고 `{ changed: true, commitSha: <7>, branch }` 다
@@ -115,6 +116,7 @@ constructor(backend: CareerBackend, github?: GithubProfileRepo);
 1. 입력을 검사한다
 2. `github` 가 없으면 `CAREER_GITHUB_NOT_CONFIGURED` 다. Backend 도 부르지 않는다
 3. `GET /api/profile/v1/usage-snapshots` 로 기록을 읽어 `UsageTokens[]` 로 바꾼다. 달, Claude Code 토큰, Codex 토큰의 칸 이름은 Phase 01 이 `list_usage_snapshots` 에 쓴 스키마의 것이다
+   - 4번 다음, 5번 앞에서 막대의 최댓값이 0 이면 GitHub 를 부르기 전에 `CAREER_INVALID_INPUT` 으로 낸다. `tools.test.ts` 에 이 경우를 더하고 `api.github.com` 요청이 0건임을 단언한다
 4. `selectUsageBars(records, months)` 를 부른다. `missing` 이 비어 있지 않으면 `new CareerError("CAREER_USAGE_MONTH_MISSING", { missing })` 이다
 5. `readTokensBadge(readme)` 가 `formatBillions(totalTenths)` 와 다르면 `new CareerError("CAREER_BADGE_MISMATCH", { expected: formatBillions(totalTenths), found: <읽은 값이나 null> })` 이다
 6. `renderUsageChart(bars)` 로 SVG 를 만든다
@@ -147,7 +149,7 @@ fetch 대역은 요청의 method, URL, 헤더, 본문을 배열에 기록하고 
 - `read()`: README 가 있고 차트가 없을 때 `{ readme: <푼 글>, chartExists: false }` 다. 한글이 든 README 의 base64 를 줄바꿈과 함께 주고 글이 그대로 풀리는지 본다. README 가 404 면 `readme: null` 이다
 - `commitProfile()` 정상: 요청이 컨텍스트 표의 1번부터 8번 순서이고, 4번과 5번의 `content` 가 넘긴 글과 같고 `encoding` 이 `utf-8` 이다. 6번의 `base_tree` 가 3번의 tree 이고 `tree` 의 `path` 가 `README.md` 와 `agent-usage.svg` 둘뿐이다. 7번의 `parents` 가 2번의 커밋 하나다. 8번의 `force` 가 `false` 다. 결과가 `{ changed: true, commitSha: <7>, branch }` 다
 - 6번의 `sha` 가 3번의 tree 와 같으면 요청이 6개뿐이고 `{ changed: false, commitSha: <2의 커밋> }` 다
-- 8번이 422 면 `CAREER_GITHUB_CONFLICT`, 1번이 401 이면 `CAREER_GITHUB_UNAUTHORIZED`, 404 면 `CAREER_GITHUB_FORBIDDEN`, 502 면 `CAREER_GITHUB_UNAVAILABLE` 이다
+- 8번이 422 면 `CAREER_GITHUB_CONFLICT`, 6번이 422 나 4번이 409 면 `CAREER_GITHUB_UNAVAILABLE`, 어느 단계든 429 면 `CAREER_GITHUB_UNAVAILABLE`, 1번이 401 이면 `CAREER_GITHUB_UNAUTHORIZED`, 404 면 `CAREER_GITHUB_FORBIDDEN`, 502 면 `CAREER_GITHUB_UNAVAILABLE` 이다
 - 모든 요청의 host 가 `api.github.com` 이고 `init.redirect` 가 `"error"` 다
 
 `career-os/plugin/src/tools.test.ts` 에 더한다. Backend 와 GitHub 를 한 fetch 대역이 host 로 나눠 답한다.

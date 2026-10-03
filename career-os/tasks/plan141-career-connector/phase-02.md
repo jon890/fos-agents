@@ -44,7 +44,7 @@ GitHub 프로필의 월별 토큰 차트를 그리는 순수 함수를 `career-o
 
 ## Blocked 조건
 
-- `career-os/scripts/profile/client.ts` 나 `career-os/scripts/agent-usage/` 가 없으면 `PHASE_BLOCKED: 프로필 저장 모듈과 사용량 수집기가 아직 머지되지 않았다` 를 출력하고 종료한다
+- `career-os/scripts/profile/client.ts` 나 `career-os/scripts/agent-usage/` 가 없으면 `PHASE_BLOCKED: 프로필 저장 모듈이나 plan139 의 사용량 수집기가 아직 이 브랜치에 없다. plan139 를 머지한 main 으로 rebase 한다` 를 출력하고 종료한다
 - `career-os/.claude/skills/sync-profile/scripts/agent_usage_chart.py` 가 없으면 `PHASE_BLOCKED: 대조할 파이썬 차트 스크립트가 없다` 를 출력하고 종료한다
 - `python3` 이 PATH 에 없으면 `PHASE_BLOCKED: python3 이 없어 파이썬 출력과 대조할 수 없다` 를 출력하고 종료한다
 
@@ -70,7 +70,7 @@ export function readTokensBadge(readme: string): string | null;
 - `toTenths(tokens)` 는 `Math.floor((tokens + 50_000_000) / 100_000_000)` 이다. `1_349_999_999` 는 `13`, `1_350_000_000` 은 `14` 다
 - `selectUsageBars` 는 `months` 를 오름차순으로 정렬하고 겹친 달을 한 번만 쓴다. `records` 에 없는 달은 `missing` 에 담고 `bars` 에 넣지 않는다. `totalTenths` 는 `bars` 의 두 정수를 모두 더한 값이다
 - `formatBillions(979)` 는 `"97.9B"`, `formatBillions(5)` 는 `"0.5B"`, `formatBillions(1000)` 은 `"100.0B"` 다
-- `renderUsageChart(bars)` 는 파이썬 `render` 와 글자까지 같은 SVG 를 낸다. 막대의 값은 `claudeTenths / 10`, `codexTenths / 10` 이고 달 표기는 `month` 의 `-` 를 `.` 로 바꾼 글이다(`2026-07` 은 `2026.07`). 파이썬의 `:.1f` 는 위 컨텍스트의 규칙으로 찍는다. `bars` 가 비었으면 `RangeError` 를 던진다
+- `renderUsageChart(bars)` 는 파이썬 `render` 와 글자까지 같은 SVG 를 낸다. 막대의 값은 `claudeTenths / 10`, `codexTenths / 10` 이고 달 표기는 `month` 의 `-` 를 `.` 로 바꾼 글이다(`2026-07` 은 `2026.07`). 파이썬의 `:.1f` 는 위 컨텍스트의 규칙으로 찍는다. `bars` 가 비었거나 모든 막대의 두 값 가운데 최댓값이 0 이면 `RangeError` 를 던진다(파이썬은 이때 0 으로 나누어 멈춘다. `NaN` 이 든 SVG 를 만들지 않는다). `chart.ts`, `chart.test.ts`, `render_chart.ts`, `render_chart.test.ts` 의 주석과 글에 파이썬 파일 이름을 쓰지 않는다. 대조 테스트(`chart.python-parity.test.ts`)만 예외다
 - `readTokensBadge(readme)` 는 `/img\.shields\.io\/badge\/Tokens-(\d+\.\d)B-/g` 에 맞는 곳이 정확히 하나일 때 `"97.9B"` 모양의 글을 돌려준다. 없거나 둘 이상이면 `null` 이다. `Tokens-98B-` 는 맞지 않으므로 `null` 이다
 
 ### 2. `career-os/scripts/agent-usage/fixtures/` 의 SVG 다섯
@@ -101,7 +101,7 @@ python3 "$P" --month 2031.01=1.3,11.6 --month 2031.02=18.9,5.7 --out "$F/chart-t
 노트북에서 차트를 파일로 그리는 CLI 다.
 
 ```bash
-bun career-os/scripts/agent-usage/render_chart.ts --months 2031-01,2031-02 --out <SVG 경로>
+bun --env-file=career-os/.env career-os/scripts/agent-usage/render_chart.ts --months 2031-01,2031-02 --out <SVG 경로>
 ```
 
 ```ts
@@ -111,8 +111,8 @@ export async function renderChartCommand(
 ): Promise<{ total: string; months: string[]; out: string }>;
 ```
 
-- 인자 처리는 `career-os/scripts/candidate-context/manage_candidate_context.ts` 가 `career-os/scripts/lib/cli.ts` 를 쓰는 방식을 따른다. `--months` 는 `YYYY-MM` 을 쉼표로 이은 글이고 1개에서 6개다. 모양이 틀리면 종료 코드 2 다
-- `listSnapshots` 의 기본값은 `career-os/scripts/profile/client.ts` 의 사용량 기록 목록 조회를 불러 `UsageTokens` 로 바꾼다. 그 client 의 이름과 응답 칸은 그 파일과 `career-os/scripts/profile/contracts.ts` 를 열어 읽는다
+- 인자는 `career-os/scripts/lib/cli.ts` 의 `firstOptionValue` 로 읽는다. `--months` 는 `YYYY-MM` 을 쉼표로 이은 글이고 1개에서 6개다. 모양이 틀리면 같은 파일의 `UsageError` 를 던진다. `import.meta.main` 블록은 `UsageError` 면 종료 코드 2, 나머지 오류면 1 로 끝낸다(`manage_candidate_context.ts` 는 모두 1 이므로 그 방식을 따르지 않는다)
+- `listSnapshots` 의 기본값은 `career-os/scripts/profile/client.ts` 의 `createProfileClient()` 로 만든 client 의 `listUsageSnapshots` 를 불러 `usageSnapshotSchema`(`career-os/scripts/profile/contracts.ts`)의 칸을 `UsageTokens` 로 바꾼다. 연결값은 `--env-file` 로 받은 환경 변수에서 읽는다
 - `selectUsageBars` 의 `missing` 이 비어 있지 않으면 파일을 쓰지 않고 없는 달을 적은 오류로 종료 코드 1 이다
 - 성공하면 `renderUsageChart` 의 글을 `--out` 에 쓰고 표준 출력에 `total=<합계> months=<달 수> out=<경로>` 한 줄을 낸다. 합계는 `formatBillions(totalTenths)` 다
 - `import.meta.main` 일 때만 실행한다
@@ -126,7 +126,7 @@ export async function renderChartCommand(
 - `selectUsageBars` 가 순서가 섞이고 겹친 `months` 를 정렬해 한 번씩 쓰고, 기록에 없는 달을 `missing` 에 담는다. `totalTenths` 가 `bars` 의 값의 합이다
 - 달별 값의 합을 `formatBillions` 한 글이 `renderUsageChart` 가 찍은 달별 합계 글자들의 합과 같다
 - `readTokensBadge` 가 `https://img.shields.io/badge/Tokens-97.9B-26d0ce` 를 담은 README 에서 `"97.9B"` 를 낸다. 배지가 없을 때, 둘일 때, `Tokens-98B-` 일 때 `null` 이다
-- `renderUsageChart([])` 가 던진다
+- `renderUsageChart([])` 가 던진다. 모든 막대가 `claudeTenths: 0, codexTenths: 0` 이어도 `RangeError` 를 던진다
 - 이 파일의 글에 `import` 문이 없다. `readFileSync` 로 `chart.ts` 를 읽어 `/^import /m` 에 맞지 않는 것을 단언한다
 
 `career-os/scripts/agent-usage/chart.python-parity.test.ts`
@@ -139,7 +139,7 @@ export async function renderChartCommand(
 
 - 정상: `listSnapshots` 대역이 두 달을 주고 `--months` 가 그 두 달이면 `write` 가 받은 글이 `renderUsageChart` 의 결과와 같고 돌려준 `total` 이 합계다
 - 실패: `--months` 에 기록에 없는 달이 있으면 `write` 를 부르지 않고 던진다. 오류의 글에 없는 달이 있다
-- `--months` 가 일곱 달이거나 `2031-13` 이면 `listSnapshots` 를 부르지 않고 사용법 오류다
+- `--months` 가 일곱 달이거나 `2031-13` 이면 `listSnapshots` 를 부르지 않고 `UsageError` 를 던진다. 테스트는 `toThrow(UsageError)` 로 단언한다
 
 ## 검증
 

@@ -30,7 +30,7 @@ fos-assistant 가 스킬을 다루는 방법이다.
 
 ```bash
 # cwd: 저장소 루트
-git grep -n "agent_usage_chart" -- career-os ':!career-os/tasks' ':!career-os/docs/adr' ':!career-os/plugin/scripts/connector-config.test.ts'
+git grep -n "agent_usage_chart" -- career-os ':!career-os/tasks' ':!career-os/docs/adr' ':!career-os/plugin/scripts/connector-config.test.ts' ':!career-os/scripts/profile/sync_profile_skill_doc.test.ts'
 ```
 
 이 계획서를 쓸 때 그 결과는 아래 넷이었다.
@@ -55,6 +55,8 @@ git grep -n "agent_usage_chart" -- career-os ':!career-os/tasks' ':!career-os/do
 ## Blocked 조건
 
 - `career-os/plugin/src/github.ts` 가 없으면 `PHASE_BLOCKED: GitHub 도구가 아직 없다` 를 출력하고 종료한다
+- `career-os/scripts/profile/sync_profile_skill_doc.test.ts` 가 없으면 `PHASE_BLOCKED: plan139 가 이 브랜치에 없다. plan139 를 머지한 main 으로 rebase 한다` 를 출력하고 종료한다
+- `python3` 이 PATH 에 없으면 `PHASE_BLOCKED: python3 이 없어 agent-usage 테스트를 돌릴 수 없다` 를 출력하고 종료한다
 - `career-os/scripts/agent-usage/render_chart.ts` 가 없으면 `PHASE_BLOCKED: 파이썬 스크립트를 대신할 CLI 가 없다` 를 출력하고 종료한다
 
 ## 작업 항목
@@ -92,22 +94,24 @@ git grep -n "agent_usage_chart" -- career-os ':!career-os/tasks' ':!career-os/do
 - `career-os/.claude/skills/sync-profile/scripts/agent_usage_chart.py` 를 지운다
 - `career-os/scripts/agent-usage/chart.python-parity.test.ts` 를 지운다
 - `career-os/scripts/agent-usage/fixtures/` 와 `chart.test.ts` 는 그대로 둔다
+- `career-os/scripts/profile/sync_profile_skill_doc.test.ts` 의 단언에서 `scripts/agent_usage_chart.py` 를 읽는 부분을 뺀다. 대신 `github.md` 에 `render_chart.ts` 가 있고 `agent_usage_chart` 가 없다는 단언을 더한다. 이 테스트 파일은 부정 단언 때문에 `agent_usage_chart` 라는 글을 담는다
 
 ### 4. `sync-profile` 스킬 문서
 
 `career-os/.claude/skills/sync-profile/SKILL.md`
 
 - 스크립트 표에서 `agent_usage_chart.py` 줄을 지운다
-- 「5. 반영」 절의 대상별 표에서 GitHub 의 저장 방법 옆에, 대화에서 하려면 fos-assistant 의 커리어 커넥터로도 README 와 차트를 올릴 수 있다는 한 줄을 더한다
+- 「5. 반영」 절의 대상별 표(칸이 넷이다) 바로 아래에 한 문장을 더한다. 대화에서 하려면 fos-assistant 의 커리어 커넥터로도 README 와 차트를 올릴 수 있다는 문장이다. 표 칸 안에는 쓰지 않는다
 
 `career-os/.claude/skills/sync-profile/references/github.md` 의 「에이전트 사용량」 절
 
 - `python3 "$A/agent_usage_chart.py" ...` 명령을 아래로 바꾼다
 
 ```bash
-bun career-os/scripts/agent-usage/render_chart.ts --months 2031-01,2031-02 --out "$OUT"
+bun --env-file=career-os/.env career-os/scripts/agent-usage/render_chart.ts --months 2031-01,2031-02 --out "$OUT"
 ```
 
+- `A=career-os/.claude/skills/sync-profile/scripts` 줄은 차트 명령만 쓰던 것이므로 지운다. 다른 명령이 `$A` 를 쓰면 남긴다
 - `--month` 의 두 수를 설명하던 문장을 지우고, `--months` 는 차트에 넣을 달이고 숫자는 Backend 의 사용량 기록에서 읽는다고 적는다. 기록에 없는 달을 넣으면 명령이 실패한다
 - 명령이 내는 `total=` 값을 Tokens 배지에 쓴다는 문장은 남긴다. 배지 값의 모양은 `career-os/docs/data-schema.md` 의 「차트와 Tokens 배지」 를 가리킨다
 - fos-assistant 의 커리어 커넥터로 올릴 때는 커넥터가 차트를 그리고 배지를 검사하므로 이 명령을 돌리지 않는다는 문장을 더한다
@@ -128,6 +132,7 @@ bun career-os/scripts/agent-usage/render_chart.ts --months 2031-01,2031-02 --out
 - 작업 항목 2 의 스킬 검사가 정상 경로다
 - 실패 경로: 본문이 8,001자인 `SKILL.md` 를 임시 디렉터리에 만들어 같은 검사 함수에 넣으면 실패한다. 이를 위해 검사를 `skillBodyOf(directory): string` 함수로 빼고, 테스트가 실제 `skills/` 와 임시 디렉터리 둘에 부른다
 - `career-os/scripts/agent-usage/chart.test.ts` 가 파이썬 파일 없이 통과한다
+- `sync_profile_skill_doc.test.ts` 가 `scripts/agent_usage_chart.py` 를 읽지 않는다. 그 단언에서 파이썬 파일을 빼고 `github.md` 에 `render_chart.ts` 가 있고 `agent_usage_chart` 가 없다는 단언을 더한다. 이 파일은 부정 단언 때문에 그 글을 담으므로 검증의 grep 에서 pathspec 으로 뺀다
 
 개수를 상수로 단언하는 테스트를 찾는다. `sync-profile` 의 스크립트 수나 파일 목록을 단언하는 테스트가 있으면 이 phase 에서 고치고 변경 파일에 더한다.
 
@@ -136,7 +141,7 @@ bun career-os/scripts/agent-usage/render_chart.ts --months 2031-01,2031-02 --out
 git grep -nE "sync-profile" -- 'career-os/**/*.test.ts'
 ```
 
-이 계획서를 쓸 때는 `career-os/scripts/candidate-context/skill_boundary.test.ts` 하나가 나왔고 스크립트 수를 단언하지 않았다.
+plan139 를 머지한 뒤에는 `career-os/scripts/candidate-context/skill_boundary.test.ts` 와 `career-os/scripts/profile/sync_profile_skill_doc.test.ts` 가 나온다. 앞의 것은 스크립트 수를 단언하지 않는다. 뒤의 것은 `.md` 파일과 `scripts/agent_usage_chart.py` 에 `library/profiles` 가 없다고 단언하므로 그 파이썬 파일을 직접 읽는다. 파일을 지우면 이 테스트가 실패하므로 아래 「3. 파이썬 차트 스크립트와 직접 대조 테스트 삭제」 에서 함께 고친다.
 
 ## 검증
 
@@ -146,12 +151,12 @@ export PATH="$HOME/.bun/bin:$PATH"
 bun install --frozen-lockfile
 bun install --frozen-lockfile --cwd career-os/plugin
 bun run --cwd career-os/plugin build
-bun test career-os/plugin career-os/scripts/agent-usage career-os/scripts/candidate-context career-os/scripts/lib career-os/plugin/scripts/connector-config.test.ts career-os/scripts/agent-usage/chart.test.ts
+bun test career-os/plugin career-os/scripts/agent-usage career-os/scripts/candidate-context career-os/scripts/profile/sync_profile_skill_doc.test.ts career-os/scripts/lib career-os/plugin/scripts/connector-config.test.ts career-os/scripts/agent-usage/chart.test.ts
 bun run --cwd career-os/plugin typecheck
 bunx tsc --noEmit
 claude plugin validate career-os/plugin
 git diff --exit-code -- career-os/plugin/dist/career-mcp.js
-! git grep -n "agent_usage_chart" -- career-os ':!career-os/tasks' ':!career-os/docs/adr' ':!career-os/plugin/scripts/connector-config.test.ts'
+! git grep -n "agent_usage_chart" -- career-os ':!career-os/tasks' ':!career-os/docs/adr' ':!career-os/plugin/scripts/connector-config.test.ts' ':!career-os/scripts/profile/sync_profile_skill_doc.test.ts'
 test ! -e career-os/.claude/skills/career-connector
 python3 ~/personal/fos-skills/korean-check/scripts/korean-style-check.py career-os/plugin/skills/career-connector/SKILL.md career-os/.claude/skills/sync-profile/references/github.md
 ```
@@ -168,6 +173,7 @@ python3 ~/personal/fos-skills/korean-check/scripts/korean-style-check.py career-
 | `career-os/plugin/scripts/connector-config.test.ts` | 수정 |
 | `career-os/.claude/skills/sync-profile/scripts/agent_usage_chart.py` | 삭제 |
 | `career-os/scripts/agent-usage/chart.python-parity.test.ts` | 삭제 |
+| `career-os/scripts/profile/sync_profile_skill_doc.test.ts` | 수정 |
 | `career-os/.claude/skills/sync-profile/SKILL.md` | 수정 |
 | `career-os/.claude/skills/sync-profile/references/github.md` | 수정 |
 | `career-os/docs/code-architecture.md` | 수정 |

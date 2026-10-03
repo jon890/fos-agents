@@ -31,8 +31,7 @@ Backend 의 HTTP 계약이다. 정의를 열어 확인한다.
 - 인증 실패는 401 이다(`career-os/services/career-backend/src/common/auth.middleware.ts`). 없는 문서는 404 `NOT_FOUND` 다
 - 오류 응답의 모양은 `{ error: { code, message, requestId } }` 다(`career-os/scripts/lib/career-backend-http.ts` 의 `responseErrorSchema`)
 
-**이 계획서를 쓸 때 `career-os/services/career-backend/src/profile/` 과 `career-os/scripts/profile/` 이 아직 없었다.**
-프로필 쪽 응답의 칸 이름은 그 파일을 열어 읽고 옮긴다. 이 문서의 요약과 코드가 다르면 코드가 맞다.
+`career-os/services/career-backend/src/profile/` 과 `career-os/scripts/profile/` 은 main 에 있다. 이 문서의 요약과 코드가 다르면 코드가 맞다.
 
 fos-assistant 가 `connector.json` 에 요구하는 것이다. 어기면 커넥터가 카탈로그에서 빠진다.
 
@@ -60,14 +59,14 @@ fos-assistant 가 `connector.json` 에 요구하는 것이다. 어기면 커넥�
 
 ## Blocked 조건
 
-아래 가운데 하나라도 없으면 `PHASE_BLOCKED: 프로필 저장 모듈과 사용량 수집기가 아직 머지되지 않았다` 를 출력하고 종료한다.
+아래 가운데 하나라도 없으면 `PHASE_BLOCKED: 프로필 저장 모듈이 아직 이 브랜치에 없다` 를 출력하고 종료한다.
+이 phase 는 plan139 의 `scripts/agent-usage/` 를 쓰지 않는다. 그 디렉터리가 필요한 것은 Phase 02 이후 전부이고, 그 phase 는 plan139 를 머지한 main 으로 rebase 한 뒤에 시작한다.
 
 ```bash
 # cwd: 저장소 루트
 test -d career-os/services/career-backend/src/profile
 test -f career-os/scripts/profile/contracts.ts
 test -f career-os/scripts/profile/client.ts
-test -d career-os/scripts/agent-usage
 ```
 
 ## 작업 항목
@@ -167,7 +166,7 @@ export class CareerTools {
 | `list_usage_snapshots` | `GET /api/profile/v1/usage-snapshots` | `{ snapshots: [...] }` |
 
 - 후보자 맥락의 응답 스키마는 `career-os/scripts/candidate-context/contracts.ts` 의 `candidateContextListResponseSchema`, `candidateContextGetResponseSchema` 와 같은 칸으로 이 파일에 다시 쓴다
-- 프로필 원고와 사용량 기록의 응답 스키마는 `career-os/scripts/profile/contracts.ts` 를 열어 같은 칸으로 다시 쓴다. 사용량 기록 한 줄의 칸 이름을 그 파일에서 그대로 옮긴다
+- 프로필 원고와 사용량 기록의 응답 스키마는 `career-os/scripts/profile/contracts.ts` 의 `profileDocumentKeys` 와 `usageSnapshotSchema` 의 칸과 같게 다시 쓴다. 사용량 기록 한 줄의 칸 이름을 `usageSnapshotSchema` 에서 그대로 옮긴다
 
 ### 6. `career-os/plugin/src/server.ts`
 
@@ -208,7 +207,7 @@ export function createServer(env?: Record<string, string | undefined>, fetchImpl
 `career-os/plugin/src/contract-parity.test.ts`
 
 - `contextDocumentKeys` 가 `career-os/scripts/candidate-context/contracts.ts` 의 `candidateContextDocumentKeys` 와 같다
-- `profileDocumentKeys` 가 `career-os/scripts/profile/contracts.ts` 가 내보내는 프로필 문서 키 목록과 같다. 내보낸 이름은 그 파일에서 읽는다
+- `profileDocumentKeys` 가 `career-os/scripts/profile/contracts.ts` 의 `profileDocumentKeys` 와 같다
 - 번들(`dist/career-mcp.js`)의 글에 `readFileSync` 와 `statSync` 가 없다
 
 `career-os/plugin/scripts/connector-config.test.ts`
@@ -239,7 +238,7 @@ export PATH="$HOME/.bun/bin:$PATH"
 bun install --frozen-lockfile
 bun install --frozen-lockfile --cwd career-os/plugin
 bun run --cwd career-os/plugin build
-bun test career-os/plugin career-os/plugin/scripts/build.test.ts career-os/plugin/scripts/connector-config.test.ts career-os/plugin/scripts/mcp-config.test.ts career-os/plugin/src/tools.test.ts career-os/plugin/src/server.test.ts career-os/plugin/src/contract-parity.test.ts
+bun test ./career-os/plugin ./career-os/plugin/scripts/build.test.ts career-os/plugin/scripts/connector-config.test.ts career-os/plugin/scripts/mcp-config.test.ts career-os/plugin/src/tools.test.ts career-os/plugin/src/server.test.ts career-os/plugin/src/contract-parity.test.ts
 bun run --cwd career-os/plugin typecheck
 claude plugin validate career-os/plugin
 git diff --exit-code -- career-os/plugin/dist/career-mcp.js
