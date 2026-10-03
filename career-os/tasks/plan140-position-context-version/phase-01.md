@@ -180,7 +180,7 @@ CAREER_BACKEND_TEST_DATABASE_URL="<테스트 DB>" SHADOW_DATABASE_URL="<빈 shad
 
 ```bash
 # cwd: 저장소 루트
-! git grep -n "policy\.candidateContextVersion" -- career-os/services/career-backend/src
+! git grep -n "policy\.candidateContextVersion" -- career-os/services/career-backend/src/positions/positions.service.ts
 git diff --quiet -- career-os/services/career-backend/test/fixtures/legacy-contract/cases.json
 git diff --quiet -- career-os/services/career-backend/src/positions/schema.ts career-os/scripts
 bunx tsc --noEmit
