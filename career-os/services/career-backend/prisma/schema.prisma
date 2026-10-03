@@ -230,6 +230,21 @@ model profile_document_revisions {
   @@id([document_key, version])
 }
 
+model agent_usage_snapshots {
+  month           String   @id @db.Char(7)
+  claude_tokens   BigInt   @db.UnsignedBigInt
+  codex_tokens    BigInt   @db.UnsignedBigInt
+  claude_cost_usd Decimal? @db.Decimal(12, 2)
+  codex_cost_usd  Decimal? @db.Decimal(12, 2)
+  sessions        Int?     @db.UnsignedInt
+  unpriced_tokens BigInt   @db.UnsignedBigInt
+  measured_on     DateTime @db.Date
+  source          String   @db.VarChar(20)
+  note            String?  @db.VarChar(500)
+  created_at      DateTime
+  updated_at      DateTime
+}
+
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model company_preferences {
   company_key  String                          @id

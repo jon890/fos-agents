@@ -22,6 +22,7 @@ import {
 const DATA_TABLES = [
   "profile_document_revisions",
   "profile_documents",
+  "agent_usage_snapshots",
   "candidate_context_document_revisions",
   "candidate_context_documents",
   "interview_attempts",
