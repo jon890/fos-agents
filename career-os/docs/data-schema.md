@@ -1176,9 +1176,9 @@ publication의 `idempotencyKey`는 `publication:` 뒤에 고정 순서 `{reportI
 외부 프로필의 현재 값은 실행할 때마다 대상 서버에서 다시 읽는다.
 로컬에 사본을 두면 서버와 어긋난 것을 알 수 없다.
 
-원고의 원본은 `profile_documents` 가 갖고, 스킬을 옮기기 전까지는 `library/profiles/` 의 파일을 읽는다.
-
-아래 표는 원고가 담는 것이다.
+원고는 커리어 Backend 의 프로필 원고 문서다. 문서 키는 `wanted`, `linkedin`, `github` 이다.
+저장 규칙은 후보자 맥락 문서와 같고 근거는 [ADR-133](adr/ADR-133-프로필-원고와-에이전트-사용량-기록은-backend의-profile-모듈이-갖는다.md)이다.
+원고가 담는 것이다.
 
 | 담는 것 |
 | --- |
@@ -1248,3 +1248,35 @@ HTTP 계약은 [`flow.md`](flow.md#프로필-http-계약)가 소유한다. 이�
 - **그 달의 행이 이미 있으면 저장 요청이 와도 값을 바꾸지 않는다.** 바꾸는 경로는 요청이 `replace` 와 사유를 함께 보낼 때뿐이다. 이력 table 은 두지 않고 바꾼 사유를 `note` 에 남긴다.
 - 끝나지 않은 달은 행을 만들 수 없다. 달 중간의 값이 그 달의 기록으로 굳는 것을 막는다.
 - 행을 지우는 경로는 없다.
+
+코드 배치는 [`code-architecture.md`](code-architecture.md#sync-profile)가 소유한다.
+
+### 수집기가 올리는 사용량 기록
+
+수집기는 `agent_usage.py --json` 의 `months` 배열 한 줄을 사용량 기록 한 행으로 올린다.
+
+| `agent_usage.py --json` 의 값 | 사용량 기록의 칸 | 바꾸는 것 |
+| --- | --- | --- |
+| `month` (`YYYY.MM`) | `month` | 점을 `-` 로 바꿔 `YYYY-MM` 으로 보낸다 |
+| `claude_tokens`, `codex_tokens` | `claude_tokens`, `codex_tokens` | 그대로다. 0 이상 정수다 |
+| `claude_cost`, `codex_cost` | `claude_cost_usd`, `codex_cost_usd` | 그대로다. 소수 둘째 자리까지의 달러다 |
+| `sessions` | `sessions` | 그대로다 |
+| `unpriced_tokens` | `unpriced_tokens` | 그대로다. 단가를 모르는 모델의 토큰이고 비용에 들어 있지 않다 |
+| 없음 | `measured_on` | 수집기가 돈 날의 `Asia/Seoul` 날짜다 |
+| 없음 | `source` | 언제나 `MEASURED` 다 |
+
+`unpriced_tokens` 는 달마다 낸다. 합계에만 있으면 한 달의 기록에 넣을 수 없다.
+
+`library/profiles/github-agent-usage-snapshots.md` 의 표에서 옮긴 달은 다르게 저장한다.
+그 표는 토큰을 십억 단위 소수 한 자리(`1.3B`)로 적었고 환산 비용과 세션 수의 칸이 없다.
+
+| 칸 | 옮긴 달의 값 |
+| --- | --- |
+| `claude_tokens`, `codex_tokens` | 표의 값에 십억을 곱한 정수다. 1억 토큰 아래 자리는 0 이다 |
+| `claude_cost_usd`, `codex_cost_usd`, `sessions` | 비운다 |
+| `unpriced_tokens` | 0 이다. 비용이 비어 있어 뜻이 없다 |
+| `measured_on` | 표의 「측정한 날」 이다 |
+| `source` | `BACKFILLED` 다. 한 달 전체를 측정한 달이라고 명령에 알려 준 달만 `MEASURED` 다 |
+| `note` | 표의 「비고」 다 |
+
+환산 비용이나 세션 수가 빈 달이 섞이면 프로필의 그 배지는 합계를 낼 수 없어 뺀다.

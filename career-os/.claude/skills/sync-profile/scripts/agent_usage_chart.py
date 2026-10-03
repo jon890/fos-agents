@@ -2,10 +2,10 @@
 """GitHub 프로필에 넣는 월별 토큰 막대 차트(SVG)를 그린다.
 
 사용법:
-    agent_usage_chart.py --month 2026.07=1.3,11.6 --month 2026.08=19.0,5.7 --out agent-usage.svg
+    agent_usage_chart.py --month 2025.01=0.4,2.1 --month 2025.02=3.0,1.0 --out agent-usage.svg
 
 `--month` 는 `<월>=<Claude Code>,<Codex>` 이고 단위는 십억(B) 토큰이다.
-값은 `library/profiles/github-agent-usage-snapshots.md` 의 측정 기록에서 가져온다.
+값은 `manage_profile.ts usage list` 의 기록에서 가져온다. 그 달의 Claude Code 와 Codex 토큰을 십억으로 나눠 적는다.
 지난 달을 `agent_usage.py` 로 다시 세어 넣지 않는다. 세션 기록이 지워져 값이 줄어든다.
 
 합계는 표준 출력에 한 줄로 낸다. 프로필의 Tokens 배지에 그 값을 쓴다.

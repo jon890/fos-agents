@@ -59,7 +59,7 @@ career-os/
 | `position-recommender` | 2 | | |
 | `resume-preparer` | 7 | 21 | 4 |
 | `study-topic-recommender` | 2 | | |
-| `sync-profile` | 3 | 7 | |
+| `sync-profile` | 3 | 6 | |
 
 ### 실행 코드를 두 자리 중 어디에 두나
 
@@ -599,9 +599,10 @@ client 가 읽는 환경값은 포지션 추천과 같다. 같은 Backend 이고
 
 ## sync-profile
 
-**실행 코드를 `scripts/` 가 아니라 스킬 번들 안에 둔다.**
+**폼을 조작하는 코드는 `scripts/` 가 아니라 스킬 번들 안에 둔다.**
 대상 사이트의 폼을 조작하는 코드라 다른 스킬이 재사용할 것이 없고,
 대상별 절차 문서 바로 옆에 두는 편이 읽기 쉽다.
+사용량 측정과 수집은 스킬 없이 `launchd` 가 실행하므로 `scripts/agent-usage/` 에 둔다.
 
 | 경로 | 책임 |
 | --- | --- |
@@ -610,16 +611,25 @@ client 가 읽는 환경값은 포지션 추천과 같다. 같은 Backend 이고
 | `.claude/skills/sync-profile/references/github.md` | GitHub 프로필 문서 규칙 |
 | `.claude/skills/sync-profile/scripts/wanted_*.sh` | 원티드 폼 필드 조회와 입력 |
 | `.claude/skills/sync-profile/scripts/linkedin_*.sh` | LinkedIn 소개의 문단 입력과 프로젝트 폼 채우기 |
-| `.claude/skills/sync-profile/scripts/agent_usage.py` | 에이전트 세션 기록에서 월별 토큰과 환산 비용 계산 |
-| `.claude/skills/sync-profile/scripts/agent_usage_chart.py` | 측정 기록의 값으로 GitHub 프로필의 차트 그리기 |
-| `library/profiles/wanted-profile.md` | 원티드 원고 |
-| `library/profiles/linkedin-profile.md` | LinkedIn 원고 |
-| `library/profiles/github-profile.md` | GitHub 원고 |
-| `library/profiles/github-agent-usage-snapshots.md` | 달이 끝난 직후 측정한 월별 사용량 기록 |
-| `library/profiles/github-agent-usage.svg` | `agent_usage_chart.py` 가 측정 기록으로 그린 이미지 |
+| `.claude/skills/sync-profile/scripts/agent_usage_chart.py` | 사용량 기록의 값으로 GitHub 프로필의 차트 그리기 |
 
-ADR-133 에 따라 원고와 사용량 기록의 원본은 커리어 Backend 로 옮긴다.
-Backend 의 저장소와 아래 「프로필 저장 CLI」 는 있고, 스킬은 아직 `library/profiles/` 를 읽는다.
+원고와 사용량 기록은 파일이 아니다. 커리어 Backend 의 `profile` 모듈이 갖고, 스킬은 `scripts/profile/manage_profile.ts` 로 읽고 쓴다.
+`library/profiles/` 는 쓰지 않는다. 차트 이미지는 저장하지 않고 기록에서 그때마다 그린다.
+
+사용량 측정과 수집의 배치다.
+
+| 경로 | 책임 |
+| --- | --- |
+| `scripts/agent-usage/agent_usage.py` | 에이전트 세션 기록에서 월별 토큰, 환산 비용, 세션 수, 단가를 모르는 토큰 계산. 단가표를 갖는다 |
+| `scripts/agent-usage/measure.ts` | `agent_usage.py --json` 을 실행해 출력을 zod 로 검증하고 달 표기를 `YYYY-MM` 으로 바꾼다. 실행기를 인자로 받아 테스트가 대역을 넣는다 |
+| `scripts/agent-usage/collect_usage.ts` | 수집기. 기록이 없는 끝난 달만 측정해 올린다. 측정기, 기록 저장소, 현재 시각을 인자로 받는다 |
+| `scripts/agent-usage/launchd/agent-usage.plist.template` | `launchd` 작업 틀. 자리표시자는 `bun` 경로, 저장소 경로, 로그 디렉터리뿐이다 |
+| `scripts/agent-usage/manage_launchd.ts` | `install`, `uninstall`, `status`. `install` 과 `uninstall` 은 `--dry-run` 으로 쓸 파일과 실행할 명령만 낸다 |
+| `scripts/profile/migrate_library_profiles.ts` | `library/profiles/` 의 원고 셋과 사용량 표를 Backend 로 옮기는 일회성 명령 |
+
+`launchd` 작업의 이름은 `com.fos-agents.career-os.agent-usage` 다. 매일 10시에 돌고, 기기가 잠들어 있었으면 깨어난 뒤에 돈다.
+plist 는 `~/Library/LaunchAgents/` 에, 로그는 `~/Library/Logs/fos-career-os/agent-usage.log` 에 둔다.
+등록은 세션 기록이 있는 기기에서 사람이 한 번 실행한다. 홈서버 인프라 저장소의 배포와 무관하다.
 
 브라우저 조작은 공용 `browser-driver`를 쓰고 이 스킬이 드라이버를 따로 만들지 않는다.
 

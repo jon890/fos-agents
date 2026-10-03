@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.fos-agents.career-os.agent-usage</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>{{BUN_PATH}}</string>
+    <string>--env-file={{REPO_ROOT}}/career-os/.env</string>
+    <string>{{REPO_ROOT}}/career-os/scripts/agent-usage/collect_usage.ts</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>{{REPO_ROOT}}</string>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>10</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin</string>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>{{LOG_DIR}}/agent-usage.log</string>
+  <key>StandardErrorPath</key>
+  <string>{{LOG_DIR}}/agent-usage.log</string>
+  <key>RunAtLoad</key>
+  <false/>
+</dict>
+</plist>
