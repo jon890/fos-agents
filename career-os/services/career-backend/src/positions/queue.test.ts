@@ -48,7 +48,6 @@ test("16개 우선 슬롯과 4개 오래 기다린 슬롯을 중복 없이 고�
   ];
   const selected = selectAnalysisQueue(candidates, {
     schemaVersion: 2,
-    candidateContextVersion: "context-1",
     dailyAnalysisLimit: 20,
     prioritySlots: 16,
     agingSlots: 4,

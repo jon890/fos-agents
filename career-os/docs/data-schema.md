@@ -95,6 +95,12 @@ HTTP 계약은 [`flow.md`](flow.md#후보자-맥락-문서)가 소유한다.
 공부 추천의 기준 버전은 `learning-interests` 의 `version` 에서 `learning-interests:v{version}` 으로 계산한다.
 이유는 [ADR-131](adr/ADR-131-후보자-맥락은-backend-문서로-두고-공부-추천-기준-버전을-문서-버전에서-계산한다.md)을 따른다.
 
+포지션 분석의 기준 버전은 `position-preferences` 의 `version` 에서 `position-preferences:v{version}` 으로 계산한다.
+Backend 가 수집 실행을 저장할 때 계산해 회사 tier 실행에 적는다.
+공고 분석 실행은 같은 수집의 회사 tier 실행에 적힌 값을 이어 쓰므로, 한 수집 안에서는 기준 버전이 하나다.
+문서를 어느 경로로 저장해도 다음 수집부터 새 기준 버전이 쓰인다.
+이유는 [ADR-134](adr/ADR-134-공고-분석의-기준-버전은-position-preferences-문서-버전에서-계산한다.md)를 따른다.
+
 ### 홈서버 release
 
 파일이 어디에 놓이는지는
@@ -489,7 +495,6 @@ Backend에 저장된 활성 공고의 제목, URL과 `first_seen_at`을 읽는�
 
 | 필드 | 허용 범위 |
 | --- | --- |
-| `candidateContextVersion` | 후보자 기준 버전 문자열 |
 | `dailyAnalysisLimit` | 하루 분석 상한 |
 | `prioritySlots` | 회사 우선 슬롯 수 |
 | `agingSlots` | 오래 기다린 공고 보장 슬롯 수 |
@@ -501,7 +506,6 @@ Backend에 저장된 활성 공고의 제목, URL과 `first_seen_at`을 읽는�
 ```json
 {
   "schemaVersion": 2,
-  "candidateContextVersion": "career-priority-2026-09",
   "dailyAnalysisLimit": 20,
   "prioritySlots": 16,
   "agingSlots": 4,
@@ -561,11 +565,15 @@ bun career-os/scripts/position-recommender/configure_position_company_preference
 보장 슬롯은 회사 티어와 무관하게 대기 시작 시각이 오래된 순서로 정한다.
 한쪽 슬롯을 채울 후보가 부족하면 다른 쪽 후보가 남은 자리를 사용하며 같은 공고를 두 번 고르지 않는다.
 
-`candidateContextVersion`은 `position-preferences:v{version}` 이다. `manage_candidate_context.ts put --key position-preferences` 가 문서를 저장할 때 함께 바꾼다.
-정책을 바꿀 때의 멱등 키는 읽은 정책 전체와 목표 version 의 hash 다. 보낸 뒤 정책을 다시 읽어 값이 바뀌었는지 확인하고, 바뀌지 않았으면 키 끝에 무작위 값을 붙여 한 번만 다시 보낸다.
-수집 명령은 이 값과 문서 version 이 다르면 시작하지 않는다. 이유는 [ADR-132](adr/ADR-132-스킬의-개인-맥락은-후보자-맥락-문서에서-읽고-지원서-공통-프로필만-brain에-둔다.md)를 따른다.
-값이 달라지면 기존 공고 분석은 본문이 같아도 `stale`로 분류한다.
-값이 같으면 수집 명령은 실행 디렉터리에 `candidate-context.json` 을 쓴다. 형태는 `{ candidateContextVersion, documents: { "position-preferences": { version, body }, "application-state": { version, body } } }` 이다.
+정책은 후보자 기준 버전을 담지 않는다. 요청과 응답에 `candidateContextVersion` 칸이 없고, 보내면 `400` 이다.
+기준 버전은 [후보자 맥락 문서](#후보자-맥락-문서) 절이 적은 대로 `position-preferences` 문서의 `version` 에서 계산한다.
+`position-preferences` 문서를 새로 저장하면 기준 버전이 달라지고, 기존 공고 분석과 회사 tier 평가는 본문이 같아도 `stale`로 분류한다.
+회사 tier 실행, 공고 분석 실행, 공고 분석과 회사 tier 평가의 `candidate_context_version` 칸은 그 행을 만들 때 계산한 기준 버전의 기록이다.
+문서를 새로 저장해도 이미 있는 행의 값은 바뀌지 않는다.
+정책 설정 명령의 멱등 키는 보내는 정책 전체의 hash 다.
+
+수집 명령은 수집 전에 `position-preferences` 와 `application-state` 문서를 읽어 실행 디렉터리에 `candidate-context.json` 을 쓴다. 형태는 `{ candidateContextVersion, documents: { "position-preferences": { version, body }, "application-state": { version, body } } }` 이다.
+이 파일의 `candidateContextVersion` 은 수집 명령이 읽은 문서 version 으로 만든 값이다. 모델이 읽은 본문이 어느 version 인지 알리는 용도이고 Backend 는 이 값을 받지 않는다.
 개인 맥락이라 저장소 안 경로에는 쓰지 않고 파일 권한은 `0600` 이다.
 정책이 없거나 형식이 잘못됐으면 전체 후보를 기본값으로 분석하지 않고 API가 `409`로 실행을 중단한다.
 
@@ -620,7 +628,7 @@ bun career-os/scripts/position-recommender/configure_position_analysis_policy.ts
 | `positions`                       | `position_id` PK, `(source_key, identity_hash)` UNIQUE, 현재 lifecycle과 관측 시각           |
 | `position_versions`               | `position_version_id` PK, `(position_id, content_hash)` UNIQUE, 정규화한 공고 snapshot       |
 | `position_collection_items`       | `(run_id, position_id)` UNIQUE, 해당 실행이 본 version과 활성 상태                           |
-| `position_analysis_policy`        | singleton PK, 후보자 기준 버전, 일일 상한, 슬롯과 만료일 정책                                |
+| `position_analysis_policy`        | singleton PK, 일일 상한, 슬롯과 만료일 정책                                                 |
 | `company_preferences`             | `company_key` UNIQUE, 회사명, nullable tier, 수집 주소, `analyze`·`exclude`·`benchmark`, 변경 시각 |
 | `company_tier_assessment_runs`      | `company_tier_run_id` PK, `collection_run_id` UNIQUE, 후보자 기준 버전과 계약 버전, `pending`·`partial`·`completed` 상태 |
 | `company_tier_assessments`          | `company_tier_assessment_id` PK, `company_key`와 후보자 기준·계약 버전, 추천 tier와 신뢰도, 근거 JSON, 유효기간, 최초 생성 실행 |

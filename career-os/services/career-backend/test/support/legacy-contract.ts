@@ -46,7 +46,15 @@ const capture = JSON.parse(readFileSync(capturePath, "utf8")) as Capture;
 
 export const legacyApiToken = capture.apiToken;
 export const legacyMaxBodyBytes = capture.maxBodyBytes;
-export const legacyComparedColumns = capture.comparedColumns;
+/** 정책 행의 기준 버전 칸은 포착 뒤에 지웠다(ADR-134). 없는 열을 읽지 않도록 비교 목록에서 뺀다. */
+export const legacyComparedColumns: LegacyComparedColumns = Object.fromEntries(
+  Object.entries(capture.comparedColumns).map(([table, spec]) => [
+    table,
+    table === "position_analysis_policy"
+      ? { ...spec, columns: spec.columns.filter((column) => column !== "candidate_context_version") }
+      : spec,
+  ]),
+);
 
 /** 포착 파일이 담은 case ID 전부. 어느 검사도 쓰지 않는 case 가 생기는 것을 막는 데 쓴다. */
 export const legacyCaseIds: string[] = capture.cases.map((entry) => entry.id);
@@ -75,9 +83,11 @@ function isGeneratedBody(body: unknown): body is GeneratedBody {
  * 대부분은 적힌 값이 곧 본문이다. 본문 상한 case 하나만 `generated` 로 만드는 방법을 적었고,
  * 그것을 알아보지 못하면 설명 객체를 그대로 보내 상한에 걸리지 않는다.
  */
-export function materializeLegacyBody(body: unknown): unknown {
+export function materializeLegacyBody(path: string, body: unknown): unknown {
   if (!isGeneratedBody(body)) {
-    const copy = structuredClone(body) as { results?: Array<Record<string, unknown>> } | undefined;
+    const copy = withoutPolicyContextVersion(path, structuredClone(body)) as
+      | { results?: Array<Record<string, unknown>> }
+      | undefined;
     for (const result of copy?.results ?? []) {
       if (!Array.isArray(result.signals) || !Array.isArray(result.evidence)) continue;
       const evidence = result.evidence as Array<Record<string, unknown>>;
@@ -93,6 +103,28 @@ export function materializeLegacyBody(body: unknown): unknown {
   const { totalBytes, padField } = body.generated;
   const overhead = JSON.stringify({ [padField]: "" }).length;
   return { [padField]: "a".repeat(totalBytes - overhead) };
+}
+
+const analysisPolicyPath = "/api/positions/v1/analysis-policy";
+
+/**
+ * 분석 정책 요청이면 본문 최상위의 `candidateContextVersion` 을 지운 사본을 돌려준다.
+ *
+ * 포착 뒤 분석 정책은 기준 버전을 받지도 돌려주지도 않는다(ADR-134).
+ * 정책 스키마가 `.strict()` 라 지우지 않고 보내면 `400` 이 된다.
+ * 다른 경로의 본문은 그 키가 계약의 일부일 수 있어 그대로 둔다.
+ */
+function withoutPolicyContextVersion(path: string, body: unknown): unknown {
+  if (path !== analysisPolicyPath) return body;
+  if (typeof body !== "object" || body === null || Array.isArray(body)) return body;
+  if (!("candidateContextVersion" in body)) return body;
+  const { candidateContextVersion: _removed, ...rest } = body as Record<string, unknown>;
+  return rest;
+}
+
+/** 포착한 응답 본문을 지금 계약이 돌려줄 본문으로 바꾼다. 분석 정책 응답의 기준 버전을 뺀다. */
+export function expectedLegacyResponseBody(path: string, body: unknown): unknown {
+  return withoutPolicyContextVersion(path, structuredClone(body));
 }
 
 /** 과거 포착값은 그대로 두고, 달라진 저장 계약만 비교 시점에 반영한다. */
@@ -111,4 +143,34 @@ export function expectedLegacyAssessment(row: Record<string, unknown>): Record<s
     ]),
   );
   return copy;
+}
+
+/**
+ * 서버가 position-preferences 문서 version 1 에서 계산하는 기준 버전.
+ * 포착 뒤 공고 분석의 기준 버전을 정책 행 대신 이 문서에서 계산하게 됐다(ADR-134).
+ */
+export const legacyContextVersion = "position-preferences:v1";
+
+/** 실행 행에 기준 버전을 기록하는 table. 정책 table 은 그 칸이 없어져 따로 다룬다. */
+const contextVersionTables = new Set([
+  "company_tier_assessment_runs",
+  "company_tier_assessments",
+  "position_analysis_runs",
+  "position_analyses",
+]);
+
+/**
+ * 포착값의 `candidate_context_version` 을 문서에서 계산하는 값으로 바꾼 사본을 돌려준다.
+ * 정책 행은 그 칸을 지웠으므로 키를 뺀 사본을 돌려준다.
+ */
+export function expectedLegacyRow(
+  table: string,
+  row: Record<string, unknown>,
+): Record<string, unknown> {
+  if (table === "position_analysis_policy") {
+    const { candidate_context_version: _removed, ...rest } = row;
+    return rest;
+  }
+  if (!contextVersionTables.has(table) || !("candidate_context_version" in row)) return row;
+  return { ...row, candidate_context_version: legacyContextVersion };
 }

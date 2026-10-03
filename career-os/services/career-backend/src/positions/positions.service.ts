@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 
+import { CandidateContextRepository } from "../candidate-context/repository/candidate-context.repository.js";
 import { ApiError } from "../common/api-error.js";
 import type { Prisma } from "../generated/prisma/client.js";
 import { companyKey, positionIdentity, stableUuid } from "./hash.js";
@@ -55,6 +56,9 @@ import {
 } from "./schema.js";
 import type { CompanyTierSource, StoredCompanyTierAssessment } from "./stored.js";
 import { companyTierProvenanceFields } from "./tier-provenance.js";
+
+/** 공고 분석의 기준 버전을 계산하는 후보자 맥락 문서의 키. */
+const positionPreferencesKey = "position-preferences";
 
 /** 회사 tier 평가 임차권의 길이. 이 시간이 지나면 처리 중 표시를 회수한다. */
 const COMPANY_TIER_LEASE_MS = 2 * 60 * 60 * 1000;
@@ -154,7 +158,10 @@ function groupAnalyses(rows: PositionAnalysisRow[]): Map<string, PositionAnalysi
  */
 @Injectable()
 export class PositionsService {
-  constructor(private readonly repository: PositionsRepository) {}
+  constructor(
+    private readonly repository: PositionsRepository,
+    private readonly candidateContextRepository: CandidateContextRepository,
+  ) {}
 
   async configurePolicy(
     policy: AnalysisPolicy,
@@ -294,14 +301,15 @@ export class PositionsService {
     return this.repository.transaction(async (tx) => {
       const policy = await this.requirePolicy(tx);
       await this.repository.lockCollectionRun(collectionRunId, collectedAt, tx);
-
       const existingRun = await this.repository.findCompanyTierRunByCollectionRun(
         collectionRunId,
         tx,
       );
       if (existingRun) {
-        return this.preparationResponse(tx, policy, existingRun, now);
+        // 재전송은 문서를 다시 읽지 않고 처음 저장할 때 tier 실행에 적은 기준 버전으로 응답한다.
+        return this.preparationResponse(tx, existingRun.candidateContextVersion, existingRun, now);
       }
+      const contextVersion = await this.requireContextVersion(tx);
 
       const upserted = await this.storeCandidates(request, tx);
       await this.repository.upsertDiagnostics(collectionRunId, request.pool.sourceDiagnostics, tx);
@@ -313,10 +321,10 @@ export class PositionsService {
         request.pool.filterSummary.personalExcludedCount,
         tx,
       );
-      await this.refreshPendingSince(request, policy, upserted, now, tx);
+      await this.refreshPendingSince(request, contextVersion, upserted, now, tx);
 
-      const run = await this.openCompanyTierRun(request, policy, now, tx);
-      return this.preparationResponse(tx, policy, run, now);
+      const run = await this.openCompanyTierRun(request, policy, contextVersion, now, tx);
+      return this.preparationResponse(tx, contextVersion, run, now);
     });
   }
 
@@ -434,11 +442,14 @@ export class PositionsService {
         );
       }
 
+      // 문서를 다시 읽지 않고 같은 수집의 tier 실행 기준 버전을 이어 쓴다.
+      // 사이에 position-preferences 가 바뀌어도 회사 평가를 같은 버전으로 찾는다.
+      const contextVersion = tierRun.candidateContextVersion;
       const selected = await this.repository.selectAnalysisQueue(
         {
           collectionRunId,
           collectedAt: collection.collectedAt,
-          candidateContextVersion: policy.candidateContextVersion,
+          candidateContextVersion: contextVersion,
           analysisContractVersion: DEFAULT_ANALYSIS_CONTRACT_VERSION,
           companyTierContractVersion: tierRun.contractVersion,
           defaultCompanyTier: policy.defaultCompanyTier,
@@ -451,7 +462,7 @@ export class PositionsService {
       const run: AnalysisRunRow = {
         analysisRunId: stableUuid(`analysis:${collectionRunId}`),
         collectionRunId,
-        candidateContextVersion: policy.candidateContextVersion,
+        candidateContextVersion: contextVersion,
         contractVersion: DEFAULT_ANALYSIS_CONTRACT_VERSION,
         status: selected.length === 0 ? "completed" : "pending",
         analyzedNowCount: 0,
@@ -590,6 +601,23 @@ export class PositionsService {
     return parsed.data;
   }
 
+  /** 공고 분석의 기준 버전은 position-preferences 문서의 version 에서 계산한다. ADR-134 를 따른다. */
+  private async requireContextVersion(tx: Prisma.TransactionClient): Promise<string> {
+    // 공유 잠금으로 읽어 실행 행에 적는 기준 버전이 commit 시점의 문서 version 과 같게 한다.
+    const document = await this.candidateContextRepository.lockDocumentForShare(
+      positionPreferencesKey,
+      tx,
+    );
+    if (!document) {
+      throw new ApiError(
+        409,
+        "CANDIDATE_CONTEXT_MISSING",
+        "position-preferences 후보자 맥락 문서가 없습니다.",
+      );
+    }
+    return `position-preferences:v${document.version}`;
+  }
+
   /** 제외 회사를 뺀 공고를 저장하고, 이번 수집에서 보이지 않은 공고를 내린다. */
   private async storeCandidates(
     request: CollectionRequest,
@@ -632,7 +660,7 @@ export class PositionsService {
   /** 유효한 분석이 있는 공고는 대기에서 빼고, 나머지는 처음 기다리기 시작한 시각을 유지한다. */
   private async refreshPendingSince(
     request: CollectionRequest,
-    policy: AnalysisPolicy,
+    contextVersion: string,
     upserted: UpsertedPosition[],
     now: string,
     tx: Prisma.TransactionClient,
@@ -646,7 +674,7 @@ export class PositionsService {
       const status = analysisStatusOf(
         entry.contentHash,
         analyses.get(entry.positionId) ?? [],
-        policy.candidateContextVersion,
+        contextVersion,
         request.analysisContractVersion,
         now,
       );
@@ -664,6 +692,7 @@ export class PositionsService {
   private async openCompanyTierRun(
     request: CollectionRequest,
     policy: AnalysisPolicy,
+    contextVersion: string,
     now: string,
     tx: Prisma.TransactionClient,
   ): Promise<CompanyTierRunRow> {
@@ -674,7 +703,7 @@ export class PositionsService {
     );
     const selected = await this.repository.selectCompanyTierQueue(
       request.pool.collectionRunId,
-      policy.candidateContextVersion,
+      contextVersion,
       request.companyTierContractVersion,
       now.slice(0, 10),
       policy.dailyCompanyTierLimit,
@@ -683,7 +712,7 @@ export class PositionsService {
     const run: CompanyTierRunRow = {
       companyTierRunId: stableUuid(`company-tier:${request.pool.collectionRunId}`),
       collectionRunId: request.pool.collectionRunId,
-      candidateContextVersion: policy.candidateContextVersion,
+      candidateContextVersion: contextVersion,
       contractVersion: request.companyTierContractVersion,
       status: selected.length === 0 ? "completed" : "pending",
       assessedNowCount: 0,
@@ -1255,7 +1284,7 @@ export class PositionsService {
    */
   private async preparationResponse(
     tx: Prisma.TransactionClient,
-    policy: AnalysisPolicy,
+    contextVersion: string,
     run: CompanyTierRunRow,
     generatedAt: string,
   ): Promise<PositionPreparationResponse> {
@@ -1269,7 +1298,7 @@ export class PositionsService {
         tx,
         run.collectionRunId,
         positions,
-        policy.candidateContextVersion,
+        contextVersion,
         DEFAULT_ANALYSIS_CONTRACT_VERSION,
         generatedAt,
       ),

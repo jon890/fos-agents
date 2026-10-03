@@ -12,6 +12,7 @@ afterAll(async () => {
 });
 beforeEach(async () => {
   await harness.clearAll();
+  await harness.ensurePositionPreferences();
 });
 
 async function prepared() {

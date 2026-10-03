@@ -354,7 +354,6 @@ model position_analyses {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model position_analysis_policy {
   singleton_id                  Int      @id @db.TinyInt
-  candidate_context_version     String
   daily_analysis_limit          Int      @db.UnsignedTinyInt
   priority_slots                Int      @db.UnsignedTinyInt
   aging_slots                   Int      @db.UnsignedTinyInt

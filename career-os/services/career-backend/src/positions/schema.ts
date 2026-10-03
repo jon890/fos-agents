@@ -12,7 +12,6 @@ const httpsUrl = z.string().url().startsWith("https://");
 export const analysisPolicySchema = z
   .object({
     schemaVersion: z.literal(2),
-    candidateContextVersion: nonEmpty,
     dailyAnalysisLimit: z.number().int().min(1).max(20),
     prioritySlots: z.number().int().min(0).max(20),
     agingSlots: z.number().int().min(0).max(20),

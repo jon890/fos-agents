@@ -2,9 +2,10 @@
 
 - **status**: `accepted`
 - **결정**:
-  - 포지션 분석의 `candidateContextVersion` 은 Backend 가 `position-preferences` 후보자 맥락 문서의 `version` 에서 `position-preferences:v{version}` 으로 그때마다 계산한다. 분석 정책에 저장하지 않는다.
+  - 포지션 분석의 `candidateContextVersion` 은 Backend 가 `position-preferences` 후보자 맥락 문서의 `version` 에서 `position-preferences:v{version}` 으로 계산한다. 분석 정책에 저장하지 않는다.
+  - 계산은 수집을 저장할 때 하고 그 값을 회사 tier 실행에 적는다. 공고 분석 실행은 같은 수집의 회사 tier 실행 값을 이어 써서, 한 수집 안에서는 기준 버전이 하나다.
   - 분석 정책의 요청과 응답에서 `candidateContextVersion` 칸을 뺀다.
-  - `position-preferences` 문서가 없으면 기준 버전이 필요한 요청을 `CANDIDATE_CONTEXT_MISSING` 으로 거절한다.
+  - `position-preferences` 문서가 없으면 수집 저장을 `CANDIDATE_CONTEXT_MISSING` 으로 거절한다.
 - **맥락**:
   - [ADR-132](ADR-132-스킬의-개인-맥락은-후보자-맥락-문서에서-읽고-지원서-공통-프로필만-brain에-둔다.md)는 정책에 기준 버전을 저장하고, 문서를 저장한 CLI 가 같은 명령에서 정책을 그 값으로 맞추게 했다. 맞추는 일이 Backend 가 아니라 CLI 에 있어, CLI 를 거치지 않고 문서를 저장하면 두 값이 어긋나고 수집이 멈춘다.
   - 문서를 저장하는 길이 하나 더 생긴다. fos-assistant 의 커넥터가 승인을 받아 후보자 맥락 문서를 저장한다.
