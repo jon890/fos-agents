@@ -52,11 +52,11 @@ export function parseMeasurement(stdout: string): MonthlyMeasurement[] {
 }
 
 export async function runAgentUsageScript(): Promise<string> {
-  const process = Bun.spawn(["python3", join(import.meta.dir, "agent_usage.py"), "--json"], {
+  const child = Bun.spawn(["python3", join(import.meta.dir, "agent_usage.py"), "--json"], {
     stdout: "pipe",
     stderr: "inherit",
   });
-  const [stdout, exitCode] = await Promise.all([new Response(process.stdout).text(), process.exited]);
+  const [stdout, exitCode] = await Promise.all([new Response(child.stdout).text(), child.exited]);
   if (exitCode !== 0) throw new Error("측정 스크립트가 실패했다.");
   return stdout;
 }

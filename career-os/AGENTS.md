@@ -84,7 +84,7 @@ grep -rl "<확인할 기술>" career-os/sources/fos-study/task/
 | 후보자 맥락 문서                        | 역할 선호, 경험 경계, 지원 이력과 현재 대상    |
 | private brain                    | 지원서 공통 프로필(신원, 연락처, 정확한 재직 기간) |
 | `applications/<company>/<role>/` | 공고별 적합도 판정과 지원 전략               |
-| 커리어 Backend 의 프로필 원고    | 대상별 프로필 원고. `manage_profile.ts documents get` 으로 읽는다 |
+| 커리어 Backend 의 프로필 원고             | 대상별 프로필 원고. `manage_profile.ts documents get` 으로 읽는다 |
 | `state/verified-claims/`         | 다시 쓸 수 있는 검증 완료 주장과 근거 상태       |
 
 

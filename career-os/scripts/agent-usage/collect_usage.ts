@@ -58,8 +58,10 @@ export async function collectUsage(deps: {
   measure: () => Promise<MonthlyMeasurement[]>;
   now: Date;
   write: (line: string) => void;
+  /** 실패 원인 한 줄. 상태 코드와 오류 코드만 담고 토큰과 응답 본문은 담지 않는다. */
+  writeError: (line: string) => void;
 }): Promise<{ results: CollectResult[]; exitCode: 0 | 1 }> {
-  const { store, measure, now, write } = deps;
+  const { store, measure, now, write, writeError } = deps;
   const targets = targetMonths(await store.listMonths(), now);
   if (targets.length === 0) {
     write("- UP_TO_DATE");
@@ -72,18 +74,21 @@ export async function collectUsage(deps: {
   for (const month of targets) {
     const measurement = measured.get(month);
     let code: CollectResult["code"];
+    let failure: unknown;
     if (!measurement || measurement.claudeTokens + measurement.codexTokens === 0) {
       code = "NO_SESSIONS";
     } else {
       try {
         code = (await store.putMeasured(measurement, measuredOn)).created ? "CREATED" : "EXISTS";
-      } catch {
+      } catch (error) {
         // 실패한 달은 다음 실행이 다시 대상으로 잡는다. 남은 달은 마저 올린다.
         code = "FAILED";
+        failure = error;
       }
     }
     results.push({ month, code });
     write(`${month} ${code}`);
+    if (code === "FAILED") writeError(`${month} ${formatManageProfileError(failure)}`);
   }
   return { results, exitCode: results.some((result) => result.code === "FAILED") ? 1 : 0 };
 }
@@ -129,6 +134,7 @@ async function main(args: readonly string[]): Promise<number> {
       measure: () => measureUsage(),
       now: new Date(),
       write: (line) => process.stdout.write(`${line}\n`),
+      writeError: (line) => process.stderr.write(`${line}\n`),
     });
     return exitCode;
   } catch (error) {
