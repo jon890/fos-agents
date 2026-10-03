@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createServer } from "../src/server.ts";
 import { toolDefinitions } from "../src/tools.ts";
@@ -99,4 +100,44 @@ test("errors 는 data-schema.md 의 커넥터 오류 코드 표에서 공통 어
   }
   expect(Object.keys(expected).length).toBeGreaterThan(0);
   expect(connector.errors).toEqual(expected);
+});
+
+const skillsDirectory = join(import.meta.dir, "..", "skills");
+
+function skillBodyOf(directory: string): string {
+  for (const entry of readdirSync(directory, { recursive: true }))
+    if (lstatSync(join(directory, String(entry))).isSymbolicLink()) throw new Error(`심볼릭 링크가 있다: ${entry}`);
+  let body = "";
+  for (const name of readdirSync(directory).sort()) {
+    const text = readFileSync(join(directory, name, "SKILL.md"), "utf8");
+    if (!text.startsWith("---\n")) throw new Error(`${name} 의 앞머리가 없다`);
+    const end = text.indexOf("\n---\n", 4);
+    if (end < 0) throw new Error(`${name} 의 앞머리가 닫히지 않는다`);
+    body += text.slice(end + 5).trim() + "\n\n";
+  }
+  if (body.length > 8000) throw new Error(`스킬 본문이 ${body.length}자로 8000자를 넘는다`);
+  return body;
+}
+
+test("스킬 본문은 설치하는 쪽의 지침 상한 안에 있고 링크가 없다", () => {
+  const body = skillBodyOf(skillsDirectory);
+  expect(body.length).toBeGreaterThan(0);
+  for (const tool of Object.keys(connector.tools)) expect(body, tool).toContain(tool);
+});
+
+test("스킬을 노트북 에이전트의 스킬 폴더에 링크하지 않는다", () => {
+  expect(existsSync(join(import.meta.dir, "../../.claude/skills/career-connector"))).toBe(false);
+});
+
+test("본문이 8001자인 스킬과 닫히지 않은 앞머리는 거절한다", () => {
+  const root = mkdtempSync(join(tmpdir(), "career-skills-"));
+  mkdirSync(join(root, "long"));
+  const head = "---\nname: long\ndescription: x\n---\n";
+  const fill = (size: number) => "가".repeat(size) + "\n";
+  writeFileSync(join(root, "long", "SKILL.md"), head + fill(7998));
+  expect(skillBodyOf(root).length).toBe(8000);
+  writeFileSync(join(root, "long", "SKILL.md"), head + fill(7999));
+  expect(() => skillBodyOf(root)).toThrow("8000자를 넘는다");
+  writeFileSync(join(root, "long", "SKILL.md"), "---\nname: long\n");
+  expect(() => skillBodyOf(root)).toThrow("닫히지 않는다");
 });

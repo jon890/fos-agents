@@ -60,7 +60,7 @@ career-os/
 | `position-recommender` | 2 | | |
 | `resume-preparer` | 7 | 21 | 4 |
 | `study-topic-recommender` | 2 | | |
-| `sync-profile` | 3 | 6 | |
+| `sync-profile` | 3 | 5 | |
 
 ### 실행 코드를 두 자리 중 어디에 두나
 
@@ -612,7 +612,6 @@ client 가 읽는 환경값은 포지션 추천과 같다. 같은 Backend 이고
 | `.claude/skills/sync-profile/references/github.md` | GitHub 프로필 문서 규칙 |
 | `.claude/skills/sync-profile/scripts/wanted_*.sh` | 원티드 폼 필드 조회와 입력 |
 | `.claude/skills/sync-profile/scripts/linkedin_*.sh` | LinkedIn 소개의 문단 입력과 프로젝트 폼 채우기 |
-| `.claude/skills/sync-profile/scripts/agent_usage_chart.py` | 사용량 기록의 값으로 GitHub 프로필의 차트 그리기 |
 
 원고와 사용량 기록은 파일이 아니다. 커리어 Backend 의 `profile` 모듈이 갖고, 스킬은 `scripts/profile/manage_profile.ts` 로 읽고 쓴다.
 `library/profiles/` 는 쓰지 않는다. 차트 이미지는 저장하지 않고 기록에서 그때마다 그린다.
