@@ -618,6 +618,9 @@ client 가 읽는 환경값은 포지션 추천과 같다. 같은 Backend 이고
 | `library/profiles/github-agent-usage-snapshots.md` | 달이 끝난 직후 측정한 월별 사용량 기록 |
 | `library/profiles/github-agent-usage.svg` | `agent_usage_chart.py` 가 측정 기록으로 그린 이미지 |
 
+ADR-133 에 따라 원고와 사용량 기록의 원본은 커리어 Backend 로 옮긴다.
+Backend 의 저장소와 아래 「프로필 저장 CLI」 는 있고, 스킬은 아직 `library/profiles/` 를 읽는다.
+
 브라우저 조작은 공용 `browser-driver`를 쓰고 이 스킬이 드라이버를 따로 만들지 않는다.
 
 ### 프로필 저장 CLI

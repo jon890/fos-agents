@@ -6,7 +6,11 @@ import { firstOptionValue } from "../lib/cli.ts";
 import { createProfileClient } from "./client.ts";
 import { profileDocumentKeySchema, profileDocumentKeys, type UsageSnapshotPutPayload } from "./contracts.ts";
 
-const value = (args: readonly string[], name: string) => firstOptionValue(args, `--${name}`);
+const value = (args: readonly string[], name: string) => {
+  const found = firstOptionValue(args, `--${name}`);
+  if (found?.startsWith("--")) throw new Error(`--${name} 값이 필요하다.`);
+  return found;
+};
 const required = (args: readonly string[], name: string) => {
   const found = value(args, name);
   if (!found?.trim()) throw new Error(`--${name} 값이 필요하다.`);
@@ -22,7 +26,7 @@ function documentKey(args: readonly string[]) {
 
 function integerOption(name: string, found: string): number {
   const parsed = Number(found);
-  if (!Number.isSafeInteger(parsed) || parsed < 0) throw new Error(`--${name} 은 0 이상의 정수여야 한다.`);
+  if (!/^\d+$/.test(found) || !Number.isSafeInteger(parsed)) throw new Error(`--${name} 은 0 이상의 정수여야 한다.`);
   return parsed;
 }
 
@@ -44,7 +48,7 @@ async function documents(command: string | undefined, args: readonly string[]): 
       document = await createProfileClient().getDocument(key);
     } catch (error) {
       if (error instanceof CareerBackendHttpError && error.status === 404) {
-        throw new Error(`문서가 없다: ${key}. documents put --expected-version 0 으로 새 문서를 만든다.`);
+        throw new Error(`문서가 없다: ${key}. documents put --expected-version 0 으로 새 문서를 만든다.`, { cause: error });
       }
       throw error;
     }
@@ -63,7 +67,7 @@ async function documents(command: string | undefined, args: readonly string[]): 
       return (await createProfileClient().putDocument(key, { body, note, expectedVersion })).document;
     } catch (error) {
       if (error instanceof CareerBackendHttpError && error.status === 409) {
-        throw new Error("문서가 바뀌었다. documents get 으로 다시 조회하고 변경을 검토한 뒤 명령을 다시 실행한다.");
+        throw new Error("문서가 바뀌었다. documents get 으로 다시 조회하고 변경을 검토한 뒤 명령을 다시 실행한다.", { cause: error });
       }
       throw error;
     }
@@ -113,6 +117,9 @@ export function formatManageProfileError(error: unknown): string {
     const detail = [`status=${error.status ?? "none"}`, `code=${error.code}`];
     if (error.requestId) detail.push(`requestId=${error.requestId}`);
     return `${error.message} (${detail.join(", ")})`;
+  }
+  if (error instanceof Error && error.cause instanceof CareerBackendHttpError && error.cause.requestId) {
+    return `${error.message} (requestId=${error.cause.requestId})`;
   }
   return error instanceof Error ? error.message : String(error);
 }

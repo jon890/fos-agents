@@ -142,7 +142,10 @@ describe("manage_profile 문서", () => {
   test("get 404 는 --expected-version 0 을 안내한다", async () => {
     useApi(() => json({ error: { code: "NOT_FOUND", message: "x" } }, 404));
 
-    await expect(manageProfile(["documents", "get", "--key", "github"])).rejects.toThrow("--expected-version 0");
+    const error = await manageProfile(["documents", "get", "--key", "github"]).catch((e: unknown) => e);
+
+    expect(formatManageProfileError(error)).toContain("--expected-version 0");
+    expect((error as Error).cause).toBeInstanceOf(CareerBackendHttpError);
   });
 
   test("list 는 요약 배열을 돌려준다", async () => {
@@ -168,7 +171,7 @@ describe("manage_profile 문서", () => {
   });
 
   test("put 409 는 다시 조회하라고 안내하고 오류 출력에 본문을 담지 않는다", async () => {
-    useApi(() => json({ error: { code: "VERSION_CONFLICT", message: "x" } }, 409));
+    useApi(() => json({ error: { code: "VERSION_CONFLICT", message: "x", requestId: "req-409" } }, 409));
     const file = join(tempDir(), "github.md");
     writeFileSync(file, "비공개 예시 문장", "utf8");
 
@@ -176,6 +179,7 @@ describe("manage_profile 문서", () => {
 
     expect(formatManageProfileError(error)).toContain("documents get");
     expect(formatManageProfileError(error)).not.toContain("비공개 예시 문장");
+    expect(formatManageProfileError(error)).toContain("requestId=req-409");
     expect(formatManageProfileError(new CareerBackendHttpError(503, "UNAVAILABLE", "실패", "req-1"))).toBe("실패 (status=503, code=UNAVAILABLE, requestId=req-1)");
     expect(formatManageProfileError(new CareerBackendHttpError(503, "UNAVAILABLE", "실패"))).toBe("실패 (status=503, code=UNAVAILABLE)");
   });
@@ -234,6 +238,23 @@ describe("manage_profile 사용량", () => {
 
     await expect(manageProfile(replace("--claude-tokens", "abc"))).rejects.toThrow("--claude-tokens");
     await expect(manageProfile(replace("--month", "2026-13"))).rejects.toThrow();
+    expect(urls).toHaveLength(0);
+  });
+
+  test("0x10 과 1e3 같은 정수 표기는 요청 전에 거절한다", async () => {
+    const urls = useApi(() => new Response("{}"));
+    const replace = (name: string, to: string) => usageArgs.map((arg, i) => (usageArgs[i - 1] === name ? to : arg));
+
+    await expect(manageProfile(replace("--claude-tokens", "0x10"))).rejects.toThrow("--claude-tokens");
+    await expect(manageProfile(replace("--codex-tokens", "1e3"))).rejects.toThrow("--codex-tokens");
+    await expect(manageProfile([...usageArgs, "--sessions", " 7"])).rejects.toThrow("--sessions");
+    expect(urls).toHaveLength(0);
+  });
+
+  test("옵션 값 자리에 다른 옵션이 오면 값이 없는 것으로 보고 거절한다", async () => {
+    const urls = useApi(() => new Response("{}"));
+
+    await expect(manageProfile([...usageArgs, "--note", "--replace"])).rejects.toThrow("--note");
     expect(urls).toHaveLength(0);
   });
 

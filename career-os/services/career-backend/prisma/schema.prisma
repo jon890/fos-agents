@@ -230,6 +230,7 @@ model profile_document_revisions {
   @@id([document_key, version])
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model agent_usage_snapshots {
   month           String   @id @db.Char(7)
   claude_tokens   BigInt   @db.UnsignedBigInt
