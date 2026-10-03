@@ -75,12 +75,14 @@ gh api user -X PATCH -f bio="$BIO"
 기록은 Backend 에서 읽는다.
 
 ```bash
+export PATH="$HOME/.bun/bin:$PATH"
 bun --env-file=career-os/.env career-os/scripts/profile/manage_profile.ts usage list
 ```
 
 지난달 기록이 없으면 수집기를 한 번 실행한다. 표준 출력은 `<YYYY-MM> <코드>` 다.
 
 ```bash
+export PATH="$HOME/.bun/bin:$PATH"
 bun --env-file=career-os/.env career-os/scripts/agent-usage/collect_usage.ts
 ```
 

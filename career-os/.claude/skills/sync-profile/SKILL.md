@@ -44,13 +44,15 @@ export PATH="$HOME/.bun/bin:$PATH"
 bun --env-file=career-os/.env career-os/scripts/profile/manage_profile.ts documents list
 ```
 
-`bun` 은 `~/.bun/bin` 에 설치돼 있고 셸의 PATH 에 없을 수 있다. 첫 줄이 그것을 맡는다.
+`bun` 은 `~/.bun/bin` 에 설치돼 있고 셸의 PATH 에 없을 수 있다.
+`bun` 을 부르는 블록마다 첫 줄이 그것을 맡는다. Bash 호출은 앞 호출의 PATH 를 이어받지 않는다.
 `documents list` 가 있는 원고와 `version` 을 낸다.
 
 원고마다 저장소 밖 임시 경로에 받는다. 개인 내용이 저장소에 남지 않게 하려는 것이다.
 받은 `version` 을 7단계의 `--expected-version` 으로 쓴다.
 
 ```bash
+export PATH="$HOME/.bun/bin:$PATH"
 bun --env-file=career-os/.env career-os/scripts/profile/manage_profile.ts documents get --key <wanted|linkedin|github> --out "${TMPDIR:-/tmp}/<key>-profile.md"
 ```
 
@@ -61,6 +63,7 @@ bun --env-file=career-os/.env career-os/scripts/profile/manage_profile.ts docume
 **이때만** 작업본을 받는다. `applications/` 를 읽기 때문이다.
 
 ```bash
+export PATH="$HOME/.bun/bin:$PATH"
 bun career-os/scripts/career-workspace/cli.ts skill begin sync-profile --json
 ```
 
@@ -166,6 +169,7 @@ bun career-os/scripts/career-workspace/cli.ts skill begin sync-profile --json
 등록하지 못한 기술, 종료월을 넣은 진행 중 프로젝트, 넣지 못한 링크가 여기 해당한다.
 
 ```bash
+export PATH="$HOME/.bun/bin:$PATH"
 bun --env-file=career-os/.env career-os/scripts/profile/manage_profile.ts documents put --key <key> --file "${TMPDIR:-/tmp}/<key>-profile.md" --expected-version <1단계의 version> --note "<무엇을 바꿨는지>"
 ```
 
@@ -179,5 +183,6 @@ bun --env-file=career-os/.env career-os/scripts/profile/manage_profile.ts docume
 1단계에서 작업본을 받았을 때만 발행한다.
 
 ```bash
+export PATH="$HOME/.bun/bin:$PATH"
 bun career-os/scripts/career-workspace/cli.ts skill finish sync-profile --json
 ```
