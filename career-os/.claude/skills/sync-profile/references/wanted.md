@@ -82,6 +82,11 @@ $S/wanted_list_fields.sh "$H" all    # 직무와 직책까지
 **AI 활용 경험은 자유 입력이 아니다.** 원티드가 이력서 본문을 읽어 후보 문장을 만들고
 그중 최대 셋을 고르게 한다. 경력 항목을 다 채운 뒤에 돌려야 최근 경험이 후보에 들어온다.
 
+**링크 절에는 추가 버튼이 보이지 않는다.** 2026-10 실측으로 `#resume-section-links` 안에는
+이미 있는 링크의 항목과 용도를 알 수 없는 아이콘 버튼 둘뿐이었고, 절 머리에도 버튼이 없었다.
+아이콘 버튼은 삭제일 수 있어 누르지 않았다. 링크를 더해야 하면 사용자에게 화면에서 직접 더해 달라고 하고,
+그 전까지는 주소를 간단 소개 본문에 적는다.
+
 선택은 `label` 을 클릭한다. `li` 를 클릭하면 아무 일도 일어나지 않는다.
 체크 여부는 `[role=checkbox]` 의 `aria-checked` 로 확인한다.
 
@@ -100,6 +105,9 @@ $B js "$H" '(async function(){
     .map(function(p){ return p.title + " | " + (p.description||"").length + "자"; }).join("\n");
 })()'
 ```
+
+**긴 본문은 길이가 아니라 글자 단위로 대조한다.** 넣은 본문 파일과 서버가 돌려준 값을 비교한다.
+간단 소개는 `resume.about` 에 있다.
 
 최상위 키는 `resume`, `careers`, `technical_projects`, `language_certs`,
 `educations`, `activities`, `links`, `skills`, `ai_competencies` 다.

@@ -30,6 +30,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await harness.clearAll();
+  await harness.ensurePositionPreferences();
 });
 
 describe("분석 정책과 회사 선호", () => {
@@ -384,11 +385,11 @@ describe("같은 실행에 동시에 온 두 요청", () => {
     const path = `/api/positions/v1/company-tier-runs/${queue.companyTierRunId}/results`;
     const [first, second] = await Promise.all([
       send("POST", path, {
-        body: materializeLegacyBody(request.body),
+        body: materializeLegacyBody(path, request.body),
         idempotencyKey: "concurrent-a",
       }),
       send("POST", path, {
-        body: materializeLegacyBody(request.body),
+        body: materializeLegacyBody(path, request.body),
         idempotencyKey: "concurrent-b",
       }),
     ]);
@@ -439,7 +440,6 @@ describe("회사 tier 평가를 다시 부르지 않는다", () => {
   function policy(dailyCompanyTierLimit: number) {
     return {
       schemaVersion: 2,
-      candidateContextVersion: "candidate-context-2026-09",
       dailyAnalysisLimit: 5,
       prioritySlots: 3,
       agingSlots: 2,
@@ -667,7 +667,6 @@ describe("수집 실행과 정책의 행 잠금과 저장된 출처", () => {
   function policyBody(overrides: Record<string, number | string> = {}) {
     return {
       schemaVersion: 2,
-      candidateContextVersion: "candidate-context-2026-09",
       dailyAnalysisLimit: 5,
       prioritySlots: 3,
       agingSlots: 2,
@@ -904,7 +903,7 @@ describe("수집 실행과 정책의 행 잠금과 저장된 출처", () => {
       expect(reply.status, "동시 요청의 status").toBe(200);
     }
     const stored = await harness.prisma.$queryRaw<Record<string, unknown>[]>`
-      SELECT candidate_context_version, daily_analysis_limit, priority_slots, aging_slots,
+      SELECT daily_analysis_limit, priority_slots, aging_slots,
              stale_after_days, default_company_tier, daily_company_tier_limit,
              company_tier_stale_after_days
       FROM position_analysis_policy
@@ -912,7 +911,6 @@ describe("수집 실행과 정책의 행 잠금과 저장된 출처", () => {
     expect(stored, "저장된 정책 행 수").toHaveLength(1);
     const row = stored[0]!;
     const asStored = (body: ReturnType<typeof policyBody>) => ({
-      candidate_context_version: body.candidateContextVersion,
       daily_analysis_limit: body.dailyAnalysisLimit,
       priority_slots: body.prioritySlots,
       aging_slots: body.agingSlots,

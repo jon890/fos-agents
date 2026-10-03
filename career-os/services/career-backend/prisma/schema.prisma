@@ -210,6 +210,43 @@ model candidate_context_document_revisions {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model profile_documents {
+  document_key String @id @db.VarChar(50)
+  body         String @db.MediumText
+  version      Int    @db.UnsignedInt
+  note         String @db.VarChar(500)
+  updated_at   DateTime
+  profile_document_revisions profile_document_revisions[]
+}
+
+model profile_document_revisions {
+  document_key String @db.VarChar(50)
+  version      Int    @db.UnsignedInt
+  body         String @db.MediumText
+  note         String @db.VarChar(500)
+  created_at   DateTime
+  profile_documents profile_documents @relation(fields: [document_key], references: [document_key], onDelete: Restrict, onUpdate: Restrict, map: "fk_profile_document_revision_document")
+
+  @@id([document_key, version])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model agent_usage_snapshots {
+  month           String   @id @db.Char(7)
+  claude_tokens   BigInt   @db.UnsignedBigInt
+  codex_tokens    BigInt   @db.UnsignedBigInt
+  claude_cost_usd Decimal? @db.Decimal(12, 2)
+  codex_cost_usd  Decimal? @db.Decimal(12, 2)
+  sessions        Int?     @db.UnsignedInt
+  unpriced_tokens BigInt   @db.UnsignedBigInt
+  measured_on     DateTime @db.Date
+  source          String   @db.VarChar(20)
+  note            String?  @db.VarChar(500)
+  created_at      DateTime
+  updated_at      DateTime
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model company_preferences {
   company_key  String                          @id
   company_name String                          @db.VarChar(255)
@@ -317,7 +354,6 @@ model position_analyses {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model position_analysis_policy {
   singleton_id                  Int      @id @db.TinyInt
-  candidate_context_version     String
   daily_analysis_limit          Int      @db.UnsignedTinyInt
   priority_slots                Int      @db.UnsignedTinyInt
   aging_slots                   Int      @db.UnsignedTinyInt

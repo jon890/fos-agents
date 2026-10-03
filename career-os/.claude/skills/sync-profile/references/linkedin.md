@@ -14,6 +14,9 @@ $B url "$H"
 로그인돼 있으면 본인 프로필 주소로 이동한다. 그 주소가 이후 편집 경로의 앞부분이 된다.
 로그인 화면이면 사용자에게 알리고 멈춘다.
 
+**주소가 `/authwall` 로 끝나면 그 브라우저 프로필에 로그인이 없는 것이다.**
+2026-10 실측으로 원티드는 로그인돼 있고 LinkedIn 만 가입 화면으로 넘어갔다. 로그인은 사이트마다 따로 확인한다.
+
 ## 편집 진입점
 
 **`aria-label` 이 절마다 다른 낱말로 끝난다.** 「편집」 하나로 찾으면 아무것도 나오지 않는다.
@@ -39,6 +42,8 @@ Array.from(document.querySelectorAll("button,a"))
 | 이름, 헤드라인, 지역, 업계 | `/edit/intro/` |
 | 소개와 대표 보유기술 | `/edit/forms/summary/new/` |
 | 경력 | `/details/experience/` |
+| 프로젝트 목록 | `/details/projects/` |
+| 프로젝트 추가 | `/edit/forms/project/new/` |
 
 **「소개」 절에는 편집 버튼이 목록에 잡히지 않는다.** 그 절까지 스크롤해야 나타난다.
 
@@ -57,23 +62,47 @@ document.execCommand("insertText", false, "새 헤드라인");
 
 ### 문단 구분
 
-**`insertText` 는 문자열 안의 줄바꿈을 버린다.**
-여러 문단짜리 소개를 한 번에 넣으면 네 문단이 한 덩어리로 붙는다.
-저장하기 전에 화면에서 발견해야 되돌릴 수 있다.
+**문단 사이에는 `insertParagraph` 를 두 번 부른다.** 이 편집기는 문단을 `<p>` 로 갖는다.
 
-문단마다 나눠 넣고 사이에 `insertLineBreak` 를 두 번 부른다.
-한 번은 줄바꿈이고, 두 번이라야 빈 줄 하나가 들어간 문단 구분이 된다.
+`insertText` 에 줄바꿈이 든 문자열을 주거나 `insertLineBreak` 로 나누면,
+넣은 직후의 `innerText` 에서는 문단이 나뉘어 보이는데 저장하면 한 덩어리로 붙는다.
+2026-10 실측으로 다섯 문단 864자가 줄바꿈 0개로 저장됐다. 그 전에 올라가 있던 소개도 같은 상태였다.
+
+```bash
+S=career-os/.claude/skills/sync-profile/scripts
+"$S/linkedin_set_paragraphs.sh" "$H" "$ABOUT_FILE"
+```
+
+`$H` 는 handle 이고 `$ABOUT_FILE` 은 문단을 빈 줄로 나눈 본문 파일이다.
+이 스크립트는 넣기만 한다. 「저장」 은 아래 「저장」 절의 방법으로 누른다.
+
+**저장한 뒤 편집 화면을 다시 열어 문단 수를 읽는다.** 프로필 화면은 소개를 접어 보여 줘 문단이 붙었는지 드러나지 않는다.
 
 ```javascript
-var paras = ["첫 문단", "둘째 문단", "셋째 문단"];
-paras.forEach(function(p, i){
-  if(i > 0){
-    document.execCommand("insertLineBreak", false, null);
-    document.execCommand("insertLineBreak", false, null);
-  }
-  document.execCommand("insertText", false, p);
-});
+document.querySelector("[contenteditable=true]").innerText
+  .split(/\n\s*\n/).filter(function(x){ return x.trim(); }).length
 ```
+
+## 프로젝트
+
+**프로젝트는 경력과 따로 등록하고 「관련 항목」 으로 경력에 잇는다.**
+이을 수 있는 것은 프로필에 이미 있는 경력과 학력뿐이다.
+경력이 프로필에 없는 회사의 프로젝트는 경력을 먼저 등록하거나 넣지 않는다. 어느 쪽인지는 사용자가 정한다.
+
+추가 폼은 대화상자가 아니라 본문에 그려진다. `[role=dialog]` 로 찾으면 검색 제안 상자가 잡힌다.
+
+```bash
+S=career-os/.claude/skills/sync-profile/scripts
+"$S/linkedin_fill_project.sh" "$H" "$PROFILE_URL" "$PROJECTS_JSON" "$INDEX"
+```
+
+`$PROFILE_URL` 은 `https://www.linkedin.com/in/` 뒤에 본인 id 까지 붙인 주소다.
+`$PROJECTS_JSON` 의 모양은 스크립트의 머리 주석이 갖는다.
+
+스크립트는 채운 값을 되읽어 JSON 한 줄로 낸다. 그것이 넣으려던 값과 같을 때만 「저장」 을 누른다.
+저장한 뒤 `/details/projects/` 에서 그 이름이 한 번만 나오는지 확인한다. 두 번이면 중복으로 등록된 것이다.
+
+2026-10 실측으로 일곱 개를 이 순서로 하나씩 넣었고 모두 한 번에 등록됐다.
 
 ## 대표 보유기술
 

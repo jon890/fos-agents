@@ -94,6 +94,7 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 | 인증 실패 | `401` |
 | version 충돌 | `409` |
 | 정책을 설정하지 않은 상태의 수집 요청 | `409 POLICY_NOT_CONFIGURED` |
+| `position-preferences` 문서가 없는 상태의 수집 요청 | `409 CANDIDATE_CONTEXT_MISSING` |
 | 회사 tier 실행이 `pending` 인데 분석 실행 생성 | `409 COMPANY_TIER_RUN_PENDING` |
 | `learning-interests` 문서가 없는 상태의 공부 후보 조회 | `409 CANDIDATE_CONTEXT_MISSING` |
 | DB 연결 실패 | `503` |
@@ -130,19 +131,21 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 
 사람이 `scripts/candidate-context/manage_candidate_context.ts` 로 고친다. 스킬은 변경 전후를 보여 주고 승인을 받은 뒤에만 같은 명령으로 저장한다.
 
-`put --key position-preferences` 는 저장에 성공하면 같은 명령 안에서 `PUT /api/positions/v1/analysis-policy` 로 정책의 `candidateContextVersion` 을 `position-preferences:v{version}` 으로 바꾼다.
-정책의 나머지 칸은 `GET /api/positions/v1/analysis-policy` 로 읽은 값을 그대로 보낸다.
-정책 갱신이 실패하면 문서는 저장된 채로 두고 종료 코드 1 과 함께 정책만 다시 맞추는 명령을 알려 준다.
-정책만 다시 맞추는 명령은 `manage_candidate_context.ts sync-position-policy` 다.
+문서 저장은 다른 저장 값을 함께 바꾸지 않는다.
+`position-preferences` 를 저장한 뒤 포지션 분석 정책을 맞추는 단계가 없다.
+Backend 가 수집 실행을 저장할 때 이 문서의 `version` 에서 기준 버전 `position-preferences:v{version}` 을 계산해 회사 tier 실행에 적는다.
+공고 분석 실행은 문서를 다시 읽지 않고 같은 수집의 회사 tier 실행에 적힌 기준 버전을 이어 쓴다.
+수집 뒤에 문서를 새로 저장해도 한 수집 안의 회사 tier 평가와 공고 분석은 같은 기준 버전을 쓴다.
+CLI 로 저장하든 다른 client 로 저장하든 다음 수집부터 새 기준 버전이 쓰인다.
+이유는 [ADR-134](adr/ADR-134-공고-분석의-기준-버전은-position-preferences-문서-버전에서-계산한다.md)를 따른다.
 
-배포 뒤 한 번은 아래 순서로 맞춘다.
+새 DB 에서 첫 수집 전에 준비할 것은 둘이고 순서는 상관없다.
 
-1. `position-preferences` 와 `application-state` 문서를 `put --expected-version 0` 으로 만든다.
-2. `sync-position-policy` 를 실행한다.
+- `position-preferences` 와 `application-state` 문서를 `put --expected-version 0` 으로 만든다.
+- `scripts/position-recommender/configure_position_analysis_policy.ts` 로 분석 정책을 만든다.
 
-분석 정책이 아직 없으면 `409 POLICY_NOT_CONFIGURED` 가 난다.
-이때는 `scripts/position-recommender/configure_position_analysis_policy.ts` 로 정책을 먼저 만든 뒤 2단계를 다시 실행한다.
-이유는 [ADR-132](adr/ADR-132-스킬의-개인-맥락은-후보자-맥락-문서에서-읽고-지원서-공통-프로필만-brain에-둔다.md)를 따른다.
+정책이 없으면 수집 요청이 `409 POLICY_NOT_CONFIGURED` 로 끝난다.
+정책은 있고 `position-preferences` 문서가 없으면 `409 CANDIDATE_CONTEXT_MISSING` 으로 끝난다.
 
 ```mermaid
 sequenceDiagram
@@ -287,15 +290,16 @@ sequenceDiagram
 
 외부 채용 소스의 열린 공고에서 실제 지원 후보를 고르고, 회사를 세 축으로 판정한다.
 
-1. 수집 명령이 `position-preferences` 문서와 분석 정책을 읽어 정책의 `candidateContextVersion` 이 `position-preferences:v{version}` 인지 확인한다. 다르거나 문서가 없으면 수집을 시작하지 않는다. 같으면 `position-preferences` 와 `application-state` 의 version 과 본문을 실행 디렉터리의 `candidate-context.json` 에 둔다.
+1. 수집 명령이 `position-preferences` 와 `application-state` 문서를 읽는다. 하나라도 없으면 수집을 시작하지 않는다. 둘 다 있으면 version 과 본문을 실행 디렉터리의 `candidate-context.json` 에 둔다. 분석 정책과 대조하지 않는다.
 2. 수집기가 `GET exclusions`로 개인 제외 규칙을 읽고, 등록된 소스 어댑터가 열린 공고를 공통 형태로 모은다.
 3. 스크립트가 종료 여부, 마감일, 고용 형태, 역할, URL 중복과 개인 제외 규칙을 검사한다.
-4. client가 후보풀과 소스 진단을 멱등 키와 함께 Backend에 보낸다. Backend는 공고 버전과 수집 실행, 회사 tier 평가 실행을 한 트랜잭션으로 저장하고 평가할 회사 큐를 반환한다.
+4. client가 후보풀과 소스 진단을 멱등 키와 함께 Backend에 보낸다. Backend는 `position-preferences` 문서의 version 에서 기준 버전을 계산하고, 공고 버전과 수집 실행, 회사 tier 평가 실행을 한 트랜잭션으로 저장한 뒤 평가할 회사 큐를 반환한다.
 5. 근거 수집기가 큐에 든 회사만 대상으로 OpenDART와 기술 블로그 RSS와 GitHub organization과 Blind를 조회한다. 유효기간이 남은 근거는 다시 모으지 않는다.
 6. client가 모은 근거를 `PUT company-tier-runs/:companyTierRunId/evidence`로 저장한다. 응답은 회사별 저장 건수다. 그 회사의 유효한 근거는 `GET companies/:companyKey/evidence`로 따로 읽는다.
 7. 모델이 그 근거만 읽고 축 셋을 각각 판정한다. 근거가 없는 축은 `unknown`으로 두고 `recommendedTier`도 내지 않는다.
 8. client가 결과와 평가하지 못한 회사를 실행 ID와 함께 보낸다. 큐가 비어 있으면 회사 tier 실행은 만들어지는 즉시 완료다.
 9. client가 공고 분석 실행 생성을 요청하면 Backend가 회사마다 `manual`, `model`, `default` 순서로 tier를 해결하고, `fresh` 분석을 재사용한 뒤 회사 우선 슬롯과 오래 기다린 공고 보장 슬롯으로 제한된 분석 큐를 반환한다.
+   기준 버전은 문서에서 다시 계산하지 않고 같은 수집의 회사 tier 실행 값을 이어 쓴다.
 10. 모델은 분석 큐에 든 공고만 읽고 그 회사의 저장된 근거와 실행 디렉터리의 `candidate-context.json` 을 함께 본다.
 11. client가 분석 결과와 분석하지 못한 공고를 실행 ID와 함께 보낸다. Backend는 아직 끝나지 않은 항목 전체와 대조하고 한 트랜잭션으로 반영한다.
 12. 실패한 공고가 남으면 실행은 `partial`로 남고 client는 남은 항목만 다시 보낸다.
@@ -306,8 +310,8 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    A[cron 또는 사용자 실행] --> P{정책 기준 버전이 position-preferences 문서 version 과 같은가}
-    P -- 아니요 또는 문서 없음 --> P2[수집하지 않고 종료 코드 1]
+    A[cron 또는 사용자 실행] --> P{position-preferences 와 application-state 문서가 있는가}
+    P -- 아니요 --> P2[수집하지 않고 종료 코드 1]
     P -- 예 --> B[개인 제외 규칙 조회]
     B --> C[열린 공고 수집]
     C --> D{사용 가능한 후보가 있는가}
@@ -604,9 +608,11 @@ API 후보 `Candidate` 는 후보풀의 `ReadingCandidate` 로 변환한다.
 원티드, LinkedIn, GitHub 프로필을 이력서 원고 기준으로 갱신한다.
 
 1. 공통 CLI로 작업본을 준비한다. `library/`와 `applications/`를 읽기 때문이다.
+   홈서버에 닿지 못하면 사용자에게 알리고 로컬 원고로 진행할지 묻는다.
 2. 대상별 원고를 `library/profiles/`에서 읽는다.
    원고가 없으면 가장 최근 지원의 이력서 초안을 출발점으로 삼아 공개 범위를 조정한 새 원고를 만든다.
 3. 사용자가 한 곳만 말해도 세 곳을 모두 읽고 원본과 어긋난 지점을 표로 보고한다.
+   달이 바뀌었으면 원티드의 진행 중 프로젝트 종료월과 GitHub 의 지난달 사용량도 대상이다.
 4. 공개 범위를 사용자에게 확인받는다. 사내 운영 수치, 사내 조직명과 도구 이름,
    진행 중인 프로젝트의 종료월 표기가 여기 해당한다.
 5. 원고에 없던 문장을 새로 썼으면 `resume-preparer`의 판정 모델로 근거를 확인한다.
@@ -618,11 +624,65 @@ API 후보 `Candidate` 는 후보풀의 `ReadingCandidate` 로 변환한다.
 
 갈라지는 곳이다.
 
-- **화면에 값이 보이는 것은 저장의 증거가 아니다.** 원티드는 새로고침 뒤 서버에서 다시 조회하고,
-  LinkedIn은 프로필 화면으로 돌아가 확인하고, GitHub은 이미지 로드 상태를 확인한다.
+- **화면에 값이 보이는 것은 저장의 증거가 아니다.** 원티드는 서버에서 다시 조회하고,
+  LinkedIn은 편집 화면을 다시 열어 값과 문단 수를 읽고, GitHub은 원격 파일과 이미지 로드 상태를 확인한다.
+- 에이전트 사용량은 달이 끝난 직후에 측정해 기록한다. 세션 기록이 지워진 뒤에는 그 달을 다시 셀 수 없다.
 - 세 곳 중 하나라도 실패하면 그것을 먼저 알린다. 나머지가 성공했다고 넘어가지 않는다.
 - 로그인 화면이 나오면 멈추고 사용자에게 알린다. 자격 증명을 대신 입력하지 않는다.
 - 공개 범위 판단은 사용자만 한다. 지원본에 있던 문장이라도 그대로 옮기지 않는다.
 
 대상별 절차와 조작 스크립트는 스킬의
 [`references/`](../.claude/skills/sync-profile/)가 소유한다.
+
+### 프로필 HTTP 계약
+
+`/api/profile/v1` 이다. 인증, 멱등 키와 공통 상태 코드는 「커리어 Backend」 절을 따른다.
+칸의 타입과 제약은 [`data-schema.md`](data-schema.md#프로필-원고-table)가 소유한다.
+
+| 경로 | 요청 | 응답 |
+| --- | --- | --- |
+| `GET documents` | | `{ documents: [{ documentKey, version, updatedAt }] }`. 문서 키 순이고 본문은 담지 않는다 |
+| `GET documents/:documentKey` | | `{ document: { documentKey, body, version, note, updatedAt } }`. 없으면 `404` |
+| `PUT documents/:documentKey` | `{ body, note, expectedVersion }` | `{ document: { documentKey, version, updatedAt } }` |
+| `GET usage-snapshots` | | `{ snapshots: [기록] }`. 달 오름차순 |
+| `PUT usage-snapshots/:month` | `claudeTokens`, `codexTokens`, `unpricedTokens`, `measuredOn`, `source`, 선택 칸 `claudeCostUsd`, `codexCostUsd`, `sessions`, `note`, `replace` | `{ snapshot: 기록, created }` |
+
+기록 하나는 `{ month, claudeTokens, codexTokens, claudeCostUsd, codexCostUsd, sessions, unpricedTokens, measuredOn, source, note, createdAt, updatedAt }` 다.
+비운 칸은 `null` 로 낸다. `measuredOn` 은 `YYYY-MM-DD` 이고 `createdAt` 과 `updatedAt` 은 UTC ISO 문자열이다.
+
+원고 저장은 [「후보자 맥락 문서」](#후보자-맥락-문서)와 같은 규칙이다.
+
+- 본문 전체를 교체한다. 새 문서는 `expectedVersion: 0` 이고, 현재 `version` 과 다르면 `409 VERSION_CONFLICT` 다.
+- 문서 행 갱신과 이력 행 추가가 한 transaction 이다.
+- 응답에 본문과 `note` 를 담지 않는다. 멱등 영수증(`request_receipts`)에 원고 사본이 남지 않게 하기 위해서다.
+- 문서 키는 `wanted`, `linkedin`, `github` 셋이고 그 밖의 키는 `400` 이다.
+- 본문이 비었거나 UTF-8 64 KiB 를 넘으면 `400` 이다.
+
+사용량 기록 저장은 처음 값을 지킨다.
+
+| 상황 | 동작 |
+| --- | --- |
+| 그 달의 기록이 없다 | 만들고 `created: true` 로 돌려준다 |
+| 기록이 있고 `replace` 가 참이 아니다 | 바꾸지 않고 저장돼 있던 기록을 `created: false` 로 돌려준다. `200` 이고 오류가 아니다 |
+| 기록이 있고 `replace` 가 참이다 | 요청 값으로 바꾸고 `created: false` 로 돌려준다. `created_at` 은 그대로 둔다 |
+| `replace` 가 참인데 `note` 가 없다 | `400` |
+| `:month` 가 `YYYY-MM` 형식이 아니다 | `400` |
+| 아직 끝나지 않은 달이나 미래의 달이다 | `400`. 요청을 받은 시각의 `Asia/Seoul` 달보다 앞선 달만 받는다 |
+| 같은 달의 첫 기록을 두 요청이 동시에 보낸다 | 하나만 만들고 `created: true` 다. 늦은 쪽은 먼저 저장된 기록을 `created: false` 로 받는다 |
+
+```mermaid
+flowchart TD
+    A[PUT usage-snapshots/:month] --> B{끝난 달인가}
+    B -->|아니다| C[400]
+    B -->|그렇다| D{그 달의 기록이 있는가}
+    D -->|없다| E[만든다. created true]
+    D -->|있다| F{replace 가 참인가}
+    F -->|아니다| G[바꾸지 않는다. 기존 기록과 created false]
+    F -->|그렇다| H{note 가 있는가}
+    H -->|없다| C
+    H -->|있다| I[요청 값으로 바꾼다. created false]
+```
+
+수집기는 `replace` 를 보내지 않는다. 그래서 같은 달을 뒤늦게 다시 측정해 올려도 처음 값이 남는다.
+`replace` 는 사람이 잘못 들어간 기록을 고칠 때만 `scripts/profile/manage_profile.ts usage put --replace --note` 로 보낸다.
+이유는 [ADR-133](adr/ADR-133-프로필-원고와-에이전트-사용량-기록은-backend의-profile-모듈이-갖는다.md)을 따른다.

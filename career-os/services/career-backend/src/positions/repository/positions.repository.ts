@@ -397,7 +397,7 @@ export class PositionsRepository {
 
   async findPolicy(client: DbClient): Promise<AnalysisPolicy | undefined> {
     const rows = await client.$queryRaw<RawRow[]>`
-      SELECT candidate_context_version, daily_analysis_limit, priority_slots, aging_slots,
+      SELECT daily_analysis_limit, priority_slots, aging_slots,
              stale_after_days, default_company_tier, daily_company_tier_limit,
              company_tier_stale_after_days
       FROM position_analysis_policy WHERE singleton_id = 1
@@ -406,7 +406,6 @@ export class PositionsRepository {
     if (!row) return undefined;
     return {
       schemaVersion: 2,
-      candidateContextVersion: String(row.candidate_context_version),
       dailyAnalysisLimit: number(row.daily_analysis_limit),
       prioritySlots: number(row.priority_slots),
       agingSlots: number(row.aging_slots),
@@ -429,15 +428,14 @@ export class PositionsRepository {
   ): Promise<void> {
     await tx.$executeRaw`
       INSERT INTO position_analysis_policy
-        (singleton_id, candidate_context_version, daily_analysis_limit, priority_slots,
+        (singleton_id, daily_analysis_limit, priority_slots,
          aging_slots, stale_after_days, default_company_tier, daily_company_tier_limit,
          company_tier_stale_after_days, updated_at)
-      VALUES (1, ${policy.candidateContextVersion}, ${policy.dailyAnalysisLimit},
+      VALUES (1, ${policy.dailyAnalysisLimit},
               ${policy.prioritySlots}, ${policy.agingSlots}, ${policy.staleAfterDays},
               ${policy.defaultCompanyTier}, ${policy.dailyCompanyTierLimit},
               ${policy.companyTierStaleAfterDays}, ${at(now)})
       ON DUPLICATE KEY UPDATE
-        candidate_context_version = VALUES(candidate_context_version),
         daily_analysis_limit = VALUES(daily_analysis_limit),
         priority_slots = VALUES(priority_slots), aging_slots = VALUES(aging_slots),
         stale_after_days = VALUES(stale_after_days),
