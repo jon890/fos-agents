@@ -85,7 +85,7 @@ describe("command career workspace transport", () => {
     environment.CAREER_WORKSPACE_COMMAND = fixture.command;
     environment.CAREER_WORKSPACE_ROOT = path.join(fixture.root, "workspace");
     environment.CAREER_WORKSPACE_ENV_FILE = path.join(fixture.root, "missing.env");
-    const proc = Bun.spawn(["bun", path.join(import.meta.dir, "../cli.ts"), "check"], {
+    const proc = Bun.spawn([process.execPath, path.join(import.meta.dir, "../cli.ts"), "check"], {
       env: environment,
       stdout: "pipe",
       stderr: "pipe",

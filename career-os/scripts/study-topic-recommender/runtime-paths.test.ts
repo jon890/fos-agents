@@ -52,7 +52,7 @@ test("CLI 경로 오류는 stack trace와 절대 경로를 출력하지 않는�
     "validate_outputs.ts": "CAREER_OS_ROOT 또는 --run-dir에 시스템 임시 실행 경로를 지정해야 한다.",
   } as const;
   for (const [script, expectedError] of Object.entries(expectedErrors)) {
-    const result = Bun.spawnSync(["bun", resolve(import.meta.dir, script)], { env: environment });
+    const result = Bun.spawnSync([process.execPath, resolve(import.meta.dir, script)], { env: environment });
     const stderr = result.stderr.toString();
 
     expect(result.exitCode).toBe(2);
@@ -65,7 +65,7 @@ test("CLI 경로 오류는 stack trace와 절대 경로를 출력하지 않는�
 test("CLI는 시스템 임시 디렉터리 밖 경로를 오류에 노출하지 않는다", () => {
   const rejectedPath = resolve(import.meta.dir, "..");
   const result = Bun.spawnSync([
-    "bun",
+    process.execPath,
     resolve(import.meta.dir, "build_morning_reading.ts"),
     "--collect-only",
   ], { env: { ...process.env, CAREER_OS_ROOT: rejectedPath } });
@@ -82,7 +82,7 @@ test("validate_outputs.ts --run-dir는 같은 실행 경로를 읽는다", () =>
   temporaryDirectories.push(directory);
 
   const result = Bun.spawnSync([
-    "bun",
+    process.execPath,
     resolve(import.meta.dir, "validate_outputs.ts"),
     "--run-dir",
     directory,

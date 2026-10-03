@@ -895,7 +895,7 @@ describe("career workspace cli", () => {
       CAREER_WORKSPACE_SSH_ARGS: "-i /private/key/path",
       CAREER_WORKSPACE_REMOTE_COMMAND: "career-storage",
     };
-    const help = Bun.spawn(["bun", cliPath, "help"], {
+    const help = Bun.spawn([process.execPath, cliPath, "help"], {
       cwd: path.resolve(import.meta.dir, "../../../.."),
       env: secretEnv,
       stdout: "pipe",
@@ -911,7 +911,7 @@ describe("career workspace cli", () => {
     expect(helpOutput).not.toContain("/private/key/path");
     expect(helpOutput).not.toContain("file-body-secret");
 
-    const error = Bun.spawn(["bun", cliPath, "unknown"], {
+    const error = Bun.spawn([process.execPath, cliPath, "unknown"], {
       cwd: path.resolve(import.meta.dir, "../../../.."),
       env: secretEnv,
       stdout: "pipe",
@@ -938,7 +938,7 @@ describe("career workspace cli", () => {
       CAREER_WORKSPACE_ROOT: fixture.workspaceRoot,
       CAREER_WORKSPACE_COMMAND: commandPath,
     };
-    const ok = Bun.spawn(["bun", cliPath, "check"], {
+    const ok = Bun.spawn([process.execPath, cliPath, "check"], {
       cwd: path.resolve(import.meta.dir, "../../../.."),
       env: commonEnv,
       stdout: "pipe",
@@ -953,7 +953,7 @@ describe("career workspace cli", () => {
     expect(JSON.parse(okStdout)).toMatchObject({ action: "check", ok: true });
     expect(okStderr).toBe("");
 
-    const fail = Bun.spawn(["bun", cliPath, "prepare"], {
+    const fail = Bun.spawn([process.execPath, cliPath, "prepare"], {
       cwd: path.resolve(import.meta.dir, "../../../.."),
       env: commonEnv,
       stdout: "pipe",

@@ -278,7 +278,7 @@ describe("study-library recommendations CLI", () => {
     });
     writeReportArtifacts({ report: emptyReport(), outputDir: root });
     // 경로를 이 파일 기준으로 푼다. 저장소 루트에서만 맞는 상대 경로였다.
-    const validation = spawnSync("bun", [
+    const validation = spawnSync(process.execPath, [
       resolve(import.meta.dir, "../validate_outputs.ts"),
       "--run-dir",
       root,
