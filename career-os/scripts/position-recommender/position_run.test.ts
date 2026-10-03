@@ -273,7 +273,7 @@ test("collect는 후보자 맥락 확인이 실패하면 이유를 알리고 수
   const exitCode = await runPositionCommand(["collect", "--run", directory], {
     operations: operations({
       async prepareCandidateContext() {
-        throw new Error("기준 버전 position-preferences:v3 과 position-preferences:v4 가 다르다.");
+        throw new Error("후보자 맥락 문서가 없다: position-preferences");
       },
       async collect() {
         collected = true;
@@ -285,7 +285,7 @@ test("collect는 후보자 맥락 확인이 실패하면 이유를 알리고 수
 
   expect(exitCode).toBe(1);
   expect(collected).toBe(false);
-  expect(lines.join("\n")).toContain("position-preferences:v3 과 position-preferences:v4");
+  expect(lines.join("\n")).toContain("후보자 맥락 문서가 없다: position-preferences");
   expect(existsSync(runDirectoryPaths(directory).analysisUpdates)).toBe(false);
 });
 

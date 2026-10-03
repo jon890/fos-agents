@@ -58,7 +58,7 @@ bun career-os/scripts/position-recommender/position_run.ts finalize --run <RUN_D
 CLI가 결과 파일의 최상위 칸과 빈 `results`, `failures` 배열을 먼저 만든다.
 모델은 `results`와 `failures`에만 쓰며, 큐의 각 항목을 둘 중 하나에 한 번씩 넣는다.
 반영 결과가 `partial`이면 stdout에 나온 남은 항목만 다시 판단해 같은 명령을 실행한다.
-`collect`가 분석 정책의 기준 버전이 다르다며 멈추면 `career-os/scripts/candidate-context/manage_candidate_context.ts sync-position-policy`를 안내하고, 실행한 뒤 `collect`를 다시 실행한다.
+`collect`가 후보자 맥락 문서가 없다며 멈추면 출력이 알려 주는 `manage_candidate_context.ts put` 명령으로 문서를 만들도록 안내하고, 저장된 뒤 `collect`를 다시 실행한다.
 
 회사 판정 큐가 있으면 `<RUN_DIR>/company-evidence.json`에 저장된 근거만 읽고 판정한다.
 큐의 회사마다 `<RUN_DIR>/company-tier-updates.json`에 결과를 한 건씩 쓴다.
