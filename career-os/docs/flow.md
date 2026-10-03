@@ -629,3 +629,56 @@ API 후보 `Candidate` 는 후보풀의 `ReadingCandidate` 로 변환한다.
 
 대상별 절차와 조작 스크립트는 스킬의
 [`references/`](../.claude/skills/sync-profile/)가 소유한다.
+
+### 프로필 HTTP 계약
+
+`/api/profile/v1` 이다. 인증, 멱등 키와 공통 상태 코드는 「커리어 Backend」 절을 따른다.
+칸의 타입과 제약은 [`data-schema.md`](data-schema.md#프로필-원고-table)가 소유한다.
+
+| 경로 | 요청 | 응답 |
+| --- | --- | --- |
+| `GET documents` | | `{ documents: [{ documentKey, version, updatedAt }] }`. 문서 키 순이고 본문은 담지 않는다 |
+| `GET documents/:documentKey` | | `{ document: { documentKey, body, version, note, updatedAt } }`. 없으면 `404` |
+| `PUT documents/:documentKey` | `{ body, note, expectedVersion }` | `{ document: { documentKey, version, updatedAt } }` |
+| `GET usage-snapshots` | | `{ snapshots: [기록] }`. 달 오름차순 |
+| `PUT usage-snapshots/:month` | `claudeTokens`, `codexTokens`, `unpricedTokens`, `measuredOn`, `source`, 선택 칸 `claudeCostUsd`, `codexCostUsd`, `sessions`, `note`, `replace` | `{ snapshot: 기록, created }` |
+
+기록 하나는 `{ month, claudeTokens, codexTokens, claudeCostUsd, codexCostUsd, sessions, unpricedTokens, measuredOn, source, note, createdAt, updatedAt }` 다.
+비운 칸은 `null` 로 낸다. `measuredOn` 은 `YYYY-MM-DD` 이고 `createdAt` 과 `updatedAt` 은 UTC ISO 문자열이다.
+
+원고 저장은 [「후보자 맥락 문서」](#후보자-맥락-문서)와 같은 규칙이다.
+
+- 본문 전체를 교체한다. 새 문서는 `expectedVersion: 0` 이고, 현재 `version` 과 다르면 `409 VERSION_CONFLICT` 다.
+- 문서 행 갱신과 이력 행 추가가 한 transaction 이다.
+- 응답에 본문과 `note` 를 담지 않는다. 멱등 영수증(`request_receipts`)에 원고 사본이 남지 않게 하기 위해서다.
+- 문서 키는 `wanted`, `linkedin`, `github` 셋이고 그 밖의 키는 `400` 이다.
+- 본문이 비었거나 UTF-8 64 KiB 를 넘으면 `400` 이다.
+
+사용량 기록 저장은 처음 값을 지킨다.
+
+| 상황 | 동작 |
+| --- | --- |
+| 그 달의 기록이 없다 | 만들고 `created: true` 로 돌려준다 |
+| 기록이 있고 `replace` 가 참이 아니다 | 바꾸지 않고 저장돼 있던 기록을 `created: false` 로 돌려준다. `200` 이고 오류가 아니다 |
+| 기록이 있고 `replace` 가 참이다 | 요청 값으로 바꾸고 `created: false` 로 돌려준다. `created_at` 은 그대로 둔다 |
+| `replace` 가 참인데 `note` 가 없다 | `400` |
+| `:month` 가 `YYYY-MM` 형식이 아니다 | `400` |
+| 아직 끝나지 않은 달이나 미래의 달이다 | `400`. 요청을 받은 시각의 `Asia/Seoul` 달보다 앞선 달만 받는다 |
+| 같은 달의 첫 기록을 두 요청이 동시에 보낸다 | 하나만 만들고 `created: true` 다. 늦은 쪽은 먼저 저장된 기록을 `created: false` 로 받는다 |
+
+```mermaid
+flowchart TD
+    A[PUT usage-snapshots/:month] --> B{끝난 달인가}
+    B -->|아니다| C[400]
+    B -->|그렇다| D{그 달의 기록이 있는가}
+    D -->|없다| E[만든다. created true]
+    D -->|있다| F{replace 가 참인가}
+    F -->|아니다| G[바꾸지 않는다. 기존 기록과 created false]
+    F -->|그렇다| H{note 가 있는가}
+    H -->|없다| C
+    H -->|있다| I[요청 값으로 바꾼다. created false]
+```
+
+수집기는 `replace` 를 보내지 않는다. 그래서 같은 달을 뒤늦게 다시 측정해 올려도 처음 값이 남는다.
+`replace` 는 사람이 잘못 들어간 기록을 고칠 때만 `scripts/profile/manage_profile.ts usage put --replace --note` 로 보낸다.
+이유는 [ADR-133](adr/ADR-133-프로필-원고와-에이전트-사용량-기록은-backend의-profile-모듈이-갖는다.md)을 따른다.

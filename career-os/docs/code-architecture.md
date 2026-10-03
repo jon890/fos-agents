@@ -168,6 +168,7 @@ MySQL container가 자체 서명 인증서를 사용하므로 서버 인증서�
 공부 소스, 수집 자료, 후보, 추천과 제외 판정은 `/api/study/v1` 에서 읽고 쓴다.
 면접 연습의 주제별 복습 상태, 연습 기록과 개인 질문은 `/api/interview/v1` 에서 읽고 쓴다.
 스킬이 판단에 쓰는 개인 맥락 문서는 `/api/candidate-context/v1` 에서 읽고 쓴다.
+프로필 원고와 월별 에이전트 사용량 기록은 `/api/profile/v1` 에서 읽고 쓴다.
 
 
 | 경로                                                     | 책임                                                    |
@@ -181,6 +182,7 @@ MySQL container가 자체 서명 인증서를 사용하므로 서버 인증서�
 | `services/career-backend/src/study/`               | 공부 소스, 수집 자료, cursor, 후보와 추천 판정                         |
 | `services/career-backend/src/interview/`           | 주제별 복습 상태, 연습 기록, 개인 질문과 복습일 규칙                        |
 | `services/career-backend/src/candidate-context/`   | 후보자 맥락 문서와 그 이력. 다른 module 에 문서 조회를 내보낸다               |
+| `services/career-backend/src/profile/`             | 프로필 원고와 그 이력, 월별 에이전트 사용량 기록과 처음 값을 지키는 규칙        |
 | `services/career-backend/src/health/`              | 생존 확인과 준비 확인                                          |
 | `services/career-backend/src/prisma/`              | `PrismaClient` 수명과 연결 설정                              |
 | `services/career-backend/src/contracts/`           | `scripts/`가 소유한 공고 후보 계약의 사본                          |
@@ -616,4 +618,24 @@ client 가 읽는 환경값은 포지션 추천과 같다. 같은 Backend 이고
 | `library/profiles/github-agent-usage-snapshots.md` | 달이 끝난 직후 측정한 월별 사용량 기록 |
 | `library/profiles/github-agent-usage.svg` | `agent_usage_chart.py` 가 측정 기록으로 그린 이미지 |
 
+ADR-133 에 따라 원고와 사용량 기록의 원본은 커리어 Backend 로 옮긴다.
+Backend 의 저장소와 아래 「프로필 저장 CLI」 는 있고, 스킬은 아직 `library/profiles/` 를 읽는다.
+
 브라우저 조작은 공용 `browser-driver`를 쓰고 이 스킬이 드라이버를 따로 만들지 않는다.
+
+### 프로필 저장 CLI
+
+`scripts/profile/` 는 커리어 Backend 의 프로필 원고와 에이전트 사용량 기록을 읽고 쓰는 client 와 CLI 다.
+스킬 번들이 아니라 `scripts/` 에 두는 이유는 `sync-profile` 스킬 말고도 사용량 수집기와 fos-assistant 커넥터가 같은 계약을 쓰기 때문이다.
+결정과 근거는 [ADR-133](adr/ADR-133-프로필-원고와-에이전트-사용량-기록은-backend의-profile-모듈이-갖는다.md)에 있다.
+
+| 경로 | 책임 |
+| --- | --- |
+| `scripts/profile/contracts.ts` | 문서 키 셋, 사용량 기록과 요청, 응답의 zod 계약 |
+| `scripts/profile/client.ts` | `/api/profile/v1` client. 연결값과 HTTP 는 `scripts/lib/career-backend-config.ts` 와 `scripts/lib/career-backend-http.ts` 를 쓴다 |
+| `scripts/profile/manage_profile.ts` | `documents list`, `documents get`, `documents put`, `usage list`, `usage put` 과 `help`. `help` 만 연결값 없이 실행한다 |
+
+`documents get --out` 은 원고를 쓸 경로가 git 저장소 안이면 거절한다. 판정은 `scripts/candidate-context/repository-guard.ts` 를 함께 쓴다.
+`documents put` 은 `--file` 로 받은 Markdown 파일을 본문으로 보내고 `--note` 와 `--expected-version` 을 요구한다.
+원고는 시스템 임시 디렉터리에서 편집하고 저장한 뒤 지운다.
+`usage put` 은 측정값을 옵션으로 받는다. `--replace` 는 `--note` 와 함께 줄 때만 받는다.
