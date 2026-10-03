@@ -301,15 +301,15 @@ export class PositionsService {
     return this.repository.transaction(async (tx) => {
       const policy = await this.requirePolicy(tx);
       await this.repository.lockCollectionRun(collectionRunId, collectedAt, tx);
-      const contextVersion = await this.requireContextVersion(tx);
-
       const existingRun = await this.repository.findCompanyTierRunByCollectionRun(
         collectionRunId,
         tx,
       );
       if (existingRun) {
-        return this.preparationResponse(tx, contextVersion, existingRun, now);
+        // 재전송은 문서를 다시 읽지 않고 처음 저장할 때 tier 실행에 적은 기준 버전으로 응답한다.
+        return this.preparationResponse(tx, existingRun.candidateContextVersion, existingRun, now);
       }
+      const contextVersion = await this.requireContextVersion(tx);
 
       const upserted = await this.storeCandidates(request, tx);
       await this.repository.upsertDiagnostics(collectionRunId, request.pool.sourceDiagnostics, tx);

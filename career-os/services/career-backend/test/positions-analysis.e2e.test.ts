@@ -882,6 +882,34 @@ describe("기준 버전은 position-preferences 문서에서 계산한다", () =
     ]);
   });
 
+  it("수집 뒤 문서가 바뀌거나 없어져도 같은 수집의 재전송은 첫 응답과 같다", async () => {
+    await configure();
+    const body = pool("collection-1", postings, "2026-09-17T00:00:00.000Z");
+    const first = await send("POST", "/api/positions/v1/collection-runs", {
+      idempotencyKey: "collect:collection-1",
+      body,
+    });
+
+    await harness.putPositionPreferences("바뀐 예시 선호 문장");
+    const afterPut = await send("POST", "/api/positions/v1/collection-runs", {
+      idempotencyKey: "collect:collection-1:again",
+      body,
+    });
+    await deleteContextDocuments();
+    const afterDelete = await send("POST", "/api/positions/v1/collection-runs", {
+      idempotencyKey: "collect:collection-1:third",
+      body,
+    });
+
+    // 응답을 만든 시각만 다르다.
+    const withoutTime = (json: unknown) =>
+      JSON.parse(JSON.stringify(json, (key, value) => (key === "generatedAt" ? undefined : value)));
+    expect(afterPut.status, "문서 저장 뒤 재전송 status").toBe(first.status);
+    expect(withoutTime(afterPut.json), "문서 저장 뒤 재전송 응답").toEqual(withoutTime(first.json));
+    expect(afterDelete.status, "문서 삭제 뒤 재전송 status").toBe(first.status);
+    expect(withoutTime(afterDelete.json), "문서 삭제 뒤 재전송 응답").toEqual(withoutTime(first.json));
+  });
+
   it("수집 뒤 문서가 없어져도 분석 실행은 tier 실행의 기준 버전으로 만든다", async () => {
     await configure();
     const queue = await collect("collection-1", postings);
