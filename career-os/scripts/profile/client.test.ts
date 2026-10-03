@@ -90,6 +90,18 @@ describe("ProfileClient 사용량", () => {
     expect(keyOf(calls[2].init)).not.toBe(keyOf(calls[0].init));
   });
 
+  test("replace 요청은 같은 값이어도 실행마다 다른 Idempotency-Key 를 쓴다", async () => {
+    const calls: RequestInit[] = [];
+    const c = client(async (_url, init) => { calls.push(init); return jsonResponse({ snapshot, created: false }); });
+    const replacePayload = { ...usagePayload, replace: true, note: "재측정" };
+
+    await c.putUsageSnapshot("2026-09", replacePayload);
+    await c.putUsageSnapshot("2026-09", replacePayload);
+
+    expect(keyOf(calls[0])).toStartWith("profile-usage:");
+    expect(keyOf(calls[1])).not.toBe(keyOf(calls[0]));
+  });
+
   test("created: false 응답도 예외 없이 그대로 돌려준다", async () => {
     const stored = { ...snapshot, claudeTokens: 999 };
     const result = await client(async () => jsonResponse({ snapshot: stored, created: false })).putUsageSnapshot("2026-09", usagePayload);

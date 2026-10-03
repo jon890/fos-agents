@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { z } from "zod";
 import { hashKey } from "../candidate-context/client.ts";
 import { resolveCareerBackendConnection } from "../lib/career-backend-config.ts";
@@ -118,7 +119,8 @@ export class ProfileClient {
       `/usage-snapshots/${parsedMonth}`,
       usageSnapshotPutResponseSchema,
       body,
-      hashKey("profile-usage", { month: parsedMonth, payload: body }),
+      // 교체는 실행마다 새 키를 쓴다. 영수증이 만료되지 않아, 같은 값의 교체를 나중에 다시 실행하면 옛 응답만 돌아온다.
+      hashKey("profile-usage", { month: parsedMonth, payload: body, run: body.replace === true ? randomUUID() : undefined }),
     );
   }
 }

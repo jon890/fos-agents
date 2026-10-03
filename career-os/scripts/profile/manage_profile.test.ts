@@ -248,6 +248,8 @@ describe("manage_profile 사용량", () => {
     await expect(manageProfile(replace("--claude-tokens", "0x10"))).rejects.toThrow("--claude-tokens");
     await expect(manageProfile(replace("--codex-tokens", "1e3"))).rejects.toThrow("--codex-tokens");
     await expect(manageProfile([...usageArgs, "--sessions", " 7"])).rejects.toThrow("--sessions");
+    await expect(manageProfile([...usageArgs, "--claude-cost-usd", "0x10"])).rejects.toThrow("--claude-cost-usd");
+    await expect(manageProfile([...usageArgs, "--codex-cost-usd", "1e1"])).rejects.toThrow("--codex-cost-usd");
     expect(urls).toHaveLength(0);
   });
 

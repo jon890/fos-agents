@@ -32,7 +32,7 @@ function integerOption(name: string, found: string): number {
 
 function numberOption(name: string, found: string): number {
   const parsed = Number(found);
-  if (found.trim() === "" || !Number.isFinite(parsed)) throw new Error(`--${name} 은 숫자여야 한다.`);
+  if (!/^\d+(\.\d+)?$/.test(found) || !Number.isFinite(parsed)) throw new Error(`--${name} 은 10진 숫자여야 한다.`);
   return parsed;
 }
 
