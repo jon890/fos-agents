@@ -312,6 +312,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await harness.clearAll();
+  await harness.ensurePositionPreferences();
 });
 
 describe("공고 분석 실행 생성", () => {
@@ -745,5 +746,129 @@ describe("정책이 없어도 되는 경로", () => {
     );
     expect(reply.status, "정책 없는 상태의 실패 반영 status").toBe(200);
     expect(reply.json).toMatchObject({ status: "partial", failedCount: 2, applied: true });
+  });
+});
+
+describe("기준 버전은 position-preferences 문서에서 계산한다", () => {
+  const postings: Posting[] = [
+    { company: "회사 1", key: "p-1" },
+    { company: "회사 2", key: "p-2" },
+  ];
+
+  async function contextVersions(table: string): Promise<string[]> {
+    const rows = await harness.prisma.$queryRawUnsafe<{ candidate_context_version: string }[]>(
+      `SELECT candidate_context_version FROM ${table} ORDER BY collection_run_id`,
+    );
+    return rows.map((row) => row.candidate_context_version);
+  }
+
+  async function rowCount(table: string): Promise<number> {
+    const rows = await harness.prisma.$queryRawUnsafe<{ total: bigint }[]>(
+      `SELECT COUNT(*) AS total FROM ${table}`,
+    );
+    return Number(rows[0]!.total);
+  }
+
+  /** 외래 키 때문에 이력 table 을 먼저 지운다. */
+  async function deleteContextDocuments(): Promise<void> {
+    await harness.prisma.$executeRawUnsafe("DELETE FROM candidate_context_document_revisions");
+    await harness.prisma.$executeRawUnsafe("DELETE FROM candidate_context_documents");
+  }
+
+  function errorCode(reply: Reply): string | undefined {
+    return (reply.json as { error?: { code?: string } } | null)?.error?.code;
+  }
+
+  it("수집과 분석 실행이 문서 version 을 기록한다", async () => {
+    await configure({ candidateContextVersion: "ignored-by-backend" });
+    const queue = await collect("collection-1", postings);
+    await assess("collection-1", queue, { "회사 1": 1, "회사 2": 2 });
+    await openQueue("collection-1");
+
+    expect(
+      await contextVersions("company_tier_assessment_runs"),
+      "회사 tier 실행의 기준 버전",
+    ).toEqual(["position-preferences:v1"]);
+    expect(await contextVersions("position_analysis_runs"), "분석 실행의 기준 버전").toEqual([
+      "position-preferences:v1",
+    ]);
+  });
+
+  it("문서를 새로 저장하면 다음 수집부터 새 기준 버전이 쓰인다", async () => {
+    await configure();
+    const queue = await collect("collection-1", postings, "2026-09-17T00:00:00.000Z");
+    await assess("collection-1", queue, { "회사 1": 1, "회사 2": 2 });
+    const analysis = await openQueue("collection-1");
+    const submitted = await submitResults(
+      analysis.analysisRunId,
+      resultsBody(
+        "collection-1",
+        analysis.candidates.map((candidate) => analysisResult(candidate.positionId)),
+      ),
+      "results-collection-1",
+    );
+    expect(submitted.status, "첫 분석 결과 반영 status").toBe(200);
+
+    const version = await harness.putPositionPreferences("바뀐 예시 선호 문장");
+    expect(version, "새로 저장한 문서 version").toBe(2);
+
+    const reply = await send("POST", "/api/positions/v1/collection-runs", {
+      idempotencyKey: "collect:collection-2",
+      body: pool("collection-2", postings, "2026-09-18T00:00:00.000Z"),
+    });
+    expect(reply.status, "둘째 수집 status").toBe(201);
+    const rows = await harness.prisma.$queryRaw<{ candidate_context_version: string }[]>`
+      SELECT candidate_context_version FROM company_tier_assessment_runs
+      WHERE collection_run_id = 'collection-2'
+    `;
+    expect(
+      rows.map((row) => row.candidate_context_version),
+      "둘째 수집의 회사 tier 실행 기준 버전",
+    ).toEqual(["position-preferences:v2"]);
+    const summary = (reply.json as { summary: { reusedCount: number; staleCount: number } })
+      .summary;
+    expect(summary.reusedCount, "옛 기준으로 만든 분석을 재사용한 수").toBe(0);
+    expect(summary.staleCount, "옛 기준이라 다시 분석할 공고 수").toBe(postings.length);
+  });
+
+  it("문서가 없으면 수집을 409 CANDIDATE_CONTEXT_MISSING 으로 거절한다", async () => {
+    await configure();
+    await deleteContextDocuments();
+
+    const reply = await send("POST", "/api/positions/v1/collection-runs", {
+      idempotencyKey: "collect:collection-1",
+      body: pool("collection-1", postings, "2026-09-17T00:00:00.000Z"),
+    });
+
+    expect(reply.status, "문서 없는 수집 status").toBe(409);
+    expect(errorCode(reply), "문서 없는 수집 오류 코드").toBe("CANDIDATE_CONTEXT_MISSING");
+    expect(await rowCount("position_collection_runs"), "남은 수집 실행 행 수").toBe(0);
+  });
+
+  it("정책도 문서도 없으면 POLICY_NOT_CONFIGURED 가 먼저다", async () => {
+    await deleteContextDocuments();
+
+    const reply = await send("POST", "/api/positions/v1/collection-runs", {
+      idempotencyKey: "collect:collection-1",
+      body: pool("collection-1", postings, "2026-09-17T00:00:00.000Z"),
+    });
+
+    expect(reply.status, "정책과 문서 없는 수집 status").toBe(409);
+    expect(errorCode(reply), "정책과 문서 없는 수집 오류 코드").toBe("POLICY_NOT_CONFIGURED");
+  });
+
+  it("문서가 없으면 분석 실행 생성을 409 CANDIDATE_CONTEXT_MISSING 으로 거절한다", async () => {
+    await configure();
+    const queue = await collect("collection-1", postings);
+    await assess("collection-1", queue, { "회사 1": 1, "회사 2": 2 });
+    await deleteContextDocuments();
+
+    const reply = await openAnalysisRun("collection-1");
+
+    expect(reply.status, "문서 없는 분석 실행 생성 status").toBe(409);
+    expect(errorCode(reply), "문서 없는 분석 실행 생성 오류 코드").toBe(
+      "CANDIDATE_CONTEXT_MISSING",
+    );
+    expect(await rowCount("position_analysis_runs"), "남은 분석 실행 행 수").toBe(0);
   });
 });

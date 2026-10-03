@@ -30,6 +30,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await harness.clearAll();
+  await harness.ensurePositionPreferences();
 });
 
 describe("분석 정책과 회사 선호", () => {

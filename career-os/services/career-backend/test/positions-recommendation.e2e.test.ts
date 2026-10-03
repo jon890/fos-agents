@@ -294,6 +294,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await harness.clearAll();
+  await harness.ensurePositionPreferences();
 });
 
 describe("추천 실행 생성", () => {
@@ -577,9 +578,9 @@ describe("만들 때와 다시 읽을 때가 같다", () => {
 
   /**
    * 대기열 집계는 실행 행의 후보 문맥 버전으로 낸다.
-   * 지금 정책의 값을 쓰면 정책을 바꾼 뒤 같은 실행을 조회할 때 집계가 달라진다.
+   * 지금 문서의 version 을 쓰면 문서를 새로 저장한 뒤 같은 실행을 조회할 때 집계가 달라진다.
    */
-  it("정책을 바꾼 뒤에도 같은 분석 실행의 집계가 그대로다", async () => {
+  it("문서를 새로 저장한 뒤에도 같은 분석 실행의 집계가 그대로다", async () => {
     await configure();
     const queue = await collect("collection-1", [
       { company: "회사 1", key: "p-1" },
@@ -598,11 +599,13 @@ describe("만들 때와 다시 읽을 때가 같다", () => {
     const summary = (before.json as AnalysisQueueResponse).summary;
     expect(summary.reusedCount, "분석을 마친 공고 수").toBe(2);
 
-    await configure({ candidateContextVersion: "candidate-context-2026-12" }, "policy-changed");
+    await harness.putPositionPreferences("바뀐 예시 선호 문장");
 
     const after = await send("GET", `/api/positions/v1/runs/${analysis.analysisRunId}`);
     expect(after.status).toBe(200);
-    expect((after.json as AnalysisQueueResponse).summary, "정책을 바꾼 뒤의 집계").toEqual(summary);
+    expect((after.json as AnalysisQueueResponse).summary, "문서를 새로 저장한 뒤의 집계").toEqual(
+      summary,
+    );
   });
 
   /**

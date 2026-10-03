@@ -112,3 +112,26 @@ export function expectedLegacyAssessment(row: Record<string, unknown>): Record<s
   );
   return copy;
 }
+
+/**
+ * 서버가 position-preferences 문서 version 1 에서 계산하는 기준 버전.
+ * 포착 뒤 공고 분석의 기준 버전을 정책 행 대신 이 문서에서 계산하게 됐다(ADR-134).
+ */
+export const legacyContextVersion = "position-preferences:v1";
+
+/** 실행 행에 기준 버전을 기록하는 table. 정책 table 은 받은 값을 그대로 저장하므로 넣지 않는다. */
+const contextVersionTables = new Set([
+  "company_tier_assessment_runs",
+  "company_tier_assessments",
+  "position_analysis_runs",
+  "position_analyses",
+]);
+
+/** 포착값의 `candidate_context_version` 을 문서에서 계산하는 값으로 바꾼 사본을 돌려준다. */
+export function expectedLegacyRow(
+  table: string,
+  row: Record<string, unknown>,
+): Record<string, unknown> {
+  if (!contextVersionTables.has(table) || !("candidate_context_version" in row)) return row;
+  return { ...row, candidate_context_version: legacyContextVersion };
+}

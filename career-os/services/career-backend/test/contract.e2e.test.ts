@@ -112,6 +112,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await harness.clearAll();
+  await harness.ensurePositionPreferences();
 });
 
 describe("대응하는 schema 가 없는 endpoint 셋", () => {

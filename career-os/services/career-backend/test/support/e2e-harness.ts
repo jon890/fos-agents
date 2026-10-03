@@ -12,6 +12,7 @@ import {
   legacyCase,
   legacyComparedColumns,
   expectedLegacyAssessment,
+  expectedLegacyRow,
   materializeLegacyBody,
   type LegacyErrorBody,
   type LegacyGiven,
@@ -130,6 +131,14 @@ export type E2eHarness = {
    * 공부 추천의 기준 버전이 이 문서의 version 에서 나오므로(ADR-131) 추천 검사가 선행 상태로 쓴다.
    */
   putLearningInterests(body: string): Promise<number>;
+  /**
+   * `position-preferences` 문서가 없으면 version 1 로 만든다. HTTP 를 거치지 않아 request_receipts 에 행이 남지 않는다.
+   * 공고 분석의 기준 버전이 이 문서의 version 에서 나오고(ADR-134), 포착 파일의 여러 case 가
+   * request_receipts 의 행 전체를 비교하므로 영수증을 남기지 않는 방법으로 만든다.
+   */
+  ensurePositionPreferences(): Promise<void>;
+  /** `position-preferences` 문서를 현재 version 위에 HTTP 로 저장하고 새 version 을 돌려준다. */
+  putPositionPreferences(body: string): Promise<number>;
   close(): Promise<void>;
 };
 
@@ -164,6 +173,26 @@ export async function startE2eHarness(): Promise<E2eHarness> {
       requestId: response.headers.get("X-Request-Id"),
       json: text.length > 0 ? (JSON.parse(text) as unknown) : null,
     };
+  }
+
+  async function putDocument(documentKey: string, body: string): Promise<number> {
+    const path = `/api/candidate-context/v1/documents/${documentKey}`;
+    const current = await send("GET", path);
+    if (current.status !== 200 && current.status !== 404) {
+      throw new Error(`${documentKey} 문서를 읽지 못했다: ${current.status} ${JSON.stringify(current.json)}`);
+    }
+    const expectedVersion = current.status === 404
+      ? 0
+      : (current.json as { document: { version: number } }).document.version;
+    // 같은 Idempotency-Key 에 다른 본문을 보내면 IDEMPOTENCY_CONFLICT 이므로 호출마다 새 키를 쓴다.
+    const saved = await send("PUT", path, {
+      body: { body, note: "e2e 선행 상태", expectedVersion },
+      idempotencyKey: `e2e-${documentKey}-${crypto.randomUUID()}`,
+    });
+    if (saved.status !== 200) {
+      throw new Error(`${documentKey} 문서를 저장하지 못했다: ${saved.status} ${JSON.stringify(saved.json)}`);
+    }
+    return (saved.json as { document: { version: number } }).document.version;
   }
 
   const harness: E2eHarness = {
@@ -232,10 +261,9 @@ export async function startE2eHarness(): Promise<E2eHarness> {
             ]),
           ),
         );
+        const expected = expectedRows.map((row) => expectedLegacyRow(table, row));
         expect(actual, `${id} 뒤의 ${table} 행`).toEqual(
-          table === "company_tier_assessments"
-            ? expectedRows.map(expectedLegacyAssessment)
-            : expectedRows,
+          table === "company_tier_assessments" ? expected.map(expectedLegacyAssessment) : expected,
         );
       }
     },
@@ -254,23 +282,28 @@ export async function startE2eHarness(): Promise<E2eHarness> {
       );
     },
     async putLearningInterests(body) {
-      const path = "/api/candidate-context/v1/documents/learning-interests";
-      const current = await send("GET", path);
-      if (current.status !== 200 && current.status !== 404) {
-        throw new Error(`learning-interests 문서를 읽지 못했다: ${current.status} ${JSON.stringify(current.json)}`);
-      }
-      const expectedVersion = current.status === 404
-        ? 0
-        : (current.json as { document: { version: number } }).document.version;
-      // 같은 Idempotency-Key 에 다른 본문을 보내면 IDEMPOTENCY_CONFLICT 이므로 호출마다 새 키를 쓴다.
-      const saved = await send("PUT", path, {
-        body: { body, note: "e2e 선행 상태", expectedVersion },
-        idempotencyKey: `e2e-learning-interests-${crypto.randomUUID()}`,
-      });
-      if (saved.status !== 200) {
-        throw new Error(`learning-interests 문서를 저장하지 못했다: ${saved.status} ${JSON.stringify(saved.json)}`);
-      }
-      return (saved.json as { document: { version: number } }).document.version;
+      return putDocument("learning-interests", body);
+    },
+    async ensurePositionPreferences() {
+      const existing = await prisma.$queryRaw<Array<{ document_key: string }>>`
+        SELECT document_key FROM candidate_context_documents WHERE document_key = 'position-preferences'
+      `;
+      if (existing.length > 0) return;
+      const body = "예시 선호 문장";
+      const note = "e2e 선행 상태";
+      await prisma.$transaction([
+        prisma.$executeRaw`
+          INSERT INTO candidate_context_documents (document_key, body, version, note, updated_at)
+          VALUES ('position-preferences', ${body}, 1, ${note}, NOW(3))
+        `,
+        prisma.$executeRaw`
+          INSERT INTO candidate_context_document_revisions (document_key, version, body, note, created_at)
+          VALUES ('position-preferences', 1, ${body}, ${note}, NOW(3))
+        `,
+      ]);
+    },
+    async putPositionPreferences(body) {
+      return putDocument("position-preferences", body);
     },
     async close() {
       await app.close();

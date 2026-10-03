@@ -301,3 +301,17 @@ case 하나는 아래를 담는다.
 
 이 문서가 적은 적용 절차를 지금 다시 돌리려면 그 경로에서 읽어야 한다.
 `capture-legacy.bun.ts` 자체는 전환 전 구현이 없어 더 돌지 않는다.
+
+## 포착 뒤에 달라진 계약
+
+**`cases.json` 은 그대로 두고, 달라진 저장 계약만 비교 시점에 반영한다.**
+
+실행과 분석과 평가의 `candidate_context_version` 은 포착값 `candidate-context-2026-09` 대신 `position-preferences:v1` 과 비교한다.
+대상 table 은 `company_tier_assessment_runs`, `company_tier_assessments`, `position_analysis_runs`, `position_analyses` 다.
+`position_analysis_policy` 는 받은 값을 그대로 저장하므로 포착값과 비교한다.
+
+이유는 ADR-134 다.
+서버가 공고 분석의 기준 버전을 정책 행이 아니라 `position-preferences` 후보자 맥락 문서의 version 에서 계산한다.
+e2e 는 그 문서를 version 1 로 만든 위에서 포착 case 를 재생하므로 기준 버전이 `position-preferences:v1` 이 된다.
+
+값을 바꾸는 코드는 `test/support/legacy-contract.ts` 의 `expectedLegacyRow` 다.
