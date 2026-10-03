@@ -105,7 +105,7 @@ export async function migrateLibraryProfiles(deps: {
 
 `migrateLibraryProfiles` 의 순서다.
 
-1. 원고 파일 셋과 `github-agent-usage-snapshots.md` 를 읽고 표를 파싱한다. `measuredMonths` 에 표에 없는 달이 있으면 던진다. 여기까지 요청을 보내지 않는다
+1. 원고 파일 셋과 `github-agent-usage-snapshots.md` 를 읽고 표를 파싱한다. `measuredMonths` 에 표에 없는 달이 있으면 던진다. `github-agent-usage-snapshots.md` 를 읽지 못하면(`readFile` 이 `null`) 그 경로를 담아 던진다. 여기까지 요청을 보내지 않는다
 2. 원고를 `wanted`, `linkedin`, `github` 순서로 처리한다
 
 | 조건 | 출력 | 요청 |
@@ -183,10 +183,10 @@ bun --env-file=career-os/.env career-os/scripts/profile/migrate_library_profiles
 PATH="$HOME/.bun/bin:$PATH" bun test career-os/scripts/profile career-os/scripts/profile/migrate_library_profiles.test.ts
 PATH="$HOME/.bun/bin:$PATH" bunx tsc --noEmit
 PATH="$HOME/.bun/bin:$PATH" bun career-os/scripts/profile/migrate_library_profiles.ts --help
-! git grep -nE "\breplace\s*:" -- career-os/scripts/profile/migrate_library_profiles.ts
+! grep -nE '(^|[^.[:alnum:]_])replace[[:space:]]*:' career-os/scripts/profile/migrate_library_profiles.ts
 ```
 
-모두 종료 코드 0 이어야 한다. 환경값은 필요 없다. `--help` 는 연결값 없이 돈다. 마지막 grep 은 객체의 `replace:` 칸만 잡는다. 문자열 메서드 `.replace(` 와 주석의 낱말은 걸리지 않는다.
+모두 종료 코드 0 이어야 한다. 환경값은 필요 없다. `--help` 는 연결값 없이 돈다. 마지막 grep 은 객체의 `replace:` 칸만 잡는다. 문자열 메서드 `.replace(` 는 앞에 `.` 이 붙어 걸리지 않는다. 커밋 전에는 새 파일이 추적되지 않아 `git grep` 이 읽지 못하므로 `grep` 으로 파일을 직접 읽는다.
 
 ## 변경 파일
 

@@ -55,7 +55,7 @@ export function renderPlist(template: string, values: { bunPath: string; repoRoo
 export type LaunchdDeps = {
   home: string;                    // 기본값 os.homedir()
   uid: number;                     // 기본값 process.getuid()
-  repoRoot: string;                // 기본값 이 파일에서 세 단계 위
+  repoRoot: string;                // 기본값 resolve(import.meta.dir, "../../..")
   bunPath: string;                 // 기본값 process.execPath
   run: (command: string, args: string[]) => { status: number; stdout: string };
   write: (line: string) => void;
@@ -113,7 +113,7 @@ export function manageLaunchd(args: string[], deps: LaunchdDeps): number;   // �
 PATH="$HOME/.bun/bin:$PATH" bun test career-os/scripts/agent-usage/measure.test.ts career-os/scripts/agent-usage/agent_usage_script.test.ts career-os/scripts/agent-usage/collect_usage.test.ts career-os/scripts/agent-usage/manage_launchd.test.ts
 PATH="$HOME/.bun/bin:$PATH" bunx tsc --noEmit
 PATH="$HOME/.bun/bin:$PATH" bun career-os/scripts/agent-usage/manage_launchd.ts install --dry-run
-! git grep -nE "CAREER_BACKEND|/Users/" -- career-os/scripts/agent-usage/launchd
+! grep -rnE "CAREER_BACKEND|/Users/" career-os/scripts/agent-usage/launchd
 ```
 
 모두 종료 코드 0 이어야 한다. 환경값은 필요 없다. `install --dry-run` 은 `.env` 검사를 건너뛰므로 `career-os/.env` 가 없어도 0 으로 끝나고, 실행 뒤 `~/Library/LaunchAgents/com.fos-agents.career-os.agent-usage.plist` 가 생기지 않아야 한다. `python3` 이 PATH 에 있어야 한다(같은 디렉터리의 Phase 01 테스트가 쓴다).

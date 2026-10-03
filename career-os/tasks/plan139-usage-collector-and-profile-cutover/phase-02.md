@@ -54,7 +54,7 @@ export type UsageSnapshotStore = {
 };
 export type CollectResult = { month: string; code: "CREATED" | "EXISTS" | "NO_SESSIONS" | "UP_TO_DATE" | "FAILED" };
 
-export function endedMonths(now: Date): string[];                    // 내부에서 쓰는 보조 함수여도 된다
+export function endedMonths(now: Date): string[];                    // 테스트가 직접 부르지 않아도 export 한다
 export function targetMonths(recorded: readonly string[], now: Date): string[];
 export async function collectUsage(deps: {
   store: UsageSnapshotStore;
@@ -88,7 +88,7 @@ export async function collectUsage(deps: {
 - `createProfileClient()` 로 client 를 만들어 `createUsageSnapshotStore(client)` 로 `UsageSnapshotStore` 에 잇는다. `listMonths` 는 `listUsageSnapshots()` 의 결과에서 `month` 만 뽑는다. `putMeasured` 는 `data-schema.md` 의 대응 표대로 `payload` 를 만들어 `putUsageSnapshot(measurement.month, payload)` 를 부르고 응답의 `created` 를 돌려준다. `source` 는 `MEASURED` 다. **`replace` 와 `note` 를 넣지 않는다**
 - `collectUsage` 가 던지면 표준 오류에 `formatManageProfileError(error)` 한 줄을 쓰고 종료 코드 1 로 끝낸다. 연결값이 없어 `resolveCareerBackendConnection` 이 던지는 경우도 같다
 - 던지지 않으면 `exitCode` 로 끝낸다
-- 인자는 받지 않는다. `help`, `--help`, `-h` 만 사용법을 내고 연결값 없이 종료 코드 0 으로 끝낸다
+- 인자는 받지 않는다. `help`, `--help`, `-h` 만 사용법을 내고 연결값 없이 종료 코드 0 으로 끝낸다. 그 밖의 인자가 오면 사용법과 함께 「모르는 인자」 를 stderr 에 내고 종료 코드 2 로 끝낸다
 
 ### 2. 이 phase 를 검증하는 테스트
 
@@ -106,7 +106,7 @@ export async function collectUsage(deps: {
 | `["2025-11", "2026-01"]` | `2026-03-15T00:00:00Z` | `["2025-12", "2026-02"]` |
 | `["2026-02"]` | `2026-03-15T00:00:00Z` | `[]`. `2026-01` 은 가장 이른 기록보다 앞이라 대상이 아니다 |
 | `["2026-01"]` | `2026-02-28T16:00:00Z` | `[]`. `Asia/Seoul` 로는 3월 1일이지만 UTC 로 2월이 끝나지 않았다 |
-| `["2026-01"]` | `2026-01-05T00:00:00Z` | `[]`. 연도를 넘는 달 계산에서 음수 달이 나오지 않는다 |
+| `["2025-11"]` | `2026-01-05T00:00:00Z` | `["2025-12"]`. 연도를 넘을 때 가장 최근에 끝난 달이 `2025-12` 다. `2026-00` 같은 달이 나오지 않는다 |
 
 `collectUsage` 를 확인한다.
 
@@ -127,10 +127,10 @@ export async function collectUsage(deps: {
 PATH="$HOME/.bun/bin:$PATH" bun test career-os/scripts/agent-usage/measure.test.ts career-os/scripts/agent-usage/agent_usage_script.test.ts career-os/scripts/agent-usage/collect_usage.test.ts
 PATH="$HOME/.bun/bin:$PATH" bunx tsc --noEmit
 PATH="$HOME/.bun/bin:$PATH" bun career-os/scripts/agent-usage/collect_usage.ts --help
-! git grep -nE "\breplace\s*:" -- career-os/scripts/agent-usage/collect_usage.ts
+! grep -nE '(^|[^.[:alnum:]_])replace[[:space:]]*:' career-os/scripts/agent-usage/collect_usage.ts
 ```
 
-모두 종료 코드 0 이어야 한다. 환경값은 필요 없다. `--help` 는 연결값 없이 돈다. 마지막 grep 은 객체의 `replace:` 칸만 잡는다. 문자열 메서드 `.replace(` 와 주석의 낱말은 걸리지 않는다. `python3` 이 PATH 에 있어야 한다.
+모두 종료 코드 0 이어야 한다. 환경값은 필요 없다. `--help` 는 연결값 없이 돈다. 마지막 grep 은 객체의 `replace:` 칸만 잡는다. 문자열 메서드 `.replace(` 는 앞에 `.` 이 붙어 걸리지 않는다. 커밋 전에는 새 파일이 추적되지 않아 `git grep` 이 읽지 못하므로 `grep` 으로 파일을 직접 읽는다. `python3` 이 PATH 에 있어야 한다.
 
 ## 변경 파일
 
