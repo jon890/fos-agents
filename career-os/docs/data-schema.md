@@ -1322,10 +1322,11 @@ Hermes 에서는 서버 이름 `career` 로 `mcp__career__<도구>` 가 된다.
 - 저장 도구의 `body`, `note`, `expectedVersion` 은 Backend 의 문서 저장 계약과 같다. 본문 전체를 바꾸고 새 문서는 `expectedVersion: 0` 이다
 - 저장 요청의 `Idempotency-Key` 는 노트북의 CLI 가 같은 내용으로 만드는 값과 같다. 같은 저장을 두 길로 보내도 한 번만 반영된다
 - `update_github_profile` 의 `readme` 는 README 전체의 Markdown 이고, `months` 는 차트에 넣을 달(`YYYY-MM`)의 목록이다. 1개에서 6개까지 받고 겹치는 달을 받지 않는다. 차트에는 달 오름차순으로 넣는다
+- 고른 달의 막대가 모두 0 이면 그릴 차트가 없으므로 `update_github_profile` 은 `CAREER_INVALID_INPUT` 으로 거절한다
 - `update_github_profile` 은 숫자를 인자로 받지 않는다. 입력 스키마가 `readme` 와 `months` 밖의 키를 거절한다
 - `total` 은 `97.9B` 같은 글이고 `commitSha` 는 올라간 커밋이다. `changed: false` 이면 저장소가 이미 같은 내용이라 커밋을 만들지 않은 것이고 `commitSha` 는 그때의 branch 끝이다
 - 결과는 MCP 응답의 첫 텍스트 칸에 JSON 으로 싣는다. `check_connection` 은 같은 값을 `structuredContent` 에도 싣는다
-- 오류는 `isError: true` 와 `{ error: { code, message } }` 다. `CAREER_BADGE_MISMATCH` 는 같은 객체에 `expected`(기록의 합계)와 `found`(README 의 값)를, `CAREER_USAGE_MONTH_MISSING` 은 `missing`(없는 달의 목록)을 더한다
+- 오류는 `isError: true` 와 `{ error: { code, message } }` 다. `CAREER_BADGE_MISMATCH` 는 같은 객체에 `expected`(기록의 합계)와 `found`(README 의 값. 배지가 없거나 여럿이면 `null`)를, `CAREER_USAGE_MONTH_MISSING` 은 `missing`(없는 달의 목록)을 더한다
 
 **승인이 필요한 도구의 인자는 fos-assistant 가 UTF-8 16KB 까지만 받는다.**
 키와 따옴표를 포함해 직렬화한 인자 전체의 크기다. 한글은 한 글자가 3바이트라 본문이 5천 자 안팎이면 닿는다.
@@ -1364,12 +1365,12 @@ README 에는 `img.shields.io/badge/Tokens-<값>B-` 모양의 배지 주소가 �
 | `CAREER_UNAVAILABLE` | Backend 의 5xx | `unavailable` |
 | `CAREER_NETWORK` | Backend 연결, redirect, 시간 초과 실패. 저장됐는지 알 수 없으므로 다시 읽어 확인한다 | `unavailable` |
 | `CAREER_INVALID_RESPONSE` | Backend 나 GitHub 의 응답에서 필요한 구조를 읽지 못함 | `unavailable` |
-| `CAREER_INVALID_INPUT` | 도구 입력 검증 실패 | `invalid_input` |
+| `CAREER_INVALID_INPUT` | 도구 입력 검증 실패, 또는 고른 달의 값이 모두 0 | `invalid_input` |
 | `CAREER_USAGE_MONTH_MISSING` | 고른 달 가운데 사용량 기록이 없는 달이 있음 | `invalid_input` |
 | `CAREER_BADGE_MISMATCH` | README 의 Tokens 배지가 없거나 여럿이거나 값이 기록의 합계와 다름 | `invalid_input` |
 | `CAREER_GITHUB_NOT_CONFIGURED` | GitHub token 을 넣지 않음 | `credential_rejected` |
 | `CAREER_GITHUB_UNAUTHORIZED` | GitHub 가 401 로 답함 | `credential_rejected` |
-| `CAREER_GITHUB_FORBIDDEN` | GitHub 가 403 이나 404 로 답함. token 에 그 저장소의 권한이 없거나 저장소 이름이 틀리다 | `forbidden` |
+| `CAREER_GITHUB_FORBIDDEN` | GitHub 가 401, 409, 422, 429 를 뺀 4xx 로 답함. 주로 403 과 404 이며 token 에 그 저장소의 권한이 없거나 저장소 이름이 틀리다 | `forbidden` |
 | `CAREER_GITHUB_CONFLICT` | branch 를 옮기는 마지막 요청에서만 GitHub 가 409 나 422 로 답함. 그 사이 다른 커밋이 올라왔다 | `unavailable` |
 | `CAREER_GITHUB_UNAVAILABLE` | GitHub 의 5xx 와 429, branch 를 옮기기 전 단계의 409 와 422, 연결과 시간 초과 실패 | `unavailable` |
 | `CAREER_UNKNOWN_TOOL`, `CAREER_INTERNAL` | 지원하지 않는 도구 또는 내부 처리 실패 | |

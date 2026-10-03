@@ -1,4 +1,6 @@
 import { expect, test } from "bun:test";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -18,16 +20,25 @@ test("schema 2 정책은 실제 MCP 도구를 빠짐없이 선언하고 미선�
   expect(Object.keys(connector.tools).sort()).toEqual(Object.keys(toolDefinitions).sort());
 });
 
-test("확인 도구는 승인 없는 READ 정책이고 서버가 readOnlyHint 로 표시한다", () => {
+test("확인 도구는 승인 없는 READ 정책이고 서버가 readOnlyHint 로 표시한다", async () => {
   expect(connector.tools[connector.verify.tool]).toMatchObject({ risk: "READ", approval: "none" });
-  const registered = (
-    createServer({
-      CAREER_BACKEND_URL: "https://career.example.com/",
-      CAREER_BACKEND_TOKEN: "x".repeat(40),
-      CAREER_GITHUB_PROFILE_REPO: "example-user/example-user",
-    }) as any
-  )._registeredTools as Record<string, { annotations?: { readOnlyHint?: boolean } }>;
-  expect(registered[connector.verify.tool]?.annotations?.readOnlyHint).toBe(true);
+  const server = createServer({
+    CAREER_BACKEND_URL: "https://career.example.com/",
+    CAREER_BACKEND_TOKEN: "x".repeat(40),
+    CAREER_GITHUB_PROFILE_REPO: "example-user/example-user",
+  });
+  const client = new Client({ name: "connector-config-test", version: "1.0.0" });
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  try {
+    await server.connect(serverTransport);
+    await client.connect(clientTransport);
+    const { tools } = await client.listTools();
+    const verifyTool = tools.find((tool) => tool.name === connector.verify.tool);
+    expect(verifyTool?.annotations?.readOnlyHint).toBe(true);
+  } finally {
+    await client.close();
+    await server.close();
+  }
 });
 
 test("조회 도구는 READ 와 none, 저장과 갱신 도구는 WRITE 와 required 다", () => {
