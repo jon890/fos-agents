@@ -11,15 +11,15 @@ const execFileAsync = promisify(execFile);
 /**
  * 적용한 migration 전부가 만드는 `CHECK` 제약 수.
  *
- * 기존 21개에 study schema의 6개, interview schema의 1개, 후보자 맥락 문서의 2개를 더한 수다.
+ * 기존 21개에 study schema의 6개, interview schema의 1개, 후보자 맥락 문서의 2개, 프로필 원고의 2개를 더한 수다.
  */
-const EXPECTED_CHECK_CONSTRAINT_COUNT = 30;
+const EXPECTED_CHECK_CONSTRAINT_COUNT = 32;
 /**
- * 기존 20개에 study table 열 개, interview table 세 개, 후보자 맥락 table 두 개를 더한 수다.
+ * 기존 20개에 study table 열 개, interview table 세 개, 후보자 맥락 table 두 개, 프로필 원고 table 두 개를 더한 수다.
  *
  * `schema_migrations` 가 그 안에 있다.
  */
-const EXPECTED_MODEL_COUNT = 35;
+const EXPECTED_MODEL_COUNT = 37;
 /** 초기 migration 을 빈 database 에 적용해 보는 임시 database. 테스트가 만들고 지운다. */
 const SCRATCH_DATABASE = "fos_career_baseline_check";
 
@@ -102,7 +102,7 @@ describe("초기 migration 기준점", () => {
     }
   });
 
-  it("빈 database 에 적용하면 전체 migration의 CHECK 제약이 30개 생긴다", async () => {
+  it("빈 database 에 적용하면 전체 migration의 CHECK 제약이 32개 생긴다", async () => {
     const adminUrl = requireTestDatabaseUrl();
     await dropScratchDatabase(adminUrl);
     await runSql(adminUrl, [
@@ -139,7 +139,7 @@ describe("초기 migration 기준점", () => {
     expect(stdout).not.toMatch(/CREATE TABLE|ALTER TABLE|DROP TABLE/);
   });
 
-  it("schema.prisma 에 model 이 35개 있다", () => {
+  it("schema.prisma 에 model 이 37개 있다", () => {
     const schema = readFileSync(schemaPath, "utf8");
     const models = schema.split("\n").filter((line) => line.startsWith("model "));
     expect(models).toHaveLength(EXPECTED_MODEL_COUNT);

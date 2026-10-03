@@ -10,10 +10,11 @@ import { HealthModule } from "./health/health.module.js";
 import { InterviewModule } from "./interview/interview.module.js";
 import { PositionsModule } from "./positions/positions.module.js";
 import { PrismaModule } from "./prisma/prisma.module.js";
+import { ProfileModule } from "./profile/profile.module.js";
 import { StudyModule } from "./study/study.module.js";
 
 @Module({
-  imports: [ConfigModule, PrismaModule, HealthModule, PositionsModule, StudyModule, InterviewModule, CandidateContextModule],
+  imports: [ConfigModule, PrismaModule, HealthModule, PositionsModule, StudyModule, InterviewModule, CandidateContextModule, ProfileModule],
   providers: [
     ReceiptRepository,
     { provide: APP_FILTER, useClass: ApiExceptionFilter },
