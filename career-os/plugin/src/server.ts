@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CareerBackend, CareerError, configuredValue, type FetchLike } from "./backend.ts";
+import { GithubProfileRepo } from "./github.ts";
 import { CareerTools, toolDefinitions } from "./tools.ts";
 
 const profileRepoPattern = /^[A-Za-z0-9-]{1,39}\/[A-Za-z0-9._-]{1,100}$/;
@@ -15,7 +16,9 @@ export function createServer(
   if (!baseUrl || !token || !profileRepo || !profileRepoPattern.test(profileRepo))
     throw new CareerError("CAREER_CONFIG");
   // The GitHub token is optional; GitHub tools answer CAREER_GITHUB_NOT_CONFIGURED without it.
-  const tools = new CareerTools(new CareerBackend({ baseUrl, token }, fetchImpl));
+  const githubToken = configuredValue(env.CAREER_GITHUB_TOKEN);
+  const github = githubToken ? new GithubProfileRepo({ token: githubToken, repo: profileRepo }, fetchImpl) : undefined;
+  const tools = new CareerTools(new CareerBackend({ baseUrl, token }, fetchImpl), github);
   const server = new McpServer({ name: "fos-career", version: "0.1.0" });
   for (const [name, definition] of Object.entries(toolDefinitions)) {
     server.registerTool(
