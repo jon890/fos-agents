@@ -42,7 +42,7 @@ describe("renderChartCommand", () => {
     expect(calls.writes).toEqual([]);
   });
 
-  test.each([["2031-01,2031-02,2031-03,2031-04,2031-05,2031-06,2031-07"], ["2031-13"]])(
+  test.each([["2031-01,2031-02,2031-03,2031-04,2031-05,2031-06,2031-07"], ["2031-13"], ["2031-01,2031-01"]])(
     "--months %s 는 기록을 읽기 전에 UsageError 로 끝낸다",
     async (months) => {
       const { calls, dependencies } = spies();

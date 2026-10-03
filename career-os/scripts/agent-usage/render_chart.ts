@@ -27,6 +27,8 @@ export async function renderChartCommand(
   if (months.length < 1 || months.length > 6 || !months.every((month) => MONTH_PATTERN.test(month))) {
     throw new UsageError("--months 는 YYYY-MM 을 쉼표로 이은 1개에서 6개여야 한다.");
   }
+  // 커넥터 스키마처럼 겹치는 달을 거절한다. 합치면 고른 달 수와 막대 수가 달라진다.
+  if (new Set(months).size !== months.length) throw new UsageError("--months 에 같은 달이 두 번 있다.");
 
   const records = await (dependencies.listSnapshots ?? listBackendSnapshots)();
   const { bars, totalTenths, missing } = selectUsageBars(records, months);
