@@ -21,13 +21,13 @@ description: 원티드, LinkedIn, GitHub 프로필을 이력서 원고 기준으
 
 | 단계 | 이름 | 통과 조건 | reference |
 | --- | --- | --- | --- |
-| 1 | 작업본 받기 | `skill begin` 응답의 `ok` 가 `true` 다. 아니면 사용자가 로컬 원고로 진행하라고 답했다 | |
+| 1 | 원고 받기 | `documents list` 의 응답을 받았고, 있는 원고마다 `documents get` 으로 받은 본문과 `version` 이 있다 | |
 | 2 | 원본과 대상 확인 | 세 프로필의 현재 값과 원고의 차이가 표로 보고됐다 | 대상별 참조 |
 | 3 | 공개 범위 결정 | 아래 표의 항목마다 사용자의 답이 있다 | |
 | 4 | 근거 확인 | 새로 쓴 문장마다 확인한 근거가 있다 | `resume-preparer` 의 판정 모델 |
 | 5 | 반영 | 넣은 항목마다 넣은 직후의 되읽기 결과가 있다 | 대상별 참조 |
 | 6 | 저장 검증 | 대상마다 아래 표의 방법으로 다시 읽은 값이 원고와 같다 | 대상별 참조 |
-| 7 | 원고 갱신과 발행 | `library/profiles/` 의 원고가 올라간 값과 같고 `skill finish` 응답의 `ok` 가 `true` 다 | |
+| 7 | 원고 저장 | 고친 원고마다 `documents put` 의 응답에 올라간 `version` 이 있다 | |
 
 대상별 참조는 그 대상에 진입할 때 읽는다.
 
@@ -35,34 +35,47 @@ description: 원티드, LinkedIn, GitHub 프로필을 이력서 원고 기준으
 - [`references/linkedin.md`](references/linkedin.md)
 - [`references/github.md`](references/github.md)
 
-## 1. 작업본 받기
+## 1. 원고 받기
 
-`applications/` 나 `library/` 를 읽고 쓰기 전에 작업본을 받아 온다. 저장소 루트에서 실행한다.
+원고는 커리어 Backend 가 갖는다. 저장소 루트에서 실행한다.
 
 ```bash
 export PATH="$HOME/.bun/bin:$PATH"
-bun career-os/scripts/career-workspace/cli.ts skill begin sync-profile --json
+bun --env-file=career-os/.env career-os/scripts/profile/manage_profile.ts documents list
 ```
 
 `bun` 은 `~/.bun/bin` 에 설치돼 있고 셸의 PATH 에 없을 수 있다. 첫 줄이 그것을 맡는다.
+`documents list` 가 있는 원고와 `version` 을 낸다.
+
+원고마다 저장소 밖 임시 경로에 받는다. 개인 내용이 저장소에 남지 않게 하려는 것이다.
+받은 `version` 을 7단계의 `--expected-version` 으로 쓴다.
+
+```bash
+bun --env-file=career-os/.env career-os/scripts/profile/manage_profile.ts documents get --key <wanted|linkedin|github> --out "${TMPDIR:-/tmp}/<key>-profile.md"
+```
+
+**Backend 에 닿지 못하면 멈추고 사용자에게 알린다.** 로컬 파일로 대신하지 않는다.
+파일과 Backend 에 원고가 따로 생기면 한쪽만 고쳐진다.
+
+원고가 없는 대상이 있으면 가장 최근 지원의 `evidence/resume-draft.md` 를 출발점으로 삼는다.
+**이때만** 작업본을 받는다. `applications/` 를 읽기 때문이다.
+
+```bash
+bun career-os/scripts/career-workspace/cli.ts skill begin sync-profile --json
+```
 
 **응답이 `TRANSPORT_UNAVAILABLE` 이면 홈서버에 닿지 못한 것이다.** 우회하지 않는다.
-사용자에게 알리고 로컬 원고로 진행할지 묻는다. 진행하면 두 가지를 보고에 적는다.
+사용자에게 알리고 새 원고를 만들지 못한다고 알린다.
 
-- 로컬 원고를 받은 날짜. `ls -la career-os/library/profiles/` 의 수정 시각이다
-- 이번에 고친 원고가 이 기기에만 남는다는 것
-
-2026-10 실측으로 홈서버 SSH 가 연결을 거부했고 `.env` 가 가리키는 키 파일이 그 기기에 없었다.
-같은 날 `CAREER_BACKEND_URL` 도 비어 있어 `career-status` 를 읽지 못했다.
+2026-10 실측으로 `CAREER_BACKEND_URL` 이 비어 있어 `career-status` 를 읽지 못했다.
 
 ## 2. 원본과 대상 확인
 
 **갱신할 내용의 출처를 먼저 정한다.**
 
-프로필은 특정 지원 건에 매이지 않으므로 대상별 원고를 `library/profiles/` 에 둔다.
-원티드는 `wanted-profile.md`, GitHub 은 `github-profile.md`, LinkedIn 은 `linkedin-profile.md` 다.
+프로필은 특정 지원 건에 매이지 않으므로 대상별 원고를 쓴다. 원고는 1단계에서 받은 것이다.
 
-원고가 없으면 가장 최근 지원의 `evidence/resume-draft.md` 를 출발점으로 삼고, 공개 범위를 조정해 새 원고를 만든다.
+원고가 없으면 1단계에서 정한 대로 가장 최근 지원의 `evidence/resume-draft.md` 를 출발점으로 삼고, 공개 범위를 조정해 새 원고를 만든다.
 현재 경력과 경험 경계는 `manage_candidate_context.ts get --key career-status` 로 확인한다.
 
 **사용자가 한 곳만 말해도 나머지를 함께 본다.**
@@ -72,7 +85,7 @@ bun career-os/scripts/career-workspace/cli.ts skill begin sync-profile --json
 **달이 바뀌었으면 두 가지가 낡아 있다.**
 
 - 원티드의 진행 중 프로젝트 종료월. 폼이 종료월을 요구해 갱신한 달을 넣어 둔다
-- GitHub 의 에이전트 사용량. 지난달 측정값이 없으면 지금 측정한다. 방법은 [`references/github.md`](references/github.md) 의 「에이전트 사용량」 이 갖는다
+- GitHub 의 에이전트 사용량. 지난달 기록이 없으면 수집기를 한 번 실행한다. 방법은 [`references/github.md`](references/github.md) 의 「에이전트 사용량」 이 갖는다
 
 ## 3. 공개 범위 결정
 
@@ -144,20 +157,27 @@ bun career-os/scripts/career-workspace/cli.ts skill begin sync-profile --json
 
 **한 곳이라도 실패하면 그것을 먼저 알린다.** 나머지가 성공했다고 넘어가지 않는다.
 
-## 7. 원고 갱신과 발행
+## 7. 원고 저장
 
 **반영한 내용을 원고에 다시 적는다.**
 다음에 갱신할 때 무엇이 올라가 있는지 알 수 있어야 한다.
 
-폼 제약 때문에 원고와 다르게 넣은 것이 있으면 그 사실과 이유를 함께 남긴다.
+폼 제약 때문에 원고와 다르게 넣은 것이 있으면 그 사실과 이유를 임시 경로의 원고에 함께 남긴다.
 등록하지 못한 기술, 종료월을 넣은 진행 중 프로젝트, 넣지 못한 링크가 여기 해당한다.
 
-원고를 고친 뒤 발행한다.
-
 ```bash
-export PATH="$HOME/.bun/bin:$PATH"
-bun career-os/scripts/career-workspace/cli.ts skill finish sync-profile --json
+bun --env-file=career-os/.env career-os/scripts/profile/manage_profile.ts documents put --key <key> --file "${TMPDIR:-/tmp}/<key>-profile.md" --expected-version <1단계의 version> --note "<무엇을 바꿨는지>"
 ```
 
-1단계에서 작업본을 받지 못하고 로컬 원고로 진행했으면 이 명령은 `RESTORE_REQUIRED` 로 끝난다.
-발행하지 못했다는 것과 고친 파일 목록을 사용자에게 알린다.
+새 원고는 `--expected-version 0` 이다.
+
+**저장이 `409` 로 거절되면 다른 곳에서 원고가 바뀐 것이다.**
+다시 받아 차이를 사용자에게 보여 준 뒤에 저장한다. 덮어쓰지 않는다.
+
+저장한 뒤 임시 파일을 지운다.
+
+1단계에서 작업본을 받았을 때만 발행한다.
+
+```bash
+bun career-os/scripts/career-workspace/cli.ts skill finish sync-profile --json
+```
