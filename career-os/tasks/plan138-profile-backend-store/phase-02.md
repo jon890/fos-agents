@@ -139,7 +139,7 @@ export type UsageSnapshotPutResponse = { snapshot: UsageSnapshot; created: boole
 | 칸 | 규칙 |
 | --- | --- |
 | `claudeTokens`, `codexTokens`, `unpricedTokens` | 필수. 0 이상의 정수이고 `Number.MAX_SAFE_INTEGER` 이하 |
-| `claudeCostUsd`, `codexCostUsd` | 선택이고 `null` 을 받는다. 0 이상, 9,999,999,999.99 이하, 소수 둘째 자리까지 |
+| `claudeCostUsd`, `codexCostUsd` | 선택이고 `null` 을 받는다. `z.number().nonnegative().max(9_999_999_999.99).multipleOf(0.01).nullable().optional()` 이다. 소수 둘째 자리 검사를 `Number.isInteger(v * 100)` 처럼 손으로 하지 않는다. node 에서 `0.07*100` 은 `7.000000000000001` 이라 정상 값을 거절한다. zod 4 의 `multipleOf(0.01)` 은 `0.07`, `0.29` 를 받고 `12.345` 를 거절한다(실측) |
 | `sessions` | 선택이고 `null` 을 받는다. 0 이상의 정수이고 4,294,967,295 이하 |
 | `measuredOn` | 필수. `YYYY-MM-DD` 이고 달력에 있는 날짜 |
 | `source` | 필수. `MEASURED` 나 `BACKFILLED` |
@@ -182,6 +182,8 @@ export type UsageSnapshotPutResponse = { snapshot: UsageSnapshot; created: boole
   2. transaction 을 연다
   3. `value.replace !== true` 면 `insertIfAbsent` 를 부른다. 결과가 `true` 면 `created: true`, `false` 면 `created: false` 다. 어느 쪽이든 `getSnapshot` 으로 읽은 행을 `snapshot` 으로 돌려준다. `false` 일 때 돌려주는 값은 **요청 값이 아니라 저장돼 있던 값**이다
   4. `value.replace === true` 면 `lockSnapshot` 으로 잠근다. 행이 없으면 `insertIfAbsent` 로 만들고 `created: true`, 있으면 `replaceSnapshot` 으로 바꾸고 `created: false` 다
+     - 격리 수준이 `ReadCommitted` 라 없는 행에 건 `FOR UPDATE` 는 gap 잠금을 걸지 않는다. 그 사이 다른 요청이 첫 기록을 먼저 넣으면 `insertIfAbsent` 가 `false` 를 돌려준다. 그때는 `lockSnapshot` 으로 다시 잠근 뒤 `replaceSnapshot` 으로 바꾸고 `created: false` 다. 사람이 요청한 교체가 조용히 빠지지 않게 한다
+     - 어느 경로든 마지막에 같은 tx 에서 `getSnapshot` 으로 읽은 행을 `snapshot` 으로 돌려준다
   5. 읽은 행이 없으면 `ApiError(500, "INTERNAL_ERROR", "사용량 기록을 저장하지 못했습니다.")`
 
 `ProfileController` 에 더한다.
@@ -227,6 +229,9 @@ export type UsageSnapshotPutResponse = { snapshot: UsageSnapshot; created: boole
 숫자는 지어낸 값만 쓴다. 실제 측정값을 넣지 않는다.
 
 기준 요청은 `{ claudeTokens: 1200, codexTokens: 300, claudeCostUsd: 12.34, codexCostUsd: 5.6, sessions: 7, unpricedTokens: 10, measuredOn: "2026-10-01", source: "MEASURED" }` 다.
+
+- `claudeCostUsd: 0.07`, `codexCostUsd: 0.29` 로 보내면 저장되고, 응답과 `GET` 에서 같은 값으로 읽힌다. 소수 검사를 곱셈으로 구현하면 이 case 가 400 으로 실패한다
+- `claudeCostUsd: 12.345` 로 보내면 400 이다
 
 - 빈 DB 에서 `GET usage-snapshots` 가 `{ snapshots: [] }` 다
 - `PUT usage-snapshots/2026-09` 에 기준 요청을 보내면 `200` 이고 `created: true` 다. `snapshot` 이 요청 값과 같고 `note` 가 `null`, `createdAt` 과 `updatedAt` 이 ISO 문자열이다

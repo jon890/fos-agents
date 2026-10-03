@@ -85,7 +85,7 @@ export const usageSnapshotPutResponseSchema;    // { snapshot, created: boolean 
 타입은 각 스키마에서 `z.infer` 로 export 한다(`ProfileDocument`, `ProfileDocumentPutPayload`, `UsageSnapshot`, `UsageSnapshotPutPayload`, `UsageSnapshotPutResponse` 등).
 
 - 문서 계약은 `candidate-context/contracts.ts` 와 같은 규칙이다. `body` 는 `trim()` 뒤 비면 거절하고 UTF-8 65,536 바이트를 넘으면 거절한다. `note` 는 `trim()` 뒤 1자 이상 500자 이하, `expectedVersion` 은 0 이상의 정수다
-- `usageSnapshotPutPayloadSchema`: `claudeTokens`, `codexTokens`, `unpricedTokens`(0 이상의 안전한 정수), `claudeCostUsd`, `codexCostUsd`(선택, `null` 가능, 0 이상, 소수 둘째 자리까지), `sessions`(선택, `null` 가능, 0 이상의 정수), `measuredOn`(`YYYY-MM-DD` 이고 달력에 있는 날짜), `source`, `note`(선택, `trim()` 뒤 1자 이상 500자 이하), `replace`(선택, boolean). `replace === true` 인데 `note` 가 없으면 거절한다
+- `usageSnapshotPutPayloadSchema`: `claudeTokens`, `codexTokens`, `unpricedTokens`(0 이상의 안전한 정수), `claudeCostUsd`, `codexCostUsd`(선택, `null` 가능. Backend 와 같은 `z.number().nonnegative().max(9_999_999_999.99).multipleOf(0.01).nullable().optional()`. 곱셈으로 소수 자리를 검사하지 않는다. `0.07*100` 이 `7.000000000000001` 이다), `sessions`(선택, `null` 가능, 0 이상의 정수), `measuredOn`(`YYYY-MM-DD` 이고 달력에 있는 날짜), `source`, `note`(선택, `trim()` 뒤 1자 이상 500자 이하), `replace`(선택, boolean). `replace === true` 인데 `note` 가 없으면 거절한다
 - `usageSnapshotSchema`: `month`, `claudeTokens`, `codexTokens`, `claudeCostUsd`(number 나 `null`), `codexCostUsd`(number 나 `null`), `sessions`(number 나 `null`), `unpricedTokens`, `measuredOn`, `source`, `note`(string 이나 `null`), `createdAt`, `updatedAt`
 
 ### 2. `career-os/scripts/profile/client.ts` 신규
@@ -129,7 +129,7 @@ export function createProfileClient(options?: ProfileClientOptions): ProfileClie
 - 첫 인자가 `documents` 나 `usage` 가 아니거나 둘째 인자가 위 표에 없으면 사용법을 메시지로 예외를 던진다
 - `--key` 가 `wanted`, `linkedin`, `github` 가 아니면 요청 전에 거절하고 메시지에 세 키를 적는다
 - 필수 옵션이 없으면 `--<이름> 값이 필요하다.` 로 거절한다
-- `--expected-version` 과 숫자 옵션은 `Number(...)` 로 바꾼 뒤 정수와 범위를 검사한다. 숫자가 아니면 요청 전에 거절한다
+- `--expected-version`, 토큰 셋, `--sessions` 는 `Number(...)` 로 바꾼 뒤 정수와 범위를 검사한다. `--claude-cost-usd`, `--codex-cost-usd` 는 `Number.isFinite` 만 보고 나머지는 contracts 의 zod 에 맡긴다. 숫자가 아니면 요청 전에 거절한다
 - `--replace` 는 값이 없는 옵션이다. `args.includes("--replace")` 로 읽는다. `--replace` 가 있는데 `--note` 가 없으면 요청 전에 거절한다
 - 주지 않은 `--claude-cost-usd`, `--codex-cost-usd`, `--sessions`, `--note` 는 payload 에 넣지 않는다
 - `documents get` 의 `404` 는 `문서가 없다: <key>. documents put --expected-version 0 으로 새 문서를 만든다.` 로 바꾼다
@@ -168,6 +168,7 @@ export function createProfileClient(options?: ProfileClientOptions): ProfileClie
 - `documents put` 의 `409` 가 다시 조회하라고 안내하고, `formatManageProfileError` 의 출력에 파일 본문이 없다
 - `usage put` 이 옵션을 `{ claudeTokens, codexTokens, unpricedTokens, measuredOn, source }` 로 보내고, 주지 않은 선택 옵션은 본문에 없다
 - `usage put` 에 `--claude-cost-usd 12.34 --codex-cost-usd 5.6 --sessions 7` 을 주면 본문에 숫자로 들어간다
+- `usage put` 에 `--claude-cost-usd 0.07 --codex-cost-usd 0.29` 를 주면 client 가 거절하지 않고 요청이 본문에 그 값을 담아 나간다
 - `usage put --replace` 를 `--note` 없이 주면 요청 전에 거절한다. `--replace --note "<사유>"` 는 본문에 `replace: true` 와 `note` 를 담는다
 - `usage put` 이 `created: false` 응답을 받으면 `Bun.spawn` 으로 실행한 CLI 의 종료 코드가 0 이고 표준 출력 JSON 의 `created` 가 `false` 다
 - `--claude-tokens abc` 와 `--month 2026-13` 은 요청 전에 거절한다
