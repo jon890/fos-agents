@@ -11,7 +11,7 @@
 set -e
 H="$1"; MODE="${2:-title}"
 [ -z "$H" ] && { echo "사용법: $0 <handle> [all]" >&2; exit 2; }
-B=~/.claude/scripts/browser-driver
+B="${BROWSER_DRIVER:-browser-driver}"
 
 if [ "$MODE" = "all" ]; then
   FILTER="true"

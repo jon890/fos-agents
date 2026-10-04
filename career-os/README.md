@@ -12,7 +12,7 @@
 - 이력서·경력기술서를 작성하고 검증할 때: `/resume-preparer <application-directory>`
 - 기술·인성 면접을 연습할 때: plugin 의 `interview-practice`. 공고별 질문으로 연습하거나 질문을 더 찾을 때: plugin 의 `interview-question-prep`
 - 오늘 읽거나 볼 기술 자료를 고를 때: `/study-topic-recommender`
-- 원티드, LinkedIn, GitHub 프로필을 갱신할 때: `/sync-profile`
+- 원티드, LinkedIn, GitHub 프로필을 갱신할 때: plugin 의 `sync-profile` (Claude Code)
 
 `application-package-writer`는 전체 지원 요청에서 `resume-preparer`까지 연결한다.
 공개 질문 보강은 [`public/question-bank/MAINTENANCE.md`](public/question-bank/MAINTENANCE.md)의 저장소 유지 절차로 한다.

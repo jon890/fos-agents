@@ -21,7 +21,7 @@ H="$1"; IDX="$2"; WHICH="$3"; Y="$4"; M="$5"
 [[ "$M" =~ ^([1-9]|1[0-2])$ ]] || { echo "월은 1부터 12 사이여야 한다: $M" >&2; exit 2; }
 [[ "$WHICH" == "start" || "$WHICH" == "end" ]] || { echo "start 또는 end 여야 한다: $WHICH" >&2; exit 2; }
 
-B=~/.claude/scripts/browser-driver
+B="${BROWSER_DRIVER:-browser-driver}"
 POS=$([ "$WHICH" = "start" ] && echo 0 || echo 1)
 
 step() {  # step <기대값> <설명> <JS>

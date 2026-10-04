@@ -6,7 +6,7 @@
 ## 시작하기
 
 ```bash
-B=~/.claude/scripts/browser-driver
+B="${BROWSER_DRIVER:-browser-driver}"
 H=$($B open "https://www.linkedin.com/in/" 25000 | tail -1)
 $B url "$H"
 ```
@@ -69,7 +69,7 @@ document.execCommand("insertText", false, "새 헤드라인");
 2026-10 실측으로 다섯 문단 864자가 줄바꿈 0개로 저장됐다. 그 전에 올라가 있던 소개도 같은 상태였다.
 
 ```bash
-S=career-os/.claude/skills/sync-profile/scripts
+S=<SCRIPTS>
 "$S/linkedin_set_paragraphs.sh" "$H" "$ABOUT_FILE"
 ```
 
@@ -92,7 +92,7 @@ document.querySelector("[contenteditable=true]").innerText
 추가 폼은 대화상자가 아니라 본문에 그려진다. `[role=dialog]` 로 찾으면 검색 제안 상자가 잡힌다.
 
 ```bash
-S=career-os/.claude/skills/sync-profile/scripts
+S=<SCRIPTS>
 "$S/linkedin_fill_project.sh" "$H" "$PROFILE_URL" "$PROJECTS_JSON" "$INDEX"
 ```
 

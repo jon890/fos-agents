@@ -13,7 +13,7 @@ set -e
 H="$1"; FILE="$2"
 [ -z "$H" ] || [ -z "$FILE" ] && { echo "사용법: $0 <handle> <본문파일>" >&2; exit 2; }
 [ -r "$FILE" ] || { echo "본문 파일을 읽을 수 없다: $FILE" >&2; exit 2; }
-B=~/.claude/scripts/browser-driver
+B="${BROWSER_DRIVER:-browser-driver}"
 
 B64=$(python3 -c "
 import base64,json,re,sys

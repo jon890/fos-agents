@@ -15,7 +15,7 @@
 # 「현재 이 프로젝트 작업 중」 을 켜면 종료 월과 연도 칸이 사라진다.
 set -e
 H="$1"; BASE="$2"; JSON="$3"; IDX="$4"
-B=~/.claude/scripts/browser-driver
+B="${BROWSER_DRIVER:-browser-driver}"
 $B nav "$H" "$BASE/edit/forms/project/new/" 25000 >/dev/null 2>&1
 $B waitjs "$H" '!!Array.from(document.querySelectorAll("input")).filter(function(e){var l=e.id?document.querySelector("label[for=\""+e.id+"\"]"):null; return l && /프로젝트 이름|Project name/.test(l.innerText||"")})[0]' 20000 >/dev/null 2>&1
 sleep 1

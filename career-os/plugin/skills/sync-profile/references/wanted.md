@@ -5,11 +5,11 @@
 
 ## 시작하기
 
-브라우저는 `~/.claude/scripts/browser-driver` 로 연다. `open` 이 내는 한 줄이 `handle` 이고,
+브라우저는 `browser-driver` 로 연다. `open` 이 내는 한 줄이 `handle` 이고,
 이 스킬의 스크립트가 모두 첫 인자로 받는 값이다.
 
 ```bash
-B=~/.claude/scripts/browser-driver
+B="${BROWSER_DRIVER:-browser-driver}"
 H=$($B open "https://www.wanted.co.kr/cv/list" 25000 | tail -1)
 $B url "$H"
 ```
@@ -30,7 +30,7 @@ $B url "$H"
 ## 필드 인덱스 읽기
 
 ```bash
-S=career-os/.claude/skills/sync-profile/scripts
+S=<SCRIPTS>
 $S/wanted_list_fields.sh "$H"        # 제목과 본문만
 $S/wanted_list_fields.sh "$H" all    # 직무와 직책까지
 ```

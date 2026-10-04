@@ -31,8 +31,8 @@ function executorNamesIn(text: string): string[] {
 
 const skills = readdirSync(skillsDirectory);
 
-test("Claude Code 전용 스킬이 넷 있다", () => {
-  expect(skills.sort()).toEqual(["interview-question-prep", "position-recommender", "resume-preparer", "study-collection"]);
+test("Claude Code 전용 스킬이 다섯 있다", () => {
+  expect(skills.sort()).toEqual(["interview-question-prep", "position-recommender", "resume-preparer", "study-collection", "sync-profile"]);
 });
 
 describe("position-recommender", () => {
@@ -105,6 +105,29 @@ describe("resume-preparer", () => {
   });
 });
 
+describe("sync-profile", () => {
+  const directory = join(skillsDirectory, "sync-profile");
+  const allFiles = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
+      entry.isDirectory() ? allFiles(join(dir, entry.name)) : [join(dir, entry.name)],
+    );
+
+  test("brain-search, brain-add, private brain, manage_profile.ts, ~/.claude/scripts 가 없다", () => {
+    for (const file of allFiles(directory)) {
+      const text = readFileSync(file, "utf8");
+      for (const banned of ["brain-search", "brain-add", "private brain", "manage_profile.ts", "~/.claude/scripts"])
+        expect(text.includes(banned), `${file} 에 ${banned}`).toBe(false);
+    }
+  });
+
+  test("resume-preparer 의 판정 모델 링크 말고는 ](../ 링크가 없다", () => {
+    for (const file of markdownFilesUnder(directory)) {
+      const text = readFileSync(file, "utf8").replaceAll("](../resume-preparer/references/claim-model.md)", "");
+      expect(text.includes("](../"), file).toBe(false);
+    }
+  });
+});
+
 test("실행기 이름 추출은 지어낸 이름을 실행기 목록에서 찾지 못한다", () => {
   const names = executorNamesIn("<CAREER_LOCAL> nope");
   expect(names).toEqual(["nope"]);
@@ -151,7 +174,7 @@ for (const skill of skills) {
     });
 
     test("본문이 가리키는 references 파일이 모두 있다", () => {
-      const links = [...body.matchAll(/references\/([A-Za-z0-9._-]+\.md)/g)].map((match) => match[1]!);
+      const links = [...body.matchAll(/(?:\]\(|`)references\/([A-Za-z0-9._-]+\.md)/g)].map((match) => match[1]!);
       expect(links.length).toBeGreaterThan(0);
       for (const link of links) expect(existsSync(join(directory, "references", link)), link).toBe(true);
     });

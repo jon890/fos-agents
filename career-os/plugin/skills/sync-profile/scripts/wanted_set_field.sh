@@ -18,7 +18,7 @@ H="$1"; IDX="$2"; FILE="$3"
 [[ "$IDX" =~ ^[0-9]+$ ]] || { echo "field-index 는 숫자여야 한다: $IDX" >&2; exit 2; }
 [ -r "$FILE" ] || { echo "본문 파일을 읽을 수 없다: $FILE" >&2; exit 2; }
 
-B=~/.claude/scripts/browser-driver
+B="${BROWSER_DRIVER:-browser-driver}"
 B64=$(base64 < "$FILE" | tr -d '\n')
 
 GOT=$($B js "$H" "(function(){

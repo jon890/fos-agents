@@ -72,51 +72,31 @@ gh api user -X PATCH -f bio="$BIO"
 세션 기록은 시간이 지나면 기기에서 지워진다. 2026-10 실측으로 Claude Code 의 가장 오래된 기록이 두 달 전이었고,
 한 달 전에 24.6B 로 측정한 달을 다시 세니 8.2B 가 나왔다.
 
-기록은 Backend 에서 읽는다.
-
-```bash
-export PATH="$HOME/.bun/bin:$PATH"
-bun --env-file=career-os/.env career-os/scripts/profile/manage_profile.ts usage list
-```
+기록은 `list_usage_snapshots` 도구로 읽는다.
 
 지난달 기록이 없으면 수집기를 한 번 실행한다. 표준 출력은 `<YYYY-MM> <코드>` 다.
 
 ```bash
 export PATH="$HOME/.bun/bin:$PATH"
-bun --env-file=career-os/.env career-os/scripts/agent-usage/collect_usage.ts
+<CAREER_LOCAL> usage
 ```
 
 `CREATED` 면 기록을 다시 읽는다. `NO_SESSIONS` 면 그 달은 세션 기록이 이 기기에 없는 것이라 차트에서 뺀다.
 
 **스킬이 측정한 값을 프로필에 직접 쓰지 않는다.** 이미 기록된 달을 다시 세면 값이 줄어든다.
-`agent_usage.py` 를 직접 돌린 결과는 단가를 확인할 때만 본다.
 
-기록을 고쳐야 하면 사용자에게 사유를 받아 `usage put` 에 `--replace` 와 `--note` 를 준다. 나머지 옵션은 `manage_profile.ts` 의 사용법을 따른다.
+기록을 고쳐야 하면 사용자에게 사유를 받아 저장소 세션에서 한다. MCP 도구에는 기록을 덮어쓰는 기능이 없다.
+단가표 확인도 저장소 세션의 일이다.
 
-```bash
-python3 career-os/scripts/agent-usage/agent_usage.py --months 2
-```
-
-위 명령은 단가표를 확인하는 방법이다. Claude Code 와 Codex 세션 기록을 전수 읽어 월별 토큰과 API 환산 비용을 낸다.
-단가표는 스크립트 안에 있다. 모델이 바뀌면 그곳을 고친다.
-
-차트는 `usage list` 의 값으로 그린다. 외부 서비스에 기대지 않고 SVG 를 저장소에 커밋한다.
-
-```bash
-export PATH="$HOME/.bun/bin:$PATH"
-bun --env-file=career-os/.env career-os/scripts/agent-usage/render_chart.ts --months 2031-01,2031-02 --out "$OUT"
-```
-
-`--months` 는 차트에 넣을 달이고 숫자는 Backend 의 사용량 기록에서 읽는다. 기록에 없는 달을 넣으면 명령이 실패한다.
-`$OUT` 은 프로필 저장소의 `agent-usage.svg` 다.
-명령이 내는 `total=` 값을 Tokens 배지에 쓴다. 값의 모양은 `career-os/docs/data-schema.md` 의 「차트와 Tokens 배지」 를 따른다. 마크다운에서는 `./agent-usage.svg` 처럼 상대 경로로 참조한다.
-fos-assistant 의 커리어 커넥터로 올릴 때는 커넥터가 차트를 그리고 배지를 검사하므로 이 명령을 돌리지 않는다.
+차트와 Tokens 배지는 `update_github_profile` 이 기록으로 그리고 검사한다.
+`get_github_profile` 로 현재 README 와 저장소 상태를 읽고, 고른 달과 README 를 `update_github_profile` 에 넘긴다.
+기록에 없는 달을 넣으면 도구가 실패한다.
+마크다운에서는 `./agent-usage.svg` 처럼 상대 경로로 참조한다.
 
 **환산 비용을 쓰면 환산값이라고 밝힌다.** 구독제로 결제한 것이라 지출액과 구분해야 한다.
 「공개 API 단가로 환산하면」이라고 적는다.
 
 **단가를 모르는 모델은 토큰만 세고 비용에서 뺀다.** 추정으로 채우면 근거가 사라진다.
-`agent_usage.py` 가 그 토큰 수와 비율을 함께 낸다.
 
 **환산 비용이나 세션 수가 빈 달이 섞이면 그 수치는 배지에서 뺀다.**
 2026-10 실측으로 7월과 8월의 비용과 세션 수를 달별로 적어 두지 않아, 석 달 합계를 낼 수 없어 두 배지를 뺐다.
