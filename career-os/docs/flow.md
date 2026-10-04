@@ -763,14 +763,15 @@ sequenceDiagram
     U->>M: 지난달 사용량으로 GitHub 프로필을 갱신해 줘
     M->>C: list_usage_snapshots, get_profile_document(github), get_github_profile
     C->>B: 사용량 기록과 원고 조회
-    C->>G: README 와 차트 파일 유무 조회
+    C->>G: 기본 branch 의 끝 커밋, 그 커밋의 README 와 차트 파일 유무 조회
     M-->>U: 기록, 원고, 현재 README 의 차이와 변경안
     U->>M: 변경안 확정
-    M->>C: update_github_profile(readme, months)
+    M->>C: update_github_profile(readme, months, expectedBranch, expectedHead)
     Note over M,C: 승인 요청이 만들어지고 호출은 실행되지 않는다
     U->>C: 승인 카드에서 승인
     C->>B: 고른 달의 사용량 기록 조회
     C->>C: 차트를 그리고 배지 값을 합계와 대조
+    C->>G: 기본 branch 와 끝 커밋을 expectedBranch, expectedHead 와 비교
     C->>G: blob 둘, tree, commit 을 만들고 branch 를 옮긴다
     C-->>M: 커밋 번호와 합계
     M->>C: save_profile_document(github)
@@ -781,7 +782,7 @@ sequenceDiagram
 1. 에이전트가 사용량 기록, GitHub 원고와 현재 README 를 읽는다. 셋은 승인 없이 읽는다.
 2. 기록에 지난달이 없으면 멈추고 알린다. 측정은 세션 기록이 있는 기기의 수집기가 한다.
 3. 현재 README 와 변경안의 차이, 차트에 넣을 달, 그 달들의 합계를 보여 주고 확인받는다.
-4. `update_github_profile` 을 한 번 부른다. 승인 카드에서 승인하면 실행된다.
+4. `update_github_profile` 을 한 번 부른다. 1단계에서 읽은 `branch` 와 `head` 를 `expectedBranch`, `expectedHead` 로 함께 넣는다. 승인 카드에서 승인하면 실행된다.
 5. 결과로 받은 커밋 번호와 합계를 알린다.
 6. 올라간 README 를 `save_profile_document` 로 GitHub 원고에 저장한다. 이것도 승인 카드에서 승인한다.
 
@@ -839,6 +840,7 @@ plugin 의 `study-topic-recommender` 스킬이 이미 수집된 후보에서 고
 | 고른 달 가운데 기록이 없는 달이 있다 | `CAREER_USAGE_MONTH_MISSING`. 없는 달을 알려 준다. 숫자를 인자로 받아 채우지 않는다 |
 | GitHub token 을 넣지 않았다 | GitHub 도구 둘만 `CAREER_GITHUB_NOT_CONFIGURED` 로 답한다. 나머지 도구는 돈다 |
 | 승인을 기다리는 사이에 다른 곳에서 문서를 저장했다 | `CAREER_VERSION_CONFLICT`. 다시 읽고 변경을 검토한 뒤 새로 승인받는다 |
+| 승인을 기다리는 사이에 README 가 커밋되거나 기본 branch 가 바뀌었다 | `CAREER_GITHUB_STALE_REVIEW`. 실행 첫머리에서 기본 branch 와 끝 커밋을 `expectedBranch`, `expectedHead` 와 비교하고, 다르면 GitHub 에 아무것도 쓰지 않는다. 최신 끝 커밋 위에 검토한 원고를 다시 올리지 않는다. 다시 읽고 변경안을 맞춘 뒤 새로 승인받는다 |
 | branch 를 옮기는 마지막 요청에서 프로필 저장소에 다른 커밋이 올라왔음을 알게 된다 | `CAREER_GITHUB_CONFLICT`. branch 를 강제로 옮기지 않는다. 그 앞 단계의 409 와 422 는 `CAREER_GITHUB_UNAVAILABLE` 이다 |
 | 올릴 README 와 차트가 저장소의 것과 같다 | 커밋을 만들지 않고 `changed: false` 로 성공한다. 같은 요청을 다시 승인해도 빈 커밋이 쌓이지 않는다 |
 | 실행 결과가 「실행했는지 알 수 없음」 으로 온다 | 같은 도구를 다시 부르지 않는다. `get_github_profile` 이나 문서 조회로 반영됐는지 확인한다 |
