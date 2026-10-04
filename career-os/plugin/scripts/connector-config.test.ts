@@ -140,7 +140,27 @@ test("스킬 본문은 설치하는 쪽의 지침 상한 안에 있고 링크가
 });
 
 test("스킬을 노트북 에이전트의 스킬 폴더에 링크하지 않는다", () => {
-  expect(existsSync(join(import.meta.dir, "../../.claude/skills/career-connector"))).toBe(false);
+  const repoSkills = join(import.meta.dir, "../../.claude/skills");
+  expect(existsSync(join(repoSkills, "career-connector"))).toBe(false);
+  for (const name of ["interview-practice", "study-topic-recommender"]) {
+    const stat = lstatSync(join(repoSkills, name));
+    expect(stat.isSymbolicLink(), `${name} 이 심볼릭 링크다`).toBe(false);
+    expect(stat.isDirectory(), `${name} 이 디렉터리가 아니다`).toBe(true);
+  }
+});
+
+test("새 스킬은 셸과 저장소 경로를 쓰지 않고 앞머리가 디렉터리와 맞는다", () => {
+  for (const name of ["interview-practice", "study-topic-recommender"]) {
+    const text = readFileSync(join(skillsDirectory, name, "SKILL.md"), "utf8");
+    const end = text.indexOf("\n---\n", 4);
+    const front = text.slice(4, end);
+    const body = text.slice(end + 5);
+    for (const banned of ["career-os/", "bun ", "git "]) expect(body, `${name} 본문에 ${banned}`).not.toContain(banned);
+    expect(front.match(/^name: (.+)$/m)?.[1], `${name} 의 name`).toBe(name);
+    const description = front.match(/^description: (.+)$/m)?.[1] ?? "";
+    expect(description.length, `${name} 의 description`).toBeGreaterThan(0);
+    expect(description.length, `${name} 의 description 길이`).toBeLessThanOrEqual(1024);
+  }
 });
 
 test("본문이 8001자인 스킬과 닫히지 않은 앞머리는 거절한다", () => {
