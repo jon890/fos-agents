@@ -98,7 +98,7 @@ function clientError(status: number, code: string | undefined): ApplicationProfi
     return new ApplicationProfileHttpError(
       status,
       "FORBIDDEN",
-      "fos-assistant 가 요청을 거절했다. 요청에 Origin 머리말이 붙지 않았는지 CLI 를 확인한다.",
+      "fos-assistant 가 요청을 거절했다. 요청에 Origin 머리말이 붙지 않았는지 CLI 를 확인하고, Cloudflare Access 를 쓰면 FOS_ASSISTANT_ACCESS_CLIENT_ID 와 secret 값도 확인한다.",
     );
   }
   if (status === 404) {

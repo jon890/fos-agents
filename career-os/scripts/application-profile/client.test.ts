@@ -91,7 +91,9 @@ describe("readApplicationProfile", () => {
   test("403 은 FORBIDDEN 으로 던진다", async () => {
     const { fetchImpl } = sequence(() => new Response(null, { status: 403 }));
 
-    expect(await failure(fetchImpl)).toMatchObject({ status: 403, code: "FORBIDDEN" });
+    const error = await failure(fetchImpl);
+    expect(error).toMatchObject({ status: 403, code: "FORBIDDEN" });
+    expect(error.message).toContain("FOS_ASSISTANT_ACCESS_CLIENT_ID");
   });
 
   test("404 는 응답 code 를 쓰고 서버 message 를 오류에 담지 않는다", async () => {

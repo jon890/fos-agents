@@ -2,7 +2,7 @@ import { readFileSync, statSync } from "node:fs";
 
 export type AccessCredentials = { clientId: string; clientSecret: string };
 
-const headerValuePattern = /^\S+$/;
+const headerValuePattern = /^[\x21-\x7e]+$/;
 
 /**
  * Cloudflare Access service token 을 환경값에서 읽는다.
@@ -29,11 +29,15 @@ export function resolveAccessCredentials(
   if (directSecret) {
     clientSecret = directSecret;
   } else {
-    if ((statSync(secretFile!).mode & 0o777) !== 0o600) throw new Error(`${fileName} 파일 권한은 0600이어야 한다.`);
-    clientSecret = readFileSync(secretFile!, "utf8").trim();
+    try {
+      if ((statSync(secretFile!).mode & 0o777) !== 0o600) throw new Error("permission");
+      clientSecret = readFileSync(secretFile!, "utf8").trim();
+    } catch {
+      throw new Error(`${fileName} 파일을 읽을 수 없거나 권한이 0600 이 아니다.`);
+    }
   }
-  if (!headerValuePattern.test(clientId)) throw new Error(`${idName} 은 공백이 없는 한 단어여야 한다.`);
-  if (!headerValuePattern.test(clientSecret)) throw new Error(`${secretName} 은 비어 있지 않고 공백이 없는 한 단어여야 한다.`);
+  if (!headerValuePattern.test(clientId)) throw new Error(`${idName} 은 출력 가능한 ASCII 문자로 된 한 단어여야 한다.`);
+  if (!headerValuePattern.test(clientSecret)) throw new Error(`${secretName} 은 비어 있지 않은 출력 가능한 ASCII 문자로 된 한 단어여야 한다.`);
   return { clientId, clientSecret };
 }
 

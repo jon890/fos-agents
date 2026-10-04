@@ -49,6 +49,7 @@ describe("resolveAccessCredentials", () => {
     const message = failure({ CAREER_BACKEND_ACCESS_CLIENT_ID: id, CAREER_BACKEND_ACCESS_CLIENT_SECRET_FILE: secretFile(0o644) });
     expect(message).toContain("CAREER_BACKEND_ACCESS_CLIENT_SECRET_FILE");
     expect(message).not.toContain(secret);
+    expect(failure({ CAREER_BACKEND_ACCESS_CLIENT_ID: id, CAREER_BACKEND_ACCESS_CLIENT_SECRET_FILE: "/nonexistent/secret-file" })).toContain("CAREER_BACKEND_ACCESS_CLIENT_SECRET_FILE");
   });
 
   test("ID 만 있거나 secret 만 있으면 실패한다", () => {
@@ -65,6 +66,12 @@ describe("resolveAccessCredentials", () => {
       CAREER_BACKEND_ACCESS_CLIENT_SECRET_FILE: secretFile(0o600),
     });
     expect(message).not.toContain(secret);
+  });
+
+  test("비 ASCII 값은 거절하고 값을 담지 않는다", () => {
+    const message = failure({ CAREER_BACKEND_ACCESS_CLIENT_ID: id, CAREER_BACKEND_ACCESS_CLIENT_SECRET: "비밀값-fake" });
+    expect(message).toContain("CAREER_BACKEND_ACCESS_CLIENT_SECRET");
+    expect(message).not.toContain("비밀값");
   });
 
   test("공백이 든 값은 머리말 주입을 막으려 거절한다", () => {
