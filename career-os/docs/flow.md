@@ -544,6 +544,18 @@ flowchart TD
 계약은 [「후보자 맥락 문서」](#후보자-맥락-문서) 절이 소유한다.
 지원 작업본의 동시 수정은 기존 revision 비교 계약을 따른다.
 
+### Claude Code 에서 이력서 준비
+
+plugin 의 `resume-preparer` 스킬이 Claude Code 에서만 같은 단계를 돈다. 작성 기준과 감사 기준은 저장소 사본과 같다.
+
+1. `<CAREER_LOCAL> workspace begin resume-preparer --json` 으로 작업본을 준비한다. 결과의 `root` 아래 `applications/` 를 읽는다.
+2. 개인 맥락은 `get_context_document` 로 읽고, 승인받은 새 사실은 `save_context_document` 로 저장한다.
+3. HTML·PDF 변환, 주장 원장 검증, 검증 완료 주장의 판정과 검색과 반영, 제출 묶음 생성과 검증은 `<CAREER_LOCAL> resume <하위 명령>` 으로 한다.
+4. 검증 완료 주장은 작업본의 `state/verified-claims/` 에 쓴다. 주장 원장의 근거 경로는 Claude Code 를 연 디렉터리 기준이다.
+5. `<CAREER_LOCAL> workspace finish resume-preparer --json` 으로 끝낸다.
+
+지원 패키지 검사와 검토 화면은 `application-package-writer` 가 plugin 으로 옮겨질 때까지 저장소 세션에서 한다.
+
 ## study-topic-recommender
 
 등록된 외부 소스에서 그날 읽거나 볼 가치가 높은 자료를 선별한다.

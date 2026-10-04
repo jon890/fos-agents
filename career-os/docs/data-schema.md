@@ -896,6 +896,20 @@ locator 형식과 판정 기준은
 | `applications/<company>/<position>/...` | `state/verified-claims/application/<company>/<position>.json` |
 | 그 밖의 로컬 파일                       | `state/verified-claims/other/<file>.json`                     |
 
+plugin 의 로컬 실행기는 이 디렉터리를 `CAREER_WORKSPACE_ROOT` 아래 `state/verified-claims/` 로 넘긴다.
+근거 경로는 실행한 디렉터리 기준으로 적으므로, 저장소 밖에서 쓰는 근거는 대부분 「그 밖의 로컬 파일」 로 나뉜다.
+
+### `library/resume-logos/`
+
+이력서 HTML 에 회사와 학교 로고를 붙이는 자산이다. 개인 경력을 드러내므로 비공개 작업본에만 둔다.
+
+| 파일 | 담는 것 |
+| --- | --- |
+| `index.json` | `{ "map": { "<h3 제목이 시작하는 이름>": "<이미지 파일 이름>" } }` |
+| `*.png`, `*.svg` | 로고 이미지. 렌더러가 base64 로 인라인한다 |
+
+제목이 `map` 의 key 로 시작하면 그 로고가 붙고, 없는 이름은 로고 없이 렌더한다.
+
 각 파일은 다음 필드를 가진다.
 
 - `schemaVersion`: 검증 장부 스키마 버전이며 처음 구현은 `1`이다

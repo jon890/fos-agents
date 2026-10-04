@@ -67,8 +67,8 @@ career-os/
 
 | 자리 | 언제 | 예 |
 | --- | --- | --- |
-| `.claude/skills/<name>/scripts/` | 그 스킬 밖에서 쓰지 않는 코드 | 이력서 PDF 변환, 원티드 폼 조작 |
-| `scripts/<name>/` | 여러 진입점이 나뉘고 독립 테스트가 큰 코드 | 공고 수집, 읽을거리 수집 |
+| `.claude/skills/<name>/scripts/` | 그 스킬 밖에서 쓰지 않는 코드 | 지원 패키지 렌더링 |
+| `scripts/<name>/` | 여러 진입점이 나뉘고 독립 테스트가 큰 코드. plugin 로컬 실행기가 번들하는 코드 | 공고 수집, 읽을거리 수집, 이력서 PDF 변환 |
 | `scripts/lib/` | 두 워크스페이스 이상이 쓰는 순수 기능 | CLI, 텍스트 정규화, 날짜 변환 |
 
 테스트는 코드 옆에 둔다. `<이름>.test.ts` 로 같은 디렉터리에 둔다.
@@ -502,8 +502,9 @@ git diff --check
 사실 감사와 설득력 평가는 별도 참고 문서와 검사 스크립트로 분리하지만 별도 스킬로 노출하지 않는다.
 면접 말하기 준비와 꼬리질문 연습은 `interview-practice`가 담당한다.
 
-`.claude/skills/resume-preparer/scripts/verified-claims/`는 검증 완료 주장 스키마, 안정적인 주장 키, 근거 파일 해시, 저장과 검색을 책임별 모듈로 나눈다.
-CLI 진입점은 다음 셋만 스킬의 `scripts/` 바로 아래에 둔다.
+실행 코드는 `scripts/resume-preparer/` 에 있다. 저장소 사본 스킬과 plugin 로컬 실행기 `resume` 이 같은 코드를 쓴다.
+`scripts/resume-preparer/verified-claims/`는 검증 완료 주장 스키마, 안정적인 주장 키, 근거 파일 해시, 저장과 검색을 책임별 모듈로 나눈다.
+검증 완료 주장 CLI 는 다음 셋이다.
 
 
 | CLI                                                  | 책임                                               |
@@ -535,7 +536,14 @@ skill은 필요한 정보를 실행 시점에 조회하고 TypeScript 스크립�
 | `.claude/skills/resume-preparer/references/resume-design.md` | 이력서와 경력기술서의 기본 시각 기준 |
 | `.claude/skills/resume-preparer/references/resume-taste.md` | 개인 작성 취향 |
 | `.claude/skills/resume-preparer/references/candidate-context.md` | 개인 맥락 조회 시점과 저장 분기 |
-| `.claude/skills/resume-preparer/templates/` | 이력서 HTML 골격, 기본 CSS와 회사·학교 로고 |
+| `scripts/resume-preparer/templates/` | 이력서 HTML 골격과 기본 CSS. `export_resume.ts` 가 텍스트 import 로 읽는다 |
+| 작업본 `library/resume-logos/` | 회사·학교 로고와 이름을 잇는 `index.json`. 개인 경력을 드러내므로 저장소와 plugin 에 두지 않는다 |
+
+`export_resume.ts --logo-dir <dir>` 로 로고 디렉터리를 정한다. 없으면 `CAREER_WORKSPACE_ROOT`(없으면 `career-os`) 아래 `library/resume-logos/` 다. 디렉터리나 `index.json` 이 없으면 로고 없이 렌더한다.
+
+plugin 의 로컬 실행기 `resume` 은 하위 명령으로 위 CLI 와 HTML·PDF 변환, 제출 묶음 검사를 고른다.
+검증 완료 주장의 상태 디렉터리는 작업본 아래 `state/verified-claims/` 로 넘긴다. 주장 원장의 근거 경로는 실행한 디렉터리 기준이다.
+지원 패키지 검사와 검토 화면(`application-package-writer` 의 스크립트)은 아직 저장소에만 있다.
 
 공고별 스타일은 `export_resume.ts --design <path>`에 CSS 파일이나
 `css` 코드 블록이 있는 Markdown 파일을 명시한다.
@@ -713,6 +721,7 @@ career-os/plugin/
 └── skills/
     ├── interview-question-prep/
     ├── position-recommender/
+    ├── resume-preparer/
     └── study-collection/
 ```
 
@@ -736,6 +745,7 @@ career-os/plugin/
 | `plugin/skills/interview-question-prep/` | Claude Code 전용. 공고별 질문으로 하는 연습과 외부 자료에서 개인 질문 찾기 |
 | `plugin/skills/study-collection/` | Claude Code 전용. 외부 피드 수집, 소스 관리, HTML 리포트와 게시 기록 |
 | `plugin/skills/position-recommender/` | Claude Code 전용. 공고 수집부터 회사 판정, 공고 분석, 리포트까지의 판단 흐름 |
+| `plugin/skills/resume-preparer/` | Claude Code 전용. 이력서와 경력기술서 작성, 주장 감사, HTML·PDF 와 제출 묶음 |
 | `scripts/lib/text-asset.ts` | 텍스트 import 로 읽은 템플릿이 문자열인지 확인하는 helper. 번들한 실행기가 템플릿 파일을 찾지 않게 한다 |
 | `scripts/plugin-local/` | 로컬 실행기의 진입점. 하위 명령을 `scripts/` 의 CLI 로 넘긴다. 실행기 이름 목록은 import 가 없는 `executors.ts` 가 갖는다 |
 | `scripts/interview-drill/public-question-bank.ts` | 공개 질문 은행 JSON 을 정적 import 로 읽는 모듈. 커넥터와 실행기와 CLI 가 함께 쓴다 |
@@ -780,6 +790,7 @@ Claude Code 전용 스킬은 `bun --no-env-file "${CLAUDE_PLUGIN_ROOT}/dist/care
 | `study-validate` | `scripts/study-topic-recommender/validate_outputs.ts` | 실행 디렉터리의 리포트 산출물을 검증한다 |
 | `study-sources` | `scripts/study-topic-recommender/manage_reading_sources.ts` | 읽을거리 소스를 조회하고 더하고 끈다 |
 | `position` | `scripts/position-recommender/position_run.ts` 의 `runPositionCommand` | 공고 수집, 회사 판정과 공고 분석 반영, 리포트 최종화, 실행 디렉터리 정리 |
+| `resume` | `scripts/resume-preparer/` 의 CLI 여덟 | 이력서 HTML·PDF 변환과 검사, 주장 원장 검증, 검증 완료 주장 판정과 검색과 반영, 제출 묶음 생성과 검증 |
 
 - 실행기 원본은 `scripts/` 에 있다. 저장소의 CLI 와 같은 코드다. 실행기 코드를 고치면 `bun run --cwd career-os/plugin build` 로 `dist/career-local.js` 를 다시 만들어 함께 커밋한다
 - `dist/career-local.js` 는 루트 `bun.lock` 이 고정한 `zod` 와 `fast-xml-parser` 를 번들한다. MCP 서버 번들(`dist/career-mcp.js`)과 따로 만들어 서로의 `zod` 가 섞이지 않는다
