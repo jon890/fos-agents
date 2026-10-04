@@ -27,6 +27,8 @@ const messages = {
   CAREER_GITHUB_UNAUTHORIZED: "GitHub 가 token 을 거절했습니다. 연결 설정의 GitHub token 을 확인해 주세요.",
   CAREER_GITHUB_FORBIDDEN: "GitHub token 에 프로필 저장소 권한이 없거나 저장소 이름이 틀립니다.",
   CAREER_GITHUB_CONFLICT: "그 사이 프로필 저장소에 다른 커밋이 올라왔습니다. 다시 읽은 뒤 갱신해 주세요.",
+  CAREER_GITHUB_STALE_REVIEW:
+    "검토한 뒤 프로필 저장소의 기본 branch 나 최신 커밋이 바뀌어 아무것도 쓰지 않았습니다. GitHub 프로필을 다시 읽고 변경안을 맞춘 뒤 새로 승인받아 주세요.",
   CAREER_GITHUB_UNAVAILABLE: "GitHub 가 응답하지 않습니다. 잠시 뒤 다시 시도해 주세요.",
   CAREER_STUDY_CONFLICT:
     "후보를 읽은 뒤 기준이 바뀌었거나 이미 추천한 주제나 자료를 골랐거나 같은 요청이 아직 처리 중입니다. 잠시 뒤 후보를 다시 읽어 확인해 주세요.",

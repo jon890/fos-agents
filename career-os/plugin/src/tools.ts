@@ -73,7 +73,7 @@ function saveSchema<K extends readonly [string, ...string[]]>(keys: K) {
     expectedVersion: z.number().int().nonnegative(),
   });
 }
-type UpdateGithubProfileArgs = { readme: string; months: string[] };
+type UpdateGithubProfileArgs = { readme: string; months: string[]; expectedBranch: string; expectedHead: string };
 type SaveArgs = { documentKey: string; body: string; note: string; expectedVersion: number };
 
 const contextSchemas = documentSchemas(contextDocumentKeys);
@@ -105,6 +105,10 @@ const updateGithubProfileSchema = z.strictObject({
     .min(1)
     .max(6)
     .refine((months) => new Set(months).size === months.length),
+  // The branch and head get_github_profile returned. They travel inside the stored approval args,
+  // so an approval executed later still names the snapshot the user reviewed.
+  expectedBranch: z.string().min(1).max(255),
+  expectedHead: z.string().regex(/^[0-9a-f]{40}$/),
 });
 
 export const toolDefinitions: Record<string, { description: string; schema: z.ZodType }> = {
@@ -143,12 +147,12 @@ export const toolDefinitions: Record<string, { description: string; schema: z.Zo
     schema: saveSchema(profileDocumentKeys),
   },
   get_github_profile: {
-    description: "GitHub 프로필 저장소의 기본 branch, README 본문, 차트 파일 유무 조회",
+    description: "GitHub 프로필 저장소의 기본 branch 와 그 끝 커밋(head), 같은 커밋의 README 본문과 차트 파일 유무 조회",
     schema: z.strictObject({}),
   },
   update_github_profile: {
     description:
-      "README 와 사용량 차트를 GitHub 프로필 저장소에 커밋 하나로 올림. 숫자는 받지 않고 고른 달의 사용량 기록에서 계산하며, README 의 Tokens 배지가 그 합계와 다르면 아무것도 쓰지 않는다",
+      "README 와 사용량 차트를 GitHub 프로필 저장소에 커밋 하나로 올림. 숫자는 받지 않고 고른 달의 사용량 기록에서 계산하며, README 의 Tokens 배지가 그 합계와 다르면 아무것도 쓰지 않는다. expectedBranch 와 expectedHead 는 get_github_profile 의 branch 와 head 이고, 실행할 때 저장소가 그 상태가 아니면 아무것도 쓰지 않는다",
     schema: updateGithubProfileSchema,
   },
   get_interview_questions: {
@@ -294,7 +298,7 @@ export class CareerTools {
   }
 
   // Every check runs before the first GitHub request, so a failed check writes nothing.
-  private async updateGithubProfile({ readme, months }: UpdateGithubProfileArgs) {
+  private async updateGithubProfile({ readme, months, expectedBranch, expectedHead }: UpdateGithubProfileArgs) {
     const github = this.requireGithub();
     const { snapshots } = await this.backend.request(
       "GET",
@@ -321,6 +325,7 @@ export class CareerTools {
     const commit = await github.commitProfile(
       { readme, chart },
       `docs: 프로필과 에이전트 사용량 차트를 갱신한다 (${range})`,
+      { branch: expectedBranch, head: expectedHead },
     );
     return { ...commit, months: barMonths, total: expected };
   }
