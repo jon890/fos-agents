@@ -1,3 +1,4 @@
+import { accessHeaders, resolveAccessCredentials, type AccessCredentials } from "../lib/access-credentials.ts";
 import {
   APPLICATION_PROFILE_COLLECTION,
   APPLICATION_PROFILE_DOCUMENT_KEY,
@@ -5,7 +6,7 @@ import {
   type ApplicationProfileDocument,
 } from "./contracts.ts";
 
-export type FosAssistantConnection = { baseUrl: string; token: string };
+export type FosAssistantConnection = { baseUrl: string; token: string; access?: AccessCredentials };
 
 const originRuleMessage = "FOS_ASSISTANT_URL은 credentials, query, hash, path 없는 HTTP 또는 HTTPS origin이어야 한다.";
 
@@ -32,7 +33,8 @@ export function resolveFosAssistantConnection(
   const baseUrl = parseFosAssistantOrigin(rawUrl).origin;
   const token = environment.FOS_ASSISTANT_SERVICE_TOKEN?.trim();
   if (!token) throw new Error("FOS_ASSISTANT_SERVICE_TOKEN 환경값이 필요하다. career-os/.env 에 채운다.");
-  return { baseUrl, token };
+  const access = resolveAccessCredentials(environment, "FOS_ASSISTANT");
+  return { baseUrl, token, ...(access ? { access } : {}) };
 }
 
 /** 메시지는 고정 문구만 담는다. 응답 본문, 서버 message, 문서 본문과 토큰은 담지 않는다. */
@@ -135,7 +137,11 @@ export async function readApplicationProfile(
       // Origin 머리말이 있으면 fos-assistant 가 403 으로 거절하므로 두 머리말만 보낸다.
       response = await fetchImpl(url, {
         method: "GET",
-        headers: new Headers({ Authorization: `Bearer ${connection.token}`, Accept: "application/json" }),
+        headers: new Headers({
+          Authorization: `Bearer ${connection.token}`,
+          Accept: "application/json",
+          ...accessHeaders(connection.access),
+        }),
         redirect: "error",
         signal: AbortSignal.timeout(timeoutMs),
       });

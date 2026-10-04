@@ -59,4 +59,25 @@ describe("checkStudyBackend", () => {
       ],
     });
   });
+
+  test("Access 값이 있으면 모든 요청에 머리말을 붙인다", async () => {
+    const heads: Headers[] = [];
+    const fetchImpl = async (_input: URL, init: RequestInit) => {
+      heads.push(new Headers(init.headers));
+      return new Response("{}", { status: 200 });
+    };
+    await checkStudyBackend(
+      { ...environment, CAREER_BACKEND_ACCESS_CLIENT_ID: "fake-id.access", CAREER_BACKEND_ACCESS_CLIENT_SECRET: "fake-secret-0001" },
+      async (input, init) => (input.pathname === "/api/v1/auth/check" ? new Response(null, { status: 204 }) : fetchImpl(input, init)),
+    );
+    const result = await checkStudyBackend(
+      { ...environment, CAREER_BACKEND_ACCESS_CLIENT_ID: "fake-id.access" },
+      fetchImpl,
+    );
+    expect(result.passed).toBe(false);
+    expect(JSON.stringify(result)).not.toContain("fake-secret-0001");
+    expect(heads.length).toBeGreaterThan(0);
+    expect(heads[0].get("CF-Access-Client-Id")).toBe("fake-id.access");
+    expect(heads[0].get("CF-Access-Client-Secret")).toBe("fake-secret-0001");
+  });
 });
