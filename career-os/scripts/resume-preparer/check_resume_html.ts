@@ -121,8 +121,8 @@ export function checkResumeHtml(
   };
 }
 
-if (import.meta.main) {
-  await runCli(
+export async function main(): Promise<never> {
+  return runCli(
     {
       name: "check_resume_html.ts",
       summary: "제출 HTML 이 독립 실행, A4 인쇄와 대비 기준을 지키는지 검사한다.",
@@ -143,3 +143,5 @@ if (import.meta.main) {
     },
   );
 }
+
+if (import.meta.main) await main();

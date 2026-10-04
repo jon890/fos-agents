@@ -1,5 +1,7 @@
 #!/usr/bin/env bun
 import { readFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { makeRemoteError, TransportError } from "../career-workspace/transport.ts";
 import { runDrillCli } from "../interview-drill/drill-engine.ts";
 import { createInterviewPracticeStore } from "../interview-drill/store/index.ts";
@@ -11,8 +13,16 @@ import { formatManageReadingSourcesError, manageReadingSources } from "../study-
 import { main as runMorningReading, reportMorningReadingError } from "../study-topic-recommender/morning_reading_cli.ts";
 import { StudyRunPathError } from "../study-topic-recommender/runtime-paths.ts";
 import { runValidateOutputs } from "../study-topic-recommender/validate_outputs.ts";
+import { main as assessClaimReuse } from "../resume-preparer/assess_claim_reuse.ts";
+import { main as buildSubmissionBundle } from "../resume-preparer/build_submission_bundle.ts";
+import { main as checkResumeHtml } from "../resume-preparer/check_resume_html.ts";
+import { main as exportResume } from "../resume-preparer/export_resume.ts";
+import { main as promoteVerifiedClaims } from "../resume-preparer/promote_verified_claims.ts";
+import { main as searchVerifiedClaims } from "../resume-preparer/search_verified_claims.ts";
+import { main as validateClaimLedger } from "../resume-preparer/validate_claim_ledger.ts";
+import { main as validateSubmissionBundle } from "../resume-preparer/validate_submission_bundle.ts";
 import { PLUGIN_LOCAL_EXECUTORS } from "./executors.ts";
-import { runPluginWorkspace } from "./workspace.ts";
+import { resolvePluginWorkspace, runPluginWorkspace } from "./workspace.ts";
 
 type Executor = (typeof PLUGIN_LOCAL_EXECUTORS)[number];
 
@@ -24,7 +34,25 @@ const descriptions: Record<Executor, string> = {
   "study-validate": "아침 공부 리포트 산출물을 검증한다 (--run-dir <dir>)",
   "study-sources": "공부 자료 출처를 조회하거나 바꾼다",
   position: "공고를 모아 판정과 분석을 반영하고 리포트를 만든다 (collect | commit-company-tiers | commit-analyses | finalize | cleanup) --run <dir>",
+  resume: "이력서 HTML·PDF 변환, 주장 원장과 검증 완료 주장, 제출 묶음을 다룬다 (export | check-html | validate-ledger | assess-reuse | search-claims | promote-claims | build-bundle | validate-bundle)",
 };
+
+/**
+ * resume 하위 명령과 원본 진입점이다. 원본은 process.argv 를 읽고 process.exit 으로 끝난다.
+ * defaults 는 사용자가 그 옵션을 주지 않았을 때만 작업본 root 기준으로 붙인다.
+ */
+const RESUME_COMMANDS: Record<string, { run: () => unknown; defaults?: Record<string, string> }> = {
+  export: { run: exportResume, defaults: { "--logo-dir": "library/resume-logos" } },
+  "check-html": { run: checkResumeHtml },
+  "validate-ledger": { run: validateClaimLedger },
+  "assess-reuse": { run: assessClaimReuse, defaults: { "--state-dir": "state/verified-claims" } },
+  "search-claims": { run: searchVerifiedClaims, defaults: { "--state-dir": "state/verified-claims" } },
+  "promote-claims": { run: promoteVerifiedClaims, defaults: { "--state-dir": "state/verified-claims" } },
+  "build-bundle": { run: buildSubmissionBundle },
+  "validate-bundle": { run: validateSubmissionBundle },
+};
+
+const RESUME_USAGE = `사용법: resume <${Object.keys(RESUME_COMMANDS).join(" | ")}> [인자...]`;
 
 const INTERVIEW_USAGE = "사용법: interview select <tech|behavioral> [--application-dir <dir>] [--target-bar <bar>] [--count <n>]";
 
@@ -98,7 +126,27 @@ export async function runPluginLocal(argv: string[]): Promise<number> {
       }
     case "position":
       return runPosition(rest);
+    case "resume":
+      return runResume(rest);
   }
+}
+
+async function runResume(args: string[]): Promise<number> {
+  const [command, ...commandArgs] = args;
+  const entry = command && Object.hasOwn(RESUME_COMMANDS, command) ? RESUME_COMMANDS[command] : undefined;
+  if (!entry) {
+    if (command) console.error(`모르는 하위 명령입니다: ${command}`);
+    console.error(RESUME_USAGE);
+    return 2;
+  }
+  const { root } = resolvePluginWorkspace(process.env, os.homedir());
+  const injected = Object.entries(entry.defaults ?? {})
+    .filter(([option]) => !commandArgs.includes(option))
+    .flatMap(([option, relative]) => [option, path.join(root, relative)]);
+  process.argv = [process.argv[0]!, process.argv[1]!, ...commandArgs, ...injected];
+  // 원본 진입점은 process.exit 으로 끝나므로 여기로 돌아오지 않는다.
+  await entry.run();
+  return typeof process.exitCode === "number" ? process.exitCode : 0;
 }
 
 // position_run.ts 의 메인 블록과 같은 출력과 종료 코드를 낸다.

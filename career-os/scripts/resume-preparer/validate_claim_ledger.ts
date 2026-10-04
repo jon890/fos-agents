@@ -230,8 +230,8 @@ export function validateClaimLedger(
   };
 }
 
-if (import.meta.main) {
-  await runCli(
+export async function main(): Promise<never> {
+  return runCli(
     {
       name: "validate_claim_ledger.ts",
       summary: "제출 HTML 의 각 주장이 근거와 맞는지 원장으로 검사한다.",
@@ -249,3 +249,5 @@ if (import.meta.main) {
     },
   );
 }
+
+if (import.meta.main) await main();

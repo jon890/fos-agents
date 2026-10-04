@@ -68,8 +68,8 @@ export function buildSubmissionBundle(applicationDirectory: string): string {
   return output;
 }
 
-if (import.meta.main) {
-  await runCli(
+export async function main(): Promise<never> {
+  return runCli(
     {
       name: "build_submission_bundle.ts",
       summary: "제출할 PDF 와 manifest 를 지원 디렉터리에 만든다.",
@@ -81,3 +81,5 @@ if (import.meta.main) {
     { json: false },
   );
 }
+
+if (import.meta.main) await main();

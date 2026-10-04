@@ -1,7 +1,9 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import {
   CHROME_PDF_FLAGS,
-  DEFAULT_DESIGN_PATH,
+  DEFAULT_DESIGN_CSS,
+  DOCUMENT_TEMPLATE,
+  PAGE_TEMPLATE,
   PAGE_BREAK_MARKER,
   countHtmlPages,
   describePageOverflow,
@@ -9,12 +11,13 @@ import {
   pageTextLength,
   readPdfPageCount,
   documentTitle,
+  inlineOrganizationLogos,
   renderHtml,
   renderMarkdownPages,
   splitHtmlPages,
 } from "./export_resume.ts";
 import { checkResumeHtml } from "./check_resume_html.ts";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SUBPROCESS_TEST_TIMEOUT_MS } from "../lib/test-timeouts.ts";
@@ -155,9 +158,8 @@ describe("resume exporter", () => {
   test("공고별 디자인이 없으면 스킬 CSS를 기본값으로 사용한다", () => {
     const directory = mkdtempSync(join(tmpdir(), "resume-design-default-"));
     try {
-      const designCss = readFileSync(DEFAULT_DESIGN_PATH, "utf-8");
       const path = join(directory, "resume.html");
-      writeFileSync(path, renderHtml(resume, designCss, DEFAULT_DESIGN_PATH));
+      writeFileSync(path, renderHtml(resume, DEFAULT_DESIGN_CSS));
 
       expect(checkResumeHtml(path).passed).toBe(true);
     } finally {
@@ -294,4 +296,110 @@ describe("resume exporter", () => {
       "<title>김테스트 경력기술서</title>",
     );
   });
+});
+
+// 지어낸 1×1 투명 PNG 다. 실제 로고 이미지를 테스트에 쓰지 않는다.
+const ONE_PIXEL_PNG = Buffer.from(
+  "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000b49444154789c6360000200000500017a5eab3f0000000049454e44ae426082",
+  "hex",
+);
+
+const temporaryDirectories: string[] = [];
+
+function temporaryDirectory(prefix: string): string {
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), prefix)));
+  temporaryDirectories.push(directory);
+  return directory;
+}
+
+afterEach(() => {
+  for (const directory of temporaryDirectories.splice(0)) rmSync(directory, { recursive: true, force: true });
+});
+
+describe("로고 디렉터리", () => {
+  test("주어진 디렉터리의 index.json 으로 h3 제목에 로고를 붙인다", () => {
+    const logoDir = temporaryDirectory("resume-logos-");
+    writeFileSync(join(logoDir, "example.png"), ONE_PIXEL_PNG);
+    writeFileSync(join(logoDir, "index.json"), JSON.stringify({ map: { 예시회사: "example.png" } }));
+
+    const html = inlineOrganizationLogos("<h3>예시회사 백엔드</h3>", logoDir);
+    expect(html).toContain(`data:image/png;base64,${ONE_PIXEL_PNG.toString("base64")}`);
+    expect(html).toContain("예시회사 백엔드</h3>");
+  });
+
+  test("index.json 이 없는 디렉터리면 입력을 그대로 돌려준다", () => {
+    const logoDir = temporaryDirectory("resume-logos-empty-");
+    writeFileSync(join(logoDir, "example.png"), ONE_PIXEL_PNG);
+    const input = "<h3>예시회사 백엔드</h3>";
+    expect(inlineOrganizationLogos(input, logoDir)).toBe(input);
+  });
+
+  test("renderHtml 은 로고 디렉터리를 줄 때만 로고를 붙인다", () => {
+    const logoDir = temporaryDirectory("resume-logos-render-");
+    writeFileSync(join(logoDir, "example.png"), ONE_PIXEL_PNG);
+    writeFileSync(join(logoDir, "index.json"), JSON.stringify({ map: { "회사 A": "example.png" } }));
+
+    expect(renderHtml(resume, designCss, "", "", logoDir)).toContain("data:image/png;base64,");
+    expect(renderHtml(resume, designCss)).not.toContain("data:image/png;base64,");
+  });
+});
+
+async function runProcess(command: string[], cwd: string) {
+  const proc = Bun.spawn(command, {
+    cwd,
+    env: { PATH: process.env.PATH ?? "", HOME: cwd },
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr, exitCode] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ]);
+  return { stdout, stderr, exitCode };
+}
+
+describe("템플릿 번들", () => {
+  test("export_resume.ts 는 파일 위치에 기대어 템플릿을 읽지 않는다", () => {
+    const source = readFileSync(join(import.meta.dir, "export_resume.ts"), "utf8");
+    expect(source).not.toContain("import.meta.dir");
+    expect(source).not.toMatch(/readFileSync\(\s*join\(/);
+    expect(source).not.toContain("TEMPLATE_DIR");
+  });
+
+  test("텍스트 import 한 템플릿은 템플릿 파일과 같다", () => {
+    const templates = join(import.meta.dir, "templates");
+    expect(DEFAULT_DESIGN_CSS).toBe(readFileSync(join(templates, "resume.css"), "utf8"));
+    expect(DOCUMENT_TEMPLATE).toBe(readFileSync(join(templates, "resume.html"), "utf8"));
+    expect(PAGE_TEMPLATE).toBe(readFileSync(join(templates, "resume-page.html"), "utf8"));
+  });
+
+  test("번들한 뒤 다른 위치에서 실행해도 같은 템플릿과 CSS 를 쓴다", async () => {
+    const templates = join(import.meta.dir, "templates");
+    const expected = {
+      document: readFileSync(join(templates, "resume.html"), "utf8").length,
+      page: readFileSync(join(templates, "resume-page.html"), "utf8").length,
+      css: readFileSync(join(templates, "resume.css"), "utf8").length,
+    };
+    const buildDirectory = temporaryDirectory("resume-bundle-");
+    const entry = join(buildDirectory, "entry.ts");
+    const bundle = join(buildDirectory, "bundle.js");
+    writeFileSync(
+      entry,
+      [
+        `import { DEFAULT_DESIGN_CSS, DOCUMENT_TEMPLATE, PAGE_TEMPLATE } from ${JSON.stringify(join(import.meta.dir, "export_resume.ts"))};`,
+        "console.log(JSON.stringify({ document: DOCUMENT_TEMPLATE.length, page: PAGE_TEMPLATE.length, css: DEFAULT_DESIGN_CSS.length }));",
+      ].join("\n"),
+    );
+    // 같은 프로세스의 Bun.build 는 다른 테스트와 모듈 해석을 공유하므로 별도 프로세스에서 빌드한다.
+    const built = await runProcess(
+      [process.execPath, "build", entry, "--target", "bun", "--outfile", bundle],
+      buildDirectory,
+    );
+    expect({ exitCode: built.exitCode, stderr: built.stderr }).toMatchObject({ exitCode: 0 });
+
+    const result = await runProcess([process.execPath, "--no-env-file", bundle], temporaryDirectory("resume-run-"));
+    expect({ exitCode: result.exitCode, stderr: result.stderr }).toEqual({ exitCode: 0, stderr: "" });
+    expect(JSON.parse(result.stdout)).toEqual(expected);
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 });

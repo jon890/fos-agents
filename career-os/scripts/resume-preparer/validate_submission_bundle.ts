@@ -168,8 +168,8 @@ export function validateSubmissionBundle(applicationDirectory: string): Submissi
   return { passed: errors.length === 0, applicationDirectory: directory, errors, warnings, artifacts };
 }
 
-if (import.meta.main) {
-  await runCli(
+export async function main(): Promise<never> {
+  return runCli(
     {
       name: "validate_submission_bundle.ts",
       summary: "제출 묶음의 파일과 해시가 manifest 와 맞는지 검사한다.",
@@ -178,3 +178,5 @@ if (import.meta.main) {
     ({ positional }) => validateSubmissionBundle(positional[0]),
   );
 }
+
+if (import.meta.main) await main();

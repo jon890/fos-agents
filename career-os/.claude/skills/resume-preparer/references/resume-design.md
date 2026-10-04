@@ -1,14 +1,14 @@
 # 이력서 디자인 계약
 
 이 파일은 이력서와 경력기술서를 HTML과 PDF로 바꿀 때 적용할 디자인 판단과 검증 기준이다.
-실제 화면은 `templates/` 아래 네 자산이 소유한다.
+실제 화면은 저장소 `career-os/scripts/resume-preparer/templates/` 아래 세 템플릿과 작업본의 로고가 소유한다.
 
 | 파일 | 담는 것 |
 | --- | --- |
-| `templates/resume.html` | 문서 골격. `{{TITLE}}`, `{{STYLE}}`, `{{PAGES}}` 자리를 채운다 |
-| `templates/resume-page.html` | 한 쪽의 골격. `{{PAGE_ROLE}}`, `{{PAGE_NUMBER}}`, `{{PAGE_BODY}}` 자리를 채운다 |
-| `templates/resume.css` | 기본 스타일 |
-| `templates/logos/` | 회사와 학교 로고, 그리고 이름을 잇는 `index.json` |
+| `scripts/resume-preparer/templates/resume.html` | 문서 골격. `{{TITLE}}`, `{{STYLE}}`, `{{PAGES}}` 자리를 채운다 |
+| `scripts/resume-preparer/templates/resume-page.html` | 한 쪽의 골격. `{{PAGE_ROLE}}`, `{{PAGE_NUMBER}}`, `{{PAGE_BODY}}` 자리를 채운다 |
+| `scripts/resume-preparer/templates/resume.css` | 기본 스타일 |
+| 작업본 `library/resume-logos/` | 회사와 학교 로고, 그리고 이름을 잇는 `index.json` |
 
 **화면 구조를 바꿀 때는 렌더러가 아니라 이 파일들을 먼저 고친다.**
 `export_resume.ts` 는 자리를 채우는 일만 하고 마크업을 만들지 않는다.
@@ -17,15 +17,18 @@
 
 ## 로고를 더하는 방법
 
-`templates/logos/` 에 이미지를 두고 `index.json` 의 `map` 에 한 줄을 더한다.
+로고는 개인 경력을 드러내므로 저장소에 두지 않고 작업본 `library/resume-logos/` 에 둔다.
+형식은 `docs/data-schema.md` 의 「`library/resume-logos/`」 절을 따른다.
+그 디렉터리에 이미지를 두고 `index.json` 의 `map` 에 한 줄을 더한다.
 
 ```json
-{ "map": { "NHN": "nhn.png" } }
+{ "map": { "예시회사": "example.png" } }
 ```
 
 **이력서의 `h3` 제목이 key 로 시작하면 그 로고가 붙는다.**
 순서가 아니라 이름으로 판정하므로 절 배치가 바뀌어도 엉뚱한 자리에 붙지 않는다.
 매핑에 없는 이름은 로고 없이 렌더한다.
+다른 위치의 로고를 쓰려면 `export_resume.ts --logo-dir <path>` 로 준다.
 
 ## 강조색
 
