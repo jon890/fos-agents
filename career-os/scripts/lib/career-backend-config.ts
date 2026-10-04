@@ -1,6 +1,7 @@
 import { readFileSync, statSync } from "node:fs";
+import { resolveAccessCredentials, type AccessCredentials } from "./access-credentials.ts";
 
-export type CareerBackendConnection = { baseUrl: string; token: string };
+export type CareerBackendConnection = { baseUrl: string; token: string; access?: AccessCredentials };
 
 export function parseCareerBackendOrigin(raw: string): URL {
   let url: URL;
@@ -47,5 +48,6 @@ export function resolveCareerBackendConnection(
           throw new Error("커리어 Backend token 파일 권한은 0600이어야 한다.");
         return validateToken(readFileSync(path, "utf8"));
       })();
-  return { baseUrl: parseCareerBackendOrigin(rawUrl).toString(), token };
+  const access = resolveAccessCredentials(environment, "CAREER_BACKEND");
+  return { baseUrl: parseCareerBackendOrigin(rawUrl).toString(), token, ...(access ? { access } : {}) };
 }

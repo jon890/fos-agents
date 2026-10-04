@@ -1,3 +1,4 @@
+import { accessHeaders } from "../../lib/access-credentials.ts";
 import { resolveCareerBackendConnection } from "../../lib/career-backend-config.ts";
 
 export type DoctorCheck = { name: string; ok: boolean; message: string };
@@ -6,7 +7,7 @@ type Fetch = (input: URL, init: RequestInit) => Promise<Response>;
 
 const TIMEOUT_MS = 10_000;
 const SETUP_HINT =
-  "career-os/.env 에 CAREER_BACKEND_URL 과 CAREER_BACKEND_TOKEN 또는 CAREER_BACKEND_TOKEN_FILE 을 둔다. 운영 값은 홈서버 인프라 저장소가 소유한다";
+  "career-os/.env 에 CAREER_BACKEND_URL 과 CAREER_BACKEND_TOKEN 또는 CAREER_BACKEND_TOKEN_FILE 을 둔다. Backend 가 Cloudflare Access 뒤에 있으면 CAREER_BACKEND_ACCESS_CLIENT_ID 와 CAREER_BACKEND_ACCESS_CLIENT_SECRET 도 함께 둔다. 운영 값은 홈서버 인프라 저장소가 소유한다";
 
 /**
  * 공부 추천이 Backend 에 닿는지 요청 전에 확인한다.
@@ -17,7 +18,7 @@ export async function checkStudyBackend(
   environment: Record<string, string | undefined> = process.env,
   fetchImpl: Fetch = fetch,
 ): Promise<DoctorResult> {
-  let connection: { baseUrl: string; token: string };
+  let connection: ReturnType<typeof resolveCareerBackendConnection>;
   try {
     connection = resolveCareerBackendConnection(environment);
   } catch (error) {
@@ -28,7 +29,7 @@ export async function checkStudyBackend(
   const call = (path: string) =>
     fetchImpl(new URL(path, connection.baseUrl), {
       method: "GET",
-      headers: { Authorization: `Bearer ${connection.token}`, Accept: "application/json" },
+      headers: { Authorization: `Bearer ${connection.token}`, Accept: "application/json", ...accessHeaders(connection.access) },
       redirect: "error",
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });

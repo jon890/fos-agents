@@ -111,4 +111,22 @@ describe("careerBackendRequest", () => {
     expect(String((thrown as Error).message)).not.toContain("request-body");
     expect(String((thrown as Error).message)).not.toContain("server secret");
   });
+
+  test("access 가 있을 때만 Cloudflare Access 머리말을 붙인다", async () => {
+    const seen: Headers[] = [];
+    const fetcher = async (_url: URL, init: RequestInit) => {
+      seen.push(new Headers(init.headers));
+      return Response.json({ ok: true });
+    };
+    const access = { clientId: "fake-id.access", clientSecret: "fake-secret-0001" };
+    const call = (options: { access?: typeof access }) =>
+      careerBackendRequest({ baseUrl: "https://career.example.com", token, fetcher, ...options }, "GET", "/api/test", undefined, undefined, schema);
+    await call({ access });
+    await call({});
+    expect(seen[0].get("CF-Access-Client-Id")).toBe("fake-id.access");
+    expect(seen[0].get("CF-Access-Client-Secret")).toBe("fake-secret-0001");
+    expect(seen[0].get("Authorization")).toBe(`Bearer ${token}`);
+    expect(seen[1].has("CF-Access-Client-Id")).toBe(false);
+    expect(seen[1].has("CF-Access-Client-Secret")).toBe(false);
+  });
 });
