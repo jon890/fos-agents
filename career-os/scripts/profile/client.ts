@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { z } from "zod";
 import { hashKey } from "../candidate-context/client.ts";
+import type { AccessCredentials } from "../lib/access-credentials.ts";
 import { resolveCareerBackendConnection } from "../lib/career-backend-config.ts";
 import { careerBackendRequest } from "../lib/career-backend-http.ts";
 import {
@@ -39,6 +40,7 @@ export interface ProfileClientOptions {
 export class ProfileClient {
   private readonly baseUrl: string;
   private readonly token: string;
+  private readonly access?: AccessCredentials;
   private readonly fetchImpl: ProfileFetch;
   private readonly timeoutMs: number;
   private readonly maxRetries: number;
@@ -52,10 +54,12 @@ export class ProfileClient {
       });
       this.baseUrl = connection.baseUrl;
       this.token = connection.token;
+      this.access = connection.access;
     } else {
       const connection = resolveCareerBackendConnection(process.env);
       this.baseUrl = connection.baseUrl;
       this.token = connection.token;
+      this.access = connection.access;
     }
     this.fetchImpl = options.fetchImpl ?? fetch;
     this.timeoutMs = options.timeoutMs ?? DEFAULT_PROFILE_TIMEOUT_MS;
@@ -73,6 +77,7 @@ export class ProfileClient {
       {
         baseUrl: this.baseUrl,
         token: this.token,
+        access: this.access,
         fetcher: this.fetchImpl,
         timeoutMs: this.timeoutMs,
         maxRetries: this.maxRetries,

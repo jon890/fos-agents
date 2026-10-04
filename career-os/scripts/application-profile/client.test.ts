@@ -91,7 +91,9 @@ describe("readApplicationProfile", () => {
   test("403 은 FORBIDDEN 으로 던진다", async () => {
     const { fetchImpl } = sequence(() => new Response(null, { status: 403 }));
 
-    expect(await failure(fetchImpl)).toMatchObject({ status: 403, code: "FORBIDDEN" });
+    const error = await failure(fetchImpl);
+    expect(error).toMatchObject({ status: 403, code: "FORBIDDEN" });
+    expect(error.message).toContain("FOS_ASSISTANT_ACCESS_CLIENT_ID");
   });
 
   test("404 는 응답 code 를 쓰고 서버 message 를 오류에 담지 않는다", async () => {
@@ -240,5 +242,33 @@ describe("resolveFosAssistantConnection", () => {
     expect(() =>
       resolveFosAssistantConnection({ FOS_ASSISTANT_URL: "https://assistant.example.com", FOS_ASSISTANT_SERVICE_TOKEN: "  " }),
     ).toThrow("FOS_ASSISTANT_SERVICE_TOKEN 환경값이 필요하다");
+  });
+
+  test("Access 값이 있으면 머리말을 함께 보내고 없으면 보내지 않는다", async () => {
+    const access = { clientId: "fake-id.access", clientSecret: "fake-secret-0001" };
+    const { calls, fetchImpl } = sequence(() => jsonResponse(profile));
+
+    await readApplicationProfile({ connection: { ...connection, access }, fetchImpl });
+    await readApplicationProfile({ connection, fetchImpl });
+
+    const withAccess = new Headers(calls[0].init.headers);
+    expect(withAccess.get("CF-Access-Client-Id")).toBe("fake-id.access");
+    expect(withAccess.get("CF-Access-Client-Secret")).toBe("fake-secret-0001");
+    expect(withAccess.get("Authorization")).toBe(`Bearer ${token}`);
+    expect(new Headers(calls[1].init.headers).has("CF-Access-Client-Id")).toBe(false);
+  });
+
+  test("연결 해석이 FOS_ASSISTANT 접두 Access 값을 읽고 하나만 있으면 실패한다", () => {
+    const env = { FOS_ASSISTANT_URL: "https://assistant.example.com", FOS_ASSISTANT_SERVICE_TOKEN: token };
+    expect(
+      resolveFosAssistantConnection({
+        ...env,
+        FOS_ASSISTANT_ACCESS_CLIENT_ID: "fake-id.access",
+        FOS_ASSISTANT_ACCESS_CLIENT_SECRET: "fake-secret-0001",
+      }).access,
+    ).toEqual({ clientId: "fake-id.access", clientSecret: "fake-secret-0001" });
+    expect(() => resolveFosAssistantConnection({ ...env, FOS_ASSISTANT_ACCESS_CLIENT_ID: "fake-id.access" })).toThrow(
+      "FOS_ASSISTANT_ACCESS_CLIENT_SECRET",
+    );
   });
 });
