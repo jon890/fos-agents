@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { measureUsage, parseMeasurement } from "./measure.ts";
 
 const valid = {
@@ -52,5 +55,54 @@ describe("measureUsage", () => {
     const result = await measureUsage(async () => JSON.stringify(valid));
     expect(result).toHaveLength(1);
     expect(result[0]?.month).toBe("2026-03");
+  });
+});
+
+/**
+ * 실제 파이썬 실행 파일이 있는 디렉터리.
+ * python3 가 mise shim 이면 shim 은 HOME 아래 설정과 설치 위치를 찾으므로, HOME 을 비우면 설치를 새로 내려받는다.
+ * 실행 파일 디렉터리를 PATH 앞에 두어 shim 을 거치지 않게 한다.
+ */
+function pythonDirectory(): string {
+  const result = Bun.spawnSync(["python3", "-c", "import sys; print(sys.executable)"], { stdout: "pipe", stderr: "pipe" });
+  if (result.exitCode !== 0) throw new Error(`python3 를 찾지 못했다: ${result.stderr.toString()}`);
+  return dirname(result.stdout.toString().trim());
+}
+
+describe("runAgentUsageScript", () => {
+  test("측정 스크립트를 소스 옆 파일 경로로 찾지 않는다", () => {
+    const source = readFileSync(join(import.meta.dir, "measure.ts"), "utf8");
+    expect(source).not.toContain("import.meta.dir");
+    expect(source).not.toMatch(/join\([^)]*agent_usage\.py"/);
+  });
+
+  test("세션 기록이 없는 HOME 에서 달이 없는 측정 결과를 낸다", async () => {
+    const home = realpathSync(mkdtempSync(join(tmpdir(), "agent-usage-home-")));
+    try {
+      const proc = Bun.spawn(
+        [
+          "bun",
+          "--no-env-file",
+          "-e",
+          `const { runAgentUsageScript } = await import(${JSON.stringify(join(import.meta.dir, "measure.ts"))});
+process.stdout.write(await runAgentUsageScript());`,
+        ],
+        {
+          cwd: home,
+          env: { PATH: `${pythonDirectory()}:${process.env.PATH ?? ""}`, HOME: home },
+          stdout: "pipe",
+          stderr: "pipe",
+        },
+      );
+      const [stdout, stderr, exitCode] = await Promise.all([
+        new Response(proc.stdout).text(),
+        new Response(proc.stderr).text(),
+        proc.exited,
+      ]);
+      expect({ exitCode, stderr }).toEqual({ exitCode: 0, stderr: "" });
+      expect(parseMeasurement(stdout)).toEqual([]);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
   });
 });

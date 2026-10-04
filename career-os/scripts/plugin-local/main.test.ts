@@ -22,15 +22,16 @@ afterEach(() => {
   errorSpy.mockRestore();
 });
 
-test("help 는 여덟 실행기를 모두 보여 주고 0 으로 끝난다", async () => {
+test("help 는 아홉 실행기를 모두 보여 주고 0 으로 끝난다", async () => {
   expect(await runPluginLocal(["help"])).toBe(0);
   const output = logged.join("\n");
-  expect(PLUGIN_LOCAL_EXECUTORS).toHaveLength(8);
+  expect(PLUGIN_LOCAL_EXECUTORS).toHaveLength(9);
   for (const name of PLUGIN_LOCAL_EXECUTORS) expect(output).toContain(name);
   expect(output).toContain("position");
   expect(output).toContain("commit-company-tiers");
   expect(output).toContain("resume");
   expect(output).toContain("search-claims");
+  expect(output).toMatch(/^ {2}usage +기록이 없는 끝난 달의 에이전트 사용량을 측정해 Backend 에 올린다$/m);
 });
 
 test("인자가 없으면 help 와 같다", async () => {

@@ -118,7 +118,7 @@ export function createUsageSnapshotStore(client: Pick<ProfileClient, "listUsageS
   };
 }
 
-async function main(args: readonly string[]): Promise<number> {
+export async function main(args: readonly string[]): Promise<number> {
   if (args.length > 0) {
     if (args.length === 1 && ["help", "--help", "-h"].includes(args[0])) {
       process.stdout.write(usage);

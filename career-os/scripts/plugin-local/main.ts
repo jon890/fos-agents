@@ -21,6 +21,7 @@ import { main as promoteVerifiedClaims } from "../resume-preparer/promote_verifi
 import { main as searchVerifiedClaims } from "../resume-preparer/search_verified_claims.ts";
 import { main as validateClaimLedger } from "../resume-preparer/validate_claim_ledger.ts";
 import { main as validateSubmissionBundle } from "../resume-preparer/validate_submission_bundle.ts";
+import { main as collectUsage } from "../agent-usage/collect_usage.ts";
 import { PLUGIN_LOCAL_EXECUTORS } from "./executors.ts";
 import { resolvePluginWorkspace, runPluginWorkspace } from "./workspace.ts";
 
@@ -35,6 +36,7 @@ const descriptions: Record<Executor, string> = {
   "study-sources": "공부 자료 출처를 조회하거나 바꾼다",
   position: "공고를 모아 판정과 분석을 반영하고 리포트를 만든다 (collect | commit-company-tiers | commit-analyses | finalize | cleanup) --run <dir>",
   resume: "이력서 HTML·PDF 변환, 주장 원장과 검증 완료 주장, 제출 묶음을 다룬다 (export | check-html | validate-ledger | assess-reuse | search-claims | promote-claims | build-bundle | validate-bundle)",
+  usage: "기록이 없는 끝난 달의 에이전트 사용량을 측정해 Backend 에 올린다",
 };
 
 /**
@@ -128,6 +130,8 @@ export async function runPluginLocal(argv: string[]): Promise<number> {
       return runPosition(rest);
     case "resume":
       return runResume(rest);
+    case "usage":
+      return collectUsage(rest);
   }
 }
 
