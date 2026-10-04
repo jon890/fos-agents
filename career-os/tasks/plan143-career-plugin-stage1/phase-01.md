@@ -45,7 +45,7 @@
 ### 2. `career-os/scripts/interview-drill/drill-engine.ts` 수정
 
 - 옮긴 함수와 타입을 지우고 `question-selection.ts` 에서 import 한다. `DrillProgressEntry`, `DrillProgress`, `toDrillProgress` 는 같은 이름으로 다시 export 해 기존 import 를 깨지 않는다
-- `selectQuestions(drillType, progress, maxCount = 5, directory?, target?, personal = [])` 의 시그니처는 그대로 두고 본문을 `selectFromBank(loadQuestionBank(drillType, directory, personal), progress, { today: today(), maxCount, target, mixApplication: directory !== undefined })` 로 바꾼다
+- `selectQuestions(drillType, progress, maxCount = 5, directory?, target?, personal = [])` 의 시그니처는 그대로 두고 본문을 `selectFromBank(loadQuestionBank(drillType, directory, personal), progress, { today: today(), maxCount, target, mixApplication: Boolean(directory) })` 로 바꾼다
 - `select` 분기의 `dueForReview` 계산은 `dueForReview(progress, question.topic, currentDay)` 를 쓴다
 
 ### 3. `career-os/scripts/interview-drill/question-selection.test.ts` 신규
@@ -54,8 +54,8 @@
 
 - 정상: 복습 상태가 빈 질문 셋 가운데 `maxCount: 2` 로 둘을 고르고, 결과가 `sequenceHint` 와 난도 순서를 따른다
 - 정상: `last_passed` 가 `today` 의 전날인 주제는 빠진다. `today` 를 `"2026-10-04"` 로 고정한다
-- 정상: `mixApplication: true` 이고 `sourceScope: "application"` 질문이 있으면 그 질문이 `Math.ceil(maxCount * 0.6)` 개까지 먼저 들어간다
-- 실패 쪽: `target: "large-scale"` 이면 `production` 난도 질문이 난도 창 밖이라 빠진다
+- 정상: `mixApplication: true` 이고 `sourceScope: "application"` 질문이 있으면 그 질문이 `Math.ceil(maxCount * 0.6)` 개까지 결과에 포함된다. 결과 순서는 마지막의 `sequenceOrder` 정렬이 정한다
+- 실패 쪽: `target: "large-scale"` 이면 `bar: "production"` 질문이 난도 창 밖이라 빠진다
 - `dueForReview` 가 `next_review_date` 가 없을 때 `false`, 오늘 이전이면 `true` 를 낸다
 - `question-selection.ts` 의 본문에 `node:fs`, `node:path`, `"zod"` 문자열이 없다(`readFileSync` 로 소스를 읽어 확인)
 

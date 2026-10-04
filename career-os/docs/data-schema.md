@@ -1345,14 +1345,15 @@ Hermes 에서는 서버 이름 `career` 로 `mcp__career__<도구>` 가 된다.
 
 공부 추천 도구의 계약이다. 칸의 제약은 [추천 실행](#추천-실행)과 Backend 의 `src/study/schema.ts` 와 같다.
 
-- `get_study_candidates` 는 `GET /api/study/v1/candidates` 한 쪽만 읽는다. `limit` 은 1 이상 30 이하이고 기본값은 30 이다. `category` 는 `techBlog`, `geek`, `ai`, `video` 가운데 하나다
+- `get_study_candidates` 는 `GET /api/study/v1/candidates` 한 쪽만 읽는다. `limit` 은 1 이상 20 이하이고 기본값은 20 이다. `category` 는 `techBlog`, `geek`, `ai`, `video` 가운데 하나다. Backend 가 409 로 답하면 `learning-interests` 문서가 없는 것이라 `CAREER_LEARNING_INTERESTS_MISSING` 이다
 - 후보 한 줄은 `{ contentKey, title, url, sourceName, category, kind, published, excerpt }` 다. `excerpt` 는 500자에서 자른다. 외부 글을 그대로 길게 싣지 않기 위해서다
-- `limit` 을 30 으로 둔 까닭은 승인 인자 상한이다. 후보마다 제외 이유를 붙인 저장 인자가 16KB 안에 들어야 한다
 - `save_study_recommendation` 의 `topics[].items[]` 는 `{ contentKey, summary, reason, careerValue }`, `rejections[]` 는 `{ contentKey, reason }` 이다
+- 저장 입력의 상한은 Backend 보다 짧다. 주제 4개, 모든 주제의 자료 합계 8개, 제외 20개다. `title` 60자, `careerQuestion`, `summary`, `reason` 각 100자, 제외 `reason` 50자, `topicKey` 는 소문자와 숫자와 `-` 로 80자까지다. `contentKey` 는 `url:` 뒤 hex 64자나 `youtube:` 뒤 영상 id 다
+- 상한을 Backend 보다 짧게 둔 까닭은 승인 인자 상한이다. 모든 칸을 상한까지 채운 인자도 16KB 안에 들어야 한다. `get_study_candidates` 의 `limit` 상한 20 도 제외 20개에 맞춘 값이다
 - `generatedAt` 을 넘기지 않으면 서버가 지금 시각을 UTC ISO 로 쓴다. `reportId` 는 `morning-<generatedAt 의 Asia/Seoul 날짜>` 다
 - `Idempotency-Key` 는 노트북의 CLI 와 같은 `recommendation:<sha256(canonical JSON { reportId, generatedAt })>` 다
 - `CAREER_NETWORK` 로 끝난 `save_study_recommendation` 은 오류 객체에 `reportId` 와 `generatedAt` 을 더한다
-- Backend 가 409 로 답하면 `CAREER_STUDY_CONFLICT` 다. 같은 날 리포트가 이미 있거나, 같은 자료나 주제를 다시 저장했거나, 후보를 읽은 뒤 관심사 문서가 바뀌었다
+- Backend 가 409 로 답하면 `GET /api/study/v1/recommendation-runs/{reportId}/status` 를 한 번 읽는다. 오늘 리포트가 있으면 `CAREER_STUDY_ALREADY_SAVED`, 없으면 `CAREER_STUDY_CONFLICT` 다. 뒤의 것은 후보를 읽은 뒤 관심사 문서가 바뀌었거나 직전 추천의 주제를 다시 고른 경우다
 
 **승인이 필요한 도구의 인자는 fos-assistant 가 UTF-8 16KB 까지만 받는다.**
 키와 따옴표를 포함해 직렬화한 인자 전체의 크기다. 한글은 한 글자가 3바이트라 본문이 5천 자 안팎이면 닿는다.

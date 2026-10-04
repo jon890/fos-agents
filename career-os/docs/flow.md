@@ -824,11 +824,12 @@ sequenceDiagram
 plugin 의 `study-topic-recommender` 스킬이 이미 수집된 후보에서 고른다.
 수집은 노트북이나 예약 실행의 `morning_reading_cli.ts --collect-only` 가 한다. 커넥터는 외부 피드에 닿지 않는다.
 
-1. `get_study_candidates` 가 `GET /api/study/v1/sources` 와 `GET /api/study/v1/candidates` 한 쪽을 읽는다. 결과는 후보, `recentStudyTopicKeys`, `candidateContextVersion`, `learningInterests` 와 켜진 소스 수다.
+1. `get_study_candidates` 가 `GET /api/study/v1/candidates` 한 쪽만 읽는다. 결과는 후보, `recentStudyTopicKeys`, `candidateContextVersion`, `learningInterests` 다. `learning-interests` 문서가 없으면 `CAREER_LEARNING_INTERESTS_MISSING` 으로 멈춘다.
 2. 에이전트가 `learningInterests.body` 를 기준으로 원문을 비교해 주제를 고르고, 고르지 않은 후보마다 제외 이유를 붙인다.
 3. 고른 결과를 대화에 글로 보여 준다. HTML 리포트와 외부 게시는 저장소 판 스킬이 한다.
 4. `save_study_recommendation` 을 한 번 부른다. 승인 카드에서 승인하면 `POST /api/study/v1/recommendation-runs` 로 저장된다.
-5. 같은 날 리포트가 이미 있거나 그 사이 관심사 문서가 바뀌었으면 `CAREER_STUDY_CONFLICT` 다. 후보를 다시 읽고 새로 고른다.
+5. 오늘 리포트가 이미 있으면 `CAREER_STUDY_ALREADY_SAVED` 다. 커넥터가 409 를 받은 뒤 `GET /api/study/v1/recommendation-runs/{reportId}/status` 로 확인해 구분한다. 에이전트는 멈추고 알린다.
+6. 그 사이 관심사 문서가 바뀌었거나 직전 추천의 주제를 다시 골랐으면 `CAREER_STUDY_CONFLICT` 다. 후보를 다시 읽고 새로 고르되, 한 번 더 충돌하면 멈춘다.
 
 ### 커넥터에서 갈라지는 곳
 
@@ -842,7 +843,7 @@ plugin 의 `study-topic-recommender` 스킬이 이미 수집된 후보에서 고
 | 올릴 README 와 차트가 저장소의 것과 같다 | 커밋을 만들지 않고 `changed: false` 로 성공한다. 같은 요청을 다시 승인해도 빈 커밋이 쌓이지 않는다 |
 | 실행 결과가 「실행했는지 알 수 없음」 으로 온다 | 같은 도구를 다시 부르지 않는다. `get_github_profile` 이나 문서 조회로 반영됐는지 확인한다 |
 | 면접 기록 저장 결과를 알 수 없다 | 오류에 실린 `attemptId` 로 다시 승인받아 보낸다. Backend 가 같은 `attemptId` 의 저장한 응답을 돌려줘 횟수가 두 번 오르지 않는다 |
-| 공부 추천 저장 결과를 알 수 없다 | 오류에 실린 `generatedAt` 으로 다시 승인받아 보낸다. 같은 `reportId` 와 `generatedAt` 이면 멱등 키가 같다 |
+| 공부 추천 저장 결과를 알 수 없다 | 다른 인자를 하나도 바꾸지 않고 오류에 실린 `generatedAt` 만 더해 다시 승인받아 보낸다. 같은 `reportId` 와 `generatedAt` 이면 멱등 키가 같다. 본문이 다르면 `IDEMPOTENCY_CONFLICT` 409 가 된다 |
 | 공부 후보가 비었다 | 수집이 아직 돌지 않았거나 모두 판정됐다. 빈 결과를 알리고 저장하지 않는다 |
 | 저장할 본문이 승인 인자 상한을 넘는다 | fos-assistant 가 호출을 거절한다. 노트북의 CLI 로 저장하라고 안내한다 |
 | 원티드나 LinkedIn 을 고쳐 달라고 한다 | 원고만 고치고, 사이트 반영은 노트북의 `sync-profile` 에서 하라고 안내한다 |
