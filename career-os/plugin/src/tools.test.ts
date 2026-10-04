@@ -308,10 +308,17 @@ describe("GitHub 프로필 도구", () => {
   const records = [usage("2031-02", 3_000_000_000, 1_049_999_999), usage("2031-01", 500_000_000, 260_000_000)];
   const badge = (value: string) => `# 프로필\n\n![Tokens](https://img.shields.io/badge/Tokens-${value}-26d0ce)\n`;
   const readme = badge("4.8B");
+  // Fake SHAs only. headA is what get_github_profile returned when the draft was reviewed.
+  const headA = "a".repeat(40);
+  const headB = "b".repeat(40);
+  const reviewed = { expectedBranch: "main", expectedHead: headA };
 
   type GhCall = { method: string; url: string; init: RequestInit | undefined; body: any };
 
-  function connected(options: { github?: boolean; githubStatus?: number; snapshots?: unknown[] } = {}) {
+  function connected(
+    options: { github?: boolean; githubStatus?: number; snapshots?: unknown[]; head?: string } = {},
+  ) {
+    const head = options.head ?? headA;
     const calls: GhCall[] = [];
     const fetchImpl: FetchLike = async (input, init) => {
       const url = String(input);
@@ -327,13 +334,13 @@ describe("GitHub 프로필 도구", () => {
       switch (key) {
         case "GET ":
           return json({ default_branch: "main" });
-        case "GET /contents/README.md?ref=main":
+        case `GET /contents/README.md?ref=${head}`:
           return json({ content: Buffer.from(readme, "utf8").toString("base64"), encoding: "base64" });
-        case "GET /contents/agent-usage.svg?ref=main":
+        case `GET /contents/agent-usage.svg?ref=${head}`:
           return json({ message: "Not Found" }, 404);
         case "GET /git/ref/heads/main":
-          return json({ object: { sha: "head-sha" } });
-        case "GET /git/commits/head-sha":
+          return json({ object: { sha: head } });
+        case `GET /git/commits/${head}`:
           return json({ tree: { sha: "base-tree-sha" } });
         case "POST /git/blobs":
           return json({ sha: `blob-${calls.length}` }, 201);
@@ -356,7 +363,7 @@ describe("GitHub 프로필 도구", () => {
 
   test("update_github_profile 은 기록에서 그린 차트와 받은 README 를 올리고 합계와 달을 낸다", async () => {
     const { calls, tools } = connected();
-    const result = await tools.call("update_github_profile", { readme, months: ["2031-02", "2031-01"] });
+    const result = await tools.call("update_github_profile", { readme, months: ["2031-02", "2031-01"], ...reviewed });
     expect(result.isError).toBeUndefined();
     expect(parse(result)).toEqual({
       changed: true,
@@ -381,7 +388,7 @@ describe("GitHub 프로필 도구", () => {
 
   test("달이 하나면 커밋 문구에 그 달 하나만 쓴다", async () => {
     const { calls, tools } = connected();
-    const result = await tools.call("update_github_profile", { readme: badge("0.8B"), months: ["2031-01"] });
+    const result = await tools.call("update_github_profile", { readme: badge("0.8B"), months: ["2031-01"], ...reviewed });
     expect(parse(result).total).toBe("0.8B");
     const commit = githubCalls(calls).find((call) => call.method === "POST" && call.url.endsWith("/git/commits"));
     expect(commit!.body.message).toBe("docs: 프로필과 에이전트 사용량 차트를 갱신한다 (2031-01)");
@@ -396,7 +403,7 @@ describe("GitHub 프로필 도구", () => {
   for (const [label, text, found] of mismatches) {
     test(`${label} CAREER_BADGE_MISMATCH 이고 GitHub 에 아무것도 보내지 않는다`, async () => {
       const { calls, tools } = connected();
-      const result = await tools.call("update_github_profile", { readme: text, months: ["2031-01", "2031-02"] });
+      const result = await tools.call("update_github_profile", { readme: text, months: ["2031-01", "2031-02"], ...reviewed });
       expect(result.isError).toBe(true);
       expect(parse(result)).toEqual({
         error: { code: "CAREER_BADGE_MISMATCH", message: expect.any(String) },
@@ -409,7 +416,7 @@ describe("GitHub 프로필 도구", () => {
 
   test("기록에 없는 달이 있으면 CAREER_USAGE_MONTH_MISSING 이고 missing 에 그 달이 있다", async () => {
     const { calls, tools } = connected();
-    const result = await tools.call("update_github_profile", { readme, months: ["2031-01", "2031-03"] });
+    const result = await tools.call("update_github_profile", { readme, months: ["2031-01", "2031-03"], ...reviewed });
     expect(parse(result)).toEqual({
       error: { code: "CAREER_USAGE_MONTH_MISSING", message: expect.any(String) },
       missing: ["2031-03"],
@@ -419,19 +426,25 @@ describe("GitHub 프로필 도구", () => {
 
   test("고른 달의 막대가 모두 0 이면 CAREER_INVALID_INPUT 이고 GitHub 에 아무것도 보내지 않는다", async () => {
     const { calls, tools } = connected({ snapshots: [usage("2031-01", 49_999_999, 0)] });
-    const result = await tools.call("update_github_profile", { readme: badge("0.0B"), months: ["2031-01"] });
+    const result = await tools.call("update_github_profile", { readme: badge("0.0B"), months: ["2031-01"], ...reviewed });
     expect(parse(result).error.code).toBe("CAREER_INVALID_INPUT");
     expect(githubCalls(calls)).toHaveLength(0);
   });
 
   const rejected = [
-    ["숫자 total 을 더하면", { readme, months: ["2031-01"], total: "97.9B" }],
-    ["months 가 빈 배열", { readme, months: [] }],
-    ["months 가 일곱 개", { readme, months: ["2031-01", "2031-02", "2031-03", "2031-04", "2031-05", "2031-06", "2031-07"] }],
-    ["months 가 겹치면", { readme, months: ["2031-01", "2031-01"] }],
-    ["months 에 2031-13", { readme, months: ["2031-13"] }],
-    ["readme 가 공백뿐", { readme: "  \n", months: ["2031-01"] }],
-    ["readme 가 65,537바이트", { readme: "a".repeat(65_537), months: ["2031-01"] }],
+    ["숫자 total 을 더하면", { readme, months: ["2031-01"], total: "97.9B", ...reviewed }],
+    ["months 가 빈 배열", { readme, months: [], ...reviewed }],
+    ["months 가 일곱 개", { readme, months: ["2031-01", "2031-02", "2031-03", "2031-04", "2031-05", "2031-06", "2031-07"], ...reviewed }],
+    ["months 가 겹치면", { readme, months: ["2031-01", "2031-01"], ...reviewed }],
+    ["months 에 2031-13", { readme, months: ["2031-13"], ...reviewed }],
+    ["readme 가 공백뿐", { readme: "  \n", months: ["2031-01"], ...reviewed }],
+    ["readme 가 65,537바이트", { readme: "a".repeat(65_537), months: ["2031-01"], ...reviewed }],
+    // Approvals stored before expectedBranch and expectedHead existed are rejected, not run on the latest head.
+    ["검토 기준이 없는 옛 형식이면", { readme, months: ["2031-01"] }],
+    ["expectedHead 만 없으면", { readme, months: ["2031-01"], expectedBranch: "main" }],
+    ["expectedBranch 가 비면", { readme, months: ["2031-01"], ...reviewed, expectedBranch: "" }],
+    ["expectedHead 가 대문자면", { readme, months: ["2031-01"], ...reviewed, expectedHead: "A".repeat(40) }],
+    ["expectedHead 가 짧으면", { readme, months: ["2031-01"], ...reviewed, expectedHead: "a".repeat(7) }],
   ] as const;
   for (const [label, args] of rejected) {
     test(`${label} fetch 없이 CAREER_INVALID_INPUT 이다`, async () => {
@@ -450,6 +463,7 @@ describe("GitHub 프로필 도구", () => {
     const result = await tools.call("update_github_profile", {
       readme: badge("6.0B"),
       months: six.map((record) => record.month),
+      ...reviewed,
     });
     expect(result.isError).toBeUndefined();
     expect(parse(result).months).toEqual(six.map((record) => record.month));
@@ -457,7 +471,7 @@ describe("GitHub 프로필 도구", () => {
 
   test("GitHub token 이 없으면 GitHub 도구는 fetch 없이 CAREER_GITHUB_NOT_CONFIGURED 이고 다른 도구는 동작한다", async () => {
     const { calls, tools } = connected({ github: false });
-    const update = await tools.call("update_github_profile", { readme, months: ["2031-01"] });
+    const update = await tools.call("update_github_profile", { readme, months: ["2031-01"], ...reviewed });
     expect(parse(update).error.code).toBe("CAREER_GITHUB_NOT_CONFIGURED");
     const read = await tools.call("get_github_profile", {});
     expect(parse(read).error.code).toBe("CAREER_GITHUB_NOT_CONFIGURED");
@@ -466,10 +480,34 @@ describe("GitHub 프로필 도구", () => {
     expect(list.isError).toBeUndefined();
   });
 
-  test("get_github_profile 은 저장소와 branch, README, 차트 유무를 낸다", async () => {
+  test("get_github_profile 은 저장소와 branch, 끝 커밋, 그 커밋의 README 와 차트 유무를 낸다", async () => {
     const { tools } = connected();
     const result = await tools.call("get_github_profile", {});
-    expect(parse(result)).toEqual({ repo, branch: "main", readme, chartExists: false });
+    expect(parse(result)).toEqual({ repo, branch: "main", head: headA, readme, chartExists: false });
+  });
+
+  test("A 를 읽고 만든 요청이 B 가 커밋된 뒤 실행되면 CAREER_GITHUB_STALE_REVIEW 이고 GitHub 에 쓰지 않는다", async () => {
+    const before = connected();
+    const read = parse(await before.tools.call("get_github_profile", {}));
+    const args = { readme, months: ["2031-01", "2031-02"], expectedBranch: read.branch, expectedHead: read.head };
+    const after = connected({ head: headB });
+    const result = await after.tools.call("update_github_profile", args);
+    expect(result.isError).toBe(true);
+    expect(parse(result).error.code).toBe("CAREER_GITHUB_STALE_REVIEW");
+    expect(githubCalls(after.calls).filter((call) => call.method !== "GET")).toHaveLength(0);
+  });
+
+  test("승인 인자를 JSON 으로 저장했다가 새 인스턴스에서 실행해도 검토 기준이 그대로 쓰인다", async () => {
+    // fos-assistant stores argsJson at approval time and executes it later, possibly in another process.
+    const stored = JSON.stringify({ readme, months: ["2031-01", "2031-02"], ...reviewed });
+    const later = connected();
+    const result = await later.tools.call("update_github_profile", JSON.parse(stored));
+    expect(result.isError).toBeUndefined();
+    const commit = githubCalls(later.calls).find((call) => call.method === "POST" && call.url.endsWith("/git/commits"));
+    expect(commit!.body.parents).toEqual([headA]);
+    const moved = connected({ head: headB });
+    const stale = await moved.tools.call("update_github_profile", JSON.parse(stored));
+    expect(parse(stale).error.code).toBe("CAREER_GITHUB_STALE_REVIEW");
   });
 
   test("check_connection 은 GitHub 가 있으면 둘 다 확인하고 structuredContent 에도 싣는다", async () => {
@@ -489,7 +527,7 @@ describe("GitHub 프로필 도구", () => {
 
   test("두 token 은 서로 다른 host 로 가지 않고 오류 결과에도 실리지 않는다", async () => {
     const { calls, tools } = connected();
-    await tools.call("update_github_profile", { readme, months: ["2031-01", "2031-02"] });
+    await tools.call("update_github_profile", { readme, months: ["2031-01", "2031-02"], ...reviewed });
     await tools.call("check_connection", {});
     expect(githubCalls(calls).length).toBeGreaterThan(0);
     for (const call of calls) {
@@ -504,7 +542,7 @@ describe("GitHub 프로필 도구", () => {
     const failures = [
       await connected({ githubStatus: 401 }).tools.call("check_connection", {}),
       await connected({ githubStatus: 502 }).tools.call("get_github_profile", {}),
-      await connected().tools.call("update_github_profile", { readme: badge("1.0B"), months: ["2031-01"] }),
+      await connected().tools.call("update_github_profile", { readme: badge("1.0B"), months: ["2031-01"], ...reviewed }),
     ];
     for (const failure of failures) {
       expect(failure.isError).toBe(true);

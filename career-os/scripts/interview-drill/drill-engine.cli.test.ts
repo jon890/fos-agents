@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { SUBPROCESS_TEST_TIMEOUT_MS } from "../lib/test-timeouts.ts";
 
 const directories: string[] = [];
 afterEach(() =>
@@ -51,12 +52,12 @@ test("file select은 JSON과 file 저장소를 출력한다", () => {
   });
   expect(result.code).toBe(0);
   expect(JSON.parse(result.stdout).store).toBe("file");
-});
+}, SUBPROCESS_TEST_TIMEOUT_MS);
 test("attemptId 없는 record는 사용법 종료 코드로 끝난다", () => {
   const result = invoke(["record", "--drill-type", "tech"], { CAREER_STORE: "file" });
   expect(result.code).toBe(2);
   expect(result.stderr).toContain("Usage:");
-});
+}, SUBPROCESS_TEST_TIMEOUT_MS);
 test("닿지 않는 Backend 기록은 파일 저장으로 바꾸지 않는다", () => {
   const directory = mkdtempSync(join(tmpdir(), "drill-cli-"));
   directories.push(directory);
@@ -86,7 +87,7 @@ test("닿지 않는 Backend 기록은 파일 저장으로 바꾸지 않는다", 
   expect(result.code).toBe(1);
   expect(result.stderr).toContain("연습 결과는 기록되지 않았습니다.");
   expect(existsSync(join(directory, "attempts.jsonl"))).toBeFalse();
-});
+}, SUBPROCESS_TEST_TIMEOUT_MS);
 test("잘못된 Backend 응답은 기록 여부를 단정하지 않는다", async () => {
   const server = Bun.serve({ port: 0, fetch: () => new Response("not-json") });
   try {
@@ -117,7 +118,7 @@ test("잘못된 Backend 응답은 기록 여부를 단정하지 않는다", asyn
   } finally {
     server.stop(true);
   }
-});
+}, SUBPROCESS_TEST_TIMEOUT_MS);
 
 test("CAREER_MEMORY=backend 인데 CAREER_BACKEND_URL 이 없으면 memory 명령은 doctor 안내로 실패한다", () => {
   const result = invoke(["memory"], {
@@ -131,7 +132,7 @@ test("CAREER_MEMORY=backend 인데 CAREER_BACKEND_URL 이 없으면 memory 명�
   expect(result.stdout).toBe("");
   expect(result.stderr).toContain("CAREER_BACKEND_URL");
   expect(result.stderr).toContain("drill-engine.ts doctor");
-});
+}, SUBPROCESS_TEST_TIMEOUT_MS);
 
 test("Backend 에 없는 후보자 맥락 문서는 memory 명령이 빠진 키를 담아 실패한다", async () => {
   const server = Bun.serve({
@@ -162,7 +163,7 @@ test("Backend 에 없는 후보자 맥락 문서는 memory 명령이 빠진 키�
   } finally {
     server.stop(true);
   }
-});
+}, SUBPROCESS_TEST_TIMEOUT_MS);
 
 test("두 설정이 없으면 doctor 명령은 실패 항목을 JSON으로 낸다", () => {
   const result = invoke(["doctor"], { CAREER_STORE: "", CAREER_MEMORY: "" });
@@ -173,7 +174,7 @@ test("두 설정이 없으면 doctor 명령은 실패 항목을 JSON으로 낸�
     { name: "CAREER_STORE", ok: false },
     { name: "CAREER_MEMORY", ok: false },
   ]);
-});
+}, SUBPROCESS_TEST_TIMEOUT_MS);
 
 test("유효한 file 설정의 doctor 명령은 성공한다", () => {
   const directory = mkdtempSync(join(tmpdir(), "drill-cli-doctor-"));
@@ -196,4 +197,4 @@ test("유효한 file 설정의 doctor 명령은 성공한다", () => {
   });
   expect(result.code).toBe(0);
   expect(JSON.parse(result.stdout).passed).toBeTrue();
-});
+}, SUBPROCESS_TEST_TIMEOUT_MS);

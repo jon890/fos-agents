@@ -9,6 +9,32 @@ import {
 import { CareerBackend, CareerError, safeError } from "./backend.ts";
 import type { GithubProfileRepo } from "./github.ts";
 import { idempotencyKey } from "./idempotency.ts";
+import {
+  attemptInputSchema,
+  getInterviewQuestions,
+  type AttemptInput,
+  type GetInterviewQuestionsArgs,
+  type ListPersonalQuestionsArgs,
+  type PersonalQuestionInput,
+  getInterviewQuestionsSchema,
+  listPersonalQuestions,
+  listPersonalQuestionsSchema,
+  personalQuestionInputSchema,
+  saveInterviewAttempt,
+  savePersonalQuestion,
+} from "./interview.ts";
+import { getPositionResearchConstraints, getPositionResearchConstraintsSchema } from "./positions.ts";
+import {
+  getStudyCandidates,
+  getStudyCandidatesSchema,
+  listStudyCandidates,
+  listStudyCandidatesSchema,
+  saveStudyRecommendation,
+  saveStudyRecommendationSchema,
+  type GetStudyCandidatesArgs,
+  type ListStudyCandidatesArgs,
+  type SaveStudyRecommendationArgs,
+} from "./study.ts";
 
 // Same keys as the Backend schemas; contract-parity.test.ts compares them with the CLI contracts.
 export const contextDocumentKeys = [
@@ -47,7 +73,7 @@ function saveSchema<K extends readonly [string, ...string[]]>(keys: K) {
     expectedVersion: z.number().int().nonnegative(),
   });
 }
-type UpdateGithubProfileArgs = { readme: string; months: string[] };
+type UpdateGithubProfileArgs = { readme: string; months: string[]; expectedBranch: string; expectedHead: string };
 type SaveArgs = { documentKey: string; body: string; note: string; expectedVersion: number };
 
 const contextSchemas = documentSchemas(contextDocumentKeys);
@@ -79,6 +105,10 @@ const updateGithubProfileSchema = z.strictObject({
     .min(1)
     .max(6)
     .refine((months) => new Set(months).size === months.length),
+  // The branch and head get_github_profile returned. They travel inside the stored approval args,
+  // so an approval executed later still names the snapshot the user reviewed.
+  expectedBranch: z.string().min(1).max(255),
+  expectedHead: z.string().regex(/^[0-9a-f]{40}$/),
 });
 
 export const toolDefinitions: Record<string, { description: string; schema: z.ZodType }> = {
@@ -117,13 +147,51 @@ export const toolDefinitions: Record<string, { description: string; schema: z.Zo
     schema: saveSchema(profileDocumentKeys),
   },
   get_github_profile: {
-    description: "GitHub 프로필 저장소의 기본 branch, README 본문, 차트 파일 유무 조회",
+    description: "GitHub 프로필 저장소의 기본 branch 와 그 끝 커밋(head), 같은 커밋의 README 본문과 차트 파일 유무 조회",
     schema: z.strictObject({}),
   },
   update_github_profile: {
     description:
-      "README 와 사용량 차트를 GitHub 프로필 저장소에 커밋 하나로 올림. 숫자는 받지 않고 고른 달의 사용량 기록에서 계산하며, README 의 Tokens 배지가 그 합계와 다르면 아무것도 쓰지 않는다",
+      "README 와 사용량 차트를 GitHub 프로필 저장소에 커밋 하나로 올림. 숫자는 받지 않고 고른 달의 사용량 기록에서 계산하며, README 의 Tokens 배지가 그 합계와 다르면 아무것도 쓰지 않는다. expectedBranch 와 expectedHead 는 get_github_profile 의 branch 와 head 이고, 실행할 때 저장소가 그 상태가 아니면 아무것도 쓰지 않는다",
     schema: updateGithubProfileSchema,
+  },
+  get_interview_questions: {
+    description:
+      "공개 질문과 켜진 개인 질문 가운데 복습 상태로 오늘 연습할 면접 질문을 고름. count 기본값은 5",
+    schema: getInterviewQuestionsSchema,
+  },
+  list_personal_questions: {
+    description: "켜진 개인 면접 질문 목록 조회",
+    schema: listPersonalQuestionsSchema,
+  },
+  save_interview_attempt: {
+    description:
+      "면접 답변 하나의 판정을 기록하고 복습 상태를 갱신. attemptId 는 다시 보낼 때만 넘기며 없으면 서버가 만든다",
+    schema: attemptInputSchema,
+  },
+  save_personal_question: {
+    description: "개인 면접 질문 하나를 더하거나 고치거나 enabled: false 로 끔",
+    schema: personalQuestionInputSchema,
+  },
+  get_study_candidates: {
+    description:
+      "수집된 공부 후보와 learning-interests 본문, 최근 추천 주제, 저장에 넘길 candidateContextVersion 조회. limit 기본값은 20",
+    schema: getStudyCandidatesSchema,
+  },
+  save_study_recommendation: {
+    description:
+      "고른 공부 주제와 자료, 고르지 않은 후보의 제외 이유를 오늘 추천으로 저장. 주제 4개, 자료 합계 8개, 제외 20개까지다",
+    schema: saveStudyRecommendationSchema,
+  },
+  list_study_candidates: {
+    description:
+      "조사 출발점으로 쓸 미추천 공부 후보를 필터와 cursor 로 한 쪽씩 조회. 자료 식별자와 원문 URL, 관심사 버전, 최근 추천 주제를 싣는다. 빈 결과는 웹에 자료가 없다는 뜻이 아니다. limit 기본값은 20",
+    schema: listStudyCandidatesSchema,
+  },
+  get_position_research_constraints: {
+    description:
+      "포지션 조사에 쓸 개인 제외 규칙(대상, 근거, 만료일)과 회사별 수동 선호 조회. 둘 중 하나라도 읽지 못하면 readiness 가 hold 이고 추천 확정을 미룬다",
+    schema: getPositionResearchConstraintsSchema,
   },
 };
 
@@ -137,6 +205,7 @@ export class CareerTools {
   constructor(
     private readonly backend: CareerBackend,
     private readonly github?: GithubProfileRepo,
+    private readonly now: () => Date = () => new Date(),
   ) {}
 
   async call(name: string, raw: unknown): Promise<ToolResult> {
@@ -192,6 +261,26 @@ export class CareerTools {
           return this.success(await this.requireGithub().read());
         case "update_github_profile":
           return this.success(await this.updateGithubProfile(args as UpdateGithubProfileArgs));
+        case "get_interview_questions":
+          return this.success(
+            await getInterviewQuestions(this.backend, parsed.data as GetInterviewQuestionsArgs, this.now),
+          );
+        case "list_personal_questions":
+          return this.success(await listPersonalQuestions(this.backend, parsed.data as ListPersonalQuestionsArgs));
+        case "save_interview_attempt":
+          return this.success(await saveInterviewAttempt(this.backend, parsed.data as AttemptInput));
+        case "save_personal_question":
+          return this.success(await savePersonalQuestion(this.backend, parsed.data as PersonalQuestionInput));
+        case "get_study_candidates":
+          return this.success(await getStudyCandidates(this.backend, parsed.data as GetStudyCandidatesArgs));
+        case "save_study_recommendation":
+          return this.success(
+            await saveStudyRecommendation(this.backend, parsed.data as SaveStudyRecommendationArgs, this.now),
+          );
+        case "list_study_candidates":
+          return this.success(await listStudyCandidates(this.backend, parsed.data as ListStudyCandidatesArgs));
+        case "get_position_research_constraints":
+          return this.success(await getPositionResearchConstraints(this.backend));
       }
       throw new CareerError("CAREER_UNKNOWN_TOOL");
     } catch (error) {
@@ -209,7 +298,7 @@ export class CareerTools {
   }
 
   // Every check runs before the first GitHub request, so a failed check writes nothing.
-  private async updateGithubProfile({ readme, months }: UpdateGithubProfileArgs) {
+  private async updateGithubProfile({ readme, months, expectedBranch, expectedHead }: UpdateGithubProfileArgs) {
     const github = this.requireGithub();
     const { snapshots } = await this.backend.request(
       "GET",
@@ -236,6 +325,7 @@ export class CareerTools {
     const commit = await github.commitProfile(
       { readme, chart },
       `docs: 프로필과 에이전트 사용량 차트를 갱신한다 (${range})`,
+      { branch: expectedBranch, head: expectedHead },
     );
     return { ...commit, months: barMonths, total: expected };
   }

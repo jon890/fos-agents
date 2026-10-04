@@ -6,6 +6,7 @@ import { revisionSchema } from "../contracts.ts";
 import { buildSshInvocationArgs, validateSshConfig } from "../ssh-transport.ts";
 import { createTarFromDirectory, safeRemove, toUint8Array, validateTarTopLevel } from "../tar-utils.ts";
 import { parseRemoteError } from "../transport.ts";
+import { SUBPROCESS_TEST_TIMEOUT_MS } from "../../lib/test-timeouts.ts";
 
 describe("transport safety boundary", () => {
   test("Bun이 tar stdout을 ArrayBuffer로 반환해도 Uint8Array로 정규화한다", () => {
@@ -30,7 +31,7 @@ describe("transport safety boundary", () => {
     } finally {
       await safeRemove(root);
     }
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("tar에 hardlink가 있으면 추출 전에 거부한다", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "career-tar-"));
@@ -46,7 +47,7 @@ describe("transport safety boundary", () => {
     } finally {
       await safeRemove(root);
     }
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("tar 경로에 절대경로, 현재/상위/빈/control segment가 있으면 거부한다", async () => {
     for (const unsafeName of ["/abs", "../escape", "applications/./x", "applications//x", "applications/bad\u0001x"]) {
@@ -54,7 +55,7 @@ describe("transport safety boundary", () => {
         result: { code: "INVALID_MANIFEST" },
       });
     }
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("tar 최상위 manifest와 managed root의 타입이 계약과 다르면 거부한다", async () => {
     await expect(validateTarTopLevel(
@@ -67,7 +68,7 @@ describe("transport safety boundary", () => {
       ["applications"],
       "export",
     )).rejects.toMatchObject({ result: { code: "INVALID_MANIFEST" } });
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("tar EOF record 두 개가 없으면 전송 손상으로 거부한다", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "career-tar-"));
@@ -87,7 +88,7 @@ describe("transport safety boundary", () => {
     } finally {
       await safeRemove(root);
     }
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("revision은 path traversal과 argv option 형태를 허용하지 않는다", () => {
     expect(() => revisionSchema.parse("rev-1")).not.toThrow();

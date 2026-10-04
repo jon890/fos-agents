@@ -12,6 +12,7 @@ import {
   toRecommendationRunPayload,
 } from "./recommendations.js";
 import type { StudyLibraryCandidateMeta } from "./candidates.js";
+import { SUBPROCESS_TEST_TIMEOUT_MS } from "../../lib/test-timeouts.ts";
 
 const originalArgv = process.argv;
 const originalFetch = globalThis.fetch;
@@ -309,7 +310,7 @@ describe("study-library recommendations CLI", () => {
       reportId: "morning-2026-09-08",
       historyVersion: 20,
     });
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("publication idempotencyKey는 접두사와 고정 순서 JSON SHA-256으로 만들고 CLI 재시도에서 같다", async () => {
     const expected = publicationIdempotencyKey({

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { CareerBackendHttpError } from "../lib/career-backend-http.ts";
 import { formatManageProfileError, manageProfile } from "./manage_profile.ts";
+import { SUBPROCESS_TEST_TIMEOUT_MS } from "../lib/test-timeouts.ts";
 
 const originalFetch = globalThis.fetch;
 const originalEnv = { url: process.env.CAREER_BACKEND_URL, token: process.env.CAREER_BACKEND_TOKEN, tokenFile: process.env.CAREER_BACKEND_TOKEN_FILE };
@@ -125,7 +126,7 @@ describe("manage_profile 문서", () => {
     } finally {
       await server.stop(true);
     }
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("get 을 --out 없이 실행하면 본문 끝 줄바꿈을 늘리지 않고 그대로 출력한다", async () => {
     const server = Bun.serve({ port: 0, fetch: () => Response.json(documentBody("본문\n")) });
@@ -137,7 +138,7 @@ describe("manage_profile 문서", () => {
     } finally {
       await server.stop(true);
     }
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("get 404 는 --expected-version 0 을 안내한다", async () => {
     useApi(() => json({ error: { code: "NOT_FOUND", message: "x" } }, 404));
@@ -230,7 +231,7 @@ describe("manage_profile 사용량", () => {
     } finally {
       await server.stop(true);
     }
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("숫자가 아닌 토큰과 잘못된 달은 요청 전에 거절한다", async () => {
     const urls = useApi(() => new Response("{}"));

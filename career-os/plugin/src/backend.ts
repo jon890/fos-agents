@@ -19,7 +19,8 @@ const messages = {
   CAREER_UNAVAILABLE: "커리어 Backend 가 응답하지 않습니다. 잠시 뒤 다시 시도해 주세요.",
   CAREER_NETWORK:
     "커리어 Backend 연결 결과를 확인할 수 없습니다. 저장을 다시 보내기 전에 문서를 다시 읽어 확인해 주세요.",
-  CAREER_INVALID_RESPONSE: "응답 형식을 확인할 수 없습니다. 요청을 반복하지 말고 문서를 다시 읽어 확인해 주세요.",
+  CAREER_INVALID_RESPONSE:
+    "응답 형식을 확인할 수 없습니다. 오류에 attemptId 가 있으면 그 값으로만 다시 보내고, 없으면 요청을 반복하지 말고 문서를 다시 읽어 확인해 주세요.",
   CAREER_INVALID_INPUT: "도구 입력을 확인해 주세요.",
   CAREER_USAGE_MONTH_MISSING: "고른 달 가운데 사용량 기록이 없는 달이 있습니다.",
   CAREER_BADGE_MISMATCH: "README 의 Tokens 배지가 사용량 기록의 합계와 맞지 않습니다.",
@@ -27,7 +28,14 @@ const messages = {
   CAREER_GITHUB_UNAUTHORIZED: "GitHub 가 token 을 거절했습니다. 연결 설정의 GitHub token 을 확인해 주세요.",
   CAREER_GITHUB_FORBIDDEN: "GitHub token 에 프로필 저장소 권한이 없거나 저장소 이름이 틀립니다.",
   CAREER_GITHUB_CONFLICT: "그 사이 프로필 저장소에 다른 커밋이 올라왔습니다. 다시 읽은 뒤 갱신해 주세요.",
+  CAREER_GITHUB_STALE_REVIEW:
+    "검토한 뒤 프로필 저장소의 기본 branch 나 최신 커밋이 바뀌어 아무것도 쓰지 않았습니다. GitHub 프로필을 다시 읽고 변경안을 맞춘 뒤 새로 승인받아 주세요.",
   CAREER_GITHUB_UNAVAILABLE: "GitHub 가 응답하지 않습니다. 잠시 뒤 다시 시도해 주세요.",
+  CAREER_STUDY_CONFLICT:
+    "후보를 읽은 뒤 기준이 바뀌었거나 이미 추천한 주제나 자료를 골랐거나 같은 요청이 아직 처리 중입니다. 잠시 뒤 후보를 다시 읽어 확인해 주세요.",
+  CAREER_STUDY_ALREADY_SAVED: "오늘 공부 추천이 이미 저장돼 있습니다.",
+  CAREER_ATTEMPT_PENDING: "같은 기록 요청이 아직 처리 중입니다. 잠시 뒤 같은 attemptId 로 다시 보내 주세요.",
+  CAREER_LEARNING_INTERESTS_MISSING: "learning-interests 문서가 없습니다. 관심사 문서를 먼저 저장해 주세요.",
   CAREER_UNKNOWN_TOOL: "지원하지 않는 도구입니다.",
   CAREER_INTERNAL: "커리어 요청을 처리하지 못했습니다. 요청 내용을 확인해 주세요.",
 } as const;
@@ -87,7 +95,7 @@ export class CareerBackend {
   }
 
   async request<T>(
-    method: "GET" | "PUT",
+    method: "GET" | "PUT" | "POST",
     path: string,
     schema: z.ZodType<T>,
     body?: unknown,

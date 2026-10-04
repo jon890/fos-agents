@@ -3,6 +3,7 @@ import { mkdtempSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { checkEvidenceSources, EVIDENCE_SOURCES, type EvidenceSourceSpec } from "./check_evidence_sources.ts";
+import { SUBPROCESS_TEST_TIMEOUT_MS } from "../../../../scripts/lib/test-timeouts.ts";
 
 const reference = readFileSync(new URL("../references/evidence-source-freshness.md", import.meta.url), "utf8");
 
@@ -93,11 +94,11 @@ describe("CLI 계약", () => {
 
     expect(result.code).toBe(0);
     expect(result.out).toContain("--no-fetch");
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("모르는 옵션은 사용법 오류 2 로 끝낸다", () => {
     expect(invoke(["--모르는옵션"]).code).toBe(2);
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("검사에 실패하면 1 로 끝낸다", () => {
     const empty = createWorkspace();
@@ -108,7 +109,7 @@ describe("CLI 계약", () => {
 
     expect(result.code).toBe(1);
     expect(JSON.parse(result.out).passed).toBe(false);
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   // `fetch: options["--no-fetch"] !== true` 는 옵션 이름이 바뀌면 뜻이 조용히 뒤집히는 자리다.
   test("--no-fetch 가 원격을 받지 않는 경로로 이어진다", () => {
@@ -130,7 +131,7 @@ describe("CLI 계약", () => {
     // 플래그를 빼면 같은 저장소에서 원격 ref 가 움직인다. 위 단언이 기본값 때문에 통과한 것이 아니다.
     invoke([root]);
     expect(remoteRef()).not.toBe(before);
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 });
 
 describe("최신 여부 판정", () => {
@@ -141,7 +142,7 @@ describe("최신 여부 판정", () => {
 
     expect(result.passed).toBe(true);
     expect(result.sources[0].status).toBe("up_to_date");
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("원격에만 커밋이 있으면 뒤처진 커밋 수와 원격 시각을 돌려준다", () => {
     const { origin, clone } = createOriginAndClone();
@@ -154,7 +155,7 @@ describe("최신 여부 판정", () => {
     expect(result.sources[0].status).toBe("behind");
     expect(result.sources[0].behindCommits).toBe(2);
     expect(result.sources[0].remoteCommittedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   // 검사만 하고 당기지 않는다. 읽기 전용 저장소이며 당기는 과정에 사람이 판단할 것이 있다.
   test("뒤처진 것을 발견해도 로컬 HEAD 를 옮기지 않는다", () => {
@@ -166,7 +167,7 @@ describe("최신 여부 판정", () => {
 
     const after = Bun.spawnSync(["git", "-C", clone, "rev-parse", "HEAD"], { stdout: "pipe" }).stdout.toString();
     expect(after).toBe(before);
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("--no-fetch 는 원격을 받지 않아 직전 remote-tracking ref 로 판정한다", () => {
     const { origin, clone } = createOriginAndClone();
@@ -175,7 +176,7 @@ describe("최신 여부 판정", () => {
     const result = checkEvidenceSources({ sources: [specFor(clone)], fetch: false });
 
     expect(result.sources[0].status).toBe("up_to_date");
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 });
 
 describe("확인할 수 없는 원본", () => {
@@ -209,7 +210,7 @@ describe("확인할 수 없는 원본", () => {
 
     expect(result.sources[0].status).toBe("unavailable");
     expect(result.sources[0].detail).toContain("루트가 아닙니다");
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("앞의 자리에 저장소가 없으면 다음 자리를 본다", () => {
     const { clone } = createOriginAndClone();
@@ -218,7 +219,7 @@ describe("확인할 수 없는 원본", () => {
 
     expect(result.sources[0].status).toBe("up_to_date");
     expect(result.sources[0].path).toBe(clone);
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("원격을 받지 못하면 unreachable 로 구분한다", () => {
     const { clone } = createOriginAndClone();
@@ -230,7 +231,7 @@ describe("확인할 수 없는 원본", () => {
     expect(result.sources[0].status).toBe("unreachable");
     // git stderr 는 여러 줄이다. 사용자에게 한 줄만 보인다.
     expect(result.sources[0].detail).not.toContain("\n");
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("모든 원본이 최신이면 통과한다", () => {
     const first = createOriginAndClone();
@@ -239,7 +240,7 @@ describe("확인할 수 없는 원본", () => {
     const result = checkEvidenceSources({ sources: [specFor(first.clone), specFor(second.clone)] });
 
     expect(result.passed).toBe(true);
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   // 사용자가 할 일이 다르므로 자리마다의 이유를 남긴다. 값을 설정하는 일과 저장소를 가져오는 일이다.
   test("자리마다 왜 아니었는지를 detail 에 남긴다", () => {
@@ -262,7 +263,7 @@ describe("확인할 수 없는 원본", () => {
     const result = checkEvidenceSources({ repositoryRoot: root, sources: [specFor("${PERSONAL_ROOT}/clone")] });
 
     expect(result.sources[0].status).toBe("up_to_date");
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("환경 변수 값이 있으면 그 아래 경로를 검사한다", () => {
     const { clone } = createOriginAndClone();
@@ -274,7 +275,7 @@ describe("확인할 수 없는 원본", () => {
     });
 
     expect(result.sources[0].status).toBe("up_to_date");
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("상대 경로 원본은 저장소 루트에서 푼다", () => {
     const { clone } = createOriginAndClone();
@@ -282,7 +283,7 @@ describe("확인할 수 없는 원본", () => {
     const result = checkEvidenceSources({ repositoryRoot: join(clone, ".."), sources: [specFor("clone")] });
 
     expect(result.sources[0].status).toBe("up_to_date");
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   // 스킬마다 명령을 실행하는 디렉터리 관례가 달라 저장소 루트와 `career-os` 양쪽에서 실행된다.
   test("저장소 루트를 주지 않으면 현재 위치에서 찾아 어느 디렉터리에서 실행해도 같은 경로를 본다", () => {
@@ -299,7 +300,7 @@ describe("확인할 수 없는 원본", () => {
     };
 
     expect(resultFrom(nested)).toEqual(resultFrom(repository));
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("한 원본이라도 최신이 아니면 전체가 통과하지 않는다", () => {
     const { clone } = createOriginAndClone();
@@ -310,5 +311,5 @@ describe("확인할 수 없는 원본", () => {
 
     expect(result.passed).toBe(false);
     expect(result.sources.map((source) => source.status)).toEqual(["up_to_date", "unavailable"]);
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 });

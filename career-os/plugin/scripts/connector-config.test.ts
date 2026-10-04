@@ -20,7 +20,7 @@ test("schema 2 정책은 실제 MCP 도구를 빠짐없이 선언하고 미선�
   expect(Object.keys(connector.tools).sort()).toEqual(Object.keys(toolDefinitions).sort());
 });
 
-test("확인 도구는 승인 없는 READ 정책이고 서버가 readOnlyHint 로 표시한다", async () => {
+test("확인 도구는 승인 없는 READ 정책이고 서버가 확인 도구와 조사 도구 둘을 readOnlyHint 로 표시한다", async () => {
   expect(connector.tools[connector.verify.tool]).toMatchObject({ risk: "READ", approval: "none" });
   const server = createServer({
     CAREER_BACKEND_URL: "https://career.example.com/",
@@ -35,6 +35,15 @@ test("확인 도구는 승인 없는 READ 정책이고 서버가 readOnlyHint �
     const { tools } = await client.listTools();
     const verifyTool = tools.find((tool) => tool.name === connector.verify.tool);
     expect(verifyTool?.annotations?.readOnlyHint).toBe(true);
+    // The research tools are read by an agent that picks its own topics, so they must never look writable.
+    for (const name of ["list_study_candidates", "get_position_research_constraints"]) {
+      const tool = tools.find((candidate) => candidate.name === name);
+      expect({ name, readOnly: tool?.annotations?.readOnlyHint, destructive: tool?.annotations?.destructiveHint }).toEqual({
+        name,
+        readOnly: true,
+        destructive: false,
+      });
+    }
   } finally {
     await client.close();
     await server.close();
@@ -85,12 +94,15 @@ test("plugin.json 과 package.json 의 version 이 같다", () => {
   expect(read(".claude-plugin/plugin.json").version).toBe(read("package.json").version);
 });
 
-test("도구는 열이고 WRITE 는 저장 도구 둘과 GitHub 갱신 도구뿐이며 모두 승인이 필요하다", () => {
-  expect(Object.keys(connector.tools)).toHaveLength(10);
+test("도구는 열여덟이고 WRITE 는 저장 도구 다섯과 GitHub 갱신 도구뿐이며 모두 승인이 필요하다", () => {
+  expect(Object.keys(connector.tools)).toHaveLength(18);
   const writes = policies.filter(([, policy]) => policy.risk === "WRITE");
   expect(writes.map(([name]) => name).sort()).toEqual([
     "save_context_document",
+    "save_interview_attempt",
+    "save_personal_question",
     "save_profile_document",
+    "save_study_recommendation",
     "update_github_profile",
   ]);
   for (const [name, policy] of writes) expect({ name, approval: policy.approval }).toEqual({ name, approval: "required" });
@@ -137,7 +149,27 @@ test("스킬 본문은 설치하는 쪽의 지침 상한 안에 있고 링크가
 });
 
 test("스킬을 노트북 에이전트의 스킬 폴더에 링크하지 않는다", () => {
-  expect(existsSync(join(import.meta.dir, "../../.claude/skills/career-connector"))).toBe(false);
+  const repoSkills = join(import.meta.dir, "../../.claude/skills");
+  expect(existsSync(join(repoSkills, "career-connector"))).toBe(false);
+  for (const name of ["interview-practice", "study-topic-recommender"]) {
+    const stat = lstatSync(join(repoSkills, name));
+    expect(stat.isSymbolicLink(), `${name} 이 심볼릭 링크다`).toBe(false);
+    expect(stat.isDirectory(), `${name} 이 디렉터리가 아니다`).toBe(true);
+  }
+});
+
+test("새 스킬은 셸과 저장소 경로를 쓰지 않고 앞머리가 디렉터리와 맞는다", () => {
+  for (const name of ["interview-practice", "study-topic-recommender"]) {
+    const text = readFileSync(join(skillsDirectory, name, "SKILL.md"), "utf8");
+    const end = text.indexOf("\n---\n", 4);
+    const front = text.slice(4, end);
+    const body = text.slice(end + 5);
+    for (const banned of ["career-os/", "bun ", "git "]) expect(body, `${name} 본문에 ${banned}`).not.toContain(banned);
+    expect(front.match(/^name: (.+)$/m)?.[1], `${name} 의 name`).toBe(name);
+    const description = front.match(/^description: (.+)$/m)?.[1] ?? "";
+    expect(description.length, `${name} 의 description`).toBeGreaterThan(0);
+    expect(description.length, `${name} 의 description 길이`).toBeLessThanOrEqual(1024);
+  }
 });
 
 test("본문이 8001자인 스킬과 닫히지 않은 앞머리는 거절한다", () => {

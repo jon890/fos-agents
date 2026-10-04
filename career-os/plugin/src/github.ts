@@ -38,6 +38,10 @@ function decodeBase64Utf8(content: string): string {
   }
 }
 
+function refPath(branch: string): string {
+  return `heads/${branch.split("/").map(encodeURIComponent).join("/")}`;
+}
+
 /** The GitHub profile repository: reads README and chart, and writes both in one commit. */
 export class GithubProfileRepo {
   private readonly token: string;
@@ -56,13 +60,25 @@ export class GithubProfileRepo {
     await this.defaultBranch();
   }
 
-  async read(): Promise<{ repo: string; branch: string; readme: string | null; chartExists: boolean }> {
+  /**
+   * Reads README and chart at one commit. The branch head is resolved first and both files are read
+   * at that SHA, so the returned head names exactly the snapshot the caller reviews.
+   */
+  async read(): Promise<{
+    repo: string;
+    branch: string;
+    head: string;
+    readme: string | null;
+    chartExists: boolean;
+  }> {
     const branch = await this.defaultBranch();
-    const readme = await this.send(this.contentsStep(readmePath, branch));
-    const chart = await this.send(this.contentsStep(chartPath, branch));
+    const head = await this.headOf(branch);
+    const readme = await this.send(this.contentsStep(readmePath, head));
+    const chart = await this.send(this.contentsStep(chartPath, head));
     return {
       repo: this.config.repo,
       branch,
+      head,
       readme: readme === null ? null : decodeBase64Utf8(this.parse(contentSchema, readme).content),
       chartExists: chart !== null,
     };
@@ -71,14 +87,20 @@ export class GithubProfileRepo {
   /**
    * Writes README and chart as one commit through the Git Data API, so the profile never shows one
    * file updated without the other. Each request is sent once and the branch moves without force.
+   *
+   * `expected` is the branch and head the README was reviewed against. When either differs, nothing
+   * is written: rebasing a stale draft onto the new head would silently drop the newer edit.
    */
   async commitProfile(
     files: { readme: string; chart: string },
     message: string,
+    expected: { branch: string; head: string },
   ): Promise<{ changed: boolean; commitSha: string; branch: string }> {
     const branch = await this.defaultBranch();
-    const ref = `heads/${branch.split("/").map(encodeURIComponent).join("/")}`;
-    const head = this.parse(refSchema, await this.send({ method: "GET", path: `/git/ref/${ref}` })).object.sha;
+    if (branch !== expected.branch) throw new CareerError("CAREER_GITHUB_STALE_REVIEW");
+    const head = await this.headOf(branch);
+    if (head !== expected.head) throw new CareerError("CAREER_GITHUB_STALE_REVIEW");
+    const ref = refPath(branch);
     const baseTree = this.parse(commitSchema, await this.send({ method: "GET", path: `/git/commits/${head}` }))
       .tree.sha;
     const readmeBlob = await this.createSha("/git/blobs", { content: files.readme, encoding: "utf-8" });
@@ -101,8 +123,12 @@ export class GithubProfileRepo {
     return this.parse(repoSchema, await this.send({ method: "GET", path: "" })).default_branch;
   }
 
-  private contentsStep(file: string, branch: string): Step {
-    return { method: "GET", path: `/contents/${file}?ref=${encodeURIComponent(branch)}`, missingIsAbsent: true };
+  private async headOf(branch: string): Promise<string> {
+    return this.parse(refSchema, await this.send({ method: "GET", path: `/git/ref/${refPath(branch)}` })).object.sha;
+  }
+
+  private contentsStep(file: string, commitSha: string): Step {
+    return { method: "GET", path: `/contents/${file}?ref=${encodeURIComponent(commitSha)}`, missingIsAbsent: true };
   }
 
   private async createSha(path: string, body: unknown): Promise<string> {

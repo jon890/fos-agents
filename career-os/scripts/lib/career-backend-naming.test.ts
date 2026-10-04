@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
 import { readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
+import { SUBPROCESS_TEST_TIMEOUT_MS } from "./test-timeouts.ts";
 
 const repositoryRoot = resolve(import.meta.dir, "../../..");
 const testFile = "career-os/scripts/lib/career-backend-naming.test.ts";
@@ -36,7 +37,7 @@ describe("커리어 Backend 이름", () => {
         expect(`${file}\n${content}`).not.toContain(value);
       }
     }
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("옛 환경값 이름은 거부를 확인하는 설정 테스트에만 남긴다", () => {
     const legacyEnvironmentFiles = trackedCareerFiles().filter((file) =>
@@ -47,5 +48,5 @@ describe("커리어 Backend 이름", () => {
       "career-os/scripts/position-recommender/career-backend/client.test.ts",
       "career-os/services/career-backend/src/config/config.test.ts",
     ]);
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 });

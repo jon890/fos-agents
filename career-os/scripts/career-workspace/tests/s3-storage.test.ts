@@ -19,6 +19,7 @@ import {
 } from "../s3-storage-contracts.ts";
 import { S3CareerWorkspaceTransport } from "../s3-storage.ts";
 import { createTarFromDirectory, safeRemove } from "../tar-utils.ts";
+import { SUBPROCESS_TEST_TIMEOUT_MS } from "../../lib/test-timeouts.ts";
 
 const producer: CareerWorkspaceProducer = {
   skill: "application-package-writer",
@@ -36,7 +37,7 @@ describe("S3 career workspace storage", () => {
       workspace: "career-os",
       current: null,
     });
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("첫 publish는 불변 객체를 순서대로 검증한 뒤 current pointer를 쓴다", async () => {
     const store = new MemoryS3ObjectStore();
@@ -71,7 +72,7 @@ describe("S3 career workspace storage", () => {
     } finally {
       await draft.cleanup();
     }
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("현재 revision을 부모로 한 같은 contentDigest publish는 새 객체를 만들지 않는다", async () => {
     const store = new MemoryS3ObjectStore();
@@ -98,7 +99,7 @@ describe("S3 career workspace storage", () => {
       await first.cleanup();
       await unchanged.cleanup();
     }
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("부모 revision이 current와 다르면 contentDigest가 같아도 충돌한다", async () => {
     const store = new MemoryS3ObjectStore();
@@ -116,7 +117,7 @@ describe("S3 career workspace storage", () => {
       await first.cleanup();
       await stale.cleanup();
     }
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("손상된 pointer와 descriptor-manifest 불일치를 INVALID_MANIFEST로 거부한다", async () => {
     const pointerStore = new MemoryS3ObjectStore();
@@ -141,7 +142,7 @@ describe("S3 career workspace storage", () => {
       await pointerDraft.cleanup();
       await manifestDraft.cleanup();
     }
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("손상된 archive는 descriptor hash 검증에서 거부한다", async () => {
     const store = new MemoryS3ObjectStore();
@@ -157,7 +158,7 @@ describe("S3 career workspace storage", () => {
     } finally {
       await draft.cleanup();
     }
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("descriptor hash가 맞아도 archive 내부 파일 hash가 다르면 export를 거부한다", async () => {
     const store = new MemoryS3ObjectStore();
@@ -187,7 +188,7 @@ describe("S3 career workspace storage", () => {
         await safeRemove(corruptArchiveRoot);
       }
     }
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("이미 존재하는 revision의 release 객체를 덮어쓰지 않는다", async () => {
     const store = new MemoryS3ObjectStore();
@@ -207,7 +208,7 @@ describe("S3 career workspace storage", () => {
       await first.cleanup();
       await second.cleanup();
     }
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("pointer 쓰기 실패는 이전 status를 유지하고 이미 쓴 release를 export할 수 있다", async () => {
     const store = new MemoryS3ObjectStore();
@@ -231,7 +232,7 @@ describe("S3 career workspace storage", () => {
       await first.cleanup();
       await second.cleanup();
     }
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("export는 current pointer와 무관하게 지정한 immutable release를 읽는다", async () => {
     const store = new MemoryS3ObjectStore();
@@ -249,7 +250,7 @@ describe("S3 career workspace storage", () => {
       await first.cleanup();
       await second.cleanup();
     }
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("S3 연결 오류는 TRANSPORT_UNAVAILABLE로 바꾸고 credential을 오류에 노출하지 않는다", async () => {
     const unavailable: S3ObjectStore = {
@@ -275,7 +276,7 @@ describe("S3 career workspace storage", () => {
       expect(String(error)).not.toContain(accessKey);
       expect(String(error)).not.toContain(secretKey);
     }
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("descriptor와 pointer는 자기 revision의 정해진 key만 허용한다", () => {
     const summary = {

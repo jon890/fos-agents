@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { chmod, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { SUBPROCESS_TEST_TIMEOUT_MS } from "../../lib/test-timeouts.ts";
 
 const wrapper = path.join(import.meta.dir, "../career-storage");
 const temporaryRoots: string[] = [];
@@ -22,7 +23,7 @@ describe("career-storage publish lock wrapper", () => {
     const exported = await runWrapper(["export", "--revision", "rev-1"], environment);
     expect(exported.exitCode).toBe(0);
     expect(exported.stdoutBytes).toEqual(fixture.exportBody);
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("publish는 flock 인자 배열 안에서 stdin byte를 그대로 전달한다", async () => {
     const fixture = await createWrapperFixture();
@@ -36,7 +37,7 @@ describe("career-storage publish lock wrapper", () => {
     expect(await readFile(fixture.flockArguments, "utf8")).toBe(
       "--nonblock\n9\n",
     );
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("publish 잠금 충돌은 REVISION_CONFLICT 구조화 오류를 반환한다", async () => {
     const fixture = await createWrapperFixture();
@@ -55,7 +56,7 @@ describe("career-storage publish lock wrapper", () => {
       ok: false,
       code: "REVISION_CONFLICT",
     });
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("실행 파일 누락과 shell 구문이 섞인 실행 파일 값은 실행하지 않는다", async () => {
     const fixture = await createWrapperFixture();
@@ -77,7 +78,7 @@ describe("career-storage publish lock wrapper", () => {
       });
     }
     expect(await exists(marker)).toBe(false);
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 });
 
 interface WrapperFixture {

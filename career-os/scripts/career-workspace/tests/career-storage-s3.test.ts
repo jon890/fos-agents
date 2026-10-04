@@ -4,6 +4,7 @@ import {
   runCareerStorageS3,
 } from "../career-storage-s3.ts";
 import { TransportError, type CareerWorkspaceTransport } from "../transport.ts";
+import { SUBPROCESS_TEST_TIMEOUT_MS } from "../../lib/test-timeouts.ts";
 
 describe("career-storage S3 entrypoint", () => {
   test("status, export와 publish를 기존 transport 계약으로 전달한다", async () => {
@@ -114,7 +115,7 @@ describe("career-storage S3 entrypoint", () => {
     } finally {
       server.stop(true);
     }
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("프로세스 실패는 stdout을 비우고 구조화 오류만 stderr에 기록한다", async () => {
     const accessKey = "process-access-key";
@@ -146,7 +147,7 @@ describe("career-storage S3 entrypoint", () => {
     });
     expect(stderr).not.toContain(accessKey);
     expect(stderr).not.toContain(secretKey);
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 });
 
 class RecordingTransport implements CareerWorkspaceTransport {

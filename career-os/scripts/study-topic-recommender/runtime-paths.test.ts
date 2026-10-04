@@ -3,6 +3,7 @@ import { mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { resolveStudyRunRoot, StudyRunPathError } from "./runtime-paths.js";
+import { SUBPROCESS_TEST_TIMEOUT_MS } from "../lib/test-timeouts.ts";
 
 const temporaryDirectories: string[] = [];
 
@@ -60,7 +61,7 @@ test("CLI 경로 오류는 stack trace와 절대 경로를 출력하지 않는�
     expect(stderr).not.toContain("StudyRunPathError");
     expect(stderr).not.toContain(import.meta.dir);
   }
-});
+}, SUBPROCESS_TEST_TIMEOUT_MS);
 
 test("CLI는 시스템 임시 디렉터리 밖 경로를 오류에 노출하지 않는다", () => {
   const rejectedPath = resolve(import.meta.dir, "..");
@@ -75,7 +76,7 @@ test("CLI는 시스템 임시 디렉터리 밖 경로를 오류에 노출하지 
   expect(stderr).toContain("시스템 임시 디렉터리");
   expect(stderr).not.toContain("StudyRunPathError");
   expect(stderr).not.toContain(rejectedPath);
-});
+}, SUBPROCESS_TEST_TIMEOUT_MS);
 
 test("validate_outputs.ts --run-dir는 같은 실행 경로를 읽는다", () => {
   const directory = mkdtempSync(join(tmpdir(), "study-topic-recommender."));
@@ -90,4 +91,4 @@ test("validate_outputs.ts --run-dir는 같은 실행 경로를 읽는다", () =>
 
   expect(result.exitCode).toBe(1);
   expect(result.stderr.toString()).toContain("산출물이 없거나 비어 있다");
-});
+}, SUBPROCESS_TEST_TIMEOUT_MS);

@@ -5,6 +5,7 @@ import path from "node:path";
 import { CommandCareerWorkspaceTransport } from "../command-transport.ts";
 import { createCareerWorkspaceTransport } from "../cli.ts";
 import { SshCareerWorkspaceTransport } from "../ssh-transport.ts";
+import { SUBPROCESS_TEST_TIMEOUT_MS } from "../../lib/test-timeouts.ts";
 
 const temporaryRoots: string[] = [];
 
@@ -33,7 +34,7 @@ describe("command career workspace transport", () => {
       revision: "rev-command",
     });
     expect(new Uint8Array(await readFile(fixture.capture))).toEqual(archive);
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("명령의 구조화 오류를 같은 action과 code로 보존한다", async () => {
     const fixture = await createCommandFixture({ failPublish: true });
@@ -42,7 +43,7 @@ describe("command career workspace transport", () => {
     await expect(transport.publish(new Uint8Array([1]))).rejects.toMatchObject({
       result: { action: "publish", code: "TRANSFER_FAILED" },
     });
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("상대 경로, directory, shell 구문과 추가 인자가 섞인 명령 문자열을 거부한다", async () => {
     const fixture = await createCommandFixture();
@@ -59,7 +60,7 @@ describe("command career workspace transport", () => {
       });
     }
     expect(await exists(marker)).toBe(false);
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("command를 우선하고 없으면 SSH transport를 선택하며 client는 S3 credential을 요구하지 않는다", async () => {
     const fixture = await createCommandFixture();
@@ -73,7 +74,7 @@ describe("command career workspace transport", () => {
       CAREER_WORKSPACE_SSH_TARGET: "host",
       CAREER_WORKSPACE_REMOTE_COMMAND: "career-storage",
     })).toBeInstanceOf(SshCareerWorkspaceTransport);
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("CLI command transport는 client 환경에 S3 credential이 없어도 동작한다", async () => {
     const fixture = await createCommandFixture();
@@ -103,7 +104,7 @@ describe("command career workspace transport", () => {
       remote: { action: "status", ok: true },
     });
     expect(stderr).toBe("");
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 });
 
 interface CommandFixture {
