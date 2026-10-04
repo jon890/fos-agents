@@ -1,10 +1,23 @@
 ---
 name: application-package-writer
-description: 공고가 찾는 사람과 후보자의 경험이 부합하는지 판정하고, 부합할 때만 제출 문서와 면접 준비를 만든다. 공고 링크나 회사와 직무 이름을 인자로 받는다. "이 공고 지원 준비", "지원서 준비", "지원 패키지", "지원동기 정리", "이 회사에 지원하고 싶어", "이 회사에서 뭘 배울 수 있어", "어느 공고부터 지원할까"처럼 개별 공고의 지원 전략이 필요할 때 사용한다. 이력서와 경력기술서 작성은 resume-preparer가 맡는다. 실제 제출, 로그인과 외부 전송은 하지 않는다.
+description: 공고가 찾는 사람과 후보자의 경험이 부합하는지 판정하고, 부합할 때만 제출 문서와 면접 준비를 만든다. 공고 링크나 회사와 직무 이름을 인자로 받는다. "이 공고 지원 준비", "지원서 준비", "지원 패키지", "지원동기 정리", "이 회사에 지원하고 싶어", "이 회사에서 뭘 배울 수 있어", "어느 공고부터 지원할까"처럼 개별 공고의 지원 전략이 필요할 때 사용한다. 이력서와 경력기술서 작성은 resume-preparer가 맡는다. 실제 제출, 로그인과 외부 전송은 하지 않는다. Claude Code 에서만 돈다.
 ---
 # 지원 준비
 
-**목표: 공고가 찾는 사람과 후보자의 경험이 부합하는지 채용 심사자 관점에서 판정하고,
+## 실행 환경
+
+이 스킬은 Claude Code 에서만 돈다.
+셸이 없는 환경이면 할 수 없다고 알리고 끝낸다.
+
+실행기 명령은 `bun --no-env-file "${CLAUDE_PLUGIN_ROOT}/dist/career-local.js"` 이다.
+이 문서와 `references/` 에서는 그 명령을 `<CAREER_LOCAL>` 로 적는다.
+셸 환경에 `CAREER_BACKEND_URL`, `CAREER_BACKEND_TOKEN` 이 있어야 한다.
+지원서 공통 프로필을 읽으려면 `FOS_ASSISTANT_URL`, `FOS_ASSISTANT_SERVICE_TOKEN` 도 있어야 한다.
+`CAREER_EVIDENCE_DIR` 는 프로젝트 근거 저장소를 가리킨다. Git 저장소의 루트이거나 그 바로 아래 디렉터리여야 한다.
+
+## 목표
+
+**공고가 찾는 사람과 후보자의 경험이 부합하는지 채용 심사자 관점에서 판정하고,
 부합할 때만 그 근거로 제출 문서와 면접 준비를 만든다.**
 
 부합하면 아래의 결과 문서가 생성된다. 제출과 면접에서 그대로 쓰는 것들이다.
@@ -23,22 +36,58 @@ description: 공고가 찾는 사람과 후보자의 경험이 부합하는지 �
 
 ## 비공개 작업본 동기화
 
-[`flow.md`의 「비공개 작업본 동기화」](../../../docs/flow.md#비공개-작업본-동기화)을 `SKILL_NAME=application-package-writer`로 적용한다.
+지원 디렉터리를 읽기 전에 최신 작업본을 받는다.
+
+```bash
+<CAREER_LOCAL> workspace begin application-package-writer --json
+```
+
+이 명령이 실패하면 기존 로컬 파일로 작업을 이어가지 않는다.
+오류 코드와 로컬 파일이 보존됐다는 사실을 알리고 멈춘다.
+
+결과의 `root` 아래 `applications/<company>/<role>/` 가 지원 디렉터리다.
+`<CAREER_LOCAL> workspace paths --json` 이 `root` 와 `evidenceDir` 를 낸다.
+
+작업을 마치면 같은 이름으로 세션을 닫는다. 중간에 멈출 때도 닫는다.
+
+```bash
+<CAREER_LOCAL> workspace finish application-package-writer --json
+```
+
+**`resume-preparer` 를 부르기 전에 이 세션을 닫는다.**
+원격 동기화 모드에서 이 세션이 열린 채 `resume-preparer` 가 자기 세션을 열면 `RESTORE_REQUIRED` 로 실패한다.
+닫고 여는 순서는 8단계가 정한다.
+동기화 설정이 없는 로컬 모드에서는 `begin` 과 `finish` 가 원격에 아무것도 보내지 않고 끝난다.
 
 ## 근거 원본 최신화 확인
 
-위 동기화가 다루지 않는 `fos-study` 로컬 사본이 원격보다 뒤처졌는지 단계 1로 들어가기 전에 검사한다.
+위 동기화가 다루지 않는 프로젝트 근거 디렉터리(`evidenceDir`)가 원격보다 뒤처졌는지 단계 1로 들어가기 전에 검사한다.
 없는 문서는 없는 경험으로 판정되므로, 근거를 읽기 전에 확인한다.
-지원서 공통 프로필은 fos-assistant Memory 에 있다.
-`evidence/application-form.json` 을 만들 때만 저장소 루트에서 아래 명령으로 읽는다.
 
 ```bash
-bun --env-file=career-os/.env career-os/scripts/application-profile/read_application_profile.ts get --out "${TMPDIR:-/tmp}/career-application-profile.md"
+<CAREER_LOCAL> package check-sources
+```
+
+지원서 공통 프로필은 fos-assistant Memory 에 있다.
+`evidence/application-form.json` 을 만들 때만 아래 명령으로 읽는다.
+
+```bash
+<CAREER_LOCAL> application-profile get --out "${TMPDIR:-/tmp}/career-application-profile.md"
 ```
 
 읽은 파일은 쓰고 나서 `rm` 으로 지운다.
-실패별 다음 행동은 [`flow.md`의 「지원서 공통 프로필」](../../../docs/flow.md#지원서-공통-프로필)이 소유한다.
-경력과 경험 경계는 `manage_candidate_context.ts get --key career-status` 로 읽는다.
+읽기가 실패하면 공통 프로필 없이 지원서 입력을 준비하지 않고 멈춘다. 상황별 다음 행동은 아래와 같다.
+
+| 상황 | 다음 행동 |
+| --- | --- |
+| `FOS_ASSISTANT_URL` 이나 `FOS_ASSISTANT_SERVICE_TOKEN` 이 없다 | 셸 환경에 두 값을 채우라고 알린다 |
+| `401` | 토큰이 없거나 틀렸거나 폐기됐거나 만료됐다. fos-assistant 웹 화면에서 새로 발급하라고 알린다 |
+| `403` | `Origin` 머리말이나 Cloudflare Access 거절이다. `FOS_ASSISTANT_ACCESS_CLIENT_ID` 와 secret 값을 확인하라고 알린다. 값은 출력하지 않는다 |
+| `404 MEMORY_NOT_FOUND` | fos-assistant 웹 화면에서 문서와 토큰 권한을 확인하라고 알린다 |
+| `409 MEMORY_ENCRYPTION_UNAVAILABLE` | 운영자에게 알리라고 한다 |
+| `5xx` 나 연결 실패 | 실행기가 두 번까지 다시 시도한 뒤 실패한다. 연결을 확인하고 다시 실행하라고 알린다 |
+
+경력과 경험 경계는 MCP 도구 `get_context_document` 로 `career-status` 를 읽어 확인한다.
 
 검사 명령과 판정별 다음 행동, 당길 때 유의할 점은 [근거 원본 최신화 확인](references/evidence-source-freshness.md)이 소유한다.
 
@@ -68,7 +117,7 @@ bun --env-file=career-os/.env career-os/scripts/application-profile/read_applica
 
 ## 실행 흐름
 
-**아래 명령은 모두 저장소 루트에서 실행한다.** 경로는 그 자리를 기준으로 적었다.
+**아래 명령은 모두 작업본 `root` 아래의 지원 디렉터리에서 실행한다.** 상대 경로는 그 자리를 기준으로 적었다.
 `resume-preparer` 와 같은 자리여야 8단계에서 이어 부를 때 근거 경로가 같게 풀린다.
 
 
@@ -81,7 +130,7 @@ bun --env-file=career-os/.env career-os/scripts/application-profile/read_applica
 | 5   | 경험과 성장 판정 | 이 자리에서 무엇을 다루게 되고 무엇을 다루지 못하는지 공개 자료로 판정한다    | [경험과 성장 판정](references/growth-judgment.md)              |
 | 6   | 지원 전략 작성  | 판정과 인터뷰 답변으로 승부처와 지원동기, 기여 시나리오, 공백 보완 계획을 쓴다 | [지원 준비 품질 기준](references/application-quality-rubric.md) |
 | 7   | 사용자 검토    | 초안의 문장이 본인 생각과 같은지 사용자가 직접 확인하고 모순을 없앤다       | [지원 문서 전수 검토](references/full-document-review.md)       |
-| 8   | 제출 문서 연결  | `resume-preparer` 를 불러 이력서와 제출 PDF 를 만들게 한다   | [이력서 제출 준비](../resume-preparer/SKILL.md)                |
+| 8   | 제출 문서 연결  | `resume-preparer` 를 불러 이력서와 제출 PDF 를 만들게 한다   | `resume-preparer` 스킬                                        |
 
 
 ### 단계 1: 공고 분석
@@ -130,7 +179,7 @@ bun --env-file=career-os/.env career-os/scripts/application-profile/read_applica
 | 회사 공개 자료 | `evidence/fit.md` 「공개 자료로 확인한 팀과 인접 사례」 | 팀의 공식 정보와 인접 조직의 사례. 5단계의 성장 판정과 6단계의 문화 연결이 이어받는다 |
 
 **기존 경력기술서의 문장은 그 자체로 근거가 아니다.**
-`sources/fos-study/task/` 와 로컬 프로젝트에서 확인하지 못하면 사실로 확정하지 않고 `사용자 확인` 으로 남긴다.
+프로젝트 근거 디렉터리(`evidenceDir`)와 로컬 프로젝트에서 확인하지 못하면 사실로 확정하지 않고 `사용자 확인` 으로 남긴다.
 
 **통과 조건:** [적합도 판정](references/fit-judgment.md)의 「근거 수집」 통과 조건을 만족하고, 위 산출물 둘이 모두 있다.
 
@@ -148,7 +197,7 @@ bun --env-file=career-os/.env career-os/scripts/application-profile/read_applica
 | 지원 여부 | `evidence/fit.md` 의 「결론」 | 지원하는지, 무엇이 강하고 무엇이 약한지. 5단계와 6단계가 여기서 승부처를 고른다 |
 
 **소계와 총점은 적지 않는다.** 행별 점수와 가중치로 화면이 계산한다.
-계산은 [scripts/fit_score.ts](scripts/fit_score.ts)가 소유한다.
+계산은 8단계의 `<CAREER_LOCAL> package render` 가 한다.
 
 ```markdown
 | 공고 구분 | 가중치 |
@@ -250,7 +299,7 @@ bun --env-file=career-os/.env career-os/scripts/application-profile/read_applica
 지원서 자동 입력을 준비할 때만 `evidence/application-form.json` 을 만든다.
 fos-assistant Memory 에서 읽은 공통 프로필의 현재 값, 회사별 입력 선택, 첨부 파일,
 서술형 질문과 답변을 한 번의 제출 스냅샷으로 묶는다.
-공통 프로필에 없거나 틀린 값은 career-os 가 고치지 않는다.
+공통 프로필에 없거나 틀린 값은 이 스킬이 고치지 않는다.
 사용자에게 fos-assistant 웹 화면에서 고치라고 알리고, 고친 뒤 다시 읽는다.
 최종 제출 버튼은 사용자 승인 전에 누르지 않는다. 이 계약이 그것을 강제한다.
 
@@ -290,12 +339,24 @@ fos-assistant Memory 에서 읽은 공통 프로필의 현재 값, 회사별 입
 **1단계가 `evidence/posting.md` 에 남긴 이력서 작성 안내와 전형 단계를 함께 넘긴다.**
 제출 파일을 몇 개로 낼지가 그것으로 정해진다.
 
-제출 문서가 준비되면 검사하고 화면을 만든다.
+**`resume-preparer` 를 부르기 전에 이 스킬의 작업본 세션을 닫고, 돌아온 뒤 다시 연다.**
+`resume-preparer` 는 이 스킬의 근거 원본 최신화 확인을 이미 마친 것으로 본다.
 
 ```bash
-bun career-os/.claude/skills/application-package-writer/scripts/validate_application_package.ts <application-directory>
-bun career-os/.claude/skills/application-package-writer/scripts/render_application_package.ts <application-directory>
+<CAREER_LOCAL> workspace finish application-package-writer --json
+# resume-preparer 가 이력서와 제출 묶음을 만들고 자기 세션을 닫는다
+<CAREER_LOCAL> workspace begin application-package-writer --json
 ```
+
+제출 문서가 준비되면 검사하고 화면을 만든 뒤 세션을 닫는다.
+
+```bash
+<CAREER_LOCAL> package validate <지원 디렉터리>
+<CAREER_LOCAL> package render <지원 디렉터리>
+<CAREER_LOCAL> workspace finish application-package-writer --json
+```
+
+지원 전략만 요청해 `resume-preparer` 를 부르지 않으면 처음 연 세션에서 `package validate` 와 `package render` 를 하고 `finish` 로 닫는다.
 
 검증기는 제출 문서와 지원서 답변에 내부 정보가 남았는지만 본다.
 화면은 `evidence/` 의 `status.md`, `fit.md`, `strategy.md` 를 이어 붙여 `application-package.html` 을 만든다.
@@ -306,8 +367,6 @@ bun career-os/.claude/skills/application-package-writer/scripts/render_applicati
 지원 전략만 요청했다면 이력서 준비 상태와 다음 행동을 `evidence/status.md` 에 남겼다.
 
 ## 산출물 계약
-
-층별 파일 배치는 `career-os/docs/code-architecture.md`의 「application-package-writer」가 소유한다.
 
 세 파일이 아래 절을 나눠 담는다. 어느 파일에 어느 절이 가는지가 계약이다.
 
@@ -368,7 +427,7 @@ bun career-os/.claude/skills/application-package-writer/scripts/render_applicati
 질문은 `evidence/interview-questions.json` 하나에 저장하고 다음 명령으로 검증한다.
 
 ```bash
-bun career-os/scripts/interview-drill/application_question_schema.ts <application-directory>
+<CAREER_LOCAL> package question-schema <지원 디렉터리>
 ```
 
 각 질문에는 답변에서 확인할 신호와 `evidenceBoundary`를 함께 기록한다.
@@ -382,7 +441,7 @@ bun career-os/scripts/interview-drill/application_question_schema.ts <applicatio
 - human-confirmation: <값>
 ```
 
-세 줄의 허용값과 뜻은 [`data-schema.md`의 「적합도 판정과 점수」](../../../docs/data-schema.md#적합도-판정과-점수)가 소유한다.
+세 줄의 허용값과 뜻은 [지원 준비 품질 기준](references/application-quality-rubric.md)의 「판정」이 소유한다.
 `human-confirmation`이 `needs_input`이면 `readiness`를 `ready`로 둘 수 없다.
 
 ## 사용자에게 주는 결과

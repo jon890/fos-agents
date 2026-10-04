@@ -1,17 +1,24 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { textAsset } from "../../lib/text-asset.ts";
+import packageStyleSource from "../templates/application-package.css" with { type: "text" };
+import packageTemplateSource from "../templates/application-package.html" with { type: "text" };
 import {
   FIT_TAB_SECTION_TITLES,
   STRATEGY_TAB_SECTION_TITLES,
   TABS,
-  TEMPLATE_DIRECTORY,
   TOP_SECTION_TITLES,
 } from "./constants.ts";
 import { demoteHeadings, escapeHtml, supportingSection } from "./markdown.ts";
 import type { MarkdownSection, RenderAssets, TabKey } from "./types.ts";
 
+/** 템플릿은 실행기 번들에 문자열로 들어간다. 설치한 곳에서 실행 파일 옆의 파일을 찾지 않는다. */
+const TEMPLATES: Readonly<Record<string, string>> = {
+  "application-package.html": textAsset(packageTemplateSource, "application-package.html"),
+  "application-package.css": textAsset(packageStyleSource, "application-package.css"),
+};
+
 export function readTemplate(name: string): string {
-  return readFileSync(join(TEMPLATE_DIRECTORY, name), "utf8");
+  if (!Object.hasOwn(TEMPLATES, name)) throw new Error(`모르는 템플릿입니다: ${name}`);
+  return TEMPLATES[name]!;
 }
 
 /** 치환 이름을 모두 채우고, 남은 이름이 있으면 그 이름을 담은 오류를 낸다. */

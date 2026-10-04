@@ -16,7 +16,7 @@
 - 동기화를 건너뛰고 고치면 홈서버 판과 어긋나 다음 실행이 `WORKSPACE_DIRTY`로 막힌다. begin이 실패하면 기존 로컬 파일로 작업을 계속하지 않는다.
 - `career-os/sources/fos-study/`는 별도 공개 저장소이므로 수정하지 않는다. 그 안에 민감 정보나 내부 정보가 들어가면 검증에서 실패로 판정한다.
 - 비공개 작업 자료의 디렉터리 경계는 `career-os/docs/data-schema.md`가 소유한다. 경로 목록을 다른 문서에 복제하지 않는다.
-- 스킬 변경의 검증 명령은 `bun test ./career-os/.claude/skills/`다.
+- 저장소에 남은 스킬은 `bun test ./career-os/scripts` 가, plugin 스킬은 `bun test ./career-os/plugin` 이 검증한다.
 
 ## 검증과 책임
 

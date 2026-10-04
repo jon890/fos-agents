@@ -2,7 +2,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { runCli } from "../../../../scripts/lib/cli.ts";
+import { runCli } from "../lib/cli.ts";
 import { EVIDENCE_DIRECTORY, SUBMISSION_LEAK_PATTERNS } from "./package_contract.ts";
 import { loadApplicationForm } from "./application_form_schema.ts";
 

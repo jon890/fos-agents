@@ -40,7 +40,7 @@ PDF 를 만들 때 쓰는 Chrome 은 `CHROME_BIN`, `pdfunite` 는 `PDFUNITE_BIN`
 결과의 `root` 아래 `applications/<회사>/<직무>/` 가 지원 디렉터리다.
 `<CAREER_LOCAL> workspace paths --json` 이 `root` 와 `evidenceDir` 를 낸다.
 지원 디렉터리의 `evidence/posting.md`, `evidence/fit.md`와 `evidence/status.md`에서 지원 직무, 지원 판단과 제출 문서를 확인한다.
-지원 판단이나 후보자 인터뷰가 준비되지 않았으면 저장소 세션의 `application-package-writer`로 먼저 만든다고 안내하고 끝낸다.
+지원 판단이나 후보자 인터뷰가 준비되지 않았으면 `application-package-writer` 스킬로 먼저 만든다고 안내하고 끝낸다.
 
 주장 감사에 쓰는 근거 원본은 `evidenceDir` 에 있다.
 근거 원본이 최신인지 확인하고, 오래됐으면 사용자에게 알린다.
@@ -88,7 +88,8 @@ PDF 를 만들 때 쓰는 Chrome 은 `CHROME_BIN`, `pdfunite` 는 `PDFUNITE_BIN`
 현재 HTML의 주장 원장을 `schemaVersion: 3`으로 만들고,
 `document`와 `user` 근거의 인용 위치를 `locator`에 기록한다.
 세부 형식은 [주장 검증 모델](references/claim-model.md)을 따른다.
-근거 경로는 Claude Code 를 연 디렉터리 기준 상대 경로나 절대 경로로 쓴다.
+근거 경로는 명령을 실행하는 작업본 `root` 아래의 지원 디렉터리 기준 상대 경로나 절대 경로로 쓴다.
+`validate-ledger` 가 상대 경로를 실행 위치(`process.cwd()`) 기준으로 풀기 때문이다. `application-package-writer` 도 같은 자리에서 부른다.
 
 ```bash
 <CAREER_LOCAL> resume validate-ledger <원장 경로> --artifact <HTML 경로>
@@ -123,7 +124,7 @@ PDF 를 만들 때 쓰는 Chrome 은 `CHROME_BIN`, `pdfunite` 는 `PDFUNITE_BIN`
 <CAREER_LOCAL> resume validate-bundle <지원 디렉터리>
 ```
 
-지원 패키지 검사와 검토 화면은 저장소 세션에서 한다.
+지원 패키지 검사와 검토 화면은 `application-package-writer` 스킬이 한다.
 
 최종 파일을 확인한 뒤 작업본을 반영한다.
 

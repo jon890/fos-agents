@@ -237,3 +237,69 @@ test("usage 는 번들에 든 측정 스크립트로 세션이 없는 달을 알
     server.stop(true);
   }
 });
+
+/** 검토 화면을 그릴 수 있는 지어낸 지원 디렉터리다. */
+function writeApplicationDirectory(directory: string): void {
+  const evidence = join(directory, "evidence");
+  mkdirSync(evidence, { recursive: true });
+  writeFileSync(join(evidence, "status.md"), "# 예시 회사 지원\n\n- readiness: needs_user_input\n");
+  writeFileSync(join(evidence, "fit.md"), "## 결론\n\n예시 결론 문장\n");
+  writeFileSync(join(evidence, "interview-questions.json"), JSON.stringify({
+    schemaVersion: 1,
+    company: "예시 회사",
+    role: "Backend Developer",
+    sourceDocuments: ["evidence/fit.md"],
+    questions: [
+      {
+        id: "example-position-question",
+        drillType: "tech",
+        topic: "position-question",
+        category: "platform",
+        difficulty: "advanced",
+        question: "여러 팀이 함께 쓰는 예시 플랫폼의 공통 계약을 어떻게 설계하겠습니까?",
+        intent: "공통 플랫폼 책임에 맞는 판단을 확인한다.",
+        answerSignals: ["입출력 계약", "오류 경계"],
+        positionFitHint: "지원 포지션의 핵심 책임과 연결한다.",
+        origin: "posting_requirement",
+        evidenceBoundary: "설계 질문이며 운영 경험으로 확대하지 않는다.",
+      },
+    ],
+  }));
+}
+
+// 번들은 실행 파일 옆의 templates/ 를 찾지 않는다. 템플릿이 번들 문자열로 들어갔는지를 결과 HTML 로 확인한다.
+test("package render 는 번들에 든 템플릿으로 검토 화면을 만든다", async () => {
+  const cwd = temporaryDirectory();
+  const applicationDir = join(cwd, "application");
+  writeApplicationDirectory(applicationDir);
+
+  const result = await runBundle(cwd, ["package", "render", applicationDir]);
+  expect({ exitCode: result.exitCode, stderr: result.stderr }).toEqual({ exitCode: 0, stderr: "" });
+  const destination = join(applicationDir, "application-package.html");
+  expect(result.stdout.trim()).toBe(destination);
+  const html = readFileSync(destination, "utf8");
+  const css = readFileSync(join(import.meta.dir, "../../scripts/application-package/templates/application-package.css"), "utf8");
+  expect(html).toContain(css.trim());
+  expect(html).toContain("예시 결론 문장");
+  expect(html).not.toMatch(/\{\{\s*[A-Z_]+\s*\}\}/);
+});
+
+test("package check-sources 는 CAREER_EVIDENCE_DIR 가 없으면 unavailable 로 1 을 낸다", async () => {
+  const result = await runBundle(temporaryDirectory(), ["package", "check-sources", "--no-fetch"]);
+  expect(result.exitCode).toBe(1);
+  const output = JSON.parse(result.stdout) as { passed: boolean; sources: Array<{ status: string; detail?: string }> };
+  expect(output.passed).toBe(false);
+  expect(output.sources[0]?.status).toBe("unavailable");
+  expect(output.sources[0]?.detail).toContain("CAREER_EVIDENCE_DIR");
+});
+
+test("application-profile get 은 연결값이 없으면 1 로 끝나고 token 을 출력하지 않는다", async () => {
+  const cwd = temporaryDirectory();
+  const result = await runBundle(cwd, ["application-profile", "get", "--out", join(cwd, "profile.md")], {
+    FOS_ASSISTANT_SERVICE_TOKEN: FAKE_TOKEN,
+  });
+  expect(result.exitCode).toBe(1);
+  expect(result.stderr).toContain("FOS_ASSISTANT_URL");
+  expect(result.stdout).not.toContain(FAKE_TOKEN);
+  expect(result.stderr).not.toContain(FAKE_TOKEN);
+});

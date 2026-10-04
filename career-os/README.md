@@ -8,8 +8,8 @@
 각 skill은 `SKILL.md`에 입력, 산출물, 검증, 안전 경계를 담는다.
 
 - 지원 가능한 공고를 찾을 때: `/position-recommender`
-- 공고별 지원 판단과 전략을 준비할 때: `/application-package-writer <posting-path>`
-- 이력서·경력기술서를 작성하고 검증할 때: `/resume-preparer <application-directory>`
+- 공고별 지원 판단과 전략을 준비할 때: plugin 의 `application-package-writer` (Claude Code)
+- 이력서·경력기술서를 작성하고 검증할 때: plugin 의 `resume-preparer` (Claude Code)
 - 기술·인성 면접을 연습할 때: plugin 의 `interview-practice`. 공고별 질문으로 연습하거나 질문을 더 찾을 때: plugin 의 `interview-question-prep`
 - 오늘 읽거나 볼 기술 자료를 고를 때: `/study-topic-recommender`
 - 원티드, LinkedIn, GitHub 프로필을 갱신할 때: plugin 의 `sync-profile` (Claude Code)

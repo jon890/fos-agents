@@ -1,4 +1,3 @@
-import { resolve } from "node:path";
 import type { FitColor, PackageStatus, TabKey } from "./types.ts";
 
 /** 탭 밖 상단에 고정하는 섹션. 어느 탭을 보고 있든 보여야 한다. */
@@ -16,8 +15,6 @@ export const STRATEGY_TAB_SECTION_TITLES = [
   "회사 문화와의 연결",
   "면접에서 검증받을 내용",
 ] as const;
-
-export const TEMPLATE_DIRECTORY = resolve(import.meta.dir, "../../templates");
 
 /** 순서가 화면 순서이고 첫 항목이 기본 선택이다. 공고 원문을 먼저 읽고 적합도를 본다. */
 export const TABS = [

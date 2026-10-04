@@ -166,24 +166,15 @@ publish tar 의 최상위는 `workspace-draft.json` 과 세 관리 root 만 허�
 ### 적합도 판정과 점수
 
 판단 기준은
-[`fit-judgment.md`](../.claude/skills/application-package-writer/references/fit-judgment.md)가 소유한다.
+[`fit-judgment.md`](../plugin/skills/application-package-writer/references/fit-judgment.md)가 소유한다.
 행별 점수와 구분별 가중치는 모델이 공고를 보고 정해 `evidence/fit.md` 에 남긴다.
 소계와 총점은 그 둘로 `fit_score.ts` 가 계산한다.
 색 구간은 `render/constants.ts` 가 소유한다.
 
 `evidence/status.md`의 준비 상태 값과 판단 기준은
-[`application-quality-rubric.md`](../.claude/skills/application-package-writer/references/application-quality-rubric.md)의 「판정」이 소유한다.
+[`application-quality-rubric.md`](../plugin/skills/application-package-writer/references/application-quality-rubric.md)의 「판정」이 소유한다.
 
-첫 10줄의 `evidence`는 제출 문장이 현재 근거 범위 안에 있는지의 상태다.
-
-| 값        | 뜻                                                  |
-| --------- | --------------------------------------------------- |
-| `safe`    | 제출 문장이 모두 확인한 근거 범위 안에 있다         |
-| `revise`  | 근거보다 넓게 읽히는 문장이 있어 표현을 낮춰야 한다 |
-| `blocked` | 근거를 확인하기 전에는 그 문장을 제출에 쓸 수 없다  |
-
-첫 10줄의 `human-confirmation`은 본인 역할, 당시 제약, 기각한 대안, 결과의 확인 범위와 제출 문구 동의처럼 후보자만 확정할 수 있는 사실과 표현 확인 상태다.
-값은 `complete` 또는 `needs_input`이며, `needs_input`이면 준비 상태를 `ready`로 둘 수 없다.
+첫 10줄의 `evidence` 와 `human-confirmation` 의 값과 뜻도 같은 문서의 「판정」이 소유한다.
 
 경력, 역할 선호와 경험 경계는 후보자 맥락 문서에 두고, 지원별 사실과 표현 확인은 `evidence/candidate-interview.md`의 기존 계약을 따른다.
 작성 취향은 스킬에서 유지하고, 문서에서 읽은 내용은 해당 문장을 판단하는 데 필요한 문서 키와 version 만 지원 기록에 연결한다.
@@ -866,7 +857,7 @@ HTML은 상세 추천, 분석한 활성 공고 순위, 분석 대기 목록과 �
 
 새 원장은 3을 쓴다. 이미 제출한 2는 locator 어긋남을 경고로만 보고하고 소급해 고치지 않는다.
 locator 형식과 판정 기준은
-`.claude/skills/resume-preparer/references/claim-model.md` 가 소유한다.
+`plugin/skills/resume-preparer/references/claim-model.md` 가 소유한다.
 
 **`safe` 가 아닌 판정이 하나라도 남으면 제출 준비가 끝난 것이 아니다.**
 
@@ -1328,7 +1319,8 @@ Claude Code 전용 스킬이 부르는 `dist/career-local.js` 가 셸 환경에�
 | `CAREER_WORKSPACE_COMMAND` | 아니오 | 홈서버 동기화 명령. 이 값이나 아래 값이 있을 때만 동기화한다 |
 | `CAREER_WORKSPACE_SSH_TARGET` | 아니오 | 홈서버 동기화의 SSH 대상. `CAREER_WORKSPACE_REMOTE_COMMAND`, `CAREER_WORKSPACE_SSH_ARGS` 를 함께 읽는다 |
 | `YOUTUBE_DATA_API_KEY` | 아니오 | 공부 자료 archive 수집의 YouTube Data API key |
-| `CAREER_EVIDENCE_DIR` | 아니오 | 스킬이 읽는 프로젝트 근거 디렉터리. 없으면 `CAREER_WORKSPACE_ROOT` 아래 `evidence/`. `workspace paths --json` 이 `evidenceDir` 로 알려 준다 |
+| `CAREER_EVIDENCE_DIR` | 아니오 | 스킬이 읽는 프로젝트 근거 디렉터리. 없으면 `CAREER_WORKSPACE_ROOT` 아래 `evidence/`. `workspace paths --json` 이 `evidenceDir` 로 알려 준다. `package check-sources` 는 이 디렉터리나 그 바로 위가 Git 저장소의 루트일 때 그 저장소가 원격보다 뒤처졌는지 본다 |
+| `FOS_ASSISTANT_URL`, `FOS_ASSISTANT_SERVICE_TOKEN` | 아니오 | `application-package-writer` 가 지원서 공통 프로필을 읽는 `application-profile` 실행기의 fos-assistant origin 과 서비스 토큰. 계약은 ADR-136 을 따른다. Cloudflare Access 가 앞에 있으면 `FOS_ASSISTANT_ACCESS_CLIENT_ID`, `FOS_ASSISTANT_ACCESS_CLIENT_SECRET` 도 읽는다 |
 | `BROWSER_DRIVER` | 아니오 | `sync-profile` 의 폼 조작 스크립트가 부르는 `browser-driver` 명령의 경로. 없으면 PATH 의 `browser-driver` |
 | `CAREER_DART_API_KEY` | 아니오 | 공고 추천의 회사 근거 수집에 쓰는 OpenDART key. `CAREER_DART_API_KEY_FILE`(권한 0600 파일)로 대신할 수 있다. 없으면 DART 근거를 건너뛴다 |
 

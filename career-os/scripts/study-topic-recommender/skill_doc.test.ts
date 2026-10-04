@@ -75,7 +75,7 @@ describe("study-topic-recommender skill 문서", () => {
     const sectionStart = flow.indexOf("### 비공개 작업본 동기화");
     const sectionEnd = flow.indexOf("### 커리어 Backend");
     const section = flow.slice(sectionStart, sectionEnd);
-    const firstSentence = section.split("\n").find((line) => line.startsWith("`application-package-writer`"));
+    const firstSentence = section.split("\n").find((line) => line.startsWith("plugin 의 `application-package-writer`"));
 
     expect(firstSentence).toBeDefined();
     expect(firstSentence).not.toContain("study-topic-recommender");

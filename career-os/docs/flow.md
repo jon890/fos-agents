@@ -14,8 +14,8 @@ career-os의 각 흐름은 외부 입력을 검증하고, 사용자 판단에 �
 
 ### 비공개 작업본 동기화
 
-`application-package-writer`, `resume-preparer`와 plugin 의 `interview-question-prep`는 다음 준비와 반영 절차를 실행한다.
-저장소 스킬은 아래 공통 CLI 를, plugin 스킬은 로컬 실행기 `workspace` 를 쓴다. 둘은 같은 코드다.
+plugin 의 `application-package-writer`, `resume-preparer`, `interview-question-prep` 는 다음 준비와 반영 절차를 실행한다.
+스킬은 로컬 실행기 `workspace` 로 부르고, 이 실행기는 아래 공통 CLI 와 같은 코드다.
 
 ```text
 작성 skill
@@ -195,8 +195,14 @@ sequenceDiagram
 이름, 연락처, 병역, 학력과 정확한 재직 기간을 담은 문서다. 원본은 fos-assistant Memory 의 `identity` collection 에 있는 민감 문서 `career-application-profile` 이다.
 career-os 는 서비스 토큰으로 읽기만 한다. 이유는 [ADR-136](adr/ADR-136-지원서-공통-프로필은-fos-assistant-memory에서-서비스-토큰으로-읽는다.md)을 따른다.
 
-`application-package-writer` 가 지원서 입력을 준비할 때 저장소 루트에서 아래 명령을 부른다.
-Bun 은 실행한 디렉터리의 `.env` 만 자동으로 읽으므로 `--env-file` 로 `career-os/.env` 를 넘긴다.
+plugin 의 `application-package-writer` 가 지원서 입력을 준비할 때 로컬 실행기 `application-profile` 로 부른다.
+실행기는 `.env` 를 탐색하지 않고 셸 환경 변수 `FOS_ASSISTANT_URL`, `FOS_ASSISTANT_SERVICE_TOKEN` 에서 연결값을 읽는다.
+
+```bash
+<CAREER_LOCAL> application-profile get --out "${TMPDIR:-/tmp}/career-application-profile.md"
+```
+
+저장소를 연 노트북에서는 같은 CLI 를 직접 부를 수 있다. Bun 은 실행한 디렉터리의 `.env` 만 자동으로 읽으므로 `--env-file` 로 `career-os/.env` 를 넘긴다.
 
 ```bash
 bun --env-file=career-os/.env career-os/scripts/application-profile/read_application_profile.ts get --out "${TMPDIR:-/tmp}/career-application-profile.md"
@@ -226,7 +232,7 @@ sequenceDiagram
 
 | 상황 | CLI 의 동작 |
 | --- | --- |
-| `FOS_ASSISTANT_URL` 이나 `FOS_ASSISTANT_SERVICE_TOKEN` 이 없다 | 요청하지 않고 실패한다. `career-os/.env` 에 두 값을 채우라고 알린다 |
+| `FOS_ASSISTANT_URL` 이나 `FOS_ASSISTANT_SERVICE_TOKEN` 이 없다 | 요청하지 않고 실패한다. 셸 환경(노트북 직접 호출이면 `career-os/.env`)에 두 값을 채우라고 알린다 |
 | Access ID 와 secret 중 하나만 있다 | 요청하지 않고 실패한다. 어느 변수가 빠졌는지만 알리고 값은 출력하지 않는다 |
 | `--out` 이 git 저장소 안이다 | 요청하지 않고 실패한다 |
 | `401` | 토큰이 없거나 틀렸거나 폐기됐거나 만료됐다. fos-assistant 웹 화면에서 새로 발급해 `.env` 를 바꾸라고 알린다 |
@@ -257,17 +263,17 @@ sequenceDiagram
 선택한 공고 하나에 맞춘 지원 자료를 만들고 제출 가능성을 검증한다.
 
 1. 공고 경로가 없으면 `application-state` 문서에서 현재 지원 대상을 찾고 대응하는 지원 디렉터리를 확인한다.
-2. 공식 공고와 회사 문화 자료의 최신 상태를 확인한다.
-3. 공고 항목을 쪼개 후보자 근거를 수집하고 항목마다 판정한다. 판정 값과 점수, 가중치는 `application-package-writer` 의 `references/fit-judgment.md` 가 소유한다.
+2. 공식 공고와 회사 문화 자료의 최신 상태를 확인하고 공고 원문을 `evidence/posting.md` 에 저장한다.
+3. 공고 항목을 쪼개 후보자 근거를 수집하고 항목마다 판정한다. 판정 값과 점수, 가중치는 plugin 의 `application-package-writer` 스킬 `references/fit-judgment.md` 가 소유한다.
 4. 적합도 판정 뒤 후보자 인터뷰를 진행한다. 기존 답변을 읽고, 동기, 당시 제약, 본인 판단, 기각한 대안과 확인하지 못한 결과 중 비어 있는 독립 질문을 최대 넷까지 묶어 확인한다.
-5. 지원 판단과 근거를 `evidence/`의 `fit.md`, `strategy.md`, `status.md`에 관심사별로 나눠 적는다. 공고 항목별 적합도 표는 공고의 주요 업무, 기대 경험과 우대 경험을 항목 단위로 모두 담는다.
-6. 공고 책임, 제출 근거 방어와 경험 공백을 `evidence/interview-questions.json`에 구조화한다.
-7. 지원 전략이 준비되면 `resume-preparer`가 이력서와 필요한 경력기술서를 작성하고 검증한다.
-8. `application-package.html`을 만든다. 화면 구성은 [`code-architecture.md`](code-architecture.md#application-package-writer)가 소유한다.
-9. 사용자는 이 화면에서 지원동기, 소유권, 가장 강한 사례, 공백과 입사 후 기여 시나리오를 검토한다.
-10. 외부에 보이는 문장을 전수 검사해 대상 범위, 본인 역할, 측정 대상과 포지션 연결이 독자에게 다르게 해석되지 않는지 확인한다.
-11. 같은 경험의 대상, 역할, 수치와 기간이 지원 전략, 이력서, 경력기술서와 지원서 답변에서 일치하는지 대조한다.
-12. 문서 근거로 고칠 수 없는 사실만 질문으로 돌리고, 독립적인 질문은 최대 넷까지 묶는다.
+5. 후보자가 이 자리에서 얻을 경험을 물었거나 같은 회사에 성격이 다른 공고가 둘 이상 열려 있으면, 이 자리에서 다루게 될 것과 다루지 못할 것을 공개 자료로 판정한다. 그 밖에는 건너뛴다.
+6. 지원 판단과 근거를 `evidence/`의 `fit.md`, `strategy.md`, `status.md`에 관심사별로 나눠 적는다. 공고 항목별 적합도 표는 공고의 주요 업무, 기대 경험과 우대 경험을 항목 단위로 모두 담는다.
+7. 공고 책임, 제출 근거 방어와 경험 공백을 `evidence/interview-questions.json`에 구조화한다.
+8. 외부에 보이는 문장을 전수 검사해 대상 범위, 본인 역할, 측정 대상과 포지션 연결이 독자에게 다르게 해석되지 않는지 확인한다.
+9. 같은 경험의 대상, 역할, 수치와 기간이 지원 전략과 지원서 답변에서 일치하는지 대조한다.
+10. 문서 근거로 고칠 수 없는 사실만 초안과 함께 질문으로 돌리고, 독립적인 질문은 최대 넷까지 묶는다. 사용자는 지원동기, 소유권, 가장 강한 사례, 공백과 입사 후 기여 시나리오를 확인한다.
+11. 전체 지원 요청이면 작업본 세션을 닫고 `resume-preparer`를 불러 이력서와 필요한 경력기술서를 작성하고 검증하게 한 뒤, 세션을 다시 연다.
+12. 로컬 실행기 `package validate` 로 제출 문서의 내부 정보를 검사하고 `package render` 로 `application-package.html`을 만든다. 화면 구성은 [`code-architecture.md`](code-architecture.md#application-package-writer)가 소유한다.
 13. 공고 원문, 후보자 답변과 제출 문서를 다시 대조하고 제출 문장의 내부 정보 유출을 검사한다.
 14. 준비 상태와 함께 사람 확인 상태를 `complete` 또는 `needs_input`으로 남기며, 미확인 항목이 있으면 `ready`로 판정하지 않는다.
 15. 최종 제출 문서, 근거 원장과 검토표의 문구 해시가 모두 일치해야 `ready`로 끝낸다.
@@ -548,7 +554,7 @@ flowchart TD
 
 ### Claude Code 에서 이력서 준비
 
-plugin 의 `resume-preparer` 스킬이 Claude Code 에서만 같은 단계를 돈다. 작성 기준과 감사 기준은 저장소 사본과 같다.
+plugin 의 `resume-preparer` 스킬이 Claude Code 에서만 위 단계를 돈다. 저장소 사본은 없다.
 
 1. `<CAREER_LOCAL> workspace begin resume-preparer --json` 으로 작업본을 준비한다. 결과의 `root` 아래 `applications/` 를 읽는다.
 2. 개인 맥락은 `get_context_document` 로 읽고, 승인받은 새 사실은 `save_context_document` 로 저장한다.
@@ -556,7 +562,7 @@ plugin 의 `resume-preparer` 스킬이 Claude Code 에서만 같은 단계를 �
 4. 검증 완료 주장은 작업본의 `state/verified-claims/` 에 쓴다. 주장 원장의 근거 경로는 Claude Code 를 연 디렉터리 기준이다.
 5. `<CAREER_LOCAL> workspace finish resume-preparer --json` 으로 끝낸다.
 
-지원 패키지 검사와 검토 화면은 `application-package-writer` 가 plugin 으로 옮겨질 때까지 저장소 세션에서 한다.
+지원 패키지 검사와 검토 화면은 plugin 의 `application-package-writer` 가 로컬 실행기 `package` 로 한다. 이 스킬도 Claude Code 에서만 돈다.
 
 ## study-topic-recommender
 
