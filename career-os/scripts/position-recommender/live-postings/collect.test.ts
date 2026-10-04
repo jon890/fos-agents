@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { parseArgs } from "../collect_live_postings.ts";
 import { SOURCE_ALIASES, SOURCE_IDS } from "./contracts.ts";
 import { DEFAULT_MAX_FAILED_SOURCES } from "./collection_health.ts";
+import { SUBPROCESS_TEST_TIMEOUT_MS } from "../../lib/test-timeouts.ts";
 
 describe("collect_live_postings 인자", () => {
   test("JSON 후보풀 출력 경로를 받는다", () => {
@@ -174,5 +175,5 @@ describe("collect_live_postings 인자", () => {
     expect(stdout).toBe("");
     expect(stderr).toBe("--output <output-json> is required\n");
     expect(stderr).not.toContain(import.meta.dir);
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 });

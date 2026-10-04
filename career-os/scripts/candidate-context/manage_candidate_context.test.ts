@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { CareerBackendHttpError } from "../lib/career-backend-http.ts";
 import { formatManageCandidateContextError, manageCandidateContext } from "./manage_candidate_context.ts";
+import { SUBPROCESS_TEST_TIMEOUT_MS } from "../lib/test-timeouts.ts";
 
 const originalFetch = globalThis.fetch;
 const originalEnv = { url: process.env.CAREER_BACKEND_URL, token: process.env.CAREER_BACKEND_TOKEN, tokenFile: process.env.CAREER_BACKEND_TOKEN_FILE };
@@ -111,7 +112,7 @@ describe("manage_candidate_context", () => {
 
     await expect(manageCandidateContext(["get", "--key", "learning-interests", "--out", join(repository, ".git", "context.md")])).rejects.toThrow("저장소 밖");
     expect(urls).toHaveLength(0);
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("cwd 가 저장소 밖이어도 저장소 안 --out 은 거절하고 밖 --out 은 허용한다", async () => {
     const cwd = tempDir();
@@ -130,7 +131,7 @@ describe("manage_candidate_context", () => {
     } finally {
       await server.stop(true);
     }
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("get 을 --out 없이 실행하면 본문 끝 줄바꿈을 늘리지 않고 그대로 출력한다", async () => {
     const server = Bun.serve({ port: 0, fetch: () => Response.json({ document: { documentKey: "learning-interests", body: "본문\n", version: 2, note: "n", updatedAt: "2026-09-01T00:00:00.000Z" } }) });
@@ -142,7 +143,7 @@ describe("manage_candidate_context", () => {
     } finally {
       await server.stop(true);
     }
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("get 은 본문을 출력하고 저장소 밖 --out 에 쓴다", async () => {
     useApi(() => new Response(JSON.stringify({ document: { documentKey: "learning-interests", body: "예시 관심사 문장", version: 3, note: "메모", updatedAt: "2026-09-01T00:00:00.000Z" } }), { headers: { "Content-Type": "application/json" } }));

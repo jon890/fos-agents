@@ -9,6 +9,7 @@ import {
   type PositionRunOperations,
 } from "./position_run.ts";
 import { runDirectoryPaths, type RunDirectoryPaths } from "./run-dir.ts";
+import { SUBPROCESS_TEST_TIMEOUT_MS } from "../lib/test-timeouts.ts";
 
 const directories: string[] = [];
 
@@ -78,14 +79,14 @@ test.each(["outside", "wrong-prefix", "nested", "symlink", "file", "missing", "e
     else if (kind !== "missing" && kind !== "empty") {
       expect(readFileSync(join(target, "keep.txt"), "utf8")).toBe("보존");
     }
-  },
+  }, SUBPROCESS_TEST_TIMEOUT_MS,
 );
 
 test("cleanup은 --run 생략을 코드 2로 거절한다", () => {
   const result = Bun.spawnSync([process.execPath, join(import.meta.dir, "position_run.ts"), "cleanup"]);
   expect(result.exitCode).toBe(2);
   expect(result.stderr.toString()).toContain("cleanup에는 --run <RUN_DIR>이 필요합니다.");
-});
+}, SUBPROCESS_TEST_TIMEOUT_MS);
 
 function analysisQueue(secret = "공개하지 않을 회사명과 공고 본문"): AnalysisQueueResponse {
   return {
@@ -491,7 +492,7 @@ test("commit-company-tiers는 갱신 파일이 없으면 경로와 작성할 내
   expect(exitCode).toBe(1);
   expect(stderr).toContain(runDirectoryPaths(directory).companyTierUpdates);
   expect(stderr).toContain("회사 판정 결과");
-});
+}, SUBPROCESS_TEST_TIMEOUT_MS);
 
 test("commit-analyses가 partial이면 남은 건수와 같은 명령 재실행을 알린다", async () => {
   const directory = workspace();

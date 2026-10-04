@@ -4,6 +4,7 @@ import {
   runCareerStorageS3,
 } from "../career-storage-s3.ts";
 import { TransportError, type CareerWorkspaceTransport } from "../transport.ts";
+import { SUBPROCESS_TEST_TIMEOUT_MS } from "../../lib/test-timeouts.ts";
 
 describe("career-storage S3 entrypoint", () => {
   test("status, export와 publish를 기존 transport 계약으로 전달한다", async () => {
@@ -24,7 +25,7 @@ describe("career-storage S3 entrypoint", () => {
       input: byteStream([archive.subarray(0, 2), archive.subarray(2)]),
     })).toMatchObject({ action: "publish", revision: "rev-published", ok: true });
     expect(transport.publishedArchive).toEqual(archive);
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("크기 제한을 넘거나 빈 publish 입력이면 transport에 byte를 전달하지 않는다", async () => {
     const transport = new RecordingTransport();
@@ -59,7 +60,7 @@ describe("career-storage S3 entrypoint", () => {
       result: { action: "publish", code: "TRANSFER_FAILED" },
     });
     expect(transport.publishCalls).toBe(0);
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("허용하지 않은 인자와 잘못된 크기 설정을 구조화 오류로 거부한다", async () => {
     const transport = new RecordingTransport();
@@ -76,7 +77,7 @@ describe("career-storage S3 entrypoint", () => {
     })).rejects.toMatchObject({
       result: { action: "publish", code: "TRANSPORT_UNAVAILABLE" },
     });
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("프로세스는 path-style S3 status 성공을 stdout에만 기록한다", async () => {
     const requests: Array<{ method: string; pathname: string }> = [];
@@ -114,7 +115,7 @@ describe("career-storage S3 entrypoint", () => {
     } finally {
       server.stop(true);
     }
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("프로세스 실패는 stdout을 비우고 구조화 오류만 stderr에 기록한다", async () => {
     const accessKey = "process-access-key";
@@ -146,7 +147,7 @@ describe("career-storage S3 entrypoint", () => {
     });
     expect(stderr).not.toContain(accessKey);
     expect(stderr).not.toContain(secretKey);
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 });
 
 class RecordingTransport implements CareerWorkspaceTransport {

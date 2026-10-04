@@ -13,6 +13,7 @@ import {
   type PositionExclusionsSource,
 } from "./exclusions.ts";
 import type { Posting } from "../live-postings/types.ts";
+import { SUBPROCESS_TEST_TIMEOUT_MS } from "../../lib/test-timeouts.ts";
 
 /** 규칙은 Backend 가 소유한다. 테스트는 그 응답만 대역으로 세운다. */
 function exclusionsSource(rules: unknown[]): PositionExclusionsSource {
@@ -225,7 +226,7 @@ describe("개인 공고 제외", () => {
       [companyRule],
     );
     expect(result.eligible.map((item) => item.company)).toEqual(["다른 회사"]);
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("회사 역할군 cooldown은 공고명에 맞는 역할만 만료일까지 제외한다", () => {
     const rule: EnrichedPositionExclusion = {

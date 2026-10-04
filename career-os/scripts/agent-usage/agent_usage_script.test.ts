@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join } from "node:path";
 import { parseMeasurement } from "./measure.ts";
+import { SUBPROCESS_TEST_TIMEOUT_MS } from "../lib/test-timeouts.ts";
 
 const directories: string[] = [];
 
@@ -64,5 +65,5 @@ describe("agent_usage.py --json", () => {
       claude_cost: 0.01,
     });
     expect(() => parseMeasurement(stdout)).not.toThrow();
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 });

@@ -5,6 +5,7 @@ import { basename, join, resolve } from "node:path";
 import { runInterviewQuestionSources } from "../interview-question-sources/cli.ts";
 import { validateMorningReadingOutputs } from "../study-topic-recommender/validate_outputs.ts";
 import { firstOptionValue } from "./cli.ts";
+import { SUBPROCESS_TEST_TIMEOUT_MS } from "./test-timeouts.ts";
 
 const scripts = resolve(import.meta.dir, "..");
 let directory: string;
@@ -38,7 +39,6 @@ describe("CLI 밖에서 호출하는 핵심 함수", () => {
     );
   });
 
-
   test("산출물 검사 실패는 호출자에게 예외로 전달한다", () => {
     expect(() => validateMorningReadingOutputs(directory)).toThrow("산출물이 없거나 비어 있다");
   });
@@ -59,7 +59,7 @@ describe("CLI 밖에서 호출하는 핵심 함수", () => {
     ]) {
       expect(invoke(script, [], true)).toEqual({ code: 0, out: "", err: "" });
     }
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 });
 
 describe("기존 명령 및 공용 runCli", () => {
@@ -76,7 +76,7 @@ describe("기존 명령 및 공용 runCli", () => {
       out: "",
       err: "collect에는 --output과 --cache-dir가 필요하다.\n",
     });
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("읽을거리 관리의 help와 JSON 템플릿을 보존한다", () => {
     const script = "study-topic-recommender/manage_reading_sources.ts";
@@ -126,7 +126,7 @@ describe("기존 명령 및 공용 runCli", () => {
         expectedVersion: 0,
       },
     });
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("아침 읽을거리의 경로 검증이 네트워크 실행보다 먼저 실패한다", () => {
     for (const script of [
@@ -139,7 +139,7 @@ describe("기존 명령 및 공용 runCli", () => {
         err: "CAREER_OS_ROOT 또는 --run-dir에 시스템 임시 실행 경로를 지정해야 한다.\n",
       });
     }
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test.each(["--help", "-h"])("아침 읽을거리의 %s는 잘못된 인자보다 우선한다", (flag) => {
     for (const script of ["morning_reading_cli.ts", "build_morning_reading.ts"]) {
@@ -151,7 +151,7 @@ describe("기존 명령 및 공용 runCli", () => {
       expect(result.out).toContain("--reading-selection <파일>");
       expect(result.out).toContain("--candidate-pool <값>");
     }
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test.each(["--run-dir", "CAREER_OS_ROOT"])("아침 읽을거리 cleanup은 정상 임시 실행 디렉터리를 지운다: %s", (source) => {
     const root = mkdtempSync(join(tmpdir(), "study-topic-recommender."));
@@ -165,7 +165,7 @@ describe("기존 명령 및 공용 runCli", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test.each(["outside", "wrong-prefix", "nested", "symlink", "env-symlink", "file", "missing", "empty"])(
     "아침 읽을거리 cleanup은 안전하지 않은 경로를 보존하고 코드 2로 거절한다: %s", (kind) => {
@@ -198,7 +198,7 @@ describe("기존 명령 및 공용 runCli", () => {
       else if (kind !== "missing" && kind !== "empty") {
         expect(readFileSync(join(target, "keep.txt"), "utf8")).toBe("보존");
       }
-    },
+    }, SUBPROCESS_TEST_TIMEOUT_MS,
   );
 
   test("산출물 검증기의 경로 실패 코드 2를 보존하고 import는 실행하지 않는다", () => {
@@ -210,7 +210,7 @@ describe("기존 명령 및 공용 runCli", () => {
       err: "CAREER_OS_ROOT 또는 --run-dir에 시스템 임시 실행 경로를 지정해야 한다.\n",
     });
     expect(invoke(script, [], true)).toEqual({ code: 0, out: "", err: "" });
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("기존 runCli의 JSON, help와 사용법 오류 계약을 보존한다", () => {
     const fixture = join(directory, "run-cli.ts");
@@ -232,5 +232,5 @@ describe("기존 명령 및 공용 runCli", () => {
     expect(invoke(fixture, ["--help"]).code).toBe(0);
     expect(invoke(fixture, ["usage"]).code).toBe(2);
     expect(invoke(fixture).code).toBe(2);
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 });
