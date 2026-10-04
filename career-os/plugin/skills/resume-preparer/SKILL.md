@@ -88,7 +88,8 @@ PDF 를 만들 때 쓰는 Chrome 은 `CHROME_BIN`, `pdfunite` 는 `PDFUNITE_BIN`
 현재 HTML의 주장 원장을 `schemaVersion: 3`으로 만들고,
 `document`와 `user` 근거의 인용 위치를 `locator`에 기록한다.
 세부 형식은 [주장 검증 모델](references/claim-model.md)을 따른다.
-근거 경로는 Claude Code 를 연 디렉터리 기준 상대 경로나 절대 경로로 쓴다.
+근거 경로는 명령을 실행하는 작업본 `root` 아래의 지원 디렉터리 기준 상대 경로나 절대 경로로 쓴다.
+`validate-ledger` 가 상대 경로를 실행 위치(`process.cwd()`) 기준으로 풀기 때문이다. `application-package-writer` 도 같은 자리에서 부른다.
 
 ```bash
 <CAREER_LOCAL> resume validate-ledger <원장 경로> --artifact <HTML 경로>
