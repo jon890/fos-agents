@@ -37,7 +37,9 @@
     "get_interview_questions": { "risk": "READ", "approval": "none", "title": "면접 질문 고르기" },
     "list_personal_questions": { "risk": "READ", "approval": "none", "title": "개인 질문 목록" },
     "save_interview_attempt": { "risk": "WRITE", "approval": "required", "title": "면접 답변 기록" },
-    "save_personal_question": { "risk": "WRITE", "approval": "required", "title": "개인 질문 저장" }
+    "save_personal_question": { "risk": "WRITE", "approval": "required", "title": "개인 질문 저장" },
+    "get_study_candidates": { "risk": "READ", "approval": "none", "title": "공부 후보 읽기" },
+    "save_study_recommendation": { "risk": "WRITE", "approval": "required", "title": "공부 추천 저장" }
   },
   "default_tool_policy": "deny",
   "operator_env": ["CAREER_BACKEND_URL", "CAREER_GITHUB_PROFILE_REPO"],
@@ -56,6 +58,9 @@
     "CAREER_GITHUB_UNAUTHORIZED": "credential_rejected",
     "CAREER_GITHUB_FORBIDDEN": "forbidden",
     "CAREER_GITHUB_CONFLICT": "unavailable",
-    "CAREER_GITHUB_UNAVAILABLE": "unavailable"
+    "CAREER_GITHUB_UNAVAILABLE": "unavailable",
+    "CAREER_STUDY_CONFLICT": "invalid_input",
+    "CAREER_STUDY_ALREADY_SAVED": "invalid_input",
+    "CAREER_LEARNING_INTERESTS_MISSING": "invalid_input"
   }
 }

@@ -10,6 +10,7 @@ import {
   profileDocumentKeys as cliProfileDocumentKeys,
   usageSnapshotSchema,
 } from "../../scripts/profile/contracts.ts";
+import { createStudyLibraryClient } from "../../scripts/study-topic-recommender/study-library/client.ts";
 import { InterviewBackendClient } from "../../scripts/interview-drill/career-backend/client.ts";
 import { loadQuestionBank } from "../../scripts/interview-drill/drill-engine.ts";
 import {
@@ -17,6 +18,7 @@ import {
   interviewQuestionSchema as backendQuestionSchema,
   personalQuestionBodySchema,
 } from "../../services/career-backend/src/interview/schema.ts";
+import { studyRecommendationRunSchema } from "../../services/career-backend/src/study/schema.ts";
 import { CareerBackend, type FetchLike } from "./backend.ts";
 import {
   attemptInputSchema,
@@ -25,6 +27,7 @@ import {
   publicBehavioralQuestions,
   publicTechQuestions,
 } from "./interview.ts";
+import { worstCaseRecommendation } from "./study-fixtures.ts";
 import { CareerTools, contextDocumentKeys, profileDocumentKeys } from "./tools.ts";
 
 test("후보자 맥락 문서 키가 CLI 계약과 같다", () => {
@@ -219,4 +222,52 @@ test("save_interview_attempt 는 attemptId 를 넘기면 CLI 의 recordAttempt �
   expect(plugin.sent).toHaveLength(1);
   expect(cli.sent[0]!.key).toBe(body.attemptId);
   expect(plugin.sent[0]).toEqual(cli.sent[0]!);
+});
+
+describe("save_study_recommendation 이 CLI 의 createRecommendationRun 과 Backend 계약에 맞는다", () => {
+  const origin = "https://career.example.com/";
+  const token = "x".repeat(40);
+  const reportId = "morning-2026-10-04";
+
+  test("같은 리포트를 CLI 와 같은 URL, 본문, Idempotency-Key 로 보낸다", async () => {
+    type Sent = { url: string; method: string; body: unknown; key: string | null };
+    function recorder() {
+      const sent: Sent[] = [];
+      const fetchImpl = async (input: string | URL | Request, init?: RequestInit) => {
+        sent.push({
+          url: String(input),
+          method: String(init?.method),
+          body: JSON.parse(String(init?.body)),
+          key: new Headers(init?.headers).get("Idempotency-Key"),
+        });
+        return new Response(JSON.stringify({ reportId, historyVersion: 4 }), { status: 201 });
+      };
+      return { sent, fetchImpl };
+    }
+
+    const input = worstCaseRecommendation();
+    const cli = recorder();
+    await createStudyLibraryClient({ origin, token, fetchImpl: cli.fetchImpl, maxRetries: 0 }).createRecommendationRun({
+      ...input,
+      reportId,
+    });
+    const plugin = recorder();
+    const result = await new CareerTools(
+      new CareerBackend({ baseUrl: origin, token }, plugin.fetchImpl),
+      undefined,
+      () => new Date("2026-10-05T00:00:00.000Z"),
+    ).call("save_study_recommendation", input);
+    expect(result.isError).toBeUndefined();
+    expect(cli.sent).toHaveLength(1);
+    expect(plugin.sent).toHaveLength(1);
+    expect(cli.sent[0]!.key).toMatch(/^recommendation:/);
+    expect(plugin.sent[0]).toEqual(cli.sent[0]!);
+  });
+
+  // The plugin's limits must never be wider than the Backend's: a value the connector accepts
+  // and the Backend rejects would cost an approval for nothing.
+  test("모든 칸을 상한까지 채운 plugin 입력에 reportId 를 붙이면 Backend 스키마도 받는다", () => {
+    const parsed = studyRecommendationRunSchema.safeParse({ ...worstCaseRecommendation(), reportId });
+    expect(parsed.success ? [] : parsed.error.issues).toEqual([]);
+  });
 });

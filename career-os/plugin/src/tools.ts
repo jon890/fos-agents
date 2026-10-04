@@ -23,6 +23,14 @@ import {
   saveInterviewAttempt,
   savePersonalQuestion,
 } from "./interview.ts";
+import {
+  getStudyCandidates,
+  getStudyCandidatesSchema,
+  saveStudyRecommendation,
+  saveStudyRecommendationSchema,
+  type GetStudyCandidatesArgs,
+  type SaveStudyRecommendationArgs,
+} from "./study.ts";
 
 // Same keys as the Backend schemas; contract-parity.test.ts compares them with the CLI contracts.
 export const contextDocumentKeys = [
@@ -157,6 +165,16 @@ export const toolDefinitions: Record<string, { description: string; schema: z.Zo
     description: "개인 면접 질문 하나를 더하거나 고치거나 enabled: false 로 끔",
     schema: personalQuestionInputSchema,
   },
+  get_study_candidates: {
+    description:
+      "수집된 공부 후보와 learning-interests 본문, 최근 추천 주제, 저장에 넘길 candidateContextVersion 조회. limit 기본값은 20",
+    schema: getStudyCandidatesSchema,
+  },
+  save_study_recommendation: {
+    description:
+      "고른 공부 주제와 자료, 고르지 않은 후보의 제외 이유를 오늘 추천으로 저장. 주제 4개, 자료 합계 8개, 제외 20개까지다",
+    schema: saveStudyRecommendationSchema,
+  },
 };
 
 type ToolResult = {
@@ -235,6 +253,12 @@ export class CareerTools {
           return this.success(await saveInterviewAttempt(this.backend, parsed.data as AttemptInput));
         case "save_personal_question":
           return this.success(await savePersonalQuestion(this.backend, parsed.data as PersonalQuestionInput));
+        case "get_study_candidates":
+          return this.success(await getStudyCandidates(this.backend, parsed.data as GetStudyCandidatesArgs));
+        case "save_study_recommendation":
+          return this.success(
+            await saveStudyRecommendation(this.backend, parsed.data as SaveStudyRecommendationArgs, this.now),
+          );
       }
       throw new CareerError("CAREER_UNKNOWN_TOOL");
     } catch (error) {

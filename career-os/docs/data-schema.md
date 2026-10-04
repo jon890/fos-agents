@@ -1388,6 +1388,9 @@ README 에는 `img.shields.io/badge/Tokens-<값>B-` 모양의 배지 주소가 �
 | `CAREER_UNAUTHORIZED` | Backend 가 401 이나 403 으로 답함 | `credential_rejected` |
 | `CAREER_NOT_FOUND` | Backend 가 404 로 답함. 아직 만들지 않은 문서다 | `invalid_input` |
 | `CAREER_VERSION_CONFLICT` | Backend 가 409 로 답함. `expectedVersion` 이 현재 값과 다르다 | `invalid_input` |
+| `CAREER_STUDY_CONFLICT` | 공부 추천 저장에 Backend 가 409 로 답했고 오늘 리포트는 없음. 관심사 문서가 바뀌었거나 직전 추천의 주제를 다시 골랐다 | `invalid_input` |
+| `CAREER_STUDY_ALREADY_SAVED` | 공부 추천 저장에 409 가 왔고 status 조회로 오늘 리포트가 이미 있음을 확인했다 | `invalid_input` |
+| `CAREER_LEARNING_INTERESTS_MISSING` | 공부 후보 조회에 Backend 가 409 로 답함. `learning-interests` 문서가 없다 | `invalid_input` |
 | `CAREER_BAD_REQUEST` | Backend 의 나머지 4xx | `invalid_input` |
 | `CAREER_UNAVAILABLE` | Backend 의 5xx | `unavailable` |
 | `CAREER_NETWORK` | Backend 연결, redirect, 시간 초과 실패. 저장됐는지 알 수 없으므로 다시 읽어 확인한다 | `unavailable` |

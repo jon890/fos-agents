@@ -28,7 +28,11 @@ const messages = {
   CAREER_GITHUB_FORBIDDEN: "GitHub token 에 프로필 저장소 권한이 없거나 저장소 이름이 틀립니다.",
   CAREER_GITHUB_CONFLICT: "그 사이 프로필 저장소에 다른 커밋이 올라왔습니다. 다시 읽은 뒤 갱신해 주세요.",
   CAREER_GITHUB_UNAVAILABLE: "GitHub 가 응답하지 않습니다. 잠시 뒤 다시 시도해 주세요.",
-  CAREER_UNKNOWN_TOOL: "지원하지 않는 도구입니다.",
+  CAREER_STUDY_CONFLICT:
+    "그 사이 관심사 문서가 바뀌었거나 직전 추천의 주제를 다시 골랐습니다. 후보를 다시 읽어 새로 골라 주세요.",
+  CAREER_STUDY_ALREADY_SAVED: "오늘 공부 추천이 이미 저장돼 있습니다.",
+  CAREER_LEARNING_INTERESTS_MISSING: "learning-interests 문서가 없습니다. 관심사 문서를 먼저 저장해 주세요.",
+  CAREER_UNKNOWN_TOOL:"지원하지 않는 도구입니다.",
   CAREER_INTERNAL: "커리어 요청을 처리하지 못했습니다. 요청 내용을 확인해 주세요.",
 } as const;
 
