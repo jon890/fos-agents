@@ -731,7 +731,7 @@ career-os/plugin/
 | `plugin/connector-skills/study-topic-recommender/SKILL.md` | MCP 도구만으로 하는 공부 추천. 수집된 후보에서 고르고 추천 이력을 저장 |
 | `plugin/skills/interview-question-prep/` | Claude Code 전용. 공고별 질문으로 하는 연습과 외부 자료에서 개인 질문 찾기 |
 | `plugin/skills/study-collection/` | Claude Code 전용. 외부 피드 수집, 소스 관리, HTML 리포트와 게시 기록 |
-| `scripts/plugin-local/` | 로컬 실행기의 진입점. 하위 명령을 `scripts/` 의 CLI 로 넘긴다 |
+| `scripts/plugin-local/` | 로컬 실행기의 진입점. 하위 명령을 `scripts/` 의 CLI 로 넘긴다. 실행기 이름 목록은 import 가 없는 `executors.ts` 가 갖는다 |
 | `scripts/interview-drill/public-question-bank.ts` | 공개 질문 은행 JSON 을 정적 import 로 읽는 모듈. 커넥터와 실행기와 CLI 가 함께 쓴다 |
 | `scripts/interview-drill/question-selection.ts` | 질문 은행과 복습 상태로 낼 질문을 고르는 순수 함수. `follow-up-policy.ts` 의 상수만 import 한다. 노트북 CLI 와 커넥터가 같은 함수를 쓴다 |
 | `public/question-bank/*/questions.json` | 공개 질문 은행. 커넥터가 번들에 넣어 저장소 경로 없이 읽는다 |
@@ -761,8 +761,9 @@ career-os/plugin/
 
 ### 로컬 실행기
 
-Claude Code 전용 스킬은 `bun "${CLAUDE_PLUGIN_ROOT}/dist/career-local.js" <실행기> ...` 로 로컬 실행기를 부른다.
-`${CLAUDE_PLUGIN_ROOT}` 는 Claude Code 가 `SKILL.md` 본문에서만 치환한다. 그래서 스킬 본문이 실행 파일 경로를 알려 주고, `references/` 의 문서는 그 경로를 `<PLUGIN_ROOT>` 로 적는다.
+Claude Code 전용 스킬은 `bun --no-env-file "${CLAUDE_PLUGIN_ROOT}/dist/career-local.js" <실행기> ...` 로 로컬 실행기를 부른다.
+`${CLAUDE_PLUGIN_ROOT}` 는 Claude Code 가 `SKILL.md` 본문에서만 치환한다. 그래서 스킬 본문이 이 명령을 알려 주고, 스킬 본문과 `references/` 의 문서는 그 명령을 `<CAREER_LOCAL>` 로 적는다.
+`--no-env-file` 은 사용자가 연 디렉터리의 `.env` 를 `bun` 이 자동으로 읽지 않게 한다.
 
 | 실행기 | 넘기는 곳 | 하는 일 |
 | --- | --- | --- |

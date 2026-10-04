@@ -28,6 +28,8 @@ Claude Code 에 plugin 만 설치한 곳에서도 저장소와 `bun install` 없
 - `createCareerWorkspaceTransport` 는 `CAREER_WORKSPACE_COMMAND` 가 있으면 명령 transport, 없고 `CAREER_WORKSPACE_SSH_TARGET` 이 있으면 SSH transport, 둘 다 없으면 호출마다 `TRANSPORT_UNAVAILABLE` 을 내는 transport 를 돌려준다
 - `drill-engine.ts` 의 `createInterviewPracticeStore(environment)` 는 `career-os/scripts/interview-drill/store/index.ts` 에 있고 `CAREER_STORE` 가 `backend` 면 `resolveCareerBackendConnection(environment)` 로 연결값을 읽는다
 - 기존 MCP 번들 빌드는 `career-os/plugin/scripts/build.ts` 의 `buildBundle(outdir)` 이고, `career-os/plugin/scripts/build.test.ts` 가 커밋한 `dist/career-mcp.js` 와 새 빌드를 대조한다. 빌드 결과의 공백만 있는 줄을 지우는 정규화(`/^[\t ]+$/gm`)를 같은 방식으로 쓴다
+- `CAREER_WORKSPACE_SCHEMA_VERSION`, `CAREER_WORKSPACE_MANAGED_ROOTS` 는 `career-workspace/contracts.ts` 가, `TransportError`, `makeRemoteError` 는 `career-workspace/transport.ts` 가 낸다. `UsageError` 는 `lib/cli.ts`, `CareerBackendHttpError` 는 `lib/career-backend-http.ts`, `StudyRunPathError` 는 `study-topic-recommender/runtime-paths.ts`, `createInterviewPracticeStore` 는 `interview-drill/store/index.ts` 가 낸다
+- `bun <파일>` 은 cwd 의 `.env` 를 자동으로 읽는다. 스킬은 `bun --no-env-file` 로 부른다(ADR-138). 테스트도 같은 플래그로 실행한다
 - `services/career-backend/` 아래 파일이 `zod` 를 import 한다. 그 디렉터리에 `node_modules` 가 설치된 환경에서는 다른 `zod` 가 번들에 섞일 수 있다
 - Phase 02 가 공개 질문 은행을 `scripts/interview-drill/public-question-bank.ts` 의 정적 import 로 바꿨다. 그래서 `interview` 실행기는 번들 위치와 무관하게 공개 질문을 갖는다
 
@@ -70,16 +72,17 @@ Claude Code 에 plugin 만 설치한 곳에서도 저장소와 `bun install` 없
 - `export function runValidateOutputs(argv: string[], environment = process.env)` 를 더한다. `resolveStudyRunRoot(environment, firstOptionValue(argv, "--run-dir"))` 로 정한 root 로 `validateMorningReadingOutputs` 를 부른 결과를 돌려준다
 - `import.meta.main` 블록은 `runValidateOutputs(process.argv)` 를 쓰게 바꾼다. 출력과 종료 코드는 그대로다
 
-### 4. `career-os/scripts/plugin-local/main.ts` 신규
+### 4. `career-os/scripts/plugin-local/executors.ts` 와 `main.ts` 신규
 
-- `export const PLUGIN_LOCAL_EXECUTORS = ["workspace", "interview", "interview-sources", "study", "study-validate", "study-sources"] as const`
+- `executors.ts` 는 import 없이 `export const PLUGIN_LOCAL_EXECUTORS = ["workspace", "interview", "interview-sources", "study", "study-validate", "study-sources"] as const` 만 낸다. plugin 쪽 테스트가 실행기 의존성을 끌어오지 않고 이름만 읽게 하려는 것이다
+- `main.ts` 는 그 목록을 import 해 쓴다
 - `export async function runPluginLocal(argv: string[]): Promise<number>`. `argv` 는 `process.argv.slice(2)` 모양이고 종료 코드를 돌려준다
   - 첫 인자가 없거나 `help`, `--help`, `-h` 면 실행기 목록과 한 줄 설명을 stdout 에 쓰고 0
   - 모르는 실행기면 stderr 에 사용법을 쓰고 2
   - 실행기에 넘기기 전에 `process.argv = [process.argv[0]!, process.argv[1]!, ...rest]` 로 바꾼다. `study` 와 `study-validate` 의 원본이 `process.argv` 에서 옵션을 찾기 때문이다
 - 실행기별 처리. 출력과 종료 코드는 원본의 `import.meta.main` 블록과 같게 한다
   - `workspace`: `runPluginWorkspace(rest)` 결과를 `JSON.stringify(result, null, 2)` 로 stdout. `TransportError` 면 `error.result` 를, 아니면 `makeRemoteError("check", "TRANSPORT_UNAVAILABLE")` 를 한 줄 JSON 으로 stderr 에 쓰고 1
-  - `interview`: 첫 인자가 `select` 가 아니면 stderr 에 「plugin 실행기는 select 만 받는다. 기록과 개인 질문은 save_interview_attempt, save_personal_question 도구로 한다.」 를 쓰고 2. `select` 면 `environment = { ...process.env, CAREER_STORE: "backend" }` 로 `runDrillCli(rest, { environment, createStore: () => createInterviewPracticeStore(environment), readFile: (path) => readFileSync(path, "utf8") })` 를 부르고 결과를 한 줄 JSON 으로 stdout. `UsageError` 는 2, 그 밖은 1. `CareerBackendHttpError` 의 `NETWORK_ERROR` 는 drill-engine 과 같은 문장을 쓴다
+  - `interview`: 첫 인자가 `select` 가 아니면 stderr 에 「plugin 실행기는 select 만 받는다. 기록과 개인 질문은 save_interview_attempt, save_personal_question 도구로 한다.」 를 쓰고 2. `select` 면 `environment = { ...process.env, CAREER_STORE: "backend" }` 로 `runDrillCli(rest, { environment, createStore: () => createInterviewPracticeStore(environment), readFile: (path) => readFileSync(path, "utf8") })` 를 부르고 결과를 한 줄 JSON 으로 stdout. `UsageError` 면 stderr 에 「사용법: interview select <tech|behavioral> [--application-dir <dir>] [--target-bar <bar>] [--count <n>]」 와 오류 메시지를 차례로 쓰고 2. 그 밖은 1. `CareerBackendHttpError` 의 `NETWORK_ERROR` 는 drill-engine 의 메인 블록과 같은 문장을 쓴다. `drill-engine.ts` 의 `usage()` 는 export 하지 않는다
   - `interview-sources`: `runInterviewQuestionSources(rest[0] ?? "validate", process.argv)` 결과를 `JSON.stringify(result, null, 2)` 로. 오류는 메시지만 stderr, 1
   - `study`: `await main()` 을 부르고 오류는 `reportMorningReadingError(error)` 에 넘긴다(그 함수가 종료한다). 정상이면 `process.exitCode ?? 0`
   - `study-validate`: `runValidateOutputs(process.argv)` 결과를 `JSON.stringify(result, null, 2)` 로. `StudyRunPathError` 면 그 `exitCode`, 그 밖은 1
@@ -104,15 +107,17 @@ Claude Code 에 plugin 만 설치한 곳에서도 저장소와 `bun install` 없
   - `CAREER_WORKSPACE_ROOT` 가 있으면 그 경로, `CAREER_WORKSPACE_SSH_TARGET` 이나 `CAREER_WORKSPACE_COMMAND` 가 있으면 `mode: "remote"`. 공백만 있는 값은 없는 값으로 본다
   - 로컬 모드 `begin interview-question-prep --json` 이 임시 root 아래 `applications`, `library`, `state` 를 만들고 `mode: "local"` 을 낸다. `finish` 도 `mode: "local"`, `noChange: true` 다. `.career-sync/` 를 만들지 않는다
   - 실패 쪽: `begin position-recommender --json` 과 `begin` 인자 없음은 `TransportError` 이고 `result.code` 가 `INVALID_MANIFEST` 다
-- `career-os/scripts/plugin-local/main.test.ts` 신규
+  - 원격 분기: `CAREER_WORKSPACE_COMMAND` 를 임시 디렉터리 안의 없는 실행 파일 경로로 주고 `begin interview-question-prep --json` 을 부르면 `TransportError` 로 끝난다. 로컬 모드 결과를 내지 않고 root 아래에 관리 디렉터리를 만들지 않는다
+- `career-os/scripts/plugin-local/main.test.ts` 신규. 각 테스트는 `process.argv` 를 저장했다가 `finally` 에서 되돌린다. stdout 과 stderr 는 `spyOn(process.stdout, "write")`, `spyOn(console, "log")`, `spyOn(console, "error")` 처럼 원본이 쓰는 경로를 잡아 확인한다
   - `runPluginLocal(["help"])` 이 0 이고 stdout 에 여섯 실행기 이름이 모두 있다
   - `runPluginLocal(["nope"])` 이 2
   - `runPluginLocal(["interview", "record"])` 이 2 이고 stderr 에 `save_interview_attempt` 가 있다
-- `career-os/plugin/scripts/local-bundle.test.ts` 신규. 커밋한 `career-os/plugin/dist/career-local.js` 를 `Bun.spawnSync` 로 `cwd` 를 임시 디렉터리에 두고 실행한다. 저장소 경로가 없는 곳에서도 도는지 보려는 것이다
+- `career-os/plugin/scripts/local-bundle.test.ts` 신규. 커밋한 `career-os/plugin/dist/career-local.js` 를 `bun --no-env-file <번들>` 로, `cwd` 를 임시 디렉터리에 두고 실행한다. 저장소 경로가 없는 곳에서도 도는지 보려는 것이다. 자식 프로세스의 env 는 `{ PATH: process.env.PATH, HOME: <임시 디렉터리> }` 에 케이스별 값만 더한 객체로 명시한다. 개발자 셸의 `CAREER_*` 값을 이어받지 않는다
   - `help` 가 0 이다
   - `workspace paths --json` 에 `CAREER_WORKSPACE_ROOT=<임시 디렉터리>` 를 주면 그 경로와 `mode: "local"` 을 낸다
-  - `interview select tech --count 3` 에 `Bun.serve` 로 띄운 HTTP 대역을 `CAREER_BACKEND_URL` 로, 40자 지어낸 token 을 `CAREER_BACKEND_TOKEN` 으로 준다. 대역은 `GET /api/interview/v1/progress?drillType=tech` 에 `{ "items": [] }`, `GET /api/interview/v1/personal-questions?drillType=tech` 에 `{ "items": [] }` 로 답한다. 결과 JSON 의 `questions` 가 세 개이고 모두 `sourceScope` 가 없거나 `"public"` 이다. 공개 은행이 번들에 들어갔다는 근거다
-  - 실패 쪽: 같은 명령을 연결값 없이 실행하면 종료 코드 1 이고 stderr 에 지어낸 token 문자열이 없다
+  - cwd 에 `CAREER_WORKSPACE_ROOT=/elsewhere` 와 `CAREER_WORKSPACE_SSH_TARGET=example` 을 담은 `.env` 를 두어도 `workspace paths --json` 의 `root` 와 `mode` 가 바뀌지 않는다
+  - `interview select tech --count 3` 은 `Bun.spawn` 으로 실행하고 `await proc.exited` 로 기다린다. `Bun.spawnSync` 는 같은 프로세스의 HTTP 대역 응답을 막아 시간 초과로 끝난다. `Bun.serve` 로 띄운 HTTP 대역을 `CAREER_BACKEND_URL` 로, 40자 지어낸 token 을 `CAREER_BACKEND_TOKEN` 으로 준다. 대역은 `GET /api/interview/v1/progress?drillType=tech` 에 `{ "items": [] }`, `GET /api/interview/v1/personal-questions?drillType=tech` 에 `{ "items": [] }` 로 답한다. 결과 JSON 의 `questions` 가 세 개이고 모두 `sourceScope` 가 없거나 `"public"` 이다. 공개 은행이 번들에 들어갔다는 근거다
+  - 실패 쪽: 40자 지어낸 token 은 `CAREER_BACKEND_TOKEN` 으로 주고 `CAREER_BACKEND_URL` 은 빼고 실행하면 종료 코드 1 이고 stdout 과 stderr 어디에도 그 token 문자열이 없다
 - `career-os/plugin/scripts/build.test.ts` 수정: `buildLocalBundle(out)` 의 `career-local.js` 가 커밋한 `dist/career-local.js` 와 같다는 테스트를 더한다
 - `career-os/scripts/career-workspace/tests/cli.test.ts` 는 고치지 않는다. 기존 테스트가 그대로 통과해야 한다
 
@@ -140,6 +145,7 @@ git grep -n "dotenv" -- career-os/scripts/plugin-local && exit 1 || true
 | `career-os/scripts/career-workspace/cli.ts` | 수정 |
 | `career-os/scripts/plugin-local/workspace.ts` | 신규 |
 | `career-os/scripts/plugin-local/workspace.test.ts` | 신규 |
+| `career-os/scripts/plugin-local/executors.ts` | 신규 |
 | `career-os/scripts/plugin-local/main.ts` | 신규 |
 | `career-os/scripts/plugin-local/main.test.ts` | 신규 |
 | `career-os/scripts/study-topic-recommender/validate_outputs.ts` | 수정 |

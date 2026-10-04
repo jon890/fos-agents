@@ -1303,7 +1303,7 @@ token 을 파일에 저장하지 않고 로그와 오류 응답에 싣지 않는
 
 ### 로컬 실행기 환경 변수
 
-Claude Code 전용 스킬이 부르는 `dist/career-local.js` 가 셸 환경에서 읽는 값이다. `.env` 를 탐색하지 않는다.
+Claude Code 전용 스킬이 부르는 `dist/career-local.js` 가 셸 환경에서 읽는 값이다. 스킬은 `bun --no-env-file` 로 불러 cwd 의 `.env` 를 읽지 않는다.
 
 | 이름 | 필수 | 내용 |
 | --- | :---: | --- |

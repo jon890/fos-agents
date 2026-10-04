@@ -29,7 +29,8 @@ Phase 03 의 로컬 실행기 번들이 실행 파일 위치로 은행 경로를
 
 ### 1. `career-os/scripts/interview-drill/public-question-bank.ts` 신규
 
-- `career-os/plugin/src/interview.ts` 의 일곱 JSON import 와 주석을 이 파일로 옮긴다. 경로는 `../../public/question-bank/<카테고리>/questions.json` 이다
+- `career-os/plugin/src/interview.ts` 의 일곱 JSON import 를 이 파일로 옮긴다. 경로는 `../../public/question-bank/<카테고리>/questions.json` 이다
+- 주석은 새로 쓴다. 카테고리 순서가 공개 질문 선별 결과를 정하므로 바꾸면 노트북과 대화가 다른 질문을 고른다는 것, 은행 검증은 `question-bank-collector/validate.ts` 가 한다는 것을 적는다. 이 phase 에서 지우는 `TECH_CATEGORIES` 를 가리키지 않는다
 - `export const publicTechQuestions = [...javaSpring, ...database, ...cs, ...operations, ...systemDesign, ...aiPlatform] as unknown as SelectableQuestion[];`
 - `export const publicBehavioralQuestions = behavioral as unknown as SelectableQuestion[];`
 - `SelectableQuestion` 만 `./question-selection.ts` 에서 `import type` 한다. 다른 import 는 두지 않는다
@@ -75,7 +76,7 @@ bunx tsc --noEmit
 git grep -n "question-bank\"" -- career-os/scripts/interview-drill/drill-engine.ts && exit 1 || true
 ```
 
-기대값: 모두 종료 코드 0. `contract-parity.test.ts` 의 「번들한 공개 질문 은행이 CLI 와 같다」 가 바뀌지 않은 채 통과한다. 마지막 줄은 아무것도 찍지 않는다.
+기대값: 모두 종료 코드 0. `contract-parity.test.ts` 의 「번들한 공개 질문 은행이 CLI 와 같다」 가 바뀌지 않은 채 통과한다. 이제 두 쪽이 같은 모듈을 쓰므로 순서 보장은 새 `public-question-bank.test.ts` 가 맡는다. 마지막 줄은 아무것도 찍지 않는다.
 
 ## 변경 파일
 

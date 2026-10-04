@@ -4,9 +4,10 @@
 - **결정**:
   - **로컬 실행기의 원본은 `career-os/scripts/` 에 그대로 둔다.**
     plugin 빌드가 의존성을 포함하고 하위 명령으로 실행기를 고르는 실행 파일 하나(`plugin/dist/career-local.js`)를 만들고, 소스를 고친 사람이 함께 커밋한다.
-    plugin 스킬은 `bun "${CLAUDE_PLUGIN_ROOT}/dist/career-local.js" <실행기> ...` 로 부른다.
+    plugin 스킬은 `bun --no-env-file "${CLAUDE_PLUGIN_ROOT}/dist/career-local.js" <실행기> ...` 로 부른다.
   - 실행기는 실행 파일 옆의 파일을 런타임에 찾지 않는다. HTML 과 CSS 템플릿은 텍스트 import 로 번들에 넣는다.
   - **연결값은 셸 환경 변수로만 받는다.** 실행기는 MCP 서버와 같은 `CAREER_BACKEND_URL`, `CAREER_BACKEND_TOKEN` 을 읽고 `.env` 를 탐색하지 않는다.
+    `bun` 은 cwd 의 `.env` 를 자동으로 읽으므로 `--no-env-file` 로 끈다. 사용자가 연 디렉터리의 `.env` 가 작업본 위치나 동기화 대상을 바꾸지 않게 하려는 것이다.
   - **비공개 작업본(`applications/`, `library/`, `state/`)의 위치는 `CAREER_WORKSPACE_ROOT` 로 받는다.** 없으면 `~/.fos-career/workspace` 다.
   - **홈서버 동기화는 설정이 있을 때만 켜진다.** `CAREER_WORKSPACE_COMMAND` 나 `CAREER_WORKSPACE_SSH_TARGET` 이 있으면 지금의 release 동기화를 거치고, 둘 다 없으면 작업본 디렉터리만 쓴다.
   - 개인 식별 정보가 담긴 자산(이력서의 회사와 학교 로고)은 번들에 넣지 않고 작업본 `library/` 에서 읽는다.

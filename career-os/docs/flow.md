@@ -77,11 +77,11 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 
 #### plugin 스킬이 실행하는 명령
 
-plugin 스킬은 같은 단계를 로컬 실행기로 부른다. `<PLUGIN_ROOT>` 는 스킬 본문이 알려 준 plugin 경로다.
+plugin 스킬은 같은 단계를 로컬 실행기로 부른다. `<CAREER_LOCAL>` 은 스킬 본문이 알려 준 `bun --no-env-file "<plugin 경로>/dist/career-local.js"` 다.
 
 ```bash
-bun "<PLUGIN_ROOT>/dist/career-local.js" workspace begin <SKILL_NAME> --json
-bun "<PLUGIN_ROOT>/dist/career-local.js" workspace finish <SKILL_NAME> --json
+<CAREER_LOCAL> workspace begin <SKILL_NAME> --json
+<CAREER_LOCAL> workspace finish <SKILL_NAME> --json
 ```
 
 작업본의 위치는 `CAREER_WORKSPACE_ROOT` 이고 없으면 `~/.fos-career/workspace` 다.

@@ -29,7 +29,7 @@ README 가 plugin 의 새 구성을 가리키게 한다.
 
 ### 1. 대화용 스킬 안내
 
-- `connector-skills/interview-practice/SKILL.md` 의 끝 줄을 「두 가지는 Claude Code 에서 이 plugin 의 `interview-question-prep` 스킬로 하라고 안내한다.」 로
+- `connector-skills/interview-practice/SKILL.md` 의 「6. 이 대화에서 하지 않는 일」 끝 줄을 「공고별 질문 연습과 외부 자료에서 개인 질문을 찾는 일은 Claude Code 에서 이 plugin 의 `interview-question-prep` 스킬로 하라고 안내한다. 공개 질문 은행은 대화에서 고치지 않는다.」 로
 - `connector-skills/study-topic-recommender/SKILL.md` 의 끝 줄을 「세 가지는 Claude Code 에서 이 plugin 의 `study-collection` 스킬로 하라고 안내한다.」 로
 
 ### 2. 버전 올리기
@@ -50,7 +50,7 @@ README 가 plugin 의 새 구성을 가리키게 한다.
 
 ### 5. 번들 재생성
 
-`bun run --cwd career-os/plugin build` 로 `dist/career-mcp.js` 와 `dist/career-local.js` 를 다시 만든다. `server.ts` 의 버전이 바뀌었다.
+`bun run --cwd career-os/plugin build` 로 다시 만든다. `server.ts` 의 버전이 바뀌어 `dist/career-mcp.js` 가 바뀐다. `server.ts` 는 `dist/career-local.js` 에 들어가지 않으므로 그 파일은 바뀌지 않아야 한다.
 
 ## 검증
 
@@ -81,5 +81,4 @@ python3 -c "import re,glob;print(sum(len(re.sub(r'^---\n.*?\n---\n','',open(f).r
 | `career-os/plugin/src/server.ts` | 수정 |
 | `career-os/plugin/scripts/connector-config.test.ts` | 수정 |
 | `career-os/plugin/dist/career-mcp.js` | 수정 |
-| `career-os/plugin/dist/career-local.js` | 수정 |
 | `career-os/README.md` | 수정 |
