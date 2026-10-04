@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import {
   attemptBodySchema,
@@ -22,6 +22,7 @@ import {
   toDrillProgress,
   type DrillProgress,
 } from "./question-selection.ts";
+import { publicBehavioralQuestions, publicTechQuestions } from "./public-question-bank.ts";
 import { createInterviewPracticeStore } from "./store/index.ts";
 import type { InterviewPracticeStore } from "./store/port.ts";
 import {
@@ -47,27 +48,6 @@ function repoRoot(): string {
 function careerOsRoot(): string {
   return join(repoRoot(), "career-os");
 }
-const TECH_CATEGORIES = [
-  "java-spring",
-  "database",
-  "cs",
-  "operations",
-  "system-design",
-  "ai-platform",
-] as const;
-function loadPublicTechQuestions(): DrillQuestion[] {
-  const result: DrillQuestion[] = [];
-  for (const category of TECH_CATEGORIES) {
-    const path = join(careerOsRoot(), "public", "question-bank", category, "questions.json");
-    if (existsSync(path))
-      result.push(...(JSON.parse(readFileSync(path, "utf8")) as DrillQuestion[]));
-  }
-  return result;
-}
-function loadPublicBehavioralQuestions(): DrillQuestion[] {
-  const path = join(careerOsRoot(), "public", "question-bank", "behavioral", "questions.json");
-  return existsSync(path) ? (JSON.parse(readFileSync(path, "utf8")) as DrillQuestion[]) : [];
-}
 function loadApplicationQuestions(
   directory: string | undefined,
   drillType: DrillType,
@@ -84,7 +64,7 @@ export function loadQuestionBank(
   personal: DrillQuestion[] = [],
 ): DrillQuestion[] {
   return [
-    ...(drillType === "tech" ? loadPublicTechQuestions() : loadPublicBehavioralQuestions()),
+    ...((drillType === "tech" ? publicTechQuestions : publicBehavioralQuestions) as unknown as DrillQuestion[]),
     ...personal.map((question) => ({ ...question, sourceScope: "personal" as const })),
     ...loadApplicationQuestions(directory, drillType),
   ];
