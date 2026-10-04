@@ -31,8 +31,37 @@ function executorNamesIn(text: string): string[] {
 
 const skills = readdirSync(skillsDirectory);
 
-test("Claude Code 전용 스킬이 둘 있다", () => {
-  expect(skills.sort()).toEqual(["interview-question-prep", "study-collection"]);
+test("Claude Code 전용 스킬이 셋 있다", () => {
+  expect(skills.sort()).toEqual(["interview-question-prep", "position-recommender", "study-collection"]);
+});
+
+describe("position-recommender", () => {
+  const directory = join(skillsDirectory, "position-recommender");
+
+  test("본문이 실행기의 position 하위 명령을 모두 적는다", () => {
+    const body = readFileSync(join(directory, "SKILL.md"), "utf8");
+    for (const command of ["<CAREER_LOCAL> position collect", "commit-company-tiers", "commit-analyses", "finalize", "cleanup"])
+      expect(body, command).toContain(command);
+  });
+
+  test("brain-search, brain-add, private brain 이 없다", () => {
+    // skill_boundary.test.ts 는 저장소 사본을 먼저 찾으므로 plugin 사본은 여기서 검사한다.
+    for (const file of markdownFilesUnder(directory)) {
+      const text = readFileSync(file, "utf8");
+      for (const banned of ["brain-search", "brain-add", "private brain"])
+        expect(text.includes(banned), `${file} 에 ${banned}`).toBe(false);
+    }
+  });
+
+  // 저장소 사본(.claude/skills/position-recommender)을 지울 때 이 단언도 함께 지운다.
+  test("references 의 판정 기준과 실패 처리가 저장소 사본과 바이트 단위로 같다", () => {
+    const repoReferences = join(import.meta.dir, "..", "..", ".claude", "skills", "position-recommender", "references");
+    for (const file of ["judgment.md", "failures.md"]) {
+      const original = join(repoReferences, file);
+      expect(existsSync(original), `${original} 가 없다`).toBe(true);
+      expect(readFileSync(join(directory, "references", file)).equals(readFileSync(original)), file).toBe(true);
+    }
+  });
 });
 
 test("실행기 이름 추출은 지어낸 이름을 실행기 목록에서 찾지 못한다", () => {
