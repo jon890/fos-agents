@@ -187,6 +187,7 @@ bun --env-file=career-os/.env career-os/scripts/application-profile/read_applica
 ```
 
 CLI 는 `GET {FOS_ASSISTANT_URL}/api/v1/service/memory-documents/identity/career-application-profile` 을 `Authorization: Bearer {FOS_ASSISTANT_SERVICE_TOKEN}` 으로 부른다.
+`FOS_ASSISTANT_ACCESS_CLIENT_ID` 와 secret 이 있으면 `CF-Access-Client-Id`, `CF-Access-Client-Secret` 머리말을 함께 보낸다. 둘 다 없으면 보내지 않고, 하나만 있으면 요청 전에 실패한다.
 본문은 `--out` 파일에만 쓰고, 표준 출력에는 판 번호와 시각만 낸다. 스킬은 그 파일을 읽어 쓴 뒤 지운다.
 
 ```mermaid
@@ -210,6 +211,7 @@ sequenceDiagram
 | 상황 | CLI 의 동작 |
 | --- | --- |
 | `FOS_ASSISTANT_URL` 이나 `FOS_ASSISTANT_SERVICE_TOKEN` 이 없다 | 요청하지 않고 실패한다. `career-os/.env` 에 두 값을 채우라고 알린다 |
+| Access ID 와 secret 중 하나만 있다 | 요청하지 않고 실패한다. 어느 변수가 빠졌는지만 알리고 값은 출력하지 않는다 |
 | `--out` 이 git 저장소 안이다 | 요청하지 않고 실패한다 |
 | `401` | 토큰이 없거나 틀렸거나 폐기됐거나 만료됐다. fos-assistant 웹 화면에서 새로 발급해 `.env` 를 바꾸라고 알린다 |
 | `403` | 요청에 `Origin` 머리말이 붙었다. CLI 의 결함으로 보고 실패한다 |

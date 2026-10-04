@@ -52,3 +52,4 @@ ADR에는 현재 설계를 이해하는 데 필요한 기술적 선택과 기각
 | ADR-135 | [fos-assistant 커넥터는 Backend 를 감싸고 숫자는 기록에서 직접 읽음](ADR-135-fos-assistant-커넥터는-backend를-감싸고-숫자는-기록에서-직접-읽는다.md) | Accepted |
 | ADR-136 | [지원서 공통 프로필은 fos-assistant Memory 에서 서비스 토큰으로 읽음](ADR-136-지원서-공통-프로필은-fos-assistant-memory에서-서비스-토큰으로-읽는다.md) | Accepted |
 | ADR-137 | [스킬과 MCP 를 plugin 하나로 묶고 세 단계로 옮김](ADR-137-스킬과-mcp를-plugin-하나로-묶고-세-단계로-옮긴다.md) | Accepted |
+| ADR-140 | [노트북 client 는 선택적 Cloudflare Access service token 머리말을 앱 인증과 함께 보냄](ADR-140-노트북-client-는-선택적-cloudflare-access-service-token-머리말을-앱-인증과-함께-보낸다.md) | Accepted |
