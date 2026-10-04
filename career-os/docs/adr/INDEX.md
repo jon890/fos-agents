@@ -50,3 +50,4 @@ ADR에는 현재 설계를 이해하는 데 필요한 기술적 선택과 기각
 | ADR-133 | [프로필 원고와 에이전트 사용량 기록은 Backend 의 profile 모듈이 가짐](ADR-133-프로필-원고와-에이전트-사용량-기록은-backend의-profile-모듈이-갖는다.md) | Accepted |
 | ADR-134 | [공고 분석의 기준 버전은 position-preferences 문서 버전에서 계산](ADR-134-공고-분석의-기준-버전은-position-preferences-문서-버전에서-계산한다.md) | Accepted |
 | ADR-135 | [fos-assistant 커넥터는 Backend 를 감싸고 숫자는 기록에서 직접 읽음](ADR-135-fos-assistant-커넥터는-backend를-감싸고-숫자는-기록에서-직접-읽는다.md) | Accepted |
+| ADR-137 | [스킬과 MCP 를 plugin 하나로 묶고 세 단계로 옮김](ADR-137-스킬과-mcp를-plugin-하나로-묶고-세-단계로-옮긴다.md) | Accepted |

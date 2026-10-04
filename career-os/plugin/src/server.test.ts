@@ -25,7 +25,7 @@ function expectConfigError(build: () => unknown) {
   throw new Error("expected CAREER_CONFIG");
 }
 
-test("MCP 로 도구 열 개를 탐색하고 확인 도구가 structuredContent 와 텍스트에 같은 값을 낸다", async () => {
+test("MCP 로 도구 열여섯 개를 탐색하고 확인 도구가 structuredContent 와 텍스트에 같은 값을 낸다", async () => {
   const server = createServer(env, async (input) => {
     expect(String(input)).toBe("https://career.example.com/api/profile/v1/documents");
     return new Response(JSON.stringify({ documents: [] }));
@@ -35,7 +35,7 @@ test("MCP 로 도구 열 개를 탐색하고 확인 도구가 structuredContent 
   try {
     await server.connect(serverTransport);
     await client.connect(clientTransport);
-    expect((await client.listTools()).tools).toHaveLength(10);
+    expect((await client.listTools()).tools).toHaveLength(16);
     const result = await client.callTool({ name: "check_connection", arguments: {} });
     expect(result.isError).not.toBe(true);
     expect(result.structuredContent).toEqual({ backend: "ok", github: "not_configured" });
@@ -85,7 +85,7 @@ test("plugin 실행 파일만 복사해도 의존성 설치 없이 stdio 로 시
   });
   try {
     await client.connect(transport);
-    expect((await client.listTools()).tools).toHaveLength(10);
+    expect((await client.listTools()).tools).toHaveLength(16);
     expect(stderr).toBe("");
   } finally {
     await client.close();

@@ -9,6 +9,28 @@ import {
 import { CareerBackend, CareerError, safeError } from "./backend.ts";
 import type { GithubProfileRepo } from "./github.ts";
 import { idempotencyKey } from "./idempotency.ts";
+import {
+  attemptInputSchema,
+  getInterviewQuestions,
+  type AttemptInput,
+  type GetInterviewQuestionsArgs,
+  type ListPersonalQuestionsArgs,
+  type PersonalQuestionInput,
+  getInterviewQuestionsSchema,
+  listPersonalQuestions,
+  listPersonalQuestionsSchema,
+  personalQuestionInputSchema,
+  saveInterviewAttempt,
+  savePersonalQuestion,
+} from "./interview.ts";
+import {
+  getStudyCandidates,
+  getStudyCandidatesSchema,
+  saveStudyRecommendation,
+  saveStudyRecommendationSchema,
+  type GetStudyCandidatesArgs,
+  type SaveStudyRecommendationArgs,
+} from "./study.ts";
 
 // Same keys as the Backend schemas; contract-parity.test.ts compares them with the CLI contracts.
 export const contextDocumentKeys = [
@@ -125,6 +147,34 @@ export const toolDefinitions: Record<string, { description: string; schema: z.Zo
       "README 와 사용량 차트를 GitHub 프로필 저장소에 커밋 하나로 올림. 숫자는 받지 않고 고른 달의 사용량 기록에서 계산하며, README 의 Tokens 배지가 그 합계와 다르면 아무것도 쓰지 않는다",
     schema: updateGithubProfileSchema,
   },
+  get_interview_questions: {
+    description:
+      "공개 질문과 켜진 개인 질문 가운데 복습 상태로 오늘 연습할 면접 질문을 고름. count 기본값은 5",
+    schema: getInterviewQuestionsSchema,
+  },
+  list_personal_questions: {
+    description: "켜진 개인 면접 질문 목록 조회",
+    schema: listPersonalQuestionsSchema,
+  },
+  save_interview_attempt: {
+    description:
+      "면접 답변 하나의 판정을 기록하고 복습 상태를 갱신. attemptId 는 다시 보낼 때만 넘기며 없으면 서버가 만든다",
+    schema: attemptInputSchema,
+  },
+  save_personal_question: {
+    description: "개인 면접 질문 하나를 더하거나 고치거나 enabled: false 로 끔",
+    schema: personalQuestionInputSchema,
+  },
+  get_study_candidates: {
+    description:
+      "수집된 공부 후보와 learning-interests 본문, 최근 추천 주제, 저장에 넘길 candidateContextVersion 조회. limit 기본값은 20",
+    schema: getStudyCandidatesSchema,
+  },
+  save_study_recommendation: {
+    description:
+      "고른 공부 주제와 자료, 고르지 않은 후보의 제외 이유를 오늘 추천으로 저장. 주제 4개, 자료 합계 8개, 제외 20개까지다",
+    schema: saveStudyRecommendationSchema,
+  },
 };
 
 type ToolResult = {
@@ -137,6 +187,7 @@ export class CareerTools {
   constructor(
     private readonly backend: CareerBackend,
     private readonly github?: GithubProfileRepo,
+    private readonly now: () => Date = () => new Date(),
   ) {}
 
   async call(name: string, raw: unknown): Promise<ToolResult> {
@@ -192,6 +243,22 @@ export class CareerTools {
           return this.success(await this.requireGithub().read());
         case "update_github_profile":
           return this.success(await this.updateGithubProfile(args as UpdateGithubProfileArgs));
+        case "get_interview_questions":
+          return this.success(
+            await getInterviewQuestions(this.backend, parsed.data as GetInterviewQuestionsArgs, this.now),
+          );
+        case "list_personal_questions":
+          return this.success(await listPersonalQuestions(this.backend, parsed.data as ListPersonalQuestionsArgs));
+        case "save_interview_attempt":
+          return this.success(await saveInterviewAttempt(this.backend, parsed.data as AttemptInput));
+        case "save_personal_question":
+          return this.success(await savePersonalQuestion(this.backend, parsed.data as PersonalQuestionInput));
+        case "get_study_candidates":
+          return this.success(await getStudyCandidates(this.backend, parsed.data as GetStudyCandidatesArgs));
+        case "save_study_recommendation":
+          return this.success(
+            await saveStudyRecommendation(this.backend, parsed.data as SaveStudyRecommendationArgs, this.now),
+          );
       }
       throw new CareerError("CAREER_UNKNOWN_TOOL");
     } catch (error) {
