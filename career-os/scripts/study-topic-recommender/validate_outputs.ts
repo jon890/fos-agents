@@ -45,10 +45,13 @@ export function validateMorningReadingOutputs(root: string): { status: "ok"; rep
   };
 }
 
+export function runValidateOutputs(argv: string[], environment = process.env) {
+  return validateMorningReadingOutputs(resolveStudyRunRoot(environment, firstOptionValue(argv, "--run-dir")));
+}
+
 if (import.meta.main) {
   try {
-    const root = resolveStudyRunRoot(process.env, firstOptionValue(process.argv, "--run-dir"));
-    console.log(JSON.stringify(validateMorningReadingOutputs(root), null, 2));
+    console.log(JSON.stringify(runValidateOutputs(process.argv), null, 2));
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exit(error instanceof StudyRunPathError ? error.exitCode : 1);

@@ -1,13 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import aiPlatform from "../../public/question-bank/ai-platform/questions.json" with { type: "json" };
-import behavioral from "../../public/question-bank/behavioral/questions.json" with { type: "json" };
-import cs from "../../public/question-bank/cs/questions.json" with { type: "json" };
-import database from "../../public/question-bank/database/questions.json" with { type: "json" };
-import javaSpring from "../../public/question-bank/java-spring/questions.json" with { type: "json" };
-import operations from "../../public/question-bank/operations/questions.json" with { type: "json" };
-import systemDesign from "../../public/question-bank/system-design/questions.json" with { type: "json" };
 import { INTERVIEW_BARS } from "../../scripts/interview-drill/follow-up-policy.ts";
+import { publicBehavioralQuestions, publicTechQuestions } from "../../scripts/interview-drill/public-question-bank.ts";
 import {
   dueForReview,
   selectFromBank,
@@ -18,19 +12,7 @@ import {
 import { CareerBackend, CareerError } from "./backend.ts";
 import { seoulDate } from "./seoul-date.ts";
 
-// The public bank is bundled so the connector never reads files. The order matches the CLI's
-// TECH_CATEGORIES (scripts/interview-drill/drill-engine.ts) so both pick the same questions on the
-// same day; contract-parity.test.ts compares the id lists. The bank files are validated by
-// scripts/question-bank-collector/validate.ts, so they are not parsed again at runtime.
-export const publicTechQuestions = [
-  ...javaSpring,
-  ...database,
-  ...cs,
-  ...operations,
-  ...systemDesign,
-  ...aiPlatform,
-] as unknown as SelectableQuestion[];
-export const publicBehavioralQuestions = behavioral as unknown as SelectableQuestion[];
+export { publicBehavioralQuestions, publicTechQuestions };
 
 // Field names, length limits, and enum values are the Backend's (services/career-backend/src/interview/schema.ts).
 // They are rewritten here because the bundle must not carry Backend code; contract-parity.test.ts compares the keys.

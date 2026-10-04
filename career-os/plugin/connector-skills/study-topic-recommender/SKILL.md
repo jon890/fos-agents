@@ -52,4 +52,4 @@ description: 커리어 Backend 에 이미 수집된 기술 블로그, 개발 동
 - 소스를 더하거나 끄지 않는다
 - HTML 리포트를 만들거나 외부에 게시하지 않는다
 
-세 가지는 저장소를 연 노트북 세션의 `study-topic-recommender` 에서 하라고 안내한다.
+세 가지는 Claude Code 에서 이 plugin 의 `study-collection` 스킬로 하라고 안내한다.

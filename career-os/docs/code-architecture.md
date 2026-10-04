@@ -56,7 +56,6 @@ career-os/
 | 스킬 | `references/` | `scripts/` | `templates/` |
 | --- | --- | --- | --- |
 | `application-package-writer` | 6 | 11 | 2 |
-| `interview-practice` | 3 | | |
 | `position-recommender` | 2 | | |
 | `resume-preparer` | 7 | 21 | 4 |
 | `study-topic-recommender` | 2 | | |
@@ -308,6 +307,10 @@ npm test
 
 ## interview-practice
 
+면접 연습 스킬은 저장소에 없고 plugin 에 있다.
+MCP 도구만으로 하는 연습은 `plugin/connector-skills/interview-practice/` 가, 공고별 질문으로 하는 연습과 외부 자료에서 질문을 찾는 일은 Claude Code 전용 `plugin/skills/interview-question-prep/` 가 맡는다.
+배치는 아래 「fos-career 커넥터」 절이 소유한다.
+
 질문은 공개 범위에 따라 세 자리로 나뉜다.
 
 | 자리 | 담는 것 |
@@ -323,10 +326,11 @@ npm test
 계약과 공급자는 [ADR-130](adr/ADR-130-면접-연습의-후보자-맥락은-memory-공급자-경계로-읽는다.md)과 `data-schema.md` 의 「후보자 맥락」 절이 정한다.
 `backend` 공급자일 때 스크립트는 `scripts/candidate-context/client.ts` 로 문서 본문을 읽어 채울 칸 목록과 함께 낸다. 칸은 모델이 채운다.
 
-`scripts/interview-drill/`은 `interview-practice`의 기술·인성 모드에서 질문 선별과 연습 기록을 처리한다.
+`scripts/interview-drill/`은 질문 선별과 연습 기록을 처리한다. 커넥터와 로컬 실행기가 이 코드를 번들해 쓰고, 저장소의 `drill-engine.ts` CLI 도 같은 코드다.
 공고별 `evidence/interview-questions.json`을 명시하면 포지션 질문과 공통 기반 질문을 섞어 구성한다.
 `follow-up-policy.ts`는 답변 수준에 따른 꼬리질문 축과 최대 깊이를 제공한다.
 `question-selection.ts` 는 질문 묶음과 복습 상태, 오늘 날짜를 받아 낼 질문을 고르는 순수 함수다. `drill-engine.ts` 가 파일과 저장소에서 읽은 값을 넘기고, fos-career 커넥터도 같은 함수를 번들해 쓴다.
+`public-question-bank.ts` 는 공개 질문 은행 JSON 을 정적 import 로 읽어 tech 와 behavioral 묶음으로 낸다. `drill-engine.ts`, 커넥터와 로컬 실행기가 같은 모듈을 쓴다. 실행 파일 위치로 은행 경로를 찾지 않으므로 번들한 실행기에서도 질문이 빠지지 않는다.
 
 주제별 복습 상태, 연습 기록과 개인 질문은 `scripts/interview-drill/store/` 의 저장소 interface 뒤에 있다.
 결정과 근거는 [ADR-129](adr/ADR-129-면접-연습-기록과-개인-질문은-backend가-소유한다.md)에 있다.
@@ -338,6 +342,7 @@ npm test
 | `scripts/interview-drill/store/file-store.ts` | `CAREER_STORE_DIR` 의 파일을 읽고 쓰는 구현 |
 | `scripts/interview-drill/store/index.ts` | `CAREER_STORE` 로 구현 하나를 고른다. 값이 없으면 실패한다 |
 | `scripts/interview-drill/memory.ts` | `CAREER_MEMORY` 에 따라 후보자 맥락을 검사해 내거나 채울 칸 목록을 낸다 |
+| `scripts/interview-drill/templates/candidate-memory.example.json` | `CAREER_MEMORY=file` 로 쓸 후보자 맥락 파일의 템플릿 |
 | `services/career-backend/src/interview/review-schedule.ts` | 복습일 규칙. Backend 와 파일 구현이 함께 import 한다 |
 
 | 명령 | 책임 |
@@ -359,7 +364,9 @@ Backend 구현의 HTTP 호출은 `scripts/interview-drill/career-backend/client.
 `scripts/interview-question-sources/`는 기존 읽을거리 수집 어댑터를 재사용해 실행별 후보풀을 만들고 설정과 후보 형식을 검증한다.
 
 `public/question-bank/sources.json`은 공개 공통 질문이 참조하는 공식 URL과 확인일을 관리한다.
-공개 질문 보강은 `interview-practice`의 필요할 때만 읽는 참고 문서가 안내한다.
+**공개 질문 보강은 저장소 유지 절차다.** 절차는 [`public/question-bank/MAINTENANCE.md`](../public/question-bank/MAINTENANCE.md) 가 소유한다.
+plugin 을 설치한 사람은 이 저장소에 커밋하지 않는다. 그래서 plugin 스킬은 외부 자료에서 찾은 질문을 공개 은행에 넣지 않고 개인 질문으로 Backend 에 저장한다.
+외부 자료 후보 수집과 질문 승격 기준은 `plugin/skills/interview-question-prep/references/source-discovery.md` 가 소유하고 유지 절차도 그 문서를 가리킨다.
 `scripts/question-bank-collector/validate.ts`는 독립된 검증 모듈로 남아 질문 구조, 공개 범위, 출처 등록과 URL 형식을 검사한다.
 
 ## position-recommender
@@ -691,7 +698,7 @@ plist 는 `~/Library/LaunchAgents/` 에, 로그는 `~/Library/Logs/fos-career-os
 plugin 이름과 커넥터 id 는 `fos-career`, MCP 서버 이름은 `career` 다.
 가계부 커넥터(`accountbook/plugin/`)와 같은 구성이고, 결정은 [ADR-135](adr/ADR-135-fos-assistant-커넥터는-backend를-감싸고-숫자는-기록에서-직접-읽는다.md)에 있다.
 이 plugin 은 career-os 의 스킬과 MCP 서버를 한데 묶는 배포 단위이기도 하다. 옮기는 단계와 세 층 구조는 [ADR-137](adr/ADR-137-스킬과-mcp를-plugin-하나로-묶고-세-단계로-옮긴다.md)을 따른다.
-지금은 1단계까지 왔다. `interview-practice` 와 `study-topic-recommender` 의 Backend 읽기와 쓰기가 MCP 도구이고, 두 스킬의 plugin 판이 `skills/` 에 있다.
+지금은 2단계를 진행하고 있다. 대화용 스킬과 Claude Code 전용 스킬의 자리는 [ADR-139](adr/ADR-139-plugin-의-대화용-스킬과-claude-code-전용-스킬을-디렉터리로-나눈다.md), 로컬 실행기의 배치는 [ADR-138](adr/ADR-138-plugin-로컬-실행기는-scripts-원본을-번들해-부르고-작업본-위치는-설정으로-받는다.md)을 따른다.
 
 ```text
 career-os/plugin/
@@ -702,10 +709,14 @@ career-os/plugin/
 ├── src/
 ├── scripts/
 ├── dist/career-mcp.js
+├── dist/career-local.js
+├── connector-skills/
+│   ├── career-connector/SKILL.md
+│   ├── interview-practice/SKILL.md
+│   └── study-topic-recommender/SKILL.md
 └── skills/
-    ├── career-connector/SKILL.md
-    ├── interview-practice/SKILL.md
-    └── study-topic-recommender/SKILL.md
+    ├── interview-question-prep/
+    └── study-collection/
 ```
 
 | 경로 | 책임 |
@@ -720,10 +731,15 @@ career-os/plugin/
 | `plugin/src/backend.ts` | 커리어 Backend 의 Bearer HTTP client 와 응답 스키마 |
 | `plugin/src/github.ts` | GitHub REST client. 프로필 저장소 조회와 Git Data API 로 커밋 하나를 만드는 일 |
 | `plugin/src/*.test.ts`, `plugin/scripts/*.test.ts` | fetch 대역으로 도는 도구 테스트, 번들 일치와 manifest 일치 검사 |
-| `plugin/scripts/build.ts`, `plugin/dist/career-mcp.js` | 의존성을 포함한 단일 실행 파일의 빌드와 배포 |
-| `plugin/skills/career-connector/SKILL.md` | 연결용 에이전트의 지침. 프로필 갱신 순서와 승인 규칙, 조사용 읽기 도구의 결과 해석 |
-| `plugin/skills/interview-practice/SKILL.md` | MCP 도구만으로 하는 면접 연습. 질문 고르기, 답변 평가, 기록과 개인 질문 저장 |
-| `plugin/skills/study-topic-recommender/SKILL.md` | MCP 도구만으로 하는 공부 추천. 수집된 후보에서 고르고 추천 이력을 저장 |
+| `plugin/scripts/build.ts`, `plugin/dist/career-mcp.js` | 의존성을 포함한 MCP 서버 실행 파일의 빌드와 배포 |
+| `plugin/dist/career-local.js` | 같은 빌드가 만드는 로컬 실행기 실행 파일. 아래 「로컬 실행기」 |
+| `plugin/connector-skills/career-connector/SKILL.md` | 연결용 에이전트의 지침. 프로필 갱신 순서와 승인 규칙, 조사용 읽기 도구의 결과 해석 |
+| `plugin/connector-skills/interview-practice/SKILL.md` | MCP 도구만으로 하는 면접 연습. 질문 고르기, 답변 평가, 기록과 개인 질문 저장 |
+| `plugin/connector-skills/study-topic-recommender/SKILL.md` | MCP 도구만으로 하는 공부 추천. 수집된 후보에서 고르고 추천 이력을 저장 |
+| `plugin/skills/interview-question-prep/` | Claude Code 전용. 공고별 질문으로 하는 연습과 외부 자료에서 개인 질문 찾기 |
+| `plugin/skills/study-collection/` | Claude Code 전용. 외부 피드 수집, 소스 관리, HTML 리포트와 게시 기록 |
+| `scripts/plugin-local/` | 로컬 실행기의 진입점. 하위 명령을 `scripts/` 의 CLI 로 넘긴다. 실행기 이름 목록은 import 가 없는 `executors.ts` 가 갖는다 |
+| `scripts/interview-drill/public-question-bank.ts` | 공개 질문 은행 JSON 을 정적 import 로 읽는 모듈. 커넥터와 실행기와 CLI 가 함께 쓴다 |
 | `scripts/interview-drill/question-selection.ts` | 질문 은행과 복습 상태로 낼 질문을 고르는 순수 함수. `follow-up-policy.ts` 의 상수만 import 한다. 노트북 CLI 와 커넥터가 같은 함수를 쓴다 |
 | `public/question-bank/*/questions.json` | 공개 질문 은행. 커넥터가 번들에 넣어 저장소 경로 없이 읽는다 |
 | `scripts/agent-usage/chart.ts` | 사용량 기록을 차트 입력으로 바꾸고 SVG 를 그리며 README 의 Tokens 배지 값을 읽는 순수 함수. import 가 없다 |
@@ -750,17 +766,39 @@ career-os/plugin/
 **MCP 서버는 프로세스 안의 상태에 기대지 않는다.** fos-assistant 는 승인된 쓰기를 새 프로세스에서 실행한다.
 파일을 읽거나 쓰지 않고, 호출 사이에 값을 기억하지 않는다.
 
+### 로컬 실행기
+
+Claude Code 전용 스킬은 `bun --no-env-file "${CLAUDE_PLUGIN_ROOT}/dist/career-local.js" <실행기> ...` 로 로컬 실행기를 부른다.
+`${CLAUDE_PLUGIN_ROOT}` 는 Claude Code 가 `SKILL.md` 본문에서만 치환한다. 그래서 스킬 본문이 이 명령을 알려 주고, 스킬 본문과 `references/` 의 문서는 그 명령을 `<CAREER_LOCAL>` 로 적는다.
+`--no-env-file` 은 사용자가 연 디렉터리의 `.env` 를 `bun` 이 자동으로 읽지 않게 한다.
+
+| 실행기 | 넘기는 곳 | 하는 일 |
+| --- | --- | --- |
+| `workspace` | `scripts/plugin-local/workspace.ts` | 비공개 작업본의 위치를 알려 주고, 스킬 시작과 끝에 동기화한다 |
+| `interview` | `scripts/interview-drill/drill-engine.ts` 의 `select` | 공고별 질문을 섞어 오늘 질문을 고른다. 저장소는 늘 Backend 다 |
+| `interview-sources` | `scripts/interview-question-sources/cli.ts` | 등록 출처에서 면접 질문 후보를 임시 디렉터리에 모은다 |
+| `study` | `scripts/study-topic-recommender/morning_reading_cli.ts` | 피드 수집, 후보 준비, HTML 리포트, 추천과 게시 기록, 실행 디렉터리 정리 |
+| `study-validate` | `scripts/study-topic-recommender/validate_outputs.ts` | 실행 디렉터리의 리포트 산출물을 검증한다 |
+| `study-sources` | `scripts/study-topic-recommender/manage_reading_sources.ts` | 읽을거리 소스를 조회하고 더하고 끈다 |
+
+- 실행기 원본은 `scripts/` 에 있다. 저장소의 CLI 와 같은 코드다. 실행기 코드를 고치면 `bun run --cwd career-os/plugin build` 로 `dist/career-local.js` 를 다시 만들어 함께 커밋한다
+- `dist/career-local.js` 는 루트 `bun.lock` 이 고정한 `zod` 와 `fast-xml-parser` 를 번들한다. MCP 서버 번들(`dist/career-mcp.js`)과 따로 만들어 서로의 `zod` 가 섞이지 않는다
+- 실행기는 실행 파일 옆의 파일이나 저장소 경로를 찾지 않는다. 공개 질문 은행과 템플릿은 import 로 번들에 들어간다
+- Backend 연결값은 셸 환경 변수 `CAREER_BACKEND_URL`, `CAREER_BACKEND_TOKEN` 에서 읽는다. `.env` 를 탐색하지 않는다
+- 비공개 작업본의 위치와 동기화 설정은 [`data-schema.md`](data-schema.md#로컬-실행기-환경-변수)가 소유한다
+
 ### 커넥터 설치 계약
 
-fos-assistant 는 `plugin/` 을 복사하거나 마운트해 `connector.json`, `.mcp.json`, `skills/` 를 읽는다.
+fos-assistant 는 `plugin/` 을 복사하거나 마운트해 `connector.json`, `.mcp.json`, `.claude-plugin/plugin.json` 의 `skills` 가 가리키는 `connector-skills/` 를 읽는다.
 
 - `connector.json` 은 `schema: 2` 다. 도구 열여덟 개를 `tools` 에 빠짐없이 선언하고 `default_tool_policy` 는 `deny` 다. 새 도구를 더할 때는 같은 변경에서 `tools` 에 위험도와 승인 방식과 `title` 을 선언한다
 - 확인 도구 `check_connection` 은 `READ` 와 `none` 이고 서버가 `readOnlyHint: true` 로 표시한다
 - `.mcp.json` 의 서버 env 는 `connector.json` 의 `fields[].env` 와 `operator_env` 의 합과 같다. 다르면 커넥터가 카탈로그에서 빠진다
 - `operator_secrets` 를 선언하지 않는다. 선언하면 카탈로그에서 빠진다. 그래서 Backend 의 token 은 사용자가 연결 화면에 넣는다
-- `skills/` 아래 모든 `SKILL.md` 의 본문을 이름 순으로 이어 붙인 것이 연결용 에이전트의 지침이 된다. 앞머리를 뺀 본문을 합쳐 8,000자를 넘지 않고 `skills/` 아래에 심볼릭 링크를 두지 않는다. 어기면 카탈로그에서 빠진다
-- plugin 스킬을 `.claude/skills/` 에 링크하지 않는다. 노트북의 에이전트에는 이 MCP 도구가 없다. 저장소를 연 세션은 `.claude/skills/` 의 `interview-practice`, `study-topic-recommender`, `sync-profile` 을 쓴다
-- 같은 이름의 스킬이 저장소와 plugin 에 함께 있다. plugin 판은 MCP 도구로 할 수 있는 단계만 담고, 나머지 단계는 저장소 판에서 하라고 적는다. 판단 규칙(채점 기준, 추천 기준)을 고치면 두 판을 함께 고친다. 저장소 판은 2단계에서 로컬 실행기를 plugin 에 넣은 뒤 지운다
+- `connector-skills/` 아래 모든 `SKILL.md` 의 본문을 이름 순으로 이어 붙인 것이 연결용 에이전트의 지침이 된다. 앞머리를 뺀 본문을 합쳐 8,000자를 넘지 않고 그 아래에 심볼릭 링크를 두지 않는다. 어기면 카탈로그에서 빠진다
+- `skills/` 는 Claude Code 만 읽는다. fos-assistant 는 읽지 않으므로 이 디렉터리의 스킬은 지침 상한에 들지 않는다. 두 디렉터리에 같은 이름의 스킬을 두지 않는다
+- plugin 스킬을 `.claude/skills/` 에 링크하지 않는다. 저장소를 연 Claude Code 세션도 plugin 을 설치해 plugin 스킬을 쓴다
+- 저장소 사본이 남은 스킬(`study-topic-recommender`, `position-recommender`, `sync-profile`, `resume-preparer`)은 판단 규칙을 고칠 때 plugin 스킬과 함께 고친다. 지우는 조건은 ADR-139 가 정한다
 - 도구 목록이 바뀐 판을 배포하면 실행 환경이 MCP 서버를 다시 띄워야 새 도구가 보인다. 스킬 본문만 바뀐 판은 연결 확인으로 반영한다
 - 실행 파일에 의존성이 포함돼 있어 설치한 환경에서 `bun install` 을 하지 않는다. 소스를 고친 사람이 빌드해 `dist/career-mcp.js` 를 함께 커밋한다
 
@@ -772,10 +810,11 @@ fos-assistant 는 `plugin/` 을 복사하거나 마운트해 `connector.json`, `
 # cwd: 저장소 루트
 bun install --frozen-lockfile
 bun install --frozen-lockfile --cwd career-os/plugin
-bun test ./career-os/plugin ./career-os/scripts/agent-usage ./career-os/scripts/interview-drill
+bun test ./career-os/plugin ./career-os/scripts/agent-usage ./career-os/scripts/interview-drill ./career-os/scripts/plugin-local
 bun run --cwd career-os/plugin typecheck
 bun run --cwd career-os/plugin build
 claude plugin validate career-os/plugin
 ```
 
 첫 줄의 루트 설치는 plugin 의 대조 테스트가 `scripts/` 의 계약 파일을 import 하기 때문에 필요하다.
+로컬 실행기 번들도 루트에 설치한 `zod` 와 `fast-xml-parser` 로 만든다.

@@ -10,16 +10,17 @@
 - 지원 가능한 공고를 찾을 때: `/position-recommender`
 - 공고별 지원 판단과 전략을 준비할 때: `/application-package-writer <posting-path>`
 - 이력서·경력기술서를 작성하고 검증할 때: `/resume-preparer <application-directory>`
-- 기술·인성·포지션별 면접 질문을 준비하고 연습할 때: `/interview-practice <tech|behavioral>`
+- 기술·인성 면접을 연습할 때: plugin 의 `interview-practice`. 공고별 질문으로 연습하거나 질문을 더 찾을 때: plugin 의 `interview-question-prep`
 - 오늘 읽거나 볼 기술 자료를 고를 때: `/study-topic-recommender`
 - 원티드, LinkedIn, GitHub 프로필을 갱신할 때: `/sync-profile`
 
 `application-package-writer`는 전체 지원 요청에서 `resume-preparer`까지 연결한다.
-`interview-practice`는 공개 질문 보강도 내부 유지보수 절차로 처리한다.
+공개 질문 보강은 [`public/question-bank/MAINTENANCE.md`](public/question-bank/MAINTENANCE.md)의 저장소 유지 절차로 한다.
 각 스킬의 입력, 산출물, 검증, 안전 경계는 해당 `SKILL.md`에서 확인한다.
 
 fos-assistant 의 대화에서 문서를 고치고, 면접을 연습하고, 공부 주제를 고르고, GitHub 프로필을 갱신할 때는 `plugin/` 의 커리어 커넥터를 쓴다.
 자세한 것은 [`docs/code-architecture.md`](docs/code-architecture.md)의 「fos-career 커넥터」를 따른다.
+Claude Code 에서는 `plugin/` 을 설치해 같은 스킬과 로컬 실행기를 쓴다. 실행기가 읽는 환경 변수는 [`docs/data-schema.md`](docs/data-schema.md#로컬-실행기-환경-변수)를 따른다.
 
 ## 설정
 

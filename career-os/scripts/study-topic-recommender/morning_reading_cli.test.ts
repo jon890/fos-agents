@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { main } from "./morning_reading_cli.ts";
+import { main, reportMorningReadingError } from "./morning_reading_cli.ts";
 
 async function withArgs(args: string[], run: () => Promise<void>): Promise<void> {
   const originalArgv = process.argv;
@@ -38,5 +38,29 @@ describe("morning_reading_cli", () => {
       exitCode: 2,
       message: expect.stringContaining("지원하지 않는 옵션"),
     });
+  });
+
+  test("알 수 없는 오류는 오류 객체에 붙은 값 없이 메시지만 출력한다", () => {
+    const originalError = console.error;
+    const originalExit = process.exit;
+    const printed: unknown[][] = [];
+    console.error = (...args: unknown[]) => {
+      printed.push(args);
+    };
+    process.exit = ((code?: string | number | null) => {
+      throw new Error(`exit:${code}`);
+    }) as typeof process.exit;
+    const error = Object.assign(new Error("요청이 실패했다"), {
+      request: { headers: { authorization: "Bearer secret-token" } },
+    });
+
+    try {
+      expect(() => reportMorningReadingError(error)).toThrow("exit:1");
+    } finally {
+      console.error = originalError;
+      process.exit = originalExit;
+    }
+
+    expect(printed).toEqual([["study-topic-recommender error:", "요청이 실패했다"]]);
   });
 });

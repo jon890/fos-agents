@@ -12,7 +12,8 @@
 | 사례 발견 | 회사 기술 블로그, 공개 콘퍼런스 영상 | 실제 제약, 장애, 대안과 운영 영향을 질문으로 바꾼다. |
 | 범위 확인 | 공개 GitHub 면접 가이드 | 빠진 CS·설계 영역을 찾되 질문과 답안을 복사하지 않는다. |
 
-등록 출처는 `config/interview-question-sources.ts`에서 관리한다.
+등록 출처는 plugin 에 번들돼 있다.
+출처가 닫혔거나 옮겨졌으면 사용자에게 알리기만 한다.
 오픈소스 가이드에 라이선스가 있어도 원문 질문과 답안을 그대로 옮기지 않는다.
 YouTube 영상은 제목과 설명만 보고 기술 사실을 확정하지 않고, 공개 자막이나 발표 자료와 원문을 확인한다.
 
@@ -27,16 +28,14 @@ mktemp -d "${TMPDIR:-/tmp}/interview-question-sources.XXXXXX"
 반환 경로를 `<RUN_DIR>`로 사용한다.
 
 ```bash
-bun "$(git rev-parse --show-toplevel)/career-os/scripts/interview-question-sources/cli.ts" validate
-bun "$(git rev-parse --show-toplevel)/career-os/scripts/interview-question-sources/cli.ts" collect \
+<CAREER_LOCAL> interview-sources validate
+<CAREER_LOCAL> interview-sources collect \
   --output <RUN_DIR>/interview-source-candidates.json \
   --cache-dir <RUN_DIR>/cache
-bun "$(git rev-parse --show-toplevel)/career-os/scripts/question-bank-collector/validate.ts"
 ```
 
 일부 출처가 실패해도 다른 출처의 후보가 있으면 계속한다.
 수집 결과가 모두 비었을 때만 웹 검색으로 등록 출처의 공개 상태를 확인한다.
-비활성화나 URL 변경은 원문에서 확인한 경우에만 설정에 반영한다.
 
 검토를 마치면 `<RUN_DIR>`의 파일과 빈 디렉터리를 각각 제거한다.
 경로가 `interview-question-sources.`로 시작하는 시스템 임시 디렉터리인지 먼저 확인한다.
@@ -48,7 +47,7 @@ find <RUN_DIR> -depth -type d -exec rmdir {} \;
 
 ## 공백과 목표 수준 연결
 
-1. 공개 질문 은행의 카테고리, tag, 난도와 `bar` 분포를 확인한다.
+1. `get_interview_questions` 와 `<CAREER_LOCAL> interview select` 가 낸 질문의 `category`, `tags`, `difficulty`, `bar` 분포를 확인한다.
 2. 현재 지원 공고가 요구하지만 공개·개인·포지션 질문에 없는 영역을 찾는다.
 3. 후보자 맥락에서 `currentRole` 과 `experience` 를 읽는다.
 4. 회사 이름으로 수준을 고정하지 않고 공고의 문제 규모와 책임으로 목표 `bar`를 정한다.
@@ -68,18 +67,20 @@ find <RUN_DIR> -depth -type d -exec rmdir {} \;
 목표가 `large-scale`이면 `production` 질문은 기본 세션에서 제외하고, `large-scale`과 `global-scale` 질문만 선별한다.
 단, 이전 연습에서 확인한 기본기 공백은 별도 복습 항목으로 다룬다.
 
-## 질문 승격 기준
+## 개인 질문 저장 기준
 
 - 단순 용어 정의가 아니라 선택 기준, 제약, 실패, 운영 영향과 검증 중 둘 이상을 묻는다.
 - 현재 경험을 확인하는 질문과 아직 해보지 않은 설계 질문을 구분한다.
 - 질문마다 `bar`, 답변 신호와 대표 꼬리질문 후보를 둔다.
 - 꼬리질문은 같은 말을 다시 묻지 않고 판단, 반례, 운영과 근거 경계로 깊어진다.
-- 포지션 전용 질문은 해당 지원 디렉터리에 두고 공개 질문 은행으로 승격하지 않는다.
-- 추가한 공개 질문은 출처 레지스트리와 전체 질문 은행 검증을 통과해야 한다.
+- 포지션 전용 질문은 해당 지원 디렉터리에 두고 개인 질문으로 저장하지 않는다.
+- 저장 대상은 공개 질문 은행이 아니라 `save_personal_question` 이다.
+- 저장 전에 질문 목록을 사용자에게 보여 주고 확인받는다.
+- 질문 칸은 `id`, `topic`, `category`, `difficulty`, `question`, `intent`, `answerSignals` 를 채우고, 선택 칸 `bar`, `followUps`, `tags` 도 가능하면 채운다.
 
 ## 중단 조건
 
-- 원문이나 공식 근거를 열 수 없으면 질문을 승격하지 않는다.
+- 원문이나 공식 근거를 열 수 없으면 질문을 저장하지 않는다.
 - 유료 자료, 비공개 후기와 저작권이 불명확한 답안을 복사하지 않는다.
-- 현재 경력과 회사 정보는 후보 선별에만 쓰고 공개 질문 파일에 기록하지 않는다.
+- 개인 질문에도 회사의 비공개 정보를 쓰지 않는다.
 - 질문 수를 채우려고 이미 충분한 카테고리를 반복 보강하지 않는다.

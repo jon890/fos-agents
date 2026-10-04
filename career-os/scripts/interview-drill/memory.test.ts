@@ -3,16 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { candidateMemorySchema, loadCandidateMemory } from "./memory.ts";
 
-const template = join(
-  import.meta.dir,
-  "..",
-  "..",
-  ".claude",
-  "skills",
-  "interview-practice",
-  "templates",
-  "candidate-memory.example.json",
-);
+const template = join(import.meta.dir, "templates", "candidate-memory.example.json");
 const valid = JSON.parse(readFileSync(template, "utf8"));
 
 test("후보자 맥락 템플릿은 계약을 통과한다", () => {
