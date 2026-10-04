@@ -392,6 +392,9 @@ skill이 중간 파일 이름과 플래그를 알지 못하도록 모든 하위 
 | `configure_position_analysis_policy.ts` | 분석 정책 설정 |
 | `configure_position_company_preferences.ts` | 사람이 정한 회사 tier와 제외 설정 |
 
+plugin 의 로컬 실행기 `position` 은 `runPositionCommand` 에 하위 명령을 그대로 넘긴다. 일일 실행 경로만 열고 설정 진입점은 열지 않는다.
+`render/assets.ts` 는 리포트 템플릿을 텍스트 import 로 읽는다. 실행 파일 위치로 템플릿을 찾지 않으므로 번들한 실행기에서도 같은 HTML 이 나온다.
+
 디렉터리별 책임은 다음과 같다.
 
 | 디렉터리 | 책임 |
@@ -709,6 +712,7 @@ career-os/plugin/
 │   └── study-topic-recommender/SKILL.md
 └── skills/
     ├── interview-question-prep/
+    ├── position-recommender/
     └── study-collection/
 ```
 
@@ -731,6 +735,8 @@ career-os/plugin/
 | `plugin/connector-skills/study-topic-recommender/SKILL.md` | MCP 도구만으로 하는 공부 추천. 수집된 후보에서 고르고 추천 이력을 저장 |
 | `plugin/skills/interview-question-prep/` | Claude Code 전용. 공고별 질문으로 하는 연습과 외부 자료에서 개인 질문 찾기 |
 | `plugin/skills/study-collection/` | Claude Code 전용. 외부 피드 수집, 소스 관리, HTML 리포트와 게시 기록 |
+| `plugin/skills/position-recommender/` | Claude Code 전용. 공고 수집부터 회사 판정, 공고 분석, 리포트까지의 판단 흐름 |
+| `scripts/lib/text-asset.ts` | 텍스트 import 로 읽은 템플릿이 문자열인지 확인하는 helper. 번들한 실행기가 템플릿 파일을 찾지 않게 한다 |
 | `scripts/plugin-local/` | 로컬 실행기의 진입점. 하위 명령을 `scripts/` 의 CLI 로 넘긴다. 실행기 이름 목록은 import 가 없는 `executors.ts` 가 갖는다 |
 | `scripts/interview-drill/public-question-bank.ts` | 공개 질문 은행 JSON 을 정적 import 로 읽는 모듈. 커넥터와 실행기와 CLI 가 함께 쓴다 |
 | `scripts/interview-drill/question-selection.ts` | 질문 은행과 복습 상태로 낼 질문을 고르는 순수 함수. `follow-up-policy.ts` 의 상수만 import 한다. 노트북 CLI 와 커넥터가 같은 함수를 쓴다 |
@@ -773,6 +779,7 @@ Claude Code 전용 스킬은 `bun --no-env-file "${CLAUDE_PLUGIN_ROOT}/dist/care
 | `study` | `scripts/study-topic-recommender/morning_reading_cli.ts` | 피드 수집, 후보 준비, HTML 리포트, 추천과 게시 기록, 실행 디렉터리 정리 |
 | `study-validate` | `scripts/study-topic-recommender/validate_outputs.ts` | 실행 디렉터리의 리포트 산출물을 검증한다 |
 | `study-sources` | `scripts/study-topic-recommender/manage_reading_sources.ts` | 읽을거리 소스를 조회하고 더하고 끈다 |
+| `position` | `scripts/position-recommender/position_run.ts` 의 `runPositionCommand` | 공고 수집, 회사 판정과 공고 분석 반영, 리포트 최종화, 실행 디렉터리 정리 |
 
 - 실행기 원본은 `scripts/` 에 있다. 저장소의 CLI 와 같은 코드다. 실행기 코드를 고치면 `bun run --cwd career-os/plugin build` 로 `dist/career-local.js` 를 다시 만들어 함께 커밋한다
 - `dist/career-local.js` 는 루트 `bun.lock` 이 고정한 `zod` 와 `fast-xml-parser` 를 번들한다. MCP 서버 번들(`dist/career-mcp.js`)과 따로 만들어 서로의 `zod` 가 섞이지 않는다

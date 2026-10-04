@@ -471,6 +471,13 @@ Backend가 응답하지 않으면 종료 코드 1로 중단한다.
 최종 답변 형식은 `position-recommender` 스킬 문서가 정하고 cron 실행과 수동 실행이 같은 형식을 쓴다.
 수집 경고가 있으면 그 줄을 최종 답변에 그대로 전달하고, 없으면 줄을 만들지 않는다.
 
+### Claude Code 에서 공고 추천
+
+plugin 의 `position-recommender` 스킬이 Claude Code 에서만 같은 단계를 돈다. 판단 기준은 저장소 사본과 같다.
+명령은 로컬 실행기 `<CAREER_LOCAL> position <하위 명령>` 이고 하위 명령과 출력은 위와 같다.
+공고 분석의 프로젝트 근거는 `<CAREER_LOCAL> workspace paths --json` 이 알려 주는 `evidenceDir` 에서 읽는다.
+홈서버 예약 실행은 저장소 사본을 쓴다. 그 실행을 plugin 으로 바꾸기 전까지 두 판단 기준을 함께 고친다.
+
 ## resume-preparer
 
 ### 근거 감사와 개선
