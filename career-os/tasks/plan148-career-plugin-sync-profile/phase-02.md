@@ -62,7 +62,7 @@ git rm career-os/.codex/skills/sync-profile
 - 5단계의 「`~/.claude/scripts/browser-driver` 로 조작한다」 를 「`browser-driver` 로 조작한다」 로, 「스크립트는 `scripts/` 에 있다」 를 「스크립트는 `<SCRIPTS>` 에 있다」 로
 - 「대화에서 하려면 fos-assistant 의 커리어 커넥터로도…」 는 「GitHub 의 README 와 차트는 `update_github_profile` 로 올린다」 로 바꾼다
 - 「2026-10 실측으로 `CAREER_BACKEND_URL` 이 비어 있어…」 문장은 지운다
-- 실행 환경 절에 `<CAREER_LOCAL> usage` 와 `workspace` 가 셸의 `CAREER_BACKEND_URL`, `CAREER_BACKEND_TOKEN` 을 쓴다고 적는다. 원고가 없을 때 읽는 지원 디렉터리는 `workspace begin` 결과의 `root` 아래 `applications/` 다
+- 실행 환경 절에 `<CAREER_LOCAL> usage` 가 셸의 `CAREER_BACKEND_URL`, `CAREER_BACKEND_TOKEN` 을 쓴다고 적는다. `workspace` 는 작업본 위치 설정(`CAREER_WORKSPACE_ROOT`, 홈서버와 동기화하면 `CAREER_WORKSPACE_SSH_TARGET`)을 따른다. 원고가 없을 때 읽는 지원 디렉터리는 `workspace begin` 결과의 `root` 아래 `applications/` 다
 - 5단계 표의 GitHub 저장 칸 `git push` 를 `update_github_profile` 로 바꾼다. 처음 프로필 저장소를 만드는 `github.md` 의 `gh repo create` 절차는 그대로 둔다
 - 「임시 경로의 원고에 함께 남긴다」 는 「원고에 함께 남긴다」 로
 
@@ -108,7 +108,7 @@ bun test ./career-os/scripts ./career-os/plugin ./career-os/.claude/skills
 bun run --cwd career-os/plugin typecheck
 bunx tsc --noEmit
 claude plugin validate career-os/plugin
-for f in career-os/plugin/skills/sync-profile/scripts/*.sh; do zsh -n "$f" || exit 1; done
+zsh -n career-os/plugin/skills/sync-profile/scripts/linkedin_fill_project.sh && zsh -n career-os/plugin/skills/sync-profile/scripts/linkedin_set_paragraphs.sh && zsh -n career-os/plugin/skills/sync-profile/scripts/wanted_list_fields.sh && zsh -n career-os/plugin/skills/sync-profile/scripts/wanted_set_field.sh && zsh -n career-os/plugin/skills/sync-profile/scripts/wanted_set_period.sh
 test ! -e career-os/.claude/skills/sync-profile
 test ! -e career-os/.codex/skills/sync-profile
 ```
