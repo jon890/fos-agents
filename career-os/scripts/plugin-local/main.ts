@@ -6,6 +6,8 @@ import { makeRemoteError, TransportError } from "../career-workspace/transport.t
 import { runDrillCli } from "../interview-drill/drill-engine.ts";
 import { createInterviewPracticeStore } from "../interview-drill/store/index.ts";
 import { runInterviewQuestionSources } from "../interview-question-sources/cli.ts";
+import { runPackageCommand } from "../application-package/cli.ts";
+import { formatReadApplicationProfileError, readApplicationProfileCli } from "../application-profile/read_application_profile.ts";
 import { PositionRunUsageError, positionRunHelp, runPositionCommand } from "../position-recommender/position_run.ts";
 import { CareerBackendHttpError } from "../lib/career-backend-http.ts";
 import { UsageError } from "../lib/cli.ts";
@@ -37,6 +39,8 @@ const descriptions: Record<Executor, string> = {
   position: "공고를 모아 판정과 분석을 반영하고 리포트를 만든다 (collect | commit-company-tiers | commit-analyses | finalize | cleanup) --run <dir>",
   resume: "이력서 HTML·PDF 변환, 주장 원장과 검증 완료 주장, 제출 묶음을 다룬다 (export | check-html | validate-ledger | assess-reuse | search-claims | promote-claims | build-bundle | validate-bundle)",
   usage: "기록이 없는 끝난 달의 에이전트 사용량을 측정해 Backend 에 올린다",
+  package: "지원 패키지의 근거 원본, 제출 문서, 검토 화면, 면접 질문 파일을 다룬다 (check-sources | validate | render | question-schema)",
+  "application-profile": "지원서 공통 프로필을 저장소 밖 파일에 쓴다 (get --out <path>)",
 };
 
 /**
@@ -132,6 +136,22 @@ export async function runPluginLocal(argv: string[]): Promise<number> {
       return runResume(rest);
     case "usage":
       return collectUsage(rest);
+    case "package":
+      return runPackageCommand(rest, process.env);
+    case "application-profile":
+      return runApplicationProfile(rest);
+  }
+}
+
+// read_application_profile.ts 의 메인 블록과 같은 출력을 낸다. 오류 출력에는 응답 본문과 토큰을 싣지 않는다.
+async function runApplicationProfile(args: string[]): Promise<number> {
+  try {
+    const result = await readApplicationProfileCli(args);
+    console.log(typeof result === "string" ? result : JSON.stringify(result, null, 2));
+    return 0;
+  } catch (error) {
+    console.error(formatReadApplicationProfileError(error));
+    return 1;
   }
 }
 

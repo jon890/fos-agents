@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { z } from "zod";
-import { APPLICATION_PROFILE_SOURCE } from "../../../../scripts/application-profile/contracts.ts";
+import { APPLICATION_PROFILE_SOURCE } from "../application-profile/contracts.ts";
 
 /** 이전에 만든 스냅샷을 다시 검증할 수 있게 받는다. 새로 쓰지 않는다. */
 const LEGACY_PROFILE_SOURCE = "private-brain:career-application-profile";

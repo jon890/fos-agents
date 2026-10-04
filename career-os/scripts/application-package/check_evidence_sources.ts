@@ -11,20 +11,22 @@
  * `read_application_profile.ts` 로 그때그때 읽는 지원서 공통 프로필에는 뒤처질 사본이 없다.
  *
  * 검사만 하고 당기지 않는다. 읽기 전용 저장소이며 당기는 과정에 사람이 판단할 것이 있다.
- * 판정별 다음 행동은 `references/evidence-source-freshness.md` 가 소유한다.
+ * 판정별 다음 행동은 스킬의 `references/evidence-source-freshness.md` 가 소유한다.
+ *
+ * 원본의 위치는 셸 환경 변수 `CAREER_EVIDENCE_DIR` 로만 받는다. `.env` 를 찾지 않는다.
+ * plugin 만 설치한 곳에는 저장소도 `.env` 도 없어서, 실행한 위치를 기준으로 경로를 짐작하면 틀린 자리를 본다.
  */
 
 import { existsSync, realpathSync } from "node:fs";
-import { isAbsolute, join, resolve } from "node:path";
-import { config as loadEnv } from "dotenv";
-import { runCli } from "../../../../scripts/lib/cli.ts";
+import { isAbsolute, resolve } from "node:path";
+import { runCli } from "../lib/cli.ts";
 
 export type EvidenceSourceSpec = {
   /** 결과와 문서에서 이 원본을 부르는 이름. */
   name: string;
   /**
    * 이 원본을 찾을 자리를 순서대로 담는다.
-   * 저장소 루트 기준 경로이거나 `${VARIABLE}` 로 시작하는 환경 변수 경로다.
+   * `${VARIABLE}` 로 시작하는 환경 변수 경로이거나 절대 경로다.
    * 앞의 자리에서 저장소를 찾으면 뒤는 보지 않는다.
    */
   paths: readonly string[];
@@ -40,13 +42,16 @@ export type EvidenceSourceSpec = {
  * 홈서버 작업본은 `skill begin <SKILL_NAME>` 이 이미 받아 온다.
  * 지원서 공통 프로필도 여기 없다. fos-assistant Memory 에서 CLI 로 읽는 것이며 경로로 여는 것이 아니다(ADR-136).
  *
- * `career-os/sources/fos-study` 는 추적하지 않는 clone 이거나 symlink 라서 워크트리에는 없다.
- * 그래서 `${PERSONAL_ROOT}` 아래의 실제 저장소를 두 번째 자리로 둔다.
+ * `CAREER_EVIDENCE_DIR` 는 저장소 루트를 가리키거나 그 바로 아래(`fos-study` 의 `task/`)를 가리킨다.
+ * 그래서 그 자리와 상위를 순서대로 본다. 둘 다 Git 저장소의 루트일 때만 원본으로 인정한다.
+ *
+ * 환경 변수가 없을 때 작업본의 기본 `evidence/` 를 채워 넣지 않는다.
+ * 그 상위는 작업본 root 이고, 작업본 root 가 우연히 Git 저장소의 루트면 그 저장소를 원본으로 오인한다.
  */
 export const EVIDENCE_SOURCES: readonly EvidenceSourceSpec[] = [
   {
     name: "fos-study",
-    paths: ["career-os/sources/fos-study", "${PERSONAL_ROOT}/fos-study"],
+    paths: ["${CAREER_EVIDENCE_DIR}", "${CAREER_EVIDENCE_DIR}/.."],
     branch: "main",
     affects: "적합도 판정과 이력서의 대표 근거",
   },
@@ -88,13 +93,11 @@ export type EvidenceSourceCheck = {
 };
 
 export type CheckOptions = {
-  /** 저장소 루트. 상대 경로 원본을 여기서 푼다. 주지 않으면 현재 위치에서 찾는다. */
-  repositoryRoot?: string;
   /** 원격을 새로 받을지. false 면 현재 remote-tracking ref 만 본다. */
   fetch?: boolean;
   /** 검사할 원본 목록. 테스트가 임시 저장소를 넣을 때 쓴다. */
   sources?: readonly EvidenceSourceSpec[];
-  /** 환경 변수 경로를 풀 때 읽을 값. */
+  /** 환경 변수 경로를 풀 때 읽을 값. 주지 않으면 `process.env` 다. */
   env?: Record<string, string | undefined>;
 };
 
@@ -125,11 +128,7 @@ const ENVIRONMENT_PATH = /^\$\{([A-Za-z_][A-Za-z0-9_]*)\}(?:\/(.*))?$/;
 type ResolvedPath = { path: string } | { reason: string };
 
 /** 경로를 절대 경로로 푼다. 환경 변수가 없으면 경로를 추측하지 않고 이유를 돌려준다. */
-function resolveSourcePath(
-  specPath: string,
-  repositoryRoot: string,
-  env: Record<string, string | undefined>,
-): ResolvedPath {
+function resolveSourcePath(specPath: string, env: Record<string, string | undefined>): ResolvedPath {
   const match = ENVIRONMENT_PATH.exec(specPath);
   if (match) {
     const [, variable, rest] = match;
@@ -137,7 +136,8 @@ function resolveSourcePath(
     if (!base) return { reason: `${variable} 환경 변수가 없어 이 자리를 확인할 수 없습니다.` };
     return { path: rest ? resolve(base, rest) : resolve(base) };
   }
-  return { path: isAbsolute(specPath) ? specPath : resolve(repositoryRoot, specPath) };
+  if (isAbsolute(specPath)) return { path: specPath };
+  return { reason: "환경 변수 경로나 절대 경로가 아니라 위치를 정할 수 없습니다." };
 }
 
 /**
@@ -162,12 +162,11 @@ function isRepositoryRoot(path: string): boolean {
 /** 계약에 적힌 자리를 순서대로 보고 저장소를 찾는다. 찾지 못하면 자리마다의 이유를 모은다. */
 function locateSource(
   spec: EvidenceSourceSpec,
-  repositoryRoot: string,
   env: Record<string, string | undefined>,
 ): { path: string; spelling: string } | { reasons: string[] } {
   const reasons: string[] = [];
   for (const spelling of spec.paths) {
-    const resolved = resolveSourcePath(spelling, repositoryRoot, env);
+    const resolved = resolveSourcePath(spelling, env);
     if ("reason" in resolved) {
       reasons.push(`${spelling}: ${resolved.reason}`);
       continue;
@@ -186,25 +185,22 @@ function locateSource(
 }
 
 /**
- * 찾지 못했을 때 무엇을 하면 되는지 명령으로 낸다.
- * 작업본마다 다시 만들어야 하는 설정이라, 다음에 같은 자리에 걸린 사람이 바로 풀 수 있어야 한다.
+ * 찾지 못했을 때 무엇을 하면 되는지 낸다.
+ * 다음에 같은 자리에 걸린 사람이 바로 풀 수 있어야 한다. 경로는 사람마다 달라 자리 표시로만 쓴다.
  */
 function remedy(spec: EvidenceSourceSpec): string {
-  const [tracked] = spec.paths;
-  return `저장소 루트에서 \`ln -s <${spec.name} 저장소의 절대 경로> ${tracked}\` 로 연결하거나, `
-    + `\`career-os/.env\` 에 \`PERSONAL_ROOT=<그 저장소의 상위 디렉터리>\` 를 더한다. `
-    + `두 자리 모두 git 이 추적하지 않으므로 작업본마다 따로 만든다.`;
+  return `셸 환경 변수 \`CAREER_EVIDENCE_DIR\` 를 ${spec.name} Git 저장소의 루트나 그 바로 아래 디렉터리로 지정한다. `
+    + `예: \`export CAREER_EVIDENCE_DIR=<${spec.name} 저장소의 절대 경로>/task\``;
 }
 
 function checkSource(
   spec: EvidenceSourceSpec,
-  repositoryRoot: string,
   shouldFetch: boolean,
   env: Record<string, string | undefined>,
 ): EvidenceSourceResult {
   const base = { name: spec.name, affects: spec.affects };
 
-  const located = locateSource(spec, repositoryRoot, env);
+  const located = locateSource(spec, env);
   if ("reasons" in located) {
     return {
       ...base,
@@ -246,36 +242,13 @@ function checkSource(
 }
 
 /**
- * 저장소 루트를 현재 위치에서 찾는다.
- * 호출하는 쪽이 저장소 루트에 있는지 `career-os` 안에 있는지에 따라 결과가 달라지지 않게 한다.
- */
-function findRepositoryRoot(): string {
-  const found = git(process.cwd(), ["rev-parse", "--show-toplevel"]);
-  return found.ok ? found.stdout : process.cwd();
-}
-
-/**
- * `PERSONAL_ROOT` 는 셸이 아니라 `career-os/.env` 에 두는 값이다.
- * 실행한 디렉터리가 아니라 저장소 루트에서 그 파일을 찾는다. 어디서 실행해도 같은 값을 읽게 한다.
- * 셸에 이미 있는 값은 덮지 않는다.
- */
-function loadWorkspaceEnvironment(repositoryRoot: string): Record<string, string | undefined> {
-  const file = process.env.CAREER_WORKSPACE_ENV_FILE || join(repositoryRoot, "career-os", ".env");
-  const loaded = existsSync(file) ? (loadEnv({ path: file, processEnv: {}, quiet: true }).parsed ?? {}) : {};
-  return { ...loaded, ...process.env };
-}
-
-/**
  * 모든 원본이 원격과 같을 때만 통과한다.
  * `unavailable` 과 `unreachable` 도 통과시키지 않는다. 확인하지 못한 것을 최신으로 보면 검사가 없는 것과 같다.
  */
 export function checkEvidenceSources(options: CheckOptions = {}): EvidenceSourceCheck {
-  const repositoryRoot = resolve(options.repositoryRoot ?? findRepositoryRoot());
   const shouldFetch = options.fetch ?? true;
-  const env = options.env ?? loadWorkspaceEnvironment(repositoryRoot);
-  const sources = (options.sources ?? EVIDENCE_SOURCES).map((spec) =>
-    checkSource(spec, repositoryRoot, shouldFetch, env),
-  );
+  const env = options.env ?? process.env;
+  const sources = (options.sources ?? EVIDENCE_SOURCES).map((spec) => checkSource(spec, shouldFetch, env));
 
   return { passed: sources.every((source) => source.status === "up_to_date"), sources };
 }
@@ -285,17 +258,11 @@ if (import.meta.main) {
     {
       name: "check_evidence_sources.ts",
       summary: "근거 원본 저장소가 원격보다 뒤처졌는지 검사한다. 검사만 하고 당기지 않는다.",
-      positional: [
-        { name: "<repository-root>", description: "저장소 루트. 주지 않으면 현재 위치에서 찾는다", required: false },
-      ],
+      positional: [],
       options: {
         "--no-fetch": { description: "원격을 새로 받지 않고 현재 remote-tracking ref 만 본다" },
       },
     },
-    ({ positional, options }) =>
-      checkEvidenceSources({
-        repositoryRoot: positional[0],
-        fetch: options["--no-fetch"] !== true,
-      }),
+    ({ options }) => checkEvidenceSources({ fetch: options["--no-fetch"] !== true }),
   );
 }

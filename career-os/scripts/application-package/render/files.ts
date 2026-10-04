@@ -1,4 +1,4 @@
-import { loadApplicationInterviewQuestions } from "../../../../../scripts/interview-drill/application_question_schema.ts";
+import { loadApplicationInterviewQuestions } from "../../interview-drill/application_question_schema.ts";
 import type { ApplicationForm } from "../application_form_schema.ts";
 import { QUESTION_ORIGIN_LABELS } from "./constants.ts";
 import { escapeHtml } from "./markdown.ts";

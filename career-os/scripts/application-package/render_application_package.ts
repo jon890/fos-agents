@@ -1,10 +1,10 @@
 #!/usr/bin/env bun
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { runCli } from "../../../../scripts/lib/cli.ts";
+import { runCli } from "../lib/cli.ts";
 import { dirname, join, resolve } from "node:path";
 import { validateApplicationPackage } from "./validate_application_package.ts";
-import { validateSubmissionBundle } from "../../../../scripts/resume-preparer/validate_submission_bundle.ts";
+import { validateSubmissionBundle } from "../resume-preparer/validate_submission_bundle.ts";
 import { loadApplicationForm, type ApplicationForm } from "./application_form_schema.ts";
 import { actionPanel } from "./render/actions.ts";
 import {
