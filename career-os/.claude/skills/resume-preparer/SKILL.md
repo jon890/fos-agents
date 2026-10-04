@@ -64,8 +64,8 @@ bun career-os/scripts/career-workspace/cli.ts skill begin resume-preparer --json
 [디자인 계약](references/resume-design.md)에 따라 HTML과 PDF를 만들고 실제 화면을 확인한다.
 
 ```bash
-bun career-os/.claude/skills/resume-preparer/scripts/export_resume.ts --application-dir <지원 디렉터리>
-bun career-os/.claude/skills/resume-preparer/scripts/check_resume_html.ts <HTML 경로>
+bun career-os/scripts/resume-preparer/export_resume.ts --application-dir <지원 디렉터리>
+bun career-os/scripts/resume-preparer/check_resume_html.ts <HTML 경로>
 ```
 
 공고의 분량 제한을 우선한다.
@@ -78,7 +78,7 @@ bun career-os/.claude/skills/resume-preparer/scripts/check_resume_html.ts <HTML 
 세부 형식은 [주장 검증 모델](references/claim-model.md)을 따른다.
 
 ```bash
-bun career-os/.claude/skills/resume-preparer/scripts/validate_claim_ledger.ts <원장 경로> --artifact <HTML 경로>
+bun career-os/scripts/resume-preparer/validate_claim_ledger.ts <원장 경로> --artifact <HTML 경로>
 ```
 
 이후 [독립 채용 리뷰](references/hard-review.md)와 [판정 기준](references/scoring-rubric.md)에 따라 인사담당자와 실무담당자 관점으로 검토한다.
@@ -90,14 +90,14 @@ bun career-os/.claude/skills/resume-preparer/scripts/validate_claim_ledger.ts <�
 출력의 `rereadEvidence` 와 변경된 주장만 다시 감사하고, `full_audit` 이면 전체 원장을 만든다.
 
 ```bash
-bun career-os/.claude/skills/resume-preparer/scripts/assess_claim_reuse.ts <지원 디렉터리>
-bun career-os/.claude/skills/resume-preparer/scripts/search_verified_claims.ts <검색어>
+bun career-os/scripts/resume-preparer/assess_claim_reuse.ts <지원 디렉터리>
+bun career-os/scripts/resume-preparer/search_verified_claims.ts <검색어>
 ```
 
 현재 HTML과 일치하는 버전 3 원장의 모든 주장이 `safe` 일 때만 검증 결과를 반영한다.
 
 ```bash
-bun career-os/.claude/skills/resume-preparer/scripts/promote_verified_claims.ts <지원 디렉터리>
+bun career-os/scripts/resume-preparer/promote_verified_claims.ts <지원 디렉터리>
 ```
 
 ### 7. 제출 묶음 완성
@@ -105,8 +105,8 @@ bun career-os/.claude/skills/resume-preparer/scripts/promote_verified_claims.ts 
 사실 확인, 주장 감사, 채용 리뷰와 화면 검증이 모두 통과했을 때만 `readiness: ready`로 바꾼다.
 다음 순서로 제출 묶음과 검토 화면을 만든다.
 
-1. `scripts/build_submission_bundle.ts`
-2. `scripts/validate_submission_bundle.ts`
+1. `career-os/scripts/resume-preparer/build_submission_bundle.ts`
+2. `career-os/scripts/resume-preparer/validate_submission_bundle.ts`
 3. `../application-package-writer/scripts/validate_application_package.ts`
 4. `../application-package-writer/scripts/render_application_package.ts`
 

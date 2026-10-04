@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 import { existsSync, readFileSync } from "node:fs";
-import { runCli, UsageError } from "../../../../scripts/lib/cli.ts";
+import { runCli, UsageError } from "../lib/cli.ts";
 import { basename } from "node:path";
 import {
   SUBMISSION_HTML_CONTRACTS,

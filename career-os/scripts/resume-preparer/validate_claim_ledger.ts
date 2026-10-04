@@ -3,7 +3,7 @@
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { artifactTextSha256 } from "./artifact_identity.ts";
-import { runCli, UsageError } from "../../../../scripts/lib/cli.ts";
+import { runCli, UsageError } from "../lib/cli.ts";
 import {
   ClaimLedgerSchema,
   CURRENT_CLAIM_LEDGER_SCHEMA_VERSION,

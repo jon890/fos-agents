@@ -17,7 +17,7 @@ import { checkResumeHtml } from "./check_resume_html.ts";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { SUBPROCESS_TEST_TIMEOUT_MS } from "../../../../scripts/lib/test-timeouts.ts";
+import { SUBPROCESS_TEST_TIMEOUT_MS } from "../lib/test-timeouts.ts";
 
 const designCss = `
 @page { size: A4; margin: 14mm; }

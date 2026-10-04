@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { runCli } from "../../../../scripts/lib/cli.ts";
+import { runCli } from "../lib/cli.ts";
 import { promote } from "./verified-claims/service.ts";
 await runCli(
   {

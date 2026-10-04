@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
-import { runCli } from "../../../../scripts/lib/cli.ts";
+import { runCli } from "../lib/cli.ts";
 import { dirname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { artifactTextSha256 } from "./artifact_identity.ts";

@@ -15,12 +15,11 @@ type Options = {
   accent: string;
 };
 
-const SKILL_ROOT = resolve(import.meta.dir, '..');
-export const TEMPLATE_DIR = join(SKILL_ROOT, 'templates');
+export const TEMPLATE_DIR = join(import.meta.dir, 'templates');
 export const DEFAULT_DESIGN_PATH = join(TEMPLATE_DIR, 'resume.css');
 export const DOCUMENT_TEMPLATE_PATH = join(TEMPLATE_DIR, 'resume.html');
 export const PAGE_TEMPLATE_PATH = join(TEMPLATE_DIR, 'resume-page.html');
-export const LOGO_DIR = join(TEMPLATE_DIR, 'logos');
+export const LOGO_DIR = resolve(import.meta.dir, '../../.claude/skills/resume-preparer/templates/logos');
 export const CHROME_PDF_FLAGS = [
   '--headless',
   '--disable-gpu',
@@ -533,12 +532,12 @@ function showHelp(): void {
   console.log(`이력서 export helper
 
 Usage:
-  bun career-os/.claude/skills/resume-preparer/scripts/export_resume.ts \
+  bun career-os/scripts/resume-preparer/export_resume.ts \
     --application-dir career-os/applications/<company>/<role>
 
 Options:
   --resume <path>       Markdown 원본. 기본값: <application-dir>/evidence/resume-draft.md
-  --design <path>       스타일 전체를 대체한다. 기본값: resume-preparer/templates/resume.css
+  --design <path>       스타일 전체를 대체한다. 기본값: career-os/scripts/resume-preparer/templates/resume.css
   --html <path>         HTML 출력. 기본값: <application-dir>/review/resume.html
   --pdf <path>          PDF 출력. 기본값: <application-dir>/resume.pdf
   --accent <#RRGGBB>    강조색만 덮어쓴다. 기본 CSS를 복제하지 않고 지원별 브랜드 색을 적용할 때 쓴다

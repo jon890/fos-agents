@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 import { existsSync, readFileSync, statSync } from "node:fs";
-import { runCli } from "../../../../scripts/lib/cli.ts";
+import { runCli } from "../lib/cli.ts";
 import { basename, join, resolve } from "node:path";
 import { artifactTextSha256 } from "./artifact_identity.ts";
 import { validateClaimLedger } from "./validate_claim_ledger.ts";
@@ -10,7 +10,7 @@ import {
   REQUIRED_RESUME_SUBMISSION_FILES,
 } from "./resume_submission_contract.ts";
 import { fileSha256, SubmissionManifestSchema } from "./submission_manifest.ts";
-import { STATUS_FILE } from "../../application-package-writer/scripts/package_contract.ts";
+import { STATUS_FILE } from "../../.claude/skills/application-package-writer/scripts/package_contract.ts";
 
 export type SubmissionBundleValidation = {
   passed: boolean;
