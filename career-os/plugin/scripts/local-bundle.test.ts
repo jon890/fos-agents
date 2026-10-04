@@ -299,7 +299,7 @@ test("application-profile get 은 연결값이 없으면 1 로 끝나고 token �
     FOS_ASSISTANT_SERVICE_TOKEN: FAKE_TOKEN,
   });
   expect(result.exitCode).toBe(1);
-  expect(result.stderr).not.toBe("");
+  expect(result.stderr).toContain("FOS_ASSISTANT_URL");
   expect(result.stdout).not.toContain(FAKE_TOKEN);
   expect(result.stderr).not.toContain(FAKE_TOKEN);
 });

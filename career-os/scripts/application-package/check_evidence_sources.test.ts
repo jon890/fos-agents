@@ -272,6 +272,13 @@ describe("CAREER_EVIDENCE_DIR 로 찾는 fos-study", () => {
     expect(result.sources[0].detail).not.toContain("ln -s");
   });
 
+  test("공백뿐인 값은 환경 변수가 없는 것으로 본다", () => {
+    const result = checkEvidenceSources({ env: { CAREER_EVIDENCE_DIR: "   " }, fetch: false });
+
+    expect(result.sources[0].status).toBe("unavailable");
+    expect(result.sources[0].detail).toContain("CAREER_EVIDENCE_DIR 환경 변수가 없어");
+  });
+
   test("증거 디렉터리가 저장소 루트면 그 자리로 판정한다", () => {
     const { clone } = createOriginAndClone();
 

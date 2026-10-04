@@ -29,6 +29,18 @@ function executorNamesIn(text: string): string[] {
   return [...text.matchAll(/<CAREER_LOCAL> ([a-z][a-z-]*)/g)].map((match) => match[1]!);
 }
 
+function expectCleanEvals(directory: string): void {
+  const strings: string[] = [];
+  const collect = (value: unknown): void => {
+    if (typeof value === "string") strings.push(value);
+    else if (Array.isArray(value)) value.forEach(collect);
+    else if (value && typeof value === "object") Object.values(value).forEach(collect);
+  };
+  collect(JSON.parse(readFileSync(join(directory, "evals", "evals.json"), "utf8")));
+  expect(strings.length).toBeGreaterThan(0);
+  for (const value of strings) expect(value.includes("/Users/"), value).toBe(false);
+}
+
 const skills = readdirSync(skillsDirectory);
 
 test("Claude Code 전용 스킬이 여섯 있다", () => {
@@ -108,16 +120,7 @@ describe("application-package-writer", () => {
   });
 
   test("evals.json 이 올바른 JSON 이고 /Users/ 경로가 없다", () => {
-    const text = readFileSync(join(directory, "evals", "evals.json"), "utf8");
-    const strings: string[] = [];
-    const collect = (value: unknown): void => {
-      if (typeof value === "string") strings.push(value);
-      else if (Array.isArray(value)) value.forEach(collect);
-      else if (value && typeof value === "object") Object.values(value).forEach(collect);
-    };
-    collect(JSON.parse(text));
-    expect(strings.length).toBeGreaterThan(0);
-    for (const value of strings) expect(value.includes("/Users/"), value).toBe(false);
+    expectCleanEvals(directory);
   });
 });
 
@@ -181,16 +184,7 @@ describe("resume-preparer", () => {
   });
 
   test("evals.json 이 올바른 JSON 이고 /Users/ 경로가 없다", () => {
-    const text = readFileSync(join(directory, "evals", "evals.json"), "utf8");
-    const strings: string[] = [];
-    const collect = (value: unknown): void => {
-      if (typeof value === "string") strings.push(value);
-      else if (Array.isArray(value)) value.forEach(collect);
-      else if (value && typeof value === "object") Object.values(value).forEach(collect);
-    };
-    collect(JSON.parse(text));
-    expect(strings.length).toBeGreaterThan(0);
-    for (const value of strings) expect(value.includes("/Users/"), value).toBe(false);
+    expectCleanEvals(directory);
   });
 });
 

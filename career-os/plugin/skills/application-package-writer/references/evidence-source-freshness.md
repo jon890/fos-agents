@@ -26,7 +26,7 @@
 | 원본 | 어떻게 읽는가 | 최신 여부를 누가 보는가 |
 | --- | --- | --- |
 | 홈서버 작업본 | `applications`, `library`, `state` 로컬 작업본 | `<CAREER_LOCAL> workspace begin application-package-writer` 가 받아 온다 |
-| 프로젝트 근거 디렉터리 | `CAREER_EVIDENCE_DIR`. 없으면 `workspace paths` 가 작업본의 `evidence/` 를 낸다 | 이 문서의 검사기가 본다 |
+| 프로젝트 근거 디렉터리 | `CAREER_EVIDENCE_DIR`(`workspace paths` 의 `evidenceDir`). 검사기는 이 변수가 있을 때만 그 자리와 바로 위를 본다 | 이 문서의 검사기가 본다 |
 | 후보자 맥락 문서 | MCP 도구 `get_context_document` 로 Backend 에서 읽는다 | 뒤처질 사본이 없다 |
 | 지원서 공통 프로필 | `<CAREER_LOCAL> application-profile get --out` 으로 fos-assistant Memory 에서 읽는다 | 뒤처질 사본이 없다. 아래 절이 설명한다 |
 
@@ -87,7 +87,7 @@ git -C <원본 경로> rev-list --count HEAD..origin/main
 | --- | --- | --- |
 | `up_to_date` | 원격과 같은 커밋이다 | 다음 단계로 간다 |
 | `behind` | 원격에만 있는 커밋이 있다 | 멈추고 사용자에게 알린다 |
-| `unavailable` | 어느 자리에서도 저장소를 찾지 못했다 | 멈추고 `CAREER_EVIDENCE_DIR` 가 근거 저장소를 가리키게 하라고 알린다 |
+| `unavailable` | 어느 자리에서도 저장소를 찾지 못했다 | 멈추고 `CAREER_EVIDENCE_DIR` 가 근거 저장소(Git 저장소의 루트이거나 그 바로 아래)를 가리키게 하라고 알린다. 근거 디렉터리가 Git 저장소가 아니라 이 검사를 할 수 없는 사용자가 이어가라고 하면 최신 여부를 확인하지 못했다고 적고 진행한다 |
 | `unreachable` | 저장소는 있으나 원격을 받지 못했다 | 사용자에게 알리고, 사용자가 이어가라고 하면 확인하지 못한 범위를 적고 진행한다 |
 
 `unavailable` 의 `detail` 은 자리마다 왜 아니었는지를 담는다.

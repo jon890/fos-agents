@@ -174,16 +174,7 @@ publish tar 의 최상위는 `workspace-draft.json` 과 세 관리 root 만 허�
 `evidence/status.md`의 준비 상태 값과 판단 기준은
 [`application-quality-rubric.md`](../plugin/skills/application-package-writer/references/application-quality-rubric.md)의 「판정」이 소유한다.
 
-첫 10줄의 `evidence`는 제출 문장이 현재 근거 범위 안에 있는지의 상태다.
-
-| 값        | 뜻                                                  |
-| --------- | --------------------------------------------------- |
-| `safe`    | 제출 문장이 모두 확인한 근거 범위 안에 있다         |
-| `revise`  | 근거보다 넓게 읽히는 문장이 있어 표현을 낮춰야 한다 |
-| `blocked` | 근거를 확인하기 전에는 그 문장을 제출에 쓸 수 없다  |
-
-첫 10줄의 `human-confirmation`은 본인 역할, 당시 제약, 기각한 대안, 결과의 확인 범위와 제출 문구 동의처럼 후보자만 확정할 수 있는 사실과 표현 확인 상태다.
-값은 `complete` 또는 `needs_input`이며, `needs_input`이면 준비 상태를 `ready`로 둘 수 없다.
+첫 10줄의 `evidence` 와 `human-confirmation` 의 값과 뜻도 같은 문서의 「판정」이 소유한다.
 
 경력, 역할 선호와 경험 경계는 후보자 맥락 문서에 두고, 지원별 사실과 표현 확인은 `evidence/candidate-interview.md`의 기존 계약을 따른다.
 작성 취향은 스킬에서 유지하고, 문서에서 읽은 내용은 해당 문장을 판단하는 데 필요한 문서 키와 version 만 지원 기록에 연결한다.

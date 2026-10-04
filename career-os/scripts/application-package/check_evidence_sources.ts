@@ -8,7 +8,7 @@
  * 그 사이 추가된 문서 넷이 적합도 판정과 이력서 문장을 바꿨다.
  *
  * 이 위험은 로컬 사본을 두는 원본에만 있다.
- * `read_application_profile.ts` 로 그때그때 읽는 지원서 공통 프로필에는 뒤처질 사본이 없다.
+ * `application-profile get` 으로 그때그때 읽는 지원서 공통 프로필에는 뒤처질 사본이 없다.
  *
  * 검사만 하고 당기지 않는다. 읽기 전용 저장소이며 당기는 과정에 사람이 판단할 것이 있다.
  * 판정별 다음 행동은 스킬의 `references/evidence-source-freshness.md` 가 소유한다.
@@ -39,7 +39,7 @@ export type EvidenceSourceSpec = {
 /**
  * 경로로 확인하는 원본만 담는다.
  *
- * 홈서버 작업본은 `skill begin <SKILL_NAME>` 이 이미 받아 온다.
+ * 홈서버 작업본은 `workspace begin <스킬 이름>` 이 이미 받아 온다.
  * 지원서 공통 프로필도 여기 없다. fos-assistant Memory 에서 CLI 로 읽는 것이며 경로로 여는 것이 아니다(ADR-136).
  *
  * `CAREER_EVIDENCE_DIR` 는 저장소 루트를 가리키거나 그 바로 아래(`fos-study` 의 `task/`)를 가리킨다.
@@ -132,7 +132,7 @@ function resolveSourcePath(specPath: string, env: Record<string, string | undefi
   const match = ENVIRONMENT_PATH.exec(specPath);
   if (match) {
     const [, variable, rest] = match;
-    const base = env[variable];
+    const base = env[variable]?.trim();
     if (!base) return { reason: `${variable} 환경 변수가 없어 이 자리를 확인할 수 없습니다.` };
     return { path: rest ? resolve(base, rest) : resolve(base) };
   }
