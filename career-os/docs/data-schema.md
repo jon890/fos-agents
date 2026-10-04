@@ -1309,6 +1309,7 @@ Claude Code 전용 스킬이 부르는 `dist/career-local.js` 가 셸 환경에�
 | --- | :---: | --- |
 | `CAREER_BACKEND_URL` | 예 | 커넥터와 같은 Backend origin |
 | `CAREER_BACKEND_TOKEN` | 예 | 커넥터와 같은 Bearer token. `CAREER_BACKEND_TOKEN_FILE`(권한 0600 파일)로 대신할 수 있다 |
+| `CAREER_BACKEND_ACCESS_CLIENT_ID`, `CAREER_BACKEND_ACCESS_CLIENT_SECRET` | 아니오 | Backend 앞에 Cloudflare Access 가 있을 때의 service token. secret 은 `CAREER_BACKEND_ACCESS_CLIENT_SECRET_FILE` 로 대신할 수 있다. 계약은 ADR-140 을 따른다 |
 | `CAREER_WORKSPACE_ROOT` | 아니오 | 비공개 작업본(`applications/`, `library/`, `state/`)의 상위 디렉터리. 없으면 `~/.fos-career/workspace` |
 | `CAREER_WORKSPACE_COMMAND` | 아니오 | 홈서버 동기화 명령. 이 값이나 아래 값이 있을 때만 동기화한다 |
 | `CAREER_WORKSPACE_SSH_TARGET` | 아니오 | 홈서버 동기화의 SSH 대상. `CAREER_WORKSPACE_REMOTE_COMMAND`, `CAREER_WORKSPACE_SSH_ARGS` 를 함께 읽는다 |
