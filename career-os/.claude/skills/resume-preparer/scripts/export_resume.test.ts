@@ -17,6 +17,7 @@ import { checkResumeHtml } from "./check_resume_html.ts";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { SUBPROCESS_TEST_TIMEOUT_MS } from "../../../../scripts/lib/test-timeouts.ts";
 
 const designCss = `
 @page { size: A4; margin: 14mm; }
@@ -149,7 +150,7 @@ describe("resume exporter", () => {
     expect(firstPage).not.toContain('id="career"');
     expect(secondPage).toContain('id="career"');
     expect(secondPage).toContain('class="period"');
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("공고별 디자인이 없으면 스킬 CSS를 기본값으로 사용한다", () => {
     const directory = mkdtempSync(join(tmpdir(), "resume-design-default-"));
@@ -217,7 +218,7 @@ describe("resume exporter", () => {
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("명시적 구분은 경력 항목 사이에서 페이지를 나누고 연속 표지를 만든다", () => {
     const markedResume = resume.replace(

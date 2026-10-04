@@ -20,6 +20,7 @@ import {
 } from "../cli.ts";
 import { createTarFromDirectory } from "../tar-utils.ts";
 import { TransportError, type CareerWorkspaceTransport } from "../transport.ts";
+import { SUBPROCESS_TEST_TIMEOUT_MS } from "../../lib/test-timeouts.ts";
 
 const producer = { skill: "test", mode: "interactive" } as const;
 
@@ -45,7 +46,7 @@ describe("career workspace cli", () => {
         "skill finish <skill> --json",
       ],
     });
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("check는 local과 remote 상태를 구조화한다", async () => withFixture(async (fixture) => {
     const result = await checkWorkspace(makeContext(fixture));
@@ -57,7 +58,7 @@ describe("career workspace cli", () => {
       local: { status: "uninitialized" },
       remote: { action: "status", current: null },
     });
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("skill begin은 같은 revision의 clean 작업본을 다시 받지 않는다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "resume" });
@@ -67,7 +68,7 @@ describe("career workspace cli", () => {
 
     expect(result).toMatchObject({ action: "skill-begin", skill: "resume-preparer", revision: "rev-1", noChange: true });
     expect(await Bun.file(path.join(fixture.workspaceRoot, ".career-sync", "skill-session.json")).exists()).toBe(true);
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("skill finish는 변경이 있을 때만 새 release를 발행한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
@@ -81,7 +82,7 @@ describe("career workspace cli", () => {
     const changed = await finishSkillWorkspace(makeContext(fixture), "application-package-writer");
     expect(changed).toMatchObject({ action: "skill-finish", noChange: false });
     expect((await checkWorkspace(makeContext(fixture))).local.status).toBe("clean");
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test.each([
     "interview-practice-notes",
@@ -92,7 +93,7 @@ describe("career workspace cli", () => {
     await expect(beginSkillWorkspace(makeContext(fixture), skill)).rejects.toMatchObject({
       result: { code: "INVALID_MANIFEST" },
     });
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("성공한 begin이 없거나 다른 skill 세션이면 finish를 거절한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
@@ -104,7 +105,7 @@ describe("career workspace cli", () => {
     await expect(finishSkillWorkspace(makeContext(fixture), "resume-preparer")).rejects.toMatchObject({
       result: { code: "RESTORE_REQUIRED" },
     });
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("세션 기록이 없는 finish는 다음에 실행할 명령을 함께 낸다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
@@ -116,7 +117,7 @@ describe("career workspace cli", () => {
         detail: expect.stringContaining("skill begin resume-preparer"),
       },
     });
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("다른 skill 세션이 열려 있으면 그 skill 이름을 오류에 담는다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
@@ -135,7 +136,7 @@ describe("career workspace cli", () => {
         detail: expect.stringContaining("application-package-writer 세션이 열려 있습니다"),
       },
     });
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("세션 시작 revision과 작업본 revision이 다르면 어긋난 두 revision을 낸다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
@@ -150,7 +151,7 @@ describe("career workspace cli", () => {
         detail: expect.stringContaining("rev-1"),
       },
     });
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("원격 연결 설정이 없으면 어느 .env가 비었는지 알린다", async () => withFixture(async (fixture) => {
     const missing = createCareerWorkspaceTransport({}, { path: "career-os/.env", present: false });
@@ -169,7 +170,7 @@ describe("career workspace cli", () => {
       },
     });
     expect(fixture.workspaceRoot).toBeTruthy();
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("prepare는 정상 release를 검증한 뒤 로컬 root와 sync-state를 갱신한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/toss/resume.md": "resume", "state/drill-progress.json": "{}" });
@@ -181,7 +182,7 @@ describe("career workspace cli", () => {
     const syncState = JSON.parse(await readFile(path.join(fixture.workspaceRoot, ".career-sync", "sync-state.json"), "utf8"));
     expect(syncState).toMatchObject({ revision: "rev-1", workspace: "career-os" });
     expect(await Bun.file(path.join(fixture.workspaceRoot, ".career-sync", "prepare-journal.json")).exists()).toBe(false);
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("fixture storage는 immutable release와 상대 current symlink를 사용한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "resume" });
@@ -189,7 +190,7 @@ describe("career workspace cli", () => {
     const currentPath = path.join(fixture.storageRoot, "current");
     expect((await lstat(currentPath)).isSymbolicLink()).toBe(true);
     expect(await readlink(currentPath)).toBe("releases/rev-1");
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test.each(["plain-file", "broken-link", "revision-mismatch"] as const)(
     "fixture storage는 잘못된 current(%s)를 초기화 전 상태로 숨기지 않는다",
@@ -233,7 +234,7 @@ describe("career workspace cli", () => {
     expect(secondResult.revision).toBe("rev-1");
     expect(secondDraft.manifest.contentDigest).toBe(firstDraft.manifest.contentDigest);
     expect(secondDraft.manifest.files).toEqual(firstDraft.manifest.files);
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("prepare는 sync-state 없는 로컬 파일을 dirty로 보고 보존한다", async () => withFixture(async (fixture) => {
     await writeFile(path.join(fixture.workspaceRoot, "applications", "local.md"), "local");
@@ -243,7 +244,7 @@ describe("career workspace cli", () => {
       result: { code: "WORKSPACE_DIRTY" },
     });
     expect(await readFile(path.join(fixture.workspaceRoot, "applications", "local.md"), "utf8")).toBe("local");
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("prepare는 manifest에서 제외한 로컬 비밀 파일을 dirty로 보고 보존한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
@@ -256,7 +257,7 @@ describe("career workspace cli", () => {
     });
     expect(await readFile(path.join(fixture.workspaceRoot, "applications", ".env"), "utf8")).toBe("LOCAL_SECRET=value");
     expect(await readFile(path.join(fixture.workspaceRoot, "applications", "resume.md"), "utf8")).toBe("before");
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("prepare는 .omc를 작업 변경으로 보지 않고 새 release를 적용한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
@@ -269,7 +270,7 @@ describe("career workspace cli", () => {
 
     expect(result.revision).toBe("rev-2");
     expect(await readFile(path.join(fixture.workspaceRoot, "applications", "resume.md"), "utf8")).toBe("after");
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("check는 .omc만 있는 작업본을 clean으로 본다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
@@ -278,7 +279,7 @@ describe("career workspace cli", () => {
     await writeFile(path.join(fixture.workspaceRoot, "library", ".omc", "notepad.md"), "메모");
 
     expect(await checkWorkspace(makeContext(fixture))).toMatchObject({ local: { status: "clean" } });
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("prepare는 시스템 메타데이터를 작업 변경으로 보지 않고 새 release를 적용한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
@@ -291,7 +292,7 @@ describe("career workspace cli", () => {
     expect(result.revision).toBe("rev-2");
     expect(await readFile(path.join(fixture.workspaceRoot, "applications", "resume.md"), "utf8")).toBe("after");
     expect(await exists(path.join(fixture.workspaceRoot, "library", ".DS_Store"))).toBe(false);
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("prepare는 손상 tar를 거부하고 기존 파일을 보존한다", async () => withFixture(async (fixture) => {
     const archive = await createTarFromDirectory(fixture.workspaceRoot, ["applications"]);
@@ -301,7 +302,7 @@ describe("career workspace cli", () => {
       result: { code: "INVALID_MANIFEST" },
     });
     expect(await exists(path.join(fixture.workspaceRoot, "applications"))).toBe(true);
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("prepare는 계약 top-level root가 빠진 tar를 거부하고 기존 파일을 보존한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/local.md": "local" });
@@ -312,7 +313,7 @@ describe("career workspace cli", () => {
       result: { action: "prepare", code: "INVALID_MANIFEST" },
     });
     expect(await readFile(path.join(fixture.workspaceRoot, "applications", "local.md"), "utf8")).toBe("local");
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("prepare는 release manifest와 파일 hash가 다르면 거부한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
@@ -323,7 +324,7 @@ describe("career workspace cli", () => {
       result: { code: "INVALID_MANIFEST" },
     });
     expect(await readFile(path.join(fixture.workspaceRoot, "applications", "resume.md"), "utf8")).toBe("before");
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("prepare는 manifest 밖 extra 파일이 섞인 release를 거부하고 기존 파일을 보존한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
@@ -335,7 +336,7 @@ describe("career workspace cli", () => {
     });
     expect(await readFile(path.join(fixture.workspaceRoot, "applications", "resume.md"), "utf8")).toBe("before");
     expect(await exists(path.join(fixture.workspaceRoot, "applications", ".env"))).toBe(false);
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("prepare는 손상된 sync-state를 RESTORE_REQUIRED로 중단한다", async () => withFixture(async (fixture) => {
     await mkdir(path.join(fixture.workspaceRoot, ".career-sync"), { recursive: true });
@@ -345,7 +346,7 @@ describe("career workspace cli", () => {
     await expect(prepareWorkspace(makeContext(fixture))).rejects.toMatchObject({
       result: { code: "RESTORE_REQUIRED" },
     });
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("prepare는 깨진 prepare journal JSON을 RESTORE_REQUIRED로 중단한다", async () => withFixture(async (fixture) => {
     await mkdir(path.join(fixture.workspaceRoot, ".career-sync"), { recursive: true });
@@ -354,7 +355,7 @@ describe("career workspace cli", () => {
     await expect(prepareWorkspace(makeContext(fixture))).rejects.toMatchObject({
       result: { action: "prepare", code: "RESTORE_REQUIRED" },
     });
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("prepare는 미완 journal을 발견하면 backup을 복구한 뒤 새 release를 적용한다", async () => withFixture(async (fixture) => {
     await writeFile(path.join(fixture.workspaceRoot, "applications", "old.md"), "old");
@@ -392,7 +393,7 @@ describe("career workspace cli", () => {
 
     expect(await readFile(path.join(fixture.workspaceRoot, "applications", "remote.md"), "utf8")).toBe("remote");
     expect(await exists(path.join(fixture.workspaceRoot, "applications", "new-partial.md"))).toBe(false);
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test.each(["started", "staged", "restoring"] as const)(
     "prepare는 %s journal 재실행을 정리하고 새 release를 적용한다",
@@ -467,7 +468,7 @@ describe("career workspace cli", () => {
 
     expect(await exists(path.join(fixture.workspaceRoot, "applications", "new.md"))).toBe(false);
     expect(await readFile(path.join(fixture.workspaceRoot, "applications", "remote.md"), "utf8")).toBe("remote");
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("prepare는 journal flag와 실제 backup/target 조합이 모순이면 삭제하지 않고 중단한다", async () => withFixture(async (fixture) => {
     await writeFile(path.join(fixture.workspaceRoot, "applications", "old.md"), "old");
@@ -499,7 +500,7 @@ describe("career workspace cli", () => {
     });
     expect(await readFile(path.join(fixture.workspaceRoot, "applications", "old.md"), "utf8")).toBe("old");
     expect(await readFile(path.join(fixture.workspaceRoot, ".career-sync", "backup", "applications", "backup.md"), "utf8")).toBe("backup");
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("prepare는 기록되지 않은 backup만 남아도 자동 복구하지 않고 중단한다", async () => withFixture(async (fixture) => {
     await writeFile(path.join(fixture.workspaceRoot, "applications", "old.md"), "old");
@@ -534,7 +535,7 @@ describe("career workspace cli", () => {
     });
     expect(await exists(path.join(fixture.workspaceRoot, "applications"))).toBe(false);
     expect(await readFile(path.join(fixture.workspaceRoot, ".career-sync", "backup", "applications", "old.md"), "utf8")).toBe("old");
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("prepare는 원본 기록에 필요한 backup이 없으면 target을 지우지 않고 중단한다", async () => withFixture(async (fixture) => {
     await writeFile(path.join(fixture.workspaceRoot, "applications", "old.md"), "old");
@@ -564,7 +565,7 @@ describe("career workspace cli", () => {
       result: { action: "prepare", code: "RESTORE_REQUIRED" },
     });
     expect(await readFile(path.join(fixture.workspaceRoot, "applications", "old.md"), "utf8")).toBe("old");
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("prepare는 원본이 없던 root의 새 target이 남은 crash-window를 제거한다", async () => withFixture(async (fixture) => {
     await rm(path.join(fixture.workspaceRoot, "library"), { recursive: true, force: true });
@@ -597,7 +598,7 @@ describe("career workspace cli", () => {
     await prepareWorkspace(makeContext(fixture));
 
     expect(await exists(path.join(fixture.workspaceRoot, "library", "new.md"))).toBe(false);
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("prepare 교체 중 실패하면 즉시 rollback해 기존 root를 보존한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/old.md": "old" });
@@ -609,7 +610,7 @@ describe("career workspace cli", () => {
 
     expect(await readFile(path.join(fixture.workspaceRoot, "applications", "old.md"), "utf8")).toBe("old");
     expect(await exists(path.join(fixture.workspaceRoot, "applications", "new.md"))).toBe(false);
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("failed export는 local roots를 보존한다", async () => withFixture(async (fixture) => {
     await writeFile(path.join(fixture.workspaceRoot, "applications", "local.md"), "local");
@@ -627,7 +628,7 @@ describe("career workspace cli", () => {
       result: { code: "TRANSFER_FAILED" },
     });
     expect(await readFile(path.join(fixture.workspaceRoot, "applications", "local.md"), "utf8")).toBe("local");
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("truncated export는 local roots와 remote current를 보존한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/local.md": "local" });
@@ -647,7 +648,7 @@ describe("career workspace cli", () => {
 
     expect(await readFile(path.join(fixture.workspaceRoot, "applications", "local.md"), "utf8")).toBe("local");
     expect(await readlink(path.join(fixture.storageRoot, "current"))).toBe(beforeCurrent);
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("completed journal은 현재 hash가 sync-state와 맞으면 cleanup한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "resume" });
@@ -670,7 +671,7 @@ describe("career workspace cli", () => {
     await prepareWorkspace(makeContext(fixture));
 
     expect(await exists(path.join(fixture.workspaceRoot, ".career-sync", "prepare-journal.json"))).toBe(false);
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("sync-state 반영 뒤 남은 applied journal은 새 작업본을 rollback하지 않고 cleanup한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/new.md": "new" });
@@ -695,7 +696,7 @@ describe("career workspace cli", () => {
     expect(await readFile(path.join(fixture.workspaceRoot, "applications", "new.md"), "utf8")).toBe("new");
     expect(await exists(path.join(fixture.workspaceRoot, "applications", "old.md"))).toBe(false);
     expect(await exists(path.join(fixture.workspaceRoot, ".career-sync", "backup"))).toBe(false);
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("restored journal 정리 중 중단됐으면 현재 작업본 hash를 확인하고 cleanup을 재시도한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "resume" });
@@ -717,7 +718,7 @@ describe("career workspace cli", () => {
 
     expect(await readFile(path.join(fixture.workspaceRoot, "applications", "resume.md"), "utf8")).toBe("resume");
     expect(await exists(path.join(fixture.workspaceRoot, ".career-sync", "prepare-journal.json"))).toBe(false);
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("diff는 마지막 prepare 기준의 추가, 수정, 삭제를 요약한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", {
@@ -736,7 +737,7 @@ describe("career workspace cli", () => {
       modified: ["applications/modify.md"],
       deleted: ["applications/delete.md"],
     });
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("publish는 원격 revision 충돌을 전달하고 로컬 결과를 보존한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
@@ -748,7 +749,7 @@ describe("career workspace cli", () => {
       result: { code: "REVISION_CONFLICT" },
     });
     expect(await readFile(path.join(fixture.workspaceRoot, "applications", "resume.md"), "utf8")).toBe("local");
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("publish revision collision은 기존 release와 current를 보존한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
@@ -761,7 +762,7 @@ describe("career workspace cli", () => {
     });
     expect(await readFile(path.join(fixture.storageRoot, "releases", "rev-1", "applications", "resume.md"), "utf8")).toBe("before");
     expect(await readlink(path.join(fixture.storageRoot, "current"))).toBe("releases/rev-1");
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("current 전환에 실패하면 승격한 release와 staging을 정리하고 이전 current를 보존한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
@@ -781,7 +782,7 @@ describe("career workspace cli", () => {
     expect(await readlink(path.join(fixture.storageRoot, "current"))).toBe("releases/rev-1");
     expect(await exists(path.join(fixture.storageRoot, "releases", "rev-failed-switch"))).toBe(false);
     expect((await readdir(path.join(fixture.storageRoot, "releases"))).some((entry) => entry.startsWith(".staging-"))).toBe(false);
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("publish 전송 실패는 로컬 변경과 remote current를 보존한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
@@ -798,7 +799,7 @@ describe("career workspace cli", () => {
     expect(await readlink(path.join(fixture.storageRoot, "current"))).toBe(beforeCurrent);
     const syncState = JSON.parse(await readFile(path.join(fixture.workspaceRoot, ".career-sync", "sync-state.json"), "utf8"));
     expect(syncState.revision).toBe("rev-1");
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("publish는 성공하면 sync-state를 새 revision으로 갱신한다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
@@ -811,7 +812,7 @@ describe("career workspace cli", () => {
     const syncState = JSON.parse(await readFile(path.join(fixture.workspaceRoot, ".career-sync", "sync-state.json"), "utf8"));
     expect(syncState.revision).toBe(result.revision);
     expect(syncState.contentDigest).toBe(result.contentDigest);
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("filesystem fixture는 동시 publish를 lock 안 current 재확인으로 하나만 성공시킨다", async () => withFixture(async (fixture) => {
     await createRemoteRelease(fixture, "rev-1", { "applications/resume.md": "before" });
@@ -833,7 +834,7 @@ describe("career workspace cli", () => {
     expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
     const rejected = results.find((result) => result.status === "rejected");
     expect(rejected).toMatchObject({ reason: { result: { action: "publish", code: "REVISION_CONFLICT" } } });
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("publish는 manifest allowlist 파일만 release에 올려 secret 파일 왕복을 막는다", async () => withFixture(async (fixture) => {
     await writeFile(path.join(fixture.workspaceRoot, "applications", "resume.md"), "resume");
@@ -850,7 +851,7 @@ describe("career workspace cli", () => {
     expect(await exists(path.join(fixture.storageRoot, "releases", currentRevision, "applications", ".env"))).toBe(false);
     expect(await exists(path.join(fixture.storageRoot, "releases", currentRevision, "library", "cache", "secret.json"))).toBe(false);
     expect(await exists(path.join(fixture.storageRoot, "releases", currentRevision, "state", "run.log"))).toBe(false);
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("publish는 missing managed root를 빈 directory로 패키징한다", async () => withFixture(async (fixture) => {
     await rm(path.join(fixture.workspaceRoot, "library"), { recursive: true, force: true });
@@ -860,7 +861,7 @@ describe("career workspace cli", () => {
     const result = await publishWorkspace(makeContext(fixture));
 
     expect(result).toMatchObject({ action: "publish", ok: true });
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("local publish의 잘못된 tar는 publish action 오류로 반환한다", async () => withFixture(async (fixture) => {
     const transport = new LocalCareerWorkspaceTransport(fixture.storageRoot);
@@ -869,7 +870,7 @@ describe("career workspace cli", () => {
     await expect(transport.publish(archive)).rejects.toMatchObject({
       result: { action: "publish", code: "INVALID_MANIFEST" },
     });
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("local publish는 draft manifest 밖 extra 파일이 섞인 archive를 거부한다", async () => withFixture(async (fixture) => {
     const draftRoot = path.join(fixture.tempRoot, "bad-draft");
@@ -883,7 +884,7 @@ describe("career workspace cli", () => {
     await expect(new LocalCareerWorkspaceTransport(fixture.storageRoot).publish(archive)).rejects.toMatchObject({
       result: { action: "publish", code: "INVALID_MANIFEST" },
     });
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("CLI help와 error는 환경 host/account/key path와 파일 본문을 노출하지 않는다", async () => withFixture(async (fixture) => {
     const cliPath = path.join(import.meta.dir, "../cli.ts");
@@ -926,7 +927,7 @@ describe("career workspace cli", () => {
     expect(errorOutput).not.toContain("example.internal");
     expect(errorOutput).not.toContain("/private/key/path");
     expect(errorOutput).not.toContain("file-body-secret");
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("CLI 프로세스는 성공 JSON을 stdout에, 오류 JSON을 stderr에만 쓴다", async () => withFixture(async (fixture) => {
     const cliPath = path.join(import.meta.dir, "../cli.ts");
@@ -967,14 +968,14 @@ describe("career workspace cli", () => {
     expect(failExit).toBe(1);
     expect(failStdout).toBe("");
     expect(JSON.parse(failStderr)).toMatchObject({ ok: false, code: "REMOTE_UNINITIALIZED" });
-  }));
+  }), SUBPROCESS_TEST_TIMEOUT_MS);
 
   test("테스트 fixture는 repo root의 storage/workspace 디렉터리에 누출되지 않는다", async () => {
     const repoRoot = path.resolve(import.meta.dir, "../../../..");
 
     expect(await exists(path.join(repoRoot, "storage"))).toBe(false);
     expect(await exists(path.join(repoRoot, "workspace"))).toBe(false);
-  });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
 });
 
 class BadExportTransport implements CareerWorkspaceTransport {
