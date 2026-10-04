@@ -164,6 +164,9 @@ test("새 스킬은 셸과 저장소 경로를 쓰지 않고 앞머리가 디렉
     const front = text.slice(4, end);
     const body = text.slice(end + 5);
     for (const banned of ["career-os/", "bun ", "git "]) expect(body, `${name} 본문에 ${banned}`).not.toContain(banned);
+    const handoff = name === "interview-practice" ? "interview-question-prep" : "study-collection";
+    expect(body, `${name} 본문의 안내 스킬`).toContain(handoff);
+    expect(body, `${name} 본문의 노트북 세션`).not.toContain("노트북 세션");
     expect(front.match(/^name: (.+)$/m)?.[1], `${name} 의 name`).toBe(name);
     const description = front.match(/^description: (.+)$/m)?.[1] ?? "";
     expect(description.length, `${name} 의 description`).toBeGreaterThan(0);

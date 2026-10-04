@@ -55,4 +55,4 @@ description: 커리어 Backend 의 복습 상태로 공개 질문과 개인 질�
 - 공고별 질문으로 연습하지 않는다
 - 공개 질문 은행을 보강하거나 외부 자료를 모으지 않는다
 
-두 가지는 저장소를 연 노트북 세션의 `interview-practice` 에서 하라고 안내한다.
+공고별 질문 연습과 외부 자료에서 개인 질문을 찾는 일은 Claude Code 에서 이 plugin 의 `interview-question-prep` 스킬로 하라고 안내한다. 공개 질문 은행은 대화에서 고치지 않는다.
