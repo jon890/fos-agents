@@ -49,8 +49,8 @@ describe("후보자 맥락 스킬 경계", () => {
   });
 
   test("application-package-writer 는 공통 프로필을 CLI 로 읽게 한다", () => {
-    const text = readFileSync(join(skillsRoot, "application-package-writer", "SKILL.md"), "utf8");
-    expect(text).toContain("bun --env-file=career-os/.env career-os/scripts/application-profile/read_application_profile.ts get --out");
+    const text = readFileSync(join(skillDirectory("application-package-writer"), "SKILL.md"), "utf8");
+    expect(text).toContain("<CAREER_LOCAL> application-profile get --out");
   });
 
   test("resume-preparer 는 candidate-context.md 를 두고 brain-context.md 를 두지 않는다", () => {

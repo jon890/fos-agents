@@ -1,7 +1,8 @@
 # 근거 원본 최신화 확인
 
 지원 준비를 시작하기 전에 로컬 사본으로 읽는 근거 원본이 원격보다 뒤처졌는지 확인한다.
-`application-package-writer` 와 `resume-preparer` 가 같은 원본을 읽으므로 두 스킬이 이 문서를 함께 따른다.
+`application-package-writer` 가 이 문서를 따른다.
+`resume-preparer` 도 같은 원본을 읽지만, 이 스킬을 거쳐 왔다면 검사를 이미 마친 것으로 본다.
 
 ## 먼저 확인하는 이유
 
@@ -24,56 +25,56 @@
 
 | 원본 | 어떻게 읽는가 | 최신 여부를 누가 보는가 |
 | --- | --- | --- |
-| 홈서버 작업본 | `applications`, `library`, `state` 로컬 작업본 | `skill begin <SKILL_NAME>` 이 받아 온다 |
-| 공개 학습·경력 자료 | `career-os/sources/fos-study` 다음 `${PERSONAL_ROOT}/fos-study` | 이 문서의 검사기가 본다 |
-| 후보자 맥락 문서 | `manage_candidate_context.ts get` 으로 Backend 에서 읽는다 | 뒤처질 사본이 없다 |
-| 지원서 공통 프로필 | `read_application_profile.ts get --out` 으로 fos-assistant Memory 에서 읽는다 | 뒤처질 사본이 없다. 아래 절이 설명한다 |
+| 홈서버 작업본 | `applications`, `library`, `state` 로컬 작업본 | `<CAREER_LOCAL> workspace begin application-package-writer` 가 받아 온다 |
+| 프로젝트 근거 디렉터리 | `CAREER_EVIDENCE_DIR`. 없으면 `workspace paths` 가 작업본의 `evidence/` 를 낸다 | 이 문서의 검사기가 본다 |
+| 후보자 맥락 문서 | MCP 도구 `get_context_document` 로 Backend 에서 읽는다 | 뒤처질 사본이 없다 |
+| 지원서 공통 프로필 | `<CAREER_LOCAL> application-profile get --out` 으로 fos-assistant Memory 에서 읽는다 | 뒤처질 사본이 없다. 아래 절이 설명한다 |
 
-**검사기가 보는 것은 공개 학습·경력 자료 하나뿐이다.**
+**검사기가 보는 것은 프로젝트 근거 디렉터리 하나뿐이다.**
 로컬에 사본을 두는 원본에만 뒤처질 위험이 있다.
 
-fos-study 는 별도 Git 저장소이며 career-os 에서는 읽기 전용이다.
-`career-os/sources/fos-study` 는 추적하지 않는 clone 이거나 symlink 라서 연결된 워크트리에는 만들어지지 않는다.
-그래서 `${PERSONAL_ROOT}` 아래의 실제 저장소를 두 번째 자리로 본다.
-앞의 자리에서 저장소를 찾으면 뒤는 보지 않는다.
+프로젝트 근거는 별도 Git 저장소(`fos-study`)이며 이 스킬에서는 읽기 전용이다.
+검사기는 그 위치를 셸 환경 변수 `CAREER_EVIDENCE_DIR` 로만 받고 `.env` 를 찾지 않는다.
+`CAREER_EVIDENCE_DIR` 는 저장소의 루트이거나 그 바로 아래 디렉터리(`task/`)여야 한다.
+검사기는 그 자리와 상위를 순서대로 보고, 앞의 자리에서 저장소를 찾으면 뒤는 보지 않는다.
 
 **그 자리가 Git 저장소의 루트일 때만 그 원본으로 인정한다.**
 저장소 안의 평범한 디렉터리는 상위 저장소의 `.git` 을 물려받아 저장소처럼 보인다.
-실측에서 빈 `career-os/sources/fos-study` 디렉터리가 fos-agents 모노레포의 상태를 fos-study 의 상태로 보고했다.
+실측에서 빈 근거 디렉터리가 그것을 담은 다른 저장소의 상태를 `fos-study` 의 상태로 보고했다.
 
-`${PERSONAL_ROOT}` 는 같은 이름의 환경 변수로 바꿔 읽는다.
-셸에 없으면 `career-os/.env` 에서 읽으며, 양쪽에 없으면 경로를 추측하지 않는다.
+`CAREER_EVIDENCE_DIR` 가 없으면 검사기는 작업본의 `evidence/` 를 대신 보지 않고 `unavailable` 로 끝난다.
+작업본 `root` 가 우연히 Git 저장소의 루트면 그 저장소를 원본으로 오인하기 때문이다.
 
 ## 지원서 공통 프로필을 경로로 확인하지 않는 이유
 
-지원서 공통 프로필은 파일을 여는 곳이 아니라 `read_application_profile.ts` 로 fos-assistant Memory 에 묻는 곳이다.
-[ADR-136](../../../../docs/adr/ADR-136-지원서-공통-프로필은-fos-assistant-memory에서-서비스-토큰으로-읽는다.md)이 그렇게 정한다.
+지원서 공통 프로필은 파일을 여는 곳이 아니라 `<CAREER_LOCAL> application-profile get --out` 으로 fos-assistant Memory 에 묻는 곳이다.
+원본은 fos-assistant Memory 에 있고 career 쪽은 서비스 토큰으로 읽기만 한다.
 검사기가 공통 프로필 저장소의 경로를 요구하면 조회 방식이 바뀔 때마다 검사기도 함께 고쳐야 한다.
 
 **뒤처질 사본이 없다는 것이 더 큰 이유다.**
-fos-study 는 로컬 clone 을 두고 읽으므로 원격이 앞서 나가면 조용히 낮게 판정된다.
+프로젝트 근거는 로컬 clone 을 두고 읽으므로 원격이 앞서 나가면 조용히 낮게 판정된다.
 공통 프로필은 물을 때마다 현재 상태를 조회하므로 그 상태가 생기지 않는다.
 
 공통 프로필과 후보자 맥락 문서의 실패는 다른 모양으로 온다. 조회했는데 결과가 없는 것이다.
-그때 무엇을 하는지는 [`career-os/CLAUDE.md`의 「후보자에게 묻기 전에 기록을 조회한다」](../../../../CLAUDE.md)가 소유한다.
-조회해서 없으면 사용자에게 묻는다.
-공통 프로필에 없거나 틀린 사실은 career-os 가 고치지 않는다.
+본인에 관한 사실은 사용자에게 묻기 전에 공통 프로필과 후보자 맥락 문서를 먼저 조회한다.
+조회해서 없을 때만 사용자에게 묻는다.
+공통 프로필에 없거나 틀린 사실은 이 스킬이 고치지 않는다.
 사용자에게 fos-assistant 웹 화면에서 고치라고 알린다.
-후보자 맥락 문서 사실은 변경 전후를 보여 주고 승인받은 뒤 `manage_candidate_context.ts put` 으로 저장한다.
+후보자 맥락 문서 사실은 변경 전후를 보여 주고 승인받은 뒤 MCP 도구 `save_context_document` 로 저장한다.
 
 ## 확인 방법
 
 작업 트리를 바꾸지 않고 원격 ref 만 받아 대조한다.
-저장소 안이면 어느 디렉터리에서 실행해도 결과가 같다.
+원본 위치를 `CAREER_EVIDENCE_DIR` 로 받으므로 어느 디렉터리에서 실행해도 결과가 같다.
 
 ```bash
-bun "$(git rev-parse --show-toplevel)/career-os/.claude/skills/application-package-writer/scripts/check_evidence_sources.ts"
+<CAREER_LOCAL> package check-sources
 ```
 
 원격을 받지 않고 직전에 받아 둔 ref 로만 보려면 `--no-fetch` 를 붙인다.
 연결이 없는 환경에서 검사를 이어갈 때만 쓴다.
 
-스크립트를 쓸 수 없으면 원본마다 같은 두 명령을 직접 실행한다.
+실행기를 쓸 수 없으면 원본마다 같은 두 명령을 직접 실행한다.
 
 ```bash
 git -C <원본 경로> fetch --quiet origin main
@@ -86,7 +87,7 @@ git -C <원본 경로> rev-list --count HEAD..origin/main
 | --- | --- | --- |
 | `up_to_date` | 원격과 같은 커밋이다 | 다음 단계로 간다 |
 | `behind` | 원격에만 있는 커밋이 있다 | 멈추고 사용자에게 알린다 |
-| `unavailable` | 어느 자리에서도 저장소를 찾지 못했다 | 멈추고 그 자리에 저장소를 연결하라고 알린다 |
+| `unavailable` | 어느 자리에서도 저장소를 찾지 못했다 | 멈추고 `CAREER_EVIDENCE_DIR` 가 근거 저장소를 가리키게 하라고 알린다 |
 | `unreachable` | 저장소는 있으나 원격을 받지 못했다 | 사용자에게 알리고, 사용자가 이어가라고 하면 확인하지 못한 범위를 적고 진행한다 |
 
 `unavailable` 의 `detail` 은 자리마다 왜 아니었는지를 담는다.
@@ -101,9 +102,9 @@ git -C <원본 경로> rev-list --count HEAD..origin/main
 | 2 | 인자나 옵션이 규격에 맞지 않다 |
 
 **확인하지 못한 원본도 1 로 끊는다.**
-`skill begin` 이 실패하면 오래된 로컬 파일로 작업을 이어가지 않는 것과 같은 결이다.
+`workspace begin` 이 실패하면 오래된 로컬 파일로 작업을 이어가지 않는 것과 같은 결이다.
 확인하지 못한 것을 최신으로 보면 검사가 없는 것과 같고, 이 검사는 바로 그 상태를 막으려고 있다.
-이어갈지는 사용자가 정하며, 스크립트가 대신 정하지 않는다.
+이어갈지는 사용자가 정하며, 실행기가 대신 정하지 않는다.
 
 **뒤처진 것을 발견하면 스킬이 자동으로 당기지 않는다.**
 읽기 전용 저장소이고, 당기는 과정에 아래 함정이 있어 사람이 판단해야 한다.

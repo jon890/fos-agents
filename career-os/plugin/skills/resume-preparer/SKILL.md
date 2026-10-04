@@ -40,7 +40,7 @@ PDF 를 만들 때 쓰는 Chrome 은 `CHROME_BIN`, `pdfunite` 는 `PDFUNITE_BIN`
 결과의 `root` 아래 `applications/<회사>/<직무>/` 가 지원 디렉터리다.
 `<CAREER_LOCAL> workspace paths --json` 이 `root` 와 `evidenceDir` 를 낸다.
 지원 디렉터리의 `evidence/posting.md`, `evidence/fit.md`와 `evidence/status.md`에서 지원 직무, 지원 판단과 제출 문서를 확인한다.
-지원 판단이나 후보자 인터뷰가 준비되지 않았으면 저장소 세션의 `application-package-writer`로 먼저 만든다고 안내하고 끝낸다.
+지원 판단이나 후보자 인터뷰가 준비되지 않았으면 `application-package-writer` 스킬로 먼저 만든다고 안내하고 끝낸다.
 
 주장 감사에 쓰는 근거 원본은 `evidenceDir` 에 있다.
 근거 원본이 최신인지 확인하고, 오래됐으면 사용자에게 알린다.
@@ -123,7 +123,7 @@ PDF 를 만들 때 쓰는 Chrome 은 `CHROME_BIN`, `pdfunite` 는 `PDFUNITE_BIN`
 <CAREER_LOCAL> resume validate-bundle <지원 디렉터리>
 ```
 
-지원 패키지 검사와 검토 화면은 저장소 세션에서 한다.
+지원 패키지 검사와 검토 화면은 `application-package-writer` 스킬이 한다.
 
 최종 파일을 확인한 뒤 작업본을 반영한다.
 

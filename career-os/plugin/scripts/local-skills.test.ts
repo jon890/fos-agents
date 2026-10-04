@@ -31,8 +31,94 @@ function executorNamesIn(text: string): string[] {
 
 const skills = readdirSync(skillsDirectory);
 
-test("Claude Code 전용 스킬이 다섯 있다", () => {
-  expect(skills.sort()).toEqual(["interview-question-prep", "position-recommender", "resume-preparer", "study-collection", "sync-profile"]);
+test("Claude Code 전용 스킬이 여섯 있다", () => {
+  expect(skills.sort()).toEqual([
+    "application-package-writer",
+    "interview-question-prep",
+    "position-recommender",
+    "resume-preparer",
+    "study-collection",
+    "sync-profile",
+  ]);
+});
+
+describe("application-package-writer", () => {
+  const directory = join(skillsDirectory, "application-package-writer");
+  const references = [
+    "application-quality-rubric.md",
+    "candidate-interview-questions.md",
+    "evidence-source-freshness.md",
+    "fit-judgment.md",
+    "full-document-review.md",
+    "growth-judgment.md",
+  ];
+
+  test("본문이 실행기의 package, application-profile, workspace 명령을 모두 적는다", () => {
+    const body = readFileSync(join(directory, "SKILL.md"), "utf8");
+    for (const command of [
+      "<CAREER_LOCAL> package check-sources",
+      "<CAREER_LOCAL> package validate",
+      "<CAREER_LOCAL> package render",
+      "<CAREER_LOCAL> package question-schema",
+      "<CAREER_LOCAL> application-profile get --out",
+      "workspace begin application-package-writer",
+      "workspace finish application-package-writer",
+    ])
+      expect(body, command).toContain(command);
+  });
+
+  test("저장소 스크립트와 저장소 경로, 개인 brain 안내가 없다", () => {
+    for (const file of markdownFilesUnder(directory)) {
+      const text = readFileSync(file, "utf8");
+      for (const banned of [
+        "brain-search",
+        "brain-add",
+        "private brain",
+        "manage_candidate_context.ts",
+        "read_application_profile.ts",
+        "sources/fos-study",
+        "PERSONAL_ROOT",
+      ])
+        expect(text.includes(banned), `${file} 에 ${banned}`).toBe(false);
+    }
+  });
+
+  test("plugin 밖을 가리키는 ](../ 링크가 없다", () => {
+    for (const file of markdownFilesUnder(directory))
+      expect(readFileSync(file, "utf8").includes("](../"), file).toBe(false);
+  });
+
+  test("근거 원본 최신화 문서가 실행기 명령, 위치 환경 변수, 공통 프로필 절을 담는다", () => {
+    const text = readFileSync(join(directory, "references", "evidence-source-freshness.md"), "utf8");
+    for (const expected of ["package check-sources", "CAREER_EVIDENCE_DIR", "## 지원서 공통 프로필을 경로로 확인하지 않는 이유"])
+      expect(text, expected).toContain(expected);
+  });
+
+  test("references 여섯이 모두 있고 각각 본문이나 다른 reference 가 한 번 이상 가리킨다", () => {
+    const texts = Object.fromEntries(
+      ["SKILL.md", ...references.map((file) => join("references", file))].map((file) => [file, readFileSync(join(directory, file), "utf8")]),
+    );
+    for (const reference of references) {
+      expect(existsSync(join(directory, "references", reference)), `${reference} 가 없다`).toBe(true);
+      const referrers = Object.entries(texts).filter(
+        ([file, text]) => file !== join("references", reference) && (text.includes(`references/${reference}`) || text.includes(`](${reference})`)),
+      );
+      expect(referrers.length, `${reference} 를 가리키는 문서가 없다`).toBeGreaterThan(0);
+    }
+  });
+
+  test("evals.json 이 올바른 JSON 이고 /Users/ 경로가 없다", () => {
+    const text = readFileSync(join(directory, "evals", "evals.json"), "utf8");
+    const strings: string[] = [];
+    const collect = (value: unknown): void => {
+      if (typeof value === "string") strings.push(value);
+      else if (Array.isArray(value)) value.forEach(collect);
+      else if (value && typeof value === "object") Object.values(value).forEach(collect);
+    };
+    collect(JSON.parse(text));
+    expect(strings.length).toBeGreaterThan(0);
+    for (const value of strings) expect(value.includes("/Users/"), value).toBe(false);
+  });
 });
 
 describe("position-recommender", () => {
