@@ -150,6 +150,7 @@ python3 -c "import re,glob;print(sum(len(re.sub(r'^---\n.*?\n---\n','',open(f).r
 | `career-os/plugin/src/backend.ts` | 수정 |
 | `career-os/plugin/src/study.ts` | 신규 |
 | `career-os/plugin/src/study.test.ts` | 신규 |
+| `career-os/plugin/src/study-fixtures.ts` | 신규 |
 | `career-os/plugin/src/tools.ts` | 수정 |
 | `career-os/plugin/src/contract-parity.test.ts` | 수정 |
 | `career-os/plugin/src/server.test.ts` | 수정 |
