@@ -847,7 +847,7 @@ plugin 의 `study-topic-recommender` 스킬이 이미 수집된 후보에서 고
 | 면접 기록 저장 결과를 알 수 없다 | 오류에 실린 `attemptId` 로 다시 승인받아 보낸다. Backend 가 같은 `attemptId` 의 저장한 응답을 돌려줘 횟수가 두 번 오르지 않는다 |
 | 같은 `attemptId` 의 면접 기록 요청이 아직 처리 중이다 | `CAREER_ATTEMPT_PENDING`. 잠시 뒤 오류에 실린 `attemptId` 로 나머지 인자를 바꾸지 않고 새로 승인받아 보낸다 |
 | 공부 추천 저장 결과를 알 수 없다 | 다른 인자를 하나도 바꾸지 않고 오류에 실린 `generatedAt` 만 더해 다시 승인받아 보낸다. 같은 `reportId` 와 `generatedAt` 이면 멱등 키가 같다. 본문이 다르면 `IDEMPOTENCY_CONFLICT` 409 가 된다 |
-| 공부 후보가 비었다 | 수집이 아직 돌지 않았거나 모두 판정됐다. 빈 결과를 알리고 저장하지 않는다 |
+| 공부 후보가 비었다 | 현재 조건에 맞는 미추천 후보가 없다. 꺼진 소스에서만 나온 자료, 이미 추천한 자료, 지금 기준에서 유효한 제외 판정이 있는 자료, 요청한 `category` 밖의 자료는 후보에서 빠지므로 수집을 마친 뒤에도 빌 수 있다. 빈 결과만으로 수집 실행 여부를 단정하지 않는다. 빈 결과를 알리고 저장하지 않는다. `learning-interests` 문서가 없거나 token 이 거절되거나 Backend 가 응답하지 않으면 빈 후보가 아니라 `CAREER_LEARNING_INTERESTS_MISSING`, `CAREER_UNAUTHORIZED`, `CAREER_UNAVAILABLE` 같은 오류로 온다 |
 | 저장할 본문이 승인 인자 상한을 넘는다 | fos-assistant 가 호출을 거절한다. 노트북의 CLI 로 저장하라고 안내한다 |
 | 원티드나 LinkedIn 을 고쳐 달라고 한다 | 원고만 고치고, 사이트 반영은 노트북의 `sync-profile` 에서 하라고 안내한다 |
 
