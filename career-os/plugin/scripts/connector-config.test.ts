@@ -85,11 +85,13 @@ test("plugin.json 과 package.json 의 version 이 같다", () => {
   expect(read(".claude-plugin/plugin.json").version).toBe(read("package.json").version);
 });
 
-test("도구는 열이고 WRITE 는 저장 도구 둘과 GitHub 갱신 도구뿐이며 모두 승인이 필요하다", () => {
-  expect(Object.keys(connector.tools)).toHaveLength(10);
+test("도구는 열넷이고 WRITE 는 저장 도구 넷과 GitHub 갱신 도구뿐이며 모두 승인이 필요하다", () => {
+  expect(Object.keys(connector.tools)).toHaveLength(14);
   const writes = policies.filter(([, policy]) => policy.risk === "WRITE");
   expect(writes.map(([name]) => name).sort()).toEqual([
     "save_context_document",
+    "save_interview_attempt",
+    "save_personal_question",
     "save_profile_document",
     "update_github_profile",
   ]);

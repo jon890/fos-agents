@@ -87,7 +87,7 @@ export class CareerBackend {
   }
 
   async request<T>(
-    method: "GET" | "PUT",
+    method: "GET" | "PUT" | "POST",
     path: string,
     schema: z.ZodType<T>,
     body?: unknown,
