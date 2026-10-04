@@ -27,7 +27,7 @@
 | 홈서버 작업본 | `applications`, `library`, `state` 로컬 작업본 | `skill begin <SKILL_NAME>` 이 받아 온다 |
 | 공개 학습·경력 자료 | `career-os/sources/fos-study` 다음 `${PERSONAL_ROOT}/fos-study` | 이 문서의 검사기가 본다 |
 | 후보자 맥락 문서 | `manage_candidate_context.ts get` 으로 Backend 에서 읽는다 | 뒤처질 사본이 없다 |
-| private brain (지원서 공통 프로필) | `brain-search` 로 `career-application-profile` 을 조회한다 | 뒤처질 사본이 없다. 아래 절이 설명한다 |
+| 지원서 공통 프로필 | `read_application_profile.ts get --out` 으로 fos-assistant Memory 에서 읽는다 | 뒤처질 사본이 없다. 아래 절이 설명한다 |
 
 **검사기가 보는 것은 공개 학습·경력 자료 하나뿐이다.**
 로컬에 사본을 두는 원본에만 뒤처질 위험이 있다.
@@ -44,13 +44,11 @@ fos-study 는 별도 Git 저장소이며 career-os 에서는 읽기 전용이다
 `${PERSONAL_ROOT}` 는 같은 이름의 환경 변수로 바꿔 읽는다.
 셸에 없으면 `career-os/.env` 에서 읽으며, 양쪽에 없으면 경로를 추측하지 않는다.
 
-## private brain 을 경로로 확인하지 않는 이유
+## 지원서 공통 프로필을 경로로 확인하지 않는 이유
 
-지원서 공통 프로필은 파일을 여는 곳이 아니라 `brain-search` 로 `career-application-profile` 을 묻는 곳이다.
-[`code-architecture.md`의 「interview-practice」](../../../../docs/code-architecture.md#interview-practice)과
-[ADR-102](../../../../docs/adr/ADR-102-별도-웹-대시보드보다-파일-기반-피드백-루프를-사용한다.md)가
-실행 스크립트는 brain 을 직접 조회하지 않는다고 정한다.
-검사기가 공통 프로필 저장소의 경로를 요구하면 그 결정을 어기고, 조회 방식이 바뀔 때마다 검사기도 함께 고쳐야 한다.
+지원서 공통 프로필은 파일을 여는 곳이 아니라 `read_application_profile.ts` 로 fos-assistant Memory 에 묻는 곳이다.
+[ADR-136](../../../../docs/adr/ADR-136-지원서-공통-프로필은-fos-assistant-memory에서-서비스-토큰으로-읽는다.md)이 그렇게 정한다.
+검사기가 공통 프로필 저장소의 경로를 요구하면 조회 방식이 바뀔 때마다 검사기도 함께 고쳐야 한다.
 
 **뒤처질 사본이 없다는 것이 더 큰 이유다.**
 fos-study 는 로컬 clone 을 두고 읽으므로 원격이 앞서 나가면 조용히 낮게 판정된다.
@@ -59,7 +57,9 @@ fos-study 는 로컬 clone 을 두고 읽으므로 원격이 앞서 나가면 �
 공통 프로필과 후보자 맥락 문서의 실패는 다른 모양으로 온다. 조회했는데 결과가 없는 것이다.
 그때 무엇을 하는지는 [`career-os/CLAUDE.md`의 「후보자에게 묻기 전에 기록을 조회한다」](../../../../CLAUDE.md)가 소유한다.
 조회해서 없으면 사용자에게 묻는다.
-확인한 공통 프로필 사실은 승인을 받아 brain 에 환원하고, 후보자 맥락 문서 사실은 변경 전후를 보여 주고 승인받은 뒤 `manage_candidate_context.ts put` 으로 저장한다.
+공통 프로필에 없거나 틀린 사실은 career-os 가 고치지 않는다.
+사용자에게 fos-assistant 웹 화면에서 고치라고 알린다.
+후보자 맥락 문서 사실은 변경 전후를 보여 주고 승인받은 뒤 `manage_candidate_context.ts put` 으로 저장한다.
 
 ## 확인 방법
 

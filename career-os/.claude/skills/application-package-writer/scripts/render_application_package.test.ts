@@ -143,7 +143,7 @@ function fixture(): string {
     formUrl: "https://example.com/job/apply",
     verifiedAt: "2026-09-03",
     status: "fields_verified",
-    profileSource: "private-brain:career-application-profile",
+    profileSource: "fos-assistant-memory:identity/career-application-profile",
     sections: [
       {
         title: "기본 정보",

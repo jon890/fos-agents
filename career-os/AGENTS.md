@@ -42,16 +42,16 @@
 아래 표의 자리가 소유하는 것이다. 지원 문서와 인터뷰 기록이 아니다.
 
 
-| 조회할 것                     | 어디에 있나                                                   |
-| ------------------------- | -------------------------------------------------------- |
-| 이름, 생년월일, 연락처, 주소         | `brain-search` 의 `career-application-profile`            |
-| 병역, 보훈, 장애 여부             | `brain-search` 의 `career-application-profile`            |
-| 학력, 자격증, 어학               | `brain-search` 의 `career-application-profile`            |
-| 회사별 부서명과 고용 형태, 정확한 재직 기간 | `brain-search` 의 `career-application-profile`            |
-| 현재 경력과 경험 경계              | `manage_candidate_context.ts get --key career-status`    |
-| 역할 선호와 이직 우선순위           | `manage_candidate_context.ts get --key position-preferences` |
-| 지원 이력과 현재 대상              | 후보자 맥락 문서 `application-state`                            |
-| 회사별 재지원 간격                | `position_exclusions`                                    |
+| 조회할 것                     | 어디에 있나                                                                 |
+| ------------------------- | ---------------------------------------------------------------------- |
+| 이름, 생년월일, 연락처, 주소         | `read_application_profile.ts get --out` 의 `career-application-profile` |
+| 병역, 보훈, 장애 여부             | `read_application_profile.ts get --out` 의 `career-application-profile` |
+| 학력, 자격증, 어학               | `read_application_profile.ts get --out` 의 `career-application-profile` |
+| 회사별 부서명과 고용 형태, 정확한 재직 기간 | `read_application_profile.ts get --out` 의 `career-application-profile` |
+| 현재 경력과 경험 경계              | `manage_candidate_context.ts get --key career-status`                  |
+| 역할 선호와 이직 우선순위           | `manage_candidate_context.ts get --key position-preferences`           |
+| 지원 이력과 현재 대상              | 후보자 맥락 문서 `application-state`                                          |
+| 회사별 재지원 간격                | `position_exclusions`                                                  |
 
 
 **후보자 인터뷰는 판단과 동기만 다룬다.**
@@ -59,7 +59,8 @@
 지원서 기본 항목은 인터뷰 대상이 아니다.
 
 **조회해서 없으면 묻는다.** 조회하지 않고 묻는 것만 금지한다.
-새로 확인한 공통 프로필 사실은 사용자 승인을 받아 brain에 환원한다.
+공통 프로필에 없거나 틀린 사실은 career-os 가 고치지 않는다.
+사용자에게 fos-assistant 웹 화면에서 고치라고 알린다.
 후보자 맥락 문서의 사실은 변경 전후를 보여 주고 승인받은 뒤 `manage_candidate_context.ts put` 으로 저장한다.
 
 ### 프로젝트 근거는 `sources/fos-study/task/`가 소유한다
@@ -82,7 +83,7 @@ grep -rl "<확인할 기술>" career-os/sources/fos-study/task/
 | -------------------------------- | ------------------------------- |
 | `sources/fos-study/task/`        | 프로젝트별로 실제 한 일, 기술 선택과 그 이유      |
 | 후보자 맥락 문서                        | 역할 선호, 경험 경계, 지원 이력과 현재 대상    |
-| private brain                    | 지원서 공통 프로필(신원, 연락처, 정확한 재직 기간) |
+| fos-assistant Memory 의 `identity` 문서 | 지원서 공통 프로필(신원, 연락처, 정확한 재직 기간). `read_application_profile.ts get --out` 으로 읽는다 |
 | `applications/<company>/<role>/` | 공고별 적합도 판정과 지원 전략               |
 | 커리어 Backend 의 프로필 원고             | 대상별 프로필 원고. `manage_profile.ts documents get` 으로 읽는다 |
 | `state/verified-claims/`         | 다시 쓸 수 있는 검증 완료 주장과 근거 상태       |

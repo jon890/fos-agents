@@ -1,5 +1,9 @@
 import { readFileSync } from "node:fs";
 import { z } from "zod";
+import { APPLICATION_PROFILE_SOURCE } from "../../../../scripts/application-profile/contracts.ts";
+
+/** 이전에 만든 스냅샷을 다시 검증할 수 있게 받는다. 새로 쓰지 않는다. */
+const LEGACY_PROFILE_SOURCE = "private-brain:career-application-profile";
 
 const ApplicationFormFieldSchema = z.object({
   id: z.string().min(1),
@@ -32,7 +36,7 @@ export const ApplicationFormSchema = z.object({
   formUrl: z.string().url(),
   verifiedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   status: z.enum(["fields_verified", "needs_review"]),
-  profileSource: z.literal("private-brain:career-application-profile"),
+  profileSource: z.enum([APPLICATION_PROFILE_SOURCE, LEGACY_PROFILE_SOURCE]),
   sections: z.array(ApplicationFormSectionSchema).min(1),
   attachments: z.array(ApplicationAttachmentSchema),
   questions: z.array(ApplicationQuestionSchema),
