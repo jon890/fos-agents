@@ -182,6 +182,60 @@ describe("save_interview_attempt", () => {
     expect(calls.map((call) => call.key)).toEqual([attemptId]);
     expectAllowed(calls);
   });
+
+  const brokenBody = () =>
+    new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('{"attemptId":'));
+        controller.error(new Error("stream reset"));
+      },
+    });
+  const unreadableResponses: [string, () => Response][] = [
+    ["잘린 JSON", () => new Response('{"attemptId":"', { status: 201 })],
+    ["본문 스트림 실패", () => new Response(brokenBody(), { status: 201 })],
+    ["스키마 불일치", () => json({ attemptId: 1, progress: null }, 201)],
+  ];
+
+  for (const [name, respond] of unreadableResponses) {
+    test(`2xx 응답이 ${name}이면 CAREER_INVALID_RESPONSE 와 그때 쓴 attemptId 를 낸다`, async () => {
+      const { calls, tools } = harness(respond);
+      const result = await tools.call("save_interview_attempt", attempt);
+      expect(result.isError).toBe(true);
+      expect(calls).toHaveLength(1);
+      expectAllowed(calls);
+      const attemptId = calls[0]!.key;
+      expect(attemptId).toMatch(uuidPattern);
+      expect(parse(result)).toEqual({
+        error: { code: "CAREER_INVALID_RESPONSE", message: expect.any(String) },
+        attemptId,
+      });
+      const text = result.content[0].text;
+      expect(text).not.toContain(token);
+      expect(text).not.toContain(attempt.question);
+      expect(text).not.toContain(attempt.feedback);
+    });
+  }
+
+  test("응답을 읽지 못한 뒤 받은 attemptId 로 같은 인자를 다시 보내면 같은 Idempotency-Key 를 쓴다", async () => {
+    let first = true;
+    const { calls, tools } = harness((call) => {
+      if (first) {
+        first = false;
+        return new Response('{"attemptId":"', { status: 201 });
+      }
+      return json({
+        attemptId: (call.body as { attemptId: string }).attemptId,
+        evaluatedOn: seoulToday,
+        progress: progressRow(attempt.topic, "2026-10-02", 1),
+      });
+    });
+    const failed = parse(await tools.call("save_interview_attempt", attempt));
+    const retried = await tools.call("save_interview_attempt", { ...attempt, attemptId: failed.attemptId });
+    expect(retried.isError).toBeUndefined();
+    expect(calls.map((call) => call.key)).toEqual([failed.attemptId, failed.attemptId]);
+    expect(calls[1]!.body).toEqual(calls[0]!.body);
+    expect(parse(retried).attemptId).toBe(failed.attemptId);
+  });
 });
 
 describe("save_personal_question", () => {
