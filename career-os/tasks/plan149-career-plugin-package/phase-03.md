@@ -4,7 +4,7 @@
 
 ## 목표
 
-`resume-preparer` 가 의존하던 `application-package-writer` 가 plugin 으로 옮겨졌으므로 `career-os/.claude/skills/resume-preparer/` 사본을 지우고, 사본을 가리키던 테스트와 문서를 plugin 기준으로 맞춘다. plugin 판을 올리고 번들을 다시 만든다.
+`resume-preparer` 가 의존하던 `application-package-writer` 가 plugin 으로 옮겨졌으므로 `career-os/.claude/skills/resume-preparer/` 사본을 지우고, 사본을 가리키던 테스트와 문서를 plugin 기준으로 맞춘다. plugin 버전을 올리고 번들을 다시 만든다.
 
 **범위 외**: `position-recommender`, `study-topic-recommender` 저장소 사본(홈서버 예약 실행이 쓴다). 개인 로고의 git 이력 처리.
 
@@ -45,7 +45,7 @@
 - `career-os/docs/prd.md` 의 `application-package-writer` 절과 `career-os/AGENTS.md` 의 안내가 plugin 스킬과 어긋나지 않는지 확인한다. 어긋나면 고친다.
 - `career-os/docs/flow.md` 의 「application-package-writer」 절 12번까지의 흐름이 plugin 스킬 본문의 8단계 흐름과 같은지 확인한다.
 
-### 3. plugin 판을 올리고 번들을 다시 만든다
+### 3. plugin 버전을 올리고 번들을 다시 만든다
 
 - `career-os/plugin/.claude-plugin/plugin.json` 과 `career-os/plugin/package.json` 의 `version` 을 `0.6.0` 에서 `0.7.0` 으로 올린다. `plugin/scripts/` 의 테스트가 두 버전의 일치를 확인하는지 `grep -rn "version" career-os/plugin/scripts/*.test.ts` 로 확인하고 맞춘다.
 - `plugin.json` 의 `description` 이 이 스킬을 포함하도록 고친다. Claude Code 에서 하는 일 목록에 지원 판단과 지원 패키지 검토 화면을 더한다.
