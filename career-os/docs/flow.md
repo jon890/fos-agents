@@ -844,7 +844,7 @@ plugin 의 `study-topic-recommender` 스킬이 이미 수집된 후보에서 고
 | branch 를 옮기는 마지막 요청에서 프로필 저장소에 다른 커밋이 올라왔음을 알게 된다 | `CAREER_GITHUB_CONFLICT`. branch 를 강제로 옮기지 않는다. 그 앞 단계의 409 와 422 는 `CAREER_GITHUB_UNAVAILABLE` 이다 |
 | 올릴 README 와 차트가 저장소의 것과 같다 | 커밋을 만들지 않고 `changed: false` 로 성공한다. 같은 요청을 다시 승인해도 빈 커밋이 쌓이지 않는다 |
 | 실행 결과가 「실행했는지 알 수 없음」 으로 온다 | 같은 도구를 다시 부르지 않는다. `get_github_profile` 이나 문서 조회로 반영됐는지 확인한다 |
-| 면접 기록 저장 결과를 알 수 없다 | `CAREER_NETWORK` 나 `CAREER_INVALID_RESPONSE`. 오류에 실린 `attemptId` 로 나머지 인자를 바꾸지 않고 다시 승인받아 보낸다. Backend 가 같은 `attemptId` 의 저장한 응답을 돌려줘 횟수가 두 번 오르지 않는다 |
+| 면접 기록 저장 결과를 알 수 없다 | `CAREER_NETWORK` 나 `CAREER_INVALID_RESPONSE`. 오류에 실린 `attemptId` 로 나머지 인자를 바꾸지 않고 다시 승인받아 보낸다. Backend 가 같은 `attemptId` 의 저장한 응답을 돌려줘 횟수가 두 번 오르지 않는다. 다시 보낸 호출도 `CAREER_INVALID_RESPONSE` 면 저장은 됐을 가능성이 크므로 더 보내지 않고 알린다 |
 | 같은 `attemptId` 의 면접 기록 요청이 아직 처리 중이다 | `CAREER_ATTEMPT_PENDING`. 잠시 뒤 오류에 실린 `attemptId` 로 나머지 인자를 바꾸지 않고 새로 승인받아 보낸다 |
 | 공부 추천 저장 결과를 알 수 없다 | 다른 인자를 하나도 바꾸지 않고 오류에 실린 `generatedAt` 만 더해 다시 승인받아 보낸다. 같은 `reportId` 와 `generatedAt` 이면 멱등 키가 같다. 본문이 다르면 `IDEMPOTENCY_CONFLICT` 409 가 된다 |
 | 공부 후보가 비었다 | 정상 응답이다. 꺼진 소스에서만 나온 자료, 이미 추천한 자료, 지금 기준에서 유효한 제외 판정, 요청 필터를 거른 뒤 남은 미추천 후보가 없다. 빈 결과만으로 수집 실행 여부나 웹 자료 유무를 단정하지 않는다. 빈 결과를 알리고 저장하지 않는다. `learning-interests` 문서가 없으면 `CAREER_LEARNING_INTERESTS_MISSING`, token 거절은 `CAREER_UNAUTHORIZED`, 장애는 `CAREER_UNAVAILABLE` 이나 `CAREER_NETWORK` 오류로 따로 온다 |
