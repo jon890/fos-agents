@@ -7,12 +7,15 @@ import { seoulDate } from "./seoul-date.ts";
 // Length limits are shorter than the Backend's on purpose: fos-assistant rejects an approval-bound
 // call whose serialized arguments exceed 16KB of UTF-8, before it reaches this connector, so every
 // argument that passes this schema must fit in that budget. study.test.ts checks the worst case.
-// Strings are not trimmed so the limit bounds the bytes actually sent.
+// Strings are not trimmed so the limit bounds the bytes actually sent. Control characters, line
+// breaks included, are rejected: JSON escapes them to six bytes each (\u0001), more than a Hangul
+// syllable's three, which would break the worst-case bound.
 const nonBlank = (max: number) =>
   z
     .string()
     .max(max)
-    .refine((value) => value.trim().length > 0);
+    .refine((value) => value.trim().length > 0)
+    .refine((value) => !/[\u0000-\u001f\u007f]/.test(value));
 const categorySchema = z.enum(["techBlog", "geek", "ai", "video"]);
 const careerValueSchema = z.enum(["current-work", "target-role", "engineering-judgment", "product-business"]);
 // Same shapes as readingContentKey (scripts/study-topic-recommender/url_identity.ts).
@@ -23,6 +26,9 @@ const utcIsoSchema = z.string().refine((value) => {
 });
 
 const maxItemsAcrossTopics = 8;
+// A generatedAt far from now would file the report under another Seoul day.
+const maxGeneratedAtLagMs = 24 * 60 * 60 * 1000;
+const maxGeneratedAtLeadMs = 5 * 60 * 1000;
 
 export const getStudyCandidatesSchema = z.strictObject({
   limit: z.number().int().min(1).max(20).optional(),
@@ -37,7 +43,8 @@ export const saveStudyRecommendationSchema = z
     topics: z
       .array(
         z.strictObject({
-          topicKey: z.string().regex(/^[a-z0-9][a-z0-9-]{0,79}$/),
+          // Same shape as the notebook's topicKey (scripts/study-topic-recommender/reading_contracts.ts), capped at 80.
+          topicKey: z.string().regex(/^(?=.{1,80}$)[a-z0-9]+(?:-[a-z0-9]+)*$/),
           title: nonBlank(60),
           careerQuestion: nonBlank(100).nullable(),
           items: z
@@ -131,7 +138,10 @@ export async function saveStudyRecommendation(
   args: SaveStudyRecommendationArgs,
   now: () => Date,
 ) {
-  const generatedAt = args.generatedAt ?? now().toISOString();
+  const nowMs = now().getTime();
+  const generatedAt = args.generatedAt ?? new Date(nowMs).toISOString();
+  const offsetMs = new Date(generatedAt).getTime() - nowMs;
+  if (offsetMs < -maxGeneratedAtLagMs || offsetMs > maxGeneratedAtLeadMs) throw new CareerError("CAREER_INVALID_INPUT");
   const reportId = `morning-${seoulDate(new Date(generatedAt))}`;
   const body = {
     reportId,
@@ -163,6 +173,8 @@ export async function saveStudyRecommendation(
         .then((status) => status.exists)
         .catch(() => false);
       if (exists) throw new CareerError("CAREER_STUDY_ALREADY_SAVED", { reportId });
+      // Every other 409: the context changed, a recent topic or item was picked again, or the
+      // same request is still in flight or was sent with another body (IDEMPOTENCY_CONFLICT).
       throw new CareerError("CAREER_STUDY_CONFLICT");
     }
     // The outcome is unknown; resending with this generatedAt reuses the same Idempotency-Key.

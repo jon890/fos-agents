@@ -1342,18 +1342,21 @@ Hermes 에서는 서버 이름 `career` 로 `mcp__career__<도구>` 가 된다.
 - `save_interview_attempt` 의 칸은 `POST /api/interview/v1/attempts` 의 요청과 같다. `attemptId` 를 넘기지 않으면 서버가 UUID 를 만든다. `Idempotency-Key` 는 `attemptId` 다
 - `save_personal_question` 은 `PUT /api/interview/v1/personal-questions/{question.id}` 다. 노트북의 CLI 처럼 호출마다 새 `Idempotency-Key`(`personal-question:<UUID>`)를 쓴다
 - `CAREER_NETWORK` 로 끝난 `save_interview_attempt` 는 오류 객체에 그때 쓴 `attemptId` 를 더한다
+- `save_interview_attempt` 에 Backend 가 409 로 답하면 같은 `attemptId` 의 요청이 아직 처리 중인 것이라 `CAREER_ATTEMPT_PENDING` 이다. 오류 객체에 `attemptId` 를 더한다
 
 공부 추천 도구의 계약이다. 칸의 제약은 [추천 실행](#추천-실행)과 Backend 의 `src/study/schema.ts` 와 같다.
 
 - `get_study_candidates` 는 `GET /api/study/v1/candidates` 한 쪽만 읽는다. `limit` 은 1 이상 20 이하이고 기본값은 20 이다. `category` 는 `techBlog`, `geek`, `ai`, `video` 가운데 하나다. Backend 가 409 로 답하면 `learning-interests` 문서가 없는 것이라 `CAREER_LEARNING_INTERESTS_MISSING` 이다
 - 후보 한 줄은 `{ contentKey, title, url, sourceName, category, kind, published, excerpt }` 다. `excerpt` 는 500자에서 자른다. 외부 글을 그대로 길게 싣지 않기 위해서다
 - `save_study_recommendation` 의 `topics[].items[]` 는 `{ contentKey, summary, reason, careerValue }`, `rejections[]` 는 `{ contentKey, reason }` 이다
-- 저장 입력의 상한은 Backend 보다 짧다. 주제 4개, 모든 주제의 자료 합계 8개, 제외 20개다. `title` 60자, `careerQuestion`, `summary`, `reason` 각 100자, 제외 `reason` 50자, `topicKey` 는 소문자와 숫자와 `-` 로 80자까지다. `contentKey` 는 `url:` 뒤 hex 64자나 `youtube:` 뒤 영상 id 다
+- 저장 입력의 상한은 Backend 보다 짧다. 주제 4개, 모든 주제의 자료 합계 8개, 제외 20개다. `title` 60자, `careerQuestion`, `summary`, `reason` 각 100자, 제외 `reason` 50자, `topicKey` 는 소문자와 숫자를 `-` 로 이은 80자 이하의 kebab-case 이고, `-` 로 시작하거나 끝나거나 연속할 수 없다. 노트북의 `reading_contracts.ts` 와 같은 규칙이다. `contentKey` 는 `url:` 뒤 hex 64자나 `youtube:` 뒤 영상 id 다
+- 글 칸(`candidateContextVersion`, `title`, `careerQuestion`, `summary`, `reason`, 제외 `reason`)은 제어 문자와 줄바꿈을 받지 않는다. JSON 이 한 글자를 6바이트로 늘려 최악 크기 계산이 깨지기 때문이다
 - 상한을 Backend 보다 짧게 둔 까닭은 승인 인자 상한이다. 모든 칸을 상한까지 채운 인자도 16KB 안에 들어야 한다. `get_study_candidates` 의 `limit` 상한 20 도 제외 20개에 맞춘 값이다
 - `generatedAt` 을 넘기지 않으면 서버가 지금 시각을 UTC ISO 로 쓴다. `reportId` 는 `morning-<generatedAt 의 Asia/Seoul 날짜>` 다
+- `generatedAt` 은 지금 시각보다 24시간 넘게 이르거나 5분 넘게 늦으면 `CAREER_INVALID_INPUT` 으로 거절하고 Backend 에 보내지 않는다
 - `Idempotency-Key` 는 노트북의 CLI 와 같은 `recommendation:<sha256(canonical JSON { reportId, generatedAt })>` 다
 - `CAREER_NETWORK` 로 끝난 `save_study_recommendation` 은 오류 객체에 `reportId` 와 `generatedAt` 을 더한다
-- Backend 가 409 로 답하면 `GET /api/study/v1/recommendation-runs/{reportId}/status` 를 한 번 읽는다. 오늘 리포트가 있으면 `CAREER_STUDY_ALREADY_SAVED`, 없으면 `CAREER_STUDY_CONFLICT` 다. 뒤의 것은 후보를 읽은 뒤 관심사 문서가 바뀌었거나 직전 추천의 주제를 다시 고른 경우다
+- Backend 가 409 로 답하면 `GET /api/study/v1/recommendation-runs/{reportId}/status` 를 한 번 읽는다. 오늘 리포트가 있으면 `CAREER_STUDY_ALREADY_SAVED`, 없으면 `CAREER_STUDY_CONFLICT` 다. 뒤의 것은 후보를 읽은 뒤 기준이 바뀌었거나, 이미 추천한 주제나 자료를 골랐거나, 같은 요청이 아직 처리 중이거나, 같은 멱등 키에 다른 본문(`IDEMPOTENCY_CONFLICT`)을 보낸 경우다
 
 **승인이 필요한 도구의 인자는 fos-assistant 가 UTF-8 16KB 까지만 받는다.**
 키와 따옴표를 포함해 직렬화한 인자 전체의 크기다. 한글은 한 글자가 3바이트라 본문이 5천 자 안팎이면 닿는다.
@@ -1388,8 +1391,9 @@ README 에는 `img.shields.io/badge/Tokens-<값>B-` 모양의 배지 주소가 �
 | `CAREER_UNAUTHORIZED` | Backend 가 401 이나 403 으로 답함 | `credential_rejected` |
 | `CAREER_NOT_FOUND` | Backend 가 404 로 답함. 아직 만들지 않은 문서다 | `invalid_input` |
 | `CAREER_VERSION_CONFLICT` | Backend 가 409 로 답함. `expectedVersion` 이 현재 값과 다르다 | `invalid_input` |
-| `CAREER_STUDY_CONFLICT` | 공부 추천 저장에 Backend 가 409 로 답했고 오늘 리포트는 없음. 관심사 문서가 바뀌었거나 직전 추천의 주제를 다시 골랐다 | `invalid_input` |
+| `CAREER_STUDY_CONFLICT` | 공부 추천 저장에 Backend 가 409 로 답했고 오늘 리포트는 없음. 후보를 읽은 뒤 기준이 바뀌었거나, 이미 추천한 주제나 자료를 골랐거나, 같은 요청이 아직 처리 중이거나, 같은 멱등 키에 다른 본문을 보냈다 | `invalid_input` |
 | `CAREER_STUDY_ALREADY_SAVED` | 공부 추천 저장에 409 가 왔고 status 조회로 오늘 리포트가 이미 있음을 확인했다 | `invalid_input` |
+| `CAREER_ATTEMPT_PENDING` | 면접 기록 저장에 Backend 가 409 로 답함. 같은 `attemptId` 의 요청이 아직 처리 중이다. 오류 객체에 `attemptId` 를 더한다 | `unavailable` |
 | `CAREER_LEARNING_INTERESTS_MISSING` | 공부 후보 조회에 Backend 가 409 로 답함. `learning-interests` 문서가 없다 | `invalid_input` |
 | `CAREER_BAD_REQUEST` | Backend 의 나머지 4xx | `invalid_input` |
 | `CAREER_UNAVAILABLE` | Backend 의 5xx | `unavailable` |

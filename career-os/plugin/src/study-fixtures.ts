@@ -4,6 +4,9 @@ const hex = (seed: number) => seed.toString(16).padStart(2, "0").repeat(32);
 export const urlKey = (seed: number) => `url:${hex(seed)}`;
 
 // Every list at its count limit and every text field at its length limit, in Hangul (3 bytes each).
+// Assumption: of the characters the schema accepts in a text field, Hangul is the one that grows
+// most when serialized. Control characters, which JSON escapes to six bytes, are rejected, and
+// characters outside the BMP count as two in the length limit while taking four bytes, so two per char.
 export function worstCaseRecommendation() {
   const hangul = (length: number) => "가".repeat(length);
   const topicKey = (index: number) => `${index}`.padEnd(80, "k");

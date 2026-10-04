@@ -40,7 +40,8 @@ description: 커리어 Backend 에 이미 수집된 기술 블로그, 개발 동
 ## 5. 오류
 
 `CAREER_STUDY_ALREADY_SAVED` 가 오면 멈추고 오늘 추천이 이미 저장됐다고 알린다.
-`CAREER_STUDY_CONFLICT` 가 오면 후보를 다시 읽어 새로 고른다. 다시 충돌하면 멈춘다.
+`CAREER_STUDY_CONFLICT` 는 기준이 바뀌었거나 이미 추천한 주제나 자료를 골랐거나 같은 요청이 처리 중이라는 뜻이다.
+잠시 뒤 후보를 다시 읽어 새로 고른다. 다시 충돌하면 멈춘다.
 `CAREER_NETWORK` 가 오면 다른 인자는 바꾸지 않고 오류의 `generatedAt` 만 더해 새로 승인받는다.
 
 ## 6. 이 대화에서 하지 않는 일

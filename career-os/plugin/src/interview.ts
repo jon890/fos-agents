@@ -188,6 +188,11 @@ export async function saveInterviewAttempt(backend: CareerBackend, args: Attempt
   } catch (error) {
     if (error instanceof CareerError && error.code === "CAREER_NETWORK")
       throw new CareerError("CAREER_NETWORK", { attemptId });
+    // Attempts carry no version, so a 409 comes from the Idempotency-Key: the request with this
+    // attemptId is still being processed. A later resend with the same arguments gets the stored
+    // response. The other 409, the same key with another body, cannot happen while the arguments stay the same.
+    if (error instanceof CareerError && error.code === "CAREER_VERSION_CONFLICT")
+      throw new CareerError("CAREER_ATTEMPT_PENDING", { attemptId });
     throw error;
   }
 }

@@ -169,6 +169,19 @@ describe("save_interview_attempt", () => {
     expect(result.content[0].text).not.toContain(token);
     expect(result.content[0].text).not.toContain(attempt.question);
   });
+
+  test("Backend 가 409 로 답하면 CAREER_ATTEMPT_PENDING 과 그때 쓴 attemptId 를 낸다", async () => {
+    const attemptId = "6f1c2b3a-4d5e-4f60-8a7b-9c0d1e2f3a4b";
+    const { calls, tools } = harness(() => json({ code: "VERSION_CONFLICT" }, 409));
+    const result = await tools.call("save_interview_attempt", { ...attempt, attemptId });
+    expect(result.isError).toBe(true);
+    expect(parse(result)).toEqual({
+      error: { code: "CAREER_ATTEMPT_PENDING", message: expect.any(String) },
+      attemptId,
+    });
+    expect(calls.map((call) => call.key)).toEqual([attemptId]);
+    expectAllowed(calls);
+  });
 });
 
 describe("save_personal_question", () => {

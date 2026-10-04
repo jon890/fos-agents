@@ -23,22 +23,22 @@ export type DrillProgressEntry = {
 };
 export type DrillProgress = Record<string, DrillProgressEntry>;
 
-export function previousDate(date: string): string {
+function previousDate(date: string): string {
   const value = new Date(`${date}T00:00:00.000Z`);
   value.setUTCDate(value.getUTCDate() - 1);
   return value.toISOString().slice(0, 10);
 }
-export function interviewBar(question: SelectableQuestion): InterviewBar {
+function interviewBar(question: SelectableQuestion): InterviewBar {
   return question.bar ?? inferredInterviewBar(question.difficulty);
 }
-export function barPriorityBoost(question: SelectableQuestion, target?: InterviewBar): number {
+function barPriorityBoost(question: SelectableQuestion, target?: InterviewBar): number {
   if (!target) return 0;
   const distance = Math.abs(
     INTERVIEW_BARS.indexOf(target) - INTERVIEW_BARS.indexOf(interviewBar(question)),
   );
   return distance === 0 ? 2 : distance === 1 ? 1 : 0;
 }
-export function inWindow(question: SelectableQuestion, target?: InterviewBar): boolean {
+function inWindow(question: SelectableQuestion, target?: InterviewBar): boolean {
   if (!target) return true;
   const index = INTERVIEW_BARS.indexOf(interviewBar(question));
   const targetIndex = INTERVIEW_BARS.indexOf(target);
@@ -46,7 +46,7 @@ export function inWindow(question: SelectableQuestion, target?: InterviewBar): b
     ? index >= targetIndex - 1
     : index >= targetIndex && index <= targetIndex + 1;
 }
-export function selectWithStretch<Q extends SelectableQuestion>(
+function selectWithStretch<Q extends SelectableQuestion>(
   pool: Array<{ q: Q; priority: number }>,
   count: number,
   target?: InterviewBar,
@@ -58,7 +58,7 @@ export function selectWithStretch<Q extends SelectableQuestion>(
   const stretch = pool.find((item) => interviewBar(item.q) === stretchBar);
   return stretch ? [...selected.slice(0, -1), stretch] : selected;
 }
-export function sequenceOrder(question: SelectableQuestion): number {
+function sequenceOrder(question: SelectableQuestion): number {
   if (question.sequenceHint === "opening") return 0;
   if (question.sequenceHint === "early") return 1;
   if (question.sequenceHint === "middle") return 2;
@@ -73,7 +73,7 @@ export function sequenceOrder(question: SelectableQuestion): number {
     return 3;
   return question.topic.includes("result") ? 4 : 2;
 }
-export function difficultyOrder(difficulty: SelectableQuestion["difficulty"]): number {
+function difficultyOrder(difficulty: SelectableQuestion["difficulty"]): number {
   return difficulty === "basic" ? 0 : difficulty === "intermediate" ? 1 : 2;
 }
 

@@ -38,8 +38,10 @@ description: 커리어 Backend 의 복습 상태로 공개 질문과 개인 질�
 답변 하나와 꼬리질문 하나마다 `save_interview_attempt` 를 한 번 부른다.
 `attemptId` 는 넘기지 않는다.
 꼬리질문은 `rootQuestionId`, `parentQuestion`, `followUpDepth`, `followUpAxis` 를 함께 넘긴다.
+`followUpAxis` 는 선택 근거가 `decision`, 반례가 `counterexample`, 운영이 `operations`, 근거 경계가 `evidence-boundary`, 범위를 줄여 묻기가 `clarification` 이다.
 승인은 같은 지침의 「승인」 절을 따른다.
 `CAREER_NETWORK` 가 오면 오류의 `attemptId` 를 넣고 나머지 인자는 바꾸지 않은 채 새로 승인받는다.
+`CAREER_ATTEMPT_PENDING` 이 오면 잠시 뒤 오류의 `attemptId` 를 넣고 나머지 인자는 바꾸지 않은 채 새로 승인받는다.
 
 ## 5. 개인 질문
 

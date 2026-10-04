@@ -61,6 +61,7 @@
     "CAREER_GITHUB_UNAVAILABLE": "unavailable",
     "CAREER_STUDY_CONFLICT": "invalid_input",
     "CAREER_STUDY_ALREADY_SAVED": "invalid_input",
+    "CAREER_ATTEMPT_PENDING": "unavailable",
     "CAREER_LEARNING_INTERESTS_MISSING": "invalid_input"
   }
 }

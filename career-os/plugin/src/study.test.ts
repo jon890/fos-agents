@@ -164,7 +164,7 @@ describe("save_study_recommendation", () => {
   test("generatedAt 을 넘기면 now 대신 그 값을 쓰고 같은 값이면 같은 키를 쓴다", async () => {
     const first = harness(created);
     const second = harness(created);
-    const args = { ...recommendation, generatedAt: "2026-10-04T00:30:00.000Z" };
+    const args = { ...recommendation, generatedAt: "2026-10-03T12:30:00.000Z" };
     await first.tools.call("save_study_recommendation", args);
     await second.tools.call("save_study_recommendation", args);
     expect((first.calls[0]!.body as { generatedAt: string }).generatedAt).toBe(args.generatedAt);
@@ -178,6 +178,28 @@ describe("save_study_recommendation", () => {
       expect({ generatedAt, code: parse(result).error?.code }).toEqual({ generatedAt, code: "CAREER_INVALID_INPUT" });
     }
     expect(calls).toHaveLength(0);
+  });
+
+  // fixedNow is 2026-10-03T16:00Z: up to 24 hours before and 5 minutes after are accepted.
+  test("now 보다 24시간 넘게 이르거나 5분 넘게 늦은 generatedAt 은 fetch 없이 거절한다", async () => {
+    const { calls, tools } = harness(created);
+    for (const generatedAt of ["2026-10-02T15:59:59.999Z", "2026-10-03T16:05:00.001Z"]) {
+      const result = await tools.call("save_study_recommendation", { ...recommendation, generatedAt });
+      expect({ generatedAt, code: parse(result).error?.code }).toEqual({ generatedAt, code: "CAREER_INVALID_INPUT" });
+    }
+    expect(calls).toHaveLength(0);
+  });
+
+  test("now 보다 정확히 24시간 이르거나 5분 늦은 generatedAt 은 저장한다", async () => {
+    const { calls, tools } = harness(created);
+    for (const generatedAt of ["2026-10-02T16:00:00.000Z", "2026-10-03T16:05:00.000Z"]) {
+      const result = await tools.call("save_study_recommendation", { ...recommendation, generatedAt });
+      expect({ generatedAt, isError: result.isError }).toEqual({ generatedAt, isError: undefined });
+    }
+    expect(calls.map((call) => (call.body as { generatedAt: string }).generatedAt)).toEqual([
+      "2026-10-02T16:00:00.000Z",
+      "2026-10-03T16:05:00.000Z",
+    ]);
   });
 
   function conflictThenStatus(status: () => Response) {
@@ -255,6 +277,8 @@ describe("최악의 인자 크기", () => {
     ["주제 5개", (a) => void a.topics.push({ ...a.topics[0]!, topicKey: "extra", items: [a.topics[0]!.items.pop()!] })],
     ["자료 합계 9개", (a) => void a.topics[0]!.items.push({ ...a.topics[0]!.items[0]!, contentKey: urlKey(200) })],
     ["topicKey 81자", (a) => void (a.topics[0]!.topicKey += "k")],
+    ["topicKey 끝의 -", (a) => void (a.topics[0]!.topicKey = "retry-")],
+    ["topicKey 의 연속 -", (a) => void (a.topics[0]!.topicKey = "a--b")],
     ["title 61자", (a) => void (a.topics[0]!.title += "가")],
     ["careerQuestion 101자", (a) => void (a.topics[0]!.careerQuestion += "가")],
     ["summary 101자", (a) => void (a.topics[0]!.items[0]!.summary += "가")],
@@ -263,6 +287,21 @@ describe("최악의 인자 크기", () => {
     ["제외 reason 51자", (a) => void (a.rejections[0]!.reason += "가")],
     ["contentKey hex 65자", (a) => void (a.rejections[0]!.contentKey += "0")],
   ];
+
+  // Each field is at its length limit, so the last character is replaced rather than appended.
+  const replaceLast = (text: string, char: string) => text.slice(0, -1) + char;
+  const textFields: Array<[string, (args: Args, char: string) => void]> = [
+    ["candidateContextVersion", (a, c) => void (a.candidateContextVersion = replaceLast(a.candidateContextVersion, c))],
+    ["title", (a, c) => void (a.topics[0]!.title = replaceLast(a.topics[0]!.title, c))],
+    ["careerQuestion", (a, c) => void (a.topics[0]!.careerQuestion = replaceLast(a.topics[0]!.careerQuestion, c))],
+    ["summary", (a, c) => void (a.topics[0]!.items[0]!.summary = replaceLast(a.topics[0]!.items[0]!.summary, c))],
+    ["reason", (a, c) => void (a.topics[0]!.items[0]!.reason = replaceLast(a.topics[0]!.items[0]!.reason, c))],
+    ["제외 reason", (a, c) => void (a.rejections[0]!.reason = replaceLast(a.rejections[0]!.reason, c))],
+  ];
+  for (const [field, put] of textFields) {
+    for (const [label, char] of [["줄바꿈", "\n"], ["\\u0001", "\u0001"]] as const)
+      overflows.push([`${field} 의 ${label}`, (a) => put(a, char)]);
+  }
 
   for (const [name, overflow] of overflows) {
     test(`${name} 은 fetch 없이 CAREER_INVALID_INPUT 이다`, async () => {

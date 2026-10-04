@@ -255,7 +255,7 @@ describe("save_study_recommendation 이 CLI 의 createRecommendationRun 과 Back
     const result = await new CareerTools(
       new CareerBackend({ baseUrl: origin, token }, plugin.fetchImpl),
       undefined,
-      () => new Date("2026-10-05T00:00:00.000Z"),
+      () => new Date("2026-10-04T00:00:00.000Z"),
     ).call("save_study_recommendation", input);
     expect(result.isError).toBeUndefined();
     expect(cli.sent).toHaveLength(1);
