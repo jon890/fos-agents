@@ -29,7 +29,8 @@ description: 공고가 찾는 사람과 후보자의 경험이 부합하는지 �
 
 위 동기화가 다루지 않는 `fos-study` 로컬 사본이 원격보다 뒤처졌는지 단계 1로 들어가기 전에 검사한다.
 없는 문서는 없는 경험으로 판정되므로, 근거를 읽기 전에 확인한다.
-지원서 공통 프로필은 fos-assistant Memory 에 있고 저장소 루트에서 아래 명령으로 읽는다.
+지원서 공통 프로필은 fos-assistant Memory 에 있다.
+`evidence/application-form.json` 을 만들 때만 저장소 루트에서 아래 명령으로 읽는다.
 
 ```bash
 bun --env-file=career-os/.env career-os/scripts/application-profile/read_application_profile.ts get --out "${TMPDIR:-/tmp}/career-application-profile.md"

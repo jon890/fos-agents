@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { ApplicationProfileHttpError, type ApplicationProfileFetch } from "./client.ts";
@@ -47,6 +47,7 @@ const ok = () =>
   });
 
 const mode = (path: string) => statSync(path).mode & 0o777;
+const leftoverTmp = (directory: string) => readdirSync(directory).filter((name) => name.endsWith(".tmp"));
 
 describe("readApplicationProfileCli", () => {
   test("help 는 연결값 없이 사용법을 낸다", async () => {
@@ -85,12 +86,14 @@ describe("readApplicationProfileCli", () => {
 
   test("get 은 본문을 0600 파일에 쓰고 메타데이터만 돌려준다", async () => {
     const { fetchImpl } = fake(ok);
-    const out = join(tempDir(), "profile.md");
+    const directory = tempDir();
+    const out = join(directory, "profile.md");
 
     const result = (await readApplicationProfileCli(["get", "--out", out], { connection, fetchImpl })) as Record<string, unknown>;
 
     expect(readFileSync(out, "utf8")).toBe(content);
     expect(mode(out)).toBe(0o600);
+    expect(leftoverTmp(directory)).toEqual([]);
     expect(result).not.toHaveProperty("content");
     expect(result).not.toHaveProperty("title");
     expect(result).toMatchObject({
@@ -104,16 +107,31 @@ describe("readApplicationProfileCli", () => {
     expect(JSON.stringify(result)).not.toContain("010-0000-0000");
   });
 
-  test("이미 있던 0644 파일도 쓴 뒤 0600 이 된다", async () => {
+  test("이미 있던 0644 파일은 새 파일로 바뀌어 0600 이 된다", async () => {
     const { fetchImpl } = fake(ok);
-    const out = join(tempDir(), "profile.md");
+    const directory = tempDir();
+    const out = join(directory, "profile.md");
     writeFileSync(out, "예전 내용", { mode: 0o644 });
     expect(mode(out)).toBe(0o644);
+    const previousInode = statSync(out).ino;
 
     await readApplicationProfileCli(["get", "--out", out], { connection, fetchImpl });
 
     expect(readFileSync(out, "utf8")).toBe(content);
     expect(mode(out)).toBe(0o600);
+    expect(statSync(out).ino).not.toBe(previousInode);
+    expect(leftoverTmp(directory)).toEqual([]);
+  });
+
+  test("이름 바꾸기가 실패하면 오류를 던지고 임시 파일을 남기지 않는다", async () => {
+    const { fetchImpl } = fake(ok);
+    const directory = tempDir();
+    const out = join(directory, "profile.md");
+    mkdirSync(join(out, "child"), { recursive: true });
+
+    await expect(readApplicationProfileCli(["get", "--out", out], { connection, fetchImpl })).rejects.toThrow();
+    expect(statSync(out).isDirectory()).toBe(true);
+    expect(leftoverTmp(directory)).toEqual([]);
   });
 
   test("404 면 오류를 던지고 파일을 만들지 않는다", async () => {

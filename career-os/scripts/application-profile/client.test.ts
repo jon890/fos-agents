@@ -110,6 +110,21 @@ describe("readApplicationProfile", () => {
     expect(await failure(fetchImpl)).toMatchObject({ status: 404, code: "MEMORY_NOT_FOUND" });
   });
 
+  test("404 의 code 가 식별자 모양이 아니면 MEMORY_NOT_FOUND 로 둔다", async () => {
+    const { fetchImpl } = sequence(() => jsonResponse({ code: "bad code; <script>", message: "지어낸 문구" }, 404));
+
+    const error = await failure(fetchImpl);
+
+    expect(error).toMatchObject({ status: 404, code: "MEMORY_NOT_FOUND" });
+    expect(error.message).not.toContain("<script>");
+  });
+
+  test("400 의 code 가 빈 문자열이면 HTTP_ERROR 로 둔다", async () => {
+    const { fetchImpl } = sequence(() => jsonResponse({ code: "", message: "지어낸 문구" }, 400));
+
+    expect(await failure(fetchImpl)).toMatchObject({ status: 400, code: "HTTP_ERROR" });
+  });
+
   test("409 MEMORY_ENCRYPTION_UNAVAILABLE 은 그 code 로 던진다", async () => {
     const { fetchImpl } = sequence(() => jsonResponse({ code: "MEMORY_ENCRYPTION_UNAVAILABLE", message: "지어낸 문구" }, 409));
 

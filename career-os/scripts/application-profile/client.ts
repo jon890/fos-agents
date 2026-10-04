@@ -69,13 +69,15 @@ async function cancelBody(response: Response): Promise<void> {
   }
 }
 
-/** 실패 응답의 본문에서 `code` 만 읽는다. 읽지 못하면 undefined 다. */
+/** 서버 code 는 stderr 로 나가므로 식별자 모양일 때만 쓴다. */
+const serverCodePattern = /^[A-Z0-9_]{1,64}$/;
+
+/** 실패 응답의 본문에서 `code` 만 읽는다. 읽지 못하거나 식별자 모양이 아니면 undefined 다. */
 async function errorCodeOf(response: Response): Promise<string | undefined> {
   try {
     const body: unknown = await response.json();
-    if (body && typeof body === "object" && typeof (body as { code?: unknown }).code === "string") {
-      return (body as { code: string }).code;
-    }
+    const code = body && typeof body === "object" ? (body as { code?: unknown }).code : undefined;
+    if (typeof code === "string" && serverCodePattern.test(code)) return code;
   } catch {
     // 401 과 403 처럼 본문이 없거나 JSON 이 아니면 상태 번호만으로 판정한다.
   }

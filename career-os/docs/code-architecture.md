@@ -619,7 +619,8 @@ client 가 읽는 환경값은 포지션 추천과 같다. 같은 Backend 이고
 두 값은 `career-os/.env` 에 두고 `bun --env-file=career-os/.env` 로 넘긴다.
 collection 과 문서 키는 코드에 고정한다. 설정으로 바꾸지 않는다.
 
-- `--out` 은 `scripts/candidate-context/repository-guard.ts` 로 git 저장소 밖인지 확인한 뒤에만 요청한다. 파일 권한은 `0600` 이다.
+- `--out` 은 `scripts/candidate-context/repository-guard.ts` 로 git 저장소 밖인지 확인한 뒤에만 요청한다.
+  같은 디렉터리에 0600 임시 파일을 새로 만들어 쓰고 `--out` 으로 이름을 바꾼다. 이미 있는 파일이나 링크에 쓰지 않는다.
 - 표준 출력은 `collection`, `documentKey`, `revision`, `updatedAt`, `tokenExpiresAt`, `out` 만 담는다. `tokenExpiresAt` 은 응답의 `X-Service-Token-Expires-At` 머리말이며 없으면 `null` 이다.
 - 오류 메시지는 상태와 다음 행동만 담는다. 응답 본문, 문서 본문과 토큰을 담지 않는다.
 - 요청에 `Origin` 머리말을 붙이지 않고 redirect 를 따라가지 않는다.

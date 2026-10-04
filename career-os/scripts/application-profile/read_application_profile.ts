@@ -1,5 +1,7 @@
 #!/usr/bin/env bun
-import { chmodSync, existsSync, writeFileSync } from "node:fs";
+import { randomBytes } from "node:crypto";
+import { closeSync, openSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
 import { assertOutsideRepository } from "../candidate-context/repository-guard.ts";
 import { firstOptionValue } from "../lib/cli.ts";
 import { ApplicationProfileHttpError, readApplicationProfile, type ReadApplicationProfileOptions } from "./client.ts";
@@ -13,6 +15,26 @@ API 명령:
   get --out <path>
     fos-assistant Memory 의 identity/career-application-profile 본문을 저장소 밖 <path> 에 쓴다.
 `;
+
+/**
+ * 같은 디렉터리에 0600 임시 파일을 새로 만들어 쓰고 outPath 로 이름을 바꾼다.
+ * 이미 있는 파일이나 링크에 쓰지 않으므로 다른 사용자가 미리 만든 파일에 본문이 들어가지 않는다.
+ */
+function writeAtomically(outPath: string, content: string): void {
+  const tmpPath = join(dirname(outPath), `.${basename(outPath)}.${process.pid}.${randomBytes(6).toString("hex")}.tmp`);
+  const fd = openSync(tmpPath, "wx", 0o600);
+  try {
+    try {
+      writeFileSync(fd, content, "utf8");
+    } finally {
+      closeSync(fd);
+    }
+    renameSync(tmpPath, outPath);
+  } catch (error) {
+    rmSync(tmpPath, { force: true });
+    throw error;
+  }
+}
 
 /**
  * 지원서 공통 프로필을 저장소 밖 파일에 쓴다.
@@ -32,10 +54,7 @@ export async function readApplicationProfileCli(
   const outPath = assertOutsideRepository(out);
 
   const { document, tokenExpiresAt } = await readApplicationProfile(options);
-  const existed = existsSync(outPath);
-  writeFileSync(outPath, document.content, { encoding: "utf8", mode: 0o600 });
-  // mode 는 새 파일에만 적용되므로 이미 있던 파일은 권한을 다시 맞춘다.
-  if (existed) chmodSync(outPath, 0o600);
+  writeAtomically(outPath, document.content);
   return {
     collection: document.collection,
     documentKey: document.documentKey,
