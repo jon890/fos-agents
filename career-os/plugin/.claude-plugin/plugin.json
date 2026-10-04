@@ -2,5 +2,6 @@
   "name": "fos-career",
   "version": "0.2.0",
   "description": "후보자 맥락 문서와 프로필 원고를 고치고 GitHub 프로필을 갱신하며, 면접 연습 기록과 공부 추천을 커리어 Backend 에 남긴다.",
-  "author": { "name": "fos-agents" }
+  "author": { "name": "fos-agents" },
+  "skills": "./connector-skills"
 }

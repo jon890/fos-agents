@@ -125,7 +125,7 @@ test("errors 는 data-schema.md 의 커넥터 오류 코드 표에서 공통 어
   expect(connector.errors).toEqual(expected);
 });
 
-const skillsDirectory = join(import.meta.dir, "..", "skills");
+const connectorSkillsDirectory = join(import.meta.dir, "..", "connector-skills");
 
 function skillBodyOf(directory: string): string {
   for (const entry of readdirSync(directory, { recursive: true }))
@@ -143,7 +143,7 @@ function skillBodyOf(directory: string): string {
 }
 
 test("스킬 본문은 설치하는 쪽의 지침 상한 안에 있고 링크가 없다", () => {
-  const body = skillBodyOf(skillsDirectory);
+  const body = skillBodyOf(connectorSkillsDirectory);
   expect(body.length).toBeGreaterThan(0);
   for (const tool of Object.keys(connector.tools)) expect(body, tool).toContain(tool);
 });
@@ -160,7 +160,7 @@ test("스킬을 노트북 에이전트의 스킬 폴더에 링크하지 않는�
 
 test("새 스킬은 셸과 저장소 경로를 쓰지 않고 앞머리가 디렉터리와 맞는다", () => {
   for (const name of ["interview-practice", "study-topic-recommender"]) {
-    const text = readFileSync(join(skillsDirectory, name, "SKILL.md"), "utf8");
+    const text = readFileSync(join(connectorSkillsDirectory, name, "SKILL.md"), "utf8");
     const end = text.indexOf("\n---\n", 4);
     const front = text.slice(4, end);
     const body = text.slice(end + 5);
@@ -183,4 +183,15 @@ test("본문이 8001자인 스킬과 닫히지 않은 앞머리는 거절한다"
   expect(() => skillBodyOf(root)).toThrow("8000자를 넘는다");
   writeFileSync(join(root, "long", "SKILL.md"), "---\nname: long\n");
   expect(() => skillBodyOf(root)).toThrow("닫히지 않는다");
+});
+
+test("plugin.json 의 skills 는 connector-skills 하나만 가리킨다", () => {
+  expect(read(".claude-plugin/plugin.json").skills).toBe("./connector-skills");
+});
+
+test("Claude Code 전용 skills 와 대화용 connector-skills 에 같은 이름의 스킬이 없다", () => {
+  const codeSkills = join(import.meta.dir, "..", "skills");
+  const codeNames = existsSync(codeSkills) ? readdirSync(codeSkills) : [];
+  const shared = codeNames.filter((name) => readdirSync(connectorSkillsDirectory).includes(name));
+  expect(shared).toEqual([]);
 });
