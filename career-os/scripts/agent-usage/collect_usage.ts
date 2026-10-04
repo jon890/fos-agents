@@ -11,7 +11,7 @@ export type UsageSnapshotStore = {
 
 export type CollectResult = { month: string; code: "CREATED" | "EXISTS" | "NO_SESSIONS" | "UP_TO_DATE" | "FAILED" };
 
-const usage = `사용법: collect_usage.ts\n\n기록이 없는 끝난 달만 측정해 Backend 에 올린다. 인자는 받지 않는다.\n연결값은 CAREER_BACKEND_URL 과 CAREER_BACKEND_TOKEN(또는 CAREER_BACKEND_TOKEN_FILE)에서 읽는다.\n Backend 가 Cloudflare Access 뒤에 있으면 CAREER_BACKEND_ACCESS_CLIENT_ID 와 CAREER_BACKEND_ACCESS_CLIENT_SECRET 도 읽는다.\n\n로컬 명령:\n  help, --help, -h\n`;
+const usage = `사용법: collect_usage.ts\n\n기록이 없는 끝난 달만 측정해 Backend 에 올린다. 인자는 받지 않는다.\n연결값은 CAREER_BACKEND_URL 과 CAREER_BACKEND_TOKEN(또는 CAREER_BACKEND_TOKEN_FILE)에서 읽는다.\nBackend 가 Cloudflare Access 뒤에 있으면 CAREER_BACKEND_ACCESS_CLIENT_ID 와 CAREER_BACKEND_ACCESS_CLIENT_SECRET 도 읽는다.\n\n로컬 명령:\n  help, --help, -h\n`;
 
 /** `YYYY-MM` 을 연*12+(월-1) 의 정수로 바꾼다. 달 계산을 정수로 해야 연도를 넘을 때 `2026-00` 같은 달이 생기지 않는다. */
 function monthIndex(month: string): number {
