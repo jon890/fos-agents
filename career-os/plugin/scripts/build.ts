@@ -19,4 +19,41 @@ export async function buildBundle(outdir: string) {
   }
 }
 
-if (import.meta.main) await buildBundle(resolve(import.meta.dir, "../dist"));
+/**
+ * 로컬 실행기 번들이다. 면접과 공부 실행기를 하나로 묶어, plugin 만 설치한 곳에서
+ * 저장소와 `bun install` 없이 실행하게 한다(ADR-138).
+ */
+export async function buildLocalBundle(outdir: string) {
+  const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+  const repositoryRoot = resolve(root, "../..");
+  const result = await Bun.build({
+    entrypoints: [resolve(root, "../scripts/plugin-local/main.ts")],
+    target: "bun",
+    format: "esm",
+    minify: true,
+    outdir,
+    naming: "career-local.js",
+    plugins: [
+      {
+        // services/career-backend 에 node_modules 가 설치돼 있으면 그 아래 zod 가
+        // 따로 해석돼 번들이 달라진다. 저장소 루트의 zod 하나로 고정한다.
+        name: "pin-zod-to-repository-root",
+        setup(build) {
+          build.onResolve({ filter: /^zod(\/.*)?$/ }, (args) => ({
+            path: Bun.resolveSync(args.path, repositoryRoot),
+          }));
+        },
+      },
+    ],
+  });
+  if (!result.success) throw new Error("CAREER_LOCAL_BUILD_FAILED");
+  for (const output of result.outputs) {
+    await Bun.write(output.path, (await output.text()).replace(/^[\t ]+$/gm, ""));
+  }
+}
+
+if (import.meta.main) {
+  const outdir = resolve(import.meta.dir, "../dist");
+  await buildBundle(outdir);
+  await buildLocalBundle(outdir);
+}

@@ -72,8 +72,13 @@ const managedSkills = new Set([
   "application-package-writer",
   "resume-preparer",
   "interview-practice",
+  "interview-question-prep",
   "sync-profile",
 ]);
+
+export function isManagedSkill(skill: string | undefined): skill is string {
+  return skill !== undefined && skill !== "" && managedSkills.has(skill);
+}
 
 export async function beginSkillWorkspace(context: CliContext, skill: string | undefined) {
   validateManagedSkill(skill);
@@ -160,7 +165,7 @@ export function describeSkillSessionMismatch(
 }
 
 function validateManagedSkill(skill: string | undefined): asserts skill is string {
-  if (!skill || !managedSkills.has(skill)) {
+  if (!isManagedSkill(skill)) {
     throw new TransportError(makeRemoteError("check", "INVALID_MANIFEST"));
   }
 }
