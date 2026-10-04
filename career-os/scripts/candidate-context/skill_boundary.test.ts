@@ -14,10 +14,18 @@ function filesUnder(directory: string): string[] {
   });
 }
 
+function skillDirectory(skill: string): string {
+  for (const root of [skillsRoot, join(repositoryRoot, "career-os", "plugin", "skills"), join(repositoryRoot, "career-os", "plugin", "connector-skills")]) {
+    const directory = join(root, skill);
+    if (existsSync(directory)) return directory;
+  }
+  throw new Error(`스킬 디렉터리를 찾을 수 없다: ${skill}`);
+}
+
 describe("후보자 맥락 스킬 경계", () => {
   for (const skill of candidateContextSkills) {
     test(`${skill} 은 개인 brain 조회와 저장 안내를 담지 않는다`, () => {
-      const files = filesUnder(join(skillsRoot, skill));
+      const files = filesUnder(skillDirectory(skill));
       expect(files.length).toBeGreaterThan(0);
       for (const file of files) {
         const text = readFileSync(file, "utf8");

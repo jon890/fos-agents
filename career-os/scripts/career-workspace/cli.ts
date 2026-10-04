@@ -71,7 +71,6 @@ export async function runCareerWorkspaceCli(args: string[], context = createDefa
 const managedSkills = new Set([
   "application-package-writer",
   "resume-preparer",
-  "interview-practice",
   "interview-question-prep",
   "sync-profile",
 ]);

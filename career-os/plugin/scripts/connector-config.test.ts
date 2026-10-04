@@ -151,11 +151,10 @@ test("스킬 본문은 설치하는 쪽의 지침 상한 안에 있고 링크가
 test("스킬을 노트북 에이전트의 스킬 폴더에 링크하지 않는다", () => {
   const repoSkills = join(import.meta.dir, "../../.claude/skills");
   expect(existsSync(join(repoSkills, "career-connector"))).toBe(false);
-  for (const name of ["interview-practice", "study-topic-recommender"]) {
-    const stat = lstatSync(join(repoSkills, name));
-    expect(stat.isSymbolicLink(), `${name} 이 심볼릭 링크다`).toBe(false);
-    expect(stat.isDirectory(), `${name} 이 디렉터리가 아니다`).toBe(true);
-  }
+  expect(existsSync(join(repoSkills, "interview-practice"))).toBe(false);
+  const stat = lstatSync(join(repoSkills, "study-topic-recommender"));
+  expect(stat.isSymbolicLink(), "study-topic-recommender 가 심볼릭 링크다").toBe(false);
+  expect(stat.isDirectory(), "study-topic-recommender 가 디렉터리가 아니다").toBe(true);
 });
 
 test("새 스킬은 셸과 저장소 경로를 쓰지 않고 앞머리가 디렉터리와 맞는다", () => {

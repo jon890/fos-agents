@@ -1,9 +1,10 @@
 # 공개 질문 은행 보강
 
-이 참고 문서는 `interview-practice`가 공개 가능한 일반 backend·CS 면접 질문을 `public/question-bank/`에 추가하거나 고칠 때만 읽는다.
+이 참고 문서는 저장소 유지자가 공개 가능한 일반 backend·CS 면접 질문을 `public/question-bank/`에 추가하거나 고칠 때 읽는다.
 일반 답변 연습에서는 읽지 않는다.
 포지션별 질문은 해당 지원 디렉터리의 `evidence/interview-questions.json`에서 관리한다.
-외부 자료에서 질문 후보를 수집할 때는 먼저 `source-discovery.md`를 읽는다.
+외부 자료에서 질문 후보를 수집할 때는 먼저 [`source-discovery.md`](../../plugin/skills/interview-question-prep/references/source-discovery.md)를 읽는다.
+그 문서의 `<CAREER_LOCAL> interview-sources` 명령은 저장소에서 `bun career-os/scripts/interview-question-sources/cli.ts` 로 같은 인자를 써서 실행한다.
 
 ## 보강 대상 카테고리
 

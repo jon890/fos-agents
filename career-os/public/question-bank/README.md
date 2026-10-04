@@ -3,7 +3,7 @@
 일반 backend/CS 면접 질문을 공개 가능한 형태로 모아 두는 저장소다.
 포지션별 질문은 `application-package-writer`가 공고별 `interview-questions.json`에 만든다.
 이 질문 은행은 여러 포지션에서 다시 쓸 수 있는 공개 가능한 일반 질문만 담는다.
-질문 추가와 보강은 `interview-practice`의 공개 질문 유지보수 절차에서 수행한다.
+질문 추가와 보강은 [`MAINTENANCE.md`](MAINTENANCE.md)의 저장소 유지 절차로 한다.
 
 ## 카테고리
 
