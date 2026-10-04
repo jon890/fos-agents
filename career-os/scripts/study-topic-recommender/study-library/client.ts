@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import { createHash } from "node:crypto";
+import type { AccessCredentials } from "../../lib/access-credentials.ts";
 import { resolveCareerBackendConnection } from "../../lib/career-backend-config.ts";
 import { careerBackendRequest } from "../../lib/career-backend-http.ts";
 import {
@@ -70,6 +71,7 @@ function appendSearchParams(url: URL, params?: StudyLibraryRequestOptions["searc
 export class StudyLibraryClient {
   private readonly baseUrl: string;
   private readonly token: string;
+  private readonly access?: AccessCredentials;
   private readonly fetchImpl: StudyLibraryFetch;
   private readonly timeoutMs: number;
   private readonly maxRetries: number;
@@ -84,10 +86,12 @@ export class StudyLibraryClient {
         });
         this.baseUrl = connection.baseUrl;
         this.token = connection.token;
+        this.access = connection.access;
       } else {
         const connection = resolveCareerBackendConnection(process.env);
         this.baseUrl = connection.baseUrl;
         this.token = connection.token;
+        this.access = connection.access;
       }
     } catch (error) {
       throw new StudyLibraryConfigError(error instanceof Error ? error.message : String(error));
@@ -112,6 +116,7 @@ export class StudyLibraryClient {
       {
         baseUrl: this.baseUrl,
         token: this.token,
+        access: this.access,
         fetcher: this.fetchImpl,
         timeoutMs: this.timeoutMs,
         maxRetries: this.maxRetries,
