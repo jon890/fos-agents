@@ -65,7 +65,8 @@ export async function getPositionResearchConstraints(backend: CareerBackend) {
     )
       throw result.reason;
   const missing = Object.entries(settled).flatMap(([source, result]) =>
-    result.status === "rejected" ? [{ source, error: safeError(result.reason) }] : [],
+    // Only the code: the fixed messages are written for saves and documents and would mislead here.
+    result.status === "rejected" ? [{ source, code: safeError(result.reason).code }] : [],
   );
   return {
     readiness: missing.length === 0 ? ("ready" as const) : ("hold" as const),

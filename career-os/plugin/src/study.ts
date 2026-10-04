@@ -84,27 +84,27 @@ export type GetStudyCandidatesArgs = z.infer<typeof getStudyCandidatesSchema>;
 export type SaveStudyRecommendationArgs = z.infer<typeof saveStudyRecommendationSchema>;
 export type ListStudyCandidatesArgs = z.infer<typeof listStudyCandidatesSchema>;
 
-const candidatePageResponse = z.object({
-  candidates: z.array(
-    z.object({
-      contentKey: z.string(),
-      canonicalUrl: z.string(),
-      sourceKey: z.string(),
-      title: z.string(),
-      url: z.string(),
-      sourceName: z.string(),
-      category: categorySchema,
-      kind: z.string(),
-      published: z.string(),
-      excerpt: z.string().optional(),
-    }),
-  ),
-  recentStudyTopicKeys: z.array(z.string()),
-  nextCursor: z.string().nullable(),
-  historyVersion: z.number().int().nonnegative(),
-  candidateContextVersion: z.string(),
-  learningInterests: z.object({ version: z.number().int(), body: z.string() }),
+const candidateRow = z.object({
+  contentKey: z.string(),
+  title: z.string(),
+  url: z.string(),
+  sourceName: z.string(),
+  category: categorySchema,
+  kind: z.string(),
+  published: z.string(),
+  excerpt: z.string().optional(),
 });
+// list_study_candidates also needs the source identity; get_study_candidates keeps its older shape.
+const listedCandidateRow = candidateRow.extend({ canonicalUrl: z.string(), sourceKey: z.string() });
+const candidatePageResponse = <R extends z.ZodType>(row: R) =>
+  z.object({
+    candidates: z.array(row),
+    recentStudyTopicKeys: z.array(z.string()),
+    nextCursor: z.string().nullable(),
+    historyVersion: z.number().int().nonnegative(),
+    candidateContextVersion: z.string(),
+    learningInterests: z.object({ version: z.number().int(), body: z.string() }),
+  });
 const recommendationRunResponse = z.object({ reportId: z.string(), historyVersion: z.number().int().nonnegative() });
 const recommendationStatusResponse = z.object({ reportId: z.string(), exists: z.boolean() });
 
@@ -115,13 +115,16 @@ const truncate = (text: string) => {
   return chars.length > maxExcerptLength ? chars.slice(0, maxExcerptLength).join("") : text;
 };
 
-type CandidatePage = z.infer<typeof candidatePageResponse>;
 
 // Resolves to null when the Backend answers 409. The only 409 on this path is
 // CANDIDATE_CONTEXT_MISSING: no learning-interests document yet.
-async function fetchCandidatePage(backend: CareerBackend, query: URLSearchParams): Promise<CandidatePage | null> {
+async function fetchCandidatePage<R extends z.ZodType>(
+  backend: CareerBackend,
+  query: URLSearchParams,
+  row: R,
+): Promise<z.infer<ReturnType<typeof candidatePageResponse<R>>> | null> {
   try {
-    return await backend.request("GET", `/api/study/v1/candidates?${query}`, candidatePageResponse);
+    return await backend.request("GET", `/api/study/v1/candidates?${query}`, candidatePageResponse(row));
   } catch (error) {
     if (error instanceof CareerError && error.code === "CAREER_VERSION_CONFLICT") return null;
     throw error;
@@ -131,7 +134,7 @@ async function fetchCandidatePage(backend: CareerBackend, query: URLSearchParams
 export async function getStudyCandidates(backend: CareerBackend, args: GetStudyCandidatesArgs) {
   const query = new URLSearchParams({ limit: String(args.limit ?? 20) });
   if (args.category) query.set("category", args.category);
-  const page = await fetchCandidatePage(backend, query);
+  const page = await fetchCandidatePage(backend, query, candidateRow);
   if (!page) throw new CareerError("CAREER_LEARNING_INTERESTS_MISSING");
   return {
     candidateContextVersion: page.candidateContextVersion,
@@ -161,7 +164,7 @@ export async function listStudyCandidates(backend: CareerBackend, args: ListStud
     const value = args[key];
     if (value !== undefined) query.set(key, value);
   }
-  const page = await fetchCandidatePage(backend, query);
+  const page = await fetchCandidatePage(backend, query, listedCandidateRow);
   if (!page) return { status: "learning_interests_missing" as const };
   return {
     status: page.candidates.length > 0 ? ("ok" as const) : ("empty" as const),

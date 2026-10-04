@@ -320,19 +320,27 @@ describe("get_position_research_constraints", () => {
       const value = parse(result);
       expect(value.readiness).toBe("hold");
       expect(
-        Object.fromEntries(value.missing.map((m: { source: string; error: { code: string } }) => [m.source, m.error.code])),
+        Object.fromEntries(value.missing.map((m: { source: string; code: string }) => [m.source, m.code])),
       ).toEqual(h.missing);
       expect(value.exclusions).toEqual("exclusions" in h.missing ? null : exclusions);
       expect(value.companyPreferences).toEqual("companyPreferences" in h.missing ? null : companyPreferences);
     });
   }
 
-  test("token 이 거절되면 hold 가 아닌 CAREER_UNAUTHORIZED 오류다", async () => {
-    const { tools } = harness(backend({ companyPreferences: () => json({}, 401) }));
-    const result = await tools.call("get_position_research_constraints", {});
-    expect(result.isError).toBe(true);
-    expect(parse(result).error.code).toBe("CAREER_UNAUTHORIZED");
-  });
+  const rejections = [
+    { label: "제외 규칙이 401", overrides: { exclusions: () => json({}, 401) } },
+    { label: "제외 규칙이 403", overrides: { exclusions: () => json({}, 403) } },
+    { label: "회사 선호가 401", overrides: { companyPreferences: () => json({}, 401) } },
+    { label: "회사 선호가 403", overrides: { companyPreferences: () => json({}, 403) } },
+  ];
+  for (const r of rejections) {
+    test(`${r.label} 이면 hold 가 아닌 CAREER_UNAUTHORIZED 오류다`, async () => {
+      const { tools } = harness(backend(r.overrides));
+      const result = await tools.call("get_position_research_constraints", {});
+      expect(result.isError).toBe(true);
+      expect(parse(result).error.code).toBe("CAREER_UNAUTHORIZED");
+    });
+  }
 
   test("입력에 키가 있으면 fetch 없이 CAREER_INVALID_INPUT 이다", async () => {
     const { calls, tools } = harness(backend());
