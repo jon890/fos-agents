@@ -1313,10 +1313,10 @@ Hermes 에서는 서버 이름 `career` 로 `mcp__career__<도구>` 가 된다.
 | `list_profile_documents` | `READ`, `none` | 없음 | `{ documents: [{ documentKey, version, updatedAt }] }` |
 | `get_profile_document` | `READ`, `none` | `documentKey` | `{ document: { documentKey, body, version, note, updatedAt } }` |
 | `list_usage_snapshots` | `READ`, `none` | 없음 | `{ snapshots: [...] }`. Backend 의 응답을 달 오름차순 그대로 낸다 |
-| `get_github_profile` | `READ`, `none` | 없음 | `{ repo, branch, readme, chartExists }`. `readme` 는 README 가 없으면 `null` 이다 |
+| `get_github_profile` | `READ`, `none` | 없음 | `{ repo, branch, head, readme, chartExists }`. `head` 는 기본 branch 의 끝 커밋 SHA 이고 `readme`, `chartExists` 는 그 커밋에서 읽은 값이다. `readme` 는 README 가 없으면 `null` 이다 |
 | `save_context_document` | `WRITE`, `required` | `documentKey`, `body`, `note`, `expectedVersion` | `{ document: { documentKey, version, updatedAt } }` |
 | `save_profile_document` | `WRITE`, `required` | `documentKey`, `body`, `note`, `expectedVersion` | `{ document: { documentKey, version, updatedAt } }` |
-| `update_github_profile` | `WRITE`, `required` | `readme`, `months` | `{ changed, commitSha, branch, months, total }` |
+| `update_github_profile` | `WRITE`, `required` | `readme`, `months`, `expectedBranch`, `expectedHead` | `{ changed, commitSha, branch, months, total }` |
 | `get_interview_questions` | `READ`, `none` | `drillType`, 선택 `targetBar`, `count` | `{ drillType, today, questions: [{ ...질문, sourceScope, dueForReview }] }` |
 | `list_personal_questions` | `READ`, `none` | `drillType` | `{ items: [질문] }`. 켜진 개인 질문만 낸다 |
 | `save_interview_attempt` | `WRITE`, `required` | 연습 기록 칸. `attemptId` 는 선택 | `{ attemptId, evaluatedOn, progress }` |
@@ -1331,7 +1331,10 @@ Hermes 에서는 서버 이름 `career` 로 `mcp__career__<도구>` 가 된다.
 - 저장 요청의 `Idempotency-Key` 는 노트북의 CLI 가 같은 내용으로 만드는 값과 같다. 같은 저장을 두 길로 보내도 한 번만 반영된다
 - `update_github_profile` 의 `readme` 는 README 전체의 Markdown 이고, `months` 는 차트에 넣을 달(`YYYY-MM`)의 목록이다. 1개에서 6개까지 받고 겹치는 달을 받지 않는다. 차트에는 달 오름차순으로 넣는다
 - 고른 달의 막대가 모두 0 이면 그릴 차트가 없으므로 `update_github_profile` 은 `CAREER_INVALID_INPUT` 으로 거절한다
-- `update_github_profile` 은 숫자를 인자로 받지 않는다. 입력 스키마가 `readme` 와 `months` 밖의 키를 거절한다
+- `update_github_profile` 은 숫자를 인자로 받지 않는다. 입력 스키마가 `readme`, `months`, `expectedBranch`, `expectedHead` 밖의 키를 거절한다
+- `expectedBranch` 와 `expectedHead` 는 변경안을 만들 때 읽은 `get_github_profile` 의 `branch` 와 `head` 다. `expectedHead` 는 소문자 40자리 SHA 다. 둘은 승인 인자에 함께 저장되므로, 승인을 기다리는 사이 README 가 바뀌거나 기본 branch 가 바뀌면 실행할 때 `CAREER_GITHUB_STALE_REVIEW` 로 거절하고 GitHub 에 아무것도 쓰지 않는다. 최신 끝 커밋 위에 검토한 원고를 다시 올리지 않는다
+- 커밋이 하나도 없는 빈 프로필 저장소는 끝 커밋을 읽을 수 없어 `get_github_profile` 이 `CAREER_GITHUB_UNAVAILABLE` 로 답한다. 첫 커밋은 GitHub 에서 직접 만든다
+- 두 칸이 없는 옛 형식의 요청은 입력 검증에서 `CAREER_INVALID_INPUT` 으로 거절한다. 검토 기준을 모르는 원고를 최신 끝 커밋에 올리지 않기 위해서다
 - `total` 은 `97.9B` 같은 글이고 `commitSha` 는 올라간 커밋이다. `changed: false` 이면 저장소가 이미 같은 내용이라 커밋을 만들지 않은 것이고 `commitSha` 는 그때의 branch 끝이다
 - 결과는 MCP 응답의 첫 텍스트 칸에 JSON 으로 싣는다. `check_connection` 은 같은 값을 `structuredContent` 에도 싣는다
 - 오류는 `isError: true` 와 `{ error: { code, message } }` 다. `CAREER_BADGE_MISMATCH` 는 같은 객체에 `expected`(기록의 합계)와 `found`(README 의 값. 배지가 없거나 여럿이면 `null`)를, `CAREER_USAGE_MONTH_MISSING` 은 `missing`(없는 달의 목록)을 더한다
@@ -1421,6 +1424,7 @@ README 에는 `img.shields.io/badge/Tokens-<값>B-` 모양의 배지 주소가 �
 | `CAREER_GITHUB_UNAUTHORIZED` | GitHub 가 401 로 답함 | `credential_rejected` |
 | `CAREER_GITHUB_FORBIDDEN` | GitHub 가 401, 409, 422, 429 를 뺀 4xx 로 답함. 주로 403 과 404 이며 token 에 그 저장소의 권한이 없거나 저장소 이름이 틀리다 | `forbidden` |
 | `CAREER_GITHUB_CONFLICT` | branch 를 옮기는 마지막 요청에서만 GitHub 가 409 나 422 로 답함. 그 사이 다른 커밋이 올라왔다 | `unavailable` |
+| `CAREER_GITHUB_STALE_REVIEW` | 실행할 때의 기본 branch 나 그 끝 커밋이 `expectedBranch`, `expectedHead` 와 다름. 검토한 뒤 저장소가 바뀌었고 GitHub 에 아무것도 쓰지 않았다 | `invalid_input` |
 | `CAREER_GITHUB_UNAVAILABLE` | GitHub 의 5xx 와 429, branch 를 옮기기 전 단계의 409 와 422, 연결과 시간 초과 실패 | `unavailable` |
 | `CAREER_UNKNOWN_TOOL`, `CAREER_INTERNAL` | 지원하지 않는 도구 또는 내부 처리 실패 | |
 

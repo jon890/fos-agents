@@ -28,7 +28,7 @@ token 을 사용자에게 묻거나 대화에 붙여 넣도록 요청하지 않�
 - `list_context_documents`, `get_context_document`: 후보자 맥락 문서의 목록과 본문을 읽는다
 - `list_profile_documents`, `get_profile_document`: 프로필 원고의 목록과 본문을 읽는다
 - `list_usage_snapshots`: 달별 에이전트 사용량 기록을 읽는다
-- `get_github_profile`: 프로필 저장소의 README 와 차트 파일 유무를 읽는다
+- `get_github_profile`: 프로필 저장소의 기본 branch 와 끝 커밋(`head`), 그 커밋의 README 와 차트 파일 유무를 읽는다
 
 후보자 맥락 문서 키는 `learning-interests`, `position-preferences`, `application-state`, `career-status` 넷이다.
 프로필 원고 키는 `wanted`, `linkedin`, `github` 셋이다.
@@ -65,7 +65,7 @@ token 을 사용자에게 묻거나 대화에 붙여 넣도록 요청하지 않�
 1. `list_usage_snapshots`, `get_profile_document` 의 `github` 원고, `get_github_profile` 을 읽는다.
 2. 기록에 지난달이 없으면 멈추고 알린다.
 3. 현재 README 와 변경안의 차이, 차트에 넣을 달과 그 달들의 합계를 보여 주고 확인받는다.
-4. `update_github_profile` 을 한 번 부른다.
+4. `update_github_profile` 을 한 번 부른다. `expectedBranch` 와 `expectedHead` 에는 1단계에서 읽은 `branch` 와 `head` 를 그대로 넣는다.
 5. 결과의 커밋 번호와 합계를 알린다.
 6. 올라간 README 를 `save_profile_document` 로 `github` 원고에 저장한다. 이것도 승인 카드에서 승인해야 한다.
 
@@ -100,6 +100,8 @@ README 의 Tokens 배지 값은 `update_github_profile` 의 결과나 `CAREER_BA
 `CAREER_UNAUTHORIZED`, `CAREER_GITHUB_UNAUTHORIZED`, `CAREER_GITHUB_NOT_CONFIGURED` 는 연결 화면에서 token 을 다시 등록하라고 안내한다.
 `CAREER_NETWORK`, `CAREER_GITHUB_UNAVAILABLE` 은 반영 여부가 불명확하므로 다시 보내기 전에 읽기 도구로 상태를 확인한다.
 `CAREER_GITHUB_CONFLICT` 는 그 사이 다른 커밋이 올라와 반영되지 않은 것이다.
-`get_github_profile` 로 새 README 를 다시 읽고 변경안을 다시 맞춘 뒤 새로 승인받는다.
+`CAREER_GITHUB_STALE_REVIEW` 는 검토한 뒤 기본 branch 나 끝 커밋이 바뀌어 GitHub 에 아무것도 쓰지 않은 것이다.
+둘 다 `get_github_profile` 로 새 README 를 다시 읽고 변경안을 다시 맞춘 뒤 새 `head` 로 새로 승인받는다.
+같은 요청을 다시 승인해도 결과가 같으므로 이전 요청을 다시 보내지 않는다.
 문서 본문과 token 을 요약 밖으로 되풀이해 싣지 않는다.
 성공한 변경 결과만 간결히 알리고 요청한 작업이 끝나면 종료한다.

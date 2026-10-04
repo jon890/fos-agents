@@ -60,6 +60,7 @@
     "CAREER_GITHUB_UNAUTHORIZED": "credential_rejected",
     "CAREER_GITHUB_FORBIDDEN": "forbidden",
     "CAREER_GITHUB_CONFLICT": "unavailable",
+    "CAREER_GITHUB_STALE_REVIEW": "invalid_input",
     "CAREER_GITHUB_UNAVAILABLE": "unavailable",
     "CAREER_STUDY_CONFLICT": "invalid_input",
     "CAREER_STUDY_ALREADY_SAVED": "invalid_input",
