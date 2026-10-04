@@ -20,7 +20,7 @@ test("schema 2 정책은 실제 MCP 도구를 빠짐없이 선언하고 미선�
   expect(Object.keys(connector.tools).sort()).toEqual(Object.keys(toolDefinitions).sort());
 });
 
-test("확인 도구는 승인 없는 READ 정책이고 서버가 readOnlyHint 로 표시한다", async () => {
+test("확인 도구는 승인 없는 READ 정책이고 서버가 확인 도구와 조사 도구 둘을 readOnlyHint 로 표시한다", async () => {
   expect(connector.tools[connector.verify.tool]).toMatchObject({ risk: "READ", approval: "none" });
   const server = createServer({
     CAREER_BACKEND_URL: "https://career.example.com/",
@@ -35,6 +35,15 @@ test("확인 도구는 승인 없는 READ 정책이고 서버가 readOnlyHint �
     const { tools } = await client.listTools();
     const verifyTool = tools.find((tool) => tool.name === connector.verify.tool);
     expect(verifyTool?.annotations?.readOnlyHint).toBe(true);
+    // The research tools are read by an agent that picks its own topics, so they must never look writable.
+    for (const name of ["list_study_candidates", "get_position_research_constraints"]) {
+      const tool = tools.find((candidate) => candidate.name === name);
+      expect({ name, readOnly: tool?.annotations?.readOnlyHint, destructive: tool?.annotations?.destructiveHint }).toEqual({
+        name,
+        readOnly: true,
+        destructive: false,
+      });
+    }
   } finally {
     await client.close();
     await server.close();
@@ -85,8 +94,8 @@ test("plugin.json 과 package.json 의 version 이 같다", () => {
   expect(read(".claude-plugin/plugin.json").version).toBe(read("package.json").version);
 });
 
-test("도구는 열여섯이고 WRITE 는 저장 도구 다섯과 GitHub 갱신 도구뿐이며 모두 승인이 필요하다", () => {
-  expect(Object.keys(connector.tools)).toHaveLength(16);
+test("도구는 열여덟이고 WRITE 는 저장 도구 다섯과 GitHub 갱신 도구뿐이며 모두 승인이 필요하다", () => {
+  expect(Object.keys(connector.tools)).toHaveLength(18);
   const writes = policies.filter(([, policy]) => policy.risk === "WRITE");
   expect(writes.map(([name]) => name).sort()).toEqual([
     "save_context_document",

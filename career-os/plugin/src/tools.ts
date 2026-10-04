@@ -23,12 +23,16 @@ import {
   saveInterviewAttempt,
   savePersonalQuestion,
 } from "./interview.ts";
+import { getPositionResearchConstraints, getPositionResearchConstraintsSchema } from "./positions.ts";
 import {
   getStudyCandidates,
   getStudyCandidatesSchema,
+  listStudyCandidates,
+  listStudyCandidatesSchema,
   saveStudyRecommendation,
   saveStudyRecommendationSchema,
   type GetStudyCandidatesArgs,
+  type ListStudyCandidatesArgs,
   type SaveStudyRecommendationArgs,
 } from "./study.ts";
 
@@ -175,6 +179,16 @@ export const toolDefinitions: Record<string, { description: string; schema: z.Zo
       "고른 공부 주제와 자료, 고르지 않은 후보의 제외 이유를 오늘 추천으로 저장. 주제 4개, 자료 합계 8개, 제외 20개까지다",
     schema: saveStudyRecommendationSchema,
   },
+  list_study_candidates: {
+    description:
+      "조사 출발점으로 쓸 미추천 공부 후보를 필터와 cursor 로 한 쪽씩 조회. 자료 식별자와 원문 URL, 관심사 버전, 최근 추천 주제를 싣는다. 빈 결과는 웹에 자료가 없다는 뜻이 아니다. limit 기본값은 20",
+    schema: listStudyCandidatesSchema,
+  },
+  get_position_research_constraints: {
+    description:
+      "포지션 조사에 쓸 개인 제외 규칙(대상, 근거, 만료일)과 회사별 수동 선호 조회. 둘 중 하나라도 읽지 못하면 readiness 가 hold 이고 추천 확정을 미룬다",
+    schema: getPositionResearchConstraintsSchema,
+  },
 };
 
 type ToolResult = {
@@ -259,6 +273,10 @@ export class CareerTools {
           return this.success(
             await saveStudyRecommendation(this.backend, parsed.data as SaveStudyRecommendationArgs, this.now),
           );
+        case "list_study_candidates":
+          return this.success(await listStudyCandidates(this.backend, parsed.data as ListStudyCandidatesArgs));
+        case "get_position_research_constraints":
+          return this.success(await getPositionResearchConstraints(this.backend));
       }
       throw new CareerError("CAREER_UNKNOWN_TOOL");
     } catch (error) {
