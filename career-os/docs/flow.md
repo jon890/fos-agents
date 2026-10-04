@@ -179,7 +179,13 @@ sequenceDiagram
 이름, 연락처, 병역, 학력과 정확한 재직 기간을 담은 문서다. 원본은 fos-assistant Memory 의 `identity` collection 에 있는 민감 문서 `career-application-profile` 이다.
 career-os 는 서비스 토큰으로 읽기만 한다. 이유는 [ADR-136](adr/ADR-136-지원서-공통-프로필은-fos-assistant-memory에서-서비스-토큰으로-읽는다.md)을 따른다.
 
-`application-package-writer` 가 지원서 입력을 준비할 때 `scripts/application-profile/read_application_profile.ts get --out <저장소 밖 경로>` 를 부른다.
+`application-package-writer` 가 지원서 입력을 준비할 때 저장소 루트에서 아래 명령을 부른다.
+Bun 은 실행한 디렉터리의 `.env` 만 자동으로 읽으므로 `--env-file` 로 `career-os/.env` 를 넘긴다.
+
+```bash
+bun --env-file=career-os/.env career-os/scripts/application-profile/read_application_profile.ts get --out "${TMPDIR:-/tmp}/career-application-profile.md"
+```
+
 CLI 는 `GET {FOS_ASSISTANT_URL}/api/v1/service/memory-documents/identity/career-application-profile` 을 `Authorization: Bearer {FOS_ASSISTANT_SERVICE_TOKEN}` 으로 부른다.
 본문은 `--out` 파일에만 쓰고, 표준 출력에는 판 번호와 시각만 낸다. 스킬은 그 파일을 읽어 쓴 뒤 지운다.
 

@@ -38,13 +38,18 @@ career-os 에서 private brain 을 가리키는 마지막 자리를 없애려는
 
 - 「근거 원본 최신화 확인」 절의 `private brain 은 지원서 공통 프로필에만 쓰며 \`brain-search\` 로 조회한다.` 를 아래 두 줄로 바꾼다.
 
-  ```markdown
-  지원서 공통 프로필은 fos-assistant Memory 에 있고 `read_application_profile.ts get --out <저장소 밖 경로>` 로 읽는다.
-  읽은 파일은 쓰고 나서 지운다. 명령과 실패별 다음 행동은 [`flow.md`의 「지원서 공통 프로필」](../../../docs/flow.md#지원서-공통-프로필)이 소유한다.
+  ````markdown
+  지원서 공통 프로필은 fos-assistant Memory 에 있고 저장소 루트에서 아래 명령으로 읽는다.
+
+  ```bash
+  bun --env-file=career-os/.env career-os/scripts/application-profile/read_application_profile.ts get --out "${TMPDIR:-/tmp}/career-application-profile.md"
   ```
 
+  읽은 파일은 쓰고 나서 `rm` 으로 지운다. 실패별 다음 행동은 [`flow.md`의 「지원서 공통 프로필」](../../../docs/flow.md#지원서-공통-프로필)이 소유한다.
+  ````
+
 - 단계 6 의 `private brain 에서 확인한 공통 프로필의 현재 값, 회사별 입력 선택, 첨부 파일,` 을 `fos-assistant Memory 에서 읽은 공통 프로필의 현재 값, 회사별 입력 선택, 첨부 파일,` 로 바꾼다.
-- 같은 단계 6 의 그 문단 끝에 `공통 프로필에 없거나 틀린 값은 career-os 가 고치지 않는다. 사용자에게 fos-assistant 웹 화면에서 고치라고 알리고, 고친 뒤 다시 읽는다.` 를 더한다.
+- 같은 단계 6 의 그 문단에서 `…한 번의 제출 스냅샷으로 묶는다.` 바로 뒤에(`최종 제출 버튼은 …` 앞에) `공통 프로필에 없거나 틀린 값은 career-os 가 고치지 않는다. 사용자에게 fos-assistant 웹 화면에서 고치라고 알리고, 고친 뒤 다시 읽는다.` 를 더한다.
 
 ### 2. `career-os/.claude/skills/application-package-writer/references/evidence-source-freshness.md`
 
@@ -93,6 +98,7 @@ career-os 에서 private brain 을 가리키는 마지막 자리를 없애려는
 - `validate_application_package.test.ts` 에 테스트 둘을 더한다. 기존 `form(answer)` 와 `write` helper 를 쓴다.
   - 옛 값 `private-brain:career-application-profile` 을 담은 폼은 형식 오류(`형식이 올바르지 않습니다`)가 없다.
   - `profileSource` 가 `"unknown-source"` 인 폼은 `evidence/application-form.json 형식이 올바르지 않습니다` 오류가 난다.
+  - 두 테스트의 이름에 `private-brain` 문자열을 넣지 않는다. 옛 값 문자열은 fixture 값 한 곳에만 둔다. 검증 절의 `git grep` 기대값이 그 파일에서 한 줄이다.
   - `form` 이 `profileSource` 를 바꿀 수 없으면 두 번째 인자 `profileSource = "fos-assistant-memory:identity/career-application-profile"` 를 더한다.
 
 ### 7. `career-os/scripts/candidate-context/skill_boundary.test.ts`
@@ -104,6 +110,7 @@ career-os 에서 private brain 을 가리키는 마지막 자리를 없애려는
   - `AGENTS.md` 본문에 `removedTerms` 의 셋이 모두 없다.
   - `career-application-profile` 을 담은 줄이 4 줄 이상이고, 그 줄이 모두 `|` 로 시작하며 `read_application_profile.ts` 를 담는다.
 - `removedTerms` 는 그대로 둔다.
+- 새 테스트 `"application-package-writer 는 공통 프로필을 CLI 로 읽게 한다"` 를 더한다. `application-package-writer/SKILL.md` 본문이 `bun --env-file=career-os/.env career-os/scripts/application-profile/read_application_profile.ts get --out` 을 담는다.
 
 ### 8. `career-os/AGENTS.md`
 

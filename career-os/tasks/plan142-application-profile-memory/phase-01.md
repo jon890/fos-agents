@@ -72,7 +72,9 @@ fos-assistant 저장소는 고치지 않는다. 실제 fos-assistant 를 부르�
   - URL 은 `new URL(\`/api/v1/service/memory-documents/${APPLICATION_PROFILE_COLLECTION}/${APPLICATION_PROFILE_DOCUMENT_KEY}\`, baseUrl)`.
   - `method: "GET"`, 머리말은 `Authorization: Bearer <token>` 과 `Accept: application/json` 둘뿐. `Origin` 을 넣지 않는다.
   - `redirect: "error"`, `signal: AbortSignal.timeout(timeoutMs)`.
-  - 5xx 와 연결 실패만 `maxRetries` 번까지 다시 시도한다. 다시 시도하기 전에 응답 본문을 취소한다. 4xx 는 바로 던진다.
+  - 5xx, 연결 실패, timeout 을 `maxRetries` 번까지 다시 시도한다. 다시 시도하기 전에 응답 본문을 취소한다. 4xx 는 바로 던진다.
+  - `AbortSignal.timeout(timeoutMs)` 는 시도마다 새로 만든다. `career-backend-http.ts` 와 같다.
+  - 200 응답의 본문을 읽다가 `SyntaxError` 가 아닌 오류(스트림 끊김)가 나면 연결 실패로 보고 `NETWORK_ERROR` 로 다시 시도한다. `SyntaxError` 와 schema 위반은 다시 시도하지 않고 `INVALID_RESPONSE` 다.
   - 실패 응답의 본문은 `code` 만 읽는다. 읽지 못해도 위 표로 판정한다.
   - `tokenExpiresAt` 은 `X-Service-Token-Expires-At` 머리말 값, 없으면 `null`.
 
