@@ -19,7 +19,8 @@ const messages = {
   CAREER_UNAVAILABLE: "커리어 Backend 가 응답하지 않습니다. 잠시 뒤 다시 시도해 주세요.",
   CAREER_NETWORK:
     "커리어 Backend 연결 결과를 확인할 수 없습니다. 저장을 다시 보내기 전에 문서를 다시 읽어 확인해 주세요.",
-  CAREER_INVALID_RESPONSE: "응답 형식을 확인할 수 없습니다. 요청을 반복하지 말고 문서를 다시 읽어 확인해 주세요.",
+  CAREER_INVALID_RESPONSE:
+    "응답 형식을 확인할 수 없습니다. 오류에 attemptId 가 있으면 그 값으로만 다시 보내고, 없으면 요청을 반복하지 말고 문서를 다시 읽어 확인해 주세요.",
   CAREER_INVALID_INPUT: "도구 입력을 확인해 주세요.",
   CAREER_USAGE_MONTH_MISSING: "고른 달 가운데 사용량 기록이 없는 달이 있습니다.",
   CAREER_BADGE_MISMATCH: "README 의 Tokens 배지가 사용량 기록의 합계와 맞지 않습니다.",

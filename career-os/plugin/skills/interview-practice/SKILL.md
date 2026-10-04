@@ -40,7 +40,8 @@ description: 커리어 Backend 의 복습 상태로 공개 질문과 개인 질�
 꼬리질문은 `rootQuestionId`, `parentQuestion`, `followUpDepth`, `followUpAxis` 를 함께 넘긴다.
 `followUpAxis` 는 선택 근거가 `decision`, 반례가 `counterexample`, 운영이 `operations`, 근거 경계가 `evidence-boundary`, 범위를 줄여 묻기가 `clarification` 이다.
 승인은 같은 지침의 「승인」 절을 따른다.
-`CAREER_NETWORK` 가 오면 오류의 `attemptId` 를 넣고 나머지 인자는 바꾸지 않은 채 새로 승인받는다.
+`CAREER_NETWORK` 나 `CAREER_INVALID_RESPONSE` 가 오면 오류의 `attemptId` 를 넣고 나머지 인자는 바꾸지 않은 채 새로 승인받는다.
+다시 보낸 호출도 `CAREER_INVALID_RESPONSE` 로 끝나면 더 보내지 않고 사용자에게 알린다.
 `CAREER_ATTEMPT_PENDING` 이 오면 잠시 뒤 오류의 `attemptId` 를 넣고 나머지 인자는 바꾸지 않은 채 새로 승인받는다.
 
 ## 5. 개인 질문

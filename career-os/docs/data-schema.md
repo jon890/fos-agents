@@ -1346,7 +1346,7 @@ Hermes 에서는 서버 이름 `career` 로 `mcp__career__<도구>` 가 된다.
 - `today` 는 Asia/Seoul 기준 날짜다. 선별 규칙은 노트북의 `drill-engine.ts select` 와 같은 함수다
 - `save_interview_attempt` 의 칸은 `POST /api/interview/v1/attempts` 의 요청과 같다. `attemptId` 를 넘기지 않으면 서버가 UUID 를 만든다. `Idempotency-Key` 는 `attemptId` 다
 - `save_personal_question` 은 `PUT /api/interview/v1/personal-questions/{question.id}` 다. 노트북의 CLI 처럼 호출마다 새 `Idempotency-Key`(`personal-question:<UUID>`)를 쓴다
-- `CAREER_NETWORK` 로 끝난 `save_interview_attempt` 는 오류 객체에 그때 쓴 `attemptId` 를 더한다
+- `CAREER_NETWORK` 나 `CAREER_INVALID_RESPONSE` 로 끝난 `save_interview_attempt` 는 오류 객체에 그때 쓴 `attemptId` 를 더한다. 2xx 를 받았어도 본문을 읽지 못하면 저장됐는지 알 수 없기 때문이다
 - `save_interview_attempt` 에 Backend 가 409 로 답하면 같은 `attemptId` 의 요청이 아직 처리 중인 것이라 `CAREER_ATTEMPT_PENDING` 이다. 오류 객체에 `attemptId` 를 더한다
 
 공부 추천 도구의 계약이다. 칸의 제약은 [추천 실행](#추천-실행)과 Backend 의 `src/study/schema.ts` 와 같다.
