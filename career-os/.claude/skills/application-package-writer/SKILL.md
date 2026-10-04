@@ -29,7 +29,15 @@ description: 공고가 찾는 사람과 후보자의 경험이 부합하는지 �
 
 위 동기화가 다루지 않는 `fos-study` 로컬 사본이 원격보다 뒤처졌는지 단계 1로 들어가기 전에 검사한다.
 없는 문서는 없는 경험으로 판정되므로, 근거를 읽기 전에 확인한다.
-private brain 은 지원서 공통 프로필에만 쓰며 `brain-search` 로 조회한다.
+지원서 공통 프로필은 fos-assistant Memory 에 있다.
+`evidence/application-form.json` 을 만들 때만 저장소 루트에서 아래 명령으로 읽는다.
+
+```bash
+bun --env-file=career-os/.env career-os/scripts/application-profile/read_application_profile.ts get --out "${TMPDIR:-/tmp}/career-application-profile.md"
+```
+
+읽은 파일은 쓰고 나서 `rm` 으로 지운다.
+실패별 다음 행동은 [`flow.md`의 「지원서 공통 프로필」](../../../docs/flow.md#지원서-공통-프로필)이 소유한다.
 경력과 경험 경계는 `manage_candidate_context.ts get --key career-status` 로 읽는다.
 
 검사 명령과 판정별 다음 행동, 당길 때 유의할 점은 [근거 원본 최신화 확인](references/evidence-source-freshness.md)이 소유한다.
@@ -240,8 +248,10 @@ private brain 은 지원서 공통 프로필에만 쓰며 `brain-search` 로 조
 | 면접에서 검증받을 내용 | 3단계의 `공백` 과 4단계에서 설명이 막힌 사례 |
 
 지원서 자동 입력을 준비할 때만 `evidence/application-form.json` 을 만든다.
-private brain 에서 확인한 공통 프로필의 현재 값, 회사별 입력 선택, 첨부 파일,
+fos-assistant Memory 에서 읽은 공통 프로필의 현재 값, 회사별 입력 선택, 첨부 파일,
 서술형 질문과 답변을 한 번의 제출 스냅샷으로 묶는다.
+공통 프로필에 없거나 틀린 값은 career-os 가 고치지 않는다.
+사용자에게 fos-assistant 웹 화면에서 고치라고 알리고, 고친 뒤 다시 읽는다.
 최종 제출 버튼은 사용자 승인 전에 누르지 않는다. 이 계약이 그것을 강제한다.
 
 **통과 조건:** 위 산출물 셋이 있고, 여섯 절이 각각 받아 쓸 것에 연결된다.

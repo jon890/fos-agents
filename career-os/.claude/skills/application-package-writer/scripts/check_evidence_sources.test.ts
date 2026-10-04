@@ -72,15 +72,13 @@ describe("근거 원본 목록의 문서 계약", () => {
   });
 
   /**
-   * `code-architecture.md` 의 「interview-practice」와 ADR-102 가
-   * 실행 스크립트는 brain 을 직접 조회하지 않는다고 정한다.
-   * 공통 프로필은 `brain-search` 로 묻는 곳이라 경로를 요구하면 그 결정을 어긴다.
+   * ADR-136 이 공통 프로필을 fos-assistant Memory 에서 CLI 로 읽는다고 정한다. 경로를 요구하면 조회 방식과 검사기가 묶인다.
    */
-  test("private brain 의 경로를 요구하지 않는다", () => {
+  test("지원서 공통 프로필의 경로를 요구하지 않는다", () => {
     const paths = EVIDENCE_SOURCES.flatMap((source) => source.paths);
 
     expect(paths.some((path) => path.includes("brain"))).toBe(false);
-    expect(reference).toContain("private brain 을 경로로 확인하지 않는 이유");
+    expect(reference).toContain("지원서 공통 프로필을 경로로 확인하지 않는 이유");
   });
 });
 

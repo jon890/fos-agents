@@ -8,7 +8,7 @@
  * 그 사이 추가된 문서 넷이 적합도 판정과 이력서 문장을 바꿨다.
  *
  * 이 위험은 로컬 사본을 두는 원본에만 있다.
- * `brain-search` 로 그때그때 조회하는 지원서 공통 프로필에는 뒤처질 사본이 없다.
+ * `read_application_profile.ts` 로 그때그때 읽는 지원서 공통 프로필에는 뒤처질 사본이 없다.
  *
  * 검사만 하고 당기지 않는다. 읽기 전용 저장소이며 당기는 과정에 사람이 판단할 것이 있다.
  * 판정별 다음 행동은 `references/evidence-source-freshness.md` 가 소유한다.
@@ -38,9 +38,7 @@ export type EvidenceSourceSpec = {
  * 경로로 확인하는 원본만 담는다.
  *
  * 홈서버 작업본은 `skill begin <SKILL_NAME>` 이 이미 받아 온다.
- * 지원서 공통 프로필(private brain)도 여기 없다. `brain-search` 로 조회하는 것이며 경로로 여는 것이 아니다.
- * `docs/code-architecture.md` 의 「interview-practice」와 ADR-102 가
- * 실행 스크립트가 brain 을 직접 조회하지 않는다고 정한다.
+ * 지원서 공통 프로필도 여기 없다. fos-assistant Memory 에서 CLI 로 읽는 것이며 경로로 여는 것이 아니다(ADR-136).
  *
  * `career-os/sources/fos-study` 는 추적하지 않는 clone 이거나 symlink 라서 워크트리에는 없다.
  * 그래서 `${PERSONAL_ROOT}` 아래의 실제 저장소를 두 번째 자리로 둔다.

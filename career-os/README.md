@@ -25,7 +25,8 @@ fos-assistant 의 대화에서 문서를 고치고, 면접을 연습하고, 공�
 
 clone 뒤에는 `.env.example`에서 필요한 secret 키 이름을 확인한다.
 현재 경력, 역할 선호, 경험 경계와 지원 상태는 커리어 Backend 의 후보자 맥락 문서가 기준 원본이다.
-연락처와 신원을 담은 지원서 공통 프로필만 private brain 에 있다.
+연락처와 신원을 담은 지원서 공통 프로필은 fos-assistant Memory 에 있고 서비스 토큰으로 읽기만 한다.
+연결값 `FOS_ASSISTANT_URL`, `FOS_ASSISTANT_SERVICE_TOKEN` 을 `.env` 에 둔다.
 
 `scripts/career-workspace/`에는 비공개 작업 파일의 manifest, 준비, 차이 확인과 발행을 담당하는 공통 CLI가 있다.
 홈서버의 `career-storage`는 `career-os` S3 bucket에 검증된 불변 release를 보관하고 검증이 끝난 뒤 current pointer를 바꾼다.

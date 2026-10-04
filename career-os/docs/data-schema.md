@@ -69,6 +69,7 @@ HTTP 계약은 [`flow.md`](flow.md#후보자-맥락-문서)가 소유한다.
 | `career-status` | 현재 경력, 강점, 경험 경계와 지원 전략 | `resume-preparer`, `application-package-writer`, `interview-practice`, `sync-profile` |
 
 연락처, 생년월일, 병역과 정확한 재직 기간 같은 지원서 공통 프로필은 문서 키에 넣지 않는다.
+그 원본은 fos-assistant Memory 이고 읽는 방법은 [`flow.md`](flow.md#지원서-공통-프로필)가 소유한다.
 
 `candidate_context_documents` 는 문서 키마다 한 행이다.
 
@@ -186,7 +187,7 @@ publish tar 의 최상위는 `workspace-draft.json` 과 세 관리 root 만 허�
 
 경력, 역할 선호와 경험 경계는 후보자 맥락 문서에 두고, 지원별 사실과 표현 확인은 `evidence/candidate-interview.md`의 기존 계약을 따른다.
 작성 취향은 스킬에서 유지하고, 문서에서 읽은 내용은 해당 문장을 판단하는 데 필요한 문서 키와 version 만 지원 기록에 연결한다.
-연락처, 신원과 정확한 재직 기간은 private brain 의 지원서 공통 프로필에만 있다.
+연락처, 신원과 정확한 재직 기간은 fos-assistant Memory 의 지원서 공통 프로필에만 있다.
 
 ## interview-practice
 

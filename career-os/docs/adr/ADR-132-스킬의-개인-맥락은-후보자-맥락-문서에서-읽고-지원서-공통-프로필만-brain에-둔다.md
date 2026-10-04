@@ -9,6 +9,7 @@
   - 재지원 간격의 날짜는 `position_exclusions.expires_at` 에만 둔다. `application-state` 문서는 지원 결과, 현재 집중 대상과 사용 원칙을 담고 날짜를 적지 않는다.
   - 포지션 분석 정책의 `candidateContextVersion` 은 `position-preferences:v{version}` 이다. `manage_candidate_context.ts put --key position-preferences` 가 저장에 성공하면 같은 명령이 분석 정책을 그 값으로 갱신한다. 수집 명령은 시작할 때 두 값이 다르면 멈춘다.
 - **이 결정에서 대체된 조항**: 「포지션 분석 정책의 `candidateContextVersion`」 조항 가운데 CLI 가 정책을 갱신하고 수집 명령이 두 값을 대조하는 부분은 [ADR-134](ADR-134-공고-분석의-기준-버전은-position-preferences-문서-버전에서-계산한다.md)가 대체했다. Backend 가 문서 버전에서 그때마다 계산한다.
+- **이 결정에서 대체된 조항 2**: 「private brain 에는 지원서 공통 프로필만 남긴다」 조항은 [ADR-136](ADR-136-지원서-공통-프로필은-fos-assistant-memory에서-서비스-토큰으로-읽는다.md)이 대체했다. 공통 프로필의 원본은 fos-assistant Memory 이고 career-os 는 서비스 토큰으로 읽기만 한다.
 - **대체된 부분**:
   - [ADR-130](ADR-130-면접-연습의-후보자-맥락은-memory-공급자-경계로-읽는다.md)의 `brain` 공급자를 `backend` 공급자로 대체한다. 필드가 정해진 JSON 계약, `file` 공급자와 자동 선택을 기각한 결정은 그대로다.
   - [ADR-102](ADR-102-별도-웹-대시보드보다-파일-기반-피드백-루프를-사용한다.md)의 현재 지원 대상과 회사별 지원 판단을 private brain 에 두는 결정을 `application-state`, `position-preferences` 문서로 대체한다.

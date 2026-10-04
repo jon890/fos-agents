@@ -22,13 +22,13 @@ function fixture(): string {
   return directory;
 }
 
-function form(answer: string): string {
+function form(answer: string, profileSource = "fos-assistant-memory:identity/career-application-profile"): string {
   return JSON.stringify({
     schemaVersion: 1,
     formUrl: "https://example.com/job/apply",
     verifiedAt: "2026-09-03",
     status: "fields_verified",
-    profileSource: "private-brain:career-application-profile",
+    profileSource,
     sections: [{ title: "기본 정보", fields: [{ id: "name", label: "이름", value: "지원자", source: "profile", required: true }] }],
     attachments: [],
     questions: [{ id: "motivation", prompt: "지원동기를 적어 주세요", answer }],
@@ -89,6 +89,23 @@ describe("validateApplicationPackage", () => {
     const result = validateApplicationPackage(directory);
     expect(result.passed).toBe(false);
     expect(result.errors.join("\n")).toContain("형식이 올바르지 않습니다");
+  });
+
+  test("이전 공통 프로필 출처 값으로 만든 지원서 입력값도 형식 검사를 통과한다", () => {
+    const directory = fixture();
+    write(directory, "evidence/application-form.json", form("문서 변환 서비스를 맡아 처리 비용을 줄였습니다.", "private-brain:career-application-profile"));
+
+    const result = validateApplicationPackage(directory);
+    expect(result.errors.join("\n")).not.toContain("형식이 올바르지 않습니다");
+  });
+
+  test("모르는 공통 프로필 출처 값은 형식 오류로 거부한다", () => {
+    const directory = fixture();
+    write(directory, "evidence/application-form.json", form("문서 변환 서비스를 맡아 처리 비용을 줄였습니다.", "unknown-source"));
+
+    const result = validateApplicationPackage(directory);
+    expect(result.passed).toBe(false);
+    expect(result.errors.join("\n")).toContain("evidence/application-form.json 형식이 올바르지 않습니다");
   });
 
   test("내부 문서의 근거 경로는 검사하지 않는다", () => {
