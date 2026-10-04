@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { accessHeaders, type AccessCredentials } from "./access-credentials.ts";
 
 const responseErrorSchema = z.object({
   error: z.object({ code: z.string(), message: z.string(), requestId: z.string().optional() }),
@@ -20,6 +21,7 @@ export class CareerBackendHttpError extends Error {
 export type CareerBackendHttpOptions = {
   baseUrl: string;
   token: string;
+  access?: AccessCredentials;
   timeoutMs?: number;
   maxRetries?: number;
   fetcher?: (input: URL, init: RequestInit) => Promise<Response>;
@@ -55,7 +57,11 @@ export async function careerBackendRequest<T>(
   let lastError: unknown;
   for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
     try {
-      const headers = new Headers({ Authorization: `Bearer ${options.token}`, Accept: "application/json" });
+      const headers = new Headers({
+        Authorization: `Bearer ${options.token}`,
+        Accept: "application/json",
+        ...accessHeaders(options.access),
+      });
       if (serialized !== undefined) headers.set("Content-Type", "application/json");
       if (idempotencyKey) headers.set("Idempotency-Key", idempotencyKey);
       const response = await fetcher(new URL(path, options.baseUrl), {

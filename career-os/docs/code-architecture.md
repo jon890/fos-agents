@@ -205,9 +205,10 @@ Backend는 local 개발에서는 `CAREER_BACKEND_DATABASE_URL`을 읽을 수 있
 운영에서는 `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`과 `DB_PASSWORD`를 읽는다.
 두 형식을 함께 주면 시작 전에 실패한다.
 client는 `CAREER_BACKEND_URL`과 `CAREER_BACKEND_TOKEN` 또는
-`CAREER_BACKEND_TOKEN_FILE`만 읽으며 DB 자격증명을 받지 않는다.
+`CAREER_BACKEND_TOKEN_FILE`, 선택값인 Cloudflare Access service token 을 읽으며 DB 자격증명을 받지 않는다.
 공부 추천과 포지션 client 는 `scripts/lib/career-backend-config.ts` 로 같은 연결값을 검증한다.
 포지션과 공부 추천 client 는 `scripts/lib/career-backend-http.ts` 에 HTTP 요청, 인증 헤더, 재시도, timeout 과 오류 응답 해석을 맡긴다.
+Cloudflare Access 헤더 `CF-Access-Client-Id`, `CF-Access-Client-Secret` 은 `scripts/lib/access-credentials.ts` 가 환경값에서 만들고 같은 HTTP 계층, 공부 추천 `doctor.ts` 와 지원서 공통 프로필 client 가 붙인다.
 멱등 키를 만드는 방법은 이미 저장된 키와 맞아야 하므로 각 client 가 지금 방식을 유지한다.
 
 **프로세스 시간대를 UTC에 고정한다.** 시각 컬럼이 모두 `DATETIME(3)`이라 시간대를 저장하지 않으므로,
@@ -594,6 +595,8 @@ client 가 읽는 환경값은 포지션 추천과 같다. 같은 Backend 이고
 | --- | --- |
 | `CAREER_BACKEND_URL` | 커리어 Backend origin |
 | `CAREER_BACKEND_TOKEN` 또는 `CAREER_BACKEND_TOKEN_FILE` | Bearer token. 파일은 mode 600 |
+| `CAREER_BACKEND_ACCESS_CLIENT_ID` | 선택값. Backend 가 Cloudflare Access 뒤에 있을 때 `CF-Access-Client-Id` 로 보낸다 |
+| `CAREER_BACKEND_ACCESS_CLIENT_SECRET` 또는 `CAREER_BACKEND_ACCESS_CLIENT_SECRET_FILE` | 선택값. `CF-Access-Client-Secret` 으로 보낸다. 파일은 mode 600. ID 와 secret 은 둘 다 있거나 둘 다 없어야 한다. launchd 로 도는 agent-usage 도 `--env-file` 로 같이 읽는다 |
 | `YOUTUBE_DATA_API_KEY` | 선택값. 있으면 YouTube uploads playlist 과거 수집을 쓴다 |
 
 `manage_reading_sources.ts`의 `list`, `add`, `update`, `disable`, `enable`과 다른 API 사용 명령은 연결 값이 없으면 요청 전에 실패한다.
@@ -634,8 +637,12 @@ client 가 읽는 환경값은 포지션 추천과 같다. 같은 Backend 이고
 | --- | --- |
 | `FOS_ASSISTANT_URL` | fos-assistant 의 HTTP 또는 HTTPS origin. path, query, hash 와 credentials 를 받지 않는다 |
 | `FOS_ASSISTANT_SERVICE_TOKEN` | fos-assistant 웹 화면에서 발급한 서비스 토큰. `identity` collection 과 그 민감 읽기를 받는다 |
+| `FOS_ASSISTANT_ACCESS_CLIENT_ID` | 선택값. fos-assistant 가 Cloudflare Access 뒤에 있을 때 `CF-Access-Client-Id` 로 보낸다 |
+| `FOS_ASSISTANT_ACCESS_CLIENT_SECRET` 또는 `FOS_ASSISTANT_ACCESS_CLIENT_SECRET_FILE` | 선택값. `CF-Access-Client-Secret` 으로 보낸다. 파일은 mode 600. ID 와 secret 은 둘 다 있거나 둘 다 없어야 한다 |
 
-두 값은 `career-os/.env` 에 두고 `bun --env-file=career-os/.env` 로 넘긴다.
+`FOS_ASSISTANT_URL` 과 `FOS_ASSISTANT_SERVICE_TOKEN` 은 `career-os/.env` 에 두고 `bun --env-file=career-os/.env` 로 넘긴다.
+Access 값도 같은 파일에 둔다.
+Access 값이 없으면 헤더를 보내지 않아 내부망과 터널 직접 경로는 그대로 동작한다.
 collection 과 문서 키는 코드에 고정한다. 설정으로 바꾸지 않는다.
 
 - `--out` 은 `scripts/candidate-context/repository-guard.ts` 로 git 저장소 밖인지 확인한 뒤에만 요청한다.
