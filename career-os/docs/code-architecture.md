@@ -323,6 +323,7 @@ npm test
 `scripts/interview-drill/`은 `interview-practice`의 기술·인성 모드에서 질문 선별과 연습 기록을 처리한다.
 공고별 `evidence/interview-questions.json`을 명시하면 포지션 질문과 공통 기반 질문을 섞어 구성한다.
 `follow-up-policy.ts`는 답변 수준에 따른 꼬리질문 축과 최대 깊이를 제공한다.
+`question-selection.ts` 는 질문 묶음과 복습 상태, 오늘 날짜를 받아 낼 질문을 고르는 순수 함수다. `drill-engine.ts` 가 파일과 저장소에서 읽은 값을 넘기고, fos-career 커넥터도 같은 함수를 번들해 쓴다.
 
 주제별 복습 상태, 연습 기록과 개인 질문은 `scripts/interview-drill/store/` 의 저장소 interface 뒤에 있다.
 결정과 근거는 [ADR-129](adr/ADR-129-면접-연습-기록과-개인-질문은-backend가-소유한다.md)에 있다.
@@ -655,6 +656,8 @@ plist 는 `~/Library/LaunchAgents/` 에, 로그는 `~/Library/Logs/fos-career-os
 `plugin/` 은 fos-assistant 가 사용자별 profile 에 설치하는 커넥터의 배포 단위다.
 plugin 이름과 커넥터 id 는 `fos-career`, MCP 서버 이름은 `career` 다.
 가계부 커넥터(`accountbook/plugin/`)와 같은 구성이고, 결정은 [ADR-135](adr/ADR-135-fos-assistant-커넥터는-backend를-감싸고-숫자는-기록에서-직접-읽는다.md)에 있다.
+이 plugin 은 career-os 의 스킬과 MCP 서버를 한데 묶는 배포 단위이기도 하다. 옮기는 단계와 세 층 구조는 [ADR-137](adr/ADR-137-스킬과-mcp를-plugin-하나로-묶고-세-단계로-옮긴다.md)을 따른다.
+지금은 1단계까지 왔다. `interview-practice` 와 `study-topic-recommender` 의 Backend 읽기와 쓰기가 MCP 도구이고, 두 스킬의 plugin 판이 `skills/` 에 있다.
 
 ```text
 career-os/plugin/
@@ -665,7 +668,10 @@ career-os/plugin/
 ├── src/
 ├── scripts/
 ├── dist/career-mcp.js
-└── skills/career-connector/SKILL.md
+└── skills/
+    ├── career-connector/SKILL.md
+    ├── interview-practice/SKILL.md
+    └── study-topic-recommender/SKILL.md
 ```
 
 | 경로 | 책임 |
@@ -673,12 +679,18 @@ career-os/plugin/
 | `plugin/connector.json` | 연결 화면의 입력 칸, 확인 도구, 도구별 위험도와 승인 방식, 오류 코드 대응 |
 | `plugin/.mcp.json` | `career` 서버의 실행 명령과 env 변수 참조. 실제 값을 담지 않는다 |
 | `plugin/src/server.ts` | stdio MCP 서버 조립과 도구별 읽기 전용 표시 |
-| `plugin/src/tools.ts` | 도구 열 개의 입력 스키마와 분기, 오류를 `{ error: { code, message } }` 로 바꾸는 일 |
+| `plugin/src/tools.ts` | 도구 열여섯 개의 입력 스키마와 분기, 오류를 `{ error: { code, message } }` 로 바꾸는 일 |
+| `plugin/src/interview.ts` | 면접 연습 도구 넷의 입력과 응답 스키마, 공개 질문 은행 번들과 질문 선별 호출 |
+| `plugin/src/study.ts` | 공부 추천 도구 둘의 입력과 응답 스키마, 후보 요약과 추천 저장 요청 조립 |
 | `plugin/src/backend.ts` | 커리어 Backend 의 Bearer HTTP client 와 응답 스키마 |
 | `plugin/src/github.ts` | GitHub REST client. 프로필 저장소 조회와 Git Data API 로 커밋 하나를 만드는 일 |
 | `plugin/src/*.test.ts`, `plugin/scripts/*.test.ts` | fetch 대역으로 도는 도구 테스트, 번들 일치와 manifest 일치 검사 |
 | `plugin/scripts/build.ts`, `plugin/dist/career-mcp.js` | 의존성을 포함한 단일 실행 파일의 빌드와 배포 |
 | `plugin/skills/career-connector/SKILL.md` | 연결용 에이전트의 지침. 프로필 갱신 순서와 승인 규칙 |
+| `plugin/skills/interview-practice/SKILL.md` | MCP 도구만으로 하는 면접 연습. 질문 고르기, 답변 평가, 기록과 개인 질문 저장 |
+| `plugin/skills/study-topic-recommender/SKILL.md` | MCP 도구만으로 하는 공부 추천. 수집된 후보에서 고르고 추천 이력을 저장 |
+| `scripts/interview-drill/question-selection.ts` | 질문 은행과 복습 상태로 낼 질문을 고르는 순수 함수. `follow-up-policy.ts` 의 상수만 import 한다. 노트북 CLI 와 커넥터가 같은 함수를 쓴다 |
+| `public/question-bank/*/questions.json` | 공개 질문 은행. 커넥터가 번들에 넣어 저장소 경로 없이 읽는다 |
 | `scripts/agent-usage/chart.ts` | 사용량 기록을 차트 입력으로 바꾸고 SVG 를 그리며 README 의 Tokens 배지 값을 읽는 순수 함수. import 가 없다 |
 | `scripts/agent-usage/render_chart.ts` | 노트북에서 같은 차트를 파일로 그리는 CLI. Backend 의 사용량 기록을 읽는다 |
 
@@ -690,8 +702,15 @@ career-os/plugin/
 
 두 client 가 어긋나지 않는지는 번들에 들어가지 않는 plugin 의 테스트가 확인한다. 문서 키 목록과 저장 요청의 `Idempotency-Key` 가 `scripts/candidate-context/` 와 `scripts/profile/` 의 것과 같은지 대조한다.
 
-**차트 코드는 `scripts/agent-usage/chart.ts` 하나다.** plugin 이 이 파일만 번들한다.
+**차트 코드는 `scripts/agent-usage/chart.ts` 하나다.** plugin 이 이 파일을 번들한다.
 다른 파일을 import 하지 않는 순수 함수라 위의 `zod` 문제가 없다. 노트북의 CLI 와 커넥터가 같은 함수로 같은 SVG 를 그린다.
+
+**질문 선별 코드는 `scripts/interview-drill/question-selection.ts` 하나다.** 같은 이유로 plugin 이 이 파일과 `follow-up-policy.ts` 를 번들한다.
+두 파일은 `zod` 와 파일 시스템을 import 하지 않는다. 질문 은행은 인자로 받고 날짜도 인자로 받는다.
+공개 질문 은행 JSON 도 번들에 들어간다. 그래서 `public/question-bank/` 를 고치면 번들을 다시 만들어 함께 커밋한다.
+
+**Backend 응답과 요청 스키마는 plugin 의 `zod` 로 다시 적는다.** `services/career-backend/src/interview/schema.ts` 와 `src/study/schema.ts` 를 번들하지 않는다.
+두 쪽이 같은지는 `plugin/src/contract-parity.test.ts` 가 같은 입력을 두 스키마에 넣어 대조한다.
 
 **MCP 서버는 프로세스 안의 상태에 기대지 않는다.** fos-assistant 는 승인된 쓰기를 새 프로세스에서 실행한다.
 파일을 읽거나 쓰지 않고, 호출 사이에 값을 기억하지 않는다.
@@ -700,12 +719,13 @@ career-os/plugin/
 
 fos-assistant 는 `plugin/` 을 복사하거나 마운트해 `connector.json`, `.mcp.json`, `skills/` 를 읽는다.
 
-- `connector.json` 은 `schema: 2` 다. 도구 열 개를 `tools` 에 빠짐없이 선언하고 `default_tool_policy` 는 `deny` 다. 새 도구를 더할 때는 같은 변경에서 `tools` 에 위험도와 승인 방식과 `title` 을 선언한다
+- `connector.json` 은 `schema: 2` 다. 도구 열여섯 개를 `tools` 에 빠짐없이 선언하고 `default_tool_policy` 는 `deny` 다. 새 도구를 더할 때는 같은 변경에서 `tools` 에 위험도와 승인 방식과 `title` 을 선언한다
 - 확인 도구 `check_connection` 은 `READ` 와 `none` 이고 서버가 `readOnlyHint: true` 로 표시한다
 - `.mcp.json` 의 서버 env 는 `connector.json` 의 `fields[].env` 와 `operator_env` 의 합과 같다. 다르면 커넥터가 카탈로그에서 빠진다
 - `operator_secrets` 를 선언하지 않는다. 선언하면 카탈로그에서 빠진다. 그래서 Backend 의 token 은 사용자가 연결 화면에 넣는다
-- `skills/` 아래 `SKILL.md` 의 본문이 연결용 에이전트의 지침이 된다. 앞머리를 뺀 본문은 8,000자를 넘지 않고 `skills/` 아래에 심볼릭 링크를 두지 않는다. 어기면 카탈로그에서 빠진다
-- 이 스킬을 `.claude/skills/` 에 링크하지 않는다. 노트북의 에이전트에는 이 MCP 도구가 없고 프로필 갱신은 `sync-profile` 이 맡는다
+- `skills/` 아래 모든 `SKILL.md` 의 본문을 이름 순으로 이어 붙인 것이 연결용 에이전트의 지침이 된다. 앞머리를 뺀 본문을 합쳐 8,000자를 넘지 않고 `skills/` 아래에 심볼릭 링크를 두지 않는다. 어기면 카탈로그에서 빠진다
+- plugin 스킬을 `.claude/skills/` 에 링크하지 않는다. 노트북의 에이전트에는 이 MCP 도구가 없다. 저장소를 연 세션은 `.claude/skills/` 의 `interview-practice`, `study-topic-recommender`, `sync-profile` 을 쓴다
+- 같은 이름의 스킬이 저장소와 plugin 에 함께 있다. plugin 판은 MCP 도구로 할 수 있는 단계만 담고, 나머지 단계는 저장소 판에서 하라고 적는다. 판단 규칙(채점 기준, 추천 기준)을 고치면 두 판을 함께 고친다. 저장소 판은 2단계에서 로컬 실행기를 plugin 에 넣은 뒤 지운다
 - 도구 목록이 바뀐 판을 배포하면 실행 환경이 MCP 서버를 다시 띄워야 새 도구가 보인다. 스킬 본문만 바뀐 판은 연결 확인으로 반영한다
 - 실행 파일에 의존성이 포함돼 있어 설치한 환경에서 `bun install` 을 하지 않는다. 소스를 고친 사람이 빌드해 `dist/career-mcp.js` 를 함께 커밋한다
 
@@ -717,7 +737,7 @@ fos-assistant 는 `plugin/` 을 복사하거나 마운트해 `connector.json`, `
 # cwd: 저장소 루트
 bun install --frozen-lockfile
 bun install --frozen-lockfile --cwd career-os/plugin
-bun test ./career-os/plugin ./career-os/scripts/agent-usage
+bun test ./career-os/plugin ./career-os/scripts/agent-usage ./career-os/scripts/interview-drill
 bun run --cwd career-os/plugin typecheck
 bun run --cwd career-os/plugin build
 claude plugin validate career-os/plugin

@@ -1,0 +1,14 @@
+{
+  "name": "plan143-career-plugin-stage1",
+  "description": "interview-practice 와 study-topic-recommender 의 Backend 읽기와 쓰기를 fos-career plugin 의 MCP 도구로 열고, 두 스킬의 plugin 판을 더한다. ADR-137 의 1단계다.",
+  "status": "pending",
+  "created_at": "2026-10-04",
+  "total_phases": 4,
+  "current_phase": 1,
+  "phases": [
+    { "number": 1, "file": "phase-01.md", "execution_profile": "standard" },
+    { "number": 2, "file": "phase-02.md", "execution_profile": "deep" },
+    { "number": 3, "file": "phase-03.md", "execution_profile": "standard" },
+    { "number": 4, "file": "phase-04.md", "execution_profile": "standard" }
+  ]
+}

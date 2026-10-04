@@ -787,6 +787,49 @@ sequenceDiagram
 
 문서를 고칠 때도 순서가 같다. 현재 본문과 `version` 을 읽고, 변경 전후를 보여 주고, 확인받은 뒤 저장 도구를 한 번 부른다.
 
+### 대화에서 면접 연습
+
+plugin 의 `interview-practice` 스킬이 MCP 도구만으로 연습한다. 판단 규칙은 저장소 판 스킬과 같다.
+
+```mermaid
+sequenceDiagram
+    participant U as 사용자
+    participant M as 에이전트
+    participant C as 커넥터 MCP 서버
+    participant B as 커리어 Backend
+    M->>C: get_context_document(career-status, application-state)
+    M->>C: get_interview_questions(drillType, targetBar, count)
+    C->>B: GET progress, GET personal-questions
+    C->>C: 번들한 공개 질문 은행과 개인 질문으로 선별
+    C-->>M: 오늘 질문
+    loop 질문과 꼬리질문마다
+        M-->>U: 질문 하나
+        U->>M: 답변
+        M->>M: 판정과 피드백
+        M->>C: save_interview_attempt(...)
+        U->>C: 승인 카드에서 승인
+        C->>B: POST attempts (Idempotency-Key 는 attemptId)
+        C-->>M: 갱신된 주제 복습 상태
+    end
+```
+
+1. 후보자 맥락은 `get_context_document` 로 `career-status` 와 `application-state` 를 읽는다. 둘 중 하나가 `CAREER_NOT_FOUND` 면 맥락 없이 연습하지 않고 문서를 먼저 저장하라고 알린다.
+2. `get_interview_questions` 는 공개 질문과 켜진 개인 질문에서 고른다. 공고별 질문(`applications/` 의 파일)은 쓰지 않는다. 그 연습은 저장소 판 스킬이 한다.
+3. 답변 하나마다 `save_interview_attempt` 를 한 번 부른다. `attemptId` 를 넘기지 않으면 서버가 새로 만들어 결과에 싣는다.
+4. 개인 질문은 `save_personal_question` 으로 더하고 끈다. 끌 때는 `list_personal_questions` 로 읽은 질문 본문을 그대로 넘기고 `enabled: false` 로 둔다.
+5. 고를 질문이 없으면 빈 목록을 알리고 끝낸다. 질문 은행 보강은 저장소 판 스킬이 한다.
+
+### 대화에서 공부 추천
+
+plugin 의 `study-topic-recommender` 스킬이 이미 수집된 후보에서 고른다.
+수집은 노트북이나 예약 실행의 `morning_reading_cli.ts --collect-only` 가 한다. 커넥터는 외부 피드에 닿지 않는다.
+
+1. `get_study_candidates` 가 `GET /api/study/v1/sources` 와 `GET /api/study/v1/candidates` 한 쪽을 읽는다. 결과는 후보, `recentStudyTopicKeys`, `candidateContextVersion`, `learningInterests` 와 켜진 소스 수다.
+2. 에이전트가 `learningInterests.body` 를 기준으로 원문을 비교해 주제를 고르고, 고르지 않은 후보마다 제외 이유를 붙인다.
+3. 고른 결과를 대화에 글로 보여 준다. HTML 리포트와 외부 게시는 저장소 판 스킬이 한다.
+4. `save_study_recommendation` 을 한 번 부른다. 승인 카드에서 승인하면 `POST /api/study/v1/recommendation-runs` 로 저장된다.
+5. 같은 날 리포트가 이미 있거나 그 사이 관심사 문서가 바뀌었으면 `CAREER_STUDY_CONFLICT` 다. 후보를 다시 읽고 새로 고른다.
+
 ### 커넥터에서 갈라지는 곳
 
 | 상황 | 동작 |
@@ -798,6 +841,9 @@ sequenceDiagram
 | branch 를 옮기는 마지막 요청에서 프로필 저장소에 다른 커밋이 올라왔음을 알게 된다 | `CAREER_GITHUB_CONFLICT`. branch 를 강제로 옮기지 않는다. 그 앞 단계의 409 와 422 는 `CAREER_GITHUB_UNAVAILABLE` 이다 |
 | 올릴 README 와 차트가 저장소의 것과 같다 | 커밋을 만들지 않고 `changed: false` 로 성공한다. 같은 요청을 다시 승인해도 빈 커밋이 쌓이지 않는다 |
 | 실행 결과가 「실행했는지 알 수 없음」 으로 온다 | 같은 도구를 다시 부르지 않는다. `get_github_profile` 이나 문서 조회로 반영됐는지 확인한다 |
+| 면접 기록 저장 결과를 알 수 없다 | 오류에 실린 `attemptId` 로 다시 승인받아 보낸다. Backend 가 같은 `attemptId` 의 저장한 응답을 돌려줘 횟수가 두 번 오르지 않는다 |
+| 공부 추천 저장 결과를 알 수 없다 | 오류에 실린 `generatedAt` 으로 다시 승인받아 보낸다. 같은 `reportId` 와 `generatedAt` 이면 멱등 키가 같다 |
+| 공부 후보가 비었다 | 수집이 아직 돌지 않았거나 모두 판정됐다. 빈 결과를 알리고 저장하지 않는다 |
 | 저장할 본문이 승인 인자 상한을 넘는다 | fos-assistant 가 호출을 거절한다. 노트북의 CLI 로 저장하라고 안내한다 |
 | 원티드나 LinkedIn 을 고쳐 달라고 한다 | 원고만 고치고, 사이트 반영은 노트북의 `sync-profile` 에서 하라고 안내한다 |
 

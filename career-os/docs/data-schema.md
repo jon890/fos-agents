@@ -1284,7 +1284,7 @@ HTTP 계약은 [`flow.md`](flow.md#프로필-http-계약)가 소유한다. 이�
 ## fos-career 커넥터
 
 커넥터는 아무것도 저장하지 않는다. 문서와 사용량 기록은 커리어 Backend 가, README 와 차트는 GitHub 의 프로필 저장소가 갖는다.
-이 절은 커넥터의 환경 변수와 MCP 계약의 단일 소스다. 입력 스키마의 정본은 `plugin/src/tools.ts` 다.
+이 절은 커넥터의 환경 변수와 MCP 계약의 단일 소스다. 입력 스키마의 정본은 `plugin/src/tools.ts`, `plugin/src/interview.ts`, `plugin/src/study.ts` 다.
 
 ### 커넥터 환경 변수
 
@@ -1317,6 +1317,12 @@ Hermes 에서는 서버 이름 `career` 로 `mcp__career__<도구>` 가 된다.
 | `save_context_document` | `WRITE`, `required` | `documentKey`, `body`, `note`, `expectedVersion` | `{ document: { documentKey, version, updatedAt } }` |
 | `save_profile_document` | `WRITE`, `required` | `documentKey`, `body`, `note`, `expectedVersion` | `{ document: { documentKey, version, updatedAt } }` |
 | `update_github_profile` | `WRITE`, `required` | `readme`, `months` | `{ changed, commitSha, branch, months, total }` |
+| `get_interview_questions` | `READ`, `none` | `drillType`, 선택 `targetBar`, `count` | `{ drillType, today, questions: [{ ...질문, sourceScope, dueForReview }] }` |
+| `list_personal_questions` | `READ`, `none` | `drillType` | `{ items: [질문] }`. 켜진 개인 질문만 낸다 |
+| `save_interview_attempt` | `WRITE`, `required` | 연습 기록 칸. `attemptId` 는 선택 | `{ attemptId, evaluatedOn, progress }` |
+| `save_personal_question` | `WRITE`, `required` | `drillType`, `enabled`, `question` | `{ questionId, drillType, topic, enabled, updatedAt }` |
+| `get_study_candidates` | `READ`, `none` | 선택 `limit`, `category` | `{ candidateContextVersion, historyVersion, learningInterests, recentStudyTopicKeys, nextCursor, candidates }` |
+| `save_study_recommendation` | `WRITE`, `required` | `candidateContextVersion`, `topics`, `rejections`, 선택 `generatedAt` | `{ reportId, generatedAt, historyVersion }` |
 
 - 후보자 맥락의 `documentKey` 는 [후보자 맥락 문서](#후보자-맥락-문서)의 네 키, 프로필 원고의 `documentKey` 는 `wanted`, `linkedin`, `github` 다
 - 저장 도구의 `body`, `note`, `expectedVersion` 은 Backend 의 문서 저장 계약과 같다. 본문 전체를 바꾸고 새 문서는 `expectedVersion: 0` 이다
@@ -1327,6 +1333,26 @@ Hermes 에서는 서버 이름 `career` 로 `mcp__career__<도구>` 가 된다.
 - `total` 은 `97.9B` 같은 글이고 `commitSha` 는 올라간 커밋이다. `changed: false` 이면 저장소가 이미 같은 내용이라 커밋을 만들지 않은 것이고 `commitSha` 는 그때의 branch 끝이다
 - 결과는 MCP 응답의 첫 텍스트 칸에 JSON 으로 싣는다. `check_connection` 은 같은 값을 `structuredContent` 에도 싣는다
 - 오류는 `isError: true` 와 `{ error: { code, message } }` 다. `CAREER_BADGE_MISMATCH` 는 같은 객체에 `expected`(기록의 합계)와 `found`(README 의 값. 배지가 없거나 여럿이면 `null`)를, `CAREER_USAGE_MONTH_MISSING` 은 `missing`(없는 달의 목록)을 더한다
+
+면접 연습 도구의 계약이다. 칸의 제약은 [면접 연습 table](#면접-연습-table)과 Backend 의 `src/interview/schema.ts` 와 같다.
+
+- `get_interview_questions` 의 `drillType` 은 `tech` 나 `behavioral`, `targetBar` 는 `production`, `large-scale`, `global-scale` 가운데 하나, `count` 는 1 이상 10 이하이고 기본값은 5 다
+- 질문은 번들한 공개 질문 은행과 켜진 개인 질문에서 고른다. `sourceScope` 는 `public` 이나 `personal` 이다. 공고별 질문은 고르지 않는다
+- `today` 는 Asia/Seoul 기준 날짜다. 선별 규칙은 노트북의 `drill-engine.ts select` 와 같은 함수다
+- `save_interview_attempt` 의 칸은 `POST /api/interview/v1/attempts` 의 요청과 같다. `attemptId` 를 넘기지 않으면 서버가 UUID 를 만든다. `Idempotency-Key` 는 `attemptId` 다
+- `save_personal_question` 은 `PUT /api/interview/v1/personal-questions/{question.id}` 다. 노트북의 CLI 처럼 호출마다 새 `Idempotency-Key`(`personal-question:<UUID>`)를 쓴다
+- `CAREER_NETWORK` 로 끝난 `save_interview_attempt` 는 오류 객체에 그때 쓴 `attemptId` 를 더한다
+
+공부 추천 도구의 계약이다. 칸의 제약은 [추천 실행](#추천-실행)과 Backend 의 `src/study/schema.ts` 와 같다.
+
+- `get_study_candidates` 는 `GET /api/study/v1/candidates` 한 쪽만 읽는다. `limit` 은 1 이상 30 이하이고 기본값은 30 이다. `category` 는 `techBlog`, `geek`, `ai`, `video` 가운데 하나다
+- 후보 한 줄은 `{ contentKey, title, url, sourceName, category, kind, published, excerpt }` 다. `excerpt` 는 500자에서 자른다. 외부 글을 그대로 길게 싣지 않기 위해서다
+- `limit` 을 30 으로 둔 까닭은 승인 인자 상한이다. 후보마다 제외 이유를 붙인 저장 인자가 16KB 안에 들어야 한다
+- `save_study_recommendation` 의 `topics[].items[]` 는 `{ contentKey, summary, reason, careerValue }`, `rejections[]` 는 `{ contentKey, reason }` 이다
+- `generatedAt` 을 넘기지 않으면 서버가 지금 시각을 UTC ISO 로 쓴다. `reportId` 는 `morning-<generatedAt 의 Asia/Seoul 날짜>` 다
+- `Idempotency-Key` 는 노트북의 CLI 와 같은 `recommendation:<sha256(canonical JSON { reportId, generatedAt })>` 다
+- `CAREER_NETWORK` 로 끝난 `save_study_recommendation` 은 오류 객체에 `reportId` 와 `generatedAt` 을 더한다
+- Backend 가 409 로 답하면 `CAREER_STUDY_CONFLICT` 다. 같은 날 리포트가 이미 있거나, 같은 자료나 주제를 다시 저장했거나, 후보를 읽은 뒤 관심사 문서가 바뀌었다
 
 **승인이 필요한 도구의 인자는 fos-assistant 가 UTF-8 16KB 까지만 받는다.**
 키와 따옴표를 포함해 직렬화한 인자 전체의 크기다. 한글은 한 글자가 3바이트라 본문이 5천 자 안팎이면 닿는다.
