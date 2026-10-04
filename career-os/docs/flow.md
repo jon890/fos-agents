@@ -14,7 +14,8 @@ career-os의 각 흐름은 외부 입력을 검증하고, 사용자 판단에 �
 
 ### 비공개 작업본 동기화
 
-`application-package-writer`, `resume-preparer`, `interview-practice`는 공통 CLI로 다음 준비와 반영 절차를 실행한다.
+`application-package-writer`, `resume-preparer`와 plugin 의 `interview-question-prep`는 다음 준비와 반영 절차를 실행한다.
+저장소 스킬은 아래 공통 CLI 를, plugin 스킬은 로컬 실행기 `workspace` 를 쓴다. 둘은 같은 코드다.
 
 ```text
 작성 skill
@@ -73,6 +74,20 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 ```
 
 완료 단계가 실패해도 로컬 결과를 지우지 않는다.
+
+#### plugin 스킬이 실행하는 명령
+
+plugin 스킬은 같은 단계를 로컬 실행기로 부른다. `<PLUGIN_ROOT>` 는 스킬 본문이 알려 준 plugin 경로다.
+
+```bash
+bun "<PLUGIN_ROOT>/dist/career-local.js" workspace begin <SKILL_NAME> --json
+bun "<PLUGIN_ROOT>/dist/career-local.js" workspace finish <SKILL_NAME> --json
+```
+
+작업본의 위치는 `CAREER_WORKSPACE_ROOT` 이고 없으면 `~/.fos-career/workspace` 다.
+`CAREER_WORKSPACE_COMMAND` 나 `CAREER_WORKSPACE_SSH_TARGET` 이 있으면 위 동기화를 그대로 거친다.
+둘 다 없으면 동기화하지 않는다. `begin` 은 관리 디렉터리 셋을 만들고 `mode: "local"` 을 내며, `finish` 는 원격에 아무것도 보내지 않는다.
+`workspace paths --json` 은 작업본의 위치와 동기화 방식만 알려 준다.
 
 `position-recommender`와 `study-topic-recommender`의 장기 추천 상태는 Backend에서 읽고 쓴다.
 
@@ -303,7 +318,8 @@ sequenceDiagram
 
 ### 질문 은행 갱신
 
-`interview-practice`의 공개 질문 유지보수 절차에서 일반 질문과 개인 경험 질문을 분리한다.
+공개 질문 은행은 이 저장소의 유지 절차로만 고친다. 절차는 `public/question-bank/MAINTENANCE.md` 가 소유한다.
+plugin 의 `interview-question-prep` 는 3, 5 단계까지 같은 기준으로 고른 질문을 공개 은행 대신 개인 질문으로 저장한다.
 
 1. 등록된 공식 문서, 기술 블로그, 공개 영상과 GitHub 가이드에서 실행별 후보를 임시 경로에 수집한다.
 2. 질문 은행의 카테고리와 수준 분포, 현재 공고의 책임과 `career-status` 문서의 경험 경계를 비교한다.
@@ -311,10 +327,29 @@ sequenceDiagram
 4. 출처 묶음을 `public/question-bank/sources.json`에 등록하거나 기존 항목을 재사용한다.
 5. 공개 질문 후보의 중복, 목표 수준, 답변 신호와 꼬리질문 깊이를 검증한다.
 6. 일반화할 수 있는 질문만 `public/question-bank/`에 추가한다.
-7. 개인 경력에서 반복해서 연습할 일반 질문은 `drill-engine.ts personal add` 로 저장소에 둔다.
+7. 개인 경력에서 반복해서 연습할 일반 질문은 `save_personal_question` 도구나 `drill-engine.ts personal add` 로 Backend 에 둔다.
 8. 공고와 지원 근거에서 나온 포지션별 질문은 해당 `applications/` 디렉터리의 `evidence/interview-questions.json`에 둔다.
 9. 답변 연습은 세 범위를 합쳐 사용할 수 있지만 공개 산출물에는 개인 질문과 포지션별 질문을 포함하지 않는다.
 10. 일반 연습에서는 질문 은행을 수정하지 않으며, 공개·개인·포지션 질문 묶음이 모두 비었을 때만 필요한 최소 질문을 보강하고 연습을 이어간다.
+
+### Claude Code 에서 공고별 질문 연습
+
+plugin 의 `interview-question-prep` 스킬이 Claude Code 에서만 한다. 답변 판정과 기록 규칙은 `interview-practice` 스킬과 같다.
+
+1. `workspace begin interview-question-prep` 로 작업본을 준비한다. 실패하면 멈춘다.
+2. `get_context_document` 로 `career-status` 와 `application-state` 를 읽고 연습할 지원 디렉터리를 고른다.
+3. `interview select <tech|behavioral> --application-dir <작업본>/applications/<회사>/<직무> --target-bar <bar>` 가 공개, 개인, 공고별 질문을 섞어 고른다. 저장소는 늘 Backend 다.
+4. 답변과 꼬리질문마다 `save_interview_attempt` 로 기록한다.
+5. `workspace finish interview-question-prep` 로 끝낸다. 이 스킬은 작업본 파일을 고치지 않으므로 동기화 모드에서도 새 release 를 만들지 않는다.
+
+외부 자료에서 질문을 찾을 때는 `interview-sources collect` 가 임시 디렉터리에 후보를 모은다.
+공식 원문으로 확인한 질문만 사용자 확인을 받아 `save_personal_question` 으로 저장한다.
+
+| 상황 | 동작 |
+| --- | --- |
+| 지원 디렉터리에 `evidence/interview-questions.json` 이 없다 | `interview select` 가 종료 코드 1 로 끝난다. 공고별 질문 없이 `interview-practice` 로 연습하라고 안내한다 |
+| Backend 연결값이 셸 환경에 없다 | `interview select` 가 종료 코드 1 로 끝난다. 환경 변수를 설정하라고 안내한다 |
+| 수집한 모든 출처가 실패했다 | 질문을 만들지 않고 멈춘다. 등록 출처 수정은 저장소 유지 절차다 |
 
 ### 면접 연습 HTTP 계약
 
@@ -837,7 +872,7 @@ sequenceDiagram
 
 ### 대화에서 면접 연습
 
-plugin 의 `interview-practice` 스킬이 MCP 도구만으로 연습한다. 판단 규칙은 저장소 판 스킬과 같다.
+plugin 의 `interview-practice` 스킬이 MCP 도구만으로 연습한다. 공고별 질문 연습은 Claude Code 의 `interview-question-prep` 이 같은 판단 규칙으로 한다.
 
 ```mermaid
 sequenceDiagram
@@ -862,19 +897,19 @@ sequenceDiagram
 ```
 
 1. 후보자 맥락은 `get_context_document` 로 `career-status` 와 `application-state` 를 읽는다. 둘 중 하나가 `CAREER_NOT_FOUND` 면 맥락 없이 연습하지 않고 문서를 먼저 저장하라고 알린다.
-2. `get_interview_questions` 는 공개 질문과 켜진 개인 질문에서 고른다. 공고별 질문(`applications/` 의 파일)은 쓰지 않는다. 그 연습은 저장소 판 스킬이 한다.
+2. `get_interview_questions` 는 공개 질문과 켜진 개인 질문에서 고른다. 공고별 질문(`applications/` 의 파일)은 쓰지 않는다. 그 연습은 Claude Code 의 `interview-question-prep` 이 한다.
 3. 답변 하나마다 `save_interview_attempt` 를 한 번 부른다. `attemptId` 를 넘기지 않으면 서버가 새로 만들어 결과에 싣는다.
 4. 개인 질문은 `save_personal_question` 으로 더하고 끈다. 끌 때는 `list_personal_questions` 로 읽은 질문 본문을 그대로 넘기고 `enabled: false` 로 둔다.
-5. 고를 질문이 없으면 빈 목록을 알리고 끝낸다. 질문 은행 보강은 저장소 판 스킬이 한다.
+5. 고를 질문이 없으면 빈 목록을 알리고 끝낸다. 외부 자료에서 개인 질문을 찾는 일은 Claude Code 의 `interview-question-prep` 이 한다.
 
 ### 대화에서 공부 추천
 
 plugin 의 `study-topic-recommender` 스킬이 이미 수집된 후보에서 고른다.
-수집은 노트북이나 예약 실행의 `morning_reading_cli.ts --collect-only` 가 한다. 커넥터는 외부 피드에 닿지 않는다.
+수집은 Claude Code 의 `study-collection` 이나 예약 실행의 `morning_reading_cli.ts --collect-only` 가 한다. 커넥터는 외부 피드에 닿지 않는다.
 
 1. `get_study_candidates` 가 `GET /api/study/v1/candidates` 한 쪽만 읽는다. 결과는 후보, `recentStudyTopicKeys`, `candidateContextVersion`, `learningInterests` 다. `learning-interests` 문서가 없으면 `CAREER_LEARNING_INTERESTS_MISSING` 으로 멈춘다.
 2. 에이전트가 `learningInterests.body` 를 기준으로 원문을 비교해 주제를 고르고, 고르지 않은 후보마다 제외 이유를 붙인다.
-3. 고른 결과를 대화에 글로 보여 준다. HTML 리포트와 외부 게시는 저장소 판 스킬이 한다.
+3. 고른 결과를 대화에 글로 보여 준다. HTML 리포트와 외부 게시는 Claude Code 의 `study-collection` 이 한다.
 4. `save_study_recommendation` 을 한 번 부른다. 승인 카드에서 승인하면 `POST /api/study/v1/recommendation-runs` 로 저장된다.
 5. 오늘 리포트가 이미 있으면 `CAREER_STUDY_ALREADY_SAVED` 다. 커넥터가 409 를 받은 뒤 `GET /api/study/v1/recommendation-runs/{reportId}/status` 로 확인해 구분한다. 에이전트는 멈추고 알린다.
 6. 후보를 읽은 뒤 기준이 바뀌었거나, 이미 추천한 주제나 자료를 골랐거나, 같은 요청이 아직 처리 중이면 `CAREER_STUDY_CONFLICT` 다. 잠시 뒤 후보를 다시 읽고 새로 고르되, 한 번 더 충돌하면 멈춘다.

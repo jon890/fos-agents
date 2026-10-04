@@ -329,7 +329,7 @@ erDiagram
 | `CAREER_MEMORY` | 채우는 쪽 |
 | --- | --- |
 | `backend` | 스크립트가 후보자 맥락 문서 `career-status` 와 `application-state` 본문을 채울 칸 목록과 함께 낸다. 출력은 `provider`, `fields`, `instruction`, `documents` 이고 `documents` 의 원소는 `{ documentKey, version, body }` 다. 스킬이 그 본문으로 칸을 채운다 |
-| `file` | `CAREER_MEMORY_FILE` 의 JSON. 기본은 `career-os/library/candidate-memory.json`. 템플릿은 `.claude/skills/interview-practice/templates/candidate-memory.example.json` |
+| `file` | `CAREER_MEMORY_FILE` 의 JSON. 기본은 `career-os/library/candidate-memory.json`. 템플릿은 `scripts/interview-drill/templates/candidate-memory.example.json` |
 | 없음 | 명령이 실패한다 |
 
 | 칸 | 타입 | 뜻 |
@@ -1300,6 +1300,22 @@ HTTP 계약은 [`flow.md`](flow.md#프로필-http-계약)가 소유한다. 이�
 필수 값이 없거나 모양이 틀리면 서버가 `CAREER_CONFIG` 로 시작하지 않는다.
 `CAREER_GITHUB_TOKEN` 만 없으면 서버는 시작하고 GitHub 도구가 `CAREER_GITHUB_NOT_CONFIGURED` 로 답한다.
 token 을 파일에 저장하지 않고 로그와 오류 응답에 싣지 않는다.
+
+### 로컬 실행기 환경 변수
+
+Claude Code 전용 스킬이 부르는 `dist/career-local.js` 가 셸 환경에서 읽는 값이다. `.env` 를 탐색하지 않는다.
+
+| 이름 | 필수 | 내용 |
+| --- | :---: | --- |
+| `CAREER_BACKEND_URL` | 예 | 커넥터와 같은 Backend origin |
+| `CAREER_BACKEND_TOKEN` | 예 | 커넥터와 같은 Bearer token. `CAREER_BACKEND_TOKEN_FILE`(권한 0600 파일)로 대신할 수 있다 |
+| `CAREER_WORKSPACE_ROOT` | 아니오 | 비공개 작업본(`applications/`, `library/`, `state/`)의 상위 디렉터리. 없으면 `~/.fos-career/workspace` |
+| `CAREER_WORKSPACE_COMMAND` | 아니오 | 홈서버 동기화 명령. 이 값이나 아래 값이 있을 때만 동기화한다 |
+| `CAREER_WORKSPACE_SSH_TARGET` | 아니오 | 홈서버 동기화의 SSH 대상. `CAREER_WORKSPACE_REMOTE_COMMAND`, `CAREER_WORKSPACE_SSH_ARGS` 를 함께 읽는다 |
+| `YOUTUBE_DATA_API_KEY` | 아니오 | 공부 자료 archive 수집의 YouTube Data API key |
+
+작업본의 기본 위치를 plugin 데이터 디렉터리에 두지 않는다. plugin 을 지우면 그 디렉터리가 함께 지워진다.
+token 과 문서 본문을 실행기의 로그와 오류 출력에 싣지 않는다.
 
 ### 도구
 
