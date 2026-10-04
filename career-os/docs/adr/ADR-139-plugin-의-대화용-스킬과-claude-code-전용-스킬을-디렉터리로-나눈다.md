@@ -16,7 +16,7 @@
     plugin 을 설치한 사람은 이 저장소에 커밋하지 않으므로, plugin 스킬은 외부 자료에서 찾은 질문을 개인 질문으로 Backend 에 저장한다.
     ADR-137 이 2단계로 옮긴다고 적은 「질문 은행 보강」 은 이 조건으로 읽는다.
   - 저장소의 `interview-practice` 사본은 지웠다. 대화 연습은 `connector-skills/interview-practice/`, 공고별 질문 연습과 외부 자료 수집은 `skills/interview-question-prep/` 가 맡는다.
-    [ADR-066](ADR-066-공개-가능-일반-면접-질문-bank는-public-question-bank에-둔다.md), [ADR-130](ADR-130-면접-연습의-후보자-맥락은-memory-공급자-경계로-읽는다.md), [ADR-132](ADR-132-스킬의-개인-맥락은-후보자-맥락-문서에서-읽고-지원서-공통-프로필만-brain에-둔다.md) 가 가리키는 `.claude/skills/interview-practice/` 는 이 두 경로로 읽는다.
+    [ADR-066](ADR-066-공개-가능-일반-면접-질문-bank는-public-question-bank에-둔다.md), [ADR-129](ADR-129-면접-연습-기록과-개인-질문은-backend가-소유한다.md), [ADR-130](ADR-130-면접-연습의-후보자-맥락은-memory-공급자-경계로-읽는다.md), [ADR-132](ADR-132-스킬의-개인-맥락은-후보자-맥락-문서에서-읽고-지원서-공통-프로필만-brain에-둔다.md) 가 가리키는 `.claude/skills/interview-practice/` 는 이 두 경로로 읽는다.
 - **맥락**:
   - fos-assistant 는 `plugin.json` 의 `skills`(없으면 `./skills`) 아래 `SKILL.md` 본문을 이름 순으로 합쳐 8,000자까지 받는다. 넘으면 커넥터가 카탈로그에서 빠진다.
   - 1단계를 마친 뒤 대화용 스킬 셋의 본문이 약 5,900자다. 공고 추천, 이력서, 프로필 동기화 스킬을 같은 디렉터리에 더하면 상한을 넘는다.
