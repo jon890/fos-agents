@@ -25,6 +25,7 @@
 
 - [2026-10-01 살펴보기, 맥락 읽기의 답] learning-interests version 7, position-preferences version 4, application-state version 5, career-status version 9, 공부 후보 없음
 - [2026-10-01 살펴보기, 결과 블록] outcome NOTHING_NEW, sourceFailures 없음
+- [2026-10-04 살펴보기, 맥락 읽기의 답] learning-interests version 8, position-preferences version 4, application-state version 5, career-status version 9, 공부 후보 없음
 - [2026-10-04 살펴보기] 원문을 찾던 중 답이 끊겼다. 결과 블록이 없다
 
 ## 위임하면 받는 답

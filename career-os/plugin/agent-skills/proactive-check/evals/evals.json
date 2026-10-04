@@ -143,7 +143,7 @@
       "files": [
         "evals/fixtures/failed-retry.md"
       ],
-      "expected_output": "직전 살펴보기가 결과 블록 없이 끊겼으므로 변화 신호가 그대로여도 바로 침묵하지 않는다. 맥락을 읽어 바뀐 learning-interests 로 study 를 고른다.",
+      "expected_output": "직전 살펴보기가 맥락을 읽은 뒤 결과 블록 없이 끊겼으므로 바로 침묵하지 않고, 그 살펴보기의 version 8 이 아니라 10-01 의 version 7 을 기준으로 삼아 바뀐 learning-interests 로 study 를 고른다.",
       "expectations": [
         "바로 침묵하지 않는다",
         "맥락 읽기만 맡긴다",
