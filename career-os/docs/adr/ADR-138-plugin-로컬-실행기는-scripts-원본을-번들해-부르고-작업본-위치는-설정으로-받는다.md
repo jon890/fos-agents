@@ -9,6 +9,7 @@
   - **연결값은 셸 환경 변수로만 받는다.** 실행기는 MCP 서버와 같은 `CAREER_BACKEND_URL`, `CAREER_BACKEND_TOKEN` 을 읽고 `.env` 를 탐색하지 않는다.
     `bun` 은 cwd 의 `.env` 를 자동으로 읽으므로 `--no-env-file` 로 끈다. 사용자가 연 디렉터리의 `.env` 가 작업본 위치나 동기화 대상을 바꾸지 않게 하려는 것이다.
   - **비공개 작업본(`applications/`, `library/`, `state/`)의 위치는 `CAREER_WORKSPACE_ROOT` 로 받는다.** 없으면 `~/.fos-career/workspace` 다.
+  - 스킬이 읽는 프로젝트 근거(회사와 프로젝트별로 실제 한 일)의 위치는 `CAREER_EVIDENCE_DIR` 로 받는다. 없으면 작업본 아래 `evidence/` 다. 저장소에서는 `sources/fos-study/task/` 를 가리키게 설정한다.
   - **홈서버 동기화는 설정이 있을 때만 켜진다.** `CAREER_WORKSPACE_COMMAND` 나 `CAREER_WORKSPACE_SSH_TARGET` 이 있으면 지금의 release 동기화를 거치고, 둘 다 없으면 작업본 디렉터리만 쓴다.
   - 개인 식별 정보가 담긴 자산(이력서의 회사와 학교 로고)은 번들에 넣지 않고 작업본 `library/` 에서 읽는다.
 - **맥락**:

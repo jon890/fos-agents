@@ -473,6 +473,13 @@ Backend가 응답하지 않으면 종료 코드 1로 중단한다.
 최종 답변 형식은 `position-recommender` 스킬 문서가 정하고 cron 실행과 수동 실행이 같은 형식을 쓴다.
 수집 경고가 있으면 그 줄을 최종 답변에 그대로 전달하고, 없으면 줄을 만들지 않는다.
 
+### Claude Code 에서 공고 추천
+
+plugin 의 `position-recommender` 스킬이 Claude Code 에서만 같은 단계를 돈다. 판단 기준은 저장소 사본과 같다.
+명령은 로컬 실행기 `<CAREER_LOCAL> position <하위 명령>` 이고 하위 명령과 출력은 위와 같다.
+공고 분석의 프로젝트 근거는 `<CAREER_LOCAL> workspace paths --json` 이 알려 주는 `evidenceDir` 에서 읽는다.
+홈서버 예약 실행은 저장소 사본을 쓴다. 그 실행을 plugin 으로 바꾸기 전까지 두 판단 기준을 함께 고친다.
+
 ## resume-preparer
 
 ### 근거 감사와 개선
@@ -538,6 +545,18 @@ flowchart TD
 저장할 때 `note` 에 확인한 날짜와 내용을 남긴다. 다른 저장과 겹치면 `409` 이고, 다시 조회해 변경 전후를 새로 보여 준다.
 계약은 [「후보자 맥락 문서」](#후보자-맥락-문서) 절이 소유한다.
 지원 작업본의 동시 수정은 기존 revision 비교 계약을 따른다.
+
+### Claude Code 에서 이력서 준비
+
+plugin 의 `resume-preparer` 스킬이 Claude Code 에서만 같은 단계를 돈다. 작성 기준과 감사 기준은 저장소 사본과 같다.
+
+1. `<CAREER_LOCAL> workspace begin resume-preparer --json` 으로 작업본을 준비한다. 결과의 `root` 아래 `applications/` 를 읽는다.
+2. 개인 맥락은 `get_context_document` 로 읽고, 승인받은 새 사실은 `save_context_document` 로 저장한다.
+3. HTML·PDF 변환, 주장 원장 검증, 검증 완료 주장의 판정과 검색과 반영, 제출 묶음 생성과 검증은 `<CAREER_LOCAL> resume <하위 명령>` 으로 한다.
+4. 검증 완료 주장은 작업본의 `state/verified-claims/` 에 쓴다. 주장 원장의 근거 경로는 Claude Code 를 연 디렉터리 기준이다.
+5. `<CAREER_LOCAL> workspace finish resume-preparer --json` 으로 끝낸다.
+
+지원 패키지 검사와 검토 화면은 `application-package-writer` 가 plugin 으로 옮겨질 때까지 저장소 세션에서 한다.
 
 ## study-topic-recommender
 
@@ -692,23 +711,22 @@ API 후보 `Candidate` 는 후보풀의 `ReadingCandidate` 로 변환한다.
 
 원티드, LinkedIn, GitHub 프로필을 이력서 원고 기준으로 갱신한다.
 
-1. 대상별 원고를 커리어 Backend 에서 읽는다. `scripts/profile/manage_profile.ts documents get` 을 쓴다.
+1. 대상별 원고를 커리어 Backend 에서 읽는다. `list_profile_documents` 와 `get_profile_document` 도구를 쓴다.
    문서 키는 `wanted`, `linkedin`, `github` 이다. 홈서버 SSH 와 비공개 작업본이 필요 없다.
    Backend 에 닿지 못하면 멈추고 사용자에게 알린다. 로컬 파일로 대신하지 않는다.
 2. 원고가 없으면 가장 최근 지원의 이력서 초안을 출발점으로 삼아 공개 범위를 조정한 새 원고를 만든다.
-   **이때만** 공통 CLI 로 작업본을 준비한다. `applications/` 를 읽기 때문이다.
+   **이때만** `<CAREER_LOCAL> workspace begin sync-profile --json` 으로 작업본을 준비한다. 결과의 `root` 아래 `applications/` 를 읽기 때문이다.
 3. 사용자가 한 곳만 말해도 세 곳을 모두 읽고 원본과 어긋난 지점을 표로 보고한다.
    달이 바뀌었으면 원티드의 진행 중 프로젝트 종료월과 GitHub 의 지난달 사용량도 대상이다.
-   사용량은 `manage_profile.ts usage list` 로 기록을 읽는다. 스킬이 그 자리에서 측정해 프로필에 쓰지 않는다.
+   사용량은 `list_usage_snapshots` 도구로 기록을 읽는다. 스킬이 그 자리에서 측정해 프로필에 쓰지 않는다.
 4. 공개 범위를 사용자에게 확인받는다. 사내 운영 수치, 사내 조직명과 도구 이름,
    진행 중인 프로젝트의 종료월 표기가 여기 해당한다.
 5. 원고에 없던 문장을 새로 썼으면 `resume-preparer`의 판정 모델로 근거를 확인한다.
 6. 무엇을 어떻게 바꿀지 보여주고 승인을 받는다.
 7. 대상별 절차로 반영한다. **한 번에 한 항목씩 넣고 결과를 확인한다.**
 8. 반영한 값이 서버에 저장됐는지 대상별 방법으로 확인한다.
-9. 반영한 내용을 원고에 다시 적어 `manage_profile.ts documents put` 으로 저장한다.
-   폼 제약으로 원고와 다르게 넣었으면 그 사실과 이유를 함께 남긴다.
-   원고는 저장소 밖 임시 경로에서 고치고 저장한 뒤 지운다.
+9. 반영한 내용을 원고에 다시 적어 `save_profile_document` 도구로 저장한다. 1단계에서 읽은 `version` 을 `expectedVersion` 으로 넘긴다.
+   폼 제약으로 원고와 다르게 넣었으면 그 사실과 이유를 원고에 함께 남긴다.
 10. 2단계에서 작업본을 준비했으면 완료 단계로 작업본을 발행한다.
 
 갈라지는 곳이다.
@@ -722,8 +740,8 @@ API 후보 `Candidate` 는 후보풀의 `ReadingCandidate` 로 변환한다.
 - 로그인 화면이 나오면 멈추고 사용자에게 알린다. 자격 증명을 대신 입력하지 않는다.
 - 공개 범위 판단은 사용자만 한다. 지원본에 있던 문장이라도 그대로 옮기지 않는다.
 
-대상별 절차와 조작 스크립트는 스킬의
-[`references/`](../.claude/skills/sync-profile/)가 소유한다.
+스킬은 plugin 의 Claude Code 전용 `sync-profile` 이다. 원고와 사용량 기록은 MCP 도구로, 사용량 수집은 로컬 실행기 `<CAREER_LOCAL> usage` 로 한다.
+대상별 절차와 조작 스크립트는 [`plugin/skills/sync-profile/`](../plugin/skills/sync-profile/)가 소유한다.
 
 ### 프로필 HTTP 계약
 
@@ -934,7 +952,7 @@ plugin 의 `study-topic-recommender` 스킬이 이미 수집된 후보에서 고
 | 공부 추천 저장 결과를 알 수 없다 | 다른 인자를 하나도 바꾸지 않고 오류에 실린 `generatedAt` 만 더해 다시 승인받아 보낸다. 같은 `reportId` 와 `generatedAt` 이면 멱등 키가 같다. 본문이 다르면 `IDEMPOTENCY_CONFLICT` 409 가 된다 |
 | 공부 후보가 비었다 | 정상 응답이다. 꺼진 소스에서만 나온 자료, 이미 추천한 자료, 지금 기준에서 유효한 제외 판정, 요청 필터를 거른 뒤 남은 미추천 후보가 없다. 빈 결과만으로 수집 실행 여부나 웹 자료 유무를 단정하지 않는다. 빈 결과를 알리고 저장하지 않는다. `learning-interests` 문서가 없으면 `CAREER_LEARNING_INTERESTS_MISSING`, token 거절은 `CAREER_UNAUTHORIZED`, 장애는 `CAREER_UNAVAILABLE` 이나 `CAREER_NETWORK` 오류로 따로 온다 |
 | 저장할 본문이 승인 인자 상한을 넘는다 | fos-assistant 가 호출을 거절한다. 노트북의 CLI 로 저장하라고 안내한다 |
-| 원티드나 LinkedIn 을 고쳐 달라고 한다 | 원고만 고치고, 사이트 반영은 노트북의 `sync-profile` 에서 하라고 안내한다 |
+| 원티드나 LinkedIn 을 고쳐 달라고 한다 | 원고만 고치고, 사이트 반영은 Claude Code 에서 이 plugin 의 `sync-profile` 로 하라고 안내한다 |
 
 README 갱신과 GitHub 원고 저장은 따로 승인받는 두 호출이다.
 GitHub 갱신만 승인하고 원고 저장을 거절하면 원고가 프로필보다 낡은 채로 남는다. 다음 갱신 때 1단계의 차이 보고에서 드러난다.

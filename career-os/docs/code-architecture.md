@@ -57,9 +57,8 @@ career-os/
 | --- | --- | --- | --- |
 | `application-package-writer` | 6 | 11 | 2 |
 | `position-recommender` | 2 | | |
-| `resume-preparer` | 7 | 21 | 4 |
+| `resume-preparer` | 7 | | |
 | `study-topic-recommender` | 2 | | |
-| `sync-profile` | 3 | 5 | |
 
 ### 실행 코드를 두 자리 중 어디에 두나
 
@@ -67,8 +66,8 @@ career-os/
 
 | 자리 | 언제 | 예 |
 | --- | --- | --- |
-| `.claude/skills/<name>/scripts/` | 그 스킬 밖에서 쓰지 않는 코드 | 이력서 PDF 변환, 원티드 폼 조작 |
-| `scripts/<name>/` | 여러 진입점이 나뉘고 독립 테스트가 큰 코드 | 공고 수집, 읽을거리 수집 |
+| `.claude/skills/<name>/scripts/` | 그 스킬 밖에서 쓰지 않는 코드 | 지원 패키지 렌더링 |
+| `scripts/<name>/` | 여러 진입점이 나뉘고 독립 테스트가 큰 코드. plugin 로컬 실행기가 번들하는 코드 | 공고 수집, 읽을거리 수집, 이력서 PDF 변환 |
 | `scripts/lib/` | 두 워크스페이스 이상이 쓰는 순수 기능 | CLI, 텍스트 정규화, 날짜 변환 |
 
 테스트는 코드 옆에 둔다. `<이름>.test.ts` 로 같은 디렉터리에 둔다.
@@ -393,6 +392,9 @@ skill이 중간 파일 이름과 플래그를 알지 못하도록 모든 하위 
 | `configure_position_analysis_policy.ts` | 분석 정책 설정 |
 | `configure_position_company_preferences.ts` | 사람이 정한 회사 tier와 제외 설정 |
 
+plugin 의 로컬 실행기 `position` 은 `runPositionCommand` 에 하위 명령을 그대로 넘긴다. 일일 실행 경로만 열고 설정 진입점은 열지 않는다.
+`render/assets.ts` 는 리포트 템플릿을 텍스트 import 로 읽는다. 실행 파일 위치로 템플릿을 찾지 않으므로 번들한 실행기에서도 같은 HTML 이 나온다.
+
 디렉터리별 책임은 다음과 같다.
 
 | 디렉터리 | 책임 |
@@ -500,8 +502,9 @@ git diff --check
 사실 감사와 설득력 평가는 별도 참고 문서와 검사 스크립트로 분리하지만 별도 스킬로 노출하지 않는다.
 면접 말하기 준비와 꼬리질문 연습은 `interview-practice`가 담당한다.
 
-`.claude/skills/resume-preparer/scripts/verified-claims/`는 검증 완료 주장 스키마, 안정적인 주장 키, 근거 파일 해시, 저장과 검색을 책임별 모듈로 나눈다.
-CLI 진입점은 다음 셋만 스킬의 `scripts/` 바로 아래에 둔다.
+실행 코드는 `scripts/resume-preparer/` 에 있다. 저장소 사본 스킬과 plugin 로컬 실행기 `resume` 이 같은 코드를 쓴다.
+`scripts/resume-preparer/verified-claims/`는 검증 완료 주장 스키마, 안정적인 주장 키, 근거 파일 해시, 저장과 검색을 책임별 모듈로 나눈다.
+검증 완료 주장 CLI 는 다음 셋이다.
 
 
 | CLI                                                  | 책임                                               |
@@ -533,7 +536,14 @@ skill은 필요한 정보를 실행 시점에 조회하고 TypeScript 스크립�
 | `.claude/skills/resume-preparer/references/resume-design.md` | 이력서와 경력기술서의 기본 시각 기준 |
 | `.claude/skills/resume-preparer/references/resume-taste.md` | 개인 작성 취향 |
 | `.claude/skills/resume-preparer/references/candidate-context.md` | 개인 맥락 조회 시점과 저장 분기 |
-| `.claude/skills/resume-preparer/templates/` | 이력서 HTML 골격, 기본 CSS와 회사·학교 로고 |
+| `scripts/resume-preparer/templates/` | 이력서 HTML 골격과 기본 CSS. `export_resume.ts` 가 텍스트 import 로 읽는다 |
+| 작업본 `library/resume-logos/` | 회사·학교 로고와 이름을 잇는 `index.json`. 개인 경력을 드러내므로 저장소와 plugin 에 두지 않는다 |
+
+`export_resume.ts --logo-dir <dir>` 로 로고 디렉터리를 정한다. 없으면 `CAREER_WORKSPACE_ROOT`(없으면 `career-os`) 아래 `library/resume-logos/` 다. 디렉터리나 `index.json` 이 없으면 로고 없이 렌더한다.
+
+plugin 의 로컬 실행기 `resume` 은 하위 명령으로 위 CLI 와 HTML·PDF 변환, 제출 묶음 검사를 고른다.
+검증 완료 주장의 상태 디렉터리는 작업본 아래 `state/verified-claims/` 로 넘긴다. 주장 원장의 근거 경로는 실행한 디렉터리 기준이다.
+지원 패키지 검사와 검토 화면(`application-package-writer` 의 스크립트)은 아직 저장소에만 있다.
 
 공고별 스타일은 `export_resume.ts --design <path>`에 CSS 파일이나
 `css` 코드 블록이 있는 Markdown 파일을 명시한다.
@@ -642,20 +652,21 @@ collection 과 문서 키는 코드에 고정한다. 설정으로 바꾸지 않�
 
 ## sync-profile
 
-**폼을 조작하는 코드는 `scripts/` 가 아니라 스킬 번들 안에 둔다.**
-대상 사이트의 폼을 조작하는 코드라 다른 스킬이 재사용할 것이 없고,
-대상별 절차 문서 바로 옆에 두는 편이 읽기 쉽다.
-사용량 측정과 수집은 스킬 없이 `launchd` 가 실행하므로 `scripts/agent-usage/` 에 둔다.
+스킬은 저장소에 없고 plugin 의 Claude Code 전용 `plugin/skills/sync-profile/` 에 있다.
+**폼을 조작하는 셸 스크립트는 그 스킬 번들 안에 둔다.**
+대상 사이트의 폼을 조작하는 코드라 다른 스킬이 재사용할 것이 없고, 대상별 절차 문서 바로 옆에 두는 편이 읽기 쉽다.
+스크립트는 `browser-driver` 명령으로 이미 로그인된 브라우저를 조작한다. 명령 위치는 `BROWSER_DRIVER` 로 바꿀 수 있고, 없으면 PATH 의 `browser-driver` 다.
+사용량 측정과 수집은 스킬 없이 `launchd` 도 실행하므로 `scripts/agent-usage/` 에 둔다. plugin 은 로컬 실행기 `usage` 로 같은 수집기를 부른다.
 
 | 경로 | 책임 |
 | --- | --- |
-| `.claude/skills/sync-profile/references/wanted.md` | 원티드 폼 구조와 저장 확인 절차 |
-| `.claude/skills/sync-profile/references/linkedin.md` | LinkedIn 편집 진입과 저장 확인 절차 |
-| `.claude/skills/sync-profile/references/github.md` | GitHub 프로필 문서 규칙 |
-| `.claude/skills/sync-profile/scripts/wanted_*.sh` | 원티드 폼 필드 조회와 입력 |
-| `.claude/skills/sync-profile/scripts/linkedin_*.sh` | LinkedIn 소개의 문단 입력과 프로젝트 폼 채우기 |
+| `plugin/skills/sync-profile/references/wanted.md` | 원티드 폼 구조와 저장 확인 절차 |
+| `plugin/skills/sync-profile/references/linkedin.md` | LinkedIn 편집 진입과 저장 확인 절차 |
+| `plugin/skills/sync-profile/references/github.md` | GitHub 프로필 문서 규칙 |
+| `plugin/skills/sync-profile/scripts/wanted_*.sh` | 원티드 폼 필드 조회와 입력 |
+| `plugin/skills/sync-profile/scripts/linkedin_*.sh` | LinkedIn 소개의 문단 입력과 프로젝트 폼 채우기 |
 
-원고와 사용량 기록은 파일이 아니다. 커리어 Backend 의 `profile` 모듈이 갖고, 스킬은 `scripts/profile/manage_profile.ts` 로 읽고 쓴다.
+원고와 사용량 기록은 파일이 아니다. 커리어 Backend 의 `profile` 모듈이 갖고, 스킬은 MCP 도구(`list_profile_documents`, `get_profile_document`, `save_profile_document`, `list_usage_snapshots`)로 읽고 쓴다. 저장소에서는 `scripts/profile/manage_profile.ts` 가 같은 계약을 쓴다.
 `library/profiles/` 는 쓰지 않는다. 차트 이미지는 저장하지 않고 기록에서 그때마다 그린다.
 
 사용량 측정과 수집의 배치다.
@@ -716,7 +727,10 @@ career-os/plugin/
 │   └── study-topic-recommender/SKILL.md
 └── skills/
     ├── interview-question-prep/
-    └── study-collection/
+    ├── position-recommender/
+    ├── resume-preparer/
+    ├── study-collection/
+    └── sync-profile/
 ```
 
 | 경로 | 책임 |
@@ -738,6 +752,10 @@ career-os/plugin/
 | `plugin/connector-skills/study-topic-recommender/SKILL.md` | MCP 도구만으로 하는 공부 추천. 수집된 후보에서 고르고 추천 이력을 저장 |
 | `plugin/skills/interview-question-prep/` | Claude Code 전용. 공고별 질문으로 하는 연습과 외부 자료에서 개인 질문 찾기 |
 | `plugin/skills/study-collection/` | Claude Code 전용. 외부 피드 수집, 소스 관리, HTML 리포트와 게시 기록 |
+| `plugin/skills/position-recommender/` | Claude Code 전용. 공고 수집부터 회사 판정, 공고 분석, 리포트까지의 판단 흐름 |
+| `plugin/skills/resume-preparer/` | Claude Code 전용. 이력서와 경력기술서 작성, 주장 감사, HTML·PDF 와 제출 묶음 |
+| `plugin/skills/sync-profile/` | Claude Code 전용. 원티드, LinkedIn, GitHub 프로필 갱신과 저장 확인 |
+| `scripts/lib/text-asset.ts` | 텍스트 import 로 읽은 템플릿이 문자열인지 확인하는 helper. 번들한 실행기가 템플릿 파일을 찾지 않게 한다 |
 | `scripts/plugin-local/` | 로컬 실행기의 진입점. 하위 명령을 `scripts/` 의 CLI 로 넘긴다. 실행기 이름 목록은 import 가 없는 `executors.ts` 가 갖는다 |
 | `scripts/interview-drill/public-question-bank.ts` | 공개 질문 은행 JSON 을 정적 import 로 읽는 모듈. 커넥터와 실행기와 CLI 가 함께 쓴다 |
 | `scripts/interview-drill/question-selection.ts` | 질문 은행과 복습 상태로 낼 질문을 고르는 순수 함수. `follow-up-policy.ts` 의 상수만 import 한다. 노트북 CLI 와 커넥터가 같은 함수를 쓴다 |
@@ -780,6 +798,9 @@ Claude Code 전용 스킬은 `bun --no-env-file "${CLAUDE_PLUGIN_ROOT}/dist/care
 | `study` | `scripts/study-topic-recommender/morning_reading_cli.ts` | 피드 수집, 후보 준비, HTML 리포트, 추천과 게시 기록, 실행 디렉터리 정리 |
 | `study-validate` | `scripts/study-topic-recommender/validate_outputs.ts` | 실행 디렉터리의 리포트 산출물을 검증한다 |
 | `study-sources` | `scripts/study-topic-recommender/manage_reading_sources.ts` | 읽을거리 소스를 조회하고 더하고 끈다 |
+| `position` | `scripts/position-recommender/position_run.ts` 의 `runPositionCommand` | 공고 수집, 회사 판정과 공고 분석 반영, 리포트 최종화, 실행 디렉터리 정리 |
+| `usage` | `scripts/agent-usage/collect_usage.ts` 의 `main` | 기록이 없는 끝난 달의 에이전트 사용량을 측정해 Backend 에 올린다 |
+| `resume` | `scripts/resume-preparer/` 의 CLI 여덟 | 이력서 HTML·PDF 변환과 검사, 주장 원장 검증, 검증 완료 주장 판정과 검색과 반영, 제출 묶음 생성과 검증 |
 
 - 실행기 원본은 `scripts/` 에 있다. 저장소의 CLI 와 같은 코드다. 실행기 코드를 고치면 `bun run --cwd career-os/plugin build` 로 `dist/career-local.js` 를 다시 만들어 함께 커밋한다
 - `dist/career-local.js` 는 루트 `bun.lock` 이 고정한 `zod` 와 `fast-xml-parser` 를 번들한다. MCP 서버 번들(`dist/career-mcp.js`)과 따로 만들어 서로의 `zod` 가 섞이지 않는다
@@ -798,7 +819,7 @@ fos-assistant 는 `plugin/` 을 복사하거나 마운트해 `connector.json`, `
 - `connector-skills/` 아래 모든 `SKILL.md` 의 본문을 이름 순으로 이어 붙인 것이 연결용 에이전트의 지침이 된다. 앞머리를 뺀 본문을 합쳐 8,000자를 넘지 않고 그 아래에 심볼릭 링크를 두지 않는다. 어기면 카탈로그에서 빠진다
 - `skills/` 는 Claude Code 만 읽는다. fos-assistant 는 읽지 않으므로 이 디렉터리의 스킬은 지침 상한에 들지 않는다. 두 디렉터리에 같은 이름의 스킬을 두지 않는다
 - plugin 스킬을 `.claude/skills/` 에 링크하지 않는다. 저장소를 연 Claude Code 세션도 plugin 을 설치해 plugin 스킬을 쓴다
-- 저장소 사본이 남은 스킬(`study-topic-recommender`, `position-recommender`, `sync-profile`, `resume-preparer`)은 판단 규칙을 고칠 때 plugin 스킬과 함께 고친다. 지우는 조건은 ADR-139 가 정한다
+- 저장소 사본이 남은 스킬(`study-topic-recommender`, `position-recommender`, `resume-preparer`)은 판단 규칙을 고칠 때 plugin 스킬과 함께 고친다. 지우는 조건은 ADR-139 가 정한다
 - 도구 목록이 바뀐 판을 배포하면 실행 환경이 MCP 서버를 다시 띄워야 새 도구가 보인다. 스킬 본문만 바뀐 판은 연결 확인으로 반영한다
 - 실행 파일에 의존성이 포함돼 있어 설치한 환경에서 `bun install` 을 하지 않는다. 소스를 고친 사람이 빌드해 `dist/career-mcp.js` 를 함께 커밋한다
 

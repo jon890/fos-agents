@@ -5,4 +5,7 @@ export const PLUGIN_LOCAL_EXECUTORS = [
   "study",
   "study-validate",
   "study-sources",
+  "position",
+  "resume",
+  "usage",
 ] as const;

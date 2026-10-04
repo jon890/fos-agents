@@ -1,4 +1,7 @@
-import { expect, test } from "bun:test";
+import { afterEach, expect, test } from "bun:test";
+import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fillTemplate, fragment } from "./template.ts";
 import { loadRenderAssets, readTemplateParts } from "./assets.ts";
 import { formatSeoulDisplayTime } from "../../lib/date-format.ts";
@@ -71,4 +74,69 @@ test("날짜 경계는 KST 표시와 잘못된 입력의 확인 필요 표시를
     full: "2026.08.13 09:00 KST",
   });
   expect(formatSeoulDisplayTime("invalid")).toEqual({ short: "확인 필요", full: "확인 필요" });
+});
+
+const temporaryDirectories: string[] = [];
+
+function temporaryDirectory(): string {
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), "render-assets-")));
+  temporaryDirectories.push(directory);
+  return directory;
+}
+
+afterEach(() => {
+  for (const directory of temporaryDirectories.splice(0))
+    rmSync(directory, { recursive: true, force: true });
+});
+
+async function runProcess(command: string[], cwd: string) {
+  const proc = Bun.spawn(command, {
+    cwd,
+    env: { PATH: process.env.PATH ?? "", HOME: cwd },
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr, exitCode] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ]);
+  return { stdout, stderr, exitCode };
+}
+
+test("자산 모듈은 파일 위치에 기대어 템플릿을 읽지 않는다", () => {
+  const source = readFileSync(join(import.meta.dir, "assets.ts"), "utf8");
+  expect(source).not.toContain("readFileSync");
+  expect(source).not.toContain("import.meta");
+});
+
+test("번들한 뒤 다른 위치에서 실행해도 같은 템플릿과 CSS 를 쓴다", async () => {
+  const expected = {
+    report: readFileSync(join(import.meta.dir, "templates", "report.html"), "utf8").length,
+    css: readFileSync(join(import.meta.dir, "templates", "report.css"), "utf8").length,
+  };
+  const buildDirectory = temporaryDirectory();
+  const entry = join(buildDirectory, "entry.ts");
+  const bundle = join(buildDirectory, "bundle.js");
+  writeFileSync(
+    entry,
+    [
+      `import { loadRenderAssets } from ${JSON.stringify(join(import.meta.dir, "assets.ts"))};`,
+      "const assets = loadRenderAssets();",
+      "console.log(JSON.stringify({ report: assets.templates.report.length, css: assets.css.length }));",
+    ].join("\n"),
+  );
+  // 같은 프로세스의 Bun.build 는 다른 테스트와 모듈 해석을 공유하므로 별도 프로세스에서 빌드한다.
+  const built = await runProcess(
+    [process.execPath, "build", entry, "--target", "bun", "--outfile", bundle],
+    buildDirectory,
+  );
+  expect({ exitCode: built.exitCode, stderr: built.stderr }).toMatchObject({ exitCode: 0 });
+
+  const result = await runProcess(
+    [process.execPath, "--no-env-file", bundle],
+    temporaryDirectory(),
+  );
+  expect({ exitCode: result.exitCode, stderr: result.stderr }).toEqual({ exitCode: 0, stderr: "" });
+  expect(JSON.parse(result.stdout)).toEqual(expected);
 });

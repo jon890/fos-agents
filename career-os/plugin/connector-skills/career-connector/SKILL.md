@@ -79,7 +79,7 @@ README 의 Tokens 배지 값은 `update_github_profile` 의 결과나 `CAREER_BA
 
 ## 하지 않는 일
 
-- 원티드와 LinkedIn 사이트에 반영하지 않는다. 원고만 고치고 사이트 반영은 노트북의 `sync-profile` 에서 하라고 안내한다
+- 원티드와 LinkedIn 사이트에 반영하지 않는다. 원고만 고치고 사이트 반영은 Claude Code 에서 이 plugin 의 `sync-profile` 로 하라고 안내한다
 - 사용량을 측정하거나 기록을 고치지 않는다. 지난달 기록이 없으면 세션 기록이 있는 기기의 수집기가 올릴 때까지 기다리라고 안내한다
 - GitHub 계정의 소개와 프로필 저장소 밖의 설정을 바꾸지 않는다
 

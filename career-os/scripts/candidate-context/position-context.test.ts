@@ -75,6 +75,20 @@ describe("prepareCandidateContext", () => {
     expect(existsSync(path)).toBe(false);
   });
 
+  test("한 문서만 없어도 실행 환경과 무관한 두 저장 방법을 알리고 저장소 경로는 담지 않는다", async () => {
+    const path = join(tempDir(), "candidate-context.json");
+
+    const error = await rejection(prepareCandidateContext({ candidateContext: path }, {
+      context: fakeContext({ "position-preferences": documents["position-preferences"] }),
+    }));
+
+    expect(error.message).toContain("후보자 맥락 문서가 없다: application-state.");
+    expect(error.message).toContain("save_context_document");
+    expect(error.message).toContain("manage_candidate_context.ts put");
+    expect(error.message).not.toContain("career-os/");
+    expect(existsSync(path)).toBe(false);
+  });
+
   test("저장소 안 경로는 조회 전에 거절한다", async () => {
     const path = join(repositoryRoot, "career-os", "tmp-candidate-context.json");
     const context = fakeContext(documents);

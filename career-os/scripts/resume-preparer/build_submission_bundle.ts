@@ -1,0 +1,85 @@
+#!/usr/bin/env bun
+
+import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
+import { runCli } from "../lib/cli.ts";
+import { dirname, join, resolve } from "node:path";
+import { spawnSync } from "node:child_process";
+import { artifactTextSha256 } from "./artifact_identity.ts";
+import { fileSha256, type SubmissionManifest } from "./submission_manifest.ts";
+
+function requireCurrentPdf(htmlPath: string, pdfPath: string): void {
+  if (!existsSync(htmlPath) || !existsSync(pdfPath)) {
+    throw new Error(`HTML·PDF 제출 문서가 모두 필요합니다: ${htmlPath}, ${pdfPath}`);
+  }
+  if (statSync(pdfPath).mtimeMs < statSync(htmlPath).mtimeMs) {
+    throw new Error(`PDF가 HTML보다 오래됐습니다. PDF를 다시 만드세요: ${pdfPath}`);
+  }
+}
+
+export function buildSubmissionBundle(applicationDirectory: string): string {
+  const directory = resolve(applicationDirectory);
+  const resumeHtml = join(directory, "review", "resume.html");
+  const resumePdf = join(directory, "resume.pdf");
+  requireCurrentPdf(resumeHtml, resumePdf);
+
+  const careerHtml = join(directory, "review", "career-description.html");
+  const careerPdf = join(directory, "career-description.pdf");
+  const hasCareerDescription = existsSync(careerHtml) || existsSync(careerPdf);
+  const artifacts: SubmissionManifest["artifacts"] = [{
+    kind: "resume",
+    file: "resume.pdf",
+    sha256: fileSha256(resumePdf),
+    sourceHtml: "review/resume.html",
+    sourceTextSha256: artifactTextSha256(resumeHtml),
+  }];
+
+  if (hasCareerDescription) {
+    requireCurrentPdf(careerHtml, careerPdf);
+    const submissionPdf = join(directory, "submission.pdf");
+    const pdfunite = process.env.PDFUNITE_BIN ?? "pdfunite";
+    const merged = spawnSync(pdfunite, [resumePdf, careerPdf, submissionPdf], { encoding: "utf8" });
+    if (merged.status !== 0 || !existsSync(submissionPdf)) {
+      throw new Error(merged.stderr || merged.stdout || "통합 PDF를 만들지 못했습니다.");
+    }
+    artifacts.push(
+      {
+        kind: "career_description",
+        file: "career-description.pdf",
+        sha256: fileSha256(careerPdf),
+        sourceHtml: "review/career-description.html",
+        sourceTextSha256: artifactTextSha256(careerHtml),
+      },
+      {
+        kind: "combined",
+        file: "submission.pdf",
+        sha256: fileSha256(submissionPdf),
+      },
+    );
+  }
+
+  const manifest: SubmissionManifest = {
+    schemaVersion: 1,
+    generatedAt: new Date().toISOString(),
+    artifacts,
+  };
+  const output = join(directory, "review", "submission-manifest.json");
+  mkdirSync(dirname(output), { recursive: true });
+  writeFileSync(output, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+  return output;
+}
+
+export async function main(): Promise<never> {
+  return runCli(
+    {
+      name: "build_submission_bundle.ts",
+      summary: "제출할 PDF 와 manifest 를 지원 디렉터리에 만든다.",
+      positional: [{ name: "<application-directory>", description: "지원 디렉터리" }],
+    },
+    ({ positional }) => {
+      console.log(buildSubmissionBundle(positional[0]));
+    },
+    { json: false },
+  );
+}
+
+if (import.meta.main) await main();

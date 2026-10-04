@@ -1,5 +1,9 @@
-import { join } from "node:path";
 import { z } from "zod";
+import { textAsset } from "../lib/text-asset.ts";
+import agentUsageSource from "./agent_usage.py" with { type: "text" };
+
+/** 측정 스크립트 본문. 번들에 넣어 실행 파일 위치와 상관없이 stdin 으로 넘긴다. */
+const agentUsageScript = textAsset(agentUsageSource, "agent_usage.py");
 
 export type MonthlyMeasurement = {
   month: string;
@@ -52,7 +56,8 @@ export function parseMeasurement(stdout: string): MonthlyMeasurement[] {
 }
 
 export async function runAgentUsageScript(): Promise<string> {
-  const child = Bun.spawn(["python3", join(import.meta.dir, "agent_usage.py"), "--json"], {
+  const child = Bun.spawn(["python3", "-", "--json"], {
+    stdin: new Blob([agentUsageScript]),
     stdout: "pipe",
     stderr: "inherit",
   });

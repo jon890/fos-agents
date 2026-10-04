@@ -4,8 +4,6 @@ import type { CandidateContextClient } from "./client.ts";
 import type { CandidateContextDocumentKey } from "./contracts.ts";
 import { assertOutsideRepository } from "./repository-guard.ts";
 
-const MANAGE_COMMAND = "career-os/scripts/candidate-context/manage_candidate_context.ts";
-
 /**
  * 공고 분석의 기준 버전은 `position-preferences` 문서 version 에서 계산한다. ADR-134 를 따른다.
  * 계산식의 소유자는 Backend 이고 이 함수는 `candidate-context.json` 에 적는 표시용 사본이다.
@@ -38,7 +36,7 @@ export async function prepareCandidateContext(
   }
   if (missing.length > 0) {
     throw new Error(
-      `후보자 맥락 문서가 없다: ${missing.join(", ")}. ${MANAGE_COMMAND} put --key <documentKey> --file <markdownPath> --expected-version 0 --note <note> 로 만든 뒤 다시 실행한다.`,
+      `후보자 맥락 문서가 없다: ${missing.join(", ")}. 대화에서는 save_context_document 도구로, 저장소에서는 manage_candidate_context.ts put --key <documentKey> --file <markdownPath> --expected-version 0 --note <note> 로 만든 뒤 다시 실행한다.`,
     );
   }
   const preferences = documents["position-preferences"]!;
