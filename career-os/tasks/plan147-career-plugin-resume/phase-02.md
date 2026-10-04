@@ -43,6 +43,7 @@
 - `--design` 이 없으면 `DEFAULT_DESIGN_CSS` 를, 있으면 지금처럼 파일을 읽는다
 - `--logo-dir <path>` 옵션을 더한다. 기본값은 `resolve(process.env.CAREER_WORKSPACE_ROOT?.trim() || "career-os", "library/resume-logos")` 다
 - `inlineOrganizationLogos(html: string, logoDir: string)` 로 디렉터리를 인자로 받는다
+- `renderHtml(resumeMarkdown, designSource, designPath = '', accent = '', logoDir?: string)` 로 마지막 인자를 더한다. `logoDir` 가 없으면 로고 없이 렌더한다. 기존 테스트의 위치 인자 호출은 그대로 통과한다. `main` 은 `opts.logoDir` 를 넘긴다
 - `function main` 을 `export` 한다. 도움말에 `--logo-dir` 를 더하고 로고 위치를 새 기본값으로 적는다
 
 ### 2. CLI 진입점 일곱
@@ -81,7 +82,9 @@ git rm -r career-os/.claude/skills/resume-preparer/templates/logos
   - 템플릿 번들 확인: `assets.test.ts` 와 같은 방식으로, `DOCUMENT_TEMPLATE`, `PAGE_TEMPLATE`, `DEFAULT_DESIGN_CSS` 의 길이를 출력하는 임시 진입점을 별도 프로세스에서 번들해 다른 cwd 에서 `bun --no-env-file` 로 실행하면 템플릿 파일의 길이와 같다
 - `career-os/scripts/resume-preparer/layout.test.ts` 수정: `LOGO_DIR` 단언을 지우고 `career-os/.claude/skills/resume-preparer/templates` 가 없다는 단언으로 바꾼다
 - `career-os/scripts/plugin-local/main.test.ts` 수정: `help` 에 `resume` 이 있다. `runPluginLocal(["resume"])`, `runPluginLocal(["resume", "nope"])` 이 2 다. help 테스트 이름의 실행기 수를 맞춘다
-- `career-os/plugin/scripts/local-bundle.test.ts` 수정: 번들의 `resume search-claims 예시` 를 `CAREER_WORKSPACE_ROOT=<빈 임시 디렉터리>` 로 실행하면 종료 코드 0 이고, 상태 디렉터리가 비어 결과에 주장이 없다. 저장소의 `career-os/state` 를 읽지 않는다는 근거다
+- `career-os/plugin/scripts/local-bundle.test.ts` 수정
+  - 상태 디렉터리 주입: `<CAREER_WORKSPACE_ROOT>/state/verified-claims/other/<이름>.json` 에 스키마(`verified-claims/schema.ts`)에 맞는 주장 하나를, `<cwd>/career-os/state/verified-claims/other/<이름>.json` 에 다른 `claimKey` 의 주장 하나를 둔다. 번들의 `resume search-claims <두 주장에 공통인 검색어>` 결과에 앞의 `claimKey` 만 나오고 뒤의 것은 나오지 않는다
+  - 로고 주입: `<root>/library/resume-logos/` 에 `index.json` 과 1×1 PNG 를, 임시 지원 디렉터리의 `evidence/resume-draft.md` 에 그 이름으로 시작하는 `###` 제목을 둔다. `resume export --application-dir <지원 디렉터리> --chrome-bin /not-used` 는 PDF 단계에서 1 로 끝나도 그 앞에서 쓴 `review/resume.html` 이 `data:image/png;base64,` 를 담는다
 
 ## 검증
 

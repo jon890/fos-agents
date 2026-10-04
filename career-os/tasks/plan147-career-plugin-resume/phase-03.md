@@ -41,12 +41,13 @@
 - 4~6단계 명령을 `<CAREER_LOCAL> resume <하위 명령>` 으로. 주장 원장의 근거 경로는 Claude Code 를 연 디렉터리 기준 상대 경로나 절대 경로로 쓴다고 적는다
 - 7단계: `<CAREER_LOCAL> resume build-bundle <지원 디렉터리>`, `<CAREER_LOCAL> resume validate-bundle <지원 디렉터리>`. 지원 패키지 검사와 검토 화면은 저장소 세션에서 한다고 적는다. 끝에 `<CAREER_LOCAL> workspace finish resume-preparer --json`
 - 「답변 연습은 `interview-practice` 로」 는 그대로 둔다. 같은 plugin 의 스킬이다
+- 원본의 `[비공개 작업 파일 흐름](../../../docs/flow.md)` 과 `../application-package-writer/...` 링크는 지운다. plugin 밖을 가리키는 `](../` 링크를 남기지 않는다
 
 ### 2. `career-os/plugin/skills/resume-preparer/references/` 신규
 
 - `claim-model.md`, `hard-review.md`, `resume-taste.md`, `resume-writing-style.md`, `scoring-rubric.md` 를 원본에서 그대로 복사한다
-- `candidate-context.md`: 원본을 옮기고 `manage_candidate_context.ts get --key <키>` 를 `get_context_document` 도구로, `put` 을 `save_context_document` 도구로 바꾼다. 저장 전 변경 전후를 보여 주고 승인받는 규칙은 그대로다
-- `resume-design.md`: 원본을 옮기고 자산 표를 「템플릿 셋은 실행기에 번들돼 있다. 공고별 스타일은 `<CAREER_LOCAL> resume export --design <path>` 로 준다. 로고는 작업본 `library/resume-logos/` 의 `index.json` 과 이미지로 붙는다」 로 바꾼다
+- `candidate-context.md`: 원본을 옮기고 `manage_candidate_context.ts get --key <키>` 를 `get_context_document` 도구로, `put` 을 `save_context_document` 도구로 바꾼다. CLI 플래그 `--expected-version`, `--note` 는 도구 인자 `expectedVersion`, `note` 로 바꾼다(`plugin/src/tools.ts` 의 `save_context_document` 정의). 저장 전 변경 전후를 보여 주고 승인받는 규칙은 그대로다
+- `resume-design.md`: 원본을 옮기고 `export_resume.ts --accent "#RRGGBB"` 를 `<CAREER_LOCAL> resume export --accent "#RRGGBB"` 로, 넘친 쪽을 알리는 주체 `export_resume.ts` 를 `<CAREER_LOCAL> resume export` 로 바꾼다. 자산 표를 「템플릿 셋은 실행기에 번들돼 있다. 공고별 스타일은 `<CAREER_LOCAL> resume export --design <path>` 로 준다. 로고는 작업본 `library/resume-logos/` 의 `index.json` 과 이미지로 붙는다」 로 바꾼다
 
 ### 3. 버전 올리기
 
@@ -57,7 +58,7 @@
 
 - `career-os/plugin/scripts/local-skills.test.ts` 수정
   - 「셋 있다」 를 「넷 있다」 로 바꾸고 기대 목록에 `resume-preparer` 를 이름 순으로 더한다
-  - `resume-preparer` 전용 `describe`: 본문에 `<CAREER_LOCAL> resume export`, `validate-ledger`, `assess-reuse`, `promote-claims`, `build-bundle`, `validate-bundle`, `workspace begin resume-preparer` 가 있다. 디렉터리의 모든 파일에 `brain-search`, `brain-add`, `private brain`, `manage_candidate_context.ts` 가 없다. 기준 문서 다섯이 저장소 사본과 바이트 단위로 같다(사본이 없으면 실패. 사본을 지울 때 이 단언도 지운다는 주석)
+  - `resume-preparer` 전용 `describe`: 디렉터리의 모든 `.md` 에 `](../` 가 없다. 본문에 `<CAREER_LOCAL> resume export`, `validate-ledger`, `assess-reuse`, `promote-claims`, `build-bundle`, `validate-bundle`, `workspace begin resume-preparer` 가 있다. 디렉터리의 모든 파일에 `brain-search`, `brain-add`, `private brain`, `manage_candidate_context.ts` 가 없다. 기준 문서 다섯이 저장소 사본과 바이트 단위로 같다(사본이 없으면 실패. 사본을 지울 때 이 단언도 지운다는 주석)
 
 ## 검증
 

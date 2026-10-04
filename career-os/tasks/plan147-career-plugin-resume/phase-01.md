@@ -67,7 +67,7 @@ bun install --frozen-lockfile
 bun test ./career-os/scripts/resume-preparer/layout.test.ts ./career-os/scripts/resume-preparer
 bun test ./career-os/scripts ./career-os/.claude/skills ./career-os/plugin
 bunx tsc --noEmit
-git grep -n "resume-preparer/scripts" -- career-os ':!career-os/tasks' ':!career-os/scripts/resume-preparer/layout.test.ts' && exit 1 || true
+! git grep -n "resume-preparer/scripts" -- career-os ':!career-os/tasks' ':!career-os/scripts/resume-preparer/layout.test.ts'
 ```
 
 기대값: 모두 종료 코드 0. 마지막 줄은 아무것도 찍지 않는다.
