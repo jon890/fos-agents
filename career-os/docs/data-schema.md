@@ -1323,6 +1323,8 @@ Hermes 에서는 서버 이름 `career` 로 `mcp__career__<도구>` 가 된다.
 | `save_personal_question` | `WRITE`, `required` | `drillType`, `enabled`, `question` | `{ questionId, drillType, topic, enabled, updatedAt }` |
 | `get_study_candidates` | `READ`, `none` | 선택 `limit`, `category` | `{ candidateContextVersion, historyVersion, learningInterests, recentStudyTopicKeys, nextCursor, candidates }` |
 | `save_study_recommendation` | `WRITE`, `required` | `candidateContextVersion`, `topics`, `rejections`, 선택 `generatedAt` | `{ reportId, generatedAt, historyVersion }` |
+| `list_study_candidates` | `READ`, `none` | 선택 `limit`, `category`, `sourceKey`, `publishedFrom`, `publishedTo`, `cursor` | `{ status, candidateContextVersion, learningInterestsVersion, historyVersion, recentStudyTopicKeys, nextCursor, hasMore, candidates }`. 관심사 문서가 없으면 `{ status: "learning_interests_missing" }` |
+| `get_position_research_constraints` | `READ`, `none` | 없음 | `{ readiness, missing, exclusions, companyPreferences }` |
 
 - 후보자 맥락의 `documentKey` 는 [후보자 맥락 문서](#후보자-맥락-문서)의 네 키, 프로필 원고의 `documentKey` 는 `wanted`, `linkedin`, `github` 다
 - 저장 도구의 `body`, `note`, `expectedVersion` 은 Backend 의 문서 저장 계약과 같다. 본문 전체를 바꾸고 새 문서는 `expectedVersion: 0` 이다
@@ -1357,6 +1359,19 @@ Hermes 에서는 서버 이름 `career` 로 `mcp__career__<도구>` 가 된다.
 - `Idempotency-Key` 는 노트북의 CLI 와 같은 `recommendation:<sha256(canonical JSON { reportId, generatedAt })>` 다
 - `CAREER_NETWORK` 로 끝난 `save_study_recommendation` 은 오류 객체에 `reportId` 와 `generatedAt` 을 더한다
 - Backend 가 409 로 답하면 `GET /api/study/v1/recommendation-runs/{reportId}/status` 를 한 번 읽는다. 오늘 리포트가 있으면 `CAREER_STUDY_ALREADY_SAVED`, 없으면 `CAREER_STUDY_CONFLICT` 다. 뒤의 것은 후보를 읽은 뒤 기준이 바뀌었거나, 이미 추천한 주제나 자료를 골랐거나, 같은 요청이 아직 처리 중이거나, 같은 멱등 키에 다른 본문(`IDEMPOTENCY_CONFLICT`)을 보낸 경우다
+
+자율 조사용 읽기 도구의 계약이다. 둘 다 기존 GET 경로만 읽고 추천 생성, 수집, 문서 저장, 게시 경로를 부르지 않는다.
+경험, 관심사, 역할 선호, 지원 상태는 `get_context_document` 의 네 문서를 그대로 쓴다.
+
+- `list_study_candidates` 는 `GET /api/study/v1/candidates` 한 쪽만 읽는다. 입력 칸은 Backend query 의 칸과 같다. `limit` 은 1 이상 50 이하이고 기본값은 20 이다. `publishedFrom`, `publishedTo` 는 ISO datetime, `cursor` 는 앞 결과의 `nextCursor` 다
+- 후보 한 줄은 `{ contentKey, canonicalUrl, url, sourceKey, sourceName, title, category, kind, published, excerpt }` 다. `excerpt` 는 500자에서 자른다. 관심사 본문은 싣지 않고 `learningInterestsVersion` 만 싣는다
+- `status` 는 `ok`, `empty`, `learning_interests_missing` 가운데 하나다. `empty` 는 수집된 미추천 후보가 없다는 뜻이고 웹에 자료가 없다는 뜻이 아니다. Backend 의 409 는 오류가 아닌 `learning_interests_missing` 이다
+- `hasMore` 는 `nextCursor` 가 있는지다. 잘못된 `cursor` 는 Backend 가 400 으로 답해 `CAREER_BAD_REQUEST` 다
+- `get_position_research_constraints` 는 `GET /api/positions/v1/exclusions` 와 `GET /api/positions/v1/company-preferences` 를 함께 읽는다. 규칙과 선호의 칸은 Backend 의 `src/positions/schema.ts` 와 같다
+- 만료된 제외 규칙은 Backend 가 Asia/Seoul 날짜로 이미 뺀다. `expiresAt` 이 없는 규칙은 만료되지 않는다
+- 둘 다 읽으면 `readiness: "ready"` 다. 하나라도 읽지 못하면 오류가 아닌 `readiness: "hold"` 이고, 읽지 못한 쪽은 `null`, `missing` 에 `{ source, error: { code, message } }` 를 싣는다. `hold` 이면 조사는 이어 가도 포지션 추천은 확정하지 않는다
+- 어느 쪽이든 token 이 거절되면 `hold` 가 아니라 `CAREER_UNAUTHORIZED` 오류다. 연결 화면에서만 고칠 수 있기 때문이다
+- `positions` 의 실행 조회(`getRun`)는 조회 중 추천을 만드는 분기가 있어 도구로 노출하지 않는다
 
 **승인이 필요한 도구의 인자는 fos-assistant 가 UTF-8 16KB 까지만 받는다.**
 키와 따옴표를 포함해 직렬화한 인자 전체의 크기다. 한글은 한 글자가 3바이트라 본문이 5천 자 안팎이면 닿는다.

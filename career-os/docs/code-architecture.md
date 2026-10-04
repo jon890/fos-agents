@@ -679,14 +679,15 @@ career-os/plugin/
 | `plugin/connector.json` | 연결 화면의 입력 칸, 확인 도구, 도구별 위험도와 승인 방식, 오류 코드 대응 |
 | `plugin/.mcp.json` | `career` 서버의 실행 명령과 env 변수 참조. 실제 값을 담지 않는다 |
 | `plugin/src/server.ts` | stdio MCP 서버 조립과 도구별 읽기 전용 표시 |
-| `plugin/src/tools.ts` | 도구 열여섯 개의 입력 스키마와 분기, 오류를 `{ error: { code, message } }` 로 바꾸는 일 |
+| `plugin/src/tools.ts` | 도구 열여덟 개의 입력 스키마와 분기, 오류를 `{ error: { code, message } }` 로 바꾸는 일 |
 | `plugin/src/interview.ts` | 면접 연습 도구 넷의 입력과 응답 스키마, 공개 질문 은행 번들과 질문 선별 호출 |
-| `plugin/src/study.ts` | 공부 추천 도구 둘의 입력과 응답 스키마, 후보 요약과 추천 저장 요청 조립 |
+| `plugin/src/study.ts` | 공부 후보 읽기와 목록, 추천 저장 도구 셋의 입력과 응답 스키마, 후보 요약과 추천 저장 요청 조립 |
+| `plugin/src/positions.ts` | 포지션 조사 제외 기준 도구의 응답 스키마와 제외 규칙, 회사 선호를 함께 읽어 보류 여부를 정하는 일 |
 | `plugin/src/backend.ts` | 커리어 Backend 의 Bearer HTTP client 와 응답 스키마 |
 | `plugin/src/github.ts` | GitHub REST client. 프로필 저장소 조회와 Git Data API 로 커밋 하나를 만드는 일 |
 | `plugin/src/*.test.ts`, `plugin/scripts/*.test.ts` | fetch 대역으로 도는 도구 테스트, 번들 일치와 manifest 일치 검사 |
 | `plugin/scripts/build.ts`, `plugin/dist/career-mcp.js` | 의존성을 포함한 단일 실행 파일의 빌드와 배포 |
-| `plugin/skills/career-connector/SKILL.md` | 연결용 에이전트의 지침. 프로필 갱신 순서와 승인 규칙 |
+| `plugin/skills/career-connector/SKILL.md` | 연결용 에이전트의 지침. 프로필 갱신 순서와 승인 규칙, 조사용 읽기 도구의 결과 해석 |
 | `plugin/skills/interview-practice/SKILL.md` | MCP 도구만으로 하는 면접 연습. 질문 고르기, 답변 평가, 기록과 개인 질문 저장 |
 | `plugin/skills/study-topic-recommender/SKILL.md` | MCP 도구만으로 하는 공부 추천. 수집된 후보에서 고르고 추천 이력을 저장 |
 | `scripts/interview-drill/question-selection.ts` | 질문 은행과 복습 상태로 낼 질문을 고르는 순수 함수. `follow-up-policy.ts` 의 상수만 import 한다. 노트북 CLI 와 커넥터가 같은 함수를 쓴다 |
