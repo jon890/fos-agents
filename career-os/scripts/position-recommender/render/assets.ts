@@ -1,16 +1,16 @@
-import { readFileSync } from "node:fs";
+import { textAsset } from "../../lib/text-asset.ts";
+import reportPartsSource from "./templates/report-parts.html" with { type: "text" };
+import reportSource from "./templates/report.html" with { type: "text" };
+import reportCss from "./templates/report.css" with { type: "text" };
 import type { RenderAssets } from "./template.ts";
 
-const directory = new URL("./templates/", import.meta.url);
-
+// 템플릿을 텍스트 import 로 읽어 번들한 실행기에서도 파일 위치와 무관하게 같은 자산을 쓴다.
 export function loadRenderAssets(): RenderAssets {
-  const templates = readTemplateParts(
-    readFileSync(new URL("report-parts.html", directory), "utf8"),
-  );
-  templates.report = readFileSync(new URL("report.html", directory), "utf8");
+  const templates = readTemplateParts(textAsset(reportPartsSource, "report-parts.html"));
+  templates.report = textAsset(reportSource, "report.html");
   return {
     templates,
-    css: readFileSync(new URL("report.css", directory), "utf8"),
+    css: textAsset(reportCss, "report.css"),
     script: "",
   };
 }

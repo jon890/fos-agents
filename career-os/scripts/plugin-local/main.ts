@@ -4,6 +4,7 @@ import { makeRemoteError, TransportError } from "../career-workspace/transport.t
 import { runDrillCli } from "../interview-drill/drill-engine.ts";
 import { createInterviewPracticeStore } from "../interview-drill/store/index.ts";
 import { runInterviewQuestionSources } from "../interview-question-sources/cli.ts";
+import { PositionRunUsageError, positionRunHelp, runPositionCommand } from "../position-recommender/position_run.ts";
 import { CareerBackendHttpError } from "../lib/career-backend-http.ts";
 import { UsageError } from "../lib/cli.ts";
 import { formatManageReadingSourcesError, manageReadingSources } from "../study-topic-recommender/manage_reading_sources.ts";
@@ -22,6 +23,7 @@ const descriptions: Record<Executor, string> = {
   study: "아침 공부 주제를 수집, 선별하고 리포트를 만든다",
   "study-validate": "아침 공부 리포트 산출물을 검증한다 (--run-dir <dir>)",
   "study-sources": "공부 자료 출처를 조회하거나 바꾼다",
+  position: "공고를 모아 판정과 분석을 반영하고 리포트를 만든다 (collect | commit-company-tiers | commit-analyses | finalize | cleanup) --run <dir>",
 };
 
 const INTERVIEW_USAGE = "사용법: interview select <tech|behavioral> [--application-dir <dir>] [--target-bar <bar>] [--count <n>]";
@@ -94,6 +96,23 @@ export async function runPluginLocal(argv: string[]): Promise<number> {
         console.error(formatManageReadingSourcesError(error));
         return 1;
       }
+    case "position":
+      return runPosition(rest);
+  }
+}
+
+// position_run.ts 의 메인 블록과 같은 출력과 종료 코드를 낸다.
+async function runPosition(args: string[]): Promise<number> {
+  try {
+    return await runPositionCommand(args);
+  } catch (error) {
+    if (error instanceof PositionRunUsageError) {
+      console.error(positionRunHelp());
+      console.error(error.message);
+      return 2;
+    }
+    console.error(messageOf(error));
+    return 1;
   }
 }
 

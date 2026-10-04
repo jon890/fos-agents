@@ -44,7 +44,21 @@ test("workspace paths 는 설정한 작업본 위치와 로컬 모드를 낸다"
   const root = join(cwd, "workspace");
   const result = await runBundle(cwd, ["workspace", "paths", "--json"], { CAREER_WORKSPACE_ROOT: root });
   expect(result.exitCode).toBe(0);
-  expect(JSON.parse(result.stdout)).toMatchObject({ action: "paths", ok: true, root, mode: "local" });
+  expect(JSON.parse(result.stdout)).toMatchObject({ action: "paths", ok: true, root, mode: "local", evidenceDir: join(root, "evidence") });
+});
+
+test("workspace paths 는 CAREER_EVIDENCE_DIR 를 프로젝트 근거 위치로 낸다", async () => {
+  const cwd = temporaryDirectory();
+  const evidenceDir = join(cwd, "evidence-elsewhere");
+  const result = await runBundle(cwd, ["workspace", "paths", "--json"], { CAREER_EVIDENCE_DIR: evidenceDir });
+  expect(result.exitCode).toBe(0);
+  expect(JSON.parse(result.stdout)).toMatchObject({ evidenceDir });
+});
+
+test("position --help 는 0 으로 끝나고 하위 명령을 보여 준다", async () => {
+  const result = await runBundle(temporaryDirectory(), ["position", "--help"]);
+  expect({ exitCode: result.exitCode, stderr: result.stderr }).toEqual({ exitCode: 0, stderr: "" });
+  expect(result.stdout).toContain("commit-company-tiers");
 });
 
 test("cwd 의 .env 는 작업본 위치와 모드를 바꾸지 않는다", async () => {

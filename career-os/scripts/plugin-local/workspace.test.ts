@@ -28,6 +28,7 @@ describe("resolvePluginWorkspace", () => {
     expect(resolvePluginWorkspace({}, "/home/example")).toEqual({
       root: "/home/example/.fos-career/workspace",
       mode: "local",
+      evidenceDir: "/home/example/.fos-career/workspace/evidence",
     });
   });
 
@@ -45,7 +46,20 @@ describe("resolvePluginWorkspace", () => {
       CAREER_WORKSPACE_ROOT: "   ",
       CAREER_WORKSPACE_SSH_TARGET: " ",
       CAREER_WORKSPACE_COMMAND: "\t",
-    }, "/home/example")).toEqual({ root: "/home/example/.fos-career/workspace", mode: "local" });
+      CAREER_EVIDENCE_DIR: "  ",
+    }, "/home/example")).toEqual({
+      root: "/home/example/.fos-career/workspace",
+      mode: "local",
+      evidenceDir: "/home/example/.fos-career/workspace/evidence",
+    });
+  });
+
+  test("CAREER_EVIDENCE_DIR 가 있으면 그 경로를 프로젝트 근거 위치로 쓴다", () => {
+    expect(resolvePluginWorkspace({ CAREER_EVIDENCE_DIR: " /data/evidence " }, "/home/example").evidenceDir).toBe("/data/evidence");
+  });
+
+  test("CAREER_EVIDENCE_DIR 가 없으면 작업본 아래 evidence 를 쓴다", () => {
+    expect(resolvePluginWorkspace({ CAREER_WORKSPACE_ROOT: "/data/career" }, "/home/example").evidenceDir).toBe("/data/career/evidence");
   });
 });
 
@@ -64,10 +78,10 @@ describe("runPluginWorkspace", () => {
     expect(existsSync(path.join(root, ".career-sync"))).toBe(false);
   });
 
-  test("paths 는 작업본 위치와 모드를 낸다", async () => {
+  test("paths 는 작업본 위치와 모드, 프로젝트 근거 위치를 낸다", async () => {
     const root = temporaryDirectory();
     expect(await runPluginWorkspace(["paths", "--json"], { CAREER_WORKSPACE_ROOT: root }, "/home/example"))
-      .toMatchObject({ action: "paths", ok: true, root, mode: "local" });
+      .toMatchObject({ action: "paths", ok: true, root, mode: "local", evidenceDir: path.join(root, "evidence") });
   });
 
   test("관리하지 않는 스킬과 빠진 스킬 이름은 INVALID_MANIFEST 다", async () => {
