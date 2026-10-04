@@ -85,7 +85,8 @@ describe("배포한 커리어 Backend 의 HTTP 계약", () => {
     rejected = await record(
       "GET /api/v1/auth/check (틀린 token)",
       "/api/v1/auth/check",
-      `${apiToken}-틀린값`,
+      // HTTP 헤더 값은 Latin-1 만 받는다. 한글을 붙이면 fetch 가 요청을 보내기 전에 던진다.
+      `${apiToken}-wrong-token`,
     );
     missing = await record(
       "GET /api/positions/v1/없는경로",
