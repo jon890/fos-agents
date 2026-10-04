@@ -1365,11 +1365,11 @@ Hermes 에서는 서버 이름 `career` 로 `mcp__career__<도구>` 가 된다.
 
 - `list_study_candidates` 는 `GET /api/study/v1/candidates` 한 쪽만 읽는다. 입력 칸은 Backend query 의 칸과 같다. `limit` 은 1 이상 50 이하이고 기본값은 20 이다. `publishedFrom`, `publishedTo` 는 ISO datetime, `cursor` 는 앞 결과의 `nextCursor` 다
 - 후보 한 줄은 `{ contentKey, canonicalUrl, url, sourceKey, sourceName, title, category, kind, published, excerpt }` 다. `excerpt` 는 500자에서 자른다. 관심사 본문은 싣지 않고 `learningInterestsVersion` 만 싣는다
-- `status` 는 `ok`, `empty`, `learning_interests_missing` 가운데 하나다. `empty` 는 수집된 미추천 후보가 없다는 뜻이고 웹에 자료가 없다는 뜻이 아니다. Backend 의 409 는 오류가 아닌 `learning_interests_missing` 이다
+- `status` 는 `ok`, `empty`, `learning_interests_missing` 가운데 하나다. `empty` 는 조건에 맞는 미추천 후보가 수집돼 있지 않다는 뜻이고 웹에 자료가 없다는 뜻이 아니다. Backend 의 409 는 오류가 아닌 `learning_interests_missing` 이다
 - `hasMore` 는 `nextCursor` 가 있는지다. 잘못된 `cursor` 는 Backend 가 400 으로 답해 `CAREER_BAD_REQUEST` 다
 - `get_position_research_constraints` 는 `GET /api/positions/v1/exclusions` 와 `GET /api/positions/v1/company-preferences` 를 함께 읽는다. 규칙과 선호의 칸은 Backend 의 `src/positions/schema.ts` 와 같다
 - 만료된 제외 규칙은 Backend 가 Asia/Seoul 날짜로 이미 뺀다. `expiresAt` 이 없는 규칙은 만료되지 않는다
-- 둘 다 읽으면 `readiness: "ready"` 다. 하나라도 읽지 못하면 오류가 아닌 `readiness: "hold"` 이고, 읽지 못한 쪽은 `null`, `missing` 에 `{ source, error: { code, message } }` 를 싣는다. `hold` 이면 조사는 이어 가도 포지션 추천은 확정하지 않는다
+- 둘 다 읽으면 `readiness: "ready"` 다. 하나라도 읽지 못하면 오류가 아닌 `readiness: "hold"` 이고, 읽지 못한 쪽은 `null`, `missing` 에 `{ source, code }` 를 싣는다. 고정 문구는 저장과 문서를 기준으로 쓴 것이라 싣지 않는다. `hold` 이면 조사는 이어 가도 포지션 추천은 확정하지 않는다
 - 어느 쪽이든 token 이 거절되면 `hold` 가 아니라 `CAREER_UNAUTHORIZED` 오류다. 연결 화면에서만 고칠 수 있기 때문이다
 - `positions` 의 실행 조회(`getRun`)는 조회 중 추천을 만드는 분기가 있어 도구로 노출하지 않는다
 
