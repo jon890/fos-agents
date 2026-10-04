@@ -325,7 +325,7 @@ MCP 도구만으로 하는 연습은 `plugin/connector-skills/interview-practice
 계약과 공급자는 [ADR-130](adr/ADR-130-면접-연습의-후보자-맥락은-memory-공급자-경계로-읽는다.md)과 `data-schema.md` 의 「후보자 맥락」 절이 정한다.
 `backend` 공급자일 때 스크립트는 `scripts/candidate-context/client.ts` 로 문서 본문을 읽어 채울 칸 목록과 함께 낸다. 칸은 모델이 채운다.
 
-`scripts/interview-drill/`은 `interview-practice`의 기술·인성 모드에서 질문 선별과 연습 기록을 처리한다.
+`scripts/interview-drill/`은 질문 선별과 연습 기록을 처리한다. 커넥터와 로컬 실행기가 이 코드를 번들해 쓰고, 저장소의 `drill-engine.ts` CLI 도 같은 코드다.
 공고별 `evidence/interview-questions.json`을 명시하면 포지션 질문과 공통 기반 질문을 섞어 구성한다.
 `follow-up-policy.ts`는 답변 수준에 따른 꼬리질문 축과 최대 깊이를 제공한다.
 `question-selection.ts` 는 질문 묶음과 복습 상태, 오늘 날짜를 받아 낼 질문을 고르는 순수 함수다. `drill-engine.ts` 가 파일과 저장소에서 읽은 값을 넘기고, fos-career 커넥터도 같은 함수를 번들해 쓴다.

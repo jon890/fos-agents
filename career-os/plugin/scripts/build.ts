@@ -53,7 +53,8 @@ export async function buildLocalBundle(outdir: string) {
 }
 
 if (import.meta.main) {
-  const outdir = resolve(import.meta.dir, "../dist");
+  // 출력 위치를 인자로 받는다. 테스트는 임시 디렉터리를 넘겨 별도 프로세스에서 빌드한다.
+  const outdir = resolve(process.argv[2] ?? resolve(import.meta.dir, "../dist"));
   await buildBundle(outdir);
   await buildLocalBundle(outdir);
 }

@@ -129,5 +129,5 @@ async function run(): Promise<void> {
   }
 }
 export async function main(): Promise<void> { await run(); }
-export function reportMorningReadingError(error: unknown): never { if (error instanceof StudyRunPathError) { console.error(error.message); process.exit(error.exitCode); } if (error instanceof CareerBackendHttpError) { console.error(JSON.stringify({ error: { code: error.code ?? `HTTP_${error.status}`, requestId: error.requestId ?? null, ...(error.retryAfter === undefined ? {} : { retryAfter: error.retryAfter }) } })); process.exit(1); } console.error("study-topic-recommender error:", error); process.exit(1); }
+export function reportMorningReadingError(error: unknown): never { if (error instanceof StudyRunPathError) { console.error(error.message); process.exit(error.exitCode); } if (error instanceof CareerBackendHttpError) { console.error(JSON.stringify({ error: { code: error.code ?? `HTTP_${error.status}`, requestId: error.requestId ?? null, ...(error.retryAfter === undefined ? {} : { retryAfter: error.retryAfter }) } })); process.exit(1); } console.error("study-topic-recommender error:", error instanceof Error ? error.message : String(error)); process.exit(1); }
 if (import.meta.main) main().catch(reportMorningReadingError);

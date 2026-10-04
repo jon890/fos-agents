@@ -33,12 +33,9 @@ description: 읽을거리를 수집하고 공부 추천 리포트를 HTML 로 �
 `<CAREER_LOCAL> study-validate --run-dir <RUN_DIR>` 와 직접 읽기로 HTML 에 개인 정보, 비공개 회사 맥락, 로컬 절대 경로가 없는지 확인한다.
 통과하면 사용자가 가진 게시 수단으로 올린다.
 게시한 URL 이 열리는지 확인한 뒤 기록한다.
+기록 명령과 각 값의 형식은 `references/execution.md` 의 「실행」 절에서 `--record-publication` 명령을 읽는다.
 
-```bash
-<CAREER_LOCAL> study --record-publication --run-dir <RUN_DIR> --report-id ... --channel ... --external-id ... --published-at ... --url ...
-```
-
-`--run-dir` 이 없으면 실행기가 종료 코드 2 로 끝난다.
+`--record-publication` 을 실행할 때 `--run-dir` 이 없으면 실행기가 종료 코드 2 로 끝난다.
 
 ## 5. 정리
 

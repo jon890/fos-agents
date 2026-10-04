@@ -16,7 +16,7 @@
 - `ai-platform` — RAG, 검색, Agent, Tool, 모델 서빙과 AI Platform 질문
 - `behavioral` — STAR 형식 경험 공유, 협업, 성장, 가치관 등 일반 인성 질문.
   개인 답변, 지원 전략, 회사별 비공개 맥락은 넣지 않는다.
-  개인 맞춤 질문과 포지션별 질문은 이 스킬의 책임이 아니다.
+  개인 맞춤 질문과 포지션별 질문은 이 절차의 범위가 아니다.
   공식 채용 안내와 컬처 자료를 `sources.json`에 등록하고, public-safe 일반 질문으로 정규화 가능한 항목만 `public/question-bank/behavioral/questions.json`에 누적한다.
 
 ## 작업 범위
@@ -102,4 +102,4 @@ git diff --check
 ```
 
 sensitive grep 결과는 사람이 확인한다.
-README나 skill의 금지 문구는 허용되지만, 실제 private 내용이면 실패로 본다.
+README나 이 절차 문서의 금지 문구는 허용되지만, 실제 private 내용이면 실패로 본다.

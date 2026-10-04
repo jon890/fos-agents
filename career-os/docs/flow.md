@@ -87,6 +87,7 @@ plugin 스킬은 같은 단계를 로컬 실행기로 부른다. `<CAREER_LOCAL>
 작업본의 위치는 `CAREER_WORKSPACE_ROOT` 이고 없으면 `~/.fos-career/workspace` 다.
 `CAREER_WORKSPACE_COMMAND` 나 `CAREER_WORKSPACE_SSH_TARGET` 이 있으면 위 동기화를 그대로 거친다.
 둘 다 없으면 동기화하지 않는다. `begin` 은 관리 디렉터리 셋을 만들고 `mode: "local"` 을 내며, `finish` 는 원격에 아무것도 보내지 않는다.
+로컬 모드에는 세션 기록, `WORKSPACE_DIRTY` 검사, release 비교가 없다. 작업본을 두 환경에서 함께 쓰지 않는다는 전제다. 두 환경에서 쓰려면 동기화 설정을 켠다.
 `workspace paths --json` 은 작업본의 위치와 동기화 방식만 알려 준다.
 
 `position-recommender`와 `study-topic-recommender`의 장기 추천 상태는 Backend에서 읽고 쓴다.
