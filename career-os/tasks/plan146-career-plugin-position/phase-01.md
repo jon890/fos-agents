@@ -12,7 +12,7 @@
 ## 컨텍스트
 
 - 로컬 실행기 진입점은 `career-os/scripts/plugin-local/main.ts` 의 `runPluginLocal(argv)` 이다. 실행기 이름 목록은 import 가 없는 `career-os/scripts/plugin-local/executors.ts` 의 `PLUGIN_LOCAL_EXECUTORS` 이고, `main.ts` 의 `descriptions` 가 이름마다 한 줄 설명을 갖는다. 실행기에 넘기기 전에 `process.argv` 를 `[argv0, argv1, ...rest]` 로 바꾼다
-- `career-os/scripts/position-recommender/position_run.ts` 는 `export async function runPositionCommand(argv: string[], options: PositionRunOptions = {}): Promise<number>` 를 낸다. 하위 명령은 `collect`, `commit-company-tiers`, `commit-analyses`, `finalize`, `cleanup`, `help` 이다. 그 파일의 `import.meta.main` 블록이 `PositionRunUsageError` 면 `positionRunHelp()` 와 메시지를 stderr 에 쓰고 2, 그 밖의 오류는 메시지만 쓰고 1 로 끝낸다. 출력의 「다음 명령: commit-analyses」 처럼 저장소 경로 없는 문장만 쓴다
+- `career-os/scripts/position-recommender/position_run.ts` 는 `export async function runPositionCommand(argv: string[], options: PositionRunOptions = {}): Promise<number>` 를 낸다. 하위 명령은 `collect`, `commit-company-tiers`, `commit-analyses`, `finalize`, `cleanup` 이다. `--help` 가 있으면 도움말을 stdout 에 쓰고 0 이다. `help` 는 하위 명령이 아니라 `PositionRunUsageError` 다. 그 파일의 `import.meta.main` 블록이 `PositionRunUsageError` 면 `positionRunHelp()` 와 메시지를 stderr 에 쓰고 2, 그 밖의 오류는 메시지만 쓰고 1 로 끝낸다. 출력의 「다음 명령: commit-analyses」 처럼 저장소 경로 없는 문장만 쓴다
 - `career-os/scripts/position-recommender/render/assets.ts` 는 `new URL("./templates/", import.meta.url)` 아래 `report-parts.html`, `report.html`, `report.css` 를 `readFileSync` 로 읽는다. 번들하면 번들 위치 기준으로 찾아 실패한다
 - 텍스트 import 는 런타임에 문자열을 준다(Bun 1.3.5 실측). 그러나 TypeScript 에서 `.html` 은 Bun 타입이 `HTMLBundle` 로 선언해 `string` 에 대입되지 않고, `.css` 는 선언이 없어 `TS2307` 이 난다
 - `career-os/scripts/candidate-context/position-context.ts` 의 `MANAGE_COMMAND` 상수는 `career-os/scripts/candidate-context/manage_candidate_context.ts` 이고, 문서가 없을 때 이 저장소 경로를 담은 오류를 던진다. `career-os/scripts/position-recommender/position_run.test.ts` 는 「후보자 맥락 문서가 없다: position-preferences」 부분만 단언한다
@@ -71,9 +71,10 @@
 - `career-os/scripts/position-recommender/render/assets.test.ts` 수정: 새 테스트 둘
   - `assets.ts` 소스에 `readFileSync`, `import.meta` 문자열이 없다
   - 임시 디렉터리에 `loadRenderAssets()` 를 불러 `templates.report` 와 `css` 의 길이를 출력하는 진입점을 두고 `Bun.build` 로 번들한 뒤, `cwd` 를 다른 임시 디렉터리로 두고 `bun --no-env-file <번들>` 로 실행하면 두 길이가 원본 import 의 길이와 같다. 진입점은 이 테스트 파일 위치 기준 절대 경로로 `assets.ts` 를 import 한다. 빌드는 `Bun.spawn(["bun", "build", ...])` 처럼 별도 프로세스에서 한다(같은 프로세스의 `Bun.build` 는 다른 테스트와 모듈 해석을 공유해 실패한 적이 있다)
-- `career-os/scripts/plugin-local/workspace.test.ts` 수정: `resolvePluginWorkspace({}, "/home/example")` 의 기대값에 `evidenceDir: "/home/example/.fos-career/workspace/evidence"` 를 더하고, `CAREER_EVIDENCE_DIR` 가 있으면 그 경로를 내는 단언을 더한다
-- `career-os/scripts/plugin-local/main.test.ts` 수정: `help` 출력에 `position` 이 있다. `runPluginLocal(["position", "nope"])` 이 2 다
-- `career-os/plugin/scripts/local-bundle.test.ts` 수정: 번들의 `position help` 가 0 이고 stdout 에 `commit-company-tiers` 가 있다. `workspace paths --json` 의 결과에 `evidenceDir` 가 있다
+- `career-os/scripts/plugin-local/workspace.test.ts` 수정: `resolvePluginWorkspace({}, "/home/example")` 의 기대값과 「공백만 있는 값은 없는 값으로 본다」 의 기대값에 모두 `evidenceDir: "/home/example/.fos-career/workspace/evidence"` 를 더하고, `CAREER_EVIDENCE_DIR` 가 있으면 그 경로를 내는 단언을 더한다
+- `career-os/scripts/plugin-local/main.test.ts` 수정: `help` 출력에 `position` 이 있다. `runPluginLocal(["position", "nope"])` 이 2 다. 「help 는 여섯 실행기를…」 테스트 이름을 일곱으로 고친다
+- `career-os/scripts/candidate-context/position-context.test.ts` 수정: 두 문서 가운데 하나가 404 면 오류 메시지에 `save_context_document` 와 `manage_candidate_context.ts put` 이 있고 `career-os/` 는 없다
+- `career-os/plugin/scripts/local-bundle.test.ts` 수정: 번들의 `position --help` 가 0 이고 stdout 에 `commit-company-tiers` 가 있다. `workspace paths --json` 의 결과에 `evidenceDir` 가 있다
 - `career-os/scripts/position-recommender/position_run.test.ts` 는 고치지 않는다. 기존 단언이 그대로 통과해야 한다
 
 ## 검증
@@ -84,10 +85,11 @@ export PATH="$HOME/.bun/bin:$PATH"
 bun install --frozen-lockfile
 bun install --frozen-lockfile --cwd career-os/plugin
 bun run --cwd career-os/plugin build
-bun test ./career-os/scripts/lib/text-asset.test.ts ./career-os/scripts/position-recommender/render/assets.test.ts ./career-os/scripts/plugin-local/workspace.test.ts ./career-os/scripts/plugin-local/main.test.ts ./career-os/plugin/scripts/local-bundle.test.ts
+bun test ./career-os/scripts/lib/text-asset.test.ts ./career-os/scripts/position-recommender/render/assets.test.ts ./career-os/scripts/plugin-local/workspace.test.ts ./career-os/scripts/plugin-local/main.test.ts ./career-os/plugin/scripts/local-bundle.test.ts ./career-os/scripts/candidate-context/position-context.test.ts
 bun test ./career-os/scripts ./career-os/plugin ./career-os/.claude/skills
 bun run --cwd career-os/plugin typecheck
 bunx tsc --noEmit
+./node_modules/.bin/prettier --check career-os/scripts/position-recommender/render/assets.ts career-os/scripts/position-recommender/render/assets.test.ts
 git grep -n "career-os/scripts/candidate-context/manage_candidate_context.ts" -- career-os/scripts/candidate-context/position-context.ts && exit 1 || true
 ```
 
@@ -103,6 +105,7 @@ git grep -n "career-os/scripts/candidate-context/manage_candidate_context.ts" --
 | `career-os/scripts/position-recommender/render/assets.ts` | 수정 |
 | `career-os/scripts/position-recommender/render/assets.test.ts` | 수정 |
 | `career-os/scripts/candidate-context/position-context.ts` | 수정 |
+| `career-os/scripts/candidate-context/position-context.test.ts` | 수정 |
 | `career-os/scripts/plugin-local/executors.ts` | 수정 |
 | `career-os/scripts/plugin-local/main.ts` | 수정 |
 | `career-os/scripts/plugin-local/main.test.ts` | 수정 |

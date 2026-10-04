@@ -54,6 +54,8 @@
 ### 4. 테스트
 
 - `career-os/plugin/scripts/local-skills.test.ts` 수정
+  - 「Claude Code 전용 스킬이 둘 있다」 를 「셋 있다」 로 바꾸고 기대 목록에 `position-recommender` 를 이름 순으로 더한다
+  - `career-os/scripts/candidate-context/skill_boundary.test.ts` 는 저장소 사본을 먼저 찾아 plugin 사본을 검사하지 않는다. 그래서 plugin 의 `position-recommender` 디렉터리의 모든 파일에 `brain-search`, `brain-add`, `private brain` 이 없다는 단언을 이 파일에 더한다
   - `position-recommender` 본문에 `<CAREER_LOCAL> position collect`, `commit-company-tiers`, `commit-analyses`, `finalize`, `cleanup` 이 모두 있다
   - `career-os/plugin/skills/position-recommender/references/` 의 `judgment.md`, `failures.md` 가 `career-os/.claude/skills/position-recommender/references/` 의 같은 파일과 바이트 단위로 같다. 저장소 사본이 없으면 이 단언을 건너뛰지 않고 실패한다. 사본을 지울 때 이 단언도 함께 지운다는 주석을 둔다
 
