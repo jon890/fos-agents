@@ -62,10 +62,13 @@ git rm career-os/.codex/skills/sync-profile
 - 5단계의 「`~/.claude/scripts/browser-driver` 로 조작한다」 를 「`browser-driver` 로 조작한다」 로, 「스크립트는 `scripts/` 에 있다」 를 「스크립트는 `<SCRIPTS>` 에 있다」 로
 - 「대화에서 하려면 fos-assistant 의 커리어 커넥터로도…」 는 「GitHub 의 README 와 차트는 `update_github_profile` 로 올린다」 로 바꾼다
 - 「2026-10 실측으로 `CAREER_BACKEND_URL` 이 비어 있어…」 문장은 지운다
+- 실행 환경 절에 `<CAREER_LOCAL> usage` 와 `workspace` 가 셸의 `CAREER_BACKEND_URL`, `CAREER_BACKEND_TOKEN` 을 쓴다고 적는다. 원고가 없을 때 읽는 지원 디렉터리는 `workspace begin` 결과의 `root` 아래 `applications/` 다
+- 5단계 표의 GitHub 저장 칸 `git push` 를 `update_github_profile` 로 바꾼다. 처음 프로필 저장소를 만드는 `github.md` 의 `gh repo create` 절차는 그대로 둔다
+- 「임시 경로의 원고에 함께 남긴다」 는 「원고에 함께 남긴다」 로
 
 ### 4. references
 
-- `wanted.md`, `linkedin.md`: `S=career-os/.claude/skills/sync-profile/scripts` 를 `S=<SCRIPTS>` 로
+- `wanted.md`, `linkedin.md`: `S=career-os/.claude/skills/sync-profile/scripts` 를 `S=<SCRIPTS>` 로, `B=~/.claude/scripts/browser-driver`(`wanted.md` 12줄, `linkedin.md` 9줄)를 `B="${BROWSER_DRIVER:-browser-driver}"` 로, `wanted.md` 8줄의 「`~/.claude/scripts/browser-driver` 로 연다」 를 「`browser-driver` 로 연다」 로
 - `github.md`: `bun --env-file=career-os/.env career-os/scripts/profile/manage_profile.ts usage list` 를 `list_usage_snapshots` 도구로, `collect_usage.ts` 명령을 `<CAREER_LOCAL> usage` 로, `render_chart.ts` 명령 블록과 그 설명을 「차트와 Tokens 배지는 `update_github_profile` 이 기록으로 그리고 검사한다」 로 바꾼다. `python3 career-os/scripts/agent-usage/agent_usage.py --months 2` 단가 확인은 저장소 세션의 일로 한 줄 남기고 경로를 지운다. `usage put --replace` 는 저장소 세션에서 한다고 적는다. 「`career-os/docs/data-schema.md` 의 「차트와 Tokens 배지」」 참조는 지운다
 - 모든 `.md` 에서 `career-os/`, `--env-file`, `git rev-parse`, `~/.claude/scripts` 가 없어진다
 
@@ -87,10 +90,10 @@ git rm career-os/.codex/skills/sync-profile
   - 「작업본 받기가 첫 동작이 아니다」 는 `workspace begin sync-profile` 이 `list_profile_documents` 뒤에 있다로
   - 「사용량은 기록을 읽고 수집기로 채운다」 는 github 참고에 `list_usage_snapshots` 와 `<CAREER_LOCAL> usage` 가 있다로
   - 「차트는 TypeScript CLI 로 그리고…」 는 github 참고에 `update_github_profile` 이 있고 `render_chart.ts` 와 `agent_usage_chart` 가 없다로
-  - 「코드 영역의 career-os 경로가 실제로 있다」 는 「코드 영역의 `<SCRIPTS>/<이름>.sh` 가 스킬의 `scripts/` 에 실제로 있다」 로 바꾼다
+  - 「코드 영역의 career-os 경로가 실제로 있다」 는 「references 의 `$S/<이름>.sh` 로 부르는 스크립트가 스킬의 `scripts/` 에 실제로 있다」 로 바꾼다. 찾은 이름이 1개 이상이라는 단언을 함께 둔다
   - 새 테스트: 다섯 스크립트에 `~/.claude/scripts` 가 없고 `BROWSER_DRIVER` 가 있다
-- `career-os/plugin/scripts/local-skills.test.ts` 수정: 「넷 있다」 를 「다섯 있다」 로, 기대 목록에 `sync-profile` 을 이름 순으로. `sync-profile` 전용 `describe`: 디렉터리의 모든 파일에 `brain-search`, `brain-add`, `private brain`, `manage_profile.ts`, `~/.claude/scripts` 가 없다. `../resume-preparer/references/claim-model.md` 링크 말고는 `](../` 가 없다
-- `career-os/plugin/scripts/connector-config.test.ts` 수정: 「스킬을 노트북 에이전트의 스킬 폴더에 링크하지 않는다」 에 `career-os/.claude/skills/sync-profile` 이 없다는 단언을 더하고, `career-connector` 본문이 「노트북」 을 담지 않는다는 단언을 더한다
+- `career-os/plugin/scripts/local-skills.test.ts` 수정: 공통 테스트 「본문이 가리키는 references 파일이 모두 있다」 의 정규식이 `](references/` 나 `` `references/ `` 로 시작하는 링크만 잡게 고친다. 지금은 `../resume-preparer/references/claim-model.md` 에서 `claim-model.md` 를 뽑아 실패한다. 「넷 있다」 를 「다섯 있다」 로, 기대 목록에 `sync-profile` 을 이름 순으로. `sync-profile` 전용 `describe`: 디렉터리의 모든 파일에 `brain-search`, `brain-add`, `private brain`, `manage_profile.ts`, `~/.claude/scripts` 가 없다. `../resume-preparer/references/claim-model.md` 링크 말고는 `](../` 가 없다
+- `career-os/plugin/scripts/connector-config.test.ts` 수정: 「스킬을 노트북 에이전트의 스킬 폴더에 링크하지 않는다」 에 `career-os/.claude/skills/sync-profile` 이 없다는 단언을 더하고, `career-connector` 본문이 「노트북의 `sync-profile`」 을 담지 않는다는 단언을 더한다. 89번째 줄의 「노트북의 CLI 로 저장하라고」 는 큰 문서를 저장소 CLI 로 저장하라는 안내라 그대로 둔다
 
 ## 검증
 
@@ -105,7 +108,7 @@ bun test ./career-os/scripts ./career-os/plugin ./career-os/.claude/skills
 bun run --cwd career-os/plugin typecheck
 bunx tsc --noEmit
 claude plugin validate career-os/plugin
-zsh -n career-os/plugin/skills/sync-profile/scripts/wanted_set_field.sh
+for f in career-os/plugin/skills/sync-profile/scripts/*.sh; do zsh -n "$f" || exit 1; done
 test ! -e career-os/.claude/skills/sync-profile
 test ! -e career-os/.codex/skills/sync-profile
 ```

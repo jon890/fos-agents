@@ -711,23 +711,22 @@ API 후보 `Candidate` 는 후보풀의 `ReadingCandidate` 로 변환한다.
 
 원티드, LinkedIn, GitHub 프로필을 이력서 원고 기준으로 갱신한다.
 
-1. 대상별 원고를 커리어 Backend 에서 읽는다. `scripts/profile/manage_profile.ts documents get` 을 쓴다.
+1. 대상별 원고를 커리어 Backend 에서 읽는다. `list_profile_documents` 와 `get_profile_document` 도구를 쓴다.
    문서 키는 `wanted`, `linkedin`, `github` 이다. 홈서버 SSH 와 비공개 작업본이 필요 없다.
    Backend 에 닿지 못하면 멈추고 사용자에게 알린다. 로컬 파일로 대신하지 않는다.
 2. 원고가 없으면 가장 최근 지원의 이력서 초안을 출발점으로 삼아 공개 범위를 조정한 새 원고를 만든다.
-   **이때만** 공통 CLI 로 작업본을 준비한다. `applications/` 를 읽기 때문이다.
+   **이때만** `<CAREER_LOCAL> workspace begin sync-profile --json` 으로 작업본을 준비한다. 결과의 `root` 아래 `applications/` 를 읽기 때문이다.
 3. 사용자가 한 곳만 말해도 세 곳을 모두 읽고 원본과 어긋난 지점을 표로 보고한다.
    달이 바뀌었으면 원티드의 진행 중 프로젝트 종료월과 GitHub 의 지난달 사용량도 대상이다.
-   사용량은 `manage_profile.ts usage list` 로 기록을 읽는다. 스킬이 그 자리에서 측정해 프로필에 쓰지 않는다.
+   사용량은 `list_usage_snapshots` 도구로 기록을 읽는다. 스킬이 그 자리에서 측정해 프로필에 쓰지 않는다.
 4. 공개 범위를 사용자에게 확인받는다. 사내 운영 수치, 사내 조직명과 도구 이름,
    진행 중인 프로젝트의 종료월 표기가 여기 해당한다.
 5. 원고에 없던 문장을 새로 썼으면 `resume-preparer`의 판정 모델로 근거를 확인한다.
 6. 무엇을 어떻게 바꿀지 보여주고 승인을 받는다.
 7. 대상별 절차로 반영한다. **한 번에 한 항목씩 넣고 결과를 확인한다.**
 8. 반영한 값이 서버에 저장됐는지 대상별 방법으로 확인한다.
-9. 반영한 내용을 원고에 다시 적어 `manage_profile.ts documents put` 으로 저장한다.
-   폼 제약으로 원고와 다르게 넣었으면 그 사실과 이유를 함께 남긴다.
-   원고는 저장소 밖 임시 경로에서 고치고 저장한 뒤 지운다.
+9. 반영한 내용을 원고에 다시 적어 `save_profile_document` 도구로 저장한다. 1단계에서 읽은 `version` 을 `expectedVersion` 으로 넘긴다.
+   폼 제약으로 원고와 다르게 넣었으면 그 사실과 이유를 원고에 함께 남긴다.
 10. 2단계에서 작업본을 준비했으면 완료 단계로 작업본을 발행한다.
 
 갈라지는 곳이다.

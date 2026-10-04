@@ -57,7 +57,7 @@
 ### 6. 테스트
 
 - `career-os/scripts/agent-usage/measure.test.ts` 수정: `measure.ts` 소스에 `import.meta.dir` 와 `agent_usage.py"` 경로 문자열 조합(`join(`)이 없다. `runAgentUsageScript()` 를 `HOME` 을 빈 임시 디렉터리로 둔 별도 프로세스에서 실행하면(`bun --no-env-file -e` 로 이 함수를 불러 결과를 출력) `parseMeasurement` 가 받는 JSON 이 나오고 `months` 가 빈 배열이다
-- `career-os/scripts/plugin-local/main.test.ts` 수정: `help` 에 `usage` 가 있다. help 테스트 이름의 실행기 수를 맞춘다
+- `career-os/scripts/plugin-local/main.test.ts` 수정: `help` 에 `usage` 가 있다. help 테스트 이름의 실행기 수와 `toHaveLength(8)` 을 9 로 맞춘다
 - `career-os/plugin/scripts/local-bundle.test.ts` 수정: `HOME` 을 빈 임시 디렉터리로, `CAREER_BACKEND_URL` 을 `Bun.serve` 대역으로, 40자 지어낸 token 을 준다. 대역은 `GET /api/profile/v1/usage-snapshots` 에 기록 없음 응답을 낸다. 번들의 `usage` 를 `Bun.spawn` 으로 실행하면 종료 코드 0 이고 stdout 이 `<YYYY-MM> NO_SESSIONS` 한 줄이다. 대역이 `PUT` 을 받지 않았다. 번들 안의 측정 스크립트가 실제로 돌았다는 근거다
 
 ## 검증
