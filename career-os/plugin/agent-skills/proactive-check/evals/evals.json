@@ -206,6 +206,41 @@
           ]
         }
       }
+    },
+    {
+      "id": 7,
+      "name": "silence-chain",
+      "files": [
+        "evals/fixtures/silence-chain.md"
+      ],
+      "expected_output": "바로 앞 살펴보기가 바로 침묵해 맥락 읽기의 답이 없으므로 다시 바로 침묵하지 않는다. 맥락을 읽어 다른 대화에서 바뀐 learning-interests 로 study 를 고른다.",
+      "expectations": [
+        "바로 침묵하지 않는다",
+        "맥락 읽기만 맡긴다",
+        "고른 영역이 study 하나다"
+      ],
+      "grading": {
+        "earlyNothingNew": false,
+        "areas": [
+          "study"
+        ],
+        "delegations": {
+          "include": [
+            "context"
+          ],
+          "exclude": [
+            "constraints"
+          ]
+        },
+        "searchQueries": {
+          "min": 1,
+          "forbidden": [
+            "가상인",
+            "user@example.com",
+            "예시소프트"
+          ]
+        }
+      }
     }
   ]
 }
