@@ -59,7 +59,6 @@ career-os/
 | `position-recommender` | 2 | | |
 | `resume-preparer` | 7 | | |
 | `study-topic-recommender` | 2 | | |
-| `sync-profile` | 3 | 5 | |
 
 ### 실행 코드를 두 자리 중 어디에 두나
 
@@ -653,20 +652,21 @@ collection 과 문서 키는 코드에 고정한다. 설정으로 바꾸지 않�
 
 ## sync-profile
 
-**폼을 조작하는 코드는 `scripts/` 가 아니라 스킬 번들 안에 둔다.**
-대상 사이트의 폼을 조작하는 코드라 다른 스킬이 재사용할 것이 없고,
-대상별 절차 문서 바로 옆에 두는 편이 읽기 쉽다.
-사용량 측정과 수집은 스킬 없이 `launchd` 가 실행하므로 `scripts/agent-usage/` 에 둔다.
+스킬은 저장소에 없고 plugin 의 Claude Code 전용 `plugin/skills/sync-profile/` 에 있다.
+**폼을 조작하는 셸 스크립트는 그 스킬 번들 안에 둔다.**
+대상 사이트의 폼을 조작하는 코드라 다른 스킬이 재사용할 것이 없고, 대상별 절차 문서 바로 옆에 두는 편이 읽기 쉽다.
+스크립트는 `browser-driver` 명령으로 이미 로그인된 브라우저를 조작한다. 명령 위치는 `BROWSER_DRIVER` 로 바꿀 수 있고, 없으면 PATH 의 `browser-driver` 다.
+사용량 측정과 수집은 스킬 없이 `launchd` 도 실행하므로 `scripts/agent-usage/` 에 둔다. plugin 은 로컬 실행기 `usage` 로 같은 수집기를 부른다.
 
 | 경로 | 책임 |
 | --- | --- |
-| `.claude/skills/sync-profile/references/wanted.md` | 원티드 폼 구조와 저장 확인 절차 |
-| `.claude/skills/sync-profile/references/linkedin.md` | LinkedIn 편집 진입과 저장 확인 절차 |
-| `.claude/skills/sync-profile/references/github.md` | GitHub 프로필 문서 규칙 |
-| `.claude/skills/sync-profile/scripts/wanted_*.sh` | 원티드 폼 필드 조회와 입력 |
-| `.claude/skills/sync-profile/scripts/linkedin_*.sh` | LinkedIn 소개의 문단 입력과 프로젝트 폼 채우기 |
+| `plugin/skills/sync-profile/references/wanted.md` | 원티드 폼 구조와 저장 확인 절차 |
+| `plugin/skills/sync-profile/references/linkedin.md` | LinkedIn 편집 진입과 저장 확인 절차 |
+| `plugin/skills/sync-profile/references/github.md` | GitHub 프로필 문서 규칙 |
+| `plugin/skills/sync-profile/scripts/wanted_*.sh` | 원티드 폼 필드 조회와 입력 |
+| `plugin/skills/sync-profile/scripts/linkedin_*.sh` | LinkedIn 소개의 문단 입력과 프로젝트 폼 채우기 |
 
-원고와 사용량 기록은 파일이 아니다. 커리어 Backend 의 `profile` 모듈이 갖고, 스킬은 `scripts/profile/manage_profile.ts` 로 읽고 쓴다.
+원고와 사용량 기록은 파일이 아니다. 커리어 Backend 의 `profile` 모듈이 갖고, 스킬은 MCP 도구(`list_profile_documents`, `get_profile_document`, `save_profile_document`, `list_usage_snapshots`)로 읽고 쓴다. 저장소에서는 `scripts/profile/manage_profile.ts` 가 같은 계약을 쓴다.
 `library/profiles/` 는 쓰지 않는다. 차트 이미지는 저장하지 않고 기록에서 그때마다 그린다.
 
 사용량 측정과 수집의 배치다.
@@ -729,7 +729,8 @@ career-os/plugin/
     ├── interview-question-prep/
     ├── position-recommender/
     ├── resume-preparer/
-    └── study-collection/
+    ├── study-collection/
+    └── sync-profile/
 ```
 
 | 경로 | 책임 |
@@ -753,6 +754,7 @@ career-os/plugin/
 | `plugin/skills/study-collection/` | Claude Code 전용. 외부 피드 수집, 소스 관리, HTML 리포트와 게시 기록 |
 | `plugin/skills/position-recommender/` | Claude Code 전용. 공고 수집부터 회사 판정, 공고 분석, 리포트까지의 판단 흐름 |
 | `plugin/skills/resume-preparer/` | Claude Code 전용. 이력서와 경력기술서 작성, 주장 감사, HTML·PDF 와 제출 묶음 |
+| `plugin/skills/sync-profile/` | Claude Code 전용. 원티드, LinkedIn, GitHub 프로필 갱신과 저장 확인 |
 | `scripts/lib/text-asset.ts` | 텍스트 import 로 읽은 템플릿이 문자열인지 확인하는 helper. 번들한 실행기가 템플릿 파일을 찾지 않게 한다 |
 | `scripts/plugin-local/` | 로컬 실행기의 진입점. 하위 명령을 `scripts/` 의 CLI 로 넘긴다. 실행기 이름 목록은 import 가 없는 `executors.ts` 가 갖는다 |
 | `scripts/interview-drill/public-question-bank.ts` | 공개 질문 은행 JSON 을 정적 import 로 읽는 모듈. 커넥터와 실행기와 CLI 가 함께 쓴다 |
@@ -797,6 +799,7 @@ Claude Code 전용 스킬은 `bun --no-env-file "${CLAUDE_PLUGIN_ROOT}/dist/care
 | `study-validate` | `scripts/study-topic-recommender/validate_outputs.ts` | 실행 디렉터리의 리포트 산출물을 검증한다 |
 | `study-sources` | `scripts/study-topic-recommender/manage_reading_sources.ts` | 읽을거리 소스를 조회하고 더하고 끈다 |
 | `position` | `scripts/position-recommender/position_run.ts` 의 `runPositionCommand` | 공고 수집, 회사 판정과 공고 분석 반영, 리포트 최종화, 실행 디렉터리 정리 |
+| `usage` | `scripts/agent-usage/collect_usage.ts` 의 `main` | 기록이 없는 끝난 달의 에이전트 사용량을 측정해 Backend 에 올린다 |
 | `resume` | `scripts/resume-preparer/` 의 CLI 여덟 | 이력서 HTML·PDF 변환과 검사, 주장 원장 검증, 검증 완료 주장 판정과 검색과 반영, 제출 묶음 생성과 검증 |
 
 - 실행기 원본은 `scripts/` 에 있다. 저장소의 CLI 와 같은 코드다. 실행기 코드를 고치면 `bun run --cwd career-os/plugin build` 로 `dist/career-local.js` 를 다시 만들어 함께 커밋한다
@@ -816,7 +819,7 @@ fos-assistant 는 `plugin/` 을 복사하거나 마운트해 `connector.json`, `
 - `connector-skills/` 아래 모든 `SKILL.md` 의 본문을 이름 순으로 이어 붙인 것이 연결용 에이전트의 지침이 된다. 앞머리를 뺀 본문을 합쳐 8,000자를 넘지 않고 그 아래에 심볼릭 링크를 두지 않는다. 어기면 카탈로그에서 빠진다
 - `skills/` 는 Claude Code 만 읽는다. fos-assistant 는 읽지 않으므로 이 디렉터리의 스킬은 지침 상한에 들지 않는다. 두 디렉터리에 같은 이름의 스킬을 두지 않는다
 - plugin 스킬을 `.claude/skills/` 에 링크하지 않는다. 저장소를 연 Claude Code 세션도 plugin 을 설치해 plugin 스킬을 쓴다
-- 저장소 사본이 남은 스킬(`study-topic-recommender`, `position-recommender`, `sync-profile`, `resume-preparer`)은 판단 규칙을 고칠 때 plugin 스킬과 함께 고친다. 지우는 조건은 ADR-139 가 정한다
+- 저장소 사본이 남은 스킬(`study-topic-recommender`, `position-recommender`, `resume-preparer`)은 판단 규칙을 고칠 때 plugin 스킬과 함께 고친다. 지우는 조건은 ADR-139 가 정한다
 - 도구 목록이 바뀐 판을 배포하면 실행 환경이 MCP 서버를 다시 띄워야 새 도구가 보인다. 스킬 본문만 바뀐 판은 연결 확인으로 반영한다
 - 실행 파일에 의존성이 포함돼 있어 설치한 환경에서 `bun install` 을 하지 않는다. 소스를 고친 사람이 빌드해 `dist/career-mcp.js` 를 함께 커밋한다
 

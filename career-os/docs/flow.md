@@ -741,8 +741,8 @@ API 후보 `Candidate` 는 후보풀의 `ReadingCandidate` 로 변환한다.
 - 로그인 화면이 나오면 멈추고 사용자에게 알린다. 자격 증명을 대신 입력하지 않는다.
 - 공개 범위 판단은 사용자만 한다. 지원본에 있던 문장이라도 그대로 옮기지 않는다.
 
-대상별 절차와 조작 스크립트는 스킬의
-[`references/`](../.claude/skills/sync-profile/)가 소유한다.
+스킬은 plugin 의 Claude Code 전용 `sync-profile` 이다. 원고와 사용량 기록은 MCP 도구로, 사용량 수집은 로컬 실행기 `<CAREER_LOCAL> usage` 로 한다.
+대상별 절차와 조작 스크립트는 [`plugin/skills/sync-profile/`](../plugin/skills/sync-profile/)가 소유한다.
 
 ### 프로필 HTTP 계약
 
@@ -953,7 +953,7 @@ plugin 의 `study-topic-recommender` 스킬이 이미 수집된 후보에서 고
 | 공부 추천 저장 결과를 알 수 없다 | 다른 인자를 하나도 바꾸지 않고 오류에 실린 `generatedAt` 만 더해 다시 승인받아 보낸다. 같은 `reportId` 와 `generatedAt` 이면 멱등 키가 같다. 본문이 다르면 `IDEMPOTENCY_CONFLICT` 409 가 된다 |
 | 공부 후보가 비었다 | 정상 응답이다. 꺼진 소스에서만 나온 자료, 이미 추천한 자료, 지금 기준에서 유효한 제외 판정, 요청 필터를 거른 뒤 남은 미추천 후보가 없다. 빈 결과만으로 수집 실행 여부나 웹 자료 유무를 단정하지 않는다. 빈 결과를 알리고 저장하지 않는다. `learning-interests` 문서가 없으면 `CAREER_LEARNING_INTERESTS_MISSING`, token 거절은 `CAREER_UNAUTHORIZED`, 장애는 `CAREER_UNAVAILABLE` 이나 `CAREER_NETWORK` 오류로 따로 온다 |
 | 저장할 본문이 승인 인자 상한을 넘는다 | fos-assistant 가 호출을 거절한다. 노트북의 CLI 로 저장하라고 안내한다 |
-| 원티드나 LinkedIn 을 고쳐 달라고 한다 | 원고만 고치고, 사이트 반영은 노트북의 `sync-profile` 에서 하라고 안내한다 |
+| 원티드나 LinkedIn 을 고쳐 달라고 한다 | 원고만 고치고, 사이트 반영은 Claude Code 에서 이 plugin 의 `sync-profile` 로 하라고 안내한다 |
 
 README 갱신과 GitHub 원고 저장은 따로 승인받는 두 호출이다.
 GitHub 갱신만 승인하고 원고 저장을 거절하면 원고가 프로필보다 낡은 채로 남는다. 다음 갱신 때 1단계의 차이 보고에서 드러난다.

@@ -1329,6 +1329,7 @@ Claude Code 전용 스킬이 부르는 `dist/career-local.js` 가 셸 환경에�
 | `CAREER_WORKSPACE_SSH_TARGET` | 아니오 | 홈서버 동기화의 SSH 대상. `CAREER_WORKSPACE_REMOTE_COMMAND`, `CAREER_WORKSPACE_SSH_ARGS` 를 함께 읽는다 |
 | `YOUTUBE_DATA_API_KEY` | 아니오 | 공부 자료 archive 수집의 YouTube Data API key |
 | `CAREER_EVIDENCE_DIR` | 아니오 | 스킬이 읽는 프로젝트 근거 디렉터리. 없으면 `CAREER_WORKSPACE_ROOT` 아래 `evidence/`. `workspace paths --json` 이 `evidenceDir` 로 알려 준다 |
+| `BROWSER_DRIVER` | 아니오 | `sync-profile` 의 폼 조작 스크립트가 부르는 `browser-driver` 명령의 경로. 없으면 PATH 의 `browser-driver` |
 | `CAREER_DART_API_KEY` | 아니오 | 공고 추천의 회사 근거 수집에 쓰는 OpenDART key. `CAREER_DART_API_KEY_FILE`(권한 0600 파일)로 대신할 수 있다. 없으면 DART 근거를 건너뛴다 |
 
 작업본의 기본 위치를 plugin 데이터 디렉터리에 두지 않는다. plugin 을 지우면 그 디렉터리가 함께 지워진다.
