@@ -1,11 +1,9 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { checkEvidenceSources, EVIDENCE_SOURCES, type EvidenceSourceSpec } from "./check_evidence_sources.ts";
-import { SUBPROCESS_TEST_TIMEOUT_MS } from "../../../../scripts/lib/test-timeouts.ts";
-
-const reference = readFileSync(new URL("../references/evidence-source-freshness.md", import.meta.url), "utf8");
+import { SUBPROCESS_TEST_TIMEOUT_MS } from "../lib/test-timeouts.ts";
 
 const workspaces: string[] = [];
 
@@ -58,10 +56,9 @@ describe("근거 원본 목록의 문서 계약", () => {
     expect(EVIDENCE_SOURCES.map((source) => source.name)).toEqual(["fos-study"]);
   });
 
-  test("각 원본의 경로가 reference 의 대상 표에 있다", () => {
-    for (const path of EVIDENCE_SOURCES.flatMap((source) => source.paths)) {
-      expect(reference).toContain(path);
-    }
+  // 원본 위치는 사용자가 지정한 CAREER_EVIDENCE_DIR 로만 정한다. 저장소 루트 기준 경로나 .env 의 값을 짐작하지 않는다.
+  test("원본 자리는 CAREER_EVIDENCE_DIR 와 그 상위 둘뿐이다", () => {
+    expect(EVIDENCE_SOURCES[0].paths).toEqual(["${CAREER_EVIDENCE_DIR}", "${CAREER_EVIDENCE_DIR}/.."]);
   });
 
   // 홈서버 작업본은 `skill begin` 이 이미 받아 온다. 이 스크립트가 다시 검사하면 책임이 겹친다.
@@ -78,14 +75,23 @@ describe("근거 원본 목록의 문서 계약", () => {
     const paths = EVIDENCE_SOURCES.flatMap((source) => source.paths);
 
     expect(paths.some((path) => path.includes("brain"))).toBe(false);
-    expect(reference).toContain("지원서 공통 프로필을 경로로 확인하지 않는 이유");
   });
 });
 
 describe("CLI 계약", () => {
   const script = join(import.meta.dir, "check_evidence_sources.ts");
+  /** 실행하는 사람의 셸에 있는 CAREER_EVIDENCE_DIR 가 결과를 바꾸지 않게 그 값을 뺀 환경을 넘긴다. */
+  const isolatedEnvironment = (): Record<string, string | undefined> => {
+    const { CAREER_EVIDENCE_DIR: _ignored, ...rest } = process.env;
+    return rest;
+  };
   const invoke = (args: string[], cwd = import.meta.dir) => {
-    const result = Bun.spawnSync([process.execPath, script, ...args], { cwd, stdout: "pipe", stderr: "pipe" });
+    const result = Bun.spawnSync([process.execPath, script, ...args], {
+      cwd,
+      env: isolatedEnvironment(),
+      stdout: "pipe",
+      stderr: "pipe",
+    });
     return { code: result.exitCode, out: result.stdout.toString(), err: result.stderr.toString() };
   };
 
@@ -100,37 +106,28 @@ describe("CLI 계약", () => {
     expect(invoke(["--모르는옵션"]).code).toBe(2);
   }, SUBPROCESS_TEST_TIMEOUT_MS);
 
-  test("검사에 실패하면 1 로 끝낸다", () => {
-    const empty = createWorkspace();
-    git(empty, ["init", "--quiet", "--initial-branch", "main"]);
-    commit(empty, "first.md");
-
-    const result = invoke(["--no-fetch"], empty);
+  test("CAREER_EVIDENCE_DIR 가 없으면 unavailable 과 지정 안내를 내고 1 로 끝낸다", () => {
+    const result = invoke(["--no-fetch"]);
 
     expect(result.code).toBe(1);
-    expect(JSON.parse(result.out).passed).toBe(false);
+    const parsed = JSON.parse(result.out);
+    expect(parsed.passed).toBe(false);
+    expect(parsed.sources[0].status).toBe("unavailable");
+    expect(parsed.sources[0].detail).toContain("CAREER_EVIDENCE_DIR 환경 변수가 없어");
+    expect(parsed.sources[0].detail).toContain("`CAREER_EVIDENCE_DIR` 를 fos-study Git 저장소의 루트나 그 바로 아래 디렉터리로 지정한다");
   }, SUBPROCESS_TEST_TIMEOUT_MS);
 
-  // `fetch: options["--no-fetch"] !== true` 는 옵션 이름이 바뀌면 뜻이 조용히 뒤집히는 자리다.
-  test("--no-fetch 가 원격을 받지 않는 경로로 이어진다", () => {
-    // 계약에 적힌 첫 자리인 `career-os/sources/fos-study` 에 실제 clone 을 둔다.
-    const { origin, clone } = createOriginAndClone();
-    const root = join(createWorkspace(), "root");
-    mkdirSync(join(root, "career-os", "sources"), { recursive: true });
-    renameSync(clone, join(root, "career-os", "sources", "fos-study"));
-    const source = join(root, "career-os", "sources", "fos-study");
-    commit(origin, "second.md");
+  // 실행한 자리가 Git 저장소의 루트여도 그 저장소를 원본으로 삼지 않는다. 위치는 환경 변수로만 받는다.
+  test("실행한 자리가 Git 저장소여도 그 저장소를 원본으로 보지 않는다", () => {
+    const repository = join(createWorkspace(), "repository");
+    mkdirSync(repository);
+    git(repository, ["init", "--quiet", "--initial-branch", "main"]);
+    commit(repository, "first.md");
 
-    const remoteRef = () =>
-      Bun.spawnSync(["git", "-C", source, "rev-parse", "origin/main"], { stdout: "pipe" }).stdout.toString();
+    const result = invoke(["--no-fetch"], repository);
 
-    const before = remoteRef();
-    invoke(["--no-fetch", root]);
-    expect(remoteRef()).toBe(before);
-
-    // 플래그를 빼면 같은 저장소에서 원격 ref 가 움직인다. 위 단언이 기본값 때문에 통과한 것이 아니다.
-    invoke([root]);
-    expect(remoteRef()).not.toBe(before);
+    expect(result.code).toBe(1);
+    expect(JSON.parse(result.out).sources[0].status).toBe("unavailable");
   }, SUBPROCESS_TEST_TIMEOUT_MS);
 });
 
@@ -246,62 +243,102 @@ describe("확인할 수 없는 원본", () => {
   test("자리마다 왜 아니었는지를 detail 에 남긴다", () => {
     const missing = join(createWorkspace(), "missing");
 
-    const result = checkEvidenceSources({ sources: [specFor(missing, "${PERSONAL_ROOT}/fos-study")], env: {} });
+    const result = checkEvidenceSources({ sources: [specFor(missing, "${CAREER_EVIDENCE_DIR}/..")], env: {} });
 
     expect(result.passed).toBe(false);
     expect(result.sources[0].status).toBe("unavailable");
     expect(result.sources[0].detail).toContain("경로가 없습니다");
-    expect(result.sources[0].detail).toContain("PERSONAL_ROOT");
+    expect(result.sources[0].detail).toContain("CAREER_EVIDENCE_DIR 환경 변수가 없어");
   });
 
-  test("환경 변수를 `career-os/.env` 에서 읽는다", () => {
-    const { clone } = createOriginAndClone();
-    const root = join(createWorkspace(), "root");
-    mkdirSync(join(root, "career-os"), { recursive: true });
-    writeFileSync(join(root, "career-os", ".env"), `PERSONAL_ROOT=${join(clone, "..")}\n`);
+  test("상대 경로 원본은 위치를 짐작하지 않고 unavailable 로 둔다", () => {
+    const result = checkEvidenceSources({ sources: [specFor("clone")], env: {} });
 
-    const result = checkEvidenceSources({ repositoryRoot: root, sources: [specFor("${PERSONAL_ROOT}/clone")] });
+    expect(result.sources[0].status).toBe("unavailable");
+    expect(result.sources[0].detail).toContain("위치를 정할 수 없습니다");
+  });
+});
+
+describe("CAREER_EVIDENCE_DIR 로 찾는 fos-study", () => {
+  test("환경 변수가 없으면 unavailable 이고 CAREER_EVIDENCE_DIR 를 지정하라고 안내한다", () => {
+    const result = checkEvidenceSources({ env: {}, fetch: false });
+
+    expect(result.passed).toBe(false);
+    expect(result.sources[0].name).toBe("fos-study");
+    expect(result.sources[0].status).toBe("unavailable");
+    expect(result.sources[0].detail).toContain("CAREER_EVIDENCE_DIR 환경 변수가 없어");
+    expect(result.sources[0].detail).toContain("셸 환경 변수 `CAREER_EVIDENCE_DIR` 를");
+    expect(result.sources[0].detail).not.toContain("PERSONAL_ROOT");
+    expect(result.sources[0].detail).not.toContain("ln -s");
+  });
+
+  test("공백뿐인 값은 환경 변수가 없는 것으로 본다", () => {
+    const result = checkEvidenceSources({ env: { CAREER_EVIDENCE_DIR: "   " }, fetch: false });
+
+    expect(result.sources[0].status).toBe("unavailable");
+    expect(result.sources[0].detail).toContain("CAREER_EVIDENCE_DIR 환경 변수가 없어");
+  });
+
+  test("증거 디렉터리가 저장소 루트면 그 자리로 판정한다", () => {
+    const { clone } = createOriginAndClone();
+
+    const result = checkEvidenceSources({ env: { CAREER_EVIDENCE_DIR: clone } });
+
+    expect(result.sources[0].status).toBe("up_to_date");
+    expect(result.sources[0].path).toBe("${CAREER_EVIDENCE_DIR}");
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
+
+  test("증거 디렉터리의 상위가 저장소 루트면 up_to_date 다", () => {
+    const { clone } = createOriginAndClone();
+    const task = join(clone, "task");
+    mkdirSync(task);
+
+    const result = checkEvidenceSources({ env: { CAREER_EVIDENCE_DIR: task } });
+
+    expect(result.passed).toBe(true);
+    expect(result.sources[0].status).toBe("up_to_date");
+    expect(result.sources[0].path).toBe("${CAREER_EVIDENCE_DIR}/..");
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
+
+  test("원격이 앞서 있으면 behind 다", () => {
+    const { origin, clone } = createOriginAndClone();
+    const task = join(clone, "task");
+    mkdirSync(task);
+    commit(origin, "second.md");
+
+    const result = checkEvidenceSources({ env: { CAREER_EVIDENCE_DIR: task } });
+
+    expect(result.passed).toBe(false);
+    expect(result.sources[0].status).toBe("behind");
+    expect(result.sources[0].behindCommits).toBe(1);
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
+
+  /**
+   * 상위 모노레포의 `.git` 만 물려받은 평범한 디렉터리다. 그 자리도 상위도 저장소 루트가 아니다.
+   * 그대로 두면 감싸고 있는 저장소를 원본으로 재고 경고 없이 `up_to_date` 가 나온다.
+   */
+  test("상위 모노레포 안의 평범한 디렉터리를 원본으로 오인하지 않는다", () => {
+    const { clone } = createOriginAndClone();
+    const evidence = join(clone, "career-os", "sources", "task");
+    mkdirSync(evidence, { recursive: true });
+
+    const result = checkEvidenceSources({ env: { CAREER_EVIDENCE_DIR: evidence } });
+
+    expect(result.sources[0].status).toBe("unavailable");
+    expect(result.sources[0].detail).toContain("루트가 아닙니다");
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
+
+  test("원격을 받지 않으면 직전 remote-tracking ref 로 판정한다", () => {
+    const { origin, clone } = createOriginAndClone();
+    commit(origin, "second.md");
+
+    const result = checkEvidenceSources({ env: { CAREER_EVIDENCE_DIR: clone }, fetch: false });
 
     expect(result.sources[0].status).toBe("up_to_date");
   }, SUBPROCESS_TEST_TIMEOUT_MS);
+});
 
-  test("환경 변수 값이 있으면 그 아래 경로를 검사한다", () => {
-    const { clone } = createOriginAndClone();
-    const parent = join(clone, "..");
-
-    const result = checkEvidenceSources({
-      sources: [specFor("${PERSONAL_ROOT}/clone")],
-      env: { PERSONAL_ROOT: parent },
-    });
-
-    expect(result.sources[0].status).toBe("up_to_date");
-  }, SUBPROCESS_TEST_TIMEOUT_MS);
-
-  test("상대 경로 원본은 저장소 루트에서 푼다", () => {
-    const { clone } = createOriginAndClone();
-
-    const result = checkEvidenceSources({ repositoryRoot: join(clone, ".."), sources: [specFor("clone")] });
-
-    expect(result.sources[0].status).toBe("up_to_date");
-  }, SUBPROCESS_TEST_TIMEOUT_MS);
-
-  // 스킬마다 명령을 실행하는 디렉터리 관례가 달라 저장소 루트와 `career-os` 양쪽에서 실행된다.
-  test("저장소 루트를 주지 않으면 현재 위치에서 찾아 어느 디렉터리에서 실행해도 같은 경로를 본다", () => {
-    const repository = join(createWorkspace(), "repository");
-    const nested = join(repository, "career-os", "scripts");
-    mkdirSync(nested, { recursive: true });
-    git(repository, ["init", "--quiet", "--initial-branch", "main"]);
-    commit(repository, "first.md");
-
-    const script = join(import.meta.dir, "check_evidence_sources.ts");
-    const resultFrom = (cwd: string): unknown => {
-      const output = Bun.spawnSync([process.execPath, script, "--no-fetch"], { cwd, stdout: "pipe", stderr: "pipe" });
-      return JSON.parse(new TextDecoder().decode(output.stdout));
-    };
-
-    expect(resultFrom(nested)).toEqual(resultFrom(repository));
-  }, SUBPROCESS_TEST_TIMEOUT_MS);
-
+describe("여러 원본", () => {
   test("한 원본이라도 최신이 아니면 전체가 통과하지 않는다", () => {
     const { clone } = createOriginAndClone();
 

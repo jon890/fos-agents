@@ -261,7 +261,7 @@ describe("renderApplicationPackage", () => {
 
   test("탭 키마다 선택된 패널을 보이게 하는 CSS 규칙이 있다", () => {
     const css = readFileSync(
-      join(import.meta.dir, "..", "templates", "application-package.css"),
+      join(import.meta.dir, "templates", "application-package.css"),
       "utf8",
     );
 

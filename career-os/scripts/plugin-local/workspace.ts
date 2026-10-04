@@ -19,7 +19,7 @@ export function resolvePluginWorkspace(
   const configuredRoot = environment.CAREER_WORKSPACE_ROOT?.trim();
   const root = configuredRoot ? path.resolve(configuredRoot) : path.join(home, ".fos-career", "workspace");
   const remote = Boolean(environment.CAREER_WORKSPACE_COMMAND?.trim() || environment.CAREER_WORKSPACE_SSH_TARGET?.trim());
-  // 프로젝트 근거 위치는 실행기가 읽지 않는다. 스킬이 paths 결과로 알고 모델이 읽는다.
+  // `workspace` 는 근거 위치를 알려만 준다. 최신 여부는 `package check-sources` 가 같은 변수로 본다.
   const configuredEvidence = environment.CAREER_EVIDENCE_DIR?.trim();
   const evidenceDir = configuredEvidence ? path.resolve(configuredEvidence) : path.join(root, "evidence");
   return { root, mode: remote ? "remote" : "local", evidenceDir };

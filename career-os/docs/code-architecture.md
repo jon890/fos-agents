@@ -19,7 +19,7 @@ public `fos-agents` 저장소는 스킬과 실행 코드를 소유한다.
 
 ```text
 career-os/
-├── .claude/skills/       사용자 작업별 skill
+├── .claude/skills/       저장소에 남은 skill. 홈서버 예약 실행이 쓴다
 ├── .codex/skills/        Codex에서 같은 skill을 노출하는 링크
 ├── config/               사람이 관리하는 수집 정책
 ├── scripts/              검증, 수집과 변환 코드
@@ -51,13 +51,12 @@ career-os/
 
 **판정 기준을 산문으로 반복하지 않는다.** 한 파일이 소유하고 나머지는 그것을 가리킨다.
 
-현재 구성이다. 비어 있는 자리는 그 스킬에 필요가 없어서다.
+저장소에 남은 스킬의 현재 구성이다. 비어 있는 자리는 그 스킬에 필요가 없어서다.
+`application-package-writer` 와 `resume-preparer` 는 plugin 으로 옮겼고 같은 자리 구성을 `plugin/skills/` 아래에서 쓴다. 그 스킬의 실행 코드는 `scripts/application-package/`, `scripts/resume-preparer/` 에 있다.
 
 | 스킬 | `references/` | `scripts/` | `templates/` |
 | --- | --- | --- | --- |
-| `application-package-writer` | 6 | 11 | 2 |
 | `position-recommender` | 2 | | |
-| `resume-preparer` | 7 | | |
 | `study-topic-recommender` | 2 | | |
 
 ### 실행 코드를 두 자리 중 어디에 두나
@@ -66,8 +65,8 @@ career-os/
 
 | 자리 | 언제 | 예 |
 | --- | --- | --- |
-| `.claude/skills/<name>/scripts/` | 그 스킬 밖에서 쓰지 않는 코드 | 지원 패키지 렌더링 |
-| `scripts/<name>/` | 여러 진입점이 나뉘고 독립 테스트가 큰 코드. plugin 로컬 실행기가 번들하는 코드 | 공고 수집, 읽을거리 수집, 이력서 PDF 변환 |
+| `.claude/skills/<name>/scripts/` | 그 스킬 밖에서 쓰지 않는 코드. plugin 으로 옮기는 스킬은 이 자리에 두지 않는다 | |
+| `scripts/<name>/` | 여러 진입점이 나뉘고 독립 테스트가 큰 코드. plugin 로컬 실행기가 번들하는 코드 | 공고 수집, 읽을거리 수집, 이력서 PDF 변환, 지원 패키지 검사와 렌더링 |
 | `scripts/lib/` | 두 워크스페이스 이상이 쓰는 순수 기능 | CLI, 텍스트 정규화, 날짜 변환 |
 
 테스트는 코드 옆에 둔다. `<이름>.test.ts` 로 같은 디렉터리에 둔다.
@@ -145,8 +144,8 @@ career-os/.career-sync/
 원격 파일을 network filesystem으로 직접 편집하지 않으며, 준비 단계는 검증한 release만 임시 경로에서 로컬로 교체한다.
 반영 단계는 실행 시작 revision이 홈서버 현재 값과 일치할 때만 새 release를 만든다.
 
-`.claude/skills/`가 skill 관리 원본이다.
-`.codex/skills/`는 같은 디렉터리를 가리키며 Hermes cron은 `career-os`를 작업 디렉터리로 사용한다.
+저장소에 남은 skill 은 `.claude/skills/`가 관리 원본이고, plugin 으로 옮긴 skill 은 `plugin/skills/`가 소유한다.
+`.codex/skills/`는 저장소에 남은 skill 디렉터리를 가리키며 Hermes cron은 `career-os`를 작업 디렉터리로 사용한다.
 환경별 차이는 `.env`의 transport 설정에만 두고 지원 판단과 문서 작성 절차를 복제하지 않는다.
 SSH client는 `career-storage`를 원격 호출하고, 홈서버의 Hermes는 같은 명령을 command transport로 호출한다.
 두 경로는 같은 홈서버 잠금과 S3 pointer 갱신 계약을 사용한다.
@@ -301,7 +300,8 @@ npm test
 이 층의 파일은 사용자용 링크로 노출하지 않는다.
 검증에는 사용하므로 현재 제출 문구와 PDF가 같은 버전인지 증명한다.
 
-`.claude/skills/application-package-writer/templates/` 가 검토 화면의 HTML 골격과 CSS 를 소유한다.
+`scripts/application-package/templates/` 가 검토 화면의 HTML 골격과 CSS 를 소유한다. `render_application_package.ts` 가 텍스트 import 로 읽는다.
+실행 코드는 `scripts/application-package/` 에 있고 plugin 로컬 실행기 `package` 가 이 코드를 부른다.
 화면 구성과 적합도 점수의 필드는 [`data-schema.md`](data-schema.md#application-package-writer)가 소유한다.
 
 ## interview-practice
@@ -502,7 +502,7 @@ git diff --check
 사실 감사와 설득력 평가는 별도 참고 문서와 검사 스크립트로 분리하지만 별도 스킬로 노출하지 않는다.
 면접 말하기 준비와 꼬리질문 연습은 `interview-practice`가 담당한다.
 
-실행 코드는 `scripts/resume-preparer/` 에 있다. 저장소 사본 스킬과 plugin 로컬 실행기 `resume` 이 같은 코드를 쓴다.
+실행 코드는 `scripts/resume-preparer/` 에 있다. plugin 로컬 실행기 `resume` 이 이 코드를 부른다.
 `scripts/resume-preparer/verified-claims/`는 검증 완료 주장 스키마, 안정적인 주장 키, 근거 파일 해시, 저장과 검색을 책임별 모듈로 나눈다.
 검증 완료 주장 CLI 는 다음 셋이다.
 
@@ -520,9 +520,9 @@ git diff --check
 
 실제 제출은 이 스킬의 책임이 아니다.
 
-이력서 작성 취향은 `.claude/skills/resume-preparer/references/resume-taste.md`가 소유한다.
+이력서 작성 취향은 `plugin/skills/resume-preparer/references/resume-taste.md`가 소유한다.
 조회 시점과 저장 분기는 같은 스킬의 `references/candidate-context.md`에 두고 필요한 단계에서 읽는다.
-스킬은 개인 맥락을 `manage_candidate_context.ts get` 으로 읽고, 승인받은 새 개인 사실을 같은 명령의 `put` 으로 저장한다.
+스킬은 개인 맥락을 `get_context_document` 로 읽고, 승인받은 새 개인 사실을 `save_context_document` 로 저장한다.
 
 현재 경력, 역할 선호와 경험 경계의 기준 원본은 후보자 맥락 문서 `career-status` 와 `position-preferences` 다.
 skill은 필요한 정보를 실행 시점에 조회하고 TypeScript 스크립트에 명시적인 입력으로 전달한다.
@@ -532,10 +532,10 @@ skill은 필요한 정보를 실행 시점에 조회하고 TypeScript 스크립�
 
 | 경로 | 책임 |
 | --- | --- |
-| `.claude/skills/resume-preparer/references/resume-writing-style.md` | 모든 이력서와 경력기술서에 적용하는 표현과 근거 범위 기준 |
-| `.claude/skills/resume-preparer/references/resume-design.md` | 이력서와 경력기술서의 기본 시각 기준 |
-| `.claude/skills/resume-preparer/references/resume-taste.md` | 개인 작성 취향 |
-| `.claude/skills/resume-preparer/references/candidate-context.md` | 개인 맥락 조회 시점과 저장 분기 |
+| `plugin/skills/resume-preparer/references/resume-writing-style.md` | 모든 이력서와 경력기술서에 적용하는 표현과 근거 범위 기준 |
+| `plugin/skills/resume-preparer/references/resume-design.md` | 이력서와 경력기술서의 기본 시각 기준 |
+| `plugin/skills/resume-preparer/references/resume-taste.md` | 개인 작성 취향 |
+| `plugin/skills/resume-preparer/references/candidate-context.md` | 개인 맥락 조회 시점과 저장 분기 |
 | `scripts/resume-preparer/templates/` | 이력서 HTML 골격과 기본 CSS. `export_resume.ts` 가 텍스트 import 로 읽는다 |
 | 작업본 `library/resume-logos/` | 회사·학교 로고와 이름을 잇는 `index.json`. 개인 경력을 드러내므로 저장소와 plugin 에 두지 않는다 |
 
@@ -543,7 +543,7 @@ skill은 필요한 정보를 실행 시점에 조회하고 TypeScript 스크립�
 
 plugin 의 로컬 실행기 `resume` 은 하위 명령으로 위 CLI 와 HTML·PDF 변환, 제출 묶음 검사를 고른다.
 검증 완료 주장의 상태 디렉터리는 작업본 아래 `state/verified-claims/` 로 넘긴다. 주장 원장의 근거 경로는 실행한 디렉터리 기준이다.
-지원 패키지 검사와 검토 화면(`application-package-writer` 의 스크립트)은 아직 저장소에만 있다.
+지원 패키지 검사와 검토 화면은 로컬 실행기 `package` 가 한다. 아래 「로컬 실행기」 표가 책임을 정한다.
 
 공고별 스타일은 `export_resume.ts --design <path>`에 CSS 파일이나
 `css` 코드 블록이 있는 Markdown 파일을 명시한다.
@@ -726,6 +726,7 @@ career-os/plugin/
 │   ├── interview-practice/SKILL.md
 │   └── study-topic-recommender/SKILL.md
 └── skills/
+    ├── application-package-writer/
     ├── interview-question-prep/
     ├── position-recommender/
     ├── resume-preparer/
@@ -750,6 +751,7 @@ career-os/plugin/
 | `plugin/connector-skills/career-connector/SKILL.md` | 연결용 에이전트의 지침. 프로필 갱신 순서와 승인 규칙, 조사용 읽기 도구의 결과 해석 |
 | `plugin/connector-skills/interview-practice/SKILL.md` | MCP 도구만으로 하는 면접 연습. 질문 고르기, 답변 평가, 기록과 개인 질문 저장 |
 | `plugin/connector-skills/study-topic-recommender/SKILL.md` | MCP 도구만으로 하는 공부 추천. 수집된 후보에서 고르고 추천 이력을 저장 |
+| `plugin/skills/application-package-writer/` | Claude Code 전용. 공고별 적합도 판정, 후보자 인터뷰, 지원 전략과 검토 화면 |
 | `plugin/skills/interview-question-prep/` | Claude Code 전용. 공고별 질문으로 하는 연습과 외부 자료에서 개인 질문 찾기 |
 | `plugin/skills/study-collection/` | Claude Code 전용. 외부 피드 수집, 소스 관리, HTML 리포트와 게시 기록 |
 | `plugin/skills/position-recommender/` | Claude Code 전용. 공고 수집부터 회사 판정, 공고 분석, 리포트까지의 판단 흐름 |
@@ -800,6 +802,8 @@ Claude Code 전용 스킬은 `bun --no-env-file "${CLAUDE_PLUGIN_ROOT}/dist/care
 | `study-sources` | `scripts/study-topic-recommender/manage_reading_sources.ts` | 읽을거리 소스를 조회하고 더하고 끈다 |
 | `position` | `scripts/position-recommender/position_run.ts` 의 `runPositionCommand` | 공고 수집, 회사 판정과 공고 분석 반영, 리포트 최종화, 실행 디렉터리 정리 |
 | `usage` | `scripts/agent-usage/collect_usage.ts` 의 `main` | 기록이 없는 끝난 달의 에이전트 사용량을 측정해 Backend 에 올린다 |
+| `package` | `scripts/application-package/` | 근거 원본이 원격보다 뒤처졌는지 검사하고(`check-sources`), 제출 문서의 내부 정보를 검사하고(`validate`), 검토 화면을 만들고(`render`), 포지션별 면접 질문 파일을 검증한다(`question-schema`) |
+| `application-profile` | `scripts/application-profile/read_application_profile.ts` | fos-assistant Memory 의 지원서 공통 프로필을 저장소 밖 파일로 읽는다 |
 | `resume` | `scripts/resume-preparer/` 의 CLI 여덟 | 이력서 HTML·PDF 변환과 검사, 주장 원장 검증, 검증 완료 주장 판정과 검색과 반영, 제출 묶음 생성과 검증 |
 
 - 실행기 원본은 `scripts/` 에 있다. 저장소의 CLI 와 같은 코드다. 실행기 코드를 고치면 `bun run --cwd career-os/plugin build` 로 `dist/career-local.js` 를 다시 만들어 함께 커밋한다
@@ -819,7 +823,7 @@ fos-assistant 는 `plugin/` 을 복사하거나 마운트해 `connector.json`, `
 - `connector-skills/` 아래 모든 `SKILL.md` 의 본문을 이름 순으로 이어 붙인 것이 연결용 에이전트의 지침이 된다. 앞머리를 뺀 본문을 합쳐 8,000자를 넘지 않고 그 아래에 심볼릭 링크를 두지 않는다. 어기면 카탈로그에서 빠진다
 - `skills/` 는 Claude Code 만 읽는다. fos-assistant 는 읽지 않으므로 이 디렉터리의 스킬은 지침 상한에 들지 않는다. 두 디렉터리에 같은 이름의 스킬을 두지 않는다
 - plugin 스킬을 `.claude/skills/` 에 링크하지 않는다. 저장소를 연 Claude Code 세션도 plugin 을 설치해 plugin 스킬을 쓴다
-- 저장소 사본이 남은 스킬(`study-topic-recommender`, `position-recommender`, `resume-preparer`)은 판단 규칙을 고칠 때 plugin 스킬과 함께 고친다. 지우는 조건은 ADR-139 가 정한다
+- 저장소 사본이 남은 스킬(`study-topic-recommender`, `position-recommender`)은 판단 규칙을 고칠 때 plugin 스킬과 함께 고친다. 지우는 조건은 ADR-139 가 정한다
 - 도구 목록이 바뀐 판을 배포하면 실행 환경이 MCP 서버를 다시 띄워야 새 도구가 보인다. 스킬 본문만 바뀐 판은 연결 확인으로 반영한다
 - 실행 파일에 의존성이 포함돼 있어 설치한 환경에서 `bun install` 을 하지 않는다. 소스를 고친 사람이 빌드해 `dist/career-mcp.js` 를 함께 커밋한다
 

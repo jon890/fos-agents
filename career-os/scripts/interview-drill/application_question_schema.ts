@@ -76,11 +76,11 @@ export function loadApplicationInterviewQuestions(
   return parsed.data;
 }
 
-if (import.meta.main) {
-  const inputPath = process.argv[2];
+/** 질문 파일을 검증하고 요약을 출력한다. 종료 코드를 돌려주고 프로세스를 끝내지 않는다. */
+export function runApplicationQuestionSchemaCli(inputPath: string | undefined): number {
   if (!inputPath) {
     console.error("사용법: application_question_schema.ts <application-directory|evidence/interview-questions.json>");
-    process.exit(2);
+    return 2;
   }
 
   try {
@@ -97,8 +97,14 @@ if (import.meta.main) {
         2,
       ),
     );
+    return 0;
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
-    process.exit(1);
+    return 1;
   }
+}
+
+if (import.meta.main) {
+  const code = runApplicationQuestionSchemaCli(process.argv[2]);
+  if (code !== 0) process.exit(code);
 }
