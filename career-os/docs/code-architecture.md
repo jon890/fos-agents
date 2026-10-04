@@ -90,7 +90,7 @@ career-os/
 
 개인 맥락은 이 저장소에 두지 않는다.
 현재 경력, 역할 선호, 경험 경계, 지원 상태와 학습 관심사는 커리어 Backend 의 후보자 맥락 문서가 소유한다.
-연락처와 신원을 담은 지원서 공통 프로필만 private brain 에 있다.
+연락처와 신원을 담은 지원서 공통 프로필은 fos-assistant Memory 가 소유한다. 아래 「지원서 공통 프로필」 절이 읽는 방법을 정한다.
 
 ### 스킬과 실행 코드
 
@@ -287,7 +287,9 @@ npm test
 
 앞의 다섯이 기본 원본이다.
 `application-package-writer`는 지원 판단과 후보자 인터뷰를 관리하고, `resume-preparer`는 `resume-draft.md`와 제출 문서를 관리한다.
-`application-form.json`은 private brain 공통 프로필의 현재 스냅샷, 회사별 선택값, 첨부 파일과 서술형 질문을 구조화한다.
+`application-form.json`은 fos-assistant Memory 에서 읽은 공통 프로필의 현재 스냅샷, 회사별 선택값, 첨부 파일과 서술형 질문을 구조화한다.
+`profileSource` 는 `fos-assistant-memory:identity/career-application-profile` 로 쓴다.
+이전에 만든 스냅샷을 다시 검증할 수 있게 schema 는 옛 값 `private-brain:career-application-profile` 도 받는다. 새로 쓰지 않는다.
 서술형 문항이 없는 지원 건은 `questions`를 빈 배열로 둔다.
 
 #### `review/`
@@ -597,6 +599,30 @@ client 가 읽는 환경값은 포지션 추천과 같다. 같은 Backend 이고
 
 `put` 은 `--file` 로 받은 Markdown 파일을 본문으로 보내고 `--note` 와 `--expected-version` 을 요구한다.
 본문을 저장소 파일로 두지 않는다. 개인 맥락이라 시스템 임시 디렉터리에서 편집하고 저장한 뒤 지운다.
+
+## 지원서 공통 프로필
+
+`scripts/application-profile/` 는 fos-assistant Memory 의 지원서 공통 프로필을 읽는 CLI 다.
+흐름과 실패 갈래는 [`flow.md`](flow.md#지원서-공통-프로필)가 소유한다.
+
+| 경로 | 책임 |
+| --- | --- |
+| `contracts.ts` | collection `identity`, 문서 키 `career-application-profile` 상수와 응답의 zod 계약 |
+| `client.ts` | 연결값 검사와 서비스 읽기 HTTP 호출. 커리어 Backend 의 client 를 쓰지 않는다 |
+| `read_application_profile.ts` | `get --out <path>` 와 `help`. `help` 만 연결값 없이 실행한다 |
+
+| 환경 변수 | 뜻 |
+| --- | --- |
+| `FOS_ASSISTANT_URL` | fos-assistant 의 HTTP 또는 HTTPS origin. path, query, hash 와 credentials 를 받지 않는다 |
+| `FOS_ASSISTANT_SERVICE_TOKEN` | fos-assistant 웹 화면에서 발급한 서비스 토큰. `identity` collection 과 그 민감 읽기를 받는다 |
+
+두 값은 `career-os/.env` 에 두고 `bun --env-file=career-os/.env` 로 넘긴다.
+collection 과 문서 키는 코드에 고정한다. 설정으로 바꾸지 않는다.
+
+- `--out` 은 `scripts/candidate-context/repository-guard.ts` 로 git 저장소 밖인지 확인한 뒤에만 요청한다. 파일 권한은 `0600` 이다.
+- 표준 출력은 `collection`, `documentKey`, `revision`, `updatedAt`, `tokenExpiresAt`, `out` 만 담는다. `tokenExpiresAt` 은 응답의 `X-Service-Token-Expires-At` 머리말이며 없으면 `null` 이다.
+- 오류 메시지는 상태와 다음 행동만 담는다. 응답 본문, 문서 본문과 토큰을 담지 않는다.
+- 요청에 `Origin` 머리말을 붙이지 않고 redirect 를 따라가지 않는다.
 
 ## sync-profile
 

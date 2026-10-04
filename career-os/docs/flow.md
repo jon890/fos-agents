@@ -174,6 +174,47 @@ sequenceDiagram
 
 이유는 [ADR-131](adr/ADR-131-후보자-맥락은-backend-문서로-두고-공부-추천-기준-버전을-문서-버전에서-계산한다.md)을 따른다.
 
+### 지원서 공통 프로필
+
+이름, 연락처, 병역, 학력과 정확한 재직 기간을 담은 문서다. 원본은 fos-assistant Memory 의 `identity` collection 에 있는 민감 문서 `career-application-profile` 이다.
+career-os 는 서비스 토큰으로 읽기만 한다. 이유는 [ADR-136](adr/ADR-136-지원서-공통-프로필은-fos-assistant-memory에서-서비스-토큰으로-읽는다.md)을 따른다.
+
+`application-package-writer` 가 지원서 입력을 준비할 때 `scripts/application-profile/read_application_profile.ts get --out <저장소 밖 경로>` 를 부른다.
+CLI 는 `GET {FOS_ASSISTANT_URL}/api/v1/service/memory-documents/identity/career-application-profile` 을 `Authorization: Bearer {FOS_ASSISTANT_SERVICE_TOKEN}` 으로 부른다.
+본문은 `--out` 파일에만 쓰고, 표준 출력에는 판 번호와 시각만 낸다. 스킬은 그 파일을 읽어 쓴 뒤 지운다.
+
+```mermaid
+sequenceDiagram
+    participant Skill as application-package-writer
+    participant CLI as read_application_profile.ts
+    participant FA as fos-assistant 서비스 읽기 API
+    Skill->>CLI: get --out <저장소 밖 경로>
+    CLI->>CLI: --out 이 저장소 밖인지 확인
+    CLI->>FA: GET /api/v1/service/memory-documents/identity/career-application-profile
+    alt 200
+        FA-->>CLI: collection, documentKey, title, content, revision, updatedAt
+        CLI->>CLI: content 를 --out 에 0600 으로 쓴다
+        CLI-->>Skill: revision, updatedAt, tokenExpiresAt, out
+    else 401, 403, 404, 409
+        FA-->>CLI: 실패 상태
+        CLI-->>Skill: 상태별 다음 행동. 본문과 토큰은 싣지 않는다
+    end
+```
+
+| 상황 | CLI 의 동작 |
+| --- | --- |
+| `FOS_ASSISTANT_URL` 이나 `FOS_ASSISTANT_SERVICE_TOKEN` 이 없다 | 요청하지 않고 실패한다. `career-os/.env` 에 두 값을 채우라고 알린다 |
+| `--out` 이 git 저장소 안이다 | 요청하지 않고 실패한다 |
+| `401` | 토큰이 없거나 틀렸거나 폐기됐거나 만료됐다. fos-assistant 웹 화면에서 새로 발급해 `.env` 를 바꾸라고 알린다 |
+| `403` | 요청에 `Origin` 머리말이 붙었다. CLI 의 결함으로 보고 실패한다 |
+| `404 MEMORY_NOT_FOUND` | 문서가 없거나 토큰이 `identity` 의 민감 읽기를 받지 않는다. fos-assistant 웹 화면에서 문서와 토큰 권한을 확인하라고 알린다 |
+| `409 MEMORY_ENCRYPTION_UNAVAILABLE` | fos-assistant 에 민감 본문의 key 가 없다. 운영자에게 알리라고 하고 실패한다 |
+| `5xx` 나 연결 실패 | 두 번까지 다시 시도한 뒤 실패한다 |
+| 응답 본문이 계약과 다르다 | 실패한다. `collection` 과 `documentKey` 가 요청한 값과 다를 때도 같다 |
+
+어느 실패든 스킬은 공통 프로필 없이 지원서 입력을 준비하지 않고 멈춘다.
+새로 확인한 공통 프로필 사실은 career-os 가 쓰지 않는다. 사용자에게 fos-assistant 웹 화면에서 고치라고 안내한다.
+
 ### HTML 리포트 게시
 
 사용자가 공유 링크를 요청했을 때만 외부 게시까지 이어간다.
