@@ -89,7 +89,9 @@ export PATH="$HOME/.bun/bin:$PATH"
 단가표 확인도 저장소 세션의 일이다.
 
 차트와 Tokens 배지는 `update_github_profile` 이 기록으로 그리고 검사한다.
-`get_github_profile` 로 현재 README 와 저장소 상태를 읽고, 고른 달과 README 를 `update_github_profile` 에 넘긴다.
+`get_github_profile` 로 현재 README 와 저장소 상태를 읽는다.
+`update_github_profile` 에는 `readme`, `months`(겹치지 않는 1~6개의 `YYYY-MM`), `expectedBranch`, `expectedHead` 를 넘긴다.
+`expectedBranch` 와 `expectedHead` 는 `get_github_profile` 결과의 `branch` 와 `head` 를 그대로 쓴다. 그 사이 저장소가 바뀌었으면 도구가 거절하므로 다시 읽는다.
 기록에 없는 달을 넣으면 도구가 실패한다.
 마크다운에서는 `./agent-usage.svg` 처럼 상대 경로로 참조한다.
 
