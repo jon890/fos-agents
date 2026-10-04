@@ -97,7 +97,7 @@
 - `git rm -r career-os/.claude/skills/interview-practice` 로 남은 `SKILL.md`, `evals/` 를 지운다
 - `git rm career-os/.codex/skills/interview-practice` 로 링크를 지운다
 - `career-os/public/question-bank/README.md` 의 「질문 추가와 보강은 `interview-practice`의 공개 질문 유지보수 절차에서 수행한다.」 를 「질문 추가와 보강은 [`MAINTENANCE.md`](MAINTENANCE.md)의 저장소 유지 절차로 한다.」 로 바꾼다
-- `career-os/scripts/career-workspace/cli.ts` 의 `managedSkills` 에서 `"interview-practice"` 를 뺀다
+- `career-os/scripts/career-workspace/cli.ts` 의 `managedSkills` 에서 `"interview-practice"` 를 뺀다. 이 파일은 실행기 번들에 들어가므로 `bun run --cwd career-os/plugin build` 로 `dist/career-local.js` 를 다시 만든다
 
 ### 5. 테스트
 
@@ -152,6 +152,7 @@ test ! -e career-os/.codex/skills/interview-practice
 | `career-os/scripts/interview-drill/memory.test.ts` | 수정 |
 | `career-os/scripts/candidate-context/skill_boundary.test.ts` | 수정 |
 | `career-os/scripts/career-workspace/cli.ts` | 수정 |
+| `career-os/plugin/dist/career-local.js` | 수정 |
 | `career-os/.claude/skills/interview-practice/SKILL.md` | 삭제 |
 | `career-os/.claude/skills/interview-practice/evals/evals.json` | 삭제 |
 | `career-os/.claude/skills/interview-practice/references/behavioral-scoring.md` | 삭제 |
