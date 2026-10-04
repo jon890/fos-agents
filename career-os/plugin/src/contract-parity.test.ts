@@ -18,7 +18,13 @@ import {
   interviewQuestionSchema as backendQuestionSchema,
   personalQuestionBodySchema,
 } from "../../services/career-backend/src/interview/schema.ts";
-import { studyRecommendationRunSchema } from "../../services/career-backend/src/study/schema.ts";
+import { studyCandidatesQuerySchema, studyRecommendationRunSchema } from "../../services/career-backend/src/study/schema.ts";
+import {
+  companyPreferenceSchema as backendCompanyPreferenceSchema,
+  positionExclusionSchema as backendExclusionSchema,
+} from "../../services/career-backend/src/positions/schema.ts";
+import { CareerBackendClient } from "../../scripts/position-recommender/career-backend/client.ts";
+import { studyLibraryCandidatePageSchema } from "../../scripts/study-topic-recommender/study-library/contracts.ts";
 import { CareerBackend, type FetchLike } from "./backend.ts";
 import {
   attemptInputSchema,
@@ -27,7 +33,8 @@ import {
   publicBehavioralQuestions,
   publicTechQuestions,
 } from "./interview.ts";
-import { worstCaseRecommendation } from "./study-fixtures.ts";
+import { urlKey, worstCaseRecommendation } from "./study-fixtures.ts";
+import { listStudyCandidatesSchema } from "./study.ts";
 import { CareerTools, contextDocumentKeys, profileDocumentKeys } from "./tools.ts";
 
 test("후보자 맥락 문서 키가 CLI 계약과 같다", () => {
@@ -269,5 +276,137 @@ describe("save_study_recommendation 이 CLI 의 createRecommendationRun 과 Back
   test("모든 칸을 상한까지 채운 plugin 입력에 reportId 를 붙이면 Backend 스키마도 받는다", () => {
     const parsed = studyRecommendationRunSchema.safeParse({ ...worstCaseRecommendation(), reportId });
     expect(parsed.success ? [] : parsed.error.issues).toEqual([]);
+  });
+});
+
+describe("조사용 읽기 도구가 CLI 와 같은 GET 을 보내고 Backend 계약의 칸을 보존한다", () => {
+  const origin = "https://career.example.com/";
+  const token = "x".repeat(40);
+  type Sent = { method: string; url: string; body: unknown };
+  function recorder(body: unknown) {
+    const sent: Sent[] = [];
+    const fetchImpl = async (input: string | URL | Request, init?: RequestInit) => {
+      sent.push({ method: String(init?.method), url: String(input), body: init?.body });
+      return new Response(JSON.stringify(body), { status: 200 });
+    };
+    return { sent, fetchImpl };
+  }
+  const tools = (fetchImpl: FetchLike) => new CareerTools(new CareerBackend({ baseUrl: origin, token }, fetchImpl));
+
+  test("list_study_candidates 의 입력 칸은 Backend 후보 query 의 칸과 같다", () => {
+    expect(Object.keys(listStudyCandidatesSchema.shape).sort()).toEqual(
+      Object.keys(studyCandidatesQuerySchema.shape).sort(),
+    );
+  });
+
+  test("list_study_candidates 는 CLI 의 getCandidates 와 같은 URL 로 GET 하고 CLI 계약을 통과하는 쪽을 받는다", async () => {
+    const page = {
+      candidates: [
+        {
+          id: urlKey(7),
+          contentKey: urlKey(7),
+          canonicalUrl: "https://blog.example.com/posts/idempotency",
+          sourceKey: "example-blog",
+          sourceName: "예시 기술 블로그",
+          category: "techBlog",
+          title: "멱등 키 설계",
+          url: "https://blog.example.com/posts/idempotency",
+          published: "2026-09-30",
+          kind: "feed-article",
+          previouslyRecommended: false,
+        },
+      ],
+      recentStudyTopicKeys: ["idempotency-key"],
+      nextCursor: "eyJ4IjoxfQ",
+      historyVersion: 1,
+      candidateContextVersion: "learning-interests:v1",
+      learningInterests: { version: 1, body: "# 관심사\n" },
+    };
+    expect(studyLibraryCandidatePageSchema.safeParse(page).success).toBe(true);
+    const filters = {
+      limit: 10,
+      category: "ai",
+      sourceKey: "example-blog",
+      publishedFrom: "2026-09-01T00:00:00Z",
+      publishedTo: "2026-10-01T00:00:00Z",
+      cursor: "eyJ4IjowfQ",
+    } as const;
+
+    const cli = recorder(page);
+    await createStudyLibraryClient({ origin, token, fetchImpl: cli.fetchImpl, maxRetries: 0 }).getCandidates(
+      Object.fromEntries(Object.entries(filters).map(([key, value]) => [key, String(value)])),
+    );
+    const plugin = recorder(page);
+    const result = await tools(plugin.fetchImpl).call("list_study_candidates", filters);
+    expect(result.isError).toBeUndefined();
+    expect(plugin.sent).toEqual([{ method: "GET", url: expect.any(String), body: undefined }]);
+    const params = (sent: Sent[]) => Object.fromEntries(new URL(sent[0]!.url).searchParams);
+    expect(new URL(plugin.sent[0]!.url).pathname).toBe(new URL(cli.sent[0]!.url).pathname);
+    expect(params(plugin.sent)).toEqual(params(cli.sent));
+    const row = JSON.parse(result.content[0].text).candidates[0];
+    for (const key of ["contentKey", "canonicalUrl", "url", "sourceKey", "sourceName", "title", "published"] as const)
+      expect({ key, value: row[key] }).toEqual({ key, value: page.candidates[0]![key] });
+  });
+
+  test("get_position_research_constraints 는 CLI 의 getExclusions, listCompanyPreferences 와 같은 URL 로 GET 하고 Backend 계약의 칸을 그대로 낸다", async () => {
+    const exclusions = [
+      {
+        scope: "posting",
+        source: "example-jobs",
+        url: "https://jobs.example.com/postings/7",
+        decisionKind: "manual",
+        reason: "이미 지원했다",
+        evidenceUrls: ["https://jobs.example.com/postings/7"],
+        decidedAt: "2026-09-01",
+        expiresAt: "2026-12-01",
+      },
+      {
+        scope: "company-role",
+        company: "example-corp",
+        titleKeywords: ["데이터 엔지니어"],
+        decisionKind: "career-downside",
+        reason: "역할 범위가 맞지 않는다",
+        evidenceUrls: ["https://jobs.example.com/companies/example-corp"],
+        confidence: "medium",
+        decidedAt: "2026-08-01",
+      },
+    ];
+    const preferences = [
+      {
+        companyKey: "example-corp",
+        companyName: "예시 주식회사",
+        tier: 2,
+        disposition: "benchmark",
+        techBlogFeedUrl: "https://tech.example.com/feed.xml",
+        githubOrg: "example-corp",
+        dartCorpCode: "00000001",
+        blindCompanySlug: "example-corp",
+        updatedAt: "2026-09-20T01:00:00.000Z",
+      },
+    ];
+    for (const rule of exclusions) expect(backendExclusionSchema.safeParse(rule).success).toBe(true);
+    for (const preference of preferences) expect(backendCompanyPreferenceSchema.safeParse(preference).success).toBe(true);
+
+    const respond = (sent: Sent[]) => async (input: string | URL | Request, init?: RequestInit) => {
+      sent.push({ method: String(init?.method), url: String(input), body: init?.body });
+      const body = String(input).endsWith("/exclusions") ? exclusions : preferences;
+      return new Response(JSON.stringify(body), { status: 200 });
+    };
+    const cliSent: Sent[] = [];
+    const cli = new CareerBackendClient({ baseUrl: origin, token, fetcher: respond(cliSent), maxRetries: 0 });
+    await cli.getExclusions();
+    await cli.listCompanyPreferences();
+    const pluginSent: Sent[] = [];
+    const result = await tools(respond(pluginSent)).call("get_position_research_constraints", {});
+    expect(result.isError).toBeUndefined();
+    const lines = (sent: Sent[]) => sent.map((call) => `${call.method} ${call.url}`).sort();
+    expect(lines(pluginSent)).toEqual(lines(cliSent));
+    expect(pluginSent.every((call) => call.body === undefined)).toBe(true);
+    expect(JSON.parse(result.content[0].text)).toEqual({
+      readiness: "ready",
+      missing: [],
+      exclusions,
+      companyPreferences: preferences,
+    });
   });
 });

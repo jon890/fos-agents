@@ -39,7 +39,9 @@
     "save_interview_attempt": { "risk": "WRITE", "approval": "required", "title": "면접 답변 기록" },
     "save_personal_question": { "risk": "WRITE", "approval": "required", "title": "개인 질문 저장" },
     "get_study_candidates": { "risk": "READ", "approval": "none", "title": "공부 후보 읽기" },
-    "save_study_recommendation": { "risk": "WRITE", "approval": "required", "title": "공부 추천 저장" }
+    "save_study_recommendation": { "risk": "WRITE", "approval": "required", "title": "공부 추천 저장" },
+    "list_study_candidates": { "risk": "READ", "approval": "none", "title": "공부 후보 목록" },
+    "get_position_research_constraints": { "risk": "READ", "approval": "none", "title": "포지션 제외 기준 읽기" }
   },
   "default_tool_policy": "deny",
   "operator_env": ["CAREER_BACKEND_URL", "CAREER_GITHUB_PROFILE_REPO"],

@@ -95,6 +95,14 @@ describe("get_study_candidates", () => {
     );
   });
 
+  test("canonicalUrl 과 sourceKey 가 없는 후보 행도 받는다", async () => {
+    const { canonicalUrl: _url, sourceKey: _source, ...older } = candidate;
+    const { tools } = harness(() => json({ ...page, candidates: [older] }));
+    const result = await tools.call("get_study_candidates", {});
+    expect(result.isError).toBeUndefined();
+    expect(parse(result).candidates).toHaveLength(1);
+  });
+
   test("limit 과 category 를 query 에 싣는다", async () => {
     const { calls, tools } = harness(() => json(page));
     await tools.call("get_study_candidates", { limit: 5, category: "video" });
