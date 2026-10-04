@@ -54,7 +54,7 @@ describe("후보자 맥락 스킬 경계", () => {
   });
 
   test("resume-preparer 는 candidate-context.md 를 두고 brain-context.md 를 두지 않는다", () => {
-    const references = join(skillsRoot, "resume-preparer", "references");
+    const references = join(skillDirectory("resume-preparer"), "references");
     expect(existsSync(join(references, "candidate-context.md"))).toBe(true);
     expect(existsSync(join(references, "brain-context.md"))).toBe(false);
   });

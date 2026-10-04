@@ -85,6 +85,9 @@ test ! -e career-os/.claude/skills/resume-preparer && test ! -e career-os/.claud
 | `career-os/.codex/skills/resume-preparer` | 삭제 |
 | `career-os/scripts/candidate-context/skill_boundary.test.ts` | 수정 |
 | `career-os/plugin/src/server.ts` | 수정 |
+| `career-os/plugin/src/server.test.ts` | 수정 |
+| `career-os/docs/flow.md` | 수정 |
+| `career-os/docs/code-architecture.md` | 수정 |
 | `career-os/plugin/dist/career-mcp.js` | 수정 |
 | `career-os/plugin/.claude-plugin/plugin.json` | 수정 |
 | `career-os/plugin/package.json` | 수정 |

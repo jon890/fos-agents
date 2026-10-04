@@ -19,7 +19,7 @@ public `fos-agents` 저장소는 스킬과 실행 코드를 소유한다.
 
 ```text
 career-os/
-├── .claude/skills/       사용자 작업별 skill
+├── .claude/skills/       저장소에 남은 skill. 홈서버 예약 실행이 쓴다
 ├── .codex/skills/        Codex에서 같은 skill을 노출하는 링크
 ├── config/               사람이 관리하는 수집 정책
 ├── scripts/              검증, 수집과 변환 코드
@@ -144,8 +144,8 @@ career-os/.career-sync/
 원격 파일을 network filesystem으로 직접 편집하지 않으며, 준비 단계는 검증한 release만 임시 경로에서 로컬로 교체한다.
 반영 단계는 실행 시작 revision이 홈서버 현재 값과 일치할 때만 새 release를 만든다.
 
-`.claude/skills/`가 skill 관리 원본이다.
-`.codex/skills/`는 같은 디렉터리를 가리키며 Hermes cron은 `career-os`를 작업 디렉터리로 사용한다.
+저장소에 남은 skill 은 `.claude/skills/`가 관리 원본이고, plugin 으로 옮긴 skill 은 `plugin/skills/`가 소유한다.
+`.codex/skills/`는 저장소에 남은 skill 디렉터리를 가리키며 Hermes cron은 `career-os`를 작업 디렉터리로 사용한다.
 환경별 차이는 `.env`의 transport 설정에만 두고 지원 판단과 문서 작성 절차를 복제하지 않는다.
 SSH client는 `career-storage`를 원격 호출하고, 홈서버의 Hermes는 같은 명령을 command transport로 호출한다.
 두 경로는 같은 홈서버 잠금과 S3 pointer 갱신 계약을 사용한다.

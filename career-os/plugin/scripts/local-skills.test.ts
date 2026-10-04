@@ -180,14 +180,17 @@ describe("resume-preparer", () => {
     }
   });
 
-  // 저장소 사본(.claude/skills/resume-preparer)을 지울 때 이 단언도 함께 지운다.
-  test("기준 문서 다섯이 저장소 사본과 바이트 단위로 같다", () => {
-    const repoReferences = join(import.meta.dir, "..", "..", ".claude", "skills", "resume-preparer", "references");
-    for (const file of ["claim-model.md", "hard-review.md", "resume-taste.md", "resume-writing-style.md", "scoring-rubric.md"]) {
-      const original = join(repoReferences, file);
-      expect(existsSync(original), `${original} 가 없다`).toBe(true);
-      expect(readFileSync(join(directory, "references", file)).equals(readFileSync(original)), file).toBe(true);
-    }
+  test("evals.json 이 올바른 JSON 이고 /Users/ 경로가 없다", () => {
+    const text = readFileSync(join(directory, "evals", "evals.json"), "utf8");
+    const strings: string[] = [];
+    const collect = (value: unknown): void => {
+      if (typeof value === "string") strings.push(value);
+      else if (Array.isArray(value)) value.forEach(collect);
+      else if (value && typeof value === "object") Object.values(value).forEach(collect);
+    };
+    collect(JSON.parse(text));
+    expect(strings.length).toBeGreaterThan(0);
+    for (const value of strings) expect(value.includes("/Users/"), value).toBe(false);
   });
 });
 

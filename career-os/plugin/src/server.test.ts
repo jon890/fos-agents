@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { copyFileSync, mkdtempSync, rmSync } from "node:fs";
+import { copyFileSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CareerError } from "./backend.ts";
@@ -24,6 +24,21 @@ function expectConfigError(build: () => unknown) {
   }
   throw new Error("expected CAREER_CONFIG");
 }
+
+test("MCP 서버가 알리는 version 이 package.json 의 version 과 같다", async () => {
+  const { version } = JSON.parse(readFileSync(join(import.meta.dir, "..", "package.json"), "utf8")) as { version: string };
+  const server = createServer(env, async () => new Response(JSON.stringify({ documents: [] })));
+  const client = new Client({ name: "version-test", version: "1.0.0" });
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  try {
+    await server.connect(serverTransport);
+    await client.connect(clientTransport);
+    expect(client.getServerVersion()?.version).toBe(version);
+  } finally {
+    await client.close();
+    await server.close();
+  }
+});
 
 test("MCP 로 도구 열여덟 개를 탐색하고 확인 도구가 structuredContent 와 텍스트에 같은 값을 낸다", async () => {
   const server = createServer(env, async (input) => {
