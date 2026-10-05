@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 BLOCK_FIELDS = {
     "sticker": "stickerCode",
     "text": "lines",
@@ -14,6 +16,8 @@ STICKER_CODES = {
     "price": "ogq_5db4314bac2f0-6",
     "self_paid": "ogq_5db4314bac2f0-23",
 }
+# 초안 폴더의 사진 이름 앞 세 자리 번호다. 지융이 보낸 순서를 담는다.
+PHOTO_NUMBER = re.compile(r"^(?:\./)?photos/(\d{3})-")
 
 
 def validate(draft: dict) -> list[str]:
@@ -66,8 +70,12 @@ def validate(draft: dict) -> list[str]:
             problems.append(f"{where}({kind}) 의 {field} 가 비어 있다")
         if kind == "sticker" and value not in STICKER_CODES.values():
             problems.append(f"{where}(sticker) 의 stickerCode 를 모른다: {value!r}")
+        if kind == "image" and "note" in block and not isinstance(block["note"], str):
+            problems.append(f"{where}(image) 의 note 는 문자열이어야 한다")
         if kind == "map" and (not isinstance(block.get("address"), str) or not block["address"].strip()):
             problems.append(f"{where}(map) 의 address 가 없다")
+
+    problems.extend(photo_order_problems(blocks))
 
     if draft.get("category") in ("맛집로그", "카페로그"):
         codes = [b.get("stickerCode") for b in blocks if isinstance(b, dict) and b.get("type") == "sticker"]
@@ -86,4 +94,29 @@ def validate(draft: dict) -> list[str]:
         if not any(isinstance(b, dict) and b.get("type") == "map" and b.get("name") and b.get("address") for b in blocks):
             problems.append("상호명과 주소가 있는 지도 블록을 둔다")
 
+    return problems
+
+
+def photo_order_problems(blocks: list) -> list[str]:
+    """사진 블록이 사진 번호 순서대로 놓였는지 본다.
+
+    번호는 지융이 보낸 순서다. 카테고리의 사진 순서나 글 흐름에 맞춰 사진을 옮기면 지융이 고른 순서가 깨진다.
+    번호가 없는 경로는 순서를 알 수 없으므로 보지 않는다.
+    """
+    problems: list[str] = []
+    previous: tuple[int, str] | None = None
+    for i, block in enumerate(blocks):
+        if not isinstance(block, dict) or block.get("type") != "image":
+            continue
+        path = block.get("path")
+        match = PHOTO_NUMBER.match(path) if isinstance(path, str) else None
+        if not match:
+            continue
+        number = int(match.group(1))
+        if previous is not None and number <= previous[0]:
+            problems.append(
+                f"blocks[{i}](image) 의 {path} 가 앞의 {previous[1]} 보다 뒤에 놓였다. "
+                "사진은 보낸 순서인 번호 순서대로 한 번씩만 놓는다"
+            )
+        previous = (number, path)
     return problems

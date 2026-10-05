@@ -18,7 +18,7 @@ fos-assistant 의 결과물 화면은 스크립트와 외부 이미지, 외부 C
       "blocks": [
         {"type": "sticker", "stickerCode": "ogq_5db4314bac2f0-1"},
         {"type": "text", "lines": ["안녕하세요 지융입니다 😋", "오늘은 ..."]},
-        {"type": "image", "path": "tmp/001-IMG_0001.jpg", "caption": ""},
+        {"type": "image", "path": "photos/001-IMG_0001.jpg", "note": "간판과 입구"},
         {"type": "map", "name": "순돌이곱창", "address": "전북특별자치도 군산시 ..."}
       ]
     }
@@ -38,7 +38,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 sys.path.insert(0, str(Path(__file__).parent))
-from draft_contract import validate  # noqa: E402
+from draft_contract import PHOTO_NUMBER, validate  # noqa: E402
 from preview_photos import LONG_EDGE, display_size, preview_bytes  # noqa: E402
 
 # fos-assistant 결과물 화면이 내어 주는 이미지 형식이다. HEIC 와 SVG 는 여기에 없다.
@@ -73,6 +73,9 @@ h1 { font-size:19px; line-height:1.45; margin:0; padding:24px 20px 16px;
 .photo { margin:0 0 18px; }
 .photo img { width:100%; height:auto; border-radius:8px; display:block; }
 .photo .cap { font-size:12px; color:var(--muted); padding-top:6px; }
+.photo .num { display:inline-block; font-size:11px; font-weight:700; color:var(--tagink);
+              background:var(--tag); border-radius:10px; padding:2px 8px; margin:0 0 6px; }
+.photo .note { font-size:12px; line-height:1.6; color:var(--muted); padding-top:6px; }
 .missing { padding:40px 12px; text-align:center; background:var(--tag); border-radius:8px;
            color:var(--muted); font-size:13px; }
 .sticker { text-align:center; font-size:26px; margin:0 0 18px; }
@@ -166,7 +169,12 @@ def render_block(
         else:
             body = f'<div class="missing">사진 없음<br>{html.escape(path or "경로 없음")}</div>'
         caption = f'<div class="cap">{html.escape(cap)}</div>' if cap else ""
-        return f'<div class="photo">{body}{caption}</div>'
+        # 번호는 지융이 보낸 순서이고, 설명은 사진을 보고 적은 것이다. 지융이 둘 다 맞는지 본다.
+        match = PHOTO_NUMBER.match(path) if isinstance(path, str) else None
+        number = f'<div class="num">{int(match.group(1))}번째 사진</div>' if match else ""
+        note = block.get("note", "")
+        described = f'<div class="note">사진 설명 · {html.escape(note)}</div>' if note else ""
+        return f'<div class="photo">{number}{body}{caption}{described}</div>'
 
     if kind == "sticker":
         code = block.get("stickerCode", "")

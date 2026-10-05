@@ -30,6 +30,43 @@ class DraftContractTest(unittest.TestCase):
     def test_confirmed_non_sponsored_draft(self):
         self.assertEqual(validate(self.draft()), [])
 
+    def test_photos_follow_sent_order(self):
+        draft = self.draft()
+        draft["blocks"][3]["path"] = "photos/003-menu.jpg"
+        draft["blocks"][4:4] = [
+            {"type": "image", "path": "photos/004-dish.jpg"},
+            {"type": "text", "lines": ["다음 사진"]},
+            {"type": "image", "path": "photos/010-close.jpg"},
+        ]
+        self.assertEqual(validate(draft), [])
+
+        # 카테고리의 사진 순서에 맞춘다고 앞에 보낸 사진을 뒤로 옮기면 막는다.
+        moved = copy.deepcopy(draft)
+        moved["blocks"][4]["path"] = "photos/002-exterior.jpg"
+        self.assertTrue(any("002-exterior.jpg" in p and "번호 순서" in p for p in validate(moved)))
+
+        twice = copy.deepcopy(draft)
+        twice["blocks"][6]["path"] = "photos/004-dish.jpg"
+        self.assertTrue(any("번호 순서" in p for p in validate(twice)))
+
+    def test_photo_order_edges(self):
+        draft = self.draft()
+        # 사진을 받기 전 자리표시자도 번호가 늘면 통과한다.
+        draft["blocks"][3]["path"] = "photos/001-<나중에>.jpg"
+        draft["blocks"].insert(4, {"type": "image", "path": "photos/002-<나중에>.jpg"})
+        self.assertEqual(validate(draft), [])
+        # 앞에 ./ 가 붙어도 같은 번호로 본다.
+        dotted = copy.deepcopy(draft)
+        dotted["blocks"][4]["path"] = "./photos/001-dup.jpg"
+        self.assertTrue(any("번호 순서" in p for p in validate(dotted)))
+        # 번호 없는 경로는 순서를 알 수 없어 보지 않는다.
+        unnumbered = copy.deepcopy(draft)
+        unnumbered["blocks"][4]["path"] = "photos/extra.jpg"
+        self.assertEqual(validate(unnumbered), [])
+        noted = copy.deepcopy(draft)
+        noted["blocks"][3]["note"] = ["메뉴판"]
+        self.assertTrue(any("note" in p for p in validate(noted)))
+
     def test_missing_menu_photo_does_not_require_fake_menu(self):
         draft = self.draft()
         draft["menuPhotoUnavailable"] = True
