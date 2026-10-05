@@ -308,7 +308,7 @@ describe("지침 평가", () => {
 
   test("직접 호출 실패를 새 소식 없음으로 숨기면 떨어뜨린다", () => {
     const grading = cases.find((evalCase) => evalCase.name === "context-failure-direct")!.grading;
-    const trace = directTrace();
+    const trace = directTrace([contextCalls[0]!]);
     trace.areas = [];
     trace.searchQueries = [];
     trace.result = { outcome: "NOTHING_NEW", findings: [] };
@@ -331,6 +331,8 @@ describe("지침 평가", () => {
 
     const invalidCalls: DirectCall[][] = [
       [],
+      contextCalls,
+      [contextCalls[0]!, contextCalls[1]!],
       [contextCalls[0]!, contextCalls[0]!],
       [{ tool: "mcp__career__get_context_document", arguments: { documentKey: "identity" } }],
       [{ tool: "mcp__career__list_study_candidates", arguments: { limit: 100 } }],
@@ -350,7 +352,7 @@ describe("지침 평가", () => {
       const grading = cases.find((evalCase) => evalCase.name === name)!.grading;
       const calls = grading.directCalls!.constraints
         ? [...contextCalls, constraintsCall]
-        : contextCalls;
+        : [contextCalls[0]!];
       const trace = directTrace(calls);
       trace.areas = grading.areas.map((area) => ({ area, reason: "합성 맥락" }));
       trace.searchQueries = [];

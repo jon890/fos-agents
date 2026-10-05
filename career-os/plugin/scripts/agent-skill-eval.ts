@@ -23,7 +23,12 @@ export type Grading = {
   earlyNothingNew: boolean;
   areas: string[];
   delegations: { include: Delegation[]; exclude: Delegation[] };
-  directCalls?: { context: boolean; constraints: boolean; allowPartialContext?: boolean };
+  directCalls?: {
+    context: boolean;
+    constraints: boolean;
+    allowPartialContext?: boolean;
+    maxCalls?: number;
+  };
   searchQueries: { min?: number; max?: number; forbidden: string[] };
   outcome?: "NOTHING_NEW" | "FINDINGS";
   sourceFailure?: string;
@@ -142,7 +147,13 @@ export function grade(trace: Trace | null, grading: Grading): Check[] {
     actual.length <= expected.length &&
     new Set(actual).size === actual.length &&
     actual.every((call) => expected.includes(call));
-  add("directCalls", exactCalls || partialContextCalls, JSON.stringify(trace.directCalls));
+  const withinCallLimit =
+    actual.length <= (grading.directCalls?.maxCalls ?? Number.POSITIVE_INFINITY);
+  add(
+    "directCalls",
+    (exactCalls || partialContextCalls) && withinCallLimit,
+    JSON.stringify(trace.directCalls),
+  );
 
   const count = trace.searchQueries.length;
   const { min = 0, max = Number.POSITIVE_INFINITY, forbidden } = grading.searchQueries;

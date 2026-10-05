@@ -590,7 +590,8 @@
         "directCalls": {
           "context": true,
           "constraints": false,
-          "allowPartialContext": true
+          "allowPartialContext": true,
+          "maxCalls": 1
         },
         "searchQueries": {
           "max": 0,
