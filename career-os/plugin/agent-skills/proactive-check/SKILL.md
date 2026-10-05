@@ -79,7 +79,7 @@ session 이 바뀌어 대화에 근거가 없으면 Memory 문맥만 본다.
 | `mcp__career__list_study_candidates` | `limit: 20` 으로 한 번. `status`, `learningInterestsVersion`, `recentStudyTopicKeys`, 후보의 `contentKey`, `title`, `canonicalUrl`, `category`, `published` |
 
 `career-status` 는 기술, 역할, 업무 일정에 관한 줄만 판단에 쓴다.
-이 경로에서는 이 실행이 받은 Memory 문맥을 함께 써서 판단한다.
+두 조회 경로 모두 살펴보기를 도는 이 실행이 받은 Memory 문맥으로 판단한다.
 필요한 도구 일부가 없거나 호출이 실패하면 실패한 출처로 처리한다. 위임으로 재시도하지 않는다.
 `CAREER_UNAUTHORIZED` 를 받으면 같은 연결을 쓰는 나머지 조회는 시작하지 않는다.
 
@@ -117,7 +117,7 @@ session 이 바뀌어 대화에 근거가 없으면 Memory 문맥만 본다.
 이전 답을 찾지 못하면 모든 문서와 후보를 바뀐 것으로 본다.
 
 `study`, `position`, `trend` 가운데 필요한 영역만 고른다.
-**고르지 않는 조건을 먼저 보고, 한 주제는 한 영역에서만 본다.**
+**고르지 않는 조건이 하나라도 참이면 고르는 조건이 참이어도 고르지 않는다. 한 주제는 한 영역에서만 본다.**
 
 | 영역 | 고르는 조건 중 하나 | 고르지 않는 조건 중 하나 |
 | --- | --- | --- |
