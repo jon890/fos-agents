@@ -112,6 +112,27 @@ class BuildPreviewTest(unittest.TestCase):
             sorted(["001-메뉴 판.jpg", f"{STICKER}.png", "draft.json", "preview.html"]),
         )
 
+    def test_preview_shows_sent_order_and_photo_description(self):
+        (self.draft_dir / "photos" / "002-외관.jpg").write_bytes(b"jpg")
+        (self.draft_dir / "photos" / "010-볶음밥.jpg").write_bytes(b"jpg")
+        data = draft("photos/001-메뉴 판.jpg", "photos/002-외관.jpg", "photos/010-볶음밥.jpg")
+        notes = ["벽에 붙은 메뉴판, 소곱창 19,000원", "녹색 간판 아래 입구", "철판 위 <볶음밥> & 김"]
+        for block, note in zip((b for b in data["blocks"] if b["type"] == "image"), notes):
+            block["note"] = note
+        path = self.draft_dir / "draft.json"
+        path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        out = self.draft_dir / "preview.html"
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT), str(path), "--out", str(out)],
+            capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout)
+        markup = out.read_text(encoding="utf-8")
+        shown = re.findall(r'<div class="num">(\d+)번째 사진</div>', markup)
+        self.assertEqual(shown, ["1", "2", "10"])
+        described = re.findall(r'<div class="note">사진 설명 · ([^<]+)</div>', markup)
+        self.assertEqual(described, [n.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;") for n in notes])
+
     def test_artifact_folder_gets_copies_and_draft_keeps_originals(self):
         out = self.artifacts / "초안" / "index.html"
         result = self.run_preview("photos/001-메뉴 판.jpg", out)

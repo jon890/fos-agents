@@ -1,4 +1,7 @@
-"""대화에 첨부된 사진 중 지정한 파일만 한 장소의 초안 폴더로 복사한다."""
+"""대화에 첨부된 사진 중 지정한 파일만 한 장소의 초안 폴더로 복사한다.
+
+번호는 `--file` 을 준 순서대로 붙인다. 지융이 보낸 순서가 곧 글의 순서이므로 촬영시각으로 다시 세우지 않는다.
+"""
 
 from __future__ import annotations
 
@@ -11,7 +14,7 @@ import tempfile
 from datetime import date
 from pathlib import Path
 
-from photo_set import renumber
+from photo_set import shot_at_file
 
 ALLOWED_SUFFIXES = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 
@@ -23,7 +26,7 @@ def stage_photos(
     drafts_dir: Path,
     visit_date: str,
 ) -> dict:
-    """명시한 첨부만 복사하고 촬영시각 순으로 번호를 붙인다."""
+    """명시한 첨부만 복사하고 names 의 순서대로 번호를 붙인다."""
     place = place.strip()
     if (
         not place
@@ -66,9 +69,13 @@ def stage_photos(
         staged_draft = Path(temporary) / "draft"
         photos_dir = staged_draft / "photos"
         photos_dir.mkdir(parents=True)
-        for source in sources:
-            shutil.copyfile(source, photos_dir / source.name)
-        photos = renumber(photos_dir)
+        photos = []
+        for order, source in enumerate(sources, 1):
+            name = f"{order:03d}-{source.name}"
+            shutil.copyfile(source, photos_dir / name)
+            photos.append(
+                {"name": name, "source": source.name, "shotAt": shot_at_file(source)}
+            )
         # mkdir 는 같은 장소를 동시에 처리해도 한 실행만 성공하게 한다.
         try:
             target.mkdir()
@@ -88,8 +95,13 @@ def stage_photos(
         "place": place,
         "directory": str(target),
         "photos": [
-            {"path": f"photos/{photo['name']}", "shotAt": photo["shotAt"]}
-            for photo in photos
+            {
+                "order": order,
+                "path": f"photos/{photo['name']}",
+                "source": photo["source"],
+                "shotAt": photo["shotAt"],
+            }
+            for order, photo in enumerate(photos, 1)
         ],
     }
 
@@ -97,7 +109,13 @@ def stage_photos(
 def main() -> int:
     parser = argparse.ArgumentParser(description="대화 첨부 사진을 장소별 초안 폴더로 복사한다")
     parser.add_argument("--source-dir", type=Path, required=True)
-    parser.add_argument("--file", action="append", required=True, dest="files")
+    parser.add_argument(
+        "--file",
+        action="append",
+        required=True,
+        dest="files",
+        help="입력에 적힌 순번 순서대로 준다. 이 순서가 글의 사진 순서다",
+    )
     parser.add_argument("--place", required=True)
     parser.add_argument("--date", default=date.today().isoformat())
     parser.add_argument("--drafts-dir", type=Path, default=Path("drafts"))
