@@ -9,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from stage_chat_photos import stage_photos
+from test_photo_set import build_jpeg
 
 
 class StageChatPhotosTest(unittest.TestCase):
@@ -31,11 +32,51 @@ class StageChatPhotosTest(unittest.TestCase):
         self.assertEqual(result["directory"], str(target))
         self.assertEqual(
             [photo["path"] for photo in result["photos"]],
-            ["photos/001-a.png", "photos/002-b.png"],
+            ["photos/001-b.png", "photos/002-a.png"],
         )
         self.assertEqual(len(list((target / "photos").iterdir())), 2)
         self.assertFalse((target / "photos" / "other.png").exists())
         self.assertTrue((self.source / "a.png").exists())
+
+    def test_sent_order_wins_over_shot_time_and_name(self):
+        # 지융이 늦게 찍은 사진을 먼저 보냈다. 촬영시각이나 이름으로 다시 세우면 글의 순서가 바뀐다.
+        sent = {
+            "205.jpg": "2026:09:27 19:40:00",
+            "201.jpg": "2026:09:27 18:05:00",
+            "230.jpg": "",
+            "203.jpg": "2026:09:27 18:30:00",
+        }
+        for name, taken in sent.items():
+            (self.source / name).write_bytes(build_jpeg(taken or None))
+
+        result = stage_photos(
+            self.source, list(sent), "가상식당", self.drafts, "2026-09-27"
+        )
+
+        self.assertEqual(
+            [(photo["order"], photo["path"], photo["source"]) for photo in result["photos"]],
+            [
+                (1, "photos/001-205.jpg", "205.jpg"),
+                (2, "photos/002-201.jpg", "201.jpg"),
+                (3, "photos/003-230.jpg", "230.jpg"),
+                (4, "photos/004-203.jpg", "203.jpg"),
+            ],
+        )
+        self.assertEqual(result["photos"][0]["shotAt"], "2026-09-27 19:40:00")
+        self.assertEqual(result["photos"][2]["shotAt"], "")
+        on_disk = sorted(p.name for p in (self.drafts / "2026-09-27-가상식당" / "photos").iterdir())
+        self.assertEqual(on_disk, ["001-205.jpg", "002-201.jpg", "003-230.jpg", "004-203.jpg"])
+
+    def test_keeps_thirty_photos_in_sent_order(self):
+        # 한 번에 30장까지 받는다. 이름 정렬로는 "10.jpg" 가 "9.jpg" 앞에 온다.
+        names = [f"{n}.jpg" for n in range(30, 0, -1)]
+        for name in names:
+            (self.source / name).write_bytes(build_jpeg(None))
+
+        result = stage_photos(self.source, names, "가상식당", self.drafts, "2026-09-27")
+
+        self.assertEqual([photo["source"] for photo in result["photos"]], names)
+        self.assertEqual(result["photos"][-1]["path"], "photos/030-1.jpg")
 
     def test_keeps_chat_supported_gif(self):
         (self.source / "motion.gif").write_bytes(b"GIF89aexample")
