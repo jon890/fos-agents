@@ -58,7 +58,7 @@
 | `scripts/naver_editor_settings.py` | 맥북, Hermes 컨테이너 | 카테고리와 태그를 넣고 모든 단계가 끝난 뒤에만 임시저장한다 |
 | `scripts/test_naver_editor.py` | 맥북, 홈서버 | 옛 초안 차단, 카테고리 선택, 사진·스티커·지도 대조, 사진 경로 절대화, 저장 차단, 세션 확인 주소를 검증한다 |
 | `.claude/skills/naver-blog-draft/` | 맥북과 홈서버 | 사진에서 임시저장까지의 판단과 절차 |
-| `docs/` | 문서 | 흐름, 스키마, 구조 |
+| `docs/` | 문서 | 흐름, 스키마, 구조, 이 워크스페이스의 결정(`docs/adr/`) |
 | `drafts/` | 맥북, Hermes 컨테이너 | 내려받거나 대화에 첨부한 사진과 초안. 추적하지 않는다 |
 | `data/` | 맥북 | 수집 원본과 집계 결과. 추적하지 않는다 |
 
@@ -68,19 +68,19 @@
 | --- | --- |
 | `SKILL.md` | 언제 무엇을 하는지, 멈출 조건 |
 | `scripts/photos.py` | 사진 저장소 명령을 부른다. 부르는 길을 환경을 보고 고른다 |
-| `scripts/photo_set.py` | 내려받은 사진의 촬영시각을 읽어 순서를 세운다 |
-| `scripts/stage_chat_photos.py` | 대화 입력에 명시된 사진만 장소별 초안 폴더로 복사한다 |
+| `scripts/photo_set.py` | 홈서버 저장소에서 내려받은 사진의 촬영시각을 읽어 순서를 세운다 |
+| `scripts/stage_chat_photos.py` | 대화 입력에 명시된 사진만 장소별 초안 폴더로 복사하고, 받은 차례대로 번호를 붙인다 |
 | `scripts/place_hints.py` | 내려받은 사진에서 장소를 짐작할 실마리를 모은다 |
-| `scripts/draft_contract.py` | 초안의 필수 필드와 블록 순서를 검사한다. 미리보기, 등록용 묶음, 편집기 조작이 함께 쓴다 |
-| `scripts/build_preview.py` | 초안과 사진으로 미리보기를 만든다. HTML 폴더 밖의 사진과 스티커는 그 폴더로 복사해 상대 경로로 부른다 |
+| `scripts/draft_contract.py` | 초안의 필수 필드와 블록 순서, 사진 번호 순서를 검사한다. 미리보기, 등록용 묶음, 편집기 조작이 함께 쓴다 |
+| `scripts/build_preview.py` | 초안과 사진으로 미리보기를 만든다. 사진마다 번호와 사진 설명을 붙인다. HTML 폴더 밖의 사진과 스티커는 그 폴더로 복사해 상대 경로로 부른다 |
 | `scripts/preview_photos.py` | 결과물 폴더에 넣을 사진을 줄이고 EXIF 를 뺀다 |
 | `scripts/build_package.py` | 초안으로 사람이 붙여넣을 등록용 묶음을 Markdown 이나 HTML 로 만든다 |
 | `scripts/test_photo_set.py` | 촬영시각 파서를 합성한 이미지로 검증한다 |
 | `scripts/test_place_hints.py` | 위치 파서와 이름 단서를 합성한 이미지로 검증한다 |
 | `scripts/test_photos_url.py` | Admin UI 파일 화면의 폴더 주소 생성을 검증한다 |
-| `scripts/test_stage_chat_photos.py` | 대화 첨부 사진을 장소별 초안 폴더에 복사할 때의 경계를 검증한다 |
-| `scripts/test_draft_contract.py` | 초안의 스티커와 장소 계약을 검증한다 |
-| `scripts/test_build_preview.py` | 미리보기가 자기 폴더 안의 파일만 상대 경로로 부르고, 넣는 사진을 줄이고 EXIF 를 빼는지 검증한다 |
+| `scripts/test_stage_chat_photos.py` | 대화 첨부 사진을 장소별 초안 폴더에 복사할 때의 경계와, 30장을 보낸 순서대로 번호 붙이는지 검증한다 |
+| `scripts/test_draft_contract.py` | 초안의 스티커와 장소 계약, 사진 번호 순서를 검증한다 |
+| `scripts/test_build_preview.py` | 미리보기가 자기 폴더 안의 파일만 상대 경로로 부르고, 넣는 사진을 줄이고 EXIF 를 빼고, 사진 번호와 설명을 순서대로 보이는지 검증한다 |
 | `scripts/test_build_package.py` | 수동 등록용 묶음의 HTML 과 출력에 내부 경로가 없는지 검증한다 |
 | `references/iphone-upload.md` | 아이폰에서 올리는 절차와 함정 |
 | `references/assistant-chat-photos.md` | 대화 첨부 사진을 장소별로 나눠 초안을 만드는 절차 |
