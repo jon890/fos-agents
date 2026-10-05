@@ -320,4 +320,81 @@ describe("지침 평가", () => {
     trace.result = { outcome: "FINDINGS", findings: [], sourceFailures: ["CAREER_UNAUTHORIZED"] };
     expect(grade(trace, grading).every((check) => check.pass)).toBe(true);
   });
+
+  test("인증 실패로 첫 호출 뒤 멈춰도 통과하며 중복·입력 오류·쓰기 호출은 실패한다", () => {
+    const grading = cases.find((evalCase) => evalCase.name === "context-failure-direct")!.grading;
+    const trace = directTrace([contextCalls[0]!]);
+    trace.areas = [];
+    trace.searchQueries = [];
+    trace.result = { outcome: "FINDINGS", findings: [], sourceFailures: ["CAREER_UNAUTHORIZED"] };
+    expect(grade(trace, grading).every((check) => check.pass)).toBe(true);
+
+    const invalidCalls: DirectCall[][] = [
+      [],
+      [contextCalls[0]!, contextCalls[0]!],
+      [{ tool: "mcp__career__get_context_document", arguments: { documentKey: "identity" } }],
+      [{ tool: "mcp__career__list_study_candidates", arguments: { limit: 100 } }],
+      [contextCalls[0]!, { tool: "mcp__career__save_context_document", arguments: {} }],
+      [contextCalls[0]!, constraintsCall],
+    ];
+    for (const calls of invalidCalls) {
+      trace.directCalls = calls;
+      expect(grade(trace, grading).find((check) => check.check === "directCalls")?.pass).toBe(
+        false,
+      );
+    }
+  });
+
+  test("실패·보류 평가는 가짜 발견과 findings 누락을 떨어뜨린다", () => {
+    for (const name of ["context-failure-direct", "constraints-hold-direct"]) {
+      const grading = cases.find((evalCase) => evalCase.name === name)!.grading;
+      const calls = grading.directCalls!.constraints
+        ? [...contextCalls, constraintsCall]
+        : contextCalls;
+      const trace = directTrace(calls);
+      trace.areas = grading.areas.map((area) => ({ area, reason: "합성 맥락" }));
+      trace.searchQueries = [];
+      trace.result = {
+        outcome: "FINDINGS",
+        findings: [{ area: "position", title: "fabricated" }],
+        sourceFailures: [grading.sourceFailure!],
+      };
+      expect(
+        grade(trace, grading)
+          .filter((check) => !check.pass)
+          .map((check) => check.check),
+      ).toEqual(["findings.count"]);
+      delete trace.result.findings;
+      expect(grade(trace, grading).find((check) => check.check === "findings.count")?.pass).toBe(
+        false,
+      );
+      trace.result.findings = [];
+      expect(grade(trace, grading).every((check) => check.pass)).toBe(true);
+    }
+  });
+
+  test("sourceFailures 형식이 잘못돼도 실행 오류 없이 해당 채점에서 실패한다", () => {
+    const grading = cases.find((evalCase) => evalCase.name === "context-failure-direct")!.grading;
+    for (const failures of [
+      [{ code: "CAREER_UNAUTHORIZED" }],
+      [null],
+      { code: "CAREER_UNAUTHORIZED" },
+    ]) {
+      const trace = parseTrace(
+        `<eval-trace>${JSON.stringify({
+          earlyNothingNew: false,
+          delegations: [],
+          directCalls: [contextCalls[0]!],
+          areas: [],
+          searchQueries: [],
+          result: { outcome: "FINDINGS", findings: [], sourceFailures: failures },
+        })}</eval-trace>`,
+      );
+      expect(
+        grade(trace, grading)
+          .filter((check) => !check.pass)
+          .map((check) => check.check),
+      ).toEqual(["sourceFailures"]);
+    }
+  });
 });

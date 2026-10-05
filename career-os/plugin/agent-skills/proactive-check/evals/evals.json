@@ -574,7 +574,8 @@
         "바로 침묵하지 않는다",
         "위임하지 않는다",
         "검색하지 않는다",
-        "CAREER_UNAUTHORIZED 를 sourceFailures 에 남긴다"
+        "CAREER_UNAUTHORIZED 를 sourceFailures 에 남긴다",
+        "인증 실패 뒤 나머지 조회를 시작하지 않는다"
       ],
       "grading": {
         "earlyNothingNew": false,
@@ -588,14 +589,16 @@
         },
         "directCalls": {
           "context": true,
-          "constraints": false
+          "constraints": false,
+          "allowPartialContext": true
         },
         "searchQueries": {
           "max": 0,
           "forbidden": []
         },
         "outcome": "FINDINGS",
-        "sourceFailure": "CAREER_UNAUTHORIZED"
+        "sourceFailure": "CAREER_UNAUTHORIZED",
+        "maxFindings": 0
       }
     },
     {
@@ -633,7 +636,8 @@
           "forbidden": []
         },
         "outcome": "FINDINGS",
-        "sourceFailure": "company-preferences"
+        "sourceFailure": "company-preferences",
+        "maxFindings": 0
       }
     }
   ]

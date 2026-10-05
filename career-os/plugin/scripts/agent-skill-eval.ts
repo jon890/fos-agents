@@ -23,10 +23,11 @@ export type Grading = {
   earlyNothingNew: boolean;
   areas: string[];
   delegations: { include: Delegation[]; exclude: Delegation[] };
-  directCalls?: { context: boolean; constraints: boolean };
+  directCalls?: { context: boolean; constraints: boolean; allowPartialContext?: boolean };
   searchQueries: { min?: number; max?: number; forbidden: string[] };
   outcome?: "NOTHING_NEW" | "FINDINGS";
   sourceFailure?: string;
+  maxFindings?: number;
 };
 export type EvalCase = { id: number; name: string; files: string[]; grading: Grading };
 export type Check = { check: string; pass: boolean; detail: string };
@@ -134,11 +135,14 @@ export function grade(trace: Trace | null, grading: Grading): Check[] {
   };
   const actual = trace.directCalls.map(signature).sort();
   const expected = expectedCalls.map(signature).sort();
-  add(
-    "directCalls",
-    JSON.stringify(actual) === JSON.stringify(expected),
-    JSON.stringify(trace.directCalls),
-  );
+  const exactCalls = JSON.stringify(actual) === JSON.stringify(expected);
+  const partialContextCalls =
+    grading.directCalls?.allowPartialContext === true &&
+    actual.length > 0 &&
+    actual.length <= expected.length &&
+    new Set(actual).size === actual.length &&
+    actual.every((call) => expected.includes(call));
+  add("directCalls", exactCalls || partialContextCalls, JSON.stringify(trace.directCalls));
 
   const count = trace.searchQueries.length;
   const { min = 0, max = Number.POSITIVE_INFINITY, forbidden } = grading.searchQueries;
@@ -156,12 +160,19 @@ export function grade(trace: Trace | null, grading: Grading): Check[] {
     add("outcome", pass, `${outcome}`);
   }
   if (grading.sourceFailure) {
-    const failures = trace.result?.sourceFailures ?? [];
+    const failures = Array.isArray(trace.result?.sourceFailures) ? trace.result.sourceFailures : [];
     add(
       "sourceFailures",
-      failures.some((failure) => failure.includes(grading.sourceFailure!)),
+      failures.some(
+        (failure) => typeof failure === "string" && failure.includes(grading.sourceFailure!),
+      ),
       JSON.stringify(failures),
     );
+  }
+  if (grading.maxFindings !== undefined) {
+    const findings = trace.result?.findings;
+    const count = Array.isArray(findings) ? findings.length : Number.POSITIVE_INFINITY;
+    add("findings.count", count <= grading.maxFindings, `${count}`);
   }
   return checks;
 }
