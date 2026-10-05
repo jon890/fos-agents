@@ -7,7 +7,7 @@ const links = run.ranking.map((item) => `<a href="${item.postingUrl}">${item.tit
 
 test("고정된 절과 카드 구조 없이 서로 다른 HTML 구성을 허용한다", () => {
   const minimal = `<!doctype html><html><head><meta name="viewport" content="width=device-width"><title>추천</title></head><body>${links}</body></html>`;
-  const editorial = `<!doctype html><html><head><title>오늘의 선택</title><meta content="width=device-width" name="viewport"></head><body><article><h1>${recommended.company}</h1><p>${recommended.reason}</p>${links}</article></body></html>`;
+  const editorial = `<!doctype html><html><head><title>오늘의 선택</title><meta content="width=device-width" name="viewport"></head><body><article><h1>${recommended.company}</h1>${links}</article></body></html>`;
   expect(validateReportHtml(minimal, run)).toEqual([]);
   expect(validateReportHtml(editorial, run)).toEqual([]);
 });
