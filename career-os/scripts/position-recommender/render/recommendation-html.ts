@@ -5,7 +5,7 @@ import type {
   RecommendationRunType,
 } from "../recommendation/schema.ts";
 import type { PublicCompanyAssessment } from "../../../services/career-backend/src/positions/schema.ts";
-import { escapeHtml, fragment, type RenderAssets } from "./template.ts";
+import { fragment, type RenderAssets } from "./template.ts";
 
 function link(assets: RenderAssets, value: string): string {
   return fragment(assets, "report-link", { url: value });
@@ -58,19 +58,8 @@ function companyAssessment(assets: RenderAssets, company: PublicCompanyAssessmen
 }
 
 function companySections(assets: RenderAssets, run: RecommendationRunType): string {
-  const benchmarks = run.companyAssessments.filter((item) => item.disposition === "benchmark");
   const candidates = run.companyAssessments.filter((item) => item.disposition === "analyze");
   return [
-    benchmarks.length
-      ? fragment(
-          assets,
-          "report-section",
-          { title: "현재 직장 비교 기준" },
-          {
-            content: benchmarks.map((item) => companyAssessment(assets, item)).join(""),
-          },
-        )
-      : "",
     candidates.length
       ? fragment(
           assets,
@@ -93,41 +82,8 @@ function list(assets: RenderAssets, values: string[], name = "report-list"): str
   );
 }
 
-function detail(assets: RenderAssets, item: RecommendationItemType["details"][number]): string {
-  const evidence = item.evidenceUrls.map((url) => link(assets, url)).join(" · ");
-  const assumptions = item.assumptions.length
-    ? list(assets, item.assumptions, "report-sub-list")
-    : "";
-  return fragment(
-    assets,
-    "report-finding",
-    { title: item.title ?? "근거와 해석", content: item.content },
-    { evidence, assumptions },
-  );
-}
-
 function card(assets: RenderAssets, item: RecommendationItemType, rank: number): string {
-  const fields: [string, string][] = [
-    ["공고 링크", link(assets, item.postingUrl)],
-    ["추천 이유", escapeHtml(item.reason)],
-  ];
-  if (item.label) fields.push(["추천 판단", escapeHtml(item.label)]);
-  if (item.details.length > 0) {
-    fields.push([
-      "근거와 해석",
-      fragment(
-        assets,
-        "report-findings",
-        {},
-        {
-          items: item.details.map((value) => detail(assets, value)).join(""),
-        },
-      ),
-    ]);
-  }
-  if (item.nextActions.length > 0) {
-    fields.push(["지원 준비", list(assets, item.nextActions, "report-sub-list")]);
-  }
+  const fields: [string, string][] = [["공고 링크", link(assets, item.postingUrl)]];
   return fragment(
     assets,
     "report-card",
@@ -176,7 +132,7 @@ function rankingItem(assets: RenderAssets, item: RankedCandidateType, index: num
     company: item.company,
     title: item.title,
     url: item.postingUrl,
-    note: item.note ?? "",
+    note: "",
   });
 }
 
@@ -240,8 +196,7 @@ function collectionWarnings(assets: RenderAssets, run: RecommendationRunType): s
       content: list(
         assets,
         run.collectionHealth.warningSources.map(
-          (warning) =>
-            `${warning.source} · ${warning.status} · 실패 ${warning.failedCount}건 · ${warning.reason}`,
+          (warning) => `${warning.source} · ${warning.status} · 실패 ${warning.failedCount}건`,
         ),
       ),
     },
@@ -254,29 +209,20 @@ export function renderReportContent(run: RecommendationRunType, assets: RenderAs
   );
   const sections = [
     companySections(assets, run),
-    run.summary.length > 0
-      ? fragment(
-          assets,
-          "report-section",
-          { title: "추천 요약" },
-          {
-            content: list(assets, run.summary),
-          },
-        )
-      : "",
+    fragment(
+      assets,
+      "report-section",
+      { title: "추천 요약" },
+      {
+        content: list(assets, [
+          `활성 공고 ${run.analysisSummary.activeCount}건 중 이번 실행 분석 ${run.analysisSummary.analyzedNowCount}건, 재사용 ${run.analysisSummary.reusedCount}건, 대기 ${run.analysisSummary.pendingCount}건입니다.`,
+          `회사 평가 실패 ${run.companyTierSummary.assessmentFailedCount}건입니다.`,
+        ]),
+      },
+    ),
     recommendationSection(assets, run.recommendations, rankByCandidate),
     rankingSection(assets, run.ranking),
     pendingSection(assets, run),
-    run.nextActions.length > 0
-      ? fragment(
-          assets,
-          "report-section",
-          { title: "다음 행동" },
-          {
-            content: list(assets, run.nextActions),
-          },
-        )
-      : "",
   ].join("\n");
   return fragment(assets, "report-content", {}, { sections });
 }

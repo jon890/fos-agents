@@ -2,7 +2,10 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { firstOptionValue } from "../../lib/cli.ts";
-import { RecommendationRun } from "../recommendation/schema.ts";
+import { RecommendationRun, type RecommendationRunType } from "../recommendation/schema.ts";
+import { loadRenderAssets } from "./assets.ts";
+import { renderRecommendationHtml } from "./recommendation-html.ts";
+import { escapeHtml } from "./template.ts";
 
 const unsafeText = [
   { pattern: /(?:\/Users\/|\/home\/)[^\s"'<>]*/i, message: "로컬 절대 경로가 포함됐다" },
@@ -15,11 +18,52 @@ function htmlAttributeValue(value: string): string {
   return value.replaceAll("&amp;", "&").replaceAll("&#38;", "&");
 }
 
+function privateReportValues(run: RecommendationRunType): string[] {
+  const positions = [...run.recommendations, ...run.ranking];
+  const values = [
+    ...run.summary,
+    ...run.nextActions,
+    ...positions.flatMap((item) => [
+      item.reason,
+      ...item.nextActions,
+      ...item.details.flatMap((detail) => [
+        detail.title ?? "",
+        detail.content,
+        ...detail.assumptions,
+      ]),
+    ]),
+    ...run.recommendations.map((item) => item.label ?? ""),
+    ...run.ranking.map((item) => item.note ?? ""),
+    ...run.companyAssessments
+      .filter((item) => item.disposition === "benchmark")
+      .flatMap((item) => [item.companyName, item.reason ?? ""]),
+    ...run.collectionHealth.warningSources.map((item) => item.reason),
+  ];
+  return [...new Set(values.filter((value) => value.trim().length > 0))];
+}
+
+function occurrenceCount(html: string, value: string): number {
+  return html.split(value).length - 1;
+}
+
 export function validateReportHtml(html: string, recommendation: unknown): string[] {
   const parsed = RecommendationRun.safeParse(recommendation);
   if (!parsed.success)
     return parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`);
   const errors: string[] = [];
+  // 건수 요약이나 공고 이름처럼 공개 필드와 같은 문구는 정상 출력 횟수만 허용한다.
+  const publicHtml = renderRecommendationHtml(
+    parsed.data,
+    loadRenderAssets(),
+    parsed.data.generatedAt,
+  );
+  const privateValues = privateReportValues(parsed.data);
+  const containsPrivateValue = privateValues.some((value) =>
+    [...new Set([value, escapeHtml(value)])].some(
+      (text) => occurrenceCount(html, text) > occurrenceCount(publicHtml, text),
+    ),
+  );
+  if (containsPrivateValue) errors.push("비공개 분석 문구가 HTML에 포함됐다");
   if (!/^\s*<!doctype html>/i.test(html)) errors.push("HTML 문서에 doctype이 없다.");
   if (!/<title>\s*[^<]+\s*<\/title>/i.test(html))
     errors.push("HTML 문서에 비어 있지 않은 title이 필요하다.");
