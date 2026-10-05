@@ -134,22 +134,21 @@ describe("position-recommender", () => {
   });
 
   test("brain-search, brain-add, private brain 이 없다", () => {
-    // skill_boundary.test.ts 는 저장소 사본을 먼저 찾으므로 plugin 사본은 여기서 검사한다.
     for (const file of markdownFilesUnder(directory)) {
       const text = readFileSync(file, "utf8");
       for (const banned of ["brain-search", "brain-add", "private brain"])
         expect(text.includes(banned), `${file} 에 ${banned}`).toBe(false);
     }
   });
+});
 
-  // 저장소 사본(.claude/skills/position-recommender)을 지울 때 이 단언도 함께 지운다.
-  test("references 의 판정 기준과 실패 처리가 저장소 사본과 바이트 단위로 같다", () => {
-    const repoReferences = join(import.meta.dir, "..", "..", ".claude", "skills", "position-recommender", "references");
-    for (const file of ["judgment.md", "failures.md"]) {
-      const original = join(repoReferences, file);
-      expect(existsSync(original), `${original} 가 없다`).toBe(true);
-      expect(readFileSync(join(directory, "references", file)).equals(readFileSync(original)), file).toBe(true);
-    }
+describe("study-collection", () => {
+  const directory = join(skillsDirectory, "study-collection");
+
+  test("정리와 도움말 명령, 관심사와 제외 판정 저장을 적는다", () => {
+    const execution = readFileSync(join(directory, "references", "execution.md"), "utf8");
+    for (const term of ["<CAREER_LOCAL> study --cleanup --run-dir <RUN_DIR>", "<CAREER_LOCAL> study --help", "learningInterests", "rejections"])
+      expect(execution, term).toContain(term);
   });
 });
 

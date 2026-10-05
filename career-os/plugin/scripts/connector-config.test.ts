@@ -155,9 +155,8 @@ test("스킬을 노트북 에이전트의 스킬 폴더에 링크하지 않는�
   expect(existsSync(join(repoSkills, "sync-profile"))).toBe(false);
   const careerConnector = readFileSync(join(connectorSkillsDirectory, "career-connector", "SKILL.md"), "utf8");
   expect(careerConnector).not.toContain("노트북의 `sync-profile`");
-  const stat = lstatSync(join(repoSkills, "study-topic-recommender"));
-  expect(stat.isSymbolicLink(), "study-topic-recommender 가 심볼릭 링크다").toBe(false);
-  expect(stat.isDirectory(), "study-topic-recommender 가 디렉터리가 아니다").toBe(true);
+  expect(existsSync(join(repoSkills, "study-topic-recommender"))).toBe(false);
+  expect(existsSync(join(repoSkills, "position-recommender"))).toBe(false);
 });
 
 test("새 스킬은 셸과 저장소 경로를 쓰지 않고 앞머리가 디렉터리와 맞는다", () => {

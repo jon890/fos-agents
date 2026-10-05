@@ -3,7 +3,6 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 const repositoryRoot = dirname(dirname(dirname(import.meta.dir)));
-const skillsRoot = join(repositoryRoot, "career-os", ".claude", "skills");
 const candidateContextSkills = ["position-recommender", "resume-preparer", "sync-profile", "interview-practice", "study-topic-recommender", "application-package-writer"];
 const removedTerms = ["brain-search", "brain-add", "private brain"];
 
@@ -15,7 +14,7 @@ function filesUnder(directory: string): string[] {
 }
 
 function skillDirectory(skill: string): string {
-  for (const root of [skillsRoot, join(repositoryRoot, "career-os", "plugin", "skills"), join(repositoryRoot, "career-os", "plugin", "connector-skills")]) {
+  for (const root of [join(repositoryRoot, "career-os", "plugin", "skills"), join(repositoryRoot, "career-os", "plugin", "connector-skills")]) {
     const directory = join(root, skill);
     if (existsSync(directory)) return directory;
   }

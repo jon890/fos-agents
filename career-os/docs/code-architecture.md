@@ -19,8 +19,6 @@ public `fos-agents` 저장소는 스킬과 실행 코드를 소유한다.
 
 ```text
 career-os/
-├── .claude/skills/       저장소에 남은 skill. 홈서버 예약 실행이 쓴다
-├── .codex/skills/        Codex에서 같은 skill을 노출하는 링크
 ├── config/               사람이 관리하는 수집 정책
 ├── scripts/              검증, 수집과 변환 코드
 ├── plugin/               fos-assistant 에 연결하는 `fos-career` 커넥터. 루트와 별도 package다
@@ -36,7 +34,7 @@ career-os/
 
 ### 스킬 폴더
 
-`.claude/skills/<name>/` 안의 자리가 정해져 있다.
+`plugin/skills/<name>/` 안의 자리가 정해져 있다.
 
 | 자리 | 담는 것 |
 | --- | --- |
@@ -51,13 +49,8 @@ career-os/
 
 **판정 기준을 산문으로 반복하지 않는다.** 한 파일이 소유하고 나머지는 그것을 가리킨다.
 
-저장소에 남은 스킬의 현재 구성이다. 비어 있는 자리는 그 스킬에 필요가 없어서다.
-`application-package-writer` 와 `resume-preparer` 는 plugin 으로 옮겼고 같은 자리 구성을 `plugin/skills/` 아래에서 쓴다. 그 스킬의 실행 코드는 `scripts/application-package/`, `scripts/resume-preparer/` 에 있다.
-
-| 스킬 | `references/` | `scripts/` | `templates/` |
-| --- | --- | --- | --- |
-| `position-recommender` | 2 | | |
-| `study-topic-recommender` | 2 | | |
+저장소에는 `.claude/skills/` 와 `.codex/skills/` 가 없다. 모든 스킬이 `plugin/` 에 있다.
+스킬의 실행 코드는 `scripts/application-package/`, `scripts/resume-preparer/`, `scripts/position-recommender/`, `scripts/study-topic-recommender/` 에 있다.
 
 ### 실행 코드를 두 자리 중 어디에 두나
 
@@ -65,7 +58,6 @@ career-os/
 
 | 자리 | 언제 | 예 |
 | --- | --- | --- |
-| `.claude/skills/<name>/scripts/` | 그 스킬 밖에서 쓰지 않는 코드. plugin 으로 옮기는 스킬은 이 자리에 두지 않는다 | |
 | `scripts/<name>/` | 여러 진입점이 나뉘고 독립 테스트가 큰 코드. plugin 로컬 실행기가 번들하는 코드 | 공고 수집, 읽을거리 수집, 이력서 PDF 변환, 지원 패키지 검사와 렌더링 |
 | `scripts/lib/` | 두 워크스페이스 이상이 쓰는 순수 기능 | CLI, 텍스트 정규화, 날짜 변환 |
 
@@ -144,8 +136,7 @@ career-os/.career-sync/
 원격 파일을 network filesystem으로 직접 편집하지 않으며, 준비 단계는 검증한 release만 임시 경로에서 로컬로 교체한다.
 반영 단계는 실행 시작 revision이 홈서버 현재 값과 일치할 때만 새 release를 만든다.
 
-저장소에 남은 skill 은 `.claude/skills/`가 관리 원본이고, plugin 으로 옮긴 skill 은 `plugin/skills/`가 소유한다.
-`.codex/skills/`는 저장소에 남은 skill 디렉터리를 가리키며 Hermes cron은 `career-os`를 작업 디렉터리로 사용한다.
+skill 은 `plugin/` 이 소유하고 Hermes cron 은 plugin 스킬을 쓴다.
 환경별 차이는 `.env`의 transport 설정에만 두고 지원 판단과 문서 작성 절차를 복제하지 않는다.
 SSH client는 `career-storage`를 원격 호출하고, 홈서버의 Hermes는 같은 명령을 command transport로 호출한다.
 두 경로는 같은 홈서버 잠금과 S3 pointer 갱신 계약을 사용한다.
@@ -829,7 +820,7 @@ fos-assistant 는 `plugin/` 을 복사하거나 마운트해 `connector.json`, `
 - `agent-skills/` 는 커넥터 설치가 읽지 않는다. 일반 에이전트에 스킬로 따로 올린다([ADR-141](adr/ADR-141-일반-에이전트가-읽는-스킬은-plugin-의-agent-skills-에-두고-따로-올린다.md)). 세 디렉터리에 같은 이름의 스킬을 두지 않는다
 - `skills/` 는 Claude Code 만 읽는다. fos-assistant 는 읽지 않으므로 이 디렉터리의 스킬은 지침 상한에 들지 않는다. 두 디렉터리에 같은 이름의 스킬을 두지 않는다
 - plugin 스킬을 `.claude/skills/` 에 링크하지 않는다. 저장소를 연 Claude Code 세션도 plugin 을 설치해 plugin 스킬을 쓴다
-- 저장소 사본이 남은 스킬(`study-topic-recommender`, `position-recommender`)은 판단 규칙을 고칠 때 plugin 스킬과 함께 고친다. 지우는 조건은 ADR-139 가 정한다
+- 저장소에 스킬 사본을 두지 않는다. 판단 규칙은 plugin 스킬 한 곳에서만 고친다
 - 도구 목록이 바뀐 판을 배포하면 실행 환경이 MCP 서버를 다시 띄워야 새 도구가 보인다. 스킬 본문만 바뀐 판은 연결 확인으로 반영한다
 - 실행 파일에 의존성이 포함돼 있어 설치한 환경에서 `bun install` 을 하지 않는다. 소스를 고친 사람이 빌드해 `dist/career-mcp.js` 를 함께 커밋한다
 
