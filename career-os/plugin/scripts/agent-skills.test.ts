@@ -1,25 +1,38 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
-import { type EvalCase, grade, parseTrace, skillDirectory, skillText } from "./agent-skill-eval.ts";
+import {
+  type DirectCall,
+  type EvalCase,
+  grade,
+  parseTrace,
+  skillDirectory,
+  skillText,
+} from "./agent-skill-eval.ts";
 
 const agentSkillsDirectory = join(import.meta.dir, "..", "agent-skills");
 
 function filesUnder(directory: string): string[] {
   // Hidden files such as .DS_Store are never uploaded.
-  return readdirSync(directory, { withFileTypes: true }).filter((entry) => !entry.name.startsWith(".")).flatMap((entry) => {
-    const path = join(directory, entry.name);
-    return entry.isDirectory() ? filesUnder(path) : [path];
-  });
+  return readdirSync(directory, { withFileTypes: true })
+    .filter((entry) => !entry.name.startsWith("."))
+    .flatMap((entry) => {
+      const path = join(directory, entry.name);
+      return entry.isDirectory() ? filesUnder(path) : [path];
+    });
 }
 
 test("일반 에이전트용 스킬은 proactive-check 하나다", () => {
-  expect(readdirSync(agentSkillsDirectory).filter((name) => !name.startsWith("."))).toEqual(["proactive-check"]);
+  expect(readdirSync(agentSkillsDirectory).filter((name) => !name.startsWith("."))).toEqual([
+    "proactive-check",
+  ]);
 });
 
 test("plugin.json 의 skills 가 agent-skills 를 가리키지 않는다", () => {
   // Pointing here would merge the skill into the connector agent's instructions and its 8,000-char budget.
-  const plugin = JSON.parse(readFileSync(join(import.meta.dir, "..", ".claude-plugin", "plugin.json"), "utf8"));
+  const plugin = JSON.parse(
+    readFileSync(join(import.meta.dir, "..", ".claude-plugin", "plugin.json"), "utf8"),
+  );
   expect(plugin.skills).toBe("./connector-skills");
 });
 
@@ -45,19 +58,29 @@ describe("proactive-check", () => {
 
   test("올리는 파일은 SKILL.md 와 references 아래뿐이고 20개, 각 10만 자, 합계 1 MiB 이하다", () => {
     expect(uploaded.length).toBeLessThanOrEqual(20);
-    const total = uploaded.reduce((sum, file) => sum + statSync(join(skillDirectory, file)).size, 0);
+    const total = uploaded.reduce(
+      (sum, file) => sum + statSync(join(skillDirectory, file)).size,
+      0,
+    );
     expect(total).toBeLessThanOrEqual(1024 * 1024);
     for (const file of uploaded) {
       expect(file === "SKILL.md" || file.startsWith("references/"), file).toBe(true);
-      expect(readFileSync(join(skillDirectory, file), "utf8").length, file).toBeLessThanOrEqual(100_000);
+      expect(readFileSync(join(skillDirectory, file), "utf8").length, file).toBeLessThanOrEqual(
+        100_000,
+      );
     }
   });
 
   test("본문이 가리키는 references 파일이 모두 있다", () => {
-    const text = uploaded.map((file) => readFileSync(join(skillDirectory, file), "utf8")).join("\n");
-    const links = [...text.matchAll(/`references\/([A-Za-z0-9._-]+\.md)`/g)].map((match) => match[1]!);
+    const text = uploaded
+      .map((file) => readFileSync(join(skillDirectory, file), "utf8"))
+      .join("\n");
+    const links = [...text.matchAll(/(?:`|\()references\/([A-Za-z0-9._-]+\.md)(?:`|\))/g)].map(
+      (match) => match[1]!,
+    );
     expect(links.length).toBeGreaterThan(0);
-    for (const link of links) expect(existsSync(join(skillDirectory, "references", link)), link).toBe(true);
+    for (const link of links)
+      expect(existsSync(join(skillDirectory, "references", link)), link).toBe(true);
   });
 
   test("커리어 커넥터의 읽기 도구 셋과 네 문서 키를 적고 쓰기 도구 이름을 적지 않는다", () => {
@@ -76,7 +99,7 @@ describe("proactive-check", () => {
   });
 
   test("결과 계약의 칸 이름과 값을 모두 적는다", () => {
-    const text = readFileSync(join(skillDirectory, "references", "result-block.md"), "utf8");
+    const text = skill;
     for (const name of [
       "<fos-check-result>",
       "version",
@@ -113,13 +136,17 @@ describe("proactive-check", () => {
 
   test("결과 블록 예가 JSON 이고 계약의 모양을 지킨다", () => {
     const text = readFileSync(join(skillDirectory, "references", "result-block.md"), "utf8");
-    const blocks = [...text.matchAll(/<fos-check-result>([\s\S]*?)<\/fos-check-result>/g)].map((match) => JSON.parse(match[1]!));
+    const blocks = [...text.matchAll(/<fos-check-result>([\s\S]*?)<\/fos-check-result>/g)].map(
+      (match) => JSON.parse(match[1]!),
+    );
     expect(blocks.length).toBeGreaterThanOrEqual(2);
     for (const block of blocks) {
       expect(block.version).toBe(1);
       expect(["FINDINGS", "NOTHING_NEW"]).toContain(block.outcome);
       for (const finding of block.findings) {
-        expect(finding.topicKey).toMatch(/^(study|position|trend):(?=.{1,80}$)[a-z0-9]+(?:-[a-z0-9]+)*$/);
+        expect(finding.topicKey).toMatch(
+          /^(study|position|trend):(?=.{1,80}$)[a-z0-9]+(?:-[a-z0-9]+)*$/,
+        );
         expect(finding.sourceUrl).toMatch(/^https:\/\//);
         expect(finding.checkedAt).toMatch(/[+-]\d{2}:\d{2}$|Z$/);
         expect(finding.facts.length).toBeGreaterThan(0);
@@ -137,7 +164,9 @@ describe("proactive-check", () => {
 });
 
 describe("지침 평가", () => {
-  const cases: EvalCase[] = JSON.parse(readFileSync(join(skillDirectory, "evals", "evals.json"), "utf8")).evals;
+  const cases: EvalCase[] = JSON.parse(
+    readFileSync(join(skillDirectory, "evals", "evals.json"), "utf8"),
+  ).evals;
 
   test("#165 의 세 맥락(학습 필요, 포지션 관심, 변화 없음)이 서로 다른 기대 판정을 갖는다", () => {
     const byName = Object.fromEntries(cases.map((evalCase) => [evalCase.name, evalCase.grading]));
@@ -168,8 +197,16 @@ describe("지침 평가", () => {
     const trace = parseTrace(
       '<eval-trace>{"earlyNothingNew": false, "delegations": ["context"], "areas": [{"area": "study", "reason": "x"}], "searchQueries": ["kafka"], "result": null}</eval-trace>',
     );
-    const failed = grade(trace, noChange).filter((check) => !check.pass).map((check) => check.check);
-    expect(failed).toEqual(["earlyNothingNew", "areas", "delegations", "searchQueries.count", "outcome"]);
+    const failed = grade(trace, noChange)
+      .filter((check) => !check.pass)
+      .map((check) => check.check);
+    expect(failed).toEqual([
+      "earlyNothingNew",
+      "areas",
+      "delegations",
+      "searchQueries.count",
+      "outcome",
+    ]);
   });
 
   test("채점은 검색어에 든 개인 표시를 잡는다", () => {
@@ -177,11 +214,110 @@ describe("지침 평가", () => {
     const trace = parseTrace(
       '<eval-trace>{"earlyNothingNew": false, "delegations": ["context"], "areas": [{"area": "study", "reason": "x"}], "searchQueries": ["orbit-정산 kafka 트랜잭션"], "result": null}</eval-trace>',
     );
-    const failed = grade(trace, grading).filter((check) => !check.pass).map((check) => check.check);
+    const failed = grade(trace, grading)
+      .filter((check) => !check.pass)
+      .map((check) => check.check);
     expect(failed).toEqual(["searchQueries.forbidden"]);
   });
 
   test("채점은 trace 가 없으면 떨어뜨린다", () => {
-    expect(grade(parseTrace("답만 있다"), noChange)).toEqual([{ check: "trace", pass: false, detail: "<eval-trace> JSON 을 읽지 못했다" }]);
+    expect(grade(parseTrace("답만 있다"), noChange)).toEqual([
+      { check: "trace", pass: false, detail: "<eval-trace> JSON 을 읽지 못했다" },
+    ]);
+  });
+
+  const contextCalls: DirectCall[] = [
+    ...["learning-interests", "position-preferences", "application-state", "career-status"].map(
+      (documentKey) => ({
+        tool: "mcp__career__get_context_document",
+        arguments: { documentKey },
+      }),
+    ),
+    { tool: "mcp__career__list_study_candidates", arguments: { limit: 20 } },
+  ];
+  const constraintsCall: DirectCall = {
+    tool: "mcp__career__get_position_research_constraints",
+    arguments: {},
+  };
+
+  function directTrace(calls: DirectCall[] = contextCalls) {
+    return parseTrace(
+      `<eval-trace>${JSON.stringify({
+        earlyNothingNew: false,
+        delegations: [],
+        directCalls: calls,
+        areas: [{ area: "study", reason: "관심사가 바뀌었다" }],
+        searchQueries: ["kafka transactions"],
+        result: null,
+      })}</eval-trace>`,
+    )!;
+  }
+
+  test("직접 호출 평가는 맥락 도구 다섯 번과 정확한 입력을 통과시킨다", () => {
+    const grading = cases.find((evalCase) => evalCase.name === "study-needed-direct")!.grading;
+    expect(grade(directTrace(), grading).every((check) => check.pass)).toBe(true);
+  });
+
+  test("직접 호출 평가는 위임 대체, 문서 누락, 후보 추가 조회, 쓰기 호출을 떨어뜨린다", () => {
+    const grading = cases.find((evalCase) => evalCase.name === "study-needed-direct")!.grading;
+    const delegated = directTrace([]);
+    delegated.delegations = ["context"];
+    expect(
+      grade(delegated, grading)
+        .filter((check) => !check.pass)
+        .map((check) => check.check),
+    ).toEqual(["delegations", "directCalls"]);
+
+    const invalidCalls = [
+      contextCalls.slice(1),
+      [...contextCalls, contextCalls.at(-1)!],
+      [
+        ...contextCalls.slice(0, -1),
+        { tool: "mcp__career__list_study_candidates", arguments: { limit: 100 } },
+      ],
+      [...contextCalls, { tool: "mcp__career__save_context_document", arguments: {} }],
+      [...contextCalls, constraintsCall],
+    ];
+    for (const calls of invalidCalls) {
+      expect(
+        grade(directTrace(calls), grading).find((check) => check.check === "directCalls")?.pass,
+      ).toBe(false);
+    }
+  });
+
+  test("포지션 직접 호출 평가는 제외 기준 조회를 요구한다", () => {
+    const grading = cases.find((evalCase) => evalCase.name === "position-interest-direct")!.grading;
+    const trace = directTrace([...contextCalls, constraintsCall]);
+    trace.areas = [{ area: "position", reason: "사용자가 공고를 물었다" }];
+    expect(grade(trace, grading).every((check) => check.pass)).toBe(true);
+    trace.directCalls = contextCalls;
+    expect(grade(trace, grading).find((check) => check.check === "directCalls")?.pass).toBe(false);
+  });
+
+  test("바로 침묵한 직접 호출 실행도 도구를 부르면 떨어뜨린다", () => {
+    const grading = cases.find((evalCase) => evalCase.name === "no-change-direct")!.grading;
+    const trace = directTrace();
+    trace.earlyNothingNew = true;
+    trace.areas = [];
+    trace.searchQueries = [];
+    trace.result = { outcome: "NOTHING_NEW", findings: [] };
+    expect(grade(trace, grading).find((check) => check.check === "directCalls")?.pass).toBe(false);
+    trace.directCalls = [];
+    expect(grade(trace, grading).every((check) => check.pass)).toBe(true);
+  });
+
+  test("직접 호출 실패를 새 소식 없음으로 숨기면 떨어뜨린다", () => {
+    const grading = cases.find((evalCase) => evalCase.name === "context-failure-direct")!.grading;
+    const trace = directTrace();
+    trace.areas = [];
+    trace.searchQueries = [];
+    trace.result = { outcome: "NOTHING_NEW", findings: [] };
+    expect(
+      grade(trace, grading)
+        .filter((check) => !check.pass)
+        .map((check) => check.check),
+    ).toEqual(["outcome", "sourceFailures"]);
+    trace.result = { outcome: "FINDINGS", findings: [], sourceFailures: ["CAREER_UNAUTHORIZED"] };
+    expect(grade(trace, grading).every((check) => check.pass)).toBe(true);
   });
 });
