@@ -27,6 +27,14 @@ Cloudflare Pages는 완성된 정적 파일을 직접 업로드하고 배포별 
 - 자체 정적 호스팅은 외부 접근과 운영 책임이 늘어나므로 채택하지 않는다.
 - Cloudflare API MCP 단독 업로드는 파일 해시와 다중 파일 전송 책임이 커서 채택하지 않는다.
 - 리포트별 Pages 프로젝트는 프로젝트 수와 관리 대상이 늘어나므로 채택하지 않는다.
+- Cloudflare 통합 CLI `cf`는 채택하지 않는다. 1.0.0-beta.12에서 `cf pages deploy`가
+  `Legacy Pages is not supported in cf`라는 오류로 Wrangler 사용을 안내하며 끝난다.
+  beta 릴리스가 8일에 13번 나왔다는 점도 버전 고정 대상으로 삼기 어렵다.
+
+### 다시 검토할 조건
+
+`cf`가 beta를 벗어나고 `cf pages deploy`가 직접 업로드를 지원하면 Wrangler 경로를 `cf`로 옮기는 것을 다시 판단한다.
+Wrangler는 `cf` beta 종료 뒤 18개월 동안 유지된다고 발표됐으므로, beta 종료 공지가 나오면 이 절을 다시 연다.
 
 ### 결과
 

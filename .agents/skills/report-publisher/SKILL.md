@@ -74,14 +74,18 @@ python3 .agents/skills/report-publisher/scripts/publish_report.py publish \
 
 ## 인증과 관리
 
-처음 한 번은 `npx wrangler@4.115.0 login`으로 Cloudflare OAuth를 승인한다.
+Wrangler 버전은 `scripts/publish_report.py`의 `WRANGLER_VERSION`이 소유한다.
+아래 `<WRANGLER_VERSION>`에는 그 값을 쓴다.
+
+처음 한 번은 `npx wrangler@<WRANGLER_VERSION> login`으로 Cloudflare OAuth를 승인한다.
 자동 실행 환경은 `Cloudflare Pages: Edit`로 제한한 API 토큰을 사용한다.
 Pages 프로젝트는 production branch를 `main`으로 지정해 먼저 생성한다.
 
 ```bash
-npx wrangler@4.115.0 pages project create fos-reports \
+npx wrangler@<WRANGLER_VERSION> pages project create fos-reports \
   --production-branch main
 ```
 
 Cloudflare API MCP가 연결돼 있으면 프로젝트 조회와 배포 상태 확인에 사용한다.
 파일 업로드는 MCP가 아니라 이 스킬의 Wrangler 실행 경로를 유지한다.
+Cloudflare 통합 CLI `cf`로는 옮기지 않는다. 이유와 다시 검토할 조건은 ADR-020이 소유한다.
