@@ -1,11 +1,13 @@
 import type { PositionExclusion as BackendPositionExclusion } from "../../../services/career-backend/src/positions/schema.ts";
-import { formatSeoulIsoDate } from "../../lib/date-format.ts";
 import { CareerBackendHttpError } from "../../lib/career-backend-http.ts";
 import { sourceIdSchema } from "../live-postings/contracts.ts";
 import {
   createCareerBackendClient,
 } from "../career-backend/client.ts";
 import type { Posting } from "../live-postings/types.ts";
+import { indexExclusions, matchExclusion } from "./exclusion-match.ts";
+
+export { normalizePostingUrl } from "./exclusion-match.ts";
 
 /**
  * 제외 규칙을 돌려주는 자리다. 운영에서는 Backend client 가, 테스트에서는 대역이 채운다.
@@ -16,39 +18,8 @@ export type PositionExclusionsSource = {
   getExclusions(): Promise<BackendPositionExclusion[]>;
 };
 
-export function normalizePostingUrl(value: string): string {
-  const url = new URL(value);
-  if (url.protocol !== "https:" || url.username || url.password)
-    throw new Error("invalid posting URL");
-  url.hash = "";
-  for (const key of [...url.searchParams.keys()]) {
-    if (/^utm_/i.test(key) || ["fbclid", "gclid"].includes(key)) url.searchParams.delete(key);
-  }
-  url.searchParams.sort();
-  url.pathname = url.pathname.replace(/\/+$/, "") || "/";
-  return url.href;
-}
-
 export type PositionExclusions = BackendPositionExclusion[];
 export type EnrichedPositionExclusion = BackendPositionExclusion;
-type PositionExclusion = BackendPositionExclusion;
-
-function isCompanyExclusion(
-  rule: PositionExclusion,
-): rule is Extract<PositionExclusion, { scope: "company" }> {
-  return rule.scope === "company";
-}
-
-function isCompanyRoleExclusion(
-  rule: PositionExclusion,
-): rule is Extract<PositionExclusion, { scope: "company-role" }> {
-  return rule.scope === "company-role";
-}
-
-function isExpired(rule: PositionExclusion, now: Date): boolean {
-  if (!rule.expiresAt) return false;
-  return formatSeoulIsoDate(now.toISOString()) > rule.expiresAt;
-}
 
 function validatePositionExclusions(rules: BackendPositionExclusion[]): PositionExclusions {
   for (const rule of rules) {
@@ -99,45 +70,12 @@ export function filterExcludedPostings(
   config: PositionExclusions,
   now = new Date(),
 ) {
-  const rules = validatePositionExclusions(config).filter((rule) => !isExpired(rule, now));
-  const identities = new Set<string>();
-  const urls = new Set<string>();
-  const companies = new Set<string>();
-  const companyRoles: Array<{ company: string; titleKeywords: string[] }> = [];
-  for (const rule of rules) {
-    if (isCompanyExclusion(rule)) {
-      companies.add(rule.company);
-      continue;
-    }
-    if (isCompanyRoleExclusion(rule)) {
-      companyRoles.push({
-        company: rule.company,
-        titleKeywords: rule.titleKeywords.map((keyword) => keyword.toLowerCase()),
-      });
-      continue;
-    }
-    if (rule.identityHash) identities.add(`${rule.source}|${rule.identityHash}`);
-    if (rule.url) urls.add(`${rule.source}|${normalizePostingUrl(rule.url)}`);
-  }
+  const index = indexExclusions(validatePositionExclusions(config), now);
+  // 수집기는 규칙을 읽지 못한 채 이어 가지 않는다. 판정 쪽은 이 규칙을 비교 불가로 다룬다.
+  if (index.unreadableRules > 0) throw new Error("invalid posting URL");
   const rejectedBySource = new Map<string, number>();
   const eligible = posts.filter((post) => {
-    let urlMatch = false;
-    try {
-      urlMatch = urls.has(`${post.source}|${normalizePostingUrl(post.url)}`);
-    } catch {
-      /* 후보 스키마에서 검사한다. */
-    }
-    if (
-      !identities.has(`${post.source}|${post.identityHash ?? ""}`) &&
-      !urlMatch &&
-      !companies.has(post.company) &&
-      !companyRoles.some(
-        (rule) =>
-          rule.company === post.company &&
-          rule.titleKeywords.some((keyword) => post.title.toLowerCase().includes(keyword)),
-      )
-    )
-      return true;
+    if (matchExclusion(index, post) === null) return true;
     rejectedBySource.set(post.source, (rejectedBySource.get(post.source) ?? 0) + 1);
     return false;
   });
