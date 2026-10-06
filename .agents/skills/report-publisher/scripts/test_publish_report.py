@@ -115,6 +115,10 @@ class PublishReportTests(unittest.TestCase):
         with self.assertRaisesRegex(PUBLISH_REPORT.PublishError, "숨김"):
             self.prepare(source)
 
+    def test_skill_doc_does_not_repeat_the_wrangler_version(self) -> None:
+        skill = MODULE_PATH.parents[1] / "SKILL.md"
+        self.assertNotRegex(skill.read_text(encoding="utf-8"), r"wrangler@\d")
+
     def test_wrangler_zero_exit_without_login_is_rejected(self) -> None:
         output = "You are not authenticated. Please run `wrangler login`."
         with self.assertRaisesRegex(PUBLISH_REPORT.PublishError, "인증이 없습니다"):
