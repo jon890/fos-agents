@@ -13,7 +13,7 @@
 | 경로 | 호출 |
 | --- | --- |
 | 직접 호출 | `mcp__career__check_position_exclusions` 를 `{"postings": [...]}` 로 한 번 부른다 |
-| 위임 | 같은 연결용 에이전트에 `check_position_exclusions` 한 번만 맡기고 3단계와 같은 방법으로 기다린다. 공고 목록을 `task` 에 적고 결과 JSON 을 바꾸지 말고 그대로 돌려 달라고 한다 |
+| 위임 | 같은 연결용 에이전트에 `check_position_exclusions` 한 번만 맡기고 3단계와 같은 방법으로 기다리되 `agent_status` 는 두 번까지만 부른다. 공고 목록을 `task` 에 적고 결과 JSON 을 바꾸지 말고 그대로 돌려 달라고 한다 |
 
 공고마다 넘기는 칸은 아래와 같다.
 
