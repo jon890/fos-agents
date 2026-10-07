@@ -3,7 +3,7 @@ import {
   cleanDetail,
   classify,
   closeWindow,
-  isContractRole,
+  isIneligibleEmployment,
   isNonTargetTitle,
   isTargetRole,
   norm,
@@ -115,7 +115,7 @@ function postingFromDetail(url: string, html: string): Posting | null {
   if (!title) return null;
   if (status !== "in_progress") return null;
   if (!/지원하기/.test(text)) return null;
-  if (isContractRole(fullText) || /intern|인턴|contract/i.test(employment)) return null;
+  if (isIneligibleEmployment(title, employment)) return null;
   if (isNonTargetTitle(title)) return null;
   if (!isTargetRole(roleSignal) && !isTargetRole(fullText)) return null;
 
@@ -125,6 +125,7 @@ function postingFromDetail(url: string, html: string): Posting | null {
     discoveryMode: "official-detail",
     company: norm(recruitment.companyName) || "카카오페이증권",
     title,
+    employmentType: employment || undefined,
     url,
     identityHash: `kakaopay-securities:${id}`,
     linkType: "direct_posting",

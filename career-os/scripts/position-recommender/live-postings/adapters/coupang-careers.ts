@@ -188,7 +188,7 @@ function postingFromSitemapUrl(item: SitemapUrl): Posting | null {
   const fullText = `Coupang ${title}`;
 
   if (!id || !title) return null;
-  if (isContractRole(fullText)) return null;
+  if (isContractRole(title)) return null;
   if (isNonTargetTitle(title)) return null;
   if (!isTargetRole(fullText)) return null;
 

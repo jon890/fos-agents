@@ -2,7 +2,6 @@ import { containsKeyword } from "../../../lib/text.ts";
 import {
   AI_PLATFORM_ROLE_KEYWORDS,
   BACKEND_PLATFORM_ROLE_KEYWORDS,
-  CONTRACT_KEYWORDS,
   NON_TARGET_ROLE_KEYWORDS,
   NON_TARGET_TITLE_KEYWORDS,
 } from "./keywords.ts";
@@ -46,5 +45,25 @@ export function isTargetRoleTitle(title: string): boolean {
 }
 
 export function isContractRole(text: string): boolean {
-  return containsKeyword(text, CONTRACT_KEYWORDS);
+  // 영문은 단어 전체를 검사한다. JD는 호출자가 넘기지 않는다.
+  return /\b(?:contract|contractor|temporary|temp|freelance|intern|internship)\b|계약직|프리랜서|인턴|체험형|현장실습/i.test(
+    text,
+  );
+}
+
+/** 구조화 고용형태와 제목 중 하나라도 비정규 표기가 있으면 제외한다. */
+export function isIneligibleEmployment(title: string, employmentType?: string): boolean {
+  return isContractRole(employmentType ?? "") || isContractRole(title);
+}
+
+/** 일반 개발 제목은 제목 자체 대신 실제 업무·요건을 근거로 삼는다. */
+export function isTargetPostingRole(title: string, body: string): boolean {
+  if (isNonTargetTitle(title)) return false;
+  if (isTargetRoleTitle(title)) return isTargetRole(`${title} ${body}`);
+  const genericEngineeringTitle = /^(?:server(?:\s*\(|$)|software\s+engineer\b)/i.test(
+    title.trim(),
+  );
+  if (!genericEngineeringTitle) return false;
+  if (containsKeyword(body, NON_TARGET_ROLE_KEYWORDS)) return false;
+  return isTargetRole(body);
 }

@@ -99,7 +99,7 @@ export function parseWoowahanRecruit(recruit: WoowaRecruit, contents: string): P
 
   const body = htmlToText(contents);
   const fullText = `${title} ${body}`;
-  if (isContractRole(fullText)) return null;
+  if (isContractRole(title)) return null;
   if (isNonTargetTitle(title)) return null;
   // 제목이 `Server(배차시스템)`처럼 도메인만 담고 스택을 안 적는 경우가 있어 본문까지 함께 본다.
   if (!isTargetRole(fullText)) return null;

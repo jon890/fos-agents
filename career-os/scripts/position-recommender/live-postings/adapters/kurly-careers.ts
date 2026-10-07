@@ -83,7 +83,7 @@ export function parseKurlyPosting(url: string, html: string): Posting | null {
 
   const title = htmlTitle(html);
   const fullText = `${title} ${text}`;
-  if (!title || isContractRole(fullText)) return null;
+  if (!title || isContractRole(title)) return null;
   if (isNonTargetTitle(title) || !SERVER_TITLE_PATTERN.test(title) || !isTargetRole(fullText))
     return null;
 

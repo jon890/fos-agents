@@ -4,7 +4,7 @@ import {
   classify,
   closeWindow,
   hasKeyword,
-  isContractRole,
+  isIneligibleEmployment,
   isNonTargetTitle,
   isTargetRole,
   norm,
@@ -173,7 +173,7 @@ async function postingFromJob(job: SkJob): Promise<Posting | null> {
   const detailText = await fetchDetailText(id);
   const fullText = `${company} ${title} ${job.jobRole ?? ""} ${job.recruitType ?? ""} ${job.workingType ?? ""} ${detailText}`;
   const roleText = `${company} ${title} ${job.jobRole ?? ""} ${job.recruitType ?? ""} ${job.workingType ?? ""}`;
-  if (isContractRole(roleText)) return null;
+  if (isIneligibleEmployment(title, job.workingType)) return null;
   if (isNonTargetTitle(title)) return null;
   if (
     !isTargetRole(roleText) &&
@@ -187,6 +187,7 @@ async function postingFromJob(job: SkJob): Promise<Posting | null> {
     discoveryMode: "official-listing",
     company,
     title,
+    employmentType: job.workingType || undefined,
     url: `${HOST}/Recruit/Detail/${id}`,
     identityHash: `sk-careers:${id}`,
     linkType: "direct_posting",

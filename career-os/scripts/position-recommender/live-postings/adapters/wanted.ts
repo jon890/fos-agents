@@ -3,7 +3,7 @@ import {
   cleanDetail,
   classify,
   closeWindow,
-  isContractRole,
+  isIneligibleEmployment,
   isNonTargetTitle,
   isTargetRole,
   norm,
@@ -65,7 +65,7 @@ function postingFromWantedDetail(
   const fullText = `${company} ${title} ${fallback?.category ?? ""} ${employeeType} ${detailText}`;
 
   if (!company || !title) return null;
-  if (isContractRole(fullText)) return null;
+  if (isIneligibleEmployment(title, employeeType)) return null;
   if (targetRoleOnly && isNonTargetTitle(title)) return null;
   if (targetRoleOnly && !isTargetRole(fullText)) return null;
 
@@ -96,6 +96,7 @@ function postingFromWantedDetail(
     discoveryMode,
     company,
     title,
+    employmentType: employeeType || undefined,
     url: `https://www.wanted.co.kr/wd/${pid}`,
     identityHash: `wanted:${pid}`,
     linkType: "direct_posting",

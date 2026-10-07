@@ -153,6 +153,7 @@ export function parseKraftonJob(job: GreenhouseJob): Posting | null {
     discoveryMode: "official-listing",
     company: "크래프톤",
     title,
+    employmentType: employmentType(job) || undefined,
     url: job.absolute_url,
     identityHash: `krafton-careers:${job.id}`,
     linkType: "direct_posting",

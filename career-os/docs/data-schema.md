@@ -1462,3 +1462,13 @@ README 에는 `img.shields.io/badge/Tokens-<값>B-` 모양의 배지 주소가 �
 | `CAREER_UNKNOWN_TOOL`, `CAREER_INTERNAL` | 지원하지 않는 도구 또는 내부 처리 실패 | |
 
 `message` 는 사람에게 보일 고정 문구다. Backend 와 GitHub 의 응답 본문, token, 문서 본문을 담지 않는다.
+
+## 수집 공고의 고용형태
+
+공고 계약은 `scripts/position-recommender/live-postings/contracts.ts`가 소유한다.
+`employmentType`은 소스가 제공한 고용형태 원문이며 선택 필드다.
+값이 없거나 비어 있으면 미확인으로 유지하고 정규직으로 추정하지 않는다.
+공통 validator는 구조화 고용형태와 제목의 채용 표기를 모두 검사한다.
+둘 중 하나라도 비정규 고용을 명시하면 제외한다.
+업무·요건·우대사항의 기술 설명이나 공통 채용 안내는 고용형태 근거로 쓰지 않는다.
+미확인 자체로 수집을 제외하지 않으며, 후속 분석에 미확인 상태를 전달한다.

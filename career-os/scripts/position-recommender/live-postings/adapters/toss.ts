@@ -1,11 +1,9 @@
 import type { AdapterCollectionResult, Posting, SourceAdapter } from "../types.ts";
 import {
-  CONTRACT_KEYWORDS,
   cleanDetail,
   classify,
   closeWindow,
-  hasKeyword,
-  isContractRole,
+  isIneligibleEmployment,
   isTargetRole,
   isTargetRoleTitle,
   norm,
@@ -22,16 +20,6 @@ const TOSS_MAX_POST_PAGES = 5;
 const TOSS_MAX_ARTICLES = 25;
 const TOSS_MAX_JOB_DETAILS = 80;
 
-// Employment types excluded for Toss (contract/intern/freelance). Kept separate from the
-// shared CONTRACT_KEYWORDS so the Wanted adapter's filtering is left unchanged.
-const TOSS_EXCLUDE_EMPLOYMENT = [
-  ...CONTRACT_KEYWORDS,
-  "intern",
-  "인턴",
-  "internship",
-  "체험형",
-  "현장실습",
-];
 const TOSS_APPLY_EVIDENCE_KEYS = [
   "applyType",
   "apply_type",
@@ -447,7 +435,7 @@ function parseTossJDSections(content: string): {
   };
 }
 
-function postingFromTossApiJob(
+export function postingFromTossApiJob(
   group: TossJobGroup,
   job: TossJob,
   targetRoleOnly: boolean,
@@ -464,7 +452,7 @@ function postingFromTossApiJob(
   const keywords = tossSearchText(job);
   const fullText = `${company} ${title} ${category} ${keywords} ${employment} ${content}`;
 
-  if (hasKeyword(fullText, TOSS_EXCLUDE_EMPLOYMENT)) return { reject: "contract_intern_freelance" };
+  if (isIneligibleEmployment(title, employment)) return { reject: "contract_intern_freelance" };
   const specificityReject = tossRoleSpecificityReject(company, title, content);
   if (specificityReject) return { reject: specificityReject };
   if (targetRoleOnly && !isTargetRoleTitle(title)) return { reject: "not_target_title" };
@@ -477,6 +465,7 @@ function postingFromTossApiJob(
       discoveryMode: "official-listing",
       company,
       title,
+      employmentType: employment || undefined,
       url: `${TOSS_HOST}/career/job-detail?job_id=${id}`,
       identityHash: `toss-careers:${id}`,
       linkType: "direct_posting",
@@ -559,7 +548,7 @@ function parseTossJobDetail(url: string, res: TossFetchResult, targetRoleOnly: b
   const employment = deepFindStringAny(roots, TOSS_EMPLOYMENT_KEYS);
   const company = deepFindStringAny(roots, ["companyName", "company"]) || "Toss";
   const fullText = `${title} ${content} ${employment}`;
-  if (hasKeyword(fullText, TOSS_EXCLUDE_EMPLOYMENT)) return { reject: "contract_intern_freelance" };
+  if (isIneligibleEmployment(title, employment)) return { reject: "contract_intern_freelance" };
   const specificityReject = tossRoleSpecificityReject(company, title, content);
   if (specificityReject) return { reject: specificityReject };
 
@@ -577,6 +566,7 @@ function parseTossJobDetail(url: string, res: TossFetchResult, targetRoleOnly: b
       discoveryMode: "official-detail",
       company,
       title,
+      employmentType: employment || undefined,
       url,
       identityHash: `toss-careers:${url.match(/job_id=([^&]+)/)?.[1] ?? url}`,
       linkType: "direct_posting",
