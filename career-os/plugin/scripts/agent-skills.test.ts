@@ -118,7 +118,10 @@ describe("proactive-check", () => {
     expect(text).toMatch(/내지 않고 그 공고 판단만 보류한다/);
     // 위임 한도(max-delegations 3)에 맞춰 위임은 세 번까지다.
     expect(text).toContain("셋까지");
-    const reference = readFileSync(join(skillDirectory, "references", "connector-queries.md"), "utf8");
+    const reference = readFileSync(
+      join(skillDirectory, "references", "connector-queries.md"),
+      "utf8",
+    );
     for (const basis of ["identity-missing", "invalid-url", "rule-unreadable", "constraints-hold"])
       expect(reference, basis).toContain(basis);
   });
@@ -136,6 +139,16 @@ describe("proactive-check", () => {
       "questions",
       "followUpCandidates",
       "sourceFailures",
+      "problemCandidates",
+      "problemKey",
+      "problem",
+      "relatedGoal",
+      "evidence",
+      "proposedAction",
+      "confidence",
+      "expectedBenefit",
+      "sideEffect",
+      "risk",
       "area",
       "topicKey",
       "title",
@@ -166,7 +179,18 @@ describe("proactive-check", () => {
     );
     expect(blocks.length).toBeGreaterThanOrEqual(2);
     for (const block of blocks) {
-      expect(block.version).toBe(1);
+      expect(block.version).toBe(3);
+      expect(Array.isArray(block.problemCandidates)).toBe(true);
+      expect(block.problemCandidates.length).toBeLessThanOrEqual(3);
+      if (block.outcome === "NOTHING_NEW") expect(block.problemCandidates).toEqual([]);
+      const topics = new Set(
+        block.findings.map((finding: { topicKey: string }) => finding.topicKey),
+      );
+      for (const candidate of block.problemCandidates) {
+        expect(candidate.relatedGoal.length).toBeGreaterThan(0);
+        expect(candidate.evidence.length).toBeGreaterThan(0);
+        for (const topic of candidate.evidence) expect(topics.has(topic)).toBe(true);
+      }
       expect(["FINDINGS", "NOTHING_NEW"]).toContain(block.outcome);
       for (const finding of block.findings) {
         expect(finding.topicKey).toMatch(
@@ -423,5 +447,122 @@ describe("지침 평가", () => {
           .map((check) => check.check),
       ).toEqual(["sourceFailures"]);
     }
+  });
+});
+
+describe("v3 문제 후보 평가", () => {
+  const cases: EvalCase[] = JSON.parse(
+    readFileSync(join(skillDirectory, "evals", "evals.json"), "utf8"),
+  ).evals;
+  const example = JSON.parse(
+    [
+      ...readFileSync(join(skillDirectory, "references", "result-block.md"), "utf8").matchAll(
+        /<fos-check-result>([\s\S]*?)<\/fos-check-result>/g,
+      ),
+    ][1]![1]!,
+  );
+  const grading = {
+    earlyNothingNew: false,
+    areas: [],
+    delegations: { include: [], exclude: [] },
+    searchQueries: { max: 0, forbidden: [] },
+    candidates: { count: 1, evidenceTopics: ["study:kafka-exactly-once"] },
+  } satisfies Parameters<typeof grade>[1];
+  const trace = (result: unknown) =>
+    parseTrace(
+      `<eval-trace>${JSON.stringify({ earlyNothingNew: false, delegations: [], directCalls: [], areas: [], searchQueries: [], result })}</eval-trace>`,
+    )!;
+  const fails = (result: unknown, check: string) =>
+    expect(grade(trace(result), grading).find((entry) => entry.check === check)?.pass).toBe(false);
+
+  test("근거가 있는 v3 예와 후보가 없는 정상 침묵을 통과시킨다", () => {
+    expect(grade(trace(example), grading).every((entry) => entry.pass)).toBe(true);
+    const quiet = cases.find((entry) => entry.name === "candidate-watch-quiet")!.grading;
+    expect(
+      grade(
+        trace({ version: 3, outcome: "NOTHING_NEW", findings: [], problemCandidates: [] }),
+        quiet,
+      ).every((entry) => entry.pass),
+    ).toBe(true);
+  });
+
+  test("v1·v2, 후보 누락과 상한 초과를 실패시킨다", () => {
+    for (const version of [1, 2]) fails({ ...example, version }, "result.version");
+    fails({ ...example, problemCandidates: undefined }, "candidates.count");
+    fails(
+      { ...example, problemCandidates: Array(4).fill(example.problemCandidates[0]) },
+      "candidates.count",
+    );
+  });
+
+  test("목표·필수 칸·열거값·상한·중복 키와 변경 근거를 검사한다", () => {
+    for (const patch of [
+      { relatedGoal: "" },
+      { problem: "" },
+      { proposedAction: { type: "SAVE", text: "저장" } },
+      { confidence: "CERTAIN" },
+      { sideEffect: "APPROVED" },
+      { expectedBenefit: "x".repeat(301) },
+    ]) {
+      fails(
+        { ...example, problemCandidates: [{ ...example.problemCandidates[0], ...patch }] },
+        "candidates.fields",
+      );
+    }
+    const duplicated = {
+      ...example,
+      problemCandidates: [
+        example.problemCandidates[0],
+        {
+          ...example.problemCandidates[0],
+          problemKey: ` ${example.problemCandidates[0].problemKey.toUpperCase()} `,
+        },
+      ],
+    };
+    fails(duplicated, "candidates.fields");
+    expect(
+      grade(trace(example), {
+        ...grading,
+        candidates: { ...grading.candidates, changed: true },
+      }).find((entry) => entry.check === "candidates.fields")?.pass,
+    ).toBe(false);
+  });
+
+  test("다른 블록의 키·URL·빈 근거와 무효 발견을 실패시킨다", () => {
+    for (const evidence of [[], ["study:other"], [example.findings[0].sourceUrl]])
+      fails(
+        { ...example, problemCandidates: [{ ...example.problemCandidates[0], evidence }] },
+        "candidates.evidence",
+      );
+    for (const patch of [
+      { freshness: "CLOSED" },
+      { freshness: "STALE" },
+      { freshness: "UNKNOWN" },
+      { sourceUrl: "" },
+      { checkedAt: "invalid" },
+      { facts: [] },
+      { next: null },
+    ])
+      fails(
+        { ...example, findings: [{ ...example.findings[0], ...patch }] },
+        "candidates.evidence",
+      );
+    fails({ ...example, findings: [] }, "candidates.evidence");
+  });
+
+  test("급한 문제·준비 부족·중복·침묵과 보류 시나리오를 평가한다", () => {
+    const byName = Object.fromEntries(cases.map((entry) => [entry.name, entry]));
+    for (const name of ["candidate-deadline", "candidate-future-preparation", "candidate-changed"])
+      expect(byName[name]?.grading.candidates?.count).toBe(1);
+    for (const name of [
+      "candidate-observation-only",
+      "candidate-duplicate",
+      "candidate-existing-follow-up",
+      "candidate-position-held",
+      "candidate-watch-quiet",
+      "candidate-no-evidence",
+    ])
+      expect(byName[name]?.grading.candidates?.count).toBe(0);
+    expect(byName["candidate-changed"]?.grading.candidates?.changed).toBe(true);
   });
 });

@@ -1,6 +1,6 @@
 // Runs the proactive-check evals against a real model through the Claude Code CLI and grades the trace.
-// The fixtures stand in for tool results, so the model stops before opening sources (step 5).
-// What is graded is the plan the model reports in <eval-trace>, not recorded tool calls.
+// Fixtures cover query selection or result writing with sources already checked in the same run.
+// Grades reported query decisions or result JSON in <eval-trace>, not recorded tool calls.
 // Usage: bun run scripts/agent-skill-eval.ts [--model sonnet] [--runs 3] [--only no-change] [--out /tmp/result.json]
 // --out holds the full model output; keep it outside the repository.
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -17,7 +17,13 @@ export type Trace = {
   directCalls: DirectCall[];
   areas: { area: string; reason: string }[];
   searchQueries: string[];
-  result: { outcome?: string; findings?: unknown[]; sourceFailures?: string[] } | null;
+  result: {
+    version?: number;
+    outcome?: string;
+    findings?: unknown[];
+    sourceFailures?: string[];
+    problemCandidates?: unknown[];
+  } | null;
 };
 export type Grading = {
   earlyNothingNew: boolean;
@@ -33,8 +39,15 @@ export type Grading = {
   outcome?: "NOTHING_NEW" | "FINDINGS";
   sourceFailure?: string;
   maxFindings?: number;
+  candidates?: { count: number; evidenceTopics: string[]; changed?: boolean; keys?: string[] };
 };
-export type EvalCase = { id: number; name: string; files: string[]; grading: Grading };
+export type EvalCase = {
+  id: number;
+  name: string;
+  files: string[];
+  stage?: "result";
+  grading: Grading;
+};
 export type Check = { check: string; pass: boolean; detail: string };
 
 export function skillText(directory = skillDirectory): string {
@@ -47,7 +60,7 @@ export function skillText(directory = skillDirectory): string {
   return parts.join("\n\n");
 }
 
-export function systemPrompt(skill: string): string {
+export function systemPrompt(skill: string, stage?: "result"): string {
   return [
     "너는 fos-assistant 의 일반 커리어 에이전트다. 지금은 Control Plane 이 연 먼저 살펴보기 turn 이다.",
     "아래는 skill_view 가 돌려준 지침과 그 references 다. 이 지침을 따른다.",
@@ -58,11 +71,13 @@ export function systemPrompt(skill: string): string {
     "이 실행은 평가라 도구를 실제로 부를 수 없다.",
     "사용자 메시지의 「실행 입력」, 「Memory 문맥」, 「점검 대화의 앞 내용」 이 실제 실행에서 받는 것이다.",
     "「사용 가능한 도구」가 호출 경로를 정한다. 「위임하면 받는 답」은 직접 도구를 부르거나 위임하면 돌아올 합성 결과이며 아직 받지 않았다. 조회하기로 한 질의의 답만 판단에 쓴다.",
-    "지침의 단계를 따르되 원문을 여는 일은 하지 않는다. 원문을 찾기 전의 커넥터 조회와 검색어 계획까지만 한다.",
+    stage === "result"
+      ? "이번 평가는 결과 작성 단계다. fixture 의 맥락과 원문 확인 결과는 이번 실행 1~5단계에서 이미 조회한 합성 결과다. 6단계 결과 블록을 작성한다. 도구 호출·위임·검색은 추가하지 않고 earlyNothingNew 는 false, areas 는 빈 배열로 trace 를 낸다. orca 명령과 worker_done 을 쓰지 않는다."
+      : "지침의 단계를 따르되 원문을 여는 일은 하지 않는다. 원문을 찾기 전의 커넥터 조회와 검색어 계획까지만 한다. orca 명령과 worker_done 을 쓰지 않는다.",
     "delegations 에는 지침에 따라 실제로 맡기기로 한 질의를 빠짐없이 적는다. 답을 읽어 판단에 쓴 질의는 맡긴 것이다. 답이 주어졌다는 이유만으로 적지는 않는다.",
     "직접 부르기로 한 도구는 delegations 대신 directCalls 에 도구 이름과 입력을 빠짐없이 적는다. 직접 호출과 위임을 혼동하지 않는다.",
     "답 끝에 아래 모양의 JSON 하나를 <eval-trace> 와 </eval-trace> 로 감싸 낸다.",
-    '{"earlyNothingNew": 2단계에서 바로 침묵했으면 true, "delegations": 맡긴 질의 목록. 맥락 읽기는 "context", 제외 기준은 "constraints", "directCalls": [{"tool": "직접 호출 이름", "arguments": 입력 객체}], "areas": [{"area": "study 나 position 이나 trend", "reason": "맥락의 사실 한 줄"}], "searchQueries": web_search 에 넣을 검색어 목록, "result": 조사할 영역이 없거나 조회 실패로 보류했으면 <fos-check-result> 안의 JSON, 원문 조사를 진행할 영역이 있으면 null}',
+    '{"earlyNothingNew": 2단계에서 바로 침묵했으면 true, "delegations": 맡긴 질의 목록. 맥락 읽기는 "context", 제외 기준은 "constraints", "directCalls": [{"tool": "직접 호출 이름", "arguments": 입력 객체}], "areas": [{"area": "study 나 position 이나 trend", "reason": "맥락의 사실 한 줄"}], "searchQueries": web_search 에 넣을 검색어 목록, "result": 조사할 영역이 없거나 조회 실패로 보류했으면 <fos-check-result> 안의 JSON, 원문 조사를 진행할 영역이 있으면 null. 결과 작성 단계 평가는 반드시 완성한 JSON}',
   ].join("\n");
 }
 
@@ -185,6 +200,96 @@ export function grade(trace: Trace | null, grading: Grading): Check[] {
     const count = Array.isArray(findings) ? findings.length : Number.POSITIVE_INFINITY;
     add("findings.count", count <= grading.maxFindings, `${count}`);
   }
+  if (grading.candidates) {
+    const expected = grading.candidates;
+    add("result.version", trace.result?.version === 3, `${trace.result?.version}`);
+    const candidates = trace.result?.problemCandidates;
+    add(
+      "candidates.count",
+      Array.isArray(candidates) && candidates.length === expected.count && candidates.length <= 3,
+      `${Array.isArray(candidates) ? candidates.length : "missing"}`,
+    );
+    const object = (value: unknown): Record<string, unknown> | null =>
+      value !== null && typeof value === "object" && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : null;
+    const nonempty = (value: unknown, max: number): boolean =>
+      typeof value === "string" && value.trim().length > 0 && value.length <= max;
+    const findings = Array.isArray(trace.result?.findings) ? trace.result.findings : [];
+    const eligible = new Set(
+      findings.flatMap((value) => {
+        const finding = object(value);
+        const next = object(finding?.next);
+        return finding &&
+          nonempty(finding.topicKey, 120) &&
+          nonempty(finding.title, 120) &&
+          nonempty(finding.whyItMatters, 600) &&
+          typeof finding.sourceUrl === "string" &&
+          /^https:\/\//.test(finding.sourceUrl) &&
+          typeof finding.checkedAt === "string" &&
+          /(?:Z|[+-]\d{2}:\d{2})$/.test(finding.checkedAt) &&
+          Number.isFinite(Date.parse(finding.checkedAt)) &&
+          finding.freshness === "CURRENT" &&
+          Array.isArray(finding.facts) &&
+          finding.facts.some((fact) => nonempty(fact, 300)) &&
+          next &&
+          ["ACTION", "QUESTION"].includes(String(next.type)) &&
+          nonempty(next.text, 300)
+          ? [String(finding.topicKey)]
+          : [];
+      }),
+    );
+    const keys = new Set<string>();
+    const usedTopics = new Set<string>();
+    let valid = Array.isArray(candidates);
+    let evidenceValid = Array.isArray(candidates);
+    for (const value of Array.isArray(candidates) ? candidates : []) {
+      const candidate = object(value);
+      const action = object(candidate?.proposedAction);
+      const key =
+        typeof candidate?.problemKey === "string" ? candidate.problemKey.trim().toLowerCase() : "";
+      valid =
+        valid &&
+        !!candidate &&
+        nonempty(candidate.problemKey, 120) &&
+        !keys.has(key) &&
+        nonempty(candidate.problem, 300) &&
+        nonempty(candidate.relatedGoal, 200) &&
+        !!action &&
+        ["ACTION", "QUESTION"].includes(String(action.type)) &&
+        nonempty(action.text, 200) &&
+        ["LOW", "MEDIUM", "HIGH"].includes(String(candidate.confidence)) &&
+        nonempty(candidate.expectedBenefit, 300) &&
+        ["NONE", "INTERNAL", "EXTERNAL"].includes(String(candidate.sideEffect)) &&
+        (candidate.risk === undefined || nonempty(candidate.risk, 200)) &&
+        (candidate.changeSinceLast === undefined || nonempty(candidate.changeSinceLast, 300)) &&
+        (!expected.changed || nonempty(candidate.changeSinceLast, 300));
+      keys.add(key);
+      const evidence = candidate?.evidence;
+      evidenceValid =
+        evidenceValid && Array.isArray(evidence) && evidence.length > 0 && evidence.length <= 5;
+      for (const topic of Array.isArray(evidence) ? evidence : []) {
+        evidenceValid =
+          evidenceValid &&
+          nonempty(topic, 120) &&
+          eligible.has(String(topic)) &&
+          expected.evidenceTopics.includes(String(topic));
+        usedTopics.add(String(topic));
+      }
+    }
+    add(
+      "candidates.fields",
+      valid &&
+        (!expected.keys ||
+          JSON.stringify([...keys].sort()) === JSON.stringify([...expected.keys].sort())),
+      "필수 칸, 상한, 중복 키와 달라진 근거",
+    );
+    add(
+      "candidates.evidence",
+      evidenceValid && expected.evidenceTopics.every((topic) => usedTopics.has(topic)),
+      JSON.stringify([...usedTopics]),
+    );
+  }
   return checks;
 }
 
@@ -236,7 +341,7 @@ if (import.meta.main) {
   const cases: EvalCase[] = JSON.parse(
     readFileSync(join(skillDirectory, "evals", "evals.json"), "utf8"),
   ).evals;
-  const system = systemPrompt(skillText());
+  const skill = skillText();
 
   const jobs = cases
     .filter((evalCase) => !only || evalCase.name === only)
@@ -251,7 +356,7 @@ if (import.meta.main) {
       .map((file) => readFileSync(join(skillDirectory, file), "utf8"))
       .join("\n\n");
     try {
-      const output = await runOnce(model, system, user, cwd);
+      const output = await runOnce(model, systemPrompt(skill, evalCase.stage), user, cwd);
       const trace = parseTrace(output);
       return { name: evalCase.name, run, trace, checks: grade(trace, evalCase.grading), output };
     } catch (error) {

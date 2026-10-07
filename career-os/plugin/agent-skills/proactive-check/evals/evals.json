@@ -785,6 +785,314 @@
           "constraints": false
         }
       }
+    },
+    {
+      "id": 21,
+      "name": "candidate-deadline",
+      "stage": "result",
+      "files": [
+        "evals/fixtures/candidate-deadline.md"
+      ],
+      "expected_output": "지원 마감 전 미정에 맞춰 v3 결과와 근거가 있는 문제 후보만 낸다.",
+      "grading": {
+        "earlyNothingNew": false,
+        "areas": [],
+        "delegations": {
+          "include": [],
+          "exclude": [
+            "context",
+            "constraints"
+          ]
+        },
+        "searchQueries": {
+          "max": 0,
+          "forbidden": []
+        },
+        "outcome": "FINDINGS",
+        "candidates": {
+          "count": 1,
+          "evidenceTopics": [
+            "position:example-backend"
+          ]
+        }
+      }
+    },
+    {
+      "id": 22,
+      "name": "candidate-future-preparation",
+      "stage": "result",
+      "files": [
+        "evals/fixtures/candidate-future-preparation.md"
+      ],
+      "expected_output": "다음 분기 준비 부족에 맞춰 v3 결과와 근거가 있는 문제 후보만 낸다.",
+      "grading": {
+        "earlyNothingNew": false,
+        "areas": [],
+        "delegations": {
+          "include": [],
+          "exclude": [
+            "context",
+            "constraints"
+          ]
+        },
+        "searchQueries": {
+          "max": 0,
+          "forbidden": []
+        },
+        "outcome": "FINDINGS",
+        "candidates": {
+          "count": 1,
+          "evidenceTopics": [
+            "study:kafka-transactions"
+          ]
+        }
+      }
+    },
+    {
+      "id": 23,
+      "name": "candidate-observation-only",
+      "stage": "result",
+      "files": [
+        "evals/fixtures/candidate-observation-only.md"
+      ],
+      "expected_output": "참고 자료이며 문제 없음에 맞춰 v3 결과와 근거가 있는 문제 후보만 낸다.",
+      "grading": {
+        "earlyNothingNew": false,
+        "areas": [],
+        "delegations": {
+          "include": [],
+          "exclude": [
+            "context",
+            "constraints"
+          ]
+        },
+        "searchQueries": {
+          "max": 0,
+          "forbidden": []
+        },
+        "outcome": "FINDINGS",
+        "candidates": {
+          "count": 0,
+          "evidenceTopics": []
+        }
+      }
+    },
+    {
+      "id": 24,
+      "name": "candidate-duplicate",
+      "stage": "result",
+      "files": [
+        "evals/fixtures/candidate-duplicate.md"
+      ],
+      "expected_output": "같은 문제와 원문에 변화가 없어 발견과 후보를 비우고 NOTHING_NEW 로 끝낸다.",
+      "grading": {
+        "earlyNothingNew": false,
+        "areas": [],
+        "delegations": {
+          "include": [],
+          "exclude": [
+            "context",
+            "constraints"
+          ]
+        },
+        "searchQueries": {
+          "max": 0,
+          "forbidden": []
+        },
+        "outcome": "NOTHING_NEW",
+        "candidates": {
+          "count": 0,
+          "evidenceTopics": []
+        },
+        "maxFindings": 0
+      }
+    },
+    {
+      "id": 25,
+      "name": "candidate-changed",
+      "stage": "result",
+      "files": [
+        "evals/fixtures/candidate-changed.md"
+      ],
+      "expected_output": "같은 문제의 마감 단축에 맞춰 v3 결과와 근거가 있는 문제 후보만 낸다.",
+      "grading": {
+        "earlyNothingNew": false,
+        "areas": [],
+        "delegations": {
+          "include": [],
+          "exclude": [
+            "context",
+            "constraints"
+          ]
+        },
+        "searchQueries": {
+          "max": 0,
+          "forbidden": []
+        },
+        "outcome": "FINDINGS",
+        "candidates": {
+          "count": 1,
+          "evidenceTopics": [
+            "position:example-backend"
+          ],
+          "changed": true,
+          "keys": [
+            "position:deadline:example-backend"
+          ]
+        }
+      }
+    },
+    {
+      "id": 26,
+      "name": "candidate-existing-follow-up",
+      "stage": "result",
+      "files": [
+        "evals/fixtures/candidate-existing-follow-up.md"
+      ],
+      "expected_output": "이미 알린 공고에 새 변화가 없고 같은 행동의 OPEN 할 일이 있으므로 발견과 후보를 비운다.",
+      "grading": {
+        "earlyNothingNew": false,
+        "areas": [],
+        "delegations": {
+          "include": [],
+          "exclude": [
+            "context",
+            "constraints"
+          ]
+        },
+        "searchQueries": {
+          "max": 0,
+          "forbidden": []
+        },
+        "outcome": "NOTHING_NEW",
+        "candidates": {
+          "count": 0,
+          "evidenceTopics": []
+        },
+        "maxFindings": 0
+      }
+    },
+    {
+      "id": 27,
+      "name": "candidate-position-held",
+      "stage": "result",
+      "files": [
+        "evals/fixtures/candidate-position-held.md"
+      ],
+      "expected_output": "제외 판정 보류에 맞춰 v3 결과와 근거가 있는 문제 후보만 낸다.",
+      "grading": {
+        "earlyNothingNew": false,
+        "areas": [],
+        "delegations": {
+          "include": [],
+          "exclude": [
+            "context",
+            "constraints"
+          ]
+        },
+        "searchQueries": {
+          "max": 0,
+          "forbidden": []
+        },
+        "outcome": "NOTHING_NEW",
+        "candidates": {
+          "count": 0,
+          "evidenceTopics": []
+        },
+        "maxFindings": 0
+      }
+    },
+    {
+      "id": 28,
+      "name": "candidate-watch-quiet",
+      "stage": "result",
+      "files": [
+        "evals/fixtures/candidate-watch-quiet.md"
+      ],
+      "expected_output": "watch 재조사 무소식에 맞춰 v3 결과와 근거가 있는 문제 후보만 낸다.",
+      "grading": {
+        "earlyNothingNew": false,
+        "areas": [],
+        "delegations": {
+          "include": [],
+          "exclude": [
+            "context",
+            "constraints"
+          ]
+        },
+        "searchQueries": {
+          "max": 0,
+          "forbidden": []
+        },
+        "outcome": "NOTHING_NEW",
+        "candidates": {
+          "count": 0,
+          "evidenceTopics": []
+        },
+        "maxFindings": 0
+      }
+    },
+    {
+      "id": 29,
+      "name": "candidate-no-evidence",
+      "stage": "result",
+      "files": [
+        "evals/fixtures/candidate-no-evidence.md"
+      ],
+      "expected_output": "원문 실패로 후보 없음에 맞춰 v3 결과와 근거가 있는 문제 후보만 낸다.",
+      "grading": {
+        "earlyNothingNew": false,
+        "areas": [],
+        "delegations": {
+          "include": [],
+          "exclude": [
+            "context",
+            "constraints"
+          ]
+        },
+        "searchQueries": {
+          "max": 0,
+          "forbidden": []
+        },
+        "outcome": "FINDINGS",
+        "candidates": {
+          "count": 0,
+          "evidenceTopics": []
+        },
+        "maxFindings": 0,
+        "sourceFailure": "원문"
+      }
+    },
+    {
+      "id": 30,
+      "name": "candidate-repeated-evidence",
+      "stage": "result",
+      "files": [
+        "evals/fixtures/candidate-repeated-evidence.md"
+      ],
+      "expected_output": "이번에 다시 확인한 같은 공고를 REPEATED 참고 근거로 싣고 새로 드러난 지원 미정 문제의 후보를 낸다. 발견의 changeSinceLast 는 지어내지 않는다.",
+      "grading": {
+        "earlyNothingNew": false,
+        "areas": [],
+        "delegations": {
+          "include": [],
+          "exclude": [
+            "context",
+            "constraints"
+          ]
+        },
+        "searchQueries": {
+          "max": 0,
+          "forbidden": []
+        },
+        "outcome": "FINDINGS",
+        "candidates": {
+          "count": 1,
+          "evidenceTopics": [
+            "position:example-backend"
+          ]
+        }
+      }
     }
   ]
 }
