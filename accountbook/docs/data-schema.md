@@ -163,6 +163,7 @@ Hermes에서는 서버 이름 `accountbook`을 사용해 `mcp__accountbook__<도
   `list_recurring_expenses`는 선택 입력 `month`(`YYYY-MM`, 생략하면 이번 달)를 받아
   `{ month, items }`를 반환한다. `month`를 생략하면 응답의 `month`는 `null`이고, 가계부 서버가 정한 이번 달이 `generatedThisMonth`의 기준이다. 각 항목은 `uuid`, `name`, `amount`, `dayOfMonth`, `categoryUuid`, `categoryName`, `generatedThisMonth`다.
   사용자 식별자는 이름과 이어지지 않으므로 내보내지 않는다.
+  지출 기록의 `recurringExpenseUuid`는 그 기록을 생성한 반복지출의 `uuid`다. 직접 등록한 지출은 `null`이다.
   `update_recurring_expense`는 `recurringExpenseUuid`와 `confirmed: true`, 바꿀 칸(`name` 100자 이하, `amount`, `dayOfMonth` 1~28, 지출 카테고리 UUID 또는 이름)을 받는다.
   수정은 다음 생성분부터 반영되고 이미 생성된 그 달 지출은 바뀌지 않는다. 그 달 기록은 `update_expense`로 따로 고친다.
   연동 토큰이 반복지출 경로를 허용받기 전에는 `ACCOUNTBOOK_FORBIDDEN`이다. 반복지출 등록과 삭제 도구는 없다.
