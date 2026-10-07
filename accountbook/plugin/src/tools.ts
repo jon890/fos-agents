@@ -154,6 +154,14 @@ function written<T>(response: unknown, schema: z.ZodType<T>): T {
   }
 }
 
+// UUID 와 이름이 각자 하나씩 찾아지는데 서로 다를 때만 불일치다. 종류가 다르거나 없는 값은 목록 안내로 충분하다.
+function conflict(categories: NamedItem[], args: Record<string, unknown>) {
+  if (!args.categoryUuid || !args.categoryName) return false;
+  const byUuid = categories.filter((item) => item.uuid === args.categoryUuid);
+  const byName = categories.filter((item) => item.name === args.categoryName);
+  return byUuid.length === 1 && byName.length === 1 && byUuid[0].uuid !== byName[0].uuid;
+}
+
 type NamedItem = { uuid: string; name: string };
 class SelectionError extends Error {
   constructor(
@@ -250,7 +258,7 @@ export class AccountbookTools {
         if (matched.length !== 1)
           throw new SelectionError(
             "ACCOUNTBOOK_CATEGORY_SELECTION",
-            `${args.categoryUuid && args.categoryName ? "categoryUuid 와 categoryName 이 서로 다른 카테고리를 가리킵니다. 하나만 보내 주세요. " : ""}${categoryType} 카테고리 목록에서 하나를 골라 주세요. 선택 가능한 이름: ${categories.map((item) => item.name).join(", ") || "없음"}`,
+            `${conflict(categories, args) ? "categoryUuid 와 categoryName 이 서로 다른 카테고리를 가리킵니다. 하나만 보내 주세요. " : ""}${categoryType} 카테고리 목록에서 하나를 골라 주세요. 선택 가능한 이름: ${categories.map((item) => item.name).join(", ") || "없음"}`,
           );
         body.categoryUuid = matched[0].uuid;
       }

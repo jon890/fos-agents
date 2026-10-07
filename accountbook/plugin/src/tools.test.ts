@@ -234,7 +234,18 @@ describe("MCP 가계부 도구", () => {
         categoryName: "지출 전용",
       });
       expect(result(rejected).error.code).toBe("ACCOUNTBOOK_CATEGORY_SELECTION");
+      expect(result(rejected).error.message).toContain("서로 다른 카테고리");
       expect(mismatch.requests.every((request) => request.method === "GET")).toBe(true);
+
+      // 같은 카테고리를 가리켜도 종류가 다르면 불일치가 아니라 종류 안내다.
+      const wrongType = setup(undefined, FAMILY);
+      const typeRejected = await wrongType.tools.call(`${action}_expense`, {
+        ...base,
+        categoryUuid: INCOME_CATEGORY,
+        categoryName: "수입 전용",
+      });
+      expect(result(typeRejected).error.code).toBe("ACCOUNTBOOK_CATEGORY_SELECTION");
+      expect(result(typeRejected).error.message).not.toContain("서로 다른 카테고리");
     }
   });
 
