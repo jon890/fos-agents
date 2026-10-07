@@ -153,7 +153,7 @@ session 이 바뀌어 대화에 근거가 없으면 Memory 문맥만 본다.
 `ready` 여도 이 읽기만으로 공고를 판정하지 않는다.
 후보 공고를 고른 뒤 발견으로 내기 전에 [제외 판정](references/connector-queries.md)의 `check_position_exclusions` 로 판정한다.
 규칙을 읽고 직접 견주지 않는다. 규칙을 읽었다는 것과 이 공고를 판정할 수 있다는 것은 다르다.
-`excluded` 와 `undeterminable` 인 공고는 내지 않는다. `undeterminable` 이면 그 공고 판단만 보류하고 `sourceFailures` 에 적는다.
+`excluded` 와 `undeterminable` 인 공고는 내지 않는다. `undeterminable` 이면 그 공고 판단만 보류하고, 적는 자리는 [제외 판정](references/connector-queries.md)의 까닭별 표를 따른다.
 
 - 포지션은 원문에서 지원 접수 여부, 마감일과 요구 조건을 확인하고 원문에 없는 적합 조건은 `unknowns` 에 둔다
 - 열어서 확인한 내용만 `facts` 에 적는다. 열지 못한 원문은 발견으로 내지 않고 `sourceFailures` 에 까닭을 적는다
