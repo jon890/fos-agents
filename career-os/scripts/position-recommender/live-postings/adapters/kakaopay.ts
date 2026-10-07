@@ -4,6 +4,7 @@ import {
   classify,
   closeWindow,
   isContractRole,
+  isIneligibleEmployment,
   isNonTargetTitle,
   isTargetRole,
   norm,
@@ -135,13 +136,19 @@ function postingFromKakaoCareersDetail(job: KakaoCareersJob): Posting | null {
   const fullText = `${title} ${text}`;
   const applyUrl = externalApplyUrl(job.introduction);
   if (!title || !applyUrl) return null;
-  if (isContractRole(fullText) || isNonTargetTitle(title) || !isTargetRole(fullText)) return null;
+  if (
+    isIneligibleEmployment(title, job.employeeTypeName) ||
+    isNonTargetTitle(title) ||
+    !isTargetRole(fullText)
+  )
+    return null;
 
   return {
     source: "kakaopay",
     discoveryMode: "official-detail",
     company: job.companyName || "카카오페이",
     title,
+    employmentType: job.employeeTypeName || undefined,
     url: applyUrl,
     identityHash: `kakaopay:${job.realId}`,
     linkType: "direct_posting",
@@ -179,7 +186,7 @@ function postingFromDetail(url: string, html: string): Posting | null {
   const title = htmlTitle(html);
   const fullText = `${title} ${text}`;
   if (!title) return null;
-  if (isContractRole(fullText)) return null;
+  if (isContractRole(title)) return null;
   if (isNonTargetTitle(title)) return null;
   if (!isTargetRole(fullText)) return null;
 

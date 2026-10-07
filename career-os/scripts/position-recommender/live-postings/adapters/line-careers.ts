@@ -78,7 +78,7 @@ export function isKoreaEngineeringServerJob(job: StrapiJob): boolean {
 
   const title = job.title || job.title_en || "";
   const fullText = `${title} ${names(job.job_fields).join(" ")}`;
-  if (isContractRole(fullText)) return false;
+  if (isContractRole(title)) return false;
   if (isNonTargetTitle(title)) return false;
   return isTargetRole(fullText);
 }
@@ -135,6 +135,7 @@ export function buildLinePosting(job: StrapiJob, detailBody: string): Posting {
     discoveryMode: "official-listing",
     company,
     title,
+    employmentType: names(job.employment_type).join(" ") || undefined,
     url: publicUrl(job.strapiId),
     identityHash: `line-careers:${job.strapiId}`,
     linkType: "direct_posting",

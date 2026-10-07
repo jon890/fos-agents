@@ -54,6 +54,8 @@ export const postingSchema = z
     discoveryMode: discoveryModeSchema.optional(),
     company: nonEmptyString,
     title: nonEmptyString,
+    // 소스가 제공한 고용형태 원문. 없으면 미확인이며 정규직으로 추정하지 않는다.
+    employmentType: z.string().optional(),
     url: httpUrl,
     identityHash: nonEmptyString.optional(),
     linkType: z.enum(["direct_posting", "career_article", "search_page"]),

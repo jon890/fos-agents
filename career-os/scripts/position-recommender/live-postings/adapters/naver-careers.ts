@@ -107,7 +107,7 @@ function postingFromDetail(item: { id: string; title: string }, html: string): P
   const title = item.title;
   const fullText = `${title} ${text}`;
   if (!title) return null;
-  if (isContractRole(fullText) || /인턴|intern|체험형/i.test(fullText)) return null;
+  if (isContractRole(title)) return null;
   if (isNonTargetTitle(title)) return null;
   if (!isTargetRole(fullText)) return null;
 

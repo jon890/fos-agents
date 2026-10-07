@@ -192,7 +192,7 @@ function postingFromDetail(
     .join(" ");
   const fullText = `${company} ${title} ${listItem.tags.join(" ")} ${detailText}`;
 
-  if (isContractRole(fullText)) return null;
+  if (isContractRole(title)) return null;
   if (isNonTargetTitle(title)) return null;
   if (!isTargetRole(fullText)) return null;
 

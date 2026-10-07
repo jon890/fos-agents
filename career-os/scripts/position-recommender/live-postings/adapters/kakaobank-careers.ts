@@ -90,7 +90,7 @@ export function parseKakaoBankPosting(notice: RecruitNotice, html: string): Post
   const title = norm(notice.recruitNoticeName);
   const fullText = `${title} ${notice.recruitClassName} ${text}`;
   if (!title || !/지원|모집기간|접수기간/.test(text)) return null;
-  if (isContractRole(fullText) || isNonTargetTitle(title) || !isTargetRole(fullText)) return null;
+  if (isContractRole(title) || isNonTargetTitle(title) || !isTargetRole(fullText)) return null;
   const url = `${HOST}/jobs/${notice.recruitNoticeSn}`;
   return {
     source: "kakaobank-careers",

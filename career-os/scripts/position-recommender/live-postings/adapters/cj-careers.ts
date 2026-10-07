@@ -143,7 +143,7 @@ async function postingFromJob(job: CjJob): Promise<Posting | null> {
   const detailText = await fetchDetailText(id);
   const fullText = `${company} ${title} ${job.job_cd_nm ?? ""} ${job.location_cd_nm ?? ""} ${detailText}`;
   const roleText = `${company} ${title} ${job.job_cd_nm ?? ""} ${job.location_cd_nm ?? ""}`;
-  if (isContractRole(roleText)) return null;
+  if (isContractRole(title)) return null;
   if (isNonTargetTitle(title)) return null;
   if (!isTargetRole(roleText) && !hasKeyword(roleText, ["백엔드개발", "backend engineer"]))
     return null;
