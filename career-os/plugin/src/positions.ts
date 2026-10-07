@@ -1,4 +1,11 @@
 import { z } from "zod";
+import { sourceIdSchema } from "../../scripts/position-recommender/live-postings/contracts.ts";
+import {
+  indexExclusions,
+  judgePosting,
+  type PostingFacts,
+  type PostingVerdict,
+} from "../../scripts/position-recommender/feedback/exclusion-match.ts";
 import { CareerBackend, CareerError, safeError } from "./backend.ts";
 
 // Field names and enum values are the Backend's (services/career-backend/src/positions/schema.ts).
@@ -73,5 +80,49 @@ export async function getPositionResearchConstraints(backend: CareerBackend) {
     missing,
     exclusions: exclusions.status === "fulfilled" ? exclusions.value : null,
     companyPreferences: companyPreferences.status === "fulfilled" ? companyPreferences.value : null,
+  };
+}
+
+const postingToCheck = z.strictObject({
+  url: z.string().min(1).max(2000),
+  company: z.string().trim().min(1).max(200),
+  title: z.string().trim().min(1).max(300),
+  // Only what a connector or listing returned. The tool never derives them and the model must not guess them.
+  source: sourceIdSchema.optional(),
+  identityHash: z.string().trim().min(1).max(300).optional(),
+});
+export const checkPositionExclusionsSchema = z.strictObject({
+  postings: z.array(postingToCheck).min(1).max(10),
+});
+export type CheckPositionExclusionsArgs = z.infer<typeof checkPositionExclusionsSchema>;
+
+// The verdict is code, not model judgement: the rules and the posting go through the same
+// matching the collector uses (scripts/position-recommender/feedback). "clear" means every rule that
+// applies to the posting was compared. Reading the lists is not enough, so a posting whose identity
+// the rules need but the caller did not have is "undeterminable" and must not be recommended.
+export async function checkPositionExclusions(
+  backend: CareerBackend,
+  args: CheckPositionExclusionsArgs,
+  now: Date,
+) {
+  // An identity hash is only meaningful inside its source. A source alone is fine: it says which board the posting is from.
+  if (args.postings.some((posting) => posting.identityHash && !posting.source))
+    throw new CareerError("CAREER_INVALID_INPUT");
+  const { readiness, missing, exclusions, companyPreferences } = await getPositionResearchConstraints(backend);
+  const index = indexExclusions(exclusions ?? [], now);
+  const excludedCompanies = new Set(
+    (companyPreferences ?? [])
+      .filter((preference) => preference.disposition === "exclude")
+      .map((preference) => preference.companyKey),
+  );
+  // With either list unread no rule set is complete, so no posting can be judged.
+  const judge = (posting: PostingFacts): PostingVerdict | { verdict: "undeterminable"; basis: "constraints-hold" } => {
+    if (!exclusions || !companyPreferences) return { verdict: "undeterminable", basis: "constraints-hold" };
+    return judgePosting(index, posting, excludedCompanies);
+  };
+  return {
+    readiness,
+    missing,
+    results: args.postings.map((posting, position) => ({ position, url: posting.url, ...judge(posting) })),
   };
 }

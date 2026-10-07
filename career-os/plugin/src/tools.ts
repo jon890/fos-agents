@@ -23,7 +23,13 @@ import {
   saveInterviewAttempt,
   savePersonalQuestion,
 } from "./interview.ts";
-import { getPositionResearchConstraints, getPositionResearchConstraintsSchema } from "./positions.ts";
+import {
+  checkPositionExclusions,
+  checkPositionExclusionsSchema,
+  getPositionResearchConstraints,
+  getPositionResearchConstraintsSchema,
+  type CheckPositionExclusionsArgs,
+} from "./positions.ts";
 import {
   getStudyCandidates,
   getStudyCandidatesSchema,
@@ -193,6 +199,11 @@ export const toolDefinitions: Record<string, { description: string; schema: z.Zo
       "포지션 조사에 쓸 개인 제외 규칙(대상, 근거, 만료일)과 회사별 수동 선호 조회. 둘 중 하나라도 읽지 못하면 readiness 가 hold 이고 추천 확정을 미룬다",
     schema: getPositionResearchConstraintsSchema,
   },
+  check_position_exclusions: {
+    description:
+      "찾은 공고(url, company, title)가 개인 제외 규칙에 걸리는지 코드로 판정. 공고마다 excluded, clear, undeterminable 이고 undeterminable 은 추천하지 않는다. source 와 identityHash 는 커넥터나 목록이 준 값만 넘긴다. source 만 알면 source 만 넘기고, identityHash 는 source 와 함께만 받으며 둘 다 만들어 내지 않는다. 한 번에 공고 10개까지",
+    schema: checkPositionExclusionsSchema,
+  },
 };
 
 type ToolResult = {
@@ -281,6 +292,10 @@ export class CareerTools {
           return this.success(await listStudyCandidates(this.backend, parsed.data as ListStudyCandidatesArgs));
         case "get_position_research_constraints":
           return this.success(await getPositionResearchConstraints(this.backend));
+        case "check_position_exclusions":
+          return this.success(
+            await checkPositionExclusions(this.backend, parsed.data as CheckPositionExclusionsArgs, this.now()),
+          );
       }
       throw new CareerError("CAREER_UNKNOWN_TOOL");
     } catch (error) {

@@ -527,7 +527,7 @@ export const recommendationResponseSchema = z
  * 개인 공고 제외 규칙의 계약이다.
  *
  * `scope` 마다 요구하는 칸이 다르다. `docs/data-schema.md` 의 「개인 공고 제외 설정」 이 정한다.
- * 수집기 쪽 `scripts/position-recommender/feedback/exclusions.ts` 와 같은 판정이어야 한다.
+ * 수집기 쪽 `scripts/position-recommender/feedback/exclusion-match.ts` 와 같은 판정이어야 한다.
  */
 const exclusionEvidenceShape = {
   decisionKind: z.enum(["career-downside", "manual"]),
