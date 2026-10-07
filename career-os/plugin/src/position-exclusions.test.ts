@@ -129,6 +129,12 @@ describe("check_position_exclusions", () => {
     expect(parse(result).error.code).toBe("CAREER_UNAUTHORIZED");
   });
 
+  test("제외 규칙이 403 이어도 hold 가 아닌 CAREER_UNAUTHORIZED 오류다", async () => {
+    const { tools } = harness([], new Response("{}", { status: 403 }));
+    const result = await tools.call("check_position_exclusions", { postings: [facts(posting)] });
+    expect(parse(result).error.code).toBe("CAREER_UNAUTHORIZED");
+  });
+
   const invalidInputs: [string, unknown][] = [
     ["빈 목록", { postings: [] }],
     ["열한 개", { postings: Array.from({ length: 11 }, () => facts(posting)) }],

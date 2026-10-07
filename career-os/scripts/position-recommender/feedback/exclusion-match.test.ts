@@ -151,6 +151,22 @@ describe("공고 제외 판정", () => {
     expect(verdictOf([role], { ...unidentified, title: "Payments Developer" })).toEqual({
       verdict: "clear",
     });
+    // 대소문자와 연속 공백만 다른 회사 이름도 같은 회사다. 수집기도 같은 비교를 쓴다.
+    expect(
+      verdictOf([{ ...companyRule, company: "TEST  Corp" }], {
+        ...unidentified,
+        company: "test corp",
+      }),
+    ).toEqual({
+      verdict: "excluded",
+      basis: "company",
+    });
+    expect(
+      verdictOf([{ ...role, company: "TEST  Corp" }], { ...unidentified, company: "Test Corp" }),
+    ).toEqual({
+      verdict: "excluded",
+      basis: "company-role",
+    });
     expect(verdictOf([], unidentified, ["테스트 회사"])).toEqual({
       verdict: "excluded",
       basis: "company-preference",

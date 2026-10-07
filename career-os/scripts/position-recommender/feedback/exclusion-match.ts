@@ -21,7 +21,7 @@ export function normalizePostingUrl(value: string): string {
   return url.href;
 }
 
-/** Backend 의 `companyKey` 와 같은 정규화다. 회사별 선호의 `companyKey` 와 견줄 때만 쓴다. */
+/** Backend 의 `companyKey` 와 같은 정규화다. 공백 연속과 대소문자 차이를 같은 회사로 본다. */
 export function companyKeyOf(company: string): string {
   return company.replace(/\s+/g, " ").trim().toLocaleLowerCase("ko-KR");
 }
@@ -68,12 +68,12 @@ export function indexExclusions(rules: PositionExclusion[], now: Date): Exclusio
   };
   for (const rule of rules.filter((candidate) => !isExpired(candidate, now))) {
     if (rule.scope === "company") {
-      index.companies.add(rule.company);
+      index.companies.add(companyKeyOf(rule.company));
       continue;
     }
     if (rule.scope === "company-role") {
       index.companyRoles.push({
-        company: rule.company,
+        company: companyKeyOf(rule.company),
         titleKeywords: rule.titleKeywords.map((keyword) => keyword.toLowerCase()),
       });
       continue;
@@ -114,13 +114,13 @@ export function matchExclusion(index: ExclusionIndex, post: PostingFacts): Exclu
   const url = tryNormalize(post.url);
   if (url && (post.source ? index.urlsBySource.has(`${post.source}|${url}`) : index.urls.has(url)))
     return "url";
-  if (index.companies.has(post.company)) return "company";
+  const company = companyKeyOf(post.company);
+  if (index.companies.has(company)) return "company";
   const title = post.title.toLowerCase();
   if (
     index.companyRoles.some(
       (rule) =>
-        rule.company === post.company &&
-        rule.titleKeywords.some((keyword) => title.includes(keyword)),
+        rule.company === company && rule.titleKeywords.some((keyword) => title.includes(keyword)),
     )
   )
     return "company-role";
@@ -136,6 +136,7 @@ export type PostingVerdict =
  * 공고 하나가 제외인지 `excluded`, `clear`, `undeterminable` 로 판정한다.
  *
  * `clear` 는 이 공고에 적용되는 모든 규칙을 비교했고 걸리는 것이 없다는 뜻이다.
+ * 단 공고의 source 를 모르면 식별자와 URL 을 함께 가진 규칙은 정규화 URL 로만 비교한다.
  * 비교할 수 없는 규칙이 하나라도 남으면 `undeterminable` 이고 추천하지 않는다.
  * 규칙이 읽혔다는 사실과 이 공고를 판정할 수 있다는 사실은 다르다.
  *

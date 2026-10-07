@@ -1400,7 +1400,7 @@ Hermes 에서는 서버 이름 `career` 로 `mcp__career__<도구>` 가 된다.
 - `hasMore` 는 `nextCursor` 가 있는지다. 잘못된 `cursor` 는 Backend 가 400 으로 답해 `CAREER_BAD_REQUEST` 다
 - `get_position_research_constraints` 는 `GET /api/positions/v1/exclusions` 와 `GET /api/positions/v1/company-preferences` 를 함께 읽는다. 규칙과 선호의 칸은 Backend 의 `src/positions/schema.ts` 와 같다
 - `check_position_exclusions` 는 같은 두 GET 으로 규칙을 읽고 공고마다 `verdict` 를 낸다. 판정은 수집기의 `feedback/exclusion-match.ts` 가 하며 모델이 규칙을 해석하지 않는다. 규칙의 사유와 근거 주소는 결과에 싣지 않는다
-- `verdict` 는 `excluded`, `clear`, `undeterminable` 이다. `basis` 는 `excluded` 일 때 `identity`, `url`, `company`, `company-role`, `company-preference` 이고 `undeterminable` 일 때 `identity-missing`, `invalid-url`, `rule-unreadable`, `constraints-hold` 다. `clear` 는 이 공고에 적용되는 규칙을 모두 비교했고 걸린 것이 없다는 뜻이다
+- `verdict` 는 `excluded`, `clear`, `undeterminable` 이다. `basis` 는 `excluded` 일 때 `identity`, `url`, `company`, `company-role`, `company-preference` 이고 `undeterminable` 일 때 `identity-missing`, `invalid-url`, `rule-unreadable`, `constraints-hold` 다. `clear` 는 이 공고에 적용되는 규칙을 모두 비교했고 걸린 것이 없다는 뜻이다. 단 `source` 를 모르는 공고는 식별자와 URL 을 함께 가진 규칙을 정규화 URL 로만 비교한다. 회사 비교는 `companyKey` 와 같은 정규화(공백 연속과 대소문자)를 쓴다
 - `source` 는 수집기 어댑터의 이름(`SOURCE_IDS`)만 받고 `identityHash` 는 `source` 와 함께만 받는다. 두 값은 커넥터나 후보 목록이 준 것만 넘기며 도구가 주소에서 만들지 않는다. 식별자만으로 비교하는 규칙(URL 이 없는 공고 제외)이 있는데 공고의 식별자가 없으면 `undeterminable` 이고 추천하지 않는다
 - `source` 를 모르는 공고는 정규화 URL 이 같은 규칙에 걸리고, 알면 `source` 와 정규화 URL 이 모두 같은 규칙에 걸린다. 정규화는 수집기의 `normalizePostingUrl` 이다(fragment, `utm_*`, `fbclid`, `gclid`, query 순서, 끝 슬래시)
 - 제외 규칙과 회사별 선호 중 하나라도 읽지 못했으면 모든 공고가 `undeterminable`(`constraints-hold`) 이고 `readiness` 는 `hold` 다

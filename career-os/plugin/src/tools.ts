@@ -201,7 +201,7 @@ export const toolDefinitions: Record<string, { description: string; schema: z.Zo
   },
   check_position_exclusions: {
     description:
-      "찾은 공고(url, company, title)가 개인 제외 규칙에 걸리는지 코드로 판정. 공고마다 excluded, clear, undeterminable 이고 undeterminable 은 추천하지 않는다. source 와 identityHash 는 커넥터나 목록이 준 값만 함께 넘기고 없으면 생략하며 만들어 내지 않는다. 한 번에 공고 10개까지",
+      "찾은 공고(url, company, title)가 개인 제외 규칙에 걸리는지 코드로 판정. 공고마다 excluded, clear, undeterminable 이고 undeterminable 은 추천하지 않는다. source 와 identityHash 는 커넥터나 목록이 준 값만 넘긴다. source 만 알면 source 만 넘기고, identityHash 는 source 와 함께만 받으며 둘 다 만들어 내지 않는다. 한 번에 공고 10개까지",
     schema: checkPositionExclusionsSchema,
   },
 };
