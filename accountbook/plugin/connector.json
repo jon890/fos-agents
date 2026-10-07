@@ -53,13 +53,20 @@
   "errors": {
     "ACCOUNTBOOK_UNAUTHORIZED": { "category": "credential_rejected", "recovery": "reconnect" },
     "ACCOUNTBOOK_FORBIDDEN": "forbidden",
-    "ACCOUNTBOOK_NETWORK": "outcome_unknown",
-    "ACCOUNTBOOK_INVALID_RESPONSE": "outcome_unknown",
+    "ACCOUNTBOOK_OUTCOME_UNKNOWN": "outcome_unknown",
+    "ACCOUNTBOOK_NETWORK": { "category": "unavailable", "recovery": "retry_later" },
     "ACCOUNTBOOK_UNAVAILABLE": { "category": "unavailable", "recovery": "retry_later" },
+    "ACCOUNTBOOK_INVALID_RESPONSE": "unavailable",
+    "ACCOUNTBOOK_CONFIG": { "category": "unavailable", "recovery": "reconnect" },
+    "ACCOUNTBOOK_NO_FAMILY": { "category": "forbidden", "recovery": "reconnect" },
     "ACCOUNTBOOK_INVALID_INPUT": { "category": "invalid_input", "recovery": "fix_input" },
     "ACCOUNTBOOK_BAD_REQUEST": { "category": "invalid_input", "recovery": "fix_input" },
     "ACCOUNTBOOK_CATEGORY_SELECTION": { "category": "invalid_input", "recovery": "fix_input" },
     "ACCOUNTBOOK_FAMILY_SELECTION": { "category": "invalid_input", "recovery": "fix_input" },
-    "ACCOUNTBOOK_NOT_FOUND": { "category": "invalid_input", "recovery": "recheck" }
+    "ACCOUNTBOOK_NOT_FOUND": { "category": "invalid_input", "recovery": "recheck" },
+    "ACCOUNTBOOK_IMPORT_CONFIRMATION_MISMATCH": { "category": "invalid_input", "recovery": "recheck" },
+    "ACCOUNTBOOK_IMPORT_NOT_SUBMITTABLE": { "category": "invalid_input", "recovery": "recheck" },
+    "ACCOUNTBOOK_IMPORT_PARTIAL": { "category": "unavailable", "recovery": "recheck" },
+    "ACCOUNTBOOK_IMPORT_IN_PROGRESS": { "category": "unavailable", "recovery": "recheck" }
   }
 }

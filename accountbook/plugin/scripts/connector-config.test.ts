@@ -110,11 +110,16 @@ test("승인한 실행의 입력 오류는 unavailable 로 묻히지 않는다",
     "ACCOUNTBOOK_CATEGORY_SELECTION",
     "ACCOUNTBOOK_FAMILY_SELECTION",
     "ACCOUNTBOOK_NOT_FOUND",
+    "ACCOUNTBOOK_IMPORT_CONFIRMATION_MISMATCH",
+    "ACCOUNTBOOK_IMPORT_NOT_SUBMITTABLE",
   ])
     expect(connector.errors[code]).toMatchObject({ category: "invalid_input" });
-  // 쓰기를 보낸 뒤 응답을 읽지 못한 것은 실패가 아니라 결과를 모르는 것이다.
-  for (const code of ["ACCOUNTBOOK_NETWORK", "ACCOUNTBOOK_INVALID_RESPONSE"])
-    expect(connector.errors[code]).toBe("outcome_unknown");
+  // 일부만 등록된 묶음은 미리보기를 다시 만들면 등록된 거래를 건너뛴다.
+  expect(connector.errors.ACCOUNTBOOK_IMPORT_PARTIAL).toMatchObject({ recovery: "recheck" });
+  // 변경 요청을 보낸 뒤 결과를 읽지 못한 것만 결과를 모르는 것이다. 쓰기 전 조회 실패는 다시 시도한다.
+  expect(connector.errors.ACCOUNTBOOK_OUTCOME_UNKNOWN).toBe("outcome_unknown");
+  for (const code of ["ACCOUNTBOOK_NETWORK", "ACCOUNTBOOK_UNAVAILABLE"])
+    expect(connector.errors[code]).toMatchObject({ recovery: "retry_later" });
 });
 
 test("모든 도구는 승인 카드에 보일 한국어 제목을 가진다", () => {
