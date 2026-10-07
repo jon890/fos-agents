@@ -51,9 +51,9 @@ export function isContractRole(text: string): boolean {
   );
 }
 
-/** 구조화 값이 있으면 우선하고, 없으면 제목의 채용 표기만 사용한다. */
+/** 구조화 고용형태와 제목 중 하나라도 비정규 표기가 있으면 제외한다. */
 export function isIneligibleEmployment(title: string, employmentType?: string): boolean {
-  return isContractRole(employmentType?.trim() || title);
+  return isContractRole(employmentType ?? "") || isContractRole(title);
 }
 
 /** 일반 개발 제목은 제목 자체 대신 실제 업무·요건을 근거로 삼는다. */

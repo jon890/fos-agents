@@ -79,3 +79,31 @@ test("고용형태가 없으면 미확인을 보존하고 JD로 추정하지 않
   expect(item.employmentType).toBeUndefined();
   expect(policy.evaluate(item, now).eligible).toBe(true);
 });
+
+for (const [employmentType, title] of [
+  ["정규직", "Backend Engineer (인턴)"],
+  ["Full-time", "Backend Engineer (Intern)"],
+  ["정규직", "Backend Engineer (체험형)"],
+  ["Full-time", "Backend Engineer (Contractor)"],
+  ["Intern", "Backend Engineer (정규직)"],
+  ["계약직", "Backend Engineer (Full-time)"],
+]) {
+  test(`고용형태와 제목이 어긋나도 비정규 표기는 제외한다: ${employmentType} / ${title}`, () => {
+    expect(policy.evaluate({ ...server(), title, employmentType }, now).rejectionCode).toBe(
+      "ineligible_employment",
+    );
+    expect(
+      postingFromTossApiJob(
+        {},
+        {
+          id: 1,
+          title,
+          company_name: "가상서비스",
+          content: "서버 API 개발",
+          metadata: [{ name: "Employment_Type", value: employmentType }],
+        },
+        true,
+      ).reject,
+    ).toBe("contract_intern_freelance");
+  });
+}
