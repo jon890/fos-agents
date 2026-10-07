@@ -120,16 +120,28 @@ test("MCP 입력 검증 실패도 도구 오류 코드가 담긴 JSON으로 답�
   try {
     await server.connect(st);
     await client.connect(ct);
-    for (const [name, args] of [
-      ["update_expense", { transactionUuid: "33333333-3333-4333-8333-333333333333", confirmed: true }],
-      ["update_expense", { transactionUuid: "x", amount: "100", confirmed: true }],
-      ["create_expense", { amount: 100, date: "2026-09-30T12:00:00", categoryName: "예시", extra: 1 }],
-      ["unknown_tool", {}],
+    for (const [name, args, code] of [
+      [
+        "update_expense",
+        { transactionUuid: "33333333-3333-4333-8333-333333333333", confirmed: true },
+        "ACCOUNTBOOK_INVALID_INPUT",
+      ],
+      [
+        "update_expense",
+        { transactionUuid: "x", amount: "100", confirmed: true },
+        "ACCOUNTBOOK_INVALID_INPUT",
+      ],
+      [
+        "create_expense",
+        { amount: 100, date: "2026-09-30T12:00:00", categoryName: "예시", extra: 1 },
+        "ACCOUNTBOOK_INVALID_INPUT",
+      ],
+      ["unknown_tool", {}, "ACCOUNTBOOK_UNKNOWN_TOOL"],
     ] as const) {
       const result = await client.callTool({ name, arguments: args });
       expect(result.isError).toBe(true);
       const payload = JSON.parse((result.content as Array<{ text: string }>)[0]!.text);
-      expect(payload.error.code).toMatch(/^ACCOUNTBOOK_(INVALID_INPUT|UNKNOWN_TOOL)$/);
+      expect(payload.error.code).toBe(code);
     }
     expect(calls).toBe(0);
   } finally {

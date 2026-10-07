@@ -177,12 +177,16 @@ Hermes에서는 서버 이름 `accountbook`을 사용해 `mcp__accountbook__<도
 | `ACCOUNTBOOK_FORBIDDEN` | 403 또는 접근할 수 없는 기본 가족 |
 | `ACCOUNTBOOK_NOT_FOUND` | 404 |
 | `ACCOUNTBOOK_BAD_REQUEST` | 나머지 HTTP 4xx |
-| `ACCOUNTBOOK_UNAVAILABLE` | HTTP 5xx |
-| `ACCOUNTBOOK_NETWORK` | 연결, redirect, timeout 실패. 변경 결과 재조회 필요 |
-| `ACCOUNTBOOK_INVALID_RESPONSE` | JSON 또는 필수 응답 구조를 확인할 수 없음 |
+| `ACCOUNTBOOK_UNAVAILABLE` | 조회의 HTTP 5xx |
+| `ACCOUNTBOOK_NETWORK` | 조회의 연결, redirect, timeout 실패 |
+| `ACCOUNTBOOK_OUTCOME_UNKNOWN` | 등록·수정·삭제 요청을 보낸 뒤의 연결 실패, HTTP 5xx, 읽을 수 없는 2xx 응답. 변경 결과 재조회 필요 |
+| `ACCOUNTBOOK_INVALID_RESPONSE` | 조회 응답의 JSON 또는 필수 구조를 확인할 수 없음 |
 | `ACCOUNTBOOK_CONFIG` | 주소, 토큰, 기본 가족 설정 오류 |
 | `ACCOUNTBOOK_INVALID_INPUT` | 도구 입력 검증 실패 |
 | `ACCOUNTBOOK_FAMILY_SELECTION`, `ACCOUNTBOOK_NO_FAMILY` | 가족 선택 필요 또는 가족 없음 |
-| `ACCOUNTBOOK_CATEGORY_SELECTION` | 거래 종류에 맞는 카테고리가 없거나 같은 종류 안에서 이름이 중복됨 |
+| `ACCOUNTBOOK_CATEGORY_SELECTION` | 거래 종류에 맞는 카테고리가 없거나, 같은 종류 안에서 이름이 중복되거나, UUID 와 이름이 서로 다른 카테고리를 가리킴 |
 | `ACCOUNTBOOK_SUMMARY_LIMIT` | 합계 조회나 화면 가져오기의 기존 기록 조회가 100페이지를 초과함 |
 | `ACCOUNTBOOK_UNKNOWN_TOOL`, `ACCOUNTBOOK_INTERNAL` | 지원하지 않는 도구 또는 내부 처리 실패 |
+
+fos-assistant 가 승인한 실행의 실패를 어떤 공통 어휘와 복구 어휘로 기록할지는 [connector.json](../plugin/connector.json) 의 `errors` 가 정한다.
+표에 없는 코드는 `unavailable` 이다. 결과를 모르는 것으로 기록하는 코드는 `ACCOUNTBOOK_OUTCOME_UNKNOWN` 하나다.

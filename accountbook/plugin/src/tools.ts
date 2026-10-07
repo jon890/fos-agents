@@ -145,6 +145,15 @@ function updateSchema(expense: boolean) {
     );
 }
 
+// A 2xx answer to a change request means it was applied; an unreadable body only hides the result.
+function written<T>(response: unknown, schema: z.ZodType<T>): T {
+  try {
+    return responseData(response, schema);
+  } catch {
+    throw new AccountbookError("ACCOUNTBOOK_OUTCOME_UNKNOWN");
+  }
+}
+
 type NamedItem = { uuid: string; name: string };
 class SelectionError extends Error {
   constructor(
@@ -221,7 +230,7 @@ export class AccountbookTools {
         return this.success(responseData(await this.client.request(target), transactionSchema));
       if (name.startsWith("delete_")) {
         const response = await this.client.request(target, "DELETE");
-        if (response !== undefined) responseData(response, z.null().optional());
+        if (response !== undefined) written(response, z.null().optional());
         return this.success({ deleted: true, familyUuid, transactionUuid: args.transactionUuid });
       }
       const body = { ...args };
@@ -241,12 +250,12 @@ export class AccountbookTools {
         if (matched.length !== 1)
           throw new SelectionError(
             "ACCOUNTBOOK_CATEGORY_SELECTION",
-            `${categoryType} 카테고리 목록에서 하나를 골라 주세요. 선택 가능한 이름: ${categories.map((item) => item.name).join(", ") || "없음"}`,
+            `${args.categoryUuid && args.categoryName ? "categoryUuid 와 categoryName 이 서로 다른 카테고리를 가리킵니다. 하나만 보내 주세요. " : ""}${categoryType} 카테고리 목록에서 하나를 골라 주세요. 선택 가능한 이름: ${categories.map((item) => item.name).join(", ") || "없음"}`,
           );
         body.categoryUuid = matched[0].uuid;
       }
       return this.success(
-        responseData(
+        written(
           await this.client.request(target, name.startsWith("create_") ? "POST" : "PUT", body),
           transactionSchema,
         ),

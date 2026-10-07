@@ -37,6 +37,8 @@ export function createServer(
   }
   // SDK 의 입력 검증은 JSON 이 아닌 글로 실패를 돌려준다. fos-assistant 는 그 글을 읽지 못해
   // 승인한 실행을 `unavailable` 로 기록했다. 검증을 도구 쪽에 맡겨 실패도 `ACCOUNTBOOK_*` 코드로 답한다.
+  // registerTool 뒤에 덮어써야 한다. McpServer 는 첫 registerTool 에서 이 핸들러를 한 번만 건다.
+  // SDK 를 올려 이 순서가 바뀌면 server.test.ts 의 입력 오류 시험이 실패한다.
   server.server.setRequestHandler(CallToolRequestSchema, (request) =>
     tools.call(request.params.name, request.params.arguments ?? {}),
   );
