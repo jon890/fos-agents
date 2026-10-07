@@ -26,7 +26,7 @@
 
 ## 점검 대화의 앞 내용
 
-- [2026-10-01 00:00 살펴보기, 결과 블록] outcome NOTHING_NEW, summary 「trend 조사: Java 가상 스레드와 JDK 릴리스」, sourceFailures 없음
+- [2026-10-01 00:00 살펴보기, 결과 블록] outcome NOTHING_NEW, summary 「Java 가상 스레드와 JDK 릴리스 동향을 확인했어요.」, sourceFailures 없음
 - [2026-10-11 00:00 살펴보기, 맥락 읽기의 답] learning-interests version 7, position-preferences version 4, application-state version 5, career-status version 9, 공부 후보 [Transactional outbox 패턴 정리, 이벤트 스키마 진화 전략]
 - [2026-10-11 00:00 살펴보기, 결과 블록] outcome NOTHING_NEW, summary 없음, sourceFailures 없음
 - [2026-10-11 09:00 사용자] 가상 스레드 동향은 이제 그만 봐도 돼요
