@@ -55,3 +55,15 @@ export function isContractRole(text: string): boolean {
 export function isIneligibleEmployment(title: string, employmentType?: string): boolean {
   return isContractRole(employmentType?.trim() || title);
 }
+
+/** 일반 개발 제목은 제목 자체 대신 실제 업무·요건을 근거로 삼는다. */
+export function isTargetPostingRole(title: string, body: string): boolean {
+  if (isNonTargetTitle(title)) return false;
+  if (isTargetRoleTitle(title)) return isTargetRole(`${title} ${body}`);
+  const genericEngineeringTitle = /^(?:server(?:\s*\(|$)|software\s+engineer\b)/i.test(
+    title.trim(),
+  );
+  if (!genericEngineeringTitle) return false;
+  if (containsKeyword(body, NON_TARGET_ROLE_KEYWORDS)) return false;
+  return isTargetRole(body);
+}
