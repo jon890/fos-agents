@@ -98,6 +98,31 @@ describe("proactive-check", () => {
     expect(text).not.toMatch(/\b(save|update)_[a-z_]+/);
   });
 
+  test("포지션 제외 판정은 코드가 하고 식별 정보를 만들지 않으며 판정 못 한 공고를 내지 않는다", () => {
+    const text = skillText();
+    for (const name of [
+      "check_position_exclusions",
+      "mcp__career__check_position_exclusions",
+      "excluded",
+      "undeterminable",
+      "clear",
+      "identity-missing",
+      "constraints-hold",
+      "identityHash",
+      "source",
+    ])
+      expect(text, name).toContain(name);
+    // 읽은 규칙을 모델이 직접 견주던 옛 판정 순서가 남아 있으면 안 된다.
+    expect(text).not.toContain("규칙의 `url` 이 공고 주소와 같다");
+    expect(text).toMatch(/주소나 제목에서 만들거나 추측하지 않는다/);
+    expect(text).toMatch(/내지 않고 그 공고 판단만 보류한다/);
+    // 위임 한도(max-delegations 3)에 맞춰 위임은 세 번까지다.
+    expect(text).toContain("셋까지");
+    const reference = readFileSync(join(skillDirectory, "references", "connector-queries.md"), "utf8");
+    for (const basis of ["identity-missing", "invalid-url", "rule-unreadable", "constraints-hold"])
+      expect(reference, basis).toContain(basis);
+  });
+
   test("결과 계약의 칸 이름과 값을 모두 적는다", () => {
     const text = skill;
     for (const name of [

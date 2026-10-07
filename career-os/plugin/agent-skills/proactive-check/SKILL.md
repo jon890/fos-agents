@@ -23,7 +23,7 @@ description: 커리어 먼저 살펴보기. 공부, 포지션, 동향 중 지금
 | 2 | 바로 침묵할지 판정 | 침묵 조건 넷이 모두 참이면 6단계로 간다 | |
 | 3 | 커리어 맥락 읽기 | 문서의 `version` 과 후보의 `status`, 또는 조회 실패가 있다 | |
 | 4 | 영역 고르기 | 고른 영역마다 맥락의 사실로 댄 이유가 있다 | |
-| 5 | 원문 확인 | 알릴 발견마다 이번에 연 원문 주소가 있다 | 포지션 제외 판정: [connector-queries.md](references/connector-queries.md) |
+| 5 | 원문 확인 | 알릴 발견마다 이번에 연 원문 주소가 있다. 포지션은 제외 판정이 `clear` 다 | 포지션 제외 판정: [connector-queries.md](references/connector-queries.md) |
 | 6 | 결과 블록 쓰기 | 답 끝에 JSON 결과 블록이 하나 있다 | 예가 필요할 때: [result-block.md](references/result-block.md) |
 
 한 번의 살펴보기는 4분과 도구 호출 40번에서 Control Plane 이 멈추고, 멈추면 답 전체가 버려진다.
@@ -92,7 +92,7 @@ session 이 바뀌어 대화에 근거가 없으면 Memory 문맥만 본다.
 
 `agent_delegate` 가 준 실행 번호를 `agent_status(wait_seconds: 20)` 로 세 번까지 기다린다.
 `SUCCEEDED` 면 `output` 을 읽고, `FAILED`, `CANCELLED`, 계속 `RUNNING` 이면 실패로 둔다.
-`CHECK_TARGET` 이면 다음 연결용 후보로 넘어간다. 위임은 맥락과 제외 기준 합쳐 둘까지만 쓴다.
+`CHECK_TARGET` 이면 다음 연결용 후보로 넘어간다. 위임은 맥락 읽기, 제외 기준 읽기, 공고 판정 합쳐 셋까지만 쓴다.
 `CHECK_LIMIT`, `AGENT_UNAVAILABLE`, `AGENT_DISABLED`, `BUSY`, `TOO_MANY_CHILDREN`, `SUBMIT_FAILED` 면 다시 맡기지 않는다.
 연결용 에이전트를 못 찾으면 조회 실패로 둔다.
 
@@ -145,11 +145,15 @@ session 이 바뀌어 대화에 근거가 없으면 Memory 문맥만 본다.
 `position` 을 골랐으면 검색 전에 제외 기준을 읽는다.
 직접 호출 경로에서는 `mcp__career__get_position_research_constraints` 를 `{}` 로 한 번 부른다.
 위임 경로에서는 같은 연결용 에이전트에 `get_position_research_constraints` 한 번만 맡기고 3단계와 같은 방법으로 기다린다.
-`readiness`, `missing`, `exclusions` 의 `scope`, `company`, `titleKeywords`, `url`, `expiresAt`, `companyPreferences` 의 `companyKey`, `companyName`, `disposition`, `tier` 만 읽는다.
+`readiness`, `missing` 과, 검색어에 넣지 않으려고 `scope` 가 `company` 인 규칙의 `company`, `disposition` 이 `exclude` 인 선호의 `companyName` 만 읽는다.
 `position` 을 고르지 않았으면 제외 기준을 조회하지 않는다.
-`ready` 면 [제외 판정](references/connector-queries.md)을 적용한다.
 `hold` 나 도구 누락·조회 실패면 포지션 발견을 내지 않고 `sourceFailures` 에 `missing.source` 또는 실패 까닭과 보류 사실을 적는다.
 다른 영역은 계속 조사할 수 있다.
+
+`ready` 여도 이 읽기만으로 공고를 판정하지 않는다.
+후보 공고를 고른 뒤 발견으로 내기 전에 [제외 판정](references/connector-queries.md)의 `check_position_exclusions` 로 판정한다.
+규칙을 읽고 직접 견주지 않는다. 규칙을 읽었다는 것과 이 공고를 판정할 수 있다는 것은 다르다.
+`excluded` 와 `undeterminable` 인 공고는 내지 않는다. `undeterminable` 이면 그 공고 판단만 보류하고, 적는 자리는 [제외 판정](references/connector-queries.md)의 까닭별 표를 따른다.
 
 - 포지션은 원문에서 지원 접수 여부, 마감일과 요구 조건을 확인하고 원문에 없는 적합 조건은 `unknowns` 에 둔다
 - 열어서 확인한 내용만 `facts` 에 적는다. 열지 못한 원문은 발견으로 내지 않고 `sourceFailures` 에 까닭을 적는다

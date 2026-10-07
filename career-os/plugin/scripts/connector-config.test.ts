@@ -36,7 +36,7 @@ test("확인 도구는 승인 없는 READ 정책이고 서버가 확인 도구�
     const verifyTool = tools.find((tool) => tool.name === connector.verify.tool);
     expect(verifyTool?.annotations?.readOnlyHint).toBe(true);
     // The research tools are read by an agent that picks its own topics, so they must never look writable.
-    for (const name of ["list_study_candidates", "get_position_research_constraints"]) {
+    for (const name of ["list_study_candidates", "get_position_research_constraints", "check_position_exclusions"]) {
       const tool = tools.find((candidate) => candidate.name === name);
       expect({ name, readOnly: tool?.annotations?.readOnlyHint, destructive: tool?.annotations?.destructiveHint }).toEqual({
         name,
@@ -94,8 +94,8 @@ test("plugin.json 과 package.json 의 version 이 같다", () => {
   expect(read(".claude-plugin/plugin.json").version).toBe(read("package.json").version);
 });
 
-test("도구는 열여덟이고 WRITE 는 저장 도구 다섯과 GitHub 갱신 도구뿐이며 모두 승인이 필요하다", () => {
-  expect(Object.keys(connector.tools)).toHaveLength(18);
+test("도구는 열아홉이고 WRITE 는 저장 도구 다섯과 GitHub 갱신 도구뿐이며 모두 승인이 필요하다", () => {
+  expect(Object.keys(connector.tools)).toHaveLength(19);
   const writes = policies.filter(([, policy]) => policy.risk === "WRITE");
   expect(writes.map(([name]) => name).sort()).toEqual([
     "save_context_document",

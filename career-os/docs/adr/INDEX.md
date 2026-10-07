@@ -56,3 +56,4 @@ ADR에는 현재 설계를 이해하는 데 필요한 기술적 선택과 기각
 | ADR-139 | [plugin 의 대화용 스킬과 Claude Code 전용 스킬을 디렉터리로 나눔](ADR-139-plugin-의-대화용-스킬과-claude-code-전용-스킬을-디렉터리로-나눈다.md) | Accepted |
 | ADR-140 | [노트북 client 는 선택적 Cloudflare Access service token 머리말을 앱 인증과 함께 보냄](ADR-140-노트북-client-는-선택적-cloudflare-access-service-token-머리말을-앱-인증과-함께-보낸다.md) | Accepted |
 | ADR-141 | [일반 에이전트가 읽는 스킬은 plugin 의 agent-skills 에 두고 따로 올림](ADR-141-일반-에이전트가-읽는-스킬은-plugin-의-agent-skills-에-두고-따로-올린다.md) | Accepted |
+| ADR-142 | [먼저 살펴보기의 공고 제외 판정은 수집기와 같은 코드가 하고 식별 불가는 보류함](ADR-142-먼저-살펴보기의-공고-제외-판정은-수집기와-같은-코드가-하고-식별-불가는-보류한다.md) | Accepted |

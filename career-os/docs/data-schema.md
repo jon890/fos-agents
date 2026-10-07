@@ -1352,6 +1352,7 @@ Hermes 에서는 서버 이름 `career` 로 `mcp__career__<도구>` 가 된다.
 | `save_study_recommendation` | `WRITE`, `required` | `candidateContextVersion`, `topics`, `rejections`, 선택 `generatedAt` | `{ reportId, generatedAt, historyVersion }` |
 | `list_study_candidates` | `READ`, `none` | 선택 `limit`, `category`, `sourceKey`, `publishedFrom`, `publishedTo`, `cursor` | `{ status, candidateContextVersion, learningInterestsVersion, historyVersion, recentStudyTopicKeys, nextCursor, hasMore, candidates }`. 관심사 문서가 없으면 `{ status: "learning_interests_missing" }` |
 | `get_position_research_constraints` | `READ`, `none` | 없음 | `{ readiness, missing, exclusions, companyPreferences }` |
+| `check_position_exclusions` | `READ`, `none` | `postings`(1개 이상 10개 이하). 칸은 `url`, `company`, `title`, 선택 `source`, `identityHash` | `{ readiness, missing, results: [{ position, url, verdict, basis? }] }` |
 
 - 후보자 맥락의 `documentKey` 는 [후보자 맥락 문서](#후보자-맥락-문서)의 네 키, 프로필 원고의 `documentKey` 는 `wanted`, `linkedin`, `github` 다
 - 저장 도구의 `body`, `note`, `expectedVersion` 은 Backend 의 문서 저장 계약과 같다. 본문 전체를 바꾸고 새 문서는 `expectedVersion: 0` 이다
@@ -1390,7 +1391,7 @@ Hermes 에서는 서버 이름 `career` 로 `mcp__career__<도구>` 가 된다.
 - `CAREER_NETWORK` 로 끝난 `save_study_recommendation` 은 오류 객체에 `reportId` 와 `generatedAt` 을 더한다
 - Backend 가 409 로 답하면 `GET /api/study/v1/recommendation-runs/{reportId}/status` 를 한 번 읽는다. 오늘 리포트가 있으면 `CAREER_STUDY_ALREADY_SAVED`, 없으면 `CAREER_STUDY_CONFLICT` 다. 뒤의 것은 후보를 읽은 뒤 기준이 바뀌었거나, 이미 추천한 주제나 자료를 골랐거나, 같은 요청이 아직 처리 중이거나, 같은 멱등 키에 다른 본문(`IDEMPOTENCY_CONFLICT`)을 보낸 경우다
 
-자율 조사용 읽기 도구의 계약이다. 둘 다 기존 GET 경로만 읽고 추천 생성, 수집, 문서 저장, 게시 경로를 부르지 않는다.
+자율 조사용 읽기 도구의 계약이다. 모두 기존 GET 경로만 읽고 추천 생성, 수집, 문서 저장, 게시 경로를 부르지 않는다.
 경험, 관심사, 역할 선호, 지원 상태는 `get_context_document` 의 네 문서를 그대로 쓴다.
 
 - `list_study_candidates` 는 `GET /api/study/v1/candidates` 한 쪽만 읽는다. 입력 칸은 Backend query 의 칸과 같다. `limit` 은 1 이상 50 이하이고 기본값은 20 이다. `publishedFrom`, `publishedTo` 는 ISO datetime, `cursor` 는 앞 결과의 `nextCursor` 다
@@ -1398,6 +1399,11 @@ Hermes 에서는 서버 이름 `career` 로 `mcp__career__<도구>` 가 된다.
 - `status` 는 `ok`, `empty`, `learning_interests_missing` 가운데 하나다. `empty` 는 조건에 맞는 미추천 후보가 수집돼 있지 않다는 뜻이고 웹에 자료가 없다는 뜻이 아니다. Backend 의 409 는 오류가 아닌 `learning_interests_missing` 이다
 - `hasMore` 는 `nextCursor` 가 있는지다. 잘못된 `cursor` 는 Backend 가 400 으로 답해 `CAREER_BAD_REQUEST` 다
 - `get_position_research_constraints` 는 `GET /api/positions/v1/exclusions` 와 `GET /api/positions/v1/company-preferences` 를 함께 읽는다. 규칙과 선호의 칸은 Backend 의 `src/positions/schema.ts` 와 같다
+- `check_position_exclusions` 는 같은 두 GET 으로 규칙을 읽고 공고마다 `verdict` 를 낸다. 판정은 수집기의 `feedback/exclusion-match.ts` 가 하며 모델이 규칙을 해석하지 않는다. 규칙의 사유와 근거 주소는 결과에 싣지 않는다
+- `verdict` 는 `excluded`, `clear`, `undeterminable` 이다. `basis` 는 `excluded` 일 때 `identity`, `url`, `company`, `company-role`, `company-preference` 이고 `undeterminable` 일 때 `identity-missing`, `invalid-url`, `rule-unreadable`, `constraints-hold` 다. `clear` 는 이 공고에 적용되는 규칙을 모두 비교했고 걸린 것이 없다는 뜻이다. 단 `source` 를 모르는 공고는 식별자와 URL 을 함께 가진 규칙을 정규화 URL 로만 비교한다. 회사 비교는 `companyKey` 와 같은 정규화(공백 연속과 대소문자)를 쓴다
+- `source` 는 수집기 어댑터의 이름(`SOURCE_IDS`)만 받고 `identityHash` 는 `source` 와 함께만 받는다. 두 값은 커넥터나 후보 목록이 준 것만 넘기며 도구가 주소에서 만들지 않는다. 식별자만으로 비교하는 규칙(URL 이 없는 공고 제외)이 있는데 공고의 식별자가 없으면 `undeterminable` 이고 추천하지 않는다
+- `source` 를 모르는 공고는 정규화 URL 이 같은 규칙에 걸리고, 알면 `source` 와 정규화 URL 이 모두 같은 규칙에 걸린다. 정규화는 수집기의 `normalizePostingUrl` 이다(fragment, `utm_*`, `fbclid`, `gclid`, query 순서, 끝 슬래시)
+- 제외 규칙과 회사별 선호 중 하나라도 읽지 못했으면 모든 공고가 `undeterminable`(`constraints-hold`) 이고 `readiness` 는 `hold` 다
 - 만료된 제외 규칙은 Backend 가 Asia/Seoul 날짜로 이미 뺀다. `expiresAt` 이 없는 규칙은 만료되지 않는다
 - 둘 다 읽으면 `readiness: "ready"` 다. 하나라도 읽지 못하면 오류가 아닌 `readiness: "hold"` 이고, 읽지 못한 쪽은 `null`, `missing` 에 `{ source, code }` 를 싣는다. 고정 문구는 저장과 문서를 기준으로 쓴 것이라 싣지 않는다. `hold` 이면 조사는 이어 가도 포지션 추천은 확정하지 않는다
 - 어느 쪽이든 token 이 거절되면 `hold` 가 아니라 `CAREER_UNAUTHORIZED` 오류다. 연결 화면에서만 고칠 수 있기 때문이다
