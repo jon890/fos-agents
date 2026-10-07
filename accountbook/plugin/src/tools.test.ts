@@ -167,6 +167,33 @@ describe("MCP 가계부 도구", () => {
     }
   });
 
+  test("카테고리 UUID와 이름을 함께 받으면 같은 카테고리일 때만 쓴다", async () => {
+    for (const action of ["create", "update"]) {
+      const base = {
+        amount: 100,
+        date: "2026-09-30T12:00:00",
+        ...(action === "update" ? { transactionUuid: RECORD, confirmed: true } : {}),
+      };
+      const { tools, requests } = setup(undefined, FAMILY);
+      const response = await tools.call(`${action}_expense`, {
+        ...base,
+        categoryUuid: CATEGORY,
+        categoryName: "예시 분류",
+      });
+      expect(response).not.toHaveProperty("isError");
+      expect(requests.at(-1)?.body?.categoryUuid).toBe(CATEGORY);
+
+      const mismatch = setup(undefined, FAMILY);
+      const rejected = await mismatch.tools.call(`${action}_expense`, {
+        ...base,
+        categoryUuid: CATEGORY,
+        categoryName: "지출 전용",
+      });
+      expect(result(rejected).error.code).toBe("ACCOUNTBOOK_CATEGORY_SELECTION");
+      expect(mismatch.requests.every((request) => request.method === "GET")).toBe(true);
+    }
+  });
+
   test("가족이 없거나 여럿이면 자동 변경하지 않고 선택 오류를 반환한다", async () => {
     for (const families of [
       [],
@@ -241,7 +268,6 @@ describe("MCP 가계부 도구", () => {
       { date: "2026-02-30T12:00:00" },
       { date: "2026-09-30T24:00:00" },
       { familyUuid: "../other" },
-      { categoryUuid: CATEGORY },
     ]) {
       expect(
         result(

@@ -129,7 +129,7 @@ function createSchema(expense: boolean) {
       date,
       ...(expense ? { excludeFromBudget: z.boolean().optional() } : {}),
     })
-    .refine((v) => Boolean(v.categoryUuid) !== Boolean(v.categoryName));
+    .refine((v) => Boolean(v.categoryUuid || v.categoryName));
 }
 
 function updateSchema(expense: boolean) {
@@ -140,7 +140,6 @@ function updateSchema(expense: boolean) {
       confirmed: z.literal(true),
       ...(expense ? { excludeFromBudget: z.boolean().optional() } : {}),
     })
-    .refine((v) => !(v.categoryUuid && v.categoryName))
     .refine((v) =>
       Object.keys(v).some((key) => !["familyUuid", "transactionUuid", "confirmed"].includes(key)),
     );
@@ -233,8 +232,11 @@ export class AccountbookTools {
         const categories = (await this.categories(root)).filter(
           (item) => item.type === categoryType,
         );
-        const matched = categories.filter((item) =>
-          args.categoryUuid ? item.uuid === args.categoryUuid : item.name === args.categoryName,
+        // 모델은 조회한 카테고리의 UUID 와 이름을 함께 보내곤 한다. 둘이 같은 카테고리를 가리킬 때만 받는다.
+        const matched = categories.filter(
+          (item) =>
+            (!args.categoryUuid || item.uuid === args.categoryUuid) &&
+            (!args.categoryName || item.name === args.categoryName),
         );
         if (matched.length !== 1)
           throw new SelectionError(
