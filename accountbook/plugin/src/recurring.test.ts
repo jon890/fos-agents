@@ -94,6 +94,7 @@ describe("반복지출 도구", () => {
     expect(requests.at(-1)?.url).toBe(`${BASE}/families/${FAMILY}/recurring-expenses/${RECURRING}`);
     expect(requests.at(-1)?.body).toEqual({ name: "새 이름", amount: 2000, categoryUuid: CATEGORY });
     expect(response).toMatchObject({ uuid: RECURRING, name: "새 이름", amount: 2000 });
+    expect(requests.filter((request) => request.url.endsWith("/categories"))).toHaveLength(1);
   });
 
   test("수입 카테고리는 반복지출에 쓰지 않는다", async () => {

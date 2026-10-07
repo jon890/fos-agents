@@ -291,8 +291,15 @@ export class AccountbookTools {
     }
   }
 
-  private async category(root: string, categoryType: "EXPENSE" | "INCOME", args: Record<string, unknown>) {
-    const categories = (await this.categories(root)).filter((item) => item.type === categoryType);
+  private async category(
+    root: string,
+    categoryType: "EXPENSE" | "INCOME",
+    args: Record<string, unknown>,
+    loaded?: Awaited<ReturnType<AccountbookTools["categories"]>>,
+  ) {
+    const categories = (loaded ?? (await this.categories(root))).filter(
+      (item) => item.type === categoryType,
+    );
     const matched = categories.filter((item) =>
       args.categoryUuid ? item.uuid === args.categoryUuid : item.name === args.categoryName,
     );
@@ -316,7 +323,8 @@ export class AccountbookTools {
       categoryName: item.categoryUuid ? (names.get(item.categoryUuid) ?? null) : null,
       generatedThisMonth: item.generatedThisMonth,
     });
-    const names = new Map((await this.categories(root)).map((item) => [item.uuid, item.name]));
+    const categories = await this.categories(root);
+    const names = new Map(categories.map((item) => [item.uuid, item.name]));
     if (name === "list_recurring_expenses") {
       const query = args.month ? `?${new URLSearchParams({ month: String(args.month) })}` : "";
       const data = responseData(
@@ -328,7 +336,7 @@ export class AccountbookTools {
     const body: Record<string, unknown> = {};
     for (const key of ["name", "amount", "dayOfMonth"]) if (args[key] !== undefined) body[key] = args[key];
     if (args.categoryName || args.categoryUuid)
-      body.categoryUuid = await this.category(root, "EXPENSE", args);
+      body.categoryUuid = await this.category(root, "EXPENSE", args, categories);
     const updated = responseData(
       await this.client.request(`${collection}/${args.recurringExpenseUuid}`, "PUT", body),
       recurringItemSchema,
