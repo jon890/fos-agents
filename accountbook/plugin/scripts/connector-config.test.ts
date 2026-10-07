@@ -88,10 +88,43 @@ test("options.tool 과 verify.tool 은 readOnlyHint 가 true 인 도구다", () 
   for (const tool of tools) expect(registered[tool]?.annotations?.readOnlyHint).toBe(true);
 });
 
-test("errors 표의 값은 공통 어휘만 쓴다", () => {
+test("errors 표의 값은 공통 어휘와 복구 계약만 쓴다", () => {
   const vocabulary = ["credential_rejected", "forbidden", "invalid_input", "unavailable"];
-  for (const value of Object.values(connector.errors) as string[])
-    expect(vocabulary).toContain(value);
+  const recovery = ["recheck", "reconnect", "fix_input", "retry_later"];
+  for (const value of Object.values(connector.errors) as Array<
+    string | { category: string; recovery?: string }
+  >) {
+    if (typeof value === "string") {
+      expect([...vocabulary, "outcome_unknown"]).toContain(value);
+      continue;
+    }
+    expect(vocabulary).toContain(value.category);
+    if (value.recovery !== undefined) expect(recovery).toContain(value.recovery);
+  }
+});
+
+test("승인한 실행의 입력 오류는 unavailable 로 묻히지 않는다", () => {
+  // 표에 없는 코드는 fos-assistant 가 unavailable 로 기록한다. 인자를 고치면 되는 오류는 표에 둔다.
+  for (const code of [
+    "ACCOUNTBOOK_INVALID_INPUT",
+    "ACCOUNTBOOK_CATEGORY_SELECTION",
+    "ACCOUNTBOOK_FAMILY_SELECTION",
+    "ACCOUNTBOOK_NOT_FOUND",
+  ])
+    expect(connector.errors[code]).toMatchObject({ category: "invalid_input" });
+  // 쓰기를 보낸 뒤 응답을 읽지 못한 것은 실패가 아니라 결과를 모르는 것이다.
+  for (const code of ["ACCOUNTBOOK_NETWORK", "ACCOUNTBOOK_INVALID_RESPONSE"])
+    expect(connector.errors[code]).toBe("outcome_unknown");
+});
+
+test("모든 도구는 승인 카드에 보일 한국어 제목을 가진다", () => {
+  for (const [name, policy] of Object.entries(connector.tools) as Array<
+    [string, { title?: string }]
+  >) {
+    expect(typeof policy.title, name).toBe("string");
+    expect(policy.title!.length).toBeGreaterThan(0);
+    expect(policy.title!.length).toBeLessThanOrEqual(80);
+  }
 });
 
 test("사진을 받는 커넥터는 이미지를 보는 도구 묶음만 요청한다", () => {
