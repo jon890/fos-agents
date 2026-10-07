@@ -109,6 +109,35 @@ test("MCP 프로토콜로 도구를 탐색하고 조회하며 미확인 삭제�
   }
 });
 
+test("MCP 입력 검증 실패도 도구 오류 코드가 담긴 JSON으로 답한다", async () => {
+  let calls = 0;
+  const server = createServer(env, async () => {
+    calls++;
+    return new Response(JSON.stringify({ data: [] }));
+  });
+  const client = new Client({ name: "invalid-input-test", version: "1.0.0" });
+  const [ct, st] = InMemoryTransport.createLinkedPair();
+  try {
+    await server.connect(st);
+    await client.connect(ct);
+    for (const [name, args] of [
+      ["update_expense", { transactionUuid: "33333333-3333-4333-8333-333333333333", confirmed: true }],
+      ["update_expense", { transactionUuid: "x", amount: "100", confirmed: true }],
+      ["create_expense", { amount: 100, date: "2026-09-30T12:00:00", categoryName: "예시", extra: 1 }],
+      ["unknown_tool", {}],
+    ] as const) {
+      const result = await client.callTool({ name, arguments: args });
+      expect(result.isError).toBe(true);
+      const payload = JSON.parse((result.content as Array<{ text: string }>)[0]!.text);
+      expect(payload.error.code).toMatch(/^ACCOUNTBOOK_(INVALID_INPUT|UNKNOWN_TOOL)$/);
+    }
+    expect(calls).toBe(0);
+  } finally {
+    await client.close();
+    await server.close();
+  }
+});
+
 test("plugin 실행 파일만 복사해도 의존성 설치 없이 stdio로 시작한다", async () => {
   const root = mkdtempSync(join(tmpdir(), "accountbook-standalone-"));
   const client = new Client({ name: "bundle-test", version: "1.0.0" });
