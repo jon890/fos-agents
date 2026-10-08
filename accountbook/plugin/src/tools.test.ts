@@ -102,6 +102,7 @@ describe("MCP 가계부 도구", () => {
       "list_expenses",
       "get_expense",
       "update_expense",
+      "delete_expense",
     ]) {
       for (const data of [
         undefined,
@@ -123,7 +124,14 @@ describe("MCP 가계부 도구", () => {
             : name === "update_expense"
               ? { transactionUuid: RECORD, confirmed: true, amount: 200 }
               : name === "delete_expense"
-                ? { transactionUuid: RECORD, confirmed: true }
+                ? {
+                    transactionUuid: RECORD,
+                    confirmed: true,
+                    date: "2026-09-30T12:00:00",
+                    amount: 100,
+                    description: "예시 기록",
+                    categoryName: "예시 분류",
+                  }
                 : {};
         // 변경 요청이 2xx 로 끝났는데 본문을 읽지 못하면 실패가 아니라 결과를 모르는 것이다.
         expect(result(await tools.call(name, args)).error.code).toBe(
