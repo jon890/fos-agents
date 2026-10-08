@@ -51,16 +51,6 @@
       "approval": "none",
       "title": "수입 목록 조회"
     },
-    "summarize_expenses": {
-      "risk": "READ",
-      "approval": "none",
-      "title": "기간 지출 합계 조회"
-    },
-    "summarize_incomes": {
-      "risk": "READ",
-      "approval": "none",
-      "title": "기간 수입 합계 조회"
-    },
     "get_expense": {
       "risk": "READ",
       "approval": "none",
@@ -189,6 +179,12 @@
     "ACCOUNTBOOK_IMPORT_IN_PROGRESS": {
       "category": "unavailable",
       "recovery": "recheck"
+    },
+    "ACCOUNTBOOK_OUTPUT_UNAVAILABLE": "unavailable",
+    "ACCOUNTBOOK_OUTPUT_LIMIT": {
+      "category": "invalid_input",
+      "recovery": "fix_input"
     }
-  }
+  },
+  "owner_output_env": "ACCOUNTBOOK_OUTPUT_DIR"
 }

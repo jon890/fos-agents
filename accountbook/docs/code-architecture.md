@@ -25,7 +25,8 @@ accountbook/
 | `plugin/` | `fos-accountbook` Claude Code plugin 배포 단위. 버전 0.2.0 |
 | `plugin/connector.json` | fos-assistant 연결 화면이 읽는 입력 칸, 확인 도구, 오류 대응과 도구별 호출 정책 |
 | `plugin/src/client.ts` | Bearer HTTP client와 응답 스키마 |
-| `plugin/src/tools.ts` | MCP 도구 16개의 스키마, 가족 선택, 카테고리 이름 해석과 기간 전체 합계 |
+| `plugin/src/tools.ts` | MCP 도구 16개의 스키마, 가족 선택, 카테고리 이름 해석과 기간 전체 목록 검증 |
+| `plugin/src/output-file.ts` | 검증한 목록의 JSONL 배타 생성과 24시간 지난 자기 파일 삭제 |
 | `plugin/src/screenshot-contracts.ts` | 화면 추출 입력 스키마 |
 | `plugin/src/screenshot-validation.ts` | 일별 합계 계산과 후보 식별자 생성 |
 | `plugin/src/screenshot-tools.ts` | 화면 가져오기 미리보기, 기존 기록 대조와 순차 등록 |
@@ -52,7 +53,8 @@ MCP 도구는 다음 책임을 가진다.
 - 같은 내용의 등록 요청이 겹치면 프로세스 안의 진행 중 표시로 하나만 진행한다.
 
 에이전트의 추출 결과가 상태 변경에 쓰이기 전에 결정적 검증을 거치므로 루트 [ADR-021](../../docs/adr/ADR-021-deterministic-agent-boundary.md)을 따른다.
-MCP 서버는 파일을 읽거나 쓰지 않는다([ADR-005](adr/ADR-005-screenshot-import-as-mcp-tools.md)).
+화면 가져오기는 파일 상태를 두지 않는다([ADR-005](adr/ADR-005-screenshot-import-as-mcp-tools.md)).
+목록 파일 출력과 코드 실행 계산은 [ADR-006](adr/ADR-006-list-output-file.md)을 따른다.
 진행 중 표시는 메모리에만 있고 프로세스가 끝나면 사라진다.
 
 ## 외부 의존
@@ -70,7 +72,7 @@ MCP 도구는 특정 에이전트 명령줄 도구와 메시지 채널에 의존
 fos-assistant는 `accountbook/plugin/`을 복사하거나 마운트해 manifest, `connector.json`, `skills/`와 `.mcp.json`을 읽는다.
 `connector.json`은 `schema: 2`로 MCP 도구별 호출 정책을 선언한다.
 `tools`는 원래 MCP 도구 이름별 `risk`와 `approval`을 정한다.
-조회·합계·미리보기는 `READ/none`, 등록·수정은 `WRITE/required`, 삭제는 `WRITE/required`와 `grant: false`다.
+조회·미리보기는 `READ/none`, 등록·수정은 `WRITE/required`, 삭제는 `WRITE/required`와 `grant: false`다.
 등록·수정·삭제는 호출하면 승인 요청이 만들어지고 사용자가 승인 카드에서 승인한 것만 실행된다.
 삭제는 상시 허락 없이 한 건씩 매번 승인받는다. 승인 카드의 인자는 재조회한 날짜·금액·내용·카테고리를 포함한다.
 `identifiers`는 날짜·금액·내용·카테고리를 승인 카드에 표시하며 `grant: false`는 상시 허락을 막는다.
@@ -88,16 +90,17 @@ schema 1만 받는 기존 대시보드는 schema 2 manifest를 거절하므로 �
 
 사용자별 profile에 MCP 서버 이름 `accountbook`을 설치하고 `${CLAUDE_PLUGIN_ROOT}`를 배포한 plugin의 절대 경로로 치환한다.
 실행 명령은 `bun <plugin-root>/dist/accountbook-mcp.js`다.
-가계부 전용 에이전트에는 셸과 파일 쓰기 도구를 추가하지 않는다.
+가계부 통계에는 결과 파일을 읽어 계산하는 `execute_code`가 필요하다.
+코드 실행 도구가 없는 환경에서는 통계 계산을 제공하지 않는다.
 화면 가져오기를 쓰려면 실행 환경이 그 에이전트에 사진을 전달하고 이미지를 보는 도구를 열어야 한다.
 `connector.json`의 `toolsets: ["vision"]`과 `attachments: true`가 그 요청이다.
 서버는 profile의 환경 변수만 읽으며 `.env` 파일을 탐색하지 않는다.
 필수 환경 변수와 선택 변수의 의미는 [데이터 계약](data-schema.md#환경-변수)을 따른다.
 `.mcp.json`은 Claude Code 형식에 따라 `mcpServers` 객체 아래에 `accountbook` 서버를 둔다.
 `.mcp.json`에는 변수 참조만 두고 토큰과 공인 주소의 실제 값을 넣지 않는다.
-`.mcp.json`의 서버 env는 `connector.json`의 `fields[].env`와 `operator_env`의 합과 같아야 한다.
+`.mcp.json`의 서버 env는 `connector.json`의 `fields[].env`, `operator_env`, `owner_output_env`의 합과 같아야 한다.
 fos-assistant는 설치할 때 `skills/` 아래 `SKILL.md`의 본문을 가계부 전용 에이전트의 지침으로 쓴다.
-스킬 도구는 열지 않으므로 `SKILL.md` 밖의 참조 파일은 에이전트에 전달되지 않는다. 에이전트가 따라야 할 규칙은 본문에 둔다.
+바인딩 설치는 스킬과 `references/`를 함께 복사한다. 스킬 도구가 없는 옛 설치는 본문만 전달하므로 계산 원칙은 본문에도 둔다.
 앞머리를 뺀 본문은 8,000자를 넘지 않아야 하고 `skills/` 아래에 심볼릭 링크를 두지 않는다. 어기면 커넥터가 카탈로그에서 빠진다.
 MCP 도구 목록이 바뀐 판을 배포하면 실행 환경이 MCP 서버를 다시 띄워야 새 도구가 보인다. 스킬 본문만 바뀐 판은 연결 확인으로 반영한다.
 실행 파일에 의존성이 포함돼 있으므로 설치한 환경에서 `bun install`을 실행하지 않는다.

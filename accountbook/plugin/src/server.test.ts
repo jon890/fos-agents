@@ -97,7 +97,9 @@ test("MCP 프로토콜로 도구를 탐색하고 조회하며 미확인 삭제�
     await server.connect(serverTransport);
     await client.connect(clientTransport);
     const listed = await client.listTools();
-    expect(listed.tools).toHaveLength(18);
+    expect(listed.tools).toHaveLength(16);
+    expect(listed.tools.map((tool) => tool.name)).not.toContain("summarize_expenses");
+    expect(listed.tools.map((tool) => tool.name)).not.toContain("summarize_incomes");
     expect(listed.tools.map((tool) => tool.name)).toContain("delete_expense");
     expect(listed.tools.map((tool) => tool.name)).toContain("delete_income");
     const response = await client.callTool({ name: "list_expenses", arguments: { limit: 3 } });
@@ -174,7 +176,7 @@ test("plugin 실행 파일만 복사해도 의존성 설치 없이 stdio로 시�
   });
   try {
     await client.connect(transport);
-    expect((await client.listTools()).tools).toHaveLength(18);
+    expect((await client.listTools()).tools).toHaveLength(16);
     expect(stderr).toBe("");
   } finally {
     await client.close();

@@ -32,8 +32,6 @@ test("조회와 미리보기는 READ, 등록과 수정은 승인이 필요한 WR
     "list_categories",
     "list_expenses",
     "list_incomes",
-    "summarize_expenses",
-    "summarize_incomes",
     "get_expense",
     "get_income",
     "preview_screenshot_import",
@@ -95,10 +93,11 @@ test("삭제 스킬은 재조회·한 건씩 승인·반복지출 경고를 안�
   expect(skill).not.toContain("삭제는 지원하지 않는다");
 });
 
-test("connector.json 의 .mcp.json 서버 env 는 fields[].env 와 operator_env 의 합과 같다", () => {
+test("서버 env 는 입력 칸과 운영자 설정, 사용자별 출력 디렉터리의 합과 같다", () => {
   const expected = [
     ...connector.fields.map((f: { env: string }) => f.env),
     ...connector.operator_env,
+    connector.owner_output_env,
   ].sort();
   const server = mcp.mcpServers.accountbook.env;
   expect(Object.keys(server).sort()).toEqual(expected);
