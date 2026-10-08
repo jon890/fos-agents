@@ -1,7 +1,7 @@
 # ji-yoon-blog 실행 흐름
 
 사진에서 네이버 임시저장까지 가는 흐름을 소유한다.
-문체와 카테고리 판단은 `references/`가, 객체 계약은 [`data-schema.md`](data-schema.md)가 소유한다.
+문체와 카테고리 판단은 스킬 `ji-yoon-blog-style` 의 `references/`가, 객체 계약은 [`data-schema.md`](data-schema.md)가 소유한다.
 
 ## 왜 이 경로인가
 
@@ -23,7 +23,7 @@ S3 API는 홈서버 loopback 주소에만 열려 있다.
 assistant 대화에 사진을 직접 첨부한 경우에는 S3 폴더를 만들지 않는다.
 Hermes 입력에 적힌 사진 파일만 보고 장소별로 나눈 뒤 초안 폴더에 복사한다.
 사진 번호는 입력의 `N번째 사진` 오름차순으로 붙여 지융이 보낸 순서를 지킨다.
-그 절차는 스킬의 `references/assistant-chat-photos.md`가 소유한다.
+그 절차는 fos-assistant 커넥터 `naver-blog` 스킬로 옮겼다. `stage_chat_photos.py` 는 정리 단계까지 남는다.
 
 아이폰 업로드에 별도 서비스를 만들지 않는다.
 Admin UI의 파일 화면에 여러 장 동시 업로드와 폴더 생성이 이미 있다.
