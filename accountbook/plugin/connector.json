@@ -44,7 +44,9 @@
     "delete_expense": { "risk": "DESTRUCTIVE", "approval": "always", "title": "지출 기록 삭제" },
     "delete_income": { "risk": "DESTRUCTIVE", "approval": "always", "title": "수입 기록 삭제" },
     "preview_screenshot_import": { "risk": "READ", "approval": "none", "title": "토스 화면 등록 미리보기" },
-    "submit_screenshot_import": { "risk": "WRITE", "approval": "required", "title": "토스 화면 거래 등록" }
+    "submit_screenshot_import": { "risk": "WRITE", "approval": "required", "title": "토스 화면 거래 등록" },
+    "list_recurring_expenses": { "risk": "READ", "approval": "none", "title": "반복지출 목록 조회" },
+    "update_recurring_expense": { "risk": "WRITE", "approval": "required", "title": "반복지출 설정 수정" }
   },
   "default_tool_policy": "deny",
   "toolsets": ["vision"],

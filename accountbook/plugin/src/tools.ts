@@ -32,6 +32,7 @@ const amount = z
   .positive()
   .max(9_999_999_999.99)
   .refine((value) => Math.abs(value * 100 - Math.round(value * 100)) < 0.0001);
+const month = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 const familyShape = { familyUuid: uuid.optional() };
 const recordShape = { ...familyShape, transactionUuid: uuid };
 const fields = {
@@ -87,8 +88,46 @@ export const toolDefinitions = {
     description: "사용자가 대상 기록을 확인한 뒤 수입 삭제",
     schema: z.strictObject({ ...recordShape, confirmed: z.literal(true) }),
   },
+  list_recurring_expenses: {
+    description:
+      "반복지출(고정지출) 설정 목록과 해당 월 생성 여부. month 는 YYYY-MM 이며 생략하면 이번 달",
+    schema: z.strictObject({ ...familyShape, month: month.optional() }),
+  },
+  update_recurring_expense: {
+    description:
+      "사용자가 현재 설정과 변경 내용을 확인한 뒤 반복지출 설정 수정. 다음 생성분부터 반영되고 이미 생성된 그 달 지출은 바뀌지 않는다",
+    schema: z
+      .strictObject({
+        ...familyShape,
+        recurringExpenseUuid: uuid,
+        name: z.string().trim().min(1).max(100).optional(),
+        amount: amount.optional(),
+        dayOfMonth: z.number().int().min(1).max(28).optional(),
+        categoryUuid: fields.categoryUuid,
+        categoryName: fields.categoryName,
+        confirmed: z.literal(true),
+      })
+      .refine((v) =>
+        ["name", "amount", "dayOfMonth", "categoryUuid", "categoryName"].some(
+          (key) => v[key as keyof typeof v] !== undefined,
+        ),
+      ),
+  },
   ...screenshotToolDefinitions,
 };
+
+const recurringItemSchema = z
+  .object({
+    uuid,
+    name: z.string(),
+    amount: z
+      .union([z.number().finite(), z.string().regex(/^\d+(?:\.\d{1,2})?$/)])
+      .refine((value) => Number(value) > 0),
+    dayOfMonth: z.number().int().min(1).max(31),
+    categoryUuid: z.string().min(1).nullable(),
+    generatedThisMonth: z.boolean(),
+  })
+  .passthrough();
 
 function summarySchema() {
   return z
@@ -221,6 +260,8 @@ export class AccountbookTools {
             this.now(),
           ),
         );
+      if (name.endsWith("_recurring_expenses") || name.endsWith("_recurring_expense"))
+        return this.success(await this.recurring(root, name, args));
       const expense = name.endsWith("expense") || name.endsWith("expenses");
       const collection = `${root}/${expense ? "expenses" : "incomes"}`;
       if (name.startsWith("summarize_"))
@@ -244,24 +285,8 @@ export class AccountbookTools {
       const body = { ...args };
       for (const key of ["familyUuid", "transactionUuid", "confirmed", "categoryName"])
         delete body[key];
-      if (args.categoryName || args.categoryUuid) {
-        const categoryType = expense ? "EXPENSE" : "INCOME";
-        const categories = (await this.categories(root)).filter(
-          (item) => item.type === categoryType,
-        );
-        // 모델은 조회한 카테고리의 UUID 와 이름을 함께 보내곤 한다. 둘이 같은 카테고리를 가리킬 때만 받는다.
-        const matched = categories.filter(
-          (item) =>
-            (!args.categoryUuid || item.uuid === args.categoryUuid) &&
-            (!args.categoryName || item.name === args.categoryName),
-        );
-        if (matched.length !== 1)
-          throw new SelectionError(
-            "ACCOUNTBOOK_CATEGORY_SELECTION",
-            `${conflict(categories, args) ? "categoryUuid 와 categoryName 이 서로 다른 카테고리를 가리킵니다. 하나만 보내 주세요. " : ""}${categoryType} 카테고리 목록에서 하나를 골라 주세요. 선택 가능한 이름: ${categories.map((item) => item.name).join(", ") || "없음"}`,
-          );
-        body.categoryUuid = matched[0].uuid;
-      }
+      if (args.categoryName || args.categoryUuid)
+        body.categoryUuid = await this.category(root, expense ? "EXPENSE" : "INCOME", args);
       return this.success(
         written(
           await this.client.request(target, name.startsWith("create_") ? "POST" : "PUT", body),
@@ -279,6 +304,62 @@ export class AccountbookTools {
         content: [{ type: "text" as const, text: JSON.stringify({ error: details, ...extra }) }],
       };
     }
+  }
+
+  private async category(
+    root: string,
+    categoryType: "EXPENSE" | "INCOME",
+    args: Record<string, unknown>,
+    loaded?: Awaited<ReturnType<AccountbookTools["categories"]>>,
+  ) {
+    const categories = (loaded ?? (await this.categories(root))).filter(
+      (item) => item.type === categoryType,
+    );
+    // 모델은 조회한 카테고리의 UUID 와 이름을 함께 보내곤 한다. 둘이 같은 카테고리를 가리킬 때만 받는다.
+    const matched = categories.filter(
+      (item) =>
+        (!args.categoryUuid || item.uuid === args.categoryUuid) &&
+        (!args.categoryName || item.name === args.categoryName),
+    );
+    if (matched.length !== 1)
+      throw new SelectionError(
+        "ACCOUNTBOOK_CATEGORY_SELECTION",
+        `${conflict(categories, args) ? "categoryUuid 와 categoryName 이 서로 다른 카테고리를 가리킵니다. 하나만 보내 주세요. " : ""}${categoryType} 카테고리 목록에서 하나를 골라 주세요. 선택 가능한 이름: ${categories.map((item) => item.name).join(", ") || "없음"}`,
+      );
+    return matched[0].uuid;
+  }
+
+  // 반복지출 설정은 지출 기록과 다른 자원이다. 사용자 식별자는 이름과 이어지지 않아 내보내지 않는다.
+  private async recurring(root: string, name: string, args: Record<string, unknown>) {
+    const collection = `${root}/recurring-expenses`;
+    const view = (item: z.infer<typeof recurringItemSchema>, names: Map<string, string>) => ({
+      uuid: item.uuid,
+      name: item.name,
+      amount: item.amount,
+      dayOfMonth: item.dayOfMonth,
+      categoryUuid: item.categoryUuid,
+      categoryName: item.categoryUuid ? (names.get(item.categoryUuid) ?? null) : null,
+      generatedThisMonth: item.generatedThisMonth,
+    });
+    const categories = await this.categories(root);
+    const names = new Map(categories.map((item) => [item.uuid, item.name]));
+    if (name === "list_recurring_expenses") {
+      const query = args.month ? `?${new URLSearchParams({ month: String(args.month) })}` : "";
+      const data = responseData(
+        await this.client.request(`${collection}${query}`),
+        z.object({ items: z.array(recurringItemSchema) }).passthrough(),
+      );
+      return { month: args.month ?? null, items: data.items.map((item) => view(item, names)) };
+    }
+    const body: Record<string, unknown> = {};
+    for (const key of ["name", "amount", "dayOfMonth"]) if (args[key] !== undefined) body[key] = args[key];
+    if (args.categoryName || args.categoryUuid)
+      body.categoryUuid = await this.category(root, "EXPENSE", args, categories);
+    const updated = responseData(
+      await this.client.request(`${collection}/${args.recurringExpenseUuid}`, "PUT", body),
+      recurringItemSchema,
+    );
+    return view(updated, names);
   }
 
   private success(value: unknown) {

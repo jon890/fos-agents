@@ -136,7 +136,7 @@ MCP 서버는 profile마다 별도 프로세스와 환경 변수로 실행하며
 도구 이름은 `list_families`, `list_categories`, `list_expenses`, `list_incomes`,
 `summarize_expenses`, `summarize_incomes`,
 `get_expense`, `get_income`, `create_expense`, `create_income`, `update_expense`, `update_income`, `delete_expense`, `delete_income`,
-`preview_screenshot_import`, `submit_screenshot_import`다.
+`preview_screenshot_import`, `submit_screenshot_import`, `list_recurring_expenses`, `update_recurring_expense`다.
 Hermes에서는 서버 이름 `accountbook`을 사용해 `mcp__accountbook__<도구>`로 노출한다.
 `list_`, `get_`, `summarize_`, `preview_`로 시작하는 도구는 읽기 전용으로 표시한다. 기록을 바꾸는 도구는 `create_`, `update_`, `delete_`, `submit_`이다.
 
@@ -157,10 +157,18 @@ Hermes에서는 서버 이름 `accountbook`을 사용해 `mcp__accountbook__<도
   수입과 지출이 섞인 화면에서는 거래별 `categoryName`을 지정한다.
 - `description`은 최대 1000자이며, 지출만 `excludeFromBudget`을 받는다.
 - 수정은 바꿀 필드만 받는다. 카테고리 UUID와 이름은 등록과 같은 규칙으로 받는다.
-  반복지출에서 생성된 지출을 수정하면 그 기록 하나만 바뀌고 반복지출 설정은 그대로다. 커넥터는 반복지출 설정을 다루지 않는다.
+  반복지출에서 생성된 지출을 수정하면 그 기록 하나만 바뀌고 반복지출 설정은 그대로다. 설정은 아래 `update_recurring_expense` 로 고친다.
   MCP 입력 스키마에서 수정과 삭제는 `confirmed: true`가 필수다.
   스킬은 사용자 확인 뒤 수정 도구에 이 값을 전달하며, 사용자가 승인 카드에서 승인해야 실행된다.
   삭제 도구는 호출하지 않고 가계부 앱에서 직접 지우도록 안내한다.
+- 반복지출 설정은 지출 기록과 다른 자원이다.
+  `list_recurring_expenses`는 선택 입력 `month`(`YYYY-MM`, 생략하면 이번 달)를 받아
+  `{ month, items }`를 반환한다. `month`를 생략하면 응답의 `month`는 `null`이고, 가계부 서버가 정한 이번 달이 `generatedThisMonth`의 기준이다. 각 항목은 `uuid`, `name`, `amount`, `dayOfMonth`, `categoryUuid`, `categoryName`, `generatedThisMonth`다.
+  사용자 식별자는 이름과 이어지지 않으므로 내보내지 않는다.
+  지출 기록의 `recurringExpenseUuid`는 그 기록을 생성한 반복지출의 `uuid`다. 직접 등록한 지출은 `null`이다.
+  `update_recurring_expense`는 `recurringExpenseUuid`와 `confirmed: true`, 바꿀 칸(`name` 100자 이하, `amount`, `dayOfMonth` 1부터 28까지, 지출 카테고리 UUID 또는 이름)을 받는다.
+  수정은 다음 생성분부터 반영되고 이미 생성된 그 달 지출은 바뀌지 않는다. 그 달 기록은 `update_expense`로 따로 고친다.
+  연동 토큰이 반복지출 경로를 허용받기 전에는 `ACCOUNTBOOK_FORBIDDEN`이다. 반복지출 등록과 삭제 도구는 없다.
 - 가족 목록은 `{ families, defaultFamilyUuid }`, 카테고리는 `{ uuid, name, type }[]`를 반환한다.
   카테고리의 `type`은 `EXPENSE` 또는 `INCOME`이며 API 응답에 반드시 있어야 한다.
   가족별 기본 카테고리는 지출 「미분류」와 수입 「기타 수입」이다.

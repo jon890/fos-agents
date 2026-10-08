@@ -37,6 +37,7 @@ test("조회와 미리보기는 READ, 등록과 수정은 승인이 필요한 WR
     "get_expense",
     "get_income",
     "preview_screenshot_import",
+    "list_recurring_expenses",
   ];
   const writeTools = [
     "create_expense",
@@ -44,6 +45,7 @@ test("조회와 미리보기는 READ, 등록과 수정은 승인이 필요한 WR
     "update_expense",
     "update_income",
     "submit_screenshot_import",
+    "update_recurring_expense",
   ];
 
   for (const name of readTools) {
