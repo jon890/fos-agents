@@ -89,6 +89,20 @@
 `SKILL.md` 는 더 부르지 않고 앱에도 올리지 않는다.
 워크스페이스의 편집기 스크립트가 `draft_contract.py` 를 불러 쓰므로, 정리 단계에서 그 스크립트들과 함께 지운다.
 
+### 앱에 올리는 방법
+
+fos-assistant 에이전트의 스킬 화면에서 새 스킬로 올린다. 화면은 묶음 파일을 받지 않으므로 칸마다 붙여 넣는다.
+
+| 칸 | 넣는 것 |
+| --- | --- |
+| 이름 | `ji-yoon-blog-style`. `SKILL.md` 앞머리의 `name` 과 같아야 한다 |
+| `SKILL.md` | 그 파일 전체 |
+| 참고 파일 | `references/ji-yung-persona.md`, `references/category-style-map.md` 를 같은 경로로 |
+
+앱은 참고 파일을 `references/` 나 `templates/` 한 단계 아래로만 받고, 새 스킬의 description 을 60자까지 받는다.
+앞머리에 환경 값이나 자격 증명 파일을 요청하는 칸을 두면 저장을 거절한다.
+같은 이름이 이미 올라가 있으면 같은 칸으로 다시 저장해 바꾼다.
+
 ## 의존 방향
 
 ```text
