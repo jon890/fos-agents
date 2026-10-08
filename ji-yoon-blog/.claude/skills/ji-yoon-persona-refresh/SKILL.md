@@ -13,8 +13,8 @@ description: >
 
 한 달에 한 번 요청받아 실행한다. 별도 스케줄러는 만들지 않는다.
 수집 원본과 통계는 추적하지 않는 `data/`에 두고, 보고서는 `reports/`에 둔다.
-사람이 보고서를 검토하기 전에는 `references/ji-yung-persona.md`와
-`references/category-style-map.md`를 고치지 않는다.
+사람이 보고서를 검토하기 전에는 `.claude/skills/ji-yoon-blog-style/references/` 의 `ji-yung-persona.md` 와
+`category-style-map.md` 를 고치지 않는다.
 
 ## 워크플로우 개요
 
@@ -23,7 +23,7 @@ description: >
 | 1 | 공개 글 수집 | `data/posts`에 본문 JSON이 있고 수집 명령이 종료 코드 0이다 | |
 | 2 | 카테고리와 태그 보강 | 조회 실패 수가 출력되고 명령이 종료 코드 0이다 | |
 | 3 | 통계와 보고서 생성 | `data/persona-stats.json`이 생기고 새 글 10개 이상이면 HTML 보고서가 생긴다 | |
-| 4 | 사람의 검토 | 보고서와 최근 글 표본을 읽고 문서 수정 여부를 결정했다 | 워크스페이스 `references/ji-yung-persona.md`, `references/category-style-map.md` |
+| 4 | 사람의 검토 | 보고서와 최근 글 표본을 읽고 문서 수정 여부를 결정했다 | 스킬 `ji-yoon-blog-style` 의 `references/ji-yung-persona.md`, `references/category-style-map.md` |
 
 명령은 `ji-yoon-blog/`에서 실행한다.
 
@@ -66,6 +66,6 @@ python3 scripts/build_persona_report.py --posts data/posts --stats data/persona-
 실제 협찬 여부와 문장의 뉘앙스는 사람이 판단한다.
 
 보고서 경로와 눈에 띄는 차이를 보여주고 문서에 반영할 내용을 확인받는다.
-확인받은 내용만 `references/ji-yung-persona.md`와
-`references/category-style-map.md`에 적고, 문서 검사기를 실행한다.
+확인받은 내용만 `.claude/skills/ji-yoon-blog-style/references/` 의 `ji-yung-persona.md` 와
+`category-style-map.md` 에 적고, 문서 검사기를 실행한다.
 보고서와 수집 원본은 외부에 게시하지 않는다.

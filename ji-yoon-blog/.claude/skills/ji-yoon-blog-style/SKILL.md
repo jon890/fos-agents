@@ -86,8 +86,8 @@ HEIC 사진은 미리보기에서 `미리보기에 넣을 수 없는 형식` 으
 | 2 | 장소 확인 | 지융이 상호명을 확정했다 | |
 | 3 | 사진 올릴 자리 만들기 | 홈서버 경로에서 주소를 주었고 지융이 올렸다고 알렸다 | 스킬 `references/iphone-upload.md` |
 | 4 | 사진 읽기 | 홈서버 경로에서 `photos.py pull` 이 사진을 내려놓았고 그 사진을 모두 봤다 | |
-| 5 | 부족한 사실 묻기 | 카테고리 모듈의 필수 사실을 모두 확보했고 협찬 여부를 확인했다 | 워크스페이스 `references/category-style-map.md` |
-| 6 | 초안 만들기 | `draft.json` 이 있고 미리보기 생성이 종료 코드 0 이다 | 워크스페이스 `references/ji-yung-persona.md`, `docs/data-schema.md` |
+| 5 | 부족한 사실 묻기 | 카테고리 모듈의 필수 사실을 모두 확보했고 협찬 여부를 확인했다 | 스킬 `references/category-style-map.md` |
+| 6 | 초안 만들기 | `draft.json` 이 있고 미리보기 생성이 종료 코드 0 이다 | 스킬 `references/ji-yung-persona.md`, 워크스페이스 `docs/data-schema.md` |
 | 7 | 미리보기 확인 | 지융이 확인했다고 답했다 | |
 | 8 | 네이버 임시저장 | `state` 의 사진·스티커·지도·카테고리·태그가 초안과 맞고 임시저장 개수가 늘었다 | 워크스페이스 `references/preview-automation.md` |
 
@@ -270,7 +270,7 @@ python3 .claude/skills/ji-yoon-blog-style/scripts/photos.py pull 2026-09-04-순�
 ## 5. 부족한 사실 묻기
 
 사진만으로는 알 수 없는 것이 있다.
-워크스페이스의 [`references/category-style-map.md`](../../../references/category-style-map.md)를 읽고
+스킬의 [`references/category-style-map.md`](references/category-style-map.md)를 읽고
 필수 사실부터 확인한다.
 하나라도 빠지면 6단계의 초안을 만들지 않고 지융에게 묻고 답을 기다린다.
 
@@ -297,7 +297,7 @@ instructions에 `<ask>` 형식 안내가 있으면 그것을 따른다.
 
 ## 6. 초안 만들기
 
-글을 쓰기 전에 워크스페이스의 두 문서를 읽는다.
+글을 쓰기 전에 스킬의 두 문서를 읽는다.
 
 | 문서 | 무엇을 정하나 |
 | --- | --- |

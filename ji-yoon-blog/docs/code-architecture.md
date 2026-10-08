@@ -40,7 +40,7 @@
 
 | 경로 | 어디서 도나 | 책임 |
 | --- | --- | --- |
-| `references/` | 판단 자료 | 페르소나, 카테고리 모듈, 미리보기 경계 |
+| `references/` | 판단 자료 | 미리보기 자동화 경계. 페르소나와 카테고리 모듈은 스킬 `ji-yoon-blog-style` 의 `references/` 에 있다 |
 | `scripts/collect_naver_posts.py` | 맥북 | 블로그 글 목록과 본문 수집 |
 | `scripts/enrich_naver_posts.py` | 맥북 | 카테고리 이름과 태그 보강 |
 | `scripts/analyze_persona.py` | 맥북 | 페르소나 문서가 인용하는 수치 집계 |

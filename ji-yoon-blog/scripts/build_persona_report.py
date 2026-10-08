@@ -84,7 +84,7 @@ thead{{background:#e9e4d9}}.note{{background:#fff;border-left:4px solid #9a7654;
 <h2>최근 글에서 나온 표현</h2><p>{expressions}</p>
 <h2>지역과 태그</h2><p>지역: {region_list}</p><p>태그: {tag_list}</p>
 <h2>검토할 최근 글</h2><ol>{recent_posts}</ol>
-<h2>검토 순서</h2><p>최근 글 30개의 문체와 사진·스티커·지도 배치를 읽고, 집계와 다른 예외를 기록한다. 바꿀 내용이 확인되면 사람이 references/ji-yung-persona.md와 references/category-style-map.md를 검토해 수정한다.</p>
+<h2>검토 순서</h2><p>최근 글 30개의 문체와 사진·스티커·지도 배치를 읽고, 집계와 다른 예외를 기록한다. 바꿀 내용이 확인되면 사람이 .claude/skills/ji-yoon-blog-style/references/ 의 ji-yung-persona.md와 category-style-map.md를 검토해 수정한다.</p>
 </main></body></html>"""
 
 

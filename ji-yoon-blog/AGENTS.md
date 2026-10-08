@@ -30,8 +30,8 @@
 
 | 문서 | 책임 |
 |---|---|
-| `references/ji-yung-persona.md` | 지융로그 페르소나 |
-| `references/category-style-map.md` | 카테고리별 글쓰기 모듈 |
+| `.claude/skills/ji-yoon-blog-style/references/ji-yung-persona.md` | 지융로그 페르소나 |
+| `.claude/skills/ji-yoon-blog-style/references/category-style-map.md` | 카테고리별 글쓰기 모듈 |
 | `references/preview-automation.md` | 네이버 미리보기 자동화 경계 |
 | `docs/flow.md` | 사진에서 임시저장까지의 흐름과 실패 처리 |
 | `docs/data-schema.md` | 사진 저장소 객체와 초안 계약 |
@@ -55,7 +55,7 @@
 - 과한 광고 문구나 출처 없는 단정은 피한다.
 - 날짜와 출처가 필요한 정보는 확인한 뒤 쓴다.
 
-카테고리마다 더 지킬 것은 `references/category-style-map.md`가 소유한다.
+카테고리마다 더 지킬 것은 `.claude/skills/ji-yoon-blog-style/references/category-style-map.md`가 소유한다.
 
 ## 산출물
 
