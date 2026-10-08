@@ -57,10 +57,42 @@ test("조회와 미리보기는 READ, 등록과 수정은 승인이 필요한 WR
   }
 });
 
-test("삭제는 호출을 닫는 DESTRUCTIVE 정책이며 상시 허락을 받지 않는다", () => {
+test("삭제는 WRITE 승인 정책이며 상시 허락을 받지 않는다", () => {
   for (const name of ["delete_expense", "delete_income"]) {
-    expect(connector.tools[name]).toMatchObject({ risk: "DESTRUCTIVE", approval: "always" });
+    expect(connector.tools[name]).toMatchObject({
+      risk: "WRITE",
+      approval: "required",
+      grant: false,
+    });
+    expect(connector.tools[name].identifiers).toEqual([
+      "date",
+      "amount",
+      "description",
+      "categoryName",
+    ]);
+    expect(connector.tools[name].title).toContain("날짜·금액·내용·카테고리");
   }
+});
+
+test("삭제 도구는 MCP 목록과 deny 기본 정책의 허용 도구 목록에 모두 있다", () => {
+  expect(connector.default_tool_policy).toBe("deny");
+  for (const name of ["delete_expense", "delete_income"] as const) {
+    expect(toolDefinitions[name]).toBeDefined();
+    expect(connector.tools[name]).toBeDefined();
+  }
+});
+
+test("삭제 스킬은 재조회·한 건씩 승인·반복지출 경고를 안내한다", () => {
+  const skill = readFileSync(join(import.meta.dir, "../skills/accountbook-api/SKILL.md"), "utf8");
+  const section = skill.split("## 수정과 삭제")[1].split("## 반복지출 수정")[0];
+  expect(section).toContain("get_expense");
+  expect(section).toContain("get_income");
+  expect(section).toContain("한 건");
+  expect(section).toContain("카드");
+  expect(section).toContain("다음 달 다시 생성");
+  expect(section).toContain("delete_expense");
+  expect(section).toContain("delete_income");
+  expect(skill).not.toContain("삭제는 지원하지 않는다");
 });
 
 test("connector.json 의 .mcp.json 서버 env 는 fields[].env 와 operator_env 의 합과 같다", () => {

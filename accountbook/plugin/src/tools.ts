@@ -70,7 +70,10 @@ export const toolDefinitions = {
     description: "수정·삭제 전에 수입 기록 재조회",
     schema: z.strictObject(recordShape),
   },
-  create_expense: { description: "EXPENSE 카테고리로 확인한 지출 등록", schema: createSchema(true) },
+  create_expense: {
+    description: "EXPENSE 카테고리로 확인한 지출 등록",
+    schema: createSchema(true),
+  },
   create_income: { description: "INCOME 카테고리로 확인한 수입 등록", schema: createSchema(false) },
   update_expense: {
     description: "사용자가 현재 기록과 변경 내용을 확인한 뒤 EXPENSE 카테고리로 지출 수정",
@@ -81,12 +84,14 @@ export const toolDefinitions = {
     schema: updateSchema(false),
   },
   delete_expense: {
-    description: "사용자가 대상 기록을 확인한 뒤 지출 삭제",
-    schema: z.strictObject({ ...recordShape, confirmed: z.literal(true) }),
+    description:
+      "get_expense로 재조회해 날짜·금액·내용·카테고리를 보여 준 지출 한 건 삭제. 매번 승인 필요",
+    schema: deleteSchema(true),
   },
   delete_income: {
-    description: "사용자가 대상 기록을 확인한 뒤 수입 삭제",
-    schema: z.strictObject({ ...recordShape, confirmed: z.literal(true) }),
+    description:
+      "get_income으로 재조회해 날짜·금액·내용·카테고리를 보여 준 수입 한 건 삭제. 매번 승인 필요",
+    schema: deleteSchema(false),
   },
   list_recurring_expenses: {
     description:
@@ -182,6 +187,20 @@ function updateSchema(expense: boolean) {
     .refine((v) =>
       Object.keys(v).some((key) => !["familyUuid", "transactionUuid", "confirmed"].includes(key)),
     );
+}
+
+// 승인 카드에서 UUID만 보고 삭제하지 않도록 재조회한 대상의 내용을 함께 받는다.
+// 표시용 필드는 DELETE 요청 본문으로 전달하지 않는다.
+function deleteSchema(expense: boolean) {
+  return z.strictObject({
+    ...recordShape,
+    confirmed: z.literal(true),
+    date,
+    amount,
+    description: z.string().max(1000).nullable(),
+    categoryName: z.string().trim().min(1).max(50).nullable(),
+    ...(expense ? { recurringExpenseUuid: uuid.nullable().optional() } : {}),
+  });
 }
 
 // A 2xx answer to a change request means it was applied; an unreadable body only hides the result.
@@ -352,7 +371,8 @@ export class AccountbookTools {
       return { month: args.month ?? null, items: data.items.map((item) => view(item, names)) };
     }
     const body: Record<string, unknown> = {};
-    for (const key of ["name", "amount", "dayOfMonth"]) if (args[key] !== undefined) body[key] = args[key];
+    for (const key of ["name", "amount", "dayOfMonth"])
+      if (args[key] !== undefined) body[key] = args[key];
     if (args.categoryName || args.categoryUuid)
       body.categoryUuid = await this.category(root, "EXPENSE", args, categories);
     const updated = responseData(

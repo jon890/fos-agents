@@ -33,6 +33,10 @@ test("MCP 삭제는 data 생략과 null, 204를 모두 성공으로 반환한다
           arguments: {
             transactionUuid: "33333333-3333-4333-8333-333333333333",
             confirmed: true,
+            date: "2026-09-30T12:00:00",
+            amount: 100,
+            description: "예시 기록",
+            categoryName: "예시 분류",
           },
         });
         expect(result.isError).not.toBe(true);
@@ -94,6 +98,8 @@ test("MCP 프로토콜로 도구를 탐색하고 조회하며 미확인 삭제�
     await client.connect(clientTransport);
     const listed = await client.listTools();
     expect(listed.tools).toHaveLength(18);
+    expect(listed.tools.map((tool) => tool.name)).toContain("delete_expense");
+    expect(listed.tools.map((tool) => tool.name)).toContain("delete_income");
     const response = await client.callTool({ name: "list_expenses", arguments: { limit: 3 } });
     expect(response.isError).not.toBe(true);
     expect(calls).toBe(1);

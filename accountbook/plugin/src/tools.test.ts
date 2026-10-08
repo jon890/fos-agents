@@ -26,12 +26,13 @@ function setup(families = [{ uuid: FAMILY, name: "예시 가족" }], defaultFami
       const body = init?.body ? JSON.parse(String(init.body)) : undefined;
       requests.push({ url, method, body });
       if (url.endsWith("/families")) return json(families);
-      if (url.endsWith("/categories")) return json([
-        { uuid: CATEGORY, name: "예시 분류", type: "EXPENSE" },
-        { uuid: INCOME_CATEGORY, name: "예시 분류", type: "INCOME" },
-        { uuid: RECORD, name: "수입 전용", type: "INCOME" },
-        { uuid: FAMILY, name: "지출 전용", type: "EXPENSE" },
-      ]);
+      if (url.endsWith("/categories"))
+        return json([
+          { uuid: CATEGORY, name: "예시 분류", type: "EXPENSE" },
+          { uuid: INCOME_CATEGORY, name: "예시 분류", type: "INCOME" },
+          { uuid: RECORD, name: "수입 전용", type: "INCOME" },
+          { uuid: FAMILY, name: "지출 전용", type: "EXPENSE" },
+        ]);
       if (method === "DELETE") return json(null);
       if (url.includes("?"))
         return json({ items: [], totalPages: 0, currentPage: 0, totalElements: 0 });
@@ -49,6 +50,51 @@ function setup(families = [{ uuid: FAMILY, name: "예시 가족" }], defaultFami
 }
 
 describe("MCP 가계부 도구", () => {
+  test("삭제는 승인 카드의 대상 필드를 모두 받고 한 건의 DELETE만 보낸다", async () => {
+    const preview = {
+      transactionUuid: RECORD,
+      confirmed: true,
+      date: "2026-09-30T12:00:00",
+      amount: 100,
+      description: "예시 기록",
+      categoryName: "예시 분류",
+    };
+    for (const type of ["expense", "income"]) {
+      const { tools, requests } = setup(undefined, FAMILY);
+      for (const field of ["date", "amount", "description", "categoryName"]) {
+        const args: Record<string, unknown> = { ...preview };
+        delete args[field];
+        expect(result(await tools.call(`delete_${type}`, args)).error.code).toBe(
+          "ACCOUNTBOOK_INVALID_INPUT",
+        );
+      }
+      expect(
+        result(await tools.call(`delete_${type}`, { ...preview, transactionUuids: [RECORD] })).error
+          .code,
+      ).toBe("ACCOUNTBOOK_INVALID_INPUT");
+      expect(requests).toHaveLength(0);
+      expect(result(await tools.call(`delete_${type}`, preview)).deleted).toBe(true);
+      expect(requests).toHaveLength(1);
+      expect(requests[0].url).toEndWith(`/${type}s/${RECORD}`);
+      expect(requests[0].method).toBe("DELETE");
+      expect(requests[0].body).toBeUndefined();
+    }
+  });
+
+  test("설명과 분류가 없는 삭제 대상은 null로 표시한다", async () => {
+    const { tools } = setup(undefined, FAMILY);
+    const response = await tools.call("delete_expense", {
+      transactionUuid: RECORD,
+      confirmed: true,
+      date: "2026-09-30T12:00:00",
+      amount: 100,
+      description: null,
+      categoryName: null,
+      recurringExpenseUuid: null,
+    });
+    expect(result(response).deleted).toBe(true);
+  });
+
   test("잘못된 성공 응답은 성공 내역으로 반환하지 않는다", async () => {
     for (const name of [
       "list_families",
@@ -56,7 +102,6 @@ describe("MCP 가계부 도구", () => {
       "list_expenses",
       "get_expense",
       "update_expense",
-      "delete_expense",
     ]) {
       for (const data of [
         undefined,
@@ -307,8 +352,16 @@ describe("MCP 가계부 도구", () => {
       expect(requests.at(-1)?.method).toBe("PUT");
       expect(requests.at(-1)?.body).toEqual({ description: "예시 변경" });
       expect(
-        result(await tools.call(`delete_${type}`, { transactionUuid: RECORD, confirmed: true }))
-          .deleted,
+        result(
+          await tools.call(`delete_${type}`, {
+            transactionUuid: RECORD,
+            confirmed: true,
+            date: "2026-09-30T12:00:00",
+            amount: 100,
+            description: "예시 기록",
+            categoryName: "예시 분류",
+          }),
+        ).deleted,
       ).toBe(true);
       expect(requests.at(-1)?.method).toBe("DELETE");
       requests.length = 0;
