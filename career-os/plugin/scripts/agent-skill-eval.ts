@@ -178,12 +178,37 @@ export function grade(trace: Trace | null, grading: Grading): Check[] {
   );
   add("searchQueries.forbidden", leaked.length === 0, JSON.stringify(leaked));
 
+  const resultRequired =
+    trace.result !== null || grading.outcome !== undefined || grading.candidates !== undefined;
+  const candidates = trace.result?.problemCandidates;
+  if (resultRequired) {
+    add("result.version", trace.result?.version === 3, `${trace.result?.version}`);
+    const expectedCount = grading.candidates?.count;
+    add(
+      "candidates.count",
+      Array.isArray(candidates) &&
+        candidates.length <= 3 &&
+        (expectedCount === undefined || candidates.length === expectedCount),
+      `${Array.isArray(candidates) ? candidates.length : "missing"}`,
+    );
+    if (trace.result?.outcome === "NOTHING_NEW")
+      add(
+        "candidates.nothingNew",
+        Array.isArray(candidates) && candidates.length === 0,
+        `${Array.isArray(candidates) ? candidates.length : "missing"}`,
+      );
+    if (trace.result?.outcome === "NOTHING_NEW") {
+      const findings = trace.result.findings;
+      add(
+        "findings.nothingNew",
+        Array.isArray(findings) && findings.length === 0,
+        `${Array.isArray(findings) ? findings.length : "missing"}`,
+      );
+    }
+  }
   if (grading.outcome) {
     const outcome = trace.result?.outcome;
-    const findings = trace.result?.findings ?? [];
-    const pass =
-      outcome === grading.outcome && (outcome !== "NOTHING_NEW" || findings.length === 0);
-    add("outcome", pass, `${outcome}`);
+    add("outcome", outcome === grading.outcome, `${outcome}`);
   }
   if (grading.sourceFailure) {
     const failures = Array.isArray(trace.result?.sourceFailures) ? trace.result.sourceFailures : [];
@@ -202,13 +227,6 @@ export function grade(trace: Trace | null, grading: Grading): Check[] {
   }
   if (grading.candidates) {
     const expected = grading.candidates;
-    add("result.version", trace.result?.version === 3, `${trace.result?.version}`);
-    const candidates = trace.result?.problemCandidates;
-    add(
-      "candidates.count",
-      Array.isArray(candidates) && candidates.length === expected.count && candidates.length <= 3,
-      `${Array.isArray(candidates) ? candidates.length : "missing"}`,
-    );
     const object = (value: unknown): Record<string, unknown> | null =>
       value !== null && typeof value === "object" && !Array.isArray(value)
         ? (value as Record<string, unknown>)
