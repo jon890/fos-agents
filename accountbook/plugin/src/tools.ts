@@ -107,7 +107,6 @@ export const toolDefinitions = {
         categoryName: fields.categoryName,
         confirmed: z.literal(true),
       })
-      .refine((v) => !(v.categoryUuid && v.categoryName))
       .refine((v) =>
         ["name", "amount", "dayOfMonth", "categoryUuid", "categoryName"].some(
           (key) => v[key as keyof typeof v] !== undefined,
@@ -169,7 +168,7 @@ function createSchema(expense: boolean) {
       date,
       ...(expense ? { excludeFromBudget: z.boolean().optional() } : {}),
     })
-    .refine((v) => Boolean(v.categoryUuid) !== Boolean(v.categoryName));
+    .refine((v) => Boolean(v.categoryUuid || v.categoryName));
 }
 
 function updateSchema(expense: boolean) {
@@ -180,10 +179,26 @@ function updateSchema(expense: boolean) {
       confirmed: z.literal(true),
       ...(expense ? { excludeFromBudget: z.boolean().optional() } : {}),
     })
-    .refine((v) => !(v.categoryUuid && v.categoryName))
     .refine((v) =>
       Object.keys(v).some((key) => !["familyUuid", "transactionUuid", "confirmed"].includes(key)),
     );
+}
+
+// A 2xx answer to a change request means it was applied; an unreadable body only hides the result.
+function written<T>(response: unknown, schema: z.ZodType<T>): T {
+  try {
+    return responseData(response, schema);
+  } catch {
+    throw new AccountbookError("ACCOUNTBOOK_OUTCOME_UNKNOWN");
+  }
+}
+
+// UUID 와 이름이 각자 하나씩 찾아지는데 서로 다를 때만 불일치다. 종류가 다르거나 없는 값은 목록 안내로 충분하다.
+function conflict(categories: NamedItem[], args: Record<string, unknown>) {
+  if (!args.categoryUuid || !args.categoryName) return false;
+  const byUuid = categories.filter((item) => item.uuid === args.categoryUuid);
+  const byName = categories.filter((item) => item.name === args.categoryName);
+  return byUuid.length === 1 && byName.length === 1 && byUuid[0].uuid !== byName[0].uuid;
 }
 
 type NamedItem = { uuid: string; name: string };
@@ -264,7 +279,7 @@ export class AccountbookTools {
         return this.success(responseData(await this.client.request(target), transactionSchema));
       if (name.startsWith("delete_")) {
         const response = await this.client.request(target, "DELETE");
-        if (response !== undefined) responseData(response, z.null().optional());
+        if (response !== undefined) written(response, z.null().optional());
         return this.success({ deleted: true, familyUuid, transactionUuid: args.transactionUuid });
       }
       const body = { ...args };
@@ -273,7 +288,7 @@ export class AccountbookTools {
       if (args.categoryName || args.categoryUuid)
         body.categoryUuid = await this.category(root, expense ? "EXPENSE" : "INCOME", args);
       return this.success(
-        responseData(
+        written(
           await this.client.request(target, name.startsWith("create_") ? "POST" : "PUT", body),
           transactionSchema,
         ),
@@ -300,13 +315,16 @@ export class AccountbookTools {
     const categories = (loaded ?? (await this.categories(root))).filter(
       (item) => item.type === categoryType,
     );
-    const matched = categories.filter((item) =>
-      args.categoryUuid ? item.uuid === args.categoryUuid : item.name === args.categoryName,
+    // 모델은 조회한 카테고리의 UUID 와 이름을 함께 보내곤 한다. 둘이 같은 카테고리를 가리킬 때만 받는다.
+    const matched = categories.filter(
+      (item) =>
+        (!args.categoryUuid || item.uuid === args.categoryUuid) &&
+        (!args.categoryName || item.name === args.categoryName),
     );
     if (matched.length !== 1)
       throw new SelectionError(
         "ACCOUNTBOOK_CATEGORY_SELECTION",
-        `${categoryType} 카테고리 목록에서 하나를 골라 주세요. 선택 가능한 이름: ${categories.map((item) => item.name).join(", ") || "없음"}`,
+        `${conflict(categories, args) ? "categoryUuid 와 categoryName 이 서로 다른 카테고리를 가리킵니다. 하나만 보내 주세요. " : ""}${categoryType} 카테고리 목록에서 하나를 골라 주세요. 선택 가능한 이름: ${categories.map((item) => item.name).join(", ") || "없음"}`,
       );
     return matched[0].uuid;
   }
