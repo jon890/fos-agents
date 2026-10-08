@@ -9,9 +9,11 @@
 |---|:---:|---|
 | `ACCOUNTBOOK_API_BASE_URL` | 예 | `/api/v1`까지 포함한 공인 HTTPS 주소 |
 | `ACCOUNTBOOK_API_TOKEN` | 예 | 사용자별 `fab_` 연동 토큰. 환경 변수로만 전달 |
+| `ACCOUNTBOOK_OUTPUT_DIR` | 파일 출력 시 | 실행 환경이 지정하는 사용자별 출력 디렉터리. 비어 있으면 파일 출력 거절 |
 | `ACCOUNTBOOK_FAMILY_UUID` | 아니오 | 기본 가족 UUID. 비우면 가족 목록으로 선택 |
 
-MCP 서버는 profile마다 별도 프로세스와 환경 변수로 실행하며 파일 상태를 저장하지 않는다.
+MCP 서버는 profile마다 별도 프로세스와 환경 변수로 실행한다. 등록 상태는 메모리에만 두고, 목록 파일만 지정된 출력 디렉터리에 쓴다.
+등록 확인 도구와 승인 실행에는 `ACCOUNTBOOK_OUTPUT_DIR`가 빈 값으로 전달된다.
 값이 `${`로 시작하면 치환되지 않은 변수 참조이므로 설정되지 않은 것으로 다룬다.
 선택 변수는 기본값을 사용하고 필수 변수는 `ACCOUNTBOOK_CONFIG`로 중단한다.
 연동 토큰은 가계부에서 발급하고 폐기하며, 자동 갱신하거나 파일에 저장하지 않는다.
@@ -134,21 +136,26 @@ MCP 서버는 profile마다 별도 프로세스와 환경 변수로 실행하며
 
 입력 스키마 정본은 [tools.ts](../plugin/src/tools.ts)에 있다.
 도구 이름은 `list_families`, `list_categories`, `list_expenses`, `list_incomes`,
-`summarize_expenses`, `summarize_incomes`,
 `get_expense`, `get_income`, `create_expense`, `create_income`, `update_expense`, `update_income`, `delete_expense`, `delete_income`,
 `preview_screenshot_import`, `submit_screenshot_import`, `list_recurring_expenses`, `update_recurring_expense`다.
 Hermes에서는 서버 이름 `accountbook`을 사용해 `mcp__accountbook__<도구>`로 노출한다.
-`list_`, `get_`, `summarize_`, `preview_`로 시작하는 도구는 읽기 전용으로 표시한다. 기록을 바꾸는 도구는 `create_`, `update_`, `delete_`, `submit_`이다.
+`list_`, `get_`, `preview_`로 시작하는 도구는 읽기 전용으로 표시한다. 기록을 바꾸는 도구는 `create_`, `update_`, `delete_`, `submit_`이다.
 
 - 가족은 선택 입력 `familyUuid`, 거래 대상은 `transactionUuid`로 지정한다. UUID는 조회 결과에서 고른다.
 - 목록은 `startDate`, `endDate`(유효한 `YYYY-MM-DD`), `limit`(1~100, 기본 20), `page`(0부터)를 받는다.
-- 기간 합계는 `startDate`, `endDate`가 필수이며 시작일은 종료일보다 늦을 수 없다.
-  기존 목록 API를 페이지당 100건으로 최대 100페이지까지 읽고 카테고리 목록은 한 번 읽는다.
-  응답은 `familyUuid`, `startDate`, `endDate`, `count`, `totalAmount`, `excludedFromBudgetAmount`, `categories`를 가진다.
-  `categories`의 각 항목은 `categoryUuid`, `categoryName`, `count`, `totalAmount`를 가진다. 이름을 찾지 못하면 `categoryName`은 `null`이다.
-  금액은 소수 둘째 자리까지 있는 문자열이다. 각 금액을 정수로 변환해 더하므로 소수 오차가 없다.
-  전체 합계에는 예산 제외 지출도 포함되며 `excludedFromBudgetAmount`는 그 지출만 합산한다. 수입에서는 `0.00`이다.
-  상한 초과, 페이지 오류, 중복 기록이나 조회 중 건수 변경이 발견되면 부분 합계를 반환하지 않는다.
+- 목록의 `output`은 `inline`(기본) 또는 `file`이다. `inline`은 기존 페이지 응답을 반환한다.
+  `file`은 `startDate`, `endDate`가 필수이며 `limit`, `page`와 관계없이 기간 전체를 페이지당 100건으로 읽는다.
+  최대 10,000건과 100페이지까지 허용하며, 페이지 누락·중복·건수 변화·범위 밖 날짜는 파일 생성 전에 거절한다.
+  응답은 `{ file, count, from, to, columns }`뿐이며 거래 내용은 포함하지 않는다. `from`, `to`는 요청의 시작일과 종료일이다.
+  JSONL의 칸은 `uuid`, `date`, `amount`, `categoryName`, `categoryUuid`, `userUuid`, `description`,
+  지출의 `recurringExpenseUuid`, `excludeFromBudget`다. 금액은 원 단위 양의 안전 정수이며 소수 금액은 반올림 없이 거절한다.
+  이름을 찾지 못한 카테고리는 `categoryName: null`이다. 수입의 예산 제외 값이 없으면 `false`다.
+  응답에 없는 필수 거래 필드는 오류로 처리한다. 토큰과 서비스 오류 원문은 파일에 쓰지 않는다.
+  파일명은 `list_expenses-UTC시각-무작위UUID.jsonl` 또는 `list_incomes-UTC시각-무작위UUID.jsonl`이며,
+  시각의 콜론과 소수점은 하이픈으로 바꾼다. 경로와 이름을 입력으로 받지 않고 배타 생성(`O_CREAT|O_EXCL`, 권한 `0600`)한다.
+  쓰기 전에 그 디렉터리에서 같은 이름 형식의 일반 파일 중 수정 시각이 24시간보다 오래된 것만 지운다.
+  출력 디렉터리는 실행 환경이 미리 준비한다. 빈 설정 또는 쓰기 실패는 `ACCOUNTBOOK_OUTPUT_UNAVAILABLE`로 거절한다.
+  합계와 통계는 모델이 `execute_code` 스크립트로 파일을 읽어 계산한다. 코드 실행 도구가 없으면 계산할 수 없다고 안내한다.
 - 등록은 양수 `amount`(정수 최대 10자리, 소수 최대 2자리), `date`(timezone 없는 `LocalDateTime`), `categoryUuid`와 `categoryName` 가운데 하나 이상을 받는다.
   둘을 함께 받으면 같은 카테고리를 가리킬 때만 쓰고, 다르면 `ACCOUNTBOOK_CATEGORY_SELECTION`을 반환한다.
 - 지출 등록·수정은 `EXPENSE`, 수입 등록·수정은 `INCOME` 카테고리에서만 이름이나 UUID를 찾는다.
@@ -189,11 +196,13 @@ Hermes에서는 서버 이름 `accountbook`을 사용해 `mcp__accountbook__<도
 | `ACCOUNTBOOK_NETWORK` | 조회의 연결, redirect, timeout 실패 |
 | `ACCOUNTBOOK_OUTCOME_UNKNOWN` | 등록·수정·삭제 요청을 보낸 뒤의 연결 실패, HTTP 5xx, 읽을 수 없는 2xx 응답. 변경 결과 재조회 필요 |
 | `ACCOUNTBOOK_INVALID_RESPONSE` | 조회 응답의 JSON 또는 필수 구조를 확인할 수 없음 |
+| `ACCOUNTBOOK_OUTPUT_UNAVAILABLE` | 파일 출력 설정이 비었거나 파일을 쓸 수 없음 |
+| `ACCOUNTBOOK_OUTPUT_LIMIT` | 목록 파일 출력이 10,000건 또는 100페이지를 초과함 |
 | `ACCOUNTBOOK_CONFIG` | 주소, 토큰, 기본 가족 설정 오류 |
 | `ACCOUNTBOOK_INVALID_INPUT` | 도구 입력 검증 실패 |
 | `ACCOUNTBOOK_FAMILY_SELECTION`, `ACCOUNTBOOK_NO_FAMILY` | 가족 선택 필요 또는 가족 없음 |
 | `ACCOUNTBOOK_CATEGORY_SELECTION` | 거래 종류에 맞는 카테고리가 없거나, 같은 종류 안에서 이름이 중복되거나, UUID 와 이름이 서로 다른 카테고리를 가리킴 |
-| `ACCOUNTBOOK_SUMMARY_LIMIT` | 합계 조회나 화면 가져오기의 기존 기록 조회가 100페이지를 초과함 |
+| `ACCOUNTBOOK_SUMMARY_LIMIT` | 화면 가져오기의 기존 기록 조회가 100페이지를 초과함 |
 | `ACCOUNTBOOK_UNKNOWN_TOOL`, `ACCOUNTBOOK_INTERNAL` | 지원하지 않는 도구 또는 내부 처리 실패 |
 
 fos-assistant 가 승인한 실행의 실패를 어떤 공통 어휘와 복구 어휘로 기록할지는 [connector.json](../plugin/connector.json) 의 `errors` 가 정한다.

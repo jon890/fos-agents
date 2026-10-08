@@ -6,12 +6,15 @@ import {
   transactionSchema,
   transactionPageSchema,
   safeError,
+  configuredValue,
 } from "./client.ts";
 import {
   ScreenshotImportError,
   screenshotImport,
   screenshotToolDefinitions,
 } from "./screenshot-tools.ts";
+
+import { writeOutputFile } from "./output-file.ts";
 
 const uuid = z.string().uuid();
 const day = z.iso.date();
@@ -54,14 +57,6 @@ export const toolDefinitions = {
   },
   list_expenses: { description: "기간별 최근 지출 목록", schema: listSchema() },
   list_incomes: { description: "기간별 최근 수입 목록", schema: listSchema() },
-  summarize_expenses: {
-    description: "기간 전체 지출의 건수, 정확한 합계와 카테고리별 합계",
-    schema: summarySchema(),
-  },
-  summarize_incomes: {
-    description: "기간 전체 수입의 건수, 정확한 합계와 카테고리별 합계",
-    schema: summarySchema(),
-  },
   get_expense: {
     description: "수정·삭제 전에 지출 기록 재조회",
     schema: z.strictObject(recordShape),
@@ -70,7 +65,10 @@ export const toolDefinitions = {
     description: "수정·삭제 전에 수입 기록 재조회",
     schema: z.strictObject(recordShape),
   },
-  create_expense: { description: "EXPENSE 카테고리로 확인한 지출 등록", schema: createSchema(true) },
+  create_expense: {
+    description: "EXPENSE 카테고리로 확인한 지출 등록",
+    schema: createSchema(true),
+  },
   create_income: { description: "INCOME 카테고리로 확인한 수입 등록", schema: createSchema(false) },
   update_expense: {
     description: "사용자가 현재 기록과 변경 내용을 확인한 뒤 EXPENSE 카테고리로 지출 수정",
@@ -129,34 +127,18 @@ const recurringItemSchema = z
   })
   .passthrough();
 
-function summarySchema() {
-  return z
-    .strictObject({ ...familyShape, startDate: day, endDate: day })
-    .refine((v) => v.startDate <= v.endDate);
-}
-
-// Convert each decimal to integer hundredths before addition; never add floats.
-function hundredths(value: number | string): bigint {
-  const text = String(value);
-  if (!/^\d+(?:\.\d{1,2})?$/.test(text)) throw new AccountbookError("ACCOUNTBOOK_INVALID_RESPONSE");
-  const [whole, fraction = ""] = text.split(".");
-  return BigInt(whole!) * 100n + BigInt(fraction.padEnd(2, "0"));
-}
-
-function decimal(value: bigint): string {
-  return `${value / 100n}.${String(value % 100n).padStart(2, "0")}`;
-}
-
 function listSchema() {
   return z
     .strictObject({
       ...familyShape,
+      output: z.enum(["inline", "file"]).default("inline"),
       startDate: day.optional(),
       endDate: day.optional(),
       limit: z.number().int().min(1).max(100).default(20),
       page: z.number().int().min(0).default(0),
     })
-    .refine((v) => !v.startDate || !v.endDate || v.startDate <= v.endDate);
+    .refine((v) => !v.startDate || !v.endDate || v.startDate <= v.endDate)
+    .refine((v) => v.output !== "file" || Boolean(v.startDate && v.endDate));
 }
 
 function createSchema(expense: boolean) {
@@ -216,6 +198,7 @@ export class AccountbookTools {
     private readonly client: AccountbookClient,
     private readonly defaultFamilyUuid?: string,
     private readonly now: () => Date = () => new Date(),
+    private readonly outputDirectory?: string,
   ) {
     if (defaultFamilyUuid && !uuid.safeParse(defaultFamilyUuid).success)
       throw new SelectionError("ACCOUNTBOOK_CONFIG", "기본 가족 UUID 설정을 확인해 주세요.");
@@ -247,6 +230,8 @@ export class AccountbookTools {
         };
         return { ...this.success(result), structuredContent: result };
       }
+      if (args.output === "file" && !configuredValue(this.outputDirectory))
+        throw new AccountbookError("ACCOUNTBOOK_OUTPUT_UNAVAILABLE");
       const familyUuid = await this.family(args.familyUuid as string | undefined);
       const root = `/families/${familyUuid}`;
       if (name === "list_categories") return this.success(await this.categories(root));
@@ -264,9 +249,9 @@ export class AccountbookTools {
         return this.success(await this.recurring(root, name, args));
       const expense = name.endsWith("expense") || name.endsWith("expenses");
       const collection = `${root}/${expense ? "expenses" : "incomes"}`;
-      if (name.startsWith("summarize_"))
-        return this.success(await this.summarize(root, collection, familyUuid, args, expense));
       if (name.startsWith("list_")) {
+        if (args.output === "file")
+          return this.success(await this.exportList(root, collection, args, expense));
         const params = new URLSearchParams({ size: String(args.limit), page: String(args.page) });
         for (const key of ["startDate", "endDate"])
           if (args[key]) params.set(key, String(args[key]));
@@ -352,7 +337,8 @@ export class AccountbookTools {
       return { month: args.month ?? null, items: data.items.map((item) => view(item, names)) };
     }
     const body: Record<string, unknown> = {};
-    for (const key of ["name", "amount", "dayOfMonth"]) if (args[key] !== undefined) body[key] = args[key];
+    for (const key of ["name", "amount", "dayOfMonth"])
+      if (args[key] !== undefined) body[key] = args[key];
     if (args.categoryName || args.categoryUuid)
       body.categoryUuid = await this.category(root, "EXPENSE", args, categories);
     const updated = responseData(
@@ -365,23 +351,42 @@ export class AccountbookTools {
   private success(value: unknown) {
     return { content: [{ type: "text" as const, text: JSON.stringify(value) }] };
   }
-  private async summarize(
+  private async exportList(
     root: string,
     collection: string,
-    familyUuid: string,
     args: Record<string, unknown>,
     expense: boolean,
   ) {
     const categories = await this.categories(root);
-    const groups = new Map<string | null, { count: number; amount: bigint }>();
+    const names = new Map(categories.map((item) => [item.uuid, item.name]));
+    const columns = [
+      "uuid",
+      "date",
+      "amount",
+      "categoryName",
+      "categoryUuid",
+      "userUuid",
+      "description",
+      ...(expense ? ["recurringExpenseUuid"] : []),
+      "excludeFromBudget",
+    ];
+    const rows: Record<string, unknown>[] = [];
     const seen = new Set<string>();
-    let total = 0n;
-    let excluded = 0n;
     let expectedCount: number | undefined;
     let expectedPages: number | undefined;
-    const summaryItem = transactionSchema.extend({
+    const itemSchema = transactionSchema.extend({
+      amount: z
+        .union([z.number(), z.string().regex(/^\d+(?:\.0{1,2})?$/)])
+        .transform(Number)
+        .pipe(z.number().int().positive().max(Number.MAX_SAFE_INTEGER)),
       categoryUuid: z.string().min(1).nullable(),
-      ...(expense ? { excludeFromBudget: z.boolean() } : {}),
+      userUuid: z.string().min(1),
+      ...(expense
+        ? {
+            excludeFromBudget: z.boolean(),
+            recurringExpenseUuid: z.string().min(1).nullable(),
+          }
+        : { excludeFromBudget: z.boolean().default(false) }),
     });
     for (let page = 0; page < 100; page++) {
       const params = new URLSearchParams({
@@ -394,10 +399,10 @@ export class AccountbookTools {
         await this.client.request(`${collection}?${params}`),
         transactionPageSchema,
       );
-      if (data.totalPages > 100)
+      if (data.totalPages > 100 || data.totalElements > 10_000)
         throw new SelectionError(
-          "ACCOUNTBOOK_SUMMARY_LIMIT",
-          "조회 범위가 100페이지를 넘습니다. 기간을 줄여 다시 요청해 주세요.",
+          "ACCOUNTBOOK_OUTPUT_LIMIT",
+          "조회 범위가 10,000건 또는 100페이지를 넘습니다. 기간을 줄여 다시 요청해 주세요.",
         );
       expectedCount ??= data.totalElements;
       expectedPages ??= data.totalPages;
@@ -410,7 +415,7 @@ export class AccountbookTools {
       )
         throw new AccountbookError("ACCOUNTBOOK_INVALID_RESPONSE");
       for (const raw of data.items) {
-        const parsed = summaryItem.safeParse(raw);
+        const parsed = itemSchema.safeParse(raw);
         if (!parsed.success) throw new AccountbookError("ACCOUNTBOOK_INVALID_RESPONSE");
         const item = parsed.data;
         if (
@@ -420,34 +425,33 @@ export class AccountbookTools {
         )
           throw new AccountbookError("ACCOUNTBOOK_INVALID_RESPONSE");
         seen.add(item.uuid);
-        const value = hundredths(item.amount);
-        total += value;
-        if (expense && item.excludeFromBudget === true) excluded += value;
-        const group = groups.get(item.categoryUuid) ?? { count: 0, amount: 0n };
-        group.count++;
-        group.amount += value;
-        groups.set(item.categoryUuid, group);
+        if (seen.size > 10_000)
+          throw new SelectionError("ACCOUNTBOOK_OUTPUT_LIMIT", "기간을 줄여 다시 요청해 주세요.");
+        rows.push({
+          uuid: item.uuid,
+          date: item.date,
+          amount: item.amount,
+          categoryName: item.categoryUuid ? (names.get(item.categoryUuid) ?? null) : null,
+          categoryUuid: item.categoryUuid,
+          userUuid: item.userUuid,
+          description: item.description,
+          ...(expense ? { recurringExpenseUuid: item.recurringExpenseUuid } : {}),
+          excludeFromBudget: item.excludeFromBudget,
+        });
       }
       if (page + 1 >= data.totalPages) {
         if (seen.size !== expectedCount) throw new AccountbookError("ACCOUNTBOOK_INVALID_RESPONSE");
-        return {
-          familyUuid,
-          startDate: args.startDate,
-          endDate: args.endDate,
-          count: seen.size,
-          totalAmount: decimal(total),
-          excludedFromBudgetAmount: decimal(excluded),
-          categories: Array.from(groups, ([categoryUuid, group]) => ({
-            categoryUuid,
-            categoryName: categories.find((item) => item.uuid === categoryUuid)?.name ?? null,
-            count: group.count,
-            totalAmount: decimal(group.amount),
-          })),
-        };
+        const file = await writeOutputFile(
+          configuredValue(this.outputDirectory)!,
+          expense ? "list_expenses" : "list_incomes",
+          rows,
+          this.now(),
+        );
+        return { file, count: rows.length, from: args.startDate, to: args.endDate, columns };
       }
       if (data.items.length === 0) throw new AccountbookError("ACCOUNTBOOK_INVALID_RESPONSE");
     }
-    throw new SelectionError("ACCOUNTBOOK_SUMMARY_LIMIT", "기간을 줄여 다시 요청해 주세요.");
+    throw new SelectionError("ACCOUNTBOOK_OUTPUT_LIMIT", "기간을 줄여 다시 요청해 주세요.");
   }
   private async families(): Promise<NamedItem[]> {
     const schema = z.array(z.object({ uuid, name: z.string() }));

@@ -32,6 +32,8 @@ export function configuredValue(value: string | undefined): string | undefined {
 }
 
 const messages = {
+  ACCOUNTBOOK_OUTPUT_UNAVAILABLE:
+    "가계부 결과 파일을 저장할 수 없습니다. 실행 환경의 출력 디렉터리를 확인해 주세요.",
   ACCOUNTBOOK_UNAUTHORIZED:
     "가계부 설정에서 연동 토큰을 다시 발급해 fos-assistant 에 등록해 주세요",
   ACCOUNTBOOK_FORBIDDEN: "이 가족 또는 요청에 접근할 권한이 없습니다.",
