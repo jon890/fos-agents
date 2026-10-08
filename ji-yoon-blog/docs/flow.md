@@ -1,7 +1,7 @@
 # ji-yoon-blog 실행 흐름
 
 사진에서 네이버 임시저장까지 가는 흐름을 소유한다.
-문체와 카테고리 판단은 `references/`가, 객체 계약은 [`data-schema.md`](data-schema.md)가 소유한다.
+문체와 카테고리 판단은 스킬 `ji-yoon-blog-style` 의 `references/`가, 객체 계약은 [`data-schema.md`](data-schema.md)가 소유한다.
 
 ## 왜 이 경로인가
 
