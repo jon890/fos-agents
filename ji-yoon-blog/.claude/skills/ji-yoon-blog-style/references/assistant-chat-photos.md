@@ -38,7 +38,7 @@
    명령은 `ji-yoon-blog` 워크스페이스에서 실행한다.
 
 ```bash
-python3 .claude/skills/naver-blog-draft/scripts/stage_chat_photos.py \
+python3 .claude/skills/ji-yoon-blog-style/scripts/stage_chat_photos.py \
   --source-dir "$ATTACHMENT_DIR" \
   --file 101.jpg --file 102.jpg \
   --place '가상식당' --date 2026-09-27 \

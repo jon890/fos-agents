@@ -57,7 +57,7 @@
 | `scripts/naver_editor_components.py` | 맥북, Hermes 컨테이너 | 스티커와 국내 지도 검색 결과를 넣고 초안과 대조한다 |
 | `scripts/naver_editor_settings.py` | 맥북, Hermes 컨테이너 | 카테고리와 태그를 넣고 모든 단계가 끝난 뒤에만 임시저장한다 |
 | `scripts/test_naver_editor.py` | 맥북, 홈서버 | 옛 초안 차단, 카테고리 선택, 사진·스티커·지도 대조, 사진 경로 절대화, 저장 차단, 세션 확인 주소를 검증한다 |
-| `.claude/skills/naver-blog-draft/` | 맥북과 홈서버 | 사진에서 임시저장까지의 판단과 절차 |
+| `.claude/skills/ji-yoon-blog-style/` | 맥북과 홈서버 | 사진에서 임시저장까지의 판단과 절차 |
 | `docs/` | 문서 | 흐름, 스키마, 구조, 이 워크스페이스의 결정(`docs/adr/`) |
 | `drafts/` | 맥북, Hermes 컨테이너 | 내려받거나 대화에 첨부한 사진과 초안. 추적하지 않는다 |
 | `data/` | 맥북 | 수집 원본과 집계 결과. 추적하지 않는다 |

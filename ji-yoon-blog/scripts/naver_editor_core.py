@@ -14,7 +14,7 @@ from cdp import Page
 
 sys.path.insert(
     0,
-    str(Path(__file__).resolve().parents[1] / ".claude/skills/naver-blog-draft/scripts"),
+    str(Path(__file__).resolve().parents[1] / ".claude/skills/ji-yoon-blog-style/scripts"),
 )
 from draft_contract import validate as validate_draft  # noqa: E402
 

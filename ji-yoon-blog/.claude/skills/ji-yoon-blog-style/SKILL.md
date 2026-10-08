@@ -1,5 +1,5 @@
 ---
-name: naver-blog-draft
+name: ji-yoon-blog-style
 description: >
   핸드폰 사진을 홈서버나 assistant 대화에 올리고, 장소별 지융로그 네이버 블로그 글 초안을
   만들어 미리보기로 확인한 뒤 네이버에 임시저장한다.
@@ -57,7 +57,7 @@ fos-assistant 는 turn 이 끝난 뒤 그 폴더에서 바뀐 `.html` 을 찾아
 미리보기는 답 아래에 자동으로 붙으므로 `아래 미리보기를 열어 확인해 주세요` 처럼 안내한다.
 
 ```bash
-python3 .claude/skills/naver-blog-draft/scripts/build_preview.py \
+python3 .claude/skills/ji-yoon-blog-style/scripts/build_preview.py \
   drafts/순돌이곱창/draft.json --out "$ARTIFACT_DIR/순돌이곱창/index.html"
 ```
 
@@ -117,7 +117,7 @@ HEIC 사진은 미리보기에서 `미리보기에 넣을 수 없는 형식` 으
 `.env.example` 이 어느 값이 어느 자리의 것인지 보여준다.
 
 ```bash
-python3 .claude/skills/naver-blog-draft/scripts/photos.py folders
+python3 .claude/skills/ji-yoon-blog-style/scripts/photos.py folders
 ```
 
 만들어 둔 폴더 목록과 폴더마다 사진이 몇 장 있는지 보여준다.
@@ -156,7 +156,7 @@ python3 .claude/skills/naver-blog-draft/scripts/photos.py folders
 사진이 먼저 와 있으면 실마리를 모은다.
 
 ```bash
-python3 .claude/skills/naver-blog-draft/scripts/place_hints.py drafts/순돌이곱창/photos
+python3 .claude/skills/ji-yoon-blog-style/scripts/place_hints.py drafts/순돌이곱창/photos
 ```
 
 촬영 위치와 파일 이름을 본다.
@@ -199,7 +199,7 @@ GPS 가 있다고 가정하고 움직이지 않는다.
 지융이 아직 사진을 올리지 않았으면 폴더를 만들어 준다.
 
 ```bash
-python3 .claude/skills/naver-blog-draft/scripts/photos.py new 순돌이곱창
+python3 .claude/skills/ji-yoon-blog-style/scripts/photos.py new 순돌이곱창
 ```
 
 2단계에서 확인한 상호명을 그대로 쓴다.
@@ -230,7 +230,7 @@ Cloudflare Access 로그인은 처음 한 번만 하고, 그 뒤에는 쿠키가
 4. 미리보기를 `--allow-missing-photos` 로 만든다.
 
 ```bash
-python3 .claude/skills/naver-blog-draft/scripts/build_preview.py \
+python3 .claude/skills/ji-yoon-blog-style/scripts/build_preview.py \
   drafts/순돌이곱창/draft.json --out drafts/순돌이곱창/preview.html \
   --allow-missing-photos
 ```
@@ -244,7 +244,7 @@ python3 .claude/skills/naver-blog-draft/scripts/build_preview.py \
 ## 4. 사진 읽기
 
 ```bash
-python3 .claude/skills/naver-blog-draft/scripts/photos.py pull 2026-09-04-순돌이곱창 \
+python3 .claude/skills/ji-yoon-blog-style/scripts/photos.py pull 2026-09-04-순돌이곱창 \
   --out ./drafts/순돌이곱창/photos
 ```
 
@@ -358,7 +358,7 @@ instructions에 `<ask>` 형식 안내가 있으면 그것을 따른다.
 ## 7. 미리보기 확인
 
 ```bash
-python3 .claude/skills/naver-blog-draft/scripts/build_preview.py \
+python3 .claude/skills/ji-yoon-blog-style/scripts/build_preview.py \
   drafts/순돌이곱창/draft.json --out drafts/순돌이곱창/preview.html
 ```
 
@@ -381,7 +381,7 @@ python3 .claude/skills/naver-blog-draft/scripts/build_preview.py \
 ```bash
 set -e
 DRAFT='drafts/순돌이곱창/draft.json'
-python3 .claude/skills/naver-blog-draft/scripts/build_preview.py "$DRAFT" \
+python3 .claude/skills/ji-yoon-blog-style/scripts/build_preview.py "$DRAFT" \
   --out drafts/순돌이곱창/preview.html
 OPEN_OUTPUT=$(python3 scripts/naver_editor.py open "$DRAFT")
 printf '%s\n' "$OPEN_OUTPUT"
@@ -439,14 +439,14 @@ Chrome 은 홈서버에서 돌므로 그 경로는 **홈서버에서 읽히는 �
 `[결과물 폴더]` 단락이 있으면 결과물 폴더에 HTML 로 만든다. 답 아래에 붙어 지융이 폰에서 열고 글을 복사할 수 있다.
 
 ```bash
-python3 .claude/skills/naver-blog-draft/scripts/build_package.py \
+python3 .claude/skills/ji-yoon-blog-style/scripts/build_package.py \
   drafts/순돌이곱창/draft.json --out "$ARTIFACT_DIR/순돌이곱창-수동등록/index.html"
 ```
 
 단락이 없으면 초안 폴더의 `package.md` 로 만들고, 그 내용을 답에 보여 준다.
 
 ```bash
-python3 .claude/skills/naver-blog-draft/scripts/build_package.py \
+python3 .claude/skills/ji-yoon-blog-style/scripts/build_package.py \
   drafts/순돌이곱창/draft.json --out drafts/순돌이곱창/package.md
 ```
 
