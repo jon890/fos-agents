@@ -57,7 +57,7 @@
 | `scripts/naver_editor_components.py` | 맥북, Hermes 컨테이너 | 스티커와 국내 지도 검색 결과를 넣고 초안과 대조한다 |
 | `scripts/naver_editor_settings.py` | 맥북, Hermes 컨테이너 | 카테고리와 태그를 넣고 모든 단계가 끝난 뒤에만 임시저장한다 |
 | `scripts/test_naver_editor.py` | 맥북, 홈서버 | 옛 초안 차단, 카테고리 선택, 사진·스티커·지도 대조, 사진 경로 절대화, 저장 차단, 세션 확인 주소를 검증한다 |
-| `.claude/skills/ji-yoon-blog-style/` | 맥북과 홈서버 | 사진에서 임시저장까지의 판단과 절차 |
+| `.claude/skills/ji-yoon-blog-style/` | fos-assistant 에이전트 | 문체와 카테고리 기준, 확인할 사실. 사진 보기와 임시저장은 커넥터 `naver-blog` 스킬이 맡는다 |
 | `docs/` | 문서 | 흐름, 스키마, 구조, 이 워크스페이스의 결정(`docs/adr/`) |
 | `drafts/` | 맥북, Hermes 컨테이너 | 내려받거나 대화에 첨부한 사진과 초안. 추적하지 않는다 |
 | `data/` | 맥북 | 수집 원본과 집계 결과. 추적하지 않는다 |
@@ -66,7 +66,9 @@
 
 | 경로 | 책임 |
 | --- | --- |
-| `SKILL.md` | 언제 무엇을 하는지, 멈출 조건 |
+| `SKILL.md` | 장소와 사실을 확인하는 차례, 제목, 스티커 코드. 앱의 스킬 화면에 올린다 |
+| `references/ji-yung-persona.md` | 지융로그 페르소나. 앱에 참고 파일로 함께 올린다 |
+| `references/category-style-map.md` | 카테고리별 글쓰기 모듈. 앱에 참고 파일로 함께 올린다 |
 | `scripts/photos.py` | 사진 저장소 명령을 부른다. 부르는 길을 환경을 보고 고른다 |
 | `scripts/photo_set.py` | 홈서버 저장소에서 내려받은 사진의 촬영시각을 읽어 순서를 세운다 |
 | `scripts/stage_chat_photos.py` | 대화 입력에 명시된 사진만 장소별 초안 폴더로 복사하고, 받은 차례대로 번호를 붙인다 |
@@ -82,8 +84,10 @@
 | `scripts/test_draft_contract.py` | 초안의 스티커와 장소 계약, 사진 번호 순서를 검증한다 |
 | `scripts/test_build_preview.py` | 미리보기가 자기 폴더 안의 파일만 상대 경로로 부르고, 넣는 사진을 줄이고 EXIF 를 빼고, 사진 번호와 설명을 순서대로 보이는지 검증한다 |
 | `scripts/test_build_package.py` | 수동 등록용 묶음의 HTML 과 출력에 내부 경로가 없는지 검증한다 |
-| `references/iphone-upload.md` | 아이폰에서 올리는 절차와 함정 |
-| `references/assistant-chat-photos.md` | 대화 첨부 사진을 장소별로 나눠 초안을 만드는 절차 |
+
+스킬의 `scripts/` 는 옛 전용 에이전트의 사진 저장소와 편집기 흐름이 쓰던 것이다.
+`SKILL.md` 는 더 부르지 않고 앱에도 올리지 않는다.
+워크스페이스의 편집기 스크립트가 `draft_contract.py` 를 불러 쓰므로, 정리 단계에서 그 스크립트들과 함께 지운다.
 
 ## 의존 방향
 
