@@ -70,8 +70,11 @@ MCP 도구는 특정 에이전트 명령줄 도구와 메시지 채널에 의존
 fos-assistant는 `accountbook/plugin/`을 복사하거나 마운트해 manifest, `connector.json`, `skills/`와 `.mcp.json`을 읽는다.
 `connector.json`은 `schema: 2`로 MCP 도구별 호출 정책을 선언한다.
 `tools`는 원래 MCP 도구 이름별 `risk`와 `approval`을 정한다.
-조회·합계·미리보기는 `READ/none`, 등록·수정은 `WRITE/required`, 삭제는 `DESTRUCTIVE/always`다.
-등록과 수정은 호출하면 승인 요청이 만들어지고 사용자가 승인 카드에서 승인한 것만 실행되며, 삭제는 계속 차단된다.
+조회·합계·미리보기는 `READ/none`, 등록·수정은 `WRITE/required`, 삭제는 `WRITE/required`와 `grant: false`다.
+등록·수정·삭제는 호출하면 승인 요청이 만들어지고 사용자가 승인 카드에서 승인한 것만 실행된다.
+삭제는 상시 허락 없이 한 건씩 매번 승인받는다. 승인 카드의 인자는 재조회한 날짜·금액·내용·카테고리를 포함한다.
+`identifiers`는 날짜·금액·내용·카테고리를 승인 카드에 표시하며 `grant: false`는 상시 허락을 막는다.
+백엔드의 지출·수입 삭제는 행을 지우지 않고 상태를 `DELETED`로 바꾼다.
 `default_tool_policy: deny`는 선언되지 않은 도구의 호출을 거절한다.
 새 MCP 도구를 추가할 때는 같은 변경에서 `tools`에 위험도와 승인 방식을 선언해야 한다.
 확인 도구와 선택지 도구는 `READ/none`으로 선언해야 한다.

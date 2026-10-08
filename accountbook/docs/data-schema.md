@@ -160,7 +160,11 @@ Hermes에서는 서버 이름 `accountbook`을 사용해 `mcp__accountbook__<도
   반복지출에서 생성된 지출을 수정하면 그 기록 하나만 바뀌고 반복지출 설정은 그대로다. 설정은 아래 `update_recurring_expense` 로 고친다.
   MCP 입력 스키마에서 수정과 삭제는 `confirmed: true`가 필수다.
   스킬은 사용자 확인 뒤 수정 도구에 이 값을 전달하며, 사용자가 승인 카드에서 승인해야 실행된다.
-  삭제 도구는 호출하지 않고 가계부 앱에서 직접 지우도록 안내한다.
+  삭제는 `date`, `amount`, `description`, `categoryName`을 필수로 받아 승인 카드에 대상 내용을 표시한다.
+  이 표시용 값은 HTTP DELETE 본문으로 보내지 않는다. 설명과 카테고리가 없으면 `null`이다.
+  지출은 선택 입력 `recurringExpenseUuid`도 받는다. 한 건의 `transactionUuid`만 받으며 묶음 삭제는 제공하지 않는다.
+  삭제는 대상 재조회와 사용자 확인 후 매번 승인 카드의 승인을 받아 실행한다.
+  정책은 `WRITE/required`, `grant: false`이며 기존 승인 실행 경로를 사용한다. 상시 허락은 제공하지 않는다.
 - 반복지출 설정은 지출 기록과 다른 자원이다.
   `list_recurring_expenses`는 선택 입력 `month`(`YYYY-MM`, 생략하면 이번 달)를 받아
   `{ month, items }`를 반환한다. `month`를 생략하면 응답의 `month`는 `null`이고, 가계부 서버가 정한 이번 달이 `generatedThisMonth`의 기준이다. 각 항목은 `uuid`, `name`, `amount`, `dayOfMonth`, `categoryUuid`, `categoryName`, `generatedThisMonth`다.
