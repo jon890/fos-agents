@@ -80,10 +80,54 @@ describe("MCP 가계부 도구", () => {
               : name === "delete_expense"
                 ? { transactionUuid: RECORD, confirmed: true }
                 : {};
+        // 변경 요청이 2xx 로 끝났는데 본문을 읽지 못하면 실패가 아니라 결과를 모르는 것이다.
         expect(result(await tools.call(name, args)).error.code).toBe(
-          "ACCOUNTBOOK_INVALID_RESPONSE",
+          name === "update_expense" || name === "delete_expense"
+            ? "ACCOUNTBOOK_OUTCOME_UNKNOWN"
+            : "ACCOUNTBOOK_INVALID_RESPONSE",
         );
       }
+    }
+  });
+
+  test("변경 요청을 보낸 뒤의 연결 실패와 5xx 는 결과를 모르는 오류다", async () => {
+    for (const failure of ["network", 502] as const) {
+      const methods: string[] = [];
+      const tools = new AccountbookTools(
+        new AccountbookClient({ apiBaseUrl: BASE, apiToken: TOKEN }, async (_input, init) => {
+          const method = init?.method ?? "GET";
+          methods.push(method);
+          if (method === "GET") throw new Error("unexpected read");
+          if (failure === "network") throw new Error("socket closed");
+          return new Response("{}", { status: failure });
+        }),
+        FAMILY,
+      );
+      const response = await tools.call("update_expense", {
+        transactionUuid: RECORD,
+        confirmed: true,
+        amount: 200,
+      });
+      expect(result(response).error.code).toBe("ACCOUNTBOOK_OUTCOME_UNKNOWN");
+      expect(methods).toEqual(["PUT"]);
+    }
+    for (const failure of ["network", 502] as const) {
+      const tools = new AccountbookTools(
+        new AccountbookClient({ apiBaseUrl: BASE, apiToken: TOKEN }, async () => {
+          if (failure === "network") throw new Error("socket closed");
+          return new Response("{}", { status: failure });
+        }),
+        FAMILY,
+      );
+      // 쓰기 전 카테고리 조회가 실패하면 아무것도 보내지 않았으므로 다시 시도할 수 있는 오류다.
+      const response = await tools.call("create_expense", {
+        amount: 100,
+        date: "2026-09-30T12:00:00",
+        categoryName: "예시 분류",
+      });
+      expect(result(response).error.code).toBe(
+        failure === "network" ? "ACCOUNTBOOK_NETWORK" : "ACCOUNTBOOK_UNAVAILABLE",
+      );
     }
   });
   test("가족이 하나면 자동 선택하고 이름을 카테고리 UUID로 변환한다", async () => {
@@ -167,6 +211,44 @@ describe("MCP 가계부 도구", () => {
     }
   });
 
+  test("카테고리 UUID와 이름을 함께 받으면 같은 카테고리일 때만 쓴다", async () => {
+    for (const action of ["create", "update"]) {
+      const base = {
+        amount: 100,
+        date: "2026-09-30T12:00:00",
+        ...(action === "update" ? { transactionUuid: RECORD, confirmed: true } : {}),
+      };
+      const { tools, requests } = setup(undefined, FAMILY);
+      const response = await tools.call(`${action}_expense`, {
+        ...base,
+        categoryUuid: CATEGORY,
+        categoryName: "예시 분류",
+      });
+      expect(response).not.toHaveProperty("isError");
+      expect(requests.at(-1)?.body?.categoryUuid).toBe(CATEGORY);
+
+      const mismatch = setup(undefined, FAMILY);
+      const rejected = await mismatch.tools.call(`${action}_expense`, {
+        ...base,
+        categoryUuid: CATEGORY,
+        categoryName: "지출 전용",
+      });
+      expect(result(rejected).error.code).toBe("ACCOUNTBOOK_CATEGORY_SELECTION");
+      expect(result(rejected).error.message).toContain("서로 다른 카테고리");
+      expect(mismatch.requests.every((request) => request.method === "GET")).toBe(true);
+
+      // 같은 카테고리를 가리켜도 종류가 다르면 불일치가 아니라 종류 안내다.
+      const wrongType = setup(undefined, FAMILY);
+      const typeRejected = await wrongType.tools.call(`${action}_expense`, {
+        ...base,
+        categoryUuid: INCOME_CATEGORY,
+        categoryName: "수입 전용",
+      });
+      expect(result(typeRejected).error.code).toBe("ACCOUNTBOOK_CATEGORY_SELECTION");
+      expect(result(typeRejected).error.message).not.toContain("서로 다른 카테고리");
+    }
+  });
+
   test("가족이 없거나 여럿이면 자동 변경하지 않고 선택 오류를 반환한다", async () => {
     for (const families of [
       [],
@@ -241,7 +323,6 @@ describe("MCP 가계부 도구", () => {
       { date: "2026-02-30T12:00:00" },
       { date: "2026-09-30T24:00:00" },
       { familyUuid: "../other" },
-      { categoryUuid: CATEGORY },
     ]) {
       expect(
         result(

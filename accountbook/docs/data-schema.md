@@ -149,13 +149,15 @@ Hermes에서는 서버 이름 `accountbook`을 사용해 `mcp__accountbook__<도
   금액은 소수 둘째 자리까지 있는 문자열이다. 각 금액을 정수로 변환해 더하므로 소수 오차가 없다.
   전체 합계에는 예산 제외 지출도 포함되며 `excludedFromBudgetAmount`는 그 지출만 합산한다. 수입에서는 `0.00`이다.
   상한 초과, 페이지 오류, 중복 기록이나 조회 중 건수 변경이 발견되면 부분 합계를 반환하지 않는다.
-- 등록은 양수 `amount`(정수 최대 10자리, 소수 최대 2자리), `date`(timezone 없는 `LocalDateTime`), `categoryUuid` 또는 `categoryName` 중 하나를 받는다.
+- 등록은 양수 `amount`(정수 최대 10자리, 소수 최대 2자리), `date`(timezone 없는 `LocalDateTime`), `categoryUuid`와 `categoryName` 가운데 하나 이상을 받는다.
+  둘을 함께 받으면 같은 카테고리를 가리킬 때만 쓰고, 다르면 `ACCOUNTBOOK_CATEGORY_SELECTION`을 반환한다.
 - 지출 등록·수정은 `EXPENSE`, 수입 등록·수정은 `INCOME` 카테고리에서만 이름이나 UUID를 찾는다.
   다른 종류를 선택하면 변경 요청 없이 `ACCOUNTBOOK_CATEGORY_SELECTION`과 해당 종류의 이름 목록을 반환한다.
   화면 가져오기도 거래의 `expense`와 `income`에 따라 같은 종류에서 이름을 찾는다.
   수입과 지출이 섞인 화면에서는 거래별 `categoryName`을 지정한다.
 - `description`은 최대 1000자이며, 지출만 `excludeFromBudget`을 받는다.
-- 수정은 바꿀 필드만 받으며 카테고리 UUID와 이름을 동시에 받지 않는다.
+- 수정은 바꿀 필드만 받는다. 카테고리 UUID와 이름은 등록과 같은 규칙으로 받는다.
+  반복지출에서 생성된 지출을 수정하면 그 기록 하나만 바뀌고 반복지출 설정은 그대로다. 커넥터는 반복지출 설정을 다루지 않는다.
   MCP 입력 스키마에서 수정과 삭제는 `confirmed: true`가 필수다.
   스킬은 사용자 확인 뒤 수정 도구에 이 값을 전달하며, 사용자가 승인 카드에서 승인해야 실행된다.
   삭제 도구는 호출하지 않고 가계부 앱에서 직접 지우도록 안내한다.
@@ -166,7 +168,8 @@ Hermes에서는 서버 이름 `accountbook`을 사용해 `mcp__accountbook__<도
 - 거래 응답은 REST API의 `data`를 MCP text JSON으로 전달한다. 목록은 `items`, `totalElements`, `totalPages`, `currentPage`를 가진다.
 - 삭제는 HTTP 2xx 응답의 `data`가 없거나 `null`이면 성공으로 처리한다. HTTP 204도 성공으로 처리한다.
 - 화면 가져오기 도구의 입력과 결과는 위 「화면 추출 입력」, 「미리보기 결과」, 「등록 결과」를 따른다.
-- 오류는 MCP `isError: true`와 `{ error: { code, message } }`로 반환한다. 화면 가져오기 오류는 같은 객체에 추가 필드를 더한다. 입력 단계의 프로토콜 스키마 오류는 SDK가 MCP 오류로 반환한다.
+- 오류는 MCP `isError: true`와 `{ error: { code, message } }`로 반환한다. 화면 가져오기 오류는 같은 객체에 추가 필드를 더한다. 입력 스키마 오류도 SDK 글이 아니라 `ACCOUNTBOOK_INVALID_INPUT`으로 반환한다.
+  fos-assistant 는 JSON 이 아닌 오류 글을 `unavailable` 로 기록하기 때문이다.
 
 | 오류 코드 | 조건 |
 |---|---|
@@ -174,12 +177,16 @@ Hermes에서는 서버 이름 `accountbook`을 사용해 `mcp__accountbook__<도
 | `ACCOUNTBOOK_FORBIDDEN` | 403 또는 접근할 수 없는 기본 가족 |
 | `ACCOUNTBOOK_NOT_FOUND` | 404 |
 | `ACCOUNTBOOK_BAD_REQUEST` | 나머지 HTTP 4xx |
-| `ACCOUNTBOOK_UNAVAILABLE` | HTTP 5xx |
-| `ACCOUNTBOOK_NETWORK` | 연결, redirect, timeout 실패. 변경 결과 재조회 필요 |
-| `ACCOUNTBOOK_INVALID_RESPONSE` | JSON 또는 필수 응답 구조를 확인할 수 없음 |
+| `ACCOUNTBOOK_UNAVAILABLE` | 조회의 HTTP 5xx |
+| `ACCOUNTBOOK_NETWORK` | 조회의 연결, redirect, timeout 실패 |
+| `ACCOUNTBOOK_OUTCOME_UNKNOWN` | 등록·수정·삭제 요청을 보낸 뒤의 연결 실패, HTTP 5xx, 읽을 수 없는 2xx 응답. 변경 결과 재조회 필요 |
+| `ACCOUNTBOOK_INVALID_RESPONSE` | 조회 응답의 JSON 또는 필수 구조를 확인할 수 없음 |
 | `ACCOUNTBOOK_CONFIG` | 주소, 토큰, 기본 가족 설정 오류 |
 | `ACCOUNTBOOK_INVALID_INPUT` | 도구 입력 검증 실패 |
 | `ACCOUNTBOOK_FAMILY_SELECTION`, `ACCOUNTBOOK_NO_FAMILY` | 가족 선택 필요 또는 가족 없음 |
-| `ACCOUNTBOOK_CATEGORY_SELECTION` | 거래 종류에 맞는 카테고리가 없거나 같은 종류 안에서 이름이 중복됨 |
+| `ACCOUNTBOOK_CATEGORY_SELECTION` | 거래 종류에 맞는 카테고리가 없거나, 같은 종류 안에서 이름이 중복되거나, UUID 와 이름이 서로 다른 카테고리를 가리킴 |
 | `ACCOUNTBOOK_SUMMARY_LIMIT` | 합계 조회나 화면 가져오기의 기존 기록 조회가 100페이지를 초과함 |
 | `ACCOUNTBOOK_UNKNOWN_TOOL`, `ACCOUNTBOOK_INTERNAL` | 지원하지 않는 도구 또는 내부 처리 실패 |
+
+fos-assistant 가 승인한 실행의 실패를 어떤 공통 어휘와 복구 어휘로 기록할지는 [connector.json](../plugin/connector.json) 의 `errors` 가 정한다.
+표에 없는 코드는 `unavailable` 이다. 결과를 모르는 것으로 기록하는 코드는 `ACCOUNTBOOK_OUTCOME_UNKNOWN` 하나다.
