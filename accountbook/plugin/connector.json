@@ -86,7 +86,7 @@
       "approval": "required",
       "title": "지출 한 건 삭제: 날짜·금액·내용·카테고리 확인",
       "grant": false,
-      "identifiers": ["date", "amount", "description", "categoryName"]
+      "identifiers": ["date", "amount", "description", "categoryName", "recurringExpenseUuid"]
     },
     "delete_income": {
       "risk": "WRITE",
@@ -121,6 +121,10 @@
   "attachments": true,
   "operator_env": ["ACCOUNTBOOK_API_BASE_URL"],
   "errors": {
+    "ACCOUNTBOOK_DELETE_CONFIRMATION_MISMATCH": {
+      "category": "invalid_input",
+      "recovery": "recheck"
+    },
     "ACCOUNTBOOK_UNAUTHORIZED": {
       "category": "credential_rejected",
       "recovery": "reconnect"

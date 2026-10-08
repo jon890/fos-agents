@@ -67,6 +67,7 @@ test("삭제는 WRITE 승인 정책이며 상시 허락을 받지 않는다", ()
       "amount",
       "description",
       "categoryName",
+      ...(name === "delete_expense" ? ["recurringExpenseUuid"] : []),
     ]);
     expect(connector.tools[name].title).toContain("날짜·금액·내용·카테고리");
   }
@@ -140,6 +141,7 @@ test("승인한 실행의 입력 오류는 unavailable 로 묻히지 않는다",
   // 표에 없는 코드는 fos-assistant 가 unavailable 로 기록한다. 인자를 고치면 되는 오류는 표에 둔다.
   for (const code of [
     "ACCOUNTBOOK_INVALID_INPUT",
+    "ACCOUNTBOOK_DELETE_CONFIRMATION_MISMATCH",
     "ACCOUNTBOOK_CATEGORY_SELECTION",
     "ACCOUNTBOOK_FAMILY_SELECTION",
     "ACCOUNTBOOK_NOT_FOUND",
@@ -149,6 +151,9 @@ test("승인한 실행의 입력 오류는 unavailable 로 묻히지 않는다",
     expect(connector.errors[code]).toMatchObject({ category: "invalid_input" });
   // 일부만 등록된 묶음은 미리보기를 다시 만들면 등록된 거래를 건너뛴다.
   expect(connector.errors.ACCOUNTBOOK_IMPORT_PARTIAL).toMatchObject({ recovery: "recheck" });
+  expect(connector.errors.ACCOUNTBOOK_DELETE_CONFIRMATION_MISMATCH).toMatchObject({
+    recovery: "recheck",
+  });
   // 변경 요청을 보낸 뒤 결과를 읽지 못한 것만 결과를 모르는 것이다. 쓰기 전 조회 실패는 다시 시도한다.
   expect(connector.errors.ACCOUNTBOOK_OUTCOME_UNKNOWN).toBe("outcome_unknown");
   for (const code of ["ACCOUNTBOOK_NETWORK", "ACCOUNTBOOK_UNAVAILABLE"])

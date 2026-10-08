@@ -75,6 +75,8 @@ fos-assistant는 `accountbook/plugin/`을 복사하거나 마운트해 manifest,
 조회·미리보기는 `READ/none`, 등록·수정은 `WRITE/required`, 삭제는 `WRITE/required`와 `grant: false`다.
 등록·수정·삭제는 호출하면 승인 요청이 만들어지고 사용자가 승인 카드에서 승인한 것만 실행된다.
 삭제는 상시 허락 없이 한 건씩 매번 승인받는다. 승인 카드의 인자는 재조회한 날짜·금액·내용·카테고리를 포함한다.
+지출은 반복지출 UUID도 표시한다. 도구는 DELETE 직전 GET 결과와 현재 카테고리 이름을 승인 인자와 대조한다.
+불일치하면 DELETE 없이 `ACCOUNTBOOK_DELETE_CONFIRMATION_MISMATCH`(`recheck`)를 반환한다.
 `identifiers`는 날짜·금액·내용·카테고리를 승인 카드에 표시하며 `grant: false`는 상시 허락을 막는다.
 백엔드의 지출·수입 삭제는 행을 지우지 않고 상태를 `DELETED`로 바꾼다.
 `default_tool_policy: deny`는 선언되지 않은 도구의 호출을 거절한다.

@@ -178,7 +178,7 @@ function deleteSchema(expense: boolean) {
     amount,
     description: z.string().max(1000).nullable(),
     categoryName: z.string().trim().min(1).max(50).nullable(),
-    ...(expense ? { recurringExpenseUuid: uuid.nullable().optional() } : {}),
+    ...(expense ? { recurringExpenseUuid: uuid.nullable() } : {}),
   });
 }
 
@@ -279,6 +279,7 @@ export class AccountbookTools {
       if (name.startsWith("get_"))
         return this.success(responseData(await this.client.request(target), transactionSchema));
       if (name.startsWith("delete_")) {
+        await this.confirmDeletion(root, target, args, expense);
         const response = await this.client.request(target, "DELETE");
         if (response !== undefined) written(response, z.null().optional());
         return this.success({ deleted: true, familyUuid, transactionUuid: args.transactionUuid });
@@ -305,6 +306,40 @@ export class AccountbookTools {
         content: [{ type: "text" as const, text: JSON.stringify({ error: details, ...extra }) }],
       };
     }
+  }
+
+  private async confirmDeletion(
+    root: string,
+    target: string,
+    args: Record<string, unknown>,
+    expense: boolean,
+  ) {
+    const current = responseData(
+      await this.client.request(target),
+      transactionSchema.extend({
+        amount: transactionSchema.shape.amount.transform(Number).pipe(amount),
+        categoryUuid: uuid.nullable(),
+        ...(expense ? { recurringExpenseUuid: uuid.nullable() } : {}),
+      }),
+    );
+    // 상세 API는 카테고리 이름을 생략하므로 같은 가족의 현재 목록에서 해석한다.
+    const category = current.categoryUuid
+      ? (await this.categories(root)).find((item) => item.uuid === current.categoryUuid)
+      : null;
+    if (current.categoryUuid && !category)
+      throw new AccountbookError("ACCOUNTBOOK_INVALID_RESPONSE");
+    if (
+      current.uuid !== args.transactionUuid ||
+      current.date !== args.date ||
+      current.amount !== args.amount ||
+      current.description !== args.description ||
+      (category?.name ?? null) !== args.categoryName ||
+      (expense && current.recurringExpenseUuid !== args.recurringExpenseUuid)
+    )
+      throw new SelectionError(
+        "ACCOUNTBOOK_DELETE_CONFIRMATION_MISMATCH",
+        "현재 기록이 승인한 삭제 대상과 다릅니다. 다시 조회하고 새 승인 요청을 만들어 주세요.",
+      );
   }
 
   private async category(
