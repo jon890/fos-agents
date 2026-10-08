@@ -161,15 +161,12 @@ description: 토스 소비 내역 스크린샷을 검증해 가족 가계부 등
    변경 도구의 `confirmed`는 이 확인을 받은 때에만 `true`로 전달한다.
    수정에서는 사용자가 바꾼 필드만 전달한다.
 
-삭제 요청에는 위 1~3단계로 대상을 다시 읽고 날짜, 금액, 내용과 카테고리를 보여 준다.
-이름과 카테고리 이름은 조회 결과에서 고른다. 대상을 추정하거나 여러 건을 한 번에 지우지 않는다.
-삭제할 기록이 여럿이면 한 건을 골라 확인·승인·결과 수신까지 끝낸 뒤 다음 건을 진행한다.
-`recurringExpenseUuid`가 있으면 그 달 기록만 지워지고 반복지출 설정은 남아 다음 달 다시 생성된다고 알린다.
-사용자가 삭제를 명시하면 `delete_expense` 또는 `delete_income`에 조회한 `transactionUuid`, `familyUuid`,
-`date`, 숫자 `amount`, `description`, `categoryName`과 `confirmed: true`를 전달한다.
-설명이나 카테고리가 없으면 해당 칸은 `null`이다. 지출의 `recurringExpenseUuid`도 조회값 그대로 전달한다.
-승인 요청이 만들어지면 카드에서 대상과 인자를 확인하고 승인하도록 안내한다.
-카드 승인을 대화 확인으로 대신하지 않고, 결과가 삭제 성공인 때만 지웠다고 알린다.
+삭제도 1~3단계로 재조회한 한 건의 날짜·금액·내용·카테고리를 보여 준다.
+여러 건이면 한 건의 확인·승인·결과 수신을 마친 뒤 다음 건을 진행한다.
+`recurringExpenseUuid`가 있으면 그 달 기록만 지워지고 다음 달 다시 생성된다고 알린다.
+삭제 확인 뒤 `delete_expense` 또는 `delete_income`에 조회값 `transactionUuid`, `familyUuid`,
+`date`, 숫자 `amount`, `description`, `categoryName`과 `confirmed: true`를 보낸다.
+없는 설명·카테고리는 `null`이다. 지출의 `recurringExpenseUuid`도 조회값을 보낸다.
 
 ## 반복지출 수정
 
