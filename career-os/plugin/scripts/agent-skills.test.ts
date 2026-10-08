@@ -237,9 +237,129 @@ describe("지침 평가", () => {
 
   test("채점은 바로 침묵한 trace 를 통과시킨다", () => {
     const trace = parseTrace(
-      '설명\n<eval-trace>{"earlyNothingNew": true, "delegations": [], "areas": [], "searchQueries": [], "result": {"version": 1, "outcome": "NOTHING_NEW", "findings": []}}</eval-trace>',
+      '설명\n<eval-trace>{"earlyNothingNew": true, "delegations": [], "areas": [], "searchQueries": [], "result": {"version": 3, "outcome": "NOTHING_NEW", "findings": [], "problemCandidates": []}}</eval-trace>',
     );
     expect(grade(trace, noChange).every((check) => check.pass)).toBe(true);
+  });
+
+  test("일반 침묵은 v3 빈 발견과 빈 후보를 요구한다", () => {
+    const trace = (result: unknown) =>
+      parseTrace(
+        `<eval-trace>${JSON.stringify({
+          earlyNothingNew: true,
+          delegations: [],
+          directCalls: [],
+          areas: [],
+          searchQueries: [],
+          result,
+        })}</eval-trace>`,
+      );
+    for (const result of [
+      { version: 1, outcome: "NOTHING_NEW", findings: [], problemCandidates: [] },
+      { version: 2, outcome: "NOTHING_NEW", findings: [], problemCandidates: [] },
+      { version: 3, outcome: "NOTHING_NEW", findings: [], problemCandidates: undefined },
+      { version: 3, outcome: "NOTHING_NEW", findings: [], problemCandidates: {} },
+      { version: 3, outcome: "NOTHING_NEW", findings: [], problemCandidates: [{}] },
+      { version: 3, outcome: "NOTHING_NEW", problemCandidates: [] },
+      { version: 3, outcome: "NOTHING_NEW", findings: {}, problemCandidates: [] },
+    ])
+      expect(grade(trace(result), noChange).every((check) => check.pass)).toBe(false);
+  });
+
+  test("결과 없는 조사 계획은 유지하고 결과를 요구하면 v3 후보 배열을 검사한다", () => {
+    const plan = directTrace([]);
+    plan.areas = [];
+    plan.searchQueries = [];
+    expect(
+      grade(plan, {
+        earlyNothingNew: false,
+        areas: [],
+        delegations: { include: [], exclude: [] },
+        searchQueries: { max: 0, forbidden: [] },
+      }).every((check) => check.pass),
+    ).toBe(true);
+
+    const required = {
+      earlyNothingNew: false,
+      areas: [],
+      delegations: { include: [], exclude: [] },
+      searchQueries: { max: 0, forbidden: [] },
+      outcome: "FINDINGS",
+    } satisfies Parameters<typeof grade>[1];
+    for (const result of [
+      { version: 1, outcome: "FINDINGS", findings: [], problemCandidates: [] },
+      { version: 3, outcome: "FINDINGS", findings: [] },
+    ])
+      expect(
+        grade(
+          parseTrace(
+            `<eval-trace>${JSON.stringify({
+              earlyNothingNew: false,
+              delegations: [],
+              directCalls: [],
+              areas: [],
+              searchQueries: [],
+              result,
+            })}</eval-trace>`,
+          ),
+          required,
+        ).every((check) => check.pass),
+      ).toBe(false);
+
+    const actualResult = (result: unknown) =>
+      parseTrace(
+        `<eval-trace>${JSON.stringify({
+          earlyNothingNew: false,
+          delegations: [],
+          directCalls: [],
+          areas: [],
+          searchQueries: [],
+          result,
+        })}</eval-trace>`,
+      );
+    const optionalResult = {
+      earlyNothingNew: false,
+      areas: [],
+      delegations: { include: [], exclude: [] },
+      searchQueries: { max: 0, forbidden: [] },
+    } satisfies Parameters<typeof grade>[1];
+    for (const result of [
+      { version: 1, outcome: "FINDINGS", findings: [], problemCandidates: [] },
+      { version: 3, outcome: "FINDINGS", findings: [] },
+    ])
+      expect(grade(actualResult(result), optionalResult).every((check) => check.pass)).toBe(false);
+    expect(
+      grade(
+        actualResult({ version: 3, outcome: "FINDINGS", findings: [], problemCandidates: [] }),
+        optionalResult,
+      ).every((check) => check.pass),
+    ).toBe(true);
+  });
+
+  test("조사 계획은 명시한 null 결과만 결과 없음으로 인정한다", () => {
+    const base = {
+      earlyNothingNew: false,
+      delegations: [],
+      directCalls: [],
+      areas: [],
+      searchQueries: [],
+    };
+    const invalid = [
+      { ...base, result: "FINDINGS" },
+      { ...base, result: true },
+      { ...base, result: 3 },
+      { ...base, result: [] },
+      base,
+    ];
+    for (const value of invalid)
+      expect(
+        grade(parseTrace(`<eval-trace>${JSON.stringify(value)}</eval-trace>`), {
+          earlyNothingNew: false,
+          areas: [],
+          delegations: { include: [], exclude: [] },
+          searchQueries: { max: 0, forbidden: [] },
+        }),
+      ).toEqual([{ check: "trace", pass: false, detail: "<eval-trace> JSON 을 읽지 못했다" }]);
   });
 
   test("채점은 위임하거나 검색한 trace 를 떨어뜨린다", () => {
@@ -254,6 +374,8 @@ describe("지침 평가", () => {
       "areas",
       "delegations",
       "searchQueries.count",
+      "result.version",
+      "candidates.count",
       "outcome",
     ]);
   });
@@ -349,7 +471,7 @@ describe("지침 평가", () => {
     trace.earlyNothingNew = true;
     trace.areas = [];
     trace.searchQueries = [];
-    trace.result = { outcome: "NOTHING_NEW", findings: [] };
+    trace.result = { version: 3, outcome: "NOTHING_NEW", findings: [], problemCandidates: [] };
     expect(grade(trace, grading).find((check) => check.check === "directCalls")?.pass).toBe(false);
     trace.directCalls = [];
     expect(grade(trace, grading).every((check) => check.pass)).toBe(true);
@@ -360,13 +482,19 @@ describe("지침 평가", () => {
     const trace = directTrace([contextCalls[0]!]);
     trace.areas = [];
     trace.searchQueries = [];
-    trace.result = { outcome: "NOTHING_NEW", findings: [] };
+    trace.result = { version: 3, outcome: "NOTHING_NEW", findings: [], problemCandidates: [] };
     expect(
       grade(trace, grading)
         .filter((check) => !check.pass)
         .map((check) => check.check),
     ).toEqual(["outcome", "sourceFailures"]);
-    trace.result = { outcome: "FINDINGS", findings: [], sourceFailures: ["CAREER_UNAUTHORIZED"] };
+    trace.result = {
+      version: 3,
+      outcome: "FINDINGS",
+      findings: [],
+      sourceFailures: ["CAREER_UNAUTHORIZED"],
+      problemCandidates: [],
+    };
     expect(grade(trace, grading).every((check) => check.pass)).toBe(true);
   });
 
@@ -375,7 +503,13 @@ describe("지침 평가", () => {
     const trace = directTrace([contextCalls[0]!]);
     trace.areas = [];
     trace.searchQueries = [];
-    trace.result = { outcome: "FINDINGS", findings: [], sourceFailures: ["CAREER_UNAUTHORIZED"] };
+    trace.result = {
+      version: 3,
+      outcome: "FINDINGS",
+      findings: [],
+      sourceFailures: ["CAREER_UNAUTHORIZED"],
+      problemCandidates: [],
+    };
     expect(grade(trace, grading).every((check) => check.pass)).toBe(true);
 
     const invalidCalls: DirectCall[][] = [
@@ -406,9 +540,11 @@ describe("지침 평가", () => {
       trace.areas = grading.areas.map((area) => ({ area, reason: "합성 맥락" }));
       trace.searchQueries = [];
       trace.result = {
+        version: 3,
         outcome: "FINDINGS",
         findings: [{ area: "position", title: "fabricated" }],
         sourceFailures: [grading.sourceFailure!],
+        problemCandidates: [],
       };
       expect(
         grade(trace, grading)
@@ -438,7 +574,13 @@ describe("지침 평가", () => {
           directCalls: [contextCalls[0]!],
           areas: [],
           searchQueries: [],
-          result: { outcome: "FINDINGS", findings: [], sourceFailures: failures },
+          result: {
+            version: 3,
+            outcome: "FINDINGS",
+            findings: [],
+            sourceFailures: failures,
+            problemCandidates: [],
+          },
         })}</eval-trace>`,
       );
       expect(
@@ -483,6 +625,24 @@ describe("v3 문제 후보 평가", () => {
         trace({ version: 3, outcome: "NOTHING_NEW", findings: [], problemCandidates: [] }),
         quiet,
       ).every((entry) => entry.pass),
+    ).toBe(true);
+  });
+
+  test("새 발견과 빈 후보 예는 FINDINGS 이고 후보 0개 채점을 통과한다", () => {
+    const blocks = [
+      ...readFileSync(join(skillDirectory, "references", "result-block.md"), "utf8").matchAll(
+        /<fos-check-result>([\s\S]*?)<\/fos-check-result>/g,
+      ),
+    ].map((match) => JSON.parse(match[1]!));
+    const observation = blocks.find(
+      (block) => block.outcome === "FINDINGS" && block.problemCandidates.length === 0,
+    );
+    expect(observation).toBeDefined();
+    expect(
+      grade(trace(observation), {
+        ...grading,
+        candidates: { count: 0, evidenceTopics: [] },
+      }).every((entry) => entry.pass),
     ).toBe(true);
   });
 

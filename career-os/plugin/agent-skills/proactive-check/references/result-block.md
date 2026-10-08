@@ -61,4 +61,35 @@
 
 새 자료를 확인했어도 사용자의 목표를 막는 문제가 없으면 `FINDINGS` 의 발견은 그대로 두고 `problemCandidates` 만 `[]` 로 쓴다.
 위 공부 예에서 사용자가 이미 업무 준비를 끝냈고 새 설명서를 참고하려는 경우가 해당한다.
+
+```text
+<fos-check-result>
+{
+  "version": 3,
+  "outcome": "FINDINGS",
+  "summary": "Kafka 트랜잭션 설명서를 확인했어요.",
+  "findings": [
+    {
+      "area": "study",
+      "topicKey": "study:kafka-exactly-once",
+      "title": "Kafka 트랜잭션과 exactly-once 처리 설명서",
+      "sourceUrl": "https://docs.example.org/kafka/transactions",
+      "checkedAt": "2026-10-05T00:00:00Z",
+      "publishedAt": "2026-08-20",
+      "freshness": "CURRENT",
+      "whyItMatters": "사용자가 업무 준비를 마쳤고, 필요할 때 참고할 설명서를 요청했다.",
+      "facts": ["transactional.id 를 설정한 producer 만 트랜잭션을 연다고 설명한다"],
+      "inferences": [],
+      "unknowns": [],
+      "next": {"type": "ACTION", "text": "필요할 때 트랜잭션 절을 다시 참고한다"}
+    }
+  ],
+  "questions": [],
+  "followUpCandidates": [],
+  "sourceFailures": [],
+  "problemCandidates": []
+}
+</fos-check-result>
+```
+
 지켜볼 동향을 재조사했지만 원문이 그대로면 `NOTHING_NEW`, 빈 `findings` 와 빈 `problemCandidates` 로 끝내고, 본문의 watch 규칙대로 `summary` 에 조사한 항목을 남긴다.

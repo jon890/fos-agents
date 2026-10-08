@@ -743,7 +743,7 @@ career-os/plugin/
 | `plugin/scripts/build.ts`, `plugin/dist/career-mcp.js` | 의존성을 포함한 MCP 서버 실행 파일의 빌드와 배포 |
 | `plugin/dist/career-local.js` | 같은 빌드가 만드는 로컬 실행기 실행 파일. 아래 「로컬 실행기」 |
 | `plugin/agent-skills/proactive-check/` | fos-assistant 의 일반 커리어 에이전트가 먼저 살펴보기에서 읽는 지침. 커넥터 위임으로 맥락을 읽어 공부, 포지션, 동향 가운데 조사할 영역을 고르고 결과 블록을 쓴다. `evals/` 는 합성 fixture 와 기대 판정이다 |
-| `plugin/scripts/agent-skill-eval.ts` | `agent-skills/proactive-check/evals/` 의 fixture 를 Claude Code CLI 로 실제 모델에 돌리고 고른 영역, 위임, 직접 호출과 검색어를 채점한다. 결과 작성 평가는 이번 실행에서 원문을 확인한 합성 결과로 v3 문제 후보의 수, 필수 칸과 근거 참조를 채점한다 |
+| `plugin/scripts/agent-skill-eval.ts` | `agent-skills/proactive-check/evals/` 의 fixture 를 Claude Code CLI 로 실제 모델에 돌리고 고른 영역, 위임, 직접 호출과 검색어를 채점한다. 결과가 있는 평가는 v3와 문제 후보 배열을 검사하고, `NOTHING_NEW` 는 빈 발견과 빈 후보를 요구한다. 결과 작성 평가는 이번 실행에서 원문을 확인한 합성 결과로 문제 후보의 수, 필수 칸과 근거 참조를 채점한다 |
 | `plugin/connector-skills/career-connector/SKILL.md` | 연결용 에이전트의 지침. 프로필 갱신 순서와 승인 규칙, 조사용 읽기 도구의 결과 해석 |
 | `plugin/connector-skills/interview-practice/SKILL.md` | MCP 도구만으로 하는 면접 연습. 질문 고르기, 답변 평가, 기록과 개인 질문 저장 |
 | `plugin/connector-skills/study-topic-recommender/SKILL.md` | MCP 도구만으로 하는 공부 추천. 수집된 후보에서 고르고 추천 이력을 저장 |
