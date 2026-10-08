@@ -79,12 +79,14 @@ export const toolDefinitions = {
     schema: updateSchema(false),
   },
   delete_expense: {
-    description: "사용자가 대상 기록을 확인한 뒤 지출 삭제",
-    schema: z.strictObject({ ...recordShape, confirmed: z.literal(true) }),
+    description:
+      "get_expense로 재조회해 날짜·금액·내용·카테고리를 보여 준 지출 한 건 삭제. 매번 승인 필요",
+    schema: deleteSchema(true),
   },
   delete_income: {
-    description: "사용자가 대상 기록을 확인한 뒤 수입 삭제",
-    schema: z.strictObject({ ...recordShape, confirmed: z.literal(true) }),
+    description:
+      "get_income으로 재조회해 날짜·금액·내용·카테고리를 보여 준 수입 한 건 삭제. 매번 승인 필요",
+    schema: deleteSchema(false),
   },
   list_recurring_expenses: {
     description:
@@ -164,6 +166,20 @@ function updateSchema(expense: boolean) {
     .refine((v) =>
       Object.keys(v).some((key) => !["familyUuid", "transactionUuid", "confirmed"].includes(key)),
     );
+}
+
+// 승인 카드에서 UUID만 보고 삭제하지 않도록 재조회한 대상의 내용을 함께 받는다.
+// 표시용 필드는 DELETE 요청 본문으로 전달하지 않는다.
+function deleteSchema(expense: boolean) {
+  return z.strictObject({
+    ...recordShape,
+    confirmed: z.literal(true),
+    date,
+    amount,
+    description: z.string().max(1000).nullable(),
+    categoryName: z.string().trim().min(1).max(50).nullable(),
+    ...(expense ? { recurringExpenseUuid: uuid.nullable() } : {}),
+  });
 }
 
 // A 2xx answer to a change request means it was applied; an unreadable body only hides the result.
@@ -263,6 +279,7 @@ export class AccountbookTools {
       if (name.startsWith("get_"))
         return this.success(responseData(await this.client.request(target), transactionSchema));
       if (name.startsWith("delete_")) {
+        await this.confirmDeletion(root, target, args, expense);
         const response = await this.client.request(target, "DELETE");
         if (response !== undefined) written(response, z.null().optional());
         return this.success({ deleted: true, familyUuid, transactionUuid: args.transactionUuid });
@@ -289,6 +306,40 @@ export class AccountbookTools {
         content: [{ type: "text" as const, text: JSON.stringify({ error: details, ...extra }) }],
       };
     }
+  }
+
+  private async confirmDeletion(
+    root: string,
+    target: string,
+    args: Record<string, unknown>,
+    expense: boolean,
+  ) {
+    const current = responseData(
+      await this.client.request(target),
+      transactionSchema.extend({
+        amount: transactionSchema.shape.amount.transform(Number).pipe(amount),
+        categoryUuid: uuid.nullable(),
+        ...(expense ? { recurringExpenseUuid: uuid.nullable() } : {}),
+      }),
+    );
+    // 상세 API는 카테고리 이름을 생략하므로 같은 가족의 현재 목록에서 해석한다.
+    const category = current.categoryUuid
+      ? (await this.categories(root)).find((item) => item.uuid === current.categoryUuid)
+      : null;
+    if (current.categoryUuid && !category)
+      throw new AccountbookError("ACCOUNTBOOK_INVALID_RESPONSE");
+    if (
+      current.uuid !== args.transactionUuid ||
+      current.date !== args.date ||
+      current.amount !== args.amount ||
+      current.description !== args.description ||
+      (category?.name ?? null) !== args.categoryName ||
+      (expense && current.recurringExpenseUuid !== args.recurringExpenseUuid)
+    )
+      throw new SelectionError(
+        "ACCOUNTBOOK_DELETE_CONFIRMATION_MISMATCH",
+        "현재 기록이 승인한 삭제 대상과 다릅니다. 다시 조회하고 새 승인 요청을 만들어 주세요.",
+      );
   }
 
   private async category(

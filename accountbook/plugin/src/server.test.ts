@@ -17,7 +17,32 @@ const env = {
 test("MCP 삭제는 data 생략과 null, 204를 모두 성공으로 반환한다", async () => {
   for (const name of ["delete_expense", "delete_income"]) {
     for (const body of [{ success: true, message: "삭제되었습니다" }, { data: null }, null]) {
-      const server = createServer(env, async (_input, init) => {
+      const server = createServer(env, async (input, init) => {
+        if (String(input).endsWith("/categories"))
+          return new Response(
+            JSON.stringify({
+              data: [
+                {
+                  uuid: env.ACCOUNTBOOK_FAMILY_UUID,
+                  name: "예시 분류",
+                  type: name === "delete_expense" ? "EXPENSE" : "INCOME",
+                },
+              ],
+            }),
+          );
+        if (init?.method === "GET")
+          return new Response(
+            JSON.stringify({
+              data: {
+                uuid: "33333333-3333-4333-8333-333333333333",
+                date: "2026-09-30T12:00:00",
+                amount: 100,
+                description: "예시 기록",
+                categoryUuid: env.ACCOUNTBOOK_FAMILY_UUID,
+                recurringExpenseUuid: null,
+              },
+            }),
+          );
         expect(init?.method).toBe("DELETE");
         return body === null
           ? new Response(null, { status: 204 })
@@ -33,6 +58,11 @@ test("MCP 삭제는 data 생략과 null, 204를 모두 성공으로 반환한다
           arguments: {
             transactionUuid: "33333333-3333-4333-8333-333333333333",
             confirmed: true,
+            date: "2026-09-30T12:00:00",
+            amount: 100,
+            description: "예시 기록",
+            categoryName: "예시 분류",
+            ...(name === "delete_expense" ? { recurringExpenseUuid: null } : {}),
           },
         });
         expect(result.isError).not.toBe(true);
@@ -96,6 +126,8 @@ test("MCP 프로토콜로 도구를 탐색하고 조회하며 미확인 삭제�
     expect(listed.tools).toHaveLength(16);
     expect(listed.tools.map((tool) => tool.name)).not.toContain("summarize_expenses");
     expect(listed.tools.map((tool) => tool.name)).not.toContain("summarize_incomes");
+    expect(listed.tools.map((tool) => tool.name)).toContain("delete_expense");
+    expect(listed.tools.map((tool) => tool.name)).toContain("delete_income");
     const response = await client.callTool({ name: "list_expenses", arguments: { limit: 3 } });
     expect(response.isError).not.toBe(true);
     expect(calls).toBe(1);

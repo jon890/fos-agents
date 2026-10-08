@@ -26,12 +26,13 @@ function setup(families = [{ uuid: FAMILY, name: "예시 가족" }], defaultFami
       const body = init?.body ? JSON.parse(String(init.body)) : undefined;
       requests.push({ url, method, body });
       if (url.endsWith("/families")) return json(families);
-      if (url.endsWith("/categories")) return json([
-        { uuid: CATEGORY, name: "예시 분류", type: "EXPENSE" },
-        { uuid: INCOME_CATEGORY, name: "예시 분류", type: "INCOME" },
-        { uuid: RECORD, name: "수입 전용", type: "INCOME" },
-        { uuid: FAMILY, name: "지출 전용", type: "EXPENSE" },
-      ]);
+      if (url.endsWith("/categories"))
+        return json([
+          { uuid: CATEGORY, name: "예시 분류", type: "EXPENSE" },
+          { uuid: INCOME_CATEGORY, name: "예시 분류", type: "INCOME" },
+          { uuid: RECORD, name: "수입 전용", type: "INCOME" },
+          { uuid: FAMILY, name: "지출 전용", type: "EXPENSE" },
+        ]);
       if (method === "DELETE") return json(null);
       if (url.includes("?"))
         return json({ items: [], totalPages: 0, currentPage: 0, totalElements: 0 });
@@ -40,6 +41,8 @@ function setup(families = [{ uuid: FAMILY, name: "예시 가족" }], defaultFami
         amount: 100,
         date: "2026-09-30T12:00:00",
         description: "예시 기록",
+        categoryUuid: url.includes("/incomes/") ? INCOME_CATEGORY : CATEGORY,
+        recurringExpenseUuid: null,
         ...body,
       });
     }),
@@ -49,6 +52,38 @@ function setup(families = [{ uuid: FAMILY, name: "예시 가족" }], defaultFami
 }
 
 describe("MCP 가계부 도구", () => {
+  test("삭제는 승인 카드의 대상 필드를 모두 받고 한 건의 DELETE만 보낸다", async () => {
+    const preview = {
+      transactionUuid: RECORD,
+      confirmed: true,
+      date: "2026-09-30T12:00:00",
+      amount: 100,
+      description: "예시 기록",
+      categoryName: "예시 분류",
+    };
+    for (const type of ["expense", "income"]) {
+      const args = { ...preview, ...(type === "expense" ? { recurringExpenseUuid: null } : {}) };
+      const { tools, requests } = setup(undefined, FAMILY);
+      for (const field of ["date", "amount", "description", "categoryName"]) {
+        const missing: Record<string, unknown> = { ...args };
+        delete missing[field];
+        expect(result(await tools.call(`delete_${type}`, missing)).error.code).toBe(
+          "ACCOUNTBOOK_INVALID_INPUT",
+        );
+      }
+      expect(
+        result(await tools.call(`delete_${type}`, { ...args, transactionUuids: [RECORD] })).error
+          .code,
+      ).toBe("ACCOUNTBOOK_INVALID_INPUT");
+      expect(requests).toHaveLength(0);
+      expect(result(await tools.call(`delete_${type}`, args)).deleted).toBe(true);
+      expect(requests.map((request) => request.method)).toEqual(["GET", "GET", "DELETE"]);
+      expect(requests[2].url).toEndWith(`/${type}s/${RECORD}`);
+      expect(requests[2].method).toBe("DELETE");
+      expect(requests[2].body).toBeUndefined();
+    }
+  });
+
   test("잘못된 성공 응답은 성공 내역으로 반환하지 않는다", async () => {
     for (const name of [
       "list_families",
@@ -78,11 +113,19 @@ describe("MCP 가계부 도구", () => {
             : name === "update_expense"
               ? { transactionUuid: RECORD, confirmed: true, amount: 200 }
               : name === "delete_expense"
-                ? { transactionUuid: RECORD, confirmed: true }
+                ? {
+                    transactionUuid: RECORD,
+                    confirmed: true,
+                    date: "2026-09-30T12:00:00",
+                    amount: 100,
+                    description: "예시 기록",
+                    categoryName: "예시 분류",
+                    recurringExpenseUuid: null,
+                  }
                 : {};
         // 변경 요청이 2xx 로 끝났는데 본문을 읽지 못하면 실패가 아니라 결과를 모르는 것이다.
         expect(result(await tools.call(name, args)).error.code).toBe(
-          name === "update_expense" || name === "delete_expense"
+          name === "update_expense"
             ? "ACCOUNTBOOK_OUTCOME_UNKNOWN"
             : "ACCOUNTBOOK_INVALID_RESPONSE",
         );
@@ -307,8 +350,17 @@ describe("MCP 가계부 도구", () => {
       expect(requests.at(-1)?.method).toBe("PUT");
       expect(requests.at(-1)?.body).toEqual({ description: "예시 변경" });
       expect(
-        result(await tools.call(`delete_${type}`, { transactionUuid: RECORD, confirmed: true }))
-          .deleted,
+        result(
+          await tools.call(`delete_${type}`, {
+            transactionUuid: RECORD,
+            confirmed: true,
+            date: "2026-09-30T12:00:00",
+            amount: 100,
+            description: "예시 기록",
+            categoryName: "예시 분류",
+            ...(type === "expense" ? { recurringExpenseUuid: null } : {}),
+          }),
+        ).deleted,
       ).toBe(true);
       expect(requests.at(-1)?.method).toBe("DELETE");
       requests.length = 0;
