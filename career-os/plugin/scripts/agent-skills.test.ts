@@ -336,6 +336,32 @@ describe("지침 평가", () => {
     ).toBe(true);
   });
 
+  test("조사 계획은 명시한 null 결과만 결과 없음으로 인정한다", () => {
+    const base = {
+      earlyNothingNew: false,
+      delegations: [],
+      directCalls: [],
+      areas: [],
+      searchQueries: [],
+    };
+    const invalid = [
+      { ...base, result: "FINDINGS" },
+      { ...base, result: true },
+      { ...base, result: 3 },
+      { ...base, result: [] },
+      base,
+    ];
+    for (const value of invalid)
+      expect(
+        grade(parseTrace(`<eval-trace>${JSON.stringify(value)}</eval-trace>`), {
+          earlyNothingNew: false,
+          areas: [],
+          delegations: { include: [], exclude: [] },
+          searchQueries: { max: 0, forbidden: [] },
+        }),
+      ).toEqual([{ check: "trace", pass: false, detail: "<eval-trace> JSON 을 읽지 못했다" }]);
+  });
+
   test("채점은 위임하거나 검색한 trace 를 떨어뜨린다", () => {
     const trace = parseTrace(
       '<eval-trace>{"earlyNothingNew": false, "delegations": ["context"], "areas": [{"area": "study", "reason": "x"}], "searchQueries": ["kafka"], "result": null}</eval-trace>',

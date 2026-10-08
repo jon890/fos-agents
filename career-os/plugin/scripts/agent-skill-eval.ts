@@ -87,13 +87,22 @@ export function parseTrace(output: string): Trace | null {
   if (!last) return null;
   try {
     const parsed = JSON.parse(last.trim());
+    if (
+      parsed === null ||
+      typeof parsed !== "object" ||
+      Array.isArray(parsed) ||
+      !Object.hasOwn(parsed, "result") ||
+      (parsed.result !== null &&
+        (typeof parsed.result !== "object" || Array.isArray(parsed.result)))
+    )
+      return null;
     return {
       earlyNothingNew: parsed.earlyNothingNew === true,
       delegations: Array.isArray(parsed.delegations) ? parsed.delegations : [],
       directCalls: Array.isArray(parsed.directCalls) ? parsed.directCalls : [],
       areas: Array.isArray(parsed.areas) ? parsed.areas : [],
       searchQueries: Array.isArray(parsed.searchQueries) ? parsed.searchQueries.map(String) : [],
-      result: parsed.result && typeof parsed.result === "object" ? parsed.result : null,
+      result: parsed.result,
     };
   } catch {
     return null;
