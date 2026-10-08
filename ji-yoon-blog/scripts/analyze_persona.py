@@ -1,6 +1,6 @@
 """수집한 글을 집계해 페르소나 문서에 쓰는 수치를 모두 만든다.
 
-`references/ji-yung-persona.md` 와 `references/category-style-map.md` 가 인용하는
+스킬 `ji-yoon-blog-style` 의 `references/ji-yung-persona.md` 와 `category-style-map.md` 가 인용하는
 수치는 전부 여기서 나와야 한다. 문서에만 있고 여기 없는 값이 생기면
 다음 갱신 때 옛 값이 남는다.
 
