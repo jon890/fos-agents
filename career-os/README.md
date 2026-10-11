@@ -29,7 +29,7 @@ Claude Code 에서는 `plugin/` 을 설치해 같은 스킬과 로컬 실행기�
 - `link`: [커리어 프로젝트](https://github.com/jon890/fos-agents/tree/main/career-os). `link_kind: project`는 GitHub 프로젝트 디렉터리라는 뜻이다.
 - `readme_url`: [커리어 README](https://github.com/jon890/fos-agents/blob/main/career-os/README.md). 제품 범위와 시작 흐름을 안내하는 문서다.
 
-기존 fos-assistant reader는 이 선택 필드를 무시한다. 화면에 링크를 표시하려면 공통 reader와 UI 지원을 별도로 반영해야 한다.
+이 선택 필드를 지원하지 않는 구버전 fos-assistant에서는 링크가 표시되지 않는다. 화면에 링크를 표시하려면 새 카탈로그 reader와 UI가 함께 반영되어야 한다.
 
 ## 설정
 

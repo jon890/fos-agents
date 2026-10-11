@@ -30,7 +30,7 @@ fos-assistant는 [plugin 설치 계약](docs/code-architecture.md#plugin-설치-
 - `link`: [가계부 서비스](https://accountbook.fosworld.co.kr). `link_kind: service`는 실제 서비스 주소라는 뜻이다.
 - `readme_url`: [가계부 README](https://github.com/jon890/fos-agents/blob/main/accountbook/README.md). 제품 범위와 사용 방법을 안내하는 문서다.
 
-기존 fos-assistant reader는 이 선택 필드를 무시한다. 화면에 링크를 표시하려면 공통 reader와 UI 지원을 별도로 반영해야 한다.
+이 선택 필드를 지원하지 않는 구버전 fos-assistant에서는 링크가 표시되지 않는다. 화면에 링크를 표시하려면 새 카탈로그 reader와 UI가 함께 반영되어야 한다.
 
 ## 사용 방법
 
