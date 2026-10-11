@@ -22,6 +22,15 @@ fos-assistant 의 대화에서 문서를 고치고, 면접을 연습하고, 공�
 자세한 것은 [`docs/code-architecture.md`](docs/code-architecture.md)의 「fos-career 커넥터」를 따른다.
 Claude Code 에서는 `plugin/` 을 설치해 같은 스킬과 로컬 실행기를 쓴다. 실행기가 읽는 환경 변수는 [`docs/data-schema.md`](docs/data-schema.md#로컬-실행기-환경-변수)를 따른다.
 
+## 공식 링크
+
+`plugin/connector.json`의 루트 필드로 링크 목적지를 선언한다.
+
+- `link`: [커리어 프로젝트](https://github.com/jon890/fos-agents/tree/main/career-os). `link_kind: project`는 GitHub 프로젝트 디렉터리라는 뜻이다.
+- `readme_url`: [커리어 README](https://github.com/jon890/fos-agents/blob/main/career-os/README.md). 제품 범위와 시작 흐름을 안내하는 문서다.
+
+이 선택 필드를 지원하지 않는 구버전 fos-assistant에서는 링크가 표시되지 않는다. 화면에 링크를 표시하려면 새 카탈로그 reader와 UI가 함께 반영되어야 한다.
+
 ## 설정
 
 clone 뒤에는 `.env.example`에서 필요한 secret 키 이름을 확인한다.
@@ -68,6 +77,9 @@ SSH client는 원격 transport 값을 넣고, 홈서버의 Hermes는 `CAREER_WOR
 TypeScript 스크립트 변경이 있으면 루트에서 `bunx tsc --noEmit`과 해당 스크립트의 검증 명령을 실행한다.
 
 `plugin/` 을 고쳤을 때의 검증 명령은 `docs/code-architecture.md` 의 「fos-career 커넥터」에 있다.
+
+GitHub Actions의 [커넥터 계약 검증](../.github/workflows/connector-contracts.yml)은 main 대상 PR과 main push에서 plugin과 관련 로컬 실행기의 테스트, plugin 타입 검사를 Bun 1.3.14로 실행한다.
+SDK 초기화·도구 목록과 manifest 이름·정책, 번들 일치 검사를 포함하며 비밀 값이나 실제 Backend·GitHub API를 사용하지 않는다.
 
 ## 문서
 

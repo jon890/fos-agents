@@ -23,6 +23,15 @@ fos-assistant는 [plugin 설치 계약](docs/code-architecture.md#plugin-설치-
 사용자는 가계부 설정에서 발급한 연동 토큰을 fos-assistant에 등록한다.
 런타임에는 Bun만 필요하며, 패키지 설치는 빌드하는 개발 환경에서만 수행한다.
 
+### 공식 링크
+
+`plugin/connector.json`의 루트 필드로 링크 목적지를 선언한다.
+
+- `link`: [가계부 서비스](https://accountbook.fosworld.co.kr). `link_kind: service`는 실제 서비스 주소라는 뜻이다.
+- `readme_url`: [가계부 README](https://github.com/jon890/fos-agents/blob/main/accountbook/README.md). 제품 범위와 사용 방법을 안내하는 문서다.
+
+이 선택 필드를 지원하지 않는 구버전 fos-assistant에서는 링크가 표시되지 않는다. 화면에 링크를 표시하려면 새 카탈로그 reader와 UI가 함께 반영되어야 한다.
+
 ## 사용 방법
 
 fos-assistant에서는 다음 순서로 쓴다.
@@ -74,3 +83,6 @@ claude plugin validate accountbook/plugin
 
 plugin 테스트에는 원본과 배포 번들의 일치 검사, 설치 없는 stdio 초기화 검사와 스킬 본문 길이 검사가 포함된다.
 실제 운영 API를 호출하지 않으며 모든 HTTP 호출은 fetch 대역으로 검증한다.
+
+GitHub Actions의 [커넥터 계약 검증](../.github/workflows/connector-contracts.yml)은 main 대상 PR과 main push에서 위 테스트와 타입 검사를 Bun 1.3.14로 실행한다.
+SDK 초기화·도구 목록과 manifest 이름·정책, 번들 일치 검사를 포함하며 비밀 값이나 운영 API를 사용하지 않는다.
