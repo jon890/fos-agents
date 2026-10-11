@@ -1,3 +1,4 @@
+import { toolDescription } from "./tool-metadata.ts";
 import { z } from "zod";
 import {
   AccountbookClient,
@@ -21,13 +22,11 @@ const importShape = {
 
 export const screenshotToolDefinitions = {
   preview_screenshot_import: {
-    description:
-      "토스 소비 화면의 날짜별 거래와 수입·지출별 카테고리를 검증하고 등록 전 미리보기와 묶음 ID를 반환. 등록하지 않음",
+    description: toolDescription("preview_screenshot_import"),
     schema: z.strictObject(importShape),
   },
   submit_screenshot_import: {
-    description:
-      "사용자가 미리보기를 확인한 뒤 같은 추출 결과와 묶음 ID로 수입·지출을 한 번에 등록",
+    description: toolDescription("submit_screenshot_import"),
     schema: z.strictObject({
       ...importShape,
       confirmBatchId: z.string().regex(/^toss-[a-f0-9]{16}$/),

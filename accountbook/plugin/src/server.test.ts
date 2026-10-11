@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createServer } from "./server.ts";
 import { AccountbookError } from "./client.ts";
+import connector from "../connector.json";
 
 const env = {
   ACCOUNTBOOK_API_BASE_URL: "https://accountbook.example.com/api/v1",
@@ -202,7 +203,13 @@ test("plugin 실행 파일만 복사해도 의존성 설치 없이 stdio로 시�
   });
   try {
     await client.connect(transport);
-    expect((await client.listTools()).tools).toHaveLength(16);
+    const listed = (await client.listTools()).tools;
+    expect(listed).toHaveLength(16);
+    expect(listed.map((tool) => tool.name).sort()).toEqual(Object.keys(connector.tools).sort());
+    for (const tool of listed)
+      expect(tool.description).toBe(
+        connector.tools[tool.name as keyof typeof connector.tools].description,
+      );
     expect(stderr).toBe("");
   } finally {
     await client.close();
