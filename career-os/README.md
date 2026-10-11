@@ -78,6 +78,9 @@ TypeScript 스크립트 변경이 있으면 루트에서 `bunx tsc --noEmit`과 
 
 `plugin/` 을 고쳤을 때의 검증 명령은 `docs/code-architecture.md` 의 「fos-career 커넥터」에 있다.
 
+GitHub Actions의 [커넥터 계약 검증](../.github/workflows/connector-contracts.yml)은 main 대상 PR과 main push에서 plugin과 관련 로컬 실행기의 테스트, plugin 타입 검사를 Bun 1.3.14로 실행한다.
+SDK 초기화·도구 목록과 manifest 이름·정책, 번들 일치 검사를 포함하며 비밀 값이나 실제 Backend·GitHub API를 사용하지 않는다.
+
 ## 문서
 
 문서별 책임과 언제 보는지는 [AGENTS.md](AGENTS.md)의 「읽기 순서」 표를 따른다.

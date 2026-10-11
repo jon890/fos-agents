@@ -83,3 +83,6 @@ claude plugin validate accountbook/plugin
 
 plugin 테스트에는 원본과 배포 번들의 일치 검사, 설치 없는 stdio 초기화 검사와 스킬 본문 길이 검사가 포함된다.
 실제 운영 API를 호출하지 않으며 모든 HTTP 호출은 fetch 대역으로 검증한다.
+
+GitHub Actions의 [커넥터 계약 검증](../.github/workflows/connector-contracts.yml)은 main 대상 PR과 main push에서 위 테스트와 타입 검사를 Bun 1.3.14로 실행한다.
+SDK 초기화·도구 목록과 manifest 이름·정책, 번들 일치 검사를 포함하며 비밀 값이나 운영 API를 사용하지 않는다.
