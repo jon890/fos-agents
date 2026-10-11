@@ -1,3 +1,4 @@
+import { toolDescription } from "./tool-metadata.ts";
 import { z } from "zod";
 import {
   AccountbookClient,
@@ -48,54 +49,50 @@ const fields = {
 
 export const toolDefinitions = {
   list_families: {
-    description: "접근할 수 있는 가족과 기본 가족 조회",
+    description: toolDescription("list_families"),
     schema: z.strictObject({}),
   },
   list_categories: {
-    description: "가족 카테고리 목록과 종류(EXPENSE: 지출, INCOME: 수입)",
+    description: toolDescription("list_categories"),
     schema: z.strictObject(familyShape),
   },
-  list_expenses: { description: "기간별 최근 지출 목록", schema: listSchema() },
-  list_incomes: { description: "기간별 최근 수입 목록", schema: listSchema() },
+  list_expenses: { description: toolDescription("list_expenses"), schema: listSchema() },
+  list_incomes: { description: toolDescription("list_incomes"), schema: listSchema() },
   get_expense: {
-    description: "수정·삭제 전에 지출 기록 재조회",
+    description: toolDescription("get_expense"),
     schema: z.strictObject(recordShape),
   },
   get_income: {
-    description: "수정·삭제 전에 수입 기록 재조회",
+    description: toolDescription("get_income"),
     schema: z.strictObject(recordShape),
   },
   create_expense: {
-    description: "EXPENSE 카테고리로 확인한 지출 등록",
+    description: toolDescription("create_expense"),
     schema: createSchema(true),
   },
-  create_income: { description: "INCOME 카테고리로 확인한 수입 등록", schema: createSchema(false) },
+  create_income: { description: toolDescription("create_income"), schema: createSchema(false) },
   update_expense: {
-    description: "사용자가 현재 기록과 변경 내용을 확인한 뒤 EXPENSE 카테고리로 지출 수정",
+    description: toolDescription("update_expense"),
     schema: updateSchema(true),
   },
   update_income: {
-    description: "사용자가 현재 기록과 변경 내용을 확인한 뒤 INCOME 카테고리로 수입 수정",
+    description: toolDescription("update_income"),
     schema: updateSchema(false),
   },
   delete_expense: {
-    description:
-      "get_expense로 재조회해 날짜·금액·내용·카테고리를 보여 준 지출 한 건 삭제. 매번 승인 필요",
+    description: toolDescription("delete_expense"),
     schema: deleteSchema(true),
   },
   delete_income: {
-    description:
-      "get_income으로 재조회해 날짜·금액·내용·카테고리를 보여 준 수입 한 건 삭제. 매번 승인 필요",
+    description: toolDescription("delete_income"),
     schema: deleteSchema(false),
   },
   list_recurring_expenses: {
-    description:
-      "반복지출(고정지출) 설정 목록과 해당 월 생성 여부. month 는 YYYY-MM 이며 생략하면 이번 달",
+    description: toolDescription("list_recurring_expenses"),
     schema: z.strictObject({ ...familyShape, month: month.optional() }),
   },
   update_recurring_expense: {
-    description:
-      "사용자가 현재 설정과 변경 내용을 확인한 뒤 반복지출 설정 수정. 다음 생성분부터 반영되고 이미 생성된 그 달 지출은 바뀌지 않는다",
+    description: toolDescription("update_recurring_expense"),
     schema: z
       .strictObject({
         ...familyShape,
