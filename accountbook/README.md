@@ -32,6 +32,9 @@ fos-assistant는 [plugin 설치 계약](docs/code-architecture.md#plugin-설치-
 
 이 선택 필드를 지원하지 않는 구버전 fos-assistant에서는 링크가 표시되지 않는다. 화면에 링크를 표시하려면 새 카탈로그 reader와 UI가 함께 반영되어야 한다.
 
+각 도구의 상세 설명은 `plugin/connector.json`의 `tools.<이름>.description`을 정본으로 삼는다.
+MCP의 `tools/list`도 같은 설명을 반환한다. 설명은 기능과 입력, 결과, 주의할 동작을 안내하는 평문이며 승인 정책을 대신하지 않는다.
+
 ## 사용 방법
 
 fos-assistant에서는 다음 순서로 쓴다.
@@ -86,3 +89,10 @@ plugin 테스트에는 원본과 배포 번들의 일치 검사, 설치 없는 s
 
 GitHub Actions의 [커넥터 계약 검증](../.github/workflows/connector-contracts.yml)은 main 대상 PR과 main push에서 위 테스트와 타입 검사를 Bun 1.3.14로 실행한다.
 SDK 초기화·도구 목록과 manifest 이름·정책, 번들 일치 검사를 포함하며 비밀 값이나 운영 API를 사용하지 않는다.
+
+fos-assistant 체크아웃이 있으면 외부 reader와의 계약도 확인할 수 있다.
+아래 검사는 기본적으로 해당 저장소의 `origin/main` Git object만 읽으며 작업 파일과 운영 설정을 바꾸지 않는다.
+
+```bash
+python3 accountbook/plugin/scripts/verify-connector-policy.py --assistant-root <fos-assistant 체크아웃>
+```
