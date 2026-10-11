@@ -22,6 +22,15 @@ fos-assistant 의 대화에서 문서를 고치고, 면접을 연습하고, 공�
 자세한 것은 [`docs/code-architecture.md`](docs/code-architecture.md)의 「fos-career 커넥터」를 따른다.
 Claude Code 에서는 `plugin/` 을 설치해 같은 스킬과 로컬 실행기를 쓴다. 실행기가 읽는 환경 변수는 [`docs/data-schema.md`](docs/data-schema.md#로컬-실행기-환경-변수)를 따른다.
 
+## 공식 링크
+
+`plugin/connector.json`의 루트 필드로 링크 목적지를 선언한다.
+
+- `link`: [커리어 프로젝트](https://github.com/jon890/fos-agents/tree/main/career-os). `link_kind: project`는 GitHub 프로젝트 디렉터리라는 뜻이다.
+- `readme_url`: [커리어 README](https://github.com/jon890/fos-agents/blob/main/career-os/README.md). 제품 범위와 시작 흐름을 안내하는 문서다.
+
+기존 fos-assistant reader는 이 선택 필드를 무시한다. 화면에 링크를 표시하려면 공통 reader와 UI 지원을 별도로 반영해야 한다.
+
 ## 설정
 
 clone 뒤에는 `.env.example`에서 필요한 secret 키 이름을 확인한다.

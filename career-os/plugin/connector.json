@@ -3,6 +3,9 @@
   "id": "fos-career",
   "title": "커리어",
   "icon": "icon.svg",
+  "link": "https://github.com/jon890/fos-agents/tree/main/career-os",
+  "link_kind": "project",
+  "readme_url": "https://github.com/jon890/fos-agents/blob/main/career-os/README.md",
   "description": "후보자 맥락 문서와 프로필 원고를 고치고, 면접 연습과 공부 추천을 기록하며, GitHub 프로필을 갱신합니다.",
   "fields": [
     {
