@@ -730,10 +730,11 @@ career-os/plugin/
 
 | 경로 | 책임 |
 | --- | --- |
-| `plugin/connector.json` | 연결 화면의 입력 칸, 확인 도구, 도구별 위험도와 승인 방식, 오류 코드 대응 |
+| `plugin/connector.json` | 연결 화면의 입력 칸, 확인 도구, 도구별 상세 설명의 정본, 위험도와 승인 방식, 오류 코드 대응 |
 | `plugin/.mcp.json` | `career` 서버의 실행 명령과 env 변수 참조. 실제 값을 담지 않는다 |
 | `plugin/src/server.ts` | stdio MCP 서버 조립과 도구별 읽기 전용 표시 |
-| `plugin/src/tools.ts` | 도구 열여덟 개의 입력 스키마와 분기, 오류를 `{ error: { code, message } }` 로 바꾸는 일 |
+| `plugin/src/tool-metadata.ts` | schema 2의 도구 설명을 검증하고 manifest 정본에서 SDK 등록에 붙이는 일. 정책이나 입력 스키마는 바꾸지 않는다 |
+| `plugin/src/tools.ts` | 도구 열아홉 개의 입력 스키마와 분기, 오류를 `{ error: { code, message } }` 로 바꾸는 일 |
 | `plugin/src/interview.ts` | 면접 연습 도구 넷의 입력과 응답 스키마, 공개 질문 은행 번들과 질문 선별 호출 |
 | `plugin/src/study.ts` | 공부 후보 읽기와 목록, 추천 저장 도구 셋의 입력과 응답 스키마, 후보 요약과 추천 저장 요청 조립 |
 | `plugin/src/positions.ts` | 포지션 조사 제외 기준 도구의 응답 스키마와 제외 규칙, 회사 선호를 함께 읽어 보류 여부를 정하는 일 |
@@ -812,7 +813,7 @@ Claude Code 전용 스킬은 `bun --no-env-file "${CLAUDE_PLUGIN_ROOT}/dist/care
 
 fos-assistant 는 `plugin/` 을 복사하거나 마운트해 `connector.json`, `.mcp.json`, `.claude-plugin/plugin.json` 의 `skills` 가 가리키는 `connector-skills/` 를 읽는다.
 
-- `connector.json` 은 `schema: 2` 다. 도구 열여덟 개를 `tools` 에 빠짐없이 선언하고 `default_tool_policy` 는 `deny` 다. 새 도구를 더할 때는 같은 변경에서 `tools` 에 위험도와 승인 방식과 `title` 을 선언한다
+- `connector.json` 은 `schema: 2` 다. 도구 열아홉 개를 `tools` 에 빠짐없이 선언하고 `default_tool_policy` 는 `deny` 다. 새 도구를 더할 때는 같은 변경에서 `tools` 에 위험도와 승인 방식, `title`, 2,000 code point 이하의 `description` 을 선언한다. 설명은 필수이며 앞뒤 공백 제거 후 비어 있거나 8,192 UTF-8 byte를 넘거나 금지 문자를 포함하면 서버가 시작하지 않는다
 - 확인 도구 `check_connection` 은 `READ` 와 `none` 이고 서버가 `readOnlyHint: true` 로 표시한다
 - `.mcp.json` 의 서버 env 는 `connector.json` 의 `fields[].env` 와 `operator_env` 의 합과 같다. 다르면 커넥터가 카탈로그에서 빠진다
 - `operator_secrets` 를 선언하지 않는다. 선언하면 카탈로그에서 빠진다. 그래서 Backend 의 token 은 사용자가 연결 화면에 넣는다
@@ -822,6 +823,7 @@ fos-assistant 는 `plugin/` 을 복사하거나 마운트해 `connector.json`, `
 - plugin 스킬을 `.claude/skills/` 에 링크하지 않는다. 저장소를 연 Claude Code 세션도 plugin 을 설치해 plugin 스킬을 쓴다
 - 저장소에 스킬 사본을 두지 않는다. 판단 규칙은 plugin 스킬 한 곳에서만 고친다
 - 도구 목록이 바뀐 판을 배포하면 실행 환경이 MCP 서버를 다시 띄워야 새 도구가 보인다. 스킬 본문만 바뀐 판은 연결 확인으로 반영한다
+- 상세 설명을 포함한 manifest는 새 description reader가 운영에 로드된 것을 확인한 뒤 설치한다. 설명만 바뀌어도 보호 SHA가 바뀌어 기존 바인딩이 pending이 되므로 설치 뒤 바인딩을 다시 승인해야 한다
 - 실행 파일에 의존성이 포함돼 있어 설치한 환경에서 `bun install` 을 하지 않는다. 소스를 고친 사람이 빌드해 `dist/career-mcp.js` 를 함께 커밋한다
 
 환경 변수의 뜻은 [`data-schema.md`](data-schema.md#fos-career-커넥터)가 소유한다.
