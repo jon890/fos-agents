@@ -26,27 +26,124 @@
       "required": false
     }
   ],
-  "verify": { "tool": "check_connection" },
+  "verify": {
+    "tool": "check_connection"
+  },
   "tools": {
-    "check_connection": { "risk": "READ", "approval": "none", "title": "연결 확인" },
-    "list_context_documents": { "risk": "READ", "approval": "none", "title": "후보자 맥락 문서 목록" },
-    "get_context_document": { "risk": "READ", "approval": "none", "title": "후보자 맥락 문서 읽기" },
-    "list_profile_documents": { "risk": "READ", "approval": "none", "title": "프로필 원고 목록" },
-    "get_profile_document": { "risk": "READ", "approval": "none", "title": "프로필 원고 읽기" },
-    "list_usage_snapshots": { "risk": "READ", "approval": "none", "title": "사용량 기록 읽기" },
-    "save_context_document": { "risk": "WRITE", "approval": "required", "title": "후보자 맥락 문서 저장" },
-    "save_profile_document": { "risk": "WRITE", "approval": "required", "title": "프로필 원고 저장" },
-    "get_github_profile": { "risk": "READ", "approval": "none", "title": "GitHub 프로필 읽기" },
-    "update_github_profile": { "risk": "WRITE", "approval": "required", "title": "GitHub 프로필 갱신" },
-    "get_interview_questions": { "risk": "READ", "approval": "none", "title": "면접 질문 고르기" },
-    "list_personal_questions": { "risk": "READ", "approval": "none", "title": "개인 질문 목록" },
-    "save_interview_attempt": { "risk": "WRITE", "approval": "required", "title": "면접 답변 기록" },
-    "save_personal_question": { "risk": "WRITE", "approval": "required", "title": "개인 질문 저장" },
-    "get_study_candidates": { "risk": "READ", "approval": "none", "title": "공부 후보 읽기" },
-    "save_study_recommendation": { "risk": "WRITE", "approval": "required", "title": "공부 추천 저장" },
-    "list_study_candidates": { "risk": "READ", "approval": "none", "title": "공부 후보 목록" },
-    "get_position_research_constraints": { "risk": "READ", "approval": "none", "title": "포지션 제외 기준 읽기" },
-    "check_position_exclusions": { "risk": "READ", "approval": "none", "title": "공고 제외 여부 판정" }
+    "check_connection": {
+      "risk": "READ",
+      "approval": "none",
+      "title": "연결 확인",
+      "description": "커리어 Backend 인증과, GitHub token이 설정된 경우 지정된 프로필 저장소의 접근 가능 여부를 확인합니다. 입력 인자는 없습니다. Backend의 프로필 원고 목록과 GitHub 저장소 정보를 읽으며 저장하거나 프로필을 갱신하지 않습니다. 성공하면 backend: ok와 github: ok 또는 not_configured를 텍스트 JSON과 structuredContent로 반환합니다. GitHub token이 없어도 Backend 확인은 가능합니다. 인증 거절, 권한 부족, 통신 실패나 잘못된 응답은 해당 CAREER 오류로 반환합니다. token이나 개인 문서 본문은 결과에 넣지 않으며 READ 도구로 승인 없이 호출합니다."
+    },
+    "list_context_documents": {
+      "risk": "READ",
+      "approval": "none",
+      "title": "후보자 맥락 문서 목록",
+      "description": "커리어 Backend에 저장된 후보자 맥락 문서의 목록을 읽습니다. 입력 인자는 없습니다. 조회 범위는 learning-interests, position-preferences, application-state, career-status이며 documents 배열에 documentKey, version, updatedAt을 반환합니다. 본문과 변경 메모는 포함하지 않고 저장된 문서만 나열합니다. 개인 학습 관심사, 역할 선호, 지원 상태와 경력 정보를 다루는 문서 목록이므로 공개 자료로 취급하지 않습니다. 저장이나 외부 제출은 수행하지 않습니다. 인증, 통신, 응답 형식 오류는 CAREER 오류로 반환하는 READ 도구이며 승인이 필요하지 않습니다."
+    },
+    "get_context_document": {
+      "risk": "READ",
+      "approval": "none",
+      "title": "후보자 맥락 문서 읽기",
+      "description": "후보자 맥락 문서 한 개의 현재 내용을 커리어 Backend에서 읽습니다. 필수 documentKey는 learning-interests, position-preferences, application-state, career-status 중 하나이며 선택 인자나 기본값은 없습니다. document에 documentKey, body, note, version, updatedAt을 반환합니다. 문서가 없으면 CAREER_NOT_FOUND이고 인증, 통신, 응답 형식 실패는 해당 CAREER 오류입니다. 개인 경력과 지원 판단 등이 본문에 포함될 수 있으므로 공개하거나 외부 제출하지 않습니다. 이 도구는 읽기만 하며 수정은 별도 저장 도구로 변경안을 보여 주고 승인받은 뒤 수행합니다. READ 도구로 조회 승인은 필요하지 않습니다."
+    },
+    "list_profile_documents": {
+      "risk": "READ",
+      "approval": "none",
+      "title": "프로필 원고 목록",
+      "description": "Backend에 보관된 프로필 원고의 목록을 읽습니다. 입력 인자는 없고 wanted, linkedin, github 원고만 조회합니다. documents 배열에 documentKey, version, updatedAt을 반환하며 본문이나 변경 메모는 포함하지 않습니다. 목록 조회는 외부 사이트의 현재 프로필이나 지원서 공통 신원 프로필을 읽는 동작이 아닙니다. 개인 원고의 존재와 수정 시각을 다루므로 결과를 공개 자료로 사용하지 않습니다. 저장, 외부 프로필 갱신과 지원서 제출은 수행하지 않습니다. 인증, 통신, 응답 형식 실패는 CAREER 오류로 반환하는 READ 도구이며 승인 없이 호출합니다."
+    },
+    "get_profile_document": {
+      "risk": "READ",
+      "approval": "none",
+      "title": "프로필 원고 읽기",
+      "description": "커리어 Backend의 프로필 원고 하나를 읽습니다. 필수 documentKey는 wanted, linkedin, github 중 하나이고 선택 인자는 없습니다. document에 documentKey, body, note, version, updatedAt을 반환합니다. 외부 사이트의 현재 게시 내용과 fos-assistant의 지원서 공통 신원 프로필은 조회하지 않습니다. 없는 원고는 CAREER_NOT_FOUND이며 인증, 통신, 응답 형식 실패는 해당 CAREER 오류입니다. 본문에는 개인 경력이나 비공개 경험이 포함될 수 있습니다. 읽기만 하며 원고 저장과 외부 프로필 갱신은 각각 별도 도구와 승인을 거칩니다. READ 도구로 조회 승인은 필요하지 않습니다."
+    },
+    "list_usage_snapshots": {
+      "risk": "READ",
+      "approval": "none",
+      "title": "사용량 기록 읽기",
+      "description": "Backend의 달별 에이전트 사용량 기록 전체를 달 오름차순으로 읽습니다. 입력 인자와 기간 필터는 없습니다. snapshots에 month, claudeTokens, codexTokens, claudeCostUsd, codexCostUsd, sessions, unpricedTokens, measuredOn, source, note, createdAt, updatedAt을 반환합니다. source는 MEASURED 또는 BACKFILLED이고 비용, 세션 수와 메모는 null일 수 있습니다. 사용량과 비용은 개인 기록이며 누락된 값을 추정하거나 새로 측정하지 않습니다. 기록 저장이나 GitHub 갱신은 하지 않습니다. 인증, 통신, 응답 형식 오류는 CAREER 오류로 반환합니다. READ 도구로 승인 없이 호출합니다."
+    },
+    "save_context_document": {
+      "risk": "WRITE",
+      "approval": "required",
+      "title": "후보자 맥락 문서 저장",
+      "description": "후보자 맥락 문서 한 개의 본문을 Backend에 저장합니다. documentKey, body, note, expectedVersion이 모두 필수입니다. documentKey는 learning-interests, position-preferences, application-state, career-status 중 하나이며 body는 공백뿐인 값을 허용하지 않고 UTF-8 65536바이트 이하입니다. note는 앞뒤 공백을 제거한 1자 이상 500자 이하 변경 메모이고 expectedVersion은 조회한 판 번호, 새 문서는 0입니다. 선택 인자나 기본값은 없습니다. 저장 결과 document에는 documentKey, version, updatedAt만 있고 본문은 없습니다. 변경 전후와 메모를 보여 주고 승인받아야 하는 WRITE 도구입니다. 지원서 공통 신원 프로필을 바꾸거나 외부에 제출하지 않습니다. 개인 맥락이 저장됩니다. 판 충돌은 CAREER_VERSION_CONFLICT이며 통신이나 응답 오류로 결과가 불명확하면 재호출 전에 문서를 다시 읽어 확인합니다. 요청은 자동 재전송하지 않습니다."
+    },
+    "save_profile_document": {
+      "risk": "WRITE",
+      "approval": "required",
+      "title": "프로필 원고 저장",
+      "description": "프로필 원고 한 개를 Backend에 저장합니다. 필수 인자는 documentKey, body, note, expectedVersion입니다. documentKey는 wanted, linkedin, github 중 하나, body는 공백뿐인 값을 제외한 UTF-8 65536바이트 이하, note는 앞뒤 공백을 제거한 1자 이상 500자 이하, expectedVersion은 조회한 판 번호 또는 신규 원고의 0입니다. 선택 인자는 없습니다. 결과 document에는 documentKey, version, updatedAt만 있고 본문은 없습니다. 개인 경력 원고를 저장하는 WRITE 도구이므로 변경안을 보여 주고 승인을 받습니다. 원티드, LinkedIn, GitHub의 게시 프로필이나 지원서 공통 신원 프로필은 이 호출로 바뀌지 않습니다. 판 충돌은 CAREER_VERSION_CONFLICT입니다. 통신이나 응답 오류로 저장 여부가 불명확하면 원고를 다시 읽어 확인하고 무조건 재전송하지 않습니다."
+    },
+    "get_github_profile": {
+      "risk": "READ",
+      "approval": "none",
+      "title": "GitHub 프로필 읽기",
+      "description": "설정된 GitHub 프로필 저장소 한 개의 현재 내용을 읽습니다. 입력 인자는 없고 GitHub token이 필요합니다. repo, 기본 branch, 그 branch의 head, 같은 head의 README.md 본문인 readme, agent-usage.svg의 존재 여부인 chartExists를 반환합니다. README가 없으면 readme는 null이고 차트 내용 자체는 반환하지 않습니다. token 미설정은 CAREER_GITHUB_NOT_CONFIGURED, 인증이나 권한 부족, 통신과 응답 실패는 해당 CAREER 오류입니다. 개인 프로필 본문이 포함될 수 있으며 token은 반환하지 않습니다. 파일이나 branch를 변경하지 않는 READ 도구로 승인 없이 호출합니다. 갱신할 때는 이 결과의 branch와 head를 변경안에 함께 넣어 별도 승인받습니다."
+    },
+    "update_github_profile": {
+      "risk": "WRITE",
+      "approval": "required",
+      "title": "GitHub 프로필 갱신",
+      "description": "설정된 GitHub 프로필 저장소의 README.md와 agent-usage.svg를 한 커밋으로 갱신합니다. 필수 readme는 공백뿐인 값을 제외한 UTF-8 65536바이트 이하의 전체 README, months는 중복 없는 YYYY-MM 달 1~6개, expectedBranch와 expectedHead는 get_github_profile이 반환한 branch와 40자리 소문자 16진수 head입니다. 선택 인자는 없으며 token과 Backend 사용량 기록이 필요합니다. 합계나 SVG를 입력받지 않고 선택한 달의 기록으로 차트와 Tokens 배지 합계를 계산합니다. 기록 누락은 CAREER_USAGE_MONTH_MISSING, 합계 0 이하는 CAREER_INVALID_INPUT, 배지 불일치는 CAREER_BADGE_MISMATCH입니다. 검토한 branch나 head가 바뀌면 CAREER_GITHUB_STALE_REVIEW로 쓰기 전에 중단합니다. 실행 중 경합은 CAREER_GITHUB_CONFLICT가 될 수 있습니다. 결과는 changed, commitSha, branch, months, total이고 내용이 같으면 changed: false입니다. 개인 경력과 사용량이 외부 저장소에 게시될 수 있으므로 전체 변경안을 보여 주고 승인받는 WRITE 도구입니다. 자동 재전송이나 강제 push를 하지 않으며 실패 시 저장소를 다시 읽어 결과를 확인합니다. 지원서나 메일을 보내지는 않습니다."
+    },
+    "get_interview_questions": {
+      "risk": "READ",
+      "approval": "none",
+      "title": "면접 질문 고르기",
+      "description": "공개 질문 은행과 Backend의 켜진 개인 질문, 복습 상태를 함께 읽어 오늘 연습할 면접 질문을 고릅니다. 필수 drillType은 tech 또는 behavioral이고 선택 targetBar는 production, large-scale, global-scale, 선택 count는 1~10이며 기본값은 5입니다. targetBar를 생략하면 해당 목표 수준으로 제한하지 않습니다. 서울 날짜를 기준으로 drillType, today, questions를 반환하며 질문에는 id, topic, category, difficulty, question, intent, answerSignals와 있는 경우 bar, followUps, positionFitHint, tags, sequenceHint가 포함됩니다. sourceScope는 public 또는 personal, dueForReview는 복습 여부입니다. 질문이 요청 수보다 적을 수 있습니다. 개인 질문과 복습 정보는 공개하지 않습니다. 판정이나 연습 기록은 저장하지 않으며 인증, 통신, 응답 실패는 CAREER 오류입니다. READ 도구로 승인 없이 호출합니다."
+    },
+    "list_personal_questions": {
+      "risk": "READ",
+      "approval": "none",
+      "title": "개인 질문 목록",
+      "description": "Backend에서 켜진 개인 면접 질문을 읽습니다. 필수 drillType은 tech 또는 behavioral이며 선택 인자와 기본값은 없습니다. items 배열에 id, topic, category, difficulty, question, intent, answerSignals와 선택적인 bar, followUps, positionFitHint, tags, sequenceHint를 반환합니다. 공개 질문 은행이나 꺼진 개인 질문은 포함하지 않습니다. 개인 경험이나 지원 대상이 질문에 포함될 수 있으므로 결과를 공개 자료로 취급하지 않습니다. 질문을 추가하거나 활성 상태를 바꾸지 않는 READ 도구로 승인 없이 호출합니다. 인증, 통신, 응답 형식 실패는 해당 CAREER 오류로 반환합니다."
+    },
+    "save_interview_attempt": {
+      "risk": "WRITE",
+      "approval": "required",
+      "title": "면접 답변 기록",
+      "description": "면접 답변 한 개의 판정을 Backend에 기록하고 해당 주제의 복습 상태를 갱신합니다. 필수 drillType은 tech 또는 behavioral, questionId와 topic은 각각 100자 이하, question은 2000자 이하, score는 pass, shallow, fail, unknown입니다. 선택 인자는 UUID인 attemptId, 500자 이하 feedback, 각 100자 이하 targetCompany, targetRole, targetValueAxis, rootQuestionId, 2000자 이하 parentQuestion, 1 이상 4 이하인 followUpDepth, followUpAxis, stopReason입니다. followUpAxis는 clarification, decision, counterexample, operations, evidence-boundary이고 stopReason은 depth-limit, needs-study, answer-complete, session-ended입니다. 문자열은 앞뒤 공백을 제거하며 비어 있으면 거절합니다. attemptId 생략 시 커넥터가 UUID를 생성합니다. 결과에 attemptId, evaluatedOn과 progress의 drillType, topic, passCount, failCount, nextReviewDate, lastPassedDate를 반환합니다. 개인 답변 판정과 피드백이 저장되는 WRITE 도구로 승인이 필요합니다. 통신이나 응답 오류에는 attemptId를 포함하고 처리 중이면 CAREER_ATTEMPT_PENDING입니다. 재전송할 때는 같은 attemptId와 같은 인자를 사용하며 자동 재전송하지 않습니다. 외부 지원서나 메일을 보내지 않습니다."
+    },
+    "save_personal_question": {
+      "risk": "WRITE",
+      "approval": "required",
+      "title": "개인 질문 저장",
+      "description": "개인 면접 질문 한 개를 Backend에 추가하거나 고치고 활성 상태를 저장합니다. 필수 drillType은 tech 또는 behavioral, enabled는 boolean, question은 질문 객체입니다. question의 필수 id, topic, category는 100자 이하, difficulty는 basic, intermediate, advanced, question과 intent는 2000자 이하, answerSignals는 비어 있지 않은 문자열 배열입니다. 선택 bar는 production, large-scale, global-scale, followUps와 tags는 문자열 배열, positionFitHint는 2000자 이하, sequenceHint는 opening, early, middle, late, closing입니다. 문자열은 앞뒤 공백을 제거하며 빈 값을 허용하지 않습니다. 같은 id를 갱신하고 enabled: false는 질문을 끄며 삭제하지 않습니다. 기본값은 없습니다. 결과는 questionId, drillType, topic, enabled, updatedAt입니다. 개인 경험과 지원 맥락을 저장하는 WRITE 도구로 변경안을 승인받아야 합니다. 호출마다 새 멱등 키를 사용하며 자동 재전송하지 않습니다. 인증, 통신, 응답 오류로 저장 여부가 불명확하면 목록을 다시 확인합니다. 공개 질문 은행이나 외부 서비스를 수정하지 않습니다."
+    },
+    "get_study_candidates": {
+      "risk": "READ",
+      "approval": "none",
+      "title": "공부 후보 읽기",
+      "description": "Backend에 수집된 미추천 공부 후보와 추천 기준을 읽습니다. 선택 limit는 1~20이고 기본값은 20, 선택 category는 techBlog, geek, ai, video입니다. 필수 인자는 없습니다. 결과는 candidates, learningInterests의 version과 body, candidateContextVersion, historyVersion, recentStudyTopicKeys, nextCursor입니다. 후보에는 contentKey, title, url, sourceName, category, kind, published와 있는 경우 최대 500 Unicode 글자의 excerpt가 포함됩니다. learning-interests가 없으면 CAREER_LEARNING_INTERESTS_MISSING입니다. 웹 전체를 검색하거나 새 자료를 수집하지 않으며 빈 후보는 웹에 자료가 없다는 뜻이 아닙니다. 개인 관심사와 추천 이력이 포함됩니다. 저장이나 발행은 하지 않는 READ 도구로 승인 없이 호출합니다. 추천 저장에는 이 결과의 candidateContextVersion을 사용합니다. 인증, 통신, 응답 형식 실패는 CAREER 오류입니다."
+    },
+    "save_study_recommendation": {
+      "risk": "WRITE",
+      "approval": "required",
+      "title": "공부 추천 저장",
+      "description": "고른 공부 주제와 자료, 제외 이유를 Backend의 일일 추천 이력으로 저장합니다. candidateContextVersion, topics, rejections가 필수이고 generatedAt은 선택 UTC ISO 시각으로 생략하면 현재 시각입니다. generatedAt은 현재보다 24시간 이전 또는 5분 이후일 수 없습니다. topics는 0개부터 4개이며 각 주제에 topicKey, title, careerQuestion, items가 필요합니다. topicKey는 소문자 영숫자와 하이픈으로 80자 이하, title은 60자 이하, careerQuestion은 100자 이하 또는 null입니다. 각 items는 1개 이상이고 전체 합계 8개 이하이며 contentKey, summary, reason, careerValue가 필수입니다. summary와 reason은 각 100자 이하, careerValue는 current-work, target-role, engineering-judgment, product-business 중 하나 또는 null입니다. rejections는 0개부터 20개로 contentKey와 50자 이하 reason을 받습니다. contentKey는 후보에서 받은 url:64자리 해시 또는 youtube:식별자이며 임의로 만들지 않습니다. 제한된 문자열은 공백뿐인 값과 제어문자를 허용하지 않습니다. 서울 날짜로 reportId를 만들고 reportId, generatedAt, historyVersion을 반환합니다. 개인 선택과 제외 이유가 저장되므로 WRITE 도구로 승인이 필요합니다. 이미 저장한 날은 CAREER_STUDY_ALREADY_SAVED, 기준 변경이나 중복 후보 등은 CAREER_STUDY_CONFLICT입니다. 통신 실패는 reportId와 generatedAt을 포함하며 다시 보낼 때 같은 generatedAt을 사용합니다. 외부 글이나 메일을 발행하지 않습니다."
+    },
+    "list_study_candidates": {
+      "risk": "READ",
+      "approval": "none",
+      "title": "공부 후보 목록",
+      "description": "조사를 시작할 때 Backend의 미추천 공부 후보를 필터와 cursor로 한 페이지씩 읽습니다. 모든 인자는 선택입니다. limit는 1~50, 기본값 20이고 category는 techBlog, geek, ai, video입니다. sourceKey는 100자 이하, publishedFrom과 publishedTo는 UTC ISO 날짜 시각, cursor는 이전 결과의 nextCursor인 1000자 이하 문자열입니다. status는 ok, empty 또는 learning_interests_missing입니다. 관심사가 없으면 그 status만 반환하며 일반 오류로 처리하지 않습니다. 정상 페이지에는 candidates, candidateContextVersion, learningInterestsVersion, historyVersion, recentStudyTopicKeys, nextCursor, hasMore가 있습니다. 후보는 contentKey, canonicalUrl, url, sourceKey, sourceName, title, category, kind, published와 선택적인 최대 500 Unicode 글자 excerpt입니다. 관심사 본문은 반환하지 않습니다. 저장된 후보만 읽으므로 빈 결과가 웹에 자료가 없다는 뜻은 아닙니다. 개인 추천 이력이 포함되며 저장, 신규 수집이나 발행은 하지 않습니다. READ 도구로 승인 없이 호출하며 인증, 통신, 응답 실패는 CAREER 오류입니다."
+    },
+    "get_position_research_constraints": {
+      "risk": "READ",
+      "approval": "none",
+      "title": "포지션 제외 기준 읽기",
+      "description": "포지션 조사에 필요한 개인 제외 규칙과 회사별 수동 선호를 Backend에서 함께 읽습니다. 입력 인자는 없습니다. 결과의 exclusions에는 공고, 회사, 회사 역할별 scope와 대상 필드인 source, identityHash, url, company, titleKeywords, decisionKind, reason, evidenceUrls, decidedAt, 선택 confidence와 expiresAt이 포함됩니다. Backend는 서울 날짜 기준 만료 규칙을 걸러냅니다. companyPreferences는 회사 키와 이름, tier, disposition, updatedAt 및 선택적인 techBlogFeedUrl, githubOrg, dartCorpCode, blindCompanySlug를 담습니다. 두 목록을 모두 읽으면 readiness: ready, 하나라도 실패하면 readiness: hold와 missing의 source, code를 반환하고 못 읽은 목록은 null입니다. 인증 거절은 hold로 숨기지 않고 CAREER_UNAUTHORIZED 오류로 반환합니다. 개인 지원 판단을 포함하므로 공개하지 않습니다. hold이면 추천 확정을 미루고 공고별 판정은 별도 check_position_exclusions로 수행합니다. 규칙이나 선호를 저장하거나 웹 공고를 검색하지 않는 READ 도구로 승인 없이 호출합니다."
+    },
+    "check_position_exclusions": {
+      "risk": "READ",
+      "approval": "none",
+      "title": "공고 제외 여부 판정",
+      "description": "찾은 공고가 개인 제외 규칙과 회사의 exclude 선호에 걸리는지 코드로 판정합니다. 필수 postings는 1개 이상 10개 이하 배열이고 각 항목의 url은 1자 이상 2000자 이하, company는 앞뒤 공백 제거 후 1자 이상 200자 이하, title은 같은 방식으로 1자 이상 300자 이하입니다. 선택 source는 커넥터나 목록이 반환한 출처 식별자(wanted, toss-careers, coupang-careers, kakaopay, kakaopay-securities, kakaomobility, kakaobank-careers, kurly-careers, naver-careers, samsung-careers, sk-careers, cj-careers, krafton-careers, line-careers, daangn-careers, woowahan-careers), identityHash는 같은 출처가 준 앞뒤 공백 제거 후 1자 이상 300자 이하 값입니다. source만 보내도 되지만 identityHash에는 source가 필요하며 둘 다 추정해서 만들지 않습니다. 선택 인자의 기본값은 없습니다. Backend의 제외 규칙과 회사 선호를 읽어 readiness, missing, results를 반환합니다. 각 결과의 position은 입력 순서이고 url, verdict와 판정 근거를 담습니다. verdict는 excluded, clear, undeterminable이며 제약 조회 실패나 필요한 공고 식별자 부족이면 undeterminable입니다. clear는 제외 규칙 판정 통과이며 적합도나 지원 가능성의 확정이 아닙니다. undeterminable 공고는 추천하지 않습니다. 인증 거절과 잘못된 입력은 CAREER 오류입니다. 개인 판단을 다루며 규칙 저장, 실제 지원이나 외부 제출 없이 판정만 하는 READ 도구로 승인 없이 호출합니다."
+    }
   },
   "default_tool_policy": "deny",
   "operator_env": ["CAREER_BACKEND_URL", "CAREER_GITHUB_PROFILE_REPO"],

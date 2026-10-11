@@ -730,10 +730,11 @@ career-os/plugin/
 
 | 경로 | 책임 |
 | --- | --- |
-| `plugin/connector.json` | 연결 화면의 입력 칸, 확인 도구, 도구별 위험도와 승인 방식, 오류 코드 대응 |
+| `plugin/connector.json` | 연결 화면의 입력 칸, 확인 도구, 도구별 상세 설명의 정본, 위험도와 승인 방식, 오류 코드 대응 |
 | `plugin/.mcp.json` | `career` 서버의 실행 명령과 env 변수 참조. 실제 값을 담지 않는다 |
 | `plugin/src/server.ts` | stdio MCP 서버 조립과 도구별 읽기 전용 표시 |
-| `plugin/src/tools.ts` | 도구 열여덟 개의 입력 스키마와 분기, 오류를 `{ error: { code, message } }` 로 바꾸는 일 |
+| `plugin/src/tool-metadata.ts` | schema 2의 도구 설명을 검증하고 manifest 정본에서 SDK 등록에 붙이는 일. 정책이나 입력 스키마는 바꾸지 않는다 |
+| `plugin/src/tools.ts` | 도구 열아홉 개의 입력 스키마와 분기, 오류를 `{ error: { code, message } }` 로 바꾸는 일 |
 | `plugin/src/interview.ts` | 면접 연습 도구 넷의 입력과 응답 스키마, 공개 질문 은행 번들과 질문 선별 호출 |
 | `plugin/src/study.ts` | 공부 후보 읽기와 목록, 추천 저장 도구 셋의 입력과 응답 스키마, 후보 요약과 추천 저장 요청 조립 |
 | `plugin/src/positions.ts` | 포지션 조사 제외 기준 도구의 응답 스키마와 제외 규칙, 회사 선호를 함께 읽어 보류 여부를 정하는 일 |

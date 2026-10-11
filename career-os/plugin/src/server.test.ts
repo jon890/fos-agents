@@ -7,6 +7,16 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CareerError } from "./backend.ts";
 import { createServer } from "./server.ts";
+import connector from "../connector.json";
+
+function expectManifestDescriptions(tools: Array<{ name: string; description?: string }>) {
+  expect(tools).toHaveLength(19);
+  expect(Object.fromEntries(tools.map(({ name, description }) => [name, description]))).toEqual(
+    Object.fromEntries(
+      Object.entries(connector.tools).map(([name, policy]) => [name, policy.description]),
+    ),
+  );
+}
 
 const env = {
   CAREER_BACKEND_URL: "https://career.example.com/",
@@ -26,7 +36,9 @@ function expectConfigError(build: () => unknown) {
 }
 
 test("MCP 서버가 알리는 version 이 package.json 의 version 과 같다", async () => {
-  const { version } = JSON.parse(readFileSync(join(import.meta.dir, "..", "package.json"), "utf8")) as { version: string };
+  const { version } = JSON.parse(
+    readFileSync(join(import.meta.dir, "..", "package.json"), "utf8"),
+  ) as { version: string };
   const server = createServer(env, async () => new Response(JSON.stringify({ documents: [] })));
   const client = new Client({ name: "version-test", version: "1.0.0" });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
@@ -50,7 +62,7 @@ test("MCP 로 도구 열아홉 개를 탐색하고 확인 도구가 structuredCo
   try {
     await server.connect(serverTransport);
     await client.connect(clientTransport);
-    expect((await client.listTools()).tools).toHaveLength(19);
+    expectManifestDescriptions((await client.listTools()).tools);
     const result = await client.callTool({ name: "check_connection", arguments: {} });
     expect(result.isError).not.toBe(true);
     expect(result.structuredContent).toEqual({ backend: "ok", github: "not_configured" });
@@ -74,9 +86,15 @@ test("GitHub token 이 치환되지 않은 변수 참조여도 서버가 만들�
 });
 
 test("Backend 주소에 path 가 있거나 token 이 짧거나 저장소 이름이 틀리면 CAREER_CONFIG 다", () => {
-  expectConfigError(() => createServer({ ...env, CAREER_BACKEND_URL: "https://career.example.com/api" }));
-  expectConfigError(() => createServer({ ...env, CAREER_BACKEND_URL: "https://career.example.com/?a=1" }));
-  expectConfigError(() => createServer({ ...env, CAREER_BACKEND_URL: "ftp://career.example.com/" }));
+  expectConfigError(() =>
+    createServer({ ...env, CAREER_BACKEND_URL: "https://career.example.com/api" }),
+  );
+  expectConfigError(() =>
+    createServer({ ...env, CAREER_BACKEND_URL: "https://career.example.com/?a=1" }),
+  );
+  expectConfigError(() =>
+    createServer({ ...env, CAREER_BACKEND_URL: "ftp://career.example.com/" }),
+  );
   expectConfigError(() => createServer({ ...env, CAREER_BACKEND_TOKEN: ` ${"x".repeat(31)} ` }));
   expectConfigError(() => createServer({ ...env, CAREER_GITHUB_PROFILE_REPO: "example-user" }));
   expect(createServer({ ...env, CAREER_BACKEND_TOKEN: ` ${"x".repeat(32)} ` })).toBeDefined();
@@ -100,7 +118,7 @@ test("plugin 실행 파일만 복사해도 의존성 설치 없이 stdio 로 시
   });
   try {
     await client.connect(transport);
-    expect((await client.listTools()).tools).toHaveLength(19);
+    expectManifestDescriptions((await client.listTools()).tools);
     expect(stderr).toBe("");
   } finally {
     await client.close();
