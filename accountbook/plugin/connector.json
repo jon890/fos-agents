@@ -3,6 +3,9 @@
   "id": "fos-accountbook",
   "title": "가계부",
   "icon": "icon.svg",
+  "link": "https://accountbook.fosworld.co.kr",
+  "link_kind": "service",
+  "readme_url": "https://github.com/jon890/fos-agents/blob/main/accountbook/README.md",
   "description": "토스 소비 화면 스크린샷을 가계부에 등록하고 수입과 지출을 조회하고 기록합니다.",
   "fields": [
     {

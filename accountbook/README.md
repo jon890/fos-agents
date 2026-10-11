@@ -23,6 +23,15 @@ fos-assistant는 [plugin 설치 계약](docs/code-architecture.md#plugin-설치-
 사용자는 가계부 설정에서 발급한 연동 토큰을 fos-assistant에 등록한다.
 런타임에는 Bun만 필요하며, 패키지 설치는 빌드하는 개발 환경에서만 수행한다.
 
+### 공식 링크
+
+`plugin/connector.json`의 루트 필드로 링크 목적지를 선언한다.
+
+- `link`: [가계부 서비스](https://accountbook.fosworld.co.kr). `link_kind: service`는 실제 서비스 주소라는 뜻이다.
+- `readme_url`: [가계부 README](https://github.com/jon890/fos-agents/blob/main/accountbook/README.md). 제품 범위와 사용 방법을 안내하는 문서다.
+
+기존 fos-assistant reader는 이 선택 필드를 무시한다. 화면에 링크를 표시하려면 공통 reader와 UI 지원을 별도로 반영해야 한다.
+
 ## 사용 방법
 
 fos-assistant에서는 다음 순서로 쓴다.
