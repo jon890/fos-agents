@@ -96,8 +96,15 @@ test("설명을 바꿔도 승인 정책과 입력 스키마를 바꾸지 않는�
     expect(definition.schema).toBe(toolDefinitions[name]!.schema);
     expect(Object.keys(definition).sort()).toEqual(["description", "schema"]);
   }
-  for (const policy of Object.values(connector.tools))
-    expect(Object.keys(policy).sort()).toEqual(["approval", "description", "risk", "title"]);
+  for (const [name, policy] of Object.entries(connector.tools)) {
+    const outbound = policy.risk !== "READ" && policy.approval === "required";
+    const expected = ["approval", "description", "risk", "title"];
+    if (outbound) expected.push("outbound");
+    if (name === "update_github_profile") expected.push("grant");
+    expect(Object.keys(policy).sort(), name).toEqual(expected.sort());
+  }
+  expect(connector.tools.update_github_profile).toMatchObject({ outbound: true, grant: false });
+  expect(connector.tools.update_github_profile).not.toHaveProperty("conversation_grant");
   expect(connector.default_tool_policy).toBe("deny");
 });
 
