@@ -1341,20 +1341,21 @@ Hermes 에서는 서버 이름 `career` 로 `mcp__career__<도구>` 가 된다.
 | `get_profile_document` | `READ`, `none` | `documentKey` | `{ document: { documentKey, body, version, note, updatedAt } }` |
 | `list_usage_snapshots` | `READ`, `none` | 없음 | `{ snapshots: [...] }`. Backend 의 응답을 달 오름차순 그대로 낸다 |
 | `get_github_profile` | `READ`, `none` | 없음 | `{ repo, branch, head, readme, chartExists }`. `head` 는 기본 branch 의 끝 커밋 SHA 이고 `readme`, `chartExists` 는 그 커밋에서 읽은 값이다. `readme` 는 README 가 없으면 `null` 이다 |
-| `save_context_document` | `WRITE`, `required` | `documentKey`, `body`, `note`, `expectedVersion` | `{ document: { documentKey, version, updatedAt } }` |
-| `save_profile_document` | `WRITE`, `required` | `documentKey`, `body`, `note`, `expectedVersion` | `{ document: { documentKey, version, updatedAt } }` |
-| `update_github_profile` | `WRITE`, `required` | `readme`, `months`, `expectedBranch`, `expectedHead` | `{ changed, commitSha, branch, months, total }` |
+| `save_context_document` | `WRITE`, `required`, `outbound: false` | `documentKey`, `body`, `note`, `expectedVersion` | `{ document: { documentKey, version, updatedAt } }` |
+| `save_profile_document` | `WRITE`, `required`, `outbound: false` | `documentKey`, `body`, `note`, `expectedVersion` | `{ document: { documentKey, version, updatedAt } }` |
+| `update_github_profile` | `WRITE`, `required`, `outbound: true`, `grant: false` | `readme`, `months`, `expectedBranch`, `expectedHead` | `{ changed, commitSha, branch, months, total }` |
 | `get_interview_questions` | `READ`, `none` | `drillType`, 선택 `targetBar`, `count` | `{ drillType, today, questions: [{ ...질문, sourceScope, dueForReview }] }` |
 | `list_personal_questions` | `READ`, `none` | `drillType` | `{ items: [질문] }`. 켜진 개인 질문만 낸다 |
-| `save_interview_attempt` | `WRITE`, `required` | 연습 기록 칸. `attemptId` 는 선택 | `{ attemptId, evaluatedOn, progress }` |
-| `save_personal_question` | `WRITE`, `required` | `drillType`, `enabled`, `question` | `{ questionId, drillType, topic, enabled, updatedAt }` |
+| `save_interview_attempt` | `WRITE`, `required`, `outbound: false` | 연습 기록 칸. `attemptId` 는 선택 | `{ attemptId, evaluatedOn, progress }` |
+| `save_personal_question` | `WRITE`, `required`, `outbound: false` | `drillType`, `enabled`, `question` | `{ questionId, drillType, topic, enabled, updatedAt }` |
 | `get_study_candidates` | `READ`, `none` | 선택 `limit`, `category` | `{ candidateContextVersion, historyVersion, learningInterests, recentStudyTopicKeys, nextCursor, candidates }` |
-| `save_study_recommendation` | `WRITE`, `required` | `candidateContextVersion`, `topics`, `rejections`, 선택 `generatedAt` | `{ reportId, generatedAt, historyVersion }` |
+| `save_study_recommendation` | `WRITE`, `required`, `outbound: false` | `candidateContextVersion`, `topics`, `rejections`, 선택 `generatedAt` | `{ reportId, generatedAt, historyVersion }` |
 | `list_study_candidates` | `READ`, `none` | 선택 `limit`, `category`, `sourceKey`, `publishedFrom`, `publishedTo`, `cursor` | `{ status, candidateContextVersion, learningInterestsVersion, historyVersion, recentStudyTopicKeys, nextCursor, hasMore, candidates }`. 관심사 문서가 없으면 `{ status: "learning_interests_missing" }` |
 | `get_position_research_constraints` | `READ`, `none` | 없음 | `{ readiness, missing, exclusions, companyPreferences }` |
 | `check_position_exclusions` | `READ`, `none` | `postings`(1개 이상 10개 이하). 칸은 `url`, `company`, `title`, 선택 `source`, `identityHash` | `{ readiness, missing, results: [{ position, url, verdict, basis? }] }` |
 
 - 후보자 맥락의 `documentKey` 는 [후보자 맥락 문서](#후보자-맥락-문서)의 네 키, 프로필 원고의 `documentKey` 는 `wanted`, `linkedin`, `github` 다
+- 쓰기 도구는 `outbound` 를 선언한다. 저장 도구 다섯 개는 사용자 본인의 Backend 에만 쓰므로 `false` 다. `update_github_profile` 은 GitHub 프로필 README 에 커밋해 누구나 볼 수 있는 곳에 올리므로 `true` 이고, `grant: false` 로 상시 허락을 닫는다. 그래서 승인 카드에 「승인하고 묻지 않기」 와 「이 대화에서 계속 허용」 이 나오지 않고 호출마다 사람이 승인한다. `conversation_grant` 는 선언하지 않는다
 - 저장 도구의 `body`, `note`, `expectedVersion` 은 Backend 의 문서 저장 계약과 같다. 본문 전체를 바꾸고 새 문서는 `expectedVersion: 0` 이다
 - 저장 요청의 `Idempotency-Key` 는 노트북의 CLI 가 같은 내용으로 만드는 값과 같다. 같은 저장을 두 길로 보내도 한 번만 반영된다
 - `update_github_profile` 의 `readme` 는 README 전체의 Markdown 이고, `months` 는 차트에 넣을 달(`YYYY-MM`)의 목록이다. 1개에서 6개까지 받고 겹치는 달을 받지 않는다. 차트에는 달 오름차순으로 넣는다
