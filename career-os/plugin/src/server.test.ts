@@ -125,3 +125,24 @@ test("plugin 실행 파일만 복사해도 의존성 설치 없이 stdio 로 시
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("save_interview_attempt 만 idempotentHint 가 false 이고 쓰기 표시는 그대로다", async () => {
+  const server = createServer(env, async () => new Response("{}"));
+  const client = new Client({ name: "annotation-test", version: "1.0.0" });
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  try {
+    await server.connect(serverTransport);
+    await client.connect(clientTransport);
+    const { tools } = await client.listTools();
+    for (const tool of tools)
+      expect({ name: tool.name, idempotent: tool.annotations?.idempotentHint }).toEqual({
+        name: tool.name,
+        idempotent: tool.name !== "save_interview_attempt",
+      });
+    const save = tools.find((tool) => tool.name === "save_interview_attempt");
+    expect(save?.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true });
+  } finally {
+    await client.close();
+    await server.close();
+  }
+});

@@ -170,6 +170,44 @@ describe("save_interview_attempt", () => {
     expect(result.content[0].text).not.toContain(attempt.question);
   });
 
+  for (const status of [500, 502, 503, 504]) {
+    test(`Backend 가 ${status} 로 답하면 CAREER_OUTCOME_UNKNOWN 과 그때 쓴 attemptId 를 내고 다시 보내지 않는다`, async () => {
+      const { calls, tools } = harness(() => json({ message: `secret ${token}` }, status));
+      const result = await tools.call("save_interview_attempt", attempt);
+      expect(result.isError).toBe(true);
+      const value = parse(result);
+      expect(value.error.code).toBe("CAREER_OUTCOME_UNKNOWN");
+      expect(value.attemptId).toBe(calls[0]!.key);
+      expect(value.attemptId).toMatch(uuidPattern);
+      expect(calls).toHaveLength(1);
+      expect(result.content[0].text).not.toContain(token);
+      expect(result.content[0].text).not.toContain(attempt.question);
+    });
+  }
+
+  test("5xx 뒤에 오류의 attemptId 로 다시 보내면 같은 attemptId, 본문, Idempotency-Key 를 쓴다", async () => {
+    let first = true;
+    const { calls, tools } = harness((call) => {
+      if (first) {
+        first = false;
+        return json({}, 503);
+      }
+      return json({ attemptId: (call.body as { attemptId: string }).attemptId, progress: null }, 201);
+    });
+    const failed = parse(await tools.call("save_interview_attempt", attempt));
+    await tools.call("save_interview_attempt", { ...attempt, attemptId: failed.attemptId });
+    expect(calls).toHaveLength(2);
+    expect(calls[1]!.key).toBe(failed.attemptId);
+    expect(calls[1]!.body).toEqual(calls[0]!.body);
+  });
+
+  test("확정된 4xx 는 attemptId 없이 기존 오류를 유지한다", async () => {
+    const { tools } = harness(() => json({}, 422));
+    const value = parse(await tools.call("save_interview_attempt", attempt));
+    expect(value.error.code).toBe("CAREER_BAD_REQUEST");
+    expect(value.attemptId).toBeUndefined();
+  });
+
   test("Backend 가 409 로 답하면 CAREER_ATTEMPT_PENDING 과 그때 쓴 attemptId 를 낸다", async () => {
     const attemptId = "6f1c2b3a-4d5e-4f60-8a7b-9c0d1e2f3a4b";
     const { calls, tools } = harness(() => json({ code: "VERSION_CONFLICT" }, 409));

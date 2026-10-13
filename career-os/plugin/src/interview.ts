@@ -171,6 +171,10 @@ export async function saveInterviewAttempt(backend: CareerBackend, args: Attempt
     // A 2xx whose body cannot be read or parsed may still have been recorded, so it is as unknown as a network failure.
     if (error instanceof CareerError && (error.code === "CAREER_NETWORK" || error.code === "CAREER_INVALID_RESPONSE"))
       throw new CareerError(error.code, { attemptId });
+    // A 5xx can come after the Backend committed the attempt (the receipt is written afterwards), so it is
+    // as unknown as a network failure. Report it as an unknown outcome, not a plain outage.
+    if (error instanceof CareerError && error.code === "CAREER_UNAVAILABLE")
+      throw new CareerError("CAREER_OUTCOME_UNKNOWN", { attemptId });
     // Attempts carry no version, so a 409 comes from the Idempotency-Key: the request with this
     // attemptId is still being processed. A later resend with the same arguments gets the stored
     // response. The other 409, the same key with another body, cannot happen while the arguments stay the same.

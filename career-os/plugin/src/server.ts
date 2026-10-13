@@ -29,7 +29,9 @@ export function createServer(
         annotations: {
           readOnlyHint: /^(check|list|get)_/.test(name),
           destructiveHint: /^(save|update)_/.test(name),
-          idempotentHint: true,
+          // save_interview_attempt makes a new attemptId (and Idempotency-Key) per call that omits it,
+          // so the same arguments twice are two attempts. Reads and the other writes replace or repeat safely.
+          idempotentHint: name !== "save_interview_attempt",
           openWorldHint: true,
         },
       },
