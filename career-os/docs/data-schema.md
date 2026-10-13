@@ -1374,7 +1374,8 @@ Hermes 에서는 서버 이름 `career` 로 `mcp__career__<도구>` 가 된다.
 - `today` 는 Asia/Seoul 기준 날짜다. 선별 규칙은 노트북의 `drill-engine.ts select` 와 같은 함수다
 - `save_interview_attempt` 의 칸은 `POST /api/interview/v1/attempts` 의 요청과 같다. `attemptId` 를 넘기지 않으면 서버가 UUID 를 만든다. `Idempotency-Key` 는 `attemptId` 다
 - `save_personal_question` 은 `PUT /api/interview/v1/personal-questions/{question.id}` 다. 노트북의 CLI 처럼 호출마다 새 `Idempotency-Key`(`personal-question:<UUID>`)를 쓴다
-- `CAREER_NETWORK` 나 `CAREER_INVALID_RESPONSE` 로 끝난 `save_interview_attempt` 는 오류 객체에 그때 쓴 `attemptId` 를 더한다. 2xx 를 받았어도 본문을 읽지 못하면 저장됐는지 알 수 없기 때문이다
+- `CAREER_NETWORK`, `CAREER_INVALID_RESPONSE`, `CAREER_OUTCOME_UNKNOWN`(5xx)으로 끝난 `save_interview_attempt` 는 오류 객체에 그때 쓴 `attemptId` 를 더한다. 2xx 를 받았어도 본문을 읽지 못하거나 5xx 가 receipt 저장 실패에서 왔을 수 있어 저장됐는지 알 수 없기 때문이다. `attemptId` 를 보존해도 잃은 receipt 나 원래 응답을 되살리지는 못한다
+- `save_interview_attempt` 의 `idempotentHint` 는 `false` 다. `attemptId` 를 생략한 같은 인자의 호출은 호출마다 새 `attemptId` 와 `Idempotency-Key` 를 만든다
 - `save_interview_attempt` 에 Backend 가 409 로 답하면 같은 `attemptId` 의 요청이 아직 처리 중인 것이라 `CAREER_ATTEMPT_PENDING` 이다. 오류 객체에 `attemptId` 를 더한다
 
 공부 추천 도구의 계약이다. 칸의 제약은 [추천 실행](#추천-실행)과 Backend 의 `src/study/schema.ts` 와 같다.
@@ -1447,7 +1448,8 @@ README 에는 `img.shields.io/badge/Tokens-<값>B-` 모양의 배지 주소가 �
 | `CAREER_ATTEMPT_PENDING` | 면접 기록 저장에 Backend 가 409 로 답함. 같은 `attemptId` 의 요청이 아직 처리 중이다. 오류 객체에 `attemptId` 를 더한다 | `unavailable` |
 | `CAREER_LEARNING_INTERESTS_MISSING` | 공부 후보 조회에 Backend 가 409 로 답함. `learning-interests` 문서가 없다 | `invalid_input` |
 | `CAREER_BAD_REQUEST` | Backend 의 나머지 4xx | `invalid_input` |
-| `CAREER_UNAVAILABLE` | Backend 의 5xx | `unavailable` |
+| `CAREER_UNAVAILABLE` | Backend 의 5xx. `save_interview_attempt` 는 `CAREER_OUTCOME_UNKNOWN` 으로 바뀐다 | `unavailable` |
+| `CAREER_OUTCOME_UNKNOWN` | 면접 기록 저장에 Backend 가 5xx 로 답함. 저장 뒤 receipt 저장에서 실패했을 수 있어 저장 여부를 알 수 없다. 오류 객체에 `attemptId` 를 더한다 | `outcome_unknown` |
 | `CAREER_NETWORK` | Backend 연결, redirect, 시간 초과 실패. 저장됐는지 알 수 없으므로 다시 읽어 확인한다 | `unavailable` |
 | `CAREER_INVALID_RESPONSE` | Backend 나 GitHub 의 응답에서 필요한 구조를 읽지 못함 | `unavailable` |
 | `CAREER_INVALID_INPUT` | 도구 입력 검증 실패, 또는 고른 달의 값이 모두 0 | `invalid_input` |
