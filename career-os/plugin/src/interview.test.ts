@@ -4,6 +4,7 @@ import {
   toDrillProgress,
   type SelectableQuestion,
 } from "../../scripts/interview-drill/question-selection.ts";
+import connector from "../connector.json";
 import { CareerBackend, type FetchLike } from "./backend.ts";
 import { publicTechQuestions } from "./interview.ts";
 import { CareerTools } from "./tools.ts";
@@ -179,6 +180,9 @@ describe("save_interview_attempt", () => {
       expect(value.error.code).toBe("CAREER_OUTCOME_UNKNOWN");
       expect(value.attemptId).toBe(calls[0]!.key);
       expect(value.attemptId).toMatch(uuidPattern);
+      // connector.json 이 선언한 retry_key 칸이 실제 오류 응답의 최상위 칸이고 값이 이번 호출의 attemptId 다.
+      const declared = connector.errors.CAREER_OUTCOME_UNKNOWN;
+      expect(value[declared.retry_key]).toBe(calls[0]!.key);
       expect(calls).toHaveLength(1);
       expect(result.content[0].text).not.toContain(token);
       expect(result.content[0].text).not.toContain(attempt.question);

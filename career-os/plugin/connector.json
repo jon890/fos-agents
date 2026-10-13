@@ -161,7 +161,10 @@
     "CAREER_BAD_REQUEST": "invalid_input",
     "CAREER_UNAVAILABLE": "unavailable",
     "CAREER_NETWORK": "unavailable",
-    "CAREER_OUTCOME_UNKNOWN": "outcome_unknown",
+    "CAREER_OUTCOME_UNKNOWN": {
+      "category": "outcome_unknown",
+      "retry_key": "attemptId"
+    },
     "CAREER_INVALID_RESPONSE": "unavailable",
     "CAREER_INVALID_INPUT": "invalid_input",
     "CAREER_USAGE_MONTH_MISSING": "invalid_input",

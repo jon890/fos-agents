@@ -1450,7 +1450,7 @@ README 에는 `img.shields.io/badge/Tokens-<값>B-` 모양의 배지 주소가 �
 | `CAREER_LEARNING_INTERESTS_MISSING` | 공부 후보 조회에 Backend 가 409 로 답함. `learning-interests` 문서가 없다 | `invalid_input` |
 | `CAREER_BAD_REQUEST` | Backend 의 나머지 4xx | `invalid_input` |
 | `CAREER_UNAVAILABLE` | Backend 의 5xx. `save_interview_attempt` 는 `CAREER_OUTCOME_UNKNOWN` 으로 바뀐다 | `unavailable` |
-| `CAREER_OUTCOME_UNKNOWN` | 면접 기록 저장에 Backend 가 5xx 로 답함. 저장 뒤 receipt 저장에서 실패했을 수 있어 저장 여부를 알 수 없다. 오류 객체에 `attemptId` 를 더한다 | `outcome_unknown` |
+| `CAREER_OUTCOME_UNKNOWN` | 면접 기록 저장에 Backend 가 5xx 로 답함. 저장 뒤 receipt 저장에서 실패했을 수 있어 저장 여부를 알 수 없다. 오류 객체에 `attemptId` 를 더한다. `connector.json` 은 이 코드를 `{category, retry_key: "attemptId"}` 로 선언해 fos-assistant 가 승인 실행의 `UNKNOWN` 줄에 이 값을 싣는다 | `outcome_unknown` |
 | `CAREER_NETWORK` | Backend 연결, redirect, 시간 초과 실패. 저장됐는지 알 수 없으므로 다시 읽어 확인한다 | `unavailable` |
 | `CAREER_INVALID_RESPONSE` | Backend 나 GitHub 의 응답에서 필요한 구조를 읽지 못함 | `unavailable` |
 | `CAREER_INVALID_INPUT` | 도구 입력 검증 실패, 또는 고른 달의 값이 모두 0 | `invalid_input` |
