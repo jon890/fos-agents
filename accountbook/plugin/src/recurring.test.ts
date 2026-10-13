@@ -97,6 +97,62 @@ describe("반복지출 도구", () => {
     expect(requests.filter((request) => request.url.endsWith("/categories"))).toHaveLength(1);
   });
 
+  const update = { recurringExpenseUuid: RECURRING, amount: 2000, confirmed: true };
+
+  test("PUT 의 2xx 응답을 해석할 수 없으면 결과 불명으로 답한다", async () => {
+    const bodies: Array<() => Response> = [
+      () => json({}),
+      () => json(null),
+      () => new Response(JSON.stringify({}), { status: 200 }),
+      () => json({ uuid: RECURRING }),
+      () => new Response(null, { status: 204 }),
+      () => new Response("not json", { status: 200 }),
+    ];
+    for (const respond of bodies) {
+      const { tools, requests } = setup((_url, method) => (method === "PUT" ? respond() : undefined));
+      expect(result(await tools.call("update_recurring_expense", update)).error.code).toBe(
+        "ACCOUNTBOOK_OUTCOME_UNKNOWN",
+      );
+      expect(requests.filter((request) => request.method === "PUT")).toHaveLength(1);
+    }
+  });
+
+  test("PUT 의 5xx 는 결과 불명, 확정 거절은 해당 오류를 유지한다", async () => {
+    const expected: Array<[number, string]> = [
+      [500, "ACCOUNTBOOK_OUTCOME_UNKNOWN"],
+      [503, "ACCOUNTBOOK_OUTCOME_UNKNOWN"],
+      [401, "ACCOUNTBOOK_UNAUTHORIZED"],
+      [403, "ACCOUNTBOOK_FORBIDDEN"],
+      [404, "ACCOUNTBOOK_NOT_FOUND"],
+      [422, "ACCOUNTBOOK_BAD_REQUEST"],
+    ];
+    for (const [status, code] of expected) {
+      const { tools } = setup((_url, method) =>
+        method === "PUT" ? new Response("{}", { status }) : undefined,
+      );
+      expect(result(await tools.call("update_recurring_expense", update)).error.code).toBe(code);
+    }
+  });
+
+  test("PUT 전에 카테고리 조회가 실패하면 PUT 을 보내지 않고 조회 오류를 유지한다", async () => {
+    const { tools, requests } = setup((url) =>
+      url.endsWith("/categories") ? new Response("{}", { status: 503 }) : undefined,
+    );
+    expect(result(await tools.call("update_recurring_expense", update)).error.code).toBe(
+      "ACCOUNTBOOK_UNAVAILABLE",
+    );
+    expect(requests.every((request) => request.method === "GET")).toBe(true);
+  });
+
+  test("목록 응답 구조가 잘못되면 INVALID_RESPONSE 를 유지한다", async () => {
+    const { tools } = setup((url, method) =>
+      method === "GET" && url.includes("/recurring-expenses") ? json({}) : undefined,
+    );
+    expect(result(await tools.call("list_recurring_expenses", {})).error.code).toBe(
+      "ACCOUNTBOOK_INVALID_RESPONSE",
+    );
+  });
+
   test("수입 카테고리는 반복지출에 쓰지 않는다", async () => {
     const { tools, requests } = setup();
     const response = result(
