@@ -73,6 +73,7 @@ fos-assistant는 `accountbook/plugin/`을 복사하거나 마운트해 manifest,
 `connector.json`은 `schema: 2`로 MCP 도구별 호출 정책을 선언한다.
 `tools`는 원래 MCP 도구 이름별 `risk`와 `approval`을 정한다.
 조회·미리보기는 `READ/none`, 등록·수정은 `WRITE/required`, 삭제는 `WRITE/required`와 `grant: false`다.
+`READ`가 아니고 `required`인 도구는 `outbound`를 선언해야 하며 manifest를 거절당하지 않는다. 이 커넥터의 쓰기 도구 여덟 개는 사용자 본인의 가계부 서비스에만 쓰므로 모두 `outbound: false`다.
 등록·수정·삭제는 호출하면 승인 요청이 만들어지고 사용자가 승인 카드에서 승인한 것만 실행된다.
 삭제는 상시 허락 없이 한 건씩 매번 승인받는다. 승인 카드의 인자는 재조회한 날짜·금액·내용·카테고리를 포함한다.
 지출은 반복지출 UUID도 표시한다. 도구는 DELETE 직전 GET 결과와 현재 카테고리 이름을 승인 인자와 대조한다.

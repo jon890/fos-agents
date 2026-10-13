@@ -389,7 +389,7 @@ export class AccountbookTools {
       if (args[key] !== undefined) body[key] = args[key];
     if (args.categoryName || args.categoryUuid)
       body.categoryUuid = await this.category(root, "EXPENSE", args, categories);
-    const updated = responseData(
+    const updated = written(
       await this.client.request(`${collection}/${args.recurringExpenseUuid}`, "PUT", body),
       recurringItemSchema,
     );
