@@ -813,7 +813,7 @@ Claude Code 전용 스킬은 `bun --no-env-file "${CLAUDE_PLUGIN_ROOT}/dist/care
 
 fos-assistant 는 `plugin/` 을 복사하거나 마운트해 `connector.json`, `.mcp.json`, `.claude-plugin/plugin.json` 의 `skills` 가 가리키는 `connector-skills/` 를 읽는다.
 
-- `connector.json` 은 `schema: 2` 다. 도구 열아홉 개를 `tools` 에 빠짐없이 선언하고 `default_tool_policy` 는 `deny` 다. 새 도구를 더할 때는 같은 변경에서 `tools` 에 위험도와 승인 방식, `title`, 2,000 code point 이하의 `description` 을 선언한다. 설명은 필수이며 앞뒤 공백 제거 후 비어 있거나 8,192 UTF-8 byte를 넘거나 금지 문자를 포함하면 서버가 시작하지 않는다
+- `connector.json` 은 `schema: 2` 다. 도구 열아홉 개를 `tools` 에 빠짐없이 선언하고 `READ` 가 아니고 `required` 인 도구는 `outbound` 를 선언하며(`update_github_profile` 만 `true` 와 `grant: false`), `default_tool_policy` 는 `deny` 다. 새 도구를 더할 때는 같은 변경에서 `tools` 에 위험도와 승인 방식, `title`, 2,000 code point 이하의 `description` 을 선언한다. 설명은 필수이며 앞뒤 공백 제거 후 비어 있거나 8,192 UTF-8 byte를 넘거나 금지 문자를 포함하면 서버가 시작하지 않는다
 - 확인 도구 `check_connection` 은 `READ` 와 `none` 이고 서버가 `readOnlyHint: true` 로 표시한다
 - `.mcp.json` 의 서버 env 는 `connector.json` 의 `fields[].env` 와 `operator_env` 의 합과 같다. 다르면 커넥터가 카탈로그에서 빠진다
 - `operator_secrets` 를 선언하지 않는다. 선언하면 카탈로그에서 빠진다. 그래서 Backend 의 token 은 사용자가 연결 화면에 넣는다

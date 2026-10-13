@@ -174,7 +174,7 @@ Hermes에서는 서버 이름 `accountbook`을 사용해 `mcp__accountbook__<도
   도구는 DELETE 직전에 같은 대상의 GET 응답을 승인 카드의 `date`, 숫자 `amount`, `description`, `categoryName`과 대조한다.
   상세 응답의 `categoryUuid`로 같은 가족의 현재 카테고리 이름을 확인하며, 지출은 `recurringExpenseUuid`도 대조한다.
   하나라도 다르면 DELETE 없이 `ACCOUNTBOOK_DELETE_CONFIRMATION_MISMATCH`를 반환한다. 복구 정책은 `recheck`이며 재조회 후 새 승인이 필요하다.
-  정책은 `WRITE/required`, `grant: false`이며 기존 승인 실행 경로를 사용한다. 상시 허락은 제공하지 않는다.
+  정책은 `WRITE/required`, `outbound: false`, `grant: false`이며 기존 승인 실행 경로를 사용한다. 상시 허락은 제공하지 않는다.
 - 반복지출 설정은 지출 기록과 다른 자원이다.
   `list_recurring_expenses`는 선택 입력 `month`(`YYYY-MM`, 생략하면 이번 달)를 받아
   `{ month, items }`를 반환한다. `month`를 생략하면 응답의 `month`는 `null`이고, 가계부 서버가 정한 이번 달이 `generatedThisMonth`의 기준이다. 각 항목은 `uuid`, `name`, `amount`, `dayOfMonth`, `categoryUuid`, `categoryName`, `generatedThisMonth`다.

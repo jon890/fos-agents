@@ -69,12 +69,14 @@
     "save_context_document": {
       "risk": "WRITE",
       "approval": "required",
+      "outbound": false,
       "title": "후보자 맥락 문서 저장",
       "description": "후보자 맥락 문서 한 개의 본문을 Backend에 저장합니다. documentKey, body, note, expectedVersion이 모두 필수입니다. documentKey는 learning-interests, position-preferences, application-state, career-status 중 하나이며 body는 공백뿐인 값을 허용하지 않고 UTF-8 65536바이트 이하입니다. note는 앞뒤 공백을 제거한 1자 이상 500자 이하 변경 메모이고 expectedVersion은 조회한 판 번호, 새 문서는 0입니다. 선택 인자나 기본값은 없습니다. 저장 결과 document에는 documentKey, version, updatedAt만 있고 본문은 없습니다. 변경 전후와 메모를 보여 주고 승인받아야 하는 WRITE 도구입니다. 지원서 공통 신원 프로필을 바꾸거나 외부에 제출하지 않습니다. 개인 맥락이 저장됩니다. 판 충돌은 CAREER_VERSION_CONFLICT이며 통신이나 응답 오류로 결과가 불명확하면 재호출 전에 문서를 다시 읽어 확인합니다. 요청은 자동 재전송하지 않습니다."
     },
     "save_profile_document": {
       "risk": "WRITE",
       "approval": "required",
+      "outbound": false,
       "title": "프로필 원고 저장",
       "description": "프로필 원고 한 개를 Backend에 저장합니다. 필수 인자는 documentKey, body, note, expectedVersion입니다. documentKey는 wanted, linkedin, github 중 하나, body는 공백뿐인 값을 제외한 UTF-8 65536바이트 이하, note는 앞뒤 공백을 제거한 1자 이상 500자 이하, expectedVersion은 조회한 판 번호 또는 신규 원고의 0입니다. 선택 인자는 없습니다. 결과 document에는 documentKey, version, updatedAt만 있고 본문은 없습니다. 개인 경력 원고를 저장하는 WRITE 도구이므로 변경안을 보여 주고 승인을 받습니다. 원티드, LinkedIn, GitHub의 게시 프로필이나 지원서 공통 신원 프로필은 이 호출로 바뀌지 않습니다. 판 충돌은 CAREER_VERSION_CONFLICT입니다. 통신이나 응답 오류로 저장 여부가 불명확하면 원고를 다시 읽어 확인하고 무조건 재전송하지 않습니다."
     },
@@ -87,6 +89,8 @@
     "update_github_profile": {
       "risk": "WRITE",
       "approval": "required",
+      "outbound": true,
+      "grant": false,
       "title": "GitHub 프로필 갱신",
       "description": "설정된 GitHub 프로필 저장소의 README.md와 agent-usage.svg를 한 커밋으로 갱신합니다. 필수 readme는 공백뿐인 값을 제외한 UTF-8 65536바이트 이하의 전체 README, months는 중복 없는 YYYY-MM 달 1~6개, expectedBranch와 expectedHead는 get_github_profile이 반환한 branch와 40자리 소문자 16진수 head입니다. 선택 인자는 없으며 token과 Backend 사용량 기록이 필요합니다. 합계나 SVG를 입력받지 않고 선택한 달의 기록으로 차트와 Tokens 배지 합계를 계산합니다. 기록 누락은 CAREER_USAGE_MONTH_MISSING, 합계 0 이하는 CAREER_INVALID_INPUT, 배지 불일치는 CAREER_BADGE_MISMATCH입니다. 검토한 branch나 head가 바뀌면 CAREER_GITHUB_STALE_REVIEW로 쓰기 전에 중단합니다. 실행 중 경합은 CAREER_GITHUB_CONFLICT가 될 수 있습니다. 결과는 changed, commitSha, branch, months, total이고 내용이 같으면 changed: false입니다. 개인 경력과 사용량이 외부 저장소에 게시될 수 있으므로 전체 변경안을 보여 주고 승인받는 WRITE 도구입니다. 자동 재전송이나 강제 push를 하지 않으며 실패 시 저장소를 다시 읽어 결과를 확인합니다. 지원서나 메일을 보내지는 않습니다."
     },
@@ -105,12 +109,14 @@
     "save_interview_attempt": {
       "risk": "WRITE",
       "approval": "required",
+      "outbound": false,
       "title": "면접 답변 기록",
       "description": "면접 답변 한 개의 판정을 Backend에 기록하고 해당 주제의 복습 상태를 갱신합니다. 필수 drillType은 tech 또는 behavioral, questionId와 topic은 각각 100자 이하, question은 2000자 이하, score는 pass, shallow, fail, unknown입니다. 선택 인자는 UUID인 attemptId, 500자 이하 feedback, 각 100자 이하 targetCompany, targetRole, targetValueAxis, rootQuestionId, 2000자 이하 parentQuestion, 1 이상 4 이하인 followUpDepth, followUpAxis, stopReason입니다. followUpAxis는 clarification, decision, counterexample, operations, evidence-boundary이고 stopReason은 depth-limit, needs-study, answer-complete, session-ended입니다. 문자열은 앞뒤 공백을 제거하며 비어 있으면 거절합니다. attemptId 생략 시 커넥터가 UUID를 생성합니다. 결과에 attemptId, evaluatedOn과 progress의 drillType, topic, passCount, failCount, nextReviewDate, lastPassedDate를 반환합니다. 개인 답변 판정과 피드백이 저장되는 WRITE 도구로 승인이 필요합니다. 통신이나 응답 오류에는 attemptId를 포함하고 처리 중이면 CAREER_ATTEMPT_PENDING입니다. 재전송할 때는 같은 attemptId와 같은 인자를 사용하며 자동 재전송하지 않습니다. 외부 지원서나 메일을 보내지 않습니다."
     },
     "save_personal_question": {
       "risk": "WRITE",
       "approval": "required",
+      "outbound": false,
       "title": "개인 질문 저장",
       "description": "개인 면접 질문 한 개를 Backend에 추가하거나 고치고 활성 상태를 저장합니다. 필수 drillType은 tech 또는 behavioral, enabled는 boolean, question은 질문 객체입니다. question의 필수 id, topic, category는 100자 이하, difficulty는 basic, intermediate, advanced, question과 intent는 2000자 이하, answerSignals는 비어 있지 않은 문자열 배열입니다. 선택 bar는 production, large-scale, global-scale, followUps와 tags는 문자열 배열, positionFitHint는 2000자 이하, sequenceHint는 opening, early, middle, late, closing입니다. 문자열은 앞뒤 공백을 제거하며 빈 값을 허용하지 않습니다. 같은 id를 갱신하고 enabled: false는 질문을 끄며 삭제하지 않습니다. 기본값은 없습니다. 결과는 questionId, drillType, topic, enabled, updatedAt입니다. 개인 경험과 지원 맥락을 저장하는 WRITE 도구로 변경안을 승인받아야 합니다. 호출마다 새 멱등 키를 사용하며 자동 재전송하지 않습니다. 인증, 통신, 응답 오류로 저장 여부가 불명확하면 켜진 질문은 list_personal_questions로 다시 확인합니다. enabled: false로 끈 질문은 목록에 나오지 않으므로 목록 조회로 저장 여부를 확인할 수 없습니다. 공개 질문 은행이나 외부 서비스를 수정하지 않습니다."
     },
@@ -123,6 +129,7 @@
     "save_study_recommendation": {
       "risk": "WRITE",
       "approval": "required",
+      "outbound": false,
       "title": "공부 추천 저장",
       "description": "고른 공부 주제와 자료, 제외 이유를 Backend의 일일 추천 이력으로 저장합니다. candidateContextVersion, topics, rejections가 필수이며 candidateContextVersion은 100자 이하입니다. generatedAt은 선택 인자이며 2026-10-11T00:00:00.000Z처럼 밀리초 세 자리와 Z를 포함한 UTC ISO 시각만 허용하고 생략하면 현재 시각입니다. 이 날짜는 형식 예시입니다. generatedAt은 현재보다 24시간 이전 또는 5분 이후일 수 없습니다. topics는 0개부터 4개이며 각 주제에 topicKey, title, careerQuestion, items가 필요합니다. topicKey는 소문자 영숫자와 하이픈으로 80자 이하, title은 60자 이하, careerQuestion은 100자 이하 또는 null입니다. 각 items는 1개 이상이고 전체 합계 8개 이하이며 contentKey, summary, reason, careerValue가 필수입니다. summary와 reason은 각 100자 이하, careerValue는 current-work, target-role, engineering-judgment, product-business 중 하나 또는 null입니다. rejections는 0개부터 20개로 contentKey와 50자 이하 reason을 받습니다. contentKey는 후보에서 받은 url:64자리 해시 또는 youtube:식별자이며 임의로 만들지 않습니다. 제한된 문자열은 공백뿐인 값과 제어문자를 허용하지 않습니다. 서울 날짜로 reportId를 만들고 reportId, generatedAt, historyVersion을 반환합니다. 개인 선택과 제외 이유가 저장되므로 WRITE 도구로 승인이 필요합니다. 이미 저장한 날은 CAREER_STUDY_ALREADY_SAVED, 기준 변경이나 중복 후보 등은 CAREER_STUDY_CONFLICT입니다. 통신 실패는 reportId와 generatedAt을 포함하며 다시 보낼 때 같은 generatedAt을 사용합니다. 외부 글이나 메일을 발행하지 않습니다."
     },
