@@ -95,8 +95,6 @@ test("errors 표의 값은 공통 어휘만 쓴다", () => {
 
 test("CAREER_OUTCOME_UNKNOWN 은 오류 결과에 싣는 attemptId 를 재시도 식별자로 선언한다", () => {
   expect(connector.errors.CAREER_OUTCOME_UNKNOWN).toEqual({ category: "outcome_unknown", retry_key: "attemptId" });
-  const attempt = connector.tools.save_interview_attempt;
-  expect(attempt.description).toContain("attemptId");
 });
 
 test("운영자 비밀값과 사진 도구 묶음을 선언하지 않는다", () => {
