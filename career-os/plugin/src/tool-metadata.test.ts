@@ -97,9 +97,12 @@ test("설명을 바꿔도 승인 정책과 입력 스키마를 바꾸지 않는�
     expect(Object.keys(definition).sort()).toEqual(["description", "schema"]);
   }
   for (const [name, policy] of Object.entries(connector.tools)) {
-    const outbound = policy.risk !== "READ" && policy.approval === "required";
+    const needsOutbound = policy.risk !== "READ" && policy.approval === "required";
     const expected = ["approval", "description", "risk", "title"];
-    if (outbound) expected.push("outbound");
+    if (needsOutbound) {
+      expected.push("outbound");
+      expect((policy as { outbound?: boolean }).outbound, name).toBe(name === "update_github_profile");
+    }
     if (name === "update_github_profile") expected.push("grant");
     expect(Object.keys(policy).sort(), name).toEqual(expected.sort());
   }
