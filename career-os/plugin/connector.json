@@ -111,7 +111,7 @@
       "approval": "required",
       "outbound": false,
       "title": "면접 답변 기록",
-      "description": "면접 답변 한 개의 판정을 Backend에 기록하고 해당 주제의 복습 상태를 갱신합니다. 필수 drillType은 tech 또는 behavioral, questionId와 topic은 각각 100자 이하, question은 2000자 이하, score는 pass, shallow, fail, unknown입니다. 선택 인자는 UUID인 attemptId, 500자 이하 feedback, 각 100자 이하 targetCompany, targetRole, targetValueAxis, rootQuestionId, 2000자 이하 parentQuestion, 1 이상 4 이하인 followUpDepth, followUpAxis, stopReason입니다. followUpAxis는 clarification, decision, counterexample, operations, evidence-boundary이고 stopReason은 depth-limit, needs-study, answer-complete, session-ended입니다. 문자열은 앞뒤 공백을 제거하며 비어 있으면 거절합니다. attemptId 생략 시 커넥터가 UUID를 생성합니다. 결과에 attemptId, evaluatedOn과 progress의 drillType, topic, passCount, failCount, nextReviewDate, lastPassedDate를 반환합니다. 개인 답변 판정과 피드백이 저장되는 WRITE 도구로 승인이 필요합니다. 통신이나 응답 오류에는 attemptId를 포함하고 처리 중이면 CAREER_ATTEMPT_PENDING입니다. 재전송할 때는 같은 attemptId와 같은 인자를 사용하며 자동 재전송하지 않습니다. 외부 지원서나 메일을 보내지 않습니다."
+      "description": "면접 답변 한 개의 판정을 Backend에 기록하고 해당 주제의 복습 상태를 갱신합니다. 필수 drillType은 tech 또는 behavioral, questionId와 topic은 각각 100자 이하, question은 2000자 이하, score는 pass, shallow, fail, unknown입니다. 선택 인자는 UUID인 attemptId, 500자 이하 feedback, 각 100자 이하 targetCompany, targetRole, targetValueAxis, rootQuestionId, 2000자 이하 parentQuestion, 1 이상 4 이하인 followUpDepth, followUpAxis, stopReason입니다. followUpAxis는 clarification, decision, counterexample, operations, evidence-boundary이고 stopReason은 depth-limit, needs-study, answer-complete, session-ended입니다. 문자열은 앞뒤 공백을 제거하며 비어 있으면 거절합니다. attemptId 생략 시 커넥터가 UUID를 생성합니다. 결과에 attemptId, evaluatedOn과 progress의 drillType, topic, passCount, failCount, nextReviewDate, lastPassedDate를 반환합니다. 개인 답변 판정과 피드백이 저장되는 WRITE 도구로 승인이 필요합니다. 통신 실패, 응답 오류, 5xx(CAREER_OUTCOME_UNKNOWN)에는 attemptId를 포함하고 저장 여부는 알 수 없으며 처리 중이면 CAREER_ATTEMPT_PENDING입니다. 재전송할 때는 같은 attemptId와 같은 인자를 사용하며 자동 재전송하지 않습니다. 외부 지원서나 메일을 보내지 않습니다."
     },
     "save_personal_question": {
       "risk": "WRITE",
@@ -161,6 +161,7 @@
     "CAREER_BAD_REQUEST": "invalid_input",
     "CAREER_UNAVAILABLE": "unavailable",
     "CAREER_NETWORK": "unavailable",
+    "CAREER_OUTCOME_UNKNOWN": "outcome_unknown",
     "CAREER_INVALID_RESPONSE": "unavailable",
     "CAREER_INVALID_INPUT": "invalid_input",
     "CAREER_USAGE_MONTH_MISSING": "invalid_input",

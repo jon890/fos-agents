@@ -81,7 +81,7 @@ test(".mcp.json 서버 env 는 fields[].env 와 operator_env 의 합과 같다",
 });
 
 test("errors 표의 값은 공통 어휘만 쓴다", () => {
-  const vocabulary = ["credential_rejected", "forbidden", "invalid_input", "unavailable"];
+  const vocabulary = ["credential_rejected", "forbidden", "invalid_input", "outcome_unknown", "unavailable"];
   for (const value of Object.values(connector.errors) as string[]) expect(vocabulary).toContain(value);
 });
 
