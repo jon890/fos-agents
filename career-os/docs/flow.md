@@ -955,7 +955,7 @@ plugin 의 `study-topic-recommender` 스킬이 이미 수집된 후보에서 고
 | 승인을 기다리는 사이에 README 가 커밋되거나 기본 branch 가 바뀌었다 | `CAREER_GITHUB_STALE_REVIEW`. 실행 첫머리에서 기본 branch 와 끝 커밋을 `expectedBranch`, `expectedHead` 와 비교하고, 다르면 GitHub 에 아무것도 쓰지 않는다. 최신 끝 커밋 위에 검토한 원고를 다시 올리지 않는다. 다시 읽고 변경안을 맞춘 뒤 새로 승인받는다 |
 | branch 를 옮기는 마지막 요청에서 프로필 저장소에 다른 커밋이 올라왔음을 알게 된다 | `CAREER_GITHUB_CONFLICT`. branch 를 강제로 옮기지 않는다. 그 앞 단계의 409 와 422 는 `CAREER_GITHUB_UNAVAILABLE` 이다 |
 | 올릴 README 와 차트가 저장소의 것과 같다 | 커밋을 만들지 않고 `changed: false` 로 성공한다. 같은 요청을 다시 승인해도 빈 커밋이 쌓이지 않는다 |
-| 실행 결과가 「실행했는지 알 수 없음」 으로 온다 | 같은 도구를 다시 부르지 않는다. `get_github_profile` 이나 문서 조회로 반영됐는지 확인한다 |
+| 실행 결과가 「실행했는지 알 수 없음」 으로 온다 | 같은 도구를 다시 부르지 않는다. 다만 자동 입력에 `재시도 식별자: attemptId=<값>` 이 실린 면접 기록은 그 값으로 한 번 다시 부를 수 있고 새 승인을 받는다. `get_github_profile` 이나 문서 조회로 반영됐는지 확인한다 |
 | 면접 기록 저장 결과를 알 수 없다 | `CAREER_NETWORK`, `CAREER_INVALID_RESPONSE`, `CAREER_OUTCOME_UNKNOWN`(5xx). 오류에 실린 `attemptId` 로 나머지 인자를 바꾸지 않고 다시 승인받아 보낸다. Backend 가 같은 `attemptId` 의 저장한 응답을 돌려줘 횟수가 두 번 오르지 않는다. 다시 보낸 호출도 `CAREER_INVALID_RESPONSE` 나 `CAREER_OUTCOME_UNKNOWN` 이면 저장 여부를 알 수 없으므로 더 보내지 않고 알린다 |
 | 같은 `attemptId` 의 면접 기록 요청이 아직 처리 중이다 | `CAREER_ATTEMPT_PENDING`. 잠시 뒤 오류에 실린 `attemptId` 로 나머지 인자를 바꾸지 않고 새로 승인받아 보낸다 |
 | 공부 추천 저장 결과를 알 수 없다 | 다른 인자를 하나도 바꾸지 않고 오류에 실린 `generatedAt` 만 더해 다시 승인받아 보낸다. 같은 `reportId` 와 `generatedAt` 이면 멱등 키가 같다. 본문이 다르면 `IDEMPOTENCY_CONFLICT` 409 가 된다 |

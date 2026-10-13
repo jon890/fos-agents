@@ -80,9 +80,23 @@ test(".mcp.json 서버 env 는 fields[].env 와 operator_env 의 합과 같다",
     expect(String(value)).toMatch(new RegExp(`^\\$\\{${name}(:-)?\\}$`));
 });
 
+// An errors entry is the vocabulary word, or {category, retry_key} for outcome_unknown (fos-assistant ADR-20261013).
+const errorCategories = Object.fromEntries(
+  Object.entries(connector.errors as Record<string, string | { category: string }>).map(([code, entry]) => [
+    code,
+    typeof entry === "string" ? entry : entry.category,
+  ]),
+);
+
 test("errors 표의 값은 공통 어휘만 쓴다", () => {
   const vocabulary = ["credential_rejected", "forbidden", "invalid_input", "outcome_unknown", "unavailable"];
-  for (const value of Object.values(connector.errors) as string[]) expect(vocabulary).toContain(value);
+  for (const value of Object.values(errorCategories)) expect(vocabulary).toContain(value);
+});
+
+test("CAREER_OUTCOME_UNKNOWN 은 오류 결과에 싣는 attemptId 를 재시도 식별자로 선언한다", () => {
+  expect(connector.errors.CAREER_OUTCOME_UNKNOWN).toEqual({ category: "outcome_unknown", retry_key: "attemptId" });
+  const attempt = connector.tools.save_interview_attempt;
+  expect(attempt.description).toContain("attemptId");
 });
 
 test("운영자 비밀값과 사진 도구 묶음을 선언하지 않는다", () => {
@@ -122,7 +136,7 @@ test("errors 는 data-schema.md 의 커넥터 오류 코드 표에서 공통 어
     if (code && vocabulary) expected[code] = vocabulary;
   }
   expect(Object.keys(expected).length).toBeGreaterThan(0);
-  expect(connector.errors).toEqual(expected);
+  expect(errorCategories).toEqual(expected);
 });
 
 const connectorSkillsDirectory = join(import.meta.dir, "..", "connector-skills");
