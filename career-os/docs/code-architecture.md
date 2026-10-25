@@ -499,6 +499,8 @@ git diff --check
 
 실행 코드는 `scripts/resume-preparer/` 에 있다. plugin 로컬 실행기 `resume` 이 이 코드를 부른다.
 `scripts/resume-preparer/verified-claims/`는 검증 완료 주장 스키마, 안정적인 주장 키, 근거 파일 해시, 저장과 검색을 책임별 모듈로 나눈다.
+`scripts/resume-preparer/evaluate_skill.ts`는 합성 사례 15~19를 도구 없는 독립 Claude 대화로 실행한다. `--out`으로 지정한 임시 경로에 응답과 지침 해시를 남기며, 기대 행동은 모델에 제공하지 않는다. 실행 성공과 행동 판정은 구분하고 응답을 읽은 검토자가 통과 여부를 기록한다. 이 평가 도구는 저장소에서 직접 실행하며 plugin 로컬 실행기에 번들하지 않는다.
+특정 사례 재실행은 `--only`로 고르고, 판정 근거와 적용 지침 해시는 `plugin/skills/resume-preparer/evals/latest-results.json`에 기록한다.
 검증 완료 주장 CLI 는 다음 셋이다.
 
 
