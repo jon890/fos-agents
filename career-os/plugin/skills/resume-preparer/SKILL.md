@@ -96,6 +96,7 @@ PDF 를 만들 때 쓰는 Chrome 은 `CHROME_BIN`, `pdfunite` 는 `PDFUNITE_BIN`
 ```
 
 이후 [독립 채용 리뷰](references/hard-review.md)와 [판정 기준](references/scoring-rubric.md)에 따라 인사담당자와 실무담당자 관점으로 검토한다.
+공고의 작성 안내에 따라 경험을 다시 평가하고 인터뷰·수정을 반복해야 하면 `resume-review` 스킬을 사용한다. 작성·판정 기준은 기존 참조 문서를 유지한다.
 문구를 바꾸면 HTML, PDF, 주장 원장과 리뷰 결과를 같은 버전으로 다시 만든다.
 
 ### 6. 검증 완료 주장 재사용과 반영

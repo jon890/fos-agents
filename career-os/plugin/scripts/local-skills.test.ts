@@ -43,12 +43,13 @@ function expectCleanEvals(directory: string): void {
 
 const skills = readdirSync(skillsDirectory);
 
-test("Claude Code 전용 스킬이 여섯 있다", () => {
+test("실행기 스킬 여섯과 문서 평가 스킬이 있다", () => {
   expect(skills.sort()).toEqual([
     "application-package-writer",
     "interview-question-prep",
     "position-recommender",
     "resume-preparer",
+    "resume-review",
     "study-collection",
     "sync-profile",
   ]);
@@ -216,7 +217,8 @@ test("실행기 이름 추출은 지어낸 이름을 실행기 목록에서 찾�
   expect((PLUGIN_LOCAL_EXECUTORS as readonly string[]).includes(names[0]!)).toBe(false);
 });
 
-for (const skill of skills) {
+// 문서 평가 스킬은 실행기를 호출하지 않아 Claude Code 환경 계약을 요구하지 않는다.
+for (const skill of skills.filter((name) => name !== "resume-review")) {
   describe(skill, () => {
     const directory = join(skillsDirectory, skill);
     const files = markdownFilesUnder(directory);

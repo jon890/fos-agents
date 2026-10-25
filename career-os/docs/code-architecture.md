@@ -52,6 +52,10 @@ career-os/
 저장소에는 `.claude/skills/` 와 `.codex/skills/` 가 없다. 모든 스킬이 `plugin/` 에 있다.
 스킬의 실행 코드는 `scripts/application-package/`, `scripts/resume-preparer/`, `scripts/position-recommender/`, `scripts/study-topic-recommender/` 에 있다.
 
+`plugin/skills/resume-review/`는 파일로 제공된 공고와 제출 문서를 평가하는 지침이다.
+Codex와 Claude Code에서 기존 작성·주장 검증·채용 리뷰 기준을 읽어 사용한다.
+Claude Code 전용 실행기를 새로 만들거나 커넥터의 MCP 지침에 파일 작업을 추가하지 않는다.
+
 ### 실행 코드를 두 자리 중 어디에 두나
 
 같은 TypeScript 인데 스킬 번들 안과 `scripts/` 둘로 나뉜다.
@@ -724,6 +728,7 @@ career-os/plugin/
     ├── interview-question-prep/
     ├── position-recommender/
     ├── resume-preparer/
+    ├── resume-review/
     ├── study-collection/
     └── sync-profile/
 ```
