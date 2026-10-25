@@ -26,7 +26,7 @@ function frontMatterOf(text: string): { name?: string; description?: string; bod
 }
 
 function executorNamesIn(text: string): string[] {
-  return [...text.matchAll(/<CAREER_LOCAL> ([a-z][a-z-]*)/g)].map((match) => match[1]!);
+  return [...text.matchAll(/(?:<CAREER_LOCAL>|bun --no-env-file "\$\{CLAUDE_PLUGIN_ROOT\}\/dist\/career-local\.js") ([a-z][a-z-]*)/g)].map((match) => match[1]!);
 }
 
 function expectCleanEvals(directory: string): void {
@@ -164,7 +164,7 @@ describe("resume-preparer", () => {
   test("본문이 실행기의 resume 하위 명령과 작업본 시작 명령을 적는다", () => {
     const body = readFileSync(join(directory, "SKILL.md"), "utf8");
     for (const command of [
-      "<CAREER_LOCAL> resume export",
+      "resume export",
       "validate-ledger",
       "assess-reuse",
       "promote-claims",
@@ -211,10 +211,13 @@ describe("sync-profile", () => {
   });
 });
 
-test("실행기 이름 추출은 지어낸 이름을 실행기 목록에서 찾지 못한다", () => {
-  const names = executorNamesIn("<CAREER_LOCAL> nope");
-  expect(names).toEqual(["nope"]);
-  expect((PLUGIN_LOCAL_EXECUTORS as readonly string[]).includes(names[0]!)).toBe(false);
+test("실행기 이름 추출은 약칭과 실제 명령에서 지어낸 이름을 찾는다", () => {
+  for (const prefix of ["<CAREER_LOCAL>", launcher]) {
+    const names = executorNamesIn(`${prefix} nope`);
+    expect(names).toEqual(["nope"]);
+    expect((PLUGIN_LOCAL_EXECUTORS as readonly string[]).includes(names[0]!)).toBe(false);
+    expect(executorNamesIn(`${prefix} resume export`)).toEqual(["resume"]);
+  }
 });
 
 // 문서 평가 스킬은 실행기를 호출하지 않아 Claude Code 환경 계약을 요구하지 않는다.
@@ -250,7 +253,7 @@ for (const skill of skills.filter((name) => name !== "resume-review")) {
       }
     });
 
-    test("<CAREER_LOCAL> 로 적은 실행기 이름이 모두 실제 실행기다", () => {
+    test("문서에 적은 실행기 이름이 모두 실제 실행기다", () => {
       const known = PLUGIN_LOCAL_EXECUTORS as readonly string[];
       for (const file of files)
         for (const executor of executorNamesIn(readFileSync(file, "utf8")))
