@@ -2,7 +2,7 @@
 #
 # build context 는 이 파일이 있는 `career-os/services/career-backend` 디렉터리다.
 # 이 package 는 모노레포 루트와 분리된 npm package 라 루트의 파일을 읽지 않는다.
-FROM node:22.18.0-bookworm-slim AS build
+FROM node:24.22.1-bookworm-slim AS build
 
 WORKDIR /app
 
@@ -14,7 +14,7 @@ COPY prisma ./prisma
 COPY src ./src
 RUN npm run build
 
-FROM node:22.18.0-bookworm-slim AS runtime
+FROM node:24.22.1-bookworm-slim AS runtime
 
 # 시각 컬럼이 `DATETIME(3)` 이라 시간대를 저장하지 않는다.
 # 프로세스가 UTC 가 아니면 다시 읽은 시각이 저장한 값과 어긋난다.

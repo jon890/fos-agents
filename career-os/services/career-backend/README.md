@@ -1,10 +1,10 @@
 # career-backend
 
-커리어 Backend 서비스다. 모노레포 루트와 분리된 Node 22 package 로 동작한다.
+커리어 Backend 서비스다. 모노레포 루트와 분리된 Node 24 package 로 동작한다.
 
 ## 요구 환경
 
-- Node `>=22.18.0`
+- Node `>=24.22`
 - MySQL 8.4
 
 ## Prisma CLI 와 테스트가 읽는 환경 변수
