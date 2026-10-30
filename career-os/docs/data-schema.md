@@ -1300,6 +1300,7 @@ HTTP 계약은 [`flow.md`](flow.md#프로필-http-계약)가 소유한다. 이�
 | `CAREER_GITHUB_TOKEN` | 사용자. 연결 칸 `github_token` | 아니오 | 프로필 저장소 하나의 내용 읽기와 쓰기 권한만 가진 token |
 | `CAREER_BACKEND_URL` | 운영자 | 예 | credentials, query, hash, path 가 없는 HTTP 또는 HTTPS origin |
 | `CAREER_GITHUB_PROFILE_REPO` | 운영자 | 예 | `<owner>/<repo>` 모양의 프로필 저장소 이름 |
+| `CAREER_BACKEND_ACCESS_CLIENT_ID`, `CAREER_BACKEND_ACCESS_CLIENT_SECRET` | 운영자 | 아니오 | Backend 앞에 Cloudflare Access 가 있을 때의 service token. 둘 다 있거나 둘 다 없어야 한다. 파일 변형은 받지 않는다. 계약은 ADR-143 을 따른다 |
 
 값이 `${` 로 시작하면 치환되지 않은 변수 참조이므로 없는 값으로 다룬다.
 필수 값이 없거나 모양이 틀리면 서버가 `CAREER_CONFIG` 로 시작하지 않는다.
