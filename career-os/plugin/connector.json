@@ -153,7 +153,7 @@
     }
   },
   "default_tool_policy": "deny",
-  "operator_env": ["CAREER_BACKEND_URL", "CAREER_GITHUB_PROFILE_REPO"],
+  "operator_env": ["CAREER_BACKEND_URL", "CAREER_GITHUB_PROFILE_REPO", "CAREER_BACKEND_ACCESS_CLIENT_ID", "CAREER_BACKEND_ACCESS_CLIENT_SECRET"],
   "errors": {
     "CAREER_UNAUTHORIZED": "credential_rejected",
     "CAREER_NOT_FOUND": "invalid_input",

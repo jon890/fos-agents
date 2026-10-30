@@ -4,20 +4,30 @@ description: 공고가 찾는 역량과 후보자의 강한 경험을 연결하�
 ---
 # 이력서 제출 준비
 
+**목표: 공고와 확인된 경험을 연결해 심사자가 다음 전형으로 넘길 이유를 찾을 수 있는 제출 문서를 완성한다.**
+
+## 워크플로 개요
+
+| 단계 | 이름 | 통과 조건 |
+| --- | --- | --- |
+| 1 | 작업본과 근거 준비 | 공고, 지원 판단과 제출 대상이 특정됐다. |
+| 2 | 사실과 대표 근거 확정 | 제출 문장의 사실과 표현에 대한 사용자 확인이 끝났다. |
+| 3 | 원고 작성 | 대표 경험의 문제, 역할, 판단과 확인된 결과가 원고에 있다. |
+| 4 | HTML과 PDF 검증 | 실제 제출 PDF의 모든 쪽을 확인했고 출력 결함이 없다. |
+| 5 | 주장 감사와 채용 리뷰 | 검토 대상과 적용 범위가 기록됐고 필수 수정이 없다. |
+| 6 | 검증 완료 주장 재사용과 반영 | 현재 문구와 일치하는 원장의 주장이 모두 safe다. |
+| 7 | 제출 묶음 완성 | 최종 파일과 검토 기록의 연결 및 제출 묶음 검증이 통과했다. |
+
 ## 실행 환경
 
 이 스킬은 Claude Code 에서만 돈다.
 셸이 없는 환경이면 할 수 없다고 알리고 끝낸다.
 
 실행기 명령은 `bun --no-env-file "${CLAUDE_PLUGIN_ROOT}/dist/career-local.js"` 이다.
-이 문서와 `references/` 에서는 그 명령을 `<CAREER_LOCAL>` 로 적는다.
+`references/`의 `<CAREER_LOCAL>`은 위 실행기 명령을 뜻하며 셸에 그대로 입력하지 않는다.
 셸 환경에 `CAREER_BACKEND_URL`, `CAREER_BACKEND_TOKEN` 이 있어야 한다.
+아래 명령의 `APPLICATION_DIR`은 작업본의 지원 디렉터리, `HTML_FILE`과 `LEDGER_FILE`은 현재 HTML과 주장 원장 경로다. 해당 단계에서 실제 경로로 설정하고 `CLAUDE_PLUGIN_ROOT`가 설치된 플러그인을 가리키는지 확인한다. `CLAIM_QUERY`는 재사용할 주장 검색어다.
 PDF 를 만들 때 쓰는 Chrome 은 `CHROME_BIN`, `pdfunite` 는 `PDFUNITE_BIN` 으로 위치를 알려 줄 수 있다.
-
-## 목표
-
-공고가 찾는 역량과 후보자의 가장 강한 실제 경험을 연결해,
-서류 심사자가 다음 전형으로 넘길 이유를 빠르게 확인할 수 있는 제출 문서를 완성한다.
 
 ## 경계
 
@@ -34,11 +44,11 @@ PDF 를 만들 때 쓰는 Chrome 은 `CHROME_BIN`, `pdfunite` 는 `PDFUNITE_BIN`
 최신 지원 작업본을 준비한다.
 
 ```bash
-<CAREER_LOCAL> workspace begin resume-preparer --json
+bun --no-env-file "${CLAUDE_PLUGIN_ROOT}/dist/career-local.js" workspace begin resume-preparer --json
 ```
 
 결과의 `root` 아래 `applications/<회사>/<직무>/` 가 지원 디렉터리다.
-`<CAREER_LOCAL> workspace paths --json` 이 `root` 와 `evidenceDir` 를 낸다.
+`workspace paths --json` 하위 명령이 `root` 와 `evidenceDir` 를 낸다.
 지원 디렉터리의 `evidence/posting.md`, `evidence/fit.md`와 `evidence/status.md`에서 지원 직무, 지원 판단과 제출 문서를 확인한다.
 지원 판단이나 후보자 인터뷰가 준비되지 않았으면 `application-package-writer` 스킬로 먼저 만든다고 안내하고 끝낸다.
 
@@ -76,12 +86,13 @@ PDF 를 만들 때 쓰는 Chrome 은 `CHROME_BIN`, `pdfunite` 는 `PDFUNITE_BIN`
 [디자인 계약](references/resume-design.md)에 따라 HTML과 PDF를 만들고 실제 화면을 확인한다.
 
 ```bash
-<CAREER_LOCAL> resume export --application-dir <지원 디렉터리>
-<CAREER_LOCAL> resume check-html <HTML 경로>
+bun --no-env-file "${CLAUDE_PLUGIN_ROOT}/dist/career-local.js" resume export --application-dir "${APPLICATION_DIR:?지원 디렉터리를 설정하세요}"
+bun --no-env-file "${CLAUDE_PLUGIN_ROOT}/dist/career-local.js" resume check-html "${HTML_FILE:?HTML 경로를 설정하세요}"
 ```
 
 공고의 분량 제한을 우선한다.
 제한이 없으면 근거의 양, 중복과 읽기 편의성으로 분량과 페이지 구분을 정한다.
+외부 이력서 편집기에서 PDF를 내보내면 최신 저장본과 내려받은 PDF를 대조한다. 편집기의 제목·기간·서식 지원에 맞추고, 로컬 HTML과 같은 출력이라고 가정하지 않는다.
 
 ### 5. 주장 감사와 채용 리뷰
 
@@ -92,11 +103,12 @@ PDF 를 만들 때 쓰는 Chrome 은 `CHROME_BIN`, `pdfunite` 는 `PDFUNITE_BIN`
 `validate-ledger` 가 상대 경로를 실행 위치(`process.cwd()`) 기준으로 풀기 때문이다. `application-package-writer` 도 같은 자리에서 부른다.
 
 ```bash
-<CAREER_LOCAL> resume validate-ledger <원장 경로> --artifact <HTML 경로>
+bun --no-env-file "${CLAUDE_PLUGIN_ROOT}/dist/career-local.js" resume validate-ledger "${LEDGER_FILE:?원장 경로를 설정하세요}" --artifact "${HTML_FILE:?HTML 경로를 설정하세요}"
 ```
 
 이후 [독립 채용 리뷰](references/hard-review.md)와 [판정 기준](references/scoring-rubric.md)에 따라 인사담당자와 실무담당자 관점으로 검토한다.
-문구를 바꾸면 HTML, PDF, 주장 원장과 리뷰 결과를 같은 버전으로 다시 만든다.
+공고의 작성 안내에 따라 경험을 다시 평가하고 인터뷰·수정을 반복해야 하면 `resume-review` 스킬을 사용한다. 작성·판정 기준은 기존 참조 문서를 유지한다.
+변경 후 재검토 범위와 기록은 [독립 채용 리뷰](references/hard-review.md)의 버전 연결 기준을 따른다.
 
 ### 6. 검증 완료 주장 재사용과 반영
 
@@ -104,14 +116,14 @@ PDF 를 만들 때 쓰는 Chrome 은 `CHROME_BIN`, `pdfunite` 는 `PDFUNITE_BIN`
 출력의 `rereadEvidence` 와 변경된 주장만 다시 감사하고, `full_audit` 이면 전체 원장을 만든다.
 
 ```bash
-<CAREER_LOCAL> resume assess-reuse <지원 디렉터리>
-<CAREER_LOCAL> resume search-claims <검색어>
+bun --no-env-file "${CLAUDE_PLUGIN_ROOT}/dist/career-local.js" resume assess-reuse "${APPLICATION_DIR:?지원 디렉터리를 설정하세요}"
+bun --no-env-file "${CLAUDE_PLUGIN_ROOT}/dist/career-local.js" resume search-claims "${CLAIM_QUERY:?검색어를 설정하세요}"
 ```
 
 현재 HTML과 일치하는 버전 3 원장의 모든 주장이 `safe` 일 때만 검증 결과를 반영한다.
 
 ```bash
-<CAREER_LOCAL> resume promote-claims <지원 디렉터리>
+bun --no-env-file "${CLAUDE_PLUGIN_ROOT}/dist/career-local.js" resume promote-claims "${APPLICATION_DIR:?지원 디렉터리를 설정하세요}"
 ```
 
 ### 7. 제출 묶음 완성
@@ -120,16 +132,17 @@ PDF 를 만들 때 쓰는 Chrome 은 `CHROME_BIN`, `pdfunite` 는 `PDFUNITE_BIN`
 다음 순서로 제출 묶음을 만들고 검증한다.
 
 ```bash
-<CAREER_LOCAL> resume build-bundle <지원 디렉터리>
-<CAREER_LOCAL> resume validate-bundle <지원 디렉터리>
+bun --no-env-file "${CLAUDE_PLUGIN_ROOT}/dist/career-local.js" resume build-bundle "${APPLICATION_DIR:?지원 디렉터리를 설정하세요}"
+bun --no-env-file "${CLAUDE_PLUGIN_ROOT}/dist/career-local.js" resume validate-bundle "${APPLICATION_DIR:?지원 디렉터리를 설정하세요}"
 ```
 
 지원 패키지 검사와 검토 화면은 `application-package-writer` 스킬이 한다.
+manifest의 PDF 해시와 검토 기록의 최종 PDF 해시를 대조한다. 외부 편집기 PDF처럼 기존 묶음 검증기가 다루지 않는 파일은 실제 파일 경로와 해시, 저장본 대조 및 재검토 결과를 별도로 남긴다. 이 확인을 기존 검증기 통과라고 보고하지 않는다.
 
 최종 파일을 확인한 뒤 작업본을 반영한다.
 
 ```bash
-<CAREER_LOCAL> workspace finish resume-preparer --json
+bun --no-env-file "${CLAUDE_PLUGIN_ROOT}/dist/career-local.js" workspace finish resume-preparer --json
 ```
 
 사용자에게 제출 PDF를 보여주고 실제 제출 승인을 기다린다.

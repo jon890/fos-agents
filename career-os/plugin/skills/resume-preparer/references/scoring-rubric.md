@@ -58,9 +58,12 @@
 - `blocked`: 후보자 확인이나 새로운 근거 없이는 사실 문제를 해결할 수 없다.
 
 `review/resume-scorecard.md`에는 아래 식별자와 판정 근거를 기록한다.
+HTML 문구 식별자는 기존 검증기가 읽는 형식을 유지한다. 별도로 최종 PDF의 실제 경로·SHA256·쪽 수와 검토자별 대상 해시·초대 판정·검토 범위를 기록한다. 변경 시 [버전 연결 기준](hard-review.md)의 재검토 범위를 적용한다.
 
 ```markdown
 - artifact: `resume.html`
 - artifactTextSha256: `<64자리 SHA-256>`
 - verdict: `pass|revise|blocked`
 ```
+
+두 검토자의 점수, 필수 수정·선택 개선·경험 공백과 지금 제출할 수 있는 이유를 함께 남긴다. 공백이 있다는 이유만으로 blocked로 판정하지 않고, 공고의 필수조건과 제출 문장의 사실성을 막는지 확인한다.

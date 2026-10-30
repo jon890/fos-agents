@@ -1,0 +1,12 @@
+{
+  "name": "fos-career",
+  "description": "career-os 의 fos-career plugin 을 로컬 작업본에서 설치하는 marketplace",
+  "owner": { "name": "jon890" },
+  "plugins": [
+    {
+      "name": "fos-career",
+      "source": "./plugin",
+      "description": "후보자 맥락, 프로필 원고, 프로필 동기화, 면접 연습, 공고 추천과 이력서 준비 스킬"
+    }
+  ]
+}

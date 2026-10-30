@@ -1,0 +1,336 @@
+{
+  "schemaVersion": 1,
+  "evaluatedOn": "2026-10-26",
+  "skill": "resume-preparer",
+  "pluginVersion": "0.7.2",
+  "method": "독립 생성 응답을 기대 행동과 대조한 수동 판정",
+  "generatorModels": ["claude-opus-5-5"],
+  "cliVersion": "2.1.310 (Claude Code)",
+  "expectationsGivenToGenerator": false,
+  "toolAccess": false,
+  "generationCount": 17,
+  "finalScenarioCount": 5,
+  "finalCheckCount": 27,
+  "sources": [
+    {
+      "file": "SKILL.md",
+      "sha256": "e501db5a7da26383bb0b6c4cd68c54670130a68550f46cf284804a5bee438c86"
+    },
+    {
+      "file": "references/candidate-context.md",
+      "sha256": "a02d5266d9abac5dae1c99c38625e1c22c41302252b17188b6f27aadf19f43ac"
+    },
+    {
+      "file": "references/claim-model.md",
+      "sha256": "42aa13881f457552b3e2397225b53818726cd88a41ae1c8bbeac4ace0ec812c5"
+    },
+    {
+      "file": "references/hard-review.md",
+      "sha256": "af04e19ee8a130fc372766aea0bacf3d4431ad96e06dca4f7f0c5433b5af87b9"
+    },
+    {
+      "file": "references/resume-design.md",
+      "sha256": "8517b1cb06c269ce7a3a0b65080b5339809177cb27e00fe14a5d19a22bf7bdae"
+    },
+    {
+      "file": "references/resume-taste.md",
+      "sha256": "9fb7338b990ebd901ad5be811b45ab1426d4c94956a51935393a09195c8cf709"
+    },
+    {
+      "file": "references/resume-writing-style.md",
+      "sha256": "704ff8792df24b1198450f0214a2582d64f2ea9837e7ea9f9532973618de9702"
+    },
+    {
+      "file": "references/scoring-rubric.md",
+      "sha256": "d15e5662b6c9e71961d265b59bd183968defd6df3fac49c3ea85276eb913b481"
+    }
+  ],
+  "reviewedGenerations": {
+    "full-recheck": {
+      "sources": [
+        {
+          "file": "SKILL.md",
+          "sha256": "e501db5a7da26383bb0b6c4cd68c54670130a68550f46cf284804a5bee438c86"
+        },
+        {
+          "file": "references/candidate-context.md",
+          "sha256": "a02d5266d9abac5dae1c99c38625e1c22c41302252b17188b6f27aadf19f43ac"
+        },
+        {
+          "file": "references/claim-model.md",
+          "sha256": "42aa13881f457552b3e2397225b53818726cd88a41ae1c8bbeac4ace0ec812c5"
+        },
+        {
+          "file": "references/hard-review.md",
+          "sha256": "af04e19ee8a130fc372766aea0bacf3d4431ad96e06dca4f7f0c5433b5af87b9"
+        },
+        {
+          "file": "references/resume-design.md",
+          "sha256": "8517b1cb06c269ce7a3a0b65080b5339809177cb27e00fe14a5d19a22bf7bdae"
+        },
+        {
+          "file": "references/resume-taste.md",
+          "sha256": "9fb7338b990ebd901ad5be811b45ab1426d4c94956a51935393a09195c8cf709"
+        },
+        {
+          "file": "references/resume-writing-style.md",
+          "sha256": "2af7b045e807b617a9f9799e76e9753bf04f5a888360b1e10998cd9e90f37009"
+        },
+        {
+          "file": "references/scoring-rubric.md",
+          "sha256": "d15e5662b6c9e71961d265b59bd183968defd6df3fac49c3ea85276eb913b481"
+        }
+      ],
+      "generatedAt": "2026-10-25T23:53:05.745Z"
+    },
+    "case17-final": {
+      "sources": [
+        {
+          "file": "SKILL.md",
+          "sha256": "e501db5a7da26383bb0b6c4cd68c54670130a68550f46cf284804a5bee438c86"
+        },
+        {
+          "file": "references/candidate-context.md",
+          "sha256": "a02d5266d9abac5dae1c99c38625e1c22c41302252b17188b6f27aadf19f43ac"
+        },
+        {
+          "file": "references/claim-model.md",
+          "sha256": "42aa13881f457552b3e2397225b53818726cd88a41ae1c8bbeac4ace0ec812c5"
+        },
+        {
+          "file": "references/hard-review.md",
+          "sha256": "af04e19ee8a130fc372766aea0bacf3d4431ad96e06dca4f7f0c5433b5af87b9"
+        },
+        {
+          "file": "references/resume-design.md",
+          "sha256": "8517b1cb06c269ce7a3a0b65080b5339809177cb27e00fe14a5d19a22bf7bdae"
+        },
+        {
+          "file": "references/resume-taste.md",
+          "sha256": "9fb7338b990ebd901ad5be811b45ab1426d4c94956a51935393a09195c8cf709"
+        },
+        {
+          "file": "references/resume-writing-style.md",
+          "sha256": "704ff8792df24b1198450f0214a2582d64f2ea9837e7ea9f9532973618de9702"
+        },
+        {
+          "file": "references/scoring-rubric.md",
+          "sha256": "d15e5662b6c9e71961d265b59bd183968defd6df3fac49c3ea85276eb913b481"
+        }
+      ],
+      "generatedAt": "2026-10-25T23:55:43.531Z"
+    }
+  },
+  "findingsResolved": [
+    {
+      "case": 16,
+      "finding": "미확인 수작업 불편과 버그 발견 시점을 초안에 확정형으로 씀",
+      "change": "확인한 사실 목록과 소개·요약·프로젝트 문장을 대조하고 미확인 사실을 질문으로 분리"
+    },
+    {
+      "case": 17,
+      "finding": "품질 평가 경험을 제품 구현으로 확대하고 별도 경험을 합침",
+      "change": "평가·구현·운영 책임과 프로젝트 관계를 구분"
+    },
+    {
+      "case": 17,
+      "finding": "병렬 개발을 실제 개발 속도 향상으로 표현",
+      "change": "수치 없는 효과 주장도 결과 근거를 요구"
+    }
+  ],
+  "fixtureChanges": [
+    {
+      "case": 17,
+      "change": "후속 평가에서 A 이미지 생성 MVP와 B 문서 파싱 서비스가 별도 프로젝트이고 B 담당이 품질 평가임을 원자료에 명시",
+      "comparisonLimit": "수정 전후 응답을 동일 입력의 성능 개선률로 비교하지 않음"
+    }
+  ],
+  "reuseScope": "15·16·18·19는 full-recheck 응답을 최종 기대 행동으로 다시 읽었다. 이후 속도 효과 문장 보완과 17번 원자료 명확화는 해당 응답의 기존 판정에 영향을 주지 않아 재생성하지 않았다. 17은 case17-final로 재실행했다.",
+  "results": [
+    {
+      "id": 15,
+      "title": "PDF 변경 후 판정 재사용",
+      "verdict": "pass",
+      "generation": "full-recheck",
+      "responseSha256": "6eb512556ab5f6ed85b8e243c29298b7adebc1d96408329c46e15949e22409ce",
+      "checks": [
+        {
+          "expectation": "A의 pass는 A에 적용되는 기록으로 보존한다.",
+          "verdict": "pass",
+          "evidence": "기존 pass는 PDF A"
+        },
+        {
+          "expectation": "B의 역할 문구는 근거 감사, 사례 순서는 포지셔닝과 정보 구조 재검토 대상으로 구분한다.",
+          "verdict": "pass",
+          "evidence": "역할 문구는 소유권 주장"
+        },
+        {
+          "expectation": "최종 PDF의 모든 쪽을 확인하고 실제 해시와 검토 범위를 연결한다.",
+          "verdict": "pass",
+          "evidence": "모든 7쪽"
+        },
+        {
+          "expectation": "이전 판정을 아는 변경분 검토를 새 블라인드 평가로 표시하지 않는다.",
+          "verdict": "pass",
+          "evidence": "변경분 검토"
+        },
+        {
+          "expectation": "합성 해시를 실제 SHA256 검증 완료로 보고하지 않고 외부 제출을 하지 않는다.",
+          "verdict": "pass",
+          "evidence": "파일 변경이나 지원 제출은 하지 않았습니다."
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "title": "실제 업무 연결을 대표 사례로 선택",
+      "verdict": "pass",
+      "generation": "full-recheck",
+      "responseSha256": "34ac709fdac6a30f27959622e17d3b8bc2f6b6aa199b21bd995e9c1155fe2e77",
+      "checks": [
+        {
+          "expectation": "CLI의 제품 목적, 본인 역할과 실제 업무 사용 흐름을 먼저 설명한다.",
+          "verdict": "pass",
+          "evidence": "대표 사례는"
+        },
+        {
+          "expectation": "코드 증빙이 상세하다는 이유만으로 JSON 버그를 전체 기여의 대표로 선택하지 않는다.",
+          "verdict": "pass",
+          "evidence": "신뢰성을 보여주는 하위 근거"
+        },
+        {
+          "expectation": "동료 피드백과 버그 수정은 도구 개선의 근거로 남길 수 있다.",
+          "verdict": "pass",
+          "evidence": "JSON 출력 버그"
+        },
+        {
+          "expectation": "입력에 없는 수작업 불편, 버그 발견 시점이나 증상을 소개와 프로젝트 초안 모두에서 단정하지 않고 확인 질문으로 분리한다.",
+          "verdict": "pass",
+          "evidence": "확인 전에는 \"사용 중 발견\"이라는 인과를 쓰지 않습니다."
+        },
+        {
+          "expectation": "조직 전체 도입, 작업 성공률이나 시간 절감 수치를 만들지 않는다.",
+          "verdict": "pass",
+          "evidence": "사용량과 시간 절감 수치는 없으므로 효과를 주장하지 않습니다."
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "title": "경험·프로젝트·효과의 과장 방지",
+      "verdict": "pass",
+      "generation": "case17-final",
+      "responseSha256": "02af11eea2b36b0363829c6d8ffae2517bdf1cb7a6d33b5ceb19d30c44df8c28",
+      "checks": [
+        {
+          "expectation": "개발 에이전트 활용을 제품 자체의 멀티 에이전트 구조로 바꾸지 않는다.",
+          "verdict": "pass",
+          "evidence": "개발 도구로 에이전트를 쓴 경험을 제품의 에이전트 구성으로 옮기면 안 됩니다."
+        },
+        {
+          "expectation": "파서 평가를 LLM 응답 품질 검증으로 세지 않는다.",
+          "verdict": "pass",
+          "evidence": "이것은 문서 변환 품질 평가입니다."
+        },
+        {
+          "expectation": "기획자의 정성 피드백은 남기되 감소율을 만들지 않는다.",
+          "verdict": "pass",
+          "evidence": "MVP 기획자로부터 반복 생성이 줄었다는 정성 피드백을 받음 (횟수는 측정하지 않음)"
+        },
+        {
+          "expectation": "개인 비서의 구현을 회사 프로젝트 메모리의 구현·운영 성과로 옮기지 않는다.",
+          "verdict": "pass",
+          "evidence": "구현 전 단계"
+        },
+        {
+          "expectation": "파서 출력 비교 경험만으로 파서 제품을 구현했다고 쓰지 않고 초안에도 같은 근거 기준을 적용한다.",
+          "verdict": "pass",
+          "evidence": "파서 출력을 정답 문서와 비교하는 품질 평가 담당"
+        },
+        {
+          "expectation": "입력에서 관계가 확인되지 않은 파서 평가와 이미지 생성 MVP를 한 프로젝트의 기능으로 합치지 않는다.",
+          "verdict": "pass",
+          "evidence": "A와 같은 시스템도 아닙니다."
+        },
+        {
+          "expectation": "병렬 개발 에이전트 활용 사실만으로 개발 속도나 생산성이 향상됐다고 쓰지 않는다.",
+          "verdict": "pass",
+          "evidence": "병렬 에이전트를 써서 \"개발 속도가 빨라졌다\"고 쓰는 것도 안 됩니다."
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "title": "최종안 수용 후 편집 종료",
+      "verdict": "pass",
+      "generation": "full-recheck",
+      "responseSha256": "9e46d76d807484226005723008bc7d9313607180b0363dc7f7d3ed29089bf38f",
+      "checks": [
+        {
+          "expectation": "소개가 길다는 선택 개선만으로 사용자가 수용한 문구를 재작성하지 않는다.",
+          "verdict": "pass",
+          "evidence": "편집은 종료합니다"
+        },
+        {
+          "expectation": "개인 동기가 실제 행동과 연결된 점을 인정하고 시장 사실로 바꾸지 않는다.",
+          "verdict": "pass",
+          "evidence": "실제 도구 개발이라는 선택과 행동으로 이어졌으므로 유지합니다."
+        },
+        {
+          "expectation": "허용되는 경험 공백을 제출 차단으로 단정하지 않는다.",
+          "verdict": "pass",
+          "evidence": "공고가 인접 경험을 허용하므로 필수조건을 막지 않습니다."
+        },
+        {
+          "expectation": "제출 적격과 실제 서류 통과를 구분하고 점수를 합격률로 바꾸지 않는다.",
+          "verdict": "pass",
+          "evidence": "편집 종료가 제출 준비 완료를 뜻하지는 않습니다."
+        },
+        {
+          "expectation": "실제 제출이나 사이트 변경을 실행하지 않는다.",
+          "verdict": "pass",
+          "evidence": "이번 응답에서는 파일·명령·외부 서비스를 실행하거나 변경하지 않았습니다."
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "title": "외부 편집기의 사용자 변경 보존",
+      "verdict": "pass",
+      "generation": "full-recheck",
+      "responseSha256": "d1d89eb5b58021211952e3edb506c0fa9b87889600cbe4504d2c86f3bf5c4fa7",
+      "checks": [
+        {
+          "expectation": "오래된 로컬 원고로 사이트 전체를 덮어쓰지 않는다.",
+          "verdict": "pass",
+          "evidence": "사이트의 최신 저장본을 기준으로 삼고"
+        },
+        {
+          "expectation": "OCR과 소개의 사용자 변경을 보존하고 CLI 한 문장의 변경 범위를 구분한다.",
+          "verdict": "pass",
+          "evidence": "이 단계에서는 사용자 문구를 다듬거나 바꾸지 않습니다."
+        },
+        {
+          "expectation": "지원하지 않는 굵게 표시나 제목·기간 중복을 전제하지 않는다.",
+          "verdict": "pass",
+          "evidence": "사이트가 굵게 표시를 지원하지 않으므로"
+        },
+        {
+          "expectation": "사이트 저장과 PDF 내보내기를 같은 결과로 가정하지 않고 실제 저장본·PDF를 확인한다.",
+          "verdict": "pass",
+          "evidence": "로컬 HTML 출력과 같은 결과라고 가정하지 않습니다."
+        },
+        {
+          "expectation": "승인된 편집과 실제 지원 제출의 권한을 구분한다.",
+          "verdict": "pass",
+          "evidence": "제출은 승인 후에만 진행합니다."
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "사례별 최종 판정은 한 응답을 검토한 결과이며 반복 실행 안정성이나 실제 채용 결과를 뜻하지 않는다.",
+    "도구 없는 모의 응답 평가다. 실제 사이트 편집·PDF 생성·주장 원장 실행·지원 제출을 검증하지 않았다.",
+    "생성 모델에는 기대 정답을 제공하지 않았지만 판정자는 지침을 보완한 에이전트와 동일하다."
+  ]
+}

@@ -5,6 +5,19 @@ import { GithubProfileRepo } from "./github.ts";
 import { CareerTools, toolDefinitions } from "./tools.ts";
 
 const profileRepoPattern = /^[A-Za-z0-9-]{1,39}\/[A-Za-z0-9._-]{1,100}$/;
+const headerValuePattern = /^[\x21-\x7e]+$/;
+
+// Claude Code runs the server on a laptop, outside the network fos-assistant shares with the Backend,
+// so a Backend behind Cloudflare Access needs the service token headers (ADR-143).
+// Values only: the bundle must not read files, so there is no *_SECRET_FILE variant here.
+function backendAccessHeaders(env: Record<string, string | undefined>): Record<string, string> {
+  const clientId = configuredValue(env.CAREER_BACKEND_ACCESS_CLIENT_ID);
+  const clientSecret = configuredValue(env.CAREER_BACKEND_ACCESS_CLIENT_SECRET);
+  if (!clientId && !clientSecret) return {};
+  if (!clientId || !clientSecret || !headerValuePattern.test(clientId) || !headerValuePattern.test(clientSecret))
+    throw new CareerError("CAREER_CONFIG");
+  return { "CF-Access-Client-Id": clientId, "CF-Access-Client-Secret": clientSecret };
+}
 
 export function createServer(
   env: Record<string, string | undefined> = process.env,
@@ -18,8 +31,9 @@ export function createServer(
   // The GitHub token is optional; GitHub tools answer CAREER_GITHUB_NOT_CONFIGURED without it.
   const githubToken = configuredValue(env.CAREER_GITHUB_TOKEN);
   const github = githubToken ? new GithubProfileRepo({ token: githubToken, repo: profileRepo }, fetchImpl) : undefined;
-  const tools = new CareerTools(new CareerBackend({ baseUrl, token }, fetchImpl), github);
-  const server = new McpServer({ name: "fos-career", version: "0.7.0" });
+  const extraHeaders = backendAccessHeaders(env);
+  const tools = new CareerTools(new CareerBackend({ baseUrl, token, extraHeaders }, fetchImpl), github);
+  const server = new McpServer({ name: "fos-career", version: "0.7.3" });
   for (const [name, definition] of Object.entries(toolDefinitions)) {
     server.registerTool(
       name,

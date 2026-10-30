@@ -22,6 +22,14 @@ fos-assistant 의 대화에서 문서를 고치고, 면접을 연습하고, 공�
 자세한 것은 [`docs/code-architecture.md`](docs/code-architecture.md)의 「fos-career 커넥터」를 따른다.
 Claude Code 에서는 `plugin/` 을 설치해 같은 스킬과 로컬 실행기를 쓴다. 실행기가 읽는 환경 변수는 [`docs/data-schema.md`](docs/data-schema.md#로컬-실행기-환경-변수)를 따른다.
 
+```bash
+claude plugin marketplace add <저장소 경로>/career-os
+claude plugin install fos-career@fos-career
+```
+
+`career-os/.claude-plugin/marketplace.json` 이 `plugin/` 을 가리키는 로컬 marketplace 다. 설치한 plugin 은 작업본을 직접 읽어 스킬을 고치면 다음 세션에 반영된다.
+MCP 서버는 `.env` 를 읽지 않고 Claude Code 프로세스의 환경 변수를 받는다. [커넥터 환경 변수](docs/data-schema.md#커넥터-환경-변수)를 Claude Code 설정의 `env` 에 둔다.
+
 ## 공식 링크
 
 `plugin/connector.json`의 루트 필드로 링크 목적지를 선언한다.

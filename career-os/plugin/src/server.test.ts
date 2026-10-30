@@ -76,6 +76,58 @@ test("MCP 로 도구 열아홉 개를 탐색하고 확인 도구가 structuredCo
   }
 });
 
+async function backendHeaders(serverEnv: Record<string, string | undefined>): Promise<Headers> {
+  let seen: Headers | undefined;
+  const server = createServer(serverEnv, async (_input, init) => {
+    seen = new Headers(init?.headers);
+    return new Response(JSON.stringify({ documents: [] }));
+  });
+  const client = new Client({ name: "access-test", version: "1.0.0" });
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  try {
+    await server.connect(serverTransport);
+    await client.connect(clientTransport);
+    await client.callTool({ name: "check_connection", arguments: {} });
+  } finally {
+    await client.close();
+    await server.close();
+  }
+  if (!seen) throw new Error("Backend 요청이 없었다");
+  return seen;
+}
+
+const access = {
+  CAREER_BACKEND_ACCESS_CLIENT_ID: "example-client.access",
+  CAREER_BACKEND_ACCESS_CLIENT_SECRET: "example-secret",
+};
+
+test("Access service token 이 있으면 Backend 요청에 Bearer 와 함께 CF-Access 머리말을 싣는다", async () => {
+  const headers = await backendHeaders({ ...env, ...access });
+  expect(headers.get("Authorization")).toBe(`Bearer ${env.CAREER_BACKEND_TOKEN}`);
+  expect(headers.get("CF-Access-Client-Id")).toBe(access.CAREER_BACKEND_ACCESS_CLIENT_ID);
+  expect(headers.get("CF-Access-Client-Secret")).toBe(access.CAREER_BACKEND_ACCESS_CLIENT_SECRET);
+});
+
+test("Access 값이 없거나 치환되지 않은 변수 참조면 CF-Access 머리말을 보내지 않는다", async () => {
+  for (const serverEnv of [
+    env,
+    {
+      ...env,
+      CAREER_BACKEND_ACCESS_CLIENT_ID: "${CAREER_BACKEND_ACCESS_CLIENT_ID}",
+      CAREER_BACKEND_ACCESS_CLIENT_SECRET: "",
+    },
+  ]) {
+    const headers = await backendHeaders(serverEnv);
+    expect(headers.has("CF-Access-Client-Id")).toBe(false);
+    expect(headers.has("CF-Access-Client-Secret")).toBe(false);
+  }
+});
+
+test("Access ID 와 secret 가운데 하나만 있으면 CAREER_CONFIG 로 시작하지 않는다", () => {
+  expectConfigError(() => createServer({ ...env, CAREER_BACKEND_ACCESS_CLIENT_ID: "example-client.access" }));
+  expectConfigError(() => createServer({ ...env, CAREER_BACKEND_ACCESS_CLIENT_SECRET: "example-secret" }));
+});
+
 test("필수 환경 변수가 치환되지 않았으면 CAREER_CONFIG 로 시작하지 않는다", () => {
   for (const key of ["CAREER_BACKEND_URL", "CAREER_BACKEND_TOKEN", "CAREER_GITHUB_PROFILE_REPO"])
     expectConfigError(() => createServer({ ...env, [key]: "${UNSET}" }));

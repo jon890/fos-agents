@@ -69,9 +69,10 @@ function statusCode(status: number): CareerErrorCode {
 export class CareerBackend {
   private readonly baseUrl: string;
   private readonly token: string;
+  private readonly extraHeaders: Record<string, string>;
 
   constructor(
-    config: { baseUrl: string; token: string },
+    config: { baseUrl: string; token: string; extraHeaders?: Record<string, string> },
     private readonly fetchImpl: FetchLike = fetch,
   ) {
     let url: URL;
@@ -94,6 +95,7 @@ export class CareerBackend {
     if (token.length < 32) throw new CareerError("CAREER_CONFIG");
     this.baseUrl = url.href;
     this.token = token;
+    this.extraHeaders = config.extraHeaders ?? {};
   }
 
   async request<T>(
@@ -104,6 +106,7 @@ export class CareerBackend {
     idempotencyKey?: string,
   ): Promise<T> {
     const headers: Record<string, string> = {
+      ...this.extraHeaders,
       Authorization: `Bearer ${this.token}`,
       Accept: "application/json",
     };
