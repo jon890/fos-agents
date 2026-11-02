@@ -17,12 +17,14 @@ Admin UI는 bucket과 객체를 확인하는 운영 화면이다.
 
 ## collection 등록
 
-현재 등록된 collection은 둘이다.
+등록된 collection은 다음 표에서 관리한다.
 
 | collection key | bucket | 무엇을 담나 | 워크스페이스 문서 |
 | --- | --- | --- | --- |
 | `career-os` | `career-os` | 비공개 작업 release | `career-os/docs/` |
 | `ji-yoon-blog` | `ji-yoon-blog` | 블로그 글에 쓸 사진 원본 | `ji-yoon-blog/docs/data-schema.md` |
+| `gersang-lab` | `gersang-lab-assets` | 원작에서 내보낸 그림과 소리. 객체 key는 `sha256/<해시>` | `gersang-lab/docs/features/server/asset-storage.md` |
+
 새 워크스페이스가 객체 저장소를 사용하려면 다음 정보를 해당 워크스페이스 문서와 환경 설정에 추가한다.
 
 | 항목 | 조건 |
