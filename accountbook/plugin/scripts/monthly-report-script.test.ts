@@ -61,11 +61,17 @@ const income = (amount: number): Row => ({
   excludeFromBudget: false,
 });
 
+const MONTH = "2026-09";
+const PREVIOUS_MONTH = "2026-08";
+type Period = { from: string; to: string };
+const SEPTEMBER: Period = { from: "2026-09-01", to: "2026-09-30" };
+const AUGUST: Period = { from: "2026-08-01", to: "2026-08-31" };
+
 type Line = { spent: number; limit: number };
 type Item = { uuid: string; name: string; limit: number; spent: number; categories: Category[] };
 function budget(total: Line, living: Line, items: Item[], allocationExceeded = false) {
   return {
-    month: "2026-09",
+    month: MONTH,
     total,
     living,
     allocationExceeded,
@@ -99,8 +105,16 @@ afterEach(() => {
     rmSync(directory, { recursive: true, force: true });
 });
 
-type Month = { expenses: Row[]; incomes?: Row[]; budget?: unknown; count?: number };
+type Month = {
+  expenses: Row[];
+  incomes?: Row[];
+  budget?: unknown;
+  count?: number;
+  expensesPeriod?: Period;
+  incomesPeriod?: Period;
+};
 type Input = Month & {
+  month?: string | null;
   previous?: Month;
   oneOffUuids?: string[];
   inProgress?: boolean;
@@ -111,19 +125,20 @@ function run(input: Input) {
   const directory = mkdtempSync(join(tmpdir(), "accountbook-monthly-report-"));
   directories.push(directory);
   let fileSeq = 0;
-  const file = (rows: Row[], count?: number) => {
+  const file = (rows: Row[], period: Period, count?: number) => {
     const path = join(directory, `rows-${fileSeq++}.jsonl`);
     writeFileSync(path, rows.map((row) => JSON.stringify(row) + "\n").join(""));
-    return { file: path, count: count ?? rows.length };
+    return { file: path, count: count ?? rows.length, from: period.from, to: period.to };
   };
-  const month = (value: Month) => ({
-    expenses: file(value.expenses, value.count),
-    incomes: file(value.incomes ?? []),
+  const month = (value: Month, period: Period) => ({
+    expenses: file(value.expenses, value.expensesPeriod ?? period, value.count),
+    incomes: file(value.incomes ?? [], value.incomesPeriod ?? period),
   });
   const params = {
-    ...month(input),
+    month: input.month === undefined ? MONTH : input.month,
+    ...month(input, SEPTEMBER),
     previous: input.previous
-      ? { ...month(input.previous), budget: input.previous.budget ?? null }
+      ? { ...month(input.previous, AUGUST), budget: input.previous.budget ?? null }
       : null,
     budget: "__BUDGET__",
     oneOffUuids: input.oneOffUuids ?? [],
@@ -513,11 +528,14 @@ test("전월 대비는 양쪽 서버 값을 비교하고 한쪽이 없으면 양
     ),
     previous: {
       ...previousMonth,
-      budget: budget(
-        { spent: 760000, limit: 2000000 },
-        { spent: 210000, limit: 1200000 },
-        items(500000, 50000),
-      ),
+      budget: {
+        ...budget(
+          { spent: 760000, limit: 2000000 },
+          { spent: 210000, limit: 1200000 },
+          items(500000, 50000),
+        ),
+        month: PREVIOUS_MONTH,
+      },
     },
   }).comparison;
   expect(server.totalExpense).toEqual({ current: 950000, previous: 750000, diff: 200000 });
@@ -575,5 +593,125 @@ test("파일의 행 수가 목록 응답과 다르면 실패한다", () => {
   });
   expect(result.exitCode).not.toBe(0);
   expect(result.stderr).toContain("행 수가 목록 응답과 다릅니다");
+  expect(result.stdout).toBe("");
+});
+
+test("일회성으로 뺀 금액이 서버 사용액보다 크면 사용액을 0 으로 막고 남은 한도는 한도 전체다", () => {
+  const oneOff = uuid(701);
+  const output = report({
+    expenses: [expense(100000, FOOD, { id: oneOff })],
+    // 파일(100000)이 서버(40000)보다 큰 불일치 상태다.
+    budget: budget({ spent: 40000, limit: 1000000 }, { spent: 40000, limit: 500000 }, []),
+    oneOffUuids: [oneOff],
+  });
+  expect(
+    output.checks.map((check: any) => [check.name, check.file, check.server, check.match]),
+  ).toEqual([
+    ["예산", 100000, 40000, false],
+    ["생활비", 100000, 40000, false],
+  ]);
+  expect(
+    output.lines.map((entry: any) => [entry.name, entry.spent, entry.over, entry.remaining]),
+  ).toEqual([
+    ["예산", 0, 0, 1000000],
+    ["생활비", 0, 0, 500000],
+  ]);
+  expect(output.reductions).toEqual([]);
+});
+
+test("예산 제외 카테고리가 예산 항목에 속하면 항목에는 들어가고 예산 합계와 생활비에는 빠진다", () => {
+  const giftItem: Item = {
+    uuid: uuid(103),
+    name: "경조사비",
+    limit: 50000,
+    spent: 80000,
+    categories: [GIFT],
+  };
+  const output = report({
+    expenses: [expense(80000, GIFT), expense(100000, FOOD)],
+    budget: budget({ spent: 100000, limit: 1000000 }, { spent: 100000, limit: 200000 }, [
+      giftItem,
+    ]),
+  });
+  expect(output.checks.map((check: any) => [check.name, check.file, check.match])).toEqual([
+    ["예산", 100000, true],
+    ["생활비", 100000, true],
+    ["경조사비", 80000, true],
+  ]);
+  expect(output.budgetExcluded).toEqual({ transaction: 0, category: 80000, recurring: 0 });
+  expect(output.budgetCategories).toEqual([
+    { categoryUuid: FOOD.uuid, categoryName: "식비", amount: 100000 },
+  ]);
+  expect(line(output, "경조사비")).toMatchObject({ spent: 80000, over: 30000, remaining: 0 });
+  expect(output.reductions.map((entry: any) => [entry.name, entry.over, entry.base])).toEqual([
+    ["경조사비", 30000, 80000],
+  ]);
+  expect(shares(reduction(output, "경조사비"))).toEqual([["경조사", 80000, 30000, 50000]]);
+});
+
+const period = (from: string, to: string): Period => ({ from, to });
+
+test.each([
+  [
+    "1월의 앞 달은 전년 12월",
+    "2026-01",
+    period("2026-01-01", "2026-01-31"),
+    period("2025-12-01", "2025-12-31"),
+  ],
+  [
+    "윤년 2월은 29일까지",
+    "2028-02",
+    period("2028-02-01", "2028-02-29"),
+    period("2028-01-01", "2028-01-31"),
+  ],
+] as const)("기간 확인: %s", (_, month, current, previous) => {
+  const output = report({
+    month,
+    expenses: [expense(1000, FOOD)],
+    expensesPeriod: current,
+    incomesPeriod: current,
+    budget: null,
+    previous: { expenses: [], expensesPeriod: previous, incomesPeriod: previous, budget: null },
+  });
+  expect(output.totalExpense).toBe(1000);
+  expect(output.comparison.totalExpense).toEqual({ current: 1000, previous: 0, diff: 1000 });
+});
+
+const emptyBudget = (month: string) => ({
+  ...budget({ spent: 0, limit: 0 }, { spent: 0, limit: 0 }, []),
+  month,
+});
+const WRONG_FORMAT = "YYYY-MM 형식이 아닙니다";
+const WRONG_PERIOD = "1일부터 말일까지가 아닙니다";
+const WRONG_BUDGET = "예산 결과의 달이";
+
+test.each<[string, Partial<Input>, string]>([
+  ["month 가 없음", { month: null }, WRONG_FORMAT],
+  ["month 형식이 틀림", { month: "2026-9" }, WRONG_FORMAT],
+  [
+    "대상 달 지출 파일이 2일부터",
+    { expensesPeriod: period("2026-09-02", "2026-09-30") },
+    WRONG_PERIOD,
+  ],
+  [
+    "대상 달 수입 파일이 29일까지",
+    { incomesPeriod: period("2026-09-01", "2026-09-29") },
+    WRONG_PERIOD,
+  ],
+  [
+    "앞 달 자리에 대상 달 파일",
+    { previous: { expenses: [], expensesPeriod: SEPTEMBER, budget: null } },
+    WRONG_PERIOD,
+  ],
+  ["예산 결과가 앞 달", { budget: emptyBudget(PREVIOUS_MONTH) }, WRONG_BUDGET],
+  [
+    "앞 달 예산 결과가 대상 달",
+    { previous: { expenses: [], budget: emptyBudget(MONTH) } },
+    WRONG_BUDGET,
+  ],
+])("기간이 맞지 않으면 실패한다: %s", (_, override, message) => {
+  const result = run({ expenses: [expense(1000, FOOD)], budget: null, ...override });
+  expect(result.exitCode).not.toBe(0);
+  expect(result.stderr).toContain(message);
   expect(result.stdout).toBe("");
 });

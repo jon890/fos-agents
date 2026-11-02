@@ -12,7 +12,7 @@
    목록의 기간은 그 달 1일부터 말일까지다.
    `get_budget_summary` 가 실패하면 오류 코드와 안내를 전하고 다시 부르지 않는다. 그 달의 예산 입력을 `null` 로 두고 계속한다.
    `ACCOUNTBOOK_FORBIDDEN` 이면 「연동 토큰이 아직 예산을 읽을 수 없다」 고 알린다. 예산 금액을 사용자에게 묻지 않는다.
-3. 아래 계산 스크립트를 `execute_code` 로 실행한다.
+3. 아래 계산 스크립트를 `execute_code` 로 실행한다. 대상 달을 `month` 에 넣고, 목록 응답의 `file`, `count`, `from`, `to` 를 그대로 넘긴다.
    총지출, 총수입, 수지, 카테고리별 합계, `countsTowardBudget` 기준 카테고리별 합계를 계산하고 서버 값과 대조한다(`checks`).
    대조가 하나라도 다르면 리포트 맨 위에 파일 값과 서버 값을 함께 보이고 어느 쪽이 맞는지 단정하지 않는다.
    한도 대비 판정은 서버 값으로, 카테고리 분배는 파일 값으로 계속한다. 스크립트가 이 기준으로 계산한다.
@@ -30,6 +30,7 @@
 6. 큰 지출 가운데 일회성으로 보이는 것은 리포트를 먼저 다 보인 뒤 사용자에게 확인한다. 확인 전에는 포함한 값으로 보이고 그 사실을 알린다.
    사용자가 일회성이라고 하면 그 거래의 `uuid` 를 `oneOffUuids` 에 넣어 스크립트를 다시 실행한다.
    스크립트가 그 금액을 사용액과 카테고리 금액에서 빼고 초과액부터 다시 계산한다. 뺀 금액과 이유를 리포트에 보인다(`oneOffRemoved`).
+   대조가 달라 뺀 금액이 서버 사용액보다 크면 그 줄의 사용액은 0 으로 두고 남은 한도는 한도 전체다.
 7. 전월 대비는 총지출, 총수입, 수지, 예산 대상 지출, 생활비와 항목 사용액, 예산 대상 카테고리별 금액을 비교한다(`comparison`). 앞 달 한도도 지금 설정 기준이다.
 8. 한도는 지금 설정 기준이라는 것(fos-accountbook ADR-B25)과, 수지가 그달 저축액이라는 것을 알린다.
 
@@ -63,6 +64,7 @@
 | 예산 항목이 없음 | `items` 가 빈 배열이고 예산 대상 전체가 생활비다 |
 | 대상 달에 지출이 없음 | 파일 `count` 가 0 이다. 0원으로 보이고 목표치는 내지 않는다 |
 | 대조가 다름 | 두 값을 함께 보이고 어느 쪽이 맞는지 단정하지 않는다. 한도 대비 판정은 서버 값, 카테고리 분배는 파일 값으로 계속한다 |
+| 말일 23:59:59 뒤 밀리초에 기록된 지출이 있음 | 가계부 목록 API 의 기간 경계를 고친 배포 전에는 그 지출이 목록 파일에서 빠져 서버 합계와 다를 수 있다. 대조가 다르면 두 값을 함께 보이고 이 가능성을 알린다 |
 | `execute_code` 가 없음 | 합계와 통계를 계산할 수 없다고 말한다. `get_budget_summary` 의 서버 값은 보인다 |
 
 ## 계산 스크립트
@@ -71,12 +73,14 @@
 `# --- 입력 시작 ---` 과 `# --- 입력 끝 ---` 사이의 `PARAMS` 한 줄만 바꾼다.
 `r'''` 와 `'''` 사이에는 JSON 을 쓴다. `get_budget_summary` 결과는 받은 JSON 을 그대로 붙인다.
 `true`, `false`, `null` 을 python 의 `True`, `False`, `None` 으로 옮겨 적지 않는다.
+도구 결과의 이름에 작은따옴표 세 개(`'''`)가 있으면 `'` 하나로 바꿔 붙인다. 그대로 두면 입력 문자열이 거기서 끝난다.
 
 | 키 | 내용 |
 | --- | --- |
-| `expenses`, `incomes` | 대상 달 `list_expenses`, `list_incomes` 응답의 `{ "file": 경로, "count": 정수 }` |
-| `previous` | `null` 또는 앞 달의 `{ "expenses", "incomes", "budget" }`. 형식은 대상 달과 같다 |
-| `budget` | 대상 달 `get_budget_summary` 결과 객체. 실패했으면 `null` |
+| `month` | 대상 달 `"YYYY-MM"`. 필수 |
+| `expenses`, `incomes` | 대상 달 `list_expenses`, `list_incomes` 응답의 `{ "file": 경로, "count": 정수, "from": 시작일, "to": 종료일 }`. `from` 은 대상 달 1일, `to` 는 대상 달 말일이어야 한다 |
+| `previous` | `null` 또는 앞 달의 `{ "expenses", "incomes", "budget" }`. 형식은 대상 달과 같고, 기간은 바로 앞 달의 1일과 말일, `budget["month"]` 는 앞 달이어야 한다 |
+| `budget` | 대상 달 `get_budget_summary` 결과 객체. `month` 가 대상 달과 같아야 한다. 실패했으면 `null` |
 | `oneOffUuids` | 사용자가 일회성이라고 확인한 지출 `uuid` 목록. 확인 전에는 빈 목록 |
 | `inProgress` | 대상 달이 진행 중인 이번 달이면 `true` |
 
@@ -90,21 +94,42 @@
 | `budgetExcluded` | 예산에서 빠진 금액. `transaction`(거래 제외), `category`(카테고리 제외), `recurring`(반복지출 생성) |
 | `allocationExceeded` | 서버 값. `budget` 이 `null` 이면 `null` |
 | `checks` | 줄마다 `{ line, uuid, name, file, server, match }`. 일회성 제외 전 값으로 대조한다. `budget` 이 `null` 이면 빈 목록 |
-| `lines` | 줄마다 `{ line, uuid, name, spent, limit, limitApplies, over, remaining }`. `line` 은 `budget`, `living`, `item` 이고 `uuid` 는 항목에만 있다. `budget` 이 `null` 이면 파일로 계산한 예산 줄 하나이고 `limit` 은 `null` 이다 |
+| `lines` | 줄마다 `{ line, uuid, name, spent, limit, limitApplies, over, remaining }`. `line` 은 `budget`, `living`, `item` 이고 `uuid` 는 항목에만 있다. `spent` 는 일회성 제외를 반영하고 0 보다 작아지지 않는다. `budget` 이 `null` 이면 파일로 계산한 예산 줄 하나이고 `limit` 은 `null` 이다 |
 | `reductions` | 줄일 금액을 낸 줄마다 `{ line, uuid, name, over, base, categories, reason }`. `categories` 의 항목은 `{ categoryUuid, categoryName, amount, reduction, target }` 이다. `base` 가 0 이면 배분 없이 `reason` 을 둔다 |
 | `oneOffRemoved` | 뺀 거래마다 `{ uuid, amount, categoryName, lines }` |
 | `comparison` | 전월 대비. `previous` 가 `null` 이면 `null`. `budgetSource` 는 예산 대상 지출, 생활비, 항목 사용액을 서버 값으로 비교했으면 `server`, 파일 분류 값으로 비교했으면 `file` 이다 |
 
 ```python
+import calendar
 import json
+import re
 from collections import defaultdict
 
 # --- 입력 시작 ---
-PARAMS = json.loads(r'''{"expenses": {"file": "/connector-output/list_expenses-example.jsonl", "count": 0}, "incomes": {"file": "/connector-output/list_incomes-example.jsonl", "count": 0}, "previous": null, "budget": null, "oneOffUuids": [], "inProgress": false}''')
+PARAMS = json.loads(r'''{"month": "2026-09", "expenses": {"file": "/connector-output/list_expenses-example.jsonl", "count": 0, "from": "2026-09-01", "to": "2026-09-30"}, "incomes": {"file": "/connector-output/list_incomes-example.jsonl", "count": 0, "from": "2026-09-01", "to": "2026-09-30"}, "previous": null, "budget": null, "oneOffUuids": [], "inProgress": false}''')
 # --- 입력 끝 ---
 
 
-def read_rows(source, expense):
+def month_days(month):
+    if type(month) is not str or re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", month) is None:
+        raise ValueError("month 가 YYYY-MM 형식이 아닙니다: " + repr(month))
+    last = calendar.monthrange(int(month[:4]), int(month[5:]))[1]
+    return month + "-01", "%s-%02d" % (month, last)
+
+
+def month_before(month):
+    year, number = int(month[:4]), int(month[5:])
+    return "%04d-12" % (year - 1) if number == 1 else "%04d-%02d" % (year, number - 1)
+
+
+def read_rows(source, expense, month):
+    # 다른 달 파일을 넣으면 숫자가 그럴듯해도 틀린 리포트가 되므로 기간부터 확인한다.
+    first, last = month_days(month)
+    if source.get("from") != first or source.get("to") != last:
+        raise ValueError(
+            "목록 파일의 기간이 " + month + " 의 1일부터 말일까지가 아닙니다: "
+            + repr(source.get("from")) + " ~ " + repr(source.get("to"))
+        )
     rows = []
     with open(source["file"], encoding="utf-8") as records:
         for line in records:
@@ -129,9 +154,11 @@ def won(value):
     return value
 
 
-def read_budget(raw):
+def read_budget(raw, month):
     if raw is None:
         return None
+    if raw.get("month") != month:
+        raise ValueError("예산 결과의 달이 " + month + " 가 아닙니다: " + repr(raw.get("month")))
     return {
         "total": {"spent": won(raw["total"]["spent"]), "limit": won(raw["total"]["limit"])},
         "living": {"spent": won(raw["living"]["spent"]), "limit": won(raw["living"]["limit"])},
@@ -207,9 +234,11 @@ def compared(current, previous):
     return {"current": current, "previous": previous, "diff": diff}
 
 
-budget = read_budget(PARAMS["budget"])
-expenses = read_rows(PARAMS["expenses"], True)
-incomes = read_rows(PARAMS["incomes"], False)
+month = PARAMS.get("month")
+month_days(month)
+budget = read_budget(PARAMS["budget"], month)
+expenses = read_rows(PARAMS["expenses"], True, month)
+incomes = read_rows(PARAMS["incomes"], False, month)
 one_off = set(PARAMS.get("oneOffUuids") or [])
 in_progress = PARAMS.get("inProgress") is True
 missing = one_off - {row["uuid"] for row in expenses}
@@ -244,15 +273,16 @@ for line in lines:
     file_spent = amount_of(members)
     removed = file_spent - amount_of(kept)
     line_categories.append(by_category(kept))
+    # 파일과 서버가 어긋나 뺀 금액이 서버 사용액보다 크면 사용액을 0 으로 막는다.
     if budget is None:
-        spent, limit, applies = file_spent - removed, None, False
+        spent, limit, applies = max(file_spent - removed, 0), None, False
     else:
         server = server_line(budget, line)
         checks.append({
             "line": line["line"], "uuid": line["uuid"], "name": line["name"],
             "file": file_spent, "server": server["spent"], "match": file_spent == server["spent"],
         })
-        spent, limit = server["spent"] - removed, server["limit"]
+        spent, limit = max(server["spent"] - removed, 0), server["limit"]
         applies = limit > 0 if line["line"] == "item" else budget["total"]["limit"] > 0
     results.append({
         "line": line["line"], "uuid": line["uuid"], "name": line["name"],
@@ -291,9 +321,10 @@ total_income = amount_of(incomes)
 comparison = None
 previous = PARAMS.get("previous")
 if previous is not None:
-    previous_expenses = read_rows(previous["expenses"], True)
-    previous_incomes = read_rows(previous["incomes"], False)
-    previous_budget = read_budget(previous.get("budget"))
+    previous_month = month_before(month)
+    previous_expenses = read_rows(previous["expenses"], True, previous_month)
+    previous_incomes = read_rows(previous["incomes"], False, previous_month)
+    previous_budget = read_budget(previous.get("budget"), previous_month)
     previous_expense = amount_of(previous_expenses)
     previous_income = amount_of(previous_incomes)
     # 양쪽 달 모두 서버 값이 있을 때만 서버 값을 쓴다. 한쪽이라도 없으면 대상 달 항목 구성으로 양쪽 파일을 분류한다.
@@ -347,4 +378,5 @@ print(json.dumps({
 }, ensure_ascii=False))
 ```
 
-파일이 없거나 행 수가 다르거나 금액이 원 단위 정수가 아니면 스크립트가 멈춘다. 그때는 리포트를 내지 않고 원인을 알린다.
+파일이 없거나 행 수가 다르거나 금액이 원 단위 정수가 아니면 스크립트가 멈춘다.
+`month` 가 없거나, 목록 파일의 기간이 그 달 1일부터 말일까지가 아니거나, 예산 결과의 달이 다르면 역시 멈춘다. 그때는 리포트를 내지 않고 원인을 알린다.
