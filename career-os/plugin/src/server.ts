@@ -9,6 +9,7 @@ const headerValuePattern = /^[\x21-\x7e]+$/;
 
 // Claude Code runs the server on a laptop, outside the network fos-assistant shares with the Backend,
 // so a Backend behind Cloudflare Access needs the service token headers (ADR-143).
+// The values come from the environment Claude Code passes down, not from .mcp.json or operator_env (ADR-144).
 // Values only: the bundle must not read files, so there is no *_SECRET_FILE variant here.
 function backendAccessHeaders(env: Record<string, string | undefined>): Record<string, string> {
   const clientId = configuredValue(env.CAREER_BACKEND_ACCESS_CLIENT_ID);
@@ -33,7 +34,7 @@ export function createServer(
   const github = githubToken ? new GithubProfileRepo({ token: githubToken, repo: profileRepo }, fetchImpl) : undefined;
   const extraHeaders = backendAccessHeaders(env);
   const tools = new CareerTools(new CareerBackend({ baseUrl, token, extraHeaders }, fetchImpl), github);
-  const server = new McpServer({ name: "fos-career", version: "0.7.3" });
+  const server = new McpServer({ name: "fos-career", version: "0.7.4" });
   for (const [name, definition] of Object.entries(toolDefinitions)) {
     server.registerTool(
       name,
