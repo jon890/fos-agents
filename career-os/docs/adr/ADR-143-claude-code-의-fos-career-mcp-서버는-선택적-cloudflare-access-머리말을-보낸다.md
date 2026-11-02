@@ -1,6 +1,6 @@
 ## ADR-143: Claude Code 의 fos-career MCP 서버는 선택적 Cloudflare Access 머리말을 보낸다
 
-- **status**: `accepted`
+- **status**: `accepted`. `operator_env` 와 `.mcp.json` 에 변수를 두는 조항은 [ADR-144](ADR-144-claude-code-전용-access-값은-커넥터-선언에-두지-않고-실행-환경에서-받는다.md) 가 대체한다
 - **결정**:
   - **fos-career MCP 서버도 Access 환경값이 있으면 `CF-Access-Client-Id`, `CF-Access-Client-Secret` 머리말을 Bearer 인증과 함께 보낸다.** [ADR-140](ADR-140-노트북-client-는-선택적-cloudflare-access-service-token-머리말을-앱-인증과-함께-보낸다.md) 이 plugin 을 제외한 부분을 이 결정으로 바꾼다.
   - 변수는 노트북 client 와 같은 `CAREER_BACKEND_ACCESS_CLIENT_ID`, `CAREER_BACKEND_ACCESS_CLIENT_SECRET` 이다. `connector.json` 의 `operator_env` 와 `.mcp.json` 의 env 에 함께 둔다. `.mcp.json` 은 빈 기본값(`:-`)으로 참조해 값이 없는 환경에서도 서버가 시작한다.

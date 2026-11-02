@@ -823,6 +823,7 @@ fos-assistant 는 `plugin/` 을 복사하거나 마운트해 `connector.json`, `
 - `connector.json` 은 `schema: 2` 다. 도구 열아홉 개를 `tools` 에 빠짐없이 선언하고 `READ` 가 아니고 `required` 인 도구는 `outbound` 를 선언하며(`update_github_profile` 만 `true` 와 `grant: false`), `default_tool_policy` 는 `deny` 다. 새 도구를 더할 때는 같은 변경에서 `tools` 에 위험도와 승인 방식, `title`, 2,000 code point 이하의 `description` 을 선언한다. 설명은 필수이며 앞뒤 공백 제거 후 비어 있거나 8,192 UTF-8 byte를 넘거나 금지 문자를 포함하면 서버가 시작하지 않는다
 - 확인 도구 `check_connection` 은 `READ` 와 `none` 이고 서버가 `readOnlyHint: true` 로 표시한다
 - `.mcp.json` 의 서버 env 는 `connector.json` 의 `fields[].env` 와 `operator_env` 의 합과 같다. 다르면 커넥터가 카탈로그에서 빠진다
+- `operator_env` 의 이름은 운영 목록이 모두 값을 줘야 한다. 하나라도 없으면 커넥터가 카탈로그에서 빠진다. 그래서 운영 환경에 없는 선택값(Cloudflare Access service token)은 `operator_env` 와 `.mcp.json` 에 선언하지 않는다([ADR-144](adr/ADR-144-claude-code-전용-access-값은-커넥터-선언에-두지-않고-실행-환경에서-받는다.md))
 - `operator_secrets` 를 선언하지 않는다. 선언하면 카탈로그에서 빠진다. 그래서 Backend 의 token 은 사용자가 연결 화면에 넣는다
 - `connector-skills/` 아래 모든 `SKILL.md` 의 본문을 이름 순으로 이어 붙인 것이 연결용 에이전트의 지침이 된다. 앞머리를 뺀 본문을 합쳐 8,000자를 넘지 않고 그 아래에 심볼릭 링크를 두지 않는다. 어기면 카탈로그에서 빠진다
 - `agent-skills/` 는 커넥터 설치가 읽지 않는다. 일반 에이전트에 스킬로 따로 올린다([ADR-141](adr/ADR-141-일반-에이전트가-읽는-스킬은-plugin-의-agent-skills-에-두고-따로-올린다.md)). 세 디렉터리에 같은 이름의 스킬을 두지 않는다
