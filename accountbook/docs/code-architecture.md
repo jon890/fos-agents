@@ -25,7 +25,7 @@ accountbook/
 | `plugin/` | `fos-accountbook` Claude Code plugin 배포 단위. 버전 0.2.0 |
 | `plugin/connector.json` | fos-assistant 연결 화면이 읽는 입력 칸, 확인 도구, 오류 대응과 도구별 호출 정책 |
 | `plugin/src/client.ts` | Bearer HTTP client와 응답 스키마 |
-| `plugin/src/tools.ts` | MCP 도구의 스키마, 가족 선택, 카테고리 이름 해석, 기간 전체 목록 검증, 행별 예산 대상 판정과 예산 요약 조회 |
+| `plugin/src/tools.ts` | MCP 도구 정의, 입력과 응답 검증, 가계부 REST 호출. 도구별 계약은 [데이터 계약](data-schema.md#mcp-계약)이 소유 |
 | `plugin/src/output-file.ts` | 검증한 목록의 JSONL 배타 생성과 24시간 지난 자기 파일 삭제 |
 | `plugin/src/screenshot-contracts.ts` | 화면 추출 입력 스키마 |
 | `plugin/src/screenshot-validation.ts` | 일별 합계 계산과 후보 식별자 생성 |
@@ -35,7 +35,7 @@ accountbook/
 | `plugin/scripts/build.ts`, `plugin/dist/accountbook-mcp.js` | 의존성을 포함한 단일 실행 파일 빌드와 배포 |
 | `plugin/skills/accountbook-api/` | 화면 읽기 규칙, MCP 호출 순서와 사용자 확인을 담은 단일 스킬 정본 |
 | `.claude/skills/accountbook-api` | plugin 안의 정본을 찾는 링크 |
-| `docs/` | 제품, 흐름, 데이터 계약과 기술 결정 |
+| `docs/` | 제품, 흐름, 데이터 계약, 기능 스펙(`docs/features/`)과 기술 결정 |
 
 ## 처리 경계
 
@@ -62,7 +62,7 @@ MCP 도구는 다음 책임을 가진다.
 - 이미지 입력을 지원하는 에이전트 실행 환경
 - 런타임 Bun
 - plugin 빌드용 공식 `@modelcontextprotocol/sdk`와 `zod`. 런타임은 번들에 포함
-- fos-accountbook-backend의 인증, 카테고리, 수입과 지출, 반복지출, 예산 요약과 예산 항목 REST API
+- fos-accountbook-backend의 REST API. 부르는 경로는 [데이터 계약](data-schema.md#mcp-계약)의 도구별 설명을 따른다
 
 MCP 도구는 특정 에이전트 명령줄 도구와 메시지 채널에 의존하지 않는다.
 실행 환경 선택은 루트 [ADR-019](../../docs/adr/ADR-019-runtime-framework-independence.md)를 따른다.
