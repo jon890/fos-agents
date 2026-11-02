@@ -36,6 +36,7 @@ test("조회와 미리보기는 READ, 등록과 수정은 승인이 필요한 WR
     "get_income",
     "preview_screenshot_import",
     "list_recurring_expenses",
+    "get_budget_summary",
   ];
   const writeTools = [
     "create_expense",

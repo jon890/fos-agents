@@ -498,3 +498,151 @@ describe("MCP 가계부 도구", () => {
     expect(result(await tools.call("list_incomes", {})).error.code).toBe("ACCOUNTBOOK_NETWORK");
   });
 });
+
+describe("예산 요약 도구", () => {
+  const ITEM_A = "55555555-5555-4555-8555-555555555555";
+  const ITEM_B = "66666666-6666-4666-8666-666666666666";
+  const UNLISTED = "77777777-7777-4777-8777-777777777777";
+  const summary = (items: unknown[] = []) => ({
+    year: 2026,
+    month: 10,
+    total: { spent: 300000, limit: 1000000 },
+    living: { spent: 120000, limit: 400000 },
+    allocationExceeded: false,
+    items,
+  });
+  const budgetItems = [
+    {
+      uuid: ITEM_B,
+      name: "예시 항목 둘",
+      monthlyLimit: 0,
+      categoryUuids: [UNLISTED],
+      createdAt: "2026-09-02T12:00:00",
+      updatedAt: "2026-09-02T12:00:00",
+    },
+    {
+      uuid: ITEM_A,
+      name: "예시 항목 하나",
+      monthlyLimit: 600000,
+      categoryUuids: [INCOME_CATEGORY, CATEGORY],
+      createdAt: "2026-09-01T12:00:00",
+      updatedAt: "2026-09-01T12:00:00",
+    },
+  ];
+
+  function budgetSetup(responses: { summary?: Response; items?: unknown[] }) {
+    const requests: string[] = [];
+    const tools = new AccountbookTools(
+      new AccountbookClient({ apiBaseUrl: BASE, apiToken: TOKEN }, async (input) => {
+        const url = String(input);
+        requests.push(url);
+        if (url.includes("/dashboard/budget-summary"))
+          return responses.summary ?? json(summary());
+        if (url.endsWith("/budget-items")) return json(responses.items ?? budgetItems);
+        if (url.endsWith("/categories"))
+          return json([
+            { uuid: CATEGORY, name: "예시 분류", type: "EXPENSE", excludeFromBudget: false },
+            { uuid: INCOME_CATEGORY, name: "예시 수입", type: "INCOME", excludeFromBudget: true },
+          ]);
+        throw new Error(`예상하지 않은 요청: ${url}`);
+      }),
+      FAMILY,
+    );
+    return { tools, requests };
+  }
+
+  test("서버 순서대로 항목과 카테고리 이름을 짝지어 숫자 금액으로 돌려준다", async () => {
+    const { tools, requests } = budgetSetup({
+      summary: json(
+        summary([
+          { budgetItemUuid: ITEM_A, name: "예시 항목 하나", limit: 600000, spent: "180000.00" },
+          { budgetItemUuid: ITEM_B, name: "예시 항목 둘", limit: 0, spent: 0 },
+        ]),
+      ),
+    });
+    expect(result(await tools.call("get_budget_summary", { month: "2026-10" }))).toEqual({
+      month: "2026-10",
+      total: { spent: 300000, limit: 1000000 },
+      living: { spent: 120000, limit: 400000 },
+      allocationExceeded: false,
+      items: [
+        {
+          uuid: ITEM_A,
+          name: "예시 항목 하나",
+          limit: 600000,
+          spent: 180000,
+          categories: [
+            { uuid: INCOME_CATEGORY, name: "예시 수입" },
+            { uuid: CATEGORY, name: "예시 분류" },
+          ],
+        },
+        {
+          uuid: ITEM_B,
+          name: "예시 항목 둘",
+          limit: 0,
+          spent: 0,
+          categories: [{ uuid: UNLISTED, name: null }],
+        },
+      ],
+    });
+    expect(requests).toEqual([
+      `${BASE}/families/${FAMILY}/dashboard/budget-summary?year=2026&month=10`,
+      `${BASE}/families/${FAMILY}/budget-items`,
+      `${BASE}/families/${FAMILY}/categories`,
+    ]);
+  });
+
+  test("한 자리 달은 앞자리 0 없이 요청한다", async () => {
+    const { tools, requests } = budgetSetup({});
+    const response = result(await tools.call("get_budget_summary", { month: "2026-03" }));
+    expect(response.month).toBe("2026-03");
+    expect(response.items).toEqual([]);
+    expect(requests[0]).toEndWith("/dashboard/budget-summary?year=2026&month=3");
+  });
+
+  test("연동 토큰이 예산 경로를 허용받기 전이면 FORBIDDEN 이다", async () => {
+    const { tools, requests } = budgetSetup({ summary: new Response(TOKEN, { status: 403 }) });
+    const response = await tools.call("get_budget_summary", { month: "2026-10" });
+    expect(result(response).error.code).toBe("ACCOUNTBOOK_FORBIDDEN");
+    expect(response.content[0].text).not.toContain(TOKEN);
+    expect(requests).toHaveLength(1);
+  });
+
+  test("요약의 항목이 예산 항목 목록에 없으면 응답 오류다", async () => {
+    const { tools } = budgetSetup({
+      summary: json(summary([{ budgetItemUuid: ITEM_A, name: "예시", limit: 1, spent: 1 }])),
+      items: budgetItems.filter((item) => item.uuid !== ITEM_A),
+    });
+    expect(
+      result(await tools.call("get_budget_summary", { month: "2026-10" })).error.code,
+    ).toBe("ACCOUNTBOOK_INVALID_RESPONSE");
+  });
+
+  test("음수이거나 숫자가 아닌 금액은 응답 오류다", async () => {
+    const item = { budgetItemUuid: ITEM_A, name: "예시", limit: 1, spent: 1 };
+    const cases: Array<[string, unknown]> = [
+      ["total 음수", { ...summary(), total: { spent: -1, limit: 0 } }],
+      ["living 음수 문자열", { ...summary(), living: { spent: 0, limit: "-1" } }],
+      ["항목 숫자 아닌 문자열", summary([{ ...item, spent: "abc" }])],
+      ["항목 금액 null", summary([{ ...item, limit: null }])],
+    ];
+    for (const [label, data] of cases) {
+      const { tools } = budgetSetup({ summary: json(data) });
+      const response = result(await tools.call("get_budget_summary", { month: "2026-10" }));
+      expect({ label, code: response.error?.code }).toEqual({
+        label,
+        code: "ACCOUNTBOOK_INVALID_RESPONSE",
+      });
+    }
+  });
+
+  test("month 가 없거나 잘못되면 요청 없이 입력 오류다", async () => {
+    const { tools, requests } = budgetSetup({});
+    for (const args of [{}, { month: "2026-13" }, { month: "2026-1" }]) {
+      expect(result(await tools.call("get_budget_summary", args)).error.code).toBe(
+        "ACCOUNTBOOK_INVALID_INPUT",
+      );
+    }
+    expect(requests).toHaveLength(0);
+  });
+});
