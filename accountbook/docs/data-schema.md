@@ -137,7 +137,7 @@ MCP 서버는 profile마다 별도 프로세스와 환경 변수로 실행한다
 입력 스키마 정본은 [tools.ts](../plugin/src/tools.ts)에 있다.
 도구 이름은 `list_families`, `list_categories`, `list_expenses`, `list_incomes`,
 `get_expense`, `get_income`, `create_expense`, `create_income`, `update_expense`, `update_income`, `delete_expense`, `delete_income`,
-`preview_screenshot_import`, `submit_screenshot_import`, `list_recurring_expenses`, `update_recurring_expense`다.
+`preview_screenshot_import`, `submit_screenshot_import`, `list_recurring_expenses`, `update_recurring_expense`, `get_budget_summary`다.
 Hermes에서는 서버 이름 `accountbook`을 사용해 `mcp__accountbook__<도구>`로 노출한다.
 `list_`, `get_`, `preview_`로 시작하는 도구는 읽기 전용으로 표시한다. 기록을 바꾸는 도구는 `create_`, `update_`, `delete_`, `submit_`이다.
 
@@ -148,7 +148,9 @@ Hermes에서는 서버 이름 `accountbook`을 사용해 `mcp__accountbook__<도
   최대 10,000건과 100페이지까지 허용하며, 페이지 누락·중복·건수 변화·범위 밖 날짜는 파일 생성 전에 거절한다.
   응답은 `{ file, count, from, to, columns }`뿐이며 거래 내용은 포함하지 않는다. `from`, `to`는 요청의 시작일과 종료일이다.
   JSONL의 칸은 `uuid`, `date`, `amount`, `categoryName`, `categoryUuid`, `userUuid`, `description`,
-  지출의 `recurringExpenseUuid`, `excludeFromBudget`다. 금액은 원 단위 양의 안전 정수이며 소수 금액은 반올림 없이 거절한다.
+  지출의 `recurringExpenseUuid`, `excludeFromBudget`, 지출의 `categoryExcludeFromBudget`, `countsTowardBudget`다.
+  `excludeFromBudget`은 거래 자체의 표시다. `categoryExcludeFromBudget`은 그 카테고리의 예산 제외 표시이며 카테고리 목록에 없으면 `false`다.
+  `countsTowardBudget`은 아래 「예산 대상 판정」을 따른다. 수입 파일에는 뒤의 두 칸이 없다. 금액은 원 단위 양의 안전 정수이며 소수 금액은 반올림 없이 거절한다.
   이름을 찾지 못한 카테고리는 `categoryName: null`이다. 수입의 예산 제외 값이 없으면 `false`다.
   응답에 없는 필수 거래 필드는 오류로 처리한다. 토큰과 서비스 오류 원문은 파일에 쓰지 않는다.
   파일명은 `list_expenses-UTC시각-무작위UUID.jsonl` 또는 `list_incomes-UTC시각-무작위UUID.jsonl`이며,
@@ -183,10 +185,20 @@ Hermes에서는 서버 이름 `accountbook`을 사용해 `mcp__accountbook__<도
   `update_recurring_expense`는 `recurringExpenseUuid`와 `confirmed: true`, 바꿀 칸(`name` 100자 이하, `amount`, `dayOfMonth` 1부터 28까지, 지출 카테고리 UUID 또는 이름)을 받는다.
   수정은 다음 생성분부터 반영되고 이미 생성된 그 달 지출은 바뀌지 않는다. 그 달 기록은 `update_expense`로 따로 고친다.
   연동 토큰이 반복지출 경로를 허용받기 전에는 `ACCOUNTBOOK_FORBIDDEN`이다. 반복지출 등록과 삭제 도구는 없다.
-- 가족 목록은 `{ families, defaultFamilyUuid }`, 카테고리는 `{ uuid, name, type }[]`를 반환한다.
-  카테고리의 `type`은 `EXPENSE` 또는 `INCOME`이며 API 응답에 반드시 있어야 한다.
+- 가족 목록은 `{ families, defaultFamilyUuid }`, 카테고리는 `{ uuid, name, type, excludeFromBudget }[]`를 반환한다.
+  카테고리의 `type`은 `EXPENSE` 또는 `INCOME`이며, `type`과 boolean `excludeFromBudget`은 API 응답에 반드시 있어야 한다. 없으면 `ACCOUNTBOOK_INVALID_RESPONSE`다.
   가족별 기본 카테고리는 지출 「미분류」와 수입 「기타 수입」이다.
   이름이나 UUID를 생략하면 기본 카테고리를 자동 선택하지 않는다.
+- 예산 대상 판정: 지출 한 건은 거래의 `excludeFromBudget`, 카테고리의 예산 제외, 반복지출 생성(`recurringExpenseUuid`가 있음) 셋이 모두 아닐 때만 예산 대상(`countsTowardBudget: true`)이다.
+  가계부 서버의 예산 합계 규칙(fos-accountbook ADR-B26)과 같다. 거래 행의 「예산 제외」 표시(거래 OR 카테고리)와는 반복지출 생성분만큼 다르다.
+  예산 항목의 사용액은 다른 규칙이다. 항목 카테고리의 지출에서 거래의 `excludeFromBudget`만 뺀다(ADR-B25). 근거는 [ADR-007](adr/ADR-007-budget-scope-row-flag.md)이다.
+- `get_budget_summary`는 선택 입력 `familyUuid`와 필수 `month`(`YYYY-MM`)를 받아 가계부의 `dashboard/budget-summary`, `budget-items`, `categories`를 읽고
+  `{ month, total: { spent, limit }, living: { spent, limit }, allocationExceeded, items: [{ uuid, name, limit, spent, categories: [{ uuid, name }] }] }`를 반환한다.
+  금액은 0 이상의 유한한 숫자다. 서버가 숫자 문자열로 주면 숫자로 바꾸고, 아니면 `ACCOUNTBOOK_INVALID_RESPONSE`다.
+  `total.limit`이 0이면 월 예산이 없다. 이때 예산과 생활비의 한도를 판정하지 않는다. `total.limit`이 0보다 크면 생활비 한도 0은 「남은 한도 0」이다. 항목은 `limit`이 0보다 클 때만 한도를 판정한다.
+  `items` 순서는 서버 순서다. 항목 카테고리는 `budget-items`의 `categoryUuids`를 카테고리 목록 이름과 짝지으며 목록에 없으면 `name: null`이다.
+  `budget-summary`의 항목이 `budget-items`에 없으면 두 요청 사이에 항목이 바뀐 것이므로 `ACCOUNTBOOK_INVALID_RESPONSE`다.
+  연동 토큰이 예산 경로를 허용받기 전이면 `ACCOUNTBOOK_FORBIDDEN`이다. 지난달도 지금의 월 예산과 항목 구성으로 계산된다(fos-accountbook ADR-B25).
 - 거래 응답은 REST API의 `data`를 MCP text JSON으로 전달한다. 목록은 `items`, `totalElements`, `totalPages`, `currentPage`를 가진다.
 - 삭제는 HTTP 2xx 응답의 `data`가 없거나 `null`이면 성공으로 처리한다. HTTP 204도 성공으로 처리한다.
 - 화면 가져오기 도구의 입력과 결과는 위 「화면 추출 입력」, 「미리보기 결과」, 「등록 결과」를 따른다.

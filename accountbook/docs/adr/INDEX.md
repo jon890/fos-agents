@@ -11,3 +11,4 @@ accountbook 워크스페이스에만 적용되는 기술 결정을 기록한다.
 | ADR-004 | 가계부 connector를 MCP plugin으로 배포한다 | Accepted | [ADR-004-mcp-connector-plugin.md](ADR-004-mcp-connector-plugin.md) |
 | ADR-005 | 화면 가져오기는 MCP 도구로 합치고 파일 상태를 두지 않는다 | Accepted | [ADR-005-screenshot-import-as-mcp-tools.md](ADR-005-screenshot-import-as-mcp-tools.md) |
 | ADR-006 | 목록 파일을 코드로 계산한다 | Accepted | [ADR-006-list-output-file.md](ADR-006-list-output-file.md) |
+| ADR-007 | 예산 대상 판정은 플러그인이 행마다 싣고 서버 예산 합계로 대조한다 | Accepted | [ADR-007-budget-scope-row-flag.md](ADR-007-budget-scope-row-flag.md) |
