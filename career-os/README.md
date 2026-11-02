@@ -29,6 +29,7 @@ claude plugin install fos-career@fos-career
 
 `career-os/.claude-plugin/marketplace.json` 이 `plugin/` 을 가리키는 로컬 marketplace 다. 설치한 plugin 은 작업본을 직접 읽어 스킬을 고치면 다음 세션에 반영된다.
 MCP 서버는 `.env` 를 읽지 않고 Claude Code 프로세스의 환경 변수를 받는다. [커넥터 환경 변수](docs/data-schema.md#커넥터-환경-변수)를 Claude Code 설정의 `env` 에 둔다.
+Backend 가 Cloudflare Access 뒤에 있으면 `CAREER_BACKEND_ACCESS_CLIENT_ID`, `CAREER_BACKEND_ACCESS_CLIENT_SECRET` 도 셸이나 Claude Code 설정의 `env` 에 둔다. `.mcp.json` 은 이 둘을 선언하지 않지만 서버가 Claude Code 의 환경을 그대로 물려받는다.
 
 ## 공식 링크
 
