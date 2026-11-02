@@ -44,7 +44,9 @@ function setup(
         if (method === "DELETE") return options.remove?.() ?? json(null);
         if (url.endsWith("/categories"))
           return json(
-            options.categories ?? [{ uuid: CATEGORY, name: "예시 분류", type: "EXPENSE" }],
+            options.categories ?? [
+              { uuid: CATEGORY, name: "예시 분류", type: "EXPENSE", excludeFromBudget: false },
+            ],
           );
         return options.read?.() ?? json(record);
       },
@@ -92,7 +94,9 @@ describe("삭제 전 승인 대상 대조", () => {
         expect(requests.every(({ method }) => method === "GET")).toBe(true);
       }
       const { tools, requests } = setup(current, {
-        categories: [{ uuid: CATEGORY, name: "바뀐 분류", type: "EXPENSE" }],
+        categories: [
+          { uuid: CATEGORY, name: "바뀐 분류", type: "EXPENSE", excludeFromBudget: false },
+        ],
       });
       expect(result(await tools.call(`delete_${type}`, args)).error.code).toBe(
         "ACCOUNTBOOK_DELETE_CONFIRMATION_MISMATCH",

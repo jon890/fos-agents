@@ -83,7 +83,9 @@ test("파일 출력은 전체 페이지를 합쳐 지정한 칸만 저장하고 
           const url = new URL(String(input));
           requests.push(url.pathname);
           if (url.pathname.endsWith("/categories"))
-            return json([{ uuid: CATEGORY, name: "예시 분류", type: "EXPENSE" }]);
+            return json([
+              { uuid: CATEGORY, name: "예시 분류", type: "EXPENSE", excludeFromBudget: false },
+            ]);
           expect(url.pathname).toEndWith(`/families/${FAMILY}/${type}`);
           expect(url.searchParams.get("size")).toBe("100");
           expect(url.searchParams.get("startDate")).toBe(dates.startDate);
@@ -119,6 +121,140 @@ test("파일 출력은 전체 페이지를 합쳐 지정한 칸만 저장하고 
       expect(statSync(result.data.file).mode & 0o777).toBe(0o600);
       expect(requests).toHaveLength(3);
     }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("지출 파일은 행마다 카테고리 예산 제외와 예산 대상 여부를 싣고 수입 파일은 그대로 둔다", async () => {
+  const EXCLUDED_CATEGORY = "55555555-5555-4555-8555-555555555555";
+  const UNLISTED_CATEGORY = "66666666-6666-4666-8666-666666666666";
+  const RECURRING = "77777777-7777-4777-8777-777777777777";
+  const categories = [
+    { uuid: CATEGORY, name: "예시 분류", type: "EXPENSE", excludeFromBudget: false },
+    { uuid: EXCLUDED_CATEGORY, name: "제외 분류", type: "EXPENSE", excludeFromBudget: true },
+  ];
+  const records = [
+    { ...item("transaction-excluded"), excludeFromBudget: true },
+    { ...item("category-excluded"), categoryUuid: EXCLUDED_CATEGORY },
+    { ...item("recurring"), recurringExpenseUuid: RECURRING },
+    { ...item("unlisted-category"), categoryUuid: UNLISTED_CATEGORY },
+    item("counted"),
+    { ...item("no-category"), categoryUuid: null },
+  ];
+  const root = directory();
+  try {
+    const expense = await call(async (input) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("/categories")) return json(categories);
+      return json(pageData(records));
+    }, root);
+    expect(expense.isError).not.toBe(true);
+    expect(expense.data.columns).toEqual([
+      "uuid",
+      "date",
+      "amount",
+      "categoryName",
+      "categoryUuid",
+      "userUuid",
+      "description",
+      "recurringExpenseUuid",
+      "excludeFromBudget",
+      "categoryExcludeFromBudget",
+      "countsTowardBudget",
+    ]);
+    const rows = readFileSync(expense.data.file, "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    for (const row of rows) expect(Object.keys(row)).toEqual(expense.data.columns);
+    expect(
+      rows.map((row) => ({
+        uuid: row.uuid,
+        excludeFromBudget: row.excludeFromBudget,
+        categoryExcludeFromBudget: row.categoryExcludeFromBudget,
+        countsTowardBudget: row.countsTowardBudget,
+      })),
+    ).toEqual([
+      {
+        uuid: "transaction-excluded",
+        excludeFromBudget: true,
+        categoryExcludeFromBudget: false,
+        countsTowardBudget: false,
+      },
+      {
+        uuid: "category-excluded",
+        excludeFromBudget: false,
+        categoryExcludeFromBudget: true,
+        countsTowardBudget: false,
+      },
+      {
+        uuid: "recurring",
+        excludeFromBudget: false,
+        categoryExcludeFromBudget: false,
+        countsTowardBudget: false,
+      },
+      {
+        uuid: "unlisted-category",
+        excludeFromBudget: false,
+        categoryExcludeFromBudget: false,
+        countsTowardBudget: true,
+      },
+      {
+        uuid: "counted",
+        excludeFromBudget: false,
+        categoryExcludeFromBudget: false,
+        countsTowardBudget: true,
+      },
+      {
+        uuid: "no-category",
+        excludeFromBudget: false,
+        categoryExcludeFromBudget: false,
+        countsTowardBudget: true,
+      },
+    ]);
+
+    const income = await call(
+      async (input) => {
+        const url = new URL(String(input));
+        if (url.pathname.endsWith("/categories")) return json(categories);
+        const record: Partial<ReturnType<typeof item>> = {
+          ...item("income"),
+          categoryUuid: EXCLUDED_CATEGORY,
+        };
+        delete record.recurringExpenseUuid;
+        return json(pageData([record]));
+      },
+      root,
+      "list_incomes",
+    );
+    expect(income.isError).not.toBe(true);
+    expect(income.data.columns).toEqual([
+      "uuid",
+      "date",
+      "amount",
+      "categoryName",
+      "categoryUuid",
+      "userUuid",
+      "description",
+      "excludeFromBudget",
+    ]);
+    const incomeRows = readFileSync(income.data.file, "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    expect(incomeRows).toEqual([
+      {
+        uuid: "income",
+        date: "2026-09-15T12:00:00",
+        amount: 100,
+        categoryName: "제외 분류",
+        categoryUuid: EXCLUDED_CATEGORY,
+        userUuid: "example-user",
+        description: "예시 거래",
+        excludeFromBudget: false,
+      },
+    ]);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

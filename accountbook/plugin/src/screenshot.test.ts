@@ -54,10 +54,10 @@ function setup(
       const body = init?.body ? JSON.parse(String(init.body)) : undefined;
       requests.push({ url, method, body });
       if (url.endsWith("/categories")) return json([
-        { uuid: CATEGORY, name: "예시 분류", type: "EXPENSE" },
-        { uuid: INCOME_CATEGORY, name: "예시 분류", type: "INCOME" },
-        { uuid: FAMILY, name: "지출 전용", type: "EXPENSE" },
-        { uuid: FAMILY, name: "수입 전용", type: "INCOME" },
+        { uuid: CATEGORY, name: "예시 분류", type: "EXPENSE", excludeFromBudget: false },
+        { uuid: INCOME_CATEGORY, name: "예시 분류", type: "INCOME", excludeFromBudget: false },
+        { uuid: FAMILY, name: "지출 전용", type: "EXPENSE", excludeFromBudget: false },
+        { uuid: FAMILY, name: "수입 전용", type: "INCOME", excludeFromBudget: false },
       ]);
       if (method === "POST") {
         posts++;

@@ -110,8 +110,28 @@ export const toolDefinitions = {
         ),
       ),
   },
+  get_budget_summary: {
+    description: toolDescription("get_budget_summary"),
+    schema: z.strictObject({ ...familyShape, month }),
+  },
   ...screenshotToolDefinitions,
 };
+
+// 서버의 BigDecimal 금액은 숫자나 숫자 문자열로 온다. 0 은 「한도 없음」 같은 뜻을 가지므로 그대로 둔다.
+const budgetAmount = z
+  .union([z.number(), z.string().regex(/^\d+(?:\.\d+)?$/)])
+  .transform(Number)
+  .pipe(z.number().finite().min(0));
+const budgetLineSchema = z.object({ spent: budgetAmount, limit: budgetAmount });
+const budgetSummarySchema = z.object({
+  total: budgetLineSchema,
+  living: budgetLineSchema,
+  allocationExceeded: z.boolean(),
+  items: z.array(
+    z.object({ budgetItemUuid: uuid, name: z.string(), limit: budgetAmount, spent: budgetAmount }),
+  ),
+});
+const budgetItemsSchema = z.array(z.object({ uuid, categoryUuids: z.array(uuid) }));
 
 const recurringItemSchema = z
   .object({
@@ -248,6 +268,9 @@ export class AccountbookTools {
       const familyUuid = await this.family(args.familyUuid as string | undefined);
       const root = `/families/${familyUuid}`;
       if (name === "list_categories") return this.success(await this.categories(root));
+      // 접미사 분기로 내려가면 수입 목록 경로로 떨어지므로 이름으로 먼저 고른다.
+      if (name === "get_budget_summary")
+        return this.success(await this.budgetSummary(root, String(args.month)));
       if (name.endsWith("_screenshot_import"))
         return this.success(
           await screenshotImport(
@@ -396,6 +419,46 @@ export class AccountbookTools {
     return view(updated, names);
   }
 
+  // 서버가 계산한 값을 그대로 넘긴다. 한도를 넘었는지는 호출하는 스킬이 판정한다.
+  private async budgetSummary(root: string, month: string) {
+    const params = new URLSearchParams({
+      year: month.slice(0, 4),
+      month: String(Number(month.slice(5, 7))),
+    });
+    const summary = responseData(
+      await this.client.request(`${root}/dashboard/budget-summary?${params}`),
+      budgetSummarySchema,
+    );
+    const budgetItems = responseData(
+      await this.client.request(`${root}/budget-items`),
+      budgetItemsSchema,
+    );
+    const names = new Map((await this.categories(root)).map((item) => [item.uuid, item.name]));
+    const categoryUuids = new Map(budgetItems.map((item) => [item.uuid, item.categoryUuids]));
+    const items = summary.items.map((item) => {
+      const members = categoryUuids.get(item.budgetItemUuid);
+      // 두 요청 사이에 예산 항목이 바뀌면 카테고리를 짝지을 수 없다.
+      if (!members) throw new AccountbookError("ACCOUNTBOOK_INVALID_RESPONSE");
+      return {
+        uuid: item.budgetItemUuid,
+        name: item.name,
+        limit: item.limit,
+        spent: item.spent,
+        categories: members.map((categoryUuid) => ({
+          uuid: categoryUuid,
+          name: names.get(categoryUuid) ?? null,
+        })),
+      };
+    });
+    return {
+      month,
+      total: summary.total,
+      living: summary.living,
+      allocationExceeded: summary.allocationExceeded,
+      items,
+    };
+  }
+
   private success(value: unknown) {
     return { content: [{ type: "text" as const, text: JSON.stringify(value) }] };
   }
@@ -407,6 +470,7 @@ export class AccountbookTools {
   ) {
     const categories = await this.categories(root);
     const names = new Map(categories.map((item) => [item.uuid, item.name]));
+    const budgetExcluded = new Map(categories.map((item) => [item.uuid, item.excludeFromBudget]));
     const columns = [
       "uuid",
       "date",
@@ -417,6 +481,7 @@ export class AccountbookTools {
       "description",
       ...(expense ? ["recurringExpenseUuid"] : []),
       "excludeFromBudget",
+      ...(expense ? ["categoryExcludeFromBudget", "countsTowardBudget"] : []),
     ];
     const rows: Record<string, unknown>[] = [];
     const seen = new Set<string>();
@@ -475,6 +540,8 @@ export class AccountbookTools {
         seen.add(item.uuid);
         if (seen.size > 10_000)
           throw new SelectionError("ACCOUNTBOOK_OUTPUT_LIMIT", "기간을 줄여 다시 요청해 주세요.");
+        const categoryExcludeFromBudget =
+          item.categoryUuid !== null && budgetExcluded.get(item.categoryUuid) === true;
         rows.push({
           uuid: item.uuid,
           date: item.date,
@@ -485,6 +552,15 @@ export class AccountbookTools {
           description: item.description,
           ...(expense ? { recurringExpenseUuid: item.recurringExpenseUuid } : {}),
           excludeFromBudget: item.excludeFromBudget,
+          ...(expense
+            ? {
+                categoryExcludeFromBudget,
+                countsTowardBudget:
+                  !item.excludeFromBudget &&
+                  !categoryExcludeFromBudget &&
+                  item.recurringExpenseUuid === null,
+              }
+            : {}),
         });
       }
       if (page + 1 >= data.totalPages) {
@@ -507,7 +583,12 @@ export class AccountbookTools {
   }
   private async categories(root: string) {
     const schema = z.array(
-      z.object({ uuid, name: z.string(), type: z.enum(["EXPENSE", "INCOME"]) }),
+      z.object({
+        uuid,
+        name: z.string(),
+        type: z.enum(["EXPENSE", "INCOME"]),
+        excludeFromBudget: z.boolean(),
+      }),
     );
     return responseData(await this.client.request(`${root}/categories`), schema);
   }

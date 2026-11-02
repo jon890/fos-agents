@@ -83,4 +83,4 @@ for name, key, value in (("list_families", "unknown_metadata", True),
         pass
     else:
         raise AssertionError("알 수 없는 metadata 또는 위험도 하한을 허용했다")
-print("16개 설명·두 링크·Unicode 계약·정책 분리·비정상 metadata 회귀 통과")
+print("도구 설명·두 링크·Unicode 계약·정책 분리·비정상 metadata 회귀 통과")

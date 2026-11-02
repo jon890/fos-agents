@@ -2,7 +2,8 @@
 
 `output: "file"`로 받은 `file`과 `count`를 아래 값에 넣어 `execute_code`에서 실행한다.
 가계부 도구를 코드 안에서 다시 호출하지 않고, 이미 받은 JSONL 파일만 읽는다.
-계산 결과는 총 건수, 전체 합계와 카테고리별 합계다. 예산 제외 지출도 포함한다.
+계산 결과는 총 건수, 전체 합계와 카테고리별 합계다.
+전체 합계(총지출)는 예산 제외 지출도 포함한다. 예산 대상 합계는 `countsTowardBudget`이 true 인 행만 더한다(아래 「예산 대상 합계」).
 
 ```python
 import json
@@ -34,3 +35,24 @@ print(json.dumps({
 ```
 
 정수 덧셈이므로 소수 오차가 없다. 파일이 없거나 행 수가 다르면 합계를 답하지 않는다.
+
+## 예산 대상 합계
+
+예산 대상 합계는 지출 파일에서 `countsTowardBudget`이 `True`인 행만 더한다.
+위 반복문의 본문을 아래처럼 바꾸면 예산 대상 카테고리별 합계가 된다.
+행 수는 `count`와 대조해야 하므로 조건보다 먼저 센다.
+
+```python
+        record = json.loads(line)
+        amount = record["amount"]
+        if type(amount) is not int or amount <= 0:
+            raise ValueError("정수 금액이 아닙니다")
+        count += 1
+        if record["countsTowardBudget"] is not True:
+            continue
+        key = (record["categoryUuid"], record["categoryName"])
+        totals[key] += amount
+```
+
+거래의 `excludeFromBudget`만으로 예산 대상을 정하지 않는다. 카테고리 예산 제외와 반복지출 생성분도 예산에서 빠진다.
+월 소비 리포트와 예산 대비 평가는 [월 리포트 절차](monthly-report.md)의 스크립트를 쓴다.

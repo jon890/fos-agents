@@ -34,8 +34,8 @@ function setup(respond: (url: string, method: string) => Response | undefined = 
       if (custom) return custom;
       if (url.endsWith("/categories"))
         return json([
-          { uuid: CATEGORY, name: "예시 분류", type: "EXPENSE" },
-          { uuid: INCOME_CATEGORY, name: "수입 분류", type: "INCOME" },
+          { uuid: CATEGORY, name: "예시 분류", type: "EXPENSE", excludeFromBudget: false },
+          { uuid: INCOME_CATEGORY, name: "수입 분류", type: "INCOME", excludeFromBudget: false },
         ]);
       if (method === "PUT") return json({ ...template, ...JSON.parse(String(init?.body)) });
       return json({ totalMonthlyAmount: 1000, items: [template] });

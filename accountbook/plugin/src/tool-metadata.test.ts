@@ -34,7 +34,7 @@ function matchesManifest(tools: Array<{ name: string; description?: string }>) {
   }
 }
 
-test("16개 SDK 도구 설명이 manifest 정본과 같으며 API를 호출하지 않는다", async () => {
+test("SDK 도구 설명이 manifest 정본과 같으며 API를 호출하지 않는다", async () => {
   const server = createServer(
     {
       ACCOUNTBOOK_API_BASE_URL: "https://example.invalid/api/v1",
@@ -50,7 +50,7 @@ test("16개 SDK 도구 설명이 manifest 정본과 같으며 API를 호출하�
     await server.connect(st);
     await client.connect(ct);
     const listed = (await client.listTools()).tools;
-    expect(listed).toHaveLength(16);
+    expect(listed).toHaveLength(Object.keys(connector.tools).length);
     matchesManifest(listed);
     matchesManifest(
       Object.entries(toolDefinitions).map(([name, tool]) => ({

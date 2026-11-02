@@ -27,6 +27,7 @@ test("MCP 삭제는 data 생략과 null, 204를 모두 성공으로 반환한다
                   uuid: env.ACCOUNTBOOK_FAMILY_UUID,
                   name: "예시 분류",
                   type: name === "delete_expense" ? "EXPENSE" : "INCOME",
+                  excludeFromBudget: false,
                 },
               ],
             }),
@@ -124,7 +125,7 @@ test("MCP 프로토콜로 도구를 탐색하고 조회하며 미확인 삭제�
     await server.connect(serverTransport);
     await client.connect(clientTransport);
     const listed = await client.listTools();
-    expect(listed.tools).toHaveLength(16);
+    expect(listed.tools).toHaveLength(Object.keys(connector.tools).length);
     expect(listed.tools.map((tool) => tool.name)).not.toContain("summarize_expenses");
     expect(listed.tools.map((tool) => tool.name)).not.toContain("summarize_incomes");
     expect(listed.tools.map((tool) => tool.name)).toContain("delete_expense");
@@ -204,7 +205,7 @@ test("plugin 실행 파일만 복사해도 의존성 설치 없이 stdio로 시�
   try {
     await client.connect(transport);
     const listed = (await client.listTools()).tools;
-    expect(listed).toHaveLength(16);
+    expect(listed).toHaveLength(Object.keys(connector.tools).length);
     expect(listed.map((tool) => tool.name).sort()).toEqual(Object.keys(connector.tools).sort());
     for (const tool of listed)
       expect(tool.description).toBe(
