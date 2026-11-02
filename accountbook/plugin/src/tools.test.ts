@@ -28,10 +28,10 @@ function setup(families = [{ uuid: FAMILY, name: "예시 가족" }], defaultFami
       if (url.endsWith("/families")) return json(families);
       if (url.endsWith("/categories"))
         return json([
-          { uuid: CATEGORY, name: "예시 분류", type: "EXPENSE" },
-          { uuid: INCOME_CATEGORY, name: "예시 분류", type: "INCOME" },
-          { uuid: RECORD, name: "수입 전용", type: "INCOME" },
-          { uuid: FAMILY, name: "지출 전용", type: "EXPENSE" },
+          { uuid: CATEGORY, name: "예시 분류", type: "EXPENSE", excludeFromBudget: false },
+          { uuid: INCOME_CATEGORY, name: "예시 분류", type: "INCOME", excludeFromBudget: false },
+          { uuid: RECORD, name: "수입 전용", type: "INCOME", excludeFromBudget: false },
+          { uuid: FAMILY, name: "지출 전용", type: "EXPENSE", excludeFromBudget: false },
         ]);
       if (method === "DELETE") return json(null);
       if (url.includes("?"))
@@ -197,10 +197,10 @@ describe("MCP 가계부 도구", () => {
   test("카테고리 목록은 종류를 보존한다", async () => {
     const { tools } = setup(undefined, FAMILY);
     expect(result(await tools.call("list_categories", {}))).toEqual([
-      { uuid: CATEGORY, name: "예시 분류", type: "EXPENSE" },
-      { uuid: INCOME_CATEGORY, name: "예시 분류", type: "INCOME" },
-      { uuid: RECORD, name: "수입 전용", type: "INCOME" },
-      { uuid: FAMILY, name: "지출 전용", type: "EXPENSE" },
+      { uuid: CATEGORY, name: "예시 분류", type: "EXPENSE", excludeFromBudget: false },
+      { uuid: INCOME_CATEGORY, name: "예시 분류", type: "INCOME", excludeFromBudget: false },
+      { uuid: RECORD, name: "수입 전용", type: "INCOME", excludeFromBudget: false },
+      { uuid: FAMILY, name: "지출 전용", type: "EXPENSE", excludeFromBudget: false },
     ]);
   });
 
@@ -208,12 +208,60 @@ describe("MCP 가계부 도구", () => {
     for (const type of [undefined, "OTHER"]) {
       const tools = new AccountbookTools(
         new AccountbookClient({ apiBaseUrl: BASE, apiToken: TOKEN }, async () =>
-          json([{ uuid: CATEGORY, name: "예시 분류", type }]),
+          json([{ uuid: CATEGORY, name: "예시 분류", type, excludeFromBudget: false }]),
         ),
         FAMILY,
       );
       const response = result(await tools.call("list_categories", {}));
       expect(response.error.code).toBe("ACCOUNTBOOK_INVALID_RESPONSE");
+    }
+  });
+
+  test("카테고리 목록은 예산 제외 표시를 그대로 돌려주고 다른 칸은 넘기지 않는다", async () => {
+    const tools = new AccountbookTools(
+      new AccountbookClient({ apiBaseUrl: BASE, apiToken: TOKEN }, async () =>
+        json([
+          {
+            uuid: CATEGORY,
+            name: "예시 분류",
+            type: "EXPENSE",
+            excludeFromBudget: true,
+            color: "#000000",
+            icon: "example",
+            createdAt: "2026-09-30T12:00:00",
+          },
+          {
+            uuid: INCOME_CATEGORY,
+            name: "예시 수입",
+            type: "INCOME",
+            excludeFromBudget: false,
+            color: "#ffffff",
+            icon: "example",
+            updatedAt: "2026-09-30T12:00:00",
+          },
+        ]),
+      ),
+      FAMILY,
+    );
+    expect(result(await tools.call("list_categories", {}))).toEqual([
+      { uuid: CATEGORY, name: "예시 분류", type: "EXPENSE", excludeFromBudget: true },
+      { uuid: INCOME_CATEGORY, name: "예시 수입", type: "INCOME", excludeFromBudget: false },
+    ]);
+  });
+
+  test("예산 제외 표시가 없거나 boolean 이 아닌 카테고리 응답은 사용하지 않는다", async () => {
+    for (const excludeFromBudget of [undefined, "true", null]) {
+      const tools = new AccountbookTools(
+        new AccountbookClient({ apiBaseUrl: BASE, apiToken: TOKEN }, async () =>
+          json([{ uuid: CATEGORY, name: "예시 분류", type: "EXPENSE", excludeFromBudget }]),
+        ),
+        FAMILY,
+      );
+      const response = result(await tools.call("list_categories", {}));
+      expect({ excludeFromBudget, code: response.error?.code }).toEqual({
+        excludeFromBudget,
+        code: "ACCOUNTBOOK_INVALID_RESPONSE",
+      });
     }
   });
 

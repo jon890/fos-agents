@@ -2,7 +2,16 @@
   "name": "plan151-accountbook-monthly-report",
   "description": "가계부 플러그인이 카테고리 예산 제외와 행별 예산 대상 여부, 가계부 예산을 넘겨 월 소비 리포트가 예산 화면과 같은 숫자로 평가하게 한다",
   "spec": "accountbook/docs/features/monthly-report/spec.md",
-  "requirements": ["R1", "R2", "R3", "R5", "R6", "R7", "R8", "R9"],
+  "requirements": [
+    "R1",
+    "R2",
+    "R3",
+    "R5",
+    "R6",
+    "R7",
+    "R8",
+    "R9"
+  ],
   "pr_scope": "fos-agents accountbook 플러그인과 스킬에 카테고리 예산 제외 전달, 목록 파일의 예산 판정 칸, get_budget_summary 도구와 월 리포트 절차를 더한다.",
   "deferred": [
     {
@@ -19,10 +28,36 @@
   "status": "pending",
   "created_at": "2026-11-02",
   "total_phases": 3,
-  "current_phase": 1,
+  "current_phase": 2,
   "phases": [
-    {"number": 1, "file": "phase-01.md", "execution_profile": "deep", "requirements": ["R1", "R2"]},
-    {"number": 2, "file": "phase-02.md", "execution_profile": "deep", "requirements": ["R3", "R5"]},
-    {"number": 3, "file": "phase-03.md", "execution_profile": "deep", "requirements": ["R6", "R7", "R8", "R9"]}
+    {
+      "number": 1,
+      "file": "phase-01.md",
+      "execution_profile": "deep",
+      "requirements": [
+        "R1",
+        "R2"
+      ]
+    },
+    {
+      "number": 2,
+      "file": "phase-02.md",
+      "execution_profile": "deep",
+      "requirements": [
+        "R3",
+        "R5"
+      ]
+    },
+    {
+      "number": 3,
+      "file": "phase-03.md",
+      "execution_profile": "deep",
+      "requirements": [
+        "R6",
+        "R7",
+        "R8",
+        "R9"
+      ]
+    }
   ]
 }

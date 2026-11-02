@@ -27,6 +27,7 @@ test("MCP 삭제는 data 생략과 null, 204를 모두 성공으로 반환한다
                   uuid: env.ACCOUNTBOOK_FAMILY_UUID,
                   name: "예시 분류",
                   type: name === "delete_expense" ? "EXPENSE" : "INCOME",
+                  excludeFromBudget: false,
                 },
               ],
             }),

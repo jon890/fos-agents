@@ -407,6 +407,7 @@ export class AccountbookTools {
   ) {
     const categories = await this.categories(root);
     const names = new Map(categories.map((item) => [item.uuid, item.name]));
+    const budgetExcluded = new Map(categories.map((item) => [item.uuid, item.excludeFromBudget]));
     const columns = [
       "uuid",
       "date",
@@ -417,6 +418,7 @@ export class AccountbookTools {
       "description",
       ...(expense ? ["recurringExpenseUuid"] : []),
       "excludeFromBudget",
+      ...(expense ? ["categoryExcludeFromBudget", "countsTowardBudget"] : []),
     ];
     const rows: Record<string, unknown>[] = [];
     const seen = new Set<string>();
@@ -475,6 +477,8 @@ export class AccountbookTools {
         seen.add(item.uuid);
         if (seen.size > 10_000)
           throw new SelectionError("ACCOUNTBOOK_OUTPUT_LIMIT", "기간을 줄여 다시 요청해 주세요.");
+        const categoryExcludeFromBudget =
+          item.categoryUuid !== null && budgetExcluded.get(item.categoryUuid) === true;
         rows.push({
           uuid: item.uuid,
           date: item.date,
@@ -485,6 +489,15 @@ export class AccountbookTools {
           description: item.description,
           ...(expense ? { recurringExpenseUuid: item.recurringExpenseUuid } : {}),
           excludeFromBudget: item.excludeFromBudget,
+          ...(expense
+            ? {
+                categoryExcludeFromBudget,
+                countsTowardBudget:
+                  !item.excludeFromBudget &&
+                  !categoryExcludeFromBudget &&
+                  item.recurringExpenseUuid === null,
+              }
+            : {}),
         });
       }
       if (page + 1 >= data.totalPages) {
@@ -507,7 +520,12 @@ export class AccountbookTools {
   }
   private async categories(root: string) {
     const schema = z.array(
-      z.object({ uuid, name: z.string(), type: z.enum(["EXPENSE", "INCOME"]) }),
+      z.object({
+        uuid,
+        name: z.string(),
+        type: z.enum(["EXPENSE", "INCOME"]),
+        excludeFromBudget: z.boolean(),
+      }),
     );
     return responseData(await this.client.request(`${root}/categories`), schema);
   }
