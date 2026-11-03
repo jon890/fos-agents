@@ -102,7 +102,7 @@ wrapper는 모든 publish를 같은 `flock` 잠금으로 직렬화하고 나머�
 
 실제 경로, endpoint와 credential은 공개 저장소 밖의 mode `600` 환경 파일에 둔다.
 이 값은 홈서버 `career-storage` 명령만 읽는다.
-외부 client와 Hermes 작업 디렉터리에는 S3 credential을 전달하지 않는다.
+외부 client에는 S3 credential을 전달하지 않는다.
 
 ## 연결과 권한 확인
 
@@ -135,8 +135,8 @@ Admin UI에서도 시험 객체가 보였다가 삭제 뒤 사라졌는지 확�
 ```
 
 외부 client는 SSH transport로 같은 `career-storage` 명령을 호출한다.
-홈서버 Hermes는 `CAREER_WORKSPACE_COMMAND`에 그 명령의 절대경로를 지정해 command transport를 사용한다.
-client와 Hermes에서 읽기, 상태 확인과 무변경 publish를 각각 확인한다.
+홈서버 안에서 명령을 직접 부를 때만 `CAREER_WORKSPACE_COMMAND`에 그 명령의 절대경로를 지정해 command transport를 쓴다. 지금 쓰는 곳은 없고, 홈서버 Hermes는 이 저장소 연결을 쓰지 않는다.
+client에서 읽기, 상태 확인과 무변경 publish를 확인한다.
 
 단일 노드 SeaweedFS는 백업이 아니다.
 데이터 볼륨 백업과 복구는 Career OS 코드가 아니라 홈서버 저장소 서비스에서 관리한다.
@@ -145,7 +145,7 @@ client와 Hermes에서 읽기, 상태 확인과 무변경 publish를 각각 확�
 
 상태 확인이나 publish가 실패하면 다음 순서로 복구한다.
 
-1. 외부 client와 Hermes의 새 publish를 중단한다.
+1. 외부 client의 새 publish를 중단한다.
 2. `career-storage status`와 SeaweedFS Admin UI에서 current pointer와 release 객체를 확인한다.
 3. credential, endpoint와 실행 파일 설정을 고친 뒤 `career-storage` 명령을 다시 배포한다.
 4. `status`와 `export --revision` 검증을 통과한 뒤 publish를 다시 허용한다.

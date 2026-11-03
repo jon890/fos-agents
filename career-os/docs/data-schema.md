@@ -1317,7 +1317,7 @@ Claude Code 전용 스킬이 부르는 `dist/career-local.js` 가 셸 환경에�
 | `CAREER_BACKEND_TOKEN` | 예 | 커넥터와 같은 Bearer token. `CAREER_BACKEND_TOKEN_FILE`(권한 0600 파일)로 대신할 수 있다 |
 | `CAREER_BACKEND_ACCESS_CLIENT_ID`, `CAREER_BACKEND_ACCESS_CLIENT_SECRET` | 아니오 | Backend 앞에 Cloudflare Access 가 있을 때의 service token. secret 은 `CAREER_BACKEND_ACCESS_CLIENT_SECRET_FILE` 로 대신할 수 있다. 계약은 ADR-140 을 따른다 |
 | `CAREER_WORKSPACE_ROOT` | 아니오 | 비공개 작업본(`applications/`, `library/`, `state/`)의 상위 디렉터리. 없으면 `~/.fos-career/workspace` |
-| `CAREER_WORKSPACE_COMMAND` | 아니오 | 홈서버 동기화 명령. 이 값이나 아래 값이 있을 때만 동기화한다 |
+| `CAREER_WORKSPACE_COMMAND` | 아니오 | 홈서버 안에서 `career-storage` 명령을 직접 부를 때 쓰는 동기화 명령. 지금 쓰는 곳은 없다. 이 값이나 아래 값이 있을 때만 동기화한다 |
 | `CAREER_WORKSPACE_SSH_TARGET` | 아니오 | 홈서버 동기화의 SSH 대상. `CAREER_WORKSPACE_REMOTE_COMMAND`, `CAREER_WORKSPACE_SSH_ARGS` 를 함께 읽는다 |
 | `YOUTUBE_DATA_API_KEY` | 아니오 | 공부 자료 archive 수집의 YouTube Data API key |
 | `CAREER_EVIDENCE_DIR` | 아니오 | 스킬이 읽는 프로젝트 근거 디렉터리. 없으면 `CAREER_WORKSPACE_ROOT` 아래 `evidence/`. `workspace paths --json` 이 `evidenceDir` 로 알려 준다. `package check-sources` 는 이 디렉터리나 그 바로 위가 Git 저장소의 루트일 때 그 저장소가 원격보다 뒤처졌는지 본다 |

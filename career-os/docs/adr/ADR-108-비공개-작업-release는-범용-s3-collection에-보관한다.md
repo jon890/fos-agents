@@ -28,3 +28,7 @@ Hermes도 SeaweedFS 데이터 볼륨을 직접 읽지 않고 같은 명령을 �
 기존 `CareerWorkspaceTransport`의 `status`, `export`, `publish`와 오류 계약은 바뀌지 않는다.
 저장소 장애나 credential 오류는 작업 쓰기를 중단하며 이전 current pointer를 유지한다.
 기존 파일 release 데이터는 별도 백업으로 보존할 수 있지만 현재 실행 코드는 파일 release를 읽지 않는다.
+
+## 후속 메모
+
+2026-11-03: 홈서버 Hermes 를 이 저장소 망에서 뺐다. 위 본문의 Hermes 호출은 더 쓰지 않으며, 외부 client 의 SSH 동기화는 그대로다.

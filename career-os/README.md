@@ -60,7 +60,8 @@ bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts"
 
 `.env`는 워크스페이스 루트에 두고 git에 올리지 않는다.
 홈서버에서는 S3 실행 파일을 빌드하고 `CAREER_STORAGE_S3_EXECUTABLE`, 공용 publish 잠금과 네 `CAREER_STORAGE_S3_*` 값을 서비스 환경에 둔다.
-SSH client는 원격 transport 값을 넣고, 홈서버의 Hermes는 `CAREER_WORKSPACE_COMMAND`로 같은 `career-storage` 명령을 호출한다.
+SSH client는 원격 transport 값을 넣는다.
+홈서버 Hermes는 이 작업 공간 동기화를 쓰지 않는다.
 설치, 상태 확인과 복구 순서는 [홈서버 객체 저장소 연결 계약](../docs/home-server-object-storage.md)을 따른다.
 진행 중인 지원 대상은 후보자 맥락 문서 `application-state` 에서 확인하고 공고별 실행 자료는 `applications/<company>/<role>/`에서 관리한다.
 
