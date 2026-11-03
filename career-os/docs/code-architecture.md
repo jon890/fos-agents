@@ -96,7 +96,7 @@ Claude Code 전용 실행기를 새로 만들거나 커넥터의 MCP 지침에 �
 
 ### 비공개 작업본 동기화
 
-`scripts/career-workspace/`는 Hermes, Codex CLI와 Claude Code가 공유하는 파일 준비·차이 검사·반영 경계다.
+`scripts/career-workspace/`는 Codex CLI와 Claude Code가 공유하는 파일 준비·차이 검사·반영 경계다.
 manifest 생성과 검증, 로컬 기준 상태 확인, SSH와 command transport, 홈서버 명령을 책임별 모듈로 나눈다.
 S3 storage adapter는 홈서버에서 표준 입력과 출력으로 release를 발행하고 내보낸다.
 회귀 테스트와 fixture는 `tests/`에 분리한다.
@@ -142,7 +142,8 @@ career-os/.career-sync/
 
 skill 은 `plugin/` 이 소유하고 Hermes cron 은 plugin 스킬을 쓴다.
 환경별 차이는 `.env`의 transport 설정에만 두고 지원 판단과 문서 작성 절차를 복제하지 않는다.
-SSH client는 `career-storage`를 원격 호출하고, 홈서버의 Hermes는 같은 명령을 command transport로 호출한다.
+SSH client는 `career-storage`를 원격 호출한다.
+command transport는 홈서버 안에서 같은 명령을 직접 부를 때 쓰며, 지금 쓰는 곳은 없다.
 두 경로는 같은 홈서버 잠금과 S3 pointer 갱신 계약을 사용한다.
 
 ### 커리어 Backend

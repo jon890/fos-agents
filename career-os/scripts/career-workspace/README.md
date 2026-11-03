@@ -16,7 +16,7 @@ skill
 ```
 
 외부 개발 환경은 `ssh-transport.ts`로 홈서버 명령을 호출한다.
-홈서버의 Hermes는 `command-transport.ts`로 같은 명령을 직접 호출한다.
+`command-transport.ts`는 홈서버 안에서 같은 명령을 직접 부를 때 쓴다. 지금 쓰는 곳은 없고, 홈서버 Hermes는 이 경로를 쓰지 않는다.
 `career-storage`는 동시에 여러 publish가 실행되지 않게 잠근다.
 `s3-storage.ts`는 release를 검증하고 마지막에 current pointer를 변경한다.
 `s3-object-store.ts`는 Bun `S3Client`만 감싸며 S3 요청을 직접 구현하지 않는다.
