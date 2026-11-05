@@ -1,6 +1,6 @@
-# docs-check 오버레이
+# docs-audit 오버레이
 
-공용 `docs-check`에 fos-agents의 문서 경계와 실측 검사를 추가한다.
+공용 `docs-audit`에 fos-agents의 문서 경계와 실측 검사를 추가한다.
 
 ## 범위
 
