@@ -708,7 +708,7 @@ plugin 이름과 커넥터 id 는 `fos-career`, MCP 서버 이름은 `career` �
 가계부 커넥터(`accountbook/plugin/`)와 같은 구성이고, 결정은 [ADR-135](adr/ADR-135-fos-assistant-커넥터는-backend를-감싸고-숫자는-기록에서-직접-읽는다.md)에 있다.
 이 plugin 은 career-os 의 스킬과 MCP 서버를 한데 묶는 배포 단위이기도 하다. 옮기는 단계와 세 층 구조는 [ADR-137](adr/ADR-137-스킬과-mcp를-plugin-하나로-묶고-세-단계로-옮긴다.md)을 따른다.
 지금은 2단계를 진행하고 있다. 대화용 스킬과 Claude Code 전용 스킬의 자리는 [ADR-139](adr/ADR-139-plugin-의-대화용-스킬과-claude-code-전용-스킬을-디렉터리로-나눈다.md), 로컬 실행기의 배치는 [ADR-138](adr/ADR-138-plugin-로컬-실행기는-scripts-원본을-번들해-부르고-작업본-위치는-설정으로-받는다.md)을 따른다.
-fos-assistant 의 일반 에이전트가 읽는 스킬의 자리는 [ADR-141](adr/ADR-141-일반-에이전트가-읽는-스킬은-plugin-의-agent-skills-에-두고-따로-올린다.md)을 따른다.
+fos-assistant 의 일반 에이전트가 읽는 스킬의 자리(지금은 스킬 없음)는 [ADR-141](adr/ADR-141-일반-에이전트가-읽는-스킬은-plugin-의-agent-skills-에-두고-따로-올린다.md)을 따른다.
 
 ```text
 career-os/plugin/
@@ -720,8 +720,7 @@ career-os/plugin/
 ├── scripts/
 ├── dist/career-mcp.js
 ├── dist/career-local.js
-├── agent-skills/
-│   └── proactive-check/
+├── agent-skills/README.md
 ├── connector-skills/
 │   ├── career-connector/SKILL.md
 │   ├── interview-practice/SKILL.md
@@ -751,8 +750,6 @@ career-os/plugin/
 | `plugin/src/*.test.ts`, `plugin/scripts/*.test.ts` | fetch 대역으로 도는 도구 테스트, 번들 일치와 manifest 일치 검사 |
 | `plugin/scripts/build.ts`, `plugin/dist/career-mcp.js` | 의존성을 포함한 MCP 서버 실행 파일의 빌드와 배포 |
 | `plugin/dist/career-local.js` | 같은 빌드가 만드는 로컬 실행기 실행 파일. 아래 「로컬 실행기」 |
-| `plugin/agent-skills/proactive-check/` | fos-assistant 의 일반 커리어 에이전트가 먼저 살펴보기에서 읽는 지침. 커넥터 위임으로 맥락을 읽어 공부, 포지션, 동향 가운데 조사할 영역을 고르고 결과 블록을 쓴다. `evals/` 는 합성 fixture 와 기대 판정이다 |
-| `plugin/scripts/agent-skill-eval.ts` | `agent-skills/proactive-check/evals/` 의 fixture 를 Claude Code CLI 로 실제 모델에 돌리고 고른 영역, 위임, 직접 호출과 검색어를 채점한다. 결과가 있는 평가는 v3와 문제 후보 배열을 검사하고, `NOTHING_NEW` 는 빈 발견과 빈 후보를 요구한다. 결과 작성 평가는 이번 실행에서 원문을 확인한 합성 결과로 문제 후보의 수, 필수 칸과 근거 참조를 채점한다 |
 | `plugin/connector-skills/career-connector/SKILL.md` | 연결용 에이전트의 지침. 프로필 갱신 순서와 승인 규칙, 조사용 읽기 도구의 결과 해석 |
 | `plugin/connector-skills/interview-practice/SKILL.md` | MCP 도구만으로 하는 면접 연습. 질문 고르기, 답변 평가, 기록과 개인 질문 저장 |
 | `plugin/connector-skills/study-topic-recommender/SKILL.md` | MCP 도구만으로 하는 공부 추천. 수집된 후보에서 고르고 추천 이력을 저장 |
@@ -827,7 +824,7 @@ fos-assistant 는 `plugin/` 을 복사하거나 마운트해 `connector.json`, `
 - `operator_env` 의 이름은 운영 목록이 모두 값을 줘야 한다. 하나라도 없으면 커넥터가 카탈로그에서 빠진다. 그래서 운영 환경에 없는 선택값(Cloudflare Access service token)은 `operator_env` 와 `.mcp.json` 에 선언하지 않는다([ADR-144](adr/ADR-144-claude-code-전용-access-값은-커넥터-선언에-두지-않고-실행-환경에서-받는다.md))
 - `operator_secrets` 를 선언하지 않는다. 선언하면 카탈로그에서 빠진다. 그래서 Backend 의 token 은 사용자가 연결 화면에 넣는다
 - `connector-skills/` 아래 모든 `SKILL.md` 의 본문을 이름 순으로 이어 붙인 것이 연결용 에이전트의 지침이 된다. 앞머리를 뺀 본문을 합쳐 8,000자를 넘지 않고 그 아래에 심볼릭 링크를 두지 않는다. 어기면 카탈로그에서 빠진다
-- `agent-skills/` 는 커넥터 설치가 읽지 않는다. 일반 에이전트에 스킬로 따로 올린다([ADR-141](adr/ADR-141-일반-에이전트가-읽는-스킬은-plugin-의-agent-skills-에-두고-따로-올린다.md)). 세 디렉터리에 같은 이름의 스킬을 두지 않는다
+- `agent-skills/` 는 커넥터 설치가 읽지 않는다. 지금은 스킬이 없고 `README.md` 만 있다. 스킬을 두면 일반 에이전트에 따로 올린다([ADR-141](adr/ADR-141-일반-에이전트가-읽는-스킬은-plugin-의-agent-skills-에-두고-따로-올린다.md)). 세 디렉터리에 같은 이름의 스킬을 두지 않는다
 - `skills/` 는 Claude Code 만 읽는다. fos-assistant 는 읽지 않으므로 이 디렉터리의 스킬은 지침 상한에 들지 않는다. 두 디렉터리에 같은 이름의 스킬을 두지 않는다
 - plugin 스킬을 `.claude/skills/` 에 링크하지 않는다. 저장소를 연 Claude Code 세션도 plugin 을 설치해 plugin 스킬을 쓴다
 - 저장소에 스킬 사본을 두지 않는다. 판단 규칙은 plugin 스킬 한 곳에서만 고친다
