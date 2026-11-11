@@ -9,7 +9,7 @@ tool_catchable: false
 source:
   - repository ADR structure
 related:
-  - ../../../../../planning-overlay.md
+  - ../../../../../plan-overlay.md
 ---
 
 # 3-2. ADR 저장 방식 혼용

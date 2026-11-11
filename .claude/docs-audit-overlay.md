@@ -9,7 +9,7 @@
 - `all`은 모든 워크스페이스를 검사한다.
 - scope가 없으면 현재 작업 경로와 변경 파일에서 가장 좁은 범위를 추론한다. 여러 범위가 섞였을 때만 `all`을 사용한다.
 
-검토 역할은 읽기 전용 컨텍스트로 격리하고 수정, commit과 push 권한을 주지 않는다. `career-os`의 워크스페이스 경계는 `.claude/build-with-teams-overlay.md`의 「career-os 경계」가 소유한다.
+검토 역할은 읽기 전용 컨텍스트로 격리하고 수정, commit과 push 권한을 주지 않는다. `career-os`의 워크스페이스 경계는 `.claude/implementation-overlay.md`의 「career-os 경계」가 소유한다.
 
 ## 구조 검사
 
