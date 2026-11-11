@@ -11,8 +11,8 @@
 !.claude/agents/**
 !**/.claude/agents/
 !**/.claude/agents/**
-!.claude/planning-overlay.md
-!.claude/build-with-teams-overlay.md
+!.claude/plan-overlay.md
+!.claude/implementation-overlay.md
 !.claude/docs-audit-overlay.md
 
 # Generated task outputs — 5버킷 경계

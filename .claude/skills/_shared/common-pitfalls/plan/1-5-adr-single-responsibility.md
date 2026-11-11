@@ -10,7 +10,7 @@ tool_catchable: false
 source:
   - apartment ADR 검토 사례
 related:
-  - ../../../../../planning-overlay.md
+  - ../../../../../plan-overlay.md
 ---
 
 # 1-5. ADR 단일 책임 위반

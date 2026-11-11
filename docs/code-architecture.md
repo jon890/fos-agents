@@ -36,8 +36,8 @@
 
 워크스페이스 한정 helper는 해당 워크스페이스 내부에 둔다.
 
-구현과 검토 역할은 공용 `build-with-teams`의 역할 문서를 사용한다.
-저장소 고유 경계는 `.claude/build-with-teams-overlay.md`에 둔다.
+구현과 검토 역할은 공용 `implementation`의 역할 문서를 사용한다.
+저장소 고유 경계는 `.claude/implementation-overlay.md`에 둔다.
 
 ## 외부 서비스
 

@@ -1,6 +1,6 @@
-# build-with-teams 오버레이
+# implementation 오버레이
 
-공용 `build-with-teams` 계약에 이 저장소의 실행 경계만 추가한다.
+공용 `implementation` 계약에 이 저장소의 실행 경계만 추가한다.
 
 ## 역할 선택
 
