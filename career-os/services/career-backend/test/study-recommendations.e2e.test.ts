@@ -248,6 +248,80 @@ describe("학습 추천 실행", () => {
     expect(await harness.prisma.$queryRawUnsafe("SELECT report_id FROM study_recommendation_runs")).toEqual([]);
   });
 
+  it("저장한 추천 실행을 최신순으로 주제 제목과 자료 제목, 주소까지 읽고 limit 으로 줄인다", async () => {
+    expect((await harness.send("GET", "/api/study/v1/recommendation-runs")).json).toEqual({ runs: [] });
+
+    await ingest(["first-a", "first-b", "second-a", "third-a"]);
+    expect((await saveRun(run("morning-2026-09-24", "first-topic", ["first-a", "first-b"], {
+      generatedAt: "2026-09-24T13:00:00.000Z",
+    }))).status).toBe(201);
+    expect((await saveRun(run("morning-2026-09-25", "second-topic", ["second-a"], {
+      generatedAt: "2026-09-25T13:00:00.000Z",
+      topics: [{
+        topicKey: "second-topic",
+        title: "주제 second-topic",
+        careerQuestion: null,
+        items: [{ contentKey: "second-a", summary: null, reason: null, careerValue: null }],
+      }],
+    }))).status).toBe(201);
+    expect((await saveRun(run("morning-2026-09-26", "third-topic", ["third-a"], {
+      generatedAt: "2026-09-26T13:00:00.000Z",
+    }))).status).toBe(201);
+
+    const all = await harness.send("GET", "/api/study/v1/recommendation-runs");
+    expect(all.status).toBe(200);
+    expect(all.json).toEqual({
+      runs: [
+        {
+          reportId: "morning-2026-09-26",
+          generatedAt: "2026-09-26T13:00:00.000Z",
+          topics: [{
+            topicKey: "third-topic",
+            title: "주제 third-topic",
+            careerQuestion: "질문 third-topic",
+            items: [{ contentKey: "third-a", title: "제목 third-a", url: "https://example.com/third-a" }],
+          }],
+        },
+        {
+          reportId: "morning-2026-09-25",
+          generatedAt: "2026-09-25T13:00:00.000Z",
+          topics: [{
+            topicKey: "second-topic",
+            title: "주제 second-topic",
+            careerQuestion: null,
+            items: [{ contentKey: "second-a", title: "제목 second-a", url: "https://example.com/second-a" }],
+          }],
+        },
+        {
+          reportId: "morning-2026-09-24",
+          generatedAt: "2026-09-24T13:00:00.000Z",
+          topics: [{
+            topicKey: "first-topic",
+            title: "주제 first-topic",
+            careerQuestion: "질문 first-topic",
+            items: [
+              { contentKey: "first-a", title: "제목 first-a", url: "https://example.com/first-a" },
+              { contentKey: "first-b", title: "제목 first-b", url: "https://example.com/first-b" },
+            ],
+          }],
+        },
+      ],
+    });
+
+    const limited = await harness.send("GET", "/api/study/v1/recommendation-runs?limit=2");
+    expect((limited.json as { runs: Array<{ reportId: string }> }).runs.map((item) => item.reportId))
+      .toEqual(["morning-2026-09-26", "morning-2026-09-25"]);
+    // 읽기는 후보와 이력 버전을 바꾸지 않는다.
+    expect((await harness.send("GET", "/api/study/v1/candidates")).json).toMatchObject({ historyVersion: 3 });
+  });
+
+  it("추천 실행 목록의 limit 이 범위 밖이거나 모르는 query 가 있으면 400 이다", async () => {
+    for (const query of ["limit=0", "limit=101", "limit=abc", "extra=1"]) {
+      const reply = await harness.send("GET", `/api/study/v1/recommendation-runs?${query}`);
+      expect({ query, status: reply.status }).toEqual({ query, status: 400 });
+    }
+  });
+
   it("사람이 기준 버전을 따로 올리던 경로는 없다", async () => {
     const reply = await harness.send("PUT", "/api/study/v1/recommendation-control", {
       idempotencyKey: nextKey("removed-control"),

@@ -8,6 +8,7 @@ import type {
   StudyIngestion,
   StudyPublication,
   StudyRecommendationRun,
+  StudyRecommendationRunView,
   StudySource,
   StudySourcePut,
 } from "../schema.js";
@@ -275,6 +276,48 @@ export class StudyRepository {
       VALUES (${publicationId}, ${value.reportId}, ${value.channel}, ${value.url}, ${value.externalId}, ${new Date(value.publishedAt)})
     `;
     return publicationId;
+  }
+
+  /** 최신 `limit` 건의 추천 실행을 주제와 자료 제목까지 읽는다. 쿼리는 세 번이고 `limit` 이 100 이하라 크기가 작다. */
+  async listRecommendationRuns(limit: number, client: DbClient): Promise<StudyRecommendationRunView[]> {
+    const runRows = await client.$queryRaw<RawRow[]>`
+      SELECT report_id, generated_at
+      FROM study_recommendation_runs
+      ORDER BY generated_at DESC, report_id DESC
+      LIMIT ${limit}
+    `;
+    if (runRows.length === 0) return [];
+    const reportIds = runRows.map((row) => String(row.report_id));
+    const topicRows = await client.$queryRaw<RawRow[]>`
+      SELECT report_id, topic_key, title, career_question
+      FROM study_recommendation_topics
+      WHERE report_id IN (${Prisma.join(reportIds)})
+      ORDER BY report_id ASC, position ASC, topic_key ASC
+    `;
+    const itemRows = await client.$queryRaw<RawRow[]>`
+      SELECT r.report_id, r.topic_key, r.content_key, m.title, m.url
+      FROM study_recommended_materials r
+      JOIN study_materials m ON m.content_key = r.content_key
+      WHERE r.report_id IN (${Prisma.join(reportIds)})
+      ORDER BY r.report_id ASC, r.topic_key ASC, r.position ASC, r.content_key ASC
+    `;
+    return runRows.map((run) => {
+      const reportId = String(run.report_id);
+      return {
+        reportId,
+        generatedAt: (date(run.generated_at) as Date).toISOString(),
+        topics: topicRows
+          .filter((topic) => String(topic.report_id) === reportId)
+          .map((topic) => ({
+            topicKey: String(topic.topic_key),
+            title: String(topic.title),
+            careerQuestion: topic.career_question === null ? null : String(topic.career_question),
+            items: itemRows
+              .filter((item) => String(item.report_id) === reportId && String(item.topic_key) === String(topic.topic_key))
+              .map((item) => ({ contentKey: String(item.content_key), title: String(item.title), url: String(item.url) })),
+          })),
+      };
+    });
   }
 
   async recentStudyTopicKeys(client: DbClient): Promise<string[]> {
