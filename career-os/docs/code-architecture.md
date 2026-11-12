@@ -743,7 +743,7 @@ career-os/plugin/
 | `plugin/src/tool-metadata.ts` | schema 2의 도구 설명을 검증하고 manifest 정본에서 SDK 등록에 붙이는 일. 정책이나 입력 스키마는 바꾸지 않는다 |
 | `plugin/src/tools.ts` | 도구 스무 개의 입력 스키마와 분기, 오류를 `{ error: { code, message } }` 로 바꾸는 일 |
 | `plugin/src/interview.ts` | 면접 연습 도구 넷의 입력과 응답 스키마, 공개 질문 은행 번들과 질문 선별 호출 |
-| `plugin/src/study.ts` | 공부 후보 읽기와 목록, 추천 저장 도구 셋의 입력과 응답 스키마, 후보 요약과 추천 저장 요청 조립 |
+| `plugin/src/study.ts` | 공부 후보 읽기와 목록, 추천 저장, 추천 기록 읽기 도구의 입력과 응답 스키마, 후보 요약과 추천 저장 요청 조립 |
 | `plugin/src/positions.ts` | 포지션 조사 제외 기준 도구의 응답 스키마와 제외 규칙, 회사 선호를 함께 읽어 보류 여부를 정하는 일 |
 | `plugin/src/backend.ts` | 커리어 Backend 의 Bearer HTTP client 와 응답 스키마 |
 | `plugin/src/github.ts` | GitHub REST client. 프로필 저장소 조회와 Git Data API 로 커밋 하나를 만드는 일 |
