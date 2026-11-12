@@ -39,6 +39,7 @@ token 을 사용자에게 묻거나 대화에 붙여 넣도록 요청하지 않�
 공부 자료나 지원할 포지션을 조사할 때 먼저 읽는다. 승인 없이 부르고 아무것도 저장하지 않는다.
 
 - `list_study_candidates`: 수집된 미추천 공부 후보를 필터와 함께 한 쪽씩 읽는다. `hasMore` 가 `true` 이면 `nextCursor` 를 `cursor` 로 넘겨 다음 쪽을 읽는다
+- `list_study_recommendations`: 저장한 공부 추천을 최신순으로 읽는다. 지난 추천의 제목은 이 도구로만 나온다
 - `get_position_research_constraints`: 개인 제외 규칙과 회사별 수동 선호를 읽는다
 - `check_position_exclusions`: 찾은 공고가 개인 제외 규칙에 걸리는지 코드로 판정한다. 공고마다 `url`, `company`, `title` 을 넘기고, 요청에 적힌 `source` 와 `identityHash` 가 있을 때만 함께 넘긴다
 

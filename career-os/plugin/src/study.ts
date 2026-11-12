@@ -80,9 +80,15 @@ export const listStudyCandidatesSchema = z.strictObject({
   cursor: nonBlank(1000).optional(),
 });
 
+// Read only. Past picks are few (one report per Seoul day), so a small cap keeps one result small.
+export const listStudyRecommendationsSchema = z.strictObject({
+  limit: z.number().int().min(1).max(10).optional(),
+});
+
 export type GetStudyCandidatesArgs = z.infer<typeof getStudyCandidatesSchema>;
 export type SaveStudyRecommendationArgs = z.infer<typeof saveStudyRecommendationSchema>;
 export type ListStudyCandidatesArgs = z.infer<typeof listStudyCandidatesSchema>;
+export type ListStudyRecommendationsArgs = z.infer<typeof listStudyRecommendationsSchema>;
 
 const candidateRow = z.object({
   contentKey: z.string(),
@@ -105,6 +111,22 @@ const candidatePageResponse = <R extends z.ZodType>(row: R) =>
     candidateContextVersion: z.string(),
     learningInterests: z.object({ version: z.number().int(), body: z.string() }),
   });
+const recommendationRunsResponse = z.object({
+  runs: z.array(
+    z.object({
+      reportId: z.string(),
+      generatedAt: z.string(),
+      topics: z.array(
+        z.object({
+          topicKey: z.string(),
+          title: z.string(),
+          careerQuestion: z.string().nullable(),
+          items: z.array(z.object({ contentKey: z.string(), title: z.string(), url: z.string() })),
+        }),
+      ),
+    }),
+  ),
+});
 const recommendationRunResponse = z.object({ reportId: z.string(), historyVersion: z.number().int().nonnegative() });
 const recommendationStatusResponse = z.object({ reportId: z.string(), exists: z.boolean() });
 
@@ -189,6 +211,19 @@ export async function listStudyCandidates(backend: CareerBackend, args: ListStud
       }),
     ),
   };
+}
+
+// What save_study_recommendation stored, newest first. The candidate tools never show these: the
+// Backend leaves every recommended material out of candidates and only gives the last run's topicKeys.
+// Titles are the topic's and the material's own; summary and reason stay in the Backend.
+export async function listStudyRecommendations(backend: CareerBackend, args: ListStudyRecommendationsArgs) {
+  const query = new URLSearchParams({ limit: String(args.limit ?? 5) });
+  const { runs } = await backend.request(
+    "GET",
+    `/api/study/v1/recommendation-runs?${query}`,
+    recommendationRunsResponse,
+  );
+  return { status: runs.length > 0 ? ("ok" as const) : ("empty" as const), runs };
 }
 
 // reportId and Idempotency-Key are the CLI's (study-library/recommendations.ts reportIdForMorningReading,

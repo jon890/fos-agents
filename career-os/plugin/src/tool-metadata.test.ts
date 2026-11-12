@@ -4,8 +4,8 @@ import connector from "../connector.json";
 import { normalizeToolDescription, withToolDescriptions } from "./tool-metadata.ts";
 import { toolDefinitions } from "./tools.ts";
 
-test("열아홉 설명이 manifest 정본과 같고 입력의 모든 칸을 설명한다", () => {
-  expect(Object.keys(toolDefinitions)).toHaveLength(19);
+test("스무 설명이 manifest 정본과 같고 입력의 모든 칸을 설명한다", () => {
+  expect(Object.keys(toolDefinitions)).toHaveLength(20);
   for (const [name, definition] of Object.entries(toolDefinitions)) {
     const description = connector.tools[name as keyof typeof connector.tools].description;
     expect(definition.description).toBe(description);

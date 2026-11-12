@@ -34,7 +34,7 @@ export function createServer(
   const github = githubToken ? new GithubProfileRepo({ token: githubToken, repo: profileRepo }, fetchImpl) : undefined;
   const extraHeaders = backendAccessHeaders(env);
   const tools = new CareerTools(new CareerBackend({ baseUrl, token, extraHeaders }, fetchImpl), github);
-  const server = new McpServer({ name: "fos-career", version: "0.7.4" });
+  const server = new McpServer({ name: "fos-career", version: "0.8.0" });
   for (const [name, definition] of Object.entries(toolDefinitions)) {
     server.registerTool(
       name,

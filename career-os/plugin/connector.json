@@ -139,6 +139,12 @@
       "title": "공부 후보 목록",
       "description": "조사를 시작할 때 Backend의 미추천 공부 후보를 필터와 cursor로 한 페이지씩 읽습니다. 모든 인자는 선택입니다. limit는 1~50, 기본값 20이고 category는 techBlog, geek, ai, video입니다. sourceKey는 100자 이하, publishedFrom과 publishedTo는 Z로 끝나는 UTC ISO 날짜 시각으로 밀리초를 생략할 수 있고, cursor는 이전 결과의 nextCursor인 1000자 이하 문자열입니다. status는 ok, empty 또는 learning_interests_missing입니다. 관심사가 없으면 그 status만 반환하며 일반 오류로 처리하지 않습니다. 정상 페이지에는 candidates, candidateContextVersion, learningInterestsVersion, historyVersion, recentStudyTopicKeys, nextCursor, hasMore가 있습니다. 후보는 contentKey, canonicalUrl, url, sourceKey, sourceName, title, category, kind, published와 선택적인 최대 500 Unicode 글자 excerpt입니다. 관심사 본문은 반환하지 않습니다. 저장된 후보만 읽으므로 빈 결과가 웹에 자료가 없다는 뜻은 아닙니다. 개인 추천 이력이 포함되며 저장, 신규 수집이나 발행은 하지 않습니다. READ 도구로 승인 없이 호출하며 인증, 통신, 응답 실패는 CAREER 오류입니다."
     },
+    "list_study_recommendations": {
+      "risk": "READ",
+      "approval": "none",
+      "title": "공부 추천 기록",
+      "description": "Backend에 저장된 공부 추천 기록을 최신순으로 읽어 주제 제목과 추천한 자료 제목을 확인합니다. 선택 인자 limit는 1~10이고 기본값은 5이며 필수 인자는 없습니다. 이미 추천한 자료는 list_study_candidates와 get_study_candidates 후보에서 빠지므로 지난 추천이 무엇이었는지는 이 도구로만 읽습니다. status는 ok 또는 empty이고 runs에는 reportId, generatedAt, topics가 있습니다. 각 topics는 topicKey, title, careerQuestion과 items를 가지며 items는 contentKey, title, url입니다. 요약과 추천 이유, 제외 판정은 반환하지 않습니다. 기록이 없으면 runs가 빈 배열인 empty이며 오류가 아닙니다. 개인 추천 이력이 포함되며 저장, 수집이나 발행은 하지 않습니다. READ 도구로 승인 없이 호출하며 인증, 통신, 응답 실패는 CAREER 오류입니다."
+    },
     "get_position_research_constraints": {
       "risk": "READ",
       "approval": "none",

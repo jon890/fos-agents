@@ -18,7 +18,12 @@ import {
   interviewQuestionSchema as backendQuestionSchema,
   personalQuestionBodySchema,
 } from "../../services/career-backend/src/interview/schema.ts";
-import { studyCandidatesQuerySchema, studyRecommendationRunSchema } from "../../services/career-backend/src/study/schema.ts";
+import {
+  studyCandidatesQuerySchema,
+  studyRecommendationRunSchema,
+  studyRecommendationRunsQuerySchema,
+  type StudyRecommendationRunPage,
+} from "../../services/career-backend/src/study/schema.ts";
 import {
   companyPreferenceSchema as backendCompanyPreferenceSchema,
   positionExclusionSchema as backendExclusionSchema,
@@ -34,7 +39,7 @@ import {
   publicTechQuestions,
 } from "./interview.ts";
 import { urlKey, worstCaseRecommendation } from "./study-fixtures.ts";
-import { listStudyCandidatesSchema } from "./study.ts";
+import { listStudyCandidatesSchema, listStudyRecommendationsSchema } from "./study.ts";
 import { CareerTools, contextDocumentKeys, profileDocumentKeys } from "./tools.ts";
 
 test("후보자 맥락 문서 키가 CLI 계약과 같다", () => {
@@ -297,6 +302,42 @@ describe("조사용 읽기 도구가 CLI 와 같은 GET 을 보내고 Backend �
     expect(Object.keys(listStudyCandidatesSchema.shape).sort()).toEqual(
       Object.keys(studyCandidatesQuerySchema.shape).sort(),
     );
+  });
+
+  test("list_study_recommendations 의 입력 칸은 Backend 추천 목록 query 의 칸이고 한도는 Backend 안이다", () => {
+    expect(Object.keys(listStudyRecommendationsSchema.shape)).toEqual(
+      Object.keys(studyRecommendationRunsQuerySchema.shape),
+    );
+    // A value the plugin accepts must be one the Backend accepts.
+    for (const limit of [1, 5, 10]) expect(studyRecommendationRunsQuerySchema.safeParse({ limit: String(limit) }).success).toBe(true);
+    expect(listStudyRecommendationsSchema.safeParse({ limit: 10 }).success).toBe(true);
+    expect(listStudyRecommendationsSchema.safeParse({ limit: 11 }).success).toBe(false);
+  });
+
+  test("list_study_recommendations 는 Backend 추천 목록 응답 모양을 그대로 읽어 같은 칸을 돌려준다", async () => {
+    const page: StudyRecommendationRunPage = {
+      runs: [
+        {
+          reportId: "morning-2026-10-05",
+          generatedAt: "2026-10-05T13:00:00.000Z",
+          topics: [
+            {
+              topicKey: "retry-budget",
+              title: "재시도 예산",
+              careerQuestion: null,
+              items: [{ contentKey: urlKey(3), title: "재시도 예산 글", url: "https://blog.example.com/posts/retry-budget" }],
+            },
+          ],
+        },
+      ],
+    };
+    const plugin = recorder(page);
+    const result = await tools(plugin.fetchImpl).call("list_study_recommendations", { limit: 3 });
+    expect(result.isError).toBeUndefined();
+    expect(plugin.sent).toEqual([
+      { method: "GET", url: "https://career.example.com/api/study/v1/recommendation-runs?limit=3", body: undefined },
+    ]);
+    expect(JSON.parse(result.content[0].text)).toEqual({ status: "ok", runs: page.runs });
   });
 
   test("list_study_candidates 는 CLI 의 getCandidates 와 같은 URL 로 GET 하고 CLI 계약을 통과하는 쪽을 받는다", async () => {
