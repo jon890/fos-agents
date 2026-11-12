@@ -683,6 +683,7 @@ Kurly 와 OliveYoung 은 최근 수집에서는 `feed` adapter 이고, archive m
 | `POST /ingestions` | 자료 묶음과 다음 cursor 원자 저장 |
 | `GET /candidates` | 추천하지 않았고 유효한 제외 판정이 없는 후보, `historyVersion`, 지금의 `candidateContextVersion`, `learningInterests` 의 `version` 과 `body` |
 | `POST /recommendation-runs` | 추천 주제와 자료, 제외 판정의 원자 저장 |
+| `GET /recommendation-runs?limit=` | 저장한 추천 실행을 최신순으로(기본 20, 최대 100). 실행마다 `reportId`, `generatedAt`, 주제(`topicKey`, `title`, `careerQuestion`)와 자료(`contentKey`, `title`, `url`). 후보 목록은 추천한 자료를 빼므로 지난 추천의 제목은 이 endpoint 로만 읽는다 |
 | `GET /recommendation-runs/{reportId}/status` | 기존 추천 실행의 존재 여부. 이관 명령이 ingestion 전에 확인한다 |
 | `POST /publications` | 외부 게시 성공 이력 |
 
@@ -942,6 +943,7 @@ plugin 의 `study-topic-recommender` 스킬이 이미 수집된 후보에서 고
 4. `save_study_recommendation` 을 한 번 부른다. 승인 카드에서 승인하면 `POST /api/study/v1/recommendation-runs` 로 저장된다.
 5. 오늘 리포트가 이미 있으면 `CAREER_STUDY_ALREADY_SAVED` 다. 커넥터가 409 를 받은 뒤 `GET /api/study/v1/recommendation-runs/{reportId}/status` 로 확인해 구분한다. 에이전트는 멈추고 알린다.
 6. 후보를 읽은 뒤 기준이 바뀌었거나, 이미 추천한 주제나 자료를 골랐거나, 같은 요청이 아직 처리 중이면 `CAREER_STUDY_CONFLICT` 다. 잠시 뒤 후보를 다시 읽고 새로 고르되, 한 번 더 충돌하면 멈춘다.
+7. 지난 추천이 무엇이었는지는 `list_study_recommendations` 가 `GET /api/study/v1/recommendation-runs` 로 읽는다. 후보 도구는 이미 추천한 자료를 빼므로 제목을 줄 수 없다.
 
 ### 커넥터에서 갈라지는 곳
 

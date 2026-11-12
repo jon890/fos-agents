@@ -36,10 +36,13 @@ import {
   getStudyCandidatesSchema,
   listStudyCandidates,
   listStudyCandidatesSchema,
+  listStudyRecommendations,
+  listStudyRecommendationsSchema,
   saveStudyRecommendation,
   saveStudyRecommendationSchema,
   type GetStudyCandidatesArgs,
   type ListStudyCandidatesArgs,
+  type ListStudyRecommendationsArgs,
   type SaveStudyRecommendationArgs,
 } from "./study.ts";
 
@@ -176,6 +179,9 @@ export const toolDefinitions: Record<string, { description: string; schema: z.Zo
     list_study_candidates: {
       schema: listStudyCandidatesSchema,
     },
+    list_study_recommendations: {
+      schema: listStudyRecommendationsSchema,
+    },
     get_position_research_constraints: {
       schema: getPositionResearchConstraintsSchema,
     },
@@ -307,6 +313,10 @@ export class CareerTools {
         case "list_study_candidates":
           return this.success(
             await listStudyCandidates(this.backend, parsed.data as ListStudyCandidatesArgs),
+          );
+        case "list_study_recommendations":
+          return this.success(
+            await listStudyRecommendations(this.backend, parsed.data as ListStudyRecommendationsArgs),
           );
         case "get_position_research_constraints":
           return this.success(await getPositionResearchConstraints(this.backend));

@@ -17,7 +17,9 @@ import type {
   StudyPublication,
   StudyPublicationResult,
   StudyRecommendationRun,
+  StudyRecommendationRunPage,
   StudyRecommendationRunResult,
+  StudyRecommendationRunsQuery,
   StudySource,
   StudySourcePut,
   StudySourceUpsertResponse,
@@ -191,6 +193,10 @@ export class StudyService {
       }
       return { publicationId: await this.repository.insertPublication(value, tx) };
     });
+  }
+
+  async listRecommendationRuns(query: StudyRecommendationRunsQuery): Promise<StudyRecommendationRunPage> {
+    return { runs: await this.repository.listRecommendationRuns(query.limit, this.repository.reader()) };
   }
 
   async getRecommendationRunStatus(reportId: string): Promise<{ reportId: string; exists: boolean }> {

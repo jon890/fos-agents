@@ -9,6 +9,7 @@ import {
   studyIngestionSchema,
   studyPublicationSchema,
   studyRecommendationRunSchema,
+  studyRecommendationRunsQuerySchema,
   studySourcePutSchema,
   type StudyCandidatePage,
   type StudyCandidatesQuery,
@@ -18,7 +19,9 @@ import {
   type StudyPublication,
   type StudyPublicationResult,
   type StudyRecommendationRun,
+  type StudyRecommendationRunPage,
   type StudyRecommendationRunResult,
+  type StudyRecommendationRunsQuery,
   type StudySourcePut,
   type StudySourceUpsertResponse,
 } from "./schema.js";
@@ -74,6 +77,13 @@ export class StudyController {
     @Body(new ZodValidationPipe(studyRecommendationRunSchema)) body: StudyRecommendationRun,
   ): Promise<StudyRecommendationRunResult> {
     return this.study.createRecommendationRun(body);
+  }
+
+  @Get("recommendation-runs")
+  listRecommendationRuns(
+    @Query(new ZodValidationPipe(studyRecommendationRunsQuerySchema)) query: StudyRecommendationRunsQuery,
+  ): Promise<StudyRecommendationRunPage> {
+    return this.study.listRecommendationRuns(query);
   }
 
   @Get("recommendation-runs/:reportId/status")

@@ -92,6 +92,11 @@ export const studyCandidatesQuerySchema = z.object({
   cursor: nonEmpty.optional(),
 }).strict();
 
+/** 저장한 추천 실행을 최신순으로 읽는 query. 후보 query 와 달리 cursor 가 없다: 하루 한 건이라 `limit` 로 충분하다. */
+export const studyRecommendationRunsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+}).strict();
+
 export type StudyIngestion = z.infer<typeof studyIngestionSchema>;
 export type StudyCandidatesQuery = z.infer<typeof studyCandidatesQuerySchema>;
 export type StudyIngestionResult = { idempotencyKey: string; acceptedCount: number; cursorVersion: number };
@@ -180,5 +185,18 @@ export const studyPublicationSchema = z.object({
 
 export type StudyRecommendationRun = z.infer<typeof studyRecommendationRunSchema>;
 export type StudyPublication = z.infer<typeof studyPublicationSchema>;
+export type StudyRecommendationRunsQuery = z.infer<typeof studyRecommendationRunsQuerySchema>;
+/** 저장한 추천 한 건. 자료 제목과 주소는 후보 저장소(`study_materials`)에서 읽는다. */
+export type StudyRecommendationRunView = {
+  reportId: string;
+  generatedAt: string;
+  topics: Array<{
+    topicKey: string;
+    title: string;
+    careerQuestion: string | null;
+    items: Array<{ contentKey: string; title: string; url: string }>;
+  }>;
+};
+export type StudyRecommendationRunPage = { runs: StudyRecommendationRunView[] };
 export type StudyRecommendationRunResult = { reportId: string; historyVersion: number };
 export type StudyPublicationResult = { publicationId: string };

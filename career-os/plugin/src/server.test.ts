@@ -10,7 +10,7 @@ import { createServer } from "./server.ts";
 import connector from "../connector.json";
 
 function expectManifestDescriptions(tools: Array<{ name: string; description?: string }>) {
-  expect(tools).toHaveLength(19);
+  expect(tools.map(({ name }) => name).sort()).toEqual(Object.keys(connector.tools).sort());
   expect(Object.fromEntries(tools.map(({ name, description }) => [name, description]))).toEqual(
     Object.fromEntries(
       Object.entries(connector.tools).map(([name, policy]) => [name, policy.description]),
@@ -52,7 +52,7 @@ test("MCP 서버가 알리는 version 이 package.json 의 version 과 같다", 
   }
 });
 
-test("MCP 로 도구 열아홉 개를 탐색하고 확인 도구가 structuredContent 와 텍스트에 같은 값을 낸다", async () => {
+test("MCP 로 manifest 에 선언한 도구를 모두 탐색하고 확인 도구가 structuredContent 와 텍스트에 같은 값을 낸다", async () => {
   const server = createServer(env, async (input) => {
     expect(String(input)).toBe("https://career.example.com/api/profile/v1/documents");
     return new Response(JSON.stringify({ documents: [] }));

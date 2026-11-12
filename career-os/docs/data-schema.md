@@ -1352,6 +1352,7 @@ Hermes 에서는 서버 이름 `career` 로 `mcp__career__<도구>` 가 된다.
 | `get_study_candidates` | `READ`, `none` | 선택 `limit`, `category` | `{ candidateContextVersion, historyVersion, learningInterests, recentStudyTopicKeys, nextCursor, candidates }` |
 | `save_study_recommendation` | `WRITE`, `required`, `outbound: false` | `candidateContextVersion`, `topics`, `rejections`, 선택 `generatedAt` | `{ reportId, generatedAt, historyVersion }` |
 | `list_study_candidates` | `READ`, `none` | 선택 `limit`, `category`, `sourceKey`, `publishedFrom`, `publishedTo`, `cursor` | `{ status, candidateContextVersion, learningInterestsVersion, historyVersion, recentStudyTopicKeys, nextCursor, hasMore, candidates }`. 관심사 문서가 없으면 `{ status: "learning_interests_missing" }` |
+| `list_study_recommendations` | `READ`, `none` | 선택 `limit` | `{ status, runs: [{ reportId, generatedAt, topics: [{ topicKey, title, careerQuestion, items: [{ contentKey, title, url }] }] }] }`. 기록이 없으면 `status` 는 `empty` 이고 `runs` 는 빈 배열이다 |
 | `get_position_research_constraints` | `READ`, `none` | 없음 | `{ readiness, missing, exclusions, companyPreferences }` |
 | `check_position_exclusions` | `READ`, `none` | `postings`(1개 이상 10개 이하). 칸은 `url`, `company`, `title`, 선택 `source`, `identityHash` | `{ readiness, missing, results: [{ position, url, verdict, basis? }] }` |
 
@@ -1401,6 +1402,7 @@ Hermes 에서는 서버 이름 `career` 로 `mcp__career__<도구>` 가 된다.
 - 후보 한 줄은 `{ contentKey, canonicalUrl, url, sourceKey, sourceName, title, category, kind, published, excerpt }` 다. `excerpt` 는 500자에서 자른다. 관심사 본문은 싣지 않고 `learningInterestsVersion` 만 싣는다
 - `status` 는 `ok`, `empty`, `learning_interests_missing` 가운데 하나다. `empty` 는 조건에 맞는 미추천 후보가 수집돼 있지 않다는 뜻이고 웹에 자료가 없다는 뜻이 아니다. Backend 의 409 는 오류가 아닌 `learning_interests_missing` 이다
 - `hasMore` 는 `nextCursor` 가 있는지다. 잘못된 `cursor` 는 Backend 가 400 으로 답해 `CAREER_BAD_REQUEST` 다
+- `list_study_recommendations` 는 `GET /api/study/v1/recommendation-runs?limit=` 한 쪽만 읽는다. `limit` 은 1 이상 10 이하이고 기본값은 5 이다(Backend 는 1 이상 100 이하, 기본값 20). 최신 `generatedAt` 순이다. 요약, 추천 이유, 제외 판정은 싣지 않는다. 후보 도구(`get_study_candidates`, `list_study_candidates`)는 이미 추천한 자료를 빼므로 지난 추천의 제목은 이 도구로만 읽는다
 - `get_position_research_constraints` 는 `GET /api/positions/v1/exclusions` 와 `GET /api/positions/v1/company-preferences` 를 함께 읽는다. 규칙과 선호의 칸은 Backend 의 `src/positions/schema.ts` 와 같다
 - `check_position_exclusions` 는 같은 두 GET 으로 규칙을 읽고 공고마다 `verdict` 를 낸다. 판정은 수집기의 `feedback/exclusion-match.ts` 가 하며 모델이 규칙을 해석하지 않는다. 규칙의 사유와 근거 주소는 결과에 싣지 않는다
 - `verdict` 는 `excluded`, `clear`, `undeterminable` 이다. `basis` 는 `excluded` 일 때 `identity`, `url`, `company`, `company-role`, `company-preference` 이고 `undeterminable` 일 때 `identity-missing`, `invalid-url`, `rule-unreadable`, `constraints-hold` 다. `clear` 는 이 공고에 적용되는 규칙을 모두 비교했고 걸린 것이 없다는 뜻이다. 단 `source` 를 모르는 공고는 식별자와 URL 을 함께 가진 규칙을 정규화 URL 로만 비교한다. 회사 비교는 `companyKey` 와 같은 정규화(공백 연속과 대소문자)를 쓴다
