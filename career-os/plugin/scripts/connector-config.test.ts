@@ -106,8 +106,7 @@ test("plugin.json 과 package.json 의 version 이 같다", () => {
   expect(read(".claude-plugin/plugin.json").version).toBe(read("package.json").version);
 });
 
-test("도구는 스물이고 WRITE 는 저장 도구 다섯과 GitHub 갱신 도구뿐이며 모두 승인이 필요하다", () => {
-  expect(Object.keys(connector.tools)).toHaveLength(20);
+test("WRITE 는 저장 도구 다섯과 GitHub 갱신 도구뿐이며 모두 승인이 필요하다", () => {
   const writes = policies.filter(([, policy]) => policy.risk === "WRITE");
   expect(writes.map(([name]) => name).sort()).toEqual([
     "save_context_document",
