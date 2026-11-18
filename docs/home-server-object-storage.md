@@ -24,6 +24,7 @@ Admin UI는 bucket과 객체를 확인하는 운영 화면이다.
 | `career-os` | `career-os` | 비공개 작업 release | `career-os/docs/` |
 | `ji-yoon-blog` | `ji-yoon-blog` | 블로그 글에 쓸 사진 원본 | `ji-yoon-blog/docs/data-schema.md` |
 | `gersang-lab` | `gersang-lab-assets` | 원작에서 내보낸 그림과 소리. 객체 key는 `sha256/<해시>` | `gersang-lab/docs/features/server/asset-storage.md` |
+| `photo-backup` | `photo-backup` | 맥의 Google 포토 Takeout을 평탄화한 사진·동영상 원본 | 이 저장소의 워크스페이스가 아니다. 홈서버 운영 저장소의 photo-backup 기능 문서가 갖는다 |
 
 새 워크스페이스가 객체 저장소를 사용하려면 다음 정보를 해당 워크스페이스 문서와 환경 설정에 추가한다.
 
@@ -36,6 +37,22 @@ Admin UI는 bucket과 객체를 확인하는 운영 화면이다.
 | object schema | 객체 key, 불변 조건, 현재 상태와 삭제 규칙 |
 
 credential과 실제 endpoint는 `.env`에만 두고 공개 문서와 결과 JSON에는 기록하지 않는다.
+
+### photo-backup collection
+
+사람이 필요할 때 맥에서 평탄화한 사진·동영상 원본을 올린다.
+
+| 항목 | 값 |
+| --- | --- |
+| identity | `photo-backup-writer` |
+| 동작 | `Read`, `Write`, `List`. `Write`에 삭제가 포함되지만 업로드 도구는 삭제를 전파하지 않는다 |
+| object key | 평탄화 폴더의 파일 이름을 그대로 쓴다 |
+| 불변 조건 | 같은 key에 다른 내용이면 덮어쓰지 않고 멈춘다 |
+| 삭제 규칙 | 원본에서 지운 파일의 객체는 남긴다 |
+| 대조 | 파일별 SHA-256 manifest로 확인한다 |
+| 접근 | 맥에서 SSH 로컬 포트 전달로 loopback S3에 연결한다 |
+
+키 값과 키 파일 위치는 이 문서에 쓰지 않는다.
 
 ### 권한 표기가 실제로 막는 범위
 
