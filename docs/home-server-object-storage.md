@@ -26,6 +26,18 @@ Admin UI는 bucket과 객체를 확인하는 운영 화면이다.
 | `gersang-lab` | `gersang-lab-assets` | 원작에서 내보낸 그림과 소리. 객체 key는 `sha256/<해시>` | `gersang-lab/docs/features/server/asset-storage.md` |
 | `photo-backup` | `photo-backup` | 맥의 Google 포토 Takeout을 평탄화한 사진·동영상 원본 | 이 저장소의 워크스페이스가 아니다. 홈서버 운영 저장소의 photo-backup 기능 문서가 갖는다 |
 
+새 워크스페이스가 객체 저장소를 사용하려면 다음 정보를 해당 워크스페이스 문서와 환경 설정에 추가한다.
+
+| 항목 | 조건 |
+| --- | --- |
+| collection key | 워크스페이스 안에서 바뀌지 않는 식별자 |
+| bucket | 다른 collection과 겹치지 않는 S3 bucket 이름 |
+| endpoint | 홈서버 내부에서 접근할 S3 API 주소 |
+| credential | 해당 bucket에 필요한 권한만 가진 access key와 secret key |
+| object schema | 객체 key, 불변 조건, 현재 상태와 삭제 규칙 |
+
+credential과 실제 endpoint는 `.env`에만 두고 공개 문서와 결과 JSON에는 기록하지 않는다.
+
 ### photo-backup collection
 
 사람이 필요할 때 맥에서 평탄화한 사진·동영상 원본을 올린다.
@@ -41,18 +53,6 @@ Admin UI는 bucket과 객체를 확인하는 운영 화면이다.
 | 접근 | 맥에서 SSH 로컬 포트 전달로 loopback S3에 연결한다 |
 
 키 값과 키 파일 위치는 이 문서에 쓰지 않는다.
-
-새 워크스페이스가 객체 저장소를 사용하려면 다음 정보를 해당 워크스페이스 문서와 환경 설정에 추가한다.
-
-| 항목 | 조건 |
-| --- | --- |
-| collection key | 워크스페이스 안에서 바뀌지 않는 식별자 |
-| bucket | 다른 collection과 겹치지 않는 S3 bucket 이름 |
-| endpoint | 홈서버 내부에서 접근할 S3 API 주소 |
-| credential | 해당 bucket에 필요한 권한만 가진 access key와 secret key |
-| object schema | 객체 key, 불변 조건, 현재 상태와 삭제 규칙 |
-
-credential과 실제 endpoint는 `.env`에만 두고 공개 문서와 결과 JSON에는 기록하지 않는다.
 
 ### 권한 표기가 실제로 막는 범위
 
