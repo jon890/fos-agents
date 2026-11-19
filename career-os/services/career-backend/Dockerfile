@@ -32,7 +32,12 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+# 실행과 migration 은 node 로 직접 호출하므로 설치 뒤 패키지 관리자를 남기지 않는다.
+RUN npm ci --omit=dev \
+  && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+    /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
+    /usr/local/bin/pnpm /usr/local/bin/pnpx /usr/local/bin/yarn /usr/local/bin/yarnpkg \
+    /root/.cache/node/corepack /root/.npm
 
 # `prisma.config.ts` 와 `prisma/schema.prisma` 는 ENTRYPOINT 의 `migrate` 가 읽는다.
 # `prisma/migrations/` 는 `GET /health/ready` 도 읽어 적용되어야 할 migration 이름을 만든다.
