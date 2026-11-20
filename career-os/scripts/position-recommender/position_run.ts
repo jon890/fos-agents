@@ -125,7 +125,7 @@ function parsePositionRunArgs(argv: string[]): {
   }
   if (command === "schema") {
     const name = argv[1];
-    if (argv.length !== 2 || !(name in RESULT_SCHEMAS)) {
+    if (argv.length !== 2 || !Object.hasOwn(RESULT_SCHEMAS, name)) {
       throw new PositionRunUsageError(
         `schema에는 ${Object.keys(RESULT_SCHEMAS).join(" 또는 ")} 하나가 필요합니다.`,
       );

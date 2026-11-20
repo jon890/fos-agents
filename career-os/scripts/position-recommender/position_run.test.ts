@@ -476,7 +476,12 @@ test("schema는 결과 파일의 입력 계약을 JSON Schema 로 내고 실행 
 });
 
 test("schema는 모르는 이름이나 남는 인자를 거절한다", async () => {
-  for (const argv of [["schema"], ["schema", "unknown"], ["schema", "analyses", "--run", "x"]]) {
+  for (const argv of [
+    ["schema"],
+    ["schema", "unknown"],
+    ["schema", "toString"],
+    ["schema", "analyses", "--run", "x"],
+  ]) {
     await expect(runPositionCommand(argv)).rejects.toBeInstanceOf(PositionRunUsageError);
   }
 });
