@@ -12,7 +12,7 @@
 - 이력서·경력기술서를 작성하고 검증할 때: plugin 의 `resume-preparer` (Claude Code)
 - 기술·인성 면접을 연습할 때: plugin 의 `interview-practice`. 공고별 질문으로 연습하거나 질문을 더 찾을 때: plugin 의 `interview-question-prep`
 - 오늘 읽거나 볼 기술 자료를 고를 때: plugin 의 `study-topic-recommender`. 읽을거리를 수집하고 HTML 리포트를 만들 때: plugin 의 `study-collection` (Claude Code)
-- 원티드, LinkedIn, GitHub 프로필을 갱신할 때: plugin 의 `sync-profile` (Claude Code)
+- 원티드, LinkedIn, GitHub 프로필을 갱신할 때: plugin 의 `sync-profile` (Claude Code). 비서 웹에서는 `career-connector` 가 원티드와 GitHub 를 갱신한다
 
 `application-package-writer`는 전체 지원 요청에서 `resume-preparer`까지 연결한다.
 공개 질문 보강은 [`public/question-bank/MAINTENANCE.md`](public/question-bank/MAINTENANCE.md)의 저장소 유지 절차로 한다.

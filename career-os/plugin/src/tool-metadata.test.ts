@@ -96,14 +96,16 @@ test("설명을 바꿔도 승인 정책과 입력 스키마를 바꾸지 않는�
     expect(definition.schema).toBe(toolDefinitions[name]!.schema);
     expect(Object.keys(definition).sort()).toEqual(["description", "schema"]);
   }
+  // Writes that land on a public profile: outbound, and no standing grant.
+  const publicWrites = ["update_github_profile", "update_wanted_resume"];
   for (const [name, policy] of Object.entries(connector.tools)) {
     const needsOutbound = policy.risk !== "READ" && policy.approval === "required";
     const expected = ["approval", "description", "risk", "title"];
     if (needsOutbound) {
       expected.push("outbound");
-      expect((policy as { outbound?: boolean }).outbound, name).toBe(name === "update_github_profile");
+      expect((policy as { outbound?: boolean }).outbound, name).toBe(publicWrites.includes(name));
     }
-    if (name === "update_github_profile") expected.push("grant");
+    if (publicWrites.includes(name)) expected.push("grant");
     expect(Object.keys(policy).sort(), name).toEqual(expected.sort());
   }
   expect(connector.tools.update_github_profile).toMatchObject({ outbound: true, grant: false });
