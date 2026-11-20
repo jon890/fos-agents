@@ -120,12 +120,12 @@ describe("agent_usage.py --json", () => {
     expect(rowsOf(home)[0]).toMatchObject({ claude_tokens: 6300, sessions: 1 });
   }, SUBPROCESS_TEST_TIMEOUT_MS);
 
-  test("id 가 다르거나 키가 없는 줄은 따로 센다", () => {
+  test("message.id 가 다르거나 키가 없는 줄은 따로 센다", () => {
     const home = tempHome();
     writeLines(join(home, ".claude/projects/sample/s1.jsonl"), [
       claudeLine({ id: "msg_a", requestId: "req_a", sessionId: "s1", output: 100 }),
       claudeLine({ id: "msg_b", requestId: "req_b", sessionId: "s1", output: 100 }),
-      claudeLine({ id: "msg_a", requestId: "req_c", sessionId: "s1", output: 100 }),
+      claudeLine({ id: "msg_c", requestId: "req_a", sessionId: "s1", output: 100 }),
       claudeLine({ sessionId: "s1", output: 100 }),
       claudeLine({ sessionId: "s1", output: 100 }),
     ]);
@@ -210,5 +210,96 @@ describe("agent_usage.py --json", () => {
     const result = runScript(home, ["--merge", totals]);
     expect(result.exitCode).toBe(2);
     expect(result.stderr).toContain("--merge");
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
+
+  test("message.id 만 있거나 requestId 만 있는 줄도 한 응답으로 세고, 한 줄에만 requestId 가 빠져도 두 번 세지 않는다", () => {
+    const home = tempHome();
+    writeLines(join(home, ".claude/projects/sample/s1.jsonl"), [
+      claudeLine({ id: "msg_only", sessionId: "s1", output: 10 }),
+      claudeLine({ id: "msg_only", sessionId: "s1", output: 40 }),
+      claudeLine({ requestId: "req_only", sessionId: "s1", output: 20 }),
+      claudeLine({ requestId: "req_only", sessionId: "s1", output: 60 }),
+      claudeLine({ id: "msg_mixed", requestId: "req_mixed", sessionId: "s1", output: 30 }),
+      claudeLine({ id: "msg_mixed", sessionId: "s1", output: 100 }),
+    ]);
+    expect(rowsOf(home)[0]).toMatchObject({ claude_tokens: 200 });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
+
+  test("UTC 달 경계를 넘는 같은 응답은 처음 본 줄의 달에 한 번만 센다", () => {
+    const home = tempHome();
+    writeLines(join(home, ".claude/projects/sample/s1.jsonl"), [
+      claudeLine({ id: "m1", requestId: "r1", sessionId: "s1", output: 10, timestamp: "2026-03-31T23:59:59Z" }),
+      claudeLine({ id: "m1", requestId: "r1", sessionId: "s1", output: 50, timestamp: "2026-04-01T00:00:01Z" }),
+    ]);
+    const rows = rowsOf(home);
+    expect(rows.map((row) => [row.month, row.claude_tokens])).toEqual([
+      ["2026.03", 50],
+      ["2026.04", 0],
+    ]);
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
+
+  test("깨진 줄과 정수가 아닌 usage 값은 그 값만 건너뛴다", () => {
+    const home = tempHome();
+    const file = join(home, ".claude/projects/sample/s1.jsonl");
+    mkdirSync(join(file, ".."), { recursive: true });
+    const good = claudeLine({ id: "m1", requestId: "r1", sessionId: "s1", output: 100, input: 5 });
+    const odd = claudeLine({ id: "m2", requestId: "r2", sessionId: "s1", output: 7 });
+    (odd.message.usage as Record<string, unknown>).input_tokens = "12";
+    writeFileSync(file, `{"usage": broken\n${JSON.stringify(good)}\n${JSON.stringify(odd)}\n`);
+    expect(rowsOf(home)[0]).toMatchObject({ claude_tokens: 112 });
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
+
+  test("--totals-json 으로 내보낸 파일을 다른 HOME 에서 --merge 하면 원래 기기의 측정값과 같다", () => {
+    const company = tempHome();
+    writeLines(join(company, ".claude/projects/sample/s1.jsonl"), [
+      claudeLine({ id: "m1", requestId: "r1", sessionId: "s1", input: 300, output: 10, cacheWrite: 2_000, cacheWrite1h: 500, cacheRead: 9_000 }),
+      claudeLine({ id: "m1", requestId: "r1", sessionId: "s1", input: 300, output: 90, cacheWrite: 2_000, cacheWrite1h: 500, cacheRead: 9_000 }),
+      claudeLine({ id: "m2", requestId: "r2", sessionId: "s1", output: 50, model: "mystery-model" }),
+    ]);
+    writeLines(join(company, ".codex/sessions/2026/03/session.jsonl"), [
+      {
+        timestamp: "2026-03-11T01:00:00Z",
+        model: "gpt-5.5",
+        payload: { info: { total_token_usage: { total_tokens: 500, input_tokens: 400, cached_input_tokens: 100, output_tokens: 100 } } },
+      },
+    ]);
+    const exported = runScript(company, []);
+    expect(exported.exitCode).toBe(0);
+    const totalsRun = Bun.spawnSync([interpreterPath(), join(import.meta.dir, "agent_usage.py"), "--totals-json", "--source", "company"], {
+      env: { ...process.env, HOME: company },
+    });
+    expect(totalsRun.exitCode).toBe(0);
+    const totalsFile = join(company, "company.json");
+    writeFileSync(totalsFile, totalsRun.stdout.toString());
+
+    const home = tempHome();
+    expect(rowsOf(home, ["--merge", totalsFile])).toEqual(rowsOf(company));
+  }, SUBPROCESS_TEST_TIMEOUT_MS);
+
+  test("--merge 는 정해진 칸 밖의 키, 어긋난 Codex 칸, 겹치는 source 를 거절한다", () => {
+    const home = tempHome();
+    const month = (claude: object, codex: object = {}) => ({ claude, codex, claude_sessions: 1, codex_sessions: 0 });
+    const claudeModel = { input: 1, cache_write_5m: 0, cache_write_1h: 0, cache_read: 0, output: 1 };
+    const cases: Record<string, object> = {
+      typo: { source: "a", months: { "2026-03": { ...month({}), cluade: {} } } },
+      oldField: { source: "a", months: { "2026-03": month({ "claude-opus-4-7": { ...claudeModel, cache_write: 5 } }) } },
+      cachedOverInput: { source: "a", months: { "2026-03": month({}, { "gpt-5.5": { input: 10, cached: 20, output: 0, total: 30 } }) } },
+      totalUnder: { source: "a", months: { "2026-03": month({}, { "gpt-5.5": { input: 10, cached: 0, output: 10, total: 15 } }) } },
+    };
+    for (const [name, body] of Object.entries(cases)) {
+      const file = join(home, `${name}.json`);
+      writeFileSync(file, JSON.stringify(body));
+      const result = runScript(home, ["--merge", file]);
+      expect([name, result.exitCode]).toEqual([name, 2]);
+    }
+    const valid = { source: "company", months: { "2026-03": month({ "claude-opus-4-7": claudeModel }) } };
+    const first = join(home, "first.json");
+    const second = join(home, "second.json");
+    writeFileSync(first, JSON.stringify(valid));
+    writeFileSync(second, JSON.stringify(valid));
+    expect(runScript(home, ["--merge", first]).exitCode).toBe(0);
+    const duplicated = runScript(home, ["--merge", first, "--merge", second]);
+    expect(duplicated.exitCode).toBe(2);
+    expect(duplicated.stderr).toContain("source");
   }, SUBPROCESS_TEST_TIMEOUT_MS);
 });
