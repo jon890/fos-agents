@@ -122,6 +122,13 @@ test("다른 실행 환경 전용 표현 검사는 실행 환경 문장, 하위 
     "WebFetch 로 회사 블로그를 읽는다.",
     "`Write` 도구로 결과 파일을 쓴다.",
     "~/.claude/skills 를 읽는다.",
+    "~/.claude 아래를 본다.",
+    "Read 도구로 큐를 읽는다.",
+    "`Read`/`Write` 도구로 결과를 고친다.",
+    "인자는 $ARGUMENTS 로 받는다.",
+    "allowed-tools: Bash",
+    "${CLAUDE_PLUGIN_DATA} 에 남긴다.",
+    "${CLAUDE_PROJECT_DIR} 에서 연다.",
   ])
     expect(hostOnlyFindings("sample.md", text), text).not.toEqual([]);
   expect(hostOnlyFindings("sample.md", "`write_file` 로 결과 파일을 쓴다. `${CLAUDE_PLUGIN_ROOT}` 는 셸이 푼다.")).toEqual([]);

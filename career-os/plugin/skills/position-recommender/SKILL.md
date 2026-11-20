@@ -70,6 +70,7 @@ JSON을 다루려고 `bun -e`, `python -c`, heredoc 같은 즉석 스크립트�
 도움말과 오류 출력에 나오는 `position_run.ts <하위 명령>` 은 `<CAREER_LOCAL> position <하위 명령>` 으로 읽는다.
 CLI가 결과 파일의 최상위 칸과 빈 `results`, `failures` 배열을 먼저 만든다.
 `results`와 `failures` 항목의 칸은 `<CAREER_LOCAL> position schema company-tiers` 와 `<CAREER_LOCAL> position schema analyses` 가 출력하는 JSON Schema를 따른다.
+칸 사이 조건은 JSON Schema에 나오지 않는다. `fitScore`는 `scoreBreakdown` 합계이고, 회사 판정의 조건은 아래 문장을 따른다.
 모델은 `results`와 `failures`에만 쓰며, 큐의 각 항목을 둘 중 하나에 한 번씩 넣는다.
 반영 결과가 `partial`이면 stdout에 나온 남은 항목만 다시 판단해 같은 명령을 실행한다.
 `collect`가 후보자 맥락 문서가 없다며 멈추면 `save_context_document` 도구로 문서를 저장하도록 안내하고, 저장된 뒤 `collect`를 다시 실행한다.

@@ -45,8 +45,10 @@ export const HOST_ONLY_PATTERNS: readonly RegExp[] = [
   /Claude Code/,
   /하위 에이전트|서브에이전트|subagent/i,
   /\b(WebFetch|WebSearch|AskUserQuestion|TodoWrite|NotebookEdit)\b/,
-  /`(Agent|Task|Skill|Write|Edit|Read|Bash|Grep|Glob)` 도구/,
-  /CLAUDE_PROJECT_DIR|~\/\.claude\//,
+  // `Read` 도구, Read 도구, `Read`/`Write` 도구 처럼 도구 이름을 나열한 꼴을 모두 잡는다.
+  /\b`?(Agent|Task|Skill|Write|Edit|Read|Bash|Grep|Glob)`?(\s*[/,·]\s*`?(Agent|Task|Skill|Write|Edit|Read|Bash|Grep|Glob)`?)*\s*도구/,
+  // `${CLAUDE_PLUGIN_ROOT}` 는 실행 공간이 넘기는 env 라 잡지 않는다.
+  /\$ARGUMENTS|allowed-tools|CLAUDE_PLUGIN_DATA|CLAUDE_PROJECT_DIR|~\/\.claude\b/,
 ];
 
 export function hostOnlyFindings(path: string, content: string): string[] {
