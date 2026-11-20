@@ -5,3 +5,4 @@ fos-assistant 의 일반 에이전트에 설치하는 스킬의 사본을 둔다
 
 스킬 디렉터리는 직접 고치지 않는다. 원본은 `../skills/` 이고, `bun run scripts/agent-skills.ts` 가 실행 환경 문장만 바꿔 다시 만든다.
 사본을 낼 스킬과 바꿀 문장은 `scripts/agent-skills.ts` 의 `AGENT_SKILL_COPIES` 가 갖고, `scripts/agent-skills.test.ts` 가 사본이 원본과 어긋나는지 본다.
+사본에 다른 실행 환경 전용 표현(실행 환경 문장, 하위 에이전트, 그 환경의 도구 이름)이 남으면 `HOST_ONLY_PATTERNS` 검사가 사본 만들기를 멈춘다.

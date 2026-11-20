@@ -29,9 +29,33 @@ const SHELL_ENVIRONMENT: readonly Replacement[] = [
   [
     LAUNCHER_LINE,
     LAUNCHER_LINE +
-      "`${CLAUDE_PLUGIN_ROOT}` 와 아래 환경 변수는 실행 공간이 넘긴 값을 셸이 푼다. 명령을 셸에 그대로 넘기고 경로를 짐작해 바꿔 쓰지 않는다.\n",
+      "`${CLAUDE_PLUGIN_ROOT}` 와 아래 환경 변수는 실행 공간이 넘긴 값을 셸이 푼다. 명령을 셸에 그대로 넘기고 경로를 짐작해 바꿔 쓰지 않는다.\n" +
+      // 실측(2026-11-21): 비서 에이전트가 플러그인 폴더를 뒤져 `skills/` 원본의 실행 환경 문장을 읽고 중간에 멈췄다.
+      "`${CLAUDE_PLUGIN_ROOT}` 는 이름과 달리 이 실행 공간에 붙은 플러그인 폴더일 뿐이고, 실행 환경을 가리키지 않는다.\n" +
+      "절차는 이 문서와 이 스킬의 `references/` 가 전부다. 플러그인 폴더의 `skills/` 는 다른 실행 환경용 원본이니 읽지 않는다.\n" +
+      "실행 공간의 파일은 `read_file`, `write_file`, `patch` 같은 파일 도구로 읽고 쓴다.\n",
   ],
 ];
+
+/**
+ * 사본이 다른 실행 환경에서만 쓰는 도구나 문장을 담지 않게 막는 패턴이다. 원본이 이런 말을 새로 담으면
+ * 사본 규칙에서 바꿀 문장을 더해야 한다.
+ */
+export const HOST_ONLY_PATTERNS: readonly RegExp[] = [
+  /Claude Code/,
+  /하위 에이전트|서브에이전트|subagent/i,
+  /\b(WebFetch|WebSearch|AskUserQuestion|TodoWrite|NotebookEdit)\b/,
+  // `Read` 도구, Read 도구, `Read`/`Write` 도구 처럼 도구 이름을 나열한 꼴을 모두 잡는다.
+  /\b`?(Agent|Task|Skill|Write|Edit|Read|Bash|Grep|Glob)`?(\s*[/,·]\s*`?(Agent|Task|Skill|Write|Edit|Read|Bash|Grep|Glob)`?)*\s*도구/,
+  // `${CLAUDE_PLUGIN_ROOT}` 는 실행 공간이 넘기는 env 라 잡지 않는다.
+  /\$ARGUMENTS|allowed-tools|CLAUDE_PLUGIN_DATA|CLAUDE_PROJECT_DIR|~\/\.claude\b/,
+];
+
+export function hostOnlyFindings(path: string, content: string): string[] {
+  return HOST_ONLY_PATTERNS.filter((pattern) => pattern.test(content)).map(
+    (pattern) => `${path}: 다른 실행 환경 전용 표현이 있다 ${pattern}`,
+  );
+}
 
 /**
  * 사본을 내는 스킬과 `SKILL.md` 교체 목록이다. 셸에 요구하는 env 는 `connector.json` 의 `agent_skills.sandbox_env` 가 갖는다.
@@ -76,6 +100,8 @@ export function renderAgentSkill(name: string): Map<string, string> {
     if (!existsSync(directory)) continue;
     for (const file of filesUnder(directory)) files.set(relative(source, file), readFileSync(file, "utf8"));
   }
+  const findings = [...files].flatMap(([path, content]) => hostOnlyFindings(`${name}/${path}`, content));
+  if (findings.length > 0) throw new Error(findings.join("\n"));
   return files;
 }
 

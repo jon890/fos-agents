@@ -5,6 +5,7 @@ import { basename, join } from "node:path";
 import type { AnalysisQueueResponse } from "../../services/career-backend/src/positions/schema.ts";
 import {
   commitAnalysesForRun,
+  PositionRunUsageError,
   runPositionCommand,
   type PositionRunOperations,
 } from "./position_run.ts";
@@ -410,6 +411,79 @@ test("collect는 회사 판정 큐의 실행 ID로 결과 틀을 만들고 대�
     failures: [],
   });
   expect(lines).toContain("채울 항목: 회사 1곳. results 나 failures에 한 번씩 넣는다.");
+});
+
+test("collect는 실패한 수집기를 진단 코드별로 알리고 판정을 이어 가라고 안내한다", async () => {
+  const directory = workspace();
+  const lines: string[] = [];
+
+  const exitCode = await runPositionCommand(["collect", "--run", directory], {
+    operations: operations({
+      async prepare(runPaths) {
+        writeJson(runPaths.companyTierQueue, companyTierQueue());
+        return {
+          passed: true,
+          collectionRunId: "collection-1",
+          companyTierRunId: "company-tier-1",
+          companyTierQueuedCount: 1,
+          analysisRunId: null,
+          candidatePoolBytes: 1,
+          candidateCount: 1,
+          queueBodyBytes: 1,
+          ...analysisQueue().summary,
+          output: runPaths.companyTierQueue,
+        };
+      },
+      async collectEvidence() {
+        return {
+          companyCount: 1,
+          evidenceCount: 0,
+          failedCollectorCount: 1,
+          failedCollectors: [{ diagnostic: "dart: 인증키 없음", companyCount: 1 }],
+        };
+      },
+    }),
+    writeLine: (line) => lines.push(line),
+  });
+
+  expect(exitCode).toBe(0);
+  expect(lines).toContain("실패한 수집기: dart: 인증키 없음 (회사 1곳)");
+  expect(lines).toContain(
+    "수집기 실패는 그 출처의 근거만 빠진 것이다. 멈추지 않고 저장된 근거로 회사 판정을 이어 간다.",
+  );
+  expect(lines).toContain("다음 명령: commit-company-tiers");
+});
+
+test("schema는 결과 파일의 입력 계약을 JSON Schema 로 내고 실행 디렉터리를 만들지 않는다", async () => {
+  for (const [name, version] of [
+    ["company-tiers", 1],
+    ["analyses", 2],
+  ] as const) {
+    const lines: string[] = [];
+    const exitCode = await runPositionCommand(["schema", name], {
+      createRunDirectory: () => {
+        throw new Error("실행 디렉터리를 만들면 안 됩니다.");
+      },
+      writeLine: (line) => lines.push(line),
+    });
+    expect(exitCode).toBe(0);
+    const schema = JSON.parse(lines.join("\n")) as {
+      properties: { schemaVersion: { const: number }; results: { items: { required: string[] } } };
+    };
+    expect(schema.properties.schemaVersion.const).toBe(version);
+    expect(schema.properties.results.items.required.length).toBeGreaterThan(0);
+  }
+});
+
+test("schema는 모르는 이름이나 남는 인자를 거절한다", async () => {
+  for (const argv of [
+    ["schema"],
+    ["schema", "unknown"],
+    ["schema", "toString"],
+    ["schema", "analyses", "--run", "x"],
+  ]) {
+    await expect(runPositionCommand(argv)).rejects.toBeInstanceOf(PositionRunUsageError);
+  }
 });
 
 test("collect는 공고 분석 큐의 실행 ID로 결과 틀을 만들고 대상 수를 알린다", async () => {
