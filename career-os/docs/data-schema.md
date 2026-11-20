@@ -1273,6 +1273,31 @@ HTTP 계약은 [`flow.md`](flow.md#프로필-http-계약)가 소유한다. 이�
 
 `unpriced_tokens` 는 달마다 낸다. 합계에만 있으면 한 달의 기록에 넣을 수 없다.
 
+### 다른 기기의 사용량 합계 파일
+
+세션 기록이 여러 기기에 나뉘어 있으면 다른 기기에서 `agent_usage.py --totals-json --source <기기 이름>` 으로 합계 파일을 내보내고,
+측정하는 기기에서 `agent_usage.py --merge <파일>` 로 더한다. 파일 하나는 한 기기의 기록이다. 같은 기기의 세션이 든 파일을 더하면 두 번 센다.
+
+```json
+{
+  "source": "company",
+  "months": {
+    "YYYY-MM": {
+      "claude": { "<모델>": { "input": 0, "cache_write_5m": 0, "cache_write_1h": 0, "cache_read": 0, "output": 0 } },
+      "codex": { "<모델>": { "input": 0, "cached": 0, "output": 0, "total": 0 } },
+      "claude_sessions": 0,
+      "codex_sessions": 0
+    }
+  }
+}
+```
+
+- 칸은 위와 정확히 같아야 한다. 빠지거나 남는 키가 있으면 `--merge` 가 종료 코드 2 로 거절한다.
+- 값은 0 이상 정수다. Codex 는 `input` 이 `cached` 를 포함하고, `cached <= input`, `total >= input + output` 이다.
+- 환산 비용은 파일에 두지 않는다. 더하는 쪽이 자기 단가표로 다시 환산한다.
+- 여러 파일의 `source` 가 겹치면 거절한다.
+- 합친 값으로 이미 기록된 달을 바꾸면 `note` 에 합친 `source` 를 적는다.
+
 `library/profiles/github-agent-usage-snapshots.md` 의 표에서 옮긴 달은 다르게 저장한다.
 그 표는 토큰을 십억 단위 소수 한 자리(`1.3B`)로 적었고 환산 비용과 세션 수의 칸이 없다.
 
