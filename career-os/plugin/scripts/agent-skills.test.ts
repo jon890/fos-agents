@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
-import { AGENT_SKILL_COPIES, AGENT_SKILLS_DIRECTORY, agentSkillDrift } from "./agent-skills.ts";
+import { AGENT_SKILL_COPIES, AGENT_SKILLS_DIRECTORY, agentSkillDrift, hostOnlyFindings } from "./agent-skills.ts";
 
 const pluginRoot = join(import.meta.dir, "..");
 const connector = JSON.parse(readFileSync(join(pluginRoot, "connector.json"), "utf8"));
@@ -110,8 +110,29 @@ test("사본에는 Claude Code 전용 안내와 복사되지 않는 파일이 �
     for (const file of walk(directory)) {
       const path = relative(directory, file);
       expect(path === "SKILL.md" || SKILL_PARTS.some((part) => path.startsWith(`${part}/`)), file).toBe(true);
-      expect(readFileSync(file, "utf8").includes("Claude Code"), file).toBe(false);
+      expect(hostOnlyFindings(file, readFileSync(file, "utf8")), file).toEqual([]);
     }
+  }
+});
+
+test("다른 실행 환경 전용 표현 검사는 실행 환경 문장, 하위 에이전트와 그 환경의 도구 이름을 잡는다", () => {
+  for (const text of [
+    "이 스킬은 Claude Code 에서만 돈다.",
+    "공고마다 하위 에이전트를 띄운다.",
+    "WebFetch 로 회사 블로그를 읽는다.",
+    "`Write` 도구로 결과 파일을 쓴다.",
+    "~/.claude/skills 를 읽는다.",
+  ])
+    expect(hostOnlyFindings("sample.md", text), text).not.toEqual([]);
+  expect(hostOnlyFindings("sample.md", "`write_file` 로 결과 파일을 쓴다. `${CLAUDE_PLUGIN_ROOT}` 는 셸이 푼다.")).toEqual([]);
+});
+
+test("실행기를 부르는 사본은 플러그인 폴더의 원본을 읽지 않고 이 사본의 절차만 따르라고 적는다", () => {
+  // 실측(2026-11-21): 비서 에이전트가 `skills/` 원본의 실행 환경 문장을 읽고 수집 뒤에 멈췄다.
+  for (const directory of agentSkillDirs) {
+    const skill = readFileSync(join(directory, "SKILL.md"), "utf8");
+    if (!skill.includes("${CLAUDE_PLUGIN_ROOT}")) continue;
+    expect(skill, directory).toContain("플러그인 폴더의 `skills/` 는 다른 실행 환경용 원본이니 읽지 않는다.");
   }
 });
 
