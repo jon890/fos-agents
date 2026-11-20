@@ -15,14 +15,10 @@
 
 | 워크스페이스 | 책임 | 시작 문서 |
 |---|---|---|
-| [`apartment/`](apartment/) | 아파트 시세 조사와 인테리어 의사결정 리포트 | [`apartment/README.md`](apartment/README.md) |
 | [`accountbook/`](accountbook/) | 금융 스크린샷 기반 가계부 입력 자동화 | [`accountbook/AGENTS.md`](accountbook/AGENTS.md) |
 | [`career-os/`](career-os/) | 커리어 성장, 공고 추천, 면접·지원 준비 | [`career-os/AGENTS.md`](career-os/AGENTS.md) |
 | [`health-care/`](health-care/) | 건강 기록, 진료 준비, 재활 경과 관리 | [`health-care/AGENTS.md`](health-care/AGENTS.md) |
-| [`ji-yoon-blog/`](ji-yoon-blog/) | 지융로그 네이버 블로그 콘텐츠 운영 | [`ji-yoon-blog/AGENTS.md`](ji-yoon-blog/AGENTS.md) |
 | [`side-projects/`](side-projects/) | 사이드 프로젝트와 외주 기회 운영 | [`side-projects/AGENTS.md`](side-projects/AGENTS.md) |
-| [`stock-investment/`](stock-investment/) | 주식·경제 이슈 관찰과 학습용 분석 | [`stock-investment/AGENTS.md`](stock-investment/AGENTS.md) |
-| [`travel/`](travel/) | 여행별 일정, 예약 정보, 의사결정 기록 | [`travel/README.md`](travel/README.md) |
 
 ## 공통 구조
 
@@ -39,7 +35,7 @@
 | `.claude/skills/` | 해당 영역에서 사용하는 agent skill 본문 |
 
 비밀 값은 각 워크스페이스의 `.env`에 둔다.
-개인 건강 기록, 지원 전략, 예약 정보처럼 민감한 데이터는 해당 워크스페이스 경계를 벗어나지 않는다.
+개인 건강 기록, 지원 전략, 가계부 내역처럼 민감한 데이터는 해당 워크스페이스 경계를 벗어나지 않는다.
 
 ## 루트 자산
 
@@ -60,20 +56,14 @@
 루트 `.env`는 사용하지 않는다.
 필요한 환경 변수는 각 워크스페이스의 `.env.example`을 참고해 같은 위치의 `.env`에 둔다.
 
-주요 예:
-
-- `apartment/.env.example` — Naver Land 수집용 선택 인증 값
-- `travel/.env.example` — travel 워크스페이스 기본 환경 값
-
 ## 검증
 
 변경 후에는 범위에 맞는 가장 작은 검증을 먼저 실행한다.
 
 | 범위 | 예시 검증 |
 |---|---|
-| apartment 수집기 | `bash apartment/scripts/apartment-daily-report/run_smoke_test.sh` |
 | TypeScript 파일 | `bunx tsc --noEmit`과 관련 테스트 |
 | 문서 링크와 구조 | `rg`와 `find`로 실제 경로 대조 |
 | HTML 리포트 게시 | `report-publisher` 실행 후 배포 URL HTTP 확인 |
 
-외부 게시, 지원서 제출, 예약, 투자 판단처럼 외부 상태를 바꾸는 작업은 해당 워크스페이스의 승인 규칙을 따른다.
+외부 게시, 지원서 제출처럼 외부 상태를 바꾸는 작업은 해당 워크스페이스의 승인 규칙을 따른다.

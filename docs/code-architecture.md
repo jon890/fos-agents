@@ -11,13 +11,9 @@
 
 | 워크스페이스 | 가이드 | 책임 |
 |---|---|---|
-| `apartment/` | [`apartment/AGENTS.md`](../apartment/AGENTS.md) | 아파트 시세와 인테리어 리포트 |
 | `accountbook/` | [`accountbook/AGENTS.md`](../accountbook/AGENTS.md) | 금융 스크린샷 기반 가계부 입력 자동화 |
 | `career-os/` | [`career-os/AGENTS.md`](../career-os/AGENTS.md) | 커리어, 면접, 지원 준비 |
-| `stock-investment/` | [`stock-investment/AGENTS.md`](../stock-investment/AGENTS.md) | 주식과 이슈 모니터링 |
-| `travel/` | [`travel/AGENTS.md`](../travel/AGENTS.md) | 여행별 일정과 결정 로그 |
 | `health-care/` | [`health-care/AGENTS.md`](../health-care/AGENTS.md) | 무릎 재활 체크인 |
-| `ji-yoon-blog/` | [`ji-yoon-blog/AGENTS.md`](../ji-yoon-blog/AGENTS.md) | 지융로그 콘텐츠 운영 |
 | `side-projects/` | [`side-projects/AGENTS.md`](../side-projects/AGENTS.md) | 개인 사이드 프로젝트와 외주 기회 운영 |
 
 ## 루트 디렉터리
@@ -78,7 +74,7 @@
 
 모든 워크스페이스는 `docs/adr/INDEX.md`와 결정별 ADR 파일을 사용한다.
 현재 기술 결정이 없는 워크스페이스는 `INDEX.md`만 둔다.
-travel처럼 자동화가 없는 문서 중심 워크스페이스는 `config/`, `scripts/`, `.claude/skills/`, `data/`, `logs/`가 없을 수 있다.
+자동화가 없는 문서 중심 워크스페이스는 `config/`, `scripts/`, `.claude/skills/`, `data/`, `logs/`가 없을 수 있다.
 
 ## Agent Guide
 
@@ -151,10 +147,6 @@ caller가 필요한 워크스페이스 `.env`를 명시적으로 전달한다.
 
 예외는 “표준 이탈”이 아니라 문서화된 결정이다.
 새 예외가 필요하면 해당 워크스페이스 ADR에 결정 이유를 남긴다.
-
-| 워크스페이스 | 예외 |
-|---|---|
-| `travel/` | 자동화 script와 workspace-level skill이 없는 문서 중심 워크스페이스 |
 
 ## 새 워크스페이스 추가
 
