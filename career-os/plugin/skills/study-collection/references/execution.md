@@ -15,7 +15,7 @@ mktemp -d "${TMPDIR:-/tmp}/study-topic-recommender.XXXXXX"
 ## 실행
 
 소스, 수집 자료, 추천 이력과 제외 판정은 커리어 Backend가 관리한다.
-`CAREER_BACKEND_URL`과 `CAREER_BACKEND_TOKEN` 은 셸 환경 변수에서 읽는다.
+`CAREER_BACKEND_URL` 과 token(`CAREER_BACKEND_TOKEN` 또는 `CAREER_BACKEND_TOKEN_FILE`)은 셸 환경 변수에서 읽는다.
 둘 중 하나라도 없으면 명령은 종료 코드 1로 멈춘다.
 
 실행 전에 연결을 확인한다. 연결값, 인증, `learning-interests` 문서를 차례로 보고 무엇이 빠졌는지 알린다.

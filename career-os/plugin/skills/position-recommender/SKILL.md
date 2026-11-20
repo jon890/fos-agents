@@ -12,8 +12,8 @@ description: 열려 있는 채용공고를 모아 후보자가 해온 일과 선
 
 실행기 명령은 `bun --no-env-file "${CLAUDE_PLUGIN_ROOT}/dist/career-local.js"` 이다.
 이 문서와 `references/` 에서는 그 명령을 `<CAREER_LOCAL>` 로 적는다.
-셸 환경에 `CAREER_BACKEND_URL`, `CAREER_BACKEND_TOKEN` 이 있어야 한다.
-공시 조회에 쓰는 `CAREER_DART_API_KEY` 는 선택이다.
+셸 환경에 `CAREER_BACKEND_URL` 과, `CAREER_BACKEND_TOKEN` 이나 `CAREER_BACKEND_TOKEN_FILE` 가운데 하나가 있어야 한다.
+공시 조회에 쓰는 `CAREER_DART_API_KEY`(또는 `CAREER_DART_API_KEY_FILE`)는 선택이다.
 시작할 때 `<CAREER_LOCAL> workspace paths --json` 으로 `evidenceDir` 를 확인한다.
 
 실행기는 의존성을 포함한 배포 번들이므로 실행 환경에서 `bun install` 이나 `bun run build` 를 하지 않는다.
