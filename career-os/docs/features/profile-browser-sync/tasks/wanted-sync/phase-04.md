@@ -42,7 +42,7 @@ ADR-137 에 「대체된 부분」 줄을 달고, INDEX 표에 ADR-145 한 줄�
 cd career-os/plugin && bun run typecheck
 cd career-os/plugin && bun test scripts/connector-config.test.ts
 cd career-os/plugin && bun test
-node /Users/kbt/personal/fos-skills/skills/plan/scripts/adr-docs.ts check --changed-since origin/main --adr-dir career-os/docs/adr --adr-dir docs/adr
+node "$PLAN_SKILL_DIR/scripts/adr-docs.ts" check --changed-since origin/main --adr-dir career-os/docs/adr --adr-dir docs/adr
 ```
 
 ## 변경 파일

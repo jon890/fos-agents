@@ -52,7 +52,11 @@ test("끼워 넣은 값이 식 안에서 그대로 보존된다", () => {
   // A box with the one title and two period buttons, so findBox succeeds.
   const box = {
     querySelectorAll: (selector: string) =>
-      selector === "[data-agent-field-key=title]" ? [element] : [{ textContent: "2025.01" }, { textContent: "YYYY.MM" }],
+      selector === "[data-agent-field-key=title]"
+        ? [element]
+        : selector === "[data-agent-field-key=description]"
+          ? [{ value: "" }]
+          : [{ textContent: "2025.01" }, { textContent: "YYYY.MM" }],
     parentElement: null,
   };
   (element as unknown as { parentElement: unknown }).parentElement = box;

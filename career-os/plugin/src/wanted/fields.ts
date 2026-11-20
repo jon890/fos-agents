@@ -132,7 +132,8 @@ const ARGUMENT_BYTE_LIMIT = 16_000;
 const changeSchema = z
   .strictObject({
     field: z.string().refine((field) => parseField(field) !== null),
-    label: z.string().trim().min(1).max(200),
+    // Company and project title can be long; 500 leaves room while keeping the card readable.
+    label: z.string().trim().min(1).max(500),
     before: z.string().regex(/^[0-9a-f]{16}$/),
     value: z.string().max(16_000),
   })

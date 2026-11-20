@@ -39,7 +39,7 @@ fos-assistant 의 네이버 블로그 `cdp.ts` 는 다른 저장소라 가져오
 
 ### 선언(`connector.json`)
 
-- `owner_browser_env: "CAREER_BROWSER_URL"`. 비서 웹 설치가 값을 준다. `.mcp.json` 에는 `"CAREER_BROWSER_URL": "${CAREER_BROWSER_URL:-}"` 로 넣는다. fos-assistant 는 서버 env 가 칸, `operator_env`, `owner_*_env` 의 합과 같지 않으면 플러그인을 카탈로그에서 뺀다(fos-assistant `hermes/connectors/README.md` 「플러그인 경로」). 노트북에서는 값이 비어 두 도구가 `CAREER_BROWSER_UNREACHABLE` 로 끝난다.
+- `owner_browser_env: "CAREER_BROWSER_URL"`. 비서 웹 설치가 값을 준다. `.mcp.json` 에는 `"CAREER_BROWSER_URL": "${CAREER_BROWSER_URL}"` 로 넣는다. fos-assistant 는 서버 env 가 칸, `operator_env`, `owner_*_env` 의 합과 같지 않거나, 선택 칸이 아닌 이름에 빈 기본값(`${NAME:-}`)을 쓰면 플러그인을 카탈로그에서 뺀다(fos-assistant `hermes/connectors/README.md` 「플러그인 경로」, `connector_manifest.py`). 노트북 Claude Code 는 변수가 없어도 서버를 띄우고 `${CAREER_BROWSER_URL}` 글자를 그대로 넘긴다(2026-11-20 실측). 서버는 `${` 로 시작하는 값을 없는 값으로 보아 두 도구가 `CAREER_BROWSER_UNREACHABLE` 로 끝난다. 셸에 따로 넣을 값은 없다.
 - `owner_browser_login_url: "https://www.wanted.co.kr/cv/list"`. 로그인돼 있지 않으면 원티드가 로그인 화면으로 보낸다. 로그인 화면 주소를 직접 적지 않아 원티드가 로그인 주소를 바꿔도 링크가 깨지지 않는다(스펙 DECISION10).
 - 새 오류 코드와 공통 어휘. 원본 표는 [`docs/data-schema.md`](../../data-schema.md) 의 「커넥터 오류 코드」 다.
 
@@ -64,7 +64,7 @@ fos-assistant 의 네이버 블로그 `cdp.ts` 는 다른 저장소라 가져오
 화면의 프로젝트 상자는 「서버가 준 그 프로젝트의 지금 제목과 정규화 값이 같은 `[data-agent-field-key=title]` 칸이 화면에 정확히 하나」 로 찾고, 그 칸에서 위로 올라가 제목 칸 하나와 기간 단추 둘 이상을 담은 가장 가까운 상자를 프로젝트 상자로 본다(`wanted_set_period.sh` 의 경계 확인과 같다). 본문 칸과 기간 단추는 그 상자 안에서만 찾는다. 같은 제목이 둘이거나 없거나 상자를 못 찾으면 `page_changed` 다. 사용자가 더한 빈 항목은 빈 제목이 하나뿐일 때만 찾힌다.
 간단 소개는 `[data-agent-field-key=about]` 이 하나일 때만 찾는다.
 실행은 넣기 전에 서버 값 지문과 위 방법으로 찾은 화면 칸의 값이 서버 값과 같은지를 함께 확인한다(REQ5, REQ7).
-실행 첫머리에서는 칸을 건드리기 전에 모든 `label` 이 지금 서버의 같은 순번 칸 이름과 같은지 본다. 읽은 뒤 항목이 늘어 순번이 밀리면, 값이 같은 다른 프로젝트 칸이 지문 대조를 통과할 수 있어서다. 하나라도 다르면 아무것도 넣지 않고 `page_changed` 로 멈춘다. 그래서 `label` 은 읽기 결과의 글을 그대로 넣는다.
+실행 첫머리에서는 칸을 건드리기 전에 `resumeTitle` 이 지금 이력서 이름과 같은지, 모든 `label` 이 지금 서버의 같은 순번 칸 이름과 같은지 본다. 다른 칸에 `page_changed` 를 붙인다. 읽은 뒤 항목이 늘어 순번이 밀리면, 값이 같은 다른 프로젝트 칸이 지문 대조를 통과할 수 있어서다. 하나라도 다르면 아무것도 넣지 않고 `page_changed` 로 멈춘다. 그래서 `label` 은 읽기 결과의 글을 그대로 넣는다.
 기간 칸은 넣기 전마다 편집 화면을 새로 열어 그 값을 지문 대조와 화면 확인에 쓴다. 실행을 시작할 때 본 화면 값으로 대조하지 않는다.
 `label` 은 「<회사 이름 또는 경력 c> / <프로젝트 제목> / 본문」 처럼 사람이 읽는 이름이다. 회사 이름을 읽지 못하면 「경력 c」 를 쓴다. 비서는 이 이름으로 원고 항목과 짝짓는다(스펙 DECISION12).
 지문은 정규화한 값의 SHA-256 앞 16자리 16진수다. 정규화는 CRLF 를 LF 로, 앞뒤 공백 제거다. 기간은 `YYYY-MM` 으로 맞춘 글이다.
@@ -74,7 +74,7 @@ fos-assistant 의 네이버 블로그 `cdp.ts` 는 다른 저장소라 가져오
 | 도구 | 인자 | 결과 |
 | --- | --- | --- |
 | `get_wanted_resume` | `resumeKey`(선택, 1~200자, 경로 한 마디라 `/`, `.`, `?`, `#`, 공백을 받지 않는다) | 이력서가 정해지면 `{status: "ok", resumeKey, resumeTitle, fields: [{field, label, value, fingerprint}], unreadable, outOfScope: {skills, links, aiCompetencies}}`. `unreadable` 은 화면에서 기간을 읽지 못한 칸의 이름이다. 여럿이면 `{status: "choose", resumes: [{resumeKey, title, updatedAt}]}`. 로그인 화면이면 넘기기 결과 |
-| `update_wanted_resume` | `resumeKey`, `resumeTitle`(1~100자), `changes`: 1~30개 `{field, label, before, value}`. `before` 는 읽기 결과의 지문, `value` 는 넣을 값(글은 UTF-8 16,000바이트 안, 빈 글 거절, 기간은 `YYYY-MM`). 같은 `field` 중복 거절 | `{status: "done" 또는 "stopped", resumeKey, results: [{field, label, state, reason?}]}`. `state` 는 `inserted`, `failed`, `not_inserted`. `reason` 은 `fingerprint_mismatch`, `stopped_earlier`, `time_limit`, `page_changed`, `not_saved`, `login_required`, `browser_in_use`, `browser_taken`. `browser_in_use` 는 탭을 열기 전에 사람이 브라우저를 쥐고 있던 경우로 모든 칸이 `not_inserted` 다. `browser_taken` 은 넣던 칸이 저장됐을 수 있어 `failed` 와 함께 쓴다 |
+| `update_wanted_resume` | `resumeKey`, `resumeTitle`(1~100자), `changes`: 1~30개 `{field, label, before, value}`. `before` 는 읽기 결과의 지문, `value` 는 넣을 값(글은 UTF-8 16,000바이트 안, 빈 글 거절, 기간은 `YYYY-MM`). 같은 `field` 중복 거절 | `{status: "done" 또는 "stopped", resumeKey, results: [{field, label, state, reason?}]}`. `state` 는 `inserted`, `failed`, `not_inserted`. `reason` 은 `fingerprint_mismatch`, `stopped_earlier`, `time_limit`, `page_changed`, `not_saved`, `login_required`, `browser_in_use`, `browser_taken`, `browser_unreachable`, `too_long`. `too_long` 은 원티드 칸의 글자 수 제한을 넘어 넣지 않은 칸이다. `browser_in_use` 는 탭을 열기 전에 사람이 브라우저를 쥐고 있던 경우로 모든 칸이 `not_inserted` 다. `browser_taken` 은 넣던 칸이 저장됐을 수 있어 `failed` 와 함께 쓴다 |
 
 넘기기 결과는 fos-assistant 공통 모양 `{status: "HUMAN_ACTION_REQUIRED", message, handoff: {code, need, tab}}` 이고 `get_wanted_resume` 만 낸다. `update_wanted_resume` 은 승인한 실행이라 넘기기를 내면 fos-assistant 가 카드 없이 실패로 끝내고 결과를 버린다. 그래서 로그인 화면과 사람 잠금도 `status: "stopped"` 로 낸다(스펙 DECISION18, DECISION19, DECISION24).
 
@@ -105,7 +105,7 @@ flowchart TD
 
 - 글 칸 넣기는 `sync-profile` 의 `wanted_set_field.sh` 와 같다: `execCommand('insertText')` 뒤 React `onBlur` 를 직접 부른다.
 - 기간 넣기는 `wanted_set_period.sh` 와 같다: 컨테이너가 프로젝트 제목 칸을 하나만 담는지 확인한 뒤 연도, 월, 「확인」 을 누른다. 확인은 편집 화면을 다시 열어 그 프로젝트의 기간 단추 글(`YYYY.MM`)을 읽는다. 원티드 API 의 기간 키 이름은 문서에 없어서 쓰지 않는다.
-- 칸은 늦어도 시작 뒤 45초 안에 시작하고, 화면을 다시 여는 기간 칸은 30초 안에 시작한다. 탭 안 식 하나는 10초 제한이다.
+- 칸은 늦어도 시작 뒤 45초 안에 시작하고, 화면을 다시 여는 기간 칸은 30초 안에 시작한다. 탭 안 식 하나는 10초 제한이고, 실행 전체는 55초 마감이라 각 단계는 남은 시간까지만 기다린다. 마감을 넘기면 넣던 칸은 `failed`(`time_limit`), 남은 칸은 `not_inserted`(`time_limit`)다.
 - 편집 화면은 load 사건 뒤 칸이 그려질 때까지 기다린다. 목록 화면에서 기다린 뒤에도 이력서가 없으면 화면이 바뀐 것으로 본다.
 - 실행 시간 제한의 근거: fos-assistant 대시보드가 승인한 호출을 60초 기다리기 때문이다(fos-assistant `hermes/connectors/README.md`). 넘으면 남은 칸을 `not_inserted`(`time_limit`)로 돌려주고, 비서는 다시 읽어 남은 칸을 새로 승인받는다. 칸 하나가 몇 초라 보통은 한 번에 끝난다.
 - 쓰기 도구의 탭은 끝나면 늘 닫는다. 읽기 도구는 넘기기를 낼 때만 탭을 남긴다.
@@ -127,7 +127,7 @@ flowchart TD
 | 대상 | 경계 | 환경 |
 | --- | --- | --- |
 | REQ1, REQ4, REQ5, REQ6, REQ7, REQ11, REQ13 | 가짜 원티드 화면 fixture 와 가짜 중계. 테스트가 Bun 서버로 CDP HTTP 창구와 WebSocket 을 흉내 내고, 탭 안 스크립트의 결과를 시나리오별로 돌려준다 | `bun test` |
-| 탭 안 스크립트(`page.ts`) | 스크립트가 문법상 컴파일되는지와 결과 표지(`OK`, `NO_ELEMENT` 같은 고정 글)를 테스트한다. DOM 라이브러리를 새로 들이지 않으므로 화면 조작 자체는 실제 계정 확인에서 본다. 결과 표지에 따른 분기는 가짜 중계 테스트가 맡는다 | `bun test`, 실제 계정 |
+| 탭 안 스크립트(`page.ts`) | 개발 의존성 `happy-dom` 으로 원티드를 흉내 낸 작은 고정 화면에 식을 그대로 돌려 상자 찾기, `AMBIGUOUS`, `BOUNDARY`, 기간 단추, 고르기 창 안의 확인 단추, 화면 판정을 확인한다. 고정 화면의 구조는 가정이라 실제 화면은 실제 계정 확인에서 본다. 결과 표지에 따른 분기는 가짜 중계 테스트가 맡는다 | `bun test`, 실제 계정 |
 | REQ3, REQ9 | 인자 검사(16KB, 범위 밖 칸, 중복)와 `connector.json` 선언 테스트 | `bun test` |
 | REQ10 | 기존 상한과 도구 이름 테스트 | `bun test` |
 | REQ2, REQ8, REQ12 | 비서의 대화 흐름 | 배포 뒤 실제 계정 확인(코디네이터와 사용자) |

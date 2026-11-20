@@ -16,5 +16,5 @@
 | REQ10 | 연결용 지침 | `cd career-os/plugin && bun test scripts/connector-config.test.ts` | 본문 8,000자 이하, 모든 도구 이름 포함 | 로컬 bun 테스트 | worker | 없음 | PR 전 |
 | REQ11 | 중계 주소 빈 값 | `bun test src/wanted/tools.test.ts src/browser/cdp.test.ts` | `CAREER_BROWSER_UNREACHABLE`, 탭 요청 0회 | 로컬 bun 테스트 | worker | 없음 | PR 전 |
 | REQ13 | 이력서 둘 fixture | `bun test src/wanted/tools.test.ts` | `status: "choose"` 와 목록, 쓰기 인자에 `resumeKey`·`resumeTitle` 필수 | 로컬 bun 테스트 | worker | 없음 | PR 전 |
-| REQ1, REQ4 | 사용자 원티드 계정 | 실제 계정에서 읽기와 칸 하나 반영 | 회사 이름 키, 편집 화면 주소, 목록 항목 모양, 로그인 판정이 실제 화면과 맞고, 넣은 칸이 서버에 저장된다 | 배포된 비서 웹과 실제 원티드 계정 | 코디네이터 | 배포 (그 뒤 바인딩 재설치) | PR 뒤 |
+| REQ1, REQ4 | 사용자 원티드 계정 | 실제 계정에서 읽기와 칸 하나 반영 | 회사 이름 키, 편집 화면 주소, 목록 항목 모양, 로그인 판정이 실제 화면과 맞고, 넣은 칸이 서버에 저장된다. 프로젝트 기간 단추가 늦게 그려져도 경력 재직 기간을 고르지 않는다 | 배포된 비서 웹과 실제 원티드 계정 | 코디네이터 | 배포 (그 뒤 바인딩 재설치) | PR 뒤 |
 | REQ3 | 사용자 원티드 계정, 본문 셋을 통째로 바꾸는 큰 변경 | 비서 웹에서 큰 변경을 요청하고 승인 | 승인 카드가 두 장 이상으로 나뉘고, 앞 카드의 칸이 모두 넣음일 때만 다음 카드가 뜬다 | 배포된 비서 웹과 실제 원티드 계정 | 코디네이터 | 배포 (그 뒤 바인딩 재설치) | PR 뒤 |

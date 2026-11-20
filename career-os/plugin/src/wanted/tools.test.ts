@@ -159,7 +159,7 @@ class World {
   }
 }
 
-const timing: Timing = { budgetMs: 45_000, periodMs: 15_000, waitMs: 0, pollMs: 0, stepMs: 1_000 };
+const timing: Timing = { budgetMs: 45_000, periodMs: 15_000, deadlineMs: 55_000, waitMs: 0, pollMs: 0, stepMs: 1_000 };
 const tools = (world: World) => new WantedTools(world.link(), () => world.clock, timing);
 
 // Labels as get_wanted_resume gives them for the fake world's starting resume.
@@ -334,7 +334,7 @@ test("사람이 브라우저를 쥐고 있거나 가져가면 그에 맞는 이�
 });
 
 test("45초가 지나면 남은 칸을 time_limit 으로 돌려준다", async () => {
-  const result = await run(new World({ tick: 30_000 }), [
+  const result = await run(new World({ tick: 16_000 }), [
     change("about", "새 소개", fingerprint("백엔드 개발자입니다.")),
     change("project:0:0:description", "- 새 본문", fingerprint("- 주문을 나눴다")),
     change("project:0:0:title", "새 제목", fingerprint("주문 API")),
@@ -408,4 +408,47 @@ test("편집 화면이 그려지지 않으면 읽기는 PAGE_CHANGED, 쓰기는 
   expect(await codeOf(tools(new World({ ready: false })).getResume({ resumeKey: "KEY=1" }))).toBe("CAREER_WANTED_PAGE_CHANGED");
   const result = await run(new World({ ready: false }), [change("about", "x", fingerprint("백엔드 개발자입니다."))]);
   expect(states(result)).toEqual(["not_inserted:page_changed"]);
+});
+
+test("이력서 이름이 지금 이력서와 다르면 아무것도 넣지 않는다", async () => {
+  const world = new World();
+  const result = (await tools(world).updateResume({
+    resumeKey: "KEY=1",
+    resumeTitle: "다른 이력서",
+    changes: [change("about", "새 소개", fingerprint("백엔드 개발자입니다."))],
+  })) as { results: { state: string; reason?: string }[] };
+  expect(states(result)).toEqual(["not_inserted:page_changed"]);
+  expect(world.about).toBe("백엔드 개발자입니다.");
+});
+
+test("칸 이름이 하나만 어긋나면 그 칸에 이유를 붙이고 나머지는 기다린 것으로 적는다", async () => {
+  const result = await run(new World(), [
+    change("about", "새 소개", fingerprint("백엔드 개발자입니다.")),
+    change("project:0:0:end", "2026-11", fingerprint("2026-10"), "가나다 / 다른 제목 / 종료월"),
+  ]);
+  expect(states(result)).toEqual(["not_inserted:stopped_earlier", "not_inserted:page_changed"]);
+});
+
+test("입력 전에 거절된 칸은 건드리지 않은 것으로 적는다", async () => {
+  const tooLong = await run(new World({ setText: () => "TOO_LONG" }), [change("about", "새 소개", fingerprint("백엔드 개발자입니다."))]);
+  expect(states(tooLong)).toEqual(["not_inserted:too_long"]);
+  const missing = await run(new World({ setText: () => "AMBIGUOUS" }), [change("about", "새 소개", fingerprint("백엔드 개발자입니다."))]);
+  expect(states(missing)).toEqual(["not_inserted:page_changed"]);
+});
+
+test("실행 전체 마감을 넘기면 time_limit 으로 끝난다", async () => {
+  // Each server read moves the clock 27.5s. The first field starts within the 45s budget, but its read ends at 55s,
+  // so the next page step has no time left: the run stops on the deadline, not the budget.
+  const result = await run(new World({ tick: 27_500 }), [
+    change("about", "새 소개", fingerprint("백엔드 개발자입니다.")),
+    change("project:0:0:description", "- 새 본문", fingerprint("- 주문을 나눴다")),
+  ]);
+  expect(result.status).toBe("stopped");
+  expect(states(result)).toEqual(["not_inserted:time_limit", "not_inserted:time_limit"]);
+});
+
+test("요청한 이력서의 화면만 연다", async () => {
+  const world = new World();
+  await tools(world).getResume({ resumeKey: "B" });
+  expect(new Set(world.urls)).toEqual(new Set(["https://www.wanted.co.kr/cv/B"]));
 });

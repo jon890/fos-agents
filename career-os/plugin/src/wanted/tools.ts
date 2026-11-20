@@ -42,7 +42,9 @@ export type StopReason =
   | "not_saved"
   | "login_required"
   | "browser_in_use"
-  | "browser_taken";
+  | "browser_taken"
+  | "browser_unreachable"
+  | "too_long";
 export type FieldResult = { field: string; label: string; state: FieldState; reason?: StopReason };
 
 type Handoff = {
@@ -52,11 +54,26 @@ type Handoff = {
 };
 
 /**
- * `budgetMs` is the latest a text field may start; a period field needs `periodMs` more because it reloads the page.
  * fos-assistant waits 60 seconds for an approved call, and a result that arrives later is lost.
+ * `budgetMs` is the latest a text field may start; a period field needs `periodMs` more because it reloads the page.
+ * `deadlineMs` bounds the whole run: every page step gets at most the time left, so a hung step ends the run in time.
  */
-export type Timing = { budgetMs: number; periodMs: number; waitMs: number; pollMs: number; stepMs: number };
-const defaultTiming: Timing = { budgetMs: 45_000, periodMs: 15_000, waitMs: 5_000, pollMs: 250, stepMs: 10_000 };
+export type Timing = {
+  budgetMs: number;
+  periodMs: number;
+  deadlineMs: number;
+  waitMs: number;
+  pollMs: number;
+  stepMs: number;
+};
+const defaultTiming: Timing = {
+  budgetMs: 45_000,
+  periodMs: 15_000,
+  deadlineMs: 55_000,
+  waitMs: 5_000,
+  pollMs: 250,
+  stepMs: 10_000,
+};
 
 const pageChanged = () => new CareerError("CAREER_WANTED_PAGE_CHANGED");
 
@@ -74,6 +91,8 @@ type ReadResult = ReadOk | { status: "LOGIN" | "NOT_FOUND" | "ERROR" };
 export class WantedTools {
   /** A tab the read tool left for a handoff; the next call in this process closes it. */
   private leftTab: string | undefined;
+  /** End of the running write's time; page steps never wait past it. Unset for reads. */
+  private deadline: number | undefined;
 
   constructor(
     private readonly browser: BrowserLink | undefined,
@@ -97,7 +116,7 @@ export class WantedTools {
       let resumeKey = args.resumeKey;
       let listedTitle = "";
       if (!resumeKey) {
-        await session.navigate(listUrl(), this.timing.stepMs);
+        await session.navigate(listUrl(), this.stepTime());
         const state = await this.value<string>(session, pageStateScript());
         if (state === "LOGIN") return ((leave = true), login(tabId));
         if (state !== "LIST") throw pageChanged();
@@ -112,7 +131,7 @@ export class WantedTools {
         resumeKey = resumes[0]!.resumeKey;
         listedTitle = resumes[0]!.title;
       }
-      await session.navigate(editUrl(resumeKey), this.timing.stepMs);
+      await session.navigate(editUrl(resumeKey), this.stepTime());
       const state = await this.value<string>(session, pageStateScript());
       if (state === "LOGIN") return ((leave = true), login(tabId));
       if (state !== "EDIT") throw pageChanged();
@@ -138,7 +157,8 @@ export class WantedTools {
       return {
         status: "ok",
         resumeKey,
-        resumeTitle: normalizeText(listedTitle || apiTitle) || "이력서",
+        // The API's own title first: the write compares resumeTitle with it.
+        resumeTitle: normalizeText(apiTitle || listedTitle) || "이력서",
         fields,
         unreadable,
         outOfScope: outOfScopeFromResume(read.resume, read.ai),
@@ -156,6 +176,7 @@ export class WantedTools {
   async updateResume(args: UpdateWantedResumeArgs): Promise<unknown> {
     const browser = this.requireBrowser();
     const start = this.now();
+    this.deadline = start + this.timing.deadlineMs;
     const results: FieldResult[] = [];
     const finish = (stop?: Stop) => {
       const done = results.length;
@@ -163,7 +184,7 @@ export class WantedTools {
         // The reason belongs to the field where the run stopped. Login, time and a held browser
         // apply to every field left, the rest only waited behind the stop.
         const own = offset === 0 && stop;
-        const shared = stop && ["login_required", "time_limit", "browser_in_use"].includes(stop.reason);
+        const shared = stop && ["login_required", "time_limit", "browser_in_use", "browser_unreachable"].includes(stop.reason);
         const state: FieldState = own && stop!.touched ? "failed" : "not_inserted";
         const reason: StopReason = own || shared ? stop!.reason : "stopped_earlier";
         results.push({ field: change.field, label: change.label, state, reason });
@@ -191,8 +212,22 @@ export class WantedTools {
       const first = await this.readServer(session, args.resumeKey);
       if (first.status === "NOT_FOUND") throw new CareerError("CAREER_WANTED_RESUME_NOT_FOUND");
       const initial = expectRead(first, false);
-      if (args.changes.some((change) => labelOf(initial, parseField(change.field)!) !== normalizeText(change.label)))
-        return finish(new Stop("page_changed"));
+      const apiTitle = typeof initial.resume?.title === "string" ? normalizeText(initial.resume.title) : "";
+      const wrongResume = apiTitle !== "" && apiTitle !== normalizeText(args.resumeTitle);
+      const shifted = args.changes.map(
+        (change) => wrongResume || labelOf(initial, parseField(change.field)!) !== normalizeText(change.label),
+      );
+      if (shifted.some(Boolean)) {
+        // Nothing is touched. The fields whose label no longer matches carry the reason; the rest only waited.
+        for (const [index, change] of args.changes.entries())
+          results.push({
+            field: change.field,
+            label: change.label,
+            state: "not_inserted",
+            reason: shifted[index] ? "page_changed" : "stopped_earlier",
+          });
+        return finish();
+      }
       for (const change of args.changes) {
         const field = parseField(change.field)!;
         const isPeriod = field.kind === "project" && (field.part === "start" || field.part === "end");
@@ -214,10 +249,12 @@ export class WantedTools {
       if (error instanceof Stop) return finish(error);
       if (isInUse(error)) return finish(new Stop(touching ? "browser_taken" : "browser_in_use", touching));
       if (error instanceof CareerError && error.code === "CAREER_WANTED_RESUME_NOT_FOUND") throw error;
-      // A lost connection or an unexpected page: nothing is retried, the field is reported as it stood.
-      // Anything else, including a reply of an unexpected shape, keeps the per-field results instead of an error.
+      if (error instanceof CareerError && error.code === "CAREER_BROWSER_UNREACHABLE")
+        return finish(new Stop(this.pastDeadline() ? "time_limit" : "browser_unreachable", touching));
+      // An unexpected page or a reply of an unexpected shape keeps the per-field results instead of an error.
       return finish(new Stop("page_changed", touching));
     } finally {
+      this.deadline = undefined;
       session.close();
       await browser.closeTab(tab.tabId);
     }
@@ -235,7 +272,7 @@ export class WantedTools {
   }
 
   private async openEditPage(session: CdpSession, resumeKey: string, touched = false) {
-    await session.navigate(editUrl(resumeKey), this.timing.stepMs);
+    await session.navigate(editUrl(resumeKey), this.stepTime());
     const state = await this.value<string>(session, pageStateScript());
     if (state === "LOGIN") throw new Stop("login_required", touched);
     if (state !== "EDIT") throw new Stop("page_changed", touched);
@@ -246,6 +283,7 @@ export class WantedTools {
   private async readServer(session: CdpSession, resumeKey: string): Promise<ReadResult> {
     const read = await this.value<ReadResult>(session, readResumeScript(resumeKey));
     if (!read || typeof read !== "object" || typeof read.status !== "string") throw pageChanged();
+    if (read.status === "OK" && (!read.resume || typeof read.resume !== "object")) throw pageChanged();
     return read;
   }
 
@@ -282,6 +320,9 @@ export class WantedTools {
     next: string,
   ) {
     const marker = await this.value<string>(session, setTextScript(located.target, next));
+    // These markers come before the first keystroke, so the field is untouched.
+    if (marker === "TOO_LONG") throw new Stop("too_long", false);
+    if (marker === "NO_ELEMENT" || marker === "AMBIGUOUS" || marker === "BOUNDARY") throw new Stop("page_changed", false);
     if (marker !== "OK") throw new Stop("page_changed", true);
     // onBlur sends the PATCH asynchronously; read the server until it shows the value or time runs out.
     const saved = await this.poll(async () => {
@@ -320,9 +361,21 @@ export class WantedTools {
 
   /** Runs a page expression with a per-step time limit so one hung step cannot use up the whole run. */
   private async value<T>(session: CdpSession, expression: string): Promise<T> {
-    const result = await session.evaluate<T>(expression, this.timing.stepMs);
+    const result = await session.evaluate<T>(expression, this.stepTime());
     if (!result.ok) throw pageChanged();
     return result.value;
+  }
+
+  /** A page step's time limit: the step limit, or what is left of the write's deadline. */
+  private stepTime(): number {
+    if (this.deadline === undefined) return this.timing.stepMs;
+    const left = this.deadline - this.now();
+    if (left <= 0) throw new CareerError("CAREER_BROWSER_UNREACHABLE");
+    return Math.min(this.timing.stepMs, left);
+  }
+
+  private pastDeadline(): boolean {
+    return this.deadline !== undefined && this.now() >= this.deadline;
   }
 
   private async poll(check: () => Promise<boolean>): Promise<boolean> {

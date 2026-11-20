@@ -228,3 +228,13 @@ test("원티드 도구 설명이 나눠 부르기, 대안, 범위 밖 칸, 다�
   expect(connector.tools.get_wanted_resume).toMatchObject({ risk: "READ", approval: "none" });
   expect(connector.owner_browser_login_url).toBe("https://www.wanted.co.kr/cv/list");
 });
+
+// fos-assistant's connector_manifest only accepts an empty default (`${NAME:-}`) for optional fields;
+// every other server env, including owner_*_env, must be exactly `${NAME}` or the plugin leaves the catalog.
+test(".mcp.json 의 빈 기본값 참조는 선택 칸에만 쓴다", () => {
+  const optional = new Set(
+    connector.fields.filter((f: { required?: boolean }) => f.required === false).map((f: { env: string }) => f.env),
+  );
+  for (const [name, value] of Object.entries(mcp.mcpServers.career.env))
+    expect({ name, value }).toEqual({ name, value: optional.has(name) ? `\${${name}:-}` : `\${${name}}` });
+});

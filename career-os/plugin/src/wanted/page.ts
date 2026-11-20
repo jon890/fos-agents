@@ -31,8 +31,10 @@ const PRELUDE = `
     for (var n = 0; n < 12 && box; n++) {
       var inside = box.querySelectorAll("[data-agent-field-key=title]").length;
       if (inside > 1) return "BOUNDARY";
-      // A project box has exactly its own start and end; a career box around it would show four.
-      if (periodButtons(box).length === 2) return { box: box, title: titles[0] };
+      // A project box has exactly its own start and end and one description; a career box around it would
+      // show more buttons, and a career box whose project buttons are not drawn yet has no description of its own.
+      if (periodButtons(box).length === 2 && box.querySelectorAll("[data-agent-field-key=description]").length === 1)
+        return { box: box, title: titles[0] };
       box = box.parentElement;
     }
     return "NO_ELEMENT";
@@ -68,6 +70,8 @@ export function pageStateScript(): string {
   return iife(`
     var u = new URL(location.href);
     var path = u.pathname;
+    // about:blank, chrome-error:// and the like are not a login page.
+    if (u.protocol !== "https:" && u.protocol !== "http:") return "OTHER";
     if (/login|signin|signup/i.test(path + u.search) || u.hostname !== "www.wanted.co.kr") return "LOGIN";
     if (path === "/cv/list" || path === "/cv/list/") return "LIST";
     if (/^\\/cv\\/[^/]+\\/?$/.test(path)) return "EDIT";
