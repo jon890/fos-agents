@@ -671,7 +671,7 @@ collection 과 문서 키는 코드에 고정한다. 설정으로 바꾸지 않�
 
 | 경로 | 책임 |
 | --- | --- |
-| `scripts/agent-usage/agent_usage.py` | 에이전트 세션 기록에서 월별 토큰, 환산 비용, 세션 수, 단가를 모르는 토큰 계산. 단가표를 갖는다 |
+| `scripts/agent-usage/agent_usage.py` | 에이전트 세션 기록에서 월별 토큰, 환산 비용, 세션 수, 단가를 모르는 토큰 계산. 단가표를 갖는다. Claude 응답은 `message.id`(없으면 `requestId`)로 한 번만 센다. `--totals-json` 으로 이 기기의 달·모델별 합계를 내보내고 `--merge` 로 다른 기기의 합계를 더한다. 꼴은 `data-schema.md` 가 소유한다 |
 | `scripts/agent-usage/measure.ts` | `agent_usage.py --json` 을 실행해 출력을 zod 로 검증하고 달 표기를 `YYYY-MM` 으로 바꾼다. 실행기를 인자로 받아 테스트가 대역을 넣는다 |
 | `scripts/agent-usage/collect_usage.ts` | 수집기. 기록이 없는 끝난 달만 측정해 올린다. 측정기, 기록 저장소, 현재 시각을 인자로 받는다 |
 | `scripts/agent-usage/launchd/agent-usage.plist.template` | `launchd` 작업 틀. 자리표시자는 `bun` 경로, 저장소 경로, 로그 디렉터리뿐이다 |
