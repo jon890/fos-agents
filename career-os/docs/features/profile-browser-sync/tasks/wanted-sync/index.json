@@ -1,0 +1,78 @@
+{
+  "name": "wanted-sync",
+  "description": "비서 웹에서 원티드 이력서의 이미 있는 칸을 「내 브라우저」 로 읽고 넣고 다시 읽는 fos-career 도구 두 개와 지침",
+  "pr_scope": "원티드의 간단 소개와 경력 프로젝트 제목·본문·시작월·종료월을 읽기 도구와 쓰기 도구로 반영하고, 연결용 지침·선언·문서·ADR 을 함께 고친다.",
+  "deferred": [
+    {
+      "what": "LinkedIn 의 헤드라인, 소개, 프로젝트 반영",
+      "why": "스펙 DECISION3 이 원티드를 먼저 하고 LinkedIn 을 두 번째 PR 로 정했다",
+      "after": "이 PR 의 머지와 실제 계정 확인. LinkedIn 에만 있는 결정을 스펙에 더해 다시 확인받는다"
+    }
+  ],
+  "status": "pending",
+  "created_at": "2026-11-20",
+  "spec": "career-os/docs/features/profile-browser-sync/spec.md",
+  "design": "career-os/docs/features/profile-browser-sync/design.md",
+  "verification_plan": "verification-plan.md",
+  "requirements": [
+    "REQ1",
+    "REQ2",
+    "REQ3",
+    "REQ4",
+    "REQ5",
+    "REQ6",
+    "REQ7",
+    "REQ8",
+    "REQ9",
+    "REQ10",
+    "REQ11",
+    "REQ12",
+    "REQ13"
+  ],
+  "total_phases": 4,
+  "current_phase": 1,
+  "phases": [
+    {
+      "number": 1,
+      "file": "phase-01.md",
+      "execution_profile": "standard",
+      "requirements": [
+        "REQ11"
+      ]
+    },
+    {
+      "number": 2,
+      "file": "phase-02.md",
+      "execution_profile": "standard",
+      "requirements": [
+        "REQ3",
+        "REQ9"
+      ]
+    },
+    {
+      "number": 3,
+      "file": "phase-03.md",
+      "execution_profile": "standard",
+      "requirements": [
+        "REQ1",
+        "REQ4",
+        "REQ5",
+        "REQ6",
+        "REQ7",
+        "REQ10",
+        "REQ12",
+        "REQ13",
+        "REQ2",
+        "REQ8"
+      ]
+    },
+    {
+      "number": 4,
+      "file": "phase-04.md",
+      "execution_profile": "standard",
+      "requirements": [
+        "REQ10"
+      ]
+    }
+  ]
+}

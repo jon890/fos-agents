@@ -60,7 +60,10 @@ fos-assistant 의 네이버 블로그 `cdp.ts` 는 다른 저장소라 가져오
 | 프로젝트 본문 | `project:<c>:<p>:description` | 글 |
 | 시작월, 종료월 | `project:<c>:<p>:start`, `project:<c>:<p>:end` | `YYYY-MM` |
 
-순번은 API 의 `careers[c].projects[p]` 차례다. 순번만으로는 칸이 밀린 것을 모르므로, 실행은 넣기 전에 화면의 그 칸과 서버 값이 같은지와 지문을 함께 확인한다(REQ5, REQ7).
+순번은 API 의 `careers[c].projects[p]` 차례다. 화면에서는 순번으로 찾지 않는다. `title`, `description` 키는 성과 항목에도 쓰여 화면 차례가 API 차례와 같다는 근거가 없기 때문이다.
+화면의 프로젝트 상자는 「서버가 준 그 프로젝트의 지금 제목과 정규화 값이 같은 `[data-agent-field-key=title]` 칸이 화면에 정확히 하나」 로 찾고, 그 칸에서 위로 올라가 제목 칸 하나와 기간 단추 둘 이상을 담은 가장 가까운 상자를 프로젝트 상자로 본다(`wanted_set_period.sh` 의 경계 확인과 같다). 본문 칸과 기간 단추는 그 상자 안에서만 찾는다. 같은 제목이 둘이거나 없거나 상자를 못 찾으면 `page_changed` 다. 사용자가 더한 빈 항목은 빈 제목이 하나뿐일 때만 찾힌다.
+간단 소개는 `[data-agent-field-key=about]` 이 하나일 때만 찾는다.
+실행은 넣기 전에 서버 값 지문과 위 방법으로 찾은 화면 칸의 값이 서버 값과 같은지를 함께 확인한다(REQ5, REQ7).
 `label` 은 「<회사 이름 또는 경력 c> / <프로젝트 제목> / 본문」 처럼 사람이 읽는 이름이다. 회사 이름을 읽지 못하면 「경력 c」 를 쓴다. 비서는 이 이름으로 원고 항목과 짝짓는다(스펙 DECISION12).
 지문은 정규화한 값의 SHA-256 앞 16자리 16진수다. 정규화는 CRLF 를 LF 로, 앞뒤 공백 제거다. 기간은 `YYYY-MM` 으로 맞춘 글이다.
 
@@ -69,7 +72,7 @@ fos-assistant 의 네이버 블로그 `cdp.ts` 는 다른 저장소라 가져오
 | 도구 | 인자 | 결과 |
 | --- | --- | --- |
 | `get_wanted_resume` | `resumeKey`(선택, 1~200자) | 이력서가 정해지면 `{status: "ok", resumeKey, resumeTitle, fields: [{field, label, value, fingerprint}], outOfScope: {skills, links, aiCompetencies}}`. 여럿이면 `{status: "choose", resumes: [{resumeKey, title, updatedAt}]}`. 로그인 화면이면 넘기기 결과 |
-| `update_wanted_resume` | `resumeKey`, `resumeTitle`(1~100자), `changes`: 1~30개 `{field, label, before, value}`. `before` 는 읽기 결과의 지문, `value` 는 넣을 값(글은 UTF-8 16,000바이트 안, 빈 글 거절, 기간은 `YYYY-MM`). 같은 `field` 중복 거절 | `{status: "done" 또는 "stopped", resumeKey, results: [{field, label, state, reason?}]}`. `state` 는 `inserted`, `failed`, `not_inserted`. `reason` 은 `fingerprint_mismatch`, `stopped_earlier`, `time_limit`, `page_changed`, `not_saved`, `login_required`, `browser_taken`. `browser_taken` 은 넣던 칸이 저장됐을 수 있어 `failed` 와 함께 쓴다 |
+| `update_wanted_resume` | `resumeKey`, `resumeTitle`(1~100자), `changes`: 1~30개 `{field, label, before, value}`. `before` 는 읽기 결과의 지문, `value` 는 넣을 값(글은 UTF-8 16,000바이트 안, 빈 글 거절, 기간은 `YYYY-MM`). 같은 `field` 중복 거절 | `{status: "done" 또는 "stopped", resumeKey, results: [{field, label, state, reason?}]}`. `state` 는 `inserted`, `failed`, `not_inserted`. `reason` 은 `fingerprint_mismatch`, `stopped_earlier`, `time_limit`, `page_changed`, `not_saved`, `login_required`, `browser_in_use`, `browser_taken`. `browser_in_use` 는 탭을 열기 전에 사람이 브라우저를 쥐고 있던 경우로 모든 칸이 `not_inserted` 다. `browser_taken` 은 넣던 칸이 저장됐을 수 있어 `failed` 와 함께 쓴다 |
 
 넘기기 결과는 fos-assistant 공통 모양 `{status: "HUMAN_ACTION_REQUIRED", message, handoff: {code, need, tab}}` 이고 `get_wanted_resume` 만 낸다. `update_wanted_resume` 은 승인한 실행이라 넘기기를 내면 fos-assistant 가 카드 없이 실패로 끝내고 결과를 버린다. 그래서 로그인 화면과 사람 잠금도 `status: "stopped"` 로 낸다(스펙 DECISION18, DECISION19, DECISION24).
 
@@ -120,7 +123,7 @@ flowchart TD
 | 대상 | 경계 | 환경 |
 | --- | --- | --- |
 | REQ1, REQ4, REQ5, REQ6, REQ7, REQ11, REQ13 | 가짜 원티드 화면 fixture 와 가짜 중계. 테스트가 Bun 서버로 CDP HTTP 창구와 WebSocket 을 흉내 내고, 탭 안 스크립트의 결과를 시나리오별로 돌려준다 | `bun test` |
-| 탭 안 스크립트(`page.ts`) | 정적 HTML fixture 에 스크립트를 돌려 칸 찾기, 경계 확인, 기간 선택기 조작을 확인한다. 실제 Chrome 없이 돌릴 수 없는 부분은 실제 계정 확인으로 넘긴다 | `bun test`, 실제 계정 |
+| 탭 안 스크립트(`page.ts`) | 스크립트가 문법상 컴파일되는지와 결과 표지(`OK`, `NO_ELEMENT` 같은 고정 글)를 테스트한다. DOM 라이브러리를 새로 들이지 않으므로 화면 조작 자체는 실제 계정 확인에서 본다. 결과 표지에 따른 분기는 가짜 중계 테스트가 맡는다 | `bun test`, 실제 계정 |
 | REQ3, REQ9 | 인자 검사(16KB, 범위 밖 칸, 중복)와 `connector.json` 선언 테스트 | `bun test` |
 | REQ10 | 기존 상한과 도구 이름 테스트 | `bun test` |
 | REQ2, REQ8, REQ12 | 비서의 대화 흐름 | 배포 뒤 실제 계정 확인(코디네이터와 사용자) |
@@ -135,7 +138,7 @@ flowchart TD
 | DECISION2 | 기간 확인 방법 | 편집 화면을 다시 열어 기간 단추 글을 읽는다 | 작성자 | API 의 기간 키 이름을 확인한 근거가 없다. 화면은 서버 값으로 다시 그려진다 |
 | DECISION3 | CDP client | fos-career 안에 새로 쓴다. 새 의존성 없음 | 작성자 | 다른 저장소 코드는 가져오지 않는다. Bun 의 `fetch` 와 `WebSocket` 으로 충분하다 |
 | DECISION4 | 로그인 링크 | `https://www.wanted.co.kr/cv/list` | 작성자 | 로그인돼 있지 않으면 원티드가 로그인 화면으로 보낸다 |
-| DECISION5 | 칸 id | API 차례의 순번에 화면 칸 확인과 지문을 더한다 | 작성자 | API 항목 id 키를 확인한 근거가 없다. 밀림은 확인 단계에서 잡는다 |
+| DECISION5 | 칸 id 와 화면 칸 찾기 | 칸 id 는 API 차례의 순번. 화면 칸은 서버의 지금 제목과 같은 제목 칸이 하나인 상자로 찾는다 | 작성자 | API 항목 id 키를 확인한 근거가 없고, 화면 차례가 API 차례와 같다는 근거도 없다. 제목이 유일하지 않으면 멈춘다 |
 
 ## 도메인 규칙
 
