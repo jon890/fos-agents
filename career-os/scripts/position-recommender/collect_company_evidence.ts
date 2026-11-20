@@ -33,7 +33,12 @@ export async function collectEvidenceForRun(
   now = new Date(),
   fetcher: EvidenceFetcher = fetch,
   dartKeyResolver: () => string | null = loadDartApiKey,
-): Promise<{ companyCount: number; evidenceCount: number; failedCollectorCount: number }> {
+): Promise<{
+  companyCount: number;
+  evidenceCount: number;
+  failedCollectorCount: number;
+  failedCollectors: Array<{ diagnostic: string; companyCount: number }>;
+}> {
   const queue = companyTierQueueResponseSchema.parse(
     JSON.parse(readFileSync(paths.companyTierQueue, "utf8")),
   );
@@ -49,6 +54,7 @@ export async function collectEvidenceForRun(
 
   const newEvidence: Array<{ companyKey: string; evidence: CompanyEvidence[] }> = [];
   let failedCollectorCount = 0;
+  const failedCompanies = new Map<string, number>();
   for (const company of queue.companies) {
     const existingEvidence = await client.getCompanyEvidence(company.companyKey);
     const activePostings = await client.getActiveCompanyPostings(company.companyKey);
@@ -84,6 +90,8 @@ export async function collectEvidenceForRun(
     if (collected.evidence.length > 0)
       newEvidence.push({ companyKey: company.companyKey, evidence: collected.evidence });
     failedCollectorCount += collected.diagnostics.length;
+    for (const diagnostic of new Set(collected.diagnostics))
+      failedCompanies.set(diagnostic, (failedCompanies.get(diagnostic) ?? 0) + 1);
   }
 
   if (newEvidence.length > 0) {
@@ -119,5 +127,9 @@ export async function collectEvidenceForRun(
     companyCount: companies.length,
     evidenceCount: companies.reduce((sum, company) => sum + company.evidence.length, 0),
     failedCollectorCount,
+    failedCollectors: [...failedCompanies].map(([diagnostic, companyCount]) => ({
+      diagnostic,
+      companyCount,
+    })),
   };
 }

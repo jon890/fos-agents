@@ -2,13 +2,15 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
+import { z } from "zod";
 import { analysisQueueResponseSchema } from "../../services/career-backend/src/positions/schema.ts";
 import { DEFAULT_MAX_FAILED_SOURCES } from "./live-postings/collection_health.ts";
 import { collectLivePostings } from "./collect_live_postings.ts";
 import { preparePositionAnalysis } from "./prepare_position_analysis.ts";
 import { completeCompanyTierAssessment } from "./complete_company_tier_assessment.ts";
 import { collectEvidenceForRun } from "./collect_company_evidence.ts";
-import { commitPositionAnalysis } from "./commit_position_analysis.ts";
+import { analysisUpdatesInputSchema, commitPositionAnalysis } from "./commit_position_analysis.ts";
+import { companyTierUpdatesInputSchema } from "./company-tier-analysis/schema.ts";
 import { finalizeRecommendation } from "./finalize_position_recommendation.ts";
 import { createCareerBackendClient } from "./career-backend/client.ts";
 import { createCandidateContextClient } from "../candidate-context/client.ts";
@@ -21,8 +23,37 @@ import {
   type RunDirectoryPaths,
 } from "./run-dir.ts";
 
-const COMMANDS = ["collect", "commit-company-tiers", "commit-analyses", "finalize", "cleanup"] as const;
+const COMMANDS = [
+  "collect",
+  "commit-company-tiers",
+  "commit-analyses",
+  "finalize",
+  "cleanup",
+  "schema",
+] as const;
 type PositionRunCommand = (typeof COMMANDS)[number];
+
+/**
+ * 모델이 채우는 결과 파일의 입력 계약이다. 실행기 번들만 받은 환경에는 스키마 소스가 없어
+ * `schema` 하위 명령이 이 계약을 JSON Schema 로 내보낸다.
+ */
+const RESULT_SCHEMAS = {
+  "company-tiers": companyTierUpdatesInputSchema,
+  analyses: analysisUpdatesInputSchema,
+} as const;
+type ResultSchemaName = keyof typeof RESULT_SCHEMAS;
+
+export function resultFileJsonSchema(name: ResultSchemaName): unknown {
+  return z.toJSONSchema(RESULT_SCHEMAS[name], { io: "input" });
+}
+
+export type EvidenceCollectionSummary = {
+  companyCount: number;
+  evidenceCount: number;
+  failedCollectorCount: number;
+  /** 실패한 수집기의 진단 코드와 그 진단이 난 회사 수다. 외부 오류 원문은 넣지 않는다. */
+  failedCollectors?: Array<{ diagnostic: string; companyCount: number }>;
+};
 
 type PreparationResult = Awaited<ReturnType<typeof preparePositionAnalysis>>;
 type CompanyTierResult = Awaited<ReturnType<typeof completeCompanyTierAssessment>>;
@@ -38,9 +69,7 @@ export type PositionRunOperations = {
   prepareCandidateContext(paths: RunDirectoryPaths): Promise<{ candidateContextVersion: string }>;
   collect(paths: RunDirectoryPaths): Promise<number>;
   prepare(paths: RunDirectoryPaths): Promise<PreparationResult>;
-  collectEvidence?(
-    paths: RunDirectoryPaths,
-  ): Promise<{ companyCount: number; evidenceCount: number; failedCollectorCount: number }>;
+  collectEvidence?(paths: RunDirectoryPaths): Promise<EvidenceCollectionSummary>;
   commitCompanyTiers(paths: RunDirectoryPaths): Promise<CompanyTierResult>;
   commitAnalyses(paths: RunDirectoryPaths): Promise<AnalysisResult>;
   finalize(paths: RunDirectoryPaths, analysisRunId: string): Promise<FinalizationResult>;
@@ -64,6 +93,7 @@ Usage:
   position_run.ts commit-analyses --run <RUN_DIR>
   position_run.ts finalize --run <RUN_DIR>
   position_run.ts cleanup --run <RUN_DIR>
+  position_run.ts schema <company-tiers|analyses>
 
 Commands:
   collect                 공고를 수집하고 다음 큐를 만든다
@@ -71,6 +101,7 @@ Commands:
   commit-analyses         공고 분석을 반영한다
   finalize                추천 JSON과 HTML을 만든다
   cleanup                 검증과 전달이 끝난 임시 실행 디렉터리를 정리한다
+  schema                  회사 판정이나 공고 분석 결과 파일의 JSON Schema 를 출력한다
 
 Options:
   --run <RUN_DIR>  실행별 파일을 둘 디렉터리
@@ -83,6 +114,7 @@ export function positionRunHelp(): string {
 function parsePositionRunArgs(argv: string[]): {
   command: PositionRunCommand | "help";
   runDirectory?: string;
+  schemaName?: ResultSchemaName;
 } {
   if (argv.length === 0) throw new PositionRunUsageError("하위 명령이 필요합니다.");
   if (argv.includes("--help")) return { command: "help" };
@@ -90,6 +122,15 @@ function parsePositionRunArgs(argv: string[]): {
   const command = argv[0];
   if (!COMMANDS.includes(command as PositionRunCommand)) {
     throw new PositionRunUsageError(`모르는 하위 명령입니다: ${command}`);
+  }
+  if (command === "schema") {
+    const name = argv[1];
+    if (argv.length !== 2 || !(name in RESULT_SCHEMAS)) {
+      throw new PositionRunUsageError(
+        `schema에는 ${Object.keys(RESULT_SCHEMAS).join(" 또는 ")} 하나가 필요합니다.`,
+      );
+    }
+    return { command: "schema", schemaName: name as ResultSchemaName };
   }
 
   let runDirectory: string | undefined;
@@ -200,6 +241,10 @@ export async function runPositionCommand(
     writeLine(positionRunHelp());
     return 0;
   }
+  if (parsed.command === "schema") {
+    writeLine(JSON.stringify(resultFileJsonSchema(parsed.schemaName!), null, 2));
+    return 0;
+  }
 
   const operations = options.operations ?? defaultOperations;
   const directory = parsed.runDirectory ?? (options.createRunDirectory ?? createRunDirectory)();
@@ -240,6 +285,12 @@ export async function runPositionCommand(
         writeLine(
           `회사 근거 수집: 회사 ${evidence.companyCount}곳, 근거 ${evidence.evidenceCount}건, 실패 수집기 ${evidence.failedCollectorCount}건`,
         );
+        for (const failed of evidence.failedCollectors ?? [])
+          writeLine(`실패한 수집기: ${failed.diagnostic} (회사 ${failed.companyCount}곳)`);
+        if (evidence.failedCollectorCount > 0)
+          writeLine(
+            "수집기 실패는 그 출처의 근거만 빠진 것이다. 멈추지 않고 저장된 근거로 회사 판정을 이어 간다.",
+          );
       }
       writeLine(
         `수집 완료: 후보 ${result.candidateCount}건, ${basename(paths.companyTierQueue)} 준비`,

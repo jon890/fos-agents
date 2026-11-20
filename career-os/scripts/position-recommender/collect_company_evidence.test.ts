@@ -90,7 +90,12 @@ test("수집한 공고 근거를 저장하고 모델 파일에 저장 ID를 남�
     },
     () => null,
   );
-  expect(result).toEqual({ companyCount: 1, evidenceCount: 1, failedCollectorCount: 1 });
+  expect(result).toEqual({
+    companyCount: 1,
+    evidenceCount: 1,
+    failedCollectorCount: 1,
+    failedCollectors: [{ diagnostic: "dart: 인증키 없음", companyCount: 1 }],
+  });
   const file = JSON.parse(readFileSync(paths.companyEvidence, "utf8")) as {
     companies: Array<{ evidence: Array<{ id: string; sourceType: string }> }>;
   };

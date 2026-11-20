@@ -388,6 +388,8 @@ skill이 중간 파일 이름과 플래그를 알지 못하도록 모든 하위 
 | `configure_position_analysis_policy.ts` | 분석 정책 설정 |
 | `configure_position_company_preferences.ts` | 사람이 정한 회사 tier와 제외 설정 |
 
+`position_run.ts schema <company-tiers|analyses>` 도 일일 실행에 들지 않는다. 모델이 채울 결과 파일의 입력 계약을 JSON Schema 로 출력해, 실행기 번들만 받은 환경에서도 결과 칸을 확인하게 한다.
+
 plugin 의 로컬 실행기 `position` 은 `runPositionCommand` 에 하위 명령을 그대로 넘긴다. 일일 실행 경로만 열고 설정 진입점은 열지 않는다.
 `render/assets.ts` 는 리포트 템플릿을 텍스트 import 로 읽는다. 실행 파일 위치로 템플릿을 찾지 않으므로 번들한 실행기에서도 같은 HTML 이 나온다.
 
