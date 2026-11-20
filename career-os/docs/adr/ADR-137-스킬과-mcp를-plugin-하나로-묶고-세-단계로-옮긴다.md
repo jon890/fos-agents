@@ -9,6 +9,7 @@
     MCP 서버는 데이터 접근(커리어 Backend, GitHub)만 맡는다.
     스킬은 판단 흐름을 담고, 데이터는 MCP 도구로 읽고 쓰며 저장소 경로를 가리키지 않는다.
     로컬 실행기(외부 자료 수집기, PDF 출력, 브라우저 조작)는 plugin 안에 두고 Claude Code 에서만 돈다.
+    - **대체된 부분**: 「내 브라우저」 중계를 받는 도구는 MCP 서버가 브라우저를 조작한다. 비서 웹의 원티드 반영이 그렇다([ADR-145](ADR-145-비서-웹의-프로필-사이트-반영은-mcp-서버가-내-브라우저-중계로-한다.md)).
   - 쓰기 도구는 모두 승인이 필요하다(`approval: "required"`). 읽기 도구는 승인 없이 돈다(`none`). [ADR-135](ADR-135-fos-assistant-커넥터는-backend를-감싸고-숫자는-기록에서-직접-읽는다.md)의 규칙을 그대로 넓힌다.
   - **세 단계로 옮긴다.**
     1. Backend 만 쓰는 `interview-practice` 와 `study-topic-recommender` 를 plugin 스킬로 옮기고, 두 스킬이 쓰는 Backend 읽기와 쓰기를 MCP 도구로 연다.

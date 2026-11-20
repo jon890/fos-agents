@@ -51,7 +51,7 @@ ADR에는 현재 설계를 이해하는 데 필요한 기술적 선택과 기각
 | ADR-134 | [공고 분석의 기준 버전은 position-preferences 문서 버전에서 계산](ADR-134-공고-분석의-기준-버전은-position-preferences-문서-버전에서-계산한다.md) | Accepted |
 | ADR-135 | [fos-assistant 커넥터는 Backend 를 감싸고 숫자는 기록에서 직접 읽음](ADR-135-fos-assistant-커넥터는-backend를-감싸고-숫자는-기록에서-직접-읽는다.md) | Accepted |
 | ADR-136 | [지원서 공통 프로필은 fos-assistant Memory 에서 서비스 토큰으로 읽음](ADR-136-지원서-공통-프로필은-fos-assistant-memory에서-서비스-토큰으로-읽는다.md) | Accepted |
-| ADR-137 | [스킬과 MCP 를 plugin 하나로 묶고 세 단계로 옮김](ADR-137-스킬과-mcp를-plugin-하나로-묶고-세-단계로-옮긴다.md) | Accepted |
+| ADR-137 | [스킬과 MCP 를 plugin 하나로 묶고 세 단계로 옮김](ADR-137-스킬과-mcp를-plugin-하나로-묶고-세-단계로-옮긴다.md) | Accepted. 브라우저 조작 조항은 ADR-145가 개정 |
 | ADR-138 | [plugin 로컬 실행기는 scripts 원본을 번들해 부르고 작업본 위치는 설정으로 받음](ADR-138-plugin-로컬-실행기는-scripts-원본을-번들해-부르고-작업본-위치는-설정으로-받는다.md) | Accepted |
 | ADR-139 | [plugin 의 대화용 스킬과 Claude Code 전용 스킬을 디렉터리로 나눔](ADR-139-plugin-의-대화용-스킬과-claude-code-전용-스킬을-디렉터리로-나눈다.md) | Accepted |
 | ADR-140 | [노트북 client 는 선택적 Cloudflare Access service token 머리말을 앱 인증과 함께 보냄](ADR-140-노트북-client-는-선택적-cloudflare-access-service-token-머리말을-앱-인증과-함께-보낸다.md) | Accepted |
@@ -59,3 +59,4 @@ ADR에는 현재 설계를 이해하는 데 필요한 기술적 선택과 기각
 | ADR-142 | [먼저 살펴보기의 공고 제외 판정은 수집기와 같은 코드가 하고 식별 불가는 보류함](ADR-142-먼저-살펴보기의-공고-제외-판정은-수집기와-같은-코드가-하고-식별-불가는-보류한다.md) | Accepted |
 | ADR-143 | [Claude Code 의 fos-career MCP 서버는 선택적 Cloudflare Access 머리말을 보냄](ADR-143-claude-code-의-fos-career-mcp-서버는-선택적-cloudflare-access-머리말을-보낸다.md) | Accepted. 변수 선언 위치 조항은 ADR-144가 대체 |
 | ADR-144 | [Claude Code 전용 Access 값은 커넥터 선언에 두지 않고 실행 환경에서 받음](ADR-144-claude-code-전용-access-값은-커넥터-선언에-두지-않고-실행-환경에서-받는다.md) | Accepted |
+| ADR-145 | [비서 웹의 프로필 사이트 반영은 MCP 서버가 「내 브라우저」 중계로 함](ADR-145-비서-웹의-프로필-사이트-반영은-mcp-서버가-내-브라우저-중계로-한다.md) | Accepted |
