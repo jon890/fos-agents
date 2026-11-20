@@ -102,7 +102,7 @@ test("실행기를 부르는 사본은 실행기와 Backend 연결에 필요한 
 test("agent-skills 의 사본이 skills 원본에서 만든 것과 같다", () => {
   // 어긋나면 `bun run scripts/agent-skills.ts` 로 다시 만든다.
   expect(agentSkillDrift()).toEqual([]);
-  expect(agentSkillNames.sort()).toEqual(Object.keys(AGENT_SKILL_COPIES).sort());
+  expect([...agentSkillNames].sort()).toEqual(Object.keys(AGENT_SKILL_COPIES).sort());
 });
 
 test("사본에는 Claude Code 전용 안내와 복사되지 않는 파일이 없다", () => {

@@ -37,7 +37,15 @@ const SHELL_ENVIRONMENT: readonly Replacement[] = [
  * 사본을 내는 스킬과 `SKILL.md` 교체 목록이다. 셸에 요구하는 env 는 `connector.json` 의 `agent_skills.sandbox_env` 가 갖는다.
  */
 export const AGENT_SKILL_COPIES: Readonly<Record<string, readonly Replacement[]>> = {
-  "position-recommender": [[" Claude Code 에서만 돈다.\n---\n", "\n---\n"], ...SHELL_ENVIRONMENT],
+  "position-recommender": [
+    [" Claude Code 에서만 돈다.\n---\n", "\n---\n"],
+    ...SHELL_ENVIRONMENT,
+    // 실행 공간 셸에는 브라우저가 없을 수 있다. 확인하지 않은 배치를 확인했다고 전하지 않게 한다.
+    [
+      "브라우저에서 데스크톱과 모바일 배치, 가로 넘침과 주요 링크를 확인한다.\n",
+      "브라우저 도구가 있으면 데스크톱과 모바일 배치, 가로 넘침과 주요 링크를 확인한다.\n없으면 `finalize` 의 HTML 검증 결과만 전하고, 화면 배치는 확인하지 못했다고 최종 답변에 적는다.\n",
+    ],
+  ],
   "study-collection": SHELL_ENVIRONMENT,
 };
 
