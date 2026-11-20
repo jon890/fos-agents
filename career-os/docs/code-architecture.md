@@ -707,6 +707,7 @@ plist 는 `~/Library/LaunchAgents/` 에, 로그는 `~/Library/Logs/fos-career-os
 plugin 이름과 커넥터 id 는 `fos-career`, MCP 서버 이름은 `career` 다.
 가계부 커넥터(`accountbook/plugin/`)와 같은 구성이고, 결정은 [ADR-135](adr/ADR-135-fos-assistant-커넥터는-backend를-감싸고-숫자는-기록에서-직접-읽는다.md)에 있다.
 이 plugin 은 career-os 의 스킬과 MCP 서버를 한데 묶는 배포 단위이기도 하다. 옮기는 단계와 세 층 구조는 [ADR-137](adr/ADR-137-스킬과-mcp를-plugin-하나로-묶고-세-단계로-옮긴다.md)을 따른다.
+「내 브라우저」 중계를 받는 원티드 도구는 MCP 서버가 브라우저를 조작한다. 그 예외는 [ADR-145](adr/ADR-145-비서-웹의-프로필-사이트-반영은-mcp-서버가-내-브라우저-중계로-한다.md)를 따른다.
 지금은 2단계를 진행하고 있다. 대화용 스킬과 Claude Code 전용 스킬의 자리는 [ADR-139](adr/ADR-139-plugin-의-대화용-스킬과-claude-code-전용-스킬을-디렉터리로-나눈다.md), 로컬 실행기의 배치는 [ADR-138](adr/ADR-138-plugin-로컬-실행기는-scripts-원본을-번들해-부르고-작업본-위치는-설정으로-받는다.md)을 따른다.
 fos-assistant 의 일반 에이전트가 읽는 스킬의 자리(지금은 스킬 없음)는 [ADR-141](adr/ADR-141-일반-에이전트가-읽는-스킬은-plugin-의-agent-skills-에-두고-따로-올린다.md)을 따른다.
 
@@ -717,6 +718,8 @@ career-os/plugin/
 ├── connector.json
 ├── package.json, tsconfig.json, bun.lock
 ├── src/
+│   ├── browser/
+│   └── wanted/
 ├── scripts/
 ├── dist/career-mcp.js
 ├── dist/career-local.js
@@ -747,10 +750,12 @@ career-os/plugin/
 | `plugin/src/positions.ts` | 포지션 조사 제외 기준 도구의 응답 스키마와 제외 규칙, 회사 선호를 함께 읽어 보류 여부를 정하는 일 |
 | `plugin/src/backend.ts` | 커리어 Backend 의 Bearer HTTP client 와 응답 스키마 |
 | `plugin/src/github.ts` | GitHub REST client. 프로필 저장소 조회와 Git Data API 로 커밋 하나를 만드는 일 |
+| `plugin/src/browser/cdp.ts` | fos-assistant 「내 브라우저」 중계(`CAREER_BROWSER_URL`)로 탭을 열고 닫고 페이지 식을 돌리는 CDP client. 사람 잠금 신호를 `CAREER_BROWSER_IN_USE` 로 바꾼다 |
+| `plugin/src/wanted/` | 원티드 읽기·쓰기 도구의 흐름(`tools.ts`), 칸 id·정규화·지문과 입력 검사(`fields.ts`), 원티드 탭 안에서 돌리는 식(`page.ts`). 설계는 [`features/profile-browser-sync/design.md`](features/profile-browser-sync/design.md) |
 | `plugin/src/*.test.ts`, `plugin/scripts/*.test.ts` | fetch 대역으로 도는 도구 테스트, 번들 일치와 manifest 일치 검사 |
 | `plugin/scripts/build.ts`, `plugin/dist/career-mcp.js` | 의존성을 포함한 MCP 서버 실행 파일의 빌드와 배포 |
 | `plugin/dist/career-local.js` | 같은 빌드가 만드는 로컬 실행기 실행 파일. 아래 「로컬 실행기」 |
-| `plugin/connector-skills/career-connector/SKILL.md` | 연결용 에이전트의 지침. 프로필 갱신 순서와 승인 규칙, 조사용 읽기 도구의 결과 해석 |
+| `plugin/connector-skills/career-connector/SKILL.md` | 연결용 에이전트의 지침. 프로필 갱신과 원티드 반영 순서, 승인 규칙, 조사용 읽기 도구의 결과 해석 |
 | `plugin/connector-skills/interview-practice/SKILL.md` | MCP 도구만으로 하는 면접 연습. 질문 고르기, 답변 평가, 기록과 개인 질문 저장 |
 | `plugin/connector-skills/study-topic-recommender/SKILL.md` | MCP 도구만으로 하는 공부 추천. 수집된 후보에서 고르고 추천 이력을 저장 |
 | `plugin/skills/application-package-writer/` | Claude Code 전용. 공고별 적합도 판정, 후보자 인터뷰, 지원 전략과 검토 화면 |

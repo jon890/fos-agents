@@ -962,7 +962,8 @@ plugin 의 `study-topic-recommender` 스킬이 이미 수집된 후보에서 고
 | 공부 추천 저장 결과를 알 수 없다 | 다른 인자를 하나도 바꾸지 않고 오류에 실린 `generatedAt` 만 더해 다시 승인받아 보낸다. 같은 `reportId` 와 `generatedAt` 이면 멱등 키가 같다. 본문이 다르면 `IDEMPOTENCY_CONFLICT` 409 가 된다 |
 | 공부 후보가 비었다 | 정상 응답이다. 꺼진 소스에서만 나온 자료, 이미 추천한 자료, 지금 기준에서 유효한 제외 판정, 요청 필터를 거른 뒤 남은 미추천 후보가 없다. 빈 결과만으로 수집 실행 여부나 웹 자료 유무를 단정하지 않는다. 빈 결과를 알리고 저장하지 않는다. `learning-interests` 문서가 없으면 `CAREER_LEARNING_INTERESTS_MISSING`, token 거절은 `CAREER_UNAUTHORIZED`, 장애는 `CAREER_UNAVAILABLE` 이나 `CAREER_NETWORK` 오류로 따로 온다 |
 | 저장할 본문이 승인 인자 상한을 넘는다 | fos-assistant 가 호출을 거절한다. 노트북의 CLI 로 저장하라고 안내한다 |
-| 원티드나 LinkedIn 을 고쳐 달라고 한다 | 원고만 고치고, 사이트 반영은 Claude Code 에서 이 plugin 의 `sync-profile` 로 하라고 안내한다 |
+| 원티드를 고쳐 달라고 한다 | `get_wanted_resume` 으로 읽고 원고와 다른 칸만 변경 전후 표로 보인 뒤 `update_wanted_resume` 한 번으로 승인받는다. 넣은 칸만 원고 저장을 따로 승인받는다([원티드 반영 설계](features/profile-browser-sync/design.md)) |
+| LinkedIn 을 고쳐 달라고 한다 | 원고만 고치고, 사이트 반영은 Claude Code 에서 이 plugin 의 `sync-profile` 로 하라고 안내한다 |
 
 README 갱신과 GitHub 원고 저장은 따로 승인받는 두 호출이다.
 GitHub 갱신만 승인하고 원고 저장을 거절하면 원고가 프로필보다 낡은 채로 남는다. 다음 갱신 때 1단계의 차이 보고에서 드러난다.
