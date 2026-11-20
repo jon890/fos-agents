@@ -19,9 +19,9 @@ related: []
 
 예:
 
-- `apartment/`
+- `accountbook/`
 - `career-os/`
-- `stock-investment/`
+- `health-care/`
 
 ## 왜
 

@@ -25,13 +25,9 @@
 
 | 워크스페이스              | 가이드                                                        | 책임               |
 | ------------------- | ---------------------------------------------------------- | ---------------- |
-| `apartment/`        | [`apartment/AGENTS.md`](apartment/AGENTS.md)               | 아파트 시세와 인테리어 리포트 |
 | `accountbook/`      | [`accountbook/AGENTS.md`](accountbook/AGENTS.md)           | 가계부 입력 자동화         |
 | `career-os/`        | [`career-os/AGENTS.md`](career-os/AGENTS.md)               | 커리어, 면접, 지원 준비   |
-| `stock-investment/` | [`stock-investment/AGENTS.md`](stock-investment/AGENTS.md) | 주식과 이슈 모니터링      |
-| `travel/`           | [`travel/AGENTS.md`](travel/AGENTS.md)                     | 여행 일정과 결정 로그     |
 | `health-care/`      | [`health-care/AGENTS.md`](health-care/AGENTS.md)           | 건강 기록과 재활 체크인    |
-| `ji-yoon-blog/`     | [`ji-yoon-blog/AGENTS.md`](ji-yoon-blog/AGENTS.md)         | 지융로그 콘텐츠 운영      |
 | `side-projects/`    | [`side-projects/AGENTS.md`](side-projects/AGENTS.md)       | 사이드 프로젝트와 외주 기회  |
 
 
@@ -57,7 +53,7 @@
 예시:
 
 - `fix(career-os): 추천 결과의 추정 기본값을 제거한다`
-- `docs(apartment): 리포트 생성 경로와 게시 검증 절차를 분리한다`
+- `docs(accountbook): 월 리포트 생성 경로와 게시 검증 절차를 분리한다`
 
 ## PR 머지
 

@@ -22,7 +22,6 @@ Admin UI는 bucket과 객체를 확인하는 운영 화면이다.
 | collection key | bucket | 무엇을 담나 | 워크스페이스 문서 |
 | --- | --- | --- | --- |
 | `career-os` | `career-os` | 비공개 작업 release | `career-os/docs/` |
-| `ji-yoon-blog` | `ji-yoon-blog` | 블로그 글에 쓸 사진 원본 | `ji-yoon-blog/docs/data-schema.md` |
 | `gersang-lab` | `gersang-lab-assets` | 원작에서 내보낸 그림과 소리. 객체 key는 `sha256/<해시>` | `gersang-lab/docs/features/server/asset-storage.md` |
 | `photo-backup` | `photo-backup` | 맥의 Google 포토 Takeout을 평탄화한 사진·동영상 원본 | 이 저장소의 워크스페이스가 아니다. 홈서버 운영 저장소의 photo-backup 기능 문서가 갖는다 |
 
