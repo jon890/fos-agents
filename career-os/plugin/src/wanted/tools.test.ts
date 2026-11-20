@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { CareerError } from "../backend.ts";
 import type { BrowserLink, CdpSession } from "../browser/cdp.ts";
 import { CareerTools } from "../tools.ts";
-import { fingerprint } from "./fields.ts";
+import { fingerprint, labelOf, parseField } from "./fields.ts";
 import { WantedTools, type Timing } from "./tools.ts";
 
 // A stand-in Wanted tab. Expressions are recognized by markers in their bodies (see page.ts);
@@ -19,6 +19,8 @@ type Scenario = {
   dropAt?: number;
   openFails?: CareerError;
   tick?: number;
+  ready?: boolean;
+  throwAt?: number;
 };
 
 class World {
@@ -51,7 +53,7 @@ class World {
     };
   }
 
-  private api() {
+  api() {
     return {
       resume: { about: this.about, title: "기본 이력서" },
       careers: [{ company_name: "가나다", projects: this.projects.map(({ title, description }) => ({ title, description })) }],
@@ -73,6 +75,7 @@ class World {
         world.evaluations++;
         if (world.scenario.dropAt && world.evaluations >= world.scenario.dropAt)
           throw new CareerError("CAREER_BROWSER_IN_USE", { tab });
+        if (world.scenario.throwAt && world.evaluations === world.scenario.throwAt) return { ok: true, value: { status: "OK", resume: null } };
         return { ok: true, value: world.evaluate(expression, url) };
       },
       close() {},
@@ -81,6 +84,7 @@ class World {
 
   private evaluate(expression: string, url: string): unknown {
     const json = (pattern: RegExp) => JSON.parse(pattern.exec(expression)![1]!);
+    if (expression === '!!document.querySelector("[data-agent-field-key]")') return this.scenario.ready ?? true;
     if (expression.includes('return "LIST"')) {
       if (this.scenario.state) return this.scenario.state(url);
       return url.endsWith("/cv/list") ? "LIST" : "EDIT";
@@ -155,10 +159,17 @@ class World {
   }
 }
 
-const timing: Timing = { budgetMs: 45_000, waitMs: 0, pollMs: 0 };
+const timing: Timing = { budgetMs: 45_000, periodMs: 15_000, waitMs: 0, pollMs: 0, stepMs: 1_000 };
 const tools = (world: World) => new WantedTools(world.link(), () => world.clock, timing);
 
-const change = (field: string, value: string, before: string) => ({ field, label: field, before, value });
+// Labels as get_wanted_resume gives them for the fake world's starting resume.
+const labels = new World().api();
+const change = (field: string, value: string, before: string, label = labelOf(labels, parseField(field)!) ?? field) => ({
+  field,
+  label,
+  before,
+  value,
+});
 const run = (world: World, changes: ReturnType<typeof change>[]) =>
   tools(world).updateResume({ resumeKey: "KEY=1", resumeTitle: "기본 이력서", changes }) as Promise<{
     status: string;
@@ -204,7 +215,8 @@ test("이력서가 여럿이면 고르게 하고, 없으면 오류다", async ()
       { resumeKey: "B", title: "영문", updatedAt: "2026.09.01" },
     ],
   });
-  expect(await codeOf(tools(new World({ resumes: [] })).getResume({}))).toBe("CAREER_WANTED_RESUME_NOT_FOUND");
+  // An empty list after waiting means the list page changed, not that there is no resume.
+  expect(await codeOf(tools(new World({ resumes: [] })).getResume({}))).toBe("CAREER_WANTED_PAGE_CHANGED");
   expect(await codeOf(tools(new World({ readResume: () => "NOT_FOUND" })).getResume({ resumeKey: "X" }))).toBe(
     "CAREER_WANTED_RESUME_NOT_FOUND",
   );
@@ -297,7 +309,7 @@ test("화면 칸을 못 찾거나 넣기가 실패하면 page_changed 다", asyn
 });
 
 test("실행 중 로그인이 풀리면 넘기기 없이 멈춘 결과를 낸다", async () => {
-  const result = await run(new World({ readResume: (call) => (call >= 3 ? "LOGIN" : undefined) }), [
+  const result = await run(new World({ readResume: (call) => (call >= 4 ? "LOGIN" : undefined) }), [
     change("about", "새 소개", fingerprint("백엔드 개발자입니다.")),
     change("project:0:0:description", "- 새 본문", fingerprint("- 주문을 나눴다")),
     change("project:0:0:title", "새 제목", fingerprint("주문 API")),
@@ -313,8 +325,8 @@ test("사람이 브라우저를 쥐고 있거나 가져가면 그에 맞는 이�
     change("project:0:0:end", "2026-11", fingerprint("2026-10")),
   ]);
   expect(states(held)).toEqual(["not_inserted:browser_in_use", "not_inserted:browser_in_use"]);
-  // Evaluations: page state, read, field value, then the setter is the 4th.
-  const taken = await run(new World({ dropAt: 4 }), [
+  // Evaluations: page state, ready, first read, field read, field value, then the setter is the 6th.
+  const taken = await run(new World({ dropAt: 6 }), [
     change("about", "새 소개", fingerprint("백엔드 개발자입니다.")),
     change("project:0:0:end", "2026-11", fingerprint("2026-10")),
   ]);
@@ -334,7 +346,7 @@ test("첫 칸 전 이력서가 없으면 오류, 둘째 칸 전 화면이 바뀌
   expect(
     await codeOf(run(new World({ readResume: () => "NOT_FOUND" }), [change("about", "x", fingerprint("백엔드 개발자입니다."))])),
   ).toBe("CAREER_WANTED_RESUME_NOT_FOUND");
-  const result = await run(new World({ readResume: (call) => (call >= 3 ? "NOT_FOUND" : undefined) }), [
+  const result = await run(new World({ readResume: (call) => (call >= 4 ? "NOT_FOUND" : undefined) }), [
     change("about", "새 소개", fingerprint("백엔드 개발자입니다.")),
     change("project:0:0:description", "- 새 본문", fingerprint("- 주문을 나눴다")),
   ]);
@@ -357,4 +369,43 @@ test("등록한 도구는 넘기기와 멈춤을 isError 없이 돌려준다", a
   const unreachable = await new CareerTools({} as never).call("get_wanted_resume", {});
   expect(unreachable.isError).toBe(true);
   expect(JSON.parse(unreachable.content[0].text).error.code).toBe("CAREER_BROWSER_UNREACHABLE");
+});
+
+test("읽은 뒤 항목이 늘어 칸 이름이 다른 칸을 가리키면 아무것도 넣지 않는다", async () => {
+  const world = new World();
+  // A new project at the top shifts positions; the old second project now sits at project:0:2.
+  world.projects.unshift({ title: "새 프로젝트", description: "", start: "2024-12", end: "2024-12" });
+  const result = await run(world, [change("project:0:1:end", "2025-01", fingerprint("2024-12"), "가나다 / 정산 배치 / 종료월")]);
+  expect(states(result)).toEqual(["not_inserted:page_changed"]);
+  expect(world.projects.map((p) => p.end)).toEqual(["2024-12", "2026-10", "2024-12"]);
+});
+
+test("세 칸 중 둘째 칸이 실패하면 넣음, 실패, 넣지 않음이다", async () => {
+  const result = await run(new World({ setText: (call) => (call === 2 ? "INSERT_FAIL" : undefined) }), [
+    change("about", "새 소개", fingerprint("백엔드 개발자입니다.")),
+    change("project:0:0:description", "- 새 본문", fingerprint("- 주문을 나눴다")),
+    change("project:0:1:description", "- 또 새 본문", fingerprint("- 정산을 옮겼다")),
+  ]);
+  expect(result.status).toBe("stopped");
+  expect(states(result)).toEqual(["inserted", "failed:page_changed", "not_inserted:stopped_earlier"]);
+});
+
+test("기간을 넣었는데 다시 연 화면에 반영되지 않으면 not_saved 다", async () => {
+  const result = await run(new World({ saves: false }), [change("project:0:0:end", "2026-11", fingerprint("2026-10"))]);
+  expect(states(result)).toEqual(["failed:not_saved"]);
+});
+
+test("예상 밖 모양의 응답도 칸별 결과로 멈춘다", async () => {
+  // The 4th evaluation is the first field's read; it answers OK without a resume.
+  const result = await run(new World({ throwAt: 4 }), [
+    change("about", "새 소개", fingerprint("백엔드 개발자입니다.")),
+    change("project:0:0:end", "2026-11", fingerprint("2026-10")),
+  ]);
+  expect(states(result)).toEqual(["not_inserted:page_changed", "not_inserted:stopped_earlier"]);
+});
+
+test("편집 화면이 그려지지 않으면 읽기는 PAGE_CHANGED, 쓰기는 page_changed 로 멈춘다", async () => {
+  expect(await codeOf(tools(new World({ ready: false })).getResume({ resumeKey: "KEY=1" }))).toBe("CAREER_WANTED_PAGE_CHANGED");
+  const result = await run(new World({ ready: false }), [change("about", "x", fingerprint("백엔드 개발자입니다."))]);
+  expect(states(result)).toEqual(["not_inserted:page_changed"]);
 });

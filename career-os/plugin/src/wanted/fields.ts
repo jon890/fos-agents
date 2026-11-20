@@ -92,6 +92,14 @@ export function fieldsFromResume(
   return { fields, unreadable };
 }
 
+/** The label get_wanted_resume gives a field in this resume, or null when the position no longer exists. */
+export function labelOf(api: ResumeApi, field: ParsedField): string | null {
+  if (field.kind === "about") return "간단 소개";
+  const career = careersOf(api)[field.c];
+  const project = career?.projects[field.p];
+  return career && project ? projectLabel(career.company, project.title, field.part) : null;
+}
+
 /** Skills, links and AI experience are read only; shape them as plain strings and skip what is not understood. */
 export function outOfScopeFromResume(
   api: ResumeApi,
@@ -112,8 +120,11 @@ export function outOfScopeFromResume(
   };
 }
 
+// A resume key is one path segment of /cv/<key>; slashes, dots, query and fragment characters are refused.
+const resumeKey = z.string().trim().min(1).max(200).regex(/^[^\s/\\?#.]+$/);
+
 export const getWantedResumeSchema = z.strictObject({
-  resumeKey: z.string().trim().min(1).max(200).optional(),
+  resumeKey: resumeKey.optional(),
 });
 
 const ARGUMENT_BYTE_LIMIT = 16_000;
@@ -135,7 +146,7 @@ const changeSchema = z
 
 export const updateWantedResumeSchema = z
   .strictObject({
-    resumeKey: z.string().trim().min(1).max(200),
+    resumeKey,
     resumeTitle: z.string().trim().min(1).max(100),
     changes: z.array(changeSchema).min(1).max(30),
   })

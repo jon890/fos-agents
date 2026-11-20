@@ -15,7 +15,7 @@ export const pageMarkers = ["OK", "NO_ELEMENT", "AMBIGUOUS", "BOUNDARY", "TOO_LO
 
 /**
  * Helpers shared by the expressions. A project box is found from the one title field whose value equals the
- * project's current title, then the nearest ancestor holding exactly that one title and at least two period buttons.
+ * project's current title, then the nearest ancestor holding exactly that one title and exactly two period buttons.
  * `title` and `description` keys are also used by other items, so the page order is never trusted.
  */
 const PRELUDE = `
@@ -31,7 +31,8 @@ const PRELUDE = `
     for (var n = 0; n < 12 && box; n++) {
       var inside = box.querySelectorAll("[data-agent-field-key=title]").length;
       if (inside > 1) return "BOUNDARY";
-      if (periodButtons(box).length >= 2) return { box: box, title: titles[0] };
+      // A project box has exactly its own start and end; a career box around it would show four.
+      if (periodButtons(box).length === 2) return { box: box, title: titles[0] };
       box = box.parentElement;
     }
     return "NO_ELEMENT";
@@ -72,6 +73,11 @@ export function pageStateScript(): string {
     if (/^\\/cv\\/[^/]+\\/?$/.test(path)) return "EDIT";
     return "OTHER";
   `);
+}
+
+/** True once the edit form has drawn its fields; the load event fires before React renders them. */
+export function editReadyScript(): string {
+  return `!!document.querySelector("[data-agent-field-key]")`;
 }
 
 /** Resume entries on the list page: [{resumeKey, title, updatedAt}]. Entries without a /cv/<key> link are skipped. */
@@ -194,12 +200,19 @@ export function setPeriodSteps(projectTitle: string, which: "start" | "end", yea
     },
     {
       run: iife(`
-        var ok = Array.from(document.querySelectorAll("button")).filter(function(x){
-          return (x.textContent || "").trim() === "확인" && x.getBoundingClientRect().width > 0;
-        });
-        if (!ok.length) return "NO_ELEMENT";
-        ok[ok.length - 1].click();
-        return "confirmed";
+        // Look for 확인 only in the picker around the grid, not anywhere on the page.
+        var g = ${grid};
+        if (g.length !== 1) return "AMBIGUOUS";
+        var scope = g[0];
+        for (var n = 0; n < 4 && scope; n++) {
+          var ok = Array.from(scope.querySelectorAll("button")).filter(function(x){
+            return (x.textContent || "").trim() === "확인" && x.getBoundingClientRect().width > 0;
+          });
+          if (ok.length === 1) { ok[0].click(); return "confirmed"; }
+          if (ok.length > 1) return "AMBIGUOUS";
+          scope = scope.parentElement;
+        }
+        return "NO_ELEMENT";
       `),
       expect: "confirmed",
     },

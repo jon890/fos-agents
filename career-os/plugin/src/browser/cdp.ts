@@ -14,8 +14,18 @@ const HUMAN_HELD_STATUS = 423;
 /** The relay closes WebSockets with this code when a person takes the browser. */
 export const HUMAN_HELD_CLOSE = 4423;
 
-function clearProxyEnvironment() {
+/**
+ * Runs `start` with the proxy variables removed, then puts them back. Bun reads them when a request starts,
+ * so the relay call goes direct while Backend and GitHub calls in the same process keep their proxy.
+ */
+function withoutProxy<T>(start: () => T): T {
+  const saved = PROXY_ENVIRONMENT_KEYS.map((key) => [key, process.env[key]] as const);
   for (const key of PROXY_ENVIRONMENT_KEYS) delete process.env[key];
+  try {
+    return start();
+  } finally {
+    for (const [key, value] of saved) if (value !== undefined) process.env[key] = value;
+  }
 }
 
 const unreachable = () => new CareerError("CAREER_BROWSER_UNREACHABLE");
@@ -33,14 +43,15 @@ export async function httpJson(
   path: string,
   { method = "GET", timeoutMs = HTTP_TIMEOUT_MS }: { method?: string; timeoutMs?: number } = {},
 ): Promise<unknown> {
-  clearProxyEnvironment();
   let text: string;
   try {
-    const response = await fetch(`${endpoint}${path}`, {
-      method,
-      signal: AbortSignal.timeout(Math.max(1, timeoutMs)),
-      redirect: "error",
-    });
+    const response = await withoutProxy(() =>
+      fetch(`${endpoint}${path}`, {
+        method,
+        signal: AbortSignal.timeout(Math.max(1, timeoutMs)),
+        redirect: "error",
+      }),
+    );
     if (response.status === HUMAN_HELD_STATUS) throw humanHeld();
     if (!response.ok) throw unreachable();
     text = await response.text();
@@ -103,11 +114,10 @@ export class CdpSession {
 
   /** Connects without an `Origin` header; the relay rejects requests that look like they came from a page. */
   static connect(wsUrl: string, timeoutMs = COMMAND_TIMEOUT_MS): Promise<CdpSession> {
-    clearProxyEnvironment();
     return new Promise((resolve, reject) => {
       let socket: WebSocket;
       try {
-        socket = new WebSocket(wsUrl);
+        socket = withoutProxy(() => new WebSocket(wsUrl));
       } catch {
         reject(unreachable());
         return;

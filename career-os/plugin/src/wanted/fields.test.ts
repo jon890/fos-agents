@@ -91,3 +91,12 @@ test("쓰기 인자는 범위 밖 칸, 중복, 잘못된 값, 16,000바이트 �
   expect(updateWantedResumeSchema.safeParse(args(three)).success).toBe(false);
   expect(updateWantedResumeSchema.safeParse(args(three.slice(0, 2))).success).toBe(true);
 });
+
+test("쓰기 인자는 resumeKey 와 resumeTitle 이 필수이고 키는 경로 한 마디만 받는다", () => {
+  const one = [change("about", "새 소개")];
+  expect(updateWantedResumeSchema.safeParse({ resumeTitle: "t", changes: one }).success).toBe(false);
+  expect(updateWantedResumeSchema.safeParse({ resumeKey: "K", changes: one }).success).toBe(false);
+  for (const bad of ["../x", "a/b", "a?b", "a#b", "a b"])
+    expect(updateWantedResumeSchema.safeParse({ resumeKey: bad, resumeTitle: "t", changes: one }).success).toBe(false);
+  expect(updateWantedResumeSchema.safeParse({ resumeKey: "AbC=_-1", resumeTitle: "t", changes: one }).success).toBe(true);
+});

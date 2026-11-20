@@ -1468,8 +1468,8 @@ README 에는 `img.shields.io/badge/Tokens-<값>B-` 모양의 배지 주소가 �
 | `CAREER_BROWSER_UNREACHABLE` | 「내 브라우저」 중계 주소가 비었거나 브라우저에 닿지 못함. 노트북 Claude Code 에서는 늘 이 코드다. 원티드 도구는 아무 칸도 건드리지 않았다 | `unavailable` |
 | `CAREER_BROWSER_IN_USE` | 사람이 「직접 할게요」 로 「내 브라우저」 를 쥐고 있음. 읽기 도구는 오류 대신 이 코드를 `code` 로 한 넘기기(`human_browser`)를 돌려준다 | `unavailable` |
 | `CAREER_WANTED_LOGIN_REQUIRED` | 원티드 로그인이나 보안 확인 화면. 읽기 도구는 이 코드를 `code` 로 한 넘기기(`login`)를 돌려준다. `connector.json` 은 recovery `reconnect` 를 함께 선언한다 | `credential_rejected` |
-| `CAREER_WANTED_PAGE_CHANGED` | 원티드 화면이나 칸 구조가 예상과 다름. 쓰기 도구는 오류 대신 칸의 `reason: page_changed` 로 멈춘다 | `unavailable` |
-| `CAREER_WANTED_RESUME_NOT_FOUND` | 원티드 이력서가 없거나 받은 `resumeKey` 의 이력서가 없음. 쓰기 도구는 첫 칸을 건드리기 전에만 이 오류를 낸다 | `invalid_input` |
+| `CAREER_WANTED_PAGE_CHANGED` | 원티드 화면이나 칸 구조가 예상과 다름. 기다린 뒤에도 이력서 목록이 비어 있는 경우도 든다. 쓰기 도구는 오류 대신 칸의 `reason: page_changed` 로 멈춘다 | `unavailable` |
+| `CAREER_WANTED_RESUME_NOT_FOUND` | 받은 `resumeKey` 의 이력서가 없음. 쓰기 도구는 첫 칸을 건드리기 전에만 이 오류를 낸다 | `invalid_input` |
 | `CAREER_UNKNOWN_TOOL`, `CAREER_INTERNAL` | 지원하지 않는 도구 또는 내부 처리 실패 | |
 
 `message` 는 사람에게 보일 고정 문구다. Backend 와 GitHub 의 응답 본문, token, 문서 본문을 담지 않는다.

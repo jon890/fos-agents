@@ -10,7 +10,7 @@
 | REQ2 | 비교와 표는 비서가 한다. 도구는 비교에 쓸 지금 값과 칸 이름을 준다. 연결용 지침에 「원고(`get_profile_document`)와 비교해 다른 칸만 표로」 순서를 둔다 |
 | REQ3 | WRITE 도구 `update_wanted_resume` 를 `risk: WRITE`, `approval: required`, `outbound: true`, `grant: false` 로 선언한다. 대화 허락은 선언하지 않는다. 승인 인자 16KB 상한은 fos-assistant 가 승인 전에 막으므로, 「16KB 를 넘을 변경은 칸을 나눠 부른다」 를 도구 설명과 지침에 둔다. 플러그인의 16,000바이트 검사는 실행 단계의 보조 검사다 |
 | REQ4 | 실행은 칸마다 「서버 값 다시 읽기, 지문 대조, 화면 칸 확인, 넣기, 서버 값 다시 읽기, 글자 대조」 를 한 칸씩 한다. 글 칸은 API 로, 기간 칸은 편집 화면을 새로 열어 다시 읽는다 |
-| REQ5 | 실행 결과는 `isError` 없는 결과의 `results[]` 에 칸마다 `inserted`, `failed`, `not_inserted` 와 이유를 담는다. 첫 실패나 지문 불일치에서 루프를 끝낸다. 실행의 멈춤은 모두 `status: "stopped"` 이고 오류로 내지 않는다. 승인한 실행의 오류는 선언한 코드만 비서에게 가서 칸별 결과가 사라진다(fos-assistant ADR-092) |
+| REQ5 | 실행 결과는 `isError` 없는 결과의 `results[]` 에 칸마다 `inserted`, `failed`, `not_inserted` 와 이유를 담는다. 첫 실패나 지문 불일치에서 루프를 끝낸다. 실행의 멈춤은 모두 `status: "stopped"` 이고 오류로 내지 않는다. 예외는 아무 칸도 건드리기 전의 `CAREER_BROWSER_UNREACHABLE` 과 `CAREER_WANTED_RESUME_NOT_FOUND` 둘뿐이다. 승인한 실행의 오류는 선언한 코드만 비서에게 가서 칸별 결과가 사라진다(fos-assistant ADR-092) |
 | REQ6 | 읽기 도구는 원티드 탭이 로그인·보안 확인 화면이면 `isError` 없는 넘기기 결과(`need: "login"`)를 돌려주고 탭을 남긴다. 쓰기 도구는 같은 화면에서 넘기기 모양을 내지 않고 `status: "stopped"` 와 칸별 결과(남은 칸 `not_inserted`, 이유 `login_required`)를 돌려준다. 지침이 「멈췄다고 알리고 `get_wanted_resume` 을 다시 불러 카드를 띄운다」 를 시킨다(스펙 DECISION24) |
 | REQ7 | 넣기 전에 칸을 찾지 못하거나 화면 칸 값이 서버 값과 다르면 그 칸을 `not_inserted`(`page_changed`)로 적고 멈춘다. 넣는 도중 화면이 기대와 다르면 `failed`(`page_changed`)다. 읽기 도구는 같은 경우 `CAREER_WANTED_PAGE_CHANGED` 오류를 낸다. 도구 설명이 대안(노트북 `sync-profile`, 직접 고치기)을 안내한다 |
 | REQ8 | 기존 `save_profile_document` 를 그대로 쓴다. 지침이 반영 뒤 「넣은 칸만 원고에 반영해 저장안을 보이고 승인」 을 시킨다 |
@@ -64,6 +64,8 @@ fos-assistant 의 네이버 블로그 `cdp.ts` 는 다른 저장소라 가져오
 화면의 프로젝트 상자는 「서버가 준 그 프로젝트의 지금 제목과 정규화 값이 같은 `[data-agent-field-key=title]` 칸이 화면에 정확히 하나」 로 찾고, 그 칸에서 위로 올라가 제목 칸 하나와 기간 단추 둘 이상을 담은 가장 가까운 상자를 프로젝트 상자로 본다(`wanted_set_period.sh` 의 경계 확인과 같다). 본문 칸과 기간 단추는 그 상자 안에서만 찾는다. 같은 제목이 둘이거나 없거나 상자를 못 찾으면 `page_changed` 다. 사용자가 더한 빈 항목은 빈 제목이 하나뿐일 때만 찾힌다.
 간단 소개는 `[data-agent-field-key=about]` 이 하나일 때만 찾는다.
 실행은 넣기 전에 서버 값 지문과 위 방법으로 찾은 화면 칸의 값이 서버 값과 같은지를 함께 확인한다(REQ5, REQ7).
+실행 첫머리에서는 칸을 건드리기 전에 모든 `label` 이 지금 서버의 같은 순번 칸 이름과 같은지 본다. 읽은 뒤 항목이 늘어 순번이 밀리면, 값이 같은 다른 프로젝트 칸이 지문 대조를 통과할 수 있어서다. 하나라도 다르면 아무것도 넣지 않고 `page_changed` 로 멈춘다. 그래서 `label` 은 읽기 결과의 글을 그대로 넣는다.
+기간 칸은 넣기 전마다 편집 화면을 새로 열어 그 값을 지문 대조와 화면 확인에 쓴다. 실행을 시작할 때 본 화면 값으로 대조하지 않는다.
 `label` 은 「<회사 이름 또는 경력 c> / <프로젝트 제목> / 본문」 처럼 사람이 읽는 이름이다. 회사 이름을 읽지 못하면 「경력 c」 를 쓴다. 비서는 이 이름으로 원고 항목과 짝짓는다(스펙 DECISION12).
 지문은 정규화한 값의 SHA-256 앞 16자리 16진수다. 정규화는 CRLF 를 LF 로, 앞뒤 공백 제거다. 기간은 `YYYY-MM` 으로 맞춘 글이다.
 
@@ -71,7 +73,7 @@ fos-assistant 의 네이버 블로그 `cdp.ts` 는 다른 저장소라 가져오
 
 | 도구 | 인자 | 결과 |
 | --- | --- | --- |
-| `get_wanted_resume` | `resumeKey`(선택, 1~200자) | 이력서가 정해지면 `{status: "ok", resumeKey, resumeTitle, fields: [{field, label, value, fingerprint}], outOfScope: {skills, links, aiCompetencies}}`. 여럿이면 `{status: "choose", resumes: [{resumeKey, title, updatedAt}]}`. 로그인 화면이면 넘기기 결과 |
+| `get_wanted_resume` | `resumeKey`(선택, 1~200자, 경로 한 마디라 `/`, `.`, `?`, `#`, 공백을 받지 않는다) | 이력서가 정해지면 `{status: "ok", resumeKey, resumeTitle, fields: [{field, label, value, fingerprint}], unreadable, outOfScope: {skills, links, aiCompetencies}}`. `unreadable` 은 화면에서 기간을 읽지 못한 칸의 이름이다. 여럿이면 `{status: "choose", resumes: [{resumeKey, title, updatedAt}]}`. 로그인 화면이면 넘기기 결과 |
 | `update_wanted_resume` | `resumeKey`, `resumeTitle`(1~100자), `changes`: 1~30개 `{field, label, before, value}`. `before` 는 읽기 결과의 지문, `value` 는 넣을 값(글은 UTF-8 16,000바이트 안, 빈 글 거절, 기간은 `YYYY-MM`). 같은 `field` 중복 거절 | `{status: "done" 또는 "stopped", resumeKey, results: [{field, label, state, reason?}]}`. `state` 는 `inserted`, `failed`, `not_inserted`. `reason` 은 `fingerprint_mismatch`, `stopped_earlier`, `time_limit`, `page_changed`, `not_saved`, `login_required`, `browser_in_use`, `browser_taken`. `browser_in_use` 는 탭을 열기 전에 사람이 브라우저를 쥐고 있던 경우로 모든 칸이 `not_inserted` 다. `browser_taken` 은 넣던 칸이 저장됐을 수 있어 `failed` 와 함께 쓴다 |
 
 넘기기 결과는 fos-assistant 공통 모양 `{status: "HUMAN_ACTION_REQUIRED", message, handoff: {code, need, tab}}` 이고 `get_wanted_resume` 만 낸다. `update_wanted_resume` 은 승인한 실행이라 넘기기를 내면 fos-assistant 가 카드 없이 실패로 끝내고 결과를 버린다. 그래서 로그인 화면과 사람 잠금도 `status: "stopped"` 로 낸다(스펙 DECISION18, DECISION19, DECISION24).
@@ -103,7 +105,9 @@ flowchart TD
 
 - 글 칸 넣기는 `sync-profile` 의 `wanted_set_field.sh` 와 같다: `execCommand('insertText')` 뒤 React `onBlur` 를 직접 부른다.
 - 기간 넣기는 `wanted_set_period.sh` 와 같다: 컨테이너가 프로젝트 제목 칸을 하나만 담는지 확인한 뒤 연도, 월, 「확인」 을 누른다. 확인은 편집 화면을 다시 열어 그 프로젝트의 기간 단추 글(`YYYY.MM`)을 읽는다. 원티드 API 의 기간 키 이름은 문서에 없어서 쓰지 않는다.
-- 실행 시간은 45초까지다. fos-assistant 대시보드가 승인한 호출을 60초 기다리기 때문이다(fos-assistant `hermes/connectors/README.md`). 넘으면 남은 칸을 `not_inserted`(`time_limit`)로 돌려주고, 비서는 다시 읽어 남은 칸을 새로 승인받는다. 칸 하나가 몇 초라 보통은 한 번에 끝난다.
+- 칸은 늦어도 시작 뒤 45초 안에 시작하고, 화면을 다시 여는 기간 칸은 30초 안에 시작한다. 탭 안 식 하나는 10초 제한이다.
+- 편집 화면은 load 사건 뒤 칸이 그려질 때까지 기다린다. 목록 화면에서 기다린 뒤에도 이력서가 없으면 화면이 바뀐 것으로 본다.
+- 실행 시간 제한의 근거: fos-assistant 대시보드가 승인한 호출을 60초 기다리기 때문이다(fos-assistant `hermes/connectors/README.md`). 넘으면 남은 칸을 `not_inserted`(`time_limit`)로 돌려주고, 비서는 다시 읽어 남은 칸을 새로 승인받는다. 칸 하나가 몇 초라 보통은 한 번에 끝난다.
 - 쓰기 도구의 탭은 끝나면 늘 닫는다. 읽기 도구는 넘기기를 낼 때만 탭을 남긴다.
 - 사람이 실행 중에 브라우저를 가져가면(WebSocket close 4423) 넣던 칸은 `failed`(`browser_taken`), 남은 칸은 `not_inserted` 다. fos-assistant 는 쓰기 승인을 사람 잠금 중에 받지 않지만, 실행이 시작된 뒤의 회수는 막지 않는다(fos-assistant `docs/features/browser-cowork/design.md`).
 

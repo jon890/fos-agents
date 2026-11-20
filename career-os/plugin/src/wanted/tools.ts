@@ -4,6 +4,7 @@ import {
   careersOf,
   fieldsFromResume,
   fingerprint,
+  labelOf,
   normalizeMonth,
   normalizeText,
   outOfScopeFromResume,
@@ -15,6 +16,7 @@ import {
   type UpdateWantedResumeArgs,
 } from "./fields.ts";
 import {
+  editReadyScript,
   editUrl,
   fieldValueScript,
   listResumesScript,
@@ -49,8 +51,12 @@ type Handoff = {
   handoff: { code: string; need: "login" | "human_browser"; tab?: string };
 };
 
-export type Timing = { budgetMs: number; waitMs: number; pollMs: number };
-const defaultTiming: Timing = { budgetMs: 45_000, waitMs: 5_000, pollMs: 250 };
+/**
+ * `budgetMs` is the latest a text field may start; a period field needs `periodMs` more because it reloads the page.
+ * fos-assistant waits 60 seconds for an approved call, and a result that arrives later is lost.
+ */
+export type Timing = { budgetMs: number; periodMs: number; waitMs: number; pollMs: number; stepMs: number };
+const defaultTiming: Timing = { budgetMs: 45_000, periodMs: 15_000, waitMs: 5_000, pollMs: 250, stepMs: 10_000 };
 
 const pageChanged = () => new CareerError("CAREER_WANTED_PAGE_CHANGED");
 
@@ -91,31 +97,34 @@ export class WantedTools {
       let resumeKey = args.resumeKey;
       let listedTitle = "";
       if (!resumeKey) {
-        await session.navigate(listUrl());
-        const state = await value<string>(session, pageStateScript());
+        await session.navigate(listUrl(), this.timing.stepMs);
+        const state = await this.value<string>(session, pageStateScript());
         if (state === "LOGIN") return ((leave = true), login(tabId));
         if (state !== "LIST") throw pageChanged();
-        const resumes = await value<{ resumeKey: string; title: string; updatedAt: string }[]>(
-          session,
-          listResumesScript(),
-        );
-        if (!Array.isArray(resumes)) throw pageChanged();
-        if (resumes.length === 0) throw new CareerError("CAREER_WANTED_RESUME_NOT_FOUND");
+        // The list renders after the load event; an empty list after waiting is a changed page, not "no resume".
+        let resumes: { resumeKey: string; title: string; updatedAt: string }[] = [];
+        await this.poll(async () => {
+          resumes = await this.value(session, listResumesScript());
+          return Array.isArray(resumes) && resumes.length > 0;
+        });
+        if (!Array.isArray(resumes) || resumes.length === 0) throw pageChanged();
         if (resumes.length > 1) return { status: "choose", resumes };
         resumeKey = resumes[0]!.resumeKey;
         listedTitle = resumes[0]!.title;
       }
-      await session.navigate(editUrl(resumeKey));
-      const state = await value<string>(session, pageStateScript());
+      await session.navigate(editUrl(resumeKey), this.timing.stepMs);
+      const state = await this.value<string>(session, pageStateScript());
       if (state === "LOGIN") return ((leave = true), login(tabId));
       if (state !== "EDIT") throw pageChanged();
+      if (!(await this.poll(async () => (await this.value<boolean>(session, editReadyScript())) === true)))
+        throw pageChanged();
       const read = await this.readServer(session, resumeKey);
       if (read.status === "LOGIN") return ((leave = true), login(tabId));
       if (read.status === "NOT_FOUND") throw new CareerError("CAREER_WANTED_RESUME_NOT_FOUND");
       if (read.status !== "OK") throw pageChanged();
       const careers = careersOf(read.resume);
       const titles = careers.flatMap((career) => career.projects.map((project) => project.title));
-      const shown = await value<({ start: string; end: string } | null)[]>(session, readPeriodsScript(titles));
+      const shown = await this.value<({ start: string; end: string } | null)[]>(session, readPeriodsScript(titles));
       if (!Array.isArray(shown) || shown.length !== titles.length) throw pageChanged();
       let index = 0;
       const periods: ProjectPeriod[] = careers.flatMap((career, c) =>
@@ -177,16 +186,22 @@ export class WantedTools {
     let touching = false;
     try {
       await this.openEditPage(session, args.resumeKey);
+      // Field ids are API positions. Before touching anything, every label must still name the same field:
+      // an item added since the read shifts positions, and a same-valued neighbour would pass the fingerprint.
+      const first = await this.readServer(session, args.resumeKey);
+      if (first.status === "NOT_FOUND") throw new CareerError("CAREER_WANTED_RESUME_NOT_FOUND");
+      const initial = expectRead(first, false);
+      if (args.changes.some((change) => labelOf(initial, parseField(change.field)!) !== normalizeText(change.label)))
+        return finish(new Stop("page_changed"));
       for (const change of args.changes) {
-        if (this.now() - start > this.timing.budgetMs) return finish(new Stop("time_limit"));
         const field = parseField(change.field)!;
-        const read = await this.readServer(session, args.resumeKey);
-        if (read.status === "NOT_FOUND" && results.length === 0)
-          throw new CareerError("CAREER_WANTED_RESUME_NOT_FOUND");
-        const resume = expectRead(read, false);
-        const located = await this.currentValue(session, resume, field);
+        const isPeriod = field.kind === "project" && (field.part === "start" || field.part === "end");
+        const latest = this.timing.budgetMs - (isPeriod ? this.timing.periodMs : 0);
+        if (this.now() - start > latest) return finish(new Stop("time_limit"));
+        const resume = expectRead(await this.readServer(session, args.resumeKey), false);
+        const located = await this.currentValue(session, args.resumeKey, resume, field);
         if (fingerprint(located.value) !== change.before) return finish(new Stop("fingerprint_mismatch"));
-        const shown = await value<unknown>(session, fieldValueScript(located.target));
+        const shown = await this.value<unknown>(session, fieldValueScript(located.target));
         if (!sameOnPage(shown, located.value, located.period)) return finish(new Stop("page_changed"));
         touching = true;
         if (located.period) await this.setPeriod(session, args.resumeKey, located, change.value);
@@ -200,8 +215,8 @@ export class WantedTools {
       if (isInUse(error)) return finish(new Stop(touching ? "browser_taken" : "browser_in_use", touching));
       if (error instanceof CareerError && error.code === "CAREER_WANTED_RESUME_NOT_FOUND") throw error;
       // A lost connection or an unexpected page: nothing is retried, the field is reported as it stood.
-      if (error instanceof CareerError) return finish(new Stop("page_changed", touching));
-      throw error;
+      // Anything else, including a reply of an unexpected shape, keeps the per-field results instead of an error.
+      return finish(new Stop("page_changed", touching));
     } finally {
       session.close();
       await browser.closeTab(tab.tabId);
@@ -220,14 +235,16 @@ export class WantedTools {
   }
 
   private async openEditPage(session: CdpSession, resumeKey: string, touched = false) {
-    await session.navigate(editUrl(resumeKey));
-    const state = await value<string>(session, pageStateScript());
+    await session.navigate(editUrl(resumeKey), this.timing.stepMs);
+    const state = await this.value<string>(session, pageStateScript());
     if (state === "LOGIN") throw new Stop("login_required", touched);
     if (state !== "EDIT") throw new Stop("page_changed", touched);
+    if (!(await this.poll(async () => (await this.value<boolean>(session, editReadyScript())) === true)))
+      throw new Stop("page_changed", touched);
   }
 
   private async readServer(session: CdpSession, resumeKey: string): Promise<ReadResult> {
-    const read = await value<ReadResult>(session, readResumeScript(resumeKey));
+    const read = await this.value<ReadResult>(session, readResumeScript(resumeKey));
     if (!read || typeof read !== "object" || typeof read.status !== "string") throw pageChanged();
     return read;
   }
@@ -235,6 +252,7 @@ export class WantedTools {
   /** The server's current value of a field and how to find it on the page. Periods come from the page itself. */
   private async currentValue(
     session: CdpSession,
+    resumeKey: string,
     resume: ResumeApi,
     field: ParsedField,
   ): Promise<{ value: string; target: PageTarget; period: boolean; projectTitle?: string }> {
@@ -247,7 +265,10 @@ export class WantedTools {
     const target: PageTarget = { kind: field.part, projectTitle: project.title };
     if (field.part === "title" || field.part === "description")
       return { value: project[field.part], target, period: false, projectTitle: project.title };
-    const shown = await value<({ start: string; end: string } | null)[]>(session, readPeriodsScript([project.title]));
+    // Months are not read from the API (the key is undocumented). Reopen the edit page so the value is the
+    // server's current one, not what the page showed when the run started.
+    await this.openEditPage(session, resumeKey);
+    const shown = await this.value<({ start: string; end: string } | null)[]>(session, readPeriodsScript([project.title]));
     const period = Array.isArray(shown) ? shown[0] : null;
     if (!period) throw new Stop("page_changed");
     return { value: period[field.part], target, period: true, projectTitle: project.title };
@@ -260,7 +281,7 @@ export class WantedTools {
     field: ParsedField,
     next: string,
   ) {
-    const marker = await value<string>(session, setTextScript(located.target, next));
+    const marker = await this.value<string>(session, setTextScript(located.target, next));
     if (marker !== "OK") throw new Stop("page_changed", true);
     // onBlur sends the PATCH asynchronously; read the server until it shows the value or time runs out.
     const saved = await this.poll(async () => {
@@ -280,14 +301,14 @@ export class WantedTools {
     const [year, monthNumber] = month.split("-").map(Number) as [number, number];
     const which = located.target.kind === "start" ? "start" : "end";
     for (const step of setPeriodSteps(located.projectTitle ?? "", which, year, monthNumber)) {
-      if ((await value<string>(session, step.run)) !== step.expect) throw new Stop("page_changed", true);
-      if (step.waitFor && !(await this.poll(async () => (await value<boolean>(session, step.waitFor!)) === true)))
+      if ((await this.value<string>(session, step.run)) !== step.expect) throw new Stop("page_changed", true);
+      if (step.waitFor && !(await this.poll(async () => (await this.value<boolean>(session, step.waitFor!)) === true)))
         throw new Stop("page_changed", true);
     }
     // The period API key is not documented; reopen the edit page, which is drawn from the server, and read it there.
     const saved = await this.poll(async () => {
       await this.openEditPage(session, resumeKey, true);
-      const shown = await value<({ start: string; end: string } | null)[]>(
+      const shown = await this.value<({ start: string; end: string } | null)[]>(
         session,
         readPeriodsScript([located.projectTitle ?? ""]),
       );
@@ -295,6 +316,13 @@ export class WantedTools {
       return !!period && period[which] === month;
     });
     if (!saved) throw new Stop("not_saved", true);
+  }
+
+  /** Runs a page expression with a per-step time limit so one hung step cannot use up the whole run. */
+  private async value<T>(session: CdpSession, expression: string): Promise<T> {
+    const result = await session.evaluate<T>(expression, this.timing.stepMs);
+    if (!result.ok) throw pageChanged();
+    return result.value;
   }
 
   private async poll(check: () => Promise<boolean>): Promise<boolean> {
@@ -305,12 +333,6 @@ export class WantedTools {
       await Bun.sleep(this.timing.pollMs);
     }
   }
-}
-
-async function value<T>(session: CdpSession, expression: string): Promise<T> {
-  const result = await session.evaluate<T>(expression);
-  if (!result.ok) throw pageChanged();
-  return result.value;
 }
 
 function expectRead(read: ReadResult, touched: boolean): ResumeApi {
