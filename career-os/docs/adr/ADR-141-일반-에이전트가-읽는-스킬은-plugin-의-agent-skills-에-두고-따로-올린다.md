@@ -1,5 +1,12 @@
 ## ADR-141: 일반 에이전트가 읽는 스킬은 plugin 의 agent-skills 에 두고 따로 올린다
 
+> **개정(2026-11-20, 사용자 결정, fos-assistant PR #811)**: fos-assistant 가 플러그인 manifest 의 `agent_skills` 항목을 열었다. 붙이기가 이 디렉터리의 스킬을 함께 설치하고, `sandbox_env` 를 선언한 스킬은 에이전트의 셸 설정이 그 env 를 모두 넘길 때만 설치한다(fos-assistant `docs/features/agent-skill/spec.md` 의 DECISION2).
+> 그래서 아래 결정의 일부를 바꾼다.
+> - `connector.json` 의 `agent_skills.path` 가 이 디렉터리를 가리킨다. 따로 올리지 않고 붙이기와 다시 설치로 반영된다.
+> - 이 디렉터리에는 Claude Code 전용 `skills/` 의 실행기 스킬 사본(`position-recommender`, `study-collection`)을 둔다. 사본은 셸에서 실행기를 부르고, 실행기 명령의 `${CLAUDE_PLUGIN_ROOT}` 는 Hermes 가 바꾸지 않아 실행 공간의 셸이 env 로 푼다. 필요한 env 는 `sandbox_env` 로 선언한다. 「셸과 로컬 실행기를 부르지 않는다」 는 이 사본에는 적용하지 않는다.
+> - 사본은 원본과 이름이 같다. Claude Code 는 이 디렉터리를 읽지 않으므로 `skills/` 와 이름이 같아도 겹치지 않는다. `connector-skills/` 와는 지금처럼 겹치지 않게 둔다(fos-assistant 가 manifest 전체를 거절한다).
+> - 사본은 `plugin/scripts/agent-skills.ts` 가 원본에서 실행 환경 문장만 바꿔 만들고, `plugin/scripts/agent-skills.test.ts` 가 어긋남과 manifest 규칙을 검사한다.
+
 > **개정(2026-11-05, 사용자 결정, fos-assistant PR #699)**: `proactive-check` 스킬을 모든 살펴보기에서 뺐다. 살펴보기는 사용자별 메인 에이전트가 스킬 없이 돌고, 공통 지침은 fos-assistant Control Plane 이 가진다(fos-assistant ADR-080 개정).
 > 그래서 `plugin/agent-skills/proactive-check/` 와 `plugin/scripts/agent-skill-eval.ts`, 합성 fixture 평가를 지웠다. `agent-skills/` 폴더는 외부 환경이 경로를 마운트하므로 `README.md` 만 두고 남긴다.
 > 아래 결정은 이 폴더에 스킬을 다시 둘 때의 규칙으로만 남는다. 지금 이 폴더에 올릴 스킬은 없다.
