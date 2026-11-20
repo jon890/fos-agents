@@ -198,3 +198,26 @@ test("save_interview_attempt 만 idempotentHint 가 false 이고 쓰기 표시�
     await server.close();
   }
 });
+
+test("「내 브라우저」 주소 없이 서버가 뜨고 원티드 도구는 닿지 않음으로 답한다", async () => {
+  const server = createServer(env, async () => new Response(JSON.stringify({ documents: [] })));
+  const client = new Client({ name: "wanted-test", version: "1.0.0" });
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  try {
+    await server.connect(serverTransport);
+    await client.connect(clientTransport);
+    const listed = await client.listTools();
+    const wanted = listed.tools.filter(({ name }) => name.endsWith("_wanted_resume"));
+    expect(wanted.map(({ name, annotations }) => [name, annotations?.readOnlyHint])).toEqual([
+      ["get_wanted_resume", true],
+      ["update_wanted_resume", false],
+    ]);
+    const result = await client.callTool({ name: "get_wanted_resume", arguments: {} });
+    expect(result.isError).toBe(true);
+    const text = (result.content as Array<{ text: string }>)[0]!.text;
+    expect(JSON.parse(text).error.code).toBe("CAREER_BROWSER_UNREACHABLE");
+  } finally {
+    await client.close();
+    await server.close();
+  }
+});

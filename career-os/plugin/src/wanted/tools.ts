@@ -1,0 +1,361 @@
+import { CareerError } from "../backend.ts";
+import type { BrowserLink, CdpSession } from "../browser/cdp.ts";
+import {
+  careersOf,
+  fieldsFromResume,
+  fingerprint,
+  normalizeMonth,
+  normalizeText,
+  outOfScopeFromResume,
+  parseField,
+  type GetWantedResumeArgs,
+  type ParsedField,
+  type ProjectPeriod,
+  type ResumeApi,
+  type UpdateWantedResumeArgs,
+} from "./fields.ts";
+import {
+  editUrl,
+  fieldValueScript,
+  listResumesScript,
+  listUrl,
+  pageStateScript,
+  readPeriodsScript,
+  readResumeScript,
+  setPeriodSteps,
+  setTextScript,
+  type PageTarget,
+} from "./page.ts";
+
+// The two Wanted tools (design: docs/features/profile-browser-sync/design.md).
+// The read tool may hand the screen to a person. The write tool runs as an approved execution,
+// where a handoff result would be dropped by fos-assistant, so every stop there is a normal `stopped` result.
+
+export type FieldState = "inserted" | "failed" | "not_inserted";
+export type StopReason =
+  | "fingerprint_mismatch"
+  | "stopped_earlier"
+  | "time_limit"
+  | "page_changed"
+  | "not_saved"
+  | "login_required"
+  | "browser_in_use"
+  | "browser_taken";
+export type FieldResult = { field: string; label: string; state: FieldState; reason?: StopReason };
+
+type Handoff = {
+  status: "HUMAN_ACTION_REQUIRED";
+  message: string;
+  handoff: { code: string; need: "login" | "human_browser"; tab?: string };
+};
+
+export type Timing = { budgetMs: number; waitMs: number; pollMs: number };
+const defaultTiming: Timing = { budgetMs: 45_000, waitMs: 5_000, pollMs: 250 };
+
+const pageChanged = () => new CareerError("CAREER_WANTED_PAGE_CHANGED");
+
+/** A stop inside the write loop: the reason for the current field and whether it was being written. */
+class Stop {
+  constructor(
+    readonly reason: StopReason,
+    readonly touched = false,
+  ) {}
+}
+
+type ReadOk = { status: "OK"; resume: ResumeApi; ai: unknown };
+type ReadResult = ReadOk | { status: "LOGIN" | "NOT_FOUND" | "ERROR" };
+
+export class WantedTools {
+  /** A tab the read tool left for a handoff; the next call in this process closes it. */
+  private leftTab: string | undefined;
+
+  constructor(
+    private readonly browser: BrowserLink | undefined,
+    private readonly now: () => number = Date.now,
+    private readonly timing: Timing = defaultTiming,
+  ) {}
+
+  async getResume(args: GetWantedResumeArgs): Promise<unknown> {
+    const browser = this.requireBrowser();
+    await this.closeLeftTab(browser);
+    let tab: { tabId: string; session: CdpSession };
+    try {
+      tab = await browser.openTab("about:blank");
+    } catch (error) {
+      if (isInUse(error)) return humanBrowser(tabOf(error));
+      throw error;
+    }
+    let leave = false;
+    try {
+      const { session, tabId } = tab;
+      let resumeKey = args.resumeKey;
+      let listedTitle = "";
+      if (!resumeKey) {
+        await session.navigate(listUrl());
+        const state = await value<string>(session, pageStateScript());
+        if (state === "LOGIN") return ((leave = true), login(tabId));
+        if (state !== "LIST") throw pageChanged();
+        const resumes = await value<{ resumeKey: string; title: string; updatedAt: string }[]>(
+          session,
+          listResumesScript(),
+        );
+        if (!Array.isArray(resumes)) throw pageChanged();
+        if (resumes.length === 0) throw new CareerError("CAREER_WANTED_RESUME_NOT_FOUND");
+        if (resumes.length > 1) return { status: "choose", resumes };
+        resumeKey = resumes[0]!.resumeKey;
+        listedTitle = resumes[0]!.title;
+      }
+      await session.navigate(editUrl(resumeKey));
+      const state = await value<string>(session, pageStateScript());
+      if (state === "LOGIN") return ((leave = true), login(tabId));
+      if (state !== "EDIT") throw pageChanged();
+      const read = await this.readServer(session, resumeKey);
+      if (read.status === "LOGIN") return ((leave = true), login(tabId));
+      if (read.status === "NOT_FOUND") throw new CareerError("CAREER_WANTED_RESUME_NOT_FOUND");
+      if (read.status !== "OK") throw pageChanged();
+      const careers = careersOf(read.resume);
+      const titles = careers.flatMap((career) => career.projects.map((project) => project.title));
+      const shown = await value<({ start: string; end: string } | null)[]>(session, readPeriodsScript(titles));
+      if (!Array.isArray(shown) || shown.length !== titles.length) throw pageChanged();
+      let index = 0;
+      const periods: ProjectPeriod[] = careers.flatMap((career, c) =>
+        career.projects.map((_, p) => {
+          const period = shown[index++];
+          return period ? { c, p, start: period.start, end: period.end } : null;
+        }),
+      );
+      const { fields, unreadable } = fieldsFromResume(read.resume, periods);
+      const apiTitle = typeof read.resume.resume?.title === "string" ? read.resume.resume.title : "";
+      return {
+        status: "ok",
+        resumeKey,
+        resumeTitle: normalizeText(listedTitle || apiTitle) || "이력서",
+        fields,
+        unreadable,
+        outOfScope: outOfScopeFromResume(read.resume, read.ai),
+      };
+    } catch (error) {
+      if (isInUse(error)) return ((leave = true), humanBrowser(tabOf(error) ?? tab.tabId));
+      throw error;
+    } finally {
+      tab.session.close();
+      if (leave) this.leftTab = tab.tabId;
+      else await browser.closeTab(tab.tabId);
+    }
+  }
+
+  async updateResume(args: UpdateWantedResumeArgs): Promise<unknown> {
+    const browser = this.requireBrowser();
+    const start = this.now();
+    const results: FieldResult[] = [];
+    const finish = (stop?: Stop) => {
+      const done = results.length;
+      args.changes.slice(done).forEach((change, offset) => {
+        // The reason belongs to the field where the run stopped. Login, time and a held browser
+        // apply to every field left, the rest only waited behind the stop.
+        const own = offset === 0 && stop;
+        const shared = stop && ["login_required", "time_limit", "browser_in_use"].includes(stop.reason);
+        const state: FieldState = own && stop!.touched ? "failed" : "not_inserted";
+        const reason: StopReason = own || shared ? stop!.reason : "stopped_earlier";
+        results.push({ field: change.field, label: change.label, state, reason });
+      });
+      return {
+        status: results.every((result) => result.state === "inserted") ? "done" : "stopped",
+        resumeKey: args.resumeKey,
+        results,
+      };
+    };
+
+    let tab: { tabId: string; session: CdpSession };
+    try {
+      tab = await browser.openTab("about:blank");
+    } catch (error) {
+      if (isInUse(error)) return finish(new Stop("browser_in_use"));
+      throw error;
+    }
+    const { session } = tab;
+    let touching = false;
+    try {
+      await this.openEditPage(session, args.resumeKey);
+      for (const change of args.changes) {
+        if (this.now() - start > this.timing.budgetMs) return finish(new Stop("time_limit"));
+        const field = parseField(change.field)!;
+        const read = await this.readServer(session, args.resumeKey);
+        if (read.status === "NOT_FOUND" && results.length === 0)
+          throw new CareerError("CAREER_WANTED_RESUME_NOT_FOUND");
+        const resume = expectRead(read, false);
+        const located = await this.currentValue(session, resume, field);
+        if (fingerprint(located.value) !== change.before) return finish(new Stop("fingerprint_mismatch"));
+        const shown = await value<unknown>(session, fieldValueScript(located.target));
+        if (!sameOnPage(shown, located.value, located.period)) return finish(new Stop("page_changed"));
+        touching = true;
+        if (located.period) await this.setPeriod(session, args.resumeKey, located, change.value);
+        else await this.setText(session, args.resumeKey, located, field, change.value);
+        touching = false;
+        results.push({ field: change.field, label: change.label, state: "inserted" });
+      }
+      return finish();
+    } catch (error) {
+      if (error instanceof Stop) return finish(error);
+      if (isInUse(error)) return finish(new Stop(touching ? "browser_taken" : "browser_in_use", touching));
+      if (error instanceof CareerError && error.code === "CAREER_WANTED_RESUME_NOT_FOUND") throw error;
+      // A lost connection or an unexpected page: nothing is retried, the field is reported as it stood.
+      if (error instanceof CareerError) return finish(new Stop("page_changed", touching));
+      throw error;
+    } finally {
+      session.close();
+      await browser.closeTab(tab.tabId);
+    }
+  }
+
+  private requireBrowser(): BrowserLink {
+    if (!this.browser) throw new CareerError("CAREER_BROWSER_UNREACHABLE");
+    return this.browser;
+  }
+
+  private async closeLeftTab(browser: BrowserLink) {
+    const left = this.leftTab;
+    this.leftTab = undefined;
+    if (left) await browser.closeTab(left);
+  }
+
+  private async openEditPage(session: CdpSession, resumeKey: string, touched = false) {
+    await session.navigate(editUrl(resumeKey));
+    const state = await value<string>(session, pageStateScript());
+    if (state === "LOGIN") throw new Stop("login_required", touched);
+    if (state !== "EDIT") throw new Stop("page_changed", touched);
+  }
+
+  private async readServer(session: CdpSession, resumeKey: string): Promise<ReadResult> {
+    const read = await value<ReadResult>(session, readResumeScript(resumeKey));
+    if (!read || typeof read !== "object" || typeof read.status !== "string") throw pageChanged();
+    return read;
+  }
+
+  /** The server's current value of a field and how to find it on the page. Periods come from the page itself. */
+  private async currentValue(
+    session: CdpSession,
+    resume: ResumeApi,
+    field: ParsedField,
+  ): Promise<{ value: string; target: PageTarget; period: boolean; projectTitle?: string }> {
+    if (field.kind === "about") {
+      const about = typeof resume.resume?.about === "string" ? resume.resume.about : "";
+      return { value: about, target: { kind: "about" }, period: false };
+    }
+    const project = careersOf(resume)[field.c]?.projects[field.p];
+    if (!project) throw new Stop("page_changed");
+    const target: PageTarget = { kind: field.part, projectTitle: project.title };
+    if (field.part === "title" || field.part === "description")
+      return { value: project[field.part], target, period: false, projectTitle: project.title };
+    const shown = await value<({ start: string; end: string } | null)[]>(session, readPeriodsScript([project.title]));
+    const period = Array.isArray(shown) ? shown[0] : null;
+    if (!period) throw new Stop("page_changed");
+    return { value: period[field.part], target, period: true, projectTitle: project.title };
+  }
+
+  private async setText(
+    session: CdpSession,
+    resumeKey: string,
+    located: { target: PageTarget },
+    field: ParsedField,
+    next: string,
+  ) {
+    const marker = await value<string>(session, setTextScript(located.target, next));
+    if (marker !== "OK") throw new Stop("page_changed", true);
+    // onBlur sends the PATCH asynchronously; read the server until it shows the value or time runs out.
+    const saved = await this.poll(async () => {
+      const read = expectRead(await this.readServer(session, resumeKey), true);
+      return normalizeText(serverText(read, field)) === normalizeText(next);
+    });
+    if (!saved) throw new Stop("not_saved", true);
+  }
+
+  private async setPeriod(
+    session: CdpSession,
+    resumeKey: string,
+    located: { target: PageTarget; projectTitle?: string },
+    next: string,
+  ) {
+    const month = normalizeMonth(next)!;
+    const [year, monthNumber] = month.split("-").map(Number) as [number, number];
+    const which = located.target.kind === "start" ? "start" : "end";
+    for (const step of setPeriodSteps(located.projectTitle ?? "", which, year, monthNumber)) {
+      if ((await value<string>(session, step.run)) !== step.expect) throw new Stop("page_changed", true);
+      if (step.waitFor && !(await this.poll(async () => (await value<boolean>(session, step.waitFor!)) === true)))
+        throw new Stop("page_changed", true);
+    }
+    // The period API key is not documented; reopen the edit page, which is drawn from the server, and read it there.
+    const saved = await this.poll(async () => {
+      await this.openEditPage(session, resumeKey, true);
+      const shown = await value<({ start: string; end: string } | null)[]>(
+        session,
+        readPeriodsScript([located.projectTitle ?? ""]),
+      );
+      const period = Array.isArray(shown) ? shown[0] : null;
+      return !!period && period[which] === month;
+    });
+    if (!saved) throw new Stop("not_saved", true);
+  }
+
+  private async poll(check: () => Promise<boolean>): Promise<boolean> {
+    const deadline = this.now() + this.timing.waitMs;
+    for (;;) {
+      if (await check()) return true;
+      if (this.now() >= deadline) return false;
+      await Bun.sleep(this.timing.pollMs);
+    }
+  }
+}
+
+async function value<T>(session: CdpSession, expression: string): Promise<T> {
+  const result = await session.evaluate<T>(expression);
+  if (!result.ok) throw pageChanged();
+  return result.value;
+}
+
+function expectRead(read: ReadResult, touched: boolean): ResumeApi {
+  if (read.status === "LOGIN") throw new Stop("login_required", touched);
+  if (read.status !== "OK") throw new Stop("page_changed", touched);
+  return read.resume;
+}
+
+/** A text field's value on the server, by its API position. Edits do not reorder the API. */
+function serverText(resume: ResumeApi, field: ParsedField): string {
+  if (field.kind === "about") return typeof resume.resume?.about === "string" ? resume.resume.about : "";
+  const project = careersOf(resume)[field.c]?.projects[field.p];
+  if (!project || (field.part !== "title" && field.part !== "description")) return "";
+  return project[field.part];
+}
+
+function sameOnPage(shown: unknown, current: string, period: boolean): boolean {
+  if (period) return typeof shown === "string" && shown === current;
+  const text = (shown as { value?: unknown } | null)?.value;
+  return typeof text === "string" && normalizeText(text) === normalizeText(current);
+}
+
+function isInUse(error: unknown): error is CareerError {
+  return error instanceof CareerError && error.code === "CAREER_BROWSER_IN_USE";
+}
+
+function tabOf(error: CareerError): string | undefined {
+  const tab = error.details?.tab;
+  return typeof tab === "string" ? tab : undefined;
+}
+
+function login(tab: string): Handoff {
+  return {
+    status: "HUMAN_ACTION_REQUIRED",
+    message:
+      "원티드 로그인이 필요합니다. 끝나지 않았고 결과가 없습니다. 사용자가 「내 브라우저」 에서 로그인하고 「다 했어요」 를 누를 때까지 다시 부르지 마세요.",
+    handoff: { code: "CAREER_WANTED_LOGIN_REQUIRED", need: "login", tab },
+  };
+}
+
+function humanBrowser(tab: string | undefined): Handoff {
+  return {
+    status: "HUMAN_ACTION_REQUIRED",
+    message:
+      "사용자가 「내 브라우저」 를 직접 쓰고 있습니다. 끝나지 않았고 결과가 없습니다. 「돌려주기」 를 누를 때까지 다시 부르지 마세요.",
+    handoff: { code: "CAREER_BROWSER_IN_USE", need: "human_browser", ...(tab ? { tab } : {}) },
+  };
+}

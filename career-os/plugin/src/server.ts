@@ -1,8 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CareerBackend, CareerError, configuredValue, type FetchLike } from "./backend.ts";
+import { browserEndpoint, relayBrowser } from "./browser/cdp.ts";
 import { GithubProfileRepo } from "./github.ts";
 import { CareerTools, toolDefinitions } from "./tools.ts";
+import { WantedTools } from "./wanted/tools.ts";
 
 const profileRepoPattern = /^[A-Za-z0-9-]{1,39}\/[A-Za-z0-9._-]{1,100}$/;
 const headerValuePattern = /^[\x21-\x7e]+$/;
@@ -33,8 +35,16 @@ export function createServer(
   const githubToken = configuredValue(env.CAREER_GITHUB_TOKEN);
   const github = githubToken ? new GithubProfileRepo({ token: githubToken, repo: profileRepo }, fetchImpl) : undefined;
   const extraHeaders = backendAccessHeaders(env);
-  const tools = new CareerTools(new CareerBackend({ baseUrl, token, extraHeaders }, fetchImpl), github);
-  const server = new McpServer({ name: "fos-career", version: "0.8.0" });
+  // The fos-assistant install passes the owner's browser relay; Claude Code leaves it empty.
+  const endpoint = browserEndpoint(env);
+  const wanted = new WantedTools(endpoint ? relayBrowser(endpoint) : undefined);
+  const tools = new CareerTools(
+    new CareerBackend({ baseUrl, token, extraHeaders }, fetchImpl),
+    github,
+    undefined,
+    wanted,
+  );
+  const server = new McpServer({ name: "fos-career", version: "0.9.0" });
   for (const [name, definition] of Object.entries(toolDefinitions)) {
     server.registerTool(
       name,

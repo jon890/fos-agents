@@ -69,10 +69,12 @@ test("모든 도구에 승인 카드에 보일 80자 이하의 title 이 있다"
   }
 });
 
-test(".mcp.json 서버 env 는 fields[].env 와 operator_env 의 합과 같다", () => {
+// fos-assistant drops a plugin whose server env differs from fields, operator_env and owner_*_env together.
+test(".mcp.json 서버 env 는 fields[].env, operator_env, owner_browser_env 의 합과 같다", () => {
   const expected = [
     ...connector.fields.map((f: { env: string }) => f.env),
     ...connector.operator_env,
+    connector.owner_browser_env,
   ].sort();
   const server = mcp.mcpServers.career.env;
   expect(Object.keys(server).sort()).toEqual(expected);
@@ -106,7 +108,7 @@ test("plugin.json 과 package.json 의 version 이 같다", () => {
   expect(read(".claude-plugin/plugin.json").version).toBe(read("package.json").version);
 });
 
-test("WRITE 는 저장 도구 다섯과 GitHub 갱신 도구뿐이며 모두 승인이 필요하다", () => {
+test("WRITE 는 저장 도구 다섯과 GitHub·원티드 갱신 도구뿐이며 모두 승인이 필요하다", () => {
   const writes = policies.filter(([, policy]) => policy.risk === "WRITE");
   expect(writes.map(([name]) => name).sort()).toEqual([
     "save_context_document",
@@ -115,6 +117,7 @@ test("WRITE 는 저장 도구 다섯과 GitHub 갱신 도구뿐이며 모두 승
     "save_profile_document",
     "save_study_recommendation",
     "update_github_profile",
+    "update_wanted_resume",
   ]);
   for (const [name, policy] of writes) expect({ name, approval: policy.approval }).toEqual({ name, approval: "required" });
 });
@@ -209,4 +212,19 @@ test("Claude Code 전용 skills 와 대화용 connector-skills 에 같은 이름
   const codeNames = existsSync(codeSkills) ? readdirSync(codeSkills) : [];
   const shared = codeNames.filter((name) => readdirSync(connectorSkillsDirectory).includes(name));
   expect(shared).toEqual([]);
+});
+
+test("원티드 도구 설명이 나눠 부르기, 대안, 범위 밖 칸, 다시 부르지 않기를 안내한다", () => {
+  const update = connector.tools.update_wanted_resume.description;
+  const read = connector.tools.get_wanted_resume.description;
+  expect(update).toContain("나눠");
+  expect(update).toContain("노트북 Claude Code");
+  expect(update).toContain("outOfScope");
+  expect(update).toContain("자동으로 다시 부르지 않습니다");
+  expect(read).toContain("노트북 Claude Code");
+  expect(read).toContain("outOfScope");
+  expect(connector.tools.update_wanted_resume).toMatchObject({ risk: "WRITE", approval: "required", outbound: true, grant: false });
+  expect(connector.tools.update_wanted_resume).not.toHaveProperty("conversation_grant");
+  expect(connector.tools.get_wanted_resume).toMatchObject({ risk: "READ", approval: "none" });
+  expect(connector.owner_browser_login_url).toBe("https://www.wanted.co.kr/cv/list");
 });

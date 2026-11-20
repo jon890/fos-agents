@@ -11,6 +11,13 @@ import type { GithubProfileRepo } from "./github.ts";
 import { idempotencyKey } from "./idempotency.ts";
 import { withToolDescriptions } from "./tool-metadata.ts";
 import {
+  getWantedResumeSchema,
+  updateWantedResumeSchema,
+  type GetWantedResumeArgs,
+  type UpdateWantedResumeArgs,
+} from "./wanted/fields.ts";
+import { WantedTools } from "./wanted/tools.ts";
+import {
   attemptInputSchema,
   getInterviewQuestions,
   type AttemptInput,
@@ -188,6 +195,12 @@ export const toolDefinitions: Record<string, { description: string; schema: z.Zo
     check_position_exclusions: {
       schema: checkPositionExclusionsSchema,
     },
+    get_wanted_resume: {
+      schema: getWantedResumeSchema,
+    },
+    update_wanted_resume: {
+      schema: updateWantedResumeSchema,
+    },
   });
 
 type ToolResult = {
@@ -201,6 +214,8 @@ export class CareerTools {
     private readonly backend: CareerBackend,
     private readonly github?: GithubProfileRepo,
     private readonly now: () => Date = () => new Date(),
+    // Without a relay address (Claude Code on a laptop) both Wanted tools answer CAREER_BROWSER_UNREACHABLE.
+    private readonly wanted: WantedTools = new WantedTools(undefined),
   ) {}
 
   async call(name: string, raw: unknown): Promise<ToolResult> {
@@ -328,6 +343,11 @@ export class CareerTools {
               this.now(),
             ),
           );
+        // A handoff or a stopped run is a normal result, never isError (fos-assistant ADR-20261111, ADR-092).
+        case "get_wanted_resume":
+          return this.success(await this.wanted.getResume(parsed.data as GetWantedResumeArgs));
+        case "update_wanted_resume":
+          return this.success(await this.wanted.updateResume(parsed.data as UpdateWantedResumeArgs));
       }
       throw new CareerError("CAREER_UNKNOWN_TOOL");
     } catch (error) {

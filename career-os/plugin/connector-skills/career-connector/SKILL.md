@@ -1,6 +1,6 @@
 ---
 name: career-connector
-description: 커리어 Backend 의 후보자 맥락 문서와 프로필 원고를 읽고 고치며, 사용량 기록으로 차트를 그려 GitHub 프로필 README 를 갱신한다. 저장과 GitHub 갱신은 사용자가 승인 카드에서 승인한 것만 실행한다. "프로필 갱신", "GitHub 프로필 업데이트", "후보자 맥락 문서 수정", "프로필 원고 고쳐 줘", "사용량 기록 보여 줘" 같은 요청에 사용한다. 공부 자료와 지원할 포지션을 조사할 때 출발점이 되는 후보와 제외 기준도 읽는다. 원티드와 LinkedIn 사이트 반영, 사용량 측정에는 사용하지 않는다.
+description: 커리어 Backend 의 후보자 맥락 문서와 프로필 원고를 읽고 고치며, 사용량 기록으로 차트를 그려 GitHub 프로필 README 를 갱신한다. 저장과 GitHub 갱신은 사용자가 승인 카드에서 승인한 것만 실행한다. "프로필 갱신", "GitHub 프로필 업데이트", "후보자 맥락 문서 수정", "프로필 원고 고쳐 줘", "사용량 기록 보여 줘" 같은 요청에 사용한다. 공부 자료와 지원할 포지션을 조사할 때 출발점이 되는 후보와 제외 기준도 읽는다. 「원티드 프로필 반영해 줘」 처럼 원티드 이력서를 「내 브라우저」 로 고칠 때도 사용한다. LinkedIn 사이트 반영, 사용량 측정에는 사용하지 않는다.
 ---
 
 # 커리어 문서와 GitHub 프로필 관리
@@ -11,11 +11,9 @@ token 을 사용자에게 묻거나 대화에 붙여 넣도록 요청하지 않�
 
 ## 승인
 
-저장과 GitHub 갱신은 사용자가 대화 화면의 승인 카드에서 승인한 것만 실행된다.
-저장 도구나 `update_github_profile` 을 부르면 그 자리에서 실행되지 않고 승인 요청이 만들어진다.
+저장과 갱신 도구는 부르면 승인 카드가 생기고, 사용자가 승인한 인자 그대로 한 번 실행된다.
 사용자에게 승인 카드에서 승인해 달라고 알리고 같은 도구를 다시 부르지 않는다.
-`update_github_profile` 은 누구나 보는 GitHub 프로필에 올라가므로 상시 허락과 「이 대화에서 계속 허용」 을 받지 않는다. 호출마다 사용자가 승인 카드에서 승인한다.
-승인하면 저장된 인자 그대로 한 번 실행되고 결과가 대화로 온다.
+`update_github_profile` 과 `update_wanted_resume` 은 누구나 보는 프로필이 바뀌어 호출마다 승인받는다.
 결과를 받기 전에 반영됐다고 말하지 않는다.
 결과가 실행했는지 알 수 없다고 오면 다시 부르지 않고 읽기 도구로 반영 여부를 확인한다.
 거절되거나 만료된 요청을 사용자가 다시 원하면 도구를 새로 부른다.
@@ -25,11 +23,7 @@ token 을 사용자에게 묻거나 대화에 붙여 넣도록 요청하지 않�
 
 읽기 도구는 승인 없이 부른다.
 
-- `check_connection`: Backend 와 GitHub 연결을 확인한다
-- `list_context_documents`, `get_context_document`: 후보자 맥락 문서의 목록과 본문을 읽는다
-- `list_profile_documents`, `get_profile_document`: 프로필 원고의 목록과 본문을 읽는다
-- `list_usage_snapshots`: 달별 에이전트 사용량 기록을 읽는다
-- `get_github_profile`: 프로필 저장소의 기본 branch 와 끝 커밋(`head`), 그 커밋의 README 와 차트 파일 유무를 읽는다
+`check_connection`, `list_context_documents`, `get_context_document`, `list_profile_documents`, `get_profile_document`, `list_usage_snapshots`, `get_github_profile` 이다. 결과는 각 도구 설명을 따른다.
 
 후보자 맥락 문서 키는 `learning-interests`, `position-preferences`, `application-state`, `career-status` 넷이다.
 프로필 원고 키는 `wanted`, `linkedin`, `github` 셋이다.
@@ -83,9 +77,19 @@ README 의 Tokens 배지 값은 `update_github_profile` 의 결과나 `CAREER_BA
 `CAREER_USAGE_MONTH_MISSING` 은 없는 달을 알려 주므로 그 달을 빼거나 기록이 올라올 때까지 기다린다.
 `changed` 가 `false` 이면 저장소가 이미 같은 내용이라 커밋을 만들지 않은 것이다.
 
+## 원티드 프로필 반영
+
+1. `get_wanted_resume` 으로 읽는다. `status: choose` 면 이력서를 고르게 한다.
+2. `wanted` 원고와 다른 칸만 변경 전후 표로 보인다.
+3. 원고와 사용자 문장만 넣고 내가 쓴 문장은 「비서 제안」 으로 표시한다.
+4. 기술, 링크, AI 활용 경험은 원티드 화면에서 고치라고 알린다.
+5. 확인받은 칸으로 `update_wanted_resume` 을 부른다.
+6. 칸마다 결과를 알린다. `login_required` 면 다시 읽어 로그인 카드를 띄운다.
+7. 넣은 칸만 원고에 반영해 저장 승인을 받는다.
+
 ## 하지 않는 일
 
-- 원티드와 LinkedIn 사이트에 반영하지 않는다. 원고만 고치고 사이트 반영은 Claude Code 에서 이 plugin 의 `sync-profile` 로 하라고 안내한다
+- LinkedIn 사이트에 반영하지 않는다. 원고만 고치고 사이트 반영은 Claude Code 에서 이 plugin 의 `sync-profile` 로 하라고 안내한다
 - 사용량을 측정하거나 기록을 고치지 않는다. 지난달 기록이 없으면 세션 기록이 있는 기기의 수집기가 올릴 때까지 기다리라고 안내한다
 - GitHub 계정의 소개와 프로필 저장소 밖의 설정을 바꾸지 않는다
 
@@ -105,9 +109,8 @@ README 의 Tokens 배지 값은 `update_github_profile` 의 결과나 `CAREER_BA
 오류의 `code` 와 `message` 를 전한다.
 `CAREER_UNAUTHORIZED`, `CAREER_GITHUB_UNAUTHORIZED`, `CAREER_GITHUB_NOT_CONFIGURED` 는 연결 화면에서 token 을 다시 등록하라고 안내한다.
 `CAREER_NETWORK`, `CAREER_GITHUB_UNAVAILABLE` 은 반영 여부가 불명확하므로 다시 보내기 전에 읽기 도구로 상태를 확인한다.
-`CAREER_GITHUB_CONFLICT` 는 그 사이 다른 커밋이 올라와 반영되지 않은 것이다.
-`CAREER_GITHUB_STALE_REVIEW` 는 검토한 뒤 기본 branch 나 끝 커밋이 바뀌어 GitHub 에 아무것도 쓰지 않은 것이다.
+`CAREER_GITHUB_CONFLICT`, `CAREER_GITHUB_STALE_REVIEW` 는 그 사이 저장소가 바뀌어 쓰지 않은 것이다.
 둘 다 `get_github_profile` 로 새 README 를 다시 읽고 변경안을 다시 맞춘 뒤 새 `head` 로 새로 승인받는다.
 같은 요청을 다시 승인해도 결과가 같으므로 이전 요청을 다시 보내지 않는다.
-문서 본문과 token 을 요약 밖으로 되풀이해 싣지 않는다.
+문서 본문과 token 을 되풀이해 보이지 않는다.
 성공한 변경 결과만 간결히 알리고 요청한 작업이 끝나면 종료한다.

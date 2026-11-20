@@ -41,6 +41,11 @@ const messages = {
   CAREER_BROWSER_UNREACHABLE:
     "「내 브라우저」 에 닿지 못했습니다. 비서 웹의 「내 브라우저」 가 켜져 있는지 확인해 주세요. 노트북 Claude Code 에서는 이 도구를 쓸 수 없습니다.",
   CAREER_BROWSER_IN_USE: "「내 브라우저」 를 사람이 직접 쓰고 있습니다. 돌려준 뒤 다시 시도해 주세요.",
+  CAREER_WANTED_LOGIN_REQUIRED:
+    "원티드 로그인이 필요합니다. 「내 브라우저」 에서 원티드에 로그인한 뒤 이력서를 다시 읽어 주세요.",
+  CAREER_WANTED_PAGE_CHANGED:
+    "원티드 화면이 예상과 달라 멈췄습니다. 노트북 Claude Code 의 프로필 갱신으로 반영하거나 원티드 화면에서 직접 고쳐 주세요.",
+  CAREER_WANTED_RESUME_NOT_FOUND: "원티드 이력서를 찾지 못했습니다. 이력서 목록을 다시 읽어 주세요.",
   CAREER_UNKNOWN_TOOL: "지원하지 않는 도구입니다.",
   CAREER_INTERNAL: "커리어 요청을 처리하지 못했습니다. 요청 내용을 확인해 주세요.",
 } as const;
