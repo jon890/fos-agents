@@ -15,8 +15,10 @@ const HUMAN_HELD_STATUS = 423;
 export const HUMAN_HELD_CLOSE = 4423;
 
 /**
- * Runs `start` with the proxy variables removed, then puts them back. Bun reads them when a request starts,
- * so the relay call goes direct while Backend and GitHub calls in the same process keep their proxy.
+ * Runs `start` with the proxy variables removed, then puts them back, as fos-assistant's naver-blog plugin does.
+ * Measured on Bun 1.3.14: a proxy set when the process starts is still used, so this only helps when the
+ * variables change at run time. The fos-assistant MCP environment sets no proxy; restoring keeps Backend
+ * and GitHub calls unaffected either way.
  */
 function withoutProxy<T>(start: () => T): T {
   const saved = PROXY_ENVIRONMENT_KEYS.map((key) => [key, process.env[key]] as const);
