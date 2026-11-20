@@ -1,4 +1,7 @@
 # agent-skills
 
-fos-assistant 의 일반 커리어 에이전트가 읽는 스킬을 두는 자리다. 지금은 스킬이 없다.
-먼저 살펴보기가 스킬 없이 도는 쪽으로 바뀌어 `proactive-check` 를 지웠고([ADR-141](../../docs/adr/ADR-141-일반-에이전트가-읽는-스킬은-plugin-의-agent-skills-에-두고-따로-올린다.md) 개정), 이 폴더는 외부 환경이 경로를 마운트하므로 비워 두되 남긴다.
+fos-assistant 의 일반 에이전트에 설치하는 스킬의 사본을 둔다([ADR-141](../../docs/adr/ADR-141-일반-에이전트가-읽는-스킬은-plugin-의-agent-skills-에-두고-따로-올린다.md)).
+`connector.json` 의 `agent_skills` 가 이 디렉터리를 가리키고, 플러그인을 붙인 에이전트의 셸 설정이 `sandbox_env` 의 env 를 모두 넘길 때만 그 스킬이 설치된다.
+
+스킬 디렉터리는 직접 고치지 않는다. 원본은 `../skills/` 이고, `bun run scripts/agent-skills.ts` 가 실행 환경 문장만 바꿔 다시 만든다.
+사본을 낼 스킬과 바꿀 문장은 `scripts/agent-skills.ts` 의 `AGENT_SKILL_COPIES` 가 갖고, `scripts/agent-skills.test.ts` 가 사본이 원본과 어긋나는지 본다.

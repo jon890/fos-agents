@@ -10,7 +10,7 @@ description: 읽을거리를 수집하고 공부 추천 리포트를 HTML 로 �
 
 실행기 명령은 `bun --no-env-file "${CLAUDE_PLUGIN_ROOT}/dist/career-local.js"` 이다.
 이 문서와 `references/` 에서는 그 명령을 `<CAREER_LOCAL>` 로 적는다.
-셸 환경에 `CAREER_BACKEND_URL`, `CAREER_BACKEND_TOKEN` 이 있어야 한다.
+셸 환경에 `CAREER_BACKEND_URL` 과, `CAREER_BACKEND_TOKEN` 이나 `CAREER_BACKEND_TOKEN_FILE` 가운데 하나가 있어야 한다.
 작업본 동기화는 하지 않는다. 추천 상태는 Backend 가 갖는다.
 
 ## 1. 점검

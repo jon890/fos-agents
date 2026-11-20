@@ -709,7 +709,7 @@ plugin 이름과 커넥터 id 는 `fos-career`, MCP 서버 이름은 `career` �
 이 plugin 은 career-os 의 스킬과 MCP 서버를 한데 묶는 배포 단위이기도 하다. 옮기는 단계와 세 층 구조는 [ADR-137](adr/ADR-137-스킬과-mcp를-plugin-하나로-묶고-세-단계로-옮긴다.md)을 따른다.
 「내 브라우저」 중계를 받는 원티드 도구는 MCP 서버가 브라우저를 조작한다. 그 예외는 [ADR-145](adr/ADR-145-비서-웹의-프로필-사이트-반영은-mcp-서버가-내-브라우저-중계로-한다.md)를 따른다.
 지금은 2단계를 진행하고 있다. 대화용 스킬과 Claude Code 전용 스킬의 자리는 [ADR-139](adr/ADR-139-plugin-의-대화용-스킬과-claude-code-전용-스킬을-디렉터리로-나눈다.md), 로컬 실행기의 배치는 [ADR-138](adr/ADR-138-plugin-로컬-실행기는-scripts-원본을-번들해-부르고-작업본-위치는-설정으로-받는다.md)을 따른다.
-fos-assistant 의 일반 에이전트가 읽는 스킬의 자리(지금은 스킬 없음)는 [ADR-141](adr/ADR-141-일반-에이전트가-읽는-스킬은-plugin-의-agent-skills-에-두고-따로-올린다.md)을 따른다.
+fos-assistant 의 일반 에이전트에 설치하는 스킬의 사본(`agent-skills/`, `connector.json` 의 `agent_skills`)은 [ADR-141](adr/ADR-141-일반-에이전트가-읽는-스킬은-plugin-의-agent-skills-에-두고-따로-올린다.md)을 따른다.
 
 ```text
 career-os/plugin/
@@ -723,7 +723,9 @@ career-os/plugin/
 ├── scripts/
 ├── dist/career-mcp.js
 ├── dist/career-local.js
-├── agent-skills/README.md
+├── agent-skills/            skills/ 의 일반 에이전트용 사본. scripts/agent-skills.ts 가 만든다
+│   ├── position-recommender/
+│   └── study-collection/
 ├── connector-skills/
 │   ├── career-connector/SKILL.md
 │   ├── interview-practice/SKILL.md
