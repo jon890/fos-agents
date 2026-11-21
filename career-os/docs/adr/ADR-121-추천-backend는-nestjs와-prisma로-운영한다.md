@@ -1,5 +1,7 @@
 ## ADR-121: 추천 Backend는 NestJS와 Prisma로 운영한다
 
+> **대체(2026-11-21, 사용자 결정, [ADR-146](ADR-146-커리어-표-데이터는-에이전트-작업-폴더의-sqlite-가-갖는다.md))**: 공고 추천과 공부 추천은 NestJS·Prisma Backend 대신 실행기 안의 저장 모듈(`scripts/lib/career-store/`)이 맡는다. Backend 는 지우는 단계까지 면접, 맥락 문서, 프로필을 계속 맡는다.
+
 - **status**: `accepted`
 - **결정**: `services/recommendation-api/`는 Node 22 위의 NestJS로 돌고 Prisma로 MySQL을 읽고 쓴다. 모노레포 루트와 별도의 `package.json`과 `tsconfig.json`을 가진다. 버전은 `@nestjs/core` 12, `prisma` 7.10.0, `@prisma/client` 7.10.0, `@prisma/adapter-mariadb` 7.10.0으로 고정한다.
 - **대체된 부분**: [ADR-118](ADR-118-추천-상태는-career-os-api와-mysql이-관리한다.md)의 런타임과 ORM 조항을 대체한다. 대체하기 전 문장은 `Backend는 Bun의 HTTP 서버와 Bun.SQL을 사용하며 새 ORM과 외부 queue를 도입하지 않는다` 였다. 외부 queue를 도입하지 않는다는 결정은 유지한다. 상태의 소유가 `career-os` API와 `fos_career`에 있다는 것, 수집기와 skill이 DB에 직접 붙지 않는다는 것, 배포 경계가 홈서버 인프라 저장소에 있다는 것도 모두 유지한다.

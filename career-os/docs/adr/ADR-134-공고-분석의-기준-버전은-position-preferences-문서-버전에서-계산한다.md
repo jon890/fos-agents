@@ -1,5 +1,7 @@
 ## ADR-134: 공고 분석의 기준 버전은 position-preferences 문서 버전에서 계산한다
 
+> **대체(2026-11-21, 사용자 결정, [ADR-146](ADR-146-커리어-표-데이터는-에이전트-작업-폴더의-sqlite-가-갖는다.md))**: 공고 분석의 기준 버전은 문서 version 대신 작업 폴더 `context/position-preferences.md` 본문의 SHA-256 으로 계산한다.
+
 - **status**: `accepted`
 - **결정**:
   - 포지션 분석의 `candidateContextVersion` 은 Backend 가 `position-preferences` 후보자 맥락 문서의 `version` 에서 `position-preferences:v{version}` 으로 계산한다. 분석 정책에 저장하지 않는다.
