@@ -29,9 +29,11 @@ description: >-
 
 ## 작업 절차
 
-0. 당일 수집 자료가 남아 있으면 재사용한다.
-   `data/runtime/downloads/`에 오늘 날짜의 합친 JSON이나 플랫폼별 수집 JSON이 있으면 아래 마감 스크립트를 먼저 실행한다.
+0. 당일 수집 자료를 확인한다.
+   `data/runtime/downloads/`에 오늘 날짜의 합친 JSON이 있고 더 최근에 쓴 플랫폼별 JSON이 없으면 아래 마감 스크립트를 먼저 실행한다.
    로컬 HTML 생성에 성공하면 1–6단계를 건너뛴다.
+   합친 JSON 없이 플랫폼별 JSON만 남았거나 합친 JSON보다 최근에 수집을 시작했다면, 빠진 플랫폼부터 수집을 이어간다.
+   사용자가 새로 수집해 달라고 했으면 새 실행 디렉터리에서 모든 플랫폼을 수집하고, 마감 스크립트의 `--runtime-dir`로 그 경로를 넘긴다.
 
    ```bash
    python3 .claude/skills/freelance-opportunity-reporter/scripts/finalize_report.py \
