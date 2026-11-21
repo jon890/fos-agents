@@ -42,8 +42,8 @@ export const AI_PLATFORM_ROLE_KEYWORDS = [
   "memory",
 ] as const;
 
-export const AI_CODING_TOOLS =
-  /\b(?:ai\s+coding(?:\s+(?:tools?|assistants?|agents?))?|coding\s+(?:assistants?|agents?)|github\s+copilot|claude\s+code)\b|AI\s*코딩(?:\s*(?:도구|에이전트))?|코딩\s*에이전트/gi;
+export const AI_TOOL_USAGE =
+  /\b(?:ai\s+coding(?:\s+(?:tools?|assistants?|agents?))?|coding\s+(?:assistants?|agents?)|github\s+copilot|claude\s+code)\b|AI\s*코딩(?:\s*(?:도구|에이전트))?|코딩\s*에이전트|\bAI\s*(?:개발|업무)\s*도구|\bAI\s*(?:agents?|에이전트|서비스|도구)\s*(?:을|를)?\s*(?:적극\s*)?(?:활용|사용)/gi;
 
 export const AI_WORK_PATTERNS = [
   /\b(?:llms?|llmops|mlops|ml[ -]serving|rag|agentic|ai[ -]native|large language models?|generative ai|machine learning)\b/i,

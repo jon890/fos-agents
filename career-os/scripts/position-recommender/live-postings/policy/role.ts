@@ -1,6 +1,6 @@
 import { cleanMarkupText, containsKeyword } from "../../../lib/text.ts";
 import {
-  AI_CODING_TOOLS,
+  AI_TOOL_USAGE,
   AI_PLATFORM_ROLE_KEYWORDS,
   AI_WORK_PATTERNS,
   BACKEND_PLATFORM_ROLE_KEYWORDS,
@@ -68,7 +68,7 @@ export function isIneligibleEmployment(title: string, employmentType?: string): 
 }
 
 function hasAiWork(text: string): boolean {
-  const work = text.replace(AI_CODING_TOOLS, " ");
+  const work = text.replace(AI_TOOL_USAGE, " ");
   return AI_WORK_PATTERNS.some((pattern) => pattern.test(work));
 }
 
