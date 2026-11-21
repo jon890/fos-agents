@@ -36,16 +36,14 @@ describe("resolvePluginWorkspace", () => {
     expect(resolvePluginWorkspace({ CAREER_WORKSPACE_ROOT: " /data/career " }, "/home/example").root).toBe("/data/career");
   });
 
-  test("SSH 대상이나 명령이 있으면 원격 모드다", () => {
+  test("SSH 대상이 있으면 원격 모드다", () => {
     expect(resolvePluginWorkspace({ CAREER_WORKSPACE_SSH_TARGET: "example" }, "/home/example").mode).toBe("remote");
-    expect(resolvePluginWorkspace({ CAREER_WORKSPACE_COMMAND: "/opt/career-storage" }, "/home/example").mode).toBe("remote");
   });
 
   test("공백만 있는 값은 없는 값으로 본다", () => {
     expect(resolvePluginWorkspace({
       CAREER_WORKSPACE_ROOT: "   ",
       CAREER_WORKSPACE_SSH_TARGET: " ",
-      CAREER_WORKSPACE_COMMAND: "\t",
       CAREER_EVIDENCE_DIR: "  ",
     }, "/home/example")).toEqual({
       root: "/home/example/.fos-career/workspace",
@@ -96,7 +94,7 @@ describe("runPluginWorkspace", () => {
     const root = path.join(base, "workspace");
     const environment = {
       CAREER_WORKSPACE_ROOT: root,
-      CAREER_WORKSPACE_COMMAND: path.join(base, "missing-career-storage"),
+      CAREER_WORKSPACE_SSH_TARGET: "invalid ssh target",
     };
     const error = await runPluginWorkspace(["begin", "interview-question-prep", "--json"], environment, "/home/example")
       .then(() => null, (caught: unknown) => caught);

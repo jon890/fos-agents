@@ -931,13 +931,17 @@ describe("career workspace cli", () => {
 
   test("CLI 프로세스는 성공 JSON을 stdout에, 오류 JSON을 stderr에만 쓴다", async () => withFixture(async (fixture) => {
     const cliPath = path.join(import.meta.dir, "../cli.ts");
-    const commandPath = path.join(fixture.tempRoot, "career-storage-test");
-    await writeFile(commandPath, "#!/bin/sh\nprintf '{\"schemaVersion\":1,\"action\":\"status\",\"ok\":true,\"workspace\":\"career-os\",\"current\":null}\\n'\n");
-    await chmod(commandPath, 0o700);
+    const sshExecutable = path.join(fixture.tempRoot, "ssh");
+    await writeFile(sshExecutable, "#!/bin/sh\nprintf '{\"schemaVersion\":1,\"action\":\"status\",\"ok\":true,\"workspace\":\"career-os\",\"current\":null}\\n'\n");
+    await chmod(sshExecutable, 0o700);
     const commonEnv = {
       ...process.env,
+      CAREER_WORKSPACE_ENV_FILE: path.join(fixture.tempRoot, "missing.env"),
       CAREER_WORKSPACE_ROOT: fixture.workspaceRoot,
-      CAREER_WORKSPACE_COMMAND: commandPath,
+      CAREER_WORKSPACE_SSH_TARGET: "test-only",
+      CAREER_WORKSPACE_SSH_ARGS: "",
+      CAREER_WORKSPACE_REMOTE_COMMAND: "career-storage",
+      PATH: `${fixture.tempRoot}${path.delimiter}${process.env.PATH ?? ""}`,
     };
     const ok = Bun.spawn([process.execPath, cliPath, "check"], {
       cwd: path.resolve(import.meta.dir, "../../../.."),

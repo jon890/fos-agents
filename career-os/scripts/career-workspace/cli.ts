@@ -19,7 +19,6 @@ import {
   type CareerWorkspaceSyncState,
   type PrepareJournal,
 } from "./local-state.ts";
-import { CommandCareerWorkspaceTransport } from "./command-transport.ts";
 import { SshCareerWorkspaceTransport } from "./ssh-transport.ts";
 import { makeRemoteError, TransportError, type CareerWorkspaceTransport } from "./transport.ts";
 import { copyManifestFiles, createTarFromDirectory, extractTarToDirectory, listRelativeFiles, safeRemove, validateTarTopLevel } from "./tar-utils.ts";
@@ -521,9 +520,6 @@ export function createCareerWorkspaceTransport(
   environment: Readonly<Record<string, string | undefined>>,
   environmentFile?: WorkspaceEnvironmentFile,
 ): CareerWorkspaceTransport {
-  if (environment.CAREER_WORKSPACE_COMMAND) {
-    return new CommandCareerWorkspaceTransport({ command: environment.CAREER_WORKSPACE_COMMAND });
-  }
   if (!environment.CAREER_WORKSPACE_SSH_TARGET) {
     return new UnconfiguredCareerWorkspaceTransport(describeMissingTransportSetting(environmentFile));
   }
@@ -545,7 +541,7 @@ export function describeMissingTransportSetting(environmentFile?: WorkspaceEnvir
   if (environmentFile && !environmentFile.present) {
     return `${file} 파일이 없어 원격 저장소 설정을 읽지 못했습니다. 원본 체크아웃의 같은 파일을 이 작업본으로 복사한 뒤 다시 실행하세요.`;
   }
-  return `${file} 의 CAREER_WORKSPACE_COMMAND 와 CAREER_WORKSPACE_SSH_TARGET 이 모두 비어 있습니다. 원본 체크아웃의 같은 파일에서 두 값을 가져온 뒤 다시 실행하세요.`;
+  return `${file} 의 CAREER_WORKSPACE_SSH_TARGET 이 비어 있습니다. 원본 체크아웃의 같은 파일에서 SSH 설정을 가져온 뒤 다시 실행하세요.`;
 }
 
 /** 원격 연결 설정이 없을 때 쓰는 transport 다. 호출하는 자리마다 같은 설명을 낸다. */
