@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { postingFromTossApiJob } from "./adapters/toss.ts";
 import { parseDaangnJob } from "./adapters/daangn-careers.ts";
+import { postingFromWantedDetail } from "./adapters/wanted.ts";
 import { parseWoowahanRecruit } from "./adapters/woowahan-careers.ts";
 import { buildPostingCandidatePool } from "./candidate_pool.ts";
 import type { Posting } from "./types.ts";
@@ -210,6 +211,22 @@ test("우아한형제들 공고의 소개에서 업무 근거를 읽는다", () 
   const item = parseWoowahanRecruit(
     { recruitSeq: 1, recruitNumber: "synthetic-1", recruitName: "Software Engineer" },
     "<p>LLM 서빙 팀입니다.</p><h2>주요 업무</h2><p>배포 API를 개발합니다.</p><h2>자격 요건</h2>서버 개발 경험",
+  );
+  expect(item).not.toBeNull();
+  expect(policy.evaluate(item!, now)).toEqual({ eligible: true });
+});
+
+test("원티드 상세의 소개에서 AI 업무를 읽는다", () => {
+  const item = postingFromWantedDetail(
+    1,
+    {
+      status: "active",
+      company: { name: "가상서비스" },
+      position: "Software Engineer",
+      detail: { intro: "LLM 서빙 팀입니다.", main_tasks: "배포 API를 개발합니다." },
+    },
+    "broad",
+    true,
   );
   expect(item).not.toBeNull();
   expect(policy.evaluate(item!, now)).toEqual({ eligible: true });

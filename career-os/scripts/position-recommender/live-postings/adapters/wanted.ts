@@ -32,7 +32,7 @@ function wantedPidFromUrl(url: string): number | null {
   return m ? Number(m[1]) : null;
 }
 
-function postingFromWantedDetail(
+export function postingFromWantedDetail(
   pid: number,
   detail: Record<string, unknown>,
   discoveryMode: DiscoveryMode,
@@ -109,7 +109,10 @@ function postingFromWantedDetail(
     tags: classify(fullText),
     skills,
     dueTime: norm(detail.due_time),
-    mainTasks: cleanDetail(d.main_tasks),
+    mainTasks: [d.intro, d.main_tasks]
+      .map((text) => cleanDetail(text))
+      .filter(Boolean)
+      .join(" "),
     requirements: cleanDetail(d.requirements),
     preferred: cleanDetail(d.preferred_points),
   };
