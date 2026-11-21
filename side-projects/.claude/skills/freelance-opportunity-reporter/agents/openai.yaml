@@ -1,4 +1,0 @@
-interface:
-  display_name: "Freelance Opportunity Reporter"
-  short_description: "외주 공고를 분류해 로컬 HTML 리포트 생성"
-  default_prompt: "$freelance-opportunity-reporter로 외주 공고를 수집·분류해 로컬 HTML 리포트를 만들고 파일 경로를 알려준다."
