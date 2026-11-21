@@ -60,7 +60,7 @@ function corruptError(): CareerStoreError {
  * SQLite 연결 하나를 감싼다. 질의는 동기지만 저장소 코드가 Backend 의 비동기 모양을 그대로 쓰도록
  * 여기서는 값만 돌려주고, 감싸는 쪽이 `async` 로 부른다.
  */
-export class CareerDatabase {
+export class CareerDatabase implements SqlClient {
   private depth = 0;
 
   constructor(
@@ -74,6 +74,20 @@ export class CareerDatabase {
 
   get<T extends Row = Row>(sql: string, params: SqlValue[] = []): T | undefined {
     return (this.raw.query(sql).get(...params.map(bind)) as T | null) ?? undefined;
+  }
+
+  async queryRaw<T = Row[]>(strings: TemplateStringsArray, ...values: unknown[]): Promise<T> {
+    const query = fragment(strings, values);
+    return this.all(query.text, query.params) as T;
+  }
+
+  async executeRaw(strings: TemplateStringsArray, ...values: unknown[]): Promise<number> {
+    const query = fragment(strings, values);
+    return this.run(query.text, query.params);
+  }
+
+  async queryRawUnsafe<T = Row[]>(text: string, ...params: unknown[]): Promise<T> {
+    return this.all(text, params as SqlValue[]) as T;
   }
 
   /** 바뀐 행 수를 돌려준다. */
@@ -177,4 +191,46 @@ export function openCareerStore(
 export function closeCareerStores(): void {
   for (const store of opened.values()) store.raw.close();
   opened.clear();
+}
+
+/** 질의 조각이다. 값은 자리표시자로 빠지고 조각끼리는 그대로 이어 붙는다. */
+export class SqlFragment {
+  constructor(
+    readonly text: string,
+    readonly params: SqlValue[],
+  ) {}
+}
+
+function fragment(strings: readonly string[], values: readonly unknown[]): SqlFragment {
+  let text = strings[0] ?? "";
+  const params: SqlValue[] = [];
+  values.forEach((value, index) => {
+    if (value instanceof SqlFragment) {
+      text += value.text;
+      params.push(...value.params);
+    } else {
+      text += "?";
+      params.push(value as SqlValue);
+    }
+    text += strings[index + 1] ?? "";
+  });
+  return new SqlFragment(text, params);
+}
+
+/** Backend 저장소 코드가 쓰던 질의 조립 도구와 같은 모양이다. 옮긴 질의를 그대로 읽을 수 있게 둔다. */
+export const Sql = {
+  sql(strings: TemplateStringsArray, ...values: unknown[]): SqlFragment {
+    return fragment(strings, values);
+  },
+  join(values: readonly SqlValue[]): SqlFragment {
+    return new SqlFragment(placeholders(values), [...values]);
+  },
+  empty: new SqlFragment("", []),
+};
+
+/** 태그 붙은 템플릿으로 질의를 실행한다. `${값}` 은 자리표시자로 묶인다. */
+export interface SqlClient {
+  queryRaw<T = Row[]>(strings: TemplateStringsArray, ...values: unknown[]): Promise<T>;
+  executeRaw(strings: TemplateStringsArray, ...values: unknown[]): Promise<number>;
+  queryRawUnsafe<T = Row[]>(text: string, ...params: unknown[]): Promise<T>;
 }
