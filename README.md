@@ -17,8 +17,6 @@
 |---|---|---|
 | [`accountbook/`](accountbook/) | 금융 스크린샷 기반 가계부 입력 자동화 | [`accountbook/AGENTS.md`](accountbook/AGENTS.md) |
 | [`career-os/`](career-os/) | 커리어 성장, 공고 추천, 면접·지원 준비 | [`career-os/AGENTS.md`](career-os/AGENTS.md) |
-| [`health-care/`](health-care/) | 건강 기록, 진료 준비, 재활 경과 관리 | [`health-care/AGENTS.md`](health-care/AGENTS.md) |
-| [`side-projects/`](side-projects/) | 사이드 프로젝트와 외주 기회 운영 | [`side-projects/AGENTS.md`](side-projects/AGENTS.md) |
 
 ## 공통 구조
 

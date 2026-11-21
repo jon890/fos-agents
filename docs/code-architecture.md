@@ -13,8 +13,6 @@
 |---|---|---|
 | `accountbook/` | [`accountbook/AGENTS.md`](../accountbook/AGENTS.md) | 금융 스크린샷 기반 가계부 입력 자동화 |
 | `career-os/` | [`career-os/AGENTS.md`](../career-os/AGENTS.md) | 커리어, 면접, 지원 준비 |
-| `health-care/` | [`health-care/AGENTS.md`](../health-care/AGENTS.md) | 무릎 재활 체크인 |
-| `side-projects/` | [`side-projects/AGENTS.md`](../side-projects/AGENTS.md) | 개인 사이드 프로젝트와 외주 기회 운영 |
 
 ## 루트 디렉터리
 
