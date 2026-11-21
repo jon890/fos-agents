@@ -35,6 +35,7 @@ SQL 을 옮길 때 바꾸는 문법이다. 결과 순서가 달라지면 추천�
 | `IN (${Prisma.join(xs)})` | 자리표시자를 개수만큼 만든다 |
 
 - `ASC` 정렬에서 NULL 이 앞에 오는 것은 두 DB 가 같다.
+- 문자열 비교는 SQLite 기본인 바이트 단위다. MySQL 은 대소문자와 끝 공백을 무시했다(`utf8mb4_unicode_ci`). 유일 키로 쓰는 값은 이미 정규화돼 있어(`company_key` 는 소문자, id 는 UUID 와 hash) 결과가 같다. 정렬의 동점 처리에는 id 열이 마지막 기준이라 순서가 정해진다.
 - 회사 근거의 「더 오래된 관측으로 덮지 않는다」 는 `excluded.observed_at >= observed_at` 비교로 옮긴다.
 
 ## 작업 항목
@@ -58,6 +59,7 @@ HTTP 경로 하나에 함수 하나인 `PositionStore`. controller 가 하던 �
 ### 5. 테스트
 
 - `career-os/scripts/lib/career-store/positions/legacy-contract.test.ts`: `career-os/services/career-backend/test/fixtures/legacy-contract/cases.json` 의 positions case 를 `PositionStore` 에 다시 돌려 응답 본문을 대조한다. 보정은 `career-os/services/career-backend/test/support/legacy-contract.ts` 의 규칙(정책의 기준 버전 칸 제거, 근거 id 채우기)을 옮긴다. 인증, health, 본문 크기, 없는 경로 case 는 HTTP 계층이 없어 대상이 아니고, 그 목록을 테스트에 적어 빠진 case 가 생기면 실패하게 한다. `given` 의 SQL 세 문장은 SQLite 문장으로 바꿔 실행한다. DB 행 대조는 하지 않는다(시각 열의 저장 꼴이 다르다).
+- Backend 의 `test/positions-company-evidence.e2e.test.ts`, `positions-exclusions.e2e.test.ts`, `positions-analysis-policy.e2e.test.ts` 가 보는 규칙을 `store.test.ts` 로 옮긴다: 회사 근거의 갱신과 오래된 관측, 유효기간, 끝난 실행 거부, 정책 조회와 변경, 제외 규칙의 만료, 그리고 규칙 목록을 통째로 바꾸는 동작. 인증, 헤더, 본문 크기 검사는 옮기지 않는다.
 - `career-os/scripts/lib/career-store/positions/store.test.ts`: 두 번째 수집이 바뀌지 않은 공고를 큐에 넣지 않는다(분석 재사용). 본문이 바뀐 공고는 `changed` 로 다시 큐에 든다. 기준 버전이 바뀌면 다시 분석한다. 제외 회사(`exclude`)는 저장하지 않는다. 제외 규칙은 만료일 다음 날부터 빠진다. 임차가 끝난 회사 평가는 회수된다. 같은 분석 실행의 추천은 한 번만 만들어진다.
 
 ## 검증

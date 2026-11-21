@@ -91,9 +91,48 @@ plugin 스킬은 같은 단계를 로컬 실행기로 부른다. `<CAREER_LOCAL>
 
 `position-recommender`와 `study-topic-recommender`의 장기 추천 상태는 Backend에서 읽고 쓴다.
 
+### 작업 폴더 저장소
+
+**공고 추천과 공부 추천은 커리어 Backend 를 부르지 않는다.** 두 실행기는 커리어 작업 폴더의 SQLite 파일 하나에 읽고 쓴다([ADR-146](adr/ADR-146-커리어-표-데이터는-에이전트-작업-폴더의-sqlite-가-갖는다.md)).
+저장 규칙은 Backend 의 것을 그대로 옮겼다. Backend 의 HTTP 경로 하나가 저장 모듈의 메서드 하나이고 입력과 출력이 같다.
+그래서 아래 `position-recommender`, `study-topic-recommender` 절이 「Backend」 와 HTTP 경로로 적은 단계는 저장 모듈의 같은 이름의 동작으로 읽는다. 상태 코드는 저장 모듈 오류의 `status` 와 `code` 다.
+
+```mermaid
+---
+config:
+  look: handDrawn
+---
+flowchart LR
+  A[대화 또는 예약 실행의 에이전트]:::agent -->|맥락 문서 본문을 쓴다| C[context/]:::ws
+  A -->|셸: career-local.js| X[실행기]:::plugin
+  X -->|읽기| C
+  X --> S[(state/career.sqlite)]:::ws
+  X --> R[runs/ 실행 폴더]:::ws
+  X --> P[reports/ 리포트 사본]:::ws
+  A -->|리포트를 넣는다| F[내 파일]:::agent
+  classDef agent fill:#fef3c7,stroke:#b45309
+  classDef plugin fill:#dcfce7,stroke:#15803d
+  classDef ws fill:#f3e8ff,stroke:#7e22ce
+```
+
+1. 에이전트가 맥락 문서 본문을 작업 폴더 `context/<문서 키>.md` 에 쓴다. 문서의 원본은 아직 Backend 의 후보자 맥락 문서이고 에이전트가 `get_context_document` 로 읽는다. 실행기는 `context/` 만 읽는다.
+2. 실행기가 본문을 정규화(줄바꿈 LF, 줄끝 공백 제거, 앞뒤 빈 줄 제거)한 뒤 SHA-256 으로 기준 버전 `<문서 키>:sha256:<hex>` 를 낸다. 본문이 같으면 분석과 판정을 다시 하지 않는다.
+3. 실행 폴더는 작업 폴더 `runs/` 아래에 만들고 끝나면 정리 명령으로 지운다.
+4. 완성한 HTML 의 사본을 `reports/<서울 날짜>-<position|study>.html` 에 남긴다. 에이전트가 그 파일을 「내 파일」 에 넣는다.
+
+| 상황 | 실행기의 동작 |
+| --- | --- |
+| 데이터 파일이 없다 | 빈 상태로 만든다. 분석 정책에는 기본값이 없어 `position configure-policy` 로 넣어야 수집을 받는다 |
+| 다른 실행이 쓰고 있어 5초 안에 잠금을 얻지 못했다 | 표준 오류 첫 줄에 `CAREER_STORE_BUSY` 를 내고 종료 코드 1 로 끝난다. 다음 실행이 이어 간다 |
+| 파일을 열 수 없거나 검사에 실패했다 | 덮어쓰지 않고 `CAREER_STORE_CORRUPT` 로 끝난다. 사용자가 파일을 지우면 빈 상태로 다시 쌓는다 |
+| 같은 명령을 다시 보냈다 | 같은 멱등 키와 같은 본문이면 처음 응답을 돌려준다. 본문이 다르면 `409 IDEMPOTENCY_CONFLICT` 다 |
+
+대화용 MCP 도구 가운데 공부 후보·추천 저장·추천 목록과 공고 제외 판정·조사 제약은 아직 Backend 를 부른다. 이 저장소를 읽지 않으므로 Backend 를 내리는 단계까지 그 도구로 공부 추천을 저장하거나 제외 규칙을 고치지 않는다. 제외 규칙은 `position exclusions put` 으로 넣는다.
+
 ### 커리어 Backend
 
 커리어 Backend 의 공통 HTTP 계약이다. 스킬별 경로는 각 스킬 절이 소유한다.
+공고 추천과 공부 추천 실행기는 위 「작업 폴더 저장소」 를 쓰고 이 계약의 인증과 health 를 거치지 않는다. 면접, 후보자 맥락 문서, 프로필은 계속 이 Backend 를 쓴다.
 코드 배치는 [`code-architecture.md`](code-architecture.md#커리어-backend)가 소유한다.
 
 모든 쓰기 요청은 `Authorization: Bearer` 와 `Idempotency-Key` 를 요구한다.
@@ -372,10 +411,10 @@ plugin 의 `interview-question-prep` 스킬이 Claude Code 에서만 한다. 답
 
 외부 채용 소스의 열린 공고에서 실제 지원 후보를 고르고, 회사를 세 축으로 판정한다.
 
-1. 수집 명령이 `position-preferences` 와 `application-state` 문서를 읽는다. 하나라도 없으면 수집을 시작하지 않는다. 둘 다 있으면 version 과 본문을 실행 디렉터리의 `candidate-context.json` 에 둔다. 분석 정책과 대조하지 않는다.
+1. 수집 명령이 작업 폴더 `context/` 의 `position-preferences` 와 `application-state` 문서를 읽는다. 하나라도 없으면 수집을 시작하지 않는다. 둘 다 있으면 기준 버전과 본문을 실행 디렉터리의 `candidate-context.json` 에 둔다. 분석 정책과 대조하지 않는다.
 2. 수집기가 `GET exclusions`로 개인 제외 규칙을 읽고, 등록된 소스 어댑터가 열린 공고를 공통 형태로 모은다.
 3. 스크립트가 종료 여부, 마감일, 고용 형태, 역할, URL 중복과 개인 제외 규칙을 검사한다.
-4. client가 후보풀과 소스 진단을 멱등 키와 함께 Backend에 보낸다. Backend는 `position-preferences` 문서의 version 에서 기준 버전을 계산하고, 공고 버전과 수집 실행, 회사 tier 평가 실행을 한 트랜잭션으로 저장한 뒤 평가할 회사 큐를 반환한다.
+4. client가 후보풀과 소스 진단을 멱등 키와 함께 Backend에 보낸다. 저장 모듈은 `position-preferences` 문서 본문의 SHA-256 에서 기준 버전을 계산하고, 공고 버전과 수집 실행, 회사 tier 평가 실행을 한 트랜잭션으로 저장한 뒤 평가할 회사 큐를 반환한다.
 5. 근거 수집기가 큐에 든 회사만 대상으로 OpenDART와 기술 블로그 RSS와 GitHub organization과 Blind를 조회한다. 유효기간이 남은 근거는 다시 모으지 않는다.
 6. client가 모은 근거를 `PUT company-tier-runs/:companyTierRunId/evidence`로 저장한다. 응답은 회사별 저장 건수다. 그 회사의 유효한 근거는 `GET companies/:companyKey/evidence`로 따로 읽는다.
 7. 모델이 그 근거만 읽고 축 셋을 각각 판정한다. 근거가 없는 축은 `unknown`으로 두고 `recommendedTier`도 내지 않는다.
@@ -433,7 +472,7 @@ flowchart TD
 ```
 
 수집기는 외부 요청 전에 `GET api/positions/v1/exclusions`로 개인 제외 규칙을 읽는다.
-Backend가 응답하지 않으면 종료 코드 1로 중단한다.
+저장소를 읽지 못하면 종료 코드 1로 중단한다.
 규칙이 필요 없는 환경도 빈 배열을 명시적으로 받아야 진행한다.
 
 실패 소스가 허용 개수를 넘거나 후보가 0건이면 수집기는 후보풀을 남기고 종료 코드 1로 끝낸다.
@@ -561,9 +600,9 @@ plugin 의 `resume-preparer` 스킬이 Claude Code 에서만 위 단계를 돈�
 ## study-topic-recommender
 
 등록된 외부 소스에서 그날 읽거나 볼 가치가 높은 자료를 선별한다.
-소스와 수집한 자료, 추천 이력과 제외 판정은 `career-os` Backend 가 `fos_career` 에 저장한다.
-skill 과 수집기는 `/api/study/v1` 만 호출하고 파일에 이력을 두지 않는다.
-이유는 [ADR-118](adr/ADR-118-추천-상태는-career-os-api와-mysql이-관리한다.md)을 따른다.
+소스와 수집한 자료, 추천 이력과 제외 판정은 작업 폴더의 SQLite 가 갖는다(「작업 폴더 저장소」).
+skill 과 수집기는 저장 모듈만 부르고 다른 파일에 이력을 두지 않는다.
+이유는 [ADR-146](adr/ADR-146-커리어-표-데이터는-에이전트-작업-폴더의-sqlite-가-갖는다.md)을 따른다.
 
 ### 실행 흐름
 
@@ -585,7 +624,7 @@ skill 과 수집기는 `/api/study/v1` 만 호출하고 파일에 이력을 두�
 9. 같은 선별 결과에서 주제 중심 HTML 을 만들고 공개 범위와 링크를 검증한다.
 10. 검증이 끝나면 client 가 추천과 제외 판정을 `POST /recommendation-runs` 로 한 번에 저장한다.
 11. 검증한 HTML을 전달한다. 사용자가 공유 링크를 요청해 자신의 게시 수단으로 올린 경우에는 URL이 열리는지 확인한 뒤 `POST /publications`로 기록한다.
-12. 시스템 임시 경로의 중간 실행 자료를 정리한다.
+12. 작업 폴더 `runs/` 의 중간 실행 자료를 정리한다. 추천 저장 때 HTML 사본이 `reports/` 에 남는다.
 
 ```mermaid
 sequenceDiagram
@@ -623,13 +662,12 @@ sequenceDiagram
 | 소스 하나의 수집이 실패한다 | 그 소스의 `POST /ingestions` 를 보내지 않고 cursor 를 진행하지 않는다. 나머지 소스는 계속 모은다 |
 | 정상적인 빈 페이지를 확인했다 | 빈 `items` 와 다음 cursor 를 보낼 수 있다. 실패와 빈 상태를 구분한다 |
 | cursor version 이 달라졌다 | `409` 다. 기존 cursor 를 유지하고 그 소스는 다음 실행에서 다시 모은다 |
-| `learning-interests` 문서가 없다 | `409 CANDIDATE_CONTEXT_MISSING` 이다. 후보풀을 만들지 않고 중단하며 문서를 저장하라고 알린다 |
+| `context/learning-interests.md` 가 없다 | `409 CANDIDATE_CONTEXT_MISSING` 이다. 후보풀을 만들지 않고 중단하며 문서 본문을 그 파일에 쓰라고 알린다 |
 | 후보가 0건이다 | 과거 자료로 채우지 않고 빈 상태의 리포트를 만든다. 추천 실행은 저장한다 |
 | 후보를 여러 페이지로 받는 중에 `historyVersion` 이나 `candidateContextVersion` 이 바뀌었다 | 후보풀을 남기지 않고 중단한다. 다음 실행에서 처음부터 조회한다 |
 | 같은 날 두 번 저장한다 | `reportId` 가 서울 날짜의 `morning-YYYY-MM-DD` 라 두 번째는 `409` 다. 같은 멱등 키와 같은 본문이면 저장된 응답을 다시 준다 |
 | 이미 추천한 자료를 다시 저장하려 한다 | 서버가 `409` 로 거부한다. `study_recommended_materials.content_key` 가 UNIQUE 다 |
-| Backend 장애, 인증 실패 | 파일로 물러서지 않고 오류 코드와 `requestId` 를 알린 뒤 중단한다 |
-| `429` | `Retry-After` 초를 표시하되 자동으로 오래 기다리지 않는다 |
+| 저장소가 잠겼거나 깨졌다 | 다른 사본으로 물러서지 않고 `CAREER_STORE_BUSY` 나 `CAREER_STORE_CORRUPT` 를 첫 줄에 알린 뒤 중단한다 |
 
 멱등 요청은 같은 본문과 같은 키로만 재시도한다.
 같은 키에 다른 본문이 필요하면 cursor 조회부터 다시 시작한다.
@@ -647,7 +685,7 @@ token 과 원문 payload 는 출력하지 않는다.
 | `learning-interests` 문서를 새로 저장했다 | 기준 버전이 바뀌어 모든 제외 판정이 무효가 되고 다시 후보로 나온다 |
 | 같은 자료가 다른 소스에서 다시 수집됐다 | `contentKey` 가 같으므로 판정을 그대로 쓴다 |
 
-기준 버전은 `learning-interests:v{version}` 이고 서버가 문서 버전에서 계산한다. 사람이 따로 올리지 않는다.
+기준 버전은 `learning-interests:sha256:<hex>` 이고 실행기가 `context/learning-interests.md` 본문에서 계산한다. 사람이 따로 올리지 않는다.
 관심사를 고쳐 저장하면 예전 기준으로 제외한 자료가 다음 후보 조회부터 다시 보인다.
 이유는 [ADR-127](adr/ADR-127-공부-추천은-고르지-않은-후보의-판정을-재사용한다.md)과
 [ADR-131](adr/ADR-131-후보자-맥락은-backend-문서로-두고-공부-추천-기준-버전을-문서-버전에서-계산한다.md)을 따른다.
@@ -664,6 +702,10 @@ Kurly 와 OliveYoung 은 최근 수집에서는 `feed` adapter 이고, archive m
 이유는 [ADR-126](adr/ADR-126-읽을거리-소스-목록은-backend가-원본을-가진다.md)을 따른다.
 
 ### 학습자료 HTTP 계약
+
+실행기는 이 경로를 HTTP 로 부르지 않고 저장 모듈의 같은 동작을 부른다. 입력과 출력은 아래와 같다.
+대화용 MCP 도구는 Backend 를 내리는 단계까지 아래 HTTP 경로를 그대로 부른다.
+추천 실행 목록(`GET /recommendation-runs`)은 저장 모듈에서 실행마다 사용자가 기록한 게시 링크(`publications`)를 함께 준다.
 
 기본 경로는 `/api/study/v1` 이다. 인증은 커리어 Backend 의 Bearer token 하나를 쓴다.
 
@@ -927,7 +969,8 @@ sequenceDiagram
 ### 대화에서 공부 추천
 
 plugin 의 `study-topic-recommender` 스킬이 이미 수집된 후보에서 고른다.
-수집은 Claude Code 의 `study-collection` 이나 예약 실행의 `morning_reading_cli.ts --collect-only` 가 한다. 커넥터는 외부 피드에 닿지 않는다.
+수집은 `study-collection` 스킬이나 예약 실행의 `morning_reading_cli.ts --collect-only` 가 하고 작업 폴더 저장소에 쌓는다. 커넥터는 외부 피드에 닿지 않는다.
+아래 도구는 Backend 를 읽으므로 그 수집 결과를 보지 못한다(「작업 폴더 저장소」). Backend 를 내리는 단계에서 이 도구를 지운다.
 
 1. `get_study_candidates` 가 `GET /api/study/v1/candidates` 한 쪽만 읽는다. 결과는 후보, `recentStudyTopicKeys`, `candidateContextVersion`, `learningInterests` 다. `learning-interests` 문서가 없으면 `CAREER_LEARNING_INTERESTS_MISSING` 으로 멈춘다.
 2. 에이전트가 `learningInterests.body` 를 기준으로 원문을 비교해 주제를 고르고, 고르지 않은 후보마다 제외 이유를 붙인다.

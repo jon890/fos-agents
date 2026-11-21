@@ -8,9 +8,32 @@
 
 ## 공통
 
+### 커리어 작업 폴더
+
+공고 추천과 공부 추천의 데이터가 있는 자리다([ADR-146](adr/ADR-146-커리어-표-데이터는-에이전트-작업-폴더의-sqlite-가-갖는다.md)).
+루트는 `CAREER_WORKSPACE_ROOT` 이고 없으면 `/workspace/career` 다.
+
+| 경로 | 내용 |
+| --- | --- |
+| `state/career.sqlite` | 공고, 회사, 공부 table 과 `request_receipts`. WAL 모드라 같은 이름의 `-wal`, `-shm` 파일이 함께 생긴다 |
+| `context/<문서 키>.md` | 에이전트가 실행 직전에 옮겨 쓴 맥락 문서. 실행기의 입력일 뿐 원본이 아니다. 키는 `position-preferences`, `application-state`, `learning-interests` 다 |
+| `runs/<실행 폴더>/` | 한 번 실행의 중간 산출물. 이름은 `position-recommendation-*`, `study-topic-recommender.*` 다. 정리 명령이 지운다 |
+| `reports/<YYYY-MM-DD>-<position\|study>.html` | 완성한 리포트의 사본. 날짜는 서울 날짜다. 같은 날 다시 만들면 덮어쓴다 |
+
+`state/career.sqlite` 의 table 과 열 이름은 아래 `fos_career` 의 공고·회사·공부 table 과 같다. 다른 점은 이렇다.
+
+- 시각은 UTC ISO 문자열, 날짜는 `YYYY-MM-DD` 문자열, JSON 은 문자열, 참·거짓은 1 과 0 이다.
+- 스키마 버전은 `PRAGMA user_version` 이다. 실행기가 열 때 모자란 단계만 적용한다(`scripts/lib/career-store/ddl.ts`).
+- `company_evidence` 의 유일 키는 `(company_key, source_type, url)` 이다. `url_hash` 열은 없다.
+- `request_receipts` 는 처리 중 표시 없이 끝난 응답만 담는다.
+- 외래 키와 `CHECK` 제약은 옮기지 않았다. 같은 조건을 저장 모듈의 요청 검증이 막는다.
+- `candidateContextVersion` 은 `<문서 키>:sha256:<hex>` 다. 맥락 문서 본문을 정규화해 계산한다.
+- 면접, 후보자 맥락 문서, 프로필, 사용량 table 은 없다. 그 데이터는 아직 Backend 가 갖는다.
+
 ### `fos_career` 도메인 구조
 
 포지션 추천, 공부 추천과 회사 근거 등 커리어 상태를 담는 database 다.
+공고·회사·공부 table 은 작업 폴더의 SQLite 로 옮겼고(위 절), Backend 의 그 table 은 Backend 를 내릴 때까지 대화용 MCP 도구만 읽는다.
 아래는 포지션 추천 table 의 다섯 묶음이다.
 
 | 묶음 | table | 담는 것 |
@@ -343,8 +366,8 @@ erDiagram
 
 ### 개인 공고 제외 설정
 
-`fos_career.position_exclusions` 가 담는다.
-`GET api/positions/v1/exclusions` 로 읽고 `PUT` 으로 전체를 바꾼다.
+작업 폴더 저장소의 `position_exclusions` 가 담는다.
+`position exclusions get` 으로 읽고 `position exclusions put --input <JSON>` 으로 전체를 바꾼다. 입력은 `{ "schemaVersion": 2, "exclusions": [...] }` 나 규칙 배열이다.
 
 | 칸 | 타입 | 설명 |
 | --- | --- | --- |
@@ -508,8 +531,8 @@ Backend에 저장된 활성 공고의 제목, URL과 `first_seen_at`을 읽는�
 }
 ```
 
-**DB 기본값을 두지 않는다.** 새 DB 에 행을 만들 때 모든 값을 줘야 하고
-이후 변경도 정책 설정 요청으로만 한다.
+**DB 기본값을 두지 않는다.** 새 저장소에 행을 만들 때 모든 값을 줘야 하고
+이후 변경도 정책 설정 명령(`position configure-policy --input <JSON>`)으로만 한다.
 
 ### `fos_career.company_preferences`
 

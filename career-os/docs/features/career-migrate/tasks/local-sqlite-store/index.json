@@ -1,7 +1,7 @@
 {
   "name": "local-sqlite-store",
   "description": "공고 추천과 공부 추천의 저장 자리를 커리어 Backend 에서 작업 폴더 SQLite 로 바꾼다(커리어 이전 1단계: REQ1, REQ3, REQ4)",
-  "pr_scope": "공고 추천과 공부 추천 실행기가 커리어 Backend 를 부르지 않고 작업 폴더의 SQLite 파일 하나에 읽고 쓴다.",
+  "pr_scope": "공고 추천과 공부 추천 실행기가 커리어 Backend 를 부르지 않고 작업 폴더의 SQLite 파일 하나에 읽고 쓴다(Backend 의 공고·공부 코드와 계약을 저장 모듈로 옮기고 실행기 전체의 import 를 바꾸는 일괄 변경이라 파일 수가 많다).",
   "deferred": [
     {
       "what": "면접 연습을 실행 공간 스크립트로, 맥락 문서와 원고를 기억과 작업 폴더 파일로 바꾸고 Backend 를 부르는 MCP 도구와 token 칸을 지운다(REQ5, REQ6, REQ7 의 플러그인 부분)",

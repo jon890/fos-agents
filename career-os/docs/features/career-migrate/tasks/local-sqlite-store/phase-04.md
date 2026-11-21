@@ -32,9 +32,10 @@
 - `career-os/scripts/position-recommender/career-backend/client.ts` 와 그 테스트를 지우고 `career-os/scripts/position-recommender/position-store.ts` 를 만든다. `createPositionStore(environment)` 가 `openCareerStore` 로 연 DB 위의 `PositionStore` 를 돌려준다. 호출부의 `createCareerBackendClient`, `CareerBackendClient` 를 이 이름으로 바꾼다.
 - `career-os/services/career-backend/src/…` 를 가리키는 import 를 `career-os/scripts/lib/career-store/…` 로 바꾼다(공고 실행기 전체).
 - `career-os/scripts/position-recommender/candidate-context.ts`: `context/position-preferences.md`, `context/application-state.md` 를 읽어 실행 폴더의 `candidate-context.json` 에 `{ candidateContextVersion, documents: { <키>: { body } } }` 로 쓴다. 문서가 없으면 어느 문서를 어느 경로에 써야 하는지 알리고 던진다. `career-os/scripts/candidate-context/position-context.ts` 와 그 테스트는 쓰는 곳이 없어져 지운다.
-- `run-dir.ts`: 실행 폴더를 `<루트>/runs/position-recommendation-*` 로 만들고, 정리 검사는 시스템 임시 폴더의 직접 자식과 `<루트>/runs` 의 직접 자식을 받는다.
-- `position_run.ts`: 하위 명령 `configure-policy --input <json>`, `configure-companies --input <json>`, `exclusions get`, `exclusions put --input <json>` 을 더한다. `finalize` 는 리포트를 `<루트>/reports/<서울 날짜>-position.html` 로 복사하고 그 경로를 출력한다.
-- `feedback/exclusions.ts` 의 실패 문구를 저장소 기준으로 고친다.
+- 실행 폴더는 `position_run.ts` 의 `createRunDirectory` 가 `<루트>/runs/` 를 만든 뒤 그 아래 `position-recommendation-*` 로 만든다. `run-dir.ts` 의 정리 검사는 시스템 임시 폴더의 직접 자식과 `<루트>/runs` 의 직접 자식을 받는다.
+- 새 파일 `position_settings.ts` 가 하위 명령 `configure-policy --input <json>`, `configure-companies --input <json>`, `exclusions get`, `exclusions put --input <json>` 을 갖고 `position_run.ts` 가 넘긴다. `configure-companies` 는 기존 `configure_position_company_preferences.ts` 를 다시 쓴다. 회사 선호와 제외 규칙의 입력은 조회 응답 꼴의 배열도 받는다(옛 Backend 의 조회 응답을 새 저장소에 넣을 때 쓴다). `finalize` 는 리포트를 `<루트>/reports/<서울 날짜>-position.html` 로 복사하고 그 경로를 출력한다.
+- `feedback/exclusions.ts` 는 저장소 오류(`CareerStoreError`)를 `FAIL position exclusions:` 로 감싸지 않고 그대로 올린다. 수집에서 저장소를 처음 여는 곳이라 감싸면 `CAREER_STORE_BUSY`, `CAREER_STORE_CORRUPT` 가 첫 줄에 나오지 않는다.
+- `study --list-recommendations` 로 저장한 추천과 게시 기록을 본다.
 
 ### 2. 공부 실행기
 
@@ -54,7 +55,9 @@
 - 기존 실행기 테스트(`position_run.test.ts`, `position_analysis_pipeline.test.ts`, `finalize_position_recommendation.test.ts`, `study-library/*.test.ts`, `runtime-paths.test.ts`, `manage_reading_sources.test.ts`, `plugin-local/main.test.ts`)를 임시 작업 폴더의 SQLite 로 돌게 고친다. HTTP 대역(fetch stub)으로 요청 모양을 보던 검사는 저장 결과를 보는 검사로 바꾼다.
 - `career-os/scripts/position-recommender/two-run.test.ts`: 임시 작업 폴더에서 수집 결과를 넣는 대역으로 `collect → commit-company-tiers → commit-analyses → finalize` 를 두 번 돌린다. 두 번째 실행의 분석 큐에 바뀌지 않은 공고가 없고, 제외 규칙에 넣은 공고와 회사가 후보에 없다.
 - `career-os/scripts/study-topic-recommender/two-run.test.ts`: 수집을 두 번 돌려 두 번째가 저장된 커서를 받아 시작하고, 첫 실행에서 고른 자료가 두 번째 후보에 없으며, 게시 기록이 추천 실행 목록에서 보인다.
-- `career-os/scripts/lib/career-backend-naming.test.ts` 의 허용 목록에서 지운 테스트 파일을 뺀다.
+- `career-os/scripts/lib/career-backend-naming.test.ts` 의 기대 목록에서 지운 테스트 파일을 뺀다.
+- 깨진 저장소 파일로 `collect_live_postings.ts` 와 번들 실행기(`position`, `study-sources`)를 돌려 표준 오류 첫 줄이 `CAREER_STORE_CORRUPT` 이고 종료 코드가 1 인지 본다.
+- `career-os/plugin/src/contract-parity.test.ts` 는 MCP 도구와 CLI 가 같은 Backend 로 간다는 비교를 지우고, MCP 도구가 아직 부르는 Backend 경로와 계약만 본다.
 
 ## 검증
 
@@ -62,6 +65,7 @@
 bun test ./career-os/scripts/lib ./career-os/scripts/position-recommender ./career-os/scripts/study-topic-recommender ./career-os/scripts/plugin-local
 bunx tsc --noEmit -p .
 bun run format:position-recommender:check
+cd career-os/plugin && bun test ./src
 grep -rn "career-backend" career-os/scripts/position-recommender career-os/scripts/study-topic-recommender --include='*.ts' | grep -v "\.test\.ts" ; test $? -eq 1
 ```
 
@@ -71,6 +75,9 @@ grep -rn "career-backend" career-os/scripts/position-recommender career-os/scrip
 |---|---|
 | `career-os/scripts/position-recommender/position-store.ts` | 신규 |
 | `career-os/scripts/position-recommender/candidate-context.ts` | 신규 |
+| `career-os/scripts/position-recommender/position_settings.ts` | 신규 |
+| `career-os/scripts/position-recommender/position_settings.test.ts` | 신규 |
+| `career-os/scripts/position-recommender/feedback/exclusions.test.ts` | 수정 |
 | `career-os/scripts/position-recommender/candidate-context.test.ts` | 신규 |
 | `career-os/scripts/position-recommender/two-run.test.ts` | 신규 |
 | `career-os/scripts/study-topic-recommender/two-run.test.ts` | 신규 |

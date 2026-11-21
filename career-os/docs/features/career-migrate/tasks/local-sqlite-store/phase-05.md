@@ -20,6 +20,9 @@
 
 ## 의도 메모
 
+- 대화용 MCP 도구(공부 후보·추천 저장·추천 목록, 공고 제외 판정·조사 제약)는 다음 계획까지 Backend 를 부른다(사용자 결정 2026-11-21). 그 사이 그 도구로 공부 추천을 저장하거나 제외 규칙을 고치지 말라고 스킬과 PR 본문에 적는다.
+- 새 저장소의 분석 정책, 회사 선호, 제외 규칙은 운영이 Backend 의 조회 응답 세 개를 실행기 명령으로 넣는다(사용자 결정 2026-11-21, 원본 스펙 DECISION4 의 예외). 값은 저장소에 쓰지 않고 순서만 PR 본문에 적는다.
+- 원본 스펙 REQ3 의 「이미 추천한 공고를 다시 추천하지 않는다」 는 「바뀌지 않은 공고는 다시 분석하지 않고 앞 분석을 재사용한다. 같은 분석 실행의 추천은 한 번만 만든다. 제외한 공고는 후보에 넣지 않는다」 로 읽는다(사용자 결정 2026-11-21). 판정 규칙은 바꾸지 않는다.
 - 이 계획에서 맥락 문서의 원본은 Backend 다. 스킬은 에이전트가 `get_context_document` 로 읽은 본문을 `context/<키>.md` 에 그대로 쓰게 한다. 다음 계획이 이 한 단계만 기억 읽기로 바꾼다.
 - `sandbox_env` 에서 Backend 이름을 빼고 `CAREER_WORKSPACE_ROOT` 를 넣는다. 운영의 에이전트 셸 설정이 이 이름을 넘기지 않으면 두 스킬이 설치되지 않으므로 PR 본문의 운영 확인 항목에 적는다.
 
@@ -39,7 +42,7 @@
 ### 2. 플러그인 선언과 버전, 번들
 
 - `career-os/plugin/connector.json` 의 `agent_skills.sandbox_env`: `position-recommender` 는 `CLAUDE_PLUGIN_ROOT`, `CAREER_WORKSPACE_ROOT`, `CAREER_EVIDENCE_DIR`, `study-collection` 은 `CLAUDE_PLUGIN_ROOT`, `CAREER_WORKSPACE_ROOT`.
-- 버전을 `0.11.0` 으로 올린다(`package.json`, `.claude-plugin/plugin.json`).
+- 버전을 `0.11.0` 으로 올린다(`package.json`, `.claude-plugin/plugin.json`, `src/server.ts` 의 서버 버전). 그래서 `dist/career-mcp.js` 도 바뀐다.
 - `cd career-os/plugin && bun run build` 로 `dist/` 를 다시 만든다.
 
 ### 2-1. 선언과 사본 검사 테스트
@@ -61,22 +64,23 @@
 
 | 요구사항 | 준비 조건 | 실행 절차 | 기대 결과 | 실행 환경 | 실행 담당 | 선행 조건 | 시점 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| REQ1 | 빈 임시 작업 폴더, `context/` 에 두 문서, 분석 정책 설정 | `CAREER_BACKEND_URL` 없이 번들 `career-local.js position` 으로 수집 대역 입력을 넣어 `finalize` 까지 실행 | 종료 코드 0, `state/career.sqlite` 와 `reports/<날짜>-position.html` 이 생긴다 | 로컬 임시 폴더 | worker | 없음 | PR 전 |
-| REQ3 | 위 실행이 끝난 같은 작업 폴더, 제외 규칙 한 건 추가 | 같은 공고에 한 건만 본문을 바꿔 두 번째 실행 | 분석 큐에 바뀐 공고만 든다. 제외한 공고가 후보에 없다. 첫 실행 추천은 다시 만들어지지 않는다 | 로컬 임시 폴더 | worker | REQ1 통과 | PR 전 |
-| REQ4 | 빈 임시 작업 폴더, `context/learning-interests.md`, 소스 한 건 | 로컬 피드 대역으로 수집 → 추천 저장 → 게시 기록, 다시 수집과 후보 조회 | 두 번째 수집이 저장된 커서 버전에서 시작한다. 고른 자료가 후보에 없다. 추천 실행과 게시 기록이 조회된다 | 로컬 임시 폴더 | worker | 없음 | PR 전 |
-| REQ1, REQ3, REQ4 | 운영 커리어 에이전트, 셸 설정에 `CAREER_WORKSPACE_ROOT` | 대화에서 두 스킬을 한 번씩 부른다 | 작업 폴더 SQLite 가 갱신되고 리포트가 「내 파일」 에 생긴다. 실행 공간에 `bun` 이 있고 `bun:sqlite` 가 돈다 | 운영 실행 공간 | 코디네이터 | 플러그인 배포 | PR 뒤(운영 단계 4) |
+| REQ1 | 빈 임시 작업 폴더, `context/` 에 두 문서, 번들로 넣은 분석 정책 | `CAREER_BACKEND_*` 없이 번들 `career-local.js position collect` 로 실제 채용 사이트를 수집하고, 결과 파일을 채워 `finalize` 까지 실행 | 종료 코드 0, `state/career.sqlite` 와 `reports/<날짜>-position.html` 이 생긴다 | 로컬 임시 폴더, 외부 사이트 | worker | 없음 | PR 전 |
+| REQ3 | 위 실행이 끝난 같은 작업 폴더, 첫 실행에 나온 공고 하나를 제외 규칙으로 추가 | 번들로 두 번째 `collect` 부터 `finalize` 까지 실행 | 첫 실행에서 분석한 공고가 분석 큐에 다시 들지 않는다(재사용). 제외한 공고가 후보와 순위에 없다 | 로컬 임시 폴더, 외부 사이트 | worker | REQ1 통과 | PR 전 |
+| REQ4 | 빈 임시 작업 폴더, `context/learning-interests.md`, 공개 HTTPS 피드 소스 한 건 | `CAREER_BACKEND_*` 없이 번들로 수집 → 후보 → 선택 → 추천 저장 → 게시 기록, 다시 수집과 후보 조회, `--list-recommendations` | 두 번째 수집 뒤 커서 버전이 2 다. 고른 자료가 후보에 없다. 추천 실행과 게시 기록이 조회된다 | 로컬 임시 폴더, 외부 피드 | worker | 없음 | PR 전 |
+| REQ1, REQ3, REQ4 | 운영 커리어 에이전트, 셸 설정에 `CAREER_WORKSPACE_ROOT` | 대화에서 두 스킬을 한 번씩 부른다 | 작업 폴더 SQLite 가 갱신되고 리포트가 「내 파일」 에 생긴다. 실행 공간에 `bun` 이 있고 `bun:sqlite` 가 돈다 | 운영 실행 공간 | 코디네이터 | 셸 설정에 `CAREER_WORKSPACE_ROOT` 를 먼저 넣고 플러그인 배포, 정책·회사 선호·제외 규칙 넣기 | PR 뒤(1단계 배포 직후, 다음 계획 시작 전) |
+
+본문이 바뀐 공고만 다시 분석하는 것과 제외 규칙 적용은 수집 대역으로 조건을 만들 수 있는 자동 테스트가 본다. 번들 실행은 실제 수집이라 공고 본문을 바꿀 수 없다.
 
 자동 테스트 대응: REQ3 은 `career-os/scripts/position-recommender/two-run.test.ts`, REQ4 는 `career-os/scripts/study-topic-recommender/two-run.test.ts` 가 같은 절차를 본다. 위 표의 PR 전 행은 번들 파일을 실제로 실행해 확인하고 결과를 PR 본문에 남긴다.
 
 ## 검증
 
 ```bash
-cd career-os/plugin && bun run scripts/agent-skills.ts --check
-cd career-os/plugin && bun run typecheck
+cd career-os/plugin && bun run scripts/agent-skills.ts --check && bun run typecheck
 bun test ./career-os/plugin ./career-os/scripts/agent-usage ./career-os/scripts/interview-drill ./career-os/scripts/plugin-local
 bun test ./career-os/scripts
 bunx tsc --noEmit -p .
-cd career-os/services/career-backend && npm run typecheck
+cd career-os/services/career-backend && npm ci && npx prisma generate && npm run typecheck
 grep -n "CAREER_BACKEND" career-os/plugin/agent-skills -r ; test $? -eq 1
 ```
 
@@ -97,6 +101,7 @@ grep -n "CAREER_BACKEND" career-os/plugin/agent-skills -r ; test $? -eq 1
 | `career-os/plugin/scripts/agent-skills.ts` | 수정 (바꿀 문장이 달라지면) |
 | `career-os/plugin/connector.json` | 수정 |
 | `career-os/plugin/package.json` | 수정 (버전) |
+| `career-os/plugin/src/server.ts` | 수정 (버전) |
 | `career-os/plugin/.claude-plugin/plugin.json` | 수정 (버전) |
 | `career-os/plugin/dist/career-local.js` | 수정 (빌드) |
 | `career-os/plugin/dist/career-mcp.js` | 수정 (빌드, 내용이 달라질 때만) |
