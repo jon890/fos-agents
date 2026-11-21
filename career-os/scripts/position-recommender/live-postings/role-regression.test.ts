@@ -96,6 +96,7 @@ for (const [title, mainTasks] of [
   ["백엔드 엔지니어 (광고)", "광고 입찰 API와 메모리를 최적화한다."],
   ["Data Scientist", "LLM으로 사용자 데이터를 분석한다."],
   ["AI Model Research Engineer", "LLM 모델 학습 기법을 연구한다."],
+  ["Research Engineer, LLM Serving", "LLM 서빙에 맞는 모델 구조를 연구한다."],
   ["Category MD", "상품 추천 시스템 개발 조직과 협업한다."],
   ["Executive Assistant", "임원 일정과 회의를 관리한다."],
   ["SRE (Monitoring Agent)", "서버에 설치된 수집 agent와 memory 사용량을 모니터링한다."],
