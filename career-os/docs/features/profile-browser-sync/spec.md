@@ -8,9 +8,8 @@
 비서가 사이트의 지금 값과 프로필 원고를 비교한 변경 전후 표를 보여 주고, 사이트마다 한 번 승인받은 뒤
 fos-career 도구가 사용자의 「내 브라우저」 에서 칸을 하나씩 넣고 다시 읽어 저장됐는지 확인한다.
 
-지금은 원티드·LinkedIn 반영이 노트북 Claude Code 의 `sync-profile` 스킬(로컬 `browser-driver` 와 zsh 스크립트)에서만 된다.
-비서 웹의 `career-connector` 는 원고 저장과 GitHub 프로필 갱신까지만 하고, 원티드와 LinkedIn 반영에는 쓰지 않는다고 적혀 있다.
-2026-11 현재 사용자의 프로필이 10월 이후 갱신되지 않아 낡아 있다.
+이 기능을 도입하기 전에는 노트북 Claude Code 의 `sync-profile` 스킬(로컬 `browser-driver` 와 zsh 스크립트)이 원티드와 LinkedIn 을 반영했다.
+당시 비서 웹의 `career-connector` 는 원고 저장과 GitHub 프로필 갱신을 맡았다.
 
 ## 범위
 
@@ -22,6 +21,7 @@ fos-career 도구가 사용자의 「내 브라우저」 에서 칸을 하나씩
 | 두 번째 PR | LinkedIn | 헤드라인, 소개, 프로젝트. 이 스펙의 결정을 그대로 따르고, LinkedIn 에만 있는 결정은 그 PR 의 계획 전에 이 스펙에 더해 다시 확인받는다 |
 
 요구사항 표는 첫 PR 의 원티드 기준으로 쓴다. 두 번째 PR 은 같은 요구사항을 LinkedIn 칸에 적용한다.
+LinkedIn 작업은 원티드 PR 의 머지와 실제 계정 확인을 마친 뒤 시작한다(DECISION3, DECISION9).
 
 범위 밖:
 

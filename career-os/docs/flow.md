@@ -48,7 +48,7 @@ prepare가 중단되면 다음 실행은 journal과 실제 root를 대조해 기
 journal과 실제 경로가 모순되면 자동 정리하지 않고 `RESTORE_REQUIRED`로 중단한다.
 prepare 는 현재 로컬 hash 가 마지막 동기화 상태와 다르면 파일을 교체하지 않는다.
 같은 `contentDigest` 를 다시 publish 하면 새 release 를 만들지 않는다.
-재생성 가능한 cache와 게시 뒤 삭제하는 임시 리포트는 동기화하지 않는다.
+재생성 가능한 cache와 임시 리포트는 동기화하지 않는다.
 관리 root 안의 `.env`와 숨김 파일은 원격으로 보내지 않으며, `prepare`가 발견하면 삭제하지 않고 `WORKSPACE_DIRTY`로 중단한다.
 `.omc`는 원격으로 보내지 않지만 `prepare`를 막지 않는다. 저장소가 재생성 가능한 운영 산출물로 선언한 디렉터리이므로 `prepare`가 관리 root를 교체할 때 함께 사라진다.
 `.DS_Store`와 `Thumbs.db`는 운영체제 메타데이터로 분류해 작업 변경에서 제외한다.
@@ -84,8 +84,8 @@ plugin 스킬은 같은 단계를 로컬 실행기로 부른다. `<CAREER_LOCAL>
 ```
 
 작업본의 위치는 `CAREER_WORKSPACE_ROOT` 이고 없으면 `~/.fos-career/workspace` 다.
-`CAREER_WORKSPACE_COMMAND` 나 `CAREER_WORKSPACE_SSH_TARGET` 이 있으면 위 동기화를 그대로 거친다.
-둘 다 없으면 동기화하지 않는다. `begin` 은 관리 디렉터리 셋을 만들고 `mode: "local"` 을 내며, `finish` 는 원격에 아무것도 보내지 않는다.
+`CAREER_WORKSPACE_SSH_TARGET` 이 있으면 위 동기화를 그대로 거친다.
+이 값이 없으면 로컬 작업본만 쓴다. `begin` 은 관리 디렉터리 셋을 만들고 `mode: "local"` 을 내며, `finish` 는 원격에 아무것도 보내지 않는다.
 로컬 모드에는 세션 기록, `WORKSPACE_DIRTY` 검사, release 비교가 없다. 작업본을 두 환경에서 함께 쓰지 않는다는 전제다. 두 환경에서 쓰려면 동기화 설정을 켠다.
 `workspace paths --json` 은 작업본의 위치와 동기화 방식만 알려 준다.
 
@@ -244,18 +244,10 @@ sequenceDiagram
 어느 실패든 스킬은 공통 프로필 없이 지원서 입력을 준비하지 않고 멈춘다.
 새로 확인한 공통 프로필 사실은 career-os 가 쓰지 않는다. 사용자에게 fos-assistant 웹 화면에서 고치라고 안내한다.
 
-### HTML 리포트 게시
+### 로컬 HTML 리포트
 
-사용자가 공유 링크를 요청했을 때만 외부 게시까지 이어간다.
-
-1. 리포트 HTML을 시스템 임시 디렉터리에 만든다.
-2. 개인 정보, 비공개 회사 맥락, 로컬 절대 경로를 검사한다.
-3. `report-publisher` skill로 Cloudflare Pages에 게시한다.
-4. 게시된 페이지와 핵심 링크가 열리는지 확인한다.
-5. 임시 HTML과 중간 데이터를 삭제한다.
-6. 검증된 URL과 다음 행동을 사용자에게 전달한다.
-
-사용자가 로컬 사본을 명시적으로 요청한 경우에만 지정한 경로에 보존한다.
+리포트 HTML을 워크스페이스에서 정한 로컬 경로에 만든다.
+본문과 링크가 열리는지 확인하고 파일 경로를 사용자에게 전달한다.
 
 ## application-package-writer
 
@@ -592,8 +584,8 @@ skill 과 수집기는 `/api/study/v1` 만 호출하고 파일에 이력을 두�
 8. 선택 검증은 후보풀에 없는 자료, 실행 내 중복, 직전 리포트 주제의 재선택을 거부한다.
 9. 같은 선별 결과에서 주제 중심 HTML 을 만들고 공개 범위와 링크를 검증한다.
 10. 검증이 끝나면 client 가 추천과 제외 판정을 `POST /recommendation-runs` 로 한 번에 저장한다.
-11. 사용자가 공유 링크를 요청했으면 `report-publisher` 로 게시하고, 성공한 뒤에만 `POST /publications` 로 기록한다.
-12. 시스템 임시 경로의 실행 자료를 정리한다.
+11. 검증한 HTML을 전달한다. 사용자가 공유 링크를 요청해 자신의 게시 수단으로 올린 경우에는 URL이 열리는지 확인한 뒤 `POST /publications`로 기록한다.
+12. 시스템 임시 경로의 중간 실행 자료를 정리한다.
 
 ```mermaid
 sequenceDiagram
@@ -618,9 +610,9 @@ sequenceDiagram
     Model-->>Client: 주제와 선택, 고르지 않은 후보의 이유
     Client->>Skill: 검증과 HTML 렌더링
     Client->>API: POST /recommendation-runs 추천과 제외 판정
-    opt 외부 게시 요청
-        Skill->>Skill: report-publisher 로 게시
-        Client->>API: POST /publications
+    Skill->>Skill: 로컬 HTML 경로 안내
+    opt 사용자 게시 수단으로 공유
+        Client->>API: POST /publications 게시 성공 기록
     end
 ```
 

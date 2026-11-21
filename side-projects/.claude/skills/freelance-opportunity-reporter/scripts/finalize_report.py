@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""외주 리포트의 조립, 검증, 렌더링, 게시와 정리를 한 번에 수행한다."""
+"""외주 공고 자료를 조립·검증하고 로컬 HTML 리포트를 만든다."""
 
 from __future__ import annotations
 
 import argparse
 import json
-import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -17,15 +16,10 @@ from render_report import load_candidates, rank_key, render_document, selected_a
 from score_opportunities import score
 
 
-def repository_root() -> Path:
-    return Path(__file__).resolve().parents[5]
-
-
 def artifact_paths(runtime_dir: Path, report_date: str) -> dict[str, Path | list[Path]]:
     return {
         "enriched": sorted(runtime_dir.glob(f"*-enriched-{report_date}.json")),
         "combined": runtime_dir / f"freelance-opportunities-{report_date}.json",
-        "scores": runtime_dir / f"freelance-scores-{report_date}.json",
         "html": runtime_dir / f"freelance-opportunity-report-{report_date}.html",
     }
 
@@ -33,13 +27,15 @@ def artifact_paths(runtime_dir: Path, report_date: str) -> dict[str, Path | list
 def ensure_combined(paths: dict[str, Path | list[Path]], report_date: str) -> Path:
     combined = paths["combined"]
     assert isinstance(combined, Path)
-    if combined.exists():
-        return combined
-
     enriched = paths["enriched"]
     assert isinstance(enriched, list)
+    if combined.exists():
+        combined_mtime = combined.stat().st_mtime_ns
+        if not any(source.stat().st_mtime_ns > combined_mtime for source in enriched):
+            return combined
+
     if not enriched:
-        raise ValueError("게시할 플랫폼별 수집 JSON이 없습니다")
+        raise ValueError("리포트를 만들 플랫폼별 수집 JSON이 없습니다")
     payload = assemble(
         enriched,
         datetime.now(ZoneInfo("Asia/Seoul")).isoformat(timespec="seconds"),
@@ -88,61 +84,10 @@ def render_html(combined: Path, html_path: Path, report_date: str) -> None:
     html_path.write_text(document, encoding="utf-8")
 
 
-def publish(html_path: Path, report_date: str, publisher_script: Path) -> dict[str, object]:
-    command = [
-        sys.executable,
-        str(publisher_script),
-        "publish",
-        "--source",
-        str(html_path),
-        "--slug",
-        f"freelance-{report_date}",
-        "--project-name",
-        "fos-reports",
-        "--confirm-public",
-    ]
-    result = subprocess.run(command, check=False, capture_output=True, text=True, timeout=360)
-    if result.returncode != 0:
-        detail = (result.stderr or result.stdout).strip()[-4000:]
-        raise RuntimeError(f"리포트 게시 실패: {detail}")
-    try:
-        value = json.loads(result.stdout)
-    except json.JSONDecodeError as error:
-        raise RuntimeError("게시 결과 JSON을 읽지 못했습니다") from error
-    if value.get("status") != "published" or not (value.get("branch_url") or value.get("public_url")):
-        raise RuntimeError("검증된 게시 URL이 없습니다")
-    return value
-
-
-def cleanup(paths: dict[str, Path | list[Path]], runtime_dir: Path, report_date: str) -> list[str]:
-    targets: list[Path] = []
-    enriched = paths["enriched"]
-    assert isinstance(enriched, list)
-    targets.extend(enriched)
-    for key in ("combined", "scores", "html"):
-        target = paths[key]
-        assert isinstance(target, Path)
-        targets.append(target)
-    targets.extend(runtime_dir.glob(f"build_freelance_*{report_date.replace('-', '')}*.py"))
-
-    removed: list[str] = []
-    for target in targets:
-        if target.exists() and target.is_file() and not target.is_symlink():
-            target.unlink()
-            removed.append(target.name)
-    return removed
-
-
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--date", default=datetime.now(ZoneInfo("Asia/Seoul")).date().isoformat())
     parser.add_argument("--runtime-dir", type=Path, default=Path("data/runtime/downloads"))
-    parser.add_argument(
-        "--publisher-script",
-        type=Path,
-        default=repository_root() / ".agents/skills/report-publisher/scripts/publish_report.py",
-    )
-    parser.add_argument("--no-publish", action="store_true")
     args = parser.parse_args()
 
     paths = artifact_paths(args.runtime_dir, args.date)
@@ -153,21 +98,11 @@ def main() -> int:
     render_html(combined, html_path, args.date)
 
     result: dict[str, object] = {
-        "status": "ready" if args.no_publish else "published",
+        "status": "ready",
         "report_date": args.date,
         **summary,
         "html": str(html_path),
     }
-    if not args.no_publish:
-        publish_result = publish(html_path, args.date, args.publisher_script)
-        result.update(
-            {
-                "public_url": publish_result.get("public_url"),
-                "branch_url": publish_result.get("branch_url"),
-                "verification": publish_result.get("verification"),
-                "cleaned": cleanup(paths, args.runtime_dir, args.date),
-            }
-        )
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 

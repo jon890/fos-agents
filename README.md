@@ -45,8 +45,6 @@
 | [`docs/code-architecture.md`](docs/code-architecture.md) | 현재 디렉터리 구조와 책임 경계 |
 | [`docs/adr/INDEX.md`](docs/adr/INDEX.md) | 모노레포 수준의 주요 결정과 이유 |
 | [`docs/home-server-object-storage.md`](docs/home-server-object-storage.md) | 홈서버 S3 서비스와 워크스페이스 연결 계약 |
-| [`.agents/skills/report-publisher/`](.agents/skills/report-publisher/) | 공개 가능한 HTML 리포트 게시 skill |
-| [`.claude/skills/_shared/`](.claude/skills/_shared/) | 여러 실행 역할이 함께 쓰는 실측 함정 참조 |
 
 `CLAUDE.md`는 `AGENTS.md`를 가리키는 심볼릭 링크다.
 두 파일을 따로 수정하지 않는다.
@@ -64,6 +62,6 @@
 |---|---|
 | TypeScript 파일 | `bunx tsc --noEmit`과 관련 테스트 |
 | 문서 링크와 구조 | `rg`와 `find`로 실제 경로 대조 |
-| HTML 리포트 게시 | `report-publisher` 실행 후 배포 URL HTTP 확인 |
+| HTML 리포트 | 로컬 파일과 본문의 링크 확인 |
 
 외부 게시, 지원서 제출처럼 외부 상태를 바꾸는 작업은 해당 워크스페이스의 승인 규칙을 따른다.

@@ -151,7 +151,6 @@ Admin UI에서도 시험 객체가 보였다가 삭제 뒤 사라졌는지 확�
 ```
 
 외부 client는 SSH transport로 같은 `career-storage` 명령을 호출한다.
-홈서버 안에서 명령을 직접 부를 때만 `CAREER_WORKSPACE_COMMAND`에 그 명령의 절대경로를 지정해 command transport를 쓴다. 지금 쓰는 곳은 없고, 홈서버 Hermes는 이 저장소 연결을 쓰지 않는다.
 client에서 읽기, 상태 확인과 무변경 publish를 확인한다.
 
 단일 노드 SeaweedFS는 백업이 아니다.

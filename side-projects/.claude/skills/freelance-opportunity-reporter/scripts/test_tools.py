@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+import sys
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from assemble_report_data import assemble
 from audit_collection import audit
-from finalize_report import artifact_paths, build_summary, render_html
+from finalize_report import artifact_paths, ensure_combined
 from render_report import load_candidates, rank_key, render_document
 from score_opportunities import first_win_sort_key, score
 
@@ -419,7 +422,28 @@ class AssembleReportDataTest(unittest.TestCase):
 
 
 class FinalizeReportTest(unittest.TestCase):
-    def test_builds_summary_and_html_from_validated_combined_data(self) -> None:
+    def test_combined_data_is_rebuilt_when_platform_collection_is_newer(self) -> None:
+        report_date = "2026-08-24"
+        with TemporaryDirectory() as directory:
+            runtime_dir = Path(directory)
+            source = runtime_dir / f"wishket-enriched-{report_date}.json"
+            source.write_text(json.dumps([{"platform": "위시켓", "title": "새 공고"}]), encoding="utf-8")
+            paths = artifact_paths(runtime_dir, report_date)
+            combined = paths["combined"]
+            self.assertIsInstance(combined, Path)
+            previous = {"items": [{"title": "이전 공고"}]}
+            combined.write_text(json.dumps(previous), encoding="utf-8")
+
+            os.utime(source, (1, 1))
+            os.utime(combined, (2, 2))
+            self.assertEqual(ensure_combined(paths, report_date), combined)
+            self.assertEqual(json.loads(combined.read_text(encoding="utf-8")), previous)
+
+            os.utime(source, (3, 3))
+            self.assertEqual(ensure_combined(paths, report_date), combined)
+            self.assertEqual(json.loads(combined.read_text(encoding="utf-8"))["items"][0]["title"], "새 공고")
+
+    def test_cli_builds_summary_and_keeps_local_html(self) -> None:
         item = {
             "platform": "위시켓",
             "project_id": "1",
@@ -461,13 +485,22 @@ class FinalizeReportTest(unittest.TestCase):
             combined = paths["combined"]
             self.assertIsInstance(combined, Path)
             combined.write_text(json.dumps(payload), encoding="utf-8")
-            summary = build_summary(combined)
-            html_path = paths["html"]
-            self.assertIsInstance(html_path, Path)
-            render_html(combined, html_path, "2026-08-24")
+            result = subprocess.run(
+                [
+                    sys.executable, str(Path(__file__).with_name("finalize_report.py")),
+                    "--date", "2026-08-24", "--runtime-dir", directory,
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            summary = json.loads(result.stdout)
+            html_path = Path(summary["html"])
 
+            self.assertEqual(summary["status"], "ready")
             self.assertEqual(summary["candidate_count"], 1)
             self.assertEqual(summary["audit_status"], "complete")
+            self.assertEqual(html_path, paths["html"])
             self.assertIn("수집한 공고 목록", html_path.read_text(encoding="utf-8"))
 
 
