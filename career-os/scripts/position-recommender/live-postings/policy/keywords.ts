@@ -50,7 +50,7 @@ export const AI_WORK_PATTERNS = [
   /인공지능|머신\s*러닝|생성형\s*AI|대규모\s*언어\s*모델/i,
   /\bAI[ /-]*(?:(?:data\s+)?platform|ml\s+(?:engineers?|developers?)|products?|services?|engineers?|developers?|agents?|models?|applications?|inference|serving)\b|\bAI\s*(?:\/\s*데이터\s*)?(?:플랫폼|제품|서비스|엔지니어|개발|에이전트|모델|추론|서빙)/i,
   /\b(?:AI|LLM)[- ](?:powered|based)\b[^.!?\n]{0,60}\b(?:systems?|products?|features?|services?|classification|recommendations?|search)\b|\bAI\s*(?:기반|로|를\s*이용해)[^.!?\n]{0,40}(?:분류|추천|검색|추론|제품|서비스|기능)/i,
-  /\b(?:personalized|proactive|conversational)\s+agents?\b|\bagents?[ -](?:runtime|orchestration|evaluation|mesh)\b|\bagents?\s*(?:런타임|오케스트레이션)|(?:대화형|개인화)\s*에이전트|에이전트\s*(?:런타임|오케스트레이션|플랫폼)/i,
+  /\b(?:personalized|proactive|conversational)\s+agents?\b|(?:대화형|개인화|생성형)\s*에이전트/i,
   /\b(?:recommendation[ -](?:engines?|systems?|models?|platforms?)|feature[ -]stores?|embedding[ -](?:models?|generation|pipelines?|platforms?|services?))\b|추천\s*(?:엔진|시스템|모델|알고리즘|플랫폼)|임베딩\s*(?:모델|파이프라인|플랫폼|서비스|생성|검색|기반\s*추천|(?:을|를)?\s*(?:적용|개발|운영))|\bML\s*추천\s*(?:기능|서비스)/i,
 ] as const;
 

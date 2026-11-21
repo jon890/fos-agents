@@ -80,6 +80,9 @@ for (const [company, title, mainTasks] of [
 for (const [title, mainTasks] of [
   ["SRE", "서비스 지표와 장애 대응 체계를 운영한다."],
   ["SRE", "엔드포인트 보안 Agent 개발과 운영을 맡는다."],
+  ["DevOps Engineer", "Prometheus Agent Runtime을 운영한다."],
+  ["DevOps Engineer", "모니터링 에이전트 플랫폼을 구축한다."],
+  ["Data-Scientist (LLM)", "사용자 데이터로 LLM 모델을 학습시킨다."],
   ["DevOps Engineer", "빌드와 릴리스 워크플로를 자동화한다."],
   ["Infra Service Engineer", "서버와 스토리지를 증설한다."],
   ["백엔드 엔지니어 (광고)", "광고 입찰 API와 메모리를 최적화한다."],
@@ -89,7 +92,7 @@ for (const [title, mainTasks] of [
   ["SRE (Monitoring Agent)", "서버에 설치된 수집 agent와 memory 사용량을 모니터링한다."],
   ["Backend Engineer", "AI 코딩 도구와 GitHub Copilot을 활용해 결제 API를 개발한다."],
 ]) {
-  test(`${title} 공고를 공통 직무 필터에서 제외한다`, () => {
+  test(`${title} 공고를 공통 직무 필터에서 제외한다 (${mainTasks})`, () => {
     expect(policy.evaluate(posting({ title, mainTasks }), now).rejectionCode).toBe(
       "not_target_role",
     );

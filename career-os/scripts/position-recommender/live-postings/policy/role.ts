@@ -14,7 +14,7 @@ export function isNonTargetTitle(text: string): boolean {
 }
 
 const NON_TARGET_TITLE_PATTERNS = NON_TARGET_TITLE_KEYWORDS.map((keyword) => {
-  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replaceAll(" ", "[ -]+");
   const start = /^\w/.test(keyword) ? "\\b" : "";
   const end = /\w$/.test(keyword) ? "\\b" : "";
   return new RegExp(`${start}${escaped}${end}`, "i");
@@ -73,7 +73,7 @@ function hasAiWork(text: string): boolean {
 }
 
 /** 업무 칸에 담긴 전체 본문에서도 지원 조건 앞의 소개와 업무만 읽는다. */
-export function postingRoleDuties(text: string): string {
+function postingRoleDuties(text: string): string {
   return text.split(ROLE_QUALIFICATION_HEADING, 1)[0] ?? "";
 }
 
