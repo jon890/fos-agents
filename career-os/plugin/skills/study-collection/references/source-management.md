@@ -1,10 +1,10 @@
 # 외부 읽을거리 소스 관리
 
-읽을거리 소스의 원본은 커리어 Backend다.
+읽을거리 소스의 원본은 작업 폴더의 `state/career.sqlite` 다.
 소스 키는 주제가 아니라 발행처를 식별한다.
 
-`study-sources` 는 API 연결 값 없이 `help`, `--help`, `-h`와 `template`를 실행할 수 있다.
-`template`는 Backend에 보내는 요청 본문의 초안을 출력하고 저장하지 않는다.
+`help`, `--help`, `-h`와 `template`는 저장소를 열지 않는다.
+`template`는 저장할 본문의 초안을 출력하고 저장하지 않는다.
 
 ```bash
 <CAREER_LOCAL> study-sources template \
@@ -53,7 +53,7 @@
 
 ## 소스 추가
 
-다음 명령은 새 소스를 Backend에 추가한다.
+다음 명령은 새 소스를 저장소에 추가한다.
 `--note`에는 추가 이유를 남긴다.
 
 ```bash

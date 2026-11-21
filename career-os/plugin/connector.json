@@ -32,8 +32,8 @@
   "agent_skills": {
     "path": "./agent-skills",
     "sandbox_env": {
-      "position-recommender": ["CLAUDE_PLUGIN_ROOT", "CAREER_BACKEND_URL", "CAREER_BACKEND_TOKEN_FILE", "CAREER_EVIDENCE_DIR"],
-      "study-collection": ["CLAUDE_PLUGIN_ROOT", "CAREER_BACKEND_URL", "CAREER_BACKEND_TOKEN_FILE"]
+      "position-recommender": ["CLAUDE_PLUGIN_ROOT", "CAREER_WORKSPACE_ROOT", "CAREER_EVIDENCE_DIR"],
+      "study-collection": ["CLAUDE_PLUGIN_ROOT", "CAREER_WORKSPACE_ROOT"]
     }
   },
   "owner_browser_env": "CAREER_BROWSER_URL",

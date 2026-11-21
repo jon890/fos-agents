@@ -12,7 +12,8 @@ description: 열려 있는 채용공고를 모아 후보자가 해온 일과 선
 
 실행기 명령은 `bun --no-env-file "${CLAUDE_PLUGIN_ROOT}/dist/career-local.js"` 이다.
 이 문서와 `references/` 에서는 그 명령을 `<CAREER_LOCAL>` 로 적는다.
-셸 환경에 `CAREER_BACKEND_URL` 과, `CAREER_BACKEND_TOKEN` 이나 `CAREER_BACKEND_TOKEN_FILE` 가운데 하나가 있어야 한다.
+데이터는 커리어 작업 폴더의 `state/career.sqlite` 에 있다. 작업 폴더는 `CAREER_WORKSPACE_ROOT` 이고 없으면 `/workspace/career` 다.
+커리어 Backend 주소와 token 은 쓰지 않는다.
 공시 조회에 쓰는 `CAREER_DART_API_KEY`(또는 `CAREER_DART_API_KEY_FILE`)는 선택이다.
 시작할 때 `<CAREER_LOCAL> workspace paths --json` 으로 `evidenceDir` 를 확인한다.
 
@@ -44,9 +45,19 @@ description: 열려 있는 채용공고를 모아 후보자가 해온 일과 선
 디렉터리가 없거나 비었으면 근거가 없다고 밝히고 추측하지 않는다.
 큐에 든 공고만 분석하며, 닫힘 여부와 개인 제외 조건은 모델이 추측하지 않는다.
 
+## 시작 전: 맥락 문서
+
+실행기는 후보자 맥락 문서를 작업 폴더의 `context/` 에서만 읽는다. 그래서 `collect` 전에 아래를 먼저 한다.
+
+1. `get_context_document` 로 `position-preferences` 와 `application-state` 를 읽는다.
+2. 읽은 본문을 고치거나 줄이지 않고 `<작업 폴더>/context/position-preferences.md`, `<작업 폴더>/context/application-state.md` 에 쓴다.
+3. 문서가 하나라도 없으면 실행기를 부르지 않는다. 어느 문서가 없는지 알리고, 사용자와 그 문서를 먼저 쓴 뒤 다시 하자고 안내하고 끝낸다.
+
+`position-preferences` 본문이 바뀌면 공고 분석의 기준이 바뀌어 저장된 분석을 다시 계산한다. 공백과 줄바꿈만 다른 것은 같은 기준으로 본다.
+
 ## 실행
 
-`CAREER_BACKEND_URL`과 token 설정이 필요하며, Backend 장애가 발생하면 파일 이력으로 전환하지 않고 중단한다.
+저장소가 잠겼거나 깨졌으면 다른 사본으로 전환하지 않고 중단한다([실패 처리](references/failures.md)의 「저장소와 설정」).
 JSON을 다루려고 `bun -e`, `python -c`, heredoc 같은 즉석 스크립트를 쓰지 않고 CLI stdout과 큐 파일을 읽는다.
 게시한 URL 이 열리는지 확인한다.
 
@@ -64,7 +75,7 @@ JSON을 다루려고 `bun -e`, `python -c`, heredoc 같은 즉석 스크립트�
 <CAREER_LOCAL> position finalize --run <RUN_DIR>
 ```
 
-`collect`를 `--run` 없이 실행하면 stdout 첫 줄이 `<RUN_DIR>`이다.
+`collect`를 `--run` 없이 실행하면 작업 폴더 `runs/` 아래에 실행 폴더를 만들고 stdout 첫 줄에 `<RUN_DIR>` 을 낸다.
 이 값을 이후 명령에 그대로 넘긴다.
 각 명령의 stdout이 다음에 읽을 큐, 모델이 결과를 쓸 경로와 다음 명령을 알린다.
 도움말과 오류 출력에 나오는 `position_run.ts <하위 명령>` 은 `<CAREER_LOCAL> position <하위 명령>` 으로 읽는다.
@@ -73,7 +84,7 @@ CLI가 결과 파일의 최상위 칸과 빈 `results`, `failures` 배열을 먼
 칸 사이 조건은 JSON Schema에 나오지 않는다. `fitScore`는 `scoreBreakdown` 합계이고, 회사 판정의 조건은 아래 문장을 따른다.
 모델은 `results`와 `failures`에만 쓰며, 큐의 각 항목을 둘 중 하나에 한 번씩 넣는다.
 반영 결과가 `partial`이면 stdout에 나온 남은 항목만 다시 판단해 같은 명령을 실행한다.
-`collect`가 후보자 맥락 문서가 없다며 멈추면 `save_context_document` 도구로 문서를 저장하도록 안내하고, 저장된 뒤 `collect`를 다시 실행한다.
+`collect`가 후보자 맥락 문서가 없다며 멈추면 「시작 전: 맥락 문서」 를 다시 하고 `collect`를 다시 실행한다.
 
 회사 판정 큐가 있으면 `<RUN_DIR>/company-evidence.json`에 저장된 근거만 읽고 판정한다.
 `collect`가 실패한 수집기를 알려도 멈추지 않는다. 그 출처의 근거만 빠진 것이므로 저장된 근거로 판정을 이어 간다.
@@ -100,6 +111,8 @@ HTML은 공고 이름과 링크, 공개 회사 근거와 축별 판정, 처리 �
 - 회사 판정의 `assessment`
 - 내부 경로, 환경 식별자와 token
 
+`finalize` 는 HTML 사본을 작업 폴더 `reports/<날짜>-position.html` 에 남기고 그 경로를 `리포트 사본:` 줄로 알린다.
+`file_space_put` 도구가 있으면 그 파일을 「내 파일」 에 넣고, 없으면 사본 경로를 전한다.
 브라우저에서 데스크톱과 모바일 배치, 가로 넘침과 주요 링크를 확인한다.
 검증과 전달이 끝나면 `<CAREER_LOCAL> position cleanup --run <RUN_DIR>` 로 정리한다.
 
