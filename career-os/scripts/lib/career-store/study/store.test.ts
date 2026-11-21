@@ -138,6 +138,20 @@ describe("공부 추천 저장 모듈", () => {
     expect((await store.getCandidates({})).candidates.map((candidate) => candidate.contentKey)).toEqual(["b", "c"]);
   });
 
+  test("제외 판정은 30일 뒤 만료일 전날까지만 후보에서 뺀다", async () => {
+    const { store, db } = await seeded();
+    await store.createRecommendationRun(run("morning-2026-11-21", "topic-1", ["a"], ["b"]), "run-1");
+    const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul" }).format(new Date());
+    const verdict = db.get<{ valid_until: string }>("SELECT valid_until FROM study_material_verdicts WHERE content_key = 'b'")!;
+    const expected = new Date(`${today}T00:00:00Z`);
+    expected.setUTCDate(expected.getUTCDate() + 30);
+    expect(verdict.valid_until).toBe(expected.toISOString().slice(0, 10));
+
+    // 만료일이 오늘이면 더 적용하지 않는다(`valid_until > 오늘` 만 유효하다).
+    db.run("UPDATE study_material_verdicts SET valid_until = ? WHERE content_key = 'b'", [today]);
+    expect((await store.getCandidates({})).candidates.map((candidate) => candidate.contentKey)).toEqual(["b", "c"]);
+  });
+
   test("같은 날의 추천은 한 번만 저장되고 직전 주제는 다시 고를 수 없다", async () => {
     const { store } = await seeded();
     await store.createRecommendationRun(run("morning-2026-11-21", "topic-1", ["a"]), "run-1");

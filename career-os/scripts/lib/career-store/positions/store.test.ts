@@ -192,6 +192,70 @@ describe("공고 추천 저장 모듈", () => {
     });
   });
 
+  test("회사 근거는 같은 출처면 갱신하되 더 오래된 관측으로 덮지 않고, 유효한 것만 돌려준다", async () => {
+    const { store } = setup();
+    await store.configureAnalysisPolicy(policyBody, "policy");
+    const prepared = await store.saveCollection(collection("run-a", "2026-09-17T00:00:00.000Z"), "collect:run-a");
+    const runId = prepared.companyTierQueue.companyTierRunId;
+    const companyKey = prepared.companyTierQueue.companies[0]!.companyKey;
+    const far = "2099-12-31";
+    const evidence = (summary: string, observedAt: string, validUntil = far, url = "https://example.com/blog") => ({
+      sourceType: "tech-blog",
+      url,
+      summary,
+      payloadJson: { posts: 3 },
+      observedAt,
+      validUntil,
+    });
+    const put = (key: string, items: unknown[]) =>
+      store.putCompanyEvidence(runId, { schemaVersion: 1, companies: [{ companyKey, evidence: items }] }, key);
+
+    expect((await put("e-1", [evidence("처음", "2026-09-10T00:00:00.000Z")])).companies).toEqual([{ companyKey, savedCount: 1 }]);
+    await put("e-2", [evidence("더 오래된 관측", "2026-09-01T00:00:00.000Z")]);
+    expect((await store.getCompanyEvidence(companyKey)).map((item) => item.summary)).toEqual(["처음"]);
+    await put("e-3", [evidence("같은 시각의 재전송", "2026-09-10T00:00:00.000Z")]);
+    expect((await store.getCompanyEvidence(companyKey)).map((item) => item.summary)).toEqual(["같은 시각의 재전송"]);
+    // 한 요청 안의 같은 출처는 하나로 세고, 만료된 근거는 조회에서 빠진다.
+    const saved = await put("e-4", [
+      evidence("새 관측", "2026-09-12T00:00:00.000Z"),
+      evidence("같은 요청의 더 새 관측", "2026-09-13T00:00:00.000Z"),
+      evidence("만료된 근거", "2020-01-01T00:00:00.000Z", "2020-01-02", "https://example.com/old"),
+    ]);
+    expect(saved.companies).toEqual([{ companyKey, savedCount: 2 }]);
+    const valid = await store.getCompanyEvidence(companyKey);
+    expect(valid.map((item) => item.summary)).toEqual(["같은 요청의 더 새 관측"]);
+    expect(valid[0]).toMatchObject({ payloadJson: { posts: 3 }, validUntil: far, observedAt: "2026-09-13T00:00:00.000Z" });
+    expect((await store.getActiveCompanyPostings(companyKey)).length).toBeGreaterThan(0);
+    await expect(store.putCompanyEvidence("missing-run", { schemaVersion: 1, companies: [{ companyKey, evidence: [evidence("x", "2026-09-10T00:00:00.000Z")] }] }, "e-5")).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  test("끝난 회사 판정 실행에는 근거를 더 저장하지 않는다", async () => {
+    const { store } = setup();
+    await store.configureAnalysisPolicy(policyBody, "policy");
+    const body = collection("run-a", "2026-09-17T00:00:00.000Z");
+    await runCollection(store, body);
+    const run = await store.saveCollection(body, "collect:run-a");
+    await expect(
+      store.putCompanyEvidence(
+        run.companyTierQueue.companyTierRunId,
+        { schemaVersion: 1, companies: [{ companyKey: "회사 1", evidence: [{ sourceType: "official", url: "https://example.com/x", summary: "늦은 근거", payloadJson: {}, observedAt: "2026-09-17T00:00:00.000Z", validUntil: "2099-01-01" }] }] },
+        "late",
+      ),
+    ).rejects.toMatchObject({ code: "VERSION_CONFLICT" });
+  });
+
+  test("정책을 바꾸면 조회가 바뀐 값을 돌려주고, 없을 때 조회는 POLICY_NOT_CONFIGURED 다", async () => {
+    const { store } = setup();
+    await expect(store.getAnalysisPolicy()).rejects.toMatchObject({ code: "POLICY_NOT_CONFIGURED", status: 409 });
+    await store.configureAnalysisPolicy(policyBody, "policy-1");
+    const changed = { ...(policyBody as Record<string, unknown>), dailyCompanyTierLimit: 1 };
+    await store.configureAnalysisPolicy(changed, "policy-2");
+    expect(await store.getAnalysisPolicy()).toEqual(changed as never);
+    // 하루 회사 평가 상한이 큐 길이를 정한다.
+    const prepared = await store.saveCollection(collection("run-a", "2026-09-17T00:00:00.000Z"), "collect:run-a");
+    expect(prepared.companyTierQueue.companies).toHaveLength(1);
+  });
+
   test("본문이 계약과 다르면 BAD_REQUEST 이고 아무것도 저장하지 않는다", async () => {
     const { store, db } = setup();
     await expect(store.configureAnalysisPolicy({ schemaVersion: 2 }, "policy")).rejects.toMatchObject({

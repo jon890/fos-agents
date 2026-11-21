@@ -14,6 +14,7 @@ export const POSITION_SETTINGS_COMMANDS = [
   "exclusions",
 ] as const;
 
+/** `--input` 은 설정 파일 꼴과, 조회 명령이나 옛 Backend 조회 응답이 내는 배열 꼴을 모두 받는다. */
 export const POSITION_SETTINGS_HELP = `  position_run.ts configure-policy --input <JSON>
   position_run.ts configure-companies --input <JSON>
   position_run.ts exclusions get
@@ -57,7 +58,23 @@ export async function runPositionSettingsCommand(
     return 0;
   }
   if (command === "configure-companies") {
-    const result = await configurePositionCompanyPreferences(inputPath(rest), createStore);
+    const path = inputPath(rest);
+    const input = readJson(path);
+    // 배열이면 저장소가 돌려주는 회사 선호 목록 꼴이다(옛 Backend 의 조회 응답도 같다). 그대로 다시 넣는다.
+    if (Array.isArray(input)) {
+      const store = createStore();
+      for (const entry of input) {
+        const { updatedAt: _updatedAt, ...body } = entry as Record<string, unknown>;
+        await store.updateCompanyPreference(
+          String(body.companyKey),
+          body,
+          settingsKey("company-preference", body),
+        );
+      }
+      writeLine(`회사 선호 저장: ${input.length}곳`);
+      return 0;
+    }
+    const result = await configurePositionCompanyPreferences(path, createStore);
     writeLine(`회사 선호 저장: ${JSON.stringify(result)}`);
     return 0;
   }
@@ -68,7 +85,9 @@ export async function runPositionSettingsCommand(
     return 0;
   }
   if (action === "put") {
-    const body = readJson(inputPath(actionArgs));
+    const input = readJson(inputPath(actionArgs));
+    // 배열이면 `exclusions get` 이 내는 목록 꼴로 본다(옛 Backend 의 조회 응답도 같다).
+    const body = Array.isArray(input) ? { schemaVersion: 2, exclusions: input } : input;
     const saved = await createStore().replaceExclusions(body, settingsKey("exclusions", body));
     writeLine(`제외 규칙 저장: ${saved.length}건(만료되지 않은 규칙)`);
     return 0;
