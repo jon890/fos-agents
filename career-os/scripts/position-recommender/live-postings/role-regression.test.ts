@@ -69,6 +69,9 @@ for (const [company, title, mainTasks] of [
   ["가상서비스", "백엔드 엔지니어", "실서비스 피드에 사용자 임베딩을 적용하고 운영한다."],
   ["가상서비스", "Software Engineer", "대화형 에이전트를 개발한다."],
   ["가상서비스", "Backend Engineer", "서비스의 ML 추천 기능을 개발한다."],
+  ["가상서비스", "검색 서버 개발자", "벡터 검색과 임베딩을 이용한 검색 서버를 운영한다."],
+  ["가상서비스", "플랫폼 엔지니어", "모델 추론 서빙 플랫폼을 운영한다."],
+  ["가상서비스", "피드 서버 개발자", "개인화 추천 피드 서버를 개발한다."],
 ]) {
   test(`${company} ${title} 공고가 공통 직무 필터를 통과한다`, () => {
     expect(policy.evaluate(posting({ company, title, mainTasks }), now)).toEqual({
