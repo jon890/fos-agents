@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, existsSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { PositionExclusion as BackendPositionExclusion } from "../../../services/career-backend/src/positions/schema.ts";
+import type { PositionExclusion as BackendPositionExclusion } from "../../lib/career-store/positions/schema.ts";
 import { collectLivePostings, parseArgs } from "../collect_live_postings.ts";
-import { CareerBackendHttpError } from "../../lib/career-backend-http.ts";
+import { CareerStoreError } from "../../lib/career-store/errors.ts";
 import {
   filterExcludedPostings,
   loadPositionExclusions,
@@ -21,7 +21,9 @@ function exclusionsSource(rules: unknown[]): PositionExclusionsSource {
   return { getExclusions: async () => rules as BackendPositionExclusion[] };
 }
 
-function failingExclusionsSource(error: unknown = new Error("커리어 Backend에 연결하지 못했습니다.")) {
+function failingExclusionsSource(
+  error: unknown = new Error("커리어 Backend에 연결하지 못했습니다."),
+) {
   return {
     getExclusions: async () => {
       throw error;
@@ -106,13 +108,13 @@ describe("개인 공고 제외", () => {
     }
   });
 
-  test("Backend가 오류를 내면 수집 명령이 종료 코드 1로 끝난다", async () => {
-    const server = Bun.serve({
-      port: 0,
-      fetch: () =>
-        Response.json({ error: { code: "INTERNAL_ERROR", message: "실패" } }, { status: 500 }),
-    });
+  test("저장소 파일이 깨졌으면 수집 명령이 그 code 를 첫 줄에 내고 종료 코드 1로 끝난다", async () => {
     const dir = mkdtempSync(join(tmpdir(), "position-exclusions-"));
+    mkdirSync(join(dir, "workspace", "state"), { recursive: true });
+    writeFileSync(
+      join(dir, "workspace", "state", "career.sqlite"),
+      "SQLite 가 아닌 내용\n".repeat(100),
+    );
     try {
       const child = Bun.spawn(
         [
@@ -126,13 +128,7 @@ describe("개인 공고 제외", () => {
         {
           stdout: "pipe",
           stderr: "pipe",
-          env: {
-            ...process.env,
-            NO_PROXY: "127.0.0.1,localhost",
-            CAREER_BACKEND_URL: `http://127.0.0.1:${server.port}`,
-            CAREER_BACKEND_TOKEN: "token-123456789012345678901234567890",
-            CAREER_BACKEND_TOKEN_FILE: undefined,
-          },
+          env: { ...process.env, CAREER_WORKSPACE_ROOT: join(dir, "workspace") },
         },
       );
       const [stderr, exitCode] = await Promise.all([
@@ -141,37 +137,40 @@ describe("개인 공고 제외", () => {
       ]);
 
       expect(exitCode).toBe(1);
-      expect(stderr).toContain("FAIL position exclusions");
+      expect(stderr.split("\n")[0]).toStartWith("CAREER_STORE_CORRUPT: ");
       expect(existsSync(join(dir, "pool.json"))).toBe(false);
     } finally {
-      server.stop(true);
       rmSync(dir, { recursive: true, force: true });
     }
   }, 60_000);
 
-  test("회사 규칙은 정확히 같은 회사의 공고만 제외한다", () => {
-    const companyRule: EnrichedPositionExclusion = {
-      scope: "company",
-      company: "테스트 회사",
-      decisionKind: "career-downside",
-      reason: "회사의 모든 백엔드 역할에 적용되는 제외 근거를 확인했다.",
-      evidenceUrls: ["https://example.com/company", "https://example.com/engineering"],
-      decidedAt: "2026-09-10",
-    };
-    const result = filterExcludedPostings(
-      [
-        posting,
-        {
-          ...posting,
-          company: "다른 회사",
-          identityHash: "other",
-          url: "https://example.com/jobs/2",
-        },
-      ],
-      [companyRule],
-    );
-    expect(result.eligible.map((item) => item.company)).toEqual(["다른 회사"]);
-  }, SUBPROCESS_TEST_TIMEOUT_MS);
+  test(
+    "회사 규칙은 정확히 같은 회사의 공고만 제외한다",
+    () => {
+      const companyRule: EnrichedPositionExclusion = {
+        scope: "company",
+        company: "테스트 회사",
+        decisionKind: "career-downside",
+        reason: "회사의 모든 백엔드 역할에 적용되는 제외 근거를 확인했다.",
+        evidenceUrls: ["https://example.com/company", "https://example.com/engineering"],
+        decidedAt: "2026-09-10",
+      };
+      const result = filterExcludedPostings(
+        [
+          posting,
+          {
+            ...posting,
+            company: "다른 회사",
+            identityHash: "other",
+            url: "https://example.com/jobs/2",
+          },
+        ],
+        [companyRule],
+      );
+      expect(result.eligible.map((item) => item.company)).toEqual(["다른 회사"]);
+    },
+    SUBPROCESS_TEST_TIMEOUT_MS,
+  );
 
   test("회사 역할군 cooldown은 공고명에 맞는 역할만 만료일까지 제외한다", () => {
     const rule: EnrichedPositionExclusion = {
@@ -208,38 +207,24 @@ describe("개인 공고 제외", () => {
     ).toEqual([posting, frontend, otherCompany]);
   });
 
-  test("규칙을 읽지 못한 원인을 연결과 인증과 계약으로 갈라 적는다", async () => {
-    const cases = [
-      {
-        error: new CareerBackendHttpError(null, "NETWORK", "연결 실패"),
-        expected: "커리어 Backend 에 연결하지 못했습니다. 주소와 서버 상태를 확인하세요.",
-      },
-      {
-        error: new CareerBackendHttpError(503, "INTERNAL_ERROR", "서버 오류"),
-        expected: "커리어 Backend 에 연결하지 못했습니다. 주소와 서버 상태를 확인하세요.",
-      },
-      {
-        error: new CareerBackendHttpError(401, "UNAUTHORIZED", "인증 실패"),
-        expected: "커리어 Backend 인증이 거절됐습니다. token 을 확인하세요.",
-      },
-      {
-        error: new CareerBackendHttpError(400, "BAD_REQUEST", "잘못된 요청"),
-        expected: "커리어 Backend 가 돌려준 제외 규칙이 계약을 만족하지 않습니다.",
-      },
-    ];
-    for (const { error, expected } of cases) {
-      await expect(loadPositionExclusions(failingExclusionsSource(error))).rejects.toThrow(
-        `FAIL position exclusions: ${expected}`,
-      );
+  test("저장소가 잠겼거나 깨진 오류는 감싸지 않고 그대로 올린다", async () => {
+    for (const code of ["CAREER_STORE_BUSY", "CAREER_STORE_CORRUPT"] as const) {
+      const error = new CareerStoreError(503, code, "저장소 오류");
+      await expect(loadPositionExclusions(failingExclusionsSource(error))).rejects.toBe(error);
     }
+    await expect(
+      loadPositionExclusions(failingExclusionsSource(new Error("알 수 없는 실패"))),
+    ).rejects.toThrow("FAIL position exclusions: 저장된 제외 규칙이 계약을 만족하지 않습니다.");
   });
 
   test("계약을 어긴 규칙의 본문은 오류 문구에 담기지 않는다", async () => {
     const secret = "비공개-회사-이름";
-    const source = exclusionsSource([{ ...backendPostingRule, source: "unknown-board", reason: secret }]);
+    const source = exclusionsSource([
+      { ...backendPostingRule, source: "unknown-board", reason: secret },
+    ]);
 
     await expect(loadPositionExclusions(source)).rejects.toThrow(
-      "FAIL position exclusions: 커리어 Backend 가 돌려준 제외 규칙이 계약을 만족하지 않습니다.",
+      "FAIL position exclusions: 저장된 제외 규칙이 계약을 만족하지 않습니다.",
     );
     await loadPositionExclusions(source).catch((error: unknown) => {
       expect(String((error as Error).message)).not.toContain(secret);

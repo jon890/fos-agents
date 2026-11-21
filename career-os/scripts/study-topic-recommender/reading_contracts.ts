@@ -188,7 +188,7 @@ export const readingStudyTopicSchema = z.object({
 export const morningReadingReportSchema = z.object({
   generatedAt: z.iso.datetime(),
   sourceOfTruth: z.object({
-    sources: z.literal("backend:study_sources"),
+    sources: z.literal("store:study_sources"),
     collectedArticles: z.literal("state/reading-candidates.json"),
   }),
   counts: z.object({

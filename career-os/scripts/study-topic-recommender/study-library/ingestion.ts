@@ -6,7 +6,7 @@ import { extractPageLinks } from "../source/adapters/page.js";
 import type { CollectedReading } from "../source/adapters/types.js";
 import { collectArchiveSource, type ArchiveCursor } from "../source/archive/index.js";
 import { canonicalizeReadingUrl, readingContentKey } from "../url_identity.js";
-import { CareerBackendHttpError } from "../../lib/career-backend-http.ts";
+import { CareerStoreError } from "../../lib/career-store/errors.ts";
 import type { StudyLibraryClient } from "./client.js";
 
 export const INGESTION_BATCH_LIMIT = 100;
@@ -423,7 +423,7 @@ export async function collectAndIngestStudyLibrary(input: CollectAndIngestOption
         cursorUpdated: sourceUpdates > 0,
       });
     } catch (error) {
-      if (error instanceof CareerBackendHttpError) throw error;
+      if (error instanceof CareerStoreError) throw error;
       statuses.push({
         sourceKey: source.key,
         status: "failed",

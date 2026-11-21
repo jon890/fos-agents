@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { analysisPolicySchema } from "../../services/career-backend/src/positions/schema.ts";
+import { analysisPolicySchema } from "../lib/career-store/positions/schema.ts";
 import { analysisPolicyIdempotencyKey } from "./configure_position_analysis_policy.ts";
 
 const policy = (overrides: Record<string, unknown> = {}) =>
@@ -20,7 +20,9 @@ test("같은 정책은 같은 멱등 키를 낸다", () => {
 });
 
 test("staleAfterDays 만 다른 정책은 다른 멱등 키를 낸다", () => {
-  expect(analysisPolicyIdempotencyKey(policy())).not.toBe(analysisPolicyIdempotencyKey(policy({ staleAfterDays: 14 })));
+  expect(analysisPolicyIdempotencyKey(policy())).not.toBe(
+    analysisPolicyIdempotencyKey(policy({ staleAfterDays: 14 })),
+  );
 });
 
 test("멱등 키는 analysis-policy: 뒤에 64자리 hex 가 온다", () => {

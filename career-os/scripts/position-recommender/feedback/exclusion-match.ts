@@ -1,4 +1,4 @@
-import type { PositionExclusion } from "../../../services/career-backend/src/positions/schema.ts";
+import type { PositionExclusion } from "../../lib/career-store/positions/schema.ts";
 import { formatSeoulIsoDate } from "../../lib/date-format.ts";
 
 /**

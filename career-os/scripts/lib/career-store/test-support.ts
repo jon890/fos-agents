@@ -28,3 +28,28 @@ export function cleanupCareerWorkspaces(): void {
   closeCareerStores();
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 }
+
+let savedWorkspaceRoot: string | undefined | null = null;
+
+/**
+ * 임시 작업 폴더를 만들고 `process.env.CAREER_WORKSPACE_ROOT` 로 건다.
+ * 환경에서 작업 폴더를 읽는 CLI 를 같은 프로세스에서 부르는 테스트가 쓴다.
+ * `restoreCareerWorkspaceEnv` 가 원래 값으로 되돌리고 폴더를 지운다.
+ */
+export function useCareerWorkspaceEnv(
+  documents: Partial<Record<ContextDocumentKey, string>> = {},
+): string {
+  if (savedWorkspaceRoot === null) savedWorkspaceRoot = process.env.CAREER_WORKSPACE_ROOT;
+  const { root } = createCareerWorkspace(documents);
+  process.env.CAREER_WORKSPACE_ROOT = root;
+  return root;
+}
+
+export function restoreCareerWorkspaceEnv(): void {
+  if (savedWorkspaceRoot !== null) {
+    if (savedWorkspaceRoot === undefined) delete process.env.CAREER_WORKSPACE_ROOT;
+    else process.env.CAREER_WORKSPACE_ROOT = savedWorkspaceRoot;
+    savedWorkspaceRoot = null;
+  }
+  cleanupCareerWorkspaces();
+}

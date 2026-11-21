@@ -52,7 +52,7 @@ function corruptError(): CareerStoreError {
   return new CareerStoreError(
     500,
     "CAREER_STORE_CORRUPT",
-    "커리어 데이터 파일(state/career.sqlite)을 읽을 수 없습니다. 덮어쓰지 않았습니다. 작업 폴더에서 이 파일을 지우면 빈 상태로 다시 쌓습니다.",
+    "커리어 데이터 파일(state/career.sqlite)을 읽을 수 없습니다. 덮어쓰지 않았습니다. 작업 폴더에서 이 파일과 같은 이름의 -wal, -shm 파일을 지우면 빈 상태로 다시 쌓습니다.",
   );
 }
 
@@ -130,21 +130,27 @@ export function placeholders(values: readonly unknown[]): string {
   return values.map(() => "?").join(", ");
 }
 
+function userVersion(db: Database): number {
+  return Number((db.query("PRAGMA user_version").get() as { user_version: number }).user_version);
+}
+
+/**
+ * 모자란 스키마 단계만 적용한다. 쓰기 잠금을 잡은 뒤 버전을 다시 읽어,
+ * 두 실행이 동시에 처음 열어도 같은 단계를 두 번 적용하지 않는다.
+ */
 function migrate(db: Database): void {
-  const current = Number(
-    (db.query("PRAGMA user_version").get() as { user_version: number }).user_version,
-  );
-  if (current > SCHEMA_STEPS.length) throw corruptError();
-  for (let step = current; step < SCHEMA_STEPS.length; step += 1) {
-    db.exec("BEGIN IMMEDIATE");
-    try {
+  if (userVersion(db) > SCHEMA_STEPS.length) throw corruptError();
+  if (userVersion(db) === SCHEMA_STEPS.length) return;
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    for (let step = userVersion(db); step < SCHEMA_STEPS.length; step += 1) {
       db.exec(SCHEMA_STEPS[step]!);
       db.exec(`PRAGMA user_version = ${step + 1}`);
-      db.exec("COMMIT");
-    } catch (error) {
-      db.exec("ROLLBACK");
-      throw error;
     }
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
   }
 }
 

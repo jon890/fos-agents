@@ -1,4 +1,4 @@
-import type { PositionExclusion as BackendPositionExclusion } from "../../../services/career-backend/src/positions/schema.ts";
+import type { PositionExclusion as BackendPositionExclusion } from "../../lib/career-store/positions/schema.ts";
 import type { PositionExclusions } from "./exclusions.ts";
 import type { Posting } from "../live-postings/types.ts";
 

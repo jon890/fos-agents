@@ -1,11 +1,9 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { CandidateContextClient } from "../candidate-context/client.ts";
-import { CareerBackendClient } from "../position-recommender/career-backend/client.ts";
 import { ProfileClient } from "../profile/client.ts";
-import { StudyLibraryClient } from "../study-topic-recommender/study-library/client.ts";
-import { resolveCareerBackendConnection } from "./career-backend-config.ts";
 
-// 각 client 가 환경의 Access 값을 요청 머리말까지 전달하는지 확인한다. 응답 내용은 보지 않는다.
+// Backend 를 부르는 client 가 환경의 Access 값을 요청 머리말까지 전달하는지 확인한다. 응답 내용은 보지 않는다.
+// 공고 추천과 공부 추천은 작업 폴더 저장소를 써서 이 검사의 대상이 아니다(ADR-146).
 const keys = [
   "CAREER_BACKEND_URL",
   "CAREER_BACKEND_TOKEN",
@@ -54,20 +52,6 @@ describe("client 의 Access 머리말 전달", () => {
     Object.assign(process.env, environment);
     const { seen, fetchImpl } = recorder();
     await new CandidateContextClient({ fetchImpl, maxRetries: 0 }).listDocuments().catch(() => undefined);
-    expectAccess(seen);
-  });
-
-  test("study-library client", async () => {
-    Object.assign(process.env, environment);
-    const { seen, fetchImpl } = recorder();
-    await new StudyLibraryClient({ fetchImpl, maxRetries: 0 }).getSources().catch(() => undefined);
-    expectAccess(seen);
-  });
-
-  test("position client 는 연결값의 access 를 그대로 쓴다", async () => {
-    const { seen, fetchImpl } = recorder();
-    const client = new CareerBackendClient({ ...resolveCareerBackendConnection(environment), fetcher: fetchImpl, maxRetries: 0 });
-    await client.saveCollection({}, "key").catch(() => undefined);
     expectAccess(seen);
   });
 });

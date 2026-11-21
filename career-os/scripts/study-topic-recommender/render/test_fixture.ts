@@ -3,7 +3,7 @@ import type { MorningReadingReport } from "../reading_contracts.js";
 export const morningReadingReportFixture: MorningReadingReport = {
   generatedAt: "2026-08-11T15:30:00.000Z",
   sourceOfTruth: {
-    sources: "backend:study_sources",
+    sources: "store:study_sources",
     collectedArticles: "state/reading-candidates.json",
   },
   counts: {

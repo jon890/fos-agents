@@ -4,22 +4,19 @@ import {
   companyTierQueueResponseSchema,
   type CompanyEvidence,
   type CompanyPreference,
-} from "../../services/career-backend/src/positions/schema.ts";
-import { stableUuid } from "../../services/career-backend/src/positions/hash.ts";
+} from "../lib/career-store/positions/schema.ts";
+import { stableUuid } from "../lib/career-store/positions/hash.ts";
 import {
   companyEvidenceCollectors,
   collectCompanyEvidence,
 } from "./company-evidence/collectors/index.ts";
 import { loadDartApiKey } from "./company-evidence/collectors/dart.ts";
 import type { EvidenceFetcher } from "./company-evidence/collectors/types.ts";
-import {
-  createCareerBackendClient,
-  type CareerBackendClient,
-} from "./career-backend/client.ts";
+import { createPositionStore, type PositionStore } from "./position-store.ts";
 import type { RunDirectoryPaths } from "./run-dir.ts";
 
 export type EvidenceClient = Pick<
-  CareerBackendClient,
+  PositionStore,
   | "listCompanyPreferences"
   | "getCompanyEvidence"
   | "getActiveCompanyPostings"
@@ -29,7 +26,7 @@ export type EvidenceClient = Pick<
 
 export async function collectEvidenceForRun(
   paths: RunDirectoryPaths,
-  client: EvidenceClient = createCareerBackendClient(),
+  client: EvidenceClient = createPositionStore(),
   now = new Date(),
   fetcher: EvidenceFetcher = fetch,
   dartKeyResolver: () => string | null = loadDartApiKey,

@@ -45,7 +45,6 @@ describe("커리어 Backend 이름", () => {
     );
 
     expect(legacyEnvironmentFiles).toEqual([
-      "career-os/scripts/position-recommender/career-backend/client.test.ts",
       "career-os/services/career-backend/src/config/config.test.ts",
     ]);
   }, SUBPROCESS_TEST_TIMEOUT_MS);

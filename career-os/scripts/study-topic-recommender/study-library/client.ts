@@ -1,8 +1,6 @@
-import type { z } from "zod";
 import { createHash } from "node:crypto";
-import type { AccessCredentials } from "../../lib/access-credentials.ts";
-import { resolveCareerBackendConnection } from "../../lib/career-backend-config.ts";
-import { careerBackendRequest } from "../../lib/career-backend-http.ts";
+import { openCareerStore } from "../../lib/career-store/database.ts";
+import { StudyStore } from "../../lib/career-store/study/store.ts";
 import {
   studyLibraryCandidatePageSchema,
   studyLibraryCursorResultSchema,
@@ -22,32 +20,15 @@ import {
   type StudyLibrarySourceUpsertResponse,
 } from "./contracts.js";
 
-export const STUDY_LIBRARY_API_BASE_PATH = "/api/study/v1";
-export const DEFAULT_STUDY_LIBRARY_TIMEOUT_MS = 10_000;
-export const DEFAULT_STUDY_LIBRARY_MAX_RETRIES = 2;
-
-export type StudyLibraryFetch = (input: URL, init: RequestInit) => Promise<Response>;
-
-export class StudyLibraryConfigError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "StudyLibraryConfigError";
-  }
-}
+type Environment = Record<string, string | undefined>;
 
 export interface StudyLibraryClientOptions {
-  origin?: string;
-  token?: string;
-  fetchImpl?: StudyLibraryFetch;
-  timeoutMs?: number;
-  maxRetries?: number;
+  /** 저장 모듈을 직접 준다. 없으면 `environment` 의 작업 폴더에서 연다. */
+  store?: StudyStore;
+  environment?: Environment;
 }
 
-export interface StudyLibraryRequestOptions {
-  searchParams?: Record<string, string | number | boolean | null | undefined>;
-  body?: unknown;
-  idempotencyKey?: string;
-}
+export type StudyLibrarySearchParams = Record<string, string | number | boolean | null | undefined>;
 
 function canonicalJson(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
@@ -60,116 +41,68 @@ function hashKey(prefix: string, value: unknown): string {
   return `${prefix}:${createHash("sha256").update(canonicalJson(value), "utf8").digest("hex")}`;
 }
 
-function appendSearchParams(url: URL, params?: StudyLibraryRequestOptions["searchParams"]): void {
-  if (!params) return;
-  for (const [key, value] of Object.entries(params)) {
-    if (value == null) continue;
-    url.searchParams.set(key, String(value));
-  }
+function withoutEmpty(params: StudyLibrarySearchParams): Record<string, string | number | boolean> {
+  return Object.fromEntries(Object.entries(params).filter(([, value]) => value != null)) as Record<string, string | number | boolean>;
 }
 
+/**
+ * 공부 추천 실행기가 쓰는 저장소 client 다. 데이터는 커리어 작업 폴더의 SQLite 파일에 있다(ADR-146).
+ * 메서드와 응답 모양은 커리어 Backend 의 HTTP client 였을 때와 같고, 멱등 키도 같은 값으로 만든다.
+ */
 export class StudyLibraryClient {
-  private readonly baseUrl: string;
-  private readonly token: string;
-  private readonly access?: AccessCredentials;
-  private readonly fetchImpl: StudyLibraryFetch;
-  private readonly timeoutMs: number;
-  private readonly maxRetries: number;
+  private readonly store: StudyStore;
 
   constructor(options: StudyLibraryClientOptions = {}) {
-    try {
-      if (options.origin !== undefined || options.token !== undefined) {
-        if (!options.origin?.trim() || !options.token?.trim()) throw new Error("명시적 origin과 token이 모두 필요하다.");
-        const connection = resolveCareerBackendConnection({
-          CAREER_BACKEND_URL: options.origin,
-          CAREER_BACKEND_TOKEN: options.token,
-        });
-        this.baseUrl = connection.baseUrl;
-        this.token = connection.token;
-        this.access = connection.access;
-      } else {
-        const connection = resolveCareerBackendConnection(process.env);
-        this.baseUrl = connection.baseUrl;
-        this.token = connection.token;
-        this.access = connection.access;
-      }
-    } catch (error) {
-      throw new StudyLibraryConfigError(error instanceof Error ? error.message : String(error));
-    }
-    this.fetchImpl = options.fetchImpl ?? fetch;
-    this.timeoutMs = options.timeoutMs ?? DEFAULT_STUDY_LIBRARY_TIMEOUT_MS;
-    this.maxRetries = options.maxRetries ?? DEFAULT_STUDY_LIBRARY_MAX_RETRIES;
-  }
-
-  async request<T>(
-    method: "GET" | "POST" | "PUT",
-    path: string,
-    schema: z.ZodType<T>,
-    options: StudyLibraryRequestOptions = {}
-  ): Promise<T> {
-    if (!path.startsWith("/")) {
-      throw new Error("API path는 /로 시작해야 한다.");
-    }
-    const url = new URL(`${STUDY_LIBRARY_API_BASE_PATH}${path}`, this.baseUrl);
-    appendSearchParams(url, options.searchParams);
-    return careerBackendRequest(
-      {
-        baseUrl: this.baseUrl,
-        token: this.token,
-        access: this.access,
-        fetcher: this.fetchImpl,
-        timeoutMs: this.timeoutMs,
-        maxRetries: this.maxRetries,
-      },
-      method,
-      `${url.pathname}${url.search}`,
-      options.body,
-      options.idempotencyKey,
-      schema,
-    );
+    this.store = options.store ?? new StudyStore(openCareerStore(options.environment ?? process.env));
   }
 
   async getSources(): Promise<StudyLibrarySourcesResponse> {
-    return this.request("GET", "/sources", studyLibrarySourcesResponseSchema);
+    return studyLibrarySourcesResponseSchema.parse(await this.store.listSources());
   }
 
   async putSource(sourceKey: string, body: StudyLibrarySourcePutPayload): Promise<StudyLibrarySourceUpsertResponse> {
-    return this.request(
-      "PUT",
-      `/sources/${encodeURIComponent(sourceKey)}`,
-      studyLibrarySourceUpsertResponseSchema,
-      { body, idempotencyKey: hashKey("source", { sourceKey, payload: body }) }
+    return studyLibrarySourceUpsertResponseSchema.parse(
+      await this.store.upsertSource(sourceKey, body, hashKey("source", { sourceKey, payload: body })),
     );
   }
 
   async getSourceCursor(sourceKey: string, mode: "recent" | "archive"): Promise<StudyLibraryCursorResult> {
-    return this.request(
-      "GET",
-      `/sources/${encodeURIComponent(sourceKey)}/cursor`,
-      studyLibraryCursorResultSchema,
-      { searchParams: { mode } }
-    );
+    return studyLibraryCursorResultSchema.parse(await this.store.getCursor(sourceKey, mode));
   }
 
   async createIngestion(body: unknown): Promise<StudyLibraryIngestionResult> {
-    return this.request("POST", "/ingestions", studyLibraryIngestionResultSchema, { body, idempotencyKey: (body as { idempotencyKey?: string }).idempotencyKey });
+    return studyLibraryIngestionResultSchema.parse(
+      await this.store.createIngestion(body, (body as { idempotencyKey?: string }).idempotencyKey ?? ""),
+    );
   }
 
-  async getCandidates(searchParams: StudyLibraryRequestOptions["searchParams"] = {}): Promise<StudyLibraryCandidatePage> {
-    return this.request("GET", "/candidates", studyLibraryCandidatePageSchema, { searchParams });
+  async getCandidates(searchParams: StudyLibrarySearchParams = {}): Promise<StudyLibraryCandidatePage> {
+    return studyLibraryCandidatePageSchema.parse(await this.store.getCandidates(withoutEmpty(searchParams)));
   }
 
   async createRecommendationRun(body: unknown): Promise<StudyLibraryRecommendationRunResult> {
     const value = body as { reportId: string; generatedAt: string };
-    return this.request("POST", "/recommendation-runs", studyLibraryRecommendationRunResultSchema, { body, idempotencyKey: hashKey("recommendation", { reportId: value.reportId, generatedAt: value.generatedAt }) });
+    return studyLibraryRecommendationRunResultSchema.parse(
+      await this.store.createRecommendationRun(
+        body,
+        hashKey("recommendation", { reportId: value.reportId, generatedAt: value.generatedAt }),
+      ),
+    );
   }
 
   async createPublication(body: unknown): Promise<StudyLibraryPublicationResult> {
-    return this.request("POST", "/publications", studyLibraryPublicationResultSchema, { body, idempotencyKey: (body as { idempotencyKey?: string }).idempotencyKey });
+    return studyLibraryPublicationResultSchema.parse(
+      await this.store.createPublication(body, (body as { idempotencyKey?: string }).idempotencyKey ?? ""),
+    );
   }
 
   async getRecommendationRunStatus(reportId: string): Promise<{ reportId: string; exists: boolean }> {
-    return this.request("GET", `/recommendation-runs/${encodeURIComponent(reportId)}/status`, studyLibraryRecommendationStatusSchema);
+    return studyLibraryRecommendationStatusSchema.parse(await this.store.getRecommendationRunStatus(reportId));
+  }
+
+  /** 저장한 추천 실행을 최신순으로 읽는다. 실행마다 사용자가 기록한 게시 링크가 함께 온다. */
+  async listRecommendationRuns(limit?: number) {
+    return this.store.listRecommendationRuns(limit === undefined ? {} : { limit });
   }
 }
 

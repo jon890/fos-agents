@@ -5,7 +5,7 @@ import { XMLParser } from "fast-xml-parser";
 import type {
   CompanyEvidence,
   CompanyPreference,
-} from "../../../../services/career-backend/src/positions/schema.ts";
+} from "../../../lib/career-store/positions/schema.ts";
 import type { CompanyEvidenceCollector, EvidenceFetcher } from "./types.ts";
 import { compactSummary, dateAfter } from "./types.ts";
 

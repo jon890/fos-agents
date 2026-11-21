@@ -3,11 +3,11 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { stableUuid } from "../../services/career-backend/src/positions/hash.ts";
+import { stableUuid } from "../lib/career-store/positions/hash.ts";
 import type {
   CompanyEvidence,
   StoredCompanyEvidence,
-} from "../../services/career-backend/src/positions/schema.ts";
+} from "../lib/career-store/positions/schema.ts";
 import { collectEvidenceForRun, type EvidenceClient } from "./collect_company_evidence.ts";
 import { runDirectoryPaths } from "./run-dir.ts";
 

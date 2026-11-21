@@ -1,8 +1,17 @@
 import { afterEach, expect, test } from "bun:test";
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
-import type { AnalysisQueueResponse } from "../../services/career-backend/src/positions/schema.ts";
+import type { AnalysisQueueResponse } from "../lib/career-store/positions/schema.ts";
 import {
   commitAnalysesForRun,
   PositionRunUsageError,
@@ -39,16 +48,19 @@ test("cleanup은 임시 실행 디렉터리를 지우고 내부 symlink 대상�
   symlinkSync(preserved, join(directory, "linked-directory"));
   const lines: string[] = [];
 
-  expect(await runPositionCommand(["cleanup", "--run", directory], {
-    writeLine: (line) => lines.push(line),
-  })).toBe(0);
+  expect(
+    await runPositionCommand(["cleanup", "--run", directory], {
+      writeLine: (line) => lines.push(line),
+    }),
+  ).toBe(0);
   expect(existsSync(directory)).toBe(false);
   expect(readFileSync(join(preserved, "keep.txt"), "utf8")).toBe("보존");
   expect(lines).toEqual([`정리 완료: ${basename(directory)}`]);
 });
 
 test.each(["outside", "wrong-prefix", "nested", "symlink", "file", "missing", "empty"])(
-  "cleanup은 안전하지 않은 경로를 보존하고 코드 2로 거절한다: %s", (kind) => {
+  "cleanup은 안전하지 않은 경로를 보존하고 코드 2로 거절한다: %s",
+  (kind) => {
     const fixture = workspace();
     const tempRoot = join(fixture, "temp");
     mkdirSync(tempRoot);
@@ -67,9 +79,10 @@ test.each(["outside", "wrong-prefix", "nested", "symlink", "file", "missing", "e
       writeFileSync(join(target, "keep.txt"), "보존");
     }
 
-    const result = Bun.spawnSync([
-      process.execPath, join(import.meta.dir, "position_run.ts"), "cleanup", "--run", target,
-    ], { env: { ...process.env, TMPDIR: tempRoot }, stdout: "pipe", stderr: "pipe" });
+    const result = Bun.spawnSync(
+      [process.execPath, join(import.meta.dir, "position_run.ts"), "cleanup", "--run", target],
+      { env: { ...process.env, TMPDIR: tempRoot }, stdout: "pipe", stderr: "pipe" },
+    );
 
     expect(result.exitCode).toBe(2);
     expect(result.stdout.toString()).toBe("");
@@ -80,14 +93,23 @@ test.each(["outside", "wrong-prefix", "nested", "symlink", "file", "missing", "e
     else if (kind !== "missing" && kind !== "empty") {
       expect(readFileSync(join(target, "keep.txt"), "utf8")).toBe("보존");
     }
-  }, SUBPROCESS_TEST_TIMEOUT_MS,
+  },
+  SUBPROCESS_TEST_TIMEOUT_MS,
 );
 
-test("cleanup은 --run 생략을 코드 2로 거절한다", () => {
-  const result = Bun.spawnSync([process.execPath, join(import.meta.dir, "position_run.ts"), "cleanup"]);
-  expect(result.exitCode).toBe(2);
-  expect(result.stderr.toString()).toContain("cleanup에는 --run <RUN_DIR>이 필요합니다.");
-}, SUBPROCESS_TEST_TIMEOUT_MS);
+test(
+  "cleanup은 --run 생략을 코드 2로 거절한다",
+  () => {
+    const result = Bun.spawnSync([
+      process.execPath,
+      join(import.meta.dir, "position_run.ts"),
+      "cleanup",
+    ]);
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr.toString()).toContain("cleanup에는 --run <RUN_DIR>이 필요합니다.");
+  },
+  SUBPROCESS_TEST_TIMEOUT_MS,
+);
 
 function analysisQueue(secret = "공개하지 않을 회사명과 공고 본문"): AnalysisQueueResponse {
   return {
@@ -549,24 +571,28 @@ test("commit-company-tiers는 분석 큐를 만든 뒤 공고 분석 결과 틀�
   expect(lines).toContain("채울 항목: 공고 1건. results 나 failures에 한 번씩 넣는다.");
 });
 
-test("commit-company-tiers는 갱신 파일이 없으면 경로와 작성할 내용을 알리고 1로 끝난다", async () => {
-  const directory = workspace();
-  const child = Bun.spawn(
-    [
-      process.execPath,
-      join(import.meta.dir, "position_run.ts"),
-      "commit-company-tiers",
-      "--run",
-      directory,
-    ],
-    { stdout: "pipe", stderr: "pipe" },
-  );
-  const [exitCode, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()]);
+test(
+  "commit-company-tiers는 갱신 파일이 없으면 경로와 작성할 내용을 알리고 1로 끝난다",
+  async () => {
+    const directory = workspace();
+    const child = Bun.spawn(
+      [
+        process.execPath,
+        join(import.meta.dir, "position_run.ts"),
+        "commit-company-tiers",
+        "--run",
+        directory,
+      ],
+      { stdout: "pipe", stderr: "pipe" },
+    );
+    const [exitCode, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()]);
 
-  expect(exitCode).toBe(1);
-  expect(stderr).toContain(runDirectoryPaths(directory).companyTierUpdates);
-  expect(stderr).toContain("회사 판정 결과");
-}, SUBPROCESS_TEST_TIMEOUT_MS);
+    expect(exitCode).toBe(1);
+    expect(stderr).toContain(runDirectoryPaths(directory).companyTierUpdates);
+    expect(stderr).toContain("회사 판정 결과");
+  },
+  SUBPROCESS_TEST_TIMEOUT_MS,
+);
 
 test("commit-analyses가 partial이면 남은 건수와 같은 명령 재실행을 알린다", async () => {
   const directory = workspace();

@@ -1,9 +1,16 @@
 #!/usr/bin/env bun
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { basename, join } from "node:path";
 import { z } from "zod";
-import { analysisQueueResponseSchema } from "../../services/career-backend/src/positions/schema.ts";
+import { analysisQueueResponseSchema } from "../lib/career-store/positions/schema.ts";
 import { DEFAULT_MAX_FAILED_SOURCES } from "./live-postings/collection_health.ts";
 import { collectLivePostings } from "./collect_live_postings.ts";
 import { preparePositionAnalysis } from "./prepare_position_analysis.ts";
@@ -12,9 +19,17 @@ import { collectEvidenceForRun } from "./collect_company_evidence.ts";
 import { analysisUpdatesInputSchema, commitPositionAnalysis } from "./commit_position_analysis.ts";
 import { companyTierUpdatesInputSchema } from "./company-tier-analysis/schema.ts";
 import { finalizeRecommendation } from "./finalize_position_recommendation.ts";
-import { createCareerBackendClient } from "./career-backend/client.ts";
-import { createCandidateContextClient } from "../candidate-context/client.ts";
-import { prepareCandidateContext } from "../candidate-context/position-context.ts";
+import { createPositionStore } from "./position-store.ts";
+import { resolveCareerStoreRoot } from "../lib/career-store/database.ts";
+import { careerStoreFailureLine } from "../lib/career-store/errors.ts";
+import { formatSeoulIsoDate } from "../lib/date-format.ts";
+import { prepareCandidateContext } from "./candidate-context.ts";
+import {
+  isPositionSettingsCommand,
+  POSITION_SETTINGS_HELP,
+  PositionSettingsUsageError,
+  runPositionSettingsCommand,
+} from "./position_settings.ts";
 import {
   runDirectoryPaths,
   validatePositionCleanupDirectory,
@@ -60,7 +75,7 @@ type CompanyTierResult = Awaited<ReturnType<typeof completeCompanyTierAssessment
 type AnalysisResult = Awaited<ReturnType<typeof commitPositionAnalysis>>;
 type FinalizationResult = Awaited<ReturnType<typeof finalizeRecommendation>>;
 type AnalysisCommitClient = Pick<
-  ReturnType<typeof createCareerBackendClient>,
+  ReturnType<typeof createPositionStore>,
   "saveAnalysisResults" | "getRun"
 >;
 
@@ -73,6 +88,8 @@ export type PositionRunOperations = {
   commitCompanyTiers(paths: RunDirectoryPaths): Promise<CompanyTierResult>;
   commitAnalyses(paths: RunDirectoryPaths): Promise<AnalysisResult>;
   finalize(paths: RunDirectoryPaths, analysisRunId: string): Promise<FinalizationResult>;
+  /** 완성한 리포트를 작업 폴더 `reports/` 에 날짜가 든 이름으로 남기고 그 경로를 돌려준다. */
+  saveReport?(paths: RunDirectoryPaths): string;
 };
 
 export type PositionRunOptions = {
@@ -94,6 +111,7 @@ Usage:
   position_run.ts finalize --run <RUN_DIR>
   position_run.ts cleanup --run <RUN_DIR>
   position_run.ts schema <company-tiers|analyses>
+${POSITION_SETTINGS_HELP}
 
 Commands:
   collect                 공고를 수집하고 다음 큐를 만든다
@@ -102,6 +120,11 @@ Commands:
   finalize                추천 JSON과 HTML을 만든다
   cleanup                 검증과 전달이 끝난 임시 실행 디렉터리를 정리한다
   schema                  회사 판정이나 공고 분석 결과 파일의 JSON Schema 를 출력한다
+  configure-policy        분석 정책을 저장한다. 새 저장소는 정책이 있어야 수집을 받는다
+  configure-companies     회사별 tier 와 제외 여부를 저장한다
+  exclusions              개인 공고 제외 규칙을 읽거나(get) 목록 전체를 바꾼다(put)
+
+데이터는 CAREER_WORKSPACE_ROOT(없으면 /workspace/career) 아래 state/career.sqlite 에 있다.
 
 Options:
   --run <RUN_DIR>  실행별 파일을 둘 디렉터리
@@ -155,11 +178,10 @@ function parsePositionRunArgs(argv: string[]): {
   return { command: command as PositionRunCommand, runDirectory };
 }
 
-const defaultOperations: PositionRunOperations = {
+/** 실제 수집과 작업 폴더 저장소를 쓰는 기본 동작이다. 테스트는 수집만 대역으로 바꿔 쓴다. */
+export const defaultOperations: PositionRunOperations = {
   async prepareCandidateContext(paths) {
-    return prepareCandidateContext(paths, {
-      context: createCandidateContextClient(),
-    });
+    return prepareCandidateContext(paths, resolveCareerStoreRoot());
   },
   async collect(paths) {
     return collectLivePostings({
@@ -191,16 +213,35 @@ const defaultOperations: PositionRunOperations = {
   },
   async finalize(paths, analysisRunId) {
     return finalizeRecommendation(
-      createCareerBackendClient(),
+      createPositionStore(),
       analysisRunId,
       paths.recommendation,
       paths.report,
     );
   },
+  saveReport(paths) {
+    return saveReportCopy(paths.report);
+  },
 };
 
+/** 실행 폴더는 작업 폴더 `runs/` 아래에 만든다. 실행 공간의 임시 폴더는 작아 큰 수집에서 넘친다. */
 function createRunDirectory(): string {
-  return mkdtempSync(join(tmpdir(), "position-recommendation-"));
+  const runs = join(resolveCareerStoreRoot(), "runs");
+  mkdirSync(runs, { recursive: true });
+  return mkdtempSync(join(runs, "position-recommendation-"));
+}
+
+/** 같은 날 다시 만들면 같은 이름을 덮어쓴다. 「내 파일」 에는 에이전트가 실행마다 따로 넣는다. */
+export function saveReportCopy(
+  reportPath: string,
+  workspaceRoot: string = resolveCareerStoreRoot(),
+  now: Date = new Date(),
+): string {
+  const reports = join(workspaceRoot, "reports");
+  mkdirSync(reports, { recursive: true });
+  const target = join(reports, `${formatSeoulIsoDate(now.toISOString())}-position.html`);
+  copyFileSync(reportPath, target);
+  return target;
 }
 
 function requireInput(path: string, description: string): void {
@@ -217,7 +258,7 @@ function queueAnalysisRunId(path: string): string {
 
 export async function commitAnalysesForRun(
   paths: RunDirectoryPaths,
-  client: AnalysisCommitClient = createCareerBackendClient(),
+  client: AnalysisCommitClient = createPositionStore(),
 ): Promise<AnalysisResult> {
   const result = await commitPositionAnalysis(
     paths.analysisQueue,
@@ -235,8 +276,17 @@ export async function runPositionCommand(
   argv: string[],
   options: PositionRunOptions = {},
 ): Promise<number> {
-  const parsed = parsePositionRunArgs(argv);
   const writeLine = options.writeLine ?? console.log;
+  if (isPositionSettingsCommand(argv[0]) && !argv.includes("--help")) {
+    try {
+      return await runPositionSettingsCommand(argv, writeLine);
+    } catch (error) {
+      if (error instanceof PositionSettingsUsageError)
+        throw new PositionRunUsageError(error.message);
+      throw error;
+    }
+  }
+  const parsed = parsePositionRunArgs(argv);
   if (parsed.command === "help") {
     writeLine(positionRunHelp());
     return 0;
@@ -251,7 +301,7 @@ export async function runPositionCommand(
   if (parsed.command === "cleanup") {
     let cleanupDirectory: string;
     try {
-      cleanupDirectory = validatePositionCleanupDirectory(directory);
+      cleanupDirectory = validatePositionCleanupDirectory(directory, resolveCareerStoreRoot());
     } catch (error) {
       throw new PositionRunUsageError((error as Error).message);
     }
@@ -356,6 +406,7 @@ export async function runPositionCommand(
   );
   for (const warning of result.collectionWarnings) writeLine(warning);
   writeLine(`산출물: ${basename(paths.recommendation)}, ${basename(paths.report)}`);
+  if (operations.saveReport) writeLine(`리포트 사본: ${operations.saveReport(paths)}`);
   return 0;
 }
 
@@ -368,7 +419,9 @@ if (import.meta.main) {
         console.error(error.message);
         process.exit(2);
       }
-      console.error(error instanceof Error ? error.message : String(error));
+      console.error(
+        careerStoreFailureLine(error) ?? (error instanceof Error ? error.message : String(error)),
+      );
       process.exit(1);
     });
 }

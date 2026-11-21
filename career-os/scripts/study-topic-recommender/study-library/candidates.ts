@@ -7,7 +7,7 @@ import {
   type ReadingCategory,
 } from "../reading_contracts.js";
 import { toReadingCandidate, type StudyLibrarySource } from "./contracts.js";
-import { CareerBackendHttpError } from "../../lib/career-backend-http.ts";
+import { CareerStoreError } from "../../lib/career-store/errors.ts";
 import type { StudyLibraryClient } from "./client.js";
 
 export const STUDY_LIBRARY_CANDIDATE_LIMIT = 100;
@@ -26,7 +26,7 @@ export interface StudyLibraryCandidateMeta {
   historyVersion: number;
   candidateContextVersion: string;
   /** 공부 추천 기준이 되는 관심사 문서. `candidateContextVersion` 은 이 문서의 버전에서 계산된다. ADR-131 을 따른다. */
-  learningInterests: { version: number; body: string };
+  learningInterests: { version: string; body: string };
   filters: {
     sourceKey?: string;
     category?: ReadingCategory;
@@ -154,7 +154,7 @@ export async function fetchStudyLibraryCandidatePool(input: {
       learningInterests = page.learningInterests;
       recentStudyTopicKeys = page.recentStudyTopicKeys;
     } else if (page.historyVersion !== historyVersion || page.candidateContextVersion !== candidateContextVersion || page.learningInterests.version !== learningInterests?.version) {
-      throw new CareerBackendHttpError(409, "VERSION_CONFLICT", "커리어 Backend 요청이 실패했습니다.");
+      throw new CareerStoreError(409, "VERSION_CONFLICT", "후보를 읽는 사이에 추천 이력이나 기준이 바뀌었습니다.");
     }
     candidates.push(...page.candidates.map(toReadingCandidate));
     nextCursor = page.nextCursor;

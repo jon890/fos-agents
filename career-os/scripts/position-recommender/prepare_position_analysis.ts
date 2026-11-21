@@ -3,13 +3,10 @@ import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { runCli, type CliSpec } from "../lib/cli.ts";
 import { postingCandidatePoolSchema } from "./live-postings/contracts.ts";
-import type { CareerBackendClient } from "./career-backend/client.ts";
-import { createCareerBackendClient } from "./career-backend/client.ts";
+import type { PositionStore } from "./position-store.ts";
+import { createPositionStore } from "./position-store.ts";
 
-type PreparationClient = Pick<
-  CareerBackendClient,
-  "saveCollection" | "createPositionAnalysisRun"
->;
+type PreparationClient = Pick<PositionStore, "saveCollection" | "createPositionAnalysisRun">;
 type ClientFactory = () => PreparationClient;
 
 export async function preparePositionAnalysis(
@@ -18,7 +15,7 @@ export async function preparePositionAnalysis(
   analysisQueueOutputPath: string,
   contractVersion = 1,
   companyTierContractVersion = 1,
-  createClient: ClientFactory = createCareerBackendClient,
+  createClient: ClientFactory = createPositionStore,
 ) {
   const resolvedCandidates = resolve(candidatesPath);
   const pool = postingCandidatePoolSchema.parse(

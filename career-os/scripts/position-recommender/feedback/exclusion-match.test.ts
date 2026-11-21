@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { PositionExclusion } from "../../../services/career-backend/src/positions/schema.ts";
+import type { PositionExclusion } from "../../lib/career-store/positions/schema.ts";
 import {
   indexExclusions,
   judgePosting,

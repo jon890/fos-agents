@@ -2,18 +2,18 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { runCli, type CliSpec } from "../lib/cli.ts";
-import { analysisPolicySchema } from "../../services/career-backend/src/positions/schema.ts";
-import { hashKey } from "../candidate-context/client.ts";
-import { createCareerBackendClient } from "./career-backend/client.ts";
+import { analysisPolicySchema } from "../lib/career-store/positions/schema.ts";
+import { canonicalRequestHash } from "../lib/career-store/request-hash.ts";
+import { createPositionStore } from "./position-store.ts";
 
 /** 정책 전체의 hash 다. 칸 하나만 바꿔도 키가 달라져 같은 키에 다른 본문을 보내는 충돌이 없다. */
 export function analysisPolicyIdempotencyKey(policy: unknown): string {
-  return hashKey("analysis-policy", policy);
+  return `analysis-policy:${canonicalRequestHash(policy).slice("sha256:".length)}`;
 }
 
 const spec: CliSpec = {
   name: "configure_position_analysis_policy.ts",
-  summary: "fresh career-backend에 명시적인 포지션 분석 정책을 설정한다.",
+  summary: "새 커리어 저장소에 포지션 분석 정책을 설정한다.",
   options: {
     "--input": { value: true, description: "분석 정책 JSON" },
   },
@@ -26,7 +26,7 @@ if (import.meta.main) {
     const policy = analysisPolicySchema.parse(
       JSON.parse(readFileSync(resolve(input), "utf8")) as unknown,
     );
-    const configured = await createCareerBackendClient().configureAnalysisPolicy(
+    const configured = await createPositionStore().configureAnalysisPolicy(
       policy,
       analysisPolicyIdempotencyKey(policy),
     );

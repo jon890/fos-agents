@@ -20,6 +20,7 @@
  *   bun collect_live_postings.ts --output <output-json>
  */
 
+import { careerStoreFailureLine } from "../lib/career-store/errors.ts";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import type {
@@ -146,7 +147,7 @@ export async function collectLivePostings(
 ): Promise<number> {
   const { jsonOut, source, targetRoleOnly, wantedLimit, includeTossArticles, maxFailedSources } =
     args;
-  // 외부 소스를 부르기 전에 읽는다. Backend 가 응답하지 않으면 수집을 시작하지 않는다.
+  // 외부 소스를 부르기 전에 읽는다. 저장소를 읽지 못하면 수집을 시작하지 않는다.
   const exclusions = await loadPositionExclusions(exclusionsSource);
   const collected: Posting[] = [];
   const errors: string[] = [];
@@ -261,7 +262,7 @@ if (import.meta.main) {
     .then(() => collectLivePostings(parseArgs(process.argv.slice(2))))
     .then(process.exit)
     .catch((e) => {
-      console.error(e instanceof Error ? e.message : String(e));
+      console.error(careerStoreFailureLine(e) ?? (e instanceof Error ? e.message : String(e)));
       process.exit(e instanceof CliUsageError ? 2 : 1);
     });
 }

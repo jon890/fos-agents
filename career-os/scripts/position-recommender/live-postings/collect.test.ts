@@ -121,16 +121,12 @@ describe("collect_live_postings 인자", () => {
   test("소스가 실패하면 후보풀을 남기고 종료 코드 1로 끝낸다", async () => {
     const dir = mkdtempSync(`${tmpdir()}/posting-candidates-`);
     const out = `${dir}/pool.json`;
-    // 제외 규칙은 Backend 가 소유한다. 수집 단계까지 가려면 이 응답이 있어야 한다.
-    const backend = Bun.serve({ port: 0, fetch: () => Response.json([]) });
+    // 제외 규칙은 작업 폴더 저장소가 소유한다. 빈 임시 작업 폴더면 규칙이 없는 상태로 수집 단계까지 간다.
     // 닫힌 포트를 프록시로 지정해 네트워크 없이 공고 수집의 연결 실패를 만든다.
-    // `NO_PROXY` 로 대역 Backend 만 프록시를 거치지 않게 둔다.
     const blocked = {
       HTTPS_PROXY: "http://127.0.0.1:1",
       HTTP_PROXY: "http://127.0.0.1:1",
-      NO_PROXY: "127.0.0.1,localhost",
-      CAREER_BACKEND_URL: `http://127.0.0.1:${backend.port}`,
-      CAREER_BACKEND_TOKEN: "token-123456789012345678901234567890",
+      CAREER_WORKSPACE_ROOT: `${dir}/workspace`,
     };
     const child = Bun.spawn(
       [
@@ -144,7 +140,7 @@ describe("collect_live_postings 인자", () => {
       {
         stdout: "pipe",
         stderr: "pipe",
-        env: { ...process.env, CAREER_BACKEND_TOKEN_FILE: undefined, ...blocked },
+        env: { ...process.env, ...blocked },
       },
     );
     const [stderr, exitCode] = await Promise.all([new Response(child.stderr).text(), child.exited]);
@@ -155,25 +151,31 @@ describe("collect_live_postings 인자", () => {
       expect(stderr).toContain("woowahan-careers");
       expect(existsSync(out)).toBe(true);
     } finally {
-      backend.stop(true);
       rmSync(dir, { recursive: true, force: true });
     }
   }, 60_000);
 
-  test("출력 경로 누락 오류는 절대 경로나 stack trace를 노출하지 않는다", async () => {
-    const child = Bun.spawn([process.execPath, `${import.meta.dir}/../collect_live_postings.ts`], {
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    const [stdout, stderr, exitCode] = await Promise.all([
-      new Response(child.stdout).text(),
-      new Response(child.stderr).text(),
-      child.exited,
-    ]);
+  test(
+    "출력 경로 누락 오류는 절대 경로나 stack trace를 노출하지 않는다",
+    async () => {
+      const child = Bun.spawn(
+        [process.execPath, `${import.meta.dir}/../collect_live_postings.ts`],
+        {
+          stdout: "pipe",
+          stderr: "pipe",
+        },
+      );
+      const [stdout, stderr, exitCode] = await Promise.all([
+        new Response(child.stdout).text(),
+        new Response(child.stderr).text(),
+        child.exited,
+      ]);
 
-    expect(exitCode).toBe(2);
-    expect(stdout).toBe("");
-    expect(stderr).toBe("--output <output-json> is required\n");
-    expect(stderr).not.toContain(import.meta.dir);
-  }, SUBPROCESS_TEST_TIMEOUT_MS);
+      expect(exitCode).toBe(2);
+      expect(stdout).toBe("");
+      expect(stderr).toBe("--output <output-json> is required\n");
+      expect(stderr).not.toContain(import.meta.dir);
+    },
+    SUBPROCESS_TEST_TIMEOUT_MS,
+  );
 });

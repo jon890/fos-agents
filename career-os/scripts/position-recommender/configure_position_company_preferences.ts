@@ -3,9 +3,9 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { z } from "zod";
 import { runCli, type CliSpec } from "../lib/cli.ts";
-import { companyKey, stableUuid } from "../../services/career-backend/src/positions/hash.ts";
-import type { CareerBackendClient } from "./career-backend/client.ts";
-import { createCareerBackendClient } from "./career-backend/client.ts";
+import { companyKey, stableUuid } from "../lib/career-store/positions/hash.ts";
+import type { PositionStore } from "./position-store.ts";
+import { createPositionStore } from "./position-store.ts";
 
 const inputPreferenceSchema = z
   .object({
@@ -36,12 +36,12 @@ export const companyPreferencesInputSchema = z
     }
   });
 
-type CompanyPreferenceClient = Pick<CareerBackendClient, "updateCompanyPreference">;
+type CompanyPreferenceClient = Pick<PositionStore, "updateCompanyPreference">;
 type ClientFactory = () => CompanyPreferenceClient;
 
 export async function configurePositionCompanyPreferences(
   inputPath: string,
-  createClient: ClientFactory = createCareerBackendClient,
+  createClient: ClientFactory = createPositionStore,
 ) {
   const input = companyPreferencesInputSchema.parse(
     JSON.parse(readFileSync(resolve(inputPath), "utf8")) as unknown,
