@@ -115,6 +115,7 @@ test("자격과 우대에만 AI 신호가 있으면 제외한다", () => {
     requirements: "AI 코딩 도구 사용 경험",
     preferred: "Coding Agent 활용 경험과 LLM API 사용 경험",
   });
+  // 자격과 우대가 구조화돼 있어도 두 칸의 AI 근거를 업무로 넘기지 않는다.
   expect(policy.evaluate(item, now).rejectionCode).toBe("not_target_role");
 
   for (const heading of [
