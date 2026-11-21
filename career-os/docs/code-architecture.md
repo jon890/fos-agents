@@ -97,7 +97,7 @@ Claude Code 전용 실행기를 새로 만들거나 커넥터의 MCP 지침에 �
 ### 비공개 작업본 동기화
 
 `scripts/career-workspace/`는 Codex CLI와 Claude Code가 공유하는 파일 준비·차이 검사·반영 경계다.
-manifest 생성과 검증, 로컬 기준 상태 확인, SSH와 command transport, 홈서버 명령을 책임별 모듈로 나눈다.
+manifest 생성과 검증, 로컬 기준 상태 확인, SSH transport, 홈서버 명령을 책임별 모듈로 나눈다.
 S3 storage adapter는 홈서버에서 표준 입력과 출력으로 release를 발행하고 내보낸다.
 회귀 테스트와 fixture는 `tests/`에 분리한다.
 사용자는 이 helper를 직접 고르지 않고 기존 career-os skill을 계속 호출한다.
@@ -108,7 +108,7 @@ S3 storage adapter는 홈서버에서 표준 입력과 출력으로 release를 �
 | 순서  | 파일                                         | 책임                                |
 | --- | ------------------------------------------ | --------------------------------- |
 | 1   | `cli.ts`                                   | 준비, 차이 확인, 발행과 skill 실행 전후 처리     |
-| 2   | `command-transport.ts`, `ssh-transport.ts` | 홈서버의 `career-storage` 호출          |
+| 2   | `ssh-transport.ts` | 홈서버의 `career-storage` 호출          |
 | 3   | `career-storage`                           | 홈서버 publish 직렬화                   |
 | 4   | `career-storage-s3.ts`                     | 홈서버 명령의 입력과 출력                    |
 | 5   | `s3-storage.ts`                            | 불변 release 검증과 current pointer 변경 |
@@ -142,9 +142,7 @@ career-os/.career-sync/
 
 skill 은 `plugin/` 이 소유하고 Hermes cron 은 plugin 스킬을 쓴다.
 환경별 차이는 `.env`의 transport 설정에만 두고 지원 판단과 문서 작성 절차를 복제하지 않는다.
-SSH client는 `career-storage`를 원격 호출한다.
-command transport는 홈서버 안에서 같은 명령을 직접 부를 때 쓰며, 지금 쓰는 곳은 없다.
-두 경로는 같은 홈서버 잠금과 S3 pointer 갱신 계약을 사용한다.
+SSH client는 `career-storage`를 원격 호출한다. 홈서버의 `career-storage`가 잠금과 S3 pointer 갱신을 맡는다.
 
 ### 커리어 Backend
 
@@ -678,7 +676,6 @@ collection 과 문서 키는 코드에 고정한다. 설정으로 바꾸지 않�
 | `scripts/agent-usage/collect_usage.ts` | 수집기. 기록이 없는 끝난 달만 측정해 올린다. 측정기, 기록 저장소, 현재 시각을 인자로 받는다 |
 | `scripts/agent-usage/launchd/agent-usage.plist.template` | `launchd` 작업 틀. 자리표시자는 `bun` 경로, 저장소 경로, 로그 디렉터리뿐이다 |
 | `scripts/agent-usage/manage_launchd.ts` | `install`, `uninstall`, `status`. `install` 과 `uninstall` 은 `--dry-run` 으로 쓸 파일과 실행할 명령만 낸다 |
-| `scripts/profile/migrate_library_profiles.ts` | `library/profiles/` 의 원고 셋과 사용량 표를 Backend 로 옮기는 일회성 명령 |
 
 `launchd` 작업의 이름은 `com.fos-agents.career-os.agent-usage` 다. 매일 10시에 돌고, 기기가 잠들어 있었으면 깨어난 뒤에 돈다.
 plist 는 `~/Library/LaunchAgents/` 에, 로그는 `~/Library/Logs/fos-career-os/agent-usage.log` 에 둔다.
@@ -833,7 +830,7 @@ fos-assistant 는 `plugin/` 을 복사하거나 마운트해 `connector.json`, `
 - `operator_env` 의 이름은 운영 목록이 모두 값을 줘야 한다. 하나라도 없으면 커넥터가 카탈로그에서 빠진다. 그래서 운영 환경에 없는 선택값(Cloudflare Access service token)은 `operator_env` 와 `.mcp.json` 에 선언하지 않는다([ADR-144](adr/ADR-144-claude-code-전용-access-값은-커넥터-선언에-두지-않고-실행-환경에서-받는다.md))
 - `operator_secrets` 를 선언하지 않는다. 선언하면 카탈로그에서 빠진다. 그래서 Backend 의 token 은 사용자가 연결 화면에 넣는다
 - `connector-skills/` 아래 모든 `SKILL.md` 의 본문을 이름 순으로 이어 붙인 것이 연결용 에이전트의 지침이 된다. 앞머리를 뺀 본문을 합쳐 8,000자를 넘지 않고 그 아래에 심볼릭 링크를 두지 않는다. 어기면 카탈로그에서 빠진다
-- `agent-skills/` 는 커넥터 설치가 읽지 않는다. 지금은 스킬이 없고 `README.md` 만 있다. 스킬을 두면 일반 에이전트에 따로 올린다([ADR-141](adr/ADR-141-일반-에이전트가-읽는-스킬은-plugin-의-agent-skills-에-두고-따로-올린다.md)). 세 디렉터리에 같은 이름의 스킬을 두지 않는다
+- `agent-skills/` 는 커넥터 설치가 읽지 않는다. 일반 에이전트가 쓰는 공고 추천과 읽을거리 수집 스킬의 사본을 두고 따로 설치한다([ADR-141](adr/ADR-141-일반-에이전트가-읽는-스킬은-plugin-의-agent-skills-에-두고-따로-올린다.md)). 세 디렉터리에 같은 이름의 스킬을 두지 않는다
 - `skills/` 는 Claude Code 만 읽는다. fos-assistant 는 읽지 않으므로 이 디렉터리의 스킬은 지침 상한에 들지 않는다. 두 디렉터리에 같은 이름의 스킬을 두지 않는다
 - plugin 스킬을 `.claude/skills/` 에 링크하지 않는다. 저장소를 연 Claude Code 세션도 plugin 을 설치해 plugin 스킬을 쓴다
 - 저장소에 스킬 사본을 두지 않는다. 판단 규칙은 plugin 스킬 한 곳에서만 고친다
