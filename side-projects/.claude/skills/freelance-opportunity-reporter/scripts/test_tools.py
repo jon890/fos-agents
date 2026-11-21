@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from assemble_report_data import assemble
 from audit_collection import audit
-from finalize_report import artifact_paths, build_summary, render_html
+from finalize_report import artifact_paths
 from render_report import load_candidates, rank_key, render_document
 from score_opportunities import first_win_sort_key, score
 
@@ -419,7 +421,7 @@ class AssembleReportDataTest(unittest.TestCase):
 
 
 class FinalizeReportTest(unittest.TestCase):
-    def test_builds_summary_and_html_from_validated_combined_data(self) -> None:
+    def test_cli_builds_summary_and_keeps_local_html(self) -> None:
         item = {
             "platform": "위시켓",
             "project_id": "1",
@@ -461,13 +463,22 @@ class FinalizeReportTest(unittest.TestCase):
             combined = paths["combined"]
             self.assertIsInstance(combined, Path)
             combined.write_text(json.dumps(payload), encoding="utf-8")
-            summary = build_summary(combined)
-            html_path = paths["html"]
-            self.assertIsInstance(html_path, Path)
-            render_html(combined, html_path, "2026-08-24")
+            result = subprocess.run(
+                [
+                    sys.executable, str(Path(__file__).with_name("finalize_report.py")),
+                    "--date", "2026-08-24", "--runtime-dir", directory,
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            summary = json.loads(result.stdout)
+            html_path = Path(summary["html"])
 
+            self.assertEqual(summary["status"], "ready")
             self.assertEqual(summary["candidate_count"], 1)
             self.assertEqual(summary["audit_status"], "complete")
+            self.assertEqual(html_path, paths["html"])
             self.assertIn("수집한 공고 목록", html_path.read_text(encoding="utf-8"))
 
 

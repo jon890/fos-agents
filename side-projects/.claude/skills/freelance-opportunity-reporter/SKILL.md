@@ -2,10 +2,10 @@
 name: freelance-opportunity-reporter
 description: >-
   위시켓, 프리모아, 원티드 긱스의 현재 외주 코딩 공고를 수집하고,
-  지원 가능성과 위험을 분류해 HTML 실행 리포트를 Cloudflare Pages에 게시한다.
+  지원 가능성과 위험을 분류해 로컬 HTML 리포트를 만든다.
   AI 자동화, 백엔드 API·데이터·인증·연동 개발, MVP, 대시보드, 크롤링,
   챗봇, 내부 도구, 작은 웹·앱 후보 탐색, 일간·주간 리드 스캔,
-  지원 후보 선정, 지원·보류·거절 판단, 검증된 공유 링크가 필요할 때 사용한다.
+  지원 후보 선정, 지원·보류·거절 판단이 필요할 때 사용한다.
 ---
 
 # Freelance Opportunity Reporter
@@ -29,10 +29,9 @@ description: >-
 
 ## 작업 절차
 
-0. 당일 미게시 산출물을 먼저 복구한다.
-   `data/runtime/downloads/`에 오늘 날짜의 `freelance-opportunities-YYYY-MM-DD.json` 또는
-   `freelance-opportunity-report-YYYY-MM-DD.html`이 남아 있으면 수집을 반복하지 않는다.
-   아래 마감 스크립트를 먼저 실행하고 게시에 성공하면 1-6단계를 건너뛴다.
+0. 당일 수집 자료가 남아 있으면 재사용한다.
+   `data/runtime/downloads/`에 오늘 날짜의 합친 JSON이나 플랫폼별 수집 JSON이 있으면 아래 마감 스크립트를 먼저 실행한다.
+   로컬 HTML 생성에 성공하면 1–6단계를 건너뛴다.
 
    ```bash
    python3 .claude/skills/freelance-opportunity-reporter/scripts/finalize_report.py \
@@ -40,7 +39,7 @@ description: >-
    ```
 
    스크립트의 `candidate_count`, `apply_now_count`, `clarify_first_count`,
-   `top_candidates`, 검증된 URL로 최종 응답을 만든다.
+   `top_candidates`와 `html` 경로로 최종 응답을 만든다.
 
 1. 수집 범위를 정한다.
    기본 수집 대상은 아래 세 곳의 공개 프로젝트 목록이다.
@@ -86,14 +85,14 @@ description: >-
    정상 종료가 로그인 상태를 `wishket-home` 프로필에 반영하고 cloud browser 사용을 끝낸다.
    `start`가 실패하거나 로그인 상세를 볼 수 없을 때만 위시켓을 `인증 만료` 또는 `접근 제한`으로 기록하고,
    검증하지 못한 위시켓 공고를 후보에서 제외한 뒤 다른 플랫폼 수집을 계속한다.
-   다른 플랫폼에서 검증된 후보를 1건 이상 확보하면 부분 성공 리포트를 게시하고,
+   다른 플랫폼에서 검증된 후보가 있으면 확인한 후보로 리포트를 만들고,
    후보가 없으면 리포트를 만들지 않고 접근 제한을 알린다.
    로그인 후에도 프라이빗 매칭 등으로 원격 조건을 확인할 수 없는 공고는 후보에서 제외한다.
 
    Hermes 자동 실행에서는 플랫폼별 브라우저 수집을 서로 다른 호출 묶음으로 나눈다.
    한 번의 `execute_code`에서 35회 이상 외부 도구를 호출하지 않는다.
    호출이 길어지면 현재 플랫폼의 `*-enriched-YYYY-MM-DD.json`을 먼저 저장하고 다음 호출에서 계속한다.
-   HTML을 직접 만들거나 게시 명령을 여러 번 호출하지 않고 6단계의 마감 스크립트에 호출 여유를 남긴다.
+   6단계의 마감 스크립트를 실행할 호출 여유를 남긴다.
 
 3. 공고 필드를 정리한다.
    다음 항목을 가능한 범위에서 뽑는다.
@@ -140,7 +139,7 @@ description: >-
    - `clarify-first`: 매력은 있지만 상주, 범위, 권한, 검수 기준을 먼저 확인해야 하는 후보
    - `avoid`: 위험이 크거나, 범위가 넓거나, 가격이 맞지 않는 후보
 
-6. 리포트를 작성하고 게시한다.
+6. 로컬 HTML 리포트를 만든다.
    파일 형식, 경로, 섹션 순서는 `결과물 형식`을 따른다.
    내용을 배치할 때만 아래를 적용한다.
 
@@ -172,21 +171,17 @@ description: >-
    - 하단 표도 상단과 같은 열, 열 순서, 판단 배지, 값 형식을 사용한다.
    - 하단 공고를 링크만 있는 목록이나 축약 표로 바꾸지 않는다.
    - 수집 과정이나 제외 과정은 각 행에서 반복하지 않는다.
-   - HTML과 원자료는 게시·검증을 위한 임시 파일로만 만든다.
-   - HTML은 `report-publisher` 스킬로 Cloudflare Pages에 게시한다.
-   - 공개 URL 검증이 끝나면 임시 HTML과 원자료를 삭제한다.
-   - 게시에 실패해도 저장소의 `reports/`나 다른 영구 경로에 결과물을 남기지 않는다.
+   - HTML과 원자료는 저장소가 추적하지 않는 `data/runtime/downloads/`에 둔다.
 
-   플랫폼별 `*-enriched-YYYY-MM-DD.json`을 만들었으면 아래 마감 스크립트를 즉시 실행한다.
-   이 스크립트가 조립, 감사, 점수 계산, HTML 생성, Cloudflare Pages 게시,
-   공개 URL 검증과 당일 임시 파일 정리를 한 번에 수행한다.
+   플랫폼별 `*-enriched-YYYY-MM-DD.json`을 만들었으면 아래 마감 스크립트를 실행한다.
+   스크립트가 자료 조립, 누락·중복 검사, 점수 계산과 로컬 HTML 생성을 수행한다.
 
    ```bash
    python3 .claude/skills/freelance-opportunity-reporter/scripts/finalize_report.py \
      --date YYYY-MM-DD
    ```
 
-   일부 플랫폼 수집에 실패해도 다른 플랫폼의 검증된 후보가 1건 이상 있으면 부분 성공으로 게시한다.
+   일부 플랫폼 수집에 실패해도 다른 플랫폼의 검증된 후보가 1건 이상 있으면 확인한 후보로 리포트를 만든다.
    누락된 플랫폼과 접근 제한은 최종 응답에 한 줄로 알린다.
    필수 플랫폼의 인증 만료나 접근 제한은 알릴 내용이 없는 상태가 아니다.
    다른 플랫폼에서도 후보를 찾지 못했더라도 `[SILENT]`로 끝내지 말고,
@@ -204,15 +199,12 @@ description: >-
 
 ## 결과물 형식
 
-사용자에게 전달하는 최종 산출물은 검증된 Cloudflare Pages 주소다.
+사용자에게 HTML 파일 경로와 주요 후보를 전달한다.
 
-| 산출물 | 위치 | 성격 |
+| 산출물 | 위치 | 용도 |
 | --- | --- | --- |
-| 공개 리포트 | Cloudflare Pages `branch_url` | 사용자용 최종 산출물이다.<br>검증된 안정 주소를 우선하고, 없으면 검증된 `public_url`을 전달한다. |
-| 임시 HTML | `data/runtime/downloads/freelance-opportunity-report-YYYY-MM-DD.html` | 게시 입력으로만 사용한다.<br>게시 검증 후 삭제한다. |
-| 임시 원자료 | `data/runtime/downloads/freelance-opportunities-YYYY-MM-DD.json` | 누락과 중복을 검사한다.<br>게시하지 않고 실행 종료 전에 삭제한다. |
-
-Cloudflare Pages 게시가 실패하면 로컬 파일 링크로 대신 완료하지 않는다.
+| HTML 리포트 | `data/runtime/downloads/freelance-opportunity-report-YYYY-MM-DD.html` | 사용자가 볼 최종 파일 |
+| 원자료 | `data/runtime/downloads/freelance-opportunities-YYYY-MM-DD.json` | 누락·중복 검사와 같은 날 재실행 |
 
 HTML에는 UTF-8 선언, 반응형 viewport, 제목, 기준일, 공고 상세 링크,
 모바일에서도 읽을 수 있는 표 스타일을 포함한다.
@@ -234,24 +226,6 @@ HTML 본문은 아래 순서로 구성한다.
 플랫폼별 표에는 최종 수집 범위의 공고를 적합도 순으로 모두 넣는다.
 상단 표와 같은 열과 값 형식을 사용하고 각 공고의 데이터를 모두 채운다.
 각 행만 읽어도 사용자에게 맞는 공고인지 판단할 수 있어야 한다.
-
-## 게시
-
-게시 단계에서는 `report-publisher` 스킬의 검사와 검증을 `finalize_report.py`가 호출한다.
-
-- 게시 대상은 임시 HTML 한 파일로 제한한다.
-- Pages 프로젝트는 `fos-reports`를 사용한다.
-- `slug`는 `freelance-YYYY-MM-DD`로 만든다.
-- `prepare` 결과에서 파일 수, 크기, 경고, 민감 정보 노출을 확인한다.
-- 이 스킬 호출에는 게시 요청이 포함된 것으로 보고 별도 게시 확인 없이 진행한다.
-- 반환된 `public_url`을 브라우저로 열어 HTTP 성공, 문서 제목, 주요 본문을 확인한다.
-- `branch_url`도 `report-publisher`가 검증했으면 사용자용 안정 주소로 우선 전달한다.
-- `branch_url`이 없거나 검증에 실패한 경우에만 검증된 `public_url`을 전달한다.
-- 게시 성공 시 임시 HTML과 원자료를 정확한 경로로 삭제한다.
-- 게시 실패 시에는 당일 산출물을 보존해 0단계 복구 입력으로 사용한다.
-
-Cloudflare 인증이나 게시 권한이 없어 게시하지 못하면 작업을 완료로 간주하지 않는다.
-실패 원인과 필요한 권한만 보고하고 로컬 산출물은 전달하지 않는다.
 
 ## 검증
 
@@ -281,9 +255,7 @@ python3 .claude/skills/freelance-opportunity-reporter/scripts/score_opportunitie
 - 공고명이 상세 페이지 링크로 연결되는지
 - 기간이나 공고 식별자만으로 공고를 가리킨 문장이 없는지
 - Orca 브라우저에서 데스크톱과 모바일 레이아웃이 읽히는지
-- `report-publisher prepare` 검사가 통과하는지
-- 사용자에게 전달할 `branch_url` 또는 `public_url`의 제목과 주요 본문이 로컬 검증 결과와 같은지
-- 임시 HTML과 원자료가 실행 종료 후 남지 않았는지
+- 결과 JSON의 `html` 경로에서 실제 파일이 열리는지
 
 ## 보조 자료
 
