@@ -142,9 +142,7 @@ career-os/.career-sync/
 
 skill 은 `plugin/` 이 소유하고 Hermes cron 은 plugin 스킬을 쓴다.
 환경별 차이는 `.env`의 transport 설정에만 두고 지원 판단과 문서 작성 절차를 복제하지 않는다.
-SSH client는 `career-storage`를 원격 호출한다.
-command transport는 홈서버 안에서 같은 명령을 직접 부를 때 쓰며, 지금 쓰는 곳은 없다.
-두 경로는 같은 홈서버 잠금과 S3 pointer 갱신 계약을 사용한다.
+SSH client는 `career-storage`를 원격 호출한다. 홈서버의 `career-storage`가 잠금과 S3 pointer 갱신을 맡는다.
 
 ### 커리어 Backend
 
