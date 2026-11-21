@@ -44,7 +44,6 @@
 | [`AGENTS.md`](AGENTS.md) | 모든 워크스페이스에 적용되는 공통 운영 규칙 |
 | [`docs/code-architecture.md`](docs/code-architecture.md) | 현재 디렉터리 구조와 책임 경계 |
 | [`docs/adr/INDEX.md`](docs/adr/INDEX.md) | 모노레포 수준의 주요 결정과 이유 |
-| [`docs/home-server-object-storage.md`](docs/home-server-object-storage.md) | 홈서버 S3 서비스와 워크스페이스 연결 계약 |
 
 `CLAUDE.md`는 `AGENTS.md`를 가리키는 심볼릭 링크다.
 두 파일을 따로 수정하지 않는다.
