@@ -55,7 +55,7 @@ export const AI_WORK_PATTERNS = [
 ] as const;
 
 export const ROLE_QUALIFICATION_HEADING =
-  /(?:^|[\s[【:(])(?:자격\s*요건|지원\s*자격|우대\s*(?:사항|요건)|필수\s*(?:요건|경험)|필요\s*역량|What\s+we\s+look\s+for|이런\s*분이\s*필요해요|이런\s*분을\s*찾습니다|이런\s*분을\s*찾고\s*있어요|이런\s*경험(?:이)?\s*있으면\s*더\s*좋아요|(?:basic |minimum |preferred )?qualifications|(?:minimum |job )requirements|preferred\s+(?:experiences?|skills?)|(?:requirements|preferred)\s*(?=[:：\]】]))(?=$|[\s\]】:：)-])/i;
+  /(?:^|[\s[【:(])(?:자격\s*요건|지원\s*자격|우대\s*(?:사항|요건)|필수\s*(?:요건|경험)|필요\s*역량|What\s+we\s+look\s+for|이런\s*분이\s*필요해요|이런\s*분을\s*찾습니다|이런\s*분을\s*찾고\s*있어요|이런\s*경험(?:이)?\s*있으면\s*(?:더\s*)?좋아요|(?:basic |minimum |preferred )?qualifications|(?:minimum |job )requirements|preferred\s+(?:experiences?|skills?)|nice[ -]+to[ -]+have|bonus\s+points|(?:requirements|preferred|우대)\s*(?=[:：\]】]))(?=$|[\s\]】:：)-])/i;
 
 export const NON_TARGET_ROLE_KEYWORDS = [
   "data engineer",

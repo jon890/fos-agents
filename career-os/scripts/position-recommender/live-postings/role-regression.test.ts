@@ -115,6 +115,10 @@ test("자격과 우대에만 AI 신호가 있으면 제외한다", () => {
     "자격 요건:",
     "Preferred Qualifications",
     "Preferred Skills:",
+    "우대:",
+    "Nice to have",
+    "Bonus points",
+    "이런 경험이 있으면 좋아요",
     "Preferred:",
   ]) {
     const mainTasks = `${item.mainTasks} ${heading} LLM API와 RAG 사용 경험`;
