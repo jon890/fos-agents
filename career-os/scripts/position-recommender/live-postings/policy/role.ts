@@ -10,7 +10,9 @@ import {
 } from "./keywords.ts";
 
 export function isNonTargetTitle(text: string): boolean {
-  return NON_TARGET_TITLE_PATTERNS.some((pattern) => pattern.test(text));
+  // AI Assistant는 공고의 제품명일 수 있다. 다른 비대상 직무 표현은 모두 검사한다.
+  const role = text.replace(/\bAI[ /-]+assistants?\b|\bAI\s*어시스턴트/gi, " ");
+  return NON_TARGET_TITLE_PATTERNS.some((pattern) => pattern.test(role));
 }
 
 const NON_TARGET_TITLE_PATTERNS = NON_TARGET_TITLE_KEYWORDS.map((keyword) => {

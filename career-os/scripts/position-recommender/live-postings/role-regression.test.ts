@@ -67,6 +67,7 @@ for (const [company, title, mainTasks] of [
   ["가상서비스", "MLOps Engineer", "LLM 서빙의 배포와 운영을 자동화한다."],
   ["가상서비스", "Software Engineer", "LLM 서빙 API와 모델 배포를 운영한다."],
   ["가상서비스", "AI Product Engineer", ""],
+  ["가상서비스", "Software Engineer (AI Assistant)", ""],
   ["가상서비스", "백엔드 엔지니어", "실서비스 피드에 사용자 임베딩을 적용하고 운영한다."],
   ["가상서비스", "Software Engineer", "대화형 에이전트를 개발한다."],
   ["가상서비스", "Backend Engineer", "서비스의 ML 추천 기능을 개발한다."],
@@ -96,6 +97,7 @@ for (const [title, mainTasks] of [
   ["Data Scientist", "LLM으로 사용자 데이터를 분석한다."],
   ["AI Model Research Engineer", "LLM 모델 학습 기법을 연구한다."],
   ["Category MD", "상품 추천 시스템 개발 조직과 협업한다."],
+  ["Executive Assistant", "임원 일정과 회의를 관리한다."],
   ["SRE (Monitoring Agent)", "서버에 설치된 수집 agent와 memory 사용량을 모니터링한다."],
   ["Backend Engineer", "AI 코딩 도구와 GitHub Copilot을 활용해 결제 API를 개발한다."],
 ]) {
