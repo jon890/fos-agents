@@ -10,8 +10,7 @@
 | `AGENTS.md` | 평가 기준과 작업 경계 |
 | `.claude/skills/freelance-opportunity-reporter/` | 외주 후보 수집 리포트 skill |
 | `.claude/skills/freelance-proposal-preparer/` | 지원 제안서 준비 skill |
-| `reports/` | 외주 공고 리포트와 원자료 |
-| `data/runtime/` | 실행 중 임시 데이터 |
+| `data/runtime/downloads/` | 로컬 HTML 리포트와 수집 자료 |
 
 ## 핵심 기준
 

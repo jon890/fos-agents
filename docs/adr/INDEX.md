@@ -11,6 +11,5 @@ ADR은 결정의 이유와 대안 기각만 담고, 현행 구조 설명은 `doc
 | ADR | 제목 | Status | 파일 |
 |---|---|---|---|
 | ADR-019 | 외부 agent runtime 종속성을 제거한다 | Accepted | [ADR-019-runtime-framework-independence.md](ADR-019-runtime-framework-independence.md) |
-| ADR-020 | 공개 HTML 리포트는 Cloudflare Pages 직접 업로드로 게시한다 | Accepted | [ADR-020-cloudflare-pages-report-publishing.md](ADR-020-cloudflare-pages-report-publishing.md) |
 | ADR-021 | 결정론적 처리와 agent 해석을 분리한다 | Accepted | [ADR-021-deterministic-agent-boundary.md](ADR-021-deterministic-agent-boundary.md) |
 | ADR-022 | 홈서버 공용 저장소는 S3 bucket으로 collection을 격리한다 | Accepted | [ADR-022-home-storage-s3-collections.md](ADR-022-home-storage-s3-collections.md) |
