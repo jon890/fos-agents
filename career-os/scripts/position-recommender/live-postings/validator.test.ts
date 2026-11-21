@@ -21,7 +21,7 @@ function posting(overrides: Partial<Posting>): Posting {
     tags: ["backend-platform"],
     skills: ["Java"],
     dueTime: "",
-    mainTasks: "test",
+    mainTasks: "LLM 분류 API를 개발한다.",
     requirements: "test",
     preferred: "",
     ...overrides,

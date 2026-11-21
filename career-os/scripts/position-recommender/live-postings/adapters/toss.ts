@@ -4,6 +4,7 @@ import {
   classify,
   closeWindow,
   isIneligibleEmployment,
+  isTargetPostingRole,
   isTargetRole,
   isTargetRoleTitle,
   norm,
@@ -401,14 +402,11 @@ function parseTossJDSections(content: string): {
   requirements: string;
   preferred: string;
 } {
-  const TASK_RE =
-    /(?:담당\s*업무|주요\s*업무|하게\s*될\s*일|합류하면\s*함께\s*할|합류하게\s*되면|Responsibilities?)/i;
   const REQ_RE =
     /(?:지원\s*자격|지원자격|필수\s*요건|자격\s*요건|필요\s*역량|이런\s*분이\s*필요해요|이런\s*분을\s*찾습니다|이런\s*경험이\s*있다면|Requirements?|What\s+we\s+look\s+for|Qualifications?)/i;
   const PREF_RE =
     /(?:우대\s*사항|우대사항|선호\s*역량|이런\s*경험이\s*있으면\s*더|있으면\s*더\s*좋은|Preferred)/i;
 
-  const taskM = TASK_RE.exec(content);
   const reqM = REQ_RE.exec(content);
   const prefM = PREF_RE.exec(content);
 
@@ -417,7 +415,6 @@ function parseTossJDSections(content: string): {
   const prefHeadStart = prefM ? prefM.index : content.length;
 
   // content start indexes (right after the heading)
-  const taskContentStart = taskM ? taskM.index + taskM[0].length : -1;
   const reqContentStart = reqM ? reqM.index + reqM[0].length : -1;
   const prefContentStart = prefM ? prefM.index + prefM[0].length : -1;
 
@@ -425,10 +422,7 @@ function parseTossJDSections(content: string): {
     from < 0 || to <= from ? "" : cleanDetail(content.slice(from, to), limit);
 
   return {
-    mainTasks:
-      taskContentStart >= 0
-        ? slice(taskContentStart, Math.min(reqHeadStart, prefHeadStart), 900)
-        : cleanDetail(content, 900),
+    mainTasks: slice(0, Math.min(reqHeadStart, prefHeadStart), 900),
     requirements:
       reqContentStart >= 0 ? slice(reqContentStart, prefHeadStart, 900) : cleanDetail(content, 900),
     preferred: prefContentStart >= 0 ? slice(prefContentStart, content.length, 500) : "",
@@ -455,7 +449,14 @@ export function postingFromTossApiJob(
   if (isIneligibleEmployment(title, employment)) return { reject: "contract_intern_freelance" };
   const specificityReject = tossRoleSpecificityReject(company, title, content);
   if (specificityReject) return { reject: specificityReject };
-  if (targetRoleOnly && !isTargetRoleTitle(title)) return { reject: "not_target_title" };
+  const sections = parseTossJDSections(content);
+  if (
+    targetRoleOnly &&
+    !isTargetRoleTitle(title) &&
+    !isTargetPostingRole(title, sections.mainTasks)
+  ) {
+    return { reject: "not_target_title" };
+  }
   if (targetRoleOnly && !isTargetRole(fullText)) return { reject: "not_target_role" };
 
   const due = job.application_deadline || tossMetadata(job, ["클로징 일자", "ExpiryDate"]);
@@ -478,7 +479,7 @@ export function postingFromTossApiJob(
       tags: classify(fullText),
       skills: [],
       dueTime: norm(due),
-      ...parseTossJDSections(content),
+      ...sections,
     },
   };
 }
@@ -552,7 +553,17 @@ function parseTossJobDetail(url: string, res: TossFetchResult, targetRoleOnly: b
   const specificityReject = tossRoleSpecificityReject(company, title, content);
   if (specificityReject) return { reject: specificityReject };
 
-  if (targetRoleOnly && !isTargetRoleTitle(title)) return { reject: "not_target_title" };
+  const sections = parseTossJDSections(content);
+  const structuredTasks = deepFindStringAny(roots, [
+    "responsibilities",
+    "mainTasks",
+    "main_tasks",
+    "role",
+  ]);
+  const mainTasks = [...new Set([sections.mainTasks, structuredTasks].filter(Boolean))].join(" ");
+  if (targetRoleOnly && !isTargetRoleTitle(title) && !isTargetPostingRole(title, mainTasks)) {
+    return { reject: "not_target_title" };
+  }
   if (targetRoleOnly && !isTargetRole(fullText)) return { reject: "not_target_role" };
 
   const department = deepFindStringAny(roots, TOSS_DEPARTMENT_KEYS);
@@ -579,15 +590,12 @@ function parseTossJobDetail(url: string, res: TossFetchResult, targetRoleOnly: b
       tags: classify(fullText),
       skills: [],
       dueTime: due,
-      mainTasks:
-        deepFindStringAny(roots, ["responsibilities", "mainTasks", "main_tasks", "role"]) ||
-        parseTossJDSections(content).mainTasks,
+      mainTasks,
       requirements:
-        deepFindStringAny(roots, ["requirements", "qualifications"]) ||
-        parseTossJDSections(content).requirements,
+        deepFindStringAny(roots, ["requirements", "qualifications"]) || sections.requirements,
       preferred:
         deepFindStringAny(roots, ["preferred", "preferredPoints", "preferred_points"]) ||
-        parseTossJDSections(content).preferred,
+        sections.preferred,
     },
   };
 }

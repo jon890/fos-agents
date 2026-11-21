@@ -8,6 +8,7 @@ import {
   isContractRole,
   isNonTargetTitle,
   isTargetRole,
+  extractPostingRoleDuties,
 } from "../policy.ts";
 
 const UA = "Mozilla/5.0 (fos-agents position recommender)";
@@ -103,8 +104,12 @@ export function parseDaangnJob(job: GreenhouseJob): Posting | null {
   // 본문 전체로 판정하면 정규직 공고가 전부 계약직으로 잘못 걸린다.
   if (isContractRole(title)) return null;
   if (isNonTargetTitle(title)) return null;
-  if (!isTargetRole(`${title} ${(job.departments ?? []).map((d) => d.name ?? "").join(" ")}`))
-    return null;
+  const mainTasks = extractPostingRoleDuties(
+    body,
+    /이런\s*일을\s*해요|주요\s*업무|담당\s*업무|What you will do/i,
+  );
+  const departments = (job.departments ?? []).map((department) => department.name ?? "").join(" ");
+  if (!isTargetRole(`${title} ${departments} ${mainTasks}`)) return null;
 
   const closesAt = (job.application_deadline ?? "").slice(0, 10);
   return {
@@ -124,12 +129,7 @@ export function parseDaangnJob(job: GreenhouseJob): Posting | null {
     tags: classify(fullText),
     skills: skillsFromText(fullText),
     dueTime: closesAt,
-    mainTasks:
-      section(
-        body,
-        /이런\s*일을\s*해요|주요\s*업무|담당\s*업무|What you will do/i,
-        /이런\s*분을\s*찾고\s*있어요|자격\s*요건|지원\s*자격|이런\s*경험/i,
-      ) || cleanDetail(body, 650),
+    mainTasks,
     requirements: section(
       body,
       /이런\s*분을\s*찾고\s*있어요|자격\s*요건|지원\s*자격|Qualifications/i,

@@ -232,6 +232,7 @@ function enrichWithDetail(posting: Posting, html: string): Posting {
   ]);
   const updated = firstMatch(text, [/Updated\s+([0-9/.-]+)/i]);
   const description = section(text, "Description", [
+    "Key Responsibilities",
     "Basic Qualifications",
     "Preferred Qualifications",
     "Qualifications",
@@ -313,7 +314,7 @@ function enrichWithDetail(posting: Posting, html: string): Posting {
     tags: classify(fullText),
     skills,
     dueTime: updated || posting.dueTime,
-    mainTasks: responsibilities || description || posting.mainTasks,
+    mainTasks: [description, responsibilities].filter(Boolean).join(" ") || posting.mainTasks,
     requirements: finalRequirements,
     preferred: finalPreferred,
   };
