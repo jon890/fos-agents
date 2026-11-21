@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import unittest
@@ -11,7 +12,7 @@ from tempfile import TemporaryDirectory
 
 from assemble_report_data import assemble
 from audit_collection import audit
-from finalize_report import artifact_paths
+from finalize_report import artifact_paths, ensure_combined
 from render_report import load_candidates, rank_key, render_document
 from score_opportunities import first_win_sort_key, score
 
@@ -421,6 +422,27 @@ class AssembleReportDataTest(unittest.TestCase):
 
 
 class FinalizeReportTest(unittest.TestCase):
+    def test_combined_data_is_rebuilt_when_platform_collection_is_newer(self) -> None:
+        report_date = "2026-08-24"
+        with TemporaryDirectory() as directory:
+            runtime_dir = Path(directory)
+            source = runtime_dir / f"wishket-enriched-{report_date}.json"
+            source.write_text(json.dumps([{"platform": "위시켓", "title": "새 공고"}]), encoding="utf-8")
+            paths = artifact_paths(runtime_dir, report_date)
+            combined = paths["combined"]
+            self.assertIsInstance(combined, Path)
+            previous = {"items": [{"title": "이전 공고"}]}
+            combined.write_text(json.dumps(previous), encoding="utf-8")
+
+            os.utime(source, (1, 1))
+            os.utime(combined, (2, 2))
+            self.assertEqual(ensure_combined(paths, report_date), combined)
+            self.assertEqual(json.loads(combined.read_text(encoding="utf-8")), previous)
+
+            os.utime(source, (3, 3))
+            self.assertEqual(ensure_combined(paths, report_date), combined)
+            self.assertEqual(json.loads(combined.read_text(encoding="utf-8"))["items"][0]["title"], "새 공고")
+
     def test_cli_builds_summary_and_keeps_local_html(self) -> None:
         item = {
             "platform": "위시켓",

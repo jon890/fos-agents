@@ -27,11 +27,13 @@ def artifact_paths(runtime_dir: Path, report_date: str) -> dict[str, Path | list
 def ensure_combined(paths: dict[str, Path | list[Path]], report_date: str) -> Path:
     combined = paths["combined"]
     assert isinstance(combined, Path)
-    if combined.exists():
-        return combined
-
     enriched = paths["enriched"]
     assert isinstance(enriched, list)
+    if combined.exists():
+        combined_mtime = combined.stat().st_mtime_ns
+        if not any(source.stat().st_mtime_ns > combined_mtime for source in enriched):
+            return combined
+
     if not enriched:
         raise ValueError("리포트를 만들 플랫폼별 수집 JSON이 없습니다")
     payload = assemble(
