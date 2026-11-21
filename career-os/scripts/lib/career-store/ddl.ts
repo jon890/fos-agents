@@ -332,9 +332,9 @@ CREATE TABLE study_recommended_materials (
   report_id TEXT NOT NULL,
   content_key TEXT NOT NULL UNIQUE,
   topic_key TEXT NOT NULL,
-  summary TEXT NOT NULL,
-  reason TEXT NOT NULL,
-  career_value TEXT NOT NULL,
+  summary TEXT,
+  reason TEXT,
+  career_value TEXT,
   position INTEGER NOT NULL,
   PRIMARY KEY (report_id, content_key),
   UNIQUE (report_id, topic_key, position)
