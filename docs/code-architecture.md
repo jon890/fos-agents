@@ -24,7 +24,6 @@
 |---|---|
 | `AGENTS.md` | 모든 에이전트를 위한 공통 행동 규칙 |
 | `CLAUDE.md` | `AGENTS.md` 심볼릭 링크 |
-| `.agents/skills/` | Codex가 직접 탐색하는 저장소 전역 skill |
 | `.codex/hooks.json`, `scripts/hooks/` | `apply_patch` 뒤 수정한 TypeScript 파일만 Prettier로 정리하는 프로젝트 hook |
 | `docs/adr/` | 모노레포 레벨 ADR |
 | `docs/code-architecture.md` | 현재 구조와 책임 경계 |
@@ -115,23 +114,6 @@ scripts/<skill-name>/
 
 `scripts/`는 실행 파일과 helper를 담고, `.claude/skills/`는 에이전트가 읽을 작업 계약을 담는다.
 실행 환경이 어떤 CLI나 서브에이전트를 쓸지는 환경이 결정한다.
-
-## 공용 리포트 게시
-
-`report-publisher`는 워크스페이스가 만든 공개 가능한 HTML 산출물을
-Cloudflare Pages에 게시하는 Codex 전용 skill이다.
-
-- 정본은 Codex 공식 저장소 경로인 `.agents/skills/report-publisher/`에 둔다.
-- 별도의 `.codex/skills` 심볼릭 링크를 만들지 않는다.
-- 게시 대상은 사용자가 명시한 HTML 파일이나 디렉터리로 제한한다.
-- 원본 워크스페이스와 저장소 루트는 직접 게시하지 않는다.
-- 실제 파일 전송은 공식 Wrangler를 사용한다.
-- Cloudflare API MCP는 프로젝트 조회와 배포 상태 확인에만 선택적으로 사용한다.
-- 게시 준비물은 임시 디렉터리에 만들고 실행 종료 시 제거한다.
-
-각 리포트는 하나의 Pages 미리보기 분기로 게시한다.
-Wrangler가 반환한 배포 고유 주소와 분기 별칭을 검증한다.
-분기 별칭이 실제 HTTP 검증을 통과하면 기본 공유 링크로 사용하고, 그렇지 않으면 검증된 배포 고유 주소를 사용한다.
 
 ## Environment
 
