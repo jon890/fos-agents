@@ -45,7 +45,7 @@ skill
 
 외부 개발 환경에는 SSH transport 설정만 둔다.
 S3 endpoint와 credential은 홈서버의 `career-storage` 환경에만 둔다.
-필요한 변수는 [`.env.example`](../../.env.example)과 [홈서버 객체 저장소 연결 계약](../../../docs/home-server-object-storage.md)에서 확인한다.
+필요한 변수는 [`.env.example`](../../.env.example)과 운영 저장소의 객체 저장소(SeaweedFS) 운영 문서에서 확인한다.
 
 ## 검증
 
