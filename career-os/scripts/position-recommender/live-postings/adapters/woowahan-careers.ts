@@ -5,6 +5,7 @@ import {
   cleanDetail,
   classify,
   closeWindow,
+  extractPostingRoleDuties,
   isContractRole,
   isNonTargetTitle,
   isTargetRole,
@@ -122,12 +123,7 @@ export function parseWoowahanRecruit(recruit: WoowaRecruit, contents: string): P
     tags: classify(fullText),
     skills: skillsFromText(fullText),
     dueTime: closesAt,
-    mainTasks:
-      section(
-        body,
-        /\[업무내용\]|업무\s*내용|주요\s*업무|담당\s*업무/i,
-        /\[지원자격\]|지원\s*자격|자격\s*요건|\[우대사항\]/i,
-      ) || cleanDetail(body, 650),
+    mainTasks: extractPostingRoleDuties(body, /\[업무내용\]|업무\s*내용|주요\s*업무|담당\s*업무/i),
     requirements: section(
       body,
       /\[지원자격\]|지원\s*자격|자격\s*요건/i,

@@ -42,6 +42,21 @@ export const AI_PLATFORM_ROLE_KEYWORDS = [
   "memory",
 ] as const;
 
+export const AI_CODING_TOOLS =
+  /\b(?:ai\s+coding(?:\s+(?:tools?|assistants?|agents?))?|coding\s+(?:assistants?|agents?)|github\s+copilot|claude\s+code)\b|AI\s*코딩(?:\s*(?:도구|에이전트))?|코딩\s*에이전트/gi;
+
+export const AI_WORK_PATTERNS = [
+  /\b(?:llms?|llmops|mlops|ml[ -]serving|rag|agentic|ai[ -]native|large language models?|generative ai|machine learning)\b/i,
+  /인공지능|머신\s*러닝|생성형\s*AI|대규모\s*언어\s*모델/i,
+  /\bAI[ /-]*(?:(?:data\s+)?platform|ml\s+(?:engineers?|developers?)|products?|services?|engineers?|developers?|agents?|models?|applications?|inference|serving)\b|\bAI\s*(?:\/\s*데이터\s*)?(?:플랫폼|제품|서비스|엔지니어|개발|에이전트|모델|추론|서빙)/i,
+  /\b(?:AI|LLM)[- ](?:powered|based)\b[^.!?\n]{0,60}\b(?:systems?|products?|features?|services?|classification|recommendations?|search)\b|\bAI\s*(?:기반|로|를\s*이용해)[^.!?\n]{0,40}(?:분류|추천|검색|추론|제품|서비스|기능)/i,
+  /\b(?:personalized|proactive|conversational)\s+agents?\b|\bagents?[ -](?:runtime|orchestration|evaluation|mesh)\b|\bagents?\s*(?:런타임|오케스트레이션)|(?:대화형|개인화)\s*에이전트|에이전트\s*(?:런타임|오케스트레이션|플랫폼)/i,
+  /\b(?:recommendation[ -](?:engines?|systems?|models?|platforms?)|feature[ -]stores?|embedding[ -](?:models?|generation|pipelines?|platforms?|services?))\b|추천\s*(?:엔진|시스템|모델|알고리즘|플랫폼)|임베딩\s*(?:모델|파이프라인|플랫폼|서비스|생성|검색|기반\s*추천|(?:을|를)?\s*(?:적용|개발|운영))|\bML\s*추천\s*(?:기능|서비스)/i,
+] as const;
+
+export const ROLE_QUALIFICATION_HEADING =
+  /(?:^|[\s[【:(])(?:자격\s*요건|지원\s*자격|우대\s*(?:사항|요건)|필수\s*(?:요건|경험)|필요\s*역량|What\s+we\s+look\s+for|이런\s*분이\s*필요해요|이런\s*분을\s*찾습니다|이런\s*분을\s*찾고\s*있어요|이런\s*경험(?:이)?\s*있으면\s*더\s*좋아요|(?:basic |minimum |preferred )?qualifications|(?:minimum |job )requirements|preferred\s+(?:experiences?|skills?)|(?:requirements|preferred)\s*(?=[:：\]】]))(?=$|[\s\]】:：)-])/i;
+
 export const NON_TARGET_ROLE_KEYWORDS = [
   "data engineer",
   "데이터 엔지니어",
@@ -87,6 +102,8 @@ export const NON_TARGET_TITLE_KEYWORDS = [
   "ai research",
   "research scientist",
   "applied scientist",
+  "research engineer",
+  "researcher",
   "ai engineer (model)",
   "model researcher",
   "모델 연구",
@@ -145,6 +162,9 @@ export const NON_TARGET_TITLE_KEYWORDS = [
   "운영 매니저",
   "security engineer",
   "보안 엔지니어",
+  "category md",
+  "상담팀 리드",
+  "operations director",
 ] as const;
 
 export const CONTRACT_KEYWORDS = [

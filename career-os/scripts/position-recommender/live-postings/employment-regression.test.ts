@@ -6,7 +6,7 @@ import { createPostingEligibilityPolicy } from "./validator.ts";
 
 const policy = createPostingEligibilityPolicy();
 const now = new Date("2026-10-07T00:00:00Z");
-function server(title = "Backend Engineer", body = "서버 API 개발 및 운영") {
+function server(title = "Backend Engineer", body = "LLM 서빙 API 개발 및 운영") {
   const parsed = parseWoowahanRecruit(
     { recruitSeq: 1, recruitNumber: "synthetic-1", recruitName: title },
     body,
@@ -35,7 +35,7 @@ for (const term of [
         id: 1,
         title: "Backend Engineer",
         company_name: "가상서비스",
-        content: `서버 API 개발 ${term}`,
+        content: `LLM 서빙 API 개발 ${term}`,
         metadata: [{ name: "Employment_Type", value: "정규직" }],
       },
       true,
@@ -62,7 +62,7 @@ for (const employment of ["Intern", "Contractor", "Temporary", "계약직", "Fre
           id: 1,
           title: "Backend Engineer",
           company_name: "가상서비스",
-          content: "서버 개발",
+          content: "LLM 서빙 개발",
           metadata: [{ name: "Employment_Type", value: employment }],
         },
         true,
@@ -74,7 +74,7 @@ for (const employment of ["Intern", "Contractor", "Temporary", "계약직", "Fre
 test("고용형태가 없으면 미확인을 보존하고 JD로 추정하지 않는다", () => {
   const item = server(
     "Backend Engineer",
-    "서버 개발 internal tools templates contract testing 인턴과 협업",
+    "LLM 서빙 개발 internal tools templates contract testing 인턴과 협업",
   );
   expect(item.employmentType).toBeUndefined();
   expect(policy.evaluate(item, now).eligible).toBe(true);
@@ -99,7 +99,7 @@ for (const [employmentType, title] of [
           id: 1,
           title,
           company_name: "가상서비스",
-          content: "서버 API 개발",
+          content: "LLM 서빙 API 개발",
           metadata: [{ name: "Employment_Type", value: employmentType }],
         },
         true,

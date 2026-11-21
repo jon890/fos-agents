@@ -66,13 +66,7 @@ export function createPostingEligibilityPolicy(
       if (isIneligibleEmployment(posting.title, posting.employmentType)) {
         return { eligible: false, rejectionCode: "ineligible_employment" };
       }
-      if (
-        targetRoleOnly &&
-        !isTargetPostingRole(
-          posting.title,
-          [posting.mainTasks, posting.requirements, posting.preferred].join(" "),
-        )
-      ) {
+      if (targetRoleOnly && !isTargetPostingRole(posting.title, posting.mainTasks)) {
         return { eligible: false, rejectionCode: "not_target_role" };
       }
       return { eligible: true };

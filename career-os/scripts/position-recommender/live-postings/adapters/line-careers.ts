@@ -6,6 +6,7 @@ import {
   cleanDetail,
   classify,
   closeWindow,
+  extractPostingRoleDuties,
   isContractRole,
   isNonTargetTitle,
   isTargetRole,
@@ -148,12 +149,7 @@ export function buildLinePosting(job: StrapiJob, detailBody: string): Posting {
     tags: classify(fullText),
     skills: skillsFromText(fullText),
     dueTime: closesAt,
-    mainTasks:
-      sectionFrom(
-        detailBody,
-        /담당\s*업무|주요\s*업무|What you will do/i,
-        /자격\s*요건|지원\s*자격|Qualifications|우대\s*사항/i,
-      ) || cleanDetail(detailBody, 650),
+    mainTasks: extractPostingRoleDuties(detailBody, /담당\s*업무|주요\s*업무|What you will do/i),
     requirements: sectionFrom(
       detailBody,
       /자격\s*요건|지원\s*자격|Qualifications/i,

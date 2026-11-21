@@ -1,18 +1,29 @@
-import { containsKeyword } from "../../../lib/text.ts";
+import { cleanMarkupText, containsKeyword } from "../../../lib/text.ts";
 import {
+  AI_CODING_TOOLS,
   AI_PLATFORM_ROLE_KEYWORDS,
+  AI_WORK_PATTERNS,
   BACKEND_PLATFORM_ROLE_KEYWORDS,
   NON_TARGET_ROLE_KEYWORDS,
   NON_TARGET_TITLE_KEYWORDS,
+  ROLE_QUALIFICATION_HEADING,
 } from "./keywords.ts";
 
 export function isNonTargetTitle(text: string): boolean {
-  return containsKeyword(text, NON_TARGET_TITLE_KEYWORDS);
+  return NON_TARGET_TITLE_PATTERNS.some((pattern) => pattern.test(text));
 }
 
+const NON_TARGET_TITLE_PATTERNS = NON_TARGET_TITLE_KEYWORDS.map((keyword) => {
+  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const start = /^\w/.test(keyword) ? "\\b" : "";
+  const end = /\w$/.test(keyword) ? "\\b" : "";
+  return new RegExp(`${start}${escaped}${end}`, "i");
+});
+
+/** 목록이나 원문을 상세 공고로 가져올 때 쓰는 넓은 사전 검색이다. */
 export function isTargetRole(text: string): boolean {
   const hasBackendPlatformKeyword = containsKeyword(text, BACKEND_PLATFORM_ROLE_KEYWORDS);
-  const hasAiPlatformKeyword = containsKeyword(text, AI_PLATFORM_ROLE_KEYWORDS);
+  const hasAiPlatformKeyword = hasAiWork(text) || containsKeyword(text, AI_PLATFORM_ROLE_KEYWORDS);
   if (
     containsKeyword(text, NON_TARGET_ROLE_KEYWORDS) &&
     !hasBackendPlatformKeyword &&
@@ -56,14 +67,27 @@ export function isIneligibleEmployment(title: string, employmentType?: string): 
   return isContractRole(employmentType ?? "") || isContractRole(title);
 }
 
-/** 일반 개발 제목은 제목 자체 대신 실제 업무·요건을 근거로 삼는다. */
-export function isTargetPostingRole(title: string, body: string): boolean {
+function hasAiWork(text: string): boolean {
+  const work = text.replace(AI_CODING_TOOLS, " ");
+  return AI_WORK_PATTERNS.some((pattern) => pattern.test(work));
+}
+
+/** 업무 칸에 담긴 전체 본문에서도 지원 조건 앞의 소개와 업무만 읽는다. */
+export function postingRoleDuties(text: string): string {
+  return text.split(ROLE_QUALIFICATION_HEADING, 1)[0] ?? "";
+}
+
+/** 업무 제목이 있는 원문에서 소개와 업무를 각각 보존한다. */
+export function extractPostingRoleDuties(text: string, dutiesHeading: RegExp): string {
+  const duties = postingRoleDuties(text);
+  const headingIndex = duties.search(dutiesHeading);
+  if (headingIndex < 0) return cleanMarkupText(duties, 650);
+  const introduction = cleanMarkupText(duties.slice(0, headingIndex), 650);
+  const responsibilities = cleanMarkupText(duties.slice(headingIndex), 650);
+  return [introduction, responsibilities].filter(Boolean).join(" ");
+}
+
+export function isTargetPostingRole(title: string, mainTasks: string): boolean {
   if (isNonTargetTitle(title)) return false;
-  if (isTargetRoleTitle(title)) return isTargetRole(`${title} ${body}`);
-  const genericEngineeringTitle = /^(?:server(?:\s*\(|$)|software\s+engineer\b)/i.test(
-    title.trim(),
-  );
-  if (!genericEngineeringTitle) return false;
-  if (containsKeyword(body, NON_TARGET_ROLE_KEYWORDS)) return false;
-  return isTargetRole(body);
+  return hasAiWork(title) || hasAiWork(postingRoleDuties(mainTasks));
 }
