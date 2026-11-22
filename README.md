@@ -17,8 +17,6 @@
 |---|---|---|
 | [`accountbook/`](accountbook/) | 금융 스크린샷 기반 가계부 입력 자동화 | [`accountbook/AGENTS.md`](accountbook/AGENTS.md) |
 | [`career-os/`](career-os/) | 커리어 성장, 공고 추천, 면접·지원 준비 | [`career-os/AGENTS.md`](career-os/AGENTS.md) |
-| [`health-care/`](health-care/) | 건강 기록, 진료 준비, 재활 경과 관리 | [`health-care/AGENTS.md`](health-care/AGENTS.md) |
-| [`side-projects/`](side-projects/) | 사이드 프로젝트와 외주 기회 운영 | [`side-projects/AGENTS.md`](side-projects/AGENTS.md) |
 
 ## 공통 구조
 
@@ -35,7 +33,7 @@
 | `.claude/skills/` | 해당 영역에서 사용하는 agent skill 본문 |
 
 비밀 값은 각 워크스페이스의 `.env`에 둔다.
-개인 건강 기록, 지원 전략, 가계부 내역처럼 민감한 데이터는 해당 워크스페이스 경계를 벗어나지 않는다.
+개인 지원 전략, 가계부 내역처럼 민감한 데이터는 해당 워크스페이스 경계를 벗어나지 않는다.
 
 ## 루트 자산
 
