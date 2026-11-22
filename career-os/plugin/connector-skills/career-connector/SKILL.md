@@ -107,7 +107,7 @@ README 의 Tokens 배지 값은 `update_github_profile` 의 결과나 `CAREER_BA
 ## 오류와 완료
 
 오류의 `code` 와 `message` 를 전한다.
-`CAREER_UNAUTHORIZED`, `CAREER_GITHUB_UNAUTHORIZED`, `CAREER_GITHUB_NOT_CONFIGURED` 는 연결 화면에서 token 을 다시 등록하라고 안내한다.
+`CAREER_UNAUTHORIZED`, `CAREER_GITHUB_UNAUTHORIZED`, `CAREER_GITHUB_NOT_CONFIGURED` 는 연결 화면에서 token 을 다시 넣거나 GitHub 단추로 다시 연결하라고 안내한다.
 `CAREER_NETWORK`, `CAREER_GITHUB_UNAVAILABLE` 은 반영 여부가 불명확하므로 다시 보내기 전에 읽기 도구로 상태를 확인한다.
 `CAREER_GITHUB_CONFLICT`, `CAREER_GITHUB_STALE_REVIEW` 는 그 사이 저장소가 바뀌어 쓰지 않은 것이다.
 둘 다 `get_github_profile` 로 새 README 를 다시 읽고 변경안을 다시 맞춘 뒤 새 `head` 로 새로 승인받는다.

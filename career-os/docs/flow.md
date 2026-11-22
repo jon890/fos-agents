@@ -988,7 +988,8 @@ plugin 의 `study-topic-recommender` 스킬이 이미 수집된 후보에서 고
 | --- | --- |
 | README 의 Tokens 배지 값이 고른 달의 합계와 다르다 | `CAREER_BADGE_MISMATCH`. GitHub 에 아무것도 쓰지 않는다. 결과가 기록의 합계를 알려 주므로 에이전트가 README 를 고쳐 다시 승인받는다 |
 | 고른 달 가운데 기록이 없는 달이 있다 | `CAREER_USAGE_MONTH_MISSING`. 없는 달을 알려 준다. 숫자를 인자로 받아 채우지 않는다 |
-| GitHub token 을 넣지 않았다 | GitHub 도구 둘만 `CAREER_GITHUB_NOT_CONFIGURED` 로 답한다. 나머지 도구는 돈다 |
+| GitHub token 을 넣지 않았고 「GitHub 으로 연결」 단추로도 연결하지 않았다 | GitHub 도구 둘만 `CAREER_GITHUB_NOT_CONFIGURED` 로 답한다. 나머지 도구는 돈다 |
+| 「GitHub 으로 연결」 단추로 연결했다 | GitHub 도구를 부를 때마다 fos-assistant 의 토큰 통로에서 token 을 받아 쓴다. 통로가 다시 연결이 필요하다고 답하면 `CAREER_GITHUB_UNAUTHORIZED` 다 |
 | 승인을 기다리는 사이에 다른 곳에서 문서를 저장했다 | `CAREER_VERSION_CONFLICT`. 다시 읽고 변경을 검토한 뒤 새로 승인받는다 |
 | 승인을 기다리는 사이에 README 가 커밋되거나 기본 branch 가 바뀌었다 | `CAREER_GITHUB_STALE_REVIEW`. 실행 첫머리에서 기본 branch 와 끝 커밋을 `expectedBranch`, `expectedHead` 와 비교하고, 다르면 GitHub 에 아무것도 쓰지 않는다. 최신 끝 커밋 위에 검토한 원고를 다시 올리지 않는다. 다시 읽고 변경안을 맞춘 뒤 새로 승인받는다 |
 | branch 를 옮기는 마지막 요청에서 프로필 저장소에 다른 커밋이 올라왔음을 알게 된다 | `CAREER_GITHUB_CONFLICT`. branch 를 강제로 옮기지 않는다. 그 앞 단계의 409 와 422 는 `CAREER_GITHUB_UNAVAILABLE` 이다 |
