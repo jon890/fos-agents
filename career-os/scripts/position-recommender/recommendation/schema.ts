@@ -3,7 +3,7 @@ import {
   companyTierProvenanceShape,
   publicCompanyAssessmentSchema,
   refineCompanyTierProvenance,
-} from "../../../services/career-backend/src/positions/schema.ts";
+} from "../../lib/career-store/positions/schema.ts";
 
 const nonEmpty = z.string().trim().min(1);
 const postingUrl = z.string().url().startsWith("https://");

@@ -6,8 +6,9 @@ import type { ReadingSource } from "../reading_contracts.js";
 import { main, reportMorningReadingError } from "../morning_reading_cli.js";
 import { canonicalizeReadingUrl, readingContentKey } from "../url_identity.js";
 import { collectAndIngestStudyLibrary, type StudyLibraryIngestionPayload } from "./ingestion.js";
-import { CareerBackendHttpError } from "../../lib/career-backend-http.ts";
-import type { StudyLibraryClient } from "./client.js";
+import { CareerStoreError } from "../../lib/career-store/errors.ts";
+import { restoreCareerWorkspaceEnv, useCareerWorkspaceEnv } from "../../lib/career-store/test-support.ts";
+import { StudyLibraryClient } from "./client.js";
 
 function response(body: unknown, init: ResponseInit = {}): Response {
   return new Response(typeof body === "string" ? body : JSON.stringify(body), {
@@ -370,11 +371,11 @@ describe("study-library ingestion", () => {
     ]);
   });
 
-  test("Backend client 오류는 종류와 관계없이 출처 반복을 멈추고 그대로 전파한다", async () => {
+  test("저장소 오류는 종류와 관계없이 출처 반복을 멈추고 그대로 전파한다", async () => {
     const errors = [
-      new CareerBackendHttpError(503, "UNAVAILABLE", "커리어 Backend 요청이 실패했습니다."),
-      new CareerBackendHttpError(200, "INVALID_RESPONSE", "커리어 Backend 응답을 읽을 수 없습니다."),
-      new CareerBackendHttpError(null, "NETWORK_ERROR", "커리어 Backend에 연결하지 못했습니다."),
+      new CareerStoreError(503, "CAREER_STORE_BUSY", "다른 실행이 쓰고 있습니다."),
+      new CareerStoreError(500, "CAREER_STORE_CORRUPT", "파일을 읽을 수 없습니다."),
+      new CareerStoreError(409, "VERSION_CONFLICT", "cursor 버전이 현재 값과 다릅니다."),
     ];
 
     for (const error of errors) {
@@ -512,127 +513,83 @@ describe("study-library ingestion", () => {
 });
 
 describe("library collect-only CLI", () => {
-  test("--reset-cursor는 archive 단일 source에서만 허용된다", async () => {
-    const originalArgv = process.argv;
-    const originalFetch = globalThis.fetch;
-    process.argv = ["bun", "morning_reading_cli.ts", "--collect-only", "--reset-cursor"];
-    process.env.CAREER_BACKEND_URL = "https://study.example.com";
-    process.env.CAREER_BACKEND_TOKEN = "test-token-123456789012345678901234567890";
+  const originalArgv = process.argv;
+  const originalFetch = globalThis.fetch;
+  const originalRunRoot = process.env.CAREER_OS_ROOT;
+  const directories: string[] = [];
+
+  afterEach(() => {
+    process.argv = originalArgv;
+    globalThis.fetch = originalFetch;
+    if (originalRunRoot === undefined) delete process.env.CAREER_OS_ROOT;
+    else process.env.CAREER_OS_ROOT = originalRunRoot;
+    restoreCareerWorkspaceEnv();
+    for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true });
+  });
+
+  /** 임시 작업 폴더에 소스 하나를 넣고, 실행 폴더를 만들어 건다. */
+  async function workspaceWithSource(): Promise<StudyLibraryClient> {
+    useCareerWorkspaceEnv();
     const directory = mkdtempSync(join(tmpdir(), "study-topic-recommender."));
+    directories.push(directory);
     process.env.CAREER_OS_ROOT = directory;
-    globalThis.fetch = (async (url: string | URL | Request) => {
-      if (new URL(String(url)).pathname.endsWith("/sources")) return response({
-        sources: [{ sourceKey: "source-a", title: "Source", category: "techBlog", url: "https://example.com", feedUrl: null, adapter: "page", enabled: true, version: 0, note: null }],
-      }, { headers: { "Content-Type": "application/json" } });
-      return response({ sourceKey: "source-a", mode: "recent", cursor: null, version: 0 }, { headers: { "Content-Type": "application/json" } });
-    }) as unknown as typeof fetch;
-    try {
-      await expect(main()).rejects.toThrow("--reset-cursor");
-    } finally {
-      process.argv = originalArgv;
-      globalThis.fetch = originalFetch;
-      rmSync(directory, { recursive: true, force: true });
-    }
+    const client = new StudyLibraryClient();
+    await client.putSource("kurly-tech", {
+      title: "Kurly",
+      category: "techBlog",
+      url: "https://helloworld.kurly.com",
+      feedUrl: "https://helloworld.kurly.com/rss.xml",
+      adapter: "feed",
+      enabled: true,
+      note: null,
+      expectedVersion: 0,
+    });
+    return client;
+  }
+
+  function feed(items: Array<{ title: string; url: string }>): typeof fetch {
+    return (async () => response(rss(items))) as unknown as typeof fetch;
+  }
+
+  test("--reset-cursor는 archive 단일 source에서만 허용된다", async () => {
+    await workspaceWithSource();
+    globalThis.fetch = feed([]);
+    process.argv = ["bun", "morning_reading_cli.ts", "--collect-only", "--reset-cursor"];
+    await expect(main()).rejects.toThrow("--reset-cursor");
   });
 
   test("CLI는 source-key 오타와 max-items 0을 usage error로 처리한다", async () => {
-    const originalArgv = process.argv;
-    const originalFetch = globalThis.fetch;
-    const directory = mkdtempSync(join(tmpdir(), "study-topic-recommender."));
-    process.env.CAREER_OS_ROOT = directory;
-    process.env.CAREER_BACKEND_URL = "https://study.example.com";
-    process.env.CAREER_BACKEND_TOKEN = "test-token-123456789012345678901234567890";
-    globalThis.fetch = (async () => response({
-      sources: [{ sourceKey: "kurly-tech", title: "Kurly", category: "techBlog", url: "https://helloworld.kurly.com", feedUrl: "https://helloworld.kurly.com/rss.xml", adapter: "feed", enabled: true, version: 0, note: null }],
-    }, { headers: { "Content-Type": "application/json" } })) as unknown as typeof fetch;
-    try {
-      process.argv = [
-        "bun",
-        "morning_reading_cli.ts",
-        "--collect-only",
-        "--source-key",
-        "missing-source",
-      ];
-      await expect(main()).rejects.toThrow("sourceKey");
+    await workspaceWithSource();
+    globalThis.fetch = feed([]);
+    process.argv = ["bun", "morning_reading_cli.ts", "--collect-only", "--source-key", "missing-source"];
+    await expect(main()).rejects.toThrow("sourceKey");
 
-      process.argv = [
-        "bun",
-        "morning_reading_cli.ts",
-        "--collect-only",
-        "--source-key",
-        "kurly-tech",
-        "--max-items",
-        "0",
-      ];
-      await expect(main()).rejects.toThrow("--max-items");
-    } finally {
-      process.argv = originalArgv;
-      globalThis.fetch = originalFetch;
-      rmSync(directory, { recursive: true, force: true });
-    }
+    process.argv = ["bun", "morning_reading_cli.ts", "--collect-only", "--source-key", "kurly-tech", "--max-items", "0"];
+    await expect(main()).rejects.toThrow("--max-items");
   });
 
-  test("--collect-only --mode recent --run-dir는 파일 이력을 읽지 않는다", async () => {
-    const originalArgv = process.argv;
-    const originalFetch = globalThis.fetch;
-    const directory = mkdtempSync(join(tmpdir(), "study-topic-recommender."));
-    const requests: string[] = [];
-    process.argv = [
-      "bun",
-      "morning_reading_cli.ts",
-      "--run-dir",
-      directory,
-      "--collect-only",
-      "--mode",
-      "recent",
-      "--source-key",
-      "kurly-tech",
-      "--max-items",
-      "1",
-    ];
-    process.env.CAREER_BACKEND_URL = "https://study.example.com";
-    process.env.CAREER_BACKEND_TOKEN = "test-token-123456789012345678901234567890";
-    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
-      const parsedUrl = new URL(String(url));
-      requests.push(`${init?.method ?? "GET"} ${parsedUrl.pathname}${parsedUrl.search}`);
-      if (String(url) === "https://helloworld.kurly.com/rss.xml") {
-        return response("<?xml version=\"1.0\"?><rss><channel></channel></rss>");
-      }
-      if (init?.method === "GET" && parsedUrl.pathname.endsWith("/sources")) return response({ sources: [{ sourceKey: "kurly-tech", title: "Kurly", category: "techBlog", url: "https://helloworld.kurly.com", feedUrl: "https://helloworld.kurly.com/rss.xml", adapter: "feed", enabled: true, version: 0, note: null }] }, { headers: { "Content-Type": "application/json" } });
-      if (init?.method === "PUT") {
-        return response({
-          source: {
-            sourceKey: decodeURIComponent(parsedUrl.pathname.split("/").at(-1) ?? ""),
-            title: "Source",
-            category: "techBlog",
-            url: "https://example.com",
-            feedUrl: null,
-            adapter: "page",
-            enabled: true,
-            version: 1,
-            note: null,
-          },
-          version: 1,
-        }, { headers: { "Content-Type": "application/json" } });
-      }
-      if (init?.method === "GET" && parsedUrl.pathname.includes("/cursor")) {
-        return response({ sourceKey: "kurly-tech", mode: "recent", cursor: null, version: 0 }, { headers: { "Content-Type": "application/json" } });
-      }
-      return response({ idempotencyKey: "ok", acceptedCount: 0, cursorVersion: 1 }, { headers: { "Content-Type": "application/json" } });
-    }) as typeof fetch;
+  test("두 번째 수집은 저장된 커서 버전에서 이어 가고 같은 자료를 다시 쌓지 않는다", async () => {
+    const client = await workspaceWithSource();
+    const args = ["bun", "morning_reading_cli.ts", "--collect-only", "--mode", "recent", "--source-key", "kurly-tech"];
 
-    try {
-      await main();
-    } finally {
-      process.argv = originalArgv;
-      globalThis.fetch = originalFetch;
-      rmSync(directory, { recursive: true, force: true });
-    }
+    globalThis.fetch = feed([{ title: "One", url: "https://helloworld.kurly.com/one" }]);
+    process.argv = args;
+    await main();
+    const first = await client.getSourceCursor("kurly-tech", "recent");
+    expect(first.version).toBe(1);
 
-    expect(requests.some((request) => request.includes("/cursor?mode=recent"))).toBe(true);
+    globalThis.fetch = feed([
+      { title: "Two", url: "https://helloworld.kurly.com/two" },
+      { title: "One", url: "https://helloworld.kurly.com/one" },
+    ]);
+    process.argv = args;
+    await main();
+    const second = await client.getSourceCursor("kurly-tech", "recent");
+    expect(second.version).toBe(2);
+    expect((second.cursor?.lastSeen as string[]).length).toBe(2);
   });
 
-  test("API 429 오류 JSON에는 retryAfter가 있으면 포함한다", () => {
+  test("저장소 오류는 code 를 첫 줄에 내고 종료 코드 1로 끝낸다", () => {
     const originalError = console.error;
     const originalExit = process.exit;
     const messages: string[] = [];
@@ -642,13 +599,7 @@ describe("library collect-only CLI", () => {
     process.exit = ((code?: string | number | null) => {
       throw new Error(`exit:${code}`);
     }) as typeof process.exit;
-    const error = new CareerBackendHttpError(
-      429,
-      "RATE_LIMITED",
-      "커리어 Backend 요청이 실패했습니다.",
-      "req-429",
-      7,
-    );
+    const error = new CareerStoreError(503, "CAREER_STORE_BUSY", "다른 실행이 쓰고 있습니다.");
 
     try {
       expect(() => reportMorningReadingError(error)).toThrow("exit:1");
@@ -657,68 +608,6 @@ describe("library collect-only CLI", () => {
       process.exit = originalExit;
     }
 
-    expect(JSON.parse(messages[0])).toEqual({
-      error: {
-        code: "RATE_LIMITED",
-        requestId: "req-429",
-        retryAfter: 7,
-      },
-    });
-  });
-
-  test("CLI collect-only API 429 출력에는 retryAfter를 포함한다", async () => {
-    const originalArgv = process.argv;
-    const originalFetch = globalThis.fetch;
-    const originalError = console.error;
-    const originalExit = process.exit;
-    const directory = mkdtempSync(join(tmpdir(), "study-topic-recommender."));
-    const messages: string[] = [];
-    process.argv = [
-      "bun",
-      "morning_reading_cli.ts",
-      "--collect-only",
-      "--source-key",
-      "kurly-tech",
-    ];
-    process.env.CAREER_OS_ROOT = directory;
-    process.env.CAREER_BACKEND_URL = "https://study.example.com";
-    process.env.CAREER_BACKEND_TOKEN = "test-token-123456789012345678901234567890";
-    globalThis.fetch = (async () => new Response(JSON.stringify({
-      error: {
-        code: "RATE_LIMITED",
-        message: "slow down",
-        requestId: "req-cli-429",
-      },
-    }), {
-      status: 429,
-      headers: {
-        "Content-Type": "application/json",
-        "Retry-After": "11",
-      },
-    })) as unknown as typeof fetch;
-    console.error = (message?: unknown) => {
-      messages.push(String(message));
-    };
-    process.exit = ((code?: string | number | null) => {
-      throw new Error(`exit:${code}`);
-    }) as typeof process.exit;
-
-    try {
-      await expect(main().catch(reportMorningReadingError)).rejects.toThrow("exit:1");
-    } finally {
-      process.argv = originalArgv;
-      globalThis.fetch = originalFetch;
-      console.error = originalError;
-      process.exit = originalExit;
-      rmSync(directory, { recursive: true, force: true });
-    }
-
-    expect(JSON.parse(messages[0])).toEqual({
-      error: {
-        code: "RATE_LIMITED",
-        requestId: "req-cli-429",
-        retryAfter: 11,
-      },
-    });
+    expect(messages).toEqual(["CAREER_STORE_BUSY: 다른 실행이 쓰고 있습니다."]);
   });
 });

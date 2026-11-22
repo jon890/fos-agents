@@ -1,32 +1,12 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { CareerBackendHttpError } from "../lib/career-backend-http.ts";
+import { CareerStoreError } from "../lib/career-store/errors.ts";
+import { restoreCareerWorkspaceEnv, useCareerWorkspaceEnv } from "../lib/career-store/test-support.ts";
 import { formatManageReadingSourcesError, manageReadingSources } from "./manage_reading_sources.ts";
 
-const originalFetch = globalThis.fetch;
-const originalUrl = process.env.CAREER_BACKEND_URL;
-const originalToken = process.env.CAREER_BACKEND_TOKEN;
-const originalTokenFile = process.env.CAREER_BACKEND_TOKEN_FILE;
-
-afterEach(() => {
-  globalThis.fetch = originalFetch;
-  if (originalUrl === undefined) delete process.env.CAREER_BACKEND_URL;
-  else process.env.CAREER_BACKEND_URL = originalUrl;
-  if (originalToken === undefined) delete process.env.CAREER_BACKEND_TOKEN;
-  else process.env.CAREER_BACKEND_TOKEN = originalToken;
-  if (originalTokenFile === undefined) delete process.env.CAREER_BACKEND_TOKEN_FILE;
-  else process.env.CAREER_BACKEND_TOKEN_FILE = originalTokenFile;
-});
-
-function clearApiEnvironment(): void {
-  delete process.env.CAREER_BACKEND_URL;
-  delete process.env.CAREER_BACKEND_TOKEN;
-  delete process.env.CAREER_BACKEND_TOKEN_FILE;
-}
+afterEach(restoreCareerWorkspaceEnv);
 
 describe("manage_reading_sources", () => {
-  test("help와 template는 API 환경값 없이 성공한다", async () => {
-    clearApiEnvironment();
-    globalThis.fetch = (() => { throw new Error("API를 호출하면 안 된다."); }) as unknown as typeof fetch;
+  test("help와 template는 저장소를 열지 않고 성공한다", async () => {
 
     for (const args of [[], ["help"], ["--help"], ["-h"]]) {
       await expect(manageReadingSources(args)).resolves.toContain("사용법:");
@@ -54,9 +34,7 @@ describe("manage_reading_sources", () => {
     });
   });
 
-  test("잘못된 template는 API 환경값과 무관하게 거부한다", async () => {
-    clearApiEnvironment();
-    globalThis.fetch = (() => { throw new Error("API를 호출하면 안 된다."); }) as unknown as typeof fetch;
+  test("잘못된 template는 거부한다", async () => {
 
     await expect(manageReadingSources([
       "template",
@@ -78,36 +56,36 @@ describe("manage_reading_sources", () => {
     ])).rejects.toThrow("HTTPS URL이어야 한다.");
   });
 
-  test("API 명령은 연결 환경값이 없으면 실패한다", async () => {
-    clearApiEnvironment();
-
-    for (const args of [
-      ["list"],
-      ["add", "--key", "source-1", "--title", "예시", "--category", "techBlog", "--url", "https://example.com", "--adapter", "page", "--note", "추가"],
-      ["update", "--key", "source-1", "--title", "예시", "--note", "수정"],
-      ["disable", "--key", "source-1", "--note", "중지"],
-      ["enable", "--key", "source-1", "--note", "복구"],
-    ]) {
-      await expect(manageReadingSources(args)).rejects.toThrow("CAREER_BACKEND_URL 환경값이 필요하다.");
-    }
+  test("저장소 명령은 작업 폴더의 소스를 추가하고 고치고 끄고 켠다", async () => {
+    useCareerWorkspaceEnv();
+    const add = ["add", "--key", "source-1", "--title", "예시", "--category", "techBlog", "--url", "https://example.com", "--adapter", "page", "--note", "추가"];
+    expect(await manageReadingSources(add)).toMatchObject({ version: 1, source: { sourceKey: "source-1", enabled: true } });
+    expect(await manageReadingSources(["update", "--key", "source-1", "--title", "새 제목", "--note", "수정"])).toMatchObject({ version: 2, source: { title: "새 제목" } });
+    expect(await manageReadingSources(["disable", "--key", "source-1", "--note", "중지"])).toMatchObject({ version: 3, source: { enabled: false } });
+    expect(await manageReadingSources(["enable", "--key", "source-1", "--note", "복구"])).toMatchObject({ version: 4, source: { enabled: true } });
+    expect(await manageReadingSources(["list"])).toEqual([
+      { sourceKey: "source-1", title: "새 제목", category: "techBlog", url: "https://example.com", feedUrl: null, adapter: "page", enabled: true, note: "복구", version: 4 },
+    ]);
   });
 
-  test("disable에 --note가 없으면 API를 부르기 전에 거부한다", async () => {
-    process.env.CAREER_BACKEND_URL = "http://study.local";
-    process.env.CAREER_BACKEND_TOKEN = "t".repeat(32);
-    globalThis.fetch = (() => { throw new Error("API를 호출하면 안 된다."); }) as unknown as typeof fetch;
+  test("없는 소스와 바꿀 것이 없는 update 는 거부한다", async () => {
+    useCareerWorkspaceEnv();
+    await expect(manageReadingSources(["disable", "--key", "missing", "--note", "중지"])).rejects.toThrow("소스를 찾을 수 없다: missing");
+    await manageReadingSources(["add", "--key", "source-1", "--title", "예시", "--category", "techBlog", "--url", "https://example.com", "--adapter", "page", "--note", "추가"]);
+    await expect(manageReadingSources(["update", "--key", "source-1", "--note", "수정"])).rejects.toThrow("update할 필드가 하나 이상 필요하다.");
+  });
 
+  test("disable에 --note가 없으면 저장하기 전에 거부한다", async () => {
+    useCareerWorkspaceEnv();
     await expect(manageReadingSources(["disable", "--key", "source-1"]))
       .rejects.toThrow("--note 값이 필요하다.");
   });
 });
 
 describe("오류 출력", () => {
-  test("공용 HTTP 오류는 상태, code, requestId 를 함께 낸다", () => {
-    const error = new CareerBackendHttpError(401, "UNAUTHORIZED", "커리어 Backend 요청이 실패했습니다.", "req-1");
-    expect(formatManageReadingSourcesError(error)).toBe(
-      "커리어 Backend 요청이 실패했습니다. (status=401, code=UNAUTHORIZED, requestId=req-1)",
-    );
+  test("저장소 오류는 code 를 앞에 낸다", () => {
+    const error = new CareerStoreError(503, "CAREER_STORE_BUSY", "다른 실행이 쓰고 있습니다.");
+    expect(formatManageReadingSourcesError(error)).toBe("CAREER_STORE_BUSY: 다른 실행이 쓰고 있습니다.");
   });
 
   test("다른 오류는 message 만 낸다", () => {

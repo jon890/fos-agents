@@ -1,6 +1,8 @@
 #!/usr/bin/env bun
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { basename, join, resolve } from "node:path";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
+import { resolveCareerStoreRoot } from "../lib/career-store/database.ts";
+import { formatSeoulIsoDate } from "../lib/date-format.ts";
 import { firstOptionValue } from "../lib/cli.ts";
 import { DEFAULT_MAX_CANDIDATES_PER_SOURCE, type MorningReadingReport, type ReadingSource } from "./reading_contracts.js";
 import { loadReadingCandidatePool } from "./reading_candidate_pool.js";
@@ -8,19 +10,20 @@ import { normalizeReadingSources } from "./reading_sources.js";
 import { selectReadings } from "./reading_stage.js";
 import { renderExistingReport, writeReportArtifacts } from "./render/report.js";
 import { resolveStudyRunRoot, StudyRunPathError, validateStudyCleanupDirectory } from "./runtime-paths.js";
-import { CareerBackendHttpError } from "../lib/career-backend-http.ts";
+import { CareerStoreError } from "../lib/career-store/errors.ts";
 import { createStudyLibraryClient } from "./study-library/client.js";
 import { buildReportCountsFromLibrary, prepareStudyLibraryCandidates, studyLibraryMetaPath, type StudyLibraryCandidateMeta } from "./study-library/candidates.js";
 import { collectAndIngestStudyLibrary, type LibraryCollectMode } from "./study-library/ingestion.js";
 import { commitRecommendationRun, recordPublication, reportIdForMorningReading } from "./study-library/recommendations.js";
-import { checkStudyBackend } from "./study-library/doctor.js";
+import { checkStudyStore } from "./study-library/doctor.js";
+import { morningHtmlFilename } from "./render/html.js";
 
 const FEED_TIMEOUT_MS = 8_000;
-const actionFlags = ["--doctor", "--collect-only", "--prepare-candidates", "--reading-selection", "--commit-recommendation", "--record-publication", "--cleanup"];
+const actionFlags = ["--doctor", "--collect-only", "--prepare-candidates", "--reading-selection", "--commit-recommendation", "--record-publication", "--list-recommendations", "--cleanup"];
 const hasFlag = (name: string) => process.argv.includes(name);
 const argument = (name: string) => { const value = firstOptionValue(process.argv, name); if (!value?.trim()) throw new StudyRunPathError(`${name} 값이 필요하다.`); return value; };
 
-const booleanOptions = new Set(["--doctor", "--collect-only", "--prepare-candidates", "--commit-recommendation", "--reset-cursor", "--record-publication", "--render-only", "--cleanup"]);
+const booleanOptions = new Set(["--doctor", "--collect-only", "--prepare-candidates", "--commit-recommendation", "--reset-cursor", "--record-publication", "--list-recommendations", "--render-only", "--cleanup"]);
 const valueOptions = new Set([
   "--reading-selection", "--run-dir", "--source-key", "--mode", "--max-items",
   "--category", "--published-from", "--published-to", "--limit", "--cursor", "--candidate-pool", "--report",
@@ -30,12 +33,13 @@ const valueOptions = new Set([
 const HELP = `사용법: morning_reading_cli.ts <하위 동작> [옵션]
 
 하위 동작:
-  --doctor                       Backend 연결값, 인증과 learning-interests 문서를 확인한다
+  --doctor                       작업 폴더 저장소와 learning-interests 문서를 확인한다
   --collect-only                 등록된 소스를 수집한다
   --prepare-candidates           추천 후보를 조회한다
   --reading-selection <파일>     선택 결과로 리포트를 만든다
   --commit-recommendation        추천 결과를 저장한다
   --record-publication           외부 게시 결과를 기록한다
+  --list-recommendations         저장한 추천과 게시 기록을 최신순으로 보여준다 (--limit)
   --render-only                  기존 결과로 HTML을 만든다
   --cleanup                      전달이 끝난 임시 실행 디렉터리를 정리한다
 
@@ -46,7 +50,8 @@ ${[...valueOptions].map((option) => `  ${option} <값>`).join("\n")}
   --reset-cursor                 수집 cursor를 초기화한다
   --help, -h                     이 도움말을 보여준다
 
-실행 경로는 --run-dir 또는 CAREER_OS_ROOT로 지정한다.`;
+실행 경로는 --run-dir 또는 CAREER_OS_ROOT로 지정한다. 작업 폴더 runs/ 아래에 만든다.
+데이터는 CAREER_WORKSPACE_ROOT(없으면 /workspace/career) 아래 state/career.sqlite 에 있다.`;
 
 function action(): string {
   const args = process.argv.slice(2);
@@ -89,7 +94,7 @@ async function prepare(root: string): Promise<void> {
 async function select(root: string): Promise<void> {
   const state = join(root, "state"); const candidatePoolPath = resolve(argument("--candidate-pool")); const pool = loadReadingCandidatePool(candidatePoolPath); const candidateMeta = meta(candidatePoolPath);
   const selected = selectReadings({ pool, selectionPath: argument("--reading-selection") });
-  const report: MorningReadingReport = { generatedAt: new Date().toISOString(), sourceOfTruth: { sources: "backend:study_sources", collectedArticles: "state/reading-candidates.json" }, counts: buildReportCountsFromLibrary({ candidatePool: pool, meta: candidateMeta }), collectionLog: pool.collectionLog, topics: selected.topics };
+  const report: MorningReadingReport = { generatedAt: new Date().toISOString(), sourceOfTruth: { sources: "store:study_sources", collectedArticles: "state/reading-candidates.json" }, counts: buildReportCountsFromLibrary({ candidatePool: pool, meta: candidateMeta }), collectionLog: pool.collectionLog, topics: selected.topics };
   mkdirSync(state, { recursive: true }); const reportPath = join(state, "morning-reading.json"); writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
   writeFileSync(join(state, "recommendation-request.json"), `${JSON.stringify({ reportId: reportIdForMorningReading(report), generatedAt: report.generatedAt, candidateContextVersion: candidateMeta.candidateContextVersion, rejections: selected.selection.rejections ?? [] }, null, 2)}\n`, "utf8");
   const artifacts = writeReportArtifacts({ report, outputDir: root }); console.log(JSON.stringify({ mode: "reading-selection", report: reportPath, ...artifacts }));
@@ -101,9 +106,14 @@ async function run(): Promise<void> {
   }
   const selectedAction = action();
   if (selectedAction === "--doctor") {
-    const result = await checkStudyBackend();
+    const result = await checkStudyStore();
     console.log(JSON.stringify(result, null, 2));
     if (!result.passed) process.exitCode = 1;
+    return;
+  }
+  if (selectedAction === "--list-recommendations") {
+    const limit = firstOptionValue(process.argv, "--limit");
+    console.log(JSON.stringify(await createStudyLibraryClient().listRecommendationRuns(limit ? Number(limit) : undefined), null, 2));
     return;
   }
   if (selectedAction === "--render-only") {
@@ -124,10 +134,37 @@ async function run(): Promise<void> {
     case "--collect-only": await collect(); return;
     case "--prepare-candidates": await prepare(root); return;
     case "--reading-selection": await select(root); return;
-    case "--commit-recommendation": console.log(JSON.stringify(await commitRecommendationRun({ client: createStudyLibraryClient(), reportPath: argument("--report") }))); return;
+    case "--commit-recommendation": {
+      const reportPath = argument("--report");
+      const saved = await commitRecommendationRun({ client: createStudyLibraryClient(), reportPath });
+      console.log(JSON.stringify({ ...saved, ...saveReportCopy(reportPath, root) }));
+      return;
+    }
     case "--record-publication": console.log(JSON.stringify(await recordPublication({ client: createStudyLibraryClient(), reportId: argument("--report-id"), channel: argument("--channel"), externalId: argument("--external-id"), publishedAt: argument("--published-at"), url: argument("--url") }))); return;
   }
 }
+/**
+ * 저장한 추천의 HTML 을 작업 폴더 `reports/` 에 날짜가 든 이름으로 남긴다.
+ * 같은 날 다시 만들면 같은 이름을 덮어쓴다. 「내 파일」 에는 에이전트가 실행마다 따로 넣는다.
+ */
+function saveReportCopy(reportPath: string, runRoot: string): { reportCopy?: string } {
+  const generatedAt = (JSON.parse(readFileSync(reportPath, "utf8")) as { generatedAt: string }).generatedAt;
+  const html = [runRoot, dirname(dirname(resolve(reportPath)))]
+    .map((directory) => join(directory, morningHtmlFilename(generatedAt)))
+    .find((candidate) => existsSync(candidate));
+  if (!html) return {};
+  const reports = join(resolveCareerStoreRoot(), "reports");
+  mkdirSync(reports, { recursive: true });
+  const reportCopy = join(reports, `${formatSeoulIsoDate(generatedAt)}-study.html`);
+  copyFileSync(html, reportCopy);
+  return { reportCopy };
+}
 export async function main(): Promise<void> { await run(); }
-export function reportMorningReadingError(error: unknown): never { if (error instanceof StudyRunPathError) { console.error(error.message); process.exit(error.exitCode); } if (error instanceof CareerBackendHttpError) { console.error(JSON.stringify({ error: { code: error.code ?? `HTTP_${error.status}`, requestId: error.requestId ?? null, ...(error.retryAfter === undefined ? {} : { retryAfter: error.retryAfter }) } })); process.exit(1); } console.error("study-topic-recommender error:", error instanceof Error ? error.message : String(error)); process.exit(1); }
+export function reportMorningReadingError(error: unknown): never {
+  if (error instanceof StudyRunPathError) { console.error(error.message); process.exit(error.exitCode); }
+  // 저장소 오류는 code 를 첫 줄에 낸다. 에이전트가 그 줄을 결과 글 첫 줄에 옮긴다.
+  if (error instanceof CareerStoreError) { console.error(`${error.code}: ${error.message}`); process.exit(1); }
+  console.error("study-topic-recommender error:", error instanceof Error ? error.message : String(error));
+  process.exit(1);
+}
 if (import.meta.main) main().catch(reportMorningReadingError);

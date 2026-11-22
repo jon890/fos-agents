@@ -5,7 +5,7 @@ import { join } from "node:path";
 import {
   analysisQueueResponseSchema,
   type AnalysisQueueResponse,
-} from "../../services/career-backend/src/positions/schema.ts";
+} from "../lib/career-store/positions/schema.ts";
 import { commitPositionAnalysis } from "./commit_position_analysis.ts";
 
 /**

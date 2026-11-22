@@ -2,16 +2,16 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { runCli, type CliSpec } from "../lib/cli.ts";
-import { canonicalRequestHash } from "../../services/career-backend/src/common/idempotency/request-hash.ts";
+import { canonicalRequestHash } from "../lib/career-store/request-hash.ts";
 import {
   companyTierQueueFileSchema,
   companyTierUpdatesInputSchema,
 } from "./company-tier-analysis/schema.ts";
-import type { CareerBackendClient } from "./career-backend/client.ts";
-import { createCareerBackendClient } from "./career-backend/client.ts";
+import type { PositionStore } from "./position-store.ts";
+import { createPositionStore } from "./position-store.ts";
 
 type CompanyTierClient = Pick<
-  CareerBackendClient,
+  PositionStore,
   "saveCompanyTierResults" | "createPositionAnalysisRun"
 >;
 type ClientFactory = () => CompanyTierClient;
@@ -24,7 +24,7 @@ export async function completeCompanyTierAssessment(
   queuePath: string,
   inputPath: string,
   analysisQueueOutputPath: string,
-  createClient: ClientFactory = createCareerBackendClient,
+  createClient: ClientFactory = createPositionStore,
 ) {
   const queue = companyTierQueueFileSchema.parse(
     JSON.parse(readFileSync(resolve(queuePath), "utf8")) as unknown,

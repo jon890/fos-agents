@@ -3,23 +3,22 @@
 이 문서는 현재 CLI의 인자와 실행 순서를 설명한다.
 추천 기준은 대화용 `study-topic-recommender` 스킬의 「2. 고르기」 를 따른다.
 
-명령의 `<CAREER_LOCAL>` 은 `SKILL.md` 가 알려 준 실행기 명령이고, `<RUN_DIR>`는 실행별 시스템 임시 디렉터리다.
+명령의 `<CAREER_LOCAL>` 은 `SKILL.md` 가 알려 준 실행기 명령이고, `<RUN_DIR>`는 작업 폴더 `runs/` 아래의 실행별 디렉터리다.
 
 **`<RUN_DIR>` 이름은 `study-topic-recommender.`로 시작해야 한다.**
 런타임이 그 접두사를 확인하고, 아니면 종료 코드 2로 거절한다.
 
 ```bash
-mktemp -d "${TMPDIR:-/tmp}/study-topic-recommender.XXXXXX"
+mkdir -p "${CAREER_WORKSPACE_ROOT:-/workspace/career}/runs"
+mktemp -d "${CAREER_WORKSPACE_ROOT:-/workspace/career}/runs/study-topic-recommender.XXXXXX"
 ```
 
 ## 실행
 
-소스, 수집 자료, 추천 이력과 제외 판정은 커리어 Backend가 관리한다.
-`CAREER_BACKEND_URL` 과 token(`CAREER_BACKEND_TOKEN` 또는 `CAREER_BACKEND_TOKEN_FILE`)은 셸 환경 변수에서 읽는다.
-둘 중 하나라도 없으면 명령은 종료 코드 1로 멈춘다.
+소스, 수집 자료, 추천 이력과 제외 판정은 작업 폴더의 `state/career.sqlite` 가 갖는다.
+파일이 없으면 실행기가 빈 상태로 만든다.
 
-실행 전에 연결을 확인한다. 연결값, 인증, `learning-interests` 문서를 차례로 보고 무엇이 빠졌는지 알린다.
-토큰과 주소 값은 출력하지 않는다.
+실행 전에 저장소, 켜진 소스, `learning-interests` 문서를 확인한다. 무엇이 빠졌는지 알린다.
 
 ```bash
 <CAREER_LOCAL> study --doctor
@@ -27,11 +26,11 @@ mktemp -d "${TMPDIR:-/tmp}/study-topic-recommender.XXXXXX"
 
 | 실패한 `checks[].name` | 조치 |
 | --- | --- |
-| `connection` | 셸 환경에 연결값을 채워 달라고 사용자에게 요청한다 |
-| `auth` | 토큰이 거절됐거나 Backend 에 닿지 않는다. 값과 네트워크 경로를 사용자에게 확인한다 |
-| `learning-interests` | 문서를 저장해야 추천할 수 있다. 「관심사 변경」 절의 `save_context_document` 를 안내한다 |
+| `store` | 데이터 파일을 열지 못했다. 메시지의 code 를 사용자에게 알리고 멈춘다 |
+| `sources` | 켜진 소스가 없다. 새 저장소는 소스 없이 시작한다. `references/source-management.md` 의 `study-sources add` 로 소스를 먼저 넣는다. 넣을 소스는 사용자에게 받는다 |
+| `learning-interests` | 문서 본문을 `context/learning-interests.md` 에 써야 한다. `SKILL.md` 의 「1. 맥락 문서와 점검」 을 다시 한다 |
 
-`<RUN_DIR>`는 시스템 임시 디렉터리 아래의 실행별 경로이며 이름이 `study-topic-recommender.`로 시작해야 한다.
+`<RUN_DIR>`는 작업 폴더 `runs/` 아래의 실행별 경로이며 이름이 `study-topic-recommender.`로 시작해야 한다.
 전체 하위 동작과 값 옵션은 `--help` 또는 `-h`로 확인한다.
 
 ```bash
@@ -113,8 +112,9 @@ token과 원문 payload는 출력하지 않는다.
 ```
 
 검증과 결과 전달이 끝나고 보존할 파일을 확인한 뒤 실행 디렉터리를 정리한다.
-`--cleanup`은 시스템 임시 디렉터리의 직접 자식만 지우며 중첩 경로와 symlink를 거절한다.
-도움말과 정리 명령에는 Backend 설정이 필요하지 않다.
+추천을 저장하면 실행기가 HTML 사본을 작업 폴더 `reports/<날짜>-study.html` 에 남기고 출력의 `reportCopy` 로 알린다.
+`file_space_put` 도구가 있으면 그 파일을 「내 파일」 에 넣는다.
+`--cleanup`은 작업 폴더 `runs/` 나 시스템 임시 디렉터리의 직접 자식만 지우며 중첩 경로와 symlink를 거절한다.
 
 ```bash
 <CAREER_LOCAL> study --cleanup --run-dir <RUN_DIR>
@@ -123,6 +123,7 @@ token과 원문 payload는 출력하지 않는다.
 ## 관심사 변경
 
 관심사가 바뀌면 `learning-interests` 문서를 고쳐 저장한다.
-저장하면 기준 버전이 바뀌어 이전 제외 판정이 다시 후보로 나온다.
+본문이 바뀌면 기준 버전이 바뀌어 이전 제외 판정이 다시 후보로 나온다.
 `get_context_document` 로 `learning-interests` 를 읽고, 고친 본문을 `save_context_document` 로 저장한다.
 `expectedVersion` 에는 읽은 문서의 `version` 을 넣고, 문서가 아직 없으면 `0` 을 넣는다.
+저장한 뒤 같은 본문을 `context/learning-interests.md` 에 다시 쓴다. 실행기는 이 파일만 읽는다.

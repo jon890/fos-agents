@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { companyPreferenceUpdateSchema } from "../../services/career-backend/src/positions/schema.ts";
+import { companyPreferenceUpdateSchema } from "../lib/career-store/positions/schema.ts";
 import { configurePositionCompanyPreferences } from "./configure_position_company_preferences.ts";
 
 function temporaryInput(value: string): { directory: string; path: string } {
@@ -48,8 +48,8 @@ test("회사 정책을 입력 순서대로 반영하고 같은 입력에는 같�
       "acme labs",
       "제외 회사",
     ]);
-    expect(calls[2].idempotencyKey).toBe(calls[0].idempotencyKey);
-    expect(calls[3].idempotencyKey).toBe(calls[1].idempotencyKey);
+    // 같은 입력을 다시 넣어도 키가 달라 저장소가 다시 반영한다.
+    expect(new Set(calls.map((call) => call.idempotencyKey)).size).toBe(4);
     expect(JSON.stringify(first)).not.toContain("Acme");
     expect(JSON.stringify(first)).not.toContain("제외 회사");
   } finally {

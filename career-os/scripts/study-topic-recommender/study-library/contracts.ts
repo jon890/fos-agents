@@ -80,7 +80,7 @@ export const studyLibraryCandidatePageSchema = z.object({
   nextCursor: z.string().nullable(),
   historyVersion: z.number().int().nonnegative(),
   candidateContextVersion: nonEmptyString,
-  learningInterests: z.object({ version: z.number().int().positive(), body: nonEmptyString }),
+  learningInterests: z.object({ version: nonEmptyString, body: nonEmptyString }),
 });
 
 export const studyLibraryRecommendationRunResultSchema = z.object({

@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { resolveStudyRunRoot, StudyRunPathError } from "./runtime-paths.js";
+import { resolveStudyRunRoot, StudyRunPathError, validateStudyCleanupDirectory } from "./runtime-paths.js";
 import { SUBPROCESS_TEST_TIMEOUT_MS } from "../lib/test-timeouts.ts";
 
 const temporaryDirectories: string[] = [];
@@ -49,8 +49,8 @@ test("CLI 경로 오류는 stack trace와 절대 경로를 출력하지 않는�
   const environment = { ...process.env };
   delete environment.CAREER_OS_ROOT;
   const expectedErrors = {
-    "build_morning_reading.ts": "하위 동작 플래그 하나가 필요하다: --doctor, --collect-only, --prepare-candidates, --reading-selection, --commit-recommendation, --record-publication, --cleanup, --render-only",
-    "validate_outputs.ts": "CAREER_OS_ROOT 또는 --run-dir에 시스템 임시 실행 경로를 지정해야 한다.",
+    "build_morning_reading.ts": "하위 동작 플래그 하나가 필요하다: --doctor, --collect-only, --prepare-candidates, --reading-selection, --commit-recommendation, --record-publication, --list-recommendations, --cleanup, --render-only",
+    "validate_outputs.ts": "CAREER_OS_ROOT 또는 --run-dir에 실행 경로를 지정해야 한다.",
   } as const;
   for (const [script, expectedError] of Object.entries(expectedErrors)) {
     const result = Bun.spawnSync([process.execPath, resolve(import.meta.dir, script)], { env: environment });
@@ -73,7 +73,7 @@ test("CLI는 시스템 임시 디렉터리 밖 경로를 오류에 노출하지 
   const stderr = result.stderr.toString();
 
   expect(result.exitCode).toBe(2);
-  expect(stderr).toContain("시스템 임시 디렉터리");
+  expect(stderr).toContain("작업 폴더 runs/ 나 시스템 임시 디렉터리");
   expect(stderr).not.toContain("StudyRunPathError");
   expect(stderr).not.toContain(rejectedPath);
 }, SUBPROCESS_TEST_TIMEOUT_MS);
@@ -92,3 +92,23 @@ test("validate_outputs.ts --run-dir는 같은 실행 경로를 읽는다", () =>
   expect(result.exitCode).toBe(1);
   expect(result.stderr.toString()).toContain("산출물이 없거나 비어 있다");
 }, SUBPROCESS_TEST_TIMEOUT_MS);
+
+test("작업 폴더 runs/ 아래의 실행 폴더를 받고 정리할 수 있다", () => {
+  const workspace = mkdtempSync(join(tmpdir(), "career-workspace-"));
+  try {
+    const runs = join(workspace, "runs");
+    mkdirSync(runs);
+    const directory = mkdtempSync(join(runs, "study-topic-recommender."));
+    const environment = { CAREER_WORKSPACE_ROOT: workspace };
+    expect(resolveStudyRunRoot(environment, directory)).toBe(realpathSync(directory));
+    expect(validateStudyCleanupDirectory(directory, environment)).toBe(realpathSync(directory));
+    // 접두사가 다르거나 작업 폴더의 다른 자리면 거부한다.
+    const other = join(runs, "other-run");
+    mkdirSync(other);
+    expect(() => resolveStudyRunRoot(environment, other)).toThrow(StudyRunPathError);
+    mkdirSync(join(workspace, "state", "study-topic-recommender.x"), { recursive: true });
+    expect(() => validateStudyCleanupDirectory(join(workspace, "state", "study-topic-recommender.x"), environment)).toThrow(StudyRunPathError);
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});

@@ -1,441 +1,118 @@
-import { describe, expect, test } from "bun:test";
-import { createHash } from "node:crypto";
-import { CareerBackendHttpError } from "../../lib/career-backend-http.ts";
-import { StudyLibraryClient, type StudyLibraryFetch } from "./client.js";
+import { afterEach, describe, expect, test } from "bun:test";
+import { contextVersion } from "../../lib/career-store/context.ts";
+import { CareerStoreError } from "../../lib/career-store/errors.ts";
+import { cleanupCareerWorkspaces, createCareerWorkspace } from "../../lib/career-store/test-support.ts";
+import { StudyLibraryClient } from "./client.js";
+import type { StudyLibrarySourcePutPayload } from "./contracts.js";
 
-function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
-  return new Response(JSON.stringify(body), {
-    status: init.status ?? 200,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init.headers instanceof Headers ? Object.fromEntries(init.headers.entries()) : init.headers),
+afterEach(cleanupCareerWorkspaces);
+
+const INTERESTS = "- 예시 관심사 문장";
+
+function client(documents: { "learning-interests"?: string } = { "learning-interests": INTERESTS }) {
+  const { environment, db } = createCareerWorkspace(documents);
+  return { db, client: new StudyLibraryClient({ environment }) };
+}
+
+const source: StudyLibrarySourcePutPayload = {
+  title: "예시 블로그",
+  category: "techBlog",
+  adapter: "feed",
+  url: null,
+  feedUrl: "https://example.com/feed.xml",
+  enabled: true,
+  note: "테스트",
+  expectedVersion: 0,
+};
+
+const ingestion = {
+  sourceKey: "example",
+  mode: "recent",
+  items: [
+    {
+      contentKey: "post-1",
+      canonicalUrl: "https://example.com/post-1",
+      url: "https://example.com/post-1",
+      title: "글 1",
+      published: "2026-11-20",
+      publishedAt: "2026-11-20T00:00:00.000Z",
+      excerpt: null,
+      kind: "feed-article",
+      tags: [],
+      collectedAt: "2026-11-21T00:00:00.000Z",
     },
-  });
-}
-
-function client(fetchImpl: StudyLibraryFetch): StudyLibraryClient {
-  return new StudyLibraryClient({
-    origin: "https://study.example.com",
-    token: "test-token-123456789012345678901234567890",
-    fetchImpl,
-  });
-}
-
-function wait(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+  ],
+  cursor: { lastSeen: "post-1" },
+  expectedCursorVersion: 0,
+  idempotencyKey: "ingest-1",
+};
 
 describe("StudyLibraryClient", () => {
-  test("Bearer 헤더와 JSON 요청 기본값을 보낸다", async () => {
-    const calls: RequestInit[] = [];
-    const fetchImpl: StudyLibraryFetch = async (_url, init) => {
-      calls.push(init ?? {});
-      return jsonResponse({ sources: [] });
-    };
-
-    await client(fetchImpl).getSources();
-
-    const headers = calls[0].headers as Headers;
-    expect(headers.get("Authorization")).toBe("Bearer test-token-123456789012345678901234567890");
-    expect(headers.get("Accept")).toBe("application/json");
+  test("작업 폴더 저장소에 소스를 쓰고 읽는다", async () => {
+    const { client: library } = client();
+    expect(await library.getSources()).toEqual({ sources: [] });
+    const saved = await library.putSource("example", source);
+    expect(saved).toMatchObject({ version: 1, source: { sourceKey: "example", feedUrl: "https://example.com/feed.xml" } });
+    expect((await library.getSources()).sources).toEqual([saved.source]);
   });
 
-  test("쓰기 요청은 Content-Type application/json을 보낸다", async () => {
-    const calls: RequestInit[] = [];
-    const fetchImpl: StudyLibraryFetch = async (_url, init) => {
-      calls.push(init ?? {});
-      return jsonResponse({
-        source: {
-          sourceKey: "source-a",
-          title: "Source A",
-          category: "techBlog",
-          url: "https://example.com",
-          feedUrl: null,
-          adapter: "page",
-          enabled: true,
-          version: 1,
-          note: null,
-        },
-        version: 1,
-      });
-    };
+  test("같은 쓰기를 다시 보내면 처음 응답을 돌려주고 한 번만 반영한다", async () => {
+    const { client: library, db } = client();
+    const first = await library.putSource("example", source);
+    expect(await library.putSource("example", source)).toEqual(first);
+    await library.createIngestion(ingestion);
+    expect(await library.createIngestion(ingestion)).toMatchObject({ acceptedCount: 1, cursorVersion: 1 });
+    expect(db.all("SELECT idempotency_key FROM request_receipts ORDER BY idempotency_key").map((row) => String(row.idempotency_key).split(":")[0])).toEqual(["ingest-1", "source"]);
+  });
 
-    await client(fetchImpl).putSource("source-a", {
-      title: "Source A",
-      category: "techBlog",
-      url: "https://example.com",
-      feedUrl: null,
-      adapter: "page",
-      enabled: true,
-      expectedVersion: 0,
+  test("수집한 자료를 후보로 읽고 저장한 커서를 돌려준다", async () => {
+    const { client: library } = client();
+    await library.putSource("example", source);
+    await library.createIngestion(ingestion);
+    expect(await library.getSourceCursor("example", "recent")).toEqual({
+      sourceKey: "example",
+      mode: "recent",
+      cursor: { lastSeen: "post-1" },
+      version: 1,
     });
-
-    const headers = calls[0].headers as Headers;
-    expect(headers.get("Content-Type")).toBe("application/json");
+    // 값이 없는 필터는 보내지 않는다.
+    const page = await library.getCandidates({ category: "techBlog", sourceKey: undefined, limit: 10, cursor: null });
+    expect(page.candidates.map((candidate) => candidate.contentKey)).toEqual(["post-1"]);
+    expect(page.learningInterests).toEqual({ version: contextVersion("learning-interests", INTERESTS), body: INTERESTS });
+    expect(page.candidateContextVersion).toBe(page.learningInterests.version);
   });
 
-  test("모든 쓰기 요청은 계약별 Idempotency-Key를 보내고 재시도는 같은 키를 쓴다", async () => {
-    const calls: Array<{ url: URL; init: RequestInit }> = [];
-    const fetchImpl: StudyLibraryFetch = async (url, init) => {
-      calls.push({ url, init: init ?? {} });
-      if (url.pathname.endsWith("/sources/source-a")) return jsonResponse({ source: { sourceKey: "source-a", title: "Source A", category: "techBlog", url: "https://example.com", feedUrl: null, adapter: "page", enabled: true, version: 1, note: null }, version: 1 });
-      if (url.pathname.endsWith("/ingestions")) return jsonResponse({ idempotencyKey: "ingestion-key", acceptedCount: 0, cursorVersion: 1 });
-      if (url.pathname.endsWith("/recommendation-runs")) return jsonResponse({ reportId: "report-a", historyVersion: 1 });
-      if (url.pathname.endsWith("/publications")) return jsonResponse({ publicationId: "publication-a" });
-      throw new Error(`unexpected ${url.pathname}`);
+  test("추천과 게시 기록을 저장하고 추천 실행 목록에서 읽는다", async () => {
+    const { client: library } = client();
+    await library.putSource("example", source);
+    await library.createIngestion(ingestion);
+    const run = {
+      reportId: "morning-2026-11-21",
+      generatedAt: "2026-11-21T00:00:00.000Z",
+      candidateContextVersion: contextVersion("learning-interests", INTERESTS),
+      rejections: [],
+      topics: [{ topicKey: "topic", title: "주제", careerQuestion: "질문", items: [{ contentKey: "post-1", summary: "요약", reason: "이유", careerValue: "target-role" }] }],
     };
-    const library = new StudyLibraryClient({ origin: "http://study.example.com", token: "x".repeat(32), fetchImpl, maxRetries: 1 });
-    const source = { title: "Source A", category: "techBlog" as const, url: "https://example.com", feedUrl: null, adapter: "page" as const, enabled: true, expectedVersion: 0 };
-    const recommendation = { reportId: "report-a", generatedAt: "2026-09-01T09:00:00.000Z" };
-
-    await library.putSource("source-a", source);
-    await library.createIngestion({ idempotencyKey: "ingestion-key", items: [] });
-    await library.createRecommendationRun(recommendation);
-    await library.createPublication({ idempotencyKey: "publication-key" });
-
-    const keys = calls.map(({ init }) => (init.headers as Headers).get("Idempotency-Key"));
-    const sourcePayload = JSON.stringify({ adapter: "page", category: "techBlog", enabled: true, expectedVersion: 0, feedUrl: null, title: "Source A", url: "https://example.com" });
-    const sourceHash = createHash("sha256").update(`{"payload":${sourcePayload},"sourceKey":"source-a"}`, "utf8").digest("hex");
-    const recommendationHash = createHash("sha256").update('{"generatedAt":"2026-09-01T09:00:00.000Z","reportId":"report-a"}', "utf8").digest("hex");
-    expect(keys.slice(0, 4)).toEqual([`source:${sourceHash}`, "ingestion-key", `recommendation:${recommendationHash}`, "publication-key"]);
+    expect(await library.createRecommendationRun(run)).toEqual({ reportId: "morning-2026-11-21", historyVersion: 1 });
+    expect(await library.createRecommendationRun(run)).toEqual({ reportId: "morning-2026-11-21", historyVersion: 1 });
+    expect(await library.getRecommendationRunStatus("morning-2026-11-21")).toEqual({ reportId: "morning-2026-11-21", exists: true });
+    await library.createPublication({ idempotencyKey: "publication-1", reportId: "morning-2026-11-21", channel: "blog", publishedAt: "2026-11-21T01:00:00.000Z", externalId: "p-1", url: "https://example.com/p-1" });
+    const runs = (await library.listRecommendationRuns(5)).runs;
+    expect(runs).toHaveLength(1);
+    expect(runs[0]!.publications).toEqual([{ channel: "blog", url: "https://example.com/p-1", externalId: "p-1", publishedAt: "2026-11-21T01:00:00.000Z" }]);
   });
 
-  test("소스 응답에서 nullable note가 빠지면 계약 오류로 거부한다", async () => {
-    const fetchImpl: StudyLibraryFetch = async () => jsonResponse({ sources: [{ sourceKey: "source-a", title: "Source A", category: "techBlog", url: "https://example.com", feedUrl: null, adapter: "page", enabled: true, version: 1 }] });
-
-    await expect(client(fetchImpl).getSources()).rejects.toThrow("응답 계약이 올바르지 않습니다");
+  test("계약을 어긴 본문과 버전 충돌은 저장소 오류로 올린다", async () => {
+    const { client: library } = client();
+    await expect(library.putSource("example", { ...source, adapter: "page" })).rejects.toMatchObject({ code: "BAD_REQUEST", status: 400 });
+    await library.putSource("example", source);
+    const conflict = await library.putSource("example", { ...source, title: "다른 제목" }).catch((error: unknown) => error);
+    expect(conflict).toBeInstanceOf(CareerStoreError);
+    expect(conflict).toMatchObject({ code: "VERSION_CONFLICT", status: 409 });
   });
 
-  test("명시적 연결값과 HTTP/HTTPS origin 규칙을 API 호출 전에 검증한다", () => {
-    const fetchImpl: StudyLibraryFetch = async () => jsonResponse({ sources: [] });
-
-    expect(() => new StudyLibraryClient({ origin: "", token: "token", fetchImpl }))
-      .toThrow("명시적 origin과 token이 모두 필요하다");
-    expect(() => new StudyLibraryClient({ origin: "https://study.example.com", token: "", fetchImpl }))
-      .toThrow("명시적 origin과 token이 모두 필요하다");
-    expect(() => new StudyLibraryClient({ origin: "http://study.example.com", token: "x".repeat(32), fetchImpl }))
-      .not.toThrow();
-    expect(() => new StudyLibraryClient({ origin: "https://user:pass@study.example.com", token: "x".repeat(32), fetchImpl }))
-      .toThrow("credentials");
-    expect(() => new StudyLibraryClient({ origin: "https://study.example.com?x=1", token: "x".repeat(32), fetchImpl }))
-      .toThrow("query");
-    expect(() => new StudyLibraryClient({ origin: "https://study.example.com#x", token: "x".repeat(32), fetchImpl }))
-      .toThrow("hash");
-    expect(() => new StudyLibraryClient({ origin: "https://study.example.com/admin", token: "x".repeat(32), fetchImpl }))
-      .toThrow("path");
-  });
-
-  test("redirect error와 10초 timeout signal을 적용한다", async () => {
-    const calls: RequestInit[] = [];
-    const fetchImpl: StudyLibraryFetch = async (_url, init) => {
-      calls.push(init ?? {});
-      return jsonResponse({ sources: [] });
-    };
-
-    await client(fetchImpl).getSources();
-
-    expect(calls[0].redirect).toBe("error");
-    expect(calls[0].signal).toBeInstanceOf(AbortSignal);
-  });
-
-  test("네트워크 오류와 5xx는 같은 body로 최대 2회 재시도한다", async () => {
-    const bodies: unknown[] = [];
-    let count = 0;
-    const fetchImpl: StudyLibraryFetch = async (_url, init) => {
-      count += 1;
-      bodies.push(init?.body);
-      if (count === 1) throw new TypeError("network down with secret");
-      if (count === 2) return jsonResponse({ error: { code: "UNAVAILABLE", message: "db raw", requestId: "req-5xx" } }, { status: 503 });
-      return jsonResponse({ idempotencyKey: "fixed-key", acceptedCount: 1, cursorVersion: 2 });
-    };
-
-    const result = await client(fetchImpl).createIngestion({ idempotencyKey: "fixed-key", items: [] });
-
-    expect(result.cursorVersion).toBe(2);
-    expect(count).toBe(3);
-    expect(new Set(bodies).size).toBe(1);
-  });
-
-  test("성공 응답 body stream 읽기에도 timeout을 유지한다", async () => {
-    const fetchImpl: StudyLibraryFetch = async (_url, init) => new Response(new ReadableStream({
-      start(controller) {
-        init.signal?.addEventListener("abort", () => controller.error(new Error("stream secret")));
-      },
-    }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-    const request = new StudyLibraryClient({
-      origin: "https://study.example.com",
-      token: "test-token-123456789012345678901234567890",
-      fetchImpl,
-      timeoutMs: 5,
-      maxRetries: 0,
-    }).getSources();
-
-    const result = await Promise.race([
-      request.then(
-        () => "resolved",
-        (error: unknown) => error
-      ),
-      wait(30).then(() => "pending"),
-    ]);
-
-    expect(result).not.toBe("pending");
-    expect(result).toBeInstanceOf(Error);
-    expect(String((result as Error).message)).toBe("커리어 Backend에 연결하지 못했습니다.");
-    expect(String((result as Error).message)).not.toContain("stream secret");
-  });
-
-  test("body read 네트워크 실패도 같은 body로 최대 2회 재시도한다", async () => {
-    const bodies: unknown[] = [];
-    let count = 0;
-    const fetchImpl: StudyLibraryFetch = async (_url, init) => {
-      count += 1;
-      bodies.push(init.body);
-      if (count < 3) {
-        return new Response(new ReadableStream({
-          start(controller) {
-            controller.error(new Error("read failed with private body"));
-          },
-        }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-      return jsonResponse({ idempotencyKey: "fixed-key", acceptedCount: 1, cursorVersion: 2 });
-    };
-
-    const result = await client(fetchImpl).createIngestion({ idempotencyKey: "fixed-key", items: [] });
-
-    expect(result.acceptedCount).toBe(1);
-    expect(count).toBe(3);
-    expect(new Set(bodies).size).toBe(1);
-  });
-
-  test("5xx 재시도 전에 응답 body를 취소한다", async () => {
-    let count = 0;
-    let cancelled = 0;
-    const fetchImpl: StudyLibraryFetch = async () => {
-      count += 1;
-      if (count === 1) {
-        return new Response(new ReadableStream({
-          cancel() {
-            cancelled += 1;
-          },
-        }), {
-          status: 503,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-      return jsonResponse({ sources: [] });
-    };
-
-    await new StudyLibraryClient({
-      origin: "https://study.example.com",
-      token: "test-token-123456789012345678901234567890",
-      fetchImpl,
-      maxRetries: 1,
-    }).getSources();
-
-    expect(cancelled).toBe(1);
-  });
-
-  test("4xx 응답은 재시도하지 않고 code와 requestId를 보존한다", async () => {
-    let count = 0;
-    const fetchImpl: StudyLibraryFetch = async () => {
-      count += 1;
-      return jsonResponse({
-        error: {
-          code: "UNAUTHENTICATED",
-          message: "server raw auth message",
-          requestId: "req-401",
-        },
-      }, { status: 401 });
-    };
-
-    await expect(client(fetchImpl).getSources()).rejects.toMatchObject({
-      status: 401,
-      code: "UNAUTHENTICATED",
-      requestId: "req-401",
-    });
-    expect(count).toBe(1);
-  });
-
-  test("계약에 명시된 JSON 오류 응답의 code와 requestId를 보존한다", async () => {
-    for (const status of [401, 403, 409, 413, 429, 503]) {
-      const fetchImpl: StudyLibraryFetch = async () => jsonResponse({
-        error: {
-          code: `CODE_${status}`,
-          message: `server message ${status}`,
-          requestId: `req-${status}`,
-        },
-      }, { status });
-
-      await expect(client(fetchImpl).getSources()).rejects.toMatchObject({
-        status,
-        code: `CODE_${status}`,
-        requestId: `req-${status}`,
-      });
-    }
-  });
-
-  test("429 응답의 유효한 Retry-After 초만 retryAfter로 보존한다", async () => {
-    const validFetch: StudyLibraryFetch = async () => jsonResponse({
-      error: {
-        code: "RATE_LIMITED",
-        message: "wait raw",
-        requestId: "req-429-valid",
-      },
-    }, { status: 429, headers: { "Retry-After": "12" } });
-
-    await expect(client(validFetch).getSources()).rejects.toMatchObject({
-      status: 429,
-      code: "RATE_LIMITED",
-      requestId: "req-429-valid",
-      retryAfter: 12,
-    });
-
-    let invalidError: unknown;
-    const invalidFetch: StudyLibraryFetch = async () => jsonResponse({
-      error: {
-        code: "RATE_LIMITED",
-        message: "wait raw invalid",
-        requestId: "req-429-invalid",
-      },
-    }, { status: 429, headers: { "Retry-After": "soon-private" } });
-    try {
-      await client(invalidFetch).getSources();
-    } catch (error) {
-      invalidError = error;
-    }
-
-    expect(invalidError).toBeInstanceOf(CareerBackendHttpError);
-    expect((invalidError as CareerBackendHttpError).retryAfter).toBeUndefined();
-    expect(String((invalidError as Error).message)).not.toContain("soon-private");
-  });
-
-  test("성공 응답은 schema를 통과해야 반환된다", async () => {
-    const fetchImpl: StudyLibraryFetch = async () => jsonResponse({
-      candidates: [{
-        id: "content-1",
-        contentKey: "content-1",
-        canonicalUrl: "https://example.com/post",
-        sourceKey: "source-a",
-        sourceName: "Source A",
-        category: "techBlog",
-        title: "Title",
-        url: "https://example.com/post",
-        published: "",
-        kind: "page-link",
-        previouslyRecommended: false,
-      }],
-      recentStudyTopicKeys: [],
-      nextCursor: null,
-      historyVersion: 0,
-      candidateContextVersion: "context-0",
-      learningInterests: { version: 1, body: "예시 관심사 문장" },
-    });
-
-    const page = await client(fetchImpl).getCandidates();
-
-    expect(page.candidates[0].id).toBe("content-1");
-    expect(page.candidates[0].contentKey).toBe("content-1");
-  });
-
-  test("성공 응답 schema가 맞지 않으면 실패한다", async () => {
-    const fetchImpl: StudyLibraryFetch = async () => jsonResponse({
-      candidates: [{
-        id: "candidate-id",
-        contentKey: "content-1",
-        canonicalUrl: "https://example.com/post",
-        sourceKey: "source-a",
-        sourceName: "Source A",
-        category: "techBlog",
-        title: "Title",
-        url: "https://example.com/post",
-        published: "",
-        kind: "page-link",
-        previouslyRecommended: false,
-      }],
-      recentStudyTopicKeys: [],
-      nextCursor: null,
-      historyVersion: 0,
-    });
-
-    await expect(client(fetchImpl).getCandidates()).rejects.toThrow("응답 계약이 올바르지 않습니다");
-  });
-
-  test("malformed JSON은 원문을 노출하지 않는 고정 오류로 실패한다", async () => {
-    let count = 0;
-    const fetchImpl: StudyLibraryFetch = async () => {
-      count += 1;
-      return new Response("not-json-private-token", {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    };
-
-    let thrown: unknown;
-    try {
-      await client(fetchImpl).getSources();
-    } catch (error) {
-      thrown = error;
-    }
-
-    expect(count).toBe(1);
-    expect(thrown).toBeInstanceOf(Error);
-    expect(String((thrown as Error).message)).toBe("커리어 Backend 응답을 읽을 수 없습니다.");
-    expect(String((thrown as Error).message)).not.toContain("not-json-private-token");
-  });
-
-  test("오류 메시지에 token과 요청 body 문자열과 서버 message를 넣지 않는다", async () => {
-    const body = { idempotencyKey: "same-key", secretMemo: "private-note" };
-    const fetchImpl: StudyLibraryFetch = async () => jsonResponse({
-      error: {
-        code: "VERSION_CONFLICT",
-        message: "server message with private-note and test-token-123456789012345678901234567890",
-        requestId: "req-409",
-      },
-    }, { status: 409 });
-
-    let thrown: unknown;
-    try {
-      await client(fetchImpl).createIngestion(body);
-    } catch (error) {
-      thrown = error;
-    }
-
-    expect(thrown).toBeInstanceOf(CareerBackendHttpError);
-    expect(String((thrown as Error).message)).not.toContain("test-token");
-    expect(String((thrown as Error).message)).not.toContain("private-note");
-    expect(String((thrown as Error).message)).not.toContain("server message");
-    expect((thrown as CareerBackendHttpError).code).toBe("VERSION_CONFLICT");
-    expect((thrown as CareerBackendHttpError).requestId).toBe("req-409");
-  });
-
-  test("HTTP, 응답 본문, JSON, 응답 검증과 네트워크 오류는 공통 Backend client 오류다", async () => {
-    const fetches: StudyLibraryFetch[] = [
-      async () => jsonResponse({ error: { code: "UNAVAILABLE", requestId: "request-1" } }, { status: 503 }),
-      async () => new Response("not-json", { headers: { "Content-Type": "application/json" } }),
-      async () => jsonResponse({ sources: [{ sourceKey: "source-a" }] }),
-      async () => {
-        throw new TypeError("network down");
-      },
-      async () => new Response(new ReadableStream({
-        start(controller) {
-          controller.error(new Error("body read failed"));
-        },
-      }), { headers: { "Content-Type": "application/json" } }),
-    ];
-
-    for (const fetchImpl of fetches) {
-      await expect(new StudyLibraryClient({
-        origin: "https://study.example.com",
-        token: "test-token-123456789012345678901234567890",
-        fetchImpl,
-        maxRetries: 0,
-      }).getSources()).rejects.toBeInstanceOf(CareerBackendHttpError);
-    }
+  test("learning-interests 문서가 없으면 후보 조회가 멈춘다", async () => {
+    const { client: library } = client({});
+    await expect(library.getCandidates()).rejects.toMatchObject({ code: "CANDIDATE_CONTEXT_MISSING" });
   });
 });

@@ -1,5 +1,7 @@
 ## ADR-138: plugin 로컬 실행기는 scripts 원본을 번들해 부르고 작업본 위치는 설정으로 받는다
 
+> **대체(2026-11-21, 사용자 결정, [ADR-146](ADR-146-커리어-표-데이터는-에이전트-작업-폴더의-sqlite-가-갖는다.md))**: 공고 추천과 공부 추천 실행기는 `CAREER_WORKSPACE_ROOT`(없으면 `/workspace/career`) 아래의 SQLite 와 `runs/` 를 쓴다. 작업본 위치와 동기화 조항은 그 스킬을 지우는 단계에서 대체된다.
+
 - **status**: `accepted`
 - **결정**:
   - **로컬 실행기의 원본은 `career-os/scripts/` 에 그대로 둔다.**

@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -302,4 +302,28 @@ test("application-profile get 은 연결값이 없으면 1 로 끝나고 token �
   expect(result.stderr).toContain("FOS_ASSISTANT_URL");
   expect(result.stdout).not.toContain(FAKE_TOKEN);
   expect(result.stderr).not.toContain(FAKE_TOKEN);
+});
+
+test("공고·공부 실행기는 Backend 값 없이 작업 폴더의 SQLite 를 만들어 쓴다", async () => {
+  const home = temporaryDirectory();
+  const workspace = join(home, "workspace");
+  const environment = { CAREER_WORKSPACE_ROOT: workspace };
+
+  const exclusions = await runBundle(home, ["position", "exclusions", "get"], environment);
+  expect({ exitCode: exclusions.exitCode, stderr: exclusions.stderr }).toEqual({ exitCode: 0, stderr: "" });
+  expect(JSON.parse(exclusions.stdout)).toEqual({ schemaVersion: 2, exclusions: [] });
+  expect(existsSync(join(workspace, "state", "career.sqlite"))).toBe(true);
+
+  const added = await runBundle(home, [
+    "study-sources", "add", "--key", "example-feed", "--title", "예시", "--category", "techBlog",
+    "--feed-url", "https://example.com/feed.xml", "--adapter", "feed", "--note", "번들 검사",
+  ], environment);
+  expect({ exitCode: added.exitCode, stderr: added.stderr }).toEqual({ exitCode: 0, stderr: "" });
+  const listed = await runBundle(home, ["study-sources", "list"], environment);
+  expect(JSON.parse(listed.stdout)).toMatchObject([{ sourceKey: "example-feed", version: 1 }]);
+
+  // 맥락 문서가 없으면 공부 추천 점검이 어느 파일을 써야 하는지 알리고 1 로 끝난다.
+  const doctor = await runBundle(home, ["study", "--doctor"], environment);
+  expect(doctor.exitCode).toBe(1);
+  expect(doctor.stdout).toContain("context/learning-interests.md");
 });

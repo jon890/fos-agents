@@ -90,3 +90,39 @@ test("application-profile 은 get 이 아닌 하위 명령이면 사용법을 st
   expect(output).toContain("get --out <path>");
   expect(logged).toEqual([]);
 });
+
+test("position 설정 명령은 작업 폴더 저장소에 쓰고, 깨진 저장소는 그 code 를 stderr 첫 줄에 낸다", async () => {
+  const { mkdirSync, mkdtempSync, rmSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { closeCareerStores } = await import("../lib/career-store/database.ts");
+  const saved = process.env.CAREER_WORKSPACE_ROOT;
+  const root = mkdtempSync(join(tmpdir(), "plugin-local-store-"));
+  process.env.CAREER_WORKSPACE_ROOT = root;
+  try {
+    const policy = join(root, "policy.json");
+    writeFileSync(policy, JSON.stringify({ schemaVersion: 2, dailyAnalysisLimit: 20, prioritySlots: 16, agingSlots: 4, staleAfterDays: 30, defaultCompanyTier: 3, dailyCompanyTierLimit: 5, companyTierStaleAfterDays: 90 }));
+    expect(await runPluginLocal(["position", "configure-policy", "--input", policy])).toBe(0);
+    expect(logged.join("\n")).toContain("분석 정책 저장");
+    expect(await runPluginLocal(["position", "exclusions", "get"])).toBe(0);
+    expect(JSON.parse(logged.at(-1)!)).toEqual({ schemaVersion: 2, exclusions: [] });
+    expect(await runPluginLocal(["position", "exclusions", "put"])).toBe(2);
+
+    closeCareerStores();
+    const broken = join(root, "broken");
+    mkdirSync(join(broken, "state"), { recursive: true });
+    writeFileSync(join(broken, "state", "career.sqlite"), "SQLite 가 아니다\n".repeat(100));
+    process.env.CAREER_WORKSPACE_ROOT = broken;
+    errored.length = 0;
+    expect(await runPluginLocal(["position", "exclusions", "get"])).toBe(1);
+    expect(errored[0]).toStartWith("CAREER_STORE_CORRUPT: ");
+    errored.length = 0;
+    expect(await runPluginLocal(["study-sources", "list"])).toBe(1);
+    expect(errored[0]).toStartWith("CAREER_STORE_CORRUPT: ");
+  } finally {
+    closeCareerStores();
+    if (saved === undefined) delete process.env.CAREER_WORKSPACE_ROOT;
+    else process.env.CAREER_WORKSPACE_ROOT = saved;
+    rmSync(root, { recursive: true, force: true });
+  }
+});

@@ -2,10 +2,10 @@
 import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { runCli, type CliSpec } from "../lib/cli.ts";
-import type { RecommendationResponse } from "../../services/career-backend/src/positions/schema.ts";
+import type { RecommendationResponse } from "../lib/career-store/positions/schema.ts";
 import { collectionWarningLines } from "./recommendation/final-answer.ts";
 import { RecommendationRun, type RecommendationRunType } from "./recommendation/schema.ts";
-import { createCareerBackendClient, type CareerBackendClient } from "./career-backend/client.ts";
+import { createPositionStore, type PositionStore } from "./position-store.ts";
 import { loadRenderAssets } from "./render/assets.ts";
 import { renderRecommendationHtml } from "./render/recommendation-html.ts";
 import { validateReportHtml } from "./render/validate-report-html.ts";
@@ -99,7 +99,7 @@ export function recommendationRunFromBackend(
 }
 
 export async function finalizeRecommendation(
-  client: Pick<CareerBackendClient, "createRecommendation">,
+  client: Pick<PositionStore, "createRecommendation">,
   analysisRunId: string,
   outputJson: string,
   outputHtml: string,
@@ -153,7 +153,7 @@ if (import.meta.main) {
       throw new Error("--analysis-run-id, --output-json과 --output-html이 필요합니다.");
     }
     const result = await finalizeRecommendation(
-      createCareerBackendClient(),
+      createPositionStore(),
       analysisRunId,
       outputJson,
       outputHtml,

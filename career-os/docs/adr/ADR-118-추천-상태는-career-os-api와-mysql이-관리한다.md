@@ -1,5 +1,7 @@
 # ADR-118 추천 상태는 career-os API와 MySQL이 관리한다
 
+> **대체(2026-11-21, 사용자 결정, [ADR-146](ADR-146-커리어-표-데이터는-에이전트-작업-폴더의-sqlite-가-갖는다.md))**: 공고 추천과 공부 추천의 저장 자리는 작업 폴더 SQLite 로 옮겼다. 나머지 범위는 Backend 를 지우는 단계에서 대체된다.
+
 - **status**: `accepted`
 - **결정**: 포지션 추천과 학습자료 추천의 장기 상태는 `career-os`가 소유하는 HTTP API와 홈서버 MySQL의 `fos_career` 데이터베이스에서 관리한다. 수집기와 skill은 DB에 직접 연결하지 않고 Bearer token이 있는 HTTP API만 호출한다.
 

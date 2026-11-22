@@ -1,7 +1,7 @@
 import { lstatSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, resolve } from "node:path";
-import { analysisQueueResponseSchema } from "../../services/career-backend/src/positions/schema.ts";
+import { analysisQueueResponseSchema } from "../lib/career-store/positions/schema.ts";
 import {
   companyTierQueueFileSchema,
   companyTierUpdatesInputSchema,
@@ -24,17 +24,36 @@ export function resolveRunDirectory(runDirectory: string): string {
   return resolve(runDirectory);
 }
 
-export function validatePositionCleanupDirectory(directory: string): string {
+/**
+ * 정리할 실행 폴더를 확인한다. 시스템 임시 폴더나 작업 폴더 `runs/` 의 직접 자식만 받는다.
+ * 실행 폴더는 작업 폴더 `runs/` 아래에 만들고, 임시 폴더는 옛 실행과 테스트를 위해 계속 받는다.
+ */
+export function validatePositionCleanupDirectory(
+  directory: string,
+  workspaceRoot?: string,
+): string {
   const prefix = "position-recommendation-";
-  const message = `정리 경로는 시스템 임시 디렉터리의 직접 자식인 ${prefix}* 디렉터리여야 하며 symlink는 허용하지 않습니다.`;
+  const message = `정리 경로는 작업 폴더 runs/ 나 시스템 임시 디렉터리의 직접 자식인 ${prefix}* 디렉터리여야 하며 symlink는 허용하지 않습니다.`;
   try {
     if (!directory.trim()) throw new Error(message);
     const path = resolve(directory);
     const stat = lstatSync(path);
     const realPath = realpathSync(path);
-    if (stat.isSymbolicLink() || !stat.isDirectory()
-      || dirname(realPath) !== realpathSync(tmpdir())
-      || !basename(realPath).startsWith(prefix)) {
+    const parents = [tmpdir(), ...(workspaceRoot ? [resolve(workspaceRoot, "runs")] : [])].flatMap(
+      (parent) => {
+        try {
+          return [realpathSync(parent)];
+        } catch {
+          return [];
+        }
+      },
+    );
+    if (
+      stat.isSymbolicLink() ||
+      !stat.isDirectory() ||
+      !parents.includes(dirname(realPath)) ||
+      !basename(realPath).startsWith(prefix)
+    ) {
       throw new Error(message);
     }
     return realPath;

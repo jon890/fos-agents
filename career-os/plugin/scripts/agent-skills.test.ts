@@ -88,14 +88,29 @@ test("sandbox_env 는 있는 에이전트용 스킬만 가리키고, 값은 실�
   }
 });
 
-test("실행기를 부르는 사본은 실행기와 Backend 연결에 필요한 env 를 sandbox_env 로 요구한다", () => {
+test("실행기를 부르는 사본은 실행기와 작업 폴더에 필요한 env 를 sandbox_env 로 요구한다", () => {
   // 요구하지 않으면 셸 조건을 보지 않고 늘 설치돼, 셸이 없는 에이전트에서도 돌 수 없는 스킬이 보인다.
   for (const directory of agentSkillDirs) {
     if (!readFileSync(join(directory, "SKILL.md"), "utf8").includes("${CLAUDE_PLUGIN_ROOT}")) continue;
     const name = skillNameOf(directory);
     expect(agentSkills.sandbox_env?.[name] ?? [], name).toEqual(
-      expect.arrayContaining(["CLAUDE_PLUGIN_ROOT", "CAREER_BACKEND_URL", "CAREER_BACKEND_TOKEN_FILE"]),
+      expect.arrayContaining(["CLAUDE_PLUGIN_ROOT", "CAREER_WORKSPACE_ROOT"]),
     );
+  }
+});
+
+test("사본과 그 sandbox_env 는 커리어 Backend 의 주소와 token 을 요구하지 않는다", () => {
+  // 공고 추천과 공부 추천은 작업 폴더의 SQLite 를 쓴다(ADR-146). Backend 값을 요구하면 그 값을 내린 뒤 스킬이 빠진다.
+  for (const names of Object.values(agentSkills.sandbox_env ?? {})) {
+    expect(names.filter((name) => name.startsWith("CAREER_BACKEND"))).toEqual([]);
+  }
+  for (const directory of agentSkillDirs) {
+    const files = (readdirSync(directory, { recursive: true }) as string[])
+      .map((name) => join(directory, name))
+      .filter((file) => file.endsWith(".md"));
+    for (const file of files) {
+      expect({ file, hit: /CAREER_BACKEND_/.test(readFileSync(file, "utf8")) }).toEqual({ file, hit: false });
+    }
   }
 });
 

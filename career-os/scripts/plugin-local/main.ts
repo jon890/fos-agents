@@ -10,6 +10,7 @@ import { runPackageCommand } from "../application-package/cli.ts";
 import { formatReadApplicationProfileError, readApplicationProfileCli } from "../application-profile/read_application_profile.ts";
 import { PositionRunUsageError, positionRunHelp, runPositionCommand } from "../position-recommender/position_run.ts";
 import { CareerBackendHttpError } from "../lib/career-backend-http.ts";
+import { careerStoreFailureLine } from "../lib/career-store/errors.ts";
 import { UsageError } from "../lib/cli.ts";
 import { formatManageReadingSourcesError, manageReadingSources } from "../study-topic-recommender/manage_reading_sources.ts";
 import { main as runMorningReading, reportMorningReadingError } from "../study-topic-recommender/morning_reading_cli.ts";
@@ -36,7 +37,7 @@ const descriptions: Record<Executor, string> = {
   study: "아침 공부 주제를 수집, 선별하고 리포트를 만든다",
   "study-validate": "아침 공부 리포트 산출물을 검증한다 (--run-dir <dir>)",
   "study-sources": "공부 자료 출처를 조회하거나 바꾼다",
-  position: "공고를 모아 판정과 분석을 반영하고 리포트를 만든다 (collect | commit-company-tiers | commit-analyses | finalize | cleanup) --run <dir>",
+  position: "공고를 모아 판정과 분석을 반영하고 리포트를 만든다 (collect | commit-company-tiers | commit-analyses | finalize | cleanup) --run <dir>. 설정은 configure-policy | configure-companies | exclusions",
   resume: "이력서 HTML·PDF 변환, 주장 원장과 검증 완료 주장, 제출 묶음을 다룬다 (export | check-html | validate-ledger | assess-reuse | search-claims | promote-claims | build-bundle | validate-bundle)",
   usage: "기록이 없는 끝난 달의 에이전트 사용량을 측정해 Backend 에 올린다",
   package: "지원 패키지의 근거 원본, 제출 문서, 검토 화면, 면접 질문 파일을 다룬다 (check-sources | validate | render | question-schema)",
@@ -183,7 +184,7 @@ async function runPosition(args: string[]): Promise<number> {
       console.error(error.message);
       return 2;
     }
-    console.error(messageOf(error));
+    console.error(careerStoreFailureLine(error) ?? messageOf(error));
     return 1;
   }
 }

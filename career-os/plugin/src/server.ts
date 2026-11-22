@@ -44,7 +44,7 @@ export function createServer(
     undefined,
     wanted,
   );
-  const server = new McpServer({ name: "fos-career", version: "0.10.3" });
+  const server = new McpServer({ name: "fos-career", version: "0.11.0" });
   for (const [name, definition] of Object.entries(toolDefinitions)) {
     server.registerTool(
       name,

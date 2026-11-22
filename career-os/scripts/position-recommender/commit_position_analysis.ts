@@ -3,14 +3,14 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { z } from "zod";
 import { runCli, type CliSpec } from "../lib/cli.ts";
-import { canonicalRequestHash } from "../../services/career-backend/src/common/idempotency/request-hash.ts";
+import { canonicalRequestHash } from "../lib/career-store/request-hash.ts";
 import {
   analysisFailureSchema,
   analysisQueueResponseSchema,
   analysisUpdateSchema,
-} from "../../services/career-backend/src/positions/schema.ts";
-import type { CareerBackendClient } from "./career-backend/client.ts";
-import { createCareerBackendClient } from "./career-backend/client.ts";
+} from "../lib/career-store/positions/schema.ts";
+import type { PositionStore } from "./position-store.ts";
+import { createPositionStore } from "./position-store.ts";
 
 export const analysisUpdatesInputSchema = z
   .object({
@@ -22,7 +22,7 @@ export const analysisUpdatesInputSchema = z
   })
   .strict();
 
-type AnalysisResultsClient = Pick<CareerBackendClient, "saveAnalysisResults">;
+type AnalysisResultsClient = Pick<PositionStore, "saveAnalysisResults">;
 type ClientFactory = () => AnalysisResultsClient;
 
 function joinIds(ids: string[]): string {
@@ -32,7 +32,7 @@ function joinIds(ids: string[]): string {
 export async function commitPositionAnalysis(
   queuePath: string,
   inputPath: string,
-  createClient: ClientFactory = createCareerBackendClient,
+  createClient: ClientFactory = createPositionStore,
 ) {
   const queue = analysisQueueResponseSchema.parse(
     JSON.parse(readFileSync(resolve(queuePath), "utf8")) as unknown,

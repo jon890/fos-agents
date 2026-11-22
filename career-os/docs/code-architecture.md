@@ -144,9 +144,27 @@ skill 은 `plugin/` 이 소유하고 Hermes cron 은 plugin 스킬을 쓴다.
 환경별 차이는 `.env`의 transport 설정에만 두고 지원 판단과 문서 작성 절차를 복제하지 않는다.
 SSH client는 `career-storage`를 원격 호출한다. 홈서버의 `career-storage`가 잠금과 S3 pointer 갱신을 맡는다.
 
+### 작업 폴더 저장 모듈
+
+`scripts/lib/career-store/` 는 공고 추천과 공부 추천의 저장 규칙을 갖는다([ADR-146](adr/ADR-146-커리어-표-데이터는-에이전트-작업-폴더의-sqlite-가-갖는다.md)).
+`bun:sqlite` 로 작업 폴더의 `state/career.sqlite` 하나를 읽고 쓴다. 실행기만 이 모듈을 import 한다. MCP 서버(`plugin/src/`)는 작업 폴더에 닿지 못해 쓰지 않는다.
+
+| 경로 | 책임 |
+| --- | --- |
+| `database.ts` | 작업 폴더 루트, 파일 열기와 검사, 스키마 단계 적용, `BEGIN IMMEDIATE` 쓰기 transaction, 질의 조립 |
+| `ddl.ts` | 스키마 단계. 적용된 단계는 고치지 않고 뒤에 더한다 |
+| `context.ts` | `context/<문서 키>.md` 읽기와 기준 버전 계산 |
+| `receipts.ts`, `request-hash.ts` | 같은 멱등 키의 재전송에 처음 응답을 돌려준다 |
+| `errors.ts`, `validate.ts` | `status` 와 `code` 를 가진 오류, 요청 본문 검증 |
+| `positions/` | 공고 추천. `store.ts` 가 공개 메서드(옛 HTTP 경로 하나에 하나), `service.ts` 가 규칙, `repository.ts` 가 질의, `schema.ts` 가 계약이다 |
+| `study/` | 공부 추천. 배치는 `positions/` 와 같다 |
+
+`positions/` 와 `study/` 의 계약, 규칙, 질의는 `services/career-backend/src/` 의 같은 파일에서 옮겼다. Backend 쪽 파일은 Backend 를 지울 때 함께 사라진다. 그때까지 두 쪽을 함께 고치지 않는다. 고칠 곳은 이 모듈이다.
+`positions/legacy-contract.test.ts` 가 Backend 전환 때 남긴 HTTP 계약 기록을 이 모듈에 다시 돌려 응답을 대조한다.
+
 ### 커리어 Backend
 
-`services/career-backend/`는 포지션 추천, 공부 추천, 회사 근거처럼 커리어 데이터의 장기 상태를 제공하는 Backend다.
+`services/career-backend/`는 면접 연습, 후보자 맥락 문서, 프로필처럼 아직 옮기지 않은 커리어 데이터의 장기 상태를 제공하는 Backend다. 공고 추천과 공부 추천 실행기는 더 부르지 않는다.
 Node 22 위의 NestJS로 돌고 Prisma로 MySQL을 읽고 쓴다.
 DB 연결은 MySQL 인증 캐시가 비어도 전체 인증을 할 수 있도록 TLS를 쓴다.
 Backend와 MySQL이 속한 같은 Docker network를 신뢰 경계로 본다.
@@ -369,7 +387,8 @@ plugin 을 설치한 사람은 이 저장소에 커밋하지 않는다. 그래�
 
 **일일 실행 경로는 `position_run.ts`의 하위 명령 다섯 개다.**
 skill이 중간 파일 이름과 플래그를 알지 못하도록 모든 하위 명령이 `--run <RUN_DIR>` 하나만 받는다.
-`run-dir.ts`는 일일 실행 파일 이름과 모델이 채울 결과 파일의 틀을 관리하고, 정리할 임시 실행 경로를 검증한다.
+`run-dir.ts`는 일일 실행 파일 이름과 모델이 채울 결과 파일의 틀을 관리하고, 정리할 실행 경로(작업 폴더 `runs/` 의 직접 자식)를 검증한다.
+`position-store.ts` 가 저장 모듈을 열고, `candidate-context.ts` 가 `context/` 의 맥락 문서를 실행 폴더로 옮기며, `position_settings.ts` 가 분석 정책, 회사 선호, 제외 규칙을 넣는 설정 명령을 갖는다.
 
 | 하위 명령 | 흐름의 단계 |
 | --- | --- |
@@ -575,8 +594,8 @@ archive 진입점은 소스 필드에 복제하지 않고 `sourceKey` 별 regist
 
 ### Backend 경계
 
-`study-library/` 는 MySQL 드라이버나 서버 저장 로직을 갖지 않는다.
-schema 와 endpoint 는 `services/career-backend/src/study/` 가 소유한다.
+`study-library/` 는 저장 로직을 갖지 않는다. `client.ts` 가 `scripts/lib/career-store/study/` 의 저장 모듈을 부른다.
+아래 표는 대화용 MCP 도구가 아직 부르는 Backend 쪽 배치다. 저장 모듈의 `study/` 가 같은 이름의 파일로 같은 책임을 갖는다.
 포지션 쪽 `src/positions/` 와 같은 배치다.
 
 | 경로 | 책임 |

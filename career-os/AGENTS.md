@@ -51,7 +51,7 @@
 | 현재 경력과 경험 경계              | `manage_candidate_context.ts get --key career-status`                  |
 | 역할 선호와 이직 우선순위           | `manage_candidate_context.ts get --key position-preferences`           |
 | 지원 이력과 현재 대상              | 후보자 맥락 문서 `application-state`                                          |
-| 회사별 재지원 간격                | `position_exclusions`                                                  |
+| 회사별 재지원 간격                | `career-local.js position exclusions get` 의 `position_exclusions`      |
 
 
 **후보자 인터뷰는 판단과 동기만 다룬다.**

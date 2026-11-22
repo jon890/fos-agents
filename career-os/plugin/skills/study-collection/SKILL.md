@@ -10,12 +10,19 @@ description: 읽을거리를 수집하고 공부 추천 리포트를 HTML 로 �
 
 실행기 명령은 `bun --no-env-file "${CLAUDE_PLUGIN_ROOT}/dist/career-local.js"` 이다.
 이 문서와 `references/` 에서는 그 명령을 `<CAREER_LOCAL>` 로 적는다.
-셸 환경에 `CAREER_BACKEND_URL` 과, `CAREER_BACKEND_TOKEN` 이나 `CAREER_BACKEND_TOKEN_FILE` 가운데 하나가 있어야 한다.
-작업본 동기화는 하지 않는다. 추천 상태는 Backend 가 갖는다.
+데이터는 커리어 작업 폴더의 `state/career.sqlite` 에 있다. 작업 폴더는 `CAREER_WORKSPACE_ROOT` 이고 없으면 `/workspace/career` 다.
+커리어 Backend 주소와 token 은 쓰지 않는다.
+작업본 동기화는 하지 않는다. 소스, 수집 자료, 추천 이력은 이 저장소가 갖는다.
+대화용 공부 추천 도구(`list_study_candidates`, `save_study_recommendation`)는 이 저장소를 읽지 않는다. 이 스킬로 수집한 자료의 추천 저장은 아래 실행기 명령으로만 한다.
 
-## 1. 점검
+## 1. 맥락 문서와 점검
 
-`<CAREER_LOCAL> study --doctor` 를 실행한다.
+실행기는 `learning-interests` 문서를 작업 폴더의 `context/` 에서만 읽는다.
+`get_context_document` 로 `learning-interests` 를 읽어 본문을 고치지 않고 `<작업 폴더>/context/learning-interests.md` 에 쓴다.
+문서가 없으면 실행기를 부르지 않는다. 사용자와 문서를 먼저 쓴 뒤 다시 하자고 안내하고 끝낸다.
+
+그다음 `<CAREER_LOCAL> study --doctor` 를 실행한다.
+실행기가 `CAREER_STORE_BUSY` 나 `CAREER_STORE_CORRUPT` 로 끝나면 이어 가지 않고 표준 오류 첫 줄을 최종 답변 첫 줄에 적는다.
 
 ## 2. 수집과 리포트
 
@@ -36,6 +43,7 @@ description: 읽을거리를 수집하고 공부 추천 리포트를 HTML 로 �
 기록 명령과 각 값의 형식은 `references/execution.md` 의 「실행」 절에서 `--record-publication` 명령을 읽는다.
 
 `--record-publication` 을 실행할 때 `--run-dir` 이 없으면 실행기가 종료 코드 2 로 끝난다.
+지난 추천과 기록한 게시 링크는 `<CAREER_LOCAL> study --list-recommendations` 로 본다.
 
 ## 5. 정리
 
