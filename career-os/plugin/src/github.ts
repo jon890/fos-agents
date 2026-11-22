@@ -44,20 +44,26 @@ function refPath(branch: string): string {
 
 /** The GitHub profile repository: reads README and chart, and writes both in one commit. */
 export class GithubProfileRepo {
-  private readonly token: string;
+  private readonly token: () => Promise<string>;
   private readonly repoPath: string;
 
+  /**
+   * `token` is a pasted token, or a function that fetches the current one (the fos-assistant token
+   * channel). The function runs once per public call, so every request of one tool call uses one token.
+   */
   constructor(
-    private readonly config: { token: string; repo: string },
+    private readonly config: { token: string | (() => Promise<string>); repo: string },
     private readonly fetchImpl: FetchLike = fetch,
   ) {
-    this.token = config.token.trim();
+    const source = config.token;
+    this.token = typeof source === "string" ? async () => source.trim() : source;
     const [owner = "", name = ""] = config.repo.split("/");
     this.repoPath = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`;
   }
 
   async check(): Promise<void> {
-    await this.defaultBranch();
+    const token = await this.token();
+    await this.defaultBranch(token);
   }
 
   /**
@@ -71,10 +77,11 @@ export class GithubProfileRepo {
     readme: string | null;
     chartExists: boolean;
   }> {
-    const branch = await this.defaultBranch();
-    const head = await this.headOf(branch);
-    const readme = await this.send(this.contentsStep(readmePath, head));
-    const chart = await this.send(this.contentsStep(chartPath, head));
+    const token = await this.token();
+    const branch = await this.defaultBranch(token);
+    const head = await this.headOf(token, branch);
+    const readme = await this.send(token, this.contentsStep(readmePath, head));
+    const chart = await this.send(token, this.contentsStep(chartPath, head));
     return {
       repo: this.config.repo,
       branch,
@@ -96,16 +103,17 @@ export class GithubProfileRepo {
     message: string,
     expected: { branch: string; head: string },
   ): Promise<{ changed: boolean; commitSha: string; branch: string }> {
-    const branch = await this.defaultBranch();
+    const token = await this.token();
+    const branch = await this.defaultBranch(token);
     if (branch !== expected.branch) throw new CareerError("CAREER_GITHUB_STALE_REVIEW");
-    const head = await this.headOf(branch);
+    const head = await this.headOf(token, branch);
     if (head !== expected.head) throw new CareerError("CAREER_GITHUB_STALE_REVIEW");
     const ref = refPath(branch);
-    const baseTree = this.parse(commitSchema, await this.send({ method: "GET", path: `/git/commits/${head}` }))
+    const baseTree = this.parse(commitSchema, await this.send(token, { method: "GET", path: `/git/commits/${head}` }))
       .tree.sha;
-    const readmeBlob = await this.createSha("/git/blobs", { content: files.readme, encoding: "utf-8" });
-    const chartBlob = await this.createSha("/git/blobs", { content: files.chart, encoding: "utf-8" });
-    const tree = await this.createSha("/git/trees", {
+    const readmeBlob = await this.createSha(token, "/git/blobs", { content: files.readme, encoding: "utf-8" });
+    const chartBlob = await this.createSha(token, "/git/blobs", { content: files.chart, encoding: "utf-8" });
+    const tree = await this.createSha(token, "/git/trees", {
       base_tree: baseTree,
       tree: [
         { path: readmePath, mode: "100644", type: "blob", sha: readmeBlob },
@@ -114,25 +122,25 @@ export class GithubProfileRepo {
     });
     // Same tree as the branch head: the repository already holds this content, so no empty commit.
     if (tree === baseTree) return { changed: false, commitSha: head, branch };
-    const commit = await this.createSha("/git/commits", { message, tree, parents: [head] });
-    await this.send({ method: "PATCH", path: `/git/refs/${ref}`, body: { sha: commit, force: false }, movesBranch: true });
+    const commit = await this.createSha(token, "/git/commits", { message, tree, parents: [head] });
+    await this.send(token, { method: "PATCH", path: `/git/refs/${ref}`, body: { sha: commit, force: false }, movesBranch: true });
     return { changed: true, commitSha: commit, branch };
   }
 
-  private async defaultBranch(): Promise<string> {
-    return this.parse(repoSchema, await this.send({ method: "GET", path: "" })).default_branch;
+  private async defaultBranch(token: string): Promise<string> {
+    return this.parse(repoSchema, await this.send(token, { method: "GET", path: "" })).default_branch;
   }
 
-  private async headOf(branch: string): Promise<string> {
-    return this.parse(refSchema, await this.send({ method: "GET", path: `/git/ref/${refPath(branch)}` })).object.sha;
+  private async headOf(token: string, branch: string): Promise<string> {
+    return this.parse(refSchema, await this.send(token, { method: "GET", path: `/git/ref/${refPath(branch)}` })).object.sha;
   }
 
   private contentsStep(file: string, commitSha: string): Step {
     return { method: "GET", path: `/contents/${file}?ref=${encodeURIComponent(commitSha)}`, missingIsAbsent: true };
   }
 
-  private async createSha(path: string, body: unknown): Promise<string> {
-    return this.parse(shaSchema, await this.send({ method: "POST", path, body })).sha;
+  private async createSha(token: string, path: string, body: unknown): Promise<string> {
+    return this.parse(shaSchema, await this.send(token, { method: "POST", path, body })).sha;
   }
 
   private parse<T>(schema: z.ZodType<T>, value: unknown): T {
@@ -142,9 +150,9 @@ export class GithubProfileRepo {
   }
 
   /** Returns the JSON body, or null when a file read answered 404. */
-  private async send(step: Step): Promise<unknown> {
+  private async send(token: string, step: Step): Promise<unknown> {
     const headers: Record<string, string> = {
-      Authorization: `Bearer ${this.token}`,
+      Authorization: `Bearer ${token}`,
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
       "User-Agent": "fos-career-connector",

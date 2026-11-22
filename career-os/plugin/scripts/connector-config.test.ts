@@ -69,12 +69,13 @@ test("모든 도구에 승인 카드에 보일 80자 이하의 title 이 있다"
   }
 });
 
-// fos-assistant drops a plugin whose server env differs from fields, operator_env and owner_*_env together.
-test(".mcp.json 서버 env 는 fields[].env, operator_env, owner_browser_env 의 합과 같다", () => {
+// fos-assistant drops a plugin whose server env differs from fields, operator_env, owner_*_env and oauth.token_env together.
+test(".mcp.json 서버 env 는 fields[].env, operator_env, owner_browser_env, oauth.token_env 의 합과 같다", () => {
   const expected = [
     ...connector.fields.map((f: { env: string }) => f.env),
     ...connector.operator_env,
     connector.owner_browser_env,
+    connector.oauth.token_env,
   ].sort();
   const server = mcp.mcpServers.career.env;
   expect(Object.keys(server).sort()).toEqual(expected);
@@ -237,4 +238,20 @@ test(".mcp.json 의 빈 기본값 참조는 선택 칸에만 쓴다", () => {
   );
   for (const [name, value] of Object.entries(mcp.mcpServers.career.env))
     expect({ name, value }).toEqual({ name, value: optional.has(name) ? `\${${name}:-}` : `\${${name}}` });
+});
+
+// fos-assistant shows the 「GitHub 으로 연결」 button only for a provider it knows, and the button leaves
+// the listed secret fields empty, so each one must be an optional secret field (connector-oauth design 「선언」).
+test("oauth 선언은 GitHub 단추로 선택 비밀 칸 github_token 을 채우고 통로 주소 env 는 다른 env 와 겹치지 않는다", () => {
+  expect(connector.oauth).toEqual({
+    provider: "github",
+    fields: ["github_token"],
+    token_env: "CAREER_GITHUB_TOKEN_URL",
+  });
+  for (const key of connector.oauth.fields) {
+    const field = connector.fields.find((f: { key: string }) => f.key === key);
+    expect(field).toMatchObject({ secret: true, required: false });
+  }
+  const others = [...connector.fields.map((f: { env: string }) => f.env), ...connector.operator_env, connector.owner_browser_env];
+  expect(others).not.toContain(connector.oauth.token_env);
 });

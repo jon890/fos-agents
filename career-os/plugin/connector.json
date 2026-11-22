@@ -29,6 +29,11 @@
   "verify": {
     "tool": "check_connection"
   },
+  "oauth": {
+    "provider": "github",
+    "fields": ["github_token"],
+    "token_env": "CAREER_GITHUB_TOKEN_URL"
+  },
   "agent_skills": {
     "path": "./agent-skills",
     "sandbox_env": {

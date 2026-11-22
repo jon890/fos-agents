@@ -221,3 +221,132 @@ test("「내 브라우저」 주소 없이 서버가 뜨고 원티드 도구는 
     await server.close();
   }
 });
+
+// Fake values only: the channel address and both tokens are placeholders, never a real host or token.
+const channelUrl = "http://channel.example.test/internal/connector-token/k1.example-marker";
+const channelGithubToken = "c".repeat(40);
+const pastedGithubToken = "p".repeat(40);
+
+type Seen = { url: string; authorization: string | null };
+
+async function callGithubTool(
+  serverEnv: Record<string, string | undefined>,
+  channel: () => Response | Promise<Response>,
+  tool = "check_connection",
+) {
+  const seen: Seen[] = [];
+  const server = createServer(serverEnv, async (input, init) => {
+    const url = String(input);
+    seen.push({ url, authorization: new Headers(init?.headers).get("Authorization") });
+    if (url === channelUrl) return channel();
+    if (url.startsWith("https://api.github.com/")) return new Response(JSON.stringify({ default_branch: "main" }));
+    return new Response(JSON.stringify({ documents: [] }));
+  });
+  const client = new Client({ name: "github-token-test", version: "1.0.0" });
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  try {
+    await server.connect(serverTransport);
+    await client.connect(clientTransport);
+    const result = await client.callTool({ name: tool, arguments: {} });
+    return { result, text: (result.content as Array<{ text: string }>)[0]!.text, seen };
+  } finally {
+    await client.close();
+    await server.close();
+  }
+}
+
+const tokenJson = () =>
+  new Response(JSON.stringify({ access_token: channelGithubToken, expires_at: "2026-11-23T10:00:00Z" }));
+
+test("통로 주소가 있으면 통로에서 받은 token 으로 GitHub 을 부르고 붙여 넣은 token 은 쓰지 않는다", async () => {
+  const { result, text, seen } = await callGithubTool(
+    { ...env, CAREER_GITHUB_TOKEN: pastedGithubToken, CAREER_GITHUB_TOKEN_URL: channelUrl },
+    tokenJson,
+  );
+  expect(result.structuredContent).toEqual({ backend: "ok", github: "ok" });
+  const github = seen.filter(({ url }) => url.startsWith("https://api.github.com/"));
+  expect(github.length).toBeGreaterThan(0);
+  for (const call of github) expect(call.authorization).toBe(`Bearer ${channelGithubToken}`);
+  // The channel itself is asked without any credential: the marker in the address is the credential.
+  expect(seen.find(({ url }) => url === channelUrl)?.authorization).toBeNull();
+  expect(text).not.toContain(channelGithubToken);
+  expect(text).not.toContain(channelUrl);
+});
+
+test("도구를 부를 때마다 통로에서 token 을 다시 받는다", async () => {
+  let issued = 0;
+  const server = createServer({ ...env, CAREER_GITHUB_TOKEN_URL: channelUrl }, async (input, init) => {
+    const url = String(input);
+    if (url === channelUrl) {
+      issued += 1;
+      return new Response(JSON.stringify({ access_token: `${issued}`.repeat(40) }));
+    }
+    if (url.startsWith("https://api.github.com/")) {
+      expect(new Headers(init?.headers).get("Authorization")).toBe(`Bearer ${`${issued}`.repeat(40)}`);
+      return new Response(JSON.stringify({ default_branch: "main" }));
+    }
+    return new Response(JSON.stringify({ documents: [] }));
+  });
+  const client = new Client({ name: "github-token-test", version: "1.0.0" });
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  try {
+    await server.connect(serverTransport);
+    await client.connect(clientTransport);
+    for (let call = 0; call < 2; call += 1) {
+      const result = await client.callTool({ name: "check_connection", arguments: {} });
+      expect(result.structuredContent).toEqual({ backend: "ok", github: "ok" });
+    }
+    expect(issued).toBe(2);
+  } finally {
+    await client.close();
+    await server.close();
+  }
+});
+
+test("통로 주소가 비었거나 치환되지 않은 참조면 붙여 넣은 token 을 쓴다", async () => {
+  for (const tokenUrl of [undefined, "", "${CAREER_GITHUB_TOKEN_URL}"]) {
+    const { result, seen } = await callGithubTool(
+      { ...env, CAREER_GITHUB_TOKEN: pastedGithubToken, CAREER_GITHUB_TOKEN_URL: tokenUrl },
+      () => {
+        throw new Error("통로를 부르면 안 된다");
+      },
+    );
+    expect(result.structuredContent).toEqual({ backend: "ok", github: "ok" });
+    expect(seen.some(({ url }) => url === channelUrl)).toBe(false);
+    for (const call of seen.filter(({ url }) => url.startsWith("https://api.github.com/")))
+      expect(call.authorization).toBe(`Bearer ${pastedGithubToken}`);
+  }
+});
+
+test("token 과 통로 주소가 모두 없으면 GitHub 은 not_configured 다", async () => {
+  const { result } = await callGithubTool({ ...env, CAREER_GITHUB_TOKEN: "", CAREER_GITHUB_TOKEN_URL: "" }, tokenJson);
+  expect(result.structuredContent).toEqual({ backend: "ok", github: "not_configured" });
+});
+
+test("통로 실패는 정한 CAREER 오류 코드로 나오고 결과에 통로 주소와 응답 원문이 없다", async () => {
+  const leaked = "channel-body-should-not-leak";
+  const cases: Array<[string, () => Response | Promise<Response>, string]> = [
+    ["401", () => new Response(leaked, { status: 401 }), "CAREER_GITHUB_UNAUTHORIZED"],
+    ["409", () => new Response(leaked, { status: 409 }), "CAREER_GITHUB_UNAUTHORIZED"],
+    ["404", () => new Response(leaked, { status: 404 }), "CAREER_GITHUB_NOT_CONFIGURED"],
+    ["503", () => new Response(leaked, { status: 503 }), "CAREER_GITHUB_UNAVAILABLE"],
+    ["통신 실패", () => Promise.reject(new Error(leaked)), "CAREER_GITHUB_UNAVAILABLE"],
+    ["token 없는 응답", () => new Response(JSON.stringify({ expires_at: leaked })), "CAREER_INVALID_RESPONSE"],
+  ];
+  for (const [name, channel, code] of cases) {
+    const { result, text, seen } = await callGithubTool(
+      { ...env, CAREER_GITHUB_TOKEN_URL: channelUrl },
+      channel,
+      "get_github_profile",
+    );
+    expect({ name, isError: result.isError, code: JSON.parse(text).error.code }).toEqual({ name, isError: true, code });
+    expect(text).not.toContain(leaked);
+    expect(text).not.toContain(channelUrl);
+    expect(seen.some(({ url }) => url.startsWith("https://api.github.com/"))).toBe(false);
+  }
+});
+
+test("통로 주소가 http(s) 주소가 아니면 CAREER_CONFIG 로 시작하지 않는다", () => {
+  expectConfigError(() => createServer({ ...env, CAREER_GITHUB_TOKEN_URL: "not a url" }));
+  expectConfigError(() => createServer({ ...env, CAREER_GITHUB_TOKEN_URL: "file:///etc/token" }));
+});

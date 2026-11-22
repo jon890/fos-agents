@@ -3,6 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { CareerBackend, CareerError, configuredValue, type FetchLike } from "./backend.ts";
 import { browserEndpoint, relayBrowser } from "./browser/cdp.ts";
 import { GithubProfileRepo } from "./github.ts";
+import { channelToken } from "./github-token.ts";
 import { CareerTools, toolDefinitions } from "./tools.ts";
 import { WantedTools } from "./wanted/tools.ts";
 
@@ -31,8 +32,10 @@ export function createServer(
   const profileRepo = configuredValue(env.CAREER_GITHUB_PROFILE_REPO);
   if (!baseUrl || !token || !profileRepo || !profileRepoPattern.test(profileRepo))
     throw new CareerError("CAREER_CONFIG");
-  // The GitHub token is optional; GitHub tools answer CAREER_GITHUB_NOT_CONFIGURED without it.
-  const githubToken = configuredValue(env.CAREER_GITHUB_TOKEN);
+  // GitHub is optional; GitHub tools answer CAREER_GITHUB_NOT_CONFIGURED without either value.
+  // A button (OAuth) connection passes the token channel address, which wins over a pasted token.
+  const githubTokenUrl = configuredValue(env.CAREER_GITHUB_TOKEN_URL);
+  const githubToken = githubTokenUrl ? channelToken(githubTokenUrl, fetchImpl) : configuredValue(env.CAREER_GITHUB_TOKEN);
   const github = githubToken ? new GithubProfileRepo({ token: githubToken, repo: profileRepo }, fetchImpl) : undefined;
   const extraHeaders = backendAccessHeaders(env);
   // The fos-assistant install passes the owner's browser relay; Claude Code leaves it empty.
@@ -44,7 +47,7 @@ export function createServer(
     undefined,
     wanted,
   );
-  const server = new McpServer({ name: "fos-career", version: "0.11.0" });
+  const server = new McpServer({ name: "fos-career", version: "0.12.0" });
   for (const [name, definition] of Object.entries(toolDefinitions)) {
     server.registerTool(
       name,
