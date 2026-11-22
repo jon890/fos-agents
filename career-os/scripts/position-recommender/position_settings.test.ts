@@ -149,3 +149,21 @@ test("설정을 예전 값으로 되돌리는 요청도 반영한다", async () 
   }
   expect((await createPositionStore().listCompanyPreferences())[0]!.tier).toBe(1);
 });
+
+test("회사 선호의 companyKey 는 수집기와 같은 정규화를 거쳐 저장한다", async () => {
+  const root = useCareerWorkspaceEnv();
+  const input = [
+    {
+      companyKey: "  Example  Corp ",
+      companyName: "Example Corp",
+      tier: 1,
+      disposition: "exclude",
+    },
+  ];
+  expect(await run(["configure-companies", "--input", inputFile(root, "mixed.json", input)])).toBe(
+    0,
+  );
+  expect(
+    (await createPositionStore().listCompanyPreferences()).map((entry) => entry.companyKey),
+  ).toEqual(["example corp"]);
+});

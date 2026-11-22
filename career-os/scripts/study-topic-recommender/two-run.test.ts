@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { restoreCareerWorkspaceEnv, useCareerWorkspaceEnv } from "../lib/career-store/test-support.ts";
 import { manageReadingSources } from "./manage_reading_sources.ts";
 import { main } from "./morning_reading_cli.ts";
+import { StudyLibraryClient } from "./study-library/client.ts";
 
 /**
  * 공부 추천을 같은 작업 폴더에서 두 번 돌린다. 외부 피드만 대역이고
@@ -57,7 +58,9 @@ test("두 번째 실행은 저장된 커서에서 이어 읽고, 고른 자료�
   const first = runDirectory();
   feed(["One", "Two"]);
   const collected = await cli(["--run-dir", first, "--collect-only"]);
-  expect(JSON.stringify(collected)).toContain("example-feed");
+  expect(collected).toMatchObject({ acceptedCount: 2, statuses: [{ sourceKey: "example-feed", status: "ingested", acceptedCount: 2 }] });
+  const library = new StudyLibraryClient();
+  expect((await library.getSourceCursor("example-feed", "recent")).version).toBe(1);
   await cli(["--run-dir", first, "--prepare-candidates"]);
   const firstPoolPath = join(first, "state", "reading-candidates.json");
   const firstPool = JSON.parse(readFileSync(firstPoolPath, "utf8")) as Pool;
@@ -87,7 +90,11 @@ test("두 번째 실행은 저장된 커서에서 이어 읽고, 고른 자료�
   // 두 번째 실행: 새 글 하나가 더 올라왔다.
   const second = runDirectory();
   feed(["Three", "One", "Two"]);
-  await cli(["--run-dir", second, "--collect-only"]);
+  // 저장된 커서가 이미 본 두 글을 빼므로 새 글 하나만 받는다. 커서를 무시하면 3건이 된다.
+  expect(await cli(["--run-dir", second, "--collect-only"])).toMatchObject({ acceptedCount: 1 });
+  const cursor = await library.getSourceCursor("example-feed", "recent");
+  expect(cursor.version).toBe(2);
+  expect(cursor.cursor?.lastSeen as string[]).toHaveLength(3);
   await cli(["--run-dir", second, "--prepare-candidates"]);
   const secondPool = JSON.parse(readFileSync(join(second, "state", "reading-candidates.json"), "utf8")) as Pool;
   expect(secondPool.candidates.map((candidate) => candidate.title).sort()).toEqual(["Three", "Two"]);

@@ -152,6 +152,45 @@ describe("공부 추천 저장 모듈", () => {
     expect((await store.getCandidates({})).candidates.map((candidate) => candidate.contentKey)).toEqual(["b", "c"]);
   });
 
+  test("관심사를 A, B, A 로 되돌리면 A 때의 제외 판정이 다시 적용된다", async () => {
+    const { store, root } = await seeded();
+    await store.createRecommendationRun(run("morning-2026-11-21", "topic-1", ["a"], ["b"]), "run-1");
+    const keys = async () => (await store.getCandidates({})).candidates.map((candidate) => candidate.contentKey);
+    expect(await keys()).toEqual(["c"]);
+    writeContextDocument(root, "learning-interests", "- 다른 관심사 B");
+    expect(await keys()).toEqual(["b", "c"]);
+    writeContextDocument(root, "learning-interests", INTERESTS);
+    expect((await store.getCandidates({})).candidateContextVersion).toBe(VERSION);
+    expect(await keys()).toEqual(["c"]);
+  });
+
+  test("같은 자료를 다시 받으면 행을 늘리지 않고 제목과 발췌만 갱신한다", async () => {
+    const { store, db } = await seeded();
+    const again = {
+      ...ingestion([], 1, { lastSeen: "a" }),
+      items: [{ ...item("a"), title: "고친 제목", url: "https://example.com/other", collectedAt: "2026-11-22T00:00:00.000Z" }],
+      idempotencyKey: "ingest-again",
+    };
+    await store.createIngestion(again, again.idempotencyKey);
+    expect(db.get("SELECT COUNT(*) AS n FROM study_materials")).toEqual({ n: 3 });
+    expect(db.get("SELECT title, url, first_collected_at, last_collected_at FROM study_materials WHERE content_key = 'a'")).toEqual({
+      title: "고친 제목",
+      url: "https://example.com/posts/a",
+      first_collected_at: "2026-11-21T00:00:00.000Z",
+      last_collected_at: "2026-11-22T00:00:00.000Z",
+    });
+    expect(db.get("SELECT COUNT(*) AS n FROM study_material_sources WHERE content_key = 'a'")).toEqual({ n: 1 });
+  });
+
+  test("범위를 벗어난 limit 은 BAD_REQUEST 다", async () => {
+    const { store } = await seeded();
+    for (const limit of [0, 101, "abc"]) {
+      await expect(store.getCandidates({ limit })).rejects.toMatchObject({ code: "BAD_REQUEST", status: 400 });
+    }
+    await expect(store.listRecommendationRuns({ limit: 101 })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect((await store.getCandidates({ limit: "2" })).candidates).toHaveLength(2);
+  });
+
   test("같은 날의 추천은 한 번만 저장되고 직전 주제는 다시 고를 수 없다", async () => {
     const { store } = await seeded();
     await store.createRecommendationRun(run("morning-2026-11-21", "topic-1", ["a"]), "run-1");

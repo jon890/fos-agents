@@ -99,6 +99,9 @@ export class CareerDatabase implements SqlClient {
    * 쓰기 transaction 을 연다. `BEGIN IMMEDIATE` 가 파일 전체의 쓰기 잠금을 먼저 잡으므로
    * Backend 가 행 잠금으로 세우던 순서를 이 잠금 하나가 대신한다.
    * 이미 transaction 안이면 그 안에서 그대로 돈다.
+   *
+   * 중첩인지는 연결 하나의 깊이로만 안다. 그래서 한 연결에서 쓰기 둘을 동시에(`Promise.all`) 열면
+   * 뒤의 것이 앞의 transaction 에 섞이고 앞의 것이 되돌려지면 함께 사라진다. 쓰기는 차례로 부른다.
    */
   async transaction<T>(callback: () => Promise<T> | T): Promise<T> {
     if (this.depth > 0) return callback();

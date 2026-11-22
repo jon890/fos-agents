@@ -2,7 +2,9 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { closeCareerStores, openCareerStore } from "./database.ts";
+import { Database } from "bun:sqlite";
+import { careerStorePath, closeCareerStores, openCareerStore } from "./database.ts";
+import { canonicalRequestHash } from "./request-hash.ts";
 import { runWithReceipt } from "./receipts.ts";
 
 const roots: string[] = [];
@@ -57,6 +59,21 @@ describe("재전송 기록", () => {
       }),
     ).rejects.toThrow();
     expect(db.all("SELECT source_key FROM position_sources")).toEqual([]);
+  });
+
+  test("같은 키의 두 실행이 동시에 와도 한 번만 처리한다", async () => {
+    const db = store();
+    const other = new Database(careerStorePath(db.root));
+    other.exec("PRAGMA busy_timeout = 5000");
+    // 다른 실행이 먼저 같은 명령을 끝내고 기록을 남긴 상태를 만든다. 이쪽은 잠금을 얻은 뒤에야 그 기록을 본다.
+    const hash = canonicalRequestHash({ a: 1 });
+    other
+      .query("INSERT INTO request_receipts (idempotency_key, request_hash, response_status, response_body, created_at) VALUES (?, ?, 200, ?, ?)")
+      .run("k-1", hash, JSON.stringify("먼저 끝난 응답"), new Date().toISOString());
+    other.close();
+    let calls = 0;
+    expect(await runWithReceipt(db, "k-1", { a: 1 }, 200, async () => (calls += 1))).toBe("먼저 끝난 응답" as never);
+    expect(calls).toBe(0);
   });
 
   test("키가 없으면 BAD_REQUEST 다", async () => {

@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { companyKey } from "../lib/career-store/positions/hash.ts";
 import { configurePositionCompanyPreferences } from "./configure_position_company_preferences.ts";
 import { createPositionStore, type PositionStore } from "./position-store.ts";
 
@@ -66,12 +67,11 @@ export async function runPositionSettingsCommand(
     if (Array.isArray(input)) {
       const store = createStore();
       for (const entry of input) {
-        const { updatedAt: _updatedAt, ...body } = entry as Record<string, unknown>;
-        await store.updateCompanyPreference(
-          String(body.companyKey),
-          body,
-          settingsKey("company-preference"),
-        );
+        const { updatedAt: _updatedAt, ...rest } = entry as Record<string, unknown>;
+        // SQLite 는 대소문자를 구분해 비교한다. 수집기가 공고에서 만드는 키와 같은 정규화를 거쳐야 선호가 적용된다.
+        const key = companyKey(String(rest.companyKey ?? ""));
+        const body = { ...rest, companyKey: key };
+        await store.updateCompanyPreference(key, body, settingsKey("company-preference"));
       }
       writeLine(`회사 선호 저장: ${input.length}곳`);
       return 0;

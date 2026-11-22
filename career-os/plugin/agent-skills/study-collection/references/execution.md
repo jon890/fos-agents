@@ -18,7 +18,7 @@ mktemp -d "${CAREER_WORKSPACE_ROOT:-/workspace/career}/runs/study-topic-recommen
 소스, 수집 자료, 추천 이력과 제외 판정은 작업 폴더의 `state/career.sqlite` 가 갖는다.
 파일이 없으면 실행기가 빈 상태로 만든다.
 
-실행 전에 저장소와 `learning-interests` 문서를 확인한다. 무엇이 빠졌는지 알린다.
+실행 전에 저장소, 켜진 소스, `learning-interests` 문서를 확인한다. 무엇이 빠졌는지 알린다.
 
 ```bash
 <CAREER_LOCAL> study --doctor
@@ -27,6 +27,7 @@ mktemp -d "${CAREER_WORKSPACE_ROOT:-/workspace/career}/runs/study-topic-recommen
 | 실패한 `checks[].name` | 조치 |
 | --- | --- |
 | `store` | 데이터 파일을 열지 못했다. 메시지의 code 를 사용자에게 알리고 멈춘다 |
+| `sources` | 켜진 소스가 없다. 새 저장소는 소스 없이 시작한다. `references/source-management.md` 의 `study-sources add` 로 소스를 먼저 넣는다. 넣을 소스는 사용자에게 받는다 |
 | `learning-interests` | 문서 본문을 `context/learning-interests.md` 에 써야 한다. `SKILL.md` 의 「1. 맥락 문서와 점검」 을 다시 한다 |
 
 `<RUN_DIR>`는 작업 폴더 `runs/` 아래의 실행별 경로이며 이름이 `study-topic-recommender.`로 시작해야 한다.
