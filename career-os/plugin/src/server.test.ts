@@ -332,6 +332,10 @@ test("통로 실패는 정한 CAREER 오류 코드로 나오고 결과에 통로
     ["503", () => new Response(leaked, { status: 503 }), "CAREER_GITHUB_UNAVAILABLE"],
     ["통신 실패", () => Promise.reject(new Error(leaked)), "CAREER_GITHUB_UNAVAILABLE"],
     ["token 없는 응답", () => new Response(JSON.stringify({ expires_at: leaked })), "CAREER_INVALID_RESPONSE"],
+    ["공백 token", () => new Response(JSON.stringify({ access_token: "   ", expires_at: leaked })), "CAREER_INVALID_RESPONSE"],
+    ["JSON 이 아닌 본문", () => new Response(leaked), "CAREER_INVALID_RESPONSE"],
+    ["400", () => new Response(leaked, { status: 400 }), "CAREER_GITHUB_UNAVAILABLE"],
+    ["500", () => new Response(leaked, { status: 500 }), "CAREER_GITHUB_UNAVAILABLE"],
   ];
   for (const [name, channel, code] of cases) {
     const { result, text, seen } = await callGithubTool(
@@ -346,7 +350,60 @@ test("통로 실패는 정한 CAREER 오류 코드로 나오고 결과에 통로
   }
 });
 
-test("통로 주소가 http(s) 주소가 아니면 CAREER_CONFIG 로 시작하지 않는다", () => {
-  expectConfigError(() => createServer({ ...env, CAREER_GITHUB_TOKEN_URL: "not a url" }));
-  expectConfigError(() => createServer({ ...env, CAREER_GITHUB_TOKEN_URL: "file:///etc/token" }));
+test("통로 주소 모양이 틀려도 서버는 뜨고 GitHub 도구만 CAREER_GITHUB_NOT_CONFIGURED 로 답한다", async () => {
+  for (const tokenUrl of ["not a url", "file:///etc/token"]) {
+    const { result, text, seen } = await callGithubTool(
+      { ...env, CAREER_GITHUB_TOKEN: pastedGithubToken, CAREER_GITHUB_TOKEN_URL: tokenUrl },
+      tokenJson,
+      "get_github_profile",
+    );
+    expect(result.isError).toBe(true);
+    expect(JSON.parse(text).error.code).toBe("CAREER_GITHUB_NOT_CONFIGURED");
+    expect(text).not.toContain(tokenUrl);
+    expect(seen.some(({ url }) => url.startsWith("https://api.github.com/"))).toBe(false);
+  }
+});
+
+test("GitHub 도구 한 번에 통로를 한 번만 부르고 그 호출의 GitHub 요청이 모두 같은 token 을 쓴다", async () => {
+  let issued = 0;
+  const authorizations: Array<string | null> = [];
+  const server = createServer({ ...env, CAREER_GITHUB_TOKEN_URL: channelUrl }, async (input, init) => {
+    const url = String(input);
+    if (url === channelUrl) {
+      issued += 1;
+      return new Response(JSON.stringify({ access_token: channelGithubToken }));
+    }
+    authorizations.push(new Headers(init?.headers).get("Authorization"));
+    if (url === "https://api.github.com/repos/example-user/example-user")
+      return new Response(JSON.stringify({ default_branch: "main" }));
+    if (url.endsWith("/git/ref/heads/main")) return new Response(JSON.stringify({ object: { sha: "a".repeat(40) } }));
+    if (url.includes("/contents/")) return new Response("{}", { status: 404 });
+    throw new Error(`unexpected request ${url}`);
+  });
+  const client = new Client({ name: "github-token-test", version: "1.0.0" });
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  try {
+    await server.connect(serverTransport);
+    await client.connect(clientTransport);
+    const result = await client.callTool({ name: "get_github_profile", arguments: {} });
+    expect(result.isError).not.toBe(true);
+    expect(issued).toBe(1);
+    expect(authorizations.length).toBe(4);
+    for (const authorization of authorizations) expect(authorization).toBe(`Bearer ${channelGithubToken}`);
+    expect(JSON.stringify(result)).not.toContain(channelGithubToken);
+  } finally {
+    await client.close();
+    await server.close();
+  }
+});
+
+test("통로가 거절하면 붙여 넣은 token 으로 넘어가지 않는다", async () => {
+  const { text, seen } = await callGithubTool(
+    { ...env, CAREER_GITHUB_TOKEN: pastedGithubToken, CAREER_GITHUB_TOKEN_URL: channelUrl },
+    () => new Response("{}", { status: 401 }),
+    "get_github_profile",
+  );
+  expect(JSON.parse(text).error.code).toBe("CAREER_GITHUB_UNAUTHORIZED");
+  expect(seen.some(({ url }) => url.startsWith("https://api.github.com/"))).toBe(false);
+  expect(seen.some(({ authorization }) => authorization === `Bearer ${pastedGithubToken}`)).toBe(false);
 });

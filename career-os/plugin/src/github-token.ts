@@ -11,6 +11,15 @@ function channelCode(status: number): CareerErrorCode {
   return "CAREER_GITHUB_UNAVAILABLE";
 }
 
+function channelAddress(url: string): string | undefined {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:" ? parsed.toString() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Returns a function that asks the token channel for the current GitHub token. A button connection
  * passes the channel address instead of a pasted token, and the token is fetched for every tool call
@@ -18,14 +27,13 @@ function channelCode(status: number): CareerErrorCode {
  * they never reach a file, a log, a result, or an error message.
  */
 export function channelToken(url: string, fetchImpl: FetchLike = fetch): () => Promise<string> {
-  let parsed: URL;
-  try {
-    parsed = new URL(url);
-  } catch {
-    throw new CareerError("CAREER_CONFIG");
-  }
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new CareerError("CAREER_CONFIG");
-  const address = parsed.toString();
+  const address = channelAddress(url);
+  // GitHub is optional: a malformed address must not stop the Backend and Wanted tools, so only
+  // the GitHub tools answer that GitHub is not set up.
+  if (!address)
+    return async () => {
+      throw new CareerError("CAREER_GITHUB_NOT_CONFIGURED");
+    };
   return async () => {
     let response: Response;
     try {
@@ -38,7 +46,11 @@ export function channelToken(url: string, fetchImpl: FetchLike = fetch): () => P
     } catch {
       throw new CareerError("CAREER_GITHUB_UNAVAILABLE");
     }
-    if (!response.ok) throw new CareerError(channelCode(response.status));
+    if (!response.ok) {
+      // Release the connection without reading a body that might echo the marker.
+      await response.body?.cancel().catch(() => undefined);
+      throw new CareerError(channelCode(response.status));
+    }
     let body: unknown;
     try {
       body = await response.json();

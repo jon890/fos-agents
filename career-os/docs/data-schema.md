@@ -1355,7 +1355,7 @@ HTTP 계약은 [`flow.md`](flow.md#프로필-http-계약)가 소유한다. 이�
 필수 값이 없거나 모양이 틀리면 서버가 `CAREER_CONFIG` 로 시작하지 않는다.
 `CAREER_GITHUB_TOKEN` 과 `CAREER_GITHUB_TOKEN_URL` 이 둘 다 없으면 서버는 시작하고 GitHub 도구가 `CAREER_GITHUB_NOT_CONFIGURED` 로 답한다. 하나라도 있으면 `check_connection` 은 GitHub 을 설정된 것으로 보고 실제로 불러 본다.
 `CAREER_GITHUB_TOKEN_URL` 이 있으면 GitHub 도구를 부를 때마다 그 주소에 `GET` 을 보내 `{access_token, expires_at}` 의 `access_token` 을 받고, 그 한 번의 도구 호출 안의 GitHub 요청에 모두 쓴다. 다음 호출에서 다시 받으므로 fos-assistant 가 갱신한 token 이 재시작 없이 쓰인다. 계약은 fos-assistant 의 `hermes/connectors/README.md` 「비밀값과 권한」 과 `docs/features/connector-oauth/design.md` 「선언」 을 따른다.
-주소가 HTTP 나 HTTPS 가 아니면 서버가 `CAREER_CONFIG` 로 시작하지 않는다.
+주소가 HTTP 나 HTTPS 가 아니어도 서버는 시작하고, GitHub 도구만 `CAREER_GITHUB_NOT_CONFIGURED` 로 답한다. GitHub 은 선택 기능이라 나머지 도구를 막지 않는다. 통로를 부르지 않고 붙여 넣은 token 으로도 넘어가지 않는다.
 token 과 통로 주소를 파일에 저장하지 않고 로그와 결과, 오류 응답에 넣지 않는다.
 
 ### 로컬 실행기 환경 변수
@@ -1509,8 +1509,8 @@ README 에는 `img.shields.io/badge/Tokens-<값>B-` 모양의 배지 주소가 �
 | `CAREER_INVALID_INPUT` | 도구 입력 검증 실패, 또는 고른 달의 값이 모두 0 | `invalid_input` |
 | `CAREER_USAGE_MONTH_MISSING` | 고른 달 가운데 사용량 기록이 없는 달이 있음 | `invalid_input` |
 | `CAREER_BADGE_MISMATCH` | README 의 Tokens 배지가 없거나 여럿이거나 값이 기록의 합계와 다름 | `invalid_input` |
-| `CAREER_GITHUB_NOT_CONFIGURED` | GitHub token 도 토큰 통로 주소도 없음, 또는 토큰 통로가 404 로 답함(연결이 없거나 해제됨) | `credential_rejected` |
-| `CAREER_GITHUB_UNAUTHORIZED` | GitHub 가 401 로 답함, 또는 토큰 통로가 401(주소의 표식이 틀림)이나 409(다시 연결해야 함)로 답함 | `credential_rejected` |
+| `CAREER_GITHUB_NOT_CONFIGURED` | GitHub token 도 토큰 통로 주소도 없음, 토큰 통로 주소가 HTTP 나 HTTPS 주소가 아님, 또는 토큰 통로가 404 로 답함(연결이 없거나 해제됨) | `credential_rejected` |
+| `CAREER_GITHUB_UNAUTHORIZED` | GitHub 가 401 로 답함, 또는 토큰 통로가 401(주소의 표식이 틀림)이나 409(다시 연결해야 함)로 답함. `connector.json` 은 recovery `reconnect` 를 함께 선언한다 | `credential_rejected` |
 | `CAREER_GITHUB_FORBIDDEN` | GitHub 가 401, 409, 422, 429 를 뺀 4xx 로 답함. 주로 403 과 404 이며 token 에 그 저장소의 권한이 없거나 저장소 이름이 틀리다 | `forbidden` |
 | `CAREER_GITHUB_CONFLICT` | branch 를 옮기는 마지막 요청에서만 GitHub 가 409 나 422 로 답함. 그 사이 다른 커밋이 올라왔다 | `unavailable` |
 | `CAREER_GITHUB_STALE_REVIEW` | 실행할 때의 기본 branch 나 그 끝 커밋이 `expectedBranch`, `expectedHead` 와 다름. 검토한 뒤 저장소가 바뀌었고 GitHub 에 아무것도 쓰지 않았다 | `invalid_input` |

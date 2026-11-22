@@ -207,7 +207,10 @@
     "CAREER_USAGE_MONTH_MISSING": "invalid_input",
     "CAREER_BADGE_MISMATCH": "invalid_input",
     "CAREER_GITHUB_NOT_CONFIGURED": "credential_rejected",
-    "CAREER_GITHUB_UNAUTHORIZED": "credential_rejected",
+    "CAREER_GITHUB_UNAUTHORIZED": {
+      "category": "credential_rejected",
+      "recovery": "reconnect"
+    },
     "CAREER_GITHUB_FORBIDDEN": "forbidden",
     "CAREER_GITHUB_CONFLICT": "unavailable",
     "CAREER_GITHUB_STALE_REVIEW": "invalid_input",
