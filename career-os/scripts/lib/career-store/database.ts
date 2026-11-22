@@ -139,7 +139,13 @@ function userVersion(db: Database): number {
  * 두 실행이 동시에 처음 열어도 같은 단계를 두 번 적용하지 않는다.
  */
 function migrate(db: Database): void {
-  if (userVersion(db) > SCHEMA_STEPS.length) throw corruptError();
+  if (userVersion(db) > SCHEMA_STEPS.length) {
+    throw new CareerStoreError(
+      500,
+      "CAREER_STORE_SCHEMA_NEWER",
+      "커리어 데이터 파일이 이 실행기보다 새 버전으로 만들어졌습니다. 파일을 지우지 말고 플러그인을 최신 버전으로 올립니다.",
+    );
+  }
   if (userVersion(db) === SCHEMA_STEPS.length) return;
   db.exec("BEGIN IMMEDIATE");
   try {

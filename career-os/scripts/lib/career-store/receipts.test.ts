@@ -47,6 +47,18 @@ describe("재전송 기록", () => {
     expect(await runWithReceipt(db, "k-1", {}, 200, async () => "다시")).toBe("다시");
   });
 
+  test("응답을 기록하지 못하면 처리도 되돌린다", async () => {
+    const db = store();
+    db.raw.exec("DROP TABLE request_receipts; CREATE TABLE request_receipts (idempotency_key TEXT PRIMARY KEY)");
+    await expect(
+      runWithReceipt(db, "k-1", {}, 200, async () => {
+        db.run("INSERT INTO position_sources (source_key, enabled) VALUES ('a', 1)");
+        return "ok";
+      }),
+    ).rejects.toThrow();
+    expect(db.all("SELECT source_key FROM position_sources")).toEqual([]);
+  });
+
   test("키가 없으면 BAD_REQUEST 다", async () => {
     await expect(runWithReceipt(store(), " ", {}, 200, async () => 1)).rejects.toMatchObject({
       code: "BAD_REQUEST",

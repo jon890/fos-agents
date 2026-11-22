@@ -63,6 +63,15 @@ describe("커리어 데이터 파일", () => {
     expect(readFileSync(careerStorePath(root), "utf8")).toBe(garbage);
   });
 
+  test("더 새 실행기가 만든 파일은 깨졌다고 하지 않고 SCHEMA_NEWER 로 끝낸다", () => {
+    const root = workspace();
+    openCareerStore({ CAREER_WORKSPACE_ROOT: root }).raw.exec("PRAGMA user_version = 99");
+    closeCareerStores();
+    expect(() => openCareerStore({ CAREER_WORKSPACE_ROOT: root })).toThrow(
+      expect.objectContaining({ code: "CAREER_STORE_SCHEMA_NEWER" }),
+    );
+  });
+
   test("다른 연결이 쓰는 동안에는 기다리다 CAREER_STORE_BUSY 로 끝낸다", async () => {
     const root = workspace();
     const store = openCareerStore({ CAREER_WORKSPACE_ROOT: root }, { busyTimeoutMs: 50 });

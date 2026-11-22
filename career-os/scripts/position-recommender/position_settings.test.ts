@@ -84,3 +84,68 @@ test("--input 이 없으면 사용법 오류다", async () => {
   await expect(run(["configure-policy"])).rejects.toBeInstanceOf(PositionRunUsageError);
   await expect(run(["exclusions", "replace"])).rejects.toBeInstanceOf(PositionRunUsageError);
 });
+
+test("설정을 예전 값으로 되돌리는 요청도 반영한다", async () => {
+  const root = useCareerWorkspaceEnv();
+  const rule = (company: string) => ({
+    scope: "company",
+    company,
+    decisionKind: "manual",
+    reason: "재지원 간격",
+    evidenceUrls: ["https://example.com/a"],
+    decidedAt: "2026-11-01",
+  });
+  const one = inputFile(root, "one.json", [rule("a")]);
+  const two = inputFile(root, "two.json", [rule("a"), rule("b")]);
+  for (const file of [one, two, one])
+    expect(await run(["exclusions", "put", "--input", file])).toBe(0);
+  expect(
+    (await createPositionStore().getExclusions()).map(
+      (entry) => (entry as { company: string }).company,
+    ),
+  ).toEqual(["a"]);
+
+  const policy = (dailyAnalysisLimit: number) => ({
+    schemaVersion: 2,
+    dailyAnalysisLimit,
+    prioritySlots: dailyAnalysisLimit - 1,
+    agingSlots: 1,
+    staleAfterDays: 30,
+    defaultCompanyTier: 3,
+    dailyCompanyTierLimit: 5,
+    companyTierStaleAfterDays: 90,
+  });
+  const high = inputFile(root, "high.json", policy(20));
+  const low = inputFile(root, "low.json", policy(10));
+  for (const file of [high, low, high])
+    expect(await run(["configure-policy", "--input", file])).toBe(0);
+  expect((await createPositionStore().getAnalysisPolicy()).dailyAnalysisLimit).toBe(20);
+
+  const company = (tier: number) => [
+    { companyKey: "예시", companyName: "예시", tier, disposition: "analyze" },
+  ];
+  for (const tier of [1, 2, 1]) {
+    expect(
+      await run([
+        "configure-companies",
+        "--input",
+        inputFile(root, `tier-${tier}.json`, company(tier)),
+      ]),
+    ).toBe(0);
+  }
+  expect((await createPositionStore().listCompanyPreferences())[0]!.tier).toBe(1);
+  const config = (tier: number) => ({
+    schemaVersion: 1,
+    preferences: [{ companyName: "예시", tier, disposition: "analyze" }],
+  });
+  for (const tier of [1, 3, 1]) {
+    expect(
+      await run([
+        "configure-companies",
+        "--input",
+        inputFile(root, `config-${tier}.json`, config(tier)),
+      ]),
+    ).toBe(0);
+  }
+  expect((await createPositionStore().listCompanyPreferences())[0]!.tier).toBe(1);
+});

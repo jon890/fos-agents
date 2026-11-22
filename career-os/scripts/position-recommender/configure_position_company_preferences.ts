@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { z } from "zod";
 import { runCli, type CliSpec } from "../lib/cli.ts";
-import { companyKey, stableUuid } from "../lib/career-store/positions/hash.ts";
+import { companyKey } from "../lib/career-store/positions/hash.ts";
 import type { PositionStore } from "./position-store.ts";
 import { createPositionStore } from "./position-store.ts";
 
@@ -53,7 +53,8 @@ export async function configurePositionCompanyPreferences(
   for (const preference of input.preferences) {
     const key = companyKey(preference.companyName);
     const body = { companyKey: key, ...preference };
-    const idempotencyKey = `company-preference:${stableUuid(JSON.stringify(body))}`;
+    // 호출마다 새 키다. 본문에서 만든 키는 값을 예전 것으로 되돌리는 요청을 재전송으로 읽게 한다.
+    const idempotencyKey = `company-preference:${crypto.randomUUID()}`;
     await client.updateCompanyPreference(key, body, idempotencyKey);
     tierCounts[String(preference.tier) as keyof typeof tierCounts] += 1;
     if (preference.disposition === "exclude") excludedCount += 1;

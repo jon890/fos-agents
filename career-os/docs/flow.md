@@ -125,7 +125,9 @@ flowchart LR
 | 데이터 파일이 없다 | 빈 상태로 만든다. 분석 정책에는 기본값이 없어 `position configure-policy` 로 넣어야 수집을 받는다 |
 | 다른 실행이 쓰고 있어 5초 안에 잠금을 얻지 못했다 | 표준 오류 첫 줄에 `CAREER_STORE_BUSY` 를 내고 종료 코드 1 로 끝난다. 다음 실행이 이어 간다 |
 | 파일을 열 수 없거나 검사에 실패했다 | 덮어쓰지 않고 `CAREER_STORE_CORRUPT` 로 끝난다. 사용자가 파일을 지우면 빈 상태로 다시 쌓는다 |
-| 같은 명령을 다시 보냈다 | 같은 멱등 키와 같은 본문이면 처음 응답을 돌려준다. 본문이 다르면 `409 IDEMPOTENCY_CONFLICT` 다 |
+| 파일이 이 실행기보다 새 스키마다 | `CAREER_STORE_SCHEMA_NEWER` 로 끝난다. 파일은 멀쩡하므로 지우지 않고 플러그인을 올린다 |
+| 같은 명령을 다시 보냈다 | 같은 멱등 키와 같은 본문이면 처음 응답을 돌려준다. 본문이 다르면 `409 IDEMPOTENCY_CONFLICT` 다. 처리와 응답 기록은 한 transaction 이다 |
+| 설정 명령(`configure-policy`, `configure-companies`, `exclusions put`) | 부를 때마다 새 멱등 키를 써서 늘 반영한다. 값을 예전 것으로 되돌리는 요청도 반영된다 |
 
 대화용 MCP 도구 가운데 공부 후보·추천 저장·추천 목록과 공고 제외 판정·조사 제약은 아직 Backend 를 부른다. 이 저장소를 읽지 않으므로 Backend 를 내리는 단계까지 그 도구로 공부 추천을 저장하거나 제외 규칙을 고치지 않는다. 제외 규칙은 `position exclusions put` 으로 넣는다.
 

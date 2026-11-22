@@ -16,7 +16,9 @@ export type CareerStoreErrorCode =
   /** 다른 실행이 파일을 쓰고 있어 잠금을 얻지 못했다. 다음 실행이 이어 간다. */
   | "CAREER_STORE_BUSY"
   /** 파일을 열 수 없거나 검사에 실패했다. 덮어쓰지 않는다. */
-  | "CAREER_STORE_CORRUPT";
+  | "CAREER_STORE_CORRUPT"
+  /** 이 실행기보다 새 실행기가 만든 파일이다. 파일은 멀쩡하므로 지우지 않고 실행기를 올린다. */
+  | "CAREER_STORE_SCHEMA_NEWER";
 
 export class CareerStoreError extends Error {
   constructor(

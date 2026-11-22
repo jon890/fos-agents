@@ -9,7 +9,7 @@ const MAX_KEY_LENGTH = 200;
  *
  * Backend 는 처리 전에 「처리 중」 행을 먼저 넣어 동시 요청을 막았다. 여기서는 그 행을 두지 않는다.
  * 실행기 프로세스가 도중에 죽으면 그 행이 남아 같은 명령이 영영 막히기 때문이다.
- * 동시에 온 같은 명령은 각 쓰기 transaction 의 실행 행 검사가 한 번만 반영되게 한다.
+ * 처리와 응답 기록은 한 쓰기 transaction 이라, 기록이 없으면 처리도 반영되지 않은 것이다.
  */
 export async function runWithReceipt<T>(
   db: CareerDatabase,
@@ -37,12 +37,16 @@ export async function runWithReceipt<T>(
     }
     return JSON.parse(existing.response_body) as T;
   }
-  const result = await handler();
-  db.run(
-    `INSERT OR IGNORE INTO request_receipts
-       (idempotency_key, request_hash, response_status, response_body, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    [key, requestHash, status, JSON.stringify(result ?? null), new Date().toISOString()],
-  );
-  return result;
+  // 처리와 응답 기록을 한 transaction 으로 묶는다. handler 안의 쓰기 transaction 은 이 안에서 그대로 돈다.
+  // 따로 두면 처리는 커밋됐는데 기록 전에 죽었을 때, 다시 보낸 같은 명령이 한 번 더 반영될 수 있다.
+  return db.transaction(async () => {
+    const result = await handler();
+    db.run(
+      `INSERT OR IGNORE INTO request_receipts
+         (idempotency_key, request_hash, response_status, response_body, created_at)
+       VALUES (?, ?, ?, ?, ?)`,
+      [key, requestHash, status, JSON.stringify(result ?? null), new Date().toISOString()],
+    );
+    return result;
+  });
 }

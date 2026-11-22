@@ -3,12 +3,14 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { runCli, type CliSpec } from "../lib/cli.ts";
 import { analysisPolicySchema } from "../lib/career-store/positions/schema.ts";
-import { canonicalRequestHash } from "../lib/career-store/request-hash.ts";
 import { createPositionStore } from "./position-store.ts";
 
-/** 정책 전체의 hash 다. 칸 하나만 바꿔도 키가 달라져 같은 키에 다른 본문을 보내는 충돌이 없다. */
-export function analysisPolicyIdempotencyKey(policy: unknown): string {
-  return `analysis-policy:${canonicalRequestHash(policy).slice("sha256:".length)}`;
+/**
+ * 호출마다 새 키다. 정책 hash 를 키로 쓰면 값을 예전 것으로 되돌리는 요청이
+ * 처음 응답의 재전송으로 읽혀 반영되지 않는다.
+ */
+export function analysisPolicyIdempotencyKey(): string {
+  return `analysis-policy:${crypto.randomUUID()}`;
 }
 
 const spec: CliSpec = {
@@ -28,7 +30,7 @@ if (import.meta.main) {
     );
     const configured = await createPositionStore().configureAnalysisPolicy(
       policy,
-      analysisPolicyIdempotencyKey(policy),
+      analysisPolicyIdempotencyKey(),
     );
     return {
       passed: true,

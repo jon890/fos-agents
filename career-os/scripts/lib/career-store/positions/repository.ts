@@ -471,10 +471,10 @@ export class PositionsRepository {
               ${preference.blindCompanySlug ?? null}, ${at(preference.updatedAt)})
       ON CONFLICT(company_key) DO UPDATE SET company_name = excluded.company_name, tier = excluded.tier,
         disposition = excluded.disposition,
-        tech_blog_feed_url = IF(${Object.hasOwn(preference, "techBlogFeedUrl")}, excluded.tech_blog_feed_url, tech_blog_feed_url),
-        github_org = IF(${Object.hasOwn(preference, "githubOrg")}, excluded.github_org, github_org),
-        dart_corp_code = IF(${Object.hasOwn(preference, "dartCorpCode")}, excluded.dart_corp_code, dart_corp_code),
-        blind_company_slug = IF(${Object.hasOwn(preference, "blindCompanySlug")}, excluded.blind_company_slug, blind_company_slug),
+        tech_blog_feed_url = CASE WHEN ${Object.hasOwn(preference, "techBlogFeedUrl")} THEN excluded.tech_blog_feed_url ELSE tech_blog_feed_url END,
+        github_org = CASE WHEN ${Object.hasOwn(preference, "githubOrg")} THEN excluded.github_org ELSE github_org END,
+        dart_corp_code = CASE WHEN ${Object.hasOwn(preference, "dartCorpCode")} THEN excluded.dart_corp_code ELSE dart_corp_code END,
+        blind_company_slug = CASE WHEN ${Object.hasOwn(preference, "blindCompanySlug")} THEN excluded.blind_company_slug ELSE blind_company_slug END,
         updated_at = excluded.updated_at
     `;
   }
@@ -521,16 +521,7 @@ export class PositionsRepository {
    * ADR-122 에 따라 transaction 을 열고 값을 바꾸기 전에 먼저 부른다.
    * 멱등 키가 다른 두 `PUT` 이 동시에 와도 뒤의 것이 앞의 것을 기다린다.
    *
-   * **`WHERE` 를 붙이지 않는다.** 조건을 달면 그 조건에 맞는 구간의 행만 잠겨,
-   * 조건 밖의 규칙을 바꾸는 다른 transaction 이 기다리지 않고 함께 지나간다.
-   * `DELETE` 뒤 `INSERT` 로 목록 전체를 바꾸는 경로라 그 둘이 섞이면 규칙이 반씩 남는다.
-   *
-   * **table 이 비어 있으면 이 잠금이 직렬화하지 못한다.** `transaction` 이 고른 격리 수준이
-   * `READ COMMITTED` 이고, 그 수준에서 InnoDB 는 gap lock 을 잡지 않아 잠글 행이 없으면
-   * 잠글 것도 없다. 2026-09-23 에 같은 container 에서 실측했다.
-   * 빈 table 에 두 연결이 동시에 들어가면 뒤의 `INSERT` 가 기다리지 않고 바로 지나갔고,
-   * 같은 절차를 `REPEATABLE READ` 로 돌리면 앞 transaction 이 끝날 때까지 3초를 기다렸다.
-   * 규칙이 한 건이라도 있으면 그 행 잠금으로 직렬화된다.
+   * SQLite 에서는 쓰기 transaction 이 파일 전체를 잠그므로 이 조회는 잠금 없이 읽기만 한다.
    */
   async lockExclusions(tx: DbClient): Promise<void> {
     await tx.queryRaw`SELECT position_exclusion_id FROM position_exclusions `;
@@ -599,10 +590,6 @@ export class PositionsRepository {
    * 요청 안의 중복을 걷는 비교와 SQL 의 비교가 같은 부등호여야 한다.
    * 다르면 같은 근거를 한 요청에 담느냐 나눠 보내느냐에 따라 남는 값이 달라진다.
    *
-   * `observed_at` 대입을 마지막에 두는 것은 MySQL 이 대입을 왼쪽부터 평가해,
-   * 먼저 바꾸면 뒤의 비교가 이미 바뀐 값을 보기 때문이다.
-   *
-   * 고유 키를 `url_hash` 에 거는 이유는 migration 주석이 적는다.
    * 한 요청에 같은 키가 두 번 들어오면 행은 하나다. 저장한 키를 그대로 돌려줘
    * 호출자가 이 요청이 다룬 서로 다른 출처가 몇인지 셀 수 있게 한다.
    */
@@ -679,12 +666,7 @@ export class PositionsRepository {
    *
    * 멱등 키가 다른 두 요청이 같은 수집 실행에 동시에 와도 뒤의 것이 앞의 것을 기다리게 한다.
    *
-   * 행이 이미 있으면 `FOR UPDATE` 하나로 끝낸다. 자리를 먼저 만들지 않는다.
-   * 만들고 잠그는 순서로 두면, 행이 있을 때 두 transaction 이 그 자리를 만드는 문장에서
-   * 공유 잠금을 함께 쥐고 뒤이은 `FOR UPDATE` 에서 서로 상대가 놓기를 기다려 교착에 빠진다.
-   *
-   * 행이 없을 때만 자리를 만든다. 그 문장은 `ON CONFLICT … DO NOTHING` 다.
-   * `INSERT OR IGNORE` 는 경합에서 진 쪽에 공유 잠금을 남겨 같은 교착을 만든다.
+   * 행이 없을 때만 자리를 만든다. 쓰기 transaction 이 파일을 잠그고 있어 다른 실행과 겹치지 않는다.
    */
   async lockCollectionRun(
     collectionRunId: string,

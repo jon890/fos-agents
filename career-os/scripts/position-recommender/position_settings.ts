@@ -1,6 +1,5 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { canonicalRequestHash } from "../lib/career-store/request-hash.ts";
 import { configurePositionCompanyPreferences } from "./configure_position_company_preferences.ts";
 import { createPositionStore, type PositionStore } from "./position-store.ts";
 
@@ -37,9 +36,12 @@ function readJson(path: string): unknown {
   return JSON.parse(readFileSync(path, "utf8")) as unknown;
 }
 
-/** 본문 전체의 hash 를 멱등 키로 쓴다. 같은 설정을 다시 넣으면 처음 응답을 돌려준다. */
-function settingsKey(kind: string, body: unknown): string {
-  return `${kind}:${canonicalRequestHash(body)}`;
+/**
+ * 설정 명령은 부를 때마다 새 멱등 키를 쓴다. 값을 덮어쓰는 명령이라 다시 넣어도 결과가 같다.
+ * 본문 hash 를 키로 쓰면 값을 예전 것으로 되돌리는 요청이 처음 응답의 재전송으로 읽혀 반영되지 않는다.
+ */
+export function settingsKey(kind: string): string {
+  return `${kind}:${crypto.randomUUID()}`;
 }
 
 export async function runPositionSettingsCommand(
@@ -52,7 +54,7 @@ export async function runPositionSettingsCommand(
     const policy = readJson(inputPath(rest));
     const configured = await createStore().configureAnalysisPolicy(
       policy,
-      settingsKey("analysis-policy", policy),
+      settingsKey("analysis-policy"),
     );
     writeLine(`분석 정책 저장: ${JSON.stringify(configured)}`);
     return 0;
@@ -68,7 +70,7 @@ export async function runPositionSettingsCommand(
         await store.updateCompanyPreference(
           String(body.companyKey),
           body,
-          settingsKey("company-preference", body),
+          settingsKey("company-preference"),
         );
       }
       writeLine(`회사 선호 저장: ${input.length}곳`);
@@ -88,7 +90,7 @@ export async function runPositionSettingsCommand(
     const input = readJson(inputPath(actionArgs));
     // 배열이면 `exclusions get` 이 내는 목록 꼴로 본다(옛 Backend 의 조회 응답도 같다).
     const body = Array.isArray(input) ? { schemaVersion: 2, exclusions: input } : input;
-    const saved = await createStore().replaceExclusions(body, settingsKey("exclusions", body));
+    const saved = await createStore().replaceExclusions(body, settingsKey("exclusions"));
     writeLine(`제외 규칙 저장: ${saved.length}건(만료되지 않은 규칙)`);
     return 0;
   }
