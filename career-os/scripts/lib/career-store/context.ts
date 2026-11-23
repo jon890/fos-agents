@@ -4,7 +4,11 @@ import { join } from "node:path";
 import { CareerStoreError } from "./errors.ts";
 
 /** 실행기가 읽는 맥락 문서의 키다. 파일 이름은 `<키>.md` 다. */
-export type ContextDocumentKey = "position-preferences" | "application-state" | "learning-interests";
+export type ContextDocumentKey =
+  | "position-preferences"
+  | "application-state"
+  | "learning-interests"
+  | "career-status";
 
 /** 에이전트가 실행 직전에 맥락 문서를 옮겨 쓰는 자리다. 실행기의 입력일 뿐 원본이 아니다. */
 export function contextDocumentPath(root: string, key: ContextDocumentKey): string {

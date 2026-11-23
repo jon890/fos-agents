@@ -42,7 +42,8 @@ export const candidateMemoryDocumentKeys = ["career-status", "application-state"
 export type CandidateMemoryDocumentKey = (typeof candidateMemoryDocumentKeys)[number];
 export type CandidateMemoryDocument = {
   documentKey: CandidateMemoryDocumentKey;
-  version: number;
+  /** 본문에서 계산한 기준 버전이다(`career-status:sha256:<hex>`). */
+  version: string;
   body: string;
 };
 /** 문서가 없는 키는 `undefined` 로 돌려준다. */
@@ -52,7 +53,7 @@ export type ReadCandidateMemoryDocuments = (
 export type CandidateMemoryResult =
   | { provider: "file"; path: string; memory: CandidateMemory }
   | {
-      provider: "backend";
+      provider: "context";
       fields: CandidateMemoryField[];
       instruction: string;
       documents: CandidateMemoryDocument[];
@@ -91,7 +92,7 @@ function validateApplicationDirectories(memory: CandidateMemory): CandidateMemor
 }
 
 // 본문은 모델이 읽는다. 스크립트는 개인 맥락을 해석하지 않는다(ADR-130).
-async function loadBackendMemory(
+async function loadContextMemory(
   readDocuments: ReadCandidateMemoryDocuments,
 ): Promise<CandidateMemoryResult> {
   let found: Awaited<ReturnType<ReadCandidateMemoryDocuments>>;
@@ -99,15 +100,15 @@ async function loadBackendMemory(
     found = await readDocuments(candidateMemoryDocumentKeys);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(
-      `커리어 Backend 에서 후보자 맥락 문서를 읽지 못했다. drill-engine.ts doctor 로 연결값을 점검한다: ${message}`,
-    );
+    throw new Error(`작업 폴더의 context/ 에서 후보자 맥락 문서를 읽지 못했다: ${message}`);
   }
   const missing = candidateMemoryDocumentKeys.filter((key) => !found[key]);
   if (missing.length > 0)
-    throw new Error(`커리어 Backend 에 후보자 맥락 문서가 없다: ${missing.join(", ")}`);
+    throw new Error(
+      `작업 폴더의 context/ 에 후보자 맥락 문서가 없다: ${missing.join(", ")}. 본문을 context/<키>.md 에 쓴 뒤 다시 실행한다.`,
+    );
   return {
-    provider: "backend",
+    provider: "context",
     fields,
     instruction: "documents 본문으로 아래 칸을 채운다. 본문에 없는 칸은 비워 두고 사용자에게 묻는다.",
     documents: candidateMemoryDocumentKeys.map((key) => {
@@ -134,10 +135,10 @@ export async function loadCandidateMemory(
   readDocuments: ReadCandidateMemoryDocuments,
 ): Promise<CandidateMemoryResult> {
   const provider = environment.CAREER_MEMORY?.trim();
-  if (provider === "backend") return loadBackendMemory(readDocuments);
+  if (provider === "context") return loadContextMemory(readDocuments);
   if (provider !== "file")
     throw new Error(
-      `CAREER_MEMORY 는 backend 나 file 이어야 한다 (현재 값: ${provider || "없음"}). drill-engine.ts doctor 로 설정을 점검한다.`,
+      `CAREER_MEMORY 는 context 나 file 이어야 한다 (현재 값: ${provider || "없음"}). drill-engine.ts doctor 로 설정을 점검한다.`,
     );
   const path = environment.CAREER_MEMORY_FILE?.trim() || defaultPath();
   try {

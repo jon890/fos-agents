@@ -362,4 +362,51 @@ CREATE TABLE study_publications (
 CREATE INDEX idx_study_publications_report ON study_publications (report_id);
 `;
 
-export const SCHEMA_STEPS: readonly string[] = [STEP_1];
+/** 면접 연습 묶음이다. 1단계에서 만든 파일(`user_version = 1`)에는 이 단계만 적용된다. */
+const STEP_2 = `
+CREATE TABLE interview_topic_progress (
+  drill_type TEXT NOT NULL,
+  topic TEXT NOT NULL,
+  pass_count INTEGER NOT NULL DEFAULT 0,
+  fail_count INTEGER NOT NULL DEFAULT 0,
+  next_review_date TEXT,
+  last_passed_date TEXT,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (drill_type, topic)
+);
+
+CREATE TABLE interview_attempts (
+  attempt_id TEXT PRIMARY KEY,
+  drill_type TEXT NOT NULL,
+  topic TEXT NOT NULL,
+  question_id TEXT NOT NULL,
+  question TEXT NOT NULL,
+  score TEXT NOT NULL,
+  feedback TEXT,
+  evaluated_on TEXT NOT NULL,
+  target_company TEXT,
+  target_role TEXT,
+  target_value_axis TEXT,
+  root_question_id TEXT,
+  parent_question TEXT,
+  follow_up_depth INTEGER,
+  follow_up_axis TEXT,
+  stop_reason TEXT,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (drill_type, topic) REFERENCES interview_topic_progress (drill_type, topic)
+);
+CREATE INDEX idx_interview_attempts_topic ON interview_attempts (drill_type, topic, created_at);
+
+CREATE TABLE interview_personal_questions (
+  question_id TEXT PRIMARY KEY,
+  drill_type TEXT NOT NULL,
+  topic TEXT NOT NULL,
+  enabled INTEGER NOT NULL,
+  payload TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX idx_interview_personal_questions_type ON interview_personal_questions (drill_type, enabled);
+`;
+
+export const SCHEMA_STEPS: readonly string[] = [STEP_1, STEP_2];
