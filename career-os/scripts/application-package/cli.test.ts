@@ -209,12 +209,56 @@ describe("package check-sources", () => {
   }, SUBPROCESS_TEST_TIMEOUT_MS);
 });
 
+describe("package report", () => {
+  function applicationIn(root: string): string {
+    const directory = join(root, "applications", "example company", "backend");
+    write(directory, "application-package.html", "<html>검토 화면</html>");
+    write(directory, "review/resume.html", "<html>이력서</html>");
+    write(directory, "notes.html", "<html>메모</html>");
+    return directory;
+  }
+
+  test("결과 파일을 reports/ 에 날짜와 종류, 회사, 직무가 든 이름으로 복사하고 넣을 경로를 알린다", async () => {
+    const root = temporaryDirectory();
+    const directory = applicationIn(root);
+    const environment = { CAREER_WORKSPACE_ROOT: root };
+    expect(await runPackageCommand(["report", directory, join(directory, "application-package.html")], environment)).toBe(0);
+    expect(await runPackageCommand(["report", directory, join(directory, "review", "resume.html")], environment)).toBe(0);
+    const copies = logged.filter((line) => line.startsWith("리포트 사본: ")).map((line) => line.slice("리포트 사본: ".length));
+    expect(copies.map((copy) => copy.replace(/\d{4}-\d{2}-\d{2}/, "<날짜>"))).toEqual([
+      join(root, "reports", "<날짜>-application-example-company-backend.html"),
+      join(root, "reports", "<날짜>-resume-example-company-backend.html"),
+    ]);
+    expect(readFileSync(copies[0]!, "utf8")).toBe("<html>검토 화면</html>");
+    expect(logged.filter((line) => line.startsWith("다음 단계: ") && line.includes("file_space_put"))).toHaveLength(2);
+  });
+
+  test("지원 폴더 밖의 파일, 모르는 이름, 작업 폴더 밖의 지원 폴더는 2 로 끝나고 복사하지 않는다", async () => {
+    const root = temporaryDirectory();
+    const directory = applicationIn(root);
+    const environment = { CAREER_WORKSPACE_ROOT: root };
+    write(root, "resume.html", "<html>밖</html>");
+    expect(await runPackageCommand(["report", directory, join(root, "resume.html")], environment)).toBe(2);
+    expect(await runPackageCommand(["report", directory, join(directory, "notes.html")], environment)).toBe(2);
+    expect(await runPackageCommand(["report", directory, join(directory, "application-package.html")], { CAREER_WORKSPACE_ROOT: temporaryDirectory() })).toBe(2);
+    expect(await runPackageCommand(["report", directory], environment)).toBe(2);
+    expect(existsSync(join(root, "reports"))).toBe(false);
+  });
+
+  test("이름은 맞지만 없는 파일은 1 로 끝난다", async () => {
+    const root = temporaryDirectory();
+    const directory = applicationIn(root);
+    expect(await runPackageCommand(["report", directory, join(directory, "resume.pdf")], { CAREER_WORKSPACE_ROOT: root })).toBe(1);
+    expect(errored.join("\n")).toContain("파일이 없습니다");
+  });
+});
+
 describe("package 사용법", () => {
   test("모르는 하위 명령은 사용법을 stderr 에 쓰고 2 로 끝난다", async () => {
     expect(await runPackageCommand(["nope"], {})).toBe(2);
     const output = errored.join("\n");
     expect(output).toContain("모르는 하위 명령입니다: nope");
-    for (const command of ["check-sources", "validate", "render", "question-schema"]) expect(output).toContain(command);
+    for (const command of ["check-sources", "validate", "render", "question-schema", "report"]) expect(output).toContain(command);
   });
 
   test("하위 명령이 없으면 2 로 끝난다", async () => {

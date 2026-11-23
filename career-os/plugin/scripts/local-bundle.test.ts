@@ -66,7 +66,7 @@ test("cwd 의 .env 는 작업본 위치와 모드를 바꾸지 않는다", async
   writeFileSync(join(cwd, ".env"), "CAREER_WORKSPACE_ROOT=/elsewhere\nCAREER_WORKSPACE_SSH_TARGET=example\n");
   const result = await runBundle(cwd, ["workspace", "paths", "--json"]);
   expect(result.exitCode).toBe(0);
-  expect(JSON.parse(result.stdout)).toMatchObject({ root: join(cwd, ".fos-career", "workspace"), mode: "local" });
+  expect(JSON.parse(result.stdout)).toMatchObject({ root: "/workspace/career", mode: "local" });
 });
 
 test("interview 는 Backend 값 없이 번들에 든 공개 질문 은행과 작업 폴더의 SQLite 로 돌고, 실행을 나눠도 기록이 이어진다", async () => {
@@ -178,8 +178,7 @@ const ONE_PIXEL_PNG = Buffer.from(
 
 test("resume export 는 --logo-dir 가 없으면 작업본의 로고를 붙인다", async () => {
   const cwd = temporaryDirectory();
-  // CAREER_WORKSPACE_ROOT 를 주지 않으면 원본의 기본값은 <cwd>/career-os 라서, 실행기가 주입한 plugin 작업본 root 와 다르다.
-  const root = join(cwd, ".fos-career", "workspace");
+  const root = join(cwd, "workspace");
   const logoDir = join(root, "library", "resume-logos");
   mkdirSync(logoDir, { recursive: true });
   writeFileSync(join(logoDir, "example.png"), ONE_PIXEL_PNG);
@@ -195,10 +194,32 @@ test("resume export 는 --logo-dir 가 없으면 작업본의 로고를 붙인�
   const result = await runBundle(
     cwd,
     ["resume", "export", "--application-dir", applicationDir, "--chrome-bin", "/not-used"],
+    { CAREER_WORKSPACE_ROOT: root },
   );
   expect(result.exitCode).toBe(1);
   const html = readFileSync(join(applicationDir, "review", "resume.html"), "utf8");
   expect(html).toContain(`data:image/png;base64,${ONE_PIXEL_PNG.toString("base64")}`);
+});
+
+test("resume export 는 Chrome 없이 HTML 만 내고, package report 가 그 사본을 reports/ 에 만든다", async () => {
+  const cwd = temporaryDirectory();
+  const root = join(cwd, "workspace");
+  const applicationDir = join(root, "applications", "example", "backend");
+  mkdirSync(join(applicationDir, "evidence"), { recursive: true });
+  writeFileSync(join(applicationDir, "evidence", "resume-draft.md"), "# 김예시\n\n## 경력\n\n### 예시회사 · 백엔드 개발\n\n- 예시 서비스를 운영했다.\n");
+  const environment = { CAREER_WORKSPACE_ROOT: root };
+
+  const exported = await runBundle(cwd, ["resume", "export", "--application-dir", applicationDir, "--html-only"], environment);
+  expect({ exitCode: exported.exitCode, stderr: exported.stderr }).toEqual({ exitCode: 0, stderr: "" });
+  expect(exported.stdout).toContain("PDF 도구 없음");
+  expect(existsSync(join(applicationDir, "resume.pdf"))).toBe(false);
+
+  const copied = await runBundle(cwd, ["package", "report", applicationDir, join(applicationDir, "review", "resume.html")], environment);
+  expect({ exitCode: copied.exitCode, stderr: copied.stderr }).toEqual({ exitCode: 0, stderr: "" });
+  const copy = copied.stdout.split("\n").find((line) => line.startsWith("리포트 사본: "))!.slice("리포트 사본: ".length);
+  expect(copy).toMatch(/reports\/\d{4}-\d{2}-\d{2}-resume-example-backend\.html$/);
+  expect(existsSync(copy)).toBe(true);
+  expect(copied.stdout).toContain("file_space_put");
 });
 
 /**

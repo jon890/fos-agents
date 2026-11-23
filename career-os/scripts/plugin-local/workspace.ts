@@ -1,23 +1,21 @@
 import { mkdir } from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import { beginSkillWorkspace, createCareerWorkspaceTransport, finishSkillWorkspace, isManagedSkill } from "../career-workspace/cli.ts";
 import { CAREER_WORKSPACE_MANAGED_ROOTS, CAREER_WORKSPACE_SCHEMA_VERSION } from "../career-workspace/contracts.ts";
 import { makeRemoteError, TransportError } from "../career-workspace/transport.ts";
+import { resolveCareerStoreRoot } from "../lib/career-store/database.ts";
 
 type Environment = Record<string, string | undefined>;
 
 /**
- * plugin 실행기의 작업본 위치와 동기화 방식을 정한다.
- * 기본 root 는 저장소 경로가 아니라 사용자 홈 아래라서, 동기화 설정을 빠뜨려도
- * 저장소의 오래된 작업본을 고치지 않는다(ADR-138).
+ * plugin 실행기의 작업 폴더 위치와 동기화 방식을 정한다.
+ * root 는 공고·공부·면접 실행기와 같은 규칙(`CAREER_WORKSPACE_ROOT`, 없으면 `/workspace/career`)으로 정해
+ * 지원 폴더와 SQLite 가 같은 작업 폴더에 생기게 한다(ADR-146).
  */
 export function resolvePluginWorkspace(
   environment: Environment,
-  home: string,
 ): { root: string; mode: "local" | "remote"; evidenceDir: string } {
-  const configuredRoot = environment.CAREER_WORKSPACE_ROOT?.trim();
-  const root = configuredRoot ? path.resolve(configuredRoot) : path.join(home, ".fos-career", "workspace");
+  const root = resolveCareerStoreRoot(environment);
   const remote = Boolean(environment.CAREER_WORKSPACE_SSH_TARGET?.trim());
   // `workspace` 는 근거 위치를 알려만 준다. 최신 여부는 `package check-sources` 가 같은 변수로 본다.
   const configuredEvidence = environment.CAREER_EVIDENCE_DIR?.trim();
@@ -25,8 +23,8 @@ export function resolvePluginWorkspace(
   return { root, mode: remote ? "remote" : "local", evidenceDir };
 }
 
-export async function runPluginWorkspace(args: string[], environment: Environment = process.env, home = os.homedir()): Promise<unknown> {
-  const { root, mode, evidenceDir } = resolvePluginWorkspace(environment, home);
+export async function runPluginWorkspace(args: string[], environment: Environment = process.env): Promise<unknown> {
+  const { root, mode, evidenceDir } = resolvePluginWorkspace(environment);
   const [command, skill] = args;
   if (command === "paths") {
     return { schemaVersion: CAREER_WORKSPACE_SCHEMA_VERSION, action: "paths", ok: true, root, mode, evidenceDir };

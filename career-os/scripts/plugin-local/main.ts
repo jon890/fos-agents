@@ -1,6 +1,5 @@
 #!/usr/bin/env bun
 import { readFileSync, writeFileSync } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { makeRemoteError, TransportError } from "../career-workspace/transport.ts";
 import { createInterviewStore, runDrillCli } from "../interview-drill/drill-engine.ts";
@@ -38,7 +37,7 @@ const descriptions: Record<Executor, string> = {
   position: "공고를 모아 판정과 분석을 반영하고 리포트를 만든다 (collect | commit-company-tiers | commit-analyses | finalize | cleanup) --run <dir>. 설정은 configure-policy | configure-companies | exclusions",
   resume: "이력서 HTML·PDF 변환, 주장 원장과 검증 완료 주장, 제출 묶음을 다룬다 (export | check-html | validate-ledger | assess-reuse | search-claims | promote-claims | build-bundle | validate-bundle)",
   usage: "기록이 없는 끝난 달의 에이전트 사용량을 측정해 Backend 에 올린다",
-  package: "지원 패키지의 근거 원본, 제출 문서, 검토 화면, 면접 질문 파일을 다룬다 (check-sources | validate | render | question-schema)",
+  package: "지원 패키지의 근거 원본, 제출 문서, 검토 화면, 면접 질문 파일을 다루고 결과 사본을 reports/ 에 만든다 (check-sources | validate | render | question-schema | report)",
   "application-profile": "지원서 공통 프로필을 저장소 밖 파일에 쓴다 (get --out <path>)",
 };
 
@@ -172,7 +171,7 @@ async function runResume(args: string[]): Promise<number> {
     console.error(RESUME_USAGE);
     return 2;
   }
-  const { root } = resolvePluginWorkspace(process.env, os.homedir());
+  const { root } = resolvePluginWorkspace(process.env);
   const injected = Object.entries(entry.defaults ?? {})
     .filter(([option]) => !commandArgs.includes(option))
     .flatMap(([option, relative]) => [option, path.join(root, relative)]);
