@@ -252,6 +252,17 @@ function requireInput(path: string, description: string): void {
   throw new Error(`${path} 파일이 없습니다. ${description}을 이 경로에 작성한 뒤 다시 실행하세요.`);
 }
 
+/**
+ * 앞 단계 명령이 만드는 큐가 없으면 그 명령이 끝나지 않은 것이다.
+ * 모델이 큐를 직접 써서 이어 가지 않게, 만들라고 하지 않고 다시 실행할 명령을 알린다.
+ */
+function requireQueue(path: string, description: string): void {
+  if (existsSync(path)) return;
+  throw new Error(
+    `${path} 파일이 없습니다. ${description}를 만드는 앞 단계 명령이 끝나지 않았습니다. 이 파일을 직접 만들지 말고 collect 부터 다시 실행하세요.`,
+  );
+}
+
 function queueAnalysisRunId(path: string): string {
   const queue = analysisQueueResponseSchema.parse(
     JSON.parse(readFileSync(path, "utf8")) as unknown,
@@ -300,7 +311,9 @@ export async function runPositionCommand(
         `--input 파일을 JSON 으로 읽지 못했습니다: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
-    writeLine(JSON.stringify(await checkExclusions(createPositionStore(), input, new Date()), null, 2));
+    writeLine(
+      JSON.stringify(await checkExclusions(createPositionStore(), input, new Date()), null, 2),
+    );
     return 0;
   }
   const parsed = parsePositionRunArgs(argv);
@@ -380,7 +393,7 @@ export async function runPositionCommand(
 
   if (parsed.command === "commit-company-tiers") {
     requireInput(paths.companyTierUpdates, "회사 판정 결과");
-    requireInput(paths.companyTierQueue, "collect가 만든 회사 판정 큐");
+    requireQueue(paths.companyTierQueue, "회사 판정 큐");
     const result = await operations.commitCompanyTiers(paths);
     writeLine(
       `회사 판정 반영: 생성 ${result.createdCount}건, 재사용 ${result.reusedCount}건, 실패 ${result.failedCount}건, 남음 ${result.remainingCount}건`,
@@ -398,7 +411,7 @@ export async function runPositionCommand(
 
   if (parsed.command === "commit-analyses") {
     requireInput(paths.analysisUpdates, "공고 분석 결과");
-    requireInput(paths.analysisQueue, "앞 단계가 만든 공고 분석 큐");
+    requireQueue(paths.analysisQueue, "공고 분석 큐");
     const result = await operations.commitAnalyses(paths);
     writeLine(
       `공고 분석 반영: 생성 ${result.createdCount}건, 재사용 ${result.reusedCount}건, 실패 ${result.failedCount}건, 남음 ${result.remainingCount}건`,
@@ -416,7 +429,7 @@ export async function runPositionCommand(
     return 0;
   }
 
-  requireInput(paths.analysisQueue, "앞 단계가 만든 공고 분석 큐");
+  requireQueue(paths.analysisQueue, "공고 분석 큐");
   const result = await operations.finalize(paths, queueAnalysisRunId(paths.analysisQueue));
   writeLine(
     `최종화 완료: 순위 ${result.rankingCount}건, 이번 실행 분석 ${result.analyzedNowCount}건, 재사용 ${result.reusedCount}건, 대기 ${result.pendingCount}건`,
@@ -426,7 +439,9 @@ export async function runPositionCommand(
   if (operations.saveReport) {
     const reportCopy = operations.saveReport(paths);
     writeLine(`리포트 사본: ${reportCopy}`);
-    writeLine(`다음 단계: file_space_put 으로 ${reportCopy} 를 「내 파일」 에 넣는다. 넣은 이름이나 넣지 못한 이유를 최종 답변의 「내 파일」 줄에 적는다`);
+    writeLine(
+      `다음 단계: file_space_put 으로 ${reportCopy} 를 「내 파일」 에 넣는다. 넣은 이름이나 넣지 못한 이유를 최종 답변의 「내 파일」 줄에 적는다`,
+    );
   }
   return 0;
 }

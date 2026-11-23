@@ -794,3 +794,18 @@ test("네 하위 명령의 stdout은 회사명과 공고 본문을 내지 않는
   expect(lines.join("\n")).not.toContain(secret);
   expect(readFileSync(paths.analysisQueue, "utf8")).toContain(secret);
 });
+
+test("앞 단계가 만든 큐가 없으면 직접 만들라고 하지 않고 collect 부터 다시 하라고 알린다", async () => {
+  // 실측(2026-11-23): collect 가 죽은 뒤 finalize 를 불렀고, 큐를 「작성한 뒤 다시 실행」 하라는 문구가 나왔다.
+  const directory = workspace();
+  writeJson(join(directory, "company-tier-updates.json"), {});
+  writeJson(join(directory, "analysis-updates.json"), {});
+  for (const command of ["commit-company-tiers", "commit-analyses", "finalize"]) {
+    const failure = await runPositionCommand([command, "--run", directory]).catch((error) => error);
+    expect(failure, command).toBeInstanceOf(Error);
+    expect((failure as Error).message, command).toContain(
+      "이 파일을 직접 만들지 말고 collect 부터 다시 실행하세요.",
+    );
+    expect((failure as Error).message, command).not.toContain("작성한 뒤");
+  }
+});
