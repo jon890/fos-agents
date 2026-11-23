@@ -143,7 +143,7 @@ test("errors 는 data-schema.md 의 커넥터 오류 코드 표에서 공통 어
 });
 
 // 대화용 스킬 디렉터리는 없다. 스킬은 모두 `agent-skills/` 로 설치된다(ADR-147).
-// 키를 빼면 설치하는 쪽이 기본값 `./skills`(Claude Code 전용)를 읽으므로 빈 목록으로 둔다.
+// 키를 빼면 설치하는 쪽이 기본값 `./skills` 를 읽으므로 빈 목록으로 둔다.
 test("plugin.json 의 skills 는 빈 목록이고 대화용 스킬 디렉터리가 없다", () => {
   expect(read(".claude-plugin/plugin.json").skills).toEqual([]);
   expect(existsSync(join(import.meta.dir, "..", "connector-skills"))).toBe(false);
@@ -155,14 +155,14 @@ test("스킬을 노트북 에이전트의 스킬 폴더에 링크하지 않는�
     expect({ name, linked: existsSync(join(repoSkills, name)) }).toEqual({ name, linked: false });
 });
 
-test("원티드 도구 설명이 나눠 부르기, 대안, 범위 밖 칸, 다시 부르지 않기를 안내한다", () => {
+test("원티드 도구 설명이 나눠 부르기, 범위 밖 칸, 다시 부르지 않기를 안내하고 지운 노트북 스킬을 안내하지 않는다", () => {
   const update = connector.tools.update_wanted_resume.description;
   const read = connector.tools.get_wanted_resume.description;
   expect(update).toContain("나눠");
-  expect(update).toContain("노트북 Claude Code");
+  expect(update).not.toContain("노트북 Claude Code");
   expect(update).toContain("outOfScope");
   expect(update).toContain("자동으로 다시 부르지 않습니다");
-  expect(read).toContain("노트북 Claude Code");
+  expect(read).not.toContain("노트북 Claude Code");
   expect(read).toContain("outOfScope");
   expect(connector.tools.update_wanted_resume).toMatchObject({ risk: "WRITE", approval: "required", outbound: true, grant: false });
   expect(connector.tools.update_wanted_resume).not.toHaveProperty("conversation_grant");

@@ -6,7 +6,7 @@
   "link": "https://github.com/jon890/fos-agents/tree/main/career-os",
   "link_kind": "project",
   "readme_url": "https://github.com/jon890/fos-agents/blob/main/career-os/README.md",
-  "description": "GitHub 프로필 README 와 원티드 이력서를 읽고 승인받아 갱신합니다. 면접 연습, 공고 추천, 공부 추천은 에이전트의 셸 실행 공간에서 작업 폴더에 쌓습니다.",
+  "description": "GitHub 프로필 README 와 원티드 이력서를 읽고 승인받아 갱신합니다. 면접 연습, 공고 추천, 공부 추천, 지원 준비는 에이전트의 셸 실행 공간에서 작업 폴더에 쌓습니다.",
   "fields": [
     {
       "key": "github_token",
@@ -31,7 +31,11 @@
       "position-recommender": ["CLAUDE_PLUGIN_ROOT", "CAREER_WORKSPACE_ROOT", "CAREER_EVIDENCE_DIR"],
       "study-collection": ["CLAUDE_PLUGIN_ROOT", "CAREER_WORKSPACE_ROOT"],
       "interview-practice": ["CLAUDE_PLUGIN_ROOT", "CAREER_WORKSPACE_ROOT"],
-      "career-connector": ["CLAUDE_PLUGIN_ROOT", "CAREER_WORKSPACE_ROOT"]
+      "career-connector": ["CLAUDE_PLUGIN_ROOT", "CAREER_WORKSPACE_ROOT"],
+      "application-package-writer": ["CLAUDE_PLUGIN_ROOT", "CAREER_WORKSPACE_ROOT"],
+      "resume-preparer": ["CLAUDE_PLUGIN_ROOT", "CAREER_WORKSPACE_ROOT"],
+      "resume-review": ["CLAUDE_PLUGIN_ROOT", "CAREER_WORKSPACE_ROOT"],
+      "interview-question-prep": ["CLAUDE_PLUGIN_ROOT", "CAREER_WORKSPACE_ROOT"]
     }
   },
   "owner_browser_env": "CAREER_BROWSER_URL",
@@ -61,7 +65,7 @@
       "risk": "READ",
       "approval": "none",
       "title": "원티드 이력서 읽기",
-      "description": "사용자의 「내 브라우저」 에서 원티드 이력서의 지금 값을 읽습니다. 선택 resumeKey 는 1자 이상 200자 이하이며 기본값은 없습니다. resumeKey 를 생략하면 이력서 목록을 읽어 하나면 그 이력서를 읽고, 여럿이면 status: choose 와 resumes(resumeKey, title, updatedAt)를 돌려주니 사용자에게 고르게 한 뒤 그 resumeKey 로 다시 부릅니다. 정상 결과는 status: ok, resumeKey, resumeTitle, fields, unreadable, outOfScope 입니다. fields 의 각 칸은 field, label, value, fingerprint 이고 field 는 about 이거나 project:<경력 순번>:<프로젝트 순번>:title|description|start|end 이며 기간 값은 YYYY-MM 입니다. label 의 회사와 프로젝트 제목으로 원고 항목과 짝짓고(짝이 없거나 제목 자체를 바꾸면 어느 항목에 넣을지 사용자에게 묻습니다), 원고와 다른 칸만 변경 전후 표로 보입니다. fingerprint 는 update_wanted_resume 의 before 에 그대로 넣습니다. unreadable 은 화면에서 기간을 읽지 못한 칸으로, 빈 값이 아니므로 바꾸자고 제안하지 않습니다. outOfScope 의 기술, 링크, AI 활용 경험은 읽기만 하며 이 플러그인으로 쓰지 않습니다. 원고와 다르면 원티드 화면에서 직접 고치라고 안내합니다. 원티드 로그인이 풀려 있으면 오류가 아닌 status: HUMAN_ACTION_REQUIRED 와 handoff(need: login)를 돌려주고 대화에 화면 넘기기 카드가 뜹니다. 사용자가 로그인하고 「다 했어요」 를 누를 때까지 다시 부르지 않습니다. 사용자가 「내 브라우저」 를 직접 쓰는 중이면 need: human_browser 입니다. 「내 브라우저」 에 닿지 못하면 CAREER_BROWSER_UNREACHABLE, 받은 resumeKey 의 이력서가 없으면 CAREER_WANTED_RESUME_NOT_FOUND, 목록이 비었거나 화면이 예상과 다르면 CAREER_WANTED_PAGE_CHANGED 이며 이때는 노트북 Claude Code 의 프로필 갱신이나 원티드 화면에서 직접 고치기를 안내합니다. 개인 경력이 담긴 이력서를 읽고 아무것도 쓰지 않는 READ 도구로 승인 없이 호출합니다."
+      "description": "사용자의 「내 브라우저」 에서 원티드 이력서의 지금 값을 읽습니다. 선택 resumeKey 는 1자 이상 200자 이하이며 기본값은 없습니다. resumeKey 를 생략하면 이력서 목록을 읽어 하나면 그 이력서를 읽고, 여럿이면 status: choose 와 resumes(resumeKey, title, updatedAt)를 돌려주니 사용자에게 고르게 한 뒤 그 resumeKey 로 다시 부릅니다. 정상 결과는 status: ok, resumeKey, resumeTitle, fields, unreadable, outOfScope 입니다. fields 의 각 칸은 field, label, value, fingerprint 이고 field 는 about 이거나 project:<경력 순번>:<프로젝트 순번>:title|description|start|end 이며 기간 값은 YYYY-MM 입니다. label 의 회사와 프로젝트 제목으로 원고 항목과 짝짓고(짝이 없거나 제목 자체를 바꾸면 어느 항목에 넣을지 사용자에게 묻습니다), 원고와 다른 칸만 변경 전후 표로 보입니다. fingerprint 는 update_wanted_resume 의 before 에 그대로 넣습니다. unreadable 은 화면에서 기간을 읽지 못한 칸으로, 빈 값이 아니므로 바꾸자고 제안하지 않습니다. outOfScope 의 기술, 링크, AI 활용 경험은 읽기만 하며 이 플러그인으로 쓰지 않습니다. 원고와 다르면 원티드 화면에서 직접 고치라고 안내합니다. 원티드 로그인이 풀려 있으면 오류가 아닌 status: HUMAN_ACTION_REQUIRED 와 handoff(need: login)를 돌려주고 대화에 화면 넘기기 카드가 뜹니다. 사용자가 로그인하고 「다 했어요」 를 누를 때까지 다시 부르지 않습니다. 사용자가 「내 브라우저」 를 직접 쓰는 중이면 need: human_browser 입니다. 「내 브라우저」 에 닿지 못하면 CAREER_BROWSER_UNREACHABLE, 받은 resumeKey 의 이력서가 없으면 CAREER_WANTED_RESUME_NOT_FOUND, 목록이 비었거나 화면이 예상과 다르면 CAREER_WANTED_PAGE_CHANGED 이며 이때는 원티드 화면에서 직접 고치기를 안내합니다. 개인 경력이 담긴 이력서를 읽고 아무것도 쓰지 않는 READ 도구로 승인 없이 호출합니다."
     },
     "update_wanted_resume": {
       "risk": "WRITE",
@@ -69,7 +73,7 @@
       "outbound": true,
       "grant": false,
       "title": "원티드 이력서 반영",
-      "description": "승인한 변경을 사용자의 「내 브라우저」 에서 원티드 이력서의 칸에 하나씩 넣고, 넣을 때마다 원티드 서버에서 다시 읽어 글자 단위로 저장을 확인합니다. 필수 resumeKey(1자 이상 200자 이하), resumeTitle(1자 이상 100자 이하, get_wanted_resume 이 준 이력서 이름 그대로, 지금 이력서 이름과 다르면 아무것도 넣지 않습니다), changes(1개 이상 30개 이하)를 받고 선택 인자와 기본값은 없습니다. changes 의 각 항목은 field, label, before, value 입니다. field 는 get_wanted_resume 의 about 이나 project:<c>:<p>:title|description|start|end 만 받고 기술, 링크, AI 활용 경험은 받지 않습니다(outOfScope 는 읽기만 합니다). label 은 get_wanted_resume 이 준 그 칸의 label 을 그대로, before 는 get_wanted_resume 이 준 fingerprint, value 는 넣을 값이며 기간은 YYYY-MM 입니다. 같은 field 를 두 번 넣지 않습니다. 인자는 UTF-8 16KB 까지라, 16KB 를 넘을 변경은 칸을 나눠 여러 번 부르고 앞 호출의 칸이 모두 inserted 일 때만, get_wanted_resume 으로 다시 읽어 새 label 과 fingerprint 로 다음 호출을 합니다. 칸을 건드리기 전에 모든 label 이 지금 이력서의 같은 칸 이름과 같은지 보고, 읽은 뒤 항목이 늘어 다르면 아무것도 넣지 않고 page_changed 로 멈춥니다. 넣기 직전 서버에서 새로 받은 값(기간은 편집 화면을 새로 연 값)의 지문이 before 와 다르면 덮어쓰지 않고 멈춥니다. 결과는 오류가 아닌 status: done 또는 stopped 와 results 입니다. results 의 각 칸은 field, label, state, reason 이고 state 는 inserted, failed, not_inserted 입니다. reason 은 fingerprint_mismatch(다른 곳에서 바뀜), stopped_earlier(앞 칸에서 멈춤), time_limit(시간 제한, 남은 칸은 다시 읽어 새로 승인), page_changed(화면이 예상과 다름), not_saved(넣었지만 저장 확인 실패), login_required(로그인 풀림, get_wanted_resume 을 다시 불러 화면 넘기기 카드를 띄움), browser_in_use(사용자가 브라우저를 쓰는 중), browser_taken(넣는 중 사용자가 브라우저를 가져가 저장 여부 불명), browser_unreachable(브라우저 연결 끊김), too_long(원티드 칸 글자 수 초과, 넣지 않음) 입니다. 진행 중 프로젝트의 종료월처럼 폼 제약으로 원고와 다르게 넣은 값은 원고 저장 때 그 사실을 함께 적습니다. failed 칸은 저장됐을 수 있으니 get_wanted_resume 으로 다시 읽어 확인합니다. 같은 인자로 자동으로 다시 부르지 않습니다. 화면이 바뀌었으면 노트북 Claude Code 의 프로필 갱신이나 원티드 화면에서 직접 고치기를 안내합니다. 「내 브라우저」 에 닿지 못하면 CAREER_BROWSER_UNREACHABLE, 이력서가 없으면 CAREER_WANTED_RESUME_NOT_FOUND 오류이며 이때는 아무 칸도 바꾸지 않았습니다. 누구나 보는 개인 프로필이 바뀌므로 변경 전후 표를 대화에 보이고 호출마다 승인 카드에서 승인받는 WRITE 도구입니다. 상시 허락과 대화 허락을 받지 않습니다. 변경안은 작업 폴더의 프로필 원고 파일에서 만들므로 셸 실행 공간이 없는 에이전트에서는 부르지 않습니다."
+      "description": "승인한 변경을 사용자의 「내 브라우저」 에서 원티드 이력서의 칸에 하나씩 넣고, 넣을 때마다 원티드 서버에서 다시 읽어 글자 단위로 저장을 확인합니다. 필수 resumeKey(1자 이상 200자 이하), resumeTitle(1자 이상 100자 이하, get_wanted_resume 이 준 이력서 이름 그대로, 지금 이력서 이름과 다르면 아무것도 넣지 않습니다), changes(1개 이상 30개 이하)를 받고 선택 인자와 기본값은 없습니다. changes 의 각 항목은 field, label, before, value 입니다. field 는 get_wanted_resume 의 about 이나 project:<c>:<p>:title|description|start|end 만 받고 기술, 링크, AI 활용 경험은 받지 않습니다(outOfScope 는 읽기만 합니다). label 은 get_wanted_resume 이 준 그 칸의 label 을 그대로, before 는 get_wanted_resume 이 준 fingerprint, value 는 넣을 값이며 기간은 YYYY-MM 입니다. 같은 field 를 두 번 넣지 않습니다. 인자는 UTF-8 16KB 까지라, 16KB 를 넘을 변경은 칸을 나눠 여러 번 부르고 앞 호출의 칸이 모두 inserted 일 때만, get_wanted_resume 으로 다시 읽어 새 label 과 fingerprint 로 다음 호출을 합니다. 칸을 건드리기 전에 모든 label 이 지금 이력서의 같은 칸 이름과 같은지 보고, 읽은 뒤 항목이 늘어 다르면 아무것도 넣지 않고 page_changed 로 멈춥니다. 넣기 직전 서버에서 새로 받은 값(기간은 편집 화면을 새로 연 값)의 지문이 before 와 다르면 덮어쓰지 않고 멈춥니다. 결과는 오류가 아닌 status: done 또는 stopped 와 results 입니다. results 의 각 칸은 field, label, state, reason 이고 state 는 inserted, failed, not_inserted 입니다. reason 은 fingerprint_mismatch(다른 곳에서 바뀜), stopped_earlier(앞 칸에서 멈춤), time_limit(시간 제한, 남은 칸은 다시 읽어 새로 승인), page_changed(화면이 예상과 다름), not_saved(넣었지만 저장 확인 실패), login_required(로그인 풀림, get_wanted_resume 을 다시 불러 화면 넘기기 카드를 띄움), browser_in_use(사용자가 브라우저를 쓰는 중), browser_taken(넣는 중 사용자가 브라우저를 가져가 저장 여부 불명), browser_unreachable(브라우저 연결 끊김), too_long(원티드 칸 글자 수 초과, 넣지 않음) 입니다. 진행 중 프로젝트의 종료월처럼 폼 제약으로 원고와 다르게 넣은 값은 원고 저장 때 그 사실을 함께 적습니다. failed 칸은 저장됐을 수 있으니 get_wanted_resume 으로 다시 읽어 확인합니다. 같은 인자로 자동으로 다시 부르지 않습니다. 화면이 바뀌었으면 원티드 화면에서 직접 고치기를 안내합니다. 「내 브라우저」 에 닿지 못하면 CAREER_BROWSER_UNREACHABLE, 이력서가 없으면 CAREER_WANTED_RESUME_NOT_FOUND 오류이며 이때는 아무 칸도 바꾸지 않았습니다. 누구나 보는 개인 프로필이 바뀌므로 변경 전후 표를 대화에 보이고 호출마다 승인 카드에서 승인받는 WRITE 도구입니다. 상시 허락과 대화 허락을 받지 않습니다. 변경안은 작업 폴더의 프로필 원고 파일에서 만들므로 셸 실행 공간이 없는 에이전트에서는 부르지 않습니다."
     }
   },
   "default_tool_policy": "deny",

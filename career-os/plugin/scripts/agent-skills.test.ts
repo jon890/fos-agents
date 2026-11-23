@@ -1,13 +1,7 @@
 import { expect, test } from "bun:test";
 import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
-import {
-  AGENT_SKILL_COPIES,
-  AGENT_SKILL_ORIGINALS,
-  AGENT_SKILLS_DIRECTORY,
-  agentSkillDrift,
-  hostOnlyFindings,
-} from "./agent-skills.ts";
+import { AGENT_SKILLS, AGENT_SKILLS_DIRECTORY, agentSkillProblems, hostOnlyFindings } from "./agent-skills.ts";
 
 const pluginRoot = join(import.meta.dir, "..");
 const connector = JSON.parse(readFileSync(join(pluginRoot, "connector.json"), "utf8"));
@@ -123,10 +117,14 @@ test("비서용 스킬과 그 sandbox_env 는 커리어 Backend 의 주소와 to
   }
 });
 
-test("agent-skills 의 사본이 skills 원본에서 만든 것과 같다", () => {
-  // 어긋나면 `bun run scripts/agent-skills.ts` 로 다시 만든다.
-  expect(agentSkillDrift()).toEqual([]);
-  expect([...agentSkillNames].sort()).toEqual([...Object.keys(AGENT_SKILL_COPIES), ...AGENT_SKILL_ORIGINALS].sort());
+test("agent-skills 의 디렉터리가 스킬 목록과 같고 검사기가 문제를 찾지 못한다", () => {
+  expect(agentSkillProblems()).toEqual([]);
+  expect([...agentSkillNames].sort()).toEqual([...AGENT_SKILLS].sort());
+});
+
+test("노트북 전용 스킬 디렉터리가 없다", () => {
+  // 스킬은 모두 `agent-skills/` 가 원본이다(ADR-148). `skills/` 가 다시 생기면 노트북에서만 도는 스킬이 따로 생긴 것이다.
+  expect(existsSync(join(pluginRoot, "skills"))).toBe(false);
 });
 
 // 지운 MCP 도구다. 스킬이 이 이름을 적으면 에이전트가 없는 도구를 찾다 멈춘다.
@@ -168,9 +166,15 @@ test("맥락 문서를 쓰는 비서용 스킬은 기억에서 읽고, 같은 �
     "study-collection": ["커리어: 학습 관심사"],
     "interview-practice": ["커리어: 현재 경력", "커리어: 지원 상태"],
     "career-connector": ["커리어: 현재 경력", "커리어: 역할 선호", "커리어: 지원 상태", "커리어: 학습 관심사"],
+    "application-package-writer": ["커리어: 현재 경력", "커리어: 역할 선호", "커리어: 지원 상태"],
+    "resume-preparer": ["커리어: 현재 경력", "커리어: 역할 선호"],
+    "interview-question-prep": ["커리어: 현재 경력", "커리어: 지원 상태"],
+    // 맥락 문서를 직접 읽지 않는다. 원고와 근거, 다른 스킬의 기준 문서만 읽는다.
+    "resume-review": [],
   };
   expect(Object.keys(titles).sort()).toEqual([...agentSkillNames].sort());
   for (const [name, expected] of Object.entries(titles)) {
+    if (expected.length === 0) continue;
     const skill = readFileSync(join(agentRoot, name, "SKILL.md"), "utf8");
     for (const title of expected) expect(skill, `${name}: ${title}`).toContain(`「${title}」`);
     expect(skill, name).toContain("memory_search");
@@ -184,7 +188,7 @@ test("맥락 문서를 쓰는 비서용 스킬은 기억에서 읽고, 같은 �
 test("맥락 문서가 없으면 실행기를 부르지 않고, 문서를 만드는 스킬을 안내한다", () => {
   const connector = readFileSync(join(agentRoot, "career-connector", "SKILL.md"), "utf8");
   expect(connector).toContain("## 맥락 문서 읽고 고치기");
-  for (const name of ["position-recommender", "study-collection", "interview-practice"]) {
+  for (const name of ["position-recommender", "study-collection", "interview-practice", "application-package-writer", "resume-preparer", "interview-question-prep"]) {
     const skill = readFileSync(join(agentRoot, name, "SKILL.md"), "utf8");
     const line = skill.split("\n").find((text) => text.includes("없으면 실행기를 부르지 않"));
     expect(line, name).toContain("`career-connector` 스킬의 「맥락 문서 읽고 고치기」");
@@ -290,11 +294,96 @@ test("실행기를 부르는 스킬은 플러그인 폴더의 원본을 읽지 �
   for (const directory of agentSkillDirs) {
     const skill = readFileSync(join(directory, "SKILL.md"), "utf8");
     if (!skill.includes("${CLAUDE_PLUGIN_ROOT}")) continue;
-    expect(skill, directory).toContain("플러그인 폴더의 `skills/` 는 다른 실행 환경용 원본이니 읽지 않는다.");
+    expect(skill, directory).toContain("플러그인 폴더의 다른 파일에서 절차를 찾지 않는다.");
   }
 });
 
 test("plugin.json 의 skills 가 agent-skills 를 가리키지 않는다", () => {
-  // 가리키면 Claude Code 에서 같은 이름의 원본과 사본이 함께 보인다.
+  // 비서용 스킬은 `connector.json` 의 `agent_skills` 로만 설치한다. 여기서도 가리키면 셸 조건을 보지 않고 설치된다.
   expect(plugin.skills).toEqual([]);
+});
+
+const applicationSkills = ["application-package-writer", "resume-preparer", "resume-review", "interview-question-prep"];
+
+function markdownOf(name: string): Array<{ file: string; text: string }> {
+  return walk(join(agentRoot, name))
+    .filter((file) => file.endsWith(".md"))
+    .map((file) => ({ file, text: readFileSync(file, "utf8") }));
+}
+
+test("비서용 스킬은 지운 작업본 동기화와 공통 프로필 명령, 스킬 밖을 가리키는 링크를 담지 않는다", () => {
+  for (const name of agentSkillNames)
+    for (const { file, text } of markdownOf(name))
+      for (const banned of ["workspace begin", "workspace finish", "<CAREER_LOCAL> application-profile", "](../", "--env-file=", "sources/fos-study"])
+        expect({ file, banned, hit: text.includes(banned) }).toEqual({ file, banned, hit: false });
+});
+
+test("문서에 적은 실행기 이름이 모두 번들의 실제 실행기다", () => {
+  const help = runLocal(["help"]);
+  const known = [...help.matchAll(/^ {2}([a-z][a-z-]*) +/gm)].map((match) => match[1]!);
+  expect(known).toContain("package");
+  for (const name of agentSkillNames)
+    for (const { file, text } of markdownOf(name))
+      for (const match of text.matchAll(/<CAREER_LOCAL> ([a-z][a-z-]*)/g)) expect(known, `${file} 의 ${match[1]}`).toContain(match[1]!);
+});
+
+test("지원 준비 스킬이 적은 package, resume, workspace 하위 명령은 번들 사용법에 있다", () => {
+  const usage = { package: runLocal(["package"]), resume: runLocal(["resume"]) };
+  const seen = new Set<string>();
+  for (const name of applicationSkills)
+    for (const { file, text } of markdownOf(name)) {
+      for (const match of text.matchAll(/<CAREER_LOCAL> (package|resume) ([a-z][a-z-]*)/g)) {
+        seen.add(`${match[1]} ${match[2]}`);
+        expect(usage[match[1] as "package" | "resume"], `${file} 의 ${match[0]}`).toContain(match[2]!);
+      }
+      for (const match of text.matchAll(/<CAREER_LOCAL> workspace ([a-z]+)/g)) expect({ file, command: match[1] }).toEqual({ file, command: "paths" });
+    }
+  for (const command of ["package check-sources", "package validate", "package render", "package report", "package question-schema", "resume export", "resume check-html", "resume validate-ledger", "resume build-bundle"])
+    expect([...seen], command).toContain(command);
+});
+
+test("본문이 가리키는 references 파일이 모두 있고, 다른 스킬의 문서를 가리키면 skill_view 로 읽으라고 적는다", () => {
+  for (const name of agentSkillNames) {
+    const skill = readFileSync(join(agentRoot, name, "SKILL.md"), "utf8");
+    // 「`resume-preparer` 스킬의 `references/x.md`」 처럼 다른 스킬 이름 뒤에 온 경로는 그 스킬에서 찾는다.
+    for (const match of skill.matchAll(/(?:`([a-z-]+)` 스킬의 )?(?:\]\(|`)references\/([A-Za-z0-9._-]+\.md)/g)) {
+      const owner = match[1] ?? name;
+      expect(existsSync(join(agentRoot, owner, "references", match[2]!)), `${name}: ${owner}/references/${match[2]}`).toBe(true);
+      if (owner !== name) expect(skill, name).toContain("`skill_view`");
+    }
+  }
+  for (const name of ["application-package-writer", "resume-review", "interview-question-prep"])
+    expect(readFileSync(join(agentRoot, name, "SKILL.md"), "utf8"), name).toContain("`skill_view`");
+});
+
+test("지원 준비 스킬은 description 앞에 요청 문구를 두고, HTML 결과를 사본으로 만들어 「내 파일」 에 넣는다", () => {
+  // 비서의 스킬 목록은 description 을 약 50자에서 자른다.
+  const requests: Record<string, RegExp> = {
+    "application-package-writer": /지원 준비|지원 패키지/,
+    "resume-preparer": /이력서 준비|이력서 작성/,
+    "resume-review": /이력서 평가|이력서 검토/,
+    "interview-question-prep": /공고별 면접 질문/,
+  };
+  for (const [name, pattern] of Object.entries(requests)) {
+    const skill = readFileSync(join(agentRoot, name, "SKILL.md"), "utf8");
+    expect((frontMatter(skill).match(/^description: (.+)$/m)?.[1] ?? "").slice(0, 50), name).toMatch(pattern);
+  }
+  // 공고별 면접 질문 연습은 HTML 결과가 없다. 연습 기록이 작업 폴더의 SQLite 에 남는다.
+  for (const name of ["application-package-writer", "resume-preparer", "resume-review"]) {
+    const skill = readFileSync(join(agentRoot, name, "SKILL.md"), "utf8");
+    expect(skill, name).toContain("<CAREER_LOCAL> package report");
+    const line = skill.split("\n").find((text) => text.includes("file_space_put") && text.includes("건너뛰지 않는다"));
+    expect(line, name).toContain("`리포트 사본:` 줄의 경로");
+    expect(skill, name).toContain("「내 파일」 줄");
+  }
+});
+
+test("이력서 준비 스킬은 PDF 도구가 없으면 HTML 만 전달하고, 지원 패키지 스킬은 공통 프로필을 기억에서 읽고 사본을 지운다", () => {
+  const resume = readFileSync(join(agentRoot, "resume-preparer", "SKILL.md"), "utf8");
+  expect(resume).toContain("`PDF 도구 없음`");
+  expect(resume).toContain("7단계의 제출 묶음은 만들지 않는다");
+  const application = readFileSync(join(agentRoot, "application-package-writer", "SKILL.md"), "utf8");
+  expect(application).toContain("「커리어: 지원서 공통 프로필」");
+  expect(application).toContain("context/application-profile.md");
+  expect(application).toContain("지원서 입력을 만든 뒤 그 파일을 지운다.");
 });

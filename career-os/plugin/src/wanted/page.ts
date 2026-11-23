@@ -1,5 +1,5 @@
 // Expressions evaluated inside the Wanted tab with `Runtime.evaluate`.
-// They port skills/sync-profile/scripts/wanted_*.sh. Each returns a fixed marker or a JSON-able value.
+// They port the form scripts of the removed notebook profile-sync skill. Each returns a fixed marker or a JSON-able value.
 // Values are embedded with JSON.stringify, so quotes, backslashes and newlines survive without base64.
 
 export const WANTED_ORIGIN = "https://www.wanted.co.kr";

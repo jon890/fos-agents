@@ -10,7 +10,9 @@ import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
 
-const skillDirectory = resolve(import.meta.dir, "../../plugin/skills/resume-preparer");
+const skillDirectory = resolve(import.meta.dir, "../../plugin/agent-skills/resume-preparer");
+// 평가 사례는 비서에 복사되지 않게 스킬 디렉터리 밖에 둔다.
+const evalsFile = resolve(import.meta.dir, "evals/evals.json");
 const outputArgument = process.argv.indexOf("--out");
 const outputDirectory = outputArgument >= 0 ? process.argv[outputArgument + 1] : undefined;
 if (!outputDirectory || !isAbsolute(outputDirectory))
@@ -18,7 +20,7 @@ if (!outputDirectory || !isAbsolute(outputDirectory))
 
 type EvalCase = { id: number; prompt: string; expected_output: string; expectations: string[] };
 const cases = (
-  JSON.parse(readFileSync(join(skillDirectory, "evals/evals.json"), "utf8")).evals as EvalCase[]
+  JSON.parse(readFileSync(evalsFile, "utf8")).evals as EvalCase[]
 ).filter(({ id }) => id >= 15 && id <= 19);
 if (cases.length !== 5 || new Set(cases.map(({ id }) => id)).size !== 5)
   throw new Error("평가 사례 15~19를 모두 확인할 수 없습니다.");

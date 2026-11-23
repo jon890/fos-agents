@@ -19,10 +19,11 @@ YouTube 영상은 제목과 설명만 보고 기술 사실을 확정하지 않�
 
 ## 후보 수집
 
-실행별 후보와 cache는 저장소가 아니라 시스템 임시 디렉터리에 만든다.
+실행별 후보와 cache는 작업 폴더의 `runs/` 아래에 만든다. 실행 공간의 `/tmp` 는 작다.
 
 ```bash
-mktemp -d "${TMPDIR:-/tmp}/interview-question-sources.XXXXXX"
+mkdir -p "${CAREER_WORKSPACE_ROOT:-/workspace/career}/runs"
+mktemp -d "${CAREER_WORKSPACE_ROOT:-/workspace/career}/runs/interview-question-sources.XXXXXX"
 ```
 
 반환 경로를 `<RUN_DIR>`로 사용한다.
@@ -35,10 +36,10 @@ mktemp -d "${TMPDIR:-/tmp}/interview-question-sources.XXXXXX"
 ```
 
 일부 출처가 실패해도 다른 출처의 후보가 있으면 계속한다.
-수집 결과가 모두 비었을 때만 웹 검색으로 등록 출처의 공개 상태를 확인한다.
+`collect` 가 성공했는데 후보가 0건일 때만 등록 출처가 지금도 열려 있는지 확인한다. 질문을 웹에서 지어 오지 않고, `collect` 가 실패했으면 실패한 명령과 표준 오류 첫 줄을 알리고 끝낸다.
 
 검토를 마치면 `<RUN_DIR>`의 파일과 빈 디렉터리를 각각 제거한다.
-경로가 `interview-question-sources.`로 시작하는 시스템 임시 디렉터리인지 먼저 확인한다.
+경로가 작업 폴더 `runs/` 아래의 `interview-question-sources.`로 시작하는 디렉터리인지 먼저 확인한다.
 
 ```bash
 find <RUN_DIR> -type f -exec unlink {} \;
@@ -47,9 +48,9 @@ find <RUN_DIR> -depth -type d -exec rmdir {} \;
 
 ## 공백과 목표 수준 연결
 
-1. `get_interview_questions` 와 `<CAREER_LOCAL> interview select` 가 낸 질문의 `category`, `tags`, `difficulty`, `bar` 분포를 확인한다.
+1. `<CAREER_LOCAL> interview select` 가 낸 질문의 `category`, `tags`, `difficulty`, `bar` 분포를 확인한다.
 2. 현재 지원 공고가 요구하지만 공개·개인·포지션 질문에 없는 영역을 찾는다.
-3. 후보자 맥락에서 `currentRole` 과 `experience` 를 읽는다.
+3. 기억의 「커리어: 현재 경력」 본문에서 현재 역할과 경험 범위를 읽는다.
 4. 회사 이름으로 수준을 고정하지 않고 공고의 문제 규모와 책임으로 목표 `bar`를 정한다.
 5. 후보 원문에서 현재 공백에 맞는 제약, 실패 사례와 판단 지점을 고른다.
 6. 기술 사실은 `answer-authority` 출처에서 다시 확인한다.
@@ -74,7 +75,7 @@ find <RUN_DIR> -depth -type d -exec rmdir {} \;
 - 질문마다 `bar`, 답변 신호와 대표 꼬리질문 후보를 둔다.
 - 꼬리질문은 같은 말을 다시 묻지 않고 판단, 반례, 운영과 근거 경계로 깊어진다.
 - 포지션 전용 질문은 저장하지 않고 사용자에게 보여 주기만 한다. 공고별 질문 파일은 이 스킬이 쓰지 않는다.
-- 저장 대상은 공개 질문 은행이 아니라 `save_personal_question` 이다.
+- 저장 대상은 공개 질문 은행이 아니라 개인 질문이다. 질문을 JSON 파일로 쓴 뒤 `<CAREER_LOCAL> interview personal add --file <.json|.jsonl>` 로 저장한다.
 - 저장 전에 질문 목록을 사용자에게 보여 주고 확인받는다.
 - 질문 칸은 `id`, `topic`, `category`, `difficulty`, `question`, `intent`, `answerSignals` 를 채우고, 선택 칸 `bar`, `followUps`, `tags` 도 가능하면 채운다.
 
