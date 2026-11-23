@@ -18,7 +18,7 @@ fos-assistant의 가계부 전용 에이전트는 셸과 파일 쓰기 도구 �
 - 등록은 멱등이다. 같은 날짜, 금액, 설명의 기존 기록을 거래와 한 건씩 짝지어 건너뛰고 남은 거래만 등록한다.
   화면의 일별 합계가 그 날짜의 거래 건수를 확정하므로 건수 대조로 충분하다.
 - 셸 기반 화면 가져오기 스킬과 스크립트, 주간 자동 등록, Discord 접수를 제거한다.
-  [ADR-002](ADR-002-weekly-safe-policy-auto-submission.md)와 [ADR-003](ADR-003-hermes-discord-image-input.md)을 대체한다.
+  ADR-002와 ADR-003을 대체한다.
 
 ### 거절한 대안
 
