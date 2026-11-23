@@ -38,7 +38,6 @@
 # 비공개 동기화 자료와 이전 경로의 안전망
 career-os/library/
 **/private/
-career-os/.career-sync/
 
 # Nested repos / published outputs managed separately
 # (디렉터리 clone 또는 ~/personal/fos-study symlink 둘 다 무시 — 끝 슬래시 없이)
