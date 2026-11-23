@@ -222,55 +222,6 @@ test("resume export 는 Chrome 없이 HTML 만 내고, package report 가 그 �
   expect(copied.stdout).toContain("file_space_put");
 });
 
-/**
- * 실제 파이썬 실행 파일이 있는 디렉터리.
- * python3 가 mise shim 이면 shim 은 HOME 아래 설정과 설치 위치를 찾으므로, HOME 을 비우면 설치를 새로 내려받는다.
- * 실행 파일 디렉터리를 PATH 앞에 두어 shim 을 거치지 않게 한다.
- */
-function pythonDirectory(): string {
-  const result = Bun.spawnSync(["python3", "-c", "import sys; print(sys.executable)"], { stdout: "pipe", stderr: "pipe" });
-  if (result.exitCode !== 0) throw new Error(`python3 를 찾지 못했다: ${result.stderr.toString()}`);
-  return dirname(result.stdout.toString().trim());
-}
-
-/** UTC 로 가장 최근에 끝난 달(`YYYY-MM`). 기록이 없을 때 수집기가 대상으로 잡는 달이다. */
-function lastEndedMonth(now: Date): string {
-  const previous = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
-  return `${previous.getUTCFullYear()}-${String(previous.getUTCMonth() + 1).padStart(2, "0")}`;
-}
-
-test("usage 는 번들에 든 측정 스크립트로 세션이 없는 달을 알리고 아무것도 올리지 않는다", async () => {
-  const requests: string[] = [];
-  const server = Bun.serve({
-    port: 0,
-    fetch(request) {
-      const url = new URL(request.url);
-      requests.push(`${request.method} ${url.pathname}`);
-      if (request.method === "GET" && url.pathname === "/api/profile/v1/usage-snapshots") {
-        return Response.json({ snapshots: [] });
-      }
-      return new Response("not found", { status: 404 });
-    },
-  });
-  try {
-    const home = temporaryDirectory();
-    const before = lastEndedMonth(new Date());
-    const result = await runBundle(home, ["usage"], {
-      PATH: `${pythonDirectory()}:${process.env.PATH ?? ""}`,
-      CAREER_BACKEND_URL: server.url.origin,
-      CAREER_BACKEND_TOKEN: FAKE_TOKEN,
-    });
-    const after = lastEndedMonth(new Date());
-    expect({ exitCode: result.exitCode, stderr: result.stderr }).toEqual({ exitCode: 0, stderr: "" });
-    // 실행 중에 달이 바뀌면 둘 중 하나다.
-    expect([`${before} NO_SESSIONS\n`, `${after} NO_SESSIONS\n`]).toContain(result.stdout);
-    expect(requests).toEqual(["GET /api/profile/v1/usage-snapshots"]);
-    expect(requests.filter((request) => request.startsWith("PUT "))).toEqual([]);
-  } finally {
-    server.stop(true);
-  }
-});
-
 /** 검토 화면을 그릴 수 있는 지어낸 지원 디렉터리다. */
 function writeApplicationDirectory(directory: string): void {
   const evidence = join(directory, "evidence");

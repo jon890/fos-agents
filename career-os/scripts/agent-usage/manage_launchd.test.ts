@@ -50,11 +50,11 @@ describe("plist 틀", () => {
     expect(textOf(parsePlist(rendered).get("Label"), "string")).toBe(LAUNCHD_LABEL);
   });
 
-  test("ProgramArguments 가 순서대로 bun, env 파일, 수집기다", () => {
+  test("ProgramArguments 가 순서대로 bun, env 파일을 읽지 않는 옵션, 수집기다", () => {
     const array = (parsePlist(rendered).get("ProgramArguments") as Node).array as Node[];
     expect(array.map((item) => textOf(item, "string"))).toEqual([
       "/opt/example/bin/bun",
-      "--env-file=/opt/example/repo/career-os/.env",
+      "--no-env-file",
       "/opt/example/repo/career-os/scripts/agent-usage/collect_usage.ts",
     ]);
   });
@@ -70,7 +70,7 @@ describe("plist 틀", () => {
   test("& 가 든 경로도 파싱된다", () => {
     const xml = renderPlist(template, { ...values, repoRoot: "/opt/a&b/repo" });
     const array = (parsePlist(xml).get("ProgramArguments") as Node).array as Node[];
-    expect(textOf(array[1], "string")).toBe("--env-file=/opt/a&b/repo/career-os/.env");
+    expect(textOf(array[2], "string")).toBe("/opt/a&b/repo/career-os/scripts/agent-usage/collect_usage.ts");
   });
 
   test("상대 경로는 던진다", () => {
@@ -144,10 +144,11 @@ describe("manageLaunchd", () => {
     ]);
   });
 
-  test("install 은 .env 가 없으면 1 이고 아무것도 만들지 않는다", () => {
-    expect(manageLaunchd(["install"], deps)).toBe(1);
-    expect(existsSync(plistPath())).toBe(false);
-    expect(calls).toHaveLength(0);
+  test("install 은 career-os/.env 가 없어도 등록한다", () => {
+    // 수집기가 Backend 연결값을 읽지 않으므로 .env 를 요구하지 않는다.
+    expect(manageLaunchd(["install"], deps)).toBe(0);
+    expect(readFileSync(plistPath(), "utf8")).not.toContain("--env-file=");
+    expect(calls).toHaveLength(2);
   });
 
   test("uninstall 은 plist 를 지우고 다시 실행해도 0 이다", () => {

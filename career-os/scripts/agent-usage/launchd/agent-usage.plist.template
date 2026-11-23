@@ -7,7 +7,7 @@
   <key>ProgramArguments</key>
   <array>
     <string>{{BUN_PATH}}</string>
-    <string>--env-file={{REPO_ROOT}}/career-os/.env</string>
+    <string>--no-env-file</string>
     <string>{{REPO_ROOT}}/career-os/scripts/agent-usage/collect_usage.ts</string>
   </array>
   <key>WorkingDirectory</key>

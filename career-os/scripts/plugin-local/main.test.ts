@@ -22,10 +22,9 @@ afterEach(() => {
   errorSpy.mockRestore();
 });
 
-test("help 는 열한 실행기를 모두 보여 주고 0 으로 끝난다", async () => {
+test("help 는 실행기를 모두 보여 주고 0 으로 끝난다", async () => {
   expect(await runPluginLocal(["help"])).toBe(0);
   const output = logged.join("\n");
-  expect(PLUGIN_LOCAL_EXECUTORS).toHaveLength(11);
   for (const name of PLUGIN_LOCAL_EXECUTORS) expect(output).toContain(name);
   expect(output).toContain("position");
   expect(output).toContain("commit-company-tiers");
@@ -33,7 +32,9 @@ test("help 는 열한 실행기를 모두 보여 주고 0 으로 끝난다", asy
   expect(output).toContain("search-claims");
   expect(output).toMatch(/^ {2}package +/m);
   expect(output).toMatch(/^ {2}application-profile +/m);
-  expect(output).toMatch(/^ {2}usage +기록이 없는 끝난 달의 에이전트 사용량을 측정해 Backend 에 올린다$/m);
+  // 사용량 수집은 노트북의 launchd 가 저장소 스크립트로 돌린다. 실행 공간 번들에는 없다.
+  expect(output).not.toMatch(/^ {2}usage +/m);
+  expect(await runPluginLocal(["usage"])).toBe(2);
 });
 
 test("인자가 없으면 help 와 같다", async () => {

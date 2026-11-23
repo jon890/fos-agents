@@ -57,10 +57,6 @@ export function manageLaunchd(args: string[], deps: LaunchdDeps): number {
         write(plist);
         return 0;
       }
-      if (!existsSync(join(repoRoot, "career-os", ".env"))) {
-        write("career-os/.env 가 없다");
-        return 1;
-      }
       mkdirSync(logDir, { recursive: true });
       mkdirSync(join(home, "Library", "LaunchAgents"), { recursive: true });
       writeFileSync(plistPath, plist);
