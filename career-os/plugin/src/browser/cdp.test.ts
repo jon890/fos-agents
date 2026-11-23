@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { CareerError } from "../backend.ts";
+import { CareerError } from "../errors.ts";
 import { browserEndpoint, CdpSession, httpJson, relayBrowser, wsUrlFor } from "./cdp.ts";
 
 type Relay = { url: string; origins: (string | null)[]; stop: () => void };

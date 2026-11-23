@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { CareerError } from "../backend.ts";
+import { CareerError } from "../errors.ts";
 import type { BrowserLink, CdpSession } from "../browser/cdp.ts";
 import { CareerTools } from "../tools.ts";
 import { fingerprint, labelOf, parseField } from "./fields.ts";
@@ -355,7 +355,7 @@ test("첫 칸 전 이력서가 없으면 오류, 둘째 칸 전 화면이 바뀌
 
 test("등록한 도구는 넘기기와 멈춤을 isError 없이 돌려준다", async () => {
   const world = new World({ state: () => "LOGIN" });
-  const career = new CareerTools({} as never, undefined, undefined, new WantedTools(world.link(), () => 0, timing));
+  const career = new CareerTools(undefined, new WantedTools(world.link(), () => 0, timing));
   const read = await career.call("get_wanted_resume", {});
   expect(read.isError).toBeUndefined();
   expect(JSON.parse(read.content[0].text)).toMatchObject({ status: "HUMAN_ACTION_REQUIRED" });

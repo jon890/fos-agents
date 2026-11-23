@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { CareerError, type FetchLike } from "./backend.ts";
+import { CareerError, type FetchLike } from "./errors.ts";
 import { GithubProfileRepo } from "./github.ts";
 
 const repo = "octo-example/octo-example";
@@ -50,15 +50,15 @@ function commitRoutes(treeSha = "new-tree-sha"): Record<string, Route | Response
     [step.repo]: () => json({ default_branch: "main" }),
     [step.ref]: () => json({ object: { sha: headA } }),
     [step.commit]: () => json({ tree: { sha: "base-tree-sha" } }),
-    [step.blob]: (call) => json({ sha: call.body.content.startsWith("<svg") ? "chart-blob" : "readme-blob" }, 201),
+    [step.blob]: () => json({ sha: "readme-blob" }, 201),
     [step.tree]: () => json({ sha: treeSha }, 201),
     [step.newCommit]: () => json({ sha: "new-commit-sha" }, 201),
     [step.move]: () => json({ object: { sha: "new-commit-sha" } }),
   };
 }
 
-const files = { readme: "# 프로필\n![Tokens](https://img.shields.io/badge/Tokens-1.2B-blue)\n", chart: "<svg>chart</svg>\n" };
-const message = "docs: 프로필과 에이전트 사용량 차트를 갱신한다 (2031-01)";
+const files = "# 프로필\n합성 README 입니다.\n";
+const message = "docs: 프로필 README 를 갱신한다";
 
 async function codeOf(promise: Promise<unknown>): Promise<string> {
   try {
@@ -87,19 +87,18 @@ describe("read", () => {
   // GitHub wraps base64 content every 60 characters.
   const encoded = Buffer.from(readme, "utf8").toString("base64").replace(/(.{20})/g, "$1\n");
 
-  test("README 의 base64 를 줄바꿈과 함께 받아 UTF-8 글로 풀고, 차트가 404 면 chartExists 가 false 다", async () => {
+  test("README 의 base64 를 줄바꿈과 함께 받아 UTF-8 글로 푼다", async () => {
     const { calls, github } = harness({
       [step.repo]: json({ default_branch: "main" }),
       [step.ref]: json({ object: { sha: headA } }),
       [`GET ${base}/contents/README.md?ref=${headA}`]: json({ content: encoded, encoding: "base64" }),
-      [`GET ${base}/contents/agent-usage.svg?ref=${headA}`]: json({ message: "Not Found" }, 404),
     });
     expect(encoded).toContain("\n");
-    expect(await github.read()).toEqual({ repo, branch: "main", head: headA, readme, chartExists: false });
+    expect(await github.read()).toEqual({ repo, branch: "main", head: headA, readme });
     expectGithubOnly(calls);
   });
 
-  test("branch 의 끝 커밋을 먼저 읽고 README 와 차트를 그 SHA 로 읽어, 낸 head 와 파일이 같은 스냅샷이다", async () => {
+  test("branch 의 끝 커밋을 먼저 읽고 README 를 그 SHA 로 읽어, 낸 head 와 파일이 같은 스냅샷이다", async () => {
     // The branch moves to B right after the ref read. Files read by branch name would come from B.
     let moved = false;
     const readmeAt = (text: string) => json({ content: Buffer.from(text, "utf8").toString("base64"), encoding: "base64" });
@@ -112,26 +111,22 @@ describe("read", () => {
       },
       [`GET ${base}/contents/README.md?ref=${headA}`]: () => readmeAt("# A\n"),
       [`GET ${base}/contents/README.md?ref=${headB}`]: () => readmeAt("# B\n"),
-      [`GET ${base}/contents/agent-usage.svg?ref=${headA}`]: json({ message: "Not Found" }, 404),
-      [`GET ${base}/contents/agent-usage.svg?ref=${headB}`]: json({ content: "", encoding: "base64" }),
     });
-    expect(await github.read()).toEqual({ repo, branch: "main", head: headA, readme: "# A\n", chartExists: false });
+    expect(await github.read()).toEqual({ repo, branch: "main", head: headA, readme: "# A\n" });
     expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
       step.repo,
       step.ref,
       `GET ${base}/contents/README.md?ref=${headA}`,
-      `GET ${base}/contents/agent-usage.svg?ref=${headA}`,
     ]);
   });
 
-  test("README 가 404 면 readme 가 null 이고 차트가 있으면 chartExists 가 true 다", async () => {
+  test("README 가 404 면 readme 가 null 이다", async () => {
     const { github } = harness({
       [step.repo]: json({ default_branch: "main" }),
       [step.ref]: json({ object: { sha: headA } }),
       [`GET ${base}/contents/README.md?ref=${headA}`]: json({ message: "Not Found" }, 404),
-      [`GET ${base}/contents/agent-usage.svg?ref=${headA}`]: json({ content: "", encoding: "base64" }),
     });
-    expect(await github.read()).toEqual({ repo, branch: "main", head: headA, readme: null, chartExists: true });
+    expect(await github.read()).toEqual({ repo, branch: "main", head: headA, readme: null });
   });
 
   test("저장소 조회의 404 는 오류이고 CAREER_GITHUB_FORBIDDEN 이다", async () => {
@@ -141,7 +136,7 @@ describe("read", () => {
 });
 
 describe("commitProfile", () => {
-  test("Git Data API 여덟 요청을 차례로 보내 두 파일을 커밋 하나로 올린다", async () => {
+  test("Git Data API 일곱 요청을 차례로 보내 README 한 파일을 커밋 하나로 올린다", async () => {
     const { calls, github } = harness(commitRoutes());
     const result = await github.commitProfile(files, message, reviewed);
     expect(result).toEqual({ changed: true, commitSha: "new-commit-sha", branch: "main" });
@@ -150,22 +145,17 @@ describe("commitProfile", () => {
       step.ref,
       step.commit,
       step.blob,
-      step.blob,
       step.tree,
       step.newCommit,
       step.move,
     ]);
-    expect(calls[3]!.body).toEqual({ content: files.readme, encoding: "utf-8" });
-    expect(calls[4]!.body).toEqual({ content: files.chart, encoding: "utf-8" });
-    expect(calls[5]!.body).toEqual({
+    expect(calls[3]!.body).toEqual({ content: files, encoding: "utf-8" });
+    expect(calls[4]!.body).toEqual({
       base_tree: "base-tree-sha",
-      tree: [
-        { path: "README.md", mode: "100644", type: "blob", sha: "readme-blob" },
-        { path: "agent-usage.svg", mode: "100644", type: "blob", sha: "chart-blob" },
-      ],
+      tree: [{ path: "README.md", mode: "100644", type: "blob", sha: "readme-blob" }],
     });
-    expect(calls[6]!.body).toEqual({ message, tree: "new-tree-sha", parents: [headA] });
-    expect(calls[7]!.body).toEqual({ sha: "new-commit-sha", force: false });
+    expect(calls[5]!.body).toEqual({ message, tree: "new-tree-sha", parents: [headA] });
+    expect(calls[6]!.body).toEqual({ sha: "new-commit-sha", force: false });
     expectGithubOnly(calls);
   });
 
@@ -173,7 +163,7 @@ describe("commitProfile", () => {
     const { calls, github } = harness(commitRoutes("base-tree-sha"));
     const result = await github.commitProfile(files, message, reviewed);
     expect(result).toEqual({ changed: false, commitSha: headA, branch: "main" });
-    expect(calls).toHaveLength(6);
+    expect(calls).toHaveLength(5);
     expect(calls.some((call) => call.method === "PATCH")).toBe(false);
   });
 

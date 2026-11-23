@@ -1,4 +1,4 @@
-import { CareerError } from "../backend.ts";
+import { CareerError } from "../errors.ts";
 import type { BrowserLink, CdpSession } from "../browser/cdp.ts";
 import {
   careersOf,
