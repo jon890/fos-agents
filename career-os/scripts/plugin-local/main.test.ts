@@ -22,18 +22,19 @@ afterEach(() => {
   errorSpy.mockRestore();
 });
 
-test("help 는 열한 실행기를 모두 보여 주고 0 으로 끝난다", async () => {
+test("help 는 실행기를 모두 보여 주고 0 으로 끝난다", async () => {
   expect(await runPluginLocal(["help"])).toBe(0);
   const output = logged.join("\n");
-  expect(PLUGIN_LOCAL_EXECUTORS).toHaveLength(11);
   for (const name of PLUGIN_LOCAL_EXECUTORS) expect(output).toContain(name);
   expect(output).toContain("position");
   expect(output).toContain("commit-company-tiers");
   expect(output).toContain("resume");
   expect(output).toContain("search-claims");
   expect(output).toMatch(/^ {2}package +/m);
-  expect(output).toMatch(/^ {2}application-profile +/m);
-  expect(output).toMatch(/^ {2}usage +기록이 없는 끝난 달의 에이전트 사용량을 측정해 Backend 에 올린다$/m);
+  expect(output).not.toMatch(/^ {2}application-profile +/m);
+  // 사용량 수집은 노트북의 launchd 가 저장소 스크립트로 돌린다. 실행 공간 번들에는 없다.
+  expect(output).not.toMatch(/^ {2}usage +/m);
+  expect(await runPluginLocal(["usage"])).toBe(2);
 });
 
 test("인자가 없으면 help 와 같다", async () => {
@@ -118,11 +119,10 @@ test("package 는 모르는 하위 명령이면 사용법을 stderr 에 쓰고 2
   }
 });
 
-test("application-profile 은 get 이 아닌 하위 명령이면 사용법을 stderr 에 쓰고 1 로 끝난다", async () => {
-  expect(await runPluginLocal(["application-profile", "put"])).toBe(1);
-  const output = errored.join("\n");
-  expect(output).toContain("get --out <path>");
-  expect(logged).toEqual([]);
+test("지운 application-profile 실행기와 workspace begin 은 2 로 끝난다", async () => {
+  expect(await runPluginLocal(["application-profile", "get"])).toBe(2);
+  expect(await runPluginLocal(["workspace", "begin", "resume-preparer", "--json"])).toBe(2);
+  expect(errored.join("\n")).toContain("사용법: workspace paths --json");
 });
 
 test("position 설정 명령은 작업 폴더 저장소에 쓰고, 깨진 저장소는 그 code 를 stderr 첫 줄에 낸다", async () => {

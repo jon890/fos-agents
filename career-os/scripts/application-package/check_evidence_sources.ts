@@ -8,7 +8,7 @@
  * 그 사이 추가된 문서 넷이 적합도 판정과 이력서 문장을 바꿨다.
  *
  * 이 위험은 로컬 사본을 두는 원본에만 있다.
- * `application-profile get` 으로 그때그때 읽는 지원서 공통 프로필에는 뒤처질 사본이 없다.
+ * 기억에서 그때그때 읽는 지원서 공통 프로필과 후보자 맥락 문서에는 뒤처질 사본이 없다.
  *
  * 검사만 하고 당기지 않는다. 읽기 전용 저장소이며 당기는 과정에 사람이 판단할 것이 있다.
  * 판정별 다음 행동은 스킬의 `references/evidence-source-freshness.md` 가 소유한다.
@@ -39,14 +39,13 @@ export type EvidenceSourceSpec = {
 /**
  * 경로로 확인하는 원본만 담는다.
  *
- * 홈서버 작업본은 `workspace begin <스킬 이름>` 이 이미 받아 온다.
- * 지원서 공통 프로필도 여기 없다. fos-assistant Memory 에서 CLI 로 읽는 것이며 경로로 여는 것이 아니다(ADR-136).
+ * 지원서 공통 프로필은 여기 없다. 에이전트가 기억에서 읽는 것이며 경로로 여는 것이 아니다(ADR-148).
  *
  * `CAREER_EVIDENCE_DIR` 는 저장소 루트를 가리키거나 그 바로 아래(`fos-study` 의 `task/`)를 가리킨다.
  * 그래서 그 자리와 상위를 순서대로 본다. 둘 다 Git 저장소의 루트일 때만 원본으로 인정한다.
  *
- * 환경 변수가 없을 때 작업본의 기본 `evidence/` 를 채워 넣지 않는다.
- * 그 상위는 작업본 root 이고, 작업본 root 가 우연히 Git 저장소의 루트면 그 저장소를 원본으로 오인한다.
+ * 환경 변수가 없을 때 작업 폴더의 기본 `evidence/` 를 채워 넣지 않는다.
+ * 그 상위는 작업 폴더 root 이고, 작업 폴더 root 가 우연히 Git 저장소의 루트면 그 저장소를 원본으로 오인한다.
  */
 export const EVIDENCE_SOURCES: readonly EvidenceSourceSpec[] = [
   {

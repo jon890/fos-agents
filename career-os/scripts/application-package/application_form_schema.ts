@@ -1,6 +1,11 @@
 import { readFileSync } from "node:fs";
 import { z } from "zod";
-import { APPLICATION_PROFILE_SOURCE } from "../application-profile/contracts.ts";
+
+/**
+ * 지원서 양식이 공통 프로필의 출처를 적을 때 쓰는 값이다. 원본은 fos-assistant Memory 이고 에이전트가 기억에서 읽는다.
+ * 이미 만든 스냅샷을 다시 검증할 수 있게 값을 바꾸지 않는다.
+ */
+export const APPLICATION_PROFILE_SOURCE = "fos-assistant-memory:identity/career-application-profile" as const;
 
 /** 이전에 만든 스냅샷을 다시 검증할 수 있게 받는다. 새로 쓰지 않는다. */
 const LEGACY_PROFILE_SOURCE = "private-brain:career-application-profile";

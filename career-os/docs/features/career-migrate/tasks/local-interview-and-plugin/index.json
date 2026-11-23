@@ -6,7 +6,7 @@
     {
       "what": "지원 준비 스킬 넷을 비서용으로 옮기고 노트북 전용 스킬(plugin/skills), sync-profile, 작업본 동기화를 지운다. 사용량 기록을 노트북 파일로 바꾼다(REQ8, REQ9)",
       "why": "스펙의 PR 나눔이 3단계로 정했다",
-      "after": "2단계 PR 머지와 운영 확인"
+      "after": "2단계 PR 머지와 운영 확인. 운영 확인이 끝나(2026-11-23) 계획 tasks/agent-application-skills 로 옮겼다"
     },
     {
       "what": "services/career-backend 코드와 그 문서, Backend 를 부르는 노트북 CLI 를 지운다(REQ7)",

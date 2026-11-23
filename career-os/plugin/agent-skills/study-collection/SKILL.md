@@ -11,13 +11,13 @@ description: 읽을거리를 수집하고 공부 추천 리포트를 HTML 로 �
 실행기 명령은 `bun --no-env-file "${CLAUDE_PLUGIN_ROOT}/dist/career-local.js"` 이다.
 `${CLAUDE_PLUGIN_ROOT}` 와 아래 환경 변수는 실행 공간이 넘긴 값을 셸이 푼다. 명령을 셸에 그대로 넘기고 경로를 짐작해 바꿔 쓰지 않는다.
 `${CLAUDE_PLUGIN_ROOT}` 는 이름과 달리 이 실행 공간에 붙은 플러그인 폴더일 뿐이고, 실행 환경을 가리키지 않는다.
-절차는 이 문서와 이 스킬의 `references/` 가 전부다. 플러그인 폴더의 `skills/` 는 다른 실행 환경용 원본이니 읽지 않는다.
+절차는 이 문서와 이 스킬의 `references/` 가 전부다. 플러그인 폴더의 다른 파일에서 절차를 찾지 않는다.
 실행 공간의 파일은 `read_file`, `write_file`, `patch` 같은 파일 도구로 읽고 쓴다.
 스킬 파일은 고치지 않는다. `skill_manage` 같은 스킬 편집 도구를 부르지 않고, 절차가 막히면 막힌 곳을 알린다.
 이 문서와 `references/` 에서는 그 명령을 `<CAREER_LOCAL>` 로 적는다.
 데이터는 커리어 작업 폴더의 `state/career.sqlite` 에 있다. 작업 폴더는 `CAREER_WORKSPACE_ROOT` 이고 없으면 `/workspace/career` 다.
 커리어 Backend 주소와 token 은 쓰지 않는다.
-작업본 동기화는 하지 않는다. 소스, 수집 자료, 추천 이력은 이 저장소가 갖는다.
+소스, 수집 자료, 추천 이력은 이 저장소가 갖는다.
 추천 저장은 아래 실행기 명령으로만 한다.
 
 ## 1. 맥락 문서와 점검

@@ -55,8 +55,13 @@ export function parseMeasurement(stdout: string): MonthlyMeasurement[] {
   }));
 }
 
-export async function runAgentUsageScript(): Promise<string> {
-  const child = Bun.spawn(["python3", "-", "--json"], {
+/** `extraArguments` 는 `--merge <파일>` 처럼 측정 스크립트에 그대로 넘길 인자다. */
+export function agentUsageCommand(extraArguments: readonly string[] = []): string[] {
+  return ["python3", "-", "--json", ...extraArguments];
+}
+
+export async function runAgentUsageScript(extraArguments: readonly string[] = []): Promise<string> {
+  const child = Bun.spawn(agentUsageCommand(extraArguments), {
     stdin: new Blob([agentUsageScript]),
     stdout: "pipe",
     stderr: "inherit",

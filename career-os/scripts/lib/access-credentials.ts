@@ -11,7 +11,7 @@ const headerValuePattern = /^[\x21-\x7e]+$/;
  */
 export function resolveAccessCredentials(
   environment: Record<string, string | undefined>,
-  prefix: "CAREER_BACKEND" | "FOS_ASSISTANT",
+  prefix: "CAREER_BACKEND",
 ): AccessCredentials | undefined {
   const idName = `${prefix}_ACCESS_CLIENT_ID`;
   const secretName = `${prefix}_ACCESS_CLIENT_SECRET`;

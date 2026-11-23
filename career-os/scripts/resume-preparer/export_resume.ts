@@ -15,6 +15,7 @@ type Options = {
   designPath: string;
   htmlPath: string;
   pdfPath: string;
+  /** 비었으면 PDF 를 만들지 않고 HTML 만 낸다. */
   chromeBin: string;
   accent: string;
   logoDir: string;
@@ -41,6 +42,7 @@ function parseArgs(args: string[]): Options {
   let chromeBin = process.env.CHROME_BIN ?? '';
   let accent = '';
   let logoDir = '';
+  let htmlOnly = false;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -52,6 +54,7 @@ function parseArgs(args: string[]): Options {
     else if (arg === '--chrome-bin' && args[i + 1]) chromeBin = args[++i];
     else if (arg === '--accent' && args[i + 1]) accent = args[++i];
     else if (arg === '--logo-dir' && args[i + 1]) logoDir = args[++i];
+    else if (arg === '--html-only') htmlOnly = true;
     else if (arg === '--help') {
       showHelp();
       process.exit(0);
@@ -67,7 +70,8 @@ function parseArgs(args: string[]): Options {
   resumePath = resumePath || join(applicationDir, 'evidence', 'resume-draft.md');
   htmlPath = htmlPath || join(applicationDir, 'review', 'resume.html');
   pdfPath = pdfPath || join(applicationDir, 'resume.pdf');
-  chromeBin = chromeBin || resolveChromeBin();
+  // Chrome 이 없는 실행 공간에서는 실패하지 않고 HTML 만 낸다. 직접 준 경로는 그대로 써서, 틀린 경로는 PDF 단계에서 실패한다.
+  chromeBin = htmlOnly ? '' : chromeBin || resolveChromeBin();
   // 로고는 개인 경력을 드러내므로 저장소가 아니라 작업본에 둔다(ADR-138).
   logoDir = logoDir || resolve(process.env.CAREER_WORKSPACE_ROOT?.trim() || 'career-os', 'library/resume-logos');
 
@@ -79,19 +83,16 @@ function parseArgs(args: string[]): Options {
   return { applicationDir, resumePath, designPath, htmlPath, pdfPath, chromeBin, accent, logoDir };
 }
 
-function resolveChromeBin(): string {
-  const candidates = [
-    '/usr/bin/google-chrome',
-    '/usr/bin/chromium',
-    '/usr/bin/chromium-browser',
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  ];
-  const found = candidates.find((candidate) => existsSync(candidate));
-  if (!found) {
-    console.error('Chrome binary not found. Set CHROME_BIN or pass --chrome-bin.');
-    process.exit(2);
-  }
-  return found;
+export const CHROME_CANDIDATES = [
+  '/usr/bin/google-chrome',
+  '/usr/bin/chromium',
+  '/usr/bin/chromium-browser',
+  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+] as const;
+
+/** 흔한 설치 경로에서 Chrome 을 찾는다. 없으면 빈 문자열이다. */
+export function resolveChromeBin(candidates: readonly string[] = CHROME_CANDIDATES): string {
+  return candidates.find((candidate) => existsSync(candidate)) ?? '';
 }
 
 function readRequired(path: string): string {
@@ -536,6 +537,17 @@ export function main(): void {
   const expectedPageCount = countHtmlPages(html);
 
   writeHtml(opts.htmlPath, html);
+  if (!opts.chromeBin) {
+    // 앞 실행이 만든 PDF 는 지금 HTML 과 내용이 다르다. 남겨 두면 옛 PDF 가 제출 파일로 쓰인다.
+    if (existsSync(opts.pdfPath)) {
+      rmSync(opts.pdfPath);
+      console.log(`이전 PDF 삭제: ${opts.pdfPath}`);
+    }
+    console.log(`HTML 이력서: ${opts.htmlPath}`);
+    console.log('PDF 도구 없음: Chrome 을 찾지 못해 PDF 를 만들지 않았습니다. HTML 을 전달하세요.');
+    console.log('외부 제출 자동화: 실행하지 않음');
+    return;
+  }
   const renderedPageCount = renderPdf(opts, html, expectedPageCount);
 
   console.log(`HTML 이력서: ${opts.htmlPath}`);
@@ -557,7 +569,8 @@ Options:
   --html <path>         HTML 출력. 기본값: <application-dir>/review/resume.html
   --pdf <path>          PDF 출력. 기본값: <application-dir>/resume.pdf
   --accent <#RRGGBB>    강조색만 덮어쓴다. 기본 CSS를 복제하지 않고 지원별 브랜드 색을 적용할 때 쓴다
-  --chrome-bin <path>   Chrome/Chromium binary. 기본값: CHROME_BIN 또는 common system paths
+  --chrome-bin <path>   Chrome/Chromium binary. 기본값: CHROME_BIN 또는 common system paths. 찾지 못하면 HTML 만 만든다
+  --html-only           Chrome 을 찾지 않고 HTML 만 만든다
   --logo-dir <path>     회사·학교 로고와 index.json 이 있는 디렉터리. 기본값: <CAREER_WORKSPACE_ROOT 또는 career-os>/library/resume-logos
 
 경력기술서는 같은 규칙을 플래그로 지정한다.

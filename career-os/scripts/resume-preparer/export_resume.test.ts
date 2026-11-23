@@ -15,9 +15,10 @@ import {
   renderHtml,
   renderMarkdownPages,
   splitHtmlPages,
+  resolveChromeBin,
 } from "./export_resume.ts";
 import { checkResumeHtml } from "./check_resume_html.ts";
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SUBPROCESS_TEST_TIMEOUT_MS } from "../lib/test-timeouts.ts";
@@ -147,6 +148,33 @@ describe("resume exporter", () => {
       rmSync(directory, { recursive: true, force: true });
     }
   }, 120000);
+
+  test("Chrome 후보 가운데 있는 파일이 없으면 빈 문자열을 돌려준다", () => {
+    expect(resolveChromeBin(["/없는/경로/chrome"])).toBe("");
+    expect(resolveChromeBin(["/없는/경로/chrome", process.execPath])).toBe(process.execPath);
+  });
+
+  test("CLI는 --html-only 면 PDF 없이 HTML 만 만들고 0 으로 끝난다", () => {
+    const directory = mkdtempSync(join(tmpdir(), "resume-html-only-"));
+    try {
+      mkdirSync(join(directory, "evidence"), { recursive: true });
+      writeFileSync(join(directory, "evidence", "resume-draft.md"), resume);
+      // 앞 실행이 남긴 PDF 다. 지금 HTML 과 다른 내용이라 남으면 안 된다.
+      writeFileSync(join(directory, "resume.pdf"), "이전 PDF");
+      const result = Bun.spawnSync({
+        cmd: [process.execPath, join(import.meta.dir, "export_resume.ts"), "--application-dir", directory, "--html-only"],
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      expect({ exitCode: result.exitCode, stderr: result.stderr.toString() }).toEqual({ exitCode: 0, stderr: "" });
+      expect(result.stdout.toString()).toContain("PDF 도구 없음");
+      expect(result.stdout.toString()).toContain("이전 PDF 삭제");
+      expect(existsSync(join(directory, "review", "resume.html"))).toBe(true);
+      expect(existsSync(join(directory, "resume.pdf"))).toBe(false);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  }, 60000);
 
   test("기본값은 경력 섹션부터 두 번째 페이지에 배치한다", () => {
     const [firstPage, secondPage] = renderMarkdownPages(resume);

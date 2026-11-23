@@ -1,7 +1,8 @@
 import { writeFile } from "node:fs/promises";
 import { firstOptionValue, UsageError } from "../lib/cli.ts";
-import { createProfileClient } from "../profile/client.ts";
+import os from "node:os";
 import { formatBillions, renderUsageChart, selectUsageBars, type UsageTokens } from "./chart.ts";
+import { readUsageFile, resolveUsageFilePath } from "./usage_file.ts";
 
 const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -10,8 +11,9 @@ export type RenderChartDependencies = {
   write?: (path: string, text: string) => Promise<void>;
 };
 
-async function listBackendSnapshots(): Promise<UsageTokens[]> {
-  const snapshots = await createProfileClient().listUsageSnapshots();
+/** 노트북의 사용량 파일에서 읽는다. 커리어 Backend 를 부르지 않는다. */
+async function listFileSnapshots(): Promise<UsageTokens[]> {
+  const snapshots = readUsageFile(resolveUsageFilePath(process.env, os.homedir()));
   return snapshots.map(({ month, claudeTokens, codexTokens }) => ({ month, claudeTokens, codexTokens }));
 }
 
@@ -30,7 +32,7 @@ export async function renderChartCommand(
   // 커넥터 스키마처럼 겹치는 달을 거절한다. 합치면 고른 달 수와 막대 수가 달라진다.
   if (new Set(months).size !== months.length) throw new UsageError("--months 에 같은 달이 두 번 있다.");
 
-  const records = await (dependencies.listSnapshots ?? listBackendSnapshots)();
+  const records = await (dependencies.listSnapshots ?? listFileSnapshots)();
   const { bars, totalTenths, missing } = selectUsageBars(records, months);
   if (missing.length > 0) throw new Error(`사용량 기록이 없는 달이 있다: ${missing.join(", ")}`);
 

@@ -12,84 +12,16 @@ career-os의 각 흐름은 외부 입력을 검증하고, 사용자 판단에 �
 
 ## 공통
 
-### 비공개 작업본 동기화
+### 지원 자료의 자리
 
-plugin 의 `application-package-writer`, `resume-preparer`, `interview-question-prep` 는 다음 준비와 반영 절차를 실행한다.
-스킬은 로컬 실행기 `workspace` 로 부르고, 이 실행기는 아래 공통 CLI 와 같은 코드다.
+지원 준비 스킬(`application-package-writer`, `resume-preparer`, `resume-review`, `interview-question-prep`)은 커리어 에이전트의 셸 실행 공간에서 돌고, 지원 자료를 커리어 작업 폴더에서만 읽고 쓴다([ADR-148](adr/ADR-148-지원-준비는-비서의-셸-실행-공간에서-하고-작업본-동기화와-노트북-전용-스킬을-두지-않는다.md)).
+기기 사이에 작업본을 주고받던 동기화는 없다. 자료가 한 곳에만 있어 맞출 사본이 없다.
 
-```text
-작성 skill
-  └─ 로컬 CLI
-       └─ 외부 개발 환경: SSH로 홈서버 명령 호출
-            └─ publish 잠금
-                 └─ S3 release 검증과 current pointer 변경
-                      └─ Bun S3Client
-                           └─ SeaweedFS의 career-os bucket
-```
+1. 스킬이 `<CAREER_LOCAL> workspace paths --json` 으로 작업 폴더(`root`)와 프로젝트 근거 위치(`evidenceDir`)를 확인한다. `<CAREER_LOCAL>` 은 스킬 본문이 알려 준 `bun --no-env-file "<plugin 경로>/dist/career-local.js"` 다.
+2. 지원 디렉터리 `<root>/applications/<회사>/<직무>/` 의 파일을 파일 도구와 실행기로 읽고 쓴다.
+3. 사용자에게 줄 HTML(이력서는 PDF 가 있으면 PDF 도)은 `<CAREER_LOCAL> package report <지원 디렉터리> <파일>` 이 `reports/` 에 날짜가 든 사본으로 만들고 `리포트 사본:` 줄로 알린다. 에이전트가 그 파일을 `file_space_put` 으로 「내 파일」 에 넣는다.
 
-로컬 CLI는 S3 credential을 읽지 않는다.
-홈서버 명령만 SeaweedFS에 접근한다. 외부 개발 환경은 SSH로 그 명령을 부르고, 홈서버 Hermes는 이 경로를 쓰지 않는다.
-파일별 책임과 코드를 읽는 순서는 [`scripts/career-workspace/README.md`](../scripts/career-workspace/README.md)에서 확인한다.
-
-1. 로컬 `applications`, `library`와 `state`가 마지막으로 받은 revision에서 바뀌지 않았는지 검사한다.
-2. 홈서버의 현재 revision과 manifest를 확인한다.
-3. 로컬 변경이 없으면 현재 release를 임시 경로로 받고 파일 hash와 허용 경로를 검증한다.
-4. 검증된 작업본만 기존 로컬 경로에 반영한다.
-5. 기존 skill이 로컬 파일을 읽고 결과를 만든다.
-6. 완료 단계는 같은 skill의 준비 기록과 시작 revision이 있을 때만 실행한다.
-7. 관리 파일이 바뀌지 않았으면 원격 release를 만들지 않는다.
-8. 파일이 바뀌면 실행 시작 revision을 조건으로 전체 작업본을 전송한다.
-9. 홈서버는 잠금 안에서 불변 release 객체를 검증하고 현재 revision이 그대로일 때만 current pointer를 새 revision으로 바꾼다.
-
-홈서버에 연결할 수 없거나 저장소가 초기화되지 않았으면 오래된 로컬 파일로 쓰기 작업을 계속하지 않는다.
-다른 환경이 먼저 반영했으면 홈서버의 현재 release를 바꾸지 않고 로컬 결과와 충돌 경로를 보존한다.
-전송이 중단되거나 검증이 실패해도 이전 release가 계속 현재 상태다.
-prepare가 중단되면 다음 실행은 journal과 실제 root를 대조해 기존 작업본으로 복구한 뒤에만 새 release를 받는다.
-journal과 실제 경로가 모순되면 자동 정리하지 않고 `RESTORE_REQUIRED`로 중단한다.
-prepare 는 현재 로컬 hash 가 마지막 동기화 상태와 다르면 파일을 교체하지 않는다.
-같은 `contentDigest` 를 다시 publish 하면 새 release 를 만들지 않는다.
-재생성 가능한 cache와 임시 리포트는 동기화하지 않는다.
-관리 root 안의 `.env`와 숨김 파일은 원격으로 보내지 않으며, `prepare`가 발견하면 삭제하지 않고 `WORKSPACE_DIRTY`로 중단한다.
-`.omc`는 원격으로 보내지 않지만 `prepare`를 막지 않는다. 저장소가 재생성 가능한 운영 산출물로 선언한 디렉터리이므로 `prepare`가 관리 root를 교체할 때 함께 사라진다.
-`.DS_Store`와 `Thumbs.db`는 운영체제 메타데이터로 분류해 작업 변경에서 제외한다.
-
-#### skill이 실행하는 명령
-
-`applications`, `library` 또는 `state`를 읽기 전에 저장소 루트 기준 CLI에 현재 skill 이름을 전달한다.
-
-```bash
-bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts" \
-  skill begin <SKILL_NAME> --json
-```
-
-이 명령이 실패하면 기존 로컬 파일로 작업을 계속하지 않는다.
-오류 코드와 로컬 파일이 보존됐다는 사실을 알리고 중단한다.
-
-산출물과 상태 검사가 성공한 뒤 같은 이름으로 완료 단계를 실행한다.
-
-```bash
-bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts" \
-  skill finish <SKILL_NAME> --json
-```
-
-완료 단계가 실패해도 로컬 결과를 지우지 않는다.
-
-#### plugin 스킬이 실행하는 명령
-
-plugin 스킬은 같은 단계를 로컬 실행기로 부른다. `<CAREER_LOCAL>` 은 스킬 본문이 알려 준 `bun --no-env-file "<plugin 경로>/dist/career-local.js"` 다.
-
-```bash
-<CAREER_LOCAL> workspace begin <SKILL_NAME> --json
-<CAREER_LOCAL> workspace finish <SKILL_NAME> --json
-```
-
-작업본의 위치는 `CAREER_WORKSPACE_ROOT` 이고 없으면 `~/.fos-career/workspace` 다.
-`CAREER_WORKSPACE_SSH_TARGET` 이 있으면 위 동기화를 그대로 거친다.
-이 값이 없으면 로컬 작업본만 쓴다. `begin` 은 관리 디렉터리 셋을 만들고 `mode: "local"` 을 내며, `finish` 는 원격에 아무것도 보내지 않는다.
-로컬 모드에는 세션 기록, `WORKSPACE_DIRTY` 검사, release 비교가 없다. 작업본을 두 환경에서 함께 쓰지 않는다는 전제다. 두 환경에서 쓰려면 동기화 설정을 켠다.
-`workspace paths --json` 은 작업본의 위치와 동기화 방식만 알려 준다.
-
-`position-recommender`와 `study-topic-recommender`의 장기 추천 상태는 Backend에서 읽고 쓴다.
+작업 폴더의 배치는 [`data-schema.md`](data-schema.md#커리어-작업-폴더)가 소유한다.
 
 ### 작업 폴더 저장소
 
@@ -232,58 +164,19 @@ sequenceDiagram
 
 ### 지원서 공통 프로필
 
-이름, 연락처, 병역, 학력과 정확한 재직 기간을 담은 문서다. 원본은 fos-assistant Memory 의 `identity` collection 에 있는 민감 문서 `career-application-profile` 이다.
-career-os 는 서비스 토큰으로 읽기만 한다. 이유는 [ADR-136](adr/ADR-136-지원서-공통-프로필은-fos-assistant-memory에서-서비스-토큰으로-읽는다.md)을 따른다.
+이름, 연락처, 병역, 학력과 정확한 재직 기간을 담은 문서다. 원본은 커리어 에이전트 주인의 기억(fos-assistant Memory)이고 제목은 「커리어: 지원서 공통 프로필」 이다.
+`application-package-writer` 가 지원서 입력(`evidence/application-form.json`)을 준비할 때만 읽는다.
 
-plugin 의 `application-package-writer` 가 지원서 입력을 준비할 때 로컬 실행기 `application-profile` 로 부른다.
-실행기는 `.env` 를 탐색하지 않고 셸 환경 변수 `FOS_ASSISTANT_URL`, `FOS_ASSISTANT_SERVICE_TOKEN` 에서 연결값을 읽는다.
+1. 에이전트가 `memory_search` 로 제목이 정확히 같은 기억을 찾아 `memory_read` 로 읽는다.
+2. 본문을 고치지 않고 작업 폴더 `context/application-profile.md` 에 쓴다.
+3. 지원서 입력을 만든 뒤 그 파일을 지운다. 연락처가 든 사본을 작업 폴더에 남기지 않는다.
 
-```bash
-<CAREER_LOCAL> application-profile get --out "${TMPDIR:-/tmp}/career-application-profile.md"
-```
-
-저장소를 연 노트북에서는 같은 CLI 를 직접 부를 수 있다. Bun 은 실행한 디렉터리의 `.env` 만 자동으로 읽으므로 `--env-file` 로 `career-os/.env` 를 넘긴다.
-
-```bash
-bun --env-file=career-os/.env career-os/scripts/application-profile/read_application_profile.ts get --out "${TMPDIR:-/tmp}/career-application-profile.md"
-```
-
-CLI 는 `GET {FOS_ASSISTANT_URL}/api/v1/service/memory-documents/identity/career-application-profile` 을 `Authorization: Bearer {FOS_ASSISTANT_SERVICE_TOKEN}` 으로 부른다.
-`FOS_ASSISTANT_ACCESS_CLIENT_ID` 와 secret 이 있으면 `CF-Access-Client-Id`, `CF-Access-Client-Secret` 머리말을 함께 보낸다. 둘 다 없으면 보내지 않고, 하나만 있으면 요청 전에 실패한다.
-본문은 `--out` 파일에만 쓰고, 표준 출력에는 판 번호와 시각만 낸다. 스킬은 그 파일을 읽어 쓴 뒤 지운다.
-
-```mermaid
-sequenceDiagram
-    participant Skill as application-package-writer
-    participant CLI as read_application_profile.ts
-    participant FA as fos-assistant 서비스 읽기 API
-    Skill->>CLI: get --out <저장소 밖 경로>
-    CLI->>CLI: --out 이 저장소 밖인지 확인
-    CLI->>FA: GET /api/v1/service/memory-documents/identity/career-application-profile
-    alt 200
-        FA-->>CLI: collection, documentKey, title, content, revision, updatedAt
-        CLI->>CLI: content 를 --out 에 0600 으로 쓴다
-        CLI-->>Skill: revision, updatedAt, tokenExpiresAt, out
-    else 401, 403, 404, 409
-        FA-->>CLI: 실패 상태
-        CLI-->>Skill: 상태별 다음 행동. 본문과 토큰은 싣지 않는다
-    end
-```
-
-| 상황 | CLI 의 동작 |
+| 상황 | 동작 |
 | --- | --- |
-| `FOS_ASSISTANT_URL` 이나 `FOS_ASSISTANT_SERVICE_TOKEN` 이 없다 | 요청하지 않고 실패한다. 셸 환경(노트북 직접 호출이면 `career-os/.env`)에 두 값을 채우라고 알린다 |
-| Access ID 와 secret 중 하나만 있다 | 요청하지 않고 실패한다. 어느 변수가 빠졌는지만 알리고 값은 출력하지 않는다 |
-| `--out` 이 git 저장소 안이다 | 요청하지 않고 실패한다 |
-| `401` | 토큰이 없거나 틀렸거나 폐기됐거나 만료됐다. fos-assistant 웹 화면에서 새로 발급해 `.env` 를 바꾸라고 알린다 |
-| `403` | 요청에 `Origin` 머리말이 붙었거나 Cloudflare Access 가 거절했다. CLI 결함과 `FOS_ASSISTANT_ACCESS_CLIENT_ID`, secret 값을 함께 확인하라고 알리고 실패한다. 값은 출력하지 않는다 |
-| `404 MEMORY_NOT_FOUND` | 문서가 없거나 토큰이 `identity` 의 민감 읽기를 받지 않는다. fos-assistant 웹 화면에서 문서와 토큰 권한을 확인하라고 알린다 |
-| `409 MEMORY_ENCRYPTION_UNAVAILABLE` | fos-assistant 에 민감 본문의 key 가 없다. 운영자에게 알리라고 하고 실패한다 |
-| `5xx` 나 연결 실패 | 두 번까지 다시 시도한 뒤 실패한다 |
-| 응답 본문이 계약과 다르다 | 실패한다. `collection` 과 `documentKey` 가 요청한 값과 다를 때도 같다 |
+| 그 제목의 기억이 없거나 둘 이상이다 | 지원서 입력만 준비하지 않는다. 기억 화면에서 그 제목의 문서를 하나만 두라고 안내하고 나머지 단계는 이어 간다 |
+| 공통 프로필에 없거나 틀린 사실을 찾았다 | career-os 가 고치지 않는다. 사용자에게 기억 화면에서 고치라고 안내한다 |
 
-어느 실패든 스킬은 공통 프로필 없이 지원서 입력을 준비하지 않고 멈춘다.
-새로 확인한 공통 프로필 사실은 career-os 가 쓰지 않는다. 사용자에게 fos-assistant 웹 화면에서 고치라고 안내한다.
+서비스 토큰으로 fos-assistant 에 묻던 CLI 는 없다. 실행 공간은 기억에 닿지 못해 에이전트가 읽어 넘긴다([ADR-148](adr/ADR-148-지원-준비는-비서의-셸-실행-공간에서-하고-작업본-동기화와-노트북-전용-스킬을-두지-않는다.md)).
 
 ### 로컬 HTML 리포트
 
@@ -294,7 +187,7 @@ sequenceDiagram
 
 선택한 공고 하나에 맞춘 지원 자료를 만들고 제출 가능성을 검증한다.
 
-1. 공고 경로가 없으면 `application-state` 문서에서 현재 지원 대상을 찾고 대응하는 지원 디렉터리를 확인한다.
+1. 기억에서 맥락 문서 셋(현재 경력, 역할 선호, 지원 상태)을 읽는다. 하나라도 없거나 같은 제목이 둘 이상이면 시작하지 않고 알린다. 공고를 받지 못했으면 「커리어: 지원 상태」 에서 현재 지원 대상을 찾고 대응하는 지원 디렉터리를 확인한다.
 2. 공식 공고와 회사 문화 자료의 최신 상태를 확인하고 공고 원문을 `evidence/posting.md` 에 저장한다.
 3. 공고 항목을 쪼개 후보자 근거를 수집하고 항목마다 판정한다. 판정 값과 점수, 가중치는 plugin 의 `application-package-writer` 스킬 `references/fit-judgment.md` 가 소유한다.
 4. 적합도 판정 뒤 후보자 인터뷰를 진행한다. 기존 답변을 읽고, 동기, 당시 제약, 본인 판단, 기각한 대안과 확인하지 못한 결과 중 비어 있는 독립 질문을 최대 넷까지 묶어 확인한다.
@@ -304,8 +197,8 @@ sequenceDiagram
 8. 외부에 보이는 문장을 전수 검사해 대상 범위, 본인 역할, 측정 대상과 포지션 연결이 독자에게 다르게 해석되지 않는지 확인한다.
 9. 같은 경험의 대상, 역할, 수치와 기간이 지원 전략과 지원서 답변에서 일치하는지 대조한다.
 10. 문서 근거로 고칠 수 없는 사실만 초안과 함께 질문으로 돌리고, 독립적인 질문은 최대 넷까지 묶는다. 사용자는 지원동기, 소유권, 가장 강한 사례, 공백과 입사 후 기여 시나리오를 확인한다.
-11. 전체 지원 요청이면 작업본 세션을 닫고 `resume-preparer`를 불러 이력서와 필요한 경력기술서를 작성하고 검증하게 한 뒤, 세션을 다시 연다.
-12. 로컬 실행기 `package validate` 로 제출 문서의 내부 정보를 검사하고 `package render` 로 `application-package.html`을 만든다. 화면 구성은 [`code-architecture.md`](code-architecture.md#application-package-writer)가 소유한다.
+11. 전체 지원 요청이면 `resume-preparer` 스킬의 절차로 이력서와 필요한 경력기술서를 작성하고 검증한다.
+12. 로컬 실행기 `package validate` 로 제출 문서의 내부 정보를 검사하고 `package render` 로 `application-package.html`을 만든 뒤, `package report` 로 사본을 만들어 「내 파일」 에 넣는다. 화면 구성은 [`code-architecture.md`](code-architecture.md#application-package-writer)가 소유한다.
 13. 공고 원문, 후보자 답변과 제출 문서를 다시 대조하고 제출 문장의 내부 정보 유출을 검사한다.
 14. 준비 상태와 함께 사람 확인 상태를 `complete` 또는 `needs_input`으로 남기며, 미확인 항목이 있으면 `ready`로 판정하지 않는다.
 15. 최종 제출 문서, 근거 원장과 검토표의 문구 해시가 모두 일치해야 `ready`로 끝낸다.
@@ -366,24 +259,23 @@ sequenceDiagram
 | 두 대화가 동시에 기록 | 파일 쓰기 잠금으로 순서대로 반영한다. 5초 안에 잠금을 얻지 못한 쪽은 `CAREER_STORE_BUSY` 다 |
 10. 일반 연습에서는 질문 은행을 수정하지 않으며, 공개·개인·포지션 질문 묶음이 모두 비었을 때만 필요한 최소 질문을 보강하고 연습을 이어간다.
 
-### Claude Code 에서 공고별 질문 연습
+### 공고별 질문 연습
 
-plugin 의 `interview-question-prep` 스킬이 Claude Code 에서만 한다. 답변 판정과 기록 규칙은 `interview-practice` 스킬과 같다.
-이 스킬은 다음 단계에서 비서용으로 옮긴다. 아래 2번과 4번이 적는 MCP 도구는 이제 없어, 옮기기 전까지 이 스킬은 돌지 않는다.
+`interview-question-prep` 스킬이 한다. 답변 판정과 기록 규칙은 `interview-practice` 스킬과 같다.
 
-1. `workspace begin interview-question-prep` 로 작업본을 준비한다. 실패하면 멈춘다.
-2. `get_context_document` 로 `career-status` 와 `application-state` 를 읽고 연습할 지원 디렉터리를 고른다.
-3. `interview select <tech|behavioral> --application-dir <작업본>/applications/<회사>/<직무> --target-bar <bar>` 가 공개, 개인, 공고별 질문을 섞어 고른다. 저장 자리는 작업 폴더의 SQLite 다.
-4. 답변과 꼬리질문마다 `save_interview_attempt` 로 기록한다.
-5. `workspace finish interview-question-prep` 로 끝낸다. 이 스킬은 작업본 파일을 고치지 않으므로 동기화 모드에서도 새 release 를 만들지 않는다.
+1. 기억에서 「커리어: 현재 경력」 과 「커리어: 지원 상태」 를 읽는다. 없거나 겹치면 시작하지 않는다.
+2. `workspace paths --json` 의 `root` 아래에서 연습할 지원 디렉터리를 고른다.
+3. `interview select <tech|behavioral> --application-dir <root>/applications/<회사>/<직무> --target-bar <bar>` 가 공개, 개인, 공고별 질문을 섞어 고른다. 저장 자리는 작업 폴더의 SQLite 다.
+4. 답변과 꼬리질문마다 `interview record` 로 기록한다.
 
-외부 자료에서 질문을 찾을 때는 `interview-sources collect` 가 임시 디렉터리에 후보를 모은다.
-공식 원문으로 확인한 질문만 사용자 확인을 받아 `save_personal_question` 으로 저장한다.
+외부 자료에서 질문을 찾을 때는 `interview-sources collect` 가 작업 폴더 `runs/` 아래에 후보를 모은다.
+공식 원문으로 확인한 질문만 사용자 확인을 받아 `interview personal add` 로 저장한다.
+이 스킬은 HTML 결과를 만들지 않는다. 결과는 작업 폴더 SQLite 의 연습 기록과 개인 질문이다.
 
 | 상황 | 동작 |
 | --- | --- |
-| 지원 디렉터리에 `evidence/interview-questions.json` 이 없다 | `interview select` 가 종료 코드 1 로 끝난다. 공고별 질문 없이 `interview-practice` 로 연습하라고 안내한다 |
-| Backend 연결값이 셸 환경에 없다 | `interview select` 가 종료 코드 1 로 끝난다. 환경 변수를 설정하라고 안내한다 |
+| 지원 디렉터리에 `evidence/interview-questions.json` 이 없다 | 공고별 질문 없이 `interview-practice` 로 연습하라고 안내하고 끝낸다 |
+| 실행기 명령이 실패했다 | 질문을 지어내거나 웹에서 찾아 대신하지 않고 실패한 명령과 표준 오류 첫 줄을 알린다 |
 | 수집한 모든 출처가 실패했다 | 질문을 만들지 않고 멈춘다. 등록 출처 수정은 저장소 유지 절차다 |
 
 ### 면접 연습 HTTP 계약
@@ -508,13 +400,6 @@ flowchart TD
 최종 답변 형식은 `position-recommender` 스킬 문서가 정하고 cron 실행과 수동 실행이 같은 형식을 쓴다.
 수집 경고가 있으면 그 줄을 최종 답변에 그대로 전달하고, 없으면 줄을 만들지 않는다.
 
-### Claude Code 에서 공고 추천
-
-plugin 의 `position-recommender` 스킬이 Claude Code 에서만 같은 단계를 돈다.
-명령은 로컬 실행기 `<CAREER_LOCAL> position <하위 명령>` 이고 하위 명령과 출력은 위와 같다.
-공고 분석의 프로젝트 근거는 `<CAREER_LOCAL> workspace paths --json` 이 알려 주는 `evidenceDir` 에서 읽는다.
-홈서버 예약 실행도 이 plugin 스킬을 쓴다. 저장소 사본은 없다.
-
 ## resume-preparer
 
 ### 근거 감사와 개선
@@ -525,7 +410,7 @@ plugin 의 `position-recommender` 스킬이 Claude Code 에서만 같은 단계�
 2. 검증 장부에서 후보 문구와 관련 근거를 검색해 먼저 읽을 자료를 줄인다.
 3. 공통 이력서 작성 규칙을 적용해 Markdown 원본을 작성한다.
 4. 제품 전체에 만든 체계와 한 기능의 개선 사례를 분리하고, 같은 경험의 범위가 모든 제출 문서에서 일치하는지 전수 검사한다.
-5. 디자인 계약으로 HTML과 PDF를 만든다.
+5. 디자인 계약으로 HTML과 PDF를 만든다. 실행 공간에 Chrome 이 없으면 `resume export` 가 HTML 만 만들고 `PDF 도구 없음` 을 알린다. 이때 21번의 제출 묶음은 만들지 않는다.
 6. 현재 HTML의 주장과 `state/verified-claims/`의 검증 완료 주장을 대조한다.
 7. 문구, 판정 축과 로컬 근거 파일의 SHA-256이 모두 같으면 이전 판정을 재사용한다.
 8. 등록되지 않은 주장, 바뀐 문구, 달라진 근거 파일과 실행 시점에 따라 달라지는 URL 근거만 다시 읽는다.
@@ -542,56 +427,50 @@ plugin 의 `position-recommender` 스킬이 Claude Code 에서만 같은 단계�
 19. 보이는 문구가 바뀌면 같은 경험을 가리키는 모든 문서의 표현을 확인하고, 해당 문서의 근거 감사와 평가를 다시 실행한다.
 20. 모든 주장이 `safe`이고 현재 HTML 해시와 일치하는 `schemaVersion: 3` 원장만 검증 장부에 반영한다.
 21. 경력기술서가 있으면 별도 PDF와 통합 `submission.pdf`를 만들고, manifest의 파일 해시까지 제출 묶음 검사를 통과한다.
-22. 면접에서 확인할 질문은 `evidence/interview-questions.json`에 선택적으로 남기며, 답변 연습은 `interview-practice`가 맡는다.
+22. 결과 파일(PDF 가 있으면 PDF 와 HTML, 없으면 HTML)을 `package report` 로 사본을 만들어 「내 파일」 에 넣는다.
+23. 면접에서 확인할 질문은 `evidence/interview-questions.json`에 선택적으로 남기며, 답변 연습은 `interview-practice`가 맡는다.
 
 검증 장부가 없거나 읽을 수 없으면 전체 감사를 수행한다.
 근거 파일이 바뀌면 그 파일을 참조하는 주장만 다시 감사하며, 다른 주장의 재사용 판정은 유지한다.
-두 실행이 같은 장부를 고치면 비공개 작업 release의 revision 충돌 검사로 이전 결과를 보존하고 새 작업본에서 다시 합친다.
+검증 장부는 작업 폴더 `state/verified-claims/` 에 있다. 쓰는 사람이 커리어 에이전트 주인 한 명이라 동시 수정을 따로 막지 않는다.
 
 개인 연락처가 포함된 이력서는 사용자의 명시적 요청 없이 공개 게시하지 않는다.
 
 ### 개인 맥락 조회와 환원
 
-지원 작업본 준비 후 대표 사례 사실 확인 단계에서 경력·역할 선호·경험 경계를 조회한다.
-원고 작성 단계에서는 스킬의 개인 작성 취향을 적용하고, 새 질문이나 정정으로 부족해진 정보만 추가 조회한다.
+원고를 쓰기 전에 기억에서 「커리어: 현재 경력」 과 「커리어: 역할 선호」 를 읽는다. 없거나 같은 제목이 둘 이상이면 시작하지 않는다.
+원고 작성 단계에서는 스킬의 개인 작성 취향을 적용하고, 새 질문이나 정정으로 부족해진 정보만 다시 확인한다.
 
 ```mermaid
+---
+config:
+  look: handDrawn
+---
 flowchart TD
-    A[지원 작업본 준비] --> B[career-status 문서를 조회]
-    B --> C{조회 결과}
-    C -->|관련 근거 있음| D[출처와 시점을 확인해 현재 문구에 적용]
+    A[지원 디렉터리 확인] --> B[기억에서 맥락 문서를 읽는다]:::memory
+    B --> C{읽은 결과}
+    C -->|문서가 없거나 제목이 겹침| X[시작하지 않고 알린다]:::stop
+    C -->|관련 근거 있음| D[출처를 확인해 현재 문구에 적용]
     C -->|관련 근거 없음| E[현재 대화와 후보자 확인으로 보완]
-    C -->|도구 실패| F[실패를 알리고 확인된 근거 범위에서 편집]
     D --> G[스킬의 작성 취향으로 원고 수정]
     E --> G
-    F --> G
     G --> H{새 정보의 성격}
-    H -->|추가 맥락 필요| B
-    H -->|합의한 작성 취향| I[스킬의 resume-taste.md 갱신]
-    H -->|재사용할 개인 사실이나 결정| J[바꿀 문서의 변경 전후 준비]
+    H -->|재사용할 개인 사실이나 결정| J[career-connector 로 변경 전후를 보여 주고 기억에 남긴다]:::memory
     H -->|지원별 표현과 수치| K[지원 건의 기존 근거 기록에 반영]
-    J --> L{사용자 검토}
-    L -->|승인| M[manage_candidate_context.ts put 으로 저장]
-    L -->|보류| G
+    classDef memory fill:#dbeafe,stroke:#1d4ed8
+    classDef stop fill:#fee2e2,stroke:#b91c1c
 ```
 
-조회한 출처의 시점보다 새로운 사용자 정정이 있으면 정정을 현재 문구에 반영하고 충돌 사실을 표시한다.
-연속 편집에서는 이미 확인한 맥락을 재사용하고, 제출 문장을 바꾸는 불확실성이 생겼을 때 다시 조회한다.
-저장할 때 `note` 에 확인한 날짜와 내용을 남긴다. 다른 저장과 겹치면 `409` 이고, 다시 조회해 변경 전후를 새로 보여 준다.
+새로운 사용자 정정이 있으면 정정을 현재 문구에 반영하고 충돌 사실을 표시한다.
+연속 편집에서는 이미 확인한 맥락을 재사용하고, 제출 문장을 바꾸는 불확실성이 생겼을 때 다시 확인한다.
+기억에 남긴 내용이 제안으로 남으면 사용자가 기억 화면에서 받아들이기 전까지 다음 실행은 옛 문서를 쓴다.
 계약은 [「후보자 맥락 문서」](#후보자-맥락-문서) 절이 소유한다.
-지원 작업본의 동시 수정은 기존 revision 비교 계약을 따른다.
 
-### Claude Code 에서 이력서 준비
+### 이력서 검토
 
-plugin 의 `resume-preparer` 스킬이 Claude Code 에서만 위 단계를 돈다. 저장소 사본은 없다.
-
-1. `<CAREER_LOCAL> workspace begin resume-preparer --json` 으로 작업본을 준비한다. 결과의 `root` 아래 `applications/` 를 읽는다.
-2. 개인 맥락은 `get_context_document` 로 읽고, 승인받은 새 사실은 `save_context_document` 로 저장한다.
-3. HTML·PDF 변환, 주장 원장 검증, 검증 완료 주장의 판정과 검색과 반영, 제출 묶음 생성과 검증은 `<CAREER_LOCAL> resume <하위 명령>` 으로 한다.
-4. 검증 완료 주장은 작업본의 `state/verified-claims/` 에 쓴다. 주장 원장의 근거 경로는 Claude Code 를 연 디렉터리 기준이다.
-5. `<CAREER_LOCAL> workspace finish resume-preparer --json` 으로 끝낸다.
-
-지원 패키지 검사와 검토 화면은 plugin 의 `application-package-writer` 가 로컬 실행기 `package` 로 한다. 이 스킬도 Claude Code 에서만 돈다.
+`resume-review` 스킬이 한다. 공고의 작성 안내에 맞춰 제출 파일을 평가하고, 부족한 근거를 인터뷰로 확인해 고친 뒤 다시 평가한다.
+작성, 주장 검증, 채용 리뷰 기준은 `resume-preparer` 스킬의 참조 문서를 `skill_view` 로 읽어 쓴다.
+재평가를 마치면 `review/resume-scorecard.md` 의 내용을 `review/resume-review.html` 로 쓰고, `package report` 로 사본을 만들어 「내 파일」 에 넣는다.
 
 ## study-topic-recommender
 
@@ -734,7 +613,7 @@ API 후보 `Candidate` 는 후보풀의 `ReadingCandidate` 로 변환한다.
 그 화면이 없어 쓰는 쪽이 없다.
 
 실행 명령과 플래그 조합은 plugin `study-collection` 스킬의
-[`references/execution.md`](../plugin/skills/study-collection/references/execution.md)가 소유한다.
+[`references/execution.md`](../plugin/agent-skills/study-collection/references/execution.md)가 소유한다.
 저장 모델과 cursor 형식은 [`data-schema.md`](data-schema.md#study-topic-recommender)가 소유한다.
 
 ### 판정에 공통으로 적용하는 것
@@ -745,41 +624,11 @@ API 후보 `Candidate` 는 후보풀의 `ReadingCandidate` 로 변환한다.
 새로운 후보가 없으면 과거 자료를 다시 채우지 않고 빈 상태를 보여준다.
 `study-topic-recommender` 호출만으로 외부 게시를 승인한 것으로 보지 않는다.
 
-## sync-profile
+## 프로필 원고와 사용량 기록
 
-원티드, LinkedIn, GitHub 프로필을 이력서 원고 기준으로 갱신한다.
-
-1. 대상별 원고를 커리어 Backend 에서 읽는다. `list_profile_documents` 와 `get_profile_document` 도구를 쓴다.
-   문서 키는 `wanted`, `linkedin`, `github` 이다. 홈서버 SSH 와 비공개 작업본이 필요 없다.
-   Backend 에 닿지 못하면 멈추고 사용자에게 알린다. 로컬 파일로 대신하지 않는다.
-2. 원고가 없으면 가장 최근 지원의 이력서 초안을 출발점으로 삼아 공개 범위를 조정한 새 원고를 만든다.
-   **이때만** `<CAREER_LOCAL> workspace begin sync-profile --json` 으로 작업본을 준비한다. 결과의 `root` 아래 `applications/` 를 읽기 때문이다.
-3. 사용자가 한 곳만 말해도 세 곳을 모두 읽고 원본과 어긋난 지점을 표로 보고한다.
-   달이 바뀌었으면 원티드의 진행 중 프로젝트 종료월과 GitHub 의 지난달 사용량도 대상이다.
-   사용량은 `list_usage_snapshots` 도구로 기록을 읽는다. 스킬이 그 자리에서 측정해 프로필에 쓰지 않는다.
-4. 공개 범위를 사용자에게 확인받는다. 사내 운영 수치, 사내 조직명과 도구 이름,
-   진행 중인 프로젝트의 종료월 표기가 여기 해당한다.
-5. 원고에 없던 문장을 새로 썼으면 `resume-preparer`의 판정 모델로 근거를 확인한다.
-6. 무엇을 어떻게 바꿀지 보여주고 승인을 받는다.
-7. 대상별 절차로 반영한다. **한 번에 한 항목씩 넣고 결과를 확인한다.**
-8. 반영한 값이 서버에 저장됐는지 대상별 방법으로 확인한다.
-9. 반영한 내용을 원고에 다시 적어 `save_profile_document` 도구로 저장한다. 1단계에서 읽은 `version` 을 `expectedVersion` 으로 넘긴다.
-   폼 제약으로 원고와 다르게 넣었으면 그 사실과 이유를 원고에 함께 남긴다.
-10. 2단계에서 작업본을 준비했으면 완료 단계로 작업본을 발행한다.
-
-갈라지는 곳이다.
-
-- **화면에 값이 보이는 것은 저장의 증거가 아니다.** 원티드는 서버에서 다시 조회하고,
-  LinkedIn은 편집 화면을 다시 열어 값과 문단 수를 읽고, GitHub은 원격 파일과 이미지 로드 상태를 확인한다.
-- 에이전트 사용량은 수집기가 달이 끝난 직후에 측정해 기록한다. 세션 기록이 지워진 뒤에는 그 달을 다시 셀 수 없다.
-  지난달 기록이 없으면 스킬은 수집기를 한 번 실행하고, 그래도 없으면 그 달을 차트에서 뺀다.
-- 원고 저장이 `409` 로 거절되면 다른 곳에서 원고가 바뀐 것이다. 다시 읽어 차이를 보여 준 뒤에 저장한다.
-- 세 곳 중 하나라도 실패하면 그것을 먼저 알린다. 나머지가 성공했다고 넘어가지 않는다.
-- 로그인 화면이 나오면 멈추고 사용자에게 알린다. 자격 증명을 대신 입력하지 않는다.
-- 공개 범위 판단은 사용자만 한다. 지원본에 있던 문장이라도 그대로 옮기지 않는다.
-
-스킬은 plugin 의 Claude Code 전용 `sync-profile` 이다. 원고와 사용량 기록은 MCP 도구로, 사용량 수집은 로컬 실행기 `<CAREER_LOCAL> usage` 로 한다.
-대상별 절차와 조작 스크립트는 [`plugin/skills/sync-profile/`](../plugin/skills/sync-profile/)가 소유한다.
+원티드와 GitHub 프로필 갱신은 `career-connector` 스킬이 비서 대화에서 한다. 흐름은 아래 「fos-career 커넥터」 절이 소유한다.
+세 사이트를 한 기기에서 직접 조작하던 `sync-profile` 스킬은 지웠다([ADR-148](adr/ADR-148-지원-준비는-비서의-셸-실행-공간에서-하고-작업본-동기화와-노트북-전용-스킬을-두지-않는다.md)).
+아래 「프로필 HTTP 계약」 은 커리어 Backend 의 계약으로, 비서용 스킬과 실행기가 쓰지 않는다. Backend 를 내릴 때 함께 지운다.
 
 ### 프로필 HTTP 계약
 
@@ -830,55 +679,66 @@ flowchart TD
     H -->|있다| I[요청 값으로 바꾼다. created false]
 ```
 
-수집기는 `replace` 를 보내지 않는다. 그래서 같은 달을 뒤늦게 다시 측정해 올려도 처음 값이 남는다.
-`replace` 는 사람이 잘못 들어간 기록을 고칠 때만 `scripts/profile/manage_profile.ts usage put --replace --note` 로 보낸다.
+이 계약을 부르던 수집기는 지금 파일에 쓴다(아래 「사용량 수집」).
+기록을 고칠 때는 이 계약이 아니라 수집기에 `collect_usage.ts --replace <YYYY-MM> --note <사유>` 를 준다.
 이유는 [ADR-133](adr/ADR-133-프로필-원고와-에이전트-사용량-기록은-backend의-profile-모듈이-갖는다.md)을 따른다.
 
 ### 사용량 수집
 
 세션 기록이 있는 기기에서 `scripts/agent-usage/collect_usage.ts` 가 매일 한 번 돈다.
-측정값을 그 기기의 파일에 두지 않고 Backend 에 올린다. 근거는 [ADR-133](adr/ADR-133-프로필-원고와-에이전트-사용량-기록은-backend의-profile-모듈이-갖는다.md)이다.
+측정값은 그 기기의 파일 하나에 쌓는다. 커리어 Backend 를 부르지 않고, 비서로 옮기지도 않는다([ADR-148](adr/ADR-148-지원-준비는-비서의-셸-실행-공간에서-하고-작업본-동기화와-노트북-전용-스킬을-두지-않는다.md)).
+파일의 자리와 꼴은 [`data-schema.md`](data-schema.md#사용량-파일)가 소유한다.
 
 ```mermaid
+---
+config:
+  look: handDrawn
+---
 flowchart TD
-    L[launchd 가 하루 한 번 실행] --> G[GET usage-snapshots]
-    G -->|닿지 못함| X[종료 코드 1]
+    L[launchd 가 하루 한 번 실행]:::run --> G[사용량 파일을 읽는다]:::file
+    G -->|꼴이 다르다| X[종료 코드 1. 파일을 건드리지 않는다]:::stop
     G --> T{기록이 없는 끝난 달이 있는가}
     T -->|없다| U[UP_TO_DATE 를 내고 종료 코드 0]
-    T -->|있다| M[agent_usage.py --json 으로 세션 기록 측정]
+    T -->|있다| M[agent_usage.py --json 으로 세션 기록 측정]:::run
     M --> D{그 달의 세션 기록이 있는가}
-    D -->|없다| N[NO_SESSIONS 를 내고 올리지 않는다]
-    D -->|있다| P[PUT usage-snapshots/:month 를 replace 없이 보낸다]
-    P -->|created 가 참| C[CREATED]
-    P -->|created 가 거짓| E[EXISTS. 값은 바뀌지 않았다]
+    D -->|없다| N[NO_SESSIONS 를 내고 쓰지 않는다]
+    D -->|있다| P[그 달을 파일에 더한다]:::file
+    P -->|새 달| C[CREATED]
+    P -->|이미 있는 달| E[EXISTS. 값은 바뀌지 않았다]
+    classDef run fill:#dcfce7,stroke:#15803d
+    classDef file fill:#f3e8ff,stroke:#7e22ce
+    classDef stop fill:#fee2e2,stroke:#b91c1c
 ```
 
-1. Backend 의 기록 목록을 먼저 읽는다. 닿지 못하면 측정하지 않고 0 이 아닌 종료 코드로 끝낸다.
+1. 사용량 파일의 기록 목록을 먼저 읽는다. 파일이 없으면 빈 목록이고, 꼴이 다르면 측정하지 않고 0 이 아닌 종료 코드로 끝낸다.
 2. 대상 달을 정한다. 끝난 달 가운데 기록이 없는 달이다.
    - 달이 끝났는지는 UTC 로 판정한다. 측정 스크립트가 세션 기록의 UTC 시각으로 달을 나누기 때문이다.
-     UTC 로 끝난 달은 `Asia/Seoul` 로도 끝난 달이라 Backend 가 거절하지 않는다.
    - 기록이 하나도 없으면 가장 최근에 끝난 달 하나만 대상이다.
    - 기록이 있으면 가장 오래된 기록보다 뒤의 달만 대상이다.
      그보다 앞의 달은 세션 기록이 일부만 남아 있어, 측정하면 실제보다 작은 값이 측정값으로 남는다.
 3. 대상 달이 없으면 측정하지 않는다. 세션 기록 전체를 읽는 일이라 매일 할 이유가 없다.
-4. 대상 달이 있으면 한 번 측정하고 달마다 `PUT` 을 보낸다. `replace` 를 보내지 않는다.
-   이미 기록된 달은 Backend 가 값을 바꾸지 않고 `created: false` 로 답한다.
+4. 대상 달이 있으면 한 번 측정하고 달마다 파일에 더한다. 이미 기록된 달은 바꾸지 않는다.
 5. 표준 출력에는 달과 결과 코드만 한 줄씩 낸다. 토큰 수와 비용은 내지 않는다. launchd 가 이 출력을 로그 파일에 쌓는다.
-   `FAILED` 이면 표준 오류에 그 달과 오류 요약(상태, `code`, 있으면 `requestId`) 한 줄을 낸다. 토큰과 본문은 담지 않는다.
+   `FAILED` 이면 표준 오류에 그 달과 원인 한 줄을 낸다.
 
 | 결과 코드 | 뜻 |
 | --- | --- |
 | `CREATED` | 그 달의 기록을 새로 만들었다 |
 | `EXISTS` | 그 달의 기록이 이미 있어 바뀌지 않았다 |
-| `NO_SESSIONS` | 그 달의 세션 기록이 기기에 없어 올리지 않았다 |
+| `REPLACED` | `--replace` 로 준 달의 기록을 다시 측정한 값으로 바꿨다 |
+| `NO_SESSIONS` | 그 달의 세션 기록이 기기에 없어 쓰지 않았다. `--replace` 로 준 달이면 표준 오류에 한 줄을 내고 종료 코드 1 로 끝낸다 |
 | `UP_TO_DATE` | 대상 달이 없다. 달 자리에는 `-` 를 낸다 |
 | `FAILED` | 그 달의 저장이 실패했다. 남은 달을 마저 시도한 뒤 종료 코드 1 로 끝낸다 |
 
 수집기가 한 달 넘게 돌지 않으면 그 달의 값은 실제보다 작게 기록된다. 그 사실은 측정한 날로만 드러난다.
-수집기는 기록을 고치지 않는다. 고치려면 사람이 `manage_profile.ts usage put` 에 `replace` 와 사유를 준다.
 
-`launchd` 등록은 `scripts/agent-usage/manage_launchd.ts` 가 한다. plist 에는 token 과 주소를 적지 않는다.
-실행 명령이 `bun --env-file=<저장소>/career-os/.env` 라 연결값은 `.env` 에서만 읽는다.
+다른 기기의 세션까지 더해 한 달을 다시 적을 때는 사람이 직접 실행한다. `--merge` 는 다른 기기에서 내보낸 합계 파일을 더해 측정하고, `--replace` 는 이미 기록한 끝난 달을 그 값으로 바꾼다. 사유(`--note`)가 없으면 바꾸지 않는다.
+
+```bash
+bun --no-env-file career-os/scripts/agent-usage/collect_usage.ts --merge <다른 기기 합계 파일> --replace <YYYY-MM> --note "<사유>"
+```
+
+`launchd` 등록은 `scripts/agent-usage/manage_launchd.ts` 가 한다. 실행 명령은 `bun --no-env-file` 이고 `.env` 를 읽지 않는다. 수집기가 읽을 연결값이 없다.
 
 ## fos-career 커넥터
 

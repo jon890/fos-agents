@@ -39,12 +39,12 @@ test("help 는 0 으로 끝난다", async () => {
   expect(result.stdout).toContain("interview");
 });
 
-test("workspace paths 는 설정한 작업본 위치와 로컬 모드를 낸다", async () => {
+test("workspace paths 는 설정한 작업 폴더와 프로젝트 근거 위치만 낸다", async () => {
   const cwd = temporaryDirectory();
   const root = join(cwd, "workspace");
   const result = await runBundle(cwd, ["workspace", "paths", "--json"], { CAREER_WORKSPACE_ROOT: root });
   expect(result.exitCode).toBe(0);
-  expect(JSON.parse(result.stdout)).toMatchObject({ action: "paths", ok: true, root, mode: "local", evidenceDir: join(root, "evidence") });
+  expect(JSON.parse(result.stdout)).toEqual({ schemaVersion: 1, action: "paths", ok: true, root, evidenceDir: join(root, "evidence") });
 });
 
 test("workspace paths 는 CAREER_EVIDENCE_DIR 를 프로젝트 근거 위치로 낸다", async () => {
@@ -61,12 +61,12 @@ test("position --help 는 0 으로 끝나고 하위 명령을 보여 준다", as
   expect(result.stdout).toContain("commit-company-tiers");
 });
 
-test("cwd 의 .env 는 작업본 위치와 모드를 바꾸지 않는다", async () => {
+test("cwd 의 .env 는 작업 폴더 위치를 바꾸지 않는다", async () => {
   const cwd = temporaryDirectory();
   writeFileSync(join(cwd, ".env"), "CAREER_WORKSPACE_ROOT=/elsewhere\nCAREER_WORKSPACE_SSH_TARGET=example\n");
   const result = await runBundle(cwd, ["workspace", "paths", "--json"]);
   expect(result.exitCode).toBe(0);
-  expect(JSON.parse(result.stdout)).toMatchObject({ root: join(cwd, ".fos-career", "workspace"), mode: "local" });
+  expect(JSON.parse(result.stdout)).toMatchObject({ root: "/workspace/career" });
 });
 
 test("interview 는 Backend 값 없이 번들에 든 공개 질문 은행과 작업 폴더의 SQLite 로 돌고, 실행을 나눠도 기록이 이어진다", async () => {
@@ -178,8 +178,7 @@ const ONE_PIXEL_PNG = Buffer.from(
 
 test("resume export 는 --logo-dir 가 없으면 작업본의 로고를 붙인다", async () => {
   const cwd = temporaryDirectory();
-  // CAREER_WORKSPACE_ROOT 를 주지 않으면 원본의 기본값은 <cwd>/career-os 라서, 실행기가 주입한 plugin 작업본 root 와 다르다.
-  const root = join(cwd, ".fos-career", "workspace");
+  const root = join(cwd, "workspace");
   const logoDir = join(root, "library", "resume-logos");
   mkdirSync(logoDir, { recursive: true });
   writeFileSync(join(logoDir, "example.png"), ONE_PIXEL_PNG);
@@ -195,59 +194,32 @@ test("resume export 는 --logo-dir 가 없으면 작업본의 로고를 붙인�
   const result = await runBundle(
     cwd,
     ["resume", "export", "--application-dir", applicationDir, "--chrome-bin", "/not-used"],
+    { CAREER_WORKSPACE_ROOT: root },
   );
   expect(result.exitCode).toBe(1);
   const html = readFileSync(join(applicationDir, "review", "resume.html"), "utf8");
   expect(html).toContain(`data:image/png;base64,${ONE_PIXEL_PNG.toString("base64")}`);
 });
 
-/**
- * 실제 파이썬 실행 파일이 있는 디렉터리.
- * python3 가 mise shim 이면 shim 은 HOME 아래 설정과 설치 위치를 찾으므로, HOME 을 비우면 설치를 새로 내려받는다.
- * 실행 파일 디렉터리를 PATH 앞에 두어 shim 을 거치지 않게 한다.
- */
-function pythonDirectory(): string {
-  const result = Bun.spawnSync(["python3", "-c", "import sys; print(sys.executable)"], { stdout: "pipe", stderr: "pipe" });
-  if (result.exitCode !== 0) throw new Error(`python3 를 찾지 못했다: ${result.stderr.toString()}`);
-  return dirname(result.stdout.toString().trim());
-}
+test("resume export 는 Chrome 없이 HTML 만 내고, package report 가 그 사본을 reports/ 에 만든다", async () => {
+  const cwd = temporaryDirectory();
+  const root = join(cwd, "workspace");
+  const applicationDir = join(root, "applications", "example", "backend");
+  mkdirSync(join(applicationDir, "evidence"), { recursive: true });
+  writeFileSync(join(applicationDir, "evidence", "resume-draft.md"), "# 김예시\n\n## 경력\n\n### 예시회사 · 백엔드 개발\n\n- 예시 서비스를 운영했다.\n");
+  const environment = { CAREER_WORKSPACE_ROOT: root };
 
-/** UTC 로 가장 최근에 끝난 달(`YYYY-MM`). 기록이 없을 때 수집기가 대상으로 잡는 달이다. */
-function lastEndedMonth(now: Date): string {
-  const previous = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
-  return `${previous.getUTCFullYear()}-${String(previous.getUTCMonth() + 1).padStart(2, "0")}`;
-}
+  const exported = await runBundle(cwd, ["resume", "export", "--application-dir", applicationDir, "--html-only"], environment);
+  expect({ exitCode: exported.exitCode, stderr: exported.stderr }).toEqual({ exitCode: 0, stderr: "" });
+  expect(exported.stdout).toContain("PDF 도구 없음");
+  expect(existsSync(join(applicationDir, "resume.pdf"))).toBe(false);
 
-test("usage 는 번들에 든 측정 스크립트로 세션이 없는 달을 알리고 아무것도 올리지 않는다", async () => {
-  const requests: string[] = [];
-  const server = Bun.serve({
-    port: 0,
-    fetch(request) {
-      const url = new URL(request.url);
-      requests.push(`${request.method} ${url.pathname}`);
-      if (request.method === "GET" && url.pathname === "/api/profile/v1/usage-snapshots") {
-        return Response.json({ snapshots: [] });
-      }
-      return new Response("not found", { status: 404 });
-    },
-  });
-  try {
-    const home = temporaryDirectory();
-    const before = lastEndedMonth(new Date());
-    const result = await runBundle(home, ["usage"], {
-      PATH: `${pythonDirectory()}:${process.env.PATH ?? ""}`,
-      CAREER_BACKEND_URL: server.url.origin,
-      CAREER_BACKEND_TOKEN: FAKE_TOKEN,
-    });
-    const after = lastEndedMonth(new Date());
-    expect({ exitCode: result.exitCode, stderr: result.stderr }).toEqual({ exitCode: 0, stderr: "" });
-    // 실행 중에 달이 바뀌면 둘 중 하나다.
-    expect([`${before} NO_SESSIONS\n`, `${after} NO_SESSIONS\n`]).toContain(result.stdout);
-    expect(requests).toEqual(["GET /api/profile/v1/usage-snapshots"]);
-    expect(requests.filter((request) => request.startsWith("PUT "))).toEqual([]);
-  } finally {
-    server.stop(true);
-  }
+  const copied = await runBundle(cwd, ["package", "report", applicationDir, join(applicationDir, "review", "resume.html")], environment);
+  expect({ exitCode: copied.exitCode, stderr: copied.stderr }).toEqual({ exitCode: 0, stderr: "" });
+  const copy = copied.stdout.split("\n").find((line) => line.startsWith("리포트 사본: "))!.slice("리포트 사본: ".length);
+  expect(copy).toMatch(/reports\/\d{4}-\d{2}-\d{2}-resume-example--backend\.html$/);
+  expect(existsSync(copy)).toBe(true);
+  expect(copied.stdout).toContain("file_space_put");
 });
 
 /** 검토 화면을 그릴 수 있는 지어낸 지원 디렉터리다. */
@@ -305,15 +277,16 @@ test("package check-sources 는 CAREER_EVIDENCE_DIR 가 없으면 unavailable �
   expect(output.sources[0]?.detail).toContain("CAREER_EVIDENCE_DIR");
 });
 
-test("application-profile get 은 연결값이 없으면 1 로 끝나고 token 을 출력하지 않는다", async () => {
+test("지운 작업본 동기화와 공통 프로필 실행기는 번들에 없다", async () => {
   const cwd = temporaryDirectory();
-  const result = await runBundle(cwd, ["application-profile", "get", "--out", join(cwd, "profile.md")], {
-    FOS_ASSISTANT_SERVICE_TOKEN: FAKE_TOKEN,
-  });
-  expect(result.exitCode).toBe(1);
-  expect(result.stderr).toContain("FOS_ASSISTANT_URL");
-  expect(result.stdout).not.toContain(FAKE_TOKEN);
-  expect(result.stderr).not.toContain(FAKE_TOKEN);
+  for (const args of [["workspace", "begin", "resume-preparer", "--json"], ["application-profile", "get", "--out", join(cwd, "profile.md")], ["usage"]]) {
+    const result = await runBundle(cwd, args, { CAREER_WORKSPACE_SSH_TARGET: "example", FOS_ASSISTANT_SERVICE_TOKEN: FAKE_TOKEN });
+    expect({ args, exitCode: result.exitCode }).toEqual({ args, exitCode: 2 });
+    expect(result.stdout + result.stderr).not.toContain(FAKE_TOKEN);
+  }
+  const source = readFileSync(bundle, "utf8");
+  for (const removed of ["CAREER_WORKSPACE_SSH_TARGET", "FOS_ASSISTANT_SERVICE_TOKEN", "WORKSPACE_DIRTY"])
+    expect({ removed, hit: source.includes(removed) }).toEqual({ removed, hit: false });
 });
 
 test("공고·공부 실행기는 Backend 값 없이 작업 폴더의 SQLite 를 만들어 쓴다", async () => {
