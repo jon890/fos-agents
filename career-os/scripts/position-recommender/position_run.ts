@@ -292,7 +292,14 @@ export async function runPositionCommand(
   if (argv[0] === "check-exclusions" && !argv.includes("--help")) {
     if (argv.length !== 3 || argv[1] !== "--input" || !argv[2]?.trim())
       throw new PositionRunUsageError("check-exclusions에는 --input <JSON 파일>이 필요합니다.");
-    const input = JSON.parse(readFileSync(resolve(argv[2]), "utf8")) as unknown;
+    let input: unknown;
+    try {
+      input = JSON.parse(readFileSync(resolve(argv[2]), "utf8")) as unknown;
+    } catch (error) {
+      throw new PositionRunUsageError(
+        `--input 파일을 JSON 으로 읽지 못했습니다: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
     writeLine(JSON.stringify(await checkExclusions(createPositionStore(), input, new Date()), null, 2));
     return 0;
   }

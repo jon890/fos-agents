@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { closeCareerStores, openCareerStore } from "../lib/career-store/database.ts";
 import { CareerStoreError } from "../lib/career-store/errors.ts";
 import { InterviewStore } from "../lib/career-store/interview/store.ts";
 import { cleanupCareerWorkspaces, createCareerWorkspace } from "../lib/career-store/test-support.ts";
@@ -213,6 +214,49 @@ describe("면접 연습 CLI", () => {
       runDrillCli(["record", "--input", "attempt.json"], { createStore: () => value, readFile: () => "{" }),
     ).rejects.toThrow("--input");
     expect((await value.listProgress("tech")).items[0]?.failCount).toBe(1);
+  });
+  test("record --input 은 만든 attemptId 를 입력 파일에 되써, 같은 파일로 다시 실행해도 한 번만 쌓인다", async () => {
+    const value = store();
+    let file = JSON.stringify({ drillType: "tech", questionId: "q", topic: "retry", question: "질문", score: "fail" });
+    const run = () =>
+      runDrillCli(["record", "--input", "attempt.json"], {
+        createStore: () => value,
+        readFile: () => file,
+        writeFile: (_path, content) => {
+          file = content;
+        },
+      }) as Promise<{ attemptId: string }>;
+    const first = await run();
+    expect(JSON.parse(file).attemptId).toBe(first.attemptId);
+    expect(await run()).toEqual(first);
+    expect((await value.listProgress("tech")).items[0]?.failCount).toBe(1);
+  });
+  test("다른 날 다시 열어 고르면 앞 연습의 복습 대상과 저장한 개인 질문이 나온다", async () => {
+    const workspace = createCareerWorkspace();
+    const dayOne = new InterviewStore(workspace.db, () => new Date("2026-08-13T01:00:00.000Z"));
+    const personal = { ...question, id: "personal-due", topic: "due-topic", category: "behavioral" };
+    await dayOne.upsertPersonalQuestion(personal.id, { enabled: true, drillType: "behavioral", question: personal });
+    await dayOne.createAttempt({
+      attemptId: "44444444-4444-4444-8444-444444444444",
+      drillType: "behavioral",
+      questionId: personal.id,
+      topic: personal.topic,
+      question: personal.question,
+      score: "fail",
+    });
+    const select = async (now: string) => {
+      closeCareerStores();
+      const reopened = new InterviewStore(openCareerStore(workspace.environment));
+      const result = (await runDrillCli(["select", "behavioral"], {
+        createStore: () => reopened,
+        readFile: () => "",
+        now: () => new Date(now),
+      })) as { today: string; questions: Array<DrillQuestion & { dueForReview: boolean }> };
+      return result.questions.find((item) => item.id === personal.id);
+    };
+    // 같은 날에는 복습일(다음 날)이 오지 않았다.
+    expect((await select("2026-08-13T02:00:00.000Z"))?.dueForReview ?? false).toBeFalse();
+    expect(await select("2026-08-14T02:00:00.000Z")).toMatchObject({ sourceScope: "personal", dueForReview: true });
   });
   test("필수 값이 빠진 record 를 사용법 오류로 거절한다", async () => {
     await expect(

@@ -58,7 +58,7 @@ description: 작업 폴더에 쌓인 복습 상태로 공개 질문과 개인 �
 답변 하나와 꼬리질문 하나마다 기록 하나를 남긴다.
 기록을 JSON 파일로 쓰고 실행기에 넘긴다. 질문과 피드백의 따옴표나 줄바꿈이 셸에서 깨지지 않게 하려는 것이다.
 
-1. `<작업 폴더>/runs/interview-attempt.json` 에 아래 칸을 쓴다.
+1. `<작업 폴더>/runs/interview-attempt.json` 을 아래 칸으로 새로 쓴다. 앞 기록의 내용을 남기지 않는다.
 2. `<CAREER_LOCAL> interview record --input <작업 폴더>/runs/interview-attempt.json` 을 실행한다.
 
 | 칸 | 값 |
@@ -71,9 +71,10 @@ description: 작업 폴더에 쌓인 복습 상태로 공개 질문과 개인 �
 | `stopReason` | 선택. `depth-limit`, `needs-study`, `answer-complete`, `session-ended` |
 
 `followUpAxis` 는 선택 근거가 `decision`, 반례가 `counterexample`, 운영이 `operations`, 근거 경계가 `evidence-boundary`, 범위를 줄여 묻기가 `clarification` 이다.
-`attemptId` 는 쓰지 않는다. 실행기가 만들어 결과에 돌려준다.
+`attemptId` 는 쓰지 않는다. 실행기가 만들어 입력 파일에 써 넣고 결과에 돌려준다.
+명령의 출력을 받지 못했으면(셸이 끊겼거나 시간이 넘었으면) 파일을 고치지 않고 같은 명령을 그대로 다시 실행한다. 파일에 `attemptId` 가 남아 있어 이미 저장된 기록은 한 번 더 쌓이지 않는다.
 결과의 `progress` 에 그 주제의 다음 복습일이 있다. 통과하면 간격이 1, 3, 7, 14, 30, 60일로 늘고 그 밖에는 다음 날 다시 나온다.
-실행기가 0 이 아닌 코드로 끝나면 기록되지 않은 것이다. 표준 오류를 알리고, 입력을 고칠 수 있으면 고쳐 한 번만 다시 실행한다.
+실행기가 0 이 아닌 코드로 끝나면 기록되지 않은 것이다. 표준 오류를 알리고, 입력을 고칠 수 있으면 파일을 새로 써서 한 번만 다시 실행한다.
 
 ## 5. 개인 질문
 

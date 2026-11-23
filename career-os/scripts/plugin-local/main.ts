@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { makeRemoteError, TransportError } from "../career-workspace/transport.ts";
@@ -219,6 +219,7 @@ async function runInterview(args: string[]): Promise<number> {
       environment: process.env,
       createStore: () => createInterviewStore(process.env),
       readFile: (filePath) => readFileSync(filePath, "utf8"),
+      writeFile: (filePath, content) => writeFileSync(filePath, content, "utf8"),
     });
     console.log(JSON.stringify(result));
     return 0;

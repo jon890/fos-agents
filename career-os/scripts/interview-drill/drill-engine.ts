@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { readContextDocument } from "../lib/career-store/context.ts";
 import { openCareerStore, resolveCareerStoreRoot } from "../lib/career-store/database.ts";
 import { CareerStoreError, careerStoreFailureLine } from "../lib/career-store/errors.ts";
@@ -69,8 +69,8 @@ export function loadQuestionBank(
     ...loadApplicationQuestions(directory, drillType),
   ];
 }
-function today(): string {
-  return seoulDate(new Date());
+function today(now: Date = new Date()): string {
+  return seoulDate(now);
 }
 export function selectQuestions(
   drillType: DrillType,
@@ -79,9 +79,10 @@ export function selectQuestions(
   directory?: string,
   target?: InterviewBar,
   personal: DrillQuestion[] = [],
+  currentDay: string = today(),
 ): DrillQuestion[] {
   return selectFromBank(loadQuestionBank(drillType, directory, personal), progress, {
-    today: today(),
+    today: currentDay,
     maxCount,
     target,
     mixApplication: Boolean(directory),
@@ -163,10 +164,15 @@ export async function runDrillCli(
     readFile: (path: string) => string;
     readContextDocuments?: ReadCandidateMemoryDocuments;
     environment?: Record<string, string | undefined>;
+    /** `record --input` 이 만든 `attemptId` 를 입력 파일에 되쓴다. 없으면 되쓰지 않는다. */
+    writeFile?: (path: string, content: string) => void;
+    /** 오늘 날짜를 정하는 시계다. 테스트가 고정한다. */
+    now?: () => Date;
   },
 ): Promise<unknown> {
   const environment = deps.environment ?? process.env;
   const readDocuments = deps.readContextDocuments ?? contextDocumentReader(environment);
+  const currentDate = () => today(deps.now?.());
   if (argv[0] === "memory") {
     checkOptions(argv, 1, []);
     return loadCandidateMemory(environment, deps.readFile, readDocuments);
@@ -223,11 +229,11 @@ export async function runDrillCli(
     const store = deps.createStore();
     const progress = toDrillProgress((await store.listProgress(drillType)).items);
     const personal = (await store.listEnabledPersonalQuestions(drillType)).items;
-    const currentDay = today();
+    const currentDay = currentDate();
     return {
       drillType,
       today: currentDay,
-      questions: selectQuestions(drillType, progress, count, directory, target, personal).map(
+      questions: selectQuestions(drillType, progress, count, directory, target, personal, currentDay).map(
         (question) => ({
           ...question,
           dueForReview: dueForReview(progress, question.topic, currentDay),
@@ -238,7 +244,7 @@ export async function runDrillCli(
   if (argv[0] === "progress") {
     checkOptions(argv, 2, []);
     const drillType = type(argv[1]);
-    const currentDay = today();
+    const currentDay = currentDate();
     const { items } = await deps.createStore().listProgress(drillType);
     return {
       drillType,
@@ -252,15 +258,20 @@ export async function runDrillCli(
   if (argv[0] === "record" && argv.includes("--input")) {
     // 질문과 피드백에 따옴표나 줄바꿈이 있어도 셸 인자로 깨지지 않게 JSON 파일로 받는다.
     checkOptions(argv, 1, ["--input"]);
+    const inputPath = option(argv, "--input", true)!;
     let input: unknown;
     try {
-      input = JSON.parse(deps.readFile(option(argv, "--input", true)!));
+      input = JSON.parse(deps.readFile(inputPath));
     } catch (error) {
       throw new UsageError(`--input 파일을 JSON 으로 읽지 못했습니다: ${error instanceof Error ? error.message : String(error)}`);
     }
     const record = typeof input === "object" && input !== null ? (input as Record<string, unknown>) : {};
     const body = attemptBodySchema.safeParse({ ...record, attemptId: record.attemptId ?? randomUUID() });
     if (!body.success) throw new UsageError(body.error.message);
+    // 만든 attemptId 를 저장 전에 입력 파일에 되쓴다. 저장은 됐는데 출력을 받기 전에 셸이 끊겨
+    // 같은 파일로 다시 실행해도 같은 attemptId 라 처음 응답을 돌려주고 한 번 더 쌓지 않는다.
+    if (record.attemptId === undefined)
+      deps.writeFile?.(inputPath, `${JSON.stringify({ ...record, attemptId: body.data.attemptId }, null, 2)}\n`);
     return deps.createStore().createAttempt(body.data);
   }
   if (argv[0] === "record") {
@@ -357,6 +368,7 @@ if (import.meta.main) {
       environment: process.env,
       createStore: () => createInterviewStore(process.env),
       readFile: (path) => readFileSync(path, "utf8"),
+      writeFile: (path, content) => writeFileSync(path, content, "utf8"),
     });
     console.log(JSON.stringify(result));
     if (

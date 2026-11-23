@@ -70,8 +70,10 @@ export class InterviewStore {
   async createAttempt(body: unknown): Promise<AttemptResult> {
     const input = parseRequest(attemptBodySchema, body);
     return runWithReceipt(this.db, input.attemptId, input, 201, async () => {
-      const evaluatedOn = seoulDate(this.now());
-      const nowIso = this.now().toISOString();
+      // 시계를 한 번만 읽는다. 두 번 읽으면 자정을 넘는 순간 평가일과 기록 시각이 어긋난다.
+      const now = this.now();
+      const evaluatedOn = seoulDate(now);
+      const nowIso = now.toISOString();
       this.db.run(
         `INSERT OR IGNORE INTO interview_topic_progress
            (drill_type, topic, pass_count, fail_count, next_review_date, last_passed_date, updated_at)

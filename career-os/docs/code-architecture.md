@@ -821,6 +821,7 @@ fos-assistant 는 `plugin/` 을 복사하거나 마운트해 `connector.json`, `
 - `operator_env` 의 이름(`CAREER_GITHUB_PROFILE_REPO`)은 운영 목록이 값을 줘야 한다. 없으면 커넥터가 카탈로그에서 빠진다
 - `operator_secrets` 를 선언하지 않는다. 선언하면 카탈로그에서 빠진다
 - `agent-skills/` 의 스킬은 붙인 에이전트의 셸 설정이 `agent_skills.sandbox_env` 의 env 를 모두 넘길 때만 설치된다([ADR-141](adr/ADR-141-일반-에이전트가-읽는-스킬은-plugin-의-agent-skills-에-두고-따로-올린다.md)). 스킬 넷 모두 `CLAUDE_PLUGIN_ROOT` 와 `CAREER_WORKSPACE_ROOT` 를 요구한다. 심볼릭 링크를 두지 않는다
+- 셸 실행 공간이 없는 에이전트에 플러그인을 붙이면 MCP 도구 다섯은 보이지만 스킬은 설치되지 않는다. 프로필 원고가 작업 폴더 파일이라 그 에이전트에서는 갱신 도구를 쓰지 않는다. 두 갱신 도구의 설명이 이 조건을 알린다
 - `skills/` 는 Claude Code 만 읽는다. fos-assistant 는 읽지 않는다
 - plugin 스킬을 `.claude/skills/` 에 링크하지 않는다. 저장소를 연 Claude Code 세션도 plugin 을 설치해 plugin 스킬을 쓴다
 - 저장소에 스킬 사본을 두지 않는다. 판단 규칙은 plugin 스킬 한 곳에서만 고친다

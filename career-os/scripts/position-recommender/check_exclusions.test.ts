@@ -122,7 +122,14 @@ describe("position check-exclusions 명령", () => {
     expect(JSON.parse(lines.join("\n")).results[0]).toMatchObject({ verdict: "excluded" });
   });
 
-  test("--input 이 없으면 사용법 오류다", async () => {
+  test("--input 이 없거나 파일이 없거나 JSON 이 깨졌으면 사용법 오류다", async () => {
     await expect(runPositionCommand(["check-exclusions"])).rejects.toThrow(PositionRunUsageError);
+    const root = useCareerWorkspaceEnv();
+    await expect(
+      runPositionCommand(["check-exclusions", "--input", join(root, "missing.json")]),
+    ).rejects.toThrow(PositionRunUsageError);
+    const broken = join(root, "broken.json");
+    writeFileSync(broken, "{");
+    await expect(runPositionCommand(["check-exclusions", "--input", broken])).rejects.toThrow(PositionRunUsageError);
   });
 });
