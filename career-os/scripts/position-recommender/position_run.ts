@@ -98,6 +98,8 @@ export type PositionRunOptions = {
   operations?: PositionRunOperations;
   createRunDirectory?: () => string;
   writeLine?: (line: string) => void;
+  /** 실패 이유를 내는 곳이다. 기본은 표준 오류다. 스킬이 실패를 표준 오류 첫 줄로 전하기 때문이다. */
+  writeError?: (line: string) => void;
 };
 
 export class PositionRunUsageError extends Error {}
@@ -257,10 +259,22 @@ function requireInput(path: string, description: string): void {
  * 앞 단계 명령이 만드는 큐가 없으면 그 명령이 끝나지 않은 것이다.
  * 모델이 큐를 직접 써서 이어 가지 않게, 만들라고 하지 않고 다시 실행할 명령을 알린다.
  */
-function requireQueue(path: string, description: string): void {
+function requireQueue(path: string, description: string, resumeCommand = "collect 부터"): void {
   if (existsSync(path)) return;
   throw new Error(
-    `${path} 파일이 없습니다. ${description}를 만드는 앞 단계 명령이 끝나지 않았습니다. 이 파일을 직접 만들지 말고 collect 부터 다시 실행하세요.`,
+    `${path} 파일이 없습니다. ${description}를 만드는 앞 단계 명령이 끝나지 않았습니다. 이 파일을 직접 만들지 말고 ${resumeCommand} 다시 실행하세요.`,
+  );
+}
+
+/**
+ * 공고 분석 큐가 없을 때 이어 갈 명령이다. 회사 판정 큐가 남아 있으면 수집은 끝난 것이라
+ * 회사 판정 반영부터 하면 된다. 수집을 다시 하면 메모리와 시간이 가장 많이 드는 구간을 또 지난다.
+ */
+function requireAnalysisQueue(paths: RunDirectoryPaths): void {
+  requireQueue(
+    paths.analysisQueue,
+    "공고 분석 큐",
+    existsSync(paths.companyTierQueue) ? "commit-company-tiers 를" : "collect 부터",
   );
 }
 
@@ -354,7 +368,9 @@ export async function runPositionCommand(
       const context = await operations.prepareCandidateContext(paths);
       writeLine(`후보자 맥락 기준 버전: ${context.candidateContextVersion}`);
     } catch (error) {
-      writeLine(`수집 전 확인 실패: ${error instanceof Error ? error.message : String(error)}`);
+      (options.writeError ?? console.error)(
+        `수집 전 확인 실패: ${error instanceof Error ? error.message : String(error)}`,
+      );
       return 1;
     }
     const exitCode = await withPeriodicGc(() => operations.collect(paths));
@@ -413,7 +429,7 @@ export async function runPositionCommand(
 
   if (parsed.command === "commit-analyses") {
     requireInput(paths.analysisUpdates, "공고 분석 결과");
-    requireQueue(paths.analysisQueue, "공고 분석 큐");
+    requireAnalysisQueue(paths);
     const result = await operations.commitAnalyses(paths);
     writeLine(
       `공고 분석 반영: 생성 ${result.createdCount}건, 재사용 ${result.reusedCount}건, 실패 ${result.failedCount}건, 남음 ${result.remainingCount}건`,
@@ -431,7 +447,7 @@ export async function runPositionCommand(
     return 0;
   }
 
-  requireQueue(paths.analysisQueue, "공고 분석 큐");
+  requireAnalysisQueue(paths);
   const result = await operations.finalize(paths, queueAnalysisRunId(paths.analysisQueue));
   writeLine(
     `최종화 완료: 순위 ${result.rankingCount}건, 이번 실행 분석 ${result.analyzedNowCount}건, 재사용 ${result.reusedCount}건, 대기 ${result.pendingCount}건`,
