@@ -24,8 +24,9 @@
 ## 작업 경계
 
 현재 지원 대상과 회사별 지원 판단은 후보자 맥락 문서 `application-state`, `position-preferences` 에서 관리한다.
+후보자 맥락 문서의 원본은 비서의 기억이고 제목은 [`docs/data-schema.md`](docs/data-schema.md#후보자-맥락-문서)가 갖는다. 아래 표의 `manage_candidate_context.ts` 와 `manage_profile.ts` 는 커리어 Backend 를 읽는 노트북 경로로, Backend 를 내릴 때 함께 지운다.
 공고별 지원 문서와 면접 질문은 `applications/`에 두고, 검증 완료 주장처럼 저장소 실행에 필요한 파일 상태만 `state/`에 둔다.
-면접 연습 기록과 개인 질문은 `CAREER_STORE` 로 고른 저장소가 소유하고, 운영에서는 커리어 Backend 다.
+면접 연습 기록과 개인 질문은 커리어 작업 폴더의 SQLite(`state/career.sqlite`)가 소유한다.
 회사명, 공고, 면접 일정과 학습 우선순위처럼 자주 바뀌는 상태를 `AGENTS.md`에 쓰지 않는다.
 
 - 현재 경력과 경험 경계는 후보자 맥락 문서 `career-status`, 역할 선호와 이직 우선순위는 `position-preferences` 에서 확인한다.

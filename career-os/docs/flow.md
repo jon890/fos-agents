@@ -115,7 +115,7 @@ flowchart LR
   classDef ws fill:#f3e8ff,stroke:#7e22ce
 ```
 
-1. 에이전트가 맥락 문서 본문을 작업 폴더 `context/<문서 키>.md` 에 쓴다. 문서의 원본은 아직 Backend 의 후보자 맥락 문서이고 에이전트가 `get_context_document` 로 읽는다. 실행기는 `context/` 만 읽는다.
+1. 에이전트가 맥락 문서 본문을 작업 폴더 `context/<문서 키>.md` 에 쓴다. 문서의 원본은 사용자의 기억이고 에이전트가 `memory_search`, `memory_read` 로 읽는다([ADR-147](adr/ADR-147-후보자-맥락-문서는-비서의-기억이-프로필-원고는-작업-폴더-파일이-갖는다.md)). 문서가 없거나 같은 제목이 둘 이상이면 실행기를 부르지 않는다. 실행기는 `context/` 만 읽는다.
 2. 실행기가 본문을 정규화(줄바꿈 LF, 줄끝 공백 제거, 앞뒤 빈 줄 제거)한 뒤 SHA-256 으로 기준 버전 `<문서 키>:sha256:<hex>` 를 낸다. 본문이 같으면 분석과 판정을 다시 하지 않는다.
 3. 실행 폴더는 작업 폴더 `runs/` 아래에 만들고 끝나면 정리 명령으로 지운다.
 4. 완성한 HTML 의 사본을 `reports/<서울 날짜>-<position|study>.html` 에 남긴다. 에이전트가 그 파일을 「내 파일」 에 넣는다.
@@ -129,7 +129,7 @@ flowchart LR
 | 같은 명령을 다시 보냈다 | 같은 멱등 키와 같은 본문이면 처음 응답을 돌려준다. 본문이 다르면 `409 IDEMPOTENCY_CONFLICT` 다. 처리와 응답 기록은 한 transaction 이다 |
 | 설정 명령(`configure-policy`, `configure-companies`, `exclusions put`) | 부를 때마다 새 멱등 키를 써서 늘 반영한다. 값을 예전 것으로 되돌리는 요청도 반영된다 |
 
-대화용 MCP 도구 가운데 공부 후보·추천 저장·추천 목록과 공고 제외 판정·조사 제약은 아직 Backend 를 부른다. 이 저장소를 읽지 않으므로 Backend 를 내리는 단계까지 그 도구로 공부 추천을 저장하거나 제외 규칙을 고치지 않는다. 제외 규칙은 `position exclusions put` 으로 넣는다.
+Backend 를 부르는 MCP 도구는 없다. 공부 추천 저장, 공고 제외 판정, 면접 기록은 모두 실행기 명령이 이 저장소에 한다. 제외 규칙은 `position exclusions put` 으로 넣고 `position check-exclusions` 로 판정한다.
 
 ### 커리어 Backend
 
@@ -317,69 +317,63 @@ sequenceDiagram
 
 짧은 답변을 반복하고 약점을 다음 실행에 반영한다.
 
-1. `drill-engine.ts memory` 로 후보자 맥락을 얻는다. `CAREER_MEMORY=backend` 면 출력에 담긴 `career-status` 와 `application-state` 본문으로 출력이 알려 준 칸을 채우고, `file` 이면 출력이 그대로 맥락이다. 포지션별 연습이면 맥락의 `targets` 에서 지원 디렉터리를 고른다.
-2. `drill-engine.ts select` 가 `CAREER_STORE` 로 고른 저장소에서 주제별 복습 상태와 켜진 개인 질문을 읽고, 공개 질문 은행과 지원 디렉터리의 포지션 질문을 합쳐 문제를 고른다.
+1. 후보자 맥락을 얻는다. 비서의 `interview-practice` 스킬은 기억에서 「커리어: 현재 경력」 과 「커리어: 지원 상태」 를 읽는다. 저장소에서 직접 부를 때는 `drill-engine.ts memory` 가 `CAREER_MEMORY` 에 따라 작업 폴더 `context/` 의 두 문서(`context`)나 후보자 맥락 파일(`file`)을 낸다.
+2. `interview select` 가 작업 폴더의 SQLite 에서 주제별 복습 상태와 켜진 개인 질문을 읽고, 공개 질문 은행과 지원 디렉터리의 포지션 질문을 합쳐 문제를 고른다.
 3. 사용자가 먼저 자신의 답변을 작성한다.
 4. 에이전트가 정확성, 구조, 근거, 전달력을 평가한다.
 5. 보완할 핵심을 짧은 피드백으로 정한다.
-6. `drill-engine.ts record` 가 점수와 피드백을 저장소에 기록한다. 저장소가 기록과 함께 그 주제의 다음 복습일을 정한다. Backend 는 같은 transaction 에서 정한다.
+6. `interview record` 가 점수와 피드백을 기록한다. 기록과 그 주제의 다음 복습일을 한 transaction 에서 정한다. 승인 카드는 없다.
 7. 현재 지원 대상이 있으면 공고 책임, 근거 방어와 명시한 경험 공백을 후속 질문에 반영한다.
 8. 답변이 충분하면 판단, 반례, 운영과 근거 경계로 최대 네 단계까지 꼬리질문을 이어간다.
 9. 틀린 답변은 한 번 명확히 확인한 뒤 반복 압박하지 않고 학습 항목으로 전환한다.
 
 ```mermaid
+---
+config:
+  look: handDrawn
+---
 sequenceDiagram
+  participant U as 사용자
   participant M as 에이전트
-  participant C as drill-engine.ts
-  participant B as 커리어 Backend
+  participant K as 기억
+  participant C as 실행기(interview)
+  participant S as 작업 폴더 SQLite
+  M->>K: 「커리어: 현재 경력」, 「커리어: 지원 상태」 읽기
   M->>C: select tech|behavioral
-  C->>B: GET progress, GET personal-questions
-  B-->>C: 주제별 복습 상태, 켜진 개인 질문
+  C->>S: 주제별 복습 상태, 켜진 개인 질문
   C-->>M: 오늘 질문 JSON
   loop 질문과 꼬리질문마다
-    M->>M: 답변 평가
-    M->>C: record --attempt-id ...
-    C->>B: POST attempts (Idempotency-Key)
-    B-->>C: 갱신된 주제 복습 상태
+    M-->>U: 질문 하나
+    U->>M: 답변
+    M->>M: 판정과 피드백
+    M->>C: record --input <기록 JSON>
+    C->>S: 기록과 다음 복습일을 한 transaction 으로
+    C-->>M: 갱신된 주제 복습 상태
   end
 ```
+
+다른 대화에서 다시 `select` 를 부르면 같은 파일을 읽으므로 앞 연습의 복습 대상(`dueForReview`)과 개인 질문이 이어진다.
 
 | 상황 | 동작 |
 | --- | --- |
 | 복습 상태가 없음 | 모든 질문을 신규로 본다 |
 | 개인 질문이 없음 | 공개 질문과 포지션 질문만 쓴다 |
-| 고를 질문이 없음 | `select` 가 빈 목록을 돌려주고 에이전트가 질문 은행 보강을 안내한다 |
-| `CAREER_STORE` 나 `CAREER_MEMORY` 가 없음 | 명령이 종료 코드 1 로 끝나고 `drill-engine.ts doctor` 를 안내한다 |
-| `CAREER_MEMORY=backend` 인데 문서를 읽지 못함 | `memory` 가 종료 코드 1 로 끝난다. 없는 문서는 키를 알려 주고, 에이전트는 맥락 없이 연습하지 않는다 |
-| `backend` 인데 Backend 에 닿지 못함 | `select` 와 `record` 가 종료 코드 1 로 끝난다. 에이전트는 기록되지 않았다고 알리고 파일에 따로 쓰지 않는다 |
+| 고를 질문이 없음 | `select` 가 빈 목록을 돌려주고 에이전트가 오늘 연습할 질문이 없다고 알린다 |
+| 기억에 맥락 문서가 없거나 같은 제목이 둘 이상 | 에이전트가 연습을 시작하지 않고 알린다 |
+| `CAREER_MEMORY` 가 없거나 `context` 인데 문서가 없음 | `drill-engine.ts memory` 가 종료 코드 1 로 끝나고 빠진 문서 키를 알린다 |
+| 저장소가 잠겼거나 깨짐 | 명령이 종료 코드 1 로 끝나고 표준 오류 첫 줄에 `CAREER_STORE_BUSY` 나 `CAREER_STORE_CORRUPT` 를 낸다. 에이전트는 기록되지 않았다고 알린다 |
 | 같은 기록을 다시 보냄 | 같은 `attemptId` 는 저장한 응답을 그대로 돌려준다. 횟수가 두 번 오르지 않는다 |
-| 두 대화가 같은 주제를 동시에 기록 | 주제 행을 잠가 순서대로 반영한다 |
-
-사용자의 생각을 바탕으로 실제 말할 수 있는 답변을 만든다.
-
-### 질문 은행 갱신
-
-공개 질문 은행은 이 저장소의 유지 절차로만 고친다. 절차는 `public/question-bank/MAINTENANCE.md` 가 소유한다.
-plugin 의 `interview-question-prep` 는 3, 5 단계까지 같은 기준으로 고른 질문을 공개 은행 대신 개인 질문으로 저장한다.
-
-1. 등록된 공식 문서, 기술 블로그, 공개 영상과 GitHub 가이드에서 실행별 후보를 임시 경로에 수집한다.
-2. 질문 은행의 카테고리와 수준 분포, 현재 공고의 책임과 `career-status` 문서의 경험 경계를 비교한다.
-3. 블로그, 영상과 GitHub 가이드에서 실무 사례와 빠진 범위만 찾고 기술 사실은 공식 원문에서 다시 검증한다.
-4. 출처 묶음을 `public/question-bank/sources.json`에 등록하거나 기존 항목을 재사용한다.
-5. 공개 질문 후보의 중복, 목표 수준, 답변 신호와 꼬리질문 깊이를 검증한다.
-6. 일반화할 수 있는 질문만 `public/question-bank/`에 추가한다.
-7. 개인 경력에서 반복해서 연습할 일반 질문은 `save_personal_question` 도구나 `drill-engine.ts personal add` 로 Backend 에 둔다.
-8. 공고와 지원 근거에서 나온 포지션별 질문은 해당 `applications/` 디렉터리의 `evidence/interview-questions.json`에 둔다.
-9. 답변 연습은 세 범위를 합쳐 사용할 수 있지만 공개 산출물에는 개인 질문과 포지션별 질문을 포함하지 않는다.
+| 두 대화가 동시에 기록 | 파일 쓰기 잠금으로 순서대로 반영한다. 5초 안에 잠금을 얻지 못한 쪽은 `CAREER_STORE_BUSY` 다 |
 10. 일반 연습에서는 질문 은행을 수정하지 않으며, 공개·개인·포지션 질문 묶음이 모두 비었을 때만 필요한 최소 질문을 보강하고 연습을 이어간다.
 
 ### Claude Code 에서 공고별 질문 연습
 
 plugin 의 `interview-question-prep` 스킬이 Claude Code 에서만 한다. 답변 판정과 기록 규칙은 `interview-practice` 스킬과 같다.
+이 스킬은 다음 단계에서 비서용으로 옮긴다. 아래 2번과 4번이 적는 MCP 도구는 이제 없어, 옮기기 전까지 이 스킬은 돌지 않는다.
 
 1. `workspace begin interview-question-prep` 로 작업본을 준비한다. 실패하면 멈춘다.
 2. `get_context_document` 로 `career-status` 와 `application-state` 를 읽고 연습할 지원 디렉터리를 고른다.
-3. `interview select <tech|behavioral> --application-dir <작업본>/applications/<회사>/<직무> --target-bar <bar>` 가 공개, 개인, 공고별 질문을 섞어 고른다. 저장소는 늘 Backend 다.
+3. `interview select <tech|behavioral> --application-dir <작업본>/applications/<회사>/<직무> --target-bar <bar>` 가 공개, 개인, 공고별 질문을 섞어 고른다. 저장 자리는 작업 폴더의 SQLite 다.
 4. 답변과 꼬리질문마다 `save_interview_attempt` 로 기록한다.
 5. `workspace finish interview-question-prep` 로 끝낸다. 이 스킬은 작업본 파일을 고치지 않으므로 동기화 모드에서도 새 release 를 만들지 않는다.
 
@@ -706,7 +700,6 @@ Kurly 와 OliveYoung 은 최근 수집에서는 `feed` adapter 이고, archive m
 ### 학습자료 HTTP 계약
 
 실행기는 이 경로를 HTTP 로 부르지 않고 저장 모듈의 같은 동작을 부른다. 입력과 출력은 아래와 같다.
-대화용 MCP 도구는 Backend 를 내리는 단계까지 아래 HTTP 경로를 그대로 부른다.
 추천 실행 목록(`GET /recommendation-runs`)은 저장 모듈에서 실행마다 사용자가 기록한 게시 링크(`publications`)를 함께 준다.
 
 기본 경로는 `/api/study/v1` 이다. 인증은 커리어 Backend 의 Bearer token 하나를 쓴다.
@@ -889,119 +882,69 @@ flowchart TD
 
 ## fos-career 커넥터
 
-fos-assistant 의 연결용 에이전트가 커넥터의 MCP 도구로 커리어 Backend 와 GitHub 를 부른다.
+fos-assistant 의 커리어 에이전트가 커넥터의 MCP 도구로 GitHub 과 원티드를 부른다. 커리어 데이터는 MCP 서버를 거치지 않고 스킬이 기억, 작업 폴더 파일, 실행기로 다룬다.
 도구의 입력과 결과, 오류 코드는 [`data-schema.md`](data-schema.md#fos-career-커넥터)가 소유한다.
 plugin 의 배치와 설치 계약은 [`code-architecture.md`](code-architecture.md#fos-career-커넥터)가 소유한다.
 
 ### 연결
 
-1. 사용자가 fos-assistant 의 연결 화면에 커리어 Backend 의 token 을 넣는다. GitHub token 은 비워 둘 수 있다.
-2. fos-assistant 가 후보 값으로 `check_connection` 을 부른다. 이 도구는 Backend 에 인증된 조회를 한 번 하고, GitHub token 이 있으면 프로필 저장소를 한 번 읽는다.
-3. 둘 다 통과해야 연결이 저장된다. Backend 의 주소와 프로필 저장소 이름은 사용자가 넣지 않고 운영자가 준다.
+1. 연결 화면에 필수 칸이 없다. GitHub 은 token 을 넣거나 「GitHub 으로 연결」 단추로 연결하고, 비워 둘 수 있다.
+2. fos-assistant 가 후보 값으로 `check_connection` 을 부른다. GitHub 연결이 있으면 프로필 저장소를 한 번 읽고, 없으면 `github: not_configured` 로 성공한다.
+3. 프로필 저장소 이름은 사용자가 넣지 않고 운영자가 준다.
+
+### 대화에서 맥락 문서와 프로필 원고 고치기
+
+`career-connector` 스킬이 한다.
+
+1. 맥락 문서는 기억에서 읽고, 변경 전후를 보여 확인받은 뒤 본문 전체를 `memory_remember` 로 남긴다. 제안으로 남으면 사람이 기억 화면에서 받아들여야 반영되고, 그전까지 공고 추천과 공부 추천은 옛 문서를 쓴다.
+2. 「커리어: 역할 선호」 본문이 바뀌면 다음 공고 추천이 `context/position-preferences.md` 를 새 본문으로 옮겨 쓰고, 실행기가 새 기준 버전으로 저장된 분석을 다시 계산한다.
+3. 프로필 원고는 작업 폴더 `library/profiles/<wanted|linkedin|github>.md` 를 파일 도구로 읽고 고친다. 승인 카드가 없다.
 
 ### 대화에서 프로필 갱신
 
 ```mermaid
+---
+config:
+  look: handDrawn
+---
 sequenceDiagram
     participant U as 사용자
-    participant M as 연결용 에이전트
+    participant M as 커리어 에이전트
+    participant W as 작업 폴더
     participant C as 커넥터 MCP 서버
-    participant B as 커리어 Backend
     participant G as GitHub
-    U->>M: 지난달 사용량으로 GitHub 프로필을 갱신해 줘
-    M->>C: list_usage_snapshots, get_profile_document(github), get_github_profile
-    C->>B: 사용량 기록과 원고 조회
-    C->>G: 기본 branch 의 끝 커밋, 그 커밋의 README 와 차트 파일 유무 조회
-    M-->>U: 기록, 원고, 현재 README 의 차이와 변경안
+    U->>M: GitHub 프로필을 갱신해 줘
+    M->>W: library/profiles/github.md 원고 읽기
+    M->>C: get_github_profile
+    C->>G: 기본 branch 의 끝 커밋, 그 커밋의 README 조회
+    M-->>U: 원고와 현재 README 의 차이와 변경안
     U->>M: 변경안 확정
-    M->>C: update_github_profile(readme, months, expectedBranch, expectedHead)
+    M->>C: update_github_profile(readme, expectedBranch, expectedHead)
     Note over M,C: 승인 요청이 만들어지고 호출은 실행되지 않는다
     U->>C: 승인 카드에서 승인
-    C->>B: 고른 달의 사용량 기록 조회
-    C->>C: 차트를 그리고 배지 값을 합계와 대조
     C->>G: 기본 branch 와 끝 커밋을 expectedBranch, expectedHead 와 비교
-    C->>G: blob 둘, tree, commit 을 만들고 branch 를 옮긴다
-    C-->>M: 커밋 번호와 합계
-    M->>C: save_profile_document(github)
-    U->>C: 승인 카드에서 승인
-    C->>B: 원고 저장
+    C->>G: blob, tree, commit 을 만들고 branch 를 옮긴다
+    C-->>M: 커밋 번호
+    M->>W: 올라간 README 를 github.md 원고에 반영
 ```
 
-1. 에이전트가 사용량 기록, GitHub 원고와 현재 README 를 읽는다. 셋은 승인 없이 읽는다.
-2. 기록에 지난달이 없으면 멈추고 알린다. 측정은 세션 기록이 있는 기기의 수집기가 한다.
-3. 현재 README 와 변경안의 차이, 차트에 넣을 달, 그 달들의 합계를 보여 주고 확인받는다.
-4. `update_github_profile` 을 한 번 부른다. 1단계에서 읽은 `branch` 와 `head` 를 `expectedBranch`, `expectedHead` 로 함께 넣는다. 승인 카드에서 승인하면 실행된다.
-5. 결과로 받은 커밋 번호와 합계를 알린다.
-6. 올라간 README 를 `save_profile_document` 로 GitHub 원고에 저장한다. 이것도 승인 카드에서 승인한다.
+1. 에이전트가 GitHub 원고와 현재 README 를 읽는다. 둘은 승인 없이 읽는다.
+2. 현재 README 와 변경안의 차이를 보여 주고 확인받는다. README 에 에이전트 사용량 차트와 Tokens 배지가 남아 있으면 변경안에서 뺀다.
+3. `update_github_profile` 을 한 번 부른다. 1단계에서 읽은 `branch` 와 `head` 를 `expectedBranch`, `expectedHead` 로 함께 넣는다. 승인 카드에서 승인하면 실행된다.
+4. 결과로 받은 커밋 번호를 알리고 올라간 README 를 원고 파일에 반영한다.
 
-문서를 고칠 때도 순서가 같다. 현재 본문과 `version` 을 읽고, 변경 전후를 보여 주고, 확인받은 뒤 저장 도구를 한 번 부른다.
-
-### 대화에서 면접 연습
-
-plugin 의 `interview-practice` 스킬이 MCP 도구만으로 연습한다. 공고별 질문 연습은 Claude Code 의 `interview-question-prep` 이 같은 판단 규칙으로 한다.
-
-```mermaid
-sequenceDiagram
-    participant U as 사용자
-    participant M as 에이전트
-    participant C as 커넥터 MCP 서버
-    participant B as 커리어 Backend
-    M->>C: get_context_document(career-status, application-state)
-    M->>C: get_interview_questions(drillType, targetBar, count)
-    C->>B: GET progress, GET personal-questions
-    C->>C: 번들한 공개 질문 은행과 개인 질문으로 선별
-    C-->>M: 오늘 질문
-    loop 질문과 꼬리질문마다
-        M-->>U: 질문 하나
-        U->>M: 답변
-        M->>M: 판정과 피드백
-        M->>C: save_interview_attempt(...)
-        U->>C: 승인 카드에서 승인
-        C->>B: POST attempts (Idempotency-Key 는 attemptId)
-        C-->>M: 갱신된 주제 복습 상태
-    end
-```
-
-1. 후보자 맥락은 `get_context_document` 로 `career-status` 와 `application-state` 를 읽는다. 둘 중 하나가 `CAREER_NOT_FOUND` 면 맥락 없이 연습하지 않고 문서를 먼저 저장하라고 알린다.
-2. `get_interview_questions` 는 공개 질문과 켜진 개인 질문에서 고른다. 공고별 질문(`applications/` 의 파일)은 쓰지 않는다. 그 연습은 Claude Code 의 `interview-question-prep` 이 한다.
-3. 답변 하나마다 `save_interview_attempt` 를 한 번 부른다. `attemptId` 를 넘기지 않으면 서버가 새로 만들어 결과에 싣는다.
-4. 개인 질문은 `save_personal_question` 으로 더하고 끈다. 끌 때는 `list_personal_questions` 로 읽은 질문 본문을 그대로 넘기고 `enabled: false` 로 둔다.
-5. 고를 질문이 없으면 빈 목록을 알리고 끝낸다. 외부 자료에서 개인 질문을 찾는 일은 Claude Code 의 `interview-question-prep` 이 한다.
-
-### 대화에서 공부 추천
-
-plugin 의 `study-topic-recommender` 스킬이 이미 수집된 후보에서 고른다.
-수집은 `study-collection` 스킬이나 예약 실행의 `morning_reading_cli.ts --collect-only` 가 하고 작업 폴더 저장소에 쌓는다. 커넥터는 외부 피드에 닿지 않는다.
-아래 도구는 Backend 를 읽으므로 그 수집 결과를 보지 못한다(「작업 폴더 저장소」). Backend 를 내리는 단계에서 이 도구를 지운다.
-
-1. `get_study_candidates` 가 `GET /api/study/v1/candidates` 한 쪽만 읽는다. 결과는 후보, `recentStudyTopicKeys`, `candidateContextVersion`, `learningInterests` 다. `learning-interests` 문서가 없으면 `CAREER_LEARNING_INTERESTS_MISSING` 으로 멈춘다.
-2. 에이전트가 `learningInterests.body` 를 기준으로 원문을 비교해 주제를 고르고, 고르지 않은 후보마다 제외 이유를 붙인다.
-3. 고른 결과를 대화에 글로 보여 준다. HTML 리포트와 외부 게시는 Claude Code 의 `study-collection` 이 한다.
-4. `save_study_recommendation` 을 한 번 부른다. 승인 카드에서 승인하면 `POST /api/study/v1/recommendation-runs` 로 저장된다.
-5. 오늘 리포트가 이미 있으면 `CAREER_STUDY_ALREADY_SAVED` 다. 커넥터가 409 를 받은 뒤 `GET /api/study/v1/recommendation-runs/{reportId}/status` 로 확인해 구분한다. 에이전트는 멈추고 알린다.
-6. 후보를 읽은 뒤 기준이 바뀌었거나, 이미 추천한 주제나 자료를 골랐거나, 같은 요청이 아직 처리 중이면 `CAREER_STUDY_CONFLICT` 다. 잠시 뒤 후보를 다시 읽고 새로 고르되, 한 번 더 충돌하면 멈춘다.
-7. 지난 추천이 무엇이었는지는 `list_study_recommendations` 가 `GET /api/study/v1/recommendation-runs` 로 읽는다. 후보 도구는 이미 추천한 자료를 빼므로 제목을 줄 수 없다.
+면접 연습의 흐름은 위 「interview-practice」 가, 공부 추천의 흐름은 「study-topic-recommender」 가 소유한다. 둘 다 실행기로 하고 MCP 도구를 쓰지 않는다.
 
 ### 커넥터에서 갈라지는 곳
 
 | 상황 | 동작 |
 | --- | --- |
-| README 의 Tokens 배지 값이 고른 달의 합계와 다르다 | `CAREER_BADGE_MISMATCH`. GitHub 에 아무것도 쓰지 않는다. 결과가 기록의 합계를 알려 주므로 에이전트가 README 를 고쳐 다시 승인받는다 |
-| 고른 달 가운데 기록이 없는 달이 있다 | `CAREER_USAGE_MONTH_MISSING`. 없는 달을 알려 준다. 숫자를 인자로 받아 채우지 않는다 |
-| GitHub token 을 넣지 않았고 「GitHub 으로 연결」 단추로도 연결하지 않았다 | GitHub 도구 둘만 `CAREER_GITHUB_NOT_CONFIGURED` 로 답한다. 나머지 도구는 돈다 |
+| GitHub token 을 넣지 않았고 「GitHub 으로 연결」 단추로도 연결하지 않았다 | GitHub 도구 둘만 `CAREER_GITHUB_NOT_CONFIGURED` 로 답한다. 연결 확인과 원티드 도구는 돈다 |
 | 「GitHub 으로 연결」 단추로 연결했다 | GitHub 도구를 부를 때마다 fos-assistant 의 토큰 통로에서 token 을 받아 쓴다. 통로가 다시 연결이 필요하다고 답하면 `CAREER_GITHUB_UNAUTHORIZED` 다 |
-| 승인을 기다리는 사이에 다른 곳에서 문서를 저장했다 | `CAREER_VERSION_CONFLICT`. 다시 읽고 변경을 검토한 뒤 새로 승인받는다 |
 | 승인을 기다리는 사이에 README 가 커밋되거나 기본 branch 가 바뀌었다 | `CAREER_GITHUB_STALE_REVIEW`. 실행 첫머리에서 기본 branch 와 끝 커밋을 `expectedBranch`, `expectedHead` 와 비교하고, 다르면 GitHub 에 아무것도 쓰지 않는다. 최신 끝 커밋 위에 검토한 원고를 다시 올리지 않는다. 다시 읽고 변경안을 맞춘 뒤 새로 승인받는다 |
 | branch 를 옮기는 마지막 요청에서 프로필 저장소에 다른 커밋이 올라왔음을 알게 된다 | `CAREER_GITHUB_CONFLICT`. branch 를 강제로 옮기지 않는다. 그 앞 단계의 409 와 422 는 `CAREER_GITHUB_UNAVAILABLE` 이다 |
-| 올릴 README 와 차트가 저장소의 것과 같다 | 커밋을 만들지 않고 `changed: false` 로 성공한다. 같은 요청을 다시 승인해도 빈 커밋이 쌓이지 않는다 |
-| 실행 결과가 「실행했는지 알 수 없음」 으로 온다 | 같은 도구를 다시 부르지 않는다. 다만 자동 입력에 `재시도 식별자: attemptId=<값>` 이 실린 면접 기록은 그 값으로 한 번 다시 부를 수 있고 새 승인을 받는다. `get_github_profile` 이나 문서 조회로 반영됐는지 확인한다 |
-| 면접 기록 저장 결과를 알 수 없다 | `CAREER_NETWORK`, `CAREER_INVALID_RESPONSE`, `CAREER_OUTCOME_UNKNOWN`(5xx). 오류에 실린 `attemptId` 로 나머지 인자를 바꾸지 않고 다시 승인받아 보낸다. Backend 가 같은 `attemptId` 의 저장한 응답을 돌려줘 횟수가 두 번 오르지 않는다. 다시 보낸 호출도 `CAREER_INVALID_RESPONSE` 나 `CAREER_OUTCOME_UNKNOWN` 이면 저장 여부를 알 수 없으므로 더 보내지 않고 알린다 |
-| 같은 `attemptId` 의 면접 기록 요청이 아직 처리 중이다 | `CAREER_ATTEMPT_PENDING`. 잠시 뒤 오류에 실린 `attemptId` 로 나머지 인자를 바꾸지 않고 새로 승인받아 보낸다 |
-| 공부 추천 저장 결과를 알 수 없다 | 다른 인자를 하나도 바꾸지 않고 오류에 실린 `generatedAt` 만 더해 다시 승인받아 보낸다. 같은 `reportId` 와 `generatedAt` 이면 멱등 키가 같다. 본문이 다르면 `IDEMPOTENCY_CONFLICT` 409 가 된다 |
-| 공부 후보가 비었다 | 정상 응답이다. 꺼진 소스에서만 나온 자료, 이미 추천한 자료, 지금 기준에서 유효한 제외 판정, 요청 필터를 거른 뒤 남은 미추천 후보가 없다. 빈 결과만으로 수집 실행 여부나 웹 자료 유무를 단정하지 않는다. 빈 결과를 알리고 저장하지 않는다. `learning-interests` 문서가 없으면 `CAREER_LEARNING_INTERESTS_MISSING`, token 거절은 `CAREER_UNAUTHORIZED`, 장애는 `CAREER_UNAVAILABLE` 이나 `CAREER_NETWORK` 오류로 따로 온다 |
-| 저장할 본문이 승인 인자 상한을 넘는다 | fos-assistant 가 호출을 거절한다. 노트북의 CLI 로 저장하라고 안내한다 |
-| 원티드를 고쳐 달라고 한다 | `get_wanted_resume` 으로 읽고 원고와 다른 칸만 변경 전후 표로 보인 뒤 `update_wanted_resume` 한 번으로 승인받는다. 넣은 칸만 원고 저장을 따로 승인받는다([원티드 반영 설계](features/profile-browser-sync/design.md)) |
-| LinkedIn 을 고쳐 달라고 한다 | 원고만 고치고, 사이트 반영은 Claude Code 에서 이 plugin 의 `sync-profile` 로 하라고 안내한다 |
-
-README 갱신과 GitHub 원고 저장은 따로 승인받는 두 호출이다.
-GitHub 갱신만 승인하고 원고 저장을 거절하면 원고가 프로필보다 낡은 채로 남는다. 다음 갱신 때 1단계의 차이 보고에서 드러난다.
+| 올릴 README 가 저장소의 것과 같다 | 커밋을 만들지 않고 `changed: false` 로 성공한다. 같은 요청을 다시 승인해도 빈 커밋이 쌓이지 않는다 |
+| 실행 결과가 「실행했는지 알 수 없음」 으로 온다 | 같은 도구를 다시 부르지 않는다. `get_github_profile` 이나 `get_wanted_resume` 으로 반영됐는지 확인한다 |
+| `months` 나 합계, 차트를 인자로 넘긴다 | `CAREER_INVALID_INPUT`. 도구는 README 만 받는다 |
+| 원티드를 고쳐 달라고 한다 | `get_wanted_resume` 으로 읽고 `wanted.md` 원고와 다른 칸만 변경 전후 표로 보인 뒤 `update_wanted_resume` 한 번으로 승인받는다. 넣은 칸만 원고 파일에 반영한다([원티드 반영 설계](features/profile-browser-sync/design.md)) |
+| LinkedIn 을 고쳐 달라고 한다 | `linkedin.md` 원고만 고치고 사이트는 사용자가 직접 고친다고 알린다 |

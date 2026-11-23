@@ -10,30 +10,31 @@
 
 ### 커리어 작업 폴더
 
-공고 추천과 공부 추천의 데이터가 있는 자리다([ADR-146](adr/ADR-146-커리어-표-데이터는-에이전트-작업-폴더의-sqlite-가-갖는다.md)).
+공고 추천, 공부 추천, 면접 연습의 데이터와 프로필 원고가 있는 자리다([ADR-146](adr/ADR-146-커리어-표-데이터는-에이전트-작업-폴더의-sqlite-가-갖는다.md)).
 루트는 `CAREER_WORKSPACE_ROOT` 이고 없으면 `/workspace/career` 다.
 
 | 경로 | 내용 |
 | --- | --- |
-| `state/career.sqlite` | 공고, 회사, 공부 table 과 `request_receipts`. WAL 모드라 같은 이름의 `-wal`, `-shm` 파일이 함께 생긴다 |
-| `context/<문서 키>.md` | 에이전트가 실행 직전에 옮겨 쓴 맥락 문서. 실행기의 입력일 뿐 원본이 아니다. 키는 `position-preferences`, `application-state`, `learning-interests` 다 |
+| `state/career.sqlite` | 공고, 회사, 공부, 면접 table 과 `request_receipts`. WAL 모드라 같은 이름의 `-wal`, `-shm` 파일이 함께 생긴다 |
+| `context/<문서 키>.md` | 에이전트가 실행 직전에 옮겨 쓴 맥락 문서. 실행기의 입력일 뿐 원본이 아니다. 키는 `position-preferences`, `application-state`, `learning-interests`, `career-status` 다 |
 | `runs/<실행 폴더>/` | 한 번 실행의 중간 산출물. 이름은 `position-recommendation-*`, `study-topic-recommender.*` 다. 정리 명령이 지운다 |
+| `library/profiles/<wanted\|linkedin\|github>.md` | 프로필 원고의 원본. `career-connector` 스킬이 파일 도구로 읽고 고친다. 길이 제한과 버전, 승인 카드가 없다 |
 | `reports/<YYYY-MM-DD>-<position\|study>.html` | 완성한 리포트의 사본. 날짜는 서울 날짜다. 같은 날 다시 만들면 덮어쓴다 |
 
-`state/career.sqlite` 의 table 과 열 이름은 아래 `fos_career` 의 공고·회사·공부 table 과 같다. 다른 점은 이렇다.
+`state/career.sqlite` 의 table 과 열 이름은 아래 `fos_career` 의 공고·회사·공부·면접 table 과 같다. 다른 점은 이렇다.
 
 - 시각은 UTC ISO 문자열, 날짜는 `YYYY-MM-DD` 문자열, JSON 은 문자열, 참·거짓은 1 과 0 이다.
-- 스키마 버전은 `PRAGMA user_version` 이다. 실행기가 열 때 모자란 단계만 적용한다(`scripts/lib/career-store/ddl.ts`).
+- 스키마 버전은 `PRAGMA user_version` 이다. 실행기가 열 때 모자란 단계만 적용한다(`scripts/lib/career-store/ddl.ts`). 첫 단계가 공고·회사·공부, 둘째 단계가 면접 table 셋이다.
 - `company_evidence` 의 유일 키는 `(company_key, source_type, url)` 이다. `url_hash` 열은 없다.
 - `request_receipts` 는 처리 중 표시 없이 끝난 응답만 담는다.
 - 외래 키와 `CHECK` 제약은 옮기지 않았다. 같은 조건을 저장 모듈의 요청 검증이 막는다.
 - `candidateContextVersion` 은 `<문서 키>:sha256:<hex>` 다. 맥락 문서 본문을 정규화해 계산한다.
-- 면접, 후보자 맥락 문서, 프로필, 사용량 table 은 없다. 그 데이터는 아직 Backend 가 갖는다.
+- 후보자 맥락 문서, 프로필 원고, 사용량 table 은 없다. 맥락 문서는 기억이, 원고는 위 파일이 갖고 사용량은 다루지 않는다.
 
 ### `fos_career` 도메인 구조
 
 포지션 추천, 공부 추천과 회사 근거 등 커리어 상태를 담는 database 다.
-공고·회사·공부 table 은 작업 폴더의 SQLite 로 옮겼고(위 절), Backend 의 그 table 은 Backend 를 내릴 때까지 대화용 MCP 도구만 읽는다.
+공고·회사·공부·면접 table 은 작업 폴더의 SQLite 로 옮겼고(위 절), Backend 의 그 table 은 Backend 를 내릴 때까지 남아 있을 뿐 실행기와 MCP 서버가 읽지 않는다.
 아래는 포지션 추천 table 의 다섯 묶음이다.
 
 | 묶음 | table | 담는 것 |
@@ -82,172 +83,42 @@ migration 적용 절차는 [`services/career-backend/README.md`](../services/car
 
 스킬이 판단에 쓰는 개인 맥락을 문서 키마다 Markdown 본문 하나로 담는다.
 값을 읽는 쪽은 스크립트가 아니라 모델이라 본문의 형식을 칸으로 나누지 않는다.
-HTTP 계약은 [`flow.md`](flow.md#후보자-맥락-문서)가 소유한다.
+
+**원본은 커리어 에이전트 주인의 기억(fos-assistant Memory)이다**([ADR-147](adr/ADR-147-후보자-맥락-문서는-비서의-기억이-프로필-원고는-작업-폴더-파일이-갖는다.md)).
+기억 제목은 고정이다. 스킬이 `memory_search` 와 `memory_read` 로 읽고, 실행기가 필요로 하는 문서는 본문 그대로 작업 폴더 `context/<문서 키>.md` 에 옮겨 쓴다.
+고칠 때는 `memory_remember` 로 본문 전체를 남긴다. 바로 저장될지 제안으로 남을지는 비서가 정하고, 제안이면 사람이 기억 화면에서 받아들여야 다음 실행에 반영된다.
+한 번에 남길 수 있는 본문은 2000자까지라 넘으면 스킬이 줄이자고 제안한다. 같은 제목의 기억이 둘 이상이면 스킬은 고르지 않고 멈춘다.
+
+| 문서 키 | 기억 제목 |
+| --- | --- |
+| `career-status` | 커리어: 현재 경력 |
+| `position-preferences` | 커리어: 역할 선호 |
+| `application-state` | 커리어: 지원 상태 |
+| `learning-interests` | 커리어: 학습 관심사 |
 
 | 문서 키 | 담는 것 | 읽는 스킬 |
 | --- | --- | --- |
-| `learning-interests` | 공부 추천이 따를 학습 관심사와 우선순위 | `study-topic-recommender` |
-| `position-preferences` | 이직 우선순위와 역할 선호 | `position-recommender` |
+| `learning-interests` | 공부 추천이 따를 학습 관심사와 우선순위 | `study-collection` |
+| `position-preferences` | 이직 우선순위와 역할 선호 | `position-recommender`, `career-connector` |
 | `application-state` | 지원 결과, 현재 집중 대상과 사용 원칙. 재지원 간격의 날짜는 `position_exclusions` 가 담는다 | `position-recommender`, `application-package-writer`, `interview-practice` |
 | `career-status` | 현재 경력, 강점, 경험 경계와 지원 전략 | `resume-preparer`, `application-package-writer`, `interview-practice`, `sync-profile` |
 
 연락처, 생년월일, 병역과 정확한 재직 기간 같은 지원서 공통 프로필은 문서 키에 넣지 않는다.
 그 원본은 fos-assistant Memory 이고 읽는 방법은 [`flow.md`](flow.md#지원서-공통-프로필)가 소유한다.
 
-`candidate_context_documents` 는 문서 키마다 한 행이다.
+기준 버전은 본문에서 계산한다. 공고 분석은 `position-preferences`, 공부 추천은 `learning-interests` 의 `context/` 사본을 정규화한 SHA-256 으로 `<문서 키>:sha256:<hex>` 를 낸다. 본문이 같으면 같은 기준이라 다시 분석하지 않는다([ADR-146](adr/ADR-146-커리어-표-데이터는-에이전트-작업-폴더의-sqlite-가-갖는다.md)).
 
-| 칸 | 타입 | 설명 |
-| --- | --- | --- |
-| `document_key` | `VARCHAR(50)` PK | 위 네 값 중 하나. `CHECK` 로 강제한다 |
-| `body` | `MEDIUMTEXT` | Markdown 본문. 서버가 UTF-8 64 KiB 이하만 받는다 |
-| `version` | `INT UNSIGNED` | 저장할 때마다 1 씩 오른다. 첫 저장이 1 이다 |
-| `note` | `VARCHAR(500)` | 마지막 변경 이유 |
-| `updated_at` | `DATETIME(3)` | |
-
-`candidate_context_document_revisions` 는 저장할 때마다 한 행을 더한다. 지우거나 고치지 않는다.
-
-| 칸 | 타입 | 설명 |
-| --- | --- | --- |
-| `document_key` | `VARCHAR(50)` | |
-| `version` | `INT UNSIGNED` | 이 저장으로 생긴 version |
-| `body` | `MEDIUMTEXT` | 그때의 본문 |
-| `note` | `VARCHAR(500)` | 변경 이유 |
-| `created_at` | `DATETIME(3)` | |
-
-`(document_key, version)` 이 PK 다. 문서 행을 지우는 경로는 없다.
-
-공부 추천의 기준 버전은 `learning-interests` 의 `version` 에서 `learning-interests:v{version}` 으로 계산한다.
-이유는 [ADR-131](adr/ADR-131-후보자-맥락은-backend-문서로-두고-공부-추천-기준-버전을-문서-버전에서-계산한다.md)을 따른다.
-
-포지션 분석의 기준 버전은 `position-preferences` 의 `version` 에서 `position-preferences:v{version}` 으로 계산한다.
-Backend 가 수집 실행을 저장할 때 계산해 회사 tier 실행에 적는다.
-공고 분석 실행은 같은 수집의 회사 tier 실행에 적힌 값을 이어 쓰므로, 한 수집 안에서는 기준 버전이 하나다.
-문서를 어느 경로로 저장해도 다음 수집부터 새 기준 버전이 쓰인다.
-이유는 [ADR-134](adr/ADR-134-공고-분석의-기준-버전은-position-preferences-문서-버전에서-계산한다.md)를 따른다.
-
-### 홈서버 release
-
-파일이 어디에 놓이는지는
-[`code-architecture.md`](code-architecture.md#비공개-작업본-동기화)가 소유한다.
-여기에는 각 파일의 형식만 적는다. `releases/` 아래 파일은 만든 뒤 고치지 않는다.
-
-| 파일 | 담는 것 |
-| --- | --- |
-| `release.json` | `schemaVersion`, `workspace`, `revision`, `contentDigest`, `createdAt`, `fileCount`, `archiveKey`, `archiveSha256`, `manifestKey`, `manifestSha256` |
-| `current.json` | `release.json` 과 같은 식별·요약 필드에 `descriptorKey`, `descriptorSha256` |
-| `sync-state.json` | 마지막으로 준비한 `revision`, `contentDigest`, 파일 hash |
-| `skill-session.json` | 진행 중인 skill 이름, 시작 revision, 시작 시각 |
-| `workspace-manifest.json` | 아래 manifest |
-| `prepare-journal.json` | 아래 journal |
-
-#### manifest
-
-| 필드 | 값 |
-| --- | --- |
-| `schemaVersion` | `1` |
-| `workspace` | `career-os` 고정 |
-| `revision` | 홈서버가 부여한 release 식별자 |
-| `parentRevision` | publish 를 시작할 때 확인한 이전 revision |
-| `createdAt` | 홈서버가 기록한 UTC 시각 |
-| `producer` | 만든 skill 과 `interactive` 또는 `automation` |
-| `contentDigest` | 정렬한 파일 경로와 크기와 SHA-256 에서 만든 전체 digest |
-| `files` | 상대 경로, byte 크기, SHA-256 목록 |
-
-`files` 의 경로는 `applications/`, `library/`, `state/` 중 하나로 시작해야 한다.
-일반 파일만 허용한다. symlink 와 `.env` 와 `.omc` 와 log 와 cache 와 임시 파일은 거절한다.
-
-#### prepare-journal
-
-transaction 식별자와 상태 하나, 그리고 root 별 `hadOriginal`, `backupDone`, `applyDone` 을 담는다.
-
-| 상태 | 복구할 때 하는 일 |
-| --- | --- |
-| `started`, `staged` | 기존 root 를 건드리지 않았으므로 staging 만 지운다 |
-| `backed_up`, `applied`, `restoring` | root 별 상태와 실제 경로를 대조해 새 root 를 지우고 backup 을 되돌린다 |
-| `restored` | 되돌리기를 마쳤다 |
-| `completed` | 새 root 와 `sync-state.json` 의 hash 가 같을 때만 backup 과 journal 을 지운다 |
-
-`hadOriginal: false` 인 항목은 되돌릴 때 새 root 만 지운다.
-기록과 실제 경로가 어긋나면 자동으로 판단하지 않고 `RESTORE_REQUIRED` 로 멈춘다.
-
-#### 원격 명령의 응답
-
-| 명령 | 응답 |
-| --- | --- |
-| `career-storage status` | `RemoteStatusResult`. `schemaVersion`, `action`, `ok`, `workspace`, nullable `current` |
-| `career-storage export --revision <revision>` | release 의 tar |
-| `career-storage publish` | `RemotePublishResult`. `schemaVersion`, `action`, `ok`, `revision`, `contentDigest`, `createdAt`, `fileCount`, `noChange` |
-
-`current` 는 `revision`, `contentDigest`, `createdAt`, `fileCount` 를 가진다.
-export tar 의 최상위는 `workspace-manifest.json` 과 세 관리 root 만,
-publish tar 의 최상위는 `workspace-draft.json` 과 세 관리 root 만 허용한다.
-
-절차와 실패 복구는 [`flow.md`](flow.md#비공개-작업본-동기화)가 소유한다.
-
-## application-package-writer
-
-### 적합도 판정과 점수
-
-판단 기준은
-[`fit-judgment.md`](../plugin/skills/application-package-writer/references/fit-judgment.md)가 소유한다.
-행별 점수와 구분별 가중치는 모델이 공고를 보고 정해 `evidence/fit.md` 에 남긴다.
-소계와 총점은 그 둘로 `fit_score.ts` 가 계산한다.
-색 구간은 `render/constants.ts` 가 소유한다.
-
-`evidence/status.md`의 준비 상태 값과 판단 기준은
-[`application-quality-rubric.md`](../plugin/skills/application-package-writer/references/application-quality-rubric.md)의 「판정」이 소유한다.
-
-첫 10줄의 `evidence` 와 `human-confirmation` 의 값과 뜻도 같은 문서의 「판정」이 소유한다.
-
-경력, 역할 선호와 경험 경계는 후보자 맥락 문서에 두고, 지원별 사실과 표현 확인은 `evidence/candidate-interview.md`의 기존 계약을 따른다.
-작성 취향은 스킬에서 유지하고, 문서에서 읽은 내용은 해당 문장을 판단하는 데 필요한 문서 키와 version 만 지원 기록에 연결한다.
-연락처, 신원과 정확한 재직 기간은 fos-assistant Memory 의 지원서 공통 프로필에만 있다.
-
-## interview-practice
-
-### `config/interview-question-sources.ts`
-
-| 필드 | 값 |
-| --- | --- |
-| `key` | 출처 식별자. 고유하다 |
-| 출처 종류 | 공식 문서, 기술 블로그, 공개 영상, GitHub 가이드 |
-| 사용 역할 | 정답 근거, 사례 발견, 범위 확인 |
-| 주제, URL, 수집 어댑터 | |
-
-**정답 근거 역할은 공식 문서만 가진다.** 기술 블로그와 공개 영상과 GitHub 가이드는
-사례 발견이나 범위 확인만 할 수 있다.
-
-### 질문
-
-각 질문의 `source` 는 `public/question-bank/sources.json` 의 식별자를 참조한다.
-`bar` 는 공개 능력 수준 셋 중 하나다.
-
-| `bar` | 수준 |
-| --- | --- |
-| `production` | 한 서비스의 정확성과 장애 복구와 운영 지표를 책임진다 |
-| `large-scale` | 대규모 제품과 여러 팀이 쓰는 계약과 용량과 변경 안전성을 판단한다 |
-| `global-scale` | 다중 리전과 조직 공통 기반의 실패 격리와 보안과 장기 trade-off 를 주도한다 |
-
-현재 직장과 목표 회사와 개인 경험 경계를 `bar` 값이나 공개 질문 본문에 넣지 않는다.
-
-### `interview-source-candidates.json`
-
-실행별 후보풀이다. 시스템 임시 경로에 두고 질문 승격 뒤 지운다. 장기 상태로 두지 않는다.
+커리어 Backend 의 `candidate_context_documents`, `candidate_context_document_revisions` table 과 HTTP 계약은 비서용 스킬과 실행기가 쓰지 않는다. Backend 를 내릴 때 함께 사라진다.
 
 각 후보는 출처 식별자, 출처 종류와 역할, 주제, 제목, URL, 게시 시각, 공개 설명, 자료 종류를 가진다.
 
 ### 면접 연습 저장소
 
-주제별 복습 상태, 연습 기록과 개인 질문은 `CAREER_STORE` 로 고른 저장소 하나에 둔다.
-결정과 근거는 [ADR-129](adr/ADR-129-면접-연습-기록과-개인-질문은-backend가-소유한다.md)에 있다.
-
-| `CAREER_STORE` | 저장 위치 | 쓰는 곳 |
-| --- | --- | --- |
-| `backend` | `fos_career` 의 table 셋. 아래 「면접 연습 table」 | 운영(hermes) |
-| `file` | `CAREER_STORE_DIR` 아래 파일 셋. 기본은 `career-os/state/interview-practice/`. 아래 「면접 연습 파일」 | Backend 를 쓰지 않는 사용자 |
-| 없음 | 명령이 실패한다 | |
-
-두 저장소는 같은 계약을 따른다. 복습일 규칙, 칸 이름과 검사 규칙이 같고, 한쪽에서 쌓은 기록을 다른 쪽이 읽지는 않는다.
+주제별 복습 상태, 연습 기록과 개인 질문은 커리어 작업 폴더의 `state/career.sqlite` 하나에 둔다([ADR-146](adr/ADR-146-커리어-표-데이터는-에이전트-작업-폴더의-sqlite-가-갖는다.md)).
+JSON 파일 저장소와 Backend 저장소, `CAREER_STORE` 선택은 없다. 그래서 대화가 바뀌어도 앞 연습의 복습 대상과 개인 질문이 이어진다.
+table 과 열, 복습일 규칙은 아래 「면접 연습 table」 과 같고 타입만 SQLite 다(시각은 UTC ISO 문자열, 날짜는 `YYYY-MM-DD`, `payload` 는 JSON 문자열, `enabled` 는 1 과 0).
+같은 `attemptId` 의 기록을 다시 보내면 `request_receipts` 가 처음 응답을 돌려주고 복습 상태를 한 번 더 바꾸지 않는다. 같은 `attemptId` 에 다른 본문이 오면 `IDEMPOTENCY_CONFLICT` 다.
+실행기 명령은 [`code-architecture.md`](code-architecture.md#interview-practice)가 소유한다.
 
 ### 면접 연습 table
 
@@ -320,29 +191,14 @@ erDiagram
 `payload` 안의 `id`, `topic` 은 행의 `question_id`, `topic` 과 같아야 하고, 다르면 `400` 이다.
 `answerSignals` 와 `followUps` 는 따로 조회하지 않고 질문 전체가 한 번에 모델에게 전달되므로 자식 table 로 나누지 않는다.
 
-### 면접 연습 파일
-
-`CAREER_STORE=file` 일 때 쓴다. 칸 이름은 HTTP 계약의 camelCase 와 같다.
-
-| 파일 | 모양 | table 대응 |
-| --- | --- | --- |
-| `topic-progress.json` | `{ schemaVersion: 1, items: [{ drillType, topic, passCount, failCount, nextReviewDate, lastPassedDate }] }` | `interview_topic_progress` |
-| `attempts.jsonl` | 한 줄에 연습 기록 하나. `POST attempts` 본문에 `evaluatedOn`, `createdAt` 을 더한 것 | `interview_attempts` |
-| `personal-questions.json` | `{ schemaVersion: 1, items: [{ questionId, drillType, topic, enabled, question, updatedAt }] }` | `interview_personal_questions` |
-
-- 같은 `attemptId` 가 `attempts.jsonl` 에 있으면 새로 쓰지 않고 그때의 결과를 돌려준다.
-- JSON 파일은 같은 디렉터리의 임시 파일에 쓴 뒤 이름을 바꿔 교체한다. 쓰다 멈춰도 반쯤 쓴 파일이 남지 않는다.
-- 한 사람이 한 곳에서 쓰는 것을 전제로 하고 동시 기록을 막지 않는다.
-- `state/` 아래에 두므로 비공개 작업본 release 로 동기화할 수 있다.
-
 ### 후보자 맥락
 
-`interview-practice` 가 질문 난도와 꼬리질문 경계를 정할 때 읽는 값이다.
+질문 난도와 꼬리질문 경계를 정할 때 읽는 값이다. 비서용 `interview-practice` 스킬은 기억의 「커리어: 현재 경력」 과 「커리어: 지원 상태」 를 직접 읽는다. 아래 `CAREER_MEMORY` 는 저장소에서 `drill-engine.ts memory` 를 직접 부를 때만 쓴다.
 결정과 근거는 [ADR-130](adr/ADR-130-면접-연습의-후보자-맥락은-memory-공급자-경계로-읽는다.md)과 [ADR-132](adr/ADR-132-스킬의-개인-맥락은-후보자-맥락-문서에서-읽고-지원서-공통-프로필만-brain에-둔다.md)에 있다.
 
 | `CAREER_MEMORY` | 채우는 쪽 |
 | --- | --- |
-| `backend` | 스크립트가 후보자 맥락 문서 `career-status` 와 `application-state` 본문을 채울 칸 목록과 함께 낸다. 출력은 `provider`, `fields`, `instruction`, `documents` 이고 `documents` 의 원소는 `{ documentKey, version, body }` 다. 스킬이 그 본문으로 칸을 채운다 |
+| `context` | 스크립트가 작업 폴더 `context/career-status.md` 와 `context/application-state.md` 의 본문을 채울 칸 목록과 함께 낸다. 출력은 `provider`, `fields`, `instruction`, `documents` 이고 `documents` 의 원소는 `{ documentKey, version, body }` 다. `version` 은 본문에서 계산한 `<문서 키>:sha256:<hex>` 다 |
 | `file` | `CAREER_MEMORY_FILE` 의 JSON. 기본은 `career-os/library/candidate-memory.json`. 템플릿은 `scripts/interview-drill/templates/candidate-memory.example.json` |
 | 없음 | 명령이 실패한다 |
 
@@ -1337,22 +1193,23 @@ HTTP 계약은 [`flow.md`](flow.md#프로필-http-계약)가 소유한다. 이�
 
 ## fos-career 커넥터
 
-커넥터는 아무것도 저장하지 않는다. 문서와 사용량 기록은 커리어 Backend 가, README 와 차트는 GitHub 의 프로필 저장소가 갖는다.
-이 절은 커넥터의 환경 변수와 MCP 계약의 단일 소스다. 입력 스키마의 정본은 `plugin/src/tools.ts`, `plugin/src/interview.ts`, `plugin/src/study.ts` 다.
+커넥터의 MCP 서버는 아무것도 저장하지 않는다. README 는 GitHub 의 프로필 저장소가, 이력서는 원티드가 갖는다.
+후보자 맥락 문서는 사용자의 기억이, 프로필 원고와 표 데이터는 작업 폴더가 갖고 스킬과 로컬 실행기가 다룬다([ADR-147](adr/ADR-147-후보자-맥락-문서는-비서의-기억이-프로필-원고는-작업-폴더-파일이-갖는다.md)).
+이 절은 커넥터의 환경 변수와 MCP 계약의 단일 소스다. 입력 스키마의 정본은 `plugin/src/tools.ts` 와 `plugin/src/wanted/fields.ts` 다.
 
 ### 커넥터 환경 변수
 
 | 이름 | 누가 주나 | 필수 | 내용 |
 | --- | --- | :---: | --- |
-| `CAREER_BACKEND_TOKEN` | 사용자. 연결 칸 `token` | 예 | 커리어 Backend 의 Bearer token. 앞뒤 공백을 뗀 뒤 32자 이상 |
 | `CAREER_GITHUB_TOKEN` | 사용자. 연결 칸 `github_token` | 아니오 | 프로필 저장소 하나의 내용 읽기와 쓰기 권한만 가진 token |
 | `CAREER_GITHUB_TOKEN_URL` | fos-assistant 실행기. 「GitHub 으로 연결」 단추로 만든 연결에만 값이 있다 | 아니오 | fos-assistant 의 토큰 통로 주소(HTTP 또는 HTTPS). 값이 있으면 `CAREER_GITHUB_TOKEN` 대신 쓴다. `connector.json` 의 `oauth.token_env` 다 |
-| `CAREER_BACKEND_URL` | 운영자 | 예 | credentials, query, hash, path 가 없는 HTTP 또는 HTTPS origin |
 | `CAREER_GITHUB_PROFILE_REPO` | 운영자 | 예 | `<owner>/<repo>` 모양의 프로필 저장소 이름 |
-| `CAREER_BACKEND_ACCESS_CLIENT_ID`, `CAREER_BACKEND_ACCESS_CLIENT_SECRET` | Claude Code 실행 환경(셸이나 설정의 `env`). `.mcp.json` 과 `operator_env` 에는 선언하지 않는다 | 아니오 | Backend 앞에 Cloudflare Access 가 있을 때의 service token. 둘 다 있거나 둘 다 없어야 한다. 파일 변형은 받지 않는다. 계약은 ADR-143 을, 선언 위치는 ADR-144 를 따른다 |
+| `CAREER_BROWSER_URL` | fos-assistant 실행기 | 아니오 | 「내 브라우저」 중계 주소. 없으면 원티드 도구가 `CAREER_BROWSER_UNREACHABLE` 로 답한다. `connector.json` 의 `owner_browser_env` 다 |
+
+서버는 커리어 Backend 의 주소와 token, Cloudflare Access 값을 읽지 않는다. 연결 화면에 필수 칸이 없다.
 
 값이 `${` 로 시작하면 치환되지 않은 변수 참조이므로 없는 값으로 다룬다.
-필수 값이 없거나 모양이 틀리면 서버가 `CAREER_CONFIG` 로 시작하지 않는다.
+`CAREER_GITHUB_PROFILE_REPO` 가 없거나 모양이 틀리면 서버가 `CAREER_CONFIG` 로 시작하지 않는다.
 `CAREER_GITHUB_TOKEN` 과 `CAREER_GITHUB_TOKEN_URL` 이 둘 다 없으면 서버는 시작하고 GitHub 도구가 `CAREER_GITHUB_NOT_CONFIGURED` 로 답한다. 하나라도 있으면 `check_connection` 은 GitHub 을 설정된 것으로 보고 실제로 불러 본다.
 `CAREER_GITHUB_TOKEN_URL` 이 있으면 GitHub 도구를 부를 때마다 그 주소에 `GET` 을 보내 `{access_token, expires_at}` 의 `access_token` 을 받고, 그 한 번의 도구 호출 안의 GitHub 요청에 모두 쓴다. 다음 호출에서 다시 받으므로 fos-assistant 가 갱신한 token 이 재시작 없이 쓰인다. 계약은 fos-assistant 의 `hermes/connectors/README.md` 「비밀값과 권한」 과 `docs/features/connector-oauth/design.md` 「선언」 을 따른다.
 주소가 HTTP 나 HTTPS 가 아니어도 서버는 시작하고, GitHub 도구만 `CAREER_GITHUB_NOT_CONFIGURED` 로 답한다. GitHub 은 선택 기능이라 나머지 도구를 막지 않는다. 통로를 부르지 않고 붙여 넣은 token 으로도 넘어가지 않는다.
@@ -1360,14 +1217,15 @@ token 과 통로 주소를 파일에 저장하지 않고 로그와 결과, 오�
 
 ### 로컬 실행기 환경 변수
 
-Claude Code 전용 스킬이 부르는 `dist/career-local.js` 가 셸 환경에서 읽는 값이다. 스킬은 `bun --no-env-file` 로 불러 cwd 의 `.env` 를 읽지 않는다.
+스킬이 부르는 `dist/career-local.js` 가 셸 환경에서 읽는 값이다. 스킬은 `bun --no-env-file` 로 불러 cwd 의 `.env` 를 읽지 않는다.
+공고·공부·면접 실행기는 Backend 값을 읽지 않는다. 아래 Backend 값은 노트북 전용 `usage` 실행기만 읽는다.
 
 | 이름 | 필수 | 내용 |
 | --- | :---: | --- |
-| `CAREER_BACKEND_URL` | 예 | 커넥터와 같은 Backend origin |
-| `CAREER_BACKEND_TOKEN` | 예 | 커넥터와 같은 Bearer token. `CAREER_BACKEND_TOKEN_FILE`(권한 0600 파일)로 대신할 수 있다 |
+| `CAREER_BACKEND_URL` | `usage` 만 | 커리어 Backend origin |
+| `CAREER_BACKEND_TOKEN` | `usage` 만 | Backend 의 Bearer token. `CAREER_BACKEND_TOKEN_FILE`(권한 0600 파일)로 대신할 수 있다 |
 | `CAREER_BACKEND_ACCESS_CLIENT_ID`, `CAREER_BACKEND_ACCESS_CLIENT_SECRET` | 아니오 | Backend 앞에 Cloudflare Access 가 있을 때의 service token. secret 은 `CAREER_BACKEND_ACCESS_CLIENT_SECRET_FILE` 로 대신할 수 있다. 계약은 ADR-140 을 따른다 |
-| `CAREER_WORKSPACE_ROOT` | 아니오 | 비공개 작업본(`applications/`, `library/`, `state/`)의 상위 디렉터리. 없으면 `~/.fos-career/workspace` |
+| `CAREER_WORKSPACE_ROOT` | 아니오 | 커리어 작업 폴더. 공고·공부·면접 실행기는 없으면 `/workspace/career` 를 쓴다(위 「커리어 작업 폴더」). 노트북 전용 실행기(`workspace`, `resume`)는 없으면 `~/.fos-career/workspace` 를 쓴다 |
 | `CAREER_WORKSPACE_SSH_TARGET` | 아니오 | 이 값을 지정하면 홈서버 동기화를 켠다. `CAREER_WORKSPACE_REMOTE_COMMAND`, `CAREER_WORKSPACE_SSH_ARGS` 를 함께 읽는다 |
 | `YOUTUBE_DATA_API_KEY` | 아니오 | 공부 자료 archive 수집의 YouTube Data API key |
 | `CAREER_EVIDENCE_DIR` | 아니오 | 스킬이 읽는 프로젝트 근거 디렉터리. 없으면 `CAREER_WORKSPACE_ROOT` 아래 `evidence/`. `workspace paths --json` 이 `evidenceDir` 로 알려 준다. `package check-sources` 는 이 디렉터리나 그 바로 위가 Git 저장소의 루트일 때 그 저장소가 원격보다 뒤처졌는지 본다 |
@@ -1381,111 +1239,50 @@ token 과 문서 본문을 실행기의 로그와 오류 출력에 싣지 않는
 ### 도구
 
 Hermes 에서는 서버 이름 `career` 로 `mcp__career__<도구>` 가 된다.
-`check_`, `list_`, `get_` 으로 시작하는 도구는 읽기 전용으로 표시한다.
+`check_`, `get_` 으로 시작하는 도구는 읽기 전용으로 표시한다. 도구는 아래 다섯뿐이다.
 
 | 도구 | 위험도, 승인 | 입력 | 결과 |
 | --- | --- | --- | --- |
-| `check_connection` | `READ`, `none` | 없음 | `{ backend: "ok", github: "ok" \| "not_configured" }`. 확인 도구다 |
-| `list_context_documents` | `READ`, `none` | 없음 | `{ documents: [{ documentKey, version, updatedAt }] }` |
-| `get_context_document` | `READ`, `none` | `documentKey` | `{ document: { documentKey, body, version, note, updatedAt } }` |
-| `list_profile_documents` | `READ`, `none` | 없음 | `{ documents: [{ documentKey, version, updatedAt }] }` |
-| `get_profile_document` | `READ`, `none` | `documentKey` | `{ document: { documentKey, body, version, note, updatedAt } }` |
-| `list_usage_snapshots` | `READ`, `none` | 없음 | `{ snapshots: [...] }`. Backend 의 응답을 달 오름차순 그대로 낸다 |
-| `get_github_profile` | `READ`, `none` | 없음 | `{ repo, branch, head, readme, chartExists }`. `head` 는 기본 branch 의 끝 커밋 SHA 이고 `readme`, `chartExists` 는 그 커밋에서 읽은 값이다. `readme` 는 README 가 없으면 `null` 이다 |
-| `save_context_document` | `WRITE`, `required`, `outbound: false` | `documentKey`, `body`, `note`, `expectedVersion` | `{ document: { documentKey, version, updatedAt } }` |
-| `save_profile_document` | `WRITE`, `required`, `outbound: false` | `documentKey`, `body`, `note`, `expectedVersion` | `{ document: { documentKey, version, updatedAt } }` |
-| `update_github_profile` | `WRITE`, `required`, `outbound: true`, `grant: false` | `readme`, `months`, `expectedBranch`, `expectedHead` | `{ changed, commitSha, branch, months, total }` |
-| `get_interview_questions` | `READ`, `none` | `drillType`, 선택 `targetBar`, `count` | `{ drillType, today, questions: [{ ...질문, sourceScope, dueForReview }] }` |
-| `list_personal_questions` | `READ`, `none` | `drillType` | `{ items: [질문] }`. 켜진 개인 질문만 낸다 |
-| `save_interview_attempt` | `WRITE`, `required`, `outbound: false` | 연습 기록 칸. `attemptId` 는 선택 | `{ attemptId, evaluatedOn, progress }` |
-| `save_personal_question` | `WRITE`, `required`, `outbound: false` | `drillType`, `enabled`, `question` | `{ questionId, drillType, topic, enabled, updatedAt }` |
-| `get_study_candidates` | `READ`, `none` | 선택 `limit`, `category` | `{ candidateContextVersion, historyVersion, learningInterests, recentStudyTopicKeys, nextCursor, candidates }` |
-| `save_study_recommendation` | `WRITE`, `required`, `outbound: false` | `candidateContextVersion`, `topics`, `rejections`, 선택 `generatedAt` | `{ reportId, generatedAt, historyVersion }` |
-| `list_study_candidates` | `READ`, `none` | 선택 `limit`, `category`, `sourceKey`, `publishedFrom`, `publishedTo`, `cursor` | `{ status, candidateContextVersion, learningInterestsVersion, historyVersion, recentStudyTopicKeys, nextCursor, hasMore, candidates }`. 관심사 문서가 없으면 `{ status: "learning_interests_missing" }` |
-| `list_study_recommendations` | `READ`, `none` | 선택 `limit` | `{ status, runs: [{ reportId, generatedAt, topics: [{ topicKey, title, careerQuestion, items: [{ contentKey, title, url }] }] }] }`. 기록이 없으면 `status` 는 `empty` 이고 `runs` 는 빈 배열이다 |
-| `get_position_research_constraints` | `READ`, `none` | 없음 | `{ readiness, missing, exclusions, companyPreferences }` |
-| `check_position_exclusions` | `READ`, `none` | `postings`(1개 이상 10개 이하). 칸은 `url`, `company`, `title`, 선택 `source`, `identityHash` | `{ readiness, missing, results: [{ position, url, verdict, basis? }] }` |
+| `check_connection` | `READ`, `none` | 없음 | `{ github: "ok" \| "not_configured" }`. 확인 도구다. GitHub 연결이 없어도 성공한다 |
+| `get_github_profile` | `READ`, `none` | 없음 | `{ repo, branch, head, readme }`. `head` 는 기본 branch 의 끝 커밋 SHA 이고 `readme` 는 그 커밋에서 읽은 값이다. README 가 없으면 `null` 이다 |
+| `update_github_profile` | `WRITE`, `required`, `outbound: true`, `grant: false` | `readme`, `expectedBranch`, `expectedHead` | `{ changed, commitSha, branch }` |
+| `get_wanted_resume` | `READ`, `none` | 선택 `resumeKey` | 이력서 칸 목록이나 고를 이력서 목록, 로그인 넘기기. 계약은 [`features/profile-browser-sync/design.md`](features/profile-browser-sync/design.md) |
+| `update_wanted_resume` | `WRITE`, `required`, `outbound: true`, `grant: false` | `resumeKey`, `resumeTitle`, `changes` | 칸마다의 결과 |
 
-- 후보자 맥락의 `documentKey` 는 [후보자 맥락 문서](#후보자-맥락-문서)의 네 키, 프로필 원고의 `documentKey` 는 `wanted`, `linkedin`, `github` 다
-- 쓰기 도구는 `outbound` 를 선언한다. 저장 도구 다섯 개는 사용자 본인의 Backend 에만 쓰므로 `false` 다. `update_github_profile` 은 GitHub 프로필 README 에 커밋해 누구나 볼 수 있는 곳에 올리므로 `true` 이고, `grant: false` 로 상시 허락을 닫는다. 그래서 승인 카드에 「승인하고 묻지 않기」 와 「이 대화에서 계속 허용」 이 나오지 않고 호출마다 사람이 승인한다. `conversation_grant` 는 선언하지 않는다
-- 저장 도구의 `body`, `note`, `expectedVersion` 은 Backend 의 문서 저장 계약과 같다. 본문 전체를 바꾸고 새 문서는 `expectedVersion: 0` 이다
-- 저장 요청의 `Idempotency-Key` 는 노트북의 CLI 가 같은 내용으로 만드는 값과 같다. 같은 저장을 두 길로 보내도 한 번만 반영된다
-- `update_github_profile` 의 `readme` 는 README 전체의 Markdown 이고, `months` 는 차트에 넣을 달(`YYYY-MM`)의 목록이다. 1개에서 6개까지 받고 겹치는 달을 받지 않는다. 차트에는 달 오름차순으로 넣는다
-- 고른 달의 막대가 모두 0 이면 그릴 차트가 없으므로 `update_github_profile` 은 `CAREER_INVALID_INPUT` 으로 거절한다
-- `update_github_profile` 은 숫자를 인자로 받지 않는다. 입력 스키마가 `readme`, `months`, `expectedBranch`, `expectedHead` 밖의 키를 거절한다
+- 쓰기 도구 둘은 누구나 볼 수 있는 프로필을 바꾸므로 `outbound: true` 이고 `grant: false` 로 상시 허락을 닫는다. 승인 카드에 「승인하고 묻지 않기」 와 「이 대화에서 계속 허용」 이 나오지 않고 호출마다 사람이 승인한다. `conversation_grant` 는 선언하지 않는다
+- `update_github_profile` 은 `README.md` 한 파일만 쓴다. `readme` 는 README 전체의 Markdown 이다. 입력 스키마가 `readme`, `expectedBranch`, `expectedHead` 밖의 키(`months`, 합계, SVG)를 거절한다
+- **에이전트 사용량 차트와 Tokens 배지는 프로필에서 뺐다.** 도구는 사용량 기록을 읽지 않고 `agent-usage.svg` 를 쓰거나 지우지 않는다. README 에서 차트 그림과 배지를 빼는 일은 `career-connector` 스킬이 안내한다. 사용량 기록이 노트북 파일로 가 더 갱신되지 않으므로 멈춘 숫자가 최신처럼 보이지 않게 한다
 - `expectedBranch` 와 `expectedHead` 는 변경안을 만들 때 읽은 `get_github_profile` 의 `branch` 와 `head` 다. `expectedHead` 는 소문자 40자리 SHA 다. 둘은 승인 인자에 함께 저장되므로, 승인을 기다리는 사이 README 가 바뀌거나 기본 branch 가 바뀌면 실행할 때 `CAREER_GITHUB_STALE_REVIEW` 로 거절하고 GitHub 에 아무것도 쓰지 않는다. 최신 끝 커밋 위에 검토한 원고를 다시 올리지 않는다
 - 커밋이 하나도 없는 빈 프로필 저장소는 끝 커밋을 읽을 수 없어 `get_github_profile` 이 `CAREER_GITHUB_UNAVAILABLE` 로 답한다. 첫 커밋은 GitHub 에서 직접 만든다
 - 두 칸이 없는 옛 형식의 요청은 입력 검증에서 `CAREER_INVALID_INPUT` 으로 거절한다. 검토 기준을 모르는 원고를 최신 끝 커밋에 올리지 않기 위해서다
-- `total` 은 `97.9B` 같은 글이고 `commitSha` 는 올라간 커밋이다. `changed: false` 이면 저장소가 이미 같은 내용이라 커밋을 만들지 않은 것이고 `commitSha` 는 그때의 branch 끝이다
+- `commitSha` 는 올라간 커밋이다. `changed: false` 이면 저장소가 이미 같은 내용이라 커밋을 만들지 않은 것이고 `commitSha` 는 그때의 branch 끝이다
 - 결과는 MCP 응답의 첫 텍스트 칸에 JSON 으로 싣는다. `check_connection` 은 같은 값을 `structuredContent` 에도 싣는다
-- 오류는 `isError: true` 와 `{ error: { code, message } }` 다. `CAREER_BADGE_MISMATCH` 는 같은 객체에 `expected`(기록의 합계)와 `found`(README 의 값. 배지가 없거나 여럿이면 `null`)를, `CAREER_USAGE_MONTH_MISSING` 은 `missing`(없는 달의 목록)을 더한다
-
-면접 연습 도구의 계약이다. 칸의 제약은 [면접 연습 table](#면접-연습-table)과 Backend 의 `src/interview/schema.ts` 와 같다.
-
-- `get_interview_questions` 의 `drillType` 은 `tech` 나 `behavioral`, `targetBar` 는 `production`, `large-scale`, `global-scale` 가운데 하나, `count` 는 1 이상 10 이하이고 기본값은 5 다
-- 질문은 번들한 공개 질문 은행과 켜진 개인 질문에서 고른다. `sourceScope` 는 `public` 이나 `personal` 이다. 공고별 질문은 고르지 않는다
-- `today` 는 Asia/Seoul 기준 날짜다. 선별 규칙은 노트북의 `drill-engine.ts select` 와 같은 함수다
-- `save_interview_attempt` 의 칸은 `POST /api/interview/v1/attempts` 의 요청과 같다. `attemptId` 를 넘기지 않으면 서버가 UUID 를 만든다. `Idempotency-Key` 는 `attemptId` 다
-- `save_personal_question` 은 `PUT /api/interview/v1/personal-questions/{question.id}` 다. 노트북의 CLI 처럼 호출마다 새 `Idempotency-Key`(`personal-question:<UUID>`)를 쓴다
-- `CAREER_NETWORK`, `CAREER_INVALID_RESPONSE`, `CAREER_OUTCOME_UNKNOWN`(5xx)으로 끝난 `save_interview_attempt` 는 오류 객체에 그때 쓴 `attemptId` 를 더한다. 2xx 를 받았어도 본문을 읽지 못하거나 5xx 가 receipt 저장 실패에서 왔을 수 있어 저장됐는지 알 수 없기 때문이다. `attemptId` 를 보존해도 잃은 receipt 나 원래 응답을 되살리지는 못한다
-- `save_interview_attempt` 의 `idempotentHint` 는 `false` 다. `attemptId` 를 생략한 같은 인자의 호출은 호출마다 새 `attemptId` 와 `Idempotency-Key` 를 만든다
-- `save_interview_attempt` 에 Backend 가 409 로 답하면 같은 `attemptId` 의 요청이 아직 처리 중인 것이라 `CAREER_ATTEMPT_PENDING` 이다. 오류 객체에 `attemptId` 를 더한다
-
-공부 추천 도구의 계약이다. 칸의 제약은 [추천 실행](#추천-실행)과 Backend 의 `src/study/schema.ts` 와 같다.
-
-- `get_study_candidates` 는 `GET /api/study/v1/candidates` 한 쪽만 읽는다. `limit` 은 1 이상 20 이하이고 기본값은 20 이다. `category` 는 `techBlog`, `geek`, `ai`, `video` 가운데 하나다. Backend 가 409 로 답하면 `learning-interests` 문서가 없는 것이라 `CAREER_LEARNING_INTERESTS_MISSING` 이다
-- 후보 한 줄은 `{ contentKey, title, url, sourceName, category, kind, published, excerpt }` 다. `excerpt` 는 500자에서 자른다. 외부 글을 그대로 길게 싣지 않기 위해서다
-- `save_study_recommendation` 의 `topics[].items[]` 는 `{ contentKey, summary, reason, careerValue }`, `rejections[]` 는 `{ contentKey, reason }` 이다
-- 저장 입력의 상한은 Backend 보다 짧다. 주제 4개, 모든 주제의 자료 합계 8개, 제외 20개다. `title` 60자, `careerQuestion`, `summary`, `reason` 각 100자, 제외 `reason` 50자, `topicKey` 는 소문자와 숫자를 `-` 로 이은 80자 이하의 kebab-case 이고, `-` 로 시작하거나 끝나거나 연속할 수 없다. 노트북의 `reading_contracts.ts` 와 같은 규칙이다. `contentKey` 는 `url:` 뒤 hex 64자나 `youtube:` 뒤 영상 id 다
-- 글 칸(`candidateContextVersion`, `title`, `careerQuestion`, `summary`, `reason`, 제외 `reason`)은 제어 문자와 줄바꿈을 받지 않는다. JSON 이 한 글자를 6바이트로 늘려 최악 크기 계산이 깨지기 때문이다
-- 상한을 Backend 보다 짧게 둔 까닭은 승인 인자 상한이다. 모든 칸을 상한까지 채운 인자도 16KB 안에 들어야 한다. `get_study_candidates` 의 `limit` 상한 20 도 제외 20개에 맞춘 값이다
-- `generatedAt` 을 넘기지 않으면 서버가 지금 시각을 UTC ISO 로 쓴다. `reportId` 는 `morning-<generatedAt 의 Asia/Seoul 날짜>` 다
-- `generatedAt` 은 지금 시각보다 24시간 넘게 이르거나 5분 넘게 늦으면 `CAREER_INVALID_INPUT` 으로 거절하고 Backend 에 보내지 않는다
-- `Idempotency-Key` 는 노트북의 CLI 와 같은 `recommendation:<sha256(canonical JSON { reportId, generatedAt })>` 다
-- `CAREER_NETWORK` 로 끝난 `save_study_recommendation` 은 오류 객체에 `reportId` 와 `generatedAt` 을 더한다
-- Backend 가 409 로 답하면 `GET /api/study/v1/recommendation-runs/{reportId}/status` 를 한 번 읽는다. 오늘 리포트가 있으면 `CAREER_STUDY_ALREADY_SAVED`, 없으면 `CAREER_STUDY_CONFLICT` 다. 뒤의 것은 후보를 읽은 뒤 기준이 바뀌었거나, 이미 추천한 주제나 자료를 골랐거나, 같은 요청이 아직 처리 중이거나, 같은 멱등 키에 다른 본문(`IDEMPOTENCY_CONFLICT`)을 보낸 경우다
-
-자율 조사용 읽기 도구의 계약이다. 모두 기존 GET 경로만 읽고 추천 생성, 수집, 문서 저장, 게시 경로를 부르지 않는다.
-경험, 관심사, 역할 선호, 지원 상태는 `get_context_document` 의 네 문서를 그대로 쓴다.
-
-- `list_study_candidates` 는 `GET /api/study/v1/candidates` 한 쪽만 읽는다. 입력 칸은 Backend query 의 칸과 같다. `limit` 은 1 이상 50 이하이고 기본값은 20 이다. `publishedFrom`, `publishedTo` 는 ISO datetime, `cursor` 는 앞 결과의 `nextCursor` 다
-- 후보 한 줄은 `{ contentKey, canonicalUrl, url, sourceKey, sourceName, title, category, kind, published, excerpt }` 다. `excerpt` 는 500자에서 자른다. 관심사 본문은 싣지 않고 `learningInterestsVersion` 만 싣는다
-- `status` 는 `ok`, `empty`, `learning_interests_missing` 가운데 하나다. `empty` 는 조건에 맞는 미추천 후보가 수집돼 있지 않다는 뜻이고 웹에 자료가 없다는 뜻이 아니다. Backend 의 409 는 오류가 아닌 `learning_interests_missing` 이다
-- `hasMore` 는 `nextCursor` 가 있는지다. 잘못된 `cursor` 는 Backend 가 400 으로 답해 `CAREER_BAD_REQUEST` 다
-- `list_study_recommendations` 는 `GET /api/study/v1/recommendation-runs?limit=` 한 쪽만 읽는다. `limit` 은 1 이상 10 이하이고 기본값은 5 이다(Backend 는 1 이상 100 이하, 기본값 20). 최신 `generatedAt` 순이다. 요약, 추천 이유, 제외 판정은 싣지 않는다. 후보 도구(`get_study_candidates`, `list_study_candidates`)는 이미 추천한 자료를 빼므로 지난 추천의 제목은 이 도구로만 읽는다
-- `get_position_research_constraints` 는 `GET /api/positions/v1/exclusions` 와 `GET /api/positions/v1/company-preferences` 를 함께 읽는다. 규칙과 선호의 칸은 Backend 의 `src/positions/schema.ts` 와 같다
-- `check_position_exclusions` 는 같은 두 GET 으로 규칙을 읽고 공고마다 `verdict` 를 낸다. 판정은 수집기의 `feedback/exclusion-match.ts` 가 하며 모델이 규칙을 해석하지 않는다. 규칙의 사유와 근거 주소는 결과에 싣지 않는다
-- `verdict` 는 `excluded`, `clear`, `undeterminable` 이다. `basis` 는 `excluded` 일 때 `identity`, `url`, `company`, `company-role`, `company-preference` 이고 `undeterminable` 일 때 `identity-missing`, `invalid-url`, `rule-unreadable`, `constraints-hold` 다. `clear` 는 이 공고에 적용되는 규칙을 모두 비교했고 걸린 것이 없다는 뜻이다. 단 `source` 를 모르는 공고는 식별자와 URL 을 함께 가진 규칙을 정규화 URL 로만 비교한다. 회사 비교는 `companyKey` 와 같은 정규화(공백 연속과 대소문자)를 쓴다
-- `source` 는 수집기 어댑터의 이름(`SOURCE_IDS`)만 받고 `identityHash` 는 `source` 와 함께만 받는다. 두 값은 커넥터나 후보 목록이 준 것만 넘기며 도구가 주소에서 만들지 않는다. 식별자만으로 비교하는 규칙(URL 이 없는 공고 제외)이 있는데 공고의 식별자가 없으면 `undeterminable` 이고 추천하지 않는다
-- `source` 를 모르는 공고는 정규화 URL 이 같은 규칙에 걸리고, 알면 `source` 와 정규화 URL 이 모두 같은 규칙에 걸린다. 정규화는 수집기의 `normalizePostingUrl` 이다(fragment, `utm_*`, `fbclid`, `gclid`, query 순서, 끝 슬래시)
-- 제외 규칙과 회사별 선호 중 하나라도 읽지 못했으면 모든 공고가 `undeterminable`(`constraints-hold`) 이고 `readiness` 는 `hold` 다
-- 만료된 제외 규칙은 Backend 가 Asia/Seoul 날짜로 이미 뺀다. `expiresAt` 이 없는 규칙은 만료되지 않는다
-- 둘 다 읽으면 `readiness: "ready"` 다. 하나라도 읽지 못하면 오류가 아닌 `readiness: "hold"` 이고, 읽지 못한 쪽은 `null`, `missing` 에 `{ source, code }` 를 싣는다. 고정 문구는 저장과 문서를 기준으로 쓴 것이라 싣지 않는다. `hold` 이면 조사는 이어 가도 포지션 추천은 확정하지 않는다
-- 어느 쪽이든 token 이 거절되면 `hold` 가 아니라 `CAREER_UNAUTHORIZED` 오류다. 연결 화면에서만 고칠 수 있기 때문이다
-- `positions` 의 실행 조회(`getRun`)는 조회 중 추천을 만드는 분기가 있어 도구로 노출하지 않는다
+- 오류는 `isError: true` 와 `{ error: { code, message } }` 다
 
 **승인이 필요한 도구의 인자는 fos-assistant 가 UTF-8 16KB 까지만 받는다.**
 키와 따옴표를 포함해 직렬화한 인자 전체의 크기다. 한글은 한 글자가 3바이트라 본문이 5천 자 안팎이면 닿는다.
-넘는 호출은 커넥터에 닿기 전에 거절된다. Backend 의 본문 상한 64 KiB 보다 작으므로 큰 문서는 노트북의 CLI 로 저장한다.
+넘는 호출은 커넥터에 닿기 전에 거절된다.
 
-### 차트와 Tokens 배지
+### 실행기로 옮긴 일
 
-숫자는 모두 사용량 기록의 토큰 수에서 계산한다.
+MCP 도구가 하던 일 가운데 커리어 데이터를 읽고 쓰는 것은 실행기 명령과 스킬로 옮겼다.
 
-| 값 | 계산 |
+| 하던 도구 | 지금 |
 | --- | --- |
-| 막대 하나의 값 | 그 달의 Claude Code 토큰과 Codex 토큰을 각각 1억으로 나눠 반올림한 정수. 단위는 0.1B 다. 5천만 이상을 올린다 |
-| 달의 합계 | 그 달의 두 정수를 더한 값 |
-| 전체 합계 | 고른 달의 정수를 모두 더한 값 |
-| 표기 | 정수를 10 으로 나눠 소수 한 자리와 `B` 를 붙인다. `979` 는 `97.9B` 다 |
+| 후보자 맥락 문서 읽기와 저장 | 기억 도구(`memory_search`, `memory_read`, `memory_remember`). 제목은 [후보자 맥락 문서](#후보자-맥락-문서) |
+| 프로필 원고 읽기와 저장 | 작업 폴더 `library/profiles/<wanted\|linkedin\|github>.md` 를 파일 도구로 |
+| 면접 질문 고르기, 기록, 개인 질문 | `<CAREER_LOCAL> interview select \| progress \| record \| personal` |
+| 공부 후보와 추천 | `study-collection` 스킬의 `<CAREER_LOCAL> study` |
+| 공고 제외 기준 읽기와 판정 | `<CAREER_LOCAL> position exclusions get`, `position check-exclusions --input <JSON>` |
+| 사용량 기록 읽기 | 없음. 사용량은 프로필에 넣지 않는다 |
 
-합계를 토큰 수에서 다시 반올림하지 않는다. 차트의 달별 값을 더한 수와 배지의 수가 늘 같아야 하기 때문이다.
+`position check-exclusions` 의 입력은 `{ postings: [{ url, company, title, source?, identityHash? }] }`(1개에서 10개)이고 결과는 `{ results: [{ position, url, verdict, basis? }] }` 다.
 
-README 에는 `img.shields.io/badge/Tokens-<값>B-` 모양의 배지 주소가 정확히 하나 있어야 한다.
-`<값>` 은 숫자, 점, 숫자 한 자리(`\d+\.\d`)다. 이 글이 전체 합계의 표기와 같지 않으면 `CAREER_BADGE_MISMATCH` 다.
-배지가 없거나 둘 이상이거나 `98B` 처럼 소수 자리가 없어도 같은 오류다.
-
-차트의 달 표기는 `2026-07` 을 `2026.07` 로 바꾼 글이다. 저장소의 파일 이름은 `README.md` 와 `agent-usage.svg` 로 고정한다.
+- `verdict` 는 `excluded`, `clear`, `undeterminable` 이다. `basis` 는 `excluded` 일 때 `identity`, `url`, `company`, `company-role`, `company-preference` 이고 `undeterminable` 일 때 `identity-missing`, `invalid-url`, `rule-unreadable` 이다. `clear` 는 이 공고에 적용되는 규칙을 모두 비교했고 걸린 것이 없다는 뜻이다. 단 `source` 를 모르는 공고는 식별자와 URL 을 함께 가진 규칙을 정규화 URL 로만 비교한다. 회사 비교는 `companyKey` 와 같은 정규화(공백 연속과 대소문자)를 쓴다
+- `source` 는 수집기 어댑터의 이름(`SOURCE_IDS`)만 받고 `identityHash` 는 `source` 와 함께만 받는다. 두 값은 공고 목록이 준 것만 넘기며 주소에서 만들지 않는다. 식별자만으로 비교하는 규칙(URL 이 없는 공고 제외)이 있는데 공고의 식별자가 없으면 `undeterminable` 이고 추천하지 않는다
+- `source` 를 모르는 공고는 정규화 URL 이 같은 규칙에 걸리고, 알면 `source` 와 정규화 URL 이 모두 같은 규칙에 걸린다. 정규화는 수집기의 `normalizePostingUrl` 이다(fragment, `utm_*`, `fbclid`, `gclid`, query 순서, 끝 슬래시)
+- 규칙과 회사 선호는 같은 SQLite 파일에 있어 한쪽만 읽지 못하는 경우가 없다. 저장소를 열지 못하면 명령이 종료 코드 1 로 끝난다
+- 판정은 수집기의 `feedback/exclusion-match.ts` 가 하며 모델이 규칙을 해석하지 않는다. 규칙의 사유와 근거 주소는 결과에 넣지 않는다
 
 ### 커넥터 오류 코드
 
@@ -1493,22 +1290,9 @@ README 에는 `img.shields.io/badge/Tokens-<값>B-` 모양의 배지 주소가 �
 
 | 오류 코드 | 조건 | 공통 어휘 |
 | --- | --- | --- |
-| `CAREER_CONFIG` | 필수 환경 변수가 없거나 모양이 틀림 | |
-| `CAREER_UNAUTHORIZED` | Backend 가 401 이나 403 으로 답함 | `credential_rejected` |
-| `CAREER_NOT_FOUND` | Backend 가 404 로 답함. 아직 만들지 않은 문서다 | `invalid_input` |
-| `CAREER_VERSION_CONFLICT` | Backend 가 409 로 답함. `expectedVersion` 이 현재 값과 다르다 | `invalid_input` |
-| `CAREER_STUDY_CONFLICT` | 공부 추천 저장에 Backend 가 409 로 답했고 오늘 리포트는 없음. 후보를 읽은 뒤 기준이 바뀌었거나, 이미 추천한 주제나 자료를 골랐거나, 같은 요청이 아직 처리 중이거나, 같은 멱등 키에 다른 본문을 보냈다 | `invalid_input` |
-| `CAREER_STUDY_ALREADY_SAVED` | 공부 추천 저장에 409 가 왔고 status 조회로 오늘 리포트가 이미 있음을 확인했다 | `invalid_input` |
-| `CAREER_ATTEMPT_PENDING` | 면접 기록 저장에 Backend 가 409 로 답함. 같은 `attemptId` 의 요청이 아직 처리 중이다. 오류 객체에 `attemptId` 를 더한다 | `unavailable` |
-| `CAREER_LEARNING_INTERESTS_MISSING` | 공부 후보 조회에 Backend 가 409 로 답함. `learning-interests` 문서가 없다 | `invalid_input` |
-| `CAREER_BAD_REQUEST` | Backend 의 나머지 4xx | `invalid_input` |
-| `CAREER_UNAVAILABLE` | Backend 의 5xx. `save_interview_attempt` 는 `CAREER_OUTCOME_UNKNOWN` 으로 바뀐다 | `unavailable` |
-| `CAREER_OUTCOME_UNKNOWN` | 면접 기록 저장에 Backend 가 5xx 로 답함. 저장 뒤 receipt 저장에서 실패했을 수 있어 저장 여부를 알 수 없다. 오류 객체에 `attemptId` 를 더한다. `connector.json` 은 이 코드를 `{category, retry_key: "attemptId"}` 로 선언해 fos-assistant 가 승인 실행의 `UNKNOWN` 줄에 이 값을 싣는다 | `outcome_unknown` |
-| `CAREER_NETWORK` | Backend 연결, redirect, 시간 초과 실패. 저장됐는지 알 수 없으므로 다시 읽어 확인한다 | `unavailable` |
-| `CAREER_INVALID_RESPONSE` | Backend 나 GitHub, 토큰 통로의 응답에서 필요한 구조를 읽지 못함 | `unavailable` |
-| `CAREER_INVALID_INPUT` | 도구 입력 검증 실패, 또는 고른 달의 값이 모두 0 | `invalid_input` |
-| `CAREER_USAGE_MONTH_MISSING` | 고른 달 가운데 사용량 기록이 없는 달이 있음 | `invalid_input` |
-| `CAREER_BADGE_MISMATCH` | README 의 Tokens 배지가 없거나 여럿이거나 값이 기록의 합계와 다름 | `invalid_input` |
+| `CAREER_CONFIG` | 프로필 저장소 이름(`CAREER_GITHUB_PROFILE_REPO`)이 없거나 모양이 틀림 | |
+| `CAREER_INVALID_RESPONSE` | GitHub 이나 토큰 통로의 응답에서 필요한 구조를 읽지 못함 | `unavailable` |
+| `CAREER_INVALID_INPUT` | 도구 입력 검증 실패 | `invalid_input` |
 | `CAREER_GITHUB_NOT_CONFIGURED` | GitHub token 도 토큰 통로 주소도 없음, 토큰 통로 주소가 HTTP 나 HTTPS 주소가 아님, 또는 토큰 통로가 404 로 답함(연결이 없거나 해제됨) | `credential_rejected` |
 | `CAREER_GITHUB_UNAUTHORIZED` | GitHub 가 401 로 답함, 또는 토큰 통로가 401(주소의 표식이 틀림)이나 409(다시 연결해야 함)로 답함. `connector.json` 은 recovery `reconnect` 를 함께 선언한다 | `credential_rejected` |
 | `CAREER_GITHUB_FORBIDDEN` | GitHub 가 401, 409, 422, 429 를 뺀 4xx 로 답함. 주로 403 과 404 이며 token 에 그 저장소의 권한이 없거나 저장소 이름이 틀리다 | `forbidden` |
@@ -1522,7 +1306,7 @@ README 에는 `img.shields.io/badge/Tokens-<값>B-` 모양의 배지 주소가 �
 | `CAREER_WANTED_RESUME_NOT_FOUND` | 받은 `resumeKey` 의 이력서가 없음. 쓰기 도구는 첫 칸을 건드리기 전에만 이 오류를 낸다 | `invalid_input` |
 | `CAREER_UNKNOWN_TOOL`, `CAREER_INTERNAL` | 지원하지 않는 도구 또는 내부 처리 실패 | |
 
-`message` 는 사람에게 보일 고정 문구다. Backend 와 GitHub 의 응답 본문, token, 문서 본문을 담지 않는다.
+`message` 는 사람에게 보일 고정 문구다. GitHub 과 원티드의 응답 본문, token, 프로필 본문을 담지 않는다.
 
 ## 수집 공고의 고용형태
 
