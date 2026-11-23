@@ -217,7 +217,7 @@ test("resume export 는 Chrome 없이 HTML 만 내고, package report 가 그 �
   const copied = await runBundle(cwd, ["package", "report", applicationDir, join(applicationDir, "review", "resume.html")], environment);
   expect({ exitCode: copied.exitCode, stderr: copied.stderr }).toEqual({ exitCode: 0, stderr: "" });
   const copy = copied.stdout.split("\n").find((line) => line.startsWith("리포트 사본: "))!.slice("리포트 사본: ".length);
-  expect(copy).toMatch(/reports\/\d{4}-\d{2}-\d{2}-resume-example-backend\.html$/);
+  expect(copy).toMatch(/reports\/\d{4}-\d{2}-\d{2}-resume-example--backend\.html$/);
   expect(existsSync(copy)).toBe(true);
   expect(copied.stdout).toContain("file_space_put");
 });

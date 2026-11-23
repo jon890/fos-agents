@@ -35,7 +35,7 @@ export type UsageSnapshot = z.infer<typeof snapshotSchema>;
 export type UsageSnapshotStore = {
   /** 기록된 달(`YYYY-MM`) 목록. */
   listMonths(): Promise<string[]>;
-  /** `replaceNote` 가 있을 때만 이미 있는 달을 바꾼다. */
+  /** `replaceNote` 가 있을 때만 이미 있는 달을 바꾼다. 사유는 그 달이 새로 생길 때도 함께 남긴다. */
   putMeasured(
     measurement: MonthlyMeasurement,
     measuredOn: string,
@@ -97,7 +97,7 @@ export function createUsageFileStore(filePath: string): UsageSnapshotStore {
         ...measurement,
         measuredOn,
         source: "MEASURED",
-        ...(existing >= 0 && note ? { note } : {}),
+        ...(note ? { note } : {}),
       });
       if (existing >= 0) snapshots[existing] = snapshot;
       else snapshots.push(snapshot);

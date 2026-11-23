@@ -246,6 +246,7 @@ npm test
 `application-form.json`은 fos-assistant Memory 에서 읽은 공통 프로필의 현재 스냅샷, 회사별 선택값, 첨부 파일과 서술형 질문을 구조화한다.
 `profileSource` 는 `fos-assistant-memory:identity/career-application-profile` 로 쓴다.
 이전에 만든 스냅샷을 다시 검증할 수 있게 schema 는 옛 값 `private-brain:career-application-profile` 도 받는다. 새로 쓰지 않는다.
+이 값은 출처를 가리키는 고정 문자열이고 기억을 찾는 키가 아니다. 기억은 제목으로 찾는다.
 서술형 문항이 없는 지원 건은 `questions`를 빈 배열로 둔다.
 
 #### `review/`
@@ -260,7 +261,7 @@ npm test
 
 `scripts/application-package/templates/` 가 검토 화면의 HTML 골격과 CSS 를 소유한다. `render_application_package.ts` 가 텍스트 import 로 읽는다.
 실행 코드는 `scripts/application-package/` 에 있고 plugin 로컬 실행기 `package` 가 이 코드를 부른다.
-화면 구성과 적합도 점수의 필드는 [`data-schema.md`](data-schema.md#application-package-writer)가 소유한다.
+화면 구성과 적합도 점수의 필드는 스킬 `plugin/agent-skills/application-package-writer/SKILL.md` 의 「산출물 계약」 이 소유한다.
 
 ## interview-practice
 

@@ -73,7 +73,12 @@ export async function collectUsage(deps: {
   replace?: { month: string; note: string };
 }): Promise<{ results: CollectResult[]; exitCode: 0 | 1 }> {
   const { store, measure, now, write, writeError, replace } = deps;
-  const missing = targetMonths(await store.listMonths(), now);
+  const recorded = await store.listMonths();
+  if (replace && recorded.length > 0 && recorded.every((month) => monthIndex(month) > monthIndex(replace.month))) {
+    // 가장 오래된 기록보다 앞의 달은 세션 기록이 일부만 남아 실제보다 작게 측정된다.
+    throw new CollectUsageArgumentError("--replace 는 가장 오래된 기록보다 앞의 달을 받지 않는다.");
+  }
+  const missing = targetMonths(recorded, now);
   const targets = replace ? [...new Set([...missing, replace.month])].sort() : missing;
   if (targets.length === 0) {
     write("- UP_TO_DATE");
@@ -112,6 +117,11 @@ function messageOf(error: unknown): string {
 }
 
 export class CollectUsageArgumentError extends Error {}
+
+/** `--merge` 로 받은 합계 파일을 측정 스크립트 인자로 바꾼다. */
+export function mergeScriptArguments(files: readonly string[]): string[] {
+  return files.flatMap((file) => ["--merge", file]);
+}
 
 /** 인자를 읽는다. 측정하기 전에 틀린 인자를 거절한다. */
 export function parseCollectArguments(
@@ -156,7 +166,7 @@ export async function main(args: readonly string[]): Promise<number> {
   }
   try {
     const store = createUsageFileStore(resolveUsageFilePath(process.env, os.homedir()));
-    const mergeArguments = parsed.merge.flatMap((file) => ["--merge", file]);
+    const mergeArguments = mergeScriptArguments(parsed.merge);
     const { exitCode } = await collectUsage({
       store,
       measure: () => measureUsage(() => runAgentUsageScript(mergeArguments)),
@@ -168,7 +178,7 @@ export async function main(args: readonly string[]): Promise<number> {
     return exitCode;
   } catch (error) {
     process.stderr.write(`${messageOf(error)}\n`);
-    return 1;
+    return error instanceof CollectUsageArgumentError ? 2 : 1;
   }
 }
 

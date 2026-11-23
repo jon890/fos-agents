@@ -21,7 +21,7 @@
 | `runs/<실행 폴더>/` | 한 번 실행의 중간 산출물. 이름은 `position-recommendation-*`, `study-topic-recommender.*` 다. 정리 명령이 지운다 |
 | `library/profiles/<wanted\|linkedin\|github>.md` | 프로필 원고의 원본. `career-connector` 스킬이 파일 도구로 읽고 고친다. 길이 제한과 버전, 승인 카드가 없다 |
 | `reports/<YYYY-MM-DD>-<position\|study>.html` | 완성한 리포트의 사본. 날짜는 서울 날짜다. 같은 날 다시 만들면 덮어쓴다 |
-| `reports/<YYYY-MM-DD>-<종류>-<회사>-<직무>.<html\|pdf>` | 지원 준비 결과의 사본. `package report` 가 만든다. 종류는 `application`(검토 화면), `resume`, `career-description`, `resume-review` 다. 에이전트가 이 파일을 「내 파일」 에 넣는다 |
+| `reports/<YYYY-MM-DD>-<종류>-<회사>--<직무>.<html\|pdf>` | 지원 준비 결과의 사본. `package report` 가 만든다. 종류는 `application`(검토 화면), `resume`, `career-description`, `resume-review` 다. 에이전트가 이 파일을 「내 파일」 에 넣는다 |
 | `applications/<회사>/<직무>/` | 공고별 지원 자료. `evidence/`(공고 원문, 적합도, 전략, 상태, 후보자 인터뷰, 면접 질문, 원고), `review/`(HTML, 검토표), 검토 화면과 제출 파일 |
 | `library/resume-logos/` | 이력서에 붙이는 회사와 학교 로고(아래 `resume-preparer` 절) |
 | `state/verified-claims/` | 다시 쓸 수 있다고 확인한 이력서 주장(아래 `resume-preparer` 절) |
@@ -1162,7 +1162,8 @@ HTTP 계약은 [`flow.md`](flow.md#프로필-http-계약)가 소유한다. 이�
 ```
 
 - 달마다 한 항목이고 달 오름차순이다. 같은 달이 두 번 있으면 읽기를 거절한다.
-- **그 달이 이미 있으면 수집기가 값을 바꾸지 않는다.** 세션 기록이 기기에서 지워진 뒤에는 그 달을 다시 셀 수 없다. 바꾸는 경로는 `--replace <YYYY-MM> --note <사유>` 뿐이고 사유가 선택 칸 `note` 에 남는다.
+- 읽고 고쳐 쓰는 사이에 잠금은 없다. 하루 한 번 도는 작업과 사람이 직접 돌리는 실행이 겹치지 않는다는 전제다.
+- **그 달이 이미 있으면 수집기가 값을 바꾸지 않는다.** 세션 기록이 기기에서 지워진 뒤에는 그 달을 다시 셀 수 없다. 바꾸는 경로는 `--replace <YYYY-MM> --note <사유>` 뿐이고 사유가 선택 칸 `note` 에 남는다. 가장 오래된 기록보다 앞의 달은 받지 않는다.
 - 끝나지 않은 달은 기록하지 않는다. 달 중간의 값이 그 달의 기록으로 굳는 것을 막는다.
 - 꼴이 다른 파일은 덮어쓰지 않고 실패한다. 쓸 때는 같은 디렉터리의 임시 파일에 쓰고 이름을 바꾼다.
 - Backend 에 있던 지난 달 기록은 옮기지 않았다. 파일은 수집기가 처음 돈 달부터 쌓인다.
@@ -1171,16 +1172,16 @@ HTTP 계약은 [`flow.md`](flow.md#프로필-http-계약)가 소유한다. 이�
 
 ### 수집기가 기록하는 사용량
 
-수집기는 `agent_usage.py --json` 의 `months` 배열 한 줄을 사용량 파일의 한 항목으로 쓴다. 아래 표의 오른쪽 이름은 Backend table 의 칸이고, 파일에서는 같은 뜻의 camelCase 칸(`claudeTokens`, `measuredOn`)이다.
+수집기는 `agent_usage.py --json` 의 `months` 배열 한 줄을 사용량 파일의 한 항목으로 쓴다.
 
-| `agent_usage.py --json` 의 값 | 사용량 기록의 칸 | 바꾸는 것 |
+| `agent_usage.py --json` 의 값 | 사용량 파일의 칸 | 바꾸는 것 |
 | --- | --- | --- |
-| `month` (`YYYY.MM`) | `month` | 점을 `-` 로 바꿔 `YYYY-MM` 으로 보낸다 |
-| `claude_tokens`, `codex_tokens` | `claude_tokens`, `codex_tokens` | 그대로다. 0 이상 정수다 |
-| `claude_cost`, `codex_cost` | `claude_cost_usd`, `codex_cost_usd` | 그대로다. 소수 둘째 자리까지의 달러다 |
+| `month` (`YYYY.MM`) | `month` | 점을 `-` 로 바꿔 `YYYY-MM` 으로 쓴다 |
+| `claude_tokens`, `codex_tokens` | `claudeTokens`, `codexTokens` | 그대로다. 0 이상 정수다 |
+| `claude_cost`, `codex_cost` | `claudeCostUsd`, `codexCostUsd` | 그대로다. 소수 둘째 자리까지의 달러다 |
 | `sessions` | `sessions` | 그대로다 |
-| `unpriced_tokens` | `unpriced_tokens` | 그대로다. 단가를 모르는 모델의 토큰이고 비용에 들어 있지 않다 |
-| 없음 | `measured_on` | 수집기가 돈 날의 `Asia/Seoul` 날짜다 |
+| `unpriced_tokens` | `unpricedTokens` | 그대로다. 단가를 모르는 모델의 토큰이고 비용에 들어 있지 않다 |
+| 없음 | `measuredOn` | 수집기가 돈 날의 `Asia/Seoul` 날짜다 |
 | 없음 | `source` | 언제나 `MEASURED` 다 |
 
 `unpriced_tokens` 는 달마다 낸다. 합계에만 있으면 한 달의 기록에 넣을 수 없다.

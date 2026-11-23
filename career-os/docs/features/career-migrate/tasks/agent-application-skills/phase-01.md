@@ -34,7 +34,7 @@
 ### 2. `career-os/scripts/resume-preparer/export_resume.ts`
 
 - `resolveChromeBin()` 이 후보 경로에서 찾지 못하면 빈 문자열을 돌려준다(종료하지 않는다). `--chrome-bin` 이나 `CHROME_BIN` 값이 있으면 그 값을 그대로 쓴다(지금 동작).
-- `main()`: `chromeBin` 이 비었으면 HTML 을 쓴 뒤 `HTML 이력서: <경로>`, `PDF 도구 없음: Chrome 을 찾지 못해 PDF 를 만들지 않았습니다. HTML 을 전달하세요.`, `외부 제출 자동화: 실행하지 않음` 을 내고 0 으로 끝난다. PDF 파일을 만들거나 지우지 않는다.
+- `main()`: `chromeBin` 이 비었으면 HTML 을 쓴 뒤 `HTML 이력서: <경로>`, `PDF 도구 없음: Chrome 을 찾지 못해 PDF 를 만들지 않았습니다. HTML 을 전달하세요.`, `외부 제출 자동화: 실행하지 않음` 을 내고 0 으로 끝난다. PDF 는 만들지 않는다. 앞 실행이 남긴 PDF 가 있으면 지금 HTML 과 내용이 달라 지우고 `이전 PDF 삭제:` 줄로 알린다.
 - 도움말의 `--chrome-bin` 설명에 「찾지 못하면 HTML 만 만든다」 를 더한다.
 
 ### 3. `career-os/scripts/application-package/cli.ts` 의 `package report`
@@ -43,7 +43,7 @@
 
 - `<file>` 은 지원 폴더 안의 `.html` 이나 `.pdf` 여야 하고, 지원 폴더는 `<root>/applications/<회사>/<직무>` 여야 한다. 아니면 사용법 오류(2)다. 파일이 없으면 1 이다.
 - 종류는 파일 이름으로 정한다: `application-package.html` → `application`, `resume.html`·`resume.pdf` → `resume`, `career-description.html`·`.pdf` → `career-description`, `resume-review.html` → `resume-review`. 그 밖의 이름은 거절한다.
-- `<root>/reports/<서울 날짜>-<종류>-<회사>-<직무>.<확장자>` 로 복사한다(같은 날 다시 만들면 덮어쓴다). 서울 날짜는 `career-os/scripts/lib/date-format.ts` 에 있는 함수를 쓰고, 없으면 `Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" })` 로 낸다.
+- `<root>/reports/<서울 날짜>-<종류>-<회사>--<직무>.<확장자>` 로 복사한다(같은 날 다시 만들면 덮어쓴다). 서울 날짜는 `career-os/scripts/lib/date-format.ts` 에 있는 함수를 쓰고, 없으면 `Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" })` 로 낸다.
 - stdout 에 `리포트 사본: <경로>` 와 `다음 단계: 이 파일을 file_space_put 으로 「내 파일」 에 넣는다` 두 줄을 낸다.
 - `root` 는 `resolveCareerStoreRoot(environment)` 다. `PACKAGE_USAGE` 에 줄을 더한다.
 

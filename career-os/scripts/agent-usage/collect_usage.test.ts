@@ -2,8 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { collectUsage, CollectUsageArgumentError, parseCollectArguments, targetMonths, type UsageSnapshotStore } from "./collect_usage.ts";
-import type { MonthlyMeasurement } from "./measure.ts";
+import { collectUsage, CollectUsageArgumentError, mergeScriptArguments, parseCollectArguments, targetMonths, type UsageSnapshotStore } from "./collect_usage.ts";
+import { agentUsageCommand, type MonthlyMeasurement } from "./measure.ts";
 import { createUsageFileStore } from "./usage_file.ts";
 
 const LINE = /^(\d{4}-\d{2}|-) [A-Z_]+$/;
@@ -223,6 +223,22 @@ describe("파일 저장소로 수집하기", () => {
       rmSync(directory, { recursive: true, force: true });
     }
   });
+});
+
+test("--merge 로 받은 파일이 측정 스크립트 명령의 인자로 넘어간다", () => {
+  const parsed = parseCollectArguments(["--merge", "a.json", "--merge", "b.json"], new Date("2026-03-15T00:00:00Z"));
+  expect(agentUsageCommand(mergeScriptArguments(parsed.merge))).toEqual(["python3", "-", "--json", "--merge", "a.json", "--merge", "b.json"]);
+  expect(agentUsageCommand()).toEqual(["python3", "-", "--json"]);
+});
+
+test("replace 로 가장 오래된 기록보다 앞의 달을 주면 측정하지 않고 거절한다", async () => {
+  const { store, puts } = fakeStore(["2026-02"]);
+  const { measure, state } = fakeMeasure([measurement("2026-01")]);
+  await expect(
+    collectUsage({ store, measure, now: new Date("2026-03-15T00:00:00Z"), write: () => {}, writeError: () => {}, replace: { month: "2026-01", note: "사유" } }),
+  ).rejects.toThrow(CollectUsageArgumentError);
+  expect(state.calls).toBe(0);
+  expect(puts).toHaveLength(0);
 });
 
 describe("parseCollectArguments", () => {

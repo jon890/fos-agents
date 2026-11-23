@@ -159,6 +159,8 @@ describe("resume exporter", () => {
     try {
       mkdirSync(join(directory, "evidence"), { recursive: true });
       writeFileSync(join(directory, "evidence", "resume-draft.md"), resume);
+      // 앞 실행이 남긴 PDF 다. 지금 HTML 과 다른 내용이라 남으면 안 된다.
+      writeFileSync(join(directory, "resume.pdf"), "이전 PDF");
       const result = Bun.spawnSync({
         cmd: [process.execPath, join(import.meta.dir, "export_resume.ts"), "--application-dir", directory, "--html-only"],
         stdout: "pipe",
@@ -166,6 +168,7 @@ describe("resume exporter", () => {
       });
       expect({ exitCode: result.exitCode, stderr: result.stderr.toString() }).toEqual({ exitCode: 0, stderr: "" });
       expect(result.stdout.toString()).toContain("PDF 도구 없음");
+      expect(result.stdout.toString()).toContain("이전 PDF 삭제");
       expect(existsSync(join(directory, "review", "resume.html"))).toBe(true);
       expect(existsSync(join(directory, "resume.pdf"))).toBe(false);
     } finally {

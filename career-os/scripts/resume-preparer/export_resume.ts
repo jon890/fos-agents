@@ -538,6 +538,11 @@ export function main(): void {
 
   writeHtml(opts.htmlPath, html);
   if (!opts.chromeBin) {
+    // 앞 실행이 만든 PDF 는 지금 HTML 과 내용이 다르다. 남겨 두면 옛 PDF 가 제출 파일로 쓰인다.
+    if (existsSync(opts.pdfPath)) {
+      rmSync(opts.pdfPath);
+      console.log(`이전 PDF 삭제: ${opts.pdfPath}`);
+    }
     console.log(`HTML 이력서: ${opts.htmlPath}`);
     console.log('PDF 도구 없음: Chrome 을 찾지 못해 PDF 를 만들지 않았습니다. HTML 을 전달하세요.');
     console.log('외부 제출 자동화: 실행하지 않음');

@@ -60,6 +60,13 @@ describe("createUsageFileStore", () => {
     ]);
   });
 
+  test("사유를 주고 없는 달을 쓰면 새로 만들고 사유를 함께 남긴다", async () => {
+    const file = usageFile();
+    const store = createUsageFileStore(file);
+    expect(await store.putMeasured(measurement("2026-02"), "2026-03-03", { replaceNote: "다른 기기 합계를 더했다" })).toEqual({ created: true, replaced: false });
+    expect(readUsageFile(file)[0]).toMatchObject({ month: "2026-02", note: "다른 기기 합계를 더했다" });
+  });
+
   test("깨진 JSON, 모르는 꼴, 겹친 달은 던지고 파일을 건드리지 않는다", async () => {
     for (const content of [
       "{",

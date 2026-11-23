@@ -99,14 +99,15 @@ PDF 는 실행 공간에 Chrome 이 있을 때만 만들어진다. 없으면 HTM
 
 ### 4. HTML과 PDF 검증
 
-[디자인 계약](references/resume-design.md)에 따라 HTML과 PDF를 만들고 실제 화면을 확인한다.
+[디자인 계약](references/resume-design.md)에 따라 HTML과 PDF를 만든다. 화면 확인은 아래 브라우저 도구 문장을 따른다.
 
 ```bash
 <CAREER_LOCAL> resume export --application-dir "${APPLICATION_DIR:?지원 디렉터리를 설정하세요}"
 <CAREER_LOCAL> resume check-html "${HTML_FILE:?HTML 경로를 설정하세요}"
 ```
 
-`resume export` 의 stdout 에 `PDF 도구 없음` 줄이 있으면 실행 공간에 Chrome 이 없어 HTML 만 만들어진 것이다. 실패가 아니다.
+`resume export` 의 stdout 에 `PDF 도구 없음` 줄이 있으면 실행 공간에 Chrome 이 없어 HTML 만 만들어진 것이다. 실패가 아니다. 앞 실행이 남긴 `resume.pdf` 는 이 명령이 지운다.
+PDF 는 이번 `resume export` 가 `PDF 도구 없음` 없이 끝났을 때만 제출 파일로 쓴다.
 이때는 HTML 을 제출 파일로 보고 5단계와 6단계를 하며, 7단계의 제출 묶음은 만들지 않는다.
 브라우저 도구가 있으면 화면 배치와 가로 넘침을 확인하고, 없으면 `check-html` 결과만 전하며 화면 배치는 확인하지 못했다고 최종 답에 적는다.
 
@@ -177,6 +178,6 @@ HTML 만 넣었으면 「PDF 는 실행 공간에 도구가 없어 만들지 못
 - `human-confirmation`이 `complete`다.
 - 모든 제출 문장이 근거 범위 안에 있다.
 - 인사담당자와 실무담당자 관점의 검토를 통과했다.
-- HTML과 PDF에 겹침, 잘림, 깨진 링크와 페이지 넘침이 없다.
+- 만든 제출 파일(PDF, 없으면 HTML)에 겹침, 잘림, 깨진 링크와 페이지 넘침이 없다. 브라우저 도구가 없어 화면을 확인하지 못했으면 그렇게 알렸다.
 - PDF 가 있으면 제출 묶음 검증이 통과했다. 없으면 PDF 를 만들지 못했다고 알렸다.
 - 결과 파일을 「내 파일」 에 넣었다.

@@ -679,7 +679,7 @@ flowchart TD
     H -->|있다| I[요청 값으로 바꾼다. created false]
 ```
 
-수집기는 `replace` 를 보내지 않는다. 그래서 같은 달을 뒤늦게 다시 측정해 올려도 처음 값이 남는다.
+이 계약을 부르던 수집기는 지금 파일에 쓴다(아래 「사용량 수집」).
 `replace` 는 사람이 잘못 들어간 기록을 고칠 때만 `scripts/profile/manage_profile.ts usage put --replace --note` 로 보낸다.
 이유는 [ADR-133](adr/ADR-133-프로필-원고와-에이전트-사용량-기록은-backend의-profile-모듈이-갖는다.md)을 따른다.
 
