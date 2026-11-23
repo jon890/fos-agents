@@ -186,6 +186,46 @@ describe("DART와 Blind 근거", () => {
     expect(findDartCorpCode(list, "겹치는이름")).toBe("00444444");
     expect(findDartCorpCode(list, "없는회사")).toBeNull();
     expect(findDartCorpCode(list, "예시")).toBeNull();
+    const blank = readDartCorpCodeList(
+      storedZip(
+        `<result><list><corp_code> </corp_code><corp_name>번호없음</corp_name></list></result>`,
+      ),
+    );
+    expect(findDartCorpCode(blank, "번호없음")).toBeNull();
+  });
+
+  test("회사 목록을 받지 못한 것도 한 실행에서 한 번만 시도한다", async () => {
+    for (const [respond, diagnostic] of [
+      [async () => new Response("", { status: 503 }), "dart: 회사 목록 HTTP 503"],
+      [
+        async () => {
+          throw new Error("연결 실패");
+        },
+        "dart: 수집 실패",
+      ],
+    ] as const) {
+      let listCalls = 0;
+      const fetcher: EvidenceFetcher = async (request) => {
+        if (!String(request).includes("corpCode.xml")) return dartFetcher(request);
+        listCalls++;
+        return respond();
+      };
+      const runCache = new Map<string, unknown>();
+      for (const companyName of ["예시", "다른예시"]) {
+        const base = input(fetcher);
+        const result = await collectCompanyEvidence(
+          {
+            ...base,
+            companyName,
+            preference: { ...base.preference!, dartCorpCode: null },
+            runCache,
+          },
+          [dartCollector],
+        );
+        expect(result.diagnostics).toEqual([diagnostic]);
+      }
+      expect(listCalls).toBe(1);
+    }
   });
 
   test("한 실행에서 회사 목록 ZIP은 한 번만 받는다", async () => {

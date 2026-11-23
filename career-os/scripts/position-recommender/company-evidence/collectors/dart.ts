@@ -76,7 +76,11 @@ function fieldOf(block: string, tag: string): string {
   return close < 0 ? "" : decodeXmlText(block.slice(open + tag.length + 2, close));
 }
 
-/** 이름이 XML 본문에 적히는 꼴이다. `&` 는 `&amp;` 로 적힌다. 따옴표는 그대로 적힐 수도, 바뀌어 적힐 수도 있다. */
+/**
+ * 이름이 XML 본문에 적히는 꼴이다. `&` 는 `&amp;` 로 적힌다. 따옴표는 그대로 적힐 수도, 바뀌어 적힐 수도 있다.
+ * 한계: 한 이름 안에서 두 표기를 섞었거나 숫자 참조(`&#39;`)나 CDATA 로 적은 이름은 찾지 못한다.
+ * 그런 회사는 「회사 고유번호를 확정하지 못함」 으로 남는다.
+ */
 function xmlSpellings(name: string): Buffer[] {
   const escaped = name.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
   const quoted = escaped.replaceAll('"', "&quot;").replaceAll("'", "&apos;");
@@ -119,9 +123,10 @@ export function readDartCorpCodeList(zip: Buffer): DartCorpCodeList {
 
 export function findDartCorpCode(list: DartCorpCodeList, companyName: string): string | null {
   const matching = matchingCorpRows(list.xml, companyName);
-  if (matching.length === 1) return matching[0]!.corp_code!.padStart(8, "0");
   const listed = matching.filter((row) => /^\d{6}$/.test(row.stock_code ?? ""));
-  return listed.length === 1 ? listed[0]!.corp_code!.padStart(8, "0") : null;
+  const chosen = matching.length === 1 ? matching[0] : listed.length === 1 ? listed[0] : undefined;
+  // 고유번호 칸이 비었으면 0 으로 채운 번호를 지어내지 않는다.
+  return chosen?.corp_code ? chosen.corp_code.padStart(8, "0") : null;
 }
 
 async function getDartJson(
@@ -192,6 +197,25 @@ function financialEvidence(
 
 const CORP_CODE_LIST_CACHE = "dart:corp-code-list";
 
+/** 회사 목록을 받은 결과다. `diagnostic` 은 HTTP 오류, `failed` 는 요청이나 ZIP 읽기가 던진 경우다. */
+type CorpCodeListResult = { list: DartCorpCodeList } | { diagnostic: string } | { failed: true };
+
+async function loadCorpCodeList(
+  fetcher: EvidenceFetcher,
+  key: string,
+): Promise<CorpCodeListResult> {
+  try {
+    const response = await fetcher(
+      `https://opendart.fss.or.kr/api/corpCode.xml?crtfc_key=${encodeURIComponent(key)}`,
+    );
+    if (!response.ok) return { diagnostic: `dart: 회사 목록 HTTP ${response.status}` };
+    return { list: readDartCorpCodeList(Buffer.from(await response.arrayBuffer())) };
+  } catch {
+    // 오류 원문에는 인증키가 든 URL 이 있을 수 있어 남기지 않는다.
+    return { failed: true };
+  }
+}
+
 export const dartCollector: CompanyEvidenceCollector = {
   name: "dart",
   sourceTypes: ["dart-employment", "dart-financial"],
@@ -202,17 +226,15 @@ export const dartCollector: CompanyEvidenceCollector = {
     let corpCode = input.preference?.dartCorpCode;
     if (!corpCode) {
       // 회사 목록은 실행마다 한 번만 받는다. 회사마다 받으면 수십 MB 를 되풀이해 푼다.
-      let list = input.runCache?.get(CORP_CODE_LIST_CACHE) as DartCorpCodeList | undefined;
-      if (!list) {
-        const response = await input.fetcher(
-          `https://opendart.fss.or.kr/api/corpCode.xml?crtfc_key=${encodeURIComponent(key)}`,
-        );
-        if (!response.ok)
-          return { evidence: [], diagnostics: [`dart: 회사 목록 HTTP ${response.status}`] };
-        list = readDartCorpCodeList(Buffer.from(await response.arrayBuffer()));
-        input.runCache?.set(CORP_CODE_LIST_CACHE, list);
+      // 받지 못한 것도 기억한다. 실패한 요청을 회사마다 되풀이하지 않는다.
+      let loaded = input.runCache?.get(CORP_CODE_LIST_CACHE) as CorpCodeListResult | undefined;
+      if (!loaded) {
+        loaded = await loadCorpCodeList(input.fetcher, key);
+        input.runCache?.set(CORP_CODE_LIST_CACHE, loaded);
       }
-      corpCode = findDartCorpCode(list, input.companyName);
+      if ("failed" in loaded) throw new Error("DART 회사 목록을 받지 못했습니다.");
+      if ("diagnostic" in loaded) return { evidence: [], diagnostics: [loaded.diagnostic] };
+      corpCode = findDartCorpCode(loaded.list, input.companyName);
       if (!corpCode) return { evidence: [], diagnostics: ["dart: 회사 고유번호를 확정하지 못함"] };
       await input.persistDartCorpCode?.(input.companyKey, corpCode);
     }
