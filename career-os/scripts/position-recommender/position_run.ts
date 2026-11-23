@@ -406,7 +406,11 @@ export async function runPositionCommand(
   );
   for (const warning of result.collectionWarnings) writeLine(warning);
   writeLine(`산출물: ${basename(paths.recommendation)}, ${basename(paths.report)}`);
-  if (operations.saveReport) writeLine(`리포트 사본: ${operations.saveReport(paths)}`);
+  if (operations.saveReport) {
+    const reportCopy = operations.saveReport(paths);
+    writeLine(`리포트 사본: ${reportCopy}`);
+    writeLine(`다음 단계: file_space_put 으로 ${reportCopy} 를 「내 파일」 에 넣는다. 넣은 이름이나 넣지 못한 이유를 최종 답변의 「내 파일」 줄에 적는다`);
+  }
   return 0;
 }
 
