@@ -179,6 +179,21 @@ test("맥락 문서를 쓰는 비서용 스킬은 기억에서 읽고, 같은 �
   }
 });
 
+test("공고 추천 스킬은 description 앞에 요청 문구를 두고, 앞쪽 순서 절과 웹 검색 금지 줄을 갖는다", () => {
+  // 실측(2026-11-23): 비서가 스킬을 다 읽고도 `collect` 를 건너뛰고 웹 검색으로 공고를 찾았다.
+  // 비서의 스킬 목록은 description 을 약 50자에서 자른다.
+  const skill = readFileSync(join(agentRoot, "position-recommender", "SKILL.md"), "utf8");
+  const description = frontMatter(skill).match(/^description: (.+)$/m)?.[1] ?? "";
+  expect(description.slice(0, 50)).toMatch(/공고 추천|포지션 추천|채용공고/);
+  const sections = [...skill.matchAll(/^## (.+)$/gm)].map((match) => match[1]);
+  expect(sections.slice(0, 2)).toEqual(["실행 환경", "순서"]);
+  const order = skill.slice(skill.indexOf("## 순서"), skill.indexOf("\n## ", skill.indexOf("## 순서") + 1));
+  const steps = ["collect", "finalize", "file_space_put"].map((word) => order.indexOf(word));
+  expect(steps.every((index) => index >= 0)).toBe(true);
+  expect([...steps].sort((left, right) => left - right)).toEqual(steps);
+  expect(order.split("\n").some((line) => line.includes("web_search") && line.includes("않"))).toBe(true);
+});
+
 // 번들한 실행기에 직접 묻는다. `scripts/` 를 import 하면 plugin 의 타입 검사가 실행기 전체를 읽는다.
 function runLocal(args: string[]): string {
   const result = Bun.spawnSync(["bun", "--no-env-file", join(pluginRoot, "dist", "career-local.js"), ...args], {
