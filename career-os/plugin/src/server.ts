@@ -24,7 +24,7 @@ export function createServer(
   const endpoint = browserEndpoint(env);
   const wanted = new WantedTools(endpoint ? relayBrowser(endpoint) : undefined);
   const tools = new CareerTools(github, wanted);
-  const server = new McpServer({ name: "fos-career", version: "0.13.1" });
+  const server = new McpServer({ name: "fos-career", version: "0.13.2" });
   for (const [name, definition] of Object.entries(toolDefinitions)) {
     server.registerTool(
       name,

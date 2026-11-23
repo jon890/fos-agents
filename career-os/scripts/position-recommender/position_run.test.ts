@@ -292,6 +292,7 @@ function operations(overrides: Partial<PositionRunOperations> = {}): PositionRun
 test("collect는 후보자 맥락 확인이 실패하면 이유를 알리고 수집하지 않은 채 1로 끝난다", async () => {
   const directory = workspace();
   const lines: string[] = [];
+  const errors: string[] = [];
   let collected = false;
 
   const exitCode = await runPositionCommand(["collect", "--run", directory], {
@@ -305,11 +306,14 @@ test("collect는 후보자 맥락 확인이 실패하면 이유를 알리고 수
       },
     }),
     writeLine: (line) => lines.push(line),
+    writeError: (line) => errors.push(line),
   });
 
   expect(exitCode).toBe(1);
   expect(collected).toBe(false);
-  expect(lines.join("\n")).toContain("후보자 맥락 문서가 없다: position-preferences");
+  // 스킬은 실패를 표준 오류 첫 줄로 전한다. 이유가 표준 출력으로만 나오면 어느 문서가 없는지 전하지 못한다.
+  expect(errors).toEqual(["수집 전 확인 실패: 후보자 맥락 문서가 없다: position-preferences"]);
+  expect(lines.join("\n")).not.toContain("후보자 맥락 문서가 없다");
   expect(existsSync(runDirectoryPaths(directory).analysisUpdates)).toBe(false);
 });
 
@@ -793,4 +797,27 @@ test("네 하위 명령의 stdout은 회사명과 공고 본문을 내지 않는
 
   expect(lines.join("\n")).not.toContain(secret);
   expect(readFileSync(paths.analysisQueue, "utf8")).toContain(secret);
+});
+
+test("앞 단계가 만든 큐가 없으면 직접 만들라고 하지 않고 collect 부터 다시 하라고 알린다", async () => {
+  // 실측(2026-11-23): collect 가 죽은 뒤 finalize 를 불렀고, 큐를 「작성한 뒤 다시 실행」 하라는 문구가 나왔다.
+  const directory = workspace();
+  writeJson(join(directory, "company-tier-updates.json"), {});
+  writeJson(join(directory, "analysis-updates.json"), {});
+  for (const command of ["commit-company-tiers", "commit-analyses", "finalize"]) {
+    const failure = await runPositionCommand([command, "--run", directory]).catch((error) => error);
+    expect(failure, command).toBeInstanceOf(Error);
+    expect((failure as Error).message, command).toContain(
+      "이 파일을 직접 만들지 말고 collect 부터 다시 실행하세요.",
+    );
+    expect((failure as Error).message, command).not.toContain("작성한 뒤");
+  }
+  // 회사 판정 큐가 남아 있으면 수집은 끝난 것이다. 수집을 다시 하라고 하지 않는다.
+  writeJson(join(directory, "company-tier-queue.json"), {});
+  const failure = await runPositionCommand(["finalize", "--run", directory]).catch(
+    (error) => error,
+  );
+  expect((failure as Error).message).toContain(
+    "이 파일을 직접 만들지 말고 commit-company-tiers 를 다시 실행하세요.",
+  );
 });
