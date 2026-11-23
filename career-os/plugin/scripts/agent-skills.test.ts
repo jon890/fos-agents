@@ -176,7 +176,43 @@ test("맥락 문서를 쓰는 비서용 스킬은 기억에서 읽고, 같은 �
     expect(skill, name).toContain("memory_search");
     expect(skill, name).toContain("memory_read");
     expect(skill, name).toContain("같은 제목의 기억이 둘 이상이면");
+    // 실측(2026-11-23): 맥락 문서가 없자 비서가 제목이 다른 기억으로 대신했다.
+    expect(skill, name).toContain("제목이 정확히 같은 기억만 맥락 문서다.");
   }
+});
+
+test("맥락 문서가 없으면 실행기를 부르지 않고, 문서를 만드는 스킬을 안내한다", () => {
+  const connector = readFileSync(join(agentRoot, "career-connector", "SKILL.md"), "utf8");
+  expect(connector).toContain("## 맥락 문서 읽고 고치기");
+  for (const name of ["position-recommender", "study-collection", "interview-practice"]) {
+    const skill = readFileSync(join(agentRoot, name, "SKILL.md"), "utf8");
+    const line = skill.split("\n").find((text) => text.includes("없으면 실행기를 부르지 않"));
+    expect(line, name).toContain("`career-connector` 스킬의 「맥락 문서 읽고 고치기」");
+    expect(line, name).toContain("끝낸다");
+  }
+});
+
+test("실행기가 실패하면 웹 검색이나 직접 만든 결과로 대신하지 않는다", () => {
+  // 실측(2026-11-23): `collect` 가 죽은 뒤 `finalize` 를 부르고, 그것도 실패하자 웹 검색으로 공고를 찾았다.
+  for (const name of agentSkillNames) {
+    const skill = readFileSync(join(agentRoot, name, "SKILL.md"), "utf8");
+    const line = skill.split("\n").find((text) => text.includes("실행기") && text.includes("실패하면") && text.includes("대신하지 않"));
+    expect(line, name).toBeDefined();
+  }
+  const position = readFileSync(join(agentRoot, "position-recommender", "SKILL.md"), "utf8");
+  const rule = position.split("\n").find((text) => text.includes("대신하지 않") && text.includes("실행기 명령"))!;
+  for (const command of ["collect", "commit-company-tiers", "commit-analyses", "finalize"]) expect(rule).toContain(`\`${command}\``);
+  const failures = readFileSync(join(agentRoot, "position-recommender", "references", "failures.md"), "utf8");
+  expect(failures).toContain("## 실행기 실패");
+  expect(failures).toContain("`collect` 가 실패했는데 `finalize` 를 부르지 않는다.");
+  const interview = readFileSync(join(agentRoot, "interview-practice", "SKILL.md"), "utf8");
+  expect(interview).toContain("실행기 없이 질문을 지어내거나");
+});
+
+test("비서용 스킬은 스킬 파일을 고치지 않는다고 적는다", () => {
+  // 실측(2026-11-23): 비서가 절차가 막히자 스킬 편집 도구로 스킬을 고치려 했다.
+  for (const directory of agentSkillDirs)
+    expect(readFileSync(join(directory, "SKILL.md"), "utf8"), directory).toContain("스킬 파일은 고치지 않는다.");
 });
 
 test("공고 추천 스킬은 description 앞에 요청 문구를 두고, 앞쪽 순서 절과 웹 검색 금지 줄을 갖는다", () => {
