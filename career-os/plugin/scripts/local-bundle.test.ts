@@ -39,12 +39,12 @@ test("help 는 0 으로 끝난다", async () => {
   expect(result.stdout).toContain("interview");
 });
 
-test("workspace paths 는 설정한 작업본 위치와 로컬 모드를 낸다", async () => {
+test("workspace paths 는 설정한 작업 폴더와 프로젝트 근거 위치만 낸다", async () => {
   const cwd = temporaryDirectory();
   const root = join(cwd, "workspace");
   const result = await runBundle(cwd, ["workspace", "paths", "--json"], { CAREER_WORKSPACE_ROOT: root });
   expect(result.exitCode).toBe(0);
-  expect(JSON.parse(result.stdout)).toMatchObject({ action: "paths", ok: true, root, mode: "local", evidenceDir: join(root, "evidence") });
+  expect(JSON.parse(result.stdout)).toEqual({ schemaVersion: 1, action: "paths", ok: true, root, evidenceDir: join(root, "evidence") });
 });
 
 test("workspace paths 는 CAREER_EVIDENCE_DIR 를 프로젝트 근거 위치로 낸다", async () => {
@@ -61,12 +61,12 @@ test("position --help 는 0 으로 끝나고 하위 명령을 보여 준다", as
   expect(result.stdout).toContain("commit-company-tiers");
 });
 
-test("cwd 의 .env 는 작업본 위치와 모드를 바꾸지 않는다", async () => {
+test("cwd 의 .env 는 작업 폴더 위치를 바꾸지 않는다", async () => {
   const cwd = temporaryDirectory();
   writeFileSync(join(cwd, ".env"), "CAREER_WORKSPACE_ROOT=/elsewhere\nCAREER_WORKSPACE_SSH_TARGET=example\n");
   const result = await runBundle(cwd, ["workspace", "paths", "--json"]);
   expect(result.exitCode).toBe(0);
-  expect(JSON.parse(result.stdout)).toMatchObject({ root: "/workspace/career", mode: "local" });
+  expect(JSON.parse(result.stdout)).toMatchObject({ root: "/workspace/career" });
 });
 
 test("interview 는 Backend 값 없이 번들에 든 공개 질문 은행과 작업 폴더의 SQLite 로 돌고, 실행을 나눠도 기록이 이어진다", async () => {
@@ -277,15 +277,16 @@ test("package check-sources 는 CAREER_EVIDENCE_DIR 가 없으면 unavailable �
   expect(output.sources[0]?.detail).toContain("CAREER_EVIDENCE_DIR");
 });
 
-test("application-profile get 은 연결값이 없으면 1 로 끝나고 token 을 출력하지 않는다", async () => {
+test("지운 작업본 동기화와 공통 프로필 실행기는 번들에 없다", async () => {
   const cwd = temporaryDirectory();
-  const result = await runBundle(cwd, ["application-profile", "get", "--out", join(cwd, "profile.md")], {
-    FOS_ASSISTANT_SERVICE_TOKEN: FAKE_TOKEN,
-  });
-  expect(result.exitCode).toBe(1);
-  expect(result.stderr).toContain("FOS_ASSISTANT_URL");
-  expect(result.stdout).not.toContain(FAKE_TOKEN);
-  expect(result.stderr).not.toContain(FAKE_TOKEN);
+  for (const args of [["workspace", "begin", "resume-preparer", "--json"], ["application-profile", "get", "--out", join(cwd, "profile.md")], ["usage"]]) {
+    const result = await runBundle(cwd, args, { CAREER_WORKSPACE_SSH_TARGET: "example", FOS_ASSISTANT_SERVICE_TOKEN: FAKE_TOKEN });
+    expect({ args, exitCode: result.exitCode }).toEqual({ args, exitCode: 2 });
+    expect(result.stdout + result.stderr).not.toContain(FAKE_TOKEN);
+  }
+  const source = readFileSync(bundle, "utf8");
+  for (const removed of ["CAREER_WORKSPACE_SSH_TARGET", "FOS_ASSISTANT_SERVICE_TOKEN", "WORKSPACE_DIRTY"])
+    expect({ removed, hit: source.includes(removed) }).toEqual({ removed, hit: false });
 });
 
 test("공고·공부 실행기는 Backend 값 없이 작업 폴더의 SQLite 를 만들어 쓴다", async () => {

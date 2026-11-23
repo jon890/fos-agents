@@ -8,5 +8,4 @@ export const PLUGIN_LOCAL_EXECUTORS = [
   "position",
   "resume",
   "package",
-  "application-profile",
 ] as const;

@@ -12,11 +12,10 @@
 `career-os`를 구현하거나 검증하는 역할은 아래를 지킨다.
 공용 role 문서가 정한 테스트 기준, 중단 조건과 회신 형식은 그대로 따르고 여기서 다시 정하지 않는다.
 
-- `career-os/applications/`, `career-os/library/`와 `career-os/state/`는 홈서버와 동기화되는 비공개 작업본이다. 이 셋 안의 파일을 읽거나 고치기 전에 `career-os/docs/flow.md`의 「skill이 실행하는 명령」을 실행하고, 마친 뒤 같은 skill 이름으로 완료 단계를 실행한다.
-- 동기화를 건너뛰고 고치면 홈서버 판과 어긋나 다음 실행이 `WORKSPACE_DIRTY`로 막힌다. begin이 실패하면 기존 로컬 파일로 작업을 계속하지 않는다.
+- 지원 자료(`applications/`, `library/`, `state/`)는 커리어 에이전트의 작업 폴더에만 있다. 저장소에 두지 않고, 테스트는 임시 폴더와 꾸며 낸 자료로 돌린다.
 - `career-os/sources/fos-study/`는 별도 공개 저장소이므로 수정하지 않는다. 그 안에 민감 정보나 내부 정보가 들어가면 검증에서 실패로 판정한다.
 - 비공개 작업 자료의 디렉터리 경계는 `career-os/docs/data-schema.md`가 소유한다. 경로 목록을 다른 문서에 복제하지 않는다.
-- 저장소에 남은 스킬은 `bun test ./career-os/scripts` 가, plugin 스킬은 `bun test ./career-os/plugin` 이 검증한다.
+- 실행기는 `bun test ./career-os/scripts` 가, 비서용 스킬과 번들은 `bun test ./career-os/plugin` 이 검증한다.
 
 ## 검증과 책임
 

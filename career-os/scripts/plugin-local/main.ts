@@ -1,11 +1,9 @@
 #!/usr/bin/env bun
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { makeRemoteError, TransportError } from "../career-workspace/transport.ts";
 import { createInterviewStore, runDrillCli } from "../interview-drill/drill-engine.ts";
 import { runInterviewQuestionSources } from "../interview-question-sources/cli.ts";
 import { runPackageCommand } from "../application-package/cli.ts";
-import { formatReadApplicationProfileError, readApplicationProfileCli } from "../application-profile/read_application_profile.ts";
 import { PositionRunUsageError, positionRunHelp, runPositionCommand } from "../position-recommender/position_run.ts";
 import { careerStoreFailureLine } from "../lib/career-store/errors.ts";
 import { UsageError } from "../lib/cli.ts";
@@ -22,12 +20,12 @@ import { main as searchVerifiedClaims } from "../resume-preparer/search_verified
 import { main as validateClaimLedger } from "../resume-preparer/validate_claim_ledger.ts";
 import { main as validateSubmissionBundle } from "../resume-preparer/validate_submission_bundle.ts";
 import { PLUGIN_LOCAL_EXECUTORS } from "./executors.ts";
-import { resolvePluginWorkspace, runPluginWorkspace } from "./workspace.ts";
+import { resolvePluginWorkspace, runPluginWorkspace, WORKSPACE_USAGE } from "./workspace.ts";
 
 type Executor = (typeof PLUGIN_LOCAL_EXECUTORS)[number];
 
 const descriptions: Record<Executor, string> = {
-  workspace: "작업본 위치를 알려 주고 스킬 세션을 열고 닫는다 (paths | begin <skill> | finish <skill>) --json",
+  workspace: "작업 폴더와 프로젝트 근거 위치를 알려 준다 (paths) --json",
   interview: "작업 폴더의 복습 상태로 면접 질문을 고르고 연습 결과와 개인 질문을 기록한다 (select | progress | record | personal list | personal add | personal disable)",
   "interview-sources": "면접 질문 출처를 검증하거나 후보를 모은다",
   study: "아침 공부 주제를 수집, 선별하고 리포트를 만든다",
@@ -36,12 +34,11 @@ const descriptions: Record<Executor, string> = {
   position: "공고를 모아 판정과 분석을 반영하고 리포트를 만든다 (collect | commit-company-tiers | commit-analyses | finalize | cleanup) --run <dir>. 설정은 configure-policy | configure-companies | exclusions",
   resume: "이력서 HTML·PDF 변환, 주장 원장과 검증 완료 주장, 제출 묶음을 다룬다 (export | check-html | validate-ledger | assess-reuse | search-claims | promote-claims | build-bundle | validate-bundle)",
   package: "지원 패키지의 근거 원본, 제출 문서, 검토 화면, 면접 질문 파일을 다루고 결과 사본을 reports/ 에 만든다 (check-sources | validate | render | question-schema | report)",
-  "application-profile": "지원서 공통 프로필을 저장소 밖 파일에 쓴다 (get --out <path>)",
 };
 
 /**
  * resume 하위 명령과 원본 진입점이다. 원본은 process.argv 를 읽고 process.exit 으로 끝난다.
- * defaults 는 사용자가 그 옵션을 주지 않았을 때만 작업본 root 기준으로 붙인다.
+ * defaults 는 사용자가 그 옵션을 주지 않았을 때만 작업 폴더 root 기준으로 붙인다.
  */
 const RESUME_COMMANDS: Record<string, { run: () => unknown; defaults?: Record<string, string> }> = {
   export: { run: exportResume, defaults: { "--logo-dir": "library/resume-logos" } },
@@ -142,20 +139,6 @@ export async function runPluginLocal(argv: string[]): Promise<number> {
       return runResume(rest);
     case "package":
       return runPackageCommand(rest, process.env);
-    case "application-profile":
-      return runApplicationProfile(rest);
-  }
-}
-
-// read_application_profile.ts 의 메인 블록과 같은 출력을 낸다. 오류 출력에는 응답 본문과 토큰을 싣지 않는다.
-async function runApplicationProfile(args: string[]): Promise<number> {
-  try {
-    const result = await readApplicationProfileCli(args);
-    console.log(typeof result === "string" ? result : JSON.stringify(result, null, 2));
-    return 0;
-  } catch (error) {
-    console.error(formatReadApplicationProfileError(error));
-    return 1;
   }
 }
 
@@ -192,15 +175,14 @@ async function runPosition(args: string[]): Promise<number> {
   }
 }
 
-async function runWorkspace(args: string[]): Promise<number> {
+function runWorkspace(args: string[]): number {
   try {
-    const result = await runPluginWorkspace(args);
-    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify(runPluginWorkspace(args), null, 2)}\n`);
     return 0;
   } catch (error) {
-    const result = error instanceof TransportError ? error.result : makeRemoteError("check", "TRANSPORT_UNAVAILABLE");
-    process.stderr.write(`${JSON.stringify(result)}\n`);
-    return 1;
+    if (!(error instanceof UsageError)) throw error;
+    console.error(WORKSPACE_USAGE);
+    return 2;
   }
 }
 

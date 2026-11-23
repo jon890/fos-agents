@@ -15,7 +15,7 @@ function secretFile(mode: number, content = `${secret}\n`): string {
   return file;
 }
 
-function failure(environment: Record<string, string>, prefix: "CAREER_BACKEND" | "FOS_ASSISTANT" = "CAREER_BACKEND"): string {
+function failure(environment: Record<string, string>, prefix: "CAREER_BACKEND" = "CAREER_BACKEND"): string {
   try {
     resolveAccessCredentials(environment, prefix);
   } catch (error) {
@@ -30,11 +30,11 @@ describe("resolveAccessCredentials", () => {
     expect(accessHeaders(undefined)).toEqual({});
   });
 
-  test("접두사별로 ID 와 secret 을 읽어 머리말을 만든다", () => {
-    const env = { FOS_ASSISTANT_ACCESS_CLIENT_ID: ` ${id} `, FOS_ASSISTANT_ACCESS_CLIENT_SECRET: secret };
-    const access = resolveAccessCredentials(env, "FOS_ASSISTANT");
+  test("접두사가 붙은 ID 와 secret 을 읽어 머리말을 만들고 다른 접두사의 값은 읽지 않는다", () => {
+    const env = { CAREER_BACKEND_ACCESS_CLIENT_ID: ` ${id} `, CAREER_BACKEND_ACCESS_CLIENT_SECRET: secret };
+    const access = resolveAccessCredentials(env, "CAREER_BACKEND");
     expect(accessHeaders(access)).toEqual({ "CF-Access-Client-Id": id, "CF-Access-Client-Secret": secret });
-    expect(resolveAccessCredentials(env, "CAREER_BACKEND")).toBeUndefined();
+    expect(resolveAccessCredentials({ OTHER_ACCESS_CLIENT_ID: id, OTHER_ACCESS_CLIENT_SECRET: secret }, "CAREER_BACKEND")).toBeUndefined();
   });
 
   test("secret 파일은 0600 일 때 읽고 trim 한다", () => {
