@@ -69,42 +69,54 @@ test("cwd 의 .env 는 작업본 위치와 모드를 바꾸지 않는다", async
   expect(JSON.parse(result.stdout)).toMatchObject({ root: join(cwd, ".fos-career", "workspace"), mode: "local" });
 });
 
-test("interview select 는 번들에 든 공개 질문 은행에서 고른다", async () => {
-  const requests: string[] = [];
-  const server = Bun.serve({
-    port: 0,
-    fetch(request) {
-      const url = new URL(request.url);
-      requests.push(`${request.method} ${url.pathname}${url.search}`);
-      if (request.method === "GET" && url.searchParams.get("drillType") === "tech" && (
-        url.pathname === "/api/interview/v1/progress" || url.pathname === "/api/interview/v1/personal-questions"
-      )) {
-        return Response.json({ items: [] });
-      }
-      return new Response("not found", { status: 404 });
-    },
+test("interview 는 Backend 값 없이 번들에 든 공개 질문 은행과 작업 폴더의 SQLite 로 돌고, 실행을 나눠도 기록이 이어진다", async () => {
+  const home = temporaryDirectory();
+  const environment = { CAREER_WORKSPACE_ROOT: join(home, "workspace") };
+
+  const selected = await runBundle(home, ["interview", "select", "tech", "--count", "3"], environment);
+  expect({ exitCode: selected.exitCode, stderr: selected.stderr }).toEqual({ exitCode: 0, stderr: "" });
+  const first = JSON.parse(selected.stdout) as { questions: Array<{ id: string; topic: string; question: string; sourceScope?: string }> };
+  expect(first.questions).toHaveLength(3);
+  for (const question of first.questions) expect([undefined, "public"]).toContain(question.sourceScope);
+
+  // 따옴표와 줄바꿈이 든 기록을 JSON 파일로 넘긴다.
+  const picked = first.questions[0]!;
+  const attempt = join(home, "attempt.json");
+  writeJson(attempt, { drillType: "tech", questionId: picked.id, topic: picked.topic, question: picked.question, score: "fail", feedback: '"핵심"이 빠졌다\n다시 본다' });
+  const recorded = await runBundle(home, ["interview", "record", "--input", attempt], environment);
+  expect({ exitCode: recorded.exitCode, stderr: recorded.stderr }).toEqual({ exitCode: 0, stderr: "" });
+  const personal = join(home, "personal.json");
+  writeJson(personal, {
+    drillType: "tech", id: "personal-bundle-1", topic: "bundle-personal", category: "database", difficulty: "basic",
+    question: "개인 질문입니다.", intent: "의도를 확인합니다.", answerSignals: ["신호"],
   });
+  expect((await runBundle(home, ["interview", "personal", "add", "--file", personal], environment)).exitCode).toBe(0);
+
+  // 새 프로세스가 앞 실행의 복습 상태와 개인 질문을 읽는다.
+  const progress = JSON.parse((await runBundle(home, ["interview", "progress", "tech"], environment)).stdout) as {
+    items: Array<{ topic: string; failCount: number; nextReviewDate: string | null }>;
+  };
+  expect(progress.items).toEqual([expect.objectContaining({ topic: picked.topic, failCount: 1 })]);
+  expect(progress.items[0]!.nextReviewDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  const listed = JSON.parse((await runBundle(home, ["interview", "personal", "list", "tech"], environment)).stdout) as { items: Array<{ id: string }> };
+  expect(listed.items.map((item) => item.id)).toEqual(["personal-bundle-1"]);
+});
+
+test("interview 는 Backend 주소와 token 을 받아도 요청을 보내지 않는다", async () => {
+  const requests: string[] = [];
+  const server = Bun.serve({ port: 0, fetch(request) { requests.push(request.url); return new Response("{}"); } });
   try {
-    const result = await runBundle(temporaryDirectory(), ["interview", "select", "tech", "--count", "3"], {
+    const home = temporaryDirectory();
+    const result = await runBundle(home, ["interview", "select", "tech", "--count", "3"], {
+      CAREER_WORKSPACE_ROOT: join(home, "workspace"),
       CAREER_BACKEND_URL: server.url.origin,
       CAREER_BACKEND_TOKEN: FAKE_TOKEN,
     });
-    expect({ exitCode: result.exitCode, stderr: result.stderr, requests }).toMatchObject({ exitCode: 0, stderr: "" });
-    const output = JSON.parse(result.stdout) as { questions: Array<{ sourceScope?: string }> };
-    expect(output.questions).toHaveLength(3);
-    for (const question of output.questions) expect([undefined, "public"]).toContain(question.sourceScope);
+    expect({ exitCode: result.exitCode, requests }).toEqual({ exitCode: 0, requests: [] });
+    expect(result.stdout).not.toContain(FAKE_TOKEN);
   } finally {
     server.stop(true);
   }
-});
-
-test("Backend 주소가 없으면 1 로 끝나고 token 을 출력하지 않는다", async () => {
-  const result = await runBundle(temporaryDirectory(), ["interview", "select", "tech", "--count", "3"], {
-    CAREER_BACKEND_TOKEN: FAKE_TOKEN,
-  });
-  expect(result.exitCode).toBe(1);
-  expect(result.stdout).not.toContain(FAKE_TOKEN);
-  expect(result.stderr).not.toContain(FAKE_TOKEN);
 });
 
 /** 지어낸 주장 하나를 담은 검증 완료 주장 상태 파일이다. */

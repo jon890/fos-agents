@@ -6,7 +6,7 @@
     {
       "name": "fos-career",
       "source": "./plugin",
-      "description": "후보자 맥락, 프로필 원고, 프로필 동기화, 면접 연습, 공고 추천과 이력서 준비 스킬"
+      "description": "GitHub·원티드 프로필 갱신 도구와 면접 연습, 공고 추천, 공부 추천, 이력서 준비 스킬"
     }
   ]
 }

@@ -1,8 +1,7 @@
 import { expect, test } from "bun:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createServer } from "../src/server.ts";
 import { toolDefinitions } from "../src/tools.ts";
@@ -20,13 +19,29 @@ test("schema 2 정책은 실제 MCP 도구를 빠짐없이 선언하고 미선�
   expect(Object.keys(connector.tools).sort()).toEqual(Object.keys(toolDefinitions).sort());
 });
 
-test("확인 도구는 승인 없는 READ 정책이고 서버가 확인 도구와 조사 도구 둘을 readOnlyHint 로 표시한다", async () => {
+test("도구는 GitHub, 원티드, 연결 확인뿐이고 커리어 Backend 의 token 칸과 주소가 선언에 없다", () => {
+  expect(Object.keys(connector.tools).sort()).toEqual([
+    "check_connection",
+    "get_github_profile",
+    "get_wanted_resume",
+    "update_github_profile",
+    "update_wanted_resume",
+  ]);
+  expect(connector.fields.map((field: { key: string }) => field.key)).toEqual(["github_token"]);
+  // 필수 칸이 없다. GitHub 을 연결하지 않아도 플러그인을 붙일 수 있다.
+  expect(connector.fields.filter((field: { required?: boolean }) => field.required !== false)).toEqual([]);
+  expect(connector.operator_env).toEqual(["CAREER_GITHUB_PROFILE_REPO"]);
+  for (const file of ["connector.json", ".mcp.json", ".claude-plugin/plugin.json"])
+    expect({ file, hit: /CAREER_BACKEND|Backend/.test(readFileSync(join(import.meta.dir, "..", file), "utf8")) }).toEqual({
+      file,
+      hit: false,
+    });
+});
+
+test("확인 도구는 승인 없는 READ 정책이고 서버가 readOnlyHint 로 표시하며 GitHub 연결 없이도 성공한다", async () => {
+  expect(connector.verify.tool).toBe("check_connection");
   expect(connector.tools[connector.verify.tool]).toMatchObject({ risk: "READ", approval: "none" });
-  const server = createServer({
-    CAREER_BACKEND_URL: "https://career.example.com/",
-    CAREER_BACKEND_TOKEN: "x".repeat(40),
-    CAREER_GITHUB_PROFILE_REPO: "example-user/example-user",
-  });
+  const server = createServer({ CAREER_GITHUB_PROFILE_REPO: "example-user/example-user" });
   const client = new Client({ name: "connector-config-test", version: "1.0.0" });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   try {
@@ -35,15 +50,9 @@ test("확인 도구는 승인 없는 READ 정책이고 서버가 확인 도구�
     const { tools } = await client.listTools();
     const verifyTool = tools.find((tool) => tool.name === connector.verify.tool);
     expect(verifyTool?.annotations?.readOnlyHint).toBe(true);
-    // The research tools are read by an agent that picks its own topics, so they must never look writable.
-    for (const name of ["list_study_candidates", "list_study_recommendations", "get_position_research_constraints", "check_position_exclusions"]) {
-      const tool = tools.find((candidate) => candidate.name === name);
-      expect({ name, readOnly: tool?.annotations?.readOnlyHint, destructive: tool?.annotations?.destructiveHint }).toEqual({
-        name,
-        readOnly: true,
-        destructive: false,
-      });
-    }
+    const result = await client.callTool({ name: connector.verify.tool, arguments: {} });
+    expect(result.isError).not.toBe(true);
+    expect(result.structuredContent).toEqual({ github: "not_configured" });
   } finally {
     await client.close();
     await server.close();
@@ -52,9 +61,10 @@ test("확인 도구는 승인 없는 READ 정책이고 서버가 확인 도구�
 
 test("조회 도구는 READ 와 none, 저장과 갱신 도구는 WRITE 와 required 다", () => {
   for (const [name, policy] of policies) {
-    if (/^(check|list|get)_/.test(name))
+    expect({ name, known: /^(check|get|update)_/.test(name) }).toEqual({ name, known: true });
+    if (/^(check|get)_/.test(name))
       expect({ name, ...policy }).toMatchObject({ name, risk: "READ", approval: "none" });
-    if (/^(save|update)_/.test(name))
+    if (/^update_/.test(name))
       expect({ name, ...policy }).toMatchObject({ name, risk: "WRITE", approval: "required" });
   }
 });
@@ -83,7 +93,7 @@ test(".mcp.json 서버 env 는 fields[].env, operator_env, owner_browser_env, oa
     expect(String(value)).toMatch(new RegExp(`^\\$\\{${name}(:-)?\\}$`));
 });
 
-// An errors entry is the vocabulary word, or {category, retry_key} for outcome_unknown (fos-assistant ADR-20261013).
+// An errors entry is the vocabulary word, or {category, ...} with a recovery hint (fos-assistant ADR-20261013).
 const errorCategories = Object.fromEntries(
   Object.entries(connector.errors as Record<string, string | { category: string }>).map(([code, entry]) => [
     code,
@@ -96,8 +106,8 @@ test("errors 표의 값은 공통 어휘만 쓴다", () => {
   for (const value of Object.values(errorCategories)) expect(vocabulary).toContain(value);
 });
 
-test("CAREER_OUTCOME_UNKNOWN 은 오류 결과에 싣는 attemptId 를 재시도 식별자로 선언한다", () => {
-  expect(connector.errors.CAREER_OUTCOME_UNKNOWN).toEqual({ category: "outcome_unknown", retry_key: "attemptId" });
+test("결과를 알 수 없는 저장 도구가 없어 재시도 식별자를 선언하지 않는다", () => {
+  expect(Object.values(errorCategories)).not.toContain("outcome_unknown");
 });
 
 test("운영자 비밀값과 사진 도구 묶음을 선언하지 않는다", () => {
@@ -109,17 +119,9 @@ test("plugin.json 과 package.json 의 version 이 같다", () => {
   expect(read(".claude-plugin/plugin.json").version).toBe(read("package.json").version);
 });
 
-test("WRITE 는 저장 도구 다섯과 GitHub·원티드 갱신 도구뿐이며 모두 승인이 필요하다", () => {
+test("WRITE 는 GitHub·원티드 갱신 도구뿐이며 모두 승인이 필요하다", () => {
   const writes = policies.filter(([, policy]) => policy.risk === "WRITE");
-  expect(writes.map(([name]) => name).sort()).toEqual([
-    "save_context_document",
-    "save_interview_attempt",
-    "save_personal_question",
-    "save_profile_document",
-    "save_study_recommendation",
-    "update_github_profile",
-    "update_wanted_resume",
-  ]);
+  expect(writes.map(([name]) => name).sort()).toEqual(["update_github_profile", "update_wanted_resume"]);
   for (const [name, policy] of writes) expect({ name, approval: policy.approval }).toEqual({ name, approval: "required" });
 });
 
@@ -140,79 +142,17 @@ test("errors 는 data-schema.md 의 커넥터 오류 코드 표에서 공통 어
   expect(errorCategories).toEqual(expected);
 });
 
-const connectorSkillsDirectory = join(import.meta.dir, "..", "connector-skills");
-
-function skillBodyOf(directory: string): string {
-  for (const entry of readdirSync(directory, { recursive: true }))
-    if (lstatSync(join(directory, String(entry))).isSymbolicLink()) throw new Error(`심볼릭 링크가 있다: ${entry}`);
-  let body = "";
-  for (const name of readdirSync(directory).sort()) {
-    const text = readFileSync(join(directory, name, "SKILL.md"), "utf8");
-    if (!text.startsWith("---\n")) throw new Error(`${name} 의 앞머리가 없다`);
-    const end = text.indexOf("\n---\n", 4);
-    if (end < 0) throw new Error(`${name} 의 앞머리가 닫히지 않는다`);
-    body += text.slice(end + 5).trim() + "\n\n";
-  }
-  if (body.length > 8000) throw new Error(`스킬 본문이 ${body.length}자로 8000자를 넘는다`);
-  return body;
-}
-
-test("스킬 본문은 설치하는 쪽의 지침 상한 안에 있고 링크가 없다", () => {
-  const body = skillBodyOf(connectorSkillsDirectory);
-  expect(body.length).toBeGreaterThan(0);
-  for (const tool of Object.keys(connector.tools)) expect(body, tool).toContain(tool);
+// 대화용 스킬 디렉터리는 없다. 스킬은 모두 `agent-skills/` 로 설치된다(ADR-147).
+// 키를 빼면 설치하는 쪽이 기본값 `./skills`(Claude Code 전용)를 읽으므로 빈 목록으로 둔다.
+test("plugin.json 의 skills 는 빈 목록이고 대화용 스킬 디렉터리가 없다", () => {
+  expect(read(".claude-plugin/plugin.json").skills).toEqual([]);
+  expect(existsSync(join(import.meta.dir, "..", "connector-skills"))).toBe(false);
 });
 
 test("스킬을 노트북 에이전트의 스킬 폴더에 링크하지 않는다", () => {
   const repoSkills = join(import.meta.dir, "../../.claude/skills");
-  expect(existsSync(join(repoSkills, "career-connector"))).toBe(false);
-  expect(existsSync(join(repoSkills, "interview-practice"))).toBe(false);
-  expect(existsSync(join(repoSkills, "sync-profile"))).toBe(false);
-  const careerConnector = readFileSync(join(connectorSkillsDirectory, "career-connector", "SKILL.md"), "utf8");
-  expect(careerConnector).not.toContain("노트북의 `sync-profile`");
-  expect(existsSync(join(repoSkills, "study-topic-recommender"))).toBe(false);
-  expect(existsSync(join(repoSkills, "position-recommender"))).toBe(false);
-});
-
-test("새 스킬은 셸과 저장소 경로를 쓰지 않고 앞머리가 디렉터리와 맞는다", () => {
-  for (const name of ["interview-practice", "study-topic-recommender"]) {
-    const text = readFileSync(join(connectorSkillsDirectory, name, "SKILL.md"), "utf8");
-    const end = text.indexOf("\n---\n", 4);
-    const front = text.slice(4, end);
-    const body = text.slice(end + 5);
-    for (const banned of ["career-os/", "bun ", "git "]) expect(body, `${name} 본문에 ${banned}`).not.toContain(banned);
-    const handoff = name === "interview-practice" ? "interview-question-prep" : "study-collection";
-    expect(body, `${name} 본문의 안내 스킬`).toContain(handoff);
-    expect(body, `${name} 본문의 노트북 세션`).not.toContain("노트북 세션");
-    expect(front.match(/^name: (.+)$/m)?.[1], `${name} 의 name`).toBe(name);
-    const description = front.match(/^description: (.+)$/m)?.[1] ?? "";
-    expect(description.length, `${name} 의 description`).toBeGreaterThan(0);
-    expect(description.length, `${name} 의 description 길이`).toBeLessThanOrEqual(1024);
-  }
-});
-
-test("본문이 8001자인 스킬과 닫히지 않은 앞머리는 거절한다", () => {
-  const root = mkdtempSync(join(tmpdir(), "career-skills-"));
-  mkdirSync(join(root, "long"));
-  const head = "---\nname: long\ndescription: x\n---\n";
-  const fill = (size: number) => "가".repeat(size) + "\n";
-  writeFileSync(join(root, "long", "SKILL.md"), head + fill(7998));
-  expect(skillBodyOf(root).length).toBe(8000);
-  writeFileSync(join(root, "long", "SKILL.md"), head + fill(7999));
-  expect(() => skillBodyOf(root)).toThrow("8000자를 넘는다");
-  writeFileSync(join(root, "long", "SKILL.md"), "---\nname: long\n");
-  expect(() => skillBodyOf(root)).toThrow("닫히지 않는다");
-});
-
-test("plugin.json 의 skills 는 connector-skills 하나만 가리킨다", () => {
-  expect(read(".claude-plugin/plugin.json").skills).toBe("./connector-skills");
-});
-
-test("Claude Code 전용 skills 와 대화용 connector-skills 에 같은 이름의 스킬이 없다", () => {
-  const codeSkills = join(import.meta.dir, "..", "skills");
-  const codeNames = existsSync(codeSkills) ? readdirSync(codeSkills) : [];
-  const shared = codeNames.filter((name) => readdirSync(connectorSkillsDirectory).includes(name));
-  expect(shared).toEqual([]);
+  for (const name of ["career-connector", "interview-practice", "sync-profile", "study-topic-recommender", "position-recommender"])
+    expect({ name, linked: existsSync(join(repoSkills, name)) }).toEqual({ name, linked: false });
 });
 
 test("원티드 도구 설명이 나눠 부르기, 대안, 범위 밖 칸, 다시 부르지 않기를 안내한다", () => {
