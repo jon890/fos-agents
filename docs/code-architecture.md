@@ -22,7 +22,6 @@
 |---|---|
 | `AGENTS.md` | 모든 에이전트를 위한 공통 행동 규칙 |
 | `CLAUDE.md` | `AGENTS.md` 심볼릭 링크 |
-| `.codex/hooks.json`, `scripts/hooks/` | `apply_patch` 뒤 수정한 TypeScript 파일만 Prettier로 정리하는 프로젝트 hook |
 | `docs/adr/` | 모노레포 레벨 ADR |
 | `docs/code-architecture.md` | 현재 구조와 책임 경계 |
 

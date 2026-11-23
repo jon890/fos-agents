@@ -163,32 +163,6 @@ jobs:
               fi
             done
 
-      # 바뀐 경로로 위험 라벨을 단다. 판정은 scripts/pr-risk-labels.sh 의 경로 규칙이 갖는다.
-      - name: 경로로 위험 라벨 달기
-        id: risk
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # PR 브랜치의 스크립트를 실행하지 않는다. base 브랜치 버전을 임시 파일에서 실행한다.
-          git fetch --no-tags --depth=1 origin main:refs/remotes/origin/main
-          LABELER=$(mktemp)
-          trap 'rm -f "$LABELER"' EXIT
-          LABELS=""
-          if git show origin/main:scripts/pr-risk-labels.sh > "$LABELER"; then
-            LABELS=$(gh pr diff "${{ env.PR_NUMBER }}" --repo "${{ github.repository }}" --name-only \
-              | bash "$LABELER")
-          else
-            echo "기준 브랜치에 위험 라벨 스크립트가 없어 라벨 판정을 건너뜁니다." >> "$GITHUB_STEP_SUMMARY"
-          fi
-          while IFS= read -r label; do
-            [ -n "$label" ] || continue
-            gh label create "$label" --repo "${{ github.repository }}" --color d93f0b \
-              --description "경로 규칙이 단 위험 라벨" 2>/dev/null || true
-            gh pr edit "${{ env.PR_NUMBER }}" --repo "${{ github.repository }}" --add-label "$label" || true
-          done <<< "$LABELS"
-          echo "labels=$(printf '%s\n' "$LABELS" | paste -sd, -)" >> "$GITHUB_OUTPUT"
-          echo "위험 라벨: ${LABELS:-없음}" >> "$GITHUB_STEP_SUMMARY"
-
       # 프롬프트는 외부 .txt 로 분리 — YAML heredoc 가독성 + markdown 포맷터의
       # glob/식별자 손상 회피. 변수 치환은 envsubst 로 필요한 것만.
       - name: 리뷰 프롬프트 준비 (외부 .txt → 변수 치환)
@@ -196,12 +170,11 @@ jobs:
         env:
           PR_NUMBER: ${{ env.PR_NUMBER }}
           REPO: ${{ github.repository }}
-          RISK_LABELS: ${{ steps.risk.outputs.labels || '없음' }}
         run: |
           {
             echo 'text<<PROMPT_EOF'
             # shellcheck disable=SC2016
-            envsubst '$PR_NUMBER $REPO $RISK_LABELS' < .github/workflows/code-review-prompt.txt
+            envsubst '$PR_NUMBER $REPO' < .github/workflows/code-review-prompt.txt
             echo 'PROMPT_EOF'
           } >> "$GITHUB_OUTPUT"
 
