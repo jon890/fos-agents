@@ -160,10 +160,15 @@ PDF 가 만들어졌으면 다음 순서로 제출 묶음을 만들고 검증한
 지원 패키지 검사와 검토 화면은 `application-package-writer` 스킬이 한다.
 manifest의 PDF 해시와 검토 기록의 최종 PDF 해시를 대조한다. 외부 편집기 PDF처럼 기존 묶음 검증기가 다루지 않는 파일은 실제 파일 경로와 해시, 저장본 대조 및 재검토 결과를 별도로 남긴다. 이 확인을 기존 검증기 통과라고 보고하지 않는다.
 
-최종 파일의 사본을 만들어 「내 파일」 에 넣는다. PDF 가 있으면 PDF 와 HTML 을 둘 다, 없으면 HTML 만 넣는다.
+최종 파일의 사본을 만들어 「내 파일」 에 넣는다. HTML 은 항상 넣는다.
 
 ```bash
 <CAREER_LOCAL> package report "${APPLICATION_DIR:?지원 디렉터리를 설정하세요}" "${APPLICATION_DIR}/review/resume.html"
+```
+
+PDF 는 4단계의 `resume export` 에 `PDF 도구 없음` 줄이 없었을 때만 아래 명령으로 사본을 만들어 함께 넣는다. 그 줄이 있었으면 이 명령을 실행하지 않는다.
+
+```bash
 <CAREER_LOCAL> package report "${APPLICATION_DIR:?지원 디렉터리를 설정하세요}" "${APPLICATION_DIR}/resume.pdf"
 ```
 

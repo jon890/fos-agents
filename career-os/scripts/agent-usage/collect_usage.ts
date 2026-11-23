@@ -88,12 +88,15 @@ export async function collectUsage(deps: {
   const measured = new Map((await measure()).map((row) => [row.month, row]));
   const measuredOn = seoulDate(now);
   const results: CollectResult[] = [];
+  let replaceMissed = false;
   for (const month of targets) {
     const measurement = measured.get(month);
     let code: CollectResult["code"];
     let failure: unknown;
     if (!measurement || measurement.claudeTokens + measurement.codexTokens === 0) {
       code = "NO_SESSIONS";
+      // 바꾸라고 지정한 달을 바꾸지 못했는데 성공으로 끝나면 바뀐 줄 안다.
+      if (replace?.month === month) replaceMissed = true;
     } else {
       try {
         const options = replace?.month === month ? { replaceNote: replace.note } : undefined;
@@ -109,7 +112,8 @@ export async function collectUsage(deps: {
     write(`${month} ${code}`);
     if (code === "FAILED") writeError(`${month} ${messageOf(failure)}`);
   }
-  return { results, exitCode: results.some((result) => result.code === "FAILED") ? 1 : 0 };
+  if (replaceMissed) writeError(`${replace!.month} 세션 기록이 없어 기록을 바꾸지 않았다.`);
+  return { results, exitCode: replaceMissed || results.some((result) => result.code === "FAILED") ? 1 : 0 };
 }
 
 function messageOf(error: unknown): string {

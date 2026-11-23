@@ -231,6 +231,24 @@ test("--merge 로 받은 파일이 측정 스크립트 명령의 인자로 넘�
   expect(agentUsageCommand()).toEqual(["python3", "-", "--json"]);
 });
 
+test("replace 로 준 달에 세션 기록이 없으면 바꾸지 않고 오류 줄과 함께 1 로 끝난다", async () => {
+  const { store, puts } = fakeStore(["2026-01", "2026-02"]);
+  const errors: string[] = [];
+  const lines: string[] = [];
+  const result = await collectUsage({
+    store,
+    measure: fakeMeasure([measurement("2026-01")]).measure,
+    now: new Date("2026-03-15T00:00:00Z"),
+    write: (line) => lines.push(line),
+    writeError: (line) => errors.push(line),
+    replace: { month: "2026-02", note: "사유" },
+  });
+  expect(puts).toHaveLength(0);
+  expect(lines).toEqual(["2026-02 NO_SESSIONS"]);
+  expect(errors).toEqual(["2026-02 세션 기록이 없어 기록을 바꾸지 않았다."]);
+  expect(result.exitCode).toBe(1);
+});
+
 test("replace 로 가장 오래된 기록보다 앞의 달을 주면 측정하지 않고 거절한다", async () => {
   const { store, puts } = fakeStore(["2026-02"]);
   const { measure, state } = fakeMeasure([measurement("2026-01")]);

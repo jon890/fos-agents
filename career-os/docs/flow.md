@@ -680,7 +680,7 @@ flowchart TD
 ```
 
 이 계약을 부르던 수집기는 지금 파일에 쓴다(아래 「사용량 수집」).
-`replace` 는 사람이 잘못 들어간 기록을 고칠 때만 `scripts/profile/manage_profile.ts usage put --replace --note` 로 보낸다.
+기록을 고칠 때는 이 계약이 아니라 수집기에 `collect_usage.ts --replace <YYYY-MM> --note <사유>` 를 준다.
 이유는 [ADR-133](adr/ADR-133-프로필-원고와-에이전트-사용량-기록은-backend의-profile-모듈이-갖는다.md)을 따른다.
 
 ### 사용량 수집
@@ -726,7 +726,7 @@ flowchart TD
 | `CREATED` | 그 달의 기록을 새로 만들었다 |
 | `EXISTS` | 그 달의 기록이 이미 있어 바뀌지 않았다 |
 | `REPLACED` | `--replace` 로 준 달의 기록을 다시 측정한 값으로 바꿨다 |
-| `NO_SESSIONS` | 그 달의 세션 기록이 기기에 없어 쓰지 않았다 |
+| `NO_SESSIONS` | 그 달의 세션 기록이 기기에 없어 쓰지 않았다. `--replace` 로 준 달이면 표준 오류에 한 줄을 내고 종료 코드 1 로 끝낸다 |
 | `UP_TO_DATE` | 대상 달이 없다. 달 자리에는 `-` 를 낸다 |
 | `FAILED` | 그 달의 저장이 실패했다. 남은 달을 마저 시도한 뒤 종료 코드 1 로 끝낸다 |
 

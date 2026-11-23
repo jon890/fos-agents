@@ -5,6 +5,7 @@
  * 공고 추천에서 넣기를 건너뛴 적이 있어, 실행기가 넣을 파일을 한 줄로 알리게 한 것과 같은 이유다.
  */
 
+import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, lstatSync, mkdirSync, realpathSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
@@ -26,10 +27,11 @@ function seoulDate(now: Date): string {
 
 /**
  * 파일 이름에 넣을 수 있게 회사와 직무 이름의 경로 구분자와 공백을 `-` 하나로 바꾼다.
- * 이어진 `-` 를 하나로 줄여, 회사와 직무 사이의 `--` 가 이름 안에 나오지 않게 한다.
+ * 이어진 `-` 를 하나로 줄이고 앞뒤의 `-` 를 잘라, 회사와 직무 사이의 `--` 가 이름 안에 나오지 않게 한다.
  */
 function slug(value: string): string {
-  return value.trim().replace(/[\\/\s-]+/g, "-");
+  // 앞뒤의 `-` 도 자른다. 남기면 `a-` 와 `b` 가 `a--b` 로 이어져 다른 지원 건과 겹친다.
+  return value.replace(/[\\/\s-]+/g, "-").replace(/^-|-$/g, "") || "_";
 }
 
 function isOutside(parent: string, child: string): boolean {
@@ -69,8 +71,16 @@ export function copyReport(input: { root: string; applicationDirectory: string; 
 
   const [company, role] = segments as [string, string];
   const extension = name.slice(name.lastIndexOf("."));
-  const target = join(root, "reports", `${seoulDate(input.now)}-${kind}-${slug(company)}--${slug(role)}${extension}`);
-  mkdirSync(join(root, "reports"), { recursive: true });
+  // 알리는 경로는 받은 작업 폴더 경로 그대로 쓴다. 링크를 푼 경로는 실행 공간이 「내 파일」 에 넣을 때 받는 꼴(`/workspace/…`)과 다를 수 있다.
+  const reports = join(resolve(input.root), "reports");
+  mkdirSync(reports, { recursive: true });
+  if (real(reports) !== join(root, "reports")) throw new Error(`reports 디렉터리가 작업 폴더 밖을 가리킵니다: ${reports}`);
+  // 이름을 바꿔 쓴 지원 건은 원래 이름의 해시를 붙인다. `a--b/c` 와 `a-b/c` 처럼 바꾼 뒤 같아지는 이름이 서로 덮어쓰지 않게 한다.
+  const altered = [company, role].some((name) => slug(name) !== name);
+  const suffix = altered ? `-${createHash("sha256").update(`${company}\0${role}`).digest("hex").slice(0, 6)}` : "";
+  const target = join(reports, `${seoulDate(input.now)}-${kind}-${slug(company)}--${slug(role)}${suffix}${extension}`);
+  // 링크에 쓰면 링크가 가리키는 파일을 덮어쓴다.
+  if (lstatSync(target, { throwIfNoEntry: false })?.isSymbolicLink()) throw new Error(`사본을 쓸 자리가 링크입니다: ${target}`);
   copyFileSync(file, target);
   return target;
 }

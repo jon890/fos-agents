@@ -32,8 +32,8 @@
       "study-collection": ["CLAUDE_PLUGIN_ROOT", "CAREER_WORKSPACE_ROOT"],
       "interview-practice": ["CLAUDE_PLUGIN_ROOT", "CAREER_WORKSPACE_ROOT"],
       "career-connector": ["CLAUDE_PLUGIN_ROOT", "CAREER_WORKSPACE_ROOT"],
-      "application-package-writer": ["CLAUDE_PLUGIN_ROOT", "CAREER_WORKSPACE_ROOT"],
-      "resume-preparer": ["CLAUDE_PLUGIN_ROOT", "CAREER_WORKSPACE_ROOT"],
+      "application-package-writer": ["CLAUDE_PLUGIN_ROOT", "CAREER_WORKSPACE_ROOT", "CAREER_EVIDENCE_DIR"],
+      "resume-preparer": ["CLAUDE_PLUGIN_ROOT", "CAREER_WORKSPACE_ROOT", "CAREER_EVIDENCE_DIR"],
       "resume-review": ["CLAUDE_PLUGIN_ROOT", "CAREER_WORKSPACE_ROOT"],
       "interview-question-prep": ["CLAUDE_PLUGIN_ROOT", "CAREER_WORKSPACE_ROOT"]
     }

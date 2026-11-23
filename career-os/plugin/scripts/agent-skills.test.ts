@@ -102,6 +102,17 @@ test("실행기를 부르는 스킬은 실행기와 작업 폴더에 필요한 e
   }
 });
 
+test("근거 원본 검사를 부르는 스킬은 프로젝트 근거 위치를 sandbox_env 로 요구한다", () => {
+  // `package check-sources` 는 `CAREER_EVIDENCE_DIR` 가 없으면 늘 `unavailable` 이라 스킬이 매번 멈춘다.
+  for (const directory of agentSkillDirs) {
+    const skill = readFileSync(join(directory, "SKILL.md"), "utf8");
+    if (!skill.includes("<CAREER_LOCAL> package check-sources")) continue;
+    const name = skillNameOf(directory);
+    expect(agentSkills.sandbox_env?.[name] ?? [], name).toContain("CAREER_EVIDENCE_DIR");
+  }
+  for (const name of ["application-package-writer", "resume-preparer"]) expect(agentSkills.sandbox_env?.[name], name).toContain("CAREER_EVIDENCE_DIR");
+});
+
 test("비서용 스킬과 그 sandbox_env 는 커리어 Backend 의 주소와 token 을 요구하지 않는다", () => {
   // 공고·공부 추천과 면접 연습은 작업 폴더의 SQLite 를 쓴다(ADR-146). Backend 값을 요구하면 그 값을 내린 뒤 스킬이 빠진다.
   for (const names of Object.values(agentSkills.sandbox_env ?? {})) {

@@ -21,7 +21,7 @@
 | `runs/<실행 폴더>/` | 한 번 실행의 중간 산출물. 이름은 `position-recommendation-*`, `study-topic-recommender.*` 다. 정리 명령이 지운다 |
 | `library/profiles/<wanted\|linkedin\|github>.md` | 프로필 원고의 원본. `career-connector` 스킬이 파일 도구로 읽고 고친다. 길이 제한과 버전, 승인 카드가 없다 |
 | `reports/<YYYY-MM-DD>-<position\|study>.html` | 완성한 리포트의 사본. 날짜는 서울 날짜다. 같은 날 다시 만들면 덮어쓴다 |
-| `reports/<YYYY-MM-DD>-<종류>-<회사>--<직무>.<html\|pdf>` | 지원 준비 결과의 사본. `package report` 가 만든다. 종류는 `application`(검토 화면), `resume`, `career-description`, `resume-review` 다. 에이전트가 이 파일을 「내 파일」 에 넣는다 |
+| `reports/<YYYY-MM-DD>-<종류>-<회사>--<직무>.<html\|pdf>` | 지원 준비 결과의 사본. `package report` 가 만든다. 회사나 직무 이름에 공백, 경로 구분자, 이어진 `-` 가 있어 바꿔 쓴 이름에는 `-<해시 6자>` 가 더 붙는다. 종류는 `application`(검토 화면), `resume`, `career-description`, `resume-review` 다. 에이전트가 이 파일을 「내 파일」 에 넣는다 |
 | `applications/<회사>/<직무>/` | 공고별 지원 자료. `evidence/`(공고 원문, 적합도, 전략, 상태, 후보자 인터뷰, 면접 질문, 원고), `review/`(HTML, 검토표), 검토 화면과 제출 파일 |
 | `library/resume-logos/` | 이력서에 붙이는 회사와 학교 로고(아래 `resume-preparer` 절) |
 | `state/verified-claims/` | 다시 쓸 수 있다고 확인한 이력서 주장(아래 `resume-preparer` 절) |
@@ -1140,7 +1140,7 @@ HTTP 계약은 [`flow.md`](flow.md#프로필-http-계약)가 소유한다. 이�
 ### 사용량 파일
 
 사용량 수집기가 쓰는 JSON 파일 하나다. 세션 기록이 있는 기기에만 있고 저장소와 비서로 옮기지 않는다([ADR-148](adr/ADR-148-지원-준비는-비서의-셸-실행-공간에서-하고-작업본-동기화와-노트북-전용-스킬을-두지-않는다.md)).
-자리는 `CAREER_AGENT_USAGE_FILE`(절대 경로)이고 없으면 `~/.fos-career/agent-usage/snapshots.json` 이다. 파일은 소유자만 읽고 쓴다(0600).
+자리는 셸 환경 변수 `CAREER_AGENT_USAGE_FILE`(절대 경로)이고 없으면 `~/.fos-career/agent-usage/snapshots.json` 이다. 수집기가 `.env` 를 읽지 않아 `.env` 에 적은 값은 쓰이지 않고, `launchd` 작업은 늘 기본 자리를 쓴다. 파일은 소유자만 읽고 쓴다(0600).
 
 ```json
 {
