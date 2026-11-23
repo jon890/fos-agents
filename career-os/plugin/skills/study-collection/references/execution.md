@@ -113,7 +113,8 @@ token과 원문 payload는 출력하지 않는다.
 
 검증과 결과 전달이 끝나고 보존할 파일을 확인한 뒤 실행 디렉터리를 정리한다.
 추천을 저장하면 실행기가 HTML 사본을 작업 폴더 `reports/<날짜>-study.html` 에 남기고 출력의 `reportCopy` 로 알린다.
-`file_space_put` 도구가 있으면 그 파일을 「내 파일」 에 넣는다.
+`reportCopy` 경로가 `/workspace/` 로 시작하면 `file_space_put`(접두사가 붙은 이름이면 끝이 `file_space_put` 인 도구)의 `path` 로 넘겨 「내 파일」 에 넣는다. 넣기는 건너뛰지 않는다.
+도구가 실제로 없거나 실패하면 결과 글에 「내 파일」 줄로 넣은 이름, 또는 넣지 못한 이유를 적는다.
 `--cleanup`은 작업 폴더 `runs/` 나 시스템 임시 디렉터리의 직접 자식만 지우며 중첩 경로와 symlink를 거절한다.
 
 ```bash
