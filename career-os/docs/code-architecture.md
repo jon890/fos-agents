@@ -11,7 +11,7 @@ career-os는 스킬이 실행 계약을 설명하고 TypeScript 스크립트와 
 파일 하나하나가 무엇을 하는지는 그 파일의 주석이 소유한다. 여기에 옮겨 적지 않는다.
 
 public `fos-agents` 저장소는 스킬과 실행 코드를 소유한다.
-비공개 작업 파일은 각 환경의 기존 경로에서 다루고 홈서버 `career-os` collection의 release를 기준으로 동기화한다.
+개인 지원 자료는 저장소에 두지 않는다. 커리어 에이전트의 작업 폴더에만 있고 기기 사이에 동기화하지 않는다.
 
 ## 공통
 
@@ -23,9 +23,6 @@ career-os/
 ├── scripts/              검증, 수집과 변환 코드
 ├── plugin/               fos-assistant 에 연결하는 `fos-career` 커넥터. 루트와 별도 package다
 ├── services/             추천 상태 HTTP Backend와 migration. 루트와 별도 package다
-├── applications/         동기화되는 로컬 지원 패키지
-├── library/              사람이 직접 관리하며 여러 지원에서 재사용하는 비공개 자료
-├── state/                검증기와 도구가 다음 실행에 재사용하는 상태
 ├── public/               공개 가능한 질문 은행
 ├── cache/                다시 만들 수 있는 수집 결과
 ├── sources/fos-study/    별도 저장소에서 관리하는 공개 학습·이력 자료
@@ -34,13 +31,12 @@ career-os/
 
 ### 스킬 폴더
 
-`plugin/skills/<name>/` 안의 자리가 정해져 있다.
+`plugin/agent-skills/<name>/` 안의 자리가 정해져 있다.
 
 | 자리 | 담는 것 |
 | --- | --- |
 | `SKILL.md` | 목표와 워크플로. 에이전트가 언제나 읽는다 |
 | `references/` | 필요한 단계에서만 읽는 판정 기준과 대상별 절차 |
-| `scripts/` | 이 스킬만 쓰는 실행 코드 |
 | `templates/` | HTML 골격, CSS 와 이미지 |
 
 **`SKILL.md` 에 모든 것을 적지 않는다.**
@@ -52,13 +48,12 @@ career-os/
 저장소에는 `.claude/skills/` 와 `.codex/skills/` 가 없다. 모든 스킬이 `plugin/` 에 있다.
 스킬의 실행 코드는 `scripts/application-package/`, `scripts/resume-preparer/`, `scripts/position-recommender/`, `scripts/study-topic-recommender/` 에 있다.
 
-`plugin/skills/resume-review/`는 파일로 제공된 공고와 제출 문서를 평가하는 지침이다.
-Codex와 Claude Code에서 기존 작성·주장 검증·채용 리뷰 기준을 읽어 사용한다.
-Claude Code 전용 실행기를 새로 만들거나 커넥터의 MCP 지침에 파일 작업을 추가하지 않는다.
+스킬은 모두 fos-assistant 에이전트의 셸 실행 공간에서 돈다. 다른 실행 환경에서만 도는 스킬을 두지 않는다([ADR-148](adr/ADR-148-지원-준비는-비서의-셸-실행-공간에서-하고-작업본-동기화와-노트북-전용-스킬을-두지-않는다.md)).
+`plugin/agent-skills/resume-review/` 는 공고와 제출 문서를 평가하는 지침이다. 기준은 `resume-preparer` 스킬의 참조 문서를 읽어 쓰고, 실행기는 결과 사본을 만드는 `package report` 만 부른다.
 
 ### 실행 코드를 두 자리 중 어디에 두나
 
-같은 TypeScript 인데 스킬 번들 안과 `scripts/` 둘로 나뉜다.
+실행 코드는 스킬 디렉터리에 두지 않는다. 비서는 스킬의 `SKILL.md`, `references/`, `templates/` 만 복사하므로 코드는 `scripts/` 에 두고 번들 실행기로 부른다.
 
 | 자리 | 언제 | 예 |
 | --- | --- | --- |
@@ -74,16 +69,17 @@ Claude Code 전용 실행기를 새로 만들거나 커넥터의 MCP 지침에 �
 | 폴더 | 누가 쓰나 | 동기화 |
 | --- | --- | --- |
 | `config/` | 사람이 직접 고치고 커밋한다 | Git |
-| `applications/<company>/<position>/` | 스킬이 만들고 사람이 읽는다 | 비공개 release |
-| `library/` | 사람이 직접 관리한다 | 비공개 release |
-| `state/` | 도구가 쓰고 도구가 읽는다 | 비공개 release |
+| 작업 폴더 `applications/<company>/<position>/` | 스킬이 만들고 사람이 읽는다 | 안 함. 커리어 작업 폴더에만 있다 |
+| 작업 폴더 `library/` | 사람과 스킬이 관리한다 | 안 함 |
+| 작업 폴더 `state/` | 도구가 쓰고 도구가 읽는다 | 안 함 |
 | `public/question-bank/` | 스킬이 만들고 공개한다 | Git |
 | `cache/` | 도구가 다시 만들 수 있다 | 안 함 |
 | 시스템 임시 디렉터리 | 게시용 HTML 과 실행별 중간 데이터. 검증 뒤 지운다 | 안 함 |
 
 개인 맥락은 이 저장소에 두지 않는다.
-현재 경력, 역할 선호, 경험 경계, 지원 상태와 학습 관심사는 커리어 Backend 의 후보자 맥락 문서가 소유한다.
-연락처와 신원을 담은 지원서 공통 프로필은 fos-assistant Memory 가 소유한다. 아래 「지원서 공통 프로필」 절이 읽는 방법을 정한다.
+현재 경력, 역할 선호, 경험 경계, 지원 상태와 학습 관심사는 커리어 에이전트 주인의 기억에 있는 후보자 맥락 문서가 소유한다.
+연락처와 신원을 담은 지원서 공통 프로필도 같은 기억에 있다. 아래 「지원서 공통 프로필」 절이 읽는 방법을 정한다.
+작업 폴더의 배치는 [`data-schema.md`](data-schema.md#커리어-작업-폴더)가 소유한다.
 
 ### 스킬과 실행 코드
 
@@ -93,56 +89,6 @@ Claude Code 전용 실행기를 새로 만들거나 커넥터의 MCP 지침에 �
 하나의 스크립트가 수집과 추천과 렌더링을 모두 책임지지 않는다.
 외부 응답은 경계에서 검증한 뒤 내부 타입으로 바꾼다.
 구조화 데이터 검증에는 zod 를 쓰고, 표시 문자열은 렌더러에서만 만든다.
-
-### 비공개 작업본 동기화
-
-`scripts/career-workspace/`는 Codex CLI와 Claude Code가 공유하는 파일 준비·차이 검사·반영 경계다.
-manifest 생성과 검증, 로컬 기준 상태 확인, SSH transport, 홈서버 명령을 책임별 모듈로 나눈다.
-S3 storage adapter는 홈서버에서 표준 입력과 출력으로 release를 발행하고 내보낸다.
-회귀 테스트와 fixture는 `tests/`에 분리한다.
-사용자는 이 helper를 직접 고르지 않고 기존 career-os skill을 계속 호출한다.
-
-정상 실행 경로를 이해할 때는 다음 파일만 순서대로 읽는다.
-
-
-| 순서  | 파일                                         | 책임                                |
-| --- | ------------------------------------------ | --------------------------------- |
-| 1   | `cli.ts`                                   | 준비, 차이 확인, 발행과 skill 실행 전후 처리     |
-| 2   | `ssh-transport.ts` | 홈서버의 `career-storage` 호출          |
-| 3   | `career-storage`                           | 홈서버 publish 직렬화                   |
-| 4   | `career-storage-s3.ts`                     | 홈서버 명령의 입력과 출력                    |
-| 5   | `s3-storage.ts`                            | 불변 release 검증과 current pointer 변경 |
-| 6   | `s3-object-store.ts`                       | Bun `S3Client`를 통한 객체 읽기와 쓰기      |
-
-
-`contracts.ts`, `manifest.ts`, `local-state.ts`, `tar-utils.ts`는 위 실행 경로가 공유하는 검증 코드다.
-동작을 수정하지 않는다면 `tests/`는 읽지 않아도 된다.
-
-release 파일은 홈서버 `career-os` bucket 과 각 환경의 `career-os/.career-sync/` 에 놓인다.
-각 파일의 형식은 [`data-schema.md`](data-schema.md#홈서버-release)가 소유한다.
-
-```text
-career-os bucket
-├── releases/<revision>/
-│   ├── workspace.tar             세 관리 root 의 archive
-│   ├── workspace-manifest.json   archive 에 든 파일 목록과 hash
-│   └── release.json              release 하나의 식별과 요약
-└── pointers/
-    └── current.json              지금 기준이 되는 release
-
-career-os/.career-sync/
-├── sync-state.json               마지막으로 준비한 release
-├── skill-session.json            진행 중인 skill 실행
-└── prepare-journal.json          준비 단계의 복구 기록
-```
-
-각 환경은 `applications`, `library`와 `state`를 일반 로컬 디렉터리로 사용한다.
-원격 파일을 network filesystem으로 직접 편집하지 않으며, 준비 단계는 검증한 release만 임시 경로에서 로컬로 교체한다.
-반영 단계는 실행 시작 revision이 홈서버 현재 값과 일치할 때만 새 release를 만든다.
-
-skill 은 `plugin/` 이 소유하고 Hermes cron 은 plugin 스킬을 쓴다.
-환경별 차이는 `.env`의 transport 설정에만 두고 지원 판단과 문서 작성 절차를 복제하지 않는다.
-SSH client는 `career-storage`를 원격 호출한다. 홈서버의 `career-storage`가 잠금과 S3 pointer 갱신을 맡는다.
 
 ### 작업 폴더 저장 모듈
 
@@ -257,8 +203,8 @@ npm test
 - 채용 사이트와 기술 블로그는 읽기 전용 입력이다.
 - `.env`는 Git에 커밋하지 않는다.
 
-- 홈서버 주소, 계정과 저장 경로는 환경 설정에서만 주입하고 공개 문서나 결과 JSON에 기록하지 않는다.
-- 비공개 작업 파일의 이전 release와 복구 경계는 홈서버 private 인프라가 소유한다.
+- 운영 서버의 주소, 계정과 저장 경로는 환경 설정에서만 주입하고 공개 문서나 결과 JSON에 기록하지 않는다.
+- 작업 폴더의 지원 자료는 백업하지 않는다. 잃으면 다시 쌓는다.
 - 외부 제출과 공개 게시에는 사용자 승인이 필요하다.
 
 ## application-package-writer
@@ -319,7 +265,7 @@ npm test
 ## interview-practice
 
 면접 연습 스킬은 저장소에 없고 plugin 에 있다.
-비서의 셸 실행 공간에서 하는 연습은 `plugin/agent-skills/interview-practice/` 가, 공고별 질문으로 하는 연습과 외부 자료에서 질문을 찾는 일은 Claude Code 전용 `plugin/skills/interview-question-prep/` 가 맡는다.
+비서의 셸 실행 공간에서 하는 연습은 `plugin/agent-skills/interview-practice/` 가, 공고별 질문으로 하는 연습과 외부 자료에서 질문을 찾는 일은 `plugin/agent-skills/interview-question-prep/` 가 맡는다.
 배치는 아래 「fos-career 커넥터」 절이 소유한다.
 
 질문은 공개 범위에 따라 세 자리로 나뉜다.
@@ -375,7 +321,7 @@ npm test
 `public/question-bank/sources.json`은 공개 공통 질문이 참조하는 공식 URL과 확인일을 관리한다.
 **공개 질문 보강은 저장소 유지 절차다.** 절차는 [`public/question-bank/MAINTENANCE.md`](../public/question-bank/MAINTENANCE.md) 가 소유한다.
 plugin 을 설치한 사람은 이 저장소에 커밋하지 않는다. 그래서 plugin 스킬은 외부 자료에서 찾은 질문을 공개 은행에 넣지 않고 개인 질문으로 Backend 에 저장한다.
-외부 자료 후보 수집과 질문 승격 기준은 `plugin/skills/interview-question-prep/references/source-discovery.md` 가 소유하고 유지 절차도 그 문서를 가리킨다.
+외부 자료 후보 수집과 질문 승격 기준은 `plugin/agent-skills/interview-question-prep/references/source-discovery.md` 가 소유하고 유지 절차도 그 문서를 가리킨다.
 `scripts/question-bank-collector/validate.ts`는 독립된 검증 모듈로 남아 질문 구조, 공개 범위, 출처 등록과 URL 형식을 검사한다.
 
 ## position-recommender
@@ -518,7 +464,7 @@ git diff --check
 실행 코드는 `scripts/resume-preparer/` 에 있다. plugin 로컬 실행기 `resume` 이 이 코드를 부른다.
 `scripts/resume-preparer/verified-claims/`는 검증 완료 주장 스키마, 안정적인 주장 키, 근거 파일 해시, 저장과 검색을 책임별 모듈로 나눈다.
 `scripts/resume-preparer/evaluate_skill.ts`는 합성 사례 15~19를 도구 없는 독립 Claude 대화로 실행한다. `--out`으로 지정한 임시 경로에 응답과 지침 해시를 남기며, 기대 행동은 모델에 제공하지 않는다. 실행 성공과 행동 판정은 구분하고 응답을 읽은 검토자가 통과 여부를 기록한다. 이 평가 도구는 저장소에서 직접 실행하며 plugin 로컬 실행기에 번들하지 않는다.
-특정 사례 재실행은 `--only`로 고르고, 판정 근거와 적용 지침 해시는 `plugin/skills/resume-preparer/evals/latest-results.json`에 기록한다.
+특정 사례 재실행은 `--only`로 고르고, 판정 근거와 적용 지침 해시는 `scripts/resume-preparer/evals/latest-results.json`에 기록한다.
 검증 완료 주장 CLI 는 다음 셋이다.
 
 
@@ -535,7 +481,7 @@ git diff --check
 
 실제 제출은 이 스킬의 책임이 아니다.
 
-이력서 작성 취향은 `plugin/skills/resume-preparer/references/resume-taste.md`가 소유한다.
+이력서 작성 취향은 `plugin/agent-skills/resume-preparer/references/resume-taste.md`가 소유한다.
 조회 시점과 저장 분기는 같은 스킬의 `references/candidate-context.md`에 두고 필요한 단계에서 읽는다.
 스킬은 개인 맥락을 `get_context_document` 로 읽고, 승인받은 새 개인 사실을 `save_context_document` 로 저장한다.
 
@@ -547,17 +493,17 @@ skill은 필요한 정보를 실행 시점에 조회하고 TypeScript 스크립�
 
 | 경로 | 책임 |
 | --- | --- |
-| `plugin/skills/resume-preparer/references/resume-writing-style.md` | 모든 이력서와 경력기술서에 적용하는 표현과 근거 범위 기준 |
-| `plugin/skills/resume-preparer/references/resume-design.md` | 이력서와 경력기술서의 기본 시각 기준 |
-| `plugin/skills/resume-preparer/references/resume-taste.md` | 개인 작성 취향 |
-| `plugin/skills/resume-preparer/references/candidate-context.md` | 개인 맥락 조회 시점과 저장 분기 |
+| `plugin/agent-skills/resume-preparer/references/resume-writing-style.md` | 모든 이력서와 경력기술서에 적용하는 표현과 근거 범위 기준 |
+| `plugin/agent-skills/resume-preparer/references/resume-design.md` | 이력서와 경력기술서의 기본 시각 기준 |
+| `plugin/agent-skills/resume-preparer/references/resume-taste.md` | 개인 작성 취향 |
+| `plugin/agent-skills/resume-preparer/references/candidate-context.md` | 개인 맥락 조회 시점과 저장 분기 |
 | `scripts/resume-preparer/templates/` | 이력서 HTML 골격과 기본 CSS. `export_resume.ts` 가 텍스트 import 로 읽는다 |
-| 작업본 `library/resume-logos/` | 회사·학교 로고와 이름을 잇는 `index.json`. 개인 경력을 드러내므로 저장소와 plugin 에 두지 않는다 |
+| 작업 폴더 `library/resume-logos/` | 회사·학교 로고와 이름을 잇는 `index.json`. 개인 경력을 드러내므로 저장소와 plugin 에 두지 않는다 |
 
 `export_resume.ts --logo-dir <dir>` 로 로고 디렉터리를 정한다. 없으면 `CAREER_WORKSPACE_ROOT`(없으면 `career-os`) 아래 `library/resume-logos/` 다. 디렉터리나 `index.json` 이 없으면 로고 없이 렌더한다.
 
 plugin 의 로컬 실행기 `resume` 은 하위 명령으로 위 CLI 와 HTML·PDF 변환, 제출 묶음 검사를 고른다.
-검증 완료 주장의 상태 디렉터리는 작업본 아래 `state/verified-claims/` 로 넘긴다. 주장 원장의 근거 경로는 실행한 디렉터리 기준이다.
+검증 완료 주장의 상태 디렉터리는 작업 폴더 아래 `state/verified-claims/` 로 넘긴다. 주장 원장의 근거 경로는 실행한 디렉터리 기준이다.
 지원 패키지 검사와 검토 화면은 로컬 실행기 `package` 가 한다. 아래 「로컬 실행기」 표가 책임을 정한다.
 
 공고별 스타일은 `export_resume.ts --design <path>`에 CSS 파일이나
@@ -610,7 +556,7 @@ client 가 읽는 환경값은 포지션 추천과 같다. 같은 Backend 이고
 | `CAREER_BACKEND_URL` | 커리어 Backend origin |
 | `CAREER_BACKEND_TOKEN` 또는 `CAREER_BACKEND_TOKEN_FILE` | Bearer token. 파일은 mode 600 |
 | `CAREER_BACKEND_ACCESS_CLIENT_ID` | 선택값. Backend 가 Cloudflare Access 뒤에 있을 때 `CF-Access-Client-Id` 로 보낸다 |
-| `CAREER_BACKEND_ACCESS_CLIENT_SECRET` 또는 `CAREER_BACKEND_ACCESS_CLIENT_SECRET_FILE` | 선택값. `CF-Access-Client-Secret` 으로 보낸다. 파일은 mode 600. ID 와 secret 은 둘 다 있거나 둘 다 없어야 한다. launchd 로 도는 agent-usage 도 `--env-file` 로 같이 읽는다 |
+| `CAREER_BACKEND_ACCESS_CLIENT_SECRET` 또는 `CAREER_BACKEND_ACCESS_CLIENT_SECRET_FILE` | 선택값. `CF-Access-Client-Secret` 으로 보낸다. 파일은 mode 600. ID 와 secret 은 둘 다 있거나 둘 다 없어야 한다. |
 | `YOUTUBE_DATA_API_KEY` | 선택값. 있으면 YouTube uploads playlist 과거 수집을 쓴다 |
 
 `manage_reading_sources.ts`의 `list`, `add`, `update`, `disable`, `enable`과 다른 API 사용 명령은 연결 값이 없으면 요청 전에 실패한다.
@@ -638,51 +584,19 @@ client 가 읽는 환경값은 포지션 추천과 같다. 같은 Backend 이고
 
 ## 지원서 공통 프로필
 
-`scripts/application-profile/` 는 fos-assistant Memory 의 지원서 공통 프로필을 읽는 CLI 다.
+실행 코드가 없다. 에이전트가 기억의 「커리어: 지원서 공통 프로필」 을 읽어 작업 폴더로 옮기고 쓰고 나서 지운다([ADR-148](adr/ADR-148-지원-준비는-비서의-셸-실행-공간에서-하고-작업본-동기화와-노트북-전용-스킬을-두지-않는다.md)).
 흐름과 실패 갈래는 [`flow.md`](flow.md#지원서-공통-프로필)가 소유한다.
+`scripts/application-package/application_form_schema.ts` 의 `APPLICATION_PROFILE_SOURCE` 는 지원서 입력 스냅샷이 출처를 적는 값이다.
 
-| 경로 | 책임 |
-| --- | --- |
-| `contracts.ts` | collection `identity`, 문서 키 `career-application-profile` 상수와 응답의 zod 계약 |
-| `client.ts` | 연결값 검사와 서비스 읽기 HTTP 호출. 커리어 Backend 의 client 를 쓰지 않는다 |
-| `read_application_profile.ts` | `get --out <path>` 와 `help`. `help` 만 연결값 없이 실행한다 |
+## 프로필 원고
 
-| 환경 변수 | 뜻 |
-| --- | --- |
-| `FOS_ASSISTANT_URL` | fos-assistant 의 HTTP 또는 HTTPS origin. path, query, hash 와 credentials 를 받지 않는다 |
-| `FOS_ASSISTANT_SERVICE_TOKEN` | fos-assistant 웹 화면에서 발급한 서비스 토큰. `identity` collection 과 그 민감 읽기를 받는다 |
-| `FOS_ASSISTANT_ACCESS_CLIENT_ID` | 선택값. fos-assistant 가 Cloudflare Access 뒤에 있을 때 `CF-Access-Client-Id` 로 보낸다 |
-| `FOS_ASSISTANT_ACCESS_CLIENT_SECRET` 또는 `FOS_ASSISTANT_ACCESS_CLIENT_SECRET_FILE` | 선택값. `CF-Access-Client-Secret` 으로 보낸다. 파일은 mode 600. ID 와 secret 은 둘 다 있거나 둘 다 없어야 한다 |
+프로필 원고의 원본은 작업 폴더의 `library/profiles/<wanted|linkedin|github>.md` 이고 `plugin/agent-skills/career-connector/` 가 파일 도구로 읽고 고친다([ADR-147](adr/ADR-147-후보자-맥락-문서는-비서의-기억이-프로필-원고는-작업-폴더-파일이-갖는다.md)).
+세 사이트의 폼을 한 기기에서 직접 조작하던 `sync-profile` 스킬과 그 폼 스크립트는 지웠다([ADR-148](adr/ADR-148-지원-준비는-비서의-셸-실행-공간에서-하고-작업본-동기화와-노트북-전용-스킬을-두지-않는다.md)).
+`scripts/profile/manage_profile.ts` 는 커리어 Backend 의 `profile` 모듈을 읽던 CLI 다. 쓰는 스킬이 없고 Backend 를 내릴 때 함께 지운다.
 
-`FOS_ASSISTANT_URL` 과 `FOS_ASSISTANT_SERVICE_TOKEN` 은 `career-os/.env` 에 두고 `bun --env-file=career-os/.env` 로 넘긴다.
-Access 값도 같은 파일에 둔다.
-Access 값이 없으면 헤더를 보내지 않아 내부망과 터널 직접 경로는 그대로 동작한다.
-collection 과 문서 키는 코드에 고정한다. 설정으로 바꾸지 않는다.
+## 사용량 수집
 
-- `--out` 은 `scripts/candidate-context/repository-guard.ts` 로 git 저장소 밖인지 확인한 뒤에만 요청한다.
-  같은 디렉터리에 0600 임시 파일을 새로 만들어 쓰고 `--out` 으로 이름을 바꾼다. 이미 있는 파일이나 링크에 쓰지 않는다.
-- 표준 출력은 `collection`, `documentKey`, `revision`, `updatedAt`, `tokenExpiresAt`, `out` 만 담는다. `tokenExpiresAt` 은 응답의 `X-Service-Token-Expires-At` 머리말이며 없으면 `null` 이다.
-- 오류 메시지는 상태와 다음 행동만 담는다. 응답 본문, 문서 본문과 토큰을 담지 않는다.
-- 요청에 `Origin` 머리말을 붙이지 않고 redirect 를 따라가지 않는다.
-
-## sync-profile
-
-스킬은 저장소에 없고 plugin 의 Claude Code 전용 `plugin/skills/sync-profile/` 에 있다.
-**폼을 조작하는 셸 스크립트는 그 스킬 번들 안에 둔다.**
-대상 사이트의 폼을 조작하는 코드라 다른 스킬이 재사용할 것이 없고, 대상별 절차 문서 바로 옆에 두는 편이 읽기 쉽다.
-스크립트는 `browser-driver` 명령으로 이미 로그인된 브라우저를 조작한다. 명령 위치는 `BROWSER_DRIVER` 로 바꿀 수 있고, 없으면 PATH 의 `browser-driver` 다.
-사용량 측정과 수집은 스킬 없이 `launchd` 도 실행하므로 `scripts/agent-usage/` 에 둔다. plugin 은 로컬 실행기 `usage` 로 같은 수집기를 부른다.
-
-| 경로 | 책임 |
-| --- | --- |
-| `plugin/skills/sync-profile/references/wanted.md` | 원티드 폼 구조와 저장 확인 절차 |
-| `plugin/skills/sync-profile/references/linkedin.md` | LinkedIn 편집 진입과 저장 확인 절차 |
-| `plugin/skills/sync-profile/references/github.md` | GitHub 프로필 문서 규칙 |
-| `plugin/skills/sync-profile/scripts/wanted_*.sh` | 원티드 폼 필드 조회와 입력 |
-| `plugin/skills/sync-profile/scripts/linkedin_*.sh` | LinkedIn 소개의 문단 입력과 프로젝트 폼 채우기 |
-
-비서에서는 프로필 원고의 원본이 작업 폴더의 `library/profiles/<wanted|linkedin|github>.md` 이고 `plugin/agent-skills/career-connector/` 가 파일 도구로 읽고 고친다([ADR-147](adr/ADR-147-후보자-맥락-문서는-비서의-기억이-프로필-원고는-작업-폴더-파일이-갖는다.md)).
-Claude Code 전용 `sync-profile` 과 `scripts/profile/manage_profile.ts` 는 커리어 Backend 의 `profile` 모듈을 읽던 노트북 경로다. MCP 서버가 원고 도구를 더 갖지 않아 지금은 쓰지 않으며 다음 단계에서 지운다.
+세션 기록이 있는 기기에서 `launchd` 가 저장소 스크립트를 직접 돌린다. 스킬과 번들 실행기를 거치지 않고 커리어 Backend 를 부르지 않는다([ADR-148](adr/ADR-148-지원-준비는-비서의-셸-실행-공간에서-하고-작업본-동기화와-노트북-전용-스킬을-두지-않는다.md)).
 
 사용량 측정과 수집의 배치다.
 
@@ -690,20 +604,20 @@ Claude Code 전용 `sync-profile` 과 `scripts/profile/manage_profile.ts` 는 �
 | --- | --- |
 | `scripts/agent-usage/agent_usage.py` | 에이전트 세션 기록에서 월별 토큰, 환산 비용, 세션 수, 단가를 모르는 토큰 계산. 단가표를 갖는다. Claude 응답은 `message.id`(없으면 `requestId`)로 한 번만 센다. `--totals-json` 으로 이 기기의 달·모델별 합계를 내보내고 `--merge` 로 다른 기기의 합계를 더한다. 꼴은 `data-schema.md` 가 소유한다 |
 | `scripts/agent-usage/measure.ts` | `agent_usage.py --json` 을 실행해 출력을 zod 로 검증하고 달 표기를 `YYYY-MM` 으로 바꾼다. 실행기를 인자로 받아 테스트가 대역을 넣는다 |
-| `scripts/agent-usage/collect_usage.ts` | 수집기. 기록이 없는 끝난 달만 측정해 올린다. 측정기, 기록 저장소, 현재 시각을 인자로 받는다 |
+| `scripts/agent-usage/collect_usage.ts` | 수집기. 기록이 없는 끝난 달만 측정해 사용량 파일에 쓴다. `--merge`, `--replace --note` 를 받는다. 측정기, 기록 저장소, 현재 시각을 인자로 받는다 |
+| `scripts/agent-usage/usage_file.ts` | 사용량 파일의 자리와 꼴, 읽기와 원자적 쓰기. 이미 있는 달은 사유 없이 바꾸지 않는다 |
+| `scripts/agent-usage/chart.ts`, `render_chart.ts` | 사용량 파일의 기록으로 차트 SVG 를 파일로 그리는 CLI 와 순수 함수 |
 | `scripts/agent-usage/launchd/agent-usage.plist.template` | `launchd` 작업 틀. 자리표시자는 `bun` 경로, 저장소 경로, 로그 디렉터리뿐이다 |
 | `scripts/agent-usage/manage_launchd.ts` | `install`, `uninstall`, `status`. `install` 과 `uninstall` 은 `--dry-run` 으로 쓸 파일과 실행할 명령만 낸다 |
 
 `launchd` 작업의 이름은 `com.fos-agents.career-os.agent-usage` 다. 매일 10시에 돌고, 기기가 잠들어 있었으면 깨어난 뒤에 돈다.
 plist 는 `~/Library/LaunchAgents/` 에, 로그는 `~/Library/Logs/fos-career-os/agent-usage.log` 에 둔다.
-등록은 세션 기록이 있는 기기에서 사람이 한 번 실행한다. 홈서버 인프라 저장소의 배포와 무관하다.
-
-브라우저 조작은 공용 `browser-driver`를 쓰고 이 스킬이 드라이버를 따로 만들지 않는다.
+등록은 세션 기록이 있는 기기에서 사람이 한 번 실행한다. 운영 배포와 무관하다. `career-os/.env` 가 없어도 등록된다.
 
 ### 프로필 저장 CLI
 
 `scripts/profile/` 는 커리어 Backend 의 프로필 원고와 에이전트 사용량 기록을 읽고 쓰는 client 와 CLI 다.
-스킬 번들이 아니라 `scripts/` 에 두는 이유는 `sync-profile` 스킬 말고도 사용량 수집기와 fos-assistant 커넥터가 같은 계약을 쓰기 때문이다.
+비서용 스킬, 실행기와 사용량 수집기는 이 CLI 를 쓰지 않는다. Backend 를 내릴 때 함께 지운다.
 결정과 근거는 [ADR-133](adr/ADR-133-프로필-원고와-에이전트-사용량-기록은-backend의-profile-모듈이-갖는다.md)에 있다.
 
 | 경로 | 책임 |
@@ -739,19 +653,15 @@ career-os/plugin/
 ├── scripts/
 ├── dist/career-mcp.js
 ├── dist/career-local.js
-├── agent-skills/            fos-assistant 에이전트의 셸 실행 공간에서 도는 스킬
-│   ├── career-connector/        원본
-│   ├── interview-practice/      원본
-│   ├── position-recommender/    skills/ 의 사본. scripts/agent-skills.ts 가 만든다
-│   └── study-collection/        skills/ 의 사본
-└── skills/
+└── agent-skills/            fos-assistant 에이전트의 셸 실행 공간에서 도는 스킬. 모두 원본이다
     ├── application-package-writer/
+    ├── career-connector/
+    ├── interview-practice/
     ├── interview-question-prep/
     ├── position-recommender/
     ├── resume-preparer/
     ├── resume-review/
-    ├── study-collection/
-    └── sync-profile/
+    └── study-collection/
 ```
 
 | 경로 | 책임 |
@@ -771,20 +681,18 @@ career-os/plugin/
 | `plugin/dist/career-local.js` | 같은 빌드가 만드는 로컬 실행기 실행 파일. 아래 「로컬 실행기」 |
 | `plugin/agent-skills/career-connector/SKILL.md` | 맥락 문서(기억)와 프로필 원고(작업 폴더 파일) 읽고 고치기, GitHub 프로필과 원티드 반영 순서, 승인 규칙, 공고 제외 판정 |
 | `plugin/agent-skills/interview-practice/SKILL.md` | 실행기로 하는 면접 연습. 질문 고르기, 답변 평가, 기록과 개인 질문 저장 |
-| `plugin/scripts/agent-skills.ts` | 사본 둘을 `skills/` 원본에서 만들고, 비서용 스킬에 다른 실행 환경 전용 표현이 없는지 검사한다 |
-| `plugin/skills/application-package-writer/` | Claude Code 전용. 공고별 적합도 판정, 후보자 인터뷰, 지원 전략과 검토 화면 |
-| `plugin/skills/interview-question-prep/` | Claude Code 전용. 공고별 질문으로 하는 연습과 외부 자료에서 개인 질문 찾기 |
-| `plugin/skills/study-collection/` | Claude Code 전용. 외부 피드 수집, 소스 관리, HTML 리포트와 게시 기록 |
-| `plugin/skills/position-recommender/` | Claude Code 전용. 공고 수집부터 회사 판정, 공고 분석, 리포트까지의 판단 흐름 |
-| `plugin/skills/resume-preparer/` | Claude Code 전용. 이력서와 경력기술서 작성, 주장 감사, HTML·PDF 와 제출 묶음 |
-| `plugin/skills/sync-profile/` | Claude Code 전용. 원티드, LinkedIn, GitHub 프로필 갱신과 저장 확인 |
+| `plugin/scripts/agent-skills.ts` | 스킬 목록과 디렉터리가 같은지, 비서용 스킬에 다른 실행 환경 전용 표현이 없는지 검사한다. 파일을 쓰지 않는다 |
+| `plugin/agent-skills/application-package-writer/` | 공고별 적합도 판정, 후보자 인터뷰, 지원 전략과 검토 화면 |
+| `plugin/agent-skills/resume-preparer/` | 이력서와 경력기술서 작성, 주장 감사, HTML·PDF 와 제출 묶음 |
+| `plugin/agent-skills/resume-review/` | 제출 문서 평가, 근거 인터뷰, 수정과 재평가 |
+| `plugin/agent-skills/interview-question-prep/` | 공고별 질문으로 하는 연습과 외부 자료에서 개인 질문 찾기 |
+| `plugin/agent-skills/study-collection/` | 외부 피드 수집, 소스 관리, HTML 리포트와 게시 기록 |
+| `plugin/agent-skills/position-recommender/` | 공고 수집부터 회사 판정, 공고 분석, 리포트까지의 판단 흐름 |
 | `scripts/lib/text-asset.ts` | 텍스트 import 로 읽은 템플릿이 문자열인지 확인하는 helper. 번들한 실행기가 템플릿 파일을 찾지 않게 한다 |
 | `scripts/plugin-local/` | 로컬 실행기의 진입점. 하위 명령을 `scripts/` 의 CLI 로 넘긴다. 실행기 이름 목록은 import 가 없는 `executors.ts` 가 갖는다 |
 | `scripts/interview-drill/public-question-bank.ts` | 공개 질문 은행 JSON 을 정적 import 로 읽는 모듈. 실행기와 CLI 가 함께 쓴다 |
 | `scripts/interview-drill/question-selection.ts` | 질문 은행과 복습 상태로 낼 질문을 고르는 순수 함수. `follow-up-policy.ts` 의 상수만 import 한다. 저장소 CLI 와 로컬 실행기가 같은 함수를 쓴다 |
 | `public/question-bank/*/questions.json` | 공개 질문 은행. 로컬 실행기가 번들에 넣어 저장소 경로 없이 읽는다 |
-| `scripts/agent-usage/chart.ts` | 사용량 기록을 차트 입력으로 바꾸고 SVG 를 그리는 순수 함수. 노트북의 `render_chart.ts` 만 쓴다. MCP 서버는 차트를 그리지 않는다 |
-| `scripts/agent-usage/render_chart.ts` | 노트북에서 같은 차트를 파일로 그리는 CLI. Backend 의 사용량 기록을 읽는다 |
 
 **MCP 서버는 커리어 Backend 를 부르지 않는다.** Backend 주소와 token, Cloudflare Access 값을 읽지 않고 파일도 읽지 않는다. `scripts/` 의 코드를 번들하지 않아 MCP 서버 번들에는 plugin package 의 `zod` 한 벌만 들어간다.
 
@@ -792,27 +700,25 @@ career-os/plugin/
 
 | 실행기 | 넘기는 곳 | 하는 일 |
 | --- | --- | --- |
-| `workspace` | `scripts/plugin-local/workspace.ts` | 비공개 작업본의 위치를 알려 주고, 스킬 시작과 끝에 동기화한다 |
+| `workspace` | `scripts/plugin-local/workspace.ts` | 작업 폴더와 프로젝트 근거 위치를 알려 준다(`paths`) |
 | `interview` | `scripts/interview-drill/drill-engine.ts` 의 `runDrillCli` | 오늘 질문을 고르고(`select`), 복습 상태를 보이고(`progress`), 연습 결과를 기록하고(`record`), 개인 질문을 읽고 더하고 끈다(`personal`). 저장 자리는 작업 폴더의 SQLite 다 |
-| `interview-sources` | `scripts/interview-question-sources/cli.ts` | 등록 출처에서 면접 질문 후보를 임시 디렉터리에 모은다 |
+| `interview-sources` | `scripts/interview-question-sources/cli.ts` | 등록 출처에서 면접 질문 후보를 받은 출력 경로에 모은다 |
 | `study` | `scripts/study-topic-recommender/morning_reading_cli.ts` | 피드 수집, 후보 준비, HTML 리포트, 추천과 게시 기록, 실행 디렉터리 정리 |
 | `study-validate` | `scripts/study-topic-recommender/validate_outputs.ts` | 실행 디렉터리의 리포트 산출물을 검증한다 |
 | `study-sources` | `scripts/study-topic-recommender/manage_reading_sources.ts` | 읽을거리 소스를 조회하고 더하고 끈다 |
 | `position` | `scripts/position-recommender/position_run.ts` 의 `runPositionCommand` | 공고 수집, 회사 판정과 공고 분석 반영, 리포트 최종화, 실행 디렉터리 정리. `check-exclusions` 는 대화에서 찾은 공고가 개인 제외 규칙과 제외 회사에 걸리는지 수집기와 같은 코드로 판정한다 |
-| `usage` | `scripts/agent-usage/collect_usage.ts` 의 `main` | 기록이 없는 끝난 달의 에이전트 사용량을 측정해 Backend 에 올린다 |
-| `package` | `scripts/application-package/` | 근거 원본이 원격보다 뒤처졌는지 검사하고(`check-sources`), 제출 문서의 내부 정보를 검사하고(`validate`), 검토 화면을 만들고(`render`), 포지션별 면접 질문 파일을 검증한다(`question-schema`) |
-| `application-profile` | `scripts/application-profile/read_application_profile.ts` | fos-assistant Memory 의 지원서 공통 프로필을 저장소 밖 파일로 읽는다 |
-| `resume` | `scripts/resume-preparer/` 의 CLI 여덟 | 이력서 HTML·PDF 변환과 검사, 주장 원장 검증, 검증 완료 주장 판정과 검색과 반영, 제출 묶음 생성과 검증 |
+| `package` | `scripts/application-package/` | 근거 원본이 원격보다 뒤처졌는지 검사하고(`check-sources`), 제출 문서의 내부 정보를 검사하고(`validate`), 검토 화면을 만들고(`render`), 포지션별 면접 질문 파일을 검증하고(`question-schema`), 결과 파일의 사본을 작업 폴더 `reports/` 에 날짜가 든 이름으로 만든다(`report`) |
+| `resume` | `scripts/resume-preparer/` 의 CLI 여덟 | 이력서 HTML·PDF 변환과 검사(Chrome 을 찾지 못하면 HTML 만), 주장 원장 검증, 검증 완료 주장 판정과 검색과 반영, 제출 묶음 생성과 검증 |
 
 - 실행기 원본은 `scripts/` 에 있다. 저장소의 CLI 와 같은 코드다. 실행기 코드를 고치면 `bun run --cwd career-os/plugin build` 로 `dist/career-local.js` 를 다시 만들어 함께 커밋한다
 - `dist/career-local.js` 는 루트 `bun.lock` 이 고정한 `zod` 와 `fast-xml-parser` 를 번들한다. MCP 서버 번들(`dist/career-mcp.js`)과 따로 만들어 서로의 `zod` 가 섞이지 않는다
 - 실행기는 실행 파일 옆의 파일이나 저장소 경로를 찾지 않는다. 공개 질문 은행과 템플릿은 import 로 번들에 들어간다
-- 공고·공부·면접 실행기는 Backend 연결값을 읽지 않는다. 노트북 전용 `usage` 만 셸 환경 변수 `CAREER_BACKEND_URL`, `CAREER_BACKEND_TOKEN` 을 읽는다. `.env` 를 탐색하지 않는다
-- 비공개 작업본의 위치와 동기화 설정은 [`data-schema.md`](data-schema.md#로컬-실행기-환경-변수)가 소유한다
+- 실행기는 커리어 Backend 와 fos-assistant 의 연결값을 읽지 않고 `.env` 를 탐색하지 않는다. 사용량 수집기는 번들에 없다
+- 작업 폴더의 위치와 실행기가 읽는 값은 [`data-schema.md`](data-schema.md#로컬-실행기-환경-변수)가 소유한다
 
 ### 커넥터 설치 계약
 
-fos-assistant 는 `plugin/` 을 복사하거나 마운트해 `connector.json`, `.mcp.json`, `connector.json` 의 `agent_skills` 가 가리키는 `agent-skills/` 를 읽는다. `.claude-plugin/plugin.json` 의 `skills` 는 빈 목록이다. 키를 빼면 설치하는 쪽이 Claude Code 전용 `skills/` 를 읽는다.
+fos-assistant 는 `plugin/` 을 복사하거나 마운트해 `connector.json`, `.mcp.json`, `connector.json` 의 `agent_skills` 가 가리키는 `agent-skills/` 를 읽는다. `.claude-plugin/plugin.json` 의 `skills` 는 빈 목록이다. 키를 빼면 설치하는 쪽이 기본값 `./skills` 를 찾는다.
 
 - `connector.json` 은 `schema: 2` 다. 모든 도구를 `tools` 에 빠짐없이 선언하고 `READ` 가 아니고 `required` 인 도구는 `outbound` 를 선언하며(`update_github_profile` 과 `update_wanted_resume` 이 `true` 와 `grant: false`), `default_tool_policy` 는 `deny` 다. 새 도구를 더할 때는 같은 변경에서 `tools` 에 위험도와 승인 방식, `title`, 2,000 code point 이하의 `description` 을 선언한다. 설명은 필수이며 앞뒤 공백 제거 후 비어 있거나 8,192 UTF-8 byte를 넘거나 금지 문자를 포함하면 서버가 시작하지 않는다
 - 확인 도구 `check_connection` 은 `READ` 와 `none` 이고 서버가 `readOnlyHint: true` 로 표시한다
@@ -820,11 +726,11 @@ fos-assistant 는 `plugin/` 을 복사하거나 마운트해 `connector.json`, `
 - 필수 입력 칸이 없다. GitHub token 은 선택이고 비워 두거나 GitHub 단추로 연결한다
 - `operator_env` 의 이름(`CAREER_GITHUB_PROFILE_REPO`)은 운영 목록이 값을 줘야 한다. 없으면 커넥터가 카탈로그에서 빠진다
 - `operator_secrets` 를 선언하지 않는다. 선언하면 카탈로그에서 빠진다
-- `agent-skills/` 의 스킬은 붙인 에이전트의 셸 설정이 `agent_skills.sandbox_env` 의 env 를 모두 넘길 때만 설치된다([ADR-141](adr/ADR-141-일반-에이전트가-읽는-스킬은-plugin-의-agent-skills-에-두고-따로-올린다.md)). 스킬 넷 모두 `CLAUDE_PLUGIN_ROOT` 와 `CAREER_WORKSPACE_ROOT` 를 요구한다. 심볼릭 링크를 두지 않는다
+- `agent-skills/` 의 스킬은 붙인 에이전트의 셸 설정이 `agent_skills.sandbox_env` 의 env 를 모두 넘길 때만 설치된다([ADR-141](adr/ADR-141-일반-에이전트가-읽는-스킬은-plugin-의-agent-skills-에-두고-따로-올린다.md)). 모든 스킬이 `CLAUDE_PLUGIN_ROOT` 와 `CAREER_WORKSPACE_ROOT` 를 요구한다. 심볼릭 링크를 두지 않는다
 - 셸 실행 공간이 없는 에이전트에 플러그인을 붙이면 MCP 도구 다섯은 보이지만 스킬은 설치되지 않는다. 프로필 원고가 작업 폴더 파일이라 그 에이전트에서는 갱신 도구를 쓰지 않는다. 두 갱신 도구의 설명이 이 조건을 알린다
-- `skills/` 는 Claude Code 만 읽는다. fos-assistant 는 읽지 않는다
-- plugin 스킬을 `.claude/skills/` 에 링크하지 않는다. 저장소를 연 Claude Code 세션도 plugin 을 설치해 plugin 스킬을 쓴다
-- 저장소에 스킬 사본을 두지 않는다. 판단 규칙은 plugin 스킬 한 곳에서만 고친다
+- `plugin/skills/` 를 두지 않는다. `scripts/agent-skills.test.ts` 가 그 디렉터리가 다시 생기면 실패한다
+- plugin 스킬을 `.claude/skills/` 에 링크하지 않는다
+- 저장소에 스킬 사본을 두지 않는다. 판단 규칙은 `agent-skills/` 한 곳에서만 고친다
 - 도구 목록이 바뀐 판을 배포하면 실행 환경이 MCP 서버를 다시 띄워야 새 도구가 보인다. 스킬 본문만 바뀐 판은 연결 확인으로 반영한다
 - 상세 설명을 포함한 manifest는 새 description reader가 운영에 로드된 것을 확인한 뒤 설치한다. 설명만 바뀌어도 보호 SHA가 바뀌어 기존 바인딩이 pending이 되므로 설치 뒤 바인딩을 다시 승인해야 한다
 - 실행 파일에 의존성이 포함돼 있어 설치한 환경에서 `bun install` 을 하지 않는다. 소스를 고친 사람이 빌드해 `dist/career-mcp.js` 를 함께 커밋한다

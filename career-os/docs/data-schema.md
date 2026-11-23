@@ -10,16 +10,21 @@
 
 ### 커리어 작업 폴더
 
-공고 추천, 공부 추천, 면접 연습의 데이터와 프로필 원고가 있는 자리다([ADR-146](adr/ADR-146-커리어-표-데이터는-에이전트-작업-폴더의-sqlite-가-갖는다.md)).
+공고 추천, 공부 추천, 면접 연습의 데이터와 프로필 원고, 지원 자료가 있는 자리다([ADR-146](adr/ADR-146-커리어-표-데이터는-에이전트-작업-폴더의-sqlite-가-갖는다.md)).
 루트는 `CAREER_WORKSPACE_ROOT` 이고 없으면 `/workspace/career` 다.
 
 | 경로 | 내용 |
 | --- | --- |
 | `state/career.sqlite` | 공고, 회사, 공부, 면접 table 과 `request_receipts`. WAL 모드라 같은 이름의 `-wal`, `-shm` 파일이 함께 생긴다 |
 | `context/<문서 키>.md` | 에이전트가 실행 직전에 옮겨 쓴 맥락 문서. 실행기의 입력일 뿐 원본이 아니다. 키는 `position-preferences`, `application-state`, `learning-interests`, `career-status` 다 |
+| `context/application-profile.md` | 지원서 입력을 만드는 동안만 두는 지원서 공통 프로필 사본. 연락처가 들어 있어 쓰고 나면 스킬이 지운다 |
 | `runs/<실행 폴더>/` | 한 번 실행의 중간 산출물. 이름은 `position-recommendation-*`, `study-topic-recommender.*` 다. 정리 명령이 지운다 |
 | `library/profiles/<wanted\|linkedin\|github>.md` | 프로필 원고의 원본. `career-connector` 스킬이 파일 도구로 읽고 고친다. 길이 제한과 버전, 승인 카드가 없다 |
 | `reports/<YYYY-MM-DD>-<position\|study>.html` | 완성한 리포트의 사본. 날짜는 서울 날짜다. 같은 날 다시 만들면 덮어쓴다 |
+| `reports/<YYYY-MM-DD>-<종류>-<회사>-<직무>.<html\|pdf>` | 지원 준비 결과의 사본. `package report` 가 만든다. 종류는 `application`(검토 화면), `resume`, `career-description`, `resume-review` 다. 에이전트가 이 파일을 「내 파일」 에 넣는다 |
+| `applications/<회사>/<직무>/` | 공고별 지원 자료. `evidence/`(공고 원문, 적합도, 전략, 상태, 후보자 인터뷰, 면접 질문, 원고), `review/`(HTML, 검토표), 검토 화면과 제출 파일 |
+| `library/resume-logos/` | 이력서에 붙이는 회사와 학교 로고(아래 `resume-preparer` 절) |
+| `state/verified-claims/` | 다시 쓸 수 있다고 확인한 이력서 주장(아래 `resume-preparer` 절) |
 
 `state/career.sqlite` 의 table 과 열 이름은 아래 `fos_career` 의 공고·회사·공부·면접 table 과 같다. 다른 점은 이렇다.
 
@@ -75,7 +80,7 @@ erDiagram
 
 table 별 칸과 제약은 아래 `position-recommender` 절이 소유한다.
 면접 연습 table 은 `interview-practice` 절이, 공부 추천 table 은 `study-topic-recommender` 절이 소유한다.
-프로필 원고와 에이전트 사용량 기록 table 은 `sync-profile` 절이 소유한다.
+프로필 원고와 에이전트 사용량 기록 table 은 「프로필 원고와 사용량 기록」 절이 소유한다.
 schema 는 `services/career-backend/prisma/` 가 관리하고,
 migration 적용 절차는 [`services/career-backend/README.md`](../services/career-backend/README.md) 가 소유한다.
 
@@ -99,12 +104,12 @@ migration 적용 절차는 [`services/career-backend/README.md`](../services/car
 | 문서 키 | 담는 것 | 읽는 스킬 |
 | --- | --- | --- |
 | `learning-interests` | 공부 추천이 따를 학습 관심사와 우선순위 | `study-collection` |
-| `position-preferences` | 이직 우선순위와 역할 선호 | `position-recommender`, `career-connector` |
-| `application-state` | 지원 결과, 현재 집중 대상과 사용 원칙. 재지원 간격의 날짜는 `position_exclusions` 가 담는다 | `position-recommender`, `application-package-writer`, `interview-practice` |
-| `career-status` | 현재 경력, 강점, 경험 경계와 지원 전략 | `resume-preparer`, `application-package-writer`, `interview-practice`, `sync-profile` |
+| `position-preferences` | 이직 우선순위와 역할 선호 | `position-recommender`, `application-package-writer`, `resume-preparer`, `career-connector` |
+| `application-state` | 지원 결과, 현재 집중 대상과 사용 원칙. 재지원 간격의 날짜는 `position_exclusions` 가 담는다 | `position-recommender`, `application-package-writer`, `interview-practice`, `interview-question-prep` |
+| `career-status` | 현재 경력, 강점, 경험 경계와 지원 전략 | `resume-preparer`, `application-package-writer`, `interview-practice`, `interview-question-prep`, `career-connector` |
 
-연락처, 생년월일, 병역과 정확한 재직 기간 같은 지원서 공통 프로필은 문서 키에 넣지 않는다.
-그 원본은 fos-assistant Memory 이고 읽는 방법은 [`flow.md`](flow.md#지원서-공통-프로필)가 소유한다.
+연락처, 생년월일, 병역과 정확한 재직 기간 같은 지원서 공통 프로필은 위 네 문서에 넣지 않는다.
+같은 기억에 제목 「커리어: 지원서 공통 프로필」 로 따로 두고, `application-package-writer` 가 지원서 입력을 만들 때만 읽는다. 읽는 방법은 [`flow.md`](flow.md#지원서-공통-프로필)가 소유한다.
 
 기준 버전은 본문에서 계산한다. 공고 분석은 `position-preferences`, 공부 추천은 `learning-interests` 의 `context/` 사본을 정규화한 SHA-256 으로 `<문서 키>:sha256:<hex>` 를 낸다. 본문이 같으면 같은 기준이라 다시 분석하지 않는다([ADR-146](adr/ADR-146-커리어-표-데이터는-에이전트-작업-폴더의-sqlite-가-갖는다.md)).
 
@@ -736,7 +741,7 @@ HTML은 상세 추천, 분석한 활성 공고 순위, 분석 대기 목록과 �
 
 새 원장은 3을 쓴다. 이미 제출한 2는 locator 어긋남을 경고로만 보고하고 소급해 고치지 않는다.
 locator 형식과 판정 기준은
-`plugin/skills/resume-preparer/references/claim-model.md` 가 소유한다.
+`plugin/agent-skills/resume-preparer/references/claim-model.md` 가 소유한다.
 
 **`safe` 가 아닌 판정이 하나라도 남으면 제출 준비가 끝난 것이 아니다.**
 
@@ -788,11 +793,11 @@ HTTPS `runtime` 근거는 실행마다 달라질 수 있으므로 `refresh_requi
 
 공고별 `review/claim-ledger.json`은 현재 제출 HTML 전체의 완결된 감사 결과다.
 `state/verified-claims/`는 다음 감사의 읽기 범위를 줄이는 파생 상태이며 공고별 원장을 대신하지 않는다.
-`sources/fos-study/task/`는 계속 읽기 전용 근거로 유지하고 검증 결과를 그 저장소에 쓰지 않는다.
+프로젝트 근거 디렉터리(`CAREER_EVIDENCE_DIR`)는 계속 읽기 전용 근거로 유지하고 검증 결과를 그 저장소에 쓰지 않는다.
 
 ### `library/resume-logos/`
 
-이력서 HTML 에 회사와 학교 로고를 붙이는 자산이다. 개인 경력을 드러내므로 비공개 작업본에만 둔다.
+이력서 HTML 에 회사와 학교 로고를 붙이는 자산이다. 개인 경력을 드러내므로 저장소가 아니라 커리어 작업 폴더에만 둔다.
 
 | 파일 | 담는 것 |
 | --- | --- |
@@ -1055,14 +1060,10 @@ HTML과 report JSON 검증이 끝난 뒤 `--commit-recommendation --report <RUN_
 publication의 `idempotencyKey`는 `publication:` 뒤에 고정 순서 `{reportId,channel,publishedAt,externalId,url}` JSON의 UTF-8 SHA-256 hex를 붙인다.
 추천 저장이 실패하면 완료로 보지 않고, 파일 이력에 대신 쓰지 않는다.
 
-## sync-profile
+## 프로필 원고와 사용량 기록
 
-이 스킬은 상태 파일을 두지 않는다.
-외부 프로필의 현재 값은 실행할 때마다 대상 서버에서 다시 읽는다.
-로컬에 사본을 두면 서버와 어긋난 것을 알 수 없다.
-
-원고는 커리어 Backend 의 프로필 원고 문서다. 문서 키는 `wanted`, `linkedin`, `github` 이다.
-저장 규칙은 후보자 맥락 문서와 같고 근거는 [ADR-133](adr/ADR-133-프로필-원고와-에이전트-사용량-기록은-backend의-profile-모듈이-갖는다.md)이다.
+프로필 원고의 원본은 커리어 작업 폴더의 `library/profiles/<wanted|linkedin|github>.md` 다(위 「커리어 작업 폴더」).
+외부 프로필의 현재 값은 실행할 때마다 대상 서버에서 다시 읽는다. 로컬에 사본을 두면 서버와 어긋난 것을 알 수 없다.
 원고가 담는 것이다.
 
 | 담는 것 |
@@ -1071,7 +1072,9 @@ publication의 `idempotencyKey`는 `publication:` 뒤에 고정 순서 `{reportI
 | 폼 제약으로 원고와 다르게 넣은 것과 그 이유 |
 
 등록하지 못한 기술과 종료월을 넣은 진행 중 프로젝트가 두 번째에 해당한다.
-파일 배치는 [`code-architecture.md`](code-architecture.md#sync-profile)가 소유한다.
+
+아래 두 table 은 커리어 Backend 의 것이다. 비서용 스킬과 실행기는 쓰지 않고, Backend 를 내릴 때 함께 사라진다.
+사용량 기록은 이제 아래 「사용량 파일」 이 갖는다([ADR-148](adr/ADR-148-지원-준비는-비서의-셸-실행-공간에서-하고-작업본-동기화와-노트북-전용-스킬을-두지-않는다.md)).
 
 ### 프로필 원고 table
 
@@ -1134,11 +1137,41 @@ HTTP 계약은 [`flow.md`](flow.md#프로필-http-계약)가 소유한다. 이�
 - 끝나지 않은 달은 행을 만들 수 없다. 달 중간의 값이 그 달의 기록으로 굳는 것을 막는다.
 - 행을 지우는 경로는 없다.
 
-코드 배치는 [`code-architecture.md`](code-architecture.md#sync-profile)가 소유한다.
+### 사용량 파일
 
-### 수집기가 올리는 사용량 기록
+사용량 수집기가 쓰는 JSON 파일 하나다. 세션 기록이 있는 기기에만 있고 저장소와 비서로 옮기지 않는다([ADR-148](adr/ADR-148-지원-준비는-비서의-셸-실행-공간에서-하고-작업본-동기화와-노트북-전용-스킬을-두지-않는다.md)).
+자리는 `CAREER_AGENT_USAGE_FILE`(절대 경로)이고 없으면 `~/.fos-career/agent-usage/snapshots.json` 이다. 파일은 소유자만 읽고 쓴다(0600).
 
-수집기는 `agent_usage.py --json` 의 `months` 배열 한 줄을 사용량 기록 한 행으로 올린다.
+```json
+{
+  "schemaVersion": 1,
+  "snapshots": [
+    {
+      "month": "YYYY-MM",
+      "claudeTokens": 0,
+      "codexTokens": 0,
+      "claudeCostUsd": 0,
+      "codexCostUsd": 0,
+      "sessions": 0,
+      "unpricedTokens": 0,
+      "measuredOn": "YYYY-MM-DD",
+      "source": "MEASURED"
+    }
+  ]
+}
+```
+
+- 달마다 한 항목이고 달 오름차순이다. 같은 달이 두 번 있으면 읽기를 거절한다.
+- **그 달이 이미 있으면 수집기가 값을 바꾸지 않는다.** 세션 기록이 기기에서 지워진 뒤에는 그 달을 다시 셀 수 없다. 바꾸는 경로는 `--replace <YYYY-MM> --note <사유>` 뿐이고 사유가 선택 칸 `note` 에 남는다.
+- 끝나지 않은 달은 기록하지 않는다. 달 중간의 값이 그 달의 기록으로 굳는 것을 막는다.
+- 꼴이 다른 파일은 덮어쓰지 않고 실패한다. 쓸 때는 같은 디렉터리의 임시 파일에 쓰고 이름을 바꾼다.
+- Backend 에 있던 지난 달 기록은 옮기지 않았다. 파일은 수집기가 처음 돈 달부터 쌓인다.
+
+코드 배치는 [`code-architecture.md`](code-architecture.md#사용량-수집)가 소유한다.
+
+### 수집기가 기록하는 사용량
+
+수집기는 `agent_usage.py --json` 의 `months` 배열 한 줄을 사용량 파일의 한 항목으로 쓴다. 아래 표의 오른쪽 이름은 Backend table 의 칸이고, 파일에서는 같은 뜻의 camelCase 칸(`claudeTokens`, `measuredOn`)이다.
 
 | `agent_usage.py --json` 의 값 | 사용량 기록의 칸 | 바꾸는 것 |
 | --- | --- | --- |
@@ -1175,21 +1208,7 @@ HTTP 계약은 [`flow.md`](flow.md#프로필-http-계약)가 소유한다. 이�
 - 값은 0 이상 정수다. Codex 는 `input` 이 `cached` 를 포함하고, `cached <= input`, `total >= input + output` 이다.
 - 환산 비용은 파일에 두지 않는다. 더하는 쪽이 자기 단가표로 다시 환산한다.
 - 여러 파일의 `source` 가 겹치면 거절한다.
-- 합친 값으로 이미 기록된 달을 바꾸면 `note` 에 합친 `source` 를 적는다.
-
-`library/profiles/github-agent-usage-snapshots.md` 의 표에서 옮긴 달은 다르게 저장한다.
-그 표는 토큰을 십억 단위 소수 한 자리(`1.3B`)로 적었고 환산 비용과 세션 수의 칸이 없다.
-
-| 칸 | 옮긴 달의 값 |
-| --- | --- |
-| `claude_tokens`, `codex_tokens` | 표의 값에 십억을 곱한 정수다. 1억 토큰 아래 자리는 0 이다 |
-| `claude_cost_usd`, `codex_cost_usd`, `sessions` | 비운다 |
-| `unpriced_tokens` | 0 이다. 비용이 비어 있어 뜻이 없다 |
-| `measured_on` | 표의 「측정한 날」 이다 |
-| `source` | `BACKFILLED` 다. 한 달 전체를 측정한 달이라고 명령에 알려 준 달만 `MEASURED` 다 |
-| `note` | 표의 「비고」 다 |
-
-환산 비용이나 세션 수가 빈 달이 섞이면 프로필의 그 배지는 합계를 낼 수 없어 뺀다.
+- 합친 값으로 이미 기록된 달을 바꾸려면 수집기에 `--merge <파일> --replace <YYYY-MM> --note <사유>` 를 준다. 사유에 합친 `source` 를 적는다.
 
 ## fos-career 커넥터
 
@@ -1218,22 +1237,17 @@ token 과 통로 주소를 파일에 저장하지 않고 로그와 결과, 오�
 ### 로컬 실행기 환경 변수
 
 스킬이 부르는 `dist/career-local.js` 가 셸 환경에서 읽는 값이다. 스킬은 `bun --no-env-file` 로 불러 cwd 의 `.env` 를 읽지 않는다.
-공고·공부·면접 실행기는 Backend 값을 읽지 않는다. 아래 Backend 값은 노트북 전용 `usage` 실행기만 읽는다.
+실행기는 커리어 Backend 와 fos-assistant 의 연결값을 읽지 않는다.
 
 | 이름 | 필수 | 내용 |
 | --- | :---: | --- |
-| `CAREER_BACKEND_URL` | `usage` 만 | 커리어 Backend origin |
-| `CAREER_BACKEND_TOKEN` | `usage` 만 | Backend 의 Bearer token. `CAREER_BACKEND_TOKEN_FILE`(권한 0600 파일)로 대신할 수 있다 |
-| `CAREER_BACKEND_ACCESS_CLIENT_ID`, `CAREER_BACKEND_ACCESS_CLIENT_SECRET` | 아니오 | Backend 앞에 Cloudflare Access 가 있을 때의 service token. secret 은 `CAREER_BACKEND_ACCESS_CLIENT_SECRET_FILE` 로 대신할 수 있다. 계약은 ADR-140 을 따른다 |
-| `CAREER_WORKSPACE_ROOT` | 아니오 | 커리어 작업 폴더. 공고·공부·면접 실행기는 없으면 `/workspace/career` 를 쓴다(위 「커리어 작업 폴더」). 노트북 전용 실행기(`workspace`, `resume`)는 없으면 `~/.fos-career/workspace` 를 쓴다 |
-| `CAREER_WORKSPACE_SSH_TARGET` | 아니오 | 이 값을 지정하면 홈서버 동기화를 켠다. `CAREER_WORKSPACE_REMOTE_COMMAND`, `CAREER_WORKSPACE_SSH_ARGS` 를 함께 읽는다 |
+| `CAREER_WORKSPACE_ROOT` | 아니오 | 커리어 작업 폴더. 없으면 `/workspace/career` 다(위 「커리어 작업 폴더」). 모든 실행기가 같은 값을 쓴다 |
 | `YOUTUBE_DATA_API_KEY` | 아니오 | 공부 자료 archive 수집의 YouTube Data API key |
 | `CAREER_EVIDENCE_DIR` | 아니오 | 스킬이 읽는 프로젝트 근거 디렉터리. 없으면 `CAREER_WORKSPACE_ROOT` 아래 `evidence/`. `workspace paths --json` 이 `evidenceDir` 로 알려 준다. `package check-sources` 는 이 디렉터리나 그 바로 위가 Git 저장소의 루트일 때 그 저장소가 원격보다 뒤처졌는지 본다 |
-| `FOS_ASSISTANT_URL`, `FOS_ASSISTANT_SERVICE_TOKEN` | 아니오 | `application-package-writer` 가 지원서 공통 프로필을 읽는 `application-profile` 실행기의 fos-assistant origin 과 서비스 토큰. 계약은 ADR-136 을 따른다. Cloudflare Access 가 앞에 있으면 `FOS_ASSISTANT_ACCESS_CLIENT_ID`, `FOS_ASSISTANT_ACCESS_CLIENT_SECRET` 도 읽는다 |
-| `BROWSER_DRIVER` | 아니오 | `sync-profile` 의 폼 조작 스크립트가 부르는 `browser-driver` 명령의 경로. 없으면 PATH 의 `browser-driver` |
+| `CHROME_BIN` | 아니오 | `resume export` 가 PDF 를 만들 때 쓰는 Chrome. 없으면 흔한 설치 경로에서 찾고, 찾지 못하면 HTML 만 만든다 |
 | `CAREER_DART_API_KEY` | 아니오 | 공고 추천의 회사 근거 수집에 쓰는 OpenDART key. `CAREER_DART_API_KEY_FILE`(권한 0600 파일)로 대신할 수 있다. 없으면 DART 근거를 건너뛴다 |
 
-작업본의 기본 위치를 plugin 데이터 디렉터리에 두지 않는다. plugin 을 지우면 그 디렉터리가 함께 지워진다.
+사용량 수집기는 번들에 없다. 저장소의 `scripts/agent-usage/collect_usage.ts` 가 `CAREER_AGENT_USAGE_FILE` 만 읽는다(위 「사용량 파일」).
 token 과 문서 본문을 실행기의 로그와 오류 출력에 싣지 않는다.
 
 ### 도구
@@ -1251,7 +1265,7 @@ Hermes 에서는 서버 이름 `career` 로 `mcp__career__<도구>` 가 된다.
 
 - 쓰기 도구 둘은 누구나 볼 수 있는 프로필을 바꾸므로 `outbound: true` 이고 `grant: false` 로 상시 허락을 닫는다. 승인 카드에 「승인하고 묻지 않기」 와 「이 대화에서 계속 허용」 이 나오지 않고 호출마다 사람이 승인한다. `conversation_grant` 는 선언하지 않는다
 - `update_github_profile` 은 `README.md` 한 파일만 쓴다. `readme` 는 README 전체의 Markdown 이다. 입력 스키마가 `readme`, `expectedBranch`, `expectedHead` 밖의 키(`months`, 합계, SVG)를 거절한다
-- **에이전트 사용량 차트와 Tokens 배지는 프로필에서 뺐다.** 도구는 사용량 기록을 읽지 않고 `agent-usage.svg` 를 쓰거나 지우지 않는다. README 에서 차트 그림과 배지를 빼는 일은 `career-connector` 스킬이 안내한다. 사용량 기록이 노트북 파일로 가 더 갱신되지 않으므로 멈춘 숫자가 최신처럼 보이지 않게 한다
+- **에이전트 사용량 차트와 Tokens 배지는 프로필에서 뺐다.** 도구는 사용량 기록을 읽지 않고 `agent-usage.svg` 를 쓰거나 지우지 않는다. README 에서 차트 그림과 배지를 빼는 일은 `career-connector` 스킬이 안내한다. 사용량 기록이 세션 기록이 있는 기기의 파일에만 쌓여 Backend 기록이 더 갱신되지 않으므로 멈춘 숫자가 최신처럼 보이지 않게 한다
 - `expectedBranch` 와 `expectedHead` 는 변경안을 만들 때 읽은 `get_github_profile` 의 `branch` 와 `head` 다. `expectedHead` 는 소문자 40자리 SHA 다. 둘은 승인 인자에 함께 저장되므로, 승인을 기다리는 사이 README 가 바뀌거나 기본 branch 가 바뀌면 실행할 때 `CAREER_GITHUB_STALE_REVIEW` 로 거절하고 GitHub 에 아무것도 쓰지 않는다. 최신 끝 커밋 위에 검토한 원고를 다시 올리지 않는다
 - 커밋이 하나도 없는 빈 프로필 저장소는 끝 커밋을 읽을 수 없어 `get_github_profile` 이 `CAREER_GITHUB_UNAVAILABLE` 로 답한다. 첫 커밋은 GitHub 에서 직접 만든다
 - 두 칸이 없는 옛 형식의 요청은 입력 검증에서 `CAREER_INVALID_INPUT` 으로 거절한다. 검토 기준을 모르는 원고를 최신 끝 커밋에 올리지 않기 위해서다
@@ -1299,7 +1313,7 @@ MCP 도구가 하던 일 가운데 커리어 데이터를 읽고 쓰는 것은 �
 | `CAREER_GITHUB_CONFLICT` | branch 를 옮기는 마지막 요청에서만 GitHub 가 409 나 422 로 답함. 그 사이 다른 커밋이 올라왔다 | `unavailable` |
 | `CAREER_GITHUB_STALE_REVIEW` | 실행할 때의 기본 branch 나 그 끝 커밋이 `expectedBranch`, `expectedHead` 와 다름. 검토한 뒤 저장소가 바뀌었고 GitHub 에 아무것도 쓰지 않았다 | `invalid_input` |
 | `CAREER_GITHUB_UNAVAILABLE` | GitHub 의 5xx 와 429, branch 를 옮기기 전 단계의 409 와 422, 연결과 시간 초과 실패. 토큰 통로의 503(갱신을 지금 못 함)과 그 밖의 실패 응답, 통로 연결과 시간 초과 실패도 든다 | `unavailable` |
-| `CAREER_BROWSER_UNREACHABLE` | 「내 브라우저」 중계 주소가 비었거나 브라우저에 닿지 못함. 노트북 Claude Code 에서는 늘 이 코드다. 원티드 도구는 아무 칸도 건드리지 않았다 | `unavailable` |
+| `CAREER_BROWSER_UNREACHABLE` | 「내 브라우저」 중계 주소가 비었거나 브라우저에 닿지 못함. 원티드 도구는 아무 칸도 건드리지 않았다 | `unavailable` |
 | `CAREER_BROWSER_IN_USE` | 사람이 「직접 할게요」 로 「내 브라우저」 를 쥐고 있음. 읽기 도구는 오류 대신 이 코드를 `code` 로 한 넘기기(`human_browser`)를 돌려준다 | `unavailable` |
 | `CAREER_WANTED_LOGIN_REQUIRED` | 원티드 로그인이나 보안 확인 화면. 읽기 도구는 이 코드를 `code` 로 한 넘기기(`login`)를 돌려준다. `connector.json` 은 recovery `reconnect` 를 함께 선언한다 | `credential_rejected` |
 | `CAREER_WANTED_PAGE_CHANGED` | 원티드 화면이나 칸 구조가 예상과 다름. 기다린 뒤에도 이력서 목록이 비어 있는 경우도 든다. 쓰기 도구는 오류 대신 칸의 `reason: page_changed` 로 멈춘다 | `unavailable` |

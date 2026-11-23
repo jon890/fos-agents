@@ -33,16 +33,14 @@ describe("후보자 맥락 스킬 경계", () => {
     });
   }
 
-  test("career-os/AGENTS.md 는 공통 프로필을 read_application_profile.ts 로 읽게 한다", () => {
+  test("career-os/AGENTS.md 는 공통 프로필을 기억 제목으로 가리키고 지운 CLI 를 적지 않는다", () => {
     const text = readFileSync(join(repositoryRoot, "career-os", "AGENTS.md"), "utf8");
-    for (const term of removedTerms) {
+    for (const term of [...removedTerms, "read_application_profile.ts", "career-application-profile"]) {
       expect(text.includes(term), `career-os/AGENTS.md 에 ${term} 이 남아 있다`).toBe(false);
     }
-    const found = text.split("\n").filter((line) => line.includes("career-application-profile"));
+    const found = text.split("\n").filter((line) => line.includes("「커리어: 지원서 공통 프로필」"));
     expect(found.length).toBeGreaterThanOrEqual(4);
-    for (const line of found) {
-      expect(line.startsWith("|") && line.includes("read_application_profile.ts"), `조회 표 밖이거나 CLI 가 없는 공통 프로필 줄: ${line}`).toBe(true);
-    }
+    for (const line of found) expect(line.startsWith("|"), `조회 표 밖의 공통 프로필 줄: ${line}`).toBe(true);
   });
 
   test("application-package-writer 는 공통 프로필을 기억에서 읽어 작업 폴더로 옮기게 한다", () => {

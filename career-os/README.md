@@ -4,15 +4,15 @@
 
 ## 시작
 
-현재 작업에 맞는 skill을 직접 호출한다.
+스킬은 모두 fos-assistant 의 커리어 에이전트에서 돈다. 현재 작업에 맞는 skill을 대화에서 부른다.
 각 skill은 `SKILL.md`에 입력, 산출물, 검증, 안전 경계를 담는다.
 
-- 지원 가능한 공고를 찾을 때: plugin 의 `position-recommender` (Claude Code)
-- 공고별 지원 판단과 전략을 준비할 때: plugin 의 `application-package-writer` (Claude Code)
-- 이력서·경력기술서를 작성하고 검증할 때: plugin 의 `resume-preparer` (Claude Code)
-- 기술·인성 면접을 연습할 때: plugin 의 `interview-practice` (비서의 커리어 에이전트). 공고별 질문으로 연습하거나 질문을 더 찾을 때: plugin 의 `interview-question-prep`
+- 지원 가능한 공고를 찾을 때: plugin 의 `position-recommender`
+- 공고별 지원 판단과 전략을 준비할 때: plugin 의 `application-package-writer`
+- 이력서·경력기술서를 작성하고 검증할 때: plugin 의 `resume-preparer`. 제출 문서를 평가하고 고칠 때: `resume-review`
+- 기술·인성 면접을 연습할 때: plugin 의 `interview-practice`. 공고별 질문으로 연습하거나 질문을 더 찾을 때: plugin 의 `interview-question-prep`
 - 읽을거리를 수집하고 오늘 읽을 자료를 골라 HTML 리포트를 만들 때: plugin 의 `study-collection`
-- 원티드, LinkedIn, GitHub 프로필을 갱신할 때: plugin 의 `sync-profile` (Claude Code). 비서의 커리어 에이전트에서는 `career-connector` 가 맥락 문서와 프로필 원고를 고치고 원티드와 GitHub 를 갱신한다
+- 맥락 문서와 프로필 원고를 고치고 원티드와 GitHub 프로필을 갱신할 때: plugin 의 `career-connector`
 
 `application-package-writer`는 전체 지원 요청에서 `resume-preparer`까지 연결한다.
 공개 질문 보강은 [`public/question-bank/MAINTENANCE.md`](public/question-bank/MAINTENANCE.md)의 저장소 유지 절차로 한다.
@@ -20,16 +20,7 @@
 
 fos-assistant 의 커리어 에이전트에서 문서를 고치고, 면접을 연습하고, 공고와 공부 자료를 추천받고, GitHub 프로필을 갱신할 때는 `plugin/` 의 커리어 커넥터를 쓴다. 스킬은 셸 실행 공간에서 돌고 데이터는 에이전트 주인의 작업 폴더와 기억에 있다.
 자세한 것은 [`docs/code-architecture.md`](docs/code-architecture.md)의 「fos-career 커넥터」를 따른다.
-Claude Code 에서는 `plugin/` 을 설치해 같은 스킬과 로컬 실행기를 쓴다. 실행기가 읽는 환경 변수는 [`docs/data-schema.md`](docs/data-schema.md#로컬-실행기-환경-변수)를 따른다.
-
-```bash
-claude plugin marketplace add <저장소 경로>/career-os
-claude plugin install fos-career@fos-career
-```
-
-`career-os/.claude-plugin/marketplace.json` 이 `plugin/` 을 가리키는 로컬 marketplace 다. 설치한 plugin 은 작업본을 직접 읽어 스킬을 고치면 다음 세션에 반영된다.
-MCP 서버는 `.env` 를 읽지 않고 Claude Code 프로세스의 환경 변수를 받는다. [커넥터 환경 변수](docs/data-schema.md#커넥터-환경-변수)를 Claude Code 설정의 `env` 에 둔다.
-Backend 가 Cloudflare Access 뒤에 있으면 `CAREER_BACKEND_ACCESS_CLIENT_ID`, `CAREER_BACKEND_ACCESS_CLIENT_SECRET` 도 셸이나 Claude Code 설정의 `env` 에 둔다. `.mcp.json` 은 이 둘을 선언하지 않지만 서버가 Claude Code 의 환경을 그대로 물려받는다.
+실행기가 읽는 환경 변수는 [`docs/data-schema.md`](docs/data-schema.md#로컬-실행기-환경-변수)를 따른다.
 
 ## 공식 링크
 
@@ -42,27 +33,11 @@ Backend 가 Cloudflare Access 뒤에 있으면 `CAREER_BACKEND_ACCESS_CLIENT_ID`
 
 ## 설정
 
-clone 뒤에는 `.env.example`에서 필요한 secret 키 이름을 확인한다.
-현재 경력, 역할 선호, 경험 경계와 지원 상태는 커리어 Backend 의 후보자 맥락 문서가 기준 원본이다.
-연락처와 신원을 담은 지원서 공통 프로필은 fos-assistant Memory 에 있고 서비스 토큰으로 읽기만 한다.
-연결값 `FOS_ASSISTANT_URL`, `FOS_ASSISTANT_SERVICE_TOKEN` 을 `.env` 에 둔다.
-Backend 나 fos-assistant 가 Cloudflare Access 뒤에 있으면 `.env.example` 의 `*_ACCESS_CLIENT_ID` 와 `*_ACCESS_CLIENT_SECRET` 도 채운다.
-
-`scripts/career-workspace/`에는 비공개 작업 파일의 manifest, 준비, 차이 확인과 발행을 담당하는 공통 CLI가 있다.
-홈서버의 `career-storage`는 `career-os` S3 bucket에 검증된 불변 release를 보관하고 검증이 끝난 뒤 current pointer를 바꾼다.
-코드를 확인할 때는 [`scripts/career-workspace/README.md`](scripts/career-workspace/README.md)의 정상 실행 경로부터 읽는다.
-세 작성 skill은 실행 전 준비와 성공 뒤 발행을 자동으로 수행한다.
-로컬 작업본과 원격 release 차이를 확인할 때는 저장소 루트에서 다음 명령을 실행한다.
-
-```bash
-bun "$(git rev-parse --show-toplevel)/career-os/scripts/career-workspace/cli.ts" check --json
-```
-
-`.env`는 워크스페이스 루트에 두고 git에 올리지 않는다.
-홈서버에서는 S3 실행 파일을 빌드하고 `CAREER_STORAGE_S3_EXECUTABLE`, 공용 publish 잠금과 네 `CAREER_STORAGE_S3_*` 값을 서비스 환경에 둔다.
-SSH client는 원격 transport 값을 넣는다.
-홈서버 Hermes는 이 작업 공간 동기화를 쓰지 않는다.
-설치, 상태 확인과 복구 순서는 운영 저장소의 객체 저장소(SeaweedFS) 운영 문서를 따른다.
+clone 뒤에는 `.env.example`에서 필요한 키 이름을 확인한다. `.env`는 워크스페이스 루트에 두고 git에 올리지 않는다.
+현재 경력, 역할 선호, 경험 경계와 지원 상태는 커리어 에이전트 주인의 기억에 있는 후보자 맥락 문서가 기준 원본이다.
+연락처와 신원을 담은 지원서 공통 프로필도 같은 기억에 「커리어: 지원서 공통 프로필」 로 있다.
+지원 자료(`applications/`, `library/`, `state/`)는 저장소가 아니라 커리어 에이전트의 작업 폴더에 있고 기기 사이에 동기화하지 않는다.
+에이전트 사용량은 세션 기록이 있는 기기에서 `scripts/agent-usage/collect_usage.ts` 가 그 기기의 파일에 쌓는다.
 진행 중인 지원 대상은 후보자 맥락 문서 `application-state` 에서 확인하고 공고별 실행 자료는 `applications/<company>/<role>/`에서 관리한다.
 
 ## 작업 흐름

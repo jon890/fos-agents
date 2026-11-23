@@ -24,8 +24,8 @@
 ## 작업 경계
 
 현재 지원 대상과 회사별 지원 판단은 후보자 맥락 문서 `application-state`, `position-preferences` 에서 관리한다.
-후보자 맥락 문서의 원본은 비서의 기억이고 제목은 [`docs/data-schema.md`](docs/data-schema.md#후보자-맥락-문서)가 갖는다. 아래 표의 `manage_candidate_context.ts` 와 `manage_profile.ts` 는 커리어 Backend 를 읽는 노트북 경로로, Backend 를 내릴 때 함께 지운다.
-공고별 지원 문서와 면접 질문은 `applications/`에 두고, 검증 완료 주장처럼 저장소 실행에 필요한 파일 상태만 `state/`에 둔다.
+후보자 맥락 문서의 원본은 비서의 기억이고 제목은 [`docs/data-schema.md`](docs/data-schema.md#후보자-맥락-문서)가 갖는다. 스킬은 비서의 커리어 에이전트에서 기억을 읽는다. 저장소의 `manage_candidate_context.ts` 와 `manage_profile.ts` 는 커리어 Backend 를 읽는 CLI 로, Backend 를 내릴 때 함께 지운다.
+공고별 지원 문서와 면접 질문은 커리어 작업 폴더의 `applications/`에 두고, 검증 완료 주장처럼 다음 실행이 다시 쓰는 파일 상태만 작업 폴더의 `state/`에 둔다. 저장소에는 두지 않는다.
 면접 연습 기록과 개인 질문은 커리어 작업 폴더의 SQLite(`state/career.sqlite`)가 소유한다.
 회사명, 공고, 면접 일정과 학습 우선순위처럼 자주 바뀌는 상태를 `AGENTS.md`에 쓰지 않는다.
 
@@ -45,13 +45,13 @@
 
 | 조회할 것                     | 어디에 있나                                                                 |
 | ------------------------- | ---------------------------------------------------------------------- |
-| 이름, 생년월일, 연락처, 주소         | `read_application_profile.ts get --out` 의 `career-application-profile` |
-| 병역, 보훈, 장애 여부             | `read_application_profile.ts get --out` 의 `career-application-profile` |
-| 학력, 자격증, 어학               | `read_application_profile.ts get --out` 의 `career-application-profile` |
-| 회사별 부서명과 고용 형태, 정확한 재직 기간 | `read_application_profile.ts get --out` 의 `career-application-profile` |
-| 현재 경력과 경험 경계              | `manage_candidate_context.ts get --key career-status`                  |
-| 역할 선호와 이직 우선순위           | `manage_candidate_context.ts get --key position-preferences`           |
-| 지원 이력과 현재 대상              | 후보자 맥락 문서 `application-state`                                          |
+| 이름, 생년월일, 연락처, 주소         | 기억의 「커리어: 지원서 공통 프로필」 |
+| 병역, 보훈, 장애 여부             | 기억의 「커리어: 지원서 공통 프로필」 |
+| 학력, 자격증, 어학               | 기억의 「커리어: 지원서 공통 프로필」 |
+| 회사별 부서명과 고용 형태, 정확한 재직 기간 | 기억의 「커리어: 지원서 공통 프로필」 |
+| 현재 경력과 경험 경계              | 기억의 「커리어: 현재 경력」(`career-status`) |
+| 역할 선호와 이직 우선순위           | 기억의 「커리어: 역할 선호」(`position-preferences`) |
+| 지원 이력과 현재 대상              | 기억의 「커리어: 지원 상태」(`application-state`) |
 | 회사별 재지원 간격                | `career-local.js position exclusions get` 의 `position_exclusions`      |
 
 
@@ -61,8 +61,8 @@
 
 **조회해서 없으면 묻는다.** 조회하지 않고 묻는 것만 금지한다.
 공통 프로필에 없거나 틀린 사실은 career-os 가 고치지 않는다.
-사용자에게 fos-assistant 웹 화면에서 고치라고 알린다.
-후보자 맥락 문서의 사실은 변경 전후를 보여 주고 승인받은 뒤 `manage_candidate_context.ts put` 으로 저장한다.
+사용자에게 기억 화면에서 고치라고 알린다.
+후보자 맥락 문서의 사실은 `career-connector` 스킬의 「맥락 문서 읽고 고치기」 로 변경 전후를 보여 주고 기억에 남긴다.
 
 ### 프로젝트 근거는 `sources/fos-study/task/`가 소유한다
 
@@ -84,10 +84,10 @@ grep -rl "<확인할 기술>" career-os/sources/fos-study/task/
 | -------------------------------- | ------------------------------- |
 | `sources/fos-study/task/`        | 프로젝트별로 실제 한 일, 기술 선택과 그 이유      |
 | 후보자 맥락 문서                        | 역할 선호, 경험 경계, 지원 이력과 현재 대상    |
-| fos-assistant Memory 의 `identity` 문서 | 지원서 공통 프로필(신원, 연락처, 정확한 재직 기간). `read_application_profile.ts get --out` 으로 읽는다 |
-| `applications/<company>/<role>/` | 공고별 적합도 판정과 지원 전략               |
-| 커리어 Backend 의 프로필 원고             | 대상별 프로필 원고. `manage_profile.ts documents get` 으로 읽는다 |
-| `state/verified-claims/`         | 다시 쓸 수 있는 검증 완료 주장과 근거 상태       |
+| 기억의 「커리어: 지원서 공통 프로필」 | 지원서 공통 프로필(신원, 연락처, 정확한 재직 기간). 지원서 입력을 만들 때만 읽는다 |
+| 작업 폴더 `applications/<company>/<role>/` | 공고별 적합도 판정과 지원 전략               |
+| 작업 폴더의 프로필 원고             | 대상별 프로필 원고. 자리는 `docs/data-schema.md` 의 「커리어 작업 폴더」 가 갖는다 |
+| 작업 폴더 `state/verified-claims/`         | 다시 쓸 수 있는 검증 완료 주장과 근거 상태       |
 
 
 **같은 사실을 두 곳에 쓰지 않는다.**
@@ -96,12 +96,12 @@ grep -rl "<확인할 기술>" career-os/sources/fos-study/task/
 
 - 실제 지원서 제출, 업로드, 이메일 전송은 자동으로 하지 않는다.
 - 외부 프로필 갱신은 반영할 내용을 먼저 보여주고 승인을 받은 뒤에만 수행한다.
-- 공고별 지원 자료는 `applications/`, 재사용 자료는 `library/`, 실행 상태는 `state/`의 책임 파일에 둔다.
+- 공고별 지원 자료는 작업 폴더의 `applications/`, 재사용 자료는 `library/`, 실행 상태는 `state/`의 책임 파일에 둔다.
 - 공개 글에는 민감한 개인 정보, 정확한 주소, 비공개 내부 정보를 쓰지 않는다.
 
 ## 외부 저장소와 데이터 경계
 
 career-os는 수집, 리포트 생성, skill 실행, private 산출물, 피드백 루프 기록을 파일과 skill 계약으로 직접 관리한다.
-지원 준비 상태는 각 `applications/` 디렉터리의 `evidence/status.md`에서 관리한다.
+지원 준비 상태는 작업 폴더의 각 `applications/` 디렉터리의 `evidence/status.md`에서 관리한다.
 
 개인 이력, 지원 전략과 회사별 비공개 맥락은 공개 HTML에 포함하지 않는다.
