@@ -25,6 +25,7 @@ import { resolveCareerStoreRoot } from "../lib/career-store/database.ts";
 import { careerStoreFailureLine } from "../lib/career-store/errors.ts";
 import { formatSeoulIsoDate } from "../lib/date-format.ts";
 import { prepareCandidateContext } from "./candidate-context.ts";
+import { withPeriodicGc } from "./memory-relief.ts";
 import {
   isPositionSettingsCommand,
   POSITION_SETTINGS_HELP,
@@ -356,12 +357,13 @@ export async function runPositionCommand(
       writeLine(`수집 전 확인 실패: ${error instanceof Error ? error.message : String(error)}`);
       return 1;
     }
-    const exitCode = await operations.collect(paths);
+    const exitCode = await withPeriodicGc(() => operations.collect(paths));
     if (exitCode !== 0) return exitCode;
     const result = await operations.prepare(paths);
     if (result.companyTierQueuedCount > 0) {
       if (operations.collectEvidence) {
-        const evidence = await operations.collectEvidence(paths);
+        const collectEvidence = operations.collectEvidence;
+        const evidence = await withPeriodicGc(() => collectEvidence(paths));
         writeLine(
           `회사 근거 수집: 회사 ${evidence.companyCount}곳, 근거 ${evidence.evidenceCount}건, 실패 수집기 ${evidence.failedCollectorCount}건`,
         );
