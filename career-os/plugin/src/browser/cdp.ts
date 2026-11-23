@@ -1,4 +1,4 @@
-import { CareerError, configuredValue } from "../backend.ts";
+import { CareerError, configuredValue } from "../errors.ts";
 
 // A small CDP client for the owner's browser behind the fos-assistant relay.
 // The relay is called like Chrome's own debugging endpoint: HTTP `json/*` plus a page WebSocket.

@@ -1,15 +1,13 @@
 #!/usr/bin/env bun
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { makeRemoteError, TransportError } from "../career-workspace/transport.ts";
-import { runDrillCli } from "../interview-drill/drill-engine.ts";
-import { createInterviewPracticeStore } from "../interview-drill/store/index.ts";
+import { createInterviewStore, runDrillCli } from "../interview-drill/drill-engine.ts";
 import { runInterviewQuestionSources } from "../interview-question-sources/cli.ts";
 import { runPackageCommand } from "../application-package/cli.ts";
 import { formatReadApplicationProfileError, readApplicationProfileCli } from "../application-profile/read_application_profile.ts";
 import { PositionRunUsageError, positionRunHelp, runPositionCommand } from "../position-recommender/position_run.ts";
-import { CareerBackendHttpError } from "../lib/career-backend-http.ts";
 import { careerStoreFailureLine } from "../lib/career-store/errors.ts";
 import { UsageError } from "../lib/cli.ts";
 import { formatManageReadingSourcesError, manageReadingSources } from "../study-topic-recommender/manage_reading_sources.ts";
@@ -32,7 +30,7 @@ type Executor = (typeof PLUGIN_LOCAL_EXECUTORS)[number];
 
 const descriptions: Record<Executor, string> = {
   workspace: "작업본 위치를 알려 주고 스킬 세션을 열고 닫는다 (paths | begin <skill> | finish <skill>) --json",
-  interview: "Backend 의 진행 기록으로 면접 질문을 고른다 (select <tech|behavioral>)",
+  interview: "작업 폴더의 복습 상태로 면접 질문을 고르고 연습 결과와 개인 질문을 기록한다 (select | progress | record | personal list | personal add | personal disable)",
   "interview-sources": "면접 질문 출처를 검증하거나 후보를 모은다",
   study: "아침 공부 주제를 수집, 선별하고 리포트를 만든다",
   "study-validate": "아침 공부 리포트 산출물을 검증한다 (--run-dir <dir>)",
@@ -61,7 +59,17 @@ const RESUME_COMMANDS: Record<string, { run: () => unknown; defaults?: Record<st
 
 const RESUME_USAGE = `사용법: resume <${Object.keys(RESUME_COMMANDS).join(" | ")}> [인자...]`;
 
-const INTERVIEW_USAGE = "사용법: interview select <tech|behavioral> [--application-dir <dir>] [--target-bar <bar>] [--count <n>]";
+const INTERVIEW_USAGE = [
+  "사용법: interview select <tech|behavioral> [--application-dir <dir>] [--target-bar <bar>] [--count <n>]",
+  "        interview progress <tech|behavioral>",
+  "        interview record --input <JSON 파일>  (칸은 아래 옵션과 같은 뜻이고 이름은 drillType, questionId, topic, question, score, feedback, rootQuestionId, parentQuestion, followUpDepth, followUpAxis, stopReason, attemptId 다)",
+  "        interview record --drill-type <tech|behavioral> --question-id <id> --topic <주제> --question <질문> --score <pass|shallow|fail|unknown> [--feedback <글>] [--root-question-id <id> --parent-question <질문> --follow-up-depth <1-4> --follow-up-axis <축>] [--stop-reason <이유>] [--attempt-id <uuid>]",
+  "        interview personal list <tech|behavioral>",
+  "        interview personal add --file <.json|.jsonl>",
+  "        interview personal disable --question-id <id>",
+].join("\n");
+/** 실행 공간에서 받는 면접 명령이다. `memory`, `doctor` 는 저장소에서 직접 부르는 점검 명령이라 받지 않는다. */
+const INTERVIEW_COMMANDS = ["select", "progress", "record", "personal"];
 
 function usage(): string {
   return [
@@ -202,17 +210,16 @@ async function runWorkspace(args: string[]): Promise<number> {
 }
 
 async function runInterview(args: string[]): Promise<number> {
-  if (args[0] !== "select") {
-    console.error("plugin 실행기는 select 만 받는다. 기록과 개인 질문은 save_interview_attempt, save_personal_question 도구로 한다.");
+  if (!args[0] || !INTERVIEW_COMMANDS.includes(args[0])) {
+    console.error(INTERVIEW_USAGE);
     return 2;
   }
-  // plugin 에는 파일 저장소를 두지 않는다. 저장소는 늘 Backend 다(ADR-137).
-  const environment = { ...process.env, CAREER_STORE: "backend" };
   try {
     const result = await runDrillCli(args, {
-      environment,
-      createStore: () => createInterviewPracticeStore(environment),
+      environment: process.env,
+      createStore: () => createInterviewStore(process.env),
       readFile: (filePath) => readFileSync(filePath, "utf8"),
+      writeFile: (filePath, content) => writeFileSync(filePath, content, "utf8"),
     });
     console.log(JSON.stringify(result));
     return 0;
@@ -222,14 +229,8 @@ async function runInterview(args: string[]): Promise<number> {
       console.error(error.message);
       return 2;
     }
-    const message = messageOf(error);
-    console.error(
-      error instanceof CareerBackendHttpError && error.code === "NETWORK_ERROR"
-        ? `커리어 Backend에 연결하지 못했습니다. 연습 결과는 기록되지 않았습니다. ${message}`
-        : message,
-    );
+    console.error(careerStoreFailureLine(error) ?? messageOf(error));
     return 1;
   }
 }
-
 if (import.meta.main) process.exitCode = await runPluginLocal(process.argv.slice(2));

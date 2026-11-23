@@ -1,9 +1,8 @@
 import { z } from "zod";
-import { CareerError, type CareerErrorCode, type FetchLike } from "./backend.ts";
+import { CareerError, type CareerErrorCode, type FetchLike } from "./errors.ts";
 
 const apiBase = "https://api.github.com";
 const readmePath = "README.md";
-const chartPath = "agent-usage.svg";
 
 const repoSchema = z.object({ default_branch: z.string().min(1) });
 const refSchema = z.object({ object: z.object({ sha: z.string().min(1) }) });
@@ -42,7 +41,7 @@ function refPath(branch: string): string {
   return `heads/${branch.split("/").map(encodeURIComponent).join("/")}`;
 }
 
-/** The GitHub profile repository: reads README and chart, and writes both in one commit. */
+/** The GitHub profile repository: reads and writes README.md only. */
 export class GithubProfileRepo {
   private readonly token: () => Promise<string>;
   private readonly repoPath: string;
@@ -67,39 +66,36 @@ export class GithubProfileRepo {
   }
 
   /**
-   * Reads README and chart at one commit. The branch head is resolved first and both files are read
-   * at that SHA, so the returned head names exactly the snapshot the caller reviews.
+   * Reads README at one commit. The branch head is resolved first and the file is read at that SHA,
+   * so the returned head names exactly the snapshot the caller reviews.
    */
   async read(): Promise<{
     repo: string;
     branch: string;
     head: string;
     readme: string | null;
-    chartExists: boolean;
   }> {
     const token = await this.token();
     const branch = await this.defaultBranch(token);
     const head = await this.headOf(token, branch);
     const readme = await this.send(token, this.contentsStep(readmePath, head));
-    const chart = await this.send(token, this.contentsStep(chartPath, head));
     return {
       repo: this.config.repo,
       branch,
       head,
       readme: readme === null ? null : decodeBase64Utf8(this.parse(contentSchema, readme).content),
-      chartExists: chart !== null,
     };
   }
 
   /**
-   * Writes README and chart as one commit through the Git Data API, so the profile never shows one
-   * file updated without the other. Each request is sent once and the branch moves without force.
+   * Writes README as one commit through the Git Data API. Each request is sent once and the branch
+   * moves without force.
    *
    * `expected` is the branch and head the README was reviewed against. When either differs, nothing
    * is written: rebasing a stale draft onto the new head would silently drop the newer edit.
    */
   async commitProfile(
-    files: { readme: string; chart: string },
+    readme: string,
     message: string,
     expected: { branch: string; head: string },
   ): Promise<{ changed: boolean; commitSha: string; branch: string }> {
@@ -111,14 +107,10 @@ export class GithubProfileRepo {
     const ref = refPath(branch);
     const baseTree = this.parse(commitSchema, await this.send(token, { method: "GET", path: `/git/commits/${head}` }))
       .tree.sha;
-    const readmeBlob = await this.createSha(token, "/git/blobs", { content: files.readme, encoding: "utf-8" });
-    const chartBlob = await this.createSha(token, "/git/blobs", { content: files.chart, encoding: "utf-8" });
+    const readmeBlob = await this.createSha(token, "/git/blobs", { content: readme, encoding: "utf-8" });
     const tree = await this.createSha(token, "/git/trees", {
       base_tree: baseTree,
-      tree: [
-        { path: readmePath, mode: "100644", type: "blob", sha: readmeBlob },
-        { path: chartPath, mode: "100644", type: "blob", sha: chartBlob },
-      ],
+      tree: [{ path: readmePath, mode: "100644", type: "blob", sha: readmeBlob }],
     });
     // Same tree as the branch head: the repository already holds this content, so no empty commit.
     if (tree === baseTree) return { changed: false, commitSha: head, branch };

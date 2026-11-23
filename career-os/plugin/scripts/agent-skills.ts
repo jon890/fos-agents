@@ -1,5 +1,6 @@
 /**
  * `agent-skills/` 의 일반 에이전트용 사본을 Claude Code 전용 `skills/` 에서 만든다(ADR-141 개정).
+ * `AGENT_SKILL_ORIGINALS` 의 스킬은 사본이 아니라 `agent-skills/` 가 원본이다. 만들거나 지우지 않고 검사만 한다(ADR-147).
  *
  * 사본은 `SKILL.md` 와 `references/`, `templates/` 만 갖는다. fos-assistant 가 그 밖의 파일을 복사하지 않기 때문이다.
  * `SKILL.md` 는 아래 교체만 거치고 나머지는 원본 그대로다. 교체할 문장이 원본에 정확히 한 번 없으면 실패해,
@@ -73,6 +74,12 @@ export const AGENT_SKILL_COPIES: Readonly<Record<string, readonly Replacement[]>
   "study-collection": SHELL_ENVIRONMENT,
 };
 
+/**
+ * `agent-skills/` 가 원본인 스킬이다. 셸 실행 공간에서만 도는 스킬이라 `skills/` 에 원본을 두지 않는다.
+ * 사본처럼 다른 실행 환경 전용 표현이 없어야 한다.
+ */
+export const AGENT_SKILL_ORIGINALS: readonly string[] = ["career-connector", "interview-practice"];
+
 function filesUnder(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true })
     .sort((left, right) => left.name.localeCompare(right.name))
@@ -121,7 +128,13 @@ export function agentSkillDrift(): string[] {
   const committed = committedAgentSkills();
   const problems: string[] = [];
   for (const name of committed.keys())
-    if (!(name in AGENT_SKILL_COPIES)) problems.push(`${name}: 사본 목록에 없는 디렉터리다`);
+    if (!(name in AGENT_SKILL_COPIES) && !AGENT_SKILL_ORIGINALS.includes(name))
+      problems.push(`${name}: 사본 목록에도 원본 목록에도 없는 디렉터리다`);
+  for (const name of AGENT_SKILL_ORIGINALS) {
+    const files = committed.get(name);
+    if (!files?.has("SKILL.md")) problems.push(`${name}: 원본 목록에 있는데 SKILL.md 가 없다`);
+    for (const [path, content] of files ?? []) problems.push(...hostOnlyFindings(`${name}/${path}`, content));
+  }
   for (const name of Object.keys(AGENT_SKILL_COPIES)) {
     const expected = renderAgentSkill(name);
     const actual = committed.get(name) ?? new Map<string, string>();
@@ -132,7 +145,9 @@ export function agentSkillDrift(): string[] {
 }
 
 export function writeAgentSkills(): void {
-  for (const name of committedAgentSkills().keys()) rmSync(join(AGENT_SKILLS_DIRECTORY, name), { recursive: true });
+  // 원본 스킬은 다시 만들 수 없으므로 지우지 않는다.
+  for (const name of committedAgentSkills().keys())
+    if (!AGENT_SKILL_ORIGINALS.includes(name)) rmSync(join(AGENT_SKILLS_DIRECTORY, name), { recursive: true });
   for (const name of Object.keys(AGENT_SKILL_COPIES))
     for (const [path, content] of renderAgentSkill(name)) {
       const target = join(AGENT_SKILLS_DIRECTORY, name, path);

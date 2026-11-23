@@ -46,10 +46,44 @@ test("모르는 실행기는 사용법과 함께 2 로 끝난다", async () => {
   expect(errored.join("\n")).toContain("nope");
 });
 
-test("interview 는 select 가 아니면 MCP 도구를 안내하고 2 로 끝난다", async () => {
-  expect(await runPluginLocal(["interview", "record"])).toBe(2);
-  expect(errored.join("\n")).toContain("save_interview_attempt");
-  expect(process.argv.slice(2)).toEqual(["record"]);
+test("interview 는 실행 공간에서 받지 않는 명령이면 사용법과 함께 2 로 끝난다", async () => {
+  expect(await runPluginLocal(["interview", "doctor"])).toBe(2);
+  expect(errored.join("\n")).toContain("interview record");
+  expect(errored.join("\n")).not.toContain("save_interview_attempt");
+  expect(process.argv.slice(2)).toEqual(["doctor"]);
+});
+
+test("interview record 와 progress 는 작업 폴더 저장소에 쓰고 읽으며, 깨진 저장소는 그 code 를 첫 줄에 낸다", async () => {
+  const { mkdirSync, mkdtempSync, rmSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { closeCareerStores } = await import("../lib/career-store/database.ts");
+  const saved = process.env.CAREER_WORKSPACE_ROOT;
+  const root = mkdtempSync(join(tmpdir(), "plugin-local-interview-"));
+  process.env.CAREER_WORKSPACE_ROOT = root;
+  const record = ["interview", "record", "--drill-type", "tech", "--question-id", "q-1", "--topic", "transaction", "--question", "질문입니다.", "--score", "fail"];
+  try {
+    expect(await runPluginLocal(record)).toBe(0);
+    expect(await runPluginLocal(["interview", "progress", "tech"])).toBe(0);
+    expect(JSON.parse(logged.at(-1)!).items).toEqual([
+      expect.objectContaining({ topic: "transaction", failCount: 1, dueForReview: false }),
+    ]);
+    expect(await runPluginLocal(["interview", "record", "--drill-type", "tech"])).toBe(2);
+
+    closeCareerStores();
+    const broken = join(root, "broken");
+    mkdirSync(join(broken, "state"), { recursive: true });
+    writeFileSync(join(broken, "state", "career.sqlite"), "SQLite 가 아니다\n".repeat(100));
+    process.env.CAREER_WORKSPACE_ROOT = broken;
+    errored.length = 0;
+    expect(await runPluginLocal(record)).toBe(1);
+    expect(errored[0]).toStartWith("CAREER_STORE_CORRUPT: ");
+  } finally {
+    closeCareerStores();
+    if (saved === undefined) delete process.env.CAREER_WORKSPACE_ROOT;
+    else process.env.CAREER_WORKSPACE_ROOT = saved;
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test("position 은 모르는 하위 명령이면 도움말과 메시지를 stderr 에 쓰고 2 로 끝난다", async () => {

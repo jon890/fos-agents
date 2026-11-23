@@ -119,11 +119,9 @@ test("저장 승인과 개인정보, 기본값과 예외를 설명에서 구분�
     expect(description, name).toContain(risk === "WRITE" ? "WRITE" : "READ");
     expect(description, name).toContain("승인");
   }
-  expect(connector.tools.get_interview_questions.description).toContain("기본값은 5");
-  expect(connector.tools.list_study_candidates.description).toContain("기본값 20");
-  expect(connector.tools.save_interview_attempt.description).toContain("커넥터가 UUID를 생성");
   expect(connector.tools.update_github_profile.description).toContain("CAREER_GITHUB_STALE_REVIEW");
-  expect(connector.tools.get_position_research_constraints.description).toContain(
-    "readiness: hold",
-  );
+  // 사용량 차트와 Tokens 배지는 README 갱신에서 빠졌다.
+  expect(connector.tools.update_github_profile.description).toContain("README.md 한 파일");
+  expect(connector.tools.update_github_profile.description).not.toContain("months 는");
+  expect(connector.tools.check_connection.description).not.toContain("Backend");
 });

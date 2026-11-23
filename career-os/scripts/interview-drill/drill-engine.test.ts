@@ -2,7 +2,10 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { FileInterviewPracticeStore } from "./store/file-store.ts";
+import { closeCareerStores, openCareerStore } from "../lib/career-store/database.ts";
+import { CareerStoreError } from "../lib/career-store/errors.ts";
+import { InterviewStore } from "../lib/career-store/interview/store.ts";
+import { cleanupCareerWorkspaces, createCareerWorkspace } from "../lib/career-store/test-support.ts";
 import {
   loadQuestionBank,
   runDrillCli,
@@ -11,9 +14,10 @@ import {
 } from "./drill-engine.ts";
 
 const directories: string[] = [];
-afterEach(() =>
-  directories.splice(0).forEach((directory) => rmSync(directory, { recursive: true, force: true })),
-);
+afterEach(() => {
+  cleanupCareerWorkspaces();
+  directories.splice(0).forEach((directory) => rmSync(directory, { recursive: true, force: true }));
+});
 const question: DrillQuestion = {
   id: "personal-1",
   topic: "transaction",
@@ -24,38 +28,41 @@ const question: DrillQuestion = {
   answerSignals: ["원자성"],
 };
 const contextDocuments = {
-  "career-status": { documentKey: "career-status" as const, version: 2, body: "# 합성 경력 상태" },
-  "application-state": { documentKey: "application-state" as const, version: 5, body: "# 합성 지원 상태" },
+  "career-status": { documentKey: "career-status" as const, version: "career-status:sha256:a", body: "# 합성 경력 상태" },
+  "application-state": { documentKey: "application-state" as const, version: "application-state:sha256:b", body: "# 합성 지원 상태" },
 };
 async function readContextDocuments() {
   return contextDocuments;
 }
-function store(): FileInterviewPracticeStore {
-  const directory = mkdtempSync(join(tmpdir(), "drill-engine-"));
-  directories.push(directory);
-  return new FileInterviewPracticeStore(directory, () => new Date("2026-08-13T01:00:00.000Z"));
+const databases = new WeakMap<InterviewStore, ReturnType<typeof createCareerWorkspace>["db"]>();
+function createdDb(value: InterviewStore) {
+  return databases.get(value)!;
+}
+function store(): InterviewStore {
+  const { db } = createCareerWorkspace();
+  const value = new InterviewStore(db, () => new Date("2026-08-13T01:00:00.000Z"));
+  databases.set(value, db);
+  return value;
 }
 
 describe("면접 연습 CLI", () => {
-  test("설정이 없으면 doctor가 저장소와 후보자 맥락을 모두 실패로 낸다", async () => {
+  test("저장소를 열지 못하고 설정이 없으면 doctor가 둘 다 실패로 낸다", async () => {
     const result = (await runDrillCli(["doctor"], {
       environment: {},
       createStore: () => {
-        throw new Error("만들면 안 됩니다.");
+        throw new CareerStoreError(500, "CAREER_STORE_CORRUPT", "읽을 수 없습니다.");
       },
       readFile: () => "",
     })) as { passed: boolean; checks: Array<{ name: string; ok: boolean }> };
     expect(result.passed).toBeFalse();
     expect(result.checks.map(({ name, ok }) => ({ name, ok }))).toEqual([
-      { name: "CAREER_STORE", ok: false },
+      { name: "CAREER_WORKSPACE", ok: false },
       { name: "CAREER_MEMORY", ok: false },
     ]);
   });
-  test("file 저장소와 유효한 파일 후보자 맥락이면 doctor가 통과한다", async () => {
-    const directory = mkdtempSync(join(tmpdir(), "drill-doctor-"));
-    directories.push(directory);
+  test("저장소가 열리고 유효한 파일 후보자 맥락이면 doctor가 통과한다", async () => {
     const result = (await runDrillCli(["doctor"], {
-      environment: { CAREER_STORE: "file", CAREER_STORE_DIR: directory, CAREER_MEMORY: "file", CAREER_MEMORY_FILE: "memory.json" },
+      environment: { CAREER_MEMORY: "file", CAREER_MEMORY_FILE: "memory.json" },
       createStore: store,
       readFile: () => JSON.stringify({
         schemaVersion: 1,
@@ -66,49 +73,21 @@ describe("면접 연습 CLI", () => {
     })) as { passed: boolean };
     expect(result.passed).toBeTrue();
   });
-  test("memory와 잘못된 저장소 doctor는 저장소를 만들지 않고 모든 점검을 낸다", async () => {
-    const createStore = () => {
-      throw new Error("저장소 생성 실패");
-    };
+  test("memory 는 저장소를 만들지 않고 context 문서를 그대로 낸다", async () => {
     const memory = (await runDrillCli(["memory"], {
-      environment: { CAREER_MEMORY: "backend" },
-      createStore,
-      readFile: () => "",
-      readContextDocuments,
-    })) as { provider: string; documents: Array<{ documentKey: string; version: number; body: string }> };
-    expect(memory.provider).toBe("backend");
-    expect(memory.documents).toEqual([contextDocuments["career-status"], contextDocuments["application-state"]]);
-    const doctor = (await runDrillCli(["doctor"], {
-      environment: { CAREER_MEMORY: "backend" },
-      createStore,
-      readFile: () => "",
-      readContextDocuments,
-    })) as { checks: Array<{ name: string; ok: boolean }> };
-    expect(doctor.checks.map(({ name, ok }) => ({ name, ok }))).toEqual([
-      { name: "CAREER_STORE", ok: false },
-      { name: "CAREER_MEMORY", ok: true },
-    ]);
-  });
-  test("저장소 생성이 실패해도 backend 후보자 맥락 doctor 점검은 계속한다", async () => {
-    const result = (await runDrillCli(["doctor"], {
-      environment: { CAREER_STORE: "file", CAREER_MEMORY: "backend" },
+      environment: { CAREER_MEMORY: "context" },
       createStore: () => {
-        throw new Error("저장소 생성 실패");
+        throw new Error("만들면 안 됩니다.");
       },
       readFile: () => "",
       readContextDocuments,
-    })) as { passed: boolean; checks: Array<{ name: string; ok: boolean }> };
-    expect(result.passed).toBeFalse();
-    expect(result.checks.map(({ name, ok }) => ({ name, ok }))).toEqual([
-      { name: "CAREER_STORE", ok: false },
-      { name: "CAREER_MEMORY", ok: true },
-    ]);
+    })) as { provider: string; documents: Array<{ documentKey: string; version: string; body: string }> };
+    expect(memory.provider).toBe("context");
+    expect(memory.documents).toEqual([contextDocuments["career-status"], contextDocuments["application-state"]]);
   });
-  test("backend 문서가 빠지면 doctor가 연결값과 빠진 문서 키를 알린다", async () => {
-    const directory = mkdtempSync(join(tmpdir(), "drill-doctor-"));
-    directories.push(directory);
+  test("context 문서가 빠지면 doctor가 쓸 자리와 빠진 문서 키를 알린다", async () => {
     const result = (await runDrillCli(["doctor"], {
-      environment: { CAREER_STORE: "file", CAREER_STORE_DIR: directory, CAREER_MEMORY: "backend" },
+      environment: { CAREER_MEMORY: "context" },
       createStore: store,
       readFile: () => "",
       readContextDocuments: async () => ({ "career-status": contextDocuments["career-status"] }),
@@ -116,13 +95,13 @@ describe("면접 연습 CLI", () => {
     expect(result.passed).toBeFalse();
     const memoryCheck = result.checks.find((check) => check.name === "CAREER_MEMORY");
     expect(memoryCheck?.ok).toBeFalse();
-    expect(memoryCheck?.message).toContain("CAREER_BACKEND_URL");
-    expect(memoryCheck?.message).toContain("application-state");
+    expect(memoryCheck?.message).toContain("context/application-state.md");
     expect(memoryCheck?.message).not.toContain("candidate-memory.json");
+    expect(memoryCheck?.message).not.toContain("CAREER_BACKEND");
   });
   test("개인 질문을 select 결과에 넣는다", async () => {
     const value = store();
-    await value.recordAttempt({
+    await value.createAttempt({
       attemptId: "11111111-1111-4111-8111-111111111111",
       drillType: "behavioral",
       questionId: "personal-1",
@@ -145,7 +124,7 @@ describe("면접 연습 CLI", () => {
   });
   test("복습일이 지난 질문을 dueForReview로 표시한다", async () => {
     const value = store();
-    await value.recordAttempt({
+    await value.createAttempt({
       attemptId: "22222222-2222-4222-8222-222222222222",
       drillType: "behavioral",
       questionId: "personal-2",
@@ -175,28 +154,114 @@ describe("면접 연습 CLI", () => {
       nextReviewDate: "9999-12-31",
       lastPassedDate: "9999-12-31",
     }));
+    const value = store();
+    // 공개 질문의 주제를 모두 한참 뒤 복습으로 밀어 두면 진행 상태가 없는 개인 질문만 남는다.
+    const nowIso = new Date().toISOString();
+    for (const item of publicProgress)
+      createdDb(value).run(
+        `INSERT OR REPLACE INTO interview_topic_progress
+           (drill_type, topic, pass_count, fail_count, next_review_date, last_passed_date, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [item.drillType, item.topic, item.passCount, item.failCount, item.nextReviewDate, item.lastPassedDate, nowIso],
+      );
+    await value.upsertPersonalQuestion(personal.id, { enabled: true, drillType: "behavioral", question: personal });
     const result = (await runDrillCli(["select", "behavioral"], {
-      createStore: () => ({
-        kind: "file",
-        listProgress: async () => publicProgress,
-        listPersonalQuestions: async () => [
-          { questionId: personal.id, drillType: "behavioral", enabled: true, question: personal },
-        ],
-        recordAttempt: async () => {
-          throw new Error("사용하지 않습니다.");
-        },
-        upsertPersonalQuestion: async () => {
-          throw new Error("사용하지 않습니다.");
-        },
-      }),
+      createStore: () => value,
       readFile: () => "",
     })) as { questions: Array<DrillQuestion & { dueForReview: boolean }> };
     expect(result.questions.find((item) => item.id === personal.id)?.dueForReview).toBeFalse();
   });
-  test("attemptId 없는 record를 사용법 오류로 거절한다", async () => {
+  test("progress 는 주제별 복습 상태와 복습 차례를 낸다", async () => {
+    const value = store();
+    await value.createAttempt({
+      attemptId: "33333333-3333-4333-8333-333333333333",
+      drillType: "tech",
+      questionId: "question-1",
+      topic: "transaction",
+      question: "질문입니다.",
+      score: "pass",
+    });
+    const result = (await runDrillCli(["progress", "tech"], { createStore: () => value, readFile: () => "" })) as {
+      items: Array<{ topic: string; passCount: number; nextReviewDate: string; dueForReview: boolean }>;
+    };
+    expect(result.items).toEqual([
+      expect.objectContaining({ topic: "transaction", passCount: 1, nextReviewDate: "2026-08-14", dueForReview: true }),
+    ]);
+  });
+  test("attemptId 없는 record 는 새 기록으로 저장하고 만든 attemptId 를 돌려준다", async () => {
+    const value = store();
+    const args = ["record", "--drill-type", "tech", "--question-id", "q", "--topic", "t", "--question", "질문", "--score", "pass"];
+    const first = (await runDrillCli(args, { createStore: () => value, readFile: () => "" })) as { attemptId: string };
+    const second = (await runDrillCli(args, { createStore: () => value, readFile: () => "" })) as { attemptId: string };
+    expect(first.attemptId).not.toBe(second.attemptId);
+    expect((await value.listProgress("tech")).items[0]?.passCount).toBe(2);
+  });
+  test("record --input 은 JSON 파일의 기록을 저장하고, 형식이 틀리면 저장하지 않는다", async () => {
+    const value = store();
+    const attempt = { drillType: "tech", questionId: "q", topic: "quoted", question: '따옴표 "와"\n줄바꿈이 있는 질문', score: "shallow" };
+    const saved = (await runDrillCli(["record", "--input", "attempt.json"], {
+      createStore: () => value,
+      readFile: () => JSON.stringify(attempt),
+    })) as { attemptId: string; progress: { topic: string; failCount: number } };
+    expect(saved.progress).toMatchObject({ topic: "quoted", failCount: 1 });
+    await expect(
+      runDrillCli(["record", "--input", "attempt.json"], {
+        createStore: () => value,
+        readFile: () => JSON.stringify({ ...attempt, score: "great" }),
+      }),
+    ).rejects.toThrow();
+    await expect(
+      runDrillCli(["record", "--input", "attempt.json"], { createStore: () => value, readFile: () => "{" }),
+    ).rejects.toThrow("--input");
+    expect((await value.listProgress("tech")).items[0]?.failCount).toBe(1);
+  });
+  test("record --input 은 만든 attemptId 를 입력 파일에 되써, 같은 파일로 다시 실행해도 한 번만 쌓인다", async () => {
+    const value = store();
+    let file = JSON.stringify({ drillType: "tech", questionId: "q", topic: "retry", question: "질문", score: "fail" });
+    const run = () =>
+      runDrillCli(["record", "--input", "attempt.json"], {
+        createStore: () => value,
+        readFile: () => file,
+        writeFile: (_path, content) => {
+          file = content;
+        },
+      }) as Promise<{ attemptId: string }>;
+    const first = await run();
+    expect(JSON.parse(file).attemptId).toBe(first.attemptId);
+    expect(await run()).toEqual(first);
+    expect((await value.listProgress("tech")).items[0]?.failCount).toBe(1);
+  });
+  test("다른 날 다시 열어 고르면 앞 연습의 복습 대상과 저장한 개인 질문이 나온다", async () => {
+    const workspace = createCareerWorkspace();
+    const dayOne = new InterviewStore(workspace.db, () => new Date("2026-08-13T01:00:00.000Z"));
+    const personal = { ...question, id: "personal-due", topic: "due-topic", category: "behavioral" };
+    await dayOne.upsertPersonalQuestion(personal.id, { enabled: true, drillType: "behavioral", question: personal });
+    await dayOne.createAttempt({
+      attemptId: "44444444-4444-4444-8444-444444444444",
+      drillType: "behavioral",
+      questionId: personal.id,
+      topic: personal.topic,
+      question: personal.question,
+      score: "fail",
+    });
+    const select = async (now: string) => {
+      closeCareerStores();
+      const reopened = new InterviewStore(openCareerStore(workspace.environment));
+      const result = (await runDrillCli(["select", "behavioral"], {
+        createStore: () => reopened,
+        readFile: () => "",
+        now: () => new Date(now),
+      })) as { today: string; questions: Array<DrillQuestion & { dueForReview: boolean }> };
+      return result.questions.find((item) => item.id === personal.id);
+    };
+    // 같은 날에는 복습일(다음 날)이 오지 않았다.
+    expect((await select("2026-08-13T02:00:00.000Z"))?.dueForReview ?? false).toBeFalse();
+    expect(await select("2026-08-14T02:00:00.000Z")).toMatchObject({ sourceScope: "personal", dueForReview: true });
+  });
+  test("필수 값이 빠진 record 를 사용법 오류로 거절한다", async () => {
     await expect(
       runDrillCli(["record", "--drill-type", "tech"], { createStore: store, readFile: () => "" }),
-    ).rejects.toThrow("--attempt-id");
+    ).rejects.toThrow("--question-id");
   });
   test("형식이 틀린 jsonl은 저장 전에 거절한다", async () => {
     const value = store();
@@ -206,7 +271,7 @@ describe("면접 연습 CLI", () => {
         readFile: () => '{"drillType":"tech"}\n',
       }),
     ).rejects.toThrow();
-    expect(await value.listPersonalQuestions("tech", { includeDisabled: true })).toEqual([]);
+    expect((await value.listEnabledPersonalQuestions("tech")).items).toEqual([]);
   });
 });
 

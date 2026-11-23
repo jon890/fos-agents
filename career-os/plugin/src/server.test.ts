@@ -5,7 +5,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { copyFileSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { CareerError } from "./backend.ts";
+import { CareerError } from "./errors.ts";
 import { createServer } from "./server.ts";
 import connector from "../connector.json";
 
@@ -19,9 +19,10 @@ function expectManifestDescriptions(tools: Array<{ name: string; description?: s
 }
 
 const env = {
-  CAREER_BACKEND_URL: "https://career.example.com/",
-  CAREER_BACKEND_TOKEN: "x".repeat(40),
   CAREER_GITHUB_PROFILE_REPO: "example-user/example-user",
+};
+const neverFetch = async () => {
+  throw new Error("요청을 보내면 안 됩니다.");
 };
 
 function expectConfigError(build: () => unknown) {
@@ -39,7 +40,7 @@ test("MCP 서버가 알리는 version 이 package.json 의 version 과 같다", 
   const { version } = JSON.parse(
     readFileSync(join(import.meta.dir, "..", "package.json"), "utf8"),
   ) as { version: string };
-  const server = createServer(env, async () => new Response(JSON.stringify({ documents: [] })));
+  const server = createServer(env, neverFetch);
   const client = new Client({ name: "version-test", version: "1.0.0" });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   try {
@@ -52,11 +53,8 @@ test("MCP 서버가 알리는 version 이 package.json 의 version 과 같다", 
   }
 });
 
-test("MCP 로 manifest 에 선언한 도구를 모두 탐색하고 확인 도구가 structuredContent 와 텍스트에 같은 값을 낸다", async () => {
-  const server = createServer(env, async (input) => {
-    expect(String(input)).toBe("https://career.example.com/api/profile/v1/documents");
-    return new Response(JSON.stringify({ documents: [] }));
-  });
+test("MCP 로 manifest 에 선언한 도구를 모두 탐색하고 확인 도구가 GitHub 연결 없이 요청을 보내지 않고 성공한다", async () => {
+  const server = createServer(env, neverFetch);
   const client = new Client({ name: "career-test", version: "1.0.0" });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   try {
@@ -65,91 +63,48 @@ test("MCP 로 manifest 에 선언한 도구를 모두 탐색하고 확인 도구
     expectManifestDescriptions((await client.listTools()).tools);
     const result = await client.callTool({ name: "check_connection", arguments: {} });
     expect(result.isError).not.toBe(true);
-    expect(result.structuredContent).toEqual({ backend: "ok", github: "not_configured" });
-    expect(JSON.parse((result.content as Array<{ text: string }>)[0]!.text)).toEqual({
-      backend: "ok",
-      github: "not_configured",
-    });
+    expect(result.structuredContent).toEqual({ github: "not_configured" });
+    expect(JSON.parse((result.content as Array<{ text: string }>)[0]!.text)).toEqual({ github: "not_configured" });
   } finally {
     await client.close();
     await server.close();
   }
 });
 
-async function backendHeaders(serverEnv: Record<string, string | undefined>): Promise<Headers> {
-  let seen: Headers | undefined;
-  const server = createServer(serverEnv, async (_input, init) => {
-    seen = new Headers(init?.headers);
-    return new Response(JSON.stringify({ documents: [] }));
-  });
-  const client = new Client({ name: "access-test", version: "1.0.0" });
+test("커리어 Backend 주소와 token 없이 시작하고, 받아도 읽지 않는다", async () => {
+  const urls: string[] = [];
+  const server = createServer(
+    { ...env, CAREER_BACKEND_URL: "https://career.example.com/", CAREER_BACKEND_TOKEN: "x".repeat(40) },
+    async (input) => {
+      urls.push(String(input));
+      return new Response("{}");
+    },
+  );
+  const client = new Client({ name: "no-backend-test", version: "1.0.0" });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   try {
     await server.connect(serverTransport);
     await client.connect(clientTransport);
     await client.callTool({ name: "check_connection", arguments: {} });
+    expect(urls).toEqual([]);
   } finally {
     await client.close();
     await server.close();
   }
-  if (!seen) throw new Error("Backend 요청이 없었다");
-  return seen;
-}
-
-const access = {
-  CAREER_BACKEND_ACCESS_CLIENT_ID: "example-client.access",
-  CAREER_BACKEND_ACCESS_CLIENT_SECRET: "example-secret",
-};
-
-test("Access service token 이 있으면 Backend 요청에 Bearer 와 함께 CF-Access 머리말을 싣는다", async () => {
-  const headers = await backendHeaders({ ...env, ...access });
-  expect(headers.get("Authorization")).toBe(`Bearer ${env.CAREER_BACKEND_TOKEN}`);
-  expect(headers.get("CF-Access-Client-Id")).toBe(access.CAREER_BACKEND_ACCESS_CLIENT_ID);
-  expect(headers.get("CF-Access-Client-Secret")).toBe(access.CAREER_BACKEND_ACCESS_CLIENT_SECRET);
+  const source = ["server.ts", "tools.ts", "errors.ts", "github.ts", "github-token.ts"]
+    .map((file) => readFileSync(join(import.meta.dir, file), "utf8"))
+    .join("\n");
+  expect(source).not.toContain("CAREER_BACKEND");
 });
 
-test("Access 값이 없거나 치환되지 않은 변수 참조면 CF-Access 머리말을 보내지 않는다", async () => {
-  for (const serverEnv of [
-    env,
-    {
-      ...env,
-      CAREER_BACKEND_ACCESS_CLIENT_ID: "${CAREER_BACKEND_ACCESS_CLIENT_ID}",
-      CAREER_BACKEND_ACCESS_CLIENT_SECRET: "",
-    },
-  ]) {
-    const headers = await backendHeaders(serverEnv);
-    expect(headers.has("CF-Access-Client-Id")).toBe(false);
-    expect(headers.has("CF-Access-Client-Secret")).toBe(false);
-  }
-});
-
-test("Access ID 와 secret 가운데 하나만 있으면 CAREER_CONFIG 로 시작하지 않는다", () => {
-  expectConfigError(() => createServer({ ...env, CAREER_BACKEND_ACCESS_CLIENT_ID: "example-client.access" }));
-  expectConfigError(() => createServer({ ...env, CAREER_BACKEND_ACCESS_CLIENT_SECRET: "example-secret" }));
-});
-
-test("필수 환경 변수가 치환되지 않았으면 CAREER_CONFIG 로 시작하지 않는다", () => {
-  for (const key of ["CAREER_BACKEND_URL", "CAREER_BACKEND_TOKEN", "CAREER_GITHUB_PROFILE_REPO"])
-    expectConfigError(() => createServer({ ...env, [key]: "${UNSET}" }));
+test("프로필 저장소 이름이 없거나 치환되지 않았거나 모양이 틀리면 CAREER_CONFIG 로 시작하지 않는다", () => {
+  expectConfigError(() => createServer({}));
+  expectConfigError(() => createServer({ CAREER_GITHUB_PROFILE_REPO: "${UNSET}" }));
+  expectConfigError(() => createServer({ CAREER_GITHUB_PROFILE_REPO: "example-user" }));
 });
 
 test("GitHub token 이 치환되지 않은 변수 참조여도 서버가 만들어진다", () => {
   expect(createServer({ ...env, CAREER_GITHUB_TOKEN: "${CAREER_GITHUB_TOKEN}" })).toBeDefined();
-});
-
-test("Backend 주소에 path 가 있거나 token 이 짧거나 저장소 이름이 틀리면 CAREER_CONFIG 다", () => {
-  expectConfigError(() =>
-    createServer({ ...env, CAREER_BACKEND_URL: "https://career.example.com/api" }),
-  );
-  expectConfigError(() =>
-    createServer({ ...env, CAREER_BACKEND_URL: "https://career.example.com/?a=1" }),
-  );
-  expectConfigError(() =>
-    createServer({ ...env, CAREER_BACKEND_URL: "ftp://career.example.com/" }),
-  );
-  expectConfigError(() => createServer({ ...env, CAREER_BACKEND_TOKEN: ` ${"x".repeat(31)} ` }));
-  expectConfigError(() => createServer({ ...env, CAREER_GITHUB_PROFILE_REPO: "example-user" }));
-  expect(createServer({ ...env, CAREER_BACKEND_TOKEN: ` ${"x".repeat(32)} ` })).toBeDefined();
 });
 
 test("plugin 실행 파일만 복사해도 의존성 설치 없이 stdio 로 시작한다", async () => {
@@ -178,29 +133,37 @@ test("plugin 실행 파일만 복사해도 의존성 설치 없이 stdio 로 시
   }
 });
 
-test("save_interview_attempt 만 idempotentHint 가 false 이고 쓰기 표시는 그대로다", async () => {
-  const server = createServer(env, async () => new Response("{}"));
+test("읽기 도구는 readOnlyHint, 갱신 도구는 destructiveHint 이고 모두 idempotentHint 다", async () => {
+  const server = createServer(env, neverFetch);
   const client = new Client({ name: "annotation-test", version: "1.0.0" });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   try {
     await server.connect(serverTransport);
     await client.connect(clientTransport);
     const { tools } = await client.listTools();
-    for (const tool of tools)
-      expect({ name: tool.name, idempotent: tool.annotations?.idempotentHint }).toEqual({
+    for (const tool of tools) {
+      const update = tool.name.startsWith("update_");
+      expect({ name: tool.name, ...tool.annotations }).toMatchObject({
         name: tool.name,
-        idempotent: tool.name !== "save_interview_attempt",
+        readOnlyHint: !update,
+        destructiveHint: update,
+        idempotentHint: true,
       });
-    const save = tools.find((tool) => tool.name === "save_interview_attempt");
-    expect(save?.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true });
+    }
   } finally {
     await client.close();
     await server.close();
   }
 });
 
+test("번들에 파일을 읽는 코드가 없다", () => {
+  const bundle = readFileSync(join(import.meta.dir, "../dist/career-mcp.js"), "utf8");
+  expect(bundle).not.toContain("readFileSync");
+  expect(bundle).not.toContain("statSync");
+});
+
 test("「내 브라우저」 주소 없이 서버가 뜨고 원티드 도구는 닿지 않음으로 답한다", async () => {
-  const server = createServer(env, async () => new Response(JSON.stringify({ documents: [] })));
+  const server = createServer(env, neverFetch);
   const client = new Client({ name: "wanted-test", version: "1.0.0" });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   try {
@@ -263,7 +226,7 @@ test("통로 주소가 있으면 통로에서 받은 token 으로 GitHub 을 부
     { ...env, CAREER_GITHUB_TOKEN: pastedGithubToken, CAREER_GITHUB_TOKEN_URL: channelUrl },
     tokenJson,
   );
-  expect(result.structuredContent).toEqual({ backend: "ok", github: "ok" });
+  expect(result.structuredContent).toEqual({ github: "ok" });
   const github = seen.filter(({ url }) => url.startsWith("https://api.github.com/"));
   expect(github.length).toBeGreaterThan(0);
   for (const call of github) expect(call.authorization).toBe(`Bearer ${channelGithubToken}`);
@@ -294,7 +257,7 @@ test("도구를 부를 때마다 통로에서 token 을 다시 받는다", async
     await client.connect(clientTransport);
     for (let call = 0; call < 2; call += 1) {
       const result = await client.callTool({ name: "check_connection", arguments: {} });
-      expect(result.structuredContent).toEqual({ backend: "ok", github: "ok" });
+      expect(result.structuredContent).toEqual({ github: "ok" });
     }
     expect(issued).toBe(2);
   } finally {
@@ -311,7 +274,7 @@ test("통로 주소가 비었거나 치환되지 않은 참조면 붙여 넣은 
         throw new Error("통로를 부르면 안 된다");
       },
     );
-    expect(result.structuredContent).toEqual({ backend: "ok", github: "ok" });
+    expect(result.structuredContent).toEqual({ github: "ok" });
     expect(seen.some(({ url }) => url === channelUrl)).toBe(false);
     for (const call of seen.filter(({ url }) => url.startsWith("https://api.github.com/")))
       expect(call.authorization).toBe(`Bearer ${pastedGithubToken}`);
@@ -320,7 +283,7 @@ test("통로 주소가 비었거나 치환되지 않은 참조면 붙여 넣은 
 
 test("token 과 통로 주소가 모두 없으면 GitHub 은 not_configured 다", async () => {
   const { result } = await callGithubTool({ ...env, CAREER_GITHUB_TOKEN: "", CAREER_GITHUB_TOKEN_URL: "" }, tokenJson);
-  expect(result.structuredContent).toEqual({ backend: "ok", github: "not_configured" });
+  expect(result.structuredContent).toEqual({ github: "not_configured" });
 });
 
 test("통로 실패는 정한 CAREER 오류 코드로 나오고 결과에 통로 주소와 응답 원문이 없다", async () => {
@@ -388,7 +351,7 @@ test("GitHub 도구 한 번에 통로를 한 번만 부르고 그 호출의 GitH
     const result = await client.callTool({ name: "get_github_profile", arguments: {} });
     expect(result.isError).not.toBe(true);
     expect(issued).toBe(1);
-    expect(authorizations.length).toBe(4);
+    expect(authorizations.length).toBe(3);
     for (const authorization of authorizations) expect(authorization).toBe(`Bearer ${channelGithubToken}`);
     expect(JSON.stringify(result)).not.toContain(channelGithubToken);
   } finally {

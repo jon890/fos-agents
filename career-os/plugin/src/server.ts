@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { CareerBackend, CareerError, configuredValue, type FetchLike } from "./backend.ts";
+import { CareerError, configuredValue, type FetchLike } from "./errors.ts";
 import { browserEndpoint, relayBrowser } from "./browser/cdp.ts";
 import { GithubProfileRepo } from "./github.ts";
 import { channelToken } from "./github-token.ts";
@@ -8,46 +8,23 @@ import { CareerTools, toolDefinitions } from "./tools.ts";
 import { WantedTools } from "./wanted/tools.ts";
 
 const profileRepoPattern = /^[A-Za-z0-9-]{1,39}\/[A-Za-z0-9._-]{1,100}$/;
-const headerValuePattern = /^[\x21-\x7e]+$/;
-
-// Claude Code runs the server on a laptop, outside the network fos-assistant shares with the Backend,
-// so a Backend behind Cloudflare Access needs the service token headers (ADR-143).
-// The values come from the environment Claude Code passes down, not from .mcp.json or operator_env (ADR-144).
-// Values only: the bundle must not read files, so there is no *_SECRET_FILE variant here.
-function backendAccessHeaders(env: Record<string, string | undefined>): Record<string, string> {
-  const clientId = configuredValue(env.CAREER_BACKEND_ACCESS_CLIENT_ID);
-  const clientSecret = configuredValue(env.CAREER_BACKEND_ACCESS_CLIENT_SECRET);
-  if (!clientId && !clientSecret) return {};
-  if (!clientId || !clientSecret || !headerValuePattern.test(clientId) || !headerValuePattern.test(clientSecret))
-    throw new CareerError("CAREER_CONFIG");
-  return { "CF-Access-Client-Id": clientId, "CF-Access-Client-Secret": clientSecret };
-}
 
 export function createServer(
   env: Record<string, string | undefined> = process.env,
   fetchImpl: FetchLike = fetch,
 ): McpServer {
-  const baseUrl = configuredValue(env.CAREER_BACKEND_URL);
-  const token = configuredValue(env.CAREER_BACKEND_TOKEN);
   const profileRepo = configuredValue(env.CAREER_GITHUB_PROFILE_REPO);
-  if (!baseUrl || !token || !profileRepo || !profileRepoPattern.test(profileRepo))
-    throw new CareerError("CAREER_CONFIG");
+  if (!profileRepo || !profileRepoPattern.test(profileRepo)) throw new CareerError("CAREER_CONFIG");
   // GitHub is optional; GitHub tools answer CAREER_GITHUB_NOT_CONFIGURED without either value.
   // A button (OAuth) connection passes the token channel address, which wins over a pasted token.
   const githubTokenUrl = configuredValue(env.CAREER_GITHUB_TOKEN_URL);
   const githubToken = githubTokenUrl ? channelToken(githubTokenUrl, fetchImpl) : configuredValue(env.CAREER_GITHUB_TOKEN);
   const github = githubToken ? new GithubProfileRepo({ token: githubToken, repo: profileRepo }, fetchImpl) : undefined;
-  const extraHeaders = backendAccessHeaders(env);
-  // The fos-assistant install passes the owner's browser relay; Claude Code leaves it empty.
+  // fos-assistant passes the owner's browser relay; without it the Wanted tools answer unreachable.
   const endpoint = browserEndpoint(env);
   const wanted = new WantedTools(endpoint ? relayBrowser(endpoint) : undefined);
-  const tools = new CareerTools(
-    new CareerBackend({ baseUrl, token, extraHeaders }, fetchImpl),
-    github,
-    undefined,
-    wanted,
-  );
-  const server = new McpServer({ name: "fos-career", version: "0.12.1" });
+  const tools = new CareerTools(github, wanted);
+  const server = new McpServer({ name: "fos-career", version: "0.13.0" });
   for (const [name, definition] of Object.entries(toolDefinitions)) {
     server.registerTool(
       name,
@@ -55,11 +32,10 @@ export function createServer(
         description: definition.description,
         inputSchema: definition.schema,
         annotations: {
-          readOnlyHint: /^(check|list|get)_/.test(name),
-          destructiveHint: /^(save|update)_/.test(name),
-          // save_interview_attempt makes a new attemptId (and Idempotency-Key) per call that omits it,
-          // so the same arguments twice are two attempts. Reads and the other writes replace or repeat safely.
-          idempotentHint: name !== "save_interview_attempt",
+          readOnlyHint: /^(check|get)_/.test(name),
+          destructiveHint: /^update_/.test(name),
+          // Reads repeat safely and both updates replace values with the same ones.
+          idempotentHint: true,
           openWorldHint: true,
         },
       },

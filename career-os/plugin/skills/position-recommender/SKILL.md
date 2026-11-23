@@ -49,9 +49,12 @@ description: 열려 있는 채용공고를 모아 후보자가 해온 일과 선
 
 실행기는 후보자 맥락 문서를 작업 폴더의 `context/` 에서만 읽는다. 그래서 `collect` 전에 아래를 먼저 한다.
 
-1. `get_context_document` 로 `position-preferences` 와 `application-state` 를 읽는다.
+1. 기억에서 제목이 「커리어: 역할 선호」(`position-preferences`)와 「커리어: 지원 상태」(`application-state`)인 문서를 `memory_search` 로 찾아 `memory_read` 로 읽는다.
 2. 읽은 본문을 고치거나 줄이지 않고 `<작업 폴더>/context/position-preferences.md`, `<작업 폴더>/context/application-state.md` 에 쓴다.
-3. 문서가 하나라도 없으면 실행기를 부르지 않는다. 어느 문서가 없는지 알리고, 사용자와 그 문서를 먼저 쓴 뒤 다시 하자고 안내하고 끝낸다.
+3. 문서가 하나라도 없으면 실행기를 부르지 않는다. 어느 문서가 없는지 알리고, 사용자와 그 문서를 기억에 먼저 쓴 뒤 다시 하자고 안내하고 끝낸다.
+4. 같은 제목의 기억이 둘 이상이면 고르지 않는다. 실행기를 부르지 않고 어느 제목이 겹쳤는지 알린 뒤 끝낸다.
+
+`context/` 의 파일은 실행기에 넘기는 사본이고 원본은 기억이다. 기억 화면에서 고친 내용은 다음 실행에서 이 단계가 다시 옮겨 쓴다.
 
 `position-preferences` 본문이 바뀌면 공고 분석의 기준이 바뀌어 저장된 분석을 다시 계산한다. 공백과 줄바꿈만 다른 것은 같은 기준으로 본다.
 

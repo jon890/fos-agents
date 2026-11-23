@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CareerError, type CareerErrorCode, type FetchLike } from "./backend.ts";
+import { CareerError, type CareerErrorCode, type FetchLike } from "./errors.ts";
 
 const tokenSchema = z.object({ access_token: z.string().min(1) });
 
@@ -28,7 +28,7 @@ function channelAddress(url: string): string | undefined {
  */
 export function channelToken(url: string, fetchImpl: FetchLike = fetch): () => Promise<string> {
   const address = channelAddress(url);
-  // GitHub is optional: a malformed address must not stop the Backend and Wanted tools, so only
+  // GitHub is optional: a malformed address must not stop the Wanted tools, so only
   // the GitHub tools answer that GitHub is not set up.
   if (!address)
     return async () => {

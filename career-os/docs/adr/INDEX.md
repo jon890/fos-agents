@@ -43,21 +43,22 @@ ADR에는 현재 설계를 이해하는 데 필요한 기술적 선택과 기각
 | ADR-126 | [읽을거리 소스 목록은 Backend가 원본을 가짐](ADR-126-읽을거리-소스-목록은-backend가-원본을-가진다.md) | Accepted |
 | ADR-127 | [공부 추천은 고르지 않은 후보의 판정을 재사용](ADR-127-공부-추천은-고르지-않은-후보의-판정을-재사용한다.md) | Accepted |
 | ADR-128 | [커리어 Backend로 이름을 넓힘](ADR-128-커리어-backend로-이름을-넓힌다.md) | Accepted |
-| ADR-129 | [면접 연습 기록과 개인 질문은 저장소 경계 뒤에 두고 운영은 Backend가 소유](ADR-129-면접-연습-기록과-개인-질문은-backend가-소유한다.md) | Accepted |
-| ADR-130 | [면접 연습의 후보자 맥락은 memory 공급자 경계로 읽음](ADR-130-면접-연습의-후보자-맥락은-memory-공급자-경계로-읽는다.md) | Accepted |
-| ADR-131 | [후보자 맥락은 Backend 문서로 두고 공부 추천 기준 버전을 문서 버전에서 계산](ADR-131-후보자-맥락은-backend-문서로-두고-공부-추천-기준-버전을-문서-버전에서-계산한다.md) | Accepted. 공부 추천 기준 버전 계산은 ADR-146이 대체 |
+| ADR-129 | [면접 연습 기록과 개인 질문은 저장소 경계 뒤에 두고 운영은 Backend가 소유](ADR-129-면접-연습-기록과-개인-질문은-backend가-소유한다.md) | Accepted. 면접 기록의 저장 자리는 ADR-146, 저장소 경계는 ADR-147이 대체 |
+| ADR-130 | [면접 연습의 후보자 맥락은 memory 공급자 경계로 읽음](ADR-130-면접-연습의-후보자-맥락은-memory-공급자-경계로-읽는다.md) | Accepted. `backend` 공급자는 ADR-147이 대체 |
+| ADR-131 | [후보자 맥락은 Backend 문서로 두고 공부 추천 기준 버전을 문서 버전에서 계산](ADR-131-후보자-맥락은-backend-문서로-두고-공부-추천-기준-버전을-문서-버전에서-계산한다.md) | Accepted. 공부 추천 기준 버전 계산은 ADR-146이 대체. 문서의 자리는 ADR-147이 대체 |
 | ADR-132 | [스킬의 개인 맥락은 후보자 맥락 문서에서 읽고 지원서 공통 프로필만 brain에 둠](ADR-132-스킬의-개인-맥락은-후보자-맥락-문서에서-읽고-지원서-공통-프로필만-brain에-둔다.md) | Accepted. 분석 정책 맞추기 조항은 ADR-134가, 공통 프로필을 brain에 두는 조항은 ADR-136이 대체 |
-| ADR-133 | [프로필 원고와 에이전트 사용량 기록은 Backend 의 profile 모듈이 가짐](ADR-133-프로필-원고와-에이전트-사용량-기록은-backend의-profile-모듈이-갖는다.md) | Accepted |
+| ADR-133 | [프로필 원고와 에이전트 사용량 기록은 Backend 의 profile 모듈이 가짐](ADR-133-프로필-원고와-에이전트-사용량-기록은-backend의-profile-모듈이-갖는다.md) | Accepted. 프로필 원고의 자리는 ADR-147이 대체 |
 | ADR-134 | [공고 분석의 기준 버전은 position-preferences 문서 버전에서 계산](ADR-134-공고-분석의-기준-버전은-position-preferences-문서-버전에서-계산한다.md) | Accepted. 기준 버전 계산은 ADR-146이 대체 |
-| ADR-135 | [fos-assistant 커넥터는 Backend 를 감싸고 숫자는 기록에서 직접 읽음](ADR-135-fos-assistant-커넥터는-backend를-감싸고-숫자는-기록에서-직접-읽는다.md) | Accepted |
+| ADR-135 | [fos-assistant 커넥터는 Backend 를 감싸고 숫자는 기록에서 직접 읽음](ADR-135-fos-assistant-커넥터는-backend를-감싸고-숫자는-기록에서-직접-읽는다.md) | Accepted. Backend 를 감싸는 것과 차트·배지 조항은 ADR-147이 대체 |
 | ADR-136 | [지원서 공통 프로필은 fos-assistant Memory 에서 서비스 토큰으로 읽음](ADR-136-지원서-공통-프로필은-fos-assistant-memory에서-서비스-토큰으로-읽는다.md) | Accepted |
-| ADR-137 | [스킬과 MCP 를 plugin 하나로 묶고 세 단계로 옮김](ADR-137-스킬과-mcp를-plugin-하나로-묶고-세-단계로-옮긴다.md) | Accepted. 브라우저 조작 조항은 ADR-145가 개정 |
+| ADR-137 | [스킬과 MCP 를 plugin 하나로 묶고 세 단계로 옮김](ADR-137-스킬과-mcp를-plugin-하나로-묶고-세-단계로-옮긴다.md) | Accepted. 브라우저 조작 조항은 ADR-145가 개정. MCP 서버의 데이터 접근과 실행기 저장소 조항은 ADR-147이 대체 |
 | ADR-138 | [plugin 로컬 실행기는 scripts 원본을 번들해 부르고 작업본 위치는 설정으로 받음](ADR-138-plugin-로컬-실행기는-scripts-원본을-번들해-부르고-작업본-위치는-설정으로-받는다.md) | Accepted. 공고·공부 실행기의 실행 폴더와 저장 자리는 ADR-146이 대체 |
-| ADR-139 | [plugin 의 대화용 스킬과 Claude Code 전용 스킬을 디렉터리로 나눔](ADR-139-plugin-의-대화용-스킬과-claude-code-전용-스킬을-디렉터리로-나눈다.md) | Accepted |
+| ADR-139 | [plugin 의 대화용 스킬과 Claude Code 전용 스킬을 디렉터리로 나눔](ADR-139-plugin-의-대화용-스킬과-claude-code-전용-스킬을-디렉터리로-나눈다.md) | Accepted. ADR-147이 대체 |
 | ADR-140 | [노트북 client 는 선택적 Cloudflare Access service token 머리말을 앱 인증과 함께 보냄](ADR-140-노트북-client-는-선택적-cloudflare-access-service-token-머리말을-앱-인증과-함께-보낸다.md) | Accepted |
 | ADR-141 | [일반 에이전트가 읽는 스킬은 plugin 의 agent-skills 에 두고 따로 올림](ADR-141-일반-에이전트가-읽는-스킬은-plugin-의-agent-skills-에-두고-따로-올린다.md) | Accepted. 2026-11-05 개정으로 스킬을 지움. 2026-11-20 개정으로 manifest `agent_skills` 와 실행기 스킬 사본을 둠 |
-| ADR-142 | [먼저 살펴보기의 공고 제외 판정은 수집기와 같은 코드가 하고 식별 불가는 보류함](ADR-142-먼저-살펴보기의-공고-제외-판정은-수집기와-같은-코드가-하고-식별-불가는-보류한다.md) | Accepted. 제외 규칙의 저장 자리는 ADR-146이 대체 |
-| ADR-143 | [Claude Code 의 fos-career MCP 서버는 선택적 Cloudflare Access 머리말을 보냄](ADR-143-claude-code-의-fos-career-mcp-서버는-선택적-cloudflare-access-머리말을-보낸다.md) | Accepted. 변수 선언 위치 조항은 ADR-144가 대체 |
-| ADR-144 | [Claude Code 전용 Access 값은 커넥터 선언에 두지 않고 실행 환경에서 받음](ADR-144-claude-code-전용-access-값은-커넥터-선언에-두지-않고-실행-환경에서-받는다.md) | Accepted |
+| ADR-142 | [먼저 살펴보기의 공고 제외 판정은 수집기와 같은 코드가 하고 식별 불가는 보류함](ADR-142-먼저-살펴보기의-공고-제외-판정은-수집기와-같은-코드가-하고-식별-불가는-보류한다.md) | Accepted. 제외 규칙의 저장 자리는 ADR-146이 대체. 판정을 MCP 도구가 하는 조항은 ADR-147이 대체 |
+| ADR-143 | [Claude Code 의 fos-career MCP 서버는 선택적 Cloudflare Access 머리말을 보냄](ADR-143-claude-code-의-fos-career-mcp-서버는-선택적-cloudflare-access-머리말을-보낸다.md) | Accepted. 변수 선언 위치 조항은 ADR-144가 대체. ADR-147이 대체 |
+| ADR-144 | [Claude Code 전용 Access 값은 커넥터 선언에 두지 않고 실행 환경에서 받음](ADR-144-claude-code-전용-access-값은-커넥터-선언에-두지-않고-실행-환경에서-받는다.md) | Accepted. ADR-147이 대체 |
 | ADR-145 | [비서 웹의 프로필 사이트 반영은 MCP 서버가 「내 브라우저」 중계로 함](ADR-145-비서-웹의-프로필-사이트-반영은-mcp-서버가-내-브라우저-중계로-한다.md) | Accepted |
 | ADR-146 | [커리어 표 데이터는 에이전트 작업 폴더의 SQLite 가 가짐](ADR-146-커리어-표-데이터는-에이전트-작업-폴더의-sqlite-가-갖는다.md) | Accepted |
+| ADR-147 | [후보자 맥락 문서는 비서의 기억이, 프로필 원고는 작업 폴더 파일이 갖고 MCP 서버는 밖의 사이트에 닿는 도구만 가짐](ADR-147-후보자-맥락-문서는-비서의-기억이-프로필-원고는-작업-폴더-파일이-갖는다.md) | Accepted |

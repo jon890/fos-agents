@@ -8,7 +8,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { basename, join } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { z } from "zod";
 import { analysisQueueResponseSchema } from "../lib/career-store/positions/schema.ts";
 import { DEFAULT_MAX_FAILED_SOURCES } from "./live-postings/collection_health.ts";
@@ -19,6 +19,7 @@ import { collectEvidenceForRun } from "./collect_company_evidence.ts";
 import { analysisUpdatesInputSchema, commitPositionAnalysis } from "./commit_position_analysis.ts";
 import { companyTierUpdatesInputSchema } from "./company-tier-analysis/schema.ts";
 import { finalizeRecommendation } from "./finalize_position_recommendation.ts";
+import { checkExclusions } from "./check_exclusions.ts";
 import { createPositionStore } from "./position-store.ts";
 import { resolveCareerStoreRoot } from "../lib/career-store/database.ts";
 import { careerStoreFailureLine } from "../lib/career-store/errors.ts";
@@ -112,6 +113,7 @@ Usage:
   position_run.ts cleanup --run <RUN_DIR>
   position_run.ts schema <company-tiers|analyses>
 ${POSITION_SETTINGS_HELP}
+  position_run.ts check-exclusions --input <JSON>
 
 Commands:
   collect                 공고를 수집하고 다음 큐를 만든다
@@ -123,6 +125,7 @@ Commands:
   configure-policy        분석 정책을 저장한다. 새 저장소는 정책이 있어야 수집을 받는다
   configure-companies     회사별 tier 와 제외 여부를 저장한다
   exclusions              개인 공고 제외 규칙을 읽거나(get) 목록 전체를 바꾼다(put)
+  check-exclusions        찾은 공고가 개인 제외 규칙과 제외 회사에 걸리는지 판정한다. 입력은 { "postings": [{ url, company, title, source?, identityHash? }] }
 
 데이터는 CAREER_WORKSPACE_ROOT(없으면 /workspace/career) 아래 state/career.sqlite 에 있다.
 
@@ -285,6 +288,20 @@ export async function runPositionCommand(
         throw new PositionRunUsageError(error.message);
       throw error;
     }
+  }
+  if (argv[0] === "check-exclusions" && !argv.includes("--help")) {
+    if (argv.length !== 3 || argv[1] !== "--input" || !argv[2]?.trim())
+      throw new PositionRunUsageError("check-exclusions에는 --input <JSON 파일>이 필요합니다.");
+    let input: unknown;
+    try {
+      input = JSON.parse(readFileSync(resolve(argv[2]), "utf8")) as unknown;
+    } catch (error) {
+      throw new PositionRunUsageError(
+        `--input 파일을 JSON 으로 읽지 못했습니다: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+    writeLine(JSON.stringify(await checkExclusions(createPositionStore(), input, new Date()), null, 2));
+    return 0;
   }
   const parsed = parsePositionRunArgs(argv);
   if (parsed.command === "help") {

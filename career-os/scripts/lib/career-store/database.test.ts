@@ -9,6 +9,7 @@ import {
   openCareerStore,
   resolveCareerStoreRoot,
 } from "./database.ts";
+import { SCHEMA_STEPS } from "./ddl.ts";
 import { CareerStoreError } from "./errors.ts";
 
 const roots: string[] = [];
@@ -43,7 +44,22 @@ describe("커리어 데이터 파일", () => {
     expect(second.all("SELECT source_key, enabled FROM position_sources")).toEqual([
       { source_key: "wanted", enabled: 1 },
     ]);
-    expect(second.get("PRAGMA user_version")).toEqual({ user_version: 1 });
+    expect(second.get("PRAGMA user_version")).toEqual({ user_version: SCHEMA_STEPS.length });
+  });
+
+  test("1단계 실행기가 만든 파일을 열면 면접 테이블만 더하고 있던 데이터는 그대로 둔다", () => {
+    const root = workspace();
+    mkdirSync(join(root, "state"), { recursive: true });
+    const old = new Database(careerStorePath(root), { create: true });
+    old.exec(SCHEMA_STEPS[0]!);
+    old.exec("PRAGMA user_version = 1");
+    old.exec("INSERT INTO position_sources (source_key, enabled) VALUES ('wanted', 1)");
+    old.close();
+
+    const store = openCareerStore({ CAREER_WORKSPACE_ROOT: root });
+    expect(store.get("PRAGMA user_version")).toEqual({ user_version: SCHEMA_STEPS.length });
+    expect(store.all("SELECT source_key FROM position_sources")).toEqual([{ source_key: "wanted" }]);
+    expect(store.all("SELECT topic FROM interview_topic_progress")).toEqual([]);
   });
 
   test("깨진 파일은 덮어쓰지 않고 CAREER_STORE_CORRUPT 로 끝낸다", () => {

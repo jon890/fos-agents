@@ -1,6 +1,6 @@
 ---
 name: study-collection
-description: 읽을거리를 수집하고 공부 추천 리포트를 HTML 로 만든다. "읽을거리 수집", "소스 추가", "소스 끄기", "공부 추천 리포트", "추천 HTML 공유" 같은 요청에 사용한다. HTML 없이 대화에서 자료를 고르는 일은 `study-topic-recommender` 가 맡는다.
+description: 읽을거리를 수집하고 공부 추천 리포트를 HTML 로 만든다. "읽을거리 수집", "소스 추가", "소스 끄기", "공부 추천 리포트", "추천 HTML 공유" 같은 요청에 사용한다.
 ---
 
 # 공부 자료 수집과 리포트
@@ -13,13 +13,15 @@ description: 읽을거리를 수집하고 공부 추천 리포트를 HTML 로 �
 데이터는 커리어 작업 폴더의 `state/career.sqlite` 에 있다. 작업 폴더는 `CAREER_WORKSPACE_ROOT` 이고 없으면 `/workspace/career` 다.
 커리어 Backend 주소와 token 은 쓰지 않는다.
 작업본 동기화는 하지 않는다. 소스, 수집 자료, 추천 이력은 이 저장소가 갖는다.
-대화용 공부 추천 도구(`list_study_candidates`, `save_study_recommendation`)는 이 저장소를 읽지 않는다. 이 스킬로 수집한 자료의 추천 저장은 아래 실행기 명령으로만 한다.
+추천 저장은 아래 실행기 명령으로만 한다.
 
 ## 1. 맥락 문서와 점검
 
 실행기는 `learning-interests` 문서를 작업 폴더의 `context/` 에서만 읽는다.
-`get_context_document` 로 `learning-interests` 를 읽어 본문을 고치지 않고 `<작업 폴더>/context/learning-interests.md` 에 쓴다.
-문서가 없으면 실행기를 부르지 않는다. 사용자와 문서를 먼저 쓴 뒤 다시 하자고 안내하고 끝낸다.
+기억에서 제목이 「커리어: 학습 관심사」(`learning-interests`)인 문서를 `memory_search` 로 찾아 `memory_read` 로 읽고, 본문을 고치지 않고 `<작업 폴더>/context/learning-interests.md` 에 쓴다.
+문서가 없으면 실행기를 부르지 않는다. 사용자와 문서를 기억에 먼저 쓴 뒤 다시 하자고 안내하고 끝낸다.
+같은 제목의 기억이 둘 이상이면 고르지 않고, 실행기를 부르지 않은 채 어느 제목이 겹쳤는지 알리고 끝낸다.
+`context/` 의 파일은 실행기에 넘기는 사본이고 원본은 기억이다.
 
 그다음 `<CAREER_LOCAL> study --doctor` 를 실행한다.
 실행기가 `CAREER_STORE_BUSY` 나 `CAREER_STORE_CORRUPT` 로 끝나면 이어 가지 않고 표준 오류 첫 줄을 최종 답변 첫 줄에 적는다.
@@ -28,7 +30,7 @@ description: 읽을거리를 수집하고 공부 추천 리포트를 HTML 로 �
 
 수집, 후보 준비, 리포트, 추천 저장은 `references/execution.md` 를 읽고 따른다.
 정리는 5번에서 한다.
-자료를 고르는 기준은 대화용 `study-topic-recommender` 스킬의 「2. 고르기」 를 따른다.
+자료를 고르는 기준은 `references/execution.md` 의 「고르는 기준」 을 따른다.
 
 ## 3. 소스 관리
 
