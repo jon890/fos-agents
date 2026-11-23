@@ -1,19 +1,24 @@
 name: Claude 코드 리뷰
 
+# PR 리뷰는 Codex 클라우드 리뷰가 맡는다(docs/adr/ADR-023-codex-pr-review.md).
+# 이 workflow 는 자동으로 돌지 않고, Actions 수동 실행과 권한 있는 사용자의 /review 댓글로만 돈다.
 on:
-  pull_request:
-    types: [opened]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 리뷰할 PR 번호
+        required: true
+        type: number
   issue_comment:
     types: [created]
 
 jobs:
   review-gate:
-    # 댓글 본문의 명령 경계와 포크 여부를 확인한 뒤에만 코드를 체크아웃한다.
+    # 댓글 본문의 명령 경계와 PR 번호, 포크 여부를 확인한 뒤에만 코드를 체크아웃한다.
     if: |
       github.actor != 'dependabot[bot]' &&
       github.actor != 'claude[bot]' && (
-        (github.event_name == 'pull_request' &&
-         github.event.pull_request.head.repo.full_name == github.repository) ||
+        github.event_name == 'workflow_dispatch' ||
         (github.event_name == 'issue_comment' &&
          github.event.issue.pull_request != null &&
          startsWith(github.event.comment.body, '/review') &&
@@ -31,21 +36,23 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           EVENT_NAME: ${{ github.event_name }}
           COMMENT_BODY: ${{ github.event.comment.body }}
-          PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+          PR_NUMBER: ${{ inputs.pr_number || github.event.issue.number }}
         run: |
           if [[ "$EVENT_NAME" == "issue_comment" && ! "$COMMENT_BODY" =~ ^/review([[:space:]]|$) ]]; then
             echo "리뷰 명령이 아닌 댓글은 건너뜁니다."
             exit 0
           fi
-          if [[ "$EVENT_NAME" == "issue_comment" ]]; then
-            PR_INFO=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" \
-              --json isCrossRepository,headRepositoryOwner)
-            IS_CROSS_REPOSITORY=$(jq -r '.isCrossRepository' <<< "$PR_INFO")
-            HEAD_OWNER=$(jq -r '.headRepositoryOwner.login' <<< "$PR_INFO")
-            if [[ "$IS_CROSS_REPOSITORY" != "false" || "${HEAD_OWNER,,}" != "${GITHUB_REPOSITORY_OWNER,,}" ]]; then
-              echo "포크 PR 은 리뷰하지 않는다" >> "$GITHUB_STEP_SUMMARY"
-              exit 0
-            fi
+          if [[ ! "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::리뷰할 PR 번호는 양의 정수여야 합니다."
+            exit 1
+          fi
+          PR_INFO=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" \
+            --json isCrossRepository,headRepositoryOwner)
+          IS_CROSS_REPOSITORY=$(jq -r '.isCrossRepository' <<< "$PR_INFO")
+          HEAD_OWNER=$(jq -r '.headRepositoryOwner.login' <<< "$PR_INFO")
+          if [[ "$IS_CROSS_REPOSITORY" != "false" || "${HEAD_OWNER,,}" != "${GITHUB_REPOSITORY_OWNER,,}" ]]; then
+            echo "포크 PR 은 리뷰하지 않는다" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
           fi
           echo "allowed=true" >> "$GITHUB_OUTPUT"
 
@@ -54,10 +61,10 @@ jobs:
     if: needs.review-gate.outputs.allowed == 'true'
     runs-on: ubuntu-latest
     env:
-      PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+      PR_NUMBER: ${{ inputs.pr_number || github.event.issue.number }}
     # 같은 PR에 대해 동시에 실행 중인 이전 리뷰 run을 취소하여 중복 코멘트 방지
     concurrency:
-      group: claude-review-${{ github.event.pull_request.number || github.event.issue.number }}
+      group: claude-review-${{ inputs.pr_number || github.event.issue.number }}
       cancel-in-progress: true
     permissions:
       contents: read
@@ -73,11 +80,10 @@ jobs:
           fetch-depth: 1
           ref: refs/pull/${{ env.PR_NUMBER }}/head
 
-      # /review 댓글 트리거는 PR Checks 탭에 자동 등록되지 않으므로
+      # 수동 실행과 /review 댓글 트리거는 PR Checks 탭에 자동 등록되지 않으므로
       # PR head SHA 에 Check Run 을 수동 생성하여 PR 과 workflow 연동
-      - name: PR 에 Check Run 등록 (issue_comment 트리거 전용)
+      - name: PR 에 Check Run 등록
         id: check-create
-        if: github.event_name == 'issue_comment'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -284,7 +290,7 @@ jobs:
       # PR Checks 탭에서 결과 확인 가능하도록 Check Run 완료 마킹
       # job.status (success/failure/cancelled) → check-run conclusion 매핑
       - name: Check Run 완료 마킹
-        if: github.event_name == 'issue_comment' && always() && steps.check-create.outputs.check_id != ''
+        if: always() && steps.check-create.outputs.check_id != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OUTCOME: ${{ job.status }}
