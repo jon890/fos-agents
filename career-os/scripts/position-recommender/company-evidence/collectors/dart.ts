@@ -1,6 +1,5 @@
 import { readFileSync, statSync } from "node:fs";
 import { inflateRawSync } from "node:zlib";
-import { XMLParser } from "fast-xml-parser";
 
 import type {
   CompanyEvidence,
@@ -21,7 +20,7 @@ export function loadDartApiKey(env: NodeJS.ProcessEnv = process.env): string | n
   return readFileSync(path, "utf8").trim() || null;
 }
 
-function unzipXml(data: Buffer): string {
+function unzipXml(data: Buffer): Buffer {
   const first = Math.max(0, data.length - 65_557);
   let end = -1;
   for (let at = data.length - 22; at >= first; at--) {
@@ -51,20 +50,78 @@ function unzipXml(data: Buffer): string {
     const xml = method === 8 ? inflateRawSync(compressed) : method === 0 ? compressed : null;
     if (!xml || xml.length > 100_000_000)
       throw new Error("DART 회사 목록 압축 형식이 지원되지 않습니다.");
-    return xml.toString("utf8");
+    return xml;
   }
   throw new Error("DART 회사 목록 XML이 없습니다.");
 }
 
-export function findDartCorpCode(zip: Buffer, companyName: string): string | null {
-  const xml = unzipXml(zip);
-  const parsed = new XMLParser().parse(xml);
-  const entries = parsed?.result?.list;
-  const rows: DartRow[] = Array.isArray(entries) ? entries : entries ? [entries] : [];
-  const matching = rows.filter((row) => String(row.corp_name).trim() === companyName.trim());
-  if (matching.length === 1) return String(matching[0]!.corp_code).padStart(8, "0");
-  const listed = matching.filter((row) => /^\d{6}$/.test(String(row.stock_code ?? "")));
-  return listed.length === 1 ? String(listed[0]!.corp_code).padStart(8, "0") : null;
+const LIST_OPEN = Buffer.from("<list>");
+const LIST_CLOSE = Buffer.from("</list>");
+const XML_ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" };
+
+function decodeXmlText(raw: string): string {
+  return raw
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/&(#x[0-9a-fA-F]+|#\d+|amp|lt|gt|quot|apos);/g, (whole, name: string) => {
+      if (name[0] !== "#") return XML_ENTITIES[name] ?? whole;
+      const code = name[1] === "x" ? Number.parseInt(name.slice(2), 16) : Number(name.slice(1));
+      return Number.isInteger(code) && code <= 0x10ffff ? String.fromCodePoint(code) : whole;
+    })
+    .trim();
+}
+
+function fieldOf(block: string, tag: string): string {
+  const open = block.indexOf(`<${tag}>`);
+  const close = open < 0 ? -1 : block.indexOf(`</${tag}>`, open);
+  return close < 0 ? "" : decodeXmlText(block.slice(open + tag.length + 2, close));
+}
+
+/** 이름이 XML 본문에 적히는 꼴이다. `&` 는 `&amp;` 로 적힌다. 따옴표는 그대로 적힐 수도, 바뀌어 적힐 수도 있다. */
+function xmlSpellings(name: string): Buffer[] {
+  const escaped = name.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+  const quoted = escaped.replaceAll('"', "&quot;").replaceAll("'", "&apos;");
+  return [...new Set([name, escaped, quoted])].map((spelling) => Buffer.from(spelling, "utf8"));
+}
+
+/**
+ * 회사 목록 XML 에서 이름이 같은 회사만 골라 낸다.
+ * 목록 전체를 XML 파서에 넣지 않고, 이름이 적힌 자리를 바이트로 찾아 그 `<list>` 묶음만 읽는다.
+ * 목록은 회사 10만 곳이 넘어, 통째로 객체로 만들면 한 번에 수백 MB 를 쓴다
+ * (실측: 회사 11만 5천 곳 합성 목록에서 최대 RSS 578MB).
+ */
+function matchingCorpRows(xml: Buffer, companyName: string): DartRow[] {
+  const wanted = companyName.trim();
+  if (!wanted) return [];
+  const rows = new Map<number, DartRow>();
+  for (const spelling of xmlSpellings(wanted)) {
+    for (let hit = xml.indexOf(spelling); hit >= 0; hit = xml.indexOf(spelling, hit + 1)) {
+      const start = xml.lastIndexOf(LIST_OPEN, hit);
+      const end = xml.indexOf(LIST_CLOSE, hit);
+      if (start < 0 || end < 0 || rows.has(start)) continue;
+      const block = xml.toString("utf8", start + LIST_OPEN.length, end);
+      // 다른 묶음에 걸친 자리이거나 이름의 일부만 같은 회사는 여기서 빠진다.
+      if (block.includes("<list>") || fieldOf(block, "corp_name") !== wanted) continue;
+      rows.set(start, {
+        corp_code: fieldOf(block, "corp_code"),
+        stock_code: fieldOf(block, "stock_code"),
+      });
+    }
+  }
+  return [...rows.entries()].sort((left, right) => left[0] - right[0]).map(([, row]) => row);
+}
+
+/** `corpCode.xml` ZIP 을 풀어 둔 것이다. 한 실행에서 회사마다 다시 받지 않게 넘겨 쓴다. */
+export type DartCorpCodeList = { xml: Buffer };
+
+export function readDartCorpCodeList(zip: Buffer): DartCorpCodeList {
+  return { xml: unzipXml(zip) };
+}
+
+export function findDartCorpCode(list: DartCorpCodeList, companyName: string): string | null {
+  const matching = matchingCorpRows(list.xml, companyName);
+  if (matching.length === 1) return matching[0]!.corp_code!.padStart(8, "0");
+  const listed = matching.filter((row) => /^\d{6}$/.test(row.stock_code ?? ""));
+  return listed.length === 1 ? listed[0]!.corp_code!.padStart(8, "0") : null;
 }
 
 async function getDartJson(
@@ -133,6 +190,8 @@ function financialEvidence(
   };
 }
 
+const CORP_CODE_LIST_CACHE = "dart:corp-code-list";
+
 export const dartCollector: CompanyEvidenceCollector = {
   name: "dart",
   sourceTypes: ["dart-employment", "dart-financial"],
@@ -142,12 +201,18 @@ export const dartCollector: CompanyEvidenceCollector = {
     if (!key) return { evidence: [], diagnostics: ["dart: 인증키 없음"] };
     let corpCode = input.preference?.dartCorpCode;
     if (!corpCode) {
-      const response = await input.fetcher(
-        `https://opendart.fss.or.kr/api/corpCode.xml?crtfc_key=${encodeURIComponent(key)}`,
-      );
-      if (!response.ok)
-        return { evidence: [], diagnostics: [`dart: 회사 목록 HTTP ${response.status}`] };
-      corpCode = findDartCorpCode(Buffer.from(await response.arrayBuffer()), input.companyName);
+      // 회사 목록은 실행마다 한 번만 받는다. 회사마다 받으면 수십 MB 를 되풀이해 푼다.
+      let list = input.runCache?.get(CORP_CODE_LIST_CACHE) as DartCorpCodeList | undefined;
+      if (!list) {
+        const response = await input.fetcher(
+          `https://opendart.fss.or.kr/api/corpCode.xml?crtfc_key=${encodeURIComponent(key)}`,
+        );
+        if (!response.ok)
+          return { evidence: [], diagnostics: [`dart: 회사 목록 HTTP ${response.status}`] };
+        list = readDartCorpCodeList(Buffer.from(await response.arrayBuffer()));
+        input.runCache?.set(CORP_CODE_LIST_CACHE, list);
+      }
+      corpCode = findDartCorpCode(list, input.companyName);
       if (!corpCode) return { evidence: [], diagnostics: ["dart: 회사 고유번호를 확정하지 못함"] };
       await input.persistDartCorpCode?.(input.companyKey, corpCode);
     }

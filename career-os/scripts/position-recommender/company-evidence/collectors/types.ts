@@ -25,6 +25,8 @@ export type CollectorInput = {
   fetcher: EvidenceFetcher;
   dartApiKey?: string;
   persistDartCorpCode?: (companyKey: string, corpCode: string) => Promise<void>;
+  /** 한 실행의 회사들이 함께 쓰는 값이다. 수집기가 큰 응답을 회사마다 다시 받지 않게 여기에 둔다. */
+  runCache?: Map<string, unknown>;
 };
 
 export type CollectorResult = { evidence: CompanyEvidence[]; diagnostics: string[] };

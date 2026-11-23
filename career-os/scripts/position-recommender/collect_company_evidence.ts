@@ -52,6 +52,7 @@ export async function collectEvidenceForRun(
   const newEvidence: Array<{ companyKey: string; evidence: CompanyEvidence[] }> = [];
   let failedCollectorCount = 0;
   const failedCompanies = new Map<string, number>();
+  const runCache = new Map<string, unknown>();
   for (const company of queue.companies) {
     const existingEvidence = await client.getCompanyEvidence(company.companyKey);
     const activePostings = await client.getActiveCompanyPostings(company.companyKey);
@@ -65,6 +66,7 @@ export async function collectEvidenceForRun(
         now,
         fetcher,
         dartApiKey,
+        runCache,
         async persistDartCorpCode(companyKey, corpCode) {
           const current: CompanyPreference = preferences.get(companyKey) ?? {
             companyKey,
