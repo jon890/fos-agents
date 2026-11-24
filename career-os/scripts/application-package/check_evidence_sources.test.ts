@@ -2,7 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { checkEvidenceSources, EVIDENCE_SOURCES, type EvidenceSourceSpec } from "./check_evidence_sources.ts";
+import { checkEvidenceSources, EVIDENCE_SOURCES, gitArguments, type EvidenceSourceSpec } from "./check_evidence_sources.ts";
 import { SUBPROCESS_TEST_TIMEOUT_MS } from "../lib/test-timeouts.ts";
 
 const workspaces: string[] = [];
@@ -75,6 +75,16 @@ describe("근거 원본 목록의 문서 계약", () => {
     const paths = EVIDENCE_SOURCES.flatMap((source) => source.paths);
 
     expect(paths.some((path) => path.includes("brain"))).toBe(false);
+  });
+});
+
+describe("git 호출 인자", () => {
+  // 소유자가 다른 저장소는 테스트로 만들기 어렵다. git 이 받는 인자에 그 저장소만 허용하는 safe.directory 가 들어가는지 본다.
+  test("검사할 폴더 하나만 safe.directory 로 허용한다", () => {
+    const args = gitArguments("/data/evidence", ["rev-parse", "HEAD"]);
+
+    expect(args).toEqual(["git", "-c", "safe.directory=/data/evidence", "-C", "/data/evidence", "rev-parse", "HEAD"]);
+    expect(args.join(" ")).not.toContain("safe.directory=*");
   });
 });
 

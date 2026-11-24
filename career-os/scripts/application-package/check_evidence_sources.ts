@@ -102,8 +102,17 @@ export type CheckOptions = {
 
 type GitResult = { ok: boolean; stdout: string; stderr: string };
 
+/**
+ * git 에 넘길 인자를 만든다.
+ * 근거 폴더는 실행 공간 사용자와 소유자가 다를 수 있고, 그러면 git 이 `detected dubious ownership` 으로 거절한다.
+ * 그 폴더 하나만 `safe.directory` 로 허용한다. 전역 `*` 허용이나 사용자 git 설정 쓰기는 하지 않는다.
+ */
+export function gitArguments(directory: string, args: readonly string[]): string[] {
+  return ["git", "-c", `safe.directory=${directory}`, "-C", directory, ...args];
+}
+
 function git(directory: string, args: readonly string[]): GitResult {
-  const result = Bun.spawnSync(["git", "-C", directory, ...args], {
+  const result = Bun.spawnSync(gitArguments(directory, args), {
     stdout: "pipe",
     stderr: "pipe",
     // 자격 증명이나 호스트 키를 물으면 동기 호출이 그대로 멈춘다. 묻는 대신 실패하게 한다.
